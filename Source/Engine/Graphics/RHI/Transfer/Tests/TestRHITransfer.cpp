@@ -185,17 +185,13 @@ SW_TEST_CASE( RHITransferTest, AcceptingSerialZeroTripsAnAssert )
 }
 
 /**
- * @brief [RHITransferTest] 장치 세대는 0 이 아니고 발급할 때마다 커진다. 장치(시리얼 발급기)마다 세대가 다르다
+ * @brief [RHITransferTest] 시리얼 발급기는 장치가 받은 세대를 티켓에 싣는다(세대 번호는 장치를 만드는 등록표가 붙인다 — `RHIBackendRegistry::createDevice`)
  */
-SW_TEST_CASE( RHITransferTest, DeviceGenerationIsNonZeroAndGrows )
+SW_TEST_CASE( RHITransferTest, SerialsCarryTheDeviceGeneration )
 {
-    const uint32 first  = allocateRHIDeviceGeneration();
-    const uint32 second = allocateRHIDeviceGeneration();
-    SW_EXPECT_TRUE( first != 0 );
-    SW_EXPECT_TRUE( first < second );
-
-    const RHITransferSerials serialsA;
-    const RHITransferSerials serialsB;
+    const RHITransferSerials serialsA{ 1 };
+    const RHITransferSerials serialsB{ 2 };
+    SW_EXPECT_TRUE( serialsA.getGeneration() == 1 );
     SW_EXPECT_TRUE( serialsA.getGeneration() != serialsB.getGeneration() );
 }
 
@@ -258,7 +254,7 @@ SW_TEST_CASE( RHITransferTest, SerialsClassifyTicketsByWatermarkAndGeneration )
 {
     SW_EXPECT_LOG( "RHI.RegisterBeforeTransferDone" );
     SW_EXPECT_LOG( "RHI.TransferTicketInvalid" );
-    RHITransferSerials serials;
+    RHITransferSerials serials{ 1 };
     const uint64       first  = serials.issue();
     const uint64       second = serials.issue();
     SW_EXPECT_EQUAL( uint64( 1 ), first );
@@ -294,7 +290,7 @@ SW_TEST_CASE( RHITransferTest, SerialsClassifyTicketsByWatermarkAndGeneration )
     SW_EXPECT_TRUE( serials.classify( firstTicket ) == RHITransferStatus::Complete ); // 이미 끝난 일은 그대로다
     SW_EXPECT_TRUE( serials.classify( secondTicket ) == RHITransferStatus::Failed );
 
-    RHITransferSerials other;
+    RHITransferSerials other{ 2 };
     SW_EXPECT_TRUE( other.classify( RHITransferTicket{} ) == RHITransferStatus::Failed );
     SW_EXPECT_TRUE( other.classify( RHITransferTicket{ 1, serials.getGeneration() } ) == RHITransferStatus::Failed ); // 다른 장치(세대)의 티켓
     SW_EXPECT_TRUE( other.classify( RHITransferTicket{ 1, other.getGeneration() } ) == RHITransferStatus::Failed );   // 발급한 적 없는 시리얼

@@ -28,9 +28,9 @@ namespace sw
             /** @brief 지금 값을 정책에 옮깁니다. */
             static void applyToPolicy()
             {
-                DeterministicRunPolicy policy  = DeterministicRun::getPolicy();
+                DeterministicRunPolicy policy  = engine::getSubsystem<DeterministicRun>().getPolicy();
                 policy._bFreezeEnvironmentTime = gv_environmentAnimate == 0 ? SW_TRUE : SW_FALSE;
-                DeterministicRun::setPolicy( policy );
+                engine::getSubsystem<DeterministicRun>().setPolicy( policy );
             }
 
             static void onVariableChanged( GlobalVariableInfo* pVariable )

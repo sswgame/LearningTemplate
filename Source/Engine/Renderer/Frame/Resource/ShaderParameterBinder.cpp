@@ -3,6 +3,7 @@
 #include "Engine/Renderer/Frame/Resource/ShaderParameterBinder.h"
 
 #include "Core/Container/span.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/RHI/Diagnostics/BindlessIndexValidator.h"
@@ -135,9 +136,7 @@ namespace sw
                 // 슬롯은 PassConstantRing::kSlotBytes 로 만들었다 — 레이아웃이 더 크면 슬롯 뒤를 쓰게 되므로 올리지 않고 알린다(GL 은 GL_INVALID_VALUE, 다른 백엔드는 조용히 넘쳤다).
                 if ( alignedSize > PassConstantRing::kSlotBytes )
                 {
-                    static atomic<bool> s_bReported{ false };
-                    if ( s_bReported.exchange( true ) == false )
-                        SW_LOG_ERROR_ID( "ShaderParameterBinder.EnginePassCBLayoutBytes", "The engine PassCB layout is %# bytes but a pass constant slot holds %# - raise PassConstantRing::kSlotBytes", alignedSize, PassConstantRing::kSlotBytes );
+                    SW_LOG_ERROR_ONCE_ID( "ShaderParameterBinder.EnginePassCBLayoutBytes", "The engine PassCB layout is %# bytes but a pass constant slot holds %# - raise PassConstantRing::kSlotBytes", alignedSize, PassConstantRing::kSlotBytes );
                     return;
                 }
                 // 버퍼는 슬롯 크기(위에서 막았다)를 넘지 않는 스택 배열이다 — 드로우마다 힙을 잡지 않고, 병렬 패스 기록의 스레드마다 따로이며,

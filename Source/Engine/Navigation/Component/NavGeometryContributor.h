@@ -15,6 +15,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/String/RegistrationList.h"
 
 namespace sw
 {
@@ -42,8 +43,10 @@ namespace sw
     class SW_API NavGeometryContributorRegistry
     {
     public:
-        /** @brief 등록 줄을 더합니다. 같은 줄을 두 번 등록하면 무시합니다. */
-        static void add( const NavGeometryContribution* pContribution );
+        /** @brief 등록 줄을 더합니다. 같은 줄을 두 번 등록하면 무시합니다(true). 빈 줄은 거절하고 false 입니다. */
+        [[nodiscard]] static bool add( const NavGeometryContribution* pContribution );
+        /** @brief 등록 줄을 뺍니다(등록한 모듈이 내려갈 때 정적 등록자가 부른다). 올라 있지 않으면 할 일이 없다. */
+        static void remove( const NavGeometryContribution* pContribution );
         /** @brief 지금까지 등록된 줄입니다(등록 순서). */
         static const vector<const NavGeometryContribution*>& getAll();
     };
@@ -51,13 +54,8 @@ namespace sw
 
 namespace sw
 {
-    /** @brief `SW_NAV_GEOMETRY_CONTRIBUTOR` 가 두는 정적 등록자입니다. */
-    struct SW_API NavGeometryContributorRegistrar
-    {
-        explicit NavGeometryContributorRegistrar( const NavGeometryContribution* pContribution );
-        NavGeometryContributorRegistrar( const NavGeometryContributorRegistrar& )            = delete;
-        NavGeometryContributorRegistrar& operator=( const NavGeometryContributorRegistrar& ) = delete;
-    };
+    /** @brief `SW_NAV_GEOMETRY_CONTRIBUTOR` 가 두는 정적 등록자입니다(공통 틀 `StaticRegistrar` — 모듈이 내려가면 뺀다). */
+    SW_DEFINE_STATIC_REGISTRAR( NavGeometryContributorRegistrar, const NavGeometryContribution*, &NavGeometryContributorRegistry::add, &NavGeometryContributorRegistry::remove );
 } // namespace sw
 
 /**

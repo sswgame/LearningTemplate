@@ -33,7 +33,7 @@
         "Source/Engine/Serialization/Inherit/ResourceRemap.cpp|ResourceRemap::loadFromAsset": "경로 교체 표 자신이다 — 리소스 입구가 찾기 전에 쓰는 표라 그 표를 층 · 교체로 읽으면 순환이다(사슬은 오류인 것과 같은 까닭)",
         "Source/Engine/Animation/Scene/VertexAnimationCookList.cpp|VertexAnimationCookList::loadFromAsset": "쿠킹 작업 안에서만 읽는 목록이다 — 쿠킹 문맥에는 withAsset 을 쓰지 않는다(ResourceContext::withAsset 머리말, 층은 쿠킹본에 펼치지 않는다)",
         "Source/Editor/Common/Config/EditorIconGlyphTable.cpp|EditorIconGlyphTable::loadFromAsset": "에디터 설정 표다 — 게임 팩의 덮어쓰기 층 · 접속 대조와 무관하다",
-        "Source/Engine/Config/PackEngineSettings.cpp|PackEngineSettings::loadFromPack": "팩 설정이 덮어쓰기 층 목록 · 경로 교체 표를 정한다(PackEngineSettingsSubsystem 이 ResourceLayers::setLayers) — 그 파일을 층으로 읽으면 층이 자기를 정하는 순환이다(CultureTable 과 같은 까닭)",
+        "Source/Engine/Config/PackEngineSettings.cpp|PackEngineSettings::loadFromPack": "팩 설정이 덮어쓰기 층 목록 · 경로 교체 표를 정한다(PackEngineSettingsSubsystem 이 ResourceComposition::setLayers) — 그 파일을 층으로 읽으면 층이 자기를 정하는 순환이다(CultureTable 과 같은 까닭)",
         "Source/Engine/Serialization/Inherit/DataCatalogReferences.cpp|DataCatalogReferenceRules::loadFromAsset": "카탈로그 참조 검사의 규칙 표 자신이다 — 쿠커 · 에디터 · 런타임이 같은 표를 보아야 하고(쿠킹 문맥에는 withAsset 이 없다), 층으로 바뀌면 같은 데이터의 검사가 팩마다 달라진다",
         "Source/Engine/Serialization/JSON/JSONDocument.cpp|JSONDocument::loadResource": "JSON 리소스 입구 자신이다(loadResource… 는 싣는 길로 센다) — 합치기 · 덮어쓰기 층은 XML 형식(ResourceComposer)만 다루어 JSON 에 실을 문맥이 없다",
         "Source/Editor/Panels/MaterialGraph/Model/MaterialGraphModel.cpp|MaterialGraphModel::load": "에디터가 고칠 원본을 읽는다 — 층 · 합치기를 거치면 층의 값이 원본 저장에 구워진다(ResourceComposer 의 SaveWouldBake 와 같은 까닭). 부모는 findBasePath 로 따로 든다",

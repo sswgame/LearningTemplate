@@ -464,6 +464,7 @@ namespace sw::editor
         , _renderer{ nullptr }
         , _editorToolDefaults{ nullptr }
         , _pIconGlyphTable{ nullptr }
+        , _fontSetup{}
         , _pComponentIconTable{ nullptr }
         , _editorContext{ nullptr }
         , _dockLayout{}
@@ -572,7 +573,7 @@ namespace sw::editor
         _dockLayout.applyINIFilename();
 
         // 글꼴은 데이터(editortooldefaults.json 후보 · 테마 글자 크기)에서 온다. 못 찾으면 이유를 남겼고 기동을 멈춘다.
-        if ( EditorFontSetup::apply( *_editorToolDefaults, *_pIconGlyphTable ) == false )
+        if ( _fontSetup.apply( *_editorToolDefaults, *_pIconGlyphTable ) == false )
         {
             shutdownImGuiContext();
             return SubsystemInitResult::Failed;
@@ -1099,6 +1100,9 @@ namespace sw::editor
         if ( _renderer != nullptr && pRHIDevice != nullptr && pDrawData != nullptr )
             _renderer->render( *pRHIDevice, *pDrawData );
     }
+
+    // 이 종류의 등록 목록 — EditorModule 이미지에 하나(확장 DLL 의 등록자도 내보낸 이 함수로 오른다).
+    SW_DEFINE_EDITOR_EXTENSION_KIND( EditorFrameStepRegistration )
 } // namespace sw::editor
 
 // ==============================================================================

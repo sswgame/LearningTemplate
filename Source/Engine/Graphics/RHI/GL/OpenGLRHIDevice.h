@@ -101,7 +101,8 @@ namespace sw
         RHIBufferHandle         createBuffer( const RHIBufferDesc& desc );
         RHIBufferHandle         createIndexBuffer( const void* pData, uint32 sizeBytes );
         /** @brief 빈 OpenGL 디바이스를 만듭니다. */
-        OpenGLRHIDevice();
+        /** @brief @p deviceGeneration 은 등록표가 붙인 이 장치의 세대입니다(전송 티켓에 싣는다). */
+        explicit OpenGLRHIDevice( uint32 deviceGeneration );
         /** @brief 컨텍스트와 GL 객체를 정리합니다. */
         virtual ~OpenGLRHIDevice() override;
 

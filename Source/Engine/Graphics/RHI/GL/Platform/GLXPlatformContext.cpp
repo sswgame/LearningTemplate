@@ -297,7 +297,7 @@ namespace sw
     void GLXPlatformContext::setSwapInterval( bool bVSync )
     {
         using PFNGLXSWAPINTERVALEXTPROC = void ( * )( Display*, GLXDrawable, int32 );
-        static PFNGLXSWAPINTERVALEXTPROC s_glXSwapIntervalEXT =
+        static const PFNGLXSWAPINTERVALEXTPROC s_glXSwapIntervalEXT =
             reinterpret_cast<PFNGLXSWAPINTERVALEXTPROC>( glXGetProcAddressARB( (const GLubyte*)"glXSwapIntervalEXT" ) );
         if ( s_glXSwapIntervalEXT != nullptr && _pDisplay != nullptr )
         {

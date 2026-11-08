@@ -1,0 +1,345 @@
+{
+    "_description": "Scripts/lint/MutableStatics.py 의 예외입니다. 주인 객체의 멤버로 둘 수 없는 가변 정적 저장소(침입형 정적 등록 머리 · 정적 등록 틀과 서비스 표의 뿌리 · OS 와 외부 라이브러리 콜백이 문맥 없이 부르는 프로세스 바닥)와 그 까닭입니다. 항목은 파일 + 변수 이름이고 까닭이 필수입니다.",
+    "_listEntry": [
+        {
+            "_path": "Source/App/AppEntry.cpp",
+            "_name": "s_app",
+            "_why": "웹(Emscripten) 주 루프 콜백은 문맥 없이 불린다 — main 이 끝난 뒤에도 앱이 살아야 해 프로세스 수명 자리에 둔다."
+        },
+        {
+            "_path": "Source/Core/Concurrency/Futex.cpp",
+            "_name": "s_arrBucket",
+            "_why": "주소로 고르는 대기 버킷 표 — 리눅스 커널 futex 해시처럼 프로세스의 모든 대기 주소가 한 표를 나눈다(주인 객체가 없다: 아무 원자 변수나 기다린다)."
+        },
+        {
+            "_path": "Source/Core/Diagnostics/CrashHandler.cpp",
+            "_name": "s_mutex",
+            "_why": "크래시 처리 — 보고를 한 번에 하나로 묶는 잠금(죽는 스레드가 여럿일 수 있다). OS 콜백이 문맥 없이 부른다."
+        },
+        {
+            "_path": "Source/Core/Diagnostics/CrashHandler.h",
+            "_name": "_s_pInstalled",
+            "_why": "크래시 처리 — 설치된 처리기(프로세스에 하나)를 OS 콜백이 찾는 자리다."
+        },
+        {
+            "_path": "Source/Core/Diagnostics/MemoryProfiler.cpp",
+            "_name": "s_activeProfiler",
+            "_why": "CRT 디버그 힙(_CrtMemCheckpoint)과 할당 훅은 프로세스 전역이다 — 그 기준점 · 훅 대상이다."
+        },
+        {
+            "_path": "Source/Core/Diagnostics/MemoryProfiler.cpp",
+            "_name": "s_bHasLeakBaseline",
+            "_why": "CRT 디버그 힙(_CrtMemCheckpoint)과 할당 훅은 프로세스 전역이다 — 그 기준점 · 훅 대상이다."
+        },
+        {
+            "_path": "Source/Core/Diagnostics/MemoryProfiler.cpp",
+            "_name": "s_leakBaseline",
+            "_why": "CRT 디버그 힙(_CrtMemCheckpoint)과 할당 훅은 프로세스 전역이다 — 그 기준점 · 훅 대상이다."
+        },
+        {
+            "_path": "Source/Core/Diagnostics/MemoryProfiler.cpp",
+            "_name": "s_leakBaselineDetailQuery",
+            "_why": "CRT 디버그 힙(_CrtMemCheckpoint)과 할당 훅은 프로세스 전역이다 — 그 기준점 · 훅 대상이다."
+        },
+        {
+            "_path": "Source/Core/Diagnostics/Posix/PosixCallStackCapture.cpp",
+            "_name": "s_initRefCount",
+            "_why": "백트레이스 심볼 풀이는 프로세스 전역 라이브러리 상태다 — 그것을 지키는 참조 수 · 잠금이다."
+        },
+        {
+            "_path": "Source/Core/Diagnostics/Posix/PosixCallStackCapture.cpp",
+            "_name": "s_symbolMutex",
+            "_why": "백트레이스 심볼 풀이는 프로세스 전역 라이브러리 상태다 — 그것을 지키는 참조 수 · 잠금이다."
+        },
+        {
+            "_path": "Source/Core/Diagnostics/Posix/PosixCrashHandler.cpp",
+            "_name": "s_pReportingHandler",
+            "_why": "크래시 처리 — 시그널 처리기는 문맥 인자 없이 불리고 비동기 시그널 안전 연산만 쓴다. 프로세스에 하나인 처리기의 저장소다."
+        },
+        {
+            "_path": "Source/Core/Diagnostics/Posix/PosixCrashHandler.cpp",
+            "_name": "s_reportSignalNumber",
+            "_why": "크래시 처리 — 시그널 처리기는 문맥 인자 없이 불리고 비동기 시그널 안전 연산만 쓴다. 프로세스에 하나인 처리기의 저장소다."
+        },
+        {
+            "_path": "Source/Core/Diagnostics/Posix/PosixCrashHandler.cpp",
+            "_name": "s_reportingThreadID",
+            "_why": "크래시 처리 — 시그널 처리기는 문맥 인자 없이 불리고 비동기 시그널 안전 연산만 쓴다. 프로세스에 하나인 처리기의 저장소다."
+        },
+        {
+            "_path": "Source/Core/Diagnostics/Posix/PosixCrashHandler.cpp",
+            "_name": "s_seenReportProgress",
+            "_why": "크래시 처리 — 시그널 처리기는 문맥 인자 없이 불리고 비동기 시그널 안전 연산만 쓴다. 프로세스에 하나인 처리기의 저장소다."
+        },
+        {
+            "_path": "Source/Core/Diagnostics/Windows/WindowsCallStackCapture.cpp",
+            "_name": "s_initRefCount",
+            "_why": "DbgHelp 심볼 처리기는 프로세스에 하나이고 스레드 안전하지 않다 — 라이브러리의 프로세스 전역 상태를 지키는 참조 수 · 잠금이다."
+        },
+        {
+            "_path": "Source/Core/Diagnostics/Windows/WindowsCallStackCapture.cpp",
+            "_name": "s_symbolMutex",
+            "_why": "DbgHelp 심볼 처리기는 프로세스에 하나이고 스레드 안전하지 않다 — 라이브러리의 프로세스 전역 상태를 지키는 참조 수 · 잠금이다."
+        },
+        {
+            "_path": "Source/Core/Diagnostics/Windows/WindowsCrashHandler.cpp",
+            "_name": "s_arrReason",
+            "_why": "크래시 처리 — OS 예외 필터 · CRT 처리기는 문맥 인자 없이 불리고 죽는 중에는 할당 · 잠금 · 객체 찾기를 못 한다. 프로세스에 하나인 처리기의 상수 초기화 저장소다."
+        },
+        {
+            "_path": "Source/Core/Diagnostics/Windows/WindowsCrashHandler.cpp",
+            "_name": "s_bStopReportThread",
+            "_why": "크래시 처리 — OS 예외 필터 · CRT 처리기는 문맥 인자 없이 불리고 죽는 중에는 할당 · 잠금 · 객체 찾기를 못 한다. 프로세스에 하나인 처리기의 상수 초기화 저장소다."
+        },
+        {
+            "_path": "Source/Core/Diagnostics/Windows/WindowsCrashHandler.cpp",
+            "_name": "s_hDumpModule",
+            "_why": "크래시 처리 — OS 예외 필터 · CRT 처리기는 문맥 인자 없이 불리고 죽는 중에는 할당 · 잠금 · 객체 찾기를 못 한다. 프로세스에 하나인 처리기의 상수 초기화 저장소다."
+        },
+        {
+            "_path": "Source/Core/Diagnostics/Windows/WindowsCrashHandler.cpp",
+            "_name": "s_hReportFinished",
+            "_why": "크래시 처리 — OS 예외 필터 · CRT 처리기는 문맥 인자 없이 불리고 죽는 중에는 할당 · 잠금 · 객체 찾기를 못 한다. 프로세스에 하나인 처리기의 상수 초기화 저장소다."
+        },
+        {
+            "_path": "Source/Core/Diagnostics/Windows/WindowsCrashHandler.cpp",
+            "_name": "s_hReportRequested",
+            "_why": "크래시 처리 — OS 예외 필터 · CRT 처리기는 문맥 인자 없이 불리고 죽는 중에는 할당 · 잠금 · 객체 찾기를 못 한다. 프로세스에 하나인 처리기의 상수 초기화 저장소다."
+        },
+        {
+            "_path": "Source/Core/Diagnostics/Windows/WindowsCrashHandler.cpp",
+            "_name": "s_hReportThread",
+            "_why": "크래시 처리 — OS 예외 필터 · CRT 처리기는 문맥 인자 없이 불리고 죽는 중에는 할당 · 잠금 · 객체 찾기를 못 한다. 프로세스에 하나인 처리기의 상수 초기화 저장소다."
+        },
+        {
+            "_path": "Source/Core/Diagnostics/Windows/WindowsCrashHandler.cpp",
+            "_name": "s_pDumpingHandler",
+            "_why": "크래시 처리 — OS 예외 필터 · CRT 처리기는 문맥 인자 없이 불리고 죽는 중에는 할당 · 잠금 · 객체 찾기를 못 한다. 프로세스에 하나인 처리기의 상수 초기화 저장소다."
+        },
+        {
+            "_path": "Source/Core/Diagnostics/Windows/WindowsCrashHandler.cpp",
+            "_name": "s_pPreviousAbortHandler",
+            "_why": "크래시 처리 — OS 예외 필터 · CRT 처리기는 문맥 인자 없이 불리고 죽는 중에는 할당 · 잠금 · 객체 찾기를 못 한다. 프로세스에 하나인 처리기의 상수 초기화 저장소다."
+        },
+        {
+            "_path": "Source/Core/Diagnostics/Windows/WindowsCrashHandler.cpp",
+            "_name": "s_pPreviousFilter",
+            "_why": "크래시 처리 — OS 예외 필터 · CRT 처리기는 문맥 인자 없이 불리고 죽는 중에는 할당 · 잠금 · 객체 찾기를 못 한다. 프로세스에 하나인 처리기의 상수 초기화 저장소다."
+        },
+        {
+            "_path": "Source/Core/Diagnostics/Windows/WindowsCrashHandler.cpp",
+            "_name": "s_pPreviousInvalidParameterHandler",
+            "_why": "크래시 처리 — OS 예외 필터 · CRT 처리기는 문맥 인자 없이 불리고 죽는 중에는 할당 · 잠금 · 객체 찾기를 못 한다. 프로세스에 하나인 처리기의 상수 초기화 저장소다."
+        },
+        {
+            "_path": "Source/Core/Diagnostics/Windows/WindowsCrashHandler.cpp",
+            "_name": "s_pPreviousPureCallHandler",
+            "_why": "크래시 처리 — OS 예외 필터 · CRT 처리기는 문맥 인자 없이 불리고 죽는 중에는 할당 · 잠금 · 객체 찾기를 못 한다. 프로세스에 하나인 처리기의 상수 초기화 저장소다."
+        },
+        {
+            "_path": "Source/Core/Diagnostics/Windows/WindowsCrashHandler.cpp",
+            "_name": "s_pendingCrash",
+            "_why": "크래시 처리 — OS 예외 필터 · CRT 처리기는 문맥 인자 없이 불리고 죽는 중에는 할당 · 잠금 · 객체 찾기를 못 한다. 프로세스에 하나인 처리기의 상수 초기화 저장소다."
+        },
+        {
+            "_path": "Source/Core/Diagnostics/Windows/WindowsCrashHandler.cpp",
+            "_name": "s_pfnMiniDumpWriteDump",
+            "_why": "크래시 처리 — OS 예외 필터 · CRT 처리기는 문맥 인자 없이 불리고 죽는 중에는 할당 · 잠금 · 객체 찾기를 못 한다. 프로세스에 하나인 처리기의 상수 초기화 저장소다."
+        },
+        {
+            "_path": "Source/Core/Diagnostics/Windows/WindowsCrashHandler.cpp",
+            "_name": "s_previousAbortBehavior",
+            "_why": "크래시 처리 — OS 예외 필터 · CRT 처리기는 문맥 인자 없이 불리고 죽는 중에는 할당 · 잠금 · 객체 찾기를 못 한다. 프로세스에 하나인 처리기의 상수 초기화 저장소다."
+        },
+        {
+            "_path": "Source/Core/Diagnostics/Windows/WindowsCrashHandler.cpp",
+            "_name": "s_reportThreadID",
+            "_why": "크래시 처리 — OS 예외 필터 · CRT 처리기는 문맥 인자 없이 불리고 죽는 중에는 할당 · 잠금 · 객체 찾기를 못 한다. 프로세스에 하나인 처리기의 상수 초기화 저장소다."
+        },
+        {
+            "_path": "Source/Core/Diagnostics/Windows/WindowsCrashHandler.cpp",
+            "_name": "s_reportingThreadID",
+            "_why": "크래시 처리 — OS 예외 필터 · CRT 처리기는 문맥 인자 없이 불리고 죽는 중에는 할당 · 잠금 · 객체 찾기를 못 한다. 프로세스에 하나인 처리기의 상수 초기화 저장소다."
+        },
+        {
+            "_path": "Source/Core/GlobalVariable/GlobalVariableManager.cpp",
+            "_name": "s_pHead",
+            "_why": "침입형 정적 등록 머리 — 다른 TU · DLL 의 정적 등록자가 정적 초기화 때(할당 · 엔진보다 먼저) 자기를 잇는다. RegistrationList 로 옮기면 그 목록 자체가 정적 초기화 순서에 걸린다(머리 포인터는 상수 초기화라 순서와 무관하다). 전역 변수(gv_) 등록자다."
+        },
+        {
+            "_path": "Source/Core/Process/Posix/PosixShutdownSignal.cpp",
+            "_name": "s_arrPreviousAction",
+            "_why": "시그널 처리기 — 문맥 인자 없이 불리고 이전 처리기를 되돌려야 한다. 프로세스에 하나다."
+        },
+        {
+            "_path": "Source/Core/Process/Posix/PosixShutdownSignal.cpp",
+            "_name": "s_bInstalled",
+            "_why": "시그널 처리기 — 문맥 인자 없이 불리고 이전 처리기를 되돌려야 한다. 프로세스에 하나다."
+        },
+        {
+            "_path": "Source/Core/Process/Posix/PosixShutdownSignal.cpp",
+            "_name": "s_interruptCount",
+            "_why": "시그널 처리기 — 문맥 인자 없이 불리고 이전 처리기를 되돌려야 한다. 프로세스에 하나다."
+        },
+        {
+            "_path": "Source/Core/Process/ShutdownSignal.h",
+            "_name": "_s_requestedCause",
+            "_why": "종료 요청 원인 — 시그널 · 콘솔 처리기(문맥 없음)가 쓰는 원자 칸이다."
+        },
+        {
+            "_path": "Source/Core/Process/Windows/WindowsShutdownSignal.cpp",
+            "_name": "s_bInstalled",
+            "_why": "콘솔 제어 처리기 — 문맥 인자 없이 OS 스레드에서 불린다. 프로세스에 하나다."
+        },
+        {
+            "_path": "Source/Core/Process/Windows/WindowsShutdownSignal.cpp",
+            "_name": "s_interruptCount",
+            "_why": "콘솔 제어 처리기 — 문맥 인자 없이 OS 스레드에서 불린다. 프로세스에 하나다."
+        },
+        {
+            "_path": "Source/Core/Process/Windows/WindowsShutdownSignal.cpp",
+            "_name": "s_serviceMode",
+            "_why": "콘솔 제어 처리기 — 문맥 인자 없이 OS 스레드에서 불린다. 프로세스에 하나다."
+        },
+        {
+            "_path": "Source/Core/String/RegistrationList.cpp",
+            "_name": "s_chain",
+            "_why": "정적 등록 공통 틀(RegistrationList) 자체의 사슬 · 핫 리로드 깊이 — 틀이 정적 등록자보다 먼저 서야 하므로 상수 초기화 파일 범위에 둔다."
+        },
+        {
+            "_path": "Source/Core/String/RegistrationList.cpp",
+            "_name": "s_reloadScopeDepth",
+            "_why": "정적 등록 공통 틀(RegistrationList) 자체의 사슬 · 핫 리로드 깊이 — 틀이 정적 등록자보다 먼저 서야 하므로 상수 초기화 파일 범위에 둔다."
+        },
+        {
+            "_path": "Source/DevTools/RenderDoc/RenderDocCapture.cpp",
+            "_name": "_s_bTried",
+            "_why": "RenderDoc API 는 프로세스에 한 번 붙는다(주입된 DLL 의 전역)."
+        },
+        {
+            "_path": "Source/DevTools/RenderDoc/RenderDocCapture.cpp",
+            "_name": "_s_pAPI",
+            "_why": "RenderDoc API 는 프로세스에 한 번 붙는다(주입된 DLL 의 전역)."
+        },
+        {
+            "_path": "Source/Editor/Common/Workspace/EditorService.cpp",
+            "_name": "s_editorScope",
+            "_why": "에디터 서비스 표의 뿌리 — 엔진 서비스 표(EngineServices)와 같은 까닭으로 묶은 범위를 가리키기만 한다."
+        },
+        {
+            "_path": "Source/Editor/Common/Workspace/EditorService.cpp",
+            "_name": "s_pHostServices",
+            "_why": "에디터 서비스 표의 뿌리 — 엔진 서비스 표(EngineServices)와 같은 까닭으로 묶은 범위를 가리키기만 한다."
+        },
+        {
+            "_path": "Source/Engine/Audio/IAudioService.cpp",
+            "_name": "s_pHead",
+            "_why": "침입형 정적 등록 머리 — 다른 TU · DLL 의 정적 등록자가 정적 초기화 때(할당 · 엔진보다 먼저) 자기를 잇는다. RegistrationList 로 옮기면 그 목록 자체가 정적 초기화 순서에 걸린다(머리 포인터는 상수 초기화라 순서와 무관하다)."
+        },
+        {
+            "_path": "Source/Engine/Foundation/EngineServices.cpp",
+            "_name": "s_bServicesBound",
+            "_why": "엔진 서비스 표의 뿌리 — 묶은 범위를 가리킬 뿐 소유하지 않는다(엔진 범위가 bind · unbind). 주인 객체에 닿는 유일한 창구라 이것까지 객체로 옮기면 창구가 없다(언리얼 GEngine 과 같은 자리)."
+        },
+        {
+            "_path": "Source/Engine/Foundation/EngineServices.cpp",
+            "_name": "s_pSubsystems",
+            "_why": "엔진 서비스 표의 뿌리 — 묶은 범위를 가리킬 뿐 소유하지 않는다(엔진 범위가 bind · unbind). 주인 객체에 닿는 유일한 창구라 이것까지 객체로 옮기면 창구가 없다(언리얼 GEngine 과 같은 자리)."
+        },
+        {
+            "_path": "Source/Engine/Foundation/EngineSubsystemRegistration.cpp",
+            "_name": "s_list",
+            "_why": "엔진 등록 목록(getGlobal) — 서브시스템 · 서비스 칸의 정적 등록자가 엔진보다 먼저 단다(정적 등록 틀과 같은 자리)."
+        },
+        {
+            "_path": "Source/Engine/Graphics/RHI/RHIBackendRegistry.cpp",
+            "_name": "s_pHead",
+            "_why": "침입형 정적 등록 머리 — 다른 TU · DLL 의 정적 등록자가 정적 초기화 때(할당 · 엔진보다 먼저) 자기를 잇는다. RegistrationList 로 옮기면 그 목록 자체가 정적 초기화 순서에 걸린다(머리 포인터는 상수 초기화라 순서와 무관하다). 배포 정적 링크의 RHI 백엔드 등록자다."
+        },
+        {
+            "_path": "Source/Engine/Graphics/Shader/Compile/ShaderCompiler.cpp",
+            "_name": "s_mutexDXCSerial",
+            "_why": "DXC 는 프로세스 전역 상태가 있어 동시에 부르면 안 된다 — 라이브러리를 지키는 잠금이다."
+        },
+        {
+            "_path": "Source/Engine/Module/ModuleObjectRegistrar.cpp",
+            "_name": "s_pHead",
+            "_why": "침입형 정적 등록 머리 — 다른 TU · DLL 의 정적 등록자가 정적 초기화 때(할당 · 엔진보다 먼저) 자기를 잇는다. RegistrationList 로 옮기면 그 목록 자체가 정적 초기화 순서에 걸린다(머리 포인터는 상수 초기화라 순서와 무관하다)."
+        },
+        {
+            "_path": "Source/Engine/Module/ModuleSubsystemRegistrar.cpp",
+            "_name": "s_pHead",
+            "_why": "침입형 정적 등록 머리 — 다른 TU · DLL 의 정적 등록자가 정적 초기화 때(할당 · 엔진보다 먼저) 자기를 잇는다. RegistrationList 로 옮기면 그 목록 자체가 정적 초기화 순서에 걸린다(머리 포인터는 상수 초기화라 순서와 무관하다)."
+        },
+        {
+            "_path": "Source/Engine/Physics/Jolt/JoltPhysicsBackend.cpp",
+            "_name": "s_arrFactoryStorage",
+            "_why": "Jolt 는 형식 공장(JPH::Factory::sInstance) · 할당기 훅을 프로세스 전역으로 요구한다 — 그 한 번 초기화의 저장소다."
+        },
+        {
+            "_path": "Source/Engine/Physics/Jolt/JoltPhysicsBackend.cpp",
+            "_name": "s_bInitialized",
+            "_why": "Jolt 는 형식 공장(JPH::Factory::sInstance) · 할당기 훅을 프로세스 전역으로 요구한다 — 그 한 번 초기화의 저장소다."
+        },
+        {
+            "_path": "Source/Engine/Physics/Jolt/JoltPhysicsBackend.cpp",
+            "_name": "s_pFactory",
+            "_why": "Jolt 는 형식 공장(JPH::Factory::sInstance) · 할당기 훅을 프로세스 전역으로 요구한다 — 그 한 번 초기화의 저장소다."
+        },
+        {
+            "_path": "Source/Engine/Physics/Jolt/JoltPhysicsBackend.cpp",
+            "_name": "s_pJobSystem",
+            "_why": "Jolt 는 형식 공장(JPH::Factory::sInstance) · 할당기 훅을 프로세스 전역으로 요구한다 — 그 한 번 초기화의 저장소다."
+        },
+        {
+            "_path": "Source/Engine/Reflection/TypeRegistry.cpp",
+            "_name": "s_pHead",
+            "_why": "침입형 정적 등록 머리 — 다른 TU · DLL 의 정적 등록자가 정적 초기화 때(할당 · 엔진보다 먼저) 자기를 잇는다. RegistrationList 로 옮기면 그 목록 자체가 정적 초기화 순서에 걸린다(머리 포인터는 상수 초기화라 순서와 무관하다). 리플렉션 형식 · 열거 등록자다."
+        },
+        {
+            "_path": "Source/Engine/UI/Accessibility/UIAccessibilityBridgeFactory.cpp",
+            "_name": "s_pHead",
+            "_why": "침입형 정적 등록 머리 — 다른 TU · DLL 의 정적 등록자가 정적 초기화 때(할당 · 엔진보다 먼저) 자기를 잇는다. RegistrationList 로 옮기면 그 목록 자체가 정적 초기화 순서에 걸린다(머리 포인터는 상수 초기화라 순서와 무관하다)."
+        },
+        {
+            "_path": "Source/Engine/UserSettings/UserSettingsHandlerRegistry.cpp",
+            "_name": "s_pHead",
+            "_why": "침입형 정적 등록 머리 — 다른 TU · DLL 의 정적 등록자가 정적 초기화 때(할당 · 엔진보다 먼저) 자기를 잇는다. RegistrationList 로 옮기면 그 목록 자체가 정적 초기화 순서에 걸린다(머리 포인터는 상수 초기화라 순서와 무관하다)."
+        },
+        {
+            "_path": "Source/Engine/Window/Android/AndroidWindow.cpp",
+            "_name": "s_pApp",
+            "_why": "android_main · 네이티브 앱 콜백은 문맥 없이 불린다 — 프로세스에 하나인 앱 · 창 포인터다."
+        },
+        {
+            "_path": "Source/Engine/Window/Android/AndroidWindow.cpp",
+            "_name": "s_pWindow",
+            "_why": "android_main · 네이티브 앱 콜백은 문맥 없이 불린다 — 프로세스에 하나인 앱 · 창 포인터다."
+        },
+        {
+            "_path": "Source/Server/Windows/WindowsServiceHost.cpp",
+            "_name": "s_argc",
+            "_why": "Windows 서비스 제어 관리자 콜백(ServiceMain · 처리기)은 문맥 인자 없이 불린다 — 프로세스에 하나인 서비스 상태다."
+        },
+        {
+            "_path": "Source/Server/Windows/WindowsServiceHost.cpp",
+            "_name": "s_exitCode",
+            "_why": "Windows 서비스 제어 관리자 콜백(ServiceMain · 처리기)은 문맥 인자 없이 불린다 — 프로세스에 하나인 서비스 상태다."
+        },
+        {
+            "_path": "Source/Server/Windows/WindowsServiceHost.cpp",
+            "_name": "s_hStatus",
+            "_why": "Windows 서비스 제어 관리자 콜백(ServiceMain · 처리기)은 문맥 인자 없이 불린다 — 프로세스에 하나인 서비스 상태다."
+        },
+        {
+            "_path": "Source/Server/Windows/WindowsServiceHost.cpp",
+            "_name": "s_ppArgv",
+            "_why": "Windows 서비스 제어 관리자 콜백(ServiceMain · 처리기)은 문맥 인자 없이 불린다 — 프로세스에 하나인 서비스 상태다."
+        },
+        {
+            "_path": "Source/Server/Windows/WindowsServiceHost.cpp",
+            "_name": "s_status",
+            "_why": "Windows 서비스 제어 관리자 콜백(ServiceMain · 처리기)은 문맥 인자 없이 불린다 — 프로세스에 하나인 서비스 상태다."
+        }
+    ]
+}

@@ -396,7 +396,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 디바이스 — 수명
     // ------------------------------------------------------------------------------
-    WebGPURHIDevice::WebGPURHIDevice()
+    WebGPURHIDevice::WebGPURHIDevice( uint32 deviceGeneration )
         : _instance{ nullptr }
         , _adapter{ nullptr }
         , _device{ nullptr }
@@ -434,7 +434,7 @@ namespace sw
         , _listConstantRing{}
         , _activeRingIndex{ 0 }
         , _releaseQueue{}
-        , _transferSerials{}
+        , _transferSerials{ deviceGeneration }
         , _transferQueue{ _transferSerials }
         , _readbackTable{}
         , _listQueuedReadbackBuffer{}

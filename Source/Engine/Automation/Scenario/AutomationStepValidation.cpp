@@ -174,15 +174,4 @@ namespace sw
         }
         return "unknown";
     }
-
-    AutomationStepValidatorRegistrar::AutomationStepValidatorRegistrar( const AutomationStepValidatorRegistration* pRegistration )
-        : _pRegistration{ AutomationStepRegistry::registerValidator( pRegistration ) ? pRegistration : nullptr }
-    {
-    }
-
-    AutomationStepValidatorRegistrar::~AutomationStepValidatorRegistrar()
-    {
-        if ( _pRegistration != nullptr )
-            AutomationStepRegistry::unregisterValidator( _pRegistration );
-    }
 } // namespace sw

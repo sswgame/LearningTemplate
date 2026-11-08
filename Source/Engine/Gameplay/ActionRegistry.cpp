@@ -7,9 +7,13 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/RegistrationList.h"
+#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Console/DevCommandRegistry.h"
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/Reflection.h"
 
@@ -19,20 +23,11 @@ namespace sw
     {
         struct ActionRegistryInternal
         {
-            struct RegistryState
-            {
-                mutex                               _mutex{};
-                RegistrationList<const ActionEntry> _registration{ "ActionRegistry", RegistrationOrder::Insertion, true, NameCase::IgnoreCase };
-            };
+            /** @brief 등록 목록입니다(함수 정적 — 다른 TU · DLL 의 정적 등록자가 먼저 쓴다). 워커가 읽으므로 고치고 읽을 때 목록의 주인 잠금(`getOwnerMutex`)을 잡는다. */
+            static SW_DEFINE_REGISTRATION_LIST( getRegistrations, const ActionEntry, "ActionRegistry", RegistrationOrder::Insertion, true, NameCase::IgnoreCase )
 
-            static RegistryState& getRegistry()
-            {
-                static RegistryState s_state;
-                return s_state;
-            }
-
-            /** @brief 글을 이름과 괄호 안으로 나눕니다. 괄호가 틀리면 false 입니다. */
-            [[nodiscard]] static bool splitCall( string_view text, string_view& outName, string_view& outArguments )
+                /** @brief 글을 이름과 괄호 안으로 나눕니다. 괄호가 틀리면 false 입니다. */
+                [[nodiscard]] static bool splitCall( string_view text, string_view& outName, string_view& outArguments )
             {
                 const string_view trimmed = StringUtil::trim( text );
                 const size_t      openPos = trimmed.find( '(' );
@@ -53,32 +48,32 @@ namespace sw
 {
     void ActionRegistry::registerAction( const ActionEntry* pEntry )
     {
-        ActionRegistryInternal::RegistryState& state = ActionRegistryInternal::getRegistry();
-        ScopedLock<mutex>                      lock{ state._mutex };
-        (void)state._registration.addLogged( pEntry, "Game action", pEntry->_pName ); // 거절은 공용 오류 로그가 알린다
+        RegistrationList<const ActionEntry>& registrations = ActionRegistryInternal::getRegistrations();
+        ScopedLock<mutex>                    lock{ registrations.getOwnerMutex() };
+        (void)registrations.addLogged( pEntry, "Game action", pEntry->_pName ); // 거절은 공용 오류 로그가 알린다
     }
 
     void ActionRegistry::unregisterAction( const ActionEntry* pEntry )
     {
-        ActionRegistryInternal::RegistryState& state = ActionRegistryInternal::getRegistry();
-        ScopedLock<mutex>                      lock{ state._mutex };
-        (void)state._registration.remove( pEntry ); // 올라 있지 않은 줄을 빼는 것은 할 일이 없다
+        RegistrationList<const ActionEntry>& registrations = ActionRegistryInternal::getRegistrations();
+        ScopedLock<mutex>                    lock{ registrations.getOwnerMutex() };
+        (void)registrations.remove( pEntry ); // 올라 있지 않은 줄을 빼는 것은 할 일이 없다
     }
 
     const ActionEntry* ActionRegistry::find( string_view name )
     {
-        ActionRegistryInternal::RegistryState& state = ActionRegistryInternal::getRegistry();
-        ScopedLock<mutex>                      lock{ state._mutex };
-        return state._registration.findByName( name );
+        RegistrationList<const ActionEntry>& registrations = ActionRegistryInternal::getRegistrations();
+        ScopedLock<mutex>                    lock{ registrations.getOwnerMutex() };
+        return registrations.findByName( name );
     }
 
     void ActionRegistry::collectNames( vector<string>& outListName )
     {
-        ActionRegistryInternal::RegistryState& state = ActionRegistryInternal::getRegistry();
-        ScopedLock<mutex>                      lock{ state._mutex };
-        for ( uint32 index = 0; index < state._registration.getCount(); ++index )
+        RegistrationList<const ActionEntry>& registrations = ActionRegistryInternal::getRegistrations();
+        ScopedLock<mutex>                    lock{ registrations.getOwnerMutex() };
+        for ( uint32 index = 0; index < registrations.getCount(); ++index )
         {
-            outListName.push_back( state._registration.getNameAt( index ) );
+            outListName.push_back( registrations.getNameAt( index ) );
         }
     }
 
@@ -216,11 +211,8 @@ namespace sw
                 atomic<bool>     _bEnabled{ false };
             };
 
-            static TraceState& getState()
-            {
-                static TraceState s_state;
-                return s_state;
-            }
+            /** @brief 상태입니다 — 엔진 범위의 `ActionTraceState` 가 든다. */
+            static TraceState& getState();
 
             /** @brief `action.trace on|off|clear` — 범용 Action 추적(HUD 섹션 `action`). */
             static bool runTrace( const vector<string>& listArgument, string& outReply )
@@ -266,6 +258,38 @@ namespace sw
             }
         };
     } // namespace
+
+    /**
+     * @class ActionTraceState
+     * @brief 범용 Action 추적의 고리 버퍼 · 켜짐 — 예전 함수 정적(감춘 싱글턴)을 엔진 범위 서브시스템이 든다. 엔진을 다시 세우면 새로 선다.
+     */
+    class ActionTraceState final : public ISubsystem
+    {
+    public:
+        static constexpr const utf8* kSubsystemName = "ActionTraceState";
+
+        ActionTraceState()
+            : _state{}
+        {
+        }
+
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
+
+        /** @brief 든 상태입니다. */
+        ActionTraceInternal::TraceState& getState() { return _state; }
+
+    private:
+        ActionTraceInternal::TraceState _state;
+    };
+
+    SW_SERVICE_SLOT( ActionTraceState, Required );
+
+    ActionTraceInternal::TraceState& ActionTraceInternal::getState()
+    {
+        return engine::getSubsystem<ActionTraceState>().getState();
+    }
 
     void ActionTrace::setEnabled( bool bEnabled )
     {
@@ -317,4 +341,9 @@ namespace sw
     SW_DEV_COMMAND( ActionTraceCommand, "action.trace", "action.trace on|off|clear",
                     "Record every game action call (dialogue, schedule, reward, behavior tree) for the action debugger (hud.print action)", &ActionTraceInternal::runTrace );
     SW_DEBUG_HUD_SECTION( action, "action", "Action calls", 260, DebugHUDSectionFlag::kNone, &ActionTraceInternal::writeSection );
+} // namespace sw
+
+namespace sw
+{
+    SW_ENGINE_SERVICE_SUBSYSTEM( ActionTraceState, HostOnly, Services, (), SW_ENGINE_DEFAULT_FACTORY( ActionTraceState ) );
 } // namespace sw

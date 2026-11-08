@@ -55,7 +55,7 @@ namespace sw::editor
      */
     struct EditorPropertyDrawerRegistration : EditorExtensionRegistration
     {
-        static constexpr const utf8* kKindName = "propertydrawer";
+        SW_EDITOR_EXTENSION_KIND( "propertydrawer" );
 
         unique_ptr<IInspectorProperty> ( *_pCreate )();
     };

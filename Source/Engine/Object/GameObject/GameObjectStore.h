@@ -363,7 +363,8 @@ namespace sw
 
         vector<GameObject*>                           _listGameObject;
         unordered_map<hashed_string, NameEntry>       _mapNameToObject;
-        unordered_map<hashed_string, NameSuffixState> _mapNameSuffix; ///< 밑 이름마다 번호 상태다. 중복 이름을 만드는 비용이 O(1) 이다(언리얼의 MakeUniqueObjectName 에 해당)
+        unordered_map<hashed_string, NameSuffixState> _mapNameSuffix;      ///< 밑 이름마다 번호 상태다. 중복 이름을 만드는 비용이 O(1) 이다(언리얼의 MakeUniqueObjectName 에 해당)
+        uint32                                        _nameFallbackSerial; ///< 번호 붙인 이름이 1024 번 겹쳤을 때의 `_x<번호>` 뒷번호(저장소 잠금 안에서만 올린다 — 이름은 이 저장소 안에서만 겹치지 않으면 된다)
         /**
          * @brief id → 오브젝트 맵입니다. **슬롯 테이블의 슬롯을 다른 살아 있는 오브젝트가 쓰는 id 만** 보관합니다(보통 비어 있습니다).
          * @details 모든 오브젝트를 넣지 않는다. 테이블과 같은 정보를 두 번 보관하게 되고, 스폰마다 노드 할당 하나와 파괴마다 해제 하나가 붙는다.

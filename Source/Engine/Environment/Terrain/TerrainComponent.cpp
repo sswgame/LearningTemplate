@@ -44,13 +44,6 @@ namespace sw
             /** @brief `writeState` 형식 버전입니다. 형식을 바꾸면 올린다. */
             static constexpr uint32 kStateVersion = 3; ///< 3: 스플랫이 텍셀마다 레이어 여덟 바이트다. 2: 구멍 마스크를 더했고, 높이의 해상도가 다시 읽은 것과 달라도 복원한다(크기 바꾸기)
 
-            /** @brief 지형마다의 스플랫 텍스처 경로(`cpu/terrain/<번호>`)를 새로 냅니다. 놓인 경로를 다시 쓰지 않도록 번호는 프로세스 안에서 늘기만 한다. */
-            static string makeCPUSplatPath()
-            {
-                static atomic<uint32> s_serial{ 0 };
-                return string{ TextureCache::kCPUTexturePrefix } + "terrain/splat" + to_string( s_serial.fetch_add( 1u, std::memory_order_relaxed ) );
-            }
-
             static const hashed_string& getLayerColorName( uint32 layerIndex )
             {
                 static const hashed_string s_arrName[TerrainComponent::kMaxLayerCount] = { hashed_string( "_layer0Color" ), hashed_string( "_layer1Color" ), hashed_string( "_layer2Color" ),
@@ -721,7 +714,7 @@ namespace sw
         for ( uint32 plane = 0; plane < SurfaceLayerWeights::kPlaneCount; ++plane )
         {
             vector<uint8> rgbaBytes;
-            string        path  = TerrainComponentInternal::makeCPUSplatPath();
+            string        path  = textures.makeUniqueCPUTexturePath( "terrain/splat" );
             const bool    bMade = _heightfield.makeFullSplatPlane( plane, rgbaBytes ) && textures.createCPUTexture( path, data._width, data._height, std::move( rgbaBytes ) );
             if ( bMade == false )
             {

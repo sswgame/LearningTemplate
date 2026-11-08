@@ -672,7 +672,7 @@ namespace sw
         // 언어 코드에는 '.' 이 없어(`normalizeLanguageCode`) 축 값으로 늘 받힌다 — 받히지 않으면 `ResourceTags` 가 오류를 남긴다.
         string localeValue = code;
         std::replace( localeValue.begin(), localeValue.end(), '-', '_' );
-        (void)ResourceTags::setAxisValue( "locale", localeValue );
+        (void)engine::getSubsystem<ResourceTags>().setAxisValue( "locale", localeValue );
         notifyLanguageChanged( oldLanguage, code );
         return true;
     }

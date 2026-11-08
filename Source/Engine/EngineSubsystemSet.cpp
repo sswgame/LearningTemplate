@@ -34,9 +34,11 @@ namespace sw::engine
             parts._pMemoryBudget = &coreScope.emplaceSubsystem<MemoryBudgetSubsystem>( *parts._pCrashHandler );
         // 서브시스템 안의 객체도 서비스 칸이다 — 그 타입으로 건다(새 범위라 겹치지 않는다).
         (void)coreScope.bind( parts._pCommandLine->findCommandLine() );
-        (void)coreScope.bind( parts._pCommandLine->findGlobalVariables() ); // 새 범위라 같은 타입이 걸려 있지 않다(위 설명)
-        (void)coreScope.bind( &parts._pContentRoot->getAssetPaths() );      // 리소스 경로 상태 — 주인은 리소스 루트 서브시스템 하나다
-        (void)coreScope.bind( &parts._pCrashHandler->getHandler() );        // 크래시 처리기 — 주인은 크래시 서브시스템 하나다
+        (void)coreScope.bind( parts._pCommandLine->findGlobalVariables() );     // 새 범위라 같은 타입이 걸려 있지 않다(위 설명)
+        (void)coreScope.bind( &parts._pContentRoot->getAssetPaths() );          // 리소스 경로 상태 — 주인은 리소스 루트 서브시스템 하나다
+        (void)coreScope.bind( &parts._pContentRoot->getResourceTags() );        // 리소스 조건 태그 — 같은 주인
+        (void)coreScope.bind( &parts._pContentRoot->getResourceComposition() ); // 합성 기록 · 덮어쓰기 층 — 같은 주인
+        (void)coreScope.bind( &parts._pCrashHandler->getHandler() );            // 크래시 처리기 — 주인은 크래시 서브시스템 하나다
         return parts;
     }
 

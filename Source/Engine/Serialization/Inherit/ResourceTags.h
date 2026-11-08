@@ -5,17 +5,20 @@
  *          축은 코드 표 하나다. 축마다 값을 넣는 코드(엔진 기동 · 사용자 설정 핸들러 · 현지화 · 데이터 레이어)가 따로 있어 데이터로 늘어나는 정책이 아니기 때문이다(값은 데이터다).
  *          - 쿠킹 축(`platform` · `target`): 쿠커가 펼쳐 쿠킹본에 남지 않는다. 런타임도 같은 값을 들고 있어(엔진 기동이 넣는다) 남은 식도 쿠커와 같은 답을 낸다.
  *          - 로드 축(`quality` · `locale` · `region` · `layer` · `feature` · `flag`): 쿠킹본에 `_when` 이 남고 읽을 때 정한다. 값이 바뀌면 그 태그를 읽은 리소스를 다시 읽는다(`ResourceComposition`).
- *          값은 프로세스에 하나다 — 공유 캐시의 열쇠가 경로뿐이라 문맥이 둘이면 같은 경로가 두 결과를 가져야 한다(`docs/ResourceStructure.md` 의 한계).
+ *          값은 엔진에 하나다 — 공유 캐시의 열쇠가 경로뿐이라 문맥이 둘이면 같은 경로가 두 결과를 가져야 한다(`docs/ResourceStructure.md` 의 한계). 주인은 코어 범위의 리소스 루트
+ *          (`ContentRootSubsystem`)이고 엔진 코드는 `engine::getSubsystem<ResourceTags>()` 로, 서비스 표가 서기 전의 기동 코드는 `CoreParts::_pContentRoot` 로 닿는다.
  *
  *          언리얼은 플랫폼 ini 층과 Device Profile(쿠킹 · 실행 때 CVar 를 고른다), Godot 은 기능 태그(`feature tag`)로 프로젝트 설정 칸을 `칸.태그` 로 덮고,
  *          유니티는 플랫폼별 임포트 설정이 쿠킹 축만 갖는다(모두 기억에 의존). 여기는 Godot 처럼 태그 집합 하나에 묻되, 언리얼처럼 쿠킹 축과 실행 축을 나눠 쿠킹 축은 쿠킹본에서 지운다.
  */
 #pragma once
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/FourCcUtil.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Gameplay/ConditionExpr.h"
 
@@ -95,14 +98,24 @@ namespace sw
         [[nodiscard]] bool evaluate( const ResourceTagSet& tags ) const;
     };
 
+    class ResourceComposition;
+
     /**
-     * @struct ResourceTags
-     * @brief 프로세스의 태그 값과 축 표입니다. 넣는 쪽은 게임 스레드, 읽는 쪽은 로드 워커라 잠금으로 지킵니다.
+     * @class ResourceTags
+     * @brief 엔진의 태그 값과 축 표입니다. 넣는 쪽은 게임 스레드, 읽는 쪽은 로드 워커라 잠금으로 지킵니다. 값이 바뀌면 그 태그에 기댄 리소스를 다시 읽기 기록(`ResourceComposition`)에 알립니다.
+     * @details 예전에는 함수 정적 상태(감춘 싱글턴)였다 — 엔진을 다시 세워도 남고 테스트가 서로 섞였다. 축 표 · 조건 컴파일처럼 상태가 없는 것만 정적이다.
      */
-    struct SW_API ResourceTags
+    class SW_API ResourceTags
     {
+    public:
         static constexpr const utf8* kConditionName = "resourceTag"; ///< 그냥 이름을 받는 조건(`ConditionExpr` 의 `pBareCondition`)
         static constexpr utf8        kSeparator     = '.';           ///< 축과 값을 가른다
+
+        /** @brief @p composition 은 같은 주인(리소스 루트)이 든 다시 읽기 기록이다(이것보다 먼저 서고 나중에 사라진다). */
+        explicit ResourceTags( ResourceComposition& composition );
+
+        ResourceTags( const ResourceTags& )            = delete;
+        ResourceTags& operator=( const ResourceTags& ) = delete;
 
         /** @brief 이름이 @p axisName 인 축입니다. 없으면 nullptr 입니다. */
         [[nodiscard]] static const ResourceTagAxis* findAxis( string_view axisName );
@@ -115,15 +128,15 @@ namespace sw
          * @brief 값 하나 축 @p axisName 의 값을 @p value 로 바꿉니다. 빈 값은 끕니다.
          * @return 모르는 축 · 여러 값 축 · 닫힌 목록에 없는 값이면 오류를 남기고 false 입니다(값을 바꾸지 않는다).
          */
-        [[nodiscard]] static bool setAxisValue( string_view axisName, string_view value );
+        [[nodiscard]] bool setAxisValue( string_view axisName, string_view value );
         /** @brief 여러 값 축 @p axisName 의 값을 @p listValue 로 바꿉니다. 틀리면 `setAxisValue` 처럼 false 입니다. */
-        [[nodiscard]] static bool setAxisValues( string_view axisName, const vector<string>& listValue );
+        [[nodiscard]] bool setAxisValues( string_view axisName, const vector<string>& listValue );
         /** @brief 여러 값 축 @p axisName 의 값 @p value 를 켜거나 끕니다. 틀리면 `setAxisValue` 처럼 false 입니다. */
-        [[nodiscard]] static bool setTagActive( string_view axisName, string_view value, bool bActive );
+        [[nodiscard]] bool setTagActive( string_view axisName, string_view value, bool bActive );
         /** @brief 지금 켜진 태그의 사본입니다. */
-        [[nodiscard]] static ResourceTagSet capture();
+        [[nodiscard]] ResourceTagSet capture() const;
         /** @brief 태그 집합을 통째로 바꾸고 앞의 것을 돌려줍니다. 테스트가 문맥을 세우고 되돌릴 때 씁니다 — 바뀐 태그를 쓴 리소스는 다시 읽을 목록에 오른다. */
-        static ResourceTagSet exchange( const ResourceTagSet& tags );
+        ResourceTagSet exchange( const ResourceTagSet& tags );
 
         /**
          * @brief `_if` 글을 컴파일합니다. 그냥 이름은 태그이고, 태그 조건 말고 다른 조건(`flag` · `chance`)을 부르거나 모르는 축 · 닫힌 목록 밖의 값을 쓰면 오류입니다.
@@ -131,5 +144,16 @@ namespace sw
          * @return 틀리면 까닭을 오류 로그(`ResourceCondition.Invalid`)로 남기고 false 입니다.
          */
         [[nodiscard]] static bool compileTest( string_view text, string_view sourceName, ResourceTagTest& outTest );
+
+    private:
+        /** @brief 태그 집합을 바꾸고 바뀐 태그를 다시 읽기 기록에 알립니다. 잠금 밖에서 알린다(기록은 자기 잠금이 있다). */
+        void replace( const ResourceTagSet& next, ResourceTagSet* pOutPrevious );
+
+    private:
+        ResourceComposition& _composition;
+        mutable mutex        _mutex;
+        ResourceTagSet _tags SW_GUARDED_BY( _mutex );
     };
+
+    SW_SERVICE_SLOT( ResourceTags, Required );
 } // namespace sw

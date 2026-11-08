@@ -17,19 +17,10 @@ namespace sw
     /** @brief 식 파서입니다. 읽으면서 후위 배열을 짓고, 틀리면 `_error` 에 첫 까닭을 적습니다. */
     struct ConditionExprInternal
     {
-        struct RegistryState
-        {
-            mutex                                  _mutex{};
-            RegistrationList<const ConditionEntry> _registration{ "ConditionRegistry", RegistrationOrder::Insertion, true };
-        };
+        /** @brief 등록 목록입니다(함수 정적 — 다른 TU · DLL 의 정적 등록자가 먼저 쓴다). 워커가 읽으므로 고치고 읽을 때 목록의 주인 잠금(`getOwnerMutex`)을 잡는다. */
+        static SW_DEFINE_REGISTRATION_LIST( getRegistrations, const ConditionEntry, "ConditionRegistry", RegistrationOrder::Insertion, true )
 
-        static RegistryState& getRegistry()
-        {
-            static RegistryState s_state;
-            return s_state;
-        }
-
-        static constexpr float64 kMaxLiteral = 100000000.0;
+            static constexpr float64 kMaxLiteral = 100000000.0;
 
         string_view    _text{};
         const utf8*    _pBareCondition{ nullptr };
@@ -456,32 +447,32 @@ namespace sw
 {
     void ConditionRegistry::registerCondition( const ConditionEntry* pEntry )
     {
-        ConditionExprInternal::RegistryState& state = ConditionExprInternal::getRegistry();
-        ScopedLock<mutex>                     lock{ state._mutex };
-        (void)state._registration.addLogged( pEntry, "Condition", pEntry->_pName ); // 거절은 공용 오류 로그가 알린다
+        RegistrationList<const ConditionEntry>& registrations = ConditionExprInternal::getRegistrations();
+        ScopedLock<mutex>                       lock{ registrations.getOwnerMutex() };
+        (void)registrations.addLogged( pEntry, "Condition", pEntry->_pName ); // 거절은 공용 오류 로그가 알린다
     }
 
     void ConditionRegistry::unregisterCondition( const ConditionEntry* pEntry )
     {
-        ConditionExprInternal::RegistryState& state = ConditionExprInternal::getRegistry();
-        ScopedLock<mutex>                     lock{ state._mutex };
-        (void)state._registration.remove( pEntry ); // 올라 있지 않은 줄을 빼는 것은 할 일이 없다
+        RegistrationList<const ConditionEntry>& registrations = ConditionExprInternal::getRegistrations();
+        ScopedLock<mutex>                       lock{ registrations.getOwnerMutex() };
+        (void)registrations.remove( pEntry ); // 올라 있지 않은 줄을 빼는 것은 할 일이 없다
     }
 
     const ConditionEntry* ConditionRegistry::find( string_view name )
     {
-        ConditionExprInternal::RegistryState& state = ConditionExprInternal::getRegistry();
-        ScopedLock<mutex>                     lock{ state._mutex };
-        return state._registration.findByName( name );
+        RegistrationList<const ConditionEntry>& registrations = ConditionExprInternal::getRegistrations();
+        ScopedLock<mutex>                       lock{ registrations.getOwnerMutex() };
+        return registrations.findByName( name );
     }
 
     void ConditionRegistry::collectNames( vector<string>& outListName )
     {
-        ConditionExprInternal::RegistryState& state = ConditionExprInternal::getRegistry();
-        ScopedLock<mutex>                     lock{ state._mutex };
-        for ( uint32 index = 0; index < state._registration.getCount(); ++index )
+        RegistrationList<const ConditionEntry>& registrations = ConditionExprInternal::getRegistrations();
+        ScopedLock<mutex>                       lock{ registrations.getOwnerMutex() };
+        for ( uint32 index = 0; index < registrations.getCount(); ++index )
         {
-            outListName.push_back( state._registration.getNameAt( index ) );
+            outListName.push_back( registrations.getNameAt( index ) );
         }
     }
 

@@ -17,6 +17,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/RegistrationList.h"
 
 #include "Engine/Asset/Cache/AssetCacheBase.h"
 
@@ -43,8 +44,10 @@ namespace sw
     class SW_API BuiltInAssetCacheRegistry
     {
     public:
-        /** @brief 등록 줄을 더합니다. 같은 줄을 두 번 올리면 무시합니다. */
-        static void add( const BuiltInAssetCacheRegistration* pRegistration );
+        /** @brief 등록 줄을 더합니다. 같은 줄을 두 번 올리면 무시합니다(true). 빈 줄은 거절하고 false 입니다. */
+        [[nodiscard]] static bool add( const BuiltInAssetCacheRegistration* pRegistration );
+        /** @brief 등록 줄을 뺍니다(등록한 모듈이 내려갈 때 정적 등록자가 부른다). 올라 있지 않으면 할 일이 없다. */
+        static void remove( const BuiltInAssetCacheRegistration* pRegistration );
         /** @brief 지금까지 올라온 등록 줄입니다(올린 순서). */
         static const vector<const BuiltInAssetCacheRegistration*>& getAll();
     };
@@ -52,13 +55,8 @@ namespace sw
 
 namespace sw
 {
-    /** @brief `SW_BUILT_IN_ASSET_CACHE` 가 두는 정적 등록자입니다. */
-    struct SW_API BuiltInAssetCacheRegistrar
-    {
-        explicit BuiltInAssetCacheRegistrar( const BuiltInAssetCacheRegistration* pRegistration );
-        BuiltInAssetCacheRegistrar( const BuiltInAssetCacheRegistrar& )            = delete;
-        BuiltInAssetCacheRegistrar& operator=( const BuiltInAssetCacheRegistrar& ) = delete;
-    };
+    /** @brief `SW_BUILT_IN_ASSET_CACHE` 가 두는 정적 등록자입니다(공통 틀 `StaticRegistrar` — 모듈이 내려가면 뺀다). */
+    SW_DEFINE_STATIC_REGISTRAR( BuiltInAssetCacheRegistrar, const BuiltInAssetCacheRegistration*, &BuiltInAssetCacheRegistry::add, &BuiltInAssetCacheRegistry::remove );
 
     /** @brief 캐시를 만드는 함수입니다. 캐시 타입이 완전한 자리(그 캐시의 .cpp)에서 실체화합니다. */
     template <typename TCache>

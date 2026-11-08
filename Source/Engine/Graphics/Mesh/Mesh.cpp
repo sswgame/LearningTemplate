@@ -22,6 +22,12 @@ namespace sw
 {
     namespace
     {
+        /** @brief 프로세스 고유 번호 발급기 — 상태가 아니라 번호 공간이다(상수 초기화라 정적 초기화 순서와 무관하다). 함수 정적에 숨기지 않고 파일 범위에 둔다. */
+        atomic<uint64> s_meshNextContentID{ 1 };
+    } // namespace
+
+    namespace
+    {
         /** @brief 강체 스킨 원본 표입니다(키: 원본의 내용 번호) — 에셋 매니저가 내장 캐시로 만들어 소유한다(`Mesh::acquireRigidSkinSource`). */
         class RigidSkinMeshCache final : public WeakInternCache<uint64, Mesh>
         {
@@ -694,8 +700,7 @@ namespace sw
 
     uint64 Mesh::allocateContentID()
     {
-        static atomic<uint64> s_nextContentID{ 1 };
-        return s_nextContentID.fetch_add( 1u, std::memory_order_relaxed );
+        return s_meshNextContentID.fetch_add( 1u, std::memory_order_relaxed );
     }
 
     bool Mesh::initRHI( IRHIDevice* pDevice )

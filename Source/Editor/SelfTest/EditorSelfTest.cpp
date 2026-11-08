@@ -380,6 +380,9 @@ namespace sw::editor
         if ( pSession != nullptr ) // 에디터 컨텍스트가 없으면 돌릴 실행도 없다
             pSession->runFrame();
     }
+
+    // 이 종류의 등록 목록 — EditorModule 이미지에 하나(확장 DLL 의 등록자도 내보낸 이 함수로 오른다).
+    SW_DEFINE_EDITOR_EXTENSION_KIND( EditorSelfTestRegistration )
 } // namespace sw::editor
 
 namespace sw

@@ -114,7 +114,7 @@
 
 언리얼 Composite Data Table 과 팩 우선순위에 해당한다. 층은 순서 있는 목록(`ResourceLayers`, 아래 층이 먼저)이고, 리소스 `X` 의 층 파일 `<뿌리>/X` 는 원본을 암묵적 부모로 가진 차이다(`_base` 를 적으면 오류). 팩 우선순위의 파일 통째 교체와 달리 다른 칸만 적는다.
 
-- 목록은 게임 팩 설정 `<Engine _listResourceLayer>` 의 뿌리(리소스 id 폴더 — `game/<팩>/layers/<이름>`)이고, DLC · 모드 팩을 올리는 쪽이 늘린다(`ResourceLayers::setLayers` — 바뀐 층에 파일이 있던 · 있는 리소스를 다시 읽는다).
+- 목록은 게임 팩 설정 `<Engine _listResourceLayer>` 의 뿌리(리소스 id 폴더 — `game/<팩>/layers/<이름>`)이고, DLC · 모드 팩을 올리는 쪽이 늘린다(`ResourceComposition::setLayers` — 리소스 루트가 든 기록, 바뀐 층에 파일이 있던 · 있는 리소스를 다시 읽는다).
 - 층의 조건(`_when`)은 층의 차이에 얹는다 — 거짓이면 그 차이를 얹지 않는다. 합치기 규칙은 읽는 쪽의 형식에서 온다(리플렉션 형식은 리플렉션 — 배포 런타임에도 있다, 손 형식은 그 규칙 함수, 합치기 함수 형식은 그 함수, 카탈로그는 표).
 - **처음 설계를 바꾼 것:** "게임 쿠킹은 자기 층까지 펼친다" 를 버리고 모든 층을 읽을 때 얹는다. 팩 쿠커는 도메인마다 팩을 굽고(`PackCooker::cookDomainPack`) 공용 도메인(`common` · `engine`) 팩은 게임마다 같아야 하므로, 게임 층을 공용 팩에 펼칠 자리가 없다. 층이 없는 게임은 글 검색 한 번으로 지나간다.
 - 층은 리소스 id 로 읽을 때만 얹는다. 글로 받는 입구(`loadFromXMLText` — 편집기 미리 보기 · 테스트)는 id 가 없어 얹지 않는다. 형식의 `loadFromAsset` 은 그 형식의 문맥에 `withAsset` 을 실어 넘긴다(`loadComposed`). 머티리얼 · 씬처럼 범용 문서 입구로 읽던 손 형식은 `XMLDocument::loadResourceAs` 로 규칙을 골라 층이 표에 없는 규칙을 찾다 멈추지 않는다.

@@ -173,8 +173,8 @@ namespace sw
                 _exporter.resyncClock( *pBackend, gpuNow );
         }
 
-        static const ProfileZoneSite* s_pFrameSite   = ProfilerBackend::registerZoneSite( "GPU Frame", "GPU frame", "Engine/Renderer", 0u );
-        static const ProfileZoneSite* s_pComputeSite = ProfilerBackend::registerZoneSite( "Compute prepass", "GPU frame", "Engine/Renderer", 1u );
+        static const ProfileZoneSite* const s_pFrameSite   = ProfilerBackend::registerZoneSite( "GPU Frame", "GPU frame", "Engine/Renderer", 0u );
+        static const ProfileZoneSite* const s_pComputeSite = ProfilerBackend::registerZoneSite( "Compute prepass", "GPU frame", "Engine/Renderer", 1u );
         if ( s_pFrameSite == nullptr || s_pComputeSite == nullptr )
             return;
 

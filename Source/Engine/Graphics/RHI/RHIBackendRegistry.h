@@ -23,7 +23,7 @@ namespace sw
 {
     class IRHIDevice;
 
-    using RHIDeviceFactoryDelegate = Delegate<unique_ptr<IRHIDevice>()>;
+    using RHIDeviceFactoryDelegate = Delegate<unique_ptr<IRHIDevice>( uint32 deviceGeneration )>;
 
     // ------------------------------------------------------------------------------
     // 1) RHIBackendEntry: 백엔드 + 팩토리 + capability
@@ -45,7 +45,7 @@ namespace sw
      */
     struct SW_API RHIStaticBackendRegistrar
     {
-        using CreateFunction = IRHIDevice* (*)();
+        using CreateFunction = IRHIDevice* (*)( uint32 deviceGeneration );
 
         RHIBackend                       _backend;
         CreateFunction                   _pCreate;
@@ -96,8 +96,12 @@ namespace sw
          */
         string describeRegisteredBackends() const;
 
-        /** @brief 등록된 팩토리로 IRHIDevice 를 만듭니다. */
-        unique_ptr<IRHIDevice> createDevice( RHIBackend backend ) const;
+        /**
+         * @brief 등록된 팩토리로 IRHIDevice 를 만듭니다. 장치마다 이 등록표가 새 세대 번호(0 이 아니고 늘기만 한다)를 붙인다.
+         * @details 세대는 장치가 발급하는 전송 티켓에 실린다 — 백엔드를 바꾸면 새 장치의 세대가 달라 옛 장치의 티켓이 새 장치에서 `Complete` 로 보이지 않는다.
+         *          번호 공간의 주인은 장치를 만드는 이 등록표다(프로세스 전역 발급기를 두지 않는다 — 사용자 지적 2026-11-08). 언리얼도 장치 재생성을 RHI 모듈이 맡는다.
+         */
+        unique_ptr<IRHIDevice> createDevice( RHIBackend backend );
 
         // ------------------------------------------------------------------------------
         // 3) MODULE: createRHIDevice export DLL, 언로드 전 디바이스 파괴 필수
@@ -124,6 +128,7 @@ namespace sw
     private:
         vector<RHIBackendEntry> _listEntry;
         vector<LoadedModule>    _listLoadedModule;
+        uint32                  _lastDeviceGeneration; ///< `createDevice` 가 마지막으로 붙인 장치 세대(0 은 "세대 없음")
     };
 
     SW_SERVICE_SLOT( RHIBackendRegistry, Required );

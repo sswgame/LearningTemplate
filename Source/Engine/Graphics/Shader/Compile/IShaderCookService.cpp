@@ -2,29 +2,31 @@
 
 #include "Engine/Graphics/Shader/Compile/IShaderCookService.h"
 
+#include "Core/String/RegistrationSlot.h"
+
 namespace sw
 {
     namespace
     {
         struct ShaderCookServiceInternal
         {
-            /** @brief 등록된 창구입니다. 함수 안 정적 변수라 등록자의 정적 초기화 순서와 무관하다. */
-            static IShaderCookService*& slot()
-            {
-                static IShaderCookService* s_pService = nullptr;
-                return s_pService;
-            }
+            /** @brief 걸린 창구입니다(이미지에 하나 — 둘째는 거절). 함수 정적이라 등록자의 정적 초기화 순서와 무관하다. */
+            static SW_DEFINE_REGISTRATION_SLOT( getSlot, IShaderCookService, "ShaderCookService" )
         };
     } // namespace
 
     IShaderCookService* IShaderCookService::find()
     {
-        return ShaderCookServiceInternal::slot();
+        return ShaderCookServiceInternal::getSlot().get();
     }
 
-    IShaderCookService::Registration::Registration( IShaderCookService& service )
+    bool IShaderCookService::attach( IShaderCookService* pService )
     {
-        SW_ASSERT( ShaderCookServiceInternal::slot() == nullptr ); // 이미지에 하나다 — 둘이면 등록의 잘못이다
-        ShaderCookServiceInternal::slot() = &service;
+        return ShaderCookServiceInternal::getSlot().setLogged( pService, "Shader cook service", "ShaderCookService" ) == RegistrationResult::Added;
+    }
+
+    void IShaderCookService::detach( IShaderCookService* pService )
+    {
+        (void)ShaderCookServiceInternal::getSlot().reset( pService );
     }
 } // namespace sw

@@ -247,7 +247,7 @@ namespace sw::editor
      */
     struct EditorCommandRegistration : EditorExtensionRegistration
     {
-        static constexpr const utf8* kKindName = "command";
+        SW_EDITOR_EXTENSION_KIND( "command" );
 
         EditorCommandActionFn  _pfnAction;  ///< 대상을 받는 동작(등록 줄이 인자 없는 함수를 `EditorCommandTargetUtil::toAction` 으로 맞춘다)
         EditorCommandEnabledFn _pfnEnabled; ///< nullptr 이면 늘 켜져 있다

@@ -411,4 +411,7 @@ namespace sw::editor
         if ( DebugKeyActions::saveUserBindings( _map, getUserBindingsPath() ) == false )
             SW_LOG_WARNING_ID( "Editor.EditorInputActionsUserBindingsCould2", "EditorInputActions: the user bindings '%#' could not be written", getUserBindingsPath().c_str() );
     }
+
+    // 이 종류의 등록 목록 — EditorModule 이미지에 하나(확장 DLL 의 등록자도 내보낸 이 함수로 오른다).
+    SW_DEFINE_EDITOR_EXTENSION_KIND( EditorInputMapRegistration )
 } // namespace sw::editor

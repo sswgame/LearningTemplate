@@ -115,7 +115,6 @@ namespace sw
         atomic<uint64>        _arrFrameBeginNanos[kFrameCapacity];
         atomic<uint64>        _frameWriteCount;
         atomic<uint32>        _threadCount;
-        uint32                _generation; ///< 이 타임라인의 고유 번호 — 스레드 지역 캐시가 다른(이미 종료된) 타임라인의 버퍼를 쓰지 않게 한다
         atomic<bool>          _bRecording;
 #if !defined( SW_SHIPPING )
         atomic<uint32> _longLimit; ///< 긴 캡처의 스레드당 사건 수 상한(0 = 꺼짐)

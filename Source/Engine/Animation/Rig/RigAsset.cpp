@@ -24,6 +24,12 @@
 // RigNodeLibrary — 이 파일만 쓴다(한 파일 전용 도우미는 따로 헤더를 두지 않는다)
 namespace sw
 {
+    namespace
+    {
+        /** @brief 프로세스 고유 번호 발급기 — 상태가 아니라 번호 공간이다(상수 초기화라 정적 초기화 순서와 무관하다). 함수 정적에 숨기지 않고 파일 범위에 둔다. */
+        atomic<uint64> s_rigAssetNextContentID{ 1 };
+    } // namespace
+
     class RigNodeRegistry;
 
     /** @brief 엔진 노드 등록 함수 모음입니다(`RigNodeRegistry` 의 생성자가 부릅니다). */
@@ -52,8 +58,7 @@ namespace sw
         /** @brief 다음 내용 번호입니다(0 은 "읽지 않음"). */
         uint64 allocateContentID()
         {
-            static atomic<uint64> s_nextContentID{ 1 };
-            return s_nextContentID.fetch_add( 1, std::memory_order_relaxed );
+            return s_rigAssetNextContentID.fetch_add( 1, std::memory_order_relaxed );
         }
 
         struct RigAssetInternal

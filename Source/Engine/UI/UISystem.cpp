@@ -1073,9 +1073,9 @@ namespace sw
         const utf8* const pScreen      = widthDp < _scaleSettings._compactMaxWidth ? "compact" : "regular";
         const utf8* const pOrientation = viewport._size._y > viewport._size._x ? "portrait" : "landscape";
         // 값은 축 표의 상수 글이라 주소로 견준다(같은 글 상수 — 위 두 줄이 유일한 출처다).
-        if ( pScreen != _pScreenTag && ResourceTags::setAxisValue( "screen", pScreen ) )
+        if ( pScreen != _pScreenTag && engine::getSubsystem<ResourceTags>().setAxisValue( "screen", pScreen ) )
             _pScreenTag = pScreen;
-        if ( pOrientation != _pOrientationTag && ResourceTags::setAxisValue( "orientation", pOrientation ) )
+        if ( pOrientation != _pOrientationTag && engine::getSubsystem<ResourceTags>().setAxisValue( "orientation", pOrientation ) )
             _pOrientationTag = pOrientation;
     }
 

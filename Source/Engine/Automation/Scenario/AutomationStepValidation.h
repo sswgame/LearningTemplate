@@ -11,6 +11,7 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/String/RegistrationList.h"
 
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 
@@ -86,16 +87,8 @@ namespace sw
 
 namespace sw
 {
-    /** @brief `SW_AUTOMATION_STEP_VALIDATOR` 가 두는 정적 등록자입니다. 등록이 거절됐으면 내릴 때 빼지 않습니다(앞 등록을 지우지 않게). */
-    struct SW_API AutomationStepValidatorRegistrar
-    {
-
-        const AutomationStepValidatorRegistration* _pRegistration;
-        explicit AutomationStepValidatorRegistrar( const AutomationStepValidatorRegistration* pRegistration );
-        ~AutomationStepValidatorRegistrar();
-        AutomationStepValidatorRegistrar( const AutomationStepValidatorRegistrar& )            = delete;
-        AutomationStepValidatorRegistrar& operator=( const AutomationStepValidatorRegistrar& ) = delete;
-    };
+    /** @brief `SW_AUTOMATION_STEP_VALIDATOR` 가 두는 정적 등록자입니다. 등록이 거절됐으면 내릴 때 빼지 않습니다(앞 등록을 지우지 않게)(공통 틀 `StaticRegistrar`). */
+    SW_DEFINE_STATIC_REGISTRAR( AutomationStepValidatorRegistrar, const AutomationStepValidatorRegistration*, &AutomationStepRegistry::registerValidator, &AutomationStepRegistry::unregisterValidator );
 } // namespace sw
 
 #if !defined( SW_SHIPPING )
@@ -104,12 +97,7 @@ namespace sw
      * @brief 단계 종류의 검사 함수만 등록합니다(.cpp 의 파일 범위). 단계를 등록하는 모듈(에디터 · App)이 올라오지 않은 프로세스(nogpu 테스트)도 시나리오 데이터를 검사하게 한다.
      * @details 검사 함수는 단계 등록(`SW_AUTOMATION_STEP`)이 받는 함수와 같아야 한다. 검사 함수를 ImGui · 렌더에 기대지 않는 파일에 두면 이 줄도 거기 둔다.
      */
-    #define SW_AUTOMATION_STEP_VALIDATOR( id, pKind, pValidate )                                                    \
-        static const ::sw::AutomationStepValidatorRegistration sw_automationStepValidator_##id{ pKind, pValidate }; \
-        static const ::sw::AutomationStepValidatorRegistrar    sw_automationStepValidatorRegistrar_##id             \
-        {                                                                                                           \
-            &sw_automationStepValidator_##id                                                                        \
-        }
+    #define SW_AUTOMATION_STEP_VALIDATOR( id, pKind, pValidate ) SW_STATIC_REGISTRATION( automationStepValidator, ::sw::AutomationStepValidatorRegistration, ::sw::AutomationStepValidatorRegistrar, id, pKind, pValidate )
 
     /** @brief 스키마 구조체 @p TParams 만 읽으면 되는 단계의 검사만 등록합니다(`SW_AUTOMATION_STEP_VALIDATOR` 에 `AutomationStep::validateFields<TParams>` 를 준 것). 쓰는 .cpp 는 `AutomationScenario.h` 를 포함합니다. */
     #define SW_AUTOMATION_STEP_SCHEMA( id, pKind, TParams ) SW_AUTOMATION_STEP_VALIDATOR( id, pKind, &::sw::AutomationStep::validateFields<TParams> )

@@ -6,6 +6,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
@@ -53,14 +54,14 @@ namespace
     {
     public:
         XSaveTagScope()
-            : _previous{ ResourceTags::exchange( Util::makeLow() ) }
+            : _previous{ engine::getSubsystem<ResourceTags>().exchange( Util::makeLow() ) }
         {
         }
         ~XSaveTagScope()
         {
-            (void)ResourceTags::exchange( _previous );
+            (void)engine::getSubsystem<ResourceTags>().exchange( _previous );
             vector<string> listPending;
-            ResourceComposition::takePendingReload( listPending );
+            engine::getSubsystem<ResourceComposition>().takePendingReload( listPending );
         }
         XSaveTagScope( const XSaveTagScope& )            = delete;
         XSaveTagScope& operator=( const XSaveTagScope& ) = delete;
@@ -178,11 +179,11 @@ SW_TEST_CASE( ResourceSaveConditionTest, LayeredResourceIsNotSavedOverTheOrigina
 {
     const ScopedScratchDomain domain;
     const XSaveTagScope       scope;
-    const vector<string>      listPreviousLayer = ResourceLayers::getLayers();
+    const vector<string>      listPreviousLayer = engine::getSubsystem<ResourceComposition>().getLayers();
     (void)domain.makeDiskFolder( "layers/night/testproject" );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "layers/night/testproject/doc.xml" ), R"(<Doc a="layer" />)" ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "doc.xml" ), R"(<Doc a="base" />)" ) );
-    SW_REQUIRE_TRUE( ResourceLayers::setLayers( { ScopedScratchDomain::makeID( "layers/night" ).str() } ) );
+    SW_REQUIRE_TRUE( engine::getSubsystem<ResourceComposition>().setLayers( { ScopedScratchDomain::makeID( "layers/night" ).str() } ) );
 
     const AssetID id = ScopedScratchDomain::makeID( "doc.xml" );
     string        flatText;
@@ -196,7 +197,7 @@ SW_TEST_CASE( ResourceSaveConditionTest, LayeredResourceIsNotSavedOverTheOrigina
     SW_REQUIRE_TRUE( FileUtil::readTextFile( domain.makeDiskPath( "doc.xml" ), onDisk ) );
     SW_EXPECT_TRUE( onDisk.find( "base" ) != string::npos );
 
-    SW_REQUIRE_TRUE( ResourceLayers::setLayers( listPreviousLayer ) );
+    SW_REQUIRE_TRUE( engine::getSubsystem<ResourceComposition>().setLayers( listPreviousLayer ) );
 }
 
 /**

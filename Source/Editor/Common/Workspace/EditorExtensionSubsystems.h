@@ -25,7 +25,7 @@ namespace sw::editor
      */
     struct EditorSubsystemRegistration : EditorExtensionRegistration
     {
-        static constexpr const utf8* kKindName = "subsystem";
+        SW_EDITOR_EXTENSION_KIND( "subsystem" );
         /** @brief 같은 모듈의 패널 · 명령이 쓴다 — 그것들이 먼저 내려가게 나중에 뗀다. */
         static constexpr uint32 kDetachPass = 1;
 

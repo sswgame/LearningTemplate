@@ -9,11 +9,7 @@ namespace sw
     namespace
     {
         /** @brief 등록된 리스너(이름 순). Engine 이미지의 함수 정적이라 등록한 이미지보다 오래 산다. */
-        RegistrationList<const AudioRenderListenerRegistration>& getAudioRenderListenerRegistrations()
-        {
-            static RegistrationList<const AudioRenderListenerRegistration> s_registration{ "AudioRenderListenerRegistry", RegistrationOrder::ByOrderThenName, true };
-            return s_registration;
-        }
+        SW_DEFINE_REGISTRATION_LIST( getAudioRenderListenerRegistrations, const AudioRenderListenerRegistration, "AudioRenderListenerRegistry", RegistrationOrder::ByOrderThenName, true )
     } // namespace
 
     bool AudioRenderListenerRegistry::registerListener( const AudioRenderListenerRegistration* pRegistration )
@@ -50,16 +46,5 @@ namespace sw
         {
             registrations.getAt( index )->_pListener->onStreamEnded( layout );
         }
-    }
-
-    AudioRenderListenerRegistrar::AudioRenderListenerRegistrar( const AudioRenderListenerRegistration* pRegistration )
-        : _pRegistration{ AudioRenderListenerRegistry::registerListener( pRegistration ) ? pRegistration : nullptr }
-    {
-    }
-
-    AudioRenderListenerRegistrar::~AudioRenderListenerRegistrar()
-    {
-        if ( _pRegistration != nullptr )
-            AudioRenderListenerRegistry::unregisterListener( _pRegistration );
     }
 } // namespace sw

@@ -67,22 +67,6 @@ namespace sw::editor
                 return editor::getSubsystem<FontService>().findSystemFontFile( pFileName );
             }
 
-            /**
-             * @brief 우선순위 순서로 나열된 폰트 파일명 목록 중 가장 먼저 존재하는 폰트의 절대 경로를 반환합니다.
-             */
-            /** @brief `apply` 가 만든 글꼴과 em 비입니다(글꼴은 ImGui 아틀라스가 소유한다). */
-            struct FontState
-            {
-                ImFont* _pMonoFont{ nullptr };
-                float32 _baseEmRatio{ 0.0f }; ///< 본문 글꼴의 (어센더 - 디센더) / em
-                float32 _monoEmRatio{ 0.0f }; ///< 고정폭 글꼴의 (어센더 - 디센더) / em
-            };
-            static FontState& state()
-            {
-                static FontState s_state;
-                return s_state;
-            }
-
             /** @brief 글꼴 파일의 (어센더 - 디센더) / em 입니다 — ImGui FreeType 로더가 크기를 맞추는 높이다. 읽지 못하면 오류를 남기고 false 다. */
             [[nodiscard]] static bool readEmRatio( const string& path, float32& outRatio )
             {
@@ -155,12 +139,11 @@ namespace sw::editor
         const bool bFontMissing = basePath.empty() || monoPath.empty() || koreanPath.empty() || kanaPath.empty() || iconPath.empty();
         if ( bFontMissing )
             return false;
-        EditorFontSetupInternal::FontState& fontState = EditorFontSetupInternal::state();
-        if ( EditorFontSetupInternal::readEmRatio( basePath, fontState._baseEmRatio ) == false ||
-             EditorFontSetupInternal::readEmRatio( monoPath, fontState._monoEmRatio ) == false )
+        ImGui::GetIO().UserData = this; // 이 컨텍스트의 글꼴 구성 — 패널의 고정폭 글꼴 · 테마의 크기 바꾸기가 찾는다
+        if ( EditorFontSetupInternal::readEmRatio( basePath, _baseEmRatio ) == false || EditorFontSetupInternal::readEmRatio( monoPath, _monoEmRatio ) == false )
             return false;
-        const float32 baseSize = fontSize * fontState._baseEmRatio;
-        const float32 monoSize = fontSize * fontState._monoEmRatio;
+        const float32 baseSize = fontSize * _baseEmRatio;
+        const float32 monoSize = fontSize * _monoEmRatio;
 
         ImFont* pBaseFont{ nullptr };
         BLOCK( "Base Font" )
@@ -221,26 +204,46 @@ namespace sw::editor
             io.Fonts->AddFontFromFileTTF( koreanPath.c_str(), monoSize, &mergeConfig, io.Fonts->GetGlyphRangesKorean() );
             io.Fonts->AddFontFromFileTTF( kanaPath.c_str(), monoSize, &mergeConfig, io.Fonts->GetGlyphRangesJapanese() );
             mergeIcons( monoSize );
-            fontState._pMonoFont = pMonoFont;
+            _monoFontIndex = static_cast<uint32>( io.Fonts->Fonts.index_from_ptr( io.Fonts->Fonts.find( pMonoFont ) ) ); // 병합 글꼴은 이 글꼴에 더해진다 — 번호는 그대로다
         }
 
         io.FontDefault = pBaseFont;
         return true;
     }
 
+    EditorFontSetup::EditorFontSetup()
+        : _monoFontIndex{ 0 }
+        , _baseEmRatio{ 0.0f }
+        , _monoEmRatio{ 0.0f }
+    {
+    }
+
+    EditorFontSetup::~EditorFontSetup()
+    {
+        if ( ImGui::GetCurrentContext() != nullptr && ImGui::GetIO().UserData == this )
+            ImGui::GetIO().UserData = nullptr;
+    }
+
+    const EditorFontSetup& EditorFontSetup::getActive()
+    {
+        const EditorFontSetup* const pActive = static_cast<const EditorFontSetup*>( ImGui::GetIO().UserData );
+        SW_ASSERT( pActive != nullptr ); // EditorFontSetup::apply 가 먼저 돈다(에디터 기동이 글꼴 → 테마 순)
+        return *pActive;
+    }
+
     float32 EditorFontSetup::toBaseFontSize( float32 emSize )
     {
-        const float32 ratio = EditorFontSetupInternal::state()._baseEmRatio;
+        const float32 ratio = getActive()._baseEmRatio;
         SW_ASSERT( ratio > 0.0f ); // EditorFontSetup::apply 가 먼저 돈다(에디터 기동이 글꼴 → 테마 순)
         return emSize * ratio;
     }
 
     void EditorFontSetup::pushMonoFont()
     {
-        const EditorFontSetupInternal::FontState& fontState = EditorFontSetupInternal::state();
-        SW_ASSERT( fontState._pMonoFont != nullptr ); // EditorFontSetup::apply 가 먼저 돈다
+        const EditorFontSetup& fontState = getActive();
+        SW_ASSERT( fontState._monoEmRatio > 0.0f ); // EditorFontSetup::apply 가 먼저 돈다
         // 지금 크기(본문 글꼴 단위)를 em 으로 되돌려 고정폭 글꼴 단위로 다시 곱한다 — 두 글꼴의 em 이 같아진다.
-        ImGui::PushFont( fontState._pMonoFont, ImGui::GetStyle().FontSizeBase / fontState._baseEmRatio * fontState._monoEmRatio );
+        ImGui::PushFont( ImGui::GetIO().Fonts->Fonts[fontState._monoFontIndex], ImGui::GetStyle().FontSizeBase / fontState._baseEmRatio * fontState._monoEmRatio );
     }
 
     void EditorFontSetup::popMonoFont()

@@ -140,6 +140,8 @@ namespace sw
          * @return 경로가 `cpu/` 가 아니거나, 이미 있거나, 크기가 틀리면 false 입니다.
          */
         [[nodiscard]] bool createCPUTexture( string_view relativePath, uint32 width, uint32 height, vector<uint8> rgbaBytes );
+        /** @brief 이 캐시에서 겹치지 않는 CPU 텍스처 경로(`cpu/<stem><번호>`)를 새로 냅니다. 놓인 경로를 다시 쓰지 않도록 번호는 늘기만 한다 — 번호 공간의 주인은 경로 공간의 주인(이 캐시)이다. */
+        [[nodiscard]] string makeUniqueCPUTexturePath( string_view stem );
         /** @brief `createCPUTexture` 로 만든 항목을 놓습니다(게임 스레드). 빌린 머티리얼이 남아 있으면 그쪽의 마지막 `release` 가 지웁니다. */
         void releaseCPUTexture( string_view relativePath );
         /**
@@ -228,6 +230,7 @@ namespace sw
         shared_ptr<Impl> _impl; ///< 로드 작업이 약한 참조로 가리킨다 — 캐시가 먼저 사라지면 로드 작업은 놓을 것이 없다
         /// @brief 엔진 범위에 `IRenderTargetDeclarationSink` 로 거는 객체입니다(`getRenderTargetDeclarationSink`).
         RenderTargetDeclarationSink _renderTargetDeclarationSink;
+        atomic<uint32>              _cpuTextureSerial; ///< `makeUniqueCPUTexturePath` 의 다음 번호
     };
 } // namespace sw
 

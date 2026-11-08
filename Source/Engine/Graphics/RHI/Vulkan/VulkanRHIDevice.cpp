@@ -51,7 +51,7 @@
 
 namespace sw
 {
-    VulkanRHIDevice::VulkanRHIDevice()
+    VulkanRHIDevice::VulkanRHIDevice( uint32 deviceGeneration )
         : _instance{ nullptr }
         , _debugMessenger{ nullptr }
         , _physicalDevice{ nullptr }
@@ -144,7 +144,7 @@ namespace sw
         , _dummyUBOMemory{ nullptr }
         , _pipelineStates{}
         , _pipelineCache{ nullptr }
-        , _transferSerials{}
+        , _transferSerials{ deviceGeneration }
         , _readbackTable{}
         , _transferFenceQueue{ _transferSerials }
         , _transferReleaseQueue{}

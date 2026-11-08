@@ -4,12 +4,9 @@
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/RegistrationList.h"
 #include "Core/String/StringBuilder.h"
-
-#include <algorithm>
 
 namespace sw
 {
@@ -17,169 +14,52 @@ namespace sw
     {
         struct AssetTypeRegistryInternal
         {
-            /** @brief 접미사 표의 한 칸 — 길이 내림차순(같으면 올린 순)으로 늘어놓는다. */
-            struct SuffixEntry
-            {
-                const AssetTypeDef* _pType;
-                const AssetSuffix*  _pSuffix;
-                uint64              _order; ///< 올린 순번(길이가 같을 때 앞선 것이 이긴다)
-
-                static bool isLongerFirst( const SuffixEntry& left, const SuffixEntry& right )
-                {
-                    if ( left._pSuffix->_text.size() != right._pSuffix->_text.size() )
-                        return left._pSuffix->_text.size() > right._pSuffix->_text.size();
-                    return left._order < right._order;
-                }
-            };
-
             /**
-             * @brief 표 전체와 그 표를 읽고 바꾸는 일입니다. 모든 멤버가 스스로 잠근다. 정적 초기화 순서와 무관하게 처음 쓸 때 만든다(`getTable`).
-             * @details 종류 목록은 공용 `RegistrationList`(이름 · 대소문자 무시)라 핫 리로드가 올리는 교체 이미지의 같은 이름을 대체하고 옛 이미지가 내려가면
-             *          그대로 남는다(손짠 목록은 교체 등록을 "두 번 올렸다" 로 거절해 옛 이미지가 내려간 뒤 종류가 사라졌다). 접미사 표는 그 목록에서 다시 짓는 파생물이다.
+             * @brief 올린 종류 목록입니다(이름 · 대소문자 무시, 함수 정적 — 정적 초기화 순서와 무관하게 처음 쓸 때 선다). 잠금은 목록의 주인 잠금(`getOwnerMutex`)이다.
+             * @details 공용 `RegistrationList` 라 핫 리로드가 올리는 교체 이미지의 같은 이름을 대체하고 옛 이미지가 내려가면 그대로 남는다. 접미사 찾기는 이 목록을 그대로 훑는다
+             *          (예전에는 파생 접미사 표를 따로 들고 등록마다 다시 지었다 — 종류는 백 개 안팎이라 훑기로 충분하다).
              */
-            class Table
+            static SW_DEFINE_REGISTRATION_LIST( getTypes, const AssetTypeDef, "AssetTypeRegistry", RegistrationOrder::Insertion, true, NameCase::IgnoreCase )
+
+                /** @brief 받지 못한 등록입니다(겹친 이름 · 접미사 · JSON 으로 그대로 읽는 접미사). 까닭은 `collectProblems` 가 목록과 견줘 다시 낸다 — 문장을 들고 있지 않는다. */
+                static SW_DEFINE_REGISTRATION_LIST( getRejected, const AssetTypeDef, "AssetTypeRejected" )
+
+                /** @brief @p def 의 접미사 중 그대로 읽는데 JSON 인 것입니다. 없으면 nullptr 입니다. */
+                static const AssetSuffix* findDisallowedSuffix( const AssetTypeDef& def )
             {
-            public:
-                Table()
-                    : _mutex{}
-                    , _listType{ "AssetTypeRegistry", RegistrationOrder::Insertion, true, NameCase::IgnoreCase }
-                    , _listSuffix{}
-                    , _listProblem{}
+                for ( uint32 index = 0; index < def._suffixCount; ++index )
                 {
+                    if ( AssetTypeRegistry::isSuffixFormatAllowed( def._pSuffix[index] ) == false )
+                        return &def._pSuffix[index];
                 }
+                return nullptr;
+            }
 
-                /** @brief 종류 하나를 올립니다. 접미사 형식 · 겹침 · 이름이 틀리면 문제 한 줄을 남기고 올리지 않는다. */
-                void registerType( const AssetTypeDef& def )
-                {
-                    ScopedLock<mutex> lock{ _mutex };
-                    for ( uint32 index = 0; index < def._suffixCount; ++index )
-                    {
-                        if ( AssetTypeRegistry::isSuffixFormatAllowed( def._pSuffix[index] ) == false )
-                        {
-                            addProblem( "asset suffix read as-is must be XML or binary, not JSON", def._name, def._pSuffix[index]._text );
-                            return;
-                        }
-                    }
-                    for ( uint32 index = 0; index < def._suffixCount; ++index )
-                    {
-                        for ( const SuffixEntry& entry : _listSuffix )
-                        {
-                            // 같은 이름의 종류는 접미사가 겹쳐도 여기서 거절하지 않는다 — 리로드면 대체, 아니면 목록이 이름 중복으로 거절한다.
-                            if ( StringUtil::equals( entry._pType->_name, def._name, true ) )
-                                continue;
-                            if ( StringUtil::equals( entry._pSuffix->_text, def._pSuffix[index]._text, true ) )
-                            {
-                                addProblem( "asset suffix claimed by two types", entry._pType->_name, def._name );
-                                return;
-                            }
-                        }
-                    }
-                    const RegistrationResult result = _listType.add( &def, def._name );
-                    if ( result == RegistrationResult::DuplicateName )
-                    {
-                        addProblem( "asset type name registered twice", _listType.findByName( def._name )->_name, def._name );
-                        return;
-                    }
-                    if ( result == RegistrationResult::EmptyName )
-                    {
-                        addProblem( "asset type has no name", def._name, def._name );
-                        return;
-                    }
-                    rebuildSuffixes();
-                }
-
-                void unregisterType( const AssetTypeDef& def )
-                {
-                    ScopedLock<mutex> lock{ _mutex };
-                    if ( _listType.remove( &def ) ) // 빼면 대체당했던 옛 등록이 돌아올 수 있다 — 접미사 표를 다시 짓는다
-                        rebuildSuffixes();
-                }
-
-                const AssetTypeDef* findType( string_view name )
-                {
-                    ScopedLock<mutex> lock{ _mutex };
-                    return _listType.findByName( name );
-                }
-
-                void collectPathMatches( string_view assetID, vector<const AssetTypeDef*>& outListType )
-                {
-                    ScopedLock<mutex> lock{ _mutex };
-                    for ( const AssetTypeDef* pType : _listType.getItems() )
-                    {
-                        if ( pType->_pathRule.matches( assetID ) )
-                            outListType.push_back( pType );
-                    }
-                }
-
-                vector<const AssetTypeDef*> collectTypes()
-                {
-                    ScopedLock<mutex> lock{ _mutex };
-                    return _listType.getItems();
-                }
-
-                AssetSuffixMatch findSuffix( string_view path )
-                {
-                    ScopedLock<mutex> lock{ _mutex };
-                    for ( const SuffixEntry& entry : _listSuffix )
-                    {
-                        if ( StringUtil::endsWith( path, entry._pSuffix->_text, true ) )
-                            return AssetSuffixMatch{ entry._pType, entry._pSuffix };
-                    }
-                    return AssetSuffixMatch{};
-                }
-
-                bool hasExcludeGroup( string_view group )
-                {
-                    ScopedLock<mutex> lock{ _mutex };
-                    for ( const AssetTypeDef* pType : _listType.getItems() )
-                    {
-                        if ( group.empty() == false && StringUtil::equals( pType->_excludeGroup, group, true ) )
-                            return true;
-                    }
-                    return false;
-                }
-
-                void collectProblems( vector<string>& outListProblem )
-                {
-                    ScopedLock<mutex> lock{ _mutex };
-                    outListProblem.insert( outListProblem.end(), _listProblem.begin(), _listProblem.end() );
-                }
-
-            private:
-                /** @brief 접미사 표를 종류 목록(올린 순)에서 다시 짓습니다 — 가장 긴 것이 먼저, 길이가 같으면 올린 순. 잠금 안에서 부른다. */
-                void rebuildSuffixes() SW_REQUIRES_LOCK( _mutex )
-                {
-                    _listSuffix.clear();
-                    uint64 order = 0;
-                    for ( const AssetTypeDef* pType : _listType.getItems() )
-                    {
-                        for ( uint32 index = 0; index < pType->_suffixCount; ++index )
-                        {
-                            _listSuffix.push_back( SuffixEntry{ pType, &pType->_pSuffix[index], order++ } );
-                        }
-                    }
-                    VectorUtil::stableSort( _listSuffix, &SuffixEntry::isLongerFirst );
-                }
-
-                /** @brief 문제 한 줄을 남깁니다(잠금 안에서 부른다). */
-                void addProblem( string_view what, string_view first, string_view second ) SW_REQUIRES_LOCK( _mutex )
-                {
-                    StringBuilder<constant::buffer::kMax256> sb;
-                    sb.appendFormat( "%#: '%#' and '%#'", what, first, second );
-                    _listProblem.emplace_back( sb.c_str(), sb.size() );
-                }
-
-            private:
-                mutex                                          _mutex;
-                RegistrationList<const AssetTypeDef> _listType SW_GUARDED_BY( _mutex );
-                vector<SuffixEntry> _listSuffix                SW_GUARDED_BY( _mutex );
-                vector<string> _listProblem                    SW_GUARDED_BY( _mutex );
-            };
-
-            static Table& getTable()
+            /** @brief @p def 의 접미사를 이름이 다른 올린 종류가 이미 쥐었으면 그 종류입니다(잠금 안에서 부른다). 같은 이름은 리로드 대체 · 이름 중복이라 여기서 보지 않는다. */
+            static const AssetTypeDef* findSuffixOwner( const AssetTypeDef& def )
             {
-                static Table s_table;
-                return s_table;
+                for ( const AssetTypeDef* pType : getTypes().getItems() )
+                {
+                    if ( pType == &def || StringUtil::equals( pType->_name, def._name, true ) )
+                        continue;
+                    for ( uint32 own = 0; own < pType->_suffixCount; ++own )
+                    {
+                        for ( uint32 index = 0; index < def._suffixCount; ++index )
+                        {
+                            if ( StringUtil::equals( pType->_pSuffix[own]._text, def._pSuffix[index]._text, true ) )
+                                return pType;
+                        }
+                    }
+                }
+                return nullptr;
+            }
+
+            /** @brief 문제 한 줄입니다. */
+            static string makeProblem( string_view what, string_view first, string_view second )
+            {
+                StringBuilder<constant::buffer::kMax256> sb;
+                sb.appendFormat( "%#: '%#' and '%#'", what, first, second );
+                return string( sb.c_str(), sb.size() );
             }
         };
     } // namespace
@@ -200,7 +80,17 @@ namespace sw
 
     void AssetTypeRegistry::registerType( const AssetTypeDef& def )
     {
-        AssetTypeRegistryInternal::getTable().registerType( def );
+        RegistrationList<const AssetTypeDef>& types = AssetTypeRegistryInternal::getTypes();
+        ScopedLock<mutex>                     lock{ types.getOwnerMutex() };
+        const bool                            bRejected = AssetTypeRegistryInternal::findDisallowedSuffix( def ) != nullptr || AssetTypeRegistryInternal::findSuffixOwner( def ) != nullptr;
+        if ( bRejected )
+        {
+            (void)AssetTypeRegistryInternal::getRejected().add( &def ); // 까닭은 `collectProblems` 가 다시 낸다
+            return;
+        }
+        const RegistrationResult result = types.add( &def, def._name );
+        if ( result == RegistrationResult::DuplicateName || result == RegistrationResult::EmptyName )
+            (void)AssetTypeRegistryInternal::getRejected().add( &def );
     }
 
     bool AssetTypeRegistry::isSuffixFormatAllowed( const AssetSuffix& suffix )
@@ -210,18 +100,29 @@ namespace sw
 
     void AssetTypeRegistry::unregisterType( const AssetTypeDef& def )
     {
-        AssetTypeRegistryInternal::getTable().unregisterType( def );
+        RegistrationList<const AssetTypeDef>& types = AssetTypeRegistryInternal::getTypes();
+        ScopedLock<mutex>                     lock{ types.getOwnerMutex() };
+        if ( types.remove( &def ) == false ) // 빼면 대체당했던 옛 등록이 돌아올 수 있다 — 접미사 찾기는 목록을 그대로 훑는다
+            (void)AssetTypeRegistryInternal::getRejected().remove( &def );
     }
 
     const AssetTypeDef* AssetTypeRegistry::findType( string_view name )
     {
-        return AssetTypeRegistryInternal::getTable().findType( name );
+        const RegistrationList<const AssetTypeDef>& types = AssetTypeRegistryInternal::getTypes();
+        ScopedLock<mutex>                           lock{ types.getOwnerMutex() };
+        return types.findByName( name );
     }
 
     void AssetTypeRegistry::collectPathMatches( string_view assetID, vector<const AssetTypeDef*>& outListType )
     {
         outListType.clear();
-        AssetTypeRegistryInternal::getTable().collectPathMatches( assetID, outListType );
+        const RegistrationList<const AssetTypeDef>& types = AssetTypeRegistryInternal::getTypes();
+        ScopedLock<mutex>                           lock{ types.getOwnerMutex() };
+        for ( const AssetTypeDef* pType : types.getItems() )
+        {
+            if ( pType->_pathRule.matches( assetID ) )
+                outListType.push_back( pType );
+        }
     }
 
     bool AssetTypeRegistry::checkLoad( const AssetTypeDef& def, const AssetID& assetID )
@@ -234,12 +135,27 @@ namespace sw
 
     vector<const AssetTypeDef*> AssetTypeRegistry::collectTypes()
     {
-        return AssetTypeRegistryInternal::getTable().collectTypes();
+        const RegistrationList<const AssetTypeDef>& types = AssetTypeRegistryInternal::getTypes();
+        ScopedLock<mutex>                           lock{ types.getOwnerMutex() };
+        return types.getItems();
     }
 
     AssetSuffixMatch AssetTypeRegistry::findSuffix( string_view path )
     {
-        return AssetTypeRegistryInternal::getTable().findSuffix( path );
+        const RegistrationList<const AssetTypeDef>& types = AssetTypeRegistryInternal::getTypes();
+        ScopedLock<mutex>                           lock{ types.getOwnerMutex() };
+        AssetSuffixMatch                            best{};
+        for ( const AssetTypeDef* pType : types.getItems() )
+        {
+            for ( uint32 index = 0; index < pType->_suffixCount; ++index )
+            {
+                const AssetSuffix& suffix  = pType->_pSuffix[index];
+                const bool         bLonger = best.isMatched() == false || best._pSuffix->_text.size() < suffix._text.size(); // 가장 긴 것, 같으면 먼저 올린 것
+                if ( bLonger && StringUtil::endsWith( path, suffix._text, true ) )
+                    best = AssetSuffixMatch{ pType, &suffix };
+            }
+        }
+        return best;
     }
 
     bool AssetTypeRegistry::isPathOfType( string_view path, const AssetTypeDef& def )
@@ -256,12 +172,34 @@ namespace sw
 
     bool AssetTypeRegistry::hasExcludeGroup( string_view group )
     {
-        return AssetTypeRegistryInternal::getTable().hasExcludeGroup( group );
+        const RegistrationList<const AssetTypeDef>& types = AssetTypeRegistryInternal::getTypes();
+        ScopedLock<mutex>                           lock{ types.getOwnerMutex() };
+        for ( const AssetTypeDef* pType : types.getItems() )
+        {
+            if ( group.empty() == false && StringUtil::equals( pType->_excludeGroup, group, true ) )
+                return true;
+        }
+        return false;
     }
 
     void AssetTypeRegistry::collectProblems( vector<string>& outListProblem )
     {
-        AssetTypeRegistryInternal::getTable().collectProblems( outListProblem );
+        const RegistrationList<const AssetTypeDef>& types = AssetTypeRegistryInternal::getTypes();
+        ScopedLock<mutex>                           lock{ types.getOwnerMutex() };
+        for ( const AssetTypeDef* pDef : AssetTypeRegistryInternal::getRejected().getItems() )
+        {
+            const AssetSuffix* const  pDisallowed = AssetTypeRegistryInternal::findDisallowedSuffix( *pDef );
+            const AssetTypeDef* const pOwner      = pDisallowed == nullptr ? AssetTypeRegistryInternal::findSuffixOwner( *pDef ) : nullptr;
+            const AssetTypeDef* const pSameName   = types.findByName( pDef->_name );
+            if ( pDisallowed != nullptr )
+                outListProblem.push_back( AssetTypeRegistryInternal::makeProblem( "asset suffix read as-is must be XML or binary, not JSON", pDef->_name, pDisallowed->_text ) );
+            else if ( pOwner != nullptr )
+                outListProblem.push_back( AssetTypeRegistryInternal::makeProblem( "asset suffix claimed by two types", pOwner->_name, pDef->_name ) );
+            else if ( pSameName != nullptr )
+                outListProblem.push_back( AssetTypeRegistryInternal::makeProblem( "asset type name registered twice", pSameName->_name, pDef->_name ) );
+            else
+                outListProblem.push_back( AssetTypeRegistryInternal::makeProblem( "asset type has no name", pDef->_name, pDef->_name ) );
+        }
     }
 
     AssetTypeRegistrar::AssetTypeRegistrar( const AssetTypeDef& def )

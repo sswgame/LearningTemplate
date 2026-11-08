@@ -110,7 +110,7 @@ namespace sw::editor
      */
     struct EditorSelfTestRegistration : EditorExtensionRegistration
     {
-        static constexpr const utf8* kKindName = "selftest";
+        SW_EDITOR_EXTENSION_KIND( "selftest" );
 
         EditorSelfTestFunc _pfnRun;
     };

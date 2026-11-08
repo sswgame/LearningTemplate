@@ -8,14 +8,8 @@ namespace sw
     {
         struct ServerServiceRegistryInternal
         {
-            static constexpr const utf8* kListName = "Server service";
-
-            /** @brief 정적 초기화 순서와 상관없이 처음 쓸 때 만들어지도록 함수 안의 정적 객체로 둡니다. */
-            static ServiceFactoryList& getList()
-            {
-                static ServiceFactoryList s_list{ kListName };
-                return s_list;
-            }
+            /** @brief 등록 목록입니다(함수 정적 — 정적 초기화 순서와 상관없이 처음 쓸 때 선다). */
+            static SW_DEFINE_SERVICE_FACTORY_LIST( getList, "Server service" )
         };
     } // namespace
 } // namespace sw
@@ -26,21 +20,21 @@ namespace sw
     {
         if ( pFactory == nullptr || pFactory->_pCreate == nullptr )
             return;
-        (void)ServerServiceRegistryInternal::getList().add( pFactory );
+        (void)ServiceFactoryNode::addTo( ServerServiceRegistryInternal::getList(), pFactory );
     }
 
     void ServerServiceRegistry::unregisterFactory( ServerServiceFactory* pFactory )
     {
-        ServerServiceRegistryInternal::getList().remove( pFactory );
+        (void)ServerServiceRegistryInternal::getList().remove( pFactory ); // 올라 있지 않은 것을 빼는 것은 할 일이 없다
     }
 
     void ServerServiceRegistry::collectFactories( vector<ServerServiceFactory*>& outListFactory )
     {
-        ServerServiceRegistryInternal::getList().collectAs( outListFactory );
+        ServiceFactoryNode::collectAs( ServerServiceRegistryInternal::getList(), outListFactory );
     }
 
     int32 ServerServiceRegistry::getFactoryCount()
     {
-        return ServerServiceRegistryInternal::getList().getCount();
+        return static_cast<int32>( ServerServiceRegistryInternal::getList().getCount() );
     }
 } // namespace sw

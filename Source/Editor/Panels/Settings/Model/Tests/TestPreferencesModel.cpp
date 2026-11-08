@@ -37,15 +37,15 @@ namespace
         {
             s_changedCount                        = 0;
             EditorExtensionRegistrationList& list = EditorExtensionRegistry<EditorSettingsRegistration>::getList();
-            SW_EXPECT_TRUE( list.addRegistration( _section ) );
-            SW_EXPECT_TRUE( list.addRegistration( _page ) );
+            SW_EXPECT_TRUE( EditorExtensionRegistration::addTo( list, _section ) );
+            SW_EXPECT_TRUE( EditorExtensionRegistration::addTo( list, _page ) );
         }
 
         ~PreferencesModelTest()
         {
             EditorExtensionRegistrationList& list = EditorExtensionRegistry<EditorSettingsRegistration>::getList();
-            list.removeRegistration( _page );
-            list.removeRegistration( _section );
+            EditorExtensionRegistration::removeFrom( list, _page );
+            EditorExtensionRegistration::removeFrom( list, _section );
         }
 
         static void onChanged() { ++s_changedCount; }
@@ -117,7 +117,7 @@ SW_TEST_CASE_F( PreferencesModelTest, SectionRemovedByModuleUnloadIsNotHeld )
     (void)_model.refreshVisibleSections( "zztest/section" );
     SW_EXPECT_TRUE( _model.getSelected() == &_section );
 
-    EditorExtensionRegistry<EditorSettingsRegistration>::getList().removeRegistration( _section );
+    EditorExtensionRegistration::removeFrom( EditorExtensionRegistry<EditorSettingsRegistration>::getList(), _section );
     (void)_model.refreshVisibleSections( "zztest/section" ); // 검색 글은 같고 등록 세대만 바뀌었다
 
     SW_EXPECT_NULL( _model.getSelected() );

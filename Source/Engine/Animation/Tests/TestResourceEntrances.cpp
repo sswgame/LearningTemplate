@@ -8,6 +8,7 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Animation/Facial/LipSync.h"
 #include "Engine/Animation/Facial/LiveLinkFace.h"
 #include "Engine/Animation/Retarget/RetargetProfile.h"
@@ -35,16 +36,16 @@ namespace
     {
     public:
         XEntranceScope()
-            : _previous{ ResourceTags::exchange( makeTags() ) }
-            , _listPreviousLayer{ ResourceLayers::getLayers() }
+            : _previous{ engine::getSubsystem<ResourceTags>().exchange( makeTags() ) }
+            , _listPreviousLayer{ engine::getSubsystem<ResourceComposition>().getLayers() }
         {
         }
         ~XEntranceScope()
         {
-            (void)ResourceTags::exchange( _previous );
-            (void)ResourceLayers::setLayers( _listPreviousLayer );
+            (void)engine::getSubsystem<ResourceTags>().exchange( _previous );
+            (void)engine::getSubsystem<ResourceComposition>().setLayers( _listPreviousLayer );
             vector<string> listPending;
-            ResourceComposition::takePendingReload( listPending ); // 케이스가 만든 다시 읽기 목록을 다음 케이스에 남기지 않는다
+            engine::getSubsystem<ResourceComposition>().takePendingReload( listPending ); // 케이스가 만든 다시 읽기 목록을 다음 케이스에 남기지 않는다
         }
         XEntranceScope( const XEntranceScope& )            = delete;
         XEntranceScope& operator=( const XEntranceScope& ) = delete;
@@ -69,7 +70,7 @@ namespace
         static bool isRecorded( const AssetID& id )
         {
             vector<ResourceDigestEntry> listEntry;
-            ResourceComposition::collectDigest( listEntry );
+            engine::getSubsystem<ResourceComposition>().collectDigest( listEntry );
             return VectorUtil::containsIf( listEntry, [&id]( const ResourceDigestEntry& entry )
             { return entry._assetID == id.str(); } );
         }
@@ -192,7 +193,7 @@ SW_TEST_CASE( ResourceEntranceTest, LayerOverHandFormatUsesItsRule )
     Util::write( domain, "layers/night/testproject/b.material", R"(<MaterialDef name="FromLayer" />)" );
     Util::write( domain, "b.retarget.xml", R"(<RetargetProfile><root source="root" target="root" /><pelvis source="pelvis" target="hips" /><chains><item name="LeftArm"><source><item>a</item></source><target><item>b</item></target></item></chains></RetargetProfile>)" );
     Util::write( domain, "layers/night/testproject/b.retarget.xml", R"(<RetargetProfile><pelvis target="hips_layer" /></RetargetProfile>)" );
-    SW_REQUIRE_TRUE( ResourceLayers::setLayers( { ScopedScratchDomain::makeID( "layers/night" ).str() } ) );
+    SW_REQUIRE_TRUE( engine::getSubsystem<ResourceComposition>().setLayers( { ScopedScratchDomain::makeID( "layers/night" ).str() } ) );
 
     const shared_ptr<Material> material = Material::create();
     SW_REQUIRE_TRUE( material->loadFromAsset( ScopedScratchDomain::makeID( "b.material" ) ) );
@@ -224,7 +225,7 @@ SW_TEST_CASE( ResourceEntranceTest, FormatSaveKeepsConditionsInTheFile )
 {
     const ScopedScratchDomain domain;
     const XEntranceScope      scope;
-    SW_REQUIRE_TRUE( ResourceTags::setAxisValue( "quality", "low" ) );
+    SW_REQUIRE_TRUE( engine::getSubsystem<ResourceTags>().setAxisValue( "quality", "low" ) );
     const string path = domain.makeDiskPath( "a.retarget.xml" );
     const string text = R"(<RetargetProfile height_ratio="2"><_when _if="region.us" height_ratio="3" /><root source="root" target="root" /><pelvis source="pelvis" target="hips" />)"
                         R"(<chains><item name="LeftArm"><source><item>a</item></source><target><item>b</item></target></item></chains></RetargetProfile>)";

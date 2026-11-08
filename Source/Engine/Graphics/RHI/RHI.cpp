@@ -17,7 +17,6 @@
 
 namespace sw
 {
-
     namespace
     {
         struct RHIInternal
@@ -211,13 +210,6 @@ namespace sw
             return false;
         }
         return true;
-    }
-
-    uint32 allocateRHIDeviceGeneration()
-    {
-        // 0 은 "세대 없음" 이라 첫 값이 1 이다. 함수 안의 정적 원자는 상수 초기화라 첫 호출 경쟁이 없다.
-        static atomic<uint32> s_lastGeneration{ 0 };
-        return s_lastGeneration.fetch_add( 1 ) + 1;
     }
 
     bool RHI::findCommandLineBackend( const CommandLineManager& commandLineManager, RHIBackend& outBackend )

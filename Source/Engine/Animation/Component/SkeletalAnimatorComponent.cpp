@@ -17,6 +17,7 @@
 #include "Engine/Animation/Notify/AnimationNotifyListener.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Foundation/DeterministicRun.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
 
@@ -285,7 +286,7 @@ namespace sw
         else
             loadGraph();
         // 결정적 실행이면 첫 포즈를 디스크 지연에 맡기지 않는다(`DeterministicRunPolicy::_bWaitForAnimationClips`, 언리얼 자동화의 FlushAsyncLoading) — 첫 프레임에 포즈가 있느냐가 래그돌 · 물리의 이력을 가른다.
-        if ( _bClipsPending == SW_TRUE && DeterministicRun::getPolicy()._bWaitForAnimationClips == SW_TRUE )
+        if ( _bClipsPending == SW_TRUE && engine::getSubsystem<DeterministicRun>().getPolicy()._bWaitForAnimationClips == SW_TRUE )
         {
             _bStartPending = _bPlayOnBegin;
             waitForAnimationAssets();

@@ -30,7 +30,7 @@ namespace sw::editor
      */
     struct EditorInspectorRegistration : EditorExtensionRegistration
     {
-        static constexpr const utf8* kKindName = "inspector";
+        SW_EDITOR_EXTENSION_KIND( "inspector" );
 
         const TypeInfo* ( *_pGetComponentType )();
         unique_ptr<IInspectorComponent> ( *_pCreate )();

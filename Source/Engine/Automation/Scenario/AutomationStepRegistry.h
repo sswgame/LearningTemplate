@@ -6,6 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/String/RegistrationList.h"
 
 namespace sw
 {
@@ -211,30 +212,14 @@ namespace sw
 
 namespace sw
 {
-    /** @brief `SW_AUTOMATION_STEP` 가 두는 정적 등록자입니다. */
-    struct SW_API AutomationStepRegistrar
-    {
-
-        const AutomationStepRegistration* _pRegistration;
-        explicit AutomationStepRegistrar( const AutomationStepRegistration* pRegistration );
-        ~AutomationStepRegistrar();
-        AutomationStepRegistrar( const AutomationStepRegistrar& )            = delete;
-        AutomationStepRegistrar& operator=( const AutomationStepRegistrar& ) = delete;
-    };
+    /** @brief `SW_AUTOMATION_STEP` 가 두는 정적 등록자입니다(공통 틀 `StaticRegistrar`). */
+    SW_DEFINE_STATIC_REGISTRAR( AutomationStepRegistrar, const AutomationStepRegistration*, &AutomationStepRegistry::registerStep, &AutomationStepRegistry::unregisterStep );
 } // namespace sw
 
 namespace sw
 {
-    /** @brief `SW_AUTOMATION_START_BLOCKER` · `SW_AUTOMATION_CLOCK_HOLDER` · `SW_AUTOMATION_CAPTURE_BLOCKER` 가 두는 정적 등록자입니다. */
-    struct SW_API AutomationBlockerRegistrar
-    {
-
-        const AutomationBlocker* _pBlocker;
-        explicit AutomationBlockerRegistrar( const AutomationBlocker* pBlocker );
-        ~AutomationBlockerRegistrar();
-        AutomationBlockerRegistrar( const AutomationBlockerRegistrar& )            = delete;
-        AutomationBlockerRegistrar& operator=( const AutomationBlockerRegistrar& ) = delete;
-    };
+    /** @brief `SW_AUTOMATION_START_BLOCKER` · `SW_AUTOMATION_CLOCK_HOLDER` · `SW_AUTOMATION_CAPTURE_BLOCKER` 가 두는 정적 등록자입니다(공통 틀 `StaticRegistrar`). */
+    SW_DEFINE_STATIC_REGISTRAR( AutomationBlockerRegistrar, const AutomationBlocker*, &AutomationStepRegistry::registerBlocker, &AutomationStepRegistry::unregisterBlocker );
 } // namespace sw
 
 #if !defined( SW_SHIPPING )
@@ -255,44 +240,19 @@ namespace sw
         }
 
     /** @brief 시작 차단 조건을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). 참인 동안 시나리오가 시작하지 않고 화면 캡처도 미뤄집니다. */
-    #define SW_AUTOMATION_START_BLOCKER( id, pName, pIsBlocking )                                                                              \
-        static const ::sw::AutomationBlocker          sw_automationStartBlocker_##id{ pName, pIsBlocking, ::sw::AutomationBlockScope::Start }; \
-        static const ::sw::AutomationBlockerRegistrar sw_automationStartBlockerRegistrar_##id                                                  \
-        {                                                                                                                                      \
-            &sw_automationStartBlocker_##id                                                                                                    \
-        }
+    #define SW_AUTOMATION_START_BLOCKER( id, pName, pIsBlocking ) SW_STATIC_REGISTRATION( automationStartBlocker, ::sw::AutomationBlocker, ::sw::AutomationBlockerRegistrar, id, pName, pIsBlocking, ::sw::AutomationBlockScope::Start )
 
     /** @brief 시계 잡기 조건을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). 참인 동안 시나리오가 시작하지 않고 도는 시나리오의 시계가 멈춥니다(`AutomationBlockScope::Clock`). */
-    #define SW_AUTOMATION_CLOCK_HOLDER( id, pName, pIsHolding )                                                                              \
-        static const ::sw::AutomationBlocker          sw_automationClockHolder_##id{ pName, pIsHolding, ::sw::AutomationBlockScope::Clock }; \
-        static const ::sw::AutomationBlockerRegistrar sw_automationClockHolderRegistrar_##id                                                 \
-        {                                                                                                                                    \
-            &sw_automationClockHolder_##id                                                                                                   \
-        }
+    #define SW_AUTOMATION_CLOCK_HOLDER( id, pName, pIsHolding ) SW_STATIC_REGISTRATION( automationClockHolder, ::sw::AutomationBlocker, ::sw::AutomationBlockerRegistrar, id, pName, pIsHolding, ::sw::AutomationBlockScope::Clock )
 
     /** @brief 시나리오 끝(`<Pass/>`)만 미루는 조건을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). 단계 사이에는 돌게 두고 끝나기 전에만 기다릴 뒤의 일이 씁니다(`AutomationBlockScope::Finish`). */
-    #define SW_AUTOMATION_FINISH_BLOCKER( id, pName, pIsBlocking )                                                                               \
-        static const ::sw::AutomationBlocker          sw_automationFinishBlocker_##id{ pName, pIsBlocking, ::sw::AutomationBlockScope::Finish }; \
-        static const ::sw::AutomationBlockerRegistrar sw_automationFinishBlockerRegistrar_##id                                                   \
-        {                                                                                                                                        \
-            &sw_automationFinishBlocker_##id                                                                                                     \
-        }
+    #define SW_AUTOMATION_FINISH_BLOCKER( id, pName, pIsBlocking ) SW_STATIC_REGISTRATION( automationFinishBlocker, ::sw::AutomationBlocker, ::sw::AutomationBlockerRegistrar, id, pName, pIsBlocking, ::sw::AutomationBlockScope::Finish )
 
     /** @brief `SW_AUTOMATION_FINISH_BLOCKER` 와 같되, 오래 기다릴 때 무엇이 남았는지 내는 @p pDescribe(`string()`)를 함께 등록합니다. */
-    #define SW_AUTOMATION_FINISH_BLOCKER_DESCRIBED( id, pName, pIsBlocking, pDescribe )                                                                     \
-        static const ::sw::AutomationBlocker          sw_automationFinishBlocker_##id{ pName, pIsBlocking, ::sw::AutomationBlockScope::Finish, pDescribe }; \
-        static const ::sw::AutomationBlockerRegistrar sw_automationFinishBlockerRegistrar_##id                                                              \
-        {                                                                                                                                                   \
-            &sw_automationFinishBlocker_##id                                                                                                                \
-        }
+    #define SW_AUTOMATION_FINISH_BLOCKER_DESCRIBED( id, pName, pIsBlocking, pDescribe ) SW_STATIC_REGISTRATION( automationFinishBlocker, ::sw::AutomationBlocker, ::sw::AutomationBlockerRegistrar, id, pName, pIsBlocking, ::sw::AutomationBlockScope::Finish, pDescribe )
 
     /** @brief 화면 캡처만 미루는 조건을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). 그림을 덮지만 입력은 막지 않는 것(화면 페이드)이 씁니다(`AutomationBlockScope::Capture`). */
-    #define SW_AUTOMATION_CAPTURE_BLOCKER( id, pName, pIsBlocking )                                                                                \
-        static const ::sw::AutomationBlocker          sw_automationCaptureBlocker_##id{ pName, pIsBlocking, ::sw::AutomationBlockScope::Capture }; \
-        static const ::sw::AutomationBlockerRegistrar sw_automationCaptureBlockerRegistrar_##id                                                    \
-        {                                                                                                                                          \
-            &sw_automationCaptureBlocker_##id                                                                                                      \
-        }
+    #define SW_AUTOMATION_CAPTURE_BLOCKER( id, pName, pIsBlocking ) SW_STATIC_REGISTRATION( automationCaptureBlocker, ::sw::AutomationBlocker, ::sw::AutomationBlockerRegistrar, id, pName, pIsBlocking, ::sw::AutomationBlockScope::Capture )
 
 #else
 

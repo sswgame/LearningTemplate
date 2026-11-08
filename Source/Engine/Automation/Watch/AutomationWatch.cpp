@@ -85,11 +85,7 @@ namespace sw
             }
 
             /** @brief 등록된 감시 값(등록 순서 · 이름은 대소문자를 가린다). Engine 이미지의 함수 정적이라 게임 모듈이 바뀌어도 남는다. 핫 리로드가 올리는 교체 이미지의 같은 이름은 대체한다(`RegistrationReloadScope`). */
-            static RegistrationList<const AutomationWatchRegistration>& getRegistrations()
-            {
-                static RegistrationList<const AutomationWatchRegistration> s_registration{ "AutomationWatchRegistry", RegistrationOrder::Insertion, true };
-                return s_registration;
-            }
+            static SW_DEFINE_REGISTRATION_LIST( getRegistrations, const AutomationWatchRegistration, "AutomationWatchRegistry", RegistrationOrder::Insertion, true )
         };
     } // namespace
 } // namespace sw
@@ -205,16 +201,5 @@ namespace sw
         query._key           = key;
         query._pTargetObject = AutomationTarget::find( pManager, target, query._targetLookup, query._targetProblem );
         return query;
-    }
-
-    AutomationWatchRegistrar::AutomationWatchRegistrar( const AutomationWatchRegistration* pRegistration )
-        : _pRegistration{ AutomationWatchRegistry::registerWatch( pRegistration ) ? pRegistration : nullptr }
-    {
-    }
-
-    AutomationWatchRegistrar::~AutomationWatchRegistrar()
-    {
-        if ( _pRegistration != nullptr )
-            AutomationWatchRegistry::unregisterWatch( _pRegistration );
     }
 } // namespace sw

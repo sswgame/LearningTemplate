@@ -291,7 +291,7 @@ namespace sw
     bool UserSettingsEngineHandlers::applyResourceTag( const UserSettingApplyParams& context )
     {
         // 모르는 축 · 여러 값 축 · 닫힌 목록 밖의 값은 `ResourceTags` 가 오류로 남긴다 — 스키마의 param 오타가 조용히 지나가지 않는다.
-        return ResourceTags::setAxisValue( context._param, context._value );
+        return engine::getSubsystem<ResourceTags>().setAxisValue( context._param, context._value );
     }
 
     void UserSettingsEngineHandlers::collectLanguages( vector<UserSettingOption>& outListOption )

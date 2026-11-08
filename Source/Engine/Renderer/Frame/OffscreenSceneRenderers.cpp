@@ -12,7 +12,13 @@ namespace sw
     OffscreenSceneRenderers::OffscreenSceneRenderers()
         : _listEntry{}
         , _count{ 0 }
+        , _nextCaptureKey{ 1 }
     {
+    }
+
+    uint32 OffscreenSceneRenderers::allocateCaptureSceneKey()
+    {
+        return kCaptureSceneKeyBit | ( _nextCaptureKey.fetch_add( 1, std::memory_order_relaxed ) & ~kCaptureSceneKeyBit );
     }
 
     OffscreenSceneRenderers::~OffscreenSceneRenderers()

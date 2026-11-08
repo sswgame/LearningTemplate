@@ -22,11 +22,7 @@ namespace sw
          * @brief 등록된 자동 플레이(등록 순서 · 이름은 전역 변수 이름). Engine 이미지의 함수 정적이라 게임 모듈이 바뀌어도 남는다.
          *        핫 리로드가 올리는 교체 이미지의 같은 이름은 대체한다(`RegistrationReloadScope`).
          */
-        RegistrationList<const GameAutoplayRegistration>& getRegistrations()
-        {
-            static RegistrationList<const GameAutoplayRegistration> s_registration{ "GameAutoplayRegistry", RegistrationOrder::Insertion, true };
-            return s_registration;
-        }
+        SW_DEFINE_REGISTRATION_LIST( getRegistrations, const GameAutoplayRegistration, "GameAutoplayRegistry", RegistrationOrder::Insertion, true )
 
         bool runAutoplay( const vector<string>& listArgument, string& outReply )
         {
@@ -53,12 +49,13 @@ namespace sw
 
 namespace sw
 {
-    void GameAutoplay::registerAutoplay( const GameAutoplayRegistration* pRegistration )
+    bool GameAutoplay::registerAutoplay( const GameAutoplayRegistration* pRegistration )
     {
         const bool bInvalidAutoplayRegistration = pRegistration == nullptr || pRegistration->_pValue == nullptr || pRegistration->_pVariableName == nullptr;
         if ( bInvalidAutoplayRegistration )
-            return;
-        (void)getRegistrations().addLogged( pRegistration, "Game autoplay", pRegistration->_pVariableName );
+            return false;
+        const RegistrationResult result = getRegistrations().addLogged( pRegistration, "Game autoplay", pRegistration->_pVariableName );
+        return result == RegistrationResult::Added || result == RegistrationResult::AlreadyPresent;
     }
 
     void GameAutoplay::unregisterAutoplay( const GameAutoplayRegistration* pRegistration )
@@ -92,17 +89,6 @@ namespace sw
         else
             *pActive->_pValue = bOn ? 1 : 0;
         return true;
-    }
-
-    GameAutoplayRegistrar::GameAutoplayRegistrar( const GameAutoplayRegistration* pRegistration )
-        : _pRegistration{ pRegistration }
-    {
-        GameAutoplay::registerAutoplay( pRegistration );
-    }
-
-    GameAutoplayRegistrar::~GameAutoplayRegistrar()
-    {
-        GameAutoplay::unregisterAutoplay( _pRegistration );
     }
 
     SW_DEV_COMMAND( Autoplay, "autoplay", "autoplay [on|off]", "Show or switch the game's autoplay (AI drives the player - SW_GAME_AUTOPLAY)",

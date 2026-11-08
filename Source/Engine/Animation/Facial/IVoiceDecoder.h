@@ -8,6 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/String/RegistrationList.h"
 
 #include "Engine/Content/AssetID.h"
 
@@ -28,10 +29,18 @@ namespace sw
         /** @brief 등록된 창구입니다. 오디오를 짓지 않는 구성(전용 서버)은 nullptr 입니다. */
         [[nodiscard]] static IVoiceDecoder* find();
 
-        /** @struct Registration @brief 오디오 폴더가 정적 객체로 창구를 겁니다(이미지에 하나). */
-        struct SW_API Registration
+        /** @brief 창구를 겁니다(정적 등록자가 부른다). 이미 다른 창구가 걸려 있으면 공용 거절 로그를 남기고 false 입니다 — 이미지에 하나다. */
+        [[nodiscard]] static bool attach( IVoiceDecoder* pDecoder );
+        /** @brief 걸린 창구를 뗍니다(건 이미지가 내려갈 때). 걸려 있지 않으면 할 일이 없다. */
+        static void detach( IVoiceDecoder* pDecoder );
+
+        /** @struct Registration @brief 오디오 폴더가 정적 객체로 창구를 겁니다(이미지에 하나) — 공통 틀 `StaticRegistrar` 라 건 이미지가 내려가면 뗀다. */
+        struct Registration final : StaticRegistrar<IVoiceDecoder*>
         {
-            explicit Registration( IVoiceDecoder& decoder );
+            explicit Registration( IVoiceDecoder& decoder )
+                : StaticRegistrar{ &decoder, &IVoiceDecoder::attach, &IVoiceDecoder::detach }
+            {
+            }
         };
     };
 } // namespace sw

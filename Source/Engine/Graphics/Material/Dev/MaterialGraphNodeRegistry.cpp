@@ -12,14 +12,10 @@ namespace sw
         struct MaterialGraphNodeRegistryInternal
         {
             /** @brief 등록표입니다. 정적 초기화 순서에 기대지 않게 함수 지역 정적입니다. */
-            static RegistrationList<const MaterialGraphNodeKind>& getList()
-            {
-                static RegistrationList<const MaterialGraphNodeKind> s_list{ "MaterialGraphNodeKinds", RegistrationOrder::Insertion, true };
-                return s_list;
-            }
+            static SW_DEFINE_REGISTRATION_LIST( getList, const MaterialGraphNodeKind, "MaterialGraphNodeKinds", RegistrationOrder::Insertion, true )
 
-            /** @brief @p text 에서 다음 `|` 앞까지를 떼어 냅니다. 남은 글이 없으면 false 입니다. */
-            static bool takeEntry( string_view& inoutText, string_view& outEntry )
+                /** @brief @p text 에서 다음 `|` 앞까지를 떼어 냅니다. 남은 글이 없으면 false 입니다. */
+                static bool takeEntry( string_view& inoutText, string_view& outEntry )
             {
                 if ( inoutText.empty() )
                     return false;

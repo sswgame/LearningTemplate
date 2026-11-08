@@ -37,7 +37,7 @@ namespace sw
 
     /**
      * @struct ResourceContext
-     * @brief 합치는 문맥입니다. 읽는 쪽이 자기 자리를 고르는 값입니다. 조건 단계의 태그는 프로세스 값(`ResourceTags`)이라 여기 들지 않습니다.
+     * @brief 합치는 문맥입니다. 읽는 쪽이 자기 자리를 고르는 값입니다. 조건 단계의 태그는 엔진 값(코어 범위의 리소스 루트가 든 `ResourceTags`)이라 여기 들지 않습니다.
      */
     struct SW_API ResourceContext
     {

@@ -2,32 +2,26 @@
 
 #include "Engine/Foundation/DeterministicRun.h"
 
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
+
 namespace sw
 {
-    namespace
-    {
-        /** @brief 프로세스의 정책입니다(함수 정적 — 정적 초기화 순서와 무관하다). */
-        DeterministicRunPolicy& getPolicyStorage()
-        {
-            static DeterministicRunPolicy s_policy{};
-            return s_policy;
-        }
-    } // namespace
-
     DeterministicRunPolicy::DeterministicRunPolicy()
         : _bFinishAssetWorkEachFrame{ SW_FALSE }
         , _bWaitForAnimationClips{ SW_FALSE }
         , _bFreezeEnvironmentTime{ SW_FALSE }
+        , _fixedFrameDelta{ 0.0f }
     {
     }
 
-    const DeterministicRunPolicy& DeterministicRun::getPolicy()
+    DeterministicRun::DeterministicRun()
+        : _policy{}
     {
-        return getPolicyStorage();
     }
+} // namespace sw
 
-    void DeterministicRun::setPolicy( const DeterministicRunPolicy& policy )
-    {
-        getPolicyStorage() = policy;
-    }
+namespace sw
+{
+    // 결정적 실행 정책 — 자동화 · 개발 스위치가 채우고 런타임(렌더 · 에셋 · 애니메이션 · App 프레임 시간)이 읽는다.
+    SW_ENGINE_SERVICE_SUBSYSTEM( DeterministicRun, GameVisible, Services, (), SW_ENGINE_DEFAULT_FACTORY( DeterministicRun ) );
 } // namespace sw

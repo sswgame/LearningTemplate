@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/String/RegistrationList.h"
 
 namespace sw
 {
@@ -41,27 +42,14 @@ namespace sw
 
 namespace sw
 {
-    /** @brief `SW_AUTOMATION_STAGE_RESET` 이 두는 정적 등록자입니다. 등록이 거절됐으면 내릴 때 빼지 않습니다. */
-    struct SW_API AutomationStageResetRegistrar
-    {
-
-        const AutomationStageResetRegistration* _pRegistration;
-        explicit AutomationStageResetRegistrar( const AutomationStageResetRegistration* pRegistration );
-        ~AutomationStageResetRegistrar();
-        AutomationStageResetRegistrar( const AutomationStageResetRegistrar& )            = delete;
-        AutomationStageResetRegistrar& operator=( const AutomationStageResetRegistrar& ) = delete;
-    };
+    /** @brief `SW_AUTOMATION_STAGE_RESET` 이 두는 정적 등록자입니다(공통 틀 `StaticRegistrar` — 거절된 등록은 내리지 않는다). */
+    SW_DEFINE_STATIC_REGISTRAR( AutomationStageResetRegistrar, const AutomationStageResetRegistration*, &AutomationStageResetRegistry::registerReset, &AutomationStageResetRegistry::unregisterReset );
 } // namespace sw
 
 #if !defined( SW_SHIPPING )
 
     /** @brief 단계 되돌리기를 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). @p id 는 정적 이름을 만드는 식별자입니다. */
-    #define SW_AUTOMATION_STAGE_RESET( id, pName, pFunction )                                                 \
-        static const ::sw::AutomationStageResetRegistration sw_automationStageReset_##id{ pName, pFunction }; \
-        static const ::sw::AutomationStageResetRegistrar    sw_automationStageResetRegistrar_##id             \
-        {                                                                                                     \
-            &sw_automationStageReset_##id                                                                     \
-        }
+    #define SW_AUTOMATION_STAGE_RESET( id, pName, pFunction ) SW_STATIC_REGISTRATION( automationStageReset, ::sw::AutomationStageResetRegistration, ::sw::AutomationStageResetRegistrar, id, pName, pFunction )
 
 #else
 

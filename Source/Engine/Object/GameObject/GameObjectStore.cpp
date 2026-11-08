@@ -46,6 +46,7 @@ namespace sw
         , _listGameObject{}
         , _mapNameToObject{}
         , _mapNameSuffix{}
+        , _nameFallbackSerial{ 0 }
         , _mapIDToObject{}
         , _objectSlotTable{}
         , _overflowObjectCount{ 0 }
@@ -704,11 +705,10 @@ namespace sw
             // 번호를 붙여 만든 이름이 아니라 사라져도 번호로 돌아오지 않는다.
         }
 
-        static atomic<uint32> s_fallback{ 0 };
         for ( uint32 fallbackIndex = 0; fallbackIndex < 1024; ++fallbackIndex )
         {
             sb.clear();
-            sb.append( baseView ).append( "_x" ).append( s_fallback.fetch_add( 1 ) );
+            sb.append( baseView ).append( "_x" ).append( _nameFallbackSerial++ );
             const hashed_string fallback( sb.c_str(), sb.size() );
             if ( isNameTakenUnlocked( fallback ) == false )
             {
@@ -720,7 +720,7 @@ namespace sw
 
         SW_LOG_ERROR_ID( "GameObjectStore.FailedUniquifyCreatingUnnamed", "Failed to uniquify '%#' — creating unnamed object", requested.c_str() );
         sb.clear();
-        sb.append( "GameObject_anon_" ).append( s_fallback.fetch_add( 1 ) );
+        sb.append( "GameObject_anon_" ).append( _nameFallbackSerial++ );
         return hashed_string( sb.c_str(), sb.size() );
     }
 

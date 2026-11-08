@@ -11,6 +11,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/RegistrationList.h"
 
 namespace sw
 {
@@ -62,21 +63,9 @@ namespace sw
         static void createAll( vector<unique_ptr<IAnimationFrameObserver>>& outListObserver );
     };
 
-    /** @brief `SW_ANIMATION_FRAME_OBSERVER` 가 두는 정적 등록자입니다. 등록이 거절됐으면 내릴 때 빼지 않습니다(앞 등록을 지우지 않게). */
-    struct SW_API AnimationFrameObserverRegistrar
-    {
-        const AnimationFrameObserverRegistration* _pRegistration;
-        explicit AnimationFrameObserverRegistrar( const AnimationFrameObserverRegistration* pRegistration );
-        ~AnimationFrameObserverRegistrar();
-        AnimationFrameObserverRegistrar( const AnimationFrameObserverRegistrar& )            = delete;
-        AnimationFrameObserverRegistrar& operator=( const AnimationFrameObserverRegistrar& ) = delete;
-    };
+    /** @brief `SW_ANIMATION_FRAME_OBSERVER` 가 두는 정적 등록자입니다(공통 틀 `StaticRegistrar` — 거절된 등록은 내리지 않는다). */
+    SW_DEFINE_STATIC_REGISTRAR( AnimationFrameObserverRegistrar, const AnimationFrameObserverRegistration*, &AnimationFrameObserverRegistry::registerObserver, &AnimationFrameObserverRegistry::unregisterObserver );
 } // namespace sw
 
 /** @brief 애니메이션 프레임 관찰자를 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). @p id 는 정적 이름을 만드는 식별자입니다. */
-#define SW_ANIMATION_FRAME_OBSERVER( id, pName, pCreate )                                                   \
-    static const ::sw::AnimationFrameObserverRegistration sw_animationFrameObserver_##id{ pName, pCreate }; \
-    static const ::sw::AnimationFrameObserverRegistrar    sw_animationFrameObserverRegistrar_##id           \
-    {                                                                                                       \
-        &sw_animationFrameObserver_##id                                                                     \
-    }
+#define SW_ANIMATION_FRAME_OBSERVER( id, pName, pCreate ) SW_STATIC_REGISTRATION( animationFrameObserver, ::sw::AnimationFrameObserverRegistration, ::sw::AnimationFrameObserverRegistrar, id, pName, pCreate )

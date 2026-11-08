@@ -21,12 +21,6 @@ namespace sw
     {
         struct SurfaceDeformSystemInternal
         {
-            /** @brief 매니저마다 다른 CPU 텍스처 경로입니다(에디터 미리보기 씬과 게임 씬이 한 캐시를 나눈다). */
-            static string makeTexturePath()
-            {
-                static atomic<uint32> s_serial{ 0 };
-                return string{ TextureCache::kCPUTexturePrefix } + "surface/deform" + to_string( s_serial.fetch_add( 1u, std::memory_order_relaxed ) );
-            }
 
             static const SurfaceDeformSystem* findSystem( const AutomationWatchQuery& query )
             {
@@ -289,7 +283,7 @@ namespace sw
         {
             const SurfaceDeformGrid::TexelRect full{ 0, 0, resolution, resolution };
             _grid.writeTexels( full, _depthRange, _listTexelByte );
-            string path = SurfaceDeformSystemInternal::makeTexturePath();
+            string path = cache.makeUniqueCPUTexturePath( "surface/deform" ); // 매니저마다 다른 경로(에디터 미리보기 씬과 게임 씬이 한 캐시를 나눈다)
             if ( cache.createCPUTexture( path, resolution, resolution, _listTexelByte ) == false )
             {
                 SW_LOG_ERROR_ID( "Surface.DeformTextureFailed", "Surface deform texture '%#' (%#x%#) could not be created", path.c_str(), resolution, resolution );

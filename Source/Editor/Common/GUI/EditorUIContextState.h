@@ -34,7 +34,7 @@ namespace sw::editor
      */
     struct EditorUIBinderRegistration : EditorExtensionRegistration
     {
-        static constexpr const utf8* kKindName = "uibinder";
+        SW_EDITOR_EXTENSION_KIND( "uibinder" );
 
         void ( *_pfnBind )( const EditorUIContextState& state );
 

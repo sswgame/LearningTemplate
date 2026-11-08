@@ -15,6 +15,7 @@
 #include "Core/Network/Transport/PlatformSocketUtil.h"
 #include "Core/Network/Transport/UDPNetTransport.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -218,7 +219,7 @@ namespace sw
 
 namespace sw
 {
-    GameNetSession::GameNetSession()
+    GameNetSession::GameNetSession( const ResourceComposition& composition )
         : _listShard{}
         , _transportDecorator{}
         , _launchOverride{}
@@ -239,7 +240,7 @@ namespace sw
         , _role{ GameNetRole::None }
         , _bTicketBound{ SW_FALSE }
         , _bConnectFailureReported{ SW_FALSE }
-        , _digestComparer{}
+        , _digestComparer{ composition }
         , _digestSentRevision{ 0 }
         , _digestServerConnection{ -1 }
         , _shutdownNotice{}
@@ -748,7 +749,7 @@ namespace sw
     void GameNetSession::sendResourceDigest( int32 connectionID )
     {
         vector<ResourceDigestEntry> listEntry;
-        ResourceComposition::collectTagDependentChanges( _digestSentRevision, listEntry );
+        engine::getSubsystem<ResourceComposition>().collectTagDependentChanges( _digestSentRevision, listEntry );
         if ( listEntry.empty() )
             return;
         int32 sentCount = 0;
@@ -1015,6 +1016,7 @@ namespace sw
     // 게임 네트워크 세션 — 게임 모듈 리로드를 넘어 연결을 지킨다.
     SW_ENGINE_SERVICE_SUBSYSTEM( GameNetSession, GameVisible, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
-        build._pStartupParts->_pNetSession = &scope.emplaceSubsystem<GameNetSession>();
+        // 합성 기록은 코어 범위(리소스 루트)에 있다 — 서비스 표가 서기 전이라 범위 사슬에서 찾는다.
+        build._pStartupParts->_pNetSession = &scope.emplaceSubsystem<GameNetSession>( requireSubsystem<const ResourceComposition>( scope.getScope() ) );
     } );
 } // namespace sw

@@ -6,6 +6,7 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/String/RegistrationList.h"
 
 namespace sw
 {
@@ -35,8 +36,8 @@ namespace sw
     class SW_API GameAutoplay
     {
     public:
-        /** @brief 등록합니다(정적 등록자가 부릅니다). */
-        static void registerAutoplay( const GameAutoplayRegistration* pRegistration );
+        /** @brief 등록합니다(정적 등록자가 부릅니다). 빈 칸 · 같은 이름의 다른 등록이면 거절하고 false 입니다. */
+        [[nodiscard]] static bool registerAutoplay( const GameAutoplayRegistration* pRegistration );
         /** @brief 등록을 뺍니다. */
         static void unregisterAutoplay( const GameAutoplayRegistration* pRegistration );
         /** @brief 지금 쓰는 등록입니다. 자동 플레이가 없는 게임이면 nullptr 입니다. */
@@ -53,16 +54,8 @@ namespace sw
 
 namespace sw
 {
-    /** @brief `SW_GAME_AUTOPLAY` 가 두는 정적 등록자입니다. */
-    struct SW_API GameAutoplayRegistrar
-    {
-
-        const GameAutoplayRegistration* _pRegistration;
-        explicit GameAutoplayRegistrar( const GameAutoplayRegistration* pRegistration );
-        ~GameAutoplayRegistrar();
-        GameAutoplayRegistrar( const GameAutoplayRegistrar& )            = delete;
-        GameAutoplayRegistrar& operator=( const GameAutoplayRegistrar& ) = delete;
-    };
+    /** @brief `SW_GAME_AUTOPLAY` 가 두는 정적 등록자입니다(공통 틀 `StaticRegistrar` — 거절된 등록은 내리지 않는다). */
+    SW_DEFINE_STATIC_REGISTRAR( GameAutoplayRegistrar, const GameAutoplayRegistration*, &GameAutoplay::registerAutoplay, &GameAutoplay::unregisterAutoplay );
 } // namespace sw
 
 /**
@@ -71,9 +64,4 @@ namespace sw
  * @param pGameName    게임 이름(리터럴)
  * @param pDescription 무엇을 자동으로 하는가(리터럴)
  */
-#define SW_GAME_AUTOPLAY( gvName, pGameName, pDescription )                                                            \
-    static const ::sw::GameAutoplayRegistration sw_gameAutoplay_##gvName{ pGameName, pDescription, #gvName, &gvName }; \
-    static const ::sw::GameAutoplayRegistrar    sw_gameAutoplayRegistrar_##gvName                                      \
-    {                                                                                                                  \
-        &sw_gameAutoplay_##gvName                                                                                      \
-    }
+#define SW_GAME_AUTOPLAY( gvName, pGameName, pDescription ) SW_STATIC_REGISTRATION( gameAutoplay, ::sw::GameAutoplayRegistration, ::sw::GameAutoplayRegistrar, gvName, pGameName, pDescription, #gvName, &gvName )

@@ -19,6 +19,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/String/RegistrationList.h"
 
 #include "Editor/Common/EditorExports.h"
 
@@ -113,34 +114,42 @@ namespace sw::editor
 
     using UndoStepInvoker = bool ( * )( Archive& arguments, UndoStepContext& context );
 
+    /** @struct UndoStepHandler @brief 처리기 한 줄 — 함수 이름 해시와 부르는 함수입니다. 등록자(`UndoStepRegistrar`)가 들고 그 주소가 목록에 오른다. */
+    struct UndoStepHandler
+    {
+        uint64          _functionHash; ///< 처리기 이름 해시
+        UndoStepInvoker _invoker;      ///< 인자를 읽어 함수를 부른다
+    };
+
     /**
      * @class UndoStepRegistry
-     * @brief 이름 해시 → 처리기 표입니다. `UndoStepFunction` 의 등록자만 고친다(정적 초기화 · DLL 언로드).
+     * @brief 이름 해시 → 처리기 목록입니다. `UndoStepFunction` 의 등록자만 고친다(정적 초기화 · DLL 언로드). 목록은 공용 정적 등록 목록(`RegistrationList`)이다.
+     * @details 같은 해시를 여러 DLL 이 올릴 수 있다(편집기 확장이 같은 헤더 함수를 쓸 때) — 줄은 이름 없이 올려 둘 다 남기고, 찾기는 먼저 오른 줄을 준다.
+     *          한 DLL 이 내려가 그 줄이 빠져도 다른 DLL 의 같은 줄이 남는다(예전의 "올린 곳 수" 세기를 줄마다 하나로).
      */
     class SW_EDITOR_API UndoStepRegistry
     {
     public:
-        /** @brief 처리기를 올립니다. 같은 해시가 이미 있으면(다른 DLL 의 같은 함수 — 편집기 확장이 같은 헤더 함수를 쓸 때) 덮지 않고 수만 셉니다. */
-        static void add( uint64 functionHash, UndoStepInvoker invoker );
-        /** @brief 처리기를 내립니다. 같은 해시를 올린 곳이 남아 있으면 그대로 둡니다. */
-        static void remove( uint64 functionHash );
+        /** @brief 처리기 줄을 올립니다. 빈 줄이면 false 입니다. */
+        [[nodiscard]] static bool add( const UndoStepHandler* pHandler );
+        /** @brief 처리기 줄을 내립니다. 올라 있지 않으면 할 일이 없다. */
+        static void remove( const UndoStepHandler* pHandler );
         /** @brief 처리기입니다. 없으면 nullptr 입니다. */
         static UndoStepInvoker find( uint64 functionHash );
     };
 
-    /** @brief `UndoStepFunction` 이 두는 정적 등록자입니다. 만들 때 올리고 사라질 때(그 DLL 이 내려갈 때) 내립니다. */
+    /** @brief `UndoStepFunction` 이 두는 정적 등록자입니다. 처리기 줄을 들고, 만들 때 올리고 사라질 때(그 DLL 이 내려갈 때) 내립니다(공통 틀 `StaticRegistrar`). */
     struct UndoStepRegistrar
     {
-
-        uint64 _functionHash;
         UndoStepRegistrar( uint64 functionHash, UndoStepInvoker invoker )
-            : _functionHash{ functionHash }
+            : _handler{ functionHash, invoker }
+            , _registrar{ &_handler, &UndoStepRegistry::add, &UndoStepRegistry::remove }
         {
-            UndoStepRegistry::add( functionHash, invoker );
         }
-        ~UndoStepRegistrar() { UndoStepRegistry::remove( _functionHash ); }
-        UndoStepRegistrar( const UndoStepRegistrar& )            = delete;
-        UndoStepRegistrar& operator=( const UndoStepRegistrar& ) = delete;
+
+    private:
+        UndoStepHandler                         _handler;   ///< 목록에 오르는 줄(이 등록자와 수명이 같다)
+        StaticRegistrar<const UndoStepHandler*> _registrar; ///< 줄 다음에 만들어 줄보다 먼저 사라진다
     };
 
     /**

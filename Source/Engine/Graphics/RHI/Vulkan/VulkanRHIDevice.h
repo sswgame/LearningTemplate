@@ -152,7 +152,8 @@ namespace sw
     public:
         friend class VulkanRHIResourceFactory;
         /** @brief 빈 Vulkan 디바이스를 만듭니다. */
-        VulkanRHIDevice();
+        /** @brief @p deviceGeneration 은 등록표가 붙인 이 장치의 세대입니다(전송 티켓에 싣는다). */
+        explicit VulkanRHIDevice( uint32 deviceGeneration );
         /** @brief 인스턴스, 디바이스, 스왑체인을 정리합니다. */
         virtual ~VulkanRHIDevice() override;
 

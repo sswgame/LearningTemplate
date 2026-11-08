@@ -2,29 +2,31 @@
 
 #include "Engine/Animation/Facial/IVoiceDecoder.h"
 
+#include "Core/String/RegistrationSlot.h"
+
 namespace sw
 {
     namespace
     {
         struct VoiceDecoderInternal
         {
-            /** @brief 등록된 창구입니다. 함수 안 정적 변수라 등록자의 정적 초기화 순서와 무관하다. */
-            static IVoiceDecoder*& slot()
-            {
-                static IVoiceDecoder* s_pDecoder = nullptr;
-                return s_pDecoder;
-            }
+            /** @brief 걸린 창구입니다(이미지에 하나 — 둘째는 거절). 함수 정적이라 등록자의 정적 초기화 순서와 무관하다. */
+            static SW_DEFINE_REGISTRATION_SLOT( getSlot, IVoiceDecoder, "VoiceDecoder" )
         };
     } // namespace
 
     IVoiceDecoder* IVoiceDecoder::find()
     {
-        return VoiceDecoderInternal::slot();
+        return VoiceDecoderInternal::getSlot().get();
     }
 
-    IVoiceDecoder::Registration::Registration( IVoiceDecoder& decoder )
+    bool IVoiceDecoder::attach( IVoiceDecoder* pDecoder )
     {
-        SW_ASSERT( VoiceDecoderInternal::slot() == nullptr ); // 이미지에 하나다 — 둘이면 등록의 잘못이다
-        VoiceDecoderInternal::slot() = &decoder;
+        return VoiceDecoderInternal::getSlot().setLogged( pDecoder, "Voice decoder", "VoiceDecoder" ) == RegistrationResult::Added;
+    }
+
+    void IVoiceDecoder::detach( IVoiceDecoder* pDecoder )
+    {
+        (void)VoiceDecoderInternal::getSlot().reset( pDecoder );
     }
 } // namespace sw

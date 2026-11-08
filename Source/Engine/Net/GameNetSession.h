@@ -213,7 +213,8 @@ namespace sw
         /** @brief 주소에 포트가 없을 때의 기본 게임 포트입니다. 언리얼 기본 포트와 같으며 `ServerConfig::_gamePort` 기본값도 같습니다. */
         static constexpr uint16 kDefaultPort = 7777;
 
-        GameNetSession();
+        /** @brief @p composition 은 이 엔진의 합성 기록이다(코어 범위 — 이 세션보다 오래 산다). 서버가 받은 합성 줄을 맞댄다. */
+        explicit GameNetSession( const ResourceComposition& composition );
         ~GameNetSession() override;
 
         GameNetSession( const GameNetSession& )            = delete;
