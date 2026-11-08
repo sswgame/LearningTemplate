@@ -32,13 +32,13 @@ SW_TEST_CASE( TestRunnerTest, SnapshotComparesWithTheCommittedFile )
     SW_EXPECT_SNAPSHOT( "greeting", "hello\nsnapshot\n" );
 }
 
-/** @brief [TestRunnerTest] 실행 동안 로그 쪽 질의가 지금 케이스의 선언을 답한다 — 시나리오 로그 게이트가 테스트 틀을 모른 채 묻는 통로다 */
+/** @brief [TestRunnerTest] 실행 동안 선언 질의가 지금 케이스의 선언을 답한다 — 시나리오 로그 게이트가 묻는 통로다 */
 SW_TEST_CASE( TestRunnerTest, ExpectedLogQueryAnswersForTheActiveCase )
 {
     SW_EXPECT_LOG( "Test.QueriedWarning" );
-    SW_EXPECT_TRUE( Logger::isExpectedLog( "Test.QueriedWarning" ) );
-    SW_EXPECT_FALSE( Logger::isExpectedLog( "Test.SomethingElse" ) );
-    SW_EXPECT_FALSE( Logger::isExpectedLog( nullptr ) );
+    SW_EXPECT_TRUE( sw::test::isExpectedLog( "Test.QueriedWarning" ) );
+    SW_EXPECT_FALSE( sw::test::isExpectedLog( "Test.SomethingElse" ) );
+    SW_EXPECT_FALSE( sw::test::isExpectedLog( nullptr ) );
     SW_LOG_WARNING_ID( "Test.QueriedWarning", "a warning this case declares on purpose" );
 }
 

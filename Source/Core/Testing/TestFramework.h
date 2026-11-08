@@ -133,6 +133,12 @@ namespace sw::test
     /** @brief 이 케이스가 일부러 내는 로그 id 를 적습니다. 그 id 의 Warning · Error 는 실패로 세지 않고, 끝까지 한 번도 안 나오면 실패입니다. */
     SW_API void expectLog( const utf8* pLogID, const utf8* pFile, int32 line );
     /**
+     * @brief 지금 도는 케이스가 @p pLogID 를 `SW_EXPECT_LOG` 로 선언했으면 true 입니다. 실행 밖이거나 id 가 없으면 false 입니다.
+     * @details 시나리오 안에서 단위 테스트가 돌 때(에디터 `editor.unitTests`) 자동화 로그 게이트가 같은 줄을 두 번 세지 않게 묻는다. 예전에는 로거가 이 질의를 들고 있어
+     *          모든 실행(배포본 포함)의 로거에 테스트 개념이 들어 있었다 — 묻는 쪽(테스트 틀 · 자동화)끼리 잇는다.
+     */
+    [[nodiscard]] SW_API bool isExpectedLog( const utf8* pLogID );
+    /**
      * @brief 이 케이스만 쓰는 빈 폴더 아래의 절대 경로입니다(`<작업 폴더>/Saved/Test/<프로세스>/<케이스>/<회차>/<name>`).
      * @details 폴더는 처음 부를 때 만든다. 테스트는 이 밖(Bin · 소스 트리 · 고정 이름 임시 경로)에 쓰지 않는다 — 나란히 도는 프로세스 · 반복 회차가 부딪치지 않게.
      */
