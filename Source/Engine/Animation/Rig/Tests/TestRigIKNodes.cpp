@@ -499,6 +499,25 @@ SW_TEST_CASE_F( RigIKTest, FootPlacementFollowsTheGround )
     SW_EXPECT_NEAR( ground._lastMaxDistance, 1.0f, 1.0e-4f );
 }
 
+// 굽 높이(몸 입력의 발 들림): 골반과 두 발이 땅 높이 보정 위에 굽만큼 더 올라간다. 땅이 없어도 굽은 걸린다.
+SW_TEST_CASE_F( RigIKTest, FootPlacementRaisesByTheHeelLift )
+{
+    SW_REQUIRE_TRUE( load( makeFootPlacement( R"(interp_speed="0")" ) ) );
+    _instance.getBodyInput().setFootLift( 0.08f );
+    FakeRigGround ground;
+    ground._leftY  = -0.1f;
+    ground._rightY = 0.05f;
+    run( &ground );
+    SW_EXPECT_NEAR( position( kPelvis )._y, 0.98f, 1.0e-3f );
+    SW_EXPECT_NEAR( position( kFootL )._y, 0.08f, 2.0e-3f ); // 땅(-0.1) 위 기준 발 높이 0.1 + 굽 0.08
+    SW_EXPECT_NEAR( position( kFootR )._y, 0.23f, 2.0e-3f );
+
+    _pose.setToReference( _skeleton );
+    run( nullptr );
+    SW_EXPECT_NEAR( position( kPelvis )._y, 1.08f, 1.0e-3f );
+    SW_EXPECT_NEAR( position( kFootL )._y, 0.18f, 2.0e-3f );
+}
+
 // 땅이 없거나 쿼리가 없으면 애니메이션 그대로다.
 SW_TEST_CASE_F( RigIKTest, FootPlacementWithoutGroundLeavesThePose )
 {
