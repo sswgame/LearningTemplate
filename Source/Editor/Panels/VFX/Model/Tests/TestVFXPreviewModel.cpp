@@ -31,5 +31,6 @@ SW_TEST_CASE( VFXPreviewModelTest, ContentHashDetectsASave )
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "<VFXEffectDef _note=\"saved by the catalog editoR\" />" ) );
     SW_EXPECT_FALSE( VFXPreviewModel::updateContentHash( path, hash ) );
 
+    SW_EXPECT_LOG( "File.NotFound" ); // 지운 파일의 해시 읽기는 읽기 실패로 알린다(ContentHash)
     SW_EXPECT_FALSE( VFXPreviewModel::updateContentHash( test::makeScratchPath( "missing.vfx.xml" ), hash ) );
 }
