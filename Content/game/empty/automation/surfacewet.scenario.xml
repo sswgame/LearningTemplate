@@ -15,14 +15,16 @@
 	<Expect watch="Surface.RainExposure" target="Walker" atMost="0.01"/>
 	<Expect watch="Surface.GroundKind" target="Walker" is="Stone"/>
 	<DevCommand line="surface.probe Walker"/>
+	<!-- 젖음 · 마름 · 씻김은 속도 × 게임 시간이라 여기부터 끝까지 시간 배율 4 로 돈다(고정 대기는 같은 게임 시간의 1/4 프레임). 비 노출 · 잠긴 비율은 자리로 바로 정해진다. -->
+	<Variable name="gv_timeScale" value="4"/>
 
 	<DevCommand line="cheat.weather rain"/>
-	<Wait frames="180"/>
+	<Wait frames="45"/>
 	<Expect watch="Surface.RainExposure" target="Walker" atLeast="0.99"/>
 	<Expect watch="Appearance.SurfaceChannel" target="Walker" key="Wet" atLeast="0.3"/>
 
 	<DevCommand line="object.place Walker -5 0.05 0"/>
-	<Wait frames="30"/>
+	<Wait frames="8"/>
 	<Expect watch="Surface.RainExposure" target="Walker" atMost="0.01"/>
 
 	<DevCommand line="cheat.weather clear"/>
@@ -36,12 +38,12 @@
 	<DevCommand line="object.place Walker 3 0.05 0"/>
 	<WaitUntil watch="Surface.Submersion" target="Walker" near="0.167" tolerance="0.03" timeoutSeconds="2"/>
 	<Expect watch="Surface.GroundKind" target="Walker" is="Water"/>
-	<Wait frames="120"/>
+	<Wait frames="30"/>
 	<Expect watch="Appearance.SurfaceChannel" target="Walker" key="Wet" atLeast="0.04"/>
 
 	<DevCommand line="object.place Walker 5 0.05 0"/>
 	<WaitUntil watch="Surface.Submersion" target="Walker" atLeast="0.8" timeoutSeconds="3"/>
-	<Wait frames="120"/>
+	<Wait frames="30"/>
 	<Expect watch="Appearance.SurfaceChannel" target="Walker" key="Wet" atLeast="0.6"/>
 	<Expect watch="Appearance.SurfaceChannel" target="Walker" key="Dirt" atMost="0.7"/>
 	<Expect watch="Appearance.SurfaceChannel" target="Walker" key="Wound" atLeast="0.99"/>
@@ -49,5 +51,6 @@
 
 	<DevCommand line="object.place Walker -3 0.05 0"/>
 	<WaitUntil watch="Surface.Submersion" target="Walker" atMost="0.01" timeoutSeconds="2"/>
+	<Variable name="gv_timeScale" value="1"/>
 	<Pass/>
 </Scenario>

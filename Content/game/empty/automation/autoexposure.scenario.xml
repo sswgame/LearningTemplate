@@ -11,12 +11,20 @@
 	<Launch variable="gv_renderScale" value="1"/>
 	<Wait frames="20"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<!-- 어두운 벽에 다 적응한다(속도 3/s, 3 초면 0.01 % 안). -->
-	<Wait frames="180"/>
+	<!-- 어두운 벽에 다 적응한다(속도 3/s, 3 초면 0.01 % 안). 적응은 게임 시계라 시간 배율 4 로 45 프레임 = 게임 시간 3 초다. -->
+	<Variable name="gv_timeScale" value="4"/>
+	<Wait frames="45"/>
+	<Variable name="gv_timeScale" value="1"/>
+	<!-- 첫 장(밝아진 직후 하얗게 날아간 그림)은 배율 1 로 찍는다 — 바뀐 뒤 몇 프레임의 게임 시간이 예전과 같아야 한다. -->
 	<DevCommand line="scene.layer Bright on"/>
 	<Wait frames="2"/>
 	<Screenshot file="exposure_first.ppm"/>
-	<Wait frames="300"/>
+	<!-- 사진은 요청 다음 프레임(N+1)의 그림이다 — 그 프레임까지 배율 1 로 두려고 한 프레임 쉰다. -->
+	<Wait frames="1"/>
+	<!-- 밝은 곳 적응 5 초도 배율 4(75 프레임 = 게임 시간 5 초) — 다 적응한 뒤라 둘째 · 셋째 장(배율 1)은 예전처럼 멈춘 그림이다. -->
+	<Variable name="gv_timeScale" value="4"/>
+	<Wait frames="75"/>
+	<Variable name="gv_timeScale" value="1"/>
 	<Screenshot file="exposure_adapted.ppm"/>
 	<Wait frames="30"/>
 	<Screenshot file="exposure_settled.ppm"/>
