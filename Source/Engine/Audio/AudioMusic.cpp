@@ -60,7 +60,7 @@ namespace sw
             SW_LOG_ERROR_ID( "AudioMusic.MusicNeedsPositiveTempo", "%#: music needs a positive tempo and beats per bar", sourceName );
             bValid = false;
         }
-        if ( _startSegment.empty() == false && findSegmentIndex( _startSegment ) < 0 )
+        if ( _startSegment.empty() == false && findSegmentIndex( _startSegment ).has_value() == false )
         {
             SW_LOG_ERROR_ID( "AudioMusic.StartSegmentDoesNot", "%#: start segment '%#' does not exist", sourceName, _startSegment.c_str() );
             bValid = false;
@@ -97,7 +97,7 @@ namespace sw
                     bValid = false;
                 }
             }
-            if ( segment._next.empty() == false && findSegmentIndex( segment._next ) < 0 )
+            if ( segment._next.empty() == false && findSegmentIndex( segment._next ).has_value() == false )
             {
                 SW_LOG_ERROR_ID( "AudioMusic.SegmentMovesUnknownSegment", "%#: segment '%#' moves to unknown segment '%#'", sourceName, pName, segment._next.c_str() );
                 bValid = false;
@@ -106,8 +106,8 @@ namespace sw
         const hashed_string anyName( "*" );
         for ( const AudioMusicTransitionDef& transition : _listTransition )
         {
-            const bool bFromKnown = transition._from.empty() || transition._from == anyName || findSegmentIndex( transition._from ) >= 0;
-            if ( bFromKnown == false || findSegmentIndex( transition._to ) < 0 )
+            const bool bFromKnown = transition._from.empty() || transition._from == anyName || findSegmentIndex( transition._from ).has_value();
+            if ( bFromKnown == false || findSegmentIndex( transition._to ).has_value() == false )
             {
                 SW_LOG_ERROR_ID( "AudioMusic.TransitionNamesUnknownSegment", "%#: transition '%#' -> '%#' names an unknown segment", sourceName, transition._from.c_str(), transition._to.c_str() );
                 bValid = false;
@@ -116,14 +116,14 @@ namespace sw
         return bValid;
     }
 
-    int32 AudioMusicDef::findSegmentIndex( const hashed_string& name ) const
+    optional<uint32> AudioMusicDef::findSegmentIndex( const hashed_string& name ) const
     {
         for ( size_t segmentIndex = 0; segmentIndex < _listSegment.size(); ++segmentIndex )
         {
             if ( _listSegment[segmentIndex]._name == name )
-                return static_cast<int32>( segmentIndex );
+                return static_cast<uint32>( segmentIndex );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     const AudioMusicTransitionDef* AudioMusicDef::findTransition( const hashed_string& from, const hashed_string& to ) const
