@@ -9,6 +9,7 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
@@ -551,4 +552,70 @@ SW_TEST_CASE( RenderPipelineAssetTest, ShippedPipelinesWireVelocity )
         }
         SW_EXPECT_TRUE_MSG( bAnyWriter == expectation._bWritesVelocity, expectation._pPath );
     }
+}
+
+/** @brief [RenderPipelineAssetTest] 화면 왜곡 누적은 왜곡 머티리얼(MATERIAL_DISTORTION)의 반투명 배치만 왜곡 퍼뮤테이션으로 그리고, 적용은 사본 · 왜곡 · 깊이를 읽는다 */
+SW_TEST_CASE( RenderPipelineAssetTest, DistortionPassTypesFollowTheTable )
+{
+    SW_EXPECT_TRUE( isPipelinePassType( RenderPassType::Distortion ) );
+    SW_EXPECT_TRUE( isPipelinePassType( RenderPassType::DistortionApply ) );
+    const RenderPassTypeInfo& accumulate = getRenderPassTypeInfo( RenderPassType::Distortion );
+    SW_EXPECT_TRUE( accumulate.hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch ) );
+    SW_EXPECT_FALSE( accumulate.hasFlag( RenderPassTraitFlag::kDepthWrite ) );
+    const vector<string> listDistortion{ string( kMaterialDistortionDefine ), string( "MATERIAL_BLEND_TRANSLUCENT" ) };
+    const vector<string> listPlain{ string( "MATERIAL_BLEND_TRANSLUCENT" ) };
+    SW_EXPECT_TRUE( FrameRendererUtil::drawsMaterialInPass( RenderPassType::Distortion, &listDistortion ) );
+    SW_EXPECT_FALSE( FrameRendererUtil::drawsMaterialInPass( RenderPassType::Distortion, &listPlain ) );
+    SW_EXPECT_FALSE( FrameRendererUtil::drawsMaterialInPass( RenderPassType::Distortion, nullptr ) ); // 머티리얼 없는 배치는 왜곡이 없다
+    const EngineDefaultAssets& assets = engine::getSubsystem<EngineDefaultAssets>();
+    SW_EXPECT_TRUE( VectorUtil::contains( selectRenderPassShader( RenderPassType::Distortion, nullptr, nullptr, assets )._listDefine, string( kPassDistortionDefine ) ) );
+    const RenderPassInputSignature* pApply = findRenderPassInputSignature( RenderPassType::DistortionApply );
+    SW_REQUIRE_TRUE( pApply != nullptr );
+    SW_EXPECT_TRUE( pApply->reads( RenderPassInputRole::SceneColorCopy ) );
+    SW_EXPECT_TRUE( pApply->reads( RenderPassInputRole::Distortion ) );
+    SW_EXPECT_TRUE( pApply->reads( RenderPassInputRole::SceneDepth ) );
+    SW_EXPECT_TRUE( resolveRenderPassInputRole( "SceneDistortion", false, "" ) == RenderPassInputRole::Distortion );
+}
+
+/** @brief [RenderPipelineAssetTest] 엔진 포워드 · 디퍼드는 반투명 앞에서 왜곡을 누적하고 적용한다 — 적용 패스는 누적 패스 뒤, 반투명 앞이고 장면 색에 쓴다 */
+SW_TEST_CASE( RenderPipelineAssetTest, ShippedPipelinesWireDistortion )
+{
+    for ( const utf8* pPath : { "engine/pipeline/forwardpipeline.xml", "engine/pipeline/deferredpipeline.xml" } )
+    {
+        RenderPipelineAsset asset;
+        SW_REQUIRE_TRUE_MSG( asset.loadFromXMLFile( AssetID{ string_view( pPath ) } ), pPath );
+        const vector<RenderGraphPassDesc>& listPass         = asset.getGraphPass();
+        size_t                             accumulateIndex  = listPass.size();
+        size_t                             applyIndex       = listPass.size();
+        size_t                             transparentIndex = listPass.size();
+        for ( size_t index = 0; index < listPass.size(); ++index )
+        {
+            accumulateIndex  = listPass[index]._type == RenderPassType::Distortion ? index : accumulateIndex;
+            applyIndex       = listPass[index]._type == RenderPassType::DistortionApply ? index : applyIndex;
+            transparentIndex = listPass[index]._type == RenderPassType::Transparent ? index : transparentIndex;
+        }
+        SW_REQUIRE_TRUE_MSG( accumulateIndex < applyIndex && applyIndex < transparentIndex, pPath );
+        const RenderGraphPassDesc& accumulate = listPass[accumulateIndex];
+        SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( accumulate._listResolvedColorOutput.size() ) );
+        SW_EXPECT_TRUE( static_cast<RenderPassInputRole>( accumulate._listResolvedColorOutput[0]._role ) == RenderPassInputRole::Distortion );
+        SW_EXPECT_TRUE( accumulate._resolvedRenderState.isAnyBlendEnabled() ); // 겹친 왜곡이 합쳐진다(가산)
+    }
+}
+
+/** @brief [RenderPipelineAssetTest] 왜곡 적용이 왜곡 입력을 적지 않으면 읽기 오류다(입력 계약) */
+SW_TEST_CASE( RenderPipelineAssetTest, DistortionApplyNeedsItsInputs )
+{
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassRequiredInputRole" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
+    const string        xml = "<RenderPipelineDesc _name=\"DistortionApply\"><_listAttachment>"
+                              "<RenderPassAttachment _name=\"SceneColor\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _loadOp=\"Clear\"/>"
+                              "<RenderPassAttachment _name=\"SceneColorCopy\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _loadOp=\"Clear\"/>"
+                              "<RenderPassAttachment _name=\"SceneDepth\" _format=\"D24_UNORM_S8_UINT\" _clearDepth=\"1\" _loadOp=\"Clear\"/>"
+                              "</_listAttachment><_listPass>"
+                              "<RenderGraphPassDesc _name=\"Apply\" _type=\"DistortionApply\" _cullMode=\"None\" _bEnableDepthTest=\"false\" _bEnableDepthWrite=\"false\">"
+                              "<_listInput><item>SceneColorCopy</item><item>SceneDepth</item></_listInput><_listOutput><item>SceneColor</item></_listOutput></RenderGraphPassDesc>"
+                              "</_listPass></RenderPipelineDesc>";
+    RenderPipelineAsset asset;
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, xml ) );
 }

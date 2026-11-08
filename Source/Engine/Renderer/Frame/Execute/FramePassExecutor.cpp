@@ -857,6 +857,8 @@ namespace sw
                 return names._sceneDepthCopy;
             case RenderPassInputRole::Velocity:
                 return names._velocity;
+            case RenderPassInputRole::Distortion:
+                return names._distortion;
             case RenderPassInputRole::Invalid:
             case RenderPassInputRole::Count:
                 return names._sourceColor;
@@ -1007,6 +1009,16 @@ namespace sw
                 case RenderPassType::TAA:
                 {
                     executeTAAPass( input );
+                    break;
+                }
+                case RenderPassType::Distortion:
+                {
+                    executeDistortionPass( input );
+                    break;
+                }
+                case RenderPassType::DistortionApply:
+                {
+                    executeDistortionApplyPass( input );
                     break;
                 }
                 case RenderPassType::Present:
@@ -1337,6 +1349,45 @@ namespace sw
         if ( beginColorPass( context, colorTarget, input._passDepth, _state._clearColor, RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load ) == false )
             return;
         drawFullscreen( context, skyPSO );
+        context._pCmd->endRenderPass();
+    }
+
+    bool FramePassExecutor::drawsDistortionThisView() const
+    {
+        // 값 보기(노멀 · 깊이 · 오버드로)와 와이어프레임은 장면 색을 덮지 않는다 — 왜곡도 없다(안개와 같은 판정).
+        const RenderViewModeInfo& viewModeInfo = getRenderViewModeInfo( _pActiveView->_settings._viewMode );
+        const bool                bShowsScene  = ( viewModeInfo._bWireframe == false || viewModeInfo._bOverlay ) && viewModeInfo._bShowsBuffer == false;
+        return bShowsScene && _state._gpuScene.hasDistortionBatches();
+    }
+
+    void FramePassExecutor::executeDistortionPass( const PassExecuteInput& input )
+    {
+        // 화면 왜곡 누적 — 왜곡 머티리얼(MATERIAL_DISTORTION)의 반투명 배치가 화면 UV 오프셋을 선언한 출력에 더한다(가산 블렌드, 깊이는 테스트만).
+        // 왜곡 배치가 없으면 기록하지 않는다 — 출력은 지워지지도 않지만 읽는 적용 패스도 같은 판정으로 돌지 않는다(쓰지 않을 때 비용이 없다).
+        const RHIPipelineStateHandle pso = _psoManager.getEnginePSO( RenderPassType::Distortion );
+        if ( drawsDistortionThisView() == false || pso == 0 )
+            return;
+        FramePassContext&    context = input._context;
+        const hashed_string& target  = input._declaredColor[0]._attachment;
+        if ( beginColorPass( context, target, input._passDepth, getTargetClearColor( target ), colorLoadFor( target ), RHIRenderPassLoadOp::Load ) == false )
+            return;
+        drawSceneMeshes( context, pso, input._bTransparentBatch );
+        context._pCmd->endRenderPass();
+    }
+
+    void FramePassExecutor::executeDistortionApplyPass( const PassExecuteInput& input )
+    {
+        // 화면 왜곡 적용 — 장면 색 사본을 왜곡 오프셋만큼 비껴 읽어 장면 색에 쓴다(distortion_apply.hlsl). 왜곡이 없으면 출력(장면 색)이 이미 맞아 아무것도 하지 않는다
+        // — 일반 풀스크린 패스의 복사 길을 타면 왜곡 없는 프레임에도 전 화면을 한 번 읽고 쓴다.
+        const RHIPipelineStateHandle pso = _psoManager.getEnginePSO( RenderPassType::DistortionApply );
+        if ( drawsDistortionThisView() == false || pso == 0 )
+            return;
+        FramePassContext&    context = input._context;
+        const hashed_string& target  = input._declaredColor[0]._attachment;
+        registerDeclaredInputs( context, input._passDesc );
+        if ( beginColorPass( context, target, hashed_string{}, _state._clearColor, RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load ) == false )
+            return;
+        drawFullscreen( context, pso );
         context._pCmd->endRenderPass();
     }
 

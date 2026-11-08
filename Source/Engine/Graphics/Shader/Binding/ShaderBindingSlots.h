@@ -37,7 +37,7 @@ namespace sw
         // 2) SRV(t#, space0): 네 백엔드 공통 슬롯
         // ------------------------------------------------------------------------------
         /**
-         * @brief 에뮬 백엔드(DX11 · GL)의 엔진 텍스처 칸 레지스터 t32..t44 입니다 — 역할 하나가 칸 하나(`emulated::kEngineTextureNames` 의 순서)입니다.
+         * @brief 에뮬 백엔드(DX11 · GL)의 엔진 텍스처 칸 레지스터 t32..t45 입니다 — 역할 하나가 칸 하나(`emulated::kEngineTextureNames` 의 순서)입니다.
          * @details GL 텍스처 유닛은 칸 번호(0..)다 — GL 백엔드가 이 레지스터 범위를 유닛으로 옮긴다(`emulated::getGlTextureUnit`). DX12 · Vulkan 은 선언하지 않는다.
          */
         inline constexpr uint32 kEngineTexture0     = SW_SLOT_ENGINE_TEX0;
@@ -401,8 +401,8 @@ namespace sw
         static_assert( kInstanceBuffer == 4, "t0..t3 은 비어 있고 띠는 인스턴스 버퍼 t4 부터다 — 띠를 내리면 DX12 테이블 · Vulkan 범위 · GL SSBO 번호가 함께 움직인다" );
         static_assert( kEngineTexture0 >= kMaterialTexture0 + kMaterialTextureCount && kEngineTexture0 >= vk::kRangeSize,
                        "엔진 텍스처 칸(에뮬)은 t 띠 · 머티리얼 칸 위다 — DX11 SRV 128 칸 안이고, GL 은 유닛을 칸 번호로 옮긴다" );
-        static_assert( SW_SLOT_ENGINE_TEX12 == SW_SLOT_ENGINE_TEX0 + 12 && kEngineTextureCount == 13 && kEngineTextureCount <= kMaterialTexture0,
-                       "엔진 텍스처 칸은 연속 13 칸이고 GL 유닛(칸 번호)이 머티리얼 유닛(16..)과 겹치지 않아야 한다 (binding.hlsli 의 선언 13 줄과 같다)" );
+        static_assert( SW_SLOT_ENGINE_TEX13 == SW_SLOT_ENGINE_TEX0 + 13 && kEngineTextureCount == 14 && kEngineTextureCount <= kMaterialTexture0,
+                       "엔진 텍스처 칸은 연속 14 칸이고 GL 유닛(칸 번호)이 머티리얼 유닛(16..)과 겹치지 않아야 한다 (binding.hlsli 의 선언 14 줄과 같다)" );
         static_assert( kMaterialBuffer == kInstanceBuffer + 1, "머티리얼 데이터 버퍼는 인스턴스 버퍼 바로 다음이어야 한다" );
         static_assert( kMaterialTexture0 == vk::kRangeSize && kSRVSlotCount <= kMaterialTexture0,
                        "머티리얼 텍스처 슬롯(에뮬)은 Vulkan t 밴드 바로 뒤에 둔다 — DX12 테이블 · Vulkan t 밴드 밖이고 SRV 띠가 자라도 겹치지 않는다" );
@@ -463,6 +463,7 @@ namespace sw
                 "Light2DCookieAtlas", ///< 2D 빛 쿠키 아틀라스 — 쿠키를 쓴 2D 빛이 있는 프레임에만
                 "AutoExposure",       ///< 자동 노출의 이번 EV(1x1 R32) — 톤맵하는 패스에만(post_grade.hlsli). 없으면 EV 0
                 "Velocity",           ///< 화면 속도(SceneVelocity, R16G16 실수) — TAA · 모션 블러가 선언했을 때만
+                "Distortion",         ///< 화면 왜곡 오프셋(SceneDistortion, R16G16 실수) — 왜곡 적용 패스가 선언했을 때만
             };
             static_assert( sizeof( kEngineTextureNames ) / sizeof( kEngineTextureNames[0] ) == kEngineTextureCount, "엔진 텍스처 칸 표와 칸 수(SW_ENGINE_TEXTURE_COUNT)가 다르다" );
 

@@ -58,6 +58,16 @@ namespace sw
      */
     inline constexpr const utf8* kPassVelocityDefine = "SW_PASS_VELOCITY=1";
 
+    /** @brief 왜곡 누적 패스가 머티리얼 셰이더에 추가하는 define 입니다. 픽셀 출력을 왜곡 오프셋 하나로 바꾸고 왜곡 훅(`computeMaterialDistortion`)을 부른다(material_shader_main.hlsli). */
+    inline constexpr const utf8* kPassDistortionDefine = "SW_PASS_DISTORTION=1";
+
+    /**
+     * @brief 화면 왜곡을 그리는 머티리얼의 define 입니다(`.material` 의 `_alwaysDefines`). 왜곡 누적 패스는 이것이 있는 배치만 그린다(`_pRequiredMaterialDefine`).
+     * @details 이 define 을 적는 머티리얼의 셰이더는 왜곡 훅을 정의한다(`SW_MATERIAL_CUSTOM_DISTORTION` — 없으면 material_shader.hlsli 의 `#error`). 본보기는 engine/shaders/distortion.hlsl 이다.
+     *          VFX 메시 입자는 방출기의 메시 머티리얼이 이 머티리얼이면 같은 길로 왜곡을 그린다.
+     */
+    inline constexpr const utf8* kMaterialDistortionDefine = "MATERIAL_DISTORTION";
+
     /** @brief FSR 1 의 RCAS 단계가 fsr1.hlsl 에 추가하는 define 입니다. 없으면 같은 파일이 EASU 단계입니다. */
     inline constexpr const utf8* kPassFSRRcasDefine = "SW_PASS_FSR_RCAS=1";
 

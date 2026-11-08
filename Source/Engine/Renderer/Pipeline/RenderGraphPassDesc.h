@@ -102,6 +102,17 @@ namespace sw
          */
         SceneDepthCopy,
         /**
+         * @brief 화면 왜곡 누적입니다. 반투명 배치 중 머티리얼에 `MATERIAL_DISTORTION` 이 있는 것만 머티리얼 셰이더의 왜곡 훅(`computeMaterialDistortion`)으로 그려
+         *        화면 UV 오프셋을 선언한 R16G16 실수 출력(`Distortion` 역할, 클리어 0)에 더한다(가산 블렌드 — 겹친 왜곡이 합쳐진다). 장면 깊이로 테스트만 한다(가려진 왜곡은 없다).
+         *        씬에 왜곡 배치가 없으면 기록하지 않는다(`GPUScene::hasDistortionBatches` — 쓰지 않을 때 비용이 없다). 언리얼 Distortion 패스 · 유니티 왜곡과 같은 자리다.
+         */
+        Distortion,
+        /**
+         * @brief 화면 왜곡 적용입니다. 장면 색 사본(`SceneColorCopy` 역할)을 왜곡 오프셋(`Distortion` 역할)만큼 비껴 읽어 선언한 컬러 출력(장면 색)에 쓴다(distortion_apply.hlsl).
+         *        비껴 읽은 자리의 깊이가 이 픽셀보다 가까우면(앞의 물체) 끌어오지 않는다. 왜곡 누적과 같은 조건으로 돌지 않는다 — 출력이 곧 왜곡 없는 장면 색이라 그대로 둔다(안개와 같은 전용 실행).
+         */
+        DistortionApply,
+        /**
          * @brief 파이프라인 XML 이 고른 컴퓨트 셰이더(`_shaderPath` · `_computeEntryPoint`)를 돌립니다 — 코드 없이 데이터만으로 효과를 더하는 패스입니다(언리얼 RDG 의 컴퓨트 패스 자리).
          *        선언한 컬러 출력 하나에 쓰고 입력(최대 둘, 깊이 형식 제외)을 읽습니다. 첨부는 RW 텍스처로 묶입니다(`compute_pass.hlsli` 의 루트 상수). 그룹 수는 첨부 크기를 `_threadGroupSize` 로 나눈 값입니다.
          */

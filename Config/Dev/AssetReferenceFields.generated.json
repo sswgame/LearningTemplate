@@ -83,6 +83,8 @@
         "_shaderDeferredLighting",
         "_shaderDepthHistory",
         "_shaderDepthOfField",
+        "_shaderDistortion",
+        "_shaderDistortionApply",
         "_shaderFog",
         "_shaderForwardLit",
         "_shaderFullscreenBlit",

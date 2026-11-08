@@ -380,6 +380,13 @@ SurfaceOutput PixelContext::storeSurface( MaterialSurface surface )
 {
     return SurfaceOutput::store( float4( 0.0f, 0.0f, 0.0f, 0.0f ), surface._albedo, surface._normal, _worldPosition, surface._roughness, surface._metallic );
 }
+    #elif defined( SW_PASS_DISTORTION )
+/** @brief 왜곡 누적 패스 — 조명 없이 왜곡 훅의 화면 UV 오프셋만 낸다. 보기 모드는 받지 않는다(패스가 값 보기에서 돌지 않는다). */
+SurfaceOutput PixelContext::storeSurface( MaterialSurface surface )
+{
+    g_SurfaceDistortion = computeMaterialDistortion( this, surface );
+    return SurfaceOutput::pack( float4( 0.0f, 0.0f, 0.0f, 0.0f ), surface._albedo, surface._normal, surface._roughness, surface._metallic );
+}
     #elif defined( MATERIAL_BLEND_TRANSLUCENT )
 SurfaceOutput PixelContext::storeSurface( MaterialSurface surface )
 {

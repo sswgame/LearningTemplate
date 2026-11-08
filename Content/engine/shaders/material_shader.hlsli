@@ -24,6 +24,8 @@
  *   사용자 보간 칸  `MaterialVaryings computeMaterialVaryings( VertexContext context )`
  *             SW_MATERIAL_CUSTOM_VARYINGS(구조체 + 훅 정의) · SW_MATERIAL_DEFAULT_VARYINGS(칸 없음) 중 하나. 시맨틱은 TEXCOORD8 ~ TEXCOORD14.
  *   외곽선    `OutlineOffset computeMaterialOutline( VertexContext context )`  메시 외곽선 패스(SW_PASS_MESH_OUTLINE)에서만 부른다.
+ *   왜곡      `float2 computeMaterialDistortion( PixelContext context, MaterialSurface surface )`  화면 UV 오프셋. 왜곡 누적 패스(SW_PASS_DISTORTION)에서만 부른다 —
+ *             그 패스는 머티리얼 define MATERIAL_DISTORTION 이 있는 배치만 그리므로 그 define 을 적는 셰이더만 SW_MATERIAL_CUSTOM_DISTORTION 으로 정의한다(본보기 distortion.hlsl).
  * 선택이 없거나 겹치면 이 파일의 `#error` 가 멈춘다. 훅 정의가 없는데 선택했으면 컴파일러가 미선언 식별자로 멈춘다.
  *
  * 머티리얼은 **한 단계에서만 읽는다**(GL 은 구조버퍼를 정점 · 픽셀 두 단계가 읽으면 링크를 거절한다 — binding.hlsli 9 절).
@@ -103,6 +105,9 @@
 #endif
 #if defined( SW_MATERIAL_DEFAULT_VARYINGS ) && defined( SW_MATERIAL_CUSTOM_VARYINGS )
     #error "pick exactly one varyings hook: SW_MATERIAL_CUSTOM_VARYINGS and SW_MATERIAL_DEFAULT_VARYINGS are exclusive"
+#endif
+#if defined( SW_PASS_DISTORTION ) && !defined( SW_MATERIAL_CUSTOM_DISTORTION )
+    #error "the distortion pass draws MATERIAL_DISTORTION materials only: define SW_MATERIAL_CUSTOM_DISTORTION and computeMaterialDistortion in a shader whose material lists MATERIAL_DISTORTION"
 #endif
 
 // ------------------------------------------------------------------------------

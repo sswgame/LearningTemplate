@@ -14,6 +14,8 @@
 		<RenderGraphPassDesc _name="DepthOfField" _op="Remove" />
 		<RenderGraphPassDesc _name="Fog" _op="Remove" />
 		<RenderGraphPassDesc _name="HighlightSense" _op="Remove" />
+		<RenderGraphPassDesc _name="DistortionApply" _op="Remove" />
+		<RenderGraphPassDesc _name="Distortion" _op="Remove" />
 		<RenderGraphPassDesc _name="SceneDepthCopy" _op="Remove" />
 		<RenderGraphPassDesc _name="SceneColorCopy" _op="Remove" />
 		<RenderGraphPassDesc _name="Sky" _op="Remove" />

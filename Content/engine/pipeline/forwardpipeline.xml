@@ -144,6 +144,42 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
+		<!-- 화면 왜곡 — 반투명 앞(장면 색 사본 뒤)에서 누적하고 바로 적용한다. 언리얼은 반투명 뒤에 적용하지만 반투명은 깊이를 쓰지 않아 앞의 반투명이 끌려 들어오므로
+		     반투명 · TAA 앞에 둔다(왜곡 면 뒤의 불투명 · 하늘만 비껴 보인다). 씬에 왜곡 머티리얼(MATERIAL_DISTORTION)이 없으면 두 패스 모두 기록하지 않는다. -->
+		<RenderGraphPassDesc _name="Distortion"
+		                     _type="Distortion"
+		                     _depthAttachment="SceneDepth"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="None"
+		                     _bEnableDepthTest="true"
+		                     _bEnableDepthWrite="false"
+		                     _blendPreset="Additive">
+			<_listInput>
+				<item>SceneDepth</item>
+			</_listInput>
+			<_listOutput>
+				<item>SceneDistortion</item>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
+		<RenderGraphPassDesc _name="DistortionApply"
+		                     _type="DistortionApply"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="None"
+		                     _bEnableDepthTest="false"
+		                     _bEnableDepthWrite="false">
+			<_listInput>
+				<item>SceneColorCopy</item>
+				<item>SceneDistortion</item>
+				<item>SceneDepth</item>
+			</_listInput>
+			<_listOutput>
+				<item>SceneColor</item>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
 		<RenderGraphPassDesc _name="Transparent"
 		                     _type="Transparent"
 		                     _depthAttachment="SceneDepth"

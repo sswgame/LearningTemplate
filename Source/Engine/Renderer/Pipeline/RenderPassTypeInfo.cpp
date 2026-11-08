@@ -254,6 +254,24 @@ namespace sw
                         info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract;
                         break;
                     }
+                    case RenderPassType::Distortion:
+                    {
+                        // 왜곡 머티리얼(MATERIAL_DISTORTION)의 반투명 배치만 그 머티리얼 셰이더의 왜곡 퍼뮤테이션으로 오프셋을 더한다(가산 블렌드는 파이프라인 XML 이 적는다).
+                        // 깊이는 테스트만 한다. 전용 실행(executeDistortionPass)이 씬에 왜곡 배치가 없으면 기록하지 않는다. 뷰 모드는 받지 않는다(값 보기에서는 왜곡이 없다).
+                        info._pDefaultShader          = &EngineDefaultAssets::_shaderDistortion;
+                        info._pPassDefine             = kPassDistortionDefine;
+                        info._pRequiredMaterialDefine = kMaterialDistortionDefine;
+                        info._flags                   = Flag::kDepthTest | Flag::kBlend | Flag::kDrawsSceneMeshes | Flag::kUsesMaterialShader | Flag::kDrawsTransparentBatch | Flag::kDrawsDeclaredColor;
+                        break;
+                    }
+                    case RenderPassType::DistortionApply:
+                    {
+                        // 장면 색 사본을 왜곡 오프셋만큼 비껴 읽어 장면 색에 쓴다. 깊이로 앞의 물체를 끌어오지 않는다. 전용 실행 — 왜곡이 없으면 출력(장면 색)이 이미 맞아 기록하지 않는다.
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderDistortionApply;
+                        info._inputContract  = makeContract( { Role::SceneColorCopy, Role::Distortion, Role::SceneDepth }, {} );
+                        info._flags          = Flag::kHasInputContract | Flag::kDrawsDeclaredColor;
+                        break;
+                    }
                     case RenderPassType::MotionBlur:
                     {
                         // 원본 색 · 장면 깊이 · 화면 속도를 읽는 효과 패스다. 꺼지면(후처리를 끈 뷰 · 품질 · gv_motionBlur · 컷 · 카메라와 물체가 모두 서 있음) 패스를 기록하지 않고 출력이 원본을 가리킨다(kBypassesToSource).

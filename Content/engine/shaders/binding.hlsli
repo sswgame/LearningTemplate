@@ -170,7 +170,8 @@ struct PassTexture
     static void sampleDepthCross( float2 uv, float2 texel, out float outCenterDepth, out float4 outNeighborDepth );
     static float4 gatherDepthRed( float2 uv );
     static float sampleAmbientOcclusion( float2 uv );
-    static float2 sampleVelocityPoint( float2 uv ); // 화면 속도(이번 UV - 지난 UV) — 불투명 지오메트리 패스의 출력(SceneVelocity)
+    static float2 sampleVelocityPoint( float2 uv );   // 화면 속도(이번 UV - 지난 UV) — 불투명 지오메트리 패스의 출력(SceneVelocity)
+    static float2 sampleDistortionPoint( float2 uv ); // 화면 왜곡 오프셋(화면 UV) — 왜곡 누적 패스의 출력(SceneDistortion)
     static float4 sampleLight2dCookieAtlas( float2 uv );
 };
 
@@ -251,9 +252,9 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     float4 g_FogDebugParams; // 안개 진단 보기(C++ FrameFog::makeDebugParams) — x 보기(0 없음 · 1 비교 · 2 산란 단면 · 3 투과율 단면), y 단면 조각, z 비교 경계 uv.x. 안개 패스만 읽는다
     // 엔진 텍스처 인덱스 g_<이름>Index — 이름은 C++ 표 shaderslot::emulated::kEngineTextureNames 하나가 정하고 컴파일러가 SW_ENGINE_TEXTURE_INDEX_<칸> 으로 넣는다.
     // 손으로 적지 않는다: 표에 없는 엔진 텍스처 인덱스가 생기면 에뮬 백엔드(DX11 · GL)가 칸을 몰라 자홍을 낸다(뜻은 표의 주석). 걸려 있지 않은 역할은 kInvalidIndex 다.
-    // 아래 13 줄은 SW_ENGINE_TEXTURE_COUNT 와 같은 수다.
-#if !defined( SW_ENGINE_TEXTURE_INDEX_0 ) || !defined( SW_ENGINE_TEXTURE_INDEX_12 ) || defined( SW_ENGINE_TEXTURE_INDEX_13 ) || SW_ENGINE_TEXTURE_COUNT != 13
-    #error "SW_ENGINE_TEXTURE_INDEX_* missing or count changed - ShaderCompiler::appendEngineDefines injects them from shaderslot::emulated::kEngineTextureNames; match the 13 fields below"
+    // 아래 14 줄은 SW_ENGINE_TEXTURE_COUNT 와 같은 수다.
+#if !defined( SW_ENGINE_TEXTURE_INDEX_0 ) || !defined( SW_ENGINE_TEXTURE_INDEX_13 ) || defined( SW_ENGINE_TEXTURE_INDEX_14 ) || SW_ENGINE_TEXTURE_COUNT != 14
+    #error "SW_ENGINE_TEXTURE_INDEX_* missing or count changed - ShaderCompiler::appendEngineDefines injects them from shaderslot::emulated::kEngineTextureNames; match the 14 fields below"
 #endif
     uint  SW_ENGINE_TEXTURE_INDEX_0;
     uint  SW_ENGINE_TEXTURE_INDEX_1;
@@ -268,6 +269,7 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     uint  SW_ENGINE_TEXTURE_INDEX_10;
     uint  SW_ENGINE_TEXTURE_INDEX_11;
     uint  SW_ENGINE_TEXTURE_INDEX_12;
+    uint  SW_ENGINE_TEXTURE_INDEX_13;
     uint  g_Flags;
     uint  g_SwInstancesIndex;          // 인스턴스 구조버퍼가 걸려 있으면 유효, kInvalidIndex 면 g_World 폴백 (풀스크린·픽스처)
     uint  g_SwInstanceCount;           // 인스턴스 버퍼 원소 수 — 범위 밖 인덱스를 막는다 (DX12 루트 SRV 는 경계 검사가 없다)

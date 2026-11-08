@@ -206,7 +206,8 @@ SW_DECLARE_ENGINE_TEXTURE( 9 );
 SW_DECLARE_ENGINE_TEXTURE( 10 );
 SW_DECLARE_ENGINE_TEXTURE( 11 );
 SW_DECLARE_ENGINE_TEXTURE( 12 );
-        #if SW_ENGINE_TEXTURE_COUNT != 13
+SW_DECLARE_ENGINE_TEXTURE( 13 );
+        #if SW_ENGINE_TEXTURE_COUNT != 14
             #error "SW_ENGINE_TEXTURE_COUNT changed - match the declarations above and SW_ENGINE_TEXTURE_SWITCH"
         #endif
 
@@ -325,6 +326,9 @@ static float4 Bindless::sampleSlotWith( Texture2D slotTexture, uint samplerID, f
                 case 12u:                                                  \
                     OP( SW_ENGINE_TEXTURE( 12 ), SW_ENGINE_SAMPLER( 12 ) ) \
                     break;                                                 \
+                case 13u:                                                  \
+                    OP( SW_ENGINE_TEXTURE( 13 ), SW_ENGINE_SAMPLER( 13 ) ) \
+                    break;                                                 \
                 default:                                                   \
                     break;                                                 \
             }
@@ -371,6 +375,8 @@ static uint Bindless::emulatedSlot( uint index )
         return 11u;
     if ( index == SW_ENGINE_TEXTURE_INDEX_12 )
         return 12u;
+    if ( index == SW_ENGINE_TEXTURE_INDEX_13 )
+        return 13u;
     return kUnmappedEngineTextureSlot;
 }
 
@@ -984,6 +990,13 @@ static float2 PassTexture::sampleVelocityPoint( float2 uv )
     if ( g_VelocityIndex == kInvalidIndex )
         return float2( 0.0f, 0.0f );
     return Bindless::sampleIndexWith( g_VelocityIndex, SW_SAMPLER_POINT_CLAMP, uv ).rg;
+}
+/** @brief 화면 왜곡 오프셋(화면 UV, 역할 Distortion)을 가장 가까운 텍셀로 읽습니다. 걸리지 않았으면 0(왜곡 없음)이다. */
+static float2 PassTexture::sampleDistortionPoint( float2 uv )
+{
+    if ( g_DistortionIndex == kInvalidIndex )
+        return float2( 0.0f, 0.0f );
+    return Bindless::sampleIndexWith( g_DistortionIndex, SW_SAMPLER_POINT_CLAMP, uv ).rg;
 }
 
 #endif // SW_NATIVE_BINDLESS || !SW_STAGE_COMPUTE

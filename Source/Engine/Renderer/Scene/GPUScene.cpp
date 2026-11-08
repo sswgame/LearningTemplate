@@ -2,6 +2,7 @@
 
 #include "Engine/Renderer/Scene/GPUScene.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 
@@ -13,6 +14,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Renderer/Scene/GPUMeshMorphPool.h"
 #include "Engine/Renderer/Scene/GPUVertexAnimationPool.h"
 
@@ -64,7 +66,8 @@ namespace sw
         _bBatchTablesDirty    = SW_TRUE;
         // 씬을 비우면 움직임 기록도 버린다 — 다음 씬의 첫 프레임은 카메라 움직임뿐이다.
         _motionHistory.reset();
-        _bObjectMotion = SW_FALSE;
+        _bObjectMotion      = SW_FALSE;
+        _bDistortionBatches = SW_FALSE;
     }
 
     void GPUScene::setVertexPoolEnabled( bool bEnabled )
@@ -156,7 +159,10 @@ namespace sw
         const uint32 instanceCount = static_cast<uint32>( _snapshot.getInstances().size() );
         const uint32 argsCount     = static_cast<uint32>( _snapshot.getAllBatches().size() );
         if ( bCPUDirty )
+        {
             uploadInstanceAndVisibleBuffers( pDevice, instanceCount );
+            refreshDistortionBatches();
+        }
 
         SW_PROFILE_SCOPE( "RT.GPUScene.batchTables" );
         uploadBatchTable( pDevice, argsCount );
@@ -326,6 +332,21 @@ namespace sw
             return false;
         view._lodStateLayoutGeneration = _snapshot._instanceLayoutGeneration;
         return true;
+    }
+
+    void GPUScene::refreshDistortionBatches()
+    {
+        const string distortionDefine{ kMaterialDistortionDefine };
+        _bDistortionBatches = SW_FALSE;
+        for ( const GPUMeshBatch& batch : _snapshot.getAllBatches() )
+        {
+            const GPUShaderPermutation* pPermutation = batch._shaderPermutation == kInvalidShaderPermutation ? nullptr : findShaderPermutation( batch._shaderPermutation );
+            if ( pPermutation != nullptr && VectorUtil::contains( pPermutation->_listDefine, distortionDefine ) )
+            {
+                _bDistortionBatches = SW_TRUE;
+                return;
+            }
+        }
     }
 
     void GPUScene::updateMotionHistory( IRHIDevice* pDevice )

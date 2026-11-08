@@ -22,6 +22,8 @@
     #define SW_WRITES_VELOCITY 0
 #endif
 static float2 g_SurfaceVelocity = float2( 0.0f, 0.0f );
+// 화면 왜곡 오프셋(화면 UV) — 왜곡 누적 패스(SW_PASS_DISTORTION)가 머티리얼의 왜곡 훅으로 정해(PixelContext::storeSurface) 단일 타깃에 낸다(가산 블렌드).
+static float2 g_SurfaceDistortion = float2( 0.0f, 0.0f );
 
 // 양쪽 다 **구조체**다. 포워드 쪽을 `float4` 로 두면 `SurfaceOutput PSMain(...)` 에 반환
 // 시맨틱이 사라져 DXC 가 "Semantic must be defined for all outputs" 로 거절한다 — 그러면 머티리얼
@@ -36,6 +38,8 @@ struct SurfaceOutput
 #elif defined( SW_PASS_VELOCITY )
     float4 _color : SV_TARGET0;
     float2 _velocity : SV_TARGET1; // R16G16 실수 — 이번 UV - 지난 UV(g_SurfaceVelocity)
+#elif defined( SW_PASS_DISTORTION )
+    float4 _distortion : SV_TARGET0; // R16G16 실수 — rg 화면 UV 오프셋(g_SurfaceDistortion), a 1(가산 블렌드의 SrcAlpha)
 #else
     float4 _color : SV_TARGET0;
 #endif
@@ -347,6 +351,13 @@ static SurfaceOutput SurfaceOutput::pack( float4 litColor, float4 albedo, float3
     SurfaceOutput output;
     output._color    = litColor;
     output._velocity = g_SurfaceVelocity;
+    return output;
+}
+#elif defined( SW_PASS_DISTORTION )
+static SurfaceOutput SurfaceOutput::pack( float4 litColor, float4 albedo, float3 worldNormal, float roughness, float metallic )
+{
+    SurfaceOutput output;
+    output._distortion = float4( g_SurfaceDistortion, 0.0f, 1.0f );
     return output;
 }
 #else

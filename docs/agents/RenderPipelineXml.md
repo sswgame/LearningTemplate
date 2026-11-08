@@ -95,6 +95,19 @@ TAA · 모션 블러가 읽는 물체별 화면 속도(이번 UV - 지난 UV)는
 
 그리지 않은 픽셀(하늘)은 속도가 0 이고, 읽는 쪽은 깊이 1 인 픽셀을 지난 뷰-투영으로 카메라 재투영한다. 반투명 · 외곽선 껍질은 속도를 쓰지 않는다(언리얼 기본값과 같다). 속도를 읽는 패스가 없는 파이프라인(2D)은 첨부도 쓰기도 두지 않는다.
 
+## 화면 왜곡
+
+충격파 · 아지랑이 · 유리 굴절처럼 뒤의 장면을 비껴 보이게 하는 효과는 두 패스다(언리얼 Distortion 패스 · 유니티 왜곡과 같은 자리).
+
+| 패스 | 하는 일 | 선언 |
+|---|---|---|
+| `Distortion` | 머티리얼에 `MATERIAL_DISTORTION` 이 있는 반투명 배치만 왜곡 훅(`computeMaterialDistortion`)으로 화면 UV 오프셋을 더한다(가산 블렌드, 깊이는 테스트만) | 출력 `SceneDistortion`(역할 Distortion, `R16G16_FLOAT`, 클리어 0), `_depthAttachment`, `_blendPreset="Additive"` |
+| `DistortionApply` | 장면 색 사본을 오프셋만큼 비껴 읽어 장면 색에 쓴다. 비껴 읽을 자리가 이 픽셀보다 가까우면 끌어오지 않는다 | 입력 SceneColorCopy · SceneDistortion · SceneDepth(필수), 출력 장면 색 |
+
+- 엔진 파이프라인은 장면 색 사본 뒤 · 반투명 앞에 둔다 — 반투명은 깊이를 쓰지 않아 뒤에 두면 앞의 반투명이 끌려 들어온다(언리얼은 반투명 뒤).
+- 씬에 왜곡 배치가 없으면 두 패스 모두 기록하지 않는다(`GPUScene::hasDistortionBatches`). 장면 색 사본이 없는 파이프라인(2D)은 두 패스를 지운다.
+- 머티리얼: `_alwaysDefines` 에 `MATERIAL_DISTORTION` · `MATERIAL_BLEND_TRANSLUCENT`, 셰이더는 `SW_MATERIAL_CUSTOM_DISTORTION` 과 훅을 정의한다(본보기 `engine/materials/distortion.material` · `engine/shaders/distortion.hlsl`). VFX 메시 입자는 방출기 메시 머티리얼을 왜곡 머티리얼로 두면 같은 길로 그린다. 물의 굴절은 자기 길(반투명 패스가 사본을 읽는다) 그대로다.
+
 ## 컴퓨트 패스
 
 `_type="Compute"` 패스는 셰이더 하나로 효과를 더한다. 선언: 컬러 출력 하나, 입력 최대 둘(깊이 형식 제외 — 깊이는 `SceneDepthCopy` 를 읽는다), 입력과 출력은 겹치지 않는다. 첨부는 RW 텍스처로 묶이고 값은 `compute_pass.hlsli` 의 루트 상수로 받는다. GL 은 묶은 포맷과 셰이더 선언이 같아야 하므로 include 전에 `SW_RW_SLOT0_GL_FORMAT` 을 적는다. 예: `game/empty/pipeline/computepasspipeline.xml`.
