@@ -3,7 +3,6 @@
 #include "Editor/Panels/ProjectSettings/ProjectSettingsPanel.h"
 
 #include "Core/File/FileUtil.h"
-#include "Core/File/ProcessRoots.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/String/StringBuilder.h"
 
@@ -18,19 +17,13 @@
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorDisplayNameUtil.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Config/ConfigManager.h"
-#include "Engine/Config/GameConfig.h"
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Reflection/ReflectionTypes.h"
-#include "Engine/Reflection/TypeRegistry.h"
 
 #include <imgui.h>
 
@@ -40,20 +33,9 @@ namespace sw::editor
     {
         struct ProjectSettingsPanelInternal
         {
-            /** @brief 감시 값이 읽는 지난 프레임의 값입니다. 패널 인스턴스는 감시 값에서 보이지 않으므로 에디터 범위의 상태 저장소가 소유한다. */
-            struct ProbeState
-            {
-                uint32 _pageCount{ 0 };
-                uint32 _selectedKeyCount{ 0 };
-                uint32 _dirtyPageCount{ 0 };
-            };
-
-            static ProbeState& getProbeState() { return getEditorState<ProbeState>(); }
-
             static void openPanel()
             {
-                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-                (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<ProjectSettingsPanel>( true ); // 패널은 이 파일에 등록되어 있다
+                (void)EditorPanelManager::getInEditorContext().setPanelOpen<ProjectSettingsPanel>( true ); // 패널은 이 파일에 등록되어 있다
             }
 
             [[nodiscard]] static bool readPageCount( const GameObjectManager* /*pManager*/, float64& outValue )
@@ -93,62 +75,24 @@ namespace sw::editor
 
     uint32 ProjectSettingsPanel::getPageCount()
     {
-        return ProjectSettingsPanelInternal::getProbeState()._pageCount;
+        return ProjectSettingsPage::getWatchValues()._pageCount;
     }
 
     uint32 ProjectSettingsPanel::getSelectedKeyCount()
     {
-        return ProjectSettingsPanelInternal::getProbeState()._selectedKeyCount;
+        return ProjectSettingsPage::getWatchValues()._selectedKeyCount;
     }
 
     uint32 ProjectSettingsPanel::getDirtyPageCount()
     {
-        return ProjectSettingsPanelInternal::getProbeState()._dirtyPageCount;
+        return ProjectSettingsPage::getWatchValues()._dirtyPageCount;
     }
 
     void ProjectSettingsPanel::reloadCatalog()
     {
         _bCatalogLoaded = SW_TRUE;
-        _listPage.clear();
-        _pSelected                   = nullptr;
-        const TypeRegistry& registry = editor::getSubsystem<TypeRegistry>();
-
-        // 활성 팩의 `<Engine>` 요소(창 제목 · 렌더 파이프라인 · 스키마 · UI 규칙) — 게임의 엔진 설정은 프리셋이 아니라 팩 gamesettings.xml 에 있다.
-        // 유니티 · 언리얼의 Project Settings 처럼 열린 프로젝트(활성 게임) 하나만 고친다.
-        const DataPath& packRoot   = editor::getSubsystem<const GameConfig>()._packRoot;
-        const string    packFolder = packRoot.isSet() ? EditorPaths::findContentFolder( packRoot.get() ) : string{};
-        // 팩 폴더를 못 찾았는데 빈 루트에 이어 붙이면 상대 경로가 돼 작업 폴더의 파일을 열고 쓴다 — 페이지를 만들지 않고 알린다.
-        if ( packRoot.isSet() && packFolder.empty() )
-            SW_LOG_ERROR_ID( "ProjectSettingsPanel.ProjectSettingsActivePack", "Project settings: the active pack folder '%#' was not found - its <Engine> settings page is not listed", packRoot.get().c_str() );
-        if ( packFolder.empty() == false )
-        {
-            unique_ptr<Page> pPackPage      = make_unique<Page>();
-            pPackPage->_entry._page         = string( PackEngineSettings::StaticType()->_name.c_str() );
-            pPackPage->_entry._typeName     = pPackPage->_entry._page;
-            pPackPage->_entry._elementName  = PackEngineSettings::kElementName;
-            pPackPage->_entry._relativePath = FileUtil::joinPath( FileUtil::joinPath( constant::path::kContentFolder, packRoot.get() ), PackEngineSettings::kPackRelativePath );
-            pPackPage->_entry._absolutePath = FileUtil::joinPath( packFolder, PackEngineSettings::kPackRelativePath );
-            pPackPage->_absolutePath        = pPackPage->_entry._absolutePath;
-            pPackPage->_bTypeFound          = registry.findType( PackEngineSettings::StaticType()->_name ) != nullptr;
-            _listPage.push_back( std::move( pPackPage ) );
-        }
-
-        const ConfigManager* const pConfigManager = editor::findSubsystem<ConfigManager>();
-        if ( pConfigManager == nullptr )
-        {
-            SW_LOG_ERROR_ID( "ProjectSettingsPanel.ProjectSettingsEditorServices", "Project settings: the editor services have no ConfigManager - there is nothing to list" );
-            return;
-        }
-        vector<ProjectSettingsEntry> listEntry;
-        ProjectSettingsEntry::collectLoaded( *pConfigManager, ProcessRoots::get()._project.str(), listEntry );
-        for ( ProjectSettingsEntry& entry : listEntry )
-        {
-            unique_ptr<Page> pPage = make_unique<Page>();
-            pPage->_entry          = std::move( entry );
-            pPage->_absolutePath   = pPage->_entry._absolutePath;
-            pPage->_bTypeFound     = registry.findType( hashed_string( pPage->_entry._typeName.c_str() ) ) != nullptr;
-            _listPage.push_back( std::move( pPage ) );
-        }
+        _pSelected      = nullptr;
+        ProjectSettingsPage::collectPages( _listPage );
     }
 
     void ProjectSettingsPanel::onPropertyEdited( const PropertyInfo& /*prop*/ )
@@ -293,8 +237,8 @@ namespace sw::editor
     {
         if ( _bCatalogLoaded == false )
             reloadCatalog();
-        ProjectSettingsPanelInternal::ProbeState& probe = ProjectSettingsPanelInternal::getProbeState();
-        probe._pageCount                                = static_cast<uint32>( _listPage.size() );
+        ProjectSettingsWatchValues& probe = ProjectSettingsPage::getWatchValues();
+        probe._pageCount                  = static_cast<uint32>( _listPage.size() );
         uint32 dirtyCount{ 0 };
         for ( const unique_ptr<Page>& pPage : _listPage )
         {

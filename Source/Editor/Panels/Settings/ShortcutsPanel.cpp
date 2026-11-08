@@ -11,8 +11,6 @@
 #include "Editor/Common/Input/EditorInputActions.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Input/RawInputEvent.h"
@@ -36,7 +34,7 @@ namespace sw::editor
                 return mark;
             }
 
-            static EditorInputActions& getInputActions() { return editor::getSubsystem<EditorContext>().getSubsystem<EditorInputActions>(); }
+            static EditorInputActions& getInputActions() { return EditorInputActions::getInEditorContext(); }
         };
 
         /** @brief 조합 받기가 부르는 입력 맵 쪽을 `EditorInputActions` 로 잇습니다. 상태가 없어 부를 때마다 만들어 씁니다. */
@@ -56,9 +54,9 @@ namespace sw::editor
             void setCommandsSuspended( bool bSuspended ) override
             {
                 // 에디터가 내려가는 중(패널 종료)이면 입력 서브시스템이 이미 없을 수 있다.
-                EditorContext* pContext = editor::findSubsystem<EditorContext>(); // 선택: 종료 경로에서 컨텍스트가 먼저 사라진다
-                if ( pContext != nullptr )
-                    pContext->getSubsystem<EditorInputActions>().setCommandsSuspended( bSuspended );
+                EditorInputActions* pInputActions = EditorInputActions::findInEditorContext(); // 선택: 종료 경로에서 컨텍스트가 먼저 사라진다
+                if ( pInputActions != nullptr )
+                    pInputActions->setCommandsSuspended( bSuspended );
             }
         };
     } // namespace
@@ -120,7 +118,7 @@ namespace sw::editor
 
     void ShortcutsPanel::drawShortcutTable( const EditorInputActions& inputActions, IShortcutBindings& bindings )
     {
-        const EditorCommandRegistry& registry = editor::getSubsystem<EditorContext>().getSubsystem<EditorCommandRegistry>();
+        const EditorCommandRegistry& registry = EditorCommandRegistry::getInEditorContext();
         const EditorListFilter       filter{ _filter.c_str() };
         if ( ImGui::BeginTable( "##Shortcuts", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY ) == false )
             return;
@@ -195,8 +193,8 @@ namespace sw::editor
 
     uint32 ShortcutsPanel::getPendingConflictCount()
     {
-        const ShortcutsPanel* pPanel = editor::getSubsystem<EditorPanelManager>().findPanel<ShortcutsPanel>(); // 필수 서비스: 없으면 버그(getSubsystem 이 멈춘다)
-        return ( pPanel != nullptr && pPanel->_capture.hasConflict() ) ? 1u : 0u;                              // 패널이 없으면 묻는 충돌도 없다
+        const ShortcutsPanel* pPanel = EditorPanelManager::getInEditorContext().findPanel<ShortcutsPanel>(); // 필수 서비스: 없으면 버그(getInEditorContext 가 멈춘다)
+        return ( pPanel != nullptr && pPanel->_capture.hasConflict() ) ? 1u : 0u;                            // 패널이 없으면 묻는 충돌도 없다
     }
 
     SW_EDITOR_PANEL( ShortcutsPanel, ShortcutsPanel::kPanelID, EditorPanelCategory::Tool, 2010 );

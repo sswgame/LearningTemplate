@@ -64,7 +64,15 @@ namespace sw::editor
         // EditorSubsystem — EditorContext 가 의존 순서로 초기화하고 역순으로 종료 · 소멸한다.
         static constexpr const utf8* kSubsystemName = "EditorInputActions";
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }
-        span<const utf8* const>      getSubsystemDependencies() const override;
+
+        /**
+         * @brief 지금 에디터 컨텍스트의 입력 동작(단축키 표)입니다. 컨텍스트가 없으면(에디터 밖 테스트 · 종료 뒤) nullptr 입니다.
+         * @details 패널 View 가 단축키 표를 찾는 길이다 — View 는 작업 공간 헤더(`EditorContext`)를 보지 않는다(`docs/agents/EditorUI.md` MVVM 계약, `EditorPanelManager::findInEditorContext` 와 같은 모양).
+         */
+        [[nodiscard]] static EditorInputActions* findInEditorContext();
+        /** @brief 지금 에디터 컨텍스트의 입력 동작(단축키 표)입니다. 에디터가 서 있을 때만 부른다 — 없으면 멈춘다. */
+        [[nodiscard]] static EditorInputActions& getInEditorContext();
+        span<const utf8* const>                  getSubsystemDependencies() const override;
         /** @brief 입력 맵을 엔진 입력 매니저에 붙이고 `editor.input.xml` · 확장 맵 · 사용자 재배치를 읽습니다. 못 읽으면 실패입니다(단축키 없는 에디터로 서지 않는다). */
         SubsystemInitResult initializeSubsystem() override;
         void                shutdownSubsystem() override;

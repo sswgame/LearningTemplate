@@ -18,6 +18,17 @@
 
 namespace sw::editor
 {
+    EditorCommandRegistry* EditorCommandRegistry::findInEditorContext()
+    {
+        EditorContext* const pContext = editor::findSubsystem<EditorContext>();
+        return pContext != nullptr ? &pContext->getSubsystem<EditorCommandRegistry>() : nullptr;
+    }
+
+    EditorCommandRegistry& EditorCommandRegistry::getInEditorContext()
+    {
+        return editor::getSubsystem<EditorContext>().getSubsystem<EditorCommandRegistry>();
+    }
+
     namespace
     {
         struct EditorCommandRegistryInternal

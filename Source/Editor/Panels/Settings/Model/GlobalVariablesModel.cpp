@@ -10,6 +10,10 @@
 
 #include "Editor/Common/Commands/Diagnostics/EditorGlobalVariableCommands.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
+#include "Editor/Common/Workspace/EditorService.h"
+
+#include "Engine/Reflection/Reflection.h"
+#include "Engine/Reflection/TypeRegistry.h"
 
 namespace sw::editor
 {
@@ -146,5 +150,25 @@ namespace sw::editor
         if ( StringUtil::endsWith( displayName, GlobalVariablesModelInternal::kPresetSuffix, true ) )
             displayName = displayName.substr( 0, displayName.size() - GlobalVariablesModelInternal::kPresetSuffix.size() );
         return displayName;
+    }
+
+    GlobalVariableManager& GlobalVariablesModel::getVariableManager()
+    {
+        return editor::getSubsystem<GlobalVariableManager>();
+    }
+
+    bool GlobalVariablesModel::saveSessionPreset()
+    {
+        return EditorGlobalVariableCommands::saveSessionPreset();
+    }
+
+    const EnumInfo* GlobalVariablesModel::findEnumInfo( const string& enumType )
+    {
+        return enumType.empty() == false ? editor::getSubsystem<TypeRegistry>().findEnum( hashed_string( enumType.c_str() ) ) : nullptr;
+    }
+
+    const utf8* GlobalVariablesModel::findEnumName( const string& enumType, int32 value )
+    {
+        return editor::getSubsystem<TypeRegistry>().enumToString( hashed_string( enumType.c_str() ), value );
     }
 } // namespace sw::editor

@@ -9,7 +9,6 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
-#include "Editor/Common/Commands/Diagnostics/EditorGlobalVariableCommands.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
@@ -17,14 +16,12 @@
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Reflection/Reflection.h"
-#include "Engine/Reflection/TypeRegistry.h"
 
 #include <imgui.h>
 
@@ -100,13 +97,12 @@ namespace sw::editor
             static bool drawEnumWidget( GlobalVariableInfo& info )
             {
                 const int32     currentVal = info.getValueAsInt();
-                TypeRegistry&   registry   = editor::getSubsystem<TypeRegistry>();
-                const EnumInfo* pEnumInfo  = info._enumType.empty() == false ? registry.findEnum( hashed_string( info._enumType.c_str() ) ) : nullptr;
+                const EnumInfo* pEnumInfo  = GlobalVariablesModel::findEnumInfo( info._enumType );
                 if ( pEnumInfo == nullptr || pEnumInfo->_mapValueToName.empty() )
                     return drawInt32Widget( info );
 
                 bool        bChanged{ false };
-                const utf8* pName    = registry.enumToString( hashed_string( info._enumType.c_str() ), currentVal );
+                const utf8* pName    = GlobalVariablesModel::findEnumName( info._enumType, currentVal );
                 const utf8* pPreview = ( pName != nullptr ) ? pName : "<Unknown>";
                 if ( ImGui::BeginCombo( "##val", pPreview ) )
                 {
@@ -196,7 +192,7 @@ namespace sw::editor
 
     bool GlobalVariablesPanel::saveDocument()
     {
-        if ( EditorGlobalVariableCommands::saveSessionPreset() == false )
+        if ( GlobalVariablesModel::saveSessionPreset() == false )
             return false;
         clearDocumentDirty();
         return true;
@@ -204,7 +200,7 @@ namespace sw::editor
 
     void GlobalVariablesPanel::revertDocument()
     {
-        editor::getSubsystem<GlobalVariableManager>().resetAllToDefault();
+        GlobalVariablesModel::getVariableManager().resetAllToDefault();
     }
 
     void GlobalVariablesPanel::markSessionDirty()
@@ -214,7 +210,7 @@ namespace sw::editor
 
     void GlobalVariablesPanel::drawContent()
     {
-        GlobalVariableManager& gvm = editor::getSubsystem<GlobalVariableManager>();
+        GlobalVariableManager& gvm = GlobalVariablesModel::getVariableManager();
 
         drawVariableToolbar( gvm );
 
