@@ -47,6 +47,7 @@ namespace sw
         , _listSharedCollider{}
         , _listBlendScratch{}
         , _pose{}
+        , _bodyInput{}
         , _space{}
         , _pCurveSource{ nullptr }
         , _worldGravity{ 0.0f, -constant::physics::kDefaultGravity, 0.0f }
@@ -334,6 +335,7 @@ namespace sw
     {
         _pendingDeltaSeconds += MathUtil::max( context._deltaSeconds, 0.0f );
         _worldGravity = context._worldGravity;
+        _bodyInput.beginFrame();
         for ( uint32 nodeIndex = 0; nodeIndex < static_cast<uint32>( _listNode.size() ); ++nodeIndex )
         {
             RigNode&          node    = *_listNode[nodeIndex];

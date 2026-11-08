@@ -12,6 +12,7 @@
 
 #include "Engine/Animation/Rig/RigConstraintNodes.h"
 #include "Engine/Animation/Rig/RigIKNodes.h"
+#include "Engine/Animation/Rig/RigJiggleNode.h"
 #include "Engine/Animation/Rig/RigSecondaryNodes.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -47,6 +48,7 @@ namespace sw
         RigIKNodes::registerNodes( registry );
         RigConstraintNodes::registerNodes( registry );
         RigSecondaryNodes::registerNodes( registry );
+        RigJiggleNode::registerNodes( registry );
         return true;
     }
 } // namespace sw
