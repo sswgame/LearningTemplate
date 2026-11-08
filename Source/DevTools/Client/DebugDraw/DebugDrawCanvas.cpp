@@ -1,17 +1,25 @@
 #include "pch.h"
 
-#include "Engine/Graphics/Canvas/DebugDrawCanvas.h"
+#include "DevTools/Client/DebugDraw/DebugDrawCanvas.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
+#include "Engine/Graphics/Canvas/CanvasOverlay.h"
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Text/FontService.h"
 
 namespace sw
 {
+    /**
+     * @brief `-gv_debugDrawGameView=1`: 디버그 드로우 큐(선 · 구 · 상자 · 화살표 · 글자)를 게임 화면(App 창 · 에디터 게임 뷰 · 스크린샷) 위에 겹쳐 그립니다.
+     * @details 에디터 게임 뷰 툴바의 단추가 켜고 끈다. 권위 고스트(`-gv_serverPoseOverlayPort`)처럼 큐에 그리는 디버그 도구를 게임 화면에서 본다.
+     */
+    SW_TEST_GLOBAL_VARIABLE( bool, gv_debugDrawGameView, false, "디버그 드로우 큐를 게임 화면 위에 겹쳐 그린다 — 선 · 구 · 글자(캔버스)" );
+
     namespace
     {
         struct DebugDrawCanvasInternal
@@ -46,14 +54,29 @@ namespace sw
                 painter.fillRect( float2{ 0.0f, -DebugDrawCanvasUtil::kLineWidthPixels * 0.5f }, float2{ length, DebugDrawCanvasUtil::kLineWidthPixels }, brush );
                 painter.popTransform();
             }
+
+            /** @brief 펼친 선분의 재사용 버퍼입니다. 게임 스레드 하나가 패킷을 채우므로 하나를 프레임마다 재사용한다. */
+            static vector<DebugLine>& getScratchLines()
+            {
+                static vector<DebugLine> s_listLine;
+                return s_listLine;
+            }
+
+            /** @brief 캔버스 겹치기: 켜져 있고 주 시점이 카메라에서 왔으면 큐의 도형을 칠한다. 칠한 것이 있으면 내용 번호 없이 올린다(도형은 프레임마다 바뀐다). */
+            static void paintOverlay( const CanvasOverlayContext& context, CanvasOverlayTarget& target )
+            {
+                if ( gv_debugDrawGameView == false || context._pViewProj == nullptr )
+                    return;
+                const uint32 paintedCount = DebugDrawCanvasUtil::paint( engine::getSubsystem<DebugDrawQueue>(), *context._pViewProj, context._targetSize, context._pFontService,
+                                                                        context._glyphFrameIndex, getScratchLines(), target.acquire() );
+                if ( paintedCount > 0 )
+                    target.markContentChanged();
+            }
         };
     } // namespace
 
-    /**
-     * @brief `-gv_debugDrawGameView=1`: 디버그 드로우 큐(선 · 구 · 상자 · 화살표 · 글자)를 게임 화면(App 창 · 에디터 게임 뷰 · 스크린샷) 위에 겹쳐 그립니다.
-     * @details 에디터 게임 뷰 툴바의 단추가 켜고 끈다. 권위 고스트(`-gv_serverPoseOverlayPort`)처럼 큐에 그리는 디버그 도구를 게임 화면에서 본다. Shipping 은 테스트 변수를 등록하지 않고 켜는 툴바도 없어 늘 꺼져 있다.
-     */
-    SW_TEST_GLOBAL_VARIABLE( bool, gv_debugDrawGameView, false, "디버그 드로우 큐를 게임 화면 위에 겹쳐 그린다 — 선 · 구 · 글자(캔버스)" );
+    // UI 위, 테스트 그림 아래(순서 0).
+    SW_CANVAS_OVERLAY( DebugDrawGameView, "DebugDraw", 0, &DebugDrawCanvasInternal::paintOverlay );
 } // namespace sw
 
 namespace sw
@@ -63,11 +86,9 @@ namespace sw
         return gv_debugDrawGameView;
     }
 
-    void DebugDrawCanvasUtil::setGameViewOverlayEnabled( [[maybe_unused]] bool bEnabled )
+    void DebugDrawCanvasUtil::setGameViewOverlayEnabled( bool bEnabled )
     {
-#if !defined( SW_SHIPPING ) // 개발 기능이다 — Shipping 에서 테스트용 변수는 상수다(DevTools 로 옮길 대상)
         gv_debugDrawGameView = bEnabled;
-#endif
     }
 
     bool DebugDrawCanvasUtil::projectSegment( const float4x4& viewProj, const float3& from, const float3& to, const float2& targetSize, float2& outFrom, float2& outTo )

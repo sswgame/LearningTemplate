@@ -4,12 +4,13 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "DevTools/Client/DebugDraw/DebugDrawCanvas.h"
+
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/NetPlay/EditorNetPlaySession.h"
 
-#include "Engine/Graphics/Canvas/DebugDrawCanvas.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"

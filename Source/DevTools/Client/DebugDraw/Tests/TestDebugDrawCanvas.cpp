@@ -3,8 +3,9 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "DevTools/Client/DebugDraw/DebugDrawCanvas.h"
+
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
-#include "Engine/Graphics/Canvas/DebugDrawCanvas.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 
 using namespace sw;
