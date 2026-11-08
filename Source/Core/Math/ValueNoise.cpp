@@ -1,16 +1,15 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Foundation/Random/ValueNoise.h"
+#include "Core/Math/ValueNoise.h"
 
+#include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
-
-#include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 
 namespace sw
 {
     float32 ValueNoise::hashLattice( int32 x, int32 z, uint32 seed )
     {
-        return GameHash::toUnitFloat( GameHash::hashCoord( x, z, seed ) );
+        return HashUtil::toUnitFloat( HashUtil::hashCoord( x, z, seed ) );
     }
 
     float32 ValueNoise::sampleValue( float32 x, float32 z, uint32 seed )

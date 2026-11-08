@@ -4,6 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -184,7 +185,7 @@ namespace sw
                 // 서식지 번호가 아니라 위치로 섞는다. 같은 배치면 지어 온 순서와 상관없이 같은 답이 나온다.
                 const uint32  placeKey = static_cast<uint32>( _topology.toIndex( instance._origin ) ) * 4u + static_cast<uint32>( instance._rotation );
                 const uint32  salt     = static_cast<uint32>( speciesIndex ) * 977u + placeKey * 31u;
-                const float32 roll     = GameHash::toUnitFloat( GameHash::hashCoord( attractKey, static_cast<int32>( salt ), _settings._randomSeed ) );
+                const float32 roll     = HashUtil::toUnitFloat( HashUtil::hashCoord( attractKey, static_cast<int32>( salt ), _settings._randomSeed ) );
                 if ( roll >= species._chance && species._chance < 1.0f )
                     continue;
                 TownCreature creature;

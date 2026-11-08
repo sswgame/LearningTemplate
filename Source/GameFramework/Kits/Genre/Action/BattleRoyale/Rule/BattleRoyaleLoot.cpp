@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/Rule/BattleRoyaleLoot.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Hash/HashUtil.h"
 
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/Catalog/BattleRoyaleCatalog.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
@@ -23,7 +24,7 @@ namespace sw
             const BattleRoyaleLootSpotDef* pDef = catalog.findLootSpot( spot._kind );
             if ( pDef == nullptr )
                 continue;
-            GameRandom random{ GameHash::hashCoord( static_cast<int32>( spotIndex ), 0x4252, seed ) };
+            GameRandom random{ HashUtil::hashCoord( static_cast<int32>( spotIndex ), 0x4252, seed ) };
             if ( random.nextChance( pDef->_chance ) == false )
                 continue;
             const int32 rollCount = random.nextInt( pDef->_minRolls, pDef->_maxRolls );
