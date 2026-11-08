@@ -502,6 +502,8 @@ namespace sw
         hashed_string _autoExposure{ "AutoExposure" };
         /// 컬러 그레이딩 LUT(뷰의 후처리 값 `_colorGradingLut`, `FramePostProcessTextureSet`) — 톤맵하는 패스가 `g_ColorGradingLutIndex` 로 읽는다. 텍스처 캐시가 소유한 텍스처다.
         hashed_string _colorGradingLut{ "ColorGradingLut" };
+        /// 블룸 먼지 마스크(뷰의 후처리 값 `_bloomDirtMask`) — 블룸을 더하는 패스가 `g_BloomDirtMaskIndex` 로 읽는다. 텍스처 캐시가 소유한 텍스처다.
+        hashed_string _bloomDirtMask{ "BloomDirtMask" };
     };
 } // namespace sw
 
@@ -580,6 +582,9 @@ namespace sw
         /// @brief 렌즈 효과(색수차 세기 · 시작 반경 · 렌즈 왜곡 · 선명화)와 필름 그레인(세기 · 크기 px)입니다. post_grade.hlsli 의 `CameraGrade::applyLens` · `applyFilmGrain`.
         hashed_string _lensParams{ "g_LensParams" };
         hashed_string _grainParams{ "g_GrainParams" };
+        /// @brief 블룸 렌즈(먼지 마스크 세기 · 플레어 세기 · 고스트 간격 · 헤일로 반지름)와 플레어 색입니다. post_bloom.hlsli 의 `Bloom::computeLensFlare` · `applyDirt`.
+        hashed_string _bloomLens{ "g_BloomLens" };
+        hashed_string _flareTint{ "g_FlareTint" };
         hashed_string _outlineColor{ "g_OutlineColor" };
         hashed_string _outlineParams{ "g_OutlineParams" };
         hashed_string _sourceTexel{ "g_SourceTexel" };

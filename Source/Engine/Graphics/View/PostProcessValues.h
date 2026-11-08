@@ -131,6 +131,23 @@ namespace sw
         PROPERTY( Min = 1.0, Max = 8.0, Tooltip = "Film grain size in pixels" )
         float32 _filmGrainSize{ 1.0f };
 
+        /**
+         * @brief 블룸 먼지 마스크와 렌즈 플레어입니다(언리얼 Bloom Dirt Mask · Lens Flares). 블룸을 더하는 함수 안에서 돈다(`post_bloom.hlsli` 의 `Bloom::computeLensFlare` · `applyDirt`).
+         *        플레어는 블룸의 밝은 부분을 화면 가운데에 대해 뒤집은 자리(고스트 넷)와 고리(헤일로)에서 다시 읽는다. 세기가 0 이면 읽지 않는다.
+         */
+        PROPERTY( Tooltip = "Bloom dirt mask texture (multiplies the bloom, e.g. lens smudges); empty is none" )
+        DataPath _bloomDirtMask;
+        PROPERTY( Min = 0.0, Max = 10.0, Tooltip = "How much the dirt mask brightens the bloom; 0 is off" )
+        float32 _bloomDirtMaskIntensity{ 0.0f };
+        PROPERTY( Min = 0.0, Max = 4.0, Tooltip = "Lens flare intensity (ghosts and halo from the bloom); 0 is off" )
+        float32 _lensFlareIntensity{ 0.0f };
+        PROPERTY( Tooltip = "Lens flare tint (rgb; w is ignored)" )
+        float4 _lensFlareTint{ 1.0f, 1.0f, 1.0f, 1.0f };
+        PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "Spacing between lens flare ghosts along the line through the screen centre" )
+        float32 _lensFlareGhostSpacing{ 0.3f };
+        PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "Radius of the lens flare halo ring (fraction of the screen height)" )
+        float32 _lensFlareHaloWidth{ 0.4f };
+
         /** @brief 자동 노출이 장면을 측정하는지(최소 EV 가 최대보다 작다) 나타냅니다. 같으면 고정 노출 2^-최소 EV 입니다. */
         bool usesAutoExposure() const { return _autoExposureMinEv < _autoExposureMaxEv; }
 
@@ -141,7 +158,7 @@ namespace sw
         static PostProcessValues blend( const PostProcessValues& from, const PostProcessValues& to, float32 weight );
         /**
          * @brief @p inoutValues 의 칸 가운데 @p overrides 가 켠 칸만 @p target 쪽으로 @p weight 만큼 섞습니다(언리얼 볼륨 블렌드의 bOverride_* 칸).
-         * @details 섞을 수 없는 칸은 @p weight 가 0.5 이상일 때 바꾼다. 레터박스는 양쪽에 있을 때만 비율을 섞고, 한쪽에만 있으면 절반에서 바꾼다(0 은 없음이라 섞을 비율이 없다).
+         * @details 섞을 수 없는 칸(경로 — LUT · 먼지 마스크)은 @p weight 가 0.5 이상일 때 바꾼다. 레터박스는 양쪽에 있을 때만 비율을 섞고, 한쪽에만 있으면 절반에서 바꾼다(0 은 없음이라 섞을 비율이 없다).
          */
         static void blendOverrides( PostProcessValues& inoutValues, const PostProcessValues& target, const PostProcessOverrides& overrides, float32 weight );
     };
@@ -246,5 +263,17 @@ namespace sw
         uint8 _bFilmGrainIntensity : 1;
         PROPERTY()
         uint8 _bFilmGrainSize : 1;
+        PROPERTY()
+        uint8 _bBloomDirtMask : 1;
+        PROPERTY()
+        uint8 _bBloomDirtMaskIntensity : 1;
+        PROPERTY()
+        uint8 _bLensFlareIntensity : 1;
+        PROPERTY()
+        uint8 _bLensFlareTint : 1;
+        PROPERTY()
+        uint8 _bLensFlareGhostSpacing : 1;
+        PROPERTY()
+        uint8 _bLensFlareHaloWidth : 1;
     };
 } // namespace sw

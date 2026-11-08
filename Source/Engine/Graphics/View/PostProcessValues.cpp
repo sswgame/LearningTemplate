@@ -53,6 +53,12 @@ namespace sw
         , _bSharpen{ SW_FALSE }
         , _bFilmGrainIntensity{ SW_FALSE }
         , _bFilmGrainSize{ SW_FALSE }
+        , _bBloomDirtMask{ SW_FALSE }
+        , _bBloomDirtMaskIntensity{ SW_FALSE }
+        , _bLensFlareIntensity{ SW_FALSE }
+        , _bLensFlareTint{ SW_FALSE }
+        , _bLensFlareGhostSpacing{ SW_FALSE }
+        , _bLensFlareHaloWidth{ SW_FALSE }
     {
     }
 
@@ -97,10 +103,13 @@ namespace sw
             }
             // 경로는 섞을 수 없다 — 절반에서 바꾼다(언리얼은 LUT 둘을 무게로 섞은 LUT 를 굽지만, 여기서는 한 장만 건다).
             // shortcut: 겹친 볼륨의 LUT 사이는 절반에서 넘어간다, 두 LUT 를 섞는 전환이 필요해지면 LUT 를 무게로 굽는 패스를 더한다.
-            if ( pValue == &inoutValues._colorGradingLut )
+            DataPath* const pPath = pValue == &inoutValues._colorGradingLut ? &inoutValues._colorGradingLut
+                                  : pValue == &inoutValues._bloomDirtMask   ? &inoutValues._bloomDirtMask
+                                                                            : nullptr;
+            if ( pPath != nullptr )
             {
                 if ( alpha >= 0.5f )
-                    inoutValues._colorGradingLut = target._colorGradingLut;
+                    *pPath = *static_cast<const DataPath*>( prop.getRawPtr( static_cast<const void*>( &target ) ) );
                 continue;
             }
             // 섞는 함수는 from 을 값으로 읽은 뒤 쓴다 — from 과 결과가 같은 주소여도 된다.

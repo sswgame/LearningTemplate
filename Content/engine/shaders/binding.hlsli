@@ -248,6 +248,9 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     // 렌즈 · 필름(post_grade.hlsli, C++ PostProcessValues) — (색수차 세기, 색수차 시작 반경, 렌즈 왜곡, 선명화) · (필름 그레인 세기, 그레인 크기 px, 0, 0). 톤맵하는 패스만 읽는다
     float4 g_LensParams;
     float4 g_GrainParams;
+    // 블룸 렌즈(post_bloom.hlsli, C++ PostProcessValues) — (먼지 마스크 세기 — 마스크가 없으면 0, 플레어 세기, 고스트 간격, 헤일로 반지름) · (플레어 색 rgb, 0). 블룸을 더하는 패스만 읽는다
+    float4 g_BloomLens;
+    float4 g_FlareTint;
     float4 g_CameraLens; // 카메라별 피사계 심도 — x 초점 거리(m), y 착란원 반지름 배율(px, 반지름 = y · |1 - x / 깊이|), z 반지름 상한(px), w 켬 1 · 끔 0(depth_of_field.hlsl)
     float4 g_OutlineColor;
     float4 g_OutlineParams;

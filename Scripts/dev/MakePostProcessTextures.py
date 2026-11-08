@@ -1,7 +1,8 @@
-"""후처리 시나리오의 텍스처 원본을 짓는다 — 컬러 그레이딩 LUT 띠(Content/game/empty/textures_raw/postprocess/*.png).
+"""후처리 시나리오의 텍스처 원본을 짓는다 — 컬러 그레이딩 LUT 띠 · 블룸 먼지 마스크(Content/game/empty/textures_raw/postprocess/*.png).
 
 시나리오 game/empty/automation/postprocess_* 의 무대(maps/postprocessvolume.scene.xml)가 볼륨의 후처리 값으로 가리킨다.
   lut_sepia.png  — 256 × 16 LUT 띠(언리얼과 같은 배치: 가로 = 파랑 조각 16 개 × 빨강 16 칸, 세로 = 초록). 휘도를 세피아 색으로 옮긴다.
+  bloomdirt.png  — 256 × 256 먼지 마스크. 고정 씨앗의 부드러운 얼룩 원들(가장자리일수록 많다)이고 바탕은 검정이다.
 텍스처 임포트(App --import-textures)가 textures/postprocess/*.dds 로 바꾼다 — LUT 는 규칙 Color_Grading_Luts(Config/Editor/TextureImportConfig.json:
 압축 없음 · 밉 없음 · 선형)를 탄다. 압축하거나 밉을 두면 조각 경계가 섞인다. LUT 주소 식은 Engine/Renderer/Frame/PostProcess/FramePostGrade.h 의
 computeLutUv 와 post_grade.hlsli 의 CameraGrade::computeLutUv 와 같다 — 배치를 고치면 셋을 함께 고친다.
@@ -53,11 +54,35 @@ def makeSepiaLut() -> bytes:
     return makePng(size * size, size, pixels)
 
 
+def makeBloomDirt() -> bytes:
+    """먼지 마스크입니다 — 선형 합동 난수(고정 씨앗)로 놓은 부드러운 원 40 개. 같은 입력이 같은 바이트다."""
+    size = 256
+    state = 12345
+    spots = []
+    for _ in range(40):
+        values = []
+        for _ in range(3):
+            state = (state * 1103515245 + 12345) & 0x7FFFFFFF
+            values.append(state / 0x7FFFFFFF)
+        spots.append((values[0] * size, values[1] * size, 6 + values[2] * 26))
+    pixels: list[tuple[int, int, int, int]] = []
+    for row in range(size):
+        for column in range(size):
+            edge = max(abs(column / (size - 1) - 0.5), abs(row / (size - 1) - 0.5)) * 2.0
+            value = 0.0
+            for spotX, spotY, radius in spots:
+                distance = ((column - spotX) ** 2 + (row - spotY) ** 2) ** 0.5
+                value += max(0.0, 1.0 - distance / radius) ** 2
+            level = round(min(1.0, value * (0.4 + 0.6 * edge)) * 255)
+            pixels.append((level, level, level, 255))
+    return makePng(size, size, pixels)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--check", action="store_true", help="저장소 파일과 바이트가 같은지만 본다")
     arguments = parser.parse_args()
-    outputs = {_OUTPUT_DIR / "lut_sepia.png": makeSepiaLut()}
+    outputs = {_OUTPUT_DIR / "lut_sepia.png": makeSepiaLut(), _OUTPUT_DIR / "bloomdirt.png": makeBloomDirt()}
     stale = [path for path, data in outputs.items() if not path.exists() or path.read_bytes() != data]
     if arguments.check:
         for path in stale:
