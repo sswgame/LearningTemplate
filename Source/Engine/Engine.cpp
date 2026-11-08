@@ -22,7 +22,6 @@
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
 #include "Engine/Animation/Scene/AnimationCrowd.h"
 #include "Engine/Animation/Scene/VertexAnimationCooker.h"
-#include "Engine/Asset/AssetLoadProfiler.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/AssetStreamingQueue.h"
 #include "Engine/Automation/AutomationCaptureUtil.h"
@@ -321,8 +320,6 @@ namespace sw
         _frameHooks.clear(); // 남은 구독을 무효화하고 저장소를 놓는다
         if ( _pRenderDriver != nullptr )
             _pRenderDriver->onShutdownBegin(); // 창(MainWindow 단계가 파괴)과 RHI 보다 먼저 놓는다
-        if ( const AssetLoadProfiler* pAssetLoadProfiler = engine::findSubsystem<AssetLoadProfiler>(); pAssetLoadProfiler != nullptr )
-            pAssetLoadProfiler->reportIfRequested( "session" );
         // 초기화한 단계만 역순으로 내린다: UI → 텔레메트리 → 씬의 디바이스 → 렌더 스레드 → 렌더러 → RHI → 씬 → 입력 · 오디오 → 모듈 라이브러리 → 태스크 → 셰이더 캐시.
         // 범위째 내린다 — 모듈 서브시스템의 자식 범위(배포는 정적 링크한 모듈이 여기 남아 있다)가 기동 단계보다 먼저 내려간다.
         _startup.shutdownAll();

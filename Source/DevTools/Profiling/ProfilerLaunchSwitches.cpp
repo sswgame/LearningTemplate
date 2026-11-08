@@ -6,6 +6,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Asset/AssetLoadProfiler.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/ProfilerBackend.h"
@@ -33,6 +34,8 @@ namespace sw
      * @details 에디터의 멀티 프로세스 재생이 서버 · 클라이언트마다 경로를 주고 Stop 뒤에 합친다(`EditorNetPlaySession`).
      */
     SW_TEST_GLOBAL_VARIABLE( sw::GlobalDiskPath, gv_traceSaveOnExit, "", "종료할 때 최근 프레임의 타임라인을 이 경로에 트레이스로 저장 (비면 끄기)" );
+    /** @brief `-gv_assetLoadReport=1` — 엔진을 끌 때 에셋 로드 표(종류별 · 가장 느린 로드, `AssetLoadProfiler::report`)를 로그에 남깁니다. */
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_assetLoadReport, 0, "엔진 종료 때 에셋 로드 표를 로그로 (1=켜기)" );
 
     ProfilerLaunchSwitches::ProfilerLaunchSwitches()
         : _frameBeginNanos{ 0 }
@@ -54,6 +57,9 @@ namespace sw
         // 서비스 · 프로파일러가 아직 있다(기동 단계가 서비스보다 먼저 내려간다).
         if ( gv_traceSaveOnExit.empty() == false )
             ProfilerTraceExport::finishExitCapture( engine::getSubsystem<FrameProfiler>(), gv_traceSaveOnExit, getProcessName() );
+        const AssetLoadProfiler* const pAssetLoadProfiler = gv_assetLoadReport != 0 ? engine::findSubsystem<AssetLoadProfiler>() : nullptr;
+        if ( pAssetLoadProfiler != nullptr )
+            pAssetLoadProfiler->report( "session" );
     }
 
     void ProfilerLaunchSwitches::onFrameBegin()
