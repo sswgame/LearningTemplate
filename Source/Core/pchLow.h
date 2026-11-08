@@ -13,7 +13,6 @@
 #include "Core/Container/map.h"
 #include "Core/Container/pair.h"
 #include "Core/Container/set.h"
-#include "Core/Container/sparse_set.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
