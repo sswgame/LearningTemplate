@@ -152,9 +152,7 @@ SW_TEST_CASE( RetargetProfileInspectionTest, AGoodProfileReportsLengthsAndMapped
 {
     const Skeleton            skeleton = Util::makeSkeleton();
     RetargetProfileInspection inspection;
-    string                    error;
-    SW_REQUIRE_TRUE( RetargetProfileInspection::inspect( Util::makeProfile(), &skeleton, &skeleton, inspection, error ) );
-    SW_EXPECT_TRUE( error.empty() );
+    SW_REQUIRE_TRUE( RetargetProfileInspection::inspect( Util::makeProfile(), &skeleton, &skeleton, inspection ).has_value() );
     SW_EXPECT_TRUE( inspection._listProblem.empty() );
     SW_EXPECT_TRUE( inspection._listWarning.empty() );
     SW_EXPECT_EQUAL( 4u, inspection._mappedTargetBoneCount );
@@ -174,19 +172,20 @@ SW_TEST_CASE( RetargetProfileInspectionTest, MissingBonesAreNamedWithoutErrorLog
         RetargetPoseBone{ hashed_string( "nope_pose" ), float3{} }
     } );
     RetargetProfileInspection inspection;
-    string                    error;
-    SW_EXPECT_FALSE( RetargetProfileInspection::inspect( profile, &skeleton, &skeleton, inspection, error ) );
+    const expected<void>      missing = RetargetProfileInspection::inspect( profile, &skeleton, &skeleton, inspection );
+    SW_REQUIRE_FALSE( missing.has_value() );
     SW_EXPECT_EQUAL( 3u, static_cast<uint32>( inspection._listProblem.size() ) );
     SW_EXPECT_TRUE( Util::containsText( inspection._listProblem, "nope_source" ) );
     SW_EXPECT_TRUE( Util::containsText( inspection._listProblem, "nope_target" ) );
     SW_EXPECT_TRUE( Util::containsText( inspection._listProblem, "nope_pose" ) );
-    SW_EXPECT_TRUE( error == inspection._listProblem.front() );
+    SW_EXPECT_TRUE( missing.error().detail() == string_view( inspection._listProblem.front() ) );
 
-    SW_EXPECT_FALSE( RetargetProfileInspection::inspect( RetargetProfile{}, &skeleton, &skeleton, inspection, error ) ); // 빈 칸도 까닭을 말한다
+    SW_EXPECT_FALSE( RetargetProfileInspection::inspect( RetargetProfile{}, &skeleton, &skeleton, inspection ).has_value() ); // 빈 칸도 까닭을 말한다
     SW_EXPECT_EQUAL( 4u, static_cast<uint32>( inspection._listProblem.size() ) );
 
-    SW_EXPECT_FALSE( RetargetProfileInspection::inspect( profile, nullptr, &skeleton, inspection, error ) );
-    SW_EXPECT_TRUE( error.find( "source skeleton" ) != string::npos );
+    const expected<void> noSource = RetargetProfileInspection::inspect( profile, nullptr, &skeleton, inspection );
+    SW_REQUIRE_FALSE( noSource.has_value() );
+    SW_EXPECT_TRUE( noSource.error().message().find( "source skeleton" ) != std::string_view::npos );
 }
 
 // 뒤집힌 사슬 · 겹친 대상 본 · 본 하나짜리 IK 는 묶이지만 뜻대로 돌지 않는다 — 저장은 막지 않고 알린다.
@@ -209,8 +208,7 @@ SW_TEST_CASE( RetargetProfileInspectionTest, SuspiciousMappingsWarnButStillBind 
     profile.addChain( shortGoal );
 
     RetargetProfileInspection inspection;
-    string                    error;
-    SW_REQUIRE_TRUE( RetargetProfileInspection::inspect( profile, &skeleton, &skeleton, inspection, error ) );
+    SW_REQUIRE_TRUE( RetargetProfileInspection::inspect( profile, &skeleton, &skeleton, inspection ).has_value() );
     SW_EXPECT_EQUAL( 3u, static_cast<uint32>( inspection._listWarning.size() ) );
     SW_EXPECT_TRUE( Util::containsText( inspection._listWarning, "source bones do not run" ) );
     SW_EXPECT_TRUE( Util::containsText( inspection._listWarning, "IK goal" ) );

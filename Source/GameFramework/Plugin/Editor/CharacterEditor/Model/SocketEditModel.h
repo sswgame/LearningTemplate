@@ -9,6 +9,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
@@ -71,35 +72,35 @@ namespace sw::editor
         bool validate( vector<string>& outListIssue ) const;
 
         // --- 편집 ----------------------------------------------------------------------------------------------------
-        // 실패하면 표를 바꾸지 않고 되돌리기 기록도 남기지 않습니다. 이유는 @p outError 에 영어 한 문장으로 담습니다.
+        // 실패하면 표를 바꾸지 않고 되돌리기 기록도 남기지 않은 채 이유(`Error`)를 돌려줍니다.
         // bContinuous 가 true 이면 같은 소켓 · 같은 필드의 연속 편집(끌기)을 되돌리기 한 단계로 합칩니다. 끌기가 끝나면 `endContinuousEdit` 를 부릅니다.
 
-        [[nodiscard]] bool addSocket( const hashed_string& name, const hashed_string& parent, const hashed_string& kind, string& outError );
-        [[nodiscard]] bool removeSocket( const hashed_string& name, string& outError );
+        [[nodiscard]] expected<void> addSocket( const hashed_string& name, const hashed_string& parent, const hashed_string& kind );
+        [[nodiscard]] expected<void> removeSocket( const hashed_string& name );
         /** @brief 이름을 바꿉니다. 다른 소켓의 후보 목록에 있는 옛 이름도 새 이름으로 바꿉니다. 표 안의 순서는 유지합니다. */
-        [[nodiscard]] bool renameSocket( const hashed_string& oldName, const hashed_string& newName, string& outError );
-        [[nodiscard]] bool setParent( const hashed_string& name, const hashed_string& parent, string& outError );
-        [[nodiscard]] bool setKind( const hashed_string& name, const hashed_string& kind, string& outError );
-        [[nodiscard]] bool setTranslation( const hashed_string& name, const float3& translation, bool bContinuous, string& outError );
+        [[nodiscard]] expected<void> renameSocket( const hashed_string& oldName, const hashed_string& newName );
+        [[nodiscard]] expected<void> setParent( const hashed_string& name, const hashed_string& parent );
+        [[nodiscard]] expected<void> setKind( const hashed_string& name, const hashed_string& kind );
+        [[nodiscard]] expected<void> setTranslation( const hashed_string& name, const float3& translation, bool bContinuous );
         /** @brief 회전을 도(피치 · 요 · 롤, 파일의 `rotation` 과 같은 배치)로 정합니다. */
-        [[nodiscard]] bool setRotationDegrees( const hashed_string& name, const float3& degrees, bool bContinuous, string& outError );
-        [[nodiscard]] bool setScale( const hashed_string& name, const float3& scale, bool bContinuous, string& outError );
+        [[nodiscard]] expected<void> setRotationDegrees( const hashed_string& name, const float3& degrees, bool bContinuous );
+        [[nodiscard]] expected<void> setScale( const hashed_string& name, const float3& scale, bool bContinuous );
         /**
          * @brief 뷰포트 기즈모가 놓은 유닛 공간 자리 @p unitTransform 을 부모(@p parentUnitTransform, `SocketSet::computeParentTransform`) 기준 로컬로 되돌려 위치 · 회전 · 크기를 한 번에 씁니다.
          * @details 세 칸을 한 되돌리기 단계로 묶는다(끄는 동안 `bContinuous` — 칸마다 따로 쌓으면 끌기 한 번이 세 단계가 된다). 크기가 그대로면 크기 칸을 적지 않는다(적은 칸만 저장한다).
          *          프리뷰 오브젝트가 아니라 소켓 데이터를 고친다 — 저장 · 다시 읽기 뒤에도 같은 자리다.
          */
-        [[nodiscard]] bool setUnitTransform( const hashed_string& name, const float4x4& unitTransform, const float4x4& parentUnitTransform, bool bContinuous, string& outError );
-        [[nodiscard]] bool setPreviewMesh( const hashed_string& name, string_view previewMesh, string& outError );
-        [[nodiscard]] bool setAnchor( const hashed_string& name, SocketAnchor anchor, string& outError );
-        [[nodiscard]] bool setFallback( const hashed_string& name, const vector<hashed_string>& listFallback, string& outError );
+        [[nodiscard]] expected<void> setUnitTransform( const hashed_string& name, const float4x4& unitTransform, const float4x4& parentUnitTransform, bool bContinuous );
+        [[nodiscard]] expected<void> setPreviewMesh( const hashed_string& name, string_view previewMesh );
+        [[nodiscard]] expected<void> setAnchor( const hashed_string& name, SocketAnchor anchor );
+        [[nodiscard]] expected<void> setFallback( const hashed_string& name, const vector<hashed_string>& listFallback );
         /**
          * @brief 소켓의 반대편 짝을 만들거나(없으면) 맞춥니다(있으면). 이름은 규칙 표로, 부모 본은 같은 규칙으로 반대편 이름이 있으면 그것을(없으면 같은 부모를),
          *        위치 · 회전은 대칭 축으로 뒤집어 씁니다. 종류 · 크기 · 미리보기 · 앵커 · 후보는 그대로 옮기고 후보 이름도 반대편으로 바꿉니다.
-         * @param outMirrorName 짝 소켓의 이름입니다.
+         * @return 짝 소켓의 이름입니다.
          * @details 이름에 짝 토큰이 없는 소켓(가운데)은 대칭할 수 없어 실패합니다. 짝 이름이 원본 자신이 되는 경우는 없다(토큰이 서로 다르다).
          */
-        [[nodiscard]] bool mirrorSocket( const hashed_string& name, hashed_string& outMirrorName, string& outError );
+        [[nodiscard]] expected<hashed_string> mirrorSocket( const hashed_string& name );
         /** @brief 연속 편집을 끝냅니다. 다음 편집은 새 되돌리기 단계를 만듭니다. */
         void endContinuousEdit() { _state.endCoalescing(); }
 
@@ -113,14 +114,14 @@ namespace sw::editor
     private:
         /** @brief 편집 직전에 부릅니다. */
         void recordUndo( string_view coalesceKey = {} );
-        /** @brief 이름의 소켓을 복사해 @p outSocket 에 담습니다. 없으면 오류를 쓰고 false 입니다. */
-        [[nodiscard]] bool copySocket( const hashed_string& name, SocketDef& outSocket, string& outError ) const;
+        /** @brief 이름의 소켓 사본입니다. 없으면 오류입니다. */
+        [[nodiscard]] expected<SocketDef> copySocket( const hashed_string& name ) const;
         /** @brief 소켓 목록을 통째로 바꿉니다(가상 본은 유지). */
         void replaceSockets( const vector<SocketDef>& listSocket );
         bool isParentAllowed( const hashed_string& parent ) const;
         bool isKindAllowed( const hashed_string& kind ) const;
-        /** @brief 값을 고치는 편집의 공통 경로입니다. 소켓을 복사해 @p fieldBit 를 켜고 되돌리기를 남긴 뒤 표에 되돌려 넣습니다. */
-        bool beginFieldEdit( const hashed_string& name, uint16 fieldBit, bool bContinuous, string_view fieldName, SocketDef& outSocket, string& outError );
+        /** @brief 값을 고치는 편집의 공통 경로입니다. 소켓을 복사해 @p fieldBit 를 켜고 되돌리기를 남긴 사본을 돌려줍니다(부르는 쪽이 고쳐 표에 되돌려 넣는다). */
+        [[nodiscard]] expected<SocketDef> beginFieldEdit( const hashed_string& name, uint16 fieldBit, bool bContinuous, string_view fieldName );
 
     private:
         SocketSet                      _sockets;

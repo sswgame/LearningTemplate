@@ -10,6 +10,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/EditorExports.h"
@@ -548,6 +549,13 @@ namespace sw::editor
             return;
         ImGui::Separator();
         ImGui::TextDisabled( "%s", pText );
+    }
+
+    string EditorWidgets::makeStatusText( const Error& error )
+    {
+        if ( error.detail().empty() )
+            return string( error.message() );
+        return formatToString( "%#: %#", error.message(), error.detail() );
     }
 
     bool EditorWidgets::drawSearchField( const utf8* pID, utf8* pBuffer, uint32 bufferBytes, const utf8* pHint, float32 width,

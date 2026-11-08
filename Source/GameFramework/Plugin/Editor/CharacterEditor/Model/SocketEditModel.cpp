@@ -101,28 +101,16 @@ namespace sw::editor
         return issues.getIssues().empty();
     }
 
-    bool SocketEditModel::addSocket( const hashed_string& name, const hashed_string& parent, const hashed_string& kind, string& outError )
+    expected<void> SocketEditModel::addSocket( const hashed_string& name, const hashed_string& parent, const hashed_string& kind )
     {
         if ( name.empty() )
-        {
-            outError = "Socket name is empty";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "Socket name is empty" } );
         if ( _sockets.findSocket( name ) != nullptr )
-        {
-            outError = string( "Socket '" ) + name.c_str() + "' already exists";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::AlreadyExists, "Socket already exists", name.view() } );
         if ( isParentAllowed( parent ) == false )
-        {
-            outError = string( "Parent '" ) + parent.c_str() + "' is not a bone of this skeleton";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "Parent is not a bone of this skeleton", parent.view() } );
         if ( isKindAllowed( kind ) == false )
-        {
-            outError = string( "Kind '" ) + kind.c_str() + "' is not in the kind table";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "Kind is not in the kind table", kind.view() } );
 
         SocketDef socket;
         socket._name      = name;
@@ -131,16 +119,13 @@ namespace sw::editor
         socket._fieldMask = SocketFieldBit::kAll;
         recordUndo();
         _sockets.addSocket( socket );
-        return true;
+        return {};
     }
 
-    bool SocketEditModel::removeSocket( const hashed_string& name, string& outError )
+    expected<void> SocketEditModel::removeSocket( const hashed_string& name )
     {
         if ( _sockets.findSocket( name ) == nullptr )
-        {
-            outError = string( "Socket '" ) + name.c_str() + "' does not exist";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "Socket does not exist", name.view() } );
         recordUndo();
         vector<SocketDef> listKept;
         for ( const SocketDef& socket : _sockets.getSockets() )
@@ -149,28 +134,19 @@ namespace sw::editor
                 listKept.push_back( socket );
         }
         replaceSockets( listKept );
-        return true;
+        return {};
     }
 
-    bool SocketEditModel::renameSocket( const hashed_string& oldName, const hashed_string& newName, string& outError )
+    expected<void> SocketEditModel::renameSocket( const hashed_string& oldName, const hashed_string& newName )
     {
         if ( _sockets.findSocket( oldName ) == nullptr )
-        {
-            outError = string( "Socket '" ) + oldName.c_str() + "' does not exist";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "Socket does not exist", oldName.view() } );
         if ( newName.empty() )
-        {
-            outError = "Socket name is empty";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "Socket name is empty" } );
         // 대소문자만 바꾸는 이름 바꾸기는 해시가 같아 자기 자신으로 겹쳐 보이므로 자기 자신은 제외한다.
         const bool bSameSocket = oldName == newName;
         if ( bSameSocket == false && _sockets.findSocket( newName ) != nullptr )
-        {
-            outError = string( "Socket '" ) + newName.c_str() + "' already exists";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::AlreadyExists, "Socket already exists", newName.view() } );
 
         recordUndo();
         vector<SocketDef> listRenamed = _sockets.getSockets();
@@ -185,162 +161,150 @@ namespace sw::editor
             }
         }
         replaceSockets( listRenamed );
-        return true;
+        return {};
     }
 
-    bool SocketEditModel::setParent( const hashed_string& name, const hashed_string& parent, string& outError )
+    expected<void> SocketEditModel::setParent( const hashed_string& name, const hashed_string& parent )
     {
         if ( isParentAllowed( parent ) == false )
-        {
-            outError = string( "Parent '" ) + parent.c_str() + "' is not a bone of this skeleton";
-            return false;
-        }
-        SocketDef socket;
-        if ( beginFieldEdit( name, SocketFieldBit::kParent, false, "parent", socket, outError ) == false )
-            return false;
-        socket._parent = parent;
+            return unexpected( Error{ ErrorKind::NotFound, "Parent is not a bone of this skeleton", parent.view() } );
+        expected<SocketDef> edit = beginFieldEdit( name, SocketFieldBit::kParent, false, "parent" );
+        if ( edit.has_value() == false )
+            return unexpected( edit.error() );
+        SocketDef& socket = *edit;
+        socket._parent    = parent;
         _sockets.addSocket( socket );
-        return true;
+        return {};
     }
 
-    bool SocketEditModel::setKind( const hashed_string& name, const hashed_string& kind, string& outError )
+    expected<void> SocketEditModel::setKind( const hashed_string& name, const hashed_string& kind )
     {
         if ( isKindAllowed( kind ) == false )
-        {
-            outError = string( "Kind '" ) + kind.c_str() + "' is not in the kind table";
-            return false;
-        }
-        SocketDef socket;
-        if ( beginFieldEdit( name, SocketFieldBit::kKind, false, "kind", socket, outError ) == false )
-            return false;
-        socket._kind = kind;
+            return unexpected( Error{ ErrorKind::NotFound, "Kind is not in the kind table", kind.view() } );
+        expected<SocketDef> edit = beginFieldEdit( name, SocketFieldBit::kKind, false, "kind" );
+        if ( edit.has_value() == false )
+            return unexpected( edit.error() );
+        SocketDef& socket = *edit;
+        socket._kind      = kind;
         _sockets.addSocket( socket );
-        return true;
+        return {};
     }
 
-    bool SocketEditModel::setTranslation( const hashed_string& name, const float3& translation, bool bContinuous, string& outError )
+    expected<void> SocketEditModel::setTranslation( const hashed_string& name, const float3& translation, bool bContinuous )
     {
-        SocketDef socket;
-        if ( beginFieldEdit( name, SocketFieldBit::kTranslation, bContinuous, "translation", socket, outError ) == false )
-            return false;
+        expected<SocketDef> edit = beginFieldEdit( name, SocketFieldBit::kTranslation, bContinuous, "translation" );
+        if ( edit.has_value() == false )
+            return unexpected( edit.error() );
+        SocketDef& socket   = *edit;
         socket._translation = translation;
         _sockets.addSocket( socket );
-        return true;
+        return {};
     }
 
-    bool SocketEditModel::setRotationDegrees( const hashed_string& name, const float3& degrees, bool bContinuous, string& outError )
+    expected<void> SocketEditModel::setRotationDegrees( const hashed_string& name, const float3& degrees, bool bContinuous )
     {
-        SocketDef socket;
-        if ( beginFieldEdit( name, SocketFieldBit::kRotation, bContinuous, "rotation", socket, outError ) == false )
-            return false;
-        socket._rotation = quaternion::makeFromYawPitchRoll( degrees * MathUtil::kDegreeToRadian );
+        expected<SocketDef> edit = beginFieldEdit( name, SocketFieldBit::kRotation, bContinuous, "rotation" );
+        if ( edit.has_value() == false )
+            return unexpected( edit.error() );
+        SocketDef& socket = *edit;
+        socket._rotation  = quaternion::makeFromYawPitchRoll( degrees * MathUtil::kDegreeToRadian );
         _sockets.addSocket( socket );
-        return true;
+        return {};
     }
 
-    bool SocketEditModel::setScale( const hashed_string& name, const float3& scale, bool bContinuous, string& outError )
+    expected<void> SocketEditModel::setScale( const hashed_string& name, const float3& scale, bool bContinuous )
     {
-        SocketDef socket;
-        if ( beginFieldEdit( name, SocketFieldBit::kScale, bContinuous, "scale", socket, outError ) == false )
-            return false;
-        socket._scale = scale;
+        expected<SocketDef> edit = beginFieldEdit( name, SocketFieldBit::kScale, bContinuous, "scale" );
+        if ( edit.has_value() == false )
+            return unexpected( edit.error() );
+        SocketDef& socket = *edit;
+        socket._scale     = scale;
         _sockets.addSocket( socket );
-        return true;
+        return {};
     }
 
-    bool SocketEditModel::setUnitTransform( const hashed_string& name, const float4x4& unitTransform, const float4x4& parentUnitTransform, bool bContinuous,
-                                            string& outError )
+    expected<void> SocketEditModel::setUnitTransform( const hashed_string& name, const float4x4& unitTransform, const float4x4& parentUnitTransform, bool bContinuous )
     {
         // 소켓의 유닛 변환은 로컬 × 부모(행벡터)다 — 로컬 = 유닛 × 부모⁻¹.
         float3     translation;
         quaternion rotation;
         float3     scale;
         if ( ( unitTransform * parentUnitTransform.invert() ).decompose( scale, rotation, translation ) == false )
-        {
-            outError = string( "Socket '" ) + name.c_str() + "' got a transform with no scale to take apart";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "Socket got a transform with no scale to take apart", name.view() } );
         const SocketDef* pSocket = _sockets.findSocket( name );
         if ( pSocket == nullptr )
-        {
-            outError = string( "Socket '" ) + name.c_str() + "' does not exist";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "Socket does not exist", name.view() } );
         constexpr float32 kScaleTolerance = 1.0e-4f; // 끌기의 부동소수 오차로 크기 칸을 적지 않는다
         const float3      scaleDelta      = scale - pSocket->_scale;
         const bool        bScaleChanged   = MathUtil::abs( scaleDelta._x ) > kScaleTolerance || MathUtil::abs( scaleDelta._y ) > kScaleTolerance ||
                                    MathUtil::abs( scaleDelta._z ) > kScaleTolerance;
-        const uint16 fieldBits = static_cast<uint16>( SocketFieldBit::kTranslation | SocketFieldBit::kRotation | ( bScaleChanged ? SocketFieldBit::kScale : 0u ) );
-        SocketDef    socket;
-        if ( beginFieldEdit( name, fieldBits, bContinuous, "transform", socket, outError ) == false )
-            return false;
+        const uint16        fieldBits = static_cast<uint16>( SocketFieldBit::kTranslation | SocketFieldBit::kRotation | ( bScaleChanged ? SocketFieldBit::kScale : 0u ) );
+        expected<SocketDef> edit      = beginFieldEdit( name, fieldBits, bContinuous, "transform" );
+        if ( edit.has_value() == false )
+            return unexpected( edit.error() );
+        SocketDef& socket   = *edit;
         socket._translation = translation;
         socket._rotation    = rotation;
         if ( bScaleChanged )
             socket._scale = scale;
         _sockets.addSocket( socket );
-        return true;
+        return {};
     }
 
-    bool SocketEditModel::setPreviewMesh( const hashed_string& name, string_view previewMesh, string& outError )
+    expected<void> SocketEditModel::setPreviewMesh( const hashed_string& name, string_view previewMesh )
     {
-        SocketDef socket;
-        if ( beginFieldEdit( name, SocketFieldBit::kPreview, false, "preview", socket, outError ) == false )
-            return false;
+        expected<SocketDef> edit = beginFieldEdit( name, SocketFieldBit::kPreview, false, "preview" );
+        if ( edit.has_value() == false )
+            return unexpected( edit.error() );
+        SocketDef& socket   = *edit;
         socket._previewMesh = string( previewMesh );
         _sockets.addSocket( socket );
-        return true;
+        return {};
     }
 
-    bool SocketEditModel::setAnchor( const hashed_string& name, SocketAnchor anchor, string& outError )
+    expected<void> SocketEditModel::setAnchor( const hashed_string& name, SocketAnchor anchor )
     {
-        SocketDef socket;
-        if ( beginFieldEdit( name, SocketFieldBit::kAnchor, false, "anchor", socket, outError ) == false )
-            return false;
-        socket._anchor = anchor;
+        expected<SocketDef> edit = beginFieldEdit( name, SocketFieldBit::kAnchor, false, "anchor" );
+        if ( edit.has_value() == false )
+            return unexpected( edit.error() );
+        SocketDef& socket = *edit;
+        socket._anchor    = anchor;
         _sockets.addSocket( socket );
-        return true;
+        return {};
     }
 
-    bool SocketEditModel::setFallback( const hashed_string& name, const vector<hashed_string>& listFallback, string& outError )
+    expected<void> SocketEditModel::setFallback( const hashed_string& name, const vector<hashed_string>& listFallback )
     {
         for ( const hashed_string& fallback : listFallback )
         {
             if ( fallback == name )
-            {
-                outError = "A socket cannot be its own fallback";
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::InvalidArgument, "A socket cannot be its own fallback", name.view() } );
         }
-        SocketDef socket;
-        if ( beginFieldEdit( name, SocketFieldBit::kFallback, false, "fallback", socket, outError ) == false )
-            return false;
+        expected<SocketDef> edit = beginFieldEdit( name, SocketFieldBit::kFallback, false, "fallback" );
+        if ( edit.has_value() == false )
+            return unexpected( edit.error() );
+        SocketDef& socket    = *edit;
         socket._listFallback = listFallback;
         _sockets.addSocket( socket );
-        return true;
+        return {};
     }
 
-    bool SocketEditModel::mirrorSocket( const hashed_string& name, hashed_string& outMirrorName, string& outError )
+    expected<hashed_string> SocketEditModel::mirrorSocket( const hashed_string& name )
     {
-        SocketDef source;
-        if ( copySocket( name, source, outError ) == false )
-            return false;
+        const expected<SocketDef> copied = copySocket( name );
+        if ( copied.has_value() == false )
+            return unexpected( copied.error() );
+        const SocketDef& source = *copied;
 
         string mirrorText;
         if ( _mirrorRules.findMirrorName( name.view(), mirrorText ) == false )
-        {
-            outError = string( "Socket '" ) + name.c_str() + "' has no left or right token in its name";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "Socket has no left or right token in its name", name.view() } );
 
         SocketDef mirrored = source;
         mirrored._name     = SocketEditModelInternal::makeName( mirrorText );
         mirrored._parent   = SocketEditModelInternal::mirrorNameOrSame( _mirrorRules, source._parent );
         if ( isParentAllowed( mirrored._parent ) == false )
-        {
-            outError = string( "Mirrored parent '" ) + mirrored._parent.c_str() + "' is not a bone of this skeleton";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "Mirrored parent is not a bone of this skeleton", mirrored._parent.view() } );
         mirrored._translation = CharacterMirrorUtil::mirrorTranslation( source._translation, _mirrorAxis );
         mirrored._rotation    = CharacterMirrorUtil::mirrorRotation( source._rotation, _mirrorAxis );
         for ( hashed_string& fallback : mirrored._listFallback )
@@ -350,8 +314,7 @@ namespace sw::editor
 
         recordUndo();
         _sockets.addSocket( mirrored );
-        outMirrorName = mirrored._name;
-        return true;
+        return mirrored._name;
     }
 
     bool SocketEditModel::undo()
@@ -369,16 +332,12 @@ namespace sw::editor
         _state.record( _sockets, coalesceKey );
     }
 
-    bool SocketEditModel::copySocket( const hashed_string& name, SocketDef& outSocket, string& outError ) const
+    expected<SocketDef> SocketEditModel::copySocket( const hashed_string& name ) const
     {
         const SocketDef* pSocket = _sockets.findSocket( name );
         if ( pSocket == nullptr )
-        {
-            outError = string( "Socket '" ) + name.c_str() + "' does not exist";
-            return false;
-        }
-        outSocket = *pSocket;
-        return true;
+            return unexpected( Error{ ErrorKind::NotFound, "Socket does not exist", name.view() } );
+        return *pSocket;
     }
 
     void SocketEditModel::replaceSockets( const vector<SocketDef>& listSocket )
@@ -410,10 +369,11 @@ namespace sw::editor
         return _kinds.hasKind( kind );
     }
 
-    bool SocketEditModel::beginFieldEdit( const hashed_string& name, uint16 fieldBit, bool bContinuous, string_view fieldName, SocketDef& outSocket, string& outError )
+    expected<SocketDef> SocketEditModel::beginFieldEdit( const hashed_string& name, uint16 fieldBit, bool bContinuous, string_view fieldName )
     {
-        if ( copySocket( name, outSocket, outError ) == false )
-            return false;
+        expected<SocketDef> socket = copySocket( name );
+        if ( socket.has_value() == false )
+            return socket;
         string coalesceKey;
         if ( bContinuous )
         {
@@ -422,7 +382,7 @@ namespace sw::editor
             coalesceKey += fieldName;
         }
         recordUndo( coalesceKey );
-        outSocket._fieldMask |= fieldBit;
-        return true;
+        socket->_fieldMask |= fieldBit;
+        return socket;
     }
 } // namespace sw::editor

@@ -569,7 +569,6 @@ namespace sw::editor
 
     void CharacterEditorPanel::applyGizmoWorld( CharacterGizmoTarget target, const float4x4& world, const float4x4& parentWorld )
     {
-        string error;
         switch ( target )
         {
             case CharacterGizmoTarget::None:
@@ -577,18 +576,18 @@ namespace sw::editor
             case CharacterGizmoTarget::Bone:
             {
                 // 부모 월드의 역으로 본의 로컬을 구해 레퍼런스 포즈 덮어쓰기에 넣는다(끄는 동안은 한 되돌리기 단계).
-                BonePoseEditModel&  pose    = _document.getPoseModel();
-                const BoneTransform local   = BoneTransform::makeFromMatrix( world * parentWorld.invert() );
-                const float3        degrees = local._rotation.getEulerAngles() * MathUtil::kRadianToDegree;
-                (void)pose.setTranslation( _document.getSelectedBone(), local._translation, true, error ); // 같은 값이면 false 이고 오류는 비어 있다
-                (void)pose.setRotationDegrees( _document.getSelectedBone(), degrees, true, error );        // 같은 값이면 false 이고 오류는 비어 있다
-                _document.setStatus( error );
+                BonePoseEditModel&   pose    = _document.getPoseModel();
+                const BoneTransform  local   = BoneTransform::makeFromMatrix( world * parentWorld.invert() );
+                const float3         degrees = local._rotation.getEulerAngles() * MathUtil::kRadianToDegree;
+                const expected<bool> moved   = pose.setTranslation( _document.getSelectedBone(), local._translation, true );
+                const expected<bool> turned  = pose.setRotationDegrees( _document.getSelectedBone(), degrees, true );
+                _document.reportEdit( moved.has_value() ? turned : moved ); // 같은 값이면 false 다 — 오류만 상태 줄에 남는다
                 break;
             }
             case CharacterGizmoTarget::Socket:
             {
                 // 월드 두 행렬에 몸의 월드가 함께 곱혀 있어 나누면 유닛 공간과 같은 로컬이다 — 소켓 파일의 부모 기준 변환으로 쓴다.
-                _document.reportEdit( _document.getSocketModel().setUnitTransform( _document.getSelectedSocket(), world, parentWorld, true, _document.editStatus() ) );
+                _document.reportEdit( _document.getSocketModel().setUnitTransform( _document.getSelectedSocket(), world, parentWorld, true ) );
                 break;
             }
         }
@@ -951,7 +950,6 @@ namespace sw::editor
     {
         const hashed_string name    = socket._name;
         SocketEditModel&    sockets = _document.getSocketModel();
-        string&             status  = _document.editStatus();
 
         EditorChrome::setNextItemWidthColumns( 24.0f );
         ImGui::InputText( "##Rename", _renameBuffer.data(), _renameBuffer.max_size() );
@@ -972,43 +970,43 @@ namespace sw::editor
         parent = socket._parent.c_str();
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "Parent" ) );
         if ( ImGui::InputText( "##Parent", parent.data(), parent.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue ) )
-            _document.reportEdit( sockets.setParent( name, CharacterEditorPanelInternal::makeName( parent.c_str() ), status ) );
+            _document.reportEdit( sockets.setParent( name, CharacterEditorPanelInternal::makeName( parent.c_str() ) ) );
 
         hashed_string pickedKind;
         if ( CharacterEditorPanelInternal::drawNameCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "Kind" ), "Kind" ), socket._kind, sockets.getKindTable().getKinds(), pickedKind ) )
-            _document.reportEdit( sockets.setKind( name, pickedKind, status ) );
+            _document.reportEdit( sockets.setKind( name, pickedKind ) );
 
         float3 translation = socket._translation;
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "Translation" ) );
         if ( ImGui::DragFloat3( "##Translation", &translation._x, CharacterEditorPanelInternal::kDragSpeed ) )
-            _document.reportEdit( sockets.setTranslation( name, translation, true, status ) );
+            _document.reportEdit( sockets.setTranslation( name, translation, true ) );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             sockets.endContinuousEdit();
 
         float3 degrees = socket._rotation.getEulerAngles() * MathUtil::kRadianToDegree;
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "Rotation" ) );
         if ( ImGui::DragFloat3( "##Rotation", &degrees._x, CharacterEditorPanelInternal::kRotationDragSpeed ) )
-            _document.reportEdit( sockets.setRotationDegrees( name, degrees, true, status ) );
+            _document.reportEdit( sockets.setRotationDegrees( name, degrees, true ) );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             sockets.endContinuousEdit();
 
         float3 scale = socket._scale;
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "Scale" ) );
         if ( ImGui::DragFloat3( "##Scale", &scale._x, CharacterEditorPanelInternal::kDragSpeed ) )
-            _document.reportEdit( sockets.setScale( name, scale, true, status ) );
+            _document.reportEdit( sockets.setScale( name, scale, true ) );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             sockets.endContinuousEdit();
 
         int32 anchorIndex = socket._anchor == SocketAnchor::Surface ? 1 : 0;
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "Anchor" ) );
         if ( ImGui::Combo( "##Anchor", &anchorIndex, "Bone\0Surface\0" ) )
-            _document.reportEdit( sockets.setAnchor( name, anchorIndex == 1 ? SocketAnchor::Surface : SocketAnchor::Bone, status ) );
+            _document.reportEdit( sockets.setAnchor( name, anchorIndex == 1 ? SocketAnchor::Surface : SocketAnchor::Bone ) );
 
         fixed_string<constant::file::kMaxPathSize> previewMesh;
         previewMesh = string_view( socket._previewMesh );
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "PreviewMesh" ) );
         if ( ImGui::InputText( "##Previewmesh", previewMesh.data(), previewMesh.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue ) )
-            _document.reportEdit( sockets.setPreviewMesh( name, previewMesh.c_str(), status ) );
+            _document.reportEdit( sockets.setPreviewMesh( name, previewMesh.c_str() ) );
     }
 
     void CharacterEditorPanel::drawSkeletonTab()
@@ -1106,12 +1104,11 @@ namespace sw::editor
             return;
         }
         ImGui::TextUnformatted( bone.c_str() );
-        string error;
 
         float3 translation = current._translation;
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "BoneTranslation" ) );
         if ( ImGui::DragFloat3( "##Bonetranslation", &translation._x, CharacterEditorPanelInternal::kDragSpeed ) )
-            _document.reportEdit( pose.setTranslation( bone, translation, true, error ) || error.empty() );
+            _document.reportEdit( pose.setTranslation( bone, translation, true ) );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             pose.endContinuousEdit();
         EditorSelfTestMarks::record( "charactereditor.bone.translation" );
@@ -1119,26 +1116,24 @@ namespace sw::editor
         float3 degrees = current._rotation.getEulerAngles() * MathUtil::kRadianToDegree;
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "BoneRotation" ) );
         if ( ImGui::DragFloat3( "##Bonerotation", &degrees._x, CharacterEditorPanelInternal::kRotationDragSpeed ) )
-            _document.reportEdit( pose.setRotationDegrees( bone, degrees, true, error ) || error.empty() );
+            _document.reportEdit( pose.setRotationDegrees( bone, degrees, true ) );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             pose.endContinuousEdit();
 
         float3 scale = current._scale;
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "BoneScale" ) );
         if ( ImGui::DragFloat3( "##Bonescale", &scale._x, CharacterEditorPanelInternal::kDragSpeed ) )
-            _document.reportEdit( pose.setScale( bone, scale, true, error ) || error.empty() );
+            _document.reportEdit( pose.setScale( bone, scale, true ) );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             pose.endContinuousEdit();
 
         ImGui::BeginDisabled( pose.hasOverride( bone ) == false );
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "ResetBone" ) ) )
-            _document.reportEdit( pose.clearBone( bone, error ) );
+            _document.reportEdit( pose.clearBone( bone ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "MirrorBone" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "MirrorBone" ) ) )
             _document.mirrorSelectedBone();
         ImGui::EndDisabled();
-        if ( error.empty() == false )
-            _document.setStatus( error );
     }
 
     void CharacterEditorPanel::drawAppearanceTab()

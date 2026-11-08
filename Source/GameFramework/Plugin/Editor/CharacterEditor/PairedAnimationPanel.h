@@ -86,7 +86,7 @@ namespace sw::editor
         /** @brief 역할 오브젝트의 애니메이터를 스크럽 시각의 자세로 맞춥니다. */
         void poseRoleObject( SkeletalAnimatorComponent& animator, uint32 roleIndex );
         /** @brief 모델 편집 결과를 상태 줄과 dirty 표시에 반영합니다. */
-        void reportEdit( bool bSucceeded );
+        void reportEdit( const expected<void>& result );
         /** @brief 미리보기 씬의 매니저입니다. 씬이 없으면 nullptr 입니다. */
         GameObjectManager* findPreviewManager() const;
 
