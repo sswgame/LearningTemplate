@@ -92,7 +92,7 @@ namespace sw
         pCmd->bindComputeUAV( target._occlusionTiles._uav, 0 );
         pCmd->bindComputeUAV( target._depthHistoryUAV, shaderslot::kComputeTextureUAV0 );
         pCmd->setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
-        pCmd->dispatchCompute( FrameRendererUtil::divideRoundUp( target._occlusionColumns, Internal::kGroupSize ), FrameRendererUtil::divideRoundUp( target._occlusionRows, Internal::kGroupSize ), 1 );
+        pCmd->dispatchThreads( target._occlusionColumns, target._occlusionRows, 1, Internal::kGroupSize, Internal::kGroupSize, 1 );
         // 컬링이 t2 로 읽는다. 쓰기가 끝났음을 알린다(빠지면 DX12 · Vulkan 에서 지난 프레임 타일을 읽는다).
         pCmd->transitionBuffer( target._occlusionTiles._buffer, RHIBufferState::ShaderResource );
         target._bOcclusionTilesThisFrame = SW_TRUE;

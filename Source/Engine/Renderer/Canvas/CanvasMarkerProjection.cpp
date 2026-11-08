@@ -123,7 +123,7 @@ namespace sw
         const uint32 debugMode = bShowInstanceSlots ? 1u : 0u;
         cmd.setComputeRootConstants( 0, 1, &debugMode );
         inoutMessages.bindCompute( cmd ); // canvas_marker.hlsl 의 메시지(u4) — 메시지 변형 PSO 일 때만 버퍼가 있다
-        cmd.dispatchCompute( ( _markerCount + Internal::kMarkerThreadGroupSize - 1u ) / Internal::kMarkerThreadGroupSize, 1, 1 );
+        cmd.dispatchThreads( _markerCount, 1, 1, Internal::kMarkerThreadGroupSize, 1, 1 );
         cmd.transitionBuffer( quads._buffer, RHIBufferState::ShaderResource );
     }
 

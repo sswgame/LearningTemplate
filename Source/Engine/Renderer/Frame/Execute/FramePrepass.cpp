@@ -179,9 +179,7 @@ namespace sw
                 // AnimationParams(b0) / g_InstancesRW(u0). instance_animation.hlsl 레지스터와 1:1 로 대응한다.
                 _pCmd->bindComputeConstantBuffer( _state._deform._instanceAnimationCb._index, 0 );
                 _pCmd->bindComputeUAV( _state._gpuScene.getInstanceUAV(), 0 );
-                const uint32 animationGroups = ( instanceCount + 63u ) / 64u;
-                if ( animationGroups > 0 )
-                    _pCmd->dispatchCompute( animationGroups, 1, 1 );
+                _pCmd->dispatchThreads( instanceCount, 1, 1, FrameRendererUtil::kLinearThreadGroupSize, 1, 1 );
                 // 다음 디스패치(컬링)와 정점 셰이더가 이 결과를 읽는다. 쓰기가 끝났음을 알린다.
                 _pCmd->transitionBuffer( _state._gpuScene.getInstanceBuffer(), RHIBufferState::ShaderResource );
             }
@@ -363,9 +361,7 @@ namespace sw
         _pCmd->bindComputeShaderResource( programSRV, 1 );
         _pCmd->bindComputeUAV( _state._deform._meshMorphPool.getMorphBuffer()._uav, 0 );
         _state._gpuMessages.bindCompute( *_pCmd ); // mesh_morph.hlsl 의 메시지(u4) — 메시지 변형 PSO 일 때만 버퍼가 있다
-        const uint32 morphGroups = ( morphParams._vertexCount + 63u ) / 64u;
-        if ( morphGroups > 0 )
-            _pCmd->dispatchCompute( morphGroups, 1, 1 );
+        _pCmd->dispatchThreads( morphParams._vertexCount, 1, 1, FrameRendererUtil::kLinearThreadGroupSize, 1, 1 );
         _pCmd->transitionBuffer( _state._deform._meshMorphPool.getMorphBuffer()._buffer, RHIBufferState::ShaderResource );
     }
 
@@ -403,9 +399,7 @@ namespace sw
         _pCmd->bindComputeShaderResource( _state._deform._meshMorphPool.getSkinPaletteBuffer()._srv, 2 );
         _pCmd->bindComputeShaderResource( _state._deform._meshMorphPool.getSkinInstanceBuffer()._srv, 3 );
         _pCmd->bindComputeUAV( _state._deform._meshMorphPool.getMorphBuffer()._uav, 0 );
-        const uint32 skinGroups = ( skinParams._skinVertexCount + 63u ) / 64u;
-        if ( skinGroups > 0 )
-            _pCmd->dispatchCompute( skinGroups, 1, 1 );
+        _pCmd->dispatchThreads( skinParams._skinVertexCount, 1, 1, FrameRendererUtil::kLinearThreadGroupSize, 1, 1 );
         _pCmd->transitionBuffer( _state._deform._meshMorphPool.getMorphBuffer()._buffer, RHIBufferState::ShaderResource );
     }
 
@@ -667,9 +661,7 @@ namespace sw
         }
         _state._gpuMessages.bindCompute( *_pCmd ); // gpu_cull.hlsl 의 메시지(u4) — 메시지 변형 PSO 일 때만 버퍼가 있다
         // **인스턴스마다** 스레드 하나를 쓴다. 그래야 보이는 것을 골라 압축할 수 있다.
-        const uint32 groups = ( cullParams._instanceCount + 63u ) / 64u;
-        if ( groups > 0 )
-            _pCmd->dispatchCompute( groups, 1, 1 );
+        _pCmd->dispatchThreads( cullParams._instanceCount, 1, 1, FrameRendererUtil::kLinearThreadGroupSize, 1, 1 );
         // 압축이 끝났으면 투명 배치의 순서를 CPU 가 정한 순서(인스턴스 번호 오름차순)로 되돌린다. 원자 연산이 준 슬롯 번호는
         // 완료 순서라 그대로 두면 블렌딩이 틀린다. 되돌리기가 GPU 에서 돌므로 투명도 압축과 컬링 이득을 받는다(instance_sort.hlsl).
         // 컬링이 채운 목록을 정렬이 바로 읽는다. 상태가 그대로라 transitionBuffer 는

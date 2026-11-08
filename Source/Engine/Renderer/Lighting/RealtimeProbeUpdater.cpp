@@ -210,7 +210,7 @@ namespace sw
         cmd.bindComputeShaderResource( _voxelBuffer._srv, 2 );
         cmd.bindComputeUAV( _historyBuffer._uav, 0 );
         cmd.bindComputeUAV( lightBuffer.getProbeUAV(), 1 );
-        cmd.dispatchCompute( ( _totalProbes + kThreadGroupSize - 1u ) / kThreadGroupSize, 1, 1 );
+        cmd.dispatchThreads( _totalProbes, 1, 1, kThreadGroupSize, 1, 1 );
         // 조명 패스(그래프)가 t13 으로 읽는다. 쓰기가 끝났음을 알린다.
         cmd.transitionBuffer( pProbeBuffer->_buffer, RHIBufferState::ShaderResource );
     }

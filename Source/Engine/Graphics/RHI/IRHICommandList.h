@@ -106,6 +106,19 @@ namespace sw
         virtual void setComputePipelineState( RHIPipelineStateHandle pso )                                           = 0;
         virtual void dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) = 0;
         /**
+         * @brief 일의 크기(스레드 수)로 디스패치합니다 — 그룹 수는 축마다 올림( 스레드 / 그룹 크기 )이고, 일이 없는 축(0)이 있으면 디스패치하지 않습니다.
+         * @details 디스패치마다 손으로 적던 `( n + g - 1 ) / g` 와 "0 그룹이면 건너뛰기" 를 한 곳에 둔다(언리얼 `FComputeShaderUtils::GetGroupCount` 자리).
+         *          그룹 크기는 셰이더의 `[numthreads]` 와 같아야 하고 0 이 아니어야 한다(0 이면 assert 뒤 건너뛴다).
+         */
+        void dispatchThreads( uint32 threadCountX, uint32 threadCountY, uint32 threadCountZ, uint32 groupSizeX, uint32 groupSizeY, uint32 groupSizeZ )
+        {
+            const bool bInvalidGroupSize = groupSizeX == 0 || groupSizeY == 0 || groupSizeZ == 0;
+            SW_ASSERT( bInvalidGroupSize == false );
+            if ( bInvalidGroupSize || threadCountX == 0 || threadCountY == 0 || threadCountZ == 0 )
+                return;
+            dispatchCompute( ( threadCountX + groupSizeX - 1u ) / groupSizeX, ( threadCountY + groupSizeY - 1u ) / groupSizeY, ( threadCountZ + groupSizeZ - 1u ) / groupSizeZ );
+        }
+        /**
          * @brief 컴퓨트 루트 상수(푸시 상수)를 씁니다.
          * @details 백엔드마다 실제 용량(dword)이 다르다. DX11 은 64, OpenGL 은 64, DX12 와 Vulkan 은 16이다(루트 상수와 푸시 상수,
          *          binding_slots.hlsli 의 SW_ROOT_DWORD_COUNT). 네 백엔드 모두에서 안전한
