@@ -395,8 +395,8 @@ namespace sw
     SW_GLOBAL_VARIABLE( RHIBackBufferFormat, gv_rhiBackBufferFormat, RHIBackBufferFormat::RGBA8, "요청 백버퍼 포맷: RGBA8=R8G8B8A8_UNORM, BGRA8=B8G8R8A8_UNORM (실제 채택값은 getBackBufferFormat)" );
     // 소프트웨어 어댑터(WARP · CPU Vulkan)로 띄운다 — GPU 없는 CI 러너와 같은 래스터라이저를 이 PC 에서 고른다. 환경 변수 SW_RHI_SOFTWARE_ADAPTER=1 도 같다
     // (ctest 가 인자 없이 켠다). 언제 켤지는 엔진이 정하고, 어떻게 고를지는 백엔드가 안다.
-    // 켜고 끄는 값이라 종류가 아니라 bool 이다(`-gv_rhiSoftwareAdapter=true`, `=1` 도 받는다).
-    SW_TEST_GLOBAL_VARIABLE( bool, gv_rhiSoftwareAdapter, false, "소프트웨어 어댑터로 띄운다: false=하드웨어, true=WARP(DX11 · DX12) · CPU 디바이스(Vulkan)" );
+    // 켜고 끄는 값이라 종류가 아니라 bool 이다(`-gv_rhiSoftwareAdapter=true`, `=1` 도 받는다). 배포본에도 둔다 — GPU 없는 기계에서 띄우는 길이고(환경 변수도 배포본에 있다), 언리얼 `-warp` 도 모든 구성에서 받는다.
+    SW_GLOBAL_VARIABLE( bool, gv_rhiSoftwareAdapter, false, "소프트웨어 어댑터로 띄운다: false=하드웨어, true=WARP(DX11 · DX12) · CPU 디바이스(Vulkan)" );
     // 하드웨어 어댑터는 고성능 순서(OS 의 GPU 선호 · Vulkan 장치 종류 — 제조사와 무관)로 고른다. 켜면 저전력 순서다(하이브리드 노트북의 내장 GPU) — 언리얼 -preferIntel 처럼
     // 같은 기계에서 다른 GPU 로 그림을 비교한다. GL 은 어댑터를 고르는 API 가 없어 실행 파일 내보내기(NvOptimusEnablement · AmdPowerXpress…)를 따른다.
     SW_GLOBAL_VARIABLE( bool, gv_rhiPreferMinimumPower, false, "하드웨어 어댑터를 저전력 순서로 고른다(DX11 · DX12 · Vulkan): false=고성능(외장 GPU), true=저전력(내장 GPU). GL 은 드라이버가 정한다" );
@@ -415,7 +415,8 @@ namespace sw
     // DX11 은 이 크기 이하의 업로드를 스테이징 없이 UpdateSubresource 로 올린다(소스 복사가 즉시 컨텍스트 잠금 안에서 일어난다).
     // 256 KiB 는 측정값이 아니라 추정이다: 잠금 안의 복사가 수십 µs(메모리 복사 5 ~ 10 GB/s)라 프레임(16.6 ms)에 비해 작고, 스테이징 한 장의 생성 · 추가 복사 명령의
     // 고정 비용과 비슷한 자리다. 글리프 아틀라스 구간 갱신(수 KB)과 256² RGBA8 이하 텍스처가 이 아래로 간다. M1(RHIAsyncUploads 측정)이 조정한다.
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_rhiDirectUploadMaxKilobytes, 256, "이 크기(KiB) 이하의 텍스처 업로드는 스테이징 없이 바로 올린다(지금은 DX11 만 쓴다). 0 이면 모두 스테이징" );
+    // 위 스테이징 용량들과 같은 성능 설정이라 배포본에도 둔다(언리얼 `r.*` 업로드 cvar 와 같은 자리).
+    SW_GLOBAL_VARIABLE( int32, gv_rhiDirectUploadMaxKilobytes, 256, "이 크기(KiB) 이하의 텍스처 업로드는 스테이징 없이 바로 올린다(지금은 DX11 만 쓴다). 0 이면 모두 스테이징" );
 
     bool IRHIDevice::initialize()
     {
