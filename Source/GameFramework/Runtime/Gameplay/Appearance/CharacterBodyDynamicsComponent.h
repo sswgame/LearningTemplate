@@ -15,6 +15,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -25,6 +26,7 @@ namespace sw
 {
     class CharacterAppearanceComponent;
     class GameObjectManager;
+    class VFXComponent;
     struct CharacterBodyProfileDef;
     struct BodyFluidDef;
 
@@ -61,6 +63,8 @@ namespace sw
         float32 computeFluidWetness() const;
         /** @brief 피부 층 번짐의 가장 큰 묽음(0..1)입니다(감시 값 — 눈물 길 아래 마스카라가 묽어진다). */
         float32 computeMaxSmearDilution() const;
+        /** @brief 지금 방울 · 가닥을 내는 체액 효과 수입니다(감시 값 — 눈물이 턱에 닿으면 방울, 침 방아쇠가 켜진 동안 가닥). */
+        float32 computeActiveFluidEffects() const;
         /** @brief 해석 순서의 피부 층 번짐 상태입니다(굽기가 읽는다). */
         const vector<SkinLayerSmearState>& getSmearStates() const { return _listSmear; }
 
@@ -68,9 +72,12 @@ namespace sw
         /** @brief 체액 방출 하나의 실행 상태입니다. */
         struct FluidStream
         {
-            vector<float32> _listDistance{}; ///< 흐르는 줄기마다 경로 위 거리(UV)
-            hashed_string   _name{};
-            float32         _emitAccumulator{ 0.0f }; ///< 새 줄기까지 쌓인 몫
+            vector<float32>                _listDistance{}; ///< 흐르는 줄기마다 경로 위 거리(UV)
+            hashed_string                  _name{};
+            TComponentHandle<VFXComponent> _effect{};                ///< 방울 · 가닥 효과(이 오브젝트에 붙인 것 — 처음 켤 때 만든다)
+            float32                        _emitAccumulator{ 0.0f }; ///< 새 줄기까지 쌓인 몫
+            float32                        _dripRemaining{ 0.0f };   ///< 방울이 더 떨어질 시간(초)
+            uint8                          _bEffectOn{ SW_FALSE };   ///< 효과의 방출기를 켜 두었다
         };
 
         /** @brief 수동 방아쇠 하나입니다(`triggerFluid`). */
@@ -91,6 +98,13 @@ namespace sw
         void updatePupil( GameObjectManager& manager, CharacterAppearanceComponent& appearance, const CharacterBodyProfileDef& profile, float32 seconds );
         /** @brief 체액 줄기를 내고 흘려 표면 채널과 화장 번짐에 찍습니다. */
         void updateFluids( CharacterAppearanceComponent& appearance, const CharacterBodyProfileDef& profile, float32 seconds );
+        /**
+         * @brief 체액 효과(방울 · 가닥)를 켜고 끄고 소켓에 둡니다. 효과 컴포넌트는 처음 켤 때 이 오브젝트에 붙인다(꺼도 남아 떨어지던 방울은 끝까지 떨어진다).
+         * @param amount 이번 방아쇠 세기입니다(가닥). @param arrivedCount 이번에 경로 끝(턱)에 닿은 줄기 수입니다(방울).
+         */
+        void updateFluidEffect( CharacterAppearanceComponent& appearance, const BodyFluidDef& def, FluidStream& stream, float32 amount, uint32 arrivedCount, float32 seconds );
+        /** @brief 붙인 체액 효과를 모두 뗍니다(프로필이 바뀌었다). */
+        void removeFluidEffects();
         /** @brief 방아쇠 @p trigger 의 이번 세기입니다(애니메이터 커브와 수동 방아쇠 중 큰 쪽). */
         float32 computeTriggerStrength( const hashed_string& trigger ) const;
 

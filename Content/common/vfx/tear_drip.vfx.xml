@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 눈물 방울 — 눈물 줄기가 턱(소켓 Chin)에 닿으면 몸 동작(CharacterBodyDynamicsComponent)이 방출기를 잠시 켠다(bodyprofiles.xml 의 Fluid effect · dripSeconds).
+     작은 투명 방울이 중력으로 떨어진다. 텍스처는 Kenney 파티클 팩(CC0) circle_05. -->
+<VFXEffectDef>
+	<_listEmitter>
+		<VFXEmitterDef _name="Drops" _renderMode="Billboard" _texturePath="engine/textures/particles/kenney_particle/circle_05.dds" _blendMode="Alpha" _bLooping="true"
+		               _maxParticles="24" _duration="1" _spawnRate="4" _lifetimeMin="0.6" _lifetimeMax="0.8"
+		               _velocityMin="-0.02, -0.1, -0.02" _velocityMax="0.02, 0, 0.02" _gravity="0, -9.8, 0">
+			<_sizeOverLife><_listKey><FloatCurveKey _time="0" _value="0.012" _interpolation="Linear"/><FloatCurveKey _time="1" _value="0.016" _interpolation="Linear"/></_listKey></_sizeOverLife>
+			<_colorOverLife>
+				<_red><_listKey><FloatCurveKey _time="0" _value="0.8" _interpolation="Linear"/></_listKey></_red>
+				<_green><_listKey><FloatCurveKey _time="0" _value="0.9" _interpolation="Linear"/></_listKey></_green>
+				<_blue><_listKey><FloatCurveKey _time="0" _value="1" _interpolation="Linear"/></_listKey></_blue>
+				<_alpha><_listKey><FloatCurveKey _time="0" _value="0.7" _interpolation="Linear"/><FloatCurveKey _time="1" _value="0" _interpolation="Linear"/></_listKey></_alpha>
+			</_colorOverLife>
+		</VFXEmitterDef>
+	</_listEmitter>
+</VFXEffectDef>

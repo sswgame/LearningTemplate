@@ -98,6 +98,8 @@ namespace sw
      * @details 흐름은 얼굴마다 그려 둔 UV 경로(`path`)다 — 월드 중력을 UV 로 사영하려면 텍셀마다 탄젠트 틀이 필요하고 얼굴 UV 이음새에서 흐름이 끊기는데, 얼굴 하나에 경로 몇 개면
      *          같은 자리에 같은 자국이 나서 결정적이다(검은사막 · 언리얼 게임들이 그린 마스크로 하는 길). 마르기는 표면 채널의 초당 감쇠(`surfacechannels.xml`)가 한다 — 같은 기반을 쓴다.
      *          방아쇠(`trigger`)는 표정 이름 또는 애니메이터 커브다(울음 · 웃음 눈물 · 침 · 먹기). 비는 표면 노출(`SurfaceExposureComponent`)이 얼굴 전체를 적신다.
+     *          효과(`effect` · `socket`)는 표면 밖으로 떨어지는 것이다 — 눈물은 줄기가 경로 끝(턱)에 닿으면 `dripSeconds` 동안 방울이, 침(`strand="true"`)은 방아쇠가 켜진 동안 가닥이 소켓에서 난다.
+     *          언리얼에서는 나이아가라 시스템을 소켓에 붙여 애님 노티파이로 켜는 자리다 — 여기서는 표면 흐름과 같은 상태(줄기 · 방아쇠 세기)가 켜고 끈다.
      */
     struct SW_GF_API BodyFluidDef
     {
@@ -112,6 +114,10 @@ namespace sw
         float32        _radius{ 0.006f };      ///< 자국 반지름(UV)
         float32        _wetValue{ 1.0f };      ///< 자국 값
         float32        _residueValue{ 0.25f }; ///< 잔여 자국 값(마른 소금 자국 · 번진 화장)
+        hashed_string  _effect{};              ///< 방울 · 가닥 효과(`*.vfx.xml`). 비면 표면 자국만 남긴다
+        hashed_string  _socket{};              ///< 효과가 나는 몸 소켓(턱 끝 · 입꼬리) — 효과가 있으면 필수
+        float32        _dripSeconds{ 0.6f };   ///< 줄기 하나가 경로 끝에 닿은 뒤 방울이 떨어지는 시간(초) — 가닥(`strand`)이면 쓰지 않는다
+        uint8          _bStrand{ SW_FALSE };   ///< 가닥(침 · 콧물)이다 — 방아쇠가 켜진 동안 소켓에서 늘어지는 줄기를 낸다(방울은 경로 끝에 닿을 때만)
 
         /** @brief 경로의 전체 길이(UV)입니다. */
         float32 computePathLength() const;

@@ -19,7 +19,7 @@ namespace sw
         struct BodyProfileInternal
         {
             static constexpr const utf8* kArrProfileAttribute[] = { "id", "wrinkleIntensity" };
-            static constexpr const utf8* kArrFluidAttribute[]   = { "name", "channel", "residueChannel", "trigger", "part", "path", "ratePerSecond", "speed", "radius", "wetValue", "residueValue" };
+            static constexpr const utf8* kArrFluidAttribute[]   = { "name", "channel", "residueChannel", "trigger", "part", "path", "ratePerSecond", "speed", "radius", "wetValue", "residueValue", "effect", "socket", "dripSeconds", "strand" };
 
             /** @brief `"u v; u v; …"` 경로를 읽습니다. 점이 둘 미만이거나 숫자가 깨졌으면 false 입니다. */
             static bool readPath( string_view text, vector<float2>& outListPoint )
@@ -58,6 +58,16 @@ namespace sw
                 AppearanceXMLUtil::readOptionalFloat( node, "radius", 0.0f, 1.0f, fluid._radius, report, sourceName );
                 AppearanceXMLUtil::readOptionalFloat( node, "wetValue", 0.0f, MathUtil::kMaxFloat, fluid._wetValue, report, sourceName );
                 AppearanceXMLUtil::readOptionalFloat( node, "residueValue", 0.0f, MathUtil::kMaxFloat, fluid._residueValue, report, sourceName );
+                AppearanceXMLUtil::readOptionalFloat( node, "dripSeconds", 0.0f, MathUtil::kMaxFloat, fluid._dripSeconds, report, sourceName );
+                fluid._effect  = hashed_string( node.getAttributeText( "effect" ) );
+                fluid._socket  = hashed_string( node.getAttributeText( "socket" ) );
+                fluid._bStrand = StringUtil::equals( node.getAttributeText( "strand" ), "true" ) ? SW_TRUE : SW_FALSE;
+                if ( fluid._effect.empty() == false && fluid._socket.empty() )
+                {
+                    report.addErrorWithID( "Appearance.FluidEffectSocket", "%#: body profile '%#' fluid '%#' has an 'effect' but no 'socket' to spawn it at", sourceName, inoutProfile._id.c_str(),
+                                           fluid._name.c_str() );
+                    return;
+                }
                 if ( readPath( node.getAttributeText( "path" ), fluid._listPathPoint ) == false )
                 {
                     report.addErrorWithID( "Appearance.FluidPathInvalid", "%#: body profile '%#' fluid '%#' needs a 'path' of two or more 'u v' points separated by ';'", sourceName, inoutProfile._id.c_str(), fluid._name.c_str() );

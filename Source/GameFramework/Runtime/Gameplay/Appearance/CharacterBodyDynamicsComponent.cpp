@@ -27,6 +27,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/VFX/VFXComponent.h"
 #include "Engine/Visual/Component/DirectionalLightComponent.h"
 #include "Engine/Visual/Component/LightComponent.h"
 
@@ -125,6 +126,8 @@ namespace sw
                                &CharacterBodyDynamicsInternal::readValue<&CharacterBodyDynamicsComponent::computeFluidWetness>, true, false );
     SW_AUTOMATION_QUERY_WATCH( bodySmearDilution, "Body.SmearDilution", "Largest makeup smear dilution (0..1) on the target",
                                &CharacterBodyDynamicsInternal::readValue<&CharacterBodyDynamicsComponent::computeMaxSmearDilution>, true, false );
+    SW_AUTOMATION_QUERY_WATCH( bodyFluidEffects, "Body.FluidEffects", "Tear drip / saliva strand effects emitting on the target",
+                               &CharacterBodyDynamicsInternal::readValue<&CharacterBodyDynamicsComponent::computeActiveFluidEffects>, true, false );
     SW_DEV_COMMAND( BodyImpulse, "body.impulse", "body.impulse <object> <x> <y> <z>", "Push the object's jiggle bones with a world velocity (m/s)", &CharacterBodyDynamicsInternal::runImpulse );
     SW_DEV_COMMAND( BodyFluid, "body.fluid", "body.fluid <object> <trigger> <seconds> [strength]", "Turn on a body fluid trigger (Cry, Drool) for a while", &CharacterBodyDynamicsInternal::runFluid );
 } // namespace sw
@@ -239,6 +242,7 @@ namespace sw
             _listSmear[index].initialize( CharacterBodyDynamicsInternal::kSmearResolution );
             _listSmearResistance.push_back( listLayer[index]._smearResistance );
         }
+        removeFluidEffects();
         _listFluid.clear();
         if ( pProfile == nullptr )
             return;
@@ -355,7 +359,10 @@ namespace sw
                 stream._emitAccumulator -= 1.0f;
             }
             if ( stream._listDistance.empty() || appearance.hasSurfaceState() == false )
+            {
+                updateFluidEffect( appearance, def, stream, amount, 0, seconds );
                 continue;
+            }
             // 자국을 찍을 부품 — 이름을 적었으면 그 몸 부품, 아니면 몸 첫 부품(해석 순서의 0 번이 몸이다).
             uint32 partIndex = 0;
             for ( size_t index = 0; def._part.empty() == false && index < resolved._listPart.size(); ++index )
@@ -382,8 +389,12 @@ namespace sw
                 for ( size_t layerIndex = 0; layerIndex < _listSmear.size(); ++layerIndex )
                     _listSmear[layerIndex].advect( to, flow * ( 1.0f / length2 ), def._radius * 2.0f, _fluidSmearStrength * seconds, _listSmearResistance[layerIndex], CharacterBodyDynamicsInternal::kSmearDilution );
             }
+            uint32 arrivedCount = 0; // 이번에 경로 끝(턱)에 닿은 줄기 — 방울이 된다
+            for ( const float32 distance : stream._listDistance )
+                arrivedCount += distance > length ? 1u : 0u;
             VectorUtil::removeIf( stream._listDistance, [length]( float32 distance )
             { return distance > length; } );
+            updateFluidEffect( appearance, def, stream, amount, arrivedCount, seconds );
         }
         if ( _pendingWipe > 0.0f )
         {
@@ -393,6 +404,68 @@ namespace sw
                 _listSmear[layerIndex].drag( center, float2{ 1.0f, 0.0f }, CharacterBodyDynamicsInternal::kWipeRadius, _pendingWipe, _listSmearResistance[layerIndex] );
             _pendingWipe = 0.0f;
         }
+    }
+
+    void CharacterBodyDynamicsComponent::updateFluidEffect( CharacterAppearanceComponent& appearance, const BodyFluidDef& def, FluidStream& stream, float32 amount, uint32 arrivedCount,
+                                                            float32 seconds )
+    {
+        if ( def._effect.empty() )
+            return;
+        // 방울은 줄기가 턱에 닿은 뒤 잠시, 가닥은 방아쇠가 켜진 동안이다.
+        if ( arrivedCount > 0 )
+            stream._dripRemaining = def._dripSeconds;
+        const bool bWanted    = def._bStrand == SW_TRUE ? amount > 0.0f : stream._dripRemaining > 0.0f;
+        stream._dripRemaining = MathUtil::max( 0.0f, stream._dripRemaining - seconds );
+
+        GameObject*        pOwner   = getOwner();
+        GameObjectManager* pManager = pOwner->getManager();
+        VFXComponent*      pEffect  = pManager != nullptr ? pManager->resolveComponent( stream._effect ) : nullptr;
+        if ( pEffect == nullptr )
+        {
+            if ( bWanted == false )
+                return; // 아직 한 번도 켜지 않았다 — 만들지 않는다
+            pEffect = pOwner->addComponent<VFXComponent>();
+            if ( pEffect == nullptr )
+                return;
+            pEffect->setEffectPath( def._effect.c_str() );
+            pEffect->play(); // 방출기는 되풀이다 — 켜고 끄기는 방출기 단위로(꺼도 떨어지던 방울은 끝까지 떨어진다)
+            stream._effect    = TComponentHandle<VFXComponent>{ pEffect };
+            stream._bEffectOn = SW_TRUE;
+        }
+        float4x4 socketWorld{};
+        if ( appearance.findSocketWorldTransform( def._socket, socketWorld ) == false )
+        {
+            SW_LOG_ERROR_ONCE_ID( "BodyDynamics.FluidSocketMissing", "'%#': fluid '%#' socket '%#' is not in the appearance - no drips or strands", pOwner->getName().c_str(), def._name.c_str(),
+                                  def._socket.c_str() );
+            return;
+        }
+        pEffect->setWorldPosition( socketWorld.getTranslation() );
+        if ( bWanted == ( stream._bEffectOn == SW_TRUE ) )
+            return;
+        for ( uint32 emitterIndex = 0; emitterIndex < pEffect->getEmitterCount(); ++emitterIndex )
+            (void)pEffect->setEmitterEnabled( emitterIndex, bWanted );
+        stream._bEffectOn = bWanted ? SW_TRUE : SW_FALSE;
+    }
+
+    void CharacterBodyDynamicsComponent::removeFluidEffects()
+    {
+        GameObject*        pOwner   = getOwner();
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        for ( FluidStream& stream : _listFluid )
+        {
+            VFXComponent* pEffect = pManager != nullptr ? pManager->resolveComponent( stream._effect ) : nullptr;
+            if ( pEffect != nullptr )
+                (void)pOwner->removeComponent( pEffect );
+            stream._effect = TComponentHandle<VFXComponent>{};
+        }
+    }
+
+    float32 CharacterBodyDynamicsComponent::computeActiveFluidEffects() const
+    {
+        float32 count = 0.0f;
+        for ( const FluidStream& stream : _listFluid )
+            count += stream._bEffectOn == SW_TRUE ? 1.0f : 0.0f;
+        return count;
     }
 
     float32 CharacterBodyDynamicsComponent::computeJiggleDisplacement() const
