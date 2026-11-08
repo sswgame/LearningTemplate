@@ -573,14 +573,22 @@ namespace sw
         // 주 출력에 그리는 패스(Present · Canvas · Present 를 대신하는 FSR 의 RCAS)의 대상은 백버퍼(디바이스가 실제 채택한 포맷), 오프스크린 렌더 타깃(에디터 씬 뷰 · 게임 뷰 등,
         // 계약값 kOffscreenColorFormat), 스크린샷 캡처 텍스처(계약값 kBackBufferFormat)다. 모두 **셋업에서** 만들어 둔다.
         // 출력 패스는 표의 kOutputPass 가 정한다.
-        const RHIFormat arrTargetFormat[] = { _pDevice->getBackBufferFormat(), constant::render::kOffscreenColorFormat, constant::render::kBackBufferFormat };
+        // 화면 회전 출력(kSurfaceRotation)은 스왑체인 이미지에만 그려 백버퍼 포맷 하나이고, 서피스를 돌릴 수 있는 장치에서만 만든다(데스크톱은 없다).
+        const RHIFormat arrTargetFormat[]   = { _pDevice->getBackBufferFormat(), constant::render::kOffscreenColorFormat, constant::render::kBackBufferFormat };
+        const bool      bSurfacePreRotation = _pDevice->getCapabilities()._bSurfacePreRotation != SW_FALSE;
         for ( uint32 typeIndex = 0; typeIndex < kRenderPassTypeCount; ++typeIndex )
         {
-            const RenderPassType passType = static_cast<RenderPassType>( typeIndex );
-            if ( getRenderPassTypeInfo( passType ).hasFlag( RenderPassTraitFlag::kOutputPass ) == false )
+            const RenderPassType      passType = static_cast<RenderPassType>( typeIndex );
+            const RenderPassTypeInfo& info     = getRenderPassTypeInfo( passType );
+            if ( info.hasFlag( RenderPassTraitFlag::kOutputPass ) == false )
                 continue;
-            for ( const RHIFormat format : arrTargetFormat )
+            const bool bSurfaceRotation = info.hasFlag( RenderPassTraitFlag::kSurfaceRotation );
+            if ( bSurfaceRotation && bSurfacePreRotation == false )
+                continue;
+            const uint32 formatCount = bSurfaceRotation ? 1u : static_cast<uint32>( SW_COUNT_OF( arrTargetFormat ) );
+            for ( uint32 formatIndex = 0; formatIndex < formatCount; ++formatIndex )
             {
+                const RHIFormat        format = arrTargetFormat[formatIndex];
                 RHIPipelineStateHandle existing{ 0 };
                 if ( format == RHIFormat::Unknown || _pCache->findOutputPSO( passType, format, existing ) )
                     continue;

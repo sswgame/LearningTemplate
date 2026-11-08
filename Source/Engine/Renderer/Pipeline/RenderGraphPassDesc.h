@@ -211,6 +211,13 @@ namespace sw
          *        컬링과 같은 조건(간접 인자 능력)이고 GPUCull 패스 안의 첫 디스패치라 따로 선언하지 않는다.
          */
         IndirectArgsReset,
+        /**
+         * @brief 화면 회전 출력입니다(screen_rotation.hlsl). 회전한 휴대 기기 화면(`IRHIDevice::getSurfaceTransform` 이 Identity 가 아니다)에서 엔진이 논리 크기로 그린
+         *        대기 텍스처(Present · Canvas · 캡처 → 화면 · 개발 겹치기 · UI 가 모두 그곳에 쓴다)를 프레임 끝에 스왑체인 이미지로 돌려 옮긴다(`FrameScreenRotation`).
+         *        스왑체인이 그 회전으로 만들어져 합성기가 돌리지 않는다. 백버퍼 포맷 하나에만 그리는 출력 패스이고, 회전할 수 있는 장치(`RHICapabilities::_bSurfacePreRotation`)에서만
+         *        PSO 가 있다 — 데스크톱은 PSO · 대기 텍스처 · 패스 모두 없다(`RenderPassTraitFlag::kSurfaceRotation`).
+         */
+        ScreenRotation,
     };
 
     /**

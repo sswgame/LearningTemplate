@@ -14,6 +14,7 @@
 #include "Engine/Graphics/RHI/Diagnostics/RHIInitPhaseTimings.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
+#include "Engine/Graphics/RHI/RHISurfaceTransform.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/RHI/RHIWaitIdleReason.h"
 
@@ -270,6 +271,15 @@ namespace sw
          *          쓰면 백버퍼를 타깃으로 하는 PSO 가 모두 렌더 패스 비호환이 된다.
          */
         virtual RHIFormat getBackBufferFormat() const { return constant::render::kBackBufferFormat; }
+        /**
+         * @brief 주 스왑체인 이미지를 엔진이 미리 돌려 써야 하는 각도입니다(pre-rotation). 기본은 돌리지 않음이다.
+         * @details Vulkan 이 회전한 서피스(Android)에서 스왑체인을 `currentTransform` 으로 만들 때만 Identity 가 아니다(`RHICapabilities::_bSurfacePreRotation`).
+         *          그때 `getBackBufferWidth/Height` 는 논리 크기이고 실제 이미지는 `getSurfaceRotation().getPhysicalWidth/Height()` 다 — 렌더러는 논리 크기 대기 텍스처에 그리고
+         *          회전 출력 패스로 옮긴다(`FrameScreenRotation`).
+         */
+        virtual RHISurfaceTransform getSurfaceTransform() const { return RHISurfaceTransform::Identity; }
+        /** @brief 주 스왑체인의 회전과 논리 크기(백버퍼 크기)입니다. */
+        RHISurfaceRotation getSurfaceRotation() const { return RHISurfaceRotation{ getSurfaceTransform(), _backBufferWidth, _backBufferHeight }; }
 
         /** @brief 백엔드 능력을 조회합니다.
          * @note 정적 테이블은 RHIAvailability::query 입니다. DX12 와 Vulkan 의 네이티브 bindless 는
@@ -314,7 +324,7 @@ namespace sw
          *          그래서 Graphics 는 Window 를 include 하지 않는다.
          */
         void resize( uint32 width, uint32 height );
-        /** @brief 백버퍼 너비입니다. initialize 때는 표면 크기이고, 그 뒤에는 마지막 `resize` 값입니다. */
+        /** @brief 백버퍼 너비입니다(논리 크기 — 회전한 서피스면 실제 이미지와 맞바뀐다, `getSurfaceRotation`). initialize 때는 표면 크기이고, 그 뒤에는 마지막 `resize` 값입니다. */
         uint32 getBackBufferWidth() const { return _backBufferWidth; }
         /** @brief 백버퍼 높이입니다. initialize 때는 표면 크기이고, 그 뒤에는 마지막 `resize` 값입니다. */
         uint32 getBackBufferHeight() const { return _backBufferHeight; }

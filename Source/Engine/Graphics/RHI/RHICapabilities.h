@@ -67,6 +67,11 @@ namespace sw
          *          (메시지 변형 PSO 를 버퍼 없이 돌리지 않는다).
          */
         uint8 _bGraphicsShaderWrites{ SW_FALSE };
+        /**
+         * @brief 주 스왑체인이 서피스 회전(`currentTransform`)으로 만들어져 `IRHIDevice::getSurfaceTransform` 이 Identity 가 아닐 수 있는지입니다 — Android 의 Vulkan 만 참이다.
+         * @details 렌더러는 이 능력이 있을 때만 회전 출력 패스의 PSO 를 만든다(`RenderPassTraitFlag::kSurfaceRotation`). 데스크톱은 PSO · 대기 텍스처 · 패스 모두 없다.
+         */
+        uint8 _bSurfacePreRotation{ SW_FALSE };
 
         /** @brief 기본값(컴퓨트만 켠 보수적 기본)으로 만듭니다. */
         RHICapabilities() noexcept = default;

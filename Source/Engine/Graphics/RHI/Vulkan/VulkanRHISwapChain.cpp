@@ -151,8 +151,11 @@ namespace sw
         , _imageFormat{ 0 }
         , _extentWidth{ 0 }
         , _extentHeight{ 0 }
+        , _logicalWidth{ 0 }
+        , _logicalHeight{ 0 }
         , _imageIndex{ 0 }
         , _createdTransform{ 0 }
+        , _surfaceTransform{ RHISurfaceTransform::Identity }
         , _requestedFormat{ constant::render::kBackBufferFormat }
         , _actualBackBufferFormat{ constant::render::kBackBufferFormat }
         , _requestedBufferCount{ 0 }
@@ -167,8 +170,9 @@ namespace sw
         VkSurfaceCapabilitiesKHR capabilities{};
         if ( _surface == VK_NULL_HANDLE || vkGetPhysicalDeviceSurfaceCapabilitiesKHR( physicalDevice, _surface, &capabilities ) != VK_SUCCESS )
             return true; // 묻지 못하면 다시 만들어 본다(다시 만들기가 진짜 오류를 낸다)
-        const bool bFixedExtent   = capabilities.currentExtent.width != UINT32_MAX && capabilities.currentExtent.height != UINT32_MAX;
-        const bool bExtentChanged = bFixedExtent && ( capabilities.currentExtent.width != _extentWidth || capabilities.currentExtent.height != _extentHeight );
+        const bool bFixedExtent = capabilities.currentExtent.width != UINT32_MAX && capabilities.currentExtent.height != UINT32_MAX;
+        // currentExtent 는 지금 방향의 크기다 — 이미지 크기(회전하면 맞바뀐 것)가 아니라 만들 때의 논리 크기와 대조한다.
+        const bool bExtentChanged = bFixedExtent && ( capabilities.currentExtent.width != _logicalWidth || capabilities.currentExtent.height != _logicalHeight );
         return bExtentChanged || static_cast<uint32>( capabilities.currentTransform ) != _createdTransform;
     }
 
@@ -381,9 +385,30 @@ namespace sw
                 compositeAlpha = VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR;
         }
 
-        // 회전한 휴대 기기 화면(currentTransform 이 90 · 270)에서 currentTransform 을 그대로 쓰면 그림이 옆으로 눕는다 — 엔진이 그림을 미리 돌리지 않으므로 IDENTITY 로 두고 합성기가 돌린다.
-        // shortcut: 합성기 회전은 GPU 한 번을 더 쓴다(Android 성능 지침의 pre-rotation), 휴대 기기 프레임이 모자라면 투영 · 뷰포트를 돌리고 currentTransform 을 쓴다.
-        VkSurfaceTransformFlagBitsKHR preTransform = ( capabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR ) != 0 ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR : capabilities.currentTransform;
+        // 회전한 휴대 기기 화면(currentTransform 이 90 · 180 · 270)은 currentTransform 그대로 만들어 합성기의 회전 패스를 없앤다(pre-rotation) — 그림은 엔진이 논리 크기로 그린 뒤
+        // 회전 출력 패스가 돌려 쓴다(`FrameScreenRotation`). 이미지 크기는 기기 기본 방향의 크기(90 · 270 이면 currentExtent 의 너비 · 높이를 맞바꾼 것)이고,
+        // 논리 크기는 currentExtent 그대로다(https://developer.android.com/games/optimize/vulkan-prerotation — "Keep the swapchain size fixed to the identity resolution").
+        // 거울 회전 · INHERIT 은 엔진이 돌리지 않는다 — IDENTITY 로 두고 합성기가 돌린다(지원하지 않으면 currentTransform 그대로, 그림은 돌지 않는다).
+        RHISurfaceTransform           surfaceTransform = RHISurfaceTransform::Identity;
+        VkSurfaceTransformFlagBitsKHR preTransform     = ( capabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR ) != 0 ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR : capabilities.currentTransform;
+        switch ( capabilities.currentTransform )
+        {
+            case VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR:
+                surfaceTransform = RHISurfaceTransform::Rotate90;
+                break;
+            case VK_SURFACE_TRANSFORM_ROTATE_180_BIT_KHR:
+                surfaceTransform = RHISurfaceTransform::Rotate180;
+                break;
+            case VK_SURFACE_TRANSFORM_ROTATE_270_BIT_KHR:
+                surfaceTransform = RHISurfaceTransform::Rotate270;
+                break;
+            default:
+                break;
+        }
+        if ( surfaceTransform != RHISurfaceTransform::Identity )
+            preTransform = capabilities.currentTransform;
+        const RHISurfaceRotation rotation{ surfaceTransform, extent.width, extent.height };
+        const VkExtent2D         imageExtent{ rotation.getPhysicalWidth(), rotation.getPhysicalHeight() };
 
         VkSwapchainCreateInfoKHR createInfo{};
         createInfo.sType            = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -391,7 +416,7 @@ namespace sw
         createInfo.minImageCount    = imageCount;
         createInfo.imageFormat      = surfaceFormat.format;
         createInfo.imageColorSpace  = surfaceFormat.colorSpace;
-        createInfo.imageExtent      = extent;
+        createInfo.imageExtent      = imageExtent;
         createInfo.imageArrayLayers = 1;
         // 백버퍼는 그리기(COLOR_ATTACHMENT)만이 아니라 **블릿의 목적지**(포스트 체인의 마지막 블릿 · 오프스크린 → 백버퍼)와
         // **읽기의 출처**(스크린샷 · 리드백)로도 쓰인다. COLOR_ATTACHMENT 만 주면 백버퍼로 블릿하는 프레임마다
@@ -421,10 +446,13 @@ namespace sw
                                     ? _requestedFormat
                                     : ( ( surfaceFormat.format == VK_FORMAT_B8G8R8A8_UNORM ) ? RHIFormat::B8G8R8A8_UNORM
                                                                                              : RHIFormat::R8G8B8A8_UNORM );
-        _extentWidth            = extent.width;
-        _extentHeight           = extent.height;
+        _extentWidth            = imageExtent.width;
+        _extentHeight           = imageExtent.height;
+        _logicalWidth           = extent.width;
+        _logicalHeight          = extent.height;
         _imageIndex             = 0;
         _createdTransform       = static_cast<uint32>( capabilities.currentTransform );
+        _surfaceTransform       = surfaceTransform;
         _listImageFence.assign( _listImage.size(), VK_NULL_HANDLE );
 
         return createImageViews( device );

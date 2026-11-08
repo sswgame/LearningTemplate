@@ -183,6 +183,8 @@ namespace sw
         PROPERTY( Required )
         DataPath _shaderUpscale; ///< FSR 1 업스케일(EASU · RCAS) — Present 가 배율 크기 뷰를 출력 크기로 키울 때(graphics.upscaler)
         PROPERTY( Required )
+        DataPath _shaderScreenRotation; ///< 화면 회전 출력(풀스크린) — 회전한 휴대 기기 화면에서 논리 크기 대기 텍스처를 스왑체인 이미지로 돌려 옮긴다(pre-rotation)
+        PROPERTY( Required )
         DataPath _shaderOcclusionTiles; ///< 가림 타일(컴퓨트) — 지난 장면 깊이를 타일마다 최대 깊이로 줄인다. GPU 컬링의 가림 판정이 읽는다
         PROPERTY( Required )
         DataPath _shaderSSAO; ///< SSAO

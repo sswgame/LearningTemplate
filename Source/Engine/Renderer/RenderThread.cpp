@@ -653,12 +653,15 @@ namespace sw
 
         // UI(presentHook)는 백버퍼에 그린다. 그래프가 오프스크린이나 백버퍼 어디에 그렸든, 여기서 타깃을
         // 명시적으로 백버퍼로 되돌린다. 그래프가 백버퍼에 그린 경우도 있으므로 Load 여야 한다.
+        // 회전한 휴대 기기 화면이면 화면은 렌더러의 논리 크기 대기 텍스처다(UI 도 그곳에 쓰고 표시 앞에 스왑체인으로 돌려 옮긴다 — `FrameScreenRotation`).
+        const bool             bRendererReady = _pFrameRenderer != nullptr && _pFrameRenderer->isReady();
+        const RHITextureHandle screenTarget   = bRendererReady ? _pFrameRenderer->getScreenTarget() : 0;
         if ( pFrameStream != nullptr )
         {
             RHIRenderPassBeginInfo backbufferPass{};
             backbufferPass._bBindColor        = SW_TRUE;
             backbufferPass._colorTargetCount  = 1;
-            backbufferPass._arrColorTarget[0] = 0; // 0 = 백버퍼
+            backbufferPass._arrColorTarget[0] = screenTarget; // 0 = 백버퍼
             // 오프스크린 경로에서는 그래프가 게임 RT 에만 그렸으므로 백버퍼는 아직 아무도 건드리지 않았다.
             // 그래서 여기서 클리어한다. 백버퍼 경로에서는 그래프가 이미 그렸으므로 보존해야 한다.
             // 그래프가 그리지 않은 프레임도 백버퍼는 받은 그대로(Vulkan 은 레이아웃 UNDEFINED)라 Load 로 열 수 없다 — 클리어한다.
@@ -676,6 +679,9 @@ namespace sw
         // 위에서 연 백버퍼 패스를 연 쪽이 닫는다(남겨 두면 endFrame 이 닫지만 패스의 끝이 어디인지 여기서 보이게 둔다).
         if ( pFrameStream != nullptr )
             pFrameStream->endRenderPass();
+        // 화면에 쓰는 일이 모두 끝났다 — 회전한 화면이면 대기 텍스처를 스왑체인 이미지로 돌려 옮긴다(돌리지 않으면 아무것도 하지 않는다).
+        if ( pFrameStream != nullptr && screenTarget != 0 )
+            _pFrameRenderer->recordScreenRotation( *pFrameStream );
 
         {
             // 제출과 Present 다. GPU 가 밀리면 여기서 기다린다.

@@ -37,6 +37,7 @@
 namespace sw
 {
     class FrameCapture;
+    class FrameScreenRotation;
     class FrameAutoExposure;
     class FrameFog;
     class FrameUpscale;
@@ -57,7 +58,8 @@ namespace sw
     {
     public:
         FramePassExecutor( IRHIDevice* const& pDevice, const RenderPipelineAsset& pipeline, FrameRenderState& state, FramePSOManager& psoManager,
-                           FrameAutoExposure& autoExposure, FrameUpscale& upscale, FrameFog& fog, FrameExtensionHost& extensionHost, FrameCapture& capture );
+                           FrameAutoExposure& autoExposure, FrameUpscale& upscale, FrameFog& fog, FrameExtensionHost& extensionHost, FrameCapture& capture,
+                           const FrameScreenRotation& screenRotation );
         ~FramePassExecutor(); ///< 밖에 둔다 — 내보내는 클래스의 소멸자는 쓰는 곳마다 만들어져 앞선 선언만 본 `unique_ptr<IRHICommandList>` 을 지우지 못한다
         FramePassExecutor( const FramePassExecutor& )            = delete;
         FramePassExecutor& operator=( const FramePassExecutor& ) = delete;
@@ -152,7 +154,7 @@ namespace sw
         /** @brief 주 출력에 그리는 패스(Present, Canvas)의 대상입니다. 지금 뷰가 정하며 `resolvePresentTarget` 이 구합니다. */
         struct PresentTarget
         {
-            RHITextureHandle _texture{ 0 }; ///< 0이면 백버퍼
+            RHITextureHandle _texture{ 0 }; ///< 0이면 스왑체인(백버퍼). 회전한 화면이면 화면 대기 텍스처(`FrameScreenRotation`)
             uint32           _width{ 0 };
             uint32           _height{ 0 };
             RHIFormat        _format{ RHIFormat::Unknown };   ///< 대상의 실제 포맷(PSO 를 고를 때 쓴다)
@@ -465,6 +467,7 @@ namespace sw
         FrameFog&                  _fog;
         FrameExtensionHost&        _extensionHost;
         FrameCapture&              _capture;
+        const FrameScreenRotation& _screenRotation; ///< 화면에 쓰는 대상(0 = 스왑체인, 회전한 화면이면 논리 크기 대기 텍스처)
         /// @brief 프레임 패스 종류마다의 실행(깊이 히스토리 · 가림 타일 · 입자 · 변형 · 컬링 · 라이트 그리드 · 볼륨 안개 · 프로브 · 마커)입니다. 순서는 프레임 그래프가 정한다.
         FrameGraphExecutor _frameGraphExecutor;
         /// @brief 프레임 그래프 노드 이름 → `_listFramePass` 번호입니다. `bindPassCallbacks` 가 채웁니다.

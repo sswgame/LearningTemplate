@@ -32,6 +32,7 @@
 #include "Engine/Renderer/Frame/Resource/PassConstantRing.h"
 #include "Engine/Renderer/Frame/Resource/PassConstantValues.h"
 #include "Engine/Renderer/Frame/Resource/TransientAttachmentPool.h"
+#include "Engine/Renderer/Frame/Screen/FrameScreenRotation.h"
 #include "Engine/Renderer/Frame/Timeline/GPUPassTimeline.h"
 #include "Engine/Renderer/Frame/View/FrameViewResources.h"
 #include "Engine/Renderer/Frame/View/FrameViewTarget.h"
@@ -202,6 +203,13 @@ namespace sw
          */
         FrameCapture&       getCapture() { return _capture; }
         const FrameCapture& getCapture() const { return _capture; }
+        /**
+         * @brief 화면에 쓰는 대상입니다 — 0 이면 스왑체인(백버퍼) 그대로, 회전한 휴대 기기 화면이면 논리 크기 대기 텍스처입니다(`FrameScreenRotation`).
+         * @details 렌더 스레드의 UI 패스도 여기에 쓰고, 끝에 `recordScreenRotation` 이 스왑체인 이미지로 돌려 옮긴다.
+         */
+        RHITextureHandle getScreenTarget() const { return _screenRotation.getScreenTarget(); }
+        /** @brief 화면 대기 텍스처를 스왑체인 이미지로 돌려 그립니다(프레임의 마지막 화면 쓰기 뒤 · 표시 앞). 돌리지 않는 장치는 아무것도 하지 않습니다. */
+        void recordScreenRotation( IRHICommandList& cmd ) const { _screenRotation.recordToSwapchain( cmd ); }
         /**
          * @brief 다음 프레임부터 그릴 캔버스(화면 2D)를 받습니다. 렌더러가 가진 것과 맞바꾸므로 버퍼 용량은 서로 넘어갑니다.
          * @details 패킷 경로에서는 `executePacket` 이 패킷의 `_canvas` 로 같은 일을 한다. 씬 직접 경로(에디터, 테스트)는 이 함수로 넣으며, 바꾸기 전까지 매 프레임
@@ -443,9 +451,11 @@ namespace sw
 
         /// @brief 캡처 · 되읽기입니다. Present 결과 텍스처(`-gv_screenshot`, 크기는 주 출력)를 소유하고 `_pDevice` · 주 시점 풀 · 파이프라인을 빌려 씁니다(그래서 그 셋보다 뒤에 선언한다).
         FrameCapture _capture;
+        /// @brief 화면 회전 출력(pre-rotation)입니다. 회전한 화면이면 화면에 쓰는 모든 것을 논리 크기 대기 텍스처로 모은다 — `_pDevice` · `_psoManager` 를 참조하므로 그 뒤에 선언한다.
+        FrameScreenRotation _screenRotation;
         /**
          * @brief 패스 실행 — 프레임 그래프, 그래프 콜백과 패스별 기록, 드로우, 뷰별 커맨드 리스트 제출입니다. 셋업이 끝난 뒤 `submitGraph` 로 넘긴다.
-         * @details 프레임 데이터(`_state`)와 협력 객체(`_psoManager` · `_autoExposure` · `_upscale` · `_fog` · `_extensionHost` · `_capture`)를 참조로 쓰므로 그들보다 뒤에 선언한다.
+         * @details 프레임 데이터(`_state`)와 협력 객체(`_psoManager` · `_autoExposure` · `_upscale` · `_fog` · `_extensionHost` · `_capture` · `_screenRotation`)를 참조로 쓰므로 그들보다 뒤에 선언한다.
          *          언리얼 `FSceneRenderer::Render` 가 뷰마다 RDG 패스를 더하고 실행하는 자리다.
          */
         FramePassExecutor _passExecutor;

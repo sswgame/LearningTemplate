@@ -123,7 +123,7 @@ namespace sw
     inline constexpr const utf8* kGPUMessagesDefine = "SW_GPU_MESSAGES_ENABLED";
 
     /** @brief `RenderPassType` 열거자 수입니다. 마지막 열거자가 바뀌면 여기를 고칩니다(테스트가 리플렉션의 열거자 수와 대조합니다). */
-    inline constexpr uint32 kRenderPassTypeCount = static_cast<uint32>( RenderPassType::IndirectArgsReset ) + 1;
+    inline constexpr uint32 kRenderPassTypeCount = static_cast<uint32>( RenderPassType::ScreenRotation ) + 1;
 
     /**
      * @struct RenderPassTraitFlag
@@ -221,6 +221,11 @@ namespace sw
          *          어느 쪽이 나은지는 측정으로 정한다(언리얼 블룸 · DOF 의 r.*.Compute 스위치 자리). 비트 27 — W10 이 더한 kWritesVelocity 와 겹치지 않게 26 을 비워 둔다.
          */
         static constexpr uint32 kComputeImplementation = SW_BIT( 28 );
+        /**
+         * @brief 화면 회전 출력 패스다(`RenderPassType::ScreenRotation`) — `kOutputPass` 와 함께 붙고, 대상은 스왑체인 이미지 하나라 PSO 를 **백버퍼 포맷으로만** 만들며
+         *        서피스를 돌릴 수 있는 장치(`RHICapabilities::_bSurfacePreRotation`)에서만 만든다(`FramePSOManager::collectOutputPSOJobs`).
+         */
+        static constexpr uint32 kSurfaceRotation = SW_BIT( 29 );
     };
 } // namespace sw
 
