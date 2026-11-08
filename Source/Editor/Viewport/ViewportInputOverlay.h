@@ -28,8 +28,11 @@ namespace sw::editor
         TopLeft
     };
 
-    /** @brief 뷰포트 오버레이 HUD 설정 */
-    struct ViewportInputOverlayConfig
+    /**
+     * @struct ViewportInputOverlay
+     * @brief 뷰포트 오버레이 HUD 설정과 그 설정대로 뷰포트 렌더 타깃 위에 ImDrawList 로 컨트롤러 HUD 를 그리는 일입니다.
+     */
+    struct ViewportInputOverlay
     {
         float32                 _opacity{ 0.85f };
         float32                 _scale{ 1.0f };
@@ -40,7 +43,7 @@ namespace sw::editor
         uint8                   _bShowCommandHistory : 1;
         [[maybe_unused]] uint8  _reserved            : 4;
 
-        ViewportInputOverlayConfig()
+        ViewportInputOverlay()
             : _opacity{ 0.85f }
             , _scale{ 1.0f }
             , _position{ ViewportOverlayPosition::BottomRight }
@@ -51,22 +54,14 @@ namespace sw::editor
             , _reserved{ 0 }
         {
         }
+
+        /** @brief 뷰포트 영역 위에 이 설정대로 오버레이를 렌더링합니다. 꺼져 있으면 그리지 않는다. */
+        void draw( ImDrawList* pDrawList, const ImVec2& viewportScreenPos, const ImVec2& viewportSize, const InputManager* pInput, const InputMap* pInputMap ) const;
     };
 } // namespace sw::editor
 
 namespace sw::editor
 {
-    /**
-     * @class ViewportInputOverlay
-     * @brief 뷰포트 렌더 타깃 위에 ImDrawList 로 컨트롤러 HUD 를 그립니다.
-     */
-    class ViewportInputOverlay
-    {
-    public:
-        /** @brief 뷰포트 영역 위에 @p config 대로 오버레이를 렌더링합니다. */
-        static void draw( ImDrawList* pDrawList, const ImVec2& viewportScreenPos, const ImVec2& viewportSize, const InputManager* pInput, const InputMap* pInputMap, const ViewportInputOverlayConfig& config );
-    };
-
     /**
      * @class ViewportInputOverlaySettings
      * @brief 오버레이 설정 한 벌입니다(입력 맵 패널이 고치고 게임 뷰가 읽는다). 에디터 서브시스템이라 컨텍스트와 함께 생기고 사라진다 — 정적 칸에 두지 않는다.
@@ -76,7 +71,7 @@ namespace sw::editor
     public:
         static constexpr const utf8* kSubsystemName = "ViewportInputOverlaySettings";
 
-        ViewportInputOverlayConfig _config{};
-        const utf8*                getSubsystemName() const override { return kSubsystemName; }
+        ViewportInputOverlay _overlay{};
+        const utf8*          getSubsystemName() const override { return kSubsystemName; }
     };
 } // namespace sw::editor

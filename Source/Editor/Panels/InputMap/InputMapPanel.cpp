@@ -1039,7 +1039,7 @@ namespace sw::editor
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "GameViewportOnScreenControllerOverlayHUDSettings" ) );
         ImGui::Separator();
 
-        ViewportInputOverlayConfig& config = editor::getSubsystem<ViewportInputOverlaySettings>()._config;
+        ViewportInputOverlay& config = editor::getSubsystem<ViewportInputOverlaySettings>()._overlay;
 
         bool bEnabled = ( config._bEnabled == SW_TRUE );
         if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "EnableViewportOnScreenHUDOverlay" ), &bEnabled ) )
