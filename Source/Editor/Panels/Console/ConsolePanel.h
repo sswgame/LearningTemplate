@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Log/Logger.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/fixed_string.h"
 
 #include "DevTools/Console/DevConsole.h"
@@ -15,6 +16,11 @@
 #include "Editor/Common/Commands/Diagnostics/EditorSourceLocation.h"
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
 #include "Editor/Panels/Console/Model/ConsoleLogRows.h"
+
+namespace sw
+{
+    class AutomationLogPolicy;
+} // namespace sw
 
 namespace sw::editor
 {
@@ -121,6 +127,7 @@ namespace sw::editor
         EditorLogTagFilter                          _tagFilter;
         uint32                                      _cachedTagRevision;
         mutex                                       _entriesMutex;
+        shared_ptr<const AutomationLogPolicy>       _pScenarioLogPolicy;            ///< 시나리오 세션의 로그 선언(`AutomationSession::getLogPolicy`) — 구독 전에 한 번 정하고 바꾸지 않는다. 세션이 없으면 nullptr
         Subscription                                _logListenerSubscription;       ///< 전역 로그 리스너. 소멸자 · `shutdown` 이 항목보다 먼저 푼다(콜백이 항목을 만진다)
         uint64 _errorSerial                         SW_GUARDED_BY( _entriesMutex ); ///< 받은 오류 행의 누계
         uint64 _entrySerial                         SW_GUARDED_BY( _entriesMutex ); ///< 받은 행의 누계

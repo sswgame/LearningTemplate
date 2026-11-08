@@ -52,6 +52,7 @@ namespace sw
         /**
          * @brief 이 범위의 칸 중 호스트 모듈(에디터)에 보인다고 선언한 것(`SubsystemModuleVisibility::HostModules`)에서만 @p typeHash 를 찾습니다. 상위는 보지 않습니다.
          * @details 호스트 모듈 창구(`ModuleRegistrationHost::getHostModuleLocator`)가 엔진 범위부터 상위로 올라가며 묻는다. 칸을 갖지 않는 창구는 없다(nullptr).
+         *          매단 자식 범위(모듈 서브시스템 — `SW_MODULE_SUBSYSTEM`)의 선언한 칸도 본다 — 서브시스템이 어느 모듈 이미지에 섰든 선언 하나로 에디터에 보인다(`AutomationSession`).
          */
         virtual void* findHostModuleVisibleInScope( uint64 typeHash ) const
         {

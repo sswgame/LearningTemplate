@@ -7,6 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Automation/Runner/AutomationLogCapture.h"
 #include "Engine/Automation/Runner/AutomationLogPolicy.h"
@@ -28,7 +29,10 @@ namespace sw
     class SW_API AutomationJudge
     {
     public:
-        AutomationJudge();
+        /** @param pLogPolicy 세션 수명의 로그 판정(`AutomationSession` 이 든다 — 콘솔도 같은 것을 읽는다). 비면 부른 쪽의 잘못이다. */
+        explicit AutomationJudge( shared_ptr<AutomationLogPolicy> pLogPolicy );
+        /** @brief 이 단계의 선언 · 허용을 지운다 — 단계 사이의 줄은 어느 시나리오의 선언도 아니다. */
+        ~AutomationJudge();
 
         AutomationJudge( const AutomationJudge& )            = delete;
         AutomationJudge& operator=( const AutomationJudge& ) = delete;
@@ -151,21 +155,21 @@ namespace sw
         void judgeImagesDiffer( AutomationStepContext& context, const AutomationStep& step );
 
     private:
-        AutomationLogCapture          _logCapture;               ///< 시나리오 동안의 로그 줄(`<ExpectLog>`, 로그 게이트)
-        AutomationLogPolicy           _logPolicy;                ///< 로그 게이트의 허용 목록(전역 + `<ExpectLog>`)
-        vector<string>                _listFailure;              ///< "frame 40 <Expect> #7: Shooter3D.WeaponIndex == 1, got 2"
-        vector<string>                _listUpdatedGolden;        ///< 이 실행이 쓴 골든(리소스 id)
-        vector<DeferredImageCheck>    _listDeferredImage;        ///< 시나리오 끝에서 판정할 `<ExpectImage>`
-        vector<const AutomationStep*> _listDeferredImagesDiffer; ///< 시나리오 끝에서 판정할 `<ExpectImagesDiffer>`
-        vector<DeferredAtMostCheck>   _listDeferredAtMost;       ///< 시나리오 끝에서 판정할 값 상한(편집기 UI 캡처의 마젠타 비율)
-        string                        _goldenFolderID;           ///< 골든 폴더(시나리오 파일 옆 `golden/`, 리소스 id)
-        string                        _goldenPrefix;             ///< 골든 파일 이름의 앞머리(시나리오 이름)
-        bool                          _bUpdateGolden{ false };   ///< `-scenario-update-golden` — 없거나 다른 골든을 지금 그림으로 쓴다 NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
-        vector<string>                _listUnhandledLog;         ///< 로그 게이트가 처리하지 않았다고 본 줄(`[Warning] [호출자] (id=…) 본문`)
-        vector<string>                _listAllowedLogID;         ///< 이 실행에서 허용 항목이 맞은 로그 id
-        vector<string>                _listMetricLine;           ///< 보고에 적는 지표 값
-        vector<string>                _listRecordLine;           ///< 보고에 적는 기록 값(결정성 대조)
-        vector<WatchHistory>          _listWatch;                ///< `<ExpectVisited>` 가 보는 감시 값 이력
-        vector<RememberedValue>       _listRemembered;           ///< `<Remember>` 가 남긴 값
+        AutomationLogCapture            _logCapture;               ///< 시나리오 동안의 로그 줄(`<ExpectLog>`, 로그 게이트)
+        shared_ptr<AutomationLogPolicy> _pLogPolicy;               ///< 로그 게이트의 선언 · 허용(`<ExpectLog>` · `<AllowLog>`) — 세션이 든 한 벌을 빌린다
+        vector<string>                  _listFailure;              ///< "frame 40 <Expect> #7: Shooter3D.WeaponIndex == 1, got 2"
+        vector<string>                  _listUpdatedGolden;        ///< 이 실행이 쓴 골든(리소스 id)
+        vector<DeferredImageCheck>      _listDeferredImage;        ///< 시나리오 끝에서 판정할 `<ExpectImage>`
+        vector<const AutomationStep*>   _listDeferredImagesDiffer; ///< 시나리오 끝에서 판정할 `<ExpectImagesDiffer>`
+        vector<DeferredAtMostCheck>     _listDeferredAtMost;       ///< 시나리오 끝에서 판정할 값 상한(편집기 UI 캡처의 마젠타 비율)
+        string                          _goldenFolderID;           ///< 골든 폴더(시나리오 파일 옆 `golden/`, 리소스 id)
+        string                          _goldenPrefix;             ///< 골든 파일 이름의 앞머리(시나리오 이름)
+        bool                            _bUpdateGolden{ false };   ///< `-scenario-update-golden` — 없거나 다른 골든을 지금 그림으로 쓴다 NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
+        vector<string>                  _listUnhandledLog;         ///< 로그 게이트가 처리하지 않았다고 본 줄(`[Warning] [호출자] (id=…) 본문`)
+        vector<string>                  _listAllowedLogID;         ///< 이 실행에서 허용 항목이 맞은 로그 id
+        vector<string>                  _listMetricLine;           ///< 보고에 적는 지표 값
+        vector<string>                  _listRecordLine;           ///< 보고에 적는 기록 값(결정성 대조)
+        vector<WatchHistory>            _listWatch;                ///< `<ExpectVisited>` 가 보는 감시 값 이력
+        vector<RememberedValue>         _listRemembered;           ///< `<Remember>` 가 남긴 값
     };
 } // namespace sw

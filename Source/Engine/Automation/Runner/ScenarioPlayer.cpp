@@ -13,8 +13,9 @@
 
 namespace sw
 {
-    ScenarioPlayer::ScenarioPlayer( EngineFrameHookList& frameHooks )
-        : _pRunner{ nullptr }
+    ScenarioPlayer::ScenarioPlayer( EngineFrameHookList& frameHooks, shared_ptr<AutomationLogPolicy> pLogPolicy )
+        : _pLogPolicy{ std::move( pLogPolicy ) }
+        , _pRunner{ nullptr }
     {
         EngineFrameHooks hooks{};
         hooks._onFrameBegin     = SW_DELEGATE_METHOD( EngineFrameDelegate, &ScenarioPlayer::onFrameBegin, this );
@@ -50,7 +51,7 @@ namespace sw
 
     void ScenarioPlayer::startRunner()
     {
-        _pRunner = make_unique<AutomationRunner>(); // 행 감시를 켜지 않는다 — 재생은 프로세스를 끝내지 않는다
+        _pRunner = make_unique<AutomationRunner>( _pLogPolicy ); // 행 감시를 켜지 않는다 — 재생은 프로세스를 끝내지 않는다
         _pRunner->startFromPath( _path, {} );
         _humanInputSerial = engine::getSubsystem<InputManager>().getHumanInputSerial();
         if ( _options._bFixedDelta && _pRunner->isActive() )

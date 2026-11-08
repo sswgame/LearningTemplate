@@ -15,6 +15,7 @@
 
 namespace sw
 {
+    class AutomationLogPolicy;
     class AutomationRunner;
     class EngineFrameHookList;
     class InputManager;
@@ -29,7 +30,8 @@ namespace sw
     class SW_API ScenarioPlayer final : public IScenarioPlayer
     {
     public:
-        explicit ScenarioPlayer( EngineFrameHookList& frameHooks );
+        /** @param pLogPolicy 세션의 로그 선언 · 허용(`AutomationSession`) — 재생도 같은 한 벌에 선언해 콘솔이 흐리게 그린다(테스트 실행과 겹쳐 돌지 않는다). */
+        ScenarioPlayer( EngineFrameHookList& frameHooks, shared_ptr<AutomationLogPolicy> pLogPolicy );
         ~ScenarioPlayer() override;
         ScenarioPlayer( const ScenarioPlayer& )            = delete;
         ScenarioPlayer& operator=( const ScenarioPlayer& ) = delete;
@@ -55,11 +57,12 @@ namespace sw
         static void setFixedFrameDelta( float32 fixedFrameDelta );
 
     private:
-        unique_ptr<AutomationRunner> _pRunner;                    ///< 지금 재생하는 실행기(쉬면 nullptr)
-        ScenarioPlayOptions          _options{};                  ///< 재생 선택(재생 중일 때만 뜻이 있다)
-        AssetID                      _path{};                     ///< 재생하는 시나리오
-        float32                      _previousFixedDelta{ 0.0f }; ///< 재생이 고정 프레임 시간을 걸기 전 정책 값(끝나면 되돌린다)
-        uint64                       _humanInputSerial{ 0 };      ///< 재생을 시작할 때의 사람 입력 수
-        Subscription                 _frameSubscription{};        ///< 엔진 프레임 훅 구독(만들 때 붙고 사라질 때 뗀다)
+        shared_ptr<AutomationLogPolicy> _pLogPolicy;                 ///< 실행기마다 넘기는 세션의 로그 선언 · 허용
+        unique_ptr<AutomationRunner>    _pRunner;                    ///< 지금 재생하는 실행기(쉬면 nullptr)
+        ScenarioPlayOptions             _options{};                  ///< 재생 선택(재생 중일 때만 뜻이 있다)
+        AssetID                         _path{};                     ///< 재생하는 시나리오
+        float32                         _previousFixedDelta{ 0.0f }; ///< 재생이 고정 프레임 시간을 걸기 전 정책 값(끝나면 되돌린다)
+        uint64                          _humanInputSerial{ 0 };      ///< 재생을 시작할 때의 사람 입력 수
+        Subscription                    _frameSubscription{};        ///< 엔진 프레임 훅 구독(만들 때 붙고 사라질 때 뗀다)
     };
 } // namespace sw

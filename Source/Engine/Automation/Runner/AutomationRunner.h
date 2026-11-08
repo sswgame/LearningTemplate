@@ -100,7 +100,8 @@ namespace sw
     class SW_API AutomationRunner final : public AutomationStepContext
     {
     public:
-        AutomationRunner();
+        /** @param pLogPolicy 세션 수명의 로그 판정(`AutomationSession::getLogPolicy`) — 판정이 빌려 쓴다. */
+        explicit AutomationRunner( shared_ptr<AutomationLogPolicy> pLogPolicy );
         ~AutomationRunner() override;
 
         AutomationRunner( const AutomationRunner& )            = delete;
