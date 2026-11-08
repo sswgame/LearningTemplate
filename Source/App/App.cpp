@@ -103,13 +103,6 @@ namespace sw
         };
     } // namespace
 
-    /**
-     * @brief `-gv_fixedFrameDelta=<초>`: 0 보다 크면 프레임마다 실제 시계 대신 그 시간을 흘립니다(자동화 시나리오, 픽셀 비교, 재현). 0 이면 실시간입니다.
-     * @details 고정 스텝(물리, fixedUpdate)도 이 시간으로 나뉩니다. 1/60 이면 프레임마다 정확히 한 스텝입니다. 시나리오(`-scenario`)는 이 값을
-     *          시나리오의 `fixedDelta` 로 설정합니다.
-     */
-    SW_TEST_GLOBAL_VARIABLE( float32, gv_fixedFrameDelta, 0.0f, "프레임마다 흘릴 고정 시간(초, 0=실시간) — 결정적 실행" );
-
     SW_AUTOMATION_WATCH( engineFramePacingState, "Engine.FramePacingState",
                          "App loop pacing this frame: 0 Foreground, 1 Background (gv_backgroundFrameRate), 2 Minimized, 3 Automation, 4 Server, 5 FullSpeed (gv_framePacing), 6 EditorIdle",
                          &AppInternal::readFramePacingState );
@@ -509,7 +502,10 @@ namespace sw
             return false;
         }
 
-        const FrameTime frameTime = _fixedTimestep.advance( engine::getSubsystem<GameTimeScale>().get(), gv_fixedFrameDelta );
+        float32 fixedFrameDelta = 0.0f; // 결정적 실행(`-gv_fixedFrameDelta`)은 개발 구성에만 있다 — 배포는 벽시계다
+        if constexpr ( build::kShipping == false )
+            fixedFrameDelta = AppDevTools::getFixedFrameDelta();
+        const FrameTime frameTime = _fixedTimestep.advance( engine::getSubsystem<GameTimeScale>().get(), fixedFrameDelta );
 
         // 사용자 설정의 화면 변경(창 방식, 해상도, VSync)은 OS 리사이즈와 같은 시점인 프레임 시작 전에 처리한다.
         _userSettingsHost.update( frameTime._deltaTime );

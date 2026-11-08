@@ -1,7 +1,8 @@
 /**
  * @file AppDevTools.h
  * @brief App 에만 있는 개발 도구 — 핫 리로드 단축키(게임 · 에디터)와 백엔드 시험 훅을 App 의 프레임 · 시동 열에 끼웁니다.
- * @details 배포에서는 두 함수 모두 아무것도 하지 않는다(`build::kShipping`) — 쓰는 기능(디버그 키 · 백엔드 교체기)이 배포에도 지어져 구현 파일을 가르지 않는다.
+ * @details 배포에서는 앞의 두 함수가 아무것도 하지 않는다(`build::kShipping`) — 쓰는 기능(디버그 키 · 백엔드 교체기)이 배포에도 지어져 구현 파일을 가르지 않는다.
+ *          결정적 실행 시간(`getFixedFrameDelta`)은 기능째 개발 전용이라 정의가 `Dev/` 에 있다.
  *          App · Server 가 같이 쓰는 개발 도구 연결(`DevToolsHost` · 프레임 훅 · 개발 콘솔)은 `ModuleManager/Host/Dev/HostDevTools.h` 다.
  */
 #pragma once
@@ -26,5 +27,10 @@ namespace sw
          * @details 실제 교체는 개발 계층(`IHostDevLayer::updateModuleReload`)이 틱 직전에 한다. 배포에는 개발 계층이 없어 부르지 않는다.
          */
         static void pollShellActions( float32 deltaTime, IHostDevLayer& devLayer, bool bEnableEditor );
+        /**
+         * @brief 결정적 실행의 프레임 시간(`-gv_fixedFrameDelta`, 0 이면 벽시계)입니다.
+         * @details 정의는 개발 구성에만 있다(`Dev/AppDevFrameTime.cpp`) — `build::kShipping` 이 아닌 갈래에서만 부른다(`makeHostDevLayer` 와 같은 방식).
+         */
+        static float32 getFixedFrameDelta();
     };
 } // namespace sw
