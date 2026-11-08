@@ -264,8 +264,8 @@ namespace sw
 
     void WGLPlatformContext::setSwapInterval( bool bVSync )
     {
-        using PFNWGLSWAPINTERVALEXTPROC                       = BOOL( WINAPI* )( int32 );
-        static PFNWGLSWAPINTERVALEXTPROC s_wglSwapIntervalEXT = reinterpret_cast<PFNWGLSWAPINTERVALEXTPROC>( wglGetProcAddress( "wglSwapIntervalEXT" ) );
+        using PFNWGLSWAPINTERVALEXTPROC                             = BOOL( WINAPI* )( int32 );
+        static const PFNWGLSWAPINTERVALEXTPROC s_wglSwapIntervalEXT = reinterpret_cast<PFNWGLSWAPINTERVALEXTPROC>( wglGetProcAddress( "wglSwapIntervalEXT" ) );
         if ( s_wglSwapIntervalEXT != nullptr )
             s_wglSwapIntervalEXT( bVSync ? 1 : 0 );
     }

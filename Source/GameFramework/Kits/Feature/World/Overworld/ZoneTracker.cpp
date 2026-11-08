@@ -118,8 +118,8 @@ namespace sw
 
     const ZoneBounds& ZoneTracker::getCameraBounds() const
     {
-        static ZoneBounds s_empty{};
-        const ZoneDef*    pZone = getActiveZone();
+        static const ZoneBounds s_empty{};
+        const ZoneDef*          pZone = getActiveZone();
         return pZone != nullptr ? pZone->_bounds : s_empty;
     }
 } // namespace sw

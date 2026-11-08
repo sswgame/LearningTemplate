@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/StdHeaders.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
@@ -102,9 +103,7 @@ namespace sw
             _scopeCount.store( kMaxScope, std::memory_order_release );
 
             // 측정이 실행을 막으면 안 된다. 한 번만 알리고 조용히 무시한다. 여러 스레드가 함께 넘칠 수 있어 원자로 한 번을 고른다.
-            static atomic<bool> s_bWarned{ false };
-            if ( s_bWarned.exchange( true, std::memory_order_relaxed ) == false )
-                SW_LOG_WARNING_ID( "FrameProfiler.FrameProfilerMoreScopesIgnoring", "FrameProfiler: more than %# scopes - ignoring '%#' and later ones (raise kMaxScope).", kMaxScope, pName );
+            SW_LOG_WARNING_ONCE_ID( "FrameProfiler.FrameProfilerMoreScopesIgnoring", "FrameProfiler: more than %# scopes - ignoring '%#' and later ones (raise kMaxScope).", kMaxScope, pName );
             return kInvalidSlot;
         }
 
