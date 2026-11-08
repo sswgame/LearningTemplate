@@ -2,6 +2,7 @@
 
 #include "Engine/Animation/AnimationSet.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
@@ -164,6 +165,11 @@ namespace sw
                 SW_LOG_ERROR_ID( "AnimationSet.ClipNeedsOneSource", "Animation set '%#': clip '%#' must have exactly one of path and set (a line of the other kind over a base line needs _op=\"Replace\")", sourceLabel, name.c_str() );
                 return false;
             }
+            if ( params._path.empty() == false && params._retarget.empty() == false )
+            {
+                SW_LOG_ERROR_ID( "AnimationSet.RetargetNeedsSet", "Animation set '%#': clip '%#' has retarget with a path - name the source clip by set (and source) so the import can bake it", sourceLabel, name.c_str() );
+                return false;
+            }
             if ( params._path.empty() == false )
             {
                 insertEntry( name, params._path );
@@ -179,9 +185,25 @@ namespace sw
                 SW_LOG_ERROR_ID( "AnimationSet.ClipNotInSet", "Animation set '%#': clip '%#' is not in set '%#'", sourceLabel, sourceName.c_str(), params._set.c_str() );
                 return false;
             }
-            insertEntry( name, *pClipPath );
+            if ( params._retarget.empty() )
+            {
+                insertEntry( name, *pClipPath );
+                continue;
+            }
+            insertEntry( name, makeRetargetedClipPath( params._retarget, *pClipPath ) );
+            AnimationSetEntry& entry  = *std::find_if( _listEntry.begin(), _listEntry.end(), [&name]( const AnimationSetEntry& item )
+             { return item._name == name; } );
+            entry._retargetProfile    = params._retarget;
+            entry._retargetSourceClip = *pClipPath;
         }
         return true;
+    }
+
+    string AnimationSet::makeRetargetedClipPath( string_view profilePath, string_view sourceClipPath )
+    {
+        string profileName = FileUtil::getFileNamePart( profilePath );
+        profileName        = profileName.substr( 0, profileName.find( '.' ) ); // `kaykit_to_ubc.retarget.xml` → `kaykit_to_ubc`
+        return FileUtil::joinPath( FileUtil::joinPath( "common/models/_retargeted", profileName ), FileUtil::getFileNamePart( sourceClipPath ) );
     }
 
 } // namespace sw

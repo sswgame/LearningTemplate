@@ -282,7 +282,7 @@ namespace sw::editor
         AnimationGraphLayerEditorInternal::drawRowLabel( SW_LOCKEY( "EdWidget", "Blend" ) );
         if ( ImGui::BeginCombo( "##layerBlend", getEnumName( inoutLayer._blend ) ) )
         {
-            for ( const AnimationLayerBlend blend : { AnimationLayerBlend::Override, AnimationLayerBlend::Additive } )
+            for ( const AnimationLayerBlend blend : { AnimationLayerBlend::Override, AnimationLayerBlend::Additive, AnimationLayerBlend::OverrideMeshSpace } )
             {
                 if ( ImGui::Selectable( getEnumName( blend ), inoutLayer._blend == blend ) )
                 {

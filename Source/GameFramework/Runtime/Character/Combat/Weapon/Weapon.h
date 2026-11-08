@@ -77,6 +77,8 @@ namespace sw
         int32 _pelletCount; ///< 한 번에 나가는 알 수(산탄)
         PROPERTY()
         uint8 _bAutomatic : 1; ///< 누르고 있으면 계속 쏜다(아니면 누를 때마다 한 발)
+        PROPERTY()
+        uint8 _bTwoHanded : 1; ///< 두 손으로 든다(소총 · 산탄총) — 몸이 두 손 조준 · 사격 자세를 고른다(언리얼 Lyra 의 무기별 애니메이션 층과 같은 자리)
 
         ConditionExpr           _acceptsExpr;  ///< `_accepts` 를 읽을 때 컴파일한 것
         vector<ShotModifierDef> _listModifier; ///< `<Modifier>` 줄 — 탄 값에 이 무기가 얹는 배율 · 합
