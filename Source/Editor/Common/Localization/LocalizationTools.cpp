@@ -9,7 +9,7 @@
 #include "Core/File/ProcessRoots.h"
 #include "Core/Log/Logger.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/String/MarkupTagScanner.h"
+#include "Core/String/MarkupToken.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Config/EditorPaths.h"
@@ -100,7 +100,7 @@ namespace sw
                 TextFormatter::collectArgumentNames( translation._text, listTranslationName );
                 if ( listSourceName != listTranslationName )
                     inoutReport._listIssue.push_back( { location, "translation arguments differ from the source arguments", false } );
-                if ( MarkupTagScanner::hasSameTags( source._source, translation._text ) == false )
+                if ( MarkupToken::hasSameTags( source._source, translation._text ) == false )
                     inoutReport._listIssue.push_back( { location, "translation rich text tags differ from the source tags", false } );
                 const uint32 length = countCharacters( translation._text );
                 if ( source._maxLength != 0 && length > source._maxLength )

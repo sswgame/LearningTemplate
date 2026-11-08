@@ -1,19 +1,19 @@
-// MarkupTagScanner — BBCode 꼴 표기 토큰(여는 · 닫는 태그 · [[ · 글), 태그 모양이 아닌 [ 는 글, 태그 열 비교.
+// MarkupToken — BBCode 꼴 표기 토큰(여는 · 닫는 태그 · [[ · 글), 태그 모양이 아닌 [ 는 글, 태그 열 비교.
 #include "pch.h"
 
-#include "Core/String/MarkupTagScanner.h"
+#include "Core/String/MarkupToken.h"
 #include "Core/Testing/TestFramework.h"
 
 using namespace sw;
 
-/** @brief [MarkupTagScannerTest] 토큰 — 글 · 여는 태그(값) · 닫는 태그 · [[ 를 차례로 읽고, 모양이 아닌 [ 는 글에 넣는다 */
-SW_TEST_CASE( MarkupTagScannerTest, ReadsTokensInOrder )
+/** @brief [MarkupTokenTest] 토큰 — 글 · 여는 태그(값) · 닫는 태그 · [[ 를 차례로 읽고, 모양이 아닌 [ 는 글에 넣는다 */
+SW_TEST_CASE( MarkupTokenTest, ReadsTokensInOrder )
 {
     const string_view   markup = "a[color=#ff0000]b[/color][[c [1] [";
     vector<MarkupToken> listToken;
     size_t              offset = 0;
     MarkupToken         token{};
-    while ( MarkupTagScanner::readToken( markup, offset, token ) )
+    while ( MarkupToken::read( markup, offset, token ) )
     {
         listToken.push_back( token );
     }
@@ -27,19 +27,19 @@ SW_TEST_CASE( MarkupTagScannerTest, ReadsTokensInOrder )
     SW_EXPECT_EQUAL( markup.size(), offset );
 }
 
-/** @brief [MarkupTagScannerTest] 태그 열은 이름 · 순서만 본다(값은 뺀다) — 번역 검사의 근거 */
-SW_TEST_CASE( MarkupTagScannerTest, ComparesTagSequences )
+/** @brief [MarkupTokenTest] 태그 열은 이름 · 순서만 본다(값은 뺀다) — 번역 검사의 근거 */
+SW_TEST_CASE( MarkupTokenTest, ComparesTagSequences )
 {
     vector<string> listTag;
-    MarkupTagScanner::collectTagSequence( "[b]x[/b][color=red]y[/color]", listTag );
+    MarkupToken::collectTagSequence( "[b]x[/b][color=red]y[/color]", listTag );
     SW_REQUIRE_EQUAL( 4u, static_cast<uint32>( listTag.size() ) );
     SW_EXPECT_EQUAL( string( "b" ), listTag[0] );
     SW_EXPECT_EQUAL( string( "/b" ), listTag[1] );
     SW_EXPECT_EQUAL( string( "color" ), listTag[2] );
-    SW_EXPECT_TRUE( MarkupTagScanner::hasSameTags( "[b]Start[/b]", "[b]시작[/b]" ) );
-    SW_EXPECT_TRUE( MarkupTagScanner::hasSameTags( "[color=red]a[/color]", "[color=blue]b[/color]" ) );
-    SW_EXPECT_FALSE( MarkupTagScanner::hasSameTags( "[b]Start[/b]", "시작" ) );
-    SW_EXPECT_FALSE( MarkupTagScanner::hasSameTags( "[b][i]a[/i][/b]", "[i][b]a[/b][/i]" ) );
-    SW_EXPECT_TRUE( MarkupTagScanner::hasMarkup( "a [[ b" ) );
-    SW_EXPECT_FALSE( MarkupTagScanner::hasMarkup( "a [1] b" ) );
+    SW_EXPECT_TRUE( MarkupToken::hasSameTags( "[b]Start[/b]", "[b]시작[/b]" ) );
+    SW_EXPECT_TRUE( MarkupToken::hasSameTags( "[color=red]a[/color]", "[color=blue]b[/color]" ) );
+    SW_EXPECT_FALSE( MarkupToken::hasSameTags( "[b]Start[/b]", "시작" ) );
+    SW_EXPECT_FALSE( MarkupToken::hasSameTags( "[b][i]a[/i][/b]", "[i][b]a[/b][/i]" ) );
+    SW_EXPECT_TRUE( MarkupToken::hasMarkup( "a [[ b" ) );
+    SW_EXPECT_FALSE( MarkupToken::hasMarkup( "a [1] b" ) );
 }

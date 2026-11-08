@@ -3,7 +3,7 @@
 #include "Engine/Localization/PseudoLocalizer.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/String/MarkupTagScanner.h"
+#include "Core/String/MarkupToken.h"
 
 #include "Engine/Localization/TextFormatter.h"
 
@@ -40,7 +40,7 @@ namespace sw
         // 리치 텍스트 표기(`[b]`, `[color=accent]`, `[[`)는 그대로 둔다. 태그 이름과 값을 바꾸면 의사 문화권에서 표기가 깨진다.
         size_t      offset = 0;
         MarkupToken token{};
-        while ( MarkupTagScanner::readToken( literalText, offset, token ) )
+        while ( MarkupToken::read( literalText, offset, token ) )
         {
             if ( token._kind != MarkupTokenKind::Text )
             {

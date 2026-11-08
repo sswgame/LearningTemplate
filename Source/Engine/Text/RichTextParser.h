@@ -2,7 +2,7 @@
  * @file RichTextParser.h
  * @brief 리치 텍스트 최소 버전을 정의합니다. BBCode 형태의 `[b]`, `[i]`, `[color=#rrggbb|#rrggbbaa|이름]`, `[size=배]` 를 지원하며, 글자 `[` 는 `[[` 로 씁니다.
  * @details XML 문서 속성 안에 쓸 때 `<` 를 이스케이프하지 않아도 되고 번역가가 다루기 쉽다(Godot `RichTextLabel` 과 같은 표기). 토큰 읽기는
- *          `Core/String/MarkupTagScanner` 이고, 번역 검사와 의사 로컬라이저도 같은 스캐너를 쓴다.
+ *          `Core/String/MarkupToken` 이고, 번역 검사와 의사 로컬라이저도 같은 스캐너를 쓴다.
  *          **모르는 태그, 짝이 맞지 않는 태그, 읽을 수 없는 값은 글자 그대로 남기고 경고한다.** 번역 실수가 화면에서 보이게 하기 위해서다.
  */
 #pragma once
@@ -53,7 +53,7 @@ namespace sw
     {
         /** @brief 표기를 빼고 구간을 만듭니다. @p outResult 는 앞을 비우고 채웁니다. 문제가 있으면 문제마다 경고 한 줄입니다. */
         static void parse( string_view markup, RichTextParseResult& outResult );
-        /** @brief 두 텍스트의 태그 열(이름과 순서)이 같은지 확인합니다. 번역 검사가 원문과 번역을 비교합니다(`MarkupTagScanner::hasSameTags`). */
+        /** @brief 두 텍스트의 태그 열(이름과 순서)이 같은지 확인합니다. 번역 검사가 원문과 번역을 비교합니다(`MarkupToken::hasSameTags`). */
         static bool hasSameTags( string_view sourceMarkup, string_view translatedMarkup );
         /**
          * @brief 액션 태그 `[action=이름]` 을 @p resolve 가 준 글리프 텍스트로 바꿔 @p outText 에 씁니다(배치 앞에서 하며, 다른 태그는 그대로 둡니다). `[[` 는 건드리지 않습니다.

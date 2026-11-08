@@ -3,7 +3,7 @@
 #include "pch.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/String/MarkupTagScanner.h"
+#include "Core/String/MarkupToken.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Content/AssetID.h"
@@ -114,7 +114,7 @@ SW_TEST_CASE( PseudoLocalizerTest, PseudoLocalizerKeepsTags )
     const sw::string_view source = "[b]Start[/b] [color=accent]now[/color]";
     const sw::string      pseudo = sw::PseudoLocalizer::transform( source, sw::PseudoLocaleMode::Accented );
     SW_EXPECT_TRUE( sw::PseudoLocalizer::isPseudoText( pseudo ) );
-    SW_EXPECT_TRUE_MSG( sw::MarkupTagScanner::hasSameTags( source, pseudo ), pseudo.c_str() );
+    SW_EXPECT_TRUE_MSG( sw::MarkupToken::hasSameTags( source, pseudo ), pseudo.c_str() );
     SW_EXPECT_TRUE( pseudo.find( "Start" ) == sw::string::npos ); // 글은 바뀐다
 
     sw::RichTextParseResult parsed{};
