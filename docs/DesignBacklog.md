@@ -117,10 +117,8 @@
 
 | 검증 경로 | 확인된 범위 | 현재 경계 |
 |---|---|---|
-| 별도 로더/자체 검사 | [`FighterCatalog`](../Source/GameFramework/Kits/Genre/Action/Fighting/FighterCatalog.cpp)는 `MoveCatalog`를 명시적으로 로드하고 기술의 프레임 데이터를 찾지 못하면 그 기술을 거부한다. [`WeaponCatalog`](../Source/GameFramework/Runtime/Character/Combat/Weapon/Weapon.cpp)는 탄 참조와 아이템 ID를 검사하고, [`Shooter3DGame`](../Source/Games/Shooter3D/Shooter3DGame.cpp)이 시작 시 호출한다. [`MetroidvaniaCatalog`](../Source/GameFramework/Kits/Genre/Action/Metroidvania/Catalog/MetroidvaniaCatalog.cpp)는 픽업→능력/부적을, [`MonsterHuntCatalog`](../Source/GameFramework/Kits/Genre/RPG/MonsterHuntRPG/Catalog/MonsterHuntCatalog.cpp)는 몬스터 약점→표식/연금술 데이터를 검사한다. | 다른 파일 의존성을 가진 Fighter는 별도 문맥 로더를 사용한다. Shooter3D는 게임 초기화 코드가 따로 검증하므로 게임 진입 전 쿠커·에디터 검증에 자동 포함되지 않는다. Metroidvania는 참조가 틀린 픽업을 제외하지만, MonsterHunt의 약점 검사는 오류만 남기고 항목을 유지한다. |
-| 선언형 검사 밖의 참조 | [`AbilityCatalog`](../Source/GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.cpp)는 능력→비용/쿨다운 이펙트를 읽을 때 빠진 이펙트를 경고하고 null 로 둔다. 하지만 이펙트→부여 능력과 AbilitySet→능력/이펙트 ID는 로드 시 연결 검사를 하지 않는다. [`AbilityComponent`](../Source/GameFramework/Runtime/Gameplay/Ability/AbilityComponent.cpp)는 적용 시 조회하고, 세트 적용은 개별 결과를 무시한 채 계속한다. [`SkillTree`](../Source/GameFramework/Kits/Genre/RPG/MonsterHuntRPG/Rule/SkillTree.cpp)는 없는 선행 기술을 경고만 하고 트리를 유지한다. | 데이터 자체가 모두 읽힌 상태에서 연결을 확인하는 규칙이 없는 구간이다. 미등록 ID를 실제 게임에서 조회할 때까지 발견하지 못하거나 해당 효과만 빠질 수 있으므로, 필수/선택 관계와 허용 부분 복구를 먼저 정한 뒤 로드/쿠킹 단계 진단을 추가한다. |
-| 중복 ID 정책 경계 | `GameDataXML::addUnique`는 일반 카탈로그의 중복 ID를 오류로 거부하지만, `AbilityCatalog`의 XML 읽기는 공개 코드 추가 API(`addAbility`/`addEffect`/`addAbilitySet`/`addCue`)와 같은 `insert_or_assign` 경로를 써서 같은 키를 교체한다. 공개 API 주석은 코드 추가 시 교체를 명시하므로, XML 중복도 허용할지 별도 계약은 확인되지 않았다. | XML의 같은 종류 ID 중복이 의도인지 테스트로 확정한다. 오류여야 한다면 XML 로드만 `addUnique` 성격으로 읽고 코드 API의 교체 동작은 유지한다. 현재 단계에서는 공개 API 계약이 있어 이를 확정 결함으로 세지 않는다. |
-| 자체 카탈로그 내부 연결 | [`RTSCatalog`](../Source/GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.cpp)의 생산자/선행조건, [`ActionPlatformerCatalog`](../Source/GameFramework/Kits/Genre/Action/ActionPlatformer/Catalog/ActionPlatformerCatalog.cpp)의 패턴 상태 전이, [`QuestCatalog`](../Source/GameFramework/Runtime/Gameplay/Quest/QuestCatalog.cpp)의 다음 단계/분기, [`ScheduleCatalog`](../Source/GameFramework/Runtime/Character/AI/Schedule/ScheduleCatalog.cpp)의 장소·활동·NPC·일정 연결, Conquest의 반격 유닛 등은 각 로더가 직접 검사한다. | 검사 정책이 다르다. ActionPlatformer는 잘못된 패턴을 제외하고, Quest·Schedule은 일부 잘못된 연결을 경고만 하며, RTS·Conquest·MonsterHunt는 오류를 기록해도 읽은 카탈로그를 성공으로 반환할 수 있다. 이는 전부 누락된 검증이라기보다 엄격도와 오류 정책이 한 공통 계약으로 정리되지 않은 상태다. |
+| 별도 로더/자체 검사 | 다른 파일 카탈로그로의 연결(무기 → 탄 · 아이템, 격투 기술 → 프레임)은 아래 엄격도 계약대로 쥐는 쪽이 시작할 때 본다. [`MonsterHuntCatalog`](../Source/GameFramework/Kits/Genre/RPG/MonsterHuntRPG/Catalog/MonsterHuntCatalog.cpp)는 몬스터 약점→표식/연금술 데이터를 검사한다. | MonsterHunt의 약점 검사는 오류만 남기고 항목을 유지한다 — 계약(필수 = 실패)에 맞출지 정한다. |
+| 자체 카탈로그 내부 연결 | [`ActionPlatformerCatalog`](../Source/GameFramework/Kits/Genre/Action/ActionPlatformer/Catalog/ActionPlatformerCatalog.cpp)의 패턴 상태 전이는 로더가 직접 검사한다(Ability · Quest · SkillTree · Schedules · Metroidvania · RTS · Conquest 는 참조 표로 옮겼다). | ActionPlatformer는 잘못된 패턴을 제외한다 — 표로 옮길 수 있는지 본다. |
 
 **개선 방향:** (1) 표 밖의 별도 로더/자체 검사에서 오류를 보고하는 규칙을 모아, 필수 참조·선택 참조·경고 허용·항목 제외·전체 로드 실패 중 의도된 정책을 각 연결별로 확정하고, 표로 옮길 수 있는 것은 `datacatalogreferences.xml` 로 옮긴다. (2) 의도적으로 허용된 경고/부분 복구는 유지하고, 필수 연결만 로드 결과에 반영한다. (3) 같은 루트 안의 연결과 `FighterCatalog`처럼 다른 리소스를 요구하는 연결을 구분해 검증 API를 설계한다. (4) 상속으로 물려받은 참조·다른 팩/파일 참조의 테스트를 추가한다.
 
@@ -405,28 +403,11 @@ GameFramework의 모듈·수명주기·서비스·테스트 경계를 현재 코
 
 위 감사를 코드 규칙(구조로 푼다 · 폴백 없음 · 미사용은 쓰게 · 대기를 쌓지 않음)에 맞춰 정했다. "요구가 확인될 때만" 으로 적힌 항목 중 상용 엔진과 비교해 지금 정할 수 있는 것은 정했고, 측정이 필요한 것은 측정을 일감으로 넣었다(재지 않고 미루지 않는다).
 
-**바로 고칠 결함(7 차 S1).**
-- 1 인칭 총구: 소켓 · 외형 데이터가 없을 때 눈 아래 15 cm 로 가는 폴백을 지운다. `Muzzle` 이 없으면 오류로 멈추고, 데이터에 소켓을 채운다. 탄도선은 시점 총 앞에서 시작해 화면에 보이게 한다.
-- `chance`: 식 안의 호출마다 굴림 차례를 섞는다(시드 + 호출 순번). 결정성은 유지한다.
-- 관통탄: 한 걸음 안에서 남은 선분을 다시 질의해 모든 명중을 차례대로 모은다(언리얼 `SweepMulti` 와 같은 자리).
-- 포탑: 쏜 뒤 생긴 벽을 탄이 비행 중에 맞게 한다(발사 순간 시야만 보지 않는다).
-- 머티리얼 파라미터 묶음 핫 리로드, `ShaderCookStamp` 가 컴파일러의 실제 의존 목록(가려진 헤더 · 탐색 경로 포함)을 기록, X11 조합 중 글을 로캘 변환(UTF-8 가정 제거), 대기 카메라가 실제 뷰 종횡비를 받게, `InteractionSession` 을 `DepletingValue::take` 로.
-- 종료 코드: `InitializationFailed` 를 표에 더한다(초기화 실패와 크래시를 가른다 — 언리얼도 초기화 실패 코드를 따로 낸다). `requestQuit` 은 `ProcessExitCode` 만 받는다.
-- `LinuxScenarios.py` 의 WSL 경로를 `wslpath -a` 로 구한다. `AssetReferenceFields.generated.json` 갱신은 잠금 + 원자 교체. 리플렉션 파서 폴백의 동시 파싱 수에 상한을 둔다.
+**계약(S2, 들어감).** 프로세스당 Engine 하나 · GameInstance 하나 — 중복은 시작 오류다(다중 엔진 요구가 생기면 그때 컨텍스트로 옮긴다). 카탈로그 참조는 데이터 표 한 벌(`datacatalogreferences.xml`)이고 런타임 · 쿠커가 같이 읽는다 — 필수 참조가 깨지면 로드 · 쿠킹 실패, 선택 참조는 경고, XML 의 같은 종류 id 겹침은 오류(코드 API `add*` 의 교체 동작은 유지).
 
-**계약을 형식으로 고정(S2).** 프로세스당 Engine 하나 · GameInstance 하나를 계약으로 정하고 중복 바인딩을 시작 오류로 막는다(테스트 포함 — 다중 엔진 요구가 생기면 그때 컨텍스트로 옮긴다). `GameInstance::initialize` 부분 실패의 단일 되감기 경로, `bindScopedService` 가 성공 여부를 돌려 필수 카탈로그 충돌을 초기화 실패로 전파, 수명 · `GameService` 범위 전환 · `GameStateSnapshot` 봉투 테스트. 카탈로그 참조: `checkReferences` 가 결과를 돌려 필수 참조가 깨지면 로드 실패, 선택 참조는 선언으로 표시, Ability 카탈로그의 이펙트 → 능력 · 세트 → 능력 연결 검사, XML 중복 id 는 오류(코드 API 의 교체 동작은 유지). 쿠커가 같은 규칙을 데이터 선언으로 읽게 한다. 테스트 틀: 케이스 옵션의 프로세스 격리, CTest 마다 JSON 보고, 매개변수 케이스의 안정 이름. 서버 서비스 서술자 `Server` · `Reliable` · `Validate` 메타데이터는 실제 RPC 경로로 쓰게 한다(2 차 묶음).
+**에디터 작업 안전(S3, 들어감).** 소스 관리 연동은 Git 만, 외부 계정 · 유료 공급자 없음. 자동 저장은 세대별 임시본이고 원본을 덮지 않는다.
 
-**에디터 작업 안전(S3).** 자동 저장 · 비정상 종료 복구(세대별 임시본, 원본을 덮지 않음), 에셋 이동 트랜잭션화 + 폴더 · 묶음 이동, 저장 검색 · 컬렉션 · Quick Launcher 와 Command Palette 를 한 검색 제공자로, Map Check 의 안전한 Fix(Undo), Assert 대화상자 설정, Inspector 는 `CallInEditor` 만 기본 노출, 소스 관리 변경 목록 · diff · 되돌리기(Git 만, 외부 계정 없음), 드롭 배치의 고스트 · 표면 피킹 · 스냅(원점 폴백 제거).
-
-**시각 저작(S4).** 본 마스크 계층 칠하기, 소켓 뷰포트 기즈모(부모 본 로컬 변환 · Undo 합치기), `.tileset.xml` 편집기, 스프라이트 시트 불규칙 프레임 지정, 볼륨 안개 비교 · froxel 단면 · 비활성 이유 표시, G-buffer 채널 · 경로 분류 보기 모드와 버전 있는 G-buffer 명세 한 벌, Ability 카탈로그 편집기.
-
-**연출(S5).** 시퀀서 바인딩 id(이름은 표시용), 카메라 컷 차선 · 렌즈 키, 정지 · 중단 계약(복원/유지 선언), 애니메이션 · 오디오 · 자막 트랙, 트랙 확장 등록 한 곳, 키 끌기 · 다중 선택, 런타임 컷씬 디버거(활성 키트 제공자), 관통 킬캠, `PoseAfterimage`, VFX 편집 · 미리보기 자동 갱신.
-
-**진단(S6).** 버그 리포트 입력 기록 · 재현 환경 해시, 리로드 결과 집계, 성능 산출물의 기계 판독 보고, 퀘스트 · 기믹 런타임 · 진행 조건 · NPC 일정-행동-블랙보드 · 범용 Action 추적 · 물리 접촉 · 캐릭터 이동 디버거, Ability 디버거의 적용 출처 · 거부 사유, 공간 효과 영역 · 상호작용 효과 · 이동 제약 계약.
-
-**표면 상호작용(S7).** 공통 표면 질의(종류 · 법선 · 표면 속도 · 이동 계수 · 발소리 분류), 날씨 · 침수 → `Wet`, 씻김 채널, 발자국 반응 · 눈 흔적(고정 용량), 모래 함몰 구역.
-
-**측정과 성능 후보(S8).** 대기 호출 표, 반사 검증의 중첩 타입 조회, 파서 토큰화, 씬 저장 비동기(스냅숏 분리), 씬 쿠킹 병렬, GPU 업로드 대기 · 텍스처 업로드 계측(`AssetLoadScope`), 렌더 그래프 레벨 폭. 재고 결과에 따라 고치거나, 이득이 없으면 측정값을 이 절에 적고 닫는다. RHI 스레드 · 에디터 UI 스레드는 이 측정에서 병목이 나올 때만 시제품. 매직 리터럴 집계 도구(보고용, 게이트 아님)와 `-1` 의미 분류 첫 묶음. 장르 키트 시연(K1: ActionCombat · ActionPlatformer · TacticsSRPG)과 장르 완결 루프 시나리오.
+**측정과 성능 후보(S8).** 아래 표의 값으로 고치거나, 이득이 없으면 측정값을 이 절에 적고 닫는다. RHI 스레드 · 에디터 UI 스레드는 이 측정에서 병목이 나올 때만 시제품.
 
 *S8 측정 표(7 차 — 계측 · 켤 코드는 커밋했고 값은 통합 실행이 채운다. "켤 코드" 커밋은 따로라 값이 흔들림 안이면 그 커밋만 되돌린다).*
 
@@ -439,11 +420,6 @@ GameFramework의 모듈·수명주기·서비스·테스트 경계를 현재 코
 | 씬 쿠킹 병렬 | `--cook-all` 을 DDC 없이 · 있이 각 2 번 | `Headless.CookStageTimes` · `SceneCooker.SceneCookTime`(합 · 가장 느린 씬) | scenes 가 쿠킹 벽시계의 절반을 넘고 가장 느린 씬이 합의 1/4 아래면 씬 단위 병렬 설계 | 없음(캐시 격리가 먼저) | |
 | GPU 업로드 · 텍스처 | shooter3d · meadowvillage 첫 진입, DX12 · Vulkan · GL, `-gv_assetLoadReport=1` × `-gv_gpuUploadQueue=0/1` 3 번 | Asset 표의 `Texture` · `TextureUpload` 행, `RT.TextureUpload.pump` · `.submitted` · `.polled` · `.waiting`, `GT.GPUUpload.flush` | pump 가 RT 의 10% 를 넘거나 waiting 이 계속 0 이 아니면 RHI Thread 형 시제품 | 없음 | |
 | 렌더 그래프 레벨 폭 | `game/empty/automation/benchmark` · Shooter3D 플레이, `-gv_renderGraphParallelMinWidth=2 · 3 · 4 · 99`, DX12 · Vulkan 3 번 | RT 프레임 중앙값, `RT.Graph.parallelLevel` · `.parallelLevels` · `.parallelPasses` · `.serialPasses` · `.maxLevelWidth` | 3 · 4 가 2 보다 흔들림 밖으로 빠르면 기본값을 바꾼다. 그림은 같아야 한다 | 폭 문턱 gv(기본 2 = 지금 동작) | |
-
-매직 리터럴: `py -3 -m Scripts magic-literals`(9 차부터 커밋 훅 래칫 — 위 "데이터 기반 값 · 매직 리터럴" 상태). 첫 집계 — 일반 코드의 `-1` 1,632 · 실수 19,051 · 두 자리 이상 정수 2,271 · 16진수 637. 검토 장소의 `-1` 뜻은 인덱스 표지 385 · 이름 없는 '없음' 381 · 찾지 못함 반환 362 · 미분류 261 · 이벤트 대상 없음 146 · 아직 모름 38 · 운영체제 계약 36 · 이름 붙은 표지 23 · 무제한 15 · 기본 인자 11 · 방향 11 · 기본값 사용 3. 첫 묶음으로 '없음' 표지의 이름 붙은 정의 열 곳이 값을 `constant::invalid_index` 에서 가져온다(값 그대로). 둘째 묶음(8 차 T7): 무제한 · 기본값 사용 — 리플렉션 칸(XML 속성)인 `Shop` 가격 · 재고 · `SpawnDirector` 상한 · `AIDirector` 조우 상한 · 긴장도 위 끝 · `Klondike` 되돌리기는 타입마다 이름 붙은 표지(`kUseItemValue` · `kUnlimitedStock` · `kUnlimitedAlive` · `kUnlimitedCount` · `kNoIntensityCap` · `kUnlimitedRecycle`)와 판정 함수(`hasFixedPrice` · `canSpawnMore` …)로 읽는다 — 코드가 `< 0` 을 직접 보지 않는다. 손으로 읽는 루프 덮어쓰기(애니 그래프 상태 · 클립 부가 데이터)는 `-1/0/1` 대신 `std::optional<bool>` 이다. 리플렉션에 optional 칸이 없어 XML 칸은 수 그대로 둔다(바이트 · 데이터 호환).
-K1 시연: Empty 의 `maps/kitdemo_actioncombat` · `kitdemo_actionplatformer` · `kitdemo_tactics` 와 같은 이름의 시나리오(입력 맵 액션 `KitDemo.*` · `Move` 로만 시작 → 결과). 몬스터 정의는 Empty 의 필수 데이터(`data/monsters.xml`, `MonsterCatalog` 경로 규칙).
-
-**새 키트(2 차 묶음).** `GF_Housing`(부지 · 부품 카탈로그 · 배치 검증 · 저장), `GF_ModSupport`(콘텐츠 전용, 시작 때 고정, 서버 허용 목록 · 구성 해시), 싱글 오픈월드 액션 어드벤처 조합과 액션 MMO 조합의 수직 슬라이스(장르 기능만 — 특정 게임의 이름 · 내용을 따르지 않는다).
 
 **하지 않기로 정한 것.** Meadow 밭 크기는 소유 타입 상수로 둔다(레벨별 크기 요구 없음). Shooter3D 탄착 표면 목록은 코드 상수로 둔다. 범용 스크립팅 VM · 네이티브 모드 DLL · 원격 명령 서버는 넣지 않는다.
 
