@@ -2,8 +2,8 @@
 
 #include "Engine/Renderer/Lighting/SceneVoxelizer.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/Mesh.h"

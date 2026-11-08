@@ -64,6 +64,12 @@
     <Equip slot="OffHand" item="shield_skeleton"/>
   </CharacterAppearance>
 
+  <!-- 몸 동작 무대(maps/bodycustomization · 시나리오 bodydynamics) — 몸 프로필이 굽 높이 · 지글 · 동공 · 눈물을 건다. -->
+  <CharacterAppearance id="BodyDemoWarrior" parent="SkeletonWarrior" body="body_skeleton_bodydemo" bodyProfile="BodyDemoWarrior">
+    <SkinLayer layer="mascara" color="0.05 0.04 0.04 1" opacity="0.9"/>
+    <SkinLayer layer="tattoo_rose" color="0.1 0.2 0.6 1" offset="0.75 0.25" scale="0.15 0.15" rotation="20" mirror="true"/>
+  </CharacterAppearance>
+
   <CharacterAppearance id="SkeletonRogue" parent="SkeletonBase" body="body_skeleton_rogue">
     <Value name="Hood" option="Hooded"/>
     <Equip slot="Back" item="cape_skeleton"/>

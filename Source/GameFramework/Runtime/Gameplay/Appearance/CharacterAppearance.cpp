@@ -170,6 +170,12 @@ namespace sw
                     {
                         readEquip( child, outDef, report, sourceName );
                     }
+                    else if ( StringUtil::equals( pName, "SkinLayer" ) )
+                    {
+                        SkinLayerValue layer;
+                        if ( layer.readFromXML( child, report, sourceName ) )
+                            outDef._listSkinLayer.push_back( layer );
+                    }
                     else if ( StringUtil::equals( pName, "SocketOverride" ) )
                     {
                         (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrSocketAttribute, report, sourceName );
@@ -492,6 +498,7 @@ namespace sw
         outNode.appendAttribute( "id", def._id.c_str() );
         Internal::appendName( outNode, "parent", def._parent );
         Internal::appendName( outNode, "schema", def._schema );
+        Internal::appendName( outNode, "bodyProfile", def._bodyProfile );
         Internal::appendNameList( outNode, "bodyType", def._listBodyType );
         Internal::appendNameList( outNode, "bodyShape", def._listBodyShape );
         Internal::appendNameList( outNode, "face", def._listFace );
@@ -520,6 +527,10 @@ namespace sw
         for ( const AppearanceSocketOverride& socketOverride : def._listSocketOverride )
         {
             Internal::writeSocketOverride( outNode, socketOverride );
+        }
+        for ( const SkinLayerValue& layer : def._listSkinLayer )
+        {
+            layer.writeToXML( outNode.appendChild( "SkinLayer" ) );
         }
         return {};
     }
@@ -560,6 +571,10 @@ namespace sw
             const CharacterAppearanceDef& level = *pLevel;
             if ( level._schema.empty() == false )
                 outMerged._schema = level._schema;
+            if ( level._bodyProfile.empty() == false )
+                outMerged._bodyProfile = level._bodyProfile;
+            if ( level._listSkinLayer.empty() == false )
+                outMerged._listSkinLayer = level._listSkinLayer;
             CharacterAppearanceInternal::replaceIfGiven( outMerged._listBodyType, level._listBodyType );
             CharacterAppearanceInternal::replaceIfGiven( outMerged._listBodyShape, level._listBodyShape );
             CharacterAppearanceInternal::replaceIfGiven( outMerged._listFace, level._listFace );
@@ -640,12 +655,14 @@ namespace sw
         outSpec._presetID           = id;
         outSpec._seed               = seed;
         outSpec._schema             = merged._schema;
+        outSpec._bodyProfile        = merged._bodyProfile;
         outSpec._tags               = merged._tags;
         outSpec._bodyType           = Internal::pickName( merged._listBodyType, seed, Internal::kKeyBodyType );
         outSpec._bodyShape          = Internal::pickName( merged._listBodyShape, seed, Internal::kKeyBodyShape );
         outSpec._face               = Internal::pickName( merged._listFace, seed, Internal::kKeyFace );
         outSpec._bodyVisual         = Internal::pickName( merged._listBody, seed, Internal::kKeyBody );
         outSpec._listSocketOverride = merged._listSocketOverride;
+        outSpec._listSkinLayer      = merged._listSkinLayer;
         Internal::pickCustomization( merged, schemas, seed, outSpec );
 
         for ( const AppearanceSlotDef& slotDef : slotTable.getSlots() )

@@ -58,6 +58,17 @@ namespace sw
         int32 _channel{ 0 }; ///< DyeChannel 0..3
         PROPERTY( Required )
         CustomizationDriveKind _kind{ CustomizationDriveKind::Morph };
+        /**
+         * @brief 머티리얼 드라이브(`MaterialScalar` · `MaterialColor` · `DyeChannel`)가 건드릴 구간입니다(`include="cloth" exclude="buckle"` — 구간의 날 이름 · 별칭 · 묶음). 손으로 읽는다.
+         * @details 둘 다 비어 있으면 주인의 모든 구간이다. 염색은 `dyeable="false"` 구간을 늘 건너뛴다. 외형에 없는 이름은 로드 오류다(`Appearance.SectionTagUnknown`).
+         *          한 구간 안의 마스크 염색 채널(`channel`)은 그대로 쓴다 — 별칭은 어느 구간에 채널을 거는지만 고른다(오른눈 · 왼눈 홍채를 따로 칠하는 이색증도 이 길이다).
+         */
+        vector<hashed_string> _listInclude{};
+        vector<hashed_string> _listExclude{};
+
+        bool isMaterialDrive() const { return _kind == CustomizationDriveKind::MaterialScalar || _kind == CustomizationDriveKind::MaterialColor || _kind == CustomizationDriveKind::DyeChannel; }
+        /** @brief 구간을 골라 거는 드라이브면 true 입니다(`include` · `exclude` 를 적었다). */
+        bool isSectionTargeted() const { return _listInclude.empty() == false || _listExclude.empty() == false; }
     };
 
     /** @brief 매개변수 원소(`<Slider>` · `<Color>` · `<Choice>` · `<Attachment>`)가 함께 받는 칸입니다. 종류마다 받는 칸이 다르다(읽기가 막는다). `default` 는 종류마다 꼴이 달라 손으로 푼다. */
@@ -74,6 +85,8 @@ namespace sw
         hashed_string _symmetry{};
         PROPERTY()
         hashed_string _socket{};
+        PROPERTY()
+        hashed_string _palette{}; ///< 색 매개변수가 고를 수 있는 견본 묶음(`<Palette id>`). 비어 있으면 자유 색
         PROPERTY()
         float32 _min{ 0.0f };
         PROPERTY()
@@ -156,11 +169,13 @@ namespace sw
         vector<CustomizationDriveDef>     _listDrive{};
         vector<CustomizationOptionDef>    _listOption{};
         vector<CustomizationConditionDef> _listCondition{};
+        vector<float4>                    _listSwatch{}; ///< 견본 묶음의 색(`palette` — 읽기가 채운다). 있으면 정규화가 가장 가까운 견본으로 맞춘다
         float4                            _defaultColor{ 1.0f, 1.0f, 1.0f, 1.0f };
         hashed_string                     _name{};
         hashed_string                     _category{}; ///< 부분 프리셋이 고르는 카테고리("Hair", "Face", "Dye")
         hashed_string                     _symmetry{}; ///< 대칭 그룹. 같은 그룹끼리 함께 바뀐다(좌우 귀)
         hashed_string                     _socket{};   ///< 부착: 주인의 소켓 이름. 주인 이름이 앞에 붙는다
+        hashed_string                     _palette{};  ///< 색: 견본 묶음 id(비어 있으면 자유 색)
         hashed_string                     _defaultOption{};
         float32                           _min{ 0.0f };
         float32                           _max{ 1.0f };
@@ -179,6 +194,8 @@ namespace sw
         float32        dequantizeSlider( uint32 step ) const;
         static uint32  quantizeColorChannel( float32 value );
         static float32 dequantizeColorChannel( uint32 step );
+        /** @brief 색 @p color 를 견본 묶음에서 가장 가까운 색으로 맞춥니다(rgba 거리). 견본이 없으면 그대로입니다 — 염색 · 홍채 · 머리 색이 팔레트만 고르게 한다. */
+        float4 snapToSwatch( const float4& color ) const;
         /** @brief 이 매개변수가 켜져 있는지, 즉 조건이 모두 맞는지 판정합니다. @p normalizedValues 는 `CustomizationSchemaDef::normalize` 의 결과입니다. */
         bool isActive( const CustomizationSchemaDef& schema, const CustomizationValueSet& normalizedValues ) const;
         /** @brief 슬라이더 값을 대상에 보내는 출력값입니다. 범위 [min,max] 를 [from,to] 로 옮긴 값입니다. */
@@ -224,12 +241,27 @@ namespace sw
     {
     public:
         [[nodiscard]] bool loadFromXML( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName );
-        void               clear() { _listSchema.clear(); }
+        void               clear()
+        {
+            _listSchema.clear();
+            _listPalette.clear();
+        }
 
         const CustomizationSchemaDef*         findSchema( const hashed_string& id ) const;
         const vector<CustomizationSchemaDef>& getSchemas() const { return _listSchema; }
 
+        /** @brief 견본 묶음 하나(`<Palette id><Swatch name color/></Palette>`)입니다. 스키마보다 앞에 적는다. */
+        struct Palette
+        {
+            vector<hashed_string> _listSwatchName{};
+            vector<float4>        _listSwatch{};
+            hashed_string         _id{};
+        };
+        const Palette*         findPalette( const hashed_string& id ) const;
+        const vector<Palette>& getPalettes() const { return _listPalette; }
+
     private:
         vector<CustomizationSchemaDef> _listSchema{};
+        vector<Palette>                _listPalette{};
     };
 } // namespace sw

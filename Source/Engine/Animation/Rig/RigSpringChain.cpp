@@ -55,6 +55,21 @@ namespace sw
                 return result;
             }
 
+            static constexpr float32 kSwingMinLength = 1e-8f; ///< 이보다 짧은 방향은 각을 잴 수 없어 벌어짐 제한을 건너뛴다
+
+            /** @brief 부모 → @p next 방향이 애니메이션 방향 @p animatedOffset 에서 @p maxRadians 넘게 벌어지면 그 각까지 되돌립니다(길이는 뒤의 `keepLength` 가 맞춘다). */
+            static float3 limitSwing( const float3& parent, const float3& next, const float3& animatedOffset, float32 maxRadians )
+            {
+                const float3  offset = next - parent;
+                const float32 length = offset.getLength();
+                if ( length < kSwingMinLength || animatedOffset.getLength() < kSwingMinLength )
+                    return next;
+                const float3     animatedDirection = animatedOffset.normalize();
+                const quaternion swing             = quaternion::fromToRotation( animatedDirection, offset.normalize() );
+                const quaternion limited           = quaternion::rotateTowards( quaternion::Identity, swing, maxRadians );
+                return parent + float3::transform( animatedDirection, limited ) * length;
+            }
+
             /** @brief 누적 시간 @p inoutAccumulator 에서 고정 스텝 수를 꺼냅니다. 상한(@p maxSubStep)을 넘는 시간은 버린다. 히치 뒤에 한꺼번에 따라잡느라 튀지 않게 하려는 것이다. */
             static uint32 consumeSubSteps( float32& inoutAccumulator, float32 deltaSeconds, float32 step, uint32 maxSubStep )
             {
@@ -90,6 +105,18 @@ namespace sw
     {
         _bInitialized = SW_FALSE;
         _accumulator  = 0.0f;
+    }
+
+    void RigSpringChain::addVelocity( const float3& worldVelocity, float32 fixedStep )
+    {
+        const size_t count = _listPosition.size();
+        if ( _bInitialized == SW_FALSE || count < 2 )
+            return;
+        for ( size_t index = 1; index < count; ++index )
+        {
+            const float32 reach = static_cast<float32>( index ) / static_cast<float32>( count - 1 );
+            _listPreviousPosition[index] -= worldVelocity * ( fixedStep * reach );
+        }
     }
 
     void RigSpringChain::simulate( RigPoseBuffer& pose, span<const uint32> listBone, const RigSpringSettings& settings, span<const RigSpringCollider> listCollider,
@@ -162,8 +189,10 @@ namespace sw
                     next = next + animatedOffset * ( particle._axisPull * step / _listLength[index] );
                 if ( space._bPlanar == SW_TRUE )
                     next = next - planeNormal * ( next - root ).dot( planeNormal );
-                next                 = RigSpringChainInternal::keepLength( _listPosition[index - 1], next, _listLength[index] );
-                next                 = RigSpringChainInternal::pushOutOfColliders( next, particle._radius, listCollider, pose, worldFromModel );
+                next = RigSpringChainInternal::keepLength( _listPosition[index - 1], next, _listLength[index] );
+                next = RigSpringChainInternal::pushOutOfColliders( next, particle._radius, listCollider, pose, worldFromModel );
+                if ( settings._maxSwingDegrees > 0.0f )
+                    next = RigSpringChainInternal::limitSwing( _listPosition[index - 1], next, animatedOffset, settings._maxSwingDegrees * MathUtil::kDegreeToRadian );
                 _listPosition[index] = RigSpringChainInternal::keepLength( _listPosition[index - 1], next, _listLength[index] );
             }
         }

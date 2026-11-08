@@ -1,0 +1,75 @@
+<Scene formatVersion="2" name="BodyCustomization">
+	<!-- 몸 동작 무대(automation/bodydynamics.scenario.xml) — 해골 Dancer 는 외형 프리셋 BodyDemoWarrior(몸 프로필 BodyDemoWarrior — 굽 높이 0.08 m · 몸통 지글 ·
+	     동공 · 눈물, 피부 층 마스카라 · 장미 문신)다. 열린 하늘(0,0)과 넓은 지붕 아래(-8,0, Hut)를 오가며 눈에 닿는 빛이 바뀌고, 날씨(skyLight)가 직사광을 줄인다.
+	     몸 동작(CharacterBodyDynamicsComponent)이 발 들림을 리그 몸 입력으로, 지글 물성을 Jiggle 노드(common/rigs/skeleton_bodydemo.rig.xml)로, 눈물을 표면 채널
+	     (common/characters/bodyfluid.surfacechannels.xml)로 넣는다. 눈 소켓은 머리 본(head)이다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="-3,2,-6" _localRotation="0.15,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="0.9" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,0,0" _localRotation="0.9,0.4,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,1,1" _intensity="1.5" _ambient="0.1" _shadowExtent="12" _shadowDistance="30" _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Weather">
+			<GameObject _schemaVersion="0" _name="Weather" _bActive="true">
+				<_listComponent>
+					<SessionStateComponent />
+					<WeatherDirectorComponent _weatherDataPath="game/empty/data/bodydemo.weather.xml" _startWeather="clear" _seed="7" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="-4,-0.25,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Stone" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="8,0.25,4" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Stone">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="16,0.5,8" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="9" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="Hut">
+			<GameObject _schemaVersion="0" _name="Hut" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="-8,3,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Wood" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="4,0.1,4" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Wood">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="8,0.2,8" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="6" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="Dancer">
+			<GameObject _schemaVersion="0" _name="Dancer" _bActive="true">
+				<_listComponent>
+					<CharacterControllerComponent _localPosition="0,0.05,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="0.7853982" _gravityScale="1" _mass="70" _layer="Character" />
+					<SkeletalMeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="" _materialPath="" _boundsRadius="2" _blendMode="Opaque" />
+					<SkeletalAnimatorComponent _animationSetPath="common/models/kaykit/skeleton_warrior/skeleton_warrior.animset.xml" _initialState="Idle_Combat" _bPlayOnBegin="true" />
+					<CharacterAppearanceComponent _presetID="BodyDemoWarrior" _seed="0" _bMergeParts="true" _surfaceChannelsPath="common/characters/bodyfluid.surfacechannels.xml" />
+					<PoseModifierComponent _rigPath="common/rigs/skeleton_bodydemo.rig.xml" _bRigEnabled="true" />
+					<CharacterBodyDynamicsComponent _eyeSocket="head" _hitImpulseScale="0.02" _sunTraceDistance="50" _skyLightValue="skyLight" _wipeEvent="WipeFace" _fluidSmearStrength="0.6" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

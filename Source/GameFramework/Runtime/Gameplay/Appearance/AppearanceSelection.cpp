@@ -27,6 +27,7 @@ namespace sw
             static constexpr int32  kLegacySliderBits = 16; ///< 판 1 의 슬라이더 — 그때 스키마 범위 안의 단계. 범위가 바뀐 뒤에는 뜻이 달라져 판 2 는 실제 값을 쓴다
             static constexpr int32  kColorBits        = 8;
             static constexpr int32  kDamageBits       = 8;
+            static constexpr int32  kFineBits         = 16; ///< 피부 층 이동 · 크기 · 회전(`SkinLayerValue::kFineSteps`)
             static constexpr int32  kVersionBits      = 8;
             static constexpr uint32 kChecksumBytes    = 4;
 
@@ -311,6 +312,7 @@ namespace sw
         outSelection._face          = spec._face;
         outSelection._customization = spec._customization;
         outSelection._listSlot      = spec._listSlot;
+        outSelection._listSkinLayer = spec._listSkinLayer;
     }
 
     void AppearanceSelection::makePartial( const AppearanceSelection& selection, const AppearanceDatabase& database, const vector<hashed_string>& listCategory,
@@ -330,6 +332,12 @@ namespace sw
         }
         if ( outPartial.includesCategory( hashed_string( AppearanceSelection::kLoadoutCategory ) ) )
             outPartial._listSlot = selection._listSlot;
+        for ( const SkinLayerValue& layer : selection._listSkinLayer )
+        {
+            const SkinLayerDef* pDef = database.getSkinLayers().findLayer( layer._layer );
+            if ( pDef != nullptr && outPartial.includesCategory( pDef->_category ) )
+                outPartial._listSkinLayer.push_back( layer );
+        }
     }
 
     void AppearanceSelection::applySelection( const AppearanceDatabase& database, const AppearanceSelection& selection, const CharacterAppearanceSpec& current,
@@ -388,6 +396,23 @@ namespace sw
             outSpec._customization.setValue( value );
         }
 
+        // 피부 층: 전체 선택은 목록을 바꾸고, 부분 선택은 그 카테고리의 층만 바꾼다(다른 카테고리의 층은 순서를 지켜 남는다). 모르는 층은 버리고 보고한다.
+        if ( selection.isPartial() == false )
+            outSpec._listSkinLayer.clear();
+        VectorUtil::removeIf( outSpec._listSkinLayer, [&]( const SkinLayerValue& layer )
+        {
+            const SkinLayerDef* pDef = database.getSkinLayers().findLayer( layer._layer );
+            return pDef == nullptr || selection.includesCategory( pDef->_category );
+        } );
+        for ( const SkinLayerValue& layer : selection._listSkinLayer )
+        {
+            const SkinLayerDef* pDef = database.getSkinLayers().findLayer( layer._layer );
+            if ( pDef == nullptr )
+                Internal::addDropped( outReport, layer._layer );
+            else if ( selection.includesCategory( pDef->_category ) )
+                outSpec._listSkinLayer.push_back( layer );
+        }
+
         if ( selection.includesCategory( hashed_string( AppearanceSelection::kLoadoutCategory ) ) == false )
             return;
         const ItemCatalog* pItemCatalog = database.getItemCatalog();
@@ -433,9 +458,10 @@ namespace sw
         outDef = CharacterAppearanceDef{};
         if ( presetID.empty() || selection.isPartial() )
             return unexpected( Error{ ErrorKind::InvalidArgument, presetID.empty() ? "a preset needs an id" : "a partial selection (only some categories) cannot become a preset" } );
-        outDef._id     = presetID;
-        outDef._parent = selection._basePresetID;
-        outDef._schema = selection._schema;
+        outDef._id            = presetID;
+        outDef._parent        = selection._basePresetID;
+        outDef._schema        = selection._schema;
+        outDef._listSkinLayer = selection._listSkinLayer;
         if ( selection._bodyType.empty() == false )
             outDef._listBodyType.push_back( selection._bodyType );
         if ( selection._bodyShape.empty() == false )
@@ -507,7 +533,7 @@ namespace sw
         ResolvedAppearance::resolve( database, previewSpec, outResolved );
     }
 
-    void AppearanceSelection::writeSelection( BitWriter& writer, const AppearanceSelection& selection, const AppearanceDatabase& database )
+    void AppearanceSelection::writeSelection( BitWriter& writer, const AppearanceSelection& selection, const AppearanceDatabase& database, uint32 version )
     {
         using Internal = AppearanceSelectionInternal;
         writer.writeUint32( Internal::toHash32( selection._basePresetID ) );
@@ -531,6 +557,8 @@ namespace sw
             writer.writeUint32( Internal::toHash32( request._state ) );
             writer.writeBits( static_cast<uint32>( ResolvedAppearance::snapDamage( request._damage ) * 255.0f + 0.5f ), Internal::kDamageBits );
             writer.writeBool( request._bSuppressed == SW_TRUE );
+            if ( version >= 3 )
+                writer.writeBool( request._bHiddenByPlayer == SW_TRUE );
             Internal::writeVarCount( writer, request._listDetachedPart.size() );
             for ( const hashed_string& part : request._listDetachedPart )
             {
@@ -538,6 +566,26 @@ namespace sw
             }
             const ItemVisualDef* pShown = Internal::findShownVisual( database, request._itemID, request._visibleVisual );
             Internal::writeValues( writer, request._customization, Internal::findVisualSchema( database, pShown ) );
+        }
+        // 판 3: 피부 층. 격자는 `SkinLayerValue::quantize` 와 같다 — 받는 쪽의 굽기 결과가 보낸 쪽과 같다.
+        if ( version < 3 )
+            return;
+        Internal::writeVarCount( writer, selection._listSkinLayer.size() );
+        for ( const SkinLayerValue& layer : selection._listSkinLayer )
+        {
+            writer.writeUint32( Internal::toHash32( layer._layer ) );
+            writer.writeBits( CustomizationParamDef::quantizeColorChannel( layer._color._x ), Internal::kColorBits );
+            writer.writeBits( CustomizationParamDef::quantizeColorChannel( layer._color._y ), Internal::kColorBits );
+            writer.writeBits( CustomizationParamDef::quantizeColorChannel( layer._color._z ), Internal::kColorBits );
+            writer.writeBits( CustomizationParamDef::quantizeColorChannel( layer._color._w ), Internal::kColorBits );
+            writer.writeBits( CustomizationParamDef::quantizeColorChannel( layer._opacity ), Internal::kColorBits );
+            writer.writeBits( SkinLayerValue::encodeFine( layer._offset._x, 0.0f, 1.0f ), Internal::kFineBits );
+            writer.writeBits( SkinLayerValue::encodeFine( layer._offset._y, 0.0f, 1.0f ), Internal::kFineBits );
+            writer.writeBits( SkinLayerValue::encodeFine( layer._scale._x, SkinLayerValue::kMinScale, SkinLayerValue::kMaxScale ), Internal::kFineBits );
+            writer.writeBits( SkinLayerValue::encodeFine( layer._scale._y, SkinLayerValue::kMinScale, SkinLayerValue::kMaxScale ), Internal::kFineBits );
+            writer.writeBits( SkinLayerValue::encodeFine( layer._rotationDegrees, -SkinLayerValue::kMaxRotation, SkinLayerValue::kMaxRotation ), Internal::kFineBits );
+            writer.writeBool( layer._bMirror == SW_TRUE );
+            writer.writeBool( layer._bHidden == SW_TRUE );
         }
     }
 
@@ -611,6 +659,7 @@ namespace sw
             const uint32 stateHash       = reader.readUint32();
             request._damage              = static_cast<float32>( reader.readBits( Internal::kDamageBits ) ) / 255.0f;
             request._bSuppressed         = reader.readBool() ? SW_TRUE : SW_FALSE;
+            request._bHiddenByPlayer     = formatVersion >= 3 && reader.readBool() ? SW_TRUE : SW_FALSE; // 판 1 · 2 에는 없다
             const ItemVisualDef*  pShown = Internal::findShownVisual( database, request._itemID, request._visibleVisual );
             vector<hashed_string> listStateName;
             vector<hashed_string> listPartName;
@@ -636,6 +685,33 @@ namespace sw
             if ( Internal::readValues( reader, Internal::findVisualSchema( database, pShown ), formatVersion, request._customization ) == false )
                 return false;
             outSelection._listSlot.push_back( request );
+        }
+        if ( formatVersion >= 3 )
+        {
+            vector<hashed_string> listLayerID;
+            for ( const SkinLayerDef& layer : database.getSkinLayers().getLayers() )
+                listLayerID.push_back( layer._id );
+            uint32 layerCount = 0;
+            if ( Internal::readVarCount( reader, layerCount ) == false )
+                return false;
+            for ( uint32 index = 0; index < layerCount; ++index )
+            {
+                SkinLayerValue layer;
+                layer._layer           = Internal::findByHash( reader.readUint32(), listLayerID );
+                layer._color._x        = CustomizationParamDef::dequantizeColorChannel( reader.readBits( Internal::kColorBits ) );
+                layer._color._y        = CustomizationParamDef::dequantizeColorChannel( reader.readBits( Internal::kColorBits ) );
+                layer._color._z        = CustomizationParamDef::dequantizeColorChannel( reader.readBits( Internal::kColorBits ) );
+                layer._color._w        = CustomizationParamDef::dequantizeColorChannel( reader.readBits( Internal::kColorBits ) );
+                layer._opacity         = CustomizationParamDef::dequantizeColorChannel( reader.readBits( Internal::kColorBits ) );
+                layer._offset._x       = SkinLayerValue::decodeFine( reader.readBits( Internal::kFineBits ), 0.0f, 1.0f );
+                layer._offset._y       = SkinLayerValue::decodeFine( reader.readBits( Internal::kFineBits ), 0.0f, 1.0f );
+                layer._scale._x        = SkinLayerValue::decodeFine( reader.readBits( Internal::kFineBits ), SkinLayerValue::kMinScale, SkinLayerValue::kMaxScale );
+                layer._scale._y        = SkinLayerValue::decodeFine( reader.readBits( Internal::kFineBits ), SkinLayerValue::kMinScale, SkinLayerValue::kMaxScale );
+                layer._rotationDegrees = SkinLayerValue::decodeFine( reader.readBits( Internal::kFineBits ), -SkinLayerValue::kMaxRotation, SkinLayerValue::kMaxRotation );
+                layer._bMirror         = reader.readBool() ? SW_TRUE : SW_FALSE;
+                layer._bHidden         = reader.readBool() ? SW_TRUE : SW_FALSE;
+                outSelection._listSkinLayer.push_back( layer );
+            }
         }
         return reader.hasOverflowed() == false;
     }

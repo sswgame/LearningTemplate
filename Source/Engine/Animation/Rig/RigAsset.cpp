@@ -10,6 +10,10 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/Rig/RigBuiltinNodes.h"
+#include "Engine/Animation/Rig/RigConstraintNodes.h"
+#include "Engine/Animation/Rig/RigIKNodes.h"
+#include "Engine/Animation/Rig/RigJiggleNode.h"
+#include "Engine/Animation/Rig/RigSecondaryNodes.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
@@ -38,6 +42,7 @@ namespace sw
         RigIKNodes::registerNodes( registry );
         RigConstraintNodes::registerNodes( registry );
         RigSecondaryNodes::registerNodes( registry );
+        RigJiggleNode::registerNodes( registry );
         return true;
     }
 } // namespace sw

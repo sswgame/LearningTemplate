@@ -31,6 +31,10 @@
   <ItemVisual id="body_skeleton_warrior" _base="body_skeleton_minion">
     <Part name="Body" mesh="common/models/kaykit/skeleton_warrior.mesh" skeleton="common/models/kaykit/skeleton_warrior/skeleton_warrior.skeleton.xml"/>
   </ItemVisual>
+  <!-- 몸 동작 무대(maps/bodycustomization)의 해골 — 전사 몸에 몸 채널 매핑(굽 높이 · 어깨 · 허리)을 단다. 다른 전사는 매핑 없이 그대로다. -->
+  <ItemVisual id="body_skeleton_bodydemo" _base="body_skeleton_warrior">
+    <Part name="Body" bodyShapes="common/characters/skeleton_warrior/skeleton_warrior.bodyshape.xml"/>
+  </ItemVisual>
   <ItemVisual id="body_skeleton_rogue" _base="body_skeleton_minion">
     <Part name="Body" mesh="common/models/kaykit/skeleton_rogue.mesh" skeleton="common/models/kaykit/skeleton_rogue/skeleton_rogue.skeleton.xml"/>
   </ItemVisual>

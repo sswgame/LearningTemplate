@@ -14,6 +14,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Animation/Rig/RigBodyInput.h"
 #include "Engine/Animation/Rig/RigIKSolver.h"
 #include "Engine/Animation/Rig/RigNode.h"
 #include "Engine/Animation/Rig/RigPoseBuffer.h"
@@ -139,6 +140,12 @@ namespace sw
         const vector<RigSpringCollider>& getSharedColliders() const { return _listSharedCollider; }
         /** @brief 풀이 공간(2D 면 평면)입니다. */
         const RigSolveSpace& getSolveSpace() const { return _space; }
+        /**
+         * @brief 몸 입력(발 들림 · 지글 물성 · 동작 배율 · 충격)입니다. 외형이 게임 스레드에서 넣고 노드가 읽는다.
+         * @details 발 디딤 IK 는 `getBodyInput().getFootLift()` 만큼 발바닥을 땅 위에 둔다 — 굽 높이를 두 번째 IK 없이 기존 IK 의 입력으로 받는다.
+         */
+        RigBodyInput&       getBodyInput() { return _bodyInput; }
+        const RigBodyInput& getBodyInput() const { return _bodyInput; }
 
         // --- 실행 ---
         /**
@@ -198,6 +205,7 @@ namespace sw
         vector<RigSpringCollider>   _listSharedCollider;
         vector<BoneTransform>       _listBlendScratch;
         RigPoseBuffer               _pose;
+        RigBodyInput                _bodyInput; ///< 외형이 넣는 몸 입력(`getBodyInput`)
         RigSolveSpace               _space;
         const IRigCurveSource*      _pCurveSource;
         float3                      _worldGravity; ///< 마지막 준비 단계가 받은 월드 중력이다.

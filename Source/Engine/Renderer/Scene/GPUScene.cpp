@@ -2,7 +2,7 @@
 
 #include "Engine/Renderer/Scene/GPUScene.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 

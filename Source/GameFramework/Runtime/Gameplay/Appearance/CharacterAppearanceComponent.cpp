@@ -326,6 +326,7 @@ namespace sw
         , _bodyProportion{}
         , _listShapeMorph{}
         , _bodyShapeSet{}
+        , _footLift{ 0.0f }
         , _shapeReload{}
         , _rig{}
         , _socketCache{}
@@ -826,6 +827,11 @@ namespace sw
         return -1;
     }
 
+    const AppearanceDatabase* CharacterAppearanceComponent::findDatabase() const
+    {
+        return _pPreviewDatabase != nullptr ? _pPreviewDatabase : game::findSubsystem<AppearanceDatabase>();
+    }
+
     void CharacterAppearanceComponent::applyBodyShapes( SkeletalMeshComponent& body )
     {
         const ResolvedAppearance& resolved = _state.getResolved();
@@ -850,11 +856,13 @@ namespace sw
         {
             SW_LOG_ERROR_ID( "CharacterAppearance.AppearanceDrivesBodyShape", "Appearance '%#' drives %# body shape axes but its body part has no 'bodyShapes' - the sliders do nothing", _presetID.c_str(), static_cast<uint32>( listValue.size() ) );
         }
+        _footLift = 0.0f;
         if ( _bodyShapeSet != nullptr )
         {
             string error;
             if ( _bodyShapeSet->evaluate( vector_reference<const BodyShapeValue>( listValue.data(), listValue.size() ), _listShapeMorph, _bodyProportion, &error ) == false )
                 SW_LOG_ERROR_ID( "CharacterAppearance.AppearanceBodyShapeAxes", "Appearance '%#' body shape axes: %#", _presetID.c_str(), error.c_str() );
+            _footLift = _bodyShapeSet->computeFootLift( vector_reference<const BodyShapeValue>( listValue.data(), listValue.size() ) );
         }
         // 암묵 스켈레톤은 몸을 입기 전이다 — 몸 스켈레톤이 정해진 뒤에만 견준다.
         if ( body.hasDataSkeleton() )

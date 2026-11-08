@@ -621,6 +621,11 @@
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdPlugin.AddSkinLayer" source="Add layer">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdPlugin.AddSlot" source="Add slot">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
@@ -641,9 +646,59 @@
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdPlugin.BodyChannelMapped" source="mapped">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.BodyChannelMissing" source="no mapping">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.BodyChannelUnsupported" source="unsupported">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.BodyChannels" source="Body channels">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.BodyChannelsEmpty" source="No body channels. Sliders, body profiles and equipment set them.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.BodyDynamics" source="Body dynamics preview">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.BodyDynamicsNoProfile" source="The preview body has no body profile. Pick a preset with bodyProfile.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.BodySlotVisibility" source="Slot visibility">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.BodyTab" source="Body">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdPlugin.Check" source="Check">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.ClearSmears" source="Clear smears">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPlugin.ClearTarget" source="Clear target">
@@ -659,6 +714,31 @@
 		<entry key="EdPlugin.ClosedReports" source="Closed reports">
 			<origins>
 				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.ColumnAlias" source="Alias">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.ColumnDyeChannels" source="Dye channels">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.ColumnDyeable" source="Dyeable">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.ColumnGroups" source="Groups">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.ColumnSection" source="Section">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPlugin.Connect" source="Connect">
@@ -712,6 +792,16 @@
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdPlugin.DyeSections" source="Dye sections">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.DyeSectionsEmpty" source="No mesh sections. List sections with aliases in the item visual.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdPlugin.Edit" source="Edit">
 			<origins>
 				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
@@ -727,7 +817,22 @@
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdPlugin.EyeLight" source="Light at the eye">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdPlugin.FitCheckViewOnly" source="Fit check (view only)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.FluidWetness" source="Tears and saliva">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.FootLift" source="Foot lift (m)">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
@@ -745,6 +850,56 @@
 		<entry key="EdPlugin.Invert" source="Invert">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.JiggleDisplacement" source="Jiggle (m)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.LayerMirror" source="Mirror">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.LayerOffset" source="Offset">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.LayerOffsetTooltip" source="Skin UV of the layer centre">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.LayerOpacity" source="Opacity">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.LayerOpacityTooltip" source="How strongly the layer covers the skin">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.LayerRotation" source="Rotation">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.LayerRotationTooltip" source="Rotation of the layer in degrees">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.LayerScale" source="Scale">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.LayerScaleTooltip" source="Skin UV size one layer covers">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPlugin.LiftSanction" source="Lift sanction">
@@ -836,6 +991,16 @@
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdPlugin.MoveDown" source="Down">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.MoveUp" source="Up">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdPlugin.Name" source="Name">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
@@ -846,6 +1011,11 @@
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.No" source="No">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPlugin.NoCustomizationSchemaForThisSelectionLoadThe"
@@ -942,6 +1112,16 @@
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdPlugin.PreviewHit" source="Hit">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.PupilSize" source="Pupil size">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdPlugin.PutLiveEvent" source="Put live event">
 			<origins>
 				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
@@ -1000,6 +1180,11 @@
 		<entry key="EdPlugin.RemoveNotice" source="Remove notice">
 			<origins>
 				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.RemoveSkinLayer" source="Remove">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPlugin.Rename" source="Rename">
@@ -1087,6 +1272,16 @@
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdPlugin.SkinLayers" source="Skin layers">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.SkinLayersEmpty" source="No skin layers. Add makeup or a tattoo from the list above.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdPlugin.SlidersColoursAndChoicesOfTheSchemaAre"
 		       source="Sliders, colours and choices of the schema are in the Preview tab (the body updates when you release a slider).">
 			<origins>
@@ -1094,6 +1289,11 @@
 			</origins>
 		</entry>
 		<entry key="EdPlugin.Slots" source="Slots">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.SmearDilution" source="Makeup smear">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
@@ -1167,6 +1367,11 @@
 			</origins>
 		</entry>
 		<entry key="EdPlugin.WhyDoesItLookLikeThisRules" source="Why does it look like this? (rules)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Yes" source="Yes">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>

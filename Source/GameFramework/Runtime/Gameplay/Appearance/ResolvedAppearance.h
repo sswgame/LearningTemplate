@@ -15,6 +15,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceTypes.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/ItemVisual.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/SkinLayer.h"
 
 namespace sw
 {
@@ -115,6 +116,25 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 굽기에 넘길 피부 층 하나입니다. 종류의 값(마스크 · 섞기 · 덮어쓰기 · 경계)과 고른 값(전송 정밀도, 견본으로 맞춘 색)을 합친 것입니다. */
+    struct ResolvedSkinLayer
+    {
+        SkinLayerValue _value{};
+        float2         _regionMin{};
+        float2         _regionMax{ 1.0f, 1.0f };
+        hashed_string  _mask{};
+        float32        _roughness{ 0.5f };
+        float32        _roughnessWeight{ 0.0f };
+        float32        _metallic{ 0.0f };
+        float32        _metallicWeight{ 0.0f };
+        float32        _smearResistance{ 0.0f };
+        SkinLayerBlend _blend{ SkinLayerBlend::Normal };
+        uint8          _bPlaceable{ SW_FALSE };
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 꾸미기 부착물 하나(조준경, 보석, 데칼)입니다. 소켓은 한 이름 공간 안의 이름입니다(`MainHand.Rail`). */
     struct ResolvedAttachment
     {
@@ -192,12 +212,14 @@ namespace sw
         vector<ResolvedSocketSource>     _listSocketSource{};
         vector<AppearanceSocketOverride> _listSocketOverride{};
         vector<ResolvedDetachedPart>     _listDetachedPart{};
+        vector<ResolvedSkinLayer>        _listSkinLayer{}; ///< 그릴 피부 층(숨긴 층 · 모르는 층은 빠진다) — 굽기 순서
         vector<hashed_string>            _listHiddenRegion{};
         vector<AppearanceTraceEntry>     _listTrace{};
         hashed_string                    _presetID{};
         hashed_string                    _bodyType{};
         hashed_string                    _bodyShape{};
         hashed_string                    _face{};
+        hashed_string                    _bodyProfile{}; ///< 몸 프로필 id(지글 · 주름 · 동공 · 체액 — 외형 컴포넌트가 리그 · 얼굴 · 표면에 건다)
         uint64                           _hash{ 0 };
         uint64                           _meshHash{ 0 };
 

@@ -1,7 +1,7 @@
 // MaterialLibraryTest — 외형 머티리얼 라이브러리(Content/engine/materials/library)의 모든 프리셋이 읽히고, 갈래 규칙(정렬 · 블렌드 · 엽 조합)을 지키는지(nogpu).
 #include "pch.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Testing/TestFramework.h"

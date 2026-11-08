@@ -5,7 +5,7 @@
  */
 #include "pch.h"
 
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Character/PoseModifier/PoseModifierComponent.h"

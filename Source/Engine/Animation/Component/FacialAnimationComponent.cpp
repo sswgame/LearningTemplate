@@ -17,6 +17,7 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -106,6 +107,7 @@ namespace sw
         GameObject*                pOwner    = skeletalMesh.getOwner();
         SkeletalAnimatorComponent* pAnimator = ( pOwner != nullptr ) ? pOwner->getComponent<SkeletalAnimatorComponent>() : nullptr;
         _owner._animator                     = TComponentHandle<SkeletalAnimatorComponent>{ pAnimator };
+        _owner.pushWrinkles( skeletalMesh );
     }
 
     void FacialAnimationBinding::onAnimationMeshDetached( SkeletalMeshComponent& skeletalMesh )
@@ -131,6 +133,11 @@ namespace sw
         , _listEyeBone{}
         , _listTrackToRigViseme{}
         , _listScratchVisemeWeight{}
+        , _pWrinkleMap{}
+        , _listScratchExpressionName{}
+        , _listScratchExpressionWeight{}
+        , _wrinkleWeights{}
+        , _pushedWrinkleWeights{}
         , _animator{}
         , _pSkeletalMesh{ nullptr }
         , _pBoundMesh{ nullptr }
@@ -537,15 +544,70 @@ namespace sw
         return bSpeakingVisemes || bBlinking || bGazing;
     }
 
+    void FacialAnimationComponent::setWrinkleMap( shared_ptr<const WrinkleMap> pMap )
+    {
+        _pWrinkleMap = std::move( pMap );
+        if ( _pWrinkleMap == nullptr )
+            return;
+        vector<hashed_string> listName;
+        for ( const FacialPose& pose : getFacialRig().getExpressions() )
+            listName.push_back( pose._name );
+        vector<hashed_string> listMissing;
+        if ( _pWrinkleMap->checkExpressions( span<const hashed_string>( listName.data(), listName.size() ), &listMissing ) )
+            return;
+        for ( const hashed_string& missing : listMissing )
+            SW_LOG_ERROR_ID( "Facial.WrinkleExpressionUnknown", "Facial rig '%#': wrinkle source expression '%#' is not one of its expressions - it adds nothing", getFacialRigPath().c_str(), missing.c_str() );
+    }
+
+    void FacialAnimationComponent::computeWrinkles( const SkeletalAnimatorComponent* pAnimator, bool bDriving )
+    {
+        if ( _pWrinkleMap == nullptr || bDriving == false )
+        {
+            _wrinkleWeights = WrinkleWeights{};
+            return;
+        }
+        const vector<FacialPose>& listExpression = getFacialRig().getExpressions();
+        _listScratchExpressionName.resize( listExpression.size() );
+        _listScratchExpressionWeight.resize( listExpression.size() );
+        for ( size_t poseIndex = 0; poseIndex < listExpression.size(); ++poseIndex )
+        {
+            _listScratchExpressionName[poseIndex]   = listExpression[poseIndex]._name;
+            _listScratchExpressionWeight[poseIndex] = computeExpressionWeight( poseIndex, pAnimator );
+        }
+        _pWrinkleMap->evaluate( span<const hashed_string>( _listScratchExpressionName.data(), _listScratchExpressionName.size() ),
+                                span<const float32>( _listScratchExpressionWeight.data(), _listScratchExpressionWeight.size() ), _wrinkleWeights );
+    }
+
+    void FacialAnimationComponent::pushWrinkles( SkeletalMeshComponent& skeletalMesh )
+    {
+        if ( _wrinkleWeights._maskA == _pushedWrinkleWeights._maskA && _wrinkleWeights._maskB == _pushedWrinkleWeights._maskB )
+            return;
+        // 외형의 표면 상태(`CharacterSurfaceBinding::acquireInstance`)와 같은 인스턴스를 나눈다 — 있으면 그것, 없으면 메시 머티리얼로 하나 만든다.
+        // shortcut: 메시의 주 머티리얼 인스턴스 하나에만 넣는다 — 얼굴이 따로 구간 머티리얼이면 구간 인스턴스로 넓힌다.
+        shared_ptr<MaterialInstance> instance = skeletalMesh.getMaterialInstance();
+        if ( instance == nullptr && skeletalMesh.getMaterial() != nullptr )
+        {
+            instance = MaterialInstance::create( skeletalMesh.getMaterial() );
+            skeletalMesh.setMaterialInstance( instance );
+        }
+        if ( instance == nullptr )
+            return;
+        instance->setVectorParameter( hashed_string( WrinkleMap::kMaskAParameter ), _wrinkleWeights._maskA );
+        instance->setVectorParameter( hashed_string( WrinkleMap::kMaskBParameter ), _wrinkleWeights._maskB );
+        _pushedWrinkleWeights = _wrinkleWeights;
+    }
+
     void FacialAnimationComponent::applyFace( SkeletalMeshComponent& skeletalMesh )
     {
         refreshBindings( skeletalMesh );
-        if ( isDrivingFace() == false )
+        const bool                       bDriving  = isDrivingFace();
+        const SkeletalAnimatorComponent* pAnimator = findAnimator( &skeletalMesh );
+        computeWrinkles( pAnimator, bDriving );
+        if ( bDriving == false )
             return;
 
         // 표정 — 명시 가중치 + 같은 오브젝트 애니메이터의 같은 이름 커브(애니메이터의 시간 단계가 이미 이번 프레임 커브를 냈다).
-        const SkeletalAnimatorComponent* pAnimator      = findAnimator( &skeletalMesh );
-        const vector<FacialPose>&        listExpression = getFacialRig().getExpressions();
+        const vector<FacialPose>& listExpression = getFacialRig().getExpressions();
         for ( size_t poseIndex = 0; poseIndex < listExpression.size(); ++poseIndex )
         {
             addPose( skeletalMesh, _listExpressionTarget[poseIndex], listExpression[poseIndex], computeExpressionWeight( poseIndex, pAnimator ) );

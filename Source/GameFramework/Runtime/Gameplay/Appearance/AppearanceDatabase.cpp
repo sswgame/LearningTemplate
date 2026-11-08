@@ -35,6 +35,8 @@ namespace sw
                 {"customization.xml", SW_FALSE},
                 {        "rules.xml", SW_FALSE},
                 {      "presets.xml", SW_FALSE},
+                { "bodyprofiles.xml", SW_FALSE},
+                {   "skinlayers.xml", SW_FALSE},
             };
 
             static bool isNotFound( const string& lastError ) { return string_view( lastError.c_str(), lastError.size() ).find( "not found" ) != string_view::npos; }
@@ -51,6 +53,8 @@ namespace sw
         , _schemas{}
         , _rules{}
         , _presets{}
+        , _bodyProfiles{}
+        , _skinLayers{}
         , _report{}
         , _pItemCatalog{ nullptr }
         , _reloadedMulticast{}
@@ -90,6 +94,8 @@ namespace sw
         _schemas.clear();
         _rules.clear();
         _presets.clear();
+        _bodyProfiles.clear();
+        _skinLayers.clear();
         _report.clear();
         _pItemCatalog = nullptr;
         ++_revision;
@@ -224,6 +230,10 @@ namespace sw
             return _rules.loadFromXML( root, _report, sourceName );
         if ( StringUtil::equals( pName, "CharacterAppearanceCatalog" ) )
             return _presets.loadFromXML( root, _report, sourceName );
+        if ( StringUtil::equals( pName, "BodyProfileCatalog" ) )
+            return _bodyProfiles.loadFromXML( root, _report, sourceName );
+        if ( StringUtil::equals( pName, "SkinLayerCatalog" ) )
+            return _skinLayers.loadFromXML( root, _report, sourceName );
         _report.addErrorWithID( "Appearance.RootUnknown", "%#: unknown appearance data root <%#>", sourceName, pName );
         return false;
     }
@@ -239,6 +249,11 @@ namespace sw
         validateItems();
         validateRules( pListKnownBodyRegion );
         validatePresets();
+        for ( const SkinLayerDef& layer : _skinLayers.getLayers() )
+        {
+            if ( layer._palette.empty() == false && _schemas.findPalette( layer._palette ) == nullptr )
+                _report.addErrorWithID( "Appearance.PaletteUnknown", "skin layer '%#' names unknown palette '%#'", layer._id.c_str(), layer._palette.c_str() );
+        }
         ++_revision;
         return _report.hasErrors() == false;
     }
@@ -363,8 +378,11 @@ namespace sw
         {
             if ( visual._occupancy.empty() == false && _slotCatalog.findOccupancy( visual._occupancy ) == nullptr )
                 _report.addErrorWithID( "Appearance.OccupancyUnknown", "visual '%#' names unknown occupancy '%#'", visual._id.c_str(), visual._occupancy.c_str() );
-            if ( visual._customization.empty() == false && _schemas.findSchema( visual._customization ) == nullptr )
+            const CustomizationSchemaDef* pVisualSchema = visual._customization.empty() ? nullptr : _schemas.findSchema( visual._customization );
+            if ( visual._customization.empty() == false && pVisualSchema == nullptr )
                 _report.addErrorWithID( "Appearance.SchemaUnknown", "visual '%#' names unknown customization schema '%#'", visual._id.c_str(), visual._customization.c_str() );
+            if ( pVisualSchema != nullptr )
+                validateSectionTags( *pVisualSchema, visual, string_view( visual._id.c_str(), visual._id.size() ) );
             if ( pListKnownBodyRegion == nullptr )
                 continue;
             for ( const AppearancePartDef& part : visual._listPart )
@@ -429,6 +447,25 @@ namespace sw
         }
     }
 
+    void AppearanceDatabase::validateSectionTags( const CustomizationSchemaDef& schema, const ItemVisualDef& visual, string_view where )
+    {
+        for ( const CustomizationParamDef& param : schema._listParameter )
+        {
+            for ( const CustomizationDriveDef& drive : param._listDrive )
+            {
+                for ( const vector<hashed_string>* pList : { &drive._listInclude, &drive._listExclude } )
+                {
+                    for ( const hashed_string& tag : *pList )
+                    {
+                        if ( visual.hasSectionTag( tag ) == false )
+                            _report.addErrorWithID( "Appearance.SectionTagUnknown", "%#: schema '%#' parameter '%#' names section alias/group '%#' visual '%#' does not list", where, schema._id.c_str(), param._name.c_str(),
+                                                    tag.c_str(), visual._id.c_str() );
+                    }
+                }
+            }
+        }
+    }
+
     void AppearanceDatabase::validateItemValues( const CustomizationValueSet& values, const hashed_string& schemaID, const utf8* pWhere )
     {
         if ( values.isEmpty() )
@@ -467,7 +504,21 @@ namespace sw
             const string where = string( "preset '" ) + preset._id.c_str() + "'";
             if ( preset._schema.empty() == false && _schemas.findSchema( preset._schema ) == nullptr )
                 _report.addErrorWithID( "Appearance.SchemaUnknown", "%# names unknown schema '%#'", where, preset._schema.c_str() );
+            if ( preset._bodyProfile.empty() == false && _bodyProfiles.findProfile( preset._bodyProfile ) == nullptr )
+                _report.addErrorWithID( "Appearance.BodyProfileUnknown", "%# names unknown body profile '%#'", where, preset._bodyProfile.c_str() );
+            for ( const SkinLayerValue& layer : preset._listSkinLayer )
+            {
+                if ( _skinLayers.findLayer( layer._layer ) == nullptr )
+                    _report.addErrorWithID( "Appearance.SkinLayerUnknown", "%# names unknown skin layer '%#'", where, layer._layer.c_str() );
+            }
             const CustomizationSchemaDef* pSchema = _schemas.findSchema( merged._schema );
+            // 몸 외형의 구간 별칭도 캐릭터 스키마의 머티리얼 드라이브(피부 화장 · 홍채 · 머리 색)가 고른다.
+            for ( const hashed_string& bodyVisual : merged._listBody )
+            {
+                const ItemVisualDef* pBody = _visuals.findVisual( bodyVisual );
+                if ( pSchema != nullptr && pBody != nullptr )
+                    validateSectionTags( *pSchema, *pBody, where );
+            }
             for ( const CharacterAppearanceValueDef& value : preset._listValue )
             {
                 const CustomizationParamDef* pParam = pSchema != nullptr ? pSchema->findParameter( value._parameter ) : nullptr;

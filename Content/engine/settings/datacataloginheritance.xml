@@ -107,7 +107,23 @@
 			</Field>
 			<Field name="State" key="name"/>
 			<Field name="DamageStage" key="name"/>
+			<Field name="BodyChannel" key="name"/>
 		</Entry>
+	</Catalog>
+	<Catalog root="BodyProfileCatalog">
+		<Entry name="BodyProfile" key="id">
+			<Field name="BodyChannel" key="name"/>
+			<Field name="Jiggle" key="group"/>
+			<Field name="ActionScale" key="tag"/>
+			<Field name="Wrinkle" key="region">
+				<Field name="Source" key="expression"/>
+			</Field>
+			<Field name="Pupil"/>
+			<Field name="Fluid" key="name"/>
+		</Entry>
+	</Catalog>
+	<Catalog root="SkinLayerCatalog">
+		<Entry name="SkinLayer" key="id"/>
 	</Catalog>
 	<Catalog root="EquipmentSetCatalog">
 		<Entry name="Set" key="id"/>

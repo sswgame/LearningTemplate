@@ -2,7 +2,7 @@
 
 #include "Engine/Renderer/Frame/Packet/RenderPacketSceneCollector.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Engine/Animation/Scene/AnimationSystem.h"
