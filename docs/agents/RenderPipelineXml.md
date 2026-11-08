@@ -201,7 +201,7 @@ TAA · 모션 블러가 읽는 물체별 화면 속도(이번 UV - 지난 UV)는
 
 - 나누지 않는 것: 깊이 형식(장면 깊이는 다음 프레임의 깊이 히스토리가 읽는다 · 그림자 맵), `_loadOp="Load"`(프레임을 넘어 잇는다), TAA 출력, 처음 쓸 때 만드는 효과 출력(그 주인 · 별칭은 자기 텍스처다).
 - 꺼지면 원본을 가리키는 효과(`kBypassesToSource`)는 원본과 출력을 한 구간으로 묶는다. NaN 감시(`-gv_nanCheck`)를 켠 실행은 나누지 않는다. 비교는 `-gv_transientAliasing=0`.
-- 서술이 다른 첨부를 한 힙에 겹치는 앨리어싱(DX12 placed resource · Vulkan 메모리 공유)은 아직 없다 — 이 계획의 주인 · 별칭 묶음을 받아 쓰는 다음 층이다.
+- 서술이 다른 첨부도 능력 `_bPlacedTextures`(DX12) 가 있으면 힙 하나에 겹쳐 놓는다 — 첫 쓰기가 지우기(`_loadOp="Clear"`)이고 RW 가 아닌 칸만, 백엔드의 크기 · 정렬로 수명이 겹치지 않는 바이트를 나눈다(`RenderGraphMemoryPlan`, `FrameViewResources::placeTransients`). 놓인 텍스처의 쓰기 전이 앞에 앨리어싱 배리어가 든다. Vulkan · DX11 · GL · WebGPU 는 같은 서술끼리만 나눈다(Vulkan 은 해제 큐의 메모리 참조 세기가 들 때까지).
 
 ## 선택 스테이지를 쓰는 셰이더
 
