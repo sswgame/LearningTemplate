@@ -48,7 +48,7 @@ namespace sw
         void                     endEventMarker() override;
         void                     setPipelineState( RHIPipelineStateHandle pso ) override;
         void                     setComputePipelineStateNative( RHIPipelineStateHandle pso ) override;
-        const utf8*              getContextBackendName() const override { return "OpenGL"; }
+        IRHIDevice&              getContextDevice() const override;
         RHIRenderPassBeginResult beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo ) override;
         void                     endRenderPassNative() override;
         void                     setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride = 4, uint32 offset = 0 ) override;

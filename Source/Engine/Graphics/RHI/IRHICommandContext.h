@@ -7,6 +7,8 @@
 
 namespace sw
 {
+    class IRHIDevice;
+
     /** @brief 렌더 패스를 시작하려고 한 결과입니다(`IRHICommandContext::beginRenderPassNative`). */
     enum class RHIRenderPassBeginResult : uint8
     {
@@ -71,8 +73,8 @@ namespace sw
         void uavBarrier( RHIBufferHandle buffer ) final;
 
     protected:
-        /** @brief 진단 줄에 붙일 백엔드 이름입니다("DX12" 등). */
-        virtual const utf8* getContextBackendName() const = 0;
+        /** @brief 이 문맥을 만든 디바이스입니다. 드로우 진단(`IRHIDevice::getDrawDiagnostics`)을 거기서 받는다 — 진단 횟수는 디바이스 멤버다. */
+        virtual IRHIDevice& getContextDevice() const = 0;
         /** @brief 네이티브 패스를 엽니다. 열린 패스는 기반이 이미 닫았다. 상태 전이는 여기서 패스를 열기 전에 끝낸다. */
         virtual RHIRenderPassBeginResult beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo ) = 0;
         /** @brief 열린 네이티브 패스를 닫습니다. 기반이 열린 패스가 있을 때만 부른다. */

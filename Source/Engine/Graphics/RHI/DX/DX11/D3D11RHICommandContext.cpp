@@ -14,6 +14,11 @@
 namespace sw
 {
 
+    IRHIDevice& D3D11RHICommandContext::getContextDevice() const
+    {
+        return *_pDevice;
+    }
+
     D3D11RHICommandContext::D3D11RHICommandContext( D3D11RHIDevice* pDevice, ID3D11DeviceContext* pContext )
         : _pDevice{ pDevice }
         , _pContext{ pContext }
@@ -344,7 +349,7 @@ namespace sw
 
         // PSO 가 읽는 슬롯에만 버퍼를 건다(정점 입력이 없는 셰이더는 레이아웃이 비어 아무 슬롯도 읽지 않는다). 건 버퍼가 부서졌으면(세대가 달라 풀리지 않는다)
         // 드로우를 버린다 — IASetVertexBuffers 를 건너뛰면 직전 드로우의 버퍼로 그린다.
-        const bool bBound = _pState->_geometry.bindVertexBuffersForDraw( "DX11", pPSO->_vertexLayout, [this]( uint32 slot, const RHIBufferBinding& binding )
+        const bool bBound = _pState->_geometry.bindVertexBuffersForDraw( _pDevice->getDrawDiagnostics(), pPSO->_vertexLayout, [this]( uint32 slot, const RHIBufferBinding& binding )
         {
             ID3D11Buffer* const pVb = _pDevice->resolveBuffer( binding._buffer );
             if ( pVb == nullptr )
@@ -599,7 +604,7 @@ namespace sw
 
     bool D3D11RHICommandContext::bindIndexBufferForDraw()
     {
-        return _pState->_geometry.bindIndexBufferForDraw( "DX11", [this]( const RHIBufferBinding& binding )
+        return _pState->_geometry.bindIndexBufferForDraw( _pDevice->getDrawDiagnostics(), [this]( const RHIBufferBinding& binding )
         {
             ID3D11Buffer* const pIb = _pDevice->resolveBuffer( binding._buffer );
             if ( pIb == nullptr )

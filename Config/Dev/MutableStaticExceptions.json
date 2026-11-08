@@ -487,16 +487,6 @@
             "_why": "엔진 등록 목록(getGlobal) — 서브시스템 · 서비스 칸의 정적 등록자가 엔진보다 먼저 단다(정적 등록 틀과 같은 자리)."
         },
         {
-            "_path": "Source/Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.cpp",
-            "_name": "s_mapBackendToCount",
-            "_why": "RHI 진단 바닥(설계 남김) — 잘못된 드로우 보고 상한을 백엔드 이름마다 센다. 부르는 곳(RHIGeometryBindings 템플릿 · 백엔드 문맥)이 장치를 받지 않아, 장치 멤버로 옮기려면 네 백엔드의 기록 경로에 장치를 실어야 한다."
-        },
-        {
-            "_path": "Source/Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.cpp",
-            "_name": "s_mutex",
-            "_why": "RHI 진단 바닥(설계 남김) — 잘못된 드로우 보고 상한을 백엔드 이름마다 센다. 부르는 곳(RHIGeometryBindings 템플릿 · 백엔드 문맥)이 장치를 받지 않아, 장치 멤버로 옮기려면 네 백엔드의 기록 경로에 장치를 실어야 한다."
-        },
-        {
             "_path": "Source/Engine/Graphics/RHI/RHIBackendRegistry.cpp",
             "_name": "s_pHead",
             "_why": "침입형 정적 등록 머리 — 다른 TU · DLL 의 정적 등록자가 정적 초기화 때(할당 · 엔진보다 먼저) 자기를 잇는다. RegistrationList 로 옮기면 그 목록 자체가 정적 초기화 순서에 걸린다(머리 포인터는 상수 초기화라 순서와 무관하다). 배포 정적 링크의 RHI 백엔드 등록자다."

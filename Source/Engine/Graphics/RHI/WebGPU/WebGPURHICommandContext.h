@@ -90,7 +90,7 @@ namespace sw
         void writeBreadcrumb( uint32 markerID ) override;
 
     protected:
-        const utf8*              getContextBackendName() const override { return "WebGPU"; }
+        IRHIDevice&              getContextDevice() const override;
         RHIRenderPassBeginResult beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo ) override;
         void                     endRenderPassNative() override;
         void                     drawNative( uint32 vertexCount, uint32 startVertex ) override;
