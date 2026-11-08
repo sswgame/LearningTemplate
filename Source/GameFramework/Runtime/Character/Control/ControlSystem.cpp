@@ -207,7 +207,11 @@ namespace sw
         }
         if ( _bRecording == SW_TRUE )
             recordIntents( manager );
-        ++_tick;
+        // 틱은 시뮬레이션 시간이다 — 게임 시간이 멈춘 프레임(정지 · 시나리오 시작 전 붙잡기, deltaTime 0)에는 세지 않는다. 물리 · 캐릭터는 멈춰 있는데
+        // 틱만 오르면 틱의 함수로 자리를 내는 바닥(`TickedPathMoverComponent`)이 혼자 앞서 가 위의 캐릭터가 가장자리에 내려앉았다(붙잡힌 프레임 수에 따라 갈렸다).
+        // 언리얼 GameState 의 서버 월드 시각도 일시 정지 동안 흐르지 않는다.
+        if ( deltaTime > 0.0f )
+            ++_tick;
     }
 
     void ControlSystem::applyQueuedPossess( GameObjectManager& manager )
