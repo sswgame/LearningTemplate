@@ -155,14 +155,14 @@ namespace sw
         return nullopt;
     }
 
-    int32 FacialRig::findVisemeIndex( const hashed_string& name ) const
+    optional<uint32> FacialRig::findVisemeIndex( const hashed_string& name ) const
     {
         for ( size_t poseIndex = 0; poseIndex < _listViseme.size(); ++poseIndex )
         {
             if ( _listViseme[poseIndex]._name == name )
-                return static_cast<int32>( poseIndex );
+                return static_cast<uint32>( poseIndex );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 } // namespace sw
 

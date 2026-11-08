@@ -637,14 +637,14 @@ namespace sw
         _contentID       = IdentityToken::make();
     }
 
-    int32 Mesh::findMorphTargetIndex( const hashed_string& name ) const
+    optional<uint32> Mesh::findMorphTargetIndex( const hashed_string& name ) const
     {
         for ( size_t targetIndex = 0; targetIndex < _listMorphTarget.size(); ++targetIndex )
         {
             if ( _listMorphTarget[targetIndex]._name == name )
-                return static_cast<int32>( targetIndex );
+                return static_cast<uint32>( targetIndex );
         }
-        return -1;
+        return nullopt;
     }
 
     void Mesh::setVertexAnimation( shared_ptr<const MeshVertexAnimation> animation )

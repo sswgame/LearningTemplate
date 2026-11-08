@@ -108,10 +108,10 @@ namespace sw
                 const uint32 vertexCount = source.getVertexCount();
                 for ( const BodyMorphWeight& weight : listMorphWeight )
                 {
-                    const int32 targetIndex = source.findMorphTargetIndex( weight._morph );
-                    if ( targetIndex < 0 || weight._weight == 0.0f )
+                    const optional<uint32> targetIndex = source.findMorphTargetIndex( weight._morph );
+                    if ( targetIndex.has_value() == false || weight._weight == 0.0f )
                         continue;
-                    for ( const MeshMorphDelta& delta : source.getMorphTargets()[static_cast<size_t>( targetIndex )]._listDelta )
+                    for ( const MeshMorphDelta& delta : source.getMorphTargets()[*targetIndex]._listDelta )
                     {
                         if ( delta._vertexIndex >= vertexCount )
                             continue;

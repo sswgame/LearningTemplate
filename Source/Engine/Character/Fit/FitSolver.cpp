@@ -151,9 +151,9 @@ namespace sw
                     vector<uint16> listHiddenIndex;
                     for ( const hashed_string& region : listHiddenRegion )
                     {
-                        const int32 regionIndex = tables.findRegionIndex( region );
-                        if ( regionIndex >= 0 )
-                            listHiddenIndex.push_back( static_cast<uint16>( regionIndex ) );
+                        const optional<uint32> regionIndex = tables.findRegionIndex( region );
+                        if ( regionIndex.has_value() )
+                            listHiddenIndex.push_back( static_cast<uint16>( *regionIndex ) );
                     }
                     for ( uint32 inner = 0; inner < partCount; ++inner )
                     {

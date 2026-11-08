@@ -28,8 +28,8 @@ namespace sw
     {
         struct FacialAnimationInternal
         {
-            /** @brief 이름들을 그리는 메시의 타깃 번호로 바꿉니다(없으면 -1 — 검증이 이미 알렸다). */
-            static void mapTargets( const SkeletalMeshComponent& skeletalMesh, const FacialPose& pose, vector<int32>& outListIndex )
+            /** @brief 이름들을 그리는 메시의 타깃 번호로 바꿉니다(없으면 비어 있다 — 검증이 이미 알렸다). */
+            static void mapTargets( const SkeletalMeshComponent& skeletalMesh, const FacialPose& pose, vector<optional<uint32>>& outListIndex )
             {
                 outListIndex.clear();
                 for ( const FacialTargetWeight& target : pose._listTarget )
@@ -481,14 +481,14 @@ namespace sw
         }
     }
 
-    void FacialAnimationComponent::addPose( SkeletalMeshComponent& skeletalMesh, const vector<int32>& listTargetIndex, const FacialPose& pose, float32 weight ) const
+    void FacialAnimationComponent::addPose( SkeletalMeshComponent& skeletalMesh, const vector<optional<uint32>>& listTargetIndex, const FacialPose& pose, float32 weight ) const
     {
         if ( weight == 0.0f )
             return;
         for ( size_t targetIndex = 0; targetIndex < listTargetIndex.size() && targetIndex < pose._listTarget.size(); ++targetIndex )
         {
-            if ( listTargetIndex[targetIndex] >= 0 )
-                skeletalMesh.addMorphWeight( static_cast<uint32>( listTargetIndex[targetIndex] ), pose._listTarget[targetIndex]._weight * weight );
+            if ( listTargetIndex[targetIndex].has_value() )
+                skeletalMesh.addMorphWeight( *listTargetIndex[targetIndex], pose._listTarget[targetIndex]._weight * weight );
         }
     }
 
@@ -546,28 +546,28 @@ namespace sw
                 const LipSyncSettings& lipSync       = *_pLipSync;
                 const float32          windowSeconds = 1.0f / MathUtil::max( lipSync._frameRate, 1.0f );
                 const float32          openness      = VisemeTrack::computeOpenness( VisemeTrack::computeRms( _listSpeechSample, _speechSampleRate, _speechTime, windowSeconds ), lipSync );
-                const int32            visemeIndex   = getFacialRig().findVisemeIndex( lipSync._fallbackViseme );
-                if ( visemeIndex >= 0 )
-                    addPose( skeletalMesh, _listVisemeTarget[static_cast<size_t>( visemeIndex )], listViseme[static_cast<size_t>( visemeIndex )], openness );
+                const optional<uint32> visemeIndex   = getFacialRig().findVisemeIndex( lipSync._fallbackViseme );
+                if ( visemeIndex.has_value() )
+                    addPose( skeletalMesh, _listVisemeTarget[*visemeIndex], listViseme[*visemeIndex], openness );
             }
             else
             {
                 _speechTrack.sample( _speechTime, _listScratchVisemeWeight );
                 for ( size_t trackViseme = 0; trackViseme < _listScratchVisemeWeight.size() && trackViseme < _listTrackToRigViseme.size(); ++trackViseme )
                 {
-                    const int32 visemeIndex = _listTrackToRigViseme[trackViseme];
-                    if ( visemeIndex >= 0 )
-                        addPose( skeletalMesh, _listVisemeTarget[static_cast<size_t>( visemeIndex )], listViseme[static_cast<size_t>( visemeIndex )],
+                    const optional<uint32> visemeIndex = _listTrackToRigViseme[trackViseme];
+                    if ( visemeIndex.has_value() )
+                        addPose( skeletalMesh, _listVisemeTarget[*visemeIndex], listViseme[*visemeIndex],
                                  _listScratchVisemeWeight[trackViseme] );
                 }
             }
         }
 
         // 깜빡임
-        for ( const int32 targetIndex : _listBlinkTarget )
+        for ( const optional<uint32>& targetIndex : _listBlinkTarget )
         {
-            if ( targetIndex >= 0 && _blinkAmount > 0.0f )
-                skeletalMesh.addMorphWeight( static_cast<uint32>( targetIndex ), _blinkAmount );
+            if ( targetIndex.has_value() && _blinkAmount > 0.0f )
+                skeletalMesh.addMorphWeight( *targetIndex, _blinkAmount );
         }
 
         applyGaze( skeletalMesh );

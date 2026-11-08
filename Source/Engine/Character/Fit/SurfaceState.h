@@ -19,6 +19,7 @@
 #include "Core/Container/span.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
@@ -70,8 +71,8 @@ namespace sw
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 채널을 더합니다(같은 이름은 바꿈). */
         void addChannel( const SurfaceChannelDef& channel );
-        /** @brief 이름의 채널 번호입니다. 없으면 -1 입니다. */
-        int32 findChannelIndex( const hashed_string& name ) const;
+        /** @brief 이름의 채널 번호입니다. 없으면 비어 있습니다. */
+        [[nodiscard]] optional<uint32> findChannelIndex( const hashed_string& name ) const;
         /** @brief 채널들입니다. */
         const vector<SurfaceChannelDef>& getChannels() const { return _listChannel; }
 

@@ -6,6 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/SubscriptionList.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
@@ -208,8 +209,8 @@ namespace sw
         const vector<float32>& getMorphWeights() const { return _listMorphWeight; }
         /** @brief 그리는 메시의 모프 타깃 수를 반환합니다. */
         uint32 getMorphTargetCount() const;
-        /** @brief 이름이 일치하는 모프 타깃 번호를 반환합니다(그리는 메시 기준). 없으면 -1 입니다. */
-        int32 findMorphTargetIndex( const hashed_string& targetName ) const;
+        /** @brief 이름이 일치하는 모프 타깃 번호를 반환합니다(그리는 메시 기준). 없으면 비어 있습니다. */
+        [[nodiscard]] optional<uint32> findMorphTargetIndex( const hashed_string& targetName ) const;
         /** @brief 가중치를 정합니다(범위 밖 번호는 무시합니다). 단계 함수 안(워커)에서 자기 유닛에만 씁니다. */
         void setMorphWeight( uint32 targetIndex, float32 weight );
         /** @brief 가중치를 더합니다(여러 작업이 한 타깃을 움직일 때 쓰며, 그릴 때 [0, 1] 로 제한합니다). */

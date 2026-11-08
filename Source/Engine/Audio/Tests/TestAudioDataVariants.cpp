@@ -213,10 +213,10 @@ SW_TEST_CASE( AudioDataVariantTest, MusicVariantMergesSegmentsByName )
     SW_EXPECT_NEAR( 90.0f, music._tempo, 0.0f );
     SW_EXPECT_TRUE( music._bus == hashed_string( "music" ) );
     SW_REQUIRE_EQUAL( 3u, static_cast<uint32>( music._listSegment.size() ) );
-    const AudioMusicSegmentDef& combat = music._listSegment[static_cast<size_t>( music.findSegmentIndex( hashed_string( "Combat" ) ) )];
+    const AudioMusicSegmentDef& combat = music._listSegment[music.findSegmentIndex( hashed_string( "Combat" ) ).value()];
     SW_EXPECT_EQUAL( 2u, combat._bars );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( combat._listLayer.size() ) ); // 물려받음
-    SW_EXPECT_TRUE( music.findSegmentIndex( hashed_string( "Boss" ) ) >= 0 );
+    SW_EXPECT_TRUE( music.findSegmentIndex( hashed_string( "Boss" ) ).has_value() );
 }
 
 /** @brief [AudioDataVariantTest] 소리 그래프 변형은 노드를 이름으로 합치고, 저장은 부모와 다른 칸만 쓴다 — 저장 → 다시 읽기가 같은 그래프다 */

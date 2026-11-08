@@ -14,6 +14,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -75,8 +76,8 @@ namespace sw
         const CharacterSurfaceState* findSurfaceState() const;
         /** @brief 잘린 영역에 올리는 표면 채널 이름입니다. */
         const hashed_string& getBloodChannel() const { return _bloodChannel; }
-        /** @brief 이름의 영역 번호를 반환합니다(테이블 순서). 없으면 -1 입니다. */
-        int32 findRegionIndex( const hashed_string& region ) const;
+        /** @brief 이름의 영역 번호를 반환합니다(테이블 순서). 없으면 비어 있습니다. */
+        [[nodiscard]] optional<uint32> findRegionIndex( const hashed_string& region ) const;
 
     private:
         /** @brief `_pieceLayer` 가 물리 레이어 표에 있는지 봅니다(`PhysicsNameValidation`). */

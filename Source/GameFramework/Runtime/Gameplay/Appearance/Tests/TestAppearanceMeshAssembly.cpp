@@ -87,9 +87,9 @@ SW_TEST_CASE( AppearanceMeshAssemblyTest, BakesBodyShapeThenMergesPartsIntoOneMe
     SW_REQUIRE_TRUE( AppearanceMeshPart::assemble( resolved, listPart, nullptr, CharacterBoneArray{}, listBaked, report ) );
     SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( listBaked.size() ) );
     SW_REQUIRE_TRUE( listBaked[0] != nullptr );
-    SW_EXPECT_TRUE( listBaked[1] == nullptr );                                              // 옷에는 그 이름의 모프가 없다 — 바꿀 것이 없어 원본을 그린다
-    SW_EXPECT_NEAR( 1.0f, listBaked[0]->getVertices()[0]._arrPosition[2], 1e-5f );          // 2 × 0.5 를 레스트에 구웠다
-    SW_EXPECT_FALSE( listBaked[0]->findMorphTargetIndex( hashed_string( "Heavy" ) ) >= 0 ); // 구운 모프는 사본에서 빠진다
+    SW_EXPECT_TRUE( listBaked[1] == nullptr );                                                     // 옷에는 그 이름의 모프가 없다 — 바꿀 것이 없어 원본을 그린다
+    SW_EXPECT_NEAR( 1.0f, listBaked[0]->getVertices()[0]._arrPosition[2], 1e-5f );                 // 2 × 0.5 를 레스트에 구웠다
+    SW_EXPECT_FALSE( listBaked[0]->findMorphTargetIndex( hashed_string( "Heavy" ) ).has_value() ); // 구운 모프는 사본에서 빠진다
 
     vector<MeshMergePart>           listMergePart;
     vector<CharacterLODSectionRule> listLODRule;

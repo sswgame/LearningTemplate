@@ -1484,9 +1484,9 @@ namespace sw
         const vector<float32>&       listCurveValue = _curves.getValues();
         for ( size_t curveIndex = 0; curveIndex < listCurveName.size(); ++curveIndex )
         {
-            const int32 targetIndex = skeletalMesh.findMorphTargetIndex( listCurveName[curveIndex] );
-            if ( targetIndex >= 0 )
-                skeletalMesh.addMorphWeight( static_cast<uint32>( targetIndex ), listCurveValue[curveIndex] );
+            const optional<uint32> targetIndex = skeletalMesh.findMorphTargetIndex( listCurveName[curveIndex] );
+            if ( targetIndex.has_value() )
+                skeletalMesh.addMorphWeight( *targetIndex, listCurveValue[curveIndex] );
         }
     }
 } // namespace sw

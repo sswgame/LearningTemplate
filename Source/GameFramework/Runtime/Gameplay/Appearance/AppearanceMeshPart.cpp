@@ -89,7 +89,7 @@ namespace sw
             {
                 for ( const BodyMorphWeight& weight : listWeight )
                 {
-                    if ( weight._weight != 0.0f && mesh.findMorphTargetIndex( weight._morph ) >= 0 )
+                    if ( weight._weight != 0.0f && mesh.findMorphTargetIndex( weight._morph ).has_value() )
                         return true;
                 }
                 return false;
@@ -108,14 +108,14 @@ namespace sw
                 bool           bValid = true;
                 for ( const hashed_string& region : resolved._listHiddenRegion )
                 {
-                    const int32 regionIndex = tables.findRegionIndex( region );
-                    if ( regionIndex < 0 )
+                    const optional<uint32> regionIndex = tables.findRegionIndex( region );
+                    if ( regionIndex.has_value() == false )
                     {
                         appendReportFormat( inoutReport, "hidden region '%#' is not in the body's fit tables", region.c_str() );
                         bValid = false;
                         continue;
                     }
-                    listHiddenIndex.push_back( static_cast<uint16>( regionIndex ) );
+                    listHiddenIndex.push_back( static_cast<uint16>( *regionIndex ) );
                 }
                 vector<uint16> listVertexRegion;
                 tables.assignRegions( body, bindBones, listVertexRegion );

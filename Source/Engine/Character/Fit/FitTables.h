@@ -155,8 +155,8 @@ namespace sw
 
         /** @brief 이름의 겹입니다. 없으면 nullptr 입니다. */
         const FitLayerDef* findLayer( const hashed_string& name ) const;
-        /** @brief 이름의 영역 번호입니다. 없으면 -1 입니다. */
-        int32 findRegionIndex( const hashed_string& name ) const;
+        /** @brief 이름의 영역 번호입니다. 없으면 비어 있습니다. */
+        [[nodiscard]] optional<uint32> findRegionIndex( const hashed_string& name ) const;
         /** @brief 이름의 프로필입니다. 없으면 nullptr 입니다. */
         const FitProfileDef* findProfile( const hashed_string& name ) const;
         /** @brief (안쪽, 바깥) 조합의 항목들을 테이블 순서로 채웁니다(비우고 채웁니다). */

@@ -824,9 +824,9 @@ namespace sw
         // 포즈 구동의 보정 모프는 이름이 그리는 메시의 모프 타깃과 같으면 그 가중치에 더한다(GPU 모프 풀이 스키닝 앞에서 적용한다). 기본 포즈 단계가 비운 뒤다.
         for ( const RigMorphWeight& morph : _instance.getMorphWeights() )
         {
-            const int32 targetIndex = skeletalMesh.findMorphTargetIndex( morph._name );
-            if ( targetIndex >= 0 )
-                skeletalMesh.addMorphWeight( static_cast<uint32>( targetIndex ), morph._weight );
+            const optional<uint32> targetIndex = skeletalMesh.findMorphTargetIndex( morph._name );
+            if ( targetIndex.has_value() )
+                skeletalMesh.addMorphWeight( *targetIndex, morph._weight );
         }
     }
 } // namespace sw

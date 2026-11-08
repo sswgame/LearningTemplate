@@ -139,7 +139,7 @@ namespace sw
         }
         for ( size_t channelIndex = 0; channelIndex < _listChannel.size(); ++channelIndex )
         {
-            if ( _listChannel[channelIndex].empty() || findChannelIndex( _listChannel[channelIndex] ) != static_cast<int32>( channelIndex ) )
+            if ( _listChannel[channelIndex].empty() || findChannelIndex( _listChannel[channelIndex] ) != static_cast<uint32>( channelIndex ) )
             {
                 SW_LOG_ERROR_ID( "LiveLinkFace.LiveLinkFaceLayout", "Live Link Face layout '%#': channel %# needs a unique, non-empty name", sourceLabel, channelIndex );
                 *this = LiveLinkFaceLayout{};
@@ -167,14 +167,14 @@ namespace sw
         return loadComposed( text, path, ResourceContext::forType( *StaticType() ).withAsset( assetID ) );
     }
 
-    int32 LiveLinkFaceLayout::findChannelIndex( const hashed_string& channel ) const
+    optional<uint32> LiveLinkFaceLayout::findChannelIndex( const hashed_string& channel ) const
     {
         for ( size_t channelIndex = 0; channelIndex < _listChannel.size(); ++channelIndex )
         {
             if ( _listChannel[channelIndex] == channel )
-                return static_cast<int32>( channelIndex );
+                return static_cast<uint32>( channelIndex );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     bool LiveLinkFaceMapping::loadFromXMLText( string_view xml, string_view sourceLabel, LiveLinkFaceLayout& outLayout )
@@ -217,7 +217,7 @@ namespace sw
             listSeen.push_back( expression._expression );
             for ( const LiveLinkFaceChannelWeight& channel : expression._listChannel )
             {
-                if ( layout.findChannelIndex( channel._channel ) < 0 )
+                if ( layout.findChannelIndex( channel._channel ).has_value() == false )
                 {
                     SW_LOG_ERROR_ID( "LiveLinkFace.LiveLinkFaceMapping3", "Live Link Face mapping '%#': expression '%#' names channel '%#' that the packet layout does not have", sourceLabel,
                                      expression._expression.c_str(), channel._channel.c_str() );
@@ -310,7 +310,7 @@ namespace sw
             input._expression = expression._expression;
             for ( const LiveLinkFaceChannelWeight& channel : expression._listChannel )
             {
-                input._listChannelIndex.push_back( layout.findChannelIndex( channel._channel ) );
+                input._listChannelIndex.push_back( layout.findChannelIndex( channel._channel ).value() ); // 대응표 검증이 배치에 없는 채널을 거절했다
                 input._listScale.push_back( channel._scale );
             }
             _listExpression.push_back( std::move( input ) );
@@ -326,7 +326,7 @@ namespace sw
             input._value = 0.0f;
             for ( size_t index = 0; index < input._listChannelIndex.size(); ++index )
             {
-                input._value += frame._listValue[static_cast<size_t>( input._listChannelIndex[index] )] * input._listScale[index];
+                input._value += frame._listValue[input._listChannelIndex[index]] * input._listScale[index];
             }
         }
         _bHasFrame = SW_TRUE;
