@@ -50,6 +50,7 @@ _kSubcommand: tuple[Subcommand, ...] = (
     Subcommand("setup", "setup.Environment", "개발 환경 및 도구체인 탐색/설정"),
     Subcommand("vcpkg", "setup.Vcpkg", "vcpkg 탐색 및 부트스트랩"),
     Subcommand("llvm", "setup.Llvm", "LLVM/Clang 탐색 및 설정"),
+    Subcommand("browser-mcp", "setup.BrowserMcp", "에이전트 브라우저 조종 MCP(Chrome DevTools MCP)를 Tools/BrowserMCP 에 고정 판으로 설치"),
     Subcommand("lint", "lint.PreCommit", "Staged 파일 대상 사전 커밋 린트 검사"),
     Subcommand("include-order", "lint.IncludeOrder:mainCheck", "include 순서 검사(--files 로 좁힌다)"),
     Subcommand("byte-read", "lint.ByteReadShape", "파일에서 읽은 개수를 믿고 할당하는 모양 · LittleEndianUtil 직접 읽기 검사(--files · --all · --self-check)"),

@@ -84,6 +84,7 @@ Tools/Tracy/
 Tools/emsdk/
 Tools/JDK/
 Tools/Android/
+Tools/BrowserMCP/
 .vcpkg/
 vcpkg_installed/
 
