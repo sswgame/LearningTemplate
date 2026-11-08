@@ -299,8 +299,8 @@ SW_TEST_CASE( RTSWorldTest, ScriptedMatchDigestIsPinned )
     SW_EXPECT_TRUE( damagedCount > 0 );
     SW_EXPECT_TRUE( match._world.getMinerals( 0 ) != 600 );
     SW_EXPECT_TRUE( exploredCount > 0 && exploredCount < kMapSize * kMapSize );
-    // 고정값은 Release(MSVC · Clang 같은 빌드 설정)에서 잡았다. 동작을 일부러 바꾼 커밋만 값을 다시 적는다.
-    SW_EXPECT_EQUAL( 10950072093537724704ull, digestMatch( match ) );
+    // 고정값은 Release(MSVC · Clang 같은 빌드 설정)에서 잡았다. 동작을 일부러 바꾼 커밋만 값을 다시 적는다(마지막: 962e297a37 — 땅 유닛의 새 경로가 요청한 걸음 끝에 붙는다).
+    SW_EXPECT_EQUAL( 8708104897650782380ull, digestMatch( match ) );
 }
 
 /**
