@@ -1819,6 +1819,14 @@ namespace sw
             context._passValues.setUint( passConstantNames()._swSkinResultOffsetCount, _state._deform._meshMorphPool.getSkinResultOffsetCount() );
         }
 
+        // 지난 월드 행렬 — 패스당 한 번. 화면 속도를 쓰는 패스의 정점 셰이더만 읽는다. 안 걸리면 셰이더가 이번 행렬을 쓴다(속도는 카메라 움직임뿐).
+        const RHIStructuredBuffer& prevWorldBuffer = _state._gpuScene.getPrevInstanceWorldBuffer();
+        if ( prevWorldBuffer._buffer != 0 && prevWorldBuffer._srv != kInvalidDescriptorIndex )
+        {
+            context._resourceRegistry.registerBuffer( passConstantNames()._swPrevInstanceWorlds, prevWorldBuffer._buffer, prevWorldBuffer._srv );
+            context._passValues.setUint( passConstantNames()._swPrevInstanceWorldCount, _state._gpuScene.getPrevInstanceWorldCount() );
+        }
+
         // 정점 애니메이션(VAT) 표 — 패스당 한 번. 시계는 게임 스레드의 군중 시계(스냅샷)라 인스턴스 시각 오프셋과 더하면 CPU 의 클립 시각이다.
         const RHIStructuredBuffer& vertexAnimationBuffer = _state._deform._vertexAnimationPool.getBuffer();
         if ( vertexAnimationBuffer._buffer != 0 && vertexAnimationBuffer._srv != kInvalidDescriptorIndex )

@@ -152,7 +152,11 @@
 // 모프 풀(g_SwMorphVertices) 안 그 스킨 결과의 첫 원소. 풀에 못 든 칸은 kInvalidIndex 다. 읽는 함수는 binding.hlsli MorphPool::computeElement 하나다.
 #define SW_SLOT_SKIN_RESULT_OFFSET_SRV 14
 
-#define SW_SRV_SLOT_COUNT 15 // t0..t14 — DX12 t 테이블 크기. Vulkan set 0 의 t 밴드 폭(16)까지 늘릴 수 있다 — 머티리얼 슬롯은 밴드 뒤라 밀리지 않는다
+// 인스턴스마다의 지난 월드 행렬 (StructuredBuffer<InstancePrevWorld> g_SwPrevInstanceWorlds) — 인스턴스 번호 순서(g_SwInstances 와 같은 번호). 렌더 쪽 움직임 기록(GPUInstanceMotionHistory)이 쓴다.
+// 기록이 없는 칸은 모두 0(_44 가 0)이고 정점 셰이더가 이번 행렬로 읽는다. 읽는 함수는 binding.hlsli InstanceData::loadPreviousWorld 하나다.
+#define SW_SLOT_PREV_INSTANCE_WORLD_SRV 15
+
+#define SW_SRV_SLOT_COUNT 16 // t0..t15 — DX12 t 테이블 크기 = Vulkan set 0 의 t 밴드 폭(16). 더 늘리려면 밴드를 넓혀야 한다(머티리얼 슬롯은 밴드 뒤라 밀리지 않는다)
 
 // 머티리얼 텍스처 고정 슬롯 t16..t31(16 칸). DX11/GL 은 bindless 가 없어 머티리얼이 준 전역 인덱스를 풀 수 없으므로
 // 엔진이 텍스처를 이 슬롯에 걸고 머티리얼 데이터에는 **서수(0..N-1)** 를 넣는다. DX12/Vulkan 은 전역 인덱스라 이 슬롯을 선언하지 않는다.

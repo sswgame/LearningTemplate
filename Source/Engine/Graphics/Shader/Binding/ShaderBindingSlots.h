@@ -118,7 +118,12 @@ namespace sw
          * @details 인스턴스의 `GPUInstance::_skinSlot` 으로 읽는다(binding.hlsli `MorphPool::loadSkinResultOffset`). RT 의 모프 풀이 스킨 집합이 바뀐 프레임에만 올린다.
          */
         inline constexpr uint32 kSkinResultOffsetBuffer = SW_SLOT_SKIN_RESULT_OFFSET_SRV;
-        inline constexpr uint32 kSRVSlotCount           = SW_SRV_SLOT_COUNT;
+        /**
+         * @brief 인스턴스마다의 지난 월드 행렬(g_SwPrevInstanceWorlds, `float4x4` 배열 — 인스턴스 번호 순서)입니다. 정점 셰이더가 화면 속도의 지난 위치를 만든다.
+         * @details 렌더 쪽 움직임 기록(`GPUInstanceMotionHistory`)이 프레임마다 채우고 `GPUScene` 이 올린다. 기록이 없는 칸은 모두 0 이다(binding.hlsli `InstanceData::loadPreviousWorld`).
+         */
+        inline constexpr uint32 kPrevInstanceWorldBuffer = SW_SLOT_PREV_INSTANCE_WORLD_SRV;
+        inline constexpr uint32 kSRVSlotCount            = SW_SRV_SLOT_COUNT;
 
         // ------------------------------------------------------------------------------
         // 2-1) 라이트 원소의 타입 값. binding_slots.hlsli 가 기준이다(셰이더와 같은 파일).
@@ -374,6 +379,7 @@ namespace sw
             inline constexpr const utf8* kLightGrid            = "g_SwLightGrid";          ///< t12(그래픽스). 뷰마다의 라이트 그리드 단어
             inline constexpr const utf8* kLightProbes          = "g_SwLightProbes";        ///< t13(그래픽스). 라이트 프로브의 SH9(프로브 하나가 float4 일곱 개)
             inline constexpr const utf8* kSkinResultOffsets    = "g_SwSkinResultOffsets";  ///< t14(그래픽스). 스킨 칸 → 결과 시작 표
+            inline constexpr const utf8* kPrevInstanceWorlds   = "g_SwPrevInstanceWorlds"; ///< t15(그래픽스). 인스턴스마다의 지난 월드 행렬
             inline constexpr const utf8* kLightGridLights      = "g_LightGridLights";      ///< light_grid 컴퓨트 t0. 씬 라이트 버퍼(g_SwLights 와 같은 버퍼)
             inline constexpr const utf8* kLightGridViews       = "g_LightGridViews";       ///< light_grid 컴퓨트 t1. 뷰마다의 뷰-투영과 깊이 조각 상수
             inline constexpr const utf8* kLightGridRw          = "g_LightGridRW";          ///< light_grid 컴퓨트 u0. 뷰마다의 그리드를 쓴다
@@ -418,7 +424,8 @@ namespace sw
         static_assert( kPassBuffer == kVertexAnimationBuffer + 1, "패스 전용 버퍼는 VAT 표 다음이다" );
         static_assert( kLightGridBuffer == kPassBuffer + 1, "라이트 그리드는 패스 전용 버퍼 다음이다" );
         static_assert( kLightProbeBuffer == kLightGridBuffer + 1, "라이트 프로브는 라이트 그리드 다음이다" );
-        static_assert( kSkinResultOffsetBuffer == kLightProbeBuffer + 1 && kSkinResultOffsetBuffer + 1 == kSRVSlotCount, "스킨 칸 표는 라이트 프로브 다음이고 SRV 슬롯의 마지막이다" );
+        static_assert( kSkinResultOffsetBuffer == kLightProbeBuffer + 1, "스킨 칸 표는 라이트 프로브 다음이다" );
+        static_assert( kPrevInstanceWorldBuffer == kSkinResultOffsetBuffer + 1 && kPrevInstanceWorldBuffer + 1 == kSRVSlotCount, "지난 월드 행렬은 스킨 칸 표 다음이고 SRV 슬롯의 마지막이다" );
         static_assert( kLightTypeDirectional < kLightTypeCount && kLightTypePoint < kLightTypeCount &&
                            kLightTypeSpot < kLightTypeCount && kLightTypePoint2D < kLightTypeCount && kLightTypeGlobal2D < kLightTypeCount &&
                            kLightTypeFreeform2D < kLightTypeCount && kLightTypeShadow2D >= kLightTypeCount && kLightTypeProbeVolume >= kLightTypeCount &&

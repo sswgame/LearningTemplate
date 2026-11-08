@@ -276,6 +276,8 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     uint  g_SwMorphVertexCount;        // 그 풀의 원소 수 — 범위 밖 인덱스를 막는다
     uint  g_SwSkinResultOffsetsIndex;  // 스킨 칸 → 결과 시작 표(g_SwSkinResultOffsets, t14)가 걸려 있으면 유효, 아니면 kInvalidIndex
     uint  g_SwSkinResultOffsetCount;   // 그 표의 칸 수 — 범위 밖 칸을 막는다
+    uint  g_SwPrevInstanceWorldsIndex; // 지난 월드 행렬 버퍼(g_SwPrevInstanceWorlds, t15)가 걸려 있으면 유효, 아니면 kInvalidIndex — 지난 행렬이 이번 행렬이다(속도는 카메라 움직임뿐)
+    uint  g_SwPrevInstanceWorldCount;  // 그 버퍼의 원소 수(인스턴스 수) — 범위 밖 번호를 막는다
     uint  g_SwLightsIndex;             // 씬 라이트 버퍼가 걸려 있으면 유효, 아니면 kInvalidIndex
     uint  g_SwLightCount;              // 그 버퍼의 빛 원소 수 (0 이면 빛 없음 — 앰비언트만 받는다)
     uint  g_SwLightGridIndex;          // 라이트 그리드 버퍼(g_SwLightGrid, t12)가 걸려 있으면 유효, 아니면 kInvalidIndex
@@ -666,12 +668,40 @@ static InstanceData InstanceData::load( uint instanceSlot )
     instance._highlight            = 0u;            // 강조 없음
     instance._appearance           = 1.0f;          // 다 보인다
     instance._skinSlot             = kInvalidIndex; // 스킨 결과 없음
+    instance._customData0          = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+    instance._customData1          = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+    instance._motionKey            = uint2( 0u, 0u ); // 기록 없음
+    instance._motionPad            = uint2( 0u, 0u );
     return instance;
 }
 
 static float4x4 InstanceData::loadWorld( uint instanceSlot )
 {
     return InstanceData::load( instanceSlot )._world;
+}
+
+// ------------------------------------------------------------------------------
+// 8-2) 지난 월드 행렬 — 화면 속도(이번 UV - 지난 UV)의 지난 위치. 렌더 쪽 움직임 기록(C++ GPUInstanceMotionHistory)이 인스턴스 번호 순서로 채운다.
+//      언리얼 GPUScene 의 PreviousLocalToWorld 와 같은 자리다. 기록이 없는 칸(생성 · 순간이동 · GPU 가 고쳐 쓰는 회전 · 인스턴스 배치 항목)은 모두 0 이라 이번 행렬로 읽는다.
+// ------------------------------------------------------------------------------
+struct InstancePrevWorld
+{
+    float4x4 _world;
+};
+SW_DECLARE_STRUCTURED_BUFFER( InstancePrevWorld, g_SwPrevInstanceWorlds, SW_SLOT_PREV_INSTANCE_WORLD_SRV );
+
+/** @brief 인스턴스 슬롯의 지난 월드 행렬입니다. 버퍼가 없거나 범위 밖이거나 기록이 없는 칸(`_44` 가 0)이면 @p currentWorld 입니다. early-return 없이 값을 고른다. */
+static float4x4 InstanceData::loadPreviousWorld( uint instanceSlot, float4x4 currentWorld )
+{
+    float4x4   previous = currentWorld;
+    const uint element  = InstanceData::resolveID( instanceSlot );
+    const bool bValid   = ( g_SwPrevInstanceWorldsIndex != kInvalidIndex ) && ( element < g_SwPrevInstanceWorldCount );
+    if ( bValid )
+    {
+        const float4x4 stored = g_SwPrevInstanceWorlds[element]._world;
+        previous              = ( stored[3][3] != 0.0f ) ? stored : currentWorld;
+    }
+    return previous;
 }
 
 // ------------------------------------------------------------------------------

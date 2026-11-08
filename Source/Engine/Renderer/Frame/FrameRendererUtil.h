@@ -583,6 +583,10 @@ namespace sw
         hashed_string _swSkinResultOffsets{ "SwSkinResultOffsets" };
         /// @brief 그 표의 칸 수입니다. PassCB g_SwSkinResultOffsetCount 에 대응합니다.
         hashed_string _swSkinResultOffsetCount{ "g_SwSkinResultOffsetCount" };
+        /// @brief 인스턴스마다의 지난 월드 행렬입니다. binding.hlsli 의 g_SwPrevInstanceWorlds(t15)와 PassCB g_SwPrevInstanceWorldsIndex 에 대응합니다.
+        hashed_string _swPrevInstanceWorlds{ "SwPrevInstanceWorlds" };
+        /// @brief 그 버퍼의 원소 수입니다. PassCB g_SwPrevInstanceWorldCount 에 대응합니다.
+        hashed_string _swPrevInstanceWorldCount{ "g_SwPrevInstanceWorldCount" };
         /// @brief 컬링이 만든 가시 인스턴스 ID 목록입니다. binding.hlsli g_SwVisibleInstanceIDs 와 "SwVisibleInstanceIDs" 에 대응합니다.
         hashed_string _swVisibleInstanceIDs{ "SwVisibleInstanceIDs" };
         /// @brief 배치의 머티리얼 데이터 구조 버퍼입니다. binding.hlsli g_SwMaterials 와 "SwMaterials" 에 대응하며, 배치마다 등록합니다.

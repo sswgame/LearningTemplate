@@ -14,6 +14,7 @@
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Binding/GPUInstanceHighlight.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
+#include "Engine/Renderer/Scene/GPUInstanceMotionHistory.h"
 #include "Engine/Renderer/Scene/GPUMeshBatchBinding.h"
 #include "Engine/Renderer/Scene/GPUMeshVertexPool.h"
 #include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
@@ -293,6 +294,15 @@ namespace sw
         uint32 getIndirectCommandCount() const { return _indirectCommandCount; }
         /** @brief 인스턴스 버퍼가 GPU 에 올라갔는지 반환합니다. */
         bool isUploaded() const { return _instances._buffer != 0; }
+        /**
+         * @brief 인스턴스마다의 지난 월드 행렬 버퍼(g_SwPrevInstanceWorlds, t15 — 인스턴스 번호 순서, 원소 `float4x4`)입니다. 화면 속도의 지난 위치를 만든다.
+         * @details 기록이 없는 칸은 모두 0(`GPUInstanceMotionHistory::isNoHistory`)이고 셰이더가 이번 행렬로 읽는다. 버퍼가 없으면 0 입니다.
+         */
+        const RHIStructuredBuffer& getPrevInstanceWorldBuffer() const { return _prevInstanceWorlds; }
+        /** @brief 지난 월드 행렬 버퍼의 원소 수(인스턴스 수)입니다. */
+        uint32 getPrevInstanceWorldCount() const { return static_cast<uint32>( _listUploadedPrevWorld.size() ); }
+        /** @brief 마지막 upload 에서 기록이 있는 물체가 하나라도 움직였으면 true 입니다. 카메라가 서 있어도 모션 블러를 끄지 않는 근거다(`FrameViewResources::applyViewPassSelection`). */
+        bool hasObjectMotion() const { return _bObjectMotion != SW_FALSE; }
 
     private:
         /// @brief 그룹에서 (버퍼, SRV, 원소 수)를 찾는 테이블입니다. 배치 루프가 조회 대신 읽습니다. 프레임마다 다시 채웁니다.
@@ -336,6 +346,11 @@ namespace sw
         void ensureInstanceSlotStream( IRHIDevice* pDevice, uint32 slotCount );
         /** @brief 뷰마다의 간접 인자 버퍼를 확보해 올립니다. */
         void uploadIndirectArgs( IRHIDevice* pDevice, uint32 argsCount );
+        /**
+         * @brief 움직임 기록을 한 걸음 나아가 지난 월드 행렬 버퍼를 올립니다. 스냅샷이 그대로인 프레임에도 부른다 — 멈춘 물체의 지난 행렬이 이번 것이 되어야 속도가 0 이 된다.
+         * @details 내용이 지난번 올린 것과 같으면(모두 멈춘 씬의 두 번째 프레임부터) 올리지 않는다.
+         */
+        void updateMotionHistory( IRHIDevice* pDevice );
 
     private:
         /** @brief 패킷에서 받은 스냅샷입니다. 이 안의 것만 GT 가 만든 값입니다. */
@@ -393,5 +408,15 @@ namespace sw
         uint8 _bGPUFillsIndirectCounts{ SW_FALSE };
         /// @brief 마지막 upload() 가 올린 간접 인자 개수입니다. 스냅샷에 없으므로 GT 가 덮어쓸 수 없습니다.
         uint32 _indirectCommandCount{ 0 };
+        /// @brief 열쇠 → 지난번 그린 월드 행렬의 기록입니다(RT 소유 — 패킷이 버려져도 실제로 그린 프레임 기준이다).
+        GPUInstanceMotionHistory _motionHistory;
+        /// @brief 지난 월드 행렬 버퍼(t15)입니다.
+        RHIStructuredBuffer _prevInstanceWorlds;
+        /// @brief 이번 프레임에 기록이 낸 지난 월드 행렬입니다(스크래치).
+        vector<float4x4> _listScratchPrevWorld;
+        /// @brief 마지막으로 올린 지난 월드 행렬입니다. 같으면 다시 올리지 않는다.
+        vector<float4x4> _listUploadedPrevWorld;
+        /// @brief 마지막 upload 에서 물체가 움직였는지입니다(`hasObjectMotion`).
+        uint8 _bObjectMotion{ SW_FALSE };
     };
 } // namespace sw
