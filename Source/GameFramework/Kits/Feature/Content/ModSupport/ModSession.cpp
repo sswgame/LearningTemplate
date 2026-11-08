@@ -38,9 +38,10 @@ namespace sw
     {
         struct ModSessionInternal
         {
-            static constexpr const utf8* kInstallFolderName = "Mods";     ///< 프로젝트(패키지는 실행 파일 폴더) 아래 모드 설치 폴더
-            static constexpr const utf8* kExportFolderName  = "ModPacks"; ///< Saved 아래 배포용 묶은 모드 폴더(`mod.pack`)
-            static constexpr size_t      kReplyLineLimit    = 200;        ///< `mod.read` 답의 글자 수 상한
+            static constexpr const utf8* kInstallFolderName       = "Mods";      ///< 패키지(실행 파일 폴더) 아래 모드 설치 폴더
+            static constexpr const utf8* kSourceTreeInstallFolder = "Test/Mods"; ///< 저장소에서의 설치 폴더 — 시연 모드는 시나리오 · 테스트 자료다
+            static constexpr const utf8* kExportFolderName        = "ModPacks";  ///< Saved 아래 배포용 묶은 모드 폴더(`mod.pack`)
+            static constexpr size_t      kReplyLineLimit          = 200;         ///< `mod.read` 답의 글자 수 상한
 
             /** @brief 쉼표 목록을 id 로 가릅니다(앞뒤 공백을 떼고 빈 칸은 버린다). 형식 검사는 `loadManifests` 가 한다. */
             static vector<string> splitList( string_view text )
@@ -152,7 +153,12 @@ namespace sw
 
     string ModSession::getInstallFolder()
     {
-        return FileUtil::joinPath( ProcessRoots::get()._project.str(), ModSessionInternal::kInstallFolderName );
+        // 패키지는 실행 파일 옆 `Mods/`(사용자가 넣는 자리), 저장소에서는 시연 모드가 시나리오 · 테스트 자료라 `Test/Mods/` 다.
+        // 패키지 판정은 ProcessRoots 의 규칙(프로젝트 루트가 바이너리 폴더 — `Content` 가 없다)을 그대로 쓴다.
+        const ProcessRoots& roots    = ProcessRoots::get();
+        const bool          bPackage = roots._project.str() == roots._binary.str();
+        return bPackage ? FileUtil::joinPath( roots._binary.str(), ModSessionInternal::kInstallFolderName )
+                        : FileUtil::joinPath( roots._project.str(), ModSessionInternal::kSourceTreeInstallFolder );
     }
 
     string ModSession::getExportFolder()

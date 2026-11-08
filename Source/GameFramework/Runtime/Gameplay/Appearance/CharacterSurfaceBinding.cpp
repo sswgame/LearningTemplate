@@ -46,10 +46,10 @@ namespace sw
         return hashed_string( text.c_str() );
     }
 
-    string SurfaceParameterNames::makeMaskTexturePath( uint64 ownerKey, uint32 part, const hashed_string& channel )
+    string SurfaceParameterNames::makeMaskTextureStem( uint64 ownerKey, uint32 part, const hashed_string& channel )
     {
         StringBuilder<constant::buffer::kMax256> resultBuilder;
-        resultBuilder.appendFormat( "%#%#/%#/%#", string( "cpu/surface/" ), ownerKey, part, channel.c_str() );
+        resultBuilder.appendFormat( "surface/%#/%#/%#_", ownerKey, part, channel.c_str() );
         return string( resultBuilder.view() );
     }
 } // namespace sw
@@ -141,7 +141,7 @@ namespace sw
             if ( pEntry == nullptr )
             {
                 MaskTexture created;
-                created._path    = SurfaceParameterNames::makeMaskTexturePath( ownerKey, part, channel._name );
+                created._path    = pCache->makeUniqueCPUTexturePath( SurfaceParameterNames::makeMaskTextureStem( ownerKey, part, channel._name ) );
                 created._channel = channel._name;
                 created._part    = part;
                 makeMaskPixels( *pMask, channel._maxValue, listPixel );

@@ -36,8 +36,8 @@ namespace sw
         static hashed_string makeMask( const hashed_string& channel );
         /** @brief 영역 벡터 이름 `_surfaceRegion<영역>Chunk<덩어리>` 입니다. */
         static hashed_string makeRegion( uint32 region, uint32 chunk );
-        /** @brief 마스크 CPU 텍스처 경로 `cpu/surface/<소유자>/<부품>/<채널>` 입니다. 소유자 키가 다르면 경로가 겹치지 않는다. */
-        static string makeMaskTexturePath( uint64 ownerKey, uint32 part, const hashed_string& channel );
+        /** @brief 마스크 텍스처 경로의 앞부분(`surface/<주인>/<부위>/<채널>_`)입니다. 번호는 텍스처 캐시가 붙인다(`TextureCache::makeUniqueCPUTexturePath` — 놓인 경로를 다시 쓰지 않는다). 주인 id 만으로 지으면 id 를 다시 쓰는 범위(엔진 없이 선 매니저 · 다음 체인 단계)에서 앞 텍스처와 경로가 겹쳤다. */
+        static string makeMaskTextureStem( uint64 ownerKey, uint32 part, const hashed_string& channel );
     };
 } // namespace sw
 

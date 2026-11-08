@@ -5,7 +5,7 @@
   - fernwood(고사리숲): 봉화 · 야영지. 탐험만 한다.
   - cinderhold(재의 요새): 들어서면 게이트가 닫히고 홀(불씨 도깨비 하나) → 보스(잿빛 파수꾼)다. 적은 제자리라(speed 0) 닿은 피해가 들지 않는 자리에 둔다.
     전투 자리는 시나리오가 걸어 멈추는 x 30.5 에서 1.2 · 1.6 m 앞이다(공격 34 - 방어 4 = 30: 도깨비 두 번, 파수꾼 네 번 — automation/vale).
-  확장 팩(Mods/velmora_tidecaves)이 이 표에 층으로 서쪽 지역 tidecaves 를 더한다.
+  확장 팩(Test/Mods/velmora_tidecaves)이 이 표에 층으로 서쪽 지역 tidecaves 를 더한다.
 -->
 <VelmoraRegionCatalog>
 	<Region id="hearth" name="Hearthstead" min="-10,-8" max="10,8" respawn="0,0" startQuest="ember_oath">

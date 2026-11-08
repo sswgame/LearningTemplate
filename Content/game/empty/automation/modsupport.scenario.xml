@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  모드 지원 키트(GF_ModSupport) 시연 — 시연 모드 Mods/demo_lantern 을 켜고 시작한다(`-gv_modList`). 소스 모드라 시작 때 팩으로 묶여 기본 팩 위에 올라간다.
+  모드 지원 키트(GF_ModSupport) 시연 — 시연 모드 Test/Mods/demo_lantern 을 켜고 시작한다(`-gv_modList`). 소스 모드라 시작 때 팩으로 묶여 기본 팩 위에 올라간다.
   값으로 판정한다: 켠 모드 하나와 구성 글(mod.status), 모드가 덮어쓴 기본 리소스의 글(소스 구성에서도 낱개 파일 위에 선다), 모드가 더한 새 리소스의 글.
   짝인 modsupport_off 가 바로 다음 단계에서 모드 없이 기본 글을 읽는다 — 세션이 끝나면 모드 팩이 내려가 다음 단계에 남지 않는다.
   실행: App -scenario=game/empty/automation/modsupport.scenario.xml -unattended (체인: ctest -R Scenario.empty)

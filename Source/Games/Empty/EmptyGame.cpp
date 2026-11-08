@@ -47,7 +47,7 @@ namespace sw
 
     private:
         /**
-         * @brief 이 세션의 모드(`-gv_modList`, 시연 모드 `Mods/demo_lantern`)입니다. 첫 씬을 열기 전에 적용하고 인스턴스와 함께 뗀다(시나리오 체인의 다음 단계에 남지 않는다).
+         * @brief 이 세션의 모드(`-gv_modList`, 시연 모드 `Test/Mods/demo_lantern`)입니다. 첫 씬을 열기 전에 적용하고 인스턴스와 함께 뗀다(시나리오 체인의 다음 단계에 남지 않는다).
          *        서버 구성에도 있다 — 서버도 같은 모드 구성으로 서야 클라이언트와 구성 해시가 맞는다.
          */
         unique_ptr<ModSession> _mods;
