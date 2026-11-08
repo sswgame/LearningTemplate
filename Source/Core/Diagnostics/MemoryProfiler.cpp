@@ -10,7 +10,6 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/Foundation/StdHeaders.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/RegistrationList.h"
 
@@ -37,12 +36,6 @@ extern "C" int32 __lsan_do_recoverable_leak_check( void );
 
 namespace sw
 {
-    /**
-     * @brief `-gv_leakWindowFullStacks`: 기준선 창을 `FullStacks` 로 엽니다(`MemoryProfiler::captureMemoryLeakBaseline`). 종료 누수 보고가 줄마다 첫 프레임(누가 할당했나)을 적습니다.
-     * @details 창 안의 모든 할당이 스택을 잡아 Debug 실행이 느려진다 — 누수 출처를 찾을 때만 켠다. 꺼 두면 `TagTotals`(태그별 바이트 · 개수만)다.
-     */
-    SW_TEST_GLOBAL_VARIABLE( bool, gv_leakWindowFullStacks, false, "기동 뒤 누수 기준선 창을 FullStacks 로 연다 - 종료 보고가 줄마다 할당한 코드의 첫 프레임을 적는다(Debug 가 느려지므로 누수 출처를 찾을 때만)" );
-
     namespace
     {
         struct MemoryProfilerInternal
@@ -94,6 +87,8 @@ namespace sw
 
             static inline thread_local bool       t_bIsInsideProfiler = false;
             static inline atomic<MemoryProfiler*> s_activeProfiler{ nullptr };
+            /** @brief 기준선 창의 기록 수준 질의입니다(`setLeakBaselineDetailQuery`). 없으면 `TagTotals` 다. */
+            static inline atomic<LeakBaselineDetailQuery> s_leakBaselineDetailQuery{ nullptr };
 
             /** @brief 이 스레드에만 있는 변수입니다. 그 주소가 살아 있는 스레드 사이에서 겹치지 않아 스레드 식별 값으로 쓴다. */
             static inline thread_local uint8 t_threadMarker = 0;
@@ -242,8 +237,9 @@ namespace sw
 
     void MemoryProfiler::captureMemoryLeakBaseline()
     {
-        // 긴 창이라 기본은 태그 합계다. 출처를 찾을 때만 `-gv_leakWindowFullStacks` 로 스택을 잡는다 — 기준선을 여는 길(보통 기동 · 헤드리스 작업)이 모두 이 한 곳을 지난다.
-        const LeakWindowDetail detail = gv_leakWindowFullStacks ? LeakWindowDetail::FullStacks : LeakWindowDetail::TagTotals;
+        // 긴 창이라 기본은 태그 합계다. 출처를 찾을 때만 개발 도구의 질의(`-gv_leakWindowFullStacks`)가 스택을 고른다 — 기준선을 여는 길(보통 기동 · 헤드리스 작업)이 모두 이 한 곳을 지난다.
+        const LeakBaselineDetailQuery query  = MemoryProfilerInternal::s_leakBaselineDetailQuery.load( std::memory_order_acquire );
+        const LeakWindowDetail        detail = query != nullptr ? query() : LeakWindowDetail::TagTotals;
         // 태그별 기준선은 플랫폼 검사와 따로 잡는다 — 기동 뒤부터 종료까지 하나의 누수 창을 열어 두고,
         // 종료 끝에 어느 용도가 늘었는지(`endLeakWindow` → `printLeakWindowReport`) 본다.
         MemoryProfiler* pActive = getActive();
@@ -258,6 +254,11 @@ namespace sw
                                                   static_cast<uint64>( MemoryProfilerInternal::s_leakBaseline.lSizes[_NORMAL_BLOCK] ),
                                                   static_cast<uint64>( MemoryProfilerInternal::s_leakBaseline.lCounts[_NORMAL_BLOCK] ) );
 #endif
+    }
+
+    void MemoryProfiler::setLeakBaselineDetailQuery( LeakBaselineDetailQuery query )
+    {
+        MemoryProfilerInternal::s_leakBaselineDetailQuery.store( query, std::memory_order_release );
     }
 
     int32 MemoryProfiler::reportMemoryLeaks( const utf8* pPhaseTag )

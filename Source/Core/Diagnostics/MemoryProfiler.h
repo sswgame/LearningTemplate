@@ -110,6 +110,12 @@ namespace sw
         FullStacks, ///< 창 안의 모든 할당의 호출 스택을 잡고 블록마다 기록한다. 씬 로드 한 번처럼 짧은 창에 쓴다
     };
 
+    /**
+     * @brief 기동 기준선 창(`MemoryProfiler::captureMemoryLeakBaseline`)의 기록 수준을 묻는 함수입니다. 개발 도구가 건다(`MemoryProfiler::setLeakBaselineDetailQuery`).
+     * @details 기준선을 잡을 때 부른다 — 명령줄이 풀린 뒤라 개발 스위치를 그 자리에서 읽을 수 있다.
+     */
+    using LeakBaselineDetailQuery = LeakWindowDetail ( * )();
+
     /** @brief 누수 창 보고서의 한 줄 — 같은 태그 · 같은 스택 · 같은 회차에서 태어나 창이 닫힐 때 아직 살아 있던 블록의 합입니다. */
     struct LeakWindowEntry
     {
@@ -270,10 +276,15 @@ namespace sw
         static void enableMemoryLeakChecks();
         /**
          * @brief 의도적인 수명 할당을 마친 뒤 힙 스냅샷을 저장하고, 활성 프로파일러의 누수 창을 엽니다(`beginLeakWindow`).
-         * @details 기록 수준은 여기 한 곳이 `-gv_leakWindowFullStacks` 로 정한다(기본 `TagTotals`, 켜면 `FullStacks` — 종료 보고가 줄마다 첫 프레임을 적는다).
-         *          예전에는 수준을 부르는 쪽이 골라 헤드리스 작업(`--test` 등)이 그 옵션을 무시했다.
+         * @details 기록 수준은 여기 한 곳이 정한다 — 걸린 질의(`setLeakBaselineDetailQuery`, 개발 도구의 `-gv_leakWindowFullStacks`)가 답하고, 없으면 `TagTotals` 다
+         *          (켜면 `FullStacks` — 종료 보고가 줄마다 첫 프레임을 적는다). 예전에는 수준을 부르는 쪽이 골라 헤드리스 작업(`--test` 등)이 그 옵션을 무시했다.
          */
         static void captureMemoryLeakBaseline();
+        /**
+         * @brief 기준선 창의 기록 수준을 묻는 함수를 겁니다. nullptr 이면 뗀다(기본 `TagTotals` 로 돌아간다).
+         * @details 스택 전수 캡처는 누수 출처를 찾는 개발 진단이라 그 스위치는 개발 도구가 든다 — 메모리 계층은 이 창구만 안다.
+         */
+        static void setLeakBaselineDetailQuery( LeakBaselineDetailQuery query );
         /** @brief 종료 후 플랫폼 누수를 보고합니다. 힙이 늘었으면 0 이 아닌 값을 반환합니다. */
         static int32 reportMemoryLeaks( const utf8* pPhaseTag = "shutdown" );
         /** @brief 추적 플래그와 태그 통계를 0 으로 둡니다. */
