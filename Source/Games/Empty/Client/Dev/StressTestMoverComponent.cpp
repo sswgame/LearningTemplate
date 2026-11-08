@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/Empty/Client/StressTestMoverComponent.h"
+#include "Games/Empty/Client/Dev/StressTestMoverComponent.h"
 
 #include "Core/Math/MathUtil.h"
 

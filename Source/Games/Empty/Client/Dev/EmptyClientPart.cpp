@@ -9,15 +9,15 @@
 #include "GameFramework/Runtime/Foundation/Framework/Flow/IGameClientPart.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
-#include "Games/Empty/Client/EmptyRenderDemo.h"
-#include "Games/Empty/Client/StressTestScene.h"
+#include "Games/Empty/Client/Dev/EmptyRenderDemo.h"
+#include "Games/Empty/Client/Dev/StressTestScene.h"
 
 namespace sw
 {
     /**
      * @class EmptyClientPart
      * @brief 빈 게임의 클라이언트 전용 부분입니다 — 측정 벤치(`StressTestScene`)와 모듈 렌더 확장 시연(`EmptyRenderDemo`)을 든다.
-     * @details 게임 인스턴스가 기동에 하나 만들어 들고(`IGameClientPart`), 같이 사라진다. 전용 서버는 이 소스를 짓지 않는다.
+     * @details 게임 인스턴스가 기동에 하나 만들어 들고(`IGameClientPart`), 같이 사라진다. 전용 서버와 배포 구성은 이 소스(Client/Dev/)를 짓지 않는다.
      */
     class EmptyClientPart final : public IGameClientPart
     {
