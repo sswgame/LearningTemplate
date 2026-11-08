@@ -1014,6 +1014,21 @@ namespace sw
         _pState->_geometry.setIndexBuffer( buffer, indexStride, offset ); // 인덱스 드로우가 건다(bindIndexBufferForDraw)
     }
 
+    void D3D12RHICommandContext::beginTextureAlias( RHITextureHandle texture )
+    {
+        if ( _pCmdList == nullptr || texture == 0 )
+            return;
+        ID3D12Resource* pResource = _pDevice->resolveTexture( texture );
+        if ( pResource == nullptr )
+            return;
+        // 앞 리소스를 특정하지 않는 앨리어싱 배리어 — 같은 힙 바이트를 쓴 어떤 placed 리소스의 일도 이 리소스의 쓰기 앞에 끝난다(D3D12 앨리어싱 규칙).
+        D3D12_RESOURCE_BARRIER barrier{};
+        barrier.Type                     = D3D12_RESOURCE_BARRIER_TYPE_ALIASING;
+        barrier.Aliasing.pResourceBefore = nullptr;
+        barrier.Aliasing.pResourceAfter  = pResource;
+        commandListForRecord()->ResourceBarrier( 1, &barrier );
+    }
+
     void D3D12RHICommandContext::uavBarrierNative( RHIBufferHandle buffer )
     {
         if ( _pCmdList == nullptr || buffer == 0 )

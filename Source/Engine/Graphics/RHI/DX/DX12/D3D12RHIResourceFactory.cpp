@@ -21,6 +21,39 @@
 #if defined( SW_PLATFORM_WINDOWS )
 namespace sw
 {
+    namespace
+    {
+        struct D3D12TextureInternal
+        {
+            /** @brief @p desc 텍스처의 D3D12 리소스 서술입니다(커밋 · placed · 크기 묻기가 같은 서술을 쓴다). */
+            static D3D12_RESOURCE_DESC makeResourceDesc( const RHITextureDesc& desc )
+            {
+                const bool          bDepth = desc._bIsDepthStencil != SW_FALSE;
+                D3D12_RESOURCE_DESC resourceDesc{};
+                resourceDesc.Dimension          = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+                resourceDesc.Alignment          = 0;
+                resourceDesc.Width              = desc._width;
+                resourceDesc.Height             = desc._height;
+                resourceDesc.DepthOrArraySize   = static_cast<UINT16>( desc._arraySize );
+                resourceDesc.MipLevels          = static_cast<UINT16>( desc._mipLevels );
+                resourceDesc.Format             = bDepth ? DXGI_FORMAT_R24G8_TYPELESS : toDXGIFormat( desc._format );
+                resourceDesc.SampleDesc.Count   = 1;
+                resourceDesc.SampleDesc.Quality = 0;
+                resourceDesc.Layout             = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+                D3D12_RESOURCE_FLAGS flags      = D3D12_RESOURCE_FLAG_NONE;
+                if ( desc._bIsRenderTarget )
+                    flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+                if ( bDepth )
+                    flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+                if ( desc._bIsUnorderedAccess )
+                    flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+                // 깊이 + SRV: 셰이더 리소스 접근을 막지 않는다(DENY_SHADER_RESOURCE 를 붙이지 않는다).
+                resourceDesc.Flags = flags;
+                return resourceDesc;
+            }
+        };
+    } // namespace
+
     RHIBufferHandle D3D12RHIResourceFactory::createConstantBuffer( uint32 size )
     {
         const UINT                             alignedSize = MathUtil::align( size, constant::render::kConstantBufferAlignment );
@@ -865,6 +898,56 @@ namespace sw
     // 길이 유지(긴 함수 정리 기준): 서술 채우기 · 리소스 생성 · 뷰 · 초기 데이터 업로드의 순서가 곧 의미라 나누지 않는다.
     RHITextureHandle D3D12RHIResourceFactory::createTexture2D( const RHITextureDesc& desc )
     {
+        return createTextureResource( desc, nullptr, 0 );
+    }
+
+    RHITextureAllocationInfo D3D12RHIResourceFactory::getTextureAllocationInfo( const RHITextureDesc& desc )
+    {
+        if ( isRHITextureShapeValid( desc ) == false )
+            return {};
+        const D3D12_RESOURCE_DESC            resourceDesc = D3D12TextureInternal::makeResourceDesc( desc );
+        const D3D12_RESOURCE_ALLOCATION_INFO info         = _pDevice->_device->GetResourceAllocationInfo( 0, 1, &resourceDesc );
+        if ( info.SizeInBytes == UINT64_MAX )
+            return {}; // 서술이 잘못됐다 — 부르는 쪽은 그 첨부를 커밋 리소스로 만든다(createTexture2D 가 이유를 남긴다)
+        return RHITextureAllocationInfo{ info.SizeInBytes, info.Alignment };
+    }
+
+    RHITransientHeapHandle D3D12RHIResourceFactory::createTransientHeap( uint64 sizeBytes )
+    {
+        if ( sizeBytes == 0 )
+            return 0;
+        D3D12_HEAP_DESC heapDesc{};
+        heapDesc.SizeInBytes     = sizeBytes;
+        heapDesc.Properties.Type = D3D12_HEAP_TYPE_DEFAULT;
+        heapDesc.Alignment       = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+        heapDesc.Flags           = D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES; // 리소스 힙 등급 1 도 받는 범주(렌더 타깃 · 깊이 텍스처만)
+        Microsoft::WRL::ComPtr<ID3D12Heap> heap;
+        if ( isHrSuccess( _pDevice->_device->CreateHeap( &heapDesc, IID_PPV_ARGS( heap.GetAddressOf() ) ), "CreateHeap (transient)" ) == false )
+            return 0;
+        const RHITransientHeapHandle handle = _nextTransientHeap++;
+        _mapTransientHeap.emplace( handle, std::move( heap ) );
+        return handle;
+    }
+
+    void D3D12RHIResourceFactory::destroyTransientHeap( RHITransientHeapHandle heap )
+    {
+        // 그 위의 placed 텍스처가 각자 힙을 붙든다 — 핸들 표에서만 지운다. 마지막 텍스처가 (해제 큐가 GPU 를 기다린 뒤) 놓일 때 힙이 사라진다.
+        _mapTransientHeap.erase( heap );
+    }
+
+    RHITextureHandle D3D12RHIResourceFactory::createPlacedTexture2D( const RHITextureDesc& desc, RHITransientHeapHandle heap, uint64 offsetBytes )
+    {
+        const auto it = _mapTransientHeap.find( heap );
+        if ( it == _mapTransientHeap.end() )
+        {
+            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.PlacedTextureNoHeap", "createPlacedTexture2D: transient heap %# does not exist", heap );
+            return 0;
+        }
+        return createTextureResource( desc, it->second.Get(), offsetBytes );
+    }
+
+    RHITextureHandle D3D12RHIResourceFactory::createTextureResource( const RHITextureDesc& desc, ID3D12Heap* pHeap, uint64 offsetBytes )
+    {
         if ( isRHITextureShapeValid( desc ) == false )
         {
             SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.CreateTexture2DDimensionSlicesX", "createTexture2D: dimension %# with %# slices (%#x%#) is not a valid texture shape", static_cast<uint32>( desc._dimension ),
@@ -874,32 +957,10 @@ namespace sw
         D3D12_HEAP_PROPERTIES heapProps{};
         heapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
 
-        const bool        bDepth      = desc._bIsDepthStencil != SW_FALSE;
-        const DXGI_FORMAT typelessFmt = bDepth ? DXGI_FORMAT_R24G8_TYPELESS : toDXGIFormat( desc._format );
-        const DXGI_FORMAT dsvFmt      = toDXGIFormat( constant::render::kDepthStencilFormat );
-        const DXGI_FORMAT colorFmt    = toDXGIFormat( desc._format );
-
-        D3D12_RESOURCE_DESC resourceDesc{};
-        resourceDesc.Dimension          = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-        resourceDesc.Alignment          = 0;
-        resourceDesc.Width              = desc._width;
-        resourceDesc.Height             = desc._height;
-        resourceDesc.DepthOrArraySize   = static_cast<UINT16>( desc._arraySize );
-        resourceDesc.MipLevels          = static_cast<UINT16>( desc._mipLevels );
-        resourceDesc.Format             = typelessFmt;
-        resourceDesc.SampleDesc.Count   = 1;
-        resourceDesc.SampleDesc.Quality = 0;
-        resourceDesc.Layout             = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-
-        D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE;
-        if ( desc._bIsRenderTarget )
-            flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
-        if ( bDepth )
-            flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-        if ( desc._bIsUnorderedAccess )
-            flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-        // 깊이 + SRV: 셰이더 리소스 접근을 막지 않는다(DENY_SHADER_RESOURCE 를 붙이지 않는다).
-        resourceDesc.Flags = flags;
+        const bool                bDepth       = desc._bIsDepthStencil != SW_FALSE;
+        const DXGI_FORMAT         dsvFmt       = toDXGIFormat( constant::render::kDepthStencilFormat );
+        const DXGI_FORMAT         colorFmt     = toDXGIFormat( desc._format );
+        const D3D12_RESOURCE_DESC resourceDesc = D3D12TextureInternal::makeResourceDesc( desc );
 
         D3D12_CLEAR_VALUE  clearValue{};
         D3D12_CLEAR_VALUE* pClearValue{ nullptr };
@@ -921,9 +982,19 @@ namespace sw
         }
 
         Microsoft::WRL::ComPtr<ID3D12Resource> texture;
-        if ( isHrSuccess( _pDevice->_device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc,
-                                                                      D3D12_RESOURCE_STATE_COMMON, pClearValue, IID_PPV_ARGS( texture.GetAddressOf() ) ),
-                          "CreateCommittedResource" ) == false )
+        if ( pHeap != nullptr )
+        {
+            // placed — 같은 힙 바이트를 다른 텍스처와 나눈다. 첫 쓰기 앞에 앨리어싱 배리어(beginTextureAlias)와 지우기가 온다(트랜지언트 풀의 규칙).
+            if ( isHrSuccess( _pDevice->_device->CreatePlacedResource( pHeap, offsetBytes, &resourceDesc, D3D12_RESOURCE_STATE_COMMON, pClearValue, IID_PPV_ARGS( texture.GetAddressOf() ) ),
+                              "CreatePlacedResource" ) == false )
+                return 0;
+            // 리소스가 힙을 붙든다(열쇠는 힙 인터페이스의 GUID — 이 사적 데이터만 쓴다) — 힙 핸들을 먼저 놓아도 이 텍스처의 미룬 해제가 끝날 때까지 메모리가 남는다.
+            if ( isHrSuccess( texture->SetPrivateDataInterface( __uuidof( ID3D12Heap ), pHeap ), "SetPrivateDataInterface (heap owner)" ) == false )
+                return 0;
+        }
+        else if ( isHrSuccess( _pDevice->_device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COMMON, pClearValue,
+                                                                           IID_PPV_ARGS( texture.GetAddressOf() ) ),
+                               "CreateCommittedResource" ) == false )
             return 0;
 
         const RHITextureHandle                 handle  = _pDevice->storeTexture( texture, RHIMemoryTracker::classifyTexture( desc ) );

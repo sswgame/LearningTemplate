@@ -157,6 +157,35 @@ namespace sw
         virtual RHITextureHandle createTexture2D( const RHITextureDesc& desc ) = 0;
 
         /**
+         * @brief @p desc 텍스처를 힙에 놓을 때의 크기 · 정렬입니다(DX12 `GetResourceAllocationInfo`). 능력 `_bPlacedTextures` 가 없으면 {0, 0} 이다.
+         * @details 트랜지언트 풀이 수명이 겹치지 않는 첨부를 힙의 같은 바이트에 놓는 계획(`RenderGraphMemoryPlan`)에 쓴다.
+         */
+        virtual RHITextureAllocationInfo getTextureAllocationInfo( const RHITextureDesc& desc )
+        {
+            (void)desc;
+            return {};
+        }
+        /** @brief 렌더 타깃 · 깊이 텍스처를 겹쳐 놓을 힙을 만듭니다. 능력이 없거나 못 만들면 0 입니다(오류는 백엔드가 남긴다). */
+        virtual RHITransientHeapHandle createTransientHeap( uint64 sizeBytes )
+        {
+            (void)sizeBytes;
+            return 0;
+        }
+        /** @brief 힙 핸들을 놓습니다. 그 위에 놓인 텍스처는 각자 힙을 붙들므로(텍스처 파괴가 끝날 때까지) 텍스처보다 먼저 불러도 된다. */
+        virtual void destroyTransientHeap( RHITransientHeapHandle heap ) { (void)heap; }
+        /**
+         * @brief 힙 @p heap 의 @p offsetBytes 에 텍스처를 놓습니다. 서술 · 뷰 · 파괴 규칙은 `createTexture2D` 와 같다. 능력이 없으면 0 입니다.
+         * @details 같은 바이트를 쓰는 다른 텍스처가 앞서 쓰였을 수 있으므로 프레임의 첫 쓰기 앞에 `IRHICommandList::beginTextureAlias` 를 부르고, 첫 쓰기는 지우기여야 한다(내용이 정해져 있지 않다).
+         */
+        virtual RHITextureHandle createPlacedTexture2D( const RHITextureDesc& desc, RHITransientHeapHandle heap, uint64 offsetBytes )
+        {
+            (void)desc;
+            (void)heap;
+            (void)offsetBytes;
+            return 0;
+        }
+
+        /**
          * @brief 텍스처에 디버그 이름을 붙입니다 — RenderDoc · PIX 캡처, DRED 페이지 폴트, 검증 레이어 메시지가 이 이름으로 리소스를 보여 준다(파이프라인 XML 의 첨부 이름).
          * @details DX12 `ID3D12Object::SetName`, DX11 `SetPrivateData( WKPDID_D3DDebugObjectName )`, Vulkan `vkSetDebugUtilsObjectNameEXT`(VK_EXT_debug_utils 가 있을 때), GL `glObjectLabel`.
          *          이름은 진단용이라 붙일 수단이 없는 백엔드(WebGPU · 테스트 목)는 아무것도 하지 않는다 — 기본 구현이 그것이다. 텍스처를 만든 스레드에서 부른다.

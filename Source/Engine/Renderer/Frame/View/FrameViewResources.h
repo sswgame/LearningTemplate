@@ -21,6 +21,7 @@ namespace sw
     class FrameUpscale;
     class IRHIDevice;
     class RenderPipelineAsset;
+    class TransientAttachmentPool;
 
     /**
      * @class FrameViewResources
@@ -72,6 +73,11 @@ namespace sw
         void ensureTAAHistory( FrameViewTarget& view );
         /** @brief 뷰의 깊이 히스토리(R32 실수 RT · RW 텍스처)를 풀 크기로 만들어 둡니다. 장면 깊이 첨부가 없으면(2D 파이프라인) 만들지 않는다. */
         void ensureDepthHistory( FrameViewTarget& view );
+        /**
+         * @brief 능력 `_bPlacedTextures` 가 있으면 앨리어싱 계획의 놓을 수 있는 텍스처를 크기 · 정렬로 힙 하나에 겹쳐 놓습니다(`RenderGraphMemoryPlan`). 아래의 첨부 만들기는 이미 있는 이름을 건너뛴다.
+         * @details 언리얼 RDG 트랜지언트 할당기와 같은 자리 — 서술이 다른 첨부도 수명이 겹치지 않으면 같은 바이트를 쓴다. 겹친 바이트가 없으면 힙을 만들지 않는다.
+         */
+        void placeTransients( TransientAttachmentPool& pool, const RenderGraphAliasPlan& aliasPlan );
         /** @brief 뷰의 가림 타일 버퍼를 깊이 히스토리 크기에 맞춰 만들어 둡니다. 깊이 히스토리가 없으면 만들지 않습니다. */
         void ensureOcclusionTiles( FrameViewTarget& view );
 

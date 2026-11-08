@@ -830,9 +830,11 @@ namespace sw
             Memory::copy( &arrDescWord[4], &attachment._clearColor._y, sizeof( float32 ) );
             Memory::copy( &arrDescWord[5], &attachment._clearColor._z, sizeof( float32 ) );
             Memory::copy( &arrDescWord[6], &attachment._clearColor._w, sizeof( float32 ) );
-            const uint64 descKey    = HashUtil::appendBytes64( HashUtil::kFNVOffset64, arrDescWord, sizeof( arrDescWord ) );
+            const uint64 descKey = HashUtil::appendBytes64( HashUtil::kFNVOffset64, arrDescWord, sizeof( arrDescWord ) );
+            // 힙에 겹쳐 놓으려면 프레임의 첫 쓰기가 지우기여야 한다(앞 텍스처가 남긴 바이트가 내용이 된다) — RW(컴퓨트가 처음 쓴다)는 빼고 Clear 만 받는다.
+            const uint8 bPlaceable  = attachment._loadOp == RHIRenderPassLoadOp::Clear && arrDescWord[2] == 0u ? 1 : 0;
             mapCandidateIndex[name] = listCandidate.size();
-            listCandidate.push_back( RenderGraphAliasCandidate{ name, descKey, listLevelOfOrder[pLife->_firstPassIndex], listLevelOfOrder[pLife->_lastPassIndex] } );
+            listCandidate.push_back( RenderGraphAliasCandidate{ name, descKey, listLevelOfOrder[pLife->_firstPassIndex], listLevelOfOrder[pLife->_lastPassIndex], bPlaceable } );
         }
 
         // 꺼진 효과는 출력 이름이 원본을 가리킨다(`kBypassesToSource`) — 그 출력을 읽는 패스가 원본을 읽으므로 원본의 수명이 출력의 끝까지 늘어난다. 둘을 한 구간으로 묶는다.
@@ -982,6 +984,9 @@ namespace sw
                     continue;
                 }
                 const RHITextureHandle texture = activePool().findOwnTexture( barrier._resource );
+                // 힙에 겹쳐 놓은 텍스처는 같은 바이트의 앞 텍스처 일이 끝난 뒤에 쓴다(앨리어싱 배리어). 쓰기 전이마다 내도 맞다 — 첫 쓰기만 골라내는 표를 두지 않는다.
+                if ( texture != 0 && activePool().isPlaced( barrier._resource ) )
+                    levelContext._pCmdList->beginTextureAlias( texture );
                 if ( texture != 0 )
                     levelContext._pCmdList->prepareTextureForRenderTarget( texture );
             }

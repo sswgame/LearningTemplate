@@ -212,6 +212,13 @@ namespace sw
         virtual void prepareTextureForUnorderedAccess( RHITextureHandle texture ) = 0;
 
         /**
+         * @brief 힙에 겹쳐 놓은 텍스처(`IRHIResourceFactory::createPlacedTexture2D`)를 이제부터 이 텍스처로 쓴다고 알립니다 — 같은 바이트의 앞 텍스처 쓰기가 끝난 뒤에 이 텍스처를 쓴다.
+         * @details DX12 는 앨리어싱 배리어(앞 리소스를 특정하지 않는 형태)다. 겹쳐 놓기가 없는 백엔드(능력 `_bPlacedTextures` 거짓)는 그런 텍스처가 없어 할 일이 없다 — 기본 구현이 그것이다.
+         *          첫 쓰기 전이(`prepareTextureForRenderTarget`) 앞에 부른다.
+         */
+        virtual void beginTextureAlias( RHITextureHandle texture ) { (void)texture; }
+
+        /**
          * @brief 텍스처 전체를 다른 텍스처로 복사합니다. **0 은 백버퍼다.** dst 가 0 이면 화면으로 내보내고, src 가 0 이면 화면에 나갈 이미지를 읽는다(테스트와 진단용).
          * @details 둘 다 0 이면 아무것도 하지 않는다. 백버퍼에서 텍스처로 복사할 때는 크기가 백버퍼와 같아야 하고, D3D 는 포맷도 같아야 한다(`getBackBufferFormat` 으로 만든다.
          *          Vulkan 은 블릿이라 변환한다). GL 은 창의 0행이 아래쪽이라 읽을 때 뒤집으므로, 결과 텍스처의 0행은 항상 화면 위쪽이다.
