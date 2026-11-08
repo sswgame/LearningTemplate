@@ -447,9 +447,10 @@ namespace sw
 
     void FightingMatch::finishMove( int32 player )
     {
-        FighterRuntime&    fighter     = _arrFighter[player];
-        const FighterMove* pMove       = fighter.findCurrentMove();
-        const int32        stanceIndex = pMove != nullptr && pMove->_enterStance.empty() == false ? fighter._pDef->findStanceIndex( pMove->_enterStance ) : constant::invalid_index::kInt32;
+        FighterRuntime&    fighter = _arrFighter[player];
+        const FighterMove* pMove   = fighter.findCurrentMove();
+        // 들어갈 자세는 읽기 때 자세 목록에 넣었다(`FighterCatalogInternal::addStance`) — 없으면 결함으로 멈춘다.
+        const int32 stanceIndex = pMove != nullptr && pMove->_enterStance.empty() == false ? fighter._pDef->findStanceIndex( pMove->_enterStance ).value() : constant::invalid_index::kInt32;
         enterState( player, fighter._bAirborne == SW_TRUE ? FighterState::Jump : FighterState::Neutral, 0 );
         fighter._stanceIndex  = stanceIndex;
         fighter._stanceFrames = stanceIndex >= 0 ? _settings._stanceFrames : 0;
@@ -503,8 +504,8 @@ namespace sw
                 return false;
             if ( posture == FighterPosture::Stance )
             {
-                const int32 stanceIndex = fighter._pDef->findStanceIndex( move._stance );
-                if ( stanceIndex < 0 || stanceIndex != fighter._stanceIndex )
+                const optional<int32> stanceIndex = fighter._pDef->findStanceIndex( move._stance );
+                if ( stanceIndex.has_value() == false || *stanceIndex != fighter._stanceIndex )
                     return false;
             }
         }

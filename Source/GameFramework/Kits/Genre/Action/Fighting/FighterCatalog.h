@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
@@ -114,9 +115,9 @@ namespace sw
         float32 _jumpDistance{ 0.8f };
 
         /** @brief id 의 기술 인덱스를 반환합니다. 없으면 −1 입니다. */
-        int32 findMoveIndex( const hashed_string& moveID ) const;
-        /** @brief 고유 자세 이름의 인덱스를 반환합니다. 없으면 −1 입니다. */
-        int32 findStanceIndex( const hashed_string& stance ) const;
+        [[nodiscard]] optional<int32> findMoveIndex( const hashed_string& moveID ) const;
+        /** @brief 고유 자세 이름의 인덱스를 반환합니다. 없으면 비어 있습니다. */
+        [[nodiscard]] optional<int32> findStanceIndex( const hashed_string& stance ) const;
     };
 } // namespace sw
 

@@ -76,7 +76,7 @@ namespace sw
 
             static void addStance( FighterDef& fighter, const hashed_string& stance )
             {
-                if ( stance.empty() || fighter.findStanceIndex( stance ) >= 0 )
+                if ( stance.empty() || fighter.findStanceIndex( stance ).has_value() )
                     return;
                 fighter._listStance.push_back( stance );
             }
@@ -130,24 +130,24 @@ namespace sw
     // ------------------------------------------------------------------------------
     // FighterDef
     // ------------------------------------------------------------------------------
-    int32 FighterDef::findMoveIndex( const hashed_string& moveID ) const
+    optional<int32> FighterDef::findMoveIndex( const hashed_string& moveID ) const
     {
         for ( size_t index = 0; index < _listMove.size(); ++index )
         {
             if ( _listMove[index]._frame._id == moveID )
                 return static_cast<int32>( index );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
-    int32 FighterDef::findStanceIndex( const hashed_string& stance ) const
+    optional<int32> FighterDef::findStanceIndex( const hashed_string& stance ) const
     {
         for ( size_t index = 0; index < _listStance.size(); ++index )
         {
             if ( _listStance[index] == stance )
                 return static_cast<int32>( index );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     // ------------------------------------------------------------------------------

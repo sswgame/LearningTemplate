@@ -161,11 +161,12 @@ namespace sw
 
     GhostSearchResult GhostMansion::searchFurniture( const hashed_string& furnitureID, GhostSearchMode mode, ItemStackList& outLoot )
     {
-        const int32 furnitureIndex = findFurnitureIndex( furnitureID );
-        if ( furnitureIndex < 0 )
+        const optional<int32> foundFurniture = findFurnitureIndex( furnitureID );
+        if ( foundFurniture.has_value() == false )
             return GhostSearchResult::UnknownFurniture;
-        const GhostFurnitureDef& furniture = _pCatalog->getFurniture()[static_cast<size_t>( furnitureIndex )];
-        const uint8              bAllowed  = mode == GhostSearchMode::Vacuum ? furniture._bVacuum : furniture._bShake;
+        const int32              furnitureIndex = *foundFurniture;
+        const GhostFurnitureDef& furniture      = _pCatalog->getFurniture()[static_cast<size_t>( furnitureIndex )];
+        const uint8              bAllowed       = mode == GhostSearchMode::Vacuum ? furniture._bVacuum : furniture._bShake;
         if ( bAllowed == SW_FALSE )
             return GhostSearchResult::WrongMode;
         if ( furniture._room != _currentRoom )
@@ -244,21 +245,21 @@ namespace sw
 
     bool GhostMansion::isSearched( const hashed_string& furnitureID ) const
     {
-        const int32 furnitureIndex = findFurnitureIndex( furnitureID );
-        return furnitureIndex >= 0 && _listSearched[static_cast<size_t>( furnitureIndex )] == SW_TRUE;
+        const optional<int32> furnitureIndex = findFurnitureIndex( furnitureID );
+        return furnitureIndex.has_value() && _listSearched[static_cast<size_t>( *furnitureIndex )] == SW_TRUE;
     }
 
-    int32 GhostMansion::findFurnitureIndex( const hashed_string& furnitureID ) const
+    optional<int32> GhostMansion::findFurnitureIndex( const hashed_string& furnitureID ) const
     {
         if ( _pCatalog == nullptr )
-            return constant::invalid_index::kInt32;
+            return nullopt;
         const vector<GhostFurnitureDef>& listFurniture = _pCatalog->getFurniture();
         for ( size_t index = 0; index < listFurniture.size(); ++index )
         {
             if ( listFurniture[index]._id == furnitureID )
                 return static_cast<int32>( index );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     bool GhostMansion::isKnownRoom( const hashed_string& roomID ) const
