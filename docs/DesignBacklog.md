@@ -44,7 +44,7 @@
 
 | 우선순위 | 현재 코드에서 확인한 내용 | 개선 방향과 완료 조건 |
 |---|---|---|
-| 검증 필요 | **엔진 프레임 API에는 뷰 입력이 남아 있지만 렌더 구현 경계는 이미 분리돼 있다.** [`Engine::update`](../Source/Engine/Engine.h)는 `FrameViewports`와 카메라 공급자를 받지만, 제출은 [`IEngineRenderDriver`](../Source/Engine/Graphics/View/IEngineRenderDriver.h)로 전달한다. 따라서 “Engine이 Renderer 구현을 직접 안다”는 이전 주장은 틀렸다. | 서버·쿠커 타깃에서 이 프레임 입력 형식이 실제로 불필요한 의존을 끌어오는지 빌드 타깃·include 그래프로 확인한다. 컴파일 경계 위반이 재현될 때만 뷰 데이터 계약을 분리한다. |
+| 검증 필요 | **엔진 프레임 API에는 뷰 입력이 남아 있지만 렌더 구현 경계는 이미 분리돼 있다.** [`Engine::update`](../Source/Engine/Engine.h)는 `FrameViewports`와 카메라 공급자를 받지만, 제출은 [`IEngineRenderDriver`](../Source/Engine/Presentation/IEngineRenderDriver.h)로 전달한다. 따라서 “Engine이 Renderer 구현을 직접 안다”는 이전 주장은 틀렸다. | 서버·쿠커 타깃에서 이 프레임 입력 형식이 실제로 불필요한 의존을 끌어오는지 빌드 타깃·include 그래프로 확인한다. 컴파일 경계 위반이 재현될 때만 뷰 데이터 계약을 분리한다. |
 | 점검 보류 | **렌더 확장 두 경로는 확인했으나 중복 결함은 입증되지 않았다.** 기본 씬 수집은 엔진 컴포넌트를 구체적으로 처리하고, 모듈 확장은 [`RenderExtensionRegistry`](../Source/Engine/Renderer/Extension/RenderExtensionRegistry.h)와 프록시 수명 계약을 쓴다. 둘의 입력·수명·스레드 계약은 다르다. | 일괄 통합하지 않는다. 실제 플러그인 기능이 기본 수집 경로에 의존하거나 같은 기능을 두 번 구현하는 사례가 확인될 때만 공통 기여 API를 설계한다. |
 | 점검 보류 | **온라인 서비스는 공통 프로토콜 기반을 이미 갖췄다.** [`OnlineProtocolService`](../Source/GameFramework/Kits/Feature/Online/OnlineCore/Server/Service/OnlineProtocolService.h)는 타입 있는 메서드 호출·응답과 공통 결과 지표·재시도 처리를 제공한다. “키트마다 손 디스패치·지표·오류 처리가 제각각”이라는 이전 요약은 현재 코드에 맞지 않는다. | 새 `OnlineSession`이나 두 번째 서버 추상화를 먼저 만들지 않는다. 게임의 실제 클라이언트 조립·수명 소유를 확인하고, 여러 게임에서 같은 통합 결함이 확인될 때만 세션 경계를 정한다. |
 
