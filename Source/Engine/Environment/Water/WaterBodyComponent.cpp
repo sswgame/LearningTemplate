@@ -18,6 +18,7 @@
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Physics/PhysicsSystem.h"
+#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Rendering/MeshInstanceBatch.h"
 
 namespace sw
@@ -170,6 +171,7 @@ namespace sw
         , _surfaceVertexCount{ 0 }
         , _bOriginDirty{ false }
         , _bBuiltOnTerrain{ false }
+        , _bRebuildQueued{ false }
     {
         setCanEverTick( true );
         setTickGroup( TickGroup::PostUpdate );
@@ -198,7 +200,20 @@ namespace sw
     void WaterBodyComponent::onPostLoad()
     {
         SceneComponent::onPostLoad();
-        rebuildSurface();
+        // 늘 틱 뒤에 한 번 짓는다 — 같은 배치에서 지형(높이장)과 강 경로 어댑터(`setRiverPathFromSource`)가 아직이거나 뒤따르면 지금 지은 메시는 버려졌다
+        // (waterplay: 지형 없이 한 번 · 강 경로로 또 한 번). 그사이 들어온 다시 만들기 요청은 줄 선 이 한 번에 합쳐진다.
+        GameObject*        pOwner   = getOwner();
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        if ( pManager == nullptr )
+        {
+            rebuildSurface();
+            return;
+        }
+        if ( _bRebuildQueued )
+            return;
+        _bRebuildQueued = true;
+        pManager->deferPostTickOnComponent( *this, []( WaterBodyComponent& water )
+        { water.rebuildSurface(); } );
     }
 
     void WaterBodyComponent::onBeginPlay()
@@ -206,10 +221,10 @@ namespace sw
         SceneComponent::onBeginPlay();
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        if ( pManager == nullptr || _bBuiltOnTerrain )
+        // 지형 없이 지었는데 지금은 이 자리에 지형이 있을 때만 다시 짓는다(지형이 뒤에 생긴 로드 순서). 열린 물은 다시 짓지 않는다.
+        if ( pManager == nullptr || _bBuiltOnTerrain || TerrainComponent::findTerrainAt( *pManager, _surfaceOrigin._x, _surfaceOrigin._z ) == nullptr )
             return;
-        pManager->executeOrDeferPostTickOnComponent( *this, []( WaterBodyComponent& water )
-        { water.rebuildSurface(); } );
+        queueRebuild( *pManager );
     }
 
     void WaterBodyComponent::onPropertyChanged( hashed_string propertyName )
@@ -236,7 +251,8 @@ namespace sw
     void WaterBodyComponent::onWorldTransformUpdated()
     {
         SceneComponent::onWorldTransformUpdated();
-        if ( _batch != nullptr )
+        // 원점이 실제로 옮겨 갔을 때만 다시 만든다 — 로드 직후 첫 월드 갱신은 같은 자리를 알려 수면을 한 번 더 지었다(지형과 같은 결함).
+        if ( _batch != nullptr && getWorldPosition() != _surfaceOrigin )
             _bOriginDirty.store( true, std::memory_order_relaxed );
     }
 
@@ -250,8 +266,7 @@ namespace sw
         if ( pManager != nullptr && _bOriginDirty.exchange( false, std::memory_order_relaxed ) )
         {
             // 다시 만들기는 배치를 레지스트리에서 빼고 넣는 구조 변경이다. 틱 뒤로 미룬다.
-            pManager->executeOrDeferPostTickOnComponent( *this, []( WaterBodyComponent& water )
-            { water.rebuildSurface(); } );
+            queueRebuild( *pManager );
         }
         // 날씨가 진폭 배율을 바꿨으면 바운드만 고친다(메시는 그대로 — 정점 셰이더가 파도를 민다).
         if ( _batch != nullptr && _boundsWaveScale != _waveAmplitudeScale )
@@ -291,8 +306,7 @@ namespace sw
             rebuildSurface();
             return;
         }
-        pManager->executeOrDeferPostTickOnComponent( *this, []( WaterBodyComponent& water )
-        { water.rebuildSurface(); } );
+        queueRebuild( *pManager );
     }
 
     void WaterBodyComponent::clearRiverPathSource()
@@ -340,8 +354,19 @@ namespace sw
         _material.setVector( names._waveParams, float4{ PhysicsSystem::getConfiguredGravityMagnitude(), 0.0f, 0.0f, 0.0f } );
     }
 
+    void WaterBodyComponent::queueRebuild( GameObjectManager& manager )
+    {
+        if ( _bRebuildQueued )
+            return;
+        _bRebuildQueued = true;
+        manager.executeOrDeferPostTickOnComponent( *this, []( WaterBodyComponent& water )
+        { water.rebuildSurface(); } );
+    }
+
     void WaterBodyComponent::rebuildSurface()
     {
+        _bRebuildQueued = false;
+        SW_PROFILE_SCOPE( "GT.Water.rebuildSurface" );
         _batch.reset();
         _surfaceVertexCount = 0;
         // 질의도 이 원점을 쓴다. 물은 움직이지 않는 것으로 보고, 옮기면 다시 만든다(트랜스폼 변경은 onPropertyChanged 로 온다).

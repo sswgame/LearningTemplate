@@ -12,6 +12,7 @@
 #include "Engine/Physics/Component/ScenePhysics.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/PhysicsDesc.h"
+#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 
 namespace sw
@@ -126,6 +127,7 @@ namespace sw
 
     void TerrainColliderComponent::beginPhysicsFrame( ScenePhysics& physics )
     {
+        SW_PROFILE_SCOPE( "GT.TerrainCollider.beginPhysicsFrame" );
         if ( isSimulated() == false )
         {
             releasePhysics( physics );

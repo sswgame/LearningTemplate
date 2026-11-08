@@ -23,6 +23,7 @@
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
+#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Rendering/MeshInstanceBatch.h"
 
 namespace sw
@@ -512,6 +513,7 @@ namespace sw
 
     void FoliageComponent::rebuildFoliage()
     {
+        SW_PROFILE_SCOPE( "GT.Foliage.rebuild" );
         releaseCells();
         _listLayerCandidate.clear();
         _lastRebuiltBatchCount = 0;

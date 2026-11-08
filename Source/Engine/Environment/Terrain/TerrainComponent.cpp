@@ -20,6 +20,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
+#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 #include "Engine/Rendering/MeshInstanceBatch.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -234,7 +235,8 @@ namespace sw
     void TerrainComponent::onWorldTransformUpdated()
     {
         SceneComponent::onWorldTransformUpdated();
-        if ( _heightfield.isValid() )
+        // 원점이 실제로 옮겨 갔을 때만 다시 읽는다 — 로드 직후 첫 월드 갱신은 같은 자리를 알려 지형 전체를 한 번 더 읽었다(waterplay Debug 600 ms).
+        if ( _heightfield.isValid() && getWorldPosition() != _heightfield.getOrigin() )
             _bOriginDirty.store( true, std::memory_order_relaxed );
     }
 
@@ -301,6 +303,7 @@ namespace sw
 
     bool TerrainComponent::reloadTerrain()
     {
+        SW_PROFILE_SCOPE( "GT.Terrain.reload" );
         releaseChunks();
         _heightfield.shutdown();
         _listChunkGeneration.clear();

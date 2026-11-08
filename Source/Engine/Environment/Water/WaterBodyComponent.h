@@ -88,6 +88,10 @@ namespace sw
 
         /** @brief 수면 메시를 다시 만들고(지형 깊이 포함) 머티리얼 값을 싣습니다. 등록 전이면 아무것도 하지 않습니다. */
         void rebuildSurface();
+        /**
+         * @brief 틱 중이면 틱 뒤에, 아니면 바로 수면을 다시 만듭니다. 이미 줄 섰으면 더 세우지 않는다 — 로드 · 원점 · 강 경로가 같은 프레임에 저마다 세워 같은 메시를 여러 번 지었다.
+         */
+        void queueRebuild( GameObjectManager& manager );
 
         /**
          * @brief 월드 (x, z) 의 수면 높이(월드 y)를 구합니다. 이 물이 덮지 않는 위치면 false 를 반환합니다.
@@ -225,5 +229,6 @@ namespace sw
         uint32                        _surfaceVertexCount;
         atomic<bool>                  _bOriginDirty;    ///< 오너가 움직여 수면 원점이 낡았다
         bool                          _bBuiltOnTerrain; ///< 마지막 수면이 지형 깊이를 구웠다
+        bool                          _bRebuildQueued;  ///< 다시 만들기가 틱 뒤로 줄 서 있다(`queueRebuild` 가 세우고 `rebuildSurface` 가 지운다)
     };
 } // namespace sw
