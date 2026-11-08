@@ -77,7 +77,7 @@ namespace sw
 
     BVHTree3D::BVHTree3D()
         : _listNode{}
-        , _listFreeNode{}
+        , _freeNode{}
         , _mapHandleToNode{}
         , _rootIndex{ constant::invalid_index::kInt32 }
     {
@@ -99,7 +99,7 @@ namespace sw
     int32 BVHTree3D::allocateNode()
     {
         // 재사용 칸도 새 칸도 기본 노드로 채운다.
-        return static_cast<int32>( allocateFreeListIndex( _listNode, _listFreeNode, BVHNode3D{} ) );
+        return static_cast<int32>( _freeNode.allocate( _listNode, BVHNode3D{} ) );
     }
 
     void BVHTree3D::freeNode( int32 nodeIndex )
@@ -110,7 +110,7 @@ namespace sw
             _listNode[static_cast<size_t>( nodeIndex )]._leftChild  = constant::invalid_index::kInt32;
             _listNode[static_cast<size_t>( nodeIndex )]._rightChild = constant::invalid_index::kInt32;
             _listNode[static_cast<size_t>( nodeIndex )]._handle     = SlotHandle{};
-            _listFreeNode.push_back( static_cast<uint32>( nodeIndex ) );
+            _freeNode.push( static_cast<uint32>( nodeIndex ) );
         }
     }
 
@@ -154,7 +154,7 @@ namespace sw
     {
         _rootIndex = constant::invalid_index::kInt32;
         _listNode.clear();
-        _listFreeNode.clear();
+        _freeNode.clear();
         _mapHandleToNode.clear();
     }
 
@@ -418,7 +418,7 @@ namespace sw
 
     size_t BVHTree3D::getNodeCount() const
     {
-        return _listNode.size() - _listFreeNode.size();
+        return _listNode.size() - _freeNode.size();
     }
 
     int32 BVHTree3D::getTreeHeight() const

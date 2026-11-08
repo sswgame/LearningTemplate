@@ -14,6 +14,7 @@
 #pragma once
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/IndexFreeList.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
@@ -166,7 +167,7 @@ namespace sw::editor
 
         mutable mutex                        _textureMutex; ///< 칸 표 — UI 스레드(등록 · 해제 예약)와 렌더 스레드(번호 등록 · 반환)가 함께 쓴다
         vector<TextureSlot> _listTextureSlot SW_GUARDED_BY( _textureMutex );
-        vector<uint32> _listFreeSlot         SW_GUARDED_BY( _textureMutex );
+        IndexFreeList _freeSlot              SW_GUARDED_BY( _textureMutex );
         vector<TextureOp> _listTextureOp     SW_GUARDED_BY( _textureMutex ); ///< UI 스레드가 낸 텍스처 연산(낸 순서) — 렌더 스레드의 `prepareFrame` 이 비운다
         vector<TextureOp>                    _listApplyingOp;                ///< 렌더 스레드가 적용 중인 연산(잠금 밖에서 쓰려고 바꿔 받는다 — 저장소를 다시 쓴다)
         EditorDrawReleaseQueue               _drawReleaseQueue;

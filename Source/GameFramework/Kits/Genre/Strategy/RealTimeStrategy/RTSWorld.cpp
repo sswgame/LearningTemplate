@@ -192,7 +192,7 @@ namespace sw
         , _pathQueue{ _pathSolver }
         , _listUnit{}
         , _listGeneration{}
-        , _listFreeSlot{}
+        , _freeSlot{}
         , _listPlayer{}
         , _eventBuffer{}
         , _listTerrainBlocked{}
@@ -230,7 +230,7 @@ namespace sw
             return false;
         _listUnit.clear();
         _listGeneration.clear();
-        _listFreeSlot.clear();
+        _freeSlot.clear();
         _listPlayer.clear();
         _eventBuffer.clear();
         _listTerrainBlocked.assign( static_cast<size_t>( _grid.getWidth() * _grid.getHeight() ), SW_FALSE );
@@ -312,7 +312,7 @@ namespace sw
     RTSUnitID RTSWorld::allocateUnit()
     {
         // 빈 슬롯은 마지막에 놓인 것부터 다시 나간다(LIFO). 유닛 id 가 그 순서를 따른다.
-        const uint32 index = reserveFreeListIndex( _listUnit, _listFreeSlot );
+        const uint32 index = _freeSlot.reserve( _listUnit );
         if ( index < _listUnit.size() )
         {
             _listUnit[index] = RTSUnit{};
@@ -339,7 +339,7 @@ namespace sw
             ++_listGeneration[index];
             if ( _listGeneration[index] == 0 )
                 _listGeneration[index] = 1;
-            _listFreeSlot.push_back( static_cast<uint32>( index ) );
+            _freeSlot.push( static_cast<uint32>( index ) );
         }
     }
 
@@ -1852,8 +1852,8 @@ namespace sw
                 return;
         }
 
-        vector<uint32>  restoredFreeSlot;
-        vector<uint32>& listFreeSlot = io.isWriting() ? _listFreeSlot : restoredFreeSlot;
+        // 쓸 때는 빈 칸 스택의 사본을 싣는다(저장 경로라 복사 한 번), 읽을 때는 검사를 마친 뒤에야 `restore` 로 바꾼다.
+        vector<uint32> listFreeSlot = io.isWriting() ? _freeSlot.getIndices() : vector<uint32>{};
         io.list( listFreeSlot, sizeof( uint32 ), [&]( uint32& slot )
         {
             io.value( slot );
@@ -1908,9 +1908,9 @@ namespace sw
         _listTerrainBlocked = std::move( restoredTerrain );
         _listUnit           = std::move( restoredUnit );
         _listGeneration     = std::move( restoredGeneration );
-        _listFreeSlot       = std::move( restoredFreeSlot );
-        _listPlayer         = std::move( restoredPlayer );
-        _vision             = std::move( restoredVision );
+        _freeSlot.restore( std::move( listFreeSlot ) );
+        _listPlayer = std::move( restoredPlayer );
+        _vision     = std::move( restoredVision );
         _eventBuffer.clear();
         _flowParams.clear();
         _stepTimer   = stepTimer;

@@ -5,8 +5,8 @@
  * @details 모든 난수는 시드 하나로 만든 `GameRandom` 이 만든다. 시드, 명령, 타이밍 입력이 같으면 같은 전투가 된다.
  */
 #pragma once
-#include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"

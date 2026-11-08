@@ -142,7 +142,7 @@ namespace sw
             // 회수된 슬롯을 먼저 재사용한다. 새 슬롯만 늘리면 버퍼가 단조 증가한다. 사본은 이번 빌드의 `refreshMaterialBindings` 가 채운다.
             // 그룹 목록은 새 원소가 생길 때만 고친다(공유 중이면 이때 베낀다 — `GPUSceneSnapshot::editMaterialGroups`).
             GPUMaterialGroup& group = inoutSnapshot.editMaterialGroups()[groupIndex];
-            elementIndex            = allocateFreeListIndex( group._listEntry, state._listFreeEntry, GPUMaterialElement{ key, MaterialRenderBinding{} } );
+            elementIndex            = state._freeEntry.allocate( group._listEntry, GPUMaterialElement{ key, MaterialRenderBinding{} } );
             if ( elementIndex >= state._listEntryLastUsedBuild.size() )
                 state._listEntryLastUsedBuild.resize( elementIndex + 1 );
             if ( elementIndex >= state._listEntryOwner.size() )
@@ -207,7 +207,7 @@ namespace sw
                 inoutSnapshot.editMaterialGroups()[groupIndex]._listEntry[index] = GPUMaterialElement{};
                 if ( index < state._listEntryOwner.size() )
                     state._listEntryOwner[index] = MaterialElementOwner{};
-                state._listFreeEntry.push_back( index );
+                state._freeEntry.push( index );
                 state._bHasLast = SW_FALSE;
             }
         }

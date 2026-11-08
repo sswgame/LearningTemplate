@@ -70,7 +70,7 @@ namespace sw
         {
             mutable mutex                                   _mutex;
             vector<LoopbackLink>                            _listLink;
-            vector<uint32>                                  _listFreeLink;
+            IndexFreeList                                   _freeLink;
             unordered_map<uint16, LoopbackStreamTransport*> _mapListener;
             LoopbackStreamConditions                        _conditions;
             DeterministicRandom32                           _random;
@@ -84,7 +84,7 @@ namespace sw
         public:
             explicit LoopbackStreamTransport( LoopbackNetworkState* pState )
                 : _listSlot{}
-                , _listFreeSlot{}
+                , _freeSlot{}
                 , _listPending{}
                 , _listDispatch{}
                 , _settings{}
@@ -306,7 +306,7 @@ namespace sw
         private:
             StreamConnectionHandle allocateSlotLocked()
             {
-                const uint32 index = reserveFreeListIndex( _listSlot, _listFreeSlot );
+                const uint32 index = _freeSlot.reserve( _listSlot );
                 if ( index == _listSlot.size() )
                     _listSlot.push_back( LoopbackHandleSlot{} );
                 LoopbackHandleSlot& slot = _listSlot[index];
@@ -326,7 +326,7 @@ namespace sw
                 ++slot._generation;
                 if ( slot._generation == 0 )
                     slot._generation = 1;
-                _listFreeSlot.push_back( handle._index );
+                _freeSlot.push( handle._index );
                 ++_stats._closedCount;
                 if ( linkIndex >= 0 )
                 {
@@ -343,7 +343,7 @@ namespace sw
                         if ( bOtherFreed )
                         {
                             link = LoopbackLink{};
-                            _pState->_listFreeLink.push_back( static_cast<uint32>( linkIndex ) );
+                            _pState->_freeLink.push( static_cast<uint32>( linkIndex ) );
                         }
                     }
                 }
@@ -351,7 +351,7 @@ namespace sw
 
             int32 allocateLinkLocked()
             {
-                const uint32 linkIndex = reserveFreeListIndex( _pState->_listLink, _pState->_listFreeLink );
+                const uint32 linkIndex = _pState->_freeLink.reserve( _pState->_listLink );
                 if ( linkIndex == _pState->_listLink.size() )
                     _pState->_listLink.emplace_back();
                 _pState->_listLink[linkIndex]._bUsed = SW_TRUE;
@@ -464,7 +464,7 @@ namespace sw
 
         private:
             vector<LoopbackHandleSlot>      _listSlot;
-            vector<uint32>                  _listFreeSlot;
+            IndexFreeList                   _freeSlot;
             vector<LoopbackEvent>           _listPending;  ///< 망 잠금 안에서 쌓인 사건
             vector<LoopbackEvent>           _listDispatch; ///< pollIO 스레드 전용 — 잠금 밖에서 넘긴다
             OnceInit<StreamTransportConfig> _settings;     ///< initialize 가 한 번 정한다 — 저쪽 전송이 망 잠금 아래에서 읽는다.

@@ -4,8 +4,8 @@
  *        시설, 고철 운반, 위협(기반 SpawnDirector 의 실내와 실외), 죽음과 시신 회수, 벌금, 전멸 손실, 회사 매입, 할당량, 터미널 상점(기반 ShopState 와 Wallet)을 다룹니다.
  */
 #pragma once
-#include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"

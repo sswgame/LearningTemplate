@@ -16,13 +16,14 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/IDAllocator.h"
-#include "Core/Container/stable_unordered_map.h"
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Time/GameTimer.h"
 
 #include "Engine/Foundation/Foundation.h"
@@ -268,7 +269,7 @@ namespace sw
             atomic<bool>              _bForceReload;
 
             /**
-             * @brief 원자 플래그를 끈 기본값으로 만듭니다. 복사도 이동도 없다 — 컨텍스트는 `_mapModule`(주소 고정 맵)이 한 번 만든 자리에서 산다.
+             * @brief 원자 플래그를 끈 기본값으로 만듭니다. 복사도 이동도 없다 — 컨텍스트는 `_mapModule` 이 `unique_ptr` 로 한 번 만든 자리에서 산다.
              *        연쇄 리로드가 `ModuleRecord*` 를 쥔 채 새 모듈 등록이 끼어들어도 그 주소는 그대로다.
              */
             ModuleRecord() noexcept;
@@ -342,7 +343,7 @@ namespace sw
         bool consumeBuildNotice();
 
     private:
-        stable_unordered_map<string, ModuleRecord>       _mapModule;        ///< 이름 집합은 `_dependencyGraph` 와 같다(`getOrCreateRecord` · `clearRecords`). 컨텍스트 주소가 고정이다
+        unordered_map<string, unique_ptr<ModuleRecord>>  _mapModule;        ///< 이름 집합은 `_dependencyGraph` 와 같다(`getOrCreateRecord` · `clearRecords`). 값을 `unique_ptr` 로 들어 맵이 자라도 컨텍스트 주소가 고정이다(언리얼 `TMap<FName, TUniquePtr<…>>` 와 같은 모양)
         ModuleDependencyGraph                            _dependencyGraph;  ///< 모듈 이름 → 의존 모듈 이름. 연쇄 교체 대상과 순서를 계산한다
         vector<SharedLibrary>                            _listSharedModule; ///< `loadSharedModule` 로 올린 공용 모듈(올린 순서 — 리로드 대상을 모두 내린 뒤 `shutdown` 이 거꾸로 내린다)
         unique_ptr<IFileWatcher>                         _fileWatcher;      ///< 모듈 폴더(하위 폴더 없이)를 본다. 첫 `registerModule` 이 시작한다

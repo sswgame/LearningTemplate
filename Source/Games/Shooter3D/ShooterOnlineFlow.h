@@ -9,9 +9,9 @@
  *          화면은 아직 없고 개발 명령(`shooter.online.*`)과 감시 값(`Shooter3D.Online*`)으로 시나리오가 끝단을 판정합니다(`automation/onlinesession.scenario.xml` · `onlinematch.scenario.xml`).
  */
 #pragma once
-#include "Core/Container/ConsumerGate.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/ConsumerGate.h"
 #include "Core/Foundation/Types.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/API/AccountClient.h"

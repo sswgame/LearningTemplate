@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/IndexFreeList.h"
 
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/EngineMinimal.h"
@@ -828,7 +829,7 @@ namespace sw
         VkPipelineLayout _pipelineLayout;
         VkDescriptorPool _descriptorPool;
         VkSampler        _arrStaticSampler[shaderslot::kStaticSamplerCount]; ///< binding_slots.hlsli 4 의 정적 샘플러 세트(set 1 immutable)
-        vector<uint32>   _listBindlessFree;
+        IndexFreeList    _freeBindless;
 
         RHIHandleTable<VulkanBufferRecord> _gpuBuffers;
         /// @brief 링 상수 버퍼에서 슬롯 하나의 크기입니다. 게임 스레드가 만들고 부수는 동안 렌더 스레드가 드로우마다 읽으므로 `_bindlessMutex` 로 보호합니다.
@@ -848,15 +849,15 @@ namespace sw
         vector<RHIBufferHandle> _listUAVSourceBuffer;
         /// @brief UAV 인덱스에서 원본 텍스처를 찾는 목록입니다(RW 텍스처 배열 원소, 0이면 버퍼 또는 빈 슬롯). 버퍼 UAV 와 같은 인덱스 공간을 씁니다.
         vector<RHITextureHandle> _listUAVSourceTexture;
-        vector<uint32>           _listUAVFree;
+        IndexFreeList            _freeUAV;
 
         RHIHandleTable<VulkanTextureRecord> _gpuTextures;
         RHIReleaseQueue                     _releaseQueue;
         /// @brief PSO 호환 렌더 패스, 합성 프레임버퍼, desc 렌더 패스 캐시입니다. Vulkan 만 가지고 있습니다(스왑체인 RP 는 위 `_renderPass`).
         VulkanRHIRenderPassCache _renderPassCache;
 
-        vector<uint8>  _listTextureUsed; ///< 텍스처 인덱스 공간(1은 사용 중, 2는 해제 대기). 프리리스트와 짝을 이룬다.
-        vector<uint32> _listTextureFree;
+        vector<uint8> _listTextureUsed; ///< 텍스처 인덱스 공간(1은 사용 중, 2는 해제 대기). 프리리스트와 짝을 이룬다.
+        IndexFreeList _freeTexture;
 
         VkDescriptorSetLayout _slotSetLayout;    ///< set 0: 슬롯 세트(b 0..15 UBO, t 16..31 SSBO, u 32..47 SSBO)
         VkDescriptorSetLayout _textureSetLayout; ///< set 1: 텍스처 배열과 immutable sampler

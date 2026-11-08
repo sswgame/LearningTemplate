@@ -27,6 +27,7 @@ namespace sw
     MeshLODSystem::MeshLODSystem( GameObjectManager& manager )
         : _manager{ manager }
         , _listView{}
+        , _listPrimitive{}
         , _listPickedLOD{}
         , _pendingView{}
         , _forcedLOD{ kPickByScreenSize }
@@ -125,8 +126,10 @@ namespace sw
         (void)deltaTime;
         SW_PROFILE_SCOPE( "GT.MeshLOD.select" );
         // GPU 컬링이 인스턴스마다 단계를 고르는 프레임은 그것이 고르는 컴포넌트의 단계를 건드리지 않는다(고정 단계 · 대기 뷰가 생기면 빌더가 다음 빌드에 CPU 로 돌려 놓는다).
-        const bool                     bGPUPicks     = _bGPUSelectionActive == SW_TRUE && needsCPUSelection() == false;
-        const vector<ScenePrimitive*>& listPrimitive = _manager.getPrimitiveRegistry().getLODPrimitives();
+        const bool                            bGPUPicks    = _bGPUSelectionActive == SW_TRUE && needsCPUSelection() == false;
+        const unordered_set<ScenePrimitive*>& setPrimitive = _manager.getPrimitiveRegistry().getLODPrimitives();
+        _listPrimitive.assign( setPrimitive.begin(), setPrimitive.end() );
+        const vector<ScenePrimitive*>& listPrimitive = _listPrimitive;
         const int32                    forcedLOD     = _forcedLOD;
         const uint32                   count         = static_cast<uint32>( listPrimitive.size() );
         // 고르기(화면 크기 · 판정)는 컴포넌트마다 독립이라 워커로 나누고, 적용(`setLODIndex`)은 이 스레드가 목록 순서로 한다(언리얼 ParallelFor + 게임 스레드 반영).

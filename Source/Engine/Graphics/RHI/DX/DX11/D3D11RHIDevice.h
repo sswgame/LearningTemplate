@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/IndexFreeList.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
@@ -596,14 +597,14 @@ namespace sw
         uint64                              _lastTimestampFrequency; ///< 마지막으로 읽은 disjoint 의 주파수(틱/초)
 
         vector<RHIBufferHandle> _listRegisteredBindless;
-        vector<uint32>          _listBindlessFree;
+        IndexFreeList           _freeBindless;
 
         vector<RHITextureHandle> _listRegisteredTexture;
-        vector<uint32>           _listTextureFree;
+        IndexFreeList            _freeTexture;
 
         vector<Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView>> _listRegisteredUAV;
         vector<RHIBufferHandle>                                   _listUAVSourceBuffer;
-        vector<uint32>                                            _listUAVFree;
+        IndexFreeList                                             _freeUAV;
 
         RHIHandleTable<D3D11PipelineStateRecord> _pipelineStates;
         RHIRenderPassRegistry                    _renderPassRegistry; ///< 렌더 패스 핸들 등록부. 자기 뮤텍스로 직렬화해 어느 스레드에서나 부른다.

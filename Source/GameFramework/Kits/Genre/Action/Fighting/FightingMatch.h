@@ -8,8 +8,8 @@
  *          공격 방향은 기술을 시작할 때 상대 쪽으로 고정된다(추적 기술은 매 프레임 상대를 따라간다). 그래서 횡이동으로 각도를 벌리면 직선 기술이 빗나간다.
  */
 #pragma once
-#include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"

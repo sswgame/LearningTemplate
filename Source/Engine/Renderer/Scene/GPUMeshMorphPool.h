@@ -43,6 +43,7 @@
  * 같은 원본을 쓰는 인스턴스는 한 구간을 나눠 쓰며 `_refCount` 로 센다. 언리얼 GPU Skin Cache 가 스켈레탈 메시마다 버퍼 구간을 나누고, 유니티 GPU skinning 이 메시 단위 버퍼 구간을 두는 것과 같은 선이다.
  */
 #pragma once
+#include "Core/Container/IndexFreeList.h"
 #include "Core/Container/SpanAllocator.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
@@ -316,9 +317,9 @@ namespace sw
         RHIStructuredBuffer _skinPalette;
         RHIStructuredBuffer _deformProgram;
         RHIStructuredBuffer _skinResultOffsets;
-        /// @brief 풀에 든 모프 메시(칸 순서)입니다. 레스트 노멀의 w 가 이 번호 + 1 입니다. 나간 메시의 칸은 nullptr 이고 `_listFreeMorphSlot` 에 있습니다.
+        /// @brief 풀에 든 모프 메시(칸 순서)입니다. 레스트 노멀의 w 가 이 번호 + 1 입니다. 나간 메시의 칸은 nullptr 이고 `_freeMorphSlot` 에 있습니다.
         vector<const Mesh*> _listPoolMorph;
-        vector<uint32>      _listFreeMorphSlot;
+        IndexFreeList       _freeMorphSlot;
         /// @brief 모프 메시 → 기록입니다. 포인터는 키로만 쓰며 따라가지 않습니다(이미 지워졌을 수 있습니다).
         unordered_map<const Mesh*, MorphEntry> _mapMorphEntry;
         SpanAllocator                          _morphAllocator;

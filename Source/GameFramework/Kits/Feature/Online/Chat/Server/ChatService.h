@@ -21,11 +21,11 @@
  *          Nakama 의 채널 메시지(DB 기록과 노드 간 클러스터 버스)와 같은 구조이다.
  */
 #pragma once
-#include "Core/Container/EventBuffer.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"

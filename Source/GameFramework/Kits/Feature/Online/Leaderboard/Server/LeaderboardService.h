@@ -15,13 +15,13 @@
  *          PlayFab Statistics 와 Leaderboards, EOS Stats 와 Leaderboards, Nakama Leaderboards(best, set, incr)에 해당한다.
  */
 #pragma once
-#include "Core/Container/EventBuffer.h"
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 

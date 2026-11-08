@@ -226,7 +226,7 @@ namespace sw::editor
         {
             ScopedLock<mutex> lock{ _textureMutex };
             _listTextureSlot.clear();
-            _listFreeSlot.clear();
+            _freeSlot.clear();
         }
         _mapForeignSRV.clear();
         _wordBuffer.release( _pDevice );
@@ -451,12 +451,7 @@ namespace sw::editor
     uint32 ImGuiRenderer::acquireSlot( RHITextureHandle texture, bool bOwned )
     {
         uint32 slotIndex{ 0 };
-        if ( _listFreeSlot.empty() == false )
-        {
-            slotIndex = _listFreeSlot.back();
-            _listFreeSlot.pop_back();
-        }
-        else
+        if ( _freeSlot.tryPop( slotIndex ) == false )
         {
             slotIndex = static_cast<uint32>( _listTextureSlot.size() );
             _listTextureSlot.emplace_back();
@@ -478,7 +473,7 @@ namespace sw::editor
                 return;
             slot                        = _listTextureSlot[slotIndex];
             _listTextureSlot[slotIndex] = TextureSlot{};
-            _listFreeSlot.push_back( slotIndex );
+            _freeSlot.push( slotIndex );
         }
         IRHIResourceFactory* const pFactory = device.getResourceFactory();
         if ( pFactory == nullptr )

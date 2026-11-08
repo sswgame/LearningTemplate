@@ -938,15 +938,11 @@ namespace sw
 
         for ( uint32 slice = 0; pNative != nullptr && desc._bIsRenderTarget && _pDevice->_rtvHeap != nullptr && slice < desc._arraySize; ++slice )
         {
-            uint32 rtvSlot{ 0 };
-            if ( _pDevice->_listFreeOffscreenRTVIndex.empty() == false )
-            {
-                rtvSlot = _pDevice->_listFreeOffscreenRTVIndex.back();
-                _pDevice->_listFreeOffscreenRTVIndex.pop_back();
-            }
-            else if ( _pDevice->_nextOffscreenRTVIndex < D3D12RHIDevice::kMaxOffscreenRTVs )
+            uint32     rtvSlot{ 0 };
+            const bool bReused = _pDevice->_freeOffscreenRTV.tryPop( rtvSlot );
+            if ( bReused == false && _pDevice->_nextOffscreenRTVIndex < D3D12RHIDevice::kMaxOffscreenRTVs )
                 rtvSlot = _pDevice->_nextOffscreenRTVIndex++;
-            else
+            else if ( bReused == false )
             {
                 // 고갈은 로그로 남긴다. 유효한 핸들이 돌아오는데 RTV 가 없으므로, 조용히 넘어가면
                 // 나중에 beginRenderPass 가 이유 없이 아무것도 안 그리는 것처럼 보인다.
@@ -987,15 +983,11 @@ namespace sw
 
         for ( uint32 slice = 0; pNative != nullptr && bDepth && _pDevice->_dsvHeap != nullptr && slice < desc._arraySize; ++slice )
         {
-            uint32 dsvSlot{ 0 };
-            if ( _pDevice->_listFreeOffscreenDSVIndex.empty() == false )
-            {
-                dsvSlot = _pDevice->_listFreeOffscreenDSVIndex.back();
-                _pDevice->_listFreeOffscreenDSVIndex.pop_back();
-            }
-            else if ( _pDevice->_nextOffscreenDSVIndex < D3D12RHIDevice::kMaxOffscreenDSVs )
+            uint32     dsvSlot{ 0 };
+            const bool bReused = _pDevice->_freeOffscreenDSV.tryPop( dsvSlot );
+            if ( bReused == false && _pDevice->_nextOffscreenDSVIndex < D3D12RHIDevice::kMaxOffscreenDSVs )
                 dsvSlot = _pDevice->_nextOffscreenDSVIndex++;
-            else
+            else if ( bReused == false )
             {
                 dsvSlot = D3D12RHIDevice::kMaxOffscreenDSVs;
                 SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.OffscreenDSVDescriptorsExhausted", "Offscreen DSV descriptors exhausted (max %#) - this texture cannot be used as depth.",
@@ -1047,16 +1039,16 @@ namespace sw
             {
                 const uint32 offscreenRTVBase = _pDevice->_swapChain.getBufferCount();
                 if ( it->second._bHasRTV != SW_FALSE && it->second._rtvIndex >= offscreenRTVBase )
-                    _pDevice->_listFreeOffscreenRTVIndex.push_back( it->second._rtvIndex - offscreenRTVBase );
+                    _pDevice->_freeOffscreenRTV.push( it->second._rtvIndex - offscreenRTVBase );
                 if ( it->second._bHasDSV != SW_FALSE )
-                    _pDevice->_listFreeOffscreenDSVIndex.push_back( it->second._dsvIndex );
+                    _pDevice->_freeOffscreenDSV.push( it->second._dsvIndex );
                 for ( const uint32 rtvIndex : it->second._listExtraRTVIndex )
                 {
-                    _pDevice->_listFreeOffscreenRTVIndex.push_back( rtvIndex - offscreenRTVBase );
+                    _pDevice->_freeOffscreenRTV.push( rtvIndex - offscreenRTVBase );
                 }
                 for ( const uint32 dsvIndex : it->second._listExtraDSVIndex )
                 {
-                    _pDevice->_listFreeOffscreenDSVIndex.push_back( dsvIndex );
+                    _pDevice->_freeOffscreenDSV.push( dsvIndex );
                 }
                 _pDevice->_mapOffscreenTexture.erase( it );
             }
@@ -1114,7 +1106,7 @@ namespace sw
         // 반납된 슬롯이 있으면 그것부터 쓴다(펜스 뒤에 회수된 것들이다). 새 인덱스는 레지스트리 크기가 아니라 힙 카운터다 —
         // SRV/CBV 와 UAV 가 레지스트리 둘에 나뉘어도 힙 인덱스 공간은 하나라서다.
         RHIDescriptorIndex reused{ kInvalidDescriptorIndex };
-        if ( tryPopFreeListIndex( _pDevice->_listFreeBindless, reused ) )
+        if ( _pDevice->_freeBindless.tryPop( reused ) )
             return reused;
 
         if ( _pDevice->_allocatedDescriptorsCount >= D3D12RHIDevice::kBindlessDescriptorCapacity )
@@ -1243,7 +1235,7 @@ namespace sw
             {
                 // 집은 인덱스를 돌려준다. 그냥 반환하면 256 바이트보다 좁은 버퍼를 등록할 때마다 힙 슬롯이 하나씩 샌다.
                 // 아직 뷰를 만들지 않았으므로 펜스를 기다릴 것 없이 바로 프리리스트로 간다(잠금은 쥐고 있다).
-                _pDevice->_listFreeBindless.push_back( index );
+                _pDevice->_freeBindless.push( index );
                 return kInvalidDescriptorIndex;
             }
         }
@@ -1320,7 +1312,7 @@ namespace sw
         _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pDevice, index]()
         {
             UniqueLock<shared_mutex> lock{ pDevice->_bindlessMutex };
-            pDevice->_listFreeBindless.push_back( index );
+            pDevice->_freeBindless.push( index );
         } ),
                                                    _pDevice->_fenceValue );
     }

@@ -96,15 +96,7 @@ namespace sw
     {
         // 등록마다 새 번호다(다섯 백엔드 같은 계약) — 같은 자원을 여러 쪽이 등록해도 각자의 번호를 각자 놓는다.
         const WebGPUBindlessEntry entry{ handle, static_cast<uint8>( bTexture ? SW_TRUE : SW_FALSE ) };
-        if ( _listFree.empty() == false )
-        {
-            const RHIDescriptorIndex index = _listFree.back();
-            _listFree.pop_back();
-            _listEntry[index] = entry;
-            return index;
-        }
-        _listEntry.push_back( entry );
-        return static_cast<RHIDescriptorIndex>( _listEntry.size() - 1 );
+        return _freeEntry.allocate( _listEntry, entry );
     }
 
     void WebGPUBindlessTable::remove( RHIDescriptorIndex index )
@@ -112,7 +104,7 @@ namespace sw
         if ( index >= _listEntry.size() || _listEntry[index]._handle == 0 )
             return;
         _listEntry[index] = WebGPUBindlessEntry{};
-        _listFree.push_back( index );
+        _freeEntry.push( index );
     }
 
     const WebGPUBindlessEntry* WebGPUBindlessTable::find( RHIDescriptorIndex index ) const

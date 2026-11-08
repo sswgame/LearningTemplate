@@ -1,7 +1,7 @@
 /**
  * @file map.h
  * @brief 정렬 맵입니다. 정렬된 벡터와 이진 검색입니다. 두 구성(`SW_ENABLE_STL_CONTAINER`)에서 같은 구현이고 기본 할당자(`ContainerAllocator`)만 다릅니다.
- * @details 키 순서로 돕니다. 원소 주소 · 반복자는 삽입 · 삭제마다 무효가 될 수 있습니다(주소를 오래 쥐어야 하면 `stable_unordered_map`).
+ * @details 키 순서로 돕니다. 원소 주소 · 반복자는 삽입 · 삭제마다 무효가 될 수 있습니다(주소를 오래 쥐어야 하면 값을 `unique_ptr` 로 든다).
  */
 #pragma once
 #include "Core/Concurrency/DataRaceDetector.h"

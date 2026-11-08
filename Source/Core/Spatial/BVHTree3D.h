@@ -1,4 +1,5 @@
 #pragma once
+#include "Core/Container/IndexFreeList.h"
 #include "Core/Container/SlotHandle.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
@@ -85,7 +86,7 @@ namespace sw
 
     private:
         vector<BVHNode3D>                _listNode;
-        vector<uint32>                   _listFreeNode;
+        IndexFreeList                    _freeNode;
         unordered_map<SlotHandle, int32> _mapHandleToNode;
         int32                            _rootIndex;
     };

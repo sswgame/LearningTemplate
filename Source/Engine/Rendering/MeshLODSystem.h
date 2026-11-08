@@ -23,6 +23,7 @@ namespace sw
     class GameObjectManager;
     class Mesh;
     class MeshComponent;
+    class ScenePrimitive;
 
     /** @class MeshLODSystem @brief 씬 하나의 메시 LOD 고르기입니다. 파일 머리말 참고. */
     class SW_API MeshLODSystem final : public ISceneService
@@ -100,13 +101,14 @@ namespace sw
         uint32 pickLOD( const MeshComponent& component, int32 forcedLOD, bool bGPUPicks ) const;
 
     private:
-        GameObjectManager& _manager;
-        vector<LODView>    _listView;
-        vector<uint32>     _listPickedLOD; ///< LOD 목록과 같은 순서로 이번 프레임에 고른 단계(재사용). 워커는 자기 칸에만 쓰고 적용은 게임 스레드가 차례로 한다
-        LODView            _pendingView;
-        int32              _forcedLOD;           ///< 씬 단위로 고정한 단계(`kPickByScreenSize` = 화면 크기로 고른다)
-        uint8              _bViewsSet;           ///< 뷰를 한 번이라도 받았다(받지 않으면 고르지 않는다)
-        uint8              _bHasPendingView;     ///< 대기 뷰가 있다
-        uint8              _bGPUSelectionActive; ///< GPU 컬링이 단계를 고르는 중이다(`setGPUSelectionActive`)
+        GameObjectManager&      _manager;
+        vector<LODView>         _listView;
+        vector<ScenePrimitive*> _listPrimitive; ///< 이번 프레임 LOD 목록의 사본(재사용). 레지스트리의 집합은 번호로 집을 수 없어 워커가 칸 번호로 나눠 읽게 옮겨 둔다
+        vector<uint32>          _listPickedLOD; ///< LOD 목록과 같은 순서로 이번 프레임에 고른 단계(재사용). 워커는 자기 칸에만 쓰고 적용은 게임 스레드가 차례로 한다
+        LODView                 _pendingView;
+        int32                   _forcedLOD;           ///< 씬 단위로 고정한 단계(`kPickByScreenSize` = 화면 크기로 고른다)
+        uint8                   _bViewsSet;           ///< 뷰를 한 번이라도 받았다(받지 않으면 고르지 않는다)
+        uint8                   _bHasPendingView;     ///< 대기 뷰가 있다
+        uint8                   _bGPUSelectionActive; ///< GPU 컬링이 단계를 고르는 중이다(`setGPUSelectionActive`)
     };
 } // namespace sw

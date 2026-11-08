@@ -269,16 +269,14 @@ namespace sw
         {
             if ( _pDevice->_listRegisteredBindless[bindlessIndex] != buffer )
                 continue;
-            releaseFreeListIndex( _pDevice->_listRegisteredBindless, _pDevice->_listBindlessFree,
-                                  static_cast<uint32>( bindlessIndex ), RHIBufferHandle{ 0 } );
+            _pDevice->_freeBindless.release( _pDevice->_listRegisteredBindless, static_cast<uint32>( bindlessIndex ), RHIBufferHandle{ 0 } );
         }
         for ( size_t bufferIndex = 0; bufferIndex < _pDevice->_listUAVSourceBuffer.size(); ++bufferIndex )
         {
             if ( _pDevice->_listUAVSourceBuffer[bufferIndex] != buffer )
                 continue;
             _pDevice->_listRegisteredUAV[bufferIndex].Reset();
-            releaseFreeListIndex( _pDevice->_listUAVSourceBuffer, _pDevice->_listUAVFree,
-                                  static_cast<uint32>( bufferIndex ), RHIBufferHandle{ 0 } );
+            _pDevice->_freeUAV.release( _pDevice->_listUAVSourceBuffer, static_cast<uint32>( bufferIndex ), RHIBufferHandle{ 0 } );
         }
 
         // 추적기는 자원을 실제로 놓을 때 줄인다(해제 요청 시점이 아니라). SRV 도 버퍼와 함께 그때 놓인다.
@@ -751,8 +749,7 @@ namespace sw
             {
                 if ( _pDevice->_listRegisteredTexture[textureIndex] != texture )
                     continue;
-                releaseFreeListIndex( _pDevice->_listRegisteredTexture, _pDevice->_listTextureFree,
-                                      static_cast<uint32>( textureIndex ), RHITextureHandle{ 0 } );
+                _pDevice->_freeTexture.release( _pDevice->_listRegisteredTexture, static_cast<uint32>( textureIndex ), RHITextureHandle{ 0 } );
             }
         }
 
@@ -791,7 +788,7 @@ namespace sw
         }
 
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        return allocateFreeListIndex( _pDevice->_listRegisteredTexture, _pDevice->_listTextureFree, texture );
+        return _pDevice->_freeTexture.allocate( _pDevice->_listRegisteredTexture, texture );
     }
 
     RHIDescriptorIndex D3D11RHIResourceFactory::registerBindlessBufferSRV( RHIBufferHandle buffer )
@@ -804,22 +801,22 @@ namespace sw
         if ( pResource == nullptr )
             return kInvalidDescriptorIndex;
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        return allocateFreeListIndex( _pDevice->_listRegisteredBindless, _pDevice->_listBindlessFree, buffer );
+        return _pDevice->_freeBindless.allocate( _pDevice->_listRegisteredBindless, buffer );
     }
 
     void D3D11RHIResourceFactory::unregisterBindlessResource( RHIDescriptorIndex index )
     {
         _pDevice->requireRegistryMutableNow( "unregisterBindlessResource" );
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        // 이중 해제 가드는 `releaseFreeListIndex` 안에 있다.
-        releaseFreeListIndex( _pDevice->_listRegisteredBindless, _pDevice->_listBindlessFree, index, RHIBufferHandle{ 0 } );
+        // 이중 해제 가드는 `IndexFreeList::release` 안에 있다.
+        _pDevice->_freeBindless.release( _pDevice->_listRegisteredBindless, index, RHIBufferHandle{ 0 } );
     }
 
     void D3D11RHIResourceFactory::unregisterBindlessTexture( RHIDescriptorIndex index )
     {
         _pDevice->requireRegistryMutableNow( "unregisterBindlessTexture" );
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        releaseFreeListIndex( _pDevice->_listRegisteredTexture, _pDevice->_listTextureFree, index, RHITextureHandle{ 0 } );
+        _pDevice->_freeTexture.release( _pDevice->_listRegisteredTexture, index, RHITextureHandle{ 0 } );
     }
 
     RHIDescriptorIndex D3D11RHIResourceFactory::registerBindlessBufferUAV( RHIBufferHandle buffer )
@@ -878,15 +875,14 @@ namespace sw
     RHIDescriptorIndex D3D11RHIResourceFactory::registerUAVView( ID3D11UnorderedAccessView* pUAV, RHIBufferHandle sourceBuffer )
     {
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        if ( _pDevice->_listUAVFree.empty() == false )
+        RHIDescriptorIndex       index{ 0 };
+        if ( _pDevice->_freeUAV.tryPop( index ) )
         {
-            const RHIDescriptorIndex index = _pDevice->_listUAVFree.back();
-            _pDevice->_listUAVFree.pop_back();
             _pDevice->_listRegisteredUAV[index]   = pUAV;
             _pDevice->_listUAVSourceBuffer[index] = sourceBuffer;
             return index;
         }
-        const RHIDescriptorIndex index = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAV.size() );
+        index = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAV.size() );
         _pDevice->_listRegisteredUAV.push_back( pUAV );
         _pDevice->_listUAVSourceBuffer.push_back( sourceBuffer );
         return index;
@@ -900,7 +896,7 @@ namespace sw
             return;
         _pDevice->_listRegisteredUAV[index].Reset();
         _pDevice->_listUAVSourceBuffer[index] = RHIBufferHandle{ 0 };
-        _pDevice->_listUAVFree.push_back( index );
+        _pDevice->_freeUAV.push( index );
     }
 
     RHIPipelineStateHandle D3D11RHIResourceFactory::createPipelineState( const RHIPipelineStateDesc& desc )
