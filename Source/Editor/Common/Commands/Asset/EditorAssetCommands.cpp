@@ -10,6 +10,7 @@
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetTypeActions.h"
+#include "Editor/Common/Workspace/Asset/EditorPlacementPose.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
@@ -101,7 +102,7 @@ namespace sw::editor
         return pSpawned;
     }
 
-    GameObject* EditorAssetCommands::spawnSprite( GameObjectManager* pManager, const utf8* pPath, const float3& worldPos )
+    GameObject* EditorAssetCommands::spawnSprite( GameObjectManager* pManager, const utf8* pPath, const EditorPlacementPose& pose )
     {
         if ( EditorPlaySession::refuseSceneEdit( "Spawn sprite" ) )
             return nullptr;
@@ -117,7 +118,10 @@ namespace sw::editor
 
         SceneComponent* pSc = pSpawned->addComponent<SceneComponent>();
         if ( pSc != nullptr )
-            pSc->setLocalPosition( worldPos );
+        {
+            pSc->setLocalPosition( pose._position );
+            pSc->setLocalRotation( pSc->getLocalRotation() + pose.makeRotationOffset() ); // 놓기 전에 고른 회전 — 기록보다 먼저 입혀 다시 실행도 같은 자세다
+        }
 
         SpriteComponent* pSprite = pSpawned->addComponent<SpriteComponent>();
         if ( pSprite != nullptr )
@@ -137,7 +141,7 @@ namespace sw::editor
         return pSpawned;
     }
 
-    GameObject* EditorAssetCommands::spawnMesh( GameObjectManager* pManager, const utf8* pPath, const float3& worldPos )
+    GameObject* EditorAssetCommands::spawnMesh( GameObjectManager* pManager, const utf8* pPath, const EditorPlacementPose& pose )
     {
         if ( EditorPlaySession::refuseSceneEdit( "Spawn mesh" ) )
             return nullptr;
@@ -157,7 +161,8 @@ namespace sw::editor
         MeshComponent* pMesh = pSpawned->addComponent<MeshComponent>();
         if ( pMesh != nullptr )
         {
-            pMesh->setLocalPosition( worldPos );
+            pMesh->setLocalPosition( pose._position );
+            pMesh->setLocalRotation( pMesh->getLocalRotation() + pose.makeRotationOffset() );
             pMesh->setMeshID( meshID );
         }
         EditorTransaction::recordCreation( pSpawned, "Spawn Mesh in Viewport" );
@@ -165,7 +170,7 @@ namespace sw::editor
         return pSpawned;
     }
 
-    GameObject* EditorAssetCommands::spawnPrefabAt( GameObjectManager* pManager, const utf8* pPath, const float3& worldPos )
+    GameObject* EditorAssetCommands::spawnPrefabAt( GameObjectManager* pManager, const utf8* pPath, const EditorPlacementPose& pose )
     {
         if ( EditorPlaySession::refuseSceneEdit( "Spawn prefab" ) )
             return nullptr;
@@ -174,7 +179,10 @@ namespace sw::editor
             return nullptr;
         SceneComponent* pSceneComponent = pSpawned->getPrimarySceneComponent();
         if ( pSceneComponent != nullptr )
-            pSceneComponent->setLocalPosition( worldPos );
+        {
+            pSceneComponent->setLocalPosition( pose._position );
+            pSceneComponent->setLocalRotation( pSceneComponent->getLocalRotation() + pose.makeRotationOffset() ); // 프리팹의 회전에 더한다
+        }
         EditorTransaction::recordCreation( pSpawned, "Spawn Prefab in Viewport" );
         EditorSceneCommands::select( pSpawned, SelectionMode::Replace );
         return pSpawned;
@@ -186,7 +194,7 @@ namespace sw::editor
         return pActions != nullptr && pActions->canPlaceInViewport();
     }
 
-    void EditorAssetCommands::placeInViewport( GameObjectManager* pManager, const utf8* pPath, const float3& worldPos )
+    void EditorAssetCommands::placeInViewport( GameObjectManager* pManager, const utf8* pPath, const EditorPlacementPose& pose )
     {
         if ( pManager == nullptr || StringUtil::isNullOrEmpty( pPath ) )
             return;
@@ -197,6 +205,6 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "EditorAssetCommands.NotPlaceable", "'%#' cannot be placed in the viewport (its type opens instead) - nothing was placed", pPath );
             return;
         }
-        pActions->placeInViewport( pManager, pPath, worldPos );
+        pActions->placeInViewport( pManager, pPath, pose );
     }
 } // namespace sw::editor

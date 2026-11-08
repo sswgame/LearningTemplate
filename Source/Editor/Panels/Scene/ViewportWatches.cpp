@@ -127,6 +127,27 @@ namespace sw::editor
             return true;
         }
 
+        /** @brief 끄는 동안 고른 놓기 전 회전(도)입니다. 끌기가 끝나면 0 입니다. */
+        [[nodiscard]] bool readPlacementYaw( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            const EditorPlacementStats* pStats = findPlacementStats();
+            if ( pStats == nullptr )
+                return false;
+            outValue = static_cast<float64>( MathUtil::round( MathUtil::toDegree( pStats->_yaw ) ) );
+            return true;
+        }
+
+        /** @brief 메인 씬에서 고른 첫 오브젝트의 로컬 요 회전(도)입니다 — 놓기 전 회전이 실제 오브젝트에 들어갔는지 본다. 고른 것이 없으면 값을 내지 않습니다. */
+        [[nodiscard]] bool readSelectedYaw( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            const GameObject*     pObject = editor::getMainSceneSelection().getPrimaryObject();
+            const SceneComponent* pScene  = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
+            if ( pScene == nullptr )
+                return false;
+            outValue = static_cast<float64>( MathUtil::round( MathUtil::toDegree( pScene->getLocalRotation()._y ) ) );
+            return true;
+        }
+
         /** @brief 내비메시 시각화가 지난 프레임에 그린 선분 수입니다. 씬 뷰 패널이 없으면 값을 내지 않습니다. */
         [[nodiscard]] bool readNavMeshSegments( const GameObjectManager* /*pManager*/, float64& outValue )
         {
@@ -517,4 +538,6 @@ namespace sw::editor
     SW_AUTOMATION_WATCH( editorPlacementOpenedCount, "Editor.PlacementOpenedCount", "Asset drops on the scene view that opened the asset because its type cannot be placed",
                          &readPlacementOpenedCount );
     SW_AUTOMATION_WATCH( editorPlacementY, "Editor.PlacementY", "Height (m) of the last asset the scene view placed (no value before the first)", &readPlacementY );
+    SW_AUTOMATION_WATCH( editorPlacementYaw, "Editor.PlacementYaw", "Rotation (degrees) the rotate keys gave the asset being dragged over the scene view (0 after the drag ends)", &readPlacementYaw );
+    SW_AUTOMATION_WATCH( editorSelectedYaw, "Editor.SelectedYaw", "Local yaw (degrees) of the first object selected in the main scene", &readSelectedYaw );
 } // namespace sw::editor

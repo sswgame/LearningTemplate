@@ -74,9 +74,9 @@ namespace sw::editor
 
             [[nodiscard]] virtual bool canPlaceInViewport() const override { return true; }
 
-            virtual void placeInViewport( GameObjectManager* pManager, const utf8* pPath, const float3& worldPos ) const override
+            virtual void placeInViewport( GameObjectManager* pManager, const utf8* pPath, const EditorPlacementPose& pose ) const override
             {
-                (void)EditorAssetCommands::spawnSprite( pManager, pPath, worldPos ); // 실패는 spawnSprite 가 알린다
+                (void)EditorAssetCommands::spawnSprite( pManager, pPath, pose ); // 실패는 spawnSprite 가 알린다
             }
         };
 

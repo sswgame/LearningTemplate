@@ -63,6 +63,13 @@
 		<action name="view.frameHovered" trigger="Pressed">
 			<bind source="Key" code="F"/>
 		</action>
+		<!-- Rotate the asset being dragged over the scene view before it is placed. Global: the drag starts in another panel (content browser), so the scene view layer is off. Read only while an asset drag is in flight. -->
+		<action name="viewport.placementRotate" trigger="Pressed">
+			<bind source="Key" code="Z"/>
+		</action>
+		<action name="viewport.placementRotateBack" trigger="Pressed">
+			<bind source="Key" modifier="Shift" code="Z"/>
+		</action>
 	</layer>
 
 	<!-- Hierarchy window: scene object commands act on the selection; selectAll / selectPrevious / selectNext are read by the panel (row order). -->

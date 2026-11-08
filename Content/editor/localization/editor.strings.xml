@@ -2135,6 +2135,11 @@
 				<item>Source/Editor/Viewport/EditorViewportAssetPlacement.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdFormat.PlacementRotation" source="Turned {degrees}°">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportAssetPlacement.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdFormat.PlaybackControlsTotalFrames"
 		       source="Playback Controls (Total Frames: {frameCount}, Duration: {totalDuration} s):">
 			<origins>

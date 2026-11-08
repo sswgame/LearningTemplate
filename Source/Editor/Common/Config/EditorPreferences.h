@@ -63,6 +63,10 @@ namespace sw::editor
         // 지평선 근처의 바닥 평면 교점이 수 km 밖에 놓이지 않게 한다. 언리얼도 커서 아래 표면이 없으면 놓지 않는다.
         PROPERTY( Min = 1.0, Max = 100000.0, Tooltip = "Farthest surface (m) an asset dragged into the scene view is placed on - beyond it nothing is placed" )
         float32 _placementMaxDistance{ 500.0f };
+
+        // 하우징 · 건설 게임처럼 놓기 전에 돌린다(언리얼 · 유니티는 놓은 뒤 기즈모) — 기본은 직각 걸음이라 벽 · 상자를 격자에 맞춰 놓는다.
+        PROPERTY( Min = 0.0174533, Max = 3.1415927, Units = rad, Tooltip = "Rotation step of the rotate keys while an asset is dragged over the scene view (before it is placed)" )
+        float32 _placementRotateStep{ MathUtil::kHalfPi };
     };
 } // namespace sw::editor
 

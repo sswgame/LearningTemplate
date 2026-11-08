@@ -37,12 +37,21 @@
 	<EditorHover mark="sceneView.canvas"/>
 	<WaitUntil watch="Editor.PlacementGhostShown" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.PlacementSurface" atLeast="1"/>
+	<!-- 놓기 전 회전: 끄는 동안 Z 는 직각 걸음(_placementRotateStep)만큼, Shift+Z 는 반대로 돈다(모델 테스트 RotateStepsWrapAndMapToTheUpAxis) -->
+	<EditorKey key="Z"/>
+	<WaitUntil watch="Editor.PlacementYaw" equals="90" timeoutFrames="30"/>
+	<EditorKey key="Z"/>
+	<WaitUntil watch="Editor.PlacementYaw" equals="180" timeoutFrames="30"/>
+	<EditorKey key="Shift+Z"/>
+	<WaitUntil watch="Editor.PlacementYaw" equals="90" timeoutFrames="30"/>
 	<CaptureEditorUI file="placement/ghost.png" maxMagentaFraction="0"/>
 	<EditorClick mark="sceneView.canvas" state="Up"/>
 	<WaitUntil watch="Editor.PlacedCount" equals="1" timeoutFrames="90"/>
 	<Expect watch="Editor.UndoCount" equals="1"/>
 	<Expect watch="Editor.SelectionCount" equals="1"/>
 	<Expect watch="Editor.PlacementY" atLeast="0"/>
+	<Expect watch="Editor.SelectedYaw" equals="90"/>
+	<WaitUntil watch="Editor.PlacementYaw" equals="0" timeoutFrames="30"/>
 	<Remember watch="Editor.SceneHash" as="placed"/>
 	<!-- ② 되돌리기 · 다시 실행은 같은 자리 -->
 	<EditorWaitSettled/>

@@ -63,5 +63,10 @@ namespace sw::editor
         [[nodiscard]] static float3 snapToGrid( const float3& position, float32 step, bool b2DMode );
         /** @brief 표면 종류의 영어 이름입니다(로그 · 고스트 글). */
         [[nodiscard]] static const utf8* getSurfaceName( EditorPlacementSurface surface );
+        /**
+         * @brief 놓기 전 회전 @p yaw 를 @p direction(+1 · -1) 쪽으로 @p step 만큼 돌린 값입니다(라디안, 0 ~ 2π 로 감는다). @p step 이 0 이하면 그대로입니다.
+         * @details 걸음은 0 에서 센다 — 키를 네 번 누르면(직각 걸음) 처음 자세로 돌아온다. 감는 값이 2π 근처에서 떨리지 않게 걸음의 배수로 맞춘다.
+         */
+        [[nodiscard]] static float32 stepYaw( float32 yaw, float32 step, int32 direction );
     };
 } // namespace sw::editor
