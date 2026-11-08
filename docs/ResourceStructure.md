@@ -6,7 +6,7 @@
 
 엔진 비교는 기억에 의존한 설명이다. 구현 전에 그 기능의 문서를 다시 확인한다.
 
-## 지금 구조와 문제
+## 옛 구조와 문제(바꾼 까닭)
 
 | 층 | 지금 | 문제 |
 |---|---|---|
@@ -14,7 +14,7 @@
 | 합성 | 파일 `_base`(`DataInheritance`), 항목 `_base`(`DataCatalogInheritance`), 프리팹 덮어쓰기, 스켈레톤 변형이 있고, 읽는 곳은 `XMLDocument::parseData` · `ReflectedXMLFile::parseDesc` · `Material` · `Skeleton` · `PrefabAsset` 로 나뉜다 | 조건별 값과 덮어쓰기 층을 넣을 자리가 형식마다 생긴다 |
 | 공유 | `SharedAssetCache<T>` 와 `GameDataCache<T>` 가 따로 있고, 카탈로그 다수는 쓰는 쪽이 멤버 · 지역 변수로 사본을 읽는다 | 행동 트리 · 스케줄 · 퀘스트 등이 공유되지 않고 다시 읽기도 닿지 않는다 |
 | 참조 | `string` 경로 칸과 이름 목록 `Config/Dev/AssetReferenceFields.json` | 칸이 어느 종류를 가리키는지 형식이 모른다. 이름 표는 사람이 맞춘다 |
-| 행동 | 조건은 `ConditionExpr`, 동작은 `ActionRegistry` 하나다(단계 6). `ScheduleActivityRegistry`(가는 곳의 규칙)는 어휘가 아니라 활동 종류라 남는다 | — |
+| 행동 | 조건은 `ConditionExpr`, 동작은 `ActionRegistry` 하나다. `ScheduleActivityRegistry`(가는 곳의 규칙)는 어휘가 아니라 활동 종류라 남는다 | — |
 
 ## 목표 구조
 
@@ -125,9 +125,9 @@
 
 `SharedAssetCache<T>` 하나로 합치고 `GameDataCache` 를 지운다. 옛 객체를 살려 두는 동작은 `SharedAssetReloadMode::Detach` 와 `shared_ptr` 가 대신한다.
 
-- **모듈 캐시:** 키트 · 게임 종류의 표를 그 모듈이 인스턴스화하고 모듈 수명으로 등록한다(`SW_MODULE_SHARED_ASSET_CACHE`, `Engine/Module/ModuleSharedAssetCache.h` — 모듈 서브시스템이 캐시를 들고 `AssetManager::registerAssetCache` 로 오르내린다). 핫 리로드의 내림은 `ModuleObjectRegistrar` 와 같은 사슬이다. `XMLCatalog` 형식 55 종 모두가 가진다(단계 2 · 4).
+- **모듈 캐시:** 키트 · 게임 종류의 표를 그 모듈이 인스턴스화하고 모듈 수명으로 등록한다(`SW_MODULE_SHARED_ASSET_CACHE`, `Engine/Module/ModuleSharedAssetCache.h` — 모듈 서브시스템이 캐시를 들고 `AssetManager::registerAssetCache` 로 오르내린다). 핫 리로드의 내림은 `ModuleObjectRegistrar` 와 같은 사슬이다. `XMLCatalog` 형식 55 종 모두가 가진다.
 - **창구:** `SharedAssetCache<T>::acquire( 경로 )` · `request( 경로 )` · `getReloadCount()` 를 바로 부른다. `XMLCatalog` 에 감싸개를 두지 않는다 — 내보내는 카탈로그가 베이스 멤버를 모두 인스턴스화해 캐시가 없는 카탈로그에서 링크가 깨졌다.
-- **사본을 못 만들게 한다(단계 4, 끝남):** `XMLCatalog::loadFromAsset` 은 protected 이고 종류의 로더(`AssetTypeLoader`)만 friend 다. 쓰는 쪽은 `shared_ptr<const T>` 를 쥐고, 게임 범위 서비스는 `GameInstance::loadRequiredCatalog( shared_ptr<const T>& )` 가 받아 건다. 테스트 · 에디터 미리 보기는 `loadFromXMLText` 를 쓴다.
+- **사본을 못 만들게 한다:** `XMLCatalog::loadFromAsset` 은 protected 이고 종류의 로더(`AssetTypeLoader`)만 friend 다. 쓰는 쪽은 `shared_ptr<const T>` 를 쥐고, 게임 범위 서비스는 `GameInstance::loadRequiredCatalog( shared_ptr<const T>& )` 가 받아 건다. 테스트 · 에디터 미리 보기는 `loadFromXMLText` 를 쓴다.
 - **다시 읽기:** 카탈로그는 기본이 제자리(`InPlace`)라 게임 범위 서비스 · 디렉터가 쥔 같은 객체에 닿는다 — 쥔 쪽은 항목 포인터를 프레임을 넘어 들지 않고 id 로 찾는다. 진행 중인 세션이 옛 정의를 읽어야 하는 표(상호작용 · 원소 규칙)와 옮길 수 없는 표(`CurrencyCatalog` 는 정책이 자기를 참조, `MonsterCatalog` 는 복사 금지)만 떼어 낸다(`Detach`). 시나리오 `editor/catalogshared` 가 쥔 쪽의 값으로 본다.
 - **카탈로그가 아닌 데이터 종류(W4):** 쓰는 쪽이 사본으로 읽던 형식도 같은 줄로 올렸다 — 엔진 `VFXEffectDef`(Detach — 방출기를 별칭 포인터로 쥔다) · `DestructionProfile`(InPlace — 구조 상태는 시작할 때의 값을 들고 다시 읽은 횟수로 다시 시작) · `RetargetProfile` · `FacialRig` · `LipSyncSettings` · `SurfaceChannelTable`(InPlace) · `TileSetAsset`(Detach — 칸마다 브러시 번호를 지어 둔다, 렌더러가 횟수를 보고 다시 짓는다), GameFramework `AIDirectorProfile`(Detach — 감독이 국면 · 풀 번호를 상태에 둔다. 판 도중에 다시 읽으면 `AIDirector::rebindProfile` 이 상태를 써서 새 객체로 옮겨 읽고, 구조가 바뀌었으면 옛 객체로 되돌린다) · `GimmickCircuitDef`, 키트 `ParkLayout`(로더가 같은 팩의 코스터 카탈로그를 받아 쥔다 — 게임 모드의 코스터 경로 칸은 지웠다) · `FighterCatalog`(기반 기술 카탈로그를 루트 `moves` 가 정한다) · `RhythmChart`. 모두 `loadFromAsset` 이 비공개(종류의 로더만 friend)다. 공유 캐시가 이미 있던 형식을 사본으로 읽던 곳(`PhysicsAsset` · `FitTables` · `Skeleton` · `AnimationClip` · `AnimationSet` · `BehaviorTreeAsset`)도 `acquire` 로 바꿨고, 엔진 형식 열하나(`Skeleton` · `AnimationClip` · `AnimationSet` · `SkeletonBoneLOD` · `RigAsset` · `PhysicsAsset` · `FitPartDef` · `BodyShapeSet` · `PairedAnimationDef` · `FractureAsset` · `SpriteLibrary`)의 `loadFromAsset` 도 비공개다.
   - **쿠킹은 사본을 읽는다:** 쿠킹 작업(`CookJob`)은 범위 안의 리소스 읽기를 입력으로 기록하므로 캐시가 쥔 한 벌을 쓰면 입력이 빠져 낡은 결과가 남는다. 그래서 쿠커가 읽는 형식(`Skeleton` · `AnimationClip` · `AnimationSet` — 정점 애니메이션 쿠커)만 의도가 드러나는 공개 이름 `loadCopyFromAsset` 을 둔다. 문맥을 받아 읽는 형식(`SocketSet` 종류 표 · `AnimationNotifyTable` 처리기 · `FitTables` 연산 레지스트리)은 경로만으로 나눌 수 없어 문맥을 받는 공개 읽기를 둔다.
@@ -229,7 +229,7 @@ SW_GAME_ACTION( OpenShop, "shop.open", OpenShopParams, &openShop );
 | 파라미터 | 외형 구간 머티리얼: 부품 · 변형 · 규칙 · 피해 단계가 메시 구간 이름마다 머티리얼과 매개변수를 정한다(`AppearanceSectionDef`, `ResolvedMaterialValue::_section`). 병합해도 구간이 남는다. 런타임 아틀라스는 두지 않는다. 구현됨 | 언리얼 Material Slot 덮어쓰기 · 유니티 `Renderer.materials`(여기는 번호가 아니라 이름) |
 | 조립 | 씬 인스턴스(`<entity scene="…">` + `<Part path>`): 씬을 다른 씬에 넣고 덮어쓴다. 읽을 때 평평한 엔티티로 펼치고 쿠킹본도 펼친 것을 담는다 | 언리얼 Level Instance · Godot 씬 상속 |
 | 조립 | 씬 상속(루트 `_base`): 엔티티 id 가 열쇠인 차이만 적는다. 씬 템플릿 자리를 겸한다 | Godot 씬 상속 |
-| 조립 | 데이터 레이어(`layers="Winter,Night"`): 켜진 이름 집합의 객체만 올린다(계절 · 이벤트). 단계 5 의 문맥 태그가 이 이름을 켠다 | 언리얼 Data Layers |
+| 조립 | 데이터 레이어(`layers="Winter,Night"`): 켜진 이름 집합의 객체만 올린다(계절 · 이벤트). 2 절 조건의 문맥 태그가 이 이름을 켠다 | 언리얼 Data Layers |
 | UI | 스타일 시트 `_base`(규칙 표 한 줄), `<TypeVariation>`(읽을 때 규칙 복제), 에디터 테마 토큰 `_base`(JSON 이라 키 덮기). 구현됨 | Godot Theme Type Variation · 유니티 USS |
 | 기타 | 리그 · 리타겟 · 물리 · 소켓 · 알림 표 · 입력 레이어에 `InheritKey` | — |
 
@@ -279,22 +279,10 @@ SW_GAME_ACTION( OpenShop, "shop.open", OpenShopParams, &openShop );
 - **어빌리티 탄(AbilityArena):** 탄은 디렉터의 시뮬레이션 하나가 바닥 평면에서 돌리고(`ArenaGameModeComponent`, PrePhysics 스냅샷으로 맞음), 실은 어빌리티 이펙트 스펙은 탄 id 로 찾는 짐(`ProjectileCargo`)이다. 스펙은 쏜 쪽 어빌리티 시스템을 가리키는 런타임 값이라 탄 상태 바이트에 넣지 않고 상태 저장 전에 모습과 함께 걷는다. 맞으면 틱 뒤 게임 스레드에서 맞은 쪽 어빌리티 시스템에 건다 — 적용 · 차단은 그 시스템의 규칙이고 탄은 나르기만 한다. 이 엔진의 어빌리티는 복제 · 예측이 없고, 언리얼 GAS 도 투사체는 서버 액터가 스펙을 들고 날아 서버에서 거는 길이라(기억에 의존한 비교) 복제가 생기면 결정적 시뮬레이션은 서버 권위로 두고 짐만 서버에 남긴다. `ArenaProjectileComponent` 는 탄을 읽기만 하는 모습이다. 탄 수치는 어빌리티의 `<Param name="projectile">` 이 가리키는 탄(`game/abilityarena/data/projectiles.xml`)이고 피해는 피해 이펙트의 SetByCaller 로 간다.
 - 확인: 단위 테스트 `ProjectileTest`(조합 · 받음 · 순서 · 맞음 표 · 맞음 동작 · 관통 · 튕김 · 유도 · 사거리 · 수명 · 상태 왕복), `ActionRoomTest.ShotsResolveFromTheProjectileCatalog` · `KartRaceTest.ItemsFlyByTheirProjectile` · `MechArenaRulesTest`(특수기의 탄), 시나리오 `game.shooter3d.projectilecombo`(같은 소총에 소이탄을 넣으면 피해 감시값과 탄도선 그림이 바뀐다), `game.abilityarena.control`(화염구가 날아 처치 수가 오른다).
 
-## 순서
+## 남은 것
 
-| 단계 | 내용 | 끝났다고 보는 조건 |
-|---|---|---|
-| 0 | 작업자 병합, Windows 검증, 전체 재임포트 | 통합 빌드와 테스트 통과 |
-| 1 | 종류 정의 통합, `ResourceComposer` 로 읽는 길 통합(동작 변화 없음) | 기존 시나리오 그대로 통과, 읽는 길 한 곳 |
-| 2 | 공유 캐시 통합, `GameDataCache` 삭제, `acquire` 도입 | 같은 경로가 같은 객체라는 테스트, 다시 읽기가 쓰는 쪽에 닿는 시나리오 |
-| 3 | `AssetRef<T>` 와 생성 목록, `string` 칸 전환 | 잘못된 종류 연결이 로드 오류, 손 표가 줄어듦 |
-| 4 | 카탈로그 공유 전환(코드 끝남) | 공개 `loadFromAsset` 제거가 컴파일됨 |
-| 5 | 조건 · 층, 경로 교체, 합성 해시 대조(코드 끝남, 컴파일 전 — 위 2 절) | 단위 테스트 `ResourceTagsTest` · `ResourceConditionTest` · `ResourceLayerTest` · `ResourceRemapTest` · `ResourceCompositionTest`, 시나리오 `game/empty/automation/resourcecondition`(품질 · 데이터 레이어로 쥔 쪽의 값이 바뀐다) |
-| 6 | `ConditionExpr` · `ActionRegistry`, 행동 트리 하위 트리(구현 — 시나리오 `game/empty/automation/vocabulary`. `<Archetype>` 은 위 까닭으로 남김) | 같은 이름의 조건 · 동작을 행동 트리 · 스케줄 · 대화가 함께 쓰는 시나리오 |
-| 7 | 종류별 변형(위 표) | 표 한 줄마다 효과를 확인하는 시나리오 |
-
-1 · 2 는 한 에이전트가 차례로 한다. 공통 파일이 겹친다. 3 · 4 와 6 · 7 은 범위가 나뉘므로 병렬로 할 수 있다. 작업자는 코드 → 린트 → 커밋만 하고 통합이 검증한다.
-
-칸을 더하면 실행이 그 칸을 읽고, 시나리오가 그 효과를 확인한다. 읽히지 않는 칸은 넣지 않는다.
+- 참조 칸: 손으로 읽는 XML 칸을 `XMLFields` 쪽 선언으로 옮겨 `Config/Dev/AssetReferenceFields.json` 을 지운다(4 절 "이름 표를 없앤다").
+- 종류별 변형: 입력 레이어의 `InheritKey`(6 절 "뺀 것").
 
 ## 새 형식 체크리스트
 
@@ -303,12 +291,12 @@ SW_GAME_ACTION( OpenShop, "shop.open", OpenShopParams, &openShop );
 3. 다른 리소스를 가리키는 칸은 `AssetRef<T>`.
 4. 쓰는 쪽은 `acquire` · `request` 로 받고, 실행 상태는 자기 쪽에 둔다.
 5. 조건과 동작은 등록된 어휘를 쓴다. 새 이름이 필요하면 어휘에 더한다.
+6. 칸을 더하면 실행이 그 칸을 읽고, 시나리오가 그 효과를 확인한다. 읽히지 않는 칸은 넣지 않는다.
 
 ## 위험
 
 | 위험 | 대응 |
 |---|---|
-| 공유 전환에서 사본을 고쳐 쓰던 코드가 대량으로 드러난다 | `const` 컴파일 오류로 빠짐없이 찾는다. 분량이 크므로 단계 4 를 범위별로 나눈다 |
 | 조건 어휘 비용 | 읽을 때 컴파일하고, 매 틱 조건은 측정으로 확인한다 |
 | 로드 축 `_when` 이 많아지면 품질 변경 때 다시 읽기가 몰린다 | 태그별로 기댄 리소스를 기록해 그것만 다시 읽는다(`ResourceComposition`, 구현됨) |
 | 코드 기본값 변경이 적지 않은 칸의 값을 바꾼다 | 이미 있는 규칙(`DataInheritance.md`)을 따른다 |

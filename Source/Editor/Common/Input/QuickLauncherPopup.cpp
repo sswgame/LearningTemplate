@@ -116,21 +116,19 @@ namespace sw::editor
                 return kDetailText; // 명령 · 창은 중립 회색(강조색은 데이터에만)
             }
 
-            /** @brief 이번 목록의 가장 넓은 종류 표시의 너비입니다. 종류는 몇 가지뿐이라 바뀔 때만 측정한다. */
-            static float32 measureWidestBadge( const vector<const EditorSearchItem*>& listFiltered )
+            /** @brief 목록의 가장 넓은 종류 표시 폭을 @p inoutWidest 에 모읍니다. 같은 종류가 이어지면 한 번만 잰다. */
+            static void measureWidestBadge( const vector<EditorSearchItem>& listItem, float32& inoutWidest )
             {
-                float32       widestBadgeWidth{ 0.0f };
                 const string* pMeasuredCategory{ nullptr };
-                for ( const EditorSearchItem* pItem : listFiltered )
+                for ( const EditorSearchItem& item : listItem )
                 {
-                    if ( pMeasuredCategory != nullptr && *pMeasuredCategory == pItem->_category )
+                    if ( pMeasuredCategory != nullptr && *pMeasuredCategory == item._category )
                         continue;
-                    pMeasuredCategory = &pItem->_category;
+                    pMeasuredCategory = &item._category;
                     fixed_string<constant::buffer::kMax32> badge;
-                    formatstring( badge.data(), badge.capacity(), "[%s]", pItem->_category.c_str() );
-                    widestBadgeWidth = MathUtil::max( widestBadgeWidth, ImGui::CalcTextSize( badge.c_str() ).x );
+                    formatstring( badge.data(), badge.capacity(), "[%s]", item._category.c_str() );
+                    inoutWidest = MathUtil::max( inoutWidest, ImGui::CalcTextSize( badge.c_str() ).x );
                 }
-                return widestBadgeWidth;
             }
 
             /**
@@ -184,6 +182,8 @@ namespace sw::editor
         , _fileIndexJob{}
         , _searchBuffer{}
         , _selectedIndex{ 0 }
+        , _widestBadgeWidth{ 0.0f }
+        , _badgeFontSize{ 0.0f }
         , _bJustOpened{ false }
         , _bExecuteWhenIndexed{ SW_FALSE }
     {
@@ -238,6 +238,7 @@ namespace sw::editor
         EditorSearchSources::appendSceneObjects( _listItem );
         EditorSearchSources::appendCommands( _listTailItem );
         EditorSearchSources::appendPanels( _listTailItem );
+        _badgeFontSize = 0.0f;
         _fileIndexJob.request();
     }
 
@@ -247,6 +248,19 @@ namespace sw::editor
         if ( _fileIndexJob.take( listFileEntry ) != EditorTaskPoll::Ready )
             return;
         EditorSearchSources::appendAssets( listFileEntry, _listItem );
+        _badgeFontSize = 0.0f;
+    }
+
+    float32 QuickLauncherPopup::getWidestBadgeWidth()
+    {
+        const float32 fontSize = ImGui::GetFontSize();
+        if ( _badgeFontSize == fontSize )
+            return _widestBadgeWidth;
+        _badgeFontSize    = fontSize;
+        _widestBadgeWidth = 0.0f;
+        QuickLauncherPopupInternal::measureWidestBadge( _listItem, _widestBadgeWidth );
+        QuickLauncherPopupInternal::measureWidestBadge( _listTailItem, _widestBadgeWidth );
+        return _widestBadgeWidth;
     }
 
     bool QuickLauncherPopup::drawResults( const vector<const EditorSearchItem*>& listFiltered, bool bIndexOutstanding )
@@ -259,8 +273,9 @@ namespace sw::editor
         resultsDesc._kind = editor::EditorSectionKind::Child;
         if ( EditorChrome::beginSection( resultsDesc ) )
         {
-            // 열 위치는 이번 목록의 가장 넓은 종류 표시와 글자 크기에서 정한다(고정 x 는 배율 · 글꼴이 바뀌면 겹친다).
-            const QuickLauncherRowLayout layout = QuickLauncherLayoutUtil::makeRowLayout( ImGui::GetContentRegionAvail().x, Internal::measureWidestBadge( listFiltered ),
+            // 열 위치는 후보 전체의 가장 넓은 종류 표시와 글자 크기에서 정한다 — 걸러 낸 결과로 재면 칠 때마다 이름 열이 좌우로 움직인다
+            // (VS Code Quick Open · 언리얼 팔레트도 열을 입력과 무관하게 고정). 고정 x 는 배율 · 글꼴이 바뀌면 겹친다.
+            const QuickLauncherRowLayout layout = QuickLauncherLayoutUtil::makeRowLayout( ImGui::GetContentRegionAvail().x, getWidestBadgeWidth(),
                                                                                           ImGui::GetFrameHeight(), ImGui::GetTextLineHeight(), ImGui::GetStyle().ItemSpacing.x );
 
             for ( int32 itemIndex = 0; itemIndex < filteredCount; ++itemIndex )

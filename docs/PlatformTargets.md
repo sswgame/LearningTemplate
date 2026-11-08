@@ -37,10 +37,10 @@
 | 타임스탬프 | `IRHITimestampProvider` | 된다(`timestampPeriod`) | `timestamp-query` 선택, 시각은 패스 경계에서만(값은 나노초, 브라우저는 거칠게 준다) | WebGPU: 기능이 있으면 제공자가 칸을 연다 — `writeTimestamp` 는 빈 계산 패스의 시작 시각이고 프레임 끝에 풀어 되읽기 버퍼 풀로 기다리지 않고 읽는다. 지금 GPU 시계를 묻는 길이 없어 `readGPUClockNanos` 는 거짓(외부 타임라인은 열지 않는다) |
 | 표면 | 창 핸들(`IRenderSurface`) | `ANativeWindow*`(`NativeSurfaceKind::AndroidWindow`), 앱 수명 안에서 사라졌다 생긴다 | canvas 선택자(`NativeSurfaceKind::WebCanvas`) | Android: `VK_KHR_android_surface`. 웹: `WGPUSurfaceSourceCanvasHTMLSelector` |
 
-## 단계별 상태(코드와 대조, 2026-11-07)
+## 플랫폼 길의 자리(코드와 대조, 2026-11-07)
 
-1. **`waitIdle` 을 펜스 지연 해제로** — 끝남. 씬 활성화(`SceneManager` → `flushRenderThread`) · 에셋 핫 리로드(`TextureCache` · `MaterialCache` · `MeshCache`) · 캡처는 GPU 를 기다리지 않는다. 남은 `waitIdle` 은 이유가 붙은 도구 · 수명 길(`RHIWaitIdleReason`)이고, 시나리오 `empty/noidlewait` · `editor/assetcascade` 가 `RHI.GPUIdleWaits` 를 본다.
-2. **텍스처 압축을 쿠킹으로** — 끝남. 임포터가 대상 묶음마다 ASTC · ETC2 변형을 굽고(`TextureBlockEncoder`), 실행 때 `TextureFormatSelection` 이 장치가 받는 첫 묶음을 고른다. 이번에 웹 목록에 ETC2 를 더했다.
+1. **GPU 를 기다리지 않는 해제** — 씬 활성화(`SceneManager` → `flushRenderThread`) · 에셋 핫 리로드(`TextureCache` · `MaterialCache` · `MeshCache`) · 캡처는 GPU 를 기다리지 않는다. 남은 `waitIdle` 은 이유가 붙은 도구 · 수명 길(`RHIWaitIdleReason`)이고, 시나리오 `empty/noidlewait` · `editor/assetcascade` 가 `RHI.GPUIdleWaits` 를 본다.
+2. **텍스처 압축은 쿠킹에서** — 임포터가 대상 묶음마다 ASTC · ETC2 변형을 굽고(`TextureBlockEncoder`), 실행 때 `TextureFormatSelection` 이 장치가 받는 첫 묶음을 고른다(웹 목록에 ETC2 포함).
 3. **WebGPU RHI 백엔드** — `Source/Engine/Graphics/RHI/WebGPU/`. 셰이더 대상 `WGSL_WebGPU`(DXC SPIR-V → Tint → WGSL, 바인딩 표를 앞에 붙인 바이너리), 고정 슬롯 모델.
 4. **Emscripten 빌드** — `cmake/Modules/Platform/Web.cmake`(링크 옵션 · 포트), 메인 루프는 브라우저 프레임 콜백(`emscripten_set_main_loop_arg`), canvas 창.
 5. **Android Vulkan** — `cmake/Modules/Platform/Android.cmake`(NDK 라이브러리), `android_main` 진입 · `ANativeWindow` 창, `VK_KHR_android_surface`.
