@@ -32,7 +32,7 @@
 - **폴더 · 파일 자리 남은 것:** [FolderMoves](FolderMoves.md) 의 막힌 표(SubsystemTimingReport · Tracy 백엔드 · IEngineRenderDriver · RuntimeUIHost · ValueNoise). 남은 `Dev/` 는 `Config/Dev/FolderLayout.json` `_devFolderAllowed` 에 까닭과 함께(App/Dev 는 사용자 결정으로 남김 — 배포에 쓰지 않는 인터페이스를 두지 않는다).
 - **`sw::expected` Core 밖 이전:** 형식 · Core 이전 · 린트(`result-types`, 기준선 `Config/Dev/ResultTypeBaseline.json`)는 끝 — Core 밖 `std::optional` 554 · `string& outError` 708 을 옮긴다(`find*Index` 92 곳 집계는 X3 보고 — 감시값 −1 · invalid_index · size(), 폴백 Box2DPhysicsScene::findMaterialIndex). 0 이 되면 `Expected.h` 의 `std::optional` 암시 변환을 지운다.
 - **에디터 시나리오가 느린 프레임:** 새 패널이 처음 열리는 프레임이 약 1 초(`EditorWaitSettled has waited 2 s (2 frame(s))`). 느린 프레임 트레이스(`-gv_traceSlowTickMs`)로 그 프레임의 동기 일(에셋 · 썸네일 · PSO)을 찾아 비동기로.
-- 작업자 보고의 남은 범위: MVVM 남은 View 66 개(`Config/Dev/EditorViewIncludes.json` 목록에 더해 가며, 공용 GUI 헤더가 `Workspace/` 를 끌어오지 않게 한 뒤 `#error` 껍데기), 틱 뒤 큐로 컴포넌트마다 미루는 남은 타입(WaterBody · Foliage · CharacterAppearance · CameraDirector · MountInteraction · SurfaceExposure)을 `forEachActiveRegistered` + 씬 서비스 · 프레임 시스템으로, `.cpp` 안 상태 타입의 "Internal 이 public 칸을 바꾸는" 모양(린트가 헤더만 본다).
+- 작업자 보고의 남은 범위: MVVM 남은 View 66 개(`Config/Dev/EditorViewIncludes.json` 목록에 더해 가며, 공용 GUI 헤더가 `Workspace/` 를 끌어오지 않게 한 뒤 `#error` 껍데기), `.cpp` 안 상태 타입의 "Internal 이 public 칸을 바꾸는" 모양(린트가 헤더만 본다).
 - 빌드 속도: 유니티 배치 크기 측정(Release 깨끗한 빌드 12 · 24 · 48)이 남았다.
 - 그 뒤: Empty 게임 이름을 TestBed 로 전수 개명(옛 이름 린트로 막기), S8 측정 6 건, dzn SPIR-V→DXIL 충돌, 웹 · Android 실제 빌드.
 
