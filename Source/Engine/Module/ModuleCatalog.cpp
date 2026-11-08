@@ -57,7 +57,7 @@ namespace sw
             }
 
             // ------------------------------------------------------------------------------
-            // 매니페스트 읽기 — `ModuleCatalog::parseManifest` 가 위에서 아래로 부른다. false 면 @p outError 에 이유가 있다.
+            // 매니페스트 읽기 — `ModuleCatalog::parseManifest` 가 위에서 아래로 부른다. 실패는 문장(리터럴)과 대상(어느 파일 · 모듈의 무엇)이다.
             // ------------------------------------------------------------------------------
 
             /**
@@ -65,16 +65,13 @@ namespace sw
              * @details 키는 대소문자까지 맞아야 한다(직렬화기는 키를 철자 그대로 찾는다). 모르는 키 · 읽지 못한 값은 orphan 으로 남는다.
              *          범위 밖 값(`Rejected`)이 있어도 모은 키를 모두 적는다 — 첫 실패에서 돌아가면 같은 파일의 오타가 다음 수정까지 숨는다(C-60).
              */
-            [[nodiscard]] static bool deserializeManifestFile( string_view jsonText, const string& where, ModuleManifestFile& outFile, string& outError )
+            [[nodiscard]] static expected<void> deserializeManifestFile( string_view jsonText, const string& where, ModuleManifestFile& outFile )
             {
                 SerializeContext          context = SerializeContext::deriveFromDefault( SerializePurpose::Authoring );
                 vector<SchemaOrphanValue> listOrphan;
                 const SoftReadResult      result = JSONSerializer::deserializeSoft( &outFile, *ModuleManifestFile::StaticType(), jsonText, &listOrphan, nullptr, context );
                 if ( result == SoftReadResult::NotParsed )
-                {
-                    outError = where + ": not valid JSON, or the root is not an object";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "not valid JSON, or the root is not an object", where } );
                 string problem;
                 for ( const SchemaOrphanValue& orphan : listOrphan )
                 {
@@ -85,47 +82,35 @@ namespace sw
                 if ( result == SoftReadResult::Rejected )
                     problem += problem.empty() ? string( "a value outside its PROPERTY( Min, Max )" ) : string( "; a value outside its PROPERTY( Min, Max )" );
                 if ( problem.empty() == false )
-                {
-                    outError = where + ": " + problem;
-                    return false;
-                }
-                return true;
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "unknown key, unreadable value or a value outside its range", where }.appendDetail( ": " ).appendDetail( problem ) ); // 목록은 대상 길이에서 잘린다
+                return {};
             }
 
             /** @brief 이름을 정하고 파일 이름과 맞는지 봅니다. 파일 이름이 곧 모듈 이름이다 — 복사본 폴더(`Bin/Modules`)에서 이름이 겹치지 않고, 찾는 쪽이 파일 이름으로 바로 찾는다. */
-            [[nodiscard]] static bool readName( const ModuleManifestFile& file, string_view sourcePath, const string& where, ModuleManifest& inoutManifest, string& outError )
+            [[nodiscard]] static expected<void> readName( const ModuleManifestFile& file, string_view sourcePath, const string& where, ModuleManifest& inoutManifest )
             {
                 inoutManifest._name = file._name;
                 if ( inoutManifest._name.empty() )
-                {
-                    outError = where + ": _name is missing";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "_name is missing", where } );
                 if ( sourcePath.empty() == false )
                 {
                     const string fileName = FileUtil::getFileNamePart( sourcePath );
                     if ( StringUtil::equals( fileName, inoutManifest._name + ModuleCatalog::kManifestExtension, false ) == false )
-                    {
-                        outError = where + ": the file must be named '" + inoutManifest._name + ModuleCatalog::kManifestExtension + "'";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "the manifest file must be named after the module", where }
+                                               .appendDetail( " -> " )
+                                               .appendDetail( inoutManifest._name )
+                                               .appendDetail( ModuleCatalog::kManifestExtension ) );
                 }
-                return true;
+                return {};
             }
 
             /** @brief 판 · 종류 · 설명과 플랫폼 · 구성 · 대상 비트를 읽습니다. */
-            [[nodiscard]] static bool readIdentity( const ModuleManifestFile& file, const string& errorContext, ModuleManifest& inoutManifest, string& outError )
+            [[nodiscard]] static expected<void> readIdentity( const ModuleManifestFile& file, const string& errorContext, ModuleManifest& inoutManifest )
             {
                 if ( ModuleVersion::parse( file._version, inoutManifest._version ) == false )
-                {
-                    outError = errorContext + ": _version must be 'major.minor.patch'";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "_version must be 'major.minor.patch'", errorContext } );
                 if ( file._kind == kModuleKindUnset )
-                {
-                    outError = errorContext + ": _kind is missing";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "_kind is missing", errorContext } );
                 inoutManifest._kind        = file._kind;
                 inoutManifest._description = file._description;
 
@@ -133,26 +118,17 @@ namespace sw
                 inoutManifest._configurationMask = toMask( file._listConfiguration );
                 inoutManifest._targetMask        = toMask( file._listTarget );
                 if ( inoutManifest._platformMask == 0 )
-                {
-                    outError = errorContext + ": _listExcludedPlatform leaves no platform";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "_listExcludedPlatform leaves no platform", errorContext } );
                 if ( inoutManifest._configurationMask == 0 )
-                {
-                    outError = errorContext + ": _listConfiguration must list Dev and/or Shipping";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "_listConfiguration must list Dev and/or Shipping", errorContext } );
                 if ( inoutManifest._targetMask == 0 )
-                {
-                    outError = errorContext + ": _listTarget must list Client and/or Server";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "_listTarget must list Client and/or Server", errorContext } );
                 inoutManifest._bEnabledByDefault = file._bEnabledByDefault;
-                return true;
+                return {};
             }
 
             /** @brief 의존 목록을 읽습니다. 이름이 없거나 자기 자신이면, 최소 판이 깨졌으면 false 입니다. */
-            [[nodiscard]] static bool readDependencies( const ModuleManifestFile& file, const string& errorContext, ModuleManifest& inoutManifest, string& outError )
+            [[nodiscard]] static expected<void> readDependencies( const ModuleManifestFile& file, const string& errorContext, ModuleManifest& inoutManifest )
             {
                 for ( size_t index = 0; index < file._listDependency.size(); ++index )
                 {
@@ -161,64 +137,52 @@ namespace sw
                     dependency._name = entry._name;
                     if ( dependency._name.empty() || dependency._name == inoutManifest._name )
                     {
-                        StringBuilder<constant::buffer::kMax256> errorBuilder;
-                        errorBuilder.appendFormat( "%#: dependency %# has no name or names the module itself", errorContext, index );
-                        outError = string( errorBuilder.view() );
-                        return false;
+                        StringBuilder<constant::buffer::kMax32> indexBuilder;
+                        indexBuilder.appendFormat( ": dependency %#", index );
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "a dependency has no name or names the module itself", errorContext }.appendDetail( indexBuilder.view() ) );
                     }
                     if ( entry._minVersion.empty() == false && ModuleVersion::parse( entry._minVersion, dependency._minVersion ) == false )
-                    {
-                        outError = errorContext + ": dependency '" + dependency._name + "' has a bad _minVersion";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "a dependency has a bad _minVersion", errorContext }.appendDetail( ": " ).appendDetail( dependency._name ) );
                     inoutManifest._listDependency.push_back( std::move( dependency ) );
                 }
-                return true;
+                return {};
             }
 
             /** @brief 프로젝트(Game 모듈)의 켜기/끄기 표를 읽습니다. 다른 종류가 표를 가지거나 이름이 빈 줄이 있으면 false 입니다. */
-            [[nodiscard]] static bool readOverrides( ModuleManifestFile& inoutFile, const string& errorContext, ModuleManifest& inoutManifest, string& outError )
+            [[nodiscard]] static expected<void> readOverrides( ModuleManifestFile& inoutFile, const string& errorContext, ModuleManifest& inoutManifest )
             {
                 if ( inoutFile._listModuleOverride.empty() == false && inoutManifest._kind != ModuleKind::Game )
-                {
-                    outError = errorContext + ": only a Game module (the project) has _listModuleOverride";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "only a Game module (the project) has _listModuleOverride", errorContext } );
                 for ( size_t index = 0; index < inoutFile._listModuleOverride.size(); ++index )
                 {
                     if ( inoutFile._listModuleOverride[index]._name.empty() )
                     {
-                        StringBuilder<constant::buffer::kMax256> errorBuilder;
-                        errorBuilder.appendFormat( "%#: module override %# must be { \"_name\": ..., \"_bEnabled\": true|false }", errorContext, index );
-                        outError = string( errorBuilder.view() );
-                        return false;
+                        StringBuilder<constant::buffer::kMax32> indexBuilder;
+                        indexBuilder.appendFormat( ": override %#", index );
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "a module override must be { \"_name\": ..., \"_bEnabled\": true|false }", errorContext }.appendDetail( indexBuilder.view() ) );
                     }
                 }
                 inoutManifest._listModuleOverride = std::move( inoutFile._listModuleOverride );
-                return true;
+                return {};
             }
 
             /** @brief 에디터 확장은 Dev 전용이고 EditorModule 에 의존한다(언리얼 Type "Editor" 모듈과 같다) — CMake `sw_readModuleManifest` 와 같은 검사. */
-            [[nodiscard]] static bool validateEditorExtension( const ModuleManifest& manifest, const string& errorContext, string& outError )
+            [[nodiscard]] static expected<void> validateEditorExtension( const ModuleManifest& manifest, const string& errorContext )
             {
                 if ( manifest._kind != ModuleKind::EditorExtension )
-                    return true;
+                    return {};
                 if ( manifest._configurationMask != static_cast<uint8>( ModuleConfiguration::Dev ) )
-                {
-                    outError = errorContext + ": an EditorExtension module is built for Dev only (_listConfiguration [\"Dev\"])";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "an EditorExtension module is built for Dev only (_listConfiguration [\"Dev\"])", errorContext } );
                 bool bDependsOnEditor = false;
                 for ( const ModuleDependency& dependency : manifest._listDependency )
                 {
                     bDependsOnEditor = bDependsOnEditor || dependency._name == config::kTargetEditorModule;
                 }
                 if ( bDependsOnEditor == false )
-                {
-                    outError = errorContext + ": an EditorExtension module must list " + string( config::kTargetEditorModule ) + " in _listDependency";
-                    return false;
-                }
-                return true;
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "an EditorExtension module must list the editor module in _listDependency", errorContext }
+                                           .appendDetail( ": " )
+                                           .appendDetail( config::kTargetEditorModule ) );
+                return {};
             }
 
             // ------------------------------------------------------------------------------
@@ -232,23 +196,20 @@ namespace sw
             }
 
             /** @brief 1) 프로젝트의 켜기/끄기 표를 칸으로 옮깁니다(-1 = 표에 없음, 0 = 끔, 1 = 켬). 모르는 이름은 오류다(꺼 두려던 모듈의 이름을 틀리면 켜진 채 남는다). */
-            [[nodiscard]] static bool collectOverrides( const ModuleCatalog& catalog, string_view projectModule, vector<int8>& outListOverride, string& outError )
+            [[nodiscard]] static expected<void> collectOverrides( const ModuleCatalog& catalog, string_view projectModule, vector<int8>& outListOverride )
             {
                 outListOverride.assign( catalog.getManifestCount(), -1 );
                 const ModuleManifest* pProject = catalog.findManifest( projectModule );
                 if ( pProject == nullptr )
-                    return true;
+                    return {};
                 for ( const ModuleOverride& entry : pProject->_listModuleOverride )
                 {
                     const ModuleManifest* pTarget = catalog.findManifest( entry._name );
                     if ( pTarget == nullptr )
-                    {
-                        outError = pProject->_sourcePath + ": module override names an unknown module '" + entry._name + "'";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::NotFound, "a module override names an unknown module", entry._name }.appendDetail( " in " ).appendDetail( pProject->_sourcePath ) );
                     outListOverride[indexOf( catalog, pTarget )] = entry._bEnabled ? 1 : 0;
                 }
-                return true;
+                return {};
             }
 
             /** @brief 2) 켜짐 = 표 > 기본값, 그리고 이 플랫폼 · 구성에 있음. 프로젝트는 늘 켜져 있다. 꺼진 이유는 @p outListReason 에 둔다. */
@@ -304,8 +265,8 @@ namespace sw
             }
 
             /** @brief 3) 켜진 모듈의 의존은 모두 있고 · 켜져 있고 · 버전이 맞아야 한다. 의존 칸 번호 목록을 만든다. */
-            [[nodiscard]] static bool collectDependencies( const ModuleCatalog& catalog, const vector<uint8>& listActive, const vector<string>& listReason, vector<vector<uint32>>& outListDependency,
-                                                           string& outError )
+            [[nodiscard]] static expected<void> collectDependencies( const ModuleCatalog& catalog, const vector<uint8>& listActive, const vector<string>& listReason,
+                                                                     vector<vector<uint32>>& outListDependency )
             {
                 outListDependency.assign( catalog.getManifestCount(), vector<uint32>() );
                 for ( size_t index = 0; index < catalog.getManifestCount(); ++index )
@@ -317,31 +278,33 @@ namespace sw
                     {
                         const ModuleManifest* pDependency = catalog.findManifest( dependency._name );
                         if ( pDependency == nullptr )
-                        {
-                            outError = "Module '" + manifest._name + "' depends on '" + dependency._name + "', which has no manifest (missing module)";
-                            return false;
-                        }
+                            return unexpected( Error{ ErrorKind::NotFound, "a module depends on a module that has no manifest (missing module)", manifest._name }
+                                                   .appendDetail( " -> " )
+                                                   .appendDetail( dependency._name ) );
                         const size_t dependencyIndex = indexOf( catalog, pDependency );
                         if ( listActive[dependencyIndex] == SW_FALSE )
-                        {
-                            outError = "Module '" + manifest._name + "' depends on '" + dependency._name + "', which is " + listReason[dependencyIndex];
-                            return false;
-                        }
+                            return unexpected( Error{ ErrorKind::NotFound, "a module depends on an inactive module", manifest._name }
+                                                   .appendDetail( " -> " )
+                                                   .appendDetail( dependency._name )
+                                                   .appendDetail( ": " )
+                                                   .appendDetail( listReason[dependencyIndex] ) );
                         if ( pDependency->_version.isAtLeast( dependency._minVersion ) == false )
-                        {
-                            outError = "Module '" + manifest._name + "' needs '" + dependency._name + "' " + dependency._minVersion.toString() + " or later, but " +
-                                       pDependency->_version.toString() + " is present";
-                            return false;
-                        }
+                            return unexpected( Error{ ErrorKind::Unsupported, "a module needs a newer version of its dependency", manifest._name }
+                                                   .appendDetail( " needs " )
+                                                   .appendDetail( dependency._name )
+                                                   .appendDetail( " " )
+                                                   .appendDetail( dependency._minVersion.toString() )
+                                                   .appendDetail( " or later, " )
+                                                   .appendDetail( pDependency->_version.toString() )
+                                                   .appendDetail( " is present" ) );
                         outListDependency[index].push_back( static_cast<uint32>( dependencyIndex ) );
                     }
                 }
-                return true;
+                return {};
             }
 
             /** @brief 4) 켜진 모듈만으로 위상 정렬해 적재 순서를 만든다. 순환이면 그 경로를 말한다. */
-            [[nodiscard]] static bool sortLoadOrder( const ModuleCatalog& catalog, const vector<uint8>& listActive, const vector<vector<uint32>>& listDependency, vector<string>& outListLoadOrder,
-                                                     string& outError )
+            [[nodiscard]] static expected<void> sortLoadOrder( const ModuleCatalog& catalog, const vector<uint8>& listActive, const vector<vector<uint32>>& listDependency, vector<string>& outListLoadOrder )
             {
                 const size_t        manifestCount = catalog.getManifestCount();
                 vector<uint32>      listActiveIndex;
@@ -367,18 +330,18 @@ namespace sw
                 const DependencyOrder order = graph.sortByName( listActiveName );
                 if ( order.isSorted() == false )
                 {
-                    outError = "Module dependency cycle:";
+                    Error error{ ErrorKind::Cycle, "module dependency cycle" };
                     for ( size_t step = 0; step < order._listCycle.size(); ++step )
                     {
-                        outError += ( step == 0 ? " " : " -> " ) + string( listActiveName[order._listCycle[step]] );
+                        error.appendDetail( step == 0 ? "" : " -> " ).appendDetail( listActiveName[order._listCycle[step]] );
                     }
-                    return false;
+                    return unexpected( error );
                 }
                 for ( const uint32 compactIndex : order._listOrder )
                 {
                     outListLoadOrder.push_back( string( listActiveName[compactIndex] ) );
                 }
-                return true;
+                return {};
             }
         };
     } // namespace
@@ -439,7 +402,7 @@ namespace sw
 
 namespace sw
 {
-    bool ModuleCatalog::parseManifest( string_view jsonText, string_view sourcePath, ModuleManifest& outManifest, string& outError )
+    expected<void> ModuleCatalog::parseManifest( string_view jsonText, string_view sourcePath, ModuleManifest& outManifest )
     {
         using Internal          = ModuleCatalogInternal;
         outManifest             = ModuleManifest{};
@@ -447,41 +410,42 @@ namespace sw
         const string where      = sourcePath.empty() ? string( "<module manifest>" ) : string( sourcePath );
 
         ModuleManifestFile file;
-        if ( Internal::deserializeManifestFile( jsonText, where, file, outError ) == false )
-            return false;
-        if ( Internal::readName( file, sourcePath, where, outManifest, outError ) == false )
-            return false;
+        if ( expected<void> read = Internal::deserializeManifestFile( jsonText, where, file ); read.has_value() == false )
+            return read;
+        if ( expected<void> read = Internal::readName( file, sourcePath, where, outManifest ); read.has_value() == false )
+            return read;
 
         const string errorContext = where + " (" + outManifest._name + ")";
-        return Internal::readIdentity( file, errorContext, outManifest, outError ) && Internal::readDependencies( file, errorContext, outManifest, outError ) &&
-               Internal::readOverrides( file, errorContext, outManifest, outError ) && Internal::validateEditorExtension( outManifest, errorContext, outError );
+        if ( expected<void> read = Internal::readIdentity( file, errorContext, outManifest ); read.has_value() == false )
+            return read;
+        if ( expected<void> read = Internal::readDependencies( file, errorContext, outManifest ); read.has_value() == false )
+            return read;
+        if ( expected<void> read = Internal::readOverrides( file, errorContext, outManifest ); read.has_value() == false )
+            return read;
+        return Internal::validateEditorExtension( outManifest, errorContext );
     }
 
-    bool ModuleCatalog::addManifest( ModuleManifest manifest, string& outError )
+    expected<void> ModuleCatalog::addManifest( ModuleManifest manifest )
     {
         const ModuleManifest* pExisting = findManifest( manifest._name );
         if ( pExisting != nullptr )
-        {
-            outError = "Module '" + manifest._name + "' is declared twice (" + pExisting->_sourcePath + ", " + manifest._sourcePath + ")";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::AlreadyExists, "a module is declared twice", manifest._name }
+                                   .appendDetail( " (" )
+                                   .appendDetail( pExisting->_sourcePath )
+                                   .appendDetail( ", " )
+                                   .appendDetail( manifest._sourcePath )
+                                   .appendDetail( ")" ) );
         _listManifest.push_back( std::move( manifest ) );
-        return true;
+        return {};
     }
 
-    bool ModuleCatalog::loadDirectory( string_view directoryPath, string& outError )
+    expected<void> ModuleCatalog::loadDirectory( string_view directoryPath )
     {
         if ( FileUtil::isDirectory( directoryPath ) == false )
-        {
-            outError = "Module catalog folder does not exist: " + string( directoryPath );
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "the module catalog folder does not exist", directoryPath } );
         vector<string> listFile;
         if ( FileUtil::collectFiles( directoryPath, ".json", listFile, false ) == false )
-        {
-            outError = "Cannot list the module catalog folder: " + string( directoryPath );
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::ExternalFailure, "the module catalog folder cannot be listed", directoryPath } );
         VectorUtil::sort( listFile );
         for ( const string& filePath : listFile )
         {
@@ -489,15 +453,14 @@ namespace sw
                 continue;
             string text;
             if ( FileUtil::readTextFile( filePath, text ) == false )
-            {
-                outError = "Cannot read module manifest " + filePath;
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::ExternalFailure, "a module manifest cannot be read", filePath } );
             ModuleManifest manifest;
-            if ( parseManifest( text, filePath, manifest, outError ) == false || addManifest( std::move( manifest ), outError ) == false )
-                return false;
+            if ( expected<void> parsed = parseManifest( text, filePath, manifest ); parsed.has_value() == false )
+                return parsed;
+            if ( expected<void> added = addManifest( std::move( manifest ) ); added.has_value() == false )
+                return added;
         }
-        return true;
+        return {};
     }
 
     bool ModuleCatalog::setProjectOverride( string_view projectModule, string_view moduleName, bool bEnabled )
@@ -525,14 +488,14 @@ namespace sw
         return VectorUtil::findBy<&ModuleManifest::_name>( _listManifest, name );
     }
 
-    bool ModuleCatalog::resolve( const ModuleResolveContext& context, ModuleResolution& outResolution, string& outError ) const
+    expected<void> ModuleCatalog::resolve( const ModuleResolveContext& context, ModuleResolution& outResolution ) const
     {
         using Internal = ModuleCatalogInternal;
         outResolution  = ModuleResolution{};
 
         vector<int8> listOverride;
-        if ( Internal::collectOverrides( *this, context._projectModule, listOverride, outError ) == false )
-            return false;
+        if ( expected<void> collected = Internal::collectOverrides( *this, context._projectModule, listOverride ); collected.has_value() == false )
+            return collected;
 
         vector<uint8>  listActive;
         vector<string> listReason;
@@ -540,10 +503,10 @@ namespace sw
         Internal::deactivateEditorExtensions( *this, listActive, listReason );
 
         vector<vector<uint32>> listDependency;
-        if ( Internal::collectDependencies( *this, listActive, listReason, listDependency, outError ) == false )
-            return false;
-        if ( Internal::sortLoadOrder( *this, listActive, listDependency, outResolution._listLoadOrder, outError ) == false )
-            return false;
+        if ( expected<void> collected = Internal::collectDependencies( *this, listActive, listReason, listDependency ); collected.has_value() == false )
+            return collected;
+        if ( expected<void> sorted = Internal::sortLoadOrder( *this, listActive, listDependency, outResolution._listLoadOrder ); sorted.has_value() == false )
+            return sorted;
 
         for ( size_t index = 0; index < _listManifest.size(); ++index )
         {
@@ -552,7 +515,7 @@ namespace sw
         }
         VectorUtil::sort( outResolution._listInactive, []( const ModuleInactiveEntry& lhs, const ModuleInactiveEntry& rhs )
         { return lhs._name < rhs._name; } );
-        return true;
+        return {};
     }
 
     ModulePlatform ModuleCatalog::getCurrentPlatform()

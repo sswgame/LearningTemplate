@@ -16,6 +16,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -230,12 +231,12 @@ namespace sw
          * @brief JSON 매니페스트 하나를 `ModuleManifestFile` 로 읽어 옮깁니다. 모르는 키, 종류, 플랫폼, 구성, 틀린 버전, 빈 이름은 오류입니다.
          * @param sourcePath 오류 메시지에 적을 경로. 파일 이름이 있으면 `<_name>.module.json` 과 같아야 합니다.
          */
-        [[nodiscard]] static bool parseManifest( string_view jsonText, string_view sourcePath, ModuleManifest& outManifest, string& outError );
+        [[nodiscard]] static expected<void> parseManifest( string_view jsonText, string_view sourcePath, ModuleManifest& outManifest );
 
         /** @brief 매니페스트를 더합니다. 같은 이름이 이미 있으면 오류입니다. */
-        [[nodiscard]] bool addManifest( ModuleManifest manifest, string& outError );
-        /** @brief 폴더의 `*.module.json` 을 모두 읽어 더합니다. 폴더가 없거나 하나라도 틀리면 false 입니다. */
-        [[nodiscard]] bool loadDirectory( string_view directoryPath, string& outError );
+        [[nodiscard]] expected<void> addManifest( ModuleManifest manifest );
+        /** @brief 폴더의 `*.module.json` 을 모두 읽어 더합니다. 폴더가 없거나 하나라도 틀리면 그 까닭입니다. */
+        [[nodiscard]] expected<void> loadDirectory( string_view directoryPath );
 
         /** @brief 이름으로 찾습니다. 없으면 nullptr 입니다. */
         const ModuleManifest* findManifest( string_view name ) const;
@@ -255,7 +256,7 @@ namespace sw
          *          켜진 모듈의 의존은 모두 있어야 하고(없으면 오류), 켜져 있어야 하고(꺼졌으면 오류이며 무엇이 껐는지 알려 준다), 최소 버전 이상이어야
          *          하며, 순환이 없어야 한다(있으면 그 경로를 알려 준다). 프로젝트 테이블의 모르는 이름도 오류다.
          */
-        [[nodiscard]] bool resolve( const ModuleResolveContext& context, ModuleResolution& outResolution, string& outError ) const;
+        [[nodiscard]] expected<void> resolve( const ModuleResolveContext& context, ModuleResolution& outResolution ) const;
 
         /** @brief 지금 빌드의 플랫폼입니다. */
         static ModulePlatform getCurrentPlatform();

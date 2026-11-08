@@ -79,7 +79,12 @@ namespace sw::editor
         _resolution = ModuleResolution{};
         _loadError.clear();
         const ModuleResolveContext context = ModulesModelInternal::makeResolveContext();
-        if ( _catalog.loadDirectory( directory, _loadError ) == false || _catalog.resolve( context, _resolution, _loadError ) == false )
+        expected<void>             loaded  = _catalog.loadDirectory( directory );
+        if ( loaded.has_value() )
+            loaded = _catalog.resolve( context, _resolution );
+        if ( loaded.has_value() == false )
+            _loadError = string( loaded.error().message().data(), loaded.error().message().size() ) + " (" + string( loaded.error().detail().data(), loaded.error().detail().size() ) + ")";
+        if ( loaded.has_value() == false )
             SW_LOG_WARNING_ID( "ModulesPanel.ModulesCatalogCouldNot", "Modules: the catalog in %# could not be resolved - %#", string( directory ).c_str(), _loadError.c_str() );
     }
 
