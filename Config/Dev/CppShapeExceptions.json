@@ -7,5 +7,9 @@
         "Source/Engine/Navigation/INavMesh.h|INavMesh": "역할 인터페이스(타일 · 질의 · 바꾸기 · 디버그)를 묶은 순수 인터페이스 — 쓰는 쪽은 한 역할만 받아 스레드 규칙을 형식으로 막는다(IPhysicsScene 과 같은 모양)",
         "Source/Engine/Physics/IPhysicsScene.h|IPhysicsScene": "역할 인터페이스(바디 · 관절 · 캐릭터 · 질의 · 차 · 소프트 바디 · 부력)를 묶은 순수 인터페이스 — 차원 트레이트가 없는 역할은 빈 타입으로 갈린다",
         "Source/Engine/Profiling/IProfilerBackend.h|IProfilerBackend": "역할 인터페이스(메모리 출력 · GPU 타임라인)를 묶은 순수 인터페이스 — RHI 는 GPU 타임라인 역할만 받는다"
+    },
+    "staticOwner": {
+        "Source/Editor/Common/Asset/OutfitAtlas.h|OutfitAtlasLayout": "빈 칸 채우기 알고리즘 — 원본 크기 목록(OutfitAtlasSource)에서 사각형 목록(OutfitAtlasRect)을 짓는 두 타입에 걸친 계산이고 어느 한쪽의 값을 다루지 않는다(언리얼 FBinPacker 와 같은 자리)",
+        "Source/Editor/Common/Asset/OutfitAtlas.h|OutfitAtlasComposer": "픽셀 버퍼(vector<uint8>) 합성 — 사각형은 놓을 자리 인자 하나이고 함수가 다루는 값은 아틀라스 픽셀이다"
     }
 }
