@@ -3,6 +3,7 @@
 #include "DevTools/Net/NetLineEmulation.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/formatString.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 
@@ -18,12 +19,38 @@ namespace sw
      * @brief `-gv_netEmulationPreset=<이름>`: 회선 흉내를 프리셋 표(`NetEmulationPresetTable`)의 한 줄로 둡니다. 있으면 `gv_netEmulation*` 낱값을 무시합니다.
      * @details 부하 검증의 `<Load network>` 와 하드웨어 프로필이 이 하나로 넘긴다 — 프리셋 값을 밖에 다시 적지 않는다.
      */
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_netEmulationLatencyMs, 0, "네트워크 흉내: 한쪽 지연(ms) — 언리얼 PktLag" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_netEmulationJitterMs, 0, "네트워크 흉내: ± 흔들림(ms) — PktLagVariance" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_netEmulationLossPercent, 0, "네트워크 흉내: 손실(%) — PktLoss" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_netEmulationDuplicatePercent, 0, "네트워크 흉내: 중복(%) — PktDup" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_netEmulationReorderPercent, 0, "네트워크 흉내: 순서 뒤바뀜(%) — PktOrder" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_netEmulationBandwidthKilobytesPerSecond, 0, "네트워크 흉내: 회선 속도(KB/s, 0=제한 없음)" );
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_netEmulationPreset, "", "네트워크 흉내: 회선 프리셋 이름(engine/settings/netemulation.presets.xml — 비면 gv_netEmulation* 낱값)" );
 
     namespace
     {
         struct NetLineEmulationInternal
         {
+            /**
+             * @brief 낱값 전역 변수(`-gv_netEmulationLatencyMs` · `JitterMs` · `LossPercent` · `DuplicatePercent` · `ReorderPercent` · `BandwidthKilobytesPerSecond`)로 시작 조건을 만듭니다.
+             * @details 언리얼의 `PktLag` · `PktLagVariance` · `PktLoss` · `PktDup` · `PktOrder` 에 대응한다. 단위 변환은 흉내 조건의 덮어쓰기 읽기(`NetEmulationConditions::parseOverrides`)
+             *          한 곳이 한다 — 같은 키를 쓰는 개발 명령 `net.emulation` 과 같은 길이다. 틀린 값(음수)이면 오류를 남기고 흉내 없이(꺼진 조건) 둔다.
+             */
+            static NetEmulationConditions makeConditionsFromGlobalVariables()
+            {
+                utf8 arrText[constant::buffer::kMax256]{};
+                formatstring( arrText, constant::buffer::kMax256, "latencyMs=%# jitterMs=%# lossPercent=%# duplicatePercent=%# reorderPercent=%# bandwidthKBps=%#", gv_netEmulationLatencyMs,
+                              gv_netEmulationJitterMs, gv_netEmulationLossPercent, gv_netEmulationDuplicatePercent, gv_netEmulationReorderPercent, gv_netEmulationBandwidthKilobytesPerSecond );
+                NetEmulationConditions conditions;
+                string                 error;
+                if ( NetEmulationConditions::parseOverrides( arrText, conditions, error ) == false )
+                {
+                    SW_LOG_ERROR_ID( "NetLineEmulation.GvNetEmulationInvalid", "gv_netEmulation* values are invalid (%#) - no emulation", error.c_str() );
+                    return NetEmulationConditions{};
+                }
+                return conditions;
+            }
+
             /** @brief 보내는 쪽 · 받는 쪽 조건을 한 줄로 씁니다(`net.emulation` 의 답). */
             static string describeEmulation( const NetEmulationTransport& emulation )
             {
@@ -160,7 +187,7 @@ namespace sw
     {
         if ( shardIndex < 0 || kMaxShardCount <= shardIndex )
             return nullptr;
-        NetEmulationConditions conditions = NetEmulationConditions::makeFromGlobalVariables();
+        NetEmulationConditions conditions = NetLineEmulationInternal::makeConditionsFromGlobalVariables();
         if ( gv_netEmulationPreset.empty() == false )
         {
             NetEmulationPresetTable presetTable;

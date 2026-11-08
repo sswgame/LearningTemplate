@@ -13,9 +13,11 @@
 #include "DevTools/AssetReload/ReloadTracker.h"
 #include "DevTools/Console/DevConsoleHost.h"
 #include "DevTools/DevToolsClientPart.h"
+#include "DevTools/File/FileReadDiagnostics.h"
 #include "DevTools/Maintenance/SavedRetentionSubsystem.h"
 #include "DevTools/Net/NetLineEmulation.h"
 #include "DevTools/Profiling/FrameStall.h"
+#include "DevTools/Profiling/LeakBaselineDetailSwitch.h"
 #include "DevTools/RenderDoc/RenderDocCapture.h"
 #include "DevTools/ServerPose/ServerPoseOverlay.h"
 
@@ -34,10 +36,15 @@ namespace sw
     DevToolsHost::DevToolsHost()
         : _pConsole{}
         , _pContentFolderWatch{ make_unique<ContentFolderWatchService>() }
+        , _pFileReadDiagnostics{ make_unique<FileReadDiagnostics>() }
     {
+        LeakBaselineDetailSwitch::install(); // 기동 기준선(엔진 초기화 끝 · 헤드리스 진입)보다 먼저다 — 호스트 범위가 엔진보다 먼저 선다
     }
 
-    DevToolsHost::~DevToolsHost() = default;
+    DevToolsHost::~DevToolsHost()
+    {
+        LeakBaselineDetailSwitch::uninstall();
+    }
 
     EngineStartupExtensionDelegate DevToolsHost::makeStartupExtension()
     {
