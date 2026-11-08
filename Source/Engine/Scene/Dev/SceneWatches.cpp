@@ -1,6 +1,7 @@
 /**
  * @file SceneWatches.cpp
  * @brief 씬의 자동화 감시 값입니다(`Scene.*`). 감시 값 레지스트리(`Engine/Automation/Watch`)가 Scene 보다 아래라 씬이 자기 감시 값을 등록합니다 — 실행기가 대신 정의하지 않습니다.
+ * @details 감시 값과 결정성 진단 스위치(`gv_automationHashDump`)만 든 개발 장치라 `Dev/` 에 둔다 — 배포 구성은 이 파일을 짓지 않는다(`SW_DEV_ONLY_SOURCE_PATTERNS`).
  */
 #include "pch.h"
 
