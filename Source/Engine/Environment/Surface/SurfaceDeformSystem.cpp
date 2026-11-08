@@ -124,22 +124,18 @@ namespace sw
         , _point{}
         , _yaw{ 0.0f }
         , _age{ 0.0f }
-        , _generation{ 0 }
-        , _bInUse{ SW_FALSE }
-        , _reserved{ 0 }
     {
     }
 
     SurfaceDeformSystem::SurfaceDeformSystem( GameObjectManager& manager )
         : _pManager{ &manager }
         , _grid{}
-        , _listPersistentStamp{}
+        , _persistentStampTable{}
         , _listTexelByte{}
         , _texturePath{}
         , _depthRange{ 0.0f }
         , _stampCount{ 0 }
         , _bindingRevision{ 0 }
-        , _persistentStampGeneration{ 0 }
     {
     }
 
@@ -163,13 +159,11 @@ namespace sw
                 ++_bindingRevision;
         }
         _grid.fill( deltaTime );
-        for ( PersistentStamp& held : _listPersistentStamp )
+        _persistentStampTable.forEach( [this, deltaTime]( PersistentStamp& held )
         {
-            if ( held._bInUse == SW_FALSE )
-                continue;
             held._age += MathUtil::max( deltaTime, 0.0f );
             _grid.applyStamp( held._def, held._point._x, held._point._z, held._yaw, 0.0f, held._def._spinSpeed * held._age );
-        }
+        } );
         uploadTexture();
     }
 
@@ -177,7 +171,7 @@ namespace sw
     {
         releaseTexture();
         _grid = SurfaceDeformGrid{};
-        _listPersistentStamp.clear();
+        _persistentStampTable.clear();
         _depthRange = 0.0f;
         _stampCount = 0;
         ++_bindingRevision;
@@ -212,28 +206,19 @@ namespace sw
     {
         if ( ensureGrid( def, point ) == false )
             return SurfaceStampHandle{};
-        uint32 slot = 0;
-        while ( slot < _listPersistentStamp.size() && _listPersistentStamp[slot]._bInUse == SW_TRUE )
-        {
-            ++slot;
-        }
-        if ( slot == _listPersistentStamp.size() )
-            _listPersistentStamp.emplace_back();
-        PersistentStamp& held = _listPersistentStamp[slot];
-        held._def             = def;
-        held._point           = point;
-        held._yaw             = yaw;
-        held._age             = 0.0f;
-        held._generation      = ++_persistentStampGeneration;
-        held._bInUse          = SW_TRUE;
+        PersistentStamp held{};
+        held._def                       = def;
+        held._point                     = point;
+        held._yaw                       = yaw;
+        const SurfaceStampHandle handle = _persistentStampTable.insert( std::move( held ) );
         _grid.applyStamp( def, point._x, point._z, yaw, 0.0f, 0.0f );
         ++_stampCount;
-        return SurfaceStampHandle{ slot, held._generation };
+        return handle;
     }
 
     bool SurfaceDeformSystem::movePersistentStamp( SurfaceStampHandle handle, const float3& point, float32 yaw )
     {
-        PersistentStamp* pHeld = findPersistentStamp( handle );
+        PersistentStamp* const pHeld = _persistentStampTable.get( handle );
         if ( pHeld == nullptr )
             return false;
         pHeld->_point = point;
@@ -243,19 +228,12 @@ namespace sw
 
     void SurfaceDeformSystem::removePersistentStamp( SurfaceStampHandle handle )
     {
-        PersistentStamp* pHeld = findPersistentStamp( handle );
-        if ( pHeld != nullptr )
-            pHeld->_bInUse = SW_FALSE;
+        _persistentStampTable.erase( handle );
     }
 
     uint32 SurfaceDeformSystem::getPersistentStampCount() const
     {
-        uint32 heldCount = 0;
-        for ( const PersistentStamp& held : _listPersistentStamp )
-        {
-            heldCount += held._bInUse == SW_TRUE ? 1u : 0u;
-        }
-        return heldCount;
+        return _persistentStampTable.size();
     }
 
     float4 SurfaceDeformSystem::makeShaderParams() const
@@ -298,14 +276,6 @@ namespace sw
         const float32 scale      = flatLength > 1.0e-4f ? ahead / flatLength : 0.0f;
         outFocus                 = float2{ position._x + forward._x * scale, position._z + forward._z * scale };
         return true;
-    }
-
-    SurfaceDeformSystem::PersistentStamp* SurfaceDeformSystem::findPersistentStamp( SurfaceStampHandle handle )
-    {
-        if ( handle.isValid() == false || handle._slot >= _listPersistentStamp.size() )
-            return nullptr;
-        PersistentStamp& held = _listPersistentStamp[handle._slot];
-        return held._bInUse == SW_TRUE && held._generation == handle._generation ? &held : nullptr;
     }
 
     void SurfaceDeformSystem::uploadTexture()

@@ -32,7 +32,8 @@ namespace sw
     class SW_DEVTOOLS_API ConfigReloadSubsystem final : public ISubsystem
     {
     public:
-        static constexpr const utf8* kSubsystemName = "ConfigReload";
+        static constexpr const utf8*               kSubsystemName    = "ConfigReload";
+        static constexpr SubsystemModuleVisibility kModuleVisibility = SubsystemModuleVisibility::HostModules; ///< 에디터 도구 시드 · 프로젝트 설정 창이 리로드를 건다
 
         /** @param configManager 호스트 설정의 주인 — 이 서브시스템보다 먼저 서고 늦게 사라진다(의존 칸). */
         explicit ConfigReloadSubsystem( ConfigManager& configManager );

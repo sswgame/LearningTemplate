@@ -55,6 +55,7 @@ Reach a service through the window of its lifetime: `getSubsystem<T>()` (must ex
 - No named accessors, no `static getInstance()`.
 - Tests inject mocks through scopes (`game::ScopedGameScope`, `editor::ScopedEditorScope`); the registration rules are tested with a local `engine::EngineRegistrationList` (`Engine/Foundation/Tests/TestEngineSubsystemRegistration.cpp`).
 - A dynamically loaded module (GameFramework, a kit) owns its services as **module subsystems**: `SW_MODULE_SUBSYSTEM( Process | Engine, T, PublishedTypes... )` in a `.cpp`. Loading the module mounts them in a child scope named after the module (`ModuleRegistrationHost`); unloading removes the child scope. Only published types are visible from the parent scope, so a lower layer finds a higher layer's implementation by interface type (`engine::findSubsystem<INetSecurityProvider>()`) — no function slot, no function-local static provider. `Process` is the root of the scope chain (the host scope) and outlives engine and game restarts.
+- A host subsystem without a slot that the editor must find (a `DevTools` subsystem, `ConfigManager`) declares it in its class: `static constexpr SubsystemModuleVisibility kModuleVisibility = SubsystemModuleVisibility::HostModules;`. The editor module's scope reaches it through `ModuleRegistrationHost::getHostModuleLocator`; game module scopes never see it. The host keeps no hand list of what to bind into the editor scope.
 
 ### Memory and ownership
 

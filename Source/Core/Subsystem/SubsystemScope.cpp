@@ -69,6 +69,12 @@ namespace sw
         return nullptr;
     }
 
+    void* SubsystemScope::findHostModuleVisibleInScope( uint64 typeHash ) const
+    {
+        const Entry* pEntry = findOwnEntry( typeHash );
+        return pEntry != nullptr && pEntry->_moduleVisibility == SubsystemModuleVisibility::HostModules ? pEntry->_pObject : nullptr;
+    }
+
     const SubsystemScope::Entry* SubsystemScope::findOwnEntry( uint64 typeHash ) const
     {
         return VectorUtil::findBy<&Entry::_typeHash>( _listEntry, typeHash );
@@ -82,12 +88,14 @@ namespace sw
         return findInMounted( typeHash );
     }
 
-    bool SubsystemScope::registerEntry( uint64 typeHash, void* pObject, bool bOwned )
+    bool SubsystemScope::registerEntry( uint64 typeHash, void* pObject, bool bOwned, SubsystemModuleVisibility moduleVisibility )
     {
         // 겹침은 이 범위 자신의 칸만 본다 — 자식이 공개한 같은 타입이 있어도 이 범위는 제 것을 걸 수 있다(이 범위의 칸이 이긴다).
         if ( findOwnEntry( typeHash ) != nullptr )
             return false;
-        _listEntry.push_back( Entry{ typeHash, pObject, bOwned } );
+        Entry entry{ typeHash, pObject, bOwned };
+        entry._moduleVisibility = moduleVisibility;
+        _listEntry.push_back( entry );
         return true;
     }
 

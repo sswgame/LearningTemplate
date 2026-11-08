@@ -39,6 +39,18 @@ namespace sw
         Failed,         ///< 기동을 멈춥니다. 이미 초기화한 서브시스템은 `shutdownAll` 이 역순으로 내립니다
         SkipDependents, ///< 이 서브시스템은 초기화됐지만, 이것에 (간접으로라도) 의존하는 서브시스템은 돌지 않습니다(헤드리스 작업)
     };
+
+    /**
+     * @brief 서브시스템이 제 범위 밖의 **모듈 서비스 범위**에 보이는지입니다. 형식 상수 `kModuleVisibility` 로 서브시스템이 스스로 선언한다(`SubsystemScope::addSubsystem` 이 칸에 옮긴다).
+     * @details 호스트가 모듈에 넘기는 범위가 손 목록으로 빌려 걸던 자리다 — 목록에서 빠지면 모듈이 조용히 못 찾았다. 이 길로는 게임 모듈에 닿을 수 없다:
+     *          게임 모듈에 보이는 것은 엔진 서비스 칸(`GameVisible`)과 모듈이 공개한 서브시스템(`SW_MODULE_SUBSYSTEM`)뿐이다 — 호스트 전용의 경계가 형식으로 선다.
+     *          언리얼 `UEditorSubsystem`(에디터만 찾는 서브시스템)과 같은 자리다.
+     */
+    enum class SubsystemModuleVisibility : uint8
+    {
+        ScopeOnly,   ///< 제 범위(와 그 아래 범위)의 조회에만 보인다(기본)
+        HostModules, ///< 호스트 모듈(에디터)의 서비스 범위에도 보인다 — 게임 모듈은 찾지 못한다(`ModuleRegistrationHost::getHostModuleLocator`)
+    };
 } // namespace sw
 
 namespace sw
@@ -94,6 +106,8 @@ namespace sw
         MemoryTag getSubsystemMemoryTag() const { return _memoryTag; }
         /** @brief 기본 용도입니다. 파생이 `static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::…;` 로 가립니다. */
         static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::EngineMisc;
+        /** @brief 기본은 제 범위에만 보인다. 에디터가 찾는 호스트 서브시스템이 `static constexpr SubsystemModuleVisibility kModuleVisibility = SubsystemModuleVisibility::HostModules;` 로 가린다. */
+        static constexpr SubsystemModuleVisibility kModuleVisibility = SubsystemModuleVisibility::ScopeOnly;
 
     private:
         friend class SubsystemCollection;

@@ -8,6 +8,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
+#include "Core/Container/IndexFreeList.h"
 #include "Core/Container/vector.h"
 #include "Core/Network/Transport/NativeSocketAddress.h"
 #include "Core/Network/Transport/PlatformSocketUtil.h"
@@ -134,7 +135,7 @@ namespace sw
             /** @brief 핸들이 지금 이 슬롯의 살아 있는 연결을 가리키는지입니다(잠금 안). */
             bool isLiveLocked( StreamConnectionHandle handle ) const
             {
-                return _generation == handle._generation && _state != IocpConnectionState::Free && _state != IocpConnectionState::Retiring;
+                return _generation == handle.generation() && _state != IocpConnectionState::Free && _state != IocpConnectionState::Retiring;
             }
 
             /** @brief 빈 슬롯 @p index 를 소켓 @p socket 의 연결로 엽니다(잠금 안). 여는 쪽이 작업 참조를 하나 잡는다 — 열림 콜백(수락)이나 ConnectEx(연결)가 끝나면 놓는다. */
@@ -261,7 +262,7 @@ namespace sw
             /** @brief 슬롯을 비웁니다(잠금 안). 세대를 올려 옛 핸들이 이 슬롯을 다시 가리키지 않게 한다(0 은 무효 핸들이라 건너뛴다). */
             void freeLocked()
             {
-                ++_generation;
+                _generation = SlotHandle::nextGeneration( _generation ); // 핸들 표와 같은 세대 규칙(0 은 건너뛴다)
                 if ( _generation == 0 )
                     _generation = 1;
                 _state = IocpConnectionState::Free;
@@ -442,7 +443,7 @@ namespace sw
 
         mutable mutex                                      _tableMutex;
         vector<unique_ptr<IocpConnection>> _listConnection SW_GUARDED_BY( _tableMutex );
-        vector<uint32> _listFreeIndex                      SW_GUARDED_BY( _tableMutex );
+        IndexFreeList _freeSlot                            SW_GUARDED_BY( _tableMutex );
         unique_ptr<IocpAcceptSlot[]>                       _arrAcceptSlot;
         vector<sw::thread>                                 _listThread;
         OnceInit<StreamTransportConfig>                    _settings; ///< initialize 가 I/O 스레드를 띄우기 전에 한 번 정한다(shutdown 이 비운다).
@@ -472,12 +473,7 @@ namespace sw
         {
             ScopedLock<mutex> lock{ _tableMutex };
             uint32            index = 0;
-            if ( _listFreeIndex.empty() == false )
-            {
-                index = _listFreeIndex.back();
-                _listFreeIndex.pop_back();
-            }
-            else
+            if ( _freeSlot.tryPop( index ) == false )
             {
                 index = static_cast<uint32>( _listConnection.size() );
                 _listConnection.push_back( make_unique<IocpConnection>() );
@@ -494,9 +490,9 @@ namespace sw
         IocpConnection* findConnection( StreamConnectionHandle handle ) const
         {
             ScopedLock<mutex> lock{ _tableMutex };
-            if ( handle.isValid() == false || handle._index >= _listConnection.size() )
+            if ( handle.isValid() == false || handle.index() >= _listConnection.size() )
                 return nullptr;
-            return _listConnection[handle._index].get();
+            return _listConnection[handle.index()].get();
         }
 
         IocpConnection& getConnection( uint32 index ) const
@@ -513,7 +509,7 @@ namespace sw
                 ScopedLock<mutex> connectionLock{ connection.getMutex() };
                 connection.freeLocked();
             }
-            _listFreeIndex.push_back( handle._index );
+            _freeSlot.push( handle.index() );
             _openCount.fetch_sub( 1, std::memory_order_relaxed );
             _closedCount.fetch_add( 1, std::memory_order_relaxed );
         }
@@ -655,7 +651,7 @@ namespace sw
                         pConnection->postReceiveLocked( _completionPort );
                         pConnection->postSendLocked( _completionPort );
                     }
-                    finishOperation( *pConnection, handle._index );
+                    finishOperation( *pConnection, handle.index() );
                 }
             }
             else if ( accepted != INVALID_SOCKET )

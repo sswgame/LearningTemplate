@@ -89,7 +89,8 @@ namespace sw
     {
     public:
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
-        static constexpr const utf8* kSubsystemName = "Config";
+        static constexpr const utf8*               kSubsystemName    = "Config";
+        static constexpr SubsystemModuleVisibility kModuleVisibility = SubsystemModuleVisibility::HostModules; ///< 에디터의 설정 감시 · 프로젝트 설정 창이 찾는다(게임 모듈은 볼 이유가 없다)
         ConfigManager();
         ~ConfigManager() override;
         ConfigManager( const ConfigManager& )            = delete;

@@ -15,6 +15,7 @@
  *          씬 서비스(`ISceneService`)이고 `SW_SCENE_SERVICE` 줄로 매니저마다 하나 생긴다(`manager.getSubsystem<sw::SurfaceDeformSystem>()`).
  */
 #pragma once
+#include "Core/Container/SlotHandleTable.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -92,9 +93,6 @@ namespace sw
             float3          _point;
             float32         _yaw;
             float32         _age; ///< 붙잡은 뒤 흐른 게임 초 — 깔때기 홈의 회전
-            uint32          _generation;
-            uint8           _bInUse   : 1;
-            uint8           _reserved : 7;
 
             PersistentStamp();
         };
@@ -103,22 +101,19 @@ namespace sw
         [[nodiscard]] bool ensureGrid( const SurfaceStampDef& def, const float3& point );
         /** @brief 너비 @p extent 인 창이 따라갈 자리(카메라 앞, 월드 x · z)입니다. 카메라가 없으면 false 입니다. */
         [[nodiscard]] bool computeWindowCenter( float32 extent, float2& outFocus ) const;
-        /** @brief @p handle 이 가리키는 붙잡은 도장입니다. 놓았거나 빈 핸들이면 nullptr 입니다. */
-        PersistentStamp* findPersistentStamp( SurfaceStampHandle handle );
         /** @brief 텍스처를 만들거나 바뀐 칸만 보냅니다. 에셋 서비스가 없으면(CPU 테스트) 격자만 남는다. */
         void uploadTexture();
         /** @brief 텍스처를 놓습니다. */
         void releaseTexture();
 
     private:
-        GameObjectManager*      _pManager;
-        SurfaceDeformGrid       _grid;
-        vector<PersistentStamp> _listPersistentStamp;
-        vector<uint8>           _listTexelByte; ///< 보낼 칸의 RGBA8(다시 쓰는 버퍼)
-        string                  _texturePath;
-        float32                 _depthRange;
-        uint32                  _stampCount;
-        uint32                  _bindingRevision;
-        uint32                  _persistentStampGeneration; ///< 붙잡을 때마다 오른다 — 씬을 비워도 되돌리지 않아 옛 핸들이 새 도장에 닿지 않는다
+        GameObjectManager*                                        _pManager;
+        SurfaceDeformGrid                                         _grid;
+        SlotHandleTable<PersistentStamp, SlotTableSync::External> _persistentStampTable; ///< 붙잡은 도장(칸 번호 + 세대) — 게임 스레드만 쓴다. 비워도 세대를 이어 가 옛 핸들이 새 도장에 닿지 않는다
+        vector<uint8>                                             _listTexelByte;        ///< 보낼 칸의 RGBA8(다시 쓰는 버퍼)
+        string                                                    _texturePath;
+        float32                                                   _depthRange;
+        uint32                                                    _stampCount;
+        uint32                                                    _bindingRevision;
     };
 } // namespace sw

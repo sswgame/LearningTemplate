@@ -8,7 +8,6 @@
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Task/TaskManager.h"
 
-#include "Engine/Config/ConfigManager.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
@@ -443,9 +442,13 @@ namespace sw
     {
         engine::bindModuleServices( outScope, bGameModule );
         // 모듈이 공개한 서브시스템(`SW_MODULE_SUBSYSTEM` — GameFramework 의 암호 제공자 …)은 목록의 행이 아니다. 모듈 범위의 부모를 그 창구로 두어 타입으로 찾게 한다 —
-        // 호스트 범위 자체를 부모로 두면 게임 모듈이 호스트 전용 서비스까지 본다.
+        // 호스트 범위 자체를 부모로 두면 게임 모듈이 호스트 전용 서비스까지 본다. 에디터 모듈의 창구는 호스트 모듈에 보인다고 스스로 선언한 서브시스템
+        // (`SubsystemModuleVisibility::HostModules` — 설정 테이블, 개발 도구의 HUD · 리로드 집계 …)도 본다 — 손 목록이 없다.
         const ModuleRegistrationHost* const pRegistrationHost = engine::findSubsystem<ModuleRegistrationHost>();
-        outScope.setParentScope( pRegistrationHost != nullptr ? &pRegistrationHost->getMountedLocator() : nullptr );
+        if ( pRegistrationHost == nullptr )
+            outScope.setParentScope( nullptr );
+        else
+            outScope.setParentScope( bGameModule ? &pRegistrationHost->getMountedLocator() : &pRegistrationHost->getHostModuleLocator() );
         // 리로드 · 인스턴스 재생성 사이에 데이터를 맡기는 호스트 칸 — 게임 · 에디터 모듈 모두 쓴다. 호스트 범위를 세우는 곳(`ModuleLoaderSubsystem::initializeHostScope`)이
         // App · Server 모두 건다 — 없으면 호스트 결함이다.
         IModuleStateStore* const pStateStore = engine::findSubsystem<IModuleStateStore>();
@@ -456,9 +459,7 @@ namespace sw
         // 호스트 전용 서비스 — 에디터 모듈만 찾는다(게임 모듈의 범위에는 걸지 않는다).
         if ( bGameModule == false )
         {
-            (void)outScope.bind( getModuleCompiler() ); // 엔진 행과 타입이 달라 겹치지 않는다(없으면 걸지 않는다)
-            // 설정 테이블은 서비스 목록 밖이다(게임 모듈이 볼 이유가 없다) — 에디터의 설정 감시 · 프로젝트 설정 창이 범위에서 찾게 건다.
-            (void)outScope.bind( engine::findSubsystem<ConfigManager>() );
+            (void)outScope.bind( getModuleCompiler() ); // 엔진 행과 타입이 달라 겹치지 않는다(없으면 걸지 않는다) — 서브시스템이 아니라 이 매니저의 멤버라 직접 건다
         }
     }
 

@@ -213,3 +213,38 @@ SW_TEST_CASE( SubsystemScopeTest, PublishedPartFollowsItsOwner )
     child.destroyAll();
     SW_EXPECT_TRUE( parent.find<IScopeProbe>() == nullptr ); // 주인의 칸처럼 소유 칸이라 지운 멤버를 가리키지 않는다
 }
+
+namespace
+{
+    /** @brief 호스트 모듈(에디터)에 보인다고 스스로 선언한 서브시스템입니다(`kModuleVisibility`). */
+    class HostModuleProbeSubsystem final : public ISubsystem
+    {
+    public:
+        static constexpr SubsystemModuleVisibility kModuleVisibility = SubsystemModuleVisibility::HostModules;
+
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return "HostModuleProbe"; }
+    };
+} // namespace
+
+/**
+ * @brief [SubsystemScopeTest] 서브시스템이 선언한 호스트 모듈 노출만 호스트 모듈 조회에 보이고, 기본 서브시스템 · 빌려 건 객체 · 상위 범위는 보이지 않는다
+ */
+SW_TEST_CASE( SubsystemScopeTest, HostModuleVisibilityFollowsTheDeclaration )
+{
+    SubsystemScope                  parent;
+    SubsystemScope                  scope{ &parent };
+    const HostModuleProbeSubsystem& visible = scope.emplaceSubsystem<HostModuleProbeSubsystem>();
+    (void)scope.emplaceSubsystem<ScopeProbeSubsystem>( nullptr );
+    ScopeCatalog catalog{};
+    SW_EXPECT_TRUE( scope.bind( &catalog ) );
+
+    SW_EXPECT_TRUE( scope.findHostModuleVisibleInScope( getSubsystemTypeHash<HostModuleProbeSubsystem>() ) == &visible );
+    SW_EXPECT_TRUE( scope.findHostModuleVisibleInScope( getSubsystemTypeHash<ScopeProbeSubsystem>() ) == nullptr );       // 선언하지 않은 서브시스템
+    SW_EXPECT_TRUE( scope.findHostModuleVisibleInScope( getSubsystemTypeHash<ScopeCatalog>() ) == nullptr );              // 빌려 건 객체
+    SW_EXPECT_TRUE( parent.findHostModuleVisibleInScope( getSubsystemTypeHash<HostModuleProbeSubsystem>() ) == nullptr ); // 상위는 하위를 보지 않는다
+
+    scope.destroyAll();
+    SW_EXPECT_TRUE( scope.findHostModuleVisibleInScope( getSubsystemTypeHash<HostModuleProbeSubsystem>() ) == nullptr ); // 지운 서브시스템을 가리키지 않는다
+}
