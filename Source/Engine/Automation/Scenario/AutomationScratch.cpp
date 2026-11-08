@@ -281,7 +281,11 @@ namespace sw
                 continue;
             }
             const string_view sourceText( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() );
-            const string      text = rebaseText( sourceText, folder._sourceID, folder._scratchID );
+            string            text = rebaseText( sourceText, folder._sourceID, folder._scratchID );
+            // 픽스처가 시나리오의 별칭(`as=` — `scratch/tilesetedit/…`)으로 서로를 가리키면 그 별칭도 이 실행의 사본 id 로 바꾼다.
+            // 예전에는 별칭이 남아 꼬리 붙은 사본(`…_p<pid>`)의 타일맵이 없는 타일셋을 가리켰다(tilesetedit · uiaudit).
+            if ( folder._declaredID.empty() == false && folder._declaredID != folder._scratchID )
+                text = rebaseText( text, folder._declaredID, folder._scratchID );
             if ( FileUtil::writeTextFile( targetFile, text ) == false )
             {
                 outError = "could not write " + targetFile;

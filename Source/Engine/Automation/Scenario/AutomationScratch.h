@@ -21,8 +21,9 @@ namespace sw
     /** @brief 시나리오 하나가 쓰는 폴더의 원본과 사본입니다(`<Scratch from as>`). 둘 다 리소스 id 입니다. */
     struct AutomationScratchFolder
     {
-        string _sourceID{};  ///< 원본 폴더(추적 중인 픽스처)
-        string _scratchID{}; ///< 사본 폴더. `scratch/` 로 시작해야 한다
+        string _sourceID{};   ///< 원본 폴더(추적 중인 픽스처)
+        string _scratchID{};  ///< 사본 폴더. `scratch/` 로 시작해야 한다
+        string _declaredID{}; ///< 시나리오가 적은 사본 id(`as=`). 실행마다 프로세스 꼬리가 붙어 `_scratchID` 와 달라진다 — 복사한 글 파일 안의 이 id 도 사본 id 로 바꾼다
     };
 } // namespace sw
 
