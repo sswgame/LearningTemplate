@@ -13,9 +13,11 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/View/OcclusionTileSnapshot.h"
 #include "Engine/Rendering/MeshComponent.h"
+#include "Engine/Rendering/PostProcessVolumeComponent.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
 
 namespace sw
@@ -50,12 +52,25 @@ namespace sw
              *          해상도 배율(`_resolutionScale`)은 일부러 옮기지 않는다 — Present 가 출력 크기로 업샘플하는 화면 출력 뷰만 `applyScreenRenderScale` 로 넣고,
              *          업샘플이 없는 뷰(렌더 텍스처 · 호스트 타깃)는 1 이어야 하며 아니면 `hasUnitResolutionScale` 이 거절한다.
              */
+            /**
+             * @brief 카메라 자신의 후처리 값 위에 카메라가 선 자리의 후처리 볼륨들을 우선순위 순으로 섞은 값입니다(`PostProcessVolumeComponent::resolveAt`).
+             * @details 언리얼은 볼륨을 섞은 뒤 카메라 값을 덮지만 여기서는 카메라 값이 바탕이다 — 카메라 값은 프리셋 · 포즈 블렌드가 쓰는 샷의 룩이고, 볼륨은 장소의 룩이다.
+             */
+            static PostProcessValues resolvePostProcess( const CameraComponent& camera )
+            {
+                const GameObject*        pOwner   = camera.getOwner();
+                const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+                if ( pManager == nullptr )
+                    return camera.getPostProcess();
+                return PostProcessVolumeComponent::resolveAt( pManager->getComponentRegistry(), camera.getWorldPosition(), camera.getPostProcess() );
+            }
+
             static RenderViewSettings makeSettings( CameraComponent& camera )
             {
                 const CameraRenderOutput& output = camera.getRenderOutput();
                 RenderViewSettings        settings;
                 settings._screenRect       = output._screenRect;
-                settings._postProcess      = camera.getPostProcess();
+                settings._postProcess      = resolvePostProcess( camera );
                 settings._depthOfField     = camera.getDepthOfField();
                 const bool bPerspective    = camera.isOrthographic() == false && camera.getFieldOfViewY() > 0.0f;
                 settings._projectionScaleY = bPerspective ? 1.0f / MathUtil::tan( camera.getFieldOfViewY() * 0.5f ) : 0.0f;

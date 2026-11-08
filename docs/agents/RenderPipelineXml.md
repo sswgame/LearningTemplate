@@ -88,6 +88,15 @@
 
 `_type="Compute"` 패스는 셰이더 하나로 효과를 더한다. 선언: 컬러 출력 하나, 입력 최대 둘(깊이 형식 제외 — 깊이는 `SceneDepthCopy` 를 읽는다), 입력과 출력은 겹치지 않는다. 첨부는 RW 텍스처로 묶이고 값은 `compute_pass.hlsli` 의 루트 상수로 받는다. GL 은 묶은 포맷과 셰이더 선언이 같아야 하므로 include 전에 `SW_RW_SLOT0_GL_FORMAT` 을 적는다. 예: `game/empty/pipeline/computepasspipeline.xml`.
 
+## 후처리 값 · 볼륨
+
+뷰마다의 후처리 값은 `PostProcessValues` 한 벌이다(`Engine/Graphics/View`). 카메라 값이 바탕이고, 카메라가 선 자리의 `PostProcessVolumeComponent` 들이 우선순위가 낮은 것부터 **덮어쓴 칸만** 섞는다(`PostProcessVolumeComponent::resolveAt`, 뷰 수집 `RenderViewCollector`). 언리얼 Post Process Volume 과 같은 칸이다 — 모양(Box · Sphere · Unbound), Priority, Blend Weight, Blend Radius(모양 밖으로 1 → 0), 칸마다 `bOverride_*`(여기서는 `PostProcessOverrides::_b<칸>`). 언리얼과 달리 카메라 값이 볼륨 아래다 — 카메라 값은 프리셋 · 포즈 블렌드가 쓰는 샷의 룩이다.
+
+| 할 일 | 고칠 곳 |
+|---|---|
+| 값 칸을 더한다 | `PostProcessValues` 에 칸, `PostProcessOverrides` 에 같은 차례로 `_b<칸>` 비트와 생성자 줄. 섞기 · 포즈 블렌드는 리플렉션으로 따라온다(테스트 `PostProcessVolumeTest.OverrideFlagsPairEveryValue` 가 짝을 본다). 섞을 수 없는 형식(경로)은 `blendOverrides` 에 주소로 고르는 줄을 더한다(절반에서 바꾼다) |
+| 셰이더가 읽는다 | 기본값은 지금 그림을 바꾸지 않는 중립이어야 한다. 패스 상수는 `FramePassExecutor::applyViewPassConstants` 가 뷰마다 채운다 |
+
 ## 선택 스테이지를 쓰는 셰이더
 
 - 소스는 패스 셰이더 한 파일이다. 머티리얼 변형은 머티리얼 셰이더의 정점 출력으로 만들어져 신호가 맞지 않아 머티리얼 셰이더 패스에는 쓸 수 없다.
