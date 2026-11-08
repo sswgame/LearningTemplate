@@ -139,6 +139,8 @@ namespace sw
 {
     /** @brief 지금 막아야 하면 true 입니다(로딩 화면이 게임 입력을 막는 동안, 화면 페이드가 그림을 덮는 동안). 게임 스레드입니다. */
     using AutomationBlockFunction = bool ( * )();
+    /** @brief 막고 있는 조건이 지금 무엇 때문에 막는지 한 줄로 냅니다(오래 기다릴 때 로그 — `AutomationStepRegistry::describeActiveBlockers`). */
+    using AutomationBlockDescribeFunction = string ( * )();
 
     /** @brief 차단 조건이 무엇을 미루는지입니다. 넓은 쪽이 좁은 쪽을 포함한다 — 시작을 미루는 조건은 캡처도 미룬다. */
     enum class AutomationBlockScope : uint8
@@ -159,9 +161,10 @@ namespace sw
      */
     struct AutomationBlocker
     {
-        const utf8*             _pName; ///< 로그와 중복 판정에 쓰는 이름입니다.
-        AutomationBlockFunction _pIsBlocking;
-        AutomationBlockScope    _scope;
+        const utf8*                     _pName; ///< 로그와 중복 판정에 쓰는 이름입니다.
+        AutomationBlockFunction         _pIsBlocking;
+        AutomationBlockScope            _scope;
+        AutomationBlockDescribeFunction _pDescribe{ nullptr }; ///< 없으면 이름만 찍는다
     };
 } // namespace sw
 
@@ -198,6 +201,11 @@ namespace sw
         static const utf8* findClockHolder();
         /** @brief 지금 시나리오 끝(`<Pass/>`)을 미루는 조건(`Finish` 만)의 이름입니다. 없으면 nullptr 입니다. */
         static const utf8* findFinishBlocker();
+        /**
+         * @brief 지금 막고 있는 조건 모두를 "이름 (까닭)" 으로 잇습니다. 없으면 "none" 입니다.
+         * @details 까닭(`_pDescribe`)은 작업 풀을 훑는 것처럼 비쌀 수 있어 매 프레임이 아니라 오래 기다릴 때의 보고(`AutomationRunner::reportOngoingWait`)만 부른다.
+         */
+        static string describeActiveBlockers();
     };
 } // namespace sw
 
@@ -266,6 +274,14 @@ namespace sw
     static const ::sw::AutomationBlockerRegistrar sw_automationFinishBlockerRegistrar_##id                                                   \
     {                                                                                                                                        \
         &sw_automationFinishBlocker_##id                                                                                                     \
+    }
+
+/** @brief `SW_AUTOMATION_FINISH_BLOCKER` 와 같되, 오래 기다릴 때 무엇이 남았는지 내는 @p pDescribe(`string()`)를 함께 등록합니다. */
+#define SW_AUTOMATION_FINISH_BLOCKER_DESCRIBED( id, pName, pIsBlocking, pDescribe )                                                                     \
+    static const ::sw::AutomationBlocker          sw_automationFinishBlocker_##id{ pName, pIsBlocking, ::sw::AutomationBlockScope::Finish, pDescribe }; \
+    static const ::sw::AutomationBlockerRegistrar sw_automationFinishBlockerRegistrar_##id                                                              \
+    {                                                                                                                                                   \
+        &sw_automationFinishBlocker_##id                                                                                                                \
     }
 
 /** @brief 화면 캡처만 미루는 조건을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). 그림을 덮지만 입력은 막지 않는 것(화면 페이드)이 씁니다(`AutomationBlockScope::Capture`). */

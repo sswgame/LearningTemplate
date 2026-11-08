@@ -73,6 +73,7 @@ namespace sw
         , _holdStartSeconds{ 0.0 }
         , _clockHoldFrameCount{ 0 }
         , _seenFrameCount{ 0 }
+        , _waitReportedSeconds{ 0.0 }
     {
     }
 
@@ -501,7 +502,10 @@ namespace sw
                 finish( AutomationResult::TimedOut, "the <Load> measurement window did not close in time (was -gv_profileFrames also given?)" );
         }
         if ( _bEnded == SW_FALSE )
+        {
             recordTimelineFrame( stepIndexBefore );
+            reportOngoingWait();
+        }
         if ( _result != AutomationResult::Running )
             endRun( &input );
         return _result;
@@ -565,6 +569,30 @@ namespace sw
         if ( kind == AutomationFrameKind::StepRan )
             _wallProfile.recordStepFrame( _run._currentStepKind, nowSeconds - _run._lastFrameEndSeconds );
         _run._lastFrameEndSeconds = nowSeconds;
+    }
+
+    void AutomationRunner::reportOngoingWait()
+    {
+        const bool bClockHeld = _run._bClockHeld == SW_TRUE;
+        if ( bClockHeld == false && _run._holdFrameCount == 0 )
+        {
+            _run._waitReportedSeconds = 0.0;
+            return;
+        }
+        const float64 nowSeconds   = AutomationRunnerInternal::readNowSeconds();
+        const float64 startSeconds = bClockHeld ? _run._clockHoldStartSeconds : _run._holdStartSeconds;
+        const float64 dueSeconds   = _run._waitReportedSeconds == 0.0 ? startSeconds + AutomationTimeLimits::kWaitReportFirstSeconds
+                                                                      : _run._waitReportedSeconds + AutomationTimeLimits::kWaitReportIntervalSeconds;
+        if ( nowSeconds < dueSeconds )
+            return;
+        _run._waitReportedSeconds  = nowSeconds;
+        const uint32 waitedSeconds = static_cast<uint32>( nowSeconds - startSeconds );
+        if ( bClockHeld )
+            SW_LOG_INFO_ID( "Automation.StillWaiting", "[Scenario] %# has held the clock for %# s (%# frame(s)) - active blockers: %#", _run._clockHolderName.c_str(), waitedSeconds,
+                            _run._clockHoldFrameCount, AutomationStepRegistry::describeActiveBlockers().c_str() );
+        else
+            SW_LOG_INFO_ID( "Automation.StillWaiting", "[Scenario] step %# %# has waited %# s (%# frame(s)) for %# - active blockers: %#", _run._currentStepNumber,
+                            _run._currentStepKind.c_str(), waitedSeconds, _run._holdFrameCount, _run._waitingFor.c_str(), AutomationStepRegistry::describeActiveBlockers().c_str() );
     }
 
     float32 AutomationRunner::computeWallLimitSeconds() const
@@ -814,6 +842,8 @@ namespace sw
             _run.clearHeldStepState(); // 놓인 단계의 상태는 이번 붙잡기의 것이다
             return AutomationStepHold::Run;
         }
+        if ( _run._holdFrameCount == 0 )
+            _run._holdStartSeconds = AutomationRunnerInternal::readNowSeconds(); // 대기 보고(`reportOngoingWait`)의 기준 — 벽시계 시한 판(`holdUntilReadyWithin`)은 먼저 같은 값을 적었다
         ++_run._holdFrameCount;
         _run._waitingFor = waitingFor;
         // 이 프레임은 시나리오 프레임으로 세지 않는다. 다음 프레임에 낼 입력 이벤트부터 한 프레임씩 밀어 시나리오 프레임과 맞춘다.

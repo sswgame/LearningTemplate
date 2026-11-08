@@ -60,6 +60,7 @@ namespace sw
         float64                          _holdStartSeconds;       ///< 지금 단계가 붙잡기 시작한 단조 시계 초(`<WaitUntil timeoutWallSeconds>` 의 시한 기준)
         uint32                           _clockHoldFrameCount;    ///< 시계 잡기 조건이 이어서 붙잡은 프레임
         uint32                           _seenFrameCount;         ///< `onFrameEnd` 가 불린 횟수(붙잡힌 프레임도 센다 — 크래시 자리를 갱신하는 박자)
+        float64                          _waitReportedSeconds;    ///< 지금 대기를 마지막으로 로그에 찍은 단조 시계 초(아직 찍지 않았으면 0 — `reportOngoingWait`)
         AutomationStepTimeline();
 
         /** @brief 스크린샷 경로를 대기열에 더합니다(`<Screenshot>`). 렌더 패킷이 한 장씩 꺼내 간다. */
@@ -264,6 +265,8 @@ namespace sw
          * @details 종류: 시작 전 · 시계 잡기 조건이 붙잡음 · 조건 대기가 붙잡음 · 단계가 돎 · 돌 단계 없이 `<At>` 시점만 기다림(고정 프레임 대기).
          */
         void recordTimelineFrame( size_t stepIndexBefore );
+        /** @brief 단계 · 시계 잡기 조건이 오래 붙잡고 있으면 무엇을 기다리는지 기다리는 동안 찍습니다(`AutomationTimeLimits::kWaitReportFirstSeconds`). */
+        void reportOngoingWait();
         /**
          * @brief 시작부터 `wallTimeoutSeconds` 가 지났으면 시간 초과(12)로 끝냅니다. 부하 시나리오는 자기 그물이 있어 보지 않습니다.
          * @details 프레임 시한(`timeoutFrames`)은 붙잡은 프레임(`holdUntilReady` · 시계 잡기)을 세지 않아, 붙잡힌 채로는 영영 끝나지 않고 테스트의 프로세스 시한(보고 없는 kill)까지 간다.

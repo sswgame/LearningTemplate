@@ -123,6 +123,22 @@ namespace sw
         return nullptr;
     }
 
+    string AutomationStepRegistry::describeActiveBlockers()
+    {
+        string text;
+        for ( const AutomationBlocker* pBlocker : AutomationStepRegistryInternal::getBlockers().getItems() )
+        {
+            if ( pBlocker->_pIsBlocking() == false )
+                continue;
+            if ( text.empty() == false )
+                text += ", ";
+            text += pBlocker->_pName;
+            if ( pBlocker->_pDescribe != nullptr )
+                text += " (" + pBlocker->_pDescribe() + ")";
+        }
+        return text.empty() ? string( "none" ) : text;
+    }
+
     AutomationStepRegistrar::AutomationStepRegistrar( const AutomationStepRegistration* pRegistration )
         : _pRegistration{ AutomationStepRegistry::registerStep( pRegistration ) ? pRegistration : nullptr }
     {

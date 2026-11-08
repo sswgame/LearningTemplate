@@ -22,6 +22,12 @@ namespace sw
         static constexpr float32 kHangGraceSeconds          = 5.0f;
         static constexpr float64 kClockHoldTimeoutSeconds   = 170.0;
         static constexpr uint32  kProcessKillSeconds        = 180;
+        /**
+         * @brief 단계 · 시계 잡기 조건이 이만큼(초) 넘게 기다리면 무엇을 기다리는지 로그에 찍고, 그 뒤로 `kWaitReportIntervalSeconds` 마다 다시 찍습니다.
+         * @details 끝날 때만 까닭을 찍으면 끝나지 않는 대기는 창이 멈춘 듯 아무것도 남기지 않는다(사용자 지적 2026-11-08). 짧은 대기(에셋 한 프레임)는 찍지 않는다.
+         */
+        static constexpr float64 kWaitReportFirstSeconds    = 2.0;
+        static constexpr float64 kWaitReportIntervalSeconds = 5.0;
 
         /** @brief `CloseWindow` 의 기본 종료 시한(초)입니다. */
         static constexpr float32 kDefaultExitWithinSeconds = 10.0f;
