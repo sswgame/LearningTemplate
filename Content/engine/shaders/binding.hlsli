@@ -288,6 +288,13 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     float4 g_FogVolumeParams;
     float4 g_FogDebugParams;      // 안개 진단 보기(C++ FrameFog::makeDebugParams) — x 보기(0 없음 · 1 비교 · 2 산란 단면 · 3 투과율 단면), y 단면 조각, z 비교 경계 uv.x. 안개 패스만 읽는다
     float4 g_PostProcessMaterial; // 후처리 머티리얼 한 그리기 — x 블렌더블 무게(0..1). PostProcessMaterial 패스가 그리기마다 쓴다(post_process_material_main.hlsli)
+    // 데칼 한 그리기(decal.hlsl) — Decal 패스가 데칼마다 쓴다. 상자 월드 행렬은 g_World 다.
+    float4x4 g_DecalWorldToLocal;
+    float4   g_DecalColor;         // rgb 알베도 곱, a 불투명도
+    float4   g_DecalSurface;       // x 거칠기, y 금속도, z 노멀 세기, w 각도 페이드 시작(cos)
+    uint     g_DecalChannels;      // 1 알베도 · 2 노멀 · 4 머티리얼(C++ DecalChannels)
+    uint     g_DecalAlbedoTexture; // MaterialTexture::sampleIndex 의 번호(없으면 kInvalidIndex — 흰색)
+    uint     g_DecalNormalTexture;
     // 엔진 텍스처 인덱스 g_<이름>Index — 이름은 C++ 표 shaderslot::emulated::kEngineTextureNames 하나가 정하고 컴파일러가 SW_ENGINE_TEXTURE_INDEX_<칸> 으로 넣는다.
     // 손으로 적지 않는다: 표에 없는 엔진 텍스처 인덱스가 생기면 에뮬 백엔드(DX11 · GL)가 칸을 몰라 자홍을 낸다(뜻은 표의 주석). 걸려 있지 않은 역할은 kInvalidIndex 다.
     // 아래 18 줄은 SW_ENGINE_TEXTURE_COUNT 와 같은 수다.

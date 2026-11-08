@@ -688,6 +688,38 @@ SW_TEST_CASE( RenderPipelineAssetTest, PostProcessMaterialPassesNameOneLocation 
     SW_EXPECT_EQUAL( expected, locationMask );
 }
 
+/** @brief [RenderPipelineAssetTest] 데칼 패스는 G버퍼 알베도 · 노멀 · 머티리얼에만 쓴다(차례 그대로) — 엔진 디퍼드는 G버퍼 뒤 · 조명 앞에 둔다 */
+SW_TEST_CASE( RenderPipelineAssetTest, DecalPassWritesTheGBuffer )
+{
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassDecalOutputs" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
+    const string        xml = "<RenderPipelineDesc _name=\"Decal\"><_listAttachment>"
+                              "<RenderPassAttachment _name=\"SceneColor\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _loadOp=\"Clear\"/>"
+                              "<RenderPassAttachment _name=\"SceneDepth\" _format=\"D24_UNORM_S8_UINT\" _clearDepth=\"1\" _loadOp=\"Clear\"/>"
+                              "</_listAttachment><_listPass>"
+                              "<RenderGraphPassDesc _name=\"Decal\" _type=\"Decal\" _cullMode=\"None\" _bEnableDepthTest=\"false\" _bEnableDepthWrite=\"false\">"
+                              "<_listInput><item>SceneDepth</item></_listInput><_listOutput><item>SceneColor</item></_listOutput></RenderGraphPassDesc>"
+                              "</_listPass></RenderPipelineDesc>";
+    RenderPipelineAsset asset;
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, xml ) );
+
+    RenderPipelineAsset deferred;
+    SW_REQUIRE_TRUE( deferred.loadFromXMLFile( AssetID{ string_view( "engine/pipeline/deferredpipeline.xml" ) } ) );
+    const vector<RenderGraphPassDesc>& listPass      = deferred.getGraphPass();
+    size_t                             gbufferIndex  = listPass.size();
+    size_t                             decalIndex    = listPass.size();
+    size_t                             lightingIndex = listPass.size();
+    for ( size_t index = 0; index < listPass.size(); ++index )
+    {
+        gbufferIndex  = listPass[index]._type == RenderPassType::GBuffer ? index : gbufferIndex;
+        decalIndex    = listPass[index]._type == RenderPassType::Decal ? index : decalIndex;
+        lightingIndex = listPass[index]._type == RenderPassType::Lighting ? index : lightingIndex;
+    }
+    SW_REQUIRE_TRUE( gbufferIndex < decalIndex && decalIndex < lightingIndex );
+    SW_EXPECT_TRUE( listPass[decalIndex]._resolvedRenderState.isAnyBlendEnabled() );
+}
+
 namespace
 {
     struct FrameGraphTestUtil

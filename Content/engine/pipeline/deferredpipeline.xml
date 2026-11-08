@@ -71,6 +71,28 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
+		<!-- 디퍼드 데칼(decal.hlsl) — G버퍼 뒤 · 조명 · SSAO 앞에 알베도 · 노멀 · 머티리얼 칸을 곧은 알파로 덮는다. 쓰기 마스크가 알베도 알파(셰이딩 모델 번호)와
+		     머티리얼 b · a(반사율 · 가림)를 지킨다. 데칼이 없는 프레임은 기록하지 않는다. -->
+		<RenderGraphPassDesc _name="Decal"
+		                     _type="Decal"
+		                     _cullMode="None"
+		                     _bEnableDepthTest="false"
+		                     _bEnableDepthWrite="false">
+			<_listInput>
+				<item>SceneDepth</item>
+			</_listInput>
+			<_listOutput>
+				<item>GBufferAlbedo</item>
+				<item>GBufferNormal</item>
+				<item>GBufferMaterial</item>
+			</_listOutput>
+			<_listBlendTarget>
+				<RHIBlendTargetState _srcColor="SrcAlpha" _dstColor="InvSrcAlpha" _colorOp="Add" _srcAlpha="Zero" _dstAlpha="One" _alphaOp="Add" _colorWriteMask="RGB" _bEnableBlend="true" />
+				<RHIBlendTargetState _srcColor="SrcAlpha" _dstColor="InvSrcAlpha" _colorOp="Add" _srcAlpha="Zero" _dstAlpha="One" _alphaOp="Add" _colorWriteMask="RG" _bEnableBlend="true" />
+				<RHIBlendTargetState _srcColor="SrcAlpha" _dstColor="InvSrcAlpha" _colorOp="Add" _srcAlpha="Zero" _dstAlpha="One" _alphaOp="Add" _colorWriteMask="RG" _bEnableBlend="true" />
+			</_listBlendTarget>
+			<_listPermutation />
+		</RenderGraphPassDesc>
 		<!-- 접촉 그림자(contact_shadow.hlsl) — 장면 깊이를 다 쓴 G버퍼 뒤, 조명 앞. 접촉 그림자를 켠 빛(LightShadowSettings::_contactShadowLength)이 없거나 후처리를 끈 뷰는 돌지 않는다. -->
 		<RenderGraphPassDesc _name="ContactShadow"
 		                     _type="ContactShadow"

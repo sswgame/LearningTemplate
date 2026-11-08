@@ -78,6 +78,7 @@
                      _shaderShadowCacheRestore="engine/shaders/shadow_cache_restore.hlsl"
                      _shaderScreenSpaceGI="engine/shaders/ssgi.hlsl"
                      _shaderLensFlare="engine/shaders/lens_flare.hlsl"
+                     _shaderDecal="engine/shaders/decal.hlsl"
                      _shaderTAA="engine/shaders/taa.hlsl"
                      _shaderSceneDepthCopy="engine/shaders/scene_depth_copy.hlsl"
                      _shaderMotionBlur="engine/shaders/motion_blur.hlsl"

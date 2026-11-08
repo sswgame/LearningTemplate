@@ -105,6 +105,7 @@ namespace sw
         collectSceneLights( &activeScene, packet._listLight, &_listShadowLightIndex, &_lightProbeElement, &packet._listLightCookie, &packet._listRealtimeProbe );
         packet._pLightProbe = _lightProbeElement.getElements();
         collectLensFlares( packet, activeScene );
+        collectDecals( packet, activeScene );
         // 하늘도 씬이 갖는다. 없으면 스카이 패스가 그리지 않는다(배경은 SceneColor 클리어 색).
         const GameObjectManager* pActiveObjects = activeScene.getObjectManager();
         packet._bHasSky                         = ( pActiveObjects != nullptr && pActiveObjects->findServiceSky( packet._sky ) ) ? SW_TRUE : SW_FALSE;
@@ -154,6 +155,24 @@ namespace sw
                 packet._listLensFlare.push_back( std::move( request ) );
             }
         }
+    }
+
+    void RenderPacketSceneCollector::collectDecals( RenderFramePacket& packet, const Scene& activeScene )
+    {
+        packet._listDecal.clear();
+        const GameObjectManager* pObjects = activeScene.getObjectManager();
+        if ( pObjects == nullptr )
+            return;
+        for ( const DecalComponent* pDecal : pObjects->getComponentRegistry().getAll<DecalComponent>() )
+        {
+            if ( pDecal == nullptr || pDecal->isActive() == false )
+                continue;
+            DecalDrawData& data = packet._listDecal.emplace_back();
+            pDecal->writeDrawData( data );
+        }
+        // 겹친 데칼은 차례가 큰 것이 위다(언리얼 Sort Order). 같은 차례는 등록 순서(안정 정렬).
+        std::stable_sort( packet._listDecal.begin(), packet._listDecal.end(), []( const DecalDrawData& left, const DecalDrawData& right )
+        { return left._sortOrder < right._sortOrder; } );
     }
 
     void RenderPacketSceneCollector::applyMainCamera( RenderFramePacket& packet, Scene& activeScene, CameraComponent& camera )

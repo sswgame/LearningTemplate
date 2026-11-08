@@ -976,6 +976,32 @@ namespace sw
             }
 
             /**
+             * @brief 3-9) 데칼 패스의 컬러 출력은 G버퍼 알베도 · 노멀 · 머티리얼 셋이고 이 차례다 — 셰이더가 SV_TARGET0..2 에 그 칸의 인코딩으로 쓴다(decal.hlsl).
+             * @details 다른 첨부(장면 색 · 포워드 색)에 쓰면 데칼 색이 그대로 장면에 덮인다 — 포워드 파이프라인에 데칼이 없는 까닭이다(덮을 G버퍼가 없다).
+             */
+            static uint32 checkDecalPasses( const RenderPipelineDesc& desc, string_view sourcePath )
+            {
+                uint32                    issueCount{ 0 };
+                const RenderPassInputRole arrExpected[] = { RenderPassInputRole::GBufferAlbedo, RenderPassInputRole::GBufferNormal, RenderPassInputRole::GBufferMaterial };
+                for ( const RenderGraphPassDesc& pass : desc._listPass )
+                {
+                    if ( pass._type != RenderPassType::Decal )
+                        continue;
+                    bool bShape = pass._listResolvedColorOutput.size() == std::size( arrExpected );
+                    for ( size_t index = 0; bShape && index < std::size( arrExpected ); ++index )
+                    {
+                        bShape = static_cast<RenderPassInputRole>( pass._listResolvedColorOutput[index]._role ) == arrExpected[index];
+                    }
+                    if ( bShape )
+                        continue;
+                    SW_LOG_ERROR_ID( "RenderPipelineAsset.PassDecalOutputs", "[%#] pass '%#' (Decal): outputs must be the G-buffer albedo, normal and material attachments in that order - a decal modifies the G-buffer",
+                                     sourcePath, pass._name );
+                    ++issueCount;
+                }
+                return issueCount;
+            }
+
+            /**
              * @brief 3-8) 후처리 머티리얼 패스는 자리마다 하나다. 톤맵 대신 자리는 출력 하나를 앞의 패스(톤맵)가 이미 썼어야 한다 — 그 위에 무게만큼 덮는다.
              * @details 같은 자리의 패스가 둘이면 같은 블렌더블을 두 번 그린다. 톤맵 대신 자리의 출력을 아무도 앞에서 쓰지 않으면 무게 1 미만에서 지난 프레임 값과 섞인다.
              */
@@ -1100,6 +1126,7 @@ namespace sw
         issueCount += Internal::checkBypassPasses( _desc, sourcePath );
         issueCount += Internal::checkOmittedPasses( _desc, sourcePath );
         issueCount += Internal::checkPostProcessMaterialPasses( _desc, sourcePath );
+        issueCount += Internal::checkDecalPasses( _desc, sourcePath );
         issueCount += Internal::checkAttachmentStoreOps( _desc, sourcePath );
         if ( issueCount > 0 )
             SW_LOG_ERROR_ID( "RenderPipelineAsset.PipelineValidationFoundIssues", "[%#] Pipeline validation found %# issues - the render result may be wrong or the GPU may die",

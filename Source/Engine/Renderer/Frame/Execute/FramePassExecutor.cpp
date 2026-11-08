@@ -1267,6 +1267,11 @@ namespace sw
                     executePostProcessMaterialPass( input );
                     break;
                 }
+                case RenderPassType::Decal:
+                {
+                    executeDecalPass( input );
+                    break;
+                }
                 case RenderPassType::TAA:
                 {
                     executeTAAPass( input );
@@ -1856,6 +1861,50 @@ namespace sw
             context._pCmd->draw( 3, 0 );
         }
         context._pCmd->endRenderPass();
+    }
+
+    void FramePassExecutor::executeDecalPass( const PassExecuteInput& input )
+    {
+        // 디퍼드 데칼이다. G버퍼 패스가 쓴 칸 셋(알베도 · 노멀 · 머티리얼) 위에 데칼마다 곧은 알파로 섞는다 — 칸마다의 덮임은 셰이더의 출력 알파, 채널 쓰기 마스크는 XML 의 블렌드다.
+        // 표면 값 보기 · 와이어프레임에서는 그리지 않는다(값 위를 덮는다). 데칼이 없으면 "그리지 않음" 은 아무것도 하지 않는 것이다(G버퍼가 이미 맞다).
+        const RenderViewModeInfo&                       viewModeInfo = getRenderViewModeInfo( _pActiveView->_settings._viewMode );
+        const RHIPipelineStateHandle                    pso          = _psoManager.getEnginePSO( RenderPassType::Decal );
+        const vector<FrameRenderState::FrameDecalDraw>& listDecal    = _state._listFrameDecalDraw;
+        const bool                                      bDraws       = pso != 0 && listDecal.empty() == false && viewModeInfo._bShowsBuffer == false && viewModeInfo._bWireframe == false;
+        if ( bDraws == false )
+            return;
+        FramePassContext& context = input._context;
+        registerDeclaredInputs( context, input._passDesc );
+        // 선언한 컬러 출력 셋이 MRT 다(검증: G버퍼 역할 셋 — 이 차례). 깊이 붙임은 없다(장면 깊이를 입력으로 읽는다).
+        hashed_string       arrColor[3];
+        float4              arrClear[3];
+        RHIRenderPassLoadOp arrLoad[3];
+        const uint32        colorCount = static_cast<uint32>( MathUtil::min( input._declaredColor.size(), static_cast<size_t>( 3 ) ) );
+        for ( uint32 colorIndex = 0; colorIndex < colorCount; ++colorIndex )
+        {
+            arrColor[colorIndex] = input._declaredColor[colorIndex]._attachment;
+            arrClear[colorIndex] = getTargetClearColor( arrColor[colorIndex] );
+            arrLoad[colorIndex]  = RHIRenderPassLoadOp::Load;
+        }
+        if ( beginColorPassMrt( context, arrColor, arrClear, arrLoad, colorCount, hashed_string{}, RHIRenderPassLoadOp::Load ) == false )
+            return;
+        for ( const FrameRenderState::FrameDecalDraw& decal : listDecal )
+        {
+            // 상자 월드 행렬은 g_World(bindForDraw 가 context._world 로 건다), 나머지는 그리기마다의 패스 상수다.
+            context._world = decal._world;
+            context._passValues.setMatrix( passConstantNames()._decalWorldToLocal, decal._worldToLocal );
+            context._passValues.setFloat4( passConstantNames()._decalColor, decal._color );
+            context._passValues.setFloat4( passConstantNames()._decalSurface, decal._surface );
+            context._passValues.setUint( passConstantNames()._decalChannels, decal._channels );
+            context._passValues.setUint( passConstantNames()._decalAlbedoTexture, decal._albedoTexture );
+            context._passValues.setUint( passConstantNames()._decalNormalTexture, decal._normalTexture );
+            commitBindlessTextureBindings( context );
+            context._pCmd->setPipelineState( pso );
+            bindForDraw( context, pso, kInvalidDescriptorIndex, decal._arrTextureSRV );
+            context._pCmd->draw( 3, 0 );
+        }
+        context._pCmd->endRenderPass();
+        setIdentityWorld( context );
     }
 
     void FramePassExecutor::executeLensFlarePass( const PassExecuteInput& input )

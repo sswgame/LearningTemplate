@@ -1,0 +1,135 @@
+<Scene formatVersion="2" name="Decals">
+	<!-- 디퍼드 데칼 시나리오(automation/decals)의 무대 — 정적 장면(바닥 · 상자 둘)에 레이어 Decals 로 데칼 셋을 둔다.
+	     길(지형 길 데칼 — Poly Haven asphalt_02 알베도 · 노멀, 차례 0), 흙 자국(brown_mud_leaves_01 알베도, 차례 1 — 길 위에 겹친다), 손상(텍스처 없는 검붉은 색 · 거칠기만, 상자 옆면 —
+	     상자 축 1 을 옆으로 눕혀 벽에 투영한다). 시나리오가 레이어를 켜고 끈 두 장을 같은 실행에서 견준다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+		<_listDataLayer>
+			<SceneDataLayerDef _name="Decals" _bInitiallyActive="false" />
+		</_listDataLayer>
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,3,-6"
+					                 _localRotation="0.45,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _fovY="0.8"
+					                 _nearZ="0.1"
+					                 _farZ="100"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,0,0"
+					                           _localRotation="0.8,3.4,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachComponent="None"
+					                           _color="1,0.96,0.9"
+					                           _intensity="1.2"
+					                           _ambient="0.35"
+					                           _shadowExtent="8"
+					                           _shadowDistance="20"
+					                           _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0,0,2"
+					               _localRotation="0,0,0"
+					               _localScale="16,1,16"
+					               _attachOwner="None"
+					               _attachComponent="None"
+					               _meshID="Plane"
+					               _materialPath="engine/materials/prototypegrid_light.material"
+					               _boundsRadius="12"
+					               _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="WallCube">
+			<GameObject _schemaVersion="0" _name="WallCube" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="2.2,1,2.5"
+					               _localRotation="0,0,0"
+					               _localScale="2,2,2"
+					               _attachOwner="None"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="engine/materials/prototypegrid_orange.material"
+					               _boundsRadius="1.8"
+					               _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="RoadDecal" layers="Decals">
+			<GameObject _schemaVersion="0" _name="RoadDecal" _bActive="true">
+				<_listComponent>
+					<DecalComponent _localPosition="-0.8,0,3"
+					                _localRotation="0,0.15,0"
+					                _localScale="2.2,1,10"
+					                _attachOwner="None"
+					                _attachComponent="None"
+					                _albedoTexture="engine/textures/surfaces/asphalt_02/asphalt_02_albedo.dds"
+					                _normalTexture="engine/textures/surfaces/asphalt_02/asphalt_02_normal.dds"
+					                _color="1,1,1,1"
+					                _roughness="0.9"
+					                _metallic="0"
+					                _normalStrength="1"
+					                _angleFadeStart="0.3"
+					                _sortOrder="0"
+					                _channels="All" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="MudDecal" layers="Decals">
+			<GameObject _schemaVersion="0" _name="MudDecal" _bActive="true">
+				<_listComponent>
+					<DecalComponent _localPosition="-0.6,0,1.2"
+					                _localRotation="0,0.8,0"
+					                _localScale="2,1,2"
+					                _attachOwner="None"
+					                _attachComponent="None"
+					                _albedoTexture="engine/textures/surfaces/brown_mud_leaves_01/brown_mud_leaves_01_albedo.dds"
+					                _color="1,1,1,0.85"
+					                _roughness="1"
+					                _metallic="0"
+					                _normalStrength="1"
+					                _angleFadeStart="0.3"
+					                _sortOrder="1"
+					                _channels="All" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="7" name="DamageDecal" layers="Decals">
+			<GameObject _schemaVersion="0" _name="DamageDecal" _bActive="true">
+				<_listComponent>
+					<DecalComponent _localPosition="1.15,1.1,2.4"
+					                _localRotation="0,0,1.5707964"
+					                _localScale="1.2,0.6,1"
+					                _attachOwner="None"
+					                _attachComponent="None"
+					                _color="0.25,0.05,0.04,0.9"
+					                _roughness="0.35"
+					                _metallic="0"
+					                _normalStrength="1"
+					                _angleFadeStart="0.3"
+					                _sortOrder="2"
+					                _channels="Albedo|Material" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

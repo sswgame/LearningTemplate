@@ -317,6 +317,14 @@ namespace sw
                         info._flags          = Flag::kBlend | Flag::kHasInputContract | Flag::kDrawsDeclaredColor | Flag::kRequiresPassDesc;
                         break;
                     }
+                    case RenderPassType::Decal:
+                    {
+                        // 출력은 G버퍼 셋(알베도 · 노멀 · 머티리얼) — 깊이 붙임 없이 장면 깊이를 입력으로 읽는다(G버퍼 패스가 다 쓴 깊이). 블렌드 · 쓰기 마스크는 XML 이 적는다.
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderDecal;
+                        info._inputContract  = makeContract( { Role::SceneDepth }, {} );
+                        info._flags          = Flag::kBlend | Flag::kHasInputContract | Flag::kDrawsDeclaredColor;
+                        break;
+                    }
                     case RenderPassType::PostProcessMaterial:
                     {
                         // 셰이더는 블렌더블의 머티리얼 것이라 표의 기본값이 없다 — 전용 실행(`executePostProcessMaterialPass`)이 머티리얼마다 확장 프로그램 PSO 로 그린다.

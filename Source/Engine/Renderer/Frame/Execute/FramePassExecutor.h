@@ -264,6 +264,11 @@ namespace sw
          *          shortcut: 같은 자리의 머티리얼은 모두 패스의 원본을 읽는다(앞 머티리얼의 결과를 읽지 않는다 — 언리얼은 이어 읽는다), 이어 읽어야 하는 머티리얼이 생기면 두 타깃을 번갈아 쓴다.
          */
         void executePostProcessMaterialPass( const PassExecuteInput& input );
+        /**
+         * @brief 디퍼드 데칼 패스입니다 — 이번 프레임 데칼(`FrameRenderState::_listFrameDecalDraw`, 그리는 차례)마다 풀스크린 하나로 G버퍼 칸 셋을 덮습니다. 데칼이 없거나 표면 값 보기에서는 기록하지 않습니다.
+         * @details shortcut: 데칼마다 화면 전체를 돈다(상자 밖 픽셀은 셰이더가 일찍 버린다), 데칼이 수십 개를 넘으면 상자를 래스터하거나 타일 목록(언리얼 클러스터드 데칼)으로 바꾼다.
+         */
+        void executeDecalPass( const PassExecuteInput& input );
         /** @brief 렌즈 플레어 패스(`RenderPassType::LensFlare`)를 실행합니다. 주 시점이 아니거나 스프라이트가 없으면 그리지 않습니다. 스프라이트는 `LensFlareSpriteBuffer` 가 기록 전에 올렸다. */
         void executeLensFlarePass( const PassExecuteInput& input );
         /** @brief TAA 와 히스토리 갱신입니다. 후처리를 끈 뷰와 컷 프레임은 원본을 넘깁니다. */

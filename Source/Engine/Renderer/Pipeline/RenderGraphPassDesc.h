@@ -149,6 +149,12 @@ namespace sw
          */
         PostProcessMaterial,
         /**
+         * @brief 디퍼드 데칼입니다(decal.hlsl — 언리얼 Deferred Decal · 유니티 HDRP Decal Projector). 씬의 데칼(`DecalComponent`)마다 풀스크린 하나로 장면 깊이에서 위치를 복원해
+         *        데칼 상자 안의 픽셀만 G버퍼 알베도 · 노멀 · 머티리얼 칸(선언한 컬러 출력 셋, 이 차례)에 곧은 알파로 섞는다 — 칸마다의 마스크는 셰이더의 출력 알파, 채널 쓰기 마스크는 XML 의
+         *        `_listBlendTarget` 이다(알베도 알파의 셰이딩 모델 번호 · 반사율 · 가림은 덮지 않는다). G버퍼 뒤 · 조명 앞에 둔다. 데칼이 없으면 기록하지 않는다(전용 실행 `executeDecalPass`).
+         */
+        Decal,
+        /**
          * @brief 파이프라인 XML 이 고른 컴퓨트 셰이더(`_shaderPath` · `_computeEntryPoint`)를 돌립니다 — 코드 없이 데이터만으로 효과를 더하는 패스입니다(언리얼 RDG 의 컴퓨트 패스 자리).
          *        선언한 컬러 출력 하나에 쓰고 입력(최대 둘, 깊이 형식 제외)을 읽습니다. 첨부는 RW 텍스처로 묶입니다(`compute_pass.hlsli` 의 루트 상수). 그룹 수는 첨부 크기를 `_threadGroupSize` 로 나눈 값입니다.
          */
