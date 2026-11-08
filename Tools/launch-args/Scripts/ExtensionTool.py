@@ -27,7 +27,7 @@ from xml.sax.saxutils import escape
 
 _kExtensionRoot = Path(__file__).resolve().parents[1]
 _kListPackagedFolder = ("Source", "Webview", "Profiles")
-_kListPackagedFile = ("package.json", "README.md")
+_kListPackagedFile = ("package.json",)  # README 는 2026-11 정리 때 지웠다 — 로컬 VSIX 는 필요 없다
 _kListUnitTest = ("CppTextUtilTest.js", "CatalogScannerTest.js", "LaunchArgumentUtilTest.js")
 _kCmakeToolsExtensionPrefix = "ms-vscode.cmake-tools-"
 _kIntegrationTimeoutSeconds = 180
@@ -82,8 +82,9 @@ def runUnitTestInternal(codePath: Path) -> int:
     print(f"[unit] {codePath} --test ({len(listTestPath)} files)", flush=True)
     # Code.exe 는 GUI 실행 파일이라 콘솔을 물려주면 출력이 사라질 수 있다 — 받아서 직접 찍는다.
     result = subprocess.run([str(codePath), "--test", *listTestPath], env=environment, cwd=_kExtensionRoot, capture_output=True, text=True, encoding="utf-8", errors="replace")
-    sys.stdout.write(result.stdout)
-    sys.stderr.write(result.stderr)
+    # 콘솔 코드 페이지(cp949)가 node:test 의 기호(✔)를 못 써 멈췄다 — UTF-8 바이트로 쓴다.
+    sys.stdout.buffer.write(result.stdout.encode("utf-8"))
+    sys.stderr.buffer.write(result.stderr.encode("utf-8"))
     return result.returncode
 
 

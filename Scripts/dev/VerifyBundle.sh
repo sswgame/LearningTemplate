@@ -75,9 +75,9 @@ if [ $STAGE -le 3 ]; then
 fi
 
 # 도구 테스트: 실행 인자 GUI(VS Code 확장 Tools/launch-args — 확장이라 JS 다)가 Source 의 매크로 · 인자 표를 읽는다. 엔진 쪽 이름 · 형식이 바뀌면 깨지는데
-# 어디서도 돌지 않아 오래 깨져 있었다(2026-11-08). node 가 없으면 멈춘다.
+# 어디서도 돌지 않아 오래 깨져 있었다(2026-11-08). 확장 도구가 VS Code 안의 Node 로 돌린다(따로 깐 node 가 필요 없다).
 echo "== launch-args tests $(date +%T)"
-node --test Tools/launch-args/Test/*.js > build/verify.launchargs.log 2>&1
+py -3 Tools/launch-args/Scripts/ExtensionTool.py test > build/verify.launchargs.log 2>&1
 RC=$?
 grep -E "^ℹ (pass|fail)" build/verify.launchargs.log
 [ $RC -eq 0 ] || windows_failed "launch-args tests"
