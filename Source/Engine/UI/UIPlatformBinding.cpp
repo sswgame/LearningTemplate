@@ -1,11 +1,11 @@
 #include "pch.h"
 
-#include "App/RuntimeUIHost.h"
+#include "Engine/UI/UIPlatformBinding.h"
 
 #include "Core/Log/Logger.h"
 
-#include "Engine/Engine.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/QuitRequest.h"
 #include "Engine/UI/Accessibility/IUIAccessibilityBridge.h"
 #include "Engine/UI/Accessibility/UIAccessibilityService.h"
 #include "Engine/UI/Input/UIClipboardService.h"
@@ -16,18 +16,16 @@
 
 namespace sw
 {
-    RuntimeUIHost::RuntimeUIHost()
-        : _pEngine{ nullptr }
-        , _quitCommandRegistration{}
+    UIPlatformBinding::UIPlatformBinding()
+        : _quitCommandRegistration{}
     {
     }
 
-    void RuntimeUIHost::install( Engine& engine, IWindow* pWindow, bool bEditor )
+    void UIPlatformBinding::install( IWindow* pWindow, bool bEditor )
     {
         UISystem* pUI = engine::findSubsystem<UISystem>();
         if ( pUI == nullptr )
             return;
-        _pEngine = &engine;
         if ( PlatformClipboard::isAvailable() )
         {
             UIClipboardAPI api{};
@@ -40,10 +38,10 @@ namespace sw
         // 스크린 리더: 창의 접근성 요청(Windows `WM_GETOBJECT`)에 런타임 UI 로 답한다. 이 플랫폼에 연결이 없으면 nullptr 이고 UI 는 그대로 동작한다.
         if ( pWindow != nullptr )
             engine::getSubsystem<UIAccessibilityService>().setBridge( UIAccessibilityBridgeFactory::createForWindow( *pUI, *pWindow ) );
-        _quitCommandRegistration = engine::getSubsystem<UIGlobalCommandRegistry>().registerCommand( hashed_string( UIGlobalCommandRegistry::kQuitGame ), SW_DELEGATE_METHOD( UICommandDelegate, &RuntimeUIHost::onQuitGameCommand, this ) );
+        _quitCommandRegistration = engine::getSubsystem<UIGlobalCommandRegistry>().registerCommand( hashed_string( UIGlobalCommandRegistry::kQuitGame ), SW_DELEGATE_METHOD( UICommandDelegate, &UIPlatformBinding::onQuitGameCommand, this ) );
     }
 
-    void RuntimeUIHost::remove()
+    void UIPlatformBinding::remove()
     {
         UISystem* pUI = engine::findSubsystem<UISystem>();
         if ( pUI == nullptr )
@@ -51,12 +49,12 @@ namespace sw
         engine::getSubsystem<UIClipboardService>().setAPI( UIClipboardAPI{} );
         engine::getSubsystem<UIAccessibilityService>().setBridge( nullptr ); // 창이 사라지기 전에 창의 접근성 훅을 푼다
         _quitCommandRegistration.reset();
-        _pEngine = nullptr;
     }
 
-    void RuntimeUIHost::onQuitGameCommand( [[maybe_unused]] const hashed_string& command, [[maybe_unused]] Widget& source )
+    void UIPlatformBinding::onQuitGameCommand( [[maybe_unused]] const hashed_string& command, [[maybe_unused]] Widget& source )
     {
         SW_LOG_INFO_ID( "App.QuitRequested", "Quit requested from the pause menu" );
-        _pEngine->requestQuit( ProcessExitCode::Passed );
+        // 엔진 루프를 쥐지 않고 종료 요청 서비스로 낸다 — `Engine::requestQuit` 도 같은 서비스로 간다.
+        engine::getSubsystem<QuitRequest>().request( ProcessExitCode::Passed );
     }
 } // namespace sw
