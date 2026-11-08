@@ -703,7 +703,13 @@ namespace sw
         if ( _impl == nullptr )
             return {};
         if ( pName == nullptr )
-            return XMLNode{ _impl->doc.first_child().internal_object() };
+        {
+            // 첫 엘리먼트다 — 주석을 남긴 문서(`parseKeepingComments`)는 루트 앞에 주석 노드가 온다.
+            pugi::xml_node node = _impl->doc.first_child();
+            while ( node && node.type() != pugi::node_element )
+                node = node.next_sibling();
+            return XMLNode{ node.internal_object() };
+        }
         return XMLNode{ XMLDocumentInternal::findChild( _impl->doc, pName ).internal_object() };
     }
 
