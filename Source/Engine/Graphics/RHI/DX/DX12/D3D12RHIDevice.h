@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/IndexFreeList.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -727,7 +728,7 @@ namespace sw
         vector<D3D12RHICommandList*> _listLiveCmd;
         /// @brief 온라인 힙 블록 프리리스트입니다. 컨텍스트가 빌려 슬롯 테이블을 확정하고, 리스트가 닫히면 펜스 뒤에 돌아옵니다.
         mutex                                                     _onlineBlockMutex;
-        vector<uint32> _listFreeOnlineBlock                       SW_GUARDED_BY( _onlineBlockMutex );
+        IndexFreeList _freeOnlineBlock                            SW_GUARDED_BY( _onlineBlockMutex );
         vector<OnlineBlockRecycleBatch> _listPendingOnlineRecycle SW_GUARDED_BY( _onlineBlockMutex );
         vector<vector<uint32>> _listOnlineRecyclePool             SW_GUARDED_BY( _onlineBlockMutex ); ///< 돌아온 빈 벡터이며 용량을 남겨 둔다.
         FrameResourceRing                                         _frameRing;
@@ -759,8 +760,8 @@ namespace sw
         unordered_map<RHITextureHandle, OffscreenTextureRecord> _mapOffscreenTexture;
         uint32                                                  _nextOffscreenRTVIndex;
         uint32                                                  _nextOffscreenDSVIndex;
-        vector<uint32>                                          _listFreeOffscreenRTVIndex;
-        vector<uint32>                                          _listFreeOffscreenDSVIndex;
+        IndexFreeList                                           _freeOffscreenRTV;
+        IndexFreeList                                           _freeOffscreenDSV;
         unordered_map<RHIBufferHandle, uint32>                  _mapCbAlignedSize;
         unordered_map<RHIBufferHandle, void*>                   _mapCbMapped;
         RHIConstantBufferMirror _constantBufferMirror           SW_GUARDED_BY( _bindlessMutex ); ///< 한 번 쓴 상수 버퍼를 나머지 링 슬롯에도 채운다.
@@ -806,9 +807,9 @@ namespace sw
         /// 읽어 PageFault(VA=0)가 나고 DEVICE_HUNG 으로 이어집니다.
         mutable shared_mutex           _bindlessMutex;
         vector<BindlessResourceRecord> _listRegisteredBindless;
-        vector<uint32>                 _listFreeBindless;
+        IndexFreeList                  _freeBindless;
 
-        /// @brief UAV 레지스트리입니다. 인덱스는 SRV/CBV 와 **같은 힙 인덱스 공간**(_listFreeBindless 공유)입니다. 셰이더가
+        /// @brief UAV 레지스트리입니다. 인덱스는 SRV/CBV 와 **같은 힙 인덱스 공간**(_freeBindless 공유)입니다. 셰이더가
         ///        RWStructuredBuffer<T> name[] 을 그 인덱스로 고르므로 힙 슬롯 번호와 같아야 합니다.
         vector<BindlessResourceRecord> _listRegisteredUAV;
 

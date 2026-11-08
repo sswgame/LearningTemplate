@@ -21,6 +21,7 @@
 #pragma once
 #include "Core/Concurrency/ScopedLock.h"
 #include "Core/Concurrency/SpinLock.h"
+#include "Core/Container/IndexFreeList.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
@@ -74,7 +75,7 @@ namespace sw
 
         explicit PathRequestQueue( TSolver& solver )
             : _listSlot{}
-            , _listFreeSlot{}
+            , _freeSlot{}
             , _listPending{}
             , _listInFlightJob{}
             , _listInFlightHandle{}
@@ -101,12 +102,7 @@ namespace sw
         {
             ScopedLock<SpinLock> lock{ _lock };
             uint32               slotIndex = 0;
-            if ( _listFreeSlot.empty() == false )
-            {
-                slotIndex = _listFreeSlot.back();
-                _listFreeSlot.pop_back();
-            }
-            else
+            if ( _freeSlot.tryPop( slotIndex ) == false )
             {
                 slotIndex = static_cast<uint32>( _listSlot.size() );
                 _listSlot.push_back( Slot{} );
@@ -297,7 +293,7 @@ namespace sw
             slot._job   = Job{};
             slot._state = PathRequestState::Unknown;
             ++slot._generation;
-            _listFreeSlot.push_back( slotIndex );
+            _freeSlot.push( slotIndex );
         }
 
         /** @brief 워커에 넘긴 태스크가 있으면 모두 끝날 때까지 기다립니다(인라인으로 푼 묶음은 기다릴 것이 없다). */
@@ -311,7 +307,7 @@ namespace sw
 
     private:
         vector<Slot> _listSlot                 SW_GUARDED_BY( _lock );
-        vector<uint32> _listFreeSlot           SW_GUARDED_BY( _lock );
+        IndexFreeList _freeSlot                SW_GUARDED_BY( _lock );
         vector<PathRequestHandle> _listPending SW_GUARDED_BY( _lock ); ///< 요청 순서 — 워커에 넘기는 순서다
         vector<Job>                            _listInFlightJob;       ///< 주인 스레드가 `launch` 에서 채우고 `complete` 에서 비운다. 그 사이 워커만 원소를 쓴다
         vector<PathRequestHandle>              _listInFlightHandle;    ///< `_listInFlightJob` 과 같은 순서의 핸들

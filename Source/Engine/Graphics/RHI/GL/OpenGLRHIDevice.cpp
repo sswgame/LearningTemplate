@@ -36,13 +36,13 @@ namespace sw
         , _contextOwnedStartNanos{ 0 }
         , _gpuBuffers{}
         , _listRegisteredBindless{}
-        , _listBindlessFree{}
+        , _freeBindless{}
         , _listRegisteredUAV{}
-        , _listUAVFree{}
+        , _freeUAV{}
         , _gpuTextures{}
         , _mapCompositeFbo{}
         , _listRegisteredTexture{}
-        , _listTextureFree{}
+        , _freeTexture{}
         , _arrTimestampQuery{}
         , _arrTimestampMask{}
         , _timestampFrameIndex{ 0 }
@@ -767,9 +767,9 @@ namespace sw
         _listRegisteredBindless.clear();
         _listRegisteredUAV.clear();
         _listRegisteredTexture.clear();
-        _listTextureFree.clear();
-        _listBindlessFree.clear();
-        _listUAVFree.clear();
+        _freeTexture.clear();
+        _freeBindless.clear();
+        _freeUAV.clear();
         Memory::set( _arrComputeRootConstantShadow, 0, sizeof( _arrComputeRootConstantShadow ) );
 
         _pipelineStates.forEach( []( OpenGLPipelineStateRecord& pso )

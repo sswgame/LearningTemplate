@@ -1,10 +1,14 @@
 /**
  * @file SlotHandleTable.h
  * @brief SlotHandle 로 T 슬롯을 보관하는 테이블입니다. 핸들의 기본값은 무효입니다.
+ * @details 핸들 표 한 벌: 빈 칸 재사용 정책은 `IndexFreeList`(LIFO), 낡은 핸들 가리기는 슬롯의 세대, 주소 고정은 `PagedArray` 가 맡습니다.
+ *          맨 인덱스만 필요하면(셰이더에 넘기는 bindless 번호 · 결정적 저장 바이트에 드는 슬롯 순서) `IndexFreeList` 를 바로 쓰고,
+ *          다시 쓰면 안 되는 id 는 `IDAllocator` 입니다(언리얼 `TSparseArray` + 세대 핸들 · 유니티 `Entity`(index, version) 와 같은 자리).
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/IndexFreeList.h"
 #include "Core/Container/PagedArray.h"
 #include "Core/Container/SlotHandle.h"
 #include "Core/Container/vector.h"
@@ -34,10 +38,9 @@ namespace sw
         {
             ScopedLock<mutex> lock{ _mutex };
 
-            if ( _listFree.empty() == false )
+            uint32 index{ 0 };
+            if ( _freeSlot.tryPop( index ) )
             {
-                const uint32 index = _listFree.back();
-                _listFree.pop_back();
                 Slot* pSlot = _listSlot.find( index );
                 if ( pSlot == nullptr )
                     return SlotHandle{};
@@ -50,8 +53,8 @@ namespace sw
 
             // 새 슬롯은 청크와 함께 초기화된 상태(비어 있음 · 세대 1)로 이미 발행돼 있을 수 있다. 값을 채운 뒤 점유 비트를
             // release 로 켜야, 락 없이 읽는 쪽이 채우는 중인 값을 받지 않는다.
-            const uint32 index = _slotCount;
-            Slot*        pSlot = _listSlot.ensure( index );
+            index       = _slotCount;
+            Slot* pSlot = _listSlot.ensure( index );
             if ( pSlot == nullptr )
                 return SlotHandle{};
             pSlot->_value = std::move( value );
@@ -143,7 +146,7 @@ namespace sw
         uint32 size() const
         {
             ScopedLock<mutex> lock{ _mutex };
-            return _slotCount - static_cast<uint32>( _listFree.size() );
+            return _slotCount - static_cast<uint32>( _freeSlot.size() );
         }
 
         /** @brief 테이블이 비어 있는지 반환합니다. */
@@ -218,13 +221,13 @@ namespace sw
             if ( nextGeneration == 0 )
                 nextGeneration = 1; // 세대 0 은 무효 핸들용으로 예약한다. 한 바퀴 돌면 건너뛴다.
             slot._state.store( nextGeneration, std::memory_order_release );
-            _listFree.push_back( index );
+            _freeSlot.push( index ); // 세대를 올린 바로 이 자리가 반납이다 — 이중 반납은 `findOccupiedSlot` 의 세대 검사가 막는다
         }
 
     private:
-        PagedArray<Slot>         _listSlot;
-        vector<uint32> _listFree SW_GUARDED_BY( _mutex );
-        mutable mutex            _mutex;
-        uint32 _slotCount        SW_GUARDED_BY( _mutex ){ 0 }; ///< 지금까지 쓴 슬롯 수. 뮤텍스 안에서만 읽고 쓴다
+        PagedArray<Slot>        _listSlot;
+        IndexFreeList _freeSlot SW_GUARDED_BY( _mutex );
+        mutable mutex           _mutex;
+        uint32 _slotCount       SW_GUARDED_BY( _mutex ){ 0 }; ///< 지금까지 쓴 슬롯 수. 뮤텍스 안에서만 읽고 쓴다
     };
 } // namespace sw

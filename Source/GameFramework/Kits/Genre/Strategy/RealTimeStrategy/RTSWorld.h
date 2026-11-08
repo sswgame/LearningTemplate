@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/EventBuffer.h"
+#include "Core/Container/IndexFreeList.h"
 #include "Core/Container/SlotHandle.h"
 #include "Core/Container/deque.h"
 #include "Core/Container/vector.h"
@@ -412,7 +413,7 @@ namespace sw
         PathRequestQueue<GridPathSolver> _pathQueue;      ///< 이번 걸음의 땅 경로 요청 — 걸음 끝에 한 번 워커로 풀고 요청 순서대로 적용한다
         deque<RTSUnit>                   _listUnit;       ///< 슬롯 번호가 id 의 index 이다(deque 라서 걸음 중에 유닛이 생겨도 다른 유닛 참조가 유지된다)
         vector<uint32>                   _listGeneration; ///< 슬롯마다의 세대
-        vector<uint32>                   _listFreeSlot;
+        IndexFreeList                    _freeSlot;
         vector<RTSPlayer>                _listPlayer;
         EventBuffer<RTSEvent>            _eventBuffer;
         vector<uint8>                    _listTerrainBlocked;

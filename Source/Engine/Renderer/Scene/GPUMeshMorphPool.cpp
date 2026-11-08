@@ -562,7 +562,7 @@ namespace sw
             _rest.release( pDevice );
             _morphAllocator.reset( 0 );
             _listPoolMorph.clear();
-            _listFreeMorphSlot.clear();
+            _freeMorphSlot.clear();
             _listDeformProgramGeneration.clear();
             _morphLiveVertexCount = 0;
             return bChanged || bHadMorph;
@@ -649,7 +649,7 @@ namespace sw
             if ( base == SpanAllocator::kInvalidOffset )
                 return false;
             entry._base = base;
-            entry._slot = allocateFreeListIndex( _listPoolMorph, _listFreeMorphSlot, pMesh );
+            entry._slot = _freeMorphSlot.allocate( _listPoolMorph, pMesh );
             _morphLiveVertexCount += entry._count;
             RHIBufferCopyRegion region{};
             region._srcOffset = static_cast<uint32>( _listScratchRest.size() * sizeof( GPUMorphVertex ) );
@@ -697,7 +697,7 @@ namespace sw
                 entry._base = kInvalidBase;
                 if ( entry._slot != kInvalidBase )
                 {
-                    (void)releaseFreeListIndex( _listPoolMorph, _listFreeMorphSlot, entry._slot ); // 비우기 전 값(메시)은 쓰지 않는다
+                    (void)_freeMorphSlot.release( _listPoolMorph, entry._slot ); // 비우기 전 값(메시)은 쓰지 않는다
                     entry._slot = kInvalidBase;
                 }
                 if ( bWarnedFull == false )
@@ -706,7 +706,7 @@ namespace sw
                 continue;
             }
             if ( entry._slot == kInvalidBase )
-                entry._slot = allocateFreeListIndex( _listPoolMorph, _listFreeMorphSlot, pMesh );
+                entry._slot = _freeMorphSlot.allocate( _listPoolMorph, pMesh );
             // 맵의 메시는 모두 이번 update 에서 본 것이라 살아 있다(못 본 것은 쓸기에서 지웠다).
             const vector<RHIVertex>& listVertex = pMesh->getVertices();
             const float32            slotTag    = static_cast<float32>( entry._slot + 1u ); // float 로 정확한 정수(2^24 미만) - 비트 재해석은 비정규 수로 지워질 수 있다
@@ -730,7 +730,7 @@ namespace sw
             _morphLiveVertexCount -= inoutEntry._count;
         }
         if ( inoutEntry._slot != kInvalidBase )
-            (void)releaseFreeListIndex( _listPoolMorph, _listFreeMorphSlot, inoutEntry._slot ); // 비우기 전 값(메시)은 쓰지 않는다
+            (void)_freeMorphSlot.release( _listPoolMorph, inoutEntry._slot ); // 비우기 전 값(메시)은 쓰지 않는다
         inoutEntry._base = kInvalidBase;
         inoutEntry._slot = kInvalidBase;
     }
@@ -875,7 +875,7 @@ namespace sw
         _skinResultOffsets.release( pDevice );
         _listPoolMorph.clear();
         _listDeformProgramGeneration.clear();
-        _listFreeMorphSlot.clear();
+        _freeMorphSlot.clear();
         _mapMorphEntry.clear();
         _morphAllocator.reset( 0 );
         _listSkinResultOffset.clear();
