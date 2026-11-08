@@ -108,6 +108,9 @@ SW_TEST_CASE( SelectOrdinalTest, OrdinalRuleIsSeparateFromPlural )
     SW_EXPECT_EQUAL( sw::string( "2e" ), Internal::ordinal( "fr", "{n, selectordinal, one {#er} other {#e}}", 2 ) );
     SW_EXPECT_EQUAL( sw::string( "3번째" ), Internal::ordinal( "ko", "{n, selectordinal, other {#번째}}", 3 ) );
     SW_EXPECT_EQUAL( sw::string( "1." ), Internal::ordinal( "de", "{n, selectordinal, one {#st} other {#.}}", 1 ) );
+    // 스페인어 서수(CLDR ordinals.xml): 1 · 3 · 21 · 23 이 one(1.er · 3.er), 11 · 13 은 other
+    SW_EXPECT_EQUAL( sw::string( "3.er" ), Internal::ordinal( "es", "{n, selectordinal, one {#.er} other {#.º}}", 3 ) );
+    SW_EXPECT_EQUAL( sw::string( "13.º" ), Internal::ordinal( "es", "{n, selectordinal, one {#.er} other {#.º}}", 13 ) );
 }
 
 /**
@@ -190,6 +193,38 @@ SW_TEST_CASE( CultureDataTest, PluralRuleTextSelectsTheCldrCategory )
     SW_EXPECT_EQUAL( sw::string( "one" ), sw::string( plural( "fa", Operands::makeDecimal( 1.0, 1 ) ) ) );
     SW_EXPECT_EQUAL( sw::string( "other" ), sw::string( plural( "en", Operands::makeDecimal( 1.0, 1 ) ) ) ); // v = 1 이라 one 이 아니다
     SW_EXPECT_EQUAL( sw::string( "other" ), sw::string( plural( "ko", Operands::makeInteger( 1 ) ) ) );
+    // CLDR plurals.xml 과 대조해 더한 범주 — 스페인어 · 프랑스어의 백만 단위(un millón de, un million de)는 many 다.
+    SW_EXPECT_EQUAL( sw::string( "many" ), sw::string( plural( "es", Operands::makeInteger( 2000000 ) ) ) );
+    SW_EXPECT_EQUAL( sw::string( "many" ), sw::string( plural( "fr", Operands::makeInteger( 1000000 ) ) ) );
+    SW_EXPECT_EQUAL( sw::string( "other" ), sw::string( plural( "es", Operands::makeInteger( 1000 ) ) ) );
+    SW_EXPECT_EQUAL( sw::string( "one" ), sw::string( plural( "fr", Operands::makeDecimal( 1.5, 1 ) ) ) );
+}
+
+/**
+ * @brief [CultureDataTest] CLDR 보기 글을 피연산자로 읽는다 — 보이는 소수 자리는 글 그대로, 압축 지수(`c`)는 소수점을 옮기고 e 에 남는다
+ */
+SW_TEST_CASE( CultureDataTest, PluralSampleTextKeepsVisibleDigits )
+{
+    sw::PluralOperands operands;
+    SW_REQUIRE_TRUE( sw::PluralOperands::parseSample( "1.50", operands ) );
+    SW_EXPECT_EQUAL( int64( 1 ), operands._integerDigits );
+    SW_EXPECT_EQUAL( int64( 50 ), operands._fractionDigits );
+    SW_EXPECT_EQUAL( uint32( 2 ), operands._visibleFractionCount );
+    SW_REQUIRE_TRUE( sw::PluralOperands::parseSample( "1.0000001c6", operands ) );
+    SW_EXPECT_EQUAL( int64( 1000000 ), operands._integerDigits );
+    SW_EXPECT_EQUAL( uint32( 1 ), operands._visibleFractionCount );
+    SW_EXPECT_EQUAL( uint32( 6 ), operands._exponent );
+    SW_REQUIRE_TRUE( sw::PluralOperands::parseSample( "2c3", operands ) );
+    SW_EXPECT_EQUAL( int64( 2000 ), operands._integerDigits );
+    SW_EXPECT_EQUAL( uint32( 0 ), operands._visibleFractionCount );
+    SW_EXPECT_FALSE( sw::PluralOperands::parseSample( "1.2.3", operands ) );
+    SW_EXPECT_FALSE( sw::PluralOperands::parseSample( "", operands ) );
+
+    sw::PluralRuleSet rules;
+    sw::string        error;
+    SW_REQUIRE_TRUE_MSG( rules.compileRule( "one", "i = 0..1 @integer 0, 1 @decimal 0.0~1.5", error ), error.c_str() );
+    SW_EXPECT_EQUAL( size_t( 18 ), rules.countSamples( sw::PluralCategory::One ) ); // 0, 1 과 0.0 ~ 1.5 의 16 개
+    SW_EXPECT_TRUE_MSG( rules.verifySamples( error ), error.c_str() );
 }
 
 /**
@@ -203,7 +238,7 @@ SW_TEST_CASE( CultureDataTest, NewLanguageIsOneDataSheet )
   <numberingSystems><numberingSystem id="deva" digits="०१२३४५६७८९" /></numberingSystems>
   <currencies><currency code="INR" symbol="₹" digits="2" /></currencies>
   <cultures>
-    <culture code="hi" digits="deva" nativeName="हिन्दी" currencyCode="INR" currencyPattern="¤#"><pluralRules one="i = 0 or n = 1" /></culture>
+    <culture code="hi" digits="deva" nativeName="हिन्दी" currencyCode="INR" currencyPattern="¤#"><pluralRules one="i = 0 or n = 1 @integer 0, 1 @decimal 0.0~1.0, 0.00~0.04" other="@integer 2~17, 100, 1000, 10000, 100000, 1000000, … @decimal 1.1~2.6, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …" /></culture>
   </cultures>
 </CultureTable>)XML",
                                                 "hi.cultures.xml", &error ),
@@ -231,8 +266,15 @@ SW_TEST_CASE( CultureDataTest, MalformedDataIsALoadError )
     };
     constexpr const utf8* kLatin = R"(<numberingSystems><numberingSystem id="latn" digits="0123456789" /></numberingSystems>)";
     rejects( sw::string( "<CultureTable>" ) + kLatin + R"(<cultures><culture code="xx" digits="latn"><pluralRules one="i = = 1" /></culture></cultures></CultureTable>)", "one rule" );
-    rejects( sw::string( "<CultureTable>" ) + kLatin + R"(<cultures><culture code="xx" digits="latn"><pluralRules other="n = 1" /></culture></cultures></CultureTable>)", "unknown plural category" );
-    rejects( sw::string( "<CultureTable>" ) + kLatin + R"(<cultures><culture code="xx" digits="latn"><pluralRules one="e = 0" /></culture></cultures></CultureTable>)", "operand" );
+    rejects( sw::string( "<CultureTable>" ) + kLatin + R"(<cultures><culture code="xx" digits="latn"><pluralRules several="n = 1 @integer 1" /></culture></cultures></CultureTable>)", "unknown plural category" );
+    rejects( sw::string( "<CultureTable>" ) + kLatin + R"(<cultures><culture code="xx" digits="latn"><pluralRules other="n = 1 @integer 1" /></culture></cultures></CultureTable>)", "samples only" );
+    rejects( sw::string( "<CultureTable>" ) + kLatin + R"(<cultures><culture code="xx" digits="latn"><pluralRules one="w = 0 @integer 0" /></culture></cultures></CultureTable>)", "operand" );
+    // CLDR 글은 보기째 붙여 넣는다 — 보기 없는 규칙, other 를 뺀 규칙, 보기와 어긋나게 고친 규칙(pl few 의 12..14 를 지운 것)은 읽기 오류다.
+    rejects( sw::string( "<CultureTable>" ) + kLatin + R"(<cultures><culture code="xx" digits="latn"><pluralRules one="i = 1 and v = 0" other="@integer 0" /></culture></cultures></CultureTable>)", "samples" );
+    rejects( sw::string( "<CultureTable>" ) + kLatin + R"(<cultures><culture code="xx" digits="latn"><pluralRules one="i = 1 and v = 0 @integer 1" /></culture></cultures></CultureTable>)", "other samples" );
+    rejects( sw::string( "<CultureTable>" ) + kLatin +
+                 R"(<cultures><culture code="xx" digits="latn"><pluralRules few="v = 0 and i % 10 = 2..4 @integer 2~4, 22~24" many="v = 0 and i % 100 = 12..14 @integer 12~14" other="@decimal 0.0~1.5" /></culture></cultures></CultureTable>)",
+             "does not match" );
     rejects( sw::string( "<CultureTable>" ) + kLatin + R"(<cultures><culture code="xx" digits="latn" /></cultures></CultureTable>)", "pluralRules" );
     rejects( sw::string( "<CultureTable>" ) + kLatin + R"(<cultures><culture code="xx" digits="thai"><pluralRules /></culture></cultures></CultureTable>)", "thai" );
     rejects( R"(<CultureTable><numberingSystems><numberingSystem id="short" digits="012" /></numberingSystems><cultures /></CultureTable>)", "10 digits" );

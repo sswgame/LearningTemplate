@@ -26,7 +26,7 @@
 		         percentPattern="#٪؜"
 		         currencyCode="SAR"
 		         currencyPattern="¤ #">
-			<pluralRules zero="n = 0" one="n = 1" two="n = 2" few="n % 100 = 3..10" many="n % 100 = 11..99" />
+			<pluralRules zero="n = 0 @integer 0 @decimal 0.0, 0.00, 0.000, 0.0000" one="n = 1 @integer 1 @decimal 1.0, 1.00, 1.000, 1.0000" two="n = 2 @integer 2 @decimal 2.0, 2.00, 2.000, 2.0000" few="n % 100 = 3..10 @integer 3~10, 103~110, 1003, … @decimal 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 103.0, 1003.0, …" many="n % 100 = 11..99 @integer 11~26, 111, 1011, … @decimal 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 111.0, 1011.0, …" other="@integer 100~102, 200~202, 300~302, 400~402, 500~502, 600, 1000, 10000, 100000, 1000000, … @decimal 0.1~0.9, 1.1~1.7, 10.1, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …" />
 			<datePatterns short="d‏/M‏/y" medium="dd‏/MM‏/y" long="d MMMM y" />
 			<timePatterns short="h:mm a" medium="h:mm:ss a" />
 			<monthNames>
@@ -74,7 +74,7 @@
 		         percentPattern="# %"
 		         currencyCode="EUR"
 		         currencyPattern="# ¤">
-			<pluralRules one="i = 1 and v = 0" />
+			<pluralRules one="i = 1 and v = 0 @integer 1" other="@integer 0, 2~16, 100, 1000, 10000, 100000, 1000000, … @decimal 0.0~1.5, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …" />
 			<datePatterns short="dd.MM.yy" medium="dd.MM.y" long="d. MMMM y" />
 			<timePatterns short="HH:mm" medium="HH:mm:ss" />
 			<monthNames>
@@ -123,8 +123,8 @@
 		         percentPattern="#%"
 		         currencyCode="USD"
 		         currencyPattern="¤#">
-			<pluralRules one="i = 1 and v = 0" />
-			<ordinalRules one="n % 10 = 1 and n % 100 != 11" two="n % 10 = 2 and n % 100 != 12" few="n % 10 = 3 and n % 100 != 13" />
+			<pluralRules one="i = 1 and v = 0 @integer 1" other="@integer 0, 2~16, 100, 1000, 10000, 100000, 1000000, … @decimal 0.0~1.5, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …" />
+			<ordinalRules one="n % 10 = 1 and n % 100 != 11 @integer 1, 21, 31, 41, 51, 61, 71, 81, 101, 1001, …" two="n % 10 = 2 and n % 100 != 12 @integer 2, 22, 32, 42, 52, 62, 72, 82, 102, 1002, …" few="n % 10 = 3 and n % 100 != 13 @integer 3, 23, 33, 43, 53, 63, 73, 83, 103, 1003, …" other="@integer 0, 4~18, 100, 1000, 10000, 100000, 1000000, …" />
 			<datePatterns short="M/d/yy" medium="MMM d, y" long="MMMM d, y" />
 			<timePatterns short="h:mm a" medium="h:mm:ss a" />
 			<monthNames>
@@ -179,7 +179,8 @@
 		         percentPattern="# %"
 		         currencyCode="EUR"
 		         currencyPattern="# ¤">
-			<pluralRules one="n = 1" />
+			<pluralRules one="n = 1 @integer 1 @decimal 1.0, 1.00, 1.000, 1.0000" many="e = 0 and i != 0 and i % 1000000 = 0 and v = 0 or e != 0..5 @integer 1000000, 1c6, 2c6, 3c6, 4c6, 5c6, 6c6, … @decimal 1.0000001c6, 1.1c6, 2.0000001c6, 2.1c6, 3.0000001c6, 3.1c6, …" other="@integer 0, 2~16, 100, 1000, 10000, 100000, 1c3, 2c3, 3c3, 4c3, 5c3, 6c3, … @decimal 0.0~0.9, 1.1~1.6, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, 1.0001c3, 1.1c3, 2.0001c3, 2.1c3, 3.0001c3, 3.1c3, …" />
+			<ordinalRules one="n % 10 = 1,3 and n % 100 != 11 @integer 1, 3, 13, 21, 23, 31, 33, 41, 101, 1001, …" other="@integer 0, 2, 4~12, 14~18, 100, 1000, 10000, 100000, 1000000, …" />
 			<datePatterns short="d/M/yy" medium="d MMM y" long="d 'de' MMMM 'de' y" />
 			<timePatterns short="H:mm" medium="H:mm:ss" />
 			<monthNames>
@@ -228,7 +229,7 @@
 		         percentPattern="#٪"
 		         currencyCode="IRR"
 		         currencyPattern="# ¤">
-			<pluralRules one="i = 0 or n = 1" />
+			<pluralRules one="i = 0 or n = 1 @integer 0, 1 @decimal 0.0~1.0, 0.00~0.04" other="@integer 2~17, 100, 1000, 10000, 100000, 1000000, … @decimal 1.1~2.6, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …" />
 			<datePatterns short="y/M/d" medium="d MMM y" long="d MMMM y" />
 			<timePatterns short="H:mm" medium="H:mm:ss" />
 			<monthNames>
@@ -276,8 +277,8 @@
 		         percentPattern="# %"
 		         currencyCode="EUR"
 		         currencyPattern="# ¤">
-			<pluralRules one="i = 0,1" />
-			<ordinalRules one="n = 1" />
+			<pluralRules one="i = 0..1 @integer 0, 1 @decimal 0.0~1.5" many="e = 0 and i != 0 and i % 1000000 = 0 and v = 0 or e != 0..5 @integer 1000000, 1c6, 2c6, 3c6, 4c6, 5c6, 6c6, … @decimal 1.0000001c6, 1.1c6, 2.0000001c6, 2.1c6, 3.0000001c6, 3.1c6, …" other="@integer 2~17, 100, 1000, 10000, 100000, 1c3, 2c3, 3c3, 4c3, 5c3, 6c3, … @decimal 2.0~3.5, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, 1.0001c3, 1.1c3, 2.0001c3, 2.1c3, 3.0001c3, 3.1c3, …" />
+			<ordinalRules one="n = 1 @integer 1" other="@integer 0, 2~16, 100, 1000, 10000, 100000, 1000000, …" />
 			<datePatterns short="dd/MM/y" medium="d MMM y" long="d MMMM y" />
 			<timePatterns short="HH:mm" medium="HH:mm:ss" />
 			<monthNames>
@@ -326,7 +327,7 @@
 		         percentPattern="#%"
 		         currencyCode="ILS"
 		         currencyPattern="# ¤">
-			<pluralRules one="i = 1 and v = 0 or i = 0 and v != 0" two="i = 2 and v = 0" />
+			<pluralRules one="i = 1 and v = 0 or i = 0 and v != 0 @integer 1 @decimal 0.0~0.9, 0.00~0.05" two="i = 2 and v = 0 @integer 2" other="@integer 0, 3~17, 100, 1000, 10000, 100000, 1000000, … @decimal 1.0~2.5, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …" />
 			<datePatterns short="d.M.y" medium="d בMMM y" long="d בMMMM y" />
 			<timePatterns short="H:mm" medium="H:mm:ss" />
 			<monthNames>
@@ -368,7 +369,7 @@
 			</fonts>
 		</culture>
 		<culture code="ja" digits="latn" nativeName="日本語" currencyCode="JPY" currencyPattern="¤#">
-			<pluralRules />
+			<pluralRules other="@integer 0~15, 100, 1000, 10000, 100000, 1000000, … @decimal 0.0~1.5, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …" />
 			<datePatterns short="y/MM/dd" medium="y/MM/dd" long="y年M月d日" />
 			<timePatterns short="H:mm" medium="H:mm:ss" />
 			<monthNames>
@@ -411,7 +412,7 @@
 			</fonts>
 		</culture>
 		<culture code="ko" digits="latn" nativeName="한국어" currencyCode="KRW" currencyPattern="¤#">
-			<pluralRules />
+			<pluralRules other="@integer 0~15, 100, 1000, 10000, 100000, 1000000, … @decimal 0.0~1.5, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …" />
 			<datePatterns short="yy. M. d." medium="y. M. d." long="y년 M월 d일" />
 			<timePatterns short="a h:mm" medium="a h:mm:ss" />
 			<monthNames>
@@ -460,7 +461,7 @@
 		         percentPattern="#%"
 		         currencyCode="PLN"
 		         currencyPattern="# ¤">
-			<pluralRules one="i = 1 and v = 0" few="v = 0 and i % 10 = 2..4 and i % 100 != 12..14" many="v = 0 and i != 1 and i % 10 = 0..1 or v = 0 and i % 10 = 5..9 or v = 0 and i % 100 = 12..14" />
+			<pluralRules one="i = 1 and v = 0 @integer 1" few="v = 0 and i % 10 = 2..4 and i % 100 != 12..14 @integer 2~4, 22~24, 32~34, 42~44, 52~54, 62, 102, 1002, …" many="v = 0 and i != 1 and i % 10 = 0..1 or v = 0 and i % 10 = 5..9 or v = 0 and i % 100 = 12..14 @integer 0, 5~19, 100, 1000, 10000, 100000, 1000000, …" other="@decimal 0.0~1.5, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …" />
 			<datePatterns short="d.MM.y" medium="d MMM y" long="d MMMM y" />
 			<timePatterns short="HH:mm" medium="HH:mm:ss" />
 			<monthNames>
@@ -513,7 +514,7 @@
 		         percentPattern="# %"
 		         currencyCode="RUB"
 		         currencyPattern="# ¤">
-			<pluralRules one="v = 0 and i % 10 = 1 and i % 100 != 11" few="v = 0 and i % 10 = 2..4 and i % 100 != 12..14" many="v = 0 and i % 10 = 0 or v = 0 and i % 10 = 5..9 or v = 0 and i % 100 = 11..14" />
+			<pluralRules one="v = 0 and i % 10 = 1 and i % 100 != 11 @integer 1, 21, 31, 41, 51, 61, 71, 81, 101, 1001, …" few="v = 0 and i % 10 = 2..4 and i % 100 != 12..14 @integer 2~4, 22~24, 32~34, 42~44, 52~54, 62, 102, 1002, …" many="v = 0 and i % 10 = 0 or v = 0 and i % 10 = 5..9 or v = 0 and i % 100 = 11..14 @integer 0, 5~19, 100, 1000, 10000, 100000, 1000000, …" other="@decimal 0.0~1.5, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …" />
 			<datePatterns short="dd.MM.y" medium="d MMM y 'г'." long="d MMMM y 'г'." />
 			<timePatterns short="HH:mm" medium="HH:mm:ss" />
 			<monthNames>
@@ -554,7 +555,7 @@
 			</fonts>
 		</culture>
 		<culture code="zh" digits="latn" nativeName="简体中文" currencyCode="CNY" currencyPattern="¤#">
-			<pluralRules />
+			<pluralRules other="@integer 0~15, 100, 1000, 10000, 100000, 1000000, … @decimal 0.0~1.5, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …" />
 			<datePatterns short="y/M/d" medium="y年M月d日" long="y年M月d日" />
 			<timePatterns short="HH:mm" medium="HH:mm:ss" />
 			<monthNames>
