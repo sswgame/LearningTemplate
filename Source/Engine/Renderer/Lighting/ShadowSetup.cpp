@@ -276,10 +276,38 @@ namespace sw
         return data;
     }
 
+    void FrameShadowData::populateContactShadows( vector<GPULight>& inoutListLight, FrameShadowData& outFrame )
+    {
+        using Internal                               = ShadowSetupInternal;
+        outFrame._contactShadowLights                = kNoContactShadowLights;
+        float32 arrLight[kContactShadowChannelCount] = { -1.0f, -1.0f, -1.0f, -1.0f };
+        uint32  channelCount                         = 0;
+        // 두 바퀴 — 방향광(대개 해, 화면 전체에 닿는다)이 먼저 채널을 받는다.
+        for ( uint32 pass = 0; pass < 2; ++pass )
+        {
+            for ( uint32 lightIndex = 0; lightIndex < static_cast<uint32>( inoutListLight.size() ); ++lightIndex )
+            {
+                GPULight&    light        = inoutListLight[lightIndex];
+                const uint32 lightType    = Internal::getLightType( light );
+                const bool   bDirectional = lightType == shaderslot::kLightTypeDirectional;
+                const bool   b3DLight     = bDirectional || lightType == shaderslot::kLightTypePoint || lightType == shaderslot::kLightTypeSpot;
+                if ( b3DLight == false || bDirectional != ( pass == 0 ) )
+                    continue;
+                light._extra._z = 0.0f;
+                if ( light._extra._y <= 0.0f || channelCount >= kContactShadowChannelCount )
+                    continue;
+                light._extra._z          = static_cast<float32>( channelCount + 1 );
+                arrLight[channelCount++] = static_cast<float32>( lightIndex );
+            }
+        }
+        outFrame._contactShadowLights = float4{ arrLight[0], arrLight[1], arrLight[2], arrLight[3] };
+    }
+
     void FrameShadowData::populateFrame( const DirectionalLightComponent* pShadowLight, const float4x4* pMainViewProj, uint32 atlasResolution,
                                          const vector<uint32>& listShadowLightIndex, vector<GPULight>& inoutListLight, FrameShadowData& outFrame )
     {
         outFrame.clear();
+        populateContactShadows( inoutListLight, outFrame );
         const uint32 cascadeCount = pShadowLight != nullptr ? pShadowLight->getShadowCascadeCount() : 1u;
         outFrame._layout          = ShadowAtlasLayout::make( atlasResolution, cascadeCount, countLocalTiles( inoutListLight, listShadowLightIndex ) );
         populateLocalShadows( outFrame._layout, pMainViewProj, listShadowLightIndex, inoutListLight, outFrame );

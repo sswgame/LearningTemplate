@@ -11,6 +11,10 @@
 	같은 그림을 내는지 테스트가 프리패스 없는 판과 대조한다(`RenderPassGPUTest.DepthPrepassRendersTheSameImage`).
 -->
 <RenderPipelineDesc _base="engine/pipeline/forwardpipeline.xml" _name="ForwardPrepassPipeline">
+	<_listAttachment>
+		<!-- 접촉 그림자 마스크 — 채널 넷이 접촉 그림자를 켠 빛 넷이다. 깊이 프리패스가 장면 깊이를 먼저 써 두므로 포워드도 조명 앞에 걸을 수 있다. -->
+		<RenderPassAttachment _name="ContactShadowMask" _format="R8G8B8A8_UNORM" _clearColor="1,1,1,1" _loadOp="Clear" />
+	</_listAttachment>
 	<_listPass>
 		<RenderGraphPassDesc _name="DepthPrepass" _after="Shadow" _type="DepthPrepass" _depthAttachment="SceneDepth" _shaderPath="engine/shaders/shadow_depth.hlsl" _vertexEntryPoint="VSMain" _pixelEntryPoint="PSMain" _computeEntryPoint="" _geometryEntryPoint="" _hullEntryPoint="" _domainEntryPoint="" _threadGroupSize="8" _cullMode="Back" _bEnableDepthTest="true" _bEnableDepthWrite="true" _minPostQuality="0">
 			<_listInput />
@@ -18,6 +22,22 @@
 				<item>SceneDepth</item>
 			</_listOutput>
 			<_listPermutation />
+		</RenderGraphPassDesc>
+		<!-- 접촉 그림자(contact_shadow.hlsl) — 깊이 프리패스 뒤, 포워드 불투명 앞. 켠 빛이 없거나 후처리를 끈 뷰는 돌지 않는다(포워드 불투명은 1 을 읽는다). -->
+		<RenderGraphPassDesc _name="ContactShadow" _after="DepthPrepass" _type="ContactShadow" _vertexEntryPoint="VSMain" _pixelEntryPoint="PSMain" _cullMode="None" _bEnableDepthTest="false" _bEnableDepthWrite="false">
+			<_listInput>
+				<item>SceneDepth</item>
+			</_listInput>
+			<_listOutput>
+				<item>ContactShadowMask</item>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
+		<RenderGraphPassDesc _name="ForwardOpaque">
+			<_listInput>
+				<item>ShadowMap</item>
+				<item>ContactShadowMask</item>
+			</_listInput>
 		</RenderGraphPassDesc>
 	</_listPass>
 </RenderPipelineDesc>

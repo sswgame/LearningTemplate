@@ -56,7 +56,7 @@ namespace sw
         /** @brief 그림자 사용 여부를 설정합니다. */
         void setCastShadow( bool bCastShadow );
 
-        /** @brief 그림자 모양 값(원천 크기)입니다. */
+        /** @brief 그림자 모양 값(원천 크기 · 접촉 그림자 길이)입니다. */
         const LightShadowSettings& getShadowSettings() const { return _shadowSettings; }
         /** @brief 그림자 모양 값을 설정합니다. */
         void setShadowSettings( const LightShadowSettings& settings );
@@ -72,7 +72,7 @@ namespace sw
         float32 _innerConeAngle;
         PROPERTY( Category = "Cone", DisplayName = "Outer Cone Angle", Min = 0.0, Tooltip = "Half angle where the light reaches zero", Units = rad )
         float32 _outerConeAngle;
-        PROPERTY( Category = "Shadow", DisplayName = "Shadow Shape", Tooltip = "Light source size for soft shadows" )
+        PROPERTY( Category = "Shadow", DisplayName = "Shadow Shape", Tooltip = "Light source size for soft shadows and contact shadow length" )
         LightShadowSettings _shadowSettings;
         PROPERTY( Category = "Shadow", DisplayName = "Cast Shadow", Tooltip = "Render this light into one cell of the shadow atlas" )
         uint8                  _bCastShadow       : 1;

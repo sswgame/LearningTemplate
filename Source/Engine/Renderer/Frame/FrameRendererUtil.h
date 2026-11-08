@@ -496,6 +496,8 @@ namespace sw
         hashed_string _sceneColorCopy{ "SceneColorCopy" };
         /// 반투명 앞에 떠 둔 장면 깊이 사본(SceneDepthCopy 패스의 출력, R32 실수) — 반투명 패스가 선언한 입력을 역할로 건다(물의 화면 공간 두께).
         hashed_string _sceneDepthCopy{ "SceneDepthCopy" };
+        /// 접촉 그림자 마스크(ContactShadow 패스의 출력, 채널 넷) — 조명 · 포워드 불투명 패스가 선언한 입력을 역할로 건다(`g_ContactShadowIndex`).
+        hashed_string _contactShadow{ "ContactShadow" };
         /// 2D 빛 쿠키 아틀라스(Light2DCookieAtlas) — 파이프라인 첨부가 아니라 렌더러가 소유한 텍스처를 역할 이름으로 건다.
         hashed_string _light2DCookieAtlas{ "Light2DCookieAtlas" };
         /// 자동 노출의 이번 프레임 EV(1x1, 뷰의 `_arrAutoExposure`) — 톤맵하는 패스가 `g_AutoExposureIndex` 로 읽는다. 렌더러가 소유한 텍스처다.
@@ -557,6 +559,8 @@ namespace sw
                                                                         hashed_string{ "g_ShadowCascade2" }, hashed_string{ "g_ShadowCascade3" } };
         /// @brief 그림자 필터입니다 — x 품질(0 PCF 3x3, 1 PCSS), y 방향광 반그림자 배율, z · w 커널 반지름 상한 · 하한(텍셀). `ShadowFilter::makeShaderParams`.
         hashed_string _shadowFilter{ "g_ShadowFilter" };
+        /// @brief 접촉 그림자 채널 넷의 빛 원소 번호입니다(-1 = 빈 채널). `FrameShadowData::_contactShadowLights`, contact_shadow.hlsl.
+        hashed_string _contactShadowLights{ "g_ContactShadowLights" };
         hashed_string _bloomParams{ "g_BloomParams" };
         /// @brief 카메라별 색 보정입니다 — x 노출 배율(2^EV), y 채도, z 대비, w 비네트 세기. `CameraPostProcessValues`, post_grade.hlsli.
         hashed_string _cameraGrade{ "g_CameraGrade" };

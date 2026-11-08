@@ -432,6 +432,8 @@ namespace sw
             context._passValues.setFloat4( names._arrShadowCascade[cascadeIndex], shadow._arrCascade[cascadeIndex] );
         }
         context._passValues.setFloat4( names._shadowFilter, ShadowFilter::makeShaderParams( ShadowFilter::getActiveMode(), shadow._directionalPenumbraScale ) );
+        // 접촉 그림자 채널은 프레임 공통이다(빛 목록이 프레임 공통이다) — 추가 뷰도 같은 값이다.
+        context._passValues.setFloat4( names._contactShadowLights, _state._frameShadow._contactShadowLights );
     }
 
     void FramePassExecutor::applyViewPassConstants( FramePassContext& context, FrameViewTarget& view )
@@ -856,6 +858,8 @@ namespace sw
                 return names._sceneColorCopy;
             case RenderPassInputRole::SceneDepthCopy:
                 return names._sceneDepthCopy;
+            case RenderPassInputRole::ContactShadow:
+                return names._contactShadow;
             case RenderPassInputRole::Invalid:
             case RenderPassInputRole::Count:
                 return names._sourceColor;
@@ -1022,6 +1026,7 @@ namespace sw
                 case RenderPassType::Invalid:
                 case RenderPassType::Lighting:
                 case RenderPassType::SSAO:
+                case RenderPassType::ContactShadow:
                 case RenderPassType::Bloom:
                 case RenderPassType::BloomDownsample:
                 case RenderPassType::Outline:
@@ -1162,6 +1167,10 @@ namespace sw
         const RenderGraphPassDesc::ResolvedAttachment* pShadowInput = Internal::findInputByRole( input._passDesc, RenderPassInputRole::ShadowMap );
         if ( pShadowInput != nullptr )
             registerPassTexture( context, attachmentNames()._shadowMap, pShadowInput->_attachment );
+        // 접촉 그림자 마스크는 그 패스가 이 뷰에서 돌았을 때만 건다(꺼지면 출력이 없다 — 셰이더는 1). 나머지 선언 입력(원본 색 · 깊이)은 이 패스가 그리는 첨부라 걸지 않는다.
+        const RenderGraphPassDesc::ResolvedAttachment* pContactInput = Internal::findInputByRole( input._passDesc, RenderPassInputRole::ContactShadow );
+        if ( pContactInput != nullptr && activePool().resolveName( pContactInput->_attachment ).empty() == false )
+            registerPassTexture( context, attachmentNames()._contactShadow, pContactInput->_attachment );
         const hashed_string& colorTarget = input._declaredColor[0]._attachment;
         const float4         sceneClear  = getTargetClearColor( colorTarget );
         if ( beginColorPass( context, colorTarget, passDepth, sceneClear, colorLoadFor( colorTarget ), colorLoadFor( passDepth ) ) == false )

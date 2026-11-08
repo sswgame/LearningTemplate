@@ -120,9 +120,10 @@ namespace sw
     {
         ShadowAtlasLayout      _layout{};
         ViewShadowData         _mainView{};
-        vector<GPULight>       _listTileElement{}; ///< 라이트 버퍼의 빛 뒤에 붙는 타일 원소(타일마다 `shaderslot::kShadowTileElementCount` 개)
-        vector<ShadowTileDraw> _listLocalTile{};   ///< 점광과 스폿 타일. 모든 뷰의 그림자 패스가 자기 아틀라스에 같은 슬롯으로 그린다
-        vector<float4>         _listLocalBound{};  ///< 그림자를 드리우는 점광과 스폿의 경계 구(xyz 중심, w 반경). 그림자 컬링 상자에 더한다
+        vector<GPULight>       _listTileElement{};                             ///< 라이트 버퍼의 빛 뒤에 붙는 타일 원소(타일마다 `shaderslot::kShadowTileElementCount` 개)
+        vector<ShadowTileDraw> _listLocalTile{};                               ///< 점광과 스폿 타일. 모든 뷰의 그림자 패스가 자기 아틀라스에 같은 슬롯으로 그린다
+        vector<float4>         _listLocalBound{};                              ///< 그림자를 드리우는 점광과 스폿의 경계 구(xyz 중심, w 반경). 그림자 컬링 상자에 더한다
+        float4                 _contactShadowLights{ kNoContactShadowLights }; ///< 접촉 그림자 채널 넷의 빛 원소 번호(-1 = 빈 채널) — `g_ContactShadowLights`
 
         /** @brief 값을 비웁니다. 저장소는 남깁니다. */
         void clear()
@@ -132,7 +133,24 @@ namespace sw
             _listTileElement.clear();
             _listLocalTile.clear();
             _listLocalBound.clear();
+            _contactShadowLights = kNoContactShadowLights;
         }
+
+        /// @brief 접촉 그림자 채널 수입니다(마스크 첨부 RGBA 한 장 — 한 프레임에 접촉 그림자를 받는 빛의 상한).
+        static constexpr uint32 kContactShadowChannelCount = 4;
+        /// @brief 빈 채널만 있는 `_contactShadowLights` 입니다.
+        static constexpr float4 kNoContactShadowLights{ -1.0f, -1.0f, -1.0f, -1.0f };
+
+        /** @brief 이번 프레임에 접촉 그림자를 받는 빛이 하나라도 있으면 true 입니다. 없으면 접촉 그림자 패스가 돌지 않는다(`FrameViewResources::applyViewPassSelection`). */
+        bool hasContactShadows() const { return _contactShadowLights._x >= 0.0f; }
+
+        /**
+         * @brief 접촉 그림자를 켠 빛(`GPULight::_extra.y` > 0, 3D 빛만)에 채널을 나눠 줍니다. 방향광이 먼저이고 나머지는 목록 순서이며 넷을 넘는 빛은 접촉 그림자 없이 비춥니다.
+         * @details 채널을 받은 빛 원소에 `_extra.z = 채널 + 1` 을 쓰고(조명이 마스크의 그 채널을 곱한다), `_contactShadowLights` 의 그 칸에 빛 원소 번호를 쓴다(패스가 그 빛 쪽으로 걷는다).
+         *          언리얼은 빛마다 그 빛의 조명 셰이더 안에서 걷는다 — 여기서는 패스 하나가 빛 넷을 한 번에 걸어 포워드 · 디퍼드가 같은 마스크를 읽는다.
+         *          받지 못한 빛의 `_extra.z` 는 0 이다.
+         */
+        static void populateContactShadows( vector<GPULight>& inoutListLight, FrameShadowData& outFrame );
 
         // 그림자 배치를 만드는 함수 묶음입니다. 패킷 경로(`RenderPacketBuilder`)와 씬 직접 경로(`FrameRenderer::execute`)가 같은 함수를 부릅니다.
         /// @brief 캐스케이드 경계를 섞는 폭입니다. 캐스케이드가 맡는 깊이 구간의 이 비율만큼 끝에서 다음 캐스케이드와 섞습니다(유니티 URP Cascade Blend).

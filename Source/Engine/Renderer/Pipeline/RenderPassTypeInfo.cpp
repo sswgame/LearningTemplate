@@ -80,8 +80,10 @@ namespace sw
                     }
                     case RenderPassType::ForwardOpaque:
                     {
+                        // 입력은 그림자 맵과 접촉 그림자(깊이 프리패스 뒤의 ContactShadow 패스)뿐이고 둘 다 선택이다 — 접촉 그림자는 꺼지면 출력이 없다(3-7).
                         info._pDefaultShader = &EngineDefaultAssets::_shaderForwardLit;
-                        info._flags          = Flag::kDepthTest | Flag::kDepthWrite | Flag::kMaterialFixedState | Flag::kMaterialBlend | kSceneColorPassFlags;
+                        info._inputContract  = makeContract( {}, { Role::ShadowMap, Role::ContactShadow } );
+                        info._flags          = Flag::kDepthTest | Flag::kDepthWrite | Flag::kMaterialFixedState | Flag::kMaterialBlend | Flag::kHasInputContract | kSceneColorPassFlags;
                         break;
                     }
                     case RenderPassType::GBuffer:
@@ -98,7 +100,7 @@ namespace sw
                     case RenderPassType::Lighting:
                     {
                         info._pDefaultShader = &EngineDefaultAssets::_shaderDeferredLighting;
-                        info._inputContract  = makeContract( { Role::GBufferAlbedo, Role::GBufferNormal, Role::GBufferMaterial, Role::SceneDepth }, { Role::ShadowMap } );
+                        info._inputContract  = makeContract( { Role::GBufferAlbedo, Role::GBufferNormal, Role::GBufferMaterial, Role::SceneDepth }, { Role::ShadowMap, Role::ContactShadow } );
                         info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract;
                         break;
                     }
@@ -114,6 +116,14 @@ namespace sw
                         // 꺼지면(후처리를 끈 뷰 · 품질) 기록하지 않고 출력이 없다 — 읽는 쪽은 AO 역할을 바인딩하지 않아 가림 없음(1)이다(kOmittedWhenOff).
                         info._pDefaultShader = &EngineDefaultAssets::_shaderSSAO;
                         info._inputContract  = makeContract( { Role::GBufferNormal, Role::SceneDepth }, {} );
+                        info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess | Flag::kOmittedWhenOff;
+                        break;
+                    }
+                    case RenderPassType::ContactShadow:
+                    {
+                        // 켠 빛이 없거나 후처리를 끈 뷰는 기록하지 않고 출력이 없다 — 읽는 쪽은 접촉 그림자 역할을 바인딩하지 않아 1 이다(kOmittedWhenOff, FrameViewResources::applyViewPassSelection).
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderContactShadow;
+                        info._inputContract  = makeContract( { Role::SceneDepth }, {} );
                         info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess | Flag::kOmittedWhenOff;
                         break;
                     }

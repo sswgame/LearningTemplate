@@ -80,6 +80,7 @@
         "_shaderAutoExposure",
         "_shaderCanvas",
         "_shaderCanvasMarker",
+        "_shaderContactShadow",
         "_shaderDeferredLighting",
         "_shaderDepthHistory",
         "_shaderDepthOfField",

@@ -101,6 +101,13 @@ namespace sw
          */
         SceneDepthCopy,
         /**
+         * @brief 접촉 그림자입니다(contact_shadow.hlsl). 장면 깊이에서 복원한 점마다 접촉 그림자를 켠 빛(`LightShadowSettings::_contactShadowLength`, 넷까지) 쪽으로 화면 공간에서 짧게 걸어
+         *        깊이 버퍼에 가리는 것이 있으면 그 빛의 채널을 0 으로 쓴다(언리얼 Contact Shadows · 유니티 HDRP Contact Shadows 와 같은 자리). 그림자 맵 텍셀보다 작은 가림(발치 · 틈)을 잡는다.
+         *        출력은 RGBA 첨부 하나(채널 = 빛, `FrameShadowData::populateContactShadows`)이고 조명(Lighting) · 포워드 불투명이 선택 입력(`ContactShadow` 역할)으로 읽는다.
+         *        켠 빛이 없거나 후처리를 끈 뷰는 패스를 기록하지 않고 출력이 없다(`kOmittedWhenOff` — 읽는 쪽은 1). 장면 깊이를 다 쓴 뒤(디퍼드 G버퍼 · 포워드 깊이 프리패스) 조명 앞에 둔다.
+         */
+        ContactShadow,
+        /**
          * @brief 파이프라인 XML 이 고른 컴퓨트 셰이더(`_shaderPath` · `_computeEntryPoint`)를 돌립니다 — 코드 없이 데이터만으로 효과를 더하는 패스입니다(언리얼 RDG 의 컴퓨트 패스 자리).
          *        선언한 컬러 출력 하나에 쓰고 입력(최대 둘, 깊이 형식 제외)을 읽습니다. 첨부는 RW 텍스처로 묶입니다(`compute_pass.hlsli` 의 루트 상수). 그룹 수는 첨부 크기를 `_threadGroupSize` 로 나눈 값입니다.
          */

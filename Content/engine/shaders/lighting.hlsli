@@ -303,6 +303,21 @@ float LightData::computeShadow( float3 worldPosition, float3 worldNormal, float 
     float      shadow    = 1.0f;
     if ( _params.x > 0.5f )
         shadow = ( lightType == SW_LIGHT_TYPE_DIRECTIONAL ) ? directionalShadow : sampleLocalShadow( worldPosition, worldNormal );
+    // 접촉 그림자 — 채널(_extra.z = 채널 + 1, C++ FrameShadowData::populateContactShadows)을 받은 3D 빛만 그 마스크 채널을 읽는다. 화면 자리는 월드 점을 투영해 구한다
+    // (포워드 · 디퍼드가 같은 식). 패스가 마스크를 걸지 않았으면 1 이다. 방향광은 그림자 맵과 같은 세기(g_ShadowParams.y)로 어두워진다. 2D 빛의 _extra.z 는 다른 뜻이라 보지 않는다.
+    const uint channel  = (uint)( _extra.z + 0.5f );
+    const bool b3DLight = lightType == SW_LIGHT_TYPE_DIRECTIONAL || lightType == SW_LIGHT_TYPE_POINT || lightType == SW_LIGHT_TYPE_SPOT;
+    if ( b3DLight && channel > 0u )
+    {
+        const float4 clip     = mul( float4( worldPosition, 1.0f ), g_ViewProj );
+        const float2 screenUv = clip.xy / max( clip.w, 1e-4f ) * float2( 0.5f, -0.5f ) + 0.5f;
+        const float4 mask     = PassTexture::sampleContactShadow( screenUv );
+        const float  contact  = ( channel == 1u ) ? mask.x : ( channel == 2u ) ? mask.y
+                                                       : ( channel == 3u )     ? mask.z
+                                                                               : mask.w;
+        const float  strength = ( lightType == SW_LIGHT_TYPE_DIRECTIONAL ) ? g_ShadowParams.y : 1.0f;
+        shadow                = min( shadow, lerp( 1.0f - strength, 1.0f, contact ) );
+    }
     return shadow;
 }
 

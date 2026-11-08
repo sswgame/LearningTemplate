@@ -170,6 +170,7 @@ struct PassTexture
     static float4 gatherDepthRed( float2 uv );
     static float sampleAmbientOcclusion( float2 uv );
     static float4 sampleLight2dCookieAtlas( float2 uv );
+    static float4 sampleContactShadow( float2 uv ); // 접촉 그림자 마스크(채널 = 빛). 패스가 걸지 않았으면 1
 };
 
 /** @brief 머티리얼이 준 텍스처 번호를 읽는다(11-3 절). 에뮬 백엔드의 번호는 머티리얼 슬롯 서수다. */
@@ -222,6 +223,8 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     float4 g_ShadowCascade3;
     // 그림자 필터(C++ ShadowFilter::makeShaderParams) — x 품질(0 PCF 3x3 · 1 PCSS), y 방향광 반그림자 배율(기준 볼륨 텍셀 / NDC 깊이 1), z · w 커널 반지름 상한 · 하한(텍셀)
     float4 g_ShadowFilter;
+    // 접촉 그림자 채널 넷의 빛 원소 번호(C++ FrameShadowData::_contactShadowLights, -1 = 빈 채널) — 접촉 그림자 패스(contact_shadow.hlsl)만 읽는다
+    float4 g_ContactShadowLights;
     float4 g_BloomParams;
     float4 g_CameraGrade; // 카메라별 색 보정 — x 노출 배율(2^EV), y 채도, z 대비, w 비네트 세기(CameraPostProcessValues, post_grade.hlsli)
     float4 g_CameraFrame; // 카메라별 화면 틀 — x 레터박스로 남길 가로/세로 비율(0 = 없음), y 지금 뷰의 가로/세로 비율, z 색각 보정 방식(color_vision.hlsli, 렌더 텍스처 뷰는 0)
@@ -251,9 +254,9 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     float4 g_FogDebugParams; // 안개 진단 보기(C++ FrameFog::makeDebugParams) — x 보기(0 없음 · 1 비교 · 2 산란 단면 · 3 투과율 단면), y 단면 조각, z 비교 경계 uv.x. 안개 패스만 읽는다
     // 엔진 텍스처 인덱스 g_<이름>Index — 이름은 C++ 표 shaderslot::emulated::kEngineTextureNames 하나가 정하고 컴파일러가 SW_ENGINE_TEXTURE_INDEX_<칸> 으로 넣는다.
     // 손으로 적지 않는다: 표에 없는 엔진 텍스처 인덱스가 생기면 에뮬 백엔드(DX11 · GL)가 칸을 몰라 자홍을 낸다(뜻은 표의 주석). 걸려 있지 않은 역할은 kInvalidIndex 다.
-    // 아래 12 줄은 SW_ENGINE_TEXTURE_COUNT 와 같은 수다.
-#if !defined( SW_ENGINE_TEXTURE_INDEX_0 ) || !defined( SW_ENGINE_TEXTURE_INDEX_11 ) || defined( SW_ENGINE_TEXTURE_INDEX_12 ) || SW_ENGINE_TEXTURE_COUNT != 12
-    #error "SW_ENGINE_TEXTURE_INDEX_* missing or count changed - ShaderCompiler::appendEngineDefines injects them from shaderslot::emulated::kEngineTextureNames; match the 12 fields below"
+    // 아래 13 줄은 SW_ENGINE_TEXTURE_COUNT 와 같은 수다.
+#if !defined( SW_ENGINE_TEXTURE_INDEX_0 ) || !defined( SW_ENGINE_TEXTURE_INDEX_12 ) || defined( SW_ENGINE_TEXTURE_INDEX_13 ) || SW_ENGINE_TEXTURE_COUNT != 13
+    #error "SW_ENGINE_TEXTURE_INDEX_* missing or count changed - ShaderCompiler::appendEngineDefines injects them from shaderslot::emulated::kEngineTextureNames; match the 13 fields below"
 #endif
     uint  SW_ENGINE_TEXTURE_INDEX_0;
     uint  SW_ENGINE_TEXTURE_INDEX_1;
@@ -267,6 +270,7 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     uint  SW_ENGINE_TEXTURE_INDEX_9;
     uint  SW_ENGINE_TEXTURE_INDEX_10;
     uint  SW_ENGINE_TEXTURE_INDEX_11;
+    uint  SW_ENGINE_TEXTURE_INDEX_12;
     uint  g_Flags;
     uint  g_SwInstancesIndex;          // 인스턴스 구조버퍼가 걸려 있으면 유효, kInvalidIndex 면 g_World 폴백 (풀스크린·픽스처)
     uint  g_SwInstanceCount;           // 인스턴스 버퍼 원소 수 — 범위 밖 인덱스를 막는다 (DX12 루트 SRV 는 경계 검사가 없다)

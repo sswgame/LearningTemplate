@@ -205,7 +205,8 @@ SW_DECLARE_ENGINE_TEXTURE( 8 );
 SW_DECLARE_ENGINE_TEXTURE( 9 );
 SW_DECLARE_ENGINE_TEXTURE( 10 );
 SW_DECLARE_ENGINE_TEXTURE( 11 );
-        #if SW_ENGINE_TEXTURE_COUNT != 12
+SW_DECLARE_ENGINE_TEXTURE( 12 );
+        #if SW_ENGINE_TEXTURE_COUNT != 13
             #error "SW_ENGINE_TEXTURE_COUNT changed - match the declarations above and SW_ENGINE_TEXTURE_SWITCH"
         #endif
 
@@ -321,6 +322,9 @@ static float4 Bindless::sampleSlotWith( Texture2D slotTexture, uint samplerID, f
                 case 11u:                                                  \
                     OP( SW_ENGINE_TEXTURE( 11 ), SW_ENGINE_SAMPLER( 11 ) ) \
                     break;                                                 \
+                case 12u:                                                  \
+                    OP( SW_ENGINE_TEXTURE( 12 ), SW_ENGINE_SAMPLER( 12 ) ) \
+                    break;                                                 \
                 default:                                                   \
                     break;                                                 \
             }
@@ -365,6 +369,8 @@ static uint Bindless::emulatedSlot( uint index )
         return 10u;
     if ( index == SW_ENGINE_TEXTURE_INDEX_11 )
         return 11u;
+    if ( index == SW_ENGINE_TEXTURE_INDEX_12 )
+        return 12u;
     return kUnmappedEngineTextureSlot;
 }
 
@@ -961,6 +967,13 @@ static void PassTexture::sampleDepthCross( float2 uv, float2 texel, out float ou
     float4 gatherLo  = PassTexture::gatherDepthRed( uv - texel * 0.25f );
     outCenterDepth   = gatherHi.w;
     outNeighborDepth = float4( gatherHi.z, gatherHi.x, gatherLo.x, gatherLo.z );
+}
+/** @brief 접촉 그림자 마스크(채널 넷 = 접촉 그림자 빛 넷). 패스가 걸지 않았으면(파이프라인에 없음 · 켠 빛 없음 · 반투명) 가림 없음(1)이다. */
+static float4 PassTexture::sampleContactShadow( float2 uv )
+{
+    if ( g_ContactShadowIndex == kInvalidIndex )
+        return float4( 1, 1, 1, 1 );
+    return Bindless::sampleIndex( g_ContactShadowIndex, uv );
 }
 /** @brief SSAO 결과. 파이프라인에 SSAO 가 없으면(인덱스 무효) 가림 없음(1)이다 — 0 으로 폴백하면 화면이 검게 된다. */
 static float PassTexture::sampleAmbientOcclusion( float2 uv )

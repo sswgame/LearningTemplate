@@ -45,7 +45,7 @@ namespace sw
         /** @brief 그림자 사용 여부를 설정합니다. */
         void setCastShadow( bool bCastShadow );
 
-        /** @brief 그림자 모양 값(원천 크기)입니다. */
+        /** @brief 그림자 모양 값(원천 크기 · 접촉 그림자 길이)입니다. */
         const LightShadowSettings& getShadowSettings() const { return _shadowSettings; }
         /** @brief 그림자 모양 값을 설정합니다. */
         void setShadowSettings( const LightShadowSettings& settings );
@@ -57,7 +57,7 @@ namespace sw
     private:
         PROPERTY( Category = "Light", DisplayName = "Radius", Min = 0.0, Tooltip = "Distance at which the light reaches zero", Units = m, Validate = validateRadius )
         float32 _radius;
-        PROPERTY( Category = "Shadow", DisplayName = "Shadow Shape", Tooltip = "Light source size for soft shadows" )
+        PROPERTY( Category = "Shadow", DisplayName = "Shadow Shape", Tooltip = "Light source size for soft shadows and contact shadow length" )
         LightShadowSettings _shadowSettings;
         PROPERTY( Category = "Shadow", DisplayName = "Cast Shadow", Tooltip = "Render this light into six cells of the shadow atlas" )
         uint8                  _bCastShadow        : 1;

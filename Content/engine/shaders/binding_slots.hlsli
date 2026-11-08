@@ -80,7 +80,7 @@
 // 로드 검증으로도 막을 수 없었다. 칸 순서는 C++ 표 shaderslot::emulated::kEngineTextureNames 하나가 정한다(컴파일러가 SW_EMU_SLOT_<이름> 으로 넣는다).
 // HLSL 레지스터는 DX11 t32..(SRV 128 칸 — t 띠 · 머티리얼 칸 위), GL 텍스처 유닛은 0..(GL 버퍼는 SSBO 라 텍스처 유닛과 이름공간이 다르다 —
 // 컴퓨트 RW 텍스처의 이미지 유닛과 같은 방식, GL 프래그먼트 유닛은 32 개라 t32 를 유닛으로 쓸 수 없다). 레지스터는 리터럴이라 칸마다 적는다.
-// DX11 은 샘플러 슬롯이 16 개뿐이라 짝이 없고 셰이더가 정적 세트의 엔진 텍스처 샘플러로 읽는다. GL 텍스처 유닛은 칸 번호 그대로(0..11)이고 엔진이 그 유닛에 엔진 텍스처 샘플러를 건다.
+// DX11 은 샘플러 슬롯이 16 개뿐이라 짝이 없고 셰이더가 정적 세트의 엔진 텍스처 샘플러로 읽는다. GL 텍스처 유닛은 칸 번호 그대로(0..12)이고 엔진이 그 유닛에 엔진 텍스처 샘플러를 건다.
 #define SW_SLOT_ENGINE_TEX0     32
 #define SW_SLOT_ENGINE_TEX1     33
 #define SW_SLOT_ENGINE_TEX2     34
@@ -93,7 +93,8 @@
 #define SW_SLOT_ENGINE_TEX9     41
 #define SW_SLOT_ENGINE_TEX10    42
 #define SW_SLOT_ENGINE_TEX11    43
-#define SW_ENGINE_TEXTURE_COUNT 12
+#define SW_SLOT_ENGINE_TEX12    44
+#define SW_ENGINE_TEXTURE_COUNT 13
 
 // GPUScene 인스턴스 구조버퍼 (per-instance world/material). 네 백엔드 공통.
 #define SW_SLOT_INSTANCE_SRV 4

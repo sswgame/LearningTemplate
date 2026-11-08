@@ -141,9 +141,10 @@ namespace sw
 
             /**
              * @brief 이 뷰에서 이번 프레임에 그 효과(`kSkipsWithoutPostProcess`)가 꺼졌으면 true 입니다. 꺼진 효과는 돌려도 원본(SSAO 는 가림 없음)과 같은 그림이다.
+             * @param bContactShadows 이번 프레임에 접촉 그림자를 받는 빛이 있다(`FrameShadowData::hasContactShadows`) — 없으면 접촉 그림자 패스는 꺼진 효과다.
              * @param bCameraStill 이번 뷰-투영이 지난번 것과 같거나 기록을 버리는 프레임이다. 모션 블러는 카메라 움직임만 흐리므로(motion_blur.hlsl — 물체 속도 버퍼가 없다) 속도가 모두 0 이다.
              */
-            static bool isEffectOff( const RenderGraphPassDesc& pass, const RenderViewSettings& settings, bool bCameraStill )
+            static bool isEffectOff( const RenderGraphPassDesc& pass, const RenderViewSettings& settings, bool bCameraStill, bool bContactShadows )
             {
                 if ( settings.usesPostProcess() == false || pass._minPostQuality > static_cast<int32>( gv_postQuality ) )
                     return true;
@@ -151,6 +152,8 @@ namespace sw
                     return settings._depthOfField.hasDepthOfField() == false || settings._projectionScaleY <= 0.0f; // 핀홀(조리개 0) · 직교
                 if ( pass._type == RenderPassType::MotionBlur )
                     return static_cast<bool>( gv_motionBlur ) == false || bCameraStill;
+                if ( pass._type == RenderPassType::ContactShadow )
+                    return bContactShadows == false; // 접촉 그림자를 켠 빛이 없는 프레임 — 마스크가 모두 1 이다
                 return false;
             }
         };
@@ -341,7 +344,7 @@ namespace sw
         view._transientPool.release( _pDevice );
     }
 
-    FrameViewResources::PassSelectionResult FrameViewResources::applyViewPassSelection( FrameViewTarget& view, const float4x4& viewProj )
+    FrameViewResources::PassSelectionResult FrameViewResources::applyViewPassSelection( FrameViewTarget& view, const float4x4& viewProj, bool bContactShadows )
     {
         using Internal = FrameViewResourcesInternal;
         // 카메라 모션 블러의 속도는 지난 뷰-투영과의 차이뿐이다. 같거나 기록을 버리는 프레임(지난 것 = 이번 것)이면 모든 픽셀이 원본이다(motion_blur.hlsl).
@@ -393,7 +396,7 @@ namespace sw
                 continue;
             }
             const RenderPassTypeInfo& info          = getRenderPassTypeInfo( pass._type );
-            const bool                bOff          = info.hasFlag( RenderPassTraitFlag::kSkipsWithoutPostProcess ) && Internal::isEffectOff( pass, view._settings, bCameraStill );
+            const bool                bOff          = info.hasFlag( RenderPassTraitFlag::kSkipsWithoutPostProcess ) && Internal::isEffectOff( pass, view._settings, bCameraStill, bContactShadows );
             const bool                bOutputNeeded = VectorUtil::containsIf( pass._listResolvedColorOutput, [&]( const RenderGraphPassDesc::ResolvedAttachment& output )
                            { return Internal::isNeeded( listAttachment, output._attachment, listNeeded ); } );
             const hashed_string*      pSource       = Internal::findSource( pass );

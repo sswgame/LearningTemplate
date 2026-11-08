@@ -45,8 +45,9 @@ namespace sw
 
     void SpotLightComponent::setShadowSettings( const LightShadowSettings& settings )
     {
-        _shadowSettings             = settings;
-        _shadowSettings._sourceSize = MathUtil::max( settings._sourceSize, 0.0f );
+        _shadowSettings                      = settings;
+        _shadowSettings._sourceSize          = MathUtil::max( settings._sourceSize, 0.0f );
+        _shadowSettings._contactShadowLength = MathUtil::max( settings._contactShadowLength, 0.0f );
         onPropertyChanged( hashed_string( "_shadowSettings" ) );
     }
 

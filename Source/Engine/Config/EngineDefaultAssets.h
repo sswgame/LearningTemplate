@@ -187,6 +187,8 @@ namespace sw
         PROPERTY( Required )
         DataPath _shaderSSAO; ///< SSAO
         PROPERTY( Required )
+        DataPath _shaderContactShadow; ///< 접촉 그림자(풀스크린) — 장면 깊이에서 접촉 그림자를 켠 빛 쪽으로 화면 공간에서 걷는다(채널 = 빛)
+        PROPERTY( Required )
         DataPath _shaderTAA; ///< TAA
         PROPERTY( Required )
         DataPath _shaderSceneDepthCopy; ///< 반투명 앞의 장면 깊이 사본(풀스크린) — 물의 화면 공간 두께가 읽는다
