@@ -129,9 +129,9 @@ namespace sw
         vector<AdventureTreasureDef> _listTreasure{};
         vector<AdventureDeviceDef>   _listDevice{};
 
-        const AdventureDoorDef*     findDoor( const hashed_string& id ) const;
-        const AdventureTreasureDef* findTreasure( const hashed_string& id ) const;
-        int32                       findDeviceIndex( const hashed_string& id ) const;
+        const AdventureDoorDef*       findDoor( const hashed_string& id ) const;
+        const AdventureTreasureDef*   findTreasure( const hashed_string& id ) const;
+        [[nodiscard]] optional<int32> findDeviceIndex( const hashed_string& id ) const;
     };
 } // namespace sw
 

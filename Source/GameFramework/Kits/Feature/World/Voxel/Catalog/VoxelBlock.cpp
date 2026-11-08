@@ -89,8 +89,8 @@ namespace sw
 
     VoxelBlockIndex VoxelBlockCatalog::findBlockIndex( const hashed_string& blockID ) const
     {
-        const int32 index = _catalog.findIndex( blockID );
-        return index >= 0 ? static_cast<VoxelBlockIndex>( index + 1 ) : kVoxelAirBlock;
+        const optional<int32> index = _catalog.findIndex( blockID );
+        return index.has_value() ? static_cast<VoxelBlockIndex>( *index + 1 ) : kVoxelAirBlock;
     }
 
     bool VoxelBlockCatalog::isSolid( VoxelBlockIndex index ) const

@@ -229,7 +229,7 @@ namespace sw
         const GhostFurnitureDef*         findFurniture( const hashed_string& id ) const { return _furnitureCatalog.find( id ); }
         const vector<GhostFurnitureDef>& getFurniture() const { return _furnitureCatalog.getAll(); }
         const vector<HidingGhostDef>&    getBoos() const { return _booCatalog.getAll(); }
-        int32                            findBooIndex( const hashed_string& id ) const { return _booCatalog.findIndex( id ); }
+        [[nodiscard]] optional<int32>    findBooIndex( const hashed_string& id ) const { return _booCatalog.findIndex( id ); }
 
     private:
         static constexpr const utf8* kXMLRootName = "GhostHunt"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)

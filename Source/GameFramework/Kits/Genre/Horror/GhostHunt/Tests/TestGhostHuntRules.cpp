@@ -264,8 +264,8 @@ SW_TEST_CASE_F( GhostHuntTest, CatalogReadsEveryElement )
     SW_EXPECT_FALSE( pDresser->_bVacuum );
     SW_EXPECT_TRUE( pDresser->_bShake );
     SW_EXPECT_TRUE( pDesk->_bVacuum && pDesk->_bShake );
-    SW_EXPECT_EQUAL( 1, _catalog.findBooIndex( "booB" ) );
-    SW_EXPECT_EQUAL( -1, _catalog.findBooIndex( "nobody" ) );
+    SW_EXPECT_EQUAL( 1, _catalog.findBooIndex( "booB" ).value() );
+    SW_EXPECT_FALSE( _catalog.findBooIndex( "nobody" ).has_value() );
 }
 
 /**

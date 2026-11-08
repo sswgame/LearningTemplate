@@ -278,7 +278,7 @@ namespace sw
         const ScheduleNPCDef*                 findNPC( const hashed_string& id ) const { return _npcCatalog.find( id ); }
         const ScheduleArchetypeDef*           findArchetype( const hashed_string& id ) const { return _archetypeCatalog.find( id ); }
         const ScheduleAppointmentDef*         findAppointment( const hashed_string& id ) const { return _appointmentCatalog.find( id ); }
-        int32                                 findAppointmentIndex( const hashed_string& id ) const { return _appointmentCatalog.findIndex( id ); }
+        [[nodiscard]] optional<int32>         findAppointmentIndex( const hashed_string& id ) const { return _appointmentCatalog.findIndex( id ); }
         const ScheduleInterruptDef*           findInterrupt( const hashed_string& id ) const { return _interruptCatalog.find( id ); }
         const vector<SchedulePlaceDef>&       getPlaces() const { return _placeCatalog.getAll(); }
         const vector<ScheduleSpotDef>&        getSpots() const { return _spotCatalog.getAll(); }

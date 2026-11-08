@@ -58,14 +58,14 @@ namespace sw
         return VectorUtil::findBy<&AdventureTreasureDef::_id>( _listTreasure, id );
     }
 
-    int32 AdventureDungeonDef::findDeviceIndex( const hashed_string& id ) const
+    optional<int32> AdventureDungeonDef::findDeviceIndex( const hashed_string& id ) const
     {
         for ( size_t index = 0; index < _listDevice.size(); ++index )
         {
             if ( _listDevice[index]._id == id )
                 return static_cast<int32>( index );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     uint32 AdventureDungeonCatalog::loadRoot( const XMLNode& root, string_view sourceName )
@@ -168,9 +168,10 @@ namespace sw
     {
         if ( _pCatalog == nullptr )
             return nullptr;
-        const int32 index = _pCatalog->findIndex( dungeonID );
-        if ( index < 0 || static_cast<size_t>( index ) >= _listRuntime.size() )
+        const optional<int32> found = _pCatalog->findIndex( dungeonID );
+        if ( found.has_value() == false || static_cast<size_t>( *found ) >= _listRuntime.size() )
             return nullptr;
+        const int32 index = *found;
         if ( ppOutDef != nullptr )
             *ppOutDef = &_pCatalog->getAll()[static_cast<size_t>( index )];
         return &_listRuntime[static_cast<size_t>( index )];
@@ -276,7 +277,7 @@ namespace sw
 
     void AdventureDungeonState::setDeviceActive( const AdventureDungeonDef& dungeon, int32 deviceIndex, bool bActive, GameFlags& flags )
     {
-        DungeonRuntime&           runtime = _listRuntime[static_cast<size_t>( _pCatalog->findIndex( dungeon._id ) )];
+        DungeonRuntime&           runtime = _listRuntime[static_cast<size_t>( _pCatalog->findIndex( dungeon._id ).value() )]; // 카탈로그의 던전이다 — 없으면 결함으로 멈춘다
         DeviceRuntime&            device  = runtime._listDevice[static_cast<size_t>( deviceIndex )];
         const AdventureDeviceDef& def     = dungeon._listDevice[static_cast<size_t>( deviceIndex )];
         const uint8               bNew    = bActive ? SW_TRUE : SW_FALSE;
@@ -291,10 +292,11 @@ namespace sw
     {
         const AdventureDungeonDef* pDungeon = nullptr;
         DungeonRuntime*            pRuntime = findRuntime( dungeonID, &pDungeon );
-        const int32                index    = pDungeon != nullptr ? pDungeon->findDeviceIndex( deviceID ) : constant::invalid_index::kInt32;
-        if ( pRuntime == nullptr || index < 0 )
+        const optional<int32>      found    = pDungeon != nullptr ? pDungeon->findDeviceIndex( deviceID ) : optional<int32>{};
+        if ( pRuntime == nullptr || found.has_value() == false )
             return false;
-        const AdventureDeviceDef& def = pDungeon->_listDevice[static_cast<size_t>( index )];
+        const int32               index = *found;
+        const AdventureDeviceDef& def   = pDungeon->_listDevice[static_cast<size_t>( index )];
         if ( def._kind == AdventureDeviceKind::TimedSwitch )
             pRuntime->_listDevice[static_cast<size_t>( index )]._timer.start( def._duration );
         else if ( def._kind != AdventureDeviceKind::Switch )
@@ -307,10 +309,11 @@ namespace sw
     {
         const AdventureDungeonDef* pDungeon = nullptr;
         DungeonRuntime*            pRuntime = findRuntime( dungeonID, &pDungeon );
-        const int32                index    = pDungeon != nullptr ? pDungeon->findDeviceIndex( deviceID ) : constant::invalid_index::kInt32;
-        if ( pRuntime == nullptr || index < 0 )
+        const optional<int32>      found    = pDungeon != nullptr ? pDungeon->findDeviceIndex( deviceID ) : optional<int32>{};
+        if ( pRuntime == nullptr || found.has_value() == false )
             return;
-        const AdventureDeviceDef& def = pDungeon->_listDevice[static_cast<size_t>( index )];
+        const int32               index = *found;
+        const AdventureDeviceDef& def   = pDungeon->_listDevice[static_cast<size_t>( index )];
         if ( def._kind != AdventureDeviceKind::PressurePlate )
             return;
         const bool bLatched = def._bLatch && pRuntime->_listDevice[static_cast<size_t>( index )]._bActive == SW_TRUE;
@@ -323,9 +326,10 @@ namespace sw
     {
         const AdventureDungeonDef* pDungeon = nullptr;
         DungeonRuntime*            pRuntime = findRuntime( dungeonID, &pDungeon );
-        const int32                index    = pDungeon != nullptr ? pDungeon->findDeviceIndex( deviceID ) : constant::invalid_index::kInt32;
-        if ( pRuntime == nullptr || index < 0 )
+        const optional<int32>      found    = pDungeon != nullptr ? pDungeon->findDeviceIndex( deviceID ) : optional<int32>{};
+        if ( pRuntime == nullptr || found.has_value() == false )
             return false;
+        const int32               index              = *found;
         const AdventureDeviceDef& def                = pDungeon->_listDevice[static_cast<size_t>( index )];
         DeviceRuntime&            device             = pRuntime->_listDevice[static_cast<size_t>( index )];
         const bool                bTorchNotLightable = def._kind != AdventureDeviceKind::TorchGroup || device._bActive == SW_TRUE || device._litCount >= def._torchCount;
@@ -381,30 +385,30 @@ namespace sw
     {
         if ( _pCatalog == nullptr )
             return nullptr;
-        const int32 index = _pCatalog->findIndex( dungeonID );
-        return index >= 0 && static_cast<size_t>( index ) < _listRuntime.size() ? &_listRuntime[static_cast<size_t>( index )]._progress : nullptr;
+        const optional<int32> index = _pCatalog->findIndex( dungeonID );
+        return index.has_value() && static_cast<size_t>( *index ) < _listRuntime.size() ? &_listRuntime[static_cast<size_t>( *index )]._progress : nullptr;
     }
 
     bool AdventureDungeonState::isDeviceActive( const hashed_string& dungeonID, const hashed_string& deviceID ) const
     {
         if ( _pCatalog == nullptr )
             return false;
-        const int32 dungeonIndex = _pCatalog->findIndex( dungeonID );
-        if ( dungeonIndex < 0 || static_cast<size_t>( dungeonIndex ) >= _listRuntime.size() )
+        const optional<int32> dungeonIndex = _pCatalog->findIndex( dungeonID );
+        if ( dungeonIndex.has_value() == false || static_cast<size_t>( *dungeonIndex ) >= _listRuntime.size() )
             return false;
-        const int32 deviceIndex = _pCatalog->getAll()[static_cast<size_t>( dungeonIndex )].findDeviceIndex( deviceID );
-        return deviceIndex >= 0 && _listRuntime[static_cast<size_t>( dungeonIndex )]._listDevice[static_cast<size_t>( deviceIndex )]._bActive == SW_TRUE;
+        const optional<int32> deviceIndex = _pCatalog->getAll()[static_cast<size_t>( *dungeonIndex )].findDeviceIndex( deviceID );
+        return deviceIndex.has_value() && _listRuntime[static_cast<size_t>( *dungeonIndex )]._listDevice[static_cast<size_t>( *deviceIndex )]._bActive == SW_TRUE;
     }
 
     int32 AdventureDungeonState::getLitTorchCount( const hashed_string& dungeonID, const hashed_string& deviceID ) const
     {
         if ( _pCatalog == nullptr )
             return 0;
-        const int32 dungeonIndex = _pCatalog->findIndex( dungeonID );
-        if ( dungeonIndex < 0 || static_cast<size_t>( dungeonIndex ) >= _listRuntime.size() )
+        const optional<int32> dungeonIndex = _pCatalog->findIndex( dungeonID );
+        if ( dungeonIndex.has_value() == false || static_cast<size_t>( *dungeonIndex ) >= _listRuntime.size() )
             return 0;
-        const int32 deviceIndex = _pCatalog->getAll()[static_cast<size_t>( dungeonIndex )].findDeviceIndex( deviceID );
-        return deviceIndex >= 0 ? _listRuntime[static_cast<size_t>( dungeonIndex )]._listDevice[static_cast<size_t>( deviceIndex )]._litCount : 0;
+        const optional<int32> deviceIndex = _pCatalog->getAll()[static_cast<size_t>( *dungeonIndex )].findDeviceIndex( deviceID );
+        return deviceIndex.has_value() ? _listRuntime[static_cast<size_t>( *dungeonIndex )]._listDevice[static_cast<size_t>( *deviceIndex )]._litCount : 0;
     }
 
     void AdventureDungeonState::pushEvent( AdventureDungeonEventKind type, const hashed_string& dungeonID, const hashed_string& id, const hashed_string& item,
@@ -437,10 +441,10 @@ namespace sw
         {
             hashed_string dungeonID = io.isWriting() && _pCatalog != nullptr ? _pCatalog->getAll()[entry]._id : hashed_string{};
             io.value( dungeonID );
-            const int32 dungeonIndex = io.isReading() ? _pCatalog->findIndex( dungeonID ) : static_cast<int32>( entry );
-            if ( io.check( 0 <= dungeonIndex && static_cast<size_t>( dungeonIndex ) < _listRuntime.size() ) == false )
+            const optional<int32> dungeonIndex = io.isReading() ? _pCatalog->findIndex( dungeonID ) : optional<int32>{ static_cast<int32>( entry ) };
+            if ( io.check( dungeonIndex.has_value() && static_cast<size_t>( *dungeonIndex ) < _listRuntime.size() ) == false )
                 return;
-            DungeonRuntime&           runtime  = _listRuntime[static_cast<size_t>( dungeonIndex )];
+            DungeonRuntime&           runtime  = _listRuntime[static_cast<size_t>( *dungeonIndex )];
             AdventureDungeonProgress& progress = runtime._progress;
             io.value( progress._smallKeyCount );
             io.value( progress._smallKeyUsedCount );
@@ -458,7 +462,7 @@ namespace sw
                 io.value( device._timer );
                 io.value( device._litCount );
                 io.flag( device._bActive );
-                if ( io.isReading() && io.check( 0 <= device._litCount && device._litCount <= _pCatalog->getAll()[static_cast<size_t>( dungeonIndex )]._listDevice[deviceIndex]._torchCount ) == false )
+                if ( io.isReading() && io.check( 0 <= device._litCount && device._litCount <= _pCatalog->getAll()[static_cast<size_t>( *dungeonIndex )]._listDevice[deviceIndex]._torchCount ) == false )
                     return;
             }
         }

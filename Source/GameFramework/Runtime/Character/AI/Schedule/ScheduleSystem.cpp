@@ -569,10 +569,10 @@ namespace sw
     {
         if ( _pCatalog == nullptr )
             return false;
-        const int32 appointmentIndex = _pCatalog->findAppointmentIndex( appointmentID );
-        if ( appointmentIndex < 0 || isAppointmentBroken( appointmentID ) )
+        const optional<int32> appointmentIndex = _pCatalog->findAppointmentIndex( appointmentID );
+        if ( appointmentIndex.has_value() == false || isAppointmentBroken( appointmentID ) )
             return false;
-        const ScheduleAppointmentDef& appointment = _pCatalog->getAppointments()[static_cast<size_t>( appointmentIndex )];
+        const ScheduleAppointmentDef& appointment = _pCatalog->getAppointments()[static_cast<size_t>( *appointmentIndex )];
         if ( appointment._listAttendee.empty() )
             return false;
         for ( const hashed_string& attendee : appointment._listAttendee )
@@ -587,8 +587,8 @@ namespace sw
     {
         if ( _pCatalog == nullptr )
             return false;
-        const int32 appointmentIndex = _pCatalog->findAppointmentIndex( appointmentID );
-        return VectorUtil::contains( _listBrokenAppointment, appointmentIndex );
+        const optional<int32> appointmentIndex = _pCatalog->findAppointmentIndex( appointmentID );
+        return appointmentIndex.has_value() && VectorUtil::contains( _listBrokenAppointment, *appointmentIndex );
     }
 
     int32 ScheduleSystem::getDay() const
@@ -890,15 +890,10 @@ namespace sw
                 candidate._source      = ScheduleSegmentSource::Routine;
                 if ( block._appointment.empty() == false )
                 {
-                    const int32 appointmentIndex = _pCatalog->findAppointmentIndex( block._appointment );
-                    bool        bBroken          = false;
-                    for ( const int32 brokenIndex : _listBrokenAppointment )
-                    {
-                        bBroken = bBroken || brokenIndex == appointmentIndex;
-                    }
-                    if ( appointmentIndex < 0 || bBroken )
+                    const optional<int32> appointmentIndex = _pCatalog->findAppointmentIndex( block._appointment );
+                    if ( appointmentIndex.has_value() == false || VectorUtil::contains( _listBrokenAppointment, *appointmentIndex ) )
                         continue;
-                    const ScheduleAppointmentDef& appointment = _pCatalog->getAppointments()[static_cast<size_t>( appointmentIndex )];
+                    const ScheduleAppointmentDef& appointment = _pCatalog->getAppointments()[static_cast<size_t>( *appointmentIndex )];
                     // 약속의 확률은 참가자 모두에게 같아야 한다 — 열쇠에 NPC 를 섞지 않는다.
                     context._chanceKey = ScheduleHash::computeNameKey( appointment._id );
                     if ( appointment._condition.matches( context ) == false )
@@ -1552,9 +1547,8 @@ namespace sw
         _listBrokenAppointment.clear();
         for ( const string& appointmentID : state._listBrokenAppointment )
         {
-            const int32 appointmentIndex = _pCatalog->findAppointmentIndex( hashed_string( appointmentID ) );
-            if ( appointmentIndex >= 0 )
-                _listBrokenAppointment.push_back( appointmentIndex );
+            if ( const optional<int32> appointmentIndex = _pCatalog->findAppointmentIndex( hashed_string( appointmentID ) ); appointmentIndex.has_value() )
+                _listBrokenAppointment.push_back( *appointmentIndex );
         }
         if ( _services._pLocator == &_defaultLocator )
             _defaultLocator.restoreState( state._listReservation );

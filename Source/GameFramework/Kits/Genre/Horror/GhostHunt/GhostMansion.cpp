@@ -193,10 +193,10 @@ namespace sw
 
     bool GhostMansion::damageBoo( const hashed_string& booID, float32 amount )
     {
-        const int32 booIndex = _pCatalog != nullptr ? _pCatalog->findBooIndex( booID ) : constant::invalid_index::kInt32;
-        if ( booIndex < 0 || static_cast<size_t>( booIndex ) >= _listBoo.size() )
+        const optional<int32> booIndex = _pCatalog != nullptr ? _pCatalog->findBooIndex( booID ) : optional<int32>{};
+        if ( booIndex.has_value() == false || static_cast<size_t>( *booIndex ) >= _listBoo.size() )
             return false;
-        HidingGhostRuntime& boo = _listBoo[static_cast<size_t>( booIndex )];
+        HidingGhostRuntime& boo = _listBoo[static_cast<size_t>( *booIndex )];
         if ( boo._state != HidingGhostState::Revealed || amount <= 0.0f )
             return false;
         if ( DepletingValue::take( boo._hp, amount )._bDepleted == SW_FALSE )
@@ -227,8 +227,8 @@ namespace sw
 
     const HidingGhostRuntime* GhostMansion::findBoo( const hashed_string& booID ) const
     {
-        const int32 booIndex = _pCatalog != nullptr ? _pCatalog->findBooIndex( booID ) : constant::invalid_index::kInt32;
-        return booIndex >= 0 && static_cast<size_t>( booIndex ) < _listBoo.size() ? &_listBoo[static_cast<size_t>( booIndex )] : nullptr;
+        const optional<int32> booIndex = _pCatalog != nullptr ? _pCatalog->findBooIndex( booID ) : optional<int32>{};
+        return booIndex.has_value() && static_cast<size_t>( *booIndex ) < _listBoo.size() ? &_listBoo[static_cast<size_t>( *booIndex )] : nullptr;
     }
 
     int32 GhostMansion::countCaughtBoos() const
