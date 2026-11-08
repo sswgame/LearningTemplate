@@ -26,6 +26,7 @@
 
 #include "GameFramework/Runtime/Character/Camera/CameraCollisionProbe.h"
 #include "GameFramework/Runtime/Character/Camera/CameraPose.h"
+#include "GameFramework/Runtime/Character/Camera/CameraSystem.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/ComponentStateStore.h"
 
@@ -123,6 +124,7 @@ namespace sw
         , _pExternalProbe{ nullptr }
         , _inputCheckedPresetID{}
         , _pendingDeltaTime{ 0.0f }
+        , _bResolvePending{ false }
     {
         setCanEverTick( true );
     }
@@ -133,6 +135,7 @@ namespace sw
     {
         Component::onRegister( manager );
         manager.getComponentRegistry().add<CameraDirectorComponent>( this );
+        (void)CameraSystem::ensureFor( manager );
     }
 
     void CameraDirectorComponent::onUnregister( GameObjectManager& manager )
@@ -146,6 +149,7 @@ namespace sw
             releasePhotoModeUILayers();
         }
         manager.getComponentRegistry().remove<CameraDirectorComponent>( this );
+        CameraSystem::releaseIfUnused( manager );
         Component::onUnregister( manager );
     }
 
@@ -376,17 +380,22 @@ namespace sw
             gatherPhotoModeInput( game::getSubsystem<GameTimeScale>().getUnscaledDeltaTime() );
         else
             gatherInput( deltaTime );
-        // 틱 중이면 틱 뒤로 미룬다 — 대상의 이번 프레임 자리는 틱이 끝나야 적용된다. 여러 번 불려도 시간은 모아 한 번 쓴다.
+        // 틱 중이면 카메라 시스템이 늦은 틱 뒤에 푼다 — 대상의 이번 프레임 자리는 틱이 끝나야 적용된다. 여러 번 불려도 시간은 모아 한 번 쓴다.
         _pendingDeltaTime += MathUtil::max( 0.0f, deltaTime );
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        if ( pManager == nullptr )
+        const GameObject*        pOwner   = getOwner();
+        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        if ( pManager != nullptr && pManager->isStructuralMutationFrozen() )
         {
-            resolveCamera();
+            _bResolvePending = true;
             return;
         }
-        pManager->executeOrDeferPostTickOnComponent( *this, []( CameraDirectorComponent& component )
-        { component.resolveCamera(); } );
+        resolveCamera();
+    }
+
+    void CameraDirectorComponent::resolvePendingCamera()
+    {
+        if ( _bResolvePending )
+            resolveCamera();
     }
 
     void CameraDirectorComponent::gatherInput( float32 deltaTime )
@@ -481,6 +490,7 @@ namespace sw
     {
         const float32 deltaTime     = _pendingDeltaTime;
         _pendingDeltaTime           = 0.0f;
+        _bResolvePending            = false;
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         CameraComponent*   pCamera  = pOwner != nullptr ? pOwner->getComponent<CameraComponent>() : nullptr;

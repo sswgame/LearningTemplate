@@ -14,9 +14,11 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Visual/MeshLODSystem.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraPose.h"
+#include "GameFramework/Runtime/Character/Camera/CameraSystem.h"
 #include "GameFramework/Runtime/Character/Camera/CameraUserSettings.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
@@ -79,14 +81,29 @@ namespace sw
         , _impulseListener{}
         , _shakeSubscription{}
         , _pendingDeltaTime{ 0.0f }
+        , _bResolvePending{ false }
     {
         setCanEverTick( true );
+    }
+
+    void CameraManagerComponent::onRegister( GameObjectManager& manager )
+    {
+        Component::onRegister( manager );
+        manager.getComponentRegistry().add<CameraManagerComponent>( this ); // `isViewTarget` 과 카메라 시스템이 씬을 훑지 않고 찾는다
+        (void)CameraSystem::ensureFor( manager );
+    }
+
+    void CameraManagerComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getComponentRegistry().remove<CameraManagerComponent>( this );
+        CameraSystem::releaseIfUnused( manager );
+        Component::onUnregister( manager );
     }
 
     void CameraManagerComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        // 뷰 타깃을 움직이는 디렉터 · 리그(PostPhysics 까지)가 미룬 쓰기 다음에 읽는다.
+        // 뷰 타깃을 움직이는 디렉터 · 리그(PostPhysics 까지)의 틱 다음에 읽는다 — 디렉터가 미룬 계산은 카메라 시스템이 이 매니저보다 먼저 푼다.
         setTickGroup( TickGroup::PostUpdate );
         updateCamera( 0.0f );
         GameObject*        pOwner   = getOwner();
@@ -218,15 +235,20 @@ namespace sw
     void CameraManagerComponent::updateCamera( float32 deltaTime )
     {
         _pendingDeltaTime += MathUtil::max( 0.0f, deltaTime );
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        if ( pManager == nullptr )
+        const GameObject*        pOwner   = getOwner();
+        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        if ( pManager != nullptr && pManager->isStructuralMutationFrozen() )
         {
-            resolveCamera();
+            _bResolvePending = true; // 카메라 시스템이 늦은 틱 뒤에 디렉터 다음으로 푼다
             return;
         }
-        pManager->executeOrDeferPostTickOnComponent( *this, []( CameraManagerComponent& component )
-        { component.resolveCamera(); } );
+        resolveCamera();
+    }
+
+    void CameraManagerComponent::resolvePendingCamera()
+    {
+        if ( _bResolvePending )
+            resolveCamera();
     }
 
     CameraComponent* CameraManagerComponent::findTargetCamera( const GameObjectHandle& target ) const
@@ -245,6 +267,7 @@ namespace sw
         GameObject*      pOwner    = getOwner();
         CameraComponent* pCamera   = pOwner != nullptr ? pOwner->getComponent<CameraComponent>() : nullptr;
         _pendingDeltaTime          = 0.0f;
+        _bResolvePending           = false;
         if ( pCamera == nullptr )
             return;
         CameraComponent* pTargetCamera = findTargetCamera( _viewTarget );

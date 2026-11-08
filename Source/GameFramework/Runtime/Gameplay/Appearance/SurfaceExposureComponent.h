@@ -7,7 +7,8 @@
  *          - **물**: 발 자리가 물(`WaterBodyComponent`)의 수면 아래면 잠긴 비율 = 깊이 ÷ `_bodyHeight`(0..1)이다. 젖음은 `_immersionWetPerSecond` × 비율로 오르고,
  *            씻김은 그 비율로 `CharacterSurfaceState::applyWater` 가 한다(발목 · 허리 · 전신에서 빠르기가 다르다). 몸 전체가 같은 빠르기로 젖는 시작점이고
  *            부위별 침수 · 옷의 방수는 요구가 생길 때 영역마다 높이를 두어 넓힌다.
- *          - **시간**: 틱의 게임 초(일시정지 · 시간 배율과 같다). 물리 질의와 표면 쓰기는 틱 뒤 게임 스레드에서 한다(`executeOrDeferPostTickOnComponent`).
+ *          - **시간**: 틱의 게임 초(일시정지 · 시간 배율과 같다). 틱은 시간만 쌓고, 물리 질의와 표면 쓰기는 표면 노출 프레임 시스템(`SurfaceExposureSystem`)이
+ *            틱 뒤 게임 스레드에서 등록 순서로 한 번에 한다(`applyExposure`).
  *          언리얼에는 이 자리의 내장 기능이 없고(게임이 Material Parameter Collection 에 젖음을 쓴다) 유니티 HDRP 의 Wetness 도 머티리얼 값만 준다 — 값을 정하는 규칙은 이 컴포넌트다.
  */
 #pragma once
@@ -36,7 +37,15 @@ namespace sw
         SurfaceExposureComponent();
         virtual ~SurfaceExposureComponent() override = default;
 
+        /** @brief 씬의 컴포넌트 레지스트리에 오르고 표면 노출 프레임 시스템(`SurfaceExposureSystem`)을 붙입니다. */
+        void onRegister( GameObjectManager& manager ) override;
+        /** @brief 레지스트리에서 내리고, 마지막 노출 컴포넌트면 시스템을 뗍니다. */
+        void onUnregister( GameObjectManager& manager ) override;
+        /** @brief 게임 초를 쌓기만 합니다 — 적용은 시스템이 틱 뒤에 한다. */
         void onTick( float32 deltaTime ) override;
+
+        /** @brief 쌓인 게임 초만큼 비 · 물을 몸 표면에 적용합니다(`SurfaceExposureSystem` 이 틱 뒤 게임 스레드에서 부른다, 테스트도 부른다). 쌓인 시간이 없으면 아무것도 하지 않는다. */
+        void applyExposure( GameObjectManager& manager );
 
         /** @brief 마지막으로 잰 잠긴 비율(0..1)입니다. */
         float32 getSubmersion() const { return _submersion; }
@@ -44,10 +53,6 @@ namespace sw
         float32 getRainExposure() const { return _rainExposure; }
         /** @brief 마지막으로 잰 발 자리의 물 깊이(m)입니다. */
         float32 getWaterDepth() const { return _waterDepth; }
-
-    private:
-        /** @brief 쌓인 게임 초만큼 비 · 물을 몸 표면에 적용합니다(틱 뒤 게임 스레드). */
-        void applyExposure( GameObjectManager& manager );
 
     private:
         PROPERTY( Category = "Surface", DisplayName = "Wet Channel", Tooltip = "Surface channel rain and water raise" )
