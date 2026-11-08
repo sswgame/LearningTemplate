@@ -72,16 +72,9 @@ namespace sw
 
 namespace sw
 {
-    class CommandLineManager;
+    struct AutomationRunStatus;
 
-    /** @brief 창 제목에 적는 "지금 무엇을 돌리는가" 입니다(`AutomationSession` 이 채운다). */
-    struct AutomationRunStatus
-    {
-        string _scenarioName;    ///< 돌고 있는 시나리오 이름
-        string _stepKind;        ///< 마지막으로 시작한 단계 이름(아직 없으면 빈 글)
-        uint32 _stepNumber{ 0 }; ///< 그 단계가 파일에서 몇 번째인지(0 부터)
-        uint32 _frame{ 0 };      ///< 시나리오 프레임
-    };
+    class CommandLineManager;
     class IWindowTitleTarget;
 
     /**

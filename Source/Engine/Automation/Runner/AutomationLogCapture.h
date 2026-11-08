@@ -63,6 +63,8 @@ namespace sw
         AutomationLogJudgement judgeLines( const AutomationLogPolicy& policy ) const;
         /** @brief 모은 줄 가운데 @p needle 을 담은 줄이 있으면 true 입니다(프레임 무관). */
         bool containsLine( string_view needle ) const;
+        /** @brief 지금까지 모은 Warning · Error 줄 수입니다(허용 판정 전 — 진행 표시용, 판정은 `judgeLines`). 아무 스레드에서나 읽는다. */
+        uint32 getWarningErrorCount() const { return _warningErrorCount.load( std::memory_order_relaxed ); }
 
     private:
         void onLogWritten( const LogEntry& entry );
@@ -72,5 +74,6 @@ namespace sw
         vector<AutomationLogLine> _listLogLine SW_GUARDED_BY( _mutex ); ///< 시나리오 동안 남은 로그(상한 `kMaxLogLine`) — 로그를 쓴 스레드가 넣는다
         Subscription                           _listenerSubscription;   ///< 전역 로그 리스너 구독(`start` ~ `stop`). 비어 있으면 듣지 않는다
         atomic<uint32>                         _frameIndex;             ///< 로그 줄에 적을 프레임(로그 스레드가 읽는다)
+        atomic<uint32>                         _warningErrorCount;      ///< 모은 Warning · Error 줄 수(로그를 쓴 스레드가 올린다, 상한 없이 센다)
     };
 } // namespace sw

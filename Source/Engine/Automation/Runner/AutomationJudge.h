@@ -91,6 +91,8 @@ namespace sw
         const vector<string>& getUpdatedGoldens() const { return _listUpdatedGolden; }
         /** @brief 로그 게이트가 처리하지 않았다고 본 줄입니다. 비어 있지 않으면 실패가 없어도 결과는 `UnhandledLog` 입니다. */
         const vector<string>& getUnhandledLogs() const { return _listUnhandledLog; }
+        /** @brief 지금까지 모은 Warning · Error 줄 수입니다(허용 판정 전 — 진행 표시용). */
+        uint32 getCapturedWarningErrorCount() const { return _logCapture.getWarningErrorCount(); }
         /** @brief 이 실행에서 허용 항목이 맞은 로그 id 입니다(`scenario-logs --check` 가 낡은 항목을 세는 근거). */
         const vector<string>& getAllowedLogIDs() const { return _listAllowedLogID; }
         /** @brief 이미지 비교 줄들입니다(`park.ppm vs golden 'park' (dx12): 0.4% differing`). */
