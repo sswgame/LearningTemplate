@@ -11,9 +11,10 @@
 #include "Core/Memory/MemoryTag.h"
 #include "Core/String/StringBuilder.h"
 
+#include "DevTools/Client/Automation/Runner/AutomationRunTitle.h"
+
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/IAudioService.h"
-#include "Engine/Automation/AutomationRunTitle.h"
 #include "Engine/Automation/AutomationRuntime.h"
 #include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Console/DebugHUDSectionFormat.h"

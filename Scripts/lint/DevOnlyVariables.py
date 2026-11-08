@@ -4,7 +4,7 @@
 Scripts/lint/DevOnlyVariables.py
 
 테스트용 전역 변수(`SW_TEST_GLOBAL_VARIABLE` · `SW_EXTERN_TEST_GLOBAL_VARIABLE`)는 개발 전용 자리에서만 선언한다 — 기능 폴더의 `Dev/` · `Tests/`
-(`SW_DEV_ONLY_SOURCE_PATTERNS`, 배포 구성이 짓지 않는다), `Source/DevTools/`, `Source/Editor/`, 자동화 실행기 `Engine/Automation/Runner/`(Shipping 이 짓지 않는다).
+(`SW_DEV_ONLY_SOURCE_PATTERNS`, 배포 구성이 짓지 않는다), `Source/DevTools/`(자동화 실행기 `DevTools/Client/Automation` 포함), `Source/Editor/`.
 
 **왜 린트인가.** Shipping 은 이 매크로를 등록 없는 상수로 접어 읽는 분기가 빠지지만, 그것은 안전망이다. 런타임 클래스가 테스트 변수를 직접 읽으면
 개발 기능이 런타임 코드 안에 남는다(인과가 뒤집힌다 — 사용자 결정 2026-11-08). 런타임은 일반 창구(`RenderDiagnostics` · `DeterministicRun` ·
@@ -32,7 +32,7 @@ kExtensions = (".h", ".cpp", ".inl")
 kDeclPattern = re.compile(r"^\s*SW_(?:EXTERN_)?TEST_GLOBAL_VARIABLE\(\s*[^,]+,\s*(\w+)", re.M)
 # `SW_DEV_ONLY_SOURCE_PATTERNS`(cmake/Engine/UnbuiltSources.cmake)와 같은 폴더 이름 + 개발 전용 대상
 kDevParts = ("/Dev/", "/Tests/")
-kDevRoots = ("Source/DevTools/", "Source/Editor/", "Source/Engine/Automation/Runner/")
+kDevRoots = ("Source/DevTools/", "Source/Editor/")
 kMacroHome = "Source/Core/GlobalVariable/GlobalVariableManager.h"
 
 
@@ -71,7 +71,7 @@ def selfCheck() -> bool:
     assert isDevOnlyPath("Source/DevTools/Client/Audio/AudioDumpListener.cpp")
     assert isDevOnlyPath("Source/Engine/Audio/Tests/TestAudio.cpp")
     assert isDevOnlyPath("Source/DevTools/Client/Render/RenderDiagnosticsSwitches.cpp")
-    assert isDevOnlyPath("Source/Engine/Automation/Runner/AutomationSession.cpp")
+    assert isDevOnlyPath("Source/DevTools/Client/Automation/Runner/AutomationSession.cpp")
     assert isDevOnlyPath(kMacroHome)
     assert not isDevOnlyPath("Source/Engine/Audio/IAudioService.cpp")
     assert not isDevOnlyPath("Source/Engine/Automation/Watch/AutomationWatch.cpp")

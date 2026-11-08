@@ -64,7 +64,7 @@
 
 ### App 프로세스 종료 코드 체계 (요청 2026-11-07)
 
-**판단: 현 체계는 제거하지 않는다.** [`ProcessExitCodes.json`](../Config/Engine/ProcessExitCodes.json)이 종료 코드 숫자의 단일 출처이며 configure 생성기([`ProcessExitCodes.py`](../Scripts/generate/ProcessExitCodes.py))가 C++ 열거형과 CMake 변수를 만든다. 실제 사용처는 자동화 결과 변환([`AutomationExitCode.h`](../Source/Engine/Automation/Runner/AutomationExitCode.h)), CTest 백엔드 건너뜀([`Test/Scenario/CMakeLists.txt`](../Test/Scenario/CMakeLists.txt)), RHI 환경 불가([`RHIInitResult.h`](../Source/Engine/Graphics/RHI/RHIInitResult.h)), 에디터 자체 테스트 종료다([`EditorSelfTest.cpp`](../Source/Editor/SelfTest/EditorSelfTest.cpp)). 이를 없애면 CTest `SKIP_RETURN_CODE`와 자동화의 결과 분류가 숫자 하드코딩으로 되돌아갈 위험이 있다.
+**판단: 현 체계는 제거하지 않는다.** [`ProcessExitCodes.json`](../Config/Engine/ProcessExitCodes.json)이 종료 코드 숫자의 단일 출처이며 configure 생성기([`ProcessExitCodes.py`](../Scripts/generate/ProcessExitCodes.py))가 C++ 열거형과 CMake 변수를 만든다. 실제 사용처는 자동화 결과 변환([`AutomationExitCode.h`](../Source/DevTools/Client/Automation/Runner/AutomationExitCode.h)), CTest 백엔드 건너뜀([`Test/Scenario/CMakeLists.txt`](../Test/Scenario/CMakeLists.txt)), RHI 환경 불가([`RHIInitResult.h`](../Source/Engine/Graphics/RHI/RHIInitResult.h)), 에디터 자체 테스트 종료다([`EditorSelfTest.cpp`](../Source/Editor/SelfTest/EditorSelfTest.cpp)). 이를 없애면 CTest `SKIP_RETURN_CODE`와 자동화의 결과 분류가 숫자 하드코딩으로 되돌아갈 위험이 있다.
 
 | 우선순위 | 현재 경계 | 다음에 검토할 개선 |
 |---|---|---|

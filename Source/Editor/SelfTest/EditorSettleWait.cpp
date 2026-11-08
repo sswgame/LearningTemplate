@@ -2,11 +2,12 @@
 
 #include "Editor/SelfTest/EditorSettleWait.h"
 
+#include "DevTools/Client/Automation/Scenario/AutomationEnvironmentSteps.h"
+
 #include "Editor/Common/GUI/Panel/EditorDockLayout.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "Engine/Automation/Scenario/AutomationEnvironmentSteps.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Renderer/Capture/CaptureReadiness.h"
 #include "Engine/Scene/SceneManager.h"

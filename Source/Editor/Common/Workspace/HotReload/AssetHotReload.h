@@ -118,7 +118,7 @@ namespace sw::editor
         [[nodiscard]] uint64 getCascadeReloadCount() const { return _cascadeReloadCount; }
 
         /**
-         * @brief 감시 울타리를 돌립니다 — 자동화 시나리오의 사본 폴더(`AutomationScratch::prepare`)를 새로 만들었으면, 감시 트리에 표지 파일을 쓰고 감시가 그 사건을 알릴 때까지 참을 돌려줍니다.
+         * @brief 감시 울타리를 돌립니다 — 자동화 시나리오의 사본 폴더(`AutomationScratchWorkspace::prepare`)를 새로 만들었으면, 감시 트리에 표지 파일을 쓰고 감시가 그 사건을 알릴 때까지 참을 돌려줍니다.
          * @details 에디터 밖의 쓰기는 OS 파일 감시가 알려야 변경 번호가 오른다. 알림 전에는 낡은 색인이 "맞다" 고 보인다(`AssetReferenceTracker::isCurrent`). 표지 사건이 왔으면 그 앞의 사본 쓰기도
          *          알려졌다(같은 감시 흐름의 순서). 시나리오 시작 차단 조건(`SW_AUTOMATION_START_BLOCKER`)이 매 프레임 부른다. 5 초 안에 안 오면 오류를 남기고 풀어 시나리오가 멈추지 않게 한다.
          *          표지 사건이 온 뒤에도 사본이 일으킨 원본 임포트(`isImportBusy`)가 끝날 때까지 기다린다(시한 120 초, 넘으면 오류를 남기고 푼다) — 임포트가 워커에서 돌아 사건이 와도 결과가 아직 없을 수 있다.
@@ -243,8 +243,8 @@ namespace sw::editor
         Subscription                      _contentWatch;                   ///< 확장자와 무관한 감시 구독이다. 변경 번호와 바뀐 파일을 모은다
         uint64                            _contentChangeSerial;
         vector<string>                    _listChangedPath;          ///< 마지막 `takeChangedPaths` 뒤 바뀐 파일의 리소스 id(소문자, 중복 없음)
-        uint64                            _fencePrepareCount;        ///< 울타리를 마친(또는 포기한) 때의 `AutomationScratch::getPrepareCount`
-        uint64                            _fenceArmedCount;          ///< 지금 세운 울타리가 본 `AutomationScratch::getPrepareCount`
+        uint64                            _fencePrepareCount;        ///< 울타리를 마친(또는 포기한) 때의 `AutomationScratchWorkspace::getPrepareCount`
+        uint64                            _fenceArmedCount;          ///< 지금 세운 울타리가 본 `AutomationScratchWorkspace::getPrepareCount`
         int64                             _fenceDeadlineNanoseconds; ///< 울타리를 포기하는 단조 시계 시각
     };
 } // namespace sw::editor

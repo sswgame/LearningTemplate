@@ -1,0 +1,55 @@
+#include "pch.h"
+
+#include "DevTools/Client/Automation/Scenario/AutomationBackendSteps.h"
+
+#include "DevTools/Client/Automation/Scenario/AutomationStepValidation.h"
+
+#include "Engine/Automation/Scenario/AutomationScenario.h"
+#include "Engine/Automation/Scenario/AutomationStepParams.h"
+
+#include "sw/config/CookContract.gen.h"
+
+namespace sw
+{
+    bool AutomationBackendSteps::tryParseBackend( string_view text, RHIBackend& outBackend )
+    {
+        struct NameRow
+        {
+            const utf8* _pName;
+            RHIBackend  _backend;
+        };
+        // 이름은 쿠킹 표(`SW_RHI_BACKEND_TABLE`)의 명령줄 이름 하나뿐이다(`-vk` 와 같은 철자) — 별칭(`vulkan` · `directx12`)과 대소문자 무시는 두지 않는다.
+        static constexpr NameRow kArrName[] = {
+#define SW_SWAP_BACKEND_NAME_ROW( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) { CommandLineName, RHIBackend::Backend },
+            SW_RHI_BACKEND_TABLE( SW_SWAP_BACKEND_NAME_ROW )
+#undef SW_SWAP_BACKEND_NAME_ROW
+        };
+        for ( const NameRow& row : kArrName )
+        {
+            if ( text == row._pName )
+            {
+                outBackend = row._backend;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool AutomationBackendSteps::validateSwapBackend( const AutomationStep& step, string& outError )
+    {
+        AutomationSwapBackendParams params;
+        if ( step.readFields( params, outError ) == false )
+            return false;
+        RHIBackend backend{};
+        const bool bRelative = params._backend == kOtherBackend || params._backend == kStartBackend;
+        if ( bRelative == false && tryParseBackend( params._backend, backend ) == false )
+        {
+            outError = step.describe() + ": needs backend=\"dx11|dx12|vk|gl|other|start\"";
+            return false;
+        }
+        return true;
+    }
+
+    // App 이 올라오지 않은 프로세스(nogpu 테스트)도 이 단계의 속성을 검사할 수 있게, App 의 단계 등록이 받는 것과 같은 검사 함수를 따로 올린다.
+    SW_AUTOMATION_STEP_VALIDATOR( swapBackend, AutomationBackendSteps::kSwapBackendKind, &AutomationBackendSteps::validateSwapBackend );
+} // namespace sw

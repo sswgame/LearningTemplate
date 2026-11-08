@@ -3,9 +3,10 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "DevTools/Client/Automation/Tests/ScenarioFileCheck.h"
+
 #include "Editor/Common/Workspace/EditorService.h"
 
-#include "Engine/Automation/Tests/ScenarioFileCheck.h"
 #include "Engine/Config/GameSelection.h"
 
 using namespace sw;

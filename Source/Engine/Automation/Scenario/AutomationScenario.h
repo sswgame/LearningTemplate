@@ -147,7 +147,7 @@ namespace sw
      */
     struct SW_API AutomationTestOptions
     {
-        vector<AutomationScratchFolder> _listScratchFolder{};  ///< 루트 아래 `<Scratch from as>`(여럿 가능). 실행기가 시작할 때 사본을 새로 만든다(`AutomationScratch::prepare`)
+        vector<AutomationScratchFolder> _listScratchFolder{};  ///< 루트 아래 `<Scratch from as>`(여럿 가능). 실행기가 시작할 때 사본을 새로 만든다(`AutomationScratchWorkspace::prepare` — 개발 도구)
         vector<AutomationAttribute>     _listAllowedLog{};     ///< 루트 아래 `<AllowLog id reason>`(여럿 가능) — 이 시나리오에서 나와도 되는 로그 id(`_name`)와 사유(`_value`). 사유는 필수다
         vector<AutomationAttribute>     _listLaunchVariable{}; ///< 루트 아래 `<Launch variable value>`(여럿 가능). 첫 씬 · 렌더 파이프라인처럼 시작한 뒤에는 바꿀 수 없는 기동 때 값
         vector<string>                  _listRequiredModule{}; ///< 루트 `requiresModule="A,B"` — 이 모듈이 모두 켜진 빌드에서만 돈다. 하나라도 없으면 건너뜀이다(언리얼에서 끈 플러그인의 테스트가 없는 것과 같다)

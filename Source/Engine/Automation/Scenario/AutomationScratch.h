@@ -4,13 +4,14 @@
  * @details 시나리오가 `Content/` 원본에 쓰면 추적 중인 파일이 바뀌거나 잔여 파일이 남고, 중단된 실행의 잔여물이 다음 실행을 지게 한다(`new_material_2`).
  *          시나리오는 쓰는 폴더를 `<Scratch from="engine/automation/editor/assetmanage" as="scratch/assetmanage"/>` 로 선언하고, 실행기는 시작할 때
  *          사본 id 에 프로세스 꼬리를 붙여(`scratch/assetmanage_p<pid>`, `makeInstanceID` — 시나리오 단계의 id 도 같이 바뀐다, `AutomationScenario::bindScratchInstances`)
- *          사본 폴더를 지운 뒤 원본을 복사한다(`prepare`). 저장소의 `Content/` 는 같은 체크아웃의 모든 App 이 나눠 쓰므로 이름이 고정이면 동시에 도는 App 이
+ *          사본 폴더를 지운 뒤 원본을 복사한다(`AutomationScratchWorkspace::prepare` — 개발 도구). 저장소의 `Content/` 는 같은 체크아웃의 모든 App 이 나눠 쓰므로 이름이 고정이면 동시에 도는 App 이
  *          서로의 사본을 지운다. 사본은 리소스 id 가 있는 보통 도메인 폴더라 편집기의 모든 경로(루트를 붙이는 곳 · 감시 · 색인)가 같게 본다.
  *          복사하면서 글 파일 안의 원본 id 를 사본 id 로 바꾼다(씬이 사본의 머티리얼을 가리키게 — 에셋은 경로 하나로 가리킨다).
  *          `Content/scratch/` 는 `.gitignore` 에 있다.
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -29,7 +30,11 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 시나리오 사본 폴더를 만듭니다. 상태가 없습니다. */
+    /**
+     * @brief 시나리오 사본 폴더의 id 규칙(선언 검사 · 프로세스 꼬리 · 글 안의 id 바꾸기)입니다. 상태가 없습니다.
+     * @details 시나리오 형식(`AutomationScenario` — 엔진)이 읽을 때 쓰는 규칙만 둔다. 사본을 실제로 만들고 쓰기 문을 세우는 일은 개발 도구의 실행기 쪽
+     *          `AutomationScratchWorkspace`(`DevTools/Client/Automation`) — 배포 구성에는 실행기가 없다.
+     */
     struct SW_API AutomationScratch
     {
         static constexpr const utf8* kScratchDomain = AssetPaths::kScratchDomain; ///< 사본이 사는 도메인(`Content/scratch/`)
@@ -46,31 +51,10 @@ namespace sw
          * @details 나란히 도는 시나리오 실행(백엔드마다 하나)은 같은 `Content/scratch/` 에 저마다 사본을 만든다 — 에디터의 파일 감시는 남의 사본 쓰기를 무시해야 한다.
          */
         [[nodiscard]] static bool isOtherProcessInstance( string_view assetID );
-        /**
-         * @brief 프로세스 꼬리를 가진 폴더(`…/<이름>_p<pid>` — `makeInstanceID`)를 비우고, 같은 이름의 다른 폴더 가운데 끝난 프로세스의 것을 지웁니다.
-         * @details 사본 말고도 프로세스마다 따로 두는 폴더(시나리오 실행의 에디터 상태)가 같은 거두기를 쓴다. 못 지운 것은 `FileUtil` 이 경고를 남긴다.
-         */
-        static void resetInstanceFolder( const string& instanceDir );
-        /**
-         * @brief 사본 폴더를 지우고 원본을 복사합니다. 글 파일의 원본 id 는 사본 id 로 바꿉니다.
-         * @details 사본 id 가 프로세스 꼬리(`makeInstanceID`)를 가졌으면, 같은 이름의 다른 사본 가운데 끝난 프로세스의 것을 먼저 지운다(죽은 실행의 사본이 쌓이지 않게).
-         * @return 원본이 없거나 지우기 · 복사 · 쓰기가 실패하면 false 와 이유입니다(시나리오는 시작하지 않는다 — 원본에 쓰는 길로 돌아가지 않는다).
-         */
-        [[nodiscard]] static bool prepare( const AutomationScratchFolder& folder, string& outError );
-        /**
-         * @brief 사본 폴더를 끝까지 만든 횟수입니다(`prepare` 성공마다 하나 오른다). 사본을 만든 뒤 OS 파일 감시가 그 쓰기를 알려야 한다 — 에디터가 이 번호가 바뀌면
-         *        감시 울타리를 다시 세운다(`AssetHotReload` 의 시작 차단 조건).
-         */
-        [[nodiscard]] static uint64 getPrepareCount();
-        /**
-         * @brief 쓰기 입구 게이트를 세웁니다 — 실행기가 시나리오를 시작할 때 한 번 부르고 끝날 때 `releaseWriteGate` 로 짝을 맞춥니다(`FileUtil::setWriteGate`). 시나리오는 한 프로세스에서 차례로 돌므로 셈을 두지 않는다.
-         * @details 게이트가 서 있는 동안 리소스 루트 아래에서 `scratch/` 밖으로 가는 모든 파일 쓰기(저장 · Quick Open 으로 연 원본 포함)는 오류와 함께 거절된다.
-         *          프로젝트 루트의 추적 폴더 `docs/` · `Config/` 도 같은 문이 막는다(`Config/Editor/` 만 허용 목록 — 에디터 설정 저장 길).
-         *          `asset.openScratch` 가 여는 쪽만 막던 것을 쓰는 쪽 한 문으로 닫는다.
-         */
-        static void acquireWriteGate();
-        /** @brief `acquireWriteGate` 의 짝입니다. 게이트를 걷습니다. */
-        static void releaseWriteGate();
+        /** @brief 프로세스 꼬리의 앞머리(`<이름>_p<pid>` 의 `_p`)입니다. */
+        static constexpr string_view kInstanceMark = "_p";
+        /** @brief 폴더 이름 @p folderName 이 프로세스 꼬리(`<이름>_p<pid>` — `makeInstanceID`)로 끝나면 그 pid 입니다. 꼬리가 없거나 숫자가 아니면 비었습니다. */
+        [[nodiscard]] static optional<int32> findInstanceProcessID( string_view folderName );
         /**
          * @brief 글 @p text 안의 @p fromID 를 @p toID 로 바꿉니다. id 경계에서만 바꿉니다 — 앞은 id 글자가 아니고, 뒤는 글 끝 · `/` · id 글자가 아닌 곳이다.
          * @details 뒤 경계가 없으면 `scratch/a` 가 `scratch/ab/…` · `scratch/a_p12/…` 의 앞머리도 바꿔 다른 폴더를 가리키게 된다.

@@ -8,6 +8,8 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/StringUtil.h"
 
+#include "DevTools/Client/Automation/Scenario/AutomationScratchWorkspace.h"
+
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
@@ -63,7 +65,7 @@ namespace sw::editor
         if ( stateDir.empty() )
             return;
         // 같은 프로세스 번호를 썼던 지난 실행이 남긴 상태를 읽지 않게 비우고 시작하며, 끝난 실행의 상태 폴더는 거둔다.
-        AutomationScratch::resetInstanceFolder( stateDir );
+        AutomationScratchWorkspace::resetInstanceFolder( stateDir );
         SW_LOG_INFO_ID( "EditorPaths.ScenarioRunEditorState", "Scenario run: editor state goes to %# (Saved/Editor is neither read nor written)", stateDir.c_str() );
     }
 
