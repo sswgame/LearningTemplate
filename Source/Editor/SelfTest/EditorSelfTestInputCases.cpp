@@ -288,7 +288,8 @@ namespace sw::editor
 
             static EditorSelfTestStep runThemeSwatch( EditorSelfTestContext& context )
             {
-                const Color violet{ 0.65f, 0.35f, 0.95f, 1.0f }; // EditorThemeUtil 의 세 번째 스와치(Neon Violet)와 같은 값이다
+                // 세 번째 스와치(Neon Violet)의 색은 대화상자와 같은 토큰에서 읽는다 — 숫자를 따로 적으면 토큰 값(#RRGGBB 반올림)이 바뀔 때 어긋났다.
+                const Color violet = SW_THEME_COLOR( "AccentSwatch", "NeonViolet" );
                 switch ( context.getStepIndex() )
                 {
                     case 0:

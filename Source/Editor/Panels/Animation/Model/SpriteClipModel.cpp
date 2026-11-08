@@ -417,7 +417,11 @@ namespace sw::editor
         }
         // 맞은편을 넘거나 닿으면 폭 · 높이가 0 이하라 읽기가 버리는 프레임이 된다 — 옮기지 않는다.
         const bool bCollapsed = moved._z - moved._x <= 0.0f || moved._w - moved._y <= 0.0f;
-        const bool bSame      = moved._x == bounds._x && moved._y == bounds._y && moved._z == bounds._z && moved._w == bounds._w;
+        // 같은지는 픽셀에 맞춘 옛 가장자리와 비교한다 — 경계는 uv 에서 다시 셈해(0.5 + -0.3) 픽셀 경계와 몇 ulp 어긋나 그대로 둔 가장자리도 바뀐 것으로 보였다.
+        const float32 oldEdge = edge == SpriteFrameEdge::Left ? bounds._x : edge == SpriteFrameEdge::Top ? bounds._y
+                                                                      : edge == SpriteFrameEdge::Right   ? bounds._z
+                                                                                                         : bounds._w;
+        const bool    bSame   = snapToAtlasPixel( oldEdge, bHorizontal ) == snapped;
         if ( bCollapsed || bSame )
             return false;
         float4&       uv        = _clip._listFrame[static_cast<size_t>( _selectedFrame )]._uvRect;
