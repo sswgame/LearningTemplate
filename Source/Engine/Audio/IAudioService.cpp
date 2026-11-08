@@ -5,16 +5,15 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/BuildInfo.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskManager.h"
 
-#include "Engine/Audio/AudioClipDecoder.h"
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/AudioMixerDef.h"
 #include "Engine/Audio/AudioMusic.h"
+#include "Engine/Audio/AudioRenderListener.h"
 #include "Engine/Audio/Graph/AudioGraphDef.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/Pack/AssetCookRoot.h"
@@ -32,8 +31,6 @@ namespace sw
             static constexpr float32 kMusicCrossfadeSeconds = 0.25f;
             /** @brief 장치 없이 한 번의 update 가 렌더할 최대 시간(초)입니다. 멈춘 프레임 뒤에 몇 분을 몰아서 렌더하지 않게 합니다. */
             static constexpr float64 kMaxOfflineSecondsPerUpdate = 0.25;
-            /** @brief 오프라인 렌더 덤프가 쌓는 최대 길이(초)입니다. 7.1 이면 약 110 MB 이며, 넘는 부분은 쌓지 않습니다. */
-            static constexpr uint32 kMaxDumpSeconds = 60;
             /** @brief 스피커 모드의 설정 값입니다(`AudioSpeakerMode` 순서). */
             static constexpr const utf8* kArrSpeakerModeName[] = { "auto", "stereo", "surround51", "surround71", "headphones" };
 
@@ -49,7 +46,7 @@ namespace sw
          * @class NullAudioBackend
          * @brief 출력 장치를 열지 않는 오디오 시스템입니다(전용 서버, 테스트). 엔진은 그대로 돌고, `update` 가 흐른 시간만큼 버퍼에 렌더합니다.
          * @details 장치를 열지 않으므로(`openDevice` 가 false) 재생 상태는 `update` 의 오프라인 렌더로 진행한다. 명시 스피커 모드(`setSpeakerMode`)는 그 레이아웃 그대로 렌더한다.
-         *          5.1 · 7.1 의 결정적 오프라인 렌더와 덤프(`gv_audioDumpPath`)가 이 길을 쓴다. `createNull` 만 만들어 이 파일에 둔다.
+         *          5.1 · 7.1 의 결정적 오프라인 렌더와 그 출력을 보는 리스너(`SW_AUDIO_RENDER_LISTENER`)가 이 길을 쓴다. `createNull` 만 만들어 이 파일에 둔다.
          *          클라이언트(Windows XAudio2 · 리눅스 ALSA)에서도 `createNull` 이 쓰므로 **항상 컴파일한다** — 한 번도 컴파일되지 않는 구현은 조용히 썩는다.
          */
         class NullAudioBackend final : public IAudioService
@@ -61,9 +58,6 @@ namespace sw
             ~NullAudioBackend() override { shutdown(); }
         };
     } // namespace
-
-    /** @brief `-gv_audioDumpPath=<파일>.wav`: 장치 없는 오프라인 렌더를 서비스를 내릴 때(또는 레이아웃을 바꿀 때) 이 WAV(채널 마스크 포함, 최대 60 초)로 남깁니다. */
-    SW_TEST_GLOBAL_VARIABLE( sw::GlobalDiskPath, gv_audioDumpPath, "", "오프라인 오디오 렌더를 내릴 때 이 WAV 로 남김(비면 끄기)" );
 } // namespace sw
 
 namespace sw
@@ -104,7 +98,6 @@ namespace sw
         , _engineAudioDriver{ *this }
         , _listBusVolume{}
         , _listOfflineBlock{}
-        , _listDumpSample{}
         , _musicPath{}
         , _mixerPath{}
         , _musicPlayingID{ 0 }
@@ -276,8 +269,8 @@ namespace sw
             stopOutput();
         _bOutputOpen = SW_FALSE;
         _pEngine->releaseAudioThread(); // 장치 스레드가 끝났다 — 다음 렌더 스레드(오프라인 · 종료)가 받는다
-        // 덤프 파일은 채널 수가 하나다. 옛 레이아웃으로 쌓은 것을 먼저 쓴다.
-        writeOfflineDump();
+        // 리스너(덤프 파일)는 채널 수가 하나다. 옛 레이아웃의 스트림을 먼저 끝낸다.
+        AudioRenderListenerRegistry::notifyStreamEnded( _pEngine->getChannelLayout() );
         const bool               bChanged = _pEngine->setChannelLayout( layout );
         const AudioChannelLayout current  = _pEngine->getChannelLayout();
         _listOfflineBlock.assign( static_cast<size_t>( audio::kBlockFrameCount ) * AudioChannelLayoutUtil::getChannelCount( current ), 0.0f );
@@ -298,25 +291,6 @@ namespace sw
         return bChanged;
     }
 
-    void IAudioService::writeOfflineDump()
-    {
-        if ( _listDumpSample.empty() )
-            return;
-        const string             path         = gv_audioDumpPath;
-        const AudioChannelLayout layout       = _pEngine->getChannelLayout();
-        const uint32             channelCount = AudioChannelLayoutUtil::getChannelCount( layout );
-        vector<uint8>            bytes;
-        AudioWAVEncoder::encodeFloat32( _listDumpSample.data(), static_cast<uint32>( _listDumpSample.size() / channelCount ), channelCount,
-                                        AudioChannelLayoutUtil::getChannelMask( layout ), audio::kSampleRate, bytes );
-        _listDumpSample.clear();
-        if ( FileUtil::writeFile( path, bytes.data(), bytes.size() ) == false )
-        {
-            SW_LOG_ERROR_ID( "AudioService.CouldNotWriteAudio", "Could not write the audio dump '%#'", path );
-            return;
-        }
-        SW_LOG_INFO_ID( "AudioService.AudioDumpWrittenChannels", "Audio dump written: %# (%# channels)", path, channelCount );
-    }
-
     void IAudioService::shutdown()
     {
         if ( _bInitialized == false )
@@ -333,7 +307,7 @@ namespace sw
             closeDevice();
         _bDeviceOpen = SW_FALSE;
         _device      = AudioOutputDevice{};
-        writeOfflineDump();
+        AudioRenderListenerRegistry::notifyStreamEnded( _pEngine->getChannelLayout() );
         _pEngine->shutdown();
         _musicPath.clear();
         _musicPlayingID = 0;
@@ -349,15 +323,14 @@ namespace sw
         // 장치가 없으면 흐른 시간만큼 바로 렌더한다. 끝남, 박자, 가상 보이스가 장치가 있을 때와 같이 진행한다.
         const float64 seconds = MathUtil::clamp( static_cast<float64>( deltaSeconds ), 0.0, IAudioServiceInternal::kMaxOfflineSecondsPerUpdate );
         _offlineFrameDebt += seconds * static_cast<float64>( audio::kSampleRate );
-        const bool   bDumping  = gv_audioDumpPath.empty() == false;
-        const size_t dumpLimit = static_cast<size_t>( IAudioServiceInternal::kMaxDumpSeconds ) * audio::kSampleRate * _listOfflineBlock.size() / audio::kBlockFrameCount;
+        const bool               bListened = AudioRenderListenerRegistry::getCount() > 0; // 배포본에는 리스너 등록이 없다
+        const AudioChannelLayout layout    = _pEngine->getChannelLayout();
         while ( _offlineFrameDebt >= static_cast<float64>( audio::kBlockFrameCount ) )
         {
             _pEngine->render( _listOfflineBlock.data(), audio::kBlockFrameCount );
             _offlineFrameDebt -= static_cast<float64>( audio::kBlockFrameCount );
-            const bool bDumpFull = _listDumpSample.size() >= dumpLimit;
-            if ( bDumping && bDumpFull == false )
-                _listDumpSample.insert( _listDumpSample.end(), _listOfflineBlock.begin(), _listOfflineBlock.end() );
+            if ( bListened )
+                AudioRenderListenerRegistry::notifyRenderedBlock( _listOfflineBlock.data(), audio::kBlockFrameCount, layout );
         }
     }
 

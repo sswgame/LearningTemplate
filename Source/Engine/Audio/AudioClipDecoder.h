@@ -71,7 +71,7 @@ namespace sw
     /**
      * @struct AudioWAVEncoder
      * @brief float32 교차 샘플을 WAV(`WAVE_FORMAT_EXTENSIBLE`, IEEE float, 채널 마스크 포함) 바이트로 씁니다. `AudioClipDecoder::decodeWAV` 가 그대로 읽습니다.
-     * @details 오프라인 렌더 덤프(`gv_audioDumpPath`)와 테스트가 다채널 출력을 파일로 남겨 분석할 때 씁니다. 형식 상수는 디코더와 같은 정의를 씁니다.
+     * @details 오프라인 렌더 덤프(`Audio/Dev/AudioDumpListener.cpp`)와 테스트가 다채널 출력을 파일로 남겨 분석할 때 씁니다. 형식 상수는 디코더와 같은 정의를 씁니다.
      */
     struct SW_API AudioWAVEncoder
     {
