@@ -90,6 +90,8 @@ namespace sw
         uint32 getLastDrawnTargetCount() const { return _lastDrawnTargetCount; }
         /** @brief 마지막 `prepareFrame` 에서 주 출력 사각형이 버퍼에서 시작하는 위치입니다(버퍼 맨 앞은 화면 앵커입니다). */
         uint32 getMainQuadBase() const { return _quadBuffer.getMainQuadBase(); }
+        /** @brief 마지막 `prepareFrame` 에서 개발 겹치기 사각형이 버퍼에서 시작하는 위치입니다. */
+        uint32 getDevOverlayQuadBase() const { return _quadBuffer.getDevOverlayQuadBase(); }
         /** @brief 마지막 `prepareFrame` 에서 대상 @p targetIndex 의 사각형이 버퍼에서 시작하는 위치입니다. */
         uint32 getTargetQuadBase( uint32 targetIndex ) const { return _quadBuffer.getTargetQuadBase( targetIndex ); }
         /**

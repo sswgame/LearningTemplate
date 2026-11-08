@@ -2,15 +2,28 @@
 <!--
   엔진 시나리오 — 디버그 HUD(Dev 전용): 마스터 단축키 Ctrl+F3 로 켜고, 개발 명령 hud 로 섹션 · 모서리를 바꾸고, 설정 창을 열어 B(UI.Back)로 닫고, 다시 Ctrl+F3 로 끈다.
   감시 값은 HUD 화면이 실제로 그린 것을 본다 — DebugHUD.SectionShown(gv_debugHUDWatchSection 의 섹션 상자) · DebugHUD.Corner(패널이 놓인 4 분면).
+  사진 분리: HUD 는 개발 겹치기 층이라 렌더러가 사진 캡처를 읽은 뒤 화면에 합친다 — 시간을 멈추고 HUD 를 켠 장과 끈 장을 찍어 같은지 본다(새면 HUD 패널만큼 다르다).
   HUD 상태는 사용자 설정이라 사용자 파일에 남는다 — 끝에서 기본값(꺼짐 · 기본 섹션 · 왼위 · 0.85)으로 되돌려 파일에 남는 값이 없게 한다.
   실행: App -scenario=engine/automation/debughud.scenario.xml -unattended
 -->
-<Scenario name="engine.debughud" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+<Scenario name="engine.debughud" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<DevCommand line="hud off"/>
 	<DevCommand line="hud physics off"/>
 	<DevCommand line="hud corner topLeft"/>
 	<Variable name="gv_debugHUDWatchSection" value="physics"/>
 	<WaitUntil watch="DebugHUD.Shown" equals="0" timeoutFrames="60"/>
+	<!-- 사진 분리 — 시간을 멈춰 두 장이 같은 그림이게 하고 HUD 를 켠 장과 끈 장을 찍는다(판정은 끝의 ExpectImagesDiffer) -->
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Variable name="gv_timeScale" value="0"/>
+	<DevCommand line="hud on"/>
+	<WaitUntil watch="DebugHUD.Shown" equals="1" timeoutFrames="60"/>
+	<Wait frames="30"/>
+	<Screenshot file="debughud_on.ppm"/>
+	<DevCommand line="hud off"/>
+	<WaitUntil watch="DebugHUD.Shown" equals="0" timeoutFrames="60"/>
+	<Wait frames="30"/>
+	<Screenshot file="debughud_off.ppm"/>
+	<Variable name="gv_timeScale" value="1"/>
 	<!-- 마스터 단축키 — Ctrl 을 누른 채 F3 -->
 	<Wait frames="2"/>
 	<Press slot="Key.LeftControl"/>
@@ -56,5 +69,7 @@
 	<DevCommand line="hud corner topLeft"/>
 	<DevCommand line="hud opacity 0.85"/>
 	<Wait frames="4"/>
+	<!-- HUD 패널(기본 섹션 넷)은 화면의 몇 % 다 — 상한 1% 는 렌더 흔들림 몫이고, HUD 가 사진에 새면 넘는다 -->
+	<ExpectImagesDiffer first="debughud_on.ppm" second="debughud_off.ppm" minDiffering="0" maxDiffering="0.01"/>
 	<Pass/>
 </Scenario>

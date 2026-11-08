@@ -147,9 +147,17 @@ namespace sw
         return _pMainOutput != nullptr ? *_pMainOutput : kEmpty;
     }
 
+    const CanvasDrawList& CanvasFrameData::getDevOverlay() const
+    {
+        static const CanvasDrawList kEmpty{};
+        return _pDevOverlay != nullptr ? *_pDevOverlay : kEmpty;
+    }
+
     void CanvasFrameData::clear()
     {
         _pMainOutput.reset();
+        _pDevOverlay.reset();
+        _devOverlayRevision = 0;
         _listTarget.clear();
         _listAtlasUpload.clear();
         _pAtlasSource = nullptr;

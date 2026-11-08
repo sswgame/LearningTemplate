@@ -229,7 +229,9 @@ namespace sw
         const vector<string>& getUpdatedGoldens() const { return _judge.getUpdatedGoldens(); }
         /** @brief 로그 게이트가 처리하지 않았다고 본 줄입니다. 비어 있지 않으면 실패가 없어도 결과는 `UnhandledLog` 입니다. */
         const vector<string>& getUnhandledLogs() const { return _judge.getUnhandledLogs(); }
-        const string&         getFinishReason() const { return _finishReason; }
+        /** @brief 지금까지 모은 Warning · Error 줄 수입니다(허용 판정 전 — 진행 표시용, 판정은 끝의 로그 게이트). */
+        uint32        getCapturedWarningErrorCount() const { return _judge.getCapturedWarningErrorCount(); }
+        const string& getFinishReason() const { return _finishReason; }
         /** @brief 활성 씬 대신 @p pManager 를 봅니다(테스트와 도구용이며, 씬 없이 매니저를 손으로 돌릴 때 씁니다). nullptr 이면 활성 씬입니다. */
         void setObjectManager( GameObjectManager* pManager ) { _pObjectManagerOverride = pManager; }
 

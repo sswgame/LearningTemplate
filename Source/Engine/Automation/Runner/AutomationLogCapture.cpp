@@ -28,6 +28,7 @@ namespace sw
         , _listLogLine{}
         , _listenerSubscription{}
         , _frameIndex{ 0 }
+        , _warningErrorCount{ 0 }
     {
     }
 
@@ -87,6 +88,8 @@ namespace sw
         // 시나리오 안에서 도는 단위 테스트(에디터 `editor.unitTests`)의 케이스가 기대한 줄은 그 케이스가 판정한다 — 두 번 세지 않는다.
         if ( test::isExpectedLog( entry._pID ) )
             return;
+        if ( entry._level == LogLevel::Warning || entry._level == LogLevel::Error )
+            (void)_warningErrorCount.fetch_add( 1, std::memory_order_relaxed ); // 진행 표시용 수 — 판정은 끝의 로그 게이트(`judgeLines`)가 한다
         ScopedLock<mutex> lock{ _mutex };
         if ( _listLogLine.size() >= AutomationLogCaptureInternal::kMaxLogLine )
             return;
