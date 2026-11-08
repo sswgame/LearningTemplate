@@ -203,6 +203,14 @@ if(TARGET OnlineLoadBot)
 	endif()
 endif()
 
+# 셰이더 캐시 — DDC 와 쿠킹 스테이징을 모두 지운 뒤 굽고 판정한다(`Shader/RunShaderCacheRebuild.cmake`). DDC 는 빌드 폴더가 함께 쓰는 자리라 다른 테스트와 나란히 돌지 않는다.
+add_test(NAME ShaderCache.RebuildFromEmpty
+	COMMAND ${CMAKE_COMMAND} -DAPP=$<TARGET_FILE:App> "-DDDC_DIR=${CMAKE_BINARY_DIR}/Bin/Saved/ShaderCompileCache"
+		"-DCOOKED_DIR=${CMAKE_BINARY_DIR}/Testing/ShaderCache/Cooked" "-DLOG_DIR=${CMAKE_BINARY_DIR}/Testing/Logs"
+		-P "${CMAKE_CURRENT_SOURCE_DIR}/Shader/RunShaderCacheRebuild.cmake"
+	WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
+set_tests_properties(ShaderCache.RebuildFromEmpty PROPERTIES LABELS nogpu TIMEOUT 3600 RUN_SERIAL TRUE)
+
 # 리플렉션 파서 — Engine 을 링크하지 못해 단위 테스트 틀에 들어가지 못한다. 사례 헤더 하나마다 실제 실행 파일을 돌려 산출물 · 오류를 대조한다(`ReflectionParser/RunParserFixture.cmake`, 왜 이 모양인지 거기 적었다).
 if(TARGET ReflectionParser)
 	file(GLOB listParserFixture CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/ReflectionParser/Fixtures/*.h")

@@ -4,6 +4,7 @@
  * @note AssetManager 가 아닙니다. 셰이더 바이트코드는 RHI와 컴파일러의 수명을 따르며 팩 에셋 인스턴스와 분리합니다.
  */
 #pragma once
+#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
@@ -85,8 +86,13 @@ namespace sw
         ShaderCache( const ShaderCache& )            = delete;
         ShaderCache& operator=( const ShaderCache& ) = delete;
 
-        /** @brief 셰이더 캐시를 초기화합니다. */
+        /** @brief 셰이더 캐시를 초기화합니다. 바이트코드 공급자는 콘텐츠 정책(쿠킹본 · 소스)으로 고릅니다. */
         [[nodiscard]] bool initialize();
+        /**
+         * @brief 공급자 @p pProvider 를 걸고 캐시를 초기화합니다. `initialize` 가 정책으로 고른 공급자를 이것으로 겁니다.
+         * @details 테스트가 디스크 · 팩 없이 공급자 규칙(쿠킹본의 상수 지문 등)만 시험할 때 바로 부른다. 비어 있으면 오류로 false 입니다.
+         */
+        [[nodiscard]] bool initializeWithProvider( unique_ptr<IShaderBytecodeProvider> pProvider );
         /** @brief 셰이더 캐시를 정리하고 종료합니다. 리플렉션 매니페스트 캐시(`ShaderReflectionLibrary`)도 비웁니다. */
         void shutdown();
 
@@ -134,6 +140,11 @@ namespace sw
          */
         static ShaderCompileDesc makeLiveCompileDesc( const ShaderCompileDesc& desc );
 
+        /** @brief 메모리 캐시가 맞아 공급자를 부르지 않은 로드 수입니다(초기화마다 0 부터). 쿠킹본 정책은 지문이 상수라 같은 요청의 둘째 로드부터 맞아야 한다. */
+        [[nodiscard]] uint64 getMemoryHitCount() const { return _memoryHitCount.load(); }
+        /** @brief 공급자(팩 · 컴파일)까지 간 로드 수입니다(초기화마다 0 부터). */
+        [[nodiscard]] uint64 getProviderLoadCount() const { return _providerLoadCount.load(); }
+
         /** @brief 읽은 리플렉션 매니페스트입니다. `ShaderReflectionLibrary` 의 조회 · 비우기가 서비스 칸으로 찾아 씁니다. */
         ShaderReflectionManifestCache& getReflectionManifests() { return _reflectionManifests; }
 
@@ -159,6 +170,8 @@ namespace sw
         unordered_map<string, ShaderCacheEntry> _mapCache                SW_GUARDED_BY( _mutexCache );
         unordered_map<string, weak_ptr<ShaderLoadOperation>> _mapLoading SW_GUARDED_BY( _mutexCache ); ///< 읽거나 컴파일 중인 로드(같은 요청은 같은 로드 작업). `_mutexCache` 로 지킨다
         mutable mutex                                                    _mutexCache;
+        atomic<uint64>                                                   _memoryHitCount;    ///< `getMemoryHitCount` — 로드 워커가 함께 센다
+        atomic<uint64>                                                   _providerLoadCount; ///< `getProviderLoadCount` — 로드 워커가 함께 센다
     };
 
     SW_SERVICE_SLOT( ShaderCache, Required );
