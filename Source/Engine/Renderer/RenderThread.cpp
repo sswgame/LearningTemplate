@@ -13,6 +13,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/Debug/GPUPixelInspector.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
 #include "Engine/Graphics/RHI/IRHIContextThreadBinding.h"
@@ -732,6 +733,11 @@ namespace sw
         writeRequestedScreenshot();
         // 에디터 렌더 타깃 창의 CPU 읽기 요청이다. 스크린샷과 같은 위치에서 처리하며, endFrame 뒤라 이 프레임이 그린 내용이 들어 있다.
         readRequestedRenderTarget();
+        // 개발 명령 `gpu.inspect x y` 의 첨부 값 읽기(한 번 — GPU 를 기다린다). 같은 이유로 endFrame 뒤다.
+        GPUPixelInspector* const    pInspector = engine::findSubsystem<GPUPixelInspector>();
+        const RenderTargetRegistry* pRegistry  = engine::findSubsystem<RenderTargetRegistry>();
+        if ( pInspector != nullptr && pRegistry != nullptr && _pDevice != nullptr && _pDevice->getResourceFactory() != nullptr )
+            pInspector->serviceAttachmentDump( *_pDevice->getResourceFactory(), *pRegistry );
 
         return true;
     }

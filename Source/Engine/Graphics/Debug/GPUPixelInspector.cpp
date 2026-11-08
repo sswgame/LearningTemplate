@@ -2,7 +2,12 @@
 
 #include "Engine/Graphics/Debug/GPUPixelInspector.h"
 
+#include "Core/Container/vector.h"
+
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Graphics/Debug/RenderTargetRegistry.h"
+#include "Engine/Graphics/RHI/IRHIResourceFactory.h"
+#include "Engine/Graphics/RHI/Transfer/RHITransferUtil.h"
 
 namespace sw
 {
@@ -48,6 +53,46 @@ namespace sw
         outAttachment = _pendingAttachment;
         _bDumpPending = SW_FALSE;
         return true;
+    }
+
+    void GPUPixelInspector::serviceAttachmentDump( IRHIResourceFactory& factory, const RenderTargetRegistry& registry )
+    {
+        uint32 x = 0;
+        uint32 y = 0;
+        string attachment;
+        if ( takeAttachmentDump( x, y, attachment ) == false )
+            return;
+        vector<RenderTargetInfo> listTarget;
+        registry.snapshot( listTarget );
+        uint32 reported = 0;
+        for ( const RenderTargetInfo& target : listTarget )
+        {
+            const bool bDepth   = target._bDepth != SW_FALSE;
+            const bool bSkipped = ( attachment.empty() == false && target._name != attachment ) || RenderTargetReadback::isDecodableFormat( target._format, bDepth ) == false;
+            const bool bOutside = x >= target._width || y >= target._height;
+            if ( bSkipped )
+                continue;
+            ++reported;
+            if ( bOutside )
+            {
+                SW_LOG_INFO_ID( "GPUInspect.PixelOutside", "pixel %#,%# is outside '%#' (%#x%#)", x, y, target._name.c_str(), target._width, target._height );
+                continue;
+            }
+            vector<uint8>     bytes;
+            RHITextureMipSpan layout{};
+            float4            value{};
+            const bool        bRead = RHITransferUtil::readbackTexture2DAndWait( factory, target._texture, 0, 0, bytes, layout ) &&
+                               RenderTargetReadback::readPixel( bytes, layout, target._format, bDepth, x, y, value );
+            if ( bRead == false )
+            {
+                SW_LOG_WARNING_ID( "GPUInspect.ReadFailed", "pixel %#,%#: '%#' could not be read back", x, y, target._name.c_str() );
+                continue;
+            }
+            const uint32 channelCount = RenderTargetReadback::getChannelCount( target._format, bDepth );
+            SW_LOG_INFO_ID( "GPUInspect.Pixel", "pixel %#,%# '%#' (%# channels): %# %# %# %#", x, y, target._name.c_str(), channelCount, value._x, value._y, value._z, value._w );
+        }
+        if ( reported == 0 )
+            SW_LOG_WARNING_ID( "GPUInspect.NoAttachment", "pixel %#,%#: no readable attachment named '%#' is published", x, y, attachment.empty() ? "<any>" : attachment.c_str() );
     }
 } // namespace sw
 
