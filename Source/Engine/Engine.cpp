@@ -16,7 +16,6 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/String/hashed_string.h"
-#include "Core/String/string_splitter.h"
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -81,7 +80,6 @@
 #include "Engine/Profiling/ProfilerTraceExport.h"
 #include "Engine/Profiling/SubsystemTimingReport.h"
 #include "Engine/Reflection/ReflectionDocWriter.h"
-#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneCooker.h"
 #include "Engine/Scene/SceneDebugDraw.h"
@@ -96,16 +94,6 @@
 #include "Engine/Window/MainWindowSubsystem.h"
 
 #include "sw/config/ConfigConstants.h"
-
-namespace sw
-{
-    /**
-     * @brief `-gv_dumpReflection=CameraComponent,CameraRole`: 첫 프레임에 그 타입 · enum 의 등록 내용을 로그로 남깁니다(`TypeRegistry::describeType`).
-     * @details 첫 프레임이라 게임 · 에디터 모듈의 타입까지 등록된 뒤다. 한 번 찍고 비운다.
-     */
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_dumpReflection, "", "첫 프레임에 이 이름들(쉼표로 여럿)의 리플렉션 등록 내용을 로그로 남긴다 — 타입 · enum (비우면 사용 안 함)" );
-
-} // namespace sw
 
 namespace sw
 {
@@ -456,25 +444,6 @@ namespace sw
         // UI 는 게임 틱보다 먼저 입력을 받는다 — UI 가 먹은 행동 · 마우스 버튼은 이번 프레임 폰의 의도에 들지 않는다(플레이어 조종자가 본다).
         if ( _pUIDriver != nullptr )
             _pUIDriver->processFrameInput( engine::getSubsystem<GameTimeScale>().getUnscaledDeltaTime() ); // 정지 메뉴의 탐색 반복은 실제 시간
-
-#if !defined( SW_SHIPPING ) // 개발 기능이다 — Shipping 에서 테스트용 변수는 상수다(DevTools 로 옮길 대상)
-        if ( gv_dumpReflection.empty() == false )
-        {
-            const TypeRegistry&   registry = engine::getSubsystem<TypeRegistry>();
-            const string_splitter parts( string_view{ gv_dumpReflection.c_str(), gv_dumpReflection.size() }, { "," } );
-            for ( const string_view part : parts.getSplitList() )
-            {
-                const string_view name = StringUtil::trim( part );
-                if ( name.empty() )
-                    continue;
-                const hashed_string key( name );
-                const string        text = ( registry.findType( key ) == nullptr && registry.findEnum( key ) != nullptr ) ? registry.describeEnum( key )
-                                                                                                                          : registry.describeType( key );
-                SW_LOG_INFO_ID( "Engine.ReflectionDump", "[gv_dumpReflection]\n%#", text.c_str() );
-            }
-            gv_dumpReflection = string{}; // 한 번만
-        }
-#endif
     }
 
     void Engine::updateFrameServices()

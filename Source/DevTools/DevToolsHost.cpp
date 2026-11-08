@@ -13,6 +13,7 @@
 #include "DevTools/AssetReload/ReloadTracker.h"
 #include "DevTools/Console/DevConsoleHost.h"
 #include "DevTools/DevToolsClientPart.h"
+#include "DevTools/Diagnostics/ReflectionDump.h"
 #include "DevTools/Maintenance/SavedRetentionSubsystem.h"
 #include "DevTools/Net/NetLineEmulation.h"
 #include "DevTools/Profiling/FrameStall.h"
@@ -73,6 +74,7 @@ namespace sw
         // 시작 명령(`-gv_devConsoleExec`)은 시작 씬이 열린 뒤 한 번 — 이 프레임의 입력 재생 앞이다.
         if ( _pConsole != nullptr )
             _pConsole->runPendingExec();
+        ReflectionDump::runPending(); // `-gv_dumpReflection` — 첫 프레임이라 게임 · 에디터 모듈의 타입까지 등록된 뒤다
     }
 
     void DevToolsHost::addStartupSubsystems( SubsystemScope& startup, const engine::StartupParts& parts )
