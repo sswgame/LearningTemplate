@@ -314,11 +314,13 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 플랫폼 비트입니다(`platforms="windows linux"`). */
+    /** @brief 플랫폼 비트입니다(`platforms="windows linux android web"`). */
     namespace UserSettingsPlatform
     {
         inline constexpr uint8 kWindows = SW_BIT( 0 );
         inline constexpr uint8 kLinux   = SW_BIT( 1 );
+        inline constexpr uint8 kAndroid = SW_BIT( 2 );
+        inline constexpr uint8 kWeb     = SW_BIT( 3 );
         inline constexpr uint8 kAll     = 0xFF;
         /** @brief 이 빌드의 플랫폼 비트입니다. */
         SW_API uint8 getCurrent();

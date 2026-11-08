@@ -8,11 +8,13 @@
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include <Psapi.h>
-#elif defined( SW_PLATFORM_LINUX )
+#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
     #include "Core/String/StringUtil.h"
     #include "Core/File/FileUtil.h"
 
     #include <sys/resource.h>
+#elif defined( SW_PLATFORM_WEB )
+// 브라우저에는 프로세스 상주량이 없다 — 아래 갈래가 "모름" 을 돌려준다
 #else
     #error "Unsupported platform"
 #endif
@@ -62,7 +64,7 @@ namespace sw
         outResidentBytes     = static_cast<uint64>( counters.WorkingSetSize );
         outPeakResidentBytes = static_cast<uint64>( counters.PeakWorkingSetSize );
         return true;
-#elif defined( SW_PLATFORM_LINUX )
+#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
         // statm 의 둘째 값이 상주 페이지 수다. 최대값은 getrusage 의 ru_maxrss(KiB)다.
         string statmText;
         if ( FileUtil::readStreamTextFile( "/proc/self/statm", statmText, constant::buffer::kMax256 ) == false )

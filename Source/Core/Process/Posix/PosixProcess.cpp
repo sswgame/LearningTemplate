@@ -6,7 +6,7 @@
 #include "Core/Process/Process.h"
 #include "Core/Process/ProcessEnvironment.h"
 
-#if defined( SW_PLATFORM_LINUX )
+#if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
     #include "Core/Foundation/PlatformOSHeaders.h"
 
     #include <cerrno>
@@ -207,7 +207,7 @@ namespace sw
             outArrOutputFd[1] = -1;
             outArrInputFd[0]  = -1;
             outArrInputFd[1]  = -1;
-    #if defined( SW_PLATFORM_LINUX )
+    #if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
             const bool bPipeOpened = pipe2( outArrOutputFd, O_CLOEXEC ) == 0;
     #else
             const bool bPipeOpened = pipe( outArrOutputFd ) == 0;

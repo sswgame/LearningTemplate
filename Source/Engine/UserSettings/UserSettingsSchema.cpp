@@ -53,6 +53,8 @@ namespace sw
             static constexpr NamedValue<uint8> kArrPlatformName[] = {
                 {"windows", UserSettingsPlatform::kWindows},
                 {  "linux",   UserSettingsPlatform::kLinux},
+                {"android", UserSettingsPlatform::kAndroid},
+                {    "web",     UserSettingsPlatform::kWeb},
             };
 
             /** @brief `gv:name` 과 `handler:name` 을 읽습니다. 비어 있으면 대상 없음입니다. */
@@ -522,6 +524,10 @@ namespace sw
         return kWindows;
 #elif defined( SW_PLATFORM_LINUX )
         return kLinux;
+#elif defined( SW_PLATFORM_ANDROID )
+        return kAndroid;
+#elif defined( SW_PLATFORM_WEB )
+        return kWeb;
 #else
     #error "Unsupported platform"
 #endif

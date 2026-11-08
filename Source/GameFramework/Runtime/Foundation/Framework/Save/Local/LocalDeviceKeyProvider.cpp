@@ -12,7 +12,7 @@
     #include "Core/Foundation/PlatformOSHeaders.h"
 
     #include <dpapi.h>
-#elif defined( SW_PLATFORM_LINUX )
+#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID ) || defined( SW_PLATFORM_WEB )
     #include <sys/stat.h>
 #else
     #error "Unsupported platform"
@@ -35,7 +35,8 @@ namespace sw
                 outBytes.assign( output.pbData, output.pbData + output.cbData );
                 LocalFree( output.pbData );
                 return true;
-#elif defined( SW_PLATFORM_LINUX )
+#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID ) || defined( SW_PLATFORM_WEB )
+                // OS 키 보관소 없이 소유자 전용 파일로 둔다 — Android · 웹은 앱 샌드박스가 다른 앱에서 가린다(유니티 PlayerPrefs 와 같은 수준).
                 outBytes.assign( pKey, pKey + keySize );
                 return true;
 #else
@@ -56,7 +57,7 @@ namespace sw
                 SecureZeroMemory( output.pbData, output.cbData );
                 LocalFree( output.pbData );
                 return bSized;
-#elif defined( SW_PLATFORM_LINUX )
+#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID ) || defined( SW_PLATFORM_WEB )
                 if ( bytes.size() != static_cast<size_t>( keySize ) )
                     return false;
                 std::memcpy( pOutKey, bytes.data(), static_cast<size_t>( keySize ) );
@@ -68,7 +69,7 @@ namespace sw
 
             static void restrictToOwner( const string& path )
             {
-#if defined( SW_PLATFORM_LINUX )
+#if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID ) || defined( SW_PLATFORM_WEB )
                 if ( ::chmod( path.c_str(), S_IRUSR | S_IWUSR ) != 0 )
                     SW_LOG_WARNING_ID( "LocalDeviceKeyProvider.CouldNotRestrictLocal", "Could not restrict the local store key file to its owner: %#", path.c_str() );
 #elif defined( SW_PLATFORM_WINDOWS )

@@ -121,6 +121,8 @@ namespace sw
         , _pCmdSetCheckpoint{ nullptr }
         , _pGetCheckpointData{ nullptr }
         , _pCmdWriteBufferMarker{ nullptr }
+        , _pCmdDrawIndirectCount{ nullptr }
+        , _pCmdDrawIndexedIndirectCount{ nullptr }
         , _breadcrumbBuffer{ VK_NULL_HANDLE }
         , _breadcrumbMemory{ VK_NULL_HANDLE }
         , _pBreadcrumbMapped{ nullptr }
@@ -1357,6 +1359,16 @@ namespace sw
             return false;
 
         vkGetDeviceQueue( _device, _graphicsQueueFamilyIndex, 0, &_graphicsQueue );
+        if ( _bDrawIndirectCount != 0 )
+        {
+            _pCmdDrawIndirectCount        = reinterpret_cast<void*>( vkGetDeviceProcAddr( _device, "vkCmdDrawIndirectCount" ) );
+            _pCmdDrawIndexedIndirectCount = reinterpret_cast<void*>( vkGetDeviceProcAddr( _device, "vkCmdDrawIndexedIndirectCount" ) );
+            if ( _pCmdDrawIndirectCount == nullptr || _pCmdDrawIndexedIndirectCount == nullptr )
+            {
+                SW_LOG_WARNING_ID( "Vulkan.DrawIndirectCountUnavailable", "drawIndirectCount is reported but the device gives no vkCmdDraw*IndirectCount - GPU draw counts are off" );
+                _bDrawIndirectCount = 0;
+            }
+        }
         _asyncComputeQueue = VK_NULL_HANDLE;
         if ( bSecondQueue )
             vkGetDeviceQueue( _device, _graphicsQueueFamilyIndex, 1, &_asyncComputeQueue );

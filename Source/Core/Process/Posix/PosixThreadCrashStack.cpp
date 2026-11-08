@@ -6,7 +6,7 @@
 #include "Core/Memory/MemoryBlock.h"
 #include "Core/Process/ThreadCrashStack.h"
 
-#if defined( SW_PLATFORM_LINUX )
+#if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
     #include <csignal>
 
 namespace sw

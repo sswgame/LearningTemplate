@@ -1011,7 +1011,7 @@ namespace sw
             const VulkanRHIDevice::VulkanBufferRecord* pCountRecord = _pDevice->resolveAllocatedBuffer( countBuffer );
             if ( pCountRecord != nullptr && pCountRecord->_buffer != VK_NULL_HANDLE )
             {
-                vkCmdDrawIndexedIndirectCount( cmd, pArgs->_buffer, argumentBufferOffset, pCountRecord->_buffer, countBufferOffset, drawCount, stride );
+                reinterpret_cast<PFN_vkCmdDrawIndexedIndirectCount>( _pDevice->_pCmdDrawIndexedIndirectCount )( cmd, pArgs->_buffer, argumentBufferOffset, pCountRecord->_buffer, countBufferOffset, drawCount, stride );
                 return;
             }
         }
@@ -1065,8 +1065,8 @@ namespace sw
             {
                 if ( pCountRecord->_buffer != VK_NULL_HANDLE )
                 {
-                    vkCmdDrawIndirectCount( cmd, pArgs->_buffer, argumentBufferOffset, pCountRecord->_buffer, countBufferOffset,
-                                            drawCount, stride );
+                    reinterpret_cast<PFN_vkCmdDrawIndirectCount>( _pDevice->_pCmdDrawIndirectCount )( cmd, pArgs->_buffer, argumentBufferOffset, pCountRecord->_buffer, countBufferOffset,
+                                                                                                      drawCount, stride );
                     return;
                 }
             }

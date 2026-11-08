@@ -73,6 +73,11 @@ namespace sw
         string home;
         if ( ProcessEnvironment::tryReadNonEmpty( "HOME", home ) )
             SystemFontLocatorInternal::appendIfDirectory( listDirectory, FileUtil::joinPath( home, ".local/share/fonts" ) );
+#elif defined( SW_PLATFORM_ANDROID )
+        SystemFontLocatorInternal::appendIfDirectory( listDirectory, "/system/fonts" ); // 앱이 읽을 수 있는 시스템 폰트(Roboto · NotoSansCJK)
+        SystemFontLocatorInternal::appendIfDirectory( listDirectory, "/product/fonts" );
+#elif defined( SW_PLATFORM_WEB )
+        // 브라우저는 시스템 폰트 파일을 주지 않는다 — 카탈로그의 저장소 폰트만 쓴다(빈 목록)
 #else
     #error "Unsupported platform"
 #endif

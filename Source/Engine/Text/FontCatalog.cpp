@@ -97,6 +97,16 @@ namespace sw
         { return StringUtil::equals( family._name, name, true ); } );
     }
 
+    const SystemFontFaceDef* SystemFontFamilyDef::findPlatformFace( string_view platformName ) const
+    {
+        for ( const SystemFontFaceDef& face : _listPlatformFace )
+        {
+            if ( face._platform == platformName )
+                return &face;
+        }
+        return nullptr;
+    }
+
     const SystemFontFamilyDef* FontCatalogDef::findSystemFamily( string_view name ) const
     {
         return VectorUtil::findIf( _listSystemFamily, [&]( const SystemFontFamilyDef& family )

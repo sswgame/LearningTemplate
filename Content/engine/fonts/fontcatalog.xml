@@ -12,50 +12,83 @@
 		</FontFamilyDef>
 	</_listFamily>
 	<_listSystemFamily>
-		<SystemFontFamilyDef _name="Arial"
-		                      _windowsRegular="arial.ttf"
-		                      _windowsBold="arialbd.ttf"
-		                      _linuxRegular="LiberationSans-Regular.ttf"
-		                      _linuxBold="LiberationSans-Bold.ttf" />
-		<SystemFontFamilyDef _name="Segoe UI" _windowsRegular="segoeui.ttf" _windowsBold="segoeuib.ttf" />
-		<SystemFontFamilyDef _name="Noto Sans"
-		                      _windowsRegular="NotoSans-Regular.ttf"
-		                      _windowsBold="NotoSans-Bold.ttf"
-		                      _linuxRegular="NotoSans-Regular.ttf"
-		                      _linuxBold="NotoSans-Bold.ttf" />
-		<SystemFontFamilyDef _name="Malgun Gothic" _windowsRegular="malgun.ttf" _windowsBold="malgunbd.ttf" />
+		<SystemFontFamilyDef _name="Arial">
+			<_listPlatformFace>
+				<SystemFontFaceDef _platform="Windows" _regular="arial.ttf" _bold="arialbd.ttf" />
+				<SystemFontFaceDef _platform="Linux" _regular="LiberationSans-Regular.ttf" _bold="LiberationSans-Bold.ttf" />
+				<SystemFontFaceDef _platform="Android" _regular="Roboto-Regular.ttf" />
+			</_listPlatformFace>
+		</SystemFontFamilyDef>
+		<SystemFontFamilyDef _name="Segoe UI">
+			<_listPlatformFace>
+				<SystemFontFaceDef _platform="Windows" _regular="segoeui.ttf" _bold="segoeuib.ttf" />
+			</_listPlatformFace>
+		</SystemFontFamilyDef>
+		<SystemFontFamilyDef _name="Noto Sans">
+			<_listPlatformFace>
+				<SystemFontFaceDef _platform="Windows" _regular="NotoSans-Regular.ttf" _bold="NotoSans-Bold.ttf" />
+				<SystemFontFaceDef _platform="Linux" _regular="NotoSans-Regular.ttf" _bold="NotoSans-Bold.ttf" />
+			</_listPlatformFace>
+		</SystemFontFamilyDef>
+		<SystemFontFamilyDef _name="Malgun Gothic">
+			<_listPlatformFace>
+				<SystemFontFaceDef _platform="Windows" _regular="malgun.ttf" _bold="malgunbd.ttf" />
+			</_listPlatformFace>
+		</SystemFontFamilyDef>
 		<SystemFontFamilyDef _name="Apple SD Gothic Neo" />
-		<SystemFontFamilyDef _name="Noto Sans KR"
-		                      _windowsRegular="NotoSansKR-Regular.ttf"
-		                      _windowsBold="NotoSansKR-Bold.ttf"
-		                      _linuxRegular="NotoSansCJK-Regular.ttc"
-		                      _linuxBold="NotoSansCJK-Bold.ttc"
-		                      _linuxFaceIndex="1" />
-		<SystemFontFamilyDef _name="Yu Gothic UI" _windowsRegular="YuGothR.ttc" _windowsBold="YuGothB.ttc" />
-		<SystemFontFamilyDef _name="Meiryo" _windowsRegular="meiryo.ttc" _windowsBold="meiryob.ttc" />
-		<SystemFontFamilyDef _name="Noto Sans JP"
-		                      _windowsRegular="NotoSansJP-Regular.ttf"
-		                      _windowsBold="NotoSansJP-Bold.ttf"
-		                      _linuxRegular="NotoSansCJK-Regular.ttc"
-		                      _linuxBold="NotoSansCJK-Bold.ttc" />
-		<SystemFontFamilyDef _name="Microsoft YaHei" _windowsRegular="msyh.ttc" _windowsBold="msyhbd.ttc" />
-		<SystemFontFamilyDef _name="Noto Sans SC"
-		                      _windowsRegular="NotoSansSC-Regular.ttf"
-		                      _windowsBold="NotoSansSC-Bold.ttf"
-		                      _linuxRegular="NotoSansCJK-Regular.ttc"
-		                      _linuxBold="NotoSansCJK-Bold.ttc"
-		                      _linuxFaceIndex="2" />
-		<SystemFontFamilyDef _name="Microsoft JhengHei" _windowsRegular="msjh.ttc" _windowsBold="msjhbd.ttc" />
-		<SystemFontFamilyDef _name="Noto Sans TC"
-		                      _windowsRegular="NotoSansTC-Regular.ttf"
-		                      _windowsBold="NotoSansTC-Bold.ttf"
-		                      _linuxRegular="NotoSansCJK-Regular.ttc"
-		                      _linuxBold="NotoSansCJK-Bold.ttc"
-		                      _linuxFaceIndex="3" />
-		<SystemFontFamilyDef _name="Noto Sans Arabic"
-		                      _windowsRegular="NotoSansArabic-Regular.ttf"
-		                      _windowsBold="NotoSansArabic-Bold.ttf"
-		                      _linuxRegular="NotoSansArabic-Regular.ttf"
-		                      _linuxBold="NotoSansArabic-Bold.ttf" />
+		<SystemFontFamilyDef _name="Noto Sans KR">
+			<_listPlatformFace>
+				<SystemFontFaceDef _platform="Windows" _regular="NotoSansKR-Regular.ttf" _bold="NotoSansKR-Bold.ttf" />
+				<SystemFontFaceDef _platform="Linux" _regular="NotoSansCJK-Regular.ttc" _bold="NotoSansCJK-Bold.ttc" _faceIndex="1" />
+				<SystemFontFaceDef _platform="Android" _regular="NotoSansCJK-Regular.ttc" _bold="NotoSansCJK-Bold.ttc" _faceIndex="1" />
+			</_listPlatformFace>
+		</SystemFontFamilyDef>
+		<SystemFontFamilyDef _name="Yu Gothic UI">
+			<_listPlatformFace>
+				<SystemFontFaceDef _platform="Windows" _regular="YuGothR.ttc" _bold="YuGothB.ttc" />
+			</_listPlatformFace>
+		</SystemFontFamilyDef>
+		<SystemFontFamilyDef _name="Meiryo">
+			<_listPlatformFace>
+				<SystemFontFaceDef _platform="Windows" _regular="meiryo.ttc" _bold="meiryob.ttc" />
+			</_listPlatformFace>
+		</SystemFontFamilyDef>
+		<SystemFontFamilyDef _name="Noto Sans JP">
+			<_listPlatformFace>
+				<SystemFontFaceDef _platform="Windows" _regular="NotoSansJP-Regular.ttf" _bold="NotoSansJP-Bold.ttf" />
+				<SystemFontFaceDef _platform="Linux" _regular="NotoSansCJK-Regular.ttc" _bold="NotoSansCJK-Bold.ttc" />
+				<SystemFontFaceDef _platform="Android" _regular="NotoSansCJK-Regular.ttc" _bold="NotoSansCJK-Bold.ttc" />
+			</_listPlatformFace>
+		</SystemFontFamilyDef>
+		<SystemFontFamilyDef _name="Microsoft YaHei">
+			<_listPlatformFace>
+				<SystemFontFaceDef _platform="Windows" _regular="msyh.ttc" _bold="msyhbd.ttc" />
+			</_listPlatformFace>
+		</SystemFontFamilyDef>
+		<SystemFontFamilyDef _name="Noto Sans SC">
+			<_listPlatformFace>
+				<SystemFontFaceDef _platform="Windows" _regular="NotoSansSC-Regular.ttf" _bold="NotoSansSC-Bold.ttf" />
+				<SystemFontFaceDef _platform="Linux" _regular="NotoSansCJK-Regular.ttc" _bold="NotoSansCJK-Bold.ttc" _faceIndex="2" />
+				<SystemFontFaceDef _platform="Android" _regular="NotoSansCJK-Regular.ttc" _bold="NotoSansCJK-Bold.ttc" _faceIndex="2" />
+			</_listPlatformFace>
+		</SystemFontFamilyDef>
+		<SystemFontFamilyDef _name="Microsoft JhengHei">
+			<_listPlatformFace>
+				<SystemFontFaceDef _platform="Windows" _regular="msjh.ttc" _bold="msjhbd.ttc" />
+			</_listPlatformFace>
+		</SystemFontFamilyDef>
+		<SystemFontFamilyDef _name="Noto Sans TC">
+			<_listPlatformFace>
+				<SystemFontFaceDef _platform="Windows" _regular="NotoSansTC-Regular.ttf" _bold="NotoSansTC-Bold.ttf" />
+				<SystemFontFaceDef _platform="Linux" _regular="NotoSansCJK-Regular.ttc" _bold="NotoSansCJK-Bold.ttc" _faceIndex="3" />
+				<SystemFontFaceDef _platform="Android" _regular="NotoSansCJK-Regular.ttc" _bold="NotoSansCJK-Bold.ttc" _faceIndex="3" />
+			</_listPlatformFace>
+		</SystemFontFamilyDef>
+		<SystemFontFamilyDef _name="Noto Sans Arabic">
+			<_listPlatformFace>
+				<SystemFontFaceDef _platform="Windows" _regular="NotoSansArabic-Regular.ttf" _bold="NotoSansArabic-Bold.ttf" />
+				<SystemFontFaceDef _platform="Linux" _regular="NotoSansArabic-Regular.ttf" _bold="NotoSansArabic-Bold.ttf" />
+			</_listPlatformFace>
+		</SystemFontFamilyDef>
 	</_listSystemFamily>
 </FontCatalogDef>

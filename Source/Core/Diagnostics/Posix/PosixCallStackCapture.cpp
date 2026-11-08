@@ -7,12 +7,15 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 
-#if defined( SW_PLATFORM_LINUX )
+#if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
     #include "Core/Foundation/PlatformOSHeaders.h"
 
     // 시그널 컨텍스트의 레지스터 인덱스(REG_RIP 등)가 여기에 있다(glibc 는 _GNU_SOURCE 를 요구한다).
     #include <sys/ucontext.h>
     #include <ucontext.h>
+    #if defined( SW_PLATFORM_ANDROID )
+        #include <unwind.h> // bionic 은 API 33 부터 backtrace 가 있다 — 대상(29)에서는 언와인더로 모은다(언리얼 Android 와 같다)
+    #endif
 
 namespace sw
 {
@@ -22,6 +25,56 @@ namespace sw
         atomic<int32> s_initRefCount{ 0 };
         /// @brief backtrace_symbols / dladdr 를 동시에 부르지 못하게 막습니다.
         mutex s_symbolMutex{};
+
+    #if defined( SW_PLATFORM_ANDROID )
+        /** @brief `_Unwind_Backtrace` 가 프레임마다 부르는 함수의 상태입니다. */
+        struct UnwindCollectState
+        {
+            void** _ppFrame;
+            int32  _capacity;
+            int32  _count;
+        };
+
+        _Unwind_Reason_Code collectUnwindFrameInternal( _Unwind_Context* pContext, void* pArgument )
+        {
+            UnwindCollectState* pState = static_cast<UnwindCollectState*>( pArgument );
+            const uintptr_t     pc     = _Unwind_GetIP( pContext );
+            if ( pc == 0 )
+                return _URC_NO_REASON;
+            if ( pState->_count >= pState->_capacity )
+                return _URC_END_OF_STACK;
+            pState->_ppFrame[pState->_count++] = reinterpret_cast<void*>( pc );
+            return _URC_NO_REASON;
+        }
+    #endif
+
+        /** @brief 지금 스레드의 반환 주소를 @p ppFrame 에 최대 @p capacity 개 모읍니다(glibc `backtrace` 와 같은 뜻). */
+        int32 collectFramesInternal( void** ppFrame, int32 capacity )
+        {
+    #if defined( SW_PLATFORM_LINUX )
+            return backtrace( ppFrame, capacity );
+    #elif defined( SW_PLATFORM_ANDROID )
+            UnwindCollectState state{ ppFrame, capacity, 0 };
+            _Unwind_Backtrace( &collectUnwindFrameInternal, &state );
+            return state._count;
+    #else
+        #error "Unsupported platform"
+    #endif
+        }
+
+        /** @brief 프레임 이름표 묶음입니다(glibc `backtrace_symbols`). bionic 에는 없어 nullptr — 그때는 dladdr 만 쓴다. 돌려받은 것은 free 로 놓는다. */
+        utf8** symbolizeFramesRawInternal( void* const* ppFrame, int32 frameCount )
+        {
+    #if defined( SW_PLATFORM_LINUX )
+            return backtrace_symbols( ppFrame, frameCount );
+    #elif defined( SW_PLATFORM_ANDROID )
+            (void)ppFrame;
+            (void)frameCount;
+            return nullptr;
+    #else
+        #error "Unsupported platform"
+    #endif
+        }
 
         /**
          * @brief 시그널 컨텍스트에서 폴트가 난 명령의 주소를 꺼냅니다.
@@ -51,7 +104,7 @@ namespace sw
         // malloc 한다(`man 3 backtrace` 의 NOTES). 그 첫 호출이 크래시 핸들러 안이면, malloc 의 락을 쥔 채 죽은 경우(힙 손상 abort)
         // 그 자리에서 멈춘다. 크로미움의 WarmUpBacktrace 와 같은 일이다.
         void* arrWarmUpFrame[2]{};
-        backtrace( arrWarmUpFrame, 2 );
+        collectFramesInternal( arrWarmUpFrame, 2 );
     }
 
     void CallStackCapture::shutdown()
@@ -70,7 +123,7 @@ namespace sw
         outStack._hash       = 0;
 
         void* arrTempFrame[CallStack::kMaxFrames + 16];
-        int32 count      = backtrace( arrTempFrame, CallStack::kMaxFrames + skipFrames + 1 );
+        int32 count      = collectFramesInternal( arrTempFrame, static_cast<int32>( CallStack::kMaxFrames + skipFrames + 1 ) );
         int32 validCount = count - ( skipFrames + 1 );
         if ( validCount > 0 )
         {
@@ -99,7 +152,7 @@ namespace sw
         // 꺼내 그 프레임을 찾고 **거기서부터** 담는다. 그러면 스택이 폴트 지점에서 시작하는 Windows(StackWalk64 + CONTEXT)
         // 와 같은 형태가 된다.
         void*       arrTempFrame[DeepCallStack::kMaxFrames + 16];
-        const int32 count = backtrace( arrTempFrame, static_cast<int32>( DeepCallStack::kMaxFrames + 16 ) );
+        const int32 count = collectFramesInternal( arrTempFrame, static_cast<int32>( DeepCallStack::kMaxFrames + 16 ) );
         if ( count <= 0 )
             return;
 
@@ -152,7 +205,7 @@ namespace sw
 
         StringBuilder<constant::buffer::kMax8192> sb;
 
-        utf8** ppSymbol = backtrace_symbols( ppFrame, frameCount );
+        utf8** ppSymbol = symbolizeFramesRawInternal( ppFrame, static_cast<int32>( frameCount ) );
         for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
         {
             if ( pFrameProgress != nullptr )

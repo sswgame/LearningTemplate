@@ -10,7 +10,7 @@
 #include <csignal>
 #include <ctime>
 
-#if defined( SW_PLATFORM_LINUX )
+#if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
     #include "Core/Foundation/PlatformOSHeaders.h"
 
     #include <pthread.h>

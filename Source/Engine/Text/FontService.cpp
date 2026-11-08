@@ -3,6 +3,7 @@
 #include "Engine/Text/FontService.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Asset/AssetManager.h"
@@ -319,21 +320,14 @@ namespace sw
         }
         else if ( pSystemFamily != nullptr )
         {
-#if defined( SW_PLATFORM_WINDOWS )
-            const string& regularName = pSystemFamily->_windowsRegular;
-            const string& boldName    = pSystemFamily->_windowsBold;
-            const uint32  faceIndex   = pSystemFamily->_windowsFaceIndex;
-#elif defined( SW_PLATFORM_LINUX )
-            const string& regularName = pSystemFamily->_linuxRegular;
-            const string& boldName    = pSystemFamily->_linuxBold;
-            const uint32  faceIndex   = pSystemFamily->_linuxFaceIndex;
-#else
-    #error "Unsupported platform"
-#endif
-            const bool    bWantsBold = static_cast<uint16>( weight ) >= static_cast<uint16>( FontWeight::SemiBold );
-            const bool    bUseBold   = bWantsBold && boldName.empty() == false;
-            const string& fileName   = bUseBold ? boldName : regularName;
-            const string  filePath   = _systemFontLocator.findSystemFontFile( fileName );
+            const SystemFontFaceDef* pPlatformFace = pSystemFamily->findPlatformFace( build::kPlatformName );
+            const string             regularName   = pPlatformFace != nullptr ? pPlatformFace->_regular : string{};
+            const string             boldName      = pPlatformFace != nullptr ? pPlatformFace->_bold : string{};
+            const uint32             faceIndex     = pPlatformFace != nullptr ? pPlatformFace->_faceIndex : 0u;
+            const bool               bWantsBold    = static_cast<uint16>( weight ) >= static_cast<uint16>( FontWeight::SemiBold );
+            const bool               bUseBold      = bWantsBold && boldName.empty() == false;
+            const string&            fileName      = bUseBold ? boldName : regularName;
+            const string             filePath      = _systemFontLocator.findSystemFontFile( fileName );
             if ( filePath.empty() == false )
             {
                 opened._face        = openFontFile( AssetID{ filePath }, faceIndex, false );

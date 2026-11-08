@@ -34,6 +34,10 @@ namespace sw
                 "windows";
 #elif defined( SW_PLATFORM_LINUX )
                 "linux";
+#elif defined( SW_PLATFORM_ANDROID )
+                "android";
+#elif defined( SW_PLATFORM_WEB )
+                "web";
 #else
     #error "Unsupported platform"
 #endif

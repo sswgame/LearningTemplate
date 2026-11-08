@@ -14,6 +14,8 @@ add_library(sw_platform_android INTERFACE)
 target_compile_definitions(sw_platform_android INTERFACE SW_PLATFORM_ANDROID SW_PLATFORM_POSIX SW_PLATFORM_NAME="Android")  # 이름은 sw::build::kPlatformName
 target_link_libraries(sw_platform_android INTERFACE android log)
 list(APPEND sw_flag_libraries sw_platform_android)
+# 앱이 공유 라이브러리(libApp.so — NativeActivity 가 연다)라 거기 묶이는 정적 라이브러리 · 오브젝트가 모두 PIC 여야 한다. 대상마다 켜지 않고 이 플랫폼 전체에 건다(빠뜨린 타깃이 링크에서 R_AARCH64_* 로 섰다).
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # NativeActivity 글루 — NDK 가 소스로 준다(새 의존성이 아니다). android_main 을 부르는 스레드 · ALooper 명령 파이프다.
 if(NOT TARGET sw_android_native_app_glue)

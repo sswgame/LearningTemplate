@@ -54,9 +54,25 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 시스템 폰트 패밀리의 한 플랫폼 면입니다(`SystemFontFamilyDef::_listPlatformFace`). 플랫폼 이름은 `build::kPlatformName` 과 같다. */
+    REFLECT()
+    struct SW_API SystemFontFaceDef
+    {
+        REFLECT_BODY();
+        PROPERTY( Required, Tooltip = "Platform name (build::kPlatformName: Windows, Linux, Android, Web)" )
+        string _platform{};
+        PROPERTY( Required, Tooltip = "Regular face file name in the platform font folders" )
+        string _regular{};
+        PROPERTY( Tooltip = "Bold face file name (empty = draw the regular face bold)" )
+        string _bold{};
+        PROPERTY( Min = 0, Tooltip = "Face index inside a collection file (.ttc)" )
+        uint32 _faceIndex{ 0 };
+    };
+
     /**
-     * @brief OS 시스템 폰트 패밀리 하나입니다. 플랫폼마다 일반 면과 굵은 면의 파일 이름을 가지며, 비어 있으면 그 플랫폼에 없다는 뜻입니다.
+     * @brief OS 시스템 폰트 패밀리 하나입니다. 플랫폼마다 일반 면과 굵은 면의 파일 이름을 가지며, 그 플랫폼 줄이 없으면 그 플랫폼에 없다는 뜻입니다.
      * @details 파일은 `SystemFontLocator` 가 OS 폰트 폴더에서 찾는다(리눅스는 하위 폴더까지). 기운 면은 적지 않는다. 기울임은 배치가 기울여 그린다.
+     *          플랫폼마다 칸을 두지 않고 플랫폼 이름 줄로 둔다 — 대상이 늘 때 형식이 바뀌지 않는다(텍스처 대상 표와 같은 모양).
      */
     REFLECT()
     struct SW_API SystemFontFamilyDef
@@ -64,18 +80,11 @@ namespace sw
         REFLECT_BODY();
         PROPERTY( Tooltip = "Family name the culture table lists" )
         string _name{};
-        PROPERTY( Tooltip = "Regular face file name in the Windows font folder" )
-        string _windowsRegular{};
-        PROPERTY( Tooltip = "Bold face file name in the Windows font folder (empty = draw the regular face bold)" )
-        string _windowsBold{};
-        PROPERTY( Tooltip = "Regular face file name under the Linux font folders" )
-        string _linuxRegular{};
-        PROPERTY( Tooltip = "Bold face file name under the Linux font folders (empty = draw the regular face bold)" )
-        string _linuxBold{};
-        PROPERTY( Min = 0, Tooltip = "Face index inside a Windows collection file (.ttc)" )
-        uint32 _windowsFaceIndex{ 0 };
-        PROPERTY( Min = 0, Tooltip = "Face index inside a Linux collection file (.ttc)" )
-        uint32 _linuxFaceIndex{ 0 };
+        PROPERTY( Tooltip = "Face files per platform; a platform without a row does not have this family" )
+        vector<SystemFontFaceDef> _listPlatformFace{};
+
+        /** @brief 플랫폼 @p platformName 의 면입니다. 없으면 nullptr 입니다. */
+        [[nodiscard]] const SystemFontFaceDef* findPlatformFace( string_view platformName ) const;
     };
 } // namespace sw
 

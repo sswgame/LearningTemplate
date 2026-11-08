@@ -56,23 +56,22 @@ if(CMAKE_CROSSCOMPILING)
 	else()
 		message(FATAL_ERROR "[Cook] unsupported host (Windows or Unix)")
 	endif()
-	set(SW_HOST_COOK_APP "${CMAKE_SOURCE_DIR}/build/Ninja-Release/Bin/${swHostCookAppName}" CACHE FILEPATH "Host development build's App that cooks the packs of a cross build")
+	# 굽는 App 은 호스트 빌드(SW_HOST_BUILD_DIR — HostTools.cmake)의 것이고, 굽기 앞에 그 빌드를 다시 짓는다 — 형식(EngineConfig 스키마 등)이 바뀐 소스로
+	# 낡은 App 이 돌면 설정 읽기부터 멈췄다. 게임 모듈 · 에디터 모듈(텍스처 변형 굽기)도 함께라 대상 하나가 아니라 빌드 전체를 짓는다.
+	set(swHostCookApp "${SW_HOST_BUILD_DIR}/Bin/${swHostCookAppName}")
 	unset(swHostCookAppName)
-	if(NOT EXISTS "${SW_HOST_COOK_APP}")
-		message(FATAL_ERROR "[Cook] cross build needs the host App at '${SW_HOST_COOK_APP}' to cook its packs.\n"
-			"  Build it first: cmake --build --preset Ninja-Release --target App\n"
-			"  (or set SW_HOST_COOK_APP to another host development build's App)")
-	endif()
 	sw_checkRHIBackendName("${SW_SHIPPING_RHI_BACKEND}")
 	set(swCrossBackendFlag "-${SW_RHI_BACKEND_${SW_SHIPPING_RHI_BACKEND}_COMMAND_LINE_NAME}")
 	add_custom_target(CookAssets
-		COMMAND "${SW_HOST_COOK_APP}" --cook-texture-variants
-		COMMAND "${SW_HOST_COOK_APP}" ${swCookArgs} ${swCrossBackendFlag}
+		COMMAND "${CMAKE_COMMAND}" --build "${SW_HOST_BUILD_DIR}"
+		COMMAND "${swHostCookApp}" --cook-texture-variants
+		COMMAND "${swHostCookApp}" ${swCookArgs} ${swCrossBackendFlag}
 		WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-		COMMENT "Cooking texture variants and Resource packs for ${SW_SHIPPING_RHI_BACKEND} with the host App (${SW_HOST_COOK_APP} --cook-all ${swCrossBackendFlag})..."
+		COMMENT "Cooking texture variants and Resource packs for ${SW_SHIPPING_RHI_BACKEND} with the host App (${swHostCookApp} --cook-all ${swCrossBackendFlag})..."
 		VERBATIM
 	)
 	unset(swCrossBackendFlag)
+	unset(swHostCookApp)
 else()
 	add_custom_target(CookAssets
 		COMMAND "$<TARGET_FILE:${SW_COOK_HOST_TARGET}>" ${swCookArgs}

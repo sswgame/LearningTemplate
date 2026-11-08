@@ -214,7 +214,8 @@ function(sw_addModulePart PART_NAME)
 	# 부분의 오브젝트는 모듈 라이브러리에 들어가므로 이미지와 같은 코드 모델로 짓는다. CMake 는 SHARED · MODULE 자신에게만 PIC 를 붙이고
 	# 거기 넣는 OBJECT 라이브러리에는 붙이지 않는다 — 빠지면 ELF 링크가 `R_X86_64_PC32 ... recompile with -fPIC` 로 멈춘다(COFF 인 Windows 는 무관).
 	get_target_property(ownerType ${ARG_OWNER} TYPE)
-	if(ownerType MATCHES "^(SHARED|MODULE)_LIBRARY$")
+	# 플랫폼이 전체를 PIC 로 짓게 했으면(Android — 앱이 공유 라이브러리) 정적 모듈의 부분도 따른다.
+	if(ownerType MATCHES "^(SHARED|MODULE)_LIBRARY$" OR CMAKE_POSITION_INDEPENDENT_CODE)
 		set(bPartPic ON)
 	else()
 		set(bPartPic OFF)

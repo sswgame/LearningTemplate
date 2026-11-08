@@ -43,7 +43,7 @@
 2. **Emscripten 빌드** — `cmake/Modules/Platform/Web.cmake`(링크 옵션 · 포트), 메인 루프는 브라우저 프레임 콜백(`emscripten_set_main_loop_arg`), canvas 창.
 3. **Android Vulkan** — `cmake/Modules/Platform/Android.cmake`(NDK 라이브러리), `android_main` 진입 · `ANativeWindow` 창, `VK_KHR_android_surface`.
 4. **Android 내용 읽기** — `AndroidMain` 이 앱 전용 폴더(`internalDataPath`)를 `SW_ANDROID_APP_FOLDER` 로 넘겨 `ProcessRoots` 의 바이너리 · 프로젝트 폴더로 쓰고, 팩 폴더 경로(`<앱 폴더>/Packs`)를 APK 의 `assets/Packs` 로 옮기는 `BundledContentFileSource` + `AndroidAssetFileReader`(AAssetManager)를 건다. 팩은 압축하지 않고 저장돼 `AAsset_openFileDescriptor64` 의 fd + 구간으로 바로 읽는다(`AsyncFileHandle::openNativeRange`) — 압축된 파일은 오류다.
-5. **교차 빌드 쿠킹** — Android · 웹의 `CookAssets` 는 호스트 개발 빌드의 App(`SW_HOST_COOK_APP`, 기본 `build/Ninja-Release/Bin/App`)이 `--cook-texture-variants` 뒤 `--cook-all -<배포 백엔드의 명령줄 이름>` 으로 `<교차 빌드>/Bin/Packs` 에 굽는다 — `android-apk` 의 기본 `--packs-dir` 이다.
+5. **교차 빌드 쿠킹** — Android · 웹의 `CookAssets` 는 호스트 개발 빌드(`SW_HOST_BUILD_DIR`, 기본 `build/Ninja-Release` — 굽기 앞에 다시 짓는다)의 App 이 `--cook-texture-variants` 뒤 `--cook-all -<배포 백엔드의 명령줄 이름>` 으로 `<교차 빌드>/Bin/Packs` 에 굽는다 — `android-apk` 의 기본 `--packs-dir` 이다.
 
 ## 화면 대응(모바일 · 데스크톱)
 

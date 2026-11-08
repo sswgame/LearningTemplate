@@ -882,11 +882,14 @@ namespace sw
         // 1바이트 필드는 위 비트필드 뒤에 모은다. 8바이트 필드 사이에 끼면 필드마다 패딩이 생긴다.
         uint8 _bSwapChainRecreateFailing; ///< 재생성 실패를 한 번만 알린다(성공하면 내린다). 실패하면 프레임마다 다시 시도한다.
         /// @brief GPU 브레드크럼을 남기는 확장입니다(`VulkanBreadcrumbMode`). 장치를 만들 때 정하고, 함수나 표지 버퍼를 얻지 못하면 None 으로 내린다.
-        VulkanBreadcrumbMode   _breadcrumbMode;
-        void*                  _pCmdSetCheckpoint;     ///< `vkCmdSetCheckpointNV` 입니다(확장 함수라 void* 로 쥐고 cpp 가 형식을 정한다). NVCheckpoints 일 때만 읽는다
-        void*                  _pGetCheckpointData;    ///< `vkGetQueueCheckpointDataNV` 입니다. 위와 같다
-        void*                  _pCmdWriteBufferMarker; ///< `vkCmdWriteBufferMarkerAMD` 입니다. AMDBufferMarker 일 때만 읽는다
-        VkBuffer               _breadcrumbBuffer;      ///< AMD 표지 버퍼 — uint32 두 칸([0] 시작 · [1] 끝), 호스트 보임 · 일관 메모리를 영속 매핑해 소실 뒤 CPU 가 읽는다
+        VulkanBreadcrumbMode _breadcrumbMode;
+        void*                _pCmdSetCheckpoint;     ///< `vkCmdSetCheckpointNV` 입니다(확장 함수라 void* 로 쥐고 cpp 가 형식을 정한다). NVCheckpoints 일 때만 읽는다
+        void*                _pGetCheckpointData;    ///< `vkGetQueueCheckpointDataNV` 입니다. 위와 같다
+        void*                _pCmdWriteBufferMarker; ///< `vkCmdWriteBufferMarkerAMD` 입니다. AMDBufferMarker 일 때만 읽는다
+        /// @brief Vulkan 1.2 간접 개수 그리기 함수입니다. 링크하지 않고 장치에서 얻는다 — Android libvulkan 은 1.0 · 1.1 함수만 내보낸다. 얻지 못하면 `_bDrawIndirectCount` 를 끈다.
+        void*                  _pCmdDrawIndirectCount;
+        void*                  _pCmdDrawIndexedIndirectCount;
+        VkBuffer               _breadcrumbBuffer; ///< AMD 표지 버퍼 — uint32 두 칸([0] 시작 · [1] 끝), 호스트 보임 · 일관 메모리를 영속 매핑해 소실 뒤 CPU 가 읽는다
         VkDeviceMemory         _breadcrumbMemory;
         const volatile uint32* _pBreadcrumbMapped;                                                                              ///< `_breadcrumbBuffer` 의 매핑. GPU 가 쓰므로 volatile 로 읽는다
         atomic<uint8>          _bTimestampEnabled;                                                                              ///< 엔진이 켜기 전에는 풀도 만들지 않는다. `setTimestampEnabled` 는 어느 스레드에서나 부를 수 있어 atomic 이다.

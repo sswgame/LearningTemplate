@@ -2,6 +2,7 @@
 // 실제 글꼴 테스트(CatalogDefaultFamilyOpens)은 저장소 글꼴로만 단언한다 — 시스템 글꼴은 기계마다 달라 보지 않는다(결정 R1).
 #include "pch.h"
 
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -115,9 +116,8 @@ SW_TEST_CASE( FontServiceTest, MissingSystemFallbackIsNotAWarning )
     FontServiceTestUtil::configureLatinHangul( *fixture._pRasterizer );
     sw::FontCatalogDef      catalog = FontServiceTestUtil::makeLatinHangulCatalog();
     sw::SystemFontFamilyDef systemFamily{};
-    systemFamily._name           = "Sw Not Installed Sans";
-    systemFamily._windowsRegular = "SwNotInstalledSans-Regular.ttf";
-    systemFamily._linuxRegular   = "SwNotInstalledSans-Regular.ttf";
+    systemFamily._name = "Sw Not Installed Sans";
+    systemFamily._listPlatformFace.push_back( sw::SystemFontFaceDef{ sw::build::kPlatformName, "SwNotInstalledSans-Regular.ttf", {}, 0 } );
     catalog._listSystemFamily.push_back( systemFamily );
     SW_REQUIRE_TRUE( fixture.initialize( catalog ) );
 
