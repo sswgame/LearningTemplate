@@ -25,6 +25,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/RegistrationList.h"
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
@@ -142,8 +143,10 @@ namespace sw
     class SW_API SceneServiceRegistry
     {
     public:
-        /** @brief 등록 줄을 더합니다. 같은 줄을 두 번 올리면 무시합니다. */
-        static void add( const SceneServiceRegistration* pRegistration );
+        /** @brief 등록 줄을 더합니다. 같은 줄을 두 번 올리면 무시합니다(true). 빈 줄은 거절하고 false 입니다. */
+        [[nodiscard]] static bool add( const SceneServiceRegistration* pRegistration );
+        /** @brief 등록 줄을 뺍니다(등록한 모듈이 내려갈 때 정적 등록자가 부른다). 올라 있지 않으면 할 일이 없다. */
+        static void remove( const SceneServiceRegistration* pRegistration );
         /** @brief 지금까지 올라온 등록 줄입니다(올린 순서). */
         static const vector<const SceneServiceRegistration*>& getAll();
     };
@@ -151,13 +154,8 @@ namespace sw
 
 namespace sw
 {
-    /** @brief `SW_SCENE_SERVICE` 가 두는 정적 등록자입니다. */
-    struct SW_API SceneServiceRegistrar
-    {
-        explicit SceneServiceRegistrar( const SceneServiceRegistration* pRegistration );
-        SceneServiceRegistrar( const SceneServiceRegistrar& )            = delete;
-        SceneServiceRegistrar& operator=( const SceneServiceRegistrar& ) = delete;
-    };
+    /** @brief `SW_SCENE_SERVICE` 가 두는 정적 등록자입니다(공통 틀 `StaticRegistrar` — 모듈이 내려가면 뺀다). */
+    SW_DEFINE_STATIC_REGISTRAR( SceneServiceRegistrar, const SceneServiceRegistration*, &SceneServiceRegistry::add, &SceneServiceRegistry::remove );
 
     /**
      * @brief 서비스를 만들어 씬 범위에 넣는 함수입니다. 서비스 타입이 완전한 자리(그 서비스의 .cpp)에서 실체화합니다. `TService( GameObjectManager& )` 생성자가 있어야 합니다.

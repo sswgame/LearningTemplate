@@ -13,6 +13,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/String/RegistrationList.h"
 #include "Core/String/fixed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -100,21 +101,9 @@ namespace sw
         static void collectProviders( vector<const SequenceDiagnosticRegistration*>& outListProvider );
     };
 
-    /** @brief `SW_SEQUENCE_DIAGNOSTIC` 이 두는 정적 등록자입니다. 거절됐으면 내릴 때 빼지 않습니다. */
-    struct SW_API SequenceDiagnosticRegistrar
-    {
-        const SequenceDiagnosticRegistration* _pRegistration;
-        explicit SequenceDiagnosticRegistrar( const SequenceDiagnosticRegistration* pRegistration );
-        ~SequenceDiagnosticRegistrar();
-        SequenceDiagnosticRegistrar( const SequenceDiagnosticRegistrar& )            = delete;
-        SequenceDiagnosticRegistrar& operator=( const SequenceDiagnosticRegistrar& ) = delete;
-    };
+    /** @brief `SW_SEQUENCE_DIAGNOSTIC` 이 두는 정적 등록자입니다(공통 틀 `StaticRegistrar` — 거절된 등록은 내리지 않는다). */
+    SW_DEFINE_STATIC_REGISTRAR( SequenceDiagnosticRegistrar, const SequenceDiagnosticRegistration*, &SequenceDiagnosticRegistry::registerProvider, &SequenceDiagnosticRegistry::unregisterProvider );
 } // namespace sw
 
 /** @brief 진단 제공자를 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). 모듈이 내려가면 빠진다. */
-#define SW_SEQUENCE_DIAGNOSTIC( id, pName, pFunction )                                                \
-    static const ::sw::SequenceDiagnosticRegistration sw_sequenceDiagnostic_##id{ pName, pFunction }; \
-    static const ::sw::SequenceDiagnosticRegistrar    sw_sequenceDiagnosticRegistrar_##id             \
-    {                                                                                                 \
-        &sw_sequenceDiagnostic_##id                                                                   \
-    }
+#define SW_SEQUENCE_DIAGNOSTIC( id, pName, pFunction ) SW_STATIC_REGISTRATION( sequenceDiagnostic, ::sw::SequenceDiagnosticRegistration, ::sw::SequenceDiagnosticRegistrar, id, pName, pFunction )

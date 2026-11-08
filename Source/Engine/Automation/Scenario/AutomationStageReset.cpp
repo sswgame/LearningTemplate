@@ -12,11 +12,7 @@ namespace sw
         struct AutomationStageResetInternal
         {
             /** @brief 등록된 되돌리기(등록 순서). Engine 이미지의 함수 정적이라 모듈이 바뀌어도 남는다(`AutomationWatchRegistry` 와 같다). */
-            static RegistrationList<const AutomationStageResetRegistration>& getRegistrations()
-            {
-                static RegistrationList<const AutomationStageResetRegistration> s_registration{ "AutomationStageResetRegistry", RegistrationOrder::Insertion, true };
-                return s_registration;
-            }
+            static SW_DEFINE_REGISTRATION_LIST( getRegistrations, const AutomationStageResetRegistration, "AutomationStageResetRegistry", RegistrationOrder::Insertion, true )
         };
     } // namespace
 } // namespace sw
@@ -45,16 +41,5 @@ namespace sw
             pRegistration->_pFunction();
         }
         return registrations.getCount();
-    }
-
-    AutomationStageResetRegistrar::AutomationStageResetRegistrar( const AutomationStageResetRegistration* pRegistration )
-        : _pRegistration{ AutomationStageResetRegistry::registerReset( pRegistration ) ? pRegistration : nullptr }
-    {
-    }
-
-    AutomationStageResetRegistrar::~AutomationStageResetRegistrar()
-    {
-        if ( _pRegistration != nullptr )
-            AutomationStageResetRegistry::unregisterReset( _pRegistration );
     }
 } // namespace sw

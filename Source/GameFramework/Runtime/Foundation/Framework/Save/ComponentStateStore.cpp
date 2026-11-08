@@ -22,11 +22,7 @@ namespace sw
             static constexpr uint32 kMinEntryBytes = sizeof( uint32 ) + sizeof( uint64 ) + sizeof( uint32 );
 
             /** @brief 정적 등록 목록입니다. 함수 안 정적 객체라 처음 등록할 때 만들어지고, 모든 등록 객체보다 늦게 소멸합니다. */
-            static RegistrationList<StatefulComponentRegistration>& getRegistrationList()
-            {
-                static RegistrationList<StatefulComponentRegistration> s_list{ "StatefulComponentRegistry", RegistrationOrder::Insertion, true };
-                return s_list;
-            }
+            static SW_DEFINE_REGISTRATION_LIST( getRegistrationList, StatefulComponentRegistration, "StatefulComponentRegistry", RegistrationOrder::Insertion, true )
         };
     } // namespace
 } // namespace sw

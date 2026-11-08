@@ -12,11 +12,7 @@ namespace sw
     {
         struct SequenceDiagnosticsInternal
         {
-            static RegistrationList<const SequenceDiagnosticRegistration>& getRegistrations()
-            {
-                static RegistrationList<const SequenceDiagnosticRegistration> s_registration{ "SequenceDiagnosticRegistry", RegistrationOrder::Insertion, true };
-                return s_registration;
-            }
+            static SW_DEFINE_REGISTRATION_LIST( getRegistrations, const SequenceDiagnosticRegistration, "SequenceDiagnosticRegistry", RegistrationOrder::Insertion, true )
         };
     } // namespace
 
@@ -97,16 +93,5 @@ namespace sw
     {
         const vector<const SequenceDiagnosticRegistration*>& listItem = SequenceDiagnosticsInternal::getRegistrations().getItems();
         outListProvider.assign( listItem.begin(), listItem.end() );
-    }
-
-    SequenceDiagnosticRegistrar::SequenceDiagnosticRegistrar( const SequenceDiagnosticRegistration* pRegistration )
-        : _pRegistration{ SequenceDiagnosticRegistry::registerProvider( pRegistration ) ? pRegistration : nullptr }
-    {
-    }
-
-    SequenceDiagnosticRegistrar::~SequenceDiagnosticRegistrar()
-    {
-        if ( _pRegistration != nullptr )
-            SequenceDiagnosticRegistry::unregisterProvider( _pRegistration );
     }
 } // namespace sw

@@ -10,6 +10,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/RegistrationList.h"
 
 namespace sw
 {
@@ -81,21 +82,9 @@ namespace sw
         static void paintAll( const CanvasOverlayContext& context, CanvasOverlayTarget& target );
     };
 
-    /** @brief `SW_CANVAS_OVERLAY` 가 두는 정적 등록자입니다. 등록이 거절됐으면 내릴 때 빼지 않습니다(앞 등록을 지우지 않게). */
-    struct SW_API CanvasOverlayRegistrar
-    {
-        const CanvasOverlayRegistration* _pRegistration;
-        explicit CanvasOverlayRegistrar( const CanvasOverlayRegistration* pRegistration );
-        ~CanvasOverlayRegistrar();
-        CanvasOverlayRegistrar( const CanvasOverlayRegistrar& )            = delete;
-        CanvasOverlayRegistrar& operator=( const CanvasOverlayRegistrar& ) = delete;
-    };
+    /** @brief `SW_CANVAS_OVERLAY` 가 두는 정적 등록자입니다(공통 틀 `StaticRegistrar`). */
+    SW_DEFINE_STATIC_REGISTRAR( CanvasOverlayRegistrar, const CanvasOverlayRegistration*, &CanvasOverlays::registerOverlay, &CanvasOverlays::unregisterOverlay );
 } // namespace sw
 
 /** @brief 캔버스 겹치기를 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). @p id 는 정적 이름을 만드는 식별자입니다. */
-#define SW_CANVAS_OVERLAY( id, pName, order, pFunction )                                           \
-    static const ::sw::CanvasOverlayRegistration sw_canvasOverlay_##id{ pName, order, pFunction }; \
-    static const ::sw::CanvasOverlayRegistrar    sw_canvasOverlayRegistrar_##id                    \
-    {                                                                                              \
-        &sw_canvasOverlay_##id                                                                     \
-    }
+#define SW_CANVAS_OVERLAY( id, pName, order, pFunction ) SW_STATIC_REGISTRATION( canvasOverlay, ::sw::CanvasOverlayRegistration, ::sw::CanvasOverlayRegistrar, id, pName, order, pFunction )

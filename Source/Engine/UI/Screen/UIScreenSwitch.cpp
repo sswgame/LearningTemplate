@@ -10,11 +10,7 @@ namespace sw
     namespace
     {
         /** @brief 등록된 스위치((순서, 이름) 순 · 이름은 대소문자를 가린다). Engine 이미지의 함수 정적이라 게임 모듈이 바뀌어도 남는다. */
-        RegistrationList<const UIScreenSwitchRegistration>& getScreenSwitchRegistrations()
-        {
-            static RegistrationList<const UIScreenSwitchRegistration> s_registration{ "UIScreenSwitchRegistry", RegistrationOrder::ByOrderThenName, true };
-            return s_registration;
-        }
+        SW_DEFINE_REGISTRATION_LIST( getScreenSwitchRegistrations, const UIScreenSwitchRegistration, "UIScreenSwitchRegistry", RegistrationOrder::ByOrderThenName, true )
     } // namespace
 } // namespace sw
 
@@ -46,16 +42,5 @@ namespace sw
     const UIScreenSwitchRegistration* UIScreenSwitches::getAt( uint32 index )
     {
         return getScreenSwitchRegistrations().getAt( index );
-    }
-
-    UIScreenSwitchRegistrar::UIScreenSwitchRegistrar( const UIScreenSwitchRegistration* pRegistration )
-        : _pRegistration{ UIScreenSwitches::registerSwitch( pRegistration ) ? pRegistration : nullptr }
-    {
-    }
-
-    UIScreenSwitchRegistrar::~UIScreenSwitchRegistrar()
-    {
-        if ( _pRegistration != nullptr )
-            UIScreenSwitches::unregisterSwitch( _pRegistration );
     }
 } // namespace sw

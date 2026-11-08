@@ -9,11 +9,7 @@ namespace sw
     namespace
     {
         /** @brief 등록된 관찰자(이름 순). Engine 이미지의 함수 정적이라 등록한 이미지보다 오래 산다. */
-        RegistrationList<const AnimationFrameObserverRegistration>& getAnimationFrameObserverRegistrations()
-        {
-            static RegistrationList<const AnimationFrameObserverRegistration> s_registration{ "AnimationFrameObserverRegistry", RegistrationOrder::ByOrderThenName, true };
-            return s_registration;
-        }
+        SW_DEFINE_REGISTRATION_LIST( getAnimationFrameObserverRegistrations, const AnimationFrameObserverRegistration, "AnimationFrameObserverRegistry", RegistrationOrder::ByOrderThenName, true )
     } // namespace
 
     bool AnimationFrameObserverRegistry::registerObserver( const AnimationFrameObserverRegistration* pRegistration )
@@ -36,16 +32,5 @@ namespace sw
         {
             outListObserver.push_back( registrations.getAt( index )->_pCreate() );
         }
-    }
-
-    AnimationFrameObserverRegistrar::AnimationFrameObserverRegistrar( const AnimationFrameObserverRegistration* pRegistration )
-        : _pRegistration{ AnimationFrameObserverRegistry::registerObserver( pRegistration ) ? pRegistration : nullptr }
-    {
-    }
-
-    AnimationFrameObserverRegistrar::~AnimationFrameObserverRegistrar()
-    {
-        if ( _pRegistration != nullptr )
-            AnimationFrameObserverRegistry::unregisterObserver( _pRegistration );
     }
 } // namespace sw

@@ -11,11 +11,7 @@ namespace sw
     namespace
     {
         /** @brief 등록된 겹치기((순서, 이름) 순). Engine 이미지의 함수 정적이라 등록한 이미지(개발 도구)보다 오래 산다. */
-        RegistrationList<const CanvasOverlayRegistration>& getCanvasOverlayRegistrations()
-        {
-            static RegistrationList<const CanvasOverlayRegistration> s_registration{ "CanvasOverlayRegistry", RegistrationOrder::ByOrderThenName, true };
-            return s_registration;
-        }
+        SW_DEFINE_REGISTRATION_LIST( getCanvasOverlayRegistrations, const CanvasOverlayRegistration, "CanvasOverlayRegistry", RegistrationOrder::ByOrderThenName, true )
     } // namespace
 
     CanvasOverlayTarget::CanvasOverlayTarget( CanvasFrameData& inoutFrame, const float2& targetSize )
@@ -69,16 +65,5 @@ namespace sw
         {
             registrations.getAt( index )->_pFunction( context, target );
         }
-    }
-
-    CanvasOverlayRegistrar::CanvasOverlayRegistrar( const CanvasOverlayRegistration* pRegistration )
-        : _pRegistration{ CanvasOverlays::registerOverlay( pRegistration ) ? pRegistration : nullptr }
-    {
-    }
-
-    CanvasOverlayRegistrar::~CanvasOverlayRegistrar()
-    {
-        if ( _pRegistration != nullptr )
-            CanvasOverlays::unregisterOverlay( _pRegistration );
     }
 } // namespace sw

@@ -215,6 +215,7 @@ namespace sw
             , _listShadowOrder{}
             , _order{ order }
             , _nameCase{ nameCase }
+            , _generation{ 0 }
             , _bRequireName{ bRequireName }
             , _subscriptions{ onRelease }
         {
@@ -243,6 +244,7 @@ namespace sw
                 if ( RegistrationReloadScope::isActive() == false )
                     return RegistrationResult::DuplicateName;
                 replaceByName( pItem, name, order );
+                ++_generation;
                 return RegistrationResult::Added;
             }
 
@@ -259,6 +261,7 @@ namespace sw
             _listItem.insert( _listItem.begin() + static_cast<ptrdiff_t>( insertIndex ), pItem );
             _listName.insert( _listName.begin() + static_cast<ptrdiff_t>( insertIndex ), string( name ) );
             _listOrder.insert( _listOrder.begin() + static_cast<ptrdiff_t>( insertIndex ), order );
+            ++_generation;
             return RegistrationResult::Added;
         }
 
@@ -296,6 +299,7 @@ namespace sw
             restoreShadow( name );
             returnToKeptStorage();
             releaseEmptyStorage();
+            ++_generation;
             return true;
         }
 
@@ -325,6 +329,7 @@ namespace sw
             _listShadowItem  = vector<T*>{};
             _listShadowName  = vector<string>{};
             _listShadowOrder = vector<int32>{};
+            ++_generation;
         }
 
         /** @brief 그 객체가 올라 있는지 봅니다. */
@@ -455,6 +460,12 @@ namespace sw
         const string& getNameAt( uint32 index ) const override { return _listName[index]; }
         /** @brief 항목 전부(순서대로)입니다. 소유하지 않습니다. */
         const vector<T*>& getItems() const { return _listItem; }
+        /**
+         * @brief 목록이 바뀔 때마다(올리기 · 리로드 대체 · 빼기 · 비우기) 오르는 번호입니다. 목록에서 만든 값을 들고 있는 쪽이 앞에 본 번호와 비교해 다시 만들 때를 안다.
+         * @details 바뀜을 전역 신호로 알리지 않는다 — 알림은 등록자의 정적 초기화 · 모듈 언로드 중에 불려 받는 쪽이 아직(또는 이미) 없을 수 있다. 번호는 받는 쪽이 자기 때에 본다
+         *          (언리얼은 모듈 변경 델리게이트를 방송하지만, 여기서는 정적 등록 중의 방송을 받을 쪽이 없을 수 있어 읽는 쪽이 비교한다).
+         */
+        uint32 getGeneration() const { return _generation; }
 
     private:
         static constexpr size_t kNotFound = static_cast<size_t>( -1 );
@@ -553,6 +564,7 @@ namespace sw
         vector<int32>     _listShadowOrder;  ///< 그림자 항목의 정렬 값
         RegistrationOrder _order;            ///< 늘어놓는 순서
         NameCase          _nameCase;         ///< 이름 비교가 대소문자를 보는지
+        uint32            _generation;       ///< `getGeneration`
         uint8             _bRequireName : 1; ///< 이름 없는 등록을 거절하는지
         /** @brief `addSubscribed` 가 낸 구독입니다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
         ItemSubscriptionList<T> _subscriptions;
@@ -804,3 +816,79 @@ namespace sw
         uint32                _revision;          ///< `getRevision`
     };
 } // namespace sw
+
+namespace sw
+{
+    /**
+     * @class StaticRegistrar
+     * @brief 정적 등록자의 공통 틀입니다. 만들 때 등록 함수로 올리고, 사라질 때(모듈 언로드 · 프로세스 끝) 올렸던 것만 내리기 함수로 내립니다.
+     * @details 기능마다 손으로 쓰던 "등록자 구조체 + 생성자에서 올리기 + 소멸자에서 거절되지 않았으면 내리기" 를 한 벌로 둔다 — 거절된 등록을 내리면 같은 이름의
+     *          앞 등록을 지우므로 그 규칙을 한곳에서 지킨다. 기능은 `SW_DEFINE_STATIC_REGISTRAR` 한 줄로 등록자 형식을 만들고, 등록 매크로는 `SW_STATIC_REGISTRATION` 을 쓴다.
+     *          함수는 템플릿 인자가 아니라 생성자 인자로 받는다 — 다른 DLL 이 내보낸 함수의 주소는 MSVC 에서 컴파일 때 상수가 아니다.
+     *          언리얼의 콘솔 변수 자동 등록 객체(생성자 등록 · 소멸자 해제)와 같은 자리다.
+     * @tparam TItem 등록 함수가 받는 항목입니다(대개 `const XRegistration*`, 함수 포인터도 된다).
+     */
+    template <typename TItem>
+    class StaticRegistrar
+    {
+    public:
+        using RegisterFunction   = bool ( * )( TItem item );
+        using UnregisterFunction = void ( * )( TItem item );
+
+        StaticRegistrar( TItem item, RegisterFunction pRegister, UnregisterFunction pUnregister )
+            : _item{ pRegister( item ) ? item : TItem{} }
+            , _pUnregister{ pUnregister }
+        {
+        }
+
+        ~StaticRegistrar()
+        {
+            if ( _item != TItem{} )
+                _pUnregister( _item );
+        }
+
+        StaticRegistrar( const StaticRegistrar& )            = delete;
+        StaticRegistrar& operator=( const StaticRegistrar& ) = delete;
+
+    private:
+        TItem              _item;        ///< 올린 항목. 거절됐으면 빈 값이라 내리지 않는다
+        UnregisterFunction _pUnregister; ///< 내리기 함수
+    };
+} // namespace sw
+
+/**
+ * @brief 정적 등록 목록을 함수 지역 정적으로 돌려주는 함수 @p getName 을 정의합니다(.cpp 에서 — 이미지마다 하나라 헤더에 두지 않는다).
+ * @details 함수 정적이라 다른 TU · DLL 의 정적 등록자가 먼저 와도 비어 있는 채로 서고, 등록자보다 늦게 사라진다. 함수 정적 가변 변수는 이 매크로와
+ *          `SW_DEFINE_REGISTRATION_SLOT` 으로만 둔다(린트 `function-statics`) — 나머지 런타임 상태 · 정책 · 신호는 엔진 · 에디터 서브시스템이 든다.
+ *          클래스 안에서는 앞에 `static` 을 붙인다(`static SW_DEFINE_REGISTRATION_LIST( getList, ... )`).
+ * @param T 항목 형식입니다. 나머지 인자는 `RegistrationList` 생성자 인자(목록 이름 · 순서 · 이름 필수 · 대소문자 · 해제 함수)입니다.
+ */
+#define SW_DEFINE_REGISTRATION_LIST( getName, T, ... )          \
+    ::sw::RegistrationList<T>& getName()                        \
+    {                                                           \
+        static ::sw::RegistrationList<T> s_list{ __VA_ARGS__ }; \
+        return s_list;                                          \
+    }
+
+/**
+ * @brief 기능의 정적 등록자 형식 @p RegistrarType 을 정의합니다(헤더, `namespace sw` 안). @p TItem 을 받아 @p pRegister 로 올리고 @p pUnregister 로 내린다(`StaticRegistrar`).
+ */
+#define SW_DEFINE_STATIC_REGISTRAR( RegistrarType, TItem, pRegister, pUnregister )                          \
+    struct RegistrarType final : ::sw::StaticRegistrar<TItem>                                               \
+    {                                                                                                       \
+        explicit RegistrarType( TItem item ) : ::sw::StaticRegistrar<TItem>{ item, pRegister, pUnregister } \
+        {                                                                                                   \
+        }                                                                                                   \
+    }
+
+/**
+ * @brief 등록 항목 하나와 그 정적 등록자(`StaticRegistrar`)를 .cpp 의 파일 범위에 둡니다. 기능의 등록 매크로가 이것 한 줄로 끝난다.
+ * @param tag 정적 이름의 앞머리입니다(기능마다 달라 한 TU 에 여러 기능을 등록해도 이름이 부딪히지 않는다). @param id 등록마다 다른 식별자입니다.
+ * @param RegistrationType 항목 형식, @param RegistrarType 그 등록자 형식이고, 나머지 인자는 항목의 중괄호 초기화 값입니다.
+ */
+#define SW_STATIC_REGISTRATION( tag, RegistrationType, RegistrarType, id, ... ) \
+    static const RegistrationType sw_##tag##_##id{ __VA_ARGS__ };               \
+    static const RegistrarType    sw_##tag##Registrar_##id                      \
+    {                                                                           \
+        &sw_##tag##_##id                                                        \
+    }

@@ -11,30 +11,18 @@ namespace sw
     {
         struct AutomationStepRegistryInternal
         {
-            /**
-             * @brief 이 레지스트리의 목록 셋입니다. Engine 이미지의 함수 정적 하나가 쥐고, 모듈이 바뀌어도 남는다.
-             * @details 단계 종류(등록 순서) · 차단 조건(등록 순서) · 검사 함수만 올린 등록(`SW_AUTOMATION_STEP_VALIDATOR` — 단계를 등록하는 모듈이 없는 프로세스가 속성을 검사하게 한다)이다.
-             */
-            struct Registries
-            {
-                RegistrationList<const AutomationStepRegistration>          _step{ "AutomationStepRegistry", RegistrationOrder::Insertion, true };
-                RegistrationList<const AutomationBlocker>                   _blocker{ "AutomationBlocker", RegistrationOrder::Insertion, true };
-                RegistrationList<const AutomationStepValidatorRegistration> _validator{ "AutomationStepValidator", RegistrationOrder::Insertion, true };
-            };
+            /** @brief 단계 종류(등록 순서). Engine 이미지의 함수 정적이라 모듈이 바뀌어도 남는다. */
+            static SW_DEFINE_REGISTRATION_LIST( getRegistrations, const AutomationStepRegistration, "AutomationStepRegistry", RegistrationOrder::Insertion, true )
 
-            static Registries& getRegistries()
-            {
-                static Registries s_registries;
-                return s_registries;
-            }
+                /** @brief 차단 조건(등록 순서)입니다. */
+                static SW_DEFINE_REGISTRATION_LIST( getBlockers, const AutomationBlocker, "AutomationBlocker", RegistrationOrder::Insertion, true )
 
-            static RegistrationList<const AutomationStepRegistration>& getRegistrations() { return getRegistries()._step; }
+                /** @brief 검사 함수만 올린 등록(`SW_AUTOMATION_STEP_VALIDATOR` — 단계를 등록하는 모듈이 없는 프로세스가 속성을 검사하게 한다)입니다. */
+                static SW_DEFINE_REGISTRATION_LIST( getValidators, const AutomationStepValidatorRegistration, "AutomationStepValidator", RegistrationOrder::Insertion, true )
 
-            static RegistrationList<const AutomationBlocker>& getBlockers() { return getRegistries()._blocker; }
-
-            /** @brief 범위가 @p minimumScope 이상인 조건 중 지금 참인 첫 조건의 이름입니다. 없으면 nullptr 입니다. */
-            /** @brief @p minimumScope 이상(넓은 범위가 좁은 범위를 포함)인 조건 가운데 지금 막는 것입니다. `Finish` 는 어느 범위에도 들지 않는다. */
-            static const utf8* findBlocking( AutomationBlockScope minimumScope )
+                /** @brief 범위가 @p minimumScope 이상인 조건 중 지금 참인 첫 조건의 이름입니다. 없으면 nullptr 입니다. */
+                /** @brief @p minimumScope 이상(넓은 범위가 좁은 범위를 포함)인 조건 가운데 지금 막는 것입니다. `Finish` 는 어느 범위에도 들지 않는다. */
+                static const utf8* findBlocking( AutomationBlockScope minimumScope )
             {
                 for ( const AutomationBlocker* pBlocker : getBlockers().getItems() )
                 {
@@ -72,17 +60,17 @@ namespace sw
         const bool bInvalidValidatorRegistration = pRegistration == nullptr || pRegistration->_pKind == nullptr || pRegistration->_pValidate == nullptr;
         if ( bInvalidValidatorRegistration )
             return false;
-        return AutomationStepRegistryInternal::getRegistries()._validator.addLogged( pRegistration, "Automation step validator", pRegistration->_pKind ) == RegistrationResult::Added;
+        return AutomationStepRegistryInternal::getValidators().addLogged( pRegistration, "Automation step validator", pRegistration->_pKind ) == RegistrationResult::Added;
     }
 
     void AutomationStepRegistry::unregisterValidator( const AutomationStepValidatorRegistration* pRegistration )
     {
-        (void)AutomationStepRegistryInternal::getRegistries()._validator.remove( pRegistration ); // 올라와 있지 않은 검사 함수를 빼는 것은 할 일이 없다
+        (void)AutomationStepRegistryInternal::getValidators().remove( pRegistration ); // 올라와 있지 않은 검사 함수를 빼는 것은 할 일이 없다
     }
 
     const AutomationStepValidatorRegistration* AutomationStepRegistry::findValidator( string_view kind )
     {
-        return AutomationStepRegistryInternal::getRegistries()._validator.findByName( kind );
+        return AutomationStepRegistryInternal::getValidators().findByName( kind );
     }
 
     bool AutomationStepRegistry::registerBlocker( const AutomationBlocker* pBlocker )
@@ -137,27 +125,5 @@ namespace sw
                 text += " (" + pBlocker->_pDescribe() + ")";
         }
         return text.empty() ? string( "none" ) : text;
-    }
-
-    AutomationStepRegistrar::AutomationStepRegistrar( const AutomationStepRegistration* pRegistration )
-        : _pRegistration{ AutomationStepRegistry::registerStep( pRegistration ) ? pRegistration : nullptr }
-    {
-    }
-
-    AutomationStepRegistrar::~AutomationStepRegistrar()
-    {
-        if ( _pRegistration != nullptr )
-            AutomationStepRegistry::unregisterStep( _pRegistration );
-    }
-
-    AutomationBlockerRegistrar::AutomationBlockerRegistrar( const AutomationBlocker* pBlocker )
-        : _pBlocker{ AutomationStepRegistry::registerBlocker( pBlocker ) ? pBlocker : nullptr }
-    {
-    }
-
-    AutomationBlockerRegistrar::~AutomationBlockerRegistrar()
-    {
-        if ( _pBlocker != nullptr )
-            AutomationStepRegistry::unregisterBlocker( _pBlocker );
     }
 } // namespace sw

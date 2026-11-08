@@ -10,11 +10,7 @@ namespace sw
 {
     namespace
     {
-        RegistrationList<const NetSimGameEntry>& getEntries()
-        {
-            static RegistrationList<const NetSimGameEntry> s_listEntry( "NetSimGameRegistry", RegistrationOrder::Insertion, true );
-            return s_listEntry;
-        }
+        SW_DEFINE_REGISTRATION_LIST( getEntries, const NetSimGameEntry, "NetSimGameRegistry", RegistrationOrder::Insertion, true )
     } // namespace
 
     bool NetSimGameRegistry::registerGame( const NetSimGameEntry& entry )

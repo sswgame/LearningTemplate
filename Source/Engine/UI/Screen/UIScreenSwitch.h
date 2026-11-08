@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/String/RegistrationList.h"
 
 #include "Engine/UI/Screen/UIScreenTypes.h"
 
@@ -51,25 +52,12 @@ namespace sw
 
 namespace sw
 {
-    /** @brief `SW_UI_SCREEN_SWITCH` 가 두는 정적 등록자입니다. 등록이 거절됐으면 내릴 때 빼지 않습니다(앞 등록을 지우지 않게). */
-    struct SW_API UIScreenSwitchRegistrar
-    {
-
-        const UIScreenSwitchRegistration* _pRegistration;
-        explicit UIScreenSwitchRegistrar( const UIScreenSwitchRegistration* pRegistration );
-        ~UIScreenSwitchRegistrar();
-        UIScreenSwitchRegistrar( const UIScreenSwitchRegistrar& )            = delete;
-        UIScreenSwitchRegistrar& operator=( const UIScreenSwitchRegistrar& ) = delete;
-    };
+    /** @brief `SW_UI_SCREEN_SWITCH` 가 두는 정적 등록자입니다(공통 틀 `StaticRegistrar` — 거절된 등록은 내리지 않는다). */
+    SW_DEFINE_STATIC_REGISTRAR( UIScreenSwitchRegistrar, const UIScreenSwitchRegistration*, &UIScreenSwitches::registerSwitch, &UIScreenSwitches::unregisterSwitch );
 } // namespace sw
 
 /**
  * @brief 화면 스위치를 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). @p id 는 정적 이름을 만드는 식별자입니다.
  * @details Shipping 은 Engine 을 통째로 링크하므로(`sw_linkWholeArchive`) 등록자가 링크에서 빠지지 않는다.
  */
-#define SW_UI_SCREEN_SWITCH( id, pName, order, pFunction )                                           \
-    static const ::sw::UIScreenSwitchRegistration sw_uiScreenSwitch_##id{ pName, order, pFunction }; \
-    static const ::sw::UIScreenSwitchRegistrar    sw_uiScreenSwitchRegistrar_##id                    \
-    {                                                                                                \
-        &sw_uiScreenSwitch_##id                                                                      \
-    }
+#define SW_UI_SCREEN_SWITCH( id, pName, order, pFunction ) SW_STATIC_REGISTRATION( uiScreenSwitch, ::sw::UIScreenSwitchRegistration, ::sw::UIScreenSwitchRegistrar, id, pName, order, pFunction )

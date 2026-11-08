@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/String/RegistrationList.h"
 
 #include "Engine/Audio/AudioChannelLayout.h"
 
@@ -56,21 +57,9 @@ namespace sw
         static void notifyStreamEnded( AudioChannelLayout layout );
     };
 
-    /** @brief `SW_AUDIO_RENDER_LISTENER` 이 두는 정적 등록자입니다. 등록이 거절됐으면 내릴 때 빼지 않습니다(앞 등록을 지우지 않게). */
-    struct SW_API AudioRenderListenerRegistrar
-    {
-        const AudioRenderListenerRegistration* _pRegistration;
-        explicit AudioRenderListenerRegistrar( const AudioRenderListenerRegistration* pRegistration );
-        ~AudioRenderListenerRegistrar();
-        AudioRenderListenerRegistrar( const AudioRenderListenerRegistrar& )            = delete;
-        AudioRenderListenerRegistrar& operator=( const AudioRenderListenerRegistrar& ) = delete;
-    };
+    /** @brief `SW_AUDIO_RENDER_LISTENER` 이 두는 정적 등록자입니다(공통 틀 `StaticRegistrar` — 거절된 등록은 내리지 않는다). */
+    SW_DEFINE_STATIC_REGISTRAR( AudioRenderListenerRegistrar, const AudioRenderListenerRegistration*, &AudioRenderListenerRegistry::registerListener, &AudioRenderListenerRegistry::unregisterListener );
 } // namespace sw
 
 /** @brief 오프라인 렌더 리스너을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). @p pListener 은 정적 수명의 리스너 객체 주소입니다. */
-#define SW_AUDIO_RENDER_LISTENER( id, pName, pListener )                                                \
-    static const ::sw::AudioRenderListenerRegistration sw_audioRenderListener_##id{ pName, pListener }; \
-    static const ::sw::AudioRenderListenerRegistrar    sw_audioRenderListenerRegistrar_##id             \
-    {                                                                                                   \
-        &sw_audioRenderListener_##id                                                                    \
-    }
+#define SW_AUDIO_RENDER_LISTENER( id, pName, pListener ) SW_STATIC_REGISTRATION( audioRenderListener, ::sw::AudioRenderListenerRegistration, ::sw::AudioRenderListenerRegistrar, id, pName, pListener )
