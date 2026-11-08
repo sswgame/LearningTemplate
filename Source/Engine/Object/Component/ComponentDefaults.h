@@ -62,7 +62,6 @@ namespace sw
          * @brief 기본값 문서를 **실제로 열어 본 횟수**입니다. 진단 · 회귀 테스트용입니다.
          * @details 이 수는 `setPath` 당 **1 이어야 합니다.** 로드가 실패해도 다시 열지 않습니다(`_bLoadAttempted`).
          */
-        uint32 getLoadAttemptCount() const { return _loadAttemptCount.load( std::memory_order_relaxed ); }
 
         /**
          * @brief 타입 @p typeInfo 의 해석 결과가 캐시에서 사는 주소입니다(없으면 nullptr). 진단 · 회귀 테스트용입니다.
@@ -142,8 +141,6 @@ namespace sw
          *          개발 중 파일을 만들어 넣는 길은 그대로 열려 있습니다.
          */
         atomic<bool> _bLoadAttempted;
-        /** @brief 문서를 실제로 열어 본 횟수입니다. `getLoadAttemptCount` 가 이것을 반환합니다. */
-        atomic<uint32> _loadAttemptCount;
     };
 
     SW_SERVICE_SLOT( ComponentDefaults, Required );

@@ -142,7 +142,6 @@ namespace sw
         , _defaultsMutex{}
         , _bDefaultsLoaded{ false }
         , _bLoadAttempted{ false }
-        , _loadAttemptCount{ 0 }
     {
     }
 
@@ -172,8 +171,7 @@ namespace sw
             return;
         }
 
-        string absPath;
-        _loadAttemptCount.fetch_add( 1, std::memory_order_relaxed );
+        string     absPath;
         const bool bLoaded = _defaultsDoc.loadResource( AssetID{ _customDefaultsPath.c_str() }, &absPath );
         if ( bLoaded )
             _bDefaultsLoaded.store( true, std::memory_order_release );

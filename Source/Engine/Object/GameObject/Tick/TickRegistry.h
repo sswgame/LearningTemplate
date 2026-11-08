@@ -196,11 +196,8 @@ namespace sw
         /** @brief 스테이지가 처리하는 항목 수입니다(선행 조건을 가진 켜진 항목). 나머지는 모두 기본 경로입니다. */
         uint32 getStageItemCount() const { return _stageItemCount; }
         /** @brief 스테이지를 다시 만든 횟수(누적)입니다. 체인 밖 오브젝트의 스폰과 파괴로는 오르지 않습니다. 진단과 회귀 테스트용입니다. */
-        uint32 getStageBuildCount() const { return _stageBuildCount; }
         /** @brief 스테이지를 다시 만들지 않고 말단 오브젝트의 항목만 끼우거나 뺀 횟수(누적)입니다. 진단과 회귀 테스트용입니다. */
-        uint32 getStageDeltaCount() const { return _stageDeltaCount; }
         /** @brief 스테이지를 훑어 파괴 · 변경된 오브젝트의 항목을 걷어 낸 횟수(누적)입니다. 한 `refresh` 에 오브젝트가 몇 개 빠져도 한 번만 오른다. 진단과 회귀 테스트용입니다. */
-        uint32 getStageCompactCount() const { return _stageCompactCount; }
 
     private:
         /** @brief 스테이지에서 한 오브젝트의 항목을 빼 달라는 대기 요청입니다. */
@@ -275,9 +272,6 @@ namespace sw
         atomic<uint8>                     _bAllDirty;                   ///< 전부 다시 훑을지 여부
         uint32                            _prerequisiteCount;           ///< 등록된 서브틱 선행 조건의 총수
         uint32                            _stageItemCount;              ///< 스테이지가 도는 항목 수
-        uint32                            _stageBuildCount;             ///< 스테이지를 다시 만든 횟수(진단)
-        uint32                            _stageDeltaCount;             ///< 말단 오브젝트의 항목만 끼우거나 뺀 횟수(진단)
-        uint32                            _stageCompactCount;           ///< 스테이지를 훑어 항목을 걷어 낸 횟수(진단) — 제거 요청 수가 아니라 `flushStageEdits` 횟수다
         uint64                            _stageEditOrder;              ///< 스테이지 편집 요청마다 오르는 순번이다(제거와 끼움의 선후를 가린다)
         vector<StageRemoval>              _listStageRemoval;            ///< 스테이지에서 빼 달라는 대기 요청이다. `flushStageEdits` 가 적용한다
         vector<StageInsertion>            _listStageInsertion;          ///< 레벨 0 스테이지에 끼울 대기 항목이다(요청 순서)

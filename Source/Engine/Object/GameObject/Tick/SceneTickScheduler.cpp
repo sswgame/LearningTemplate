@@ -197,7 +197,6 @@ namespace sw
         , _pStructuralChangeBuffer{ &structuralChangeBuffer }
         , _tickRegistry{}
         , _listBatchStart{}
-        , _stageBuildCount{ 0 }
         , _stageTransformApplyCount{ 0 }
     {
     }
@@ -229,8 +228,7 @@ namespace sw
         {
             // 멤버십이 바뀐 오브젝트만 항목을 다시 짓는다. 씬 전체를 훑지 않는다.
             SW_PROFILE_SCOPE( "GT.Scene.tick.registry" );
-            if ( _tickRegistry.refresh( *_pManager ) )
-                _stageBuildCount.fetch_add( 1, std::memory_order_relaxed );
+            (void)_tickRegistry.refresh( *_pManager ); // 다시 지은 횟수는 레지스트리의 계측(`GT.Scene.tick.stageRebuilds`)이 센다
         }
 
         // 그룹마다: 보통 길(오브젝트 칸 목록을 한 번의 포크-조인) → 그 그룹의 선행 조건 스테이지. 한 오브젝트의 칸은 한 워커가 (순서 키 순으로)

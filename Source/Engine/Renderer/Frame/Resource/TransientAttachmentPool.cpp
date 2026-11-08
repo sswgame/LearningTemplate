@@ -6,6 +6,7 @@
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
+#include "Engine/Profiling/FrameProfiler.h"
 
 namespace sw
 {
@@ -16,7 +17,6 @@ namespace sw
         , _listClearedThisFrame{}
         , _width{ 0 }
         , _height{ 0 }
-        , _allocationCount{ 0 }
     {
     }
 
@@ -62,7 +62,7 @@ namespace sw
         const RHIDescriptorIndex srv = pDevice->getResourceFactory()->registerBindlessTexture( handle );
         const RHIDescriptorIndex uav = bUnorderedAccess ? pDevice->getResourceFactory()->registerBindlessTextureUAV( handle ) : kInvalidDescriptorIndex;
         _mapAttachment.emplace( name, Attachment{ handle, srv, uav, desc._width, desc._height, format, ops } );
-        ++_allocationCount;
+        SW_PROFILE_COUNT( "RT.Frame.transientAllocations", 1 ); // 새 첨부를 만들었다 — 풀이 재사용하지 못한 횟수
         return true;
     }
 

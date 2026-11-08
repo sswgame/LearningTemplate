@@ -51,7 +51,6 @@ namespace sw
         const TickRegistry& getTickRegistry() const { return _tickRegistry; }
 
         /** @brief 레지스트리가 오브젝트 항목을 다시 지은 틱의 수입니다. 진단 · 회귀 테스트용입니다. */
-        uint32 getStageBuildCount() const { return _stageBuildCount.load( std::memory_order_relaxed ); }
         /** @brief 선행 조건 스테이지 경계에서 틱 중 트랜스폼 쓰기를 적용한 횟수(누적)입니다. 진단 · 회귀 테스트용입니다. */
         uint32 getStageTransformApplyCount() const { return _stageTransformApplyCount; }
 
@@ -68,7 +67,6 @@ namespace sw
         StructuralChangeBuffer*  _pStructuralChangeBuffer;
         TickRegistry             _tickRegistry;
         vector<uint32>           _listBatchStart;           ///< 한 그룹의 디스패치에서 일괄 목록마다 시작 번호(끝에 전체 수). 할당을 재사용한다
-        atomic<uint32>           _stageBuildCount;          ///< 레지스트리가 항목을 다시 지은 틱의 수(진단)
         uint32                   _stageTransformApplyCount; ///< 스테이지 경계 적용 횟수(진단)
     };
 } // namespace sw

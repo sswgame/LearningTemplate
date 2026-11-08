@@ -130,7 +130,6 @@ namespace sw
          */
         bool releaseIfIdle( IRHIDevice* pDevice, const hashed_string& name, bool bUsedThisFrame );
         /** @brief 이 풀이 지금까지 만든 첨부 수입니다(놓았다 다시 만든 것도 센다 — 진단과 테스트용). */
-        uint32 getAllocationCount() const { return _allocationCount; }
         /** @brief 디바이스가 이미 사라졌을 때 부릅니다. 핸들만 잊습니다. */
         void clear();
 
@@ -154,6 +153,5 @@ namespace sw
         vector<hashed_string> _listClearedThisFrame SW_GUARDED_BY( _clearedMutex );
         uint32                                      _width;
         uint32                                      _height;
-        uint32                                      _allocationCount;
     };
 } // namespace sw

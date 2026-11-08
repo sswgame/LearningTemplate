@@ -18,7 +18,6 @@ namespace sw
         , _scrollOffset{ 0.0f }
         , _viewportHeight{ 0.0f }
         , _itemCount{ 0 }
-        , _bindCount{ 0 }
         , _rowHeight{ 32.0f }
         , _wheelStep{ 96.0f }
     {
@@ -156,7 +155,6 @@ namespace sw
             if ( _listRowItem[rowIndex] != itemIndex )
             {
                 _listRowItem[rowIndex] = itemIndex;
-                ++_bindCount;
                 if ( _rowBinder.isBound() )
                     _rowBinder( row, itemIndex );
             }

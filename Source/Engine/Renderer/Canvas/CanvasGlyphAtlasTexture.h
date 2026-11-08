@@ -41,7 +41,7 @@ namespace sw
         void applyUploads( vector<GlyphAtlasUpload>& inoutListUpload, GlyphAtlas* pSource );
         /**
          * @brief 페이지 텍스처를 갖추고(없으면 만듭니다) 바뀐 구간의 업로드를 냅니다. GPU 완료를 기다리지 않습니다(새 페이지는 첫 업로드가 끝난 이후 프레임부터 그려진다).
-         * @details 업로드 호출 수(`getLastUploadCallCount`)를 이번 호출 것으로 새로 셉니다.
+         * @details 받아들여진 업로드 제출은 계측 `RT.Canvas.glyphUploads` 로 센다.
          */
         void uploadPages( IRHIDevice& device );
         /** @brief 페이지 @p page 의 SRV 입니다. 첫 업로드가 끝나기 전(SRV 없음)이거나 멈춘 페이지, 없는 페이지면 kInvalidDescriptorIndex 입니다. */
@@ -52,7 +52,6 @@ namespace sw
         /** @brief 지금 보관 중인 아틀라스 페이지 수입니다(미러 기준). */
         uint32 getPageCount() const { return static_cast<uint32>( _listPage.size() ); }
         /** @brief 마지막 `uploadPages` 가 받아들여진 업로드 제출 수입니다(전체 페이지와 구간의 합이며 진단과 테스트용입니다. `Busy` 는 세지 않습니다). */
-        uint32 getLastUploadCallCount() const { return _lastUploadCallCount; }
 
         /**
          * @brief 한 페이지의 구간 목록이 @p maxRegionCount 를 넘으면 그 경계 상자 하나로 바꿉니다(순수 함수이며 테스트가 직접 부릅니다).
@@ -97,8 +96,7 @@ namespace sw
 
     private:
         vector<AtlasPage> _listPage;
-        vector<uint8>     _regionScratchBytes; ///< 구간 업로드용으로 행 사이의 빈틈을 없앤 사본
-        uint32            _lastUploadCallCount;
+        vector<uint8>     _regionScratchBytes;  ///< 구간 업로드용으로 행 사이의 빈틈을 없앤 사본
         uint64            _appliedSequence;     ///< 마지막으로 받은 묶음 번호입니다(0 = 아직 없음).
         uint8             _bAwaitingFullUpload; ///< 묶음을 놓쳐 전체 묶음을 기다린다 — 그때까지 차분 묶음은 버리고 다시 청한다
     };

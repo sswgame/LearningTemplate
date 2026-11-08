@@ -7,13 +7,13 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferUtil.h"
+#include "Engine/Profiling/FrameProfiler.h"
 
 namespace sw
 {
     CanvasGlyphAtlasTexture::CanvasGlyphAtlasTexture()
         : _listPage{}
         , _regionScratchBytes{}
-        , _lastUploadCallCount{ 0 }
         , _appliedSequence{ 0 }
         , _bAwaitingFullUpload{ SW_FALSE }
     {
@@ -53,7 +53,6 @@ namespace sw
 
     void CanvasGlyphAtlasTexture::uploadPages( IRHIDevice& device )
     {
-        _lastUploadCallCount = 0;
         // 페이지 텍스처 — 없으면 만들고(새 디바이스 · 백엔드 교체 뒤에도 거울에서 다시 올린다) 바뀐 구간을 올린다. 프레임 경로라 GPU 완료를 기다리지 않는다:
         // 제출만 하고 완료는 이후 프레임에 폴링한다(`...AndWait` 를 부르면 Debug 단언).
         const RHITransferUtil::ScopedForbidBlockingTransfer forbidBlocking;
@@ -243,7 +242,7 @@ namespace sw
             failPage( page, "upload was rejected" );
             return;
         }
-        ++_lastUploadCallCount;
+        SW_PROFILE_COUNT( "RT.Canvas.glyphUploads", 1 );
         page._bWholePageDirty = SW_FALSE;
         page._listDirty.clear();
         if ( page._srv == kInvalidDescriptorIndex )
@@ -281,7 +280,7 @@ namespace sw
                 return;
             }
             ++submittedCount;
-            ++_lastUploadCallCount;
+            SW_PROFILE_COUNT( "RT.Canvas.glyphUploads", 1 );
         }
         // 낸 앞부분만 지운다 — `Busy` 에서 멈춘 나머지는 다음 프레임에 같은 순서로 낸다.
         page._listDirty.erase( page._listDirty.begin(), page._listDirty.begin() + static_cast<ptrdiff_t>( submittedCount ) );

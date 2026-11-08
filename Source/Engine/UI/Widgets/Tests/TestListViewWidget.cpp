@@ -18,6 +18,8 @@ namespace
     {
         static constexpr float2  kViewport{ 100.0f, 100.0f };
         static constexpr float32 kRowHeight = 20.0f; ///< 보이는 줄 5 + 1
+        /** @brief 바인더가 불린 횟수입니다 — 위젯이 아니라 테스트가 센다(바인딩은 이 콜백을 부르는 일이다). `makeList` 가 0 으로 되돌린다. */
+        static inline uint32 s_bindCount = 0;
 
         /** @brief 잎 위젯 줄을 만들고 항목 번호를 위젯 이름(바인더가 부른 횟수와 함께)으로 남기는 목록을 루트에 놓습니다. */
         static ListViewWidget& makeList( WidgetTree& tree, uint32 itemCount )
@@ -26,8 +28,12 @@ namespace
             list.setRowHeight( kRowHeight );
             list.setRowFactory( ListViewWidget::RowFactoryDelegate::create( []() -> unique_ptr<Widget>
             { return make_unique<UITestLeaf>( float2{ 10.0f, 10.0f } ); } ) );
+            s_bindCount = 0;
             list.setRowBinder( ListViewWidget::RowBinderDelegate::create( []( Widget& row, uint32 itemIndex )
-            { row.setName( hashed_string( to_string( static_cast<uint64>( itemIndex ) ) ) ); } ) );
+            {
+                ++s_bindCount;
+                row.setName( hashed_string( to_string( static_cast<uint64>( itemIndex ) ) ) );
+            } ) );
             list.setItemCount( itemCount );
             return list;
         }
@@ -42,7 +48,7 @@ SW_TEST_CASE( ListViewWidgetTest, CreatesOnlyTheVisibleRows )
     ListViewWidget& list = Util::makeList( tree, 10000 );
     (void)UITestUtil::layout( tree, Util::kViewport );
     SW_EXPECT_EQUAL( 6u, list.getCreatedRowCount() );
-    SW_EXPECT_EQUAL( 6u, list.getBindCount() );
+    SW_EXPECT_EQUAL( 6u, Util::s_bindCount );
     SW_EXPECT_EQUAL( 0u, list.findItemIndex( *list.getChild( 0 ) ) );
     SW_EXPECT_EQUAL( 5u, list.findItemIndex( *list.getChild( 5 ) ) );
 }
@@ -53,10 +59,10 @@ SW_TEST_CASE( ListViewWidgetTest, ScrollingOneRowRebindsOneWidget )
     WidgetTree      tree;
     ListViewWidget& list = Util::makeList( tree, 100 );
     (void)UITestUtil::layout( tree, Util::kViewport );
-    const uint32 bindsBefore = list.getBindCount();
+    const uint32 bindsBefore = Util::s_bindCount;
     list.setScrollOffset( Util::kRowHeight );
     (void)UITestUtil::layout( tree, Util::kViewport );
-    SW_EXPECT_EQUAL( bindsBefore + 1u, list.getBindCount() );
+    SW_EXPECT_EQUAL( bindsBefore + 1u, Util::s_bindCount );
     SW_EXPECT_EQUAL( 6u, list.findItemIndex( *list.getChild( 0 ) ) ); // 항목 k 는 줄 k % 6 이 맡는다
     SW_EXPECT_EQUAL( 1u, list.findItemIndex( *list.getChild( 1 ) ) );
     SW_EXPECT_EQUAL( 6u, list.getCreatedRowCount() );

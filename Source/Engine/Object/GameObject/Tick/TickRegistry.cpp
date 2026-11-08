@@ -14,6 +14,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Tick/TickBatchRegistry.h"
+#include "Engine/Profiling/FrameProfiler.h"
 
 namespace sw
 {
@@ -487,9 +488,6 @@ namespace sw
         , _bAllDirty{ SW_TRUE }
         , _prerequisiteCount{ 0 }
         , _stageItemCount{ 0 }
-        , _stageBuildCount{ 0 }
-        , _stageDeltaCount{ 0 }
-        , _stageCompactCount{ 0 }
         , _stageEditOrder{ 0 }
         , _listStageRemoval{}
         , _listStageInsertion{}
@@ -663,7 +661,7 @@ namespace sw
             if ( bRebuildPending || applyStageDelta( manager, pObj ) == false )
                 ++_stageGeneration;
             else
-                ++_stageDeltaCount;
+                SW_PROFILE_COUNT( "GT.Scene.tick.stageDeltas", 1 ); // 말단 오브젝트의 항목만 끼우거나 뺐다
         }
     }
 
@@ -705,7 +703,7 @@ namespace sw
         // 제거: 스테이지마다 한 번 훑으며 요청된 오브젝트의 항목을 걷어 낸다. 남은 항목의 순서는 그대로다.
         if ( listRemoval.empty() == false )
         {
-            ++_stageCompactCount;
+            SW_PROFILE_COUNT( "GT.Scene.tick.stageCompacts", 1 ); // 스테이지를 훑어 항목을 걷어 냈다
             for ( TickStage& stage : _listStage )
             {
                 size_t keptCount = 0;
@@ -971,7 +969,7 @@ namespace sw
     void TickRegistry::rebuildStages( GameObjectManager& manager )
     {
         _builtStageGeneration = _stageGeneration;
-        ++_stageBuildCount;
+        SW_PROFILE_COUNT( "GT.Scene.tick.stageRebuilds", 1 ); // 스테이지를 다시 만들었다 — 잦으면 틱 멤버십이 흔들린다
         _listStage.clear();
         _listStageRemoval.clear(); // 처음부터 다시 짓는다 — 쌓인 편집은 필요 없다
         _listStageInsertion.clear();

@@ -219,7 +219,6 @@ namespace sw
          */
         void wakeSleepingWorkers( uint32 requestedCount );
         /** @brief 지금까지 워커를 깨운 시그널 수입니다. 테스트가 "그룹 하나에 한 번" 인지 확인하는 데 씁니다. */
-        uint32 getWakeSignalCount() const { return _wakeSignalCount.load( std::memory_order_relaxed ); }
         /** @brief 만들어졌지만 아직 끝나지 않은 태스크 수입니다. `waitStage` · `waitAll` 이 돌아온 직후에는 그 태스크가 빠져 있어야 합니다(테스트용). */
         uint32 getActiveTaskCount() const { return _activeTaskCount.load( std::memory_order_acquire ); }
 
@@ -470,7 +469,6 @@ namespace sw
          *          `wakeSleepingWorkers` 가 한 번 올립니다.
          */
         alignas( 64 ) atomic<uint32> _workEpoch;
-        atomic<uint32> _wakeSignalCount; ///< 워커를 깨운 시그널 수(통계 · 테스트용)
         /**
          * @brief 완료 브로드캐스트입니다(스테이지 완료 · 활성 수 0 · 메인 작업 · clear). `waitAll` 과 "두 번째 대기자" 가 잠듭니다.
          * @details 스테이지 · 병렬 그룹은 대기자 **하나**를 자기 조인 카운터에 적어 두고, 마지막 태스크가 그 스레드만 깨웁니다. 같은

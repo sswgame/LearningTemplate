@@ -133,7 +133,6 @@ namespace sw
         , _pSkinBindingSkeleton{ nullptr }
         , _pAnimationSystem{ nullptr }
         , _frameContext{}
-        , _poseEvaluationCount{ 0 }
         , _lodClient{ *this }
         , _lodState{}
         , _boneLOD{}
@@ -261,7 +260,6 @@ namespace sw
     {
         _localPose.computeModelSpace( _skeleton->getParentIndices(), _listModelSpace );
         refreshSkinPalette();
-        ++_poseEvaluationCount;
         _bPoseDirty = SW_FALSE;
     }
 
@@ -981,7 +979,6 @@ namespace sw
                 refreshSkinPalette();
                 if ( bPoseNeeded )
                 {
-                    ++_poseEvaluationCount;
                     _bPoseDirty = SW_FALSE;
                 }
                 break;

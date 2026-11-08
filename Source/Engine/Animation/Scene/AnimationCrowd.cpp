@@ -181,7 +181,6 @@ namespace sw
         , _clock{ 0.0 }
         , _frameIndex{ 0 }
         , _evaluatedBucketCount{ 0 }
-        , _cookedVertexAnimationCount{ 0 }
     {
     }
 
@@ -410,8 +409,6 @@ namespace sw
         {
             // 쿠킹본은 같은 조건(정점 수 · 루트 묶기)일 때만 쓴다 — 아니면 베이크한다.
             bReady = animation->_vertexCount == sourceMesh->getVertexCount() && animation->_bAnchorRootMotion == anchor;
-            if ( bReady )
-                ++_cookedVertexAnimationCount;
         }
         if ( bReady == false )
             bReady = MeshVertexAnimationBaker::bake( *sourceMesh, skeleton, clip, _settings._vertexAnimationFramesPerSecond, bAnchorRootMotion, *animation );

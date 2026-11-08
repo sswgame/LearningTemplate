@@ -296,7 +296,6 @@ namespace sw
         shared_ptr<Mesh> findVertexAnimationMesh( const shared_ptr<Mesh>& sourceMesh, const Skeleton& skeleton, const AnimationClip& clip, bool bAnchorRootMotion,
                                                   string_view meshPath );
         /** @brief 쿠킹본에서 읽은 VAT 수입니다(진단과 테스트용). */
-        uint32 getCookedVertexAnimationCount() const { return _cookedVertexAnimationCount; }
 
         /** @brief 군중 시계(초)입니다. VAT 시계와 같은 값이며 렌더 스냅샷으로 전달됩니다. */
         float64 getClock() const { return _clock; }
@@ -336,6 +335,5 @@ namespace sw
         float64                                                                                    _clock;
         uint32                                                                                     _frameIndex; ///< `beginFrame` 마다 오른다(섞기 묶음의 시작 프레임)
         uint32                                                                                     _evaluatedBucketCount;
-        uint32                                                                                     _cookedVertexAnimationCount;
     };
 } // namespace sw

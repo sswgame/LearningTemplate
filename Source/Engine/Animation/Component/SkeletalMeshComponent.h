@@ -165,7 +165,6 @@ namespace sw
         /** @brief 화면 밖에서도 포즈를 만들지 정합니다. */
         void setAnimateWhenOffscreen( bool bAnimate ) { _bAnimateWhenOffscreen = bAnimate ? SW_TRUE : SW_FALSE; }
         /** @brief 포즈를 실제로 만든 횟수입니다(진단과 테스트용). 보간만 한 프레임은 세지 않습니다. */
-        uint32 getPoseEvaluationCount() const { return _poseEvaluationCount; }
         /** @brief 이번 프레임에 포즈를 만들면 true 입니다(`beginAnimationFrame` 뒤에 의미가 있습니다). */
         bool isPoseNeededThisFrame() const { return _frameContext._bPoseNeeded == SW_TRUE; }
 
@@ -339,7 +338,6 @@ namespace sw
         const Skeleton*                                 _pSkinBindingSkeleton;  ///< `refreshSkinBinding` 이 마지막으로 본 스켈레톤이다(동일성만 확인한다)
         AnimationSystem*                                _pAnimationSystem;
         AnimationFrameContext                           _frameContext;
-        uint32                                          _poseEvaluationCount;
         SkeletalMeshLODClient                           _lodClient;
         Subscription                                    _lodRegistration; ///< LOD 클라이언트 등록 구독(`onRegister` 가 받고 `onUnregister` 가 놓는다)
         AnimationLODState                               _lodState;

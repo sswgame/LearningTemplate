@@ -59,7 +59,6 @@ namespace sw
         /** @brief 지금까지 만든 줄 위젯 수입니다(테스트용이며, 보이는 줄 + 1 을 넘지 않습니다). */
         uint32 getCreatedRowCount() const { return static_cast<uint32>( _listRowItem.size() ); }
         /** @brief 지금까지 줄을 다시 연결한 횟수입니다(테스트용). */
-        uint32 getBindCount() const { return _bindCount; }
 
         bool canScrollIntoView() const override { return true; }
         bool scrollIntoView( const Widget& widget ) override;
@@ -82,7 +81,6 @@ namespace sw
         float32            _scrollOffset;
         float32            _viewportHeight; ///< 지난 배치의 보이는 높이
         uint32             _itemCount;
-        uint32             _bindCount;
         PROPERTY( DisplayName = "Row Height", Min = 1.0, Meta = "Units=ui" )
         float32 _rowHeight;
         PROPERTY( DisplayName = "Wheel Step", Min = 0.0, Meta = "Units=ui" )

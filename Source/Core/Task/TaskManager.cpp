@@ -219,7 +219,6 @@ namespace sw
         , _instanceID{ s_nextInstanceID.fetch_add( 1, std::memory_order_relaxed ) }
         , _idleWorkerMask{ 0 }
         , _workEpoch{ 0 }
-        , _wakeSignalCount{ 0 }
         , _completionBroadcast{}
         , _mainThreadParkedSlot{ -1 }
         , _globalHighQueue{}
@@ -1407,8 +1406,6 @@ namespace sw
             // 다시 잠들어서 깨우기 시스템 호출이 그보다 느린 곳(WSL)에서는 모두 깨우기 한 번이 1~90 초를 돈다.
             mask &= previous & ~bit;
         }
-        if ( wokenCount > 0 )
-            _wakeSignalCount.fetch_add( 1, std::memory_order_relaxed );
     }
 
     void TaskManager::workerLoop( uint32 workerID )
