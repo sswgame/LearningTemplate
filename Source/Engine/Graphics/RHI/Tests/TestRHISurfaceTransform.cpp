@@ -12,7 +12,7 @@ namespace
         float32 _v;
     };
 
-    SurfaceCoord mapToLogical( const sw::RHISurfaceCoordMapping& mapping, float32 physicalU, float32 physicalV )
+    SurfaceCoord mapToLogical( const sw::RHISurfaceUVMapping& mapping, float32 physicalU, float32 physicalV )
     {
         return SurfaceCoord{ mapping._m00 * physicalU + mapping._m01 * physicalV + mapping._offsetU, mapping._m10 * physicalU + mapping._m11 * physicalV + mapping._offsetV };
     }
@@ -48,15 +48,15 @@ SW_TEST_CASE( RHISurfaceTransformTest, PhysicalExtentSwapsOnlyForQuarterTurns )
 SW_TEST_CASE( RHISurfaceTransformTest, UVMappingRotatesCornersClockwise )
 {
     using sw::RHISurfaceTransform;
-    const sw::RHISurfaceCoordMapping identity = sw::RHISurfaceRotation{ RHISurfaceTransform::Identity, 4, 2 }.computeLogicalUVMapping();
-    const SurfaceCoord               same     = mapToLogical( identity, 0.25f, 0.75f );
+    const sw::RHISurfaceUVMapping identity = sw::RHISurfaceRotation{ RHISurfaceTransform::Identity, 4, 2 }.computeLogicalUVMapping();
+    const SurfaceCoord            same     = mapToLogical( identity, 0.25f, 0.75f );
     SW_EXPECT_EQUAL( 0.25f, same._u );
     SW_EXPECT_EQUAL( 0.75f, same._v );
 
     // 90: 실제 오른쪽 위(1, 0) 는 논리 왼쪽 위(0, 0), 실제 오른쪽 아래(1, 1) 는 논리 오른쪽 위(1, 0)
-    const sw::RHISurfaceCoordMapping quarter         = sw::RHISurfaceRotation{ RHISurfaceTransform::Rotate90, 4, 2 }.computeLogicalUVMapping();
-    const SurfaceCoord               quarterTopRight = mapToLogical( quarter, 1.0f, 0.0f );
-    const SurfaceCoord               quarterBotRight = mapToLogical( quarter, 1.0f, 1.0f );
+    const sw::RHISurfaceUVMapping quarter         = sw::RHISurfaceRotation{ RHISurfaceTransform::Rotate90, 4, 2 }.computeLogicalUVMapping();
+    const SurfaceCoord            quarterTopRight = mapToLogical( quarter, 1.0f, 0.0f );
+    const SurfaceCoord            quarterBotRight = mapToLogical( quarter, 1.0f, 1.0f );
     SW_EXPECT_EQUAL( 0.0f, quarterTopRight._u );
     SW_EXPECT_EQUAL( 0.0f, quarterTopRight._v );
     SW_EXPECT_EQUAL( 1.0f, quarterBotRight._u );
@@ -68,9 +68,9 @@ SW_TEST_CASE( RHISurfaceTransformTest, UVMappingRotatesCornersClockwise )
     SW_EXPECT_EQUAL( 1.0f, half._v );
 
     // 270: 실제 왼쪽 아래(0, 1) 는 논리 왼쪽 위, 실제 왼쪽 위(0, 0) 는 논리 오른쪽 위
-    const sw::RHISurfaceCoordMapping threeQuarter        = sw::RHISurfaceRotation{ RHISurfaceTransform::Rotate270, 4, 2 }.computeLogicalUVMapping();
-    const SurfaceCoord               threeQuarterBotLeft = mapToLogical( threeQuarter, 0.0f, 1.0f );
-    const SurfaceCoord               threeQuarterTopLeft = mapToLogical( threeQuarter, 0.0f, 0.0f );
+    const sw::RHISurfaceUVMapping threeQuarter        = sw::RHISurfaceRotation{ RHISurfaceTransform::Rotate270, 4, 2 }.computeLogicalUVMapping();
+    const SurfaceCoord            threeQuarterBotLeft = mapToLogical( threeQuarter, 0.0f, 1.0f );
+    const SurfaceCoord            threeQuarterTopLeft = mapToLogical( threeQuarter, 0.0f, 0.0f );
     SW_EXPECT_EQUAL( 0.0f, threeQuarterBotLeft._u );
     SW_EXPECT_EQUAL( 0.0f, threeQuarterBotLeft._v );
     SW_EXPECT_EQUAL( 1.0f, threeQuarterTopLeft._u );
