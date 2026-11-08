@@ -990,7 +990,7 @@ namespace sw
                                                   const vector<AppearanceDetachEvent>& listDetachEvent )
     {
         using Internal = CharacterAppearanceComponentInternal;
-        // 부품을 스폰하는 비용(풀 전 · 후 비교는 `-gv_socketPartPool=0`, 계획 ShooterCharacterIntegration S6)이 이 구간에 든다.
+        // 부품을 스폰하는 비용(풀이 내주지 못한 부품, 계획 ShooterCharacterIntegration S6)이 이 구간에 든다.
         SW_PROFILE_SCOPE( "GT.Appearance.syncParts" );
         // 남길 것을 고르고 없어진 것은 지운다. 같은 부품(주인, 이름, 에셋)은 그 오브젝트를 그대로 쓴다. 그래서 무기를 바꿔도 투구는 그대로 남는다.
         vector<SpawnedPart> listKeep;

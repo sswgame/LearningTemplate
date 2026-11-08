@@ -34,13 +34,6 @@ SW_GLOBAL_VARIABLE( float32, gv_effectsSpawnScale, 1.0f, "이펙트 입자 생�
 
 namespace sw
 {
-    /**
-     * @brief CPU · GPU 둘 다 되는 방출기의 시뮬레이션 대상입니다. 기본값은 Shipping 과 같은 GPU 다.
-     * @details 학습용으로 두 방식을 나란히 보게 둔다. 한 곳만 되는 방출기(물리 충돌은 CPU, 깊이 충돌은 GPU)는
-     *          이 값과 무관하게 그곳이다(`VFXEmitterDef::computeSupportedTargets`). Shipping 은 테스트 변수를 등록하지 않아 기본값 GPU 로 고정된다. 효과를 읽을 때 정하므로 바꾼 뒤 읽은 효과부터 따른다.
-     */
-    SW_TEST_GLOBAL_VARIABLE( VFXSimulationTarget, gv_vfxSimulation, VFXSimulationTarget::GPU, "둘 다 되는 방출기의 시뮬레이션 (CPU / GPU — 모듈이 한 곳만 허락하면 그곳)" );
-
     namespace
     {
         /**
@@ -112,9 +105,8 @@ namespace sw
             }
 
             /**
-             * @brief 방출기 @p def 의 시뮬레이션 대상입니다. 모듈이 한 곳만 허락하면(`computeSupportedTargets`) 데이터가 정한 그곳이고,
-             *        둘 다 허락할 때만 빌드가 고릅니다(Shipping 은 GPU, 개발 빌드는 `gv_vfxSimulation`).
-             * @details `gv_vfxSimulation` 은 둘 다 되는 방출기의 비교 스위치라 한 곳만 되는 방출기에는 묻지 않는다. 허락한 곳이 하나도 없는 방출기는 검증이 로드를 막았다.
+             * @brief 방출기 @p def 의 시뮬레이션 대상입니다. 모듈이 한 곳만 허락하면(`computeSupportedTargets`) 데이터가 정한 그곳이고, 둘 다 허락하면 GPU 입니다
+             *        (언리얼 Niagara 도 방출기의 Sim Target 은 데이터이고 실행 중 스위치가 없다). 허락한 곳이 하나도 없는 방출기는 검증이 로드를 막았다.
              */
             [[nodiscard]] static VFXSimulationTarget selectSimulationTarget( const VFXEmitterDef& def )
             {
@@ -122,9 +114,7 @@ namespace sw
                 SW_ASSERT( supported.isEmpty() == false );
                 if ( supported.has( VFXSimulationTarget::GPU ) == false )
                     return VFXSimulationTarget::CPU;
-                if ( supported.has( VFXSimulationTarget::CPU ) == false )
-                    return VFXSimulationTarget::GPU;
-                return gv_vfxSimulation;
+                return VFXSimulationTarget::GPU;
             }
         };
     } // namespace

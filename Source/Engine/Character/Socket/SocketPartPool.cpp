@@ -2,19 +2,9 @@
 
 #include "Engine/Character/Socket/SocketPartPool.h"
 
-#include "Core/GlobalVariable/GlobalVariableManager.h"
-
 #include "Engine/Character/Socket/SocketBindingComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-
-namespace sw
-{
-    /**
-     * @brief `-gv_socketPartPool=0` — 소켓 부품 풀을 끕니다(`takePart` 는 늘 못 내주고 `storePart` 는 늘 받지 않는다 → 부르는 쪽이 새로 스폰하고 지운다). 풀 전 · 후 스폰 비용 비교용입니다.
-     */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_socketPartPool, 1, "Socket part pool for appearance parts (0 = off: every part is spawned and destroyed, for before/after cost comparison)" );
-} // namespace sw
 
 namespace sw
 {
@@ -41,7 +31,7 @@ namespace sw
 
     GameObject* SocketPartPool::takePart( const hashed_string& assetPath )
     {
-        const auto found = gv_socketPartPool != 0 ? _mapResting.find( assetPath ) : _mapResting.end();
+        const auto found = _mapResting.find( assetPath );
         if ( found != _mapResting.end() )
         {
             vector<GameObjectHandle>& listResting = found->second;
@@ -63,8 +53,7 @@ namespace sw
     bool SocketPartPool::storePart( GameObject& object, const hashed_string& assetPath )
     {
         SocketBindingComponent* pBinding = object.getComponent<SocketBindingComponent>();
-        const bool              bRefused = gv_socketPartPool == 0 || object.isPendingDestroy();
-        if ( bRefused || pBinding == nullptr )
+        if ( object.isPendingDestroy() || pBinding == nullptr )
             return false;
         if ( pBinding->getState() == SocketBindingState::Bound )
             (void)pBinding->release( SocketReleaseMode::Animated ); // 씬 컴포넌트가 있어 붙었으므로 떼기는 실패하지 않는다

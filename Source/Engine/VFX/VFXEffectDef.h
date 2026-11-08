@@ -47,7 +47,7 @@ namespace sw
     /**
      * @brief 방출기 하나를 시뮬레이션하는 곳입니다(언리얼 Niagara 방출기의 Sim Target).
      * @details 데이터가 정한다 — 모듈마다 돌 수 있는 곳(`VFXSimulationTargetSet`)을 선언하고, 방출기의 대상은 그 교집합이다
-     *          (`VFXEmitterDef::computeSupportedTargets`). 둘 다 되는 방출기만 Shipping 에서 GPU, 개발 빌드에서 `gv_vfxSimulation` 이 고른다(`VFXComponent`).
+     *          (`VFXEmitterDef::computeSupportedTargets`). 둘 다 되는 방출기는 GPU 다(`VFXComponent`).
      *          두 곳은 같은 형식(`GPUParticle`)을 낸다. 방출기 데이터의 칸이 아니다 — 고를 수 있는 것은 모듈이 정하므로 칸을 두면 틀린 조합만 하나 더 생긴다.
      */
     ENUM()

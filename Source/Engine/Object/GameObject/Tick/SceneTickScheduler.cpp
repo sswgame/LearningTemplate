@@ -6,7 +6,6 @@
 
 #include "Engine/Object/GameObject/Tick/SceneTickScheduler.h"
 
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/EngineParallel.h"
@@ -20,28 +19,18 @@
 
 namespace sw
 {
-    /**
-     * @brief `-gv_tickCostDispatch=1`: 씬 틱의 병렬 분배를 앞 항목을 직접 돌아 측정한 비용으로 고릅니다(`TaskManager::runParallelByCost`). 기동 때 정하는 값입니다.
-     * @details 기본(0)은 옛 방식(항목 16 개 이상이면 늘 나눈다)이다. 실제 게임 여덟 개에서 이득은 한 곳뿐이고 일곱 곳은 같거나 느렸다.
-     *          상용 엔진도 틱 분배는 정적 그레인 크기를 쓴다. 프레임 사이에 비용을 기억하는 방식을 재 보기 위해 남긴 스위치다.
-     */
-    SW_TEST_GLOBAL_VARIABLE( bool, gv_tickCostDispatch, false, "씬 틱 병렬 분배를 잰 비용으로 고른다(0 이면 항목 16 개 이상이면 늘 나눈다 — 기본)" );
-
     namespace
     {
         struct SceneTickSchedulerInternal
         {
-            /** @brief 옛 방식의 임계값입니다: 항목이 이 수보다 적으면 나누지 않고 이 스레드가 돕니다(`gv_tickCostDispatch` 가 0 일 때만). */
-            static constexpr uint32 kLegacyParallelThreshold = 16;
+            /**
+             * @brief 병렬 분배 임계값입니다: 항목이 이 수보다 적으면 나누지 않고 이 스레드가 돕니다.
+             * @details 잰 비용으로 고르는 분배(`runParallelByCost`)도 재 봤으나 실제 게임 여덟 개 중 이득은 한 곳뿐이고 일곱 곳은 같거나 느렸다 — 상용 엔진(언리얼 틱 태스크)도 정적 그레인 크기다.
+             */
+            static constexpr uint32 kParallelThreshold = 16;
 
-            /** @brief [0, count) 를 병렬 분배합니다. 스위치가 켜지면 측정한 비용으로, 기본(꺼짐)은 옛 고정 임계값으로 고릅니다. */
-            static void dispatch( uint32 count, const ParallelBlockDelegate& body )
-            {
-                if ( gv_tickCostDispatch )
-                    engine::runParallelByCost( count, body );
-                else
-                    engine::runParallel( count, kLegacyParallelThreshold, body );
-            }
+            /** @brief [0, count) 를 고정 임계값으로 병렬 분배합니다. */
+            static void dispatch( uint32 count, const ParallelBlockDelegate& body ) { engine::runParallel( count, kParallelThreshold, body ); }
 
             /** @brief 항목 하나를 돌립니다. 주 틱이면 `onTick`, 서브틱이면 `onSubTick` 입니다. 살아 있고 켜져 있는지는 부르는 쪽이 이미 봤습니다. */
             static void runTickItem( float32 deltaTime, const TickItem& item )

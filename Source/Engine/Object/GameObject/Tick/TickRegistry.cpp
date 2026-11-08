@@ -7,7 +7,6 @@
 #include "Engine/Object/GameObject/Tick/TickRegistry.h"
 
 #include "Core/Container/VectorUtil.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Hash/HashUtil.h"
 
 #include "Engine/Object/Component/Component.h"
@@ -472,12 +471,6 @@ namespace sw
 
 namespace sw
 {
-    /**
-     * @brief `-gv_tickBatch=0`: 타입별 일괄 틱(`TickBatchRegistry`)을 끄고 모든 오브젝트를 칸 목록으로 돌립니다 — 같은 바이너리로 전/후를 비교합니다.
-     * @details 기동 때 정합니다. 실행 중에 바꾸면 다음 전체 훑기(모듈 적재 · 씬 초기화)부터 따릅니다.
-     */
-    SW_TEST_GLOBAL_VARIABLE( bool, gv_tickBatch, true, "타입별 일괄 틱 경로를 쓴다(0 이면 모든 오브젝트를 칸 목록으로 — 전/후 비교용)" );
-
     TickRegistry::TickRegistry()
         : _arrListEntry{}
         , _arrListBatch{}
@@ -818,7 +811,7 @@ namespace sw
     TickBatchFunction TickRegistry::findBatchFunction( TickBatchRegistry* pBatchRegistry, const TickItem* pItem, uint32 itemCount )
     {
         // 그 그룹의 항목이 주 틱 하나뿐일 때만 — 둘 이상이면 오브젝트 안의 순서를 지키려고 오브젝트 칸으로 간다. 표가 없는 매니저(엔진 없는 테스트)는 일괄 경로가 없다.
-        const bool bNotBatchable = pBatchRegistry == nullptr || gv_tickBatch == false || itemCount != 1 || pItem->_subTickID != 0 || pItem->_pComponent == nullptr;
+        const bool bNotBatchable = pBatchRegistry == nullptr || itemCount != 1 || pItem->_subTickID != 0 || pItem->_pComponent == nullptr;
         if ( bNotBatchable )
             return nullptr;
         return pBatchRegistry->findFunction( pItem->_pComponent->findCachedTypeInfo() );
