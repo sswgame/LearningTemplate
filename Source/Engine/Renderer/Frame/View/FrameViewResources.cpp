@@ -226,6 +226,7 @@ namespace sw
         historyDesc._bIsShaderResource  = SW_TRUE;
         historyDesc._bIsUnorderedAccess = SW_TRUE;
         view._depthHistory              = _pDevice->getResourceFactory()->createTexture2D( historyDesc );
+        _pDevice->getResourceFactory()->setTextureDebugName( view._depthHistory, "DepthHistory" );
         if ( view._depthHistory != 0 )
             view._depthHistoryUAV = _pDevice->getResourceFactory()->registerBindlessTextureUAV( view._depthHistory );
         if ( view._depthHistoryUAV == kInvalidDescriptorIndex )
@@ -274,6 +275,7 @@ namespace sw
         historyDesc._bIsShaderResource = SW_TRUE;
 
         view._taaHistory = _pDevice->getResourceFactory()->createTexture2D( historyDesc );
+        _pDevice->getResourceFactory()->setTextureDebugName( view._taaHistory, "TAAHistory" );
         if ( view._taaHistory != 0 )
             view._taaHistorySRV = _pDevice->getResourceFactory()->registerBindlessTexture( view._taaHistory );
     }

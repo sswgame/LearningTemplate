@@ -59,6 +59,7 @@ namespace sw
             SW_LOG_WARNING_ID( "TransientAttachmentPool.FailedAllocateTransient", "Failed to allocate transient '%#'", name.c_str() );
             return false;
         }
+        pDevice->getResourceFactory()->setTextureDebugName( handle, name.c_str() ); // 캡처 · DRED 가 파이프라인 XML 의 첨부 이름으로 보인다
         const RHIDescriptorIndex srv = pDevice->getResourceFactory()->registerBindlessTexture( handle );
         const RHIDescriptorIndex uav = bUnorderedAccess ? pDevice->getResourceFactory()->registerBindlessTextureUAV( handle ) : kInvalidDescriptorIndex;
         _mapAttachment.emplace( name, Attachment{ handle, srv, uav, desc._width, desc._height, format, ops } );

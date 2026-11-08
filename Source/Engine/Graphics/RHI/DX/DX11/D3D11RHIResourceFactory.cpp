@@ -589,6 +589,16 @@ namespace sw
         return _pDevice->_transferSerials.makeAccepted( serial );
     }
 
+    void D3D11RHIResourceFactory::setTextureDebugName( RHITextureHandle texture, const utf8* pName )
+    {
+        const D3D11RHIDevice::TextureRecord* pRecord = _pDevice->resolveTexture( texture );
+        if ( pRecord == nullptr || pRecord->_texture == nullptr || pName == nullptr )
+            return;
+        // WKPDID_D3DDebugObjectName(d3dcommon.h, dxguid.lib — sw_graphics_dx11_libs 가 링크한다). 그래픽스 디버거 · 디버그 레이어 메시지가 이 이름을 보인다.
+        const string_view name = pName;
+        pRecord->_texture->SetPrivateData( WKPDID_D3DDebugObjectName, static_cast<UINT>( name.size() ), name.data() );
+    }
+
     // 길이 유지(긴 함수 정리 기준): 서술 채우기 · 리소스 생성 · 뷰의 순서가 곧 의미라 나누지 않는다.
     RHITextureHandle D3D11RHIResourceFactory::createTexture2D( const RHITextureDesc& desc )
     {
