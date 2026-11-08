@@ -783,7 +783,9 @@ namespace sw
         /// 프레임 flushDebugMessages() 가 똑같은 검증 메시지 수십 줄을 끝없이 반복 출력하는 것을 막습니다.
         /// 렌더 스레드 · 기록 워커(리스트 생성) · PSO 생성이 함께 읽고 쓰므로 atomic 입니다(비트필드면 옆 비트와 한 바이트를 고쳐 쓴다).
         atomic<uint8> _bDeviceRemovedLogged;
-        /// @brief GPU 브레드크럼 버퍼입니다(`IRHICommandList::writeBreadcrumb`) - 읽기 힙의 4 바이트 버퍼를 영속 매핑해 두고 `WriteBufferImmediate`(MARKER_IN)가 패스 id 를 쓴다.
+        /// @brief 브레드크럼 버퍼의 칸 수입니다 — [0] 시작 표지(MARKER_IN) · [1] 끝 표지(MARKER_OUT, `GPUBreadcrumbs::kEndMarkerBit`).
+        static constexpr uint32 kBreadcrumbSlotCount = 2;
+        /// @brief GPU 브레드크럼 버퍼입니다(`IRHICommandList::writeBreadcrumb`) - 읽기 힙의 uint32 두 칸 버퍼를 영속 매핑해 두고 `WriteBufferImmediate` 가 패스 id 를 쓴다(시작 MARKER_IN · 끝 MARKER_OUT).
         ///        디바이스를 잃은 뒤에도 CPU 가 이 매핑으로 마지막으로 닿은 패스를 읽는다(`readLastBreadcrumbs`). 만들지 못했거나 `-gv_gpuBreadcrumbs` 가 꺼졌으면 주소가 0 이다.
         Microsoft::WRL::ComPtr<ID3D12Resource> _breadcrumbBuffer;
         D3D12_GPU_VIRTUAL_ADDRESS              _breadcrumbAddress;

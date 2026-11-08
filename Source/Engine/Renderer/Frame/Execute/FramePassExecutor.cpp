@@ -890,16 +890,8 @@ namespace sw
             return;
         }
 
-        if ( passName.empty() == false )
-        {
-            utf8         arrPassName[constant::buffer::kMax64];
-            const size_t copyLen = ( passName.size() < sizeof( arrPassName ) - 1 ) ? passName.size() : ( sizeof( arrPassName ) - 1 );
-            Memory::copy( arrPassName, passName.data(), copyLen );
-            arrPassName[copyLen] = '\0';
-            // GPU 브레드크럼 - 디바이스 소실 때 마지막으로 닿은 패스 이름을 싣는다(꺼져 있으면 아무것도 하지 않는다).
-            GPUBreadcrumbs::mark( *context._pCmd, string_view( arrPassName, copyLen ) );
-            context._pCmd->beginEventMarker( arrPassName );
-        }
+        // 이벤트 표지(캡처의 구간 이름) + GPU 브레드크럼 시작 · 끝 표지 — 디바이스 소실 때 끝난 패스와 돌던 패스를 이름으로 싣는다. 어느 길로 돌아가도 짝이 맞는다.
+        const GPUPassScope passScope{ *context._pCmd, passName };
         context._resourceRegistry.reset();
         context._passType = passType;
         // 라이트는 **패스 종류를 가리지 않는다.** 포워드 지오메트리도, 디퍼드 풀스크린 조명도 읽는다.
@@ -923,10 +915,7 @@ namespace sw
         const bool bMissingDeclaredColor = info.hasFlag( RenderPassTraitFlag::kDrawsDeclaredColor ) && declaredColor.empty();
         SW_ASSERT( bMissingDeclaredColor == false );
         if ( bMissingDeclaredColor )
-        {
-            context._pCmd->endEventMarker(); // 함수 끝과 같은 짝
             return;
-        }
         const PassExecuteInput input{ context, passType, passDesc, declaredColor, passDepth, info.hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch ) };
         if ( info.hasFlag( RenderPassTraitFlag::kGenericFullscreen ) )
         {
@@ -1051,8 +1040,6 @@ namespace sw
                 }
             }
         }
-
-        context._pCmd->endEventMarker();
     }
 
     RHIRenderPassLoadOp FramePassExecutor::colorLoadFor( const hashed_string& name )
@@ -2299,8 +2286,7 @@ namespace sw
     {
         if ( context._pCmd == nullptr )
             return;
-        GPUBreadcrumbs::mark( *context._pCmd, pass._graphName.view() );
-        context._pCmd->beginEventMarker( pass._graphName.c_str() );
+        const GPUPassScope passScope{ *context._pCmd, pass._graphName.view() };
         context._resourceRegistry.reset();
         context._passType = RenderPassType::Invalid;
         registerLightBuffer( context );
@@ -2310,7 +2296,6 @@ namespace sw
         view._height    = activePool().getHeight();
         ExtensionPassContext moduleContext( *this, &context, &pass, view );
         pass._execute( moduleContext );
-        context._pCmd->endEventMarker();
     }
 
     bool FramePassExecutor::drawModuleFullscreen( FramePassContext& context, const ExtensionFramePass& pass, vector_reference<const ExtensionConstant> listConstant )

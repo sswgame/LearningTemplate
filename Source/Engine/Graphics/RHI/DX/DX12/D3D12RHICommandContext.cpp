@@ -4,6 +4,7 @@
 
 #include "Core/Concurrency/mutex.h"
 
+#include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIDevice.h"
 #include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
@@ -782,9 +783,12 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> list2;
         if ( FAILED( commandListForRecord()->QueryInterface( IID_PPV_ARGS( list2.GetAddressOf() ) ) ) )
             return;
-        const D3D12_WRITEBUFFERIMMEDIATE_PARAMETER param{ _pDevice->_breadcrumbAddress, markerID };
-        // MARKER_IN: 앞선 명령이 **시작**하는 시점에 쓴다 - 소실 뒤 값은 GPU 가 시작한 마지막 패스다.
-        const D3D12_WRITEBUFFERIMMEDIATE_MODE mode = D3D12_WRITEBUFFERIMMEDIATE_MODE_MARKER_IN;
+        // 시작 표지는 [0] 칸에 MARKER_IN(앞선 명령이 모두 **시작**한 뒤), 끝 표지(GPUBreadcrumbs::kEndMarkerBit)는 [1] 칸에 MARKER_OUT(앞선 명령이 모두 **끝난** 뒤)으로 쓴다.
+        // 소실 뒤 [0] 은 GPU 가 시작한 마지막 패스, [1] 은 끝낸 마지막 패스다.
+        // https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_writebufferimmediate_mode
+        const bool                                 bEnd = ( markerID & GPUBreadcrumbs::kEndMarkerBit ) != 0;
+        const D3D12_WRITEBUFFERIMMEDIATE_PARAMETER param{ _pDevice->_breadcrumbAddress + ( bEnd ? sizeof( uint32 ) : 0u ), markerID };
+        const D3D12_WRITEBUFFERIMMEDIATE_MODE      mode = bEnd ? D3D12_WRITEBUFFERIMMEDIATE_MODE_MARKER_OUT : D3D12_WRITEBUFFERIMMEDIATE_MODE_MARKER_IN;
         list2->WriteBufferImmediate( 1, &param, &mode );
     }
 
