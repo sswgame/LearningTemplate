@@ -219,16 +219,16 @@ namespace sw::editor
             for ( uint32 slot = 0; slot < static_cast<uint32>( listInput.size() ); ++slot )
             {
                 const MaterialGraphLink* pLink = graph._listNode[readerIndex].findLink( listInput[slot]._name );
-                const int32              from  = pLink != nullptr ? graph.findNodeIndex( pLink->_fromNode ) : -1;
-                if ( from < 0 )
+                const optional<uint32>   from  = pLink != nullptr ? graph.findNodeIndex( pLink->_fromNode ) : nullopt;
+                if ( from.has_value() == false )
                     continue;
-                const vector<MaterialGraphPinInfo>& listOutput = _model.getOutputPins( static_cast<uint32>( from ) );
+                const vector<MaterialGraphPinInfo>& listOutput = _model.getOutputPins( *from );
                 for ( uint32 outputSlot = 0; outputSlot < static_cast<uint32>( listOutput.size() ); ++outputSlot )
                 {
                     if ( listOutput[outputSlot]._name != pLink->_fromPin )
                         continue;
                     const int32 inputPin = MaterialGraphModel::makeInputPinID( readerIndex, slot );
-                    ed::Link( toLinkID( inputPin ), toPinID( MaterialGraphModel::makeOutputPinID( static_cast<uint32>( from ), outputSlot ) ), toPinID( inputPin ) );
+                    ed::Link( toLinkID( inputPin ), toPinID( MaterialGraphModel::makeOutputPinID( *from, outputSlot ) ), toPinID( inputPin ) );
                 }
             }
         }
@@ -237,10 +237,10 @@ namespace sw::editor
         for ( const MaterialGraphIssue& issue : _model.getIssues() )
         {
             // 하위 그래프 안의 문제(`바깥/안`)는 바깥 노드에 붙인다.
-            const string_view outerName{ string_view( issue._nodeName ).substr( 0, issue._nodeName.find( '/' ) ) };
-            const int32       nodeIndex = graph.findNodeIndex( outerName );
-            if ( nodeIndex >= 0 )
-                listIssue.push_back( EditorGraphNodeIssue{ MaterialGraphModel::makeNodeID( static_cast<uint32>( nodeIndex ) ), issue._message } );
+            const string_view      outerName{ string_view( issue._nodeName ).substr( 0, issue._nodeName.find( '/' ) ) };
+            const optional<uint32> nodeIndex = graph.findNodeIndex( outerName );
+            if ( nodeIndex.has_value() )
+                listIssue.push_back( EditorGraphNodeIssue{ MaterialGraphModel::makeNodeID( *nodeIndex ), issue._message } );
         }
         _nodeGraph.setNodeIssues( std::move( listIssue ) );
         _nodeGraph.drawNodeIssues();

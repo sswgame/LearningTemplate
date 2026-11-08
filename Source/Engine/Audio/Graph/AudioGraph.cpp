@@ -193,7 +193,7 @@ namespace sw
 
         shared_ptr<AudioGraph> pGraph = make_shared<AudioGraph>();
         pGraph->_frameCount           = static_cast<uint32>( def._durationSeconds * static_cast<float32>( audio::kSampleRate ) );
-        pGraph->_outputIndex          = listDataToOrder[static_cast<size_t>( def.findNodeIndex( def._output ) )];
+        pGraph->_outputIndex          = listDataToOrder[def.findNodeIndex( def._output ).value()]; // validate 가 출력 노드를 확인했다
         pGraph->_listNode.resize( listOrder.size() );
         for ( uint32 orderIndex = 0; orderIndex < listOrder.size(); ++orderIndex )
         {
@@ -208,7 +208,7 @@ namespace sw
             }
             for ( const hashed_string& input : desc._listInput )
             {
-                node._listInput.push_back( listDataToOrder[static_cast<size_t>( def.findNodeIndex( input ) )] );
+                node._listInput.push_back( listDataToOrder[def.findNodeIndex( input ).value()] ); // makeProcessingOrder 가 없는 입력을 거절했다
             }
             for ( const AudioGraphParameterDef& parameterDesc : desc._listParameter )
             {

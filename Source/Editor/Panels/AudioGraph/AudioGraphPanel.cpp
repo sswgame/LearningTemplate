@@ -182,10 +182,10 @@ namespace sw::editor
             float2 corner{};
             for ( const string_view token : StringUtil::split( text, "," ) )
             {
-                const int32 index = _model.getGraph().findNodeIndex( hashed_string( token ) );
-                if ( index < 0 )
+                const optional<uint32> index = _model.getGraph().findNodeIndex( hashed_string( token ) );
+                if ( index.has_value() == false )
                     continue; // 복사한 뒤 지운 노드
-                const float2& position = _model.getGraph()._listNode[static_cast<size_t>( index )]._editorPosition;
+                const float2& position = _model.getGraph()._listNode[*index]._editorPosition;
                 corner                 = bCorner ? float2{ MathUtil::min( corner._x, position._x ), MathUtil::min( corner._y, position._y ) } : position;
                 bCorner                = true;
                 listName.push_back( hashed_string( token ) );
@@ -255,10 +255,10 @@ namespace sw::editor
             const vector<hashed_string>& listInput = graph._listNode[readerIndex]._listInput;
             for ( uint32 inputSlot = 0; inputSlot < listInput.size(); ++inputSlot )
             {
-                const int32 fromIndex = graph.findNodeIndex( listInput[inputSlot] );
-                if ( fromIndex < 0 )
+                const optional<uint32> fromIndex = graph.findNodeIndex( listInput[inputSlot] );
+                if ( fromIndex.has_value() == false )
                     continue; // 없는 노드를 가리키는 입력 — 검사가 저장을 막고 그리드에서 고친다
-                ed::Link( toLinkID( AudioGraphEditUtil::makeLinkID( readerIndex, inputSlot ) ), toPinID( AudioGraphEditUtil::makeOutputPinID( static_cast<uint32>( fromIndex ) ) ),
+                ed::Link( toLinkID( AudioGraphEditUtil::makeLinkID( readerIndex, inputSlot ) ), toPinID( AudioGraphEditUtil::makeOutputPinID( *fromIndex ) ),
                           toPinID( AudioGraphEditUtil::makeInputPinID( readerIndex ) ) );
             }
         }
