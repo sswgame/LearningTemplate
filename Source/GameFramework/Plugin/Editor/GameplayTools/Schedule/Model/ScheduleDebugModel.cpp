@@ -45,9 +45,9 @@ namespace sw::editor
         return pSystem;
     }
 
-    int32 ScheduleDebugModel::findSelectedNPCIndex( const ScheduleSystem& system ) const
+    optional<int32> ScheduleDebugModel::findSelectedNPCIndex( const ScheduleSystem& system ) const
     {
-        return _selectedNPC.empty() ? -1 : system.findNPCIndex( _selectedNPC );
+        return _selectedNPC.empty() ? optional<int32>{} : system.findNPCIndex( _selectedNPC );
     }
 
     void ScheduleDebugModel::followClock( const ScheduleSystem& system )

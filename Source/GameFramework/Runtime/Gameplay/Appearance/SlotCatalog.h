@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -58,8 +59,8 @@ namespace sw
         [[nodiscard]] bool loadFromXML( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName );
         void               clear();
 
-        int32                            findSlotIndex( const hashed_string& slot ) const;
-        bool                             hasSlot( const hashed_string& slot ) const { return findSlotIndex( slot ) >= 0; }
+        [[nodiscard]] optional<int32>    findSlotIndex( const hashed_string& slot ) const;
+        bool                             hasSlot( const hashed_string& slot ) const { return findSlotIndex( slot ).has_value(); }
         const SlotOccupancyDef*          findOccupancy( const hashed_string& id ) const;
         const vector<AppearanceSlotDef>& getSlots() const { return _listSlot; }
         /** @brief `"Head,Body,MainHand:Weapon"` 형식의 문자열입니다. `Equipment::initialize` 에 그대로 넘깁니다. */

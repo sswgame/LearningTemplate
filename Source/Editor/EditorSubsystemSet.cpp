@@ -26,6 +26,7 @@
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
+#include "Editor/Common/Workspace/EditorSelectionSync.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
@@ -61,6 +62,7 @@ namespace sw::editor
         SW_ASSERT( bStackBound );
         (void)bStackBound;
         scope.emplaceSubsystem<ObjectCopyBuffer>();
+        scope.emplaceSubsystem<EditorSelectionSync>();      // 선택 동기화 채널 — 문맥마다 고른 애셋 한 칸(선택은 옮기지 않는다)
         scope.emplaceSubsystem<EditorObjectEditBindings>(); // 커맨드 스택 알림 칸의 주인 — 컨텍스트와 함께 놓는다
         scope.emplaceSubsystem<EditorInputActions>();       // 에디터 단축키의 입력 맵(editor.input.xml) — 명령 등록부 · 패널 매니저 뒤
         scope.emplaceSubsystem<EditorPopupManager>();

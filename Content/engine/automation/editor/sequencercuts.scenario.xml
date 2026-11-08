@@ -6,7 +6,7 @@
   ④ 컷 차선 · 바인딩 목록 화면을 찍는다(카메라 이름이 컷 띠에 보이고, 묶이지 않음 빨간 글이 없다).
   실행: App -EnableEditor -scenario=engine/automation/editor/sequencercuts.scenario.xml -unattended
 -->
-<Scenario name="editor.sequencercuts" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+<Scenario name="editor.sequencercuts" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="Immediately" input="exclusive">
 	<DevCommand line="scene.open engine/automation/editor/sequencerkeys/sequencerkeys.scene.xml"/>
 	<EditorWaitSettled/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
@@ -49,6 +49,42 @@
 	<EditorClick mark="sequencer.addCut"/>
 	<WaitUntil watch="Editor.SequencerCutCount" equals="2" timeoutFrames="60"/>
 	<Expect watch="Editor.SequencerUnboundCount" equals="0"/>
+	<EditorWaitSettled/>
+	<!-- ⑤ 쇼트 도구: 프레임 75 에서 컷을 나누면 컷 3(뒤 조각을 고른다), 고른 컷의 카메라를 CamA 로 바꾸면 되돌리기가 쌓이고, 지우면 앞 컷이 그 자리를 덮어 컷 2(모델 테스트 ShotToolsSplitRemoveAndRebindCuts) -->
+	<EditorClick mark="sequencer.scrub" mods="ctrl"/>
+	<EditorWaitSettled/>
+	<EditorKey key="Ctrl+A"/>
+	<EditorWaitSettled/>
+	<EditorText value="75"/>
+	<EditorWaitSettled/>
+	<EditorKey key="Enter"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="sequencer.splitCut"/>
+	<WaitUntil watch="Editor.SequencerCutCount" equals="3" timeoutFrames="60"/>
+	<EditorClick mark="sequencer.binding.1"/>
+	<EditorWaitSettled/>
+	<Remember watch="Editor.UndoIndex" as="undoBeforeCamera"/>
+	<EditorClick mark="sequencer.cutCamera"/>
+	<WaitUntil watch="Editor.UndoIndex" differsFrom="undoBeforeCamera" timeoutFrames="60"/>
+	<EditorClick mark="sequencer.deleteCut"/>
+	<WaitUntil watch="Editor.SequencerCutCount" equals="2" timeoutFrames="60"/>
+	<Expect watch="Editor.SequencerItemCount" equals="2"/>
+	<!-- 쇼트 목록의 첫 줄을 누르면 그 컷을 고른다 -->
+	<EditorClick mark="sequencer.shot.0"/>
+	<EditorWaitSettled/>
+	<!-- ⑥ 항목 복사 · 붙여넣기: 고른 컷을 프레임 75 에 붙이면 항목이 셋이다 -->
+	<EditorClick mark="sequencer.copyItem"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="sequencer.scrub" mods="ctrl"/>
+	<EditorWaitSettled/>
+	<EditorKey key="Ctrl+A"/>
+	<EditorWaitSettled/>
+	<EditorText value="75"/>
+	<EditorWaitSettled/>
+	<EditorKey key="Enter"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="sequencer.pasteItem"/>
+	<WaitUntil watch="Editor.SequencerItemCount" equals="3" timeoutFrames="60"/>
 	<EditorWaitSettled/>
 	<!-- ④ 화면 -->
 	<CaptureEditorUI file="sequencercuts/cutlane.png" maxMagentaFraction="0"/>

@@ -48,18 +48,13 @@
 - 디렉터 컴포넌트의 카탈로그 읽기는 컴포넌트 칸의 경로로 씬마다 다른 데이터라 게임 범위 `loadRequiredCatalog` 로 옮기지 않고 실패 등급만 ERROR 로. 파일 글 되돌리기 둘(프리팹은 캐시를 바로, 리그는 파일 감시가 다시 읽는다)은 뒤따르는 일이 달라 합치지 않는다.
 
 ### T8 구성 차이
+- 플랫폼 폴더는 CMake 가 고른다(`sw_filterPlatformSources` — Core · Engine · DevTools). 플랫폼 폴더 `.cpp` 에 파일 전체 플랫폼 `#if` 를 두지 않는다(언리얼 UBT 의 플랫폼 폴더 규칙).
 - 리플렉션의 에디터 메타데이터(카테고리 · 표시 이름 · 툴팁 · 커스텀 메타 · 편집 조건 · 슬라이더 범위 …)는 옆 표(`ReflectionEditorMetadata.h`)에 두고 런타임 메타데이터는 포인터(`_pEditor`)로만 가리킨다 — 구조체 배치가 구성마다 같다. 값은 헤더마다의 개발 전용 단위(`<이름>.gen.meta.cpp`)가 정적 등록으로 올리고 `TypeRegistry` 가 등록 때 붙이며, 배포 구성은 그 단위를 짓지 않는다(언리얼 `WITH_METADATA` 자리를 `#if` 대신 빌드 단위로). 새 표시 · 편집 필드는 `ReflectionEditorMetadata.h` 에, 런타임 필드는 `ReflectionMetadata.h` 에 더한다.
 - 전용 서버는 플랫폼 구현을 폴더째 고른다 — `Window/Linux` · `Input/Linux`(와 오디오 · UI)는 짓지 않고(`SW_UNBUILT_ENGINE_FOLDERS`, 헤더는 `serverbuild` 게이트) 창 없는 대체는 `Window/Headless` · `Input/Headless` 가 정의한다(클라이언트는 `Headless` 를 짓지 않는다). 엔진 층에 `SW_WITH_CLIENT_CODE` 구역은 빌드가 무엇을 담는지 말하는 파일(`Config/Dev/ClientCodeGuards.json`)에만 둔다.
 - **남긴 구성 분기와 이유**:
   - `GameObjectManager::resolveComponent` 의 타입 확인 — 뜨거운 길의 검사(언리얼 `DO_CHECK` 자리)라 함수 호출로 바꾸면 비용이 는다.
   - 스위치를 정의하는 자리(`ContentSource.h` · `AnimationRewind.h` · `ProfilerBackend.h` · `ModuleCatalog::getCurrentConfiguration`)는 대상이 아니다. `SW_PROFILER_TRACE_ENABLED`(ServerApp 1)는 그대로다.
   - 개발에서만 허용하는 동작(평문 공개 게임 포트 · 개발 인증서 · 가짜 제공자)은 구성 이름이 아니라 개발 대체물 등록으로 묻는다(`Core/Network/DevOnlineExtension.h` — 배포는 등록하지 않는다).
-
-### T9 생성 계약
-- `ReflectionSchema`: `ReflectionSchema` 는 include 경로로 막지 못한다(Core 가 `Source` 루트를 준다) — 목록 밖 Engine 헤더 include 를 막으려면 루트를 층별로 나눠야 한다.
-
-### T10 폴백 — 남은 것
-- `RHI::getShaderTargetFormat` 이 모르는 백엔드에 DXIL 을 돌려준다.
 
 ## 5. 남은 확인
 

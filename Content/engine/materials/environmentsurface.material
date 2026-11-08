@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 환경 · 소품 표면 마스터 머티리얼(environment_surface.hlsl). 프리셋은 engine/materials/library/ 의 자식 .material 이 값만 바꾼다(언리얼 Material Instance).
+     층 순서: 밑 → 무늬 → 잔무늬 · 큰 무늬 → 모서리 마모(밑 층) → 녹 → 변색 → 때 → 헤어라인 · 클리어 코트 → 날씨. 세기 0 이면 그 층이 꺼진다(기본은 모두 끔).
+     무늬 종류(_patternShape.x): 0 없음 · 1 벽돌/타일(_patternScale.w = 줄 어긋남) · 2 판자(결 포함) · 3 대리석 결(_patternScale.x = 크기, y = 날카로움) · 4 칸(돌담 · 균열 유약) · 5 줄(밧줄 · 골판지 · 고무 홈, w = 기울기).
+     좌표(_patternShape.w): 0 메시 UV · 1 월드 축 투영(벽 · 바닥 — 크기가 m 다). _weather 는 파라미터 묶음 Weather 에 묶여 지형과 함께 젖는다.
+     클리어 코트 · 이방성은 W17 셰이딩 모델이 들어오기 전의 근사다(material_functions.hlsli 머리 주석). 프로퍼티 이름 · 타입은 셰이더의 SW_MATERIAL 구조체와 같다. -->
+<MaterialDef formatVersion="0" name="EnvironmentSurface" shaderPath="engine/shaders/environment_surface.hlsl" alphaMode="Opaque">
+	<_properties>
+		<item name="_baseColor" type="Color" defaultValue="0.8 0.8 0.8 1" displayName="Base Color" group="Base" bHdr="0" bSrgb="1"/>
+		<item name="_secondaryColor" type="Color" defaultValue="0.4 0.4 0.4 1" displayName="Pattern Color (grout, veins, grain)" group="Pattern" bHdr="0" bSrgb="1"/>
+		<item name="_underColor" type="Color" defaultValue="0.6 0.6 0.6 1" displayName="Under Layer Color (revealed by edge wear)" group="Wear" bHdr="0" bSrgb="1"/>
+		<item name="_patternScale" type="Vector4" defaultValue="1 1 0.02 0.5" displayName="Pattern Cell Size XY, Groove Width, Row Offset / Skew" group="Pattern"/>
+		<item name="_patternShape" type="Vector4" defaultValue="0 0 0 0" displayName="Pattern Kind, Cell Tint, Groove Depth (m), World Space" group="Pattern"/>
+		<item name="_weather" collection="engine/materials/weather.matparams.xml" collectionParameter="Weather" type="Vector4" defaultValue="0 0 0 0" displayName="Weather (wet, puddle, snow, snow line)" group="Weather"/>
+		<item name="_roughness" type="Range" defaultValue="0.5" min="0.0" max="1.0" group="Base"/>
+		<item name="_metallic" type="Range" defaultValue="0" min="0.0" max="1.0" group="Base"/>
+		<item name="_secondaryRoughness" type="Range" defaultValue="0.8" min="0.0" max="1.0" displayName="Pattern Roughness" group="Pattern"/>
+		<item name="_secondaryMetallic" type="Range" defaultValue="0" min="0.0" max="1.0" displayName="Pattern Metallic" group="Pattern"/>
+		<item name="_underRoughness" type="Range" defaultValue="0.4" min="0.0" max="1.0" displayName="Under Layer Roughness" group="Wear"/>
+		<item name="_underMetallic" type="Range" defaultValue="1" min="0.0" max="1.0" displayName="Under Layer Metallic" group="Wear"/>
+		<item name="_noiseStrength" type="Range" defaultValue="0" min="0.0" max="1.0" displayName="Detail Noise" group="Variation"/>
+		<item name="_noiseScale" type="Float" defaultValue="0.05" displayName="Detail Noise Size (m)" group="Variation"/>
+		<item name="_macroVariation" type="Range" defaultValue="0" min="0.0" max="1.0" displayName="Macro Variation" group="Variation"/>
+		<item name="_macroScale" type="Float" defaultValue="4" displayName="Macro Variation Size (m)" group="Variation"/>
+		<item name="_edgeWear" type="Range" defaultValue="0" min="0.0" max="1.0" displayName="Edge Wear / Chips" group="Wear"/>
+		<item name="_edgeWearScale" type="Float" defaultValue="0.05" displayName="Chip Noise Size (m)" group="Wear"/>
+		<item name="_dirt" type="Range" defaultValue="0" min="0.0" max="1.0" displayName="Dirt" group="Wear"/>
+		<item name="_rust" type="Range" defaultValue="0" min="0.0" max="1.0" displayName="Rust" group="Wear"/>
+		<item name="_tarnish" type="Range" defaultValue="0" min="0.0" max="1.0" displayName="Tarnish" group="Wear"/>
+		<item name="_wearScale" type="Float" defaultValue="0.2" displayName="Dirt / Rust / Tarnish Noise Size (m)" group="Wear"/>
+		<item name="_clearCoat" type="Range" defaultValue="0" min="0.0" max="1.0" displayName="Clear Coat (glaze, varnish)" group="Coat"/>
+		<item name="_clearCoatRoughness" type="Range" defaultValue="0.05" min="0.0" max="1.0" displayName="Clear Coat Roughness" group="Coat"/>
+		<item name="_anisotropy" type="Range" defaultValue="0" min="0.0" max="1.0" displayName="Brushed (anisotropy)" group="Coat"/>
+		<item name="_porosity" type="Range" defaultValue="0.5" min="0.0" max="1.0" displayName="Porosity (rain darkening)" group="Weather"/>
+		<item name="_wetness" type="Range" defaultValue="0" min="0.0" max="1.0" displayName="Wetness (added to weather)" group="Weather"/>
+		<item name="_puddle" type="Range" defaultValue="0" min="0.0" max="1.0" displayName="Puddles (added to weather)" group="Weather"/>
+		<item name="_snow" type="Range" defaultValue="0" min="0.0" max="1.0" displayName="Snow (added to weather)" group="Weather"/>
+		<item name="_sparkle" type="Range" defaultValue="0" min="0.0" max="1.0" displayName="Sparkle" group="Weather"/>
+		<item name="_textureTiling" type="Float" defaultValue="1" displayName="Texture Tiling" group="Base"/>
+		<item name="_normalScale" type="Range" defaultValue="1" min="0.0" max="2.0" displayName="Normal Scale" group="Base"/>
+		<item name="_albedoMap" type="Texture2D" displayName="Albedo" group="Base" bSrgb="1"/>
+		<item name="_normalMap" type="Texture2D" displayName="Normal" group="Base" bSrgb="0"/>
+		<item name="_ormMap" type="Texture2D" displayName="Occlusion Roughness Metallic" group="Base" bSrgb="0"/>
+	</_properties>
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_alwaysDefines>
+			<item>MATERIAL_DOMAIN_SURFACE</item>
+		</_alwaysDefines>
+		<_multiCompiles>
+			<item name="FogMode" selected="FOG_OFF">
+				<_options>
+					<item>FOG_OFF</item>
+					<item>FOG_LINEAR</item>
+					<item>FOG_EXP</item>
+				</_options>
+			</item>
+		</_multiCompiles>
+	</_permutations>
+</MaterialDef>

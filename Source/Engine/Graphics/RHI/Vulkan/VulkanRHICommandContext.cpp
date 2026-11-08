@@ -5,6 +5,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
 
+#include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
@@ -549,39 +550,66 @@ namespace sw
 
     void VulkanRHICommandContext::transitionBufferNative( RHIBufferHandle buffer, RHIBufferState newState )
     {
-        VkCommandBuffer                      cmd     = commandBuffer();
-        VulkanRHIDevice::VulkanBufferRecord* pRecord = _pDevice->resolveAllocatedBuffer( buffer );
-        if ( cmd == VK_NULL_HANDLE || pRecord == nullptr )
-            return;
+        const RHIBufferTransition transition{ buffer, newState };
+        transitionBuffersNative( &transition, 1 );
+    }
 
-        if ( pRecord->_buffer == VK_NULL_HANDLE || pRecord->_state == newState )
+    void VulkanRHICommandContext::transitionBuffersNative( const RHIBufferTransition* pTransition, uint32 count )
+    {
+        VkCommandBuffer cmd = commandBuffer();
+        if ( cmd == VK_NULL_HANDLE )
             return;
-
-        if ( _pState->_bRenderPassActive == SW_TRUE )
+        // 모은 전이를 vkCmdPipelineBarrier 한 번에 낸다 — 앞 · 뒤 단계는 모든 전이의 합이다(한 버퍼씩 내면 그때마다 파이프라인이 단계 사이를 비운다).
+        // https://registry.khronos.org/vulkan/specs/latest/man/html/vkCmdPipelineBarrier.html (pBufferMemoryBarriers 여럿, 단계 마스크는 그 합)
+        constexpr uint32      kMaxBarrierPerCall = 16;
+        VkBufferMemoryBarrier arrBarrier[kMaxBarrierPerCall]{};
+        uint32                barrierCount  = 0;
+        VkPipelineStageFlags  srcStageSum   = 0;
+        VkPipelineStageFlags  dstStageSum   = 0;
+        auto                  flushBarriers = [&]()
         {
-            vkCmdEndRenderPass( cmd );
-            _pState->_bRenderPassActive = SW_FALSE;
+            if ( barrierCount == 0 )
+                return;
+            vkCmdPipelineBarrier( cmd, srcStageSum, dstStageSum, 0, 0, nullptr, barrierCount, arrBarrier, 0, nullptr );
+            barrierCount = 0;
+            srcStageSum  = 0;
+            dstStageSum  = 0;
+        };
+        for ( uint32 index = 0; index < count; ++index )
+        {
+            const RHIBufferState                 newState = pTransition[index]._state;
+            VulkanRHIDevice::VulkanBufferRecord* pRecord  = _pDevice->resolveAllocatedBuffer( pTransition[index]._buffer );
+            if ( pRecord == nullptr || pRecord->_buffer == VK_NULL_HANDLE || pRecord->_state == newState )
+                continue;
+            if ( _pState->_bRenderPassActive == SW_TRUE )
+            {
+                vkCmdEndRenderPass( cmd );
+                _pState->_bRenderPassActive = SW_FALSE;
+            }
+            VkAccessFlags        srcAccess{ 0 };
+            VkAccessFlags        dstAccess{ 0 };
+            VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+            mapStateVal( pRecord->_state, srcAccess, srcStage );
+            mapStateVal( newState, dstAccess, dstStage );
+
+            VkBufferMemoryBarrier& barrier = arrBarrier[barrierCount++];
+            barrier.sType                  = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+            barrier.pNext                  = nullptr;
+            barrier.srcAccessMask          = srcAccess;
+            barrier.dstAccessMask          = dstAccess;
+            barrier.srcQueueFamilyIndex    = VK_QUEUE_FAMILY_IGNORED;
+            barrier.dstQueueFamilyIndex    = VK_QUEUE_FAMILY_IGNORED;
+            barrier.buffer                 = pRecord->_buffer;
+            barrier.offset                 = 0;
+            barrier.size                   = VK_WHOLE_SIZE;
+            srcStageSum |= srcStage;
+            dstStageSum |= dstStage;
+            pRecord->_state = newState;
+            if ( barrierCount == kMaxBarrierPerCall )
+                flushBarriers();
         }
-
-        VkAccessFlags        srcAccess{ 0 };
-        VkAccessFlags        dstAccess{ 0 };
-        VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-        mapStateVal( pRecord->_state, srcAccess, srcStage );
-        mapStateVal( newState, dstAccess, dstStage );
-
-        VkBufferMemoryBarrier barrier{};
-        barrier.sType               = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-        barrier.srcAccessMask       = srcAccess;
-        barrier.dstAccessMask       = dstAccess;
-        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.buffer              = pRecord->_buffer;
-        barrier.offset              = 0;
-        barrier.size                = VK_WHOLE_SIZE;
-
-        vkCmdPipelineBarrier( cmd, srcStage, dstStage, 0, 0, nullptr, 1, &barrier, 0, nullptr );
-        pRecord->_state = newState;
+        flushBarriers();
     }
 
     void VulkanRHICommandContext::copyBufferToReadbackNative( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes )
@@ -610,6 +638,17 @@ namespace sw
         if ( slot >= shaderslot::kComputeUAVSlotCount )
             return;
         setSlot( true, shaderslot::vk::kUShift + slot, index, true, false );
+    }
+
+    void VulkanRHICommandContext::bindGraphicsUAV( RHIDescriptorIndex index, uint32 slot )
+    {
+        // 그래픽스 u# → 그래픽스 슬롯 세트의 u 범위. 세트 레이아웃은 모든 단계에 보이고, 프래그먼트 쓰기는 fragmentStoresAndAtomics 가 켠다(능력 `_bGraphicsShaderWrites`).
+        if ( _pDevice->_bFragmentStores == 0 )
+            return;
+        slot = toRegister( slot, shaderslot::vk::kUShift );
+        if ( slot >= shaderslot::kComputeUAVSlotCount )
+            return;
+        setSlot( false, shaderslot::vk::kUShift + slot, index, true, false );
     }
 
     void VulkanRHICommandContext::bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot )
@@ -1049,10 +1088,30 @@ namespace sw
     void VulkanRHICommandContext::writeBreadcrumb( uint32 markerID )
     {
         VkCommandBuffer cmd = commandBuffer();
-        if ( _pDevice->_bCheckpoints == SW_FALSE || cmd == VK_NULL_HANDLE )
+        if ( cmd == VK_NULL_HANDLE )
             return;
-        // 체크포인트의 값은 포인터 크기 자리다 - 패스 id 를 그대로 싣는다(소실 뒤 vkGetQueueCheckpointDataNV 가 같은 값을 돌려준다).
-        reinterpret_cast<PFN_vkCmdSetCheckpointNV>( _pDevice->_pCmdSetCheckpoint )( cmd, reinterpret_cast<const void*>( static_cast<uintptr_t>( markerID ) ) );
+        switch ( _pDevice->_breadcrumbMode )
+        {
+            case VulkanBreadcrumbMode::None:
+            {
+                return;
+            }
+            case VulkanBreadcrumbMode::NVCheckpoints:
+            {
+                // 체크포인트의 값은 포인터 크기 자리다 - 패스 id 를 그대로 싣는다(소실 뒤 vkGetQueueCheckpointDataNV 가 같은 값을 돌려준다).
+                reinterpret_cast<PFN_vkCmdSetCheckpointNV>( _pDevice->_pCmdSetCheckpoint )( cmd, reinterpret_cast<const void*>( static_cast<uintptr_t>( markerID ) ) );
+                return;
+            }
+            case VulkanBreadcrumbMode::AMDBufferMarker:
+            {
+                // 시작 표지는 [0] 칸에 TOP_OF_PIPE(앞 명령이 파이프라인에 들어간 뒤), 끝 표지는 [1] 칸에 BOTTOM_OF_PIPE(앞 명령이 모두 끝난 뒤) — DX12 MARKER_IN · MARKER_OUT 과 같은 뜻.
+                // 렌더 패스 안팎 어디서나 기록할 수 있다(명세의 Render Pass Scope: Both).
+                const bool                    bEnd  = ( markerID & GPUBreadcrumbs::kEndMarkerBit ) != 0;
+                const VkPipelineStageFlagBits stage = bEnd ? VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT : VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+                reinterpret_cast<PFN_vkCmdWriteBufferMarkerAMD>( _pDevice->_pCmdWriteBufferMarker )( cmd, stage, _pDevice->_breadcrumbBuffer, bEnd ? sizeof( uint32 ) : 0u, markerID );
+                return;
+            }
+        }
     }
 
     void VulkanRHICommandContext::beginEventMarker( const utf8* pName )

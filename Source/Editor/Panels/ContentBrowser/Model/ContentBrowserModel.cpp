@@ -18,6 +18,7 @@
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorSelectionSync.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
@@ -374,8 +375,25 @@ namespace sw::editor
     void ContentBrowserModel::selectAsset( const AssetEntry& entry )
     {
         _selectedAssetAbs = entry._absolutePath;
-        if ( entry._bIsDirectory == false )
-            editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>().setFocusedAssetPath( entry._relativePath.c_str() );
+        if ( entry._bIsDirectory )
+            return;
+        editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>().setFocusedAssetPath( entry._relativePath.c_str() );
+        // 콘텐츠 브라우저 문맥의 칸 — 메인 씬 선택을 바꾸지 않는다(문맥마다 따로, `EditorSelectionSync`).
+        EditorSelectionSync* pSync = editor::findSubsystem<EditorSelectionSync>();
+        if ( pSync != nullptr )
+            pSync->publish( EditorSelectionContext::ContentBrowser, entry._relativePath, 0 );
+    }
+
+    bool ContentBrowserModel::revealAsset( string_view assetID )
+    {
+        const auto filePath = editor::getSubsystem<AssetPaths>().findLooseFile( FileUtil::normalizePath( assetID ) ); // 디스크 파일(없으면 비어 있다)
+        if ( filePath.has_value() == false )
+            return false; // 쿠킹 묶음에만 있는 애셋 — 보일 폴더가 없다
+        openFolder( FileUtil::getDirectoryPart( filePath->str() ) );
+        // 폴더를 고르면 선택이 비므로 그 뒤에 고른다 — 목록이 새로 와도 경로로 고르므로 그 타일이 고른 채 선다.
+        _selectedAssetAbs = FileUtil::normalizeSeparators( filePath->str() );
+        editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>().setFocusedAssetPath( string{ assetID }.c_str() );
+        return true;
     }
 
     void ContentBrowserModel::selectAssetPath( string_view absolutePath )

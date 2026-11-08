@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Name/hashed_string.h"
@@ -52,22 +53,22 @@ namespace sw::editor
         const ReferencePoseOverride& getOverride() const { return _override; }
 
         // --- 편집 ----------------------------------------------------------------------------------------------------
-        // 실패하면(없는 본) 아무것도 바꾸지 않고 기록도 남기지 않으며, 이유를 영어 한 문장으로 @p outError 에 담습니다.
-        // 지금 값과 같으면 false 이고 오류는 비어 있습니다. bContinuous 는 끌기 한 번을 되돌리기 한 단계로 합칩니다(`endContinuousEdit`).
+        // 값 편집은 바꿨으면 true, 지금 값과 같으면 false(기록 없음), 실패하면(없는 본) 아무것도 바꾸지 않고 기록도 남기지 않은 채 이유(`Error`)입니다.
+        // bContinuous 는 끌기 한 번을 되돌리기 한 단계로 합칩니다(`endContinuousEdit`).
 
-        [[nodiscard]] bool setTranslation( const hashed_string& bone, const float3& translation, bool bContinuous, string& outError );
+        [[nodiscard]] expected<bool> setTranslation( const hashed_string& bone, const float3& translation, bool bContinuous );
         /** @brief 회전을 도(`makeFromYawPitchRoll` 와 같은 배치)로 정합니다. */
-        [[nodiscard]] bool setRotationDegrees( const hashed_string& bone, const float3& degrees, bool bContinuous, string& outError );
-        [[nodiscard]] bool setScale( const hashed_string& bone, const float3& scale, bool bContinuous, string& outError );
-        /** @brief 본의 덮어쓰기를 지웁니다(임포트 값으로). 덮어쓰기가 없으면 false 입니다. */
-        [[nodiscard]] bool clearBone( const hashed_string& bone, string& outError );
+        [[nodiscard]] expected<bool> setRotationDegrees( const hashed_string& bone, const float3& degrees, bool bContinuous );
+        [[nodiscard]] expected<bool> setScale( const hashed_string& bone, const float3& scale, bool bContinuous );
+        /** @brief 본의 덮어쓰기를 지웁니다(임포트 값으로). 덮어쓰기가 없으면 오류입니다. */
+        [[nodiscard]] expected<void> clearBone( const hashed_string& bone );
         /**
          * @brief 본의 덮어쓰기를 반대편 본에 뒤집어 적습니다. 반대편 이름은 @p rules 로 찾고, 스켈레톤에 있어야 합니다. 짝을 쌍으로 등록합니다.
-         * @param outMirrorBone 반대편 본 이름입니다.
+         * @return 반대편 본 이름입니다.
          */
-        [[nodiscard]] bool mirrorBone( const hashed_string& bone, const MirrorNameRules& rules, hashed_string& outMirrorBone, string& outError );
-        void               setMirrorAxis( MirrorAxis axis ) { _override.setMirrorAxis( axis ); }
-        void               endContinuousEdit() { _state.endCoalescing(); }
+        [[nodiscard]] expected<hashed_string> mirrorBone( const hashed_string& bone, const MirrorNameRules& rules );
+        void                                  setMirrorAxis( MirrorAxis axis ) { _override.setMirrorAxis( axis ); }
+        void                                  endContinuousEdit() { _state.endCoalescing(); }
 
         // --- 읽기 · 쓰기 · 되돌리기 ----------------------------------------------------------------------------------
 
@@ -89,8 +90,8 @@ namespace sw::editor
         bool               canRedo() const { return _state.canRedo(); }
 
     private:
-        /** @brief 본의 지금 값을 구합니다. 스켈레톤에 없으면 오류를 쓰고 false 입니다. */
-        [[nodiscard]] bool findCurrent( const hashed_string& bone, BoneTransform& outCurrent, string& outError ) const;
+        /** @brief 본의 지금 값을 구합니다. 스켈레톤에 없으면 오류입니다. */
+        [[nodiscard]] expected<BoneTransform> findCurrent( const hashed_string& bone ) const;
         /** @brief 편집 직전에 부릅니다. @p fieldName 이 있으면 같은 본 · 필드의 연속 편집을 한 단계로 합칩니다. */
         void recordUndo( const hashed_string& bone, string_view fieldName );
 

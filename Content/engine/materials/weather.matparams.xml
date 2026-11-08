@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 날씨 파라미터 묶음 — 지형(terrain.material) · 환경 표면(environmentsurface.material)의 칸 _weather 가 여기 Weather 에 묶인다(언리얼 MPC 로 날씨를 돌리는 방식).
+     x = 젖음(0..1), y = 웅덩이(0..1), z = 눈(0..1), w = 설선 높이(m — 이 높이 위에 눈이 쌓인다). 기본은 맑음.
+     런타임에 값을 바꾸면(MaterialParameterCollection::setValue) 묶은 모든 머티리얼이 다음 프레임에 함께 바뀐다. 계절 · 지역 변형은 _base 로 이 파일을 가리키고 값만 적는다. -->
+<MaterialParameterCollectionDef>
+	<_listParameter>
+		<MaterialCollectionParameterDef _name="Weather" _value="0, 0, 0, 0" />
+	</_listParameter>
+</MaterialParameterCollectionDef>

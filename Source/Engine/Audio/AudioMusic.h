@@ -9,6 +9,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -154,8 +155,8 @@ namespace sw
         /** @brief 이름, 레이어, 길이, 템포, 시작 구간, 다음 구간, 전환 이름, 곡선 순서를 검사합니다. */
         [[nodiscard]] bool validate( string_view sourceName ) const;
 
-        /** @brief 구간 번호입니다. 없으면 -1 입니다. */
-        int32 findSegmentIndex( const hashed_string& name ) const;
+        /** @brief 구간 번호입니다. 없으면 비어 있습니다. */
+        [[nodiscard]] optional<uint32> findSegmentIndex( const hashed_string& name ) const;
         /** @brief @p from → @p to 전환 규칙입니다(구간을 적은 규칙이 `*` 규칙보다 먼저). 없으면 nullptr 입니다. */
         const AudioMusicTransitionDef* findTransition( const hashed_string& from, const hashed_string& to ) const;
         /** @brief 구간의 박 길이(프레임)입니다. */

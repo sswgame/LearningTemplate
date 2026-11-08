@@ -9,6 +9,7 @@
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Visual/Component/LightComponent.h"
+#include "Engine/Visual/LightShadowSettings.h"
 
 namespace sw
 {
@@ -55,6 +56,8 @@ namespace sw
         float32                  _depthRange{ 1.0f };     ///< 깊이 구간 길이(m) — far - near(모든 캐스케이드가 같다)
         uint32                   _resolution{ 1 };        ///< 캐스케이드 타일 한 변의 텍셀 수
         uint32                   _cascadeCount{ 1 };
+        float32                  _fadeStartDepth{ DirectionalShadowCascade::kUnboundedDepth }; ///< 그림자가 옅어지기 시작하는 카메라 뷰 깊이(m) — 마지막 캐스케이드 끝에서 0 이 된다. 끝없음이면 옅어지지 않는다(`g_ShadowCascadeLayout.w`)
+        float32                  _sourceAngle{ 0.0f };                                         ///< 빛 원천의 시직경(라디안, `LightShadowSettings::_sourceSize` 를 바꾼 값) — PCSS 반그림자 폭(`ShadowFilter::computeDirectionalPenumbraScale`)
         DirectionalShadowCascade _arrCascade[kMaxCascade]{};
 
         /** @brief 셰이더의 `g_ShadowParams` 입니다 — x 깊이 바이어스(NDC) · y 그늘 세기 · z 노멀 오프셋(m) · w 텍셀 하나의 UV 폭(타일 기준). 캐스케이드 c 의 x · z 는 이 값 ÷ 배율입니다. */
@@ -63,6 +66,11 @@ namespace sw
         float4 computeCascadeShaderValue( uint32 cascadeIndex ) const;
         /** @brief 캐스케이드 c 를 자기 타일에 그리는 뷰-투영입니다 — 기준 행렬 뒤에 NDC xy 배율 · 이동을 곱한 것(깊이는 그대로)입니다. */
         float4x4 computeCascadeViewProj( uint32 cascadeIndex ) const;
+        /**
+         * @brief 그림자 거리 끝에서 옅어지기 시작하는 깊이입니다 — 그림자 구간(@p nearDepth ~ @p endDepth)의 끝 @p fadeFraction 몫에서 그림자가 1 → 0 으로 옅어진다.
+         * @details 언리얼 `ShadowDistanceFadeoutFraction` 과 같은 자리다 — 그림자 거리 끝이 칼로 자른 줄로 보이지 않게 한다. 몫이 0 이하 · 끝이 없는 구간이면 끝없음(옅어지지 않음)이다.
+         */
+        static float32 computeFadeStartDepth( float32 nearDepth, float32 endDepth, float32 fadeFraction );
     };
 } // namespace sw
 
@@ -128,6 +136,11 @@ namespace sw
         /** @brief 캐스케이드 수를 설정합니다(1~4 로 자릅니다). */
         void setShadowCascadeCount( uint32 count );
 
+        /** @brief 그림자 거리 끝에서 옅어지는 몫(0 ~ 1, 0 = 칼로 자른 끝)입니다. 카메라에 맞춘 원근 볼륨만 읽습니다. */
+        float32 getShadowFadeFraction() const { return _shadowFadeFraction; }
+        /** @brief 옅어지는 몫을 설정합니다(0 ~ 1 로 자릅니다). */
+        void setShadowFadeFraction( float32 fraction );
+
         /** @brief 이 라이트의 그림자 view-projection 행렬을 만듭니다. */
         float4x4 computeShadowViewProj() const;
         /** @brief 고정 볼륨(원점 둘레 반경 `_shadowExtent`)의 그림자 투영입니다. `shadowMapResolution` 은 그림자 맵(타일) 한 변의 텍셀 수입니다. */
@@ -157,6 +170,11 @@ namespace sw
         /** @brief 그림자를 받는 높이 띠를 설정합니다. 두 값이 같으면 띠로 자르지 않습니다. */
         void setShadowReceiverHeightRange( float32 minHeight, float32 maxHeight );
 
+        /** @brief 그림자 모양 값(원천 크기 · 접촉 그림자 길이)입니다. */
+        const LightShadowSettings& getShadowSettings() const { return _shadowSettings; }
+        /** @brief 그림자 모양 값을 설정합니다. */
+        void setShadowSettings( const LightShadowSettings& settings );
+
     protected:
         /** @brief 방향(`_directionType.xyz`)을 씁니다. */
         void writeGPULightKindFields( GPULight& outLight ) const override;
@@ -176,6 +194,10 @@ namespace sw
         float32 _shadowReceiverMaxHeight;
         PROPERTY( Category = "Shadow", DisplayName = "Cascade Count", Min = 1, Max = 4, Tooltip = "Cascades for a perspective camera when fitting to the view (orthographic cameras use one)" )
         uint32 _shadowCascadeCount;
+        PROPERTY( Category = "Shadow", DisplayName = "Distance Fade", Min = 0.0, Max = 1.0, Tooltip = "Fraction of the shadow view distance over which shadows fade out at its end (0 = hard cut)" )
+        float32 _shadowFadeFraction;
+        PROPERTY( Category = "Shadow", DisplayName = "Shadow Shape", Tooltip = "Light source size for soft shadows and contact shadow length" )
+        LightShadowSettings _shadowSettings;
         PROPERTY( Category = "Shadow", DisplayName = "Cast Shadow", Tooltip = "Render this light into the shadow map" )
         uint8                  _bCastShadow   : 1;
         [[maybe_unused]] uint8 _reservedLight : 7;

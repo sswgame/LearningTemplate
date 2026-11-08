@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  물체별 화면 속도 — 카메라에 붙어 함께 움직이는 상자(HeldCube, 1인칭 총의 자리)는 카메라가 움직여도 TAA · 모션 블러에 번지지 않고, 배경은 움직임대로 바뀐다.
+  디퍼드 파이프라인(TAA · 모션 블러 둘 다 화면 속도 SceneVelocity 를 읽는다)을 본다. 예전(깊이 + 지난 뷰-투영의 카메라 재투영)에는 붙은 상자가 카메라 속도로 흐려졌다.
+  카메라는 순간이동이 아니라 이어진 움직임으로 옮긴다(move — 순간이동은 붙은 상자의 움직임 기록도 버린다). 프레임마다 옆으로 0.05 m.
+  결정적: 애니메이션 없는 무대(maps/objectvelocity), 고정 프레임 시간. 첫 사진이 자리 잡기를 기다린 뒤로는 찍는 프레임이 정해져야 하므로 기다리지 않는다(waitForSettle="false").
+  골든 없음 — 같은 실행의 두 사진을 견준다(가운데 상자 영역은 같고, 배경 영역은 다르다).
+  실행: ctest -R Scenario.game.empty.objectvelocity
+-->
+<Scenario name="game.empty.objectvelocity" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/objectvelocity.scene.xml"/>
+	<Launch variable="gv_deferredShading" value="1"/>
+	<Launch variable="gv_postQuality" value="2"/>
+	<Launch variable="gv_renderScale" value="1"/>
+	<Launch variable="gv_viewDistanceScale" value="1"/>
+	<Variable name="gv_motionBlur" value="1"/>
+	<Wait frames="40"/>
+	<Screenshot file="still.ppm"/>
+
+	<!-- 이어진 움직임 — 프레임마다 0.05 m. TAA 기록이 움직이는 동안 몇 프레임 쌓인 뒤 찍는다. -->
+	<DevCommand line="move GameCamera 0.05 1.6 -6"/>
+	<Wait frames="1"/>
+	<DevCommand line="move GameCamera 0.10 1.6 -6"/>
+	<Wait frames="1"/>
+	<DevCommand line="move GameCamera 0.15 1.6 -6"/>
+	<Wait frames="1"/>
+	<DevCommand line="move GameCamera 0.20 1.6 -6"/>
+	<Wait frames="1"/>
+	<DevCommand line="move GameCamera 0.25 1.6 -6"/>
+	<Wait frames="1"/>
+	<DevCommand line="move GameCamera 0.30 1.6 -6"/>
+	<Wait frames="1"/>
+	<DevCommand line="move GameCamera 0.35 1.6 -6"/>
+	<Screenshot file="moving.ppm" waitForSettle="false"/>
+	<Wait frames="1"/>
+	<DevCommand line="move GameCamera 0.40 1.6 -6"/>
+	<Wait frames="6"/>
+
+	<!-- 가운데(붙은 상자의 안쪽)는 움직이는 동안에도 서 있을 때와 같다 — 속도가 0 이라 모션 블러가 섞지 않고 TAA 기록이 제자리다. -->
+	<ExpectImagesDiffer first="moving.ppm" second="still.ppm" region="0.45,0.42,0.55,0.58" minDiffering="0" maxDiffering="0.02"/>
+	<!-- 배경(왼쪽 아래 — 바닥 무늬 · 왼쪽 상자, 붙은 상자 밖)은 카메라 움직임대로 바뀐다(움직임이 실제로 있었다는 확인). -->
+	<ExpectImagesDiffer first="moving.ppm" second="still.ppm" region="0.05,0.6,0.35,0.9" minDiffering="0.02"/>
+	<Pass/>
+</Scenario>

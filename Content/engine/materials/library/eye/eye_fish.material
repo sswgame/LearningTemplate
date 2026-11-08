@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 외형 라이브러리 프리셋(eye): 물고기 — 평평한 렌즈(굴절 거의 없음) · 큰 둥근 동공 · 은빛 홍채 · 눈꺼풀 젖음 없음. 값만 바꾼다 — 셰이더 변형은 갈래 바탕과 같다. -->
+<MaterialDef formatVersion="0" name="EyeFish" _base="engine/materials/library/eye/base.material">
+	<_properties>
+		<item name="_layerColor" defaultValue="0.75 0.72 0.6 1" />
+		<item name="_irisRadius" defaultValue="0.85" />
+		<item name="_pupilMinRadius" defaultValue="0.45" />
+		<item name="_pupilMaxRadius" defaultValue="0.6" />
+		<item name="_corneaHeight" defaultValue="0.02" />
+		<item name="_ior" defaultValue="1.02" />
+		<item name="_coatWeight" defaultValue="0" />
+		<item name="_wetMeniscus" defaultValue="0" />
+		<item name="_roughness" defaultValue="0.15" />
+		<item name="_specular" defaultValue="0.8" />
+	</_properties>
+</MaterialDef>

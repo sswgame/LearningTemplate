@@ -81,6 +81,15 @@ namespace sw
         uint32 _skinSlot{ constant::invalid_index::kUint32 };
         /** @brief 인스턴스 사용자 값입니다(`InstanceCustomData` — 담는 법 없는 실수라 컴포넌트의 형식을 그대로 싣는다). 스프라이트 칸처럼 내용이고 배치 키가 아닙니다. 셰이더의 `customData0` · `customData1` 입니다. */
         InstanceCustomData _customData{};
+        /**
+         * @brief 움직임 기록의 열쇠입니다(`MeshComponent::getMotionHistoryKey` — 컴포넌트 일련번호 + 순간이동 차례). 0 이면 기록이 없다(인스턴스 배치 항목 · GPU 가 쓰는 칸).
+         * @details 렌더 쪽(`GPUInstanceMotionHistory`)이 이 열쇠로 지난번 그린 월드 행렬을 찾아 화면 속도의 지난 위치를 만든다. 인스턴스 번호는 배치를 다시 나누면 바뀌므로 열쇠가
+         *          따로 있다(언리얼 프리미티브 프록시가 PreviousLocalToWorld 를 들고 있는 것과 같은 자리 — 여기서는 게임 스레드가 정체성만 싣고 기록은 렌더 쪽이 소유한다).
+         *          순간이동이 차례를 올려 열쇠가 바뀌면 기록이 없는 것으로 보여 그 프레임의 속도가 카메라 움직임뿐이다. 셰이더는 읽지 않는다.
+         */
+        uint64 _motionKey{ 0 };
+        /** @brief 원소를 16 바이트 단위로 맞추는 칸입니다(HLSL 구조 버퍼 원소 정렬). 0 으로 둔다. */
+        uint64 _motionPad{ 0 };
     };
 } // namespace sw
 
@@ -89,7 +98,7 @@ namespace sw
     /// @brief GPU 인스턴스 LOD 그룹이 받는 메시의 최대 단계 수(LOD 0 포함)입니다. 더 많으면 그 메시는 CPU 가 단계를 고른다(`GPUSceneBuilder::applyGPULODGroup`).
     inline constexpr uint32 kGPULODMaxLevels = 8;
 
-    static_assert( sizeof( GPUInstance ) == 160, "GPUInstance must match InstanceData (instance_data.hlsli) byte for byte" );
+    static_assert( sizeof( GPUInstance ) == 176, "GPUInstance must match InstanceData (instance_data.hlsli) byte for byte" );
     static_assert( sizeof( InstanceCustomData ) == sizeof( float4 ) * InstanceCustomData::kCount, "InstanceCustomData must be exactly the float4 slots of InstanceData" );
 
     /**
@@ -134,6 +143,11 @@ namespace sw
          *          배치 키에 들어간다. 한 배치의 인스턴스는 모두 같은 부호다(`FramePSOManager::psoForBatch`).
          */
         uint8 _bReverseCulling{ SW_FALSE };
+        /**
+         * @brief 정적 메시(`MeshComponent::isStatic`)의 배치입니다. 배치 키라 불투명 배치는 정적과 움직이는 것이 섞이지 않는다(반투명은 그림자 패스가 그리지 않아 섞일 수 있다).
+         * @details 그림자 캐시가 정적 배치만 캐시 층에, 움직이는 배치만 그 위에 그린다(`FramePassExecutor::drawShadowTiles`).
+         */
+        uint8 _bStaticShadowCaster{ SW_FALSE };
         /** @brief 머티리얼 데이터 그룹(셰이더 타입) 인덱스입니다(`GPUSceneSnapshot::getMaterialGroups`). 없으면 kInvalidMaterialGroup 입니다. */
         uint32 _materialGroup{ 0xFFFFFFFFu };
         /**
@@ -295,14 +309,14 @@ namespace sw
     /**
      * @struct GPUViewTransparentOrder
      * @brief 추가 뷰 하나의 투명 그리기 순서입니다. 주 뷰의 순서(꼬리 인스턴스 배치)는 그대로 두고, 이 뷰가 다르게 그릴 것만 싣습니다.
-     * @details GT 가 그 뷰의 시점과 시선 축으로 꼬리를 다시 정렬해 만든다(`GPUSceneBuilder::computeViewTransparentOrders`). RT 는 순번 테이블을 정렬 디스패치에,
-     *          꼬리 슬롯 테이블을 컬링이 없는 백엔드의 인스턴스 슬롯 스트림에, 배치 순서를 투명 패스 드로우 순서에 쓴다.
-     *          메시 투명 배치가 없고 입자만 있는 뷰는 순번 · 꼬리 슬롯이 nullptr 이고 배치 순서가 비며 입자 자리만 싣는다.
+     * @details GT 가 그 뷰의 시점과 시선 축으로 꼬리를 다시 정렬해 만든다(`GPUSceneBuilder::computeViewTransparentOrders`). RT 는 순번 테이블을 정렬 디스패치(instance_sort.hlsl)에,
+     *          배치 순서를 투명 패스 드로우 순서에 쓴다. 컬링이 없는 백엔드만 순번으로 배치 안을 다시 놓은 인스턴스 슬롯 스트림을 RT 에서 만든다
+     *          (`GPUTransparentSorter::buildViewTailSlots`) — 배치 안 정렬은 GPU 정렬과 CPU 정렬 중 한 곳에서만 돈다.
+     *          메시 투명 배치가 없고 입자만 있는 뷰는 순번이 nullptr 이고 배치 순서가 비며 입자 자리만 싣는다.
      */
     struct GPUViewTransparentOrder
     {
         shared_ptr<const vector<uint32>>   _pListRank;        ///< 꼬리 인스턴스(꼬리 시작 기준)마다 이 뷰에서 그리는 순번(0이면 가장 먼저, 곧 가장 멀다)
-        shared_ptr<const vector<uint32>>   _pListTailSlot;    ///< 배치마다 안쪽을 이 뷰 순서로 다시 배치한 꼬리 인스턴스 번호(전역). 꼬리 길이와 같다.
         vector<uint32>                     _listBatchOrder;   ///< 이 뷰에서 투명 배치를 그리는 순서(`GPUSceneSnapshot::getTransparentBatches` 의 번호)
         vector<GPUTransparentParticleSlot> _listParticleSlot; ///< 이 뷰에서 입자 그리기의 순서와 자리(`_drawPosition` 은 `_listBatchOrder` 안의 자리)
         uint64                             _viewID{ 0 };      ///< `RenderViewRequest::_viewID`
@@ -417,6 +431,11 @@ namespace sw
          *        본 클립 시각과 같습니다. 패스마다 PassCB `g_SwVertexAnimationTime` 으로 전달됩니다.
          */
         float32 _vertexAnimationTime{ 0.0f };
+        /**
+         * @brief 정적 그림자 세대입니다. 정적 메시가 움직이거나 바뀌거나 더해지거나 빠질 때 오른다(`GPUSceneBuilder::updateStaticShadowGeneration`).
+         * @details 그림자 캐시(`ShadowCachePolicy`)가 이 값이 바뀌면 캐시 층을 다시 그린다 — 언리얼이 정적 프리미티브의 등록 · 이동으로 캐시한 그림자 맵을 버리는 것과 같은 자리다.
+         */
+        uint64 _staticShadowGeneration{ 0 };
         /**
          * @brief 인스턴스 **번호의 배치**가 바뀔 때마다 오르는 세대입니다(배치를 처음부터 다시 만든 빌드). 제자리 갱신(움직임 · 색)은 올리지 않는다.
          * @details 인스턴스 번호에 묶어 둔 GPU 상태(LOD 전환 상태 `GPUCullViewResources::_lodState`)가 이 값이 달라지면 낡은 것이라 비운다.

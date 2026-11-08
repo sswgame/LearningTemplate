@@ -33,6 +33,7 @@ namespace sw
 
         /**
          * @brief 규칙 표 글에서 루트 @p rootName 의 카탈로그 규칙(`<Catalog root>`)을 찾습니다. 맨 위 노드는 루트이고 `_listField` 한 칸이 항목 종류 하나입니다(`_keyAttribute` 가 항목의 id 칸).
+         *        줄 바로 아래의 `<Field>` 는 항목이 아닌 루트 칸입니다(`key` 가 없어도 되고 `_base` 를 받지 않는다 — 입력 맵의 `<layers>` 래퍼).
          * @param outbListed 표에 있으면 true 입니다. 없으면 @p outSchema 는 그대로입니다.
          * @return 표가 깨졌으면 오류를 남기고 false 입니다.
          */

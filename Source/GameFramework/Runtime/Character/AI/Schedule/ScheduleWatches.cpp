@@ -25,11 +25,11 @@ namespace sw
             const hashed_string id( npcID );
             for ( const ScheduleSystem* pSystem : listSystem )
             {
-                const int32 npcIndex = pSystem->findNPCIndex( id );
-                if ( npcIndex >= 0 )
+                const optional<int32> npcIndex = pSystem->findNPCIndex( id );
+                if ( npcIndex.has_value() )
                 {
                     outpSystem  = pSystem;
-                    outNPCIndex = npcIndex;
+                    outNPCIndex = *npcIndex;
                     return true;
                 }
             }

@@ -52,5 +52,48 @@ namespace sw
             result._high = _high * inverse;
             return result;
         }
+        /**
+         * @brief 합 1 인 가중치에서 레이어 @p layer 쪽으로 @p coverage(0..1)만큼 옮긴 값입니다 — 다른 레이어는 (1 − coverage) 배, 그 레이어는 coverage 를 더 받는다.
+         * @details 자동 규칙(`TerrainLayerRule`)이 레이어 순서대로 부른다. 합 1 은 그대로 남는다. 셰이더 `applyLayerRule`(terrain.hlsl)과 같은 식이다.
+         */
+        SurfaceLayerWeights computeCovered( uint32 layer, float32 coverage ) const
+        {
+            const float32       keep = 1.0f - coverage;
+            SurfaceLayerWeights result{};
+            result._low  = _low * keep;
+            result._high = _high * keep;
+            result.set( layer, result.get( layer ) + coverage );
+            return result;
+        }
+        /**
+         * @brief 높이 섞기 — 레이어마다 높이(0..1, 디테일 맵의 레이어 채널)가 높은 쪽이 경계에서 먼저 드러나게 다시 나눈 값(합 1)입니다.
+         * @details 언리얼 HeightLerp · 랜드스케이프 Height Blend 와 같은 생각이다. 키 = 가중치 × (1 + 높이), 가장 큰 키에서 @p depth 아래까지의 몫만 남겨 합으로 나눈다.
+         *          키에 가중치를 곱하므로 가중치 0 인 레이어는 높이가 커도 튀어나오지 않는다(덧셈 키는 칠하지 않은 바위가 경계 밖에서 솟는다).
+         *          @p depth 가 0 이하이면 높이를 보지 않고 `computeNormalized` 다(끈 값). 깊을수록 부드럽다. 셰이더 `SurfaceFunction::blendByHeight8` 과 같은 식이다.
+         */
+        SurfaceLayerWeights computeHeightBlended( const float32 ( &arrHeight )[kLayerCount], float32 depth ) const
+        {
+            const SurfaceLayerWeights normalized = computeNormalized();
+            if ( depth <= 0.0f )
+                return normalized;
+            float32 arrKey[kLayerCount]{};
+            float32 maxKey = 0.0f;
+            for ( uint32 layer = 0; layer < kLayerCount; ++layer )
+            {
+                arrKey[layer] = normalized.get( layer ) * ( 1.0f + arrHeight[layer] );
+                maxKey        = arrKey[layer] > maxKey ? arrKey[layer] : maxKey;
+            }
+            const float32       threshold = maxKey - depth;
+            SurfaceLayerWeights result{
+                float4{0.0f, 0.0f, 0.0f, 0.0f},
+                float4{0.0f, 0.0f, 0.0f, 0.0f}
+            };
+            for ( uint32 layer = 0; layer < kLayerCount; ++layer )
+            {
+                const float32 share = arrKey[layer] - threshold;
+                result.set( layer, share > 0.0f ? share : 0.0f );
+            }
+            return result.computeNormalized();
+        }
     };
 } // namespace sw

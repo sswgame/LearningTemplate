@@ -3,6 +3,8 @@
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 
 #include "Core/Log/LogOnce.h"
+#include "Core/Math/MathUtil.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 
@@ -56,6 +58,63 @@ namespace sw
         if ( bNothingToUpload )
             return;
         pDevice->getResourceFactory()->updateStructuredBufferRange( _buffer, pData, byteSize, byteOffset );
+    }
+
+    uint32 RHIStructuredBuffer::uploadRegions( IRHIDevice* pDevice, const void* pBaseSource, const vector<RHIBufferCopyRegion>& listRegion ) const
+    {
+        const bool bNothingToUpload = pDevice == nullptr || _buffer == 0 || pBaseSource == nullptr || listRegion.empty();
+        if ( bNothingToUpload )
+            return 0;
+        pDevice->getResourceFactory()->updateStructuredBufferRegions( _buffer, pBaseSource, listRegion.data(), static_cast<uint32>( listRegion.size() ) );
+        uint32 byteCount = 0;
+        for ( const RHIBufferCopyRegion& region : listRegion )
+        {
+            byteCount += region._sizeBytes;
+        }
+        return byteCount;
+    }
+
+    void RHIStructuredBuffer::collectChangedRegions( const void* pPrevious, uint32 previousCount, const void* pCurrent, uint32 currentCount, uint32 stride,
+                                                     uint32 mergeGapElements, vector<RHIBufferCopyRegion>& outListRegion )
+    {
+        outListRegion.clear();
+        if ( pCurrent == nullptr || currentCount == 0 || stride == 0 )
+            return;
+        const uint8* const pPreviousByte = static_cast<const uint8*>( pPrevious );
+        const uint8* const pCurrentByte  = static_cast<const uint8*>( pCurrent );
+        const uint32       comparedCount = pPrevious != nullptr ? MathUtil::min( previousCount, currentCount ) : 0u;
+        // 바뀐 구간 하나를 더한다. 앞 구간과의 사이가 붙일 만큼 짧으면 앞 구간을 늘린다.
+        auto addRun = [&]( uint32 firstElement, uint32 endElement )
+        {
+            if ( outListRegion.empty() == false )
+            {
+                RHIBufferCopyRegion& last          = outListRegion.back();
+                const uint32         lastEndOffset = last._dstOffset + last._sizeBytes;
+                if ( firstElement * stride <= lastEndOffset + mergeGapElements * stride )
+                {
+                    last._sizeBytes = endElement * stride - last._dstOffset;
+                    return;
+                }
+            }
+            outListRegion.push_back( RHIBufferCopyRegion{ firstElement * stride, firstElement * stride, ( endElement - firstElement ) * stride } );
+        };
+        uint32 element = 0;
+        while ( element < comparedCount )
+        {
+            if ( Memory::compare( pPreviousByte + element * stride, pCurrentByte + element * stride, stride ) == 0 )
+            {
+                ++element;
+                continue;
+            }
+            const uint32 runBegin = element;
+            while ( element < comparedCount && Memory::compare( pPreviousByte + element * stride, pCurrentByte + element * stride, stride ) != 0 )
+            {
+                ++element;
+            }
+            addRun( runBegin, element );
+        }
+        if ( currentCount > comparedCount )
+            addRun( comparedCount, currentCount );
     }
 
     void RHIStructuredBuffer::release( IRHIDevice* pDevice )

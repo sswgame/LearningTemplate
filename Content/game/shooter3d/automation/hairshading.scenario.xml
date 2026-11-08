@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Shooter3D 머리카락 셰이딩 — 플레이어 몸(ShooterPlayer 외형, Hair = Buzzed)의 머리카락 부품이 셰이딩 모델 Hair(common/materials/quaternius/hair_1.material →
+  engine/materials/hair.material · hair.hlsl, Marschner 근사 + 디더 덮임)로 그려지는지 사진을 골든과 견준다(골든은 통합 때 백엔드마다 기록).
+  궤도 카메라로 몸을 3인칭으로 보고, 해(Sun)가 비스듬히 비추는 시작 자리에서 찍는다. 사진은 정해진 시각에 찍으므로 고정 대기다.
+  실행: App -scenario=game/shooter3d/automation/hairshading.scenario.xml -unattended (체인: ctest -R Scenario.shooter3d)
+-->
+<Scenario name="game.shooter3d.hairshading" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Variable name="gv_shooterAutoPlay" value="0"/>
+	<DevCommand line="camera.preset orbit"/>
+	<WaitUntil watch="Rig.Output" target="PlayerBody" key="Feet.ground_hits" near="2" tolerance="0.01" timeoutFrames="300"/>
+	<Wait frames="60"/>
+	<Screenshot file="hair_orbit.ppm"/>
+	<ExpectImage file="hair_orbit.ppm" golden="hair_orbit"/>
+	<Pass/>
+</Scenario>

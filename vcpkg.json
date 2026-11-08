@@ -27,11 +27,11 @@
     },
     {
       "name": "vulkan-loader",
-      "platform": "!linux"
+      "platform": "!linux & !android & !emscripten"
     },
     {
       "name": "vulkan-validationlayers",
-      "platform": "!linux"
+      "platform": "!linux & !android & !emscripten"
     },
     {
       "name": "imgui",
@@ -102,7 +102,8 @@
       "default-features": false,
       "features": [
         "openssl"
-      ]
+      ],
+      "platform": "!emscripten & !android"
     }
   ],
   "features": {

@@ -12,9 +12,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "DevTools/Client/Automation/Runner/AutomationLogPolicy.h"
-#include "DevTools/Client/Automation/Runner/AutomationSession.h"
 
-#include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
@@ -24,8 +22,7 @@
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/Play/EditorPlaySession.h"
+#include "Editor/Panels/Console/Model/ConsoleViewModel.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -162,8 +159,8 @@ namespace sw::editor
             /** @brief 열린 Output Log 패널입니다. 없으면 nullptr 입니다. */
             static ConsolePanel* findPanel()
             {
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                return pContext != nullptr ? pContext->getSubsystem<EditorPanelManager>().findPanel<ConsolePanel>() : nullptr;
+                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
+                return pPanels != nullptr ? pPanels->findPanel<ConsolePanel>() : nullptr;
             }
 
             /** @brief Output Log 가 지난 그리기에 보인 줄 수입니다(접기 · 거르기 뒤). */
@@ -253,8 +250,7 @@ namespace sw::editor
         , _reservedFlags{ 0 }
     {
         // 세션이 없는 실행(자동화 실행기를 짓지 않은 구성 · 에디터 서비스 없이 세운 테스트)은 시나리오 선언이 없다 — 단위 테스트 선언만 본다.
-        if ( const AutomationSession* const pSession = findSubsystem<AutomationSession>() )
-            _pScenarioLogPolicy = pSession->getLogPolicy();
+        _pScenarioLogPolicy      = ConsoleViewModel::findScenarioLogPolicy();
         _logListenerSubscription = Logger::registerGlobalListener(
             SW_DELEGATE_METHOD( LogWrittenDelegate, &ConsolePanel::onLogWritten, this ) );
     }
@@ -699,12 +695,12 @@ namespace sw::editor
         }
         // 이번 실행의 파일은 싱크만 안다 — 폴더의 "가장 새 파일" 은 같은 폴더를 쓰는 다른 프로세스의 것일 수 있다.
         const string logFilePath = pSink->getLogFilePath();
-        (void)EditorAssetFileCommands::showInFileExplorer( logFilePath.empty() ? string( pSink->getLogFolderPath() ) : logFilePath );
+        (void)ConsoleViewModel::showInFileExplorer( logFilePath.empty() ? string( pSink->getLogFolderPath() ) : logFilePath );
     }
 
     void ConsolePanel::updatePlayReactions()
     {
-        const bool bStopped          = EditorPlaySession::isStopped();
+        const bool bStopped          = ConsoleViewModel::isPlayStopped();
         const bool bClearOnPlayStart = _bClearOnPlay == SW_TRUE && _bWasStopped == SW_TRUE && bStopped == false;
         if ( bClearOnPlayStart )
             clearEntries();
@@ -716,9 +712,9 @@ namespace sw::editor
             errorSerial = _errorSerial;
         }
         // 오류는 로그를 쓴 다음 그리기에서 본다 — 그 프레임이 끝나기 전에 멈추는 유니티 Error Pause 보다 한 프레임 늦다.
-        const bool bPauseOnNewError = _bErrorPause == SW_TRUE && errorSerial != _seenErrorSerial && EditorPlaySession::isPlaying() && EditorPlaySession::isPaused() == false;
+        const bool bPauseOnNewError = _bErrorPause == SW_TRUE && errorSerial != _seenErrorSerial && ConsoleViewModel::isPlayRunning();
         if ( bPauseOnNewError )
-            EditorPlaySession::pause();
+            ConsoleViewModel::pausePlay();
         _seenErrorSerial = errorSerial;
     }
 

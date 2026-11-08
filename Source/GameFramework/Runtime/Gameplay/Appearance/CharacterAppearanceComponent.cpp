@@ -326,6 +326,7 @@ namespace sw
         , _bodyProportion{}
         , _listShapeMorph{}
         , _bodyShapeSet{}
+        , _footLift{ 0.0f }
         , _shapeReload{}
         , _rig{}
         , _socketCache{}
@@ -826,35 +827,47 @@ namespace sw
         return -1;
     }
 
+    const AppearanceDatabase* CharacterAppearanceComponent::findDatabase() const
+    {
+        return _pPreviewDatabase != nullptr ? _pPreviewDatabase : game::findSubsystem<AppearanceDatabase>();
+    }
+
     void CharacterAppearanceComponent::applyBodyShapes( SkeletalMeshComponent& body )
     {
         const ResolvedAppearance& resolved = _state.getResolved();
         _bodyProportion.clear();
         _listShapeMorph.clear();
-        _bodyShapeSet = nullptr;
-        vector<BodyShapeValue> listValue;
-        for ( const ResolvedBoneProportion& proportion : resolved._listBoneProportion )
-        {
-            if ( proportion._owner.empty() ) // 다른 주인(장비)의 본 비율은 그 주인의 부품이 다룬다
-                listValue.push_back( BodyShapeValue{ proportion._name, proportion._value } );
-        }
-        const ResolvedPart* pBodyPart = _bodyPart >= 0 ? &resolved._listPart[static_cast<size_t>( _bodyPart )] : nullptr;
-        if ( pBodyPart != nullptr && pBodyPart->_bodyShapes.empty() == false )
+        _bodyShapeSet                  = nullptr;
+        const ResolvedPart* pBodyPart  = _bodyPart >= 0 ? &resolved._listPart[static_cast<size_t>( _bodyPart )] : nullptr;
+        const bool          bHasShapes = pBodyPart != nullptr && pBodyPart->_bodyShapes.empty() == false;
+        if ( bHasShapes )
         {
             _bodyShapeSet = SharedAssetCache<BodyShapeSet>::acquire( pBodyPart->_bodyShapes.c_str() );
             _shapeReload.markSeen();
             if ( _bodyShapeSet == nullptr )
                 SW_LOG_ERROR_ID( "CharacterAppearance.AppearanceBodyShapesCould", "Appearance '%#' body shapes '%#' could not be read - the body keeps its proportions", _presetID.c_str(), pBodyPart->_bodyShapes.c_str() );
         }
-        else if ( listValue.empty() == false )
+        vector<BodyShapeValue> listValue;
+        for ( const ResolvedBoneProportion& proportion : resolved._listBoneProportion )
+        {
+            if ( proportion._owner.empty() == false )
+                continue; // 다른 주인(장비)의 본 비율은 그 주인의 부품이 다룬다
+            // 부품 머티리얼이 받은 채널(`<ChannelMaterial>` — 머리카락 길이)은 이 스켈레톤이 축으로 적지 않았으면 몸 축이 아니다 — 체형 축 데이터 없이도 닿는다.
+            const bool bMaterialOnly = VectorUtil::contains( resolved._listMaterialChannel, proportion._name ) && ( _bodyShapeSet == nullptr || _bodyShapeSet->findAxis( proportion._name ) == nullptr );
+            if ( bMaterialOnly == false )
+                listValue.push_back( BodyShapeValue{ proportion._name, proportion._value } );
+        }
+        if ( bHasShapes == false && listValue.empty() == false )
         {
             SW_LOG_ERROR_ID( "CharacterAppearance.AppearanceDrivesBodyShape", "Appearance '%#' drives %# body shape axes but its body part has no 'bodyShapes' - the sliders do nothing", _presetID.c_str(), static_cast<uint32>( listValue.size() ) );
         }
+        _footLift = 0.0f;
         if ( _bodyShapeSet != nullptr )
         {
             string error;
             if ( _bodyShapeSet->evaluate( vector_reference<const BodyShapeValue>( listValue.data(), listValue.size() ), _listShapeMorph, _bodyProportion, &error ) == false )
                 SW_LOG_ERROR_ID( "CharacterAppearance.AppearanceBodyShapeAxes", "Appearance '%#' body shape axes: %#", _presetID.c_str(), error.c_str() );
+            _footLift = _bodyShapeSet->computeFootLift( vector_reference<const BodyShapeValue>( listValue.data(), listValue.size() ) );
         }
         // 암묵 스켈레톤은 몸을 입기 전이다 — 몸 스켈레톤이 정해진 뒤에만 견준다.
         if ( body.hasDataSkeleton() )
@@ -1617,15 +1630,14 @@ namespace sw
         }
         if ( _merged != nullptr || _listMergePart.empty() )
             return;
-        MeshMergeResult result;
-        string          error;
-        if ( CharacterMeshUtil::mergeMeshes( _listMergePart, nullptr, result, &error ) == false )
+        const expected<MeshMergeResult> result = CharacterMeshUtil::mergeMeshes( _listMergePart, nullptr );
+        if ( result.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "CharacterAppearance.AppearancePartsDrawnUnmerged", "Appearance '%#' parts are drawn unmerged: %#", _presetID.c_str(), error.c_str() );
+            SW_LOG_ERROR_ID( "CharacterAppearance.AppearancePartsDrawnUnmerged", "Appearance '%#' parts are drawn unmerged: %# '%#'", _presetID.c_str(), result.error().message(), result.error().detail() );
             _listMergePart.clear();
             return;
         }
-        _merged = result._mesh;
+        _merged = result->_mesh;
         // 합친 메시의 LOD 는 여기서 한 번 만든다(조립한 메시라 임포트 LOD 가 없다) — 같은 차림은 캐시로 나눈다. 만들지 못하면 오류를 남기고 LOD 0 만 그린다.
         (void)CharacterLODSettings::buildLODs( *_merged, *_pLODSettings, listLODRule );
         _bMergeBuilt = true;

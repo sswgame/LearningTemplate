@@ -83,6 +83,7 @@ namespace sw
         for ( uint32 slot = 0; slot < 2; ++slot )
         {
             view._arrAutoExposure[slot] = pFactory->createTexture2D( desc );
+            pFactory->setTextureDebugName( view._arrAutoExposure[slot], "AutoExposure" );
             if ( view._arrAutoExposure[slot] != 0 )
                 view._arrAutoExposureSRV[slot] = pFactory->registerBindlessTexture( view._arrAutoExposure[slot] );
         }
@@ -109,8 +110,8 @@ namespace sw
 
     void FrameAutoExposure::prepareAutoExposure( FrameViewTarget& view, float32 now, float32& inoutExposureScale ) const
     {
-        const CameraPostProcessValues& post = view._settings._postProcess;
-        view._bAutoExposureThisFrame        = SW_FALSE;
+        const PostProcessValues& post = view._settings._postProcess;
+        view._bAutoExposureThisFrame  = SW_FALSE;
         // 범위가 한 점이면 재지 않는 고정 노출이다(기본 0 · 0 은 노출 1). 후처리를 끈 뷰 · 표면 값 보기는 톤맵이 카메라 노출을 걸지 않으므로 재지 않는다.
         if ( post.usesAutoExposure() == false )
         {

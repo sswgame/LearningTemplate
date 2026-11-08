@@ -1,0 +1,44 @@
+<Scene formatVersion="2" _base="game/empty/maps/shadowtest.scene.xml" name="ShadowTestContact">
+	<!-- 시나리오 automation/shadow_contact 의 둘째 무대 — shadowtest 를 물려받아 해(0.6 m)와 점광(0.4 m)의 접촉 그림자 길이만 켠다(LightShadowSettings::_contactShadowLength).
+	     접촉 그림자 패스(ContactShadow)는 켠 빛이 있는 이 무대에서만 돈다. 씬 상속은 `<GameObject>` 를 통째로 바꾸므로 엔티티 전체를 적는다. -->
+	<entities>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,0,0"
+					                           _localRotation="0.5,3.4,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachComponent="None"
+					                           _color="1,0.96,0.9"
+					                           _intensity="1.2"
+					                           _ambient="0.3"
+					                           _shadowExtent="8"
+					                           _shadowDistance="20"
+					                           _shadowViewDistance="14"
+					                           _shadowCascadeCount="2"
+					                           _bCastShadow="true">
+						<_shadowSettings _sourceSize="3" _contactShadowLength="0.6" />
+					</DirectionalLightComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Lamp">
+			<GameObject _schemaVersion="0" _name="Lamp" _bActive="true">
+				<_listComponent>
+					<PointLightComponent _localPosition="2.5,2.2,2"
+					                     _localRotation="0,0,0"
+					                     _localScale="1,1,1"
+					                     _attachOwner="None"
+					                     _attachComponent="None"
+					                     _color="1,0.7,0.45"
+					                     _intensity="3"
+					                     _radius="7"
+					                     _bCastShadow="true">
+						<_shadowSettings _sourceSize="0.15" _contactShadowLength="0.4" />
+					</PointLightComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

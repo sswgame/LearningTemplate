@@ -46,5 +46,5 @@ SW_TEST_CASE( RigFileRewriteTest, VariantWritesOverrideRows )
     SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( asset.getNodes().size() ) );
     SW_EXPECT_NEAR( 0.25f, asset.getNodes()[0]->getWeight(), 1e-6f );
     SW_EXPECT_NEAR( 0.75f, asset.getNodes()[1]->getWeight(), 1e-6f );
-    SW_EXPECT_EQUAL( 0, asset.findTargetIndex( hashed_string( "Grip" ) ) );
+    SW_EXPECT_TRUE( asset.findTargetIndex( hashed_string( "Grip" ) ) == 0u );
 }

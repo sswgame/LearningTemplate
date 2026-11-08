@@ -89,12 +89,7 @@ namespace sw
             ( *listRank )[_listViewKey[rank]._candidateIndex] = rank;
         }
 
-        // 2) 배치 안을 rank 순으로 다시 배치한 꼬리 슬롯(컬링 없는 백엔드의 인스턴스 슬롯 스트림)과, 배치마다 가장 먼저 그릴 인스턴스의 rank.
-        shared_ptr<vector<uint32>> listTailSlot = make_shared<vector<uint32>>( tailCount );
-        for ( uint32 tailIndex = 0; tailIndex < tailCount; ++tailIndex )
-        {
-            ( *listTailSlot )[tailIndex] = tailBase + tailIndex;
-        }
+        // 2) 배치마다 가장 먼저 그릴 인스턴스의 rank. 배치 안의 순서는 GPU 정렬(컬링) 또는 RT 의 buildViewTailSlots(컬링 없음)가 정한다.
         vector<uint32> listBatchFirstRank( listBatch.size(), MathUtil::kMaxUInt32 );
         for ( uint32 batchIndex = 0; batchIndex < static_cast<uint32>( listBatch.size() ); ++batchIndex )
         {
@@ -108,9 +103,6 @@ namespace sw
             {
                 listBatchFirstRank[batchIndex] = MathUtil::min( listBatchFirstRank[batchIndex], ( *listRank )[tailIndex] );
             }
-            std::sort( listTailSlot->begin() + begin, listTailSlot->begin() + end,
-                       [&listRank, tailBase]( uint32 slotA, uint32 slotB )
-            { return ( *listRank )[slotA - tailBase] < ( *listRank )[slotB - tailBase]; } );
         }
         order._listBatchOrder.resize( listBatch.size() );
         for ( uint32 batchIndex = 0; batchIndex < static_cast<uint32>( listBatch.size() ); ++batchIndex )
@@ -138,8 +130,28 @@ namespace sw
             }
             placeParticles( vector_reference<const GPUTransparentSortKey>( _listViewBatchHeadKey ), listParticleKey, order._listParticleSlot );
         }
-        order._pListRank     = std::move( listRank );
-        order._pListTailSlot = std::move( listTailSlot );
+        order._pListRank = std::move( listRank );
         return order;
+    }
+
+    void GPUTransparentSorter::buildViewTailSlots( vector_reference<const uint32> listRank, uint32 tailBase, vector_reference<const GPUMeshBatch> listBatch, vector<uint32>& outListTailSlot )
+    {
+        const uint32 tailCount = static_cast<uint32>( listRank.size() );
+        outListTailSlot.resize( tailCount );
+        for ( uint32 tailIndex = 0; tailIndex < tailCount; ++tailIndex )
+        {
+            outListTailSlot[tailIndex] = tailBase + tailIndex;
+        }
+        for ( const GPUMeshBatch& batch : listBatch )
+        {
+            const bool bInsideTheTail = tailBase <= batch._instanceBase && batch._instanceBase + batch._instanceCount <= tailBase + tailCount;
+            if ( bInsideTheTail == false )
+                continue;
+            const uint32 begin = batch._instanceBase - tailBase;
+            const uint32 end   = begin + batch._instanceCount;
+            std::sort( outListTailSlot.begin() + begin, outListTailSlot.begin() + end,
+                       [&listRank, tailBase]( uint32 slotA, uint32 slotB )
+            { return listRank[slotA - tailBase] < listRank[slotB - tailBase]; } );
+        }
     }
 } // namespace sw

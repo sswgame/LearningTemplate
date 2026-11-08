@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 헤어라인 알루미늄 — 한 방향 결(이방성 하이라이트는 W17 모델 뒤). 부모(environmentsurface.material)의 값만 바꾼 프리셋이다. -->
+<MaterialDef formatVersion="0" name="BrushedMetal" _base="engine/materials/environmentsurface.material">
+	<_properties>
+		<item name="_baseColor" defaultValue="0.75 0.75 0.77 1"/>
+		<item name="_metallic" defaultValue="1"/>
+		<item name="_roughness" defaultValue="0.35"/>
+		<item name="_anisotropy" defaultValue="1"/>
+		<item name="_porosity" defaultValue="0"/>
+	</_properties>
+</MaterialDef>

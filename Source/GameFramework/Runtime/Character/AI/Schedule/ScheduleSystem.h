@@ -20,6 +20,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Event/EventBuffer.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -291,10 +292,10 @@ namespace sw
         /** @brief 끼어든 동안 몸이 옮겨진 위치를 알립니다(도망, 전투). 끼어든 중이 아니면 무시합니다. */
         void reportInterruptedLocation( int32 npcIndex, const ScheduleLocation& location );
 
-        int32           getNPCCount() const { return static_cast<int32>( _listNPC.size() ); }
-        int32           findNPCIndex( const hashed_string& npcID ) const;
-        hashed_string   getNPCID( int32 npcIndex ) const;
-        ScheduleNPCView getNPCView( int32 npcIndex ) const;
+        int32                         getNPCCount() const { return static_cast<int32>( _listNPC.size() ); }
+        [[nodiscard]] optional<int32> findNPCIndex( const hashed_string& npcID ) const;
+        hashed_string                 getNPCID( int32 npcIndex ) const;
+        ScheduleNPCView               getNPCView( int32 npcIndex ) const;
         /** @brief 오늘 계획입니다. */
         const vector<ScheduleSegment>& getPlan( int32 npcIndex ) const;
         bool                           isAppointmentMet( const hashed_string& appointmentID ) const;

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 외형 라이브러리 프리셋(skin): 립글로스 입술. 값만 바꾼다 — 셰이더 변형은 갈래 바탕과 같다. -->
+<MaterialDef formatVersion="0" name="LipsGloss" _base="engine/materials/library/skin/base.material">
+	<_properties>
+		<item name="_color" defaultValue="0.62 0.2 0.22 1" />
+		<item name="_coatWeight" defaultValue="1" />
+		<item name="_coatRoughness" defaultValue="0.04" />
+		<item name="_roughness" defaultValue="0.45" />
+	</_properties>
+</MaterialDef>

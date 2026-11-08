@@ -50,7 +50,7 @@ namespace sw
         /** @brief 합친 글을 읽고 검사합니다(`ConfigManager::readComposedXMLDocument`). 리소스 id 로 읽으면 @p context 에 `withAsset` 이 실린다. */
         [[nodiscard]] bool loadComposed( string_view xml, string_view sourceLabel, const ResourceContext& context );
         /** @brief 채널 번호입니다. 없으면 -1 입니다. */
-        int32 findChannelIndex( const hashed_string& channel ) const;
+        optional<uint32> findChannelIndex( const hashed_string& channel ) const;
     };
 } // namespace sw
 
@@ -162,7 +162,7 @@ namespace sw
         struct ExpressionInput
         {
             hashed_string   _expression{};
-            vector<int32>   _listChannelIndex{};
+            vector<uint32>  _listChannelIndex{};
             vector<float32> _listScale{};
             float32         _value{ 0.0f };
         };

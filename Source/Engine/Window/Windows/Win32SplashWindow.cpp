@@ -7,10 +7,9 @@
 
 #include "Engine/Window/Windows/Win32Window.h"
 
-#if defined( SW_PLATFORM_WINDOWS )
+#include <gdiplus.h>
 
-    #include <gdiplus.h>
-    #pragma comment( lib, "gdiplus.lib" )
+#pragma comment( lib, "gdiplus.lib" )
 
 namespace sw
 {
@@ -311,5 +310,3 @@ namespace sw
         _bOpen = SW_FALSE;
     }
 } // namespace sw
-
-#endif

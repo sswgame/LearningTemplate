@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 화면 왜곡 머티리얼(distortion.hlsl) — 충격파 고리 · 아지랑이 · 마법 물결 · 유리 · 얼음 굴절. 메시(구 · 고리 · 판)에 붙이면 뒤의 장면을 노멀 방향으로 비껴 보인다.
+     _alwaysDefines 의 MATERIAL_DISTORTION 이 왜곡 누적 패스에 들게 하고(RenderPassTypeInfo 의 _pRequiredMaterialDefine), MATERIAL_BLEND_TRANSLUCENT 가 반투명 패스의 표면 색을 낸다.
+     _tint 의 알파가 0 이면 표면은 보이지 않고 왜곡만 남는다. _strength 는 화면 UV 단위의 최대 오프셋이다. VFX 메시 입자는 방출기 메시 머티리얼을 이것(또는 _base 로 이은 것)으로 두면 왜곡을 그린다. -->
+<MaterialDef formatVersion="0" name="Distortion" shaderPath="engine/shaders/distortion.hlsl" alphaMode="Blend">
+	<_properties>
+		<item name="_tint" type="Color" defaultValue="1 1 1 0" displayName="Tint Color" group="Surface" bHdr="0" bSrgb="1"/>
+		<item name="_strength" type="Range" defaultValue="0.03" min="0.0" max="0.2" displayName="Distortion Strength (screen UV)" group="Distortion"/>
+	</_properties>
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_alwaysDefines>
+			<item>MATERIAL_BLEND_TRANSLUCENT</item>
+			<item>MATERIAL_DISTORTION</item>
+		</_alwaysDefines>
+	</_permutations>
+</MaterialDef>

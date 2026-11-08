@@ -106,6 +106,9 @@ namespace sw
         /** @brief 기록 값 줄들입니다(`frame 300 Scene.TransformHash = 12345` — 백엔드끼리 같아야 한다). */
         const vector<string>& getRecordLines() const { return _listRecordLine; }
 
+        /** @brief 단계의 감시 값 · 대상 · 키를 읽어 값을 냅니다. 없으면 false 이고(`<SkipUnless>` 같은 단계도 같은 읽기를 쓴다) @p outMessage 에 이유를 씁니다. */
+        [[nodiscard]] bool readWatchValue( const AutomationStepContext& context, const AutomationStep& step, AutomationWatchValue& outValue, string& outMessage ) const;
+
     private:
         /**
          * @struct WatchHistory
@@ -147,8 +150,6 @@ namespace sw
             float64                                   _limit{ 0.0 };
         };
 
-        /** @brief 단계의 감시 값 · 대상 · 키를 읽어 값을 냅니다. 없으면 false 이고 @p outMessage 에 이유를 씁니다. */
-        [[nodiscard]] bool readWatchValue( const AutomationStepContext& context, const AutomationStep& step, AutomationWatchValue& outValue, string& outMessage ) const;
         /** @brief 시작할 때 `<ExpectVisited>` 가 보는 감시 값마다 이력을 만듭니다. */
         void prepareWatches( const AutomationScenario& scenario );
         /** @brief 미룬 `<ExpectImage>` 하나를 판정합니다(@p pBackendTag 는 단언한 때의 백엔드). */

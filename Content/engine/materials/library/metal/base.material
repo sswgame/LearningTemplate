@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 외형 라이브러리 갈래 바탕: 금속 — 기본 PBR 금속도 1. 거울도 여기(거칠기 ≈ 0, 반사는 SSR + 반사 프로브). -->
+<MaterialDef formatVersion="0" name="AppearanceMetal" _base="engine/materials/library/appearance.material">
+	<_properties>
+		<item name="_metallic" defaultValue="1" />
+		<item name="_roughness" defaultValue="0.3" />
+		<item name="_color" defaultValue="0.56 0.57 0.58 1" />
+	</_properties>
+</MaterialDef>

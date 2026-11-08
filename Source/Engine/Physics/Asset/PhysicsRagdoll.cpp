@@ -62,14 +62,14 @@ namespace sw
 
 namespace sw
 {
-    int32 PhysicsRagdoll::findBodyIndex( PhysicsBodyHandle body ) const
+    optional<uint32> PhysicsRagdoll::findBodyIndex( PhysicsBodyHandle body ) const
     {
         for ( size_t bodyIndex = 0; bodyIndex < _listBody.size(); ++bodyIndex )
         {
             if ( _listBody[bodyIndex] == body )
-                return static_cast<int32>( bodyIndex );
+                return static_cast<uint32>( bodyIndex );
         }
-        return -1;
+        return nullopt;
     }
 
     bool PhysicsRagdoll::create( IPhysicsScene3D& scene, const PhysicsAsset& asset, const PhysicsSkeletonView& skeleton, const float4x4& worldFromModel,
@@ -162,10 +162,15 @@ namespace sw
 
         for ( const PhysicsAssetPairDef& pair : asset._listDisabledPair )
         {
-            const int32 bodyA = asset.findBodyIndex( pair._boneA );
-            const int32 bodyB = asset.findBodyIndex( pair._boneB );
-            if ( bodyA >= 0 && bodyB >= 0 )
-                scene.setPairCollision( outRagdoll._listBody[static_cast<size_t>( bodyA )], outRagdoll._listBody[static_cast<size_t>( bodyB )], false );
+            const optional<uint32> bodyA = asset.findBodyIndex( pair._boneA );
+            const optional<uint32> bodyB = asset.findBodyIndex( pair._boneB );
+            if ( bodyA.has_value() == false || bodyB.has_value() == false )
+            {
+                // 검증(`PhysicsAsset::validate`)을 거치지 않은 에셋이다 — 그 쌍만 알리고 건너뛴다(나머지 래그돌은 맞다).
+                SW_LOG_ERROR_ID( "PhysicsRagdoll.DisabledPairNamesBone", "Ragdoll: disabled pair '%#' - '%#' names a bone without a body - the pair is skipped", pair._boneA.c_str(), pair._boneB.c_str() );
+                continue;
+            }
+            scene.setPairCollision( outRagdoll._listBody[*bodyA], outRagdoll._listBody[*bodyB], false );
         }
         return true;
     }

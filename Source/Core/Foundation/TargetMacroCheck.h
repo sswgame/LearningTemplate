@@ -47,10 +47,14 @@
 #endif
 
 // ------------------------------------------------------------------------------
-// 2) 아키텍처 — x64 / arm64 중 정확히 하나
+// 2) 아키텍처 — x64 / arm64 / wasm32(웹) 중 정확히 하나
 // ------------------------------------------------------------------------------
-#if ( defined( SW_X64 ) + defined( SW_ARM64 ) ) != 1
-    #error "Exactly one of SW_X64 / SW_ARM64 must be defined (cmake/Modules/Architecture via sw_global_options)."
+#if ( defined( SW_X64 ) + defined( SW_ARM64 ) + defined( SW_WASM32 ) ) != 1
+    #error "Exactly one of SW_X64 / SW_ARM64 / SW_WASM32 must be defined (cmake/Modules/Architecture via sw_global_options)."
+#endif
+
+#if defined( SW_WASM32 ) && !( defined( __wasm32__ ) && defined( SW_PLATFORM_WEB ) )
+    #error "SW_WASM32 is defined but the compiler does not target wasm32 (__wasm32__) or the platform is not SW_PLATFORM_WEB."
 #endif
 
 #if defined( SW_X64 ) && !( defined( _M_X64 ) || defined( __x86_64__ ) )

@@ -30,23 +30,25 @@ SW_TEST_CASE( BehaviorTreeEditModelTest, VariantSavesOnlyItsDifference )
     const string baseID = test::ScopedScratchDomain::makeID( "base.bt.xml" ).str();
 
     BehaviorTreeEditModel model;
-    string                error;
-    SW_REQUIRE_TRUE_MSG( model.parse( "<BehaviorTree _base=\"" + baseID + "\"><Selector id=\"root\" name=\"Guard\"/></BehaviorTree>", error ), error.c_str() );
+    const expected<void>  parsed = model.parse( "<BehaviorTree _base=\"" + baseID + "\"><Selector id=\"root\" name=\"Guard\"/></BehaviorTree>" );
+    SW_REQUIRE_TRUE_MSG( parsed.has_value(), parsed.has_value() ? "" : parsed.error().message().data() ); // 문장은 리터럴이라 널로 끝난다
     SW_EXPECT_EQUAL( baseID, model.getBaseID() );
 
-    string saved;
-    SW_REQUIRE_TRUE_MSG( model.makeSaveText( saved, error ), error.c_str() );
-    SW_EXPECT_TRUE( saved.find( baseID ) != string::npos );
-    SW_EXPECT_TRUE( saved.find( "Guard" ) != string::npos );
-    SW_EXPECT_TRUE( saved.find( "rested" ) == string::npos ); // 물려받은 가지는 적지 않는다
+    const expected<string> saved = model.makeSaveText();
+    SW_REQUIRE_TRUE_MSG( saved.has_value(), saved.has_value() ? "" : saved.error().message().data() );
+    SW_EXPECT_TRUE( saved->find( baseID ) != string::npos );
+    SW_EXPECT_TRUE( saved->find( "Guard" ) != string::npos );
+    SW_EXPECT_TRUE( saved->find( "rested" ) == string::npos ); // 물려받은 가지는 적지 않는다
 
     BehaviorTreeEditModel reread;
-    SW_REQUIRE_TRUE_MSG( reread.parse( saved, error ), error.c_str() );
+    const expected<void>  rereadResult = reread.parse( *saved );
+    SW_REQUIRE_TRUE_MSG( rereadResult.has_value(), rereadResult.has_value() ? "" : rereadResult.error().message().data() );
     SW_EXPECT_EQUAL( model.write(), reread.write() );
     SW_EXPECT_EQUAL( baseID, reread.getBaseID() );
 
     BehaviorTreeEditModel plain; // 부모 없는 트리는 펼친 글 그대로다
-    SW_REQUIRE_TRUE_MSG( plain.parse( "<BehaviorTree><Action id=\"a\" task=\"flag.set\" flag=\"x\"/></BehaviorTree>", error ), error.c_str() );
-    SW_REQUIRE_TRUE( plain.makeSaveText( saved, error ) );
-    SW_EXPECT_EQUAL( plain.write(), saved );
+    SW_REQUIRE_TRUE( plain.parse( "<BehaviorTree><Action id=\"a\" task=\"flag.set\" flag=\"x\"/></BehaviorTree>" ).has_value() );
+    const expected<string> plainSaved = plain.makeSaveText();
+    SW_REQUIRE_TRUE( plainSaved.has_value() );
+    SW_EXPECT_EQUAL( plain.write(), *plainSaved );
 }

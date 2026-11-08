@@ -45,7 +45,7 @@ SW_TEST_CASE( GBufferLayoutTest, PassFormatsComeFromTheLayout )
 }
 
 /**
- * @brief [GBufferLayoutTest] 값 풀이는 셰이더 읽기와 같다 — 노멀 칸 (0, 0) 은 +Z, 머티리얼 칸은 금속도 · 거칠기 · 그려짐, 알베도 알파는 셰이딩 모델
+ * @brief [GBufferLayoutTest] 값 풀이는 셰이더 읽기와 같다 — 노멀 칸 (0, 0) 은 +Z, 머티리얼 칸은 금속도 · 거칠기 · 반사율 · 가림, 알베도 알파는 셰이딩 모델 번호
  */
 SW_TEST_CASE( GBufferLayoutTest, DecodeFollowsTheShaderEncoding )
 {
@@ -55,13 +55,66 @@ SW_TEST_CASE( GBufferLayoutTest, DecodeFollowsTheShaderEncoding )
     SW_EXPECT_EQUAL( 3u, listValue[0]._componentCount );
     SW_EXPECT_NEAR( 1.0f, listValue[0]._value._z, 1.0e-5f );
 
-    GBufferLayout::decodeTexel( GBufferLayout::kArrAttachment[2], float4{ 0.25f, 0.75f, 0.0f, 1.0f }, listValue );
-    SW_REQUIRE_EQUAL( 3u, static_cast<uint32>( listValue.size() ) ); // 금속도 · 거칠기 · 그려짐(쓰지 않는 칸은 뺀다)
+    GBufferLayout::decodeTexel( GBufferLayout::kArrAttachment[2], float4{ 0.25f, 0.75f, 0.5f, 1.0f }, listValue );
+    SW_REQUIRE_EQUAL( 4u, static_cast<uint32>( listValue.size() ) ); // 금속도 · 거칠기 · 반사율 · 가림
     SW_EXPECT_NEAR( 0.25f, listValue[0]._value._x, 1.0e-6f );
     SW_EXPECT_NEAR( 0.75f, listValue[1]._value._x, 1.0e-6f );
-    SW_EXPECT_NEAR( 1.0f, listValue[2]._value._x, 1.0e-6f );
+    SW_EXPECT_NEAR( 0.5f, listValue[2]._value._x, 1.0e-6f );
+    SW_EXPECT_NEAR( 1.0f, listValue[3]._value._x, 1.0e-6f );
 
-    GBufferLayout::decodeTexel( GBufferLayout::kArrAttachment[0], float4{ 0.5f, 0.5f, 0.5f, 0.0f }, listValue );
+    GBufferLayout::decodeTexel( GBufferLayout::kArrAttachment[0], float4{ 0.5f, 0.5f, 0.5f, GBufferLayout::encodeShadingModel( ShadingModelID::Cloth ) }, listValue );
     SW_REQUIRE_EQUAL( 4u, static_cast<uint32>( listValue.size() ) );
-    SW_EXPECT_NEAR( 0.0f, listValue[3]._value._x, 1.0e-6f ); // Unlit
+    SW_EXPECT_NEAR( static_cast<float32>( ShadingModelID::Cloth ), listValue[3]._value._x, 1.0e-6f );
+    SW_EXPECT_TRUE( string_view( listValue[3]._pName ) == "Shading model: Cloth" );
+}
+
+/**
+ * @brief [GBufferLayoutTest] 셰이딩 모델 번호는 8 비트 UNORM 칸을 지나도 같은 번호로 돌아온다 — 클리어 0 은 None(그리지 않음), 표 밖 값은 Count
+ */
+SW_TEST_CASE( GBufferLayoutTest, ShadingModelRoundTripsThroughUnorm8 )
+{
+    for ( uint32 id = 0; id < static_cast<uint32>( ShadingModelID::Count ); ++id )
+    {
+        const float32 encoded   = GBufferLayout::encodeShadingModel( static_cast<ShadingModelID>( id ) );
+        const float32 quantized = static_cast<float32>( static_cast<uint32>( encoded * 255.0f + 0.5f ) ) / 255.0f; // RGBA8 에 적고 읽은 값
+        SW_EXPECT_TRUE( GBufferLayout::decodeShadingModel( quantized ) == static_cast<ShadingModelID>( id ) );
+    }
+    SW_EXPECT_TRUE( GBufferLayout::decodeShadingModel( 0.0f ) == ShadingModelID::None );
+    SW_EXPECT_TRUE( GBufferLayout::decodeShadingModel( 1.0f ) == ShadingModelID::Count );
+    SW_EXPECT_TRUE( string_view( GBufferLayout::getShadingModelName( ShadingModelID::Count ) ) == "Shading model: (out of table)" );
+}
+
+/**
+ * @brief [GBufferLayoutTest] 셰이더의 번호 표(shading_model_ids.hlsli)가 C++ enum 과 같은 줄을 가진다 — 셰이더에만 번호를 더하면 진다
+ * @details enum 은 같은 파일의 define 으로 만들지만, 셰이더가 쓰는 define 이 enum 에 빠졌는지는 글을 세어야 안다.
+ */
+SW_TEST_CASE( GBufferLayoutTest, ShaderShadingModelTableMatchesTheEnum )
+{
+    string text;
+    SW_REQUIRE_TRUE( AssetIO::readTextAsset( AssetID{ "engine/shaders/shading_model_ids.hlsli" }, text ) );
+    uint32                defineCount = 0;
+    constexpr string_view kPrefix     = "#define SW_SHADING_MODEL_ID_";
+    for ( size_t at = text.find( kPrefix.data(), 0, kPrefix.size() ); at != string::npos; at = text.find( kPrefix.data(), at + 1, kPrefix.size() ) )
+        ++defineCount;
+    // 번호 줄 + COUNT + SCALE.
+    SW_EXPECT_EQUAL( static_cast<uint32>( ShadingModelID::Count ) + 2u, defineCount );
+}
+
+/**
+ * @brief [GBufferLayoutTest] 판 3 의 넷째 슬롯(SV_TARGET3)은 화면 속도다 — 역할 Velocity, R16G16 실수, 클리어 0, 값은 u · v 그대로(부호 있는 UV 차이)
+ */
+SW_TEST_CASE( GBufferLayoutTest, VelocityIsTheFourthSlot )
+{
+    SW_EXPECT_EQUAL( 3u, GBufferLayout::kVersion );
+    const GBufferAttachmentSpec& velocity = GBufferLayout::kArrAttachment[GBufferLayout::kVelocitySlot];
+    SW_EXPECT_EQUAL( 3u, GBufferLayout::kVelocitySlot );
+    SW_EXPECT_EQUAL( 6u, GBufferLayout::kAttachmentCount ); // 사용자 칸 · 장면 색이 뒤를 잇는다
+    SW_EXPECT_TRUE( velocity._role == RenderPassInputRole::Velocity );
+    SW_EXPECT_TRUE( velocity._format == RHIFormat::R16G16_FLOAT );
+    SW_EXPECT_TRUE( resolveRenderPassInputRole( velocity._pName, false, "" ) == RenderPassInputRole::Velocity ); // 이름이 곧 역할이다
+    vector<GBufferDecodedValue> listValue;
+    GBufferLayout::decodeTexel( velocity, float4{ 0.125f, -0.25f, 0.0f, 0.0f }, listValue );
+    SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( listValue.size() ) );
+    SW_EXPECT_NEAR( 0.125f, listValue[0]._value._x, 1.0e-6f );
+    SW_EXPECT_NEAR( -0.25f, listValue[1]._value._x, 1.0e-6f );
 }

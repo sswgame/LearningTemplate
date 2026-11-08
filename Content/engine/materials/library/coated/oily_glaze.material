@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 외형 라이브러리 프리셋(coated): 기름진 음식 · 설탕 글레이즈. 값만 바꾼다 — 셰이더 변형은 갈래 바탕과 같다. -->
+<MaterialDef formatVersion="0" name="OilyGlaze" _base="engine/materials/library/coated/base.material">
+	<_properties>
+		<item name="_color" defaultValue="0.55 0.28 0.1 1" />
+		<item name="_roughness" defaultValue="0.7" />
+		<item name="_coatWeight" defaultValue="0.9" />
+		<item name="_coatRoughness" defaultValue="0.06" />
+	</_properties>
+</MaterialDef>

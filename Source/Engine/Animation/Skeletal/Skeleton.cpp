@@ -131,14 +131,14 @@ namespace sw
         return skinBinding._layoutHash == MeshSkinBinding::kAnyLayout || skinBinding._layoutHash == getHierarchyHash( boneCount );
     }
 
-    int32 Skeleton::findBoneIndex( const hashed_string& name ) const
+    optional<uint32> Skeleton::findBoneIndex( const hashed_string& name ) const
     {
         for ( size_t boneIndex = 0; boneIndex < _listBone.size(); ++boneIndex )
         {
             if ( _listBone[boneIndex]._name == name )
-                return static_cast<int32>( boneIndex );
+                return static_cast<uint32>( boneIndex );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     void Skeleton::clear()
@@ -190,7 +190,7 @@ namespace sw
             SW_LOG_ERROR_ID( "Skeleton.SocketDuplicate", "Skeleton '%#': socket '%#' is defined twice", sourceLabel, socket._name.c_str() );
             return false;
         }
-        if ( findBoneIndex( socket._parentBone ) < 0 )
+        if ( findBoneIndex( socket._parentBone ).has_value() == false )
         {
             SW_LOG_ERROR_ID( "Skeleton.SocketNamesUnknownBone", "Skeleton '%#': socket '%#' names unknown bone '%#'", sourceLabel, socket._name.c_str(), socket._parentBone.c_str() );
             return false;
@@ -201,15 +201,15 @@ namespace sw
 
     bool Skeleton::applyBoneOverride( const SkeletonBoneOverride& boneOverride, string_view sourceLabel )
     {
-        const int32 boneIndex = findBoneIndex( boneOverride._bone );
-        if ( boneIndex < 0 )
+        const optional<uint32> boneIndex = findBoneIndex( boneOverride._bone );
+        if ( boneIndex.has_value() == false )
         {
             SW_LOG_ERROR_ID( "Skeleton.VariantOverrideUnknownBone", "Skeleton variant '%#': bone override names unknown bone '%#'", sourceLabel, boneOverride._bone.c_str() );
             return false;
         }
         _listClipRule.resize( _listBone.size() );
-        SkeletonClipRule& rule = _listClipRule[static_cast<uint32>( boneIndex )];
-        BoneTransform&    pose = _listBone[static_cast<uint32>( boneIndex )]._referencePose;
+        SkeletonClipRule& rule = _listClipRule[*boneIndex];
+        BoneTransform&    pose = _listBone[*boneIndex]._referencePose;
         // 변형의 변형이면 클립의 기준은 맨 위 스켈레톤 그대로이고 나머지 차이가 쌓인다.
         if ( rule._bActive == SW_FALSE )
             rule._sourceTranslation = pose._translation;
@@ -240,36 +240,36 @@ namespace sw
         if ( bValid && bScalesByPelvis )
         {
             // 골반 높이 비 — 리타깃(`PoseRetargeter`)과 같은 값이다. 변형의 변형은 부모의 비에 곱해 맨 위 기준을 지킨다.
-            const int32      pelvisBone = findBoneIndex( variant._pelvisBone );
-            vector<float4x4> listBaseModel;
-            vector<float4x4> listModel;
-            Pose             pose;
+            const optional<uint32> pelvisBone = findBoneIndex( variant._pelvisBone );
+            vector<float4x4>       listBaseModel;
+            vector<float4x4>       listModel;
+            Pose                   pose;
             pose.setToReference( base );
             pose.computeModelSpace( base.getParentIndices(), listBaseModel );
             pose.setToReference( *this );
             pose.computeModelSpace( getParentIndices(), listModel );
-            const float32 baseHeight = pelvisBone >= 0 ? listBaseModel[static_cast<uint32>( pelvisBone )].getTranslation()._y : 0.0f;
-            if ( MathUtil::abs( baseHeight ) <= MathUtil::kEpsilon )
+            const bool bPelvisValid = pelvisBone.has_value() && MathUtil::abs( listBaseModel[*pelvisBone].getTranslation()._y ) > MathUtil::kEpsilon;
+            if ( bPelvisValid == false )
             {
                 SW_LOG_ERROR_ID( "Skeleton.VariantPelvisInvalid", "Skeleton variant '%#': ScaleByPelvisHeight needs _pelvisBone, a bone above the origin in the base (got '%#')", sourceLabel, variant._pelvisBone.c_str() );
                 bValid = false;
             }
             else
             {
-                _translationRatio = base._translationRatio * listModel[static_cast<uint32>( pelvisBone )].getTranslation()._y / baseHeight;
+                _translationRatio = base._translationRatio * listModel[*pelvisBone].getTranslation()._y / listBaseModel[*pelvisBone].getTranslation()._y;
             }
         }
         for ( const SkeletonAddedBone& added : variant._listAddedBone )
         {
-            const int32 parentBone = findBoneIndex( added._parentBone );
-            if ( findBoneIndex( added._name ) >= 0 || parentBone < 0 )
+            const optional<uint32> parentBone = findBoneIndex( added._parentBone );
+            if ( findBoneIndex( added._name ).has_value() || parentBone.has_value() == false )
             {
                 SW_LOG_ERROR_ID( "Skeleton.VariantAddedBoneInvalid", "Skeleton variant '%#': added bone '%#' already exists or its parent '%#' does not", sourceLabel, added._name.c_str(), added._parentBone.c_str() );
                 bValid = false;
                 continue;
             }
             _firstAddedBone = MathUtil::min( _firstAddedBone, getBoneCount() );
-            (void)addBone( added._name, parentBone, added._referencePose ); // 부모가 있는 번호다
+            (void)addBone( added._name, static_cast<int32>( *parentBone ), added._referencePose ); // 부모가 있는 번호다
         }
         // 합친 뒤의 검증이다 — 부모의 메시 · 클립은 본 번호로 잇는다(`getHierarchyHash`). 차이 칸이 번호를 바꾸는 꼴을 더하면 여기서 멈춘다.
         const uint32 baseBoneCount = base.getBoneCount();
@@ -287,7 +287,7 @@ namespace sw
         }
         for ( const SkeletonAttachment& attachment : variant._listAttachment )
         {
-            if ( findBoneIndex( attachment._parentBone ) < 0 )
+            if ( findBoneIndex( attachment._parentBone ).has_value() == false )
             {
                 SW_LOG_ERROR_ID( "Skeleton.SkeletonAttachmentNamesUnknown", "Skeleton '%#': attachment '%#' names unknown bone '%#'", sourceLabel, attachment._name.c_str(), attachment._parentBone.c_str() );
                 bValid = false;
@@ -390,7 +390,7 @@ namespace sw
         }
         for ( const SkeletonAttachment& attachment : listLoadedAttachment )
         {
-            if ( findBoneIndex( attachment._parentBone ) < 0 )
+            if ( findBoneIndex( attachment._parentBone ).has_value() == false )
             {
                 SW_LOG_ERROR_ID( "Skeleton.SkeletonAttachmentNamesUnknown", "Skeleton '%#': attachment '%#' names unknown bone '%#'", sourceLabel, attachment._name.c_str(), attachment._parentBone.c_str() );
                 return false;

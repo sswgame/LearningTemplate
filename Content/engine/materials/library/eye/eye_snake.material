@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 외형 라이브러리 프리셋(eye): 뱀 · 도마뱀 — 세로 틈 · 비늘 같은 홍채, 젖음 없음. 값만 바꾼다 — 셰이더 변형은 갈래 바탕과 같다. -->
+<MaterialDef formatVersion="0" name="EyeSnake" _base="engine/materials/library/eye/base.material">
+	<_properties>
+		<item name="_layerColor" defaultValue="0.65 0.55 0.15 1" />
+		<item name="_pupilShape" defaultValue="1" />
+		<item name="_pupilMinRadius" defaultValue="0.08" />
+		<item name="_pupilMaxRadius" defaultValue="0.7" />
+		<item name="_irisRadius" defaultValue="0.9" />
+		<item name="_coatWeight" defaultValue="0.6" />
+		<item name="_wetMeniscus" defaultValue="0" />
+		<item name="_limbalWidth" defaultValue="0.02" />
+	</_properties>
+</MaterialDef>

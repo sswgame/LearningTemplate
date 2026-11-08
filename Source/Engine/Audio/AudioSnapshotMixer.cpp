@@ -162,12 +162,9 @@ namespace sw
         {
             for ( const AudioSnapshotBusDef& busVolume : snapshot._pDesc->_listBusVolume )
             {
-                const int32 busIndex = mixer.findBusIndex( busVolume._bus );
-                if ( busIndex >= 0 )
-                {
-                    const uint32 index = static_cast<uint32>( busIndex );
-                    mixer.setBusVolumeOffsetDb( index, mixer.getBusVolumeOffsetDb( index ) + busVolume._volumeDb * snapshot._intensity );
-                }
+                const optional<uint32> busIndex = mixer.findBusIndex( busVolume._bus ); // 그래프 validate 가 모르는 버스를 거른다
+                if ( busIndex.has_value() )
+                    mixer.setBusVolumeOffsetDb( *busIndex, mixer.getBusVolumeOffsetDb( *busIndex ) + busVolume._volumeDb * snapshot._intensity );
             }
         }
 
@@ -176,11 +173,11 @@ namespace sw
         {
             for ( const AudioSnapshotSendDef& sendItem : anySnapshot._listSend )
             {
-                const int32 busIndex    = mixer.findBusIndex( sendItem._bus );
-                const int32 targetIndex = mixer.findBusIndex( sendItem._target );
-                if ( busIndex < 0 || targetIndex < 0 )
+                const optional<uint32> busIndex    = mixer.findBusIndex( sendItem._bus );
+                const optional<uint32> targetIndex = mixer.findBusIndex( sendItem._target );
+                if ( busIndex.has_value() == false || targetIndex.has_value() == false )
                     continue;
-                float32 levelDb = AudioSnapshotMixerInternal::findBaseSendLevel( desc, static_cast<uint32>( busIndex ), sendItem._target );
+                float32 levelDb = AudioSnapshotMixerInternal::findBaseSendLevel( desc, *busIndex, sendItem._target );
                 for ( const SnapshotState& snapshot : _listSnapshot )
                 {
                     for ( const AudioSnapshotSendDef& activeSend : snapshot._pDesc->_listSend )
@@ -189,23 +186,23 @@ namespace sw
                             levelDb += ( activeSend._levelDb - levelDb ) * snapshot._intensity;
                     }
                 }
-                (void)mixer.setSendLevelDb( static_cast<uint32>( busIndex ), static_cast<uint32>( targetIndex ), levelDb );
+                (void)mixer.setSendLevelDb( *busIndex, *targetIndex, levelDb );
             }
             for ( const AudioSnapshotEffectDef& effectItem : anySnapshot._listEffectParameter )
             {
-                const int32 busIndex = mixer.findBusIndex( effectItem._bus );
-                if ( busIndex < 0 )
+                const optional<uint32> busIndex = mixer.findBusIndex( effectItem._bus );
+                if ( busIndex.has_value() == false )
                     continue;
-                IAudioEffect*         pEffect     = mixer.findEffect( static_cast<uint32>( busIndex ), effectItem._effect );
-                const AudioEffectDef* pEffectDesc = desc.findEffect( static_cast<uint32>( busIndex ), effectItem._effect );
+                IAudioEffect*         pEffect     = mixer.findEffect( *busIndex, effectItem._effect );
+                const AudioEffectDef* pEffectDesc = desc.findEffect( *busIndex, effectItem._effect );
                 if ( pEffect == nullptr || pEffectDesc == nullptr )
                     continue;
-                const int32 parameterIndex = pEffect->findParameterIndex( effectItem._parameter );
-                if ( parameterIndex < 0 )
+                const optional<uint32> parameterIndex = pEffect->findParameterIndex( effectItem._parameter ); // 그래프 validate 가 모르는 값 이름을 거른다
+                if ( parameterIndex.has_value() == false )
                     continue;
                 const AudioEffectTypeInfo&      typeInfo = pEffect->getTypeInfo();
-                const AudioEffectParameterInfo& info     = typeInfo._pParameter[parameterIndex];
-                float32                         value    = AudioSnapshotMixerInternal::findBaseEffectValue( *pEffectDesc, typeInfo, static_cast<uint32>( parameterIndex ) );
+                const AudioEffectParameterInfo& info     = typeInfo._pParameter[*parameterIndex];
+                float32                         value    = AudioSnapshotMixerInternal::findBaseEffectValue( *pEffectDesc, typeInfo, *parameterIndex );
                 for ( const SnapshotState& snapshot : _listSnapshot )
                 {
                     for ( const AudioSnapshotEffectDef& activeEffect : snapshot._pDesc->_listEffectParameter )
@@ -218,7 +215,7 @@ namespace sw
                                                    : value + ( activeEffect._value - value ) * snapshot._intensity;
                     }
                 }
-                pEffect->setParameter( static_cast<uint32>( parameterIndex ), value );
+                pEffect->setParameter( *parameterIndex, value );
             }
         }
     }
@@ -258,10 +255,11 @@ namespace sw
 
     void AudioSnapshotMixer::applyBusUserState( AudioMixer& mixer, const BusUserState& state )
     {
-        const int32 busIndex = mixer.findBusIndex( state._bus );
-        if ( busIndex < 0 )
+        // 사용자 상태는 그래프를 바꾸기 전 버스에 남은 것일 수 있다 — 지금 그래프에 없는 버스는 적용하지 않고 기억만 한다.
+        const optional<uint32> busIndex = mixer.findBusIndex( state._bus );
+        if ( busIndex.has_value() == false )
             return;
-        const uint32 index = static_cast<uint32>( busIndex );
+        const uint32 index = *busIndex;
         mixer.setBusUserVolume( index, state._volume );
         mixer.setBusMuted( index, state._bMuted || mixer.getDesc()._listBus[index]._bMuted );
         mixer.setBusSolo( index, state._bSolo || mixer.getDesc()._listBus[index]._bSolo );

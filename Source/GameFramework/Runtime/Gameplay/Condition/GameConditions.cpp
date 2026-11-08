@@ -3,6 +3,7 @@
 #include "GameFramework/Runtime/Gameplay/Condition/GameConditions.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Hash/HashUtil.h"
 
 #include "Engine/Object/Component/TagSystem.h"
 
@@ -34,7 +35,7 @@ namespace sw
 
             static bool rollChance( const GameplayContext& context, const ConditionNumberArg& args )
             {
-                return GameHash::toUnitFloat( context.getSeed() ) < args._value; // 식이 호출 자리 번호를 섞은 씨앗을 넘긴다 — 한 식의 chance 둘은 독립 굴림이다
+                return HashUtil::toUnitFloat( context.getSeed() ) < args._value; // 식이 호출 자리 번호를 섞은 씨앗을 넘긴다 — 한 식의 chance 둘은 독립 굴림이다
             }
 
             static bool hasBodyShape( const GameplayContext& context, const ConditionNameListArgs& args )
@@ -104,7 +105,7 @@ namespace sw
 
     uint32 GameConditions::makeSeed( int32 first, int32 second )
     {
-        return GameHash::hashCoord( first, second, GameConditionsInternal::kChanceSalt );
+        return HashUtil::hashCoord( first, second, GameConditionsInternal::kChanceSalt );
     }
 
     SW_CONDITION( flag, ConditionNameArg, &GameConditionsInternal::readFlag );

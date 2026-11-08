@@ -5,7 +5,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/String/StringBuilder.h"
 
-#if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_ATSPI )
+#if defined( SW_WITH_ATSPI )
 
     #include "Core/Container/string.h"
     #include "Core/Container/vector.h"
@@ -47,6 +47,7 @@ namespace sw
             constexpr const utf8* kIfaceEvent  = "org.a11y.atspi.Event.Object";
             constexpr int32       kTimeoutMs   = 1000;
             constexpr uint32      kRoleApp     = 75; // ATSPI_ROLE_APPLICATION
+            constexpr uint64      kDecimalBase = 10; // 객체 경로의 번호는 십진수다
             constexpr const utf8* kToolkitName = "SWEngine";
 
             /** @brief 객체 경로 → 대상. 루트는 `bRoot`, 그 밖은 접근성 트리 노드입니다. */
@@ -80,7 +81,7 @@ namespace sw
                     const bool bSeparator = ch == '_' && part == 0 && bDigit;
                     if ( bIsDigit )
                     {
-                        arrNumber[part] = arrNumber[part] * 10 + static_cast<uint64>( ch - '0' );
+                        arrNumber[part] = arrNumber[part] * kDecimalBase + static_cast<uint64>( ch - '0' );
                         bDigit          = true;
                     }
                     else if ( bSeparator )

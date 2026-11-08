@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  말의 출력 한계(maps/mountslope.scene.xml) — 다리의 가속 한계가 경사 당김보다 커도 출력(InertiaSettings::_maxPower, P = F·v)이 모자라면 오르막에서 처지는지 값으로 본다.
+  ① 같은 의도(구보, 8 m/s) 6 초: 평지의 말(HorseFlat)은 구보 속도에 닿는다(8 m/s 에서 출력 한계 4000 / (500·8) = 1 m/s² — 공기 저항이 없어 유지된다).
+  ② 돌 비탈(0.2 rad)을 오르는 말(HorseHill)은 걸음새는 구보 그대로 두고 속도는 P / (m·g·sin0.2) ≈ 4.1 m/s 에 선다.
+  값으로 판정한다(골든 없음). 실행: App -scenario=game/empty/automation/mountslope.scenario.xml -unattended
+-->
+<Scenario name="game.empty.mountslope" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/mountslope.scene.xml"/>
+	<Wait frames="20"/>
+	<!-- 의도는 월드 방향이다 — 둘 다 +Z(비탈 위쪽)를 본다 -->
+	<Intent pawn="HorseFlat" move="0,1" frames="420"/>
+	<Intent pawn="HorseHill" move="0,1" frames="420"/>
+	<Wait frames="360"/>
+	<Expect watch="Mount.Gait" target="HorseFlat" equals="3"/>
+	<Expect watch="Mount.Gait" target="HorseHill" equals="3"/>
+	<Expect watch="Mount.Speed" target="HorseFlat" near="8" tolerance="0.05"/>
+	<Expect watch="Mount.Speed" target="HorseHill" atLeast="3.6"/>
+	<Expect watch="Mount.Speed" target="HorseHill" atMost="4.6"/>
+	<!-- 오르막 위에 있다(비탈 위로 올라왔다) -->
+	<Expect watch="Object.Y" target="HorseHill" atLeast="3"/>
+	<Pass/>
+</Scenario>

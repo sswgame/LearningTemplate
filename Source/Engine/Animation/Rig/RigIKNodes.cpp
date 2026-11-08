@@ -137,6 +137,8 @@ namespace sw
          * @brief 2 본 IK(팔, 다리, 손 IK)입니다. 키는 `root`, `mid`, `end`, `target`, `pole`(대상, 선택), `match_rotation`(끝 본 회전을 대상 회전으로 맞춤),
          *        `keep_end_rotation`(기본 true, 끝 본의 모델 회전을 애니메이션 값으로 유지)입니다.
          * @details 왼손을 무기 손잡이 소켓에 붙이려면 `target` 을 무기 유닛의 `Grip` 소켓(space = 오른손)으로 두고 `match_rotation` 을 켠다. 그러면 손이 손잡이 방향으로 돈다.
+         *          손을 벽 · 난간에 짚게 하려면 `target` 을 접촉 대상(`trace_from` — `RigTargetKind::Trace`)으로 둔다. 대상 가중치(닿고 놓을 때 `blend_speed` 로 오르내린다)만큼
+         *          목표가 애니메이션 손 자리에서 접촉점으로 옮겨 가므로 손이 튀지 않는다.
          */
         class RigTwoBoneIKNode final : public RigNode
         {
@@ -171,6 +173,13 @@ namespace sw
                 quaternion     targetRotation{};
                 if ( context._pInstance->resolveTarget( _target, pose, targetPosition, targetRotation ) == false )
                     return;
+                const float32 targetWeight = context._pInstance->getTargetWeight( _target );
+                if ( targetWeight < 1.0f )
+                {
+                    const quaternion endAnimated = pose.getModelRotation( _end );
+                    targetPosition               = float3::lerp( pose.getModelPosition( _end ), targetPosition, targetWeight );
+                    targetRotation               = quaternion::slerp( endAnimated, targetRotation, targetWeight );
+                }
                 float3           polePosition{};
                 quaternion       poleRotation{};
                 const bool       bPole     = _pole != MathUtil::kMaxUInt32 && context._pInstance->resolveTarget( _pole, pose, polePosition, poleRotation );
@@ -264,7 +273,9 @@ namespace sw
 
         /**
          * @brief 조준과 시선(Aim, LookAt)입니다. 키는 `bone`, `target`, `aim_axis`(본 로컬, 기본 +Z), `max_degrees`(애니메이션 방향에서 벗어날 수 있는 상한),
-         *        `chain`(`[{ "bone", "weight" }]`, 조준 본의 조상들이 루트 쪽부터 회전을 나눠 받음)입니다.
+         *        `chain`(`[{ "bone", "weight", "max_degrees" }]`, 조준 본의 조상들이 루트 쪽부터 회전을 나눠 받음 — 본마다 상한이 따로다)입니다.
+         * @details 등뼈 → 목 → 머리 순으로 남은 회전의 몫을 받고, 본 하나가 상한에 막히면 남은 몫은 다음 본이 받는다(마지막 조준 본이 나머지를 맡는다).
+         *          언리얼 Look At · Control Rig Aim 체인과 같은 분배다.
          */
         class RigAimNode final : public RigNode
         {
@@ -281,13 +292,14 @@ namespace sw
                 const RigXMLList chain = reader.readArray( "chain", false );
                 for ( size_t index = 0; bOk && chain.isValid() && index < chain.size(); ++index )
                 {
-                    RigXMLReader        entryReader( chain.at( index ), reader.getContext() );
-                    RigBoneWeightParams entryParams;
+                    RigXMLReader      entryReader( chain.at( index ), reader.getContext() );
+                    RigAimChainParams entryParams;
                     bOk = entryReader.readFields( entryParams );
                     bOk = entryReader.finish() && bOk;
                     ChainEntry entry{};
-                    entry._name   = entryParams._bone;
-                    entry._weight = entryParams._weight;
+                    entry._name     = entryParams._bone;
+                    entry._weight   = entryParams._weight;
+                    entry._maxAngle = entryParams._maxDegrees * MathUtil::kDegreeToRadian;
                     _listChain.push_back( entry );
                 }
                 if ( bOk && _aimAxis.getLengthSquared() < 0.5f )
@@ -302,6 +314,13 @@ namespace sw
             {
                 if ( context.findBone( _params._bone, _bone ) == false || context.findTarget( _params._target, _target ) == false )
                     return false;
+                if ( _params._bAimAxisInModel )
+                {
+                    // 모델 공간 축을 레퍼런스 포즈의 본 로컬 축으로 바꾼다. 원형(`_params`)의 축은 그대로 두어 다시 묶어도 같은 값이다.
+                    vector<float4x4> listReference;
+                    RigIKNodesInternal::computeReferenceModel( *context._pSkeleton, listReference );
+                    _aimAxis = float3::transform( _params._aimAxis.normalize(), RigIKSolver::makeInverse( listReference[_bone].getRotation() ) ).normalize();
+                }
                 for ( ChainEntry& entry : _listChain )
                 {
                     if ( context.findBone( entry._name, entry._bone ) == false )
@@ -324,12 +343,9 @@ namespace sw
                 const float3 toTarget     = space.projectVector( targetPosition - bonePosition );
                 if ( animated.getLengthSquared() < 0.5f || toTarget.getLengthSquared() < 1e-8f )
                     return;
-                const float32 distance  = toTarget.getLength();
-                quaternion    turn      = RigIKSolver::makeFromToRotation( animated, toTarget );
-                const float32 turnAngle = 2.0f * MathUtil::acos( MathUtil::clamp( MathUtil::abs( turn._w ), 0.0f, 1.0f ) );
-                if ( turnAngle > _maxAngle && turnAngle > MathUtil::kEpsilon )
-                    turn = quaternion::slerp( quaternion::Identity, turn, _maxAngle / turnAngle );
-                const float3 aimPoint = bonePosition + float3::transform( animated, turn ) * distance;
+                const float32    distance = toTarget.getLength();
+                const quaternion turn     = RigAimNode::limitTurn( RigIKSolver::makeFromToRotation( animated, toTarget ), _maxAngle );
+                const float3     aimPoint = bonePosition + float3::transform( animated, turn ) * distance;
 
                 for ( const ChainEntry& entry : _listChain )
                 {
@@ -338,7 +354,7 @@ namespace sw
                     if ( currentAim.getLengthSquared() < 1e-8f || desired.getLengthSquared() < 1e-8f )
                         continue;
                     const quaternion delta = RigIKSolver::makeFromToRotation( currentAim, desired );
-                    pose.rotateModel( entry._bone, quaternion::slerp( quaternion::Identity, delta, MathUtil::saturate( entry._weight ) ) );
+                    pose.rotateModel( entry._bone, RigAimNode::limitTurn( quaternion::slerp( quaternion::Identity, delta, entry._weight ), entry._maxAngle ) );
                 }
                 (void)RigIKSolver::aimBone( pose, _bone, _aimAxis, aimPoint, MathUtil::kPi, 1.0f, space );
             }
@@ -353,11 +369,22 @@ namespace sw
             }
 
         private:
+            /** @brief 회전 @p turn 을 @p maxAngle(라디안) 이하로 줄입니다(축은 그대로). */
+            static quaternion limitTurn( const quaternion& turn, float32 maxAngle )
+            {
+                const float32 angle = 2.0f * MathUtil::acos( MathUtil::clamp( MathUtil::abs( turn._w ), 0.0f, 1.0f ) );
+                if ( angle > maxAngle && angle > MathUtil::kEpsilon )
+                    return quaternion::slerp( quaternion::Identity, turn, maxAngle / angle );
+                return turn;
+            }
+
+        private:
             RigAimParams _params{}; ///< 파일 키 · 기본값 · 범위(RigNodeParams.h)
             struct ChainEntry
             {
                 hashed_string _name{};
                 float32       _weight{ 0.0f };
+                float32       _maxAngle{ MathUtil::kPi }; ///< 이 본이 애니메이션 방향에서 돌 수 있는 상한(라디안)
                 uint32        _bone{ 0 };
             };
 
@@ -412,8 +439,14 @@ namespace sw
             {
                 const float3   up             = float3::transformVector( float3::UnitY, context._worldFromModel ).normalize();
                 const float4x4 modelFromWorld = context._worldFromModel.invert();
+                // 출력 사본은 게임 스레드에서만 쓴다 — 지난 평가의 골반 · 발 높이(`getOutputValue`).
+                _outputPelvisOffset = _pelvisOffset;
+                _outputFootLift     = _footLift;
+                _outputHitCount     = 0;
                 for ( Foot& foot : _listFoot )
                 {
+                    foot._outputOffset = foot._offset;
+                    _outputHitCount += foot._bHit == SW_TRUE ? 1u : 0u;
                     foot._bHit = SW_FALSE;
                     if ( context._pGroundQuery == nullptr )
                         continue;
@@ -446,12 +479,16 @@ namespace sw
                 const float32 pelvisGoal = MathUtil::max( lowest, -_params._maxPelvisDrop );
                 _pelvisOffset            = _bPelvisInitialized == SW_TRUE ? MathUtil::lerp( _pelvisOffset, pelvisGoal, blend ) : pelvisGoal;
                 _bPelvisInitialized      = SW_TRUE;
-                pose.setModelPosition( _pelvis, pose.getModelPosition( _pelvis ) + float3{ 0.0f, _pelvisOffset, 0.0f } );
+                // 굽 높이(발 들림)는 골반과 발 목표를 함께 올린다 — 다리 길이는 그대로라 IK 가 같은 자세를 풀고 발바닥이 땅 + 굽에 선다(언리얼 Leg IK 의 발 높이 보정).
+                // 굽은 장비가 바꿀 때만 바뀌므로 부드럽게 따라가지 않고 바로 건다.
+                const float32 lift = context._pInstance->getBodyInput().getFootLift();
+                _footLift          = lift;
+                pose.setModelPosition( _pelvis, pose.getModelPosition( _pelvis ) + float3{ 0.0f, _pelvisOffset + lift, 0.0f } );
 
                 for ( const Foot& foot : _listFoot )
                 {
                     const quaternion footRotation = pose.getModelRotation( foot._end );
-                    const float3     goal         = foot._animatedModel + float3{ 0.0f, foot._offset, 0.0f };
+                    const float3     goal         = foot._animatedModel + float3{ 0.0f, foot._offset + lift, 0.0f };
                     (void)RigIKSolver::solveTwoBone( pose, foot._root, foot._mid, foot._end, goal, nullptr, *context._pSpace );
                     quaternion aligned = footRotation;
                     if ( _params._bAlignToNormal && foot._bHit == SW_TRUE )
@@ -486,6 +523,38 @@ namespace sw
                 }
             }
 
+            /**
+             * @brief 출력: `pelvis_offset`(땅 보정으로 골반을 옮긴 높이, 미터 · 음수면 내림 · 굽 제외), `foot_lift`(골반 · 발에 더 올린 굽 높이, 미터),
+             *        `foot_offset_<번호>`(`feet` 순서의 발 높이 보정), `ground_hits`(땅에 닿은 발 수).
+             */
+            [[nodiscard]] bool getOutputValue( const hashed_string& output, float32& outValue ) const override
+            {
+                static constexpr string_view kFootPrefix = "foot_offset_";
+                const string_view            name        = output.c_str();
+                if ( name == "pelvis_offset" )
+                {
+                    outValue = _outputPelvisOffset;
+                    return true;
+                }
+                if ( name == "foot_lift" )
+                {
+                    outValue = _outputFootLift;
+                    return true;
+                }
+                if ( name == "ground_hits" )
+                {
+                    outValue = static_cast<float32>( _outputHitCount );
+                    return true;
+                }
+                if ( name.size() != kFootPrefix.size() + 1 || name.substr( 0, kFootPrefix.size() ) != kFootPrefix )
+                    return false;
+                const uint32 footIndex = static_cast<uint32>( name.back() - '0' );
+                if ( footIndex >= _listFoot.size() )
+                    return false;
+                outValue = _listFoot[footIndex]._outputOffset;
+                return true;
+            }
+
         private:
             RigFootPlacementParams _params{}; ///< 파일 키 · 기본값 · 범위(RigNodeParams.h)
             struct Foot
@@ -497,6 +566,7 @@ namespace sw
                 float3        _hitModel{};
                 float3        _normalModel{ 0.0f, 1.0f, 0.0f };
                 float32       _offset{ 0.0f };
+                float32       _outputOffset{ 0.0f }; ///< 게임 스레드 사본(준비 단계가 `_offset` 에서 옮긴다)
                 uint32        _root{ 0 };
                 uint32        _mid{ 0 };
                 uint32        _end{ 0 };
@@ -507,6 +577,10 @@ namespace sw
             vector<Foot> _listFoot{};
             float32      _maxAlignAngle{ 0.5f };
             float32      _pelvisOffset{ 0.0f };
+            float32      _outputPelvisOffset{ 0.0f }; ///< 게임 스레드 사본(준비 단계가 `_pelvisOffset` 에서 옮긴다)
+            float32      _footLift{ 0.0f };           ///< 지난 평가가 건 굽 높이(몸 입력의 발 들림)
+            float32      _outputFootLift{ 0.0f };     ///< 게임 스레드 사본(준비 단계가 `_footLift` 에서 옮긴다)
+            uint32       _outputHitCount{ 0 };        ///< 지난 준비 단계에서 땅에 닿은 발 수
             uint32       _pelvis{ 0 };
             uint8        _bPelvisInitialized{ SW_FALSE };
         };

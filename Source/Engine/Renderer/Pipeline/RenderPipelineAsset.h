@@ -34,13 +34,28 @@ namespace sw
         PROPERTY()
         vector<RenderPassAttachment> _listAttachment;
 
-        /** @brief 그래프 노드(이름, 타입, 입력, 출력)입니다. */
+        /** @brief 뷰 그래프 노드(이름, 타입, 입력, 출력)입니다. 뷰(주 시점 · 추가 뷰)마다 다시 돈다. 타입은 `isViewPassType` 이다. */
         PROPERTY()
         vector<RenderGraphPassDesc> _listPass;
 
         /**
-         * @brief 첨부를 가져올 RenderPass XML 경로입니다(선택, 예: engine/renderpass/defaultrenderpass.xml).
-         * @details 읽을 때 적은 순서대로 그 파일의 첨부를 `_listAttachment` 앞에 합친다(`RenderPipelineAsset::mergeRenderPassAttachments`) — 렌더러는 합친 목록만 본다.
+         * @brief 프레임 그래프의 자원(서브시스템의 버퍼 · 히스토리)입니다. 프레임 패스의 입출력은 이 이름이다(첨부가 아니다).
+         * @details `_listRenderPassRef` 의 자원이 읽을 때 앞에 합쳐진다. 이름은 첨부와 겹칠 수 없다(검증).
+         */
+        PROPERTY( SkipIfEmpty )
+        vector<RenderGraphResourceDesc> _listResource;
+
+        /**
+         * @brief 프레임 그래프 노드입니다. 프레임에 한 번, 뷰 그래프보다 먼저 돌며 모든 뷰의 몫을 기록한다(컬링 · 라이트 그리드 · 깊이 히스토리 · 스키닝 등 — `isFramePassType`).
+         * @details 순서는 `_listResource` 이름의 읽기 · 쓰기가 정한다(뷰 그래프와 같은 규칙). 선언하지 않은 종류는 PSO 도 없고 돌지 않는다.
+         *          `_listRenderPassRef` 의 프레임 패스가 읽을 때 앞에 합쳐진다(여러 파이프라인이 `engine/renderpass/framecomputerenderpass.xml` 한 벌을 쓴다).
+         */
+        PROPERTY( SkipIfEmpty )
+        vector<RenderGraphPassDesc> _listFramePass;
+
+        /**
+         * @brief 첨부 · 프레임 자원 · 프레임 패스를 가져올 RenderPass XML 경로입니다(선택, 예: engine/renderpass/defaultrenderpass.xml).
+         * @details 읽을 때 적은 순서대로 그 파일의 첨부 · 자원 · 프레임 패스를 이 파이프라인 목록 앞에 합친다(`RenderPipelineAsset::mergeRenderPassRefs`) — 렌더러는 합친 목록만 본다.
          *          읽지 못하면 로드 실패이고, 이름이 겹치면 검증 오류다.
          */
         PROPERTY( SkipIfEmpty, AssetPath )
@@ -98,10 +113,19 @@ namespace sw
         [[nodiscard]] uint32 validate( string_view sourcePath );
 
         const vector<RenderGraphPassDesc>& getGraphPass() const { return _desc._listPass; }
+        /** @brief 프레임 그래프의 패스입니다(`RenderPipelineDesc::_listFramePass`). */
+        const vector<RenderGraphPassDesc>& getFramePass() const { return _desc._listFramePass; }
+        /** @brief 프레임 그래프의 자원입니다(`RenderPipelineDesc::_listResource`). */
+        const vector<RenderGraphResourceDesc>& getResources() const { return _desc._listResource; }
+        /**
+         * @brief 이 파이프라인이 프레임 패스 @p type 을 선언했는지입니다. 선언하지 않은 종류의 일(컬링이 채울 간접 인자 · GPU 라이트 그리드 · 스킨 결과 · 볼륨 안개 등)은
+         *        준비 단계부터 하지 않는다 — 채우는 패스가 없는 버퍼를 읽게 두지 않는다.
+         */
+        bool hasFramePass( RenderPassType type ) const;
 
     private:
-        /** @brief `_listRenderPassRef` 의 첨부를 `_listAttachment` 앞에 합칩니다. 렌더 패스 파일을 읽지 못하면 오류를 남기고 false 입니다. */
-        [[nodiscard]] bool mergeRenderPassAttachments( string_view sourcePath );
+        /** @brief `_listRenderPassRef` 의 첨부 · 자원 · 프레임 패스를 이 파이프라인 목록 앞에 합칩니다. 렌더 패스 파일을 읽지 못하면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool mergeRenderPassRefs( string_view sourcePath );
         /** @brief 읽기 입구 둘(리소스 id · 디스크 파일)이 같이 쓰는 끝 처리입니다(첨부 합치기 · 검사 · 로그). 문제가 있으면 false 입니다. */
         [[nodiscard]] bool finishLoad( string_view sourcePath );
 

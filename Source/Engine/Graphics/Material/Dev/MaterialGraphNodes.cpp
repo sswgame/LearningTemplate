@@ -49,8 +49,29 @@ namespace sw
     // 표면
     SW_MATERIAL_GRAPH_NODE( Fresnel, "Surface", "Normal:float3=context._normal|Power:float=5", "Out:float=pow( saturate( 1.0f - dot( normalize( $Normal ), View::computeToView( context._worldPosition ) ) ), $Power )", "" );
 
+    // 함수 묶음(material_functions.hlsli — 지형 · 환경 · 기믹 셰이더와 같은 식, 언리얼 Material Function 자리). 스칼라 · 벡터를 내는 것만 노드다 — 층을 바꾸는 함수(젖음 · 눈 얹기)는 층 파일로 쓴다.
+    SW_MATERIAL_GRAPH_NODE( TriplanarWeights, "Surface Function", "Normal:float3=context._normal|Sharpness:float=4", "Out:float3=SurfaceFunction::computeTriplanarWeights( $Normal, $Sharpness )", "" );
+    SW_MATERIAL_GRAPH_NODE( ValueNoise,       "Surface Function", "Position:float3=context._worldPosition|Size:float=1", "Out:float=SurfaceFunction::computeValueNoise( $Position / max( $Size, 0.0001f ) )", "" );
+    SW_MATERIAL_GRAPH_NODE( FractalNoise,     "Surface Function", "Position:float3=context._worldPosition|Size:float=1", "Out:float=SurfaceFunction::computeFbm( $Position / max( $Size, 0.0001f ), uint( %Octaves ) )", "Octaves:float=4" );
+    SW_MATERIAL_GRAPH_NODE( CellDistance,     "Surface Function", "UV:float2=context._uv|Size:float=0.1", "Nearest:float2=SurfaceFunction::computeCellDistance( $UV / max( $Size, 0.0001f ), 0u )|Edge:float=$Nearest.y", "" );
+    SW_MATERIAL_GRAPH_NODE( MacroVariation,   "Surface Function", "Position:float3=context._worldPosition|Size:float=4", "Out:float=SurfaceFunction::computeMacroVariation( $Position, $Size )", "" );
+    SW_MATERIAL_GRAPH_NODE( HeightBlend4,     "Surface Function", "Weights:float4!|Heights:float4!|Depth:float=0.2", "Out:float4=SurfaceFunction::blendByHeight4( $Weights, $Heights, $Depth )", "" );
+    SW_MATERIAL_GRAPH_NODE( SlopeMask,        "Surface Function", "Normal:float3=context._normal|Low:float=30|High:float=90|Fade:float=6", "Out:float=SurfaceFunction::computeBand( SurfaceFunction::computeSlopeDegrees( $Normal.y ), $Low, $High, $Fade )", "" );
+    SW_MATERIAL_GRAPH_NODE( AltitudeMask,     "Surface Function", "Low:float=0|High:float=100|Fade:float=2", "Out:float=SurfaceFunction::computeBand( context._worldPosition.y, $Low, $High, $Fade )", "" );
+    SW_MATERIAL_GRAPH_NODE( Veins,            "Surface Function", "Position:float3=context._worldPosition|Size:float=0.4|Sharpness:float=8", "Out:float=SurfaceFunction::computeVeins( $Position, $Size, $Sharpness )", "" );
+    SW_MATERIAL_GRAPH_NODE( Stripes,          "Surface Function", "UV:float2=context._uv|Frequency:float=10|Skew:float=0", "Out:float=SurfaceFunction::computeStripes( $UV, $Frequency, $Skew )", "" );
+    SW_MATERIAL_GRAPH_NODE( HexEdge,          "Surface Function", "UV:float2=context._uv", "Out:float=SurfaceFunction::computeHexEdge( $UV )", "" );
+    SW_MATERIAL_GRAPH_NODE( BumpFromHeight,   "Surface Function", "Height:float!|Strength:float=0.01|Normal:float3=context._normal", "Out:float3=SurfaceFunction::perturbNormalByHeight( $Normal, context._worldPosition, $Height, $Strength )", "" );
+    SW_MATERIAL_GRAPH_NODE( EdgeWearMask,     "Surface Function", "Amount:float=0.5|Size:float=0.05", "Out:float=SurfaceFunction::computeEdgeWearMask( context._worldPosition, context._normal, $Amount, $Size )", "" );
+    SW_MATERIAL_GRAPH_NODE( RustMask,         "Surface Function", "Amount:float=0.5|Size:float=0.2", "Out:float=SurfaceFunction::computeRustMask( context._worldPosition, context._normal, $Amount, $Size )", "" );
+    SW_MATERIAL_GRAPH_NODE( DirtMask,         "Surface Function", "Amount:float=0.5|Size:float=0.2", "Out:float=SurfaceFunction::computeDirtMask( context._worldPosition, context._normal, $Amount, $Size )", "" );
+    SW_MATERIAL_GRAPH_NODE( TarnishMask,      "Surface Function", "Amount:float=0.5|Size:float=0.05", "Out:float=SurfaceFunction::computeTarnishMask( context._worldPosition, context._normal, $Amount, $Size )", "" );
+    SW_MATERIAL_GRAPH_NODE( PuddleMask,       "Surface Function", "Amount:float=0.5|Size:float=3", "Out:float=SurfaceFunction::computePuddleMask( context._worldPosition, context._normal, $Amount, $Size )", "" );
+    SW_MATERIAL_GRAPH_NODE( SnowMask,         "Surface Function", "Amount:float=0.5|SnowLine:float=-100000", "Out:float=SurfaceFunction::computeSnowMask( context._worldPosition, context._normal, $Amount, $SnowLine )", "" );
+    SW_MATERIAL_GRAPH_NODE( Scanlines,        "Surface Function", "Density:float=40|Speed:float=1", "Out:float=SurfaceFunction::computeScanlines( context._worldPosition, $Density, $Speed, g_SwMaterialTime )", "" );
+
     // 출력 · 하위 그래프 — 역할이 컴파일을 정한다. 출력 핀 이름은 `material_graph.hlsli` 의 `MaterialGraphOutput` 칸과 같다.
-    static const MaterialGraphNodeKind sw_materialGraphNode_Output{ "Output", "Output", "BaseColor:float3!|Metallic:float=0|Roughness:float=0.5|Normal:float3=context._normal|Emissive:float3=0 0 0|Alpha:float=1", "", "", "", MaterialGraphNodeRole::Output };
+    static const MaterialGraphNodeKind sw_materialGraphNode_Output{ "Output", "Output", "BaseColor:float3!|Metallic:float=0|Roughness:float=0.5|Normal:float3=context._normal|Emissive:float3=0 0 0|Alpha:float=1", "", "ShadingModel:string=DefaultLit", "", MaterialGraphNodeRole::Output };
     static const MaterialGraphNodeKind sw_materialGraphNode_Subgraph{ "Subgraph", "Subgraph", "", "", "", "", MaterialGraphNodeRole::Subgraph };
     static const MaterialGraphNodeKind sw_materialGraphNode_GraphInput{ "GraphInput", "Subgraph", "", "Out:any=", "Name:string=In|Type:string=float", "", MaterialGraphNodeRole::GraphInput };
     static const MaterialGraphNodeKind sw_materialGraphNode_GraphOutput{ "GraphOutput", "Subgraph", "Value:any!", "", "Name:string=Out", "", MaterialGraphNodeRole::GraphOutput };

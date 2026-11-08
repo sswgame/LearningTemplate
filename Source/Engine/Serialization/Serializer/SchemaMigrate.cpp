@@ -112,7 +112,7 @@ namespace sw
              */
             static bool isNumericTypeName( hashed_string typeName )
             {
-                const ReflectBuiltinClass builtinClass = ReflectedValueUtil::getBuiltinClass( ReflectedValueUtil::findBuiltinIndex( typeName ) );
+                const ReflectBuiltinClass builtinClass = ReflectedValueUtil::getBuiltinClass( typeName );
                 return builtinClass == ReflectBuiltinClass::Bool || builtinClass == ReflectBuiltinClass::Number;
             }
 

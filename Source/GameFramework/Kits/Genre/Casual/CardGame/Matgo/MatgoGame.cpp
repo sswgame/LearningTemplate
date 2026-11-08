@@ -219,7 +219,7 @@ namespace sw
             int32  bestPriority = -1;
             for ( const uint16 floorCardID : listSameMonth )
             {
-                const int32 priority = MatgoGameInternal::computeCapturePriority( _floor.getAt( _floor.findIndexByID( floorCardID ) ) );
+                const int32 priority = MatgoGameInternal::computeCapturePriority( _floor.getAt( _floor.findIndexByID( floorCardID ).value() ) ); // 같은 달 목록은 바닥에서 모았다
                 if ( floorCardID == targetID )
                 {
                     chosenID = floorCardID;

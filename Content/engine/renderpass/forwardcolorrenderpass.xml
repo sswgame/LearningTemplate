@@ -1,7 +1,9 @@
-<!-- 포워드 파이프라인의 HDR 색 첨부 — 장면 색과 모션 블러 출력(원본을 가리킬 수 있어 같은 형식이다). -->
+<!-- 포워드 파이프라인의 HDR 색 첨부 — 장면 색과 모션 블러 출력(원본을 가리킬 수 있어 같은 형식이다), 그리고 불투명 패스가 함께 쓰는 화면 속도(모션 블러가 읽는다).
+     화면 속도는 G버퍼 명세의 속도 칸과 같은 포맷 · 클리어 값이어야 한다(GBufferLayout::kVelocitySlot — 로드 검증 3-3). 클리어 0 은 "움직임 없음" 이고 하늘은 읽는 쪽이 깊이 1 로 가린다. -->
 <RenderPassDesc _name="ForwardColorPass">
 	<_listAttachment>
 		<RenderPassAttachment _name="SceneColor" _format="R16G16B16A16_FLOAT" _clearColor="0.12,0.15,0.18,1" _loadOp="Clear" />
 		<RenderPassAttachment _name="MotionBlurColor" _format="R16G16B16A16_FLOAT" _clearColor="0.12,0.15,0.18,1" _loadOp="Clear" />
+		<RenderPassAttachment _name="SceneVelocity" _format="R16G16_FLOAT" _clearColor="0,0,0,0" _loadOp="Clear" />
 	</_listAttachment>
 </RenderPassDesc>

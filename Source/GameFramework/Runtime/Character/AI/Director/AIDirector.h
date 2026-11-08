@@ -12,6 +12,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Event/EventBuffer.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -146,9 +147,9 @@ namespace sw
         float32                          getTime() const { return _time; }
         float32                          getIntensity() const { return _intensity; }
         /** @brief 페이싱이 시작 단계로 돌아온 횟수입니다. 판의 "몇 번째 파도"에 해당합니다. */
-        int32   getCycle() const { return _cycle; }
-        float32 getPoolBudget( int32 poolIndex ) const;
-        int32   findPoolIndex( const hashed_string& poolID ) const;
+        int32                         getCycle() const { return _cycle; }
+        float32                       getPoolBudget( int32 poolIndex ) const;
+        [[nodiscard]] optional<int32> findPoolIndex( const hashed_string& poolID ) const;
 
         /** @brief 풀 @p poolIndex 의 항목 @p encounterIndex 를 지금 막는 까닭(`AIDirectorBlock` 비트)입니다. 0 이면 고를 수 있다는 뜻입니다. */
         uint32 computeBlockMask( int32 poolIndex, int32 encounterIndex ) const;

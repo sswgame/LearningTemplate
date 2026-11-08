@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 용암 — 식은 껍질(보로노이 판) 사이로 흐르는 뜨거운 틈이 빛난다. 부모(gimmicksurface.material)의 값만 바꾼 프리셋이다. -->
+<MaterialDef formatVersion="0" name="Lava" _base="engine/materials/gimmicksurface.material">
+	<_properties>
+		<item name="_effect" defaultValue="5"/>
+		<item name="_baseColor" defaultValue="0.08 0.05 0.04 1"/>
+		<item name="_emissiveColor" defaultValue="1 0.35 0.05 1"/>
+		<item name="_emissiveStrength" defaultValue="6"/>
+		<item name="_roughness" defaultValue="0.9"/>
+		<item name="_patternScale" defaultValue="0.6 0 0.25 0"/>
+		<item name="_flowSpeed" defaultValue="0.05"/>
+	</_properties>
+</MaterialDef>

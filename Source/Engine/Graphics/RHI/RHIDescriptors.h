@@ -252,11 +252,12 @@ namespace sw
          * @brief 프레임 하나에 찍을 수 있는 GPU 타임스탬프 슬롯 수입니다.
          * @details 패스 인덱스로 슬롯을 고정해 쓴다(패스당 begin/end 두 슬롯). 네 백엔드가 같은 값으로
          *          쿼리 힙, 풀, 쿼리 배열 크기를 잡으므로 한쪽만 바꾸면 다른 쪽이 구간 밖을 읽는다.
-         *          64 슬롯은 begin/end 쌍 32개인데, 렌더러가 뒤쪽 세 슬롯을 프레임 전체와 컴퓨트 프리패스에 쓰므로 패스는
-         *          30개까지다(`FrameRendererUtil`). 렌더 그래프가 그보다 길어지면 뒤쪽 패스는 시간이 빠지고 로드 때 경고한다.
-         *          슬롯 비트 집합은 `GPUTimestampSlotMask` 하나로 다룬다 — 슬롯 수를 늘려도 비트 폭이 따라가는지 그 형식이 확인한다.
+         *          128 슬롯을 렌더러가 뷰 패스 쌍 · 프레임 패스 쌍 · 뒤쪽 예약 세 칸(프레임 전체 · 프레임 그래프)으로 나눈다(`FrameRendererUtil`).
+         *          그래프가 그 몫보다 길어지면 뒤쪽 패스는 시간이 빠지고 로드 때 경고한다. 64 에서 늘린 까닭: 프레임 패스(컬링 · 그리드 · 스킨 …)를 하나씩 재려면
+         *          쌍이 열 몇 개 더 필요하다. 쿼리 힙 크기는 칸 × 프레임 수(128 × 3)라 비용이 없다.
+         *          슬롯 비트 집합은 `GPUTimestampSlotMask`(64 비트 단어 배열) 하나로 다룬다 — 슬롯 수를 늘려도 단어 수가 따라간다.
          */
-        inline constexpr uint32 kMaxGPUTimestampSlot = 64;
+        inline constexpr uint32 kMaxGPUTimestampSlot = 128;
 
         /**
          * @brief GPU 리소스를 지연 해제하는 프레임 수입니다(RHIReleaseQueue 기본 frameLatency).
@@ -285,16 +286,6 @@ namespace sw
         inline constexpr uint32 kVulkanRequiredMajor = 1;
         inline constexpr uint32 kVulkanRequiredMinor = 2;
     } // namespace constant::render
-
-    /** @brief GPU 타임스탬프 슬롯마다 한 비트(기록됨 · 준비됨)입니다. 비트 폭이 `constant::render::kMaxGPUTimestampSlot` 이상이어야 한다. */
-    using GPUTimestampSlotMask = uint64;
-    static_assert( sizeof( GPUTimestampSlotMask ) * 8u >= constant::render::kMaxGPUTimestampSlot, "타임스탬프 슬롯 비트 집합이 슬롯 수보다 좁다" );
-
-    /** @brief 슬롯 @p slotIndex 의 비트입니다. 비트 연산은 이 함수로만 만든다(`1u << slot` 은 32 슬롯을 넘으면 정의되지 않는다). */
-    [[nodiscard]] constexpr GPUTimestampSlotMask makeGPUTimestampSlotBit( uint32 slotIndex )
-    {
-        return GPUTimestampSlotMask{ 1 } << slotIndex;
-    }
 
     /**
      * @struct RHISwapChainDesc
@@ -460,6 +451,16 @@ namespace sw
         uint32 _srcOffset{ 0 }; ///< 넘긴 원본 포인터 기준 바이트 오프셋
         uint32 _dstOffset{ 0 }; ///< 목적 버퍼 안의 바이트 오프셋
         uint32 _sizeBytes{ 0 }; ///< 옮길 바이트 수
+    };
+
+    /**
+     * @struct RHIBufferTransition
+     * @brief 버퍼 하나의 상태 전이입니다(`IRHICommandList::transitionBuffers` 의 한 원소). 모으는 쪽은 `RHIBufferTransitionBatch` 다.
+     */
+    struct RHIBufferTransition
+    {
+        RHIBufferHandle _buffer{ 0 };
+        RHIBufferState  _state{ RHIBufferState::Common };
     };
 } // namespace sw
 

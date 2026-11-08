@@ -3,6 +3,10 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Serialization/Inherit/ResourceComposer.h"
+#include "Engine/Serialization/Inherit/ResourceComposition.h"
+#include "Engine/Serialization/Inherit/ResourceTags.h"
 #include "Engine/UI/Document/UIDocument.h"
 #include "Engine/UI/Document/UIDocumentCache.h"
 #include "Engine/UI/Document/UIDocumentLoader.h"
@@ -39,7 +43,7 @@ namespace
     void expectRefused( const utf8* pXML, const utf8* pExpected )
     {
         UIDocumentAsset asset;
-        const string    error = describeFailure( UIDocumentLoader::parse( pXML, "engine/ui/test.ui.xml", asset ) );
+        const string    error = describeFailure( UIDocumentLoader::parse( pXML, "engine/ui/test.ui.xml", ResourceContext::forDocument(), asset ) );
         SW_EXPECT_FALSE( error.empty() );
         SW_EXPECT_TRUE( error.find( pExpected ) != string::npos );
     }
@@ -55,7 +59,7 @@ SW_TEST_CASE( UIDocumentTest, ParsesEverything )
 {
     UIDocumentAsset asset;
     string          error;
-    SW_REQUIRE_TRUE( UIDocumentLoader::parse( kDocumentXML, "engine/ui/test.ui.xml", asset ).has_value() );
+    SW_REQUIRE_TRUE( UIDocumentLoader::parse( kDocumentXML, "engine/ui/test.ui.xml", ResourceContext::forDocument(), asset ).has_value() );
     SW_EXPECT_TRUE( asset._screenDesc._bPausesGame );
     SW_REQUIRE_EQUAL( size_t( 1 ), asset._listStyleSheet.size() );
     SW_EXPECT_EQUAL( string( "engine/ui/a.uss.xml" ), asset._listStyleSheet[0] );
@@ -95,7 +99,7 @@ SW_TEST_CASE( UIDocumentTest, ErrorsCarryPathAndLine )
 {
     UIDocumentAsset asset;
     string          error;
-    error = describeFailure( UIDocumentLoader::parse( "<UIDocument _schemaVersion=\"1\">\n<BoxPanel>\n<odd/>\n</BoxPanel>\n</UIDocument>", "engine/ui/lines.ui.xml", asset ) );
+    error = describeFailure( UIDocumentLoader::parse( "<UIDocument _schemaVersion=\"1\">\n<BoxPanel>\n<odd/>\n</BoxPanel>\n</UIDocument>", "engine/ui/lines.ui.xml", ResourceContext::forDocument(), asset ) );
     SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.find( "engine/ui/lines.ui.xml:3:" ) != string::npos );
 }
@@ -105,11 +109,11 @@ SW_TEST_CASE( UIDocumentTest, InstantiatesWidgets )
 {
     UIDocumentAsset asset;
     string          error;
-    SW_REQUIRE_TRUE( UIDocumentLoader::parse( kDocumentXML, "engine/ui/test.ui.xml", asset ).has_value() );
+    SW_REQUIRE_TRUE( UIDocumentLoader::parse( kDocumentXML, "engine/ui/test.ui.xml", ResourceContext::forDocument(), asset ).has_value() );
     UIDocumentCache cache;
 
     vector<UIBindingDef> listBinding;
-    unique_ptr<Widget>   root = UIDocumentLoader::instantiate( asset, cache, listBinding ).value_or( nullptr );
+    unique_ptr<Widget>   root = UIDocumentLoader::instantiate( asset, cache, ResourceTagSet{}, listBinding ).value_or( nullptr );
     SW_REQUIRE_TRUE( root != nullptr );
     SW_EXPECT_TRUE( root->getName() == hashed_string( "Root" ) );
     SW_REQUIRE_EQUAL( size_t( 2 ), root->getChildren().size() );
@@ -119,7 +123,7 @@ SW_TEST_CASE( UIDocumentTest, InstantiatesWidgets )
     SW_REQUIRE_EQUAL( size_t( 1 ), listBinding.size() );
     SW_EXPECT_TRUE( root->getChildren()[1]->getID() == listBinding[0]._widget );
 
-    unique_ptr<Widget> second = UIDocumentLoader::instantiate( asset, cache, listBinding ).value_or( nullptr );
+    unique_ptr<Widget> second = UIDocumentLoader::instantiate( asset, cache, ResourceTagSet{}, listBinding ).value_or( nullptr );
     SW_REQUIRE_TRUE( second != nullptr );
     SW_EXPECT_EQUAL( size_t( 2 ), listBinding.size() );
     SW_EXPECT_FALSE( listBinding[0]._widget == listBinding[1]._widget );
@@ -130,14 +134,47 @@ SW_TEST_CASE( UIDocumentTest, BadValueFailsInstantiate )
 {
     UIDocumentAsset asset;
     string          error;
-    SW_REQUIRE_TRUE( UIDocumentLoader::parse( makeDocument( "<BoxPanel _name=\"Root\"><TextWidget _text=\"{bind:_a}\"/><BoxPanel _spacing=\"abc\"/></BoxPanel>" ), "engine/ui/bad.ui.xml", asset ).has_value() );
+    SW_REQUIRE_TRUE( UIDocumentLoader::parse( makeDocument( "<BoxPanel _name=\"Root\"><TextWidget _text=\"{bind:_a}\"/><BoxPanel _spacing=\"abc\"/></BoxPanel>" ), "engine/ui/bad.ui.xml", ResourceContext::forDocument(), asset ).has_value() );
     UIDocumentCache      cache;
     vector<UIBindingDef> listBinding;
     listBinding.push_back( UIBindingDef{} );
-    error = describeFailure( UIDocumentLoader::instantiate( asset, cache, listBinding ) );
+    error = describeFailure( UIDocumentLoader::instantiate( asset, cache, ResourceTagSet{}, listBinding ) );
     SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.find( "engine/ui/bad.ui.xml" ) != string::npos );
     SW_EXPECT_EQUAL( size_t( 1 ), listBinding.size() );
+}
+
+/** @brief [UIDocumentTest] 변형: 문서의 `_when` 은 읽을 때 풀린다. 바꿔 끼운 태그(에디터 미리보기의 기기 견본)로 읽은 변형은 엔진 판과 따로 들고, 엔진 태그는 그대로다 */
+SW_TEST_CASE( UIDocumentTest, TagOverrideVariantsAreCachedApart )
+{
+    UIDocumentCache       cache;
+    constexpr const utf8* kPath = "engine/ui/adaptive.ui.xml";
+    cache.registerMemoryDocument( kPath, makeDocument( "<TextWidget _name=\"Title\" _text=\"Wide\"><_when _if=\"screen.compact\" _text=\"Narrow\"/></TextWidget>" ) );
+    ResourceTagSet tagOverride;
+    tagOverride.add( "screen.compact" );
+    ResourceTagSet engineTags = engine::getSubsystem<ResourceTags>().capture();
+    engineTags.removeAxis( "screen" );
+    const ResourceTagSet previousTags = engine::getSubsystem<ResourceTags>().exchange( engineTags ); // 엔진 판은 screen 축이 없다 — compact 가 아니다
+
+    const uint32                                      parseCount = cache.getParseCount();
+    const expected<shared_ptr<const UIDocumentAsset>> engineDoc  = cache.findOrLoad( kPath );
+    const expected<shared_ptr<const UIDocumentAsset>> variantDoc = cache.findOrLoad( kPath, tagOverride );
+    SW_REQUIRE_TRUE( engineDoc.has_value() );
+    SW_REQUIRE_TRUE( variantDoc.has_value() );
+    SW_EXPECT_FALSE( engineDoc->get() == variantDoc->get() );
+    SW_EXPECT_TRUE( cache.findOrLoad( kPath, tagOverride )->get() == variantDoc->get() );
+    SW_EXPECT_EQUAL( parseCount + 2u, cache.getParseCount() );
+    SW_EXPECT_TRUE( engine::getSubsystem<ResourceTags>().capture() == engineTags );
+
+    vector<UIBindingDef>     listBinding;
+    const unique_ptr<Widget> wide   = UIDocumentLoader::instantiate( **engineDoc, cache, ResourceTagSet{}, listBinding ).value_or( nullptr );
+    const unique_ptr<Widget> narrow = UIDocumentLoader::instantiate( **variantDoc, cache, tagOverride, listBinding ).value_or( nullptr );
+    SW_REQUIRE_TRUE( wide != nullptr && narrow != nullptr );
+    SW_EXPECT_EQUAL( string( "Wide" ), castTo<const TextWidget>( wide.get() )->getText() );
+    SW_EXPECT_EQUAL( string( "Narrow" ), castTo<const TextWidget>( narrow.get() )->getText() );
+    (void)engine::getSubsystem<ResourceTags>().exchange( previousTags );
+    vector<string> listPending;
+    engine::getSubsystem<ResourceComposition>().takePendingReload( listPending ); // 태그를 되돌리며 오른 다시 읽기 목록을 다음 케이스에 남기지 않는다
 }
 
 /** @brief [UIDocumentTest] 조각: 안의 이름은 `조각.이름` 으로 감싸고, 이름 없는 조각은 바깥 접두를 넘긴다. 자기를 부르면 그 사슬을 알린다 */
@@ -149,11 +186,11 @@ SW_TEST_CASE( UIDocumentTest, FragmentsWrapNamesAndRefuseCycles )
 
     UIDocumentAsset asset;
     string          error;
-    SW_REQUIRE_TRUE( UIDocumentLoader::parse( makeDocument( "<BoxPanel><UserWidget _name=\"Row\" _document=\"engine/ui/row.ui.xml\"/></BoxPanel>" ), "engine/ui/main.ui.xml", asset ).has_value() );
+    SW_REQUIRE_TRUE( UIDocumentLoader::parse( makeDocument( "<BoxPanel><UserWidget _name=\"Row\" _document=\"engine/ui/row.ui.xml\"/></BoxPanel>" ), "engine/ui/main.ui.xml", ResourceContext::forDocument(), asset ).has_value() );
     SW_REQUIRE_EQUAL( size_t( 1 ), asset._listFragment.size() );
 
     vector<UIBindingDef> listBinding;
-    unique_ptr<Widget>   root = UIDocumentLoader::instantiate( asset, cache, listBinding ).value_or( nullptr );
+    unique_ptr<Widget>   root = UIDocumentLoader::instantiate( asset, cache, ResourceTagSet{}, listBinding ).value_or( nullptr );
     SW_REQUIRE_TRUE( root != nullptr );
     const Widget* pRow = root->getChildren()[0].get();
     SW_EXPECT_TRUE( pRow->getName() == hashed_string( "Row" ) );
@@ -163,14 +200,14 @@ SW_TEST_CASE( UIDocumentTest, FragmentsWrapNamesAndRefuseCycles )
     SW_EXPECT_TRUE( pBox->getChildren()[0]->getName() == hashed_string( "Row.Label" ) );
 
     UIDocumentAsset selfAsset;
-    SW_REQUIRE_TRUE( UIDocumentLoader::parse( makeDocument( "<UserWidget _document=\"engine/ui/self.ui.xml\"/>" ), "engine/ui/self.ui.xml", selfAsset ).has_value() );
-    error = describeFailure( UIDocumentLoader::instantiate( selfAsset, cache, listBinding ) );
+    SW_REQUIRE_TRUE( UIDocumentLoader::parse( makeDocument( "<UserWidget _document=\"engine/ui/self.ui.xml\"/>" ), "engine/ui/self.ui.xml", ResourceContext::forDocument(), selfAsset ).has_value() );
+    error = describeFailure( UIDocumentLoader::instantiate( selfAsset, cache, ResourceTagSet{}, listBinding ) );
     SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.find( "includes itself" ) != string::npos );
 
     UIDocumentAsset missingAsset;
-    SW_REQUIRE_TRUE( UIDocumentLoader::parse( makeDocument( "<UserWidget _document=\"engine/ui/missing.ui.xml\"/>" ), "engine/ui/m.ui.xml", missingAsset ).has_value() );
-    error = describeFailure( UIDocumentLoader::instantiate( missingAsset, cache, listBinding ) );
+    SW_REQUIRE_TRUE( UIDocumentLoader::parse( makeDocument( "<UserWidget _document=\"engine/ui/missing.ui.xml\"/>" ), "engine/ui/m.ui.xml", ResourceContext::forDocument(), missingAsset ).has_value() );
+    error = describeFailure( UIDocumentLoader::instantiate( missingAsset, cache, ResourceTagSet{}, listBinding ) );
     SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.find( "not loaded" ) != string::npos );
 }
@@ -180,10 +217,10 @@ SW_TEST_CASE( UIDocumentTest, WriteThenReadIsTheSame )
 {
     UIDocumentAsset asset;
     string          error;
-    SW_REQUIRE_TRUE( UIDocumentLoader::parse( kDocumentXML, "engine/ui/test.ui.xml", asset ).has_value() );
+    SW_REQUIRE_TRUE( UIDocumentLoader::parse( kDocumentXML, "engine/ui/test.ui.xml", ResourceContext::forDocument(), asset ).has_value() );
     UIDocumentCache      cache;
     vector<UIBindingDef> listBinding;
-    unique_ptr<Widget>   root = UIDocumentLoader::instantiate( asset, cache, listBinding ).value_or( nullptr );
+    unique_ptr<Widget>   root = UIDocumentLoader::instantiate( asset, cache, ResourceTagSet{}, listBinding ).value_or( nullptr );
     SW_REQUIRE_TRUE( root != nullptr );
 
     const string text = UIDocumentWriter::write( asset._screenDesc, asset._listStyleSheet, *root, listBinding, asset._listAnimation );
@@ -191,7 +228,7 @@ SW_TEST_CASE( UIDocumentTest, WriteThenReadIsTheSame )
     SW_EXPECT_TRUE( text.find( "_bShowCursor" ) == string::npos ); // 기본값이다
 
     UIDocumentAsset reread;
-    SW_REQUIRE_TRUE( UIDocumentLoader::parse( text, "engine/ui/test.ui.xml", reread ).has_value() );
+    SW_REQUIRE_TRUE( UIDocumentLoader::parse( text, "engine/ui/test.ui.xml", ResourceContext::forDocument(), reread ).has_value() );
     SW_EXPECT_TRUE( reread._screenDesc._bPausesGame );
     SW_REQUIRE_EQUAL( size_t( 1 ), reread._listStyleSheet.size() );
     SW_EXPECT_EQUAL( string( "engine/ui/a.uss.xml" ), reread._listStyleSheet[0] );
@@ -201,7 +238,7 @@ SW_TEST_CASE( UIDocumentTest, WriteThenReadIsTheSame )
     SW_EXPECT_EQUAL( string( "{bind:_health}" ), reread._listNode[2]._listBinding[0]._expression );
 
     vector<UIBindingDef> listSecond;
-    unique_ptr<Widget>   secondRoot = UIDocumentLoader::instantiate( reread, cache, listSecond ).value_or( nullptr );
+    unique_ptr<Widget>   secondRoot = UIDocumentLoader::instantiate( reread, cache, ResourceTagSet{}, listSecond ).value_or( nullptr );
     SW_REQUIRE_TRUE( secondRoot != nullptr );
     SW_EXPECT_EQUAL( string( text ), UIDocumentWriter::write( reread._screenDesc, reread._listStyleSheet, *secondRoot, listSecond, reread._listAnimation ) );
 }

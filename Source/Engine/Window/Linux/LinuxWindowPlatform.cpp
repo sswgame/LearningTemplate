@@ -10,8 +10,6 @@
 #include "Engine/Window/Linux/X11Window.h"
 #include "Engine/Window/WindowPlatform.h"
 
-#if defined( SW_PLATFORM_LINUX )
-
 namespace sw
 {
     namespace
@@ -27,13 +25,13 @@ namespace sw
                     return nullptr;
                 if ( backend == LinuxWindowBackend::X11 )
                     return make_unique<X11Window>();
-    #if defined( SW_WITH_WAYLAND )
+#if defined( SW_WITH_WAYLAND )
                 SW_LOG_INFO_ID( "Window.WindowBackendWaylandSW", "Window backend: Wayland (SW_WINDOW_BACKEND=wayland)" );
                 return make_unique<WaylandWindow>();
-    #else
+#else
                 SW_LOG_ERROR_ID( "Window.SWWINDOWBACKENDWayland", "SW_WINDOW_BACKEND=wayland but this build has no Wayland window layer (configure with -DSW_ENABLE_WAYLAND=ON)" );
                 return nullptr;
-    #endif
+#endif
             }
 
             static unique_ptr<ISplashWindow> createSplash()
@@ -44,11 +42,11 @@ namespace sw
                     return nullptr;
                 if ( backend == LinuxWindowBackend::X11 )
                     return make_unique<X11SplashWindow>();
-    #if defined( SW_WITH_WAYLAND )
+#if defined( SW_WITH_WAYLAND )
                 return make_unique<WaylandSplashWindow>();
-    #else
+#else
                 return nullptr;
-    #endif
+#endif
             }
 
             static bool isSplashSupported()
@@ -59,12 +57,12 @@ namespace sw
                 string display;
                 if ( backend == LinuxWindowBackend::Wayland )
                 {
-    #if defined( SW_WITH_WAYLAND )
+#if defined( SW_WITH_WAYLAND )
                     // Wayland 스플래시는 `wl_display_connect( nullptr )` 로 연결한다 — `WAYLAND_DISPLAY` 가 없으면 기본 소켓 이름을 찾지만, 메인 창과 같은 조건(변수 있음)으로 맞춘다.
                     return ProcessEnvironment::tryReadNonEmpty( "WAYLAND_DISPLAY", display );
-    #else
+#else
                     return false; // 이 빌드에 Wayland 창 계층이 없다(메인 창 생성이 오류로 알린다)
-    #endif
+#endif
                 }
                 // X11 스플래시는 `XOpenDisplay( nullptr )` 로 연결한다 — `DISPLAY` 가 없으면 열 수 없다(순수 Wayland 세션에서 X11 을 골랐을 때).
                 return ProcessEnvironment::tryReadNonEmpty( "DISPLAY", display );
@@ -75,5 +73,3 @@ namespace sw
         const WindowPlatform::Registrar s_linuxWindowRegistrar{ s_linuxWindowFactory };
     } // namespace
 } // namespace sw
-
-#endif

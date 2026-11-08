@@ -350,6 +350,13 @@ namespace sw
             _state._compute._arrUnorderedAccess[slot] = index;
     }
 
+    void WebGPURHICommandContext::bindGraphicsUAV( RHIDescriptorIndex index, uint32 slot )
+    {
+        // 그래픽스 단계 u 바인딩은 구현하지 않았다(`RHICapabilities::_bGraphicsShaderWrites` 가 거짓) — 셰이더 메시지 채널은 이 백엔드에서 켜지지 않아 여기에 오지 않는다.
+        (void)index;
+        (void)slot;
+    }
+
     void WebGPURHICommandContext::bindShaderResource( RHIDescriptorIndex index, uint32 slot )
     {
         if ( slot < shaderslot::wgpu::kTRange )

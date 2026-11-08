@@ -10,6 +10,7 @@
 #include "Engine/Renderer/Frame/Capture/PresentHookDelegate.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Lighting/GPULightBuffer.h"
+#include "Engine/Renderer/Lighting/LensFlareSpriteBuffer.h"
 #include "Engine/Renderer/Lighting/ShadowSetup.h"
 #include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
 
@@ -48,6 +49,8 @@ namespace sw
         vector<GPULightCookie> _listLightCookie;
         /** @brief 실시간으로 갱신할 라이트 프로브 볼륨들의 요청입니다(`collectSceneLights`). 볼륨 원소는 `_listLight` 에 있고 복셀 격자는 공유 포인터로 실린다(렌더 스레드는 읽기만 한다). */
         vector<RealtimeProbeRequest> _listRealtimeProbe;
+        /** @brief 렌즈 플레어를 단 빛들입니다(`RenderPacketSceneCollector::collectLensFlares`). 렌더 스레드가 주 시점에 투영해 스프라이트로 펼친다. */
+        vector<LensFlareRequest> _listLensFlare;
         /** @brief 씬의 하늘(`SkyComponent`)입니다. `_bHasSky` 가 0 이면 값이 없고 스카이 패스가 그리지 않는다(배경은 SceneColor 클리어 색). */
         SkyGradient _sky;
         /** @brief 씬의 안개(`FogComponent`, 카메라가 물속이면 물속 안개로 덮은 값)입니다. `_bHasFog` 가 0 이면 값이 없고 안개 패스가 그리지 않는다. */
@@ -104,6 +107,7 @@ namespace sw
             , _pLightProbe{}
             , _listLightCookie{}
             , _listRealtimeProbe{}
+            , _listLensFlare{}
             , _sky{}
             , _fog{}
             , _listView{}
@@ -158,6 +162,7 @@ namespace sw
             _pLightProbe.reset();
             _listLightCookie.clear();
             _listRealtimeProbe.clear();
+            _listLensFlare.clear();
             _sky = SkyGradient{};
             _fog = FogSettings{};
             _listView.clear();

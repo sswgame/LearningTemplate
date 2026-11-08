@@ -428,7 +428,7 @@ namespace sw
         , _timestampResolveBuffer{ nullptr }
         , _listTimestampReadback{}
         , _pPendingTimestampReadback{ nullptr }
-        , _timestampWrittenMask{ 0 }
+        , _timestampWrittenMask{}
         , _timestampFrame{}
         , _bTimestampEnabled{ SW_FALSE }
         , _listConstantRing{}
@@ -824,15 +824,15 @@ namespace sw
             return;
         wgpuComputePassEncoderEnd( pass );
         wgpuComputePassEncoderRelease( pass );
-        _timestampWrittenMask |= makeGPUTimestampSlotBit( slotIndex );
+        _timestampWrittenMask.set( slotIndex );
     }
 
     void WebGPURHIDevice::resolveTimestamps()
     {
         const GPUTimestampSlotMask mask = _timestampWrittenMask;
-        _timestampWrittenMask           = 0;
+        _timestampWrittenMask           = GPUTimestampSlotMask{};
         _pPendingTimestampReadback      = nullptr;
-        if ( mask == 0 || _timestampQuerySet == nullptr || _timestampResolveBuffer == nullptr || _frameEncoder == nullptr )
+        if ( mask.any() == false || _timestampQuerySet == nullptr || _timestampResolveBuffer == nullptr || _frameEncoder == nullptr )
             return;
         WebGPUTimestampReadback* pFree = nullptr;
         for ( const unique_ptr<WebGPUTimestampReadback>& readback : _listTimestampReadback )

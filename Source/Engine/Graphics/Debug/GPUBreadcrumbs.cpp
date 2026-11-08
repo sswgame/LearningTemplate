@@ -7,6 +7,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/LogOnce.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/formatString.h"
 
 #include "Engine/Foundation/EngineServices.h"
@@ -74,13 +75,48 @@ namespace sw
         return pLog != nullptr && pLog->resolve( id, pOutName, capacity );
     }
 
-    void GPUBreadcrumbs::mark( IRHICommandList& commands, string_view passName )
+    uint32 GPUBreadcrumbs::beginPass( IRHICommandList& commands, string_view passName )
     {
         const uint32 id = registerPass( passName );
         if ( id == 0 )
-            return;
+            return 0;
         engine::findSubsystem<GPUBreadcrumbLog>()->recordRecorded( id ); // id 가 0 이 아니면 표가 있다(`registerPass`)
         commands.writeBreadcrumb( id );
+        return id;
+    }
+
+    void GPUBreadcrumbs::endPass( IRHICommandList& commands, uint32 id )
+    {
+        if ( id == 0 )
+            return;
+        commands.writeBreadcrumb( id | kEndMarkerBit );
+    }
+
+    GPUBreadcrumbs::Report GPUBreadcrumbs::parse( const uint32* pMarker, uint32 markerCount )
+    {
+        Report report;
+        for ( uint32 index = 0; pMarker != nullptr && index < markerCount; ++index )
+        {
+            const uint32 marker = pMarker[index];
+            if ( ( marker & kEndMarkerBit ) != 0 && report._lastCompletedID == 0 )
+                report._lastCompletedID = marker & ~kEndMarkerBit;
+        }
+        for ( uint32 index = 0; pMarker != nullptr && index < markerCount; ++index )
+        {
+            const uint32 marker = pMarker[index];
+            // 0 은 표지가 아니다. 끝난 패스의 시작 표지는 원인 후보가 아니다. 같은 id 는 한 번만 싣는다(Vulkan 은 단계마다 같은 값이 온다).
+            const bool bSkip = marker == 0 || ( marker & kEndMarkerBit ) != 0 || marker == report._lastCompletedID;
+            if ( bSkip )
+                continue;
+            bool bKnown = false;
+            for ( uint32 knownIndex = 0; knownIndex < report._inFlightCount; ++knownIndex )
+            {
+                bKnown = bKnown || report._arrInFlightID[knownIndex] == marker;
+            }
+            if ( bKnown == false && report._inFlightCount < kMaxReported )
+                report._arrInFlightID[report._inFlightCount++] = marker;
+        }
+        return report;
     }
 
     uint32 GPUBreadcrumbs::getLastRecordedID()
@@ -101,24 +137,43 @@ namespace sw
         utf8                arrLine[constant::buffer::kMax256];
         utf8                arrName[constant::buffer::kMax64];
 
-        // GPU 가 닿은 표지 - 이름으로 푼다. 쓰지 못한 백엔드는 없다.
-        uint32 reported = 0;
-        for ( uint32 index = 0; pGPUID != nullptr && index < gpuCount && reported < kMaxReported; ++index )
+        // GPU 가 닿은 표지 - 끝난 패스와 돌던 패스로 갈라 이름으로 푼다. 쓰지 못한 백엔드는 없다.
+        const Report report   = parse( pGPUID, gpuCount );
+        uint32       reported = 0;
+        if ( report._lastCompletedID != 0 )
         {
-            if ( resolve( pGPUID[index], arrName, sizeof( arrName ) ) == false )
+            if ( resolve( report._lastCompletedID, arrName, sizeof( arrName ) ) )
             {
-                if ( pGPUID[index] != 0 )
-                    SW_LOG_ERROR_ID( "GPUBreadcrumbs.DeviceLostGPUBreadcrumb", "Device lost (%#): the GPU breadcrumb %# is not in the pass name table", pBackendName, pGPUID[index] );
+                ++reported;
+                SW_LOG_ERROR_ID( "GPUBreadcrumbs.DeviceLostLastCompleted", "Device lost (%#): the last pass the GPU completed was '%#' (breadcrumb %#)", pBackendName, arrName, report._lastCompletedID );
+                formatstring( arrLine, sizeof( arrLine ), "gpu device lost (%#) - GPU last completed pass '%#'", pBackendName, arrName );
+                if ( pCrashHandler != nullptr )
+                {
+                    pCrashHandler->addBreadcrumb( arrLine );
+                    pCrashHandler->setContextValue( "gpu_last_completed_pass", arrName );
+                }
+            }
+            else
+            {
+                SW_LOG_ERROR_ID( "GPUBreadcrumbs.DeviceLostGPUBreadcrumb", "Device lost (%#): the GPU breadcrumb %# is not in the pass name table", pBackendName, report._lastCompletedID );
+            }
+        }
+        for ( uint32 index = 0; index < report._inFlightCount; ++index )
+        {
+            const uint32 id = report._arrInFlightID[index];
+            if ( resolve( id, arrName, sizeof( arrName ) ) == false )
+            {
+                SW_LOG_ERROR_ID( "GPUBreadcrumbs.DeviceLostGPUBreadcrumb", "Device lost (%#): the GPU breadcrumb %# is not in the pass name table", pBackendName, id );
                 continue;
             }
             ++reported;
-            SW_LOG_ERROR_ID( "GPUBreadcrumbs.DeviceLostGPULast", "Device lost (%#): the GPU last reached the pass '%#' (breadcrumb %#)", pBackendName, arrName, pGPUID[index] );
-            formatstring( arrLine, sizeof( arrLine ), "gpu device lost (%#) - GPU last reached pass '%#'", pBackendName, arrName );
-            // 크래시 문맥은 키 하나에 값 하나다 - 첫 표지를 마지막 패스로 싣는다(Vulkan 은 단계마다 하나씩 와도 모두 빵부스러기에 남는다).
+            SW_LOG_ERROR_ID( "GPUBreadcrumbs.DeviceLostGPULast", "Device lost (%#): the GPU was running the pass '%#' (breadcrumb %#, started but not completed)", pBackendName, arrName, id );
+            formatstring( arrLine, sizeof( arrLine ), "gpu device lost (%#) - GPU was running pass '%#'", pBackendName, arrName );
+            // 크래시 문맥은 키 하나에 값 하나다 - 첫 "돌던 패스" 를 마지막 패스(원인 후보)로 싣는다. 모두 빵부스러기에 남는다.
             if ( pCrashHandler != nullptr )
             {
                 pCrashHandler->addBreadcrumb( arrLine );
-                if ( reported == 1 )
+                if ( index == 0 )
                     pCrashHandler->setContextValue( "gpu_last_pass", arrName );
             }
         }
@@ -138,6 +193,41 @@ namespace sw
         }
         if ( pCrashHandler != nullptr )
             pCrashHandler->setContextValue( "gpu_lost_backend", pBackendName );
+    }
+
+    GPUPassScope::GPUPassScope( IRHICommandList& commands, string_view passName )
+        : GPUPassScope( commands, passName, kNoTimestamp )
+    {
+    }
+
+    GPUPassScope::GPUPassScope( IRHICommandList& commands, string_view passName, uint32 timestampBeginSlot )
+        : _commands{ commands }
+        , _breadcrumbID{ 0 }
+        , _timestampBeginSlot{ kNoTimestamp }
+        , _bEventOpen{ SW_FALSE }
+    {
+        if ( passName.empty() )
+            return;
+        _breadcrumbID = GPUBreadcrumbs::beginPass( _commands, passName );
+        // 이벤트 표지는 끝이 0 인 글을 받는다 — 이름을 고정 칸에 옮긴다(넘으면 자른다).
+        utf8         arrName[constant::buffer::kMax64];
+        const size_t copyLength = passName.size() < sizeof( arrName ) - 1 ? passName.size() : sizeof( arrName ) - 1;
+        Memory::copy( arrName, passName.data(), copyLength );
+        arrName[copyLength] = '\0';
+        _commands.beginEventMarker( arrName );
+        _bEventOpen         = SW_TRUE;
+        _timestampBeginSlot = timestampBeginSlot;
+        if ( _timestampBeginSlot != kNoTimestamp )
+            _commands.writeTimestamp( _timestampBeginSlot );
+    }
+
+    GPUPassScope::~GPUPassScope()
+    {
+        if ( _timestampBeginSlot != kNoTimestamp )
+            _commands.writeTimestamp( _timestampBeginSlot + 1u );
+        if ( _bEventOpen == SW_TRUE )
+            _commands.endEventMarker();
+        GPUBreadcrumbs::endPass( _commands, _breadcrumbID );
     }
 } // namespace sw
 

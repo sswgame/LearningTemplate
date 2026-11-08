@@ -1,5 +1,5 @@
 /**
- * instance_data.hlsli — GPUScene 인스턴스 원소 하나(InstanceData). C++ `GPUInstance`(GPUSceneSnapshot.h)와 바이트까지 같다(160 바이트).
+ * instance_data.hlsli — GPUScene 인스턴스 원소 하나(InstanceData). C++ `GPUInstance`(GPUSceneSnapshot.h)와 바이트까지 같다(176 바이트).
  *
  * 그래픽스(binding.hlsli 가 g_SwInstances 로 건다)와 컴퓨트 셋(gpu_cull · instance_sort 는 읽고, instance_animation 은 고쳐 쓴다)이
  * **이 파일 하나**를 include 한다. 구조체를 셰이더마다 베끼면 한쪽만 고쳤을 때 원소가 아무 말 없이 어긋난다.
@@ -34,6 +34,8 @@ struct InstanceData
     uint     _skinSlot;             // 스킨 칸(유닛 · 군중 묶음마다 게임 스레드가 준 번호) — g_SwSkinResultOffsets 로 스킨 결과 시작을 찾는다. kInvalidIndex 면 스킨 결과를 읽지 않는다(C++ GPUInstance::_skinSlot)
     float4   _customData0;          // 사용자 값 0(C++ InstanceCustomData) — 머티리얼 셰이더가 getCustomData 로 읽는다. 배치 키가 아니다
     float4   _customData1;          // 사용자 값 1
+    uint2    _motionKey;            // 움직임 기록의 열쇠(C++ GPUInstance::_motionKey, 64 비트) — 렌더 쪽 기록이 쓰고 셰이더는 읽지 않는다. 지난 월드 행렬은 g_SwPrevInstanceWorlds(binding.hlsli 8-2)
+    uint2    _motionPad;            // 16 바이트 맞춤
 
     // 멤버 함수는 원소 레이아웃을 바꾸지 않는다. 정의는 이 파일 아래(강조 · 스프라이트 칸)와 binding.hlsli(읽기 · 정점 애니메이션)다.
     uint getHighlightStyle();
@@ -49,6 +51,7 @@ struct InstanceData
     static uint resolveID( uint instanceSlot );
     static InstanceData load( uint instanceSlot );
     static float4x4 loadWorld( uint instanceSlot );
+    static float4x4 loadPreviousWorld( uint instanceSlot, float4x4 currentWorld ); // 화면 속도의 지난 월드 행렬(binding.hlsli 8-2)
 };
 
 /// 가시 목록 항목(컬링이 쓰고 정점 셰이더가 읽는다): 아래 24비트 인스턴스 번호, 다음 3비트 LOD 단계(머리 배치에서의 오프셋), 위쪽 5비트 LOD 크로스페이드 코드(binding.hlsli `Appearance::computeLODFadeAppearance`).

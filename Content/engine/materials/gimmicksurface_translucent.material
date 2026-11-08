@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 기믹 표면의 반투명 부모(홀로그램 · 역장) — 가산 블렌드, 깊이를 쓰지 않는다. 블렌드 모드는 머티리얼의 성질이라 불투명 부모와 다른 에셋이다(glassmaterial 과 같은 까닭). -->
+<MaterialDef formatVersion="0" name="GimmickSurfaceTranslucent" _base="engine/materials/gimmicksurface.material" alphaMode="Blend" blendPreset="Additive" enableDepthWrite="false">
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_alwaysDefines>
+			<item>MATERIAL_DOMAIN_SURFACE</item>
+			<item>MATERIAL_FORWARD_ONLY</item>
+			<item>MATERIAL_BLEND_TRANSLUCENT</item>
+		</_alwaysDefines>
+	</_permutations>
+</MaterialDef>

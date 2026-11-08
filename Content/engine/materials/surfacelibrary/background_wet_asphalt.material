@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 젖은 아스팔트 — 골재 잔무늬, 늘 젖어 있고 웅덩이가 진다. 부모(environmentsurface.material)의 값만 바꾼 프리셋이다. -->
+<MaterialDef formatVersion="0" name="WetAsphalt" _base="engine/materials/environmentsurface.material">
+	<_properties>
+		<item name="_baseColor" defaultValue="0.12 0.12 0.12 1"/>
+		<item name="_roughness" defaultValue="0.8"/>
+		<item name="_noiseStrength" defaultValue="0.35"/>
+		<item name="_noiseScale" defaultValue="0.01"/>
+		<item name="_macroVariation" defaultValue="0.3"/>
+		<item name="_macroScale" defaultValue="5"/>
+		<item name="_patternShape" defaultValue="0 0 0 1"/>
+		<item name="_wetness" defaultValue="0.9"/>
+		<item name="_puddle" defaultValue="0.5"/>
+		<item name="_porosity" defaultValue="0.7"/>
+	</_properties>
+</MaterialDef>

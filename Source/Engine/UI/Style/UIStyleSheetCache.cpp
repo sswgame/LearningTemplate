@@ -11,10 +11,10 @@ namespace sw
 {
     namespace
     {
-        expected<shared_ptr<const void>> parseSheet( string_view text, string_view path )
+        expected<shared_ptr<const void>> parseSheet( string_view text, string_view path, const ResourceContext& context )
         {
             shared_ptr<UIStyleSheetAsset> sheet = make_shared<UIStyleSheetAsset>();
-            if ( expected<void> parsed = UIStyleSheetAsset::parse( text, path, *sheet ); parsed.has_value() == false )
+            if ( expected<void> parsed = UIStyleSheetAsset::parse( text, path, context, *sheet ); parsed.has_value() == false )
                 return unexpected( parsed.error() );
             return shared_ptr<const void>( std::move( sheet ) );
         }
@@ -51,7 +51,12 @@ namespace sw
 
     expected<shared_ptr<const UIStyleSheetAsset>> UIStyleSheetCache::findOrLoad( string_view path )
     {
-        return _cache.findOrLoadAsset( path ).transform( []( const shared_ptr<const void>& pAsset )
+        return findOrLoad( path, ResourceTagSet{} );
+    }
+
+    expected<shared_ptr<const UIStyleSheetAsset>> UIStyleSheetCache::findOrLoad( string_view path, const ResourceTagSet& tagOverride )
+    {
+        return _cache.findOrLoadAsset( path, tagOverride ).transform( []( const shared_ptr<const void>& pAsset )
         { return std::static_pointer_cast<const UIStyleSheetAsset>( pAsset ); } );
     }
 } // namespace sw

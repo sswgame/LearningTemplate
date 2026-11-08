@@ -4,7 +4,7 @@
   0.5 초마다 가라앉음 스택(GE_Sink — 0.1 m · 걷는 속도 −10%, 아홉 번까지), SinkDepth ≥ 0.85 에 2 초면 삼켜짐(GE_Engulfed — 움직이지 못한다), 나가면 이 출처의 이펙트를 지운다.
   외형 내리기(VisualSinkReactionComponent)와 점프 탈출(JumpEscapeReactionComponent — 점프마다 세 스택)은 걷는 해골의 반응 컴포넌트다.
   ① 모래 패드 가장자리(8,0,2.8 — 구역 밖, Sand 표면): 지역 None · 이동 계수 Sand 0.85(단순 모래는 함몰 상태가 없다). ② 구역 안: 깊이(SinkDepth)가 오르고 이동 계수가 준다(이펙트 → MovementConstraint),
-  외형도 같은 깊이로 내린다. ③ character.jump 두 번: 탈출 수 2, 깊이가 준다. ④ 구역을 나가면 이펙트가 지워진다(깊이 0, 외형은 원래 자리). ⑤ 다시 들어가 바닥에 머물면 삼켜짐, 이동 계수 0.
+  외형도 같은 깊이로 내린다. 지역의 표면 도장 모듈(rim — 배치 덮어쓰기, SurfaceStamp Print 지름 1 m · 깊이 0.06 · 테두리 0.03)이 발 둘레 변형 층을 파고 테두리를 올린다. ③ character.jump 두 번: 탈출 수 2, 깊이가 준다. ④ 구역을 나가면 이펙트가 지워진다(깊이 0, 외형은 원래 자리). ⑤ 다시 들어가 바닥에 머물면 삼켜짐, 이동 계수 0.
   값으로 판정한다(골든 없음). 실행: App -scenario=game/empty/automation/sinkingsand.scenario.xml -unattended (체인: ctest -R Scenario.empty)
 -->
 <Scenario name="game.empty.sinkingsand" fixedDelta="0.0166667" timeoutFrames="3600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
@@ -27,6 +27,9 @@
 	<Expect watch="Zone.SinkVisual" target="Walker" near="0.35" tolerance="0.06"/>
 	<Expect watch="Zone.Value" target="Walker" key="zoneDepth01" near="1" tolerance="0.05"/>
 	<Expect watch="Surface.MoveScale" target="Walker" atMost="0.75"/>
+	<Expect watch="Zone.Modules" target="Quicksand" is="sink,engulf,release,downflow,npcAvoid,rim"/>
+	<Expect watch="Surface.DeformDepth" key="8 0" atLeast="0.05"/>
+	<Expect watch="Surface.DeformDepth" key="8 0.6" atMost="-0.02"/>
 
 	<Wait frames="1"/>
 	<DevCommand line="character.jump Walker 4"/>

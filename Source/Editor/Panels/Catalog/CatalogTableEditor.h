@@ -12,6 +12,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/fixed_string.h"
 
+#include "Editor/Common/Widgets/EditorCurveEditorState.h"
 #include "Editor/Panels/Catalog/Model/CatalogChildSection.h"
 #include "Editor/Panels/Catalog/Model/CatalogCurve.h"
 #include "Editor/Panels/Catalog/Model/CatalogDocument.h"
@@ -56,8 +57,10 @@ namespace sw::editor
         void drawChildSectionActions( const CatalogChildSection& section, bool& inoutbFirstAdd );
         void drawChildNode( const CatalogChildSection& section, const CatalogChildNode& node, int32 nodePosition, bool& inoutbFirstCell, bool& inoutbFirstRemove );
         /** @brief "곡선 편집" 창입니다 - @p _curveOwner 원소 아래의 모든 곡선을 그래프 · 그래디언트 띠 · 키 표로 고칩니다(키 칸은 `drawCell` 과 같은 길이라 되돌리기 한 단계 = 칸 편집 한 번). */
-        void               drawCurvePopup( const CatalogDocument& document );
-        void               drawGradientBar( const CatalogGradient& gradient );
+        void drawCurvePopup( const CatalogDocument& document );
+        void drawGradientBar( const CatalogGradient& gradient );
+        /** @brief 곡선 창 위쪽 그래프입니다 — 미리보기로 고른 곡선(`_graphCurve`)의 키를 끌어 고치고, 놓으면 `SetCurveKeys` 편집 하나를 남깁니다. */
+        void               drawCurveGraph();
         void               drawCurveBlock( const CatalogDocument& document, const CatalogCurve& curve );
         [[nodiscard]] bool applyPending( CatalogDocument& inoutDocument );
 
@@ -71,13 +74,15 @@ namespace sw::editor
         vector<CatalogChildSection>             _listChildSection;    ///< 자식 창이 이번 프레임에 그리는 표들
         int32                                   _curveOwner;          ///< 곡선 창이 보는 원소(-1 이면 닫힘)
         int32                                   _childOwner;          ///< 자식 창이 보는 행(-1 이면 닫힘). 고쳐도 번호가 그대로다 - 행 안쪽만 고치고 원소 번호는 문서 순서다
+        int32                                   _graphCurve;          ///< 곡선 창의 그래프가 고치는 곡선 원소(-1 이면 그래프를 닫았다)
         uint8                                   _bOpenCurvePopup : 1; ///< 다음 그리기에서 창을 연다
         uint8                                   _bOpenChildPopup : 1; ///< 다음 그리기에서 자식 창을 연다
         uint8                                   _bEditFailed     : 1; ///< 지난 편집이 거절되었다(`takeEditFailed`)
         string                                  _editText;
         string                                  _lastActionText;
         uint32                                  _editID;
-        CatalogTableEdit                        _pending; ///< 표를 다 그린 뒤 반영할 편집 하나
+        CatalogTableEdit                        _pending;    ///< 표를 다 그린 뒤 반영할 편집 하나
+        EditorCurveEditorState                  _graphState; ///< 곡선 창 그래프(키 끌기 · 메뉴) 상태 — 놓을 때 `SetCurveKeys` 편집 하나가 된다
         fixed_string<constant::buffer::kMax128> _rowFilter;
     };
 } // namespace sw::editor

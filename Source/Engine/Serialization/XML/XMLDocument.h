@@ -370,8 +370,7 @@ namespace sw
         /** @brief XML 엔티티 문자열(&amp;, &lt;, &gt;, &quot;, &apos;)을 원래 문자로 복원합니다. 쓰는 쪽(이스케이프)은 `XMLWriter::appendEscaped` 하나다. */
         static string unescapeString( string_view text );
 
-    private:
-        /** @brief @p context 로 합친 글을 파싱합니다(`parseData` · `loadResource` 의 본문). */
+        /** @brief @p context 로 합친 글을 파싱합니다(`parseData` · `loadResource` 의 본문). 문맥을 고르는 읽는 쪽(UI 문서 · 스타일 시트 캐시 — 리소스 id 와 미리보기 변형의 태그)이 직접 부릅니다. */
         [[nodiscard]] bool parseComposed( string_view xmlText, string_view sourceName, const ResourceContext& context );
 
     private:

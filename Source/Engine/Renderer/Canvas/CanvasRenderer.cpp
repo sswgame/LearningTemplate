@@ -74,9 +74,9 @@ namespace sw
     }
 
     void CanvasRenderer::recordMarkerProjection( IRHICommandList& cmd, RHIPipelineStateHandle pso, RHIBufferHandle instanceBuffer, RHIDescriptorIndex instanceSRV, RHIDescriptorIndex placeholderSRV,
-                                                 GPUAssertMonitor& inoutAssert, bool bShowInstanceSlots )
+                                                 GPUMessageChannel& inoutMessages, bool bShowInstanceSlots )
     {
-        _markers.record( cmd, _quadBuffer, pso, instanceBuffer, instanceSRV, placeholderSRV, inoutAssert, bShowInstanceSlots );
+        _markers.record( cmd, _quadBuffer, pso, instanceBuffer, instanceSRV, placeholderSRV, inoutMessages, bShowInstanceSlots );
     }
 
     uint32 CanvasRenderer::drawList( IRHICommandList& cmd, const CanvasDrawList& list, uint32 quadBase, RHIPipelineStateHandle pso, uint32 targetWidth,

@@ -6,6 +6,7 @@
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Event/EventBuffer.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -97,14 +98,14 @@ namespace sw
             return scale.has_value() ? *scale : 1.0f;
         }
 
-        const SpawnEntryDef*         findEntry( const hashed_string& id ) const { return _catalog.find( id ); }
-        int32                        findEntryIndex( const hashed_string& id ) const { return _catalog.findIndex( id ); }
-        const vector<SpawnEntryDef>& getEntries() const { return _catalog.getAll(); }
-        const FloatCurve&            getCurve() const { return _curve; }
-        float32                      getBudgetPerMinute() const { return _budgetPerMinute; }
-        float32                      getMaxBudget() const { return _maxBudget; }
-        float32                      getStartBudget() const { return _startBudget; }
-        bool                         isRefundOnDespawn() const { return _bRefundOnDespawn == SW_TRUE; }
+        const SpawnEntryDef*          findEntry( const hashed_string& id ) const { return _catalog.find( id ); }
+        [[nodiscard]] optional<int32> findEntryIndex( const hashed_string& id ) const { return _catalog.findIndex( id ); }
+        const vector<SpawnEntryDef>&  getEntries() const { return _catalog.getAll(); }
+        const FloatCurve&             getCurve() const { return _curve; }
+        float32                       getBudgetPerMinute() const { return _budgetPerMinute; }
+        float32                       getMaxBudget() const { return _maxBudget; }
+        float32                       getStartBudget() const { return _startBudget; }
+        bool                          isRefundOnDespawn() const { return _bRefundOnDespawn == SW_TRUE; }
 
     private:
         static constexpr const utf8* kXMLRootName = "SpawnTable"; ///< 루트 원소(`XMLCatalog`)

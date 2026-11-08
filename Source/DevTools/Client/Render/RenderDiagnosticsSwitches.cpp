@@ -27,8 +27,13 @@ namespace sw
 #endif
     } // namespace
 
-    /** @brief `-gv_gpuAssert=1`: assert 를 가진 셰이더(`RenderPassTraitFlag::kGPUAssertTarget`)를 `SW_GPU_ASSERT_ENABLED` 변형으로 컴파일하고 링 버퍼를 건다 — 틀린 조건을 CPU 가 몇 프레임 뒤 로그로 낸다. */
-    SW_TEST_GLOBAL_VARIABLE( bool, gv_gpuAssert, false, "셰이더 assert(SW_GPU_ASSERT) 를 켠다 - assert 를 가진 셰이더가 UAV 링에 기록하고 CPU 가 몇 프레임 뒤 로그로 낸다" );
+    /**
+     * @brief `-gv_gpuMessages=1`: 메시지를 가진 셰이더(`RenderPassTraitFlag::kGPUMessageTarget`)를 `SW_GPU_MESSAGES_ENABLED` 변형으로 컴파일하고 링 버퍼를 건다 — assert · 출력 · 로그를 CPU 가 몇 프레임 뒤 로그로 낸다.
+     * @details 예전 이름은 `-gv_gpuAssert` 였다(assert 만 실었다). 출력(`SW_GPU_PRINT`)은 `gpu.inspect x y` · `gpu.thread n` 이 고른 픽셀 · 스레드만 적는다.
+     */
+    SW_TEST_GLOBAL_VARIABLE( bool, gv_gpuMessages, false, "셰이더 메시지(SW_GPU_PRINT · SW_GPU_LOG · SW_GPU_ASSERT) 를 켠다 - 셰이더가 UAV 링에 기록하고 CPU 가 몇 프레임 뒤 로그로 낸다" );
+    /** @brief `-gv_gpuMessageLogBudget=N`: `SW_GPU_LOG` 가 메시지 id 하나당 한 프레임에 적는 기록 수(언리얼 ShaderPrint 의 최대 글자 수와 같은 상한). */
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_gpuMessageLogBudget, RenderDiagnosticsPolicy{}._gpuMessageLogBudget, "SW_GPU_LOG 가 메시지 id 하나당 한 프레임에 적는 기록 수 (0 .. 255)" );
     /** @brief `-gv_nanCheck=1`: 그래프가 끝난 뒤 주 시점의 부동소수 패스 출력을 컴퓨트로 훑어 NaN · Inf 를 패스 이름과 함께 로그로 낸다(언리얼 r.CheckNaN, DX12 · Vulkan 만). */
     SW_TEST_GLOBAL_VARIABLE( bool, gv_nanCheck, false, "패스 출력 텍스처의 NaN/Inf 를 컴퓨트로 세고 패스 이름과 함께 로그로 낸다 (DX12 · Vulkan 만)" );
     /** @brief `-gv_shaderDebugCodegen=1`: 실행 중 셰이더 컴파일을 디버그 코드젠으로(RenderDoc 에서 한 줄씩, 언리얼 `r.Shaders.Optimize=0`). 기동 때 컴파일한 셰이더도 따르므로 명령줄로 준다. */
@@ -51,19 +56,20 @@ namespace sw
     {
         struct RenderDiagnosticsSwitchesInternal
         {
-            /// 정책의 단면 칸(uint8)에 담을 수 있는 범위입니다 — froxel 조각 수로 자르는 일은 렌더러가 한다.
-            static constexpr int32 kSliceFieldMin = 0;
-            static constexpr int32 kSliceFieldMax = static_cast<int32>( std::numeric_limits<uint8>::max() );
+            /// 정책의 uint8 칸(안개 단면 · 메시지 예산)에 담을 수 있는 범위입니다 — froxel 조각 수로 자르는 일은 렌더러가 한다.
+            static constexpr int32 kUint8FieldMin = 0;
+            static constexpr int32 kUint8FieldMax = static_cast<int32>( std::numeric_limits<uint8>::max() );
 
             static void fill( RenderDiagnosticsPolicy& inoutPolicy )
             {
-                inoutPolicy._bGPUAssert          = gv_gpuAssert ? SW_TRUE : SW_FALSE;
+                inoutPolicy._bGPUMessages        = gv_gpuMessages ? SW_TRUE : SW_FALSE;
+                inoutPolicy._gpuMessageLogBudget = static_cast<uint8>( MathUtil::clamp( gv_gpuMessageLogBudget, kUint8FieldMin, kUint8FieldMax ) );
                 inoutPolicy._bNanCheck           = gv_nanCheck ? SW_TRUE : SW_FALSE;
                 inoutPolicy._bShaderDebugCodegen = gv_shaderDebugCodegen ? SW_TRUE : SW_FALSE;
                 inoutPolicy._bindlessIndexCheck  = gv_validateBindlessIndex;
                 inoutPolicy._lightGridProducer   = gv_lightCulling;
                 inoutPolicy._fogDebugView        = gv_fogDebugView;
-                inoutPolicy._fogDebugSlice       = static_cast<uint8>( MathUtil::clamp( gv_fogDebugSlice, kSliceFieldMin, kSliceFieldMax ) );
+                inoutPolicy._fogDebugSlice       = static_cast<uint8>( MathUtil::clamp( gv_fogDebugSlice, kUint8FieldMin, kUint8FieldMax ) );
             }
         };
     } // namespace

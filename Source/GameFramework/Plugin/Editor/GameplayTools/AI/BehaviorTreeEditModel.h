@@ -9,6 +9,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 
 #include "GameFramework/Runtime/Character/AI/BehaviorTree.h"
@@ -52,17 +53,17 @@ namespace sw::editor
         /** @brief 노드가 없는 빈 문서로 되돌립니다. */
         void clear();
         /**
-         * @brief 파일 글을 읽어 모델을 바꿉니다. 모르는 노드 · 속성 이름, 루트가 둘이거나 없는 글은 읽지 않고 false 이며 @p outError 에 이유를 둡니다(모델은 그대로).
+         * @brief 파일 글을 읽어 모델을 바꿉니다. 모르는 노드 · 속성 이름, 루트가 둘이거나 없는 글은 읽지 않고 이유(`Error`)를 돌려줍니다(모델은 그대로).
          * @details 동작 이름이 레지스트리에 있는지는 보지 않는다 - 그것은 `collectIssues` 의 문제 표시다(편집기는 아직 안 만든 작업의 트리도 열 수 있어야 한다).
          */
-        [[nodiscard]] bool parse( string_view xmlText, string& outError );
+        [[nodiscard]] expected<void> parse( string_view xmlText );
         /** @brief 파일 글로 씁니다(`<BehaviorTree>` 루트, 노드마다 한 줄, 탭 들여쓰기). 루트가 없으면 빈 `<BehaviorTree/>` 입니다. */
         string write() const;
         /**
          * @brief 파일에 쓸 글을 만듭니다. 부모(`_base`)를 가리키던 글에서 읽었으면 부모와의 차이(`DataInheritance::makeDelta`, 노드 `id` 가 열쇠)이고, 아니면 `write` 와 같습니다.
-         * @details 차이를 다시 읽어 같은 트리가 나올 때만 차이를 돌려줍니다 — 열쇠(`id`) 없는 노드를 고친 편집처럼 차이로 적을 수 없으면 false 이고 @p outError 에 이유를 둔다(부모를 끊지 않는다).
+         * @details 차이를 다시 읽어 같은 트리가 나올 때만 차이를 돌려줍니다 — 열쇠(`id`) 없는 노드를 고친 편집처럼 차이로 적을 수 없으면 이유(`Error`)를 돌려준다(부모를 끊지 않는다).
          */
-        [[nodiscard]] bool makeSaveText( string& outText, string& outError ) const;
+        [[nodiscard]] expected<string> makeSaveText() const;
         /** @brief 읽은 글이 가리킨 부모의 리소스 id 입니다. 부모 없이 읽었거나 비웠으면 비어 있습니다. */
         const string& getBaseID() const { return _baseID; }
         /** @brief 부모를 정합니다. 되돌리기가 펼친 글로 복원한 모델에 문서의 부모를 다시 단다. */
@@ -91,13 +92,13 @@ namespace sw::editor
         string writeSubtree( int32 id ) const;
         /**
          * @brief 트리 글 @p xmlText(`writeSubtree` · 파일)의 루트를 @p parentID 의 자식 @p insertIndex 자리(-1 이면 맨 뒤)에 새 번호로 붙입니다(언리얼 BT 의 붙여 넣기).
-         * @details 글은 `parse` 와 같은 검사를 따로 거친 뒤에 붙인다 — 틀린 글이나 놓을 수 없는 자리(잎 · 찬 데코레이터 아래, 깊이 한도)면 모델을 그대로 두고 -1 이며 @p outError 에 이유를 둔다.
+         * @details 글은 `parse` 와 같은 검사를 따로 거친 뒤에 붙인다 — 틀린 글이나 놓을 수 없는 자리(잎 · 찬 데코레이터 아래, 깊이 한도)면 모델을 그대로 두고 이유(`Error`)를 돌려준다.
          *          @p parentID 가 -1 이면 빈 트리의 루트로 붙인다(루트가 있으면 거절).
          * @return 붙인 하위 트리 루트의 새 번호입니다.
          */
-        int32 pasteSubtree( int32 parentID, string_view xmlText, int32 insertIndex, string& outError );
-        /** @brief 노드 @p id 와 그 아래를 바로 뒤 형제로 복제합니다(언리얼 BT 의 Duplicate — `writeSubtree` + `pasteSubtree`). 루트이거나 부모가 더 받지 못하면 -1 입니다. */
-        int32 duplicateSubtree( int32 id, string& outError );
+        [[nodiscard]] expected<int32> pasteSubtree( int32 parentID, string_view xmlText, int32 insertIndex );
+        /** @brief 노드 @p id 와 그 아래를 바로 뒤 형제로 복제합니다(언리얼 BT 의 Duplicate — `writeSubtree` + `pasteSubtree`). 루트이거나 부모가 더 받지 못하면 이유(`Error`)입니다. */
+        [[nodiscard]] expected<int32> duplicateSubtree( int32 id );
         /** @brief 루트가 0 인 깊이입니다. 없는 번호면 0 입니다. */
         uint32 getDepth( int32 id ) const;
 
@@ -114,9 +115,9 @@ namespace sw::editor
         void               detachFromParent( BehaviorTreeEditNode& node );
         void               collectSubtree( int32 id, vector<int32>& outListID ) const;
         /** @brief @p source 의 노드 @p sourceID 와 그 아래를 새 번호로 이 모델에 더하고(부모 목록에는 넣지 않는다) 새 번호를 돌려줍니다. 자리 검사는 부르는 쪽이 했다. */
-        int32 graftSubtree( const BehaviorTreeEditModel& source, int32 sourceID, int32 parentID );
-        int32 loadNodeFromXML( const XMLNode& node, int32 parentID, uint32 depth, string& outError );
-        void  writeNode( int32 id, const XMLNode& parentXML ) const;
+        int32                         graftSubtree( const BehaviorTreeEditModel& source, int32 sourceID, int32 parentID );
+        [[nodiscard]] expected<int32> loadNodeFromXML( const XMLNode& node, int32 parentID, uint32 depth );
+        void                          writeNode( int32 id, const XMLNode& parentXML ) const;
 
     private:
         vector<BehaviorTreeEditNode> _listNode{};

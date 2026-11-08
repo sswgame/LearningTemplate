@@ -5,6 +5,9 @@
 
 #include "Engine/Animation/Component/PoseAfterimageComponent.h"
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
+#include "Engine/Animation/Scene/AnimationSystem.h"
+#include "Engine/Animation/Skeletal/Pose.h"
+#include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -48,4 +51,35 @@ SW_TEST_CASE( PoseAfterimageTest, PoolIsPreparedAndReleased )
 
     pAfterimage->onEndPlay();
     SW_EXPECT_FALSE( pAfterimage->isCapturing() );
+}
+
+/**
+ * @brief [PoseAfterimageTest] 포즈를 만드는 쪽(작업 · 리더)이 없는 유닛은 더러워도 고정 포즈를 지킨다 — 잔상 사본이 다음 프레임에 바인드 포즈로 돌아가지 않는다
+ * @details 사본은 스킨 원본을 바꾸며 포즈가 더러워지고(setSkinSourceMesh), 다음 평가의 기본 포즈 단계가 레퍼런스로 덮어 바인드 포즈 잔상이 보였다.
+ */
+SW_TEST_CASE( PoseAfterimageTest, FrozenPoseSurvivesTheNextEvaluation )
+{
+    auto skeleton = make_shared<Skeleton>();
+    (void)skeleton->addBone( hashed_string( "root" ), -1, BoneTransform{} );
+    (void)skeleton->addBone( hashed_string( "arm" ), 0, BoneTransform{} );
+    GameObjectManager manager;
+    GameObject*       pGhost = manager.createGameObject( hashed_string( "Ghost" ) );
+    SW_REQUIRE_NOT_NULL( pGhost );
+    SkeletalMeshComponent* pMesh = pGhost->addComponent<SkeletalMeshComponent>();
+    SW_REQUIRE_NOT_NULL( pMesh );
+    pMesh->setSkeleton( skeleton );
+
+    Pose          frozen = pMesh->getLocalPose();
+    BoneTransform raised{};
+    raised._translation = float3{ 0.0f, 0.7f, 0.0f };
+    frozen.setBoneTransform( 1, raised );
+    SW_REQUIRE_TRUE( pMesh->applyRewindPose( frozen ) );
+    pMesh->markPoseDirty(); // 스킨 원본 교체 · 스킨 바인딩 갱신이 남기는 상태
+
+    SW_REQUIRE_TRUE( pMesh->beginAnimationFrame( 0.016f, 1 ) );
+    for ( uint32 phase = 0; phase < static_cast<uint32>( AnimationPhase::Count ); ++phase )
+        pMesh->runAnimationPhase( static_cast<AnimationPhase>( phase ) );
+    pMesh->finishAnimationFrame();
+    SW_EXPECT_NEAR( 0.7f, pMesh->getLocalPose().getBoneTransform( 1 )._translation._y, 1e-6f );
+    SW_EXPECT_FALSE( pMesh->beginAnimationFrame( 0.016f, 2 ) ); // 더러움이 풀려 다음 프레임은 쉰다
 }

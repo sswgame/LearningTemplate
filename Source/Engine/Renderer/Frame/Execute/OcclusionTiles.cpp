@@ -1,7 +1,7 @@
 /**
  * @file OcclusionTiles.cpp
  * @brief GPU 컬링의 가림 판정입니다 — 지난 프레임 장면 깊이(깊이 히스토리)를 타일마다 최대 깊이로 줄여(가림 타일) 컬링이 경계 구를 그 뒤에서 거릅니다.
- * @details 흐름: 프레임 처음 컴퓨트 프리패스에서 깊이 히스토리를 옮긴 직후 뷰마다 가림 타일을 짓고(`recordOcclusionTiles`, occlusion_tiles.hlsl), 컬링(gpu_cull.hlsl)이
+ * @details 흐름: 프레임 처음 프레임 그래프에서 깊이 히스토리를 옮긴 직후 뷰마다 가림 타일을 짓고(`recordOcclusionTiles`, occlusion_tiles.hlsl), 컬링(gpu_cull.hlsl)이
  *          절두체를 통과한 인스턴스의 경계 구를 감싼 상자를 그 깊이를 그린 프레임의 뷰-투영으로 옮겨, 덮는 타일의 최대 깊이보다 모두 멀면 그리지 않는다.
  *          언리얼의 HZB 가림(지난 프레임 깊이의 최대 밉 사슬)을 밉 한 단만 둔 모양이다 — 화면에서 타일 8 x 8 을 넘게 덮는 큰 물체는 판정하지 않는다(보인다).
  *          지난 프레임 깊이로 보므로 그 사이에 드러난 물체는 한 프레임 늦게 나오고, 기록을 버리는 프레임(처음 · 컷)은 판정하지 않는다.
@@ -92,7 +92,7 @@ namespace sw
         pCmd->bindComputeUAV( target._occlusionTiles._uav, 0 );
         pCmd->bindComputeUAV( target._depthHistoryUAV, shaderslot::kComputeTextureUAV0 );
         pCmd->setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
-        pCmd->dispatchCompute( FrameRendererUtil::divideRoundUp( target._occlusionColumns, Internal::kGroupSize ), FrameRendererUtil::divideRoundUp( target._occlusionRows, Internal::kGroupSize ), 1 );
+        pCmd->dispatchThreads( target._occlusionColumns, target._occlusionRows, 1, Internal::kGroupSize, Internal::kGroupSize, 1 );
         // 컬링이 t2 로 읽는다. 쓰기가 끝났음을 알린다(빠지면 DX12 · Vulkan 에서 지난 프레임 타일을 읽는다).
         pCmd->transitionBuffer( target._occlusionTiles._buffer, RHIBufferState::ShaderResource );
         target._bOcclusionTilesThisFrame = SW_TRUE;

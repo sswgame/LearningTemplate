@@ -31,6 +31,8 @@ namespace sw::editor
             static constexpr float32 kChildActionColumnWidth = 210.0f; ///< 자식 창의 Up · Down · Reset · Remove 단추
             static constexpr int32   kExtraColumnCount       = 2;      ///< 자식 수 · 행 동작
             static constexpr int32   kMaxVisibleRows         = 12;     ///< 넘으면 테이블 안에서 세로로 스크롤한다
+            static constexpr float32 kCurveGraphLines        = 12.0f;  ///< 곡선 창 그래프의 높이(글자 줄 수 — 시퀀서 곡선 편집기와 같다)
+            static constexpr int32   kNoElement              = -1;     ///< 창 · 그래프가 보는 원소가 없음
 
             /**
              * @brief 그룹 테이블의 바깥 높이입니다 — 행 수만큼(최대 `kMaxVisibleRows`)만 차지합니다.
@@ -62,6 +64,7 @@ namespace sw::editor
         , _listChildSection{}
         , _curveOwner{ -1 }
         , _childOwner{ -1 }
+        , _graphCurve{ CatalogTableEditorInternal::kNoElement }
         , _bOpenCurvePopup{ SW_FALSE }
         , _bOpenChildPopup{ SW_FALSE }
         , _bEditFailed{ SW_FALSE }
@@ -69,6 +72,7 @@ namespace sw::editor
         , _lastActionText{}
         , _editID{ 0 }
         , _pending{}
+        , _graphState{}
         , _rowFilter{}
     {
     }
@@ -80,6 +84,7 @@ namespace sw::editor
         _pending         = CatalogTableEdit{};
         _curveOwner      = -1;
         _childOwner      = -1;
+        _graphCurve      = CatalogTableEditorInternal::kNoElement;
         _bOpenCurvePopup = SW_FALSE;
         _bOpenChildPopup = SW_FALSE;
         _bEditFailed     = SW_FALSE;
@@ -545,10 +550,24 @@ namespace sw::editor
     {
         ImGui::PushID( curve._elementIndex );
         ImGui::TextUnformatted( curve._label.c_str() );
-        if ( CatalogCurve::sample( curve, CatalogCurve::computeEndTime( curve ), 48, _listSample ) )
-            ImGui::PlotLines( "##plot", _listSample.data(), static_cast<int32>( _listSample.size() ), 0, nullptr, FLT_MAX, FLT_MAX, ImVec2{ ImGui::GetContentRegionAvail().x, EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, 3.0f ) ).y } );
+        // 미리보기를 누르면 위 그래프가 이 곡선을 연다 — 키는 그래프에서 끌어 고친다(아래 칸은 숫자로 고치는 길).
+        const FloatCurve preview = CatalogCurve::makeFloatCurve( curve );
+        if ( preview._listKey.empty() == false )
+        {
+            if ( EditorCurveEditorState::drawPreview( "##plot", preview, EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, 3.0f ) ).y ) )
+            {
+                _graphCurve              = curve._elementIndex; // 보기 상태 — 문서는 그래프를 놓을 때 바뀐다
+                _graphState              = EditorCurveEditorState{};
+                _graphState._working     = preview;
+                _graphState._bFitPending = true;
+            }
+            EditorSelfTestMarks::record( "catalog.curves.preview" );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EdText", "CurvePreviewOpensGraphTip" ) );
+        }
         else
+        {
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "NoKeysYet" ) );
+        }
         for ( const CatalogCurveKey& key : curve._listKey )
         {
             ImGui::PushID( key._elementIndex );
@@ -576,6 +595,32 @@ namespace sw::editor
         ImGui::PopID();
     }
 
+    void CatalogTableEditor::drawCurveGraph()
+    {
+        // 그래프는 곡선 하나를 크게 연다(언리얼 Curve Editor · 유니티 Curve 창처럼 키를 끌어 고친다). 놓을 때 한 번 문서에 적는다 — 끌기 하나가 되돌리기 한 단계다.
+        const CatalogCurve* pCurve = nullptr;
+        for ( const CatalogCurve& curve : _listCurve )
+        {
+            if ( curve._elementIndex == _graphCurve )
+                pCurve = &curve;
+        }
+        if ( pCurve == nullptr )
+        {
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "PickACurvePreviewToEditItInTheGraph" ) );
+            return;
+        }
+        ImGui::TextUnformatted( pCurve->_label.c_str() );
+        // 끄는 중 · 칸 입력 중이 아니면 문서에서 다시 뜬다(되돌리기 · 아래 칸의 숫자 편집이 그래프에 보인다) — 시퀀서 곡선 편집기와 같은 규칙이다.
+        if ( _graphState._drag == EditorCurveDrag::None && ImGui::IsAnyItemActive() == false )
+            _graphState._working = CatalogCurve::makeFloatCurve( *pCurve );
+        if ( ImGui::BeginChild( "##curveGraph", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, CatalogTableEditorInternal::kCurveGraphLines ) ), ImGuiChildFlags_Borders ) )
+        {
+            if ( EditorCurveEditorState::drawEditor( _graphState, "catalog.curves.graph" ) )
+                _pending = CatalogTableEdit{ CatalogTableEdit::Kind::SetCurveKeys, pCurve->_elementIndex, string(), string(), CatalogChildPath{}, _graphState._working };
+        }
+        ImGui::EndChild();
+    }
+
     void CatalogTableEditor::drawCurvePopup( const CatalogDocument& document )
     {
         constexpr const utf8* kPopupName = "Curves##catalogCurves";
@@ -584,7 +629,7 @@ namespace sw::editor
             EditorInputGUI::openPopup( kPopupName );
             _bOpenCurvePopup = SW_FALSE;
         }
-        EditorChrome::setNextWindowExtent( EditorTextExtent::ofText( 75.0f, 27.0f ), false );
+        EditorChrome::setNextWindowExtent( EditorTextExtent::ofText( 75.0f, 40.0f ), false ); // 그래프(12 줄) 아래에 곡선 목록이 보일 높이
         bool bOpen = true;
         if ( ImGui::BeginPopupModal( kPopupName, &bOpen ) == false )
             return;
@@ -602,6 +647,7 @@ namespace sw::editor
                 ImGui::TextUnformatted( gradient._label.c_str() );
                 drawGradientBar( gradient );
             }
+            drawCurveGraph();
             ImGui::Separator();
             ImGui::BeginChild( "##curveList", ImVec2{ 0.0f, -ImGui::GetFrameHeightWithSpacing() } );
             for ( const CatalogCurve& curve : _listCurve )
@@ -610,7 +656,9 @@ namespace sw::editor
             }
             ImGui::EndChild();
         }
-        if ( ImGui::Button( SW_LOCKEY( "EdText", "Close" ) ) || bOpen == false )
+        const bool bClose = ImGui::Button( SW_LOCKEY( "EdText", "Close" ) );
+        EditorSelfTestMarks::record( "catalog.curves.close" );
+        if ( bClose || bOpen == false )
         {
             _curveOwner = -1;
             ImGui::CloseCurrentPopup();

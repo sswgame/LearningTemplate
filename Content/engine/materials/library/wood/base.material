@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 외형 라이브러리 갈래 바탕: 나무 — 오브젝트 Y 축 나이테 + 결, 칠(_patternAmount)과 니스(코트). -->
+<MaterialDef formatVersion="0" name="AppearanceWood" _base="engine/materials/library/appearance.material">
+	<_properties>
+		<item name="_color" defaultValue="0.62 0.43 0.26 1" />
+		<item name="_secondaryColor" defaultValue="0.36 0.22 0.12 1" />
+		<item name="_roughness" defaultValue="0.6" />
+		<item name="_layerRoughness" defaultValue="0.35" />
+		<item name="_patternScale" defaultValue="3" />
+		<item name="_specular" defaultValue="0.45" />
+	</_properties>
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_alwaysDefines>
+			<item>MATERIAL_DOMAIN_SURFACE</item>
+			<item>MATERIAL_FORWARD_ONLY</item>
+			<item>MATERIAL_PATTERN_WOOD</item>
+		</_alwaysDefines>
+	</_permutations>
+</MaterialDef>

@@ -136,10 +136,14 @@ namespace sw::editor
     bool PairedAnimationPanel::saveDocument()
     {
         const auto writePath = getDocumentDiskPath(); // 읽은 그 자리
-        string     error;
-        if ( writePath.has_value() == false || _model.saveDocument( *writePath, error ) == false )
+        if ( writePath.has_value() == false )
         {
-            _status = writePath.has_value() == false ? string( "No write path for this asset" ) : error;
+            _status = "No write path for this asset";
+            return false;
+        }
+        if ( const expected<void> saved = _model.saveDocument( *writePath ); saved.has_value() == false )
+        {
+            _status = EditorWidgets::makeStatusText( saved.error() );
             return false;
         }
         SW_LOG_INFO_ID( "PairedAnimationPanel.PairedAnimationSaved", "Paired animation saved to %#", writePath->c_str() );
@@ -202,14 +206,14 @@ namespace sw::editor
     void PairedAnimationPanel::drawHistoryRow()
     {
         ImGui::BeginDisabled( _model.canUndo() == false );
-        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Undo" ) ) )
-            reportEdit( _model.undo() );
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Undo" ) ) && _model.undo() )
+            reportEdit( expected<void>{} );
         ImGui::EndDisabled();
         EditorSelfTestMarks::record( "pairedanim.undo" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "Redo" ) ) );
         ImGui::BeginDisabled( _model.canRedo() == false );
-        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Redo" ) ) )
-            reportEdit( _model.redo() );
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Redo" ) ) && _model.redo() )
+            reportEdit( expected<void>{} );
         ImGui::EndDisabled();
         EditorSelfTestMarks::record( "pairedanim.redo" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "Check" ) ) );
@@ -225,7 +229,7 @@ namespace sw::editor
         EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "DurationS" ) );
         EditorChrome::setNextItemWidthColumns( 16.0f );
         if ( ImGui::DragFloat( "##Durations", &duration, 0.01f, 0.01f, 60.0f, "%.3f" ) )
-            reportEdit( _model.setDuration( duration, true, _editError ) );
+            reportEdit( _model.setDuration( duration, true ) );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             _model.endContinuousEdit();
         EditorSelfTestMarks::record( "pairedanim.duration" );
@@ -278,7 +282,7 @@ namespace sw::editor
                 EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "StartS" ) );
                 EditorChrome::setNextItemWidthColumns( 16.0f );
                 if ( ImGui::DragFloat( "##Starts", &start, 0.01f, 0.0f, _model.getContent()._duration, "%.3f" ) )
-                    reportEdit( _model.setRoleStart( roleIndex, start, true, _editError ) );
+                    reportEdit( _model.setRoleStart( roleIndex, start, true ) );
                 if ( ImGui::IsItemDeactivatedAfterEdit() )
                     _model.endContinuousEdit();
                 ImGui::SameLine();
@@ -287,7 +291,7 @@ namespace sw::editor
             EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "EnterExitBlendS" ) );
             EditorChrome::setNextItemWidthColumns( 27.0f );
             if ( ImGui::DragFloat2( "##Enterexitblends", arrBlend, 0.01f, 0.0f, 5.0f, "%.3f" ) )
-                reportEdit( _model.setRoleBlend( roleIndex, arrBlend[0], arrBlend[1], true, _editError ) );
+                reportEdit( _model.setRoleBlend( roleIndex, arrBlend[0], arrBlend[1], true ) );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 _model.endContinuousEdit();
 
@@ -306,7 +310,7 @@ namespace sw::editor
                 const bool bYawChanged = ImGui::DragFloat( "##Yawdeg", &yawDegrees, 0.5f, -180.0f, 180.0f, "%.1f" );
                 const bool bYawDone    = ImGui::IsItemDeactivatedAfterEdit();
                 if ( bOffsetChanged || bYawChanged )
-                    reportEdit( _model.setRoleOffset( roleIndex, offset, yawDegrees, true, _editError ) );
+                    reportEdit( _model.setRoleOffset( roleIndex, offset, yawDegrees, true ) );
                 if ( bOffsetDone || bYawDone )
                     _model.endContinuousEdit();
                 EditorSelfTestMarks::record( ( string( "pairedanim.role." ) + role._name.c_str() + ".offset" ).c_str() );
@@ -318,7 +322,7 @@ namespace sw::editor
                 EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "WarpEndS" ) );
                 EditorChrome::setNextItemWidthColumns( 16.0f );
                 if ( ImGui::DragFloat( "##Warpends", &warpEnd, 0.01f, 0.0f, 10.0f, "%.3f" ) )
-                    reportEdit( _model.setRoleWarpEnd( roleIndex, warpEnd, true, _editError ) );
+                    reportEdit( _model.setRoleWarpEnd( roleIndex, warpEnd, true ) );
                 if ( ImGui::IsItemDeactivatedAfterEdit() )
                     _model.endContinuousEdit();
             }
@@ -339,7 +343,7 @@ namespace sw::editor
             float32 time = notify._time;
             EditorChrome::setNextItemWidthColumns( 27.0f );
             if ( ImGui::SliderFloat( "##Time", &time, 0.0f, content._duration, "%.3f s" ) )
-                reportEdit( _model.setNotifyTime( notifyIndex, time, true, _editError ) );
+                reportEdit( _model.setNotifyTime( notifyIndex, time, true ) );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 _model.endContinuousEdit();
             EditorSelfTestMarks::record( ( string( "pairedanim.notify." ) + notify._name.c_str() + ".time" ).c_str() );
@@ -350,7 +354,7 @@ namespace sw::editor
                 for ( const PairedAnimationRoleDef& role : content._listRole )
                 {
                     if ( ImGui::Selectable( role._name.c_str(), role._name == notify._role ) )
-                        reportEdit( _model.setNotifyRole( notifyIndex, role._name, _editError ) );
+                        reportEdit( _model.setNotifyRole( notifyIndex, role._name ) );
                 }
                 ImGui::EndCombo();
             }
@@ -360,7 +364,7 @@ namespace sw::editor
             ImGui::PopID();
         }
         if ( removeIndex != constant::invalid_index::kUint32 )
-            reportEdit( _model.removeNotify( removeIndex, _editError ) );
+            reportEdit( _model.removeNotify( removeIndex ) );
 
         EditorChrome::setNextItemWidthColumns( 21.0f );
         ImGui::InputText( "##NewNotify", _newNotifyName.data(), _newNotifyName.max_size() );
@@ -370,7 +374,7 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "AddNotifyAtT" ) ) )
         {
             // 새 알림은 첫 역할로 받는다 — 역할은 콤보로 바꾼다.
-            reportEdit( _model.addNotify( hashed_string( _newNotifyName.c_str() ), content._listRole[0]._name, _model.getScrubTime(), _editError ) );
+            reportEdit( _model.addNotify( hashed_string( _newNotifyName.c_str() ), content._listRole[0]._name, _model.getScrubTime() ) );
         }
         ImGui::EndDisabled();
         EditorSelfTestMarks::record( "pairedanim.addNotify" );
@@ -402,7 +406,7 @@ namespace sw::editor
             const bool                    bMoved   = ( current - slot._placedPosition ).getLength() > PairedAnimationPanelInternal::kMovedToleranceMeters ||
                                 MathUtil::abs( MathUtil::wrapAngle( yaw - slot._placedYaw ) ) > PairedAnimationPanelInternal::kMovedToleranceRadians;
             if ( bAligned && bMoved )
-                reportEdit( _model.setRoleOffsetFromWorld( roleIndex, anchorPosition, anchorYaw, current, yaw, true, _editError ) );
+                reportEdit( _model.setRoleOffsetFromWorld( roleIndex, anchorPosition, anchorYaw, current, yaw, true ) );
             else if ( bMoved && _gizmo.hasMouse() == false )
                 _model.endContinuousEdit();
 
@@ -481,16 +485,18 @@ namespace sw::editor
         (void)animator.seekCurrentTime( clipTime ); // 범위 밖은 모델이 자른다 — 실패는 seek 가 오류로 남긴다
     }
 
-    void PairedAnimationPanel::reportEdit( bool bSucceeded )
+    void PairedAnimationPanel::reportEdit( const expected<void>& result )
     {
-        if ( bSucceeded )
+        if ( result.has_value() == false )
         {
-            _editError.clear();
-            if ( _model.isDirty() )
-                markDocumentDirty();
-            else
-                clearDocumentDirty();
+            _editError = EditorWidgets::makeStatusText( result.error() );
+            return;
         }
+        _editError.clear();
+        if ( _model.isDirty() )
+            markDocumentDirty();
+        else
+            clearDocumentDirty();
     }
 
     GameObjectManager* PairedAnimationPanel::findPreviewManager() const

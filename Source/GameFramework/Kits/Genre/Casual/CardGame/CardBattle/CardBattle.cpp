@@ -126,11 +126,11 @@ namespace sw
             return false;
         for ( const hashed_string& cardID : listDeckCardID )
         {
-            const int32 defIndex = pCatalog->findIndex( cardID );
-            if ( defIndex < 0 )
+            const optional<int32> defIndex = pCatalog->findIndex( cardID );
+            if ( defIndex.has_value() == false )
                 continue;
             _drawPile.push( Card{ static_cast<uint16>( _listDefIndex.size() ), 0, 0 } );
-            _listDefIndex.push_back( defIndex );
+            _listDefIndex.push_back( *defIndex );
         }
         if ( _drawPile.isEmpty() )
             return false;
@@ -269,8 +269,9 @@ namespace sw
             io.value( defID );
             if ( io.isReading() )
             {
-                defIndex = _pCatalog->findIndex( defID );
-                io.check( defIndex >= 0 );
+                const optional<int32> found = _pCatalog->findIndex( defID );
+                if ( io.check( found.has_value() ) )
+                    defIndex = *found;
             }
         } );
         io.value( _drawPile );

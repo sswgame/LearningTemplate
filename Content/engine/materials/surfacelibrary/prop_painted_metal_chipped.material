@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 칠한 금속 — 모서리 칩으로 밑 강철이 드러나고 먼지가 앉았다. 부모(environmentsurface.material)의 값만 바꾼 프리셋이다. -->
+<MaterialDef formatVersion="0" name="PaintedMetalChipped" _base="engine/materials/environmentsurface.material">
+	<_properties>
+		<item name="_baseColor" defaultValue="0.18 0.35 0.22 1"/>
+		<item name="_roughness" defaultValue="0.5"/>
+		<item name="_underColor" defaultValue="0.55 0.55 0.56 1"/>
+		<item name="_underRoughness" defaultValue="0.35"/>
+		<item name="_underMetallic" defaultValue="1"/>
+		<item name="_edgeWear" defaultValue="0.55"/>
+		<item name="_edgeWearScale" defaultValue="0.05"/>
+		<item name="_dirt" defaultValue="0.2"/>
+		<item name="_wearScale" defaultValue="0.3"/>
+		<item name="_porosity" defaultValue="0.2"/>
+	</_properties>
+</MaterialDef>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 외형 라이브러리 프리셋(nacre): 진주(얇은 막, 은은하다). 값만 바꾼다 — 셰이더 변형은 갈래 바탕과 같다. -->
+<MaterialDef formatVersion="0" name="Pearl" _base="engine/materials/library/nacre/base.material">
+	<_properties>
+		<item name="_color" defaultValue="0.92 0.9 0.86 1" />
+		<item name="_filmThickness" defaultValue="300" />
+		<item name="_filmWeight" defaultValue="0.5" />
+	</_properties>
+</MaterialDef>

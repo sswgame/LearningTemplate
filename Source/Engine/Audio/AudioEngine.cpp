@@ -161,11 +161,16 @@ namespace sw
         SW_ASSERT( pMixer->getChannelLayout() == _layout );
         _pMixer = std::move( pMixer );
         _snapshotMixer.applyMixer( *_pMixer ); // 버스 사용자 상태 다시 적용, 스냅샷 설명자 다시 찾기
-        // 살아 있는 보이스는 같은 이름의 버스로 옮긴다(없으면 sfx, 그것도 없으면 master).
+        // 살아 있는 보이스는 같은 이름의 버스로 옮긴다. 새 그래프에 그 버스가 없으면 보이스를 멈춘다(오류는 resolveBusIndex 가 남긴다).
         for ( AudioVoiceSlot& slot : _voicePool )
         {
-            if ( slot._bInUse )
-                slot._busIndex = resolveBusIndex( slot._busName );
+            if ( slot._bInUse == false )
+                continue;
+            const optional<uint32> busIndex = resolveBusIndex( slot._busName );
+            if ( busIndex.has_value() )
+                slot._busIndex = *busIndex;
+            else
+                AudioVoicePool::free( slot );
         }
         if ( _voicePool.getCount() < _pMixer->getDesc()._maxVoiceCount )
         {
@@ -219,7 +224,7 @@ namespace sw
         bool              bValid     = true;
         for ( const AudioEventDef& event : library._listEvent )
         {
-            if ( _pGameMixerDesc == nullptr || _pGameMixerDesc->findBusIndex( event._bus ) < 0 )
+            if ( _pGameMixerDesc == nullptr || _pGameMixerDesc->findBusIndex( event._bus ).has_value() == false )
             {
                 Internal::appendError( outListError, "%#: event '%#' sends to unknown bus '%#'", sourceName, event._name.c_str(), event._bus.c_str() );
                 bValid = false;
@@ -629,12 +634,14 @@ namespace sw
         return _published.getStats();
     }
 
-    float32 AudioEngine::getBusPeak( const hashed_string& bus ) const
+    optional<float32> AudioEngine::getBusPeak( const hashed_string& bus ) const
     {
         if ( _pMixer == nullptr )
-            return 0.0f;
-        const int32 busIndex = _pMixer->findBusIndex( bus );
-        return busIndex < 0 ? 0.0f : _pMixer->getBusPeak( static_cast<uint32>( busIndex ) );
+            return nullopt;
+        const optional<uint32> busIndex = _pMixer->findBusIndex( bus );
+        if ( busIndex.has_value() == false )
+            return nullopt;
+        return _pMixer->getBusPeak( *busIndex );
     }
 
     void AudioEngine::pushCommand( Command&& command )
@@ -698,7 +705,10 @@ namespace sw
 
     void AudioEngine::applyPlayClip( const Command& command )
     {
-        _appliedPlayingID     = MathUtil::max( _appliedPlayingID, command._playingID );
+        _appliedPlayingID               = MathUtil::max( _appliedPlayingID, command._playingID );
+        const optional<uint32> busIndex = resolveBusIndex( command._name );
+        if ( busIndex.has_value() == false )
+            return;
         AudioVoiceSlot* pSlot = _voicePool.allocate();
         if ( pSlot == nullptr )
         {
@@ -708,7 +718,7 @@ namespace sw
         pSlot->_playingID        = command._playingID;
         pSlot->_clipPath         = command._path;
         pSlot->_busName          = command._name;
-        pSlot->_busIndex         = resolveBusIndex( command._name );
+        pSlot->_busIndex         = *busIndex;
         pSlot->_volume           = AudioMath::dbToLinear( command._clipParams._volumeDb );
         pSlot->_pan              = command._clipParams._pan;
         pSlot->_pitchRatio       = AudioMath::semitonesToRatio( command._clipParams._pitchSemitones );
@@ -891,13 +901,16 @@ namespace sw
 
     bool AudioEngine::startMusicVoice( const AudioMusicVoiceRequest& request )
     {
+        const optional<uint32> busIndex = resolveBusIndex( request._bus );
+        if ( busIndex.has_value() == false )
+            return false;
         AudioVoiceSlot* pSlot = _voicePool.allocate();
         if ( pSlot == nullptr )
             return false;
         pSlot->_playingID       = request._playingID;
         pSlot->_clipPath        = request._clipPath;
         pSlot->_busName         = request._bus;
-        pSlot->_busIndex        = resolveBusIndex( request._bus );
+        pSlot->_busIndex        = *busIndex;
         pSlot->_musicSegment    = request._segment;
         pSlot->_musicLayer      = request._layer;
         pSlot->_musicGain       = request._gain;
@@ -1021,14 +1034,14 @@ namespace sw
         slot._bWaitingForClip = false;
     }
 
-    uint32 AudioEngine::resolveBusIndex( const hashed_string& bus ) const
+    optional<uint32> AudioEngine::resolveBusIndex( const hashed_string& bus ) const
     {
-        int32 busIndex = bus.empty() ? constant::invalid_index::kInt32 : _pMixer->findBusIndex( bus );
-        if ( busIndex < 0 )
-            busIndex = _pMixer->findBusIndex( hashed_string( AudioBusNames::kSFX ) );
-        if ( busIndex < 0 )
-            busIndex = _pMixer->findBusIndex( hashed_string( AudioBusNames::kMaster ) );
-        return busIndex < 0 ? 0u : static_cast<uint32>( busIndex );
+        // 버스를 고르지 않은 클립은 sfx 로 간다(언리얼의 기본 사운드 클래스와 같은 설계 기본값). 이름이 있는데 지금 그래프에 없으면 다른 버스로 돌리지 않고 오류다.
+        const hashed_string    target   = bus.empty() ? hashed_string( AudioBusNames::kSFX ) : bus;
+        const optional<uint32> busIndex = _pMixer->findBusIndex( target );
+        if ( busIndex.has_value() == false )
+            SW_LOG_ERROR_ID( "AudioEngine.BusNotInMixer", "Bus '%#' is not in the current mixer - the voice is not played", target.c_str() );
+        return busIndex;
     }
 
     void AudioEngine::updateEmitters()
@@ -1537,8 +1550,11 @@ namespace sw
         const auto stateIt = _mapEventState.find( command._name );
         if ( stateIt == _mapEventState.end() || stateIt->second._pDesc == nullptr )
             return;
-        EventState&          state = stateIt->second;
-        const AudioEventDef& event = *state._pDesc;
+        EventState&            state    = stateIt->second;
+        const AudioEventDef&   event    = *state._pDesc;
+        const optional<uint32> busIndex = resolveBusIndex( event._bus );
+        if ( busIndex.has_value() == false )
+            return;
         if ( tryAcceptEvent( state, event ) == false )
             return;
 
@@ -1567,8 +1583,7 @@ namespace sw
         uint32 pickCount = 1;
         pickEventClips( state, event, firstClip, pickCount );
 
-        const uint32 busIndex         = resolveBusIndex( event._bus );
-        const int32  attenuationIndex = resolveAttenuationIndex( event._attenuation );
+        const int32 attenuationIndex = resolveAttenuationIndex( event._attenuation );
         for ( uint32 pickIndex = 0; pickIndex < pickCount; ++pickIndex )
         {
             const AudioClipEntry& clip  = event._listClip[firstClip + pickIndex];
@@ -1582,7 +1597,7 @@ namespace sw
             pSlot->_emitterID        = command._emitterID;
             pSlot->_clipPath         = clip._path;
             pSlot->_busName          = event._bus;
-            pSlot->_busIndex         = busIndex;
+            pSlot->_busIndex         = *busIndex;
             pSlot->_attenuationName  = event._attenuation;
             pSlot->_attenuationIndex = attenuationIndex;
             pSlot->_instanceIndex    = instanceIndex;

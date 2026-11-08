@@ -13,10 +13,14 @@ struct ImDrawList;
 namespace sw
 {
     struct float2;
-    struct float3;
 
     class GameObjectManager;
 } // namespace sw
+
+namespace sw::editor
+{
+    struct EditorPlacementPose;
+} // namespace sw::editor
 
 namespace sw::editor
 {
@@ -48,9 +52,9 @@ namespace sw::editor
          */
         [[nodiscard]] virtual bool canPlaceInViewport() const { return false; }
         /**
-         * @brief @p worldPos 에 이 종류의 오브젝트를 만들고 되돌리기 · 선택을 기록합니다. `canPlaceInViewport` 가 true 인 종류만 불린다. 위치는 부른 쪽이 표면에서 구한다.
+         * @brief @p pose(자리 · 놓기 전에 고른 회전)로 이 종류의 오브젝트를 만들고 되돌리기 · 선택을 기록합니다. `canPlaceInViewport` 가 true 인 종류만 불린다. 자리는 부른 쪽이 표면에서 구한다.
          * @details 기본 구현은 오류를 남긴다 — 놓을 수 있다고 하고 구현하지 않은 종류가 조용히 아무것도 하지 않게 두지 않는다.
          */
-        virtual void placeInViewport( GameObjectManager* pManager, const utf8* pPath, const float3& worldPos ) const;
+        virtual void placeInViewport( GameObjectManager* pManager, const utf8* pPath, const EditorPlacementPose& pose ) const;
     };
 } // namespace sw::editor

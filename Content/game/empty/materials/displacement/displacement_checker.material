@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 시나리오 automation/displacement — 체커 높이 맵으로 칸마다 0.35 m 솟는 판. 헐 · 도메인 변형으로 그려져 윤곽(먼 가장자리)이 계단이 된다(material_displacement.hlsli). -->
+<MaterialDef formatVersion="0" name="displacement_checker" _base="game/empty/materials/displacement/displacement_flat.material">
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_alwaysDefines>
+			<item>MATERIAL_DOMAIN_SURFACE</item>
+			<item>MATERIAL_DISPLACEMENT</item>
+		</_alwaysDefines>
+	</_permutations>
+</MaterialDef>

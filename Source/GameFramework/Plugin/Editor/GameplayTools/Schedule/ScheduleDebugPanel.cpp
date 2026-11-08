@@ -81,15 +81,15 @@ namespace sw::editor
 
         if ( ImGui::BeginChild( "##ScheduleDetail" ) )
         {
-            const int32 npcIndex = _model.findSelectedNPCIndex( system );
-            if ( npcIndex < 0 )
+            const optional<int32> npcIndex = _model.findSelectedNPCIndex( system );
+            if ( npcIndex.has_value() == false )
             {
                 EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdSchedule", "SelectNPCHint" ) );
             }
             else
             {
-                drawTimeline( system, npcIndex );
-                drawExplanation( system, npcIndex );
+                drawTimeline( system, *npcIndex );
+                drawExplanation( system, *npcIndex );
             }
         }
         ImGui::EndChild();

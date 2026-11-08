@@ -14,6 +14,7 @@
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Binding/GPUInstanceHighlight.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
+#include "Engine/Renderer/Scene/GPUInstanceMotionHistory.h"
 #include "Engine/Renderer/Scene/GPUMeshBatchBinding.h"
 #include "Engine/Renderer/Scene/GPUMeshVertexPool.h"
 #include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
@@ -230,6 +231,8 @@ namespace sw
         void assignVertexAnimationBases( const GPUVertexAnimationPool& pool );
         /** @brief 이번 프레임 VAT 시계(초)입니다. 스냅샷에 실려 온 게임 스레드의 군중 시계입니다. */
         float32 getVertexAnimationTime() const { return _snapshot._vertexAnimationTime; }
+        /** @brief 정적 그림자 세대입니다(`GPUSceneSnapshot::_staticShadowGeneration`). 그림자 캐시가 캐시 층을 다시 그릴지 정한다. */
+        uint64 getStaticShadowGeneration() const { return _snapshot._staticShadowGeneration; }
 
         /** @brief 인스턴스 버퍼 핸들을 반환합니다. */
         RHIBufferHandle getInstanceBuffer() const { return _instances._buffer; }
@@ -265,17 +268,16 @@ namespace sw
         void setVertexPoolEnabled( bool bEnabled );
         /**
          * @brief 간접 인자의 인스턴스 개수를 CPU 가 채울지, 컴퓨트가 만들지 정합니다.
-         * @details true 면 업로드 시점에 개수를 **0으로** 올린다. 컬링 컴퓨트가 InterlockedAdd 로 채우기
-         *          때문이다. 컬링이 없으면 CPU 가 채운 개수 그대로 그려야 하므로 false 여야 한다.
+         * @details true 면 배치 표가 바뀐 업로드에서 개수를 **0으로** 올리고, 그 뒤 프레임마다의 0 되돌리기는 컬링 앞의 GPU 커널이 한다(CPU 는 올리지 않는다).
+         *          컬링 컴퓨트가 InterlockedAdd 로 채우기 때문이다. 컬링이 없으면 CPU 가 채운 개수 그대로 그려야 하므로 false 여야 한다.
          *          FrameRenderer 가 매 프레임 실제 컬링 가능 여부를 보고 정한다.
          */
         void setIndirectCountsFilledByGPU( bool bByGPU );
         /**
-         * @brief 간접 인자의 인스턴스 개수만 다시 올립니다(배치 구성이 그대로일 때).
-         * @details 컬링 컴퓨트는 개수를 0에서부터 센다. 그래서 씬이 하나도 바뀌지 않은 프레임에도 개수는
-         *          되돌려 놓아야 한다. 배치당 16바이트뿐이라 모두 올려도 싸다.
+         * @brief GPU 가 개수를 맡지 못하게 된 업로드(컬링 뷰 버퍼를 다 갖추지 못함)에서 인자를 CPU 개수로 다시 올립니다.
+         * @details GPU 가 개수를 맡는 동안의 프레임마다 되돌리기는 CPU 가 하지 않는다 — 컬링 앞의 GPU 커널(`RenderPassType::IndirectArgsReset`)이 한다.
          */
-        void refreshIndirectCounts( IRHIDevice* pDevice );
+        void uploadCPUIndirectCounts( IRHIDevice* pDevice );
         /** @brief 모든 컬링 뷰가 간접 인자와 가시 목록을 다 갖췄는지 확인합니다. 하나라도 없으면 GPU 개수를 쓰면 안 됩니다. */
         bool hasAllCullViewBuffers() const;
         /** @brief 모든 컬링 뷰가 가시 목록 버퍼를 갖췄는지 확인합니다. 간접 인자는 이 검사 뒤에 만들어집니다. */
@@ -293,6 +295,17 @@ namespace sw
         uint32 getIndirectCommandCount() const { return _indirectCommandCount; }
         /** @brief 인스턴스 버퍼가 GPU 에 올라갔는지 반환합니다. */
         bool isUploaded() const { return _instances._buffer != 0; }
+        /**
+         * @brief 인스턴스마다의 지난 월드 행렬 버퍼(g_SwPrevInstanceWorlds, t15 — 인스턴스 번호 순서, 원소 `float4x4`)입니다. 화면 속도의 지난 위치를 만든다.
+         * @details 기록이 없는 칸은 모두 0(`GPUInstanceMotionHistory::isNoHistory`)이고 셰이더가 이번 행렬로 읽는다. 버퍼가 없으면 0 입니다.
+         */
+        const RHIStructuredBuffer& getPrevInstanceWorldBuffer() const { return _prevInstanceWorlds; }
+        /** @brief 지난 월드 행렬 버퍼의 원소 수(인스턴스 수)입니다. */
+        uint32 getPrevInstanceWorldCount() const { return static_cast<uint32>( _listUploadedPrevWorld.size() ); }
+        /** @brief 마지막 upload 에서 기록이 있는 물체가 하나라도 움직였으면 true 입니다. 카메라가 서 있어도 모션 블러를 끄지 않는 근거다(`FrameViewResources::applyViewPassSelection`). */
+        bool hasObjectMotion() const { return _bObjectMotion != SW_FALSE; }
+        /** @brief 배치 가운데 화면 왜곡 머티리얼(`kMaterialDistortionDefine`)이 있으면 true 입니다. 없으면 왜곡 누적 · 적용 패스가 기록되지 않는다(쓰지 않을 때 비용이 없다). 스냅샷이 바뀐 upload 가 정한다. */
+        bool hasDistortionBatches() const { return _bDistortionBatches != SW_FALSE; }
 
     private:
         /// @brief 그룹에서 (버퍼, SRV, 원소 수)를 찾는 테이블입니다. 배치 루프가 조회 대신 읽습니다. 프레임마다 다시 채웁니다.
@@ -336,6 +349,13 @@ namespace sw
         void ensureInstanceSlotStream( IRHIDevice* pDevice, uint32 slotCount );
         /** @brief 뷰마다의 간접 인자 버퍼를 확보해 올립니다. */
         void uploadIndirectArgs( IRHIDevice* pDevice, uint32 argsCount );
+        /**
+         * @brief 움직임 기록을 한 걸음 나아가 지난 월드 행렬 버퍼를 올립니다. 스냅샷이 그대로인 프레임에도 부른다 — 멈춘 물체의 지난 행렬이 이번 것이 되어야 속도가 0 이 된다.
+         * @details 내용이 지난번 올린 것과 같으면(모두 멈춘 씬의 두 번째 프레임부터) 올리지 않는다.
+         */
+        void updateMotionHistory( IRHIDevice* pDevice );
+        /** @brief 배치의 퍼뮤테이션에 화면 왜곡 define 이 있는지 다시 봅니다(스냅샷이 바뀐 upload 에서). */
+        void refreshDistortionBatches();
 
     private:
         /** @brief 패킷에서 받은 스냅샷입니다. 이 안의 것만 GT 가 만든 값입니다. */
@@ -393,5 +413,17 @@ namespace sw
         uint8 _bGPUFillsIndirectCounts{ SW_FALSE };
         /// @brief 마지막 upload() 가 올린 간접 인자 개수입니다. 스냅샷에 없으므로 GT 가 덮어쓸 수 없습니다.
         uint32 _indirectCommandCount{ 0 };
+        /// @brief 열쇠 → 지난번 그린 월드 행렬의 기록입니다(RT 소유 — 패킷이 버려져도 실제로 그린 프레임 기준이다).
+        GPUInstanceMotionHistory _motionHistory;
+        /// @brief 지난 월드 행렬 버퍼(t15)입니다.
+        RHIStructuredBuffer _prevInstanceWorlds;
+        /// @brief 이번 프레임에 기록이 낸 지난 월드 행렬입니다(스크래치).
+        vector<float4x4> _listScratchPrevWorld;
+        /// @brief 마지막으로 올린 지난 월드 행렬입니다. 같으면 다시 올리지 않는다.
+        vector<float4x4> _listUploadedPrevWorld;
+        /// @brief 마지막 upload 에서 물체가 움직였는지입니다(`hasObjectMotion`).
+        uint8 _bObjectMotion{ SW_FALSE };
+        /// @brief 배치에 화면 왜곡 머티리얼이 있는지입니다(`hasDistortionBatches`).
+        uint8 _bDistortionBatches{ SW_FALSE };
     };
 } // namespace sw

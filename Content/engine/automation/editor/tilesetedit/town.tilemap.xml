@@ -1,7 +1,4 @@
-<TileMap>
-	<name>Tile Set Edit Test</name>
-	<width>20</width>
-	<height>12</height>
+<TileMap name="Tile Set Edit Test" width="20" height="12">
 	<spawn x="7" y="7" />
 	<tiles />
 	<warps />

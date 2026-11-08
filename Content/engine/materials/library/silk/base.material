@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 외형 라이브러리 갈래 바탕: 비단 · 공단 — 비등방 GGX(실 방향 = UV u) 와 약한 시엔. -->
+<MaterialDef formatVersion="0" name="AppearanceSilk" _base="engine/materials/library/appearance.material">
+	<_properties>
+		<item name="_sheenWeight" defaultValue="0.35" />
+		<item name="_sheenColor" defaultValue="0.5 0.5 0.5 1" />
+		<item name="_sheenRoughness" defaultValue="0.35" />
+		<item name="_roughness" defaultValue="0.3" />
+		<item name="_anisotropy" defaultValue="0.7" />
+		<item name="_patternScale" defaultValue="256" />
+	</_properties>
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_alwaysDefines>
+			<item>MATERIAL_DOMAIN_SURFACE</item>
+			<item>MATERIAL_FORWARD_ONLY</item>
+			<item>MATERIAL_LOBE_SHEEN</item>
+			<item>MATERIAL_LOBE_ANISOTROPY</item>
+			<item>MATERIAL_PATTERN_WEAVE</item>
+		</_alwaysDefines>
+	</_permutations>
+</MaterialDef>

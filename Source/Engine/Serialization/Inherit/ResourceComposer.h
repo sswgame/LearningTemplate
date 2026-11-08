@@ -38,7 +38,8 @@ namespace sw
 
     /**
      * @struct ResourceContext
-     * @brief 합치는 문맥입니다. 읽는 쪽이 자기 자리를 고르는 값입니다. 조건 단계의 태그는 엔진 값(코어 범위의 리소스 루트가 든 `ResourceTags`)이라 여기 들지 않습니다.
+     * @brief 합치는 문맥입니다. 읽는 쪽이 자기 자리를 고르는 값입니다. 조건 단계의 태그는 엔진 값(코어 범위의 리소스 루트가 든 `ResourceTags`)이고,
+     *        미리보기 문맥만 몇 축을 바꿔 끼웁니다(`withTagOverride`).
      */
     struct SW_API ResourceContext
     {
@@ -58,9 +59,17 @@ namespace sw
         DataInheritance::MergeFunction      _pfnMerge;      ///< `KnownMerge` 의 함수
         IDataInheritanceSource*             _pSource;       ///< `RootName` 이 부모를 읽는 곳. 나머지는 리소스다
         AssetID                             _assetID;       ///< 리소스 id 로 읽을 때의 id(`withAsset`). 덮어쓰기 층 · 다시 읽기 기록 · 접속 대조가 쓴다. 비면 글 읽기다
+        const ResourceTagSet*               _pTagOverride;  ///< 엔진 태그에서 바꿔 끼울 축(`withTagOverride`, 부르는 쪽이 합치는 동안 든다). nullptr 이면 엔진 태그 그대로다
 
         /** @brief 이 문맥으로 리소스 @p assetID 를 읽습니다 — 덮어쓰기 층을 얹고, 로드 축 조건에 기댄 결과를 기록합니다(`ResourceComposition`). 팩 쿠킹 문맥에는 쓰지 않습니다. */
         [[nodiscard]] ResourceContext withAsset( const AssetID& assetID ) const;
+        /**
+         * @brief 이 문맥의 조건 단계가 엔진 태그에 @p overrideTags 의 축을 바꿔 끼워 풉니다(에디터 UI 미리보기의 기기 견본 — `screen` · `orientation`). 빈 집합이면 이 문맥 그대로입니다.
+         * @details 바꿔 끼운 합성은 다시 읽기 기록(`ResourceComposition`)에 적지 않는다 — 기록은 엔진 태그로 읽은 리소스의 것이고 접속 대조 해시도 그 결과다.
+         *          언리얼 위젯 디자이너의 미리보기 기기 · Godot 에디터의 기능 태그 덮기처럼 엔진 값을 건드리지 않고 한 문맥만 바꾼다(기억).
+         *          @p overrideTags 는 합치기가 끝날 때까지 살아 있어야 한다(포인터로 든다). 팩 쿠킹 문맥에는 쓰지 않습니다.
+         */
+        [[nodiscard]] ResourceContext withTagOverride( const ResourceTagSet& overrideTags ) const;
 
         /** @brief 범용 데이터 읽기입니다(`XMLDocument::parseData`). 프리팹처럼 자기 입구가 부모를 합치는 형식도 머리는 이 길을 지납니다. */
         [[nodiscard]] static ResourceContext forDocument();
@@ -110,9 +119,10 @@ namespace sw
 
         /**
          * @brief 글 리소스를 디스크에 씁니다(폴더가 없으면 만듭니다). 저장 입구(직렬화기 · 형식의 `saveToFile`)가 모두 이 함수를 지납니다 — 있던 파일의 조건을 지키고(`restoreConditions`), 덮어쓰기 층을 얹어 읽은 리소스는 층 값이 원본에 박히므로 쓰지 않습니다.
+         * @param pTagOverride 사본을 바꿔 끼운 태그로 읽었으면 그 축입니다(`ResourceContext::withTagOverride`) — 조건을 되돌릴 때 읽은 태그와 같아야 편집이 맞는 조건에 들어간다. nullptr 이면 엔진 태그입니다.
          * @return 쓰지 못하면 false 입니다(까닭은 로그).
          */
-        [[nodiscard]] static bool saveText( string_view absPath, string_view text );
+        [[nodiscard]] static bool saveText( string_view absPath, string_view text, const ResourceTagSet* pTagOverride = nullptr );
 
         /**
          * @brief 부모와의 차이 글 @p deltaText 를 다시 읽어 펼친 글 @p fullText 와 같은지 봅니다. @p reread 가 비었으면 보지 않습니다.

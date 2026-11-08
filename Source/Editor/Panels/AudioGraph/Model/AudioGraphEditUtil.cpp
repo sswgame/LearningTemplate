@@ -77,7 +77,7 @@ namespace sw::editor
         const utf8* pTypeName = AudioGraphRegistry::getNodeType( type )._pName;
         uint32      number    = 1;
         string      name      = pTypeName;
-        while ( inoutDef.findNodeIndex( hashed_string( string_view( name ) ) ) >= 0 )
+        while ( inoutDef.findNodeIndex( hashed_string( string_view( name ) ) ).has_value() )
         {
             ++number;
             StringBuilder<constant::buffer::kMax64> numbered;
@@ -99,11 +99,11 @@ namespace sw::editor
         vector<hashed_string> listNew;
         for ( const hashed_string& name : listName )
         {
-            const int32 sourceIndex = inoutDef.findNodeIndex( name );
-            uint32      newIndex    = 0;
-            if ( sourceIndex < 0 )
-                continue;
-            const AudioGraphNodeDef source = inoutDef._listNode[static_cast<size_t>( sourceIndex )]; // addNode 가 목록을 늘리기 전에 값으로 둔다
+            const optional<uint32> sourceIndex = inoutDef.findNodeIndex( name );
+            uint32                 newIndex    = 0;
+            if ( sourceIndex.has_value() == false )
+                continue;                                                      // 고른 뒤 지운 노드
+            const AudioGraphNodeDef source = inoutDef._listNode[*sourceIndex]; // addNode 가 목록을 늘리기 전에 값으로 둔다
             if ( addNode( inoutDef, source._type, source._editorPosition + offset, newIndex ) == false )
                 break; // 노드 수 상한
             AudioGraphNodeDef& copy = inoutDef._listNode[newIndex];
@@ -114,8 +114,9 @@ namespace sw::editor
         }
         for ( size_t index = 0; index < listSource.size(); ++index )
         {
-            const AudioGraphNodeDef source = inoutDef._listNode[static_cast<size_t>( inoutDef.findNodeIndex( listSource[index] ) )];
-            AudioGraphNodeDef&      copy   = inoutDef._listNode[static_cast<size_t>( inoutDef.findNodeIndex( listNew[index] ) )];
+            // 위 반복이 둘 다 찾았거나 만든 이름이다.
+            const AudioGraphNodeDef source = inoutDef._listNode[inoutDef.findNodeIndex( listSource[index] ).value()];
+            AudioGraphNodeDef&      copy   = inoutDef._listNode[inoutDef.findNodeIndex( listNew[index] ).value()];
             for ( const hashed_string& input : source._listInput )
             {
                 for ( size_t mapIndex = 0; mapIndex < listSource.size(); ++mapIndex )
@@ -181,7 +182,7 @@ namespace sw::editor
             uint32             depth = 0;
             for ( const hashed_string& input : node._listInput )
             {
-                depth = MathUtil::max( depth, listDepth[static_cast<size_t>( inoutDef.findNodeIndex( input ) )] + 1u );
+                depth = MathUtil::max( depth, listDepth[inoutDef.findNodeIndex( input ).value()] + 1u ); // 처리 순서를 만든 그래프라 입력은 모두 있다
             }
             listDepth[nodeIndex] = depth;
             const uint32 row     = listRowCount[depth]++;

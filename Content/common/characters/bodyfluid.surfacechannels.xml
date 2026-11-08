@@ -1,0 +1,12 @@
+<!-- 몸 표면 채널 — 기본 표(engine/character/default.surfacechannels.xml)에 체액 자국을 더한 것. 몸 동작(CharacterBodyDynamicsComponent)의 눈물 · 침 줄기가 찍는다.
+     Teardrop · Saliva 는 금방 마르고(초당 0.08), TearSalt 는 마른 뒤 옅게 오래 남는 소금 자국 · 번진 화장 자리다(초당 0.004). 물은 셋 다 씻는다. -->
+<SurfaceChannels>
+    <Channel name="Wet" decayPerSecond="0.05"/>
+    <Channel name="Dirt" decayPerSecond="0.002" washPerSecond="0.25" maskResolution="64"/>
+    <Channel name="Blood" decayPerSecond="0.01" washPerSecond="0.15" maskResolution="128"/>
+    <Channel name="Wound" maskResolution="128"/>
+    <Channel name="Tear" maskResolution="128" clip="true"/>
+    <Channel name="Teardrop" decayPerSecond="0.08" washPerSecond="0.5" maskResolution="128"/>
+    <Channel name="Saliva" decayPerSecond="0.08" washPerSecond="0.5" maskResolution="128"/>
+    <Channel name="TearSalt" decayPerSecond="0.004" washPerSecond="0.3" maskResolution="128"/>
+</SurfaceChannels>

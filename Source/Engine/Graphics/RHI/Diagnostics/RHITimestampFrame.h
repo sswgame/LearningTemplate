@@ -9,6 +9,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Graphics/RHI/Diagnostics/GPUTimestampSlotMask.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw
@@ -34,10 +35,10 @@ namespace sw
          * @param pTick 슬롯마다의 틱, `constant::render::kMaxGPUTimestampSlot` 개. 준비되지 않은 슬롯의 값은 읽지 않습니다.
          * @param readyMask 이번에 읽힌 슬롯의 비트.
          * @param nanosPerTick 틱 하나가 몇 나노초인가 (DX: 1e9 / 주파수, GL: 1, Vulkan: timestampPeriod). `readGPUClockNanos` 와 같은 환산이어야 합니다.
-         * @param outFrame 슬롯 수만큼 채웁니다. 기록되지 않은 슬롯은 -1 이고, 부르는 쪽이 그 쌍을 통째로 버리는 약속입니다. readyMask 가 0 이면 비웁니다.
+         * @param outFrame 슬롯 수만큼 채웁니다. 기록되지 않은 슬롯은 -1 이고, 부르는 쪽이 그 쌍을 통째로 버리는 약속입니다. readyMask 가 비었으면 비웁니다.
          * @return 하나라도 풀었으면 true 입니다.
          */
-        static bool resolve( const uint64* pTick, GPUTimestampSlotMask readyMask, float64 nanosPerTick, RHITimestampFrame& outFrame );
+        static bool resolve( const uint64* pTick, const GPUTimestampSlotMask& readyMask, float64 nanosPerTick, RHITimestampFrame& outFrame );
 
         /** @brief 틱을 GPU 시계 나노초로 바꿉니다(`resolve` 의 기준점과 `readGPUClockNanos` 가 같은 환산을 쓰게 한 곳에 둡니다). */
         static int64 convertTickToNanos( uint64 tick, float64 nanosPerTick );

@@ -19,3 +19,32 @@ editorextension = ["ModuleManager", "App", "Server", "Games", "Programs"]
 # 전용 서버 구성은 오디오 · 렌더러 · 런타임 UI · 클라이언트 전용 소스 헤더를 읽지 않는다 — 이음매는 `IEngineAudioDriver` · `ISoundPlayer` · `IEngineRenderDriver` · `IEngineUIDriver` 와 게임 코드의 창구다.
 # Server 타깃 구성의 모든 타깃이 더 받는다(`sw_applyTargetLayerGate`). 게임 모듈의 `Client/` 는 게임마다 폴더라 여기 적지 않고 린트 `server-ui` 가 본다.
 serverbuild = ["Engine/Audio", "Engine/Renderer", "Engine/UI", "Engine/Window/Linux", "Engine/Input/Linux", "GameFramework/Client", "DevTools/Client"]
+# 리플렉션 파서는 Core 만 링크한다(Engine.dll 과 순환) — 그래도 리플렉션 스키마(매크로 · 키 · 형식 기술자)는 엔진과 같아야 해 Engine 헤더 몇 개를 읽는다.
+# `Source/` 가 Core 의 include 루트라 경로로는 나머지 Engine 헤더를 막지 못한다 — 게이트로 Engine 전체를 막고 아래 `[allow]` 의 헤더만 연다.
+reflectionparser = ["Engine", "ModuleAPI", "DevTools", "Editor", "ModuleManager", "App", "Server", "GameFramework", "Games"]
+
+# [allow] 게이트 이름 → 그 게이트가 막는 접두어 안에서도 여는 헤더(`Source/` 기준 경로). 연 헤더가 include 하는 헤더도 모두 열려 있어야 한다 — 아니면 configure 가 멈춘다.
+# 언리얼 Build.cs 의 `PublicIncludePathModuleNames`(헤더만 쓰고 링크하지 않는 의존)와 같은 자리다. 이 목록이 CMake 의 `ReflectionSchema` 헤더 묶음이기도 하다
+# (`SW_TARGET_LAYER_ALLOW_<게이트>`, Source/Programs/ReflectionParser/CMakeLists.txt) — 구현이 필요한 헤더를 넣지 않는다(파서가 링크하지 못한다).
+[allow]
+reflectionparser = [
+	"Engine/EngineMinimal.h",
+	"Engine/Foundation/EngineDefines.h",
+	"Engine/Foundation/Foundation.h",
+	"Engine/Reflection/EnumInfo.h",
+	"Engine/Reflection/FunctionInfo.h",
+	"Engine/Reflection/PropertyInfo.h",
+	"Engine/Reflection/ReflectionAnnotationKeys.h",
+	"Engine/Reflection/ReflectionConstants.h",
+	"Engine/Reflection/ReflectionContainers.h",
+	"Engine/Reflection/ReflectionEnumNames.h",
+	"Engine/Reflection/ReflectionIntellisense.h",
+	"Engine/Reflection/ReflectionMacros.h",
+	"Engine/Reflection/ReflectionMetadataBox.h",
+	"Engine/Reflection/ReflectionTypes.h",
+	"Engine/Reflection/ReflectionUnits.h",
+	"Engine/Reflection/TextAddress.h",
+	"Engine/Reflection/TypeCastHeader.h",
+	"Engine/Reflection/TypeInfo.h",
+	"Engine/Reflection/TypeLookupCache.h",
+]

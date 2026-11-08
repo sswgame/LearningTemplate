@@ -5,7 +5,7 @@
  *          축은 코드 표 하나다. 축마다 값을 넣는 코드(엔진 기동 · 사용자 설정 핸들러 · 현지화 · 데이터 레이어)가 따로 있어 데이터로 늘어나는 정책이 아니기 때문이다(값은 데이터다).
  *          - 쿠킹 축(`platform` · `target`): 쿠커가 펼쳐 쿠킹본에 남지 않는다. 런타임도 같은 값을 들고 있어(엔진 기동이 넣는다) 남은 식도 쿠커와 같은 답을 낸다.
  *          - 로드 축(`quality` · `locale` · `region` · `layer` · `feature` · `flag`): 쿠킹본에 `_when` 이 남고 읽을 때 정한다. 값이 바뀌면 그 태그를 읽은 리소스를 다시 읽는다(`ResourceComposition`).
- *          값은 엔진에 하나다 — 공유 캐시의 열쇠가 경로뿐이라 문맥이 둘이면 같은 경로가 두 결과를 가져야 한다(`docs/ResourceStructure.md` 의 한계). 주인은 코어 범위의 리소스 루트
+ *          값은 엔진에 하나다 — 공유 캐시의 열쇠가 경로뿐이라 문맥이 둘이면 같은 경로가 두 결과를 가져야 한다(`docs/ResourceStructure.md` 의 한계 — 몇 축만 바꿔 끼운 미리보기 합성 `ResourceContext::withTagOverride` 만 예외다). 주인은 코어 범위의 리소스 루트
  *          (`ContentRootSubsystem`)이고 엔진 코드는 `engine::getSubsystem<ResourceTags>()` 로, 서비스 표가 서기 전의 기동 코드는 `CoreParts::_pContentRoot` 로 닿는다.
  *
  *          언리얼은 플랫폼 ini 층과 Device Profile(쿠킹 · 실행 때 CVar 를 고른다), Godot 은 기능 태그(`feature tag`)로 프로젝트 설정 칸을 `칸.태그` 로 덮고,
@@ -73,6 +73,14 @@ namespace sw
         void remove( string_view tag );
         /** @brief 축 @p axisName 의 태그를 모두 끕니다. */
         void removeAxis( string_view axisName );
+        /**
+         * @brief @p overrideTags 의 태그마다 그 축의 태그를 끄고 그 태그를 켭니다(값 하나 축을 바꿔 끼운다).
+         * @details 미리보기 문맥(에디터 UI 미리보기의 기기 견본)이 엔진 값에서 몇 축만 바꿔 합칠 때 쓴다(`ResourceContext::withTagOverride`).
+         */
+        void overrideAxes( const ResourceTagSet& overrideTags );
+        /** @brief 켜진 태그가 모두 같으면 true 입니다. */
+        bool operator==( const ResourceTagSet& other ) const { return _listTag == other._listTag; }
+        bool operator!=( const ResourceTagSet& other ) const { return ( *this == other ) == false; }
         /** @brief 켜진 태그입니다(이름 순). */
         const vector<string>& getTags() const { return _listTag; }
 
@@ -133,8 +141,15 @@ namespace sw
         [[nodiscard]] bool setAxisValues( string_view axisName, const vector<string>& listValue );
         /** @brief 여러 값 축 @p axisName 의 값 @p value 를 켜거나 끕니다. 틀리면 `setAxisValue` 처럼 false 입니다. */
         [[nodiscard]] bool setTagActive( string_view axisName, string_view value, bool bActive );
+        /**
+         * @brief 값 하나 축들의 값을 한 번에 바꿉니다 — @p tags 의 태그(`축.값`)마다 그 축을 그 값으로 둡니다(알림은 한 번).
+         * @return 모양이 틀렸거나 · 모르는 축 · 여러 값 축 · 닫힌 목록 밖의 값이면 오류를 남기고 false 입니다(값을 바꾸지 않는다).
+         */
+        [[nodiscard]] bool setAxisTags( const ResourceTagSet& tags );
         /** @brief 지금 켜진 태그의 사본입니다. */
         [[nodiscard]] ResourceTagSet capture() const;
+        /** @brief 지금 켜진 태그에 @p overrideTags 의 축을 바꿔 끼운 사본입니다(`ResourceTagSet::overrideAxes`). 엔진 값은 그대로입니다. */
+        [[nodiscard]] ResourceTagSet captureWith( const ResourceTagSet& overrideTags ) const;
         /** @brief 태그 집합을 통째로 바꾸고 앞의 것을 돌려줍니다. 테스트가 문맥을 세우고 되돌릴 때 씁니다 — 바뀐 태그를 쓴 리소스는 다시 읽을 목록에 오른다. */
         ResourceTagSet exchange( const ResourceTagSet& tags );
 

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 벽돌 벽 — 21.5 × 6.5 cm 벽돌(줄 어긋남 0.5), 모르타르 줄눈, 벽돌마다 색, 큰 무늬. 부모(environmentsurface.material)의 값만 바꾼 프리셋이다. -->
+<MaterialDef formatVersion="0" name="BrickWall" _base="engine/materials/environmentsurface.material">
+	<_properties>
+		<item name="_baseColor" defaultValue="0.55 0.25 0.17 1"/>
+		<item name="_roughness" defaultValue="0.85"/>
+		<item name="_secondaryColor" defaultValue="0.62 0.60 0.55 1"/>
+		<item name="_secondaryRoughness" defaultValue="1"/>
+		<item name="_patternScale" defaultValue="0.215 0.065 0.01 0.5"/>
+		<item name="_patternShape" defaultValue="1 0.2 0.004 1"/>
+		<item name="_noiseStrength" defaultValue="0.2"/>
+		<item name="_noiseScale" defaultValue="0.05"/>
+		<item name="_macroVariation" defaultValue="0.3"/>
+		<item name="_macroScale" defaultValue="4"/>
+		<item name="_porosity" defaultValue="1"/>
+	</_properties>
+</MaterialDef>

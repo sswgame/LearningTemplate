@@ -16,7 +16,7 @@ namespace sw::editor
         return false;
     }
 
-    void IEditorAssetTypeActions::placeInViewport( GameObjectManager* /*pManager*/, const utf8* pPath, const float3& /*worldPos*/ ) const
+    void IEditorAssetTypeActions::placeInViewport( GameObjectManager* /*pManager*/, const utf8* pPath, const EditorPlacementPose& /*pose*/ ) const
     {
         SW_LOG_ERROR_ID( "EditorAssetTypeActions.PlaceNotImplemented", "'%#': the asset type says it can be placed in the viewport but does not implement placeInViewport - nothing was placed",
                          pPath );

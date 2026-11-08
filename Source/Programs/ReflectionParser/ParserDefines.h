@@ -134,6 +134,7 @@ namespace sw
         inline constexpr const utf8* kEmitBuiltinsGen = "--emit-builtins-gen";
         inline constexpr const utf8* kDepfile         = "--depfile";
         inline constexpr const utf8* kModuleLocal     = "--module-local";
+        inline constexpr const utf8* kTargetArg       = "--target-arg";
     } // namespace cli
 
     // 5) emit — *.tpl 골격 이름은 `EmitTemplate`(EmitTemplateStore.h) 열거형 하나다.

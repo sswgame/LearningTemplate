@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
@@ -49,7 +50,7 @@ namespace sw::editor
         const hashed_string& getSelectedNPC() const { return _selectedNPC; }
         void                 selectNPC( const hashed_string& npcID ) { _selectedNPC = npcID; }
         /** @brief 고른 NPC 의 @p system 안 번호입니다. 고르지 않았거나 없으면 -1 입니다. */
-        int32 findSelectedNPCIndex( const ScheduleSystem& system ) const;
+        [[nodiscard]] optional<int32> findSelectedNPCIndex( const ScheduleSystem& system ) const;
 
         /** @brief 시계를 따라가면 미리 볼 시각을 @p system 의 지금 시각으로 맞춥니다. */
         void  followClock( const ScheduleSystem& system );

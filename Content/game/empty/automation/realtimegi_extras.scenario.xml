@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  실시간 프로브의 하늘 가림 · 발광(LightProbeVolumeComponent::_realtimeSkyOcclusion · _realtimeEmissiveIntensity) — 두 값이 0 인 무대(이전 그림)와 1 인 무대를 같은 실행에서 견준다.
+  켜면 발광 큐브(머티리얼 _emissiveColor)의 빛이 프로브를 거쳐 큰 큐브 옆면 · 바닥을 물들이고(probe_update.hlsl 의 발광 칸), 반사 앰비언트가 프로브의 하늘 보임만큼 가려진다(lighting.hlsli).
+  음성 대조(ExpectImagesDiffer) — 두 설정이 그림을 바꾸지 않으면 진다. 켠 그림은 골든으로도 지킨다(통합에서 기록).
+  실행: ctest -R Scenario.game.empty.realtimegi_extras
+-->
+<Scenario name="game.empty.realtimegi_extras" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/realtimegi_extras_off.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Wait frames="120"/>
+	<Screenshot file="realtimegi_extras_off.ppm"/>
+	<LoadScene path="game/empty/maps/realtimegi_extras.scene.xml" timeoutFrames="600"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Wait frames="120"/>
+	<Screenshot file="realtimegi_extras_on.ppm"/>
+	<Wait frames="2"/>
+	<ExpectImagesDiffer first="realtimegi_extras_off.ppm" second="realtimegi_extras_on.ppm" region="0,0.3,1,0.7" minDiffering="0.02"/>
+	<ExpectImage file="realtimegi_extras_on.ppm" golden="realtimegi_extras"/>
+	<Pass/>
+</Scenario>

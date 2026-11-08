@@ -148,20 +148,20 @@ namespace sw
         const uint32 boneCount = skeleton.getBoneCount();
         outListWeight.assign( boneCount, 0.0f );
         // 본마다 그 본에서 시작하는 root 의 가중치다(-1 은 root 가 아님).
-        vector<float32> listRootWeight( boneCount, -1.0f );
-        vector<int32>   listSingleBone( _listEntry.size(), constant::invalid_index::kInt32 );
+        vector<float32>          listRootWeight( boneCount, -1.0f );
+        vector<optional<uint32>> listSingleBone( _listEntry.size() ); // 퍼뜨리지 않는 항목의 본(퍼뜨리는 항목은 없음)
         for ( size_t entryIndex = 0; entryIndex < _listEntry.size(); ++entryIndex )
         {
             const AnimationBoneMaskEntry& entry     = _listEntry[entryIndex];
-            const int32                   boneIndex = skeleton.findBoneIndex( entry._bone );
-            if ( boneIndex < 0 )
+            const optional<uint32>        boneIndex = skeleton.findBoneIndex( entry._bone );
+            if ( boneIndex.has_value() == false )
             {
                 SW_LOG_ERROR_ID( "AnimationBoneMask.BoneMaskNamesBone", "Bone mask '%#' names bone '%#' that is not in the skeleton", _name.c_str(), entry._bone.c_str() );
                 outListWeight.assign( boneCount, 0.0f );
                 return false;
             }
             if ( entry._bPropagate == SW_TRUE )
-                listRootWeight[static_cast<uint32>( boneIndex )] = entry._weight;
+                listRootWeight[*boneIndex] = entry._weight;
             else
                 listSingleBone[entryIndex] = boneIndex;
         }
@@ -176,8 +176,8 @@ namespace sw
         }
         for ( size_t entryIndex = 0; entryIndex < _listEntry.size(); ++entryIndex )
         {
-            if ( listSingleBone[entryIndex] >= 0 )
-                outListWeight[static_cast<uint32>( listSingleBone[entryIndex] )] = _listEntry[entryIndex]._weight;
+            if ( listSingleBone[entryIndex].has_value() )
+                outListWeight[*listSingleBone[entryIndex]] = _listEntry[entryIndex]._weight;
         }
         return true;
     }

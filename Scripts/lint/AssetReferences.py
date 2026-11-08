@@ -5,7 +5,8 @@ Scripts/lint/AssetReferences.py
 
 에셋 참조 검사 — 에셋은 경로 하나로 가리키므로(식별자 표 · `.meta` 는 없다, 언리얼 소프트 경로와 같다) 끊어진 경로를 커밋 전에 잡는다.
 
-- 어떤 칸이 경로인지는 데이터 한 곳(`Config/Dev/AssetReferenceFields.json`)이 정한다. 같은 파일을 C++ 검사(`App --check-asset-refs`,
+- 어떤 칸이 경로인지는 리플렉션 선언이 정하고 파서가 낸 표(`Config/Dev/AssetReferenceFields.generated.json`) 한 곳에 모인다. 도메인 · 확장자 · 임포트 폴더는
+  `Config/Dev/AssetReferenceFields.json` 이다. 같은 파일을 C++ 검사(`App --check-asset-refs`,
   ctest `ToolCheckAssetRefs`)와 에디터 이름 바꾸기 · 옮기기(`AssetReferenceFields`), `py -3 -m Scripts move-asset` 이 읽는다.
   글 모양을 짐작하는 정규식으로 찾지 않는다 — 칸 이름이 목록에 있는 속성 · 요소 글 · JSON 키의 값만, 그 안에서도 도메인(`engine/` …)으로 시작하는 낱말만 경로다.
 - 있음 판정은 **스테이지(인덱스)** 기준이다. 커밋하지 않은 파일은 없는 것으로 본다(작업 트리에만 있는 파일을 가리킨 커밋은 다른 체크아웃에서 끊긴다).
@@ -79,10 +80,10 @@ def _require(document: dict, key: str, kind: type):
 
 
 def loadConfig(projectRoot: Path) -> FieldConfig:
-    """칸 목록을 읽습니다(손으로 읽는 XML 칸 `listField` + 파서가 낸 표). 파일이 없거나 칸이 빠지면 예외다(기본값으로 검사하지 않는다)."""
+    """규칙(도메인 · 확장자 · 임포트 폴더 · CMake)과 칸 목록(파서가 낸 표 하나)을 읽습니다. 파일이 없거나 칸이 빠지면 예외다(기본값으로 검사하지 않는다)."""
     document = json.loads((projectRoot / kConfigPath).read_text(encoding="utf-8"))
     generated = json.loads((projectRoot / kGeneratedPath).read_text(encoding="utf-8"))
-    setField = set(_require(document, "listField", list))
+    setField: set[str] = set()
     for owner in _require(generated, "listOwner", list):
         setField.update(_require(owner, "listField", list))
     listImported = []

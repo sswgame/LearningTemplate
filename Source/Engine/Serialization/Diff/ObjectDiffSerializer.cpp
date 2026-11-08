@@ -92,9 +92,9 @@ namespace sw
                 return false;
 
             const vector<PropertyInfo>& listProp     = typeInfo.getPropertiesWithBase();
-            const size_t                matchedIndex = SerializerUtil::findPropertyIndexByNameHash( listProp, nameHash );
-            const bool                  bMatched     = matchedIndex < listProp.size() && SerializerUtil::shouldSerializeProperty( typeInfo, listProp[matchedIndex], context );
-            const PropertyInfo*         pProp        = bMatched ? &listProp[matchedIndex] : nullptr;
+            const optional<uint32>      matchedIndex = SerializerUtil::findPropertyIndexByNameHash( listProp, nameHash );
+            const bool                  bMatched     = matchedIndex.has_value() && SerializerUtil::shouldSerializeProperty( typeInfo, listProp[*matchedIndex], context );
+            const PropertyInfo*         pProp        = bMatched ? &listProp[*matchedIndex] : nullptr;
             if ( pProp != nullptr )
             {
                 // 값 주소가 없거나 페이로드를 끝까지 읽지 못하면 diff 가 틀린 것이다. 건너뛰지 않고 실패한다(필드 실패와 객체 실패 모두 diff 적용의 실패다).

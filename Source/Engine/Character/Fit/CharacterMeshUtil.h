@@ -89,8 +89,8 @@ namespace sw
          *          조각이 쓰는 정점만 처음 쓰인 순서로 싣고 스킨 · 모프 타깃(이름으로 합치고 없는 부품은 0)이 따라온다. 낮은 상세 단계(LOD)는 합치지 않는다(병합 결과는 LOD 0 만 가진다).
          *          정점이 0 인 조각(덮인 삼각형을 모두 뺀 옷)은 빈 구간으로 남는다.
          * @return 부품이 없거나, 메시가 nullptr 이거나, 정점 애니메이션을 가졌거나, 고른 구간이 메시에 없거나, 훅 없이 조각 이름이 겹쳤거나, 한 그룹에 시점 가시성이 섞였거나, 스킨 유무 · 본 수가 섞였거나,
-         *         합친 정점이 하나도 없으면 까닭을 @p pOutError 에 남기고 false 입니다.
+         *         합친 정점이 하나도 없으면 그 까닭입니다.
          */
-        [[nodiscard]] static bool mergeMeshes( vector_reference<const MeshMergePart> listPart, const IMeshMergeHooks* pHooks, MeshMergeResult& outResult, string* pOutError );
+        [[nodiscard]] static expected<MeshMergeResult> mergeMeshes( vector_reference<const MeshMergePart> listPart, const IMeshMergeHooks* pHooks );
     };
 } // namespace sw

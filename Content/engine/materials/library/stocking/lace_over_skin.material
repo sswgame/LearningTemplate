@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 외형 라이브러리 프리셋(stocking): 레이스 스타킹(꽃 고리). 값만 바꾼다 — 셰이더 변형은 갈래 바탕과 같다. -->
+<MaterialDef formatVersion="0" name="LaceOverSkin" _base="engine/materials/library/stocking/base.material">
+	<_properties>
+		<item name="_patternAmount" defaultValue="1" />
+		<item name="_patternWidth" defaultValue="0.03" />
+		<item name="_patternScale" defaultValue="30" />
+	</_properties>
+</MaterialDef>

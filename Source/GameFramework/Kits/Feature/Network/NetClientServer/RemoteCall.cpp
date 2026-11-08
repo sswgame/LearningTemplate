@@ -47,10 +47,10 @@ namespace sw
             {
                 if ( parameter._pType == nullptr )
                     return false;
-                const hashed_string typeName     = parameter._pType->_pGetTypeName();
-                const int32         builtinIndex = ReflectedValueUtil::findBuiltinIndex( typeName );
-                if ( 0 <= builtinIndex )
-                    return ReflectedValueUtil::getBuiltinClass( builtinIndex ) != ReflectBuiltinClass::Other;
+                const hashed_string   typeName     = parameter._pType->_pGetTypeName();
+                const optional<int32> builtinIndex = ReflectedValueUtil::findBuiltinIndex( typeName );
+                if ( builtinIndex.has_value() )
+                    return ReflectedValueUtil::getBuiltinClass( *builtinIndex ) != ReflectBuiltinClass::Other;
                 return game::getSubsystem<TypeRegistry>().findEnum( typeName ) != nullptr;
             }
 
@@ -69,9 +69,8 @@ namespace sw
                     return false;
                 for ( const ReflectedValue& argument : listArg )
                 {
-                    const int32 builtinIndex = ReflectedValueUtil::findBuiltinIndex( argument._typeName );
-                    const bool  bBuiltinText = 0 <= builtinIndex && ReflectedValueUtil::getBuiltinClass( builtinIndex ) != ReflectBuiltinClass::Other;
-                    const bool  bEnum        = bBuiltinText == false && game::getSubsystem<TypeRegistry>().findEnum( argument._typeName ) != nullptr;
+                    const bool bBuiltinText = ReflectedValueUtil::getBuiltinClass( argument._typeName ) != ReflectBuiltinClass::Other;
+                    const bool bEnum        = bBuiltinText == false && game::getSubsystem<TypeRegistry>().findEnum( argument._typeName ) != nullptr;
                     if ( bBuiltinText == false && bEnum == false )
                         return false;
                     outListText.push_back( argument.toText() );

@@ -1,14 +1,13 @@
 /**
  * @file ProfilerBackend.h
- * @brief 외부 프로파일러 출력(`IProfilerBackend`)을 고르고, 계측 지점을 프로세스 수명 저장소에 둡니다.
+ * @brief 외부 프로파일러 출력(`IProfilerBackend`)의 활성 칸과 계측 지점의 프로세스 수명 저장소입니다.
  *
  * [켜는 법]
- * 개발 빌드에서도 기본은 꺼짐입니다. `-gv_tracy=1`(개발 도구 `ProfilerLaunchSwitches` 가 기동 단계에 켠다)로 켜거나, 에디터 프로파일러 패널의 "Tracy 열기" 가 실행 중에 켭니다.
- * 꺼져 있으면 Tracy 클라이언트 DLL 을 **올리지도 않습니다**(지연 로드) — 리슨 소켓 · 수집 스레드가 없습니다.
- * 한 번 켜면 프로세스가 끝날 때까지 켜져 있습니다(Tracy 는 중간에 끊으면 뷰어 쪽 타임라인이 깨집니다).
+ * 개발 빌드에서도 기본은 꺼짐입니다. 출력 구현(Tracy — `DevTools/Profiling/Tracy/TracyProfilerBackend`)은 개발 도구에 있고, 켜는 쪽이 `startBackend` 로 꽂습니다
+ * (`-gv_tracy=1` 은 `ProfilerLaunchSwitches` 가 기동 단계에, 에디터 프로파일러 패널의 "Tracy 열기" 는 실행 중에). 엔진은 어떤 외부 프로파일러인지 모릅니다.
  *
  * [Shipping]
- * `SW_PROFILER_BACKEND_COMPILED` 가 0 이라 계측 매크로가 지점을 등록하지도, 출력에 묻지도 않습니다. Tracy 는 링크조차 하지 않습니다.
+ * `SW_PROFILER_BACKEND_COMPILED` 가 0 이라 계측 매크로가 지점을 등록하지도, 출력에 묻지도 않습니다. 개발 도구가 없어 출력도 없습니다.
  */
 #pragma once
 #include "Core/Foundation/Macros.h"
@@ -19,7 +18,7 @@
 
 /**
  * @brief 외부 프로파일러 출력이 이 빌드에 컴파일되는지 나타냅니다. Shipping 에서는 0 입니다(계측 매크로가 출력을 묻지도 않는다).
- * @details Tracy 가 이 빌드에 링크되었는지는 따로입니다(`ProfilerBackend::isTracyCompiled`). 링크하지 않은 개발 빌드는 출력 자리만 있고 비어 있습니다.
+ * @details Tracy 가 이 빌드에 링크되었는지는 따로입니다(`TracyProfilerBackend::isCompiled`). 링크하지 않은 개발 빌드는 출력 자리만 있고 비어 있습니다.
  */
 #if defined( SW_SHIPPING )
     #define SW_PROFILER_BACKEND_COMPILED 0
@@ -48,16 +47,12 @@ namespace sw
         static void shutdown();
 
         /**
-         * @brief Tracy 출력을 켭니다. 처음 부르면 TracyClient.dll 이 올라오고 수집 스레드가 섭니다. 이미 켜져 있으면 true 입니다.
-         * @details @p bObserveAllocations 면 할당 관찰도 겁니다(할당마다 큐 기록이 붙어 느리다 — `-gv_tracyMemory`). 엔진 `FrameProfiler` 도 함께 켭니다 — 카운터 그래프 · GPU 타임스탬프가
-         *          그 경로를 탑니다.
-         * @return Tracy 가 이 빌드에 없으면 false 입니다.
+         * @brief 외부 출력 @p backend 를 활성으로 꽂고 계측을 잇습니다 — 태스크 · 스테이지 구간 훅, @p bObserveAllocations 면 할당 관찰, 엔진 `FrameProfiler`(카운터 그래프 · GPU 타임스탬프가
+         *        그 경로를 탄다). 이미 같은 출력이 활성이면 아무것도 하지 않고 true 입니다.
+         * @note @p backend 는 프로세스 수명이어야 합니다(늦게 닫히는 구간이 그것을 부른다 — `setActiveBackend` 와 같은 규칙).
+         * @return 이 빌드에 외부 출력이 없으면(Shipping) false 입니다.
          */
-        static bool startTracy( bool bObserveAllocations );
-        /** @brief Tracy 가 이 빌드에 링크되어 있으면 true 입니다(Shipping · `SW_ENABLE_TRACY=OFF` 이면 false). */
-        static bool isTracyCompiled();
-        /** @brief Tracy 가 쓰는 데이터 포트입니다(뷰어 연결 · 에디터 버튼). */
-        static uint16 getTracyPort();
+        static bool startBackend( IProfilerBackend& backend, bool bObserveAllocations );
 
         /** @brief 활성 출력입니다. 없으면 nullptr 입니다. 어느 스레드에서나 부를 수 있습니다. */
         static IProfilerBackend* getActiveBackend();
@@ -67,7 +62,7 @@ namespace sw
          */
         static void setActiveBackend( IProfilerBackend* pBackend );
 #if SW_PROFILER_BACKEND_COMPILED
-        /** @brief Tracy 가 켜질 때 `TaskManager::bindProfileHook` 에 꽂는 훅입니다(테스트가 같은 것을 꽂는다). 태스크 · 스테이지 이름이 구간 이름이 됩니다. */
+        /** @brief 출력을 켤 때(`startBackend`) `TaskManager::bindProfileHook` 에 꽂는 훅입니다(테스트가 같은 것을 꽂는다). 태스크 · 스테이지 이름이 구간 이름이 됩니다. */
         static const TaskProfileHook* getTaskProfileHook();
 #endif
 
