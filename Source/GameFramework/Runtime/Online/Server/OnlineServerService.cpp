@@ -26,23 +26,13 @@ namespace sw
         class OnlineServerService final : public IServerService
         {
         public:
-            [[nodiscard]] bool initialize( const ServerServiceContext& context, string& outError ) override
-            {
-                const expected<void> result = assemble( context );
-                if ( result.has_value() )
-                    return true;
-                outError = string( result.error().message() ) + ": " + string( result.error().detail() );
-                return false;
-            }
-            void  shutdown() override { _runtime.shutdown(); }
-            void  update( UnixMilliseconds nowMs ) override { _runtime.update( nowMs ); }
-            int32 getConnectionCount() const override { return _runtime.getConnectionCount(); }
-            int32 getOpenWorkCount() const override { return _runtime.getOpenWorkCount(); }
-            void  beginShutdown( const ServerShutdownNotice& notice ) override { _runtime.beginShutdown( notice ); }
-
-        private:
             /** @brief 설정을 읽어 런타임을 세웁니다. 서버 설정이 없거나 온라인 설정 파일이 없으면 할 일 없이 성공입니다. */
-            [[nodiscard]] expected<void> assemble( const ServerServiceContext& context );
+            [[nodiscard]] expected<void> initialize( const ServerServiceContext& context ) override;
+            void                         shutdown() override { _runtime.shutdown(); }
+            void                         update( UnixMilliseconds nowMs ) override { _runtime.update( nowMs ); }
+            int32                        getConnectionCount() const override { return _runtime.getConnectionCount(); }
+            int32                        getOpenWorkCount() const override { return _runtime.getOpenWorkCount(); }
+            void                         beginShutdown( const ServerShutdownNotice& notice ) override { _runtime.beginShutdown( notice ); }
 
         private:
             SystemMonotonicClock _clock; ///< 런타임이 빌린다(메모리 캐시 만료 · 외부 HTTP 시한). 런타임보다 먼저 선언한다
@@ -53,7 +43,7 @@ namespace sw
 
 namespace sw
 {
-    expected<void> OnlineServerService::assemble( const ServerServiceContext& context )
+    expected<void> OnlineServerService::initialize( const ServerServiceContext& context )
     {
         const bool bNoServerConfig = context._pServerConfig == nullptr || context._pConfigManager == nullptr || context._serverConfigPath.empty();
         if ( bNoServerConfig )

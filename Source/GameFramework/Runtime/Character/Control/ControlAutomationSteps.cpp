@@ -30,17 +30,16 @@ namespace sw
     {
         struct ControlAutomationStepsInternal
         {
-            /** @brief 있으면 수로 읽습니다. @p outbPresent 는 속성이 있었는가입니다. 형식이 틀리면 false 와 이유. */
-            [[nodiscard]] static expected<void> readFloat( const AutomationStep& step, string_view name, float32& outValue, bool& outbPresent )
+            /** @brief 있으면 수로 읽습니다. 속성이 없으면 빈 값, 형식이 틀리면 그 글이 대상인 오류입니다. */
+            [[nodiscard]] static expected<optional<float32>> readFloat( const AutomationStep& step, string_view name )
             {
                 const string* pValue = step.findAttribute( name );
-                outbPresent          = pValue != nullptr;
-                outValue             = 0.0f;
-                if ( pValue == nullptr || StringUtil::parseFloat( StringUtil::trim( string_view{ *pValue } ), outValue ) )
-                    return {};
-                Error error{ ErrorKind::InvalidArgument, "the attribute must be a number", name };
-                error.appendDetail( " = '" ).appendDetail( *pValue ).appendDetail( "'" );
-                return unexpected( error );
+                if ( pValue == nullptr )
+                    return optional<float32>{};
+                float32 value = 0.0f;
+                if ( StringUtil::parseFloat( StringUtil::trim( string_view{ *pValue } ), value ) )
+                    return optional<float32>{ value };
+                return unexpected( Error{ ErrorKind::InvalidArgument, "yaw and pitch must be numbers", *pValue } );
             }
 
             /** @brief 이름의 오브젝트입니다. 없으면 실패를 적고 nullptr 입니다. */
@@ -53,26 +52,22 @@ namespace sw
                 return pObject;
             }
 
-            // 검사 함수의 모양(bool + outError)은 엔진의 `AutomationStepValidateFunction` 이 정한다 — 그 형식이 옮겨지면 함께 옮긴다.
-            static bool validateIntentStep( const AutomationStep& step, string& outError )
+            static expected<void> validateIntentStep( const AutomationStep& step )
             {
                 ControlIntentStepParams params;
-                if ( step.readFields( params, outError, { "yaw", "pitch" } ) == false )
-                    return false;
-                float32              value    = 0.0f;
-                bool                 bPresent = false;
-                const expected<void> numbers  = readFloat( step, "yaw", value, bPresent ).and_then( [&]
-                { return readFloat( step, "pitch", value, bPresent ); } );
-                if ( numbers.has_value() == false )
+                const expected<void>    read = step.readFields( params, { "yaw", "pitch" } );
+                if ( read.has_value() == false )
+                    return read;
+                for ( const string_view name : { string_view{ "yaw" }, string_view{ "pitch" } } )
                 {
-                    outError = step.describe() + ": " + string( numbers.error().message() ) + " (" + string( numbers.error().detail() ) + ")";
-                    return false;
+                    const expected<optional<float32>> angle = readFloat( step, name );
+                    if ( angle.has_value() == false )
+                        return unexpected( angle.error() );
                 }
                 // 이동 길이는 1 이하다(`ControlIntent::_move`) — 선 · 파일은 넘는 값을 거절하므로 시나리오도 받지 않는다.
                 if ( params._move._x * params._move._x + params._move._y * params._move._y <= 1.0f + MathUtil::kEpsilon )
-                    return true;
-                outError = step.describe() + ": move must have length at most 1";
-                return false;
+                    return {};
+                return unexpected( Error{ ErrorKind::InvalidArgument, "move must have length at most 1" } );
             }
 
             /** @brief 폰을 기록 조종자로 `frames` 틱 동안 몰고 원래 조종자에게 돌려준다. 버튼은 첫 틱에 발동 + 내내 누름. */
@@ -88,19 +83,15 @@ namespace sw
                     runner.recordFailure( step, "object '" + params._pawn + "' has no pawn" );
                     return true;
                 }
-                ControlIntent intent{};
-                float32       yaw       = 0.0f;
-                float32       pitch     = 0.0f;
-                bool          bHasYaw   = false;
-                bool          bHasPitch = false;
-                if ( readFloat( step, "yaw", yaw, bHasYaw ).and_then( [&]
-                { return readFloat( step, "pitch", pitch, bHasPitch ); } )
-                         .has_value() == false )
-                    return false; // 검사(`validateIntentStep`)가 같은 읽기를 이미 통과시켰다
+                ControlIntent                     intent{};
+                const expected<optional<float32>> yaw   = readFloat( step, "yaw" );
+                const expected<optional<float32>> pitch = readFloat( step, "pitch" );
+                if ( yaw.has_value() == false || pitch.has_value() == false )
+                    return false;
                 intent._move         = params._move;
                 intent._moveUp       = params._up;
-                intent._controlYaw   = bHasYaw ? yaw : pPawn->getIntent()._controlYaw;
-                intent._controlPitch = bHasPitch ? pitch : pPawn->getIntent()._controlPitch;
+                intent._controlYaw   = yaw->value_or( pPawn->getIntent()._controlYaw ); // 적지 않으면 지금 바라보는 쪽을 둔다
+                intent._controlPitch = pitch->value_or( pPawn->getIntent()._controlPitch );
                 string_view rest     = params._buttons;
                 while ( rest.empty() == false )
                 {
