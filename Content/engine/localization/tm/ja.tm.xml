@@ -72,6 +72,7 @@
 		<entry source="Center" text="中心" />
 		<entry source="Chains" text="チェーン" />
 		<entry source="Check" text="チェック" />
+		<entry source="Clamped to range: {clamped}" text="範囲に収めた: {clamped}" />
 		<entry source="Clear target" text="ターゲットを解除" />
 		<entry source="Click a node to edit it" text="ノードをクリックして編集" />
 		<entry source="Click to edit the curve" text="クリックしてカーブを編集" />

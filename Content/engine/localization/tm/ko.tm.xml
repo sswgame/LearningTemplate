@@ -76,6 +76,7 @@
 		<entry source="Center" text="중심" />
 		<entry source="Chains" text="체인" />
 		<entry source="Check" text="검사" />
+		<entry source="Clamped to range: {clamped}" text="범위로 자름: {clamped}" />
 		<entry source="Clear target" text="대상 지우기" />
 		<entry source="Click a node to edit it" text="노드를 누르면 편집합니다" />
 		<entry source="Click to edit the curve" text="눌러서 곡선 편집" />

@@ -585,7 +585,7 @@ SW_TEST_CASE( CatalogTableEditTest, DescribesWhatChangedOrWhyItWasRefused )
     SW_EXPECT_TRUE( description == "Removed row from Item" );
 
     SW_EXPECT_FALSE( ( CatalogTableEdit{ CatalogTableEdit::Kind::UnsetCell, document.getGroups()[0]._listRow[0], "nope", "" }.apply( document, description ) ) );
-    SW_EXPECT_TRUE( description == "the element has no such attribute" ); // 거절의 이유가 그대로 나온다
+    SW_EXPECT_TRUE( description == "nope: the element has no such attribute" ); // 거절의 이유가 대상(속성 이름)과 함께 나온다
 }
 
 // ---------------------------------------------------------------------- 파일 목록

@@ -1344,6 +1344,11 @@
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdPluginFormat.Clamped" source="Clamped to range: {clamped}">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdPluginFormat.Client" source="{focused}Client {worldIndex}">
 			<origins>
 				<item>Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp</item>
@@ -1357,11 +1362,6 @@
 		</entry>
 		<entry key="EdPluginFormat.CutVertsMovedMax"
 		       source="{name}: cut {cutTriangleCount}/{triangleCount} ({cutRatio}%), {movedVertexCount} verts moved, max push {maxDelta}">
-			<origins>
-				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginFormat.Clamped" source="Clamped to range: {clamped}">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>

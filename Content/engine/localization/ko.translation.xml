@@ -366,6 +366,7 @@
 		<entry key="EdPluginFormat.BonesOverridden"
 		       text="본 {boneCount}개, 덮어씀 {overridesCount}개{dirty}"
 		       sourceHash="707eff48e4e0e751" />
+		<entry key="EdPluginFormat.Clamped" text="범위로 자름: {clamped}" sourceHash="cc1c67ea126eb653" />
 		<entry key="EdPluginFormat.Client" text="{focused}클라이언트 {worldIndex}" sourceHash="9c2c41007f64608b" />
 		<entry key="EdPluginFormat.ClipS"
 		       text="{role, select, anchor {기준} required {필수} other {선택}}  클립 {clip}  {stage} {clipSeconds}초{clipLength, select, unknown {  (클립 길이 모름 - 프리팹을 고르세요)} other {}}"
@@ -373,7 +374,6 @@
 		<entry key="EdPluginFormat.CutVertsMovedMax"
 		       text="{name}: 자름 {cutTriangleCount}/{triangleCount}({cutRatio}%), 정점 {movedVertexCount}개 옮김, 최대 밀기 {maxDelta}"
 		       sourceHash="123a644d3007c563" />
-		<entry key="EdPluginFormat.Clamped" text="범위로 자름: {clamped}" sourceHash="cc1c67ea126eb653" />
 		<entry key="EdPluginFormat.Dropped" text="빠짐: {dropped}" sourceHash="ce2449119803e99d" />
 		<entry key="EdPluginFormat.GMConnection" text="GM 연결: {stateText}" sourceHash="ba6187deff08f6db" />
 		<entry key="EdPluginFormat.Id"

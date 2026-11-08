@@ -374,6 +374,7 @@
 		<entry key="EdPluginFormat.BonesOverridden"
 		       text="ボーン {boneCount} 個、上書き {overridesCount} 個{dirty}"
 		       sourceHash="707eff48e4e0e751" />
+		<entry key="EdPluginFormat.Clamped" text="範囲に収めた: {clamped}" sourceHash="cc1c67ea126eb653" />
 		<entry key="EdPluginFormat.Client" text="{focused}クライアント {worldIndex}" sourceHash="9c2c41007f64608b" />
 		<entry key="EdPluginFormat.ClipS"
 		       text="{role, select, anchor {アンカー} required {必須} other {任意}}  クリップ {clip}  {stage} {clipSeconds} 秒{clipLength, select, unknown {  (クリップの長さ不明 - プレハブを選んでください)} other {}}"
@@ -381,7 +382,6 @@
 		<entry key="EdPluginFormat.CutVertsMovedMax"
 		       text="{name}: カット {cutTriangleCount}/{triangleCount}({cutRatio}%)、頂点 {movedVertexCount} 個移動、最大押し出し {maxDelta}"
 		       sourceHash="123a644d3007c563" />
-		<entry key="EdPluginFormat.Clamped" text="範囲に収めた: {clamped}" sourceHash="cc1c67ea126eb653" />
 		<entry key="EdPluginFormat.Dropped" text="除外: {dropped}" sourceHash="ce2449119803e99d" />
 		<entry key="EdPluginFormat.GMConnection" text="GM 接続: {stateText}" sourceHash="ba6187deff08f6db" />
 		<entry key="EdPluginFormat.Id"
