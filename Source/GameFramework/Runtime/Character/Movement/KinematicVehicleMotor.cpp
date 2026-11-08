@@ -310,7 +310,7 @@ namespace sw
     {
         const float32 cap          = computeSpeedCap();
         const float32 throttle     = input._throttle;
-        const float32 acceleration = _settings.computeDriveAcceleration();
+        const float32 acceleration = _settings._inertia.limitDriveAcceleration( _settings.computeDriveAcceleration(), inoutForwardSpeed ); // 출력 한계 — 빠를수록 · 오르막에서 처진다
         const float32 braking      = _settings.computeBrakeDeceleration();
         float32       speed        = inoutForwardSpeed;
         if ( isBoosting() && throttle >= 0.0f )

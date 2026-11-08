@@ -102,6 +102,36 @@ SW_TEST_CASE( KinematicVehicleMotorTest, AlongAccelerationIsSlopeMinusResistance
     SW_EXPECT_NEAR( 0.0f, slow + inertia.computeAlongAcceleration( slow, 0.0f, 0.1f, Util::kStep ) * Util::kStep, 1.0e-6f );
 }
 
+/** @brief [KinematicVehicleMotorTest] 출력 한계: 구동 가속도는 P/(m·v) 까지, 0 이면 한계 없음, 서 있을 때는 kPowerMinSpeed 로 본다. 오르막에서 다리 · 페달로 미는 몸은 P/(m·g·sin) 에 선다 */
+SW_TEST_CASE( KinematicVehicleMotorTest, PowerLimitCapsDriveAndSlowsClimbs )
+{
+    InertiaSettings inertia;
+    inertia._mass    = 500.0f;
+    inertia._gravity = 10.0f;
+    SW_EXPECT_NEAR( 6.0f, inertia.limitDriveAcceleration( 6.0f, 10.0f ), 1.0e-6f ); // 한계 없음
+    inertia._maxPower = 5000.0f;
+    SW_EXPECT_NEAR( 1.0f, inertia.limitDriveAcceleration( 6.0f, 10.0f ), 1.0e-5f ); // 5000 / (500·10)
+    SW_EXPECT_NEAR( 6.0f, inertia.limitDriveAcceleration( 6.0f, 0.5f ), 1.0e-5f );  // 10 / 1 m/s 로 본 한계 > 6 — 출발은 가속 한계
+    SW_EXPECT_NEAR( 2.0f, inertia.limitDriveAcceleration( 6.0f, -5.0f ), 1.0e-5f ); // 뒤로 가도 속도 크기로 본다
+
+    // 말과 같은 적분(경사 당김 → 걸음새 속도로 다가감) — 기울기 사인 0.2 에서 평형 5000 / (500·10·0.2) = 5 m/s, 목표 10 m/s 에 닿지 않는다.
+    float32 speed = 0.0f;
+    for ( int32 stepIndex = 0; stepIndex < 60 * 30; ++stepIndex )
+    {
+        speed += inertia.computeAlongAcceleration( speed, 0.2f, 0.0f, Util::kStep ) * Util::kStep;
+        speed = MathUtil::moveToward( speed, 10.0f, inertia.limitDriveAcceleration( 6.0f, speed ) * Util::kStep );
+    }
+    SW_EXPECT_NEAR( 5.0f, speed, 0.05f );
+    // 평지에서는 같은 말이 목표 속도에 닿는다(출력이 공기 저항 없는 평지 유지에는 모자라지 않다).
+    float32 flat = 0.0f;
+    for ( int32 stepIndex = 0; stepIndex < 60 * 30; ++stepIndex )
+    {
+        flat += inertia.computeAlongAcceleration( flat, 0.0f, 0.0f, Util::kStep ) * Util::kStep;
+        flat = MathUtil::moveToward( flat, 10.0f, inertia.limitDriveAcceleration( 6.0f, flat ) * Util::kStep );
+    }
+    SW_EXPECT_NEAR( 10.0f, flat, 1.0e-3f );
+}
+
 /** @brief [KinematicVehicleMotorTest] 같은 언덕: 썰매는 내리막에서 멈춘 데서 빨라지고, 오르막에서는 평지보다 빨리 느려진다 */
 SW_TEST_CASE( KinematicVehicleMotorTest, SameHillSpeedsUpDownhillAndSlowsUphill )
 {
