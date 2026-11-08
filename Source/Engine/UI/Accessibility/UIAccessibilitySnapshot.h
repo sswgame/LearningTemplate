@@ -24,7 +24,7 @@ namespace sw
     /** @brief 접근성 트리의 노드 하나입니다. */
     struct AccessibleNode
     {
-        WidgetID       _widget{ kInvalidWidgetID };                ///< 위젯 번호입니다(화면 트리 안에서 유일).
+        WidgetID       _widget{ kInvalidWidgetID };                ///< 위젯 토큰입니다(`WidgetID`).
         uint32         _screen{ 0 };                               ///< 위젯이 속한 화면 핸들입니다(`UIScreenHandle`, 0 은 화면 없음).
         int32          _parent{ constant::invalid_index::kInt32 }; ///< 가장 가까운 노드 조상의 목록 번호입니다(-1 이면 접근성 루트 바로 아래).
         float4         _bounds{};                                  ///< 화면 사각형입니다(x, y, 너비, 높이, UI 단위·뷰포트 원점 기준).
@@ -47,6 +47,8 @@ namespace sw
         }
         /** @brief (화면, 위젯)의 노드 번호입니다. 없으면 -1 입니다. */
         int32 findNode( uint32 screen, WidgetID widget ) const;
+        /** @brief (화면, 위젯 토큰 키 `WidgetID::getKey`)의 노드 번호입니다 — 글자 경로에서 읽은 키로 찾는 쪽(AT-SPI)이 쓴다. 없으면 -1 입니다. */
+        int32 findNodeByWidgetKey( uint32 screen, uint64 widgetKey ) const;
 
         // 접근성 트리를 뽑는 도구입니다.
         /**

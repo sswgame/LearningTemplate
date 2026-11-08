@@ -33,14 +33,11 @@ namespace sw
         /** @brief 빈 토큰으로 되돌립니다. */
         void reset() { _pBlock.reset(); }
 
+        /** @brief 해시 키입니다(`DefaultHash` 가 부른다 — `unordered_map<IdentityToken, …>` 이 그대로 쓴다). */
+        uint64 computeHash() const { return getKey(); }
+
         bool operator==( const IdentityToken& other ) const { return _pBlock == other._pBlock; }
         bool operator!=( const IdentityToken& other ) const { return _pBlock != other._pBlock; }
-
-        /** @brief unordered_map 키로 쓰기 위한 해시 함수 객체입니다. */
-        struct HashFunc
-        {
-            size_t operator()( const IdentityToken& token ) const noexcept { return static_cast<size_t>( token.getKey() ); }
-        };
 
     private:
         /** @brief 정체성 블록입니다(칸은 크기를 0 이 아니게 할 뿐 — 주소가 정체성이다). */

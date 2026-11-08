@@ -347,9 +347,9 @@ namespace sw
         vector<uint32>             _listSkinSlot;
         vector<GPUSkinInstanceRow> _listSkinRow;
         /// @brief 풀에 든 스킨 원본(스킨 데이터 번호 → 기록)과 구간 할당기(레스트 버퍼 · 가중치 버퍼, 단위 = 원소 하나)입니다.
-        unordered_map<IdentityToken, SkinSource, IdentityToken::HashFunc> _mapSkinSource; ///< 키가 원본 토큰을 들어 나간 원본의 주소가 새 원본의 키로 다시 쓰이지 않는다
-        SpanAllocator                                                     _skinRestAllocator;
-        SpanAllocator                                                     _skinWeightAllocator;
+        unordered_map<IdentityToken, SkinSource> _mapSkinSource; ///< 키가 원본 토큰을 들어 나간 원본의 주소가 새 원본의 키로 다시 쓰이지 않는다
+        SpanAllocator                            _skinRestAllocator;
+        SpanAllocator                            _skinWeightAllocator;
         /// @brief 이번 update 에서 새로 들어온 원본, 올릴 데이터와 조각입니다(프레임마다 할당하지 않습니다).
         vector<IdentityToken>       _listScratchSkinAdded;
         vector<IdentityToken>       _listScratchSkinRemoved;

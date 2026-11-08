@@ -5,6 +5,7 @@
 #include "Core/Concurrency/ScopedLock.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Task/TaskManager.h"
 
@@ -23,7 +24,7 @@ namespace sw
     namespace
     {
         /** @brief 강체 스킨 원본 표입니다(키: 원본의 내용 토큰 — 표가 들고 있어 지운 원본의 주소가 새 원본의 키로 다시 쓰이지 않는다) — 에셋 매니저가 내장 캐시로 만들어 소유한다(`Mesh::acquireRigidSkinSource`). */
-        class RigidSkinMeshCache final : public WeakInternCache<IdentityToken, Mesh, IdentityToken::HashFunc>
+        class RigidSkinMeshCache final : public WeakInternCache<IdentityToken, Mesh, DefaultHash<IdentityToken>>
         {
         public:
             static constexpr const utf8* kAssetKindName = "RigidSkinMesh";
