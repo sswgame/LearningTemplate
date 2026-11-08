@@ -10,11 +10,21 @@
 
 namespace sw::editor
 {
+    /**
+     * @brief Output Log 가 보관하는 줄 — 받은 로그 줄에 콘솔이 판단한 표시를 더한다.
+     * @details 예상된 줄은 에디터 안에서 도는 단위 테스트(`editor.unitTests`)가 `SW_EXPECT_LOG` 로 선언한 줄이다. 받는 순간 테스트 틀에 묻는다(`test::isExpectedLog` —
+     *          선언은 케이스 동안만 산다). 로그 줄 자체(`LogEntry` · 파일 형식)는 바꾸지 않는다 — 테스트가 배포 코드의 모양을 정하지 않게, 표시는 보는 쪽이 정한다.
+     */
+    struct ConsoleLogEntry : LogEntry
+    {
+        bool _bExpected{ false }; ///< NOLINT(sw-bool-flag): 집합체다(C++17 비트필드는 기본값을 둘 수 없다). 선언된 Error · Warning 이면 true — 흐리게 그리고 오류 수에서 뺀다
+    };
+
     /** @brief Output Log 가 그리는 행 하나입니다. 접기를 켜면 같은 행 여럿이 처음 나온 위치의 한 행이 됩니다. */
     struct ConsoleLogRow
     {
-        const LogEntry* _pEntry{ nullptr }; ///< 처음 나온 항목이다. 접기를 끄면 그 항목 자신이다
-        uint32          _repeatCount{ 1 };  ///< 이 행으로 접힌 항목 수
+        const ConsoleLogEntry* _pEntry{ nullptr }; ///< 처음 나온 항목이다. 접기를 끄면 그 항목 자신이다
+        uint32                 _repeatCount{ 1 };  ///< 이 행으로 접힌 항목 수
     };
 } // namespace sw::editor
 
@@ -29,7 +39,7 @@ namespace sw::editor
     struct ConsoleLogRows
     {
         /** @brief @p listVisible 로 @p outListRow 를 채웁니다. 먼저 출력 목록을 비웁니다. @p bCollapse 이면 같은 행을 처음 나온 위치에 접고 개수를 셉니다. */
-        static void populate( const vector<const LogEntry*>& listVisible, bool bCollapse, vector<ConsoleLogRow>& outListRow );
+        static void populate( const vector<const ConsoleLogEntry*>& listVisible, bool bCollapse, vector<ConsoleLogRow>& outListRow );
         /**
          * @brief 스크롤이 맨 아래에 붙어 있는지 확인합니다. 붙어 있을 때만 새 로그를 따라 내려갑니다.
          * @details 위로 올려 읽는 중에는 새 로그가 와도 끌려 내려가지 않고, 다시 맨 아래로 내리면 따라가기가 돌아온다. 언리얼 Output Log 와 같다.

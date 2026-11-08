@@ -3417,6 +3417,11 @@
 				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdText.ExpectedByTest" source="expected by test">
+			<origins>
+				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdText.False" source="False">
 			<origins>
 				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>

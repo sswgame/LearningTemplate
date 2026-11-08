@@ -2577,6 +2577,7 @@
 		       text="클라이언트 인자 (예: -vulkan -width=960 -height=540)" />
 		<entry source="cmd: {actionCommand}" text="명령: {actionCommand}" />
 		<entry source="depth" text="깊이" />
+		<entry source="expected by test" text="테스트가 예상함" />
 		<entry source="first frame" text="첫 프레임" />
 		<entry source="frame count" text="프레임 수" />
 		<entry source="git was not found on PATH, so changes cannot be listed. Install git and restart the editor."

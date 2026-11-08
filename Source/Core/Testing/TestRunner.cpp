@@ -71,8 +71,9 @@ namespace sw::test
                 vector<string>              _listFailure;
                 vector<string>              _listUpdatedSnapshot;
                 string                      _scratchFolder;
-                string                      _childArgument;         ///< 자식 역할로 띄워졌을 때 `--test-child-arg` 의 값
-                bool                        _bIsolatedRun{ false }; ///< 격리 케이스의 자식 프로세스로 띄워졌다(`--test-isolated-case`) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                string                      _childArgument;               ///< 자식 역할로 띄워졌을 때 `--test-child-arg` 의 값
+                uint32                      _declaredErrorLineCount{ 0 }; ///< 실행 전체에서 선언과 맞은 Error 줄 수(`kDeclaredErrorLinesPrefix` 줄로 알린다)
+                bool                        _bIsolatedRun{ false };       ///< 격리 케이스의 자식 프로세스로 띄워졌다(`--test-isolated-case`) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
                 uint32                      _assertionCount{ 0 };
                 bool                        _bUpdateSnapshots{ false }; ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
                 bool                        _bActive{ SW_FALSE };       ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
@@ -177,6 +178,8 @@ namespace sw::test
                     if ( pMatch != nullptr )
                     {
                         ++pMatch->_seenCount;
+                        if ( entry._level == LogLevel::Error )
+                            ++state._declaredErrorLineCount;
                         return;
                     }
                     failure = string( entry._file ) + "(" + to_string( entry._line ) + "): error: unexpected " + ( entry._level == LogLevel::Error ? "Error" : "Warning" ) +
@@ -841,6 +844,12 @@ namespace sw::test
 
         const int64 runMilliseconds = ( MonotonicClock::nowNanoseconds() - runStart ) / constant::time::kNanosecondsPerMillisecond;
         formatstring( arrBuffer, constant::buffer::kMax1024, "[==========] %# case run(s) (%# ms), %# passed, %# failed, seed %#", ranCount, runMilliseconds, ranCount - failedCount, failedCount, baseSeed );
+        Internal::writeLine( arrBuffer );
+        {
+            TestRunnerInternal::CaseState& state = TestRunnerInternal::getState();
+            ScopedLock<mutex>              lock{ state._mutex };
+            formatstring( arrBuffer, constant::buffer::kMax1024, "%#%# error log line(s) declared with SW_EXPECT_LOG", test::kDeclaredErrorLinesPrefix, state._declaredErrorLineCount );
+        }
         Internal::writeLine( arrBuffer );
         for ( const string& path : listUpdatedSnapshot )
         {

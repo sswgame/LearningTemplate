@@ -29,13 +29,13 @@ namespace sw::editor
         return full;
     }
 
-    void ConsoleLogRows::populate( const vector<const LogEntry*>& listVisible, bool bCollapse, vector<ConsoleLogRow>& outListRow )
+    void ConsoleLogRows::populate( const vector<const ConsoleLogEntry*>& listVisible, bool bCollapse, vector<ConsoleLogRow>& outListRow )
     {
         outListRow.clear();
         outListRow.reserve( listVisible.size() );
         if ( bCollapse == false )
         {
-            for ( const LogEntry* pEntry : listVisible )
+            for ( const ConsoleLogEntry* pEntry : listVisible )
             {
                 if ( pEntry != nullptr )
                     outListRow.push_back( ConsoleLogRow{ pEntry, 1 } );
@@ -47,12 +47,13 @@ namespace sw::editor
         unordered_map<string, uint32> mapRowByKey;
         mapRowByKey.reserve( listVisible.size() );
         string key;
-        for ( const LogEntry* pEntry : listVisible )
+        for ( const ConsoleLogEntry* pEntry : listVisible )
         {
             if ( pEntry == nullptr )
                 continue;
             key.clear();
             key += static_cast<utf8>( '0' + static_cast<uint8>( pEntry->_level ) );
+            key += pEntry->_bExpected ? 'e' : 'u'; // 선언된 줄과 같은 글의 진짜 오류를 한 행에 접지 않는다
             key += '\0';
             key += pEntry->_tag;
             key += '\0';

@@ -3397,6 +3397,11 @@ msgctxt "EdText.ExitIsolation"
 msgid "Exit Isolation"
 msgstr "격리 나가기"
 
+#: Source/Editor/Panels/Console/ConsolePanel.cpp
+msgctxt "EdText.ExpectedByTest"
+msgid "expected by test"
+msgstr "테스트가 예상함"
+
 #: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
 msgctxt "EdText.False"
 msgid "False"
@@ -5968,6 +5973,11 @@ msgid "Add a node of this type to the graph. You can also right-click empty canv
 msgstr "이 종류의 노드를 그래프에 추가합니다. 캔버스 빈 곳을 오른쪽 클릭해 찾아 넣을 수도 있습니다."
 
 #: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
+msgctxt "EditorDialogueGraph.AddSpeaker"
+msgid "+ Add Speaker"
+msgstr "+ 화자 추가"
+
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
 msgctxt "EditorDialogueGraph.AdvancePreviewTip"
 msgid "Move the preview to the next node without waiting."
 msgstr "기다리지 않고 미리보기를 다음 노드로 넘깁니다."
@@ -6028,6 +6038,11 @@ msgid "Remove this choice option."
 msgstr "이 선택지를 지웁니다."
 
 #: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
+msgctxt "EditorDialogueGraph.RemoveSpeakerTip"
+msgid "Remove this speaker. Lines that used it are left without a speaker."
+msgstr "이 화자를 지웁니다. 이 화자를 쓰던 대사는 화자 없음이 됩니다."
+
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
 msgctxt "EditorDialogueGraph.ResetDefaultTip"
 msgid "Replace the whole graph with the sample conversation."
 msgstr "그래프 전체를 예제 대화로 바꿉니다."
@@ -6038,9 +6053,24 @@ msgid "Write the dialogue graph and its node layout to the asset file."
 msgstr "대화 그래프와 노드 배치를 애셋 파일에 씁니다."
 
 #: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
+msgctxt "EditorDialogueGraph.SpeakerNameTip"
+msgid "Name shown as the speaker, or a localization key."
+msgstr "화자로 보이는 이름 또는 현지화 키입니다."
+
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
 msgctxt "EditorDialogueGraph.SpeakerTip"
-msgid "Name shown as the speaker of this line."
-msgstr "이 대사의 화자로 표시되는 이름입니다."
+msgid "Speaker of this line, picked from the graph's speakers. The scene object that speaks is set in the dialogue runner's Speakers list."
+msgstr "이 대사의 화자입니다. 그래프의 화자 목록에서 고릅니다. 말하는 씬 오브젝트는 대화 러너의 Speakers 목록에서 정합니다."
+
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
+msgctxt "EditorDialogueGraph.Speakers"
+msgid "Speakers"
+msgstr "화자"
+
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
+msgctxt "EditorDialogueGraph.SpeakersTip"
+msgid "Speakers the lines refer to by id. Renaming one keeps every line linked."
+msgstr "대사가 id 로 가리키는 화자입니다. 이름을 바꿔도 대사가 끊기지 않습니다."
 
 #: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
 msgctxt "EditorDialogueGraph.StopPreviewTip"
@@ -7191,6 +7221,11 @@ msgid "Show all channels, or one channel as grayscale. RGBA shows the live GPU t
 msgstr "모든 채널을 보거나 한 채널을 회색조로 봅니다. RGBA 는 실시간 GPU 텍스처를, 한 채널은 CPU 스냅샷을 씁니다."
 
 #: Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp
+msgctxt "EditorRenderTarget.Consumers"
+msgid "Read by: {passes}"
+msgstr "읽는 패스: {passes}"
+
+#: Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp
 msgctxt "EditorRenderTarget.DepthLabel"
 msgid "depth"
 msgstr "깊이"
@@ -7199,6 +7234,11 @@ msgstr "깊이"
 msgctxt "EditorRenderTarget.FormatNotReadable"
 msgid "This format cannot be read back."
 msgstr "이 포맷은 다시 읽어 올 수 없습니다."
+
+#: Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp
+msgctxt "EditorRenderTarget.Lifetime"
+msgid "Used from pass {firstPass} to pass {lastPass} (pipeline order)"
+msgstr "패스 {firstPass} 부터 {lastPass} 까지 쓰입니다(파이프라인 순서)"
 
 #: Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp
 msgctxt "EditorRenderTarget.LinearLabel"
@@ -7229,6 +7269,11 @@ msgstr "렌더러가 아직 타깃을 공개하지 않았습니다."
 msgctxt "EditorRenderTarget.PickTargetHint"
 msgid "Pick a render target on the left."
 msgstr "왼쪽에서 렌더 타깃을 고릅니다."
+
+#: Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp
+msgctxt "EditorRenderTarget.Producers"
+msgid "Written by: {passes}"
+msgstr "쓰는 패스: {passes}"
 
 #: Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp
 msgctxt "EditorRenderTarget.ReadingTarget"

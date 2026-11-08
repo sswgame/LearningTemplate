@@ -139,6 +139,12 @@ namespace sw::test
      */
     [[nodiscard]] SW_API bool isExpectedLog( const utf8* pLogID );
     /**
+     * @brief 실행 끝 줄 `[ DECLARED ] <N> error log line(s) …` 의 머리입니다. N 은 실행 동안 케이스가 `SW_EXPECT_LOG` 로 선언해 맞은 Error 줄 수입니다.
+     * @details 출력만 보는 쪽(에디터 Test Runner)이 Error 줄 수에서 이것을 빼 "선언 밖 오류" 를 낸다 — 거절 경로 테스트가 일부러 낸 수천 줄이 오류로 보였다.
+     *          줄 모양을 바꾸지 않고(로그는 그대로 `[Error]`) 수만 알린다. 표시는 읽는 쪽이 정한다.
+     */
+    inline constexpr string_view kDeclaredErrorLinesPrefix = "[ DECLARED ] ";
+    /**
      * @brief 이 케이스만 쓰는 빈 폴더 아래의 절대 경로입니다(`<작업 폴더>/Saved/Test/<프로세스>/<케이스>/<회차>/<name>`).
      * @details 폴더는 처음 부를 때 만든다. 테스트는 이 밖(Bin · 소스 트리 · 고정 이름 임시 경로)에 쓰지 않는다 — 나란히 도는 프로세스 · 반복 회차가 부딪치지 않게.
      */

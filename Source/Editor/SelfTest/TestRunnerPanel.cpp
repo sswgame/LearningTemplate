@@ -302,7 +302,7 @@ namespace sw::editor
         _listExternalLine   = std::move( result._listLine );
         _externalExitCode   = result._exitCode;
         _bExternalLaunched  = result._bLaunched ? SW_TRUE : SW_FALSE;
-        _externalErrorCount = EditorTestOutputParser::countErrorLines( _listExternalLine );
+        _externalErrorCount = EditorTestOutputParser::countUndeclaredErrorLines( _listExternalLine );
         if ( _externalRunKind == ExternalRunKind::UnitTestRun )
             EditorTestOutputParser::collectResults( _listExternalLine, _listUnitTestResult );
     }

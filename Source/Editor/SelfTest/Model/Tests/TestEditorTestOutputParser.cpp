@@ -59,5 +59,13 @@ SW_TEST_CASE( EditorTestOutputParserTest, CountsOnlyErrorLogLines )
 {
     const vector<string> listLine{ "12:00:00 [Error] Core - boom", "12:00:00 [Warning] Core - careful", "12:00:00 [Info] Core - [Error] quoted", "[  FAILED  ] A.b (1 ms)",
                                    "12:00:01 [Error] Core - again" };
-    SW_EXPECT_EQUAL( 2u, EditorTestOutputParser::countErrorLines( listLine ) );
+    SW_EXPECT_EQUAL( 2u, EditorTestOutputParser::countUndeclaredErrorLines( listLine ) );
+}
+
+// 단위 테스트 실행의 끝 줄이 알린 선언된 Error 줄 수(`SW_EXPECT_LOG`)는 오류 줄 수에서 뺀다 — 거절 경로 테스트가 일부러 낸 줄이 오류로 보이지 않게.
+SW_TEST_CASE( EditorTestOutputParserTest, DeclaredErrorLinesAreNotCounted )
+{
+    const vector<string> listLine{ "12:00:00 [Error] Core - declared one", "12:00:00 [Error] Core - declared two", "12:00:01 [Error] Core - real",
+                                   string( sw::test::kDeclaredErrorLinesPrefix ) + "2 error log line(s) declared with SW_EXPECT_LOG" };
+    SW_EXPECT_EQUAL( 1u, EditorTestOutputParser::countUndeclaredErrorLines( listLine ) );
 }

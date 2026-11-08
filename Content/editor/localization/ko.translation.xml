@@ -1081,6 +1081,7 @@
 		       sourceHash="2f4f4f40f3b73646" />
 		<entry key="EdText.Event" text="이벤트" sourceHash="d0ea7366ebc403ff" />
 		<entry key="EdText.ExitIsolation" text="격리 나가기" sourceHash="e8739d86a278f825" />
+		<entry key="EdText.ExpectedByTest" text="테스트가 예상함" sourceHash="1eec9062c1865172" />
 		<entry key="EdText.False" text="거짓" sourceHash="7254ca27b16ae2d8" />
 		<entry key="EdText.Fit" text="맞춤" sourceHash="f2a69a199c808e4c" />
 		<entry key="EdText.Frames" text="프레임:" sourceHash="2a9c5488aee787cf" />

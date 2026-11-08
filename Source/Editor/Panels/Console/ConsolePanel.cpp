@@ -9,6 +9,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
@@ -56,11 +57,13 @@ namespace sw::editor
             }
 
             /** @brief 로그 목록에서 레벨별 줄 수를 셉니다. */
-            static ConsolePanel::LevelCounts countLevels( const deque<LogEntry>& listEntry )
+            static ConsolePanel::LevelCounts countLevels( const deque<ConsoleLogEntry>& listEntry )
             {
                 ConsolePanel::LevelCounts counts;
-                for ( const LogEntry& entry : listEntry )
+                for ( const ConsoleLogEntry& entry : listEntry )
                 {
+                    if ( entry._bExpected )
+                        continue; // 테스트가 선언한 줄은 오류 · 경고 수가 아니다(행은 흐리게 그린다)
                     switch ( entry._level )
                     {
                         case LogLevel::Error:
@@ -260,7 +263,7 @@ namespace sw::editor
         _listVisible.clear();
         _listVisible.reserve( _listDrawSnapshot.size() );
 
-        for ( const LogEntry& entry : _listDrawSnapshot )
+        for ( const ConsoleLogEntry& entry : _listDrawSnapshot )
         {
             const uint8 levelIndex = static_cast<uint8>( entry._level );
             if ( levelIndex >= 4 || _arrLevelEnabled[levelIndex] == false )
@@ -523,8 +526,10 @@ namespace sw::editor
     void ConsolePanel::drawLogRow( int32 rowIndex, float32 rowWidth, float32 lineHeight, bool bListHovered )
     {
         _uiThread.assumeHeld(); // 패널을 그리는 UI 스레드에서 불린다
-        const ConsoleLogRow& row   = _listRow[static_cast<size_t>( rowIndex )];
-        const LogEntry&      entry = *row._pEntry;
+        const ConsoleLogRow&   row   = _listRow[static_cast<size_t>( rowIndex )];
+        const ConsoleLogEntry& entry = *row._pEntry;
+        // 테스트가 선언한 줄(`ConsoleLogEntry::_bExpected`)은 신호색 대신 흐린 색으로 — 진짜 오류와 눈으로 갈린다.
+        const Color& levelColor = entry._bExpected ? SW_THEME_COLOR( "Base", "TextMuted" ) : ConsolePanelInternal::colorForLevel( entry._level );
         ImGui::PushID( rowIndex );
 
         const ImVec2 rowMin = ImGui::GetCursorScreenPos();
@@ -534,7 +539,7 @@ namespace sw::editor
 
         if ( row._repeatCount > 1 )
         {
-            ImGui::TextColored( EditorColorUtil::toImVec4( ConsolePanelInternal::colorForLevel( entry._level ) ), "(%u)", row._repeatCount );
+            ImGui::TextColored( EditorColorUtil::toImVec4( levelColor ), "(%u)", row._repeatCount );
             ImGui::SameLine( 0.0f, ImGui::GetStyle().ItemInnerSpacing.x );
         }
         // 줄마다 되풀이되는 머리는 줄인다: 날짜는 빼고 시각만, 수준은 Info 가 아닐 때만 적는다 — 언리얼 Output Log 의 "Category: Warning: …" 처럼
@@ -550,7 +555,10 @@ namespace sw::editor
         if ( entry._level != LogLevel::Info )
         {
             ImGui::SameLine( 0.0f, 0.0f );
-            ImGui::TextColored( EditorColorUtil::toImVec4( ConsolePanelInternal::colorForLevel( entry._level ) ), " %s:", ConsoleLogRows::levelName( entry._level ) );
+            if ( entry._bExpected )
+                ImGui::TextColored( EditorColorUtil::toImVec4( levelColor ), " %s (%s):", ConsoleLogRows::levelName( entry._level ), SW_LOCKEY( "EdText", "ExpectedByTest" ) );
+            else
+                ImGui::TextColored( EditorColorUtil::toImVec4( levelColor ), " %s:", ConsoleLogRows::levelName( entry._level ) );
         }
         ImGui::SameLine( 0.0f, 0.0f );
         ImGui::TextUnformatted( " " );
@@ -729,7 +737,7 @@ namespace sw::editor
         // 지금 보관하고 있는 로그에 나온 태그만 보인다.
         _listTagCache.clear();
         _listTagCache.reserve( _listDrawSnapshot.size() );
-        for ( const LogEntry& entry : _listDrawSnapshot )
+        for ( const ConsoleLogEntry& entry : _listDrawSnapshot )
         {
             _listTagCache.push_back( string{ getEntryCategory( entry ) } );
         }
@@ -754,11 +762,15 @@ namespace sw::editor
     {
         // 어느 스레드 · 어느 스코프에서 쓴 로그든 콘솔이 보관하고 있는 사본은 에디터 담당이다.
         SW_MEMORY_SCOPE( Editor );
+        ConsoleLogEntry consoleEntry;
+        static_cast<LogEntry&>( consoleEntry ) = entry;
+        // 받는 순간 묻는다 — 선언은 케이스가 도는 동안만 살고, 로그는 부른 스레드에서 바로 온다.
+        consoleEntry._bExpected = ( entry._level == LogLevel::Error || entry._level == LogLevel::Warning ) && test::isExpectedLog( entry._pID );
         ScopedLock<mutex> lock{ _entriesMutex };
-        _listEntry.push_back( entry );
+        if ( entry._level == LogLevel::Error && consoleEntry._bExpected == false )
+            ++_errorSerial; // 오류 때 멈춤은 진짜 오류에만
+        _listEntry.push_back( std::move( consoleEntry ) );
         ++_entrySerial;
-        if ( entry._level == LogLevel::Error )
-            ++_errorSerial;
         while ( _listEntry.size() > constant::buffer::kMax2048 )
         {
             _listEntry.pop_front();
