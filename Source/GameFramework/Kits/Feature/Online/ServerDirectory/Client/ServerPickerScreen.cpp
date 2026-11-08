@@ -118,11 +118,11 @@ namespace sw
         }
         if ( command == hashed_string( Internal::kPickCommand ) && _pModel != nullptr )
         {
-            const ListViewWidget* pServers = getTree().findWidget<ListViewWidget>( hashed_string( Internal::kServersName ) );
-            const uint32          index    = pServers != nullptr ? pServers->findItemIndex( source ) : constant::invalid_index::kUint32;
-            if ( index >= _pModel->getEntries().size() )
+            const ListViewWidget*  pServers = getTree().findWidget<ListViewWidget>( hashed_string( Internal::kServersName ) );
+            const optional<uint32> index    = pServers != nullptr ? pServers->findItemIndex( source ) : nullopt;
+            if ( index.has_value() == false || *index >= _pModel->getEntries().size() )
                 return false;
-            const ServerListEntry server = _pModel->getEntries()[index]; // 델리게이트가 모델을 바꿔도 안전하게 복사해 둔다
+            const ServerListEntry server = _pModel->getEntries()[*index]; // 델리게이트가 모델을 바꿔도 안전하게 복사해 둔다
             if ( server._state != ServerState::Open )
                 return false; // 받지 않는 서버는 고를 수 없다(단추도 꺼져 있다)
             if ( _onPicked.isBound() )
