@@ -37,6 +37,7 @@ namespace sw
                 {        "rules.xml", SW_FALSE},
                 {      "presets.xml", SW_FALSE},
                 { "bodyprofiles.xml", SW_FALSE},
+                {   "skinlayers.xml", SW_FALSE},
             };
 
             static bool isNotFound( const string& lastError ) { return string_view( lastError.c_str(), lastError.size() ).find( "not found" ) != string_view::npos; }
@@ -59,6 +60,7 @@ namespace sw
         , _rules{}
         , _presets{}
         , _bodyProfiles{}
+        , _skinLayers{}
         , _report{}
         , _pItemCatalog{ nullptr }
         , _reloadedMulticast{}
@@ -99,6 +101,7 @@ namespace sw
         _rules.clear();
         _presets.clear();
         _bodyProfiles.clear();
+        _skinLayers.clear();
         _report.clear();
         _pItemCatalog = nullptr;
         ++_revision;
@@ -235,6 +238,8 @@ namespace sw
             return _presets.loadFromXML( root, _report, sourceName );
         if ( StringUtil::equals( pName, "BodyProfileCatalog" ) )
             return _bodyProfiles.loadFromXML( root, _report, sourceName );
+        if ( StringUtil::equals( pName, "SkinLayerCatalog" ) )
+            return _skinLayers.loadFromXML( root, _report, sourceName );
         _report.addErrorWithID( "Appearance.RootUnknown", "%#: unknown appearance data root <%#>", sourceName, pName );
         return false;
     }
@@ -250,6 +255,11 @@ namespace sw
         validateItems();
         validateRules( pListKnownBodyRegion );
         validatePresets();
+        for ( const SkinLayerDef& layer : _skinLayers.getLayers() )
+        {
+            if ( layer._palette.empty() == false && _schemas.findPalette( layer._palette ) == nullptr )
+                _report.addErrorWithID( "Appearance.PaletteUnknown", "skin layer '%#' names unknown palette '%#'", layer._id.c_str(), layer._palette.c_str() );
+        }
         ++_revision;
         return _report.hasErrors() == false;
     }

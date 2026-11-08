@@ -120,6 +120,9 @@
 			<Field name="Fluid" key="name"/>
 		</Entry>
 	</Catalog>
+	<Catalog root="SkinLayerCatalog">
+		<Entry name="SkinLayer" key="id"/>
+	</Catalog>
 	<Catalog root="EquipmentSetCatalog">
 		<Entry name="Set" key="id"/>
 	</Catalog>

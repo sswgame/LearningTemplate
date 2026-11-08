@@ -20,6 +20,7 @@
 #include "GameFramework/Runtime/Gameplay/Appearance/CustomizationSchema.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/EquipmentSetCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/ItemVisual.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/SkinLayer.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/SlotCatalog.h"
 
 namespace sw
@@ -32,7 +33,7 @@ namespace sw
      * @brief 외형 데이터 폴더 하나(`<게임>/data/appearance/`)를 읽습니다. 파일 하나가 한 종류이고, 루트 원소 이름으로 종류를 구분합니다.
      * @details 파일은 다음과 같다. `slots.xml`(`SlotCatalog`, 반드시 필요), `sets.xml`(`EquipmentSetCatalog`), `itemvisuals.xml`(`ItemVisualCatalog`),
      *          `customization.xml`(`CustomizationSchemaCatalog`), `rules.xml`(`AppearanceRuleCatalog`), `presets.xml`(`CharacterAppearanceCatalog`),
-     *          `bodyprofiles.xml`(`CharacterBodyProfileCatalog` — 지글 · 주름 · 동공 · 체액 · 기본 몸 채널).
+     *          `bodyprofiles.xml`(`CharacterBodyProfileCatalog` — 지글 · 주름 · 동공 · 체액 · 기본 몸 채널), `skinlayers.xml`(`SkinLayerCatalog` — 화장 · 문신 층 종류).
      *          프리셋은 에셋 파일 하나에 하나씩도 둘 수 있다. `presets/` 아래의 `*.appearance.xml`(루트 `<CharacterAppearance>`)을 `presets.xml` 뒤에 읽는다.
      *          캐릭터 편집 창이 내보내는 곳이고(언리얼과 유니티의 프리셋 에셋에 해당), 씬의 `CharacterAppearanceComponent` 는 그 id 를 가리킨다.
      *          모두 읽은 뒤 `finishLoad` 가 알 수 없는 이름(슬롯, 세트, 아이템, 외형, 스키마, 매개변수, 항목, 변형, 부품, 부모)과 장착 조건 순환, 프리셋 부모 순환을 오류로 모은다.
@@ -86,6 +87,7 @@ namespace sw
         const AppearanceRuleCatalog&       getRules() const { return _rules; }
         const CharacterAppearanceCatalog&  getPresets() const { return _presets; }
         const CharacterBodyProfileCatalog& getBodyProfiles() const { return _bodyProfiles; }
+        const SkinLayerCatalog&            getSkinLayers() const { return _skinLayers; }
         const ItemCatalog*                 getItemCatalog() const { return _pItemCatalog; }
         const AppearanceLoadReport&        getReport() const { return _report; }
         uint32                             getRevision() const { return _revision; }
@@ -130,6 +132,7 @@ namespace sw
         AppearanceRuleCatalog       _rules;
         CharacterAppearanceCatalog  _presets;
         CharacterBodyProfileCatalog _bodyProfiles;
+        SkinLayerCatalog            _skinLayers;
         AppearanceLoadReport        _report;
         const ItemCatalog*          _pItemCatalog;
         MulticastDelegate<void()>   _reloadedMulticast;

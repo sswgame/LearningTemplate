@@ -17,6 +17,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/GameData/CustomizationValueSet.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceTypes.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/SkinLayer.h"
 
 namespace sw
 {
@@ -40,6 +41,7 @@ namespace sw
 
         CustomizationValueSet         _customization{};
         vector<AppearanceSlotRequest> _listSlot{};
+        vector<SkinLayerValue>        _listSkinLayer{}; ///< 피부 층(화장 · 문신) — 순서가 그리기 순서. 카테고리는 층 종류의 `category`
         vector<hashed_string>         _listCategory{};
         hashed_string                 _basePresetID{};
         hashed_string                 _schema{};
@@ -77,12 +79,19 @@ namespace sw
 
         // 선택을 비트로 씁니다. 네트워크 외형 동기화에 쓰며, 받는 쪽이 펼쳐서 해석하면 같은 해시가 나옵니다. 공유 코드와 세이브도 이것을 씁니다.
         // 슬라이더는 스키마 범위의 16 비트, 색은 성분마다 8 비트, 피해는 8 비트로 쓴다. 해석기가 쓰는 정밀도와 같으므로 손실이 없다. 값마다 종류를 2 비트로
-        static void writeSelection( BitWriter& writer, const AppearanceSelection& selection, const AppearanceDatabase& database );
-        /** @brief 읽습니다. 비트가 모자라거나 개수가 비정상이면 false 입니다. */
-        [[nodiscard]] static bool readSelection( BitReader& reader, const AppearanceDatabase& database, AppearanceSelection& outSelection );
+        // @p version 은 쓸 판이다(기본은 지금 판). 옛 판으로 쓰면 그 판에 없는 칸(플레이어 숨김 · 피부 층)은 빠진다 — 옛 클라이언트와 옛 판 읽기 테스트가 쓴다.
+        static void writeSelection( BitWriter& writer, const AppearanceSelection& selection, const AppearanceDatabase& database, uint32 version = kShareCodeVersionCurrent );
+        /**
+         * @brief 읽습니다. 비트가 모자라거나 개수가 비정상이면 false 입니다. @p version 은 쓴 쪽의 판입니다(네트워크는 같은 빌드라 지금 판, 공유 코드는 머리의 판).
+         * @details 판 1 에는 슬롯의 플레이어 숨김과 피부 층이 없다 — 읽으면 숨김 없음 · 층 없음이다(옛 공유 코드가 그대로 열린다).
+         */
+        [[nodiscard]] static bool readSelection( BitReader& reader, const AppearanceDatabase& database, AppearanceSelection& outSelection, uint32 version = kShareCodeVersionCurrent );
 
-        // 공유 코드입니다. 버전 1 바이트, 선택 비트, CRC32 를 base64url(패딩 없음)로 쓴 짧은 문자열입니다. 버전이 다르거나 체크섬이 틀리면 거절합니다(정확히 같은 판만 읽습니다).
-        static constexpr uint32 kShareCodeVersion = 1;
+        // 공유 코드입니다. 버전 1 바이트, 선택 비트, CRC32 를 base64url(패딩 없음)로 쓴 짧은 문자열입니다. 체크섬이 틀리거나 이 빌드보다 새 판이면 거절하고, 옛 판은 그 판의 모양으로 읽습니다.
+        // 판 2: 슬롯마다 플레이어 숨김 1 비트, 슬롯 뒤에 피부 층 목록(층 id 해시 · 색 · 불투명도 · 배치 · 대칭 · 숨김).
+        static constexpr uint32 kShareCodeVersionFirst   = 1;
+        static constexpr uint32 kShareCodeVersionCurrent = 2;
+        static constexpr uint32 kShareCodeVersion        = kShareCodeVersionCurrent;
 
         static string encode( const AppearanceSelection& selection, const AppearanceDatabase& database );
         /** @brief 공유 코드를 해석합니다. 코드가 망가졌거나(base64 오류, 체크섬 불일치) 이 빌드가 모르는 버전이면 false 를 반환하고, @p pOutReason 에 이유를 씁니다. */

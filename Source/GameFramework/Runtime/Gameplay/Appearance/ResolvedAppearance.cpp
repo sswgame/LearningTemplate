@@ -278,6 +278,52 @@ namespace sw
             }
 
             /**
+             * @brief 피부 층을 굽기 순서대로 냅니다. 모르는 층은 버리고 설명에 남기며(지워진 콘텐츠), 숨긴 층은 그리지 않는다. 값은 전송 정밀도로 맞추고 색은 종류의 견본 묶음으로 맞춘다.
+             */
+            static void emitSkinLayers( const AppearanceDatabase& database, const CharacterAppearanceSpec& spec, ResolvedAppearance& out )
+            {
+                for ( const SkinLayerValue& given : spec._listSkinLayer )
+                {
+                    const SkinLayerDef* pDef = database.getSkinLayers().findLayer( given._layer );
+                    if ( pDef == nullptr )
+                    {
+                        addTrace( out, AppearanceTraceStep::Customization, given._layer, "skin layer '%#' is unknown - dropped", given._layer.c_str() );
+                        continue;
+                    }
+                    if ( given._bHidden == SW_TRUE )
+                        continue;
+                    ResolvedSkinLayer layer;
+                    layer._value = given;
+                    layer._value.quantize();
+                    const CustomizationSchemaCatalog::Palette* pPalette = pDef->_palette.empty() ? nullptr : database.getSchemas().findPalette( pDef->_palette );
+                    if ( pPalette != nullptr )
+                    {
+                        CustomizationParamDef swatches; // 견본 맞추기는 색 매개변수와 같은 식이다
+                        swatches._listSwatch = pPalette->_listSwatch;
+                        layer._value._color  = swatches.snapToSwatch( layer._value._color );
+                    }
+                    if ( pDef->_bPlaceable == false )
+                    {
+                        layer._value._offset          = float2{ 0.5f, 0.5f }; // 배치 없는 층은 피부 UV 그대로다
+                        layer._value._scale           = float2{ 1.0f, 1.0f };
+                        layer._value._rotationDegrees = 0.0f;
+                        layer._value._bMirror         = SW_FALSE;
+                    }
+                    layer._regionMin       = pDef->_regionMin;
+                    layer._regionMax       = pDef->_regionMax;
+                    layer._mask            = pDef->_mask;
+                    layer._roughness       = pDef->_roughness;
+                    layer._roughnessWeight = pDef->_roughnessWeight;
+                    layer._metallic        = pDef->_metallic;
+                    layer._metallicWeight  = pDef->_metallicWeight;
+                    layer._smearResistance = pDef->_smearResistance;
+                    layer._blend           = pDef->_blend;
+                    layer._bPlaceable      = pDef->_bPlaceable ? SW_TRUE : SW_FALSE;
+                    out._listSkinLayer.push_back( layer );
+                }
+            }
+
+            /**
              * @brief 몸 채널 층을 모아 몸의 체형 축 값(`_listBoneProportion`, 주인이 빈 것)을 다시 씁니다. 바닥은 꾸미기 슬라이더, 그 위에 몸 프로필 층, 보이는 장비 층(슬롯 표 순서)을 우선순위로 얹는다.
              * @details 숨겨진 장비(점유 · 규칙 · 조건 · 플레이어 숨김)는 몸을 누르지 않는다 — 보이지 않는 갑옷이 가슴을 조이지 않는다.
              */
@@ -1021,6 +1067,7 @@ namespace sw
         }
         Internal::emitDecisions( spec, listDecision, outResolved );
         Internal::applyBodyChannels( database, spec, listEntry, outResolved );
+        Internal::emitSkinLayers( database, spec, outResolved );
         Internal::removeRepeatedHiddenRegions( outResolved );
         outResolved._meshHash = computeMeshHash( outResolved );
         outResolved._hash     = computeHash( outResolved );
@@ -1092,6 +1139,18 @@ namespace sw
         builder.addUint64( computeMeshHash( resolved ) );
         builder.addName( resolved._presetID );
         builder.addName( resolved._bodyProfile );
+        for ( const ResolvedSkinLayer& layer : resolved._listSkinLayer ) // 굽기 텍스처가 바뀌는 값(메시 해시에는 넣지 않는다 — 병합 메시는 그대로다)
+        {
+            builder.addName( layer._value._layer );
+            builder.addFloat4( layer._value._color );
+            builder.addFloat( layer._value._opacity );
+            builder.addFloat( layer._value._offset._x );
+            builder.addFloat( layer._value._offset._y );
+            builder.addFloat( layer._value._scale._x );
+            builder.addFloat( layer._value._scale._y );
+            builder.addFloat( layer._value._rotationDegrees );
+            builder.addInt( layer._value._bMirror );
+        }
         for ( const ResolvedPart& part : resolved._listPart )
         {
             builder.addName( part._owner );

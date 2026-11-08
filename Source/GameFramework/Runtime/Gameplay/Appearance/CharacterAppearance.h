@@ -16,6 +16,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/GameData/CustomizationValueSet.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceTypes.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/SkinLayer.h"
 
 namespace sw
 {
@@ -93,6 +94,7 @@ namespace sw
         CustomizationValueSet            _customization{};
         vector<AppearanceSlotRequest>    _listSlot{};
         vector<AppearanceSocketOverride> _listSocketOverride{};
+        vector<SkinLayerValue>           _listSkinLayer{}; ///< 피부 층(화장 · 문신) — 선택이 준다. 프리셋 데이터에는 아직 없다
         TagContainer                     _tags{};
         hashed_string                    _presetID{};
         hashed_string                    _schema{};
