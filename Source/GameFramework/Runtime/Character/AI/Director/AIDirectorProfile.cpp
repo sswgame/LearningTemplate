@@ -74,24 +74,24 @@ namespace sw
         _startPhaseIndex = -1;
     }
 
-    int32 AIDirectorProfile::findPhaseIndex( const hashed_string& phaseID ) const
+    optional<int32> AIDirectorProfile::findPhaseIndex( const hashed_string& phaseID ) const
     {
         for ( size_t index = 0; index < _listPhase.size(); ++index )
         {
             if ( _listPhase[index]._id == phaseID )
                 return static_cast<int32>( index );
         }
-        return -1;
+        return nullopt;
     }
 
-    int32 AIDirectorProfile::findSignalIndex( const hashed_string& signalID ) const
+    optional<int32> AIDirectorProfile::findSignalIndex( const hashed_string& signalID ) const
     {
         for ( size_t index = 0; index < _intensity._listSignal.size(); ++index )
         {
             if ( _intensity._listSignal[index]._id == signalID )
                 return static_cast<int32>( index );
         }
-        return -1;
+        return nullopt;
     }
 
     void AIDirectorProfile::collectEncounterIDs( vector<hashed_string>& outListID ) const
@@ -154,7 +154,7 @@ namespace sw
                 bValid = false;
                 continue;
             }
-            if ( findSignalIndex( signal._id ) >= 0 )
+            if ( findSignalIndex( signal._id ).has_value() )
             {
                 SW_LOG_ERROR_ID( "AIDirectorProfile.SignalDeclaredTwice", "%#: signal '%#' is declared twice", sourceName, signal._id.c_str() );
                 bValid = false;
@@ -182,7 +182,7 @@ namespace sw
             else
                 bValid = false;
         }
-        if ( findPhaseIndex( phase._id ) >= 0 )
+        if ( findPhaseIndex( phase._id ).has_value() )
         {
             SW_LOG_ERROR_ID( "AIDirectorProfile.PhaseDeclaredTwice", "%#: phase '%#' is declared twice", sourceName, phase._id.c_str() );
             return false;
@@ -247,7 +247,7 @@ namespace sw
         bool bValid = true;
         for ( const hashed_string& phaseID : listPacing )
         {
-            if ( findPhaseIndex( phaseID ) >= 0 )
+            if ( findPhaseIndex( phaseID ).has_value() )
                 continue;
             SW_LOG_ERROR_ID( "AI.DirectorPacingPhaseUnknown", "%#: '%#' names an unknown pacing phase '%#'", sourceName, ownerID.c_str(), phaseID.c_str() );
             bValid = false;
@@ -263,8 +263,9 @@ namespace sw
             SW_LOG_ERROR_ID( "AI.DirectorNoPhase", "%#: no <Phase>", sourceName );
             return false;
         }
-        _startPhaseIndex = _startPhase.empty() ? 0 : findPhaseIndex( _startPhase );
-        if ( _startPhaseIndex < 0 )
+        const optional<int32> startPhaseIndex = _startPhase.empty() ? optional<int32>{ 0 } : findPhaseIndex( _startPhase );
+        _startPhaseIndex                      = startPhaseIndex.has_value() ? *startPhaseIndex : constant::invalid_index::kInt32; // 읽기 실패(아래 bValid)면 쓰지 않는 칸이다
+        if ( startPhaseIndex.has_value() == false )
         {
             SW_LOG_ERROR_ID( "AI.DirectorStartPhaseUnknown", "%#: start phase '%#' is not a <Phase>", sourceName, _startPhase.c_str() );
             bValid = false;
@@ -274,9 +275,12 @@ namespace sw
         {
             for ( AIDirectorExitDef& exit : phase._listExit )
             {
-                exit._toIndex = findPhaseIndex( exit._to );
-                if ( exit._toIndex >= 0 )
+                const optional<int32> toIndex = findPhaseIndex( exit._to );
+                if ( toIndex.has_value() )
+                {
+                    exit._toIndex = *toIndex;
                     continue;
+                }
                 SW_LOG_ERROR_ID( "AI.DirectorExitPhaseUnknown", "%#: phase '%#' exits to an unknown phase '%#'", sourceName, phase._id.c_str(), exit._to.c_str() );
                 bValid = false;
             }
@@ -290,14 +294,16 @@ namespace sw
             }
             if ( pool._trigger == AIDirectorPoolTrigger::PhaseEnter )
             {
-                pool._phaseIndex = findPhaseIndex( pool._phase );
-                if ( pool._phaseIndex < 0 )
+                const optional<int32> phaseIndex = findPhaseIndex( pool._phase );
+                if ( phaseIndex.has_value() )
+                    pool._phaseIndex = *phaseIndex;
+                else
                 {
                     SW_LOG_ERROR_ID( "AIDirectorProfile.PoolWaitsUnknownPhase", "%#: pool '%#' waits for an unknown phase '%#'", sourceName, pool._id.c_str(), pool._phase.c_str() );
                     bValid = false;
                 }
             }
-            if ( pool._needSignal.empty() == false && findSignalIndex( pool._needSignal ) < 0 )
+            if ( pool._needSignal.empty() == false && findSignalIndex( pool._needSignal ).has_value() == false )
             {
                 SW_LOG_ERROR_ID( "AI.DirectorPoolSignalUnknown", "%#: pool '%#' reads an unknown signal '%#'", sourceName, pool._id.c_str(), pool._needSignal.c_str() );
                 bValid = false;

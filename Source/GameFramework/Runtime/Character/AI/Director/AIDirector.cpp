@@ -139,17 +139,17 @@ namespace sw
         return 0 <= poolIndex && poolIndex < static_cast<int32>( _listPoolState.size() ) ? _listPoolState[static_cast<size_t>( poolIndex )]._budget : 0.0f;
     }
 
-    int32 AIDirector::findPoolIndex( const hashed_string& poolID ) const
+    optional<int32> AIDirector::findPoolIndex( const hashed_string& poolID ) const
     {
         if ( _pProfile == nullptr )
-            return -1;
+            return nullopt;
         const vector<AIDirectorPoolDef>& listPool = _pProfile->getPools();
         for ( size_t index = 0; index < listPool.size(); ++index )
         {
             if ( listPool[index]._id == poolID )
                 return static_cast<int32>( index );
         }
-        return -1;
+        return nullopt;
     }
 
     void AIDirector::update( float32 deltaTime )
@@ -197,10 +197,10 @@ namespace sw
 
     bool AIDirector::forcePhase( const hashed_string& phaseID )
     {
-        const int32 phaseIndex = _pProfile != nullptr ? _pProfile->findPhaseIndex( phaseID ) : -1;
-        if ( phaseIndex < 0 )
+        const optional<int32> phaseIndex = _pProfile != nullptr ? _pProfile->findPhaseIndex( phaseID ) : optional<int32>{};
+        if ( phaseIndex.has_value() == false )
             return false;
-        enterPhase( phaseIndex, -1 );
+        enterPhase( *phaseIndex, -1 );
         return true;
     }
 

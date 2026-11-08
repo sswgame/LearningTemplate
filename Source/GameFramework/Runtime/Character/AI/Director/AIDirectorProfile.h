@@ -9,6 +9,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
@@ -268,8 +269,8 @@ namespace sw
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
         void               clear();
 
-        int32 findPhaseIndex( const hashed_string& phaseID ) const;
-        int32 findSignalIndex( const hashed_string& signalID ) const;
+        [[nodiscard]] optional<int32> findPhaseIndex( const hashed_string& phaseID ) const;
+        [[nodiscard]] optional<int32> findSignalIndex( const hashed_string& signalID ) const;
 
         const AIDirectorIntensityDef&     getIntensity() const { return _intensity; }
         const vector<AIDirectorPhaseDef>& getPhases() const { return _listPhase; }
