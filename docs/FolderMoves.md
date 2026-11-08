@@ -318,7 +318,7 @@ FourCC 표기: FourCC 는 "Four-Character Code" 의 약어 **CC** 를 품는다 
 
 ## 12. 그대로 두는 것(검토했고 맞다)
 
-`Core/Foundation/ASCIIUtil · HexDigitUtil`(Hash 티어 0 이 씀), `Core/Container/{EventBuffer,ConsumerGate,KeyedPendingList,SharedVectorPool,InlineAllocator,IDAllocator,SpanAllocator,IndexFreeList}`(컨테이너 · 할당 정책 — UE Containers 와 같음), `Core/Task/LockFreeObjectPool`(로그 · 시간을 써 Memory 로 못 감), `Core/Network/Replication/*`, `Core/Spatial/PositionWelder`, `Engine/Asset/GraphCommentBox`(그래프 에셋 공용 직렬화 조각), `Engine/Serialization/Serializer/{AssetRefBase,DataPath}`(층 1 이 필요), `Engine/Object/Component/CameraComponent` · `Registry/CameraRegistry`(씬이 카메라를 고름 — 층 5), `Engine/Foundation/*Handle.h`(아래 층 앞 선언), `Engine/Graphics/Debug/VisualLogger`(디버그 그리기 큐 위), `Engine/Observability/DebugChannel`(Server 운영 채널이 씀 — 제품), `Engine/Config/NetEmulationPresetTable`(3 절).
+`Core/Foundation/ASCIIUtil · HexDigitUtil`(Hash 티어 0 이 씀), `Core/Container/{InlineAllocator,IDAllocator,SpanAllocator,IndexFreeList}`(할당 정책 — UE Containers 와 같음. EventBuffer · ConsumerGate 는 Core/Event, KeyedPendingList 는 RHIRetireList 로 이미 옮겼다), `Core/Task/LockFreeObjectPool`(로그 · 시간을 써 Memory 로 못 감), `Core/Network/Replication/*`, `Core/Spatial/PositionWelder`, `Engine/Asset/GraphCommentBox`(그래프 에셋 공용 직렬화 조각), `Engine/Serialization/Serializer/{AssetRefBase,DataPath}`(층 1 이 필요), `Engine/Object/Component/CameraComponent` · `Registry/CameraRegistry`(씬이 카메라를 고름 — 층 5), `Engine/Foundation/*Handle.h`(아래 층 앞 선언), `Engine/Graphics/Debug/VisualLogger`(디버그 그리기 큐 위), `Engine/Observability/DebugChannel`(Server 운영 채널이 씀 — 제품), `Engine/Config/NetEmulationPresetTable`(3 절).
 
 ---
 
