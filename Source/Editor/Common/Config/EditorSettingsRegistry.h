@@ -141,7 +141,7 @@ namespace sw::editor
          *          상태 폴더를 찾다 죽었다(`--check-models` 등 모든 도구 명령).
          */
         [[nodiscard]] static EditorUserFileResult open();
-        /** @brief 마지막으로 쓰고 닫습니다. 그 뒤로 `saveOpened`(모듈이 내려갈 때 등)는 아무것도 쓰지 않는다. 에디터 종료가 서비스가 서 있는 동안 부릅니다. */
+        /** @brief 마지막으로 쓰고 닫습니다. `saveOpened` 는 에디터 컨텍스트가 선 동안만 쓴다(모듈이 내려갈 때 등은 아무것도 쓰지 않는다). 에디터 종료가 서비스가 서 있는 동안 부릅니다. */
         static void close();
         /** @brief 열려 있으면 그 파일에 모두 씁니다(`saveAll`). 열려 있지 않으면 쓰지 않고 true 입니다. 실패는 경고로 알리고 false 입니다. */
         static bool saveOpened();

@@ -22,6 +22,7 @@ namespace sw
 {
     class INetSecurityProvider;
     class LocalDeviceKeyProvider;
+    struct LocalStoreChannelList;
 
     /**
      * @class LocalStoreChannel
@@ -69,7 +70,7 @@ namespace sw
         /**
          * @brief 살아 있는 채널 중 하나라도 일이 남았으면 true 입니다(게임 스레드).
          * @details 자동화의 끝 차단(`LocalStoreRequests`)이 쓴다 — 저장 · 썸네일 쓰기가 끝나기 전에 시나리오가 그 결과를 보거나 끝나지 않게. 채널은 만들어질 때 목록에 걸리고
-         *          소멸할 때 빠진다(침입형 — 목록이 할당하지 않는다).
+         *          소멸할 때 빠진다(침입형 — 목록이 할당하지 않는다). 목록 머리는 게임 서비스의 모듈 부분(`LocalStoreChannelList`)이 든다 — 게임 서비스가 없는 실행(테스트)은 걸지 않는다.
          */
         static bool isAnyChannelBusy();
 
@@ -93,6 +94,7 @@ namespace sw
         unique_ptr<ILocalStore>            _store;
         vector<PendingRequest>             _listPendingRequest;
         SubscriptionList                   _subscriptions{ SubscriptionList::ReleaseFunction::create<&LocalStoreChannel::releaseRequest>( this ) };
+        LocalStoreChannelList*             _pLiveList{ nullptr }; ///< 건 살아 있는 채널 목록(만들 때 찾는다 — 없으면 걸지 않았다)
         LocalStoreChannel*                 _pPrevLive{ nullptr }; ///< 살아 있는 채널 목록의 앞(`isAnyChannelBusy`)
         LocalStoreChannel*                 _pNextLive{ nullptr }; ///< 살아 있는 채널 목록의 뒤
     };

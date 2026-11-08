@@ -21,7 +21,6 @@
 #include "DevTools/Net/NetLineEmulation.h"
 #include "DevTools/Net/NetListenLaunch.h"
 #include "DevTools/Profiling/FrameProfileSession.h"
-#include "DevTools/Profiling/FrameStall.h"
 #include "DevTools/Profiling/LeakBaselineDetailSwitch.h"
 #include "DevTools/Profiling/ProfilerLaunchSwitches.h"
 #include "DevTools/RenderDoc/RenderDocCapture.h"
@@ -50,6 +49,7 @@ namespace sw
         : _pConsole{}
         , _pContentFolderWatch{ make_unique<ContentFolderWatchService>() }
         , _pFileReadDiagnostics{ make_unique<FileReadDiagnostics>() }
+        , _frameStall{}
     {
         LeakBaselineDetailSwitch::install(); // 기동 기준선(엔진 초기화 끝 · 헤드리스 진입)보다 먼저다 — 호스트 범위가 엔진보다 먼저 선다
     }
@@ -148,7 +148,7 @@ namespace sw
     {
         // 디버그 HUD — 씬 틱 뒤 · 런타임 UI 앞(HUD 화면이 UI 갱신의 틱에서 섹션을 부른다). 꺼져 있으면 디버그 키 맵 액션 하나를 읽고 끝난다.
         // 개발 명령 `profile.stall` 이 건 지연 — 엔진의 `GT.Frame` 구간 안이다(스파이크를 프레임 비용에 기대지 않고 만든다).
-        FrameStall::consume();
+        _frameStall.consume();
         // 서버 포즈 고스트 — 씬 틱 · 디버그 그리기 뒤(이번 프레임에 넣은 선이 프레임 끝에 확정된다).
         if ( ServerPoseOverlay* const pServerPose = engine::findSubsystem<ServerPoseOverlay>() )
             if ( SceneManager* const pSceneManager = engine::findSubsystem<SceneManager>() )

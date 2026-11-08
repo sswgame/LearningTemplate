@@ -20,8 +20,6 @@ namespace sw
     {
         struct ShaderBindingValidatorInternal
         {
-            static inline atomic<uint32> s_totalViolation{ 0 };
-
             /// @brief 한 리소스를 이름공간 키로 만들 때 쓰는 레지스터 종류입니다(DX 기준).
             enum class RegisterClass : uint8
             {
@@ -227,7 +225,6 @@ namespace sw
             static void report( vector<ShaderBindingValidatorIssue>* pOutIssue, string_view shaderLabel, const string& resource, string&& message, uint32& ioCount )
             {
                 ++ioCount;
-                s_totalViolation.fetch_add( 1, std::memory_order_relaxed );
                 SW_LOG_ERROR_ID( "ShaderBindingValidator.ContractViolated", "[Binding contract] %# - %#: %#", string( shaderLabel ).c_str(), resource.c_str(), message.c_str() );
                 if ( pOutIssue != nullptr )
                 {
@@ -259,11 +256,11 @@ namespace sw
         }
 
         /// @brief 계약 표에 항목 하나를 더합니다.
-        void addReserved( vector<ShaderReservedBinding>& list, const utf8* pName, ShaderBindingKind kind, ShaderReservedLocation dx11,
+        void addReserved( vector<ShaderReservedBinding>& list, string name, ShaderBindingKind kind, ShaderReservedLocation dx11,
                           ShaderReservedLocation dx12, ShaderReservedLocation vulkan, ShaderReservedLocation opengl )
         {
             ShaderReservedBinding entry{};
-            entry._name   = pName;
+            entry._name   = std::move( name );
             entry._kind   = kind;
             entry._dx11   = dx11;
             entry._dx12   = dx12;
@@ -349,29 +346,23 @@ namespace sw
             // 엔진 텍스처 칸 t32.. / 머티리얼 텍스처 t16..t31: 에뮬 백엔드(DX11 · GL)만. Vulkan · DX12 는 선언 자체가 없어야 한다.
             // 엔진 텍스처 칸의 GL binding 은 칸 번호다(레지스터와 다르다 — shaderslot::emulated::getGlTextureUnit). 짝 샘플러는 계약에 없다 —
             // DX11 은 정적 세트로 읽고, GL 은 결합 샘플러라 리플렉션에 샘플러 이름이 따로 나오지 않는다(binding.hlsli).
-            static string s_arrEngineName[shaderslot::kEngineTextureCount];
-            static string s_arrMaterialName[shaderslot::kMaterialTextureCount];
             for ( uint32 slotIndex = 0; slotIndex < shaderslot::kEngineTextureCount; ++slotIndex )
             {
-                s_arrEngineName[slotIndex] = string( shaderslot::resname::kEngineTexture ) + to_string( slotIndex );
-                const uint32 reg           = shaderslot::kEngineTexture0 + slotIndex;
-                addReserved( list, s_arrEngineName[slotIndex].c_str(), ShaderBindingKind::Texture, slotAt( 0, reg ), none(), none(),
+                const uint32 reg = shaderslot::kEngineTexture0 + slotIndex;
+                addReserved( list, string( shaderslot::resname::kEngineTexture ) + to_string( slotIndex ), ShaderBindingKind::Texture, slotAt( 0, reg ), none(), none(),
                              slotAt( 0, shaderslot::emulated::getGlTextureUnit( reg ) ) );
             }
             for ( uint32 slotIndex = 0; slotIndex < shaderslot::kMaterialTextureCount; ++slotIndex )
             {
-                s_arrMaterialName[slotIndex] = string( shaderslot::resname::kMaterialTexture ) + to_string( slotIndex );
-                const uint32 reg             = shaderslot::kMaterialTexture0 + slotIndex;
+                const uint32 reg = shaderslot::kMaterialTexture0 + slotIndex;
                 // 짝 샘플러 이름은 계약에 없다 — 셰이더가 머티리얼 칸을 짝 샘플러 없이 선언하고(binding.hlsli `SW_DECLARE_TEXTURE2D`),
                 // DX11 은 정적 세트의 머티리얼 샘플러로, GL 은 유닛에 건 머티리얼 샘플러 객체로 읽는다(OpenGLRHIDeviceInit).
-                addReserved( list, s_arrMaterialName[slotIndex].c_str(), ShaderBindingKind::Texture, slotAt( 0, reg ), none(), none(), slotAt( 0, reg ) );
+                addReserved( list, string( shaderslot::resname::kMaterialTexture ) + to_string( slotIndex ), ShaderBindingKind::Texture, slotAt( 0, reg ), none(), none(), slotAt( 0, reg ) );
             }
             // 컴퓨트 RW 텍스처 슬롯 u5..u7: 에뮬 백엔드만. GL 은 이미지 유닛(SSBO 와 다른 이름공간).
-            static string s_arrRwTextureName[shaderslot::kComputeTextureUAVSlotCount];
             for ( uint32 slotIndex = 0; slotIndex < shaderslot::kComputeTextureUAVSlotCount; ++slotIndex )
             {
-                s_arrRwTextureName[slotIndex] = string( shaderslot::resname::kRwTextureSlot ) + to_string( slotIndex );
-                addReserved( list, s_arrRwTextureName[slotIndex].c_str(), ShaderBindingKind::RwTexture, slotAt( 0, shaderslot::kComputeTextureUAV0 + slotIndex ), none(), none(),
+                addReserved( list, string( shaderslot::resname::kRwTextureSlot ) + to_string( slotIndex ), ShaderBindingKind::RwTexture, slotAt( 0, shaderslot::kComputeTextureUAV0 + slotIndex ), none(), none(),
                              slotAt( 0, shaderslot::gl::kImageUnit0 + slotIndex ) );
             }
             // 네이티브 bindless 텍스처 배열: DX12 t0 space1 / Vulkan set 1 binding 0. RW 배열은 DX12 u0 space1 / Vulkan set 1 binding 3. 에뮬에는 없다.
@@ -383,11 +374,9 @@ namespace sw
             // DX11 은 같은 세트를 s9..s15 샘플러 상태로 건다(bindStaticSamplers). GL 은 결합 샘플러뿐이라 없다.
             addReserved( list, shaderslot::resname::kSamplers, ShaderBindingKind::Sampler, none(),
                          none(), at( shaderslot::bindless::kVkTextureSet, shaderslot::bindless::kVkSamplerBinding ), none() );
-            static string s_arrSamplerName[shaderslot::kStaticSamplerArrayCount];
             for ( uint32 samplerIndex = 0; samplerIndex < shaderslot::kStaticSamplerArrayCount; ++samplerIndex )
             {
-                s_arrSamplerName[samplerIndex] = string( shaderslot::resname::kSamplerSlot ) + to_string( samplerIndex );
-                addReserved( list, s_arrSamplerName[samplerIndex].c_str(), ShaderBindingKind::Sampler, slotAt( 0, shaderslot::dx11::kStaticSampler0 + samplerIndex ),
+                addReserved( list, string( shaderslot::resname::kSamplerSlot ) + to_string( samplerIndex ), ShaderBindingKind::Sampler, slotAt( 0, shaderslot::dx11::kStaticSampler0 + samplerIndex ),
                              at( 0, samplerIndex ), none(), none() );
             }
             addReserved( list, shaderslot::resname::kShadowSampler, ShaderBindingKind::Sampler, none(),

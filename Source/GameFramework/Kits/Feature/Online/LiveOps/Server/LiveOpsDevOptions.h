@@ -12,8 +12,9 @@ namespace sw
 {
     class IPushNotificationProvider;
 
-    template <typename TValue>
-    class DevOnlineExtension;
+    template <typename T>
+
+    class RegistrationSlot;
 
     /**
      * @struct LiveOpsDevOptions
@@ -25,6 +26,6 @@ namespace sw
 
         CreateFakePushProviderFunction _pCreateFakePushProvider{ nullptr }; ///< `_bFakePush` 가 발송기에 올리는 가짜 제공자("fake")를 만든다
 
-        static DevOnlineExtension<LiveOpsDevOptions> s_devOnline;
+        static RegistrationSlot<const LiveOpsDevOptions>& getDevOnline(); ///< 개발 대체물 칸(`SW_DEFINE_DEV_ONLINE_EXTENSION` 이 정의 — `DevOnlineExtension` 으로 읽는다)
     };
 } // namespace sw

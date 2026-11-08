@@ -7,6 +7,7 @@
  *          개발 도구 단위라 배포 빌드에는 형식째 없습니다 — 출시 빌드에 프레임을 붙잡는 길을 남기지 않습니다.
  */
 #pragma once
+#include "Core/Concurrency/atomic.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -15,14 +16,21 @@
 namespace sw
 {
     /**
-     * @struct FrameStall
+     * @class FrameStall
      * @brief 한 번 걸고 한 번 소비하는 프레임 지연입니다. 걸린 지연이 없으면 `consume` 은 아무것도 하지 않습니다.
+     * @details 개발 도구 호스트(`DevToolsHost`)의 멤버다 — 호스트 범위와 함께 생기고 사라진다(정적 칸이면 엔진을 다시 세워도 걸린 지연이 남는다).
      */
-    struct SW_DEVTOOLS_API FrameStall
+    class SW_DEVTOOLS_API FrameStall
     {
-        /** @brief 다음 `consume` 이 @p milliseconds 동안 부른 스레드를 붙잡게 합니다. 아직 소비하지 않은 지연이 있으면 새 값으로 바꿉니다. */
-        static void request( int32 milliseconds );
+    public:
+        FrameStall();
+
+        /** @brief 다음 `consume` 이 @p milliseconds 동안 부른 스레드를 붙잡게 합니다. 아직 소비하지 않은 지연이 있으면 새 값으로 바꿉니다. 어느 스레드에서도 된다. */
+        void request( int32 milliseconds );
         /** @brief 걸린 지연이 있으면 그만큼 부른 스레드를 재우고 지웁니다. 개발 도구(`DevToolsHost::onAfterSceneTick`)가 `GT.Frame` 구간 안에서 부릅니다. */
-        static void consume();
+        void consume();
+
+    private:
+        atomic<int32> _pendingStallMilliseconds; ///< 다음 `consume` 이 붙잡을 시간(밀리초). 0 이면 걸린 지연이 없다. 개발 명령이 쓰고 게임 스레드가 비운다
     };
 } // namespace sw

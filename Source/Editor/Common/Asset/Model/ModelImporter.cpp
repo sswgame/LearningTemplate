@@ -6,8 +6,6 @@
 
 #include "Editor/Common/Asset/Model/ModelImporter.h"
 
-#include "Core/Concurrency/ScopedLock.h"
-#include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
@@ -630,13 +628,6 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 공용 스켈레톤 파일을 쓰는 임포트 잡끼리 막습니다 — 일괄 임포트가 워커에서 돌고, 같은 내용의 모델이 같은 파일을 쓴다. */
-            static mutex& getSharedSkeletonMutex()
-            {
-                static mutex s_mutex;
-                return s_mutex;
-            }
-
             /**
              * @brief 스켈레톤을 공용 폴더(`<x>/models/_skeletons/`)에 내용당 한 벌만 쓰고, 그 경로를 돌려줍니다. 이름이 내용의 지문이라 같은 내용의 모델은 같은 파일을 가리킵니다.
              * @details 언리얼이 임포트 때 기존 USkeleton 을 고르는 일을 내용 대조로 저절로 한다. 공용 폴더는 옆 폴더 밖이라 다시 임포트해도 지워지지 않는다.
@@ -656,8 +647,8 @@ namespace sw::editor
                 const uint64 hash = HashUtil::appendBytes64( HashUtil::kFNVOffset64, text.data(), text.size() );
                 outSharedPath     = normalized.substr( 0, folderEnd + marker.size() ) + string( ModelImportUtil::kSharedSkeletonFolder ) + "/skeleton_" + to_string( hash ) + string( Skeleton::kExtension );
 
-                ScopedLock<mutex> lock{ getSharedSkeletonMutex() };
-                string            existing;
+                // 잠그지 않는다: 이름이 내용 지문이라 워커 둘이 같은 파일을 써도 같은 글이고, `writeTextFile` 은 저마다의 임시 파일에 쓴 뒤 바꿔 끼운다.
+                string existing;
                 if ( FileUtil::exists( outSharedPath ) && FileUtil::readTextFile( outSharedPath, existing ) && existing == text )
                     return true;
                 if ( FileUtil::ensureParentDirectoryExists( outSharedPath ) == false || FileUtil::writeTextFile( outSharedPath, text ) == false )

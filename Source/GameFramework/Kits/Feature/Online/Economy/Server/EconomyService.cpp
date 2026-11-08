@@ -66,7 +66,7 @@ namespace sw
 
 namespace sw
 {
-    SW_DEFINE_DEV_ONLINE_EXTENSION( EconomyDevOptions, "_bFakeReceipts" );
+    SW_DEFINE_DEV_ONLINE_EXTENSION( EconomyDevOptions, "_bFakeReceipts" )
 
     EconomyService::EconomyService()
         : _localCalls{}
@@ -102,7 +102,7 @@ namespace sw
             return false;
         }
         // 서명 없는 개발 전용 제공자는 DevOnline 단위가 있는 구성(개발)에서만 받는다 — 배포는 그 단위를 짓지 않는다.
-        const bool bDevValidatorRefused = settings._pReceiptRegistry != nullptr && settings._pReceiptRegistry->hasDevelopmentValidator() && EconomyDevOptions::s_devOnline.isRegistered() == false;
+        const bool bDevValidatorRefused = settings._pReceiptRegistry != nullptr && settings._pReceiptRegistry->hasDevelopmentValidator() && DevOnlineExtension<EconomyDevOptions>::isRegistered() == false;
         if ( bDevValidatorRefused )
         {
             SW_LOG_ERROR_ID( "EconomyService.EconomyServiceRefusesDevelopmentOnly", "EconomyService refuses a development-only receipt validator in a build without the DevOnline unit (Shipping)" );

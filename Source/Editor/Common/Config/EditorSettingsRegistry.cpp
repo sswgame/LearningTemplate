@@ -9,6 +9,8 @@
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Config/EditorUserFile.h"
+#include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -60,13 +62,6 @@ namespace sw::editor
             static bool isLoaded( const EditorSettingsRegistration& registration ) { return registration._bFileValueApplied == SW_TRUE; }
 
             static void markLoaded( const EditorSettingsRegistration& registration ) { registration._bFileValueApplied = SW_TRUE; }
-
-            /** @brief `open` 과 `close` 사이인지입니다. 소멸자 없는 값이라 모듈이 내려가는 정적 해제 중에 읽어도 된다. 메인 스레드만 씁니다. */
-            static bool& isStoreOpen()
-            {
-                static bool s_bOpen = false;
-                return s_bOpen;
-            }
 
             /** @brief 섹션 하나에 파일 루트의 값을 입히고 `_pfnOnChanged` 를 부릅니다. */
             static void applySection( const JSONValue& root, const string& sectionID, const EditorSettingsRegistration& registration )
@@ -280,19 +275,18 @@ namespace sw::editor
 
     EditorUserFileResult EditorPreferencesStore::open()
     {
-        EditorSettingsRegistryInternal::isStoreOpen() = true;
         return loadAll( getDefaultFilePath() );
     }
 
     void EditorPreferencesStore::close()
     {
-        (void)saveOpened(); // 실패는 saveAll 이 경고로 알린다
-        EditorSettingsRegistryInternal::isStoreOpen() = false;
+        (void)saveAll( getDefaultFilePath() ); // 실패는 saveAll 이 경고로 알린다
     }
 
     bool EditorPreferencesStore::saveOpened()
     {
-        if ( EditorSettingsRegistryInternal::isStoreOpen() == false )
+        // 열린 동안은 에디터 컨텍스트가 선 동안이다 — 환경설정은 컨텍스트 안의 UI 만 고친다. 정적 깃발을 두지 않는다: 모듈이 내려가는 정적 해제 · 셸이 컨텍스트를 내린 뒤의 부름은 쓰지 않는다.
+        if ( editor::findSubsystem<EditorContext>() == nullptr )
             return true;
         return saveAll( getDefaultFilePath() );
     }

@@ -4,6 +4,10 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Log/LogOnce.h"
+
+#include "Editor/Common/Config/EditorComponentIconTable.h"
+#include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
@@ -97,56 +101,30 @@ namespace sw::editor
         return nullptr;
     }
 
-    namespace
-    {
-        /** @brief 셸이 게시한 표와 이미 알린 이름입니다. 셸은 프로세스에 하나이고 그리기 스레드 하나가 읽는다. */
-        struct EditorIconPublished
-        {
-            const EditorIconGlyphTable*     _pGlyphTable{ nullptr };
-            const EditorComponentIconTable* _pComponentTable{ nullptr };
-            vector<hashed_string>           _listReported;
-        };
-
-        EditorIconPublished& published()
-        {
-            static EditorIconPublished s_published;
-            return s_published;
-        }
-    } // namespace
-
-    void EditorIconGlyphTable::publish( const EditorIconGlyphTable* pGlyphTable, const EditorComponentIconTable* pComponentTable )
-    {
-        EditorIconPublished& state = published();
-        state._pGlyphTable         = pGlyphTable;
-        state._pComponentTable     = pComponentTable;
-        state._listReported.clear();
-    }
-
     const EditorComponentIconTable& EditorIconGlyphTable::getComponentIconTable()
     {
-        const EditorComponentIconTable* pTable = published()._pComponentTable;
+        const EditorComponentIconTable* pTable = editor::findSubsystem<const EditorComponentIconTable>();
         if ( pTable == nullptr )
-            SW_FATAL( "The component icon table is asked for before the editor shell published it" );
+            SW_FATAL( "The component icon table is asked for without an editor context (the shell lends it to the context scope)" );
         return *pTable;
     }
 
     const utf8* EditorIconGlyphTable::findPublishedGlyph( const hashed_string& name )
     {
-        EditorIconPublished&       state = published();
-        static const hashed_string s_missingName{ EditorIconGlyphTable::kMissingIconName };
-        if ( state._pGlyphTable != nullptr )
+        static const hashed_string  s_missingName{ EditorIconGlyphTable::kMissingIconName };
+        EditorIconGlyphTable* const pTable = editor::findSubsystem<EditorIconGlyphTable>();
+        if ( pTable == nullptr )
         {
-            if ( const utf8* pGlyph = state._pGlyphTable->findGlyph( name ) )
-                return pGlyph;
+            SW_LOG_ERROR_ONCE_ID( "EditorIcon.TableNotLoaded", "Editor icon '%#' was asked for without an editor context (the shell lends the icon table to it) - a static table must hold the name, not the glyph", name.c_str() );
+            return "?";
         }
-        const utf8* const pMissing = state._pGlyphTable != nullptr ? state._pGlyphTable->findGlyph( s_missingName ) : nullptr;
-        if ( VectorUtil::contains( state._listReported, name ) == false )
+        if ( const utf8* pGlyph = pTable->findGlyph( name ) )
+            return pGlyph;
+        const utf8* const pMissing = pTable->findGlyph( s_missingName );
+        if ( VectorUtil::contains( pTable->_listReported, name ) == false )
         {
-            state._listReported.push_back( name );
-            if ( pMissing == nullptr )
-                SW_LOG_ERROR_ID( "EditorIcon.TableNotLoaded", "Editor icon '%#' was asked for before the icon table was published (EditorFontSetup) - a static table must hold the name, not the glyph", name.c_str() );
-            else
-                SW_LOG_ERROR_ID( "EditorIcon.UnknownName", "Editor icon '%#' is not in the icon table (editor/fonts/sweditoricons.glyphs.xml)", name.c_str() );
+            pTable->_listReported.push_back( name );
+            SW_LOG_ERROR_ID( "EditorIcon.UnknownName", "Editor icon '%#' is not in the icon table (editor/fonts/sweditoricons.glyphs.xml)", name.c_str() );
         }
         return pMissing != nullptr ? pMissing : "?";
     }

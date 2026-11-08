@@ -7,17 +7,30 @@
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
+#include "Engine/Module/ModuleSubsystemRegistrar.h"
 
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalDeviceKeyProvider.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalStoreBackend.h"
 
 namespace sw
 {
+    /**
+     * @struct LocalStoreChannelList
+     * @brief 살아 있는 채널 목록의 머리입니다(게임 스레드 — 채널은 게임 스레드에서 만들고 부수고 묻는다).
+     * @details GameFramework 의 모듈 부분이라 엔진 범위와 함께 생기고 사라진다(일정 시스템 목록 `ScheduleSystemRegistry` 와 같은 자리).
+     */
+    struct LocalStoreChannelList
+    {
+        static constexpr const utf8* kModulePartName = "LocalStoreChannelList";
+
+        LocalStoreChannel* _pFirst{ nullptr };
+    };
+
+    SW_MODULE_PART( Engine, LocalStoreChannelList, LocalStoreChannelList );
+
     namespace
     {
-        /** @brief 살아 있는 채널 목록의 머리입니다(게임 스레드 — 채널은 게임 스레드에서 만들고 부수고 묻는다). */
-        LocalStoreChannel* s_pFirstLiveChannel = nullptr;
-
         /** @brief 저장 · 썸네일 쓰기가 끝나기 전에 시나리오가 그 결과를 보거나 끝나지 않게 한다(에디터 자리 잡기 · `<Pass/>`). */
         bool isLocalStoreBusy()
         {
@@ -54,27 +67,34 @@ namespace sw
 
     void LocalStoreChannel::linkLive()
     {
-        _pNextLive = s_pFirstLiveChannel;
-        if ( s_pFirstLiveChannel != nullptr )
-            s_pFirstLiveChannel->_pPrevLive = this;
-        s_pFirstLiveChannel = this;
+        _pLiveList = game::findSubsystem<LocalStoreChannelList>();
+        if ( _pLiveList == nullptr )
+            return; // 게임 서비스가 없다(테스트의 지역 채널) — 걸 목록이 없다
+        _pNextLive = _pLiveList->_pFirst;
+        if ( _pLiveList->_pFirst != nullptr )
+            _pLiveList->_pFirst->_pPrevLive = this;
+        _pLiveList->_pFirst = this;
     }
 
     void LocalStoreChannel::unlinkLive()
     {
+        if ( _pLiveList == nullptr )
+            return; // 걸지 않았다
         if ( _pPrevLive != nullptr )
             _pPrevLive->_pNextLive = _pNextLive;
         else
-            s_pFirstLiveChannel = _pNextLive;
+            _pLiveList->_pFirst = _pNextLive;
         if ( _pNextLive != nullptr )
             _pNextLive->_pPrevLive = _pPrevLive;
         _pPrevLive = nullptr;
         _pNextLive = nullptr;
+        _pLiveList = nullptr;
     }
 
     bool LocalStoreChannel::isAnyChannelBusy()
     {
-        for ( const LocalStoreChannel* pChannel = s_pFirstLiveChannel; pChannel != nullptr; pChannel = pChannel->_pNextLive )
+        const LocalStoreChannelList* const pList = game::findSubsystem<LocalStoreChannelList>();
+        for ( const LocalStoreChannel* pChannel = pList != nullptr ? pList->_pFirst : nullptr; pChannel != nullptr; pChannel = pChannel->_pNextLive )
         {
             if ( pChannel->isBusy() )
                 return true;

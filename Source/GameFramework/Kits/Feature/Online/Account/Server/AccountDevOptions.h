@@ -12,8 +12,8 @@
 
 namespace sw
 {
-    template <typename TValue>
-    class DevOnlineExtension;
+    template <typename T>
+    class RegistrationSlot;
 
     /**
      * @struct AccountDevOptions
@@ -24,6 +24,6 @@ namespace sw
         NetPasswordHashParams _lightPasswordHashParams{}; ///< `_bLightPasswordHash` 가 쓰는 가벼운 Argon2id(테스트 · 부하 봇)
         uint8                 _devTicketKeyByte{ 0 };     ///< 티켓 키 환경 변수를 비웠을 때의 개발 키(모든 바이트 같은 값)
 
-        static DevOnlineExtension<AccountDevOptions> s_devOnline;
+        static RegistrationSlot<const AccountDevOptions>& getDevOnline(); ///< 개발 대체물 칸(`SW_DEFINE_DEV_ONLINE_EXTENSION` 이 정의 — `DevOnlineExtension` 으로 읽는다)
     };
 } // namespace sw

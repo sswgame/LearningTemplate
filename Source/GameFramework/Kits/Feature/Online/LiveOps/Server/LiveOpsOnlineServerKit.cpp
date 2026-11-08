@@ -111,7 +111,7 @@ namespace sw
             {
                 if ( bFakePush == false )
                     return true;
-                const LiveOpsDevOptions* pDevOptions = LiveOpsDevOptions::s_devOnline.require( outError );
+                const LiveOpsDevOptions* pDevOptions = DevOnlineExtension<LiveOpsDevOptions>::require( outError );
                 if ( pDevOptions == nullptr )
                     return false;
                 _pFakeProvider = pDevOptions->_pCreateFakePushProvider();
@@ -163,7 +163,7 @@ namespace sw
 
 namespace sw
 {
-    SW_DEFINE_DEV_ONLINE_EXTENSION( LiveOpsDevOptions, "_bFakePush" );
+    SW_DEFINE_DEV_ONLINE_EXTENSION( LiveOpsDevOptions, "_bFakePush" )
 
     SW_REGISTER_ONLINE_SERVER_KIT( LiveOpsOnlineServerKit, OnlineServerKitName::kLiveOps );
 
