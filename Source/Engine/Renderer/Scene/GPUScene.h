@@ -268,17 +268,16 @@ namespace sw
         void setVertexPoolEnabled( bool bEnabled );
         /**
          * @brief 간접 인자의 인스턴스 개수를 CPU 가 채울지, 컴퓨트가 만들지 정합니다.
-         * @details true 면 업로드 시점에 개수를 **0으로** 올린다. 컬링 컴퓨트가 InterlockedAdd 로 채우기
-         *          때문이다. 컬링이 없으면 CPU 가 채운 개수 그대로 그려야 하므로 false 여야 한다.
+         * @details true 면 배치 표가 바뀐 업로드에서 개수를 **0으로** 올리고, 그 뒤 프레임마다의 0 되돌리기는 컬링 앞의 GPU 커널이 한다(CPU 는 올리지 않는다).
+         *          컬링 컴퓨트가 InterlockedAdd 로 채우기 때문이다. 컬링이 없으면 CPU 가 채운 개수 그대로 그려야 하므로 false 여야 한다.
          *          FrameRenderer 가 매 프레임 실제 컬링 가능 여부를 보고 정한다.
          */
         void setIndirectCountsFilledByGPU( bool bByGPU );
         /**
-         * @brief 간접 인자의 인스턴스 개수만 다시 올립니다(배치 구성이 그대로일 때).
-         * @details 컬링 컴퓨트는 개수를 0에서부터 센다. 그래서 씬이 하나도 바뀌지 않은 프레임에도 개수는
-         *          되돌려 놓아야 한다. 배치당 16바이트뿐이라 모두 올려도 싸다.
+         * @brief GPU 가 개수를 맡지 못하게 된 업로드(컬링 뷰 버퍼를 다 갖추지 못함)에서 인자를 CPU 개수로 다시 올립니다.
+         * @details GPU 가 개수를 맡는 동안의 프레임마다 되돌리기는 CPU 가 하지 않는다 — 컬링 앞의 GPU 커널(`RenderPassType::IndirectArgsReset`)이 한다.
          */
-        void refreshIndirectCounts( IRHIDevice* pDevice );
+        void uploadCPUIndirectCounts( IRHIDevice* pDevice );
         /** @brief 모든 컬링 뷰가 간접 인자와 가시 목록을 다 갖췄는지 확인합니다. 하나라도 없으면 GPU 개수를 쓰면 안 됩니다. */
         bool hasAllCullViewBuffers() const;
         /** @brief 모든 컬링 뷰가 가시 목록 버퍼를 갖췄는지 확인합니다. 간접 인자는 이 검사 뒤에 만들어집니다. */

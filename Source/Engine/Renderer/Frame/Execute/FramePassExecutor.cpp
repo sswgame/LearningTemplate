@@ -1318,6 +1318,7 @@ namespace sw
                 case RenderPassType::CanvasMarker:
                 case RenderPassType::ShadowCacheRestore:
                 case RenderPassType::NanCheck:
+                case RenderPassType::IndirectArgsReset:
                 case RenderPassType::ProbeUpdate:
                 {
                     SW_LOG_WARNING_ID( "FramePassExecutor.UnknownPassType", "Unknown pass type '%#' in '%#'", passType, passName );

@@ -205,6 +205,12 @@ namespace sw
          *        `-gv_nanCheck=1` 일 때만 PSO 가 만들어지고, 그래프가 끝난 뒤 주 시점의 패스 출력마다 한 번 돈다(`FramePassExecutor::scanPassOutputsForNan`). 네이티브 bindless(DX12 · Vulkan)만 쓴다.
          */
         NanCheck,
+        /**
+         * @brief 간접 인자의 인스턴스 개수를 GPU 에서 되돌리는 컴퓨트(gpu_cull.hlsl 의 `SW_CULL_RESET_ARGS`)입니다. 컬링 슬롯마다 컬링 앞에서 배치마다 스레드 하나가
+         *        개수를 0(압축을 포기한 배치는 CPU 개수)으로 쓴다 — CPU 가 프레임마다 인자 전체를 다시 올리던 일을 대신한다(`FrameGraphExecutor::dispatchCullView`).
+         *        컬링과 같은 조건(간접 인자 능력)이고 GPUCull 패스 안의 첫 디스패치라 따로 선언하지 않는다.
+         */
+        IndirectArgsReset,
     };
 
     /**
@@ -235,7 +241,7 @@ namespace sw
     /**
      * @brief 프레임 그래프(`_listFramePass`)의 `_type` 으로 쓸 수 있는 값인지 확인합니다. 프레임에 한 번 모든 뷰의 몫을 기록하는 패스입니다(`FrameGraphExecutor`).
      * @details 이 목록이 곧 "그래프 앞에 C++ 가 박아 두던 일" 의 전부다. 파이프라인이 선언하지 않은 종류는 PSO 도 없고 돌지 않는다(`FramePSOManager::createPassPSOs`).
-     *          InstanceSort · VFXMeshInstance 는 GPUCull · VFXSimulation 패스 안의 두 번째 디스패치라 따로 선언하지 않는다.
+     *          InstanceSort · IndirectArgsReset · VFXMeshInstance 는 GPUCull · VFXSimulation 패스 안의 다른 디스패치라 따로 선언하지 않는다.
      */
     constexpr bool isFramePassType( RenderPassType type )
     {

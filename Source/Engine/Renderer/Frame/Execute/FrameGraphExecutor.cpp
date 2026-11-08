@@ -178,7 +178,8 @@ namespace sw
     {
         // 컴퓨트가 드로우 커맨드를 만드는 경로를 쓰려면 인다이렉트 드로우와 컬링 디스패치가 둘 다 켜져
         // 있고 컬링 PSO 가 실제로 만들어져 있어야 한다. 셋 중 하나라도 없으면 CPU 가 채운 개수로 그린다.
-        return gv_gpuCulling && _psoManager.getEnginePSO( RenderPassType::GPUCull ) != 0;
+        // 개수를 되돌리는 커널이 없으면 컴퓨트가 센 개수가 프레임마다 쌓인다(N, 2N ...) — 둘이 다 있어야 GPU 가 개수를 맡는다.
+        return gv_gpuCulling && _psoManager.getEnginePSO( RenderPassType::GPUCull ) != 0 && _psoManager.getEnginePSO( RenderPassType::IndirectArgsReset ) != 0;
     }
 
     void FrameGraphExecutor::dispatchInstanceAnimation( uint32 instanceCount )
@@ -476,7 +477,8 @@ namespace sw
         // FInstanceCullingContext 를 두는 것과 같은 이유다. 이번 프레임에 그리는 추가 뷰(CCTV, PiP)도 자기 슬롯을 돈다.
         if ( _state._gpuScene.isUploaded() == false || _state._gpuScene.areIndirectCountsGPUFilled() == false )
             return;
-        const bool bCullingUnavailable = _psoManager.getEnginePSO( RenderPassType::GPUCull ) == 0 || _state._gpuScene.getInstanceSRV() == kInvalidDescriptorIndex ||
+        const bool bCullingUnavailable = _psoManager.getEnginePSO( RenderPassType::GPUCull ) == 0 || _psoManager.getEnginePSO( RenderPassType::IndirectArgsReset ) == 0 ||
+                                         _state._gpuScene.getInstanceSRV() == kInvalidDescriptorIndex ||
                                          _state._gpuScene.getBatchInfoSRV() == kInvalidDescriptorIndex;
         if ( bCullingUnavailable )
             return;
@@ -733,6 +735,14 @@ namespace sw
         renderView._cullCb.update( *_pCmd, &cullParams, sizeof( cullParams ) );
 
         // 컬링이 쓰는 버퍼(인자 · 가시 목록 · 전환 상태)는 dispatchCullAndSort 가 모든 슬롯을 묶어 UAV 로 옮겨 두었다.
+        // 개수를 GPU 에서 되돌린다 — 배치마다 0(압축을 포기한 배치는 CPU 개수). 예전에는 CPU 가 프레임마다 모든 뷰의 인자 전체를 다시 올렸다.
+        // 나머지 칸(인덱스 수 · 시작 · 정점 시작 · 인스턴스 시작)은 배치 표가 바뀔 때만 CPU 가 올린다. 바인딩은 컬링과 같은 자리(b0 · t1 · u0)라 그대로 이어 쓴다.
+        _pCmd->setComputePipelineState( _psoManager.getEnginePSO( RenderPassType::IndirectArgsReset ) );
+        _pCmd->bindComputeConstantBuffer( renderView._cullCb._index, 0 );
+        _pCmd->bindComputeShaderResource( _state._gpuScene.getBatchInfoSRV(), 1 );
+        _pCmd->bindComputeUAV( view._indirectArgs._uav, 0 );
+        _pCmd->dispatchThreads( cullParams._batchCount, 1, 1, FrameRendererUtil::kLinearThreadGroupSize, 1, 1 );
+        _pCmd->uavBarrier( view._indirectArgs._buffer ); // 되돌린 개수 위에서 컬링이 InterlockedAdd 로 센다
         // PSO 와 바인딩은 **뷰마다** 다시 설정한다. 아래 정렬 패스가 둘 다 교체하므로 다음 뷰가 정렬 PSO 로 컬링을 돌면 안 된다.
         _pCmd->setComputePipelineState( _psoManager.getEnginePSO( RenderPassType::GPUCull ) );
         // CullParams(b0) / g_Instances(t0) / g_BatchInfo(t1) / g_OcclusionTiles(t2) / g_IndirectArgs(u0) / g_VisibleInstanceIDs(u1).

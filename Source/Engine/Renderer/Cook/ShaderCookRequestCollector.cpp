@@ -306,7 +306,11 @@ namespace sw
                     const string& defaultShader = ( engineDefaultAssets.*info._pDefaultShader ).get();
                     if ( info.hasFlag( RenderPassTraitFlag::kCompute ) )
                     {
-                        appendRequestUnique( outListRequest, defaultShader, getShaderStageInfo( ShaderStage::Compute )._pEntryPoint, ShaderStage::Compute, {} );
+                        // 표의 패스 define(같은 셰이더 파일의 다른 커널 — 간접 인자 되돌리기)은 런타임 `selectRenderPassShader` 와 같이 붙인다.
+                        vector<string> listComputeDefine;
+                        if ( info._pPassDefine != nullptr )
+                            listComputeDefine.push_back( string( info._pPassDefine ) );
+                        appendRequestUnique( outListRequest, defaultShader, getShaderStageInfo( ShaderStage::Compute )._pEntryPoint, ShaderStage::Compute, listComputeDefine );
                         continue;
                     }
                     if ( FrameRendererUtil::drawsSceneMeshes( passType ) )
