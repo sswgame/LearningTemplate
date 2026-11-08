@@ -1057,15 +1057,17 @@ namespace sw
         if ( bBorrowRenderTexture )
         {
             TextureCache& textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
-            if ( view._pOutputTexture != nullptr )
-                textures.release( view._outputPath.view() );
             textures.declareRenderTarget( request._renderTexture.view(), request._outputWidth, request._outputHeight );
-            // 렌더 타깃은 읽을 파일이 없어 기다림이 이 스레드의 GPU 생성뿐이라 동기로 둔다(`CanvasTextureLeases::prepareTargets` 와 같다).
-            view._pOutputTexture = textures.acquire( request._renderTexture.view() );
+            // 기다리지 않고 요청한다 — 0 채우기 전송은 진행 중인 프레임 뒤에 실행되므로(전송 계약 3) 이 스레드의 펌프가 끝낸다(`CanvasTextureLeases::prepareTargets` 와 같다).
+            // 옛 경로의 핸들은 덮어쓰며 놓인다(캐시에 돌려준다).
+            view._outputLoad     = textures.request( request._renderTexture.view(), AssetLoadStart::Async );
+            view._pOutputTexture = nullptr;
             view._outputPath     = request._renderTexture;
         }
         if ( bRenderTexture )
         {
+            if ( view._pOutputTexture == nullptr && view._outputLoad.isReady() )
+                view._pOutputTexture = view._outputLoad.getOperation()->getTexture();
             if ( view._pOutputTexture == nullptr || view._pOutputTexture->isRHIValid() == false )
             {
                 view._bRenderThisFrame = SW_FALSE;
@@ -1123,8 +1125,7 @@ namespace sw
         view._shadowCullInput._cullCb.release( _pDevice );
         releaseViewTransparentOrder( view );
         view._commandList.reset();
-        if ( view._pOutputTexture != nullptr && engine::areEngineServicesBound() )
-            engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().release( view._outputPath.view() );
+        view._outputLoad.reset(); // 핸들이 쥔 참조를 놓는다(캐시에 돌려준다)
         view._pOutputTexture = nullptr;
         view._outputPath     = hashed_string{};
     }
