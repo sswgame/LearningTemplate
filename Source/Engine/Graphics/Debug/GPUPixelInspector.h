@@ -55,15 +55,25 @@ namespace sw
          */
         void serviceAttachmentDump( IRHIResourceFactory& factory, const RenderTargetRegistry& registry );
 
+        /**
+         * @brief 주 시점의 Present 가 화면에 낼 원본을 첨부 @p attachment 로 바꿉니다(개발 보기 `gpu.show` — 언리얼 Buffer Visualization 자리). 비면 원래 원본(SourceColor)으로 돌아간다.
+         * @details 첨부를 통째로 보인다 — 채널 하나만 · 값 범위는 에디터 렌더 타깃 창이 맡는다. 깊이는 빨강 채널 하나로 보인다.
+         */
+        void setVisualizedAttachment( string_view attachment );
+        /** @brief 바꾼 원본 이름을 @p outAttachment 에 씁니다(렌더 스레드, 프레임마다). 바꾸지 않았으면 false 이고 잠금을 잡지 않는다. */
+        [[nodiscard]] bool findVisualizedAttachment( string& outAttachment ) const;
+
     private:
-        atomic<uint32>            _pixelX{ SW_GPU_MESSAGE_NO_COORD };
-        atomic<uint32>            _pixelY{ SW_GPU_MESSAGE_NO_COORD };
-        atomic<uint32>            _thread{ SW_GPU_MESSAGE_NO_COORD };
-        mutable mutex             _mutex;
-        string _pendingAttachment SW_GUARDED_BY( _mutex ); ///< 읽을 첨부 이름(비면 모두)
-        uint32 _pendingX          SW_GUARDED_BY( _mutex ){ 0 };
-        uint32 _pendingY          SW_GUARDED_BY( _mutex ){ 0 };
-        uint8 _bDumpPending       SW_GUARDED_BY( _mutex ){ SW_FALSE };
+        atomic<uint32>               _pixelX{ SW_GPU_MESSAGE_NO_COORD };
+        atomic<uint32>               _pixelY{ SW_GPU_MESSAGE_NO_COORD };
+        atomic<uint32>               _thread{ SW_GPU_MESSAGE_NO_COORD };
+        mutable mutex                _mutex;
+        string _pendingAttachment    SW_GUARDED_BY( _mutex ); ///< 읽을 첨부 이름(비면 모두)
+        uint32 _pendingX             SW_GUARDED_BY( _mutex ){ 0 };
+        uint32 _pendingY             SW_GUARDED_BY( _mutex ){ 0 };
+        uint8 _bDumpPending          SW_GUARDED_BY( _mutex ){ SW_FALSE };
+        string _visualizedAttachment SW_GUARDED_BY( _mutex );   ///< Present 원본을 바꾼 첨부 이름(비면 바꾸지 않음)
+        atomic<uint8>                _bVisualizing{ SW_FALSE }; ///< `_visualizedAttachment` 가 비지 않았는지 — 렌더 스레드가 잠금 없이 먼저 본다
     };
 
     SW_SERVICE_SLOT( GPUPixelInspector, Optional );

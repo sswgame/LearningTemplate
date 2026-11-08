@@ -23,6 +23,7 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
+#include "Engine/Graphics/Debug/GPUPixelInspector.h"
 #include "Engine/Graphics/Debug/RenderDiagnostics.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
@@ -555,6 +556,22 @@ namespace sw
             }
         }
         return hashed_string{};
+    }
+
+    void FramePassExecutor::registerVisualizedAttachment( FramePassContext& context )
+    {
+        // 주 시점만 바꾼다 — 추가 뷰(CCTV · 렌더 텍스처)는 제 원본을 그대로 낸다. 없는 이름이면 원본을 그대로 둔다(개발 명령이 이미 이름을 알렸다).
+        const GPUPixelInspector* const pInspector = engine::findSubsystem<GPUPixelInspector>();
+        string                         attachment;
+        if ( isRenderingExtraView() || pInspector == nullptr || pInspector->findVisualizedAttachment( attachment ) == false )
+            return;
+        const hashed_string name = hashed_string::findInterned( attachment );
+        if ( name.empty() || findTransient( name ) == 0 )
+        {
+            SW_LOG_WARNING_ONCE_ID( "FramePassExecutor.VisualizedAttachmentMissing", "gpu.show: attachment '%#' is not allocated in this view - showing the normal output", attachment.c_str() );
+            return;
+        }
+        registerPassTexture( context, attachmentNames()._sourceColor, name );
     }
 
     void FramePassExecutor::scanPassOutputsForNan( IRHIDevice* pDevice )
@@ -1419,6 +1436,8 @@ namespace sw
             // 선언한 입력을 **모두** 바인딩한다. Present 가 후처리 체인을 겸하면 깊이(외곽선)와 AO 가 필요하고,
             // 그냥 블릿이면 선언이 컬러 하나뿐이라 위 등록을 덮어쓸 뿐이다.
             registerDeclaredInputs( context, passDesc );
+            // 개발 보기 `gpu.show <첨부>` — 주 시점이 화면에 낼 원본을 그 첨부로 바꾼다(언리얼 Buffer Visualization). 선언한 입력 등록 뒤라 그것을 덮는다.
+            registerVisualizedAttachment( context );
             // 후처리 체인이 톤맵까지 하면 자동 노출을 이 그리기 앞에서 측정한다(Tonemap 패스와 같은 자리).
             _autoExposure.recordAutoExposure( context, *_pActiveView, passDesc );
             // FSR 1 로 키우는 뷰는 렌더 패스를 열기 전에 EASU 를 중간 RT 에 그리고, 아래에서 블릿 대신 RCAS 로 그린다(prepareUpscale 이 셋업에서 정했다).

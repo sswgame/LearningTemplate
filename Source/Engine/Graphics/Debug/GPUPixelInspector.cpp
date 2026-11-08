@@ -43,6 +43,22 @@ namespace sw
         return selection;
     }
 
+    void GPUPixelInspector::setVisualizedAttachment( string_view attachment )
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        _visualizedAttachment = string( attachment );
+        _bVisualizing.store( attachment.empty() ? SW_FALSE : SW_TRUE );
+    }
+
+    bool GPUPixelInspector::findVisualizedAttachment( string& outAttachment ) const
+    {
+        if ( _bVisualizing.load() == SW_FALSE )
+            return false;
+        ScopedLock<mutex> lock{ _mutex };
+        outAttachment = _visualizedAttachment;
+        return outAttachment.empty() == false;
+    }
+
     bool GPUPixelInspector::takeAttachmentDump( uint32& outX, uint32& outY, string& outAttachment )
     {
         ScopedLock<mutex> lock{ _mutex };

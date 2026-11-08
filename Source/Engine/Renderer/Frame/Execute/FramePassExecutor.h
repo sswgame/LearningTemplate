@@ -410,6 +410,8 @@ namespace sw
          *          파이프라인을 바꾸기 전까지만 유효하므로 프레임을 넘겨 보관하지 않는다.
          */
         hashed_string resolvePresentSource() const;
+        /** @brief 개발 보기 `gpu.show <첨부>`(GPUPixelInspector)가 켜져 있으면 주 시점 Present 의 SourceColor 를 그 첨부로 다시 등록합니다. 선언한 입력 등록 뒤에 부릅니다. */
+        void registerVisualizedAttachment( FramePassContext& context );
         /** @brief 지금 그리는 뷰의 트랜지언트 풀입니다. */
         TransientAttachmentPool&       activePool() { return _pActiveView->_transientPool; }
         const TransientAttachmentPool& activePool() const { return _pActiveView->_transientPool; }

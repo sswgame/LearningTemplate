@@ -67,6 +67,17 @@ namespace sw
                 return true;
             }
 
+            static bool runShow( const vector<string>& listArgument, string& outReply )
+            {
+                GPUPixelInspector* const pInspector = engine::findSubsystem<GPUPixelInspector>();
+                if ( pInspector == nullptr || listArgument.size() != 1 )
+                    return false;
+                const bool bOff = listArgument[0] == "off";
+                pInspector->setVisualizedAttachment( bOff ? string_view{} : string_view( listArgument[0] ) );
+                outReply = bOff ? string( "showing the normal output" ) : formatToString( "showing attachment '%#' on screen (gpu.show off to return)", listArgument[0].c_str() );
+                return true;
+            }
+
             static bool runTimings( const vector<string>& listArgument, string& outReply )
             {
                 FrameProfiler* const pProfiler = engine::findSubsystem<FrameProfiler>();
@@ -100,5 +111,7 @@ namespace sw
     SW_DEV_COMMAND( GPUInspectPixel, "gpu.inspect", "gpu.inspect <x> <y> [attachment] | gpu.inspect off",
                     "Log the attachment values at a pixel and select it for SW_GPU_PRINT (shader prints need -gv_gpuMessages=1)", &GPUDiagnosticsCommandsInternal::runInspect );
     SW_DEV_COMMAND( GPUSelectThread, "gpu.thread", "gpu.thread <dispatch thread>", "Select the compute dispatch thread for SW_GPU_PRINT", &GPUDiagnosticsCommandsInternal::runThread );
+    SW_DEV_COMMAND( GPUShowAttachment, "gpu.show", "gpu.show <attachment> | gpu.show off", "Show a pipeline attachment (GBuffer, depth, ...) on screen instead of the normal output",
+                    &GPUDiagnosticsCommandsInternal::runShow );
     SW_DEV_COMMAND( GPUTimings, "gpu.timings", "gpu.timings [on|off]", "Log the last frame GPU time per pass (GPUTiming.Pass), or turn GPU timing on/off", &GPUDiagnosticsCommandsInternal::runTimings );
 } // namespace sw

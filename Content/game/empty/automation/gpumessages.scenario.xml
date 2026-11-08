@@ -20,6 +20,7 @@
 	<ExpectLog id="GPUMessage.UnknownID" count="0"/>
 	<ExpectLog id="GPUMessage.Error" count="0"/>
 	<DevCommand line="gpu.inspect off"/>
+	<DevCommand line="gpu.show off"/>
 	<DevCommand line="gpu.thread 0"/>
 	<DevCommand line="gpu.timings on"/>
 	<Wait frames="30"/>
