@@ -15,6 +15,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Profiling/FrameProfiler.h"
 
+#include <algorithm>
 #include <atomic>
 #include <queue>
 
@@ -276,7 +277,7 @@ namespace sw
      * @brief 그래프에 새 패스 노드를 등록합니다.
      */
     bool RenderGraph::addPass( hashed_string passName, vector<hashed_string> listInput, vector<hashed_string> listOutput,
-                               RenderGraphPassExecuteFn execute )
+                               RenderGraphPassExecuteFn execute, RHIQueueType queue )
     {
         // 이름은 패스의 키다(실행 순서, 레벨, 이름에서 노드를 찾는 테이블). 같은 이름을 받으면 그 테이블이 뒤의 것으로 덮여 한 패스는 두 번,
         // 다른 하나는 한 번도 돌지 않고, 병렬 기록에서는 두 작업 스레드가 같은 커맨드 리스트에 쓴다. 그래서 거절한다.
@@ -295,6 +296,7 @@ namespace sw
         node._listOutput = std::move( listOutput );
         node._execute    = std::move( execute );
         node._bCulled    = false;
+        node._queue      = queue;
         _listNode.push_back( std::move( node ) );
         return true;
     }
@@ -307,6 +309,9 @@ namespace sw
         using Internal = RenderGraphCompileInternal;
         _listCompiledExecutionOrder.clear();
         _listCompiledLevel.clear();
+        _listQueueStep.clear();
+        _listFinalJoinBatch.clear();
+        _asyncBatchCount = 0;
 
         if ( _listNode.empty() )
             return false;
@@ -342,7 +347,141 @@ namespace sw
 
         // 수명은 실행 순서가 정해진 **뒤에야** 의미가 있다. "몇 번째 패스에서 처음 또는 마지막으로 쓰이나" 이기 때문이다.
         computeResourceLifetimes();
+        computeQueuePlan( graph._adjacency );
 
+        return true;
+    }
+
+    void RenderGraph::computeQueuePlan( const unordered_map<size_t, vector<size_t>>& mapAdjacency )
+    {
+        _listQueueStep.assign( _listCompiledExecutionOrder.size(), RenderGraphQueueStep{} );
+        _listFinalJoinBatch.clear();
+        _asyncBatchCount = 0;
+
+        // 소비자 → 생산자들(간선의 역방향). 그래픽스 패스가 기다릴 묶음은 자기 생산자가 속한 묶음이다.
+        unordered_map<size_t, vector<size_t>> mapProducer;
+        for ( const auto& [producerIndex, listConsumer] : mapAdjacency )
+        {
+            for ( size_t consumerIndex : listConsumer )
+            {
+                mapProducer[consumerIndex].push_back( producerIndex );
+            }
+        }
+
+        constexpr uint32 kNoBatch = ~0u;
+        vector<uint32>   listBatchOfNode( _listNode.size(), kNoBatch );
+        vector<uint8>    listBatchJoined;
+        for ( size_t orderIndex = 0; orderIndex < _listCompiledExecutionOrder.size(); ++orderIndex )
+        {
+            const size_t          nodeIndex = _mapNameToIndex[_listCompiledExecutionOrder[orderIndex]];
+            RenderGraphQueueStep& step      = _listQueueStep[orderIndex];
+            // 능력이 없으면 선언과 상관없이 그래픽스로 계획한다 — 같은 순서로 돌 뿐 결과는 같다.
+            const bool bAsync = _bAsyncComputeSupported && _listNode[nodeIndex]._queue == RHIQueueType::AsyncCompute;
+            step._queue       = bAsync ? RHIQueueType::AsyncCompute : RHIQueueType::Graphics;
+            if ( bAsync )
+            {
+                // 실행 순서에서 이어진 비동기 패스는 한 묶음(컴퓨트 리스트 하나)이다. 앞 패스가 그래픽스였으면 여기서 포크한다.
+                const bool bPreviousAsync = orderIndex > 0 && _listQueueStep[orderIndex - 1]._queue == RHIQueueType::AsyncCompute;
+                if ( bPreviousAsync == false )
+                {
+                    step._bBeginsBatch = 1;
+                    ++_asyncBatchCount;
+                    listBatchJoined.push_back( 0 );
+                }
+                step._batch                = _asyncBatchCount - 1;
+                listBatchOfNode[nodeIndex] = step._batch;
+                continue;
+            }
+            const auto producerIt = mapProducer.find( nodeIndex );
+            if ( producerIt == mapProducer.end() )
+                continue;
+            for ( size_t producerIndex : producerIt->second )
+            {
+                const uint32 batch = listBatchOfNode[producerIndex];
+                if ( batch == kNoBatch || listBatchJoined[batch] != 0 )
+                    continue;
+                step._listJoinBatch.push_back( batch );
+                listBatchJoined[batch] = 1;
+            }
+            std::sort( step._listJoinBatch.begin(), step._listJoinBatch.end() );
+        }
+        for ( size_t orderIndex = 0; orderIndex < _listQueueStep.size(); ++orderIndex )
+        {
+            const bool bAsync                      = _listQueueStep[orderIndex]._queue == RHIQueueType::AsyncCompute;
+            const bool bNextAsync                  = orderIndex + 1 < _listQueueStep.size() && _listQueueStep[orderIndex + 1]._queue == RHIQueueType::AsyncCompute;
+            _listQueueStep[orderIndex]._bEndsBatch = ( bAsync && bNextAsync == false ) ? 1 : 0;
+        }
+        // 그래프 밖(뷰 그래프 · 다음 프레임)이 결과를 읽는다 — 아무도 조인하지 않은 묶음은 그래프 끝에서 조인한다.
+        for ( uint32 batch = 0; batch < _asyncBatchCount; ++batch )
+        {
+            if ( listBatchJoined[batch] == 0 )
+                _listFinalJoinBatch.push_back( batch );
+        }
+    }
+
+    bool RenderGraph::executeOnQueues( RenderGraphExecutionContext& context, IRHIDevice& device, IRHICommandList& graphicsList, IRHICommandList* pAsyncList )
+    {
+        context.reset();
+        if ( _listCompiledExecutionOrder.empty() && compile() == false )
+            return false;
+        if ( _asyncBatchCount > 0 && pAsyncList == nullptr )
+        {
+            SW_LOG_ERROR_ONCE_ID( "RenderGraph.AsyncListMissing", "executeOnQueues: %# async compute batch(es) planned but no async command list was given - nothing recorded", _asyncBatchCount );
+            return false;
+        }
+
+        vector<RHIQueueSyncPoint> listBatchPoint( _asyncBatchCount );
+        // 그래픽스 리스트를 닫아 넘기고 다시 연다 — 포크의 신호와 조인의 대기는 큐에 넘긴 일에만 걸리므로 그 자리까지의 기록을 먼저 넘긴다.
+        const auto handOffGraphics = [&device, &graphicsList]()
+        {
+            graphicsList.endCommandList();
+            device.executeCommandList( &graphicsList );
+            graphicsList.beginCommandList();
+        };
+        const auto joinBatches = [&]( const vector<uint32>& listBatch )
+        {
+            if ( listBatch.empty() )
+                return;
+            graphicsList.endCommandList();
+            device.executeCommandList( &graphicsList );
+            for ( uint32 batch : listBatch )
+            {
+                device.waitForAsyncCompute( listBatchPoint[batch] );
+            }
+            graphicsList.beginCommandList();
+        };
+
+        for ( size_t orderIndex = 0; orderIndex < _listCompiledExecutionOrder.size(); ++orderIndex )
+        {
+            const auto indexIt = _mapNameToIndex.find( _listCompiledExecutionOrder[orderIndex] );
+            if ( indexIt == _mapNameToIndex.end() )
+            {
+                SW_LOG_ERROR_ID( "RenderGraph.ExecuteUnknownPassOrder", "execute: unknown pass in order: %#", _listCompiledExecutionOrder[orderIndex].c_str() );
+                return false;
+            }
+            RenderGraphNode&            node = _listNode[indexIt->second];
+            const RenderGraphQueueStep& step = _listQueueStep[orderIndex];
+            if ( step._queue == RHIQueueType::Graphics )
+                joinBatches( step._listJoinBatch );
+            else if ( step._bBeginsBatch != 0 )
+                pAsyncList->beginCommandList();
+
+            IRHICommandList* const pList = step._queue == RHIQueueType::Graphics ? &graphicsList : pAsyncList;
+            _listLevelBarrier.clear();
+            _mapLevelBarrierIndex.clear();
+            appendPassBarriers( context, node );
+            issueBarriers( pList );
+            if ( node._execute.isBound() )
+                recordPassBody( node, pList );
+
+            if ( step._queue == RHIQueueType::AsyncCompute && step._bEndsBatch != 0 )
+            {
+                pAsyncList->endCommandList();
+                handOffGraphics(); // 포크 지점 — 이 묶음은 여기까지의 그래픽스 일 뒤에 시작한다
+                listBatchPoint[step._batch] = device.submitAsyncCompute( pAsyncList );
+            }
+        }
+        joinBatches( _listFinalJoinBatch );
         return true;
     }
 
@@ -919,5 +1058,8 @@ namespace sw
         _listResourceLifetime.clear();
         _mapResourceLifetimeIndex.clear();
         _mapResourceKind.clear();
+        _listQueueStep.clear();
+        _listFinalJoinBatch.clear();
+        _asyncBatchCount = 0;
     }
 } // namespace sw

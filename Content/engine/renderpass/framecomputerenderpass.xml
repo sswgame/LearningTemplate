@@ -5,6 +5,8 @@
 	  · 애니메이션 · 모프 · 스킨이 컬링보다 앞이다(컬링이 이번 프레임 바운드로 판정한다) — InstanceBuffer · DeformVertices 를 쓰고 컬링이 읽는다.
 	  · 입자가 인스턴스 칸(메시 입자)과 라이트 버퍼 GPU 구간(입자 라이트)을 쓰므로 애니메이션 · 라이트 그리드보다 앞이다.
 	선언하지 않은 종류는 PSO 도 없고 돌지 않는다. 셰이더는 패스 종류의 표가 정한다(셰이더 칸은 비워 둔다 — 검증).
+	`_queue="AsyncCompute"` 는 비동기 컴퓨트 큐 후보다(가림 타일 · 입자 · 라이트 그리드 · 프로브). DX12 · 큐가 둘인 Vulkan 장치는 컴퓨트 큐에서 그래픽스와 겹쳐 돌고,
+	DX11 · GL · WebGPU 는 그래픽스 큐에서 같은 순서로 돈다(능력 `_bAsyncCompute`). 끄고 켠 비교는 `-gv_asyncCompute=0`. 이득이 없으면 이 속성 한 줄을 지운다.
 -->
 <RenderPassDesc _name="FrameComputePass">
 	<_listResource>
@@ -33,7 +35,7 @@
 			</_listOutput>
 		</RenderGraphPassDesc>
 		<!-- 깊이 히스토리 → 16 px 타일마다 최대 깊이(occlusion_tiles.hlsl). 컬링이 읽고, 주 시점 타일은 게임 스레드가 몇 프레임 늦게 되읽는다. -->
-		<RenderGraphPassDesc _name="OcclusionTiles" _type="OcclusionTiles" _cullMode="None">
+		<RenderGraphPassDesc _name="OcclusionTiles" _type="OcclusionTiles" _cullMode="None" _queue="AsyncCompute">
 			<_listInput>
 				<item>DepthHistory</item>
 			</_listInput>
@@ -42,7 +44,7 @@
 			</_listOutput>
 		</RenderGraphPassDesc>
 		<!-- GPU 방출기의 입자 시뮬레이션(vfx_simulate.hlsl) + 메시 입자의 인스턴스 칸 쓰기(vfx_mesh_instance.hlsl). 깊이 충돌은 주 시점 깊이 히스토리를 읽는다. -->
-		<RenderGraphPassDesc _name="ParticleSimulation" _type="VFXSimulation" _cullMode="None">
+		<RenderGraphPassDesc _name="ParticleSimulation" _type="VFXSimulation" _cullMode="None" _queue="AsyncCompute">
 			<_listInput>
 				<item>DepthHistory</item>
 			</_listInput>
@@ -79,7 +81,7 @@
 			</_listOutput>
 		</RenderGraphPassDesc>
 		<!-- 뷰마다의 클러스터드 라이트 그리드(light_grid.hlsl). 뷰 그래프의 조명 패스(포워드 · 디퍼드 · 투명)가 읽는다. -->
-		<RenderGraphPassDesc _name="LightGrid" _type="LightGrid" _cullMode="None">
+		<RenderGraphPassDesc _name="LightGrid" _type="LightGrid" _cullMode="None" _queue="AsyncCompute">
 			<_listInput>
 				<item>LightBuffer</item>
 			</_listInput>
@@ -96,7 +98,7 @@
 				<item>VolumetricFogVolume</item>
 			</_listOutput>
 		</RenderGraphPassDesc>
-		<RenderGraphPassDesc _name="ProbeUpdate" _type="ProbeUpdate" _cullMode="None">
+		<RenderGraphPassDesc _name="ProbeUpdate" _type="ProbeUpdate" _cullMode="None" _queue="AsyncCompute">
 			<_listInput>
 				<item>LightBuffer</item>
 				<item>LightGrid</item>

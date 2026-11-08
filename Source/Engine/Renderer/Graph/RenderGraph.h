@@ -12,6 +12,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Graphics/RHI/RHIEnums.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -163,11 +164,28 @@ namespace sw
      */
     struct RenderGraphNode
     {
-        hashed_string            _name;             ///< 렌더 패스의 고유 이름(해시)
-        vector<hashed_string>    _listInput;        ///< 입력으로 읽는 자원 해시 목록
-        vector<hashed_string>    _listOutput;       ///< 출력으로 만드는 자원 해시 목록
-        RenderGraphPassExecuteFn _execute;          ///< 컴파일된 순서대로 부르는 패스 콜백(선택)
-        bool                     _bCulled{ false }; ///< 쓰이지 않아 컬링되었는지 여부 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        hashed_string            _name;                            ///< 렌더 패스의 고유 이름(해시)
+        vector<hashed_string>    _listInput;                       ///< 입력으로 읽는 자원 해시 목록
+        vector<hashed_string>    _listOutput;                      ///< 출력으로 만드는 자원 해시 목록
+        RenderGraphPassExecuteFn _execute;                         ///< 컴파일된 순서대로 부르는 패스 콜백(선택)
+        bool                     _bCulled{ false };                ///< 쓰이지 않아 컬링되었는지 여부 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        RHIQueueType             _queue{ RHIQueueType::Graphics }; ///< 선언한 큐입니다. 비동기 컴퓨트를 지원하지 않는 그래프에서는 그래픽스로 계획한다(`setAsyncComputeSupported`)
+    };
+
+    /**
+     * @struct RenderGraphQueueStep
+     * @brief 컴파일한 실행 순서의 패스 하나가 어느 큐에서 돌고, 그 앞뒤에 어떤 큐 동기화가 오는지입니다(`RenderGraph::getQueueSteps`, 실행 순서와 같은 번호).
+     * @details 연속한 AsyncCompute 패스는 한 묶음(컴퓨트 리스트 하나)이다. 묶음의 첫 패스 앞이 포크(그때까지의 그래픽스 일 뒤에 시작), 마지막 패스 뒤가 제출이다.
+     *          그래픽스 패스는 자기가 의존하는(간선) 묶음 중 아직 기다리지 않은 것을 앞에서 조인한다 — 의존하지 않는 그래픽스 일은 컴퓨트와 겹친다.
+     *          언리얼 RDG 가 AsyncCompute 패스의 포크 · 조인 지점을 그래프 간선에서 정하는 것과 같다(`FRDGPass::CrossPipelineProducer` 자리).
+     */
+    struct RenderGraphQueueStep
+    {
+        RHIQueueType   _queue{ RHIQueueType::Graphics };
+        uint32         _batch{ 0 };        ///< 비동기 묶음 번호(AsyncCompute 패스만)
+        uint8          _bBeginsBatch{ 0 }; ///< 이 패스 앞에서 포크한다(묶음의 첫 패스)
+        uint8          _bEndsBatch{ 0 };   ///< 이 패스 뒤에서 묶음을 컴퓨트 큐에 낸다(묶음의 마지막 패스)
+        vector<uint32> _listJoinBatch;     ///< 이 그래픽스 패스 앞에서 그래픽스 큐가 기다릴 묶음 번호(오름차순)
     };
 } // namespace sw
 
@@ -227,7 +245,28 @@ namespace sw
          * @param execute 위상 정렬 순서로 실행할 때 부를 콜백입니다. 바인딩되지 않았으면 건너뜁니다.
          */
         bool addPass( hashed_string passName, vector<hashed_string> listInput = {}, vector<hashed_string> listOutput = {},
-                      RenderGraphPassExecuteFn execute = {} );
+                      RenderGraphPassExecuteFn execute = {}, RHIQueueType queue = RHIQueueType::Graphics );
+
+        /**
+         * @brief 이 그래프를 돌릴 디바이스가 비동기 컴퓨트 큐를 갖는지 알립니다(능력 `RHICapabilities::_bAsyncCompute`). 컴파일 전에 부릅니다. 기본은 거짓입니다.
+         * @details 거짓이면 AsyncCompute 로 선언한 패스도 그래픽스 큐로 계획한다(같은 순서, 동기화 없음) — 능력 표가 정한 길이지 실패의 대체가 아니다.
+         */
+        void setAsyncComputeSupported( bool bSupported ) { _bAsyncComputeSupported = bSupported; }
+        /** @brief 컴파일한 실행 순서와 같은 번호의 큐 계획입니다(포크 · 묶음 · 조인). 컴파일 전이면 비어 있습니다. */
+        const vector<RenderGraphQueueStep>& getQueueSteps() const { return _listQueueStep; }
+        /** @brief 마지막 패스 뒤에 그래픽스 큐가 기다릴 묶음입니다 — 그래프 밖(뷰 그래프)이 결과를 읽으므로 그래프가 끝나기 전에 모두 조인한다. */
+        const vector<uint32>& getFinalJoinBatches() const { return _listFinalJoinBatch; }
+        /** @brief 계획한 비동기 묶음 수입니다. */
+        uint32 getAsyncBatchCount() const { return _asyncBatchCount; }
+
+        /**
+         * @brief 큐 계획대로 패스를 기록하고 제출합니다. 그래픽스 패스는 @p graphicsList 에, 비동기 패스는 @p pAsyncList 에 기록한다.
+         * @details @p graphicsList 는 열린 채로 받고 열린 채로 돌려준다 — 포크 · 조인마다 닫아 `executeCommandList` 로 넘기고 다시 연다(리스트는 프레임 안 재사용을 받는다).
+         *          포크는 `submitAsyncCompute`, 조인은 `waitForAsyncCompute` 다. 묶음이 없으면 @p pAsyncList 가 nullptr 여도 된다.
+         *          배리어 추론은 직렬 `execute` 와 같고 레벨 콜백에 그 패스의 리스트를 넘긴다.
+         * @return 실행했으면 true 입니다. 묶음이 있는데 비동기 리스트가 없으면 false 이고 아무것도 기록하지 않는다.
+         */
+        [[nodiscard]] bool executeOnQueues( RenderGraphExecutionContext& context, IRHIDevice& device, IRHICommandList& graphicsList, IRHICommandList* pAsyncList );
 
         /**
          * @brief 자원 @p name 의 수명 종류를 선언합니다. 선언하지 않은 이름은 Transient 입니다. 같은 이름을 다시 선언하면 뒤의 것이 이깁니다.
@@ -346,6 +385,8 @@ namespace sw
         void issueBarriers( IRHICommandList* pCmdList );
         /** @brief compile() 끝에서 리소스 수명을 채우고, 쓰이지 않는 자원과 쓰인 적 없는 자원을 로그로 알립니다. */
         void computeResourceLifetimes();
+        /** @brief compile() 끝에서 큐 계획(`_listQueueStep` · 끝 조인 · 묶음 수)을 채웁니다. @p mapAdjacency 는 생산자 → 소비자 간선입니다. */
+        void computeQueuePlan( const unordered_map<size_t, vector<size_t>>& mapAdjacency );
         /** @brief 병렬 기록 전에 모든 레벨의 패스 커맨드 리스트를 마련합니다(디바이스가 바뀌면 지난 것을 놓는다). 하나라도 못 만들면 false 이고 아무것도 내지 않습니다. */
         [[nodiscard]] bool prepareParallelCommandLists( IRHIDevice* pDevice );
         /** @brief 레벨 하나의 배리어를 `_listLevelBarrier` 에, 기록할 패스를 병렬 스크래치의 엔트리 목록에 모읍니다. 모르는 패스면 false 입니다. */
@@ -374,5 +415,10 @@ namespace sw
         unordered_map<hashed_string, size_t> _mapResourceLifetimeIndex;
         /// @brief `declareResource` 가 적은 수명 종류입니다. 없는 이름은 Transient 입니다.
         unordered_map<hashed_string, RenderGraphResourceKind> _mapResourceKind;
+        /// @brief compile() 이 계산한 큐 계획(실행 순서 번호)과 끝의 조인, 묶음 수입니다.
+        vector<RenderGraphQueueStep> _listQueueStep;
+        vector<uint32>               _listFinalJoinBatch;
+        uint32                       _asyncBatchCount{ 0 };
+        bool                         _bAsyncComputeSupported{ false }; ///< NOLINT(sw-bool-flag): 그래프 하나에 하나뿐인 설정이다
     };
 } // namespace sw

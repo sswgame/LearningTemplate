@@ -141,6 +141,8 @@ namespace sw
     {
         Microsoft::WRL::ComPtr<ID3D12CommandAllocator>    _allocator;
         Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> _list;
+        /// @brief 쌍의 종류입니다. DIRECT 는 그래픽스 큐, COMPUTE 는 비동기 컴퓨트 큐에 낸다 — 반납할 풀이 다르다(한 큐의 리스트는 다른 큐에 낼 수 없다).
+        D3D12_COMMAND_LIST_TYPE _type{ D3D12_COMMAND_LIST_TYPE_DIRECT };
     };
 } // namespace sw
 
@@ -244,6 +246,7 @@ namespace sw
             RHICapabilities caps  = RHIAvailability::query( RHIBackend::DirectX12 );
             caps._bNativeBindless = _bBindlessRootSignature != SW_FALSE ? 1u : 0u;
             caps._bGPUBreadcrumbs = _breadcrumbAddress != 0 ? SW_TRUE : SW_FALSE;
+            caps._bAsyncCompute   = _computeQueue != nullptr ? SW_TRUE : SW_FALSE;
             return caps;
         }
 
@@ -284,6 +287,12 @@ namespace sw
 
         void executeCommandList( IRHICommandList* pCmdList ) override;
         void executeCommandListImmediate( IRHICommandList* pCmdList ) override;
+        /** @brief COMPUTE 종류의 리스트를 만듭니다. 컴퓨트 큐가 없으면(만들지 못한 장치) 오류를 남기고 nullptr 입니다. */
+        unique_ptr<IRHICommandList> createAsyncComputeCommandList() override;
+        /** @brief 그래픽스 일을 큐에 내고 신호 → 컴퓨트 큐가 기다리고 실행 → 컴퓨트 펜스 신호. 그 값을 돌려준다. */
+        RHIQueueSyncPoint submitAsyncCompute( IRHICommandList* pCmdList ) override;
+        /** @brief 그 전 그래픽스 일을 큐에 낸 뒤 그래픽스 큐가 컴퓨트 펜스 값을 기다리게 합니다. */
+        void waitForAsyncCompute( RHIQueueSyncPoint point ) override;
         /**
          * @brief 프레임 스트림의 다음 세그먼트를 열고 기록 대상으로 만듭니다.
          * @details 커맨드 리스트가 제출될 때마다 스트림을 여기서 자른다(executeCommandList 참고).
@@ -295,7 +304,7 @@ namespace sw
          * @details 풀에 남은 것이 없으면 새로 만든다. 풀로 돌아온 항목은 이미 GPU 펜스를 통과한 것이라
          *          곧바로 Reset 해도 안전하다. 여러 태스크 스레드가 동시에 부르므로 안에서 잠근다.
          */
-        D3D12CommandListEntry acquireCommandListEntry();
+        D3D12CommandListEntry acquireCommandListEntry( D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT );
         /**
          * @brief 다 쓴 리스트와 얼로케이터 쌍을 GPU 가 끝낸 뒤 풀로 돌려보냅니다.
          * @details 제출 직후 파괴되더라도 GPU 는 아직 그 얼로케이터의 커맨드 메모리를 읽고 있다.
@@ -578,6 +587,15 @@ namespace sw
          *          (프레임 스트림 begin, 세그먼트, 리스트 begin, 프레임 스트림 컨텍스트의 ensureRecording)이 모두 이 함수를 부른다.
          */
         void bindBindlessRootState( ID3D12GraphicsCommandList* pList );
+        /** @brief 컴퓨트 큐 리스트의 힙과 컴퓨트 루트 시그니처를 겁니다. COMPUTE 리스트는 그래픽스 루트를 받지 않는다(디버그 레이어 오류). */
+        void bindBindlessComputeRootState( ID3D12GraphicsCommandList* pList );
+        /**
+         * @brief 지금까지 기록한 프레임 스트림 조각과 대기 리스트(구조 버퍼 복사 포함)를 곧바로 그래픽스 큐에 내고, 이어 기록할 새 조각을 엽니다.
+         * @details 큐 사이 동기화(신호 · 대기)는 큐에 낸 일에만 걸린다 — 모아 두었다가 프레임 끝에 내면 포크의 신호가 그 일을 덮지 못한다.
+         */
+        void submitFrameWorkNow();
+        /** @brief 프레임 스트림의 새 조각을 열고 바인딩 캐시 · 뷰포트 · 시저를 다시 깝니다(`executeCommandList` · `submitFrameWorkNow` 가 함께 쓴다). */
+        void openNextFrameSegment();
         /**
          * @brief 링 상수 버퍼들의 힙 CBV 를 이번 프레임 슬롯으로 맞춥니다. 프레임당 한 번, 기록 시작 전에 부릅니다.
          * @details 주소는 프레임 링 슬롯에만 의존하므로 프레임당 한 번이면 충분하다. 주의: updateConstantBuffer 에서
@@ -700,9 +718,18 @@ namespace sw
         /// @details 텍스처 전송은 이 락을 잡지 않습니다(`_transferSubmitMutex`). 그래서 큰 텍스처의 소스 복사 · 풋프린트 계산 · 리스트 기록이 렌더 스레드의 프레임 제출과 겨루지 않는다.
         mutex _uploadSlotMutex;
 
-        Microsoft::WRL::ComPtr<ID3D12Device>              _device;
-        Microsoft::WRL::ComPtr<IDXGIAdapter3>             _memoryAdapter; ///< 디바이스가 쓰는 어댑터(LUID 로 찾는다). GPU 메모리 사용량과 예산을 질의하는 데 쓴다.
-        Microsoft::WRL::ComPtr<ID3D12CommandQueue>        _commandQueue;
+        Microsoft::WRL::ComPtr<ID3D12Device>       _device;
+        Microsoft::WRL::ComPtr<IDXGIAdapter3>      _memoryAdapter; ///< 디바이스가 쓰는 어댑터(LUID 로 찾는다). GPU 메모리 사용량과 예산을 질의하는 데 쓴다.
+        Microsoft::WRL::ComPtr<ID3D12CommandQueue> _commandQueue;
+        /// @brief 비동기 컴퓨트 큐(COMPUTE)입니다. 만들지 못하면 비어 있고 능력 `_bAsyncCompute` 가 거짓이다(그래픽스 큐로 대신 내지 않는다 — 부르는 쪽이 능력을 본다).
+        Microsoft::WRL::ComPtr<ID3D12CommandQueue> _computeQueue;
+        /// @brief 그래픽스 큐가 포크 지점에서 신호하고 컴퓨트 큐가 기다리는 펜스입니다.
+        Microsoft::WRL::ComPtr<ID3D12Fence> _queueSyncFence;
+        /// @brief 컴퓨트 큐가 일마다 신호하고 그래픽스 큐가 조인 지점에서 기다리는 펜스입니다.
+        Microsoft::WRL::ComPtr<ID3D12Fence>               _computeFence;
+        uint64                                            _queueSyncValue;     ///< 마지막으로 신호한 포크 값(렌더 스레드만 올린다)
+        uint64                                            _computeFenceValue;  ///< 마지막으로 신호한 컴퓨트 값
+        uint64                                            _computeWaitedValue; ///< 그래픽스 큐가 이미 기다린 컴퓨트 값 — 프레임 끝이 그 위를 모두 기다린다
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>      _rtvHeap;
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>      _dsvHeap;
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>      _cbvHeap;
@@ -723,6 +750,8 @@ namespace sw
         /// @brief 병렬 기록용 리스트와 얼로케이터의 재사용 풀입니다. 태스크 스레드가 동시에 빌려 가므로 잠급니다.
         mutex                                               _cmdListPoolMutex;
         vector<D3D12CommandListEntry> _listFreeCmdListEntry SW_GUARDED_BY( _cmdListPoolMutex );
+        /// @brief 컴퓨트 큐 리스트(COMPUTE 종류)의 재사용 풀입니다. DIRECT 쌍과 섞으면 다른 큐에 낼 수 없는 리스트를 빌려 준다.
+        vector<D3D12CommandListEntry> _listFreeComputeCmdListEntry SW_GUARDED_BY( _cmdListPoolMutex );
 
         /** @brief 살아 있는 커맨드 리스트입니다(소유하지 않습니다). 종료할 때 연결을 끊어 줍니다. */
         mutex                        _liveCmdListMutex;

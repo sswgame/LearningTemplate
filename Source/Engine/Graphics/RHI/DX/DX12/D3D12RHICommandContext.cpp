@@ -259,9 +259,17 @@ namespace sw
         } );
     }
 
-    void D3D12RHICommandContext::transitionTexture( RHITextureHandle texture, D3D12_RESOURCE_STATES newState )
+    D3D12_RESOURCE_STATES D3D12RHICommandContext::toQueueState( D3D12_RESOURCE_STATES state ) const
     {
-        ID3D12Resource* pResource = _pDevice->resolveTexture( texture );
+        if ( _bComputeQueueList == SW_FALSE || ( state & D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE ) == 0 )
+            return state;
+        return static_cast<D3D12_RESOURCE_STATES>( ( state & ~D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE ) | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE );
+    }
+
+    void D3D12RHICommandContext::transitionTexture( RHITextureHandle texture, D3D12_RESOURCE_STATES requestedState )
+    {
+        const D3D12_RESOURCE_STATES newState  = toQueueState( requestedState );
+        ID3D12Resource*             pResource = _pDevice->resolveTexture( texture );
         if ( pResource == nullptr )
             return;
 
@@ -1001,7 +1009,7 @@ namespace sw
         if ( pResource == nullptr )
             return;
 
-        const D3D12_RESOURCE_STATES stateAfter = toD3D12BufferState( newState );
+        const D3D12_RESOURCE_STATES stateAfter = toQueueState( toD3D12BufferState( newState ) );
         D3D12_RESOURCE_STATES       stateBefore;
         {
             ScopedLock<mutex> lock{ _pDevice->_resourceStateMutex };
@@ -1013,6 +1021,12 @@ namespace sw
             stateBefore     = stateIt->second;
             stateIt->second = stateAfter;
         }
+        // 컴퓨트 큐 리스트는 따로 낸 ExecuteCommandLists 라 버퍼가 COMMON 으로 감쇠해 들어온다. 기록한 상태에 그래픽스 전용 비트가 있으면 COMMON 을 앞 상태로 쓴다
+        // (COMMON 또는 승격 가능한 상태를 앞 상태로 쓰는 것이 문서의 허용 범위다 — 그래픽스 전용 비트는 COMPUTE 리스트의 배리어에 적을 수 없다).
+        if ( _bComputeQueueList != SW_FALSE && toQueueState( stateBefore ) != stateBefore )
+            stateBefore = D3D12_RESOURCE_STATE_COMMON;
+        if ( stateBefore == stateAfter )
+            return;
 
         D3D12_RESOURCE_BARRIER barrier{};
         barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;

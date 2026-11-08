@@ -360,6 +360,9 @@ namespace sw
                         report( "RenderPipelineAsset.FramePassShader", pass._name, "a frame pass takes its shader from the pass type table - leave shader, entry point and permutation fields empty" );
                     if ( pass._depthAttachment.empty() == false || pass._minPostQuality != 0 )
                         report( "RenderPipelineAsset.FramePassViewField", pass._name, "_depthAttachment and _minPostQuality are view pass fields" );
+                    // 컴퓨트 큐는 드로우 · 렌더 타깃 상태를 모른다 — 표의 컴퓨트 종류만 비동기 큐에 둘 수 있다(깊이 히스토리는 풀스크린 드로우다).
+                    if ( pass._queue == RHIQueueType::AsyncCompute && getRenderPassTypeInfo( pass._type ).hasFlag( RenderPassTraitFlag::kCompute ) == false )
+                        report( "RenderPipelineAsset.FramePassAsyncNotCompute", pass._name, "_queue AsyncCompute needs a compute pass type - this type draws on the graphics queue" );
                     for ( const string& name : pass._listInput )
                     {
                         if ( findResource( desc, name ) == nullptr )
@@ -488,6 +491,12 @@ namespace sw
                 {
                     SW_LOG_ERROR_ID( "RenderPipelineAsset.PassUnknownTypeNot", "[%#] pass '%#': type '%#' cannot be a view pass - write a view RenderPassType (frame pass types go in _listFramePass, internal slots nowhere)",
                                      sourcePath, pass._name, getEnumName( pass._type ) );
+                    ++issueCount;
+                }
+                // 뷰 그래프는 뷰마다 다시 돌고 병렬로 기록한다 — 비동기 큐는 프레임 패스만 받는다(포크 · 조인을 뷰마다 되풀이할 자리가 없다).
+                if ( pass._queue != RHIQueueType::Graphics )
+                {
+                    SW_LOG_ERROR_ID( "RenderPipelineAsset.PassAsyncNotFramePass", "[%#] pass '%#': _queue AsyncCompute is only for frame passes (_listFramePass)", sourcePath, pass._name );
                     ++issueCount;
                 }
                 for ( const string& inputName : pass._listInput )

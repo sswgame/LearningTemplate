@@ -34,8 +34,8 @@ namespace sw
     class D3D12RHICommandList : public RHICommandListForwarder<D3D12RHICommandContext>
     {
     public:
-        /** @brief 디바이스 풀에서 리스트와 전용 얼로케이터 쌍을 빌립니다(Close 상태). */
-        explicit D3D12RHICommandList( D3D12RHIDevice* pDevice );
+        /** @brief 디바이스 풀에서 리스트와 전용 얼로케이터 쌍을 빌립니다(Close 상태). @p type 이 COMPUTE 면 비동기 컴퓨트 큐에 내는 리스트입니다. */
+        explicit D3D12RHICommandList( D3D12RHIDevice* pDevice, D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT );
         /** @brief 빌린 쌍을 GPU 펜스 통과 후 풀로 돌려보냅니다. */
         ~D3D12RHICommandList() override;
 
@@ -62,11 +62,12 @@ namespace sw
         void detachFromDevice();
 
     private:
-        D3D12RHIDevice*        _pDevice;
-        D3D12CommandListEntry  _entry;       ///< 이 리스트 전용 커맨드 리스트와 얼로케이터
-        uint8                  _bEntryDirty; ///< 현재 쌍에 이미 기록한 적이 있는가(있으면 다음 begin 때 교체합니다)
-        D3D12RecordingState    _state;
-        D3D12RHICommandContext _context;
+        D3D12RHIDevice*         _pDevice;
+        D3D12_COMMAND_LIST_TYPE _type;        ///< 쌍을 바꿀 때 같은 종류의 풀에서 빌린다
+        D3D12CommandListEntry   _entry;       ///< 이 리스트 전용 커맨드 리스트와 얼로케이터
+        uint8                   _bEntryDirty; ///< 현재 쌍에 이미 기록한 적이 있는가(있으면 다음 begin 때 교체합니다)
+        D3D12RecordingState     _state;
+        D3D12RHICommandContext  _context;
     };
 } // namespace sw
 

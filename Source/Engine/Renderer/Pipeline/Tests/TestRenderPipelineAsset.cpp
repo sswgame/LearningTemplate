@@ -531,6 +531,27 @@ SW_TEST_CASE( RenderPipelineAssetTest, FrameGraphRejectsWhatTheExecutorCannotRun
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( "_type=\"LightGrid\" _cullMode=\"None\"" ) ) );
 }
 
+/**
+ * @brief [RenderPipelineAssetTest] `_queue` — 프레임 컴퓨트 패스는 AsyncCompute 를 받고 읽은 값이 그대로 오며, 드로우 패스(깊이 히스토리)와 뷰 패스는 받지 않는다
+ */
+SW_TEST_CASE( RenderPipelineAssetTest, QueueAttributeIsForFrameComputePasses )
+{
+    SW_EXPECT_LOG( "RenderPipelineAsset.FramePassAsyncNotCompute" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassAsyncNotFramePass" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
+    using Util = FrameGraphTestUtil;
+    RenderPipelineAsset asset;
+    const string        asyncGrid = "<RenderGraphPassDesc _name=\"LightGrid\" _type=\"LightGrid\" _queue=\"AsyncCompute\"><_listOutput><item>CullResults</item></_listOutput></RenderGraphPassDesc>";
+    SW_REQUIRE_TRUE( RenderPipelineTestUtil::load( asset, Util::makeXML( Util::kResources, asyncGrid ) ) );
+    SW_EXPECT_TRUE( asset.getFramePass()[0]._queue == RHIQueueType::AsyncCompute );
+    // 깊이 히스토리는 풀스크린 드로우다 — 컴퓨트 큐는 렌더 타깃을 모른다.
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( Util::kResources, "<RenderGraphPassDesc _name=\"DepthHistory\" _type=\"DepthHistory\" _queue=\"AsyncCompute\"/>" ) ) );
+    // 뷰 패스는 뷰마다 다시 돌아 포크 · 조인 자리가 없다.
+    const string viewAsync = string( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" _queue=\"AsyncCompute\" " ) + RenderPipelineTestUtil::kOpaqueState;
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( viewAsync ) ) );
+}
+
 /** @brief [RenderPipelineAssetTest] 엔진 파이프라인은 모두 프레임 패스 한 벌(framecomputerenderpass.xml)을 합쳐 컬링 · 그리드 · 스킨을 선언한다 */
 SW_TEST_CASE( RenderPipelineAssetTest, ShippedPipelinesDeclareFramePasses )
 {

@@ -418,5 +418,13 @@ namespace sw
          */
         PROPERTY()
         int32 _minPostQuality{ 0 };
+
+        /**
+         * @brief 이 패스가 도는 큐입니다. `AsyncCompute` 는 프레임 패스 중 컴퓨트 종류만 받는다(검증) — 뷰 패스 · 그래픽스 드로우(깊이 히스토리)는 그래픽스 큐다.
+         * @details 능력 `RHICapabilities::_bAsyncCompute` 가 있는 백엔드(DX12 · 큐가 둘인 Vulkan 장치)는 컴퓨트 큐에서 그래픽스와 겹쳐 돈다. 없으면(DX11 · GL · WebGPU)
+         *          그래픽스 큐에서 같은 순서로 돈다 — 능력 표가 정한 길이다. 포크 · 조인은 그래프 간선이 정한다(`RenderGraph::getQueueSteps`). 언리얼 `ERDGPassFlags::AsyncCompute` 자리.
+         */
+        PROPERTY()
+        RHIQueueType _queue{ RHIQueueType::Graphics };
     };
 } // namespace sw

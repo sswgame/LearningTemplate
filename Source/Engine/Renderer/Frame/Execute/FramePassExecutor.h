@@ -443,6 +443,8 @@ namespace sw
         /// @brief 프레임 그래프 리스트와 그것을 만든 디바이스입니다. `_pCmd` 는 프리패스를 기록하는 동안만 그 리스트를 가리킨다.
         IRHIDevice*                 _pCmdOwnerDevice;
         unique_ptr<IRHICommandList> _frameCmd;
+        /// @brief 프레임 그래프의 비동기 컴퓨트 묶음을 기록하는 리스트입니다(능력이 있고 묶음이 있을 때 처음 만든다). 프레임 리스트와 같은 디바이스의 것이다.
+        unique_ptr<IRHICommandList> _asyncComputeCmd;
         IRHICommandList*            _pCmd;
         /**
          * @brief 패스 슬롯별 컨텍스트입니다. 프레임마다 `_frameContext` 를 **대입**해 씁니다. 용량이 남아 있어 힙을 건드리지 않습니다.

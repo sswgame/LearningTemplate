@@ -418,3 +418,116 @@ SW_TEST_CASE( RenderGraphTest, PersistentAndExternalResourcesLiveForTheWholeGrap
     graph.clear();
     SW_EXPECT_TRUE( graph.getResourceKind( history ) == RenderGraphResourceKind::Transient );
 }
+
+namespace
+{
+    /**
+     * @brief 프레임 그래프 모양의 큐 시험 그래프입니다. 실행 순서는 Depth, Light, Anim, Occl, Fog, Cull 이다(레벨 0: Depth · Light · Anim, 1: Occl · Fog, 2: Cull).
+     * @details Light · Occl 이 AsyncCompute 다. Fog 는 Light 를, Cull 은 Occl 을 읽는다. Anim 은 어느 묶음에도 기대지 않아 컴퓨트와 겹친다.
+     */
+    void addQueueGraph( RenderGraph& graph, atomic<int32>& callCount )
+    {
+        graph.addPass( hashed_string( "Depth" ), {}, { hashed_string( "DepthHistory" ) }, makeCountingPass( callCount ) );
+        graph.addPass( hashed_string( "Light" ), {}, { hashed_string( "LightGrid" ) }, makeCountingPass( callCount ), RHIQueueType::AsyncCompute );
+        graph.addPass( hashed_string( "Anim" ), {}, { hashed_string( "InstanceBuffer" ) }, makeCountingPass( callCount ) );
+        graph.addPass( hashed_string( "Occl" ), { hashed_string( "DepthHistory" ) }, { hashed_string( "OcclusionTiles" ) }, makeCountingPass( callCount ), RHIQueueType::AsyncCompute );
+        graph.addPass( hashed_string( "Fog" ), { hashed_string( "LightGrid" ) }, { hashed_string( "FogVolume" ) }, makeCountingPass( callCount ) );
+        graph.addPass( hashed_string( "Cull" ), { hashed_string( "InstanceBuffer" ), hashed_string( "OcclusionTiles" ) }, { hashed_string( "CullResults" ) }, makeCountingPass( callCount ) );
+    }
+} // namespace
+
+/**
+ * @brief [RenderGraphTest] 비동기 큐 계획 — 이어진 비동기 패스가 묶음이고, 그래픽스 패스는 자기가 읽는 묶음만 앞에서 조인한다(기대지 않는 그래픽스는 겹친다)
+ */
+SW_TEST_CASE( RenderGraphTest, AsyncComputePlanForksAndJoinsOnDependencies )
+{
+    RenderGraph   graph;
+    atomic<int32> callCount{ 0 };
+    addQueueGraph( graph, callCount );
+    graph.setAsyncComputeSupported( true );
+    SW_REQUIRE_TRUE( graph.compile() );
+
+    const vector<hashed_string>& order = graph.getExecutionOrder();
+    SW_REQUIRE_EQUAL( size_t( 6 ), order.size() );
+    SW_EXPECT_EQUAL( string( "Light" ), string( order[1].c_str() ) );
+    SW_EXPECT_EQUAL( string( "Occl" ), string( order[3].c_str() ) );
+
+    const vector<RenderGraphQueueStep>& steps = graph.getQueueSteps();
+    SW_REQUIRE_EQUAL( size_t( 6 ), steps.size() );
+    SW_EXPECT_EQUAL( uint32( 2 ), graph.getAsyncBatchCount() );
+    SW_EXPECT_TRUE( steps[0]._queue == RHIQueueType::Graphics );
+    SW_EXPECT_TRUE( steps[1]._queue == RHIQueueType::AsyncCompute && steps[1]._bBeginsBatch != 0 && steps[1]._bEndsBatch != 0 && steps[1]._batch == 0 );
+    SW_EXPECT_TRUE( steps[2]._listJoinBatch.empty() ); // Anim 은 컴퓨트와 겹친다
+    SW_EXPECT_TRUE( steps[3]._queue == RHIQueueType::AsyncCompute && steps[3]._batch == 1 );
+    SW_REQUIRE_EQUAL( size_t( 1 ), steps[4]._listJoinBatch.size() ); // Fog 가 Light 묶음을 기다린다
+    SW_EXPECT_EQUAL( uint32( 0 ), steps[4]._listJoinBatch[0] );
+    SW_REQUIRE_EQUAL( size_t( 1 ), steps[5]._listJoinBatch.size() ); // Cull 이 Occl 묶음을 기다린다
+    SW_EXPECT_EQUAL( uint32( 1 ), steps[5]._listJoinBatch[0] );
+    SW_EXPECT_TRUE( graph.getFinalJoinBatches().empty() );
+}
+
+/**
+ * @brief [RenderGraphTest] 비동기 큐가 없는 디바이스는 AsyncCompute 로 선언한 패스도 그래픽스로 계획한다 — 같은 순서, 묶음 · 조인 없음(능력 표가 정한 길)
+ */
+SW_TEST_CASE( RenderGraphTest, AsyncComputeWithoutCapabilityRunsOnGraphics )
+{
+    RenderGraph   graph;
+    atomic<int32> callCount{ 0 };
+    addQueueGraph( graph, callCount );
+    SW_REQUIRE_TRUE( graph.compile() ); // 기본은 지원하지 않음
+    SW_EXPECT_EQUAL( uint32( 0 ), graph.getAsyncBatchCount() );
+    for ( const RenderGraphQueueStep& step : graph.getQueueSteps() )
+    {
+        SW_EXPECT_TRUE( step._queue == RHIQueueType::Graphics );
+        SW_EXPECT_TRUE( step._listJoinBatch.empty() );
+    }
+}
+
+/**
+ * @brief [RenderGraphTest] 그래프 안에서 아무도 읽지 않는 비동기 묶음은 그래프 끝에서 조인한다 — 결과를 읽는 쪽(뷰 그래프)이 그래프 밖이다
+ */
+SW_TEST_CASE( RenderGraphTest, UnreadAsyncBatchJoinsAtTheEnd )
+{
+    RenderGraph graph;
+    graph.addPass( hashed_string( "Anim" ), {}, { hashed_string( "InstanceBuffer" ) } );
+    graph.addPass( hashed_string( "Probe" ), {}, { hashed_string( "ProbeIrradiance" ) }, {}, RHIQueueType::AsyncCompute );
+    graph.setAsyncComputeSupported( true );
+    SW_REQUIRE_TRUE( graph.compile() );
+    SW_REQUIRE_EQUAL( size_t( 1 ), graph.getFinalJoinBatches().size() );
+    SW_EXPECT_EQUAL( uint32( 0 ), graph.getFinalJoinBatches()[0] );
+}
+
+/**
+ * @brief [RenderGraphTest] 큐 계획대로 기록하면 포크 앞에서 그래픽스 리스트를 넘기고, 조인 앞에서 넘긴 뒤 기다린다 — 큐 사건 순서와 기록한 리스트를 본다
+ */
+SW_TEST_CASE( RenderGraphTest, ExecuteOnQueuesPlacesForksAndJoins )
+{
+    RenderGraph   graph;
+    atomic<int32> callCount{ 0 };
+    addQueueGraph( graph, callCount );
+    graph.setAsyncComputeSupported( true );
+    SW_REQUIRE_TRUE( graph.compile() );
+
+    test::FakeRHIDevice device;
+    device._bAsyncCompute                 = SW_TRUE;
+    unique_ptr<IRHICommandList> pGraphics = device.createCommandList();
+    unique_ptr<IRHICommandList> pAsync    = device.createAsyncComputeCommandList();
+    RenderGraphExecutionContext context;
+    pGraphics->beginCommandList();
+    SW_REQUIRE_TRUE( graph.executeOnQueues( context, device, *pGraphics, pAsync.get() ) );
+    SW_EXPECT_EQUAL( 6, callCount.load() );
+    SW_EXPECT_TRUE( static_cast<test::FakeRHICommandList*>( pGraphics.get() )->_bOpen ); // 열린 채로 돌려준다
+
+    // G F1 G F2 G J1 G J2 — 포크마다 그 앞의 그래픽스를 넘기고, 조인마다 넘긴 뒤 기다린다.
+    const char   arrKind[]  = { 'G', 'F', 'G', 'F', 'G', 'J', 'G', 'J' };
+    const uint64 arrValue[] = { 0, 1, 0, 2, 0, 1, 0, 2 };
+    SW_REQUIRE_EQUAL( size_t( 8 ), device._listQueueEvent.size() );
+    for ( size_t eventIndex = 0; eventIndex < device._listQueueEvent.size(); ++eventIndex )
+    {
+        SW_EXPECT_EQUAL( arrKind[eventIndex], device._listQueueEvent[eventIndex]._kind );
+        SW_EXPECT_EQUAL( arrValue[eventIndex], device._listQueueEvent[eventIndex]._value );
+    }
+    // 비동기 리스트는 묶음마다 한 번 열고 닫았다.
+    SW_EXPECT_EQUAL( uint32( 2 ), static_cast<test::FakeRHICommandList*>( pAsync.get() )->_beginCount );
+    SW_EXPECT_EQUAL( uint32( 2 ), static_cast<test::FakeRHICommandList*>( pAsync.get() )->_endCount );
+}

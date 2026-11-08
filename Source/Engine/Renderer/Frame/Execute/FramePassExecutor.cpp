@@ -65,6 +65,12 @@ namespace sw
      */
     SW_GLOBAL_VARIABLE( bool, gv_drawMerge, true, "씬 배치 멀티 드로우 묶기 (false=배치마다 호출, 진단용)" );
 
+    /**
+     * @brief `-gv_asyncCompute=0` 이면 `_queue="AsyncCompute"` 프레임 패스도 그래픽스 큐에서 돕니다(시작 인자 — 파이프라인을 묶을 때 계획한다).
+     * @details 비동기 큐가 이득인지는 측정으로 정한다(같은 장면에서 켜고 끈 GPU 프레임 시간). 능력이 없는 백엔드는 이 값과 상관없이 그래픽스 큐다.
+     */
+    SW_GLOBAL_VARIABLE( bool, gv_asyncCompute, true, "프레임 패스의 비동기 컴퓨트 큐 (false=모두 그래픽스 큐, 측정용)" );
+
     namespace
     {
         constexpr float4 kDefaultBloomParams{ 0.55f, 0.65f, 0.25f, 0.0f };
@@ -178,6 +184,7 @@ namespace sw
         , _pActiveView{ &state._mainView }
         , _pCmdOwnerDevice{ nullptr }
         , _frameCmd{}
+        , _asyncComputeCmd{}
         , _pCmd{ nullptr }
         , _listPassContext{}
         , _mapPassNameToIndex{}
@@ -216,7 +223,9 @@ namespace sw
         // 리소스 상태 추적은 이름에서 상태를 찾는 구조라 디바이스가 바뀌어도 살아남는다. 새 디바이스의 텍스처는 다시 Undefined 다.
         // 지우지 않으면 첫 프레임이 "이미 렌더 타깃 상태" 로 믿고 배리어를 건너뛴다.
         _graphContext.reset();
+        _frameGraphContext.reset();
         _frameCmd.reset();
+        _asyncComputeCmd.reset();
         _pCmdOwnerDevice = nullptr;
         _pCmd            = nullptr;
     }
@@ -233,6 +242,7 @@ namespace sw
         {
             // 리스트는 만든 디바이스의 것이다. 뷰마다의 리스트도 함께 버린다.
             _frameCmd.reset();
+            _asyncComputeCmd.reset();
             _state._mainView._commandList.reset();
             for ( unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
             {
@@ -737,8 +747,11 @@ namespace sw
             }
             _mapFramePassNameToIndex[nameHash] = index;
             frameGraph.addPass( nameHash, std::move( listInput ), std::move( listOutput ),
-                                SW_DELEGATE_METHOD( RenderGraphPassExecuteFn, &FramePassExecutor::onFrameGraphPassExecute, this ) );
+                                SW_DELEGATE_METHOD( RenderGraphPassExecuteFn, &FramePassExecutor::onFrameGraphPassExecute, this ), pass._queue );
         }
+        // 비동기 컴퓨트 큐가 없는 백엔드(DX11 · GL · WebGPU · 큐가 하나인 Vulkan 장치)는 AsyncCompute 패스를 그래픽스 큐로 계획한다(능력 표가 정한 길).
+        const bool bAsyncCompute = gv_asyncCompute && _pDevice != nullptr && _pDevice->getCapabilities()._bAsyncCompute != SW_FALSE;
+        frameGraph.setAsyncComputeSupported( bAsyncCompute );
         // 프레임 패스가 없는 파이프라인(미리보기 · 시험 파이프라인)은 빈 그래프다 — 컬링 · 그리드 등은 PSO 도 없다(`FramePSOManager::getEnginePSO`).
         if ( listFramePass.empty() )
             return true;
@@ -751,10 +764,23 @@ namespace sw
         return true;
     }
 
-    void FramePassExecutor::recordFrameGraph( [[maybe_unused]] IRHIDevice* pDevice )
+    void FramePassExecutor::recordFrameGraph( IRHIDevice* pDevice )
     {
         _frameGraphExecutor.beginFrame();
-        if ( _state._frameGraph.getNodeCount() > 0 && _state._frameGraph.execute( _frameGraphContext, _pCmd ) == false )
+        RenderGraph& frameGraph = _state._frameGraph;
+        bool         bOk        = true;
+        if ( frameGraph.getNodeCount() > 0 && frameGraph.getAsyncBatchCount() > 0 )
+        {
+            // 비동기 묶음이 있다 — 컴퓨트 큐 리스트를 그래프가 포크마다 열고 닫는다. 프리패스 리스트는 포크 · 조인에서 잘려 큐에 나가고 다시 열린다.
+            if ( _asyncComputeCmd == nullptr )
+                _asyncComputeCmd = pDevice->createAsyncComputeCommandList();
+            bOk = _asyncComputeCmd != nullptr && frameGraph.executeOnQueues( _frameGraphContext, *pDevice, *_pCmd, _asyncComputeCmd.get() );
+        }
+        else if ( frameGraph.getNodeCount() > 0 )
+        {
+            bOk = frameGraph.execute( _frameGraphContext, _pCmd );
+        }
+        if ( bOk == false )
             SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.FrameGraphExecuteFailed", "Frame graph could not run - culling, light grid and skinning results are stale this frame" );
         _frameGraphExecutor.endFrame( *_pCmd );
     }
