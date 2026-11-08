@@ -24,7 +24,7 @@
 | 웨이브 연산 | `gpu_cull.hlsl` 의 `WaveReadLaneFirst` · `WaveActiveCountBits` · `WavePrefixCountBits` | 서브그룹 기본 연산은 1.1 코어, ballot 은 선택 | `subgroups` 기능은 선택(기억) | WebGPU 대상은 `SW_NO_WAVE_OPS` 로 쿠킹한다 — DX11 과 같은 스레드마다 원자 연산 길(`gpu_cull.hlsl`). 결과는 같고 경합만 늘어난다 |
 | `R16G16_SNORM` 첨부 · 블렌드 | G버퍼 법선(`RenderPassTypeInfo` 의 고정 포맷) | 첨부는 선택 형식이다 — 장치 생성이 조회한다(`verifyRequiredColorAttachmentFormats`). 블렌드도 선택(못 섞는 첨부는 덮어쓴다) | 코어에 `rg16snorm` 없음 — `texture-formats-tier1` 기능(기억) | Vulkan: 못 쓰면 장치를 고르지 않는다. WebGPU: 기능이 있으면 `rg16snorm`, 없으면 백엔드가 `rg16float` 으로 만든다 — 셰이더는 `.rg` 를 [-1, 1] 실수로 읽어 둘이 같다(`WebGPURHIUtil::toTextureFormat`) |
 | `R32G32B32_FLOAT` 텍스처 | DDS(dxgi 6)로 들어올 수 있다. 정점 형식은 별개 | 샘플 형식은 선택(모바일에서 흔히 없다) | 텍스처 형식이 없다 | `Texture2D` 가 장치가 못 쓰면 RGBA32F 로 펴서 올린다(`Texture2D::expandToFourChannels`) — 알파 1 |
-| 블록 압축 | 쿠킹 변형(`Config/Engine/EngineConfig.json` `_textureFormats`) | BC 는 대개 없다 → ASTC · ETC2 | `texture-compression-bc` · `-astc` · `-etc2` 모두 선택 | 쿠킹이 대상마다 목록대로 굽고 실행 때 장치가 지원하는 첫 묶음을 고른다(`TextureBlockEncoder` · `TextureFormatSelection`). 웹 목록은 BC · ASTC · ETC2(셋 다 없는 장치는 오류) |
+| 블록 압축 | 쿠킹 변형(`Config/Engine/EngineConfig.json` `_textureFormats`) | BC 는 대개 없다 → ASTC · ETC2 | `texture-compression-bc` · `-astc` · `-etc2` 모두 선택 | 쿠킹은 모든 대상의 접미사 묶음(ASTC · ETC2)을 한 번 굽고(`--cook-texture-variants`, `TextureFormatFamily::resolveCookFamilies`) 팩은 대상마다 같다. 실행은 빌드 플랫폼을 적은 대상(`_listPlatform`)에서 장치가 지원하는 첫 묶음을 고른다(`findPlatformTarget` · `selectFamily`). 웹 목록은 BC · ASTC · ETC2(셋 다 없는 장치는 오류) |
 | `R32_FLOAT` 선형 샘플 | 깊이 히스토리 · 자동 노출을 선형 샘플러로 읽는 패스가 있다 | 선형 필터는 선택 | `float32-filterable` 기능(기억) | WebGPU 필수 기능 — 없으면 장치 생성이 `DriverUnsupported` 로 멈춘다 |
 | 깊이 형식 · 되읽기 | `D24_UNORM_S8_UINT`, 깊이 되읽기는 float32 | 장치마다 D24S8 이 없을 수 있다 — 장치 생성이 고른다(`selectDepthFormat`) | `depth24plus-stencil8` 은 복사 원본이 될 수 없다 | WebGPU: `depth32float-stencil8` 기능이 있으면 그것, 없으면 `depth24plus-stencil8` 이고 깊이 되읽기는 `Rejected`(로그) |
 | 깊이 샘플 | 셰이더가 깊이를 실수 텍스처(`Texture2D<float>`)로 읽는다 | 된다 | 깊이는 `texture_depth_*` 로만 읽힌다(자동 레이아웃이 실수로 보면 검증 오류) | WebGPU: 셰이더가 읽는 깊이 텍스처는 R32 실수 사본을 두고 샘플 뷰가 사본이다 — `prepareTextureForShaderRead` 가 내장 WGSL(`textureLoad`) 패스로 채운다(언리얼 모바일의 SceneDepthAux 자리, 기억). 그 프레임에 채우지 않은 사본을 읽으면 오류 로그 |
@@ -42,11 +42,13 @@
 1. **WebGPU RHI 백엔드** — `Source/Engine/Graphics/RHI/WebGPU/`. 셰이더 대상 `WGSL_WebGPU`(DXC SPIR-V → Tint → WGSL, 바인딩 표를 앞에 붙인 바이너리), 고정 슬롯 모델.
 2. **Emscripten 빌드** — `cmake/Modules/Platform/Web.cmake`(링크 옵션 · 포트), 메인 루프는 브라우저 프레임 콜백(`emscripten_set_main_loop_arg`), canvas 창.
 3. **Android Vulkan** — `cmake/Modules/Platform/Android.cmake`(NDK 라이브러리), `android_main` 진입 · `ANativeWindow` 창, `VK_KHR_android_surface`.
+4. **Android 내용 읽기** — `AndroidMain` 이 앱 전용 폴더(`internalDataPath`)를 `SW_ANDROID_APP_FOLDER` 로 넘겨 `ProcessRoots` 의 바이너리 · 프로젝트 폴더로 쓰고, 팩 폴더 경로(`<앱 폴더>/Packs`)를 APK 의 `assets/Packs` 로 옮기는 `BundledContentFileSource` + `AndroidAssetFileReader`(AAssetManager)를 건다. 팩은 압축하지 않고 저장돼 `AAsset_openFileDescriptor64` 의 fd + 구간으로 바로 읽는다(`AsyncFileHandle::openNativeRange`) — 압축된 파일은 오류다.
+5. **교차 빌드 쿠킹** — Android · 웹의 `CookAssets` 는 호스트 개발 빌드의 App(`SW_HOST_COOK_APP`, 기본 `build/Ninja-Release/Bin/App`)이 `--cook-texture-variants` 뒤 `--cook-all -<배포 백엔드의 명령줄 이름>` 으로 `<교차 빌드>/Bin/Packs` 에 굽는다 — `android-apk` 의 기본 `--packs-dir` 이다.
 
 ## 화면 대응(모바일 · 데스크톱)
 
 - 안전 여백: 플랫폼 창이 `IWindow::getSafeAreaInsets`(물리 픽셀)를 준다 — Android 는 JNI `getRootWindowInsets`, 웹은 셸 HTML 의 CSS 변수 `--sw-safe-left/top/right/bottom`(= `env(safe-area-inset-*)`). `UIScaleSettings::makeViewport` 가 변마다 디버그 흉내(`gv_uiSafeZone`)와 큰 쪽을 고른다.
-- 크기 · 회전 · 수명: `CallbackInputWindow::applyPlatformResize` 하나로 모은다. Android `APP_CMD_TERM_WINDOW` → `SurfaceLost`(렌더러가 `IRHIDevice::releaseSurface`), `INIT_WINDOW` → `SurfaceRestored`(`restoreSurface`), `PAUSE` · `RESUME` · 웹 `visibilitychange` → 앱 멈춤 · 돌아옴. Vulkan 스왑체인은 `IDENTITY` 변환이라 합성기가 돌린다 — 회전한 기기는 표시마다 `VK_SUBOPTIMAL_KHR` 를 주므로 서피스의 회전 · 크기가 정말 바뀌었을 때만 다시 만든다(`VulkanRHISwapChain::hasSurfaceChanged`). 엔진이 그림을 미리 돌리는 pre-rotation 은 남은 일이다.
+- 크기 · 회전 · 수명: `CallbackInputWindow::applyPlatformResize` 하나로 모은다. Android `APP_CMD_TERM_WINDOW` → `SurfaceLost`(렌더러가 `IRHIDevice::releaseSurface`), `INIT_WINDOW` → `SurfaceRestored`(`restoreSurface`), `PAUSE` · `RESUME` · 웹 `visibilitychange` → 앱 멈춤 · 돌아옴. 회전한 기기(Vulkan 서피스 `currentTransform` 90 · 180 · 270)는 pre-rotation 이다: 스왑체인을 그 회전으로 만들어 합성기가 돌리지 않고(이미지는 기기 기본 방향 크기, `getWidth/Height` · 백버퍼 크기는 논리 크기), 화면에 쓰는 모든 것(Present · Canvas · 캡처 → 화면 · 개발 겹치기 · UI)이 논리 크기 대기 텍스처에 쓴 뒤 출력 패스 하나(`RenderPassType::ScreenRotation`, `FrameScreenRotation`)가 돌려 옮긴다. 데스크톱은 PSO · 대기 텍스처 · 패스가 없다(`RHICapabilities::_bSurfacePreRotation`). 거울 회전은 IDENTITY + 합성기이고, 스왑체인은 서피스의 회전 · 크기가 정말 바뀌었을 때만 다시 만든다(`VulkanRHISwapChain::hasSurfaceChanged` — 논리 크기 · 만든 때의 회전과 대조).
 - 좁은 화면 · 방향: 리소스 태그 `screen.compact`(dp 너비 < `uiscale.xml` `_compactMaxWidth`) · `orientation.portrait` — UI 문서 · 스타일 시트가 읽을 때 `_when` 변형으로 다시 배치한다(캐시가 합성의 한 길을 지난다, 태그가 바뀌면 `reloadComposed`). 규칙은 `UIScaleSettings::makeScreenTags` 한 곳이다.
 - 손가락: 터치 장치의 첫 손가락이 UI 포인터가 되고, 조작을 비켜 짚으면 `_minTouchTargetSize`(48)까지 넓혀 고른다(`UIEventRouter::hitTestTouch`).
 - 품질 등급: `engine.settings.xml` 의 `<AutoDetect platform=… requireNativeBindless=…>` — 플랫폼 기본 RHI 의 정적 능력과 시스템 메모리로 고른다.
@@ -56,8 +58,7 @@
 ## 남은 일(코드를 붙여 보지 못한 것)
 
 - 빌드: Emscripten · NDK 로 한 번도 짓지 못했다 — 프리셋 `Web-Shipping` · `Android-Shipping` 이 `Tools/emsdk` · `Tools/Android/ndk/<판>` 을 가리킨다(설치 `py -3 Scripts/setup/PlatformSdk.py all`, 프리셋과 설정의 판 대조는 `… check`). Core · Engine 의 `#error "Unsupported platform"` 사슬 중 Android · Web 갈래가 없는 곳이 컴파일에서 드러난다(설계대로).
-- Android 내용 읽기: APK 의 `assets/Packs` 를 읽는 `IContentFileSource`(AAsset)를 기동이 걸어야 한다 — 지금 Android 는 소스가 없으면 `ContentFileSource::getCurrent` 가 멈춘다(설계대로). 팩을 Android 대상(ASTC · ETC2)으로 쿠킹하는 길도 함께 정한다(`android-apk --packs-dir`).
-- Android pre-rotation: 백버퍼를 쓰는 곳이 하나가 아니다(Present · Canvas · 캡처 → 백버퍼 블릿 · 개발 겹치기) — 그래서 패스마다 회전 변형을 두지 않고 한 곳에서 돌린다. 계획: 회전한 서피스면 Vulkan 이 스왑체인을 `currentTransform` 으로 만들고 논리 크기(90 · 270 이면 너비 · 높이를 맞바꾼 것)를 백버퍼 크기로 알린다(`IRHIDevice` 에 회전 조회) → 프레임은 출력을 논리 크기 대기 텍스처로 돌려(에디터 게임 뷰 RT 와 같은 길 — 캡처 · 개발 겹치기 순서 그대로) → 끝에 엔진 내부 출력 패스 하나(FSR RCAS 처럼 PSO 칸만 있는 타입, 정점 단계가 UV 를 돌리는 전용 셰이더)가 대기 텍스처를 실제 백버퍼에 돌려 그린다. `hasSurfaceChanged` 는 그대로 만든 때의 회전과 대조한다. 언리얼 모바일도 백버퍼 앞 마지막 패스에서 돌린다(기억).
+- Android 파일 시스템: `Linux/` 폴더는 Android 에서 짓지 않는다 — `PlatformFileSystem` · `UserDataPath`(`#error` 사슬)의 Android 갈래가 없어 위 빌드 줄에서 함께 드러난다. 앱 전용 폴더는 `SW_ANDROID_APP_FOLDER`(ProcessRoots)가 이미 갖고 있으니 사용자 데이터 · 설정 폴더도 그 아래로 잇는다.
 
 ## 입력(웹 · Android)
 
