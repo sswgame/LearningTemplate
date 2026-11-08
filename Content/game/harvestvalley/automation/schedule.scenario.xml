@@ -49,6 +49,8 @@
 	<ExpectVisited watch="Schedule.Activity" target="pierre" sequence="Sleep, WorkAt, UseObject"/>
 	<ExpectVisited watch="Schedule.Activity" target="harvey" sequence="Sleep, WorkAt, GoTo"/>
 	<ExpectVisited watch="Schedule.Phase" target="pierre" is="Traveling"/>
+	<!-- 개발 명령 schedule.trace — "왜 여기 있나" 와 오늘 시간표를 답한다(로그로 남아 실패를 읽을 때 쓴다) -->
+	<DevCommand line="schedule.trace pierre"/>
 	<Record watch="Schedule.MinuteOfDay"/>
 	<Record watch="Object.X" target="Villager.pierre"/>
 	<Record watch="Object.Z" target="Villager.pierre"/>
