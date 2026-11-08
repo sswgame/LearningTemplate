@@ -8,6 +8,12 @@
 
 #if defined( SW_PLATFORM_LINUX )
     #include <unistd.h>
+#elif defined( SW_PLATFORM_ANDROID )
+    #include <android/log.h>
+#elif defined( SW_PLATFORM_WINDOWS ) || defined( SW_PLATFORM_WEB )
+// 따로 들일 OS 헤더가 없다(PlatformOSHeaders · 표준 출력)
+#else
+    #error "Unsupported platform"
 #endif
 
 namespace sw
@@ -87,6 +93,8 @@ namespace sw
 #elif defined( SW_PLATFORM_LINUX )
         // 터미널이 아니면(journald · 파일 · 테스트 파이프) 색 이스케이프를 쓰지 않는다.
         _bHasConsole = isatty( STDOUT_FILENO ) != 0;
+#elif defined( SW_PLATFORM_ANDROID ) || defined( SW_PLATFORM_WEB )
+        _bHasConsole = false; // logcat · 브라우저 콘솔은 색 이스케이프를 받지 않는다
 #else
     #error "Unsupported platform"
 #endif
@@ -161,6 +169,12 @@ namespace sw
         }
         if ( ConsoleLogOutputInternal::shouldFlush( level ) )
             std::fflush( stdout );
+#elif defined( SW_PLATFORM_ANDROID )
+        // 앱의 표준 출력은 /dev/null 이다 — logcat 이 콘솔이다(언리얼 Android 도 __android_log). 수준은 Error · Warning · Info · Trace 순서다.
+        static constexpr int32 arrPriority[] = { ANDROID_LOG_ERROR, ANDROID_LOG_WARN, ANDROID_LOG_INFO, ANDROID_LOG_VERBOSE };
+        const int32            index         = static_cast<int32>( level );
+        const int32            priority      = ( 0 <= index && index < static_cast<int32>( LogLevel::Count ) ) ? arrPriority[index] : ANDROID_LOG_INFO;
+        __android_log_write( priority, "SW", pMessage );
 #elif defined( SW_PLATFORM_POSIX )
         std::fputs( pMessage, stdout );
         if ( ConsoleLogOutputInternal::shouldFlush( level ) )

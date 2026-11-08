@@ -9,7 +9,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
 
-#if defined( SW_PLATFORM_LINUX )
+#if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID ) || defined( SW_PLATFORM_WEB )
     #include "Core/String/StringUtil.h"
     #include "Core/File/PlatformFileSystem.h"
     #include "Core/File/PlatformFileUtil.h"
@@ -28,7 +28,7 @@ namespace sw
 {
     namespace
     {
-        struct LinuxFileSystemInternal
+        struct PosixFileSystemInternal
         {
             /** @brief 1601-01-01(Windows FILETIME 기원)에서 유닉스 기원까지의 100 ns 눈금 수입니다. */
             static constexpr int64 kUnixEpochTicks = 116'444'736'000'000'000;
@@ -73,7 +73,7 @@ namespace sw
     {
         if ( path.empty() )
             return false;
-        const string native = LinuxFileSystemInternal::toNative( path );
+        const string native = PosixFileSystemInternal::toNative( path );
         struct stat  info;
         struct stat  linkInfo;
         outStatus._bLink = lstat( native.c_str(), &linkInfo ) == 0 && S_ISLNK( linkInfo.st_mode );
@@ -81,7 +81,7 @@ namespace sw
             return false;
         outStatus._kind       = S_ISDIR( info.st_mode ) ? FileKind::Directory : ( S_ISREG( info.st_mode ) ? FileKind::File : FileKind::Other );
         outStatus._size       = static_cast<uint64>( info.st_size );
-        outStatus._writeTicks = LinuxFileSystemInternal::toTicks( info.st_mtim );
+        outStatus._writeTicks = PosixFileSystemInternal::toTicks( info.st_mtim );
         outStatus._bReadOnly  = ( info.st_mode & S_IWUSR ) == 0;
         return true;
     }
@@ -90,21 +90,21 @@ namespace sw
     {
         if ( path.empty() )
             return false;
-        return mkdir( LinuxFileSystemInternal::toNative( path ).c_str(), 0777 ) == 0; // umask 가 깎는다
+        return mkdir( PosixFileSystemInternal::toNative( path ).c_str(), 0777 ) == 0; // umask 가 깎는다
     }
 
     bool PlatformFileSystem::removeEntry( string_view path )
     {
         if ( path.empty() )
             return false;
-        return remove( LinuxFileSystemInternal::toNative( path ).c_str() ) == 0; // 파일 · 링크는 unlink, 폴더는 rmdir
+        return remove( PosixFileSystemInternal::toNative( path ).c_str() ) == 0; // 파일 · 링크는 unlink, 폴더는 rmdir
     }
 
     bool PlatformFileSystem::copyFileOverwrite( string_view source, string_view destination )
     {
         if ( source.empty() || destination.empty() )
             return false;
-        const int sourceFd = open( LinuxFileSystemInternal::toNative( source ).c_str(), O_RDONLY | O_CLOEXEC );
+        const int sourceFd = open( PosixFileSystemInternal::toNative( source ).c_str(), O_RDONLY | O_CLOEXEC );
         if ( sourceFd < 0 )
             return false;
         struct stat info;
@@ -113,7 +113,7 @@ namespace sw
             close( sourceFd );
             return false;
         }
-        const int destinationFd = open( LinuxFileSystemInternal::toNative( destination ).c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, info.st_mode & 0777 );
+        const int destinationFd = open( PosixFileSystemInternal::toNative( destination ).c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, info.st_mode & 0777 );
         if ( destinationFd < 0 )
         {
             close( sourceFd );
@@ -121,7 +121,7 @@ namespace sw
         }
 
         bool         bOk = true;
-        vector<utf8> chunk( LinuxFileSystemInternal::kCopyChunkSize );
+        vector<utf8> chunk( PosixFileSystemInternal::kCopyChunkSize );
         while ( bOk )
         {
             const ssize_t readBytes = read( sourceFd, chunk.data(), chunk.size() );
@@ -155,7 +155,7 @@ namespace sw
     {
         if ( path.empty() )
             return false;
-        const string native = LinuxFileSystemInternal::toNative( path );
+        const string native = PosixFileSystemInternal::toNative( path );
         struct stat  info;
         if ( stat( native.c_str(), &info ) != 0 )
             return false;
@@ -170,23 +170,23 @@ namespace sw
             return false;
         const timespec arrTime[2] = {
             { 0, UTIME_OMIT },
-            LinuxFileSystemInternal::fromTicks( ticks )
+            PosixFileSystemInternal::fromTicks( ticks )
         }; // 접근 시각은 건드리지 않는다
-        return utimensat( AT_FDCWD, LinuxFileSystemInternal::toNative( path ).c_str(), arrTime, 0 ) == 0;
+        return utimensat( AT_FDCWD, PosixFileSystemInternal::toNative( path ).c_str(), arrTime, 0 ) == 0;
     }
 
     int64 PlatformFileSystem::getNowTicks()
     {
         timespec now;
         clock_gettime( CLOCK_REALTIME, &now ); // WallClock 은 밀리초 눈금이라 100 ns 파일 시각에 못 쓴다
-        return LinuxFileSystemInternal::toTicks( now );
+        return PosixFileSystemInternal::toTicks( now );
     }
 
     bool PlatformFileSystem::makeAbsolute( string_view path, string& outResult )
     {
         if ( path.empty() )
             return false;
-        string native = LinuxFileSystemInternal::toNative( path );
+        string native = PosixFileSystemInternal::toNative( path );
         if ( native.empty() )
             return false; // 상대 경로는 거절됐다(R2) - 실행 중 작업 폴더로 풀지 않는다
         if ( native[0] != '/' )
@@ -230,7 +230,7 @@ namespace sw
         if ( path.empty() )
             return false;
         utf8 arrResolved[PATH_MAX];
-        if ( realpath( LinuxFileSystemInternal::toNative( path ).c_str(), arrResolved ) == nullptr )
+        if ( realpath( PosixFileSystemInternal::toNative( path ).c_str(), arrResolved ) == nullptr )
             return false;
         outResult = arrResolved;
         return true;
@@ -247,13 +247,28 @@ namespace sw
 
     bool PlatformFileSystem::setCurrentDirectory( string_view path )
     {
-        return path.empty() == false && chdir( LinuxFileSystemInternal::toNative( path ).c_str() ) == 0;
+        return path.empty() == false && chdir( PosixFileSystemInternal::toNative( path ).c_str() ) == 0;
     }
 
     bool PlatformFileSystem::getExecutablePath( string& outResult )
     {
+    #if defined( SW_PLATFORM_LINUX )
         // `/proc/self/exe` 는 실행 파일을 가리키는 링크다 - 풀어 둔 실제 경로가 답이다.
         return makeCanonical( "/proc/self/exe", outResult );
+    #elif defined( SW_PLATFORM_ANDROID )
+        // 실행 파일은 zygote(app_process)다 — 앱의 코드는 이 함수가 든 공유 라이브러리(lib<앱>.so)이므로 그 경로가 답이다.
+        Dl_info info{};
+        if ( dladdr( reinterpret_cast<const void*>( &PlatformFileSystem::getExecutablePath ), &info ) == 0 || info.dli_fname == nullptr )
+            return false;
+        outResult = info.dli_fname;
+        return true;
+    #elif defined( SW_PLATFORM_WEB )
+        // 브라우저에는 실행 파일 경로가 없다 — 패키지 파일(--preload-file)이 붙는 가상 파일 시스템 뿌리의 앱이다.
+        outResult = "/App";
+        return true;
+    #else
+        #error "Unsupported platform"
+    #endif
     }
 
     bool PlatformFileSystem::getTempDirectory( string& outResult )
@@ -276,7 +291,7 @@ namespace sw
     {
         if ( directory.empty() || visit == nullptr )
             return false;
-        const string native = LinuxFileSystemInternal::toNative( directory );
+        const string native = PosixFileSystemInternal::toNative( directory );
         DIR* const   pDir   = opendir( native.c_str() );
         if ( pDir == nullptr )
             return false;

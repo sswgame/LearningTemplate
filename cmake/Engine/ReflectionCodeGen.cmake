@@ -344,6 +344,9 @@ function(sw_addReflectionStep TARGET_NAME)
 
 	sw_addReflectionCandidateCheck(${TARGET_NAME} "${ARG_OUTPUT_DIR}" ${listNonReflectHeader})
 	add_custom_target(${TARGET_NAME}_ReflectionGen DEPENDS ${generatedFiles})
+	if(TARGET SwHostReflectionParser)
+		add_dependencies(${TARGET_NAME}_ReflectionGen SwHostReflectionParser) # 교차 빌드 — 호스트 파서를 먼저 다시 짓는다(HostTools.cmake)
+	endif()
 	add_dependencies(${TARGET_NAME} ReflectionParser ${TARGET_NAME}_ReflectionGen)
 
 	# 타깃마다 두 줄씩 configure 출력을 메우지 않는다 — `cmake --log-level=VERBOSE` 로 다시 본다.
@@ -399,6 +402,9 @@ function(sw_addReflectBuiltinsGen TARGET_NAME)
 
 	target_sources(${TARGET_NAME} PRIVATE "${genFile}")
 	add_custom_target(${TARGET_NAME}_ReflectBuiltinsGen DEPENDS "${swBuiltinStamp}")
+	if(TARGET SwHostReflectionParser)
+		add_dependencies(${TARGET_NAME}_ReflectBuiltinsGen SwHostReflectionParser) # 교차 빌드 — 호스트 파서를 먼저 다시 짓는다
+	endif()
 	add_dependencies(${TARGET_NAME} ${TARGET_NAME}_ReflectBuiltinsGen)
 	set_target_properties(${TARGET_NAME}_ReflectBuiltinsGen PROPERTIES FOLDER "Reflection")
 	set_source_files_properties("${genFile}" PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

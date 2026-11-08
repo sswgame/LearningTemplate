@@ -6,7 +6,10 @@
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Foundation/PlatformOSHeaders.h"
-#elif defined( SW_PLATFORM_LINUX )
+#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
+    #include <pthread.h>
+#elif defined( SW_PLATFORM_WEB )
+    #include <emscripten/threading.h>
 #else
     #error "Unsupported platform"
 #endif
@@ -25,7 +28,7 @@ namespace sw
         if ( written <= 0 )
             return;
         SetThreadDescription( GetCurrentThread(), arrWide );
-#elif defined( SW_PLATFORM_LINUX )
+#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
         // comm 은 15 바이트까지다. 넘기면 pthread_setname_np 가 ERANGE 로 아무것도 하지 않으므로 잘라서 넘긴다.
         utf8   arrShort[kMaxPosixLength + 1]{};
         size_t length = 0;
@@ -35,6 +38,9 @@ namespace sw
             ++length;
         }
         pthread_setname_np( pthread_self(), arrShort );
+#elif defined( SW_PLATFORM_WEB )
+        // 브라우저 개발자 도구의 워커 이름(웹에는 커널 스레드 이름이 없다).
+        emscripten_set_thread_name( pthread_self(), pName );
 #else
     #error "Unsupported platform"
 #endif
@@ -59,7 +65,7 @@ namespace sw
         }
         pOutName[capacity - 1] = '\0';
         return pOutName[0] != '\0';
-#elif defined( SW_PLATFORM_LINUX )
+#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
         utf8 arrShort[kMaxPosixLength + 1]{};
         if ( pthread_getname_np( pthread_self(), arrShort, sizeof( arrShort ) ) != 0 )
             return false;

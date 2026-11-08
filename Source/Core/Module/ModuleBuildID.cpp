@@ -10,7 +10,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
-#if defined( SW_PLATFORM_LINUX )
+#if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
     #include <link.h>
 #endif
 
@@ -36,7 +36,7 @@ namespace sw
             };
 
             static constexpr DWORD kRsdsSignature = FourCCUtil::make( "RSDS" );
-#elif defined( SW_PLATFORM_LINUX )
+#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
             struct BuildIDQuery
             {
                 uintptr_t     _address{ 0 };
@@ -95,6 +95,8 @@ namespace sw
                 }
                 return 1;
             }
+#elif defined( SW_PLATFORM_WEB )
+            // wasm 모듈에는 읽을 ELF 노트가 없다.
 #else
     #error "Unsupported platform"
 #endif
@@ -148,13 +150,15 @@ namespace sw
             result._debugFile = pRecord->_arrPDBPath;
             break;
         }
-#elif defined( SW_PLATFORM_LINUX )
+#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
         Internal::BuildIDQuery query{};
         query._address = reinterpret_cast<uintptr_t>( pAddressInside );
         query._bMain   = pAddressInside == nullptr;
         dl_iterate_phdr( &Internal::visitLibrary, &query );
         if ( query._bFound )
             result = query._result;
+#elif defined( SW_PLATFORM_WEB )
+        (void)pAddressInside; // wasm 모듈에는 ELF build-id 가 없다 — 빈 결과다(심볼은 -gseparate-dwarf 파일 이름으로 찾는다)
 #else
     #error "Unsupported platform"
 #endif

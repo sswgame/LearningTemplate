@@ -16,8 +16,7 @@
 
     #include <share.h>
     #include <shellapi.h>
-#elif defined( SW_PLATFORM_LINUX )
-
+#elif defined( SW_PLATFORM_POSIX )
     #include <cerrno>
     #include <ctime>
     #include <fcntl.h>
@@ -326,6 +325,8 @@ namespace sw
         return true;
 #elif defined( SW_PLATFORM_LINUX )
         return PlatformFileUtilInternal::findTrashFolder().empty() == false;
+#elif defined( SW_PLATFORM_ANDROID ) || defined( SW_PLATFORM_WEB )
+        return false; // 샌드박스에는 휴지통이 없다(에디터 기능이다)
 #else
     #error "Unsupported platform"
 #endif
@@ -364,6 +365,8 @@ namespace sw
                 return false;
         }
         return true;
+#elif defined( SW_PLATFORM_ANDROID ) || defined( SW_PLATFORM_WEB )
+        return false; // hasRecycleBin 이 false 다 — 부르는 쪽이 먼저 묻는다
 #else
     #error "Unsupported platform"
 #endif

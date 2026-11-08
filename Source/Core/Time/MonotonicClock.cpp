@@ -18,7 +18,7 @@ namespace sw
         LARGE_INTEGER counter{};
         QueryPerformanceCounter( &counter );
         return static_cast<int64>( counter.QuadPart );
-#elif defined( SW_PLATFORM_LINUX )
+#elif defined( SW_PLATFORM_POSIX )
         timespec time{};
         clock_gettime( CLOCK_MONOTONIC, &time );
         return static_cast<int64>( time.tv_sec ) * constant::time::kNanosecondsPerSecond + static_cast<int64>( time.tv_nsec );

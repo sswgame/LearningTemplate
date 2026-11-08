@@ -6,7 +6,7 @@
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Foundation/PlatformOSHeaders.h"
-#elif defined( SW_PLATFORM_LINUX )
+#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID ) || defined( SW_PLATFORM_WEB )
     #include <sched.h>
 #else
     #error "Unsupported platform"
@@ -96,11 +96,13 @@ namespace sw
                 ++count;
             }
         }
-#elif defined( SW_PLATFORM_LINUX )
+#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
         cpu_set_t set;
         CPU_ZERO( &set );
         if ( sched_getaffinity( 0, sizeof( set ), &set ) == 0 )
             count = static_cast<uint32>( CPU_COUNT( &set ) );
+#elif defined( SW_PLATFORM_WEB )
+        count = std::thread::hardware_concurrency(); // navigator.hardwareConcurrency — 브라우저에는 친화도 마스크가 없다
 #else
     #error "Unsupported platform"
 #endif

@@ -188,7 +188,7 @@ endfunction()
 # ------------------------------------------------------------------------------
 # 2) sw_vcpkgWriteManifestStamp — project() 이후 현재 해시를 스탬프에 기록
 # 다음 configure의 install gate가 스탬프와 비교해 재설치를 건너뜀
-# 경로: ${VCPKG_INSTALLED_DIR}/.sw_vcpkg_manifest_sha
+# 경로: ${VCPKG_INSTALLED_DIR}/.sw_vcpkg_manifest_sha_<triplet>
 # ------------------------------------------------------------------------------
 function(sw_vcpkgWriteManifestStamp)
     if(NOT SW_USE_VCPKG)
@@ -218,7 +218,7 @@ function(sw_vcpkgWriteManifestStamp)
         return()
     endif()
 
-    set(swStamp "${VCPKG_INSTALLED_DIR}/.sw_vcpkg_manifest_sha")
+    set(swStamp "${VCPKG_INSTALLED_DIR}/.sw_vcpkg_manifest_sha_${VCPKG_TARGET_TRIPLET}") # triplet 마다 — 한 폴더에 triplet 이 여럿이면 한쪽 스탬프가 다른 쪽 설치를 가렸다
     file(WRITE "${swStamp}" "${swManifestHash}")
     message(STATUS "[vcpkg] Manifest stamp updated (${VCPKG_TARGET_TRIPLET})")
 endfunction()
@@ -369,10 +369,12 @@ endif()
 sw_vcpkgComputeManifestHash(swManifestHash)
 
 set(swVcpkgTree "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}")
-set(swStamp "${VCPKG_INSTALLED_DIR}/.sw_vcpkg_manifest_sha")
+set(swStamp "${VCPKG_INSTALLED_DIR}/.sw_vcpkg_manifest_sha_${VCPKG_TARGET_TRIPLET}") # triplet 마다 — 한 폴더에 triplet 이 여럿이면 한쪽 스탬프가 다른 쪽 설치를 가렸다
 set(swTreeReady FALSE)
 
-if(EXISTS "${swVcpkgTree}")
+# 폴더만 보지 않는다 — 매니페스트 설치가 다른 triplet 의 포트를 지우면 빈 폴더가 남아 스탬프만 맞고 헤더가 없었다(2026-11-09).
+file(GLOB swVcpkgSharedPorts LIST_DIRECTORIES true "${swVcpkgTree}/share/*")
+if(EXISTS "${swVcpkgTree}" AND swVcpkgSharedPorts)
     set(swTreeReady TRUE)
 endif()
 

@@ -12,7 +12,7 @@
         { "_path": "Source/Core/File/Windows/WindowsAsyncFileIOBackend", "_reason": "IOCP 완료 대기(GetQueuedCompletionStatus) — OS 에서 막힌다" },
         { "_path": "Source/Core/File/Linux/LinuxAsyncFileIOBackend", "_reason": "io_uring 완료 대기 — OS 에서 막힌다" },
         { "_path": "Source/Core/Network/Transport/Windows/IocpStreamTransport", "_reason": "소켓 IOCP 완료 대기 — OS 에서 막힌다" },
-        { "_path": "Source/Core/Network/Transport/Linux/EpollStreamTransport", "_reason": "소켓 epoll 대기 — OS 에서 막힌다" },
+        { "_path": "Source/Core/Network/Transport/LinuxKernel/EpollStreamTransport", "_reason": "소켓 epoll 대기 — OS 에서 막힌다" },
         { "_path": "Source/Core/Network/Transport/DelayedStreamTransport", "_reason": "측정용 지연 흉내의 타이머 스레드 — 안쪽 전송이 IO 스레드를 가질 때만 띄운다(머리말)" },
         { "_path": "Source/Core/Network/Connection/NetEndpointThread", "_reason": "연결 하나의 소켓 대기 루프 — OS 에서 막힌다" },
         { "_path": "Source/DevTools/FileWatch/Windows/WindowsFileWatcher", "_reason": "ReadDirectoryChangesW 대기 — OS 에서 막힌다" },

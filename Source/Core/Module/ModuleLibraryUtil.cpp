@@ -14,7 +14,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
-#if defined( SW_PLATFORM_LINUX )
+#if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
     #include <link.h>
 #endif
 
@@ -331,6 +331,9 @@ namespace sw
             dlclose( pDependency );
             ++pinnedCount;
         }
+#elif defined( SW_PLATFORM_ANDROID ) || defined( SW_PLATFORM_WEB )
+        // 배포 모듈은 정적으로 묶인다 — 고정할 의존 라이브러리가 없다(bionic 에는 dlinfo 도 없다).
+        (void)pHandle;
 #else
     #error "Unsupported platform"
 #endif

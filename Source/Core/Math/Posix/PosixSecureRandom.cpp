@@ -2,7 +2,7 @@
 
 #include "Core/Math/SecureRandom.h"
 
-#if defined( SW_PLATFORM_LINUX )
+#if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID ) || defined( SW_PLATFORM_WEB )
     #include <cerrno>
     #include <cstdlib>
     #include <cstring>

@@ -120,12 +120,18 @@ file(GLOB_RECURSE swCookCodeInputs CONFIGURE_DEPENDS
 	"${CMAKE_SOURCE_DIR}/Source/Engine/*.xxx"
 )
 set(swCookCodeHeader "${CMAKE_BINARY_DIR}/generated/engineabi/CookCodeFingerprint.gen.h")
+# 쿠커 도구 판은 쿠킹하는 쪽의 vcpkg 기록이다 — 교차 빌드는 호스트 빌드의 것(HostTools.cmake), 아니면 이 빌드의 것.
+if(CMAKE_CROSSCOMPILING)
+	set(swCookVcpkgStatus "${SW_HOST_VCPKG_STATUS}")
+else()
+	set(swCookVcpkgStatus "${VCPKG_INSTALLED_DIR}/vcpkg/status")
+endif()
 add_custom_command(
 	OUTPUT "${swCookCodeHeader}"
 	COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/Scripts/generate/CookCodeFingerprint.py"
 		--root "${CMAKE_SOURCE_DIR}" --inputs "${CMAKE_SOURCE_DIR}/Config/Dev/CookCodeInputs.json"
-		--vcpkg-status "${VCPKG_INSTALLED_DIR}/vcpkg/status" --out "${swCookCodeHeader}"
-	DEPENDS ${swCookCodeInputs} "${CMAKE_SOURCE_DIR}/Config/Dev/CookCodeInputs.json" "${VCPKG_INSTALLED_DIR}/vcpkg/status"
+		--vcpkg-status "${swCookVcpkgStatus}" --out "${swCookCodeHeader}"
+	DEPENDS ${swCookCodeInputs} "${CMAKE_SOURCE_DIR}/Config/Dev/CookCodeInputs.json" "${swCookVcpkgStatus}"
 		"${CMAKE_SOURCE_DIR}/Scripts/generate/CookCodeFingerprint.py"
 	COMMENT "Fingerprinting cooker code"
 	VERBATIM

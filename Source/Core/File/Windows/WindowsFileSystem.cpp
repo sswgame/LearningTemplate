@@ -3,7 +3,7 @@
  * @brief `PlatformFileSystem` 의 파일 시스템 연산(질의 · 폴더 · 지우기 · 복사 · 시각 · 경로 해석 · 나열)의 Win32 구현입니다.
  * @details 경로는 UTF-8 → UTF-16 으로 직접 바꿔 넓은 문자 API 에 넘긴다(좁은 문자 API 는 ANSI 코드 페이지로 읽는다). 오류는 던지지 않고 `bool` 로 돌려준다.
  *          shortcut: 경로를 돌려주는 호출은 `kMaxBuffer4096` 글자 버퍼 하나로 받는다 - 더 긴 경로는 실패로 돌려준다(긴 경로 접두 `\\?\` 를 쓰게 되면 늘린다).
- *          POSIX 짝은 `File/Linux/LinuxFileSystem.cpp` 다.
+ *          POSIX 짝은 `File/Posix/PosixFileSystem.cpp` 다.
  */
 #include "pch.h"
 
