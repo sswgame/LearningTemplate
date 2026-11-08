@@ -2,7 +2,7 @@
 
 #include "Core/Container/DependencyGraph.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 
 #include <algorithm>
 #include <functional>

@@ -2,9 +2,9 @@
 
 #include "Editor/Common/EditorUtil.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Config/EditorConfig.h"
 

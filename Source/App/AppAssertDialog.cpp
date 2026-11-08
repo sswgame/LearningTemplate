@@ -3,10 +3,10 @@
 #include "App/AppAssertDialog.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
-#include "Core/Container/StringUtil.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Foundation/EngineServices.h"

@@ -2,14 +2,14 @@
 
 #include "ModuleManager/LiveReload/LiveReloadManager.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Event/EventDispatcher.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/String/RegistrationList.h"
+#include "Core/Registry/RegistrationList.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Task/TaskManager.h"
 
 #include "DevTools/FileWatch/IFileWatcher.h"

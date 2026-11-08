@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveEventRules.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "GameFramework/Runtime/Online/Config/RemoteConfig.h"

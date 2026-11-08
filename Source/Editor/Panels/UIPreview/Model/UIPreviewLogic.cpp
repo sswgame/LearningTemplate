@@ -2,12 +2,12 @@
 
 #include "Editor/Panels/UIPreview/Model/UIPreviewLogic.h"
 
-#include "Core/Container/VectorUtil.h"
-#include "Core/Container/formatString.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Name/hashed_string.h"
 #include "Core/String/fixed_string.h"
-#include "Core/String/hashed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 

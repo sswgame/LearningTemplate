@@ -2,7 +2,7 @@
 
 #include "Engine/Renderer/Canvas/CanvasTextureLeases.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Foundation/EngineServices.h"

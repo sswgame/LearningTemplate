@@ -2,12 +2,12 @@
 
 #include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
 #include "Core/Path/AbsolutePath.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "DevTools/AssetReload/ReloadTracker.h"

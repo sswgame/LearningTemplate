@@ -1,8 +1,8 @@
 // UTF8Util · StringUtil 의 UTF-8 — 검증기 · 디코더 · UCS-2 변환의 판정 일치, 연속 바이트, 경계로 물러나기, 한 글자 디코드, UCS-2 대체.
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/UTF8Util.h"
+#include "Core/String/StringUtil.h"
+#include "Core/String/UTF8Util.h"
 #include "Core/Testing/TestFramework.h"
 
 using namespace sw;

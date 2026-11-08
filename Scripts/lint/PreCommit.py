@@ -143,7 +143,7 @@ def main(argv: list[str] | None = None) -> int:
             for line in listCatalogRootViolation:
                 print(f"  - {line}")
 
-    # --- Core 높은 티어 사이 역류(빌드가 가르지 않는 자리 — CoreTiers.py 머리말) ---------------
+    # --- Core 티어 역류(Log 경계 밖은 빌드가 가르지 않는 자리 — CoreTiers.py 머리말) ---------------
     if stagedCppFiles:
         listTierViolation = checkCoreTiers(projectRoot, [str(path) for path in stagedCppFiles])
         if listTierViolation:

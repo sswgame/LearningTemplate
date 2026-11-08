@@ -2,10 +2,10 @@
 
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartGhost.h"
 
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
-#include "Core/String/FourCcUtil.h"
 
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartTrack.h"
 
@@ -17,7 +17,7 @@ namespace sw
         {
             static constexpr float32 kAxisScale  = 127.0f;
             static constexpr int32   kButtonBits = 4;
-            static constexpr uint32  kMagic      = FourCcUtil::make( "KGHT" );
+            static constexpr uint32  kMagic      = FourCCUtil::make( "KGHT" );
 
             static int8 encodeAxis( float32 value )
             {

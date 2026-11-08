@@ -2,7 +2,7 @@
 
 #include "Engine/Reflection/ReflectionValidation.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectionTypes.h"

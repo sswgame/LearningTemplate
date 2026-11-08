@@ -2,8 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Network/NetTurnRelay/TurnRelay.h"
 
-#include "Core/Container/LittleEndianUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Hash/SecureUtil.h"
@@ -11,6 +10,7 @@
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Serialization/BitStream.h"
+#include "Core/Serialization/LittleEndianUtil.h"
 #include "Core/UUID/UUID.h"
 
 #include "GameFramework/Runtime/Foundation/Utility/ConfigRangeUtil.h"

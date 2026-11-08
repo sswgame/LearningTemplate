@@ -4,10 +4,10 @@
 
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Compression/ICompressionCodec.h"
-#include "Core/Container/LittleEndianUtil.h"
-#include "Core/Container/StringUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
+#include "Core/Serialization/LittleEndianUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include <cstring>
 

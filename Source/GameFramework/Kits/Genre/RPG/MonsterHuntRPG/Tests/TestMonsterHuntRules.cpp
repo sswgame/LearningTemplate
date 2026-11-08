@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Console/DebugHUDRegistry.h"

@@ -2,7 +2,7 @@
 
 #include "GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogEditModel.h"
 
-#include "Core/Container/formatString.h"
+#include "Core/String/formatString.h"
 
 namespace sw::editor
 {

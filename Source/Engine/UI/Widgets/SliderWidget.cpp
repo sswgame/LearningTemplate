@@ -3,7 +3,7 @@
 #include "Engine/UI/Widgets/SliderWidget.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Reflection/ReflectionTypes.h"

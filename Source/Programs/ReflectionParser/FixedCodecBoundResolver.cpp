@@ -2,7 +2,7 @@
 
 #include "Programs/ReflectionParser/FixedCodecBoundResolver.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/String/StringUtil.h"
 #include "Core/String/string_splitter.h"
 
 #include <cmath>

@@ -2,8 +2,8 @@
 
 #include "ModuleManager/LiveReload/ModuleLibraryPatch.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/StringUtil.h"
 
 namespace sw
 {

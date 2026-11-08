@@ -2,9 +2,9 @@
 
 #include "Engine/UI/Binding/UIBindingValue.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectBuiltinClass.h"

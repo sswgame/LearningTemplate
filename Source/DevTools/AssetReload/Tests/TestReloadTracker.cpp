@@ -1,7 +1,7 @@
 // 리로드 결과 집계 — 경로마다 마지막 상태, 낡음(실패 뒤 이전 값), 고정 용량, 표 글.
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "DevTools/AssetReload/ReloadTracker.h"

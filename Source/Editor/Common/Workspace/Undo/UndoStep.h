@@ -19,7 +19,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Hash/HashUtil.h"
-#include "Core/String/RegistrationList.h"
+#include "Core/Registry/RegistrationList.h"
 
 #include "Editor/Common/EditorExports.h"
 

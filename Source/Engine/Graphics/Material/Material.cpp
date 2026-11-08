@@ -2,7 +2,7 @@
 
 #include "Engine/Graphics/Material/Material.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Hash/HashUtil.h"
 
 #include "Engine/Asset/AssetFormat.h"

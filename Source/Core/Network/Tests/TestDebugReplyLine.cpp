@@ -1,8 +1,8 @@
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Network/DebugReplyLine.h"
 #include "Core/Network/Transport/NetEmulation.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 // DebugReplyLine — 한 줄 답의 바이트 상한 · 잘림 표시와 UTF-8 글자 경계 자르기.

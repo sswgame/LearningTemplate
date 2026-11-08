@@ -2,8 +2,8 @@
 
 #include "Games/ThemeParkTycoon/ParkGameModeComponent.h"
 
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
@@ -35,7 +35,7 @@ namespace sw
     {
         struct ParkGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCcUtil::make( "PARK" );
+            static constexpr uint32 kStateTag     = FourCCUtil::make( "PARK" );
             static constexpr uint32 kStateVersion = 2;
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 themepark.audioevents.xml 이 정한다.

@@ -1,8 +1,8 @@
 #include "pch.h"
 
-#include "Core/Container/LittleEndianUtil.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/File/FileUtil.h"
-#include "Core/String/FourCcUtil.h"
+#include "Core/Serialization/LittleEndianUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Asset/Image/DDSFormat.h"
@@ -67,7 +67,7 @@ namespace
     /** @brief DX10 머리 DDS 를 만듭니다(형식 @p dxgiFormat, 배열 @p arraySize, misc @p miscFlag). 머리 뒤에 @p payloadSize 바이트를 붙입니다. */
     vector<uint8> makeDx10DDS( uint32 dxgiFormat, size_t payloadSize, uint32 arraySize = 1, uint32 miscFlag = 0 )
     {
-        vector<uint8> bytes = makeLegacyDDS( LegacyPixelFormat{ DDSFormat::kPixelFormatFourCcFlag, DDSFormat::kDx10FourCc, 0, 0, 0, 0, 0 }, 0 );
+        vector<uint8> bytes = makeLegacyDDS( LegacyPixelFormat{ DDSFormat::kPixelFormatFourCCFlag, DDSFormat::kDx10FourCC, 0, 0, 0, 0, 0 }, 0 );
         LittleEndianUtil::appendUint32( bytes, dxgiFormat );
         LittleEndianUtil::appendUint32( bytes, 3 ); // D3D10_RESOURCE_DIMENSION_TEXTURE2D
         LittleEndianUtil::appendUint32( bytes, miscFlag );
@@ -77,9 +77,9 @@ namespace
         return bytes;
     }
 
-    LegacyPixelFormat makeFourCc( uint32 fourCC )
+    LegacyPixelFormat makeFourCC( uint32 fourCC )
     {
-        return LegacyPixelFormat{ DDSFormat::kPixelFormatFourCcFlag, fourCC, 0, 0, 0, 0, 0 };
+        return LegacyPixelFormat{ DDSFormat::kPixelFormatFourCCFlag, fourCC, 0, 0, 0, 0, 0 };
     }
 
     LegacyPixelFormat makeRGB( uint32 rMask, uint32 gMask, uint32 bMask, uint32 aMask )
@@ -90,7 +90,7 @@ namespace
     /** @brief 성공한 읽기로 채워 둔 출력입니다. 실패한 읽기가 이것을 비우는지 봅니다. */
     DDSImageData makeLoadedImage()
     {
-        const vector<uint8> bytes = makeLegacyDDS( makeFourCc( FourCcUtil::make( "DXT1" ) ), 8 );
+        const vector<uint8> bytes = makeLegacyDDS( makeFourCC( FourCCUtil::make( "DXT1" ) ), 8 );
         DDSImageData        image;
         SW_EXPECT_TRUE( DDSLoader::loadFromMemory( bytes.data(), bytes.size(), image ) );
         return image;
@@ -140,11 +140,11 @@ SW_TEST_CASE( DDSLoaderTest, LegacyHeadersMapToDXGIFormats )
         size_t            _payloadSize; ///< 4 × 2 한 장의 바이트(BC 는 4×4 블록 하나)
     };
     const Case arrCase[] = {
-        { makeFourCc( FourCcUtil::make( "DXT1" ) ), 71, true, false, 8 },
-        { makeFourCc( FourCcUtil::make( "DXT5" ) ), 77, true, false, 16 },
-        { makeFourCc( FourCcUtil::make( "ATI2" ) ), 83, true, false, 16 },
-        { makeFourCc( 113 ), 10, false, false, 64 }, // D3DFMT_A16B16G16R16F
-        { makeFourCc( 114 ), 41, false, false, 32 }, // D3DFMT_R32F
+        { makeFourCC( FourCCUtil::make( "DXT1" ) ), 71, true, false, 8 },
+        { makeFourCC( FourCCUtil::make( "DXT5" ) ), 77, true, false, 16 },
+        { makeFourCC( FourCCUtil::make( "ATI2" ) ), 83, true, false, 16 },
+        { makeFourCC( 113 ), 10, false, false, 64 }, // D3DFMT_A16B16G16R16F
+        { makeFourCC( 114 ), 41, false, false, 32 }, // D3DFMT_R32F
         { makeRGB( 0x000000FFu, 0x0000FF00u, 0x00FF0000u, 0xFF000000u ), 28, false, false, 32 },
         { makeRGB( 0x000000FFu, 0x0000FF00u, 0x00FF0000u, 0x00000000u ), 28, false, false, 32 },
         { makeRGB( 0x00FF0000u, 0x0000FF00u, 0x000000FFu, 0xFF000000u ), 87, false, true, 32 },
@@ -162,7 +162,7 @@ SW_TEST_CASE( DDSLoaderTest, LegacyHeadersMapToDXGIFormats )
     }
 
     // 표를 돌려주는 함수는 읽기가 쓰는 표 그대로다
-    SW_EXPECT_EQUAL( size_t( 15 ), DDSLoader::getLegacyFourCcTable().size() );
+    SW_EXPECT_EQUAL( size_t( 15 ), DDSLoader::getLegacyFourCCTable().size() );
     SW_EXPECT_EQUAL( size_t( 4 ), DDSLoader::getLegacyRGBMaskTable().size() );
 }
 
@@ -172,7 +172,7 @@ SW_TEST_CASE( DDSLoaderTest, LegacyHeadersMapToDXGIFormats )
  */
 SW_TEST_CASE( DDSLoaderTest, KeepsDepthAndMipCount )
 {
-    const vector<uint8> bytes = makeLegacyDDS( makeFourCc( FourCcUtil::make( "DXT1" ) ), 40, 3, 3 );
+    const vector<uint8> bytes = makeLegacyDDS( makeFourCC( FourCCUtil::make( "DXT1" ) ), 40, 3, 3 );
     DDSImageData        image;
     SW_REQUIRE_TRUE( DDSLoader::loadFromMemory( bytes.data(), bytes.size(), image ) );
     SW_EXPECT_EQUAL( 3u, image._depth );
@@ -221,7 +221,7 @@ SW_TEST_CASE( DDSLoaderTest, ArraysAndCubeMapsCountTheirLayers )
     const vector<uint8> cubeArray = makeDx10DDS( 28, size_t( 32 ) * 12, 2, DDSFormat::kDx10MiscTextureCubeFlag );
     SW_REQUIRE_TRUE( DDSLoader::loadFromMemory( cubeArray.data(), cubeArray.size(), image ) );
     SW_EXPECT_EQUAL( 12u, image._layerCount );
-    const vector<uint8> legacyCube = makeLegacyDDS( makeFourCc( FourCcUtil::make( "DXT1" ) ), size_t( 8 ) * 6, 0, 0, DDSFormat::kCaps2CubemapFlag );
+    const vector<uint8> legacyCube = makeLegacyDDS( makeFourCC( FourCCUtil::make( "DXT1" ) ), size_t( 8 ) * 6, 0, 0, DDSFormat::kCaps2CubemapFlag );
     SW_REQUIRE_TRUE( DDSLoader::loadFromMemory( legacyCube.data(), legacyCube.size(), image ) );
     SW_EXPECT_EQUAL( 6u, image._layerCount );
 }
@@ -234,7 +234,7 @@ SW_TEST_CASE( DDSLoaderTest, InconsistentHeadersFail )
     SW_EXPECT_LOG( "DDS.CorruptHeader" );
     SW_EXPECT_LOG( "DDS.UnsupportedFormat" );
     DDSImageData        image;
-    const vector<uint8> tooManyMips = makeLegacyDDS( makeFourCc( FourCcUtil::make( "DXT1" ) ), size_t( 8 ) * 4, 0, 4 ); // 4×2 는 밉 셋까지
+    const vector<uint8> tooManyMips = makeLegacyDDS( makeFourCC( FourCCUtil::make( "DXT1" ) ), size_t( 8 ) * 4, 0, 4 ); // 4×2 는 밉 셋까지
     SW_EXPECT_FALSE( DDSLoader::loadFromMemory( tooManyMips.data(), tooManyMips.size(), image ) );
     const vector<uint8> emptyArray = makeDx10DDS( 28, 32, 0 );
     SW_EXPECT_FALSE( DDSLoader::loadFromMemory( emptyArray.data(), emptyArray.size(), image ) );
@@ -264,7 +264,7 @@ SW_TEST_CASE( DDSLoaderTest, FormatSizeTableCoversTheLegacyTables )
         SW_EXPECT_TRUE( row._blockBytes > 0 );
         SW_EXPECT_TRUE( ( row._blockWidth == 1 && row._blockHeight == 1 ) || ( row._blockWidth == 4 && row._blockHeight == 4 ) );
     }
-    for ( const DDSLegacyFourCc& row : DDSLoader::getLegacyFourCcTable() )
+    for ( const DDSLegacyFourCC& row : DDSLoader::getLegacyFourCCTable() )
     {
         SW_EXPECT_TRUE_MSG( countOfDxgi( row._dxgiFormat ) == 1, "legacy FourCC maps to DXGI " + to_string( row._dxgiFormat ) + " which has no size" );
     }
@@ -292,24 +292,24 @@ SW_TEST_CASE( DDSLoaderTest, MalformedBuffersFailAndClearTheOutput )
     SW_EXPECT_EQUAL( 0u, image._width );
     SW_EXPECT_FALSE( DDSLoader::loadFromMemory( nullptr, 512, image ) );
 
-    vector<uint8> badMagic = makeLegacyDDS( makeFourCc( FourCcUtil::make( "DXT1" ) ), 8 );
+    vector<uint8> badMagic = makeLegacyDDS( makeFourCC( FourCCUtil::make( "DXT1" ) ), 8 );
     badMagic[0]            = 'X';
     image                  = makeLoadedImage();
     SW_EXPECT_FALSE( DDSLoader::loadFromMemory( badMagic.data(), badMagic.size(), image ) );
     SW_EXPECT_FALSE( image.isValid() );
 
-    vector<uint8> badHeaderSize = makeLegacyDDS( makeFourCc( FourCcUtil::make( "DXT1" ) ), 8 );
+    vector<uint8> badHeaderSize = makeLegacyDDS( makeFourCC( FourCCUtil::make( "DXT1" ) ), 8 );
     badHeaderSize[4]            = 100; // 머리 크기 124 → 100
     SW_EXPECT_FALSE( DDSLoader::loadFromMemory( badHeaderSize.data(), badHeaderSize.size(), image ) );
 
-    vector<uint8> zeroWidth = makeLegacyDDS( makeFourCc( FourCcUtil::make( "DXT1" ) ), 8 );
+    vector<uint8> zeroWidth = makeLegacyDDS( makeFourCC( FourCCUtil::make( "DXT1" ) ), 8 );
     zeroWidth[16]           = 0; // 너비(머리 다섯째 칸, 값 4)를 0 으로
     SW_EXPECT_FALSE( DDSLoader::loadFromMemory( zeroWidth.data(), zeroWidth.size(), image ) );
 
-    const vector<uint8> truncatedDx10 = makeLegacyDDS( makeFourCc( DDSFormat::kDx10FourCc ), 0 );
+    const vector<uint8> truncatedDx10 = makeLegacyDDS( makeFourCC( DDSFormat::kDx10FourCC ), 0 );
     SW_EXPECT_FALSE( DDSLoader::loadFromMemory( truncatedDx10.data(), truncatedDx10.size(), image ) );
 
-    const vector<uint8> headerOnly = makeLegacyDDS( makeFourCc( FourCcUtil::make( "DXT1" ) ), 0 );
+    const vector<uint8> headerOnly = makeLegacyDDS( makeFourCC( FourCCUtil::make( "DXT1" ) ), 0 );
     image                          = makeLoadedImage();
     SW_EXPECT_FALSE( DDSLoader::loadFromMemory( headerOnly.data(), headerOnly.size(), image ) );
     SW_EXPECT_FALSE( image.isValid() );
@@ -323,7 +323,7 @@ SW_TEST_CASE( DDSLoaderTest, UnknownFormatsFail )
     SW_EXPECT_LOG( "DDS.UnsupportedFormat" );
 
     const LegacyPixelFormat arrPixelFormat[] = {
-        makeFourCc( FourCcUtil::make( "ABCD" ) ),
+        makeFourCC( FourCCUtil::make( "ABCD" ) ),
         makeRGB( 0x0000FFFFu, 0x00FF0000u, 0xFF000000u, 0x00000000u ),
         LegacyPixelFormat{ 0, 0, 0, 0, 0, 0, 0 },
     };

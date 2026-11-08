@@ -1,8 +1,8 @@
 #include "pch.h"
 
-#include "Core/Container/LittleEndianUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Serialization/LittleEndianUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Graphics/Mesh/Mesh.h"

@@ -16,7 +16,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/DeterministicRandom.h"
 #include "Core/Memory/Memory.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Audio/AudioSpatial.h"
 #include "Engine/Audio/AudioStream.h"

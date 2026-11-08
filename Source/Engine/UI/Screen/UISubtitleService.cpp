@@ -2,10 +2,10 @@
 
 #include "Engine/UI/Screen/UISubtitleService.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Audio/AudioEngineState.h"
 #include "Engine/Foundation/EngineServices.h"

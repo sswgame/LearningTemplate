@@ -2,13 +2,13 @@
 // `CrashHandler`)를 만들어 보고 조각을 직접 부른다 — 앱의 처리기는 건드리지 않는다. 끝 절은 자식 역할(`SW_TEST_CHILD_ROLE`)을 띄워 진짜로 죽인다.
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/Process/ProcessSession.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 using namespace sw;

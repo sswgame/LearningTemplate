@@ -2,8 +2,8 @@
 
 #include "Editor/Panels/Material/Model/MaterialModel.h"
 
-#include "Core/Container/formatString.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Commands/Scene/EditorViewportPreview.h"
 #include "Editor/Common/Workspace/EditorService.h"

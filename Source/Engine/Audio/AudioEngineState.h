@@ -4,15 +4,15 @@
  * @details 둘 다 비가상이고 할당을 늘리지 않습니다. 오디오 상태를 바꾸는 순서는 `AudioEngine` 이 정합니다.
  */
 #pragma once
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Audio/AudioMusic.h"
 #include "Engine/Audio/AudioTypes.h"

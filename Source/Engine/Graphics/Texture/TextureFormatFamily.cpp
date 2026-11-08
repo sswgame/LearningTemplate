@@ -2,9 +2,9 @@
 
 #include "Engine/Graphics/Texture/TextureFormatFamily.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Asset/Cook/AssetCompanion.h"
 #include "Engine/Config/EngineConfig.h"

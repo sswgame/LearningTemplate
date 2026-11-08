@@ -2,9 +2,9 @@
 
 #include "Core/Network/Connection/NetPacketSealer.h"
 
-#include "Core/Container/LittleEndianUtil.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Serialization/BitStream.h"
+#include "Core/Serialization/LittleEndianUtil.h"
 
 #include <cstring>
 

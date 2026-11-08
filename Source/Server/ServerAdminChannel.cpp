@@ -2,12 +2,12 @@
 
 #include "Server/ServerAdminChannel.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Process/ProcessEnvironment.h"
 #include "Core/Process/ShutdownSignal.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Config/Server/ServerConfig.h"
 #include "Engine/DedicatedServer/ServiceHealthRegistry.h"

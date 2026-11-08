@@ -1,12 +1,12 @@
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/PlatformFileUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Process/ProcessEnvironment.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 // 파일 도우미 — 경로 문자열(이름 · 폴더 · 확장자 · 절대 판정), 읽기 · 쓰기(대소문자 · 한글 경로 · 원자적 바꿔 끼우기 · 실패 · 범위),

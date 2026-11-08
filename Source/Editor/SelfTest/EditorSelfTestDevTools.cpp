@@ -7,8 +7,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Name/TagID.h"
 #include "Core/Process/Process.h"
-#include "Core/String/TagID.h"
 
 #include "DevTools/Console/DevConsole.h"
 

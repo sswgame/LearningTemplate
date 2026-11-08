@@ -3,7 +3,6 @@
  * @brief UTF 변환 · 해시 · 분할 · 트림 같은 문자열 유틸리티입니다(입력은 널 종료 utf8* / utf16*).
  */
 #pragma once
-#include "Core/Container/UTF8Util.h"
 #include "Core/Container/array.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
@@ -13,6 +12,7 @@
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/String/UTF8Util.h"
 
 namespace sw
 {

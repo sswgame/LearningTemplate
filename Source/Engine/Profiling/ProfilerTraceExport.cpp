@@ -2,9 +2,9 @@
 
 #include "Engine/Profiling/ProfilerTraceExport.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -12,12 +12,12 @@
 
 #if !defined( SW_SHIPPING )
 
-    #include "Core/Container/StringUtil.h"
+    #include "Core/String/StringUtil.h"
     #include "Core/File/FileUtil.h"
     #include "Core/File/ProcessRoots.h"
     #include "Core/Memory/Memory.h"
     #include "Core/Process/Process.h"
-    #include "Core/String/HexUtil.h"
+    #include "Core/Encoding/HexUtil.h"
     #include "Core/Time/MonotonicClock.h"
     #include "Core/Time/WallClock.h"
 

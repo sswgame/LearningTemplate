@@ -4,9 +4,9 @@
 
 #include "App/EditorModuleManager.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Automation/Scenario/AutomationBackendSteps.h"

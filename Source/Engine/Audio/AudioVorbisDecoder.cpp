@@ -58,7 +58,7 @@
 #undef temp_block_array
 #undef temp_free
 
-#include "Core/Container/LittleEndianUtil.h"
+#include "Core/Serialization/LittleEndianUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 

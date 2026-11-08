@@ -5,9 +5,9 @@
  */
 #pragma once
 #include "Core/Concurrency/Futex.h"
+#include "Core/Concurrency/Queue/ConcurrentQueue.h"
+#include "Core/Concurrency/Queue/WorkStealingDeque.h"
 #include "Core/Concurrency/thread.h"
-#include "Core/Container/ConcurrentQueue.h"
-#include "Core/Container/WorkStealingDeque.h"
 #include "Core/Container/span.h"
 #include "Core/Container/string.h"
 #include "Core/Delegate/Subscription.h"

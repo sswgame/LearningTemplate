@@ -2,9 +2,9 @@
 
 #include "Games/Shooter3D/ShooterGameModeComponent.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -39,7 +39,7 @@ namespace sw
     {
         struct ShooterGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCcUtil::make( "SHOT" );
+            static constexpr uint32 kStateTag     = FourCCUtil::make( "SHOT" );
             static constexpr uint32 kStateVersion = 3;
             /** @brief 이 게임이 아는 조우, 보상, 스폰 ID 입니다. 프로필이 다른 이름을 쓰면 시작할 때 알립니다. */
             static constexpr const utf8* kArrKnownEncounter[] = { "swarm", "elite", "ammo", "repair" };

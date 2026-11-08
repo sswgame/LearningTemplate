@@ -2,9 +2,9 @@
 
 #include "Engine/UI/Binding/UIBindingConverterRegistry.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 

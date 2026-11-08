@@ -2,10 +2,10 @@
 
 #include "GameFramework/Kits/Feature/Storage/CacheStore/Server/CacheEndpoint.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Network/Transport/PlatformSocketUtil.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Time/Clock.h"
 

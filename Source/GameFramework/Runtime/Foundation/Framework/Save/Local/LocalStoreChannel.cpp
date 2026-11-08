@@ -2,8 +2,8 @@
 
 #include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalStoreChannel.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/thread.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"

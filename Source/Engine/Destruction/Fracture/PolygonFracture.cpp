@@ -2,7 +2,7 @@
 
 #include "Engine/Destruction/Fracture/PolygonFracture.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/pair.h"
 #include "Core/Math/DeterministicMathUtil.h"
 #include "Core/Math/MathUtil.h"

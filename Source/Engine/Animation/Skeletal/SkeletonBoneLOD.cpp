@@ -2,12 +2,12 @@
 
 #include "Engine/Animation/Skeletal/SkeletonBoneLOD.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/atomic.h"
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Asset/Cook/AssetCompanion.h"

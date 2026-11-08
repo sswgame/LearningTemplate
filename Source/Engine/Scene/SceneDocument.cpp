@@ -2,11 +2,11 @@
 
 #include "Engine/Scene/SceneDocument.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_set.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/File/FileUtil.h"
-#include "Core/String/FourCcUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Asset/AssetLoadProfiler.h"
@@ -33,7 +33,7 @@ namespace sw
             static constexpr const utf8* kEntity        = "entity";
             static constexpr const utf8* kGameObject    = "GameObject";
             static constexpr const utf8* kDefaultEntity = "Entity";
-            static constexpr uint32      kBinMagic      = FourCcUtil::make( "SCN1" );
+            static constexpr uint32      kBinMagic      = FourCCUtil::make( "SCN1" );
             // 배치: 이름 · 월드 설정(리플렉션 바이너리) · 기본 엔티티 목록 · 셀 목록(셀 좌표 x · z, 그 셀의 엔티티 목록).
             // 엔티티 하나: 이름 · 프리팹 경로 · XML 상태 · 바이너리 상태 · 파일 id · 덮어쓴 것(`_prefabOverrideXML`) · id 범위 · 앵커 파일 id · 레이어 목록 · 인스턴스 덮어쓰기 목록.
             // 프리팹은 경로 하나로 가리킨다(판 5 에서 GUID 칸을 지웠다). 판 6 에서 조립 칸을 더했다. 셀에는 레이어 목록이 붙는다.

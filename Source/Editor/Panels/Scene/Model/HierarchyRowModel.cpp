@@ -2,9 +2,9 @@
 
 #include "Editor/Panels/Scene/Model/HierarchyRowModel.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/TagID.h"
+#include "Core/Name/TagID.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/Commands/Scene/EditorSiblingOrder.h"

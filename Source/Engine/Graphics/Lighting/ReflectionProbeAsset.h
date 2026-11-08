@@ -13,12 +13,12 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Content/AssetID.h"
 
@@ -29,7 +29,7 @@ namespace sw
     /** @brief `.reflprobe` 하나의 내용입니다. 파일 머리말을 참고하세요. */
     struct SW_API ReflectionProbeAsset
     {
-        static constexpr uint32      kMagic     = FourCcUtil::make( "SWRP" );
+        static constexpr uint32      kMagic     = FourCCUtil::make( "SWRP" );
         static constexpr uint32      kVersion   = 1;
         static constexpr string_view kExtension = ".reflprobe";
         /// @brief 한 변 텍셀 수의 범위 — 깨진 머리말이 큰 할당을 일으키지 않게 막는다.

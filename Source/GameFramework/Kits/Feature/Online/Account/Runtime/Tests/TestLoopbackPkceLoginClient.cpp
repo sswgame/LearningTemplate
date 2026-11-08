@@ -3,9 +3,9 @@
 // HTTP 클라이언트가, 토큰 주소는 루프백 망의 가짜 서버가 맡는다. SHA-256 은 가짜 요약이다(짝만 본다). 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
+#include "Core/Encoding/Base64Util.h"
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
 #include "Core/Network/Transport/StreamTypes.h"
-#include "Core/String/Base64Util.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/Clock.h"
 

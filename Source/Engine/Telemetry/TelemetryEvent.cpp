@@ -2,7 +2,7 @@
 
 #include "Engine/Telemetry/TelemetryEvent.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 
 namespace sw
 {

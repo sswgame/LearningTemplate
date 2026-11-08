@@ -2,8 +2,8 @@
 
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModSupportSettings.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"

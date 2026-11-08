@@ -1,7 +1,7 @@
 // HexUtil — 바이트 · 정수의 16진 쓰기(대소문자 · 자릿수 채움)와 읽기(대소문자 무관, 홀수 길이 · 16진 밖 글자 거절), 왕복.
 #include "pch.h"
 
-#include "Core/String/HexUtil.h"
+#include "Core/Encoding/HexUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 using namespace sw;

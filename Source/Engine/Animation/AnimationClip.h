@@ -7,8 +7,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Name/hashed_string.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/String/hashed_string.h"
 
 #include "Engine/Animation/AnimationPlayback.h"
 #include "Engine/Animation/Codec/AnimationCodec.h"

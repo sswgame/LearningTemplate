@@ -2,9 +2,9 @@
 
 #include "Editor/Panels/DataTable/DataTablePanel.h"
 
-#include "Core/Container/formatString.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"

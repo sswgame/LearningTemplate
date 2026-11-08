@@ -3,11 +3,11 @@
 #include "pch.h"
 
 #include "Core/Concurrency/thread.h"
-#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Process/Process.h"
 #include "Core/Process/ProcessEnvironment.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Testing/TestWait.h"
 #include "Core/Time/MonotonicClock.h"

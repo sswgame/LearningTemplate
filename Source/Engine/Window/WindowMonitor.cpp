@@ -2,7 +2,7 @@
 
 #include "Engine/Window/WindowMonitor.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include <utility>

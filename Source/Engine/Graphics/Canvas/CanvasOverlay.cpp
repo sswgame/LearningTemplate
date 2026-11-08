@@ -2,7 +2,7 @@
 
 #include "Engine/Graphics/Canvas/CanvasOverlay.h"
 
-#include "Core/String/RegistrationList.h"
+#include "Core/Registry/RegistrationList.h"
 
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 

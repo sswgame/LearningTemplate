@@ -2,11 +2,11 @@
 
 #include "Games/StarSkirmish/SkirmishGameModeComponent.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/XorShift32.h"
-#include "Core/String/FourCcUtil.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
@@ -41,7 +41,7 @@ namespace sw
         struct SkirmishGameModeComponentInternal
         {
             static constexpr int32  kUnitLookCategory = 5; ///< 0번 팀, 1번 팀, 주인 없음, 광물, 가스.
-            static constexpr uint32 kStateTag         = FourCcUtil::make( "RTMS" );
+            static constexpr uint32 kStateTag         = FourCCUtil::make( "RTMS" );
             static constexpr uint32 kStateVersion     = 2;
 
             // 사운드 이벤트 이름(starskirmish.audioevents.xml).

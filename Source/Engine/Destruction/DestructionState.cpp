@@ -2,15 +2,15 @@
 
 #include "Engine/Destruction/DestructionState.h"
 
-#include "Core/Container/UnionFindUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/UnionFindUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/BitUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Serialization/BitStream.h"
-#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Destruction/DestructionDamage.h"
 #include "Engine/Destruction/Fracture/FractureGraph.h"
@@ -25,7 +25,7 @@ namespace sw
     {
         struct DestructionStateInternal
         {
-            static constexpr uint32 kMagic        = FourCcUtil::make( "SWDS" );
+            static constexpr uint32 kMagic        = FourCCUtil::make( "SWDS" );
             static constexpr uint32 kVersion      = 1;
             static constexpr uint32 kNoActiveNode = constant::invalid_index::kUint32;
 

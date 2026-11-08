@@ -1,7 +1,7 @@
 // RegistrationList — 구독으로 올리기(`addSubscribed`): 구독이 풀리면 주인의 해제 함수가 그 항목으로 불리고, 거절은 빈 구독이며, 목록이 먼저 사라지면 구독이 무효가 된다.
 #include "pch.h"
 
-#include "Core/String/RegistrationList.h"
+#include "Core/Registry/RegistrationList.h"
 #include "Core/Testing/TestFramework.h"
 
 using namespace sw;

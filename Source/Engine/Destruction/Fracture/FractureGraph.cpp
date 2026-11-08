@@ -2,8 +2,8 @@
 
 #include "Engine/Destruction/Fracture/FractureGraph.h"
 
-#include "Core/Container/UnionFindUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/UnionFindUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 namespace sw

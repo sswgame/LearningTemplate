@@ -2,9 +2,9 @@
 
 #include "Engine/Content/Pack/PackPatchTrustSource.h"
 
+#include "Core/Encoding/HexUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
-#include "Core/String/HexUtil.h"
 
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Foundation/EngineServices.h"

@@ -11,8 +11,8 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Name/hashed_string.h"
 #include "Core/Serialization/BitStream.h"
-#include "Core/String/hashed_string.h"
 
 #include "Engine/DedicatedServer/ServiceFactoryList.h"
 #include "Engine/Reflection/EnumName.h"

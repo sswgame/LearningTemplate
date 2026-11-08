@@ -2,7 +2,7 @@
 
 #include "GameFramework/Runtime/Gameplay/Inventory/Crafting.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Module/ModuleSharedAssetCache.h"

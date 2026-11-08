@@ -2,7 +2,7 @@
 
 #include "Engine/Localization/TimeZoneInfo.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 
 #include "Engine/Serialization/Format/XMLSerializer.h"
 

@@ -2,10 +2,10 @@
 
 #include "Engine/Destruction/Fracture/FractureAsset.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Serialization/ByteStream.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Asset/Cook/AssetCompanion.h"
 #include "Engine/Content/AssetIO.h"

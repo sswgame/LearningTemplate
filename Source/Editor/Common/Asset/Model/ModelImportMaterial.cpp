@@ -6,11 +6,11 @@
 
 #include "Editor/Common/Asset/Model/ModelImportMaterial.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Asset/ImportedAssetStore.h"
 #include "Editor/Common/Asset/Model/ModelImportGeometry.h"

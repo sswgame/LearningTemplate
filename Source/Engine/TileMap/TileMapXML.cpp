@@ -2,9 +2,9 @@
 
 #include "Engine/TileMap/TileMapXML.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"

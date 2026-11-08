@@ -2,7 +2,7 @@
 
 #include "Engine/Sequencer/SequenceAsset.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"

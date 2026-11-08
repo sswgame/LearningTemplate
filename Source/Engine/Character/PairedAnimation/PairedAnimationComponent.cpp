@@ -2,7 +2,7 @@
 
 #include "Engine/Character/PairedAnimation/PairedAnimationComponent.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Character/CharacterDataCache.h"

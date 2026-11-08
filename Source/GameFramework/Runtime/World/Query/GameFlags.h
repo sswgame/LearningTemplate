@@ -8,10 +8,10 @@
 #pragma once
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/String/FourCcUtil.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -50,7 +50,7 @@ namespace sw
     class SW_GF_API GameFlags
     {
     public:
-        static constexpr uint32 kStateTag     = FourCcUtil::make( "FLAG" );
+        static constexpr uint32 kStateTag     = FourCCUtil::make( "FLAG" );
         static constexpr uint32 kStateVersion = 1;
 
         GameFlags();

@@ -2,11 +2,11 @@
 
 #include "Engine/UI/Document/UIDocumentLoader.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/MemoryBlock.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Task/TaskTypes.h"
 
 #include "Engine/Foundation/EngineServices.h"

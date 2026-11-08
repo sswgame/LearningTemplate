@@ -2,13 +2,13 @@
 
 #include "Core/Module/ModuleBuildID.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/Encoding/FourCCUtil.h"
+#include "Core/Encoding/HexUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/HexDigitUtil.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
-#include "Core/String/FourCcUtil.h"
-#include "Core/String/HexUtil.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
 #if defined( SW_PLATFORM_LINUX )
     #include <link.h>
@@ -35,7 +35,7 @@ namespace sw
                 utf8  _arrPDBPath[1];
             };
 
-            static constexpr DWORD kRsdsSignature = FourCcUtil::make( "RSDS" );
+            static constexpr DWORD kRsdsSignature = FourCCUtil::make( "RSDS" );
 #elif defined( SW_PLATFORM_LINUX )
             struct BuildIDQuery
             {

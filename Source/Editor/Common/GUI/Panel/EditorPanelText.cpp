@@ -2,7 +2,7 @@
 
 #include "Editor/Common/GUI/Panel/EditorPanelText.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 
 #include "Editor/Common/Localization/EditorDataText.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"

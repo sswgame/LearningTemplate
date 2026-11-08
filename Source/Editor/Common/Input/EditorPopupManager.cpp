@@ -2,7 +2,7 @@
 
 #include "Editor/Common/Input/EditorPopupManager.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 
 #include "Editor/Common/GUI/IEditorPopup.h"
 

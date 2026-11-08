@@ -2,8 +2,8 @@
 
 #include "Games/NileCity/NileGameModeComponent.h"
 
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
@@ -36,7 +36,7 @@ namespace sw
         {
             static constexpr int32  kWalkerLookStride = 16; ///< 일꾼 모습 번호 = 종류 × 16 + 서비스
             static constexpr int32  kWalkerKindCount  = 3;
-            static constexpr uint32 kStateTag         = FourCcUtil::make( "NILE" );
+            static constexpr uint32 kStateTag         = FourCCUtil::make( "NILE" );
             static constexpr uint32 kStateVersion     = 3;
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 nilecity.audioevents.xml 이 정한다.

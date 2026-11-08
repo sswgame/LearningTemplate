@@ -2,8 +2,8 @@
 
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickCircuitComponent.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Console/DebugHUDRegistry.h"

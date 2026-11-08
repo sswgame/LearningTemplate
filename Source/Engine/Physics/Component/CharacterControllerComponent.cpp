@@ -3,8 +3,8 @@
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
 
 #include "Core/Concurrency/atomic.h"
-#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
 

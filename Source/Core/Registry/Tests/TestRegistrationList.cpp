@@ -1,7 +1,7 @@
 // RegistrationList — 중복 · nullptr 거절과 빼기의 순서, 저장소 유지 · 보관 저장소로 돌아가기, 이름 사본 · 이름 중복, (순서, 이름) 정렬, 리로드 대체 · 취소, 전역 열거.
 #include "pch.h"
 
-#include "Core/String/RegistrationList.h"
+#include "Core/Registry/RegistrationList.h"
 #include "Core/Testing/TestFramework.h"
 
 using namespace sw;

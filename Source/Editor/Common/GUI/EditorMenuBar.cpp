@@ -2,7 +2,7 @@
 
 #include "Editor/Common/GUI/EditorMenuBar.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/Scene/EditorSceneFileCommands.h"

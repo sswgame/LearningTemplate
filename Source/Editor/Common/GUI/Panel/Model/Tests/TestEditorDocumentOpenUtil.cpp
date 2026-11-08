@@ -1,7 +1,7 @@
 // EditorDocumentOpenUtil — 문서 패널이 열 문서를 정하는 판정: "Open..." 후보, 최근 목록, 포커스 교체와 취소.
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/GUI/Panel/Model/EditorDocumentOpenUtil.h"

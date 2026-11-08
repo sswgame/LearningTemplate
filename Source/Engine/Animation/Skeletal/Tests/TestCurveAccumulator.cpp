@@ -1,8 +1,8 @@
 #include "pch.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/vector.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Animation/Skeletal/CurveAccumulator.h"

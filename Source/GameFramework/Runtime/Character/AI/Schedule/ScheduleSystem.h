@@ -22,7 +22,7 @@
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Gameplay/GameplayContext.h"
 #include "Engine/Object/Component/TagSystem.h"

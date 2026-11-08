@@ -2,7 +2,7 @@
 
 #include "ModuleManager/Dev/ModuleReloadDriver.h"
 
-#include "Core/Container/formatString.h"
+#include "Core/String/formatString.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"

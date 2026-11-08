@@ -2,7 +2,7 @@
 
 #include "Editor/Common/Commands/EditorCommandText.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Localization/EditorDataText.h"

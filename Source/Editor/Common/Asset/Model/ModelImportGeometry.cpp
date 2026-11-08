@@ -6,12 +6,12 @@
 
 #include "Editor/Common/Asset/Model/ModelImportGeometry.h"
 
-#include "Core/Container/LittleEndianUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Serialization/LittleEndianUtil.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Asset/Model/ModelImportConfig.h"

@@ -1,7 +1,7 @@
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Container/vector.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Input/InputManager.h"

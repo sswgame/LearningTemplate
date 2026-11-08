@@ -8,11 +8,11 @@
  *          - 제외 패턴은 `StringUtil::matchesPathPattern`(에디터 임포트 규칙과 같은 마디 매칭: `/` 없는 패턴은 파일 이름에, 있으면 경로 마디별로, `*` 는 폴더를 넘지 않고 마디 `**` 만 넘는다. 대소문자 무시)으로 도메인 기준 경로에 맞춥니다. 제외 폴더는 경로 성분 이름입니다.
  */
 #pragma once
-#include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Config/IConfig.h"
 #include "Engine/Content/Pack/PackTypes.h"

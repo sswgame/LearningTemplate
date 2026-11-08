@@ -2,10 +2,10 @@
 
 #include "Engine/Asset/Image/ImageFileWriter.h"
 
-#include "Core/Container/LittleEndianUtil.h"
-#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/Serialization/LittleEndianUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Asset/Image/DDSFormat.h"
 #include "Engine/Compression/ZlibCompressionCodec.h"
@@ -78,8 +78,8 @@ namespace sw
             LittleEndianUtil::appendUint32( bytes, 0 ); // 예약
         }
         LittleEndianUtil::appendUint32( bytes, DDSFormat::kPixelFormatSize );
-        LittleEndianUtil::appendUint32( bytes, DDSFormat::kPixelFormatFourCcFlag );
-        LittleEndianUtil::appendUint32( bytes, DDSFormat::kDx10FourCc );
+        LittleEndianUtil::appendUint32( bytes, DDSFormat::kPixelFormatFourCCFlag );
+        LittleEndianUtil::appendUint32( bytes, DDSFormat::kDx10FourCC );
         for ( uint32 index = 0; index < 5; ++index )
         {
             LittleEndianUtil::appendUint32( bytes, 0 ); // 비트 수 · 마스크(DX10 머리말이 포맷을 말한다)

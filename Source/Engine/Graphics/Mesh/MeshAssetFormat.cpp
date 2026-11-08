@@ -2,13 +2,13 @@
 
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 
-#include "Core/Container/LittleEndianUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/NormalizedInt.h"
 #include "Core/Math/OctahedralNormal.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Serialization/ByteStream.h"
+#include "Core/Serialization/LittleEndianUtil.h"
 
 #include "Engine/Content/AssetIO.h"
 

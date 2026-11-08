@@ -2,9 +2,9 @@
 
 #include "Games/PixelTown/TownGameModeComponent.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -22,7 +22,7 @@ namespace sw
 {
     namespace
     {
-        constexpr uint32 kTownStateTag     = FourCcUtil::make( "TOWN" );
+        constexpr uint32 kTownStateTag     = FourCCUtil::make( "TOWN" );
         constexpr uint32 kTownStateVersion = 1;
 
     } // namespace

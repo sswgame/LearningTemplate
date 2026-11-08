@@ -1,8 +1,8 @@
 // ModelImportMaterial — 일반 glTF 의 금속도 · 거칠기 머티리얼 읽기: 바깥 이미지 경로(`../`) · 파일 이름 접미사 · factor · 가림(ORM 에 묶였을 때만).
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Asset/Model/ModelImportMaterial.h"

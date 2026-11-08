@@ -2,7 +2,7 @@
 
 #include "Editor/Common/Commands/Scene/EditorBakeOutputPath.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/String/StringUtil.h"
 
 namespace sw::editor
 {

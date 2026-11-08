@@ -2,9 +2,9 @@
 
 #include "Engine/Animation/AnimationSet.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Content/AssetIO.h"

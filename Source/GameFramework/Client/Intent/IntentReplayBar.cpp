@@ -2,9 +2,9 @@
 
 #include "GameFramework/Client/Intent/IntentReplayBar.h"
 
-#include "Core/Container/formatString.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"

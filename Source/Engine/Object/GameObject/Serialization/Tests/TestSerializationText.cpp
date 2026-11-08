@@ -1,7 +1,7 @@
 // 직렬화 글 칸 — 글(`string`)은 끝 공백을 값으로 지키고 이름(`hashed_string`)은 자르며, JSON 컴포넌트 목록의 모양 틀린 원소는 그 원소만 버린다(nogpu).
 #include "pch.h"
 
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Object/Component/SceneComponent.h"

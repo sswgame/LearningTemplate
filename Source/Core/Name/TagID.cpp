@@ -1,12 +1,12 @@
 #include "pch.h"
 
-#include "Core/String/TagID.h"
+#include "Core/Name/TagID.h"
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Memory/LifetimeScope.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 namespace sw
 {

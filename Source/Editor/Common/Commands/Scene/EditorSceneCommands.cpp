@@ -2,12 +2,12 @@
 
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/AABB.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Name/TagID.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/String/TagID.h"
+#include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/Scene/EditorSiblingOrder.h"

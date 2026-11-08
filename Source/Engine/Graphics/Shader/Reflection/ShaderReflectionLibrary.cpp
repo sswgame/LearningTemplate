@@ -2,14 +2,14 @@
 
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
-#include "Core/String/FourCcUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
@@ -25,7 +25,7 @@ namespace sw
     namespace
     {
         /// @brief 'SRFM' 매니페스트 매직입니다.
-        constexpr uint32 kMagic = FourCcUtil::make( "SRFM" );
+        constexpr uint32 kMagic = FourCCUtil::make( "SRFM" );
         /// @brief 매니페스트 포맷 버전입니다. 쿠킹하는 쪽과 읽는 쪽이 같은 파일에 있으므로 한 곳만 올리면 됩니다.
         constexpr uint32 kVersion = 2; ///< 2: 구조버퍼 원소 레이아웃(_listStructuredElement) 추가
 

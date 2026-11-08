@@ -2,10 +2,10 @@
 
 #include "Engine/Input/InputManager.h"
 
-#include "Core/Container/UTF8Util.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/UTF8Util.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Foundation/EngineServices.h"

@@ -4,12 +4,12 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
-#include "Core/String/FourCcUtil.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -124,7 +124,7 @@ namespace sw
     class SW_KIT_API WesternLawState
     {
     public:
-        static constexpr uint32 kStateTag     = FourCcUtil::make( "WLAW" );
+        static constexpr uint32 kStateTag     = FourCCUtil::make( "WLAW" );
         static constexpr uint32 kStateVersion = 1;
 
         WesternLawState();

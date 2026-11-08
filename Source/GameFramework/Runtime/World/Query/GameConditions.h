@@ -5,11 +5,11 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/String/FourCcUtil.h"
-#include "Core/String/TagID.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/TagID.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Gameplay/ActionRegistry.h"
@@ -30,42 +30,42 @@ namespace sw
     struct GameFlagsSlot
     {
         using Type                      = const GameFlags;
-        static constexpr uint32 kSlotID = FourCcUtil::make( "FLAG" );
+        static constexpr uint32 kSlotID = FourCCUtil::make( "FLAG" );
     };
 
     /** @brief 동작이 쓰는 월드 플래그입니다. 읽기 칸과 나눈 것은 스케줄처럼 읽기만 빌린 실행기가 있어서입니다. */
     struct GameFlagsWriteSlot
     {
         using Type                      = GameFlags;
-        static constexpr uint32 kSlotID = FourCcUtil::make( "FLGW" );
+        static constexpr uint32 kSlotID = FourCCUtil::make( "FLGW" );
     };
 
     /** @brief 조건을 묻는 주체의 태그입니다(NPC · 캐릭터). */
     struct SubjectTagsSlot
     {
         using Type                      = const TagContainer;
-        static constexpr uint32 kSlotID = FourCcUtil::make( "TGSB" );
+        static constexpr uint32 kSlotID = FourCCUtil::make( "TGSB" );
     };
 
     /** @brief 세계 태그입니다(축제 중 · 경보). */
     struct WorldTagsSlot
     {
         using Type                      = const TagContainer;
-        static constexpr uint32 kSlotID = FourCcUtil::make( "TGWD" );
+        static constexpr uint32 kSlotID = FourCCUtil::make( "TGWD" );
     };
 
     /** @brief 주체의 체형입니다(`bodyShape`). */
     struct BodyShapeSlot
     {
         using Type                      = const hashed_string;
-        static constexpr uint32 kSlotID = FourCcUtil::make( "BSHP" );
+        static constexpr uint32 kSlotID = FourCCUtil::make( "BSHP" );
     };
 
     /** @brief 주체의 몸 종류입니다(`bodyType`). */
     struct BodyTypeSlot
     {
         using Type                      = const hashed_string;
-        static constexpr uint32 kSlotID = FourCcUtil::make( "BTYP" );
+        static constexpr uint32 kSlotID = FourCCUtil::make( "BTYP" );
     };
 
     /**
@@ -75,7 +75,7 @@ namespace sw
     struct ActionTargetSlot
     {
         using Type                      = GameObject;
-        static constexpr uint32 kSlotID = FourCcUtil::make( "ATGT" );
+        static constexpr uint32 kSlotID = FourCCUtil::make( "ATGT" );
     };
 
     /** @brief 동작을 부른 길(출처)입니다. 동작이 건 이펙트에 실려(`volume:<이름>` · `surface:<종류>`) Ability 디버거가 보이고, 이탈이 그 길의 것만 지운다. */
@@ -88,7 +88,7 @@ namespace sw
     struct ActionSourceSlot
     {
         using Type                      = const ActionSource;
-        static constexpr uint32 kSlotID = FourCcUtil::make( "ASRC" );
+        static constexpr uint32 kSlotID = FourCCUtil::make( "ASRC" );
     };
 
     /**
@@ -116,7 +116,7 @@ namespace sw
     struct ActionValuesSlot
     {
         using Type                      = const ActionValues;
-        static constexpr uint32 kSlotID = FourCcUtil::make( "AVAL" );
+        static constexpr uint32 kSlotID = FourCCUtil::make( "AVAL" );
     };
 } // namespace sw
 

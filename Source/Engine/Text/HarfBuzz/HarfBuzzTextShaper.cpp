@@ -3,7 +3,7 @@
 #if defined( SW_TEXT_COMPLEX_SHAPING )
     #include "Engine/Text/HarfBuzz/ComplexTextShaper.h"
 
-    #include "Core/Container/StringUtil.h"
+    #include "Core/String/StringUtil.h"
     #include "Core/Container/unordered_map.h"
     #include "Core/Log/Logger.h"
 

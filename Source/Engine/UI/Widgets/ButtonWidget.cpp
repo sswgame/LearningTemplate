@@ -2,7 +2,7 @@
 
 #include "Engine/UI/Widgets/ButtonWidget.h"
 
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/UI/Accessibility/UIAccessibilitySnapshot.h"
 #include "Engine/UI/Screen/UIScreen.h"

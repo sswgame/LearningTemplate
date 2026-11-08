@@ -2,11 +2,11 @@
 
 #include "Engine/Config/Dev/GameAutoplay.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
-#include "Core/String/RegistrationList.h"
+#include "Core/Registry/RegistrationList.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Config/IGameAutoplayQuery.h"

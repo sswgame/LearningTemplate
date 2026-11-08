@@ -2,10 +2,10 @@
 
 #include "Engine/Console/DevCommandRegistry.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Path/AbsolutePath.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/Foundation/EngineSubsystemRegistration.h"

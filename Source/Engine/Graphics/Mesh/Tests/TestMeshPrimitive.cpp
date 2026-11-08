@@ -1,8 +1,8 @@
 // MeshPrimitiveTest — MeshUtil 이 만드는 기본 도형의 공유 · 경계 반지름 · 위상 · 노멀 · UV · 탄젠트 · 정점 색. 디바이스 없음(nogpu).
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Asset/AssetRef.h"

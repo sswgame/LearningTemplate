@@ -4,7 +4,6 @@
 
 #include "Core/Compression/CompressionStream.h"
 #include "Core/Compression/ICompressionCodec.h"
-#include "Core/Container/StringUtil.h"
 #include "Core/Container/array.h"
 #include "Core/File/AsyncFileIO.h"
 #include "Core/File/ContentFileSource.h"
@@ -14,6 +13,7 @@
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Content/Pack/PackCompressionUtil.h"
 #include "Engine/Foundation/EngineServices.h"

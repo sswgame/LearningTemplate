@@ -3,10 +3,10 @@
  * @brief 모듈 라이브러리에서 API 표를 받고 인스턴스를 만들고 내리는 절차입니다. 게임(`GameModuleManager`)과 에디터(`EditorModuleManager`)가 같은 절차를 씁니다.
  */
 #pragma once
-#include "Core/Container/StringUtil.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
 #include "Core/Module/ModuleLibraryUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Module/ModuleTypeRegistry.h"

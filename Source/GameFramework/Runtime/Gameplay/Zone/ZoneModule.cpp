@@ -3,10 +3,10 @@
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneModule.h"
 
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/formatString.h"
 #include "Core/Log/LogOnce.h"
-#include "Core/String/RegistrationList.h"
+#include "Core/Registry/RegistrationList.h"
+#include "Core/String/StringUtil.h"
+#include "Core/String/formatString.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 

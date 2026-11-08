@@ -2,7 +2,7 @@
 
 #include "Editor/Common/Commands/Scene/EditorLightProbeBakeSession.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/Commands/Scene/EditorBakeOutputPath.h"

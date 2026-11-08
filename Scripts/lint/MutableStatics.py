@@ -35,7 +35,7 @@ from common.Paths import getProjectRoot  # noqa: E402
 
 kExtensions = (".h", ".cpp", ".inl")
 # 함수 정적을 매크로 본문에 둘 수 있는 곳(두 틀의 정의 매크로)
-kMacroHomes = ("Source/Core/String/RegistrationList.h", "Source/Core/String/RegistrationSlot.h")
+kMacroHomes = ("Source/Core/Registry/RegistrationList.h", "Source/Core/Registry/RegistrationSlot.h")
 kExceptionFile = "Config/Dev/MutableStaticExceptions.json"
 kNamespaceHead = re.compile(r"(?:\bnamespace\b[^;{}()]*|extern\s+\"C\"\s*)$")
 kClassHead = re.compile(r"\b(?:class|struct|union)\b[^;{}()]*$")

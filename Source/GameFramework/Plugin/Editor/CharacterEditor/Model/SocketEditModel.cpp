@@ -2,7 +2,7 @@
 
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/SocketEditModel.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 

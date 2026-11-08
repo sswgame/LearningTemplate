@@ -12,7 +12,7 @@
 #include "Core/Math/Math.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 #include "Core/Task/TaskManager.h"
 #include "Core/Task/TaskTypes.h"
 

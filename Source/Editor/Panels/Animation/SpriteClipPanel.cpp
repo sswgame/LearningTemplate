@@ -2,8 +2,8 @@
 
 #include "Editor/Panels/Animation/SpriteClipPanel.h"
 
-#include "Core/Container/formatString.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/GUI/EditorChrome.h"

@@ -2,10 +2,10 @@
 
 #include "DevTools/Diagnostics/ReflectionDump.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
+#include "Core/String/StringUtil.h"
 #include "Core/String/string_splitter.h"
 
 #include "Engine/Foundation/EngineServices.h"

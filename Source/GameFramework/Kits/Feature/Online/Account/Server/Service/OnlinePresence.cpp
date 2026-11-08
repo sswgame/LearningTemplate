@@ -2,9 +2,9 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/OnlinePresence.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Serialization/BitStream.h"
+#include "Core/String/StringUtil.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/Protocol/AccountTypes.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBus.h"

@@ -2,7 +2,7 @@
 
 #include "Games/Empty/KitDemo/ActionCombatDemoComponent.h"
 
-#include "Core/String/FourCcUtil.h"
+#include "Core/Encoding/FourCCUtil.h"
 
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -19,7 +19,7 @@ namespace sw
     {
         struct ActionCombatDemoComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCcUtil::make( "KDAC" );
+            static constexpr uint32 kStateTag     = FourCCUtil::make( "KDAC" );
             static constexpr uint32 kStateVersion = 1;
 
             static constexpr const utf8* kAttackAction = "KitDemo.Attack";

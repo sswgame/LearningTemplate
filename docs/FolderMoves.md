@@ -31,26 +31,26 @@
 
 | 현재 경로 | 새 경로 | 까닭 | include 수 |
 | --- | --- | --- | --- |
-| Core/Container/StringUtil.h | Core/String/StringUtil.h | UTF 변환 · 분할 · 트림 — 문자열 도구. String 을 티어 4 로 내리면 pchLow · Log(5) · Subsystem(4) 이 그대로 쓴다 | 658 |
-| Core/Container/UTF8Util.h | Core/String/UTF8Util.h | UTF-8 글자 경계 판정 | 7 |
-| Core/Container/formatString.h | Core/String/formatString.h | printf 포맷 | 91 |
+| Core/String/StringUtil.h | Core/String/StringUtil.h | UTF 변환 · 분할 · 트림 — 문자열 도구. String 을 티어 4 로 내리면 pchLow · Log(5) · Subsystem(4) 이 그대로 쓴다 | 658 |
+| Core/String/UTF8Util.h | Core/String/UTF8Util.h | UTF-8 글자 경계 판정 | 7 |
+| Core/String/formatString.h | Core/String/formatString.h | printf 포맷 | 91 |
 | Core/String/StringBuilder.h · string_splitter.h · JSONStringUtil.h · MarkupTagScanner.h · EnumNameTable.h | (그대로, 폴더 티어만 6 → 4) | 로그를 안 쓴다(.cpp 도 SW_LOG 0) | 270 · 17 · 5 · 6 · 1 (경로 불변) |
 | Core/String/fixed_string.h | Core/String/fixed_string.h (그대로) — 단 SW_LOG 14 곳을 `SW_LOW_LEVEL_*` 로 | 고정 용량 문자열은 String 의 일. 로그 매크로가 티어 4 를 막는다. **로그를 못 바꾸면** Core/Name 으로 | 115(경로 불변) |
-| Core/String/hashed_string.h | Core/Name/hashed_string.h | intern 이름(FName) — 이름 풀 · 로그를 쓴다 | 620 |
-| Core/String/TagID.h | Core/Name/TagID.h | intern 태그 식별자 | 36 |
-| Core/String/RegistrationList.h | Core/Registry/RegistrationList.h | **사용자 지적 예.** 레지스트리 공통 구조(중복 거절 · 정렬 · 모듈 범위 · NameRegistry) — 문자열 일이 아니다. Delegate · hashed_string · 로그를 써서 티어 6 | 50 |
-| Core/String/Base64Util.h | Core/Encoding/Base64Util.h | 바이트 ↔ 글자 인코딩 | 8 |
-| Core/String/HexUtil.h | Core/Encoding/HexUtil.h | 〃 | 19 |
-| Core/String/FourCcUtil.h | Core/Encoding/**FourCCUtil.h** | 네 글자 표식 → uint32. 약어는 모두 대문자(NamingCpp Acronyms) | 127 |
-| Core/Container/VarIntUtil.h | Core/Serialization/VarIntUtil.h | LEB128 · ZigZag — 쓰는 곳이 ByteStream · BitStream · Network | 6 |
-| Core/Container/LittleEndianUtil.h | Core/Serialization/LittleEndianUtil.h | 파일 · 네트워크 바이트 순서 | 30 |
-| Core/Container/VectorUtil.h | Core/Algorithm/VectorUtil.h | 연속 배열에 쓰는 static 템플릿 알고리즘 — Foundation 만 include. Delegate(4) · Subsystem(4) · Container .cpp 가 쓰니 티어 2 | 522 |
-| Core/Container/CompareUtil.h | Core/Algorithm/CompareUtil.h | 정렬 · 이진 탐색 비교자 | 18 |
-| Core/Container/UnionFindUtil.h | Core/Algorithm/UnionFindUtil.h | 유니온 파인드 | 2 |
-| Core/Concurrency/SpscQueue.h | Core/Concurrency/Queue/SpscQueue.h | 스레드 간 자료 구조는 Concurrency 아래 한 폴더(사용자 결정 — 하는 일로 묶는다). vector 를 쓰는 형제가 있어 Container 위 티어 | 1 |
-| Core/Container/ConcurrentQueue.h · WorkStealingDeque.h | Core/Concurrency/Queue/ | 〃 | 6 · 2 |
-| Core/Concurrency/SharedVectorPool.h | Core/Concurrency/Queue/SharedVectorPool.h | 〃(갈래 C 가 Concurrency 바로 아래로 옮겨 티어 역류) | 2 |
-| Core/Concurrency/LockedSwapQueue.h | Core/Concurrency/Queue/LockedSwapQueue.h | 〃 — 지금 Concurrency(1) 가 Container/vector.h(3) 를 include 하는 티어 역류가 이 이동으로 풀린다 | — |
+| Core/Name/hashed_string.h | Core/Name/hashed_string.h | intern 이름(FName) — 이름 풀 · 로그를 쓴다 | 620 |
+| Core/Name/TagID.h | Core/Name/TagID.h | intern 태그 식별자 | 36 |
+| Core/Registry/RegistrationList.h | Core/Registry/RegistrationList.h | **사용자 지적 예.** 레지스트리 공통 구조(중복 거절 · 정렬 · 모듈 범위 · NameRegistry) — 문자열 일이 아니다. Delegate · hashed_string · 로그를 써서 티어 6 | 50 |
+| Core/Encoding/Base64Util.h | Core/Encoding/Base64Util.h | 바이트 ↔ 글자 인코딩 | 8 |
+| Core/Encoding/HexUtil.h | Core/Encoding/HexUtil.h | 〃 | 19 |
+| Core/Encoding/FourCCUtil.h | Core/Encoding/**FourCCUtil.h** | 네 글자 표식 → uint32. 약어는 모두 대문자(NamingCpp Acronyms) | 127 |
+| Core/Serialization/VarIntUtil.h | Core/Serialization/VarIntUtil.h | LEB128 · ZigZag — 쓰는 곳이 ByteStream · BitStream · Network | 6 |
+| Core/Serialization/LittleEndianUtil.h | Core/Serialization/LittleEndianUtil.h | 파일 · 네트워크 바이트 순서 | 30 |
+| Core/Algorithm/VectorUtil.h | Core/Algorithm/VectorUtil.h | 연속 배열에 쓰는 static 템플릿 알고리즘 — Foundation 만 include. Delegate(4) · Subsystem(4) · Container .cpp 가 쓰니 티어 2 | 522 |
+| Core/Algorithm/CompareUtil.h | Core/Algorithm/CompareUtil.h | 정렬 · 이진 탐색 비교자 | 18 |
+| Core/Algorithm/UnionFindUtil.h | Core/Algorithm/UnionFindUtil.h | 유니온 파인드 | 2 |
+| Core/Concurrency/Queue/SpscQueue.h | Core/Concurrency/Queue/SpscQueue.h | 스레드 간 자료 구조는 Concurrency 아래 한 폴더(사용자 결정 — 하는 일로 묶는다). vector 를 쓰는 형제가 있어 Container 위 티어 | 1 |
+| Core/Concurrency/Queue/ConcurrentQueue.h · WorkStealingDeque.h | Core/Concurrency/Queue/ | 〃 | 6 · 2 |
+| Core/Concurrency/Queue/SharedVectorPool.h | Core/Concurrency/Queue/SharedVectorPool.h | 〃(갈래 C 가 Concurrency 바로 아래로 옮겨 티어 역류) | 2 |
+| Core/Concurrency/Queue/LockedSwapQueue.h | Core/Concurrency/Queue/LockedSwapQueue.h | 〃 — 지금 Concurrency(1) 가 Container/vector.h(3) 를 include 하는 티어 역류가 이 이동으로 풀린다 | — |
 | Core/Process/ThreadCrashStack.h | (그대로) | Diagnostics(10) 가 더 맞지만 File(8) · Task(7) · Log/Sink 가 include — 옮기면 티어 역류 | 16 |
 | Core/Math/SecureRandom.h | (그대로) | OS 암호 난수 — Math 의 난수 묶음. Hash 는 해시만 | 9 |
 | Core/Container/DependencyGraph.h | (그대로) | 노드 · 간선 자료 구조 + 위상 정렬 — 컨테이너. Algorithm(2) 은 vector 를 못 쓴다 | 11 |
@@ -292,7 +292,7 @@ FourCC 표기: FourCC 는 "Four-Character Code" 의 약어 **CC** 를 품는다 
 
 | 약어 | 어긋난 파일 · 폴더 | 우리 코드 식별자(예) | 수 | 비고 |
 | --- | --- | --- | --- | --- |
-| CC | Core/String/FourCcUtil.h | FourCcUtil, DDSLegacyFourCc, listFourCc, kArrFourCcRow, kPixelFormatFourCcFlag | 9 | |
+| CC | Core/Encoding/FourCCUtil.h | FourCcUtil, DDSLegacyFourCc, listFourCc, kArrFourCcRow, kPixelFormatFourCcFlag | 9 | |
 | ID | — | AssetId, DeviceId, EventId, InstanceId, AccountIdHex, DuplicateId, 테스트 이름 *WithoutId* 다수 | 약 60(ImGui · NDK · Win32 바깥 이름 제외) | 바깥: ActiveId · DockId · GetCurrentThreadId · AInputEvent_getDeviceId 는 그대로 |
 | RESP | GameFramework/…/CacheStore/Server/Driver/Resp/ (폴더 + 파일 10) | RespCodec, RespCommand, FakeRespServer | 27 | Redis RESP 프로토콜 |
 | HPACK | OnlineCore/Server/HTTP/Hpack.h · HpackHuffmanTable.h · HpackStaticTable.h | HpackDecoder, HpackEncoder | 11 | RFC 7541 |

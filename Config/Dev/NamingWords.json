@@ -96,7 +96,16 @@
         "applyBlast": "applyRadialDamage(언리얼 ApplyRadialDamage)",
         "setBehaviorTreeRunner": "AIControllerComponent 가 실행기를 쥔다(_behaviorTree 칸 · getBehaviorTreeRunner)",
         "NumeralSystem": "문화권 표의 <numberingSystems>(CultureInfo::_numberingSystem · _listDigit)",
-        "PluralRuleFunc": "PluralRuleSet(CLDR 규칙 글, *.cultures.xml 의 <pluralRules> · <ordinalRules>)"
+        "PluralRuleFunc": "PluralRuleSet(CLDR 규칙 글, *.cultures.xml 의 <pluralRules> · <ordinalRules>)",
+        "FourCcUtil": "FourCCUtil(약어는 모두 대문자 — NamingCpp)",
+        "DDSLegacyFourCc": "DDSLegacyFourCC",
+        "listFourCc": "listFourCC",
+        "kArrFourCcRow": "kArrFourCCRow",
+        "kPixelFormatFourCcFlag": "kPixelFormatFourCCFlag",
+        "kDx10FourCc": "kDx10FourCC",
+        "makeFourCc": "makeFourCC",
+        "getLegacyFourCcTable": "getLegacyFourCCTable",
+        "findDxgiFormatOfFourCc": "findDXGIFormatOfFourCC"
     },
     "_keep": {
         "MailboxOutcome": "우편 업무 값과 전송 공통 범주를 두 층으로 가른 온라인 키트의 업무 층",
@@ -1376,7 +1385,7 @@
         "Catalogs",
         "Category",
         "Cause",
-        "Cc",
+        "CC",
         "Cell",
         "Chain",
         "Challenge",

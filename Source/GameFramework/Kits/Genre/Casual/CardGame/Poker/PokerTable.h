@@ -6,11 +6,11 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -130,7 +130,7 @@ namespace sw
     class SW_KIT_API PokerTable
     {
     public:
-        static constexpr uint32 kStateTag     = FourCcUtil::make( "CPKR" );
+        static constexpr uint32 kStateTag     = FourCCUtil::make( "CPKR" );
         static constexpr uint32 kStateVersion = 1;
 
         PokerTable();

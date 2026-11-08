@@ -2,9 +2,9 @@
 
 #include "GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/YawUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"

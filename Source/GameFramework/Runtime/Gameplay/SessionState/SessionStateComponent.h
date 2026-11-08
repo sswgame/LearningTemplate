@@ -4,9 +4,9 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/DeterministicRandom.h"
-#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -96,7 +96,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = FourCcUtil::make( "GTST" );
+        static constexpr uint32 kStateTag     = FourCCUtil::make( "GTST" );
         static constexpr uint32 kStateVersion = 1;
 
         SessionStateComponent();

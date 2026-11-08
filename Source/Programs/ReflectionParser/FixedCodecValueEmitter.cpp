@@ -2,8 +2,8 @@
 
 #include "Programs/ReflectionParser/FixedCodecValueEmitter.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 #include "Core/String/string_splitter.h"
 
 #include "Programs/ReflectionParser/FixedCodecBoundResolver.h"

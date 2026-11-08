@@ -2,7 +2,7 @@
 
 #include "GameFramework/Runtime/Character/AI/BehaviorTreeAsset.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Gameplay/ActionRegistry.h"

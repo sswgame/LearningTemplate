@@ -2,9 +2,9 @@
 
 #include "Editor/Common/Backend/Platform/WindowsFileDialog.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Backend/FileDialog.h"
 

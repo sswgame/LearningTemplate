@@ -2,7 +2,7 @@
 
 #include "Editor/Common/Workspace/EditorStateHashCompare.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringBuilder.h"
 

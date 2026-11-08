@@ -202,12 +202,12 @@
             "_why": "콘솔 제어 처리기 — 문맥 인자 없이 OS 스레드에서 불린다. 프로세스에 하나다."
         },
         {
-            "_path": "Source/Core/String/RegistrationList.cpp",
+            "_path": "Source/Core/Registry/RegistrationList.cpp",
             "_name": "s_chain",
             "_why": "정적 등록 공통 틀(RegistrationList) 자체의 사슬 · 핫 리로드 깊이 — 틀이 정적 등록자보다 먼저 서야 하므로 상수 초기화 파일 범위에 둔다."
         },
         {
-            "_path": "Source/Core/String/RegistrationList.cpp",
+            "_path": "Source/Core/Registry/RegistrationList.cpp",
             "_name": "s_reloadScopeDepth",
             "_why": "정적 등록 공통 틀(RegistrationList) 자체의 사슬 · 핫 리로드 깊이 — 틀이 정적 등록자보다 먼저 서야 하므로 상수 초기화 파일 범위에 둔다."
         },

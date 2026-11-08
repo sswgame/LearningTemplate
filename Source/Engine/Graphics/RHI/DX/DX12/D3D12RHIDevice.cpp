@@ -2,8 +2,8 @@
 
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIDevice.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Log/LogOnce.h"

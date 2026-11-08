@@ -3,11 +3,11 @@
 #include "ModuleManager/LiveReload/ModuleShadowCopy.h"
 
 #include "Core/Concurrency/thread.h"
-#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/Process/Process.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Module/EngineABIStamp.h"
 

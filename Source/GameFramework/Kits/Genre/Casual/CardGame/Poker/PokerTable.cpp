@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Casual/CardGame/Poker/PokerTable.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 

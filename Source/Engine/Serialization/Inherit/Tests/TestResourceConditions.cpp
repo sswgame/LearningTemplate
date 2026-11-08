@@ -1,7 +1,7 @@
 // 리소스 조건(`_when`) · 문맥 태그 · 덮어쓰기 층 · 합성 기록(nogpu). 태그는 프로세스 값이라 케이스마다 세우고 되돌린다.
 #include "pch.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"

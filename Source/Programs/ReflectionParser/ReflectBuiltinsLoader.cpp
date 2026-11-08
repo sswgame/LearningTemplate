@@ -2,11 +2,11 @@
 
 #include "Programs/ReflectionParser/ReflectBuiltinsLoader.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 #include "Core/String/string_splitter.h"
 
 #include "Programs/ReflectionParser/ContainerTypeMap.h"

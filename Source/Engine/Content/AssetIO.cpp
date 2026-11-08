@@ -2,14 +2,14 @@
 
 #include "Engine/Content/AssetIO.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/pair.h"
 #include "Core/File/AsyncFileIO.h"
 #include "Core/File/ContentFileSource.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/CookJob.h"

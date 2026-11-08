@@ -2,8 +2,8 @@
 
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/DynamicBitset.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/BitUtil.h"

@@ -2,9 +2,9 @@
 
 #include "Engine/Graphics/Mesh/Mesh.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/ScopedLock.h"
 #include "Core/Concurrency/atomic.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Task/TaskManager.h"
 

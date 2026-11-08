@@ -2,10 +2,10 @@
 
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/Rule/SkillTree.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Module/ModuleSharedAssetCache.h"

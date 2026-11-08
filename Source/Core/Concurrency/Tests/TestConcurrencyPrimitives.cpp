@@ -1,8 +1,8 @@
 #include "pch.h"
 
 #include "Core/Concurrency/Futex.h"
-#include "Core/Concurrency/LockedSwapQueue.h"
 #include "Core/Concurrency/OnceInit.h"
+#include "Core/Concurrency/Queue/LockedSwapQueue.h"
 #include "Core/Concurrency/ScopedLock.h"
 #include "Core/Concurrency/SpinLock.h"
 #include "Core/Concurrency/StopToken.h"

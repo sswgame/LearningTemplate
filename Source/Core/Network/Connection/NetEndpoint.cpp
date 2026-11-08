@@ -3,7 +3,6 @@
 #include "Core/Network/Connection/NetEndpoint.h"
 
 #include "Core/Concurrency/thread.h"
-#include "Core/Container/LittleEndianUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
@@ -12,6 +11,7 @@
 #include "Core/Network/Transport/NetTransport.h"
 #include "Core/Process/Process.h"
 #include "Core/Serialization/BitStream.h"
+#include "Core/Serialization/LittleEndianUtil.h"
 #include "Core/String/StringBuilder.h"
 
 #include <chrono>

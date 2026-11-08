@@ -6,7 +6,7 @@
 
 #include "Engine/Renderer/Frame/View/FrameViewResources.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"

@@ -2,7 +2,7 @@
 
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/RetargetProfileEdit.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/String/StringUtil.h"
 
 namespace sw::editor
 {

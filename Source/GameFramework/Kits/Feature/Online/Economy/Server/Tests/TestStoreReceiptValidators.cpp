@@ -2,9 +2,9 @@
 // 실제 HTTP 클라이언트가 루프백 망의 가짜 스토어(`HTTPServer`)와 말한다 — 바깥 서비스는 없다. 서명은 가짜 제공자가 답한다(규칙만 본다). 스팀은 `TestSteamReceiptValidator.cpp`. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
+#include "Core/Encoding/Base64Util.h"
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
 #include "Core/Network/Transport/StreamTypes.h"
-#include "Core/String/Base64Util.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/Clock.h"
 

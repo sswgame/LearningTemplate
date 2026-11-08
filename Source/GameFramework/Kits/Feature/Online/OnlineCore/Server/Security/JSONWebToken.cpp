@@ -2,10 +2,10 @@
 
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Security/JSONWebToken.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/Encoding/Base64Util.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
-#include "Core/String/Base64Util.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/JSON/JSONWriter.h"

@@ -1,9 +1,9 @@
 // formatstring 의 실수 표기 — `%#` 는 `to_string` 과 같은 가장 짧은 왕복 표기, printf 실수 서식(`%f` · `%g` · `%e`)은 printf 와 같다.
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/formatString.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
+#include "Core/String/formatString.h"
 #include "Core/Testing/TestFramework.h"
 
 using namespace sw;

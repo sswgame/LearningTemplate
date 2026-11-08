@@ -2,8 +2,8 @@
 
 #include "Engine/Gameplay/InstancedStruct.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/formatString.h"
+#include "Core/String/StringUtil.h"
+#include "Core/String/formatString.h"
 
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionMetadata.h"

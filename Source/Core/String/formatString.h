@@ -3,8 +3,6 @@
  * @brief printf 스타일 포맷 도우미입니다.
  */
 #pragma once
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/UTF8Util.h"
 #include "Core/Container/string.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
@@ -12,6 +10,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/StringUtil.h"
+#include "Core/String/UTF8Util.h"
 
 namespace sw
 {

@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/HTTP/Hpack.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/HTTP/HpackHuffmanTable.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/HTTP/HpackStaticTable.h"

@@ -2,7 +2,7 @@
 
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 
 #include "Editor/Common/Backend/ImGuiRenderer.h"
 #include "Editor/Common/Workspace/EditorService.h"

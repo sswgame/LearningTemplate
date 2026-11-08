@@ -5,10 +5,10 @@
  *          null 이면 모든 호출이 아무것도 하지 않는다. 지연은 응답 시점에 측정한다 — 서버 호출 표(`OnlineServerCallTable`)가 받은 시각을 들고 응답할 때 `observeRequest` 를 부른다.
  */
 #pragma once
-#include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Reflection/EnumName.h"
 

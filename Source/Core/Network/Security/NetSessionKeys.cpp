@@ -2,8 +2,8 @@
 
 #include "Core/Network/Security/NetSessionKeys.h"
 
-#include "Core/Container/LittleEndianUtil.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
+#include "Core/Serialization/LittleEndianUtil.h"
 
 #include <cstring>
 

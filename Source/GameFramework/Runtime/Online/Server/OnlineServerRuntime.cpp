@@ -2,11 +2,11 @@
 
 #include "GameFramework/Runtime/Online/Server/OnlineServerRuntime.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/IStreamTransport.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Time/Clock.h"
 
 #include "Engine/Config/Server/ServerConfig.h"

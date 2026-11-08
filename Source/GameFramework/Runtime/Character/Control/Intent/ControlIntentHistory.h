@@ -7,12 +7,12 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Name/hashed_string.h"
 #include "Core/Network/Replication/TickRingBuffer.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/String/FourCcUtil.h"
-#include "Core/String/hashed_string.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/ComponentHandle.h"
@@ -53,7 +53,7 @@ namespace sw
     class SW_GF_API ControlIntentHistory
     {
     public:
-        static constexpr uint32      kMagic                = FourCcUtil::make( "SWIN" );
+        static constexpr uint32      kMagic                = FourCCUtil::make( "SWIN" );
         static constexpr uint32      kVersion              = 2;
         static constexpr string_view kExtension            = ".swintent";
         static constexpr int32       kDefaultCapacityTicks = 3600; ///< 폰마다 기본 링 버퍼 크기. 60 Hz 로 1 분이다

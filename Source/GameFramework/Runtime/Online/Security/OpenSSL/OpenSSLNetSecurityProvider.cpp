@@ -3,8 +3,8 @@
 #include "GameFramework/Runtime/Online/Security/OpenSSL/OpenSSLNetSecurityProvider.h"
 
 #include "Core/Container/vector.h"
+#include "Core/Encoding/HexUtil.h"
 #include "Core/Log/Logger.h"
-#include "Core/String/HexUtil.h"
 #include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Module/ModuleSubsystemRegistrar.h"

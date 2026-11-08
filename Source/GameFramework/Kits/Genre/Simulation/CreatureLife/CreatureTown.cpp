@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureTown.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 

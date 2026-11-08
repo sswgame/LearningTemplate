@@ -2,7 +2,7 @@
 
 #include "Engine/Window/Linux/X11SplashWindow.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Window/Linux/X11Monitors.h"
 #include "Engine/Window/WindowMonitor.h"

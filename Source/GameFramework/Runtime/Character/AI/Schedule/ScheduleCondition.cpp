@@ -2,9 +2,9 @@
 
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleCondition.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
-#include "Core/Container/formatString.h"
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/String/StringUtil.h"
+#include "Core/String/formatString.h"
 
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Reflection/EnumName.h"

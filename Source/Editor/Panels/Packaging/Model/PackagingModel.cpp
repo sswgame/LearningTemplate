@@ -2,9 +2,9 @@
 
 #include "Editor/Panels/Packaging/Model/PackagingModel.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/EditorUtil.h"

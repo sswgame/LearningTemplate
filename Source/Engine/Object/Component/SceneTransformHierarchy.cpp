@@ -6,7 +6,7 @@
 
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Math/MathUtil.h"
 

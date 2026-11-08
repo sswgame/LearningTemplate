@@ -9,7 +9,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/PackedTypes.h"
-#include "Core/String/TagID.h"
+#include "Core/Name/TagID.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetIndex.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"

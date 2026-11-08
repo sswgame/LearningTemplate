@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/String/HexUtil.h"
+#include "Core/Encoding/HexUtil.h"
 
 namespace sw
 {

@@ -1,7 +1,7 @@
 // StringUtil::split — 글을 나누는 정본: 빈 토큰 유지(기본) · 자르기 · 빈 토큰 버리기 · 여러 구분자 · 빈 글.
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 using namespace sw;

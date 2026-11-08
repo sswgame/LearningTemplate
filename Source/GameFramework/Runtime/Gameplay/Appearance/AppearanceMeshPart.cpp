@@ -2,10 +2,10 @@
 
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceMeshPart.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/VectorUtil.h"
-#include "Core/Container/formatString.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/String/formatString.h"
 #include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Character/Fit/BodyShape.h"

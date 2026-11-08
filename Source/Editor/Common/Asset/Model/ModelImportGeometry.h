@@ -6,9 +6,9 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
-#include "Core/String/FourCcUtil.h"
 
 #include "Editor/Common/Asset/Model/ModelImportUtil.h"
 
@@ -37,9 +37,9 @@ namespace sw::editor
     struct ModelImportGeometry
     {
         /** @brief GLB 헤더와 청크 헤더의 크기, 그리고 매직 값("glTF", "JSON")입니다. */
-        static constexpr uint32 kGlbMagic = FourCcUtil::make( "glTF" );
+        static constexpr uint32 kGlbMagic = FourCCUtil::make( "glTF" );
 
-        static constexpr uint32 kGlbJSONChunkType = FourCcUtil::make( "JSON" );
+        static constexpr uint32 kGlbJSONChunkType = FourCCUtil::make( "JSON" );
 
         static constexpr size_t kGlbHeaderSize = 12;
 

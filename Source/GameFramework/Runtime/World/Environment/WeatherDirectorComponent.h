@@ -8,7 +8,7 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Object/Component/Component.h"

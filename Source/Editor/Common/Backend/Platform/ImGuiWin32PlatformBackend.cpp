@@ -5,7 +5,7 @@
 #include "Editor/Common/Backend/IImGuiPlatformBackend.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include "Core/Container/StringUtil.h"
+    #include "Core/String/StringUtil.h"
 
     #include "Engine/Config/RHIBackendType.h"
     #include "Engine/Window/IWindow.h"

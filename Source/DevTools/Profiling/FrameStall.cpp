@@ -3,8 +3,8 @@
 #include "DevTools/Profiling/FrameStall.h"
 
 #include "Core/Concurrency/atomic.h"
-#include "Core/Container/StringUtil.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Console/DevCommandRegistry.h"

@@ -2,12 +2,12 @@
 
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 
-#include "Core/Container/VectorUtil.h"
-#include "Core/Container/formatString.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/String/formatString.h"
 
 #include "Engine/2D/SpriteComponent.h"
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"

@@ -2,7 +2,7 @@
 
 #include "GameFramework/Runtime/World/Query/GameConditions.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 
 #include "Engine/Object/Component/TagSystem.h"
 

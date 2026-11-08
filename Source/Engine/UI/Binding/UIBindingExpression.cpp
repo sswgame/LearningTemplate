@@ -2,7 +2,7 @@
 
 #include "Engine/UI/Binding/UIBindingExpression.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/String/StringUtil.h"
 
 namespace sw
 {

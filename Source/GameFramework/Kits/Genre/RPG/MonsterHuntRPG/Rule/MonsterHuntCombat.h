@@ -4,10 +4,10 @@
  *        기반 `ElementChart` 상태이상), 아드레날린 포인트(적중으로 쌓이고 피격으로 줄어듦)를 관리합니다.
  */
 #pragma once
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/String/FourCcUtil.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -65,7 +65,7 @@ namespace sw
     class SW_KIT_API MonsterHuntCombat
     {
     public:
-        static constexpr uint32 kStateTag     = FourCcUtil::make( "WCMB" );
+        static constexpr uint32 kStateTag     = FourCCUtil::make( "WCMB" );
         static constexpr uint32 kStateVersion = 1;
 
         MonsterHuntCombat();

@@ -2,7 +2,6 @@
 
 #include "Engine/Automation/Runner/AutomationRunner.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/BuildInfo.h"
@@ -11,6 +10,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 #include "Core/Time/WallClock.h"
 

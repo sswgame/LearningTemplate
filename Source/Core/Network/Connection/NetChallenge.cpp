@@ -2,13 +2,13 @@
 
 #include "Core/Network/Connection/NetChallenge.h"
 
-#include "Core/Container/LittleEndianUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Hash/SecureUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/SecureRandom.h"
 #include "Core/Network/Connection/NetSlotTable.h"
 #include "Core/Network/NetTypes.h"
+#include "Core/Serialization/LittleEndianUtil.h"
 
 namespace sw
 {

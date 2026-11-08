@@ -1,7 +1,7 @@
 // LittleEndianUtil — 바이트 위치(낮은 바이트가 앞), 부호 있는 값 왕복, 쓰기 · 덧붙이기가 같은 바이트를 내는지.
 #include "pch.h"
 
-#include "Core/Container/LittleEndianUtil.h"
+#include "Core/Serialization/LittleEndianUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 using namespace sw;

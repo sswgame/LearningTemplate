@@ -6,11 +6,11 @@
 
 #include "Editor/Common/Asset/Model/ModelImportUtil.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
 namespace sw::editor
 {

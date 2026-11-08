@@ -1,8 +1,8 @@
 // StringUtil 의 나누기 도우미 — forEachLine 의 CRLF · 빈 줄 · 끝 줄바꿈, forEachToken 의 빈 토큰, 둘 다 false 에서 멈추는지, parseFloatList 가 숫자 아닌 토큰과 개수 상한에서 멈추는지.
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Container/vector.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 using namespace sw;

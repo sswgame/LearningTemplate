@@ -2,7 +2,7 @@
 
 #include "Engine/Graphics/Shader/Compile/WebGPUShaderContainer.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw

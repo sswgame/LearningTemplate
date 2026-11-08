@@ -8,7 +8,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Editor/Common/Config/EditorThemeTokens.h"
 #include "Editor/Common/EditorColor.h"

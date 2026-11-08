@@ -2,10 +2,10 @@
 
 #include "Editor/Panels/Scene/HierarchyPanel.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
-#include "Core/String/TagID.h"
+#include "Core/Name/TagID.h"
+#include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetCommands.h"

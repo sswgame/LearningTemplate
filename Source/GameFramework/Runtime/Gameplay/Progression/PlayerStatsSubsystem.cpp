@@ -2,9 +2,9 @@
 
 #include "GameFramework/Runtime/Gameplay/Progression/PlayerStatsSubsystem.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/GameConfig.h"

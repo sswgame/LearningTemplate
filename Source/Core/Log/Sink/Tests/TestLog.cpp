@@ -3,7 +3,6 @@
 #include "Core/Concurrency/ScopedLock.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
-#include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
@@ -17,6 +16,7 @@
 #include "Core/Log/Sink/ILogOutput.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Process/ProcessSession.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/ScopedAssertCapture.h"
 #include "Core/Testing/TestFramework.h"
 

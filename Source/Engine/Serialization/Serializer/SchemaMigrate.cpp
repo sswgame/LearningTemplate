@@ -2,10 +2,10 @@
 
 #include "Engine/Serialization/Serializer/SchemaMigrate.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/atomic.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Name/TagID.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/String/TagID.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectedValue.h"

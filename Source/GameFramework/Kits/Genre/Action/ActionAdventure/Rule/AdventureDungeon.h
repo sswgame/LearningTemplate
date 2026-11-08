@@ -7,11 +7,11 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/String/FourCcUtil.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
@@ -224,7 +224,7 @@ namespace sw
     class SW_KIT_API AdventureDungeonState
     {
     public:
-        static constexpr uint32 kStateTag     = FourCcUtil::make( "ADGN" );
+        static constexpr uint32 kStateTag     = FourCCUtil::make( "ADGN" );
         static constexpr uint32 kStateVersion = 1;
 
         AdventureDungeonState();

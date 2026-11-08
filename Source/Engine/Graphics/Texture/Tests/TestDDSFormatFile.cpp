@@ -89,9 +89,9 @@ SW_TEST_CASE( DDSFormatFileTest, MatchesTheLoaderTables )
     }
 
     // 옛 FourCC 표 — 네 글자 코드(fourcc) 또는 D3DFMT 정수(d3dfmt)
-    const vector<DDSLegacyFourCc> listFourCc = DDSLoader::getLegacyFourCcTable();
-    SW_EXPECT_EQUAL( listFourCc.size(), legacy.size() );
-    for ( const DDSLegacyFourCc& loaderRow : listFourCc )
+    const vector<DDSLegacyFourCC> listFourCC = DDSLoader::getLegacyFourCCTable();
+    SW_EXPECT_EQUAL( listFourCC.size(), legacy.size() );
+    for ( const DDSLegacyFourCC& loaderRow : listFourCC )
     {
         bool bFound = false;
         for ( size_t index = 0; index < legacy.size() && bFound == false; ++index )

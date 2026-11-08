@@ -3,7 +3,7 @@
 
 #define SW_TEST_INTERNAL
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Testing/TestFramework.h"

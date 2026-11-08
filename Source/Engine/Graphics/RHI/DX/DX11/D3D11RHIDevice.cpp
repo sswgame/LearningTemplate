@@ -2,9 +2,9 @@
 
 #include "Engine/Graphics/RHI/DX/DX11/D3D11RHIDevice.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Time/MonotonicClock.h"

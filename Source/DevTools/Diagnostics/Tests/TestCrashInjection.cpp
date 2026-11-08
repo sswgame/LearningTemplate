@@ -1,12 +1,12 @@
 // 크래시 보고를 끝까지 태운다 — 이 실행 파일을 자식 역할로 띄워 `CrashInjector` 로 죽게 하고 보고가 남았는지 본다(보고 조각은 Core 의 `TestCrashReport.cpp`).
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "DevTools/Diagnostics/CrashInjection.h"

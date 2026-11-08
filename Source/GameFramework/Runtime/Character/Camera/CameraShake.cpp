@@ -2,7 +2,7 @@
 
 #include "GameFramework/Runtime/Character/Camera/CameraShake.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 

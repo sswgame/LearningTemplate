@@ -2,7 +2,7 @@
 
 #include "Core/Math/BitUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Environment/Sky/SkyGradient.h"

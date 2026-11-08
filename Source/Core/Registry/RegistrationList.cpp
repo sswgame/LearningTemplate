@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/String/RegistrationList.h"
+#include "Core/Registry/RegistrationList.h"
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Log/Logger.h"

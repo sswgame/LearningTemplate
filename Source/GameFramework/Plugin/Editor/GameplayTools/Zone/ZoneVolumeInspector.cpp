@@ -8,7 +8,7 @@
  */
 #include "pch.h"
 
-#include "Core/Container/formatString.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Panels/Inspector/IInspectorComponent.h"

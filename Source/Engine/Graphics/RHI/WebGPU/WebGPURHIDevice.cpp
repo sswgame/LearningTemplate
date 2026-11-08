@@ -2,8 +2,8 @@
 
 #include "Engine/Graphics/RHI/WebGPU/WebGPURHIDevice.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/thread.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/LogOnce.h"

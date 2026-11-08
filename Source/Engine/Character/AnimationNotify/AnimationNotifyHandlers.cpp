@@ -2,9 +2,9 @@
 
 #include "Engine/Character/AnimationNotify/AnimationNotifyHandlers.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/YawUtil.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/Animation/Scene/MotionWarpingComponent.h"

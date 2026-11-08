@@ -2,7 +2,7 @@
 
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 
 #include "Editor/Common/Workspace/EditorContext.h"

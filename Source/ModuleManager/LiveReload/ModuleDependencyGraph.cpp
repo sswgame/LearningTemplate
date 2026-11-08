@@ -2,8 +2,8 @@
 
 #include "ModuleManager/LiveReload/ModuleDependencyGraph.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/DependencyGraph.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Foundation/StdHeaders.h"
 

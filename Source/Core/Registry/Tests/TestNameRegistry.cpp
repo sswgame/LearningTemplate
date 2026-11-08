@@ -1,7 +1,7 @@
 // NameRegistry — 빈 · 겹친 이름 거절과 이름으로 빼기의 순서, 주인 있는 등록(`addOwned`): 덮으면 앞 값이 그림자로 남고, 지금 주인이 풀리면 그림자로 돌아가며, 그림자 주인이 먼저 풀리면 그 그림자만 버린다.
 #include "pch.h"
 
-#include "Core/String/RegistrationList.h"
+#include "Core/Registry/RegistrationList.h"
 #include "Core/Testing/TestFramework.h"
 
 using namespace sw;

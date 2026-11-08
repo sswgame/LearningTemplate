@@ -2,8 +2,8 @@
 
 #include "Engine/Character/AnimationNotify/AnimationNotifyTable.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Character/AnimationNotify/AnimationNotifyHandlers.h"
 #include "Engine/Character/CharacterDataReader.h"

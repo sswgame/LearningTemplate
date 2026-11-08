@@ -1,7 +1,7 @@
 // MaterialRenderStateTest — 패스 → 머티리얼 합치기, 머티리얼의 렌더 칸 읽기 · 잘못된 조합, 해시, 프리셋 데이터(nogpu).
 #include "pch.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"
 

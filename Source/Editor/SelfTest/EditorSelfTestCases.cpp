@@ -1,8 +1,8 @@
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
-#include "Core/String/TagID.h"
+#include "Core/Name/TagID.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Backend/IImGuiPlatformBackend.h"
 #include "Editor/Common/Commands/Scene/EditorViewportPreview.h"

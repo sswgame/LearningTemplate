@@ -2,11 +2,11 @@
 
 #include "Engine/Asset/Image/DDSLoader.h"
 
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
-#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Asset/Image/DDSFormat.h"
 #include "Engine/Content/AssetIO.h"
@@ -19,15 +19,15 @@ namespace sw
     {
 
         // DXT 계열 FourCC 코드
-        constexpr uint32 kFourCC_DXT1 = FourCcUtil::make( "DXT1" );
-        constexpr uint32 kFourCC_DXT2 = FourCcUtil::make( "DXT2" );
-        constexpr uint32 kFourCC_DXT3 = FourCcUtil::make( "DXT3" );
-        constexpr uint32 kFourCC_DXT4 = FourCcUtil::make( "DXT4" );
-        constexpr uint32 kFourCC_DXT5 = FourCcUtil::make( "DXT5" );
-        constexpr uint32 kFourCC_ATI1 = FourCcUtil::make( "ATI1" );
-        constexpr uint32 kFourCC_BC4U = FourCcUtil::make( "BC4U" );
-        constexpr uint32 kFourCC_ATI2 = FourCcUtil::make( "ATI2" );
-        constexpr uint32 kFourCC_BC5U = FourCcUtil::make( "BC5U" );
+        constexpr uint32 kFourCC_DXT1 = FourCCUtil::make( "DXT1" );
+        constexpr uint32 kFourCC_DXT2 = FourCCUtil::make( "DXT2" );
+        constexpr uint32 kFourCC_DXT3 = FourCCUtil::make( "DXT3" );
+        constexpr uint32 kFourCC_DXT4 = FourCCUtil::make( "DXT4" );
+        constexpr uint32 kFourCC_DXT5 = FourCCUtil::make( "DXT5" );
+        constexpr uint32 kFourCC_ATI1 = FourCCUtil::make( "ATI1" );
+        constexpr uint32 kFourCC_BC4U = FourCCUtil::make( "BC4U" );
+        constexpr uint32 kFourCC_ATI2 = FourCCUtil::make( "ATI2" );
+        constexpr uint32 kFourCC_BC5U = FourCCUtil::make( "BC5U" );
 
         // D3DFMT 열거값이 그대로 들어앉은 FourCC — **네 글자 코드가 아니다.**
         // D3D9 시절 DDS 라이터는 부동소수점 포맷에 네 글자 이름을 주지 않고 `D3DFORMAT` 의 정수를
@@ -104,7 +104,7 @@ namespace sw
         struct DDSLoaderInternal
         {
             /** @brief FourCC 코드 하나가 가리키는 DXGI 포맷의 표입니다. 이름의 정본은 `Config/Editor/DdsFormats.json` 이고 테스트가 이 표와 견준다. */
-            static constexpr DDSLegacyFourCc kArrFourCcRow[] = {
+            static constexpr DDSLegacyFourCC kArrFourCCRow[] = {
                 {         kFourCC_DXT1,          kDxgiFormatBC1Unorm},
                 {         kFourCC_DXT2,          kDxgiFormatBC2Unorm},
                 {         kFourCC_DXT3,          kDxgiFormatBC2Unorm},
@@ -123,9 +123,9 @@ namespace sw
             };
 
             /** @brief 압축 계열 FourCC 와 D3DFMT 정수 코드를 DXGI 포맷으로 바꿉니다. 모르는 코드는 `kDxgiFormatUnknown`(호출한 쪽의 포맷 검사가 실패로 끝낸다)입니다. */
-            static uint32 findDxgiFormatOfFourCc( uint32 fourCC )
+            static uint32 findDXGIFormatOfFourCC( uint32 fourCC )
             {
-                for ( const DDSLegacyFourCc& row : kArrFourCcRow )
+                for ( const DDSLegacyFourCC& row : kArrFourCCRow )
                 {
                     if ( row._fourCC == fourCC )
                         return row._dxgiFormat;
@@ -300,7 +300,7 @@ namespace sw
 
         size_t dataOffset = sizeof( uint32 ) + sizeof( DDSFileHeader );
 
-        if ( ( pHeader->_pixelFormat._flags & DDSFormat::kPixelFormatFourCcFlag ) != 0 && pHeader->_pixelFormat._fourCC == DDSFormat::kDx10FourCc )
+        if ( ( pHeader->_pixelFormat._flags & DDSFormat::kPixelFormatFourCCFlag ) != 0 && pHeader->_pixelFormat._fourCC == DDSFormat::kDx10FourCC )
         {
             if ( bufferSize < dataOffset + sizeof( DDSHeaderDxt10 ) )
             {
@@ -318,10 +318,10 @@ namespace sw
             image._layerCount = pDxt10->_arraySize * ( ( pDxt10->_miscFlag & DDSFormat::kDx10MiscTextureCubeFlag ) != 0 ? 6u : 1u );
             dataOffset += sizeof( DDSHeaderDxt10 );
         }
-        else if ( ( pHeader->_pixelFormat._flags & DDSFormat::kPixelFormatFourCcFlag ) != 0 )
+        else if ( ( pHeader->_pixelFormat._flags & DDSFormat::kPixelFormatFourCCFlag ) != 0 )
         {
             // 모르는 코드는 포맷을 정하지 않는다. 아래 `kDxgiFormatUnknown` 검사가 실패로 끝낸다.
-            image._dxgiFormat = DDSLoaderInternal::findDxgiFormatOfFourCc( pHeader->_pixelFormat._fourCC );
+            image._dxgiFormat = DDSLoaderInternal::findDXGIFormatOfFourCC( pHeader->_pixelFormat._fourCC );
         }
         else if ( ( pHeader->_pixelFormat._flags & DDSFormat::kPixelFormatRGBFlag ) != 0 )
         {
@@ -387,10 +387,10 @@ namespace sw
         return true;
     }
 
-    vector<DDSLegacyFourCc> DDSLoader::getLegacyFourCcTable()
+    vector<DDSLegacyFourCC> DDSLoader::getLegacyFourCCTable()
     {
-        vector<DDSLegacyFourCc> listRow;
-        for ( const DDSLegacyFourCc& row : DDSLoaderInternal::kArrFourCcRow )
+        vector<DDSLegacyFourCC> listRow;
+        for ( const DDSLegacyFourCC& row : DDSLoaderInternal::kArrFourCCRow )
         {
             listRow.push_back( row );
         }

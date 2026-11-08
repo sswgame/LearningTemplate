@@ -2,8 +2,8 @@
 
 #include "Engine/UserSettings/UserSettingsEngineHandlers.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/formatString.h"
+#include "Core/String/StringUtil.h"
+#include "Core/String/formatString.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Input/IInputDevice.h"

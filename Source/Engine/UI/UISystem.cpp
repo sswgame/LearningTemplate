@@ -2,8 +2,7 @@
 
 #include "Engine/UI/UISystem.h"
 
-#include "Core/Container/VectorUtil.h"
-#include "Core/Container/formatString.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/string.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/Constants.h"
@@ -12,6 +11,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Engine/Asset/PackEngineSettingsSubsystem.h"
 #include "Engine/Audio/AudioEngine.h"

@@ -21,7 +21,7 @@
  *          적용한 사건은 `getEventLog()` 에 쌓인다. 다른 기계가 이 사건을 같은 순서로 `applyDamage` 에 넘기면 같은 상태가 된다.
  */
 #pragma once
-#include "Core/Concurrency/LockedSwapQueue.h"
+#include "Core/Concurrency/Queue/LockedSwapQueue.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
@@ -30,7 +30,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Asset/AssetRef.h"

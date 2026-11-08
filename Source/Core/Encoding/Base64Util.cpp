@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/String/Base64Util.h"
+#include "Core/Encoding/Base64Util.h"
 
 #include "Core/Foundation/Constants.h"
 
