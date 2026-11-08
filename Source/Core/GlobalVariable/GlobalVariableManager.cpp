@@ -41,7 +41,7 @@ namespace sw
 
             static inline shared_mutex s_stringVarMutex;
             /** @brief 디스크 경로 변수의 상대 경로 기준입니다(`setPathBaseDirectory` - 기동 때 한 번, 그 뒤 읽기만). */
-            static inline std::optional<AbsolutePath> s_pathBaseDirectory;
+            static inline optional<AbsolutePath> s_pathBaseDirectory;
         };
 
         /**
@@ -186,7 +186,7 @@ namespace sw
                         return false; // 기준을 정하기 전에는 상대 경로를 풀 곳이 없다
                     return GlobalVariableStringOps::parseValue( info, AbsolutePath::tryMake( text )->str() );
                 }
-                const std::optional<AbsolutePath> resolved = AbsolutePath::tryResolve( text, *GlobalVariableInternal::s_pathBaseDirectory );
+                const optional<AbsolutePath> resolved = AbsolutePath::tryResolve( text, *GlobalVariableInternal::s_pathBaseDirectory );
                 if ( resolved.has_value() == false )
                     return false;
                 return GlobalVariableStringOps::parseValue( info, resolved->str() );
@@ -469,33 +469,24 @@ namespace sw
         GlobalVariableInternal::s_pathBaseDirectory = baseDirectory;
     }
 
-    bool GlobalVariableInfo::setValueFromCommandLine( string_view strValue, string& outError )
+    expected<void> GlobalVariableInfo::setValueFromCommandLine( string_view strValue )
     {
-        outError.clear();
         if ( _pData == nullptr )
-        {
-            outError = _name + " has no storage to write";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::Unsupported, "the variable has no storage to write", _name } );
         // 사람이 쓰는 명령줄은 열거자 이름만 받는다. 숫자는 열거자를 더하거나 순서를 바꾸면 뜻이 달라지고, 변수의 크기보다 큰 수는 조용히 잘려 다른 열거자가 된다.
         int32 number{ 0 };
         if ( _type == GlobalVariableType::Enum && StringUtil::parseInt( strValue, number ) )
-        {
-            outError = _name + " takes an enumerator name of " + _enumType + ", not a number (a number changes meaning when enumerators are added or reordered)";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "takes an enumerator name, not a number (a number changes meaning when enumerators are added or reordered)", _enumType } );
         if ( setValueFromString( strValue ) )
-            return true;
+            return {};
         // 읽지 못한 이유는 타입이 정한다. 호출하는 쪽이 고정 문구로 덮으면 이름 없는 열거자 · 타입 불일치 · 파서 없음이 같은 말로 보인다.
         if ( _type == GlobalVariableType::Enum )
         {
-            const bool bParserBound = _pEnumTextParser != nullptr && _pEnumTextParser->isBound();
-            outError                = bParserBound ? ( _enumType + " has no enumerator named '" + string{ strValue } + "'" )
-                                                   : ( "no enumerator name table is registered for " + _enumType + ", so '" + string{ strValue } + "' cannot be read" );
+            if ( _pEnumTextParser != nullptr && _pEnumTextParser->isBound() )
+                return unexpected( Error{ ErrorKind::NotFound, "no enumerator of that name", _enumType } );
+            return unexpected( Error{ ErrorKind::Unsupported, "no enumerator name table is registered", _enumType } );
         }
-        else
-            outError = "'" + string{ strValue } + "' cannot be read as " + getTypeName() + " for " + _name;
-        return false;
+        return unexpected( Error{ ErrorKind::InvalidArgument, "cannot be read as the variable type", getTypeName() } );
     }
 
     /**
@@ -645,9 +636,9 @@ namespace sw
                 //
                 // 변경 알림은 여기서 따로 부르지 않는다. setValueFromString 이 거치는 setValueAs* 네 함수가 모두 이미
                 // _onValueChanged 를 부른다(여기서 한 번 더 부르면 모듈 변수만 콜백이 **두 번** 온다).
-                string valueError;
-                if ( iter->second->setValueFromCommandLine( pendingValue, valueError ) == false )
-                    SW_LOG_WARNING_ID( "GlobalVariableManager.Ignored", "-%#=%# : %#. Ignored", strName.c_str(), pendingValue.c_str(), valueError.c_str() );
+                const expected<void> result = iter->second->setValueFromCommandLine( pendingValue );
+                if ( result.has_value() == false )
+                    SW_LOG_WARNING_ID( "GlobalVariableManager.Ignored", "-%#=%# : %# (%#). Ignored", strName.c_str(), pendingValue.c_str(), result.error().message(), result.error().detail() );
             }
         }
 
@@ -765,13 +756,12 @@ namespace sw
         bool bAllApplied{ true };
         for ( const auto& [name, text] : _mapPendingEnumText )
         {
-            GlobalVariableInfo* pInfo = findVariable( name );
-            string              valueError;
-            if ( pInfo == nullptr )
-                valueError = "no variable of that name is registered";
-            if ( pInfo != nullptr && pInfo->setValueFromCommandLine( text, valueError ) )
+            GlobalVariableInfo*  pInfo  = findVariable( name );
+            const expected<void> result = pInfo != nullptr ? pInfo->setValueFromCommandLine( text )
+                                                           : expected<void>{ unexpected( Error{ ErrorKind::NotFound, "no variable of that name is registered" } ) };
+            if ( result.has_value() )
                 continue;
-            SW_LOG_ERROR_ID( "GlobalVariable.EnumTextNotApplied", "-%#=%# : not applied, %#", name.c_str(), text.c_str(), valueError.c_str() );
+            SW_LOG_ERROR_ID( "GlobalVariable.EnumTextNotApplied", "-%#=%# : not applied, %# (%#)", name.c_str(), text.c_str(), result.error().message(), result.error().detail() );
             bAllApplied = false;
         }
         _mapPendingEnumText.clear();

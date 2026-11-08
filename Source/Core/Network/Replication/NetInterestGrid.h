@@ -11,6 +11,7 @@
 #include "Core/Container/SlotHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
@@ -28,10 +29,10 @@ namespace sw
         NetInterestGrid();
 
         /**
-         * @brief 칸 크기와 두 반경을 정하고 비웁니다. 칸 크기가 0 이하이거나, 반경이 음수이거나, 나가는 반경이 들어오는 반경보다 작으면 false 이고 아무것도 바꾸지 않습니다.
-         * @param outError 거절 이유(로그에 남길 글)입니다.
+         * @brief 칸 크기와 두 반경을 정하고 비웁니다. 칸 크기가 0 이하이거나, 반경이 음수이거나, 나가는 반경이 들어오는 반경보다 작으면
+         *        `ErrorKind::InvalidArgument` 이고 아무것도 바꾸지 않습니다(알리는 일은 부르는 쪽).
          */
-        [[nodiscard]] bool initialize( float32 cellSize, float32 enterRadius, float32 leaveRadius, string& outError );
+        [[nodiscard]] expected<void> initialize( float32 cellSize, float32 enterRadius, float32 leaveRadius );
 
         /** @brief 엔티티 점을 넣거나 옮깁니다(XZ 평면). */
         void setPoint( uint32 entityID, const float3& position );

@@ -11,7 +11,7 @@ namespace
     /** @brief 디스크 경로 인자의 상대 경로 기준 폴더입니다 — 이 케이스 폴더. */
     sw::AbsolutePath makeCommandLineTestBaseDirectory()
     {
-        const std::optional<sw::AbsolutePath> baseDirectory = sw::AbsolutePath::tryMake( sw::test::makeScratchPath( "base" ) );
+        const sw::optional<sw::AbsolutePath> baseDirectory = sw::AbsolutePath::tryMake( sw::test::makeScratchPath( "base" ) );
         SW_ASSERT( baseDirectory.has_value() );
         return *baseDirectory;
     }
@@ -161,7 +161,7 @@ SW_TEST_CASE( CommandLineTest, MultiWordArgumentAcceptsOnlyHyphenatedSpelling )
     sw::string cookedDir;
     SW_EXPECT_TRUE( cmdManager.getArgument( sw::CommandLineArgument::COOKED_DIR, cookedDir ) );
     // 디스크 경로 인자는 받을 때 기준 폴더 아래 절대 경로로 푼다.
-    const std::optional<sw::AbsolutePath> expectedCookedDir = sw::AbsolutePath::tryResolve( "out", makeCommandLineTestBaseDirectory() );
+    const sw::optional<sw::AbsolutePath> expectedCookedDir = sw::AbsolutePath::tryResolve( "out", makeCommandLineTestBaseDirectory() );
     SW_REQUIRE_TRUE( expectedCookedDir.has_value() );
     SW_EXPECT_EQUAL( expectedCookedDir->str(), cookedDir );
     SW_EXPECT_TRUE( cmdManager.isArgumentProvided( sw::CommandLineArgument::CHECK_TEXTURES ) );

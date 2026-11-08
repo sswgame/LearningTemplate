@@ -7,6 +7,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/DeterministicRandom.h"
@@ -46,10 +47,11 @@ namespace sw
         bool isActive() const;
 
         /**
-         * @brief `latencyMs=80 jitterMs=20 lossPercent=5 duplicatePercent=1 reorderPercent=2 bandwidthKBps=256` 같은 덮어쓰기를 @p inoutConditions 에 적용합니다.
-         * @details 키는 개발 도구의 시작 값(`-gv_netEmulation*`, `NetLineEmulationSubsystem`)과 같은 단위입니다. 빈칸으로 나누며, 모르는 키나 음수 · 숫자가 아닌 값이면 false 와 @p outError 이고 아무것도 바꾸지 않습니다.
+         * @brief `latencyMs=80 jitterMs=20 lossPercent=5 duplicatePercent=1 reorderPercent=2 bandwidthKBps=256` 같은 덮어쓰기를 @p base 에 얹은 조건을 돌려줍니다.
+         * @details 키는 개발 도구의 시작 값(`-gv_netEmulation*`, `NetLineEmulationSubsystem`)과 같은 단위입니다. 빈칸으로 나누며, 모르는 키나 음수 · 숫자가 아닌 값이면
+         *          `ErrorKind::InvalidArgument`(대상은 틀린 토큰 · 키)이고 부르는 쪽의 조건은 그대로다(돌려준 값만 쓴다).
          */
-        [[nodiscard]] static bool parseOverrides( string_view text, NetEmulationConditions& inoutConditions, string& outError );
+        [[nodiscard]] static expected<NetEmulationConditions> parseOverrides( string_view text, const NetEmulationConditions& base );
         /**
          * @brief `parseOverrides` 가 읽는 글을 만듭니다(`latencyMs=35 jitterMs=15 lossPercent=1 duplicatePercent=0 reorderPercent=0.5 bandwidthKBps=1024`).
          * @details 키 여섯을 모두 쓰므로 받는 쪽은 앞 상태와 상관없이 이 조건이 된다. 값은 0.01 단위로 반올림한다. 에디터 회선 조절이 자식 프로세스에 보내는 명령이 이 글이다.

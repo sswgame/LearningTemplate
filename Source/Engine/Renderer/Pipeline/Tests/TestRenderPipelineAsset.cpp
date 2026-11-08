@@ -354,8 +354,8 @@ SW_TEST_CASE( RenderPipelineAssetTest, SavedChildRoundTrips )
     SW_REQUIRE_TRUE( ReflectedXMLFile::loadDesc( AssetID{ "engine/pipeline/forwardtoonpipeline.xml" }, source ) );
     source._listPass[0]._cullMode = RHICullMode::Front;
 
-    const string                      childPath = test::makeScratchPath( "child.xml" );
-    const std::optional<AbsolutePath> childFile = FileUtil::requireAbsolutePath( childPath );
+    const string                 childPath = test::makeScratchPath( "child.xml" );
+    const optional<AbsolutePath> childFile = FileUtil::requireAbsolutePath( childPath );
     SW_REQUIRE_TRUE( childFile.has_value() );
     SW_REQUIRE_TRUE( ReflectedXMLFile::saveDescAsChild( *childFile, source, AssetID{ "engine/pipeline/forwardpipeline.xml" } ) );
     string childText;
@@ -367,8 +367,8 @@ SW_TEST_CASE( RenderPipelineAssetTest, SavedChildRoundTrips )
     SW_REQUIRE_TRUE( ReflectedXMLFile::loadDescFromDiskFile( childPath, rereadChild ) );
     SW_EXPECT_EQUAL( XMLSerializer::serialize( &source, typeInfo ), XMLSerializer::serialize( &rereadChild, typeInfo ) );
 
-    const string                      fullPath = test::makeScratchPath( "full.xml" );
-    const std::optional<AbsolutePath> fullFile = FileUtil::requireAbsolutePath( fullPath );
+    const string                 fullPath = test::makeScratchPath( "full.xml" );
+    const optional<AbsolutePath> fullFile = FileUtil::requireAbsolutePath( fullPath );
     SW_REQUIRE_TRUE( fullFile.has_value() );
     SW_REQUIRE_TRUE( ReflectedXMLFile::saveDesc( *fullFile, source ) );
     RenderPipelineDesc rereadFull;

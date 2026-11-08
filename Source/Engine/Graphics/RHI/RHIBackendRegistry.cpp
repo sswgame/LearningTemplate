@@ -152,8 +152,8 @@ namespace sw
 #if SW_WITH_DYNAMIC_MODULES
     bool RHIBackendRegistry::tryLoadModule( RHIBackend backend, string_view modulePath )
     {
-        const std::optional<AbsolutePath> libraryPath   = AbsolutePath::tryMake( modulePath );
-        void*                             pModuleHandle = libraryPath.has_value() ? ModuleLibraryUtil::loadLibraryAt( *libraryPath ) : nullptr;
+        const optional<AbsolutePath> libraryPath   = AbsolutePath::tryMake( modulePath );
+        void*                        pModuleHandle = libraryPath.has_value() ? ModuleLibraryUtil::loadLibraryAt( *libraryPath ) : nullptr;
         if ( pModuleHandle == nullptr )
             return false;
 

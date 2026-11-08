@@ -214,14 +214,14 @@ namespace sw::engine
         {
             listNode.push_back( { listRecord[recordIndex]->_pTypeName, listDependencyName[recordIndex] } );
         }
-        SubsystemGraph graph{};
-        if ( SubsystemCollection::computeGraph( listNode, graph, outError ) == false )
+        const expected<SubsystemGraph> graph = SubsystemCollection::computeGraph( listNode );
+        if ( graph.has_value() == false )
         {
-            outError = "Engine subsystem build order: " + outError;
+            outError = formatToString( "Engine subsystem build order: %#: %#", graph.error().message(), graph.error().detail() );
             return false;
         }
-        outListOrder.reserve( graph._listOrder.size() );
-        for ( const uint32 nodeIndex : graph._listOrder )
+        outListOrder.reserve( graph->_listOrder.size() );
+        for ( const uint32 nodeIndex : graph->_listOrder )
         {
             outListOrder.push_back( listRecord[nodeIndex] );
         }

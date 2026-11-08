@@ -209,10 +209,10 @@ namespace sw
         // 5단계: 타입별로 값을 넣는다. 값 없이 적은 것은 플래그이므로 true 로 켠다.
         if ( bHasValue )
         {
-            string error;
-            if ( trySetValue( argument, cleanKey, valueStr, baseDirectory, error ) == false )
+            const expected<void> result = trySetValue( argument, valueStr, baseDirectory );
+            if ( result.has_value() == false )
             {
-                _listParseError.push_back( std::move( error ) );
+                _listParseError.push_back( formatToString( "%#: %# (%#)", cleanKey, result.error().message(), result.error().detail() ) );
                 return;
             }
         }
@@ -294,61 +294,46 @@ namespace sw
      * StringUtil::parse* 로 임시 문자열을 할당하지 않고 바로 변환합니다. 변환에 실패하면 0 이 조용히 들어가지 않도록
      * 경고를 남깁니다. `-W=abc` 가 아무 말 없이 폭 0 이 되면 창이 왜 뜨지 않는지 알 길이 없기 때문입니다.
      */
-    bool CommandLineManager::trySetValue( ArgumentInfo& argument, string_view key, string_view newValue, const AbsolutePath& baseDirectory, string& outError )
+    expected<void> CommandLineManager::trySetValue( ArgumentInfo& argument, string_view newValue, const AbsolutePath& baseDirectory )
     {
         if ( std::holds_alternative<bool>( argument._defaultValue ) )
         {
             bool bParsed = false;
             if ( StringUtil::tryParseBool( newValue, bParsed ) == false )
-            {
-                outError = formatToString( "%#: not a boolean (%#)", key, newValue );
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::InvalidArgument, "not a boolean", newValue } );
             argument._value = bParsed;
-            return true;
+            return {};
         }
         if ( std::holds_alternative<int32>( argument._defaultValue ) )
         {
             int32 parsedValue{ 0 };
             if ( StringUtil::parseInt( newValue, parsedValue ) == false )
-            {
-                outError = formatToString( "%#: not an integer (%#)", key, newValue );
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::InvalidArgument, "not an integer", newValue } );
             argument._value = parsedValue;
-            return true;
+            return {};
         }
         if ( std::holds_alternative<float32>( argument._defaultValue ) )
         {
             float32 parsedValue{ 0.0f };
             if ( StringUtil::parseFloat( newValue, parsedValue ) == false )
-            {
-                outError = formatToString( "%#: not a real number (%#)", key, newValue );
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::InvalidArgument, "not a real number", newValue } );
             argument._value = parsedValue;
-            return true;
+            return {};
         }
         if ( std::holds_alternative<CommandLineDiskPath>( argument._defaultValue ) )
         {
             if ( newValue.empty() )
-            {
-                outError = formatToString( "%#: the path is empty", key );
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::InvalidArgument, "the path is empty" } );
             // 받는 자리에서 한 번 절대화한다(R5) - 기준은 기동 때 넘긴 폴더다.
-            const std::optional<AbsolutePath> resolved = AbsolutePath::tryResolve( newValue, baseDirectory );
+            const optional<AbsolutePath> resolved = AbsolutePath::tryResolve( newValue, baseDirectory );
             if ( resolved.has_value() == false )
-            {
-                outError = formatToString( "%#: '%#' is neither absolute nor relative (drive-relative or rootless)", key, newValue );
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::InvalidArgument, "neither absolute nor relative (drive-relative or rootless)", newValue } );
             CommandLineDiskPath diskPath;
             diskPath._path  = resolved->str();
             argument._value = std::move( diskPath );
-            return true;
+            return {};
         }
         argument._value = string( newValue );
-        return true;
+        return {};
     }
 } // namespace sw

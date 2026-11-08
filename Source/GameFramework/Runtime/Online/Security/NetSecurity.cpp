@@ -67,7 +67,7 @@ namespace sw
         outPath.clear();
         if ( path.empty() )
             return true;
-        const std::optional<AbsolutePath> resolved = AbsolutePath::tryResolve( path, ProcessRoots::get()._project );
+        const optional<AbsolutePath> resolved = AbsolutePath::tryResolve( path, ProcessRoots::get()._project );
         if ( resolved.has_value() == false )
         {
             outError = "'" + string( path ) + "' is not a file path (absolute or relative to the project root)";
@@ -109,9 +109,14 @@ namespace sw
         if ( Internal::readPem( certificatePath, settings._certificatePem, outError ) == false ||
              Internal::readPem( privateKeyPath, settings._privateKeyPem, outError ) == false )
             return nullptr;
-        unique_ptr<ITLSContext> context = provider.createTLSContext( settings, outError );
+        expected<unique_ptr<ITLSContext>> context = provider.createTLSContext( settings );
         settings._privateKeyPassphrase.assign( settings._privateKeyPassphrase.size(), '\0' );
-        return context;
+        if ( context.has_value() == false )
+        {
+            outError = formatToString( "%#: %#", context.error().message(), context.error().detail() );
+            return nullptr;
+        }
+        return std::move( context ).value();
     }
 
     unique_ptr<ITLSContext> NetSecurity::createClientTLSContext( INetSecurityProvider& provider, string_view trustFile, string_view serverName, string& outError,
@@ -140,7 +145,13 @@ namespace sw
         {
             return nullptr;
         }
-        return provider.createTLSContext( settings, outError );
+        expected<unique_ptr<ITLSContext>> context = provider.createTLSContext( settings );
+        if ( context.has_value() == false )
+        {
+            outError = formatToString( "%#: %#", context.error().message(), context.error().detail() );
+            return nullptr;
+        }
+        return std::move( context ).value();
     }
 
     SW_REGISTER_DEV_ONLINE_EXTENSION( NetSecurityDevOptions, NetSecurityDevOnlineInternal::kDevOptions );

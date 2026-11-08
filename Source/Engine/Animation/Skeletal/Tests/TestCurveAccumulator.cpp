@@ -27,7 +27,7 @@ SW_TEST_CASE( CurveAccumulatorTest, MatchesLinearFindAccumulation )
         value += 0.5f;
         accumulator.add( name, value );
 
-        const std::optional<size_t> found = VectorUtil::findIndex( listOldName, name );
+        const optional<size_t> found = VectorUtil::findIndex( listOldName, name );
         if ( found.has_value() == false )
         {
             listOldName.push_back( name );

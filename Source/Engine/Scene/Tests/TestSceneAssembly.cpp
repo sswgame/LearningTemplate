@@ -60,7 +60,7 @@ namespace
 
         static AbsolutePath makeAbsolute( const string& diskPath )
         {
-            const std::optional<AbsolutePath> absPath = FileUtil::requireAbsolutePath( diskPath );
+            const optional<AbsolutePath> absPath = FileUtil::requireAbsolutePath( diskPath );
             SW_EXPECT_TRUE( absPath.has_value() );
             return *absPath;
         }

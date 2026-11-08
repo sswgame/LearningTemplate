@@ -72,11 +72,10 @@ namespace
             (void)pKey;
             return nullptr;
         }
-        unique_ptr<ITLSContext> createTLSContext( const TLSContextConfig& settings, string& outError ) override
+        expected<unique_ptr<ITLSContext>> createTLSContext( const TLSContextConfig& settings ) override
         {
             (void)settings;
-            outError = "not supported";
-            return nullptr;
+            return sw::unexpected( Error{ ErrorKind::Unsupported, "not supported" } );
         }
         [[nodiscard]] bool createSelfSignedCertificate( string_view commonName, int32 validDays, string& outCertificatePem, string& outPrivateKeyPem ) override
         {

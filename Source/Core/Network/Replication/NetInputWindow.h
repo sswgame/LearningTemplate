@@ -26,11 +26,10 @@
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Replication/TickRingBuffer.h"
-
-#include <optional>
 
 namespace sw
 {
@@ -180,7 +179,7 @@ namespace sw
         /** @brief @p tick 이하이고 @p lowestTick 이상인 틱 중 가장 새로 받은 것을 반환합니다. 링 한 바퀴 안까지만 봅니다. 없으면 nullptr 입니다. */
         const NetInputEntry* findLatestAtOrBefore( uint32 tick, uint32 lowestTick ) const;
         /** @brief 창 안에 받아 둔 가장 오래된 틱을 반환합니다. 없으면 비어 있습니다. */
-        [[nodiscard]] std::optional<uint32> findOldestTick() const;
+        [[nodiscard]] optional<uint32> findOldestTick() const;
         /** @brief 빈틈없이 받은 다음 틱을 반환합니다. 상대에게 돌려주는 확인 값이며, 창 아래로 놓은 틱은 받은 것으로 칩니다. */
         uint32 getFirstMissingTick() const { return _firstMissingTick; }
         uint32 getWindowFirst() const { return _windowFirst; }

@@ -335,8 +335,8 @@ namespace sw::editor
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldPathEm" ) );
         ImGui::InputTextWithHint( "##SyncPath", "StateHashes/<name>.txt", _arrPath[sourceIndex].data(), _arrPath[sourceIndex].capacity() );
         // 사람이 친 상대 경로는 이 실행의 산출물 폴더(`ProcessRoots::_saved`) 아래다 - 작업 폴더가 아니다. 경로가 아니면(드라이브 상대) 빈 값이라 읽기 · 쓰기가 실패로 알린다.
-        const std::optional<AbsolutePath> typedPath = AbsolutePath::tryResolve( _arrPath[sourceIndex].c_str(), ProcessRoots::get()._saved );
-        const string                      filePath  = typedPath.has_value() ? typedPath->str() : string{};
+        const optional<AbsolutePath> typedPath = AbsolutePath::tryResolve( _arrPath[sourceIndex].c_str(), ProcessRoots::get()._saved );
+        const string                 filePath  = typedPath.has_value() ? typedPath->str() : string{};
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "LoadFile" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdText", "LoadFile" ) ) && compare.loadFromFile( sourceIndex, filePath ) == false )
             SW_LOG_WARNING_ID( "MultiplayerSync.SyncCouldNotLoad", "Sync could not load %#: %#", _arrPath[sourceIndex].c_str(), compare.getLastError() );

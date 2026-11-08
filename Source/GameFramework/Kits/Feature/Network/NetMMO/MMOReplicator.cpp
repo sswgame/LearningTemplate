@@ -100,10 +100,10 @@ namespace sw
             return false;
         }
         // 반경 관계(나가는 >= 들어오는)는 관심 영역 격자 한 곳이 거절한다 — 클라이언트-서버 키트의 관심 영역도 같은 규칙이다. 칸은 월드 격자의 셀 크기다.
-        string interestError;
-        if ( _interest.initialize( cellGrid.getCellSize(), settings._enterRadius, settings._leaveRadius, interestError ) == false )
+        const expected<void> interest = _interest.initialize( cellGrid.getCellSize(), settings._enterRadius, settings._leaveRadius );
+        if ( interest.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "MMOReplicator.MMOReplicatorRefusedStartEnter", "MMOReplicator: refused to start - %# (enter %#, leave %#)", interestError.c_str(), settings._enterRadius, settings._leaveRadius );
+            SW_LOG_ERROR_ID( "MMOReplicator.MMOReplicatorRefusedStartEnter", "MMOReplicator: refused to start - %# (enter %#, leave %#)", interest.error().message(), settings._enterRadius, settings._leaveRadius );
             return false;
         }
         _pHost    = pHost;

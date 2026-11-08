@@ -188,9 +188,9 @@ namespace sw::editor
         const size_t totalCount = inoutMesh._listVertex.size();
         for ( cgltf_size targetIndex = 0; targetIndex < primitive.targets_count; ++targetIndex )
         {
-            const hashed_string         name    = ModelImportUtil::makeMorphTargetName( pSourceMesh, targetIndex );
-            const std::optional<size_t> found   = VectorUtil::findIndex( inoutMesh._listMorphName, name );
-            const size_t                indexOf = found.has_value() ? *found : inoutMesh._listMorphName.size();
+            const hashed_string    name    = ModelImportUtil::makeMorphTargetName( pSourceMesh, targetIndex );
+            const optional<size_t> found   = VectorUtil::findIndex( inoutMesh._listMorphName, name );
+            const size_t           indexOf = found.has_value() ? *found : inoutMesh._listMorphName.size();
             if ( found.has_value() == false )
             {
                 inoutMesh._listMorphName.push_back( name );

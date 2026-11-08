@@ -192,7 +192,7 @@ namespace sw::editor
                     LayerWeightsAsset data;
                     if ( HeightfieldImporter::readLayerWeights( sourcePath, data ) == false )
                         return false;
-                    const std::optional<AbsolutePath> importedFile = FileUtil::requireAbsolutePath( importedPath );
+                    const optional<AbsolutePath> importedFile = FileUtil::requireAbsolutePath( importedPath );
                     return importedFile.has_value() && FileUtil::ensureParentDirectoryExists( importedPath ) && data.saveToFile( *importedFile );
                 }
                 return HeightfieldImporter::importHeightfield( sourcePath, importedPath );
@@ -385,7 +385,7 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "HeightfieldImporter.CannotCreateFolder", "Cannot create the folder for '%#'", outputPath );
             return false;
         }
-        const std::optional<AbsolutePath> outputFile = FileUtil::requireAbsolutePath( outputPath );
+        const optional<AbsolutePath> outputFile = FileUtil::requireAbsolutePath( outputPath );
         return outputFile.has_value() && data.saveToFile( *outputFile );
     }
 

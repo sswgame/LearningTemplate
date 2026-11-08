@@ -196,7 +196,7 @@ SW_TEST_CASE( LipSyncTest, TrackRoundTripsThroughXMLAndAFile )
     SW_EXPECT_TRUE( parsed._listViseme == track._listViseme );
     SW_EXPECT_TRUE( parsed._listWeight == track._listWeight );
 
-    const std::optional<AbsolutePath> path = AbsolutePath::tryMake( test::makeScratchPath( "line.visemes.xml" ) );
+    const optional<AbsolutePath> path = AbsolutePath::tryMake( test::makeScratchPath( "line.visemes.xml" ) );
     SW_REQUIRE_TRUE( path.has_value() );
     SW_REQUIRE_TRUE( track.saveToFile( *path ) );
     string text;

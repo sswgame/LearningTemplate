@@ -128,7 +128,7 @@ SW_TEST_CASE( OnlineProviderFileTest, MissingProvidersFileIsRejected )
 {
     SW_EXPECT_LOG( "File.NotFound" );
 
-    const std::optional<sw::AbsolutePath> providersFile = sw::AbsolutePath::tryMake( sw::test::makeScratchPath( "absent.json" ) );
+    const sw::optional<sw::AbsolutePath> providersFile = sw::AbsolutePath::tryMake( sw::test::makeScratchPath( "absent.json" ) );
     SW_REQUIRE_TRUE( providersFile.has_value() );
     sw::vector<FakeProviderConfig> listConfig;
     sw::string                     error;

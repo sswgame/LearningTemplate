@@ -24,7 +24,7 @@ SW_TEST_CASE( UserDataPathTest, GameFolderIsLowercaseAndRelativePathsResolveUnde
  */
 SW_TEST_CASE( UserDataPathTest, LocalStoreLocationKeepsTheChosenKind )
 {
-    const std::optional<LocalStoreLocation> saves = LocalStoreLocation::tryUnderUserData( "saves" );
+    const optional<LocalStoreLocation> saves = LocalStoreLocation::tryUnderUserData( "saves" );
     SW_REQUIRE_TRUE( saves.has_value() );
     SW_EXPECT_TRUE( saves->getKind() == LocalStoreLocation::Kind::UnderUserData );
     SW_EXPECT_TRUE( saves->resolveDiskPath( "MeadowVillage" ) == FileUtil::joinPath( UserDataPath::getDataDirectory( "MeadowVillage" ), "saves" ) );
@@ -36,7 +36,7 @@ SW_TEST_CASE( UserDataPathTest, LocalStoreLocationKeepsTheChosenKind )
     SW_EXPECT_FALSE( LocalStoreLocation::tryUnderUserData( FileUtil::getCurrentPath() ).has_value() );
     SW_EXPECT_TRUE( LocalStoreLocation::tryUnderUserData( "saves/..hidden" ).has_value() ); // `..` 로 시작할 뿐인 이름은 마디 `..` 가 아니다
 
-    const std::optional<AbsolutePath> absolutePath = AbsolutePath::tryMake( FileUtil::joinPath( FileUtil::getCurrentPath(), "elsewhere/saves" ) );
+    const optional<AbsolutePath> absolutePath = AbsolutePath::tryMake( FileUtil::joinPath( FileUtil::getCurrentPath(), "elsewhere/saves" ) );
     SW_REQUIRE_TRUE( absolutePath.has_value() );
     const LocalStoreLocation absolute = LocalStoreLocation::absolute( *absolutePath );
     SW_EXPECT_TRUE( absolute.getKind() == LocalStoreLocation::Kind::Absolute );

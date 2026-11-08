@@ -46,7 +46,7 @@ namespace
     /** @brief 명령줄의 디스크 경로 인자 기준 폴더입니다 — 이 케이스 폴더(경로 인자는 쓰지 않지만 `parse` 가 받는다). */
     sw::AbsolutePath makeGlobalVariableTestBaseDirectory()
     {
-        const std::optional<sw::AbsolutePath> baseDirectory = sw::AbsolutePath::tryMake( sw::test::makeScratchPath( "base" ) );
+        const sw::optional<sw::AbsolutePath> baseDirectory = sw::AbsolutePath::tryMake( sw::test::makeScratchPath( "base" ) );
         SW_ASSERT( baseDirectory.has_value() );
         return *baseDirectory;
     }
@@ -269,13 +269,13 @@ SW_TEST_CASE( GlobalVariableTest, EnumRejectsNumbersOnTheCommandLine )
 
     sw::GlobalVariableInfo* pInfo = manager.findVariable( "gv_testEnumNumber" );
     SW_REQUIRE_NOT_NULL( pInfo );
-    sw::string reason;
-    SW_EXPECT_FALSE( pInfo->setValueFromCommandLine( "1", reason ) );
-    SW_EXPECT_FALSE( reason.empty() ); // 거절은 이유와 함께 돌아온다
+    const sw::expected<void> number = pInfo->setValueFromCommandLine( "1" );
+    SW_REQUIRE_FALSE( number.has_value() );
+    SW_EXPECT_TRUE( number.error().kind() == sw::ErrorKind::InvalidArgument ); // 거절은 이유와 함께 돌아온다
     SW_EXPECT_EQUAL( 0, numberValue );
-    reason.clear();
-    SW_EXPECT_FALSE( pInfo->setValueFromCommandLine( "NoSuchMode", reason ) ); // 파서가 이름을 받지 않는다
-    SW_EXPECT_FALSE( reason.empty() );
+    const sw::expected<void> unknownName = pInfo->setValueFromCommandLine( "NoSuchMode" ); // 파서가 이름을 받지 않는다
+    SW_REQUIRE_FALSE( unknownName.has_value() );
+    SW_EXPECT_FALSE( unknownName.error().message().empty() );
     SW_EXPECT_EQUAL( 0, numberValue );
     SW_EXPECT_TRUE( pInfo->setValueFromString( "1" ) ); // 안쪽 글(에디터 · 프리셋)은 숫자를 받는다
     SW_EXPECT_EQUAL( 1, numberValue );

@@ -60,8 +60,8 @@ namespace sw
             }
             VisemeTrack track;
             LipSyncAnalyzer::analyze( listSample, sampleRate, settings, track );
-            const string                      trackPath = VisemeTrack::makePathForAudio( normalized );
-            const std::optional<AbsolutePath> trackFile = FileUtil::requireAbsolutePath( trackPath );
+            const string                 trackPath = VisemeTrack::makePathForAudio( normalized );
+            const optional<AbsolutePath> trackFile = FileUtil::requireAbsolutePath( trackPath );
             if ( trackFile.has_value() == false || track.saveToFile( *trackFile ) == false )
             {
                 SW_LOG_ERROR_ID( "LipSync.WriteFailed", "Lip sync import could not write '%#'", trackPath.c_str() );

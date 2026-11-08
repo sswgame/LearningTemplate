@@ -37,7 +37,7 @@ namespace sw::editor
     {
         outPath.clear();
         // 상대 → 절대는 한 규칙(R5)이다 - 루트가 없거나 풀리지 않는 글을 받은 그대로 작업 폴더 기준으로 찾지 않는다.
-        const std::optional<AbsolutePath> resolved = AbsolutePath::tryResolve( configuredPath, projectRoot );
+        const optional<AbsolutePath> resolved = AbsolutePath::tryResolve( configuredPath, projectRoot );
         if ( resolved.has_value() == false )
             return false;
         const string& place = resolved->str();
@@ -59,7 +59,7 @@ namespace sw::editor
     ProcessCommand EditorTracyLauncher::makeViewerCommand( string_view viewerPath, uint16 port )
     {
         // `-a <주소>` 는 뜨자마자 그 주소에 붙는다(Tracy 뷰어 명령줄). 같은 PC 라 localhost 다.
-        const std::optional<AbsolutePath> executable = AbsolutePath::tryMake( viewerPath );
+        const optional<AbsolutePath> executable = AbsolutePath::tryMake( viewerPath );
         if ( executable.has_value() == false )
             return {}; // 빈 명령 - 띄우기가 실패로 알린다(뷰어 경로는 찾은 파일의 절대 경로다)
         return ProcessCommand::at( *executable, { "-a", "127.0.0.1", "-p", to_string( static_cast<uint32>( port ) ) } );

@@ -723,7 +723,7 @@ namespace sw
         return aead;
     }
 
-    unique_ptr<ITLSContext> OpenSSLNetSecurityProvider::createTLSContext( const TLSContextConfig& settings, string& outError )
+    expected<unique_ptr<ITLSContext>> OpenSSLNetSecurityProvider::createTLSContext( const TLSContextConfig& settings )
     {
         using Internal = OpenSSLNetSecurityInternal;
         ERR_clear_error();
@@ -770,11 +770,11 @@ namespace sw
         }
         if ( bReady == false )
         {
-            outError = Internal::takeErrorText();
+            Error error{ ErrorKind::ExternalFailure, "OpenSSL could not create the TLS context", Internal::takeErrorText() };
             SSL_CTX_free( pContext );
-            return nullptr;
+            return unexpected( error );
         }
-        return sw::make_unique<OpenSSLContext>( pContext, settings );
+        return unique_ptr<ITLSContext>{ sw::make_unique<OpenSSLContext>( pContext, settings ) };
     }
 
     bool OpenSSLNetSecurityProvider::createSelfSignedCertificate( string_view commonName, int32 validDays, string& outCertificatePem, string& outPrivateKeyPem )

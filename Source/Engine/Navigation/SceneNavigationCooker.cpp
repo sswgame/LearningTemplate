@@ -125,7 +125,7 @@ namespace sw
                     return CookStep::Failed;
                 if ( asset.getEntries().empty() )
                     return CookStep::Skipped;
-                const std::optional<AbsolutePath> cookedFile = FileUtil::requireAbsolutePath( cookedPath );
+                const optional<AbsolutePath> cookedFile = FileUtil::requireAbsolutePath( cookedPath );
                 if ( cookedFile.has_value() == false || asset.saveToFile( *cookedFile ) == false )
                 {
                     SW_LOG_ERROR_ID( "SceneNavigationCooker.NavmeshCookCouldNot4", "Navmesh cook could not write '%#'", cookedPath.c_str() );

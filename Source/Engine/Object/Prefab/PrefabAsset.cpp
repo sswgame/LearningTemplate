@@ -1490,8 +1490,8 @@ namespace sw
             {
                 if ( node.isResolved() )
                     continue;
-                const string                childPath  = string( node._prefabPath );
-                const std::optional<size_t> stackIndex = VectorUtil::findIndex( stack, PrefabAssetInternal::makePathKey( PrefabAssetInternal::makePrefabCacheKey( childPath ) ) );
+                const string           childPath  = string( node._prefabPath );
+                const optional<size_t> stackIndex = VectorUtil::findIndex( stack, PrefabAssetInternal::makePathKey( PrefabAssetInternal::makePrefabCacheKey( childPath ) ) );
                 if ( stackIndex.has_value() )
                 {
                     cycleFloor = MathUtil::min( cycleFloor, *stackIndex );
@@ -1911,9 +1911,9 @@ namespace sw
                 PrefabCache nestedPrefabs;
                 PrefabAsset asset;
                 // 디스크로 훑은 원본이다 — 디스크 입구로 읽는다(리소스 id 입구는 팩 전용 구성에서 리소스 루트 안 절대 경로를 거절한다).
-                const bool                        bLoaded    = asset.loadFromDiskFile( normalized );
-                const bool                        bFlattened = bLoaded && asset.isValid() && nestedPrefabs.flattenNestedInstances( asset );
-                const std::optional<AbsolutePath> outputFile = FileUtil::requireAbsolutePath( outputPath );
+                const bool                   bLoaded    = asset.loadFromDiskFile( normalized );
+                const bool                   bFlattened = bLoaded && asset.isValid() && nestedPrefabs.flattenNestedInstances( asset );
+                const optional<AbsolutePath> outputFile = FileUtil::requireAbsolutePath( outputPath );
                 if ( outputFile.has_value() == false || bFlattened == false || asset.saveToBinaryFile( *outputFile ) == false )
                 {
                     SW_LOG_WARNING_ID( "PrefabAsset.PrefabCookFailed", "Prefab cook failed for '%#'", normalized );

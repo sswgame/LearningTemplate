@@ -333,7 +333,7 @@ namespace
 #if defined( SW_PLATFORM_WINDOWS ) // POSIX 는 인자 배열을 execv 에 그대로 넘긴다 — 아래 케이스가 실제 자식으로 본다
 SW_TEST_CASE( ProcessTest, WindowsCommandLineRoundTripsThroughTheArgumentSplitter )
 {
-    const std::optional<sw::AbsolutePath> toolPath = sw::AbsolutePath::tryMake( "C:\\Program Files\\Tool\\tool.exe" );
+    const sw::optional<sw::AbsolutePath> toolPath = sw::AbsolutePath::tryMake( "C:\\Program Files\\Tool\\tool.exe" );
     SW_REQUIRE_TRUE( toolPath.has_value() );
     const sw::ProcessCommand command       = sw::ProcessCommand::at( *toolPath, makeTrickyProcessArguments() );
     const sw::wstring        wideLine      = sw::StringUtil::utf8ToUTF16( command.toCommandLine().c_str() );

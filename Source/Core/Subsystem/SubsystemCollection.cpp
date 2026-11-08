@@ -24,20 +24,21 @@ namespace sw
                 return kNotFound;
             }
 
-            /** @brief 의존 이름을 노드 자리로 풉니다. 모르는 이름이면 false 입니다. */
-            [[nodiscard]] static bool resolveDependencies( const vector<SubsystemNode>& listNode, uint32 nodeIndex, vector<uint32>& outListDependency, string& outError )
+            /** @brief 의존 이름을 노드 자리로 풉니다. 모르는 이름이면 `ErrorKind::NotFound`(대상 `A -> B`)입니다. */
+            [[nodiscard]] static expected<void> resolveDependencies( const vector<SubsystemNode>& listNode, uint32 nodeIndex, vector<uint32>& outListDependency )
             {
                 for ( const utf8* const pDependencyName : listNode[nodeIndex]._listDependency )
                 {
                     const uint32 dependencyIndex = findNodeIndex( listNode, pDependencyName );
                     if ( dependencyIndex == kNotFound )
                     {
-                        outError = string( "Subsystem '" ) + listNode[nodeIndex]._pName + "' depends on unknown subsystem '" + pDependencyName + "'";
-                        return false;
+                        Error error{ ErrorKind::NotFound, "Subsystem depends on an unknown subsystem", listNode[nodeIndex]._pName };
+                        error.appendDetail( " -> " ).appendDetail( pDependencyName );
+                        return unexpected( error );
                     }
                     outListDependency.push_back( dependencyIndex );
                 }
-                return true;
+                return {};
             }
 
             /** @brief @p selfHost 의 호스트마다 @p dependencyHost 도 도는가 — 어느 호스트에서 도는 것이 그 호스트에 없는 것에 의존하면 false 입니다. */
@@ -89,9 +90,13 @@ namespace sw
         {
             listNode.push_back( { entry._pSubsystem->getSubsystemName(), entry._pSubsystem->getSubsystemDependencies(), entry._pSubsystem->getSubsystemDependents() } );
         }
-        SubsystemGraph graph{};
-        if ( computeGraph( listNode, graph, _error ) == false )
+        expected<SubsystemGraph> result = computeGraph( listNode );
+        if ( result.has_value() == false )
+        {
+            _error = string( result.error().message() ) + ": " + string( result.error().detail() );
             return false;
+        }
+        SubsystemGraph graph = std::move( result ).value();
 
         // 서브시스템이 도는 호스트마다 그 의존도 돌아야 한다(서버에서 도는 것이 클라이언트 전용에 기대면 서버 기동이 빈 자리를 본다).
         for ( uint32 index = 0; index < static_cast<uint32>( _listEntry.size() ); ++index )
@@ -286,22 +291,21 @@ namespace sw
         return bRestarted;
     }
 
-    bool SubsystemCollection::computeGraph( const vector<SubsystemNode>& listNode, SubsystemGraph& outGraph, string& outError )
+    expected<SubsystemGraph> SubsystemCollection::computeGraph( const vector<SubsystemNode>& listNode )
     {
-        const uint32 nodeCount = static_cast<uint32>( listNode.size() );
-        outGraph._listOrder.clear();
-        outGraph._listDependency.clear();
-        outGraph._listDependency.resize( nodeCount );
+        const uint32   nodeCount = static_cast<uint32>( listNode.size() );
+        SubsystemGraph subsystemGraph{};
+        subsystemGraph._listDependency.resize( nodeCount );
 
         for ( uint32 nodeIndex = 0; nodeIndex < nodeCount; ++nodeIndex )
         {
             if ( SubsystemCollectionInternal::findNodeIndex( listNode, listNode[nodeIndex]._pName ) != nodeIndex )
             {
-                outError = string( "Subsystem '" ) + listNode[nodeIndex]._pName + "' is declared twice";
-                return false;
+                return unexpected( Error{ ErrorKind::AlreadyExists, "Subsystem is declared twice", listNode[nodeIndex]._pName } );
             }
-            if ( SubsystemCollectionInternal::resolveDependencies( listNode, nodeIndex, outGraph._listDependency[nodeIndex], outError ) == false )
-                return false;
+            expected<void> resolved = SubsystemCollectionInternal::resolveDependencies( listNode, nodeIndex, subsystemGraph._listDependency[nodeIndex] );
+            if ( resolved.has_value() == false )
+                return unexpected( std::move( resolved ).error() );
         }
         // 역방향 의존: 노드가 적은 뒤에 설 이름은 그 이름의 의존이 된다. 이 목록에 없는 이름은 건너뛴다(그 호스트에 없는 서브시스템).
         for ( uint32 nodeIndex = 0; nodeIndex < nodeCount; ++nodeIndex )
@@ -311,7 +315,7 @@ namespace sw
                 const uint32 dependentIndex = SubsystemCollectionInternal::findNodeIndex( listNode, pDependentName );
                 if ( dependentIndex == SubsystemCollectionInternal::kNotFound )
                     continue;
-                vector<uint32>& listDependency = outGraph._listDependency[dependentIndex];
+                vector<uint32>& listDependency = subsystemGraph._listDependency[dependentIndex];
                 if ( VectorUtil::contains( listDependency, nodeIndex ) == false )
                     listDependency.push_back( nodeIndex );
             }
@@ -325,7 +329,7 @@ namespace sw
         for ( uint32 nodeIndex = 0; nodeIndex < nodeCount; ++nodeIndex )
         {
             listName.push_back( listNode[nodeIndex]._pName );
-            for ( const uint32 dependency : outGraph._listDependency[nodeIndex] )
+            for ( const uint32 dependency : subsystemGraph._listDependency[nodeIndex] )
             {
                 graph.addDependency( nodeIndex, dependency );
             }
@@ -334,14 +338,14 @@ namespace sw
         if ( order.isSorted() == false )
         {
             // 남은 노드는 모두 서로를 기다린다 — 순환(이나 순환에 매달린 노드)이다.
-            outError = "Subsystems in or behind a dependency cycle:";
+            Error error{ ErrorKind::Cycle, "Subsystems in or behind a dependency cycle" };
             for ( const uint32 nodeIndex : order._listUnsorted )
             {
-                outError += string( " " ) + listNode[nodeIndex]._pName;
+                error.appendDetail( error.detail().empty() ? "" : " " ).appendDetail( listNode[nodeIndex]._pName );
             }
-            return false;
+            return unexpected( error );
         }
-        outGraph._listOrder = std::move( order._listOrder );
-        return true;
+        subsystemGraph._listOrder = std::move( order._listOrder );
+        return subsystemGraph;
     }
 } // namespace sw

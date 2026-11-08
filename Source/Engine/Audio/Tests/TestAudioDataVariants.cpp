@@ -238,7 +238,7 @@ SW_TEST_CASE( AudioDataVariantTest, GraphVariantSavesOnlyItsDifference )
     SW_EXPECT_EQUAL( baseID, graph._baseID );
     graph._durationSeconds = 3.0f;
 
-    const std::optional<AbsolutePath> childPath = AbsolutePath::tryMake( domain.makeDiskPath( "child.audiograph.xml" ) );
+    const optional<AbsolutePath> childPath = AbsolutePath::tryMake( domain.makeDiskPath( "child.audiograph.xml" ) );
     SW_REQUIRE_TRUE( childPath.has_value() );
     SW_REQUIRE_TRUE( graph.saveToAsset( *childPath ) );
     string saved;

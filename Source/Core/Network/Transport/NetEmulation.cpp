@@ -50,20 +50,19 @@ namespace sw
                _bandwidthBytesPerSecond > 0;
     }
 
-    bool NetEmulationConditions::parseOverrides( string_view text, NetEmulationConditions& inoutConditions, string& outError )
+    expected<NetEmulationConditions> NetEmulationConditions::parseOverrides( string_view text, const NetEmulationConditions& base )
     {
         using Internal                = NetEmulationInternal;
-        NetEmulationConditions parsed = inoutConditions; // 하나라도 틀리면 아무것도 바꾸지 않는다
-        bool                   bOk    = true;
-        StringUtil::forEachToken( text, " \t", [&parsed, &bOk, &outError]( string_view token ) -> bool
+        NetEmulationConditions parsed = base;
+        optional<Error>        failure;
+        StringUtil::forEachToken( text, " 	", [&parsed, &failure]( string_view token ) -> bool
         {
             string_view key;
             string_view valueText;
             float32     value = 0.0f;
             if ( StringUtil::trySplitKeyValue( token, key, valueText ) == false || Internal::parseNonNegative( valueText, value ) == false )
             {
-                outError = "expected <key>=<non-negative number>, got '" + string( token ) + "'";
-                bOk      = false;
+                failure.emplace( ErrorKind::InvalidArgument, "expected <key>=<non-negative number>", token );
                 return false;
             }
             if ( key == "latencyMs" )
@@ -80,15 +79,14 @@ namespace sw
                 parsed._bandwidthBytesPerSecond = static_cast<int32>( value ) * static_cast<int32>( constant::memory::kBytesPerKilobyte );
             else
             {
-                outError = "unknown key '" + string( key ) + "' (latencyMs, jitterMs, lossPercent, duplicatePercent, reorderPercent, bandwidthKBps)";
-                bOk      = false;
+                failure.emplace( ErrorKind::InvalidArgument, "unknown key (latencyMs, jitterMs, lossPercent, duplicatePercent, reorderPercent, bandwidthKBps)", key );
                 return false;
             }
             return true;
         } );
-        if ( bOk )
-            inoutConditions = parsed;
-        return bOk;
+        if ( failure.has_value() )
+            return unexpected( std::move( *failure ) );
+        return parsed;
     }
 
     string NetEmulationConditions::makeOverrideText() const

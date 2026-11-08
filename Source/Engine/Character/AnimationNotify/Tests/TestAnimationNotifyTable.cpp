@@ -127,7 +127,7 @@ SW_TEST_CASE( AnimationNotifyTableTest, ChildSocketSetSavesOnlyItsDifference )
     eyes._translation = float3{ 0.0f, 2.0f, 0.0f };
     sockets.addSocket( eyes );
 
-    const std::optional<AbsolutePath> childPath = AbsolutePath::tryMake( domain.makeDiskPath( "child.sockets.xml" ) );
+    const optional<AbsolutePath> childPath = AbsolutePath::tryMake( domain.makeDiskPath( "child.sockets.xml" ) );
     SW_REQUIRE_TRUE( childPath.has_value() );
     SW_REQUIRE_TRUE( sockets.saveToFile( *childPath, kinds ) );
     string saved;

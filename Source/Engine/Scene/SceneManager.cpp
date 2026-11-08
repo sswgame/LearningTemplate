@@ -464,8 +464,8 @@ namespace sw
 
     bool SceneManager::saveActiveSceneAs( const AbsolutePath& absPath )
     {
-        const std::optional<AbsolutePath> outPath  = AbsolutePath::tryMake( AssetCookPath::toSourcePath( absPath.str(), SceneDocument::kAssetType ) );
-        const string                      sourceID = outPath.has_value() ? engine::getSubsystem<AssetPaths>().toAssetID( outPath->str() ) : string{};
+        const optional<AbsolutePath> outPath  = AbsolutePath::tryMake( AssetCookPath::toSourcePath( absPath.str(), SceneDocument::kAssetType ) );
+        const string                 sourceID = outPath.has_value() ? engine::getSubsystem<AssetPaths>().toAssetID( outPath->str() ) : string{};
         if ( sourceID.empty() )
         {
             SW_LOG_ERROR_ID( "SceneManager.SaveSceneOutsideContent", "Save Scene As: '%#' is outside the content root and every mounted disk domain - a scene saved there cannot be opened again", absPath.str() );

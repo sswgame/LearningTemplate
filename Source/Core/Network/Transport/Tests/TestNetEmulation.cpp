@@ -197,18 +197,17 @@ SW_TEST_CASE( NetEmulationTest, CorruptionFlipsOneBytePerPacket )
  */
 SW_TEST_CASE( NetEmulationTest, OverridesMakeConditions )
 {
-    NetEmulationConditions overridden;
-    string                 error;
-    SW_REQUIRE_TRUE( NetEmulationConditions::parseOverrides( "latencyMs=80  jitterMs=20 lossPercent=5 bandwidthKBps=256", overridden, error ) );
-    SW_EXPECT_NEAR( overridden._latency, 0.08, 1.0e-9 );
-    SW_EXPECT_NEAR( overridden._jitter, 0.02, 1.0e-9 );
-    SW_EXPECT_NEAR( overridden._lossRate, 0.05f, 1.0e-6f );
-    SW_EXPECT_EQUAL( overridden._bandwidthBytesPerSecond, 256 * 1024 );
-    const NetEmulationConditions before = overridden;
-    SW_EXPECT_FALSE( NetEmulationConditions::parseOverrides( "latencyMs=10 pingMs=5", overridden, error ) );
-    SW_EXPECT_TRUE( error.find( "pingMs" ) != string::npos );
-    SW_EXPECT_NEAR( overridden._latency, before._latency, 1.0e-12 ); // 앞의 latencyMs 도 적용하지 않았다
-    SW_EXPECT_FALSE( NetEmulationConditions::parseOverrides( "lossPercent=-1", overridden, error ) );
+    const expected<NetEmulationConditions> overridden = NetEmulationConditions::parseOverrides( "latencyMs=80  jitterMs=20 lossPercent=5 bandwidthKBps=256", NetEmulationConditions{} );
+    SW_REQUIRE_TRUE( overridden.has_value() );
+    SW_EXPECT_NEAR( overridden->_latency, 0.08, 1.0e-9 );
+    SW_EXPECT_NEAR( overridden->_jitter, 0.02, 1.0e-9 );
+    SW_EXPECT_NEAR( overridden->_lossRate, 0.05f, 1.0e-6f );
+    SW_EXPECT_EQUAL( overridden->_bandwidthBytesPerSecond, 256 * 1024 );
+    const expected<NetEmulationConditions> unknownKey = NetEmulationConditions::parseOverrides( "latencyMs=10 pingMs=5", *overridden );
+    SW_REQUIRE_FALSE( unknownKey.has_value() );
+    SW_EXPECT_TRUE( unknownKey.error().kind() == ErrorKind::InvalidArgument );
+    SW_EXPECT_TRUE( unknownKey.error().detail() == "pingMs" );
+    SW_EXPECT_FALSE( NetEmulationConditions::parseOverrides( "lossPercent=-1", *overridden ).has_value() );
 }
 
 /**
@@ -229,10 +228,11 @@ SW_TEST_CASE( NetEmulationTest, OverrideTextRoundTrips )
     for ( const NetEmulationConditions& preset : { NetEmulationConditions{}, lte, lossy } )
     {
         const string           text = preset.makeOverrideText();
-        NetEmulationConditions parsed;
-        parsed._latency = 9.0; // 글이 모든 키를 써서 앞 상태를 덮는지 본다
-        string error;
-        SW_REQUIRE_TRUE_MSG( NetEmulationConditions::parseOverrides( text, parsed, error ), error.c_str() );
+        NetEmulationConditions base;
+        base._latency                                 = 9.0; // 글이 모든 키를 써서 앞 상태를 덮는지 본다
+        const expected<NetEmulationConditions> result = NetEmulationConditions::parseOverrides( text, base );
+        SW_REQUIRE_TRUE_MSG( result.has_value(), text.c_str() );
+        const NetEmulationConditions& parsed = *result;
         SW_EXPECT_NEAR( parsed._latency, preset._latency, 1.0e-6 );
         SW_EXPECT_NEAR( parsed._jitter, preset._jitter, 1.0e-6 );
         SW_EXPECT_NEAR( parsed._lossRate, preset._lossRate, 1.0e-5f );

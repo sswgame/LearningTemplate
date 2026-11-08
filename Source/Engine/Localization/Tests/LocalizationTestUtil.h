@@ -124,8 +124,8 @@ namespace sw::test
         template <typename TTable>
         static void save( const TTable& table, const string& path )
         {
-            const std::optional<AbsolutePath> absPath = AbsolutePath::tryMake( path );
-            const bool                        bSaved  = absPath.has_value() && FileUtil::ensureParentDirectoryExists( path ) && table.saveToFile( *absPath );
+            const optional<AbsolutePath> absPath = AbsolutePath::tryMake( path );
+            const bool                   bSaved  = absPath.has_value() && FileUtil::ensureParentDirectoryExists( path ) && table.saveToFile( *absPath );
             if ( bSaved == false )
                 reportFailure( __FILE__, __LINE__, "could not write " + path );
         }

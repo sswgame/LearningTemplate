@@ -232,7 +232,7 @@ SW_TEST_CASE( ResourceEntranceTest, FormatSaveKeepsConditionsInTheFile )
 
     RetargetProfile profile;
     SW_REQUIRE_TRUE( profile.loadFromXMLText( text, path ) );
-    const std::optional<AbsolutePath> absPath = AbsolutePath::tryMake( path );
+    const optional<AbsolutePath> absPath = AbsolutePath::tryMake( path );
     SW_REQUIRE_TRUE( absPath.has_value() );
     SW_REQUIRE_TRUE( profile.saveToFile( *absPath ) );
 

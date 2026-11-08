@@ -259,8 +259,8 @@ namespace sw
                     inoutResult._bOutOfDate = true;
                     return;
                 }
-                const bool                        bHasTranslations = translation.getEntries().empty() == false || FileUtil::exists( path );
-                const std::optional<AbsolutePath> translationFile  = FileUtil::requireAbsolutePath( path );
+                const bool                   bHasTranslations = translation.getEntries().empty() == false || FileUtil::exists( path );
+                const optional<AbsolutePath> translationFile  = FileUtil::requireAbsolutePath( path );
                 if ( bHasTranslations && ( translationFile.has_value() == false || translation.saveToFile( *translationFile ) == false ) )
                     inoutResult._report._listIssue.push_back( { path, "translation table could not be written", true } );
                 if ( bMemoryChanged && memory.saveToFile( memoryPath ) == false )
@@ -559,8 +559,8 @@ namespace sw
         {
             if ( bWrite )
             {
-                const std::optional<AbsolutePath> gatherFile = FileUtil::requireAbsolutePath( outResult._gatherTablePath );
-                outResult._bWritten                          = gatherFile.has_value() && gatherTable.saveToFile( *gatherFile );
+                const optional<AbsolutePath> gatherFile = FileUtil::requireAbsolutePath( outResult._gatherTablePath );
+                outResult._bWritten                     = gatherFile.has_value() && gatherTable.saveToFile( *gatherFile );
             }
             else
                 outResult._bOutOfDate = true;
@@ -806,7 +806,7 @@ namespace sw
             if ( bStale == false && poEntry._bFuzzy == false )
                 (void)memory.addPair( poEntry._source, poEntry._translation );
         }
-        const std::optional<AbsolutePath> translationFile = FileUtil::requireAbsolutePath( translationPath );
+        const optional<AbsolutePath> translationFile = FileUtil::requireAbsolutePath( translationPath );
         if ( translationFile.has_value() == false || translation.saveToFile( *translationFile ) == false || memory.saveToFile( memoryPath ) == false )
         {
             SW_LOG_ERROR_ID( "LocalizationTools.TranslationTableCouldNot", "[ImportPo] translation table '%#' could not be written", translationPath.c_str() );

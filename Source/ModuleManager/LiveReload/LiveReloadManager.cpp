@@ -227,8 +227,8 @@ namespace sw
             return false;
 
         // 불변 조건: 여기서 전역 헤드는 비어 있다(등록할 때마다 비운다). 로드하면 이 모듈의 정적 등록기만 매달린다.
-        const std::optional<AbsolutePath> sharedPath    = AbsolutePath::tryMake( modulePath );
-        void* const                       pSharedHandle = sharedPath.has_value() ? ModuleLibraryUtil::loadLibraryAt( *sharedPath ) : nullptr;
+        const optional<AbsolutePath> sharedPath    = AbsolutePath::tryMake( modulePath );
+        void* const                  pSharedHandle = sharedPath.has_value() ? ModuleLibraryUtil::loadLibraryAt( *sharedPath ) : nullptr;
         if ( pSharedHandle == nullptr )
         {
             SW_LOG_ERROR_ID( "LiveReloadManager.FailedLoadSharedModule", "Failed to load the shared module %#", modulePath );
@@ -721,7 +721,7 @@ namespace sw
 
             // 교체 라이브러리의 정적 등록자는 옛 라이브러리가 도는 동안 돈다 — 같은 이름의 등록(개발 명령 · 감시 값 · 시나리오 단계 · 에디터 등록)을 거절하지 않고 대체하게 한다.
             // 첫 로드는 진짜 중복(두 모듈이 같은 이름을 정의)이 있을 수 있으니 거절을 그대로 둔다.
-            const std::optional<AbsolutePath> shadowPath = AbsolutePath::tryMake( outShadow._tempPath );
+            const optional<AbsolutePath> shadowPath = AbsolutePath::tryMake( outShadow._tempPath );
             if ( shadowPath.has_value() == false )
             {
                 outShadow._pHandle = nullptr;

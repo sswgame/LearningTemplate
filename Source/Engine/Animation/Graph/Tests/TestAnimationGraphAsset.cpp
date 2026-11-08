@@ -186,8 +186,8 @@ SW_TEST_CASE( AnimationGraphAssetTest, SaveWritesOnlyTheDifference )
     sw::AnimationGraphAsset             graph;
     SW_REQUIRE_TRUE( AnimationGraphTestUtil::parseChild( graph, domain, "<links><link id=\"1\" blend=\"0.4\"/></links>" ) );
 
-    const sw::string                      childPath = domain.makeDiskPath( "child.animgraph.xml" );
-    const std::optional<sw::AbsolutePath> absPath   = sw::FileUtil::requireAbsolutePath( childPath );
+    const sw::string                     childPath = domain.makeDiskPath( "child.animgraph.xml" );
+    const sw::optional<sw::AbsolutePath> absPath   = sw::FileUtil::requireAbsolutePath( childPath );
     SW_REQUIRE_TRUE( absPath.has_value() );
     SW_REQUIRE_TRUE( graph.saveToFile( *absPath ) );
     sw::string written;

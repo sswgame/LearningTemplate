@@ -94,7 +94,7 @@ namespace sw
     std::optional<AbsolutePath> ShaderIncludeResolver::readInclude( string_view candidatePath, vector<uint8>& outBytes ) const
     {
         outBytes.clear();
-        const std::optional<AbsolutePath> candidate = AbsolutePath::tryMake( candidatePath );
+        const optional<AbsolutePath> candidate = AbsolutePath::tryMake( candidatePath );
         if ( candidate.has_value() == false || FileUtil::isRegularFile( candidate->str() ) == false )
             return std::nullopt;
         if ( FileUtil::readFile( candidate->str(), outBytes ) == false ) // 실패 로그는 readFile 이 남긴다
@@ -151,7 +151,7 @@ namespace sw
             return std::nullopt;
         }
 
-        const std::optional<AbsolutePath> sourceDir = AbsolutePath::tryMake( FileUtil::getDirectoryPart( sourceFile->str() ) );
+        const optional<AbsolutePath> sourceDir = AbsolutePath::tryMake( FileUtil::getDirectoryPart( sourceFile->str() ) );
         if ( sourceDir.has_value() == false )
         {
             outError = "Shader source folder cannot be resolved: " + sourceFile->str();

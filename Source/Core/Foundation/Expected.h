@@ -23,6 +23,7 @@
 #include <functional>
 #include <limits>
 #include <new>
+#include <optional>
 #include <string_view>
 #include <type_traits>
 #include <utility>
@@ -332,6 +333,21 @@ namespace sw
         {
             reset();
             return *this;
+        }
+
+        /**
+         * @brief `optional<T>` 만: Core 밖에 남은 `std::optional<T>` 자리(인자 · 반환 · 멤버)로 넘깁니다.
+         * @note shortcut: 이전 동안만 두는 변환이다 — Core 밖 정의가 `sw::optional` 로 옮겨 기준선(`Config/Dev/ResultTypeBaseline.json`)이 0 이 되면 지운다.
+         */
+        template <typename G = E, std::enable_if_t<std::is_same_v<G, Absent>, int32> = 0>
+        operator std::optional<T>() const&
+        {
+            return _bHasValue ? std::optional<T>{ _storage._value } : std::optional<T>{};
+        }
+        template <typename G = E, std::enable_if_t<std::is_same_v<G, Absent>, int32> = 0>
+        operator std::optional<T>() &&
+        {
+            return _bHasValue ? std::optional<T>{ std::move( _storage._value ) } : std::optional<T>{};
         }
 
         /** @brief `optional<T>` 만: 비웁니다(`TOptional::Reset` · `std::optional::reset`). */

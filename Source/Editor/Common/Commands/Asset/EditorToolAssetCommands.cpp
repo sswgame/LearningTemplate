@@ -114,7 +114,7 @@ namespace sw::editor
             template <typename TAsset>
             [[nodiscard]] static bool writeDocument( const TAsset& data, const string& resolved )
             {
-                const std::optional<AbsolutePath> documentFile = FileUtil::requireAbsolutePath( resolved );
+                const optional<AbsolutePath> documentFile = FileUtil::requireAbsolutePath( resolved );
                 return documentFile.has_value() && data.saveToFile( *documentFile );
             }
 
@@ -136,7 +136,7 @@ namespace sw::editor
 
             [[nodiscard]] static bool writeDocument( const TileMapXMLData& data, const string& resolved )
             {
-                const std::optional<AbsolutePath> documentFile = FileUtil::requireAbsolutePath( resolved );
+                const optional<AbsolutePath> documentFile = FileUtil::requireAbsolutePath( resolved );
                 return documentFile.has_value() && data.save( *documentFile );
             }
 

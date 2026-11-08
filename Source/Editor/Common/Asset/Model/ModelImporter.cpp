@@ -378,7 +378,7 @@ namespace sw::editor
                     const string           clipName  = animation.name != nullptr ? string( animation.name ) : "clip" + to_string( static_cast<uint64>( animationIndex ) );
                     if ( rule._listClipName.empty() == false )
                     {
-                        const std::optional<size_t> requestedIndex = VectorUtil::findIndex( rule._listClipName, clipName );
+                        const optional<size_t> requestedIndex = VectorUtil::findIndex( rule._listClipName, clipName );
                         if ( requestedIndex.has_value() == false )
                             continue;
                         listRequestedFound[*requestedIndex] = SW_TRUE;
@@ -597,7 +597,7 @@ namespace sw::editor
                     SW_LOG_ERROR_ID( "ModelImporter.FractureFailed", "Fracture of %# failed: %#", sourcePath, error.c_str() );
                     return false;
                 }
-                const std::optional<AbsolutePath> fractureFile = FileUtil::requireAbsolutePath( fracturePath );
+                const optional<AbsolutePath> fractureFile = FileUtil::requireAbsolutePath( fracturePath );
                 if ( fractureFile.has_value() == false || fracture.saveToFile( *fractureFile ) == false )
                 {
                     SW_LOG_ERROR_ID( "ModelImporter.FailedWriteFractureAsset", "Failed to write fracture asset %#", fracturePath.c_str() );
@@ -613,8 +613,8 @@ namespace sw::editor
             {
                 for ( const ModelImportAttachment& attachment : result._listAttachment )
                 {
-                    const string                      partPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImportUtil::kPartFolder ), attachment._fileStem + string( MeshAssetFormat::kExtension ) );
-                    const std::optional<AbsolutePath> partFile = FileUtil::requireAbsolutePath( partPath );
+                    const string                 partPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImportUtil::kPartFolder ), attachment._fileStem + string( MeshAssetFormat::kExtension ) );
+                    const optional<AbsolutePath> partFile = FileUtil::requireAbsolutePath( partPath );
                     if ( partFile.has_value() == false || MeshAssetFormat::saveToFile( *partFile, attachment._mesh ) == false )
                     {
                         SW_LOG_ERROR_ID( "ModelImporter.FailedWriteAttachmentMesh", "Failed to write attachment mesh %#", partPath.c_str() );
@@ -862,7 +862,7 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "ModelImporter.FailedClearImportedModel", "Failed to clear the imported model folder %#", sideFolder.c_str() );
             return false;
         }
-        const std::optional<AbsolutePath> outputFile = FileUtil::requireAbsolutePath( outputPath );
+        const optional<AbsolutePath> outputFile = FileUtil::requireAbsolutePath( outputPath );
         if ( outputFile.has_value() == false || MeshAssetFormat::saveToFile( *outputFile, result._mesh ) == false )
         {
             SW_LOG_ERROR_ID( "ModelImporter.FailedWriteMeshAsset", "Failed to write mesh asset %#", outputPath );

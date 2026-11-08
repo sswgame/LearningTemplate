@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -122,8 +123,8 @@ namespace sw
         /** @brief 키를 박은 AEAD 를 만듭니다(@p pKey 는 kAeadKeySize 바이트). 실패하면 nullptr. */
         virtual unique_ptr<INetAead> createAead( NetAeadAlgorithm algorithm, const uint8* pKey ) = 0;
 
-        /** @brief TLS 컨텍스트를 만듭니다. 실패하면 nullptr 이고 @p outError 에 까닭. */
-        virtual unique_ptr<ITLSContext> createTLSContext( const TLSContextConfig& settings, string& outError ) = 0;
+        /** @brief TLS 컨텍스트를 만듭니다. 실패하면 오류(바깥 라이브러리 실패는 `ErrorKind::ExternalFailure`, 대상은 그 쪽 오류 글)입니다. */
+        virtual expected<unique_ptr<ITLSContext>> createTLSContext( const TLSContextConfig& settings ) = 0;
         /** @brief 개발용 자체 서명 인증서(EC P-256, SAN = @p commonName · localhost · 127.0.0.1)와 키를 PEM 으로 만듭니다. */
         [[nodiscard]] virtual bool createSelfSignedCertificate( string_view commonName, int32 validDays, string& outCertificatePem, string& outPrivateKeyPem ) = 0;
         /** @brief PEM 인증서(첫 장)의 DER SHA-256 을 소문자 16 진 64 자로 줍니다. */

@@ -11,24 +11,18 @@ namespace sw
     {
     }
 
-    bool NetInterestGrid::initialize( float32 cellSize, float32 enterRadius, float32 leaveRadius, string& outError )
+    expected<void> NetInterestGrid::initialize( float32 cellSize, float32 enterRadius, float32 leaveRadius )
     {
         const bool bBadValue = cellSize <= 0.0f || enterRadius < 0.0f || leaveRadius < 0.0f;
         if ( bBadValue )
-        {
-            outError = "cell size must be positive and radii must not be negative";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "cell size must be positive and radii must not be negative" } );
         // 나가는 반경을 들어오는 반경으로 올려 받지 않는다 — 히스테리시스가 없는 설정은 설정 결함이다.
         if ( leaveRadius < enterRadius )
-        {
-            outError = "leave radius is smaller than enter radius";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "leave radius is smaller than enter radius" } );
         _grid        = SpatialHashGrid2D{ cellSize };
         _enterRadius = enterRadius;
         _leaveRadius = leaveRadius;
-        return true;
+        return {};
     }
 
     void NetInterestGrid::setPoint( uint32 entityID, const float3& position )

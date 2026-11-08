@@ -278,7 +278,7 @@ namespace sw
     bool ValeWorldComponent::startServer( INetPeers& peers, NetMessageRouter& router )
     {
         // 두 프로세스 시나리오는 서버의 사용자 데이터 폴더(SW_USER_DATA_ROOT)를 실행마다 빈 폴더로 옮겨 새 진행으로 시작한다 — 저장소는 배포와 같은 파일 저장소다.
-        const std::optional<LocalStoreLocation> location = LocalStoreLocation::tryUnderUserData( _profileFolder );
+        const optional<LocalStoreLocation> location = LocalStoreLocation::tryUnderUserData( _profileFolder );
         if ( location.has_value() == false )
         {
             SW_LOG_ERROR_ID( "LanternVale.ProfileFolderInvalid", "[LanternVale] Profile Folder '%#' must be a relative path under the user data folder", _profileFolder.c_str() );

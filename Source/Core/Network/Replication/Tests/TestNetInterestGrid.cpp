@@ -11,8 +11,7 @@ using namespace sw;
 SW_TEST_CASE( NetInterestGridTest, EnterAndLeaveRadiiFormAHysteresisBand )
 {
     NetInterestGrid grid;
-    string          error;
-    SW_REQUIRE_TRUE( grid.initialize( 8.0f, 10.0f, 15.0f, error ) );
+    SW_REQUIRE_TRUE( grid.initialize( 8.0f, 10.0f, 15.0f ).has_value() );
     grid.setPoint( 1, float3{ 5.0f, 100.0f, 0.0f } ); // 안쪽(높이는 무시)
     grid.setPoint( 2, float3{ 12.0f, 0.0f, 0.0f } );  // 띠 안 — 새로 보이지는 않지만 보이던 것은 남는다
     grid.setPoint( 3, float3{ 0.0f, 0.0f, -20.0f } ); // 바깥
@@ -36,10 +35,10 @@ SW_TEST_CASE( NetInterestGridTest, EnterAndLeaveRadiiFormAHysteresisBand )
 SW_TEST_CASE( NetInterestGridTest, ALeaveRadiusBelowTheEnterRadiusIsRefused )
 {
     NetInterestGrid grid;
-    string          error;
-    SW_REQUIRE_TRUE( grid.initialize( 8.0f, 10.0f, 15.0f, error ) );
-    SW_EXPECT_FALSE( grid.initialize( 8.0f, 10.0f, 5.0f, error ) );
-    SW_EXPECT_FALSE( error.empty() );
-    SW_EXPECT_FALSE( grid.initialize( 0.0f, 10.0f, 15.0f, error ) );
+    SW_REQUIRE_TRUE( grid.initialize( 8.0f, 10.0f, 15.0f ).has_value() );
+    const expected<void> narrower = grid.initialize( 8.0f, 10.0f, 5.0f );
+    SW_REQUIRE_FALSE( narrower.has_value() );
+    SW_EXPECT_TRUE( narrower.error().kind() == ErrorKind::InvalidArgument );
+    SW_EXPECT_FALSE( grid.initialize( 0.0f, 10.0f, 15.0f ).has_value() );
     SW_EXPECT_EQUAL( 15.0f, grid.getLeaveRadius() );
 }

@@ -12,6 +12,7 @@
 #include "Core/Container/span.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -126,9 +127,9 @@ namespace sw
 
         /**
          * @brief 노드 목록을 위상 정렬합니다. 준비된 노드가 여럿이면 이름이 앞인 것이 먼저입니다(목록 순서는 보지 않습니다).
-         * @return 같은 이름 · 모르는 의존 · 순환이면 false 이고 @p outError 에 무엇인지 적습니다.
+         * @return 정렬한 그래프. 같은 이름(`ErrorKind::AlreadyExists`) · 모르는 의존(`NotFound`, 대상 `A -> B`) · 순환(`Cycle`, 대상은 남은 이름들)이면 오류입니다.
          */
-        [[nodiscard]] static bool computeGraph( const vector<SubsystemNode>& listNode, SubsystemGraph& outGraph, string& outError );
+        [[nodiscard]] static expected<SubsystemGraph> computeGraph( const vector<SubsystemNode>& listNode );
 
     private:
         /** @brief 서브시스템 하나와 그것을 넘긴 타입으로 소멸시키는 함수입니다. */

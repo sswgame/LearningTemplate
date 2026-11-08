@@ -114,7 +114,7 @@ namespace sw
                     uint32 bone = 0;
                     if ( context.findBone( spec._bone, bone ) == false )
                         return false;
-                    const std::optional<size_t> chainFound = VectorUtil::findIndex( listChainBone, bone );
+                    const optional<size_t> chainFound = VectorUtil::findIndex( listChainBone, bone );
                     if ( chainFound.has_value() == false )
                     {
                         SW_LOG_ERROR_ID( "RigIKNodes.RigLimitBoneNot", "Rig '%#': limit bone '%#' is not in the chain", context._label, spec._bone.c_str() );
