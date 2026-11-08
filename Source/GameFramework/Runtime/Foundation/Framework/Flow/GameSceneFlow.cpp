@@ -66,8 +66,8 @@ namespace sw
         const SceneManager* pSceneManager = game::findSubsystem<SceneManager>();
         const bool          bLoading      = _listPendingSceneLoad.empty() == false || ( pSceneManager != nullptr && pSceneManager->isTransitioning() );
         // 로드 진행은 씬 매니저의 프리로드가 안다(쿠킹이 구운 목록이 없으면 모른다 — 로딩 화면은 진행 막대를 접는다).
-        std::optional<float32> loadProgress;
-        float32                progressValue = 0.0f;
+        optional<float32> loadProgress;
+        float32           progressValue = 0.0f;
         if ( pSceneManager != nullptr && pSceneManager->tryGetLoadProgress( progressValue ) )
             loadProgress = progressValue;
         // 페이드와 로딩 화면은 실제 시간으로 돌린다. 게임 시간으로 돌리면 정지 메뉴(게임 시간 0)가 뜬 동안 페이드가 반쯤 검은 채로 멈춘다.

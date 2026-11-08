@@ -102,7 +102,7 @@ namespace sw
                 }
                 else if ( node.findAttribute( "value" ) != nullptr )
                 {
-                    const std::optional<float32> number = node.readRequiredAttribute<float32>( "value" );
+                    const auto number = node.readRequiredAttribute<float32>( "value" );
                     if ( number.has_value() )
                         inoutSlot._customization.setNumber( parameter, *number );
                     else

@@ -213,7 +213,7 @@ SW_TEST_CASE( RTSCommanderAITest, NotifyFiltersAttackEvents )
     SW_EXPECT_FALSE( rig._ai.getBlackboard().isSet( Rig::kThreat ) );
 
     rig._ai.notify( rig.makeAttackEvent( depot + float3{ 2.0f, 0.0f, 0.0f } ) );
-    const std::optional<float3> threat = rig._ai.getBlackboard().getVector( Rig::kThreat );
+    const sw::optional<float3> threat = rig._ai.getBlackboard().getVector( Rig::kThreat );
     SW_REQUIRE_TRUE( threat.has_value() );
     SW_EXPECT_NEAR( depot._x + 2.0f, threat->_x, 1.0e-4f );
 }

@@ -27,6 +27,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -37,8 +38,6 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-
-#include <optional>
 
 namespace sw
 {
@@ -80,7 +79,7 @@ namespace sw
         uint32                _flags{ 0 };
 
         /** @brief 이름에 해당하는 수치입니다. 이 재질이 적지 않은 이름이면 비어 있습니다(부르는 쪽이 그 뜻을 정한다). */
-        [[nodiscard]] std::optional<int32> getParam( const hashed_string& name ) const;
+        [[nodiscard]] optional<int32> getParam( const hashed_string& name ) const;
     };
 } // namespace sw
 

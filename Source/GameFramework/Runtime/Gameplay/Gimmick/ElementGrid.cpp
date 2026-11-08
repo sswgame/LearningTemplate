@@ -276,7 +276,7 @@ namespace sw
                         {
                             const ElementMaterialDef& material = _pTable->getMaterials()[static_cast<size_t>( getMaterial( position ) )];
                             // 재질이 수명 수치를 적지 않았으면 이 상태는 그 재질에서 끝나지 않는다.
-                            const std::optional<int32> steps = material.getParam( rule._stepsParam );
+                            const optional<int32> steps = material.getParam( rule._stepsParam );
                             if ( steps.has_value() && value >= *steps )
                                 _listPending.push_back( PendingChange{ position, static_cast<int32>( ruleIndex ) } );
                             break;

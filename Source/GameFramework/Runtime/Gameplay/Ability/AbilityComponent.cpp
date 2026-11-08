@@ -860,9 +860,9 @@ namespace sw
     HealthReading AbilityComponent::getHealthReading() const
     {
         // 체력과 최대 체력이 둘 다 있어야 읽은 것이다 — 없는 최대 체력을 0 으로 보지 않는다.
-        HealthReading                reading;
-        const std::optional<float32> health    = getAttributeValue( _healthAttribute );
-        const std::optional<float32> maxHealth = getAttributeValue( _maxHealthAttribute );
+        HealthReading           reading;
+        const optional<float32> health    = getAttributeValue( _healthAttribute );
+        const optional<float32> maxHealth = getAttributeValue( _maxHealthAttribute );
         if ( health.has_value() == false || maxHealth.has_value() == false )
         {
             reading._bHasHealth = SW_FALSE;
@@ -981,21 +981,21 @@ namespace sw
         return findAttributeSetFor( name ) != nullptr;
     }
 
-    std::optional<float32> AbilityComponent::getAttributeValue( const hashed_string& name ) const
+    optional<float32> AbilityComponent::getAttributeValue( const hashed_string& name ) const
     {
         const AttributeSet*  pAttributeSet = findAttributeSetFor( name );
         const AttributeData* pData         = pAttributeSet != nullptr ? pAttributeSet->findAttribute( name ) : nullptr;
         if ( pData == nullptr )
-            return std::nullopt;
+            return nullopt;
         return pData->_currentValue;
     }
 
-    std::optional<float32> AbilityComponent::getAttributeBaseValue( const hashed_string& name ) const
+    optional<float32> AbilityComponent::getAttributeBaseValue( const hashed_string& name ) const
     {
         const AttributeSet*  pAttributeSet = findAttributeSetFor( name );
         const AttributeData* pData         = pAttributeSet != nullptr ? pAttributeSet->findAttribute( name ) : nullptr;
         if ( pData == nullptr )
-            return std::nullopt;
+            return nullopt;
         return pData->_baseValue;
     }
 
@@ -1387,7 +1387,7 @@ namespace sw
         {
             if ( modifier._op != AttributeModOp::Add )
                 continue;
-            const std::optional<float32> current = getAttributeValue( modifier._attribute );
+            const optional<float32> current = getAttributeValue( modifier._attribute );
             if ( current.has_value() == false )
                 return false;
             float32 magnitude = 0.0f;
@@ -1472,7 +1472,7 @@ namespace sw
                 }
                 else
                 {
-                    const std::optional<float32> backing = getAttributeValue( modifier._backingAttribute );
+                    const optional<float32> backing = getAttributeValue( modifier._backingAttribute );
                     if ( backing.has_value() == false )
                         return false;
                     attributeValue = *backing;

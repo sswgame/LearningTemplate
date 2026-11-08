@@ -8,14 +8,13 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Security/NetSecurityTypes.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-
-#include <optional>
 
 namespace sw
 {
@@ -122,7 +121,7 @@ namespace sw
          * @brief @p publicKey 로 서명을 확인하고 @p rule 의 클레임을 확인합니다. 둘 다 맞으면 본문을 넘긴 `JWTVerified` 이고, 아니면 비어 있습니다.
          * @details 키 알고리즘이 헤더와 달라도 비어 있습니다. 본문을 넘기므로 rvalue 에서만 부른다(`std::move( token ).verify( … )`).
          */
-        [[nodiscard]] std::optional<JWTVerified> verify( INetSecurityProvider& provider, const NetPublicKey& publicKey, const JWTClaimRule& rule ) &&;
+        [[nodiscard]] optional<JWTVerified> verify( INetSecurityProvider& provider, const NetPublicKey& publicKey, const JWTClaimRule& rule ) &&;
 
     private:
         unique_ptr<JSONDocument> _payload;

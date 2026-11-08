@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Catalog/MonsterCatalog.h"
 
+#include "Core/Foundation/Expected.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Module/ModuleSharedAssetCache.h"
@@ -9,8 +10,6 @@
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
-
-#include <optional>
 
 namespace sw
 {
@@ -72,7 +71,7 @@ namespace sw
             }
             else if ( name == "Prefab" )
             {
-                const std::optional<string> path = child.readRequiredAttribute<string>( "path" );
+                const auto path = child.readRequiredAttribute<string>( "path" );
                 if ( path.has_value() )
                     monsterDef._prefabPath = *path;
                 else

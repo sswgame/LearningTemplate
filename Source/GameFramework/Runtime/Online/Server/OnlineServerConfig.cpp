@@ -30,7 +30,7 @@ namespace sw
         return false;
     }
 
-    bool OnlineServerKitEntry::resolveFile( const string& text, const utf8* pFieldName, std::optional<AbsolutePath>& outPath, string& outError ) const
+    bool OnlineServerKitEntry::resolveFile( const string& text, const utf8* pFieldName, optional<AbsolutePath>& outPath, string& outError ) const
     {
         outPath.reset();
         if ( text.empty() )

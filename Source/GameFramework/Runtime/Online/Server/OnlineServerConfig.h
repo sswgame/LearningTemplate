@@ -51,7 +51,7 @@ namespace sw
          * @details 풀 수 없는 값(드라이브 상대)은 오류입니다 — 못 푼 경로가 "정하지 않음"으로 읽히면 다른 동작(개발 인증서 · 제공자 없음)으로 물러난다.
          * @param pFieldName 오류 글에 쓸 칸 이름
          */
-        [[nodiscard]] bool resolveFile( const string& text, const utf8* pFieldName, std::optional<AbsolutePath>& outPath, string& outError ) const;
+        [[nodiscard]] bool resolveFile( const string& text, const utf8* pFieldName, optional<AbsolutePath>& outPath, string& outError ) const;
 
     private:
         [[nodiscard]] bool readSettingsInto( void* pSettings, const TypeInfo& typeInfo, string& outError ) const;

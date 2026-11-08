@@ -202,9 +202,9 @@ namespace sw
         if ( bSuccess )
         {
             // 등급별 보너스가 없는 등급은 설정의 기본 보너스다(둘 다 데이터).
-            const std::optional<float32> gradeBonus = _config._gradeBonus.findValue( grade );
-            const float32                bonus      = gradeBonus.has_value() ? *gradeBonus : _config._skillCheckBonus;
-            InteractionEvent             event;
+            const optional<float32> gradeBonus = _config._gradeBonus.findValue( grade );
+            const float32           bonus      = gradeBonus.has_value() ? *gradeBonus : _config._skillCheckBonus;
+            InteractionEvent        event;
             event._kind    = InteractionEvent::Kind::SkillCheckSucceeded;
             event._actorID = actorID;
             event._grade   = grade;

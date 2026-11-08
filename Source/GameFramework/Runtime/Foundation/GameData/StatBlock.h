@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -11,8 +12,6 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-
-#include <optional>
 
 namespace sw
 {
@@ -42,7 +41,7 @@ namespace sw
         /** @brief 더하는 값(보너스 · 비용 · 자원)으로 읽습니다. 없는 이름의 기여는 합의 항등원 0 입니다 — 호출부가 다른 기본값을 넣지 않는다. */
         float32 getValue( const hashed_string& name ) const;
         /** @brief 이름이 있을 때만 값입니다. 반드시 있어야 하는 값(지속 시간 · 배율)은 이것으로 읽고 없음을 오류로 다룹니다. */
-        [[nodiscard]] std::optional<float32> findValue( const hashed_string& name ) const;
+        [[nodiscard]] optional<float32> findValue( const hashed_string& name ) const;
         /** @brief 곱하는 배율로 읽습니다. 없는 이름은 곱의 항등원 1 입니다(보정이 없음) — 호출부가 다른 기본값을 넣지 않는다. */
         float32 getScale( const hashed_string& name ) const;
         bool    hasValue( const hashed_string& name ) const;
@@ -68,7 +67,7 @@ namespace sw
         SW_DECLARE_STATE_IO();
 
     private:
-        /** @brief 고칠 값 칸입니다. 공개 `findValue`(읽기 전용, 없음은 std::nullopt)와 이름을 달리해 비 const 호출이 이쪽으로 잘못 가지 않게 한다. */
+        /** @brief 고칠 값 칸입니다. 공개 `findValue`(읽기 전용, 없음은 nullopt)와 이름을 달리해 비 const 호출이 이쪽으로 잘못 가지 않게 한다. */
         StatValue* findMutableValue( const hashed_string& name );
 
     private:

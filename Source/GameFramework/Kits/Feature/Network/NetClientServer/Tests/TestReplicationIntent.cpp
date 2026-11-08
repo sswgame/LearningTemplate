@@ -137,7 +137,7 @@ SW_TEST_CASE( ReplicationIntentTest, OldestInputTickFollowsTheFirstReceived )
     SW_EXPECT_FALSE( rig._server.findOldestInputTick( rig._connectionID ).has_value() );
     SW_REQUIRE_TRUE( rig._client.sendIntent( 40, ReplicationIntentTestRig::makeIntent(), {} ) );
     rig.pumpUntilDelivered();
-    const std::optional<uint32> oldestTick = rig._server.findOldestInputTick( rig._connectionID );
+    const sw::optional<uint32> oldestTick = rig._server.findOldestInputTick( rig._connectionID );
     SW_REQUIRE_TRUE( oldestTick.has_value() );
     SW_EXPECT_EQUAL( 40u, *oldestTick );
 }

@@ -177,7 +177,7 @@ namespace
                 writer.valueString( claims._name );
             }
             writer.endObject();
-            const std::optional<JSONText> payload = writer.finish();
+            const auto payload = writer.finish();
             SW_EXPECT_TRUE( payload.has_value() );
             string compact;
             if ( payload.has_value() )
@@ -504,8 +504,8 @@ SW_TEST_CASE( AppleLoginProviderTest, ClientSecretCarriesTheDocumentedClaims )
     SW_EXPECT_TRUE( token.getAlgorithm() == NetSignatureAlgorithm::EcdsaP256Sha256 );
     SW_EXPECT_EQUAL( string( "KEY456" ), token.getKeyID() );
     NetPublicKey anyKey;
-    anyKey._algorithm                       = NetSignatureAlgorithm::EcdsaP256Sha256;
-    const std::optional<JWTVerified> claims = std::move( token ).verify( rig._http._security, anyKey, JWTClaimRule::makeSignatureOnly() );
+    anyKey._algorithm                      = NetSignatureAlgorithm::EcdsaP256Sha256;
+    const sw::optional<JWTVerified> claims = std::move( token ).verify( rig._http._security, anyKey, JWTClaimRule::makeSignatureOnly() );
     SW_REQUIRE_TRUE( claims.has_value() );
     string issuer;
     string subject;

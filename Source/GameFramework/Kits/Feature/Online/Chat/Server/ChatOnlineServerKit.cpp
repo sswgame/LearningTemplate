@@ -90,8 +90,8 @@ namespace sw
                 ChatKitConfig kitConfig;
                 if ( entry.readSettings( kitConfig, outError ) == false )
                     return false;
-                std::optional<AbsolutePath> bannedWordsPath;
-                std::optional<AbsolutePath> ignoredCharactersPath;
+                optional<AbsolutePath> bannedWordsPath;
+                optional<AbsolutePath> ignoredCharactersPath;
                 if ( entry.resolveFile( kitConfig._bannedWordsFile, "_bannedWordsFile", bannedWordsPath, outError ) == false || entry.resolveFile( kitConfig._ignoredCharactersFile, "_ignoredCharactersFile", ignoredCharactersPath, outError ) == false )
                     return false;
                 _settings._bannedWordsPath       = bannedWordsPath.has_value() ? bannedWordsPath->str() : string();

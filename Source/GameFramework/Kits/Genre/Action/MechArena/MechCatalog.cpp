@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Action/MechArena/MechCatalog.h"
 
+#include "Core/Foundation/Expected.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Module/ModuleSharedAssetCache.h"
@@ -9,8 +10,6 @@
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
-
-#include <optional>
 
 namespace sw
 {
@@ -54,8 +53,8 @@ namespace sw
             [[nodiscard]] static bool readDefaultMode( const XMLNode& node, string_view sourceName, MechModeDef& outMode )
             {
                 outMode._id = hashed_string( "default" );
-                std::optional<float32> speed;
-                bool                   bValid = node.readOptionalAttribute( "speed", speed ) && ( speed.has_value() == false || *speed >= 0.0f );
+                optional<float32> speed;
+                bool              bValid = node.readOptionalAttribute( "speed", speed ) && ( speed.has_value() == false || *speed >= 0.0f );
                 if ( bValid == false )
                     SW_LOG_ERROR_ID( "MechCatalog.MechSpeedNeedsNumber", "%#: <Mech speed=\"%#\"> needs a number of 0 or more", sourceName, node.getAttributeText( "speed" ) );
                 else if ( speed.has_value() )

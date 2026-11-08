@@ -301,8 +301,8 @@ SW_TEST_CASE( GimmickCircuitTest, ParameterValuesAreRead )
     GimmickNodeDef& node = rig._def.addNode( hashed_string( "r" ), hashed_string( "Ranged" ) );
     node.setParam( hashed_string( "Amount" ), "2.5" );
     rig.build();
-    const int32                  ranged = rig._circuit.findNode( hashed_string( "r" ) );
-    const std::optional<float32> amount = rig._circuit.readParamNumber( ranged, "Amount" );
+    const int32                 ranged = rig._circuit.findNode( hashed_string( "r" ) );
+    const sw::optional<float32> amount = rig._circuit.readParamNumber( ranged, "Amount" );
     SW_REQUIRE_TRUE( amount.has_value() );
     SW_EXPECT_NEAR( 2.5f, *amount, 1e-5f );
     SW_EXPECT_NEAR( 3.0f, rig._circuit.readParamVector( ranged, "Move" )._y, 1e-5f ); // 기본값

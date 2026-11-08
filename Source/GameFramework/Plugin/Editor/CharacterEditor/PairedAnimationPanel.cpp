@@ -135,8 +135,8 @@ namespace sw::editor
 
     bool PairedAnimationPanel::saveDocument()
     {
-        const std::optional<AbsolutePath> writePath = getDocumentDiskPath(); // 읽은 그 자리
-        string                            error;
+        const auto writePath = getDocumentDiskPath(); // 읽은 그 자리
+        string     error;
         if ( writePath.has_value() == false || _model.saveDocument( *writePath, error ) == false )
         {
             _status = writePath.has_value() == false ? string( "No write path for this asset" ) : error;
@@ -159,7 +159,7 @@ namespace sw::editor
         if ( path.empty() )
             return ToolAssetLoadResult::Missing;
 
-        const std::optional<AbsolutePath> readPath = getDocumentDiskPath();
+        const auto readPath = getDocumentDiskPath();
         if ( readPath.has_value() == false )
         {
             _status = "The paired animation '" + path + "' has no file on disk to read";

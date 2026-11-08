@@ -92,14 +92,14 @@ namespace sw
         return true;
     }
 
-    std::optional<float32> ActionValues::find( const hashed_string& name ) const
+    optional<float32> ActionValues::find( const hashed_string& name ) const
     {
         for ( uint32 index = 0; index < _count; ++index )
         {
             if ( _arrName[index] == name )
                 return _arrValue[index];
         }
-        return std::nullopt;
+        return nullopt;
     }
 
     uint32 GameConditions::makeSeed( int32 first, int32 second )

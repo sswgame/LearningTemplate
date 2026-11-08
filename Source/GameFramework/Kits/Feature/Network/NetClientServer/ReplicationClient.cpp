@@ -76,11 +76,11 @@ namespace sw
         return pLatest != nullptr && pLatest->_ownerState._bPresent == SW_TRUE ? &pLatest->_ownerState : nullptr;
     }
 
-    std::optional<int64> ReplicationClient::findServerTickOffset() const
+    optional<int64> ReplicationClient::findServerTickOffset() const
     {
         const NetOwnerState* pOwner = findOwnerState();
         if ( pOwner == nullptr )
-            return std::nullopt;
+            return nullopt;
         return static_cast<int64>( getLatest()->_tick ) - static_cast<int64>( pOwner->_inputTick );
     }
 

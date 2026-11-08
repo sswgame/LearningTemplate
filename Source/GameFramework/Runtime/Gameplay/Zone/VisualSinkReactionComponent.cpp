@@ -48,7 +48,7 @@ namespace sw
     {
         GameObject* const             pOwner   = getOwner();
         const AbilityComponent* const pAbility = pOwner != nullptr ? pOwner->getComponent<AbilityComponent>() : nullptr;
-        const std::optional<float32>  value    = pAbility != nullptr ? pAbility->getAttributeValue( _attribute ) : std::nullopt;
+        const optional<float32>       value    = pAbility != nullptr ? pAbility->getAttributeValue( _attribute ) : nullopt;
         const float32                 depth    = value.has_value() ? MathUtil::max( 0.0f, *value ) * _scale : 0.0f; // 속성이 없는 개체는 가라앉지 않는다
         if ( depth <= 0.0f )
         {

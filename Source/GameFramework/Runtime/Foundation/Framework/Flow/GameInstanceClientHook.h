@@ -6,13 +6,12 @@
  *          GameFramework 는 리로드하지 않는 공유 모듈이라 등록은 이미지 수명 동안 하나다.
  */
 #pragma once
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Registry/RegistrationList.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-
-#include <optional>
 
 namespace sw
 {
@@ -31,7 +30,7 @@ namespace sw
         /** @brief 로딩 화면을 띄웁니다. 띄우지 못하면(UI 가 없다) false 입니다. */
         virtual bool beginLoading() = 0;
         /** @brief 매 프레임 로딩 상태 · 진행률과 화면 페이드를 반영합니다. */
-        virtual void update( float32 deltaSeconds, bool bLoading, std::optional<float32> loadProgress, ScreenFade& fade ) = 0;
+        virtual void update( float32 deltaSeconds, bool bLoading, optional<float32> loadProgress, ScreenFade& fade ) = 0;
     };
 
     /** @class IGameInstanceClientHook @brief 게임 인스턴스의 클라이언트 전용 부분을 세우는 쪽입니다. */

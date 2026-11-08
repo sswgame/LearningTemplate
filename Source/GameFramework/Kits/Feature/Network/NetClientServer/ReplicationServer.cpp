@@ -290,10 +290,10 @@ namespace sw
         return client._input.read( reader );
     }
 
-    std::optional<uint32> ReplicationServer::findOldestInputTick( int32 connectionID ) const
+    optional<uint32> ReplicationServer::findOldestInputTick( int32 connectionID ) const
     {
         if ( connectionID < 0 || connectionID >= static_cast<int32>( _listClient.size() ) )
-            return std::nullopt;
+            return nullopt;
         return _listClient[static_cast<size_t>( connectionID )]._input.findOldestTick();
     }
 

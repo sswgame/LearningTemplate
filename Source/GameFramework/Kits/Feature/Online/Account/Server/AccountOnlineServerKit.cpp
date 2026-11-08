@@ -49,9 +49,9 @@ namespace sw
 
             [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
             {
-                AccountKitConfig            kitConfig;
-                std::optional<AbsolutePath> providersFile;
-                std::optional<AbsolutePath> trustFile;
+                AccountKitConfig       kitConfig;
+                optional<AbsolutePath> providersFile;
+                optional<AbsolutePath> trustFile;
                 if ( entry.readSettings( kitConfig, outError ) == false || entry.resolveFile( kitConfig._platformProvidersFile, "_platformProvidersFile", providersFile, outError ) == false || entry.resolveFile( kitConfig._platformTrustFile, "_platformTrustFile", trustFile, outError ) == false )
                     return false;
                 LoginServiceConfig loginSettings;
@@ -131,7 +131,7 @@ namespace sw
             }
 
             /** @brief 제공자 설정 파일을 읽어 제공자를 만들고 로그인 서비스에 등록합니다. 파일을 정하지 않았으면 외부 로그인이 없습니다. */
-            [[nodiscard]] bool createPlatformProviders( const std::optional<AbsolutePath>& providersFile, const std::optional<AbsolutePath>& trustFile, const string& linkSecretKeyEnvironment,
+            [[nodiscard]] bool createPlatformProviders( const optional<AbsolutePath>& providersFile, const optional<AbsolutePath>& trustFile, const string& linkSecretKeyEnvironment,
                                                         const IClock& clock, string& outError )
             {
                 vector<PlatformLoginProviderConfig> listSettings;

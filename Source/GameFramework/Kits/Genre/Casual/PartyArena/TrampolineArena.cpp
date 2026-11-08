@@ -659,10 +659,10 @@ namespace sw
         {
             // Heavy 의 세 수치는 아이템 데이터가 반드시 적는다 — 코드가 대신 정한 값으로 효과를 내지 않는다.
             // 시간이 0 이하면 타이머가 돌지 않아 배율이 부활할 때까지 남았고, 음수 배율은 밀림을 뒤집었다.
-            const std::optional<float32> duration       = def._stats.findValue( TrampolineArenaInternal::getDurationName() );
-            const std::optional<float32> knockbackTaken = def._stats.findValue( TrampolineArenaInternal::getKnockbackTakenName() );
-            const std::optional<float32> knockbackDealt = def._stats.findValue( TrampolineArenaInternal::getKnockbackDealtName() );
-            const bool                   bComplete      = duration.has_value() && knockbackTaken.has_value() && knockbackDealt.has_value() && *duration > 0.0f && *knockbackTaken >= 0.0f && *knockbackDealt >= 0.0f;
+            const optional<float32> duration       = def._stats.findValue( TrampolineArenaInternal::getDurationName() );
+            const optional<float32> knockbackTaken = def._stats.findValue( TrampolineArenaInternal::getKnockbackTakenName() );
+            const optional<float32> knockbackDealt = def._stats.findValue( TrampolineArenaInternal::getKnockbackDealtName() );
+            const bool              bComplete      = duration.has_value() && knockbackTaken.has_value() && knockbackDealt.has_value() && *duration > 0.0f && *knockbackTaken >= 0.0f && *knockbackDealt >= 0.0f;
             if ( bComplete == false )
             {
                 SW_LOG_ERROR_ID( "TrampolineArena.ItemHeavyNeedsDuration", "item '%#' (Heavy) needs a positive duration and knockbackTaken and knockbackDealt of 0 or more - not applied", def._id.c_str() );

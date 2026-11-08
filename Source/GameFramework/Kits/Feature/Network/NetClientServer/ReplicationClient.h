@@ -94,7 +94,7 @@ namespace sw
          * @details 서버는 입력을 자기 틱 하나에 하나씩 꺼내므로, 이 차이를 더하면 예측하는 입력 틱이 서버에서 시뮬레이션될 서버 틱이다. 틱의 함수로 움직이는 것
          *          (`ControlSystem::publishServerTick` → `TickedPathMoverComponent`)을 그 서버 틱의 자리에 둔다. 서버가 아직 내 상태를 싣지 않았으면 비어 있다.
          */
-        [[nodiscard]] std::optional<int64> findServerTickOffset() const;
+        [[nodiscard]] optional<int64> findServerTickOffset() const;
         /** @brief 그리는 서버 틱입니다. 보간 지연만큼 과거이며 소수이고, 서버의 랙 보정이 씁니다. 스냅샷을 받기 전에는 0 입니다. */
         float32 getRenderTick() const { return _clock.hasServerTick() ? _clock.getRenderTick() : 0.0f; }
         uint64  getDecodeFailureCount() const { return _decodeFailureCount; }

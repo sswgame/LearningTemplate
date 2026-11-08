@@ -401,6 +401,6 @@ SW_TEST_CASE( ReceiptKitAssemblyTest, ExternalSampleConfigReads )
     const optional<AbsolutePath> providersFile = AbsolutePath::tryResolve( "Config/Server/Online/Providers/Shooter3D.receipts.json", ProcessRoots::get()._project );
     SW_REQUIRE_TRUE( providersFile.has_value() );
     vector<ReceiptProviderConfig> listConfig;
-    SW_REQUIRE_TRUE_MSG( OnlineProviderFile::read<ReceiptProviderConfig>( providersFile, std::nullopt, "receiptProvidersFile", "receiptTrustFile", &ReceiptProviderSet::readEntry, listConfig, error ), error.c_str() );
+    SW_REQUIRE_TRUE_MSG( OnlineProviderFile::read<ReceiptProviderConfig>( providersFile, sw::nullopt, "receiptProvidersFile", "receiptTrustFile", &ReceiptProviderSet::readEntry, listConfig, error ), error.c_str() );
     SW_EXPECT_EQUAL( size_t( 3 ), listConfig.size() );
 }

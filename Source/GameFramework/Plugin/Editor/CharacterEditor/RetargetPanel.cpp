@@ -190,7 +190,7 @@ namespace sw::editor
             _status = "Not saved: " + _inspectionError;
             return false;
         }
-        const std::optional<AbsolutePath> writePath = getDocumentDiskPath();                // 읽은 그 자리
+        const auto writePath = getDocumentDiskPath();                                       // 읽은 그 자리
         if ( writePath.has_value() == false || _profile.saveToFile( *writePath ) == false ) // 변형(`_base`)은 부모와의 차이로 쓴다
         {
             _status = writePath.has_value() == false ? string( "No write path for this asset" ) : string( "The profile could not be written (see the log)" );

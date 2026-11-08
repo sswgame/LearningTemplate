@@ -617,7 +617,7 @@ namespace sw::editor
         if ( hasTarget() == false )
             return false;
         // 곁 파일은 아직 없을 수 있다 — 메시 파일(상대 키면 읽기가 고른 그 파일) 곁에 쓴다.
-        const std::optional<AbsolutePath> meshPath = editor::getSubsystem<AssetPaths>().toDiskPath( _meshPath );
+        const auto meshPath = editor::getSubsystem<AssetPaths>().toDiskPath( _meshPath );
         if ( meshPath.has_value() == false )
             return false; // 이유는 toDiskPath 가 남겼다
         const string                 path      = MeshModifierStack::makeSidecarPath( meshPath->str() );
@@ -636,7 +636,7 @@ namespace sw::editor
     {
         if ( hasTarget() == false )
             return false;
-        const std::optional<AbsolutePath> path = editor::getSubsystem<AssetPaths>().findLooseFile( MeshModifierStack::makeSidecarPath( _meshPath ) );
+        const auto path = editor::getSubsystem<AssetPaths>().findLooseFile( MeshModifierStack::makeSidecarPath( _meshPath ) );
         if ( path.has_value() == false )
             return false;
         if ( _stack.loadFromFile( path->str() ) == false )
@@ -672,8 +672,8 @@ namespace sw::editor
             SW_LOG_WARNING_ID( "MeshModifierSession.MeshMorphTargetsThey", "Mesh '%#' has %# morph targets - they are dropped from the baked mesh", _meshPath.c_str(), _sourceData._listMorphTarget.size() );
 
         // 구운 메시도 원본 메시 파일 곁이다
-        const std::optional<AbsolutePath> meshPath = editor::getSubsystem<AssetPaths>().toDiskPath( _meshPath );
-        const optional<AbsolutePath>      path     = meshPath.has_value() ? AbsolutePath::tryMake( MeshModifierStack::makeBakedMeshPath( meshPath->str() ) ) : nullopt;
+        const auto                   meshPath = editor::getSubsystem<AssetPaths>().toDiskPath( _meshPath );
+        const optional<AbsolutePath> path     = meshPath.has_value() ? AbsolutePath::tryMake( MeshModifierStack::makeBakedMeshPath( meshPath->str() ) ) : nullopt;
         if ( path.has_value() == false || MeshAssetFormat::saveToFile( *path, baked ) == false )
         {
             SW_LOG_ERROR_ID( "MeshModifierSession.FailedWriteBakedMesh", "Failed to write the baked mesh of '%#'", _meshPath.c_str() );

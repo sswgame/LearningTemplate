@@ -141,9 +141,9 @@ namespace sw
     // ------------------------------------------------------------------------------
     ActionResult RTSCommanderAI::taskDefend( ActionContext& context, const VocabularyNoParams& /*params*/ )
     {
-        RTSCommanderAI&             self   = *static_cast<RTSCommanderAI*>( context._pOwner );
-        Blackboard&                 board  = *context._world.find<BlackboardWriteSlot>(); // 러너가 틱마다 채운다
-        const std::optional<float3> threat = board.getVector( getThreatKey() );
+        RTSCommanderAI&        self   = *static_cast<RTSCommanderAI*>( context._pOwner );
+        Blackboard&            board  = *context._world.find<BlackboardWriteSlot>(); // 러너가 틱마다 채운다
+        const optional<float3> threat = board.getVector( getThreatKey() );
         if ( threat.has_value() == false )
             return ActionResult::Failed; // 위협 자리가 없으면 막을 곳이 없다
         vector<RTSUnitID> listArmy;

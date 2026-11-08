@@ -31,7 +31,7 @@ namespace sw
          * @return 파일을 정하지 않았으면 빈 목록으로 true 다(제공자 없음). 신뢰 PEM 만 정했거나, 파일을 못 읽거나, JSON · 항목이 틀리면 false 와 @p outError 입니다.
          */
         template <typename Config>
-        [[nodiscard]] static bool read( const std::optional<AbsolutePath>& providersFile, const std::optional<AbsolutePath>& trustFile, const utf8* pProvidersOption,
+        [[nodiscard]] static bool read( const optional<AbsolutePath>& providersFile, const optional<AbsolutePath>& trustFile, const utf8* pProvidersOption,
                                         const utf8* pTrustOption, EntryReader<Config> readEntry, vector<Config>& outListConfig, string& outError )
         {
             outListConfig.clear();
@@ -48,11 +48,11 @@ namespace sw
         }
 
         /** @brief 신뢰 PEM 옵션을 제공자의 TLS 등록이 받는 글로 바꿉니다. 정하지 않았으면 빈 글(그때 `https://` 제공자는 등록이 거절한다)입니다. */
-        [[nodiscard]] static string_view getTrustText( const std::optional<AbsolutePath>& trustFile ) { return trustFile.has_value() ? string_view( trustFile->str() ) : string_view{}; }
+        [[nodiscard]] static string_view getTrustText( const optional<AbsolutePath>& trustFile ) { return trustFile.has_value() ? string_view( trustFile->str() ) : string_view{}; }
 
     private:
         /** @brief 파일을 읽고 `providers` 배열의 항목(모두 객체)을 @p outListEntry 에 담습니다. 핸들은 @p outDocument 를 가리킨다(읽기만 한다). */
-        [[nodiscard]] static bool readEntries( const std::optional<AbsolutePath>& providersFile, const std::optional<AbsolutePath>& trustFile, const utf8* pProvidersOption,
+        [[nodiscard]] static bool readEntries( const optional<AbsolutePath>& providersFile, const optional<AbsolutePath>& trustFile, const utf8* pProvidersOption,
                                                const utf8* pTrustOption, JSONDocument& outDocument, vector<JSONValue>& outListEntry, string& outError );
     };
 } // namespace sw

@@ -107,9 +107,9 @@ namespace sw
         writer.key( "exp" );
         writer.valueInt( expiresSec );
         writer.endObject();
-        const std::optional<JSONText> payload = writer.finish();
-        string                        assertion;
-        const bool                    bSigned = payload.has_value() &&
+        const auto payload = writer.finish();
+        string     assertion;
+        const bool bSigned = payload.has_value() &&
                              JWTUtil::makeSigned( *_pSecurity, NetSignatureAlgorithm::RsaPkcs1SHA256, _credentials._keyID, *payload, _credentials._privateKeyPem, assertion );
         if ( bSigned == false )
         {

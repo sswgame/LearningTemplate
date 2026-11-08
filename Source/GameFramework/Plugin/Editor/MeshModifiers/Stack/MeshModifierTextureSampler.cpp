@@ -58,7 +58,7 @@ namespace sw::editor
              */
             static string resolvePath( const AssetPaths& assetPaths, string_view assetPath )
             {
-                const std::optional<AbsolutePath> found = assetPaths.findLooseFile( assetPath );
+                const auto found = assetPaths.findLooseFile( assetPath );
                 return found.has_value() ? found->str() : string{};
             }
 

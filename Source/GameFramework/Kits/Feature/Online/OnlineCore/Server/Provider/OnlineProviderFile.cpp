@@ -7,7 +7,7 @@
 
 namespace sw
 {
-    bool OnlineProviderFile::readEntries( const std::optional<AbsolutePath>& providersFile, const std::optional<AbsolutePath>& trustFile, const utf8* pProvidersOption,
+    bool OnlineProviderFile::readEntries( const optional<AbsolutePath>& providersFile, const optional<AbsolutePath>& trustFile, const utf8* pProvidersOption,
                                           const utf8* pTrustOption, JSONDocument& outDocument, vector<JSONValue>& outListEntry, string& outError )
     {
         outListEntry.clear();

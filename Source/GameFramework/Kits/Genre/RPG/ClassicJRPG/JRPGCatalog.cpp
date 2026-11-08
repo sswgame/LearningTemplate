@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGCatalog.h"
 
+#include "Core/Foundation/Expected.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Module/ModuleSharedAssetCache.h"
@@ -9,8 +10,6 @@
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
-
-#include <optional>
 
 namespace sw
 {
@@ -28,9 +27,9 @@ namespace sw
                 bool bValid = true;
                 for ( int32 index = 0; index < kJRPGStatCount; ++index )
                 {
-                    std::optional<int32> value;
-                    const bool           bRead     = node.readOptionalAttribute( arrName[index], value );
-                    const bool           bNegative = value.has_value() && *value < 0;
+                    optional<int32> value;
+                    const bool      bRead     = node.readOptionalAttribute( arrName[index], value );
+                    const bool      bNegative = value.has_value() && *value < 0;
                     if ( bRead == false || bNegative )
                     {
                         SW_LOG_ERROR_ID( "JRPGCatalog.NeedsIntegerMore", "%#: <%# %#=\"%#\"> needs an integer of 0 or more", sourceName, node.getName(), arrName[index], node.getAttributeText( arrName[index] ) );

@@ -112,14 +112,14 @@ namespace sw
         return true;
     }
 
-    std::optional<JWTVerified> JWTUnverified::verify( INetSecurityProvider& provider, const NetPublicKey& publicKey, const JWTClaimRule& rule ) &&
+    optional<JWTVerified> JWTUnverified::verify( INetSecurityProvider& provider, const NetPublicKey& publicKey, const JWTClaimRule& rule ) &&
     {
         if ( _signingInput.empty() || publicKey._algorithm != _algorithm )
-            return std::nullopt; // 읽지 않았거나 키 알고리즘이 머리와 다르다
+            return nullopt; // 읽지 않았거나 키 알고리즘이 머리와 다르다
         const bool bSigned = provider.verifySignature( publicKey, reinterpret_cast<const uint8*>( _signingInput.data() ), static_cast<int32>( _signingInput.size() ),
                                                        _signatureBytes.data(), static_cast<int32>( _signatureBytes.size() ) );
         if ( bSigned == false )
-            return std::nullopt;
+            return nullopt;
         JWTVerified verified( std::move( _payload ), std::move( _keyID ) );
         _payload = make_unique<JSONDocument>(); // 넘긴 뒤에도 객체는 쓸 수 있는 빈 상태로 둔다
         _signingInput.clear();
@@ -139,7 +139,7 @@ namespace sw
         const bool bIssuedOk  = verified.findInteger( "iat", issuedAt ) == false || issuedAt * constant::time::kMillisecondsPerSecond <= rule._nowMs + rule._clockSkewMs;
         const bool bClaimsOk  = bIssuerOk && bAudience && bExpiresOk && bIssuedOk;
         if ( bClaimsOk == false )
-            return std::nullopt;
+            return nullopt;
         return verified;
     }
 
@@ -175,8 +175,8 @@ namespace sw
     bool JWTVerified::findInteger( string_view claim, int64& outValue ) const
     {
         // 시각 클레임(NumericDate)은 소수 초도 허용된다(RFC 7519 2절) — 실수로 읽어 초 단위로 버린다. 값은 2^53 보다 작다.
-        const JSONValue              value  = _payload->getRoot().get( claim );
-        const std::optional<float64> number = value.isNumber() ? value.read<float64>() : std::nullopt;
+        const JSONValue         value  = _payload->getRoot().get( claim );
+        const optional<float64> number = value.isNumber() ? value.read<float64>() : nullopt;
         if ( number.has_value() == false )
             return false;
         outValue = static_cast<int64>( *number );

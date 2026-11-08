@@ -7,6 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -24,8 +25,6 @@
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityTypes.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AttributeSet.h"
 #include "GameFramework/Runtime/Gameplay/Ability/TagCountTable.h"
-
-#include <optional>
 
 namespace sw
 {
@@ -151,9 +150,9 @@ namespace sw
         /** @brief 어트리뷰트가 있으면 true 입니다. */
         bool hasAttribute( const hashed_string& name ) const;
         /** @brief current 값입니다. 이 컴포넌트에 없는 어트리뷰트면 비어 있습니다 — 부르는 쪽이 없음을 정한다(0 을 지어내지 않는다). */
-        [[nodiscard]] std::optional<float32> getAttributeValue( const hashed_string& name ) const;
+        [[nodiscard]] optional<float32> getAttributeValue( const hashed_string& name ) const;
         /** @brief base 값입니다. 없는 어트리뷰트면 비어 있습니다. */
-        [[nodiscard]] std::optional<float32> getAttributeBaseValue( const hashed_string& name ) const;
+        [[nodiscard]] optional<float32> getAttributeBaseValue( const hashed_string& name ) const;
         /**
          * @brief base 값을 정합니다. 세트의 훅으로 클램프하고, current 를 다시 집계한 뒤 알립니다. 어트리뷰트가 없으면 false 입니다.
          * @details 즉시 이펙트가 아니라 코드에서 직접 바꿀 때 씁니다. 레벨 업, 세이브 불러오기, 디버그가 해당합니다.

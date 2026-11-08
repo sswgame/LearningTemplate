@@ -155,8 +155,8 @@ SW_TEST_CASE( AIControllerTreeTest, BlackboardAddAndCopy )
     blackboard.setFloat( "Count", 6.0f );
     blackboard.setVector( "Spot", float3{ 1.0f, 2.0f, 3.0f } );
     SW_EXPECT_TRUE( XTestUtil::tickOnce( asset.getTree(), controller, runner ) == BehaviorStatus::Success );
-    SW_EXPECT_TRUE( blackboard.getFloat( "Count" ) == std::optional<float32>( 5.0f ) );
-    SW_EXPECT_TRUE( ( blackboard.getVector( "Stand" ) == std::optional<float3>( float3{ 1.0f, 2.0f, 3.0f } ) ) );
+    SW_EXPECT_TRUE( blackboard.getFloat( "Count" ) == sw::optional<float32>( 5.0f ) );
+    SW_EXPECT_TRUE( ( blackboard.getVector( "Stand" ) == sw::optional<float3>( float3{ 1.0f, 2.0f, 3.0f } ) ) );
 }
 
 /** @brief [AIControllerTreeTest] 조종자 칸이 없는 실행기(지휘관 · 스케줄)에서 `ai.*` 는 실패이고 조건 `aiHasDestination` 은 거짓이다 */

@@ -23,17 +23,17 @@ namespace sw
         {
             /** @brief 표에 없는 속성마다 경고합니다. @p bCondition 이면 조건 속성도 받습니다. */
             /** @brief 시각 속성을 분으로 읽는다. 속성이 없거나 깨졌으면(깨진 경우 @p inoutbValid 를 내린다) 값이 없다. 없을 때의 값은 호출부가 정한다. */
-            [[nodiscard]] static std::optional<int32> readClock( const XMLNode& node, const utf8* pName, string_view sourceName, string_view ownerName, bool& inoutbValid )
+            [[nodiscard]] static optional<int32> readClock( const XMLNode& node, const utf8* pName, string_view sourceName, string_view ownerName, bool& inoutbValid )
             {
                 const utf8* pText = node.findAttribute( pName );
                 if ( pText == nullptr )
-                    return std::nullopt;
+                    return nullopt;
                 int32 minutes = 0;
                 if ( ScheduleCatalog::parseClockMinutes( pText, minutes ) )
                     return minutes;
                 SW_LOG_WARNING_ID( "Schedule.TimeInvalid", "%#: '%#' has an invalid %# time '%#' (expected H:MM in 0:00..24:00)", sourceName, ownerName, pName, pText );
                 inoutbValid = false;
-                return std::nullopt;
+                return nullopt;
             }
 
             /** @brief 시작 순으로 놓은 칸 번호 — 겹침 검사가 쓴다. */

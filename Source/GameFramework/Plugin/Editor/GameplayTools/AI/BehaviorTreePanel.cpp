@@ -123,8 +123,8 @@ namespace sw::editor
         _selectedID     = -1;
         _bLayoutPending = SW_TRUE;
         _nodeGraph.requestContentFit();
-        const std::optional<AbsolutePath> diskPath = getDocumentDiskPath();
-        string                            text;
+        const auto diskPath = getDocumentDiskPath();
+        string     text;
         if ( diskPath.has_value() == false || FileUtil::readTextFile( diskPath->str(), text ) == false )
         {
             _statusText = "The file could not be read";
@@ -148,7 +148,7 @@ namespace sw::editor
         const string& path = getLoadedAssetPath();
         if ( path.empty() )
             return false;
-        const std::optional<AbsolutePath> diskPath = getDocumentDiskPath(); // 읽은 그 자리
+        const auto diskPath = getDocumentDiskPath(); // 읽은 그 자리
         if ( diskPath.has_value() == false )
             return false; // 이유는 toDiskPath 가 남겼다
         _model.collectIssues( _listIssue );

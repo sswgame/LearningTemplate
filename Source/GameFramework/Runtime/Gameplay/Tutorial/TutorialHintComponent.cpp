@@ -41,7 +41,7 @@ namespace sw
         const UserSettingsManager* pSettings = game::findSubsystem<UserSettingsManager>();
         if ( pSettings != nullptr )
         {
-            const std::optional<UserSettingKey<bool>> showTutorialsKey = pSettings->resolveKey<bool>( hashed_string( TutorialHintComponentInternal::kShowTutorialsSetting ) );
+            const auto showTutorialsKey = pSettings->resolveKey<bool>( hashed_string( TutorialHintComponentInternal::kShowTutorialsSetting ) );
             if ( showTutorialsKey.has_value() == false || pSettings->getBoolValue( *showTutorialsKey ) == false )
                 return false;
         }

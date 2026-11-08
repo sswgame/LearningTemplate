@@ -461,6 +461,6 @@ SW_TEST_CASE( PushKitAssemblyTest, ExternalSampleConfigReads )
     const optional<AbsolutePath> providersFile = AbsolutePath::tryResolve( "Config/Server/Online/Providers/Shooter3D.push.json", ProcessRoots::get()._project );
     SW_REQUIRE_TRUE( providersFile.has_value() );
     vector<PushProviderConfig> listConfig;
-    SW_REQUIRE_TRUE_MSG( OnlineProviderFile::read<PushProviderConfig>( providersFile, std::nullopt, "pushProvidersFile", "pushTrustFile", &PushProviderSet::readEntry, listConfig, error ), error.c_str() );
+    SW_REQUIRE_TRUE_MSG( OnlineProviderFile::read<PushProviderConfig>( providersFile, sw::nullopt, "pushProvidersFile", "pushTrustFile", &PushProviderSet::readEntry, listConfig, error ), error.c_str() );
     SW_EXPECT_EQUAL( size_t( 2 ), listConfig.size() );
 }

@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/Casual/PartyArena/PartyRoundSeries.h"
 
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
@@ -11,8 +12,6 @@
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
-
-#include <optional>
 
 namespace sw
 {
@@ -90,7 +89,7 @@ namespace sw
     {
         // 승리 점수와 순위 점수는 적지 않으면 지금 설정 그대로다. 적었으면 모두 읽혀야 한다 — 깨진 값은 오류를 남기고 이 파일을 읽지 않는다(깨진 값을 건너뛰어 순위가 밀리지 않게).
         // 끝까지 읽은 뒤 한 번에 옮긴다. 앞 칸만 바뀐 채 실패하거나, 다시 읽을 때 라운드가 뒤에 덧붙지 않게 한다.
-        std::optional<int32> winScore;
+        optional<int32> winScore;
         if ( root.readOptionalAttribute( "winScore", winScore ) == false )
         {
             SW_LOG_ERROR_ID( "PartyRoundSeries.WinScoreNotNumber", "%#: <%# winScore> is not a number", sourceName, root.getName() );

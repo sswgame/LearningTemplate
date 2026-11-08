@@ -85,9 +85,9 @@ SW_TEST_CASE( OnlineServerConfigTest, SettingsRejectUnknownKeyAndMalformedValue 
  */
 SW_TEST_CASE( OnlineServerConfigTest, ResolveFileHandlesEmptyAndRelativePaths )
 {
-    const sw::OnlineServerKitEntry  entry = makeEntry( "" );
-    std::optional<sw::AbsolutePath> path;
-    sw::string                      error;
+    const sw::OnlineServerKitEntry entry = makeEntry( "" );
+    sw::optional<sw::AbsolutePath> path;
+    sw::string                     error;
     SW_REQUIRE_TRUE( entry.resolveFile( "", "_file", path, error ) );
     SW_EXPECT_FALSE( path.has_value() );
     SW_REQUIRE_TRUE( entry.resolveFile( "Config/Server/a.txt", "_file", path, error ) );

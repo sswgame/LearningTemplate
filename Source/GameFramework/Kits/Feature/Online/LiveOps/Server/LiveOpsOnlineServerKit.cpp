@@ -63,9 +63,9 @@ namespace sw
 
             [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
             {
-                LiveOpsKitConfig            kitConfig;
-                std::optional<AbsolutePath> providersFile;
-                std::optional<AbsolutePath> trustFile;
+                LiveOpsKitConfig       kitConfig;
+                optional<AbsolutePath> providersFile;
+                optional<AbsolutePath> trustFile;
                 if ( entry.readSettings( kitConfig, outError ) == false || entry.resolveFile( kitConfig._pushProvidersFile, "_pushProvidersFile", providersFile, outError ) == false || entry.resolveFile( kitConfig._pushTrustFile, "_pushTrustFile", trustFile, outError ) == false )
                     return false;
                 _dispatcher.initialize( context._pStore, PushDispatcherConfig{} );
@@ -122,7 +122,7 @@ namespace sw
             }
 
             /** @brief 설정 파일을 읽어 실제 푸시 제공자를 만들고 발송기에 등록합니다. 파일을 정하지 않았으면 실제 제공자가 없습니다. */
-            [[nodiscard]] bool createPushProviders( const std::optional<AbsolutePath>& providersFile, const std::optional<AbsolutePath>& trustFile, const IClock& clock, string& outError )
+            [[nodiscard]] bool createPushProviders( const optional<AbsolutePath>& providersFile, const optional<AbsolutePath>& trustFile, const IClock& clock, string& outError )
             {
                 vector<PushProviderConfig> listSettings;
                 const bool                 bRead = OnlineProviderFile::read<PushProviderConfig>( providersFile, trustFile, "_pushProvidersFile", "_pushTrustFile", &PushProviderSet::readEntry,

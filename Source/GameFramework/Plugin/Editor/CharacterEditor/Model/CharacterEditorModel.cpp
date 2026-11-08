@@ -148,7 +148,7 @@ namespace sw::editor
     bool CharacterEditorModel::loadSocketFile()
     {
         ensureKindTable(); // 문서는 첫 그리기 전에 열릴 수 있다(시나리오 · 콘텐츠 브라우저) — 종류 표 없이 읽으면 모든 kind 가 모르는 종류다
-        const std::optional<AbsolutePath> readPath = editor::getSubsystem<AssetPaths>().findLooseFile( string_view( _paths._socketPath.c_str() ) );
+        const auto readPath = editor::getSubsystem<AssetPaths>().findLooseFile( string_view( _paths._socketPath.c_str() ) );
         if ( readPath.has_value() == false )
         {
             _status = "Socket file '" + string{ _paths._socketPath.c_str() } + "' has no file on disk to load";
@@ -183,7 +183,7 @@ namespace sw::editor
         bool bSaved = true;
         if ( _sockets.isDirty() )
         {
-            const std::optional<AbsolutePath> writePath = editor::getSubsystem<AssetPaths>().toDiskPath( string_view( _paths._socketPath.c_str() ) );
+            const auto writePath = editor::getSubsystem<AssetPaths>().toDiskPath( string_view( _paths._socketPath.c_str() ) );
             if ( writePath.has_value() == false || _sockets.saveDocument( *writePath ) == false )
             {
                 _status = "Socket file could not be saved";
@@ -197,7 +197,7 @@ namespace sw::editor
         }
         if ( _pose.isDirty() )
         {
-            const std::optional<AbsolutePath> writePath = editor::getSubsystem<AssetPaths>().toDiskPath( string_view( _paths._refPosePath.c_str() ) );
+            const auto writePath = editor::getSubsystem<AssetPaths>().toDiskPath( string_view( _paths._refPosePath.c_str() ) );
             if ( writePath.has_value() == false || _pose.saveDocument( *writePath ) == false )
             {
                 _status = "Reference pose file could not be saved";
@@ -230,7 +230,7 @@ namespace sw::editor
 
     void CharacterEditorModel::loadReferencePose()
     {
-        const std::optional<AbsolutePath> readPath = editor::getSubsystem<AssetPaths>().findLooseFile( string_view( _paths._refPosePath.c_str() ) );
+        const auto readPath = editor::getSubsystem<AssetPaths>().findLooseFile( string_view( _paths._refPosePath.c_str() ) );
         if ( readPath.has_value() == false )
             _status = "Reference pose file was not found - edit bones and Save to create it";
         else if ( _pose.loadFromFile( readPath->str() ) == false )
@@ -463,9 +463,9 @@ namespace sw::editor
             _status = "Data preset could not be made - " + reason;
             return false;
         }
-        const string                      assetID   = FileUtil::joinPath( string_view( _paths._exportFolder.c_str() ), string( presetID.c_str() ) + AppearanceDatabase::kPresetExtension );
-        const std::optional<AbsolutePath> writePath = editor::getSubsystem<AssetPaths>().toDiskPath( assetID );
-        const bool                        bWritten  = writePath.has_value() && FileUtil::ensureParentDirectoryExists( writePath->str() ) && doc.saveToFile( writePath->str() );
+        const string assetID   = FileUtil::joinPath( string_view( _paths._exportFolder.c_str() ), string( presetID.c_str() ) + AppearanceDatabase::kPresetExtension );
+        const auto   writePath = editor::getSubsystem<AssetPaths>().toDiskPath( assetID );
+        const bool   bWritten  = writePath.has_value() && FileUtil::ensureParentDirectoryExists( writePath->str() ) && doc.saveToFile( writePath->str() );
         if ( bWritten == false )
         {
             _status = "Data preset could not be written to " + assetID;

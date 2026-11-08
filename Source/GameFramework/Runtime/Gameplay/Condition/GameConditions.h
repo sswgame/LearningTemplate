@@ -6,6 +6,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Encoding/FourCCUtil.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/TagID.h"
@@ -17,8 +18,6 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-
-#include <optional>
 
 namespace sw
 {
@@ -104,8 +103,8 @@ namespace sw
         /** @brief @p name 의 값을 정합니다. 칸이 다 찼으면 false 입니다. */
         [[nodiscard]] bool set( const hashed_string& name, float32 value );
         /** @brief @p name 의 값입니다. 없으면 비어 있습니다. */
-        [[nodiscard]] std::optional<float32> find( const hashed_string& name ) const;
-        uint32                               getCount() const { return _count; }
+        [[nodiscard]] optional<float32> find( const hashed_string& name ) const;
+        uint32                          getCount() const { return _count; }
 
     private:
         hashed_string _arrName[kCapacity]{};

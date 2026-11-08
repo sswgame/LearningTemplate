@@ -44,7 +44,7 @@ SW_TEST_CASE( GameFlowTest, LoadingScreenWithoutUISystem )
     SW_EXPECT_NULL( controller.findLoadingScreen() );
 
     ScreenFade fade;
-    controller.update( 0.5f, false, std::optional<float32>{ 0.5f }, fade );
+    controller.update( 0.5f, false, sw::optional<float32>{ 0.5f }, fade );
     SW_EXPECT_NEAR( 0.0f, controller.getShownSeconds(), 1.0e-6f );
     SW_EXPECT_NEAR( 0.0f, fade.getOverlayAlpha(), 1.0e-6f );
     SW_EXPECT_NULL( controller.findFadeScreen() );
@@ -52,7 +52,7 @@ SW_TEST_CASE( GameFlowTest, LoadingScreenWithoutUISystem )
     fade.beginFadeOut( 0.1f );
     fade.update( 0.05f ); // 어두워지는 중이어도 패널을 열 UI 가 없다
     SW_EXPECT_TRUE( fade.getOverlayAlpha() > 0.0f );
-    controller.update( 0.5f, false, std::nullopt, fade );
+    controller.update( 0.5f, false, sw::nullopt, fade );
     SW_EXPECT_NULL( controller.findFadeScreen() );
     SW_EXPECT_TRUE( controller.getCurrentTip().empty() );
 }

@@ -6,6 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -18,8 +19,6 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityTypes.h"
-
-#include <optional>
 
 namespace sw
 {
@@ -186,7 +185,7 @@ namespace sw
             _context._bHasHit          = SW_TRUE;
         }
         /** @brief SetByCaller 수를 찾습니다. 넣지 않은 이름이면 비어 있습니다(부르는 쪽이 없음을 정한다). */
-        [[nodiscard]] std::optional<float32> getSetByCallerMagnitude( const hashed_string& name ) const;
+        [[nodiscard]] optional<float32> getSetByCallerMagnitude( const hashed_string& name ) const;
         /** @brief 쏜 쪽 어트리뷰트 스냅샷을 찾습니다. 없으면 false 를 반환하고 @p outValue 는 바뀌지 않습니다. */
         [[nodiscard]] bool findSourceAttribute( const hashed_string& name, float32& outValue ) const;
     };

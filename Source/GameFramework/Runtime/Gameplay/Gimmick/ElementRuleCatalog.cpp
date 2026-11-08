@@ -35,14 +35,14 @@ namespace sw
 
 namespace sw
 {
-    std::optional<int32> ElementMaterialDef::getParam( const hashed_string& name ) const
+    optional<int32> ElementMaterialDef::getParam( const hashed_string& name ) const
     {
         for ( size_t index = 0; index < _listParamName.size(); ++index )
         {
             if ( _listParamName[index] == name )
                 return _listParamValue[index];
         }
-        return std::nullopt;
+        return nullopt;
     }
 
     void ElementRuleCatalog::clear()

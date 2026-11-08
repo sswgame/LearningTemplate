@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/AsymmetricHorrorRules.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Module/ModuleSharedAssetCache.h"
@@ -10,8 +11,6 @@
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
-
-#include <optional>
 
 namespace sw
 {
@@ -91,9 +90,9 @@ namespace sw
         // 창의 판정 폭(early · late · score)은 기반 TimingJudge 가 읽고, 등급마다 더하는 진행량(bonus)은 여기서 읽는다.
         for ( XMLNode window = node.findChild( "Window" ); window; window = window.findNextSibling( "Window" ) )
         {
-            const std::optional<string> grade = window.readRequiredAttribute<string>( "grade" );
-            std::optional<float32>      bonus;
-            const bool                  bBonus = window.readOptionalAttribute( "bonus", bonus );
+            const auto        grade = window.readRequiredAttribute<string>( "grade" );
+            optional<float32> bonus;
+            const bool        bBonus = window.readOptionalAttribute( "bonus", bonus );
             if ( grade.has_value() == false || bBonus == false )
             {
                 bValid = false;

@@ -40,9 +40,9 @@ namespace sw
 
             [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
             {
-                EconomyKitConfig            kitConfig;
-                std::optional<AbsolutePath> providersFile;
-                std::optional<AbsolutePath> trustFile;
+                EconomyKitConfig       kitConfig;
+                optional<AbsolutePath> providersFile;
+                optional<AbsolutePath> trustFile;
                 if ( entry.readSettings( kitConfig, outError ) == false || entry.resolveFile( kitConfig._receiptProvidersFile, "_receiptProvidersFile", providersFile, outError ) == false || entry.resolveFile( kitConfig._receiptTrustFile, "_receiptTrustFile", trustFile, outError ) == false )
                     return false;
                 const string& currencyPath = kitConfig._currencyCatalog;
@@ -125,7 +125,7 @@ namespace sw
 
         private:
             /** @brief 설정 파일을 읽어 실제 영수증 제공자를 만들고 레지스트리에 등록합니다. 파일을 정하지 않았으면 실제 제공자가 없습니다. */
-            [[nodiscard]] bool createReceiptProviders( const std::optional<AbsolutePath>& providersFile, const std::optional<AbsolutePath>& trustFile, const IClock& clock, string& outError )
+            [[nodiscard]] bool createReceiptProviders( const optional<AbsolutePath>& providersFile, const optional<AbsolutePath>& trustFile, const IClock& clock, string& outError )
             {
                 vector<ReceiptProviderConfig> listSettings;
                 const bool                    bRead = OnlineProviderFile::read<ReceiptProviderConfig>( providersFile, trustFile, "_receiptProvidersFile", "_receiptTrustFile",
