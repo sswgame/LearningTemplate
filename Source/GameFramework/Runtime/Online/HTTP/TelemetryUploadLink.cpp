@@ -2,7 +2,6 @@
 
 #include "GameFramework/Runtime/Online/HTTP/TelemetryUploadLink.h"
 
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Process/ProcessEnvironment.h"
 
 #include "Engine/Telemetry/CrashReportService.h"
@@ -13,19 +12,11 @@
 
 namespace sw
 {
-    /** @brief `-gv_telemetryUploadEndpoint=<주소>`: gamesettings 의 텔레메트리 끝점 대신 쓸 주소입니다(로컬 수신기 · 자동화). */
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_telemetryUploadEndpoint, "", "gamesettings 의 텔레메트리 업로드 끝점 대신 쓸 주소 (비면 gamesettings)" );
-    /** @brief `-gv_crashUploadEndpoint=<주소>`: gamesettings 의 크래시 보고 끝점 대신 쓸 주소입니다(로컬 수신기 · 자동화). */
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_crashUploadEndpoint, "", "gamesettings 의 크래시 보고 업로드 끝점 대신 쓸 주소 (비면 gamesettings)" );
-
     namespace
     {
         struct TelemetryUploadLinkInternal
         {
             static constexpr const utf8* kTrustOption = "telemetryUploadTrustFile in gamesettings";
-
-            /** @brief 명령줄 값이 있으면 그것, 없으면 gamesettings 의 값입니다. */
-            static string resolveEndpoint( const string& commandLineValue, const string& settingsValue ) { return commandLineValue.empty() ? settingsValue : commandLineValue; }
         };
     } // namespace
 } // namespace sw
@@ -50,10 +41,10 @@ namespace sw
 
     SubsystemInitResult TelemetryUploadLink::initializeSubsystem()
     {
-        using Internal                = TelemetryUploadLinkInternal;
-        const string telemetryAddress = Internal::resolveEndpoint( string( gv_telemetryUploadEndpoint ), _settings._telemetryUploadEndpoint );
-        const string crashAddress     = Internal::resolveEndpoint( string( gv_crashUploadEndpoint ), _settings._crashUploadEndpoint );
-        string       error;
+        // 개발 구성의 실행 인자 덮어쓰기(로컬 수신기)는 게임 인스턴스가 이미 넣었다(`IGameSettingsOverride`).
+        const string& telemetryAddress = _settings._telemetryUploadEndpoint;
+        const string& crashAddress     = _settings._crashUploadEndpoint;
+        string        error;
         if ( telemetryAddress.empty() == false && linkTelemetry( telemetryAddress, error ) == false )
         {
             SW_LOG_ERROR_ID( "TelemetryUploadLink.TelemetryNotLinked", "[TelemetryUpload] telemetry uploads to '%#' could not be set up - %#", telemetryAddress.c_str(), error.c_str() );

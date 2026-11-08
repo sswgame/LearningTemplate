@@ -32,6 +32,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/Save/Autosave.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/GameLocalStore.h"
 #include "GameFramework/Runtime/Foundation/GameData/GamePackDataUtil.h"
+#include "GameFramework/Runtime/Foundation/GameData/GameSettingsOverride.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDataWatcher.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
@@ -305,7 +306,12 @@ namespace sw
         ComponentDefaults* const pComponentDefaults = game::findSubsystem<ComponentDefaults>();
         if ( pComponentDefaults != nullptr )
             pComponentDefaults->setPath( _packConfig.resolve( constant::path::kGameSettingsFile ) );
-        return _packConfig.load( constant::path::kGameSettingsFile );
+        if ( _packConfig.load( constant::path::kGameSettingsFile ) == false )
+            return false;
+        // 개발 구성의 실행 인자 덮어쓰기(로컬 수신기 · 로컬 서버로 끝점을 돌린다)가 서비스로 걸기 전에 고친다. 배포에는 창구가 없다.
+        if ( IGameSettingsOverride* const pOverride = IGameSettingsOverride::find() )
+            pOverride->apply( _packConfig._data );
+        return true;
     }
 
     bool GameInstance::applyPackConfig()
