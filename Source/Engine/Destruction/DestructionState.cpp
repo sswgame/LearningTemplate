@@ -557,12 +557,12 @@ namespace sw
             // 한 덩어리 그대로면(묶음이 갈라졌을 뿐이면) 번호를 유지한다. 바디도 렌더링도 바뀌지 않는다.
             if ( listPart.size() == 1 && listPart[0]._bAnchored == old._bAnchored )
             {
-                DestructionGroup& kept = _listGroup[static_cast<size_t>( groupIndex )];
+                DestructionGroup& kept = _listGroup[*groupIndex];
                 kept._listNode         = std::move( listPart[0]._listNode );
                 continue;
             }
             outChange._listRemovedGroup.push_back( old._id );
-            _listGroup.erase( _listGroup.begin() + groupIndex );
+            _listGroup.erase( _listGroup.begin() + static_cast<ptrdiff_t>( *groupIndex ) );
             for ( DestructionGroup& part : listPart )
             {
                 listNewGroup.push_back( std::move( part ) );

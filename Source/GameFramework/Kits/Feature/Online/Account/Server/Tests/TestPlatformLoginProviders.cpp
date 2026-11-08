@@ -577,14 +577,12 @@ SW_TEST_CASE( AppleLoginProviderTest, RevokesTheRefreshToken )
     SW_EXPECT_EQUAL( string( "com.example.game" ), TestUtil::findForm( *pRevoke, "client_id" ) );
     SW_EXPECT_EQUAL( string( "R-1" ), TestUtil::findForm( *pRevoke, "token" ) );
     SW_EXPECT_EQUAL( string( "refresh_token" ), TestUtil::findForm( *pRevoke, "token_type_hint" ) );
-    const auto failed1 = TestUtil::findForm( *pRevoke, "client_secret" ).empty();
-    SW_REQUIRE_FALSE( failed1.has_value() );
-    const sw::string error1 = sw::string( failed1.error().message() ) + " " + sw::string( failed1.error().detail() );
+    SW_EXPECT_FALSE( TestUtil::findForm( *pRevoke, "client_secret" ).empty() );
 
     rig._http._revokeStatus = 400;
-    rig._http._revokeBody   = R"({"error1":"invalid_grant"})";
+    rig._http._revokeBody   = R"({"error":"invalid_grant"})";
     SW_EXPECT_TRUE( rig.revoke( "R-2" )._bUnavailable == SW_FALSE );
-    rig._http._revokeBody = R"({"error1":"invalid_client"})";
+    rig._http._revokeBody = R"({"error":"invalid_client"})";
     SW_EXPECT_LOG( "AppleLoginProvider.LoginProviderRejectedRevocation" );
     SW_EXPECT_TRUE( rig.revoke( "R-3" )._bUnavailable == SW_TRUE );
     rig._http._revokeStatus = HTTPConstant::kStatusServerError;

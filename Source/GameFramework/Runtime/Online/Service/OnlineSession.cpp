@@ -77,8 +77,8 @@ namespace sw
                     outReply = "online: no game instance";
                     return true;
                 }
-                string error;
-                outReply = pSession->connect( error ) ? "online: connecting" : "online: " + error;
+                const expected<void> connected = pSession->connect();
+                outReply                       = connected.has_value() ? "online: connecting" : "online: " + string( connected.error().message() ) + " (" + string( connected.error().detail() ) + ")";
                 return true;
             }
 

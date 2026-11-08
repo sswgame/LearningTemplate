@@ -45,7 +45,7 @@ namespace sw
         shared_ptr<ShaderCompileResult> pResult = sw::make_shared<ShaderCompileResult>( _pCache->loadOrCompile( _desc, _cacheKey ) );
         expected<void>                  loaded  = {};
         if ( pResult->_bSuccess == false )
-            loaded = unexpected( Error{ ErrorKind::ExternalFailure, "the shader could not be compiled or found", pResult->_errorMessage } ); // 컴파일러 글은 대상(앞 159 바이트)
+            loaded = unexpected( Error{ ErrorKind::ExternalFailure, "the shader could not be compiled or found", pResult->_errorMessage } ); // 컴파일러 글은 대상(앞 `Error::kDetailCapacity` 바이트)
         _pResult = std::move( pResult );
         {
             // 이 로드 작업의 칸일 때만 뺀다(캐시를 비운 뒤 같은 요청이 새 로드 작업을 넣었을 수 있다).

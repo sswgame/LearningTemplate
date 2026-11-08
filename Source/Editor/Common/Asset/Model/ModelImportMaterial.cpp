@@ -61,11 +61,10 @@ namespace sw::editor
         const JSONValue materialProperties = vrm0.isObject() ? vrm0.get( "materialProperties" ) : JSONValue{};
         for ( size_t index = 0; index < count; ++index )
         {
-            string error;
-            bool   bRead = false;
+            expected<ToonMaterialDef> read = unexpected( Error{ ErrorKind::NotFound, "no material read" } );
             if ( bVrm1 )
             {
-                bRead = ToonMaterialDef::readMtoon1Material( materials.at( index ), outListToon[index], &outListIgnored, error );
+                read = ToonMaterialDef::readMtoon1Material( materials.at( index ), &outListIgnored );
             }
             else
             {
@@ -75,13 +74,14 @@ namespace sw::editor
                     SW_LOG_ERROR_ID( "ModelImporter.VRMMaterialNoMaterialProperties", "VRM '%#': material %# has no materialProperties entry", sourcePath, index );
                     return false;
                 }
-                bRead = ToonMaterialDef::readVrm0Material( materialProperties.at( index ), materials.at( index ), outListToon[index], &outListIgnored, error );
+                read = ToonMaterialDef::readVrm0Material( materialProperties.at( index ), materials.at( index ), &outListIgnored );
             }
-            if ( bRead == false )
+            if ( read.has_value() == false )
             {
-                SW_LOG_ERROR_ID( "ModelImporter.VRM", "VRM '%#': %#", sourcePath, error.c_str() );
+                SW_LOG_ERROR_ID( "ModelImporter.VRM", "VRM '%#': %# (%#)", sourcePath, read.error().message(), read.error().detail() );
                 return false;
             }
+            outListToon[index] = std::move( *read );
             if ( outListToon[index]._name.empty() )
             {
                 StringBuilder<constant::buffer::kMax256> nameBuilder;

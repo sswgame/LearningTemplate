@@ -258,6 +258,7 @@ namespace sw
             SW_LOG_ERROR_ID( "UINotificationService.NotificationEntryFailed", "[UI] Notification entry failed: %# (%#)", built.error().message(), built.error().detail() );
             return;
         }
+        unique_ptr<Widget> widget = std::move( *built );
         widget->setStyleClass( Internal::getKindClass( entry._desc._kind ) );
         // 같은 조각을 항목마다 붙이므로 붙이기 전에 이름을 항목 번호로 가른다(붙은 뒤에는 "name is used twice" 경고가 난다).
         widget->setName( getEntryWidgetName( entry._order ) );

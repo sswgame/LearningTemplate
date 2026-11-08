@@ -103,8 +103,8 @@ namespace sw
     class Error
     {
     public:
-        /** @brief 대상(detail)에 담는 최대 바이트 수입니다. 넘치면 자릅니다. */
-        static constexpr size_t kDetailCapacity = 159;
+        /** @brief 대상(detail)에 담는 최대 바이트 수입니다. 넘치면 자릅니다. 파일 경로(Windows 260 자) 하나와 바깥 라이브러리의 까닭 한 줄이 함께 들어가는 크기다 — 159 일 때 긴 경로의 끝(파일 이름)이 잘렸다. */
+        static constexpr size_t kDetailCapacity = 383;
 
         /**
          * @param kind 실패의 종류
@@ -128,7 +128,7 @@ namespace sw
             const size_t count = text.size() < room ? text.size() : room;
             if ( count > 0 )
                 std::memcpy( _arrDetail + _detailSize, text.data(), count );
-            _detailSize = static_cast<uint8>( _detailSize + count );
+            _detailSize = static_cast<uint16>( _detailSize + count );
             return *this;
         }
 
@@ -144,7 +144,7 @@ namespace sw
                 std::memmove( _arrDetail + count, _arrDetail, kept );
             if ( count > 0 )
                 std::memcpy( _arrDetail, text.data(), count );
-            _detailSize = static_cast<uint8>( count + kept );
+            _detailSize = static_cast<uint16>( count + kept );
             return *this;
         }
 
@@ -153,11 +153,11 @@ namespace sw
         [[nodiscard]] std::string_view detail() const noexcept { return std::string_view{ _arrDetail, _detailSize }; }
 
     private:
-        static_assert( kDetailCapacity <= std::numeric_limits<uint8>::max(), "the detail size is stored in a uint8" );
+        static_assert( kDetailCapacity <= std::numeric_limits<uint16>::max(), "the detail size is stored in a uint16" );
 
         const utf8* _pMessage;                       ///< 고정 문장(리터럴)
         ErrorKind   _kind;                           ///< 실패의 종류
-        uint8       _detailSize;                     ///< `_arrDetail` 에 쓴 바이트 수
+        uint16      _detailSize;                     ///< `_arrDetail` 에 쓴 바이트 수
         utf8        _arrDetail[kDetailCapacity + 1]; ///< 대상 사본(널 종료하지 않는다 — `detail()` 로 읽는다)
     };
 

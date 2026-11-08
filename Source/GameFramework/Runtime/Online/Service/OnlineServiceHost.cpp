@@ -339,10 +339,9 @@ namespace sw
         }
         if ( _bInitialized == SW_TRUE )
         {
-            string exposureError;
-            if ( OnlineServiceHostInternal::checkExposure( *pService, _listenerTransport->hasAdminListener(), exposureError ) == false )
+            if ( const expected<void> exposure = OnlineServiceHostInternal::checkExposure( *pService, _listenerTransport->hasAdminListener() ); exposure.has_value() == false )
             {
-                SW_LOG_ERROR_ID( "OnlineHost.ExposureRefused", "%#", exposureError );
+                SW_LOG_ERROR_ID( "OnlineHost.ExposureRefused", "%# (%#)", exposure.error().message(), exposure.error().detail() );
                 return false;
             }
             for ( uint16 offset = 0; offset < OnlineMethodRange::kMethodCount; ++offset )

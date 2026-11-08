@@ -364,8 +364,7 @@ SW_TEST_CASE_F( OnlineServerRuntimeTest, GameServerIsInTheDirectoryBeforeTheFirs
     OnlineServerRuntimeConfig settings = makeSettings( { ConsumerTestKit::kName, ProviderTestKit::kName } );
     settings._config._publicAddress    = "127.0.0.1";
     OnlineServerRuntime runtime;
-    string              error;
-    SW_REQUIRE_TRUE_MSG( runtime.initialize( settings, UnixMilliseconds{ 1000 }, error ), error.c_str() );
+    SW_REQUIRE_TRUE( runtime.initialize( settings, UnixMilliseconds{ 1000 } ).has_value() );
     EphemeralStoreRouter& router = *runtime.getContext()._pRouter;
     const Subscription    owner  = router.openReplyOwner();
     DirectoryIndexProbe   probe;

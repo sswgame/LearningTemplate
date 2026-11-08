@@ -224,7 +224,7 @@ SW_TEST_CASE( JSONWriterTest, FinishHandsOutOnlyCompleteText )
     writer.key( "sub" );
     writer.valueString( "a\",\"admin\":true" );
     writer.endObject();
-    const optional<sw::JSONText> text = writer.finish();
+    const sw::optional<sw::JSONText> text = writer.finish();
     SW_REQUIRE_TRUE( text.has_value() );
     SW_EXPECT_EQUAL( sw::string( R"({"sub":"a\",\"admin\":true"})" ), sw::string( text->view() ) );
 

@@ -433,6 +433,7 @@ SW_TEST_CASE_F( AppearanceSelectionTest, ShareCodeSliderSurvivesARangeChange )
     SW_REQUIRE_TRUE( AppearanceSelection::decode( code, narrower, decoded ) );
     CharacterAppearanceSpec   applied;
     AppearanceSelectionReport report;
+    SW_EXPECT_LOG( "AppearanceSelection.AppearanceValueOutOfRange" );
     AppearanceSelection::applySelection( narrower, decoded, CharacterAppearanceSpec{}, nullptr, applied, report );
     SW_REQUIRE_EQUAL( size_t( 1 ), report._listClampedParameter.size() );
     SW_EXPECT_TRUE( report._listClampedParameter[0] == hashed_string( "Height" ) );

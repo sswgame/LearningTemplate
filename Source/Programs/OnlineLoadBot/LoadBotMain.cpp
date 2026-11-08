@@ -133,9 +133,8 @@ namespace sw
                 if ( FileUtil::readTextFile( loadPath, text ) == false )
                     return unexpected( Error{ ErrorKind::NotFound, "cannot read the load declaration", loadPath } );
                 AutomationScenario declaration;
-                string             parseError; // 시나리오 읽기(엔진)의 글 — 그 쪽이 결과 형식으로 옮기면 이 줄도 따라간다
-                if ( declaration.parse( text, loadPath, parseError ) == false )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "the load declaration does not parse", parseError } );
+                if ( const expected<void> parsed = declaration.parse( text, loadPath ); parsed.has_value() == false )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the load declaration does not parse", parsed.error().message() }.appendDetail( parsed.error().detail() ) );
                 const AutomationLoad& load = declaration.getTestOptions()._load;
                 if ( load._bDeclared == false || load._clientCount == 0 )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "needs <Load clients=\"N\" rampUpSeconds=\"S\" durationSeconds=\"S\"/> with clients > 0", loadPath } );

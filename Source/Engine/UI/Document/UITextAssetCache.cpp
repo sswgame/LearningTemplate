@@ -86,14 +86,13 @@ namespace sw
             return;
         }
         ++_parseCount;
-        string                       error;
-        const shared_ptr<const void> asset = _pParse( text, relativePath, error );
-        if ( asset == nullptr )
+        const expected<shared_ptr<const void>> asset = _pParse( text, relativePath );
+        if ( asset.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "UITextAssetCache.ReloadFailedKeepingOld", "[UI] %# reload failed, keeping the old one: %#", _pAssetLabel, error.c_str() );
+            SW_LOG_ERROR_ID( "UITextAssetCache.ReloadFailedKeepingOld", "[UI] %# reload failed, keeping the old one: %# (%#)", _pAssetLabel, asset.error().message(), asset.error().detail() );
             return;
         }
-        _mapPathToAsset[key] = asset;
+        _mapPathToAsset[key] = *asset;
         _onReloaded.broadcast( key );
     }
 } // namespace sw
