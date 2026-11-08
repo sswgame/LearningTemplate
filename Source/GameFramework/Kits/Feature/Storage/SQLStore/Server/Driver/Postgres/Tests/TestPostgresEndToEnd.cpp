@@ -14,6 +14,16 @@
 #include "GameFramework/Runtime/Online/Service/Tests/OnlineHostTestUtil.h"
 #include "GameFramework/Runtime/Online/Store/ServiceStore.h"
 
+namespace
+{
+    /** @brief 실패의 문장과 대상을 이은 글입니다(성공이면 빈 글). 오류 글을 확인하는 테스트가 씁니다. */
+    template <typename T>
+    sw::string describeError( const sw::expected<T>& result )
+    {
+        return result.has_value() ? sw::string{} : sw::string( result.error().message() ) + " " + sw::string( result.error().detail() );
+    }
+} // namespace
+
 // PostgresEndToEndTest — 서버 설정이 고른 `postgres` 저장소: 조립(`OnlineServerRuntime`)이 드라이버 키트로 저장소를 만들고, 실제 libpq 가 실제 TCP 로 로컬 가짜 서버에 붙어 비밀번호 인증(환경 변수) · 마이그레이션 · 준비된 문장 · 이진 결과를 끝까지 돈다.
 // 가짜 서버는 PostgreSQL 와이어 프로토콜 3.0 을 말하고 `SQLServiceStore` · `SQLMigrationRunner` 가 쓰는 문장만 값으로 흉내 낸다. 모르는 문장은 SQL 오류로 답해 케이스가 진다 - 문장을 더하면 여기에도 더한다.
 // 실제 서버의 SQL 해석 · 직렬화 격리는 보지 않는다 - 그것은 실제 Postgres 를 가리키는 `online-local run --server-config` 의 몫이다(nogpu).
@@ -723,7 +733,10 @@ SW_TEST_CASE( PostgresEndToEndTest, ConfigSelectsPostgresAndReachesTheEndpoint )
 
     test::OnlineRuntimeFixture rig;
     string                     error;
-    SW_REQUIRE_TRUE_MSG( rig.fromConfig( PostgresEndToEndTestUtil::makeServerJSON( server.getPort() ), PostgresEndToEndTestUtil::kOnlineJSON, kNowMs, error ), error.c_str() );
+    {
+        const auto result = rig.fromConfig( PostgresEndToEndTestUtil::makeServerJSON( server.getPort() ), PostgresEndToEndTestUtil::kOnlineJSON, kNowMs );
+        SW_REQUIRE_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() );
+    }
     SW_EXPECT_TRUE( server.getMigrationCount() >= 2 );
     SW_EXPECT_TRUE( server.hasScript( "CREATE SEQUENCE sw_commit_version" ) ); // 방언 분기 파일(`.postgres.sql`)이 골렸다
     SW_EXPECT_TRUE( server.hasScript( "LOCK TABLE sw_schema_migration" ) );
@@ -786,7 +799,8 @@ SW_TEST_CASE( PostgresEndToEndTest, WrongPasswordStopsStartup )
 
     test::OnlineRuntimeFixture rig;
     string                     error;
-    SW_EXPECT_FALSE( rig.fromConfig( PostgresEndToEndTestUtil::makeServerJSON( server.getPort() ), PostgresEndToEndTestUtil::kOnlineJSON, kNowMs, error ) );
+    error = describeError( rig.fromConfig( PostgresEndToEndTestUtil::makeServerJSON( server.getPort() ), PostgresEndToEndTestUtil::kOnlineJSON, kNowMs ) );
+    SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.find( "postgres connection failed" ) != string::npos );
     SW_EXPECT_EQUAL( 0, server.getAuthenticatedCount() );
 }
@@ -797,6 +811,7 @@ SW_TEST_CASE( PostgresEndToEndTest, MissingSecretStopsStartup )
     SW_EXPECT_LOG( "Server.SecretNotSet" );
     test::OnlineRuntimeFixture rig;
     string                     error;
-    SW_EXPECT_FALSE( rig.fromConfig( PostgresEndToEndTestUtil::makeServerJSON( 5432 ), PostgresEndToEndTestUtil::kOnlineJSON, kNowMs, error ) );
+    error = describeError( rig.fromConfig( PostgresEndToEndTestUtil::makeServerJSON( 5432 ), PostgresEndToEndTestUtil::kOnlineJSON, kNowMs ) );
+    SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.find( "main" ) != string::npos );
 }

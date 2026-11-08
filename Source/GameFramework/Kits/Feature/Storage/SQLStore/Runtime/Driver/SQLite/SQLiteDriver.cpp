@@ -288,8 +288,8 @@ namespace sw
     public:
         static SQLiteDriver& getInstance();
 
-        const utf8*                getName() const override { return "sqlite"; }
-        unique_ptr<ISQLConnection> openConnection( string_view connection, string_view secret, string& outError ) override;
+        const utf8*                          getName() const override { return "sqlite"; }
+        expected<unique_ptr<ISQLConnection>> openConnection( string_view connection, string_view secret ) override;
     };
 } // namespace sw
 
@@ -301,28 +301,23 @@ namespace sw
         return s_driver;
     }
 
-    unique_ptr<ISQLConnection> SQLiteDriver::openConnection( string_view connection, string_view secret, string& outError )
+    expected<unique_ptr<ISQLConnection>> SQLiteDriver::openConnection( string_view connection, string_view secret )
     {
         (void)secret;
         if ( connection.empty() )
-        {
-            outError = "sqlite connection needs a database file path";
-            return nullptr;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "sqlite connection needs a database file path" } );
         const string path( connection );
         // SQLite 가 경로를 스스로 열어 만들고 쓴다 — `FileUtil` 의 쓰기 입구를 지나지 않으므로 게이트를 직접 묻는다(메모리 DB 는 파일이 아니다).
         if ( string_view( path ) != SQLiteDriverInternal::kMemoryDatabase && FileUtil::isWriteAllowed( path ) == false )
-        {
-            outError = "sqlite open '" + path + "' was refused by the file write gate";
-            return nullptr;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the sqlite open was refused by the file write gate", path } );
         sqlite3*    pDatabase = nullptr;
         const int32 flags     = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX; // 연결은 한 스레드만 쓴다
         if ( sqlite3_open_v2( path.c_str(), &pDatabase, flags, nullptr ) != SQLITE_OK )
         {
-            outError = "sqlite open '" + path + "' failed: " + ( pDatabase != nullptr ? sqlite3_errmsg( pDatabase ) : "out of memory" );
+            Error error{ ErrorKind::ExternalFailure, "sqlite open failed", path };
+            error.appendDetail( ": " ).appendDetail( pDatabase != nullptr ? sqlite3_errmsg( pDatabase ) : "out of memory" );
             sqlite3_close_v2( pDatabase );
-            return nullptr;
+            return unexpected( error );
         }
         // 잠금 시한을 어떤 문장보다 먼저 건다 - 새 파일을 여러 작업자가 동시에 열면 WAL 로 바꾸는 첫 문장이 서로 잠가("database is locked"), 늦게 건 시한은 그 문장을 지키지 못한다.
         // API 로 걸어 설정 문장의 순서에서 떼어 놓았다(SQLite 를 여는 곳은 이 함수 하나다).
@@ -332,12 +327,13 @@ namespace sw
         const int32 code   = sqlite3_exec( pDatabase, SQLiteDriverInternal::kSetupSQL, nullptr, nullptr, &pError );
         if ( code != SQLITE_OK )
         {
-            outError = "sqlite setup of '" + path + "' failed: " + ( pError != nullptr ? pError : sqlite3_errmsg( pDatabase ) );
+            Error error{ ErrorKind::ExternalFailure, "sqlite setup failed", path };
+            error.appendDetail( ": " ).appendDetail( pError != nullptr ? pError : sqlite3_errmsg( pDatabase ) );
             sqlite3_free( pError );
             sqlite3_close_v2( pDatabase );
-            return nullptr;
+            return unexpected( error );
         }
-        return make_unique<SQLiteDriverInternal::SQLiteConnection>( pDatabase );
+        return unique_ptr<ISQLConnection>( make_unique<SQLiteDriverInternal::SQLiteConnection>( pDatabase ) );
     }
 } // namespace sw
 

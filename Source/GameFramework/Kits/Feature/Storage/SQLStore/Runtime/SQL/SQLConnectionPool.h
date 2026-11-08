@@ -76,7 +76,7 @@ namespace sw
         SQLConnectionPool& operator=( const SQLConnectionPool& ) = delete;
 
         /** @brief 이 스레드에서 연결 하나를 먼저 열어 보고(기동 오류를 바로 알린다) 워커를 시작합니다. 열지 못하면 false 와 실패 이유를 반환하며 폴백은 없습니다. */
-        [[nodiscard]] bool initialize( ISQLDriver* pDriver, const SQLConnectionPoolConfig& settings, string& outError );
+        [[nodiscard]] expected<void> initialize( ISQLDriver* pDriver, const SQLConnectionPoolConfig& settings );
         /** @brief 새 작업을 막고, 남은 작업은 닫힌 연결로 실행해 완료 큐에 넣은 뒤 워커를 합류시킵니다. 그 뒤 `pollCompletions` 한 번이 모두 회수합니다. */
         void shutdown();
 

@@ -12,6 +12,16 @@
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQLMigrationRunner.h"
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/Tests/FakeSQLDriver.h"
 
+namespace
+{
+    /** @brief 실패의 문장과 대상을 이은 글입니다(성공이면 빈 글). 오류 글을 확인하는 테스트가 씁니다. */
+    template <typename T>
+    sw::string describeError( const sw::expected<T>& result )
+    {
+        return result.has_value() ? sw::string{} : sw::string( result.error().message() ) + " " + sw::string( result.error().detail() );
+    }
+} // namespace
+
 // SQLMigrationRunnerTest — 마이그레이션: 목록 읽기 규칙(번호, 방언 분기, 목록에 없는 파일), 토큰 치환, 체크섬, 적용 순서와 실패 때의 되돌리기(가짜 드라이버), 실제 SQLite 의 원자성(nogpu).
 
 using namespace sw;
@@ -44,9 +54,9 @@ namespace
             write( SQLMigrationRunner::kListFileName, text );
         }
 
-        bool load( string_view driverName, vector<SQLMigration>& outListMigration, string& outError ) const
+        expected<void> load( string_view driverName, vector<SQLMigration>& outListMigration ) const
         {
-            return SQLMigrationRunner::loadMigrations( _folderID, driverName, outListMigration, outError );
+            return SQLMigrationRunner::loadMigrations( _folderID, driverName, outListMigration );
         }
     };
 
@@ -69,17 +79,18 @@ namespace
         static vector<SQLValue> makeHistoryRow( int32 version, string_view sql ) { return vector<SQLValue>{ SQLValue::makeInt64( version ), SQLValue::makeText( SQLMigrationRunner::computeChecksum( sql ) ) }; }
 
         /** @brief @p driver 의 연결로 두 마이그레이션을 적용합니다. */
-        static bool applyTwo( test::FakeSQLDriver& driver, string& outError )
+        static expected<void> applyTwo( test::FakeSQLDriver& driver )
         {
-            unique_ptr<ISQLConnection> connection = driver.openConnection( "", "", outError );
-            return SQLMigrationRunner::apply( *connection, makeTwoMigrations(), UnixMilliseconds{ 1234 }, outError );
+            expected<unique_ptr<ISQLConnection>> connection = driver.openConnection( "", "" );
+            if ( connection.has_value() == false )
+                return sw::unexpected( connection.error() );
+            return SQLMigrationRunner::apply( **connection, makeTwoMigrations(), UnixMilliseconds{ 1234 } );
         }
 
         static unique_ptr<ISQLConnection> openSQLite()
         {
-            string      error;
-            ISQLDriver* pDriver = SQLDriverRegistry::findDriver( "sqlite", error );
-            return pDriver != nullptr ? pDriver->openConnection( ":memory:", "", error ) : nullptr;
+            ISQLDriver* pDriver = SQLDriverRegistry::findDriver( "sqlite" ).value_or( nullptr );
+            return pDriver != nullptr ? pDriver->openConnection( ":memory:", "" ).value_or( nullptr ) : nullptr;
         }
     };
 } // namespace
@@ -105,7 +116,10 @@ SW_TEST_CASE( SQLMigrationRunnerTest, AppliesEverythingInOneTransaction )
 {
     test::FakeSQLDriver driver;
     string              error;
-    SW_REQUIRE_TRUE_MSG( SQLMigrationRunnerTestUtil::applyTwo( driver, error ), error );
+    {
+        const auto result = SQLMigrationRunnerTestUtil::applyTwo( driver );
+        SW_REQUIRE_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() );
+    }
     const vector<string> listSQL = driver.getSQLLog();
     SW_REQUIRE_EQUAL( size_t( 9 ), listSQL.size() );
     SW_EXPECT_TRUE( listSQL[0].find( "CREATE TABLE IF NOT EXISTS sw_schema_migration" ) != string::npos );
@@ -124,7 +138,10 @@ SW_TEST_CASE( SQLMigrationRunnerTest, HistoryRecordsTheOriginalChecksumAsParamet
 {
     test::FakeSQLDriver driver;
     string              error;
-    SW_REQUIRE_TRUE_MSG( SQLMigrationRunnerTestUtil::applyTwo( driver, error ), error );
+    {
+        const auto result = SQLMigrationRunnerTestUtil::applyTwo( driver );
+        SW_REQUIRE_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() );
+    }
     const vector<test::FakeSQLDriver::Statement> listStatement = driver.getStatements();
     SW_REQUIRE_TRUE( listStatement.size() > 5 );
     const vector<SQLValue>& listParam = listStatement[5]._listParam;
@@ -140,7 +157,10 @@ SW_TEST_CASE( SQLMigrationRunnerTest, AppliedMigrationIsSkipped )
     test::FakeSQLDriver driver;
     driver.addRows( "SELECT version, checksum", { SQLMigrationRunnerTestUtil::makeHistoryRow( 1, "CREATE FIRST {{blob}}" ) } );
     string error;
-    SW_REQUIRE_TRUE_MSG( SQLMigrationRunnerTestUtil::applyTwo( driver, error ), error );
+    {
+        const auto result = SQLMigrationRunnerTestUtil::applyTwo( driver );
+        SW_REQUIRE_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() );
+    }
     SW_EXPECT_EQUAL( 0, driver.countSQL( "CREATE FIRST" ) );
     SW_EXPECT_EQUAL( 1, driver.countSQL( "CREATE SECOND" ) );
     SW_EXPECT_EQUAL( 1, driver.countSQL( "COMMIT" ) );
@@ -151,7 +171,8 @@ SW_TEST_CASE( SQLMigrationRunnerTest, EditedAppliedMigrationIsRefused )
     test::FakeSQLDriver driver;
     driver.addRows( "SELECT version, checksum", { SQLMigrationRunnerTestUtil::makeHistoryRow( 1, "the file used to say this" ) } );
     string error;
-    SW_EXPECT_FALSE( SQLMigrationRunnerTestUtil::applyTwo( driver, error ) );
+    error = describeError( SQLMigrationRunnerTestUtil::applyTwo( driver ) );
+    SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.find( "changed after it was applied" ) != string::npos );
     SW_EXPECT_EQUAL( 1, driver.countSQL( "ROLLBACK" ) );
     SW_EXPECT_EQUAL( 0, driver.countSQL( "COMMIT" ) );
@@ -167,7 +188,8 @@ SW_TEST_CASE( SQLMigrationRunnerTest, NewerDatabaseIsRefused )
     driver.addRows( "SELECT version, checksum", { SQLMigrationRunnerTestUtil::makeHistoryRow( 1, "CREATE FIRST {{blob}}" ), SQLMigrationRunnerTestUtil::makeHistoryRow( 2, "CREATE SECOND" ),
                                                   SQLMigrationRunnerTestUtil::makeHistoryRow( 3, "from a newer build" ) } );
     string error;
-    SW_EXPECT_FALSE( SQLMigrationRunnerTestUtil::applyTwo( driver, error ) );
+    error = describeError( SQLMigrationRunnerTestUtil::applyTwo( driver ) );
+    SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.find( "newer" ) != string::npos );
     SW_EXPECT_EQUAL( 1, driver.countSQL( "ROLLBACK" ) );
     SW_EXPECT_EQUAL( 0, driver.countSQL( "COMMIT" ) );
@@ -182,7 +204,7 @@ SW_TEST_CASE( SQLMigrationRunnerTest, LostHistoryTableRaceIsNotAFailure )
     test::FakeSQLDriver driver;
     driver.addResult( "CREATE TABLE IF NOT EXISTS", SQLResult::Constraint );
     string error;
-    SW_EXPECT_TRUE( SQLMigrationRunnerTestUtil::applyTwo( driver, error ) );
+    SW_EXPECT_TRUE( SQLMigrationRunnerTestUtil::applyTwo( driver ) );
     SW_EXPECT_EQUAL( 1, driver.countSQL( "COMMIT" ) );
 }
 
@@ -209,7 +231,8 @@ SW_TEST_CASE( SQLMigrationRunnerTest, FailuresRollBackOnlyWhatWasOpened )
         test::FakeSQLDriver driver;
         driver.addResult( failure._pFragment, SQLResult::Error );
         string error;
-        SW_EXPECT_FALSE( SQLMigrationRunnerTestUtil::applyTwo( driver, error ) );
+        error = describeError( SQLMigrationRunnerTestUtil::applyTwo( driver ) );
+        SW_EXPECT_FALSE( error.empty() );
         SW_EXPECT_TRUE_MSG( error.empty() == false, failure._pFragment );
         SW_EXPECT_EQUAL( failure._expectedRollbackCount, driver.countSQL( "ROLLBACK" ) );
         SW_EXPECT_EQUAL( failure._expectedCommitCount, driver.countSQL( "COMMIT" ) );
@@ -235,7 +258,8 @@ SW_TEST_CASE( SQLMigrationRunnerTest, FailedRunLeavesTheSQLiteDatabaseUntouched 
     bad._sql                  = "THIS IS NOT SQL;";
 
     string error;
-    SW_EXPECT_FALSE( SQLMigrationRunner::apply( *connection, listMigration, UnixMilliseconds{ 1 }, error ) );
+    error = describeError( SQLMigrationRunner::apply( *connection, listMigration, UnixMilliseconds{ 1 } ) );
+    SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.empty() == false );
     SQLRowSet rowSet;
     SW_REQUIRE_TRUE( connection->execute( "SELECT count( * ) FROM sqlite_master WHERE name = 'made_by_good'", nullptr, 0, &rowSet ) == SQLResult::Ok );
@@ -244,13 +268,19 @@ SW_TEST_CASE( SQLMigrationRunnerTest, FailedRunLeavesTheSQLiteDatabaseUntouched 
     SW_EXPECT_EQUAL( int64( 0 ), rowSet._listRow[0][0]._integer );
 
     listMigration.pop_back();
-    SW_REQUIRE_TRUE_MSG( SQLMigrationRunner::apply( *connection, listMigration, UnixMilliseconds{ 1 }, error ), error ); // 트랜잭션을 남기지 않았으니 다시 된다
-    SW_REQUIRE_TRUE_MSG( SQLMigrationRunner::apply( *connection, listMigration, UnixMilliseconds{ 2 }, error ), error ); // 두 번째는 할 일이 없다
+    {
+        const auto result = SQLMigrationRunner::apply( *connection, listMigration, UnixMilliseconds{ 1 } );
+        SW_REQUIRE_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() ); // 트랜잭션을 남기지 않았으니 다시 된다
+    }
+    {
+        const auto result = SQLMigrationRunner::apply( *connection, listMigration, UnixMilliseconds{ 2 } );
+        SW_REQUIRE_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() ); // 두 번째는 할 일이 없다
+    }
     SW_REQUIRE_TRUE( connection->execute( "SELECT count( * ) FROM sw_schema_migration", nullptr, 0, &rowSet ) == SQLResult::Ok );
     SW_EXPECT_EQUAL( int64( 1 ), rowSet._listRow[0][0]._integer );
 
     listMigration[0]._sql += " -- edited";
-    SW_EXPECT_FALSE( SQLMigrationRunner::apply( *connection, listMigration, UnixMilliseconds{ 3 }, error ) );
+    SW_EXPECT_FALSE( SQLMigrationRunner::apply( *connection, listMigration, UnixMilliseconds{ 3 } ) );
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -262,18 +292,27 @@ SW_TEST_CASE( SQLMigrationRunnerTest, ShippedFoldersLoad )
 {
     string               error;
     vector<SQLMigration> listSQLite;
-    SW_REQUIRE_TRUE_MSG( SQLMigrationRunner::loadMigrations( "common/sql/servicestore", "sqlite", listSQLite, error ), error );
+    {
+        const auto result = SQLMigrationRunner::loadMigrations( "common/sql/servicestore", "sqlite", listSQLite );
+        SW_REQUIRE_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() );
+    }
     vector<SQLMigration> listPostgres;
-    SW_REQUIRE_TRUE_MSG( SQLMigrationRunner::loadMigrations( "common/sql/servicestore", "postgres", listPostgres, error ), error );
+    {
+        const auto result = SQLMigrationRunner::loadMigrations( "common/sql/servicestore", "postgres", listPostgres );
+        SW_REQUIRE_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() );
+    }
     SW_REQUIRE_EQUAL( size_t( 2 ), listSQLite.size() );
     SW_REQUIRE_EQUAL( size_t( 2 ), listPostgres.size() );
     SW_EXPECT_EQUAL( listSQLite[0]._sql, listPostgres[0]._sql );  // 공통 파일
     SW_EXPECT_TRUE( listSQLite[1]._sql != listPostgres[1]._sql ); // 방언 분기
 
     vector<SQLMigration> listLocal;
-    SW_EXPECT_TRUE( SQLMigrationRunner::loadMigrations( "common/sql/localstore", "sqlite", listLocal, error ) );
+    SW_EXPECT_TRUE( SQLMigrationRunner::loadMigrations( "common/sql/localstore", "sqlite", listLocal ) );
     vector<string> listDriverName;
-    SW_REQUIRE_TRUE_MSG( SQLMigrationRunner::collectDialectDriverNames( "common/sql/servicestore", listDriverName, error ), error );
+    {
+        const auto result = SQLMigrationRunner::collectDialectDriverNames( "common/sql/servicestore", listDriverName );
+        SW_REQUIRE_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() );
+    }
     SW_EXPECT_EQUAL( size_t( 2 ), listDriverName.size() );
 }
 
@@ -287,7 +326,10 @@ SW_TEST_CASE( SQLMigrationRunnerTest, ListPicksDialectFileAndNormalizesLineEnds 
 
     string               error;
     vector<SQLMigration> listAlpha;
-    SW_REQUIRE_TRUE_MSG( fixture.load( "alpha", listAlpha, error ), error );
+    {
+        const auto result = fixture.load( "alpha", listAlpha );
+        SW_REQUIRE_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() );
+    }
     SW_REQUIRE_EQUAL( size_t( 2 ), listAlpha.size() );
     SW_EXPECT_EQUAL( string( "ALPHA A" ), listAlpha[0]._sql );
     SW_EXPECT_EQUAL( 1, listAlpha[0]._version );
@@ -295,7 +337,10 @@ SW_TEST_CASE( SQLMigrationRunnerTest, ListPicksDialectFileAndNormalizesLineEnds 
     SW_EXPECT_EQUAL( string( "COMMON B" ), listAlpha[1]._sql );
 
     vector<SQLMigration> listBeta;
-    SW_REQUIRE_TRUE_MSG( fixture.load( "beta", listBeta, error ), error );
+    {
+        const auto result = fixture.load( "beta", listBeta );
+        SW_REQUIRE_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() );
+    }
     SW_REQUIRE_EQUAL( size_t( 2 ), listBeta.size() );
     SW_EXPECT_EQUAL( string( "COMMON\nA" ), listBeta[0]._sql ); // 체크아웃의 줄 끝이 체크섬을 바꾸지 않는다
 }
@@ -308,19 +353,25 @@ SW_TEST_CASE( SQLMigrationRunnerTest, ListRejectsBadShapes )
     vector<SQLMigration> listMigration;
 
     fixture.write( SQLMigrationRunner::kListFileName, "<Other />" );
-    SW_EXPECT_FALSE( fixture.load( "alpha", listMigration, error ) );
+    error = describeError( fixture.load( "alpha", listMigration ) );
+    SW_EXPECT_FALSE( error.empty() );
     fixture.write( SQLMigrationRunner::kListFileName, "<SQLMigrationList _extra=\"1\"><Migration _name=\"0001_a\" /></SQLMigrationList>" );
-    SW_EXPECT_FALSE( fixture.load( "alpha", listMigration, error ) );
+    error = describeError( fixture.load( "alpha", listMigration ) );
+    SW_EXPECT_FALSE( error.empty() );
     fixture.write( SQLMigrationRunner::kListFileName, "<SQLMigrationList></SQLMigrationList>" );
-    SW_EXPECT_FALSE( fixture.load( "alpha", listMigration, error ) );
+    error = describeError( fixture.load( "alpha", listMigration ) );
+    SW_EXPECT_FALSE( error.empty() );
     fixture.write( SQLMigrationRunner::kListFileName, "<SQLMigrationList><Other _name=\"0001_a\" /></SQLMigrationList>" );
-    SW_EXPECT_FALSE( fixture.load( "alpha", listMigration, error ) );
+    error = describeError( fixture.load( "alpha", listMigration ) );
+    SW_EXPECT_FALSE( error.empty() );
     fixture.write( SQLMigrationRunner::kListFileName, "<SQLMigrationList><Migration _name=\"0001_a\" _more=\"x\" /></SQLMigrationList>" );
-    SW_EXPECT_FALSE( fixture.load( "alpha", listMigration, error ) );
+    error = describeError( fixture.load( "alpha", listMigration ) );
+    SW_EXPECT_FALSE( error.empty() );
     fixture.writeList( { "first" } ); // 번호가 없는 이름
-    SW_EXPECT_FALSE( fixture.load( "alpha", listMigration, error ) );
+    error = describeError( fixture.load( "alpha", listMigration ) );
+    SW_EXPECT_FALSE( error.empty() );
     fixture.writeList( { "0001_a.alpha" } ); // 목록에는 방언을 적지 않는다
-    SW_EXPECT_FALSE( fixture.load( "alpha", listMigration, error ) );
+    SW_EXPECT_FALSE( fixture.load( "alpha", listMigration ) );
 }
 
 SW_TEST_CASE( SQLMigrationRunnerTest, NumbersMustRunWithoutGaps )
@@ -331,7 +382,8 @@ SW_TEST_CASE( SQLMigrationRunnerTest, NumbersMustRunWithoutGaps )
     fixture.write( "0003_c.sql", "C" );
     string               error;
     vector<SQLMigration> listMigration;
-    SW_EXPECT_FALSE( fixture.load( "alpha", listMigration, error ) );
+    error = describeError( fixture.load( "alpha", listMigration ) );
+    SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.find( "without gaps" ) != string::npos );
 }
 
@@ -344,7 +396,8 @@ SW_TEST_CASE( SQLMigrationRunnerTest, FileMissingFromTheListIsRefused )
     fixture.write( "0002_forgotten.sql", "B" );
     string               error;
     vector<SQLMigration> listMigration;
-    SW_EXPECT_FALSE( fixture.load( "alpha", listMigration, error ) );
+    error = describeError( fixture.load( "alpha", listMigration ) );
+    SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.find( "0002_forgotten" ) != string::npos );
 }
 
@@ -357,7 +410,8 @@ SW_TEST_CASE( SQLMigrationRunnerTest, BadlyNamedFileIsRefused )
     fixture.write( "notes.sql", "B" );
     string               error;
     vector<SQLMigration> listMigration;
-    SW_EXPECT_FALSE( fixture.load( "alpha", listMigration, error ) );
+    error = describeError( fixture.load( "alpha", listMigration ) );
+    SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.find( "notes.sql" ) != string::npos );
 }
 
@@ -369,10 +423,14 @@ SW_TEST_CASE( SQLMigrationRunnerTest, DriverWithoutItsFileIsRefusedAndNamesAreCo
     fixture.write( "0001_a.beta.sql", "BETA" );
     string               error;
     vector<SQLMigration> listMigration;
-    SW_EXPECT_FALSE( fixture.load( "gamma", listMigration, error ) ); // 공통 파일도 없다 — 다른 방언으로 대신하지 않는다
+    error = describeError( fixture.load( "gamma", listMigration ) ); // 공통 파일도 없다 — 다른 방언으로 대신하지 않는다
+    SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.find( "gamma" ) != string::npos );
 
     vector<string> listDriverName{ "alpha" };
-    SW_REQUIRE_TRUE_MSG( SQLMigrationRunner::collectDialectDriverNames( fixture._folderID, listDriverName, error ), error );
+    {
+        const auto result = SQLMigrationRunner::collectDialectDriverNames( fixture._folderID, listDriverName );
+        SW_REQUIRE_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() );
+    }
     SW_EXPECT_EQUAL( size_t( 2 ), listDriverName.size() ); // 겹치지 않게 더한다
 }

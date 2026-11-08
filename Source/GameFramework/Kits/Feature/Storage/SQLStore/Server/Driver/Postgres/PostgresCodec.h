@@ -41,12 +41,12 @@ namespace sw
          * @brief 값을 `PQexecPrepared` 의 칸으로 바꿉니다. 정수와 문자열은 텍스트 형식, 바이트는 이진 형식입니다.
          * @return 값 수가 자리 수와 다르거나 문자열에 NUL 이 있으면 false 와 까닭입니다. 텍스트 형식은 NUL 로 끝나므로 뒤가 말없이 잘려 다른 키를 묻게 된다.
          */
-        [[nodiscard]] static bool encodeParameters( const SQLValue* pParam, int32 paramCount, int32 placeholderCount, PostgresParameters& outParameters, string& outError );
+        [[nodiscard]] static expected<void> encodeParameters( const SQLValue* pParam, int32 paramCount, int32 placeholderCount, PostgresParameters& outParameters );
         /**
          * @brief 이진 결과 칸 하나를 읽습니다. 정수(bool · int2 · int4 · int8)는 빅엔디언이고 부호를 확장합니다.
          * @return 아는 타입이 아니거나 정수의 길이가 타입과 맞지 않으면 false 와 까닭입니다. 길이는 서버가 준 값이므로 믿지 않습니다.
          */
-        [[nodiscard]] static bool decodeColumn( uint32 typeOid, const uint8* pData, int32 size, SQLValue& outValue, string& outError );
+        [[nodiscard]] static expected<void> decodeColumn( uint32 typeOid, const uint8* pData, int32 size, SQLValue& outValue );
         /** @brief SQLSTATE 를 결과로 나눕니다. 고유 키 위반, 직렬화 실패 · 교착, 연결 · 서버 내려감, 락 시한이고 그 밖은 Error 입니다. */
         static SQLResult classifySQLState( string_view state );
 

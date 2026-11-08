@@ -104,8 +104,11 @@ namespace sw
                     if ( pStatement == nullptr )
                         return prepareResult;
                     PostgresParameters parameters;
-                    if ( PostgresCodec::encodeParameters( pParam, paramCount, pStatement->_paramCount, parameters, _lastError ) == false )
+                    if ( const expected<void> encoded = PostgresCodec::encodeParameters( pParam, paramCount, pStatement->_paramCount, parameters ); encoded.has_value() == false )
+                    {
+                        _lastError = string( encoded.error().message() ) + ": " + string( encoded.error().detail() );
                         return SQLResult::Error;
+                    }
                     ScopedResult    result{ PQexecPrepared( _pConnection, pStatement->_name.c_str(), pStatement->_paramCount, parameters._listValue.data(), parameters._listLength.data(),
                                                             parameters._listFormat.data(), 1 ) };
                     const SQLResult sqlResult = toSQLResult( result.get(), _pConnection );
@@ -113,8 +116,9 @@ namespace sw
                         return fail( sqlResult, result.get() );
                     if ( pOutRowSet != nullptr )
                     {
-                        if ( readRows( result.get(), *pOutRowSet, _lastError ) == false )
+                        if ( const expected<void> read = readRows( result.get(), *pOutRowSet ); read.has_value() == false )
                         {
+                            _lastError = string( read.error().message() ) + ": " + string( read.error().detail() );
                             pOutRowSet->clear();
                             return SQLResult::Error;
                         }
@@ -175,7 +179,7 @@ namespace sw
                 }
 
                 /** @brief 결과 행을 읽습니다. 담을 수 없는 칸(모르는 타입 · 틀린 정수 길이)이 있으면 false 와 까닭입니다 - 예전에는 모르는 타입의 이진 표현을 바이트로 그대로 건넸다. */
-                [[nodiscard]] static bool readRows( const PGresult* pResult, SQLRowSet& outRowSet, string& outError )
+                [[nodiscard]] static expected<void> readRows( const PGresult* pResult, SQLRowSet& outRowSet )
                 {
                     const int32 rowCount    = PQntuples( pResult );
                     const int32 columnCount = PQnfields( pResult );
@@ -191,11 +195,11 @@ namespace sw
                                 continue;
                             const uint8* pData = reinterpret_cast<const uint8*>( PQgetvalue( pResult, rowIndex, columnIndex ) );
                             const int32  size  = PQgetlength( pResult, rowIndex, columnIndex );
-                            if ( PostgresCodec::decodeColumn( static_cast<uint32>( PQftype( pResult, columnIndex ) ), pData, size, value, outError ) == false )
-                                return false;
+                            if ( expected<void> decoded = PostgresCodec::decodeColumn( static_cast<uint32>( PQftype( pResult, columnIndex ) ), pData, size, value ); decoded.has_value() == false )
+                                return decoded;
                         }
                     }
-                    return true;
+                    return {};
                 }
 
                 SQLResult fail( SQLResult result, const PGresult* pResult )
@@ -229,8 +233,8 @@ namespace sw
     public:
         static PostgresDriver& getInstance();
 
-        const utf8*                getName() const override { return "postgres"; }
-        unique_ptr<ISQLConnection> openConnection( string_view connection, string_view secret, string& outError ) override;
+        const utf8*                          getName() const override { return "postgres"; }
+        expected<unique_ptr<ISQLConnection>> openConnection( string_view connection, string_view secret ) override;
     };
 } // namespace sw
 
@@ -242,13 +246,12 @@ namespace sw
         return s_driver;
     }
 
-    unique_ptr<ISQLConnection> PostgresDriver::openConnection( string_view connection, string_view secret, string& outError )
+    expected<unique_ptr<ISQLConnection>> PostgresDriver::openConnection( string_view connection, string_view secret )
     {
         // 빈 접속 문자열을 libpq 에 넘기면 환경 변수 · 기본값(localhost, OS 사용자)으로 어딘가에 붙는다 - SQLite 드라이버처럼 거절한다.
         if ( connection.empty() )
         {
-            outError = "postgres connection needs a connection string";
-            return nullptr;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "postgres connection needs a connection string" } );
         }
         // 접속 문자열은 dbname 에 펼쳐 넘기고(expand_dbname) 비밀번호는 따로 넘긴다. 그래서 비밀이 접속 문자열이나 로그에 남지 않는다.
         // connect_timeout 은 기본값이고 뒤에 펼치는 접속 문자열이 덮는다 - libpq 기본은 무한 대기라 망이 막히면 워커와 shutdown 의 join 이 멈춘다.
@@ -260,15 +263,12 @@ namespace sw
         PGconn*      pConnection  = PQconnectdbParams( arrKeyword, arrValue, 1 );
         StringUtil::wipeSecret( secretText );
         if ( pConnection == nullptr )
-        {
-            outError = "postgres connection failed: out of memory";
-            return nullptr;
-        }
+            return unexpected( Error{ ErrorKind::ExternalFailure, "postgres connection failed: out of memory" } );
         if ( PQstatus( pConnection ) != CONNECTION_OK )
         {
-            outError = string( "postgres connection failed: " ) + PQerrorMessage( pConnection );
+            const Error error{ ErrorKind::ExternalFailure, "postgres connection failed", PQerrorMessage( pConnection ) }; // 연결을 닫기 전에 글을 복사한다
             PQfinish( pConnection );
-            return nullptr;
+            return unexpected( error );
         }
         PQsetNoticeProcessor( pConnection, &PostgresDriverInternal::ignoreNotice, nullptr );
         PGresult*  pResult = PQexec( pConnection, "SET TIME ZONE 'UTC'" );
@@ -276,11 +276,11 @@ namespace sw
         PQclear( pResult );
         if ( bOk == false )
         {
-            outError = string( "postgres session setup failed: " ) + PQerrorMessage( pConnection );
+            const Error error{ ErrorKind::ExternalFailure, "postgres session setup failed", PQerrorMessage( pConnection ) }; // 연결을 닫기 전에 글을 복사한다
             PQfinish( pConnection );
-            return nullptr;
+            return unexpected( error );
         }
-        return make_unique<PostgresDriverInternal::PostgresConnection>( pConnection );
+        return unique_ptr<ISQLConnection>( make_unique<PostgresDriverInternal::PostgresConnection>( pConnection ) );
     }
 } // namespace sw
 

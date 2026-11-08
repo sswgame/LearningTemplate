@@ -131,10 +131,10 @@ namespace sw
         /** @brief 서버 설정 `_driver` 의 값입니다. "sqlite" 나 "postgres" 입니다. */
         virtual const utf8* getName() const = 0;
         /**
-         * @brief 연결을 엽니다. 실패하면 nullptr 과 실패 이유를 반환합니다.
+         * @brief 연결을 엽니다. 실패하면 그 이유(대상에 비밀을 담지 않는다)입니다.
          * @param connection 드라이버 고유의 접속 문자열입니다. SQLite 는 파일 경로이고 PostgreSQL 은 libpq 접속 문자열이나 URI 이며, 비밀은 포함하지 않습니다.
          * @param secret 비밀번호입니다. 서버 설정의 환경 변수에서 읽은 값이며 없으면 빈 문자열입니다.
          */
-        virtual unique_ptr<ISQLConnection> openConnection( string_view connection, string_view secret, string& outError ) = 0;
+        virtual expected<unique_ptr<ISQLConnection>> openConnection( string_view connection, string_view secret ) = 0;
     };
 } // namespace sw

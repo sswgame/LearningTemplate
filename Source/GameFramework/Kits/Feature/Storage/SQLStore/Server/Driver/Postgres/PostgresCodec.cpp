@@ -73,13 +73,10 @@ namespace sw
         return text;
     }
 
-    bool PostgresCodec::encodeParameters( const SQLValue* pParam, int32 paramCount, int32 placeholderCount, PostgresParameters& outParameters, string& outError )
+    expected<void> PostgresCodec::encodeParameters( const SQLValue* pParam, int32 paramCount, int32 placeholderCount, PostgresParameters& outParameters )
     {
-        if ( paramCount != placeholderCount )
-        {
-            outError = "the statement and the parameter list differ in length"; // 예전에는 모자란 칸을 NULL 로 채우고 남는 값을 버렸다
-            return false;
-        }
+        if ( paramCount != placeholderCount ) // 예전에는 모자란 칸을 NULL 로 채우고 남는 값을 버렸다
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the statement and the parameter list differ in length" } );
         const size_t count = static_cast<size_t>( placeholderCount );
         outParameters._listText.assign( count, string{} ); // 크기를 먼저 정한다 — `_listValue` 가 원소를 가리킨다
         outParameters._listValue.assign( count, nullptr );
@@ -105,10 +102,7 @@ namespace sw
                 case SQLValueType::Text:
                 {
                     if ( value.getText().find( '\0' ) != string_view::npos )
-                    {
-                        outError = "a text parameter holds a NUL byte";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "a text parameter holds a NUL byte" } );
                     outParameters._listText[index]  = string( value.getText() );
                     outParameters._listValue[index] = outParameters._listText[index].c_str();
                     break;
@@ -122,10 +116,10 @@ namespace sw
                 }
             }
         }
-        return true;
+        return {};
     }
 
-    bool PostgresCodec::decodeColumn( uint32 typeOid, const uint8* pData, int32 size, SQLValue& outValue, string& outError )
+    expected<void> PostgresCodec::decodeColumn( uint32 typeOid, const uint8* pData, int32 size, SQLValue& outValue )
     {
         int32 integerSize = 0;
         if ( typeOid == kBoolOid )
@@ -140,10 +134,9 @@ namespace sw
         {
             if ( size != integerSize )
             {
-                StringBuilder<constant::buffer::kMax256> errorBuilder;
-                errorBuilder.appendFormat( "integer column of type %# holds %# bytes", typeOid, size );
-                outError = string( errorBuilder.view() );
-                return false;
+                StringBuilder<constant::buffer::kMax128> errorBuilder;
+                errorBuilder.appendFormat( "%#, %#", typeOid, size );
+                return unexpected( Error{ ErrorKind::InvalidArgument, "an integer column holds a byte count its type does not have (type oid, bytes)", errorBuilder.view() } );
             }
             uint64 raw = 0;
             for ( int32 byteIndex = 0; byteIndex < size; ++byteIndex )
@@ -153,20 +146,19 @@ namespace sw
             const int32 shift = 64 - size * 8; // 부호는 크기만큼 확장한다
             outValue._type    = SQLValueType::Int64;
             outValue._integer = shift > 0 ? static_cast<int64>( raw << shift ) >> shift : static_cast<int64>( raw );
-            return true;
+            return {};
         }
         const bool bText = typeOid == kTextOid || typeOid == kVarcharOid;
         if ( bText == false && typeOid != kByteaOid )
         {
-            StringBuilder<constant::buffer::kMax256> errorBuilder;
-            errorBuilder.appendFormat( "column type %# has no SQLValue form", typeOid );
-            outError = string( errorBuilder.view() );
-            return false;
+            StringBuilder<constant::buffer::kMax128> errorBuilder;
+            errorBuilder.appendFormat( "%#", typeOid );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the column type (oid) has no SQLValue form", errorBuilder.view() } );
         }
         outValue._type = bText ? SQLValueType::Text : SQLValueType::Blob;
         if ( size > 0 )
             outValue._bytes.assign( pData, pData + size );
-        return true;
+        return {};
     }
 
     SQLResult PostgresCodec::classifySQLState( string_view state )

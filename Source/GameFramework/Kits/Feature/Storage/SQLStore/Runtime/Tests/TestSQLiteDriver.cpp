@@ -10,6 +10,16 @@
 #include <algorithm>
 #include <limits>
 
+namespace
+{
+    /** @brief 실패의 문장과 대상을 이은 글입니다(성공이면 빈 글). 오류 글을 확인하는 테스트가 씁니다. */
+    template <typename T>
+    sw::string describeError( const sw::expected<T>& result )
+    {
+        return result.has_value() ? sw::string{} : sw::string( result.error().message() ) + " " + sw::string( result.error().detail() );
+    }
+} // namespace
+
 // SQLiteDriverTest · SQLDriverRegistryTest — 드라이버 계약을 실제 SQLite(메모리 DB)로 본다: 값 왕복, 매개변수가 문장이 되지 않음, 한 문 규칙, 자리 수,
 // 제약 종류, 바뀐 행 수, 실패 뒤 문장 재사용, 여는 실패. 등록표는 이름 찾기와 범위 등록(nogpu, 외부 DB 없음).
 
@@ -19,11 +29,7 @@ namespace
 {
     struct SQLiteDriverTestUtil
     {
-        static ISQLDriver* findDriver()
-        {
-            string error;
-            return SQLDriverRegistry::findDriver( "sqlite", error );
-        }
+        static ISQLDriver* findDriver() { return SQLDriverRegistry::findDriver( "sqlite" ).value_or( nullptr ); }
 
         /** @brief 메모리 DB 를 열고 표 `t( a, b )` 를 만듭니다. */
         static unique_ptr<ISQLConnection> openWithTable()
@@ -31,8 +37,7 @@ namespace
             ISQLDriver* pDriver = findDriver();
             if ( pDriver == nullptr )
                 return nullptr;
-            string                     error;
-            unique_ptr<ISQLConnection> connection = pDriver->openConnection( ":memory:", "", error );
+            unique_ptr<ISQLConnection> connection = pDriver->openConnection( ":memory:", "" ).value_or( nullptr );
             if ( connection != nullptr && connection->executeScript( "CREATE TABLE t ( a TEXT PRIMARY KEY, b INTEGER NOT NULL )" ) != SQLResult::Ok )
                 return nullptr;
             return connection;
@@ -43,7 +48,8 @@ namespace
 SW_TEST_CASE( SQLDriverRegistryTest, UnknownNameExplainsWhatIsAvailable )
 {
     string error;
-    SW_EXPECT_NULL( SQLDriverRegistry::findDriver( "no_such_driver", error ) );
+    error = describeError( SQLDriverRegistry::findDriver( "no_such_driver" ) );
+    SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.find( "no_such_driver" ) != string::npos );
     SW_EXPECT_TRUE( error.find( "sqlite" ) != string::npos ); // 있는 드라이버를 알려 준다 — 다른 드라이버로 대신하지 않는다
 }
@@ -51,15 +57,14 @@ SW_TEST_CASE( SQLDriverRegistryTest, UnknownNameExplainsWhatIsAvailable )
 SW_TEST_CASE( SQLDriverRegistryTest, RegistrationLivesOnlyInItsScope )
 {
     test::FakeSQLDriver driver;
-    string              error;
     {
         const SQLDriverRegistration registration{ driver };
-        SW_EXPECT_TRUE( SQLDriverRegistry::findDriver( test::FakeSQLDriver::kName, error ) == &driver );
+        SW_EXPECT_TRUE( SQLDriverRegistry::findDriver( test::FakeSQLDriver::kName ).value_or( nullptr ) == &driver );
         vector<string> listName;
         SQLDriverRegistry::getDriverNames( listName );
         SW_EXPECT_TRUE( std::find( listName.begin(), listName.end(), string( test::FakeSQLDriver::kName ) ) != listName.end() );
     }
-    SW_EXPECT_NULL( SQLDriverRegistry::findDriver( test::FakeSQLDriver::kName, error ) );
+    SW_EXPECT_FALSE( SQLDriverRegistry::findDriver( test::FakeSQLDriver::kName ) );
 }
 
 SW_TEST_CASE( SQLiteDriverTest, ValuesRoundTripWithTheirKinds )
@@ -240,16 +245,19 @@ SW_TEST_CASE( SQLiteDriverTest, OpenFailuresExplainAndLeaveNoConnection )
     ISQLDriver* pDriver = SQLiteDriverTestUtil::findDriver();
     SW_REQUIRE_NOT_NULL( pDriver );
     string error;
-    SW_EXPECT_NULL( pDriver->openConnection( "", "", error ) );
+    error = describeError( pDriver->openConnection( "", "" ) );
+    SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.empty() == false );
 
     error.clear();
     const string garbagePath = test::makeScratchPath( "not_a_database.db" );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( garbagePath, "this file is long enough that SQLite reads a header from it and refuses it as not a database at all." ) );
-    SW_EXPECT_NULL( pDriver->openConnection( garbagePath, "", error ) ); // 설정 문장이 파일 머리를 읽다 진다 — 핸들을 닫고 까닭을 돌려준다
+    error = describeError( pDriver->openConnection( garbagePath, "" ) ); // 설정 문장이 파일 머리를 읽다 진다 — 핸들을 닫고 까닭을 돌려준다
+    SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.find( garbagePath ) != string::npos );
 
     error.clear();
-    SW_EXPECT_NULL( pDriver->openConnection( FileUtil::joinPath( test::makeScratchPath( "no_such_folder" ), "x.db" ), "", error ) );
+    error = describeError( pDriver->openConnection( FileUtil::joinPath( test::makeScratchPath( "no_such_folder" ), "x.db" ), "" ) );
+    SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.empty() == false );
 }

@@ -102,8 +102,8 @@ namespace sw::test
             _listStatement.clear();
         }
 
-        const utf8*                getName() const override { return kName; }
-        unique_ptr<ISQLConnection> openConnection( string_view connection, string_view secret, string& outError ) override;
+        const utf8*                          getName() const override { return kName; }
+        expected<unique_ptr<ISQLConnection>> openConnection( string_view connection, string_view secret ) override;
 
         static const SQLDialect& getDialect()
         {
@@ -212,7 +212,7 @@ namespace sw::test
         uint8          _bLastFailed : 1;
     };
 
-    inline unique_ptr<ISQLConnection> FakeSQLDriver::openConnection( string_view connection, string_view secret, string& outError )
+    inline expected<unique_ptr<ISQLConnection>> FakeSQLDriver::openConnection( string_view connection, string_view secret )
     {
         (void)connection;
         (void)secret;
@@ -222,8 +222,7 @@ namespace sw::test
             ++_openCount;
             if ( _allowedOpenCount == 0 )
             {
-                outError = "fake driver refused the connection";
-                return nullptr;
+                return unexpected( Error{ ErrorKind::InvalidArgument, "fake driver refused the connection" } );
             }
             if ( _allowedOpenCount > 0 )
                 --_allowedOpenCount;

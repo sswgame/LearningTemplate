@@ -46,25 +46,24 @@ namespace sw
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
         /**
-         * @brief 저장소를 만들고 초기화합니다. 실패하면 nullptr 과 실패 이유를 반환합니다.
+         * @brief 저장소를 만들고 초기화합니다. 실패하면 그 이유입니다.
          * @param secret 비밀번호(`ServerSecret::read` 로 읽은 것)입니다. 쓰고 나면 호출한 쪽이 비웁니다.
          * @param nowMs 마이그레이션 기록에 남길 벽시계 시각입니다.
          */
-        unique_ptr<IServiceStore> createServiceStore( string_view driverName, string_view connection, string_view secret, int32 workerCount, UnixMilliseconds nowMs,
-                                                      string& outError )
+        expected<unique_ptr<IServiceStore>> createServiceStore( string_view driverName, string_view connection, string_view secret, int32 workerCount, UnixMilliseconds nowMs )
         {
             if ( driverName == kMemoryStoreDriverName )
-                return make_unique<MemoryServiceStore>( &_memoryDatabase );
+                return unique_ptr<IServiceStore>( make_unique<MemoryServiceStore>( &_memoryDatabase ) );
             SQLConnectionPoolConfig settings;
-            settings._connection                 = string( connection );
-            settings._secret                     = string( secret );
-            settings._workerCount                = workerCount;
-            unique_ptr<SQLServiceStore> store    = make_unique<SQLServiceStore>();
-            const bool                  bStarted = store->initialize( driverName, settings, SQLServiceStore::kMigrationFolder, nowMs, outError );
+            settings._connection                = string( connection );
+            settings._secret                    = string( secret );
+            settings._workerCount               = workerCount;
+            unique_ptr<SQLServiceStore> store   = make_unique<SQLServiceStore>();
+            const expected<void>        started = store->initialize( driverName, settings, SQLServiceStore::kMigrationFolder, nowMs );
             StringUtil::wipeSecret( settings._secret ); // 재접속에 쓰는 사본은 풀이 살아 있는 동안 지닌다
-            if ( bStarted == false )
-                return nullptr;
-            return store;
+            if ( started.has_value() == false )
+                return unexpected( started.error() );
+            return unique_ptr<IServiceStore>( std::move( store ) );
         }
 
         /** @brief 공개할 저장소 드라이버입니다(`ModuleSubsystemRegistration` 이 `IServiceStoreDriver` 로 공개한다). 이 서브시스템과 수명이 같습니다. */
@@ -80,10 +79,9 @@ namespace sw
             {
             }
 
-            unique_ptr<IServiceStore> createServiceStore( string_view driverName, string_view connection, string_view secret, int32 workerCount, UnixMilliseconds nowMs,
-                                                          string& outError ) override
+            expected<unique_ptr<IServiceStore>> createServiceStore( string_view driverName, string_view connection, string_view secret, int32 workerCount, UnixMilliseconds nowMs ) override
             {
-                return _owner.createServiceStore( driverName, connection, secret, workerCount, nowMs, outError );
+                return _owner.createServiceStore( driverName, connection, secret, workerCount, nowMs );
             }
 
         private:

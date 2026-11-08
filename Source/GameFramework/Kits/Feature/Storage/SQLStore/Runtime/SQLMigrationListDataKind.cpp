@@ -28,18 +28,18 @@ namespace sw
                 if ( folder.empty() )
                     return false;
                 SQLDriverRegistry::getDriverNames( outListDriverName );
-                string error;
-                if ( SQLMigrationRunner::collectDialectDriverNames( folder, outListDriverName, error ) == false )
+                if ( const expected<void> names = SQLMigrationRunner::collectDialectDriverNames( folder, outListDriverName ); names.has_value() == false )
                 {
-                    SW_LOG_ERROR_ID( "SQLMigrationListDataKind.SQLMigrationList", "SQL migration list '%#': %#", assetID.c_str(), error.c_str() );
+                    SW_LOG_ERROR_ID( "SQLMigrationListDataKind.SQLMigrationList", "SQL migration list '%#': %# (%#)", assetID.c_str(), names.error().message(), names.error().detail() );
                     return false;
                 }
                 for ( const string& driverName : outListDriverName )
                 {
                     vector<SQLMigration> listMigration;
-                    if ( SQLMigrationRunner::loadMigrations( folder, driverName, listMigration, error ) == false )
+                    if ( const expected<void> loaded = SQLMigrationRunner::loadMigrations( folder, driverName, listMigration ); loaded.has_value() == false )
                     {
-                        SW_LOG_ERROR_ID( "SQLMigrationListDataKind.SQLMigrationList2", "SQL migration list '%#' (%#): %#", assetID.c_str(), driverName.c_str(), error.c_str() );
+                        SW_LOG_ERROR_ID( "SQLMigrationListDataKind.SQLMigrationList2", "SQL migration list '%#' (%#): %# (%#)", assetID.c_str(), driverName.c_str(), loaded.error().message(),
+                                         loaded.error().detail() );
                         return false;
                     }
                 }

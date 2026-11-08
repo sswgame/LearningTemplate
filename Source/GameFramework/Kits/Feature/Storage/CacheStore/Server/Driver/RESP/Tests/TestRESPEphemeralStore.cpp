@@ -8,6 +8,16 @@
 
 #include "GameFramework/Kits/Feature/Storage/CacheStore/Server/Driver/RESP/RESPEphemeralStore.h"
 
+namespace
+{
+    /** @brief 실패의 문장과 대상을 이은 글입니다(성공이면 빈 글). 오류 글을 확인하는 테스트가 씁니다. */
+    template <typename T>
+    sw::string describeError( const sw::expected<T>& result )
+    {
+        return result.has_value() ? sw::string{} : sw::string( result.error().message() ) + " " + sw::string( result.error().detail() );
+    }
+} // namespace
+
 using namespace sw;
 
 namespace
@@ -117,7 +127,7 @@ namespace
             StreamTransportConfig settings;
             settings._ioThreadCount = 0;
             string error;
-            SW_REQUIRE_TRUE( _store.initialize( _network.createTransport(), settings, config, nullptr, error ) );
+            SW_REQUIRE_TRUE( _store.initialize( _network.createTransport(), settings, config, nullptr ) );
         }
 
         /** @brief 양쪽을 충분히 돌리고 나온 답을 모읍니다. */
@@ -490,9 +500,11 @@ SW_TEST_CASE_F( RESPStoreTest, InitializeNeedsTransportAndAddress )
     config._address = NetAddress::makeLoopback( FakeRESPServer::kPort );
     StreamTransportConfig settings;
     settings._ioThreadCount = 0;
-    SW_EXPECT_FALSE( _store.initialize( nullptr, settings, config, nullptr, error ) );
+    error                   = describeError( _store.initialize( nullptr, settings, config, nullptr ) );
+    SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_FALSE( error.empty() );
     error.clear();
-    SW_EXPECT_FALSE( _store.initialize( _network.createTransport(), settings, RESPStoreConfig{}, nullptr, error ) );
+    error = describeError( _store.initialize( _network.createTransport(), settings, RESPStoreConfig{}, nullptr ) );
+    SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_FALSE( error.empty() );
 }

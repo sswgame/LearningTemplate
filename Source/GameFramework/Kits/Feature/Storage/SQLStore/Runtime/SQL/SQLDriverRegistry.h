@@ -27,9 +27,9 @@ namespace sw
     {
         friend class SQLDriverRegistration;
 
-        /** @brief 이름으로 찾습니다. 없으면 nullptr 을 반환하고 @p outError 에 이 빌드 타깃과 있는 드라이버 목록을 채웁니다. */
-        static ISQLDriver* findDriver( string_view driverName, string& outError );
-        static void        getDriverNames( vector<string>& outListName );
+        /** @brief 이름으로 찾습니다. 없으면 대상에 이 빌드 타깃과 있는 드라이버 목록을 담은 오류입니다. */
+        [[nodiscard]] static expected<ISQLDriver*> findDriver( string_view driverName );
+        static void                                getDriverNames( vector<string>& outListName );
 
     private:
         /** @brief 드라이버를 올립니다. 같은 이름이 이미 있으면 오류다(앞 것을 덮지 않는다). */

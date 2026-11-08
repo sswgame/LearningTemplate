@@ -35,6 +35,6 @@ namespace sw
         static constexpr uint16      kDefaultRESPPort = 6379;
 
         /** @brief 엔드포인트 문자열을 해석합니다. 호스트 이름이면 DNS 를 묻는 막는 호출입니다. 모르는 인자이거나 값이 깨졌거나 풀리지 않으면 false 와 실패 이유를 반환합니다. */
-        [[nodiscard]] static bool parseEndpoint( string_view endpoint, CacheEndpoint& outEndpoint, string& outError );
+        [[nodiscard]] static expected<void> parseEndpoint( string_view endpoint, CacheEndpoint& outEndpoint );
     };
 } // namespace sw
