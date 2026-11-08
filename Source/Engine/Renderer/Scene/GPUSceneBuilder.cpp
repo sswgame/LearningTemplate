@@ -672,7 +672,7 @@ namespace sw
         // 퍼뮤테이션은 프리미티브를 더럽히지 않는다. 머티리얼이나 인스턴스의 정적 스위치, 키워드, 멀티컴파일을
         // 바꾸면 그릴 셰이더가 달라지는데 씬에서는 아무 일도 일어나지 않은 것처럼 보인다. 세대로 가른다.
         const uint64 permutationGeneration = MaterialPermutation::getPermutationGeneration();
-        input._bPermutationSame            = input._bHasCache && ( permutationGeneration == _lastPermutationGeneration );
+        input._bPermutationSame            = input._bHasCache && permutationGeneration != 0 && ( permutationGeneration == _lastPermutationGeneration ); // 0 = 모름(엔진 없음) — 같다고 보지 않는다
 
         // 아무도 "바뀌었다" 고 말하지 않았고 카메라도 그대로면 **수집 자체를 하지 않는다**.
         // 바꾼 쪽이 알려 주므로 정지한 씬의 비용은 0에 수렴한다. 주의: 이 판단을 위해 모든 GameObject 의

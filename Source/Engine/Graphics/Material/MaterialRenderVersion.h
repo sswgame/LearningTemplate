@@ -1,13 +1,13 @@
 /**
  * @file MaterialRenderVersion.h
- * @brief 머티리얼 렌더 값(바이트 · stride · 텍스처 슬롯 · 덮어쓰기 · 묶음 값)의 변경 번호입니다. 올릴 때마다 모든 머티리얼이 함께 쓰는 전역 번호도 오릅니다.
- * @details 장면 스냅샷은 머티리얼 사본을 매 빌드 다시 묻는 대신, 전역 번호(과 머티리얼 밖의 입력 — 텍스처 다시 올림 · 셰이더 리플렉션 캐시 세대)가 그대로면
- *          사본 맞추기를 통째로 건너뛴다(`GPUMaterialRegistry::refreshMaterialBindings`). 그러려면 값을 바꾸는 모든 곳이 전역 번호를 올려야 한다 —
- *          번호를 올리는 길을 `bump` 하나로 두고 증감 연산자를 두지 않아, 칸의 번호만 올리고 전역 번호를 빠뜨리는 코드를 쓸 수 없게 한다.
+ * @brief 머티리얼 렌더 값(바이트 · stride · 텍스처 슬롯 · 덮어쓰기 · 묶음 값)의 변경 번호입니다. 올릴 때마다 엔진에 묶인 머티리얼 캐시의 렌더 값 세대도 오릅니다.
+ * @details 장면 스냅샷은 머티리얼 사본을 매 빌드 다시 묻는 대신, 렌더 값 세대(`MaterialCache::getRenderValueGeneration`)와 머티리얼 밖의 입력(텍스처 다시 올림 · 셰이더 리플렉션 캐시 세대)이
+ *          그대로면 사본 맞추기를 통째로 건너뛴다(`GPUMaterialRegistry::refreshMaterialBindings`). 그러려면 값을 바꾸는 모든 곳이 세대를 올려야 한다 —
+ *          번호를 올리는 길을 `bump` 하나로 두고 증감 연산자를 두지 않아, 칸의 번호만 올리고 세대를 빠뜨리는 코드를 쓸 수 없게 한다.
+ *          세대는 프로세스 정적 칸이 아니라 머티리얼 캐시(엔진 범위)의 칸이다 — 엔진 없이 만든 머티리얼은 읽는 쪽도 "모름" 이라 올릴 곳이 없다.
  *          언리얼은 머티리얼 인스턴스가 바뀌면 렌더 쪽 유니폼 표현을 무효화해 그 프레임에만 다시 모은다(기억에 의존).
  */
 #pragma once
-#include "Core/Concurrency/atomic.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -15,8 +15,8 @@ namespace sw
 {
     /**
      * @class MaterialRenderVersion
-     * @brief 칸 하나의 변경 번호이면서, 올릴 때 전역 번호(`getGlobal`)도 함께 올리는 값입니다.
-     * @details 머티리얼 틱(물 · 식생)이 워커에서 값을 넣을 수 있어 전역 번호는 원자값이다. 칸의 번호는 그 머티리얼을 만지는 스레드의 것이다(예전 `uint32` 칸과 같다).
+     * @brief 칸 하나의 변경 번호이면서, 올릴 때 렌더 값 세대(`MaterialCache::getRenderValueGeneration`)도 함께 올리는 값입니다.
+     * @details 칸의 번호는 그 머티리얼을 만지는 스레드의 것이다(예전 `uint32` 칸과 같다). 세대는 캐시의 원자 칸이다(워커에서 올려도 된다).
      */
     class SW_API MaterialRenderVersion
     {
@@ -27,28 +27,19 @@ namespace sw
         {
         }
 
-        /** @brief 렌더 값이 바뀌었다 — 이 칸의 번호와 전역 번호를 함께 올립니다. */
-        void bump()
-        {
-            ++_value;
-            _s_global.fetch_add( 1u, std::memory_order_relaxed );
-        }
+        /** @brief 렌더 값이 바뀌었다 — 이 칸의 번호와 렌더 값 세대를 함께 올립니다. */
+        void bump();
         /** @brief 이 칸의 번호입니다(같으면 이 칸의 렌더 값이 그대로다). */
         uint32 get() const { return _value; }
 
-        /** @brief 모든 칸이 함께 올리는 번호입니다. 같으면 어느 머티리얼의 렌더 값도 바뀌지 않았다(머티리얼 밖의 입력은 따로 본다). */
-        static uint64 getGlobal() { return _s_global.load( std::memory_order_relaxed ); }
-
     private:
         uint32 _value{ 0 };
-
-        static atomic<uint64> _s_global;
     };
 
     /**
      * @struct MaterialRenderInputs
      * @brief 머티리얼 사본(`Material::getRenderBinding` · `MaterialInstance::getRenderBinding`)을 정하는 입력 전부의 번호입니다.
-     * @details 셋이 모두 같으면 어느 머티리얼도 지난번과 다른 사본을 내지 않는다: 머티리얼 · 인스턴스 · 묶음의 값(`MaterialRenderVersion::getGlobal`),
+     * @details 셋이 모두 같으면 어느 머티리얼도 지난번과 다른 사본을 내지 않는다: 머티리얼 · 인스턴스 · 묶음의 값(`MaterialCache::getRenderValueGeneration`),
      *          다시 올리거나 비동기로 끝난 텍스처의 SRV(`TextureCache::getReloadGeneration`), 셰이더 레이아웃(`ShaderReflectionLibrary::getCacheGeneration`).
      *          사본이 새 입력을 읽는 길을 더하면 여기에도 더한다 — 빠뜨리면 장면 스냅샷이 사본 맞추기를 건너뛰어 그 변화가 화면에 오르지 않는다.
      */

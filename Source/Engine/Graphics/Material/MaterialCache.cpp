@@ -127,7 +127,16 @@ namespace sw
     MaterialCache::MaterialCache()
         : AssetCacheBase{ CacheTracking::counted( kAssetKindName ) }
         , _impl{ make_unique<Impl>() }
+        , _renderValueGeneration{ 1 }
+        , _permutationGeneration{ 1 }
     {
+    }
+
+    MaterialCache* MaterialCache::findBound()
+    {
+        if ( engine::areEngineServicesBound() == false )
+            return nullptr;
+        return &engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>();
     }
 
     MaterialCache::~MaterialCache() = default;
