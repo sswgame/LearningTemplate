@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -24,6 +25,9 @@ namespace sw
     class SW_API IFontRasterizer
     {
     public:
+        /** @brief 모든 폰트의 0 번 글리프(.notdef, 상자)입니다. 대체 연쇄 어디에도 없는 문자를 경고와 함께 이것으로 그린다. */
+        static constexpr uint32 kNotdefGlyphIndex = 0;
+
         /** @brief 기본 구현(FreeType)을 만듭니다. 초기화에 실패하면 nullptr 입니다(이유는 로그). */
         static unique_ptr<IFontRasterizer> createDefault();
 
@@ -46,8 +50,8 @@ namespace sw
 
         /** @brief 면의 세로 메트릭입니다. 없는 면이면 false. */
         [[nodiscard]] virtual bool findFaceMetrics( FontFaceID face, FontFaceMetrics& outMetrics ) const = 0;
-        /** @brief 코드 포인트의 글리프 번호입니다. 그 면에 없으면 0(.notdef)이며, 대체 연쇄가 다음 면을 묻는 근거입니다. */
-        virtual uint32 findGlyphIndex( FontFaceID face, uint32 codepoint ) const = 0;
+        /** @brief 코드 포인트의 글리프 번호입니다. 그 면에 없으면(.notdef 뿐) 비어 있으며, 대체 연쇄가 다음 면을 묻는 근거입니다. */
+        [[nodiscard]] virtual optional<uint32> findGlyphIndex( FontFaceID face, uint32 codepoint ) const = 0;
         /** @brief 글리프 메트릭입니다. 없는 면이거나 없는 글리프면 false 입니다. */
         [[nodiscard]] virtual bool findGlyphMetrics( FontFaceID face, uint32 glyphIndex, GlyphMetrics& outMetrics ) const = 0;
         /** @brief 두 글리프 사이 커닝(em 비율, 보통 음수)입니다. 테이블이 없으면 0 입니다. */

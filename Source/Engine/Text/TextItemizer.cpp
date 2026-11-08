@@ -67,7 +67,7 @@ namespace sw
             if ( bNeutral && bHasRun )
             {
                 // 중립 문자는 지금 런을 이어 간다. 그 면에 글리프가 있거나 폭이 없으면 면도 그대로 둔다.
-                const bool bCurrentFaceHasIt = isZeroWidth( codepoint ) || rasterizer.findGlyphIndex( current._face, codepoint ) != 0;
+                const bool bCurrentFaceHasIt = isZeroWidth( codepoint ) || rasterizer.findGlyphIndex( current._face, codepoint ).has_value();
                 if ( bCurrentFaceHasIt )
                     face = current._face;
             }

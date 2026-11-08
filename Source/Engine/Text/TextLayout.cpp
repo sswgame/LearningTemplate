@@ -434,9 +434,9 @@ namespace sw
                             const uint32 mirrored          = bRightToLeftGlyph ? TextBidi::getMirroredCodepoint( shaped._codepoint ) : shaped._codepoint;
                             if ( mirrored != shaped._codepoint )
                             {
-                                const uint32 mirroredGlyph = rasterizer.findGlyphIndex( shaped._face, mirrored );
-                                if ( mirroredGlyph != 0 )
-                                    glyph._glyphIndex = mirroredGlyph;
+                                const optional<uint32> mirroredGlyph = rasterizer.findGlyphIndex( shaped._face, mirrored );
+                                if ( mirroredGlyph.has_value() )
+                                    glyph._glyphIndex = *mirroredGlyph;
                             }
                             outResult._listGlyph.push_back( glyph );
                         }

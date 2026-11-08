@@ -108,11 +108,11 @@ namespace sw::test
             return true;
         }
 
-        uint32 findGlyphIndex( FontFaceID face, uint32 codepoint ) const override
+        sw::optional<uint32> findGlyphIndex( FontFaceID face, uint32 codepoint ) const override
         {
             const auto iter = _mapFace.find( face );
             if ( iter == _mapFace.end() || iter->second.hasCodepoint( codepoint ) == false )
-                return 0;
+                return sw::nullopt;
             return codepoint;
         }
 

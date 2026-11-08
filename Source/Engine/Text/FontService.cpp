@@ -251,15 +251,15 @@ namespace sw
 
     FontFaceID FontService::findFaceForCodepoint( const FontFaceChain& chain, uint32 codepoint, uint32& outGlyphIndex )
     {
-        outGlyphIndex = 0;
+        outGlyphIndex = IFontRasterizer::kNotdefGlyphIndex;
         if ( chain._faceCount == 0 || _rasterizer == nullptr )
             return kInvalidFontFaceID;
         for ( uint32 index = 0; index < chain._faceCount; ++index )
         {
-            const uint32 glyphIndex = _rasterizer->findGlyphIndex( chain._arrFace[index], codepoint );
-            if ( glyphIndex != 0 )
+            const optional<uint32> glyphIndex = _rasterizer->findGlyphIndex( chain._arrFace[index], codepoint );
+            if ( glyphIndex.has_value() )
             {
-                outGlyphIndex = glyphIndex;
+                outGlyphIndex = *glyphIndex;
                 return chain._arrFace[index];
             }
         }
