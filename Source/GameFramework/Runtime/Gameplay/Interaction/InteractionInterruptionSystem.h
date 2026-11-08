@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
@@ -27,8 +28,8 @@ namespace sw
     class SW_GF_API InteractionInterruptionSystem
     {
     public:
-        /** @brief 오브젝트가 어느 NPC 인지 답하는 함수입니다. NPC 가 아니면 -1 을 돌려줍니다. */
-        using NPCResolveFunc = int32 ( * )( const ScheduleSystem& schedule, const GameObject& target );
+        /** @brief 오브젝트가 어느 NPC 인지 답하는 함수입니다. NPC 가 아니면 비어 있습니다. */
+        using NPCResolveFunc = optional<int32> ( * )( const ScheduleSystem& schedule, const GameObject& target );
 
         InteractionInterruptionSystem();
 
@@ -65,7 +66,7 @@ namespace sw
             int32  _npcIndex{ constant::invalid_index::kInt32 };
         };
 
-        int32 resolveNPC( const GameObject& target ) const;
+        [[nodiscard]] optional<int32> resolveNPC( const GameObject& target ) const;
 
     private:
         ScheduleSystem* _pSchedule;

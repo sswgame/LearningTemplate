@@ -28,17 +28,17 @@ namespace sw
             /** @brief 한 주의 날 수입니다. */
             static constexpr int32 kDaysPerWeek = 7;
 
-            /** @brief 계절 순서에서 @p season 의 번호입니다. 모르면 −1 입니다. */
-            static int32 findSeasonIndex( const vector<hashed_string>* pListSeason, const hashed_string& season )
+            /** @brief 계절 순서에서 @p season 의 번호입니다. 모르면 비어 있습니다. */
+            static optional<int32> findSeasonIndex( const vector<hashed_string>* pListSeason, const hashed_string& season )
             {
                 if ( pListSeason == nullptr )
-                    return -1;
+                    return nullopt;
                 for ( size_t index = 0; index < pListSeason->size(); ++index )
                 {
                     if ( ( *pListSeason )[index] == season )
                         return static_cast<int32>( index );
                 }
-                return -1;
+                return nullopt;
             }
 
             /** @brief "5-9, 12" 를 계절의 날 목록으로 읽습니다. 범위(`a-b`)는 풀어 넣습니다. */
@@ -199,14 +199,14 @@ namespace sw
                 if ( pSchedule == nullptr )
                     return false;
                 // 날짜를 (계절 번호, 날) 열쇠로 바꿔 비교한다. 계절 순서를 모르면(문맥에 없으면) 거짓이다.
-                const int32 currentSeason = findSeasonIndex( pSchedule->_pSeasonOrder, pSchedule->_season );
-                const int32 fromSeason    = args._fromDay > 0 ? findSeasonIndex( pSchedule->_pSeasonOrder, args._fromSeason ) : 0;
-                const int32 toSeason      = args._toDay > 0 ? findSeasonIndex( pSchedule->_pSeasonOrder, args._toSeason ) : 0;
-                if ( currentSeason < 0 || fromSeason < 0 || toSeason < 0 )
+                const optional<int32> currentSeason = findSeasonIndex( pSchedule->_pSeasonOrder, pSchedule->_season );
+                const optional<int32> fromSeason    = args._fromDay > 0 ? findSeasonIndex( pSchedule->_pSeasonOrder, args._fromSeason ) : optional<int32>{ 0 }; // 날이 없으면 쓰지 않는 칸이다
+                const optional<int32> toSeason      = args._toDay > 0 ? findSeasonIndex( pSchedule->_pSeasonOrder, args._toSeason ) : optional<int32>{ 0 };
+                if ( currentSeason.has_value() == false || fromSeason.has_value() == false || toSeason.has_value() == false )
                     return false;
-                const int32 current = currentSeason * kSeasonKeyStride + pSchedule->_dayOfSeason;
-                const int32 from    = fromSeason * kSeasonKeyStride + args._fromDay;
-                const int32 to      = toSeason * kSeasonKeyStride + args._toDay;
+                const int32 current = *currentSeason * kSeasonKeyStride + pSchedule->_dayOfSeason;
+                const int32 from    = *fromSeason * kSeasonKeyStride + args._fromDay;
+                const int32 to      = *toSeason * kSeasonKeyStride + args._toDay;
                 if ( args._fromDay > 0 && args._toDay > 0 )
                     return from <= to ? ( from <= current && current <= to ) : ( from <= current || current <= to );
                 return args._fromDay > 0 ? from <= current : current <= to;

@@ -496,14 +496,14 @@ namespace sw
         _listNPC[static_cast<size_t>( npcIndex )]._held = location;
     }
 
-    int32 ScheduleSystem::findNPCIndex( const hashed_string& npcID ) const
+    optional<int32> ScheduleSystem::findNPCIndex( const hashed_string& npcID ) const
     {
         for ( int32 npcIndex = 0; npcIndex < getNPCCount(); ++npcIndex )
         {
             if ( getNPCID( npcIndex ) == npcID )
                 return npcIndex;
         }
-        return -1;
+        return nullopt;
     }
 
     hashed_string ScheduleSystem::getNPCID( int32 npcIndex ) const
@@ -577,7 +577,8 @@ namespace sw
             return false;
         for ( const hashed_string& attendee : appointment._listAttendee )
         {
-            if ( isAttendeePresent( findNPCIndex( attendee ), appointmentIndex ) == false )
+            const optional<int32> npcIndex = findNPCIndex( attendee );
+            if ( npcIndex.has_value() == false || isAttendeePresent( *npcIndex, *appointmentIndex ) == false )
                 return false;
         }
         return true;
@@ -900,7 +901,7 @@ namespace sw
                         continue;
                     candidate._sourceID   = appointment._id;
                     candidate._priority   = MathUtil::max( routine._priority, appointment._priority );
-                    candidate._ownerIndex = appointmentIndex;
+                    candidate._ownerIndex = *appointmentIndex;
                     candidate._source     = ScheduleSegmentSource::Appointment;
                 }
                 candidate._order = order++;
@@ -1258,10 +1259,11 @@ namespace sw
         _listBrokenAppointment.push_back( inoutCheck._appointmentIndex );
         for ( const hashed_string& attendee : appointment._listAttendee )
         {
-            const int32 npcIndex = findNPCIndex( attendee );
-            if ( npcIndex < 0 )
+            const optional<int32> foundNPC = findNPCIndex( attendee );
+            if ( foundNPC.has_value() == false )
                 continue;
-            bool bPlanned = false;
+            const int32 npcIndex = *foundNPC;
+            bool        bPlanned = false;
             for ( const ScheduleSegment& segment : _listNPC[static_cast<size_t>( npcIndex )]._listSegment )
             {
                 bPlanned = bPlanned || ( segment._source == ScheduleSegmentSource::Appointment && segment._ownerIndex == inoutCheck._appointmentIndex );
@@ -1556,11 +1558,12 @@ namespace sw
         vector<uint8> listRestored( _listNPC.size(), SW_FALSE );
         for ( const ScheduleNPCSaveState& npcState : state._listNPC )
         {
-            const int32 npcIndex = findNPCIndex( npcState._id );
-            if ( npcIndex < 0 )
+            const optional<int32> foundNPC = findNPCIndex( npcState._id );
+            if ( foundNPC.has_value() == false )
                 continue;
-            NPCRuntime& npc = _listNPC[static_cast<size_t>( npcIndex )];
-            npc._affinity   = npcState._affinity;
+            const int32 npcIndex = *foundNPC;
+            NPCRuntime& npc      = _listNPC[static_cast<size_t>( npcIndex )];
+            npc._affinity        = npcState._affinity;
             npc._tags.clear();
             for ( const string& tagName : npcState._listTag )
             {
