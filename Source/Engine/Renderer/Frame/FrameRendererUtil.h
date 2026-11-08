@@ -500,6 +500,8 @@ namespace sw
         hashed_string _light2DCookieAtlas{ "Light2DCookieAtlas" };
         /// 자동 노출의 이번 프레임 EV(1x1, 뷰의 `_arrAutoExposure`) — 톤맵하는 패스가 `g_AutoExposureIndex` 로 읽는다. 렌더러가 소유한 텍스처다.
         hashed_string _autoExposure{ "AutoExposure" };
+        /// 컬러 그레이딩 LUT(뷰의 후처리 값 `_colorGradingLut`, `FramePostProcessTextureSet`) — 톤맵하는 패스가 `g_ColorGradingLutIndex` 로 읽는다. 텍스처 캐시가 소유한 텍스처다.
+        hashed_string _colorGradingLut{ "ColorGradingLut" };
     };
 } // namespace sw
 
@@ -562,6 +564,19 @@ namespace sw
         hashed_string _cameraFrame{ "g_CameraFrame" };
         /// @brief 카메라별 피사계 심도입니다 — x 초점 거리(m), y 착란원 반지름 배율(px), z 반지름 상한(px), w 켬(1) · 끔(0, 끈 뷰는 패스를 기록하지 않아 셰이더는 읽지 않는다). depth_of_field.hlsl.
         hashed_string _cameraLens{ "g_CameraLens" };
+        /// @brief 컬러 그레이딩 화이트 밸런스 행 셋입니다(`PostGradeConstants::_arrWhiteBalance`, post_grade.hlsli).
+        hashed_string _arrGradeWhiteBalance[3]{ hashed_string{ "g_GradeWhiteBalance0" }, hashed_string{ "g_GradeWhiteBalance1" }, hashed_string{ "g_GradeWhiteBalance2" } };
+        /// @brief 컬러 그레이딩 범위 상수입니다 — 범위(그림자 · 중간 · 밝은 부분)마다 채도 · 대비 · 감마 · 게인 · 오프셋(`PostGradeConstants::_arrRange` 와 같은 차례).
+        /// @brief 컬러 그레이딩 범위 상수의 수입니다(`PostGradeConstants::kRangeCount * kRangeFieldCount`, FramePassExecutor 가 static_assert 로 맞춘다).
+        static constexpr uint32 kGradeRangeConstantCount = 15;
+        hashed_string           _arrGradeRange[kGradeRangeConstantCount]{ hashed_string{ "g_GradeShadowsSaturation" }, hashed_string{ "g_GradeShadowsContrast" }, hashed_string{ "g_GradeShadowsGamma" },
+                                                                          hashed_string{ "g_GradeShadowsGain" }, hashed_string{ "g_GradeShadowsOffset" }, hashed_string{ "g_GradeMidtonesSaturation" },
+                                                                          hashed_string{ "g_GradeMidtonesContrast" }, hashed_string{ "g_GradeMidtonesGamma" }, hashed_string{ "g_GradeMidtonesGain" },
+                                                                          hashed_string{ "g_GradeMidtonesOffset" }, hashed_string{ "g_GradeHighlightsSaturation" }, hashed_string{ "g_GradeHighlightsContrast" },
+                                                                          hashed_string{ "g_GradeHighlightsGamma" }, hashed_string{ "g_GradeHighlightsGain" }, hashed_string{ "g_GradeHighlightsOffset" } };
+        /// @brief 컬러 그레이딩 범위 경계 · 켬(`PostGradeConstants::_params`)과 LUT 크기 · 세기(`_lut`)입니다.
+        hashed_string _gradeParams{ "g_GradeParams" };
+        hashed_string _gradeLut{ "g_GradeLut" };
         hashed_string _outlineColor{ "g_OutlineColor" };
         hashed_string _outlineParams{ "g_OutlineParams" };
         hashed_string _sourceTexel{ "g_SourceTexel" };

@@ -49,6 +49,7 @@
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/PostProcess/FrameAutoExposure.h"
 #include "Engine/Renderer/Frame/PostProcess/FrameFog.h"
+#include "Engine/Renderer/Frame/PostProcess/FramePostGrade.h"
 #include "Engine/Renderer/Frame/PostProcess/FrameUpscale.h"
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Frame/Resource/RenderPSOCache.h"
@@ -458,6 +459,28 @@ namespace sw
         const bool    bScreenOutput   = view._pOutputTexture == nullptr;
         const float32 colorVisionMode = bScreenOutput ? static_cast<float32>( _state._canvasFrame._colorVisionMode ) : 0.0f;
         context._passValues.setFloat4( passConstantNames()._cameraFrame, float4{ MathUtil::max( 0.0f, post._letterboxAspectRatio ), viewAspect, colorVisionMode, 0.0f } );
+        // 컬러 그레이딩(post_grade.hlsli) — 화이트 밸런스 · 범위 보정 · LUT. LUT 는 세기가 있는 후처리 뷰만 묻는다(안 쓰는 경로를 읽지 않는다). 띠 모양이 아니면 데이터 오류라 걸지 않는다.
+        const bool       bWantsLut = view._settings.usesPostProcess() && post._colorGradingLutIntensity > 0.0f;
+        const Texture2D* pLut      = bWantsLut ? _state._postProcessTextures.findReady( post._colorGradingLut, "colour grading LUT" ) : nullptr;
+        if ( pLut != nullptr && PostGradeConstants::isLutStrip( pLut->getWidth(), pLut->getHeight() ) == false )
+        {
+            SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.ColorGradingLutShape", "Colour grading LUT '%#' is %#x%# - it must be an N*N wide, N tall strip (e.g. 256x16); the LUT is left out",
+                                  post._colorGradingLut.c_str(), pLut->getWidth(), pLut->getHeight() );
+            pLut = nullptr;
+        }
+        view._pColorGradingLut         = pLut;
+        const PostGradeConstants grade = PostGradeConstants::make( post, pLut != nullptr ? pLut->getHeight() : 0u );
+        for ( uint32 row = 0; row < 3; ++row )
+        {
+            context._passValues.setFloat4( passConstantNames()._arrGradeWhiteBalance[row], grade._arrWhiteBalance[row] );
+        }
+        static_assert( PassConstantNames::kGradeRangeConstantCount == PostGradeConstants::kRangeCount * PostGradeConstants::kRangeFieldCount, "그레이딩 범위 상수 이름 수가 상수 배치와 다르다" );
+        for ( uint32 index = 0; index < PassConstantNames::kGradeRangeConstantCount; ++index )
+        {
+            context._passValues.setFloat4( passConstantNames()._arrGradeRange[index], grade._arrRange[index] );
+        }
+        context._passValues.setFloat4( passConstantNames()._gradeParams, grade._params );
+        context._passValues.setFloat4( passConstantNames()._gradeLut, grade._lut );
         // 피사계 심도(depth_of_field.hlsl) — 얇은 렌즈의 착란원. 지름 / 센서 높이 = 센서 높이 · s² / ( 4 · N · 초점 거리 ) · |1 - 초점 거리 / 깊이|
         // (s = 1 / tan( fovY / 2 ) 라 초점 길이 = 센서 높이 · s / 2, 구경 = 초점 길이 / N, 초점 길이가 초점 거리보다 훨씬 짧다고 본다). y 는 그 반지름을 화면 높이 px 로 바꾼 배율이다.
         // 조리개 0(핀홀) · 직교 · 후처리를 끈 뷰는 패스를 기록하지 않는다(applyViewPassSelection). 그때는 배율을 0 으로 두고 w 도 0 이다(셰이더는 w 를 읽지 않는다).
@@ -905,6 +928,8 @@ namespace sw
         // 라이트는 **패스 종류를 가리지 않는다.** 포워드 지오메트리도, 디퍼드 풀스크린 조명도 읽는다.
         // 그래서 인스턴스 버퍼(지오메트리 패스 전용)와 달리 여기서 모든 패스에 바인딩한다.
         registerLightBuffer( context );
+        // 후처리 텍스처(LUT · 먼지 마스크)도 패스를 가리지 않는다 — 톤맵이 Tonemap 패스에도 후처리 체인(Present)에도 있고, 파이프라인 XML 이 자리를 정한다.
+        registerPostProcessTextures( context );
 
         // 이 패스가 바인딩할 뎁스다. 파이프라인 XML 의 `_depthAttachment` 가 기준이고, 비어 있으면
         // 뎁스 없이 연다. "이 패스는 일부러 뎁스를 쓰지 않는다" 를 선언으로 표현할 수 있어야 한다.
@@ -1826,6 +1851,14 @@ namespace sw
                                                       cullView._visibleInstances._buffer, cullView._visibleInstances._srv );
             context._passValues.setUint( passConstantNames()._swVisibleSlotCount, _state._gpuScene.getVisibleSlotCount() );
         }
+    }
+
+    void FramePassExecutor::registerPostProcessTextures( FramePassContext& context )
+    {
+        // 뷰의 후처리 텍스처는 셋업이 이번 프레임에 읽힌 것만 골라 두었다(`applyViewPassConstants`). 걸린 것이 없으면 셰이더는 그 효과를 끈 상수를 받았다.
+        const FrameViewTarget& view = *_pActiveView;
+        if ( view._pColorGradingLut != nullptr )
+            context._resourceRegistry.registerTexture( attachmentNames()._colorGradingLut, view._pColorGradingLut->getHandle(), view._pColorGradingLut->getSRV() );
     }
 
     void FramePassExecutor::registerLightBuffer( FramePassContext& context )

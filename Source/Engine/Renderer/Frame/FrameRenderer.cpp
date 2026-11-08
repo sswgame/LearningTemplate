@@ -605,6 +605,8 @@ namespace sw
         context._passValues.setFloat4( passConstantNames()._fogInscatter, _fog.getFrameFog()._inscatter );
         context._passValues.setFloat4( passConstantNames()._fogVolumeParams, _fog.getFrameFog()._volumeParams );
         context._passValues.setFloat4( passConstantNames()._outlineColor, kDefaultOutlineColor );
+        // 지난 프레임 어느 뷰도 묻지 않은 후처리 텍스처를 놓는다 — 이번 프레임의 뷰들이 묻기 전에 한 번.
+        _state._postProcessTextures.pruneUnused();
         _passExecutor.applyViewPassConstants( context, _state._mainView );
     }
 
@@ -722,6 +724,7 @@ namespace sw
         _fog.release();
         _state._probeUpdater.release( _pDevice );
         _state._cookieAtlas.release( _pDevice );
+        _state._postProcessTextures.release();
         // HDRI 텍스처의 참조를 놓는다 — 다음 프레임의 하늘이 새 디바이스에 다시 청한다(경로를 비워 다르게 본다).
         _state._skyHdriLoad  = TextureHandle{};
         _state._skyHdriPath  = hashed_string{};

@@ -43,7 +43,8 @@ SW_TEST_CASE( PostProcessVolumeTest, OverrideFlagsPairEveryValue )
         expected.append( valueName.substr( 2 ) );
         SW_EXPECT_EQUAL( string_view( expected ), listOverride[index]._name.view() );
         SW_EXPECT_TRUE( listOverride[index]._bIsBitField == SW_TRUE );
-        SW_EXPECT_TRUE( PropertyRoleUtil::isInterpolatable( listValue[index] ) );
+        // 섞을 수 없는 칸은 경로(DataPath)뿐이다 — 섞기가 주소로 골라 절반에서 바꾼다. 다른 형식을 더하면 blendOverrides 에 줄을 더하고 여기를 넓힌다.
+        SW_EXPECT_TRUE( PropertyRoleUtil::isInterpolatable( listValue[index] ) || listValue[index]._typeName.view() == "DataPath" );
     }
 }
 

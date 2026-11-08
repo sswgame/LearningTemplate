@@ -5,8 +5,10 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/VectorMath.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/DataPath.h"
 
 namespace sw
 {
@@ -52,6 +54,65 @@ namespace sw
         float32 _autoExposureSpeedUp{ 3.0f };
         PROPERTY( Min = 0.0, Tooltip = "Adaptation speed when the scene gets darker (1/s, exponential)" )
         float32 _autoExposureSpeedDown{ 1.0f };
+
+        /**
+         * @brief 컬러 그레이딩(언리얼 Color Grading · White Balance)입니다. 노출 뒤 · 톤맵 앞의 선형 HDR 색에 화이트 밸런스, 범위별 채도 · 대비 · 감마 · 게인 · 오프셋을 걸고,
+         *        톤맵 뒤에 LUT 를 섞는다(`post_grade.hlsli` 의 `CameraGrade::applyColorGrading` · `applyLut`). 범위 값은 rgb 와 w(모든 채널에 곱하거나 더하는 값)이고
+         *        전역(`_color*`)이 범위(`_shadows*` · `_midtones*` · `_highlights*`)에 곱해진다(오프셋은 더해진다). 모든 기본값은 중립이다.
+         */
+        PROPERTY( Min = 1500.0, Max = 15000.0, Tooltip = "White balance temperature of the scene light; 6500 is neutral, lower makes the image cooler", Units = K )
+        float32 _whiteTemperature{ 6500.0f };
+        PROPERTY( Min = -1.0, Max = 1.0, Tooltip = "White balance tint; 0 is neutral, positive compensates a green cast (more magenta)" )
+        float32 _whiteTint{ 0.0f };
+        PROPERTY( Tooltip = "Global Saturation (rgb per channel, w all channels); 1 keeps the colour" )
+        float4 _colorSaturation{ 1.0f, 1.0f, 1.0f, 1.0f };
+        PROPERTY( Tooltip = "Global Contrast around mid grey 0.18 (rgb, w); 1 keeps the contrast" )
+        float4 _colorContrast{ 1.0f, 1.0f, 1.0f, 1.0f };
+        PROPERTY( Tooltip = "Global Gamma (rgb, w); 1 keeps the curve" )
+        float4 _colorGamma{ 1.0f, 1.0f, 1.0f, 1.0f };
+        PROPERTY( Tooltip = "Global Gain multiplier (rgb, w); 1 keeps the colour" )
+        float4 _colorGain{ 1.0f, 1.0f, 1.0f, 1.0f };
+        PROPERTY( Tooltip = "Global Offset added (rgb, w added to all channels); 0 keeps the colour" )
+        float4 _colorOffset{ 0.0f, 0.0f, 0.0f, 0.0f };
+        PROPERTY( Tooltip = "Shadows Saturation (rgb per channel, w all channels); 1 keeps the colour" )
+        float4 _shadowsSaturation{ 1.0f, 1.0f, 1.0f, 1.0f };
+        PROPERTY( Tooltip = "Shadows Contrast around mid grey 0.18 (rgb, w); 1 keeps the contrast" )
+        float4 _shadowsContrast{ 1.0f, 1.0f, 1.0f, 1.0f };
+        PROPERTY( Tooltip = "Shadows Gamma (rgb, w); 1 keeps the curve" )
+        float4 _shadowsGamma{ 1.0f, 1.0f, 1.0f, 1.0f };
+        PROPERTY( Tooltip = "Shadows Gain multiplier (rgb, w); 1 keeps the colour" )
+        float4 _shadowsGain{ 1.0f, 1.0f, 1.0f, 1.0f };
+        PROPERTY( Tooltip = "Shadows Offset added (rgb, w added to all channels); 0 keeps the colour" )
+        float4 _shadowsOffset{ 0.0f, 0.0f, 0.0f, 0.0f };
+        PROPERTY( Tooltip = "Midtones Saturation (rgb per channel, w all channels); 1 keeps the colour" )
+        float4 _midtonesSaturation{ 1.0f, 1.0f, 1.0f, 1.0f };
+        PROPERTY( Tooltip = "Midtones Contrast around mid grey 0.18 (rgb, w); 1 keeps the contrast" )
+        float4 _midtonesContrast{ 1.0f, 1.0f, 1.0f, 1.0f };
+        PROPERTY( Tooltip = "Midtones Gamma (rgb, w); 1 keeps the curve" )
+        float4 _midtonesGamma{ 1.0f, 1.0f, 1.0f, 1.0f };
+        PROPERTY( Tooltip = "Midtones Gain multiplier (rgb, w); 1 keeps the colour" )
+        float4 _midtonesGain{ 1.0f, 1.0f, 1.0f, 1.0f };
+        PROPERTY( Tooltip = "Midtones Offset added (rgb, w added to all channels); 0 keeps the colour" )
+        float4 _midtonesOffset{ 0.0f, 0.0f, 0.0f, 0.0f };
+        PROPERTY( Tooltip = "Highlights Saturation (rgb per channel, w all channels); 1 keeps the colour" )
+        float4 _highlightsSaturation{ 1.0f, 1.0f, 1.0f, 1.0f };
+        PROPERTY( Tooltip = "Highlights Contrast around mid grey 0.18 (rgb, w); 1 keeps the contrast" )
+        float4 _highlightsContrast{ 1.0f, 1.0f, 1.0f, 1.0f };
+        PROPERTY( Tooltip = "Highlights Gamma (rgb, w); 1 keeps the curve" )
+        float4 _highlightsGamma{ 1.0f, 1.0f, 1.0f, 1.0f };
+        PROPERTY( Tooltip = "Highlights Gain multiplier (rgb, w); 1 keeps the colour" )
+        float4 _highlightsGain{ 1.0f, 1.0f, 1.0f, 1.0f };
+        PROPERTY( Tooltip = "Highlights Offset added (rgb, w added to all channels); 0 keeps the colour" )
+        float4 _highlightsOffset{ 0.0f, 0.0f, 0.0f, 0.0f };
+        PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "Scene luminance where the shadow range has faded out (linear, before tonemapping)" )
+        float32 _shadowsMax{ 0.09f };
+        PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "Scene luminance where the highlight range starts (linear, before tonemapping)" )
+        float32 _highlightsMin{ 0.5f };
+        /// @brief 컬러 그레이딩 LUT 텍스처(가로 N² × 세로 N 띠, 언리얼 256 × 16 과 같은 배치)입니다. 비면 LUT 가 없다. 톤맵한 [0,1] 색을 주소로 읽는다.
+        PROPERTY( Tooltip = "Colour grading LUT texture (N*N wide, N tall strip, e.g. 256 x 16); empty is none" )
+        DataPath _colorGradingLut;
+        PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "How much of the LUT result replaces the colour; 0 is off" )
+        float32 _colorGradingLutIntensity{ 0.0f };
 
         /** @brief 자동 노출이 장면을 측정하는지(최소 EV 가 최대보다 작다) 나타냅니다. 같으면 고정 노출 2^-최소 EV 입니다. */
         bool usesAutoExposure() const { return _autoExposureMinEv < _autoExposureMaxEv; }
@@ -104,5 +165,57 @@ namespace sw
         uint8 _bAutoExposureSpeedUp : 1;
         PROPERTY()
         uint8 _bAutoExposureSpeedDown : 1;
+        PROPERTY()
+        uint8 _bWhiteTemperature : 1;
+        PROPERTY()
+        uint8 _bWhiteTint : 1;
+        PROPERTY()
+        uint8 _bColorSaturation : 1;
+        PROPERTY()
+        uint8 _bColorContrast : 1;
+        PROPERTY()
+        uint8 _bColorGamma : 1;
+        PROPERTY()
+        uint8 _bColorGain : 1;
+        PROPERTY()
+        uint8 _bColorOffset : 1;
+        PROPERTY()
+        uint8 _bShadowsSaturation : 1;
+        PROPERTY()
+        uint8 _bShadowsContrast : 1;
+        PROPERTY()
+        uint8 _bShadowsGamma : 1;
+        PROPERTY()
+        uint8 _bShadowsGain : 1;
+        PROPERTY()
+        uint8 _bShadowsOffset : 1;
+        PROPERTY()
+        uint8 _bMidtonesSaturation : 1;
+        PROPERTY()
+        uint8 _bMidtonesContrast : 1;
+        PROPERTY()
+        uint8 _bMidtonesGamma : 1;
+        PROPERTY()
+        uint8 _bMidtonesGain : 1;
+        PROPERTY()
+        uint8 _bMidtonesOffset : 1;
+        PROPERTY()
+        uint8 _bHighlightsSaturation : 1;
+        PROPERTY()
+        uint8 _bHighlightsContrast : 1;
+        PROPERTY()
+        uint8 _bHighlightsGamma : 1;
+        PROPERTY()
+        uint8 _bHighlightsGain : 1;
+        PROPERTY()
+        uint8 _bHighlightsOffset : 1;
+        PROPERTY()
+        uint8 _bShadowsMax : 1;
+        PROPERTY()
+        uint8 _bHighlightsMin : 1;
+        PROPERTY()
+        uint8 _bColorGradingLut : 1;
+        PROPERTY()
+        uint8 _bColorGradingLutIntensity : 1;
     };
 } // namespace sw

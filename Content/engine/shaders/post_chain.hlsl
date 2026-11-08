@@ -54,10 +54,10 @@ float3 applyOutline( float2 uv, float2 depthTexel, float3 color )
 #if defined( SW_POST_TONEMAP )
 float3 applyTonemap( float2 uv, float3 color )
 {
-    // 카메라별 후처리 값은 톤맵과 함께 간다 — 노출은 톤맵 앞, 색 보정 · 비네트 · 레터박스는 뒤(post_grade.hlsli). 후처리를 끈 뷰는 PSMain 에서 원본을 고른다.
-    color = CameraGrade::applyExposure( color );
+    // 뷰의 후처리 값은 톤맵과 함께 간다 — 노출 · 컬러 그레이딩은 톤맵 앞, LUT · 색 보정 · 비네트 · 레터박스는 뒤(post_grade.hlsli). 후처리를 끈 뷰는 PSMain 에서 원본을 고른다.
+    color = CameraGrade::applyColorGrading( CameraGrade::applyExposure( color ) );
     color = color / ( color + 1.0f );
-    return CameraGrade::apply( uv, color );
+    return CameraGrade::apply( uv, CameraGrade::applyLut( color ) );
 }
 #else
 float3 applyTonemap( float2 uv, float3 color )

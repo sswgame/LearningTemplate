@@ -91,6 +91,8 @@ namespace sw
         /// @brief 이번 프레임의 측정 상수(최소 EV, 최대 EV, 밝아질 때 · 어두워질 때 목표로 다가가는 비율)입니다. 셋업(`prepareAutoExposure`)이 정하고 톤맵 패스는 읽기만 합니다.
         float4  _autoExposureParams{};
         float32 _autoExposureClock{ 0.0f }; ///< 지난번 이 뷰의 노출을 측정한 게임 시각(초, `GPUScene::getVertexAnimationTime`)
+        /// @brief 이번 프레임 이 뷰가 읽는 컬러 그레이딩 LUT 입니다(읽힌 것만, 없으면 nullptr). 셋업(`applyViewPassConstants`)이 정하고 패스가 역할 이름으로 건다 — 수명은 `FramePostProcessTextureSet` 가 쥔다.
+        const Texture2D* _pColorGradingLut{ nullptr };
         /**
          * @brief FSR 1 의 중간 RT(EASU 출력 = Present 뷰포트 크기, RGBA8)와 그 SRV 입니다. 이 뷰가 FSR 로 키울 때만 있다(`prepareUpscale`).
          * @details 크기는 Present 뷰포트(화면 사각형 · 자기 출력)다 — 풀(배율 크기)과 다르고 출력이 바뀌면 다시 만든다.

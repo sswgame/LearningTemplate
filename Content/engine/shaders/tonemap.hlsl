@@ -10,8 +10,8 @@ float4 PSMain( PSInput input ) : SV_TARGET
     const bool bSkipTonemap = ( g_Flags & SW_PASS_FLAG_SKIP_TONEMAP ) != 0u;
     // 카메라별 후처리 값(노출 · 채도 · 대비 · 비네트 · 레터박스)은 후처리를 끈 뷰(CCTV)에는 걸지 않는다 — 톤맵만 한다.
     const bool   bSkipPost = ( g_Flags & SW_PASS_FLAG_SKIP_POST ) != 0u;
-    const float3 exposed   = bSkipPost ? source : CameraGrade::applyExposure( source );
+    const float3 exposed   = bSkipPost ? source : CameraGrade::applyColorGrading( CameraGrade::applyExposure( source ) );
     const float3 mapped    = exposed / ( exposed + 1.0f );
-    const float3 graded    = bSkipPost ? mapped : CameraGrade::apply( input._uv, mapped );
+    const float3 graded    = bSkipPost ? mapped : CameraGrade::apply( input._uv, CameraGrade::applyLut( mapped ) );
     return float4( bSkipTonemap ? source : graded, 1.0f );
 }

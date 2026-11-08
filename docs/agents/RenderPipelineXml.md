@@ -96,6 +96,9 @@
 |---|---|
 | 값 칸을 더한다 | `PostProcessValues` 에 칸, `PostProcessOverrides` 에 같은 차례로 `_b<칸>` 비트와 생성자 줄. 섞기 · 포즈 블렌드는 리플렉션으로 따라온다(테스트 `PostProcessVolumeTest.OverrideFlagsPairEveryValue` 가 짝을 본다). 섞을 수 없는 형식(경로)은 `blendOverrides` 에 주소로 고르는 줄을 더한다(절반에서 바꾼다) |
 | 셰이더가 읽는다 | 기본값은 지금 그림을 바꾸지 않는 중립이어야 한다. 패스 상수는 `FramePassExecutor::applyViewPassConstants` 가 뷰마다 채운다 |
+| 텍스처를 가리킨다(LUT · 먼지 마스크) | 칸은 `DataPath`, 로드는 `FramePostProcessTextureSet::findReady`(비동기 — 읽는 동안 그 효과는 빠진다), 셰이더 칸은 엔진 텍스처 표(`shaderslot::emulated::kEngineTextureNames`)의 이름이다. 에뮬(DX11 · GL)의 엔진 텍스처 칸은 GL 유닛 0..15 안이라 둘이 더 남는다 |
+
+컬러 그레이딩은 톤맵하는 셰이더(Tonemap 패스 · 후처리 체인 `SW_POST_TONEMAP`) 안의 함수다 — 노출 → 화이트 밸런스 · 범위 보정(선형 HDR) → 톤맵 곡선 → LUT → 채도 · 대비 · 비네트 · 레터박스. 언리얼은 그레이딩을 LUT 하나로 구워(PostProcessCombineLUTs) 톤맵이 읽지만, 여기서는 뷰마다 값이 적어 굽는 패스(왕복 하나)를 두지 않고 픽셀마다 푼다. 값이 모두 중립이면 C++ 가 켬 상수를 0 으로 두어 셰이더가 건너뛴다. 후처리를 끈 뷰(`SW_PASS_FLAG_SKIP_POST`)는 톤맵만 한다.
 
 ## 선택 스테이지를 쓰는 셰이더
 

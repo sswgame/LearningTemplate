@@ -302,6 +302,8 @@ namespace sw
          *          패스라 `registerInstanceBuffer` 를 거치지 않는데, 라이트는 바로 거기서 필요하다.
          */
         void registerLightBuffer( FramePassContext& context );
+        /** @brief 지금 그리는 뷰가 이번 프레임에 읽는 후처리 텍스처(컬러 그레이딩 LUT · 블룸 먼지 마스크)를 역할 이름으로 겁니다. 셋업이 고른 것만 건다. */
+        void registerPostProcessTextures( FramePassContext& context );
         /** @brief 배치의 머티리얼 데이터 버퍼(GPUScene)를 패스 레지스트리에 "SwMaterials" 이름으로 등록합니다. */
         void registerMaterialBuffer( FramePassContext& context, const GPUMeshBatchBinding& binding, RHIPipelineStateHandle pso );
         /** @brief 씬 메시를 그립니다. GPUScene 이 올라가 있으면 drawGPUBatches 로 넘기고, 아니면 상태만 맞춥니다. */

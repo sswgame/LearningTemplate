@@ -21,6 +21,32 @@ namespace sw
         , _bAutoExposureMaxEv{ SW_FALSE }
         , _bAutoExposureSpeedUp{ SW_FALSE }
         , _bAutoExposureSpeedDown{ SW_FALSE }
+        , _bWhiteTemperature{ SW_FALSE }
+        , _bWhiteTint{ SW_FALSE }
+        , _bColorSaturation{ SW_FALSE }
+        , _bColorContrast{ SW_FALSE }
+        , _bColorGamma{ SW_FALSE }
+        , _bColorGain{ SW_FALSE }
+        , _bColorOffset{ SW_FALSE }
+        , _bShadowsSaturation{ SW_FALSE }
+        , _bShadowsContrast{ SW_FALSE }
+        , _bShadowsGamma{ SW_FALSE }
+        , _bShadowsGain{ SW_FALSE }
+        , _bShadowsOffset{ SW_FALSE }
+        , _bMidtonesSaturation{ SW_FALSE }
+        , _bMidtonesContrast{ SW_FALSE }
+        , _bMidtonesGamma{ SW_FALSE }
+        , _bMidtonesGain{ SW_FALSE }
+        , _bMidtonesOffset{ SW_FALSE }
+        , _bHighlightsSaturation{ SW_FALSE }
+        , _bHighlightsContrast{ SW_FALSE }
+        , _bHighlightsGamma{ SW_FALSE }
+        , _bHighlightsGain{ SW_FALSE }
+        , _bHighlightsOffset{ SW_FALSE }
+        , _bShadowsMax{ SW_FALSE }
+        , _bHighlightsMin{ SW_FALSE }
+        , _bColorGradingLut{ SW_FALSE }
+        , _bColorGradingLutIntensity{ SW_FALSE }
     {
     }
 
@@ -61,6 +87,14 @@ namespace sw
                 const bool bBoth                  = inoutValues._letterboxAspectRatio > 0.0f && target._letterboxAspectRatio > 0.0f;
                 inoutValues._letterboxAspectRatio = bBoth ? MathUtil::lerp( inoutValues._letterboxAspectRatio, target._letterboxAspectRatio, alpha )
                                                           : ( alpha < 0.5f ? inoutValues._letterboxAspectRatio : target._letterboxAspectRatio );
+                continue;
+            }
+            // 경로는 섞을 수 없다 — 절반에서 바꾼다(언리얼은 LUT 둘을 무게로 섞은 LUT 를 굽지만, 여기서는 한 장만 건다).
+            // shortcut: 겹친 볼륨의 LUT 사이는 절반에서 넘어간다, 두 LUT 를 섞는 전환이 필요해지면 LUT 를 무게로 굽는 패스를 더한다.
+            if ( pValue == &inoutValues._colorGradingLut )
+            {
+                if ( alpha >= 0.5f )
+                    inoutValues._colorGradingLut = target._colorGradingLut;
                 continue;
             }
             // 섞는 함수는 from 을 값으로 읽은 뒤 쓴다 — from 과 결과가 같은 주소여도 된다.

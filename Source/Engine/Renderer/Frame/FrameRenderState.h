@@ -18,6 +18,7 @@
 #include "Engine/Renderer/Canvas/CanvasRenderer.h"
 #include "Engine/Renderer/Frame/FrameMeshDeformState.h"
 #include "Engine/Renderer/Frame/FramePassContext.h"
+#include "Engine/Renderer/Frame/PostProcess/FramePostProcessTextureSet.h"
 #include "Engine/Renderer/Frame/Resource/PassConstantRing.h"
 #include "Engine/Renderer/Frame/Timeline/GPUPassTimeline.h"
 #include "Engine/Renderer/Frame/View/FrameViewTarget.h"
@@ -116,6 +117,8 @@ namespace sw
         TextureHandle                _skyHdriLoad{};    ///< HDRI 하늘 텍스처의 로드 핸들입니다(참조를 쥔다). 스카이 패스가 준비된 것만 읽는다
         /** @brief 2D 빛 쿠키 아틀라스입니다(칸 나누기 · 쿠키 텍스처 수명 · 아틀라스 렌더 타깃). */
         Light2DCookieAtlas _cookieAtlas{};
+        /** @brief 뷰의 후처리 값이 가리키는 텍스처(컬러 그레이딩 LUT · 블룸 먼지 마스크)의 로드 핸들입니다. 셋업이 뷰마다 묻고 프레임 시작에 안 쓰인 것을 놓는다. */
+        FramePostProcessTextureSet _postProcessTextures{};
         /// @brief 캔버스(화면 2D) 렌더러입니다. 아틀라스 사본, 사각형 버퍼, 일괄 드로우, 렌더 텍스처 대상(월드 공간 UI)을 렌더 스레드에서 처리합니다.
         CanvasRenderer _canvasRenderer{};
         /// @brief 파티클 렌더러입니다. 입자 버퍼와 입자 텍스처를 렌더 스레드에서 처리하고, 투명 패스가 방출기마다 빌보드를 그립니다.

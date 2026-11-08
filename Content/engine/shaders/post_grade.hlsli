@@ -1,6 +1,6 @@
 /**
  * @file post_grade.hlsli
- * @brief 카메라별 후처리 값(PostProcessValues)을 톤맵 앞뒤에서 적용합니다 — 노출은 앞, 채도 · 대비 · 비네트 · 레터박스는 뒤.
+ * @brief 뷰의 후처리 값(PostProcessValues)을 톤맵 앞뒤에서 적용합니다 — 노출 · 컬러 그레이딩은 앞, LUT · 채도 · 대비 · 비네트 · 레터박스는 뒤.
  * @details 값은 PassCB 의 g_CameraGrade · g_CameraFrame 이고 엔진이 뷰마다 채운다(FramePassExecutor::applyViewPassConstants).
  *          중립 값(노출 배율 1, 채도 1, 대비 1, 비네트 0, 레터박스 0)이면 두 함수가 색을 바꾸지 않는다 — 카메라 값을 쓰지 않는 게임의 화면이 그대로다.
  *          톤맵을 하는 두 셰이더(tonemap.hlsl, post_chain.hlsl 의 SW_POST_TONEMAP)가 같은 함수를 부른다.
@@ -13,8 +13,15 @@
 struct CameraGrade
 {
     static float3 applyExposure( float3 hdrColor );
+    static float3 correctRange( float3 color, float4 saturation, float4 contrast, float4 gamma, float4 gain, float4 offset );
+    static float3 applyColorGrading( float3 hdrColor );
+    static float2 computeLutUv( float3 color, float size, float slice );
+    static float3 applyLut( float3 color );
     static float3 apply( float2 uv, float3 color );
 };
+
+/// @brief 휘도 가중치(Rec.709 선형)입니다. 그레이딩의 범위 무게와 채도가 쓴다.
+static const float3 kGradeLumaWeights = float3( 0.2126f, 0.7152f, 0.0722f );
 
 /**
  * @brief 톤맵 앞의 HDR 색에 카메라 노출 배율과 자동 노출을 곱합니다.
@@ -26,6 +33,71 @@ static float3 CameraGrade::applyExposure( float3 hdrColor )
 {
     const float autoExposureEv = Bindless::sampleIndexWith( g_AutoExposureIndex, SW_SAMPLER_POINT_CLAMP, float2( 0.5f, 0.5f ) ).r;
     return hdrColor * ( g_CameraGrade.x * exp2( -autoExposureEv ) );
+}
+
+/**
+ * @brief 범위 하나의 보정입니다(언리얼 PostProcessCombineLUTs 의 ColorCorrect 와 같은 순서) — 채도, 중간 회색 0.18 을 축으로 한 대비, 감마, 게인, 오프셋.
+ * @details 인자는 C++ 가 전역 · 범위 값과 w 를 미리 합친 rgb 다(`PostGradeConstants::make`). 모두 중립(1 · 1 · 1 · 1 · 0)이면 색이 그대로다.
+ */
+static float3 CameraGrade::correctRange( float3 color, float4 saturation, float4 contrast, float4 gamma, float4 gain, float4 offset )
+{
+    const float luminance = dot( color, kGradeLumaWeights );
+    color                 = max( 0.0f, lerp( luminance.xxx, color, saturation.rgb ) );
+    color                 = pow( color * ( 1.0f / 0.18f ), contrast.rgb ) * 0.18f;
+    color                 = pow( color, 1.0f / max( gamma.rgb, 1e-4f ) );
+    return color * gain.rgb + offset.rgb;
+}
+
+/**
+ * @brief 노출 뒤 · 톤맵 앞의 선형 HDR 색에 화이트 밸런스와 범위별 보정(그림자 · 중간 · 밝은 부분)을 겁니다.
+ * @details 범위 무게는 화이트 밸런스 뒤 휘도로 정한다 — 그림자 1 - smoothstep( 0, 그림자 끝 ), 밝은 부분 smoothstep( 시작, 1 ), 중간은 나머지(언리얼 ColorCorrectAll).
+ *          값이 모두 중립이면 C++ 가 g_GradeParams.z 를 0 으로 두어 계산하지 않는다(뷰마다 같은 값이라 분기가 흩어지지 않는다).
+ */
+static float3 CameraGrade::applyColorGrading( float3 hdrColor )
+{
+    float3 graded = hdrColor;
+    [branch] if ( g_GradeParams.z > 0.5f )
+    {
+        const float3 balanced         = max( 0.0f, float3( dot( g_GradeWhiteBalance0.xyz, hdrColor ), dot( g_GradeWhiteBalance1.xyz, hdrColor ), dot( g_GradeWhiteBalance2.xyz, hdrColor ) ) );
+        const float  luminance        = dot( balanced, kGradeLumaWeights );
+        const float  shadowsWeight    = 1.0f - smoothstep( 0.0f, max( g_GradeParams.x, 1e-4f ), luminance );
+        const float  highlightsWeight = smoothstep( min( g_GradeParams.y, 0.9999f ), 1.0f, luminance );
+        const float  midtonesWeight   = 1.0f - shadowsWeight - highlightsWeight;
+        const float3 shadows          = CameraGrade::correctRange( balanced, g_GradeShadowsSaturation, g_GradeShadowsContrast, g_GradeShadowsGamma, g_GradeShadowsGain, g_GradeShadowsOffset );
+        const float3 midtones         = CameraGrade::correctRange( balanced, g_GradeMidtonesSaturation, g_GradeMidtonesContrast, g_GradeMidtonesGamma, g_GradeMidtonesGain, g_GradeMidtonesOffset );
+        const float3 highlights       = CameraGrade::correctRange( balanced, g_GradeHighlightsSaturation, g_GradeHighlightsContrast, g_GradeHighlightsGamma, g_GradeHighlightsGain, g_GradeHighlightsOffset );
+        graded                        = shadows * shadowsWeight + midtones * midtonesWeight + highlights * highlightsWeight;
+    }
+    return graded;
+}
+
+/** @brief LUT 띠(가로 N² × 세로 N)에서 색의 파랑 조각 @p slice 안 텍셀 중심 UV 입니다. C++ `PostGradeConstants::computeLutUv` 와 같은 식이다(단위 테스트가 그쪽을 본다). */
+static float2 CameraGrade::computeLutUv( float3 color, float size, float slice )
+{
+    const float red   = saturate( color.r ) * ( size - 1.0f );
+    const float green = saturate( color.g ) * ( size - 1.0f );
+    return float2( ( slice * size + red + 0.5f ) / ( size * size ), ( green + 0.5f ) / size );
+}
+
+/**
+ * @brief 톤맵한 [0,1] 색을 컬러 그레이딩 LUT(g_ColorGradingLutIndex)로 바꿔 세기만큼 섞습니다. 파랑은 이웃 두 조각을 읽어 섞는다(조각 사이는 필터가 섞지 않는다).
+ * @details LUT 가 없거나(읽는 중 · 경로 없음) 세기 0 이면 g_GradeLut.x 가 0 이라 읽지 않는다.
+ */
+static float3 CameraGrade::applyLut( float3 color )
+{
+    float3 result = color;
+    [branch] if ( g_GradeLut.x > 0.5f )
+    {
+        const float  size    = g_GradeLut.x;
+        const float3 clamped = saturate( color );
+        const float  blue    = clamped.b * ( size - 1.0f );
+        const float  slice0  = floor( blue );
+        const float  slice1  = min( slice0 + 1.0f, size - 1.0f );
+        const float3 lower   = Bindless::sampleIndex( g_ColorGradingLutIndex, CameraGrade::computeLutUv( clamped, size, slice0 ) ).rgb;
+        const float3 upper   = Bindless::sampleIndex( g_ColorGradingLutIndex, CameraGrade::computeLutUv( clamped, size, slice1 ) ).rgb;
+        result               = lerp( color, lerp( lower, upper, blue - slice0 ), g_GradeLut.y );
+    }
+    return result;
 }
 
 /** @brief 톤맵 뒤의 [0,1] 색에 채도 · 대비 · 비네트 · 색각 보정 · 레터박스를 적용합니다. */
