@@ -2,7 +2,6 @@
 
 #include "Games/Shooter3D/ShooterAutoAimControllerComponent.h"
 
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/Ray.h"
 
@@ -18,9 +17,6 @@
 
 namespace sw
 {
-    /** @brief `-gv_shooterAutoMelee=1`: 자동 플레이 AI 가 닿는 거리의 적을 근접으로도 칩니다(네트 근접 시나리오 — 기본 꺼짐이라 자동 플레이 골든은 그대로다). */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_shooterAutoMelee, 0, "Shooter3D: 자동 플레이 AI 가 가까운 적을 근접으로도 (1=켜기)" );
-
     namespace
     {
         struct ShooterAutoAimControllerComponentInternal
@@ -63,6 +59,7 @@ namespace sw
         , _chestHeight{ 0.55f }
         , _circleTangent{ 0.08f }
         , _circleInward{ 0.04f }
+        , _bMelee{ SW_FALSE }
     {
         // 사람처럼 돈다 — 표적이 바뀔 때 한 프레임에 수십 도 돌면 3인칭 몸 · 카메라가 튄다.
         setTurnRate( 3.0f );
@@ -130,7 +127,7 @@ namespace sw
             setStateName( "Fire" );
             pressButton( hashed_string( Internal::kFire ) );
         }
-        if ( gv_shooterAutoMelee != 0 && bVisible && MathUtil::abs( yawError ) < _aimTolerance && bestDistance < pPlayer->getMeleeReach() )
+        if ( _bMelee == SW_TRUE && bVisible && MathUtil::abs( yawError ) < _aimTolerance && bestDistance < pPlayer->getMeleeReach() )
             pressButton( hashed_string( Internal::kMelee ) );
         // 가까우면 산탄총, 멀면 소총 — 탄이 남은 쪽만.
         const int32        wantedWeapon = bestDistance < _closeRangeDistance ? 1 : 0;

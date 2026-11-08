@@ -129,9 +129,6 @@ namespace sw
         ShooterGameModeComponent();
         virtual ~ShooterGameModeComponent() override;
 
-        /** @brief 움직임 기록(`-gv_shooterMotionTrace`)을 파일로 쓰고 판을 닫습니다. */
-        void onEndPlay() override;
-
         /** @brief 판의 진행(처치 수, 페이싱 감독 상태)을 씁니다. `ComponentStateStore::capture` 가 부릅니다. 적과 효과는 모습이라 정리합니다. */
         void serializeState( StateIO& io ) override;
         /** @brief 플레이어가 쓰러졌습니다. 적을 정리하고 감독을 처음부터 다시 돌립니다(틱이 끝난 뒤 게임 스레드에서 부릅니다). */
@@ -152,6 +149,10 @@ namespace sw
         const float3&    getPlayerFeet() const { return _playerFeet; }
         bool             isPlayerAlive() const { return _bPlayerAlive == SW_TRUE; }
         GameObjectHandle getPlayer() const { return _player; }
+        /** @brief 스폰한 적 수입니다(쓰러져 정리를 기다리는 것 포함 — 진단 · 개발 기록이 읽는다). */
+        uint32 getEnemyCount() const { return static_cast<uint32>( _listEnemy.size() ); }
+        /** @brief 스폰한 적 @p index 의 오브젝트입니다(스폰 순서). */
+        GameObjectHandle getEnemyObject( uint32 index ) const { return _listEnemy[index]._object; }
         float32          getArenaHalfSize() const { return _arenaHalfSize; }
         /** @brief 현재 웨이브입니다. 감독이 쌓기 단계로 돌아온 횟수에 1 을 더한 값입니다. */
         uint32            getWave() const { return static_cast<uint32>( _director.getCycle() + 1 ); }
@@ -223,8 +224,6 @@ namespace sw
         void syncAutoPlayPossession( GameObjectManager& manager );
         void clearEnemies();
         void logStatus( float32 deltaTime );
-        /** @brief `-gv_shooterMotionTrace=<경로>`: 지난 프레임에 그려진 플레이어 몸, 본, 카메라, 적 하나의 위치를 CSV 한 줄로 쌓습니다. */
-        void appendMotionTrace( float32 deltaTime );
 
     private:
         PROPERTY( Category = "Prefabs", Tooltip = "Pooled sphere for hits and muzzle flashes" )
@@ -272,7 +271,6 @@ namespace sw
         vector<ShooterReplicatedEnemy>      _listReplicaSample;  ///< 이번 프레임에 받은 적(네트 클라이언트)
         vector<ShooterReplicatedEnemy>      _listPendingReplica; ///< 틱 뒤에 세울 복제 모습
         MaterialTintCache                   _tintCache;          ///< 효과 색(같은 색은 나눠 쓴다).
-        string                              _motionTrace;        ///< 움직임 기록 CSV(진단용이며 끝날 때 파일로 쓴다).
         GameObjectHandle                    _autoPlayController; ///< 자동 플레이 AI 조종자 오브젝트(스폰한 것이며 정리할 목록에 들어 있다).
         float3                              _playerEye;
         float3                              _playerFeet;
@@ -280,7 +278,6 @@ namespace sw
         float32                             _pendingHeal; ///< 감독의 수리 보상. 틱이 끝난 뒤 플레이어 체력에 반영한다.
         uint32                              _spawnCursor; ///< 다음 적의 스폰 위치 순번.
         uint32                              _killCount;
-        uint32                              _traceFrame;       ///< 움직임 기록의 프레임 번호.
         AssetReloadWatch<AIDirectorProfile> _profileReload;    ///< 프로필을 받을 때의 프로필 캐시 다시 읽기 횟수(바뀌면 판을 이어 새 프로필로 옮긴다)
         uint32                              _nextEnemyNetID;   ///< 다음 적의 복제 엔티티 번호
         int8                                _appliedAutoPlay;  ///< 플레이어 폰에 맞춰 둔 자동 플레이(-1 아직, 0 끔, 1 켬).
