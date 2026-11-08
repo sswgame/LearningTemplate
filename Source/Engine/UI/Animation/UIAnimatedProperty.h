@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -61,7 +62,7 @@ namespace sw
          * @brief @p type(기반 타입 포함) 기준으로 경로 @p path 를 해석합니다(`UIBindingValue::resolvePath`). 컨테이너는 잎이어도 받지 않습니다.
          * @return 모르는 이름이거나 컨테이너면 false 이고 @p outError 에 이유(영어)를 둡니다.
          */
-        [[nodiscard]] static bool resolve( const TypeInfo& type, string_view path, UIAnimatedProperty& outProperty, string& outError );
+        [[nodiscard]] static expected<void> resolve( const TypeInfo& type, string_view path, UIAnimatedProperty& outProperty );
 
         /** @brief 텍스트 @p text 를 이 필드의 값으로 읽습니다(키의 `_value` 와 트윈 끝값). 읽지 못하면 false 입니다. */
         [[nodiscard]] bool parseValue( string_view text, UIAnimatedValue& outValue ) const;

@@ -329,18 +329,18 @@ namespace sw
         UISystem* pUI  = getUISystem();
         if ( pUI == nullptr )
             return false;
-        const string&                           documentPath = findRowDocument( pUI->getEngineDocuments(), setting, pUI->getInputRouter().getInputMode() );
-        UIDocumentCache&                        documents    = engine::getSubsystem<UIDocumentCache>();
-        string                                  error;
-        const shared_ptr<const UIDocumentAsset> document = documents.findOrLoad( documentPath, error );
-        vector<UIBindingDef>                    listBinding;
-        unique_ptr<Widget>                      row = document != nullptr ? UIDocumentLoader::instantiate( *document, documents, listBinding, error ) : nullptr;
-        if ( row == nullptr )
+        const string&                                     documentPath = findRowDocument( pUI->getEngineDocuments(), setting, pUI->getInputRouter().getInputMode() );
+        UIDocumentCache&                                  documents    = engine::getSubsystem<UIDocumentCache>();
+        const expected<shared_ptr<const UIDocumentAsset>> document     = documents.findOrLoad( documentPath );
+        vector<UIBindingDef>                              listBinding;
+        expected<unique_ptr<Widget>>                      built = document.has_value() ? UIDocumentLoader::instantiate( **document, documents, listBinding ) : unexpected( document.error() );
+        if ( built.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "OptionsMenuScreen.OptionsRowFailed", "[UI] Options row for '%#' failed: %#", setting._id.c_str(), error.c_str() );
+            SW_LOG_ERROR_ID( "OptionsMenuScreen.OptionsRowFailed", "[UI] Options row for '%#' failed: %# (%#)", setting._id.c_str(), built.error().message(), built.error().detail() );
             return false;
         }
-        const string prefix( setting._id.c_str() );
+        unique_ptr<Widget> row = std::move( *built );
+        const string       prefix( setting._id.c_str() );
         Internal::prefixNames( *row, prefix );
         (void)rows.addChild( std::move( row ) );
         WidgetTree& tree = getTree();

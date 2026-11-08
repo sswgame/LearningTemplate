@@ -25,42 +25,34 @@ namespace sw
             }
 
             /** @brief `키=값` 하나를 식에 적습니다. */
-            [[nodiscard]] static bool applyOption( string_view option, UIBindingExpression& outExpression, string& outError )
+            [[nodiscard]] static expected<void> applyOption( string_view option, UIBindingExpression& outExpression )
             {
                 string_view key;
                 string_view value;
                 if ( StringUtil::trySplitKeyValue( option, key, value ) == false )
-                {
-                    outError = "option '" + string( option ) + "' is not key=value";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "a binding option is not key=value", option } );
                 if ( value.empty() )
-                {
-                    outError = "option '" + string( key ) + "' has no value";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "a binding option has no value", key } );
                 if ( key == "mode" )
                 {
                     if ( value == "OneWay" || value == "TwoWay" )
                     {
                         outExpression._mode = value == "OneWay" ? UIBindingMode::OneWay : UIBindingMode::TwoWay;
-                        return true;
+                        return {};
                     }
-                    outError = "unknown mode '" + string( value ) + "' (OneWay, TwoWay)";
-                    return false;
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "unknown binding mode (OneWay, TwoWay)", value } );
                 }
                 if ( key == "format" )
                 {
                     outExpression._format = hashed_string( value );
-                    return true;
+                    return {};
                 }
                 if ( key == "converter" )
                 {
                     outExpression._converter = hashed_string( value );
-                    return true;
+                    return {};
                 }
-                outError = "unknown option '" + string( key ) + "' (mode, format, converter)";
-                return false;
+                return unexpected( Error{ ErrorKind::InvalidArgument, "unknown binding option (mode, format, converter)", key } );
             }
         };
     } // namespace
@@ -68,29 +60,20 @@ namespace sw
 
 namespace sw
 {
-    bool UIBindingExpression::parse( string_view text, UIBindingExpression& outExpression, string& outError )
+    expected<void> UIBindingExpression::parse( string_view text, UIBindingExpression& outExpression )
     {
         outExpression                  = UIBindingExpression{};
         const string_view whole        = StringUtil::trim( text );
         const bool        bNotEnclosed = whole.size() < 2 || whole.front() != '{' || whole.back() != '}';
         if ( bNotEnclosed )
-        {
-            outError = "binding expression must be enclosed in { }";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "binding expression must be enclosed in { }", whole } );
         const string_view body  = whole.substr( 1, whole.size() - 2 );
         const size_t      colon = body.find( ':' );
         if ( colon == string_view::npos )
-        {
-            outError = "binding expression has no kind (bind:, poll:, setting:)";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "binding expression has no kind (bind:, poll:, setting:)", whole } );
         const string_view kind = StringUtil::trim( body.substr( 0, colon ) );
         if ( UIBindingExpressionInternal::tryParseSource( kind, outExpression._source ) == false )
-        {
-            outError = "unknown binding kind '" + string( kind ) + "' (bind, poll, setting)";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "unknown binding kind (bind, poll, setting)", kind } );
         if ( outExpression._source == UIBindingSource::Setting )
             outExpression._mode = UIBindingMode::TwoWay;
 
@@ -98,18 +81,15 @@ namespace sw
         size_t      comma   = rest.find( ',' );
         outExpression._path = string( StringUtil::trim( rest.substr( 0, comma ) ) );
         if ( outExpression._path.empty() )
-        {
-            outError = "binding expression has an empty path";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "binding expression has an empty path", whole } );
         while ( comma != string_view::npos )
         {
             rest                     = rest.substr( comma + 1 );
             comma                    = rest.find( ',' );
             const string_view option = StringUtil::trim( rest.substr( 0, comma ) );
-            if ( UIBindingExpressionInternal::applyOption( option, outExpression, outError ) == false )
-                return false;
+            if ( expected<void> applied = UIBindingExpressionInternal::applyOption( option, outExpression ); applied.has_value() == false )
+                return applied;
         }
-        return true;
+        return {};
     }
 } // namespace sw

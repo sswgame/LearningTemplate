@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -44,7 +45,7 @@ namespace sw
         uint32                      _specificity{ 0 };
 
         /** @brief 선택자 문자열을 읽습니다. 모르는 문법이나 상태 이름이면 false 를 반환하고 @p outError 에 이유를 둡니다. */
-        [[nodiscard]] static bool parse( string_view text, UIStyleSelector& outSelector, string& outError );
+        [[nodiscard]] static expected<void> parse( string_view text, UIStyleSelector& outSelector );
         /** @brief 위젯 @p widget 의 지금 상태가 @p part 에 맞는지 반환합니다. @p bNavigationMode 면 포커스 위젯이 `:focus-visible` 입니다. */
         static bool matchesPart( const UIStyleSelectorPart& part, const Widget& widget, bool bNavigationMode );
         /** @brief 위젯 @p widget 에 맞는지 반환합니다. 맨 오른쪽 조각은 위젯에, 나머지는 가까운 조상부터 차례로 찾아 맞춥니다. */
@@ -117,7 +118,7 @@ namespace sw
 
         // 스타일 시트 텍스트를 읽고, 규칙 필드를 계산된 스타일에 씁니다. */
         /** @brief 스타일 시트 텍스트를 읽습니다. 실패하면 false 를 반환하고 오류는 `<경로>:<줄>: <이유>` 형식입니다. */
-        [[nodiscard]] static bool parse( string_view text, string_view path, UIStyleSheetAsset& outSheet, string& outError );
+        [[nodiscard]] static expected<void> parse( string_view text, string_view path, UIStyleSheetAsset& outSheet );
         /** @brief 필드 하나를 @p inoutStyle 에 씁니다(읽을 때 이미 확인한 텍스트라 실패하지 않습니다). */
         static void applyAssignment( const UIStyleAssignment& assignment, WidgetStyle& inoutStyle );
     };

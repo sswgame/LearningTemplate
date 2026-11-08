@@ -42,7 +42,7 @@ namespace sw
             }
 
             /** @brief 항목 하나(`_field 0.2 EaseOut`)를 @p inoutSpec 에 더합니다. */
-            [[nodiscard]] static bool parseEntry( string_view item, UIStyleTransitionSpec& inoutSpec, string& outError )
+            [[nodiscard]] static expected<void> parseEntry( string_view item, UIStyleTransitionSpec& inoutSpec )
             {
                 // 공백으로 나눈 단어를 셋까지 읽는다. 필드, 길이, 곡선 순서다.
                 string_view arrToken[4]{};
@@ -65,23 +65,14 @@ namespace sw
                     if ( position == begin )
                         break;
                     if ( tokenCount == 4 )
-                    {
-                        outError = "transition item '" + string( item ) + "' has more than four words";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "a transition item has more than four words", item } );
                     arrToken[tokenCount++] = item.substr( begin, position - begin );
                 }
                 if ( tokenCount < 2 )
-                {
-                    outError = "transition item '" + string( item ) + "' must be 'field seconds [curve] [delay]'";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "a transition item must be 'field seconds [curve] [delay]'", item } );
                 UIStyleTransitionSpec::Entry entry{};
                 if ( StringUtil::parseFloat( arrToken[1], entry._duration ) == false || entry._duration < 0.0f )
-                {
-                    outError = "transition item '" + string( item ) + "' has an unreadable duration";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "a transition item has an unreadable duration", item } );
                 // 길이 다음 단어: 숫자면 지연(곡선 없음), 아니면 곡선이다. 곡선 다음 숫자는 지연이다.
                 uint32  nextToken = 2;
                 float32 delay     = 0.0f;
@@ -95,41 +86,26 @@ namespace sw
                     BlendCurveDef       scratch{};
                     const PropertyInfo* pCurve = BlendCurveDef::StaticType()->findProperty( hashed_string( "_curve" ) );
                     if ( pCurve == nullptr || SerializerUtil::applyPropertyText( *pCurve, MutableObjectAddress{ &scratch }, arrToken[nextToken], SerializeContext::getDefault( SerializePurpose::Authoring ) ) == false )
-                    {
-                        outError = "transition item '" + string( item ) + "' has an unknown curve '" + string( arrToken[nextToken] ) + "'";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::NotFound, "a transition item has an unknown curve", item } );
                     entry._curve = scratch._curve;
                     ++nextToken;
                     if ( nextToken < tokenCount )
                     {
                         if ( StringUtil::parseFloat( arrToken[nextToken], delay ) == false )
-                        {
-                            outError = "transition item '" + string( item ) + "' has an unreadable delay '" + string( arrToken[nextToken] ) + "'";
-                            return false;
-                        }
+                            return unexpected( Error{ ErrorKind::InvalidArgument, "a transition item has an unreadable delay", item } );
                         entry._delay = delay;
                         ++nextToken;
                     }
                 }
                 if ( nextToken < tokenCount || entry._delay < 0.0f )
-                {
-                    outError = "transition item '" + string( item ) + "' must be 'field seconds [curve] [delay]' with a delay of zero or more";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "a transition item must be 'field seconds [curve] [delay]' with a delay of zero or more", item } );
                 const bool bAll = StringUtil::equals( arrToken[0], string_view( kAllName ) );
                 if ( bAll == false )
                 {
                     if ( UIStyleFieldTable::tryFindField( arrToken[0], entry._field ) == false )
-                    {
-                        outError = "transition names unknown style property '" + string( arrToken[0] ) + "'";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::NotFound, "a transition names an unknown style property", arrToken[0] } );
                     if ( UIStyleTransitionSpec::isInterpolable( entry._field ) == false )
-                    {
-                        outError = "style property '" + string( arrToken[0] ) + "' cannot transition (not a number, size or color)";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::Unsupported, "the style property cannot transition (not a number, size or color)", arrToken[0] } );
                 }
                 for ( uint32 index = 0; index < static_cast<uint32>( UIStyleField::Count ); ++index )
                 {
@@ -137,7 +113,7 @@ namespace sw
                     if ( ( bAll && UIStyleTransitionSpec::isInterpolable( field ) ) || ( bAll == false && field == entry._field ) )
                         setEntry( inoutSpec, field, entry );
                 }
-                return true;
+                return {};
             }
 
             static void setEntry( UIStyleTransitionSpec& inoutSpec, UIStyleField field, const UIStyleTransitionSpec::Entry& source )
@@ -182,24 +158,21 @@ namespace sw
         return VectorUtil::findBy<&Entry::_field>( _listEntry, field );
     }
 
-    bool UIStyleTransitionSpec::parse( string_view text, UIStyleTransitionSpec& outSpec, string& outError )
+    expected<void> UIStyleTransitionSpec::parse( string_view text, UIStyleTransitionSpec& outSpec )
     {
         outSpec                            = UIStyleTransitionSpec{};
         const vector<string_view> listItem = StringUtil::split( text, ",", { ._bTrim = true } );
         // 빈 글 하나(항목 없음)는 받고, 항목이 여럿인데 빈 것이 끼면 오류다.
         if ( listItem.size() == 1 && listItem[0].empty() )
-            return true;
+            return {};
         for ( const string_view item : listItem )
         {
             if ( item.empty() )
-            {
-                outError = "transition '" + string( text ) + "' has an empty item";
-                return false;
-            }
-            if ( UIStyleTransitionInternal::parseEntry( item, outSpec, outError ) == false )
-                return false;
+                return unexpected( Error{ ErrorKind::InvalidArgument, "a transition has an empty item", text } );
+            if ( expected<void> parsed = UIStyleTransitionInternal::parseEntry( item, outSpec ); parsed.has_value() == false )
+                return parsed;
         }
-        return true;
+        return {};
     }
 
     bool UIStyleTransitionSpec::isInterpolable( UIStyleField field )
@@ -306,8 +279,7 @@ namespace sw
         UIStyleTransitionSpec spec{};
         if ( pNew->has( UIStyleField::Transition ) && pNew->_value._transition.empty() == false )
         {
-            string error;
-            if ( UIStyleTransitionSpec::parse( pNew->_value._transition, spec, error ) == false )
+            if ( UIStyleTransitionSpec::parse( pNew->_value._transition, spec ).has_value() == false )
                 spec = UIStyleTransitionSpec{}; // 시트 로드가 이미 걸렀으므로 여기서는 조용히 전환 없음으로 처리한다
         }
 

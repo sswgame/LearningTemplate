@@ -395,7 +395,7 @@ namespace sw
         return UIBindingValueInternal::getKindOps( kind ).pName;
     }
 
-    bool UIBindingValue::resolvePath( const TypeInfo& type, string_view path, UIPropertyPath& outPath, string& outError )
+    expected<void> UIBindingValue::resolvePath( const TypeInfo& type, string_view path, UIPropertyPath& outPath )
     {
         outPath                 = UIPropertyPath{};
         const TypeInfo* pType   = &type;
@@ -408,19 +408,19 @@ namespace sw
             bIsLast                   = dot == string_view::npos;
             if ( pType == nullptr )
             {
-                outError = "'" + string( path ) + "' goes through a field that is not a reflected struct";
-                return false;
+                outPath = UIPropertyPath{};
+                return unexpected( Error{ ErrorKind::InvalidArgument, "the path goes through a field that is not a reflected struct", path } );
             }
             const PropertyInfo* pProperty = pType->findPropertyInHierarchy( hashed_string( segment ) );
             if ( pProperty == nullptr )
             {
-                outError = "'" + string( pType->_name.c_str() ) + "' has no property '" + string( segment ) + "'";
-                return false;
+                outPath = UIPropertyPath{};
+                return unexpected( Error{ ErrorKind::NotFound, "the type has no property of that name", pType->_name.c_str() }.appendDetail( "." ).appendDetail( segment ) );
             }
             if ( pProperty->_bIsContainer == SW_TRUE && bIsLast == false )
             {
-                outError = "'" + string( path ) + "' goes through a container";
-                return false;
+                outPath = UIPropertyPath{};
+                return unexpected( Error{ ErrorKind::Unsupported, "the path goes through a container", path } );
             }
             outPath._listProperty.push_back( pProperty );
             if ( bIsLast == false )
@@ -431,7 +431,7 @@ namespace sw
         }
         const PropertyInfo& leaf = outPath.getLeafProperty();
         outPath._kind            = leaf._bIsContainer == SW_TRUE ? UIBindingValueKind::Other : classifyType( leaf._typeName );
-        return true;
+        return {};
     }
 
     UIBindingValue UIBindingValue::readValue( const UIPropertyPath& path, const void* pRoot )

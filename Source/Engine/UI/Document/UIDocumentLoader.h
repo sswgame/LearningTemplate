@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -31,16 +32,15 @@ namespace sw
         /**
          * @brief 문서 텍스트 @p text 를 파싱합니다.
          * @param path 문서 경로입니다(오류 메시지와 `UIDocumentAsset::_path` 에 쓰며, 정규화해서 적습니다).
-         * @return 실패하면 false 이고 @p outError(`<경로>:<줄>: <이유>`)를 채웁니다. 이때 @p outAsset 은 쓰지 않습니다.
+         * @return 실패하면 그 이유(대상은 `<경로>:<줄>: <까닭>`)입니다. 이때 @p outAsset 은 쓰지 않습니다.
          */
-        [[nodiscard]] static bool parse( string_view text, string_view path, UIDocumentAsset& outAsset, string& outError );
+        [[nodiscard]] static expected<void> parse( string_view text, string_view path, UIDocumentAsset& outAsset );
         /**
          * @brief 문서 @p document 에서 위젯 트리를 만듭니다. 조각(`UserWidget`)은 @p cache 에서 찾아 끼우고 그 안의 이름을 `조각.이름` 으로 감쌉니다.
          * @param outListBinding 문서에서 분리한 바인딩 식을 위젯 번호와 함께 뒤에 붙입니다(실패하면 비웁니다).
-         * @return 루트 위젯입니다. 실패하면(모르는 타입, 읽지 못한 값, 조각이 자기를 다시 부르는 경우) nullptr 를 반환하고 @p outError 를 채웁니다.
+         * @return 루트 위젯입니다. 실패하면(모르는 타입, 읽지 못한 값, 조각이 자기를 다시 부르는 경우) 그 이유(대상은 `<경로>:<줄>: <까닭>`)입니다.
          */
-        [[nodiscard]] static unique_ptr<Widget> instantiate( const UIDocumentAsset& document, UIDocumentCache& cache, vector<UIBindingDef>& outListBinding,
-                                                             string& outError );
+        [[nodiscard]] static expected<unique_ptr<Widget>> instantiate( const UIDocumentAsset& document, UIDocumentCache& cache, vector<UIBindingDef>& outListBinding );
         /**
          * @brief 위젯 타입 @p type 의 기본값 인스턴스를 리플렉션 기본 생성자(`$ctor`)로 sw 할당자 블록에 만듭니다. 만들 수 없으면(추상 타입이거나 생성자가 없음) nullptr 입니다.
          * @details `unique_ptr<Widget>` 의 해제자(`sw_delete`)가 가상 소멸자를 부르고 같은 블록을 해제하므로, `make_unique` 로 만든 것과 짝이 맞는다.

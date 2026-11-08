@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -40,7 +41,7 @@ namespace sw
         const Entry* findEntry( UIStyleField field ) const;
 
         /** @brief 텍스트 @p text 를 읽습니다. 모르는 필드, 보간할 수 없는 필드, 읽지 못한 길이, 모르는 곡선이면 false 를 반환하고 @p outError 에 이유(영어)를 둡니다. */
-        [[nodiscard]] static bool parse( string_view text, UIStyleTransitionSpec& outSpec, string& outError );
+        [[nodiscard]] static expected<void> parse( string_view text, UIStyleTransitionSpec& outSpec );
         /** @brief 필드 @p field 가 보간되는 필드(실수 성분)이면 true 입니다. */
         static bool isInterpolable( UIStyleField field );
     };

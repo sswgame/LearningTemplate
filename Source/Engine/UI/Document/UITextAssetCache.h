@@ -8,6 +8,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Diagnostics/CacheStats.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -26,7 +27,7 @@ namespace sw
      * @brief 텍스트 하나를 에셋으로 파싱합니다. 실패하면 nullptr 를 반환하고 @p outError 에 `<경로>:<줄>: <이유>` 를 둡니다.
      * @details 에셋 타입은 가진 서브시스템만 안다. 공통 구현은 `shared_ptr<const void>` 로 보관하고, 가진 서브시스템이 자기 타입으로 되돌린다.
      */
-    using UITextAssetParseFunction = shared_ptr<const void> ( * )( string_view text, string_view path, string& outError );
+    using UITextAssetParseFunction = expected<shared_ptr<const void>> ( * )( string_view text, string_view path );
 } // namespace sw
 
 namespace sw
@@ -64,7 +65,7 @@ namespace sw
         void clear() override;
 
         /** @brief 에셋을 나눠 줍니다. 처음이면 읽고 파싱합니다. 실패하면 nullptr 를 반환하고 @p outError 를 채웁니다. */
-        shared_ptr<const void> findOrLoadAsset( string_view path, string& outError );
+        expected<shared_ptr<const void>> findOrLoadAsset( string_view path );
         /** @brief 파일 대신 읽을 텍스트를 경로에 등록합니다. 이미 읽어 둔 그 경로의 에셋은 버립니다. */
         void registerMemoryText( string_view path, string_view text );
         /** @brief 텍스트를 읽어 파싱한 횟수입니다. */
