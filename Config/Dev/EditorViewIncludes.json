@@ -52,6 +52,7 @@
         "Source/Editor/Panels/Scene/HistoryPanel",
         "Source/Editor/Panels/Animation/AnimationGraphPanel",
         "Source/Editor/Panels/TileMap/TileMapPanel",
-        "Source/Editor/Panels/Animation/SpriteClipPanel"
+        "Source/Editor/Panels/Animation/SpriteClipPanel",
+        "Source/Editor/Panels/Console/ConsolePanel"
     ]
 }

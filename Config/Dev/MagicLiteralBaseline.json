@@ -162,7 +162,7 @@
     "Source/Editor/Common/Backend/Platform/LinuxFileDialog.cpp": {"minus-one": 4},
     "Source/Editor/Common/Commands/Asset/EditorAssetFileCommands.cpp": {"integer": 1},
     "Source/Editor/Common/Commands/Diagnostics/EditorAssertControl.cpp": {"integer": 1},
-    "Source/Editor/Common/Commands/Diagnostics/EditorSourceLocation.cpp": {"integer": 1},
+    "Source/Editor/Panels/Console/Model/EditorSourceLocation.cpp": {"integer": 1},
     "Source/Editor/Common/Commands/EditorDragPayload.h": {"integer": 1},
     "Source/Editor/Common/Commands/Play/EditorNetConditions.cpp": {"minus-one": 1},
     "Source/Editor/Common/Commands/Play/EditorScenarioRecordCommands.cpp": {"integer": 1},

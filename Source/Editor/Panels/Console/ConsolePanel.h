@@ -12,9 +12,9 @@
 
 #include "DevTools/Console/DevConsole.h"
 
-#include "Editor/Common/Commands/Diagnostics/EditorSourceLocation.h"
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
 #include "Editor/Panels/Console/Model/ConsoleLogRows.h"
+#include "Editor/Panels/Console/Model/EditorSourceLocation.h"
 
 namespace sw::editor
 {
