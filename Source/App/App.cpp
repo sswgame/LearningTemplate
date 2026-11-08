@@ -3,6 +3,7 @@
 #include "App/App.h"
 
 #include "App/AppHeadlessTasks.h"
+#include "App/Dev/InteractiveAssertDialog.h"
 #include "App/EditorModuleManager.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
@@ -11,8 +12,6 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Time/MonotonicClock.h"
-
-#include "DevTools/Client/Diagnostics/AssertDialog.h"
 
 #include "Engine/Automation/AutomationRuntime.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -449,7 +448,7 @@ namespace sw
             {
                 const CommandLineManager* pCommandLine = _launch.getEngine().getCommandLineManager();
                 if ( pCommandLine != nullptr )
-                    AssertDialog::installForInteractiveRun( *pCommandLine );
+                    InteractiveAssertDialog::install( *pCommandLine );
             }
         }
 

@@ -1,18 +1,17 @@
 /**
- * @file DevTools/Console/ServerDebugControl.h
+ * @file ModuleManager/Host/ServerDebugControl.h
  * @brief 전용 서버의 개발 조종 — 개발 콘솔(표준 입력의 개발 명령 · gv_*), 디버그 채널(루프백 · 토큰, 개발 명령 원격 실행 S3), 일시정지 · 한 걸음(`pause` · `resume` · `step [N]`), 틱 상한 종료.
  * @details `ServerApp` 이 호스트 서비스 `DevConsole` · `DebugChannel` 로 세우고 내리는 협력 객체다(관리 채널 `ServerAdminChannel` 과 같은 자리 — 언리얼 전용 서버의
  *          `-pause` · 원격 콘솔과 같은 쓰임). 지금 틱 번호는 세울 때 받은 델리게이트로 묻는다 — 서버 루프를 모른다.
- *          개발 도구다(DevTools — 배포는 짓지 않는다, 예전 Server/IServerDebugControl · Server/Dev). 구현(`ServerDebugControl.cpp`)은 개발 콘솔 옆에 있고, `ServerApp` 은 `makeServerDebugControl` 로
- *          `build::kShipping` 이 아닐 때만 만든다(배포는 비어 있다 — 명령을 받지 않고 틱을 붙잡지 않는다). 빈 구현 파일을 두지 않는다.
+ *          호스트 개발 계층(`HostDevLayer.h`)과 같은 모양이다: 창구와 만드는 함수는 배포도 보는 여기에, 구현(`Host/Dev/ServerDebugControl.cpp` — 개발 콘솔을 쓴다)은 개발 구성에만 있다.
+ *          `ServerApp` 은 `if constexpr ( build::kShipping == false )` 한 곳에서 만들고, 배포에서는 버려지는 갈래라 정의가 없어도 링크된다(명령을 받지 않고 틱을 붙잡지 않는다).
+ *          예전에는 창구가 DevTools 헤더에 있어 배포 서버가 include 부터 막혔다(`DevToolsAPI.h`). 빈 구현 파일을 두지 않는다.
  */
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-
-#include "DevTools/DevToolsAPI.h"
 
 namespace sw
 {
@@ -48,6 +47,6 @@ namespace sw
         virtual void onTickFinished() = 0;
     };
 
-    /** @brief 개발 조종을 만듭니다. 정의는 개발 도구에 있다(`DevTools/Console/ServerDebugControl.cpp`) — `build::kShipping` 이 아닌 갈래에서만 부른다. */
-    [[nodiscard]] SW_DEVTOOLS_API unique_ptr<IServerDebugControl> makeServerDebugControl( const ServerTickCountDelegate& tickCount );
+    /** @brief 개발 조종을 만듭니다. 정의는 개발 구성에만 있다(`ModuleManager/Host/Dev/ServerDebugControl.cpp`) — `build::kShipping` 이 아닌 갈래에서만 부른다. */
+    [[nodiscard]] unique_ptr<IServerDebugControl> makeServerDebugControl( const ServerTickCountDelegate& tickCount );
 } // namespace sw

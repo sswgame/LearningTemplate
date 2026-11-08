@@ -26,8 +26,6 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
-#include "DevTools/Console/ServerDebugControl.h"
-
 #include "Engine/Console/StandardInputCommands.h"
 #include "Engine/DedicatedServer/ServerAdminChannel.h"
 #include "Engine/DedicatedServer/ServerObservability.h"
@@ -35,6 +33,7 @@
 #include "Engine/HostServiceSet.h"
 
 #include "ModuleManager/Host/HostLaunch.h"
+#include "ModuleManager/Host/ServerDebugControl.h"
 
 namespace sw
 {

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "DevTools/Console/ServerDebugControl.h"
+#include "ModuleManager/Host/ServerDebugControl.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
