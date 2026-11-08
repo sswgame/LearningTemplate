@@ -10,7 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
-#include "Editor/Common/Commands/Asset/EditorDataTableCommands.h"
+#include "Editor/Common/Commands/Asset/EditorLocalizationSheet.h"
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
 #include "Editor/Panels/Catalog/Model/CatalogDocument.h"
 

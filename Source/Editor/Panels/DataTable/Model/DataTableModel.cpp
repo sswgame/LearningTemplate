@@ -5,6 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
+#include "Editor/Common/Commands/Asset/EditorDataTableCommands.h"
 #include "Editor/Common/Localization/LocalizationTools.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 

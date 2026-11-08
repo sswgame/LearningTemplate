@@ -17,23 +17,30 @@
         "Editor/Common/Commands/EditorBackgroundIO.h": "백그라운드 잡(요청 · 꺼내기) — 결과 값 헤더와 잡 뼈대(Common/Task)만 include 한다. 작업 본문이 부르는 커맨드는 .cpp 가 본다(Model 이 잡을 값으로 든다)",
         "Editor/Common/Commands/Asset/EditorAssetIndexEntry.h": "퀵 런처 항목 · 리소스 카탈로그 개수 값",
         "Editor/Common/Commands/Asset/EditorFolderListingEntry.h": "콘텐츠 브라우저 폴더 항목 값",
-        "Editor/Common/Commands/Asset/EditorLocalizationSheet.h": "로컬라이즈 표 · 게임 데이터 파일 항목 값(판정 함수만 있다)"
+        "Editor/Common/Commands/Asset/EditorLocalizationSheet.h": "로컬라이즈 표 · 게임 데이터 파일 항목 값(판정 함수만 있다)",
+        "Editor/Common/Workspace/EditorExtensionRegistry.h": "등록 줄(SW_EDITOR_*)의 기반 — Core · 모듈 등록자만 include 하는 잎 헤더로 모델 상태가 없다(View 가 자기 탭 · 드로어 · 인스펙터를 등록한다, 언리얼 탭 스포너 등록과 같은 자리)",
+        "Editor/Common/Workspace/Undo/EditorDocumentState.h": "문서 한 벌의 저장한 값과 창 안 되돌리기 기록 — Core 와 EditSnapshotHistory 만 include 하는 값 템플릿(문서 Model 이 값으로 든다)",
+        "Editor/Common/Workspace/Undo/EditSnapshotHistory.h": "창 안 되돌리기 스냅숏 기록 — Core 만 include 하는 값 템플릿"
     },
     "_migratedViews": [
         "Source/Editor/Panels/Animation/AnimationGraphLayerEditor",
         "Source/Editor/Panels/AudioGraph/AudioGraphPanel",
         "Source/Editor/Panels/Autosave/RecoveredWorkPanel",
         "Source/Editor/Panels/BugReport/BugReportPanel",
+        "Source/Editor/Panels/Catalog/CatalogTableEditor",
+        "Source/Editor/Panels/DataTable/DataTablePanel",
         "Source/Editor/Panels/Dialogue/DialogueGraphPanel",
+        "Source/Editor/Panels/InputMap/InputMapWatches",
         "Source/Editor/Panels/Inspector/DataPathPropertyDrawer",
         "Source/Editor/Panels/Inspector/FloatCurvePropertyDrawer",
         "Source/Editor/Panels/Inspector/IInspectorComponent",
+        "Source/Editor/Panels/Inspector/IInspectorProperty",
         "Source/Editor/Panels/Inspector/InspectorLayoutWatches",
-        "Source/Editor/Panels/InputMap/InputMapWatches",
-        "Source/Editor/Panels/RenderTarget/RenderTargetWatches",
-        "Source/Editor/Panels/Settings/GlobalVariablesPanelWatches",
         "Source/Editor/Panels/MaterialGraph/MaterialGraphPanel",
+        "Source/Editor/Panels/Multiplayer/MultiplayerTab",
+        "Source/Editor/Panels/RenderTarget/RenderTargetWatches",
         "Source/Editor/Panels/Scene/DataLayersPanel",
+        "Source/Editor/Panels/Settings/GlobalVariablesPanelWatches",
         "Source/Editor/Panels/TileSet/TileSetPanel"
     ]
 }
