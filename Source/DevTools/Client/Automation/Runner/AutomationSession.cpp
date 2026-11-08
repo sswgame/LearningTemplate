@@ -146,12 +146,15 @@ namespace sw
         const GameObjectManager* pManager      = pScene != nullptr ? pScene->getObjectManager() : nullptr;
         for ( const string& spec : _listRecordWatch )
         {
-            ScenarioRecordCheckpoint checkpoint;
-            string                   error;
-            if ( ScenarioRecorder::readCheckpoint( spec, pManager, checkpoint, error ) )
-                settings._listCheckpoint.push_back( std::move( checkpoint ) );
+            expected<ScenarioRecordCheckpoint> checkpoint = ScenarioRecorder::readCheckpoint( spec, pManager );
+            if ( checkpoint.has_value() )
+            {
+                settings._listCheckpoint.push_back( std::move( *checkpoint ) );
+            }
             else
-                SW_LOG_WARNING_ID( "AutomationSession.CheckpointSkipped", "[ScenarioRecord] checkpoint %# skipped: %#", spec.c_str(), error.c_str() );
+            {
+                SW_LOG_WARNING_ID( "AutomationSession.CheckpointSkipped", "[ScenarioRecord] checkpoint %# skipped: %#: %#", spec.c_str(), checkpoint.error().message(), checkpoint.error().detail() );
+            }
         }
         const ScenarioRecordOutput output = _recorder.stop( settings );
         if ( FileUtil::ensureParentDirectoryExists( _recordPath ) == false || FileUtil::writeTextFile( _recordPath, output._xmlText ) == false )
@@ -564,7 +567,6 @@ namespace sw
         // 창 · RHI 를 세우기 전에 가로챈다 — 이 프로세스는 기다리기만 한다.
         inoutState.enterHeadless();
         AutomationPerBackendOptions options;
-        string                      error;
         (void)commandLine.getArgument( CommandLineArgument::SCENARIO, options._scenarioPath );
         (void)commandLine.getArgument( CommandLineArgument::LOG_FILE, options._logFilePath );
         (void)commandLine.getArgument( CommandLineArgument::SCENARIO_REPORT, options._reportPath );
@@ -573,9 +575,19 @@ namespace sw
         (void)commandLine.getArgument( CommandLineArgument::SCENARIO_BACKEND_SPLIT, options._bSplitScenarios );
         (void)commandLine.getArgument( CommandLineArgument::SCENARIO_BACKEND_SPLIT_OFFSET, options._splitOffset );
         (void)commandLine.getArgument( CommandLineArgument::SCENARIO_BACKEND_SLOTS, options._slotCount );
-        if ( options._scenarioPath.empty() || AutomationPerBackend::parseBackendList( backends, options._listBackend, error ) == false )
+        const expected<vector<string>> listBackend = AutomationPerBackend::parseBackendList( backends );
+        if ( listBackend.has_value() )
+            options._listBackend = *listBackend;
+        if ( options._scenarioPath.empty() || listBackend.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "AutomationSession.BackendsOptionInvalid", "%#", options._scenarioPath.empty() ? "-scenario-backends needs -scenario=<path>" : error.c_str() );
+            if ( options._scenarioPath.empty() )
+            {
+                SW_LOG_ERROR_ID( "AutomationSession.BackendsOptionInvalid", "%#", "-scenario-backends needs -scenario=<path>" );
+            }
+            else
+            {
+                SW_LOG_ERROR_ID( "AutomationSession.BackendsOptionInvalid", "%#: %#", listBackend.error().message(), listBackend.error().detail() );
+            }
             inoutState._bFailed         = SW_TRUE;
             inoutState._failureExitCode = getAutomationExitStatus( AutomationResult::LoadError );
             return;

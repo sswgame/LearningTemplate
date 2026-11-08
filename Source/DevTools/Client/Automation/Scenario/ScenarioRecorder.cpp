@@ -573,39 +573,38 @@ namespace sw
         return result;
     }
 
-    bool ScenarioRecorder::readCheckpoint( string_view spec, const GameObjectManager* pManager, ScenarioRecordCheckpoint& outCheckpoint, string& outError )
+    expected<ScenarioRecordCheckpoint> ScenarioRecorder::readCheckpoint( string_view spec, const GameObjectManager* pManager )
     {
-        outCheckpoint         = ScenarioRecordCheckpoint{};
-        const size_t firstAt  = spec.find( '@' );
-        const size_t secondAt = firstAt == string_view::npos ? string_view::npos : spec.find( '@', firstAt + 1 );
-        outCheckpoint._watch  = string( StringUtil::trim( spec.substr( 0, firstAt ) ) );
+        ScenarioRecordCheckpoint checkpoint;
+        const size_t             firstAt  = spec.find( '@' );
+        const size_t             secondAt = firstAt == string_view::npos ? string_view::npos : spec.find( '@', firstAt + 1 );
+        checkpoint._watch                 = string( StringUtil::trim( spec.substr( 0, firstAt ) ) );
         if ( firstAt != string_view::npos )
-            outCheckpoint._target = string( StringUtil::trim( spec.substr( firstAt + 1, secondAt == string_view::npos ? string_view::npos : secondAt - firstAt - 1 ) ) );
+            checkpoint._target = string( StringUtil::trim( spec.substr( firstAt + 1, secondAt == string_view::npos ? string_view::npos : secondAt - firstAt - 1 ) ) );
         if ( secondAt != string_view::npos )
-            outCheckpoint._key = string( StringUtil::trim( spec.substr( secondAt + 1 ) ) );
-        const AutomationWatchRegistration* pRegistration = AutomationWatchRegistry::find( outCheckpoint._watch );
+            checkpoint._key = string( StringUtil::trim( spec.substr( secondAt + 1 ) ) );
+        const AutomationWatchRegistration* pRegistration = AutomationWatchRegistry::find( checkpoint._watch );
         if ( pRegistration == nullptr )
-        {
-            outError = "unknown watch '" + outCheckpoint._watch + "'";
-            return false;
-        }
-        const AutomationWatchQuery query = AutomationWatchQuery::make( pManager, outCheckpoint._target, outCheckpoint._key );
+            return unexpected( Error{ ErrorKind::NotFound, "unknown watch", checkpoint._watch } );
+        const AutomationWatchQuery query = AutomationWatchQuery::make( pManager, checkpoint._target, checkpoint._key );
         AutomationWatchValue       value{};
         if ( AutomationWatchRegistry::read( *pRegistration, query, value ) == false )
         {
-            outError = string( spec ) + " has no value" + ( value._bText ? " (" + value._text + ")" : string() );
-            return false;
+            Error error{ ErrorKind::NotFound, "the watch has no value", spec };
+            if ( value._bText )
+                error.appendDetail( " (" ).appendDetail( value._text ).appendDetail( ")" );
+            return unexpected( error );
         }
-        outCheckpoint._bText = value._bText;
+        checkpoint._bText = value._bText;
         if ( value._bText )
         {
-            outCheckpoint._value = value._text;
-            return true;
+            checkpoint._value = value._text;
+            return checkpoint;
         }
         utf8 arrDigit[constant::buffer::kMax64]{};
         (void)StringUtil::formatNumber( arrDigit, constant::buffer::kMax64, value._number, 6 ); // 쓴 길이는 널 종료로 대신한다
-        outCheckpoint._value = arrDigit;
-        return true;
+        checkpoint._value = arrDigit;
+        return checkpoint;
     }
 
     bool ScenarioRecorder::isAllowedOutputPath( string_view path )

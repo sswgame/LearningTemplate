@@ -149,22 +149,19 @@ namespace sw
 
         struct ProfilerTraceExportInternal
         {
-            /** @brief 머리말(`otherData`) 칸을 읽습니다. 칸은 모두 선택이다(다른 도구가 쓴 파일). 없으면 머리말의 초기값이고, 타입이 다르면 false 입니다. */
-            [[nodiscard]] static bool readMeta( const JSONValue& root, ProfilerTraceMeta& outMeta, string& outError )
+            /** @brief 머리말(`otherData`) 칸을 읽습니다. 칸은 모두 선택이다(다른 도구가 쓴 파일). 없으면 머리말의 초기값이고, 타입이 다르면 오류입니다. */
+            [[nodiscard]] static expected<void> readMeta( const JSONValue& root, ProfilerTraceMeta& outMeta )
             {
                 const JSONValue other = root.isObject() ? root.get( "otherData" ) : JSONValue{};
                 if ( other.isObject() == false )
-                    return true;
+                    return {};
                 outMeta._processName = other.get( "processName" ).asString();
                 outMeta._hostName    = other.get( "hostName" ).asString();
                 const bool bMetaRead = other.readOptionalInto( "processID", outMeta._processID ) && other.readOptionalInto( "wallUnixMilliseconds", outMeta._wallUnixMilliseconds ) &&
                                        other.readOptionalInto( "monotonicNanoseconds", outMeta._monotonicNanoseconds ) && other.readOptionalInto( "truncated", outMeta._bTruncated );
                 if ( bMetaRead == false )
-                {
-                    outError = "otherData has a value of the wrong type";
-                    return false;
-                }
-                return true;
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "otherData has a value of the wrong type" } );
+                return {};
             }
 
             /** @brief (pid, tid) 의 스레드 번호를 찾고, 없으면 `tid N` 이름으로 새로 더합니다. */
@@ -198,9 +195,9 @@ namespace sw
 
             /**
              * @brief `traceEvents` 를 읽어 구간(ph=X) · 스레드 이름 · 프로세스 이름 · 프레임 표시(ph=i)를 @p inoutTrace 에 담습니다.
-             * @return 구간이 하나도 없거나 칸이 틀리면 이유를 @p outError 에 적고 false 입니다.
+             * @return 구간이 하나도 없거나 칸이 틀리면 그 이유입니다(대상은 사건 번호).
              */
-            [[nodiscard]] static bool readEvents( const JSONValue& events, TraceParseState& inoutState, ProfilerLoadedTrace& inoutTrace, string& outError )
+            [[nodiscard]] static expected<void> readEvents( const JSONValue& events, TraceParseState& inoutState, ProfilerLoadedTrace& inoutTrace )
             {
                 size_t eventCount = 0;
                 for ( size_t index = 0; index < events.size(); ++index )
@@ -211,23 +208,13 @@ namespace sw
                     int64 pid{ 0 };
                     int64 tid{ 0 };
                     if ( event.readOptionalInto( "pid", pid ) == false || event.readOptionalInto( "tid", tid ) == false )
-                    {
-                        StringBuilder<constant::buffer::kMax256> errorBuilder;
-                        errorBuilder.appendFormat( "event %# has a pid or tid that is not an integer", index );
-                        outError = string( errorBuilder.view() );
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "an event has a pid or tid that is not an integer", to_string( index ) } );
                     if ( phase == "X" )
                     {
                         const optional<float64> begin    = event.readRequired<float64>( "ts" );
                         const optional<float64> duration = event.readRequired<float64>( "dur" );
                         if ( begin.has_value() == false || duration.has_value() == false )
-                        {
-                            StringBuilder<constant::buffer::kMax256> errorBuilder;
-                            errorBuilder.appendFormat( "complete event %# needs numeric ts and dur", index );
-                            outError = string( errorBuilder.view() );
-                            return false;
-                        }
+                            return unexpected( Error{ ErrorKind::InvalidArgument, "a complete event needs numeric ts and dur", to_string( index ) } );
                         ProfilerTimelineEvent loaded;
                         loaded._beginNanos = static_cast<uint64>( *begin * constant::time::kNanosecondsPerMicrosecond + 0.5 );
                         loaded._endNanos   = loaded._beginNanos + static_cast<uint64>( *duration * constant::time::kNanosecondsPerMicrosecond + 0.5 );
@@ -247,21 +234,13 @@ namespace sw
                     {
                         const optional<float64> frameBegin = event.readRequired<float64>( "ts" );
                         if ( frameBegin.has_value() == false )
-                        {
-                            StringBuilder<constant::buffer::kMax256> errorBuilder;
-                            errorBuilder.appendFormat( "frame marker %# needs a numeric ts", index );
-                            outError = string( errorBuilder.view() );
-                            return false;
-                        }
+                            return unexpected( Error{ ErrorKind::InvalidArgument, "a frame marker needs a numeric ts", to_string( index ) } );
                         inoutTrace._listFrameBegin.push_back( static_cast<uint64>( *frameBegin * constant::time::kNanosecondsPerMicrosecond + 0.5 ) );
                     }
                 }
                 if ( eventCount == 0 )
-                {
-                    outError = "no complete events (ph=X) in the file";
-                    return false;
-                }
-                return true;
+                    return unexpected( Error{ ErrorKind::NotFound, "no complete events (ph=X) in the file" } );
+                return {};
             }
 
             /** @brief 여러 프로세스를 합친 파일이면 같은 스레드 이름("Game Thread")이 프로세스마다 있으니 줄 이름 앞에 프로세스를 붙입니다. */
@@ -786,48 +765,38 @@ namespace sw
         json += '\n';
         return json;
     }
-    bool ProfilerTraceExport::parseTraceJSON( string_view json, ProfilerLoadedTrace& outTrace, string& outError )
+    expected<ProfilerLoadedTrace> ProfilerTraceExport::parseTraceJSON( string_view json )
     {
         using Internal = ProfilerTraceExportInternal;
-        outTrace       = ProfilerLoadedTrace{};
         JSONDocument document;
         if ( document.parse( json ) == false )
-        {
-            outError = "not valid JSON: " + document.getLastError();
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "not valid JSON", document.getLastError() } );
         const JSONValue root = document.getRoot();
         // 배열만 있는 형식도 허용한다(Trace Event 사양의 JSON Array Format).
         const JSONValue events = root.isArray() ? root : root.get( "traceEvents" );
         if ( events.isArray() == false )
-        {
-            outError = "no traceEvents array";
-            return false;
-        }
-        if ( Internal::readMeta( root, outTrace._meta, outError ) == false )
-            return false;
-
-        TraceParseState state;
-        if ( Internal::readEvents( events, state, outTrace, outError ) == false )
-            return false;
-        Internal::prefixProcessNames( state, outTrace );
-        Internal::assignDepthsAndRange( outTrace );
-        VectorUtil::sort( outTrace._listFrameBegin );
-        return true;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "no traceEvents array" } );
+        ProfilerLoadedTrace  trace;
+        TraceParseState      state;
+        const expected<void> read = Internal::readMeta( root, trace._meta ).and_then( [&]()
+        { return Internal::readEvents( events, state, trace ); } );
+        if ( read.has_value() == false )
+            return unexpected( read.error() );
+        Internal::prefixProcessNames( state, trace );
+        Internal::assignDepthsAndRange( trace );
+        VectorUtil::sort( trace._listFrameBegin );
+        return trace;
     }
 
-    bool ProfilerTraceExport::loadTraceFile( string_view path, ProfilerLoadedTrace& outTrace, string& outError )
+    expected<ProfilerLoadedTrace> ProfilerTraceExport::loadTraceFile( string_view path )
     {
         string text;
         if ( FileUtil::readTextFile( path, text ) == false )
-        {
-            outError = "cannot read " + string( path );
-            return false;
-        }
-        if ( parseTraceJSON( text, outTrace, outError ) == false )
-            return false;
-        outTrace._sourcePath = string( path );
-        return true;
+            return unexpected( Error{ ErrorKind::NotFound, "cannot read the trace file", path } );
+        expected<ProfilerLoadedTrace> trace = parseTraceJSON( text );
+        if ( trace.has_value() )
+            trace->_sourcePath = string( path );
+        return trace;
     }
 
     string ProfilerTraceExport::findLatestTraceFile()

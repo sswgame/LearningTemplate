@@ -58,9 +58,8 @@ SW_TEST_CASE( AutomationPerBackendTest, RecordMismatchReportsMissingAndRenamedLi
  */
 SW_TEST_CASE( AutomationPerBackendTest, BackendListAllFollowsPlatformAvailability )
 {
-    sw::vector<sw::string> listBackend;
-    sw::string             error;
-    SW_EXPECT_TRUE( sw::AutomationPerBackend::parseBackendList( "all", listBackend, error ) );
+    const sw::expected<sw::vector<sw::string>> listAll = sw::AutomationPerBackend::parseBackendList( "all" );
+    SW_REQUIRE_TRUE( listAll.has_value() );
 #if defined( SW_PLATFORM_WINDOWS )
     const sw::vector<sw::string> listExpectedAll{ "dx11", "dx12", "vk", "gl" };
 #elif defined( SW_PLATFORM_LINUX )
@@ -72,9 +71,10 @@ SW_TEST_CASE( AutomationPerBackendTest, BackendListAllFollowsPlatformAvailabilit
 #else
     #error "Unsupported platform"
 #endif
-    SW_EXPECT_TRUE( listBackend == listExpectedAll );
+    SW_EXPECT_TRUE( *listAll == listExpectedAll );
 
-    SW_EXPECT_TRUE( sw::AutomationPerBackend::parseBackendList( "gl,dx12", listBackend, error ) );
-    SW_EXPECT_TRUE( listBackend == ( sw::vector<sw::string>{ "dx12", "gl" } ) );
-    SW_EXPECT_FALSE( sw::AutomationPerBackend::parseBackendList( "all,vk", listBackend, error ) );
+    const sw::expected<sw::vector<sw::string>> listNamed = sw::AutomationPerBackend::parseBackendList( "gl,dx12" );
+    SW_REQUIRE_TRUE( listNamed.has_value() );
+    SW_EXPECT_TRUE( *listNamed == ( sw::vector<sw::string>{ "dx12", "gl" } ) );
+    SW_EXPECT_FALSE( sw::AutomationPerBackend::parseBackendList( "all,vk" ).has_value() );
 }
