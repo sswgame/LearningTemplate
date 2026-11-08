@@ -19,6 +19,7 @@ import argparse
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -35,6 +36,7 @@ _kServerName = "netpair"
 _kAccount = "netpair_bot"
 _kPassword = "netpair_pw_1"
 _kTicketKeyEnvironment = "SW_NETPAIR_TICKET_KEY"
+_kUserDataRootEnvironment = "SW_USER_DATA_ROOT"  # Core/File/UserDataPath.h 의 kUserDataRootVariable — 사용자 데이터 폴더를 옮긴다
 _kTicketKey = "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"  # 시나리오 전용 임시 키(32 B) — 개발용 키 경고를 피한다
 _kConnected = re.compile(r"Net session client \d+ connected")
 _kListening = re.compile(r"Net session listening on UDP port")
@@ -212,11 +214,16 @@ def _runMmo(argument: argparse.Namespace) -> int:
     outDir.mkdir(parents=True, exist_ok=True)
     serverConfig = writeConfigs(outDir, _kMmoGamePort, _kMmoServicePort, _kMmoAccount, _kMmoPassword, _kMmoServerName)
     serverLog = outDir / "server.log"
-    serverArgs = [str(serverExe), AppArguments.option("game", _kMmoGame), AppArguments.option("server-config", serverConfig), AppArguments.variable("gv_valeMemoryProfiles", "1")]
+    # 서버 진행 저장소는 배포와 같은 파일 저장소다. 실행마다 새 진행으로 시작하도록 서버의 사용자 데이터 폴더를 이 실행의 빈 폴더로 옮긴다
+    # (한 서버 실행 안의 저장 → 재접속 읽기는 같은 저장소 계약을 지난다).
+    serverUserData = outDir / "server_userdata"
+    shutil.rmtree(serverUserData, ignore_errors=True)
+    serverUserData.mkdir(parents=True)
+    serverArgs = [str(serverExe), AppArguments.option("game", _kMmoGame), AppArguments.option("server-config", serverConfig)]
     print(f"[net-pair] server: {' '.join(serverArgs)}")
     listClientLog: list[Path] = []
     with serverLog.open("wb") as serverOut:
-        serverEnvironment = {**os.environ, _kTicketKeyEnvironment: _kTicketKey}
+        serverEnvironment = {**os.environ, _kTicketKeyEnvironment: _kTicketKey, _kUserDataRootEnvironment: str(serverUserData)}
         server = subprocess.Popen(serverArgs, cwd=str(binDir), env=serverEnvironment, stdin=subprocess.PIPE, stdout=serverOut, stderr=subprocess.STDOUT)
         if not _waitForText(serverLog, _kListening, argument.timeout, server):
             print(f"[net-pair] FAIL: the server never opened its game port (log: {serverLog})")

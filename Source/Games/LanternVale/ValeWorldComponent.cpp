@@ -4,7 +4,6 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/UserDataPath.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Time/MonotonicClock.h"
@@ -24,12 +23,6 @@
 
 namespace sw
 {
-    /**
-     * @brief `-gv_valeMemoryProfiles=1`: 서버가 진행을 디스크 대신 메모리 저장소에 둡니다. 두 프로세스 시나리오가 실행마다 새 진행으로 시작하려고 켠다
-     *        (한 서버 실행 안의 저장 → 재접속 읽기는 같은 저장소 계약을 지난다). 배포본에는 없다.
-     */
-    SW_TEST_GLOBAL_VARIABLE( bool, gv_valeMemoryProfiles, false, "LanternVale 서버 진행을 메모리 저장소에 두기 (두 프로세스 시나리오)" );
-
     namespace
     {
         /** @brief 개발 명령과 감시 값입니다. 골짜기 컴포넌트는 활성 씬에서 찾습니다. */
@@ -284,17 +277,14 @@ namespace sw
 
     bool ValeWorldComponent::startServer( INetPeers& peers, NetMessageRouter& router )
     {
-        LocalStoreConfig settings{ string( LocalStoreFactory::kMemoryBackendName ), LocalStoreLocation::memory() };
-        if ( gv_valeMemoryProfiles == false )
+        // 두 프로세스 시나리오는 서버의 사용자 데이터 폴더(SW_USER_DATA_ROOT)를 실행마다 빈 폴더로 옮겨 새 진행으로 시작한다 — 저장소는 배포와 같은 파일 저장소다.
+        const std::optional<LocalStoreLocation> location = LocalStoreLocation::tryUnderUserData( _profileFolder );
+        if ( location.has_value() == false )
         {
-            const std::optional<LocalStoreLocation> location = LocalStoreLocation::tryUnderUserData( _profileFolder );
-            if ( location.has_value() == false )
-            {
-                SW_LOG_ERROR_ID( "LanternVale.ProfileFolderInvalid", "[LanternVale] Profile Folder '%#' must be a relative path under the user data folder", _profileFolder.c_str() );
-                return false;
-            }
-            settings = LocalStoreConfig{ string( LocalStoreFactory::kFileBackendName ), *location };
+            SW_LOG_ERROR_ID( "LanternVale.ProfileFolderInvalid", "[LanternVale] Profile Folder '%#' must be a relative path under the user data folder", _profileFolder.c_str() );
+            return false;
         }
+        const LocalStoreConfig  settings{ string( LocalStoreFactory::kFileBackendName ), *location };
         string                  error;
         unique_ptr<ILocalStore> pStore = LocalStoreFactory::createLocalStore( "LanternVale", settings, LocalSealContext{}, error );
         if ( pStore == nullptr )
