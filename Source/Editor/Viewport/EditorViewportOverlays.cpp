@@ -13,7 +13,7 @@
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
-#include "Editor/Viewport/EditorViewportToolbar.h"
+#include "Editor/Viewport/ViewportToolbarSettings.h"
 
 #include "Engine/Localization/LocText.h"
 
@@ -276,15 +276,15 @@ namespace sw::editor
         }
         else
         {
-            EditorViewportToolbar::nextItem( bVertical );
+            ViewportToolbarSettings::nextItem( bVertical );
             if ( state._id == "view" )
-                EditorViewportToolbar::drawViewBar( settings, bVertical );
+                ViewportToolbarSettings::drawViewBar( settings, bVertical );
             else if ( state._id == "transform" )
-                EditorViewportToolbar::drawTransformBar( settings, bVertical, bHasSelection );
+                ViewportToolbarSettings::drawTransformBar( settings, bVertical, bHasSelection );
             else if ( state._id == "display" )
-                EditorViewportToolbar::drawDisplayBar( settings, bVertical );
+                ViewportToolbarSettings::drawDisplayBar( settings, bVertical );
             else if ( state._id == "tools" )
-                EditorViewportToolbar::drawToolsBar( settings, bVertical );
+                ViewportToolbarSettings::drawToolsBar( settings, bVertical );
         }
 
         const ImVec2 size = ImGui::GetWindowSize();

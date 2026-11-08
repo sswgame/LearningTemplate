@@ -12,7 +12,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/Widgets/EditableAssetPath.h"
-#include "Editor/Panels/InputMap/Model/InputMapConflicts.h"
+#include "Editor/Panels/InputMap/Model/InputMapConflict.h"
 
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/Virtual/InputReplay.h"

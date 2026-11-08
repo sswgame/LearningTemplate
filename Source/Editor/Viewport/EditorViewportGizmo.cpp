@@ -10,7 +10,7 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
-#include "Editor/Viewport/EditorViewportToolbar.h"
+#include "Editor/Viewport/ViewportToolbarSettings.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"

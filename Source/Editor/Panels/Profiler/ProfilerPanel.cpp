@@ -1048,7 +1048,7 @@ namespace sw::editor
         ImGui::TableHeadersRow();
         const vector<ProfilerCallNode>& listNode       = callTree.getNodes();
         const vector<string>&           listThreadName = callTree.getThreadNames();
-        uint32                          shownThread    = ProfilerCallTree::kNoParent;
+        uint32                          shownThread    = ProfilerCallNode::kNoParent;
         for ( const uint32 root : callTree.getRoots() )
         {
             const uint32 threadIndex = listNode[root]._threadIndex;
@@ -1076,7 +1076,7 @@ namespace sw::editor
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
         ImGui::PushID( static_cast<int32>( nodeIndex ) );
-        const bool         bLeaf     = node._firstChild == ProfilerCallTree::kNoParent;
+        const bool         bLeaf     = node._firstChild == ProfilerCallNode::kNoParent;
         ImGuiTreeNodeFlags treeFlags = ImGuiTreeNodeFlags_SpanFullWidth | ( bLeaf ? ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen : 0 );
         // 바깥쪽 두 단계는 펼쳐 둔다. 프레임과 큰 단계가 바로 보이게 하기 위해서다.
         if ( node._depth < 2 )
@@ -1091,7 +1091,7 @@ namespace sw::editor
         ImGui::Text( "%u", node._callCount );
         if ( bOpen && bLeaf == false )
         {
-            for ( uint32 child = node._firstChild; child != ProfilerCallTree::kNoParent; child = listNode[child]._nextSibling )
+            for ( uint32 child = node._firstChild; child != ProfilerCallNode::kNoParent; child = listNode[child]._nextSibling )
             {
                 drawCallTreeNode( child );
             }

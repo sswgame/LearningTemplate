@@ -6,7 +6,7 @@
 
 에디터의 Packaging 창과 사람이 같은 진입점을 쓴다(언리얼 Package Project, 유니티 Build Settings 의 Build). 단계마다
 `[package] step k/4 <단계>` 한 줄을 찍고, 끝나면 `[package] done <폴더> <바이트>` 또는 `[package] FAILED <단계> <이유>` 와 종료 코드(0 · 1)다.
-창은 이 줄을 읽어 진행과 결과를 보인다(`PackagingProgressParser`).
+창은 이 줄을 읽어 진행과 결과를 보인다(`PackagingProgress::parseLine`).
 
 | 타깃 | 프리셋 | 실행 파일 | 쿠킹에서 빠지는 것 |
 | --- | --- | --- | --- |

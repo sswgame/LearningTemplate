@@ -3,7 +3,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Editor/Panels/Catalog/Model/CatalogCurveModel.h"
+#include "Editor/Panels/Catalog/Model/CatalogCurve.h"
 #include "Editor/Panels/Catalog/Model/CatalogDocument.h"
 #include "Editor/Panels/Catalog/Model/CatalogFileList.h"
 #include "Editor/Panels/Catalog/Model/CatalogFileSession.h"
@@ -444,7 +444,7 @@ SW_TEST_CASE( CatalogCurveModelTest, FindsCurvesWithLabelsAndKeys )
     string         error;
     SW_REQUIRE_TRUE( parsed.parse( Util::kCurves, error ) );
     vector<CatalogCurve> listCurve;
-    CatalogCurveModel::collectCurves( parsed, parsed.getRootIndex(), listCurve );
+    CatalogCurve::collectCurves( parsed, parsed.getRootIndex(), listCurve );
     SW_REQUIRE_EQUAL( size_t{ 5 }, listCurve.size() );
     SW_EXPECT_TRUE( listCurve[0]._label == "Def(Smoke)/_size" );
     SW_REQUIRE_EQUAL( size_t{ 3 }, listCurve[0]._listKey.size() );
@@ -455,7 +455,7 @@ SW_TEST_CASE( CatalogCurveModelTest, FindsCurvesWithLabelsAndKeys )
     SW_EXPECT_TRUE( listCurve[2]._listKey.empty() ); // 키 없는 채널도 곡선이다
 
     vector<CatalogCurve> listNone;
-    CatalogCurveModel::collectCurves( parsed, 999, listNone );
+    CatalogCurve::collectCurves( parsed, 999, listNone );
     SW_EXPECT_TRUE( listNone.empty() );
 }
 
@@ -465,15 +465,15 @@ SW_TEST_CASE( CatalogCurveModelTest, GradientNeedsAllFourChannels )
     string         error;
     SW_REQUIRE_TRUE( parsed.parse( Util::kCurves, error ) );
     vector<CatalogCurve> listCurve;
-    CatalogCurveModel::collectCurves( parsed, parsed.getRootIndex(), listCurve );
+    CatalogCurve::collectCurves( parsed, parsed.getRootIndex(), listCurve );
     vector<CatalogGradient> listGradient;
-    CatalogCurveModel::collectGradients( listCurve, listGradient );
+    CatalogCurve::collectGradients( listCurve, listGradient );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listGradient.size() );
     SW_EXPECT_TRUE( listGradient[0]._label == "Def(Smoke)/_colorOverLife" );
     SW_EXPECT_EQUAL( 4, listGradient[0]._alpha );
 
     listCurve.pop_back(); // 알파가 없다
-    CatalogCurveModel::collectGradients( listCurve, listGradient );
+    CatalogCurve::collectGradients( listCurve, listGradient );
     SW_EXPECT_TRUE( listGradient.empty() );
 }
 
@@ -483,21 +483,21 @@ SW_TEST_CASE( CatalogCurveModelTest, SamplingUsesOnlyValidKeys )
     string         error;
     SW_REQUIRE_TRUE( parsed.parse( Util::kCurves, error ) );
     vector<CatalogCurve> listCurve;
-    CatalogCurveModel::collectCurves( parsed, parsed.getRootIndex(), listCurve );
+    CatalogCurve::collectCurves( parsed, parsed.getRootIndex(), listCurve );
     const CatalogCurve& size = listCurve[0];
-    SW_EXPECT_EQUAL( size_t{ 2 }, CatalogCurveModel::makeFloatCurve( size )._listKey.size() );
-    SW_EXPECT_NEAR( 2.0f, CatalogCurveModel::computeEndTime( size ), 1e-5f );
+    SW_EXPECT_EQUAL( size_t{ 2 }, CatalogCurve::makeFloatCurve( size )._listKey.size() );
+    SW_EXPECT_NEAR( 2.0f, CatalogCurve::computeEndTime( size ), 1e-5f );
 
     vector<float32> listValue;
-    SW_REQUIRE_TRUE( CatalogCurveModel::sample( size, 2.0f, 3, listValue ) );
+    SW_REQUIRE_TRUE( CatalogCurve::sample( size, 2.0f, 3, listValue ) );
     SW_REQUIRE_EQUAL( size_t{ 3 }, listValue.size() );
     SW_EXPECT_NEAR( 1.0f, listValue[0], 1e-4f );
     SW_EXPECT_NEAR( 2.0f, listValue[1], 1e-4f );
     SW_EXPECT_NEAR( 3.0f, listValue[2], 1e-4f );
 
-    SW_EXPECT_FALSE( CatalogCurveModel::sample( size, 2.0f, 1, listValue ) );
-    SW_EXPECT_FALSE( CatalogCurveModel::sample( listCurve[2], 2.0f, 3, listValue ) ); // 키가 없다
-    SW_EXPECT_NEAR( 1.0f, CatalogCurveModel::computeEndTime( listCurve[2] ), 1e-5f ); // 빈 곡선은 1 초 창이다
+    SW_EXPECT_FALSE( CatalogCurve::sample( size, 2.0f, 1, listValue ) );
+    SW_EXPECT_FALSE( CatalogCurve::sample( listCurve[2], 2.0f, 3, listValue ) ); // 키가 없다
+    SW_EXPECT_NEAR( 1.0f, CatalogCurve::computeEndTime( listCurve[2] ), 1e-5f ); // 빈 곡선은 1 초 창이다
 }
 
 // 빈 채널에 처음 더하면 시각 0 값 1, 그다음은 마지막 키 뒤 한 걸음에 같은 값이다.
@@ -507,11 +507,11 @@ SW_TEST_CASE( CatalogCurveModelTest, AddKeyContinuesAfterTheLastKey )
     SW_REQUIRE_TRUE( document.load( Util::kCurves ) );
     const int32 green = Util::findElement( document.getParsed(), "_green" );
     SW_REQUIRE_TRUE( green >= 0 );
-    SW_REQUIRE_TRUE( CatalogCurveModel::addKey( document, green ) );
-    SW_REQUIRE_TRUE( CatalogCurveModel::addKey( document, green ) );
+    SW_REQUIRE_TRUE( CatalogCurve::addKey( document, green ) );
+    SW_REQUIRE_TRUE( CatalogCurve::addKey( document, green ) );
 
     vector<CatalogCurve> listCurve;
-    CatalogCurveModel::collectCurves( document.getParsed(), document.getParsed().getRootIndex(), listCurve );
+    CatalogCurve::collectCurves( document.getParsed(), document.getParsed().getRootIndex(), listCurve );
     const CatalogCurve* pGreen = nullptr;
     for ( const CatalogCurve& curve : listCurve )
     {
@@ -524,7 +524,7 @@ SW_TEST_CASE( CatalogCurveModelTest, AddKeyContinuesAfterTheLastKey )
     SW_EXPECT_NEAR( 1.0f, pGreen->_listKey[0]._value, 1e-5f );
     SW_EXPECT_NEAR( 0.1f, pGreen->_listKey[1]._time, 1e-5f );
     SW_EXPECT_NEAR( 1.0f, pGreen->_listKey[1]._value, 1e-5f );
-    SW_EXPECT_FALSE( CatalogCurveModel::addKey( document, -1 ) );
+    SW_EXPECT_FALSE( CatalogCurve::addKey( document, -1 ) );
     SW_EXPECT_FALSE( document.getError().empty() );
 }
 
@@ -533,7 +533,7 @@ SW_TEST_CASE( CatalogCurveModelTest, AddKeyIsOneUndoStep )
 {
     CatalogDocument document;
     SW_REQUIRE_TRUE( document.load( Util::kCurves ) );
-    SW_REQUIRE_TRUE( CatalogCurveModel::addKey( document, Util::findElement( document.getParsed(), "_green" ) ) );
+    SW_REQUIRE_TRUE( CatalogCurve::addKey( document, Util::findElement( document.getParsed(), "_green" ) ) );
     document.undo();
     SW_EXPECT_FALSE( document.isDirty() );
     SW_EXPECT_FALSE( document.canUndo() );
@@ -546,20 +546,20 @@ SW_TEST_CASE( CatalogCurveModelTest, GradientSamplesNeedEveryChannelAndAreClampe
     vector<CatalogCurve>    listCurve;
     vector<CatalogGradient> listGradient;
     vector<float4>          listColor;
-    CatalogCurveModel::collectCurves( document.getParsed(), document.getParsed().getRootIndex(), listCurve );
-    CatalogCurveModel::collectGradients( listCurve, listGradient );
+    CatalogCurve::collectCurves( document.getParsed(), document.getParsed().getRootIndex(), listCurve );
+    CatalogCurve::collectGradients( listCurve, listGradient );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listGradient.size() );
-    SW_EXPECT_FALSE( CatalogCurveModel::sampleGradient( listCurve, listGradient[0], 3, listColor ) ); // 키 없는 채널이 있다
+    SW_EXPECT_FALSE( CatalogCurve::sampleGradient( listCurve, listGradient[0], 3, listColor ) ); // 키 없는 채널이 있다
 
     for ( const utf8* pChannel : { "_green", "_blue", "_alpha" } )
     {
-        SW_REQUIRE_TRUE( CatalogCurveModel::addKey( document, Util::findElement( document.getParsed(), pChannel ) ) );
+        SW_REQUIRE_TRUE( CatalogCurve::addKey( document, Util::findElement( document.getParsed(), pChannel ) ) );
     }
-    CatalogCurveModel::collectCurves( document.getParsed(), document.getParsed().getRootIndex(), listCurve );
+    CatalogCurve::collectCurves( document.getParsed(), document.getParsed().getRootIndex(), listCurve );
     SW_REQUIRE_TRUE( document.setCell( listCurve[static_cast<size_t>( listGradient[0]._red )]._listKey[0]._elementIndex, "_value", "5" ) );
-    CatalogCurveModel::collectCurves( document.getParsed(), document.getParsed().getRootIndex(), listCurve );
-    CatalogCurveModel::collectGradients( listCurve, listGradient );
-    SW_REQUIRE_TRUE( CatalogCurveModel::sampleGradient( listCurve, listGradient[0], 3, listColor ) );
+    CatalogCurve::collectCurves( document.getParsed(), document.getParsed().getRootIndex(), listCurve );
+    CatalogCurve::collectGradients( listCurve, listGradient );
+    SW_REQUIRE_TRUE( CatalogCurve::sampleGradient( listCurve, listGradient[0], 3, listColor ) );
     SW_REQUIRE_EQUAL( size_t{ 3 }, listColor.size() );
     SW_EXPECT_NEAR( 1.0f, listColor[0]._x, 1e-5f ); // 5 는 1 로 자른다
     SW_EXPECT_NEAR( 1.0f, listColor[2]._w, 1e-5f );

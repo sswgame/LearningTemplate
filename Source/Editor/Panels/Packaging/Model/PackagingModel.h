@@ -3,7 +3,7 @@
  * @brief 패키징 창의 모델 — 게임 설정 목록(활성 팩의 게임 고르기), 타깃 · 게임 · 백엔드 · 산출 폴더 · 건너뛰기 설정, 진입점 명령 만들기, 백그라운드 실행 잡과 결과 받기 · 진행,
  *        최근 로그 줄. ImGui 를 모릅니다.
  * @details 패널(`PackagingPanel`)은 콤보 · 체크칸 · 진행 막대 · 로그를 그리기만 한다 — 버그 리포트 · 데이터 테이블 `Model/` 과 같은 선이다
- *          (언리얼 Project Launcher 의 프로필 · 작업 상태와 Slate 창이 나뉜 것과 같다). 진행 줄 읽기는 `PackagingProgressParser` 다.
+ *          (언리얼 Project Launcher 의 프로필 · 작업 상태와 Slate 창이 나뉜 것과 같다). 진행 줄 읽기는 `PackagingProgress` 다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -12,7 +12,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Process/Process.h"
 
-#include "Editor/Panels/Packaging/Model/PackagingProgressParser.h"
+#include "Editor/Panels/Packaging/Model/PackagingProgress.h"
 
 namespace sw::editor
 {

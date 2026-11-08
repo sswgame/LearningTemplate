@@ -652,7 +652,7 @@ msgctxt "EdCommon.Advanced"
 msgid "Advanced"
 msgstr "고급"
 
-#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+#: Source/Editor/Viewport/ViewportToolbarSettings.cpp
 msgctxt "EdCommon.AlignSelected"
 msgid "Align and distribute the selected objects (select two or more)."
 msgstr "선택한 오브젝트를 정렬하고 분배합니다(둘 이상 선택)."
@@ -702,17 +702,17 @@ msgctxt "EdCommon.BuildSucceeded"
 msgid "The last build finished successfully."
 msgstr "마지막 빌드가 성공적으로 완료되었습니다"
 
-#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+#: Source/Editor/Viewport/ViewportToolbarSettings.cpp
 msgctxt "EdCommon.CameraBookmarkPosition"
 msgid "Position: {position}"
 msgstr "위치: {position}"
 
-#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+#: Source/Editor/Viewport/ViewportToolbarSettings.cpp
 msgctxt "EdCommon.CameraBookmarks"
 msgid "Camera bookmarks: move the view to a saved camera position (Ctrl+1~9)"
 msgstr "카메라 북마크: 저장한 카메라 위치로 뷰를 옮깁니다 (Ctrl+1~9)"
 
-#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+#: Source/Editor/Viewport/ViewportToolbarSettings.cpp
 msgctxt "EdCommon.CameraSpeed"
 msgid "Camera fly speed (0.5 to 20). Turning the mouse wheel while holding the right mouse button also changes it."
 msgstr "카메라 비행 속도(0.5 ~ 20)입니다. 오른쪽 마우스 단추를 누른 채 휠을 돌려도 바뀝니다."
@@ -737,17 +737,17 @@ msgctxt "EdCommon.ComponentCardOptions"
 msgid "More options for this component, including removing it."
 msgstr "컴포넌트 추가 옵션 및 삭제"
 
-#: Source/Editor/Common/Widgets/EditorCurveEditor.cpp
+#: Source/Editor/Common/Widgets/EditorCurveEditorState.cpp
 msgctxt "EdCommon.CurveEditorHint"
 msgid "Click a key to edit it. Right-click to add a key. F fits the view."
 msgstr "키를 클릭하면 편집합니다. 오른쪽 클릭으로 키를 더합니다. F 를 누르면 뷰를 곡선에 맞춥니다."
 
-#: Source/Editor/Common/Widgets/EditorCurveEditor.cpp
+#: Source/Editor/Common/Widgets/EditorCurveEditorState.cpp
 msgctxt "EdCommon.CurveNoKeys"
 msgid "(no keys)"
 msgstr "(키 없음)"
 
-#: Source/Editor/Common/Widgets/EditorCurveEditor.cpp
+#: Source/Editor/Common/Widgets/EditorCurveEditorState.cpp
 msgctxt "EdCommon.CurvePreviewEdit"
 msgid "Click to edit the curve"
 msgstr "클릭하면 곡선을 편집합니다"
@@ -918,12 +918,12 @@ msgctxt "EdCommon.GraphNeedTwoNodes"
 msgid "Select two or more nodes"
 msgstr "노드를 둘 이상 고르세요"
 
-#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+#: Source/Editor/Viewport/ViewportToolbarSettings.cpp
 msgctxt "EdCommon.GridSnap"
 msgid "Grid snap: moved objects jump in steps of the grid size on the right."
 msgstr "그리드 스냅: 옮기는 오브젝트가 오른쪽의 그리드 크기 단위로 움직입니다."
 
-#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+#: Source/Editor/Viewport/ViewportToolbarSettings.cpp
 msgctxt "EdCommon.GridSnapSize"
 msgid "Grid snap step, in world units."
 msgstr "그리드 스냅 간격(월드 단위)입니다."
@@ -1393,12 +1393,12 @@ msgctxt "EdCommon.ResetLayout"
 msgid "Reset the docked windows to the default editor layout."
 msgstr "도킹 창 배치를 기본 에디터 레이아웃으로 초기화합니다"
 
-#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+#: Source/Editor/Viewport/ViewportToolbarSettings.cpp
 msgctxt "EdCommon.RotationSnap"
 msgid "Rotation snap: rotations jump in steps of the angle on the right."
 msgstr "회전 스냅: 회전이 오른쪽의 각도 단위로 움직입니다."
 
-#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+#: Source/Editor/Viewport/ViewportToolbarSettings.cpp
 msgctxt "EdCommon.RotationSnapSize"
 msgid "Rotation snap step, in degrees."
 msgstr "회전 스냅 간격(도)입니다."
@@ -1408,12 +1408,12 @@ msgctxt "EdCommon.SaveLayout"
 msgid "Save the current dock layout and panel visibility under this name (Saved/Editor/Layouts; letters, digits, spaces, _ and - only)."
 msgstr "지금 도킹 배치와 패널 가시성을 이 이름으로 저장합니다 (Saved/Editor/Layouts, 영숫자 · 공백 · _ · -)"
 
-#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+#: Source/Editor/Viewport/ViewportToolbarSettings.cpp
 msgctxt "EdCommon.ScaleSnap"
 msgid "Scale snap: scaling jumps in steps of the value on the right."
 msgstr "크기 스냅: 크기가 오른쪽 값 단위로 바뀝니다."
 
-#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+#: Source/Editor/Viewport/ViewportToolbarSettings.cpp
 msgctxt "EdCommon.ScaleSnapSize"
 msgid "Scale snap step, as a scale factor."
 msgstr "크기 스냅 간격(배율)입니다."
@@ -1450,7 +1450,7 @@ msgctxt "EdCommon.SimulateStart"
 msgid "Start simulate mode (ticks the scene only: no game module update and no game input)."
 msgstr "시뮬레이션 모드를 시작합니다 (씬만 틱 — 게임 모듈 업데이트 · 게임 입력 없음)"
 
-#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+#: Source/Editor/Viewport/ViewportToolbarSettings.cpp
 msgctxt "EdCommon.SurfaceSnap"
 msgid "Surface snap: objects you drag land on the surface under the cursor."
 msgstr "표면 스냅: 끄는 오브젝트가 커서 아래 표면에 놓입니다."
@@ -1510,37 +1510,37 @@ msgctxt "EdCommon.Vec3AxisReset"
 msgid "Click to reset this axis to its default value."
 msgstr "클릭하여 기본값으로 초기화합니다"
 
-#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+#: Source/Editor/Viewport/ViewportToolbarSettings.cpp
 msgctxt "EdCommon.View2D"
 msgid "2D view (XY plane grid). Click to switch to 3D."
 msgstr "2D 뷰(XY 평면 그리드)입니다. 클릭하면 3D 로 바뀝니다."
 
-#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+#: Source/Editor/Viewport/ViewportToolbarSettings.cpp
 msgctxt "EdCommon.View3D"
 msgid "3D view (XZ plane grid). Click to switch to 2D."
 msgstr "3D 뷰(XZ 평면 그리드)입니다. 클릭하면 2D 로 바뀝니다."
 
-#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+#: Source/Editor/Viewport/ViewportToolbarSettings.cpp
 msgctxt "EdCommon.ViewMode"
 msgid "Scene view mode: Lit / Unlit / Wireframe / Normals / Depth / Overdraw (the game view always draws Lit)"
 msgstr "씬 뷰 보기 모드 — Lit / Unlit / Wireframe / Normals / Depth / Overdraw (게임 뷰는 늘 Lit)"
 
-#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+#: Source/Editor/Viewport/ViewportToolbarSettings.cpp
 msgctxt "EdCommon.ViewModeNoRenderer"
 msgid "The renderer is not attached yet."
 msgstr "렌더러가 아직 붙지 않았습니다"
 
-#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+#: Source/Editor/Viewport/ViewportToolbarSettings.cpp
 msgctxt "EdCommon.ViewportGrid"
 msgid "Show or hide the ground grid."
 msgstr "바닥 그리드를 보이거나 숨깁니다."
 
-#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+#: Source/Editor/Viewport/ViewportToolbarSettings.cpp
 msgctxt "EdCommon.ViewportHUD"
 msgid "Show the Debug HUD box in this view (view size and HUD sections). Right-click to choose sections."
 msgstr "이 뷰에 디버그 HUD 상자(뷰 크기 · HUD 섹션)를 보입니다. 오른쪽 클릭으로 섹션을 고릅니다."
 
-#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+#: Source/Editor/Viewport/ViewportToolbarSettings.cpp
 msgctxt "EdCommon.ViewportOrientationCube"
 msgid "Show or hide the orientation cube that shows which way the camera faces."
 msgstr "카메라가 어느 쪽을 보는지 나타내는 방향 큐브를 보이거나 숨깁니다."
@@ -2379,7 +2379,7 @@ msgctxt "EdLabel.Active"
 msgid "Active"
 msgstr "활성"
 
-#: Source/Editor/Common/Widgets/EditorCurveEditor.cpp
+#: Source/Editor/Common/Widgets/EditorCurveEditorState.cpp
 #: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
 #: Source/Editor/Panels/DataTable/DataTablePanel.cpp
 msgctxt "EdLabel.AddKey"
@@ -2417,7 +2417,7 @@ msgctxt "EdLabel.AutoScroll"
 msgid "Auto-scroll"
 msgstr "자동 스크롤"
 
-#: Source/Editor/Common/Widgets/EditorCurveEditor.cpp
+#: Source/Editor/Common/Widgets/EditorCurveEditorState.cpp
 msgctxt "EdLabel.AutoTangent"
 msgid "Auto Tangent"
 msgstr "자동 탄젠트"
@@ -2477,7 +2477,7 @@ msgctxt "EdLabel.CreateVariant"
 msgid "Variant"
 msgstr "변형"
 
-#: Source/Editor/Common/Widgets/EditorCurveEditor.cpp
+#: Source/Editor/Common/Widgets/EditorCurveEditorState.cpp
 msgctxt "EdLabel.DeleteKey"
 msgid "Delete Key"
 msgstr "키 지우기"
@@ -2513,7 +2513,7 @@ msgctxt "EdLabel.ExpandAll"
 msgid "Expand All"
 msgstr "모두 펼치기"
 
-#: Source/Editor/Common/Widgets/EditorCurveEditor.cpp
+#: Source/Editor/Common/Widgets/EditorCurveEditorState.cpp
 msgctxt "EdLabel.FitView"
 msgid "Fit View"
 msgstr "화면에 맞추기"
@@ -3258,7 +3258,7 @@ msgctxt "EdText.Buttons"
 msgid "Buttons:"
 msgstr "단추:"
 
-#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+#: Source/Editor/Viewport/ViewportToolbarSettings.cpp
 msgctxt "EdText.CameraBookmarksCtrl19"
 msgid "Camera Bookmarks (Ctrl+1~9)"
 msgstr "카메라 책갈피(Ctrl+1~9)"
@@ -3487,7 +3487,7 @@ msgctxt "EdText.InputReplayRecorderDeterministicQAPlayback"
 msgid "Input Replay Recorder & Deterministic QA Playback"
 msgstr "입력 재생 기록 · 결정적 QA 재생"
 
-#: Source/Editor/Common/Widgets/EditorCurveEditor.cpp
+#: Source/Editor/Common/Widgets/EditorCurveEditorState.cpp
 msgctxt "EdText.Interpolation"
 msgid "Interpolation"
 msgstr "보간"
@@ -3537,7 +3537,7 @@ msgctxt "EdText.MouseDeltaSpeedDXDY"
 msgid "Mouse Delta Speed (dX/dY):"
 msgstr "마우스 이동 속도(dX/dY):"
 
-#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+#: Source/Editor/Viewport/ViewportToolbarSettings.cpp
 msgctxt "EdText.MultiObjectAlignment"
 msgid "Multi-Object Alignment"
 msgstr "여러 오브젝트 정렬"
@@ -4006,7 +4006,7 @@ msgctxt "EdText.ThisMeshHasOneLevelSetLODRatios"
 msgid "This mesh has one level - set LOD ratios in the import rule and import again."
 msgstr "이 메시는 단계가 하나입니다 — 가져오기 규칙에 LOD 비율을 정하고 다시 가져오세요."
 
-#: Source/Editor/Common/Widgets/EditorCurveEditor.cpp
+#: Source/Editor/Common/Widgets/EditorCurveEditorState.cpp
 msgctxt "EdText.Time"
 msgid "Time"
 msgstr "시간"
@@ -4076,7 +4076,7 @@ msgctxt "EdText.Validate"
 msgid "Validate"
 msgstr "검사"
 
-#: Source/Editor/Common/Widgets/EditorCurveEditor.cpp
+#: Source/Editor/Common/Widgets/EditorCurveEditorState.cpp
 #: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
 msgctxt "EdText.Value"
 msgid "Value"
@@ -4421,92 +4421,92 @@ msgctxt "EdVerb.Undo"
 msgid "Undo"
 msgstr "실행 취소"
 
-#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+#: Source/Editor/Viewport/ViewportToolbarSettings.cpp
 msgctxt "EdViewMode.Depth"
 msgid "Depth"
 msgstr "깊이"
 
-#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+#: Source/Editor/Viewport/ViewportToolbarSettings.cpp
 msgctxt "EdViewMode.LODFadeCode"
 msgid "LOD Fade Code"
 msgstr "LOD 페이드 코드"
 
-#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+#: Source/Editor/Viewport/ViewportToolbarSettings.cpp
 msgctxt "EdViewMode.LODLevel"
 msgid "LOD Level"
 msgstr "LOD 단계"
 
-#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+#: Source/Editor/Viewport/ViewportToolbarSettings.cpp
 msgctxt "EdViewMode.LightComplexity"
 msgid "Light Complexity"
 msgstr "조명 복잡도"
 
-#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+#: Source/Editor/Viewport/ViewportToolbarSettings.cpp
 msgctxt "EdViewMode.LightingOnly"
 msgid "Lighting Only"
 msgstr "조명만"
 
-#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+#: Source/Editor/Viewport/ViewportToolbarSettings.cpp
 msgctxt "EdViewMode.Lit"
 msgid "Lit"
 msgstr "조명"
 
-#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+#: Source/Editor/Viewport/ViewportToolbarSettings.cpp
 msgctxt "EdViewMode.MarkerSlots"
 msgid "Marker Slots"
 msgstr "표지 칸"
 
-#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+#: Source/Editor/Viewport/ViewportToolbarSettings.cpp
 msgctxt "EdViewMode.Metallic"
 msgid "Metallic"
 msgstr "금속성"
 
-#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+#: Source/Editor/Viewport/ViewportToolbarSettings.cpp
 msgctxt "EdViewMode.Mipmaps"
 msgid "Mipmaps"
 msgstr "밉맵"
 
-#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+#: Source/Editor/Viewport/ViewportToolbarSettings.cpp
 msgctxt "EdViewMode.Normals"
 msgid "Normals"
 msgstr "노멀"
 
-#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+#: Source/Editor/Viewport/ViewportToolbarSettings.cpp
 msgctxt "EdViewMode.Overdraw"
 msgid "Overdraw"
 msgstr "오버드로"
 
-#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+#: Source/Editor/Viewport/ViewportToolbarSettings.cpp
 msgctxt "EdViewMode.Roughness"
 msgid "Roughness"
 msgstr "거칠기"
 
-#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+#: Source/Editor/Viewport/ViewportToolbarSettings.cpp
 msgctxt "EdViewMode.ShadedWireframe"
 msgid "Shaded Wireframe"
 msgstr "셰이드 와이어프레임"
 
-#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+#: Source/Editor/Viewport/ViewportToolbarSettings.cpp
 msgctxt "EdViewMode.ShadingPath"
 msgid "Shading Path"
 msgstr "셰이딩 경로"
 
-#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+#: Source/Editor/Viewport/ViewportToolbarSettings.cpp
 msgctxt "EdViewMode.Unlit"
 msgid "Unlit"
 msgstr "조명 없음"
 
-#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+#: Source/Editor/Viewport/ViewportToolbarSettings.cpp
 msgctxt "EdViewMode.Wireframe"
 msgid "Wireframe"
 msgstr "와이어프레임"
 
-#: Source/Editor/Viewport/EditorViewportBillboard.cpp
+#: Source/Editor/Viewport/EditorViewportBillboardItem.cpp
 msgctxt "EdVisualizer.BillboardLabel"
 msgid "Icons"
 msgstr "아이콘"
 
-#: Source/Editor/Viewport/EditorViewportBillboard.cpp
+#: Source/Editor/Viewport/EditorViewportBillboardItem.cpp
 msgctxt "EdVisualizer.BillboardTip"
 msgid "Shows components without a mesh (lights, cameras, audio) as icons you can click to select"
 msgstr "빛 · 카메라 · 오디오처럼 메시가 없는 컴포넌트를 아이콘으로 표시하고 눌러 고르게 합니다"
@@ -8850,17 +8850,17 @@ msgctxt "EditorTip.CameraOrthographic"
 msgid "Use a parallel (non-perspective) projection, as for 2D or isometric views. FOV is ignored while on."
 msgstr "원근 없는 평행 투영을 씁니다(2D · 아이소메트릭 시점). 켜져 있는 동안 FOV 는 무시됩니다."
 
-#: Source/Editor/Common/Widgets/EditorCurveEditor.cpp
+#: Source/Editor/Common/Widgets/EditorCurveEditorState.cpp
 msgctxt "EditorTip.CurveKeyInterpolation"
 msgid "How the curve moves from this key to the next: Constant holds the value, Linear is a straight line, Cubic is a smooth spline."
 msgstr "이 키에서 다음 키까지 곡선이 움직이는 방식입니다. Constant 는 값을 유지하고, Linear 는 직선, Cubic 은 부드러운 스플라인입니다."
 
-#: Source/Editor/Common/Widgets/EditorCurveEditor.cpp
+#: Source/Editor/Common/Widgets/EditorCurveEditorState.cpp
 msgctxt "EditorTip.CurveKeyTime"
 msgid "When the key sits on the curve's time axis. It stays between its neighbouring keys."
 msgstr "이 키가 곡선의 시간 축에서 놓인 위치입니다. 이웃한 키 사이에만 둘 수 있습니다."
 
-#: Source/Editor/Common/Widgets/EditorCurveEditor.cpp
+#: Source/Editor/Common/Widgets/EditorCurveEditorState.cpp
 msgctxt "EditorTip.CurveKeyValue"
 msgid "The curve's value at this key."
 msgstr "이 키에서 곡선이 가지는 값입니다."

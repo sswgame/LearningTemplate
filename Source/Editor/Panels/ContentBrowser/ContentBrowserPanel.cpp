@@ -1195,7 +1195,7 @@ namespace sw::editor
             if ( ImGui::Selectable( kArrFavorites[favIdx]._pLabel, bSelected ) )
             {
                 vector<ContentBrowserCrumb> listCrumb;
-                ContentBrowserLogic::makeFavoriteTrail( kArrFavorites[favIdx]._pLabel, fullFavPath, listCrumb );
+                ContentBrowserCrumb::makeFavoriteTrail( kArrFavorites[favIdx]._pLabel, fullFavPath, listCrumb );
                 _model.selectFolder( fullFavPath, listCrumb );
             }
         }

@@ -16,11 +16,11 @@
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Viewport/EditorViewportBillboard.h"
+#include "Editor/Viewport/EditorViewportBillboardItem.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
-#include "Editor/Viewport/EditorViewportToolbar.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/Model/EditorViewportRayPick.h"
+#include "Editor/Viewport/ViewportToolbarSettings.h"
 
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -204,13 +204,13 @@ namespace sw::editor
 
         // 빌보드(라이트, 카메라, 오디오 아이콘)를 레이 피킹보다 먼저 검사한다. 메시가 없어 레이로는 집히지 않기 때문이다(언리얼 빌보드, 유니티 Gizmo 아이콘 클릭).
         // 잠근 오브젝트의 빌보드가 맞으면 그 위치는 "빈 곳" 으로 처리한다. 뒤의 레이 피킹으로 넘기지 않는다.
-        const EditorVisualizerRegistration* pBillboard = EditorExtensionRegistry<EditorVisualizerRegistration>::find( EditorViewportBillboard::kVisualizerID );
+        const EditorVisualizerRegistration* pBillboard = EditorExtensionRegistry<EditorVisualizerRegistration>::find( EditorViewportBillboardItem::kVisualizerID );
         if ( pBillboard != nullptr && settings._visualizerToggles.isOn( *pBillboard ) )
         {
             vector<EditorViewportBillboardItem> listItem;
-            EditorViewportBillboard::collect( *pManager, viewProj, canvasPos, canvasSize, pCamera, listItem );
+            EditorViewportBillboardItem::collect( *pManager, viewProj, canvasPos, canvasSize, pCamera, listItem );
             const ImVec2 mouse = ImGui::GetMousePos();
-            const uint32 index = EditorViewportBillboard::findAt( listItem, float2{ mouse.x, mouse.y } );
+            const uint32 index = EditorViewportBillboardItem::findAt( listItem, float2{ mouse.x, mouse.y } );
             if ( index != constant::invalid_index::kUint32 )
             {
                 if ( workspace.isObjectLocked( listItem[index]._pObject->getObjectID() ) )

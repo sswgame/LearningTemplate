@@ -8,7 +8,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsDocument.h"
-#include "Editor/Panels/ProjectSettings/Model/ProjectSettingsFileList.h"
+#include "Editor/Panels/ProjectSettings/Model/ProjectSettingsEntry.h"
 
 namespace sw::editor
 {

@@ -235,9 +235,9 @@ namespace sw::editor
         // Quick Open 의 제공자 순서: 씬 오브젝트 → 에셋(색인이 오면 붙는다) → 명령 → 창(팔레트와 같은 제공자, 순서만 다르다)
         _listItem.clear();
         _listTailItem.clear();
-        EditorSearchSources::appendSceneObjects( _listItem );
-        EditorSearchSources::appendCommands( _listTailItem );
-        EditorSearchSources::appendPanels( _listTailItem );
+        EditorSearchItem::appendSceneObjects( _listItem );
+        EditorSearchItem::appendCommands( _listTailItem );
+        EditorSearchItem::appendPanels( _listTailItem );
         _fileIndexJob.request();
     }
 
@@ -246,7 +246,7 @@ namespace sw::editor
         vector<EditorAssetIndexEntry> listFileEntry;
         if ( _fileIndexJob.take( listFileEntry ) != EditorTaskPoll::Ready )
             return;
-        EditorSearchSources::appendAssets( listFileEntry, _listItem );
+        EditorSearchItem::appendAssets( listFileEntry, _listItem );
     }
 
     bool QuickLauncherPopup::drawResults( const vector<const EditorSearchItem*>& listFiltered, bool bIndexOutstanding )
@@ -336,9 +336,9 @@ namespace sw::editor
         vector<const EditorSearchItem*> listFiltered;
         // 에셋 색인이 오기 전에는 명령 · 창을 섞지 않는다 — 파일 이름을 치고 바로 누른 Enter 가 명령을 실행하지 않고 색인을 기다린다(`resolvePendingExecute`)
         if ( bIndexOutstanding )
-            EditorSearchSources::filter( { &_listItem }, _searchBuffer.view(), listFiltered );
+            EditorSearchItem::filter( { &_listItem }, _searchBuffer.view(), listFiltered );
         else
-            EditorSearchSources::filter( { &_listItem, &_listTailItem }, _searchBuffer.view(), listFiltered );
+            EditorSearchItem::filter( { &_listItem, &_listTailItem }, _searchBuffer.view(), listFiltered );
 
         const int32 filteredCount = static_cast<int32>( listFiltered.size() );
         bool        bExecute      = EditorWidgets::updateListSelection( _selectedIndex, filteredCount, false );
@@ -359,7 +359,7 @@ namespace sw::editor
             {
                 const EditorSearchItem item = *pTarget; // 실행이 목록을 다시 만들 수 있다 — 사본으로 부른다
                 close();
-                EditorSearchSources::execute( item );
+                EditorSearchItem::execute( item );
                 return;
             }
             close();

@@ -4,7 +4,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Editor/Panels/Profiler/Model/ProfilerCallTree.h"
+#include "Editor/Panels/Profiler/Model/ProfilerCallNode.h"
 #include "Editor/Panels/Profiler/Model/ProfilerCaptureModel.h"
 #include "Editor/Panels/Profiler/Model/ProfilerPerformanceModel.h"
 #include "Editor/Panels/Profiler/Model/ProfilerScopeHistory.h"
@@ -66,7 +66,7 @@ namespace
 SW_TEST_CASE( ProfilerCallTreeTest, FoldsCallsAndComputesSelfTime )
 {
     vector<ProfilerCallNode> listNode;
-    ProfilerCallTree::compute( { Util::makeThread( "Main", {
+    ProfilerCallNode::compute( { Util::makeThread( "Main", {
                                                                Util::makeEvent( 0, 100, 1, 0 ),
                                                                Util::makeEvent( 10, 30, 2, 1 ),
                                                                Util::makeEvent( 40, 60, 2, 1 ),
@@ -78,7 +78,7 @@ SW_TEST_CASE( ProfilerCallTreeTest, FoldsCallsAndComputesSelfTime )
     SW_EXPECT_EQUAL( uint64{ 150 }, listNode[0]._totalNanos );
     SW_EXPECT_EQUAL( uint64{ 90 }, listNode[0]._selfNanos );
     SW_EXPECT_EQUAL( 2u, listNode[0]._callCount );
-    SW_EXPECT_EQUAL( ProfilerCallTree::kNoParent, listNode[0]._parent );
+    SW_EXPECT_EQUAL( ProfilerCallNode::kNoParent, listNode[0]._parent );
     SW_EXPECT_EQUAL( uint64{ 40 }, listNode[1]._totalNanos );
     SW_EXPECT_EQUAL( 2u, listNode[1]._callCount );
     SW_EXPECT_EQUAL( 0u, listNode[1]._parent );
@@ -91,7 +91,7 @@ SW_TEST_CASE( ProfilerCallTreeTest, FoldsCallsAndComputesSelfTime )
 SW_TEST_CASE( ProfilerCallTreeTest, ThreadsAndParentsKeepNodesApart )
 {
     vector<ProfilerCallNode> listNode;
-    ProfilerCallTree::compute( { Util::makeThread( "A", { Util::makeEvent( 0, 10, 1, 0 ), Util::makeEvent( 1, 2, 5, 1 ), Util::makeEvent( 10, 20, 2, 0 ), Util::makeEvent( 11, 12, 5, 1 ) } ),
+    ProfilerCallNode::compute( { Util::makeThread( "A", { Util::makeEvent( 0, 10, 1, 0 ), Util::makeEvent( 1, 2, 5, 1 ), Util::makeEvent( 10, 20, 2, 0 ), Util::makeEvent( 11, 12, 5, 1 ) } ),
                                  Util::makeThread( "B", { Util::makeEvent( 0, 10, 1, 0 ) } ) },
                                listNode );
     SW_REQUIRE_EQUAL( size_t{ 5 }, listNode.size() );
@@ -104,9 +104,9 @@ SW_TEST_CASE( ProfilerCallTreeTest, ThreadsAndParentsKeepNodesApart )
 SW_TEST_CASE( ProfilerCallTreeTest, ToleratesLostParentsAndBadTimes )
 {
     vector<ProfilerCallNode> listNode;
-    ProfilerCallTree::compute( { Util::makeThread( "A", { Util::makeEvent( 0, 10, 1, 2 ), Util::makeEvent( 2, 500, 2, 3 ), Util::makeEvent( 30, 20, 3, 4 ) } ) }, listNode );
+    ProfilerCallNode::compute( { Util::makeThread( "A", { Util::makeEvent( 0, 10, 1, 2 ), Util::makeEvent( 2, 500, 2, 3 ), Util::makeEvent( 30, 20, 3, 4 ) } ) }, listNode );
     SW_REQUIRE_EQUAL( size_t{ 3 }, listNode.size() );
-    SW_EXPECT_EQUAL( ProfilerCallTree::kNoParent, listNode[0]._parent ); // 앞이 덮였다 — 루트로 붙인다
+    SW_EXPECT_EQUAL( ProfilerCallNode::kNoParent, listNode[0]._parent ); // 앞이 덮였다 — 루트로 붙인다
     SW_EXPECT_EQUAL( 0, static_cast<int32>( listNode[0]._depth ) );
     SW_EXPECT_EQUAL( 0u, listNode[1]._parent );
     SW_EXPECT_EQUAL( uint64{ 0 }, listNode[0]._selfNanos );  // 자식이 더 길어도 감기지 않는다
@@ -116,15 +116,15 @@ SW_TEST_CASE( ProfilerCallTreeTest, ToleratesLostParentsAndBadTimes )
 SW_TEST_CASE( ProfilerCallTreeTest, SortingPutsTheBiggestFirst )
 {
     vector<ProfilerCallNode> listNode;
-    ProfilerCallTree::compute( { Util::makeThread( "A", { Util::makeEvent( 0, 100, 1, 0 ), Util::makeEvent( 0, 10, 2, 1 ), Util::makeEvent( 10, 50, 3, 1 ), Util::makeEvent( 200, 500, 4, 0 ) } ),
+    ProfilerCallNode::compute( { Util::makeThread( "A", { Util::makeEvent( 0, 100, 1, 0 ), Util::makeEvent( 0, 10, 2, 1 ), Util::makeEvent( 10, 50, 3, 1 ), Util::makeEvent( 200, 500, 4, 0 ) } ),
                                  Util::makeThread( "B", { Util::makeEvent( 0, 900, 5, 0 ) } ) },
                                listNode );
-    ProfilerCallTree::sortChildrenByTotal( listNode );
+    ProfilerCallNode::sortChildrenByTotal( listNode );
     SW_EXPECT_EQUAL( 3u, listNode[listNode[0]._firstChild]._slot );
     SW_EXPECT_EQUAL( 2u, listNode[listNode[listNode[0]._firstChild]._nextSibling]._slot );
 
     vector<uint32> listRoot;
-    ProfilerCallTree::collectRoots( listNode, listRoot );
+    ProfilerCallNode::collectRoots( listNode, listRoot );
     SW_REQUIRE_EQUAL( size_t{ 3 }, listRoot.size() );
     SW_EXPECT_EQUAL( 4u, listNode[listRoot[0]]._slot ); // 스레드 순, 그 안에서 긴 것
     SW_EXPECT_EQUAL( 1u, listNode[listRoot[1]]._slot );

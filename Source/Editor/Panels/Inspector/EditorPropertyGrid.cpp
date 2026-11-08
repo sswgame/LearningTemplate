@@ -39,7 +39,7 @@
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
 #include "Editor/Panels/Inspector/Model/InspectorFavorites.h"
 #include "Editor/Panels/Inspector/Model/InspectorPropertyLayout.h"
-#include "Editor/Panels/Inspector/Model/PropertyEditCondition.h"
+#include "Editor/Panels/Inspector/Model/PropertyEditConditionExpr.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
@@ -432,8 +432,8 @@ namespace sw::editor
 
                 for ( const PropertyInfo* prop : props )
                 {
-                    // `EditCondition` 이 거짓이면 숨기거나(EditConditionHides) 막는다. 판정은 ImGui 에 의존하지 않는 `PropertyEditCondition` 이 한다.
-                    const PropertyEditState editState = PropertyEditCondition::getEditState( *pTypeInfo, *prop, instance );
+                    // `EditCondition` 이 거짓이면 숨기거나(EditConditionHides) 막는다. 판정은 ImGui 에 의존하지 않는 `PropertyEditConditionExpr` 이 한다.
+                    const PropertyEditState editState = PropertyEditConditionExpr::getEditState( *pTypeInfo, *prop, instance );
                     if ( editState == PropertyEditState::Hidden )
                         continue;
 
@@ -929,7 +929,7 @@ namespace sw::editor
             pFieldType->forEachProperty( [&]( const PropertyInfo& nestedProp )
             {
                 // 구조체 필드의 값 주소는 그 구조체 타입의 객체 주소다.
-                const PropertyEditState editState = PropertyEditCondition::getEditState( *pFieldType, nestedProp, ObjectAddress{ pNestedPtr } );
+                const PropertyEditState editState = PropertyEditConditionExpr::getEditState( *pFieldType, nestedProp, ObjectAddress{ pNestedPtr } );
                 if ( editState == PropertyEditState::Hidden )
                     return;
                 ImGui::PushID( nestedProp._name.c_str() );

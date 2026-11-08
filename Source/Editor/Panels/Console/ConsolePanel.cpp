@@ -749,8 +749,8 @@ namespace sw::editor
     void ConsolePanel::openEntryInIde( const LogEntry& entry )
     {
         EditorSourceLocation location;
-        if ( EditorLogCommands::findLogEntryLocation( entry._message, entry._file, entry._line, location ) )
-            (void)EditorLogCommands::openInIde( location ); // 실패는 openInIde 가 경고로 남긴다
+        if ( EditorSourceLocation::findLogEntryLocation( entry._message, entry._file, entry._line, location ) )
+            (void)EditorSourceLocation::openInIde( location ); // 실패는 openInIde 가 경고로 남긴다
     }
 
     void ConsolePanel::shutdown()

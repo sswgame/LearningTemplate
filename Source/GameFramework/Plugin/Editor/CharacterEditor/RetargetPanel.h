@@ -2,7 +2,7 @@
  * @file RetargetPanel.h
  * @brief 리타깃 프로필(`*.retarget.xml`) 편집 창입니다 — 두 스켈레톤 · 루트와 골반 짝 · 사슬 쌍(본 목록 · IK 목표) · 본 이름 테이블 · 이동 방법 · 리타깃 포즈를 고치고,
  *        런타임 리타기터로 묶어 본 점검(사슬 길이 비 · 짝지은 본 수)을 보이며 저장합니다.
- * @details 데이터는 `RetargetProfile` 하나이고 쓰기는 `RetargetProfile::toXML`, 점검은 `RetargetProfileInspector::inspect`(런타임과 같은 묶기) 하나다 —
+ * @details 데이터는 `RetargetProfile` 하나이고 쓰기는 `RetargetProfile::toXML`, 점검은 `RetargetProfileInspection::inspect`(런타임과 같은 묶기) 하나다 —
  *          에디터 쪽 사본 규칙을 두지 않는다. 묶이지 않는 프로필은 저장하지 않는다. 되돌리기는 문서 패널의 글 스냅샷(`captureDocumentText`)이 한다.
  *          스켈레톤 읽기 · 자세 · 카메라 맞춤은 `RetargetPreviewModel`, 이름 규칙은 `RetargetProfileEdit` 가 맡는다(화면 없이 테스트한다).
  *          - **3D 미리보기**: 미리보기 씬은 비어 있고, 두 스켈레톤의 레퍼런스 자세를 뷰포트 위에 겹쳐 선으로 긋는다(원본 파랑 · 대상 레퍼런스 회색 · 리타깃 포즈를 얹은 대상 주황).

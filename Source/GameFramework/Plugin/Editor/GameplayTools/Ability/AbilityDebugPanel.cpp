@@ -145,7 +145,7 @@ namespace sw::editor
             return;
         }
 
-        AbilityDebugModel::collect( *pTarget, _snapshot );
+        AbilityDebugSnapshot::collect( *pTarget, _snapshot );
         _bSnapshotValid = SW_TRUE;
         ImGui::TextDisabled( "t = %.2f", static_cast<float64>( _snapshot._time ) );
         drawSnapshot();

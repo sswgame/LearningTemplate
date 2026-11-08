@@ -6,7 +6,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
-#include "Editor/Common/Widgets/EditorCurveEditor.h"
+#include "Editor/Common/Widgets/EditorCurveEditorState.h"
 #include "Editor/Panels/Animation/Model/SequenceClipTiming.h"
 #include "Editor/Panels/Animation/Model/SequenceModel.h"
 

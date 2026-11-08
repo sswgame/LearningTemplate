@@ -1,7 +1,7 @@
 /**
  * @file ModelImportVrm.cpp
  * @brief 모델 임포트의 VRM 아바타 정보(humanoid · 표정 · 스프링 본 · 1인칭) 읽기와 `.avatar.xml` · 얼굴 리그(`.facial.xml`) · 후처리 리그(`.rig.xml`) 쓰기입니다.
- * @details 값의 해석은 `VrmAvatarImporter`, 런타임 형식으로 옮기기는 `VrmRuntimeAssets` 가 합니다.
+ * @details 값의 해석은 `VrmAvatarDef`, 런타임 형식으로 옮기기는 `VrmRuntimeAssets` 가 합니다.
  */
 #include "pch.h"
 
@@ -15,7 +15,7 @@
 #include "Editor/Common/Asset/Model/ModelImportMaterial.h"
 #include "Editor/Common/Asset/Model/ModelImportUtil.h"
 #include "Editor/Common/Asset/Model/ModelImporter.h"
-#include "Editor/Common/Asset/Model/VrmAvatarImporter.h"
+#include "Editor/Common/Asset/Model/VrmAvatarDef.h"
 #include "Editor/Common/Asset/Model/VrmRuntimeAssets.h"
 
 #include "Engine/Animation/Facial/FacialRig.h"
@@ -118,11 +118,11 @@ namespace sw::editor
         if ( vrm1.isObject() )
         {
             const JSONValue springBone = extensions.get( "VRMC_springBone" );
-            bRead                      = VrmAvatarImporter::readVrm1Avatar( vrm1, springBone, names, inoutResult._avatar, &inoutResult._listIgnoredAvatarKey, error );
+            bRead                      = VrmAvatarDef::readVrm1Avatar( vrm1, springBone, names, inoutResult._avatar, &inoutResult._listIgnoredAvatarKey, error );
         }
         else
         {
-            bRead = VrmAvatarImporter::readVrm0Avatar( vrm0, names, inoutResult._avatar, &inoutResult._listIgnoredAvatarKey, error );
+            bRead = VrmAvatarDef::readVrm0Avatar( vrm0, names, inoutResult._avatar, &inoutResult._listIgnoredAvatarKey, error );
         }
         if ( bRead == false )
         {
@@ -167,8 +167,8 @@ namespace sw::editor
             return true;
         if ( result._listIgnoredAvatarKey.empty() == false )
             SW_LOG_WARNING_ID( "ModelImporter.VRMAvatarValuesNot", "VRM '%#': avatar values that are not imported (ignored): %#", sourcePath, Internal::joinNames( result._listIgnoredAvatarKey ).c_str() );
-        const string avatarPath = FileUtil::joinPath( sideFolder, string( stem ) + string( VrmAvatarImporter::kExtension ) );
-        if ( FileUtil::ensureDirectoryExists( sideFolder ) == false || FileUtil::writeTextFile( avatarPath, VrmAvatarImporter::makeAvatarXML( result._avatar ) ) == false )
+        const string avatarPath = FileUtil::joinPath( sideFolder, string( stem ) + string( VrmAvatarDef::kExtension ) );
+        if ( FileUtil::ensureDirectoryExists( sideFolder ) == false || FileUtil::writeTextFile( avatarPath, VrmAvatarDef::makeAvatarXML( result._avatar ) ) == false )
         {
             SW_LOG_ERROR_ID( "ModelImporter.FailedWriteAvatar", "Failed to write avatar %#", avatarPath.c_str() );
             return false;

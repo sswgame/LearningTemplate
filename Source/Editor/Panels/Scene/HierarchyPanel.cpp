@@ -19,7 +19,7 @@
 #include "Editor/Common/GUI/EditorCompactControls.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
-#include "Editor/Common/GUI/Theme/EditorComponentIcon.h"
+#include "Editor/Common/GUI/Theme/EditorComponentIconRow.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorComponentMenu.h"
@@ -261,7 +261,7 @@ namespace sw::editor
                                           : "SceneComponent";
 
                 // 행 앞에 컴포넌트 아이콘을 그린다. 언리얼의 Outliner 나 Godot 의 씬 트리처럼 종류를 한눈에 알 수 있다
-                const utf8*                             pIcon = EditorComponentIcon::findRow( pSceneComp->getTypeInfo() )._pGlyph;
+                const utf8*                             pIcon = EditorComponentIconRow::findRow( pSceneComp->getTypeInfo() )._pGlyph;
                 fixed_string<constant::buffer::kMax256> arrLabel;
                 formatstring( arrLabel.data(), arrLabel.capacity(), "%# %###sc%#", pIcon, pCompName, pSceneComp->getComponentID() );
 
@@ -343,7 +343,7 @@ namespace sw::editor
                 }
 
                 // 오브젝트 아이콘은 빌보드 종류 컴포넌트(라이트, 카메라, 오디오)가 있으면 그 아이콘이고, 없으면 기본 오브젝트 아이콘이다.
-                const utf8* pIcon = EditorSiblingOrder::isFolder( *pObj ) ? SW_EDITOR_ICON( "Folder" ) : EditorComponentIcon::findObjectRow( *pObj )._pGlyph;
+                const utf8* pIcon = EditorSiblingOrder::isFolder( *pObj ) ? SW_EDITOR_ICON( "Folder" ) : EditorComponentIconRow::findObjectRow( *pObj )._pGlyph;
                 formatstring( outLabel.data(), outLabel.capacity(), "%# %###go%#", pIcon, pObj->getName().c_str(), objectID );
             }
 

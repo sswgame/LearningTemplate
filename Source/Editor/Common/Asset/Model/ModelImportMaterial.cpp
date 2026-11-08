@@ -16,7 +16,7 @@
 #include "Editor/Common/Asset/Model/ModelImportGeometry.h"
 #include "Editor/Common/Asset/Model/ModelImportUtil.h"
 #include "Editor/Common/Asset/Model/ModelImporter.h"
-#include "Editor/Common/Asset/Model/VrmMaterialImporter.h"
+#include "Editor/Common/Asset/Model/ToonMaterialDef.h"
 #include "Editor/Common/Asset/Texture/TextureImportConfig.h"
 #include "Editor/Common/Asset/Texture/TextureImporter.h"
 
@@ -65,7 +65,7 @@ namespace sw::editor
             bool   bRead = false;
             if ( bVrm1 )
             {
-                bRead = VrmMaterialImporter::readMtoon1Material( materials.at( index ), outListToon[index], &outListIgnored, error );
+                bRead = ToonMaterialDef::readMtoon1Material( materials.at( index ), outListToon[index], &outListIgnored, error );
             }
             else
             {
@@ -75,7 +75,7 @@ namespace sw::editor
                     SW_LOG_ERROR_ID( "ModelImporter.VRMMaterialNoMaterialProperties", "VRM '%#': material %# has no materialProperties entry", sourcePath, index );
                     return false;
                 }
-                bRead = VrmMaterialImporter::readVrm0Material( materialProperties.at( index ), materials.at( index ), outListToon[index], &outListIgnored, error );
+                bRead = ToonMaterialDef::readVrm0Material( materialProperties.at( index ), materials.at( index ), outListToon[index], &outListIgnored, error );
             }
             if ( bRead == false )
             {
@@ -328,7 +328,7 @@ namespace sw::editor
             if ( std::find( listWrittenStem.begin(), listWrittenStem.end(), section._fileStem ) != listWrittenStem.end() )
                 continue;
             listWrittenStem.push_back( section._fileStem );
-            const string materialText = VrmMaterialImporter::makeMaterialXML( result._listToonMaterial[section._materialIndex], listTexturePath, pDefaultAssets->_toonMaterialTemplate );
+            const string materialText = ToonMaterialDef::makeMaterialXML( result._listToonMaterial[section._materialIndex], listTexturePath, pDefaultAssets->_toonMaterialTemplate );
             if ( materialText.empty() || writeSharedMaterial( assetPaths, materialText, toonTemplateText, pDefaultAssets->_toonMaterialTemplate.get(), section._fileStem, sourcePath, sideFolder ) == false )
             {
                 SW_LOG_ERROR_ID( "ModelImporter.FailedWriteToonMaterial", "Failed to write toon material '%#' of %#", section._fileStem.c_str(), sourcePath );
@@ -486,7 +486,7 @@ namespace sw::editor
         bool bMissingProperty = false;
         auto setAttribute     = [&]( string_view name, const utf8* pAttribute, const string& value )
         {
-            const XMLNode item = VrmMaterialImporter::findMaterialProperty( properties, name );
+            const XMLNode item = ToonMaterialDef::findMaterialProperty( properties, name );
             if ( item.isValid() == false )
             {
                 bMissingProperty = true;

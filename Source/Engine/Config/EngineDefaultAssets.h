@@ -138,7 +138,7 @@ namespace sw
         PROPERTY( Required )
         DataPath _spriteMaterial; ///< 스프라이트(2D) — 머티리얼 칸이 비면 쓰는 기본 머티리얼(`SpriteRenderUtil`)
         PROPERTY( Required )
-        DataPath _toonMaterialTemplate; ///< VRM 임포트가 MToon 재질마다 복사하는 툰 머티리얼 견본(`VrmMaterialImporter`)
+        DataPath _toonMaterialTemplate; ///< VRM 임포트가 MToon 재질마다 복사하는 툰 머티리얼 견본(`ToonMaterialDef`)
         PROPERTY( Required )
         DataPath _pbrMaterialTemplate; ///< 일반 glTF 임포트가 금속도 · 거칠기 머티리얼마다 복사하는 PBR 머티리얼 견본(`ModelImportMaterial::writePbrMaterial`)
 

@@ -19,7 +19,7 @@
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
-#include "Editor/Viewport/EditorViewportToolbar.h"
+#include "Editor/Viewport/ViewportToolbarSettings.h"
 
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"

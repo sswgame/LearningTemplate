@@ -9,8 +9,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
-#include "Editor/Common/Asset/Model/VrmAvatarImporter.h"
-#include "Editor/Common/Asset/Model/VrmMaterialImporter.h"
+#include "Editor/Common/Asset/Model/ToonMaterialDef.h"
+#include "Editor/Common/Asset/Model/VrmAvatarDef.h"
 
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
@@ -146,7 +146,7 @@ namespace sw::editor
         ModelImportPbrMaterial _pbrMaterial;
         /** @brief 머티리얼이 지원하지 않는 VRM 키의 이름입니다. 값이 효과 없는 기본값이면 빠집니다. 임포트가 경고로 알립니다. */
         vector<string> _listIgnoredMaterialKey;
-        /** @brief VRM 이면 humanoid 본 테이블 · 표정 · 스프링 본 · 1인칭 정보입니다(`VrmAvatarImporter`). VRM 이 아니면 비어 있습니다. */
+        /** @brief VRM 이면 humanoid 본 테이블 · 표정 · 스프링 본 · 1인칭 정보입니다(`VrmAvatarDef`). VRM 이 아니면 비어 있습니다. */
         VrmAvatarDef _avatar;
         /** @brief 아바타 정보에서 모르는 키와 옮기지 않는 값의 경로입니다. 임포트가 경고로 알립니다. */
         vector<string> _listIgnoredAvatarKey;

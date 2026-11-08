@@ -5,7 +5,7 @@
 #pragma once
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Viewport/EditorViewportGizmo.h"
-#include "Editor/Viewport/EditorViewportToolbar.h"
+#include "Editor/Viewport/ViewportToolbarSettings.h"
 
 namespace sw::editor
 {

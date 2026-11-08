@@ -21,7 +21,7 @@
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Panels/Animation/Model/RigFileRewrite.h"
+#include "Editor/Panels/Animation/Model/RigSaveParams.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
@@ -124,7 +124,7 @@ namespace sw::editor
             }
 
             /**
-             * @brief 리그 파일에 @p params 를 되써 넣고 상태 줄 글을 돌려줍니다. 다른 키는 그대로 둡니다(`RigFileRewrite::rewriteSettings`).
+             * @brief 리그 파일에 @p params 를 되써 넣고 상태 줄 글을 돌려줍니다. 다른 키는 그대로 둡니다(`RigSaveParams::rewriteSettings`).
              * @details 파일 감시가 쓴 파일을 다시 읽으면 같은 리그를 쓰는 모든 인스턴스가 새 값으로 다시 바인딩된다. @p pUndoLabel 이 있으면 파일 글 전후를
              *          되돌리기로 기록한다(대상 오프셋 — 인스턴스 값이 아니라 파일이 바뀐다).
              */
@@ -136,7 +136,7 @@ namespace sw::editor
                 if ( readPath.has_value() == false || FileUtil::readTextFile( readPath->str(), text ) == false )
                     return string( "The rig file could not be read" );
                 string rewritten;
-                if ( RigFileRewrite::rewriteSettings( text, rigPath, params, rewritten ) == false )
+                if ( RigSaveParams::rewriteSettings( text, rigPath, params, rewritten ) == false )
                     return string( "The rig was not saved - see the log" );
                 const std::optional<AbsolutePath> rigFile = editor::getSubsystem<AssetPaths>().toDiskPath( rigPath );
                 if ( rigFile.has_value() == false )
