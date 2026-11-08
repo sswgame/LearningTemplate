@@ -19,6 +19,8 @@
 
 // 씬 라이트 한 개(LightData)의 정의는 light_data.hlsli 하나다 — 컴퓨트(light_grid.hlsl)도 같은 파일을 쓴다. float4 로만 채운 이유는 그 파일 머리 주석.
 #include "light_data.hlsli"
+// 셰이딩 모델의 스칼라 식(GGX · 프레넬 · 시엔 …) 한 벌 — C++ 단위 테스트도 같은 파일을 읽는다(Engine/Graphics/Lighting/ShadingMath.h).
+#include "shading_math.hlsli"
 
 SW_DECLARE_STRUCTURED_BUFFER( LightData, g_SwLights, SW_SLOT_LIGHT_SRV );
 // 라이트 프로브의 SH9(프로브 하나가 float4 일곱 개). 볼륨 원소(SW_LIGHT_TYPE_PROBE_VOLUME)가 첫 프로브 번호를 싣는다 — 읽는 함수는 LightProbe::load 하나다.
@@ -527,16 +529,10 @@ float3 SurfacePBR::evaluateSpecular( float3 normal, float3 toView, float3 toLigh
     const float3 halfway       = normalize( toView + toLight );
     const float  normalDotHalf = saturate( dot( normal, halfway ) );
     const float  viewDotHalf   = saturate( dot( toView, halfway ) );
-    const float  alphaSquared  = _alpha * _alpha;
-    const float  denominator   = normalDotHalf * normalDotHalf * ( alphaSquared - 1.0f ) + 1.0f;
-    // D · π — 분포의 1/π 와 엔진 단위의 π 가 지워진다.
-    const float  distributionTimesPi = alphaSquared / max( denominator * denominator, 1e-8f );
-    const float  visibility          = 0.5f / max( normalDotLight * ( normalDotView * ( 1.0f - _alpha ) + _alpha ) +
-                                                       normalDotView * ( normalDotLight * ( 1.0f - _alpha ) + _alpha ),
-                                                   1e-5f );
-    const float  oneMinusViewDotHalf = 1.0f - viewDotHalf;
-    const float  fresnelSquared      = oneMinusViewDotHalf * oneMinusViewDotHalf;
-    const float  fresnelWeight       = fresnelSquared * fresnelSquared * oneMinusViewDotHalf; // pow 는 DXC 가 log · exp 로 낸다
+    // D · π — 분포의 1/π 와 엔진 단위의 π 가 지워진다. 식은 shading_math.hlsli 한 벌이다(셰이딩 모델의 다른 엽도 같은 식을 부른다).
+    const float  distributionTimesPi = ShadingMath::computeDistributionGGXTimesPi( normalDotHalf, _alpha );
+    const float  visibility          = ShadingMath::computeVisibilitySmithGGX( normalDotLight, normalDotView, _alpha );
+    const float  fresnelWeight       = ShadingMath::computeSchlickWeight( viewDotHalf );
     const float3 fresnel             = _specularColor + ( 1.0f - _specularColor ) * fresnelWeight;
     return distributionTimesPi * visibility * fresnel * normalDotLight;
 }
@@ -567,30 +563,84 @@ static float3 Lighting::computeRimLight( float3 normal )
     return rim * g_KeyLightColor.rgb;
 }
 
+// ------------------------------------------------------------------------------
+// 표면 BRDF — 빛 하나의 응답과 앰비언트 · 반사 프로브의 가중을 내는 형식. 빛을 도는 고리(SurfaceBRDF::shadeLights)는 아래 한 벌이고,
+// 셰이딩 모델(SW_SHADING_MODEL_LAYERED — shading_model.hlsli)은 같은 이름 · 같은 멤버의 형식을 대신 둔다(코트 · 시엔 · 피부 · 비등방 · 박막 · 머리결 · 투과 엽).
+// 언리얼이 셰이딩 모델마다 BxDF 를 고르고 빛 고리는 하나인 것과 같은 자리다(기억에 의존한 비교). 기본은 금속도 · 거칠기 PBR 그대로다.
+// ------------------------------------------------------------------------------
+#if defined( SW_SHADING_MODEL_LAYERED )
+    #include "shading_model.hlsli"
+#else
+/** @brief 기본 표면 BRDF — 금속도 · 거칠기 PBR(SurfacePBR). */
+struct SurfaceBRDF
+{
+    SurfacePBR _pbr;
+    float3     _normal; ///< 월드 노멀(정규화)
+    float3     _toView;
+    float      _normalDotView;
+
+    static SurfaceBRDF makePBR( float3 albedo, float3 worldPosition, float3 normal, float roughness, float metallic );
+    bool receivesLight( float normalDotLight );                   // 이 N·L(자르지 않은 값)의 빛이 응답을 내는지
+    float3 evaluateLight( float3 toLight, float normalDotLight ); // 빛 하나의 응답(빛 색 · 감쇠 · 그림자를 곱하기 전)
+    float3 getAmbientDiffuseColor();                              // 앰비언트 · 라이트 프로브가 곱하는 확산색
+    float3 computeEnvironmentSpecular();                          // 앰비언트 · 반사 프로브가 곱하는 반사 비율
+    float getReflectionRoughness();                               // 반사 프로브 단계를 고르는 거칠기
+    float3 shadeLights( float3 worldPosition, float shadow );     // 모든 빛 — 아래 한 벌
+};
+
+static SurfaceBRDF SurfaceBRDF::makePBR( float3 albedo, float3 worldPosition, float3 normal, float roughness, float metallic )
+{
+    SurfaceBRDF brdf;
+    brdf._pbr           = SurfacePBR::make( albedo, roughness, metallic );
+    brdf._normal        = normal;
+    brdf._toView        = View::computeToView( worldPosition );
+    brdf._normalDotView = max( saturate( dot( normal, brdf._toView ) ), 1e-4f );
+    return brdf;
+}
+
+bool SurfaceBRDF::receivesLight( float normalDotLight )
+{
+    return normalDotLight > 0.0f;
+}
+
+float3 SurfaceBRDF::evaluateLight( float3 toLight, float normalDotLight )
+{
+    const float clampedNormalDotLight = saturate( normalDotLight );
+    return _pbr._diffuseColor * clampedNormalDotLight + _pbr.evaluateSpecular( _normal, _toView, toLight, clampedNormalDotLight, _normalDotView );
+}
+
+float3 SurfaceBRDF::getAmbientDiffuseColor()
+{
+    return _pbr._diffuseColor;
+}
+
+float3 SurfaceBRDF::computeEnvironmentSpecular()
+{
+    return _pbr.computeEnvironmentSpecular( _normalDotView );
+}
+
+float SurfaceBRDF::getReflectionRoughness()
+{
+    return _pbr._roughness;
+}
+#endif
+
 /**
- * @brief 이 표면을 이 위치를 비추는 **모든 라이트**로 셰이딩합니다(금속도 · 거칠기 PBR).
- * @param albedo   기본 색(언리얼 BaseColor) — 금속도가 확산색과 F0 로 나눈다
- * @param worldPosition 월드 위치 — 점광의 거리 감쇠와 시선 방향에 쓴다
- * @param normal   월드 노멀 (정규화되어 있어야 한다)
- * @param shadow   `Shadow::sampleAtWorld` 가 준 방향광 값 — `params.x` 가 켜진 방향광에만 곱한다(점광 · 스폿은 `LightData::computeShadow` 가 자기 타일을 읽는다)
- * @param roughness · metallic 머티리얼 칸(포워드) 또는 G버퍼 머티리얼 칸(디퍼드)의 값. 기본값을 두지 않는다 — 셰이더마다 자기 값을 넘긴다
+ * @brief 이 표면을 이 위치를 비추는 **모든 라이트**로 셰이딩합니다. 빛 하나의 응답은 표면 BRDF(기본 PBR 또는 셰이딩 모델)가 낸다.
+ * @param shadow `Shadow::sampleAtWorld` 가 준 방향광 값 — `params.x` 가 켜진 방향광에만 곱한다(점광 · 스폿은 `LightData::computeShadow` 가 자기 타일을 읽는다)
  * @details 3D 라이트가 하나도 없으면 앰비언트만 남습니다. 키 라이트로 대신 비추지 않습니다. 3D 씬은 방향광이나 스카이를 데이터로 가집니다(결정 기록 5-12 D2-13).
  *          이 위치를 덮는 라이트 프로브 볼륨(커서가 도는 SW_LIGHT_TYPE_PROBE_VOLUME 원소)이 있으면 확산 앰비언트 대신 그 볼륨들의 SH 를 가중 평균해 쓴다
  *          (IndirectLighting.md P3). 볼륨이 없는 곳은 지금까지의 앰비언트 그대로다. 이 위치를 덮는 반사 프로브(SW_LIGHT_TYPE_REFLECTION_PROBE 원소)가 있으면
  *          반사 앰비언트를 그 프로브가 찍어 거른 빛으로 바꾼다(P4 — 거칠기로 단계를 고르고 반사 방향으로 읽는다). 프로브가 없는 곳은 앰비언트 색 그대로다.
  */
-static float3 Lighting::shadeLights( float3 albedo, float3 worldPosition, float3 normal, float shadow, float roughness, float metallic )
+float3 SurfaceBRDF::shadeLights( float3 worldPosition, float shadow )
 {
-    // 보기 모드 LightingOnly 는 포워드 셰이더의 표면 색을 회색으로 바꾼다(ViewMode::overrideLightingAlbedo — binding.hlsli).
-    albedo                         = ViewMode::overrideLightingAlbedo( albedo );
-    const SurfacePBR surface       = SurfacePBR::make( albedo, roughness, metallic );
-    const float3     toView        = View::computeToView( worldPosition );
-    const float      normalDotView = max( saturate( dot( normal, toView ) ), 1e-4f );
     // 앰비언트는 빛 목록과 무관하게 **한 번만** 더한다 — 라이트마다 더하면 빛을 늘릴수록 화면이 바랜다.
     const float3 ambient             = g_KeyLightColor.rgb * g_KeyLightColor.a;
-    const float3 environmentSpecular = surface.computeEnvironmentSpecular( normalDotView );
-    const float3 reflectDirection    = reflect( -toView, normal );
-    float3       lit                 = ( surface._diffuseColor + environmentSpecular ) * ambient;
+    const float3 diffuseColor        = getAmbientDiffuseColor();
+    const float3 environmentSpecular = computeEnvironmentSpecular();
+    const float3 reflectDirection    = reflect( -_toView, _normal );
+    float3       lit                 = ( diffuseColor + environmentSpecular ) * ambient;
     float3       probeSum            = float3( 0.0f, 0.0f, 0.0f );
     float        probeWeight         = 0.0f;
     float3       reflectionSum       = float3( 0.0f, 0.0f, 0.0f );
@@ -603,14 +653,14 @@ static float3 Lighting::shadeLights( float3 albedo, float3 worldPosition, float3
         const uint lightType = (uint)( light._directionType.w + 0.5f );
         if ( lightType == SW_LIGHT_TYPE_PROBE_VOLUME )
         {
-            const float4 probe = light.sampleProbeVolume( worldPosition, normal );
+            const float4 probe = light.sampleProbeVolume( worldPosition, _normal );
             probeSum += probe.rgb * probe.a;
             probeWeight += probe.a;
             continue;
         }
         if ( lightType == SW_LIGHT_TYPE_REFLECTION_PROBE )
         {
-            const float4 reflection = light.sampleReflectionProbe( worldPosition, reflectDirection, surface._roughness );
+            const float4 reflection = light.sampleReflectionProbe( worldPosition, reflectDirection, getReflectionRoughness() );
             reflectionSum += reflection.rgb * reflection.a;
             reflectionWeight += reflection.a;
             continue;
@@ -620,17 +670,17 @@ static float3 Lighting::shadeLights( float3 albedo, float3 worldPosition, float3
         if ( light.computeIncidence( worldPosition, toLight, attenuation ) == false )
             continue;
 
-        const float normalDotLight = saturate( dot( normal, toLight ) );
-        if ( normalDotLight * attenuation <= 0.0f )
+        // 기본 PBR 은 N·L > 0 만 받는다. 감싼 확산 · 투과 엽은 뒤에서 오는 빛도 받는다(receivesLight).
+        const float normalDotLight = dot( _normal, toLight );
+        if ( receivesLight( normalDotLight ) == false || attenuation <= 0.0f )
             continue;
 
-        const float  shadowTerm = light.computeShadow( worldPosition, normal, shadow );
-        const float3 response   = surface._diffuseColor * normalDotLight + surface.evaluateSpecular( normal, toView, toLight, normalDotLight, normalDotView );
-        lit += response * attenuation * light._colorIntensity.a * light._colorIntensity.rgb * shadowTerm;
+        const float shadowTerm = light.computeShadow( worldPosition, _normal, shadow );
+        lit += evaluateLight( toLight, normalDotLight ) * attenuation * light._colorIntensity.a * light._colorIntensity.rgb * shadowTerm;
     }
     // 볼륨이 덮는 곳은 확산 앰비언트를 프로브의 간접광으로 바꾼다(겹친 볼륨은 가중 평균). 덮지 않으면 아무 연산도 더하지 않는다.
     if ( probeWeight > 0.0f )
-        lit += surface._diffuseColor * ( probeSum / probeWeight - ambient );
+        lit += diffuseColor * ( probeSum / probeWeight - ambient );
     // 반사 프로브가 덮는 곳은 반사 앰비언트를 프로브의 빛으로 바꾼다(IndirectLighting.md P4). 겹친 프로브는 가중 평균이고, 가중치 합이 1 보다 작은 경계는
     // 모자란 몫을 앰비언트로 채워 상자 밖과 이어진다. 덮지 않으면 아무 연산도 더하지 않는다.
     if ( reflectionWeight > 0.0f )
@@ -639,6 +689,23 @@ static float3 Lighting::shadeLights( float3 albedo, float3 worldPosition, float3
         lit += environmentSpecular * ( environment - ambient );
     }
     return lit;
+}
+
+/**
+ * @brief 이 표면을 이 위치를 비추는 **모든 라이트**로 셰이딩합니다(금속도 · 거칠기 PBR).
+ * @param albedo   기본 색(언리얼 BaseColor) — 금속도가 확산색과 F0 로 나눈다
+ * @param worldPosition 월드 위치 — 점광의 거리 감쇠와 시선 방향에 쓴다
+ * @param normal   월드 노멀 (정규화되어 있어야 한다)
+ * @param shadow   `Shadow::sampleAtWorld` 가 준 방향광 값
+ * @param roughness · metallic 머티리얼 칸(포워드) 또는 G버퍼 머티리얼 칸(디퍼드)의 값. 기본값을 두지 않는다 — 셰이더마다 자기 값을 넘긴다
+ * @details 셰이딩 모델 셰이더(SW_SHADING_MODEL_LAYERED)에서 불러도 엽이 모두 꺼진 PBR 이다(makePBR).
+ */
+static float3 Lighting::shadeLights( float3 albedo, float3 worldPosition, float3 normal, float shadow, float roughness, float metallic )
+{
+    // 보기 모드 LightingOnly 는 포워드 셰이더의 표면 색을 회색으로 바꾼다(ViewMode::overrideLightingAlbedo — binding.hlsli).
+    albedo                 = ViewMode::overrideLightingAlbedo( albedo );
+    const SurfaceBRDF brdf = SurfaceBRDF::makePBR( albedo, worldPosition, normal, roughness, metallic );
+    return brdf.shadeLights( worldPosition, shadow );
 }
 
 #endif // SW_ENGINE_LIGHTING_HLSLI
