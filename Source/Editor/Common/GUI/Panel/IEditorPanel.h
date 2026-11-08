@@ -156,6 +156,12 @@ namespace sw::editor
          */
         virtual EditorTextExtent getInitialPanelSize() const { return EditorTextExtent::ofText( 85.0f, 22.0f ); }
 
+        /**
+         * @brief 이번 프레임 뒤에 곧바로 다음 프레임이 필요하다고 알립니다(시간으로 움직이는 패널 — `EditorRenderViews::requestAnimationFrame`). 에디터 컨텍스트가 없으면 아무것도 하지 않습니다.
+         * @details 패널 View 가 작업 공간 헤더(`EditorContext` · `EditorRenderViews`)를 보지 않게 여기를 지난다(`docs/agents/EditorUI.md` MVVM 계약).
+         */
+        static void requestAnimationFrame();
+
         /** @brief 열림 표시를 끄고 `onPanelClosed` 를 부릅니다. 패널을 닫는 유일한 위치입니다(문서 쪽 닫기 확인도 이것으로 닫는다). */
         void closeNow()
         {

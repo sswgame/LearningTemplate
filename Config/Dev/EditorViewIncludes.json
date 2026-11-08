@@ -26,6 +26,8 @@
     "_migratedViews": [
         "Source/Editor/Panels/Animation/AnimationGraphLayerEditor",
         "Source/Editor/Panels/Animation/AnimationGraphPanel",
+        "Source/Editor/Panels/Animation/SequenceDebuggerPanel",
+        "Source/Editor/Panels/Animation/SpriteClipPanel",
         "Source/Editor/Panels/AudioGraph/AudioGraphPanel",
         "Source/Editor/Panels/AudioMixer/AudioMixerPanel",
         "Source/Editor/Panels/Autosave/RecoveredWorkPanel",
@@ -46,6 +48,7 @@
         "Source/Editor/Panels/Inspector/TagComponentInspector",
         "Source/Editor/Panels/MaterialGraph/MaterialGraphPanel",
         "Source/Editor/Panels/Multiplayer/MultiplayerTab",
+        "Source/Editor/Panels/Packaging/PackagingPanel",
         "Source/Editor/Panels/Profiler/ProfilerWatches",
         "Source/Editor/Panels/ProjectSettings/ProjectSettingsPanel",
         "Source/Editor/Panels/RenderTarget/RenderTargetWatches",
@@ -58,6 +61,7 @@
         "Source/Editor/Panels/Settings/SettingsWatches",
         "Source/Editor/Panels/Settings/ShortcutsPanel",
         "Source/Editor/Panels/Settings/UserSettingsPanel",
+        "Source/Editor/Panels/SourceControl/SourceControlChangesPanel",
         "Source/Editor/Panels/TileSet/TileSetPanel"
     ]
 }

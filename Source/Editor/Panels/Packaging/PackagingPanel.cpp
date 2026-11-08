@@ -2,14 +2,11 @@
 
 #include "Editor/Panels/Packaging/PackagingPanel.h"
 
-#include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -40,10 +37,8 @@ namespace sw::editor
 
             static const PackagingPanel* findPanel()
             {
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                if ( pContext == nullptr )
-                    return nullptr;
-                return pContext->getSubsystem<EditorPanelManager>().findPanel<PackagingPanel>();
+                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
+                return pPanels != nullptr ? pPanels->findPanel<PackagingPanel>() : nullptr;
             }
 
             [[nodiscard]] static bool readPackagingState( const GameObjectManager* /*pManager*/, float64& outValue )
@@ -137,7 +132,7 @@ namespace sw::editor
         const bool               bHasFolder = progress._state == PackagingState::Succeeded && progress._outputFolder.empty() == false;
         ImGui::BeginDisabled( bHasFolder == false );
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "FolderOpen" ), SW_LOCKEY( "EdButton", "OpenFolder" ), "Open Folder" ) ) )
-            (void)EditorAssetFileCommands::showInFileExplorer( progress._outputFolder ); // 탐색기를 못 띄우면 경고가 남는다
+            PackagingModel::showInFileExplorer( progress._outputFolder );
         ImGui::EndDisabled();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "OpenFolder" ) );
     }

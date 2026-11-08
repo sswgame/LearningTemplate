@@ -85,7 +85,7 @@ namespace sw::editor
         drawDebugViewRow( VolumetricFogStatus::canShowVolumeViews( state ) );
         drawFogObjectRow();
         // 진단 보기는 뷰포트 그림을 바꾸므로 에디터가 쉬지 않고 다시 그리게 한다(상태도 프레임마다 바뀔 수 있다).
-        editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>().requestAnimationFrame();
+        requestAnimationFrame();
     }
 
     void VolumetricFogPanel::drawDebugViewRow( bool bVolumeActive )
