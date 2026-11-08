@@ -220,6 +220,26 @@ namespace sw
                 return limits;
             }
 
+            /** @brief 셰이딩 모델 Hair 의 머티리얼 칸을 덧붙입니다(이름 · 범위는 hair.material 의 같은 뜻 칸과 같다). */
+            static void appendHairFields( vector<MaterialGraphField>& inoutListField )
+            {
+                static constexpr float32 kHairShiftLimit = 0.2f; ///< 큐티클 기울기 칸의 범위(± 라디안, hair.material `_shift` 와 같다)
+                const auto               add             = [&inoutListField]( const utf8* pName, const utf8* pDefault, float32 minValue, float32 maxValue )
+                {
+                    MaterialGraphField field;
+                    field._name         = pName;
+                    field._hlslType     = "float";
+                    field._propertyType = "Range";
+                    field._defaultValue = pDefault;
+                    field._min          = minValue;
+                    field._max          = maxValue;
+                    inoutListField.push_back( std::move( field ) );
+                };
+                add( "_hairShift", "0.035", -kHairShiftLimit, kHairShiftLimit );
+                add( "_hairScatter", "0.5", 0.0f, 1.0f );
+                add( "_hairStrandAxis", "1", 0.0f, 1.0f );
+            }
+
             /** @brief 컴파일 한 번의 상태와 단계입니다. */
             struct Session
             {
@@ -232,6 +252,7 @@ namespace sw
                 LayerLimits                _layerLimits;
                 uint32                     _nextVariable{ 1 };
                 bool                       _bEmissive{ false };         ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다)
+                bool                       _bHair{ false };             ///< NOLINT(sw-bool-flag): 집합체다. 출력의 셰이딩 모델이 Hair 다
                 bool                       _bLayerPhase{ false };       ///< NOLINT(sw-bool-flag): 집합체다. 출력 노드를 펼친 뒤다 — 조각을 `_outputLines` 에 쓴다
                 bool                       _bLayerMaskSampled{ false }; ///< NOLINT(sw-bool-flag): 집합체다. `_layerMask` 를 이미 읽었다(층마다 다시 읽지 않는다)
 
@@ -567,6 +588,15 @@ namespace sw
                         _outputLines.append( "    output._" ).append( field ).append( " = " ).append( expression ).append( ";\n" );
                     }
                     _bEmissive = node.findLink( "Emissive" ) != nullptr || node.findValue( "Emissive" ) != nullptr;
+                    // 셰이딩 모델 — 빛을 받는 식을 고른다(언리얼 머티리얼의 Shading Model). Hair 는 hair_shading.hlsli 이고 G버퍼 칸이 없어 포워드 전용이다.
+                    const string shadingModel = readSettingText( kind, node, "ShadingModel" );
+                    _bHair                    = shadingModel == "Hair";
+                    if ( _bHair == false && shadingModel != "DefaultLit" )
+                    {
+                        string message{ "ShadingModel '" };
+                        message.append( shadingModel ).append( "' - must be DefaultLit or Hair" );
+                        report( scope, node._name, "BadValue", std::move( message ) );
+                    }
                 }
 
                 /** @brief 하위 그래프 노드를 펼칩니다(언리얼 Material Function 처럼 호출이 아니라 펼침이다 — 칸 · 순열이 머티리얼 하나로 모인다). */
@@ -978,6 +1008,9 @@ namespace sw
         outResult._listField                                       = std::move( session._listField );
         if ( bEmitted == false || outResult._listIssue.empty() == false )
             return false;
+        // 셰이딩 모델 Hair 의 칸(hair_shading.hlsli 의 큐티클 이동 · 다중 산란, 가닥 축) — 그래프 핀이 아니라 머티리얼 칸이라 다른 그래프의 생성물이 바뀌지 않는다.
+        if ( session._bHair )
+            MaterialGraphCompilerInternal::appendHairFields( outResult._listField );
 
         MaterialGraphCompilerInternal::Session fieldLines;
         fieldLines._listField = outResult._listField;
@@ -986,11 +1019,14 @@ namespace sw
         hlsl.append( "#include \"lighting.hlsli\"\n\nSW_MATERIAL_BEGIN\n{\n" ).append( fieldLines.makeFieldLines() ).append( "}\nSW_MATERIAL_END\n\n" );
         if ( session._bEmissive )
             hlsl.append( "#define SW_MATERIAL_GRAPH_EMISSIVE\n" );
+        if ( session._bHair )
+            hlsl.append( "#define SW_MATERIAL_GRAPH_HAIR\n" );
         hlsl.append( "#include \"material_graph.hlsli\"\n\nMaterialGraphOutput evaluateMaterialGraph( PixelContext context )\n{\n" );
         hlsl.append( session._body ).append( "    MaterialGraphOutput output;\n" ).append( session._outputLines );
         hlsl.append( "    return output;\n}\n\n#include \"material_graph_main.hlsli\"\n" );
 
         outResult._bEmissive   = session._bEmissive;
+        outResult._bHair       = session._bHair;
         outResult._contentHash = static_cast<uint32>( HashUtil::computeStringHash64( hlsl, false ) & 0xFFFFFFFFu );
         return true;
     }
@@ -1032,7 +1068,7 @@ namespace sw
         }
         text.append( "\t</_properties>\n\t<_permutations quality=\"High\" shaderLOD=\"300\" usage=\"StaticMesh\">\n\t\t<_alwaysDefines>\n\t\t\t<item>MATERIAL_DOMAIN_SURFACE</item>\n" );
         // 자체 발광은 G버퍼에 칸이 없다 — 디퍼드가 이 배치를 빼고 ForwardOnlyOpaque 가 그린다(툰과 같은 길).
-        if ( result._bEmissive )
+        if ( result._bEmissive || result._bHair )
             text.append( "\t\t\t<item>MATERIAL_FORWARD_ONLY</item>\n" );
         text.append( "\t\t</_alwaysDefines>\n\t\t<_multiCompiles>\n\t\t\t<item name=\"FogMode\" selected=\"FOG_OFF\">\n\t\t\t\t<_options>\n\t\t\t\t\t<item>FOG_OFF</item>\n\t\t\t\t\t<item>FOG_LINEAR</item>\n\t\t\t\t\t<item>FOG_EXP</item>\n\t\t\t\t</_options>\n\t\t\t</item>\n\t\t</_multiCompiles>\n" );
         text.append( "\t</_permutations>\n</MaterialDef>\n" );

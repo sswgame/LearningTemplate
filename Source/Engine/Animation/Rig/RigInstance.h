@@ -92,8 +92,13 @@ namespace sw
          * @return 바깥 대상(다른 유닛 · 오브젝트)이거나 번호가 범위 밖이면 false 입니다.
          */
         [[nodiscard]] bool tryGetOwnTargetBinding( uint32 targetIndex, int32& outBone, BoneTransform& outCombinedOffset ) const;
-        /** @brief 대상의 지금 모델 공간 변환입니다(워커). 값이 없으면 false 입니다. */
+        /**
+         * @brief 대상의 지금 모델 공간 변환입니다(워커). 값이 없으면 false 입니다.
+         * @details 접촉 대상(`RigTargetKind::Trace`)은 닿은 면 + 법선 × `surface_offset` 이고, 회전은 모델 +Y 를 면 법선으로 돌린 것 × 데이터 회전이다. 가중치가 0 이면 false 다.
+         */
         [[nodiscard]] bool resolveTarget( uint32 targetIndex, RigPoseBuffer& pose, float3& outPosition, quaternion& outRotation ) const;
+        /** @brief 대상의 이번 프레임 가중치입니다(0..1). 접촉 대상은 닿고 놓을 때 `blend_speed` 로 오르내리고, 그 밖의 대상은 늘 1 입니다. */
+        float32 getTargetWeight( uint32 targetIndex ) const;
 
         // --- 가중치 ---
         /** @brief 노드 가중치를 움직일 커브 출처입니다(빌림). */
@@ -121,6 +126,8 @@ namespace sw
         RigNode* findNode( const hashed_string& name ) const;
         /** @brief 노드의 조절 값을 정합니다(부모 바꾸기의 활성 부모 등). 노드나 조절이 없으면 false 를 반환합니다. */
         bool setNodeControl( const hashed_string& nodeName, const hashed_string& control, float32 value );
+        /** @brief 노드의 출력 값을 읽습니다(`RigNode::getOutputValue`). 노드나 출력이 없으면 false 입니다. */
+        [[nodiscard]] bool getNodeOutputValue( const hashed_string& nodeName, const hashed_string& output, float32& outValue ) const;
 
         // --- 출력 ---
         /** @brief 포즈 구동이 낸 모프 가중치입니다(평가마다 다시 씁니다). */
@@ -161,6 +168,18 @@ namespace sw
             float32       _weight{ 1.0f };
         };
 
+        /** @brief 접촉 대상 하나의 상태입니다. 원점은 워커(평가)가, 닿은 점 · 가중치는 게임 스레드(준비)가 쓴다 — 프레임 순서로 갈린다. */
+        struct ContactState
+        {
+            float3  _originModel{};                   ///< 지난 평가의 애니메이션 포즈에서 광선 본의 모델 위치
+            float3  _hitModel{};                      ///< 마지막으로 닿은 점(모델) — 놓은 뒤에도 가중치가 0 이 될 때까지 쓴다
+            float3  _normalModel{ 0.0f, 1.0f, 0.0f }; ///< 마지막으로 닿은 면의 법선(모델)
+            float32 _weight{ 0.0f };
+        };
+
+        /** @brief 접촉 대상마다 광선을 쏘고 가중치를 옮깁니다(준비 단계). */
+        void traceContacts( const RigPrepareContext& context );
+
         /** @brief `computeNodeWeight` 의 본체입니다 — 커브 가중치가 있는 노드에는 @p curveFactor 를 곱한다. 커브 값을 아직 모르는 `canWritePose` 도 같은 곱셈을 쓴다. */
         float32 computeNodeWeightWithCurve( uint32 nodeIndex, float32 curveFactor ) const;
 
@@ -170,6 +189,7 @@ namespace sw
         vector<RigTargetValue>      _listTargetValue;
         vector<int32>               _listTargetBone;   ///< 자기 유닛 대상의 본이다(`kExternalBone` 과 `kModelOriginBone` 도 있다).
         vector<BoneTransform>       _listTargetOffset; ///< 자기 유닛 대상의 본 기준 오프셋이다(소켓 로컬이나 데이터 오프셋).
+        vector<ContactState>        _listContact;      ///< 대상마다 접촉 상태다(`RigTargetKind::Trace` 인 칸만 쓴다).
         vector<unique_ptr<RigNode>> _listNode;
         vector<vector<uint32>>      _listNodeWrittenBone;
         vector<AnimationLODFade>    _listNodeLODFade; ///< 노드마다 LOD 가중치다(`_listNode` 와 인덱스가 같다).

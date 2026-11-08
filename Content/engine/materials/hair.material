@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 머리카락 카드 머티리얼(hair.hlsl — 셰이딩 모델 Hair: Marschner 근사 R · TT · TRT). 프로퍼티 이름 · 타입은 hair.hlsl 의 SW_MATERIAL 구조체와 같다.
+     alphaMode="Mask" 는 빼지 않는다 — 카드 덮임 · 길이 자르기 · 디더가 모두 알파 컷오프 길로 버린다(깊이 · 그림자 · 본 패스가 같은 픽셀). 카드는 양면이다.
+     _alwaysDefines 의 MATERIAL_FORWARD_ONLY 는 빼지 않는다 — G버퍼에 머리카락 칸이 없어 디퍼드는 ForwardOnlyOpaque 패스가 포워드로 그린다.
+     꾸미기(외형이 머티리얼 값으로 건다): _length · _rootColor · _tipColor · _gradientPosition · _gradientWidth · _highlightColor(a 세기) · _highlightMap(r 마스크). -->
+<MaterialDef formatVersion="0" name="Hair" shaderPath="engine/shaders/hair.hlsl" alphaMode="Mask" cullMode="None" twoSidedLighting="true">
+	<_properties>
+		<item name="_baseColor" type="Color" defaultValue="1 1 1 1" displayName="Base Color" group="Color" bHdr="0" bSrgb="1"/>
+		<item name="_rootColor" type="Color" defaultValue="1 1 1 1" displayName="Root Color" group="Color" bHdr="0" bSrgb="1"/>
+		<item name="_tipColor" type="Color" defaultValue="1 1 1 1" displayName="Tip Color" group="Color" bHdr="0" bSrgb="1"/>
+		<item name="_highlightColor" type="Color" defaultValue="1 1 1 0" displayName="Highlight Color (a = strength)" group="Color" bHdr="0" bSrgb="1"/>
+		<item name="_gradientPosition" type="Range" defaultValue="0.5" min="0.0" max="1.0" displayName="Gradient Position (root 0 - tip 1)" group="Color"/>
+		<item name="_gradientWidth" type="Range" defaultValue="1" min="0.0" max="2.0" displayName="Gradient Width" group="Color"/>
+		<item name="_length" type="Range" defaultValue="1" min="0.0" max="1.0" displayName="Length (trim along strands)" group="Shape"/>
+		<item name="_strandRootUV" type="Range" defaultValue="0" min="0.0" max="1.0" displayName="Strand Root UV" group="Shape"/>
+		<item name="_strandTipUV" type="Range" defaultValue="1" min="0.0" max="1.0" displayName="Strand Tip UV" group="Shape"/>
+		<item name="_strandAxis" type="Range" defaultValue="1" min="0.0" max="1.0" displayName="Strand Axis (0 U tangent, 1 V bitangent)" group="Shape"/>
+		<item name="_roughness" type="Range" defaultValue="0.35" min="0.0" max="1.0" displayName="Roughness" group="Shading"/>
+		<item name="_shift" type="Range" defaultValue="0.035" min="-0.2" max="0.2" displayName="Cuticle Shift (rad)" group="Shading"/>
+		<item name="_specular" type="Range" defaultValue="1" min="0.0" max="4.0" displayName="Specular" group="Shading"/>
+		<item name="_scatter" type="Range" defaultValue="0.5" min="0.0" max="1.0" displayName="Multiple Scattering" group="Shading"/>
+		<item name="_shiftJitter" type="Range" defaultValue="0.3" min="0.0" max="2.0" displayName="Tangent Shift Jitter" group="Shading"/>
+		<item name="_alphaCutoff" type="Range" defaultValue="0.5" min="0.0" max="1.0" displayName="Alpha Cutoff (when not dithered)" group="Coverage"/>
+		<item name="_coverageDither" type="Range" defaultValue="1" min="0.0" max="1.0" displayName="Dithered Coverage (0 cutoff, 1 dither)" group="Coverage"/>
+		<item name="_albedoMap" type="Texture2D" displayName="Albedo (a = coverage)" group="Color" bSrgb="1"/>
+		<item name="_highlightMap" type="Texture2D" displayName="Highlight Mask (r)" group="Color" bSrgb="0"/>
+	</_properties>
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_alwaysDefines>
+			<item>MATERIAL_DOMAIN_SURFACE</item>
+			<item>MATERIAL_FORWARD_ONLY</item>
+		</_alwaysDefines>
+	</_permutations>
+</MaterialDef>

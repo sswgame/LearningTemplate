@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Shooter3D 발 디딤 — 몸 리그(common/rigs/ubc_player_body.rig.xml 의 FootPlacement 노드 Feet)가 물리 광선으로 땅 높이를 읽어 발을 올리는지 본다.
+  무대는 maps/footplacement.scene.xml(아레나 + 계단 두 칸, 윗면 0.12 · 0.24 m). 슈터 몸은 늘 y = 0 에 서므로 발 높이 보정(감시 값 Rig.Output 의
+  Feet.foot_offset_0 · _1)이 곧 발밑 윗면 높이다(max_raise 0.35 안). 골반은 낮은 발만큼만 내리므로 두 발이 다 올라가면 0 이다(pelvis_offset).
+  걸음: 시작 (0, -16) 에서 +Z 로 걷는다(_walkSpeed 5.5 m/s — 프레임마다 0.092 m). 27 프레임이면 첫 칸 가운데(z ≈ -13.5), 24 프레임 더 가면 둘째 칸 가운데(z ≈ -11.3)다.
+  계단 길이가 2.2 m 라 입력 지연 몇 프레임은 칸 안이다. 멈춘 뒤 interp_speed 12 로 따라가므로 40 프레임 기다려 값을 본다.
+  사진은 궤도 카메라로 발을 보이게 찍는다(골든은 통합 때 기록).
+  실행: App -scenario=game/shooter3d/automation/footplacement.scenario.xml -unattended (체인: ctest -R Scenario.shooter3d)
+-->
+<Scenario name="game.shooter3d.footplacement" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/shooter3d/maps/footplacement.scene.xml"/>
+	<Variable name="gv_shooterAutoPlay" value="0"/>
+	<DevCommand line="camera.preset orbit"/>
+	<!-- 평지: 리그가 묶여 두 발 광선이 바닥(0)에 닿는다. -->
+	<WaitUntil watch="Rig.Output" target="PlayerBody" key="Feet.ground_hits" near="2" tolerance="0.01" timeoutFrames="300"/>
+	<Wait frames="30"/>
+	<Expect watch="Rig.Output" target="PlayerBody" key="Feet.foot_offset_0" near="0" tolerance="0.02"/>
+	<Expect watch="Rig.Output" target="PlayerBody" key="Feet.foot_offset_1" near="0" tolerance="0.02"/>
+	<Expect watch="Rig.Output" target="PlayerBody" key="Feet.pelvis_offset" near="0" tolerance="0.01"/>
+	<!-- 첫 칸(0.12 m): 두 발이 칸 위로 올라가고 골반은 그대로다. -->
+	<Press slot="Key.W"/>
+	<Wait frames="27"/>
+	<Release slot="Key.W"/>
+	<Wait frames="40"/>
+	<Expect watch="Rig.Output" target="PlayerBody" key="Feet.foot_offset_0" near="0.12" tolerance="0.03"/>
+	<Expect watch="Rig.Output" target="PlayerBody" key="Feet.foot_offset_1" near="0.12" tolerance="0.03"/>
+	<Expect watch="Rig.Output" target="PlayerBody" key="Feet.pelvis_offset" near="0" tolerance="0.01"/>
+	<Screenshot file="step_low.ppm"/>
+	<!-- 둘째 칸(0.24 m). -->
+	<Press slot="Key.W"/>
+	<Wait frames="24"/>
+	<Release slot="Key.W"/>
+	<Wait frames="40"/>
+	<Expect watch="Rig.Output" target="PlayerBody" key="Feet.foot_offset_0" near="0.24" tolerance="0.03"/>
+	<Expect watch="Rig.Output" target="PlayerBody" key="Feet.foot_offset_1" near="0.24" tolerance="0.03"/>
+	<Expect watch="Rig.Output" target="PlayerBody" key="Feet.ground_hits" near="2" tolerance="0.01"/>
+	<Screenshot file="step_high.ppm"/>
+	<ExpectImage file="step_low.ppm" golden="step_low"/>
+	<ExpectImage file="step_high.ppm" golden="step_high"/>
+	<Pass/>
+</Scenario>

@@ -49,6 +49,16 @@ namespace sw
         float3 _translation{};
         PROPERTY( Name = "rotation", Units = deg )
         float3 _rotation{};
+        PROPERTY( Name = "trace_from" )
+        hashed_string _traceFrom{};
+        PROPERTY( Name = "trace_direction" )
+        float3 _traceDirection{};
+        PROPERTY( Name = "trace_distance", Min = 0.0, Units = m )
+        float32 _traceDistance{ 0.0f };
+        PROPERTY( Name = "surface_offset", Units = m )
+        float32 _surfaceOffset{ 0.0f };
+        PROPERTY( Name = "blend_speed", Min = 0.0 )
+        float32 _blendSpeed{ 0.0f };
     };
 
     /** @brief 모든 노드가 받는 공통 키입니다(`RigNode::parseCommon`). `type` 은 에셋이 노드를 만들 때 따로 읽는다. */
@@ -159,7 +169,7 @@ namespace sw
         float3 _axis{ 0.0f, 1.0f, 0.0f };
     };
 
-    /** @brief 본과 몫 한 쌍(`<item bone weight>`)입니다 — 트위스트 분배 · 조준 사슬이 함께 쓴다. */
+    /** @brief 본과 몫 한 쌍(`<item bone weight>`)입니다 — 트위스트 분배가 쓴다. */
     REFLECT()
     struct SW_API RigBoneWeightParams
     {
@@ -258,7 +268,24 @@ namespace sw
         float32 _maxDegrees{ 180.0f };
     };
 
-    /** @brief 조준(`Aim`)의 칸입니다. 조준 사슬(`chain`)은 `RigBoneWeightParams` 목록이다. */
+    /**
+     * @brief 조준 사슬의 본 하나(`<chain><item bone weight max_degrees/>`)입니다. 본은 남은 회전의 `weight` 몫을 받되, 애니메이션 방향에서 `max_degrees` 를 넘게 돌지 않습니다.
+     * @details 머리 · 목 · 등뼈에 시선을 나눌 때 본마다 상한을 따로 둔다(언리얼 Control Rig 의 Aim 체인 · Look At 의 본별 제한과 같은 자리).
+     */
+    REFLECT()
+    struct SW_API RigAimChainParams
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Name = "bone", Required )
+        hashed_string _bone{};
+        PROPERTY( Name = "weight", Required, Min = 0.0, Max = 1.0 )
+        float32 _weight{ 0.0f };
+        PROPERTY( Name = "max_degrees", Min = 0.0, Max = 180.0, Units = deg )
+        float32 _maxDegrees{ 180.0f };
+    };
+
+    /** @brief 조준(`Aim`)의 칸입니다. 조준 사슬(`chain`)은 `RigAimChainParams` 목록이다. */
     REFLECT()
     struct SW_API RigAimParams
     {
@@ -272,6 +299,9 @@ namespace sw
         float3 _aimAxis{ 0.0f, 0.0f, 1.0f };
         PROPERTY( Name = "max_degrees", Min = 0.0, Max = 180.0, Units = deg )
         float32 _maxDegrees{ 180.0f };
+        /** @brief 켜면 `aim_axis` 는 레퍼런스 포즈의 모델 공간 방향이다(캐릭터 앞 +Z) — 본 로컬 축을 모르는 임포트 리그(UBC · Mixamo)도 같은 데이터로 쓴다. 묶을 때 본 로컬로 바꾼다. */
+        PROPERTY( Name = "aim_axis_in_model" )
+        bool _bAimAxisInModel{ false };
     };
 
     /** @brief 다리 하나(`<feet><item root mid end/>`)의 칸입니다 — 발 디딤 · 보폭 워핑이 함께 쓴다. */
