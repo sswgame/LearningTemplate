@@ -33,82 +33,115 @@ namespace sw::editor
 {
     namespace
     {
-        struct EditorColliderHandleToolInternal
+        /**
+         * @class EditorColliderHandleToolState
+         * @brief 충돌체 손잡이 도구의 끌기 상태와 그 상태를 바꾸는 일(손잡이 그리기 · 집기 · 끌기 · 끝내기)입니다. 에디터 범위의 상태 저장소가 소유한다(`get`).
+         */
+        class EditorColliderHandleToolState
         {
+        public:
             /** @brief 손잡이 사각형의 반 변(픽셀)입니다. 마우스가 올라오면 키운다. */
             static constexpr float32 kHandleHalfSize = 4.0f;
             /** @brief 손잡이를 집을 수 있는 마우스 거리(픽셀)입니다. */
             static constexpr float32 kPickRadius = 9.0f;
 
-            struct State
-            {
-                GameObjectHandle       _object{};
-                ObjectSnapshot         _undoBefore{};
-                ColliderHandle         _active{};
-                vector<ColliderHandle> _listHandle{};          ///< 프레임마다 지우고 다시 채우는 손잡이 재사용 버퍼(UI 스레드 하나만 쓴다)
-                bool                   _bDragging{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-                bool                   _bChanged{ SW_FALSE };  ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-                bool                   _bCapturing{ false };   ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-                int32                  _frame{ -1 };
-                uint32                 _commitCount{ 0 };
-                uint32                 _drawnHandleCount{ 0 };
-            };
+            EditorColliderHandleToolState();
 
-            /** @brief 도구의 끌기 상태입니다. 에디터 범위의 상태 저장소가 소유한다. */
-            static State& getState() { return getEditorState<State>(); }
+            /** @brief 지금 에디터 범위의 도구 상태입니다. */
+            static EditorColliderHandleToolState& get() { return getEditorState<EditorColliderHandleToolState>(); }
 
-            /** @brief 끌기를 정리합니다. 셰이프가 바뀌었고 오브젝트가 아직 있으면 끌기 전 상태로 되돌리기를 남깁니다. */
-            static void endDrag( State& state, bool bCommit )
+            /** @brief 선택된 강체의 손잡이를 그리고 끌기를 처리합니다(`EditorColliderHandleTool::process`). */
+            void process( const EditorViewportVisualizerArgs& args )
             {
-                const bool bCommitDrag = bCommit && state._bChanged && EditorPlaySession::areSceneEditsAllowed();
-                if ( bCommitDrag )
+                _bCapturing       = SW_FALSE;
+                _frame            = ImGui::GetFrameCount();
+                _drawnHandleCount = 0;
+
+                // 끌고 있는 오브젝트가 있으면 그것, 아니면 단일 선택된 오브젝트입니다.
+                GameObject* pObject = nullptr;
+                if ( _bDragging )
+                    pObject = editor::findGameObject( _object );
+                else if ( editor::getMainSceneSelection().getSelectedObjectCount() == 1 )
+                    pObject = editor::getMainSceneSelection().getPrimaryObject();
+                RigidBodyComponent* pBody               = pObject != nullptr ? pObject->getComponent<RigidBodyComponent>() : nullptr;
+                const bool          bHandlesUnavailable = pBody == nullptr || args._pViewProj == nullptr || args._pDrawList == nullptr || EditorPlaySession::areSceneEditsAllowed() == false;
+                if ( bHandlesUnavailable )
                 {
-                    GameObject* pObject = editor::findGameObject( state._object );
-                    if ( pObject != nullptr && state._undoBefore._xml.empty() == false )
-                    {
-                        EditorSceneCommands::commitModify( pObject, state._undoBefore, "Resize Collider" );
-                        ++state._commitCount;
-                    }
-                }
-                state._object     = GameObjectHandle{};
-                state._undoBefore = ObjectSnapshot{};
-                state._bDragging  = SW_FALSE;
-                state._bChanged   = SW_FALSE;
-            }
-
-            /** @brief 시나리오가 손잡이를 누를 수 있도록 화면 사각형을 기록합니다(`collider.handle.<셰이프>.<축><부호>`). */
-            static void recordHandle( const ColliderHandle& handle, const ImVec2& screen )
-            {
-                if ( EditorSelfTestMarks::isEnabled() == false )
+                    if ( _bDragging )
+                        endDrag( false );
                     return;
-                static const utf8* const arrAxisName[3] = { "x", "y", "z" };
-                const string             key            = formatToString( "collider.handle.%#.%#%#", handle._shapeIndex, arrAxisName[handle._axis], ( handle._sign > 0.0f ? "+" : "-" ) );
-                EditorSelfTestMarks::recordRect( key.c_str(), float2{ screen.x - kHandleHalfSize, screen.y - kHandleHalfSize },
-                                                 float2{ screen.x + kHandleHalfSize, screen.y + kHandleHalfSize } );
+                }
+
+                float3     position{};
+                quaternion rotation{};
+                float3     scale{};
+                PhysicsComponent::readWorldPose( *pBody, position, rotation, scale );
+
+                if ( _bDragging )
+                {
+                    if ( ImGui::IsMouseDown( ImGuiMouseButton_Left ) == false )
+                    {
+                        endDrag( true );
+                        return;
+                    }
+                    _bCapturing = SW_TRUE;
+                    if ( dragHandle( *pBody, args, scale ) )
+                        _bChanged = SW_TRUE;
+                }
+
+                _listHandle.clear();
+                const vector<PhysicsShapeDesc3D>& listShape = pBody->getShapes();
+                for ( uint32 shapeIndex = 0; shapeIndex < listShape.size(); ++shapeIndex )
+                {
+                    EditorColliderHandleMath::collectHandles( listShape[shapeIndex], shapeIndex, position, rotation, scale, _listHandle );
+                }
+
+                const ImVec2 mouse        = ImGui::GetMousePos();
+                const bool   bMouseInside = mouse.x >= args._canvasPos._x && mouse.y >= args._canvasPos._y && mouse.x <= args._canvasPos._x + args._canvasSize._x &&
+                                          mouse.y <= args._canvasPos._y + args._canvasSize._y && ImGui::IsWindowHovered();
+                const ColliderHandle* pHovered        = nullptr;
+                float32               hoveredDistance = kPickRadius;
+                for ( const ColliderHandle& handle : _listHandle )
+                {
+                    ImVec2 screen;
+                    if ( EditorViewportProjectionUtil::projectPoint( *args._pViewProj, handle._position, args._canvasPos, args._canvasSize, screen ) == false )
+                        continue;
+                    ++_drawnHandleCount;
+                    recordHandle( handle, screen );
+                    const bool    bActive                = _bDragging && handle._shapeIndex == _active._shapeIndex && handle._axis == _active._axis && handle._sign == _active._sign;
+                    const float32 dx                     = mouse.x - screen.x;
+                    const float32 dy                     = mouse.y - screen.y;
+                    const float32 distance               = ::sqrtf( dx * dx + dy * dy );
+                    const bool    bNearestHoverCandidate = _bDragging == false && bMouseInside && args._bGizmoDragging == false && distance <= hoveredDistance;
+                    if ( bNearestHoverCandidate )
+                    {
+                        hoveredDistance = distance;
+                        pHovered        = &handle;
+                    }
+                    const bool   bHighlight = bActive || pHovered == &handle;
+                    const float2 half{ kHandleHalfSize + ( bHighlight ? 2.0f : 0.0f ), kHandleHalfSize + ( bHighlight ? 2.0f : 0.0f ) };
+                    const ImVec2 min{ screen.x - half._x, screen.y - half._y };
+                    const ImVec2 max{ screen.x + half._x, screen.y + half._y };
+                    args._pDrawList->AddRectFilled( min, max, EditorColorUtil::toImU32( bHighlight ? SW_THEME_COLOR( "Viewport", "SelectionOutline" ) : SW_THEME_COLOR( "Base", "Text" ).withAlpha( 0.95f ) ) );
+                    args._pDrawList->AddRect( min, max, EditorColorUtil::toImU32( SW_THEME_COLOR( "Viewport", "HandleOutline" ) ) );
+                }
+
+                if ( _bDragging || pHovered == nullptr )
+                    return;
+                _bCapturing = SW_TRUE;
+                if ( EditorInputGUI::readPointer().wasPressed( EditorMouseButton::Left ) )
+                {
+                    _active     = *pHovered;
+                    _object     = pObject->getHandle();
+                    _undoBefore = EditorTransaction::captureSnapshot( pObject );
+                    _bDragging  = SW_TRUE;
+                    _bChanged   = SW_FALSE;
+                }
             }
 
-            /** @brief 지금 끌고 있는 손잡이로 셰이프를 고칩니다. 바뀌었으면 true 입니다. */
-            static bool dragHandle( State& state, RigidBodyComponent& body, const EditorViewportVisualizerArgs& args, const float3& bodyScale )
-            {
-                const vector<PhysicsShapeDesc3D>& listShape = body.getShapes();
-                if ( state._active._shapeIndex >= listShape.size() )
-                    return false;
-                Ray ray{};
-                if ( EditorViewportProjectionUtil::makeMouseRay( args._pViewProj->invert(), args._canvasPos, args._canvasSize, ray ) == false )
-                    return false;
-                const float32 distance = EditorColliderHandleMath::computeClosestAxisParameter( ray._origin, ray._direction, state._active._center, state._active._direction );
-                // 축은 중심에서 손잡이 쪽을 향하므로 레이가 가리키는 점의 거리가 곧 새 가장자리까지의 거리다.
-                const PhysicsShapeDesc3D& current         = listShape[state._active._shapeIndex];
-                PhysicsShapeDesc3D        resized         = EditorColliderHandleMath::applyDrag( current, state._active, distance, bodyScale );
-                const bool                bShapeUnchanged = resized._halfExtents._x == current._halfExtents._x && resized._halfExtents._y == current._halfExtents._y &&
-                                             resized._halfExtents._z == current._halfExtents._z && resized._radius == current._radius && resized._halfHeight == current._halfHeight;
-                if ( bShapeUnchanged )
-                    return false;
-                vector<PhysicsShapeDesc3D> listResized = listShape;
-                listResized[state._active._shapeIndex] = resized;
-                body.setShapes( listResized );
-                return true;
-            }
+            /** @brief 이번 프레임에 손잡이가 마우스를 가져갔는지입니다. */
+            bool   isCapturingMouse() const { return _bCapturing && _frame == ImGui::GetFrameCount(); }
+            uint32 getCommitCount() const { return _commitCount; }
 
             /** @brief 감시 값 `Editor.ColliderHalfExtentX` 가 읽는 값 — 단일 선택 강체의 첫 셰이프 반 크기 X 입니다. 없으면 0 입니다. */
             [[nodiscard]] static bool readHalfExtentX( const GameObjectManager* /*pManager*/, float64& outValue )
@@ -124,127 +157,117 @@ namespace sw::editor
 
             [[nodiscard]] static bool readCommitCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                outValue = static_cast<float64>( getState()._commitCount );
+                outValue = static_cast<float64>( get()._commitCount );
                 return true;
             }
 
             [[nodiscard]] static bool readDrawnHandleCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                outValue = static_cast<float64>( getState()._drawnHandleCount );
+                outValue = static_cast<float64>( get()._drawnHandleCount );
                 return true;
             }
+
+        private:
+            /** @brief 끌기를 정리합니다. 셰이프가 바뀌었고 오브젝트가 아직 있으면 끌기 전 상태로 되돌리기를 남깁니다. */
+            void endDrag( bool bCommit )
+            {
+                const bool bCommitDrag = bCommit && _bChanged && EditorPlaySession::areSceneEditsAllowed();
+                if ( bCommitDrag )
+                {
+                    GameObject* pObject = editor::findGameObject( _object );
+                    if ( pObject != nullptr && _undoBefore._xml.empty() == false )
+                    {
+                        EditorSceneCommands::commitModify( pObject, _undoBefore, "Resize Collider" );
+                        ++_commitCount;
+                    }
+                }
+                _object     = GameObjectHandle{};
+                _undoBefore = ObjectSnapshot{};
+                _bDragging  = SW_FALSE;
+                _bChanged   = SW_FALSE;
+            }
+
+            /** @brief 시나리오가 손잡이를 누를 수 있도록 화면 사각형을 기록합니다(`collider.handle.<셰이프>.<축><부호>`). */
+            static void recordHandle( const ColliderHandle& handle, const ImVec2& screen )
+            {
+                if ( EditorSelfTestMarks::isEnabled() == false )
+                    return;
+                static const utf8* const arrAxisName[3] = { "x", "y", "z" };
+                const string             key            = formatToString( "collider.handle.%#.%#%#", handle._shapeIndex, arrAxisName[handle._axis], ( handle._sign > 0.0f ? "+" : "-" ) );
+                EditorSelfTestMarks::recordRect( key.c_str(), float2{ screen.x - kHandleHalfSize, screen.y - kHandleHalfSize },
+                                                 float2{ screen.x + kHandleHalfSize, screen.y + kHandleHalfSize } );
+            }
+
+            /** @brief 지금 끌고 있는 손잡이로 셰이프를 고칩니다. 바뀌었으면 true 입니다. */
+            bool dragHandle( RigidBodyComponent& body, const EditorViewportVisualizerArgs& args, const float3& bodyScale ) const
+            {
+                const vector<PhysicsShapeDesc3D>& listShape = body.getShapes();
+                if ( _active._shapeIndex >= listShape.size() )
+                    return false;
+                Ray ray{};
+                if ( EditorViewportProjectionUtil::makeMouseRay( args._pViewProj->invert(), args._canvasPos, args._canvasSize, ray ) == false )
+                    return false;
+                const float32 distance = EditorColliderHandleMath::computeClosestAxisParameter( ray._origin, ray._direction, _active._center, _active._direction );
+                // 축은 중심에서 손잡이 쪽을 향하므로 레이가 가리키는 점의 거리가 곧 새 가장자리까지의 거리다.
+                const PhysicsShapeDesc3D& current         = listShape[_active._shapeIndex];
+                PhysicsShapeDesc3D        resized         = EditorColliderHandleMath::applyDrag( current, _active, distance, bodyScale );
+                const bool                bShapeUnchanged = resized._halfExtents._x == current._halfExtents._x && resized._halfExtents._y == current._halfExtents._y &&
+                                             resized._halfExtents._z == current._halfExtents._z && resized._radius == current._radius && resized._halfHeight == current._halfHeight;
+                if ( bShapeUnchanged )
+                    return false;
+                vector<PhysicsShapeDesc3D> listResized = listShape;
+                listResized[_active._shapeIndex]       = resized;
+                body.setShapes( listResized );
+                return true;
+            }
+
+        private:
+            GameObjectHandle       _object;
+            ObjectSnapshot         _undoBefore;
+            ColliderHandle         _active;
+            vector<ColliderHandle> _listHandle; ///< 프레임마다 지우고 다시 채우는 손잡이 재사용 버퍼(UI 스레드 하나만 쓴다)
+            int32                  _frame;
+            uint32                 _commitCount;
+            uint32                 _drawnHandleCount;
+            uint8                  _bDragging  : 1;
+            uint8                  _bChanged   : 1;
+            uint8                  _bCapturing : 1;
         };
+
+        EditorColliderHandleToolState::EditorColliderHandleToolState()
+            : _object{}
+            , _undoBefore{}
+            , _active{}
+            , _listHandle{}
+            , _frame{ -1 }
+            , _commitCount{ 0 }
+            , _drawnHandleCount{ 0 }
+            , _bDragging{ SW_FALSE }
+            , _bChanged{ SW_FALSE }
+            , _bCapturing{ SW_FALSE }
+        {
+        }
     } // namespace
 
     void EditorColliderHandleTool::process( const EditorViewportVisualizerArgs& args )
     {
-        using Internal          = EditorColliderHandleToolInternal;
-        Internal::State& state  = Internal::getState();
-        state._bCapturing       = false;
-        state._frame            = ImGui::GetFrameCount();
-        state._drawnHandleCount = 0;
-
-        // 끌고 있는 오브젝트가 있으면 그것, 아니면 단일 선택된 오브젝트입니다.
-        GameObject* pObject = nullptr;
-        if ( state._bDragging )
-            pObject = editor::findGameObject( state._object );
-        else if ( editor::getMainSceneSelection().getSelectedObjectCount() == 1 )
-            pObject = editor::getMainSceneSelection().getPrimaryObject();
-        RigidBodyComponent* pBody               = pObject != nullptr ? pObject->getComponent<RigidBodyComponent>() : nullptr;
-        const bool          bHandlesUnavailable = pBody == nullptr || args._pViewProj == nullptr || args._pDrawList == nullptr || EditorPlaySession::areSceneEditsAllowed() == false;
-        if ( bHandlesUnavailable )
-        {
-            if ( state._bDragging )
-                Internal::endDrag( state, false );
-            return;
-        }
-
-        float3     position{};
-        quaternion rotation{};
-        float3     scale{};
-        PhysicsComponent::readWorldPose( *pBody, position, rotation, scale );
-
-        if ( state._bDragging )
-        {
-            if ( ImGui::IsMouseDown( ImGuiMouseButton_Left ) == false )
-            {
-                Internal::endDrag( state, true );
-                return;
-            }
-            state._bCapturing = true;
-            state._bChanged   = Internal::dragHandle( state, *pBody, args, scale ) || state._bChanged;
-        }
-
-        vector<ColliderHandle>& listHandle = state._listHandle;
-        listHandle.clear();
-        const vector<PhysicsShapeDesc3D>& listShape = pBody->getShapes();
-        for ( uint32 shapeIndex = 0; shapeIndex < listShape.size(); ++shapeIndex )
-        {
-            EditorColliderHandleMath::collectHandles( listShape[shapeIndex], shapeIndex, position, rotation, scale, listHandle );
-        }
-
-        const ImVec2 mouse        = ImGui::GetMousePos();
-        const bool   bMouseInside = mouse.x >= args._canvasPos._x && mouse.y >= args._canvasPos._y && mouse.x <= args._canvasPos._x + args._canvasSize._x &&
-                                  mouse.y <= args._canvasPos._y + args._canvasSize._y && ImGui::IsWindowHovered();
-        const ColliderHandle* pHovered        = nullptr;
-        float32               hoveredDistance = Internal::kPickRadius;
-        for ( const ColliderHandle& handle : listHandle )
-        {
-            ImVec2 screen;
-            if ( EditorViewportProjectionUtil::projectPoint( *args._pViewProj, handle._position, args._canvasPos, args._canvasSize, screen ) == false )
-                continue;
-            ++state._drawnHandleCount;
-            Internal::recordHandle( handle, screen );
-            const bool bActive = state._bDragging && handle._shapeIndex == state._active._shapeIndex && handle._axis == state._active._axis &&
-                                 handle._sign == state._active._sign;
-            const float32 dx                     = mouse.x - screen.x;
-            const float32 dy                     = mouse.y - screen.y;
-            const float32 distance               = ::sqrtf( dx * dx + dy * dy );
-            const bool    bNearestHoverCandidate = state._bDragging == false && bMouseInside && args._bGizmoDragging == false && distance <= hoveredDistance;
-            if ( bNearestHoverCandidate )
-            {
-                hoveredDistance = distance;
-                pHovered        = &handle;
-            }
-            const bool   bHighlight = bActive || pHovered == &handle;
-            const float2 half{ Internal::kHandleHalfSize + ( bHighlight ? 2.0f : 0.0f ), Internal::kHandleHalfSize + ( bHighlight ? 2.0f : 0.0f ) };
-            const ImVec2 min{ screen.x - half._x, screen.y - half._y };
-            const ImVec2 max{ screen.x + half._x, screen.y + half._y };
-            args._pDrawList->AddRectFilled( min, max, EditorColorUtil::toImU32( bHighlight ? SW_THEME_COLOR( "Viewport", "SelectionOutline" ) : SW_THEME_COLOR( "Base", "Text" ).withAlpha( 0.95f ) ) );
-            args._pDrawList->AddRect( min, max, EditorColorUtil::toImU32( SW_THEME_COLOR( "Viewport", "HandleOutline" ) ) );
-        }
-
-        if ( state._bDragging )
-            return;
-        if ( pHovered != nullptr )
-        {
-            state._bCapturing = true;
-            if ( EditorInputGUI::readPointer().wasPressed( EditorMouseButton::Left ) )
-            {
-                state._active     = *pHovered;
-                state._object     = pObject->getHandle();
-                state._undoBefore = EditorTransaction::captureSnapshot( pObject );
-                state._bDragging  = SW_TRUE;
-                state._bChanged   = SW_FALSE;
-            }
-        }
+        EditorColliderHandleToolState::get().process( args );
     }
 
     bool EditorColliderHandleTool::isCapturingMouse()
     {
-        const EditorColliderHandleToolInternal::State& state = EditorColliderHandleToolInternal::getState();
-        return state._bCapturing && state._frame == ImGui::GetFrameCount();
+        return EditorColliderHandleToolState::get().isCapturingMouse();
     }
 
     uint32 EditorColliderHandleTool::getCommitCount()
     {
-        return EditorColliderHandleToolInternal::getState()._commitCount;
+        return EditorColliderHandleToolState::get().getCommitCount();
     }
 
     SW_AUTOMATION_WATCH( editorColliderHalfExtentX, "Editor.ColliderHalfExtentX", "Half size X of the first shape of the selected RigidBody (0 when none)",
-                         &EditorColliderHandleToolInternal::readHalfExtentX );
+                         &EditorColliderHandleToolState::readHalfExtentX );
     SW_AUTOMATION_WATCH( editorColliderHandleCommitCount, "Editor.ColliderHandleCommitCount", "Collider handle drags that finished and left an undo entry",
-                         &EditorColliderHandleToolInternal::readCommitCount );
+                         &EditorColliderHandleToolState::readCommitCount );
     SW_AUTOMATION_WATCH( editorColliderHandleCount, "Editor.ColliderHandleCount", "Collider handles drawn in the last frame",
-                         &EditorColliderHandleToolInternal::readDrawnHandleCount );
+                         &EditorColliderHandleToolState::readDrawnHandleCount );
 } // namespace sw::editor
