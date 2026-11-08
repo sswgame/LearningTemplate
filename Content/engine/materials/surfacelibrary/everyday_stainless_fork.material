@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 스테인리스 포크 — 밝은 금속, 미세 헤어라인과 잔무늬. 부모(environmentsurface.material)의 값만 바꾼 프리셋이다. -->
+<MaterialDef formatVersion="0" name="StainlessFork" _base="engine/materials/environmentsurface.material">
+	<_properties>
+		<item name="_baseColor" defaultValue="0.78 0.78 0.79 1"/>
+		<item name="_metallic" defaultValue="1"/>
+		<item name="_roughness" defaultValue="0.22"/>
+		<item name="_noiseStrength" defaultValue="0.08"/>
+		<item name="_noiseScale" defaultValue="0.01"/>
+		<item name="_anisotropy" defaultValue="0.3"/>
+		<item name="_porosity" defaultValue="0"/>
+	</_properties>
+</MaterialDef>

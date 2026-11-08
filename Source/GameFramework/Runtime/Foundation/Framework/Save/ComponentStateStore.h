@@ -7,6 +7,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Serialization/Format/Archive.h"
 
@@ -20,7 +21,6 @@ namespace sw
     struct ObjectIdentity;
 
     class GameObject;
-    class GameObjectManager;
 
     /**
      * @class ComponentStateStore

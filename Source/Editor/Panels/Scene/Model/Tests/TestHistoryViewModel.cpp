@@ -8,7 +8,7 @@
 #include "Editor/Common/Workspace/Undo/UndoStep.h"
 #include "Editor/Panels/Scene/Model/HistoryViewModel.h"
 
-// HistoryViewModelTest — 히스토리 창의 ViewModel: 단계 줄 모으기와 이동 명령. 메인 스택 대신 지역 스택을 범위에 건다.
+// HistoryViewModelTest — 히스토리 창의 ViewModel. 창이 스택을 직접 읽던 것을 값(ViewState)으로 옮겼으므로 이름 · 위치 · 이동이 스택과 같은지 본다.
 
 namespace
 {
@@ -16,48 +16,51 @@ namespace
     {
         static void doNothing() {}
 
-        static sw::CommandStack::Command makeCommand( const sw::editor::UndoStepOwner& owner, const utf8* pLabel )
+        static sw::CommandStack::Command makeCommand( const sw::editor::UndoStepOwner& owner, const char* pLabel )
         {
-            sw::CommandStack::Command command;
-            command._label = pLabel;
-            command._undo  = sw::editor::UndoStep::makeTransient( sw::Delegate<void()>::create<&HistoryViewModelTestInternal::doNothing>(), owner );
-            command._redo  = sw::editor::UndoStep::makeTransient( sw::Delegate<void()>::create<&HistoryViewModelTestInternal::doNothing>(), owner );
-            return command;
+            sw::CommandStack::Command cmd;
+            cmd._label = pLabel;
+            cmd._undo  = sw::editor::UndoStep::makeTransient( sw::Delegate<void()>::create<&HistoryViewModelTestInternal::doNothing>(), owner );
+            cmd._redo  = sw::editor::UndoStep::makeTransient( sw::Delegate<void()>::create<&HistoryViewModelTestInternal::doNothing>(), owner );
+            return cmd;
         }
     };
 } // namespace
 
-/**
- * @brief [HistoryViewModelTest] 단계 줄은 기록 순서이고 지금 위치를 따른다 — 처음 상태로 이동하면 되돌릴 것이 없고 다시 실행할 수 있다
- */
-SW_TEST_CASE( HistoryViewModelTest, GatherFollowsJumpTo )
+/** @brief [HistoryViewModelTest] gather 는 이름(빈 이름은 "Command") · 지금 위치를 담고, jumpTo · undo · redo 가 범위의 스택을 움직인다 */
+SW_TEST_CASE( HistoryViewModelTest, GatherAndJumpFollowTheStack )
 {
     using Internal = HistoryViewModelTestInternal;
 
     sw::editor::UndoStepOwner owner;
     sw::CommandStack          stack;
-    sw::SubsystemScope        scope;
+    stack.push( Internal::makeCommand( owner, "Move" ) );
+    stack.push( Internal::makeCommand( owner, "" ) );
+
+    sw::SubsystemScope scope;
     SW_REQUIRE_TRUE( scope.bind( &stack ) );
     const sw::editor::ScopedEditorScope scopedEditor( scope );
-    stack.push( Internal::makeCommand( owner, "First" ) );
-    stack.push( Internal::makeCommand( owner, "" ) );
 
     sw::editor::HistoryViewModel viewModel;
     sw::editor::HistoryViewState state;
     viewModel.gather( state );
-    SW_EXPECT_TRUE( state._bAvailable != SW_FALSE );
-    SW_REQUIRE_EQUAL( state._listStep.size(), static_cast<size_t>( 2 ) );
-    SW_EXPECT_TRUE( state._listStep[0]._label == "First" );
-    SW_EXPECT_TRUE( state._listStep[1]._label == "Command" ); // 이름 없는 명령
-    SW_EXPECT_EQUAL( state._currentStep, 2u );
+    SW_EXPECT_TRUE( state._bAvailable );
+    SW_REQUIRE_TRUE( state._listLabel.size() == 2u );
+    SW_EXPECT_TRUE( state._listLabel[0] == "Move" );
+    SW_EXPECT_TRUE( state._listLabel[1] == "Command" );
+    SW_EXPECT_TRUE( state._currentIndex == 2u );
+    SW_EXPECT_TRUE( state._bCanUndo && state._bCanRedo == false );
 
     viewModel.jumpTo( 0 );
     viewModel.gather( state );
-    SW_EXPECT_EQUAL( state._currentStep, 0u );
-    SW_EXPECT_TRUE( state._bCanUndo == SW_FALSE );
-    SW_EXPECT_TRUE( state._bCanRedo != SW_FALSE );
+    SW_EXPECT_TRUE( state._currentIndex == 0u );
+    SW_EXPECT_TRUE( state._bCanUndo == false && state._bCanRedo );
 
     viewModel.redo();
     viewModel.gather( state );
-    SW_EXPECT_EQUAL( state._currentStep, 1u );
+    SW_EXPECT_TRUE( state._currentIndex == 1u );
+
+    viewModel.undo();
+    viewModel.gather( state );
+    SW_EXPECT_TRUE( state._currentIndex == 0u );
 }

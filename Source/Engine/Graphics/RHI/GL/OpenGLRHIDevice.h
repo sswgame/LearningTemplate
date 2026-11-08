@@ -51,7 +51,7 @@ namespace sw
     {
         RHIGeometryBindings _geometry; ///< setVertexBuffer · setIndexBuffer 로 건 정점 슬롯과 인덱스 버퍼(드로우 때 건다 — RHIGeometryBindings)
         /// @brief 지금 텍스처가 바인딩된 유닛의 비트마스크(비트 i는 유닛 i)입니다. beginRenderPass 가 이 유닛들만 해제합니다.
-        uint32 _boundTextureUnitMask{ 0 };
+        uint64 _boundTextureUnitMask{ 0 };
 
         RHIPipelineStateHandle _boundGraphicsPSO{ 0 };
         RHIPipelineStateHandle _boundComputePSO{ 0 }; ///< setComputePipelineState 가 마지막으로 설정한 컴퓨트 PSO. dispatchCompute 가 이 프로그램을 쓴다.
@@ -499,7 +499,7 @@ namespace sw
         uint32 _meshVao;         ///< 씬 메시 드로우용 VAO
         uint32 _defaultSampler;  ///< 엔진과 머티리얼 유닛 밖의 모든 텍스처 유닛(최근접, 클램프)
         uint32 _materialSampler; ///< 머티리얼 텍스처 유닛 t16..t31 (선형, 랩, shaderslot::kMaterialTextureSampler)
-        uint32 _engineSampler;   ///< 엔진 텍스처 유닛 0..kEngineTextureCount-1 (선형, 클램프, shaderslot::kEngineTextureSampler)
+        uint32 _engineSampler;   ///< 엔진 텍스처 유닛(레지스터 번호 그대로 t32..) (선형, 클램프, shaderslot::kEngineTextureSampler)
         uint32 _defaultTexture;
         /// @brief 지금 컨텍스트를 가진 스레드(없으면 기본값)와 가진 시각입니다. 잡기에 실패했을 때 누가 가지고 있었는지 로그에 적습니다(진단 전용).
         atomic<std::thread::id> _contextOwnerThread;

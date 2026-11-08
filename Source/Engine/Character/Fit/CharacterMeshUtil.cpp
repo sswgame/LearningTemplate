@@ -65,19 +65,6 @@ namespace sw
                 return false;
             }
 
-            /** @brief 병합을 못 하는 까닭을 남기고 false 를 돌려줍니다. */
-            [[nodiscard]] static bool failMerge( string* pOutError, const string& reason )
-            {
-                if ( pOutError != nullptr )
-                    *pOutError = reason;
-                return false;
-            }
-            /** @brief 병합을 못 하는 까닭 @p error 를 `문장 '대상'` 글로 남기고 false 를 돌려줍니다. */
-            [[nodiscard]] static bool failMerge( string* pOutError, const Error& error )
-            {
-                return failMerge( pOutError, string( error.message().data(), error.message().size() ) + " '" + string( error.detail().data(), error.detail().size() ) + "'" );
-            }
-
             /** @brief 부품 하나가 병합에 들어갈 수 있는지 봅니다. 못 들어가면 그 까닭(대상은 부품 이름)입니다. */
             [[nodiscard]] static expected<void> checkMergePart( const MeshMergePart& part )
             {
@@ -108,10 +95,10 @@ namespace sw
                 const uint32 vertexCount = source.getVertexCount();
                 for ( const BodyMorphWeight& weight : listMorphWeight )
                 {
-                    const int32 targetIndex = source.findMorphTargetIndex( weight._morph );
-                    if ( targetIndex < 0 || weight._weight == 0.0f )
+                    const optional<uint32> targetIndex = source.findMorphTargetIndex( weight._morph );
+                    if ( targetIndex.has_value() == false || weight._weight == 0.0f )
                         continue;
-                    for ( const MeshMorphDelta& delta : source.getMorphTargets()[static_cast<size_t>( targetIndex )]._listDelta )
+                    for ( const MeshMorphDelta& delta : source.getMorphTargets()[*targetIndex]._listDelta )
                     {
                         if ( delta._vertexIndex >= vertexCount )
                             continue;
@@ -546,16 +533,15 @@ namespace sw
         return unboundCount;
     }
 
-    bool CharacterMeshUtil::mergeMeshes( vector_reference<const MeshMergePart> listPart, const IMeshMergeHooks* pHooks, MeshMergeResult& outResult, string* pOutError )
+    expected<MeshMergeResult> CharacterMeshUtil::mergeMeshes( vector_reference<const MeshMergePart> listPart, const IMeshMergeHooks* pHooks )
     {
         using Internal = CharacterMeshUtilInternal;
-        outResult      = MeshMergeResult{};
         if ( listPart.empty() )
-            return Internal::failMerge( pOutError, "nothing to merge" );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "nothing to merge" } );
 
         // 부품을 검사하고 스킨 유무 · 본 배치 · 역 바인드가 같은지 본다 — 섞이면 한 메시로 스키닝할 수 없다.
         if ( const expected<void> valid = Internal::validateMergeParts( listPart ); valid.has_value() == false )
-            return Internal::failMerge( pOutError, valid.error() );
+            return unexpected( valid.error() );
         const Mesh& first    = *listPart[0]._pMesh;
         const bool  bSkinned = first.hasSkin();
 
@@ -563,7 +549,7 @@ namespace sw
         vector<Internal::MergePiece> listPiece;
         vector<Internal::MergePiece> listGroup;
         if ( const expected<void> collected = Internal::collectMergePieces( listPart, pHooks, listPiece, listGroup ); collected.has_value() == false )
-            return Internal::failMerge( pOutError, collected.error() );
+            return unexpected( collected.error() );
 
         vector<RHIVertex>       listVertex;
         vector<uint32>          listIndex;
@@ -607,7 +593,7 @@ namespace sw
             listSection.push_back( section );
         }
         if ( listIndex.empty() )
-            return Internal::failMerge( pOutError, "every merge part is empty - there is nothing to draw" );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "every merge part is empty - there is nothing to draw" } );
 
         shared_ptr<Mesh> merged = Mesh::create();
         // 조각마다 검사된 번호를 합친 정점 번호로 옮겼다 — 합친 정점 안이다.
@@ -619,10 +605,9 @@ namespace sw
             merged->setSkin( std::move( listSkin ), first.getSkinBinding() );
         merged->setMorphTargets( std::move( listTarget ) );
         if ( merged->setSections( std::move( listSection ) ) == false )
-            return Internal::failMerge( pOutError, "the merged sections were refused (see the log above)" );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the merged sections were refused (see the log above)" } );
         merged->setGPUMorphEnabled( bAnyGPUMorph );
 
-        outResult._mesh = std::move( merged );
-        return true;
+        return MeshMergeResult{ std::move( merged ) };
     }
 } // namespace sw

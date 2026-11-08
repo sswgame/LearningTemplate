@@ -251,6 +251,27 @@ namespace sw::editor
             {
                 drawList.AddQuadFilled( ImVec2( x, centerY - radius ), ImVec2( x + radius, centerY ), ImVec2( x, centerY + radius ), ImVec2( x - radius, centerY ), color );
             }
+
+            /** @brief 트랙 오류 배지의 풀이(이유와 고칠 일)입니다. */
+            static const utf8* findTrackIssueText( SequenceTrackIssue issue )
+            {
+                switch ( issue )
+                {
+                    case SequenceTrackIssue::UnknownKind:
+                        return SW_LOCKEY( "EditorSequencer", "TrackIssueUnknownKind" );
+                    case SequenceTrackIssue::ChannelCount:
+                        return SW_LOCKEY( "EditorSequencer", "TrackIssueChannelCount" );
+                    case SequenceTrackIssue::MissingBinding:
+                        return SW_LOCKEY( "EditorSequencer", "TrackIssueMissingBinding" );
+                    case SequenceTrackIssue::MissingPropertyPath:
+                        return SW_LOCKEY( "EditorSequencer", "TrackIssueMissingPropertyPath" );
+                    case SequenceTrackIssue::KeysOutsideTimeline:
+                        return SW_LOCKEY( "EditorSequencer", "TrackIssueKeysOutsideTimeline" );
+                    case SequenceTrackIssue::None:
+                        return "";
+                }
+                return "";
+            }
         };
     } // namespace
 
@@ -334,14 +355,35 @@ namespace sw::editor
         }
         EditorSelfTestMarks::record( "sequencer.scrub" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "ScrubTip" ) );
+        drawViewControls();
 
         // 바인딩이 맨 위다 — 트랙 · 컷 · 항목이 모두 바인딩을 대상으로 고른다(언리얼 Sequencer 의 바인딩 줄 아래 트랙).
         drawBindings();
         drawCutLane();
+        drawShotTools();
         // 키 트랙이 항목 위다 — 자주 고치는 쪽(키 · 커브)이 패널이 낮아도 보인다.
         drawKeyTracks();
 
         ImGui::SeparatorText( SW_LOCKEY( "EdSection", "ClipsEventsAndCameraCuts" ) );
+        // 고른 구간 항목을 지금 프레임에 붙인다(언리얼 Sequencer 의 섹션 복사 · 붙여넣기). 클립보드는 문서 안에 있어 다른 시퀀스로는 옮기지 않는다.
+        const utf8* const pCopyItem = SW_LOCKEY( "EditorSequencer", "CopyItem" );
+        ImGui::BeginDisabled( _document._selectedItem < 0 );
+        if ( ImGui::Button( pCopyItem ) )
+            (void)_document.copySelectedItem(); // 클립보드만 바뀐다 — 문서 편집이 아니다
+        ImGui::EndDisabled();
+        EditorSelfTestMarks::record( "sequencer.copyItem" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "CopyItemTip" ) );
+        const utf8* const pPasteItem = SW_LOCKEY( "EditorSequencer", "PasteItem" );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( pPasteItem ) );
+        ImGui::BeginDisabled( _document.hasCopiedItem() == false );
+        if ( ImGui::Button( pPasteItem ) && _document.pasteItem( _currentFrame ) >= 0 )
+        {
+            notifyDocumentEdited( "Paste Sequence Item" );
+            previewCurrentFrame();
+        }
+        ImGui::EndDisabled();
+        EditorSelfTestMarks::record( "sequencer.pasteItem" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "PasteItemTip" ) );
         drawItemFields();
 
         // ImSequencer 는 여러 항목을 그리는 위젯이라 IsItemEdited("마지막 항목")가 클립 끌기 · 더하기 · 지우기를 뜻하지 않는다 — 부르기 전후의 배치를 비교한다.
@@ -550,6 +592,7 @@ namespace sw::editor
         }
         EditorSelfTestMarks::record( "sequencer.cutLane" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "CutLaneTip" ) );
+        handleTimelineWheel( origin.x, width );
 
         ImDrawList* pDrawList = ImGui::GetWindowDrawList();
         pDrawList->AddRectFilled( origin, ImVec2( origin.x + width, origin.y + height ), ImGui::GetColorU32( ImGuiCol_FrameBg ) );
@@ -569,8 +612,150 @@ namespace sw::editor
         if ( _listCutItem.empty() )
             pDrawList->AddText( ImVec2( origin.x + ImGui::GetStyle().FramePadding.x, origin.y + ( height - ImGui::GetTextLineHeight() ) * 0.5f ), ImGui::GetColorU32( ImGuiCol_TextDisabled ),
                                 SW_LOCKEY( "EditorSequencer", "NoCutsHint" ) );
-        const float32 cursorX = origin.x + _document.computeRatioAtFrame( static_cast<float32>( _currentFrame ) ) * width;
-        pDrawList->AddLine( ImVec2( cursorX, origin.y ), ImVec2( cursorX, origin.y + height ), ImGui::GetColorU32( ImGuiCol_CheckMark ) );
+        const float32 cursorRatio = _document.computeRatioAtFrame( static_cast<float32>( _currentFrame ) );
+        if ( 0.0f <= cursorRatio && cursorRatio <= 1.0f ) // 확대해 지금 프레임이 보이는 범위 밖이면 그리지 않는다
+            pDrawList->AddLine( ImVec2( origin.x + cursorRatio * width, origin.y ), ImVec2( origin.x + cursorRatio * width, origin.y + height ), ImGui::GetColorU32( ImGuiCol_CheckMark ) );
+    }
+
+    void SequencerPanel::drawShotTools()
+    {
+        // 컷 차선이 쇼트 목록이다(언리얼 Camera Cut 트랙 · Shot 트랙의 쇼트 하나 = 컷 하나). 하위 시퀀스(Shot 트랙)는 두지 않는다 — 쇼트를 따로 저작할 요구가 확인되기 전까지 한 시퀀스의 컷으로 짠다.
+        const utf8* const pSplit = SW_LOCKEY( "EditorSequencer", "SplitCut" );
+        if ( ImGui::Button( pSplit ) && _document.splitCameraCut( _currentFrame ) >= 0 )
+        {
+            notifyDocumentEdited( "Split Camera Cut" );
+            previewCurrentFrame();
+        }
+        EditorSelfTestMarks::record( "sequencer.splitCut" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "SplitCutTip" ) );
+
+        const SequenceTrackItem*    pSelected     = _document._selectedItem >= 0 && _document._selectedItem < static_cast<int32>( _document._asset._listItem.size() )
+                                                      ? &_document._asset._listItem[static_cast<size_t>( _document._selectedItem )]
+                                                      : nullptr;
+        const SequenceItemKindInfo* pSelectedKind = pSelected != nullptr ? SequenceAsset::findItemKindInfo( pSelected->_kind ) : nullptr;
+        const bool                  bCutSelected  = pSelectedKind != nullptr && pSelectedKind->_bCutsCamera;
+
+        const utf8* const pDelete = SW_LOCKEY( "EditorSequencer", "DeleteCut" );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( pDelete ) );
+        ImGui::BeginDisabled( bCutSelected == false );
+        if ( ImGui::Button( pDelete ) && _document.removeCameraCut( _document._selectedItem ) )
+        {
+            notifyDocumentEdited( "Delete Camera Cut" );
+            previewCurrentFrame();
+        }
+        ImGui::EndDisabled();
+        EditorSelfTestMarks::record( "sequencer.deleteCut" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "DeleteCutTip" ) );
+
+        const utf8* const pCamera = SW_LOCKEY( "EditorSequencer", "CutCamera" );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( pCamera ) );
+        ImGui::BeginDisabled( bCutSelected == false || pSelected->_binding == _document._selectedBinding || _document._asset.findBinding( _document._selectedBinding ) == nullptr );
+        if ( ImGui::Button( pCamera ) && _document.setCutCamera( _document._selectedItem, _document._selectedBinding ) )
+        {
+            notifyDocumentEdited( "Set Camera Cut Camera" );
+            previewCurrentFrame();
+        }
+        ImGui::EndDisabled();
+        EditorSelfTestMarks::record( "sequencer.cutCamera" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "CutCameraTip" ) );
+
+        _document.collectCutLane( _listCutItem ); // 위 단추가 컷을 나누거나 지웠을 수 있다 — 옛 번호로 그리지 않는다
+        if ( _listCutItem.empty() )
+            return; // 빈 차선은 컷 차선이 이유와 할 일을 적는다
+        constexpr ImGuiTableFlags kFlags = ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_BordersInnerH;
+        if ( ImGui::BeginTable( "##shotList", 4, kFlags ) == false )
+            return;
+        ImGui::TableSetupColumn( SW_LOCKEY( "EditorSequencer", "ShotCameraColumn" ) );
+        ImGui::TableSetupColumn( SW_LOCKEY( "EditorSequencer", "ShotStartColumn" ) );
+        ImGui::TableSetupColumn( SW_LOCKEY( "EditorSequencer", "ShotEndColumn" ) );
+        ImGui::TableSetupColumn( SW_LOCKEY( "EditorSequencer", "ShotLengthColumn" ) );
+        ImGui::TableHeadersRow();
+        for ( size_t shotIndex = 0; shotIndex < _listCutItem.size(); ++shotIndex )
+        {
+            const int32              cutIndex = _listCutItem[shotIndex];
+            const SequenceTrackItem& cut      = _document._asset._listItem[static_cast<size_t>( cutIndex )];
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            ImGui::PushID( cutIndex );
+            // 줄을 누르면 그 컷을 고르고 첫 프레임으로 간다(쇼트 목록에서 쇼트로 가기).
+            if ( ImGui::Selectable( findBindingName( cut._binding ), cutIndex == _document._selectedItem, ImGuiSelectableFlags_SpanAllColumns ) )
+            {
+                _document._selectedItem = cutIndex;
+                _currentFrame           = cut._start;
+                previewCurrentFrame();
+            }
+            fixed_string<constant::buffer::kMax64> mark;
+            formatstring( mark.data(), mark.capacity(), "sequencer.shot.%#", shotIndex );
+            EditorSelfTestMarks::record( mark.c_str() );
+            ImGui::PopID();
+            // 숫자는 오른쪽 맞춤(표는 규칙과 정렬).
+            const int32 arrValue[] = { cut._start, cut._end, cut._end - cut._start + 1 };
+            for ( const int32 value : arrValue )
+            {
+                ImGui::TableNextColumn();
+                fixed_string<constant::buffer::kMax32> text;
+                formatstring( text.data(), text.capacity(), "%#", value );
+                ImGui::SetCursorPosX( ImGui::GetCursorPosX() + MathUtil::max( 0.0f, ImGui::GetContentRegionAvail().x - ImGui::CalcTextSize( text.c_str() ).x ) );
+                ImGui::TextUnformatted( text.c_str() );
+            }
+        }
+        ImGui::EndTable();
+    }
+
+    void SequencerPanel::drawViewControls()
+    {
+        constexpr float32 kZoomStep = 0.5f; // 단추 한 번에 폭이 반(확대) · 두 배(축소)
+        const utf8* const pZoomIn   = SW_LOCKEY( "EditorSequencer", "ZoomIn" );
+        if ( ImGui::Button( pZoomIn ) )
+            _document.zoomView( kZoomStep, _document.computeRatioAtFrame( static_cast<float32>( _currentFrame ) ) ); // 보기만 바뀐다 — 되돌리기에 남기지 않는다
+        EditorSelfTestMarks::record( "sequencer.zoomIn" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "ZoomInTip" ) );
+        const utf8* const pZoomOut = SW_LOCKEY( "EditorSequencer", "ZoomOut" );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( pZoomOut ) );
+        ImGui::BeginDisabled( _document.isViewFitted() );
+        if ( ImGui::Button( pZoomOut ) )
+            _document.zoomView( 1.0f / kZoomStep, _document.computeRatioAtFrame( static_cast<float32>( _currentFrame ) ) );
+        EditorSelfTestMarks::record( "sequencer.zoomOut" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "ZoomOutTip" ) );
+        const utf8* const pFit = SW_LOCKEY( "EditorSequencer", "ZoomFit" );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( pFit ) );
+        if ( ImGui::Button( pFit ) )
+            _document.fitView();
+        EditorSelfTestMarks::record( "sequencer.zoomFit" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "ZoomFitTip" ) );
+        ImGui::EndDisabled();
+
+        // 확대한 동안만 스크롤 막대가 뜻이 있다 — 막대 값은 보이는 첫 프레임이다.
+        if ( _document.isViewFitted() )
+            return;
+        ImGui::SameLine();
+        const int32 firstFrame = _document.getViewFirstFrame();
+        const int32 lastFirst  = _document._asset._frameMax - _document.getViewFrameSpan();
+        int32       scroll     = firstFrame;
+        ImGui::SetNextItemWidth( -1.0f );
+        if ( ImGui::SliderInt( "##viewScroll", &scroll, _document._asset._frameMin, MathUtil::max( lastFirst, _document._asset._frameMin ), SW_LOCKEY( "EditorSequencer", "ViewRangeFormat" ) ) )
+            _document.setViewFirstFrame( scroll );
+        EditorSelfTestMarks::record( "sequencer.viewScroll" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "ViewScrollTip" ) );
+    }
+
+    void SequencerPanel::handleTimelineWheel( float32 originX, float32 width )
+    {
+        if ( ImGui::IsItemHovered() == false )
+            return;
+        constexpr float32        kWheelZoom   = 0.8f; // 휠 한 칸에 폭이 0.8 배(확대) — 유니티 Timeline 과 비슷한 걸음
+        constexpr float32        kWheelScroll = 0.1f; // 휠 한 칸에 보이는 폭의 1/10 만큼 스크롤
+        const EditorPointerState pointer      = EditorInputGUI::readPointer();
+        const float32            wheel        = pointer._wheel;
+        if ( wheel != 0.0f && pointer.hasModifier( ModifierKey::Ctrl ) )
+        {
+            const float32 anchor = ( pointer._position._x - originX ) / MathUtil::max( width, 1.0f );
+            _document.zoomView( MathUtil::pow( kWheelZoom, wheel ), anchor );
+            return;
+        }
+        const float32 scrollWheel = pointer.hasModifier( ModifierKey::Shift ) ? wheel : pointer._wheelHorizontal;
+        if ( scrollWheel != 0.0f )
+            _document.scrollView( static_cast<int32>( MathUtil::round( -scrollWheel * kWheelScroll * static_cast<float32>( _document.getViewFrameSpan() ) ) ) );
     }
 
     bool SequencerPanel::drawItemBindingCombo( SequenceTrackItem& edit, const SequenceItemKindInfo& kindInfo )
@@ -682,24 +867,25 @@ namespace sw::editor
         ImGui::SeparatorText( SW_LOCKEY( "EdSection", "KeyTracks" ) );
         // 트랙은 고른 바인딩에 붙는다 — 고른 바인딩이 없으면 더할 대상이 없다.
         ImGui::BeginDisabled( _document._asset.findBinding( _document._selectedBinding ) == nullptr );
-        if ( ImGui::Button( "+ Transform Track" ) )
-            addKeyTrack( SequenceTrackKind::Transform );
-        EditorSelfTestMarks::record( "sequencer.addTransformTrack" );
-        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "AddTransformTrackTip" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "+ Property Track" ) );
-        if ( ImGui::Button( "+ Property Track" ) )
-            addKeyTrack( SequenceTrackKind::Property );
-        EditorSelfTestMarks::record( "sequencer.addPropertyTrack" );
-        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "AddPropertyTrackTip" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "+ Rig Slot Track" ) );
-        if ( ImGui::Button( "+ Rig Slot Track" ) )
-            addKeyTrack( SequenceTrackKind::RigSlot );
-        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "AddRigSlotTrackTip" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "+ Lens Track" ) );
-        if ( ImGui::Button( "+ Lens Track" ) )
-            addKeyTrack( SequenceTrackKind::CameraLens );
-        EditorSelfTestMarks::record( "sequencer.addLensTrack" );
-        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "AddLensTrackTip" ) );
+        // 종류 표를 돈다 — 새 트랙 종류는 엔진 표(`SequenceAsset::findTrackKindInfo`)의 한 줄이고 여기를 고치지 않는다.
+        for ( int32 kindIndex = 0; kindIndex < static_cast<int32>( SequenceTrackKind::Count ); ++kindIndex )
+        {
+            const SequenceTrackKind      kind  = static_cast<SequenceTrackKind>( kindIndex );
+            const SequenceTrackKindInfo* pInfo = SequenceAsset::findTrackKindInfo( kind );
+            if ( pInfo == nullptr )
+                continue;
+            fixed_string<constant::buffer::kMax64> label;
+            formatstring( label.data(), label.capacity(), "+ %# Track", pInfo->_pNamePrefix );
+            if ( kindIndex > 0 )
+                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( label.c_str() ) );
+            if ( ImGui::Button( label.c_str() ) )
+                addKeyTrack( kind );
+            const utf8*                            pKindName = editor::getSubsystem<TypeRegistry>().enumToString( kind );
+            fixed_string<constant::buffer::kMax64> mark;
+            formatstring( mark.data(), mark.capacity(), "sequencer.addTrack.%#", pKindName != nullptr ? pKindName : "?" );
+            EditorSelfTestMarks::record( mark.c_str() );
+            EditorWidgets::drawTooltip( SW_LOCKEYFORMAT( "EditorSequencer", "AddTrackTipFormat", TextArgumentList().addText( "kind", pInfo->_pNamePrefix ) ).c_str() );
+        }
         ImGui::EndDisabled();
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "DeleteTrack" ) ) );
         ImGui::BeginDisabled( _document._selectedTrack < 0 );
@@ -707,6 +893,43 @@ namespace sw::editor
             notifyDocumentEdited( "Delete Sequence Track" );
         ImGui::EndDisabled();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "DeleteTrackTip" ) );
+        // 순서는 파일의 트랙 순서다(재생 결과는 같다 — 트랙은 서로 다른 값을 몬다). 언리얼 Sequencer 는 트리 줄을 끌어 바꾼다.
+        const int32       trackCount = static_cast<int32>( _document._asset._listTrack.size() );
+        const utf8* const pMoveUp    = SW_LOCKEY( "EditorSequencer", "MoveTrackUp" );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( pMoveUp ) );
+        ImGui::BeginDisabled( _document._selectedTrack <= 0 || _document._selectedTrack >= trackCount );
+        if ( ImGui::Button( pMoveUp ) && _document.moveTrack( _document._selectedTrack, _document._selectedTrack - 1 ) )
+            notifyDocumentEdited( "Move Sequence Track" );
+        ImGui::EndDisabled();
+        EditorSelfTestMarks::record( "sequencer.moveTrackUp" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "MoveTrackUpTip" ) );
+        const utf8* const pMoveDown = SW_LOCKEY( "EditorSequencer", "MoveTrackDown" );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( pMoveDown ) );
+        ImGui::BeginDisabled( _document._selectedTrack < 0 || _document._selectedTrack + 1 >= trackCount );
+        if ( ImGui::Button( pMoveDown ) && _document.moveTrack( _document._selectedTrack, _document._selectedTrack + 1 ) )
+            notifyDocumentEdited( "Move Sequence Track" );
+        ImGui::EndDisabled();
+        EditorSelfTestMarks::record( "sequencer.moveTrackDown" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "MoveTrackDownTip" ) );
+        const utf8* const pCopyKeys = SW_LOCKEY( "EditorSequencer", "CopyKeys" );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( pCopyKeys ) );
+        ImGui::BeginDisabled( _document.getSelectedKeys().empty() );
+        if ( ImGui::Button( pCopyKeys ) )
+            (void)_document.copySelectedKeys(); // 클립보드만 바뀐다 — 문서 편집이 아니다
+        ImGui::EndDisabled();
+        EditorSelfTestMarks::record( "sequencer.copyKeys" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "CopyKeysTip" ) );
+        const utf8* const pPasteKeys = SW_LOCKEY( "EditorSequencer", "PasteKeys" );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( pPasteKeys ) );
+        ImGui::BeginDisabled( _document.hasCopiedKeys() == false || _document._selectedTrack < 0 );
+        if ( ImGui::Button( pPasteKeys ) && _document.pasteKeys( _currentFrame ) > 0 )
+        {
+            notifyDocumentEdited( "Paste Sequence Keys" );
+            previewCurrentFrame();
+        }
+        ImGui::EndDisabled();
+        EditorSelfTestMarks::record( "sequencer.pasteKeys" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "PasteKeysTip" ) );
         const utf8* const pDeleteKeys = SW_LOCKEY( "EditorSequencer", "DeleteSelectedKeys" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( pDeleteKeys ) );
         ImGui::BeginDisabled( _document.getSelectedKeys().empty() );
@@ -731,6 +954,18 @@ namespace sw::editor
         {
             const SequenceKeyTrack& track = listTrack[static_cast<size_t>( trackIndex )];
             ImGui::PushID( trackIndex );
+            // 오류 배지: 트랙마다 빨간 표식 하나와 이유 · 고칠 일(색만으로 알리지 않는다 — 풀이가 글로 있다). 배지가 없는 줄도 같은 폭을 비워 이름 열을 맞춘다.
+            const SequenceTrackIssue issue = _document.findTrackIssue( trackIndex );
+            const utf8* const        pMark = issue != SequenceTrackIssue::None ? "!" : " ";
+            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Error" ) ), "%s", pMark );
+            if ( issue != SequenceTrackIssue::None )
+            {
+                EditorWidgets::drawTooltip( SequencerPanelInternal::findTrackIssueText( issue ) );
+                fixed_string<constant::buffer::kMax64> issueMark;
+                formatstring( issueMark.data(), issueMark.capacity(), "sequencer.trackIssue.%#", trackIndex );
+                EditorSelfTestMarks::record( issueMark.c_str() );
+            }
+            ImGui::SameLine();
             fixed_string<constant::buffer::kMax256> label;
             formatstring( label.data(), label.capacity(), "%# (%#)", track._name.empty() ? "Track" : track._name.c_str(), findBindingName( track._binding ) );
             if ( ImGui::Selectable( label.c_str(), trackIndex == _document._selectedTrack, ImGuiSelectableFlags_None, ImVec2( labelWidth, 0.0f ) ) )
@@ -759,6 +994,7 @@ namespace sw::editor
         const float32 radius = SequencerPanelInternal::kKeyMarkerRadius * EditorThemeUtil::getDPIScale();
         track.collectKeyFrames( _listKeyFrame );
         (void)ImGui::InvisibleButton( "##keyStrip", ImVec2( width, height ) );
+        handleTimelineWheel( origin.x, width );
         const EditorPointerState pointer = EditorInputGUI::readPointer();
         if ( ImGui::IsItemActivated() )
         {
@@ -804,12 +1040,15 @@ namespace sw::editor
             // 고른 키는 선택 색(강조는 선택에만), 끄는 중이면 놓을 자리에 그린다. 고른 키는 모든 트랙에서 함께 움직인다.
             const bool    bSelected = _document.isKeySelected( trackIndex, keyFrame );
             const float32 drawFrame = bSelected ? keyFrame + dragOffset : keyFrame;
-            const float32 x         = origin.x + _document.computeRatioAtFrame( drawFrame ) * width;
-            SequencerPanelInternal::drawKeyDiamond( *pDrawList, x, centerY, bSelected ? radius * 1.25f : radius,
+            const float32 ratio     = _document.computeRatioAtFrame( drawFrame );
+            if ( ratio < 0.0f || ratio > 1.0f )
+                continue; // 확대해 보이는 범위 밖의 키 — 띠 밖에 그리지 않는다
+            SequencerPanelInternal::drawKeyDiamond( *pDrawList, origin.x + ratio * width, centerY, bSelected ? radius * 1.25f : radius,
                                                     ImGui::GetColorU32( bSelected ? ImGuiCol_CheckMark : ImGuiCol_PlotHistogram ) );
         }
-        const float32 cursorX = origin.x + _document.computeRatioAtFrame( static_cast<float32>( _currentFrame ) ) * width;
-        pDrawList->AddLine( ImVec2( cursorX, origin.y ), ImVec2( cursorX, origin.y + height ), ImGui::GetColorU32( ImGuiCol_Text ) );
+        const float32 cursorRatio = _document.computeRatioAtFrame( static_cast<float32>( _currentFrame ) );
+        if ( 0.0f <= cursorRatio && cursorRatio <= 1.0f )
+            pDrawList->AddLine( ImVec2( origin.x + cursorRatio * width, origin.y ), ImVec2( origin.x + cursorRatio * width, origin.y + height ), ImGui::GetColorU32( ImGuiCol_Text ) );
     }
 
     void SequencerPanel::drawTrackTextField( const utf8* pLabel, string& inoutText, const utf8* pTooltip, bool bPreviewOnEdit )

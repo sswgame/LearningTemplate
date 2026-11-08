@@ -60,10 +60,12 @@ namespace sw
             if ( TextItemizer::isZeroWidth( codepoint ) )
                 continue;
             ShapedGlyph glyph{};
-            glyph._face       = run._face;
-            glyph._glyphIndex = rasterizer.findGlyphIndex( run._face, codepoint );
-            glyph._cluster    = run._byteOffset + static_cast<uint32>( clusterOffset );
-            glyph._codepoint  = codepoint;
+            glyph._face = run._face;
+            // 런의 면은 대체 연쇄가 골랐다 — 어느 면에도 없는 문자는 고를 때 경고(Text.GlyphMissing)했고 상자(.notdef)로 그린다.
+            const optional<uint32> foundGlyph = rasterizer.findGlyphIndex( run._face, codepoint );
+            glyph._glyphIndex                 = foundGlyph.has_value() ? *foundGlyph : IFontRasterizer::kNotdefGlyphIndex;
+            glyph._cluster                    = run._byteOffset + static_cast<uint32>( clusterOffset );
+            glyph._codepoint                  = codepoint;
             GlyphMetrics metrics{};
             if ( rasterizer.findGlyphMetrics( run._face, glyph._glyphIndex, metrics ) )
                 glyph._advance = metrics._advance;

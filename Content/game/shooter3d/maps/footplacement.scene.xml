@@ -1,0 +1,112 @@
+<Scene formatVersion="2" _base="game/shooter3d/maps/arena.scene.xml" name="Shooter3DFootPlacement">
+	<!-- 발 디딤 무대(automation/footplacement.scenario.xml) — 아레나를 물려받아 시작 자리(0, -16) 앞 +Z 쪽에 계단 두 칸(윗면 0.12 m · 0.24 m)을 놓는다.
+	     계단은 정적 강체뿐이고 ShooterBlocker 가 아니다 — 슈터 몸 이동은 늘 y = 0 평면이라 몸은 계단을 지나가고, 리그 발 광선(물리 질의)만 윗면을 본다.
+	     그래서 발 높이 보정 = 계단 높이를 그대로 견줄 수 있다. 길을 막는 엄폐물 Cover_10 (0, 1, -12) 은 뺀다. -->
+	<entities>
+		<entity id="37" _op="Remove" />
+		<entity id="200" name="FootStepLow">
+			<GameObject _schemaVersion="0" _name="FootStepLow" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,0.06,-13.5"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="None"
+					                    _bodyType="Static"
+					                    _layer="Static"
+					                    _material="Stone"
+					                    _mass="0"
+					                    _linearDamping="0.05"
+					                    _angularDamping="0.05"
+					                    _gravityFactor="1"
+					                    _bTrigger="false"
+					                    _bContinuous="false"
+					                    _bLockRotation="false"
+					                    _bInterpolate="false">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box"
+							                    _halfExtents="0.8,0.06,1.1"
+							                    _radius="0.5"
+							                    _halfHeight="0.5"
+							                    _localPosition="0,0,0"
+							                    _localRotation="0,0,0"
+							                    _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="1.6,0.12,2.2"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="RigidBodyComponent#0"
+					               _meshID="Cube"
+					               _materialPath="game/shooter3d/materials/wall.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="201" name="FootStepHigh">
+			<GameObject _schemaVersion="0" _name="FootStepHigh" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,0.12,-11.3"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="None"
+					                    _bodyType="Static"
+					                    _layer="Static"
+					                    _material="Stone"
+					                    _mass="0"
+					                    _linearDamping="0.05"
+					                    _angularDamping="0.05"
+					                    _gravityFactor="1"
+					                    _bTrigger="false"
+					                    _bContinuous="false"
+					                    _bLockRotation="false"
+					                    _bInterpolate="false">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box"
+							                    _halfExtents="0.8,0.12,1.1"
+							                    _radius="0.5"
+							                    _halfHeight="0.5"
+							                    _localPosition="0,0,0"
+							                    _localRotation="0,0,0"
+							                    _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="1.6,0.24,2.2"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="RigidBodyComponent#0"
+					               _meshID="Cube"
+					               _materialPath="game/shooter3d/materials/wall.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

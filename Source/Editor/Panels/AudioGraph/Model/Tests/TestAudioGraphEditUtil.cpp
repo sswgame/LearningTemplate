@@ -27,9 +27,9 @@ SW_TEST_CASE( AudioGraphEditUtilTest, DuplicateKeepsInnerInputsOnly )
     const vector<hashed_string> listNew = AudioGraphEditUtil::duplicateNodes( def, { sineName, gainName }, float2{ 40.0f, 40.0f } );
     SW_REQUIRE_EQUAL( static_cast<size_t>( 2 ), listNew.size() );
     SW_EXPECT_EQUAL( static_cast<size_t>( 5 ), def._listNode.size() );
-    const int32 copyGain = def.findNodeIndex( listNew[1] );
-    SW_REQUIRE_TRUE( copyGain >= 0 );
-    const AudioGraphNodeDef& gainCopy = def._listNode[static_cast<size_t>( copyGain )];
+    const optional<uint32> copyGain = def.findNodeIndex( listNew[1] );
+    SW_REQUIRE_TRUE( copyGain.has_value() );
+    const AudioGraphNodeDef& gainCopy = def._listNode[*copyGain];
     SW_REQUIRE_EQUAL( static_cast<size_t>( 1 ), gainCopy._listInput.size() ); // 둘째 Sine 은 복제하지 않았다 — 그 입력은 버린다
     SW_EXPECT_TRUE( gainCopy._listInput[0] == listNew[0] );
     SW_EXPECT_NEAR( 240.0f, gainCopy._editorPosition._x, 1e-4f );

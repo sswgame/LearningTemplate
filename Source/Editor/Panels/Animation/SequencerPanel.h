@@ -31,9 +31,13 @@ namespace sw::editor
      *          시간 막대를 옮기면(끄는 동안에도) 그 프레임을 씬에 바로 적용합니다(뷰포트 미리보기 — 구간 동작 포함). 키 트랙 채널 값을 고치면 지금 프레임에
      *          그 채널의 키가 생기고(언리얼 Sequencer 의 자동 키), Key 단추는 대상의 지금 상태를 모든 채널의 키로 찍습니다. 키 띠의 마름모는 눌러 고르고(Ctrl 은 더하기 · 빼기) 끌어 옮긴다(정수 프레임 스냅).
      *          이름: 시간 막대 `sequencer.scrub`, 트랙 줄 `sequencer.track.<n>`, 키 띠 `sequencer.keyStrip.<n>`, `sequencer.addKey`, 채널 값 `sequencer.channel.<n>`,
-     *          커브 단추 `sequencer.curve.<n>`, 트랙 더하기 `sequencer.addTransformTrack` · `sequencer.addPropertyTrack` · `sequencer.addLensTrack`, 고른 키 지우기 `sequencer.deleteSelectedKeys`,
+     *          커브 단추 `sequencer.curve.<n>`, 트랙 더하기 `sequencer.addTrack.<종류 열거자 이름>`(종류 표를 돈다), 고른 키 지우기 `sequencer.deleteSelectedKeys`,
+     *          트랙 순서 `sequencer.moveTrackUp` · `sequencer.moveTrackDown`, 키 복사 · 붙여넣기 `sequencer.copyKeys` · `sequencer.pasteKeys`, 오류 배지 `sequencer.trackIssue.<n>`,
+     *          보기 `sequencer.zoomIn` · `sequencer.zoomOut` · `sequencer.zoomFit` · `sequencer.viewScroll`(Ctrl+휠 확대, Shift+휠 스크롤 — 키 띠 · 컷 차선 위),
      *          바인딩 줄 `sequencer.binding.<n>`, `sequencer.bindSelection`, `sequencer.addBindingFromSelection`, 컷 차선 `sequencer.cutLane`, `sequencer.addCut`,
+     *          쇼트 도구 `sequencer.splitCut` · `sequencer.deleteCut` · `sequencer.cutCamera` · 쇼트 목록 줄 `sequencer.shot.<n>`, 항목 복사 · 붙여넣기 `sequencer.copyItem` · `sequencer.pasteItem`,
      *          항목 칸 `sequencer.item.name` · `.binding` · `.prefab` · `.preset` · `.scenario` · `.clip` · `.sound` · `.text`, 초안 단추 `sequencer.item.create` · `.cancel`.
+     *          편집 조작은 언리얼 Sequencer(트랙 끌어 순서 바꾸기 · 키/섹션 복사 · Camera Cut 섹션 Split)와 유니티 Timeline(Ctrl+휠 확대)을 따른다 — 단추로 두는 것은 ImGui 표 줄 끌기가 키 띠 끌기와 겹치기 때문이다.
      */
     class SequencerPanel : public EditorDocumentPanel
     {
@@ -87,6 +91,14 @@ namespace sw::editor
         // 카메라 컷 차선
         /** @brief 카메라 컷만 모은 차선(컷 구간 · 카메라 이름 · 지금 프레임)과 컷 더하기 단추를 그립니다. 컷을 누르면 그 항목을 고른다. */
         void drawCutLane();
+        /** @brief 쇼트 도구(지금 프레임에서 나누기 · 고른 컷 지우기 · 고른 컷의 카메라를 고른 바인딩으로)와 쇼트 목록(번호 · 카메라 · 구간 · 길이)을 그립니다. */
+        void drawShotTools();
+
+        // 보기
+        /** @brief 확대 · 축소 · 맞추기 단추와 보이는 범위 스크롤을 그립니다(키 띠 · 컷 차선이 같은 범위를 쓴다). */
+        void drawViewControls();
+        /** @brief 띠(@p originX · @p width) 위에서 Ctrl+휠은 포인터 자리를 두고 확대 · 축소, Shift+휠(또는 가로 휠)은 스크롤합니다. 직전 항목이 그 띠여야 한다. */
+        void handleTimelineWheel( float32 originX, float32 width );
 
         // 구간 항목
         /** @brief 구간 항목의 칸을 그립니다 — 이름 · 바인딩과 종류가 쓰는 칸(종류 표)입니다. 초안이 열려 있으면 초안을, 아니면 고른 항목을 고칩니다. */

@@ -122,7 +122,7 @@ SW_TEST_CASE( AudioDataVariantTest, MixerVariantMergesBusesByName )
     SW_REQUIRE_TRUE( mixer.loadFromXMLText( flat ) );
     SW_EXPECT_EQUAL( 16u, mixer._maxVoiceCount );
     SW_REQUIRE_EQUAL( 4u, static_cast<uint32>( mixer._listBus.size() ) );
-    const AudioBusDef& sfx = mixer._listBus[static_cast<size_t>( mixer.findBusIndex( hashed_string( "sfx" ) ) )];
+    const AudioBusDef& sfx = mixer._listBus[mixer.findBusIndex( hashed_string( "sfx" ) ).value()];
     SW_EXPECT_NEAR( -6.0f, sfx._volumeDb, 0.0f );
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( sfx._listSend.size() ) );
     SW_EXPECT_NEAR( -6.0f, sfx._listSend[0]._levelDb, 0.0f );
@@ -213,10 +213,10 @@ SW_TEST_CASE( AudioDataVariantTest, MusicVariantMergesSegmentsByName )
     SW_EXPECT_NEAR( 90.0f, music._tempo, 0.0f );
     SW_EXPECT_TRUE( music._bus == hashed_string( "music" ) );
     SW_REQUIRE_EQUAL( 3u, static_cast<uint32>( music._listSegment.size() ) );
-    const AudioMusicSegmentDef& combat = music._listSegment[static_cast<size_t>( music.findSegmentIndex( hashed_string( "Combat" ) ) )];
+    const AudioMusicSegmentDef& combat = music._listSegment[music.findSegmentIndex( hashed_string( "Combat" ) ).value()];
     SW_EXPECT_EQUAL( 2u, combat._bars );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( combat._listLayer.size() ) ); // 물려받음
-    SW_EXPECT_TRUE( music.findSegmentIndex( hashed_string( "Boss" ) ) >= 0 );
+    SW_EXPECT_TRUE( music.findSegmentIndex( hashed_string( "Boss" ) ).has_value() );
 }
 
 /** @brief [AudioDataVariantTest] 소리 그래프 변형은 노드를 이름으로 합치고, 저장은 부모와 다른 칸만 쓴다 — 저장 → 다시 읽기가 같은 그래프다 */

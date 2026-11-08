@@ -39,7 +39,7 @@ namespace sw
 namespace sw
 {
     /** @brief RHIFormat 열거자 수입니다. 새 포맷은 맨 뒤에 잇고 이 값을 함께 올린다 — 공통 · 백엔드 표의 대조가 모두 이 값을 본다. */
-    inline constexpr size_t kRHIFormatCount = static_cast<size_t>( RHIFormat::R32G32B32A32_FLOAT ) + 1;
+    inline constexpr size_t kRHIFormatCount = static_cast<size_t>( RHIFormat::R16G16_FLOAT ) + 1;
 
     /** @brief 형식 표 @p arrRow(`_format` 칸을 가진 행)가 RHIFormat 열거자를 빠짐없이 열거 순서로 적었는지 봅니다. 백엔드 표는 이것을 `static_assert` 로 건다. */
     template <typename TRow, size_t kRowCount>
@@ -81,6 +81,7 @@ namespace sw
             {     RHIFormat::EAC_R11_UNORM,  { 4, 4, 8 }, 0, 0, 0},
             {    RHIFormat::EAC_RG11_UNORM, { 4, 4, 16 }, 0, 0, 0},
             {RHIFormat::R32G32B32A32_FLOAT, { 1, 1, 16 }, 0, 0, 1},
+            {      RHIFormat::R16G16_FLOAT,  { 1, 1, 4 }, 1, 0, 1},
         };
 
         /** @brief 포맷의 행입니다. 범위 밖 값이면 `Unknown` 행입니다. */

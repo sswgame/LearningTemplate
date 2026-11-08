@@ -121,7 +121,7 @@ namespace sw
         , _fixedTimestep{}
         , _pBackendSwitcher{}
         , _userSettingsHost{}
-        , _runtimeUIHost{}
+        , _uiPlatformBinding{}
         , _sceneViewCameraProvider{}
         , _configReloadedSubscription{}
         , _windowMessageSubscription{}
@@ -351,12 +351,12 @@ namespace sw
             }
             case HostServiceID::UserSettings:
             {
-                _userSettingsHost.initialize( &_launch.getEngine(), _pWindow );
+                _userSettingsHost.initialize( _launch.getEngine().getRenderDriver(), _pWindow );
                 return true;
             }
             case HostServiceID::RuntimeUIHooks:
             {
-                _runtimeUIHost.install( _launch.getEngine(), _pWindow, bEnableEditor );
+                _uiPlatformBinding.install( _pWindow, bEnableEditor );
                 return true;
             }
             case HostServiceID::DevConsole:
@@ -409,7 +409,7 @@ namespace sw
             }
             case HostServiceID::RuntimeUIHooks:
             {
-                _runtimeUIHost.remove();
+                _uiPlatformBinding.remove();
                 return;
             }
             case HostServiceID::DevConsole:

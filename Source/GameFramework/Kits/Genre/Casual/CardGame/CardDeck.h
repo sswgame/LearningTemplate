@@ -7,6 +7,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -113,8 +114,8 @@ namespace sw
         /** @brief index @p index 의 카드를 뺍니다. 나머지의 위아래 순서는 그대로입니다. */
         Card removeAt( int32 index );
         /** @brief 번호가 @p cardID 인 카드의 index 를 반환합니다. 없으면 -1 입니다. */
-        int32 findIndexByID( uint16 cardID ) const;
-        bool  containsID( uint16 cardID ) const { return findIndexByID( cardID ) >= 0; }
+        [[nodiscard]] optional<int32> findIndexByID( uint16 cardID ) const;
+        bool                          containsID( uint16 cardID ) const { return findIndexByID( cardID ).has_value(); }
 
         /** @brief Fisher-Yates 셔플을 합니다. 같은 시드의 @p random 이면 플랫폼과 무관하게 같은 순서가 나옵니다. */
         void shuffle( GameRandom& random );

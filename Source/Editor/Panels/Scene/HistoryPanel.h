@@ -1,6 +1,7 @@
 /**
  * @file HistoryPanel.h
- * @brief 실행 취소 · 다시 실행 내역을 보여 주고 원하는 시점으로 되돌리는 히스토리 창입니다. 값은 `HistoryViewModel::gather` 가 모으고 명령도 그쪽이 받으며, 이 패널은 그리기만 합니다(MVVM 계약).
+ * @brief 실행 취소 · 다시 실행 내역을 보여 주고 원하는 시점으로 되돌리는 히스토리 창입니다.
+ * @details 스택 값은 `HistoryViewModel::gather` 가 모으고 명령도 그쪽이 받는다. 이 패널은 그리기만 한다(MVVM 계약).
  */
 #pragma once
 #include "Core/Foundation/Types.h"
@@ -31,11 +32,7 @@ namespace sw::editor
         void drawContent() override;
 
     private:
-        void drawToolbar();
-        void drawTable();
-
-    private:
         HistoryViewModel _viewModel;
-        HistoryViewState _viewState; ///< 프레임마다 다시 채운다
+        HistoryViewState _viewState; ///< 프레임마다 다시 채운다(`gather` — MVVM 계약)
     };
 } // namespace sw::editor

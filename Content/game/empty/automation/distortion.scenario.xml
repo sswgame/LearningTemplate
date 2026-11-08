@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  화면 왜곡 — 보이지 않는 왜곡 렌즈(구, MATERIAL_DISTORTION)가 뒤의 무늬 벽을 비껴 보이게 하고, 렌즈를 치우면 벽이 곧게 보인다.
+  기본(포워드) 파이프라인의 왜곡 누적(Distortion) · 적용(DistortionApply) 패스를 본다. 렌즈 표면은 알파 0 이라 두 사진의 차이는 왜곡뿐이다.
+  결정적: 애니메이션 없는 무대(maps/distortion), 고정 프레임 시간. 렌즈는 순간이동으로 시야 밖(땅 아래)에 치운다.
+  골든: distortion_on — 통합에서 처음 기록한다(이 작업에서는 돌리지 못했다). 그 전까지는 같은 실행의 두 사진 견주기가 판정이다.
+  실행: ctest -R Scenario.game.empty.distortion
+-->
+<Scenario name="game.empty.distortion" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/distortion.scene.xml"/>
+	<Launch variable="gv_postQuality" value="2"/>
+	<Launch variable="gv_renderScale" value="1"/>
+	<Launch variable="gv_viewDistanceScale" value="1"/>
+	<Wait frames="40"/>
+	<Screenshot file="distortion_on.ppm"/>
+
+	<DevCommand line="teleport Lens 0 -50 -2"/>
+	<Wait frames="10"/>
+	<Screenshot file="distortion_off.ppm"/>
+
+	<Wait frames="4"/>
+	<!-- 렌즈 가운데(화면 가운데)는 왜곡으로 벽 무늬가 비껴 다르다. -->
+	<ExpectImagesDiffer first="distortion_on.ppm" second="distortion_off.ppm" region="0.35,0.3,0.65,0.7" minDiffering="0.05"/>
+	<!-- 렌즈 밖(화면 모서리)은 같다 — 오프셋 0 인 픽셀은 사본 그대로다. -->
+	<ExpectImagesDiffer first="distortion_on.ppm" second="distortion_off.ppm" region="0.0,0.0,0.15,0.15" minDiffering="0" maxDiffering="0.01"/>
+	<ExpectImage file="distortion_on.ppm" golden="distortion_on" region="0.05,0.05,0.95,0.95"/>
+	<Pass/>
+</Scenario>

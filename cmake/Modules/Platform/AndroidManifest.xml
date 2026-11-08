@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 앱 매니페스트 틀 — `py -3 -m Scripts android-apk` 가 달러 · 중괄호 자리를 Config/Environment/android_package.json 과 프리셋 값으로 채워 aapt2 에 넘긴다.
+  Java 코드가 없는 NativeActivity 앱이다(hasCode=false) — 시스템의 android.app.NativeActivity 가 lib_name 의 lib<이름>.so 를 열고 android_main 을 부른다(Source/App/Android/AndroidMain.cpp).
+  configChanges 는 회전 · 크기 바뀜에 액티비티를 다시 만들지 않고 창 크기 바뀜으로 받는다(CallbackInputWindow::applyPlatformResize).
+  Vulkan 1.2 가 필수다(docs/PlatformTargets.md 요구 판) — 못 주는 기기는 스토어가 거른다.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          package="${applicationId}"
+          android:versionCode="${versionCode}"
+          android:versionName="${versionName}">
+
+    <uses-feature android:name="android.hardware.vulkan.version" android:version="${vulkanVersion}" android:required="true" />
+    <uses-feature android:glEsVersion="0x00030000" android:required="false" />
+
+    <application android:label="${label}"
+                 android:hasCode="false"
+                 android:extractNativeLibs="false">
+        <activity android:name="android.app.NativeActivity"
+                  android:exported="true"
+                  android:screenOrientation="${screenOrientation}"
+                  android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|density|keyboard|keyboardHidden|navigation|uiMode">
+            <meta-data android:name="android.app.lib_name" android:value="${libName}" />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

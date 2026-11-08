@@ -9,6 +9,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -72,6 +73,14 @@ namespace sw
         /** @brief 시야각 킥(+)이나 줌 펀치(-)를 더합니다. 섞인 포즈의 시야각과 직교 높이에 마지막으로 곱합니다. */
         void addFieldOfViewKick( const CameraFieldOfViewKickDef& def ) { _fieldOfViewKickListener.addKick( def ); }
         /**
+         * @brief 출처 @p source 의 후처리 덧칠을 가중치 @p weight(0..1)로 정합니다. 0 이하이면 뺍니다. 섞인 포즈의 후처리 위에 출처를 정한 순서로 섞는다(`blendPostProcess`).
+         * @details 지역의 화면 반응(독가스 · 유황 · 늪 — `ScreenReactionComponent`)이 쓴다. 가중치를 올리고 내리는 것(페이드)은 출처가 하고, 디렉터는 프레임마다 받은 값만 섞는다.
+         *          스택(저장 상태)에 넣지 않는다 — 출처가 프레임마다 다시 정한다. 언리얼 PostProcessVolume 의 BlendWeight · 유니티 Volume weight 와 같은 자리다.
+         */
+        void setPostProcessOverlay( const GameObjectHandle& source, const PostProcessValues& values, float32 weight );
+        /** @brief 지금 섞는 후처리 덧칠 수입니다(진단 · 테스트). */
+        uint32 getPostProcessOverlayCount() const { return static_cast<uint32>( _listPostProcessOverlay.size() ); }
+        /**
          * @brief 다음 `step` 부터 쓸 사용자 설정(시야각, 흔들림 배율, 머리 흔들림)을 정합니다. 기본값은 바꾸지 않은 상태입니다.
          * @details 디렉터는 전역 변수를 읽지 않는다. 컴포넌트가 `CameraUserSettings::makeFromGlobalVariables` 로 읽어 넣고, 테스트는 값을 직접 넣는다.
          */
@@ -131,6 +140,14 @@ namespace sw
             uint8           _bFresh{ SW_FALSE };  ///< 다음 `step` 이 감쇠 없이 그 위치에서 시작한다
         };
 
+        /** @brief 출처 하나의 후처리 덧칠입니다. */
+        struct PostProcessOverlay
+        {
+            GameObjectHandle  _source{};
+            PostProcessValues _values{};
+            float32           _weight{ 0.0f };
+        };
+
         /** @brief 층 하나를 이번 프레임 포즈로 계산합니다. 모드, 감쇠(새로 켰으면 그 위치 그대로), 손떨림 순으로 처리합니다. 고정 층는 그대로입니다. */
         void evaluateLayer( Layer& inoutLayer, float32 deltaTime, const CameraTarget& target ) const;
         /** @brief 층이 넘치면 가장 아래 둘을 그 둘의 섞인 포즈로 고정해 하나로 합칩니다. */
@@ -142,7 +159,8 @@ namespace sw
         vector<Layer>                 _listLayer; ///< [0] 이 가장 아래(가장 오래된) 층, 끝이 지금 프리셋
         CameraImpulseListener         _impulseListener;
         CameraFieldOfViewKickListener _fieldOfViewKickListener;
-        CameraModeState               _emptyState; ///< 켠 프리셋이 없을 때 `getModeState` 가 내주는 빈 상태
+        vector<PostProcessOverlay>    _listPostProcessOverlay; ///< 섞인 포즈 위에 정한 순서로 섞는 후처리 덧칠(출처마다 하나)
+        CameraModeState               _emptyState;             ///< 켠 프리셋이 없을 때 `getModeState` 가 내주는 빈 상태
         CameraPose                    _outputPose;
         CameraUserSettings            _userSettings;
         const ICameraCollisionProbe*  _pProbe;

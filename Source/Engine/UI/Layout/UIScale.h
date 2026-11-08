@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -11,6 +12,7 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Inherit/ResourceTags.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"
 
 /**
@@ -64,8 +66,13 @@ namespace sw
         PROPERTY( DisplayName = "Min Touch Target", Min = 0.0, Tooltip = "Smallest touch target (UI units) - a touch that misses every control picks the nearest one whose box grown to this size holds the point" )
         float32 _minTouchTargetSize{ 48.0f }; ///< Android 48dp · Apple 44pt 지침(기억). 0 이면 넓히지 않는다(`UIWidgetPath::hitTestTouch`)
         PROPERTY( DisplayName = "Compact Max Width", Min = 0.0, Tooltip = "A screen narrower than this (density-independent pixels: physical width / content scale) is compact - documents relayout with _when=\"screen.compact\"" )
-        float32 _compactMaxWidth{ 600.0f }; ///< Android sw600dp 의 경계(기억, dp = 물리 픽셀 / 창 배율). 리소스 태그 축 `screen` 이 이 값으로 compact · regular 를 고른다(`UISystem::syncScreenTags`)
+        float32 _compactMaxWidth{ 600.0f }; ///< Android sw600dp 의 경계(기억, dp = 물리 픽셀 / 창 배율). 리소스 태그 축 `screen` 이 이 값으로 compact · regular 를 고른다(`makeScreenTags`)
 
+        /**
+         * @brief 뷰포트 @p viewport 의 화면 태그(`screen.compact|regular` · `orientation.portrait|landscape`)입니다. 크기가 0 이면(최소화) 없습니다 — 등급을 바꾸지 않는다.
+         * @details 규칙의 한 곳이다 — 게임 UI(`UISystem::syncScreenTags` 가 엔진 태그로 올린다)와 에디터 UI 미리보기(`UIOffscreenScreens::setView` 가 그 화면의 문맥에만 바꿔 끼운다)가 같은 답을 낸다.
+         */
+        [[nodiscard]] optional<ResourceTagSet> makeScreenTags( const UIViewport& viewport ) const;
         /** @brief 리소스 경로의 XML 을 읽습니다. 실패하면(파일이 없거나 모르는 키) 오류를 남기고 false 를 반환하며, 읽은 값은 남습니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 규칙만 적용한 배율입니다(사용자 배율과 창 배율을 적용하기 전이며, 최소와 최대로 제한합니다). */

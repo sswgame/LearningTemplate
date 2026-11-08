@@ -2,20 +2,22 @@
 
 #include "Editor/Panels/Console/Model/ConsoleViewModel.h"
 
-#include "Core/Log/LogTypes.h"
+#include "DevTools/Client/Automation/Runner/AutomationSession.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
-#include "Editor/Common/Commands/Diagnostics/EditorSourceLocation.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
 namespace sw::editor
 {
-    ConsolePlayState ConsoleViewModel::gatherPlayState()
+    bool ConsoleViewModel::isPlayStopped()
     {
-        ConsolePlayState state;
-        state._bStopped = EditorPlaySession::isStopped();
-        state._bRunning = EditorPlaySession::isPlaying() && EditorPlaySession::isPaused() == false;
-        return state;
+        return EditorPlaySession::isStopped();
+    }
+
+    bool ConsoleViewModel::isPlayRunning()
+    {
+        return EditorPlaySession::isPlaying() && EditorPlaySession::isPaused() == false;
     }
 
     void ConsoleViewModel::pausePlay()
@@ -23,15 +25,14 @@ namespace sw::editor
         EditorPlaySession::pause();
     }
 
-    void ConsoleViewModel::openEntryInIde( const LogEntry& entry )
+    bool ConsoleViewModel::showInFileExplorer( string_view absolutePath )
     {
-        EditorSourceLocation location;
-        if ( EditorSourceLocation::findLogEntryLocation( entry._message, entry._file, entry._line, location ) )
-            (void)EditorSourceLocation::openInIde( location ); // 실패는 openInIde 가 경고로 남긴다
+        return EditorAssetFileCommands::showInFileExplorer( absolutePath );
     }
 
-    void ConsoleViewModel::showInFileExplorer( const string& path )
+    shared_ptr<const AutomationLogPolicy> ConsoleViewModel::findScenarioLogPolicy()
     {
-        (void)EditorAssetFileCommands::showInFileExplorer( path );
+        const AutomationSession* const pSession = findSubsystem<AutomationSession>();
+        return pSession != nullptr ? pSession->getLogPolicy() : nullptr;
     }
 } // namespace sw::editor

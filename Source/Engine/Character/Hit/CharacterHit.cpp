@@ -212,11 +212,11 @@ namespace sw
         const RagdollComponent* pRagdoll = target.getComponent<RagdollComponent>();
         if ( pRagdoll != nullptr )
         {
-            int32                    bodyIndex = -1;
-            const PhysicsHitZoneDef* pZone     = pRagdoll->findHitZone( body, bodyIndex );
-            if ( bodyIndex >= 0 )
+            const optional<uint32> bodyIndex = pRagdoll->findBodyIndex( body );
+            if ( bodyIndex.has_value() )
             {
-                inoutHit._bodyIndex = bodyIndex;
+                inoutHit._bodyIndex            = static_cast<int32>( *bodyIndex );
+                const PhysicsHitZoneDef* pZone = pRagdoll->findHitZone( *bodyIndex );
                 if ( pZone != nullptr )
                     CharacterHitInternal::applyHitZone( *pZone, inoutHit );
                 return;

@@ -1,0 +1,107 @@
+<Scene formatVersion="2" name="ObjectVelocity">
+	<!-- 물체별 화면 속도 시나리오(automation/objectvelocity)의 무대 — 카메라에 붙은 상자(HeldCube, 1인칭 총의 자리)와 무늬 있는 배경 상자들.
+	     카메라는 시나리오가 순간이동 없이 옮긴다(move GameCamera …). 붙은 상자는 카메라와 함께 움직여 화면 속도가 0 이라 TAA · 모션 블러에 번지지 않아야 한다.
+	     붙은 상자의 머티리얼은 단색이다 — 월드 공간 무늬(prototypegrid)는 상자가 월드에서 움직이면 미끄러져 "번지지 않음" 을 가린다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,1.6,-6"
+					                 _localRotation="0.15,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _fovY="0.7"
+					                 _nearZ="0.1"
+					                 _farZ="100"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,0,0"
+					                           _localRotation="0.6,3.6,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachComponent="None"
+					                           _color="1,0.96,0.9"
+					                           _intensity="1.2"
+					                           _ambient="0.3"
+					                           _shadowExtent="8"
+					                           _shadowDistance="20"
+					                           _bCastShadow="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0,0,2"
+					               _localRotation="0,0,0"
+					               _localScale="16,1,16"
+					               _attachOwner="None"
+					               _attachComponent="None"
+					               _meshID="Plane"
+					               _materialPath="engine/materials/prototypegrid_dark.material"
+					               _boundsRadius="12"
+					               _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="LeftCube">
+			<GameObject _schemaVersion="0" _name="LeftCube" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-2.6,0.75,1.5"
+					               _localRotation="0,0.5,0"
+					               _localScale="1.5,1.5,1.5"
+					               _attachOwner="None"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="engine/materials/prototypegrid_orange.material"
+					               _boundsRadius="1.3"
+					               _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="RightCube">
+			<GameObject _schemaVersion="0" _name="RightCube" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="2.6,1,3"
+					               _localRotation="0,-0.4,0"
+					               _localScale="2,2,2"
+					               _attachOwner="None"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="engine/materials/prototypegrid_orange.material"
+					               _boundsRadius="1.8"
+					               _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<!-- 카메라 앞 1.5 m 의 작은 상자 — 화면 가운데 약 40 % 높이를 덮는다(세로 시야 0.7 rad). 카메라 컴포넌트에 붙어 회전 · 이동을 그대로 따른다. -->
+		<entity id="6" name="HeldCube">
+			<GameObject _schemaVersion="0" _name="HeldCube" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0,0,1.5"
+					               _localRotation="0,0,0"
+					               _localScale="0.4,0.4,0.4"
+					               _attachOwner="GameCamera"
+					               _attachOwnerID="1"
+					               _attachComponent="CameraComponent#0"
+					               _meshID="Cube"
+					               _materialPath="game/empty/materials/renderstate/plain_red.material"
+					               _boundsRadius="0.4"
+					               _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

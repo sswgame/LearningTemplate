@@ -95,12 +95,12 @@ namespace sw
         return _owner.findBoneLOD();
     }
 
-    int32 SkeletalMeshLODClient::findMeshLODIndex() const
+    optional<uint32> SkeletalMeshLODClient::findMeshLODIndex() const
     {
         const shared_ptr<Mesh>& mesh = _owner.getMesh();
         if ( mesh == nullptr || mesh->getLODCount() <= 1 )
-            return constant::invalid_index::kInt32;
-        return static_cast<int32>( _owner.getLODIndex() );
+            return nullopt;
+        return _owner.getLODIndex();
     }
 
     uint32 SkeletalMeshLODClient::getBoneLODMaskCount() const
@@ -505,11 +505,11 @@ namespace sw
 
     bool SkeletalMeshComponent::findBoneModelTransform( const hashed_string& boneName, float4x4& outTransform ) const
     {
-        const int32             boneIndex      = _skeleton->findBoneIndex( boneName );
+        const optional<uint32>  boneIndex      = _skeleton->findBoneIndex( boneName );
         const vector<float4x4>& listModelSpace = getModelSpaceTransforms();
-        if ( boneIndex < 0 || static_cast<size_t>( boneIndex ) >= listModelSpace.size() )
+        if ( boneIndex.has_value() == false || *boneIndex >= listModelSpace.size() )
             return false;
-        outTransform = listModelSpace[static_cast<size_t>( boneIndex )];
+        outTransform = listModelSpace[*boneIndex];
         return true;
     }
 
@@ -615,10 +615,12 @@ namespace sw
         return ( pMesh != nullptr ) ? pMesh->getMorphTargetCount() : 0u;
     }
 
-    int32 SkeletalMeshComponent::findMorphTargetIndex( const hashed_string& targetName ) const
+    optional<uint32> SkeletalMeshComponent::findMorphTargetIndex( const hashed_string& targetName ) const
     {
         const Mesh* pMesh = getRawMesh();
-        return ( pMesh != nullptr ) ? pMesh->findMorphTargetIndex( targetName ) : constant::invalid_index::kInt32;
+        if ( pMesh == nullptr )
+            return nullopt;
+        return pMesh->findMorphTargetIndex( targetName );
     }
 
     void SkeletalMeshComponent::setMorphWeight( uint32 targetIndex, float32 weight )
@@ -913,7 +915,7 @@ namespace sw
             {
                 _listLeaderBone[boneIndex] = leaderSkeleton.findBoneIndex( _skeleton->getBone( boneIndex )._name );
                 // 변형이 뒤에 붙인 본(망토 · 머리카락)과 부품 스켈레톤만 리더에 없어도 된다 — 나머지는 레퍼런스에 얼어 있는 틀린 조합이다.
-                const bool bMissing = _listLeaderBone[boneIndex] < 0 && _skeleton->isAddedBone( boneIndex ) == false && _skeleton->isPartial() == false && leaderSkeleton.isPartial() == false;
+                const bool bMissing = _listLeaderBone[boneIndex].has_value() == false && _skeleton->isAddedBone( boneIndex ) == false && _skeleton->isPartial() == false && leaderSkeleton.isPartial() == false;
                 if ( bMissing )
                     SW_LOG_ERROR_ID( "SkeletalMeshComponent.LeaderLacksBone", "Skeleton '%#' follows a leader without bone '%#' - the bone stays at its reference pose; add it as a variant bone or declare the skeleton partial", _skeletonPath.c_str(),
                                      _skeleton->getBone( boneIndex )._name.c_str() );
@@ -923,9 +925,9 @@ namespace sw
         const Pose& leaderPose = leader.getLocalPose();
         for ( uint32 boneIndex = 0; boneIndex < static_cast<uint32>( _listLeaderBone.size() ); ++boneIndex )
         {
-            const int32 leaderBone = _listLeaderBone[boneIndex];
-            if ( leaderBone >= 0 && static_cast<uint32>( leaderBone ) < leaderPose.getBoneCount() )
-                _localPose.setBoneTransform( boneIndex, leaderPose.getBoneTransform( static_cast<uint32>( leaderBone ) ) );
+            const optional<uint32>& leaderBone = _listLeaderBone[boneIndex];
+            if ( leaderBone.has_value() && *leaderBone < leaderPose.getBoneCount() )
+                _localPose.setBoneTransform( boneIndex, leaderPose.getBoneTransform( *leaderBone ) );
         }
     }
 
@@ -946,11 +948,16 @@ namespace sw
                 // 보간의 출발점 — 지금 보이던 포즈(직전 프레임의 결과)다.
                 if ( _lodState._bInterpolate == SW_TRUE && _effectiveDivisor > 1 )
                     _interpolationFrom = _localPose;
-                _localPose.setToReference( *_skeleton );
-                // 모프 가중치도 포즈와 같이 새로 만든다 — 일들(커브 · 얼굴)이 이 단계와 후처리 단계에서 더한다.
-                std::fill( _listMorphWeight.begin(), _listMorphWeight.end(), 0.0f );
                 // 리더는 의존이라 이 유닛보다 먼저 모든 단계를 마쳤다(`AnimationDependencyEdge`) — 부착 · 후처리(체형 비율 · IK)까지 적용된 최종 로컬 포즈를 읽는다.
                 const SkeletalMeshComponent* pLeader = findLeaderPose();
+                // 포즈를 만드는 쪽(작업 · 리더)이 없으면 들고 있는 포즈(외부 · 되감기 · 잔상 고정 포즈)가 답이다 — 더러움은 모델 공간 · 팔레트를 다시 구하라는 뜻일 뿐
+                // 레퍼런스로 덮으라는 뜻이 아니다(덮으면 잔상 사본이 바인드 포즈로 보였다). 리셋 직후의 포즈는 이미 레퍼런스다(resetPoseBuffers).
+                if ( pLeader != nullptr || _listTask.empty() == false )
+                {
+                    _localPose.setToReference( *_skeleton );
+                    // 모프 가중치도 포즈와 같이 새로 만든다 — 일들(커브 · 얼굴)이 이 단계와 후처리 단계에서 더한다.
+                    std::fill( _listMorphWeight.begin(), _listMorphWeight.end(), 0.0f );
+                }
                 if ( pLeader != nullptr )
                     copyLeaderPose( *pLeader );
                 runTasks( phase );

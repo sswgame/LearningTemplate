@@ -21,6 +21,16 @@ namespace sw
     {
         struct BodyShapeInternal
         {
+            static constexpr const utf8* kArrUnsupportedAttribute[] = { "name" };
+
+            /** @brief 축 값 @p axisValue 의 한쪽 끝 가중치(0..1)입니다. 0 이 기본 체형이고 양쪽은 max, 음쪽은 min 에서 1 이며 응답 곡선(`_response` 지수)을 지난다. */
+            static float32 computeSideWeight( const BodyShapeAxis& axis, float32 axisValue )
+            {
+                const bool    bPositive = axisValue > 0.0f;
+                const float32 span      = bPositive ? axis._max : -axis._min;
+                const float32 linear    = span > 0.0f ? MathUtil::abs( axisValue ) / span : 0.0f;
+                return linear > 0.0f ? MathUtil::pow( linear, axis._response ) : 0.0f;
+            }
 
             static void appendError( string* pOutError, const string& message )
             {
@@ -80,7 +90,7 @@ namespace sw
             if ( entry._bone == bone )
                 return entry;
         }
-        _listEntry.push_back( BoneProportionEntry{ bone, float3( 1.0f ), float3::Zero } );
+        _listEntry.push_back( BoneProportionEntry{ bone, float3( 1.0f ), float3::Zero, float3::Zero } );
         return _listEntry.back();
     }
 
@@ -97,6 +107,12 @@ namespace sw
         const float3         scale  = float3::lerp( float3( 1.0f ), entry._scale, weight );
         target._scale               = float3::multiply( target._scale, scale );
         target._offset += entry._offset * weight;
+        target._rotation += entry._rotation * weight; // 작은 각(굽 · 조임)을 겹치는 층이라 오일러 각을 더한다 — 큰 회전을 겹칠 일이 생기면 쿼터니언 곱으로 바꾼다
+    }
+
+    quaternion BoneProportion::makeRotation( const BoneProportionEntry& entry )
+    {
+        return quaternion::makeFromYawPitchRoll( entry._rotation );
     }
 
     const BoneProportionEntry* BoneProportion::findBone( const hashed_string& bone ) const
@@ -117,7 +133,7 @@ namespace sw
             float3     translation;
             (void)local.decompose( scale, rotation, translation );
             scale = float3::multiply( scale, entry._scale );
-            local = CharacterGeometryUtil::makeTransform( translation + entry._offset, rotation, scale );
+            local = CharacterGeometryUtil::makeTransform( translation + entry._offset, rotation * makeRotation( entry ), scale );
         }
         inoutBones.computeModelTransforms();
     }
@@ -127,7 +143,7 @@ namespace sw
         bool bValid = true;
         for ( const BoneProportionEntry& entry : _listEntry )
         {
-            if ( skeleton.findBoneIndex( entry._bone ) >= 0 )
+            if ( skeleton.findBoneIndex( entry._bone ).has_value() )
                 continue;
             SW_LOG_ERROR_ID( "BoneProportion.BoneNotInSkeleton", "Body shape '%#': bone '%#' is not in the skeleton - the proportion does nothing", sourceLabel, entry._bone.c_str() );
             bValid = false;
@@ -139,13 +155,15 @@ namespace sw
     {
         for ( const BoneProportionEntry& entry : _listEntry )
         {
-            const int32 boneIndex = skeleton.findBoneIndex( entry._bone );
-            if ( boneIndex < 0 || static_cast<uint32>( boneIndex ) >= inoutPose.getBoneCount() )
+            // 스켈레톤에 없는 본은 `checkBones` 가 알렸다.
+            const optional<uint32> boneIndex = skeleton.findBoneIndex( entry._bone );
+            if ( boneIndex.has_value() == false || *boneIndex >= inoutPose.getBoneCount() )
                 continue;
-            BoneTransform local = inoutPose.getBoneTransform( static_cast<uint32>( boneIndex ) );
+            BoneTransform local = inoutPose.getBoneTransform( *boneIndex );
             local._scale        = float3::multiply( local._scale, entry._scale );
             local._translation  = local._translation + entry._offset;
-            inoutPose.setBoneTransform( static_cast<uint32>( boneIndex ), local );
+            local._rotation     = local._rotation * makeRotation( entry ); // 본 자기 축에서 돌린다(로컬 뒤에 적용)
+            inoutPose.setBoneTransform( *boneIndex, local );
         }
     }
 } // namespace sw
@@ -155,6 +173,8 @@ namespace sw
     bool BodyShapeSet::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
         _listAxis.clear();
+        _listUnsupported.clear();
+        _params = BodyShapeSetParams{};
         CharacterDataReader reader( sourceName );
         XMLDocument         document;
         XMLNode             root;
@@ -167,6 +187,8 @@ namespace sw
     {
         const string_view path = assetID.view();
         _listAxis.clear();
+        _listUnsupported.clear();
+        _params = BodyShapeSetParams{};
         CharacterDataReader reader( path );
         XMLDocument         document;
         XMLNode             root;
@@ -177,9 +199,21 @@ namespace sw
 
     void BodyShapeSet::readRoot( const XMLNode& root, CharacterDataReader& reader )
     {
-        reader.reportUnexpectedAttributes( root );
+        (void)reader.readFields( root, _params ); // 모르는 속성도 이 읽기가 오류로 남긴다
         for ( XMLNode axisNode = root.findChild(); axisNode; axisNode = axisNode.findNextSibling() )
         {
+            if ( StringUtil::equals( axisNode.getName(), "Unsupported" ) )
+            {
+                hashed_string name;
+                reader.reportUnknownAttributes( axisNode, BodyShapeInternal::kArrUnsupportedAttribute );
+                if ( const utf8* pName = axisNode.findAttribute( "name" ); pName != nullptr && pName[0] != '\0' )
+                    name = hashed_string( pName );
+                if ( name.empty() || VectorUtil::contains( _listUnsupported, name ) )
+                    reader.addError( "Character.BodyUnsupportedInvalid", axisNode, "needs a unique non-empty 'name'" );
+                else
+                    _listUnsupported.push_back( name );
+                continue;
+            }
             if ( StringUtil::equals( axisNode.getName(), "Axis" ) == false )
             {
                 reader.reportUnknownElement( axisNode );
@@ -208,6 +242,13 @@ namespace sw
             }
             _listAxis.push_back( std::move( axis ) );
         }
+        for ( const hashed_string& unsupported : _listUnsupported )
+        {
+            if ( findAxis( unsupported ) != nullptr )
+                reader.addError( "Character.BodyUnsupportedInvalid", root, string( "declares mapped axis '" ) + unsupported.c_str() + "' as unsupported" );
+        }
+        if ( _params._footLiftAxis.empty() == false && findAxis( _params._footLiftAxis ) == nullptr )
+            reader.addError( "Character.BodyFootLiftAxisUnknown", root, string( "footLiftAxis names unknown axis '" ) + _params._footLiftAxis.c_str() + "'" );
     }
 
     void BodyShapeSet::readSide( const XMLNode& node, BodyShapeAxisSide& outSide, CharacterDataReader& reader )
@@ -251,7 +292,7 @@ namespace sw
         bool bValid = true;
         for ( const BodyShapeValue& value : listValue )
         {
-            if ( findAxis( value._axis ) != nullptr )
+            if ( findAxis( value._axis ) != nullptr || isUnsupported( value._axis ) )
                 continue;
             bValid = false;
             BodyShapeInternal::appendError( pOutError, string( "unknown body shape axis '" ) + value._axis.c_str() + "'" );
@@ -264,12 +305,9 @@ namespace sw
                 if ( value._axis == axis._name )
                     axisValue = value._value;
             }
-            axisValue = MathUtil::clamp( axisValue, axis._min, axis._max );
-            // 0 이 기본 체형이다. 양쪽은 max 에서 1, 음쪽은 min 에서 1 이 된다.
-            const bool               bPositive = axisValue > 0.0f;
-            const float32            span      = bPositive ? axis._max : -axis._min;
-            const float32            weight    = span > 0.0f ? MathUtil::abs( axisValue ) / span : 0.0f;
-            const BodyShapeAxisSide& side      = bPositive ? axis._positive : axis._negative;
+            axisValue                       = MathUtil::clamp( axisValue, axis._min, axis._max );
+            const float32            weight = BodyShapeInternal::computeSideWeight( axis, axisValue );
+            const BodyShapeAxisSide& side   = axisValue > 0.0f ? axis._positive : axis._negative;
             if ( weight <= 0.0f )
                 continue;
             BodyShapeInternal::addMorphWeight( outListMorphWeight, side._morph, weight );
@@ -281,4 +319,22 @@ namespace sw
         return bValid;
     }
 
+    bool BodyShapeSet::isUnsupported( const hashed_string& axis ) const
+    {
+        return VectorUtil::contains( _listUnsupported, axis );
+    }
+
+    float32 BodyShapeSet::computeFootLift( vector_reference<const BodyShapeValue> listValue ) const
+    {
+        const BodyShapeAxis* pAxis = _params._footLiftAxis.empty() ? nullptr : findAxis( _params._footLiftAxis );
+        if ( pAxis == nullptr )
+            return 0.0f;
+        float32 axisValue = pAxis->_default;
+        for ( const BodyShapeValue& value : listValue )
+        {
+            if ( value._axis == pAxis->_name )
+                axisValue = value._value;
+        }
+        return MathUtil::clamp( axisValue, pAxis->_min, pAxis->_max );
+    }
 } // namespace sw

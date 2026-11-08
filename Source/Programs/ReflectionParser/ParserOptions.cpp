@@ -23,16 +23,17 @@ namespace sw
         };
 
         constexpr OptionRow kArrOptionRow[] = {
-            {          cli::kInput,                              nullptr,   &ParserOptions::_listInputFile,            "<header.h>",                                                        "header to parse (repeatable)"},
-            {         cli::kOutput,           &ParserOptions::_outputDir,                          nullptr,                 "<dir>",                                            "directory for .gen.cpp / .gen.h / stamps"},
-            {        cli::kInclude,                              nullptr, &ParserOptions::_listIncludePath,                 "<dir>",                                                     "clang include path (repeatable)"},
-            {         cli::kConfig,          &ParserOptions::_configPath,                          nullptr,   "<abs defaults.json>", "committed parser_config.defaults.json (local and toolchain settings sit next to it)"},
-            {       cli::kBuiltins,        &ParserOptions::_builtinsPath,                          nullptr, "<ReflectBuiltins.xxx>",                                                  "scalar aliases and container rules"},
-            { cli::kAnnotationMeta,  &ParserOptions::_annotationMetaPath,                          nullptr,  "<AnnotationMeta.txt>",                                                          "annotation token spellings"},
-            {  cli::kEmitTemplates,    &ParserOptions::_emitTemplatesDir,                          nullptr,                 "<dir>",                                                           "Templates/*.tpl directory"},
-            {         cli::kModule,          &ParserOptions::_moduleName,                          nullptr,                "<name>",                 "runtime module the types register under (the CMake target's module)"},
-            {cli::kEmitBuiltinsGen, &ParserOptions::_emitBuiltinsGenPath,                          nullptr,            "<file.cpp>",                                         "only write ReflectBuiltins.gen.cpp and exit"},
-            {        cli::kDepfile,         &ParserOptions::_depfilePath,                          nullptr,              "<file.d>",                    "write the headers the inputs include as a Makefile-style depfile"},
+            {          cli::kInput,                              nullptr,   &ParserOptions::_listInputFile,            "<header.h>",                                                                              "header to parse (repeatable)"},
+            {         cli::kOutput,           &ParserOptions::_outputDir,                          nullptr,                 "<dir>",                                                                  "directory for .gen.cpp / .gen.h / stamps"},
+            {        cli::kInclude,                              nullptr, &ParserOptions::_listIncludePath,                 "<dir>",                                                                           "clang include path (repeatable)"},
+            {         cli::kConfig,          &ParserOptions::_configPath,                          nullptr,   "<abs defaults.json>",                       "committed parser_config.defaults.json (local and toolchain settings sit next to it)"},
+            {       cli::kBuiltins,        &ParserOptions::_builtinsPath,                          nullptr, "<ReflectBuiltins.xxx>",                                                                        "scalar aliases and container rules"},
+            { cli::kAnnotationMeta,  &ParserOptions::_annotationMetaPath,                          nullptr,  "<AnnotationMeta.txt>",                                                                                "annotation token spellings"},
+            {  cli::kEmitTemplates,    &ParserOptions::_emitTemplatesDir,                          nullptr,                 "<dir>",                                                                                 "Templates/*.tpl directory"},
+            {         cli::kModule,          &ParserOptions::_moduleName,                          nullptr,                "<name>",                                       "runtime module the types register under (the CMake target's module)"},
+            {cli::kEmitBuiltinsGen, &ParserOptions::_emitBuiltinsGenPath,                          nullptr,            "<file.cpp>",                                                               "only write ReflectBuiltins.gen.cpp and exit"},
+            {      cli::kTargetArg,                              nullptr,   &ParserOptions::_listTargetArg,           "<clang arg>", "clang argument describing the build target: -D target macro, --target=, --sysroot=, -isystem (repeatable)"},
+            {        cli::kDepfile,         &ParserOptions::_depfilePath,                          nullptr,              "<file.d>",                                          "write the headers the inputs include as a Makefile-style depfile"},
         };
 
         /** @brief 값 없이 켜는 플래그 한 줄입니다. */
@@ -181,7 +182,15 @@ namespace sw
                ParserOptionsInternal::isGiven( _configPath, cli::kConfig, cli::kInput ) &&
                ParserOptionsInternal::isGiven( _emitTemplatesDir, cli::kEmitTemplates, cli::kInput ) &&
                ParserOptionsInternal::isGiven( _annotationMetaPath, cli::kAnnotationMeta, cli::kInput ) &&
-               ParserOptionsInternal::isGiven( _moduleName, cli::kModule, cli::kInput );
+               ParserOptionsInternal::isGiven( _moduleName, cli::kModule, cli::kInput ) && hasTargetArgs();
+    }
+
+    bool ParserOptions::hasTargetArgs() const
+    {
+        if ( _listTargetArg.empty() == false )
+            return true;
+        SW_LOG_ERROR_ID( "ParserOptions.NoTargetArgs", "%# requires %# (the build target's macros - CMake passes them; the parser does not guess from its own host build).", cli::kInput, cli::kTargetArg );
+        return false;
     }
 
     void ParserOptions::printUsage()

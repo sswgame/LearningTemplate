@@ -12,6 +12,7 @@ namespace sw
     {
         vector<string> _listInputFile;         ///< --input (여러 번)
         vector<string> _listIncludePath;       ///< --include (여러 번)
+        vector<string> _listTargetArg;         ///< --target-arg (여러 번): 빌드 대상을 그리는 clang 인자(타깃 매크로 `-D` · `--target=` · `--sysroot=` · `-isystem`). CMake 가 대상 빌드의 값으로 넘긴다 — 파서가 자기(호스트) 빌드로 추측하지 않는다(교차 빌드)
         string         _outputDir;             ///< --output
         string         _builtinsPath;          ///< --builtins
         string         _configPath;            ///< --config: 커밋된 parser_config.defaults.json 의 절대 경로(로컬 · 툴체인 설정은 그 옆)
@@ -36,6 +37,9 @@ namespace sw
          *          Shipping 파서의 `--help` 가 아무것도 찍지 않는다.
          */
         static void printUsage();
+
+        /** @brief 대상 인자가 있으면 true, 없으면 이유를 알리고 false 입니다. */
+        [[nodiscard]] bool hasTargetArgs() const;
 
         /** @brief ReflectBuiltins.gen.cpp 만 쓰는 모드인지 봅니다. */
         bool isBuiltinsGenMode() const noexcept { return _emitBuiltinsGenPath.empty() == false; }

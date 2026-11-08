@@ -1,7 +1,7 @@
 #include "common.hlsli"
 #include "canvas_quad.hlsli"
 #include "instance_data.hlsli"
-#include "gpu_assert.hlsli"
+#include "gpu_message.hlsli"
 
 /**
  * canvas_marker.hlsl — 화면 마커(이름표 · HP 바 · 목표 표시)의 투영 컴퓨트(RenderPassType::CanvasMarker, docs/plans UI 후보 MarkerComputeProjection 의 구현).
@@ -61,7 +61,7 @@ uint getMarkerInstanceCount()
 SW_NUMTHREADS( 64, 1, 1 )
 void CSMain( uint3 dispatchID : SV_DispatchThreadID )
 {
-    SW_GPU_ASSERT_THREAD( dispatchID.x );
+    SW_GPU_MESSAGE_THREAD( dispatchID.x );
     const float4 cameraRow   = g_MarkerRows[kRowCamera];
     const uint   markerCount = asuint( cameraRow.w );
     const uint   index       = dispatchID.x;
@@ -86,7 +86,7 @@ void CSMain( uint3 dispatchID : SV_DispatchThreadID )
     const uint instanceSlot = asuint( rowC.w );
     SW_GPU_ASSERT( instanceSlot == kNoInstance || instanceSlot < getMarkerInstanceCount(), SW_GPU_ASSERT_ID_MARKER_INSTANCE_RANGE, instanceSlot );
     const float3 world = instanceSlot != kNoInstance ? g_MarkerInstances[instanceSlot]._world[3].xyz + rowC.xyz : rowA.xyz;
-    SW_GPU_ASSERT( GPUAssert::isFinite( world ), SW_GPU_ASSERT_ID_MARKER_WORLD_NAN, world.x );
+    SW_GPU_ASSERT( GPUMessage::isFinite( world ), SW_GPU_ASSERT_ID_MARKER_WORLD_NAN, world.x );
     const float dist    = length( cameraRow.xyz - world );
     float4      rect    = float4( 0.0f, 0.0f, 0.0f, 0.0f ); // 배율 0 = 접힘(그려지지 않는다)
     const bool  bTooFar = rowA.w > 0.0f && dist > rowA.w;
@@ -99,7 +99,7 @@ void CSMain( uint3 dispatchID : SV_DispatchThreadID )
         const float4 world4 = float4( world, 1.0f );
         const float4 clip   = world4.x * g_MarkerRows[kRowViewProjection] + world4.y * g_MarkerRows[kRowViewProjection + 1u] + world4.z * g_MarkerRows[kRowViewProjection + 2u] +
                             world4.w * g_MarkerRows[kRowViewProjection + 3u];
-        SW_GPU_ASSERT( GPUAssert::isFinite( clip ), SW_GPU_ASSERT_ID_MARKER_CLIP_NAN, clip.w );
+        SW_GPU_ASSERT( GPUMessage::isFinite( clip ), SW_GPU_ASSERT_ID_MARKER_CLIP_NAN, clip.w );
         const bool   bBehind = clip.w < limits.x;
         const float2 center  = viewSize * 0.5f;
         float2       screen  = float2( 0.0f, 0.0f );

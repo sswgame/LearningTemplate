@@ -562,7 +562,7 @@
             "_why": "프로파일러 바닥 — 계측 지점(SW_PROFILE_SCOPE)은 모든 스레드 · 층에서 문맥 없이 불리고 엔진이 내려간 뒤 닫히는 구간도 받는다. Tracy 는 프로세스 전역 라이브러리이고 지점 표 · 이름 저장소는 그 지점이 가리키는 정적 저장소다."
         },
         {
-            "_path": "Source/Engine/Profiling/ProfilerBackend.cpp",
+            "_path": "Source/DevTools/Profiling/Tracy/TracyProfilerBackend.cpp",
             "_name": "s_tracy",
             "_why": "프로파일러 바닥 — 계측 지점(SW_PROFILE_SCOPE)은 모든 스레드 · 층에서 문맥 없이 불리고 엔진이 내려간 뒤 닫히는 구간도 받는다. Tracy 는 프로세스 전역 라이브러리이고 지점 표 · 이름 저장소는 그 지점이 가리키는 정적 저장소다."
         },

@@ -12,7 +12,6 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "DevTools/Client/Automation/Runner/AutomationLogPolicy.h"
-#include "DevTools/Client/Automation/Runner/AutomationSession.h"
 
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/GUI/EditorChrome.h"
@@ -251,8 +250,7 @@ namespace sw::editor
         , _reservedFlags{ 0 }
     {
         // 세션이 없는 실행(자동화 실행기를 짓지 않은 구성 · 에디터 서비스 없이 세운 테스트)은 시나리오 선언이 없다 — 단위 테스트 선언만 본다.
-        if ( const AutomationSession* const pSession = findSubsystem<AutomationSession>() )
-            _pScenarioLogPolicy = pSession->getLogPolicy();
+        _pScenarioLogPolicy      = ConsoleViewModel::findScenarioLogPolicy();
         _logListenerSubscription = Logger::registerGlobalListener(
             SW_DELEGATE_METHOD( LogWrittenDelegate, &ConsolePanel::onLogWritten, this ) );
     }
@@ -697,14 +695,13 @@ namespace sw::editor
         }
         // 이번 실행의 파일은 싱크만 안다 — 폴더의 "가장 새 파일" 은 같은 폴더를 쓰는 다른 프로세스의 것일 수 있다.
         const string logFilePath = pSink->getLogFilePath();
-        ConsoleViewModel::showInFileExplorer( logFilePath.empty() ? string( pSink->getLogFolderPath() ) : logFilePath );
+        (void)ConsoleViewModel::showInFileExplorer( logFilePath.empty() ? string( pSink->getLogFolderPath() ) : logFilePath );
     }
 
     void ConsolePanel::updatePlayReactions()
     {
-        const ConsolePlayState playState         = ConsoleViewModel::gatherPlayState();
-        const bool             bStopped          = playState._bStopped;
-        const bool             bClearOnPlayStart = _bClearOnPlay == SW_TRUE && _bWasStopped == SW_TRUE && bStopped == false;
+        const bool bStopped          = ConsoleViewModel::isPlayStopped();
+        const bool bClearOnPlayStart = _bClearOnPlay == SW_TRUE && _bWasStopped == SW_TRUE && bStopped == false;
         if ( bClearOnPlayStart )
             clearEntries();
         _bWasStopped = bStopped ? SW_TRUE : SW_FALSE;
@@ -715,7 +712,7 @@ namespace sw::editor
             errorSerial = _errorSerial;
         }
         // 오류는 로그를 쓴 다음 그리기에서 본다 — 그 프레임이 끝나기 전에 멈추는 유니티 Error Pause 보다 한 프레임 늦다.
-        const bool bPauseOnNewError = _bErrorPause == SW_TRUE && errorSerial != _seenErrorSerial && playState._bRunning;
+        const bool bPauseOnNewError = _bErrorPause == SW_TRUE && errorSerial != _seenErrorSerial && ConsoleViewModel::isPlayRunning();
         if ( bPauseOnNewError )
             ConsoleViewModel::pausePlay();
         _seenErrorSerial = errorSerial;
@@ -756,7 +753,9 @@ namespace sw::editor
 
     void ConsolePanel::openEntryInIde( const LogEntry& entry )
     {
-        ConsoleViewModel::openEntryInIde( entry );
+        EditorSourceLocation location;
+        if ( EditorSourceLocation::findLogEntryLocation( entry._message, entry._file, entry._line, location ) )
+            (void)EditorSourceLocation::openInIde( location ); // 실패는 openInIde 가 경고로 남긴다
     }
 
     void ConsolePanel::shutdown()

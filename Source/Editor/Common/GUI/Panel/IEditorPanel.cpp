@@ -68,9 +68,7 @@ namespace sw::editor
 
     void IEditorPanel::requestAnimationFrame()
     {
-        EditorContext* const pContext = editor::findSubsystem<EditorContext>();
-        if ( pContext != nullptr )
-            pContext->getSubsystem<EditorRenderViews>().requestAnimationFrame();
+        editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>().requestAnimationFrame();
     }
 
     bool IEditorPanel::areSceneEditsAllowed()

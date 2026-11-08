@@ -155,7 +155,7 @@ namespace sw
             UIScreenDef          desc{};
             vector<UIBindingDef> listBinding{};
             vector<string>       listStyleSheet{};
-            unique_ptr<Widget>   root = instantiateDocument( documentPath, desc, listBinding, listStyleSheet );
+            unique_ptr<Widget>   root = instantiateDocument( documentPath, ResourceTagSet{}, desc, listBinding, listStyleSheet );
             if ( root == nullptr )
                 return kInvalidUIScreenHandle;
             return pushDocumentScreen( sw::make_unique<ScreenType>( desc, std::move( root ) ), documentPath, std::move( listBinding ), std::move( listStyleSheet ) );
@@ -196,8 +196,14 @@ namespace sw
         unique_ptr<UIScreen> createDocumentScreen( string_view documentPath );
         /** @brief 화면 @p screen 의 트리를 그 문서로 새로 생성합니다(포커스와 스크롤을 이름으로 이어 갑니다). 실패하면 기존 트리를 두고 false 를 반환합니다. 스택 밖 화면도 같은 길이다. */
         bool rebuildScreenFromDocument( UIScreen& screen );
-        /** @brief 문서 @p documentPath 가 조각 연쇄로 @p usedPath 를 쓰는지(자기 자신 포함) 반환합니다. */
-        bool isDocumentUsing( const string& documentPath, string_view usedPath );
+        /** @brief 화면 @p screen 의 문서가 조각 연쇄로 @p usedPath 를 쓰는지(자기 자신 포함) 반환합니다. 조각은 그 화면의 변형(`UIScreen::getResourceTagOverride`)에서 찾습니다. */
+        bool isDocumentUsing( const UIScreen& screen, string_view usedPath );
+        /**
+         * @brief 화면 @p screen 의 문서 변형 태그(엔진 태그에서 바꿔 끼울 축 — `ResourceContext::withTagOverride`)를 @p tagOverride 로 바꿉니다. 바뀌었으면 문서로 다시 짓고 true 입니다.
+         * @details 에디터 UI 미리보기가 기기 견본의 `screen` · `orientation` 을 그 화면에만 건다(`UIOffscreenScreens::setView`) — 엔진 태그와 게임 UI 는 그대로다.
+         *          스타일 세트는 지금 테마로 다시 짓는다(다른 테마를 쓰는 화면은 부르는 쪽이 되돌린다).
+         */
+        bool setResourceTagOverride( UIScreen& screen, const ResourceTagSet& tagOverride );
 
         // --- 핫 리로드 ---------------------------------------------------------------
         // 문서(`.ui.xml`)와 스타일 시트의 파일 변화는 **에디터**의 파일 감시가 캐시 다시 읽기로 이어 준다(`EditorAssetType` 표의 `kAnyCacheHoldingPath`).
@@ -334,8 +340,10 @@ namespace sw
     private:
         /** @brief 문서를 캐시에서 찾아 위젯 트리를 생성합니다. 스타일 시트는 문서와 조각(끼워 넣은 순서)의 것을 모읍니다. 실패하면 오류를 로그에 남기고 nullptr 를 반환합니다. */
         /** @brief 모듈 내림 알림(`TypeRegistry::subscribeModuleUnloading`)입니다 — `closeScreensOfModule` 을 부릅니다. */
-        void               onModuleUnloadingNotice( string_view moduleName ) { (void)closeScreensOfModule( moduleName ); }
-        unique_ptr<Widget> instantiateDocument( string_view documentPath, UIScreenDef& outDesc, vector<UIBindingDef>& outListBinding, vector<string>& outListStyleSheet );
+        void onModuleUnloadingNotice( string_view moduleName ) { (void)closeScreensOfModule( moduleName ); }
+        /** @param tagOverride 문서 · 조각을 찾을 변형의 태그입니다(빈 집합이면 엔진 판). */
+        unique_ptr<Widget> instantiateDocument( string_view documentPath, const ResourceTagSet& tagOverride, UIScreenDef& outDesc, vector<UIBindingDef>& outListBinding,
+                                                vector<string>& outListStyleSheet );
         /** @brief 문서로 생성한 화면에 문서 경로, 바인딩, 스타일 시트를 기록하고 올립니다. */
         UIScreenHandle pushDocumentScreen( unique_ptr<UIScreen> screen, string_view documentPath, vector<UIBindingDef> listBinding, vector<string> listStyleSheet );
         /** @brief 화면의 스타일 시트를 테마 @p themeName(빈 이름이면 지금 테마) 시트, 화면 시트 순서로 다시 적용하고 트리 전체를 다시 맞추게 합니다. */
@@ -365,7 +373,7 @@ namespace sw
         void syncScreenSwitches();
         /**
          * @brief 뷰포트에서 화면 등급(`screen` — compact · regular)과 방향(`orientation`)을 정해 리소스 태그로 올립니다. 바뀐 프레임에만 올린다 — 그 태그를 쓴 문서는 다시 읽힌다.
-         * @details 좁은 화면 재배치는 데이터다(문서의 `_when` 변형) — 코드가 배치를 고르지 않는다. 경계는 `UIScaleSettings::_compactMaxWidth`(UI 단위)다.
+         * @details 좁은 화면 재배치는 데이터다(문서의 `_when` 변형) — 코드가 배치를 고르지 않는다. 규칙은 `UIScaleSettings::makeScreenTags` 한 곳이다(에디터 미리보기도 같은 함수).
          *          Android 의 smallestWidth 자원 한정자 · 유니티 Device Simulator 의 방향과 같은 자리다(기억).
          */
         void syncScreenTags( const UIViewport& viewport );
@@ -462,9 +470,8 @@ namespace sw
         unique_ptr<TextLayoutEngine> _textLayout;
         UIScaleSettings              _scaleSettings;
         UIViewport                   _viewport;
-        const utf8*                  _pScreenTag;      ///< 마지막으로 올린 `screen` 값(`syncScreenTags`). 아직 없으면 nullptr
-        const utf8*                  _pOrientationTag; ///< 마지막으로 올린 `orientation` 값
-        UICanvasPaintState           _paintState;      ///< 그리기 목록, 재사용 판정 상태, 레이어 숨김 요청 수입니다.
+        ResourceTagSet               _screenTags; ///< 마지막으로 올린 화면 태그(`syncScreenTags`). 아직 없으면 빈 집합
+        UICanvasPaintState           _paintState; ///< 그리기 목록, 재사용 판정 상태, 레이어 숨김 요청 수입니다.
         UIScreenHandle               _activeScreen;
         vector<UIScreenHandle>       _listTickScratch;     ///< `tickScreens` 가 도는 번호입니다(프레임마다 다시 씁니다).
         vector<SwitchScreen>         _listSwitchScreen;    ///< 화면 스위치(`UIScreenSwitches`)마다 연 화면입니다(이름으로 찾습니다).

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  그림자 캐시 — 캐시를 켜도 그림이 같아야 한다(같은 골든 하나를 두 장이 지킨다): 캐시 끔 · 켬(층을 처음 그린 프레임 뒤 다시 쓰는 프레임).
+  무효화도 본다 — 정적 기둥을 순간이동하면(정적 그림자 세대가 오른다) 층을 다시 그려 그림자가 기둥을 따라간다. 옮긴 뒤의 끔 · 켬 두 장도 같은 골든 하나다.
+  상자는 움직이는 메시라 늘 캐시 층 위에 그려진다. 무대 maps/shadowtest_static(바닥 · 기둥 정적), 그림자 점광 하나(칸 여섯).
+  실행: ctest -R Scenario.game.empty.shadow_cache
+-->
+<Scenario name="game.empty.shadow_cache" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/shadowtest_static.scene.xml"/>
+	<Launch variable="gv_deferredShading" value="1"/>
+	<Launch variable="gv_postQuality" value="2"/>
+	<Launch variable="gv_renderScale" value="1"/>
+	<Launch variable="gv_viewDistanceScale" value="1"/>
+	<Launch variable="gv_shadowMapResolution" value="2048"/>
+	<Launch variable="gv_shadowFilter" value="0"/>
+	<Launch variable="gv_shadowCache" value="0"/>
+	<Wait frames="20"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Wait frames="10"/>
+	<Screenshot file="cache_off.ppm"/>
+	<Variable name="gv_shadowCache" value="1"/>
+	<Wait frames="10"/>
+	<Screenshot file="cache_on.ppm"/>
+
+	<!-- 정적 기둥을 옮긴다 — 캐시 층을 다시 그려야 그림자가 따라간다 -->
+	<DevCommand line="teleport Pillar -0.5 1.5 3"/>
+	<Wait frames="10"/>
+	<Screenshot file="cache_on_moved.ppm"/>
+	<Variable name="gv_shadowCache" value="0"/>
+	<Wait frames="10"/>
+	<Screenshot file="cache_off_moved.ppm"/>
+	<Wait frames="2"/>
+	<ExpectImagesDiffer first="cache_off.ppm" second="cache_off_moved.ppm" region="0.05,0.3,0.95,0.95" minDiffering="0.005"/>
+	<ExpectImage file="cache_off.ppm" golden="shadow_cache_static"/>
+	<ExpectImage file="cache_on.ppm" golden="shadow_cache_static"/>
+	<ExpectImage file="cache_off_moved.ppm" golden="shadow_cache_moved"/>
+	<ExpectImage file="cache_on_moved.ppm" golden="shadow_cache_moved"/>
+	<Pass/>
+</Scenario>

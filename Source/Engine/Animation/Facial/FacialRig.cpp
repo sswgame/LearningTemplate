@@ -137,7 +137,7 @@ namespace sw
         }
         for ( const hashed_string& bone : _gaze._listEyeBone )
         {
-            if ( skeleton.findBoneIndex( bone ) >= 0 )
+            if ( skeleton.findBoneIndex( bone ).has_value() )
                 continue;
             SW_LOG_ERROR_ID( "FacialRig.FacialRigEyeBone", "Facial rig '%#': eye bone '%#' is not in the skeleton", sourceLabel, bone.c_str() );
             bValid = false;
@@ -155,14 +155,14 @@ namespace sw
         return nullopt;
     }
 
-    int32 FacialRig::findVisemeIndex( const hashed_string& name ) const
+    optional<uint32> FacialRig::findVisemeIndex( const hashed_string& name ) const
     {
         for ( size_t poseIndex = 0; poseIndex < _listViseme.size(); ++poseIndex )
         {
             if ( _listViseme[poseIndex]._name == name )
-                return static_cast<int32>( poseIndex );
+                return static_cast<uint32>( poseIndex );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 } // namespace sw
 

@@ -684,29 +684,37 @@ namespace sw
         return context;
     }
 
+    ResourceContext ResourceContext::withTagOverride( const ResourceTagSet& overrideTags ) const
+    {
+        SW_ASSERT( _parentRule != ParentRule::RootName && "the pack cook resolves cook axes only - a preview context never reaches it" );
+        ResourceContext context = *this;
+        context._pTagOverride   = overrideTags.getTags().empty() ? nullptr : &overrideTags;
+        return context;
+    }
+
     ResourceContext ResourceContext::forDocument()
     {
-        return ResourceContext{ ParentRule::CatalogTable, nullptr, nullptr, nullptr, nullptr, AssetID{} };
+        return ResourceContext{ ParentRule::CatalogTable, nullptr, nullptr, nullptr, nullptr, AssetID{}, nullptr };
     }
 
     ResourceContext ResourceContext::forSchema( DataInheritance::MakeSchemaFunction pfnMakeSchema )
     {
-        return ResourceContext{ ParentRule::KnownSchema, pfnMakeSchema, nullptr, nullptr, nullptr, AssetID{} };
+        return ResourceContext{ ParentRule::KnownSchema, pfnMakeSchema, nullptr, nullptr, nullptr, AssetID{}, nullptr };
     }
 
     ResourceContext ResourceContext::forType( const TypeInfo& typeInfo )
     {
-        return ResourceContext{ ParentRule::KnownType, nullptr, &typeInfo, nullptr, nullptr, AssetID{} };
+        return ResourceContext{ ParentRule::KnownType, nullptr, &typeInfo, nullptr, nullptr, AssetID{}, nullptr };
     }
 
     ResourceContext ResourceContext::forMerge( DataInheritance::MergeFunction pfnMerge )
     {
-        return ResourceContext{ ParentRule::KnownMerge, nullptr, nullptr, pfnMerge, nullptr, AssetID{} };
+        return ResourceContext{ ParentRule::KnownMerge, nullptr, nullptr, pfnMerge, nullptr, AssetID{}, nullptr };
     }
 
     ResourceContext ResourceContext::forPackCook( IDataInheritanceSource& source )
     {
-        return ResourceContext{ ParentRule::RootName, nullptr, nullptr, nullptr, &source, AssetID{} };
+        return ResourceContext{ ParentRule::RootName, nullptr, nullptr, nullptr, &source, AssetID{}, nullptr };
     }
 
     bool ResourceComposer::compose( string_view text, string_view id, const ResourceContext& context, string& outText, bool& outbComposed )
@@ -722,7 +730,7 @@ namespace sw
 
         // 2. 조건 — 팩 쿠킹은 쿠킹 축만 풀고, 읽기는 모두 푼다(쿠킹 축 값은 런타임도 같다).
         const bool           bCook = context._parentRule == ResourceContext::ParentRule::RootName;
-        const ResourceTagSet tags  = engine::getSubsystem<ResourceTags>().capture();
+        const ResourceTagSet tags  = context._pTagOverride != nullptr ? engine::getSubsystem<ResourceTags>().captureWith( *context._pTagOverride ) : engine::getSubsystem<ResourceTags>().capture();
         vector<string>       listLoadTag;
         string               conditionText;
         bool                 bConditions = false;
@@ -743,7 +751,10 @@ namespace sw
             if ( ResourceComposerInternal::composeLayers( context, tags, current, bLayered, listLoadTag ) == false )
                 return false;
             bText = bText || bLayered;
-            engine::getSubsystem<ResourceComposition>().record( context._assetID.view(), listLoadTag, bLayered, bText ? string_view( current ) : text );
+            // 바꿔 끼운 태그로 합친 것은 기록하지 않는다 — 기록 · 접속 대조는 엔진 태그로 읽은 결과다(같은 id 의 엔진 합성을 덮지 않게).
+            // shortcut: 바꿔 끼운 합성은 엔진 태그가 바뀌어도 다시 읽기 목록에 오르지 않는다 - 같은 id 를 엔진 태그로도 읽었으면 그 다시 읽기가 캐시의 변형까지 다시 읽는다(`UITextAssetCache::reload`). 변형만 든 리소스가 생기면 기록에 변형 칸을 둔다.
+            if ( context._pTagOverride == nullptr )
+                engine::getSubsystem<ResourceComposition>().record( context._assetID.view(), listLoadTag, bLayered, bText ? string_view( current ) : text );
         }
         if ( bText )
         {
@@ -813,7 +824,7 @@ namespace sw
         return true;
     }
 
-    bool ResourceComposer::saveText( string_view absPath, string_view text )
+    bool ResourceComposer::saveText( string_view absPath, string_view text, const ResourceTagSet* pTagOverride )
     {
         // 덮어쓰기 층을 얹어 읽은 사본을 원본 자리에 쓰면 층 값이 원본에 박힌다 - 고칠 자리는 층 파일이다.
         if ( engine::getSubsystem<ResourceComposition>().getLayers().empty() == false )
@@ -831,8 +842,10 @@ namespace sw
         string sourceText;
         if ( FileUtil::isRegularFile( absPath ) == false || FileUtil::readTextFile( absPath, sourceText ) == false )
             return FileUtil::writeTextFile( absPath, text );
-        string restoredText;
-        if ( restoreConditions( text, sourceText, absPath, engine::getSubsystem<ResourceTags>().capture(), restoredText ) == false )
+        string               restoredText;
+        const ResourceTags&  engineTags = engine::getSubsystem<ResourceTags>();
+        const ResourceTagSet tags       = pTagOverride != nullptr ? engineTags.captureWith( *pTagOverride ) : engineTags.capture();
+        if ( restoreConditions( text, sourceText, absPath, tags, restoredText ) == false )
             return false;
         return FileUtil::writeTextFile( absPath, restoredText );
     }

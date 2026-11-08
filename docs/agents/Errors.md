@@ -23,6 +23,7 @@ One result type for the whole codebase (user decision 2026-11-08: "absent" is a 
 ### Rules
 
 - **No output parameter for the reason.** `bool f( …, string& outError )` / `outReason` is gone: the reason is the return value. Other output parameters (filling a list the caller owns) stay.
+  - The same defect in other spellings counts too (lint kinds `out-error-pointer` · `out-text-on-failure`): an optional pointer `string* pOutError` / `pOutReason` / `pOutMessage` (a caller passing `nullptr` silently drops the reason), and a text output under any name (`outReply`, `outUnknown`, `outFailureText` …) that the body writes only right before `return false` / `nullptr` / `nullopt` / `unexpected`.
 - **No `std::optional`.** Use `sw::optional<T>`. A default-constructed `sw::optional` is empty; `sw::expected<T, E>` has no default constructor (a result is a value or a reason, never "nothing yet" — Unreal `TValueOrError` is the same).
 - **No fallback through `value_or`** for a required value — a missing required value is an error (Constants.md). `value_or` is for "absent is normal" lookups that pick a default by design.
 - **Wrong-side access stops the process.** `value()` on an error and `error()` on a value call `SW_LOW_LEVEL_FATAL` (no exceptions in the engine); `operator*` / `operator->` assert in Debug, like `std`.
@@ -43,6 +44,6 @@ Godot returns `Error` codes plus out parameters; Unity (C#) uses exceptions or `
 
 ### Migration state
 
-- `Source/Core` is migrated: no `std::optional`, no `string& outError` (enforced as 0 by `py -3 -m Scripts result-types`, run by the commit hook). The one exemption is `Expected.h` itself.
+- `Source/Core` is migrated: no `std::optional`, no `string& outError` (enforced as 0 by `py -3 -m Scripts result-types`, run by the commit hook). Exemptions are data, per file and kind, in the baseline's `_coreExemptions` with a reason (`Expected.h`'s bridge, one pre-rule failure-only text output).
 - Outside Core the remaining count per file is in `Config/Dev/ResultTypeBaseline.json`: it may only go down. When a file drops, run `py -3 -m Scripts result-types --ratchet` and commit the baseline with it.
 - Until the baseline is empty, `sw::optional<T>` and `std::optional<T>` convert implicitly both ways, so a migrated caller can receive a not-yet-migrated `std::optional` result and the other way round (folders migrate on separate branches). Because both ways convert, a conditional that mixes the two is ambiguous — wrap one side (`cond ? optional<T>{ f() } : nullopt`). Delete both conversions (marked `shortcut:` in `Expected.h`) with the last baseline entry.

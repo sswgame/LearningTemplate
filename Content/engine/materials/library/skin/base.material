@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 외형 라이브러리 갈래 바탕: 피부 — 미리 적분한 피부의 값싼 판(채널마다 감싼 확산 × 곡률) + 피지 막(코트, _maskMap R 이 T 존 마스크). 화면 공간 SSS 프로필 패스를 두지 않은 까닭은 appearance_lit.hlsl 머리말. -->
+<MaterialDef formatVersion="0" name="AppearanceSkin" _base="engine/materials/library/appearance.material">
+	<_properties>
+		<item name="_color" defaultValue="0.85 0.62 0.5 1" />
+		<item name="_subsurfaceColor" defaultValue="1 0.35 0.2 1" />
+		<item name="_subsurfaceRadius" defaultValue="0.55" />
+		<item name="_roughness" defaultValue="0.55" />
+		<item name="_specular" defaultValue="0.35" />
+		<item name="_coatWeight" defaultValue="0.25" />
+		<item name="_coatRoughness" defaultValue="0.3" />
+	</_properties>
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_alwaysDefines>
+			<item>MATERIAL_DOMAIN_SURFACE</item>
+			<item>MATERIAL_FORWARD_ONLY</item>
+			<item>MATERIAL_LOBE_SUBSURFACE</item>
+		</_alwaysDefines>
+	</_permutations>
+</MaterialDef>

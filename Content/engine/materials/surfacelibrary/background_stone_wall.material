@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 줄눈 있는 돌담 — 보로노이 돌, 넓은 회색 줄눈, 돌마다 색, 깊은 범프. 부모(environmentsurface.material)의 값만 바꾼 프리셋이다. -->
+<MaterialDef formatVersion="0" name="StoneWallGrout" _base="engine/materials/environmentsurface.material">
+	<_properties>
+		<item name="_baseColor" defaultValue="0.50 0.48 0.44 1"/>
+		<item name="_roughness" defaultValue="0.85"/>
+		<item name="_secondaryColor" defaultValue="0.65 0.63 0.58 1"/>
+		<item name="_secondaryRoughness" defaultValue="1"/>
+		<item name="_patternScale" defaultValue="0.35 0.35 0.12 0"/>
+		<item name="_patternShape" defaultValue="4 0.3 0.02 1"/>
+		<item name="_noiseStrength" defaultValue="0.3"/>
+		<item name="_noiseScale" defaultValue="0.06"/>
+		<item name="_porosity" defaultValue="0.7"/>
+	</_properties>
+</MaterialDef>

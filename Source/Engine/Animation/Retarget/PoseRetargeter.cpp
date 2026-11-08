@@ -22,13 +22,13 @@ namespace sw
 
             [[nodiscard]] static bool findBone( const Skeleton& skeleton, const hashed_string& name, const utf8* pSide, uint32& outBone )
             {
-                const int32 boneIndex = skeleton.findBoneIndex( name );
-                if ( boneIndex < 0 )
+                const optional<uint32> boneIndex = skeleton.findBoneIndex( name );
+                if ( boneIndex.has_value() == false )
                 {
                     SW_LOG_ERROR_ID( "PoseRetargeter.RetargetSkeletonNoBone", "Retarget: %# skeleton has no bone '%#'", pSide, name.c_str() );
                     return false;
                 }
-                outBone = static_cast<uint32>( boneIndex );
+                outBone = *boneIndex;
                 return true;
             }
         };
@@ -178,10 +178,11 @@ namespace sw
         {
             for ( uint32 targetBone = 0; targetBone < targetSkeleton.getBoneCount(); ++targetBone )
             {
-                const int32 sourceBone = sourceSkeleton.findBoneIndex( targetSkeleton.getBone( targetBone )._name );
-                if ( sourceBone < 0 )
+                // 같은 이름 짝짓기다 — 원본에 없는 대상 본은 짝이 없는 것이 정상이다.
+                const optional<uint32> sourceBone = sourceSkeleton.findBoneIndex( targetSkeleton.getBone( targetBone )._name );
+                if ( sourceBone.has_value() == false )
                     continue;
-                inoutListSourceBone.push_back( static_cast<uint32>( sourceBone ) );
+                inoutListSourceBone.push_back( *sourceBone );
                 inoutListTargetBone.push_back( targetBone );
             }
         }

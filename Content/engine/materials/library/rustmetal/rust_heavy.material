@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 외형 라이브러리 프리셋(rustmetal): 녹이 거의 덮은 쇠. 값만 바꾼다 — 셰이더 변형은 갈래 바탕과 같다. -->
+<MaterialDef formatVersion="0" name="RustHeavy" _base="engine/materials/library/rustmetal/base.material">
+	<_properties>
+		<item name="_patternAmount" defaultValue="1" />
+	</_properties>
+</MaterialDef>

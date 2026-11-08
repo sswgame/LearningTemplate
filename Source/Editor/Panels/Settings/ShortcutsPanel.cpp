@@ -33,31 +33,6 @@ namespace sw::editor
                 formatstring( mark.data(), mark.capacity(), "shortcuts.%#.%#", pAction, commandID.c_str() );
                 return mark;
             }
-
-            static EditorInputActions& getInputActions() { return EditorInputActions::getInEditorContext(); }
-        };
-
-        /** @brief 조합 받기가 부르는 입력 맵 쪽을 `EditorInputActions` 로 잇습니다. 상태가 없어 부를 때마다 만들어 씁니다. */
-        class EditorShortcutBindings final : public IShortcutBindings
-        {
-        public:
-            bool rebindShortcut( string_view action, Key key, uint8 modifierMask, hashed_string& outConflictAction ) override
-            {
-                return ShortcutsPanelInternal::getInputActions().rebindShortcut( action, key, modifierMask, outConflictAction );
-            }
-            bool swapShortcut( string_view action, string_view otherAction, Key key, uint8 modifierMask ) override
-            {
-                return ShortcutsPanelInternal::getInputActions().swapShortcut( action, otherAction, key, modifierMask );
-            }
-            void resetShortcut( string_view action ) override { ShortcutsPanelInternal::getInputActions().resetShortcut( action ); }
-            void resetAllShortcuts() override { ShortcutsPanelInternal::getInputActions().resetAllShortcuts(); }
-            void setCommandsSuspended( bool bSuspended ) override
-            {
-                // 에디터가 내려가는 중(패널 종료)이면 입력 서브시스템이 이미 없을 수 있다.
-                EditorInputActions* pInputActions = EditorInputActions::findInEditorContext(); // 선택: 종료 경로에서 컨텍스트가 먼저 사라진다
-                if ( pInputActions != nullptr )
-                    pInputActions->setCommandsSuspended( bSuspended );
-            }
         };
     } // namespace
 } // namespace sw::editor
@@ -68,13 +43,14 @@ namespace sw::editor
         : IEditorPanel( false )
         , _filter{}
         , _capture{}
+        , _viewModel{}
     {
     }
 
     void ShortcutsPanel::drawContent()
     {
-        const EditorInputActions& inputActions = ShortcutsPanelInternal::getInputActions();
-        EditorShortcutBindings    bindings;
+        const EditorInputActions& inputActions = ShortcutsViewModel::getInputActions();
+        IShortcutBindings&        bindings     = _viewModel;
 
         pollShortcutCapture( bindings );
 
@@ -118,7 +94,7 @@ namespace sw::editor
 
     void ShortcutsPanel::drawShortcutTable( const EditorInputActions& inputActions, IShortcutBindings& bindings )
     {
-        const EditorCommandRegistry& registry = EditorCommandRegistry::getInEditorContext();
+        const EditorCommandRegistry& registry = ShortcutsViewModel::getCommandRegistry();
         const EditorListFilter       filter{ _filter.c_str() };
         if ( ImGui::BeginTable( "##Shortcuts", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY ) == false )
             return;
@@ -175,20 +151,17 @@ namespace sw::editor
 
     void ShortcutsPanel::shutdown()
     {
-        EditorShortcutBindings bindings;
-        _capture.cancel( bindings );
+        _capture.cancel( _viewModel );
     }
 
     void ShortcutsPanel::onPanelCollapsed()
     {
-        EditorShortcutBindings bindings;
-        _capture.cancel( bindings );
+        _capture.cancel( _viewModel );
     }
 
     void ShortcutsPanel::onPanelClosed()
     {
-        EditorShortcutBindings bindings;
-        _capture.cancel( bindings );
+        _capture.cancel( _viewModel );
     }
 
     uint32 ShortcutsPanel::getPendingConflictCount()

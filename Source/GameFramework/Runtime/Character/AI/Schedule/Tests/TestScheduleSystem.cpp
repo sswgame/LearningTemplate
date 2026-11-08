@@ -95,7 +95,7 @@ SW_TEST_CASE( ScheduleSystemTest, SameInputsGiveTheSameState )
     first.advanceTo( 18 * kHour );
     second.advanceTo( 18 * kHour );
     SW_EXPECT_EQUAL( first.computeStateHash(), second.computeStateHash() );
-    SW_EXPECT_TRUE( first.getPlan( first.findNPCIndex( sw::hashed_string( "a" ) ) ).empty() == false );
+    SW_EXPECT_TRUE( first.getPlan( first.findNPCIndex( sw::hashed_string( "a" ) ).value() ).empty() == false );
 }
 
 /**

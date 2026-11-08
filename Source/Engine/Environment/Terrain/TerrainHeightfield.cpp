@@ -47,7 +47,20 @@ namespace sw
         , _resolution{ 0 }
         , _splatWidth{ 0 }
         , _splatHeight{ 0 }
+        , _arrLayerRule{}
+        , _bAnyLayerRule{ SW_FALSE }
     {
+    }
+
+    void TerrainHeightfield::setLayerRules( const vector<TerrainLayerRule>& listRule )
+    {
+        bool bAnyRule = false;
+        for ( uint32 layer = 0; layer < SurfaceLayerWeights::kLayerCount; ++layer )
+        {
+            _arrLayerRule[layer] = layer < listRule.size() ? listRule[layer] : TerrainLayerRule{};
+            bAnyRule             = bAnyRule || _arrLayerRule[layer].isActive();
+        }
+        _bAnyLayerRule = bAnyRule ? SW_TRUE : SW_FALSE;
     }
 
     bool TerrainHeightfield::initialize( const HeightfieldAsset& data, const float3& origin, const float2& size, float32 heightMin, float32 heightMax )
@@ -427,7 +440,24 @@ namespace sw
     {
         if ( isValid() == false )
             return SurfaceLayerWeights{};
-        return computeLayerWeightsAtUV( ( worldX - _origin._x ) / _size._x, ( worldZ - _origin._z ) / _size._y );
+        const SurfaceLayerWeights painted = computeLayerWeightsAtUV( ( worldX - _origin._x ) / _size._x, ( worldZ - _origin._z ) / _size._y );
+        return applyLayerRules( painted, worldX, worldZ );
+    }
+
+    SurfaceLayerWeights TerrainHeightfield::applyLayerRules( const SurfaceLayerWeights& painted, float32 worldX, float32 worldZ ) const
+    {
+        float32 height{ 0.0f };
+        float3  normal{ 0.0f, 1.0f, 0.0f };
+        if ( _bAnyLayerRule == SW_FALSE || findHeightAt( worldX, worldZ, height ) == false || findNormalAt( worldX, worldZ, normal ) == false )
+            return painted;
+        const float32       slopeRadians = TerrainLayerRule::computeSlopeRadians( normal._y );
+        SurfaceLayerWeights result       = painted;
+        for ( uint32 layer = 0; layer < SurfaceLayerWeights::kLayerCount; ++layer )
+        {
+            if ( _arrLayerRule[layer].isActive() )
+                result = result.computeCovered( layer, _arrLayerRule[layer].computeCoverage( slopeRadians, height ) );
+        }
+        return result;
     }
 } // namespace sw
 

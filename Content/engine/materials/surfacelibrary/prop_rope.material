@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 밧줄 — 꼬인 가닥(기운 줄 무늬)과 범프, 섬유 잔무늬. 부모(environmentsurface.material)의 값만 바꾼 프리셋이다. -->
+<MaterialDef formatVersion="0" name="Rope" _base="engine/materials/environmentsurface.material">
+	<_properties>
+		<item name="_baseColor" defaultValue="0.62 0.52 0.36 1"/>
+		<item name="_roughness" defaultValue="0.95"/>
+		<item name="_secondaryColor" defaultValue="0.35 0.28 0.18 1"/>
+		<item name="_secondaryRoughness" defaultValue="1"/>
+		<item name="_patternScale" defaultValue="0.05 0.05 0.5 1.5"/>
+		<item name="_patternShape" defaultValue="5 0 0.004 0"/>
+		<item name="_noiseStrength" defaultValue="0.2"/>
+		<item name="_noiseScale" defaultValue="0.004"/>
+		<item name="_porosity" defaultValue="1"/>
+	</_properties>
+</MaterialDef>

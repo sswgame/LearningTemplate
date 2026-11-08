@@ -2,6 +2,7 @@
 
 #include "Editor/ImGuiEditor.h"
 
+#include "Core/Diagnostics/SubsystemTimingReport.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
@@ -64,7 +65,6 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Object/Component/CameraComponent.h"
-#include "Engine/Profiling/SubsystemTimingReport.h"
 #include "Engine/Renderer/Capture/CaptureReadiness.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"

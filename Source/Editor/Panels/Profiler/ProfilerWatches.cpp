@@ -7,6 +7,7 @@
 #include "pch.h"
 
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
+#include "Editor/Panels/Profiler/Model/ProfilerCaptureModel.h"
 #include "Editor/Panels/Profiler/ProfilerPanel.h"
 #include "Editor/SelfTest/EditorWatchSupport.h"
 
@@ -102,7 +103,7 @@ namespace sw::editor
         [[nodiscard]] bool readProfilerTimelineThreadCount( const GameObjectManager* /*pManager*/, float64& outValue )
         {
             constexpr uint32     kRecentFrameCount = 4;
-            const FrameProfiler* pProfiler         = ProfilerCaptureModel::findFrameProfiler();
+            const FrameProfiler* pProfiler         = ProfilerCaptureModel::findProfiler();
             if ( pProfiler == nullptr ) // 필수 서비스: 없으면 버그
             {
                 SW_LOG_ERROR_ID( "ProfilerWatches.WatchProfilerTimelineThreadCountFrameProfilerMissing", "[Scenario] watch ProfilerTimelineThreadCount: FrameProfiler is missing" );

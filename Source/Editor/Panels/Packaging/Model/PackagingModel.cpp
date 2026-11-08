@@ -161,8 +161,8 @@ namespace sw::editor
             SW_LOG_WARNING_ID( "PackagingPanel.PackagingFailed", "Packaging failed at '%#': %#", _progress._stepName, _progress._failure );
     }
 
-    void PackagingModel::showInFileExplorer( const string& folder )
+    bool PackagingModel::openOutputFolder() const
     {
-        (void)EditorAssetFileCommands::showInFileExplorer( folder );
+        return EditorAssetFileCommands::showInFileExplorer( _progress._outputFolder );
     }
 } // namespace sw::editor

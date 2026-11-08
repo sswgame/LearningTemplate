@@ -17,6 +17,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/GameData/CustomizationValueSet.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceTypes.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/SkinLayer.h"
 
 namespace sw
 {
@@ -40,6 +41,7 @@ namespace sw
 
         CustomizationValueSet         _customization{};
         vector<AppearanceSlotRequest> _listSlot{};
+        vector<SkinLayerValue>        _listSkinLayer{}; ///< 피부 층(화장 · 문신) — 순서가 그리기 순서. 카테고리는 층 종류의 `category`
         vector<hashed_string>         _listCategory{};
         hashed_string                 _basePresetID{};
         hashed_string                 _schema{};
@@ -78,14 +80,15 @@ namespace sw
         // 선택을 비트로 씁니다(지금 판 `kShareCodeVersion`). 네트워크 외형 동기화에 쓰며, 받는 쪽이 펼쳐서 해석하면 같은 해시가 나옵니다. 공유 코드와 세이브도 이것을 씁니다.
         // 판을 넘어 뜻이 남게 쓴다 — 슬라이더는 실제 값(32 비트, 스키마 범위가 바뀌어도 그대로), 선택이 담은 카테고리의 모든 매개변수를 적는다(정하지 않은 값은 지금 기본값 —
         // 뒤 판이 기본값을 바꿔도 저장된 캐릭터는 그대로다). 색은 성분마다 8 비트, 피해는 8 비트(해석기의 정밀도와 같다). 값마다 종류를 2 비트로
-        static void writeSelection( BitWriter& writer, const AppearanceSelection& selection, const AppearanceDatabase& database );
+        static void writeSelection( BitWriter& writer, const AppearanceSelection& selection, const AppearanceDatabase& database, uint32 version = kShareCodeVersion );
         /** @brief 읽습니다. 비트가 모자라거나 개수가 비정상이면 false 입니다. */
         [[nodiscard]] static bool readSelection( BitReader& reader, const AppearanceDatabase& database, AppearanceSelection& outSelection, uint32 formatVersion = kShareCodeVersion );
 
         // 공유 코드입니다. 판 1 바이트, 선택 비트, CRC32 를 base64url(패딩 없음)로 쓴 짧은 문자열입니다. 체크섬이 틀리거나 이 빌드보다 새 판이면 거절하고, 옛 판은 읽습니다
         // (플레이어 프리셋 저장소가 이 문자열로 저장한다 — 판을 올리면 옛 판 읽기를 남기고 옛 판 코드 테스트를 더한다).
         // 판 1: 슬라이더가 그때 스키마 범위의 16 비트 단계, 정한 값만. 판 2: 슬라이더 실제 값, 담은 카테고리의 모든 매개변수.
-        static constexpr uint32 kShareCodeVersion       = 2;
+        // 판 3: 판 2 에 슬롯마다 플레이어 숨김 1 비트, 슬롯 뒤에 피부 층 목록(층 id 해시 · 색 · 불투명도 · 배치 · 대칭 · 숨김). @p version 으로 옛 판을 쓰면 그 판에 없는 칸이 빠진다.
+        static constexpr uint32 kShareCodeVersion       = 3;
         static constexpr uint32 kOldestShareCodeVersion = 1;
 
         static string encode( const AppearanceSelection& selection, const AppearanceDatabase& database );

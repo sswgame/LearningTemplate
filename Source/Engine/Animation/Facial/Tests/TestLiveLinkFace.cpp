@@ -161,8 +161,8 @@ SW_TEST_CASE( LiveLinkFaceTest, LayoutRejectsBadChannels )
     LiveLinkFaceLayout layout{};
     SW_EXPECT_TRUE( layout.loadFromXMLText( "<LiveLinkFaceLayout _packetVersion=\"6\"><_listChannel><item>A</item><item>B</item></_listChannel></LiveLinkFaceLayout>", "good" ) );
     SW_EXPECT_EQUAL( 6, layout._packetVersion );
-    SW_EXPECT_EQUAL( 1, layout.findChannelIndex( hashed_string{ "B" } ) );
-    SW_EXPECT_EQUAL( -1, layout.findChannelIndex( hashed_string{ "C" } ) );
+    SW_EXPECT_TRUE( layout.findChannelIndex( hashed_string{ "B" } ) == 1u );
+    SW_EXPECT_FALSE( layout.findChannelIndex( hashed_string{ "C" } ).has_value() );
 
     SW_EXPECT_FALSE( layout.loadFromXMLText( "<LiveLinkFaceLayout _packetVersion=\"6\"><_listChannel><item>A</item><item>A</item></_listChannel></LiveLinkFaceLayout>", "duplicate" ) );
     SW_EXPECT_TRUE( layout._listChannel.empty() );

@@ -53,6 +53,7 @@ namespace sw
             {     RHIFormat::EAC_R11_UNORM,         WGPUTextureFormat_EACR11Unorm, WGPUFeatureName_TextureCompressionETC2},
             {    RHIFormat::EAC_RG11_UNORM,        WGPUTextureFormat_EACRG11Unorm, WGPUFeatureName_TextureCompressionETC2},
             {RHIFormat::R32G32B32A32_FLOAT,         WGPUTextureFormat_RGBA32Float,                             kNoFeature},
+            {      RHIFormat::R16G16_FLOAT,           WGPUTextureFormat_RG16Float,                             kNoFeature},
         };
 
         /** @brief 표의 줄입니다. 범위 밖이면 `Unknown` 줄입니다. */

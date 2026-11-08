@@ -24,6 +24,7 @@ static const float kAbsorptionPerMeter = 0.8f;
 // 깊이 비교의 여유(장치 깊이) — 물 표면과 같은 깊이의 장면(물가에 닿은 바닥)을 물 앞으로 오판하지 않는다.
 static const float kDepthCompareBias = 1e-5f;
 #include "gerstner.hlsli"
+#include "scene_refraction.hlsli"
 
 // water.material 의 프로퍼티와 같은 이름 · 타입이다.
 SW_MATERIAL_BEGIN
@@ -170,7 +171,7 @@ float4 computeMaterialLighting( PixelContext context, MaterialSurface surface )
 
     // 굴절 · 화면 공간 두께 — 장면 색 사본이 걸린 파이프라인은 물 뒤의 장면을 파도 노멀로 비껴 읽어 물 색과 섞고, 그 픽셀을 불투명하게 덮는다(장면 색은 이미 이 섞기의 한 항이다).
     // 사본은 반투명 전체 앞에 떠 둔 것이라 물보다 먼저 그려진 다른 반투명은 이 픽셀에서 지워진다. 인덱스는 패스 상수라 분기가 고르다.
-    SW_BRANCH if ( g_SceneColorCopyIndex != kInvalidIndex )
+    SW_BRANCH if ( SceneRefraction::isAvailable() )
     {
         const float2 screenUv  = context._position.xy * g_SourceTexel.xy;
         float        thickness = context._user._shading.w; // 정점에 구운 깊이(m) — 깊이 사본이 없을 때의 두께
@@ -182,18 +183,16 @@ float4 computeMaterialLighting( PixelContext context, MaterialSurface surface )
             const float3 scenePosition = Transform::computeWorldPositionFromDepth( screenUv, sceneDepth );
             const bool   bSceneBehind  = sceneDepth + kDepthCompareBias >= context._position.z;
             thickness                  = bSceneBehind ? length( scenePosition - context._worldPosition ) : 0.0f;
-            // 비껴 읽은 자리가 물 앞의 물체면 그 물체의 색을 끌어오지 않는다(굴절을 버리고 제자리를 읽는다).
-            const float2 offsetUv       = normal.xz * kRefractionStrength * saturate( thickness / kRefractionFullDepth );
-            const float2 candidateUv    = saturate( screenUv + offsetUv );
-            const float  candidateDepth = Bindless::sampleIndexWith( g_SceneDepthCopyIndex, SW_SAMPLER_POINT_CLAMP, candidateUv ).r;
-            refractUv                   = ( candidateDepth + kDepthCompareBias >= context._position.z ) ? candidateUv : screenUv;
-            alpha                       = max( alpha, 1.0f - exp( -thickness * kAbsorptionPerMeter ) );
+            // 비껴 읽은 자리가 물 앞의 물체면 그 물체의 색을 끌어오지 않는다(굴절을 버리고 제자리를 읽는다 — 유리와 같은 한 벌, scene_refraction.hlsli).
+            const float2 offsetUv = normal.xz * kRefractionStrength * saturate( thickness / kRefractionFullDepth );
+            refractUv             = SceneRefraction::resolveUv( screenUv, offsetUv, context._position.z );
+            alpha                 = max( alpha, 1.0f - exp( -thickness * kAbsorptionPerMeter ) );
         }
         else
         {
             refractUv = saturate( screenUv + normal.xz * kRefractionStrength * saturate( thickness / kRefractionFullDepth ) );
         }
-        const float3 refracted = Bindless::sampleIndex( g_SceneColorCopyIndex, refractUv ).rgb;
+        const float3 refracted = SceneRefraction::sampleColor( refractUv, 0.0f );
         color                  = lerp( refracted, color, alpha );
         alpha                  = 1.0f;
     }

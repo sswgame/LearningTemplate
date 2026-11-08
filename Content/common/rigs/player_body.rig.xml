@@ -9,6 +9,21 @@
 				<item root="upperleg.r" mid="lowerleg.r" end="foot.r" />
 			</feet>
 		</item>
+		<item type="FootPlacement"
+		      name="Feet"
+		      pelvis="hips"
+		      trace_up="0.5"
+		      trace_down="0.5"
+		      max_pelvis_drop="0.3"
+		      max_raise="0.35"
+		      interp_speed="12"
+		      max_align_degrees="25"
+		      max_lod="1">
+			<feet>
+				<item root="upperleg.l" mid="lowerleg.l" end="foot.l" />
+				<item root="upperleg.r" mid="lowerleg.r" end="foot.r" />
+			</feet>
+		</item>
 		<item type="TwoBoneIK" name="LeftHandGrip" root="upperarm.l" mid="lowerarm.l" end="hand.l" target="Grip" />
 		<item type="ScaleBone" name="HideHead" bone="head" weight_slot="FirstPersonHead" />
 	</nodes>

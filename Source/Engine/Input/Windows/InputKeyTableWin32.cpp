@@ -4,8 +4,6 @@
 
 #include "Engine/Input/Map/InputKeyTable.h"
 
-#if defined( SW_PLATFORM_WINDOWS )
-
 namespace sw
 {
     namespace
@@ -521,4 +519,3 @@ namespace sw
         return InputKeyTableWin32Internal::kArrPollKeys;
     }
 } // namespace sw
-#endif

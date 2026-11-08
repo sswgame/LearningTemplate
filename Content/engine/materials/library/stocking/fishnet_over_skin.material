@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 외형 라이브러리 프리셋(stocking): 망사 스타킹(피부 위). 값만 바꾼다 — 셰이더 변형은 갈래 바탕과 같다. -->
+<MaterialDef formatVersion="0" name="FishnetOverSkin" _base="engine/materials/library/stocking/base.material">
+</MaterialDef>

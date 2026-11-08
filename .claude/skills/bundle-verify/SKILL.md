@@ -14,7 +14,7 @@ description: "이 저장소의 묶음 끝 전체 검증과 push 절차: Windows 
 2. **`bash Scripts/dev/VerifyBundle.sh` 를 백그라운드로 한 번.** Windows(Debug · Release · 서버 · `shipping-check`)가 모두 통과해야 Linux(`linux-verify` 의 `all`)가 시작한다. Windows 가 지면 Linux 를 돌리지 않는다(사용자 결정). 이 동안 본 트리의 Source · Content 를 고치지 않는다. 그 사이 코드는 다음 묶음으로 미룬다.
    한 단계가 지면 고친 뒤 처음부터 돌리지 않는다: 고친 것이 앞 단계에 영향을 주지 않으면 `--from release|server|shipping` 으로 그 단계부터 돌린다.
 3. **로그 분류:** `build/<프리셋>/Testing/Logs/*.log` 의 Error · Warning 을 id 별로 모아 테스트가 선언한 것인지 본다. 통과만 보지 않는다.
-4. **push:** 끝 줄이 `VERIFIED=<sha>` 이면 `git push origin <sha>:main`. 검증 뒤에 코드를 고쳤으면 그 커밋은 아직 검증되지 않았다.
+4. **push:** Windows 단계가 모두 통과하면(`WINDOWS_OK` 줄의 sha) Linux 를 기다리지 않고 `git push origin <sha>:main`(사용자 결정 2026-11-09). Linux 가 지면 고친 커밋을 다음 검증에서 다시 push 한다. 검증 뒤에 코드를 고쳤으면 그 커밋은 아직 검증되지 않았다.
 
 실패하면 `scenario-debug` 로 고치고 **영향 범위만** 다시 돌린 뒤, 고친 것이 공통 코드(엔진 · 입력 · 자동화)면 2 번을 다시 돌린다. 시나리오 · 테스트 한 곳만 고쳤으면 그 체인만 통과해도 push 한다.
 

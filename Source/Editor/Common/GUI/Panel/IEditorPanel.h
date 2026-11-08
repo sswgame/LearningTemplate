@@ -157,8 +157,8 @@ namespace sw::editor
         virtual EditorTextExtent getInitialPanelSize() const { return EditorTextExtent::ofText( 85.0f, 22.0f ); }
 
         /**
-         * @brief 이번 프레임 뒤에 곧바로 다음 프레임이 필요하다고 알립니다(시간으로 움직이는 패널 — `EditorRenderViews::requestAnimationFrame`). 에디터 컨텍스트가 없으면 아무것도 하지 않습니다.
-         * @details 패널 View 가 작업 공간 헤더(`EditorContext` · `EditorRenderViews`)를 보지 않게 여기를 지난다(`docs/agents/EditorUI.md` MVVM 계약).
+         * @brief 다음 프레임을 곧 그리게 합니다(`EditorRenderViews::requestAnimationFrame`) — 재생 · 애니메이션 중인 창이 에디터 유휴로 들지 않게 한다.
+         * @details 패널 View 가 작업 공간 헤더(`EditorContext` · `EditorRenderViews`)를 보지 않게 기반이 창구를 둔다(`docs/agents/EditorUI.md` MVVM 계약). 에디터가 서 있을 때(그리기)만 부른다.
          */
         static void requestAnimationFrame();
         /** @brief 지금 씬을 고쳐도 되면 true 입니다(플레이가 멈췄고 편집을 붙잡지 않았다 — `EditorPlaySession::areSceneEditsAllowed`). 프레임마다 묻는 UI 잠금용이다. View 가 플레이 세션 헤더를 보지 않게 여기를 지난다. */

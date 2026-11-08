@@ -912,11 +912,11 @@ SW_TEST_CASE( FightingTest, CatalogReadsFieldsAndCollectsStances )
     SW_EXPECT_TRUE( pDef->_listMove[2].allowsPosture( FighterPosture::Stance ) );
     SW_EXPECT_FALSE( pDef->_listMove[2].allowsPosture( FighterPosture::Standing ) );
 
-    SW_EXPECT_EQUAL( 1, pDef->findMoveIndex( hashed_string( "grab" ) ) );
-    SW_EXPECT_EQUAL( -1, pDef->findMoveIndex( hashed_string( "none" ) ) );
-    SW_EXPECT_EQUAL( 0, pDef->findStanceIndex( hashed_string( "crane" ) ) );
-    SW_EXPECT_EQUAL( 1, pDef->findStanceIndex( hashed_string( "tiger" ) ) );
-    SW_EXPECT_EQUAL( -1, pDef->findStanceIndex( hashed_string( "none" ) ) );
+    SW_EXPECT_EQUAL( 1, pDef->findMoveIndex( hashed_string( "grab" ) ).value() );
+    SW_EXPECT_FALSE( pDef->findMoveIndex( hashed_string( "none" ) ).has_value() );
+    SW_EXPECT_EQUAL( 0, pDef->findStanceIndex( hashed_string( "crane" ) ).value() );
+    SW_EXPECT_EQUAL( 1, pDef->findStanceIndex( hashed_string( "tiger" ) ).value() );
+    SW_EXPECT_FALSE( pDef->findStanceIndex( hashed_string( "none" ) ).has_value() );
 }
 
 /**
@@ -947,7 +947,7 @@ SW_TEST_CASE( FightingTest, CatalogDropsOnlyTheBrokenMoves )
     const FighterDef* pDef = catalog.find( hashed_string( "kaz" ) );
     SW_REQUIRE_NOT_NULL( pDef );
     SW_REQUIRE_EQUAL( size_t( 1 ), pDef->_listMove.size() );
-    SW_EXPECT_EQUAL( 0, pDef->findMoveIndex( hashed_string( "good" ) ) );
+    SW_EXPECT_EQUAL( 0, pDef->findMoveIndex( hashed_string( "good" ) ).value() );
 }
 
 /**

@@ -38,7 +38,9 @@ namespace sw::editor
             static const PackagingPanel* findPanel()
             {
                 const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
-                return pPanels != nullptr ? pPanels->findPanel<PackagingPanel>() : nullptr;
+                if ( pPanels == nullptr )
+                    return nullptr;
+                return pPanels->findPanel<PackagingPanel>();
             }
 
             [[nodiscard]] static bool readPackagingState( const GameObjectManager* /*pManager*/, float64& outValue )
@@ -132,7 +134,7 @@ namespace sw::editor
         const bool               bHasFolder = progress._state == PackagingState::Succeeded && progress._outputFolder.empty() == false;
         ImGui::BeginDisabled( bHasFolder == false );
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "FolderOpen" ), SW_LOCKEY( "EdButton", "OpenFolder" ), "Open Folder" ) ) )
-            PackagingModel::showInFileExplorer( progress._outputFolder );
+            (void)_model.openOutputFolder(); // 탐색기를 못 띄우면 경고가 남는다
         ImGui::EndDisabled();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "OpenFolder" ) );
     }

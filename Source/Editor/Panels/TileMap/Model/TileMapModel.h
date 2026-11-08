@@ -38,6 +38,11 @@ namespace sw::editor
     class TileMapModel
     {
     public:
+        /** @brief 작업 공간이 포커스한 에셋 경로입니다(비면 없음). 창이 작업 공간 헤더를 보지 않게 여기서 읽는다(MVVM 계약). 에디터가 서 있을 때만 부른다. */
+        static const string& getFocusedAssetPath();
+        /** @brief @p path(리소스 경로 또는 디스크 경로)에 도구 문서 파일이 있으면 true 입니다 — 읽기(`EditorToolAssetCommands::loadTileMap`)와 같은 해석이다. */
+        [[nodiscard]] static bool hasDocumentFile( string_view path );
+
         /** @brief 현재 브러시가 쓰는 레이어 종류입니다. 플래그 레이어는 `getFlagLayer` 가 고릅니다. */
         enum class PaintLayer : uint8
         {

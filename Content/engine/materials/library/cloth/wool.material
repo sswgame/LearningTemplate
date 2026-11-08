@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 외형 라이브러리 프리셋(cloth): 울(굵은 실, 거친 잔털). 값만 바꾼다 — 셰이더 변형은 갈래 바탕과 같다. -->
+<MaterialDef formatVersion="0" name="Wool" _base="engine/materials/library/cloth/base.material">
+	<_properties>
+		<item name="_color" defaultValue="0.55 0.12 0.1 1" />
+		<item name="_secondaryColor" defaultValue="0.48 0.1 0.08 1" />
+		<item name="_sheenColor" defaultValue="0.35 0.3 0.3 1" />
+		<item name="_sheenRoughness" defaultValue="0.95" />
+		<item name="_patternScale" defaultValue="40" />
+	</_properties>
+</MaterialDef>

@@ -6,7 +6,7 @@
 #include "Core/Math/BitUtil.h"
 
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
-#include "Engine/Graphics/Debug/GPUAssert.h"
+#include "Engine/Graphics/Debug/GPUMessage.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Profiling/FrameProfiler.h"
@@ -86,7 +86,7 @@ namespace sw
     }
 
     void CanvasMarkerProjection::record( IRHICommandList& cmd, const CanvasQuadBuffer& quadBuffer, RHIPipelineStateHandle pso, RHIBufferHandle instanceBuffer, RHIDescriptorIndex instanceSRV,
-                                         RHIDescriptorIndex placeholderSRV, GPUAssertMonitor& inoutAssert, bool bShowInstanceSlots ) const
+                                         RHIDescriptorIndex placeholderSRV, GPUMessageChannel& inoutMessages, bool bShowInstanceSlots ) const
     {
         if ( _markerCount == 0 )
             return;
@@ -122,8 +122,8 @@ namespace sw
         // 루트 상수 하나(canvas_marker.hlsl g_MarkerDebugMode) — 1 이면 앵커의 네 번째 값에 인스턴스 칸 유무 코드를 쓴다(보기 모드 MarkerSlots).
         const uint32 debugMode = bShowInstanceSlots ? 1u : 0u;
         cmd.setComputeRootConstants( 0, 1, &debugMode );
-        inoutAssert.bind( cmd ); // canvas_marker.hlsl 의 assert(u4) — assert 변형 PSO 일 때만 버퍼가 있다
-        cmd.dispatchCompute( ( _markerCount + Internal::kMarkerThreadGroupSize - 1u ) / Internal::kMarkerThreadGroupSize, 1, 1 );
+        inoutMessages.bindCompute( cmd ); // canvas_marker.hlsl 의 메시지(u4) — 메시지 변형 PSO 일 때만 버퍼가 있다
+        cmd.dispatchThreads( _markerCount, 1, 1, Internal::kMarkerThreadGroupSize, 1, 1 );
         cmd.transitionBuffer( quads._buffer, RHIBufferState::ShaderResource );
     }
 

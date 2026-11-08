@@ -9,6 +9,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Name/hashed_string.h"
@@ -85,7 +86,7 @@ namespace sw::editor
         uint64 computeSignature() const;
 
         // ------------------------------------------------------------------------------
-        // 편집 — 실패하면 아무것도 바꾸지 않고 false 입니다(@p outError 가 있으면 이유를 적습니다).
+        // 편집 — 실패하면 아무것도 바꾸지 않고 false(이유를 말하는 편집은 `Error`)입니다.
         // ------------------------------------------------------------------------------
         /** @brief 종류 @p kind 의 새 노드를 더하고 그래프 번호를 반환합니다. 모르는 종류이면 `kNoGraphID` 입니다. 이름은 `<종류>_<n>` 입니다. */
         int32 addNode( const hashed_string& kind );
@@ -98,17 +99,18 @@ namespace sw::editor
         /** @brief 노드와 그 노드에 닿은 배선을 지웁니다. */
         [[nodiscard]] bool removeNode( int32 graphID );
         /** @brief 노드 이름을 바꿉니다. 비었거나 다른 노드가 이미 쓰면 거절합니다. 배선은 따라갑니다. */
-        [[nodiscard]] bool renameNode( int32 graphID, const hashed_string& newID, string& outError );
+        [[nodiscard]] expected<void> renameNode( int32 graphID, const hashed_string& newID );
         /** @brief 매개변수 하나를 바꿉니다. @p value 가 비면 그 매개변수를 지웁니다(종류의 기본값을 씁니다). */
         [[nodiscard]] bool setNodeParam( int32 graphID, string_view name, string_view value );
         [[nodiscard]] bool setNodeTarget( int32 graphID, GameObjectHandle target );
         /**
          * @brief 출력 포트에서 입력 포트로 배선을 더합니다. 포트가 종류에 없거나 같은 배선이 이미 있으면 거절합니다.
          * @details 같은 입력 포트로 여러 배선이 들어오는 것은 허용한다(OR). 순환은 여기서 막지 않는다 — 지연(Delay)을 지나는 고리는 정상이라 `collectIssues` 가 봅니다.
+         * @return 새 배선의 그래프 번호입니다.
          */
-        [[nodiscard]] bool addWire( int32 fromNode, string_view fromPort, int32 toNode, string_view toPort, int32& outWireGraphID, string& outError );
-        [[nodiscard]] bool removeWire( int32 wireGraphID );
-        [[nodiscard]] bool setWireInvert( int32 wireGraphID, bool bInvert );
+        [[nodiscard]] expected<int32> addWire( int32 fromNode, string_view fromPort, int32 toNode, string_view toPort );
+        [[nodiscard]] bool            removeWire( int32 wireGraphID );
+        [[nodiscard]] bool            setWireInvert( int32 wireGraphID, bool bInvert );
         /** @brief 가리키는 노드가 없는 배선을 지웁니다. 지운 수를 반환합니다. */
         int32 removeOrphanWires();
         /** @brief 입력 방향(왼쪽 → 오른쪽) 층으로 노드를 배치합니다. 순환은 층 계산을 노드 수에서 끊습니다. 모든 노드의 `_bPlaced` 를 false 로 둡니다. */
@@ -123,10 +125,10 @@ namespace sw::editor
         vector<GimmickGraphNode>&       getMutableNodes() { return _listNode; } ///< 위치와 `_bPlaced` 만 고칩니다(캔버스가 끌린 위치를 되돌려 줍니다)
         const vector<GimmickGraphWire>& getWires() const { return _listWire; }
         const vector<GimmickWireDesc>&  getOrphanWires() const { return _listOrphanWire; }
-        vector<GraphCommentBox>&        getMutableComments() { return _listComment; } ///< 캔버스가 주석 상자를 더하고 옮기고 지운다(고치면 패널이 편집으로 남긴다)
-        int32                           findNodeIndex( int32 graphID ) const;
-        int32                           findNodeIndexByID( const hashed_string& id ) const;
-        int32                           findWireIndex( int32 wireGraphID ) const;
+        vector<GraphCommentBox>&        getMutableComments() { return _listComment; }       ///< 캔버스가 주석 상자를 더하고 옮기고 지운다(고치면 패널이 편집으로 남긴다)
+        [[nodiscard]] optional<uint32>  findNodeIndex( int32 graphID ) const;               ///< 없으면 비어 있습니다
+        [[nodiscard]] optional<uint32>  findNodeIndexByID( const hashed_string& id ) const; ///< 없으면 비어 있습니다
+        [[nodiscard]] optional<uint32>  findWireIndex( int32 wireGraphID ) const;           ///< 없으면 비어 있습니다
         const GimmickNodeKind*          findKind( const GimmickGraphNode& node ) const;
         /** @brief 매개변수 값입니다. 적혀 있지 않으면 빈 문자열입니다. */
         static string readParam( string_view params, string_view name );

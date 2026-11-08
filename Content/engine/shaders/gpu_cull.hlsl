@@ -1,6 +1,6 @@
 #include "common.hlsli"
 #include "batch_data.hlsli"
-#include "gpu_assert.hlsli"
+#include "gpu_message.hlsli"
 
 /**
  * gpu_cull.hlsl — GPU 컬링 + **드로우 커맨드 생성** (언리얼 FInstanceCullingContext 와 같은 자리).
@@ -15,7 +15,8 @@
  * 주의: 보이는 **개수만** 세어 `instanceCount` 에 넣으면 드로우는 늘 배치 앞쪽 N 개를 그린다 — 앞이 안 보이고 뒤가
  * 보이는 상황에서 **보이는 쪽이 사라지고 안 보이는 쪽이 그려진다**. 개수만으로는 무엇을 그릴지 고를 수 없어 압축 목록을 만든다.
  *
- * 개수는 디스패치 전에 0 이어야 한다 — GPUScene 이 컬링이 켜져 있을 때 0 을 올린다.
+ * 개수는 디스패치 전에 0 이어야 한다 — 같은 파일의 되돌리기 커널(`SW_CULL_RESET_ARGS`, C++ RenderPassType::IndirectArgsReset)이 컬링 바로 앞에서
+ * 배치마다 0(압축을 포기한 배치는 CPU 개수)을 쓴다. CPU 는 배치 표가 바뀔 때만 인자 전체를 올린다.
  *
  * 바인딩 계약(binding_slots.hlsli): CB b0, 인스턴스 읽기 t0, 배치 구간 읽기 t1, 가림 타일 읽기 t2, 간접 인자 쓰기 u0,
  * 가시 ID 쓰기 u1.
@@ -276,10 +277,22 @@ void advanceLODFade( uint instanceId, uint headBatch, uint levelCount, float scr
     outFadeLevel = ( progress == 255u ) ? 16u : ( progress >> 4u );
 }
 
+#if defined( SW_CULL_RESET_ARGS )
+// 되돌리기 커널 — 배치마다 스레드 하나. 컬링이 이 위에서 InterlockedAdd 로 센다. 압축을 포기한 배치(sortMode 1)는 컬링이 개수를 건드리지 않으므로 CPU 개수를 둔다.
 SW_NUMTHREADS( 64, 1, 1 )
 void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
 {
-    SW_GPU_ASSERT_THREAD( dispatchThreadID.x );
+    const uint batchIndex = dispatchThreadID.x;
+    if ( batchIndex >= g_BatchCount )
+        return;
+    const BatchData batch                     = g_BatchInfo[batchIndex];
+    g_IndirectArgs[batchIndex]._instanceCount = ( batch._sortMode == 1u ) ? batch._instanceCount : 0u;
+}
+#else
+SW_NUMTHREADS( 64, 1, 1 )
+void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
+{
+    SW_GPU_MESSAGE_THREAD( dispatchThreadID.x );
     const uint instanceId = dispatchThreadID.x;
     if ( instanceId >= g_InstanceCount )
         return;
@@ -347,3 +360,4 @@ void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
         appendVisible( headBatch + previous, instanceId | ( previous << kVisibleEntryLevelShift ) | ( ( kLODFadeOutgoing | fadeLevel ) << kVisibleEntryFadeShift ) );
     }
 }
+#endif // SW_CULL_RESET_ARGS

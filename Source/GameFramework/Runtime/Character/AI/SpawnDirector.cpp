@@ -227,8 +227,8 @@ namespace sw
 
     int32 SpawnDirector::getAliveCount( const hashed_string& entryID ) const
     {
-        const int32 entryIndex = _pTable != nullptr ? _pTable->findEntryIndex( entryID ) : -1;
-        return entryIndex >= 0 ? _listAliveCount[static_cast<size_t>( entryIndex )] : 0;
+        const optional<int32> entryIndex = _pTable != nullptr ? _pTable->findEntryIndex( entryID ) : optional<int32>{};
+        return entryIndex.has_value() ? _listAliveCount[static_cast<size_t>( *entryIndex )] : 0;
     }
 
     hashed_string SpawnDirector::getPendingEntry() const

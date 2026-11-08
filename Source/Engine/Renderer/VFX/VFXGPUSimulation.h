@@ -83,7 +83,7 @@ namespace sw
      * @brief 재생 토큰(`VFXGPUEmitterRequest::_pRunToken`)마다 GPU 상태(입자 상태 두 반쪽, 렌더 입력, 간접 인자)를 들고, 프레임마다 밀린 단계를 디스패치합니다.
      * @details 기록 전(`prepareFrame`)에 상태를 만들고 매개변수(방출기 상수 · 단계마다의 일정 · 커브 키 · 해시 상수 · 방출기 행렬 · 깊이 히스토리)를 한 버퍼로 올린다.
      *          일정은 게임 스레드와 같은 시계(`VFXEmitterClock`)를 여기서 다시 돌려 얻는다 — 요청이 누적 단계 수라 패킷을 건너뛴 프레임도 다음 프레임에 이어 돈다
-     *          (디스패치마다 상한 SW_VFX_MAX_STEPS_PER_DISPATCH, 넘친 단계는 다음 프레임). 컴퓨트 프리패스(`recordDispatches`)는 인스턴스 애니메이션 · 컬링 **앞에**
+     *          (디스패치마다 상한 SW_VFX_MAX_STEPS_PER_DISPATCH, 넘친 단계는 다음 프레임). 프레임 그래프(`recordDispatches`)는 인스턴스 애니메이션 · 컬링 **앞에**
      *          방출기마다 그룹 하나(풀이 `SW_VFX_MULTI_GROUP_MIN_POOL` 이상이면 단계마다 적분 · 접두사 합 · 압축 디스패치 셋 — 같은 결과, 언리얼 Niagara GPU 압축 · 유니티 VFX Graph dead list 와 같은 선)를 디스패치하고, 메시 방출기는 이어서 인스턴스 칸을 쓴다(vfx_mesh_instance.hlsl — 매 프레임. 배치 구성이 바뀌어 CPU 자리표가
      *          올라온 프레임도 그리기 전에 다시 쓴다). 빌보드 · 띠는 투명 패스가 렌더 입력을 t11 에 걸고 간접 인자로 그린다(`VFXParticleRenderer::drawBatches`).
      *          이번 프레임에 없는 재생 번호의 상태는 놓는다(멈췄거나 다시 재생했거나 컴포넌트가 사라졌다). 다시 나타나면 처음부터 다시 돌아 같은 결과에 닿는다.
@@ -121,7 +121,7 @@ namespace sw
          */
         void prepareFrame( IRHIDevice& device, const vector<GPUParticleBatch>& listBatch, const vector<GPUVFXMeshEmitter>& listMeshEmitter,
                            const VFXSimulationFrameInput& input );
-        /** @brief 컴퓨트 프리패스에 이번 프레임의 디스패치를 기록합니다(`prepareFrame` 뒤, 인스턴스 애니메이션 · 컬링 앞). */
+        /** @brief 프레임 그래프에 이번 프레임의 디스패치를 기록합니다(`prepareFrame` 뒤, 인스턴스 애니메이션 · 컬링 앞). */
         void recordDispatches( IRHICommandList& cmd, RHIPipelineStateHandle simulationPSO, RHIPipelineStateHandle meshInstancePSO ) const;
         /** @brief 배치 @p batchIndex(`prepareFrame` 에 넘긴 목록의 번호)를 그릴 자원입니다. GPU 배치가 아니거나 준비하지 못했으면 nullptr 입니다. */
         const DrawSource* findDrawSource( uint32 batchIndex ) const;

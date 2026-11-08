@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  외형 머티리얼 라이브러리 쇼케이스 — engine/materials/library 의 프리셋이 appearance_lit.hlsl 로 그려지는지 본다(네 백엔드).
+  첫 무대(materiallibrary.scene.xml): 불투명 프리셋 41 개 + 털 껍질 둘을 9 열로 세운다 — 피부(감싼 확산 · 피지 · 젖음) · 기름막 · 마른 자국 · 천(시엔 · 직조) · 비단(비등방) · 가죽 ·
+  피부 위 망사 · 레이스(알파 컷 · 양면) · 종이 · 진주층(박막) · 비늘 · 금속 · 거울 · 칼날 · 녹 · 나무 · 돌.
+  둘째 무대(materiallibrary_clear.scene.xml): 무늬 벽 앞의 유리(굴절) · 색유리 · 창유리 · 간유리(흐린 굴절) · 커튼(투과), 아래 줄은 눈 13 개(동공 모양 · 확장 · 짝짝이 · 반사판).
+  기대: 유리 뒤 벽 무늬가 비껴 보인다 · 간유리는 흐리다 · 고양이 · 뱀 눈은 세로 틈 · 염소 · 말은 가로 막대 · 갑오징어는 W 자 · 망사는 멀리서도 깜박이지 않는다.
+  단언은 두 장의 골든 비교다(백엔드별 golden/ — 첫 실행은 -scenario-update-golden 으로 뜨고 그림을 리뷰한다, 통합에서 기록).
+  실행: ctest -R Scenario.game.empty.materiallibrary
+-->
+<Scenario name="game.empty.materiallibrary" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/materiallibrary.scene.xml"/>
+	<Wait frames="20"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Wait frames="10"/>
+	<Screenshot file="materiallibrary_opaque.ppm"/>
+	<LoadScene path="game/empty/maps/materiallibrary_clear.scene.xml" timeoutFrames="600"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
+	<Wait frames="20"/>
+	<Screenshot file="materiallibrary_clear.ppm"/>
+	<Wait frames="2"/>
+	<ExpectImage file="materiallibrary_opaque.ppm" golden="materiallibrary_opaque" region="0,0,1,1"/>
+	<ExpectImage file="materiallibrary_clear.ppm" golden="materiallibrary_clear" region="0,0,1,1"/>
+	<Pass/>
+</Scenario>

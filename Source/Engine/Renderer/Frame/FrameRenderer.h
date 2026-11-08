@@ -107,7 +107,7 @@ namespace sw
      *          추가 뷰(`RenderViewRequest`)에는 CCTV, 백미러, 미니맵 같은 렌더 텍스처 뷰와 분할 화면, PiP 같은 화면 사각형 뷰가 있다.
      *          뷰마다 트랜지언트 풀, 컬링 슬롯, TAA 히스토리, 커맨드 리스트를 따로 가진다(`FrameViewTarget`).
      *          컬링 슬롯은 간접 인자, 가시 목록, 컬링 상수 버퍼로 이루어진다.
-     *          실행 순서는 컴퓨트 프리패스(모든 뷰의 컬링), 렌더 텍스처 뷰, 주 시점, 화면 사각형 뷰다.
+     *          실행 순서는 프레임 그래프(모든 뷰의 컬링), 렌더 텍스처 뷰, 주 시점, 화면 사각형 뷰다.
      *          주 시점이 렌더 텍스처를 읽으므로 렌더 텍스처 뷰가 먼저 돌고, 화면 사각형 뷰는 주 시점 위에 겹친다.
      *
      *          **얇은 지휘자.** 렌더러는 프레임 순서(스냅샷 받기 · 라이트 · 그림자 · 하늘 · 뷰 준비 · 업로드 · PSO 준비 · 제출)를 정하고 프레임 데이터(`FrameRenderState`)를 소유한다.
@@ -438,11 +438,13 @@ namespace sw
         vector<float4x4> _listScratchGridViewProj;  ///< 라이트 그리드를 만들 뷰의 뷰-투영(프레임마다 다시 쓴다)
         /// @brief GPU 방출기의 파티클 라이트 슬롯 범위입니다. 라이트 버퍼의 GPU 구간 크기를 정하는 데만 쓴다(범위는 시뮬레이션이 같은 함수로 다시 얻는다).
         vector<VFXGPULightRange> _listScratchGPULightRange;
+        /// @brief 컬링이 없는 백엔드에서 추가 뷰의 꼬리 슬롯을 만드는 임시 배열입니다(`applyViewTransparentOrder`, 뷰마다 다시 쓴다).
+        vector<uint32> _listScratchTailSlot;
 
         /// @brief 캡처 · 되읽기입니다. Present 결과 텍스처(`-gv_screenshot`, 크기는 주 출력)를 소유하고 `_pDevice` · 주 시점 풀 · 파이프라인을 빌려 씁니다(그래서 그 셋보다 뒤에 선언한다).
         FrameCapture _capture;
         /**
-         * @brief 패스 실행 — 컴퓨트 프리패스, 그래프 콜백과 패스별 기록, 드로우, 뷰별 커맨드 리스트 제출입니다. 셋업이 끝난 뒤 `submitGraph` 로 넘긴다.
+         * @brief 패스 실행 — 프레임 그래프, 그래프 콜백과 패스별 기록, 드로우, 뷰별 커맨드 리스트 제출입니다. 셋업이 끝난 뒤 `submitGraph` 로 넘긴다.
          * @details 프레임 데이터(`_state`)와 협력 객체(`_psoManager` · `_autoExposure` · `_upscale` · `_fog` · `_extensionHost` · `_capture`)를 참조로 쓰므로 그들보다 뒤에 선언한다.
          *          언리얼 `FSceneRenderer::Render` 가 뷰마다 RDG 패스를 더하고 실행하는 자리다.
          */

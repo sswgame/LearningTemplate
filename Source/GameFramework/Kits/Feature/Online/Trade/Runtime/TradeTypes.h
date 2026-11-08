@@ -10,6 +10,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -142,9 +143,9 @@ namespace sw
         PROPERTY()
         TradeCloseReason _closeReason{ TradeCloseReason::None };
 
-        /** @brief 계정의 쪽 번호(0 또는 1)를 반환합니다. 당사자가 아니면 -1 입니다. */
-        int32 findSideIndex( AccountID accountID ) const;
-        bool  isClosed() const { return _state == TradeState::Settled || _state == TradeState::Failed || _state == TradeState::Cancelled; }
-        bool  isBothConfirmed() const { return _arrSide[0]._bConfirmed == SW_TRUE && _arrSide[1]._bConfirmed == SW_TRUE; }
+        /** @brief 계정의 쪽 번호(0 또는 1)를 반환합니다. 당사자가 아니면 비어 있습니다. */
+        [[nodiscard]] optional<int32> findSideIndex( AccountID accountID ) const;
+        bool                          isClosed() const { return _state == TradeState::Settled || _state == TradeState::Failed || _state == TradeState::Cancelled; }
+        bool                          isBothConfirmed() const { return _arrSide[0]._bConfirmed == SW_TRUE && _arrSide[1]._bConfirmed == SW_TRUE; }
     };
 } // namespace sw

@@ -222,6 +222,147 @@ namespace sw
 
             static hashed_string getDefaultState( const ItemVisualDef& visual ) { return visual._defaultState; }
 
+            /** @brief 주인 항목 @p ownerIndex 의 외형입니다. 항목이 없으면 nullptr 입니다. */
+            static const ItemVisualDef* findOwnerVisual( const vector<Entry>& listEntry, int32 ownerIndex )
+            {
+                return ownerIndex >= 0 && static_cast<size_t>( ownerIndex ) < listEntry.size() ? listEntry[static_cast<size_t>( ownerIndex )]._pVisual : nullptr;
+            }
+
+            /** @brief 구간 @p section 이 드라이브 @p drive 의 대상인지 판정합니다 — `include`(비면 모두) 안이고 `exclude` 밖이며, 염색이면 `dyeable` 구간이다. */
+            static bool isDriveSection( const CustomizationDriveDef& drive, const AppearanceSectionDef& section )
+            {
+                if ( drive._kind == CustomizationDriveKind::DyeChannel && section._bDyeable == false )
+                    return false;
+                const auto matches = [&section]( const hashed_string& tag )
+                { return section.matchesTag( tag ); };
+                const bool bIncluded = drive._listInclude.empty() || std::any_of( drive._listInclude.begin(), drive._listInclude.end(), matches );
+                return bIncluded && std::none_of( drive._listExclude.begin(), drive._listExclude.end(), matches );
+            }
+
+            /** @brief 외형에 염색하지 않는 구간이 있으면 true 입니다 — 그런 외형의 염색은 구간마다 나눠 건다. */
+            static bool hasUndyeableSection( const ItemVisualDef& visual )
+            {
+                for ( const AppearancePartDef& part : visual._listPart )
+                {
+                    for ( const AppearanceSectionDef& section : part._listSection )
+                    {
+                        if ( section._bDyeable == false )
+                            return true;
+                    }
+                }
+                return false;
+            }
+
+            /**
+             * @brief 머티리얼 드라이브의 값을 겁니다. 구간을 고르지 않는 드라이브는 주인 전체(부품 · 구간 빈 값)에 하나, 고르는 드라이브(`include` · `exclude` · 염색 제외 구간)는 맞는 구간마다 하나다.
+             * @details 구간 별칭은 로드가 외형에 있는지 봤다(`Appearance.SectionTagUnknown`). 별칭이 하나도 맞지 않으면 아무 값도 걸지 않는다(그게 데이터의 뜻이다).
+             */
+            static void addDriveMaterialValue( ResolvedAppearance& out, const hashed_string& schemaOwner, const ItemVisualDef* pSchemaVisual, const vector<Entry>& listEntry,
+                                               const CustomizationDriveDef& drive, const float4& value, ResolvedMaterialTarget target, ResolvedMaterialShape shape )
+            {
+                // 드라이브가 주인을 적으면(`owner="Hair"`) 몸 스키마의 고르기가 낸 항목이 받는다. 구간 고르기는 그 항목의 외형으로 한다 — 아직 없으면(뒤에 선언한 고르기) 주인 전체다.
+                const bool           bDriveOwner     = drive._owner.empty() == false;
+                const hashed_string& owner           = bDriveOwner ? drive._owner : schemaOwner;
+                const int32          ownerEntry      = bDriveOwner ? findEntry( listEntry, drive._owner, false ) : constant::invalid_index::kInt32;
+                const ItemVisualDef* pVisual         = bDriveOwner ? findOwnerVisual( listEntry, ownerEntry ) : pSchemaVisual;
+                const int32          channel         = target == ResolvedMaterialTarget::DyeChannel ? drive._channel : 0;
+                const bool           bSplitBySection = pVisual != nullptr && ( drive.isSectionTargeted() || ( drive._kind == CustomizationDriveKind::DyeChannel && hasUndyeableSection( *pVisual ) ) );
+                if ( bSplitBySection == false )
+                {
+                    addMaterialValue( out, owner, hashed_string{}, hashed_string{}, drive._target, value, target, channel, shape );
+                    return;
+                }
+                for ( const AppearancePartDef& part : pVisual->_listPart )
+                {
+                    for ( const AppearanceSectionDef& section : part._listSection )
+                    {
+                        if ( isDriveSection( drive, section ) )
+                            addMaterialValue( out, owner, part._name, section._name, drive._target, value, target, channel, shape );
+                    }
+                }
+            }
+
+            /**
+             * @brief 피부 층을 굽기 순서대로 냅니다. 모르는 층은 버리고 설명에 남기며(지워진 콘텐츠), 숨긴 층은 그리지 않는다. 값은 전송 정밀도로 맞추고 색은 종류의 견본 묶음으로 맞춘다.
+             */
+            static void emitSkinLayers( const AppearanceDatabase& database, const CharacterAppearanceSpec& spec, ResolvedAppearance& out )
+            {
+                for ( const SkinLayerValue& given : spec._listSkinLayer )
+                {
+                    const SkinLayerDef* pDef = database.getSkinLayers().findLayer( given._layer );
+                    if ( pDef == nullptr )
+                    {
+                        addTrace( out, AppearanceTraceStep::Customization, given._layer, "skin layer '%#' is unknown - dropped", given._layer.c_str() );
+                        continue;
+                    }
+                    if ( given._bHidden == SW_TRUE )
+                        continue;
+                    ResolvedSkinLayer layer;
+                    layer._value = given;
+                    layer._value.quantize();
+                    const CustomizationSchemaCatalog::Palette* pPalette = pDef->_palette.empty() ? nullptr : database.getSchemas().findPalette( pDef->_palette );
+                    if ( pPalette != nullptr )
+                    {
+                        CustomizationParamDef swatches; // 견본 맞추기는 색 매개변수와 같은 식이다
+                        swatches._listSwatch = pPalette->_listSwatch;
+                        layer._value._color  = swatches.snapToSwatch( layer._value._color );
+                    }
+                    if ( pDef->_bPlaceable == false )
+                    {
+                        layer._value._offset          = float2{ 0.5f, 0.5f }; // 배치 없는 층은 피부 UV 그대로다
+                        layer._value._scale           = float2{ 1.0f, 1.0f };
+                        layer._value._rotationDegrees = 0.0f;
+                        layer._value._bMirror         = SW_FALSE;
+                    }
+                    layer._regionMin       = pDef->_regionMin;
+                    layer._regionMax       = pDef->_regionMax;
+                    layer._mask            = pDef->_mask;
+                    layer._roughness       = pDef->_roughness;
+                    layer._roughnessWeight = pDef->_roughnessWeight;
+                    layer._metallic        = pDef->_metallic;
+                    layer._metallicWeight  = pDef->_metallicWeight;
+                    layer._smearResistance = pDef->_smearResistance;
+                    layer._blend           = pDef->_blend;
+                    layer._bPlaceable      = pDef->_bPlaceable ? SW_TRUE : SW_FALSE;
+                    out._listSkinLayer.push_back( layer );
+                }
+            }
+
+            /**
+             * @brief 몸 채널 층을 모아 몸의 체형 축 값(`_listBoneProportion`, 주인이 빈 것)을 다시 씁니다. 바닥은 꾸미기 슬라이더, 그 위에 몸 프로필 층, 보이는 장비 층(슬롯 표 순서)을 우선순위로 얹는다.
+             * @details 숨겨진 장비(점유 · 규칙 · 조건 · 플레이어 숨김)는 몸을 누르지 않는다 — 보이지 않는 갑옷이 가슴을 조이지 않는다.
+             */
+            static void applyBodyChannels( const AppearanceDatabase& database, const CharacterAppearanceSpec& spec, const vector<Entry>& listEntry, ResolvedAppearance& out )
+            {
+                vector<BodyChannelLayerDef>    listLayer;
+                const CharacterBodyProfileDef* pProfile = spec._bodyProfile.empty() ? nullptr : database.getBodyProfiles().findProfile( spec._bodyProfile );
+                if ( pProfile != nullptr )
+                    listLayer.insert( listLayer.end(), pProfile->_listChannel.begin(), pProfile->_listChannel.end() );
+                for ( const Entry& entry : listEntry )
+                {
+                    if ( entry._bHidden == SW_TRUE || entry._pVisual == nullptr )
+                        continue;
+                    for ( const BodyChannelLayerDef& layer : entry._pVisual->_listBodyChannel )
+                    {
+                        listLayer.push_back( layer );
+                        addTrace( out, AppearanceTraceStep::Output, entry._owner, "'%#' sets body channel '%#' (%# %#)", entry._pVisual->_id.c_str(), layer._name.c_str(), getEnumName( layer._blend ), layer._value );
+                    }
+                }
+                if ( listLayer.empty() )
+                    return;
+                vector<BodyChannelValue> listValue;
+                for ( const ResolvedBoneProportion& proportion : out._listBoneProportion )
+                {
+                    if ( proportion._owner.empty() )
+                        listValue.push_back( BodyChannelValue{ proportion._name, proportion._value } );
+                }
+                BodyChannelLayerDef::blendLayers( span<const BodyChannelLayerDef>( listLayer.data(), listLayer.size() ), listValue );
+                VectorUtil::removeIf( out._listBoneProportion, []( const ResolvedBoneProportion& proportion )
+                { return proportion._owner.empty(); } );
+                for ( const BodyChannelValue& value : listValue )
+                    out._listBoneProportion.push_back( ResolvedBoneProportion{ hashed_string{}, value._channel, value._value } );
+            }
+
             /**
              * @brief 꾸미기 값을 적용합니다. 슬라이더와 색은 모프, 본 비율, 머티리얼에 적용하고, 고르기는 변형과 외형에, 부착은 소켓 부착물에 적용합니다. @p ownerIndex 는 그 주인의 항목입니다.
              * @details 몸(주인이 빔)의 고르기 외형은 매개변수 이름을 주인으로 하는 새 항목이 된다. 아이템의 고르기 외형은 같은 주인으로 @p outListExtraVisual 에 담겨 나온다.
@@ -262,18 +403,18 @@ namespace sw
                                     }
                                     case CustomizationDriveKind::MaterialScalar:
                                     {
-                                        addMaterialValue( out, owner, hashed_string{}, hashed_string{}, drive._target, float4( driven, 0.0f, 0.0f, 0.0f ), ResolvedMaterialTarget::Parameter, 0,
-                                                          ResolvedMaterialShape::Scalar );
+                                        addDriveMaterialValue( out, owner, findOwnerVisual( inoutListEntry, ownerIndex ), inoutListEntry, drive, float4( driven, 0.0f, 0.0f, 0.0f ), ResolvedMaterialTarget::Parameter,
+                                                               ResolvedMaterialShape::Scalar );
                                         break;
                                     }
                                     case CustomizationDriveKind::MaterialColor:
                                     {
-                                        addMaterialValue( out, owner, hashed_string{}, hashed_string{}, drive._target, pValue->_number, ResolvedMaterialTarget::Parameter, 0 );
+                                        addDriveMaterialValue( out, owner, findOwnerVisual( inoutListEntry, ownerIndex ), inoutListEntry, drive, pValue->_number, ResolvedMaterialTarget::Parameter, ResolvedMaterialShape::Vector );
                                         break;
                                     }
                                     case CustomizationDriveKind::DyeChannel:
                                     {
-                                        addMaterialValue( out, owner, hashed_string{}, hashed_string{}, drive._target, pValue->_number, ResolvedMaterialTarget::DyeChannel, drive._channel );
+                                        addDriveMaterialValue( out, owner, findOwnerVisual( inoutListEntry, ownerIndex ), inoutListEntry, drive, pValue->_number, ResolvedMaterialTarget::DyeChannel, ResolvedMaterialShape::Vector );
                                         break;
                                     }
                                     case CustomizationDriveKind::PaletteSwap:
@@ -418,9 +559,9 @@ namespace sw
             static bool emitDetachedPart( const ItemVisualDef& visual, const Entry& entry, const AppearancePartDef& part, const AppearancePlacement& placement, int32 stageIndex,
                                           ResolvedAppearance& out )
             {
-                const bool  bHitOff    = entry._pRequest != nullptr && VectorUtil::contains( entry._pRequest->_listDetachedPart, part._name );
-                const int32 breakIndex = part._breakStage.empty() ? constant::invalid_index::kInt32 : visual.findDamageStageIndex( part._breakStage );
-                const bool  bStageOff  = breakIndex >= 0 && stageIndex >= breakIndex;
+                const bool            bHitOff    = entry._pRequest != nullptr && VectorUtil::contains( entry._pRequest->_listDetachedPart, part._name );
+                const optional<int32> breakIndex = part._breakStage.empty() ? optional<int32>{} : visual.findDamageStageIndex( part._breakStage );
+                const bool            bStageOff  = breakIndex.has_value() && stageIndex >= *breakIndex;
                 if ( bHitOff && part._bBreakable == SW_FALSE )
                     addTrace( out, AppearanceTraceStep::Damage, entry._owner, "part '%#' is not breakable - detach request ignored", part._name.c_str() );
                 const bool bDetached = part._bBreakable == SW_TRUE && ( bHitOff || bStageOff );
@@ -547,6 +688,44 @@ namespace sw
                     return false;
                 pSection->_material = material;
                 return true;
+            }
+
+            /**
+             * @brief 모은 몸 채널 값으로 부품 머티리얼 스칼라(`<ChannelMaterial>`)를 겁니다. 몸 채널을 모은 뒤(`applyBodyChannels`) 부른다 — 장비 층까지 얹은 값이 닿는다.
+             * @details 나온 부품(`_listPart`)에만 건다 — 숨긴 부품 · 숨긴 항목은 값을 받지 않는다. 모은 값에 없는 채널은 중립 0 이다.
+             */
+            static void applyChannelMaterials( const vector<Entry>& listEntry, ResolvedAppearance& out )
+            {
+                for ( const Entry& entry : listEntry )
+                {
+                    if ( entry._bHidden == SW_TRUE || entry._pVisual == nullptr )
+                        continue;
+                    for ( const AppearancePartDef& part : entry._pVisual->_listPart )
+                    {
+                        if ( part._listChannelMaterial.empty() )
+                            continue;
+                        const bool bEmitted = std::any_of( out._listPart.begin(), out._listPart.end(), [&]( const ResolvedPart& resolved )
+                        { return resolved._owner == entry._owner && resolved._partName == part._name; } );
+                        if ( bEmitted == false )
+                            continue;
+                        for ( const AppearanceChannelMaterialDef& channelMaterial : part._listChannelMaterial )
+                        {
+                            float32 channelValue = 0.0f;
+                            for ( const ResolvedBoneProportion& proportion : out._listBoneProportion )
+                            {
+                                if ( proportion._owner.empty() && proportion._name == channelMaterial._channel )
+                                    channelValue = proportion._value;
+                            }
+                            if ( VectorUtil::contains( out._listMaterialChannel, channelMaterial._channel ) == false )
+                                out._listMaterialChannel.push_back( channelMaterial._channel );
+                            const float32 value = channelMaterial.computeValue( channelValue );
+                            addMaterialValue( out, entry._owner, part._name, hashed_string{}, channelMaterial._name, float4( value, 0.0f, 0.0f, 0.0f ), ResolvedMaterialTarget::Parameter, 0,
+                                              ResolvedMaterialShape::Scalar );
+                            addTrace( out, AppearanceTraceStep::Output, entry._owner, "body channel '%#' = %# sets '%#' of part '%#' to %#", channelMaterial._channel.c_str(), channelValue,
+                                      channelMaterial._name.c_str(), part._name.c_str(), value );
+                        }
+                    }
+                }
             }
 
             static void emitParts( const ItemVisualDef& visual, const Entry& entry, int32 stageIndex, const vector<Decision>& listDecision, ResolvedAppearance& out )
@@ -677,6 +856,11 @@ namespace sw
                     {
                         entry._bHidden = SW_TRUE;
                         addTrace( out, AppearanceTraceStep::Output, request._slot, "'%#' hidden - its equip condition is broken", request._itemID.c_str() );
+                    }
+                    else if ( request._bHiddenByPlayer == SW_TRUE )
+                    {
+                        entry._bHidden = SW_TRUE;
+                        addTrace( out, AppearanceTraceStep::Output, request._slot, "'%#' hidden by the player", request._itemID.c_str() );
                     }
                     inoutListEntry.push_back( entry );
                 }
@@ -900,12 +1084,13 @@ namespace sw
 
     void ResolvedAppearance::resolve( const AppearanceDatabase& database, const CharacterAppearanceSpec& spec, ResolvedAppearance& outResolved )
     {
-        using Internal         = AppearanceResolverInternal;
-        outResolved            = ResolvedAppearance{};
-        outResolved._presetID  = spec._presetID;
-        outResolved._bodyType  = spec._bodyType;
-        outResolved._bodyShape = spec._bodyShape;
-        outResolved._face      = spec._face;
+        using Internal           = AppearanceResolverInternal;
+        outResolved              = ResolvedAppearance{};
+        outResolved._presetID    = spec._presetID;
+        outResolved._bodyType    = spec._bodyType;
+        outResolved._bodyShape   = spec._bodyShape;
+        outResolved._face        = spec._face;
+        outResolved._bodyProfile = spec._bodyProfile;
 
         // 단계 순서가 결과다. 뒤 단계는 앞 단계가 숨긴 항목을 보지 않는다.
         vector<Internal::Entry> listEntry;
@@ -924,6 +1109,9 @@ namespace sw
             Internal::emitEntry( database, listEntry[index], listEntry, static_cast<int32>( index ), listDecision, outResolved );
         }
         Internal::emitDecisions( spec, listDecision, outResolved );
+        Internal::applyBodyChannels( database, spec, listEntry, outResolved );
+        Internal::applyChannelMaterials( listEntry, outResolved );
+        Internal::emitSkinLayers( database, spec, outResolved );
         Internal::removeRepeatedHiddenRegions( outResolved );
         outResolved._meshHash = computeMeshHash( outResolved );
         outResolved._hash     = computeHash( outResolved );
@@ -994,6 +1182,19 @@ namespace sw
         AppearanceResolverInternal::HashBuilder builder;
         builder.addUint64( computeMeshHash( resolved ) );
         builder.addName( resolved._presetID );
+        builder.addName( resolved._bodyProfile );
+        for ( const ResolvedSkinLayer& layer : resolved._listSkinLayer ) // 굽기 텍스처가 바뀌는 값(메시 해시에는 넣지 않는다 — 병합 메시는 그대로다)
+        {
+            builder.addName( layer._value._layer );
+            builder.addFloat4( layer._value._color );
+            builder.addFloat( layer._value._opacity );
+            builder.addFloat( layer._value._offset._x );
+            builder.addFloat( layer._value._offset._y );
+            builder.addFloat( layer._value._scale._x );
+            builder.addFloat( layer._value._scale._y );
+            builder.addFloat( layer._value._rotationDegrees );
+            builder.addInt( layer._value._bMirror );
+        }
         for ( const ResolvedPart& part : resolved._listPart )
         {
             builder.addName( part._owner );

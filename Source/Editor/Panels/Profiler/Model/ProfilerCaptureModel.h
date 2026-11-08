@@ -28,6 +28,9 @@ namespace sw::editor
         /** @brief 수집을 켠 채(멈추지 않고) 시작합니다. */
         ProfilerCaptureModel();
 
+        /** @brief 엔진 프레임 프로파일러입니다. 없으면(프로파일러 없이 도는 테스트) nullptr 입니다. 패널 · 감시 값이 작업 공간 헤더를 보지 않게 여기서 찾는다(MVVM 계약). */
+        static const FrameProfiler* findProfiler();
+
         /** @brief 패널이 열려 있는 프레임마다 부릅니다. 수집이 켜져 있으면 엔진 프로파일러를 켜고, 멈추지 않았으면 한 칸 담은 뒤 스파이크를 봅니다. */
         void tick( FrameProfiler& profiler );
 

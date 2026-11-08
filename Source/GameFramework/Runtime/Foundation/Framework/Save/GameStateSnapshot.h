@@ -21,8 +21,6 @@ namespace sw
 {
     struct TypeInfo;
 
-    class GameObjectManager;
-
     /**
      * @class GameStateSnapshot
      * @brief 상태 스냅샷 봉투 하나의 형식과, 그 봉투에 실을 컴포넌트 타입 목록입니다.

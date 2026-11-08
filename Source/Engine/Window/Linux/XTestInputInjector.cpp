@@ -9,7 +9,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 
-#if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE ) && defined( SW_WITH_XTEST )
+#if defined( SW_WITH_CLIENT_CODE ) && defined( SW_WITH_XTEST )
 
     #include "Core/Foundation/PlatformOSHeaders.h"
     #include "Core/Foundation/X11Headers.h"
@@ -94,7 +94,7 @@ namespace sw
     }
 } // namespace sw
 
-#elif defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
+#elif defined( SW_WITH_CLIENT_CODE )
 
 namespace sw
 {

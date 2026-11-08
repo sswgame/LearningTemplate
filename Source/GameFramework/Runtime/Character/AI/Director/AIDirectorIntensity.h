@@ -7,6 +7,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -79,9 +80,9 @@ namespace sw
         SW_DECLARE_STATE_IO();
 
     private:
-        int32   findSignalIndex( const hashed_string& signalID ) const;
-        void    recordCombat();
-        float32 computeLevelFloor() const;
+        [[nodiscard]] optional<int32> findSignalIndex( const hashed_string& signalID ) const;
+        void                          recordCombat();
+        float32                       computeLevelFloor() const;
 
     private:
         vector<float32>               _listSignalValue; ///< 신호마다(Impulse 는 마지막에 넣은 양)

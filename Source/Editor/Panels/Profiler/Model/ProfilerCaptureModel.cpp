@@ -109,7 +109,7 @@ namespace sw::editor
                         Fmt( static_cast<float64>( _spikeThresholdMs ), Format().precision( 1 ) ) );
     }
 
-    FrameProfiler* ProfilerCaptureModel::findFrameProfiler()
+    const FrameProfiler* ProfilerCaptureModel::findProfiler()
     {
         return editor::findSubsystem<FrameProfiler>();
     }

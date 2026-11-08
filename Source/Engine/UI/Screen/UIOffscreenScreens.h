@@ -83,6 +83,8 @@ namespace sw
         /**
          * @brief 화면 @p handle 의 뷰포트(UI 단위 크기, 배율, 안전 영역. 렌더 텍스처 크기가 물리 크기), 글자 배율(0 이하면 1), 테마(빈 이름이면 지금 테마)를 정합니다.
          * @details 테마가 바뀌면 그 화면의 스타일 시트만 다시 적용한다(게임 UI 의 테마는 그대로다).
+         *          뷰포트의 화면 태그(`screen.compact` · `orientation.portrait` — `UIScaleSettings::makeScreenTags`)를 이 화면의 문서 변형에 걸고, 바뀌면 문서로 다시 짓는다
+         *          (`UISystem::setResourceTagOverride`). 엔진 태그는 건드리지 않아 게임 UI 는 그대로다.
          */
         void setView( UIScreenHandle handle, const UIViewport& viewport, float32 textScale, const hashed_string& theme );
         /**

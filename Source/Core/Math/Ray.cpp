@@ -1,8 +1,9 @@
 #include "pch.h"
 
+#include "Core/Math/Ray.h"
+
 #include "Core/Math/DeterministicMathUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Math/Ray.h"
 
 namespace sw
 {

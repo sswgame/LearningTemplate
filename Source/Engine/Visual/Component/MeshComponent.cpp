@@ -46,12 +46,14 @@ namespace sw
         , _appearance{ 1.0f }
         , _appearanceRate{ 0.0f }
         , _bTeleportAppearPending{ false }
+        , _motionTeleportSerial{ 0 }
         , _lodIndex{ 0 }
         , _pPrimitiveRegistry{ nullptr }
         , _bVisible{ SW_TRUE }
         , _bFirstPersonView{ SW_FALSE }
         , _bAwaitingAppearance{ SW_FALSE }
         , _bAppearOnTeleport{ SW_FALSE }
+        , _bStatic{ SW_FALSE }
         , _reserved{ 0 }
     {
         // 월드가 바뀌면 트랜스폼 칸의 프리미티브 번호로 렌더 더티가 찍힌다(`ScenePrimitive::setPrimitiveIndex`). 훅은 받지 않는다.
@@ -168,9 +170,18 @@ namespace sw
         return self.advanceAppearance( deltaSeconds );
     }
 
+    uint64 MeshComponent::getMotionHistoryKey() const
+    {
+        constexpr uint64 kSerialMask = 0xFFFFu; // 차례는 감겨도 된다 — 열쇠는 지난 한 프레임과만 견준다
+        return ( getComponentID() << 16 ) | ( static_cast<uint64>( _motionTeleportSerial.load( std::memory_order_relaxed ) ) & kSerialMask );
+    }
+
     void MeshComponent::onTeleported()
     {
         ScenePrimitive::onTeleported();
+        // 화면 속도의 기록을 버린다 — 열쇠가 바뀌어 렌더 쪽이 지난 행렬을 찾지 못한다. 트랜스폼만 바뀐 프레임은 후보를 다시 채우지 않으므로 렌더 상태 더티로 열쇠를 다시 읽게 한다.
+        _motionTeleportSerial.fetch_add( 1u, std::memory_order_relaxed );
+        markRenderStateDirty();
         if ( _bAppearOnTeleport == SW_FALSE || _pPrimitiveRegistry == nullptr )
             return;
         // 틱 중(워커)에도 불린다 — 표시만 하고(원자값) 등장은 씬 프레임의 도착 단계가 시작한다. 거는 것은 레지스트리가 잠근다.
@@ -420,8 +431,11 @@ namespace sw
         static const hashed_string s_sectionName( "_sectionName" );
         if ( propertyName == s_materialPathName || propertyName == s_meshIDName )
             resolveRenderAssets();
+        static const hashed_string s_staticName( "_bStatic" );
         if ( propertyName == s_sectionName )
             validateSectionName();
+        if ( propertyName == s_staticName && _pPrimitiveRegistry != nullptr )
+            _pPrimitiveRegistry->markSetDirty(); // setStatic 과 같은 까닭
         markRenderStateDirty();
     }
 
@@ -526,6 +540,18 @@ namespace sw
             return;
         _sortKey = sortKey;
         markRenderStateDirty();
+    }
+
+    void MeshComponent::setStatic( bool bStatic )
+    {
+        const uint8 value = bStatic ? SW_TRUE : SW_FALSE;
+        if ( _bStatic == value )
+            return;
+        _bStatic = value;
+        markRenderStateDirty();
+        // 정적 집합이 바뀌었다 — 빌더가 정적 그림자 세대를 다시 잰다(움직이는 쪽으로 바뀐 메시는 더티 슬롯만으로는 보이지 않는다).
+        if ( _pPrimitiveRegistry != nullptr )
+            _pPrimitiveRegistry->markSetDirty();
     }
 
     void MeshComponent::setBlendMode( RHIBlendMode mode )

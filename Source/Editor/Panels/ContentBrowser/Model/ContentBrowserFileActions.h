@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
@@ -123,8 +124,8 @@ namespace sw::editor
         bool confirmDelete();
 
     private:
-        /** @brief 폴더(그 안 파일 전부) 또는 파일 하나를 @p folderAbs 로 옮기는 목록입니다. 옮길 수 없으면 false 이고 @p outFailure 에 이유입니다. */
-        [[nodiscard]] static bool collectMovesToFolder( string_view sourceAbs, string_view folderAbs, vector<EditorAssetMove>& outListMove, string& outFailure );
+        /** @brief 폴더(그 안 파일 전부) 또는 파일 하나를 @p folderAbs 로 옮기는 목록입니다. 옮길 수 없으면 그 이유입니다. */
+        [[nodiscard]] static expected<vector<EditorAssetMove>> collectMovesToFolder( string_view sourceAbs, string_view folderAbs );
 
     private:
         string _renamingAbs;      ///< 이름을 바꾸는 중인 에셋. 비어 있으면 없음

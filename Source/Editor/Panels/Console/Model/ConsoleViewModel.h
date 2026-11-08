@@ -1,36 +1,33 @@
 /**
  * @file ConsoleViewModel.h
- * @brief 콘솔 창의 ViewModel — 창 밖에 닿는 명령(로그 줄을 IDE 에서 열기 · 로그 파일 폴더 열기)과 플레이 세션 반응(플레이 시작에 지우기 · 오류에서 멈추기)의 판정 값입니다. ImGui 를 모릅니다.
- * @details 로그 줄 · 거르기 · 묶기는 창이 든다(로그 싱크가 UI 스레드로 넘긴 스냅숏 — `ConsoleLogRows`). 여기 명령은 문서를 바꾸지 않아 되돌리기에 남지 않는다. `docs/agents/EditorUI.md` MVVM 계약.
+ * @brief Output Log 창의 ViewModel — 플레이 세션 상태 읽기 · 멈추기(Clear on Play · Error Pause)와 로그 파일 보이기를 받습니다. ImGui 를 모릅니다.
+ * @details 패널(`ConsolePanel`)은 작업 공간 · 커맨드 헤더(`EditorPlaySession` · `EditorAssetFileCommands`)를 보지 않는다(`docs/agents/EditorUI.md` MVVM 계약).
+ *          플레이 멈춤 · 탐색기 열기는 문서를 바꾸지 않아 되돌리기에 남지 않는다(유니티 Console 의 Error Pause 와 같다).
  */
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
 
 namespace sw
 {
-    struct LogEntry;
+    class AutomationLogPolicy;
 } // namespace sw
 
 namespace sw::editor
 {
-    /** @brief 플레이 세션의 지금 상태입니다(값만). */
-    struct ConsolePlayState
-    {
-        bool _bStopped{ true };  ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다)
-        bool _bRunning{ false }; ///< 플레이 중이고 멈추지 않았다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다)
-    };
-
-    /** @brief 콘솔 창의 ViewModel 입니다(상태 없음). */
+    /** @brief Output Log 창의 ViewModel 입니다. 파일 머리말 참고. 상태가 없다. */
     struct ConsoleViewModel
     {
-        /** @brief 지금 플레이 세션 상태를 읽습니다(`EditorPlaySession`). */
-        static ConsolePlayState gatherPlayState();
-        /** @brief 플레이를 멈춥니다(오류에서 멈추기 — 유니티 Error Pause). */
+        /** @brief 플레이 세션이 멈춰(정지) 있으면 true 입니다. */
+        static bool isPlayStopped();
+        /** @brief 플레이 중이고 일시 정지가 아니면 true 입니다. */
+        static bool isPlayRunning();
+        /** @brief 플레이를 일시 정지합니다(Error Pause). */
         static void pausePlay();
-        /** @brief 로그 줄 @p entry 의 소스 위치(메시지의 `파일(줄)` 또는 줄의 파일 · 줄)를 IDE 에서 엽니다. 위치가 없으면 아무것도 하지 않고, 실패는 경고로 남는다. */
-        static void openEntryInIde( const LogEntry& entry );
-        /** @brief @p path(로그 파일 또는 폴더)를 파일 탐색기로 엽니다. 못 띄우면 경고가 남는다. */
-        static void showInFileExplorer( const string& path );
+        /** @brief @p absolutePath(로그 파일 또는 폴더)를 탐색기로 보입니다. 못 띄우면 경고가 남고 false 입니다. */
+        static bool showInFileExplorer( string_view absolutePath );
+        /** @brief 지금 도는 시나리오 세션의 로그 정책입니다(선언한 로그를 기대한 줄로 표시). 세션이 없는 실행(자동화 실행기를 짓지 않은 구성)이면 nullptr 입니다. */
+        static shared_ptr<const AutomationLogPolicy> findScenarioLogPolicy();
     };
 } // namespace sw::editor

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  화면 공간 GI 파이프라인(engine/pipeline/deferredpipeline_gi.xml) — SSAO 자리의 GTAO(gtao.hlsl)와 ScreenSpaceGI 패스(ssgi.hlsl)가 함께 돈다.
+  무대는 realtimegi(밝은 주황 바닥 위 어두운 큐브, 실시간 프로브) — 큐브 옆면 아래쪽이 바닥에서 튄 가까운 빛(SSGI)으로 주황을 띠고, 큐브와 바닥이 만나는 모서리가 GTAO 로 어두워진다.
+  파이프라인은 기동 때만 고를 수 있어 같은 실행의 대조 사진이 없다 — 꺼진 그림은 realtimegi 시나리오의 골든이다. 골든 screenspacegi 는 통합에서 기록한다.
+  실행: ctest -R Scenario.game.empty.screenspacegi
+-->
+<Scenario name="game.empty.screenspacegi" fixedDelta="0.0166667" timeoutFrames="400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/realtimegi.scene.xml"/>
+	<Launch variable="gv_renderPipeline" value="engine/pipeline/deferredpipeline_gi.xml"/>
+	<Launch variable="gv_postQuality" value="2"/>
+	<Launch variable="gv_renderScale" value="1"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Wait frames="120"/>
+	<Screenshot file="screenspacegi.ppm"/>
+	<Wait frames="10"/>
+	<ExpectImage file="screenspacegi.ppm" golden="screenspacegi"/>
+	<Pass/>
+</Scenario>

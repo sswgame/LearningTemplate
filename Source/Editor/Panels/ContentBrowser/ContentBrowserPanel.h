@@ -218,5 +218,6 @@ namespace sw::editor
         ContentBrowserCollectionStore           _collections;          /**< 저장 검색 · 컬렉션(로컬 · 공유) */
         string                                  _activeCollectionName; /**< 오른쪽에 펼친 컬렉션. 비었으면 폴더 보기다 */
         string                                  _collectionNameBuffer; /**< 저장 검색 · 새 컬렉션 이름 입력 */
+        string                                  _syncedAssetID;        /**< 메인 씬에서 고른 오브젝트의 애셋(선택 동기화 채널의 메인 씬 칸) — 타일에 테두리로 보인다. 미리보기 창의 선택은 따르지 않는다 */
     };
 } // namespace sw::editor

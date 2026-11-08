@@ -348,10 +348,10 @@ namespace sw
             state                           = AnimationLODState::makeState( _lodSettings, screenSize, bVisible, pBoneLOD );
             // 메시가 LOD 를 가지면 본 LOD 는 그 메시 단계를 따른다(화면 크기 임계값의 정본이 메시 단계 하나 — 본은 안 보이는 단계에서 먼저 빠지지 않는다).
             // 단계 n(1 부터)은 마스크 n - 1 이다 — 메시 LOD n 이 단계 n 이다(예전 `min( n, 단계 수 - 1 )` 은 마지막 본 단계에 닿지 못했다).
-            const int32  meshLODIndex  = pClient->findMeshLODIndex();
-            const uint32 boneMaskCount = pClient->getBoneLODMaskCount();
-            if ( boneMaskCount > 0 && meshLODIndex >= 0 )
-                state._boneLODLevel = static_cast<uint8>( MathUtil::min( static_cast<uint32>( meshLODIndex ), boneMaskCount ) );
+            const optional<uint32> meshLODIndex  = pClient->findMeshLODIndex();
+            const uint32           boneMaskCount = pClient->getBoneLODMaskCount();
+            if ( boneMaskCount > 0 && meshLODIndex.has_value() )
+                state._boneLODLevel = static_cast<uint8>( MathUtil::min( *meshLODIndex, boneMaskCount ) );
             // 예산은 포즈를 만드는 것만 센다 — 화면 밖에서 포즈를 건너뛰는 것은 이미 0 이다.
             if ( state._bVisible == SW_TRUE || _lodSettings._offscreenUpdateRateDivisor > 0 )
                 _listScratchBudgetItem.push_back( AnimationBudgetItem{ state._significance, state._updateRateDivisor } );
@@ -455,9 +455,10 @@ namespace sw
             for ( const TComponentHandle<SkeletalMeshComponent> handle : listSkeletalMesh[skeletalMeshIndex]->getAnimationDependencies() )
             {
                 const SkeletalMeshComponent* pUpstream     = ( _pManager != nullptr ) ? _pManager->resolveComponent( handle ) : nullptr;
-                const uint32                 upstreamIndex = _skeletalMeshList.findIndex( pUpstream );
-                if ( upstreamIndex == constant::invalid_index::kUint32 )
+                const optional<uint32>       foundUpstream = _skeletalMeshList.findIndex( pUpstream );
+                if ( foundUpstream.has_value() == false )
                     continue; // 사라졌거나 다른 씬의 유닛 — 순서를 강제하지 않는다
+                const uint32 upstreamIndex = *foundUpstream;
                 _listScratchEdge.push_back( AnimationDependencyEdge{ upstreamIndex, static_cast<uint32>( skeletalMeshIndex ) } );
                 ++_listScratchPendingCount[skeletalMeshIndex];
                 ++_listScratchDependentStart[upstreamIndex + 1];

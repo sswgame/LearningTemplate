@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -164,7 +165,7 @@ namespace sw
         void writeDebugLines( DebugHUDSectionWriter& writer, int32 characterLevel, uint32 maxLines ) const;
 
     private:
-        int32 findIndex( const hashed_string& skillID ) const;
+        [[nodiscard]] optional<int32> findIndex( const hashed_string& skillID ) const;
         /** @brief @p listRank 를 트리의 층(`_requiredSpent`)을 지키며 배워 닿을 수 있는지 판정합니다. */
         bool isSpendOrderReachable( const vector<int32>& listRank ) const;
 

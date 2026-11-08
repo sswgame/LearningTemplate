@@ -32,6 +32,7 @@
 #include "Core/Container/DependencyGraph.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
@@ -174,7 +175,7 @@ namespace sw
         [[nodiscard]] bool makeProcessingOrder( vector<uint32>& outListNodeIndex ) const;
         /** @brief 입력을 간선으로 본 의존 그래프입니다(노드 번호는 `_listNode` 와 같다). 없는 노드를 가리키는 입력은 빠진다 — 검사(`validate`)가 따로 잡는다. */
         [[nodiscard]] DependencyGraph makeDependencyGraph() const;
-        /** @brief 이름의 노드 번호입니다. 없으면 -1 입니다. */
-        int32 findNodeIndex( const hashed_string& name ) const;
+        /** @brief 이름의 노드 번호입니다. 없으면 비어 있습니다. */
+        [[nodiscard]] optional<uint32> findNodeIndex( const hashed_string& name ) const;
     };
 } // namespace sw

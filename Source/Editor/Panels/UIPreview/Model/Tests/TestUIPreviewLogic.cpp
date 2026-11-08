@@ -711,3 +711,28 @@ SW_TEST_CASE( UIPreviewLogicTest, ViewportSafeInsetsTakeTheLargerPerEdge )
     SW_EXPECT_EQUAL( 20.0f, viewport._safeInsets._w ); // 흉내 2000 × 0.01 이 시스템 바 10 보다 크다
     SW_EXPECT_EQUAL( 48.0f, viewport._touchTargetSize );
 }
+
+/**
+ * @brief [UIPreviewLogicTest] 기기 견본의 뷰포트가 고르는 화면 태그 — 게임 UI(`UISystem::syncScreenTags`)와 미리보기(`UIOffscreenScreens::setView`)가 같은 함수(`UIScaleSettings::makeScreenTags`)를 지난다.
+ *        세로 휴대 기기는 dp 너비(물리 / density)가 경계보다 좁아 compact · portrait, 돌리면 regular · landscape, 크기 0(최소화)은 등급이 없다
+ */
+SW_TEST_CASE( UIPreviewLogicTest, DevicePresetPicksScreenTags )
+{
+    UIScaleSettings settings{};
+    settings._rule                              = UIScaleRule::Fixed;
+    settings._compactMaxWidth                   = 600.0f;
+    constexpr float32              kDensity     = 2.75f;
+    const UIViewport               portrait     = UIScaleSettings::makeViewport( settings, float2{ 1080.0f, 2400.0f }, 1.0f, kDensity, float4{}, 0.0f );
+    const optional<ResourceTagSet> portraitTags = settings.makeScreenTags( portrait );
+    SW_REQUIRE_TRUE( portraitTags.has_value() );
+    SW_EXPECT_TRUE( portraitTags->contains( "screen.compact" ) );
+    SW_EXPECT_TRUE( portraitTags->contains( "orientation.portrait" ) );
+
+    const UIViewport               landscape     = UIScaleSettings::makeViewport( settings, float2{ 2400.0f, 1080.0f }, 1.0f, kDensity, float4{}, 0.0f );
+    const optional<ResourceTagSet> landscapeTags = settings.makeScreenTags( landscape );
+    SW_REQUIRE_TRUE( landscapeTags.has_value() );
+    SW_EXPECT_TRUE( landscapeTags->contains( "screen.regular" ) ); // 2400 / 2.75 ≈ 873dp
+    SW_EXPECT_TRUE( landscapeTags->contains( "orientation.landscape" ) );
+
+    SW_EXPECT_FALSE( settings.makeScreenTags( UIViewport{} ).has_value() );
+}

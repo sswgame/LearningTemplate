@@ -228,11 +228,12 @@ namespace sw
     {
         if ( _winner >= 0 || player != _currentPlayer )
             return false;
-        CardPile&   hand  = _listHand[static_cast<size_t>( player )];
-        const int32 index = hand.findIndexByID( cardID );
-        if ( index < 0 )
+        CardPile&             hand      = _listHand[static_cast<size_t>( player )];
+        const optional<int32> foundCard = hand.findIndexByID( cardID );
+        if ( foundCard.has_value() == false )
             return false;
-        const Card card = hand.getAt( index );
+        const int32 index = *foundCard;
+        const Card  card  = hand.getAt( index );
         if ( isPlayable( card ) == false )
             return false;
         const bool bWild = UnoGameInternal::isWildValue( card._rank );

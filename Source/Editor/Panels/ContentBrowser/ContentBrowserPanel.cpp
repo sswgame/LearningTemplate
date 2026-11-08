@@ -4,6 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 
@@ -24,6 +25,7 @@
 #include "Editor/Common/Workspace/Asset/EditorAssetTypeActions.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorRenderViews.h"
+#include "Editor/Common/Workspace/EditorSelectionSync.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -517,6 +519,7 @@ namespace sw::editor
         , _collections{}
         , _activeCollectionName{}
         , _collectionNameBuffer{}
+        , _syncedAssetID{}
     {
     }
 
@@ -1084,6 +1087,19 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "AddAsset" ) );
         drawAddMenu();
 
+        // 선택 동기화: 메인 씬 칸만 따른다 — 미리보기 창(프리팹 창)에서 고른 부품은 콘텐츠 브라우저를 움직이지 않는다(`EditorSelectionSync`).
+        const EditorSelectionSync*      pSync = editor::findSubsystem<EditorSelectionSync>();
+        const EditorSelectionSyncEntry* pMain = pSync != nullptr ? pSync->findLatest( makeSelectionContextBit( EditorSelectionContext::MainScene ) ) : nullptr;
+        _syncedAssetID                        = pMain != nullptr ? pMain->_assetPath : string{};
+        const utf8* const pFindSelected       = SW_LOCKEY( "EditorContentBrowser", "FindSelected" );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( pFindSelected ) );
+        ImGui::BeginDisabled( _syncedAssetID.empty() );
+        if ( ImGui::Button( pFindSelected ) && _model.revealAsset( _syncedAssetID ) == false )
+            SW_LOG_WARNING_ID( "ContentBrowser.FindSelectedNotOnDisk", "'%#' has no loose file to show (it lives only in a cooked pack)", _syncedAssetID.c_str() );
+        ImGui::EndDisabled();
+        EditorSelfTestMarks::record( "contentBrowser.findSelected" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "FindSelectedTip" ) );
+
         ImGui::SameLine();
         EditorWidgets::drawSearchField( "##cb_search", _searchBuffer, SW_LOCKEY( "EditorContentBrowser", "SearchHint" ), 160.0f, false, "contentBrowser.search" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "SearchTooltip" ) );
@@ -1415,6 +1431,12 @@ namespace sw::editor
                                         float2{ cursor.x + cell - inset, cursor.y + cell * 0.65f }, entry );
 
                     drawSourceControlBadge( pDrawList, float2{ cursor.x + cell - inset, cursor.y + inset }, entry );
+                    // 메인 씬에서 고른 오브젝트의 애셋은 테두리 하나(고른 타일의 채움과 겹쳐도 구분된다 — 언리얼 Sync to Content Browser · 유니티 Ping 의 표시).
+                    if ( _syncedAssetID.empty() == false && entry._bIsDirectory == false && FileUtil::pathsEqualNormalized( entry._relativePath, _syncedAssetID ) )
+                    {
+                        pDrawList->AddRect( cursor, ImVec2( cursor.x + cell, cursor.y + cell ), EditorColorUtil::toImU32( accent ), 0.0f, 0, 2.0f * EditorThemeUtil::getDPIScale() );
+                        EditorSelfTestMarks::record( "contentBrowser.synced" );
+                    }
 
                     if ( _model.isRenaming( entry ) )
                         drawRenameField( cell );

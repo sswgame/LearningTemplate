@@ -6,19 +6,15 @@
  */
 #include "pch.h"
 
+#include "Core/Math/VectorMath.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/Animation/AnimationGraphPanel.h"
 #include "Editor/Panels/Animation/SequencerPanel.h"
 #include "Editor/SelfTest/EditorWatchSupport.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Object/Component/SceneComponent.h"
-#include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
 
 namespace sw::editor
 {
@@ -27,10 +23,10 @@ namespace sw::editor
         /** @brief 애니메이션 그래프 패널의 개수 하나를 읽습니다(@p count 는 패널의 개수 함수). 패널이 없으면 값을 내지 않습니다. */
         [[nodiscard]] bool readAnimationGraphCount( uint32 ( AnimationGraphPanel::*count )() const, float64& outValue )
         {
-            EditorContext* pContext = getWatchContext( __func__ );
-            if ( pContext == nullptr )
+            const EditorPanelManager* pPanels = getWatchPanelManager( __func__ );
+            if ( pPanels == nullptr )
                 return false;
-            const AnimationGraphPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<AnimationGraphPanel>();
+            const AnimationGraphPanel* pPanel = pPanels->findPanel<AnimationGraphPanel>();
             if ( pPanel == nullptr )
                 return false;
             outValue = static_cast<float64>( ( pPanel->*count )() );
@@ -70,22 +66,20 @@ namespace sw::editor
         /** @brief `-gv_editorWatchObject` 오브젝트의 로컬 위치 X 입니다. 시퀀서 키 트랙 미리보기가 옮긴 값입니다. */
         [[nodiscard]] bool readObjectPositionX( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            const GameObjectManager* pManager = editor::getActiveObjectManager();
-            const GameObject*        pObject  = pManager != nullptr ? pManager->findGameObjectByName( hashed_string( gv_editorWatchObject.c_str() ) ) : nullptr;
-            const SceneComponent*    pScene   = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
-            if ( pScene == nullptr )
+            float3 position{};
+            if ( readWatchedObjectLocalPosition( position ) == false )
                 return false;
-            outValue = static_cast<float64>( pScene->getLocalPosition()._x );
+            outValue = static_cast<float64>( position._x );
             return true;
         }
 
         /** @brief Sequencer 패널이 선택한 키 트랙의 키 프레임 수입니다. 패널이 닫혔거나 선택한 트랙이 없으면 값을 내지 않습니다. */
         [[nodiscard]] bool readSequencerKeyFrameCount( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            EditorContext* pContext = getWatchContext( __func__ );
-            if ( pContext == nullptr )
+            const EditorPanelManager* pPanels = getWatchPanelManager( __func__ );
+            if ( pPanels == nullptr )
                 return false;
-            const SequencerPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<SequencerPanel>();
+            const SequencerPanel* pPanel = pPanels->findPanel<SequencerPanel>();
             uint32                count{ 0 };
             const bool            bKeyFrameCountUnavailable = pPanel == nullptr || pPanel->isOpen() == false || pPanel->findSelectedTrackKeyFrameCount( count ) == false;
             if ( bKeyFrameCountUnavailable )
@@ -97,10 +91,10 @@ namespace sw::editor
         /** @brief 열린 Sequencer 패널입니다. 닫혔으면 nullptr 입니다. */
         [[nodiscard]] const SequencerPanel* findOpenSequencer( const utf8* pCaller )
         {
-            EditorContext* pContext = getWatchContext( pCaller );
-            if ( pContext == nullptr )
+            const EditorPanelManager* pPanels = getWatchPanelManager( pCaller );
+            if ( pPanels == nullptr )
                 return nullptr;
-            const SequencerPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<SequencerPanel>();
+            const SequencerPanel* pPanel = pPanels->findPanel<SequencerPanel>();
             return pPanel != nullptr && pPanel->isOpen() ? pPanel : nullptr;
         }
 
@@ -145,6 +139,46 @@ namespace sw::editor
             outValue = static_cast<float64>( pPanel->getDocument().getSelectedKeys().size() );
             return true;
         }
+
+        /** @brief Sequencer 의 오류 배지가 붙은 트랙 수입니다. */
+        [[nodiscard]] bool readSequencerTrackIssueCount( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            const SequencerPanel* pPanel = findOpenSequencer( __func__ );
+            if ( pPanel == nullptr )
+                return false;
+            outValue = static_cast<float64>( pPanel->getDocument().countTrackIssues() );
+            return true;
+        }
+
+        /** @brief Sequencer 에서 고른 키 트랙 번호입니다(없으면 -1). */
+        [[nodiscard]] bool readSequencerSelectedTrack( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            const SequencerPanel* pPanel = findOpenSequencer( __func__ );
+            if ( pPanel == nullptr )
+                return false;
+            outValue = static_cast<float64>( pPanel->getDocument()._selectedTrack );
+            return true;
+        }
+
+        /** @brief Sequencer 의 키 띠 · 컷 차선이 보이는 프레임 폭입니다(확대하면 준다). */
+        [[nodiscard]] bool readSequencerViewFrameSpan( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            const SequencerPanel* pPanel = findOpenSequencer( __func__ );
+            if ( pPanel == nullptr )
+                return false;
+            outValue = static_cast<float64>( pPanel->getDocument().getViewFrameSpan() );
+            return true;
+        }
+
+        /** @brief Sequencer 문서의 구간 항목 수입니다(컷 포함). */
+        [[nodiscard]] bool readSequencerItemCount( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            const SequencerPanel* pPanel = findOpenSequencer( __func__ );
+            if ( pPanel == nullptr )
+                return false;
+            outValue = static_cast<float64>( pPanel->getDocument()._asset._listItem.size() );
+            return true;
+        }
     } // namespace
 
     SW_AUTOMATION_WATCH( editorSequencerBindingCount, "Editor.SequencerBindingCount", "Bindings in the sequence open in the Sequencer panel", &readSequencerBindingCount );
@@ -152,6 +186,12 @@ namespace sw::editor
                          &readSequencerUnboundCount );
     SW_AUTOMATION_WATCH( editorSequencerCutCount, "Editor.SequencerCutCount", "Camera cuts in the sequence open in the Sequencer panel", &readSequencerCutCount );
     SW_AUTOMATION_WATCH( editorSequencerSelectedKeyCount, "Editor.SequencerSelectedKeyCount", "Keys selected in the Sequencer panel's key strips", &readSequencerSelectedKeyCount );
+    SW_AUTOMATION_WATCH( editorSequencerTrackIssueCount, "Editor.SequencerTrackIssueCount", "Key tracks with an error badge in the Sequencer panel (unknown binding, channel count, empty target path, keys outside the timeline)",
+                         &readSequencerTrackIssueCount );
+    SW_AUTOMATION_WATCH( editorSequencerSelectedTrack, "Editor.SequencerSelectedTrack", "Index of the key track selected in the Sequencer panel (-1: none)", &readSequencerSelectedTrack );
+    SW_AUTOMATION_WATCH( editorSequencerViewFrameSpan, "Editor.SequencerViewFrameSpan", "Frames the Sequencer panel's key strips and cut lane show (the timeline length when fitted)",
+                         &readSequencerViewFrameSpan );
+    SW_AUTOMATION_WATCH( editorSequencerItemCount, "Editor.SequencerItemCount", "Span items (camera cuts included) in the sequence open in the Sequencer panel", &readSequencerItemCount );
     SW_AUTOMATION_WATCH( editorAnimationGraphLinkCount, "Editor.AnimationGraphLinkCount", "Transitions in the open animation graph document",
                          &readAnimationGraphLinkCount );
     SW_AUTOMATION_WATCH( editorAnimationGraphConditionCount, "Editor.AnimationGraphConditionCount", "Transitions with a condition in the open animation graph document",

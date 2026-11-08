@@ -109,17 +109,23 @@ function(sw_addExecutable TARGET_NAME)
 	endif()
 endfunction()
 
-# sw_splitShippingDebugInfo — 리눅스 Shipping: 디버그 정보를 `Symbols/<이름>.debug` 로 떼고 실행 파일에는 `.gnu_debuglink` 만 남긴다
+# sw_splitShippingDebugInfo — 리눅스 · Android Shipping(웹은 -gseparate-dwarf): 디버그 정보를 `Symbols/<이름>.debug` 로 떼고 실행 파일에는 `.gnu_debuglink` 만 남긴다
 #   (배포물에 정보가 실리지 않는다). Windows 는 PDB 가 원래 따로다(`CMAKE_PDB_OUTPUT_DIRECTORY`).
 # ------------------------------------------------------------------------------
 function(sw_splitShippingDebugInfo TARGET_NAME)
 	if(NOT SW_SHIPPING_BUILD OR WIN32 OR SW_RELEASE_DEBUG_INFO STREQUAL "none")
 		return()
 	endif()
+	set(symbolsDir "${CMAKE_BINARY_DIR}/Symbols")
+	if(EMSCRIPTEN)
+		# wasm 에는 objcopy 가 없다 — Emscripten 링커가 DWARF 를 따로 쓴다(-gseparate-dwarf). 배포 .wasm 에는 그 파일 이름만 남는다.
+		file(MAKE_DIRECTORY "${symbolsDir}")
+		target_link_options(${TARGET_NAME} PRIVATE "-g" "-gseparate-dwarf=${symbolsDir}/${TARGET_NAME}.debug.wasm")
+		return()
+	endif()
 	if(NOT CMAKE_OBJCOPY)
 		message(FATAL_ERROR "sw_splitShippingDebugInfo(${TARGET_NAME}): CMAKE_OBJCOPY is not set - install llvm-objcopy or binutils")
 	endif()
-	set(symbolsDir "${CMAKE_BINARY_DIR}/Symbols")
 	add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E make_directory "${symbolsDir}"
 		COMMAND ${CMAKE_OBJCOPY} --only-keep-debug "$<TARGET_FILE:${TARGET_NAME}>" "${symbolsDir}/$<TARGET_FILE_NAME:${TARGET_NAME}>.debug"

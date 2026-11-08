@@ -13,7 +13,7 @@
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/SourceControl/EditorSourceControl.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Panels/SourceControl/Model/SourceControlChangesModel.h"
+#include "Editor/Panels/SourceControl/Model/SourceControlChangesViewModel.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -31,7 +31,7 @@ namespace sw::editor
         {
             static constexpr const utf8* kRevertPopupName = "Revert File##SourceControlRevert";
 
-            static EditorSourceControl& getSourceControl() { return SourceControlChangesModel::getSourceControl(); }
+            static EditorSourceControl& getSourceControl() { return SourceControlChangesViewModel::getSourceControl(); }
 
             /** @brief 상태 열의 짧은 글입니다(색이 아니라 글로 알린다). */
             static const utf8* describeKind( SourceControlChangeKind kind )
@@ -67,7 +67,7 @@ namespace sw::editor
             /** @brief 감시 값 `Editor.SourceControlChangeCount` — 바뀐 파일 수입니다. 아직 목록을 읽지 못했으면 -1 입니다. */
             [[nodiscard]] static bool readChangeCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                if ( SourceControlChangesModel::findSourceControl() == nullptr )
+                if ( SourceControlChangesViewModel::findSourceControl() == nullptr )
                     return false;
                 const EditorSourceControl& sourceControl = getSourceControl();
                 outValue                                 = sourceControl.hasStatus() ? static_cast<float64>( sourceControl.getChanges().size() ) : -1.0;
@@ -77,7 +77,7 @@ namespace sw::editor
             /** @brief 감시 값 `Editor.SourceControlTracksChanges` — 공급자가 변경 목록을 다루면(git) 1 입니다. */
             [[nodiscard]] static bool readTracksChanges( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                if ( SourceControlChangesModel::findSourceControl() == nullptr )
+                if ( SourceControlChangesViewModel::findSourceControl() == nullptr )
                     return false;
                 outValue = getSourceControl().getProvider().canTrackChanges() ? 1.0 : 0.0;
                 return true;
@@ -86,7 +86,7 @@ namespace sw::editor
             /** @brief `sourcecontrol.history <저장소 기준 경로>` — 파일 하나의 최근 커밋을 읽는다(History 단추와 같다 — 바뀌지 않은 파일도 된다). */
             static bool runHistory( const vector<string>& listArgument, string& outReply )
             {
-                if ( listArgument.size() != 1 || SourceControlChangesModel::findSourceControl() == nullptr )
+                if ( listArgument.size() != 1 || SourceControlChangesViewModel::findSourceControl() == nullptr )
                     return false;
                 outReply = getSourceControl().requestHistory( listArgument[0] ) ? "reading history of " + listArgument[0] : string( "source control does not track changes (no git)" );
                 return true;
@@ -95,7 +95,7 @@ namespace sw::editor
             /** @brief 감시 값 `Editor.SourceControlDetailLines` — 지난 diff · 이력의 줄 수입니다. */
             [[nodiscard]] static bool readDetailLines( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                if ( SourceControlChangesModel::findSourceControl() == nullptr )
+                if ( SourceControlChangesViewModel::findSourceControl() == nullptr )
                     return false;
                 outValue = static_cast<float64>( getSourceControl().getDetailLines().size() );
                 return true;

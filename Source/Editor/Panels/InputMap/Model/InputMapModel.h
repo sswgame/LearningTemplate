@@ -130,10 +130,10 @@ namespace sw::editor
          * @details 2D 합성 · 스틱 · 마우스 축 · 가상 조이스틱 · AnyKey 는 매 프레임 읽는 값이라 형식에 이 칸이 없다(`InputMapXML`). 고치게 두면 저장 뒤 말없이 사라진다.
          */
         static bool savesTriggerFields( BindingKind kind );
-        /** @brief 에디터 범위의 입력 관리자입니다(없으면 멈춘다). View 가 서비스 창구(`EditorService.h`)를 보지 않게 여기서 찾는다. */
+        /** @brief 호스트의 입력 매니저입니다. 에디터가 서 있을 때(그리기)만 부른다 — 없으면 멈춘다. 패널이 작업 공간 헤더를 보지 않게 여기서 찾는다(MVVM 계약). */
         static InputManager& getInputManager();
-        /** @brief 뷰포트 입력 오버레이 설정입니다(창이 바로 고친다 — 보기 설정이라 되돌리기에 남기지 않는다). 없으면 멈춘다. */
-        static ViewportInputOverlay& getViewportOverlay();
+        /** @brief 게임 뷰 입력 오버레이 설정입니다(에디터 서브시스템 `ViewportInputOverlaySettings`). 에디터가 서 있을 때만 부른다 — 없으면 멈춘다. 보기 설정이라 되돌리기에 남지 않는다. */
+        static ViewportInputOverlay& editViewportOverlay();
 
         const string& getSelectedAction() const { return _selectedAction; }
         void          selectAction( string_view action ) { _selectedAction = action; }

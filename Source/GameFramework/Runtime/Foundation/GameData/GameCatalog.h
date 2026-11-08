@@ -7,6 +7,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
 #include "Core/Name/hashed_string.h"
@@ -62,15 +63,17 @@ namespace sw
         /** @brief id 의 정의입니다. 없으면 nullptr 입니다. */
         const TDef* find( const hashed_string& id ) const
         {
-            const int32 index = findIndex( id );
-            return index >= 0 ? &_listDef[static_cast<size_t>( index )] : nullptr;
+            const optional<int32> index = findIndex( id );
+            return index.has_value() ? &_listDef[static_cast<size_t>( *index )] : nullptr;
         }
 
-        /** @brief id 의 인덱스입니다. 없으면 -1 입니다. */
-        int32 findIndex( const hashed_string& id ) const
+        /** @brief id 의 인덱스입니다. 없으면 비어 있습니다. */
+        [[nodiscard]] optional<int32> findIndex( const hashed_string& id ) const
         {
             const auto mapIter = _mapIndex.find( id );
-            return mapIter != _mapIndex.end() ? static_cast<int32>( mapIter->second ) : constant::invalid_index::kInt32;
+            if ( mapIter == _mapIndex.end() )
+                return nullopt;
+            return static_cast<int32>( mapIter->second );
         }
 
         /** @brief 조건에 맞는 첫 정의입니다. 씨앗 아이템으로 작물 찾기처럼 보조 키로 찾을 때 씁니다. */

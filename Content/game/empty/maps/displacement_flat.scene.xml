@@ -1,0 +1,29 @@
+<Scene formatVersion="2" name="Displacement_flat">
+	<!-- 시나리오 automation/displacement 의 대조 무대 — 낮은 카메라가 5 m 판의 먼 가장자리(윤곽)를 본다. displacement.scene.xml 과 판의 머티리얼만 다르다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,0.7,-6" _localRotation="0.08,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="0.7" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,0,0" _localRotation="0.6,0.5,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,1,1" _intensity="1.2" _ambient="0.4" _shadowExtent="8" _shadowDistance="20" _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Plate">
+			<GameObject _schemaVersion="0" _name="Plate" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="5,1,5" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="game/empty/materials/displacement/displacement_flat.material" _boundsRadius="4" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

@@ -87,13 +87,13 @@ namespace
                 return pEffect;
             for ( const std::pair<const utf8*, float32>& parameter : listParameter )
             {
-                const int32 parameterIndex = pEffect->findParameterIndex( sw::hashed_string( parameter.first ) );
-                if ( parameterIndex < 0 )
+                const sw::optional<uint32> parameterIndex = pEffect->findParameterIndex( sw::hashed_string( parameter.first ) );
+                if ( parameterIndex.has_value() == false )
                 {
                     pEffect.reset();
                     return pEffect;
                 }
-                pEffect->setParameter( static_cast<uint32>( parameterIndex ), parameter.second );
+                pEffect->setParameter( *parameterIndex, parameter.second );
             }
             return pEffect;
         }
@@ -221,9 +221,9 @@ SW_TEST_CASE( AudioDSPTest, CompressorGainReduction )
     SW_EXPECT_NEAR( -40.0f, sw::AudioMath::linearToDb( AudioDSPTestInternal::computePeak( listQuiet, 0, 43200, 4800 ) ), 0.1f );
 
     // 메이크업 게인은 그대로 더해진다.
-    const int32 makeupIndex = pCompressor->findParameterIndex( sw::hashed_string( "makeupDb" ) );
-    SW_REQUIRE_TRUE( makeupIndex >= 0 );
-    pCompressor->setParameter( static_cast<uint32>( makeupIndex ), 6.0f );
+    const sw::optional<uint32> makeupIndex = pCompressor->findParameterIndex( sw::hashed_string( "makeupDb" ) );
+    SW_REQUIRE_TRUE( makeupIndex.has_value() );
+    pCompressor->setParameter( *makeupIndex, 6.0f );
     pCompressor->reset();
     listQuiet = AudioDSPTestInternal::makeStereoSine( 1000.0f, 0.01f, 48000 );
     AudioDSPTestInternal::processAll( *pCompressor, listQuiet );

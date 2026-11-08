@@ -68,6 +68,26 @@ namespace sw
                 return true;
             }
 
+            /** @brief 타깃 인자의 `-DSW_PLATFORM_*` 로 설정 표(`parser_args.platform`)의 열쇠를 고릅니다. 모르는 플랫폼이면 nullopt 입니다. */
+            [[nodiscard]] static optional<string_view> findTargetPlatformKey( const vector<string>& listTargetArg )
+            {
+                constexpr std::pair<string_view, string_view> kArrPlatform[] = {
+                    {"-DSW_PLATFORM_WINDOWS", "windows"},
+                    {  "-DSW_PLATFORM_LINUX",   "linux"},
+                    {"-DSW_PLATFORM_ANDROID", "android"},
+                    {    "-DSW_PLATFORM_WEB",     "web"},
+                };
+                for ( const string& targetArg : listTargetArg )
+                {
+                    for ( const auto& [macro, key] : kArrPlatform )
+                    {
+                        if ( targetArg == macro )
+                            return key;
+                    }
+                }
+                return nullopt;
+            }
+
             static void appendUnique( vector<string>& inoutListDst, const vector<string>& listSrc )
             {
                 for ( const string& item : listSrc )
@@ -384,20 +404,21 @@ namespace sw
     {
     }
 
-    bool ParserConfig::load( const string& defaultsPath )
+    bool ParserConfig::load( const string& defaultsPath, const vector<string>& listTargetArg )
     {
         _listBaseArg.clear();
         _listForceInclude.clear();
         _listLoadedFile.clear();
         _bLoaded = SW_FALSE;
 
-#if defined( SW_PLATFORM_WINDOWS )
-        constexpr const utf8* kPlatformParserKey = "windows";
-#elif defined( SW_PLATFORM_LINUX )
-        constexpr const utf8* kPlatformParserKey = "linux";
-#else
-        constexpr const utf8* kPlatformParserKey = "";
-#endif
+        // 대상 플랫폼은 CMake 가 넘긴 타깃 매크로가 정한다(교차 빌드에서 파서를 지은 호스트와 다르다). 표에 없는 플랫폼은 오류다.
+        const optional<string_view> platformParserKey = ParserConfigInternal::findTargetPlatformKey( listTargetArg );
+        if ( platformParserKey.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "ParserConfig.NoTargetPlatform", "%# names no SW_PLATFORM_* macro the parser knows (-DSW_PLATFORM_WINDOWS / LINUX / ANDROID / WEB)", cli::kTargetArg );
+            return false;
+        }
+        const string kPlatformParserKey{ *platformParserKey };
 
         if ( AbsolutePath::tryMake( defaultsPath ).has_value() == false )
         {
@@ -415,8 +436,8 @@ namespace sw
 
         BLOCK( "Load Base Arguments from Config" )
         {
-            vector<string> listMerged = ParserConfigInternal::loadArgsFromDocument( defaultsDoc, kPlatformParserKey );
-            ParserConfigInternal::appendUnique( listMerged, ParserConfigInternal::loadArgsFromDocument( localDoc, kPlatformParserKey ) );
+            vector<string> listMerged = ParserConfigInternal::loadArgsFromDocument( defaultsDoc, kPlatformParserKey.c_str() );
+            ParserConfigInternal::appendUnique( listMerged, ParserConfigInternal::loadArgsFromDocument( localDoc, kPlatformParserKey.c_str() ) );
             _listBaseArg = std::move( listMerged );
         }
 
@@ -469,29 +490,11 @@ namespace sw
         BLOCK( "Target Macros" )
         {
             // 헤더는 CMake 가 정의하는 타깃 매크로만 읽고 `Core/Foundation/TargetMacroCheck.h` 가 그것을 실제 컴파일러와 대조한다.
-            // libclang 은 CMake 를 거치지 않으므로 같은 매크로를 여기서 넘긴다. libclang 은 기본 타깃(이 파서를 지은 기계)으로 읽고,
-            // 언제나 clang 이다.
-#if defined( SW_PLATFORM_WINDOWS )
-            _listBaseArg.emplace_back( "-DSW_PLATFORM_WINDOWS" );
-#elif defined( SW_PLATFORM_LINUX )
-            _listBaseArg.emplace_back( "-DSW_PLATFORM_LINUX" );
-            _listBaseArg.emplace_back( "-DSW_PLATFORM_POSIX" );
-#else
-    #error "ReflectionParser runs on a desktop host (Windows or Linux)"
-#endif
-#if defined( SW_X64 )
-            _listBaseArg.emplace_back( "-DSW_X64" );
-#elif defined( SW_ARM64 )
-            _listBaseArg.emplace_back( "-DSW_ARM64" );
-#endif
+            // libclang 은 CMake 를 거치지 않으므로 대상 빌드의 매크로 · 트리플 · 시스템 헤더를 CMake 가 `--target-arg` 로 넘긴다(ReflectionCodeGen.cmake).
+            // 파서 자신의 매크로를 쓰지 않는다 — 교차 빌드(웹 · Android)는 호스트에서 지은 파서가 다른 대상을 읽는다. libclang 은 언제나 clang 이다.
+            for ( const string& targetArg : listTargetArg )
+                _listBaseArg.push_back( targetArg );
             _listBaseArg.emplace_back( "-DSW_COMPILER_CLANG" );
-            // 빌드 타깃 종류 — 파서는 같은 빌드 폴더의 sw_global_options 로 지어지므로 자기 매크로가 곧 그 빌드의 것이다.
-#if defined( SW_WITH_CLIENT_CODE )
-            _listBaseArg.emplace_back( "-DSW_WITH_CLIENT_CODE" );
-#endif
-#if defined( SW_WITH_SERVER_CODE )
-            _listBaseArg.emplace_back( "-DSW_WITH_SERVER_CODE" );
-#endif
         }
 
         BLOCK( "Locate LLVM and Clang Resource Directory" )
@@ -529,27 +532,28 @@ namespace sw
         }
 
 #if defined( SW_PLATFORM_WINDOWS )
-        BLOCK( "Locate MSVC and Windows SDK Includes" )
-        {
-            const string msvcInc = FileUtil::joinPath( msvcToolsDir, _msvcIncludeRel );
-            if ( msvcToolsDir.empty() == false && FileUtil::isDirectory( msvcInc ) )
+        if ( kPlatformParserKey == "windows" ) // 대상이 Windows 일 때만 MSVC · SDK 헤더를 읽는다(교차 대상은 자기 sysroot 를 `--target-arg` 로 받는다)
+            BLOCK( "Locate MSVC and Windows SDK Includes" )
             {
-                _listBaseArg.emplace_back( _flagIsystem );
-                _listBaseArg.emplace_back( msvcInc );
-            }
-
-            if ( winSdkDir.empty() == false && winSdkVer.empty() == false )
-            {
-                const string ucrtPath = FileUtil::joinPath(
-                    FileUtil::joinPath( FileUtil::joinPath( winSdkDir, _winSdkIncludeRel ), winSdkVer ),
-                    _winSdkUcrtRel );
-                if ( FileUtil::isDirectory( ucrtPath ) )
+                const string msvcInc = FileUtil::joinPath( msvcToolsDir, _msvcIncludeRel );
+                if ( msvcToolsDir.empty() == false && FileUtil::isDirectory( msvcInc ) )
                 {
                     _listBaseArg.emplace_back( _flagIsystem );
-                    _listBaseArg.emplace_back( ucrtPath );
+                    _listBaseArg.emplace_back( msvcInc );
+                }
+
+                if ( winSdkDir.empty() == false && winSdkVer.empty() == false )
+                {
+                    const string ucrtPath = FileUtil::joinPath(
+                        FileUtil::joinPath( FileUtil::joinPath( winSdkDir, _winSdkIncludeRel ), winSdkVer ),
+                        _winSdkUcrtRel );
+                    if ( FileUtil::isDirectory( ucrtPath ) )
+                    {
+                        _listBaseArg.emplace_back( _flagIsystem );
+                        _listBaseArg.emplace_back( ucrtPath );
+                    }
                 }
             }
-        }
 #endif
 
         _bLoaded = SW_TRUE;

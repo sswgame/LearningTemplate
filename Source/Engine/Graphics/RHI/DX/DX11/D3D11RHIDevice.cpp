@@ -93,7 +93,7 @@ namespace sw
         , _gpuBuffers{}
         , _gpuTextures{}
         , _timestampFrameIndex{ 0 }
-        , _timestampWrittenMask{ 0 }
+        , _timestampWrittenMask{}
         , _bTimestampEnabled{ SW_FALSE }
         , _bTimestampReady{ SW_FALSE }
         , _bTimestampFrameOpen{ SW_FALSE }
@@ -159,6 +159,8 @@ namespace sw
         pContext->PSSetSamplers( shaderslot::dx11::kStaticSampler0, shaderslot::kStaticSamplerArrayCount, arrSampler );
         // 정점 셰이더도 머티리얼 텍스처를 읽는다(툰 외곽선 두께) — 같은 세트를 건다.
         pContext->VSSetSamplers( shaderslot::dx11::kStaticSampler0, shaderslot::kStaticSamplerArrayCount, arrSampler );
+        // 변위 머티리얼의 도메인 스테이지가 높이 맵을 읽는다(material_displacement.hlsli).
+        pContext->DSSetSamplers( shaderslot::dx11::kStaticSampler0, shaderslot::kStaticSamplerArrayCount, arrSampler );
     }
 
     void D3D11RHIDevice::flushDebugMessages( const utf8* pStage )
@@ -923,7 +925,7 @@ namespace sw
             return;
         // 타임스탬프 쿼리는 Begin 이 없다. End 하나가 "지금 GPU 시각" 이다.
         pContext->End( pQuery );
-        _timestampWrittenMask.fetch_or( makeGPUTimestampSlotBit( slotIndex ), std::memory_order_relaxed );
+        _timestampWrittenMask.set( slotIndex );
     }
 
     void D3D11RHIDevice::ensureTimestampResources()
@@ -956,7 +958,7 @@ namespace sw
     {
         _timestampFrame._listMicro.clear();
         D3D11TimestampFrame& frame                   = _arrTimestampFrame[_timestampFrameIndex];
-        const bool           bNoTimestampFrameToRead = getTimestampSlotCount() == 0 || frame._bPending == SW_FALSE || frame._writtenMask == 0;
+        const bool           bNoTimestampFrameToRead = getTimestampSlotCount() == 0 || frame._bPending == SW_FALSE || frame._writtenMask.any() == false;
         if ( bNoTimestampFrameToRead )
             return;
 
@@ -992,17 +994,17 @@ namespace sw
             return;
 
         uint64               arrTick[constant::render::kMaxGPUTimestampSlot]{};
-        GPUTimestampSlotMask readyMask{ 0 };
+        GPUTimestampSlotMask readyMask{};
         for ( uint32 slotIndex = 0; slotIndex < constant::render::kMaxGPUTimestampSlot; ++slotIndex )
         {
-            if ( ( frame._writtenMask & makeGPUTimestampSlotBit( slotIndex ) ) == 0 )
+            if ( frame._writtenMask.test( slotIndex ) == false )
                 continue;
 
             uint64 tick{ 0 };
             if ( waitForQuery( frame._arrQuery[slotIndex].Get(), &tick, sizeof( tick ) ) == false )
                 continue;
             arrTick[slotIndex] = tick;
-            readyMask |= makeGPUTimestampSlotBit( slotIndex );
+            readyMask.set( slotIndex );
         }
         _lastTimestampFrequency = disjointData.Frequency;
         RHITimestampFrame::resolve( arrTick, readyMask, constant::time::kNanosecondsPerSecond / static_cast<float64>( disjointData.Frequency ), _timestampFrame );
@@ -1019,8 +1021,8 @@ namespace sw
         const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
         if ( getTimestampSlotCount() != 0 )
         {
-            _arrTimestampFrame[_timestampFrameIndex]._writtenMask = 0;
-            _timestampWrittenMask.store( 0, std::memory_order_relaxed );
+            _arrTimestampFrame[_timestampFrameIndex]._writtenMask = GPUTimestampSlotMask{};
+            _timestampWrittenMask.clear();
 
             // disjoint 는 프레임 전체를 감싼다. 그 사이에 즉시 컨텍스트가 커맨드 리스트를 실행한다.
             context->Begin( _arrTimestampFrame[_timestampFrameIndex]._disjoint.Get() );
@@ -1069,8 +1071,8 @@ namespace sw
                 const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
                 context->End( frame._disjoint.Get() );
             }
-            frame._writtenMask   = _timestampWrittenMask.load( std::memory_order_relaxed );
-            frame._bPending      = ( frame._writtenMask != 0 ) ? SW_TRUE : SW_FALSE;
+            frame._writtenMask   = _timestampWrittenMask.load();
+            frame._bPending      = frame._writtenMask.any() ? SW_TRUE : SW_FALSE;
             _bTimestampFrameOpen = SW_FALSE;
             _timestampFrameIndex = ( _timestampFrameIndex + 1 ) % constant::render::kMaxFrameCountInFlight;
         }

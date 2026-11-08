@@ -1,0 +1,76 @@
+<Scene formatVersion="2" name="Distortion">
+	<!-- 화면 왜곡 시나리오(automation/distortion)의 무대 — 카메라 앞에 세운 무늬 벽(prototypegrid)과, 그 앞의 보이지 않는 왜곡 렌즈(구, distortion_lens — 표면 알파 0).
+	     렌즈가 있으면 벽의 격자가 구의 가장자리 쪽으로 휘어 보이고, 시나리오가 렌즈를 시야 밖으로 순간이동하면 벽이 곧게 보인다. 애니메이션이 없어 같은 프레임이 실행마다 같은 그림이다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,1.6,-6"
+					                 _localRotation="0,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _fovY="0.7"
+					                 _nearZ="0.1"
+					                 _farZ="100"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,0,0"
+					                           _localRotation="0.6,3.6,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachComponent="None"
+					                           _color="1,1,1"
+					                           _intensity="1.2"
+					                           _ambient="0.5"
+					                           _shadowExtent="8"
+					                           _shadowDistance="20"
+					                           _bCastShadow="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<!-- 카메라를 보는 무늬 벽 — 바닥 판을 세웠다(x 축으로 -90 도). -->
+		<entity id="3" name="Wall">
+			<GameObject _schemaVersion="0" _name="Wall" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0,1.6,3"
+					               _localRotation="-1.5708,0,0"
+					               _localScale="12,1,12"
+					               _attachOwner="None"
+					               _attachComponent="None"
+					               _meshID="Plane"
+					               _materialPath="engine/materials/prototypegrid_light.material"
+					               _boundsRadius="9"
+					               _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<!-- 왜곡 렌즈 — 화면 가운데의 구. 표면은 보이지 않고(알파 0) 뒤의 벽을 노멀 방향으로 비껴 보인다. -->
+		<entity id="4" name="Lens">
+			<GameObject _schemaVersion="0" _name="Lens" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0,1.6,-2"
+					               _localRotation="0,0,0"
+					               _localScale="1.5,1.5,1.5"
+					               _attachOwner="None"
+					               _attachComponent="None"
+					               _meshID="Sphere"
+					               _materialPath="game/empty/materials/distortion_lens.material"
+					               _boundsRadius="1"
+					               _blendMode="Transparent" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

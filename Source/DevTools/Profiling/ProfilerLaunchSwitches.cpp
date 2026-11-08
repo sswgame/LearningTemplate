@@ -7,11 +7,11 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "DevTools/Profiling/ProfilerTraceExport.h"
+#include "DevTools/Profiling/Tracy/TracyProfilerBackend.h"
 
 #include "Engine/Asset/AssetLoadProfiler.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Profiling/ProfilerBackend.h"
 
 namespace sw
 {
@@ -47,7 +47,7 @@ namespace sw
     {
         // 켜지 못해도(빌드에 없음 · 클라이언트 라이브러리 없음) 기동을 세우지 않는다 — 경고는 출력 쪽이 남긴다.
         if ( gv_tracy )
-            (void)ProfilerBackend::startTracy( gv_tracyMemory );
+            (void)TracyProfilerBackend::start( gv_tracyMemory );
         if ( gv_traceSaveOnExit.empty() == false )
             ProfilerTraceExport::startExitCapture( engine::getSubsystem<FrameProfiler>(), gv_traceSaveOnExit );
         return SubsystemInitResult::Succeeded;
@@ -55,7 +55,8 @@ namespace sw
 
     void ProfilerLaunchSwitches::shutdownSubsystem()
     {
-        // 서비스 · 프로파일러가 아직 있다(기동 단계가 서비스보다 먼저 내려간다).
+        // 서비스 · 프로파일러가 아직 있다(기동 단계가 서비스보다 먼저 내려간다). 외부 출력은 프로세스 끝까지 켜져 있다 — 여기서는 요약 줄만 남긴다.
+        TracyProfilerBackend::logSummary();
         if ( gv_traceSaveOnExit.empty() == false )
             ProfilerTraceExport::finishExitCapture( engine::getSubsystem<FrameProfiler>(), gv_traceSaveOnExit, getProcessName() );
         const AssetLoadProfiler* const pAssetLoadProfiler = gv_assetLoadReport != 0 ? engine::findSubsystem<AssetLoadProfiler>() : nullptr;

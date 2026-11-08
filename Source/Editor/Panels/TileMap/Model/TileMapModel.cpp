@@ -10,6 +10,7 @@
 
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
+#include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/TileMap/Model/TileMapPaintUtil.h"
@@ -773,10 +774,9 @@ namespace sw::editor
         return static_cast<size_t>( y ) * static_cast<size_t>( _map._width ) + static_cast<size_t>( x );
     }
 
-    string TileMapModel::getFocusedAssetPath()
+    const string& TileMapModel::getFocusedAssetPath()
     {
-        const EditorWorkspace* const pWorkspace = editor::findSubsystem<EditorWorkspace>();
-        return pWorkspace != nullptr ? pWorkspace->getFocusedAssetPath() : string{};
+        return editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>().getFocusedAssetPath();
     }
 
     bool TileMapModel::hasDocumentFile( string_view path )

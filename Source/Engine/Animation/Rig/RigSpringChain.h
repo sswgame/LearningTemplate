@@ -70,6 +70,7 @@ namespace sw
         float32 _fixedStep{ constant::time::kDefaultFixedStepSeconds }; ///< 스텝 길이(초)다. 프레임 시간과 무관하게 같은 결과가 나온다.
         float32 _teleportDistance{ 1.0f };                              ///< 한 프레임에 루트가 이만큼 넘게 움직이면 순간이동으로 보고 다시 시작한다.
         uint32  _maxSubStep{ 4 };                                       ///< 프레임당 스텝 상한(넘는 시간은 버린다)
+        float32 _maxSwingDegrees{ 0.0f };                               ///< 애니메이션 방향에서 벌어질 수 있는 최대 각(도)이다. 0 이면 제한 없음 — 지글(가슴 · 배)이 몸을 뚫지 않게 자른다.
         uint8   _bUseGravityOverride{ SW_FALSE };                       ///< 월드 중력 대신 `_gravityOverride` 를 쓴다(언리얼 AnimDynamics 의 GravityOverride).
         /**
          * @brief 입자마다의 물성입니다(리그 데이터의 "joints"). 비면 모든 입자가 위 사슬 값이고, 있으면 길이가 본 수 − 1 이며 [k] 가 입자 k + 1 이다.
@@ -101,6 +102,13 @@ namespace sw
         uint32 getLastStepCount() const { return _lastStepCount; }
         /** @brief 입자의 월드 위치입니다. */
         const vector<float3>& getParticles() const { return _listPosition; }
+        /** @brief 지난 시뮬레이션의 애니메이션 자세(월드)입니다. 입자와의 차이가 흔들림이다(지글 감시 값 · 진단). */
+        const vector<float3>& getAnimatedPositions() const { return _listAnimated; }
+        /**
+         * @brief 루트 다음 입자들에 월드 속도(m/s)를 더합니다(맞음 · 착지 충격). 베를레 입자라 이전 위치를 속도 × @p fixedStep 만큼 뒤로 옮긴다. 시뮬레이션 상태가 없으면 아무것도 하지 않는다.
+         * @details 끝으로 갈수록 크게(입자 번호 / (수 − 1)) 준다 — 뿌리는 몸에 붙어 있고 끝이 흔들린다.
+         */
+        void addVelocity( const float3& worldVelocity, float32 fixedStep );
 
         /**
          * @brief @p deltaSeconds 만큼 고정 스텝으로 진행하고 사슬 본을 돌립니다.

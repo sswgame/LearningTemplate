@@ -271,6 +271,10 @@ namespace sw
             // 셰이더가 파이프라인의 퍼뮤테이션을 요구하는 패스는 그 파이프라인에 있을 때만 만든다(없으면 실행도 없다).
             if ( info.hasFlag( RenderPassTraitFlag::kRequiresPassDesc ) && findPassDescByType( passType ) == nullptr )
                 continue;
+            // 프레임 패스(컬링 · 그리드 · 스키닝 등)는 파이프라인이 `_listFramePass` 에 선언할 때만 돈다 — 선언이 없으면 PSO 도 만들지 않는다.
+            // 실행 쪽은 PSO 가 아니라 선언으로 가른다(`RenderPipelineAsset::hasFramePass`) — 미리보기 렌더러는 주 렌더러의 저장소를 함께 써 PSO 가 있어도 선언이 없을 수 있다.
+            if ( isFramePassType( passType ) && _pipeline.hasFramePass( passType ) == false )
+                continue;
             // 진단 패스는 요청한 실행에서만 만든다. 네이티브 bindless 가 필요한 패스는 에뮬 백엔드에서 쓰지 않는다(능력 질의로 가린 것이지 실패가 아니다).
             if ( info.hasFlag( RenderPassTraitFlag::kDiagnostic ) && isDiagnosticPassRequested( passType ) == false )
                 continue;
@@ -300,7 +304,7 @@ namespace sw
             if ( bCapable == false )
                 continue; // 능력이 없는 백엔드는 이 디스패치를 쓰지 않는다(능력 질의로 가린 것이지 실패가 아니다)
             // 셰이더 경로와 define 은 쿠커와 같은 함수가 정한다(셰이더 assert 변형이 define 으로 온다).
-            RenderPassShaderSelection computeShader = selectRenderPassShader( passType, nullptr, engineDefaultAssets );
+            RenderPassShaderSelection computeShader = selectRenderPassShader( passType, nullptr, nullptr, engineDefaultAssets );
             ComputePSOJob&            computeJob    = listComputeJob.emplace_back();
             computeJob._shaderPath                  = std::move( computeShader._shaderPath );
             computeJob._listDefine                  = std::move( computeShader._listDefine );
@@ -310,9 +314,20 @@ namespace sw
         // 파이프라인 컴퓨트 패스는 셰이더가 패스마다 달라 표가 아니라 그래프를 돈다. 컴퓨트 능력이 없는 백엔드는 이 패스를 돌리지 못한다.
         for ( const RenderGraphPassDesc& pass : _pipeline.getGraphPass() )
         {
+            // 일반 풀스크린 패스의 컴퓨트 구현 — 네이티브 bindless 에서만 만든다(에뮬 백엔드는 픽셀 구현이 돈다 — 그 PSO 는 위의 표 단계가 늘 만든다). 키는 패스 이름이다.
+            if ( pass._implementation == RenderPassExecutionMode::Compute && _pDevice->supportsNativeBindlessSampling() )
+            {
+                RenderPassShaderSelection computeShader = selectRenderPassComputeShader( pass, engineDefaultAssets );
+                ComputePSOJob&            computeJob    = listComputeJob.emplace_back();
+                computeJob._shaderPath                  = std::move( computeShader._shaderPath );
+                computeJob._listDefine                  = std::move( computeShader._listDefine );
+                computeJob._pipelinePassName            = hashed_string( pass._name.c_str() );
+                computeJob._passType                    = pass._type;
+                continue;
+            }
             if ( pass._type != RenderPassType::Compute )
                 continue;
-            RenderPassShaderSelection computeShader = selectRenderPassShader( RenderPassType::Compute, &pass, engineDefaultAssets );
+            RenderPassShaderSelection computeShader = selectRenderPassShader( RenderPassType::Compute, &pass, &pass, engineDefaultAssets );
             ComputePSOJob&            computeJob    = listComputeJob.emplace_back();
             computeJob._shaderPath                  = std::move( computeShader._shaderPath );
             computeJob._entryPoint                  = pass._computeEntryPoint;
@@ -414,6 +429,10 @@ namespace sw
 
     RHIPipelineStateHandle FramePSOManager::getEnginePSO( RenderPassType passType ) const
     {
+        // 프레임 패스는 이 파이프라인이 선언했을 때만 있다 — 함께 쓰는 저장소(미리보기 렌더러)에 주 렌더러가 만든 PSO 가 있어도 0 이다.
+        // 그래서 "PSO 가 있으면 준비한다" 고 묻는 모든 곳(간접 인자를 컬링에 맡김 · GPU 라이트 그리드 · 볼륨 안개 · 프로브 · 입자 · 깊이 히스토리)이 선언을 따른다.
+        if ( isFramePassType( passType ) && _pipeline.hasFramePass( passType ) == false )
+            return 0;
         return _pCache->findEnginePSO( passType );
     }
 
@@ -528,6 +547,11 @@ namespace sw
         inoutListShader.push_back( std::move( request._vertex ) );
         if ( request._bHasPixelShader != SW_FALSE )
             inoutListShader.push_back( std::move( request._pixel ) );
+        if ( request._bHasTessellation != SW_FALSE )
+        {
+            inoutListShader.push_back( std::move( request._hull ) );
+            inoutListShader.push_back( std::move( request._domain ) );
+        }
     }
 
     void FramePSOManager::warmShaders( const vector<ShaderCompileDesc>& listShader ) const
@@ -661,8 +685,11 @@ namespace sw
     {
         // 파이프라인 패스는 XML 의 값(셰이더 · 진입점 · 렌더 상태 · 퍼뮤테이션 · 타깃)이 그대로 들어간다. 표는 XML 이 비운 셰이더의 기본값, 패스 define, XML 에 없는 내부 슬롯의 값이다.
         // 셰이더와 define 은 쿠커와 **같은 함수**(selectRenderPassShader)로 정한다. 어긋나면 Shipping 에서 매니페스트 미스가 난다.
-        const RenderPassTypeInfo&       info   = getRenderPassTypeInfo( passType );
-        const RenderPassShaderSelection shader = selectRenderPassShader( passType, pPassDesc, engine::getSubsystem<EngineDefaultAssets>() );
+        const RenderPassTypeInfo& info = getRenderPassTypeInfo( passType );
+        // 내부 슬롯은 대신 그리는 파이프라인 패스의 출력 선언으로 포맷 · 화면 속도 쓰기를 정한다(`_targetSourceType`).
+        const RenderGraphPassDesc* pTargetDesc =
+            ( pPassDesc == nullptr && info._targetSourceType != RenderPassType::Invalid ) ? findPassDescByType( info._targetSourceType ) : pPassDesc;
+        const RenderPassShaderSelection shader = selectRenderPassShader( passType, pPassDesc, pTargetDesc, engine::getSubsystem<EngineDefaultAssets>() );
 
         RHIPipelineStateDesc& desc = outDesc;
         desc                       = RHIPipelineStateDesc{};
@@ -680,9 +707,6 @@ namespace sw
                 desc._topology = RHIPrimitiveTopology::PatchList3;
         }
         desc._listShaderDefine = shader._listDefine;
-        // 내부 슬롯은 대신 그리는 파이프라인 패스의 출력 선언으로 포맷을 정한다(`_targetSourceType`).
-        const RenderGraphPassDesc* pTargetDesc =
-            ( pPassDesc == nullptr && info._targetSourceType != RenderPassType::Invalid ) ? findPassDescByType( info._targetSourceType ) : pPassDesc;
         if ( fillPassRenderTargetFormats( desc, pTargetDesc, pRTVFormatOverride != nullptr ? pRTVFormatOverride : info._pColorFormat, info._colorTargetCount ) == false )
         {
             SW_LOG_ERROR_ID( "FramePSOManager.PassNoRenderTarget", "Pass %# has no render target format (no fixed format, and no color output declaration with a known format) - no PSO is created", passType );
@@ -693,7 +717,8 @@ namespace sw
         // 않는다. 주의: 여기서 정하지 않으면 백엔드마다 판단이 갈리고, 그 위에 머티리얼 define 을 적용한 변형
         // (createMaterialPSOVariant 는 이 desc 를 그대로 물려받는다)은 쿠커가 쿠킹하지 않아 Shipping 에서 매니페스트 미스로
         // 실패한다. 쿠커 쪽 같은 규칙은 FrameRendererUtil::hasPixelStage 다.
-        if ( desc._numRenderTargets == 0 )
+        // 그림자 캐시 복원(kWritesPixelDepth)만 컬러 없이 픽셀 깊이를 쓰므로 픽셀 스테이지를 남긴다.
+        if ( desc._numRenderTargets == 0 && info.hasFlag( RenderPassTraitFlag::kWritesPixelDepth ) == false )
         {
             desc._pixelShaderPath.clear();
             desc._pixelEntryPoint.clear();
@@ -780,6 +805,21 @@ namespace sw
                 if ( bMaterialDepthShader && FrameRendererUtil::hasMaterialDepthPixelStage( passType, &pPermutation->_listDefine ) == false )
                     desc._pixelShaderPath.clear();
                 bChanged = true;
+            }
+            // 변위 머티리얼은 머티리얼 셰이더의 헐 · 도메인을 붙인다(쿠커와 같은 판정). 테셀레이션이 없는 백엔드에서는 평면으로 대신 그리지 않고 이 조합을 그리지 않는다.
+            if ( FrameRendererUtil::tessellatesMaterial( passType, &pPermutation->_listDefine ) )
+            {
+                if ( _pDevice->getCapabilities()._bMaterialTessellation == SW_FALSE )
+                {
+                    SW_LOG_ERROR_ID( "FramePSOManager.DisplacementUnsupported",
+                                     "Material '%#' uses MATERIAL_DISPLACEMENT but backend %# has no material tessellation (RHICapabilities::_bMaterialTessellation) - these batches are not drawn",
+                                     pPermutation->_shaderPath, static_cast<uint32>( _pDevice->getBackendType() ) );
+                    return RenderPSOCache::MaterialPSOEntry::failed();
+                }
+                desc._hullEntryPoint   = string( getShaderStageInfo( ShaderStage::Hull )._pEntryPoint );
+                desc._domainEntryPoint = string( getShaderStageInfo( ShaderStage::Domain )._pEntryPoint );
+                desc._topology         = RHIPrimitiveTopology::PatchList3;
+                bChanged               = true;
             }
             // 등장 디더 변형은 패스 셰이더의 깊이 패스에도 픽셀 스테이지가 있어야 한다 — 기본 패스와 같은 픽셀을 버린다(쿠커와 같은 판정).
             if ( FrameRendererUtil::addsAppearanceDitherPixelStage( passType, &pPermutation->_listDefine ) && desc._pixelShaderPath.empty() )

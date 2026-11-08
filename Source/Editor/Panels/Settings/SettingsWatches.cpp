@@ -7,7 +7,7 @@
 #include "pch.h"
 
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
-#include "Editor/Common/Input/EditorInputActions.h"
+#include "Editor/Panels/Settings/Model/ShortcutsViewModel.h"
 #include "Editor/Panels/Settings/ModulesPanel.h"
 #include "Editor/Panels/Settings/PreferencesPanel.h"
 #include "Editor/Panels/Settings/ShortcutsPanel.h"
@@ -42,7 +42,7 @@ namespace sw::editor
         /** @brief 사용자 단축키 덮어쓰기 수입니다. 기본과 다른 커맨드의 수입니다. */
         [[nodiscard]] bool readShortcutOverrideCount( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            outValue = static_cast<float64>( EditorInputActions::getInEditorContext().countModifiedShortcuts() );
+            outValue = static_cast<float64>( ShortcutsViewModel::countModifiedShortcuts() );
             return true;
         }
 

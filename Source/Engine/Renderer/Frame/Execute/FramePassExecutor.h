@@ -1,6 +1,6 @@
 /**
  * @file FramePassExecutor.h
- * @brief 한 프레임의 기록과 제출입니다 — 컴퓨트 프리패스(변형 · 컬링 · 라이트 그리드 · 깊이 히스토리 · 가림 타일), 그래프 패스 콜백과 패스별 실행, 드로우, 뷰별 커맨드 리스트 제출.
+ * @brief 한 프레임의 기록과 제출입니다 — 프레임 그래프(변형 · 컬링 · 라이트 그리드 · 깊이 히스토리 · 가림 타일), 그래프 패스 콜백과 패스별 실행, 드로우, 뷰별 커맨드 리스트 제출.
  * @details 렌더러(`FrameRenderer`)가 셋업(스냅샷 받기 · 업로드 · 뷰 준비 · PSO 준비)을 끝낸 뒤 `submitGraph` 를 부르면 여기서 기록이 시작된다.
  *          프레임 데이터(`FrameRenderState`)는 렌더러가 소유하고 이 객체는 참조로 읽는다. 언리얼 `FSceneRenderer::Render` 가 뷰마다 RDG 패스(람다)를 더하고
  *          실행하는 자리와 같다 — 패스는 패스 컨텍스트(`FramePassContext`)와 지금 그리는 뷰(`FrameViewTarget`)만 본다.
@@ -15,13 +15,13 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
-#include "Engine/Graphics/Debug/GPUAssert.h"
+#include "Engine/Graphics/Debug/GPUMessage.h"
 #include "Engine/Graphics/Debug/GPUNanCheck.h"
 #include "Engine/Graphics/RHI/AsyncBufferReadback.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Extension/RenderExtension.h"
-#include "Engine/Renderer/Frame/Execute/FramePrepass.h"
+#include "Engine/Renderer/Frame/Execute/FrameGraphExecutor.h"
 #include "Engine/Renderer/Frame/Extension/FrameExtensionHost.h"
 #include "Engine/Renderer/Frame/FramePassContext.h"
 #include "Engine/Renderer/Frame/FrameRenderState.h"
@@ -76,13 +76,13 @@ namespace sw
         // 2) 셋업이 부르는 준비(기록 전)
         // ------------------------------------------------------------------------------
         /**
-         * @brief 파이프라인 패스와 모듈 확장 패스를 그래프 노드로 묶고 컴파일합니다. 컴파일했으면 true 입니다(렌더러가 "묶였다" 를 적는다).
-         * @details 그래프 콜백은 이 객체의 `onGraphPassExecute` · `onGraphLevelPrologue` 다.
+         * @brief 파이프라인 패스와 모듈 확장 패스를 뷰 그래프 노드로, 프레임 패스를 프레임 그래프 노드로 묶고 컴파일합니다. 둘 다 컴파일했으면 true 입니다(렌더러가 "묶였다" 를 적는다).
+         * @details 뷰 그래프 콜백은 이 객체의 `onGraphPassExecute` · `onGraphLevelPrologue`, 프레임 그래프 콜백은 `onFrameGraphPassExecute` 다.
          */
         [[nodiscard]] bool bindPassCallbacks();
-        /** @brief 프레임 프리패스(그래프 앞에 프리패스 리스트로 기록하는 컴퓨트 · 깊이 히스토리 · 렌더 텍스처)입니다. 렌더러가 업로드 전에 묻는 값(`usesGPUGeneratedCommands` · 모프 풀 · VFX 입력)도 여기에 있다. */
-        FramePrepass&       getPrepass() { return _prepass; }
-        const FramePrepass& getPrepass() const { return _prepass; }
+        /** @brief 프레임 패스의 실행(`_listFramePass` 의 종류마다)입니다. 렌더러가 업로드 전에 묻는 값(`usesGPUGeneratedCommands` · 모프 풀 · VFX 입력)도 여기에 있다. */
+        FrameGraphExecutor&       getFrameGraphExecutor() { return _frameGraphExecutor; }
+        const FrameGraphExecutor& getFrameGraphExecutor() const { return _frameGraphExecutor; }
         /** @brief 이번 프레임 한 뷰의 그림자 패스가 그리는 타일 수입니다(상수 버퍼 링 용량 산정). */
         uint32 computeShadowTileCountPerView() const;
         /**
@@ -96,6 +96,10 @@ namespace sw
          * @details 판정은 `FrameRendererUtil::drawsMaterialInPass` 하나로 한다. 머티리얼 PSO 변형과 셰이더 쿠커도 같은 판정을 쓴다.
          */
         bool drawsBatchInPass( RenderPassType passType, const GPUMeshBatch& batch, const GPUMeshBatchBinding& binding ) const;
+        /** @brief 지금 뷰가 화면 왜곡을 그리는지 — 씬에 왜곡 배치가 있고(`GPUScene::hasDistortionBatches`) 장면 색을 보이는 뷰 모드입니다. 왜곡 누적 · 적용 패스가 같은 판정을 본다. */
+        bool drawsDistortionThisView() const;
+        /** @brief 그림자 캐시의 거르기(@p filter)가 이 배치를 그리게 하면 true 입니다(`GPUMeshBatch::_bStaticShadowCaster`). */
+        static bool drawsCasterBatch( ShadowCasterFilter filter, const GPUMeshBatch& batch );
 
         // ------------------------------------------------------------------------------
         // 3) 뷰 패스 상수(셋업의 주 시점 시드와 추가 뷰 기록이 함께 쓴다)
@@ -125,7 +129,7 @@ namespace sw
          */
         [[nodiscard]] bool prepareCommandList( IRHIDevice* pDevice, const utf8* pCallerName );
         /**
-         * @brief 컴퓨트 프리패스를 기록해 내고, 렌더 텍스처 뷰 · 주 시점 · 화면 사각형 뷰 · 호스트 타깃 뷰 순서로 그래프를 기록해 제출합니다.
+         * @brief 프레임 그래프를 기록해 내고, 렌더 텍스처 뷰 · 주 시점 · 화면 사각형 뷰 · 호스트 타깃 뷰 순서로 그래프를 기록해 제출합니다.
          * @return 주 시점 그래프 실행의 결과
          */
         [[nodiscard]] bool submitGraph( IRHIDevice* pDevice );
@@ -134,7 +138,7 @@ namespace sw
         // 5) 조회
         // ------------------------------------------------------------------------------
         /** @brief 주 시점 가림 타일을 몇 프레임 늦게 되읽은 가장 최근 사본입니다(`FrameRenderer::getOcclusionSnapshot`). 어느 스레드에서 불러도 됩니다. */
-        shared_ptr<const OcclusionTileSnapshot> getOcclusionSnapshot() const { return _prepass.getOcclusionSnapshot(); }
+        shared_ptr<const OcclusionTileSnapshot> getOcclusionSnapshot() const { return _frameGraphExecutor.getOcclusionSnapshot(); }
         /** @brief 지난 `submitGraph` 가 낸 씬 간접 드로우 호출 수입니다(모든 패스 합). */
         uint32 getIndirectDrawCallCount() const { return _indirectDrawCallCount.load( std::memory_order_relaxed ); }
         /** @brief 지난 `submitGraph` 가 PSO 가 아직 만드는 중이라 건너뛴 배치 묶음 수입니다. 0 이 아니면 그 프레임은 덜 그린 그림이다. */
@@ -180,7 +184,8 @@ namespace sw
             RHIBufferHandle                                    _slotStream{ 0 }; ///< 인스턴스 슬롯 스트림(슬롯 1)
             RHIBufferHandle                                    _argsBuffer{ 0 }; ///< 이 패스의 뷰가 만든 간접 인자
             RenderPassType                                     _passType{};
-            uint32                                             _batchOffset{ 0 }; ///< 간접 인자 슬롯의 시작(불투명 다음 투명)
+            ShadowCasterFilter                                 _casterFilter{ ShadowCasterFilter::All }; ///< 그림자 캐시의 정적 · 움직임 거르기(패스 컨텍스트의 값)
+            uint32                                             _batchOffset{ 0 };                        ///< 간접 인자 슬롯의 시작(불투명 다음 투명)
             uint32                                             _particleSlotCursor{ 0 };
             uint32                                             _drawCallCount{ 0 };
             bool                                               _bMerge{ false }; ///< 연속 배치를 멀티 드로우 한 번으로 묶는지 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
@@ -191,6 +196,17 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief RenderGraph 가 패스를 실행할 때 부르는 콜백입니다. */
         void onGraphPassExecute( const RenderGraphPassContext& context );
+        /** @brief 프레임 그래프가 프레임 패스를 실행할 때 부르는 콜백입니다. 서술의 종류로 `FrameGraphExecutor::executePass` 를 부릅니다. */
+        void onFrameGraphPassExecute( const RenderGraphPassContext& context );
+        /**
+         * @brief 컴파일한 뷰 그래프의 수명(레벨)으로 트랜지언트 앨리어싱 계획을 세워 `FrameRenderState::_transientAliasPlan` 에 두고 세대를 올립니다.
+         * @details 깊이 · `Load` 첨부 · TAA 출력은 나누지 않고, 꺼지면 원본을 가리키는 효과(`kBypassesToSource`)는 원본과 출력을 한 구간으로 묶는다. NaN 감시를 켠 실행은 나누지 않는다.
+         */
+        void buildTransientAliasPlan();
+        /** @brief 프레임 패스를 프레임 그래프 노드로 묶고 컴파일합니다(`bindPassCallbacks` 의 뒷부분). 프레임 패스가 없으면 빈 그래프이고 true 입니다. */
+        [[nodiscard]] bool bindFramePassCallbacks();
+        /** @brief 프레임 그래프를 프리패스 리스트(`_pCmd`)에 기록합니다. 뷰 그래프보다 먼저 큐에 내는 리스트다. */
+        void recordFrameGraph( IRHIDevice* pDevice );
         /**
          * @brief 레벨을 기록하기 **직전에** 그 레벨이 만질 자원의 배리어를 미리 발행합니다. 직렬 경로에서는 패스마다 발행합니다.
          * @details 자원 이름으로 실제 텍스처를 찾아 `prepareTextureForShaderRead` 와
@@ -213,6 +229,11 @@ namespace sw
         void executeFullscreenInto( FramePassContext& context, RHIPipelineStateHandle pso, const hashed_string& targetName, const float4& passClearColor );
         /** @brief 일반 풀스크린 패스(테이블의 kGenericFullscreen)입니다. 선언한 입력을 모두 바인딩하고 선언한 첫 컬러 출력에 그립니다. 이 뷰에서 빠진 패스(`FrameViewResources::applyViewPassSelection`)는 기록하지 않습니다. */
         void executeGenericFullscreenPass( const PassExecuteInput& input );
+        /**
+         * @brief 일반 풀스크린 패스의 컴퓨트 구현(`_implementation="Compute"` — 블룸 다운샘플 · 피사계 심도)입니다. 원본 · 깊이를 bindless SRV 로, 출력을 RW 로 묶고 8x8 그룹으로 디스패치합니다.
+         * @details 효과의 값(블룸 문턱 · 렌즈 · 역뷰-투영 4 열)은 패스 상수에서 루트 상수로 옮긴다 — 컴퓨트 PSO 에는 PassCB 가 묶이지 않는다. 네이티브 bindless 에서만 부른다.
+         */
+        void executeComputeImplementation( const PassExecuteInput& input );
         /** @brief 파이프라인 컴퓨트 패스입니다. 첨부를 RW 텍스처로 묶고 출력 크기만큼 디스패치합니다(`compute_pass.hlsli` 의 루트 상수). */
         void executeComputePass( const PassExecuteInput& input );
         /** @brief ForwardOpaque · ForwardOnlyOpaque 입니다. 그림자 맵 입력을 바인딩하고 선언한 첫 컬러 출력에 그립니다. */
@@ -231,6 +252,14 @@ namespace sw
         void executeSkyPass( const PassExecuteInput& input );
         /** @brief 안개 패스(`RenderPassType::Fog`)를 실행합니다. 안개가 없거나 표면 값 보기에서는 그리지 않습니다. 안개 상수 · 볼륨 버퍼는 `FrameFog` 가 정해 둔 것을 읽습니다. */
         void executeFogPass( const PassExecuteInput& input );
+        /** @brief 화면 왜곡 누적 — 왜곡 머티리얼의 반투명 배치가 오프셋을 선언한 출력에 더한다. 왜곡이 없는 뷰는 기록하지 않는다. */
+        void executeDistortionPass( const PassExecuteInput& input );
+        /** @brief 화면 왜곡 적용 — 장면 색 사본을 오프셋만큼 비껴 읽어 장면 색에 쓴다. 왜곡이 없는 뷰는 기록하지 않는다(출력이 이미 맞다). */
+        void executeDistortionApplyPass( const PassExecuteInput& input );
+        /** @brief 화면 공간 반사 패스입니다 — 세기가 있는 후처리 뷰에서만 장면 색 위에 반사를 블렌드합니다. */
+        void executeScreenSpaceReflectionPass( const PassExecuteInput& input );
+        /** @brief 렌즈 플레어 패스(`RenderPassType::LensFlare`)를 실행합니다. 주 시점이 아니거나 스프라이트가 없으면 그리지 않습니다. 스프라이트는 `LensFlareSpriteBuffer` 가 기록 전에 올렸다. */
+        void executeLensFlarePass( const PassExecuteInput& input );
         /** @brief TAA 와 히스토리 갱신입니다. 후처리를 끈 뷰와 컷 프레임은 원본을 넘깁니다. */
         void executeTAAPass( const PassExecuteInput& input );
         /** @brief 최종 출력(백버퍼 · 캡처 · 렌더 텍스처)으로의 블릿입니다. 화면 사각형 · 정수 업스케일 뷰포트를 적용합니다. */
@@ -255,8 +284,14 @@ namespace sw
         /**
          * @brief 그림자 패스 하나를 그립니다 — 지금 뷰의 캐스케이드 타일과 프레임의 점광 · 스폿 타일을 아틀라스의 자기 칸(뷰포트)에 그립니다.
          * @details 타일마다 `g_LightViewProj` 를 그 타일의 행렬로 바꿔 씬을 한 번씩 그린다. 컬링은 모든 타일을 덮는 상자(`ViewShadowData::_cullViewProj`) 하나다.
+         *          @p bCacheLayer 면 그림자 캐시가 캐시하는 점광 · 스폿 타일(`ShadowCache::getAction` 이 DrawAll 이 아닌 것)은 캐시 층을 옮기고 움직이는 배치만 그린다.
          */
-        void drawShadowTiles( FramePassContext& context, bool bTransparentBatch );
+        void drawShadowTiles( FramePassContext& context, bool bTransparentBatch, bool bCacheLayer );
+        /**
+         * @brief 그림자 캐시 층을 이번 프레임에 쓸 수 있게 합니다 — 층 텍스처를 아틀라스(@p atlasName) 형식 · 크기로 두고, 다시 그릴 프레임이면 정적 배치만 그리고, 셰이더 읽기로 돌린다.
+         * @details 아틀라스 렌더 패스를 열기 전에 부른다(다른 깊이 대상 · 상태 전환). 캐시를 쓰지 않는 프레임 · 복원 PSO 가 없을 때는 false 이고 그림자 패스는 지금처럼 다 그린다.
+         */
+        [[nodiscard]] bool prepareShadowCacheLayer( FramePassContext& context, const hashed_string& atlasName, bool bTransparentBatch );
         /** @brief 컬러(및 깊이) 패스를 시작합니다. 열지 못하면 false 를 반환하며, 그때는 그리지도 닫지도 않습니다(`beginColorPassMrt` 도 같습니다). */
         bool beginColorPass( FramePassContext& context, const hashed_string& colorName, const hashed_string& depthName, const float4& clearColor,
                              RHIRenderPassLoadOp colorLoad, RHIRenderPassLoadOp depthLoad );
@@ -302,6 +337,8 @@ namespace sw
          *          패스라 `registerInstanceBuffer` 를 거치지 않는데, 라이트는 바로 거기서 필요하다.
          */
         void registerLightBuffer( FramePassContext& context );
+        /** @brief 지금 그리는 뷰가 이번 프레임에 읽는 후처리 텍스처(컬러 그레이딩 LUT · 블룸 먼지 마스크)를 역할 이름으로 겁니다. 셋업이 고른 것만 건다. */
+        void registerPostProcessTextures( FramePassContext& context );
         /** @brief 배치의 머티리얼 데이터 버퍼(GPUScene)를 패스 레지스트리에 "SwMaterials" 이름으로 등록합니다. */
         void registerMaterialBuffer( FramePassContext& context, const GPUMeshBatchBinding& binding, RHIPipelineStateHandle pso );
         /** @brief 씬 메시를 그립니다. GPUScene 이 올라가 있으면 drawGPUBatches 로 넘기고, 아니면 상태만 맞춥니다. */
@@ -410,6 +447,8 @@ namespace sw
          *          파이프라인을 바꾸기 전까지만 유효하므로 프레임을 넘겨 보관하지 않는다.
          */
         hashed_string resolvePresentSource() const;
+        /** @brief 개발 보기 `gpu.show <첨부>`(GPUPixelInspector)가 켜져 있으면 주 시점 Present 의 SourceColor 를 그 첨부로 다시 등록합니다. 선언한 입력 등록 뒤에 부릅니다. */
+        void registerVisualizedAttachment( FramePassContext& context );
         /** @brief 지금 그리는 뷰의 트랜지언트 풀입니다. */
         TransientAttachmentPool&       activePool() { return _pActiveView->_transientPool; }
         const TransientAttachmentPool& activePool() const { return _pActiveView->_transientPool; }
@@ -426,13 +465,19 @@ namespace sw
         FrameFog&                  _fog;
         FrameExtensionHost&        _extensionHost;
         FrameCapture&              _capture;
-        /// @brief 그래프 앞의 프리패스 단계(컴퓨트 프리패스 · 깊이 히스토리 · 가림 타일 · 볼륨 안개 · 렌더 텍스처)입니다.
-        FramePrepass _prepass;
+        /// @brief 프레임 패스 종류마다의 실행(깊이 히스토리 · 가림 타일 · 입자 · 변형 · 컬링 · 라이트 그리드 · 볼륨 안개 · 프로브 · 마커)입니다. 순서는 프레임 그래프가 정한다.
+        FrameGraphExecutor _frameGraphExecutor;
+        /// @brief 프레임 그래프 노드 이름 → `_listFramePass` 번호입니다. `bindPassCallbacks` 가 채웁니다.
+        unordered_map<hashed_string, uint32> _mapFramePassNameToIndex;
+        /// @brief 프레임 그래프 실행 상태입니다(뷰 그래프와 따로 — 자원 이름이 다르고 프레임에 한 번 돈다).
+        RenderGraphExecutionContext _frameGraphContext;
         /// @brief 지금 그리는 뷰입니다. 프레임 밖에서는 항상 `FrameRenderState::_mainView` 입니다. 바꾸는 곳은 `renderExtraView` 하나다.
         FrameViewTarget* _pActiveView;
-        /// @brief 컴퓨트 프리패스 리스트와 그것을 만든 디바이스입니다. `_pCmd` 는 프리패스를 기록하는 동안만 그 리스트를 가리킨다.
+        /// @brief 프레임 그래프 리스트와 그것을 만든 디바이스입니다. `_pCmd` 는 프리패스를 기록하는 동안만 그 리스트를 가리킨다.
         IRHIDevice*                 _pCmdOwnerDevice;
         unique_ptr<IRHICommandList> _frameCmd;
+        /// @brief 프레임 그래프의 비동기 컴퓨트 묶음을 기록하는 리스트입니다(능력이 있고 묶음이 있을 때 처음 만든다). 프레임 리스트와 같은 디바이스의 것이다.
+        unique_ptr<IRHICommandList> _asyncComputeCmd;
         IRHICommandList*            _pCmd;
         /**
          * @brief 패스 슬롯별 컨텍스트입니다. 프레임마다 `_frameContext` 를 **대입**해 씁니다. 용량이 남아 있어 힙을 건드리지 않습니다.

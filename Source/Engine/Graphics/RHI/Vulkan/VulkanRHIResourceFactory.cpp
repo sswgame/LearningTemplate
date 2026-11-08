@@ -460,6 +460,28 @@ namespace sw
                                                    _pDevice->_frameFenceCounter + 1 );
     }
 
+    void VulkanRHIResourceFactory::setTextureDebugName( RHITextureHandle texture, const utf8* pName )
+    {
+        const VulkanRHIDevice::VulkanTextureRecord* pRecord = _pDevice->resolveTexture( texture );
+        if ( pRecord == nullptr || pRecord->_image == VK_NULL_HANDLE || pName == nullptr || _pDevice->_instance == VK_NULL_HANDLE )
+            return;
+        // VK_EXT_debug_utils 가 켜진 인스턴스에서만 함수가 있다(이벤트 표지 vkCmdBeginDebugUtilsLabelEXT 와 같은 조회) — 없으면 이름을 붙이지 않는다.
+        // https://docs.vulkan.org/refpages/latest/refpages/source/vkSetDebugUtilsObjectNameEXT.html
+        const PFN_vkSetDebugUtilsObjectNameEXT pfnSetName =
+            reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>( vkGetInstanceProcAddr( _pDevice->_instance, "vkSetDebugUtilsObjectNameEXT" ) );
+        if ( pfnSetName == nullptr )
+            return;
+        VkDebugUtilsObjectNameInfoEXT nameInfo{};
+        nameInfo.sType      = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+        nameInfo.objectType = VK_OBJECT_TYPE_IMAGE;
+        // VkImage 는 64 비트에서는 포인터, 32 비트에서는 uint64 다 — 바이트를 그대로 옮겨 두 경우를 함께 받는다.
+        uint64 imageHandle = 0;
+        Memory::copy( &imageHandle, &pRecord->_image, sizeof( pRecord->_image ) );
+        nameInfo.objectHandle = imageHandle;
+        nameInfo.pObjectName  = pName;
+        (void)pfnSetName( _pDevice->_device, &nameInfo ); // 진단 이름이다 — 실패해도 그리기는 그대로다
+    }
+
     // 길이 유지(긴 함수 정리 기준): 서술 채우기 · 이미지 생성 · 메모리 · 뷰 · 초기 데이터 업로드의 순서가 곧 의미라 나누지 않는다.
     RHITextureHandle VulkanRHIResourceFactory::createTexture2D( const RHITextureDesc& desc )
     {

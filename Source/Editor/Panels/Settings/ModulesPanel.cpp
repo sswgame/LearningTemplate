@@ -44,9 +44,7 @@ namespace sw::editor
             EditorThemeUtil::textWarning( SW_LOCKEY( "EditorSettings", "ModuleSetChanged" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Build" ) ) );
             if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "Build" ) ) )
-            {
-                (void)EditorCommandRegistry::getInEditorContext().execute( "build.compileAll", EditorCommandTarget::none() ); // 막혀 있으면 빌드 상태 표시가 알린다
-            }
+                (void)ModulesModel::requestBuildAll(); // 막혀 있으면 빌드 상태 표시가 알린다
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "BuildModules" ) );
         }
         if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Refresh" ) ) )

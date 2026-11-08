@@ -426,7 +426,7 @@ namespace sw
         PROPERTY()
         CameraDollyDef _dolly{};
         PROPERTY()
-        CameraPostProcessValues _postProcess{};
+        PostProcessValues _postProcess{};
     };
 } // namespace sw
 

@@ -1,0 +1,38 @@
+<Scene formatVersion="2" _base="game/empty/maps/shadowtest.scene.xml" name="ShadowTestStatic">
+	<!-- 시나리오 automation/shadow_cache 의 무대 — shadowtest 를 물려받아 바닥과 기둥을 정적 메시(MeshComponent::_bStatic)로 둔다. 상자는 움직이는 메시다.
+	     그림자 캐시(gv_shadowCache 1)는 서 있는 점광(Lamp)의 칸 여섯에 바닥 · 기둥 깊이를 한 번 그려 두고 상자만 매 프레임 그 위에 그린다. 씬 상속은 `<GameObject>` 를 통째로 바꾼다. -->
+	<entities>
+		<entity id="4" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0,0,3"
+					               _localRotation="0,0,0"
+					               _localScale="16,1,16"
+					               _attachOwner="None"
+					               _attachComponent="None"
+					               _meshID="Plane"
+					               _materialPath="engine/materials/prototypegrid_dark.material"
+					               _boundsRadius="12"
+					               _blendMode="Opaque"
+					               _bStatic="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="Pillar">
+			<GameObject _schemaVersion="0" _name="Pillar" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-1.5,1.5,2"
+					               _localRotation="0,0.3,0"
+					               _localScale="0.4,3,0.4"
+					               _attachOwner="None"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="engine/materials/prototypegrid_orange.material"
+					               _boundsRadius="1.6"
+					               _blendMode="Opaque"
+					               _bStatic="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

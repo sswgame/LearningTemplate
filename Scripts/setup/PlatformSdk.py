@@ -87,11 +87,20 @@ class PlatformSdk:
             extractZipSafe(archive, staging)
             (staging / "cmdline-tools").rename(latest)
             shutil.rmtree(staging, ignore_errors=True)
-        sdkManager = latest / "bin" / ("sdkmanager.bat" if isWindowsHost() else "sdkmanager")
+        # sdkmanager 는 Android CLI(`android sdk`)로 넘기는 껍데기가 됐고, Windows 배치 인자 분리가 `ndk;<판>` 의 `;` 를 끊어 "not found" 를 내고도 0 으로 끝났다.
+        # 새 CLI 를 셸 없이 부르고(꾸러미 경로는 `/`), 끝나면 폴더를 대조한다 — 종료 코드만 믿지 않는다.
+        androidCli = latest / "bin" / ("android.exe" if isWindowsHost() else "android")
         env = dict(os.environ, JAVA_HOME=str(javaHome))
-        packages = [f"ndk;{self.require('android_ndk_version')}", f"platforms;android-{self.require('android_platform')}", f"build-tools;{self.require('android_build_tools')}", "platform-tools"]
-        subprocess.run([str(sdkManager), f"--sdk_root={root}", "--licenses"], input="y\n" * 20, text=True, check=True, env=env, shell=isWindowsHost())
-        subprocess.run([str(sdkManager), f"--sdk_root={root}", *packages], check=True, env=env, shell=isWindowsHost())
+        packages = {
+            f"ndk/{self.require('android_ndk_version')}": root / "ndk" / self.require("android_ndk_version"),
+            f"platforms/android-{self.require('android_platform')}": root / "platforms" / f"android-{self.require('android_platform')}",
+            f"build-tools/{self.require('android_build_tools')}": root / "build-tools" / self.require("android_build_tools"),
+            "platform-tools": root / "platform-tools",
+        }
+        subprocess.run([str(androidCli), f"--sdk={root}", "sdk", "install", *packages], check=True, env=env)
+        missing = [name for name, folder in packages.items() if not folder.is_dir()]
+        if missing:
+            raise RuntimeError(f"[PlatformSdk] Android packages not installed after `android sdk install`: {', '.join(missing)}")
         print(f"[PlatformSdk] Android SDK: {root} (NDK {self.require('android_ndk_version')}, JDK {javaHome})")
         return root
 

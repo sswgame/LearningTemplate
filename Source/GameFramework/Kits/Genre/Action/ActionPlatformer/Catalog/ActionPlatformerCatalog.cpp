@@ -24,14 +24,14 @@ namespace sw
         };
     } // namespace
 
-    int32 ActionPatternDef::findStateIndex( const hashed_string& stateID ) const
+    optional<int32> ActionPatternDef::findStateIndex( const hashed_string& stateID ) const
     {
         for ( size_t index = 0; index < _listState.size(); ++index )
         {
             if ( _listState[index]._id == stateID )
                 return static_cast<int32>( index );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     ActionPlatformerCatalog::ActionPlatformerCatalog()
@@ -145,7 +145,7 @@ namespace sw
             SW_LOG_ERROR_ID( "ActionPlatformerCatalog.PatternIdNoState", "%#: <Pattern id=\"%#\"> has no <State>", sourceName, pattern._id.c_str() );
             bValid = false;
         }
-        if ( pattern._start.empty() == false && pattern.findStateIndex( pattern._start ) < 0 )
+        if ( pattern._start.empty() == false && pattern.findStateIndex( pattern._start ).has_value() == false )
         {
             SW_LOG_ERROR_ID( "ActionPlatformerCatalog.PatternIdStartsUnknown", "%#: <Pattern id=\"%#\"> starts at an unknown state '%#'", sourceName, pattern._id.c_str(), pattern._start.c_str() );
             bValid = false;
@@ -168,7 +168,7 @@ namespace sw
             const hashed_string arrTarget[] = { state._next, state._onNear, state._onHit };
             for ( const hashed_string& target : arrTarget )
             {
-                if ( target.empty() == false && pattern.findStateIndex( target ) < 0 )
+                if ( target.empty() == false && pattern.findStateIndex( target ).has_value() == false )
                 {
                     SW_LOG_ERROR_ID( "ActionPlatformerCatalog.PatternStateGoesUnknown", "%#: pattern '%#' state '%#' goes to an unknown state '%#'", sourceName, pattern._id.c_str(), state._id.c_str(), target.c_str() );
                     bValid = false;

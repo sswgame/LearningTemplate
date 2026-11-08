@@ -6,17 +6,17 @@
 
 namespace sw
 {
-    bool RHITimestampFrame::resolve( const uint64* pTick, GPUTimestampSlotMask readyMask, float64 nanosPerTick, RHITimestampFrame& outFrame )
+    bool RHITimestampFrame::resolve( const uint64* pTick, const GPUTimestampSlotMask& readyMask, float64 nanosPerTick, RHITimestampFrame& outFrame )
     {
         outFrame._listMicro.clear();
         outFrame._originNanos = 0;
-        if ( pTick == nullptr || readyMask == 0 )
+        if ( pTick == nullptr || readyMask.any() == false )
             return false;
 
         uint64 origin{ UINT64_MAX };
         for ( uint32 slotIndex = 0; slotIndex < constant::render::kMaxGPUTimestampSlot; ++slotIndex )
         {
-            if ( ( readyMask & makeGPUTimestampSlotBit( slotIndex ) ) != 0 && pTick[slotIndex] < origin )
+            if ( readyMask.test( slotIndex ) && pTick[slotIndex] < origin )
                 origin = pTick[slotIndex];
         }
 
@@ -25,7 +25,7 @@ namespace sw
         outFrame._listMicro.resize( constant::render::kMaxGPUTimestampSlot );
         for ( uint32 slotIndex = 0; slotIndex < constant::render::kMaxGPUTimestampSlot; ++slotIndex )
         {
-            if ( ( readyMask & makeGPUTimestampSlotBit( slotIndex ) ) == 0 )
+            if ( readyMask.test( slotIndex ) == false )
             {
                 outFrame._listMicro[slotIndex] = -1.0f;
                 continue;

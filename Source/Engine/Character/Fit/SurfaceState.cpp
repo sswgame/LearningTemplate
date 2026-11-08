@@ -62,7 +62,7 @@ namespace sw
             (void)reader.readFields( child, channel );
             if ( channel._name.empty() )
                 continue;
-            if ( findChannelIndex( channel._name ) >= 0 )
+            if ( findChannelIndex( channel._name ).has_value() )
                 reader.addError( "Character.SurfaceChannelRepeated", child, string( "repeats channel '" ) + channel._name.c_str() + "'" );
             else
                 _listChannel.push_back( channel );
@@ -82,14 +82,14 @@ namespace sw
         _listChannel.push_back( channel );
     }
 
-    int32 SurfaceChannelTable::findChannelIndex( const hashed_string& name ) const
+    optional<uint32> SurfaceChannelTable::findChannelIndex( const hashed_string& name ) const
     {
         for ( size_t channelIndex = 0; channelIndex < _listChannel.size(); ++channelIndex )
         {
             if ( _listChannel[channelIndex]._name == name )
-                return static_cast<int32>( channelIndex );
+                return static_cast<uint32>( channelIndex );
         }
-        return -1;
+        return nullopt;
     }
 } // namespace sw
 

@@ -31,7 +31,8 @@ target_link_libraries(sw_platform_windows INTERFACE
 # ------------------------------------------------------------------------------
 if(NOT TARGET sw_graphics_dx11_libs)
 	add_library(sw_graphics_dx11_libs INTERFACE)
-	target_link_libraries(sw_graphics_dx11_libs INTERFACE d3d11.lib d3dcompiler.lib dxgi.lib)
+	# dxguid — WKPDID_D3DDebugObjectName(디버그 이름, D3D11RHIResourceFactory::setTextureDebugName) 같은 GUID 정의가 이 라이브러리에 있다.
+	target_link_libraries(sw_graphics_dx11_libs INTERFACE d3d11.lib d3dcompiler.lib dxgi.lib dxguid.lib)
 endif()
 
 if(NOT TARGET sw_graphics_dx12_libs)

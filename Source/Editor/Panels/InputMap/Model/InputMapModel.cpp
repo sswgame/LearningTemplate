@@ -544,7 +544,7 @@ namespace sw::editor
         return editor::getSubsystem<InputManager>();
     }
 
-    ViewportInputOverlay& InputMapModel::getViewportOverlay()
+    ViewportInputOverlay& InputMapModel::editViewportOverlay()
     {
         return editor::getSubsystem<ViewportInputOverlaySettings>()._overlay;
     }

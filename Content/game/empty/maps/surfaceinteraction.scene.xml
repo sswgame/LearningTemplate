@@ -3,7 +3,7 @@
 	     걷는 해골(Walker)은 제자리 걷기(Walking_A, 발 알림 FootL · FootR)라 시나리오가 object.place 로 자리를 옮긴다. 처음 자리는 돌 패드(-3)다 —
 	     눈 패드 위에서 시작하면 시나리오가 옮기기 전 대기 동안 발자국을 찍어 "돌 위에서는 발자국 없음"(surfacefootprint ①)을 깬다.
 	     표면 질의(SurfaceQuery)가 패드의 물리 재질 · 물 깊이로 종류를 고르고, 눈은 발자국(SurfaceFootprintSystem)을, 날씨 · 물은 젖음 · 씻김(SurfaceExposureComponent)을,
-	     모래 구역은 지역 볼륨(ZoneVolumeComponent, 프로필 zones/sand.zone.xml — 가라앉음 스택 · 감속 · 삼켜짐)이고, 외형 내리기 · 점프 탈출은 걷는 해골의 반응 컴포넌트
+	     모래 구역은 지역 볼륨(ZoneVolumeComponent, 프로필 zones/sand.zone.xml — 가라앉음 스택 · 감속 · 삼켜짐, 배치 덮어쓰기로 파묻힘 테두리 도장 rim 을 더한다)이고, 외형 내리기 · 점프 탈출은 걷는 해골의 반응 컴포넌트
 	     (VisualSinkReactionComponent · JumpEscapeReactionComponent)가 속성 · 스택만 읽어 한다. 날씨는 Weather 오브젝트의 판 상태가 연다(WeatherDirectorComponent).
 	     표면 변형 층(SurfaceDeformSystem): 눈 · 모래 패드 위의 촘촘한 지면(SnowGround · SandGround — PlaneDense + surfacedeform_*.material + SurfaceDeformMeshComponent)이
 	     발자국 · 끌린 자국(Dragger — SurfaceStampComponent Trail) · 깔때기(Whirl — Hold, 홈이 돈다)로 꺼진다. 패드 상자는 그 아래로 내려 두었다(꺼진 지면이 상자 윗면에 가리지 않게). -->
@@ -134,7 +134,20 @@
 			<GameObject _schemaVersion="0" _name="Quicksand" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localPosition="8,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<ZoneVolumeComponent _zoneProfile="game/empty/zones/sand.zone.xml" _shape="Box" _halfExtents="1.5,1,2.5" _pullCenterOffset="0,0,0" _lifetime="0" _growthRate="0" _maxGrowth="0" />
+					<ZoneVolumeComponent _zoneProfile="game/empty/zones/sand.zone.xml" _shape="Box" _halfExtents="1.5,1,2.5" _pullCenterOffset="0,0,0" _lifetime="0" _growthRate="0" _maxGrowth="0">
+						<_listModuleOverride>
+							<ZoneModuleDef _name="rim" _kind="SurfaceStamp">
+								<_listParam>
+									<ZoneParamDef _name="shape" _value="Print" />
+									<ZoneParamDef _name="size" _value="1,1,0" />
+									<ZoneParamDef _name="depth" _value="0.06" />
+									<ZoneParamDef _name="rimHeight" _value="0.03" />
+									<ZoneParamDef _name="rimWidth" _value="0.2" />
+									<ZoneParamDef _name="fillSpeed" _value="0.02" />
+								</_listParam>
+							</ZoneModuleDef>
+						</_listModuleOverride>
+					</ZoneVolumeComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>

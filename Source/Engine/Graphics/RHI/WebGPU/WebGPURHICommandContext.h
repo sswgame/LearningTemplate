@@ -78,6 +78,7 @@ namespace sw
         void setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) override;
         void setGraphicsRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) override;
         void bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override;
+        void bindGraphicsUAV( RHIDescriptorIndex index, uint32 slot ) override;
         void bindShaderResource( RHIDescriptorIndex index, uint32 slot ) override;
         void bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override;
         void updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override;

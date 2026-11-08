@@ -396,7 +396,7 @@ namespace sw::editor
 
     void TileMapPanel::drawTileMapFileControls()
     {
-        const string focused = TileMapModel::getFocusedAssetPath();
+        const string& focused = TileMapModel::getFocusedAssetPath();
         if ( focused.empty() == false )
             ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "Focused", TextArgumentList().addText( "path", focused ) ).c_str() );
 

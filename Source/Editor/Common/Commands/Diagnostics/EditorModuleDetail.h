@@ -1,7 +1,6 @@
 /**
  * @file EditorModuleDetail.h
- * @brief 모듈 창 상세 영역 한 모듈의 내용 — 값(만드는 동작은 `EditorModuleOverrides.h` 의 `makeDetail`).
- * @details 값만 둔다: 모듈 창 View 가 상세를 그릴 때 매니페스트 고쳐 쓰기 커맨드를 끌어오지 않게 가른다(MVVM View include 계약, `docs/agents/EditorUI.md`).
+ * @brief 모듈 창 상세 영역 한 모듈의 내용(값)입니다. `EditorModuleOverrideUtil::makeDetail` 이 채우고 모듈 창 View 가 그린다 — View 가 커맨드 헤더를 보지 않게 값만 따로 둔다.
  */
 #pragma once
 #include "Core/Container/string.h"

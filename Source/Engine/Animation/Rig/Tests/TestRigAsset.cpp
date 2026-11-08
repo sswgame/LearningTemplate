@@ -152,7 +152,7 @@ SW_TEST_CASE( RigAssetTest, ChildMergesNodesByName )
     SW_EXPECT_TRUE( asset.getNodes()[1]->getName() == hashed_string( "Arm" ) );
     SW_EXPECT_NEAR( 0.25f, asset.getNodes()[1]->getWeight(), 1e-6f );
     SW_EXPECT_TRUE( asset.getNodes()[2]->getName() == hashed_string( "Follow" ) );
-    SW_EXPECT_EQUAL( 0, asset.findTargetIndex( hashed_string( "Grip" ) ) ); // 물려받음
+    SW_EXPECT_TRUE( asset.findTargetIndex( hashed_string( "Grip" ) ) == 0u ); // 물려받음
 }
 
 /**

@@ -13,6 +13,7 @@
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
+#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorProjectedLineRenderer.h"
@@ -39,9 +40,11 @@
 #include "Engine/Scene/Scene.h"
 
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/CharacterEditorLocalStore.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceSelection.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearance.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/CharacterBodyDynamicsComponent.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/ResolvedAppearance.h"
 
 #include <imgui.h>
@@ -54,6 +57,8 @@ namespace sw::editor
         {
             static constexpr float32 kDragSpeed                = 0.005f;
             static constexpr float32 kRotationDragSpeed        = 0.5f;
+            static constexpr int32   kLayerUp                  = 1;  ///< 피부 층 한 칸 위(목록 뒤가 위다)
+            static constexpr int32   kLayerDown                = -1; ///< 피부 층 한 칸 아래
             static constexpr float32 kPathButtonsColumns       = 32.0f;
             static constexpr float32 kBoneTreeLines            = 10.0f;
             static constexpr float32 kPresetListLines          = 5.0f;
@@ -143,6 +148,14 @@ namespace sw::editor
             {
                 return readPublished( &CharacterEditorPanel::Published::_penetrationMarkCount, outValue );
             }
+            [[nodiscard]] static bool readBodyLayerCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                return readPublished( &CharacterEditorPanel::Published::_bodyLayerCount, outValue );
+            }
+            [[nodiscard]] static bool readBodyHiddenSlotCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                return readPublished( &CharacterEditorPanel::Published::_bodyHiddenSlotCount, outValue );
+            }
             [[nodiscard]] static bool readBoneCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 return readPublished( &CharacterEditorPanel::Published::_boneCount, outValue );
@@ -192,6 +205,10 @@ namespace sw::editor
 
     SW_AUTOMATION_FINISH_BLOCKER( characterEditorThumbnail, "CharacterEditorThumbnail", &CharacterEditorPanelInternal::isThumbnailCapturePending );
 
+    SW_AUTOMATION_WATCH( editorCharacterEditorBodyLayerCount, "Editor.CharacterEditorBodyLayerCount", "Skin layers in the Character Editor appearance selection (published while the Body tab draws)",
+                         &CharacterEditorPanelInternal::readBodyLayerCount );
+    SW_AUTOMATION_WATCH( editorCharacterEditorBodyHiddenSlots, "Editor.CharacterEditorBodyHiddenSlots", "Slots the player hid in the Character Editor selection (published while the Body tab draws)",
+                         &CharacterEditorPanelInternal::readBodyHiddenSlotCount );
     SW_AUTOMATION_WATCH( editorCharacterEditorBoneCount, "Editor.CharacterEditorBoneCount", "Bones of the skeleton the Character Editor has loaded", &CharacterEditorPanelInternal::readBoneCount );
     SW_AUTOMATION_WATCH( editorCharacterEditorStatusSet, "Editor.CharacterEditorStatusSet", "1 while the Character Editor status line holds a message (an edit error or progress)", &CharacterEditorPanelInternal::readStatusSet );
     SW_AUTOMATION_WATCH( editorCharacterEditorSocketCount, "Editor.CharacterEditorSocketCount", "Sockets in the socket file the Character Editor has loaded", &CharacterEditorPanelInternal::readSocketCount );
@@ -239,6 +256,7 @@ namespace sw::editor
         , _placedGizmoTarget{ CharacterGizmoTarget::None }
         , _bRigPreview{ false }
         , _published{}
+        , _bodyState{}
         , _thumbnailCapturePath{}
         , _thumbnailCapturePreset{}
         , _thumbnailCaptureSerial{ 0 }
@@ -312,6 +330,13 @@ namespace sw::editor
             if ( bAppearanceTab )
             {
                 drawAppearanceTab();
+                ImGui::EndTabItem();
+            }
+            const bool bBodyTab = ImGui::BeginTabItem( SW_LOCKEY( "EdPlugin", "BodyTab" ) );
+            EditorSelfTestMarks::record( "charactereditor.tab.body" );
+            if ( bBodyTab )
+            {
+                drawBodyTab();
                 ImGui::EndTabItem();
             }
             // 미리보기는 탭 하나다 — 다른 탭의 줄을 밀지 않고, 가려진 탭은 그리지 않는다(뷰포트를 부른 프레임만 렌더한다).
@@ -523,12 +548,12 @@ namespace sw::editor
     {
         const BonePoseEditModel& pose      = _document.getPoseModel();
         const Skeleton&          skeleton  = pose.getSkeleton();
-        const int32              boneIndex = skeleton.findBoneIndex( _document.getSelectedBone() );
-        if ( boneIndex < 0 )
-            return false;
+        const optional<uint32>   boneIndex = skeleton.findBoneIndex( _document.getSelectedBone() );
+        if ( boneIndex.has_value() == false )
+            return false; // 고른 본이 없다(고르지 않았거나 다른 스켈레톤) — 기즈모를 그리지 않는다
         // 덮어쓴 값을 얹은 모델 변환 — 부모까지 줄을 올라가 루트부터 곱한다(행벡터: 자식 × 부모).
         vector<int32> listChain;
-        for ( int32 index = boneIndex; index >= 0; index = skeleton.getBone( static_cast<uint32>( index ) )._parentIndex )
+        for ( int32 index = static_cast<int32>( *boneIndex ); index >= 0; index = skeleton.getBone( static_cast<uint32>( index ) )._parentIndex )
         {
             listChain.push_back( index );
         }
@@ -569,7 +594,6 @@ namespace sw::editor
 
     void CharacterEditorPanel::applyGizmoWorld( CharacterGizmoTarget target, const float4x4& world, const float4x4& parentWorld )
     {
-        string error;
         switch ( target )
         {
             case CharacterGizmoTarget::None:
@@ -577,18 +601,18 @@ namespace sw::editor
             case CharacterGizmoTarget::Bone:
             {
                 // 부모 월드의 역으로 본의 로컬을 구해 레퍼런스 포즈 덮어쓰기에 넣는다(끄는 동안은 한 되돌리기 단계).
-                BonePoseEditModel&  pose    = _document.getPoseModel();
-                const BoneTransform local   = BoneTransform::makeFromMatrix( world * parentWorld.invert() );
-                const float3        degrees = local._rotation.getEulerAngles() * MathUtil::kRadianToDegree;
-                (void)pose.setTranslation( _document.getSelectedBone(), local._translation, true, error ); // 같은 값이면 false 이고 오류는 비어 있다
-                (void)pose.setRotationDegrees( _document.getSelectedBone(), degrees, true, error );        // 같은 값이면 false 이고 오류는 비어 있다
-                _document.setStatus( error );
+                BonePoseEditModel&   pose    = _document.getPoseModel();
+                const BoneTransform  local   = BoneTransform::makeFromMatrix( world * parentWorld.invert() );
+                const float3         degrees = local._rotation.getEulerAngles() * MathUtil::kRadianToDegree;
+                const expected<bool> moved   = pose.setTranslation( _document.getSelectedBone(), local._translation, true );
+                const expected<bool> turned  = pose.setRotationDegrees( _document.getSelectedBone(), degrees, true );
+                _document.reportEdit( moved.has_value() ? turned : moved ); // 같은 값이면 false 다 — 오류만 상태 줄에 남는다
                 break;
             }
             case CharacterGizmoTarget::Socket:
             {
                 // 월드 두 행렬에 몸의 월드가 함께 곱혀 있어 나누면 유닛 공간과 같은 로컬이다 — 소켓 파일의 부모 기준 변환으로 쓴다.
-                _document.reportEdit( _document.getSocketModel().setUnitTransform( _document.getSelectedSocket(), world, parentWorld, true, _document.editStatus() ) );
+                _document.reportEdit( _document.getSocketModel().setUnitTransform( _document.getSelectedSocket(), world, parentWorld, true ) );
                 break;
             }
         }
@@ -765,6 +789,8 @@ namespace sw::editor
                 return;
             }
             pAnimator->setAnimationSetPath( string_view( _document.getPaths()._animationSet.c_str() ) );
+            // 몸 동작(굽 · 지글 · 동공 · 체액)은 몸 프로필이 있는 외형에서만 일한다 — 없는 몸에서는 쉰다. 몸 탭의 미리보기 단추가 이것을 부른다.
+            (void)pBody->addComponent<CharacterBodyDynamicsComponent>();
             _previewBody         = pBody->getHandle();
             _bPreviewBodyDressed = SW_FALSE;
         }
@@ -951,7 +977,6 @@ namespace sw::editor
     {
         const hashed_string name    = socket._name;
         SocketEditModel&    sockets = _document.getSocketModel();
-        string&             status  = _document.editStatus();
 
         EditorChrome::setNextItemWidthColumns( 24.0f );
         ImGui::InputText( "##Rename", _renameBuffer.data(), _renameBuffer.max_size() );
@@ -972,43 +997,43 @@ namespace sw::editor
         parent = socket._parent.c_str();
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "Parent" ) );
         if ( ImGui::InputText( "##Parent", parent.data(), parent.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue ) )
-            _document.reportEdit( sockets.setParent( name, CharacterEditorPanelInternal::makeName( parent.c_str() ), status ) );
+            _document.reportEdit( sockets.setParent( name, CharacterEditorPanelInternal::makeName( parent.c_str() ) ) );
 
         hashed_string pickedKind;
         if ( CharacterEditorPanelInternal::drawNameCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "Kind" ), "Kind" ), socket._kind, sockets.getKindTable().getKinds(), pickedKind ) )
-            _document.reportEdit( sockets.setKind( name, pickedKind, status ) );
+            _document.reportEdit( sockets.setKind( name, pickedKind ) );
 
         float3 translation = socket._translation;
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "Translation" ) );
         if ( ImGui::DragFloat3( "##Translation", &translation._x, CharacterEditorPanelInternal::kDragSpeed ) )
-            _document.reportEdit( sockets.setTranslation( name, translation, true, status ) );
+            _document.reportEdit( sockets.setTranslation( name, translation, true ) );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             sockets.endContinuousEdit();
 
         float3 degrees = socket._rotation.getEulerAngles() * MathUtil::kRadianToDegree;
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "Rotation" ) );
         if ( ImGui::DragFloat3( "##Rotation", &degrees._x, CharacterEditorPanelInternal::kRotationDragSpeed ) )
-            _document.reportEdit( sockets.setRotationDegrees( name, degrees, true, status ) );
+            _document.reportEdit( sockets.setRotationDegrees( name, degrees, true ) );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             sockets.endContinuousEdit();
 
         float3 scale = socket._scale;
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "Scale" ) );
         if ( ImGui::DragFloat3( "##Scale", &scale._x, CharacterEditorPanelInternal::kDragSpeed ) )
-            _document.reportEdit( sockets.setScale( name, scale, true, status ) );
+            _document.reportEdit( sockets.setScale( name, scale, true ) );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             sockets.endContinuousEdit();
 
         int32 anchorIndex = socket._anchor == SocketAnchor::Surface ? 1 : 0;
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "Anchor" ) );
         if ( ImGui::Combo( "##Anchor", &anchorIndex, "Bone\0Surface\0" ) )
-            _document.reportEdit( sockets.setAnchor( name, anchorIndex == 1 ? SocketAnchor::Surface : SocketAnchor::Bone, status ) );
+            _document.reportEdit( sockets.setAnchor( name, anchorIndex == 1 ? SocketAnchor::Surface : SocketAnchor::Bone ) );
 
         fixed_string<constant::file::kMaxPathSize> previewMesh;
         previewMesh = string_view( socket._previewMesh );
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "PreviewMesh" ) );
         if ( ImGui::InputText( "##Previewmesh", previewMesh.data(), previewMesh.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue ) )
-            _document.reportEdit( sockets.setPreviewMesh( name, previewMesh.c_str(), status ) );
+            _document.reportEdit( sockets.setPreviewMesh( name, previewMesh.c_str() ) );
     }
 
     void CharacterEditorPanel::drawSkeletonTab()
@@ -1106,12 +1131,11 @@ namespace sw::editor
             return;
         }
         ImGui::TextUnformatted( bone.c_str() );
-        string error;
 
         float3 translation = current._translation;
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "BoneTranslation" ) );
         if ( ImGui::DragFloat3( "##Bonetranslation", &translation._x, CharacterEditorPanelInternal::kDragSpeed ) )
-            _document.reportEdit( pose.setTranslation( bone, translation, true, error ) || error.empty() );
+            _document.reportEdit( pose.setTranslation( bone, translation, true ) );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             pose.endContinuousEdit();
         EditorSelfTestMarks::record( "charactereditor.bone.translation" );
@@ -1119,26 +1143,24 @@ namespace sw::editor
         float3 degrees = current._rotation.getEulerAngles() * MathUtil::kRadianToDegree;
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "BoneRotation" ) );
         if ( ImGui::DragFloat3( "##Bonerotation", &degrees._x, CharacterEditorPanelInternal::kRotationDragSpeed ) )
-            _document.reportEdit( pose.setRotationDegrees( bone, degrees, true, error ) || error.empty() );
+            _document.reportEdit( pose.setRotationDegrees( bone, degrees, true ) );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             pose.endContinuousEdit();
 
         float3 scale = current._scale;
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "BoneScale" ) );
         if ( ImGui::DragFloat3( "##Bonescale", &scale._x, CharacterEditorPanelInternal::kDragSpeed ) )
-            _document.reportEdit( pose.setScale( bone, scale, true, error ) || error.empty() );
+            _document.reportEdit( pose.setScale( bone, scale, true ) );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             pose.endContinuousEdit();
 
         ImGui::BeginDisabled( pose.hasOverride( bone ) == false );
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "ResetBone" ) ) )
-            _document.reportEdit( pose.clearBone( bone, error ) );
+            _document.reportEdit( pose.clearBone( bone ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "MirrorBone" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "MirrorBone" ) ) )
             _document.mirrorSelectedBone();
         ImGui::EndDisabled();
-        if ( error.empty() == false )
-            _document.setStatus( error );
     }
 
     void CharacterEditorPanel::drawAppearanceTab()
@@ -1170,6 +1192,239 @@ namespace sw::editor
         drawExplanation();
         drawFitCheck();
         drawPresetRow();
+    }
+
+    void CharacterEditorPanel::drawBodyTab()
+    {
+        // MVVM: 그리기마다 한 번 모으고(ViewModel), 상태만 읽어 그리며, 바꿀 때는 이름 붙은 명령을 부른다.
+        const AppearanceDatabase& database   = _document.getDatabase();
+        AppearanceEditModel&      appearance = _document.getAppearanceModel();
+        GameObjectManager*        pManager   = findPreviewManager();
+        GameObject*               pBody      = pManager != nullptr ? pManager->resolveGameObject( _previewBody ) : nullptr;
+        BodyCustomizationViewModel::gather( appearance, database, pBody, _bodyState );
+        const BodyCustomizationViewState& state = _bodyState;
+        _published._bodyLayerCount              = static_cast<uint32>( state._listLayer.size() );
+        _published._bodyHiddenSlotCount         = static_cast<uint32>( std::count_if( state._listSlot.begin(), state._listSlot.end(), []( const BodyCustomizationViewState::SlotRow& row )
+                { return row._bHidden == SW_TRUE; } ) );
+        if ( _document.isDatabaseLoaded() == false )
+        {
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdPlugin", "LoadTheItemsFileAndTheAppearanceFolder" ) );
+            return;
+        }
+
+        // 슬롯 숨김 — 투구 숨기기처럼 장비는 그대로 두고 외형 · 몸 채널만 뺀다.
+        ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "BodySlotVisibility" ) );
+        for ( const BodyCustomizationViewState::SlotRow& row : state._listSlot )
+        {
+            bool bHidden = row._bHidden == SW_TRUE;
+            ImGui::PushID( row._slot.c_str() );
+            if ( ImGui::Checkbox( "##hidden", &bHidden ) )
+                (void)BodyCustomizationViewModel::setSlotHidden( appearance, row._slot, bHidden );
+            ImGui::SameLine();
+            ImGui::TextUnformatted( row._slot.c_str() );
+            ImGui::SameLine();
+            ImGui::TextDisabled( "%s", row._item.empty() ? "-" : row._item.c_str() );
+            ImGui::PopID();
+        }
+        EditorSelfTestMarks::record( "charactereditor.body.slots" );
+        ImGui::Separator();
+
+        // 몸 채널 — 장비 · 프로필 · 슬라이더를 모은 값과 이 몸의 매핑(스켈레톤마다 *.bodyshape.xml).
+        ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "BodyChannels" ) );
+        if ( state._listChannel.empty() )
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdPlugin", "BodyChannelsEmpty" ) );
+        else if ( ImGui::BeginTable( "##BodyChannels", 3, ImGuiTableFlags_SizingStretchProp ) )
+        {
+            for ( const BodyCustomizationViewState::ChannelRow& row : state._listChannel )
+            {
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted( row._channel.c_str() );
+                ImGui::TableNextColumn();
+                ImGui::Text( "%.3f", row._value );
+                ImGui::TableNextColumn();
+                const utf8* pMapping = row._mapping == BodyChannelMapping::Mapped      ? SW_LOCKEY( "EdPlugin", "BodyChannelMapped" )
+                                     : row._mapping == BodyChannelMapping::Unsupported ? SW_LOCKEY( "EdPlugin", "BodyChannelUnsupported" )
+                                                                                       : SW_LOCKEY( "EdPlugin", "BodyChannelMissing" );
+                if ( row._mapping == BodyChannelMapping::Missing )
+                    ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Error" ) ), "%s", pMapping ); // 상태 색은 상태에만 — 매핑이 없으면 로드 오류다
+                else
+                    ImGui::TextDisabled( "%s", pMapping );
+            }
+            ImGui::EndTable();
+        }
+        ImGui::Separator();
+
+        // 염색 구간 — 별칭 · 묶음 · 염색 여부와 해석이 건 염색 채널 수.
+        ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "DyeSections" ) );
+        if ( state._listSection.empty() )
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdPlugin", "DyeSectionsEmpty" ) );
+        else if ( ImGui::BeginTable( "##DyeSections", 5, ImGuiTableFlags_SizingStretchProp ) )
+        {
+            ImGui::TableSetupColumn( SW_LOCKEY( "EdPlugin", "ColumnSection" ) );
+            ImGui::TableSetupColumn( SW_LOCKEY( "EdPlugin", "ColumnAlias" ) );
+            ImGui::TableSetupColumn( SW_LOCKEY( "EdPlugin", "ColumnGroups" ) );
+            ImGui::TableSetupColumn( SW_LOCKEY( "EdPlugin", "ColumnDyeable" ) );
+            ImGui::TableSetupColumn( SW_LOCKEY( "EdPlugin", "ColumnDyeChannels" ) );
+            ImGui::TableHeadersRow();
+            for ( const BodyCustomizationViewState::SectionRow& row : state._listSection )
+            {
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted( row._section.c_str() );
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted( row._alias.empty() ? "-" : row._alias.c_str() );
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted( row._groups.empty() ? "-" : row._groups.c_str() );
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted( row._bDyeable == SW_TRUE ? SW_LOCKEY( "EdPlugin", "Yes" ) : SW_LOCKEY( "EdPlugin", "No" ) );
+                ImGui::TableNextColumn();
+                ImGui::Text( "%u", row._dyeCount );
+            }
+            ImGui::EndTable();
+        }
+        ImGui::Separator();
+        drawSkinLayerRows( state );
+        ImGui::Separator();
+        drawBodyDynamicsPreview( state, pBody );
+    }
+
+    void CharacterEditorPanel::drawSkinLayerRows( const BodyCustomizationViewState& state )
+    {
+        const AppearanceDatabase& database   = _document.getDatabase();
+        AppearanceEditModel&      appearance = _document.getAppearanceModel();
+        ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "SkinLayers" ) );
+        if ( EditorWidgets::beginCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPlugin", "AddSkinLayer" ), "AddSkinLayer" ), "" ) )
+        {
+            for ( size_t index = 0; index < state._listAvailableLayer.size(); ++index )
+            {
+                const hashed_string& layer = state._listAvailableLayer[index];
+                if ( ImGui::Selectable( layer.c_str() ) )
+                    (void)BodyCustomizationViewModel::addSkinLayer( appearance, database, layer );
+                if ( index == 0 )
+                    EditorSelfTestMarks::record( "charactereditor.body.addLayer.first" );
+            }
+            ImGui::EndCombo();
+        }
+        EditorSelfTestMarks::record( "charactereditor.body.addLayer" );
+        if ( state._listLayer.empty() )
+        {
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdPlugin", "SkinLayersEmpty" ) );
+            return;
+        }
+        // 목록 뒤가 위다 — 위층부터 그려 위가 위에 보이게 한다.
+        for ( size_t reverse = state._listLayer.size(); reverse > 0; --reverse )
+        {
+            const uint32                                index = static_cast<uint32>( reverse - 1 );
+            const BodyCustomizationViewState::LayerRow& row   = state._listLayer[index];
+            SkinLayerValue                              value = row._value;
+            ImGui::PushID( static_cast<int32>( index ) );
+            bool bVisible = value._bHidden == SW_FALSE;
+            if ( ImGui::Checkbox( "##visible", &bVisible ) )
+            {
+                value._bHidden = bVisible ? SW_FALSE : SW_TRUE;
+                (void)BodyCustomizationViewModel::setSkinLayer( appearance, index, value, false );
+            }
+            ImGui::SameLine();
+            ImGui::TextUnformatted( value._layer.c_str() );
+            ImGui::SameLine();
+            ImGui::TextDisabled( "%s", row._category.c_str() );
+            ImGui::SameLine();
+            if ( ImGui::SmallButton( SW_LOCKEY( "EdPlugin", "MoveUp" ) ) )
+                (void)BodyCustomizationViewModel::moveSkinLayer( appearance, index, CharacterEditorPanelInternal::kLayerUp );
+            ImGui::SameLine();
+            if ( ImGui::SmallButton( SW_LOCKEY( "EdPlugin", "MoveDown" ) ) )
+                (void)BodyCustomizationViewModel::moveSkinLayer( appearance, index, CharacterEditorPanelInternal::kLayerDown );
+            ImGui::SameLine();
+            if ( ImGui::SmallButton( SW_LOCKEY( "EdPlugin", "RemoveSkinLayer" ) ) )
+                (void)BodyCustomizationViewModel::removeSkinLayer( appearance, index );
+
+            // 색 — 견본 묶음이 있으면 견본 단추만(염색과 같은 팔레트), 없으면 자유 색.
+            if ( row._listSwatch.empty() )
+            {
+                if ( ImGui::ColorEdit4( "##color", &value._color._x, ImGuiColorEditFlags_NoInputs ) )
+                    (void)BodyCustomizationViewModel::setSkinLayer( appearance, index, value, ImGui::IsItemActive() );
+            }
+            for ( size_t swatch = 0; swatch < row._listSwatch.size(); ++swatch )
+            {
+                const float4& color = row._listSwatch[swatch];
+                ImGui::PushID( static_cast<int32>( swatch ) );
+                if ( ImGui::ColorButton( "##swatch", ImVec4( color._x, color._y, color._z, color._w ) ) )
+                {
+                    value._color = color;
+                    (void)BodyCustomizationViewModel::setSkinLayer( appearance, index, value, false );
+                }
+                ImGui::PopID();
+                ImGui::SameLine();
+            }
+            ImGui::NewLine();
+            EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPlugin", "LayerOpacity" ), SW_LOCKEY( "EdPlugin", "LayerOpacityTooltip" ) );
+            if ( ImGui::SliderFloat( "##opacity", &value._opacity, 0.0f, 1.0f ) )
+                (void)BodyCustomizationViewModel::setSkinLayer( appearance, index, value, true );
+            if ( ImGui::IsItemDeactivatedAfterEdit() )
+                appearance.endContinuousEdit();
+            if ( row._bPlaceable == SW_TRUE )
+            {
+                EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPlugin", "LayerOffset" ), SW_LOCKEY( "EdPlugin", "LayerOffsetTooltip" ) );
+                bool bChanged = ImGui::DragFloat2( "##offset", &value._offset._x, CharacterEditorPanelInternal::kDragSpeed, 0.0f, 1.0f );
+                EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPlugin", "LayerScale" ), SW_LOCKEY( "EdPlugin", "LayerScaleTooltip" ) );
+                bChanged = ImGui::DragFloat2( "##scale", &value._scale._x, CharacterEditorPanelInternal::kDragSpeed, SkinLayerValue::kMinScale, SkinLayerValue::kMaxScale ) || bChanged;
+                EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPlugin", "LayerRotation" ), SW_LOCKEY( "EdPlugin", "LayerRotationTooltip" ) );
+                bChanged     = ImGui::DragFloat( "##rotation", &value._rotationDegrees, CharacterEditorPanelInternal::kRotationDragSpeed, -SkinLayerValue::kMaxRotation, SkinLayerValue::kMaxRotation ) || bChanged;
+                bool bMirror = value._bMirror == SW_TRUE;
+                if ( ImGui::Checkbox( SW_LOCKEY( "EdPlugin", "LayerMirror" ), &bMirror ) )
+                {
+                    value._bMirror = bMirror ? SW_TRUE : SW_FALSE;
+                    bChanged       = true;
+                }
+                if ( bChanged )
+                    (void)BodyCustomizationViewModel::setSkinLayer( appearance, index, value, true );
+                if ( ImGui::IsItemDeactivatedAfterEdit() )
+                    appearance.endContinuousEdit();
+            }
+            ImGui::PopID();
+        }
+    }
+
+    void CharacterEditorPanel::drawBodyDynamicsPreview( const BodyCustomizationViewState& state, GameObject* pBody )
+    {
+        ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "BodyDynamics" ) );
+        if ( state._bHasBody == SW_FALSE || state._bodyProfile.empty() )
+        {
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdPlugin", "BodyDynamicsNoProfile" ) );
+            return;
+        }
+        // 미리보기 단추는 몸만 바꾼다(기록 없음) — 맞음은 지글, 울기 · 침은 체액 방아쇠, 지우기는 화장 번짐.
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "PreviewHit" ) ) )
+            BodyCustomizationViewModel::previewHit( pBody );
+        EditorSelfTestMarks::record( "charactereditor.body.hit" );
+        for ( const hashed_string& trigger : state._listFluidTrigger )
+        {
+            ImGui::SameLine();
+            if ( ImGui::Button( trigger.c_str() ) ) // 단추 이름은 데이터의 방아쇠 이름(Cry · Drool)이다
+                BodyCustomizationViewModel::previewFluid( pBody, trigger );
+        }
+        ImGui::SameLine();
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "ClearSmears" ) ) )
+            BodyCustomizationViewModel::clearSmears( pBody );
+        if ( ImGui::BeginTable( "##BodyDynamicsValues", 2, ImGuiTableFlags_SizingStretchProp ) )
+        {
+            const auto drawValue = []( const utf8* pLabel, float32 value )
+            {
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted( pLabel );
+                ImGui::TableNextColumn();
+                ImGui::Text( "%.3f", value );
+            };
+            drawValue( SW_LOCKEY( "EdPlugin", "FootLift" ), state._footLift );
+            drawValue( SW_LOCKEY( "EdPlugin", "PupilSize" ), state._pupilSize );
+            drawValue( SW_LOCKEY( "EdPlugin", "EyeLight" ), state._eyeLuminance );
+            drawValue( SW_LOCKEY( "EdPlugin", "JiggleDisplacement" ), state._jiggleDisplacement );
+            drawValue( SW_LOCKEY( "EdPlugin", "FluidWetness" ), state._fluidWetness );
+            drawValue( SW_LOCKEY( "EdPlugin", "SmearDilution" ), state._smearDilution );
+            ImGui::EndTable();
+        }
     }
 
     void CharacterEditorPanel::drawAppearanceDataRow()

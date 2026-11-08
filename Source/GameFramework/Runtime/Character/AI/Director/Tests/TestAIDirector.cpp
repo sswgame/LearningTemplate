@@ -235,10 +235,10 @@ SW_TEST_CASE( AIDirectorPoolTest, IntervalPoolRunsOnlyInItsPacingAndRespectsCool
     rig.run( 30.0f, 1.0f ); // 항목 쿨다운 100 초 동안 다시 나오지 않는다
     SW_EXPECT_EQUAL( 1, rig.count( AIDirectorEventKind::Encounter, "stranger" ) );
 
-    const int32  poolIndex = rig._director.findPoolIndex( hashed_string( "ambient" ) );
+    const int32  poolIndex = rig._director.findPoolIndex( hashed_string( "ambient" ) ).value();
     const uint32 mask      = rig._director.computeBlockMask( poolIndex, 0 );
     SW_EXPECT_TRUE( ( mask & AIDirectorBlock::kCooldown ) != 0 );
-    SW_EXPECT_EQUAL( -1, rig._director.findPoolIndex( hashed_string( "nothing" ) ) );
+    SW_EXPECT_FALSE( rig._director.findPoolIndex( hashed_string( "nothing" ) ).has_value() );
 }
 
 SW_TEST_CASE( AIDirectorPoolTest, BudgetPoolPaysCostAndScalesWithPhaseAndNeed )
@@ -246,7 +246,7 @@ SW_TEST_CASE( AIDirectorPoolTest, BudgetPoolPaysCostAndScalesWithPhaseAndNeed )
     DirectorRig rig;
     SW_REQUIRE_TRUE( rig._director.forcePhase( hashed_string( "Relax" ) ) );
     AIDirectorIntensityModel& model     = rig._director.getBuiltinIntensityModel();
-    const int32               poolIndex = rig._director.findPoolIndex( hashed_string( "supplies" ) );
+    const int32               poolIndex = rig._director.findPoolIndex( hashed_string( "supplies" ) ).value();
 
     (void)model.setSignal( hashed_string( "low" ), 2.0f ); // 필요 2 → 배율 1 + 1 x 2 = 3, 단계 보상 배율 2, 초당 1 예산
     rig._director.update( 0.1f );
@@ -476,9 +476,9 @@ SW_TEST_CASE( AIDirectorProfileTest, CollectsEveryEncounterIDOnce )
     vector<hashed_string> listID;
     rig._profile.collectEncounterIDs( listID );
     SW_EXPECT_EQUAL( size_t( 3 ), listID.size() );
-    SW_EXPECT_EQUAL( 1, rig._profile.findPhaseIndex( hashed_string( "Peak" ) ) );
-    SW_EXPECT_EQUAL( -1, rig._profile.findPhaseIndex( hashed_string( "Nothing" ) ) );
-    SW_EXPECT_EQUAL( 2, rig._profile.findSignalIndex( hashed_string( "low" ) ) );
+    SW_EXPECT_EQUAL( 1, rig._profile.findPhaseIndex( hashed_string( "Peak" ) ).value() );
+    SW_EXPECT_FALSE( rig._profile.findPhaseIndex( hashed_string( "Nothing" ) ).has_value() );
+    SW_EXPECT_EQUAL( 2, rig._profile.findSignalIndex( hashed_string( "low" ) ).value() );
 }
 
 /**
@@ -495,9 +495,9 @@ SW_TEST_CASE( AIDirectorProfileTest, SharedCacheGivesOneObjectAndReloadDetaches 
     const shared_ptr<const AIDirectorProfile> pAgain = SharedAssetCache<AIDirectorProfile>::acquire( id );
     SW_REQUIRE_TRUE( pHeld != nullptr );
     SW_EXPECT_TRUE( pHeld.get() == pAgain.get() );
-    const int32 peak = pHeld->findPhaseIndex( hashed_string( "Peak" ) );
-    SW_REQUIRE_TRUE( peak >= 0 );
-    SW_EXPECT_NEAR( 2.0f, pHeld->getPhases()[static_cast<size_t>( peak )]._spawnScale, 0.0001f );
+    const optional<int32> peak = pHeld->findPhaseIndex( hashed_string( "Peak" ) );
+    SW_REQUIRE_TRUE( peak.has_value() );
+    SW_EXPECT_NEAR( 2.0f, pHeld->getPhases()[static_cast<size_t>( *peak )]._spawnScale, 0.0001f );
 
     string       changed = DirectorRig::kProfileXML;
     const size_t at      = changed.find( "<Phase id=\"Peak\" spawnScale=\"2\">" );
@@ -505,12 +505,12 @@ SW_TEST_CASE( AIDirectorProfileTest, SharedCacheGivesOneObjectAndReloadDetaches 
     changed.replace( at, string_view( "<Phase id=\"Peak\" spawnScale=\"2\">" ).size(), "<Phase id=\"Peak\" spawnScale=\"3\">" );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "arena.director.xml" ), changed ) );
     SW_REQUIRE_TRUE( SharedAssetCache<AIDirectorProfile>::reloadShared( id ) );
-    SW_EXPECT_NEAR( 2.0f, pHeld->getPhases()[static_cast<size_t>( peak )]._spawnScale, 0.0001f ); // 쥔 쪽은 옛 객체 그대로(Detach)
+    SW_EXPECT_NEAR( 2.0f, pHeld->getPhases()[static_cast<size_t>( *peak )]._spawnScale, 0.0001f ); // 쥔 쪽은 옛 객체 그대로(Detach)
 
     const shared_ptr<const AIDirectorProfile> pFresh = SharedAssetCache<AIDirectorProfile>::acquire( id );
     SW_REQUIRE_TRUE( pFresh != nullptr );
     SW_EXPECT_TRUE( pFresh.get() != pHeld.get() );
-    SW_EXPECT_NEAR( 3.0f, pFresh->getPhases()[static_cast<size_t>( peak )]._spawnScale, 0.0001f );
+    SW_EXPECT_NEAR( 3.0f, pFresh->getPhases()[static_cast<size_t>( *peak )]._spawnScale, 0.0001f );
 }
 
 /**

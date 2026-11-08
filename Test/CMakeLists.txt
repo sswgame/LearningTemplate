@@ -151,6 +151,11 @@ add_test(NAME Scripts.PackMods
 	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/package/Tests/TestPackMods.py")
 set_tests_properties(Scripts.PackMods PROPERTIES LABELS nogpu TIMEOUT 60)
 
+# Android APK 패키징 값 — 매니페스트 틀이 다 채워지고, 게임 덮기 · 프리셋 최소 API 를 읽고, 틀린 값은 멈춘다(Scripts/package/AndroidApk.py, 도구는 부르지 않는다).
+add_test(NAME Scripts.AndroidApk
+	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/package/Tests/TestAndroidApk.py")
+set_tests_properties(Scripts.AndroidApk PROPERTIES LABELS nogpu TIMEOUT 60)
+
 # 온라인 부하 봇의 짧은 시나리오 — 같은 프로세스 서버(`--local-server=0`, OS 가 고른 포트라 나란히 돌아도 다투지 않는다)에 봇 여덟이 붙어
 # 로그인 · 채팅 · 순위를 한 번씩 돈다. 오류율 · 보고서 쓰기 실패가 종료 코드다(엔진 · 모듈이 서지 못하면 3). 봇 로그는 `-log-file` 로 같은 폴더에 남는다.
 if(TARGET OnlineLoadBot)

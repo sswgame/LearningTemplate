@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/RHI/DX/DX11/D3D11RHICommandContext.h"
 
+#include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
@@ -187,6 +188,7 @@ namespace sw
             _pContext->OMSetRenderTargets( rtCount, arrRTV, pDSV );
         else
             _pContext->OMSetRenderTargets( 0, nullptr, pDSV );
+        _pState->_boundRenderTargetCount = rtCount;
 
         // 깊이 · 블렌드 상태는 PSO 의 것만 쓴다(setPipelineState 가 건다). 전역 깊이 상태로 대신하지 않는다 — PSO 없이 그리면
         // bindGraphicsPipelineForDraw 가 멈춘다. 패스 앞에 이미 PSO 가 걸려 있으면 그 상태를 다시 건다.
@@ -290,6 +292,26 @@ namespace sw
         _pContext->CopySubresourceRegion( pTarget, 0, 0, 0, 0, pSource, 0, &region );
     }
 
+    void D3D11RHICommandContext::bindGraphicsUAV( RHIDescriptorIndex index, uint32 slot )
+    {
+        Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> uav = _pDevice->bindlessUAVAt( index );
+        if ( _pContext == nullptr || uav == nullptr || _pState == nullptr )
+            return;
+        // 픽셀 셰이더의 u 번호는 렌더 타깃 칸과 같은 자리다 — UAVStartSlot 은 건 렌더 타깃 수 이상이어야 한다. 모자라면 걸지 않는다(셰이더의 쓰기는 버려진다).
+        // https://learn.microsoft.com/en-us/windows/win32/api/d3d11/nf-d3d11-id3d11devicecontext-omsetrendertargetsandunorderedaccessviews
+        if ( slot < _pState->_boundRenderTargetCount || slot >= D3D11_PS_CS_UAV_REGISTER_COUNT )
+        {
+            SW_LOG_ERROR_ONCE_ID( "D3D11RHICommandContext.GraphicsUAVBehindTargets", "bindGraphicsUAV: u%# is not behind the %# bound render targets - D3D11 pixel shader UAVs share the render target slots, the writes are dropped",
+                                  slot, _pState->_boundRenderTargetCount );
+            return;
+        }
+        // 렌더 타깃 · 깊이는 그대로 두고(KEEP) UAV 하나만 건다. 같은 버퍼가 CS UAV 로 걸려 있으면 런타임이 그쪽을 뗀다.
+        ID3D11UnorderedAccessView* pUAV = uav.Get();
+        _pContext->OMSetRenderTargetsAndUnorderedAccessViews( D3D11_KEEP_RENDER_TARGETS_AND_DEPTH_STENCIL, nullptr, nullptr, slot, 1, &pUAV, nullptr );
+        if ( slot < D3D11_PS_CS_UAV_REGISTER_COUNT )
+            _pState->_arrComputeUAVBuffer[slot] = 0; // CS 쪽 기록은 런타임이 뗐다
+    }
+
     void D3D11RHICommandContext::bindComputeUAV( RHIDescriptorIndex index, uint32 slot )
     {
         Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> uav = _pDevice->bindlessUAVAt( index );
@@ -318,7 +340,12 @@ namespace sw
         // 머티리얼 텍스처는 정점 셰이더도 읽는다(툰 외곽선 두께 텍스처 — MToon 이 정점에서 읽는다). 다른 세 백엔드는 모든 스테이지가 본다.
         const bool bMaterialSlot = ( shaderslot::kMaterialTexture0 <= slot && slot < shaderslot::kMaterialTexture0 + shaderslot::kMaterialTextureCount );
         if ( bMaterialSlot )
+        {
             _pContext->VSSetShaderResources( slot, 1, &pSRV );
+            // 변위 머티리얼의 높이 맵은 도메인 스테이지가 읽는다(material_displacement.hlsli). 헐은 읽지 않지만 같은 자리를 함께 건다 — 스테이지마다 다른 표를 두지 않는다.
+            _pContext->HSSetShaderResources( slot, 1, &pSRV );
+            _pContext->DSSetShaderResources( slot, 1, &pSRV );
+        }
         if ( _pState != nullptr && slot < D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT )
             _pState->_arrPixelSRVTexture[slot] = ( pSRV != nullptr ) ? texture : 0;
         // 짝 샘플러는 걸지 않는다 — DX11 샘플러 슬롯은 16 개뿐이라 엔진 텍스처 칸(t32..)과 머티리얼 칸(t16..t31)은 셰이더가 정적 세트(s9..s15)의 샘플러로 읽는다.
@@ -439,6 +466,9 @@ namespace sw
         _pContext->VSSetConstantBuffers( slot, 1, &pCb );
         _pContext->PSSetConstantBuffers( slot, 1, &pCb );
         _pContext->CSSetConstantBuffers( slot, 1, &pCb );
+        // 변위 머티리얼의 헐 · 도메인이 패스 상수(뷰-투영)를 읽는다 — 다른 세 백엔드는 모든 스테이지가 본다.
+        _pContext->HSSetConstantBuffers( slot, 1, &pCb );
+        _pContext->DSSetConstantBuffers( slot, 1, &pCb );
     }
 
     ID3D11ShaderResourceView* D3D11RHICommandContext::findBindlessBufferSRV( RHIDescriptorIndex index ) const
@@ -460,6 +490,9 @@ namespace sw
             return;
         _pContext->VSSetShaderResources( slot, 1, &pSRV );
         _pContext->PSSetShaderResources( slot, 1, &pSRV );
+        // 변위 머티리얼의 헐 · 도메인이 머티리얼 · 인스턴스 버퍼를 읽는다.
+        _pContext->HSSetShaderResources( slot, 1, &pSRV );
+        _pContext->DSSetShaderResources( slot, 1, &pSRV );
         // 버퍼가 그 슬롯의 텍스처를 덮는다.
         if ( _pState != nullptr && slot < D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT )
             _pState->_arrPixelSRVTexture[slot] = 0;
@@ -559,6 +592,9 @@ namespace sw
         {
             _pContext->VSSetConstantBuffers( shaderslot::kRootConstantEmulationSlot, 1, &pCb );
             _pContext->PSSetConstantBuffers( shaderslot::kRootConstantEmulationSlot, 1, &pCb );
+            // 머티리얼 원소 수(SW_MATERIAL 의 클램프)를 헐 · 도메인도 읽는다.
+            _pContext->HSSetConstantBuffers( shaderslot::kRootConstantEmulationSlot, 1, &pCb );
+            _pContext->DSSetConstantBuffers( shaderslot::kRootConstantEmulationSlot, 1, &pCb );
         }
     }
 
@@ -676,6 +712,8 @@ namespace sw
         _pContext->PSSetShaderResources( 0, D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT, arrNullSRV );
         // 머티리얼 슬롯은 정점 셰이더에도 걸린다(bindShaderResource) — 같은 범위만 뗀다(정점 셰이더의 구조버퍼 t4..t11 은 그대로 둔다).
         _pContext->VSSetShaderResources( shaderslot::kMaterialTexture0, shaderslot::kMaterialTextureCount, arrNullSRV );
+        _pContext->HSSetShaderResources( shaderslot::kMaterialTexture0, shaderslot::kMaterialTextureCount, arrNullSRV );
+        _pContext->DSSetShaderResources( shaderslot::kMaterialTexture0, shaderslot::kMaterialTextureCount, arrNullSRV );
         if ( _pState != nullptr )
             Memory::set( _pState->_arrPixelSRVTexture, 0, sizeof( _pState->_arrPixelSRVTexture ) );
     }
@@ -695,7 +733,11 @@ namespace sw
             _pContext->PSSetShaderResources( slot, 1, &pNull );
             const bool bMaterialSlot = ( shaderslot::kMaterialTexture0 <= slot && slot < shaderslot::kMaterialTexture0 + shaderslot::kMaterialTextureCount );
             if ( bMaterialSlot )
+            {
                 _pContext->VSSetShaderResources( slot, 1, &pNull );
+                _pContext->HSSetShaderResources( slot, 1, &pNull );
+                _pContext->DSSetShaderResources( slot, 1, &pNull );
+            }
             _pState->_arrPixelSRVTexture[slot] = 0;
         }
     }

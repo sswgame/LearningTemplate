@@ -7,7 +7,7 @@
   키 띠 가운데(키 없음)를 누르면 고른 키가 없다. 드래그 칸 · 슬라이더는 Ctrl+클릭이 글 입력이다.
   실행: App -EnableEditor -scenario=engine/automation/editor/sequencerkeys.scenario.xml -unattended
 -->
-<Scenario name="editor.sequencerkeys" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+<Scenario name="editor.sequencerkeys" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="Immediately" input="exclusive">
 	<DevCommand line="scene.open engine/automation/editor/sequencerkeys/sequencerkeys.scene.xml"/>
 	<EditorWaitSettled/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
@@ -64,6 +64,26 @@
 	<EditorClick mark="sequencer.keyStrip.0"/>
 	<EditorWaitSettled/>
 	<Expect watch="Editor.SequencerSelectedKeyCount" equals="0"/>
+	<!-- 보기: 확대는 지금 프레임(50)을 두고 폭을 반으로, 맞추기는 타임라인 전체(모델 테스트 ZoomKeepsTheAnchorFrameAndStaysInside) -->
+	<EditorClick mark="sequencer.zoomIn"/>
+	<WaitUntil watch="Editor.SequencerViewFrameSpan" equals="50" timeoutFrames="60"/>
+	<EditorClick mark="sequencer.zoomFit"/>
+	<WaitUntil watch="Editor.SequencerViewFrameSpan" equals="100" timeoutFrames="60"/>
+	<!-- 키 복사 · 붙여넣기: 키 띠 왼쪽 끝(프레임 0)의 키를 골라 지금 프레임(50)에 붙이면 키 프레임이 셋이다(모델 테스트 PasteKeysKeepsTrackAndFrameOffsets) -->
+	<EditorClick mark="sequencer.keyStrip.0" anchor="0.002,0.5"/>
+	<WaitUntil watch="Editor.SequencerSelectedKeyCount" equals="1" timeoutFrames="60"/>
+	<EditorClick mark="sequencer.copyKeys"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="sequencer.pasteKeys"/>
+	<WaitUntil watch="Editor.SequencerKeyFrameCount" equals="3" timeoutFrames="60"/>
+	<!-- 오류 배지 · 재정렬: 프로퍼티 트랙은 대상 경로가 비어 배지가 붙고(종류 표 줄의 _bUsesPropertyPath), 위로 옮기면 고른 트랙이 0 번이 된다 -->
+	<EditorClick mark="sequencer.addTrack.Property"/>
+	<WaitUntil watch="Editor.SequencerTrackIssueCount" equals="1" timeoutFrames="60"/>
+	<Expect watch="Editor.SequencerSelectedTrack" equals="1"/>
+	<EditorClick mark="sequencer.moveTrackUp"/>
+	<WaitUntil watch="Editor.SequencerSelectedTrack" equals="0" timeoutFrames="60"/>
+	<Expect watch="Editor.SequencerTrackIssueCount" equals="1"/>
+	<EditorWaitSettled/>
 	<CaptureEditorUI file="sequencerkeys/sequencer.png" maxMagentaFraction="0"/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>

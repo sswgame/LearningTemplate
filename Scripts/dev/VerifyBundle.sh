@@ -1,7 +1,7 @@
 #!/bin/bash
 # 묶음 끝 전체 검증: Windows(Debug · Release 빌드 · 단위 · ctest, 서버 빌드 · 단위, 배포 구성)가 모두 통과한 뒤에만 Linux 를 돌린다.
 # 인자는 Linux 로 넘긴다(--record). --no-linux 면 Windows 까지만 돈다(Linux 골든이 곧 바뀌는 묶음 사이). 로그는 build/<프리셋>/Testing/Logs/verify.* · build/verify.linux.log. 끝 줄 VERIFIED=<sha> 가 나와야 push 한다.
-# --show 는 게임 · 에디터 테스트 창을 화면에 띄우고 테스트를 하나씩 돌린다(사람이 지켜볼 때). --from debug|release|server|shipping 은 앞 단계를 건너뛴다. 앞 단계가 통과한 뒤 바뀐 것이 그 단계에 영향을 주지 않을 때만 쓴다(실패한 단계부터 다시 돌린다). 끝 줄에 어디서 시작했는지 적는다.
+# --show 는 게임 · 에디터 테스트 창을 화면에 띄우고 테스트를 하나씩 돌린다(사람이 지켜볼 때). --from debug|release|server|shipping|linux 는 앞 단계를 건너뛴다(linux 는 Windows 가 이미 통과했고 그 뒤 고친 것이 Linux 쪽 스크립트 · 환경뿐일 때). 앞 단계가 통과한 뒤 바뀐 것이 그 단계에 영향을 주지 않을 때만 쓴다(실패한 단계부터 다시 돌린다). 끝 줄에 어디서 시작했는지 적는다.
 cd "$(dirname "$0")/../.." || exit 2
 SHA=$(git rev-parse HEAD)
 FROM=debug
@@ -19,7 +19,8 @@ case "$FROM" in
   release) STAGE=2 ;;
   server) STAGE=3 ;;
   shipping) STAGE=4 ;;
-  *) echo "--from 은 debug · release · server · shipping 중 하나다: $FROM"; exit 2 ;;
+  linux) STAGE=5 ;;
+  *) echo "--from 은 debug · release · server · shipping · linux 중 하나다: $FROM"; exit 2 ;;
 esac
 
 windows_failed() {
@@ -74,19 +75,21 @@ if [ $STAGE -le 3 ]; then
   [ $RC -eq 0 ] || windows_failed "server unit"
 fi
 
-# 도구 테스트: 실행 인자 GUI(VS Code 확장 Tools/launch-args — 확장이라 JS 다)가 Source 의 매크로 · 인자 표를 읽는다. 엔진 쪽 이름 · 형식이 바뀌면 깨지는데
-# 어디서도 돌지 않아 오래 깨져 있었다(2026-11-08). 확장 도구가 VS Code 안의 Node 로 돌린다(따로 깐 node 가 필요 없다).
-echo "== launch-args tests $(date +%T)"
-py -3 Tools/launch-args/Scripts/ExtensionTool.py test > build/verify.launchargs.log 2>&1
-RC=$?
-grep -E "^ℹ (pass|fail)" build/verify.launchargs.log
-[ $RC -eq 0 ] || windows_failed "launch-args tests"
+if [ $STAGE -le 4 ]; then
+  # 도구 테스트: 실행 인자 GUI(VS Code 확장 Tools/launch-args — 확장이라 JS 다)가 Source 의 매크로 · 인자 표를 읽는다. 엔진 쪽 이름 · 형식이 바뀌면 깨지는데
+  # 어디서도 돌지 않아 오래 깨져 있었다(2026-11-08). 확장 도구가 VS Code 안의 Node 로 돌린다(따로 깐 node 가 필요 없다).
+  echo "== launch-args tests $(date +%T)"
+  py -3 Tools/launch-args/Scripts/ExtensionTool.py test > build/verify.launchargs.log 2>&1
+  RC=$?
+  grep -E "^ℹ (pass|fail)" build/verify.launchargs.log
+  [ $RC -eq 0 ] || windows_failed "launch-args tests"
 
-echo "== shipping-check $(date +%T)"
-py -3 -m Scripts shipping-check 2>&1 | tail -n 8
-RC=${PIPESTATUS[0]}
-echo "shipping-check exit=$RC"
-[ $RC -eq 0 ] || windows_failed "shipping-check"
+  echo "== shipping-check $(date +%T)"
+  py -3 -m Scripts shipping-check 2>&1 | tail -n 8
+  RC=${PIPESTATUS[0]}
+  echo "shipping-check exit=$RC"
+  [ $RC -eq 0 ] || windows_failed "shipping-check"
+fi
 
 if [ "$1" = "--no-linux" ]; then
   echo "WINDOWS_VERIFIED=$SHA (Linux 를 돌리지 않았다, 시작 단계 $FROM)"

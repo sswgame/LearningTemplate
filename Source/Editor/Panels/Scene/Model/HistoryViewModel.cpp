@@ -7,51 +7,64 @@
 
 namespace sw::editor
 {
+    namespace
+    {
+        struct HistoryViewModelInternal
+        {
+            /** @brief 되돌리기 스택입니다. 선택 서비스: 커맨드 스택은 EditorModule 보다 오래 살아 종료할 때 결합이 먼저 풀린다. */
+            static CommandStack* findStack() { return editor::findSubsystem<CommandStack>(); }
+        };
+    } // namespace
+
     void HistoryViewModel::gather( HistoryViewState& outState ) const
     {
-        outState._listStep.clear();
-        outState._currentStep = 0;
-        outState._bCanUndo    = SW_FALSE;
-        outState._bCanRedo    = SW_FALSE;
-        // 선택 서비스: 커맨드 스택은 EditorModule 보다 오래 살아 종료할 때 결합이 먼저 풀린다.
-        const CommandStack* const pStack = editor::findSubsystem<CommandStack>();
-        outState._bAvailable             = pStack != nullptr ? SW_TRUE : SW_FALSE;
+        const CommandStack* pStack = HistoryViewModelInternal::findStack();
+        outState._bAvailable       = pStack != nullptr;
         if ( pStack == nullptr )
+        {
+            outState._listLabel.clear();
+            outState._currentIndex = 0;
+            outState._bCanUndo     = false;
+            outState._bCanRedo     = false;
             return;
-        outState._currentStep = static_cast<uint32>( pStack->getCurrentIndex() );
-        outState._bCanUndo    = pStack->canUndo() ? SW_TRUE : SW_FALSE;
-        outState._bCanRedo    = pStack->canRedo() ? SW_TRUE : SW_FALSE;
-        const size_t count    = pStack->getCommandCount();
+        }
+        const size_t count = pStack->getCommandCount();
+        outState._listLabel.resize( count );
         for ( size_t index = 0; index < count; ++index )
         {
-            const CommandStack::Command& command = pStack->getCommand( index );
-            HistoryStepRow&              row     = outState._listStep.emplace_back();
-            row._step                            = static_cast<uint32>( index + 1 );
-            row._label                           = command._label.empty() == false ? command._label.c_str() : "Command";
+            const string& label        = pStack->getCommand( index )._label;
+            outState._listLabel[index] = label.empty() == false ? label : string( "Command" );
         }
+        outState._currentIndex = pStack->getCurrentIndex();
+        outState._bCanUndo     = pStack->canUndo();
+        outState._bCanRedo     = pStack->canRedo();
     }
 
     void HistoryViewModel::undo()
     {
-        if ( CommandStack* pStack = editor::findSubsystem<CommandStack>() )
+        CommandStack* pStack = HistoryViewModelInternal::findStack();
+        if ( pStack != nullptr )
             pStack->undo();
     }
 
     void HistoryViewModel::redo()
     {
-        if ( CommandStack* pStack = editor::findSubsystem<CommandStack>() )
+        CommandStack* pStack = HistoryViewModelInternal::findStack();
+        if ( pStack != nullptr )
             pStack->redo();
-    }
-
-    void HistoryViewModel::jumpTo( uint32 step )
-    {
-        if ( CommandStack* pStack = editor::findSubsystem<CommandStack>() )
-            pStack->jumpTo( step );
     }
 
     void HistoryViewModel::clear()
     {
-        if ( CommandStack* pStack = editor::findSubsystem<CommandStack>() )
+        CommandStack* pStack = HistoryViewModelInternal::findStack();
+        if ( pStack != nullptr )
             pStack->clear();
+    }
+
+    void HistoryViewModel::jumpTo( size_t stepIndex )
+    {
+        CommandStack* pStack = HistoryViewModelInternal::findStack();
+        if ( pStack != nullptr )
+            pStack->jumpTo( stepIndex );
     }
 } // namespace sw::editor

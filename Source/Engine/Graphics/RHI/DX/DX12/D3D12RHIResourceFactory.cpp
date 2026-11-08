@@ -5,6 +5,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/IndexFreeList.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Foundation/EnginePlatformHeaders.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -849,6 +850,16 @@ namespace sw
         const D3D12_RANGE noWrite{ 0, 0 };
         pResource->Unmap( 0, &noWrite );
         return true;
+    }
+
+    void D3D12RHIResourceFactory::setTextureDebugName( RHITextureHandle texture, const utf8* pName )
+    {
+        ID3D12Resource* const pResource = _pDevice->resolveTexture( texture );
+        if ( pResource == nullptr || pName == nullptr )
+            return;
+        // PIX · DRED 페이지 폴트 출력이 이 이름을 보인다(디버그 빌드의 `SW Texture <핸들>` 이름을 첨부 이름으로 덮는다).
+        const wstring wideName = StringUtil::utf8ToUTF16( pName );
+        pResource->SetName( wideName.c_str() );
     }
 
     // 길이 유지(긴 함수 정리 기준): 서술 채우기 · 리소스 생성 · 뷰 · 초기 데이터 업로드의 순서가 곧 의미라 나누지 않는다.

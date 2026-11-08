@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -40,8 +41,8 @@ namespace sw
         uint32 getChildCount() const { return static_cast<uint32>( _listChild.size() ); }
         /** @brief @p index 번째 자식입니다(범위는 호출하는 쪽이 지킵니다). */
         Widget* getChild( uint32 index ) const { return _listChild[index].get(); }
-        /** @brief @p pChild 의 자식 인덱스입니다. 자식이 아니면 `constant::invalid_index::kUint32` 입니다. */
-        uint32 findChildIndex( const Widget* pChild ) const;
+        /** @brief @p pChild 의 자식 인덱스입니다. 자식이 아니면 비어 있습니다. */
+        [[nodiscard]] optional<uint32> findChildIndex( const Widget* pChild ) const;
         /**
          * @brief 그리기 순서가 자식 순서와 다를 수 있는 패널이면 true 입니다(z 순서를 쓰는 `CanvasPanel`). false 면 그리기 순서와 자식 순서가 같아 목록을 만들지 않습니다.
          */

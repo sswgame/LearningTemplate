@@ -30,6 +30,7 @@ namespace sw
         RHIBufferHandle                 createReadbackBuffer( uint32 elementSize, uint32 elementCount ) override;
         [[nodiscard]] bool              readReadbackBuffer( RHIBufferHandle readback, uint32 sizeBytes, void* pDestination ) override;
         RHITextureHandle                createTexture2D( const RHITextureDesc& desc ) override;
+        void                            setTextureDebugName( RHITextureHandle texture, const utf8* pName ) override;
         void                            destroyTexture( RHITextureHandle texture ) override;
         [[nodiscard]] RHITransferSubmit submitTextureUpload( RHITextureHandle texture, const RHITextureUploadDesc& desc ) override;
         [[nodiscard]] RHITransferSubmit submitTextureRegionUpload( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc ) override;

@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/IdentityToken.h"
@@ -112,8 +113,8 @@ namespace sw
         const IdentityToken& getContentID() const { return _contentID; }
         /** @brief 2D(평면) 리그인지입니다. */
         bool isPlanar() const { return _bPlanar == SW_TRUE; }
-        /** @brief 이름의 대상 번호입니다. 없으면 -1 입니다. */
-        int32 findTargetIndex( const hashed_string& name ) const;
+        /** @brief 이름의 대상 번호입니다. 없으면 없음입니다. */
+        optional<uint32> findTargetIndex( const hashed_string& name ) const;
 
     private:
         /** @brief 합성 문맥을 받는 읽기의 본문입니다. `loadFromAsset` 은 리소스 id 를 실은 문맥(`withAsset`)을, 글 입구는 id 없는 문맥을 넘깁니다(덮어쓰기 층 · 다시 읽기 기록 · 접속 대조는 id 로 읽을 때만 받는다). */

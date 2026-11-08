@@ -1019,7 +1019,7 @@ namespace sw::editor
                 }
                 if ( ( stepIndex % 2 ) == 1 )
                 {
-                    (void)context.expect( queueTabFocus( UserSettingsViewModel::getCategoryLabel( listCategory[categoryIndex] ) ), "a user settings category tab is missing" );
+                    (void)context.expect( queueTabFocus( UserSettingsPanel::getCategoryLabel( listCategory[categoryIndex] ) ), "a user settings category tab is missing" );
                     return EditorSelfTestStep::Continue;
                 }
                 (void)context.expect( findActiveTable( "Setting", "Value", 2 ) != nullptr, "a user settings tab did not draw its table" );

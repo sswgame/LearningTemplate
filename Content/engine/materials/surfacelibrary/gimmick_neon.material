@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 네온관 — 강한 자체 발광. 부모(gimmicksurface.material)의 값만 바꾼 프리셋이다. -->
+<MaterialDef formatVersion="0" name="Neon" _base="engine/materials/gimmicksurface.material">
+	<_properties>
+		<item name="_effect" defaultValue="0"/>
+		<item name="_baseColor" defaultValue="0.9 0.2 0.6 1"/>
+		<item name="_emissiveColor" defaultValue="1 0.15 0.6 1"/>
+		<item name="_emissiveStrength" defaultValue="8"/>
+	</_properties>
+</MaterialDef>

@@ -11,6 +11,7 @@
 | `models_raw/avatarsample_d.vrm` · `textures_raw/_shared/vrm_character_textures/*.png`(임포트가 꺼낸 내장 이미지, 이름은 내용 키) | VRoid Project "AvatarSample_D"(VRoid Studio 알파판 샘플, VRM 0.x) — <https://opengameart.org/content/vroid-studio-cc0-models> 에서 받음. 원 출처 · 조건: <https://vroid.pixiv.help/hc/en-us/articles/4402614652569-Do-VRoid-Studio-s-sample-models-come-with-conditions-of-use>. 텍스처 원본은 모델 임포트가 VRM 에 든 이미지를 그대로 꺼낸 것 | CC0 1.0 |
 | `models_raw/crate_medium.glb` | Kenney "Blaster Kit" (<https://kenney.nl/assets/blaster-kit>) — 나무 상자(shooter3d 의 것과 같은 파일, 파괴 쇼케이스) | CC0 1.0 |
 | `models_raw/brick_wall.gltf` · `models_raw/barrel.gltf` | 이 저장소에서 만든 상자 · 원기둥(파괴 쇼케이스) | 이 저장소 |
+| `textures_raw/postprocess/*.png` → `textures/postprocess/*.dds` | `Scripts/dev/MakePostProcessTextures.py` 가 만든 후처리 시나리오 텍스처(컬러 그레이딩 LUT 띠 · 블룸 먼지 마스크) | 이 저장소 |
 | `textures/twod/*.dds` | 이 저장소에서 코드로 그린 2D 데모 픽셀 아트(스프라이트 · 타일 · 노멀 맵, 커밋 `1fb09535c`) | 이 저장소 |
 
 - `AudioServiceTest` 가 OGG 디코드를 실제 파일로 확인하는 테스트 자료입니다.
