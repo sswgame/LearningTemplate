@@ -421,6 +421,8 @@ GameFramework의 모듈·수명주기·서비스·테스트 경계를 현재 코
 | GPU 업로드 · 텍스처 | shooter3d · meadowvillage 첫 진입, DX12 · Vulkan · GL, `-gv_assetLoadReport=1` × `-gv_gpuUploadQueue=0/1` 3 번 | Asset 표의 `Texture` · `TextureUpload` 행, `RT.TextureUpload.pump` · `.submitted` · `.polled` · `.waiting`, `GT.GPUUpload.flush` | pump 가 RT 의 10% 를 넘거나 waiting 이 계속 0 이 아니면 RHI Thread 형 시제품 | 없음 | |
 | 렌더 그래프 레벨 폭 | `game/empty/automation/benchmark` · Shooter3D 플레이, `-gv_renderGraphParallelMinWidth=2 · 3 · 4 · 99`, DX12 · Vulkan 3 번 | RT 프레임 중앙값, `RT.Graph.parallelLevel` · `.parallelLevels` · `.parallelPasses` · `.serialPasses` · `.maxLevelWidth` | 3 · 4 가 2 보다 흔들림 밖으로 빠르면 기본값을 바꾼다. 그림은 같아야 한다 | 폭 문턱 gv(기본 2 = 지금 동작) | |
 
+**개발 그림은 사진에 들지 않는다(2026-11-09, 들어감).** 캔버스 겹치기 등록(`SW_CANVAS_OVERLAY`)은 칠할 층(`CanvasOverlayLayer`)을 밝힌다. 디버그 드로우 게임 뷰 겹치기는 디버그 HUD 와 같은 개발 겹치기 층 — 사진 캡처 뒤에 화면에만 합치고(에디터 게임 뷰는 `rendertarget/dev_overlay` 텍스처), 스크린샷 · `<ExpectImage>` 골든에 들지 않는다. 캔버스 테스트 그림만 주 출력 층이다 — Canvas 패스 자체가 확인 대상이라 사진에 들어야 한다. 대조: 유니티 기즈모는 게임 뷰 캡처에 들지 않고 언리얼 `HighResShot` 은 기본으로 UI · `stat` 글자를 뺀다. Godot 의 디버그 그리기는 뷰포트 안이라 캡처에 든다 — 골든이 게임 출력을 재는 이 저장소는 앞의 둘을 따른다.
+
 **하지 않기로 정한 것.** Meadow 밭 크기는 소유 타입 상수로 둔다(레벨별 크기 요구 없음). Shooter3D 탄착 표면 목록은 코드 상수로 둔다. 범용 스크립팅 VM · 네이티브 모드 DLL · 원격 명령 서버는 넣지 않는다.
 
 **리소스 라이선스(사용자 결정 2026-11-08: 문제가 되면 다른 리소스).** 저장소의 Quaternius 묶음 여덟은 묶음 페이지가 CC0 이고 QAL 은 소급하지 않아 그대로 둔다(근거는 `Content/common/credits.md` 머리). 새 리소스는 CC0 묶음만, QAL · CC-BY · 불명확한 것은 다른 CC0 출처로 바꾼다.

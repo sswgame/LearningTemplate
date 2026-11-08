@@ -15,7 +15,7 @@
 namespace sw
 {
     /**
-     * @brief `-gv_debugDrawGameView=1`: 디버그 드로우 큐(선 · 구 · 상자 · 화살표 · 글자)를 게임 화면(App 창 · 에디터 게임 뷰 · 스크린샷) 위에 겹쳐 그립니다.
+     * @brief `-gv_debugDrawGameView=1`: 디버그 드로우 큐(선 · 구 · 상자 · 화살표 · 글자)를 게임 화면(App 창 · 에디터 게임 뷰) 위에 겹쳐 그립니다. 스크린샷 · 골든에는 들지 않습니다(개발 겹치기 층).
      * @details 에디터 게임 뷰 툴바의 단추가 켜고 끈다. 권위 고스트(`-gv_serverPoseOverlayPort`)처럼 큐에 그리는 디버그 도구를 게임 화면에서 본다.
      */
     SW_TEST_GLOBAL_VARIABLE( bool, gv_debugDrawGameView, false, "디버그 드로우 큐를 게임 화면 위에 겹쳐 그린다 — 선 · 구 · 글자(캔버스)" );
@@ -70,8 +70,8 @@ namespace sw
         };
     } // namespace
 
-    // UI 위, 테스트 그림 아래(순서 0).
-    SW_CANVAS_OVERLAY( DebugDrawGameView, "DebugDraw", 0, &DebugDrawCanvasInternal::paintOverlay );
+    // 개발 겹치기 층(디버그 HUD 위) — 사진 캡처 뒤에 화면에만 합친다. 개발 그림이 게임 출력 사진에 섞이지 않는다.
+    SW_CANVAS_OVERLAY( DebugDrawGameView, "DebugDraw", 0, CanvasOverlayLayer::DevOverlay, &DebugDrawCanvasInternal::paintOverlay );
 } // namespace sw
 
 namespace sw
