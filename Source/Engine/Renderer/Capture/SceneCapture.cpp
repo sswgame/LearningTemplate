@@ -19,23 +19,8 @@ namespace sw
 {
     namespace
     {
-        /** @brief 프로세스 고유 번호 발급기 — 상태가 아니라 번호 공간이다(상수 초기화라 정적 초기화 순서와 무관하다). 함수 정적에 숨기지 않고 파일 범위에 둔다. */
-        atomic<uint32> s_sceneCaptureNextKey{ 1 };
-    } // namespace
-
-    namespace
-    {
         struct SceneCaptureInternal
         {
-            /** @brief 캡처 씬 키의 표시 비트입니다. 미리보기 씬 키(`SceneManager::getPreviewSceneKey` — 1 부터 센다)와 겹치지 않는 공간이다. */
-            static constexpr uint32 kCaptureSceneKeyBit = 0x80000000u;
-
-            /** @brief 캡처마다 새 씬 키를 냅니다(하위 렌더러를 캡처끼리 나누지 않는다 — 씬이 다르다). */
-            static uint32 allocateSceneKey()
-            {
-                return kCaptureSceneKeyBit | ( s_sceneCaptureNextKey.fetch_add( 1, std::memory_order_relaxed ) & ~kCaptureSceneKeyBit );
-            }
-
             /** @brief 다 그려진 장을 기다리는 시한(초)입니다. 첫 실행의 셰이더 캐시 없는 빌드(DX11 머티리얼 변형 하나에 수백 ms)와 텍스처 읽기보다 넉넉하다. */
             static constexpr int64 kReadyWaitSeconds = 30;
         };
@@ -59,15 +44,15 @@ namespace sw
     bool SceneCapture::initialize( RenderThread& renderThread, string_view pipelinePath )
     {
         shutdown();
-        if ( renderThread.getDevice() == nullptr || renderThread.getFrameRenderer() == nullptr )
+        if ( renderThread.getDevice() == nullptr || renderThread.getFrameRenderer() == nullptr || renderThread.getOffscreenRenderers() == nullptr )
         {
-            SW_LOG_ERROR_ID( "SceneCapture.RenderThreadNoDevice", "The render thread has no device or renderer - nothing can be captured" );
+            SW_LOG_ERROR_ID( "SceneCapture.RenderThreadNoDevice", "The render thread has no device, renderer or off-screen renderers - nothing can be captured" );
             return false;
         }
         _pRenderThread = &renderThread;
         _scene.initialize( *renderThread.getDevice() ); // 배치 합치기는 주 화면 · 미리보기와 같은 규칙(디바이스가 정한다)
         _pipelinePath = string( pipelinePath );
-        _sceneKey     = SceneCaptureInternal::allocateSceneKey();
+        _sceneKey     = renderThread.getOffscreenRenderers()->allocateCaptureSceneKey(); // 키의 주인은 키로 렌더러를 드는 화면 밖 렌더러 표다
         return true;
     }
 

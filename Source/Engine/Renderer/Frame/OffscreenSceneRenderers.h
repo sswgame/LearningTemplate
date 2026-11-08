@@ -28,6 +28,9 @@ namespace sw
     class SW_API OffscreenSceneRenderers
     {
     public:
+        /** @brief 캡처 씬 키의 표시 비트입니다. 미리보기 씬 키(`SceneManager::getPreviewSceneKey` — 1 부터 센다)와 겹치지 않는 공간이다. */
+        static constexpr uint32 kCaptureSceneKeyBit = 0x80000000u;
+
         OffscreenSceneRenderers();
         ~OffscreenSceneRenderers();
 
@@ -41,6 +44,11 @@ namespace sw
          * @return 그린 렌더러입니다(캡처가 그 첨부를 읽는다). 그리지 못하면 nullptr 입니다(이유는 로그에 남는다).
          */
         FrameRenderer* execute( FrameRenderer& mainRenderer, IRHIDevice* pDevice, RenderFramePacket& packet, const float4& clearColor, string_view pipelinePath = {} );
+        /**
+         * @brief 씬 캡처 하나에 새 씬 키를 냅니다(하위 렌더러를 캡처끼리 나누지 않는다 — 씬이 다르다). 어느 스레드에서 불러도 된다.
+         * @details 씬 키의 주인은 키로 렌더러를 드는 이 표다(프로세스 전역 발급기를 두지 않는다 — 사용자 지적 2026-11-08). 언리얼 씬 캡처도 자기 `FScene` 을 렌더러 모듈이 든다.
+         */
+        [[nodiscard]] uint32 allocateCaptureSceneKey();
         /** @brief 씬 @p sceneKey 의 렌더러를 모두 내립니다(그 씬이 사라졌다). 디바이스의 해제는 GPU 완료 뒤로 미뤄진다 — 이미 낸 프레임이 쓰는 자원을 지금 파괴하지 않는다. */
         void retire( uint32 sceneKey );
         /** @brief 셰이더 핫 리로드를 렌더러마다 알립니다. 주 렌더러가 PSO 캐시를 다시 채운 **뒤에** 부른다(함께 쓰는 캐시의 새 PSO 를 집는다). */
@@ -63,7 +71,8 @@ namespace sw
 
     private:
         vector<Entry>  _listEntry;
-        atomic<uint32> _count; ///< `_listEntry` 의 크기를 렌더 스레드가 공개한 값
+        atomic<uint32> _count;          ///< `_listEntry` 의 크기를 렌더 스레드가 공개한 값
+        atomic<uint32> _nextCaptureKey; ///< `allocateCaptureSceneKey` 의 다음 번호(표시 비트 밖)
     };
 
     SW_SERVICE_SLOT( OffscreenSceneRenderers, Optional );
