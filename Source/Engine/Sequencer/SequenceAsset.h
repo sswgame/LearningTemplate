@@ -118,7 +118,8 @@ namespace sw
     /**
      * @brief 키 트랙 종류 하나의 특성입니다. 표의 한 줄입니다(`SequenceAsset::findTrackKindInfo`, 표는 `SequenceAsset.cpp` 의 `kArrSequenceTrackKindInfo`).
      * @details 새 종류는 값 하나와 이 표의 한 줄이다(static_assert 가 알려 준다) — 채널 수 · 새 이름 · 대상 경로 규칙을 에디터와 파일 검사가 같은 줄에서 읽는다.
-     *          값을 읽고 쓰는 일(`SequenceTimelineUtil::readTrackValues` · `applyTrackValues`)은 종류마다 다른 코드라 그 switch 가 `Count` 를 빠뜨리면 컴파일러가 알린다.
+     *          값을 읽고 쓰는 일(`SequenceTimelineUtil::readTrackValues` · `writeTrackValues`)은 종류마다 다른 코드라 그 switch 가 `Count` 를 빠뜨리면 컴파일러가 알린다.
+     *          데이터만으로 새 로직을 저작해야 한다는 요구가 확인되기 전에는 범용 스크립트 트랙 · Lua 트랙을 두지 않는다 — 새 동작은 종류 한 줄과 그 값 코드다.
      */
     struct SequenceTrackKindInfo
     {
