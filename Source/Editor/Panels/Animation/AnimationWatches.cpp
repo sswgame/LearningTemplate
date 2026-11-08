@@ -139,6 +139,46 @@ namespace sw::editor
             outValue = static_cast<float64>( pPanel->getDocument().getSelectedKeys().size() );
             return true;
         }
+
+        /** @brief Sequencer 의 오류 배지가 붙은 트랙 수입니다. */
+        [[nodiscard]] bool readSequencerTrackIssueCount( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            const SequencerPanel* pPanel = findOpenSequencer( __func__ );
+            if ( pPanel == nullptr )
+                return false;
+            outValue = static_cast<float64>( pPanel->getDocument().countTrackIssues() );
+            return true;
+        }
+
+        /** @brief Sequencer 에서 고른 키 트랙 번호입니다(없으면 -1). */
+        [[nodiscard]] bool readSequencerSelectedTrack( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            const SequencerPanel* pPanel = findOpenSequencer( __func__ );
+            if ( pPanel == nullptr )
+                return false;
+            outValue = static_cast<float64>( pPanel->getDocument()._selectedTrack );
+            return true;
+        }
+
+        /** @brief Sequencer 의 키 띠 · 컷 차선이 보이는 프레임 폭입니다(확대하면 준다). */
+        [[nodiscard]] bool readSequencerViewFrameSpan( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            const SequencerPanel* pPanel = findOpenSequencer( __func__ );
+            if ( pPanel == nullptr )
+                return false;
+            outValue = static_cast<float64>( pPanel->getDocument().getViewFrameSpan() );
+            return true;
+        }
+
+        /** @brief Sequencer 문서의 구간 항목 수입니다(컷 포함). */
+        [[nodiscard]] bool readSequencerItemCount( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            const SequencerPanel* pPanel = findOpenSequencer( __func__ );
+            if ( pPanel == nullptr )
+                return false;
+            outValue = static_cast<float64>( pPanel->getDocument()._asset._listItem.size() );
+            return true;
+        }
     } // namespace
 
     SW_AUTOMATION_WATCH( editorSequencerBindingCount, "Editor.SequencerBindingCount", "Bindings in the sequence open in the Sequencer panel", &readSequencerBindingCount );
@@ -146,6 +186,12 @@ namespace sw::editor
                          &readSequencerUnboundCount );
     SW_AUTOMATION_WATCH( editorSequencerCutCount, "Editor.SequencerCutCount", "Camera cuts in the sequence open in the Sequencer panel", &readSequencerCutCount );
     SW_AUTOMATION_WATCH( editorSequencerSelectedKeyCount, "Editor.SequencerSelectedKeyCount", "Keys selected in the Sequencer panel's key strips", &readSequencerSelectedKeyCount );
+    SW_AUTOMATION_WATCH( editorSequencerTrackIssueCount, "Editor.SequencerTrackIssueCount", "Key tracks with an error badge in the Sequencer panel (unknown binding, channel count, empty target path, keys outside the timeline)",
+                         &readSequencerTrackIssueCount );
+    SW_AUTOMATION_WATCH( editorSequencerSelectedTrack, "Editor.SequencerSelectedTrack", "Index of the key track selected in the Sequencer panel (-1: none)", &readSequencerSelectedTrack );
+    SW_AUTOMATION_WATCH( editorSequencerViewFrameSpan, "Editor.SequencerViewFrameSpan", "Frames the Sequencer panel's key strips and cut lane show (the timeline length when fitted)",
+                         &readSequencerViewFrameSpan );
+    SW_AUTOMATION_WATCH( editorSequencerItemCount, "Editor.SequencerItemCount", "Span items (camera cuts included) in the sequence open in the Sequencer panel", &readSequencerItemCount );
     SW_AUTOMATION_WATCH( editorAnimationGraphLinkCount, "Editor.AnimationGraphLinkCount", "Transitions in the open animation graph document",
                          &readAnimationGraphLinkCount );
     SW_AUTOMATION_WATCH( editorAnimationGraphConditionCount, "Editor.AnimationGraphConditionCount", "Transitions with a condition in the open animation graph document",

@@ -83,6 +83,12 @@ namespace sw::editor
                 outDescription = Internal::describe( "Added a key to", groupName, string_view() );
                 break;
             }
+            case Kind::SetCurveKeys:
+            {
+                bChanged       = CatalogCurve::applyEditedCurve( inoutDocument, _element, _curve );
+                outDescription = Internal::describe( "Edited the keys of", groupName, string_view() );
+                break;
+            }
             case Kind::SetChildCell:
             {
                 bChanged       = inoutDocument.setChildCell( _element, _path, _column, _text );
