@@ -13,6 +13,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
+#include "Engine/Automation/Watch/AutomationHooksEnabled.h"
 
 namespace sw
 {
@@ -98,16 +99,26 @@ namespace sw
     };
 } // namespace sw
 
-/**
- * @brief 단계 종류의 검사 함수만 등록합니다(.cpp 의 파일 범위). 단계를 등록하는 모듈(에디터 · App)이 올라오지 않은 프로세스(nogpu 테스트)도 시나리오 데이터를 검사하게 한다.
- * @details 검사 함수는 단계 등록(`SW_AUTOMATION_STEP`)이 받는 함수와 같아야 한다. 검사 함수를 ImGui · 렌더에 기대지 않는 파일에 두면 이 줄도 거기 둔다.
- */
-#define SW_AUTOMATION_STEP_VALIDATOR( id, pKind, pValidate )                                                    \
-    static const ::sw::AutomationStepValidatorRegistration sw_automationStepValidator_##id{ pKind, pValidate }; \
-    static const ::sw::AutomationStepValidatorRegistrar    sw_automationStepValidatorRegistrar_##id             \
-    {                                                                                                           \
-        &sw_automationStepValidator_##id                                                                        \
-    }
+#if SW_AUTOMATION_HOOKS_ENABLED
 
-/** @brief 스키마 구조체 @p TParams 만 읽으면 되는 단계의 검사만 등록합니다(`SW_AUTOMATION_STEP_VALIDATOR` 에 `AutomationStep::validateFields<TParams>` 를 준 것). 쓰는 .cpp 는 `AutomationScenario.h` 를 포함합니다. */
-#define SW_AUTOMATION_STEP_SCHEMA( id, pKind, TParams ) SW_AUTOMATION_STEP_VALIDATOR( id, pKind, &::sw::AutomationStep::validateFields<TParams> )
+    /**
+     * @brief 단계 종류의 검사 함수만 등록합니다(.cpp 의 파일 범위). 단계를 등록하는 모듈(에디터 · App)이 올라오지 않은 프로세스(nogpu 테스트)도 시나리오 데이터를 검사하게 한다.
+     * @details 검사 함수는 단계 등록(`SW_AUTOMATION_STEP`)이 받는 함수와 같아야 한다. 검사 함수를 ImGui · 렌더에 기대지 않는 파일에 두면 이 줄도 거기 둔다.
+     */
+    #define SW_AUTOMATION_STEP_VALIDATOR( id, pKind, pValidate )                                                    \
+        static const ::sw::AutomationStepValidatorRegistration sw_automationStepValidator_##id{ pKind, pValidate }; \
+        static const ::sw::AutomationStepValidatorRegistrar    sw_automationStepValidatorRegistrar_##id             \
+        {                                                                                                           \
+            &sw_automationStepValidator_##id                                                                        \
+        }
+
+    /** @brief 스키마 구조체 @p TParams 만 읽으면 되는 단계의 검사만 등록합니다(`SW_AUTOMATION_STEP_VALIDATOR` 에 `AutomationStep::validateFields<TParams>` 를 준 것). 쓰는 .cpp 는 `AutomationScenario.h` 를 포함합니다. */
+    #define SW_AUTOMATION_STEP_SCHEMA( id, pKind, TParams ) SW_AUTOMATION_STEP_VALIDATOR( id, pKind, &::sw::AutomationStep::validateFields<TParams> )
+
+#else
+
+// 자동화를 뺀 배포본: 등록하지 않고 본문 함수만 붙잡는다(`Engine/Automation/Watch/AutomationHooksEnabled.h`).
+    #define SW_AUTOMATION_STEP_VALIDATOR( id, pKind, pValidate ) [[maybe_unused]] static constexpr auto sw_automationStepValidatorUnused_##id = pValidate
+    #define SW_AUTOMATION_STEP_SCHEMA( id, pKind, TParams )      SW_AUTOMATION_STEP_VALIDATOR( id, pKind, &::sw::AutomationStep::validateFields<TParams> )
+
+#endif // SW_AUTOMATION_HOOKS_ENABLED

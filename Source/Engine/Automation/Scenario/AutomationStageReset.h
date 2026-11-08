@@ -9,6 +9,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Automation/Watch/AutomationHooksEnabled.h"
+
 namespace sw
 {
     /** @brief 단계 되돌리기 함수입니다. 게임 스레드에서 다음 단계의 실행기를 세우기 전에 부릅니다. */
@@ -53,10 +55,19 @@ namespace sw
     };
 } // namespace sw
 
-/** @brief 단계 되돌리기를 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). @p id 는 정적 이름을 만드는 식별자입니다. */
-#define SW_AUTOMATION_STAGE_RESET( id, pName, pFunction )                                                 \
-    static const ::sw::AutomationStageResetRegistration sw_automationStageReset_##id{ pName, pFunction }; \
-    static const ::sw::AutomationStageResetRegistrar    sw_automationStageResetRegistrar_##id             \
-    {                                                                                                     \
-        &sw_automationStageReset_##id                                                                     \
-    }
+#if SW_AUTOMATION_HOOKS_ENABLED
+
+    /** @brief 단계 되돌리기를 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). @p id 는 정적 이름을 만드는 식별자입니다. */
+    #define SW_AUTOMATION_STAGE_RESET( id, pName, pFunction )                                                 \
+        static const ::sw::AutomationStageResetRegistration sw_automationStageReset_##id{ pName, pFunction }; \
+        static const ::sw::AutomationStageResetRegistrar    sw_automationStageResetRegistrar_##id             \
+        {                                                                                                     \
+            &sw_automationStageReset_##id                                                                     \
+        }
+
+#else
+
+// 자동화를 뺀 배포본: 등록하지 않고 본문 함수만 붙잡는다(`Engine/Automation/Watch/AutomationHooksEnabled.h`).
+    #define SW_AUTOMATION_STAGE_RESET( id, pName, pFunction ) [[maybe_unused]] static constexpr auto sw_automationStageResetUnused_##id = pFunction
+
+#endif // SW_AUTOMATION_HOOKS_ENABLED
