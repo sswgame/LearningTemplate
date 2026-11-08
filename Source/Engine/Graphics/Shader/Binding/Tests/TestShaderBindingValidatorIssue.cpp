@@ -175,7 +175,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, ReservedTableHoldsSlotContract )
     SW_EXPECT_EQUAL( shaderslot::vk::kTShift + shaderslot::kMaterialBuffer, pMaterials->_vulkan._bind );
 
     SW_EXPECT_EQUAL( shaderslot::kEngineTexture0, pEngineTexture0->_dx11._bind );
-    SW_EXPECT_EQUAL( 0u, pEngineTexture0->_opengl._bind ); // GL 유닛은 칸 번호다
+    SW_EXPECT_EQUAL( shaderslot::kEngineTexture0, pEngineTexture0->_opengl._bind ); // GL 유닛은 레지스터 번호 그대로다(머티리얼 칸과 같다)
     SW_EXPECT_FALSE( pEngineTexture0->_dx12._bDeclared );
     SW_EXPECT_FALSE( pEngineTexture0->_vulkan._bDeclared );
 

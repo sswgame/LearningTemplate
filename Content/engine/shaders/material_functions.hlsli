@@ -94,6 +94,7 @@ struct SurfaceFunction
     static void blendByHeight8( inout float4 inoutLow, inout float4 inoutHigh, float4 heightLow, float4 heightHigh, float depth );
     static float computeBand( float value, float low, float high, float fade );
     static float computeSlopeDegrees( float normalY );
+    static float computeSlopeRadians( float normalY );
     static float computeMacroVariation( float3 position, float scale );
 
     // 무늬
@@ -334,7 +335,13 @@ static float SurfaceFunction::computeBand( float value, float low, float high, f
     return saturate( ( value - low ) / width + 1.0f ) * saturate( ( high - value ) / width + 1.0f );
 }
 
-/** @brief 노멀 y 로 수평에서 잰 경사(도) — C++ `TerrainLayerRule::computeSlopeDegrees` 와 같은 식. */
+/** @brief 노멀 y 로 수평에서 잰 경사(라디안) — C++ `TerrainLayerRule::computeSlopeRadians` 와 같은 식(지형 규칙). */
+static float SurfaceFunction::computeSlopeRadians( float normalY )
+{
+    return acos( clamp( normalY, -1.0f, 1.0f ) );
+}
+
+/** @brief 노멀 y 로 수평에서 잰 경사(도) — 머티리얼 그래프 노드(SlopeMask)가 도로 적는 문턱과 견준다. */
 static float SurfaceFunction::computeSlopeDegrees( float normalY )
 {
     return degrees( acos( clamp( normalY, -1.0f, 1.0f ) ) );

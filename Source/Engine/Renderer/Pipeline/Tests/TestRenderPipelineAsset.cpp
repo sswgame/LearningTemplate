@@ -695,7 +695,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, FrameGraphRejectsWhatTheExecutorCannotRun
     // 자원 이름이 첨부와 겹친다.
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( "<RenderGraphResourceDesc _name=\"SceneColor\" _kind=\"External\"/>", "" ) ) );
     // 프레임 종류는 뷰 목록(_listPass)에 올 수 없다.
-    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( "_type=\"LightGrid\" _cullMode=\"None\"" ) ) );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( "_type=\"LightGrid\" _cullMode=\"None\" _bEnableDepthTest=\"false\" _bEnableDepthWrite=\"false\"" ) ) );
 }
 
 /**

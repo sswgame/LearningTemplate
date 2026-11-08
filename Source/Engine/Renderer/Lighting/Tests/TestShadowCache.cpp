@@ -92,8 +92,9 @@ SW_TEST_CASE( ShadowCacheTest, StaticSceneChangeAndResolutionChangeRebuildEveryT
     using Action   = sw::ShadowCacheTileAction;
     const sw::vector<sw::ShadowTileDraw> listTile{ Internal::makeTile( 0, 1.0f ), Internal::makeTile( 1, 2.0f ) };
     sw::ShadowCache                      cache;
-    cache.update( listTile, Internal::kAtlasResolution, 3, true );
-    cache.update( listTile, Internal::kAtlasResolution, 3, true );
+    cache.update( listTile, Internal::kAtlasResolution, 3, true ); // 처음 본 빛 — 다 그린다
+    cache.update( listTile, Internal::kAtlasResolution, 3, true ); // 멈췄다 — 층을 채운다(Rebuild)
+    cache.update( listTile, Internal::kAtlasResolution, 3, true ); // 층이 유효하다
     SW_REQUIRE_TRUE( cache.getAction( 0 ) == Action::Reuse );
 
     cache.update( listTile, Internal::kAtlasResolution, 4, true ); // 정적 메시가 바뀌었다

@@ -14,6 +14,11 @@ using namespace sw;
  * @brief [TerrainLayerRuleTest] 띠는 끝값까지 1, 바깥으로 페이드 폭만큼 0 까지 내려가는 사다리꼴이다 · 경사는 노멀 y 의 역코사인(도)이다
  * @details 변이: 페이드를 끝값 가운데에 두면(+1 대신 +0.5) 끝값이 0.5 라 평지(경사 0)가 [0, 40] 띠에 반만 덮인다. 페이드 0 을 그대로 나누면 무한대가 나온다.
  */
+namespace
+{
+    constexpr float32 kDeg = sw::MathUtil::kDegreeToRadian; // 경사는 라디안으로 쥔다 — 테스트 값은 읽기 쉽게 도로 적고 옮긴다
+} // namespace
+
 SW_TEST_CASE( TerrainLayerRuleTest, BandIsTrapezoidAroundEdges )
 {
     SW_EXPECT_NEAR( 1.0f, TerrainLayerRule::computeBand( 45.0f, 30.0f, 90.0f, 10.0f ), 1.0e-6f );
@@ -27,10 +32,10 @@ SW_TEST_CASE( TerrainLayerRuleTest, BandIsTrapezoidAroundEdges )
     SW_EXPECT_NEAR( 1.0f, TerrainLayerRule::computeBand( 30.1f, 30.0f, 90.0f, 0.0f ), 1.0e-6f );
     SW_EXPECT_NEAR( 0.0f, TerrainLayerRule::computeBand( 29.9f, 30.0f, 90.0f, 0.0f ), 1.0e-6f );
 
-    SW_EXPECT_NEAR( 0.0f, TerrainLayerRule::computeSlopeDegrees( 1.0f ), 1.0e-4f );
-    SW_EXPECT_NEAR( 90.0f, TerrainLayerRule::computeSlopeDegrees( 0.0f ), 1.0e-4f );
-    SW_EXPECT_NEAR( 60.0f, TerrainLayerRule::computeSlopeDegrees( 0.5f ), 1.0e-3f );
-    SW_EXPECT_NEAR( 0.0f, TerrainLayerRule::computeSlopeDegrees( 1.5f ), 1.0e-4f ); // 단위를 넘은 값은 자른다(NaN 이 아니다)
+    SW_EXPECT_NEAR( 0.0f, TerrainLayerRule::computeSlopeRadians( 1.0f ), 1.0e-4f );
+    SW_EXPECT_NEAR( MathUtil::kHalfPi, TerrainLayerRule::computeSlopeRadians( 0.0f ), 1.0e-4f );
+    SW_EXPECT_NEAR( 60.0f * MathUtil::kDegreeToRadian, TerrainLayerRule::computeSlopeRadians( 0.5f ), 1.0e-4f );
+    SW_EXPECT_NEAR( 0.0f, TerrainLayerRule::computeSlopeRadians( 1.5f ), 1.0e-4f ); // 단위를 넘은 값은 자른다(NaN 이 아니다)
 }
 
 /**
@@ -40,21 +45,21 @@ SW_TEST_CASE( TerrainLayerRuleTest, CoverageMultipliesStrengthAndBands )
 {
     const TerrainLayerRule off{};
     SW_EXPECT_FALSE( off.isActive() );
-    SW_EXPECT_NEAR( 0.0f, off.computeCoverage( 45.0f, 10.0f ), 0.0f );
+    SW_EXPECT_NEAR( 0.0f, off.computeCoverage( 45.0f * kDeg, 10.0f ), 0.0f );
 
     TerrainLayerRule snow{};
     snow._strength      = 0.5f;
-    snow._slopeRange    = float2{ 0.0f, 40.0f };
-    snow._slopeFade     = 10.0f;
+    snow._slopeRange    = float2{ 0.0f * kDeg, 40.0f * kDeg };
+    snow._slopeFade     = 10.0f * kDeg;
     snow._altitudeRange = float2{ 20.0f, 100000.0f };
     snow._altitudeFade  = 4.0f;
     SW_EXPECT_TRUE( snow.isActive() );
-    SW_EXPECT_NEAR( 0.5f, snow.computeCoverage( 10.0f, 30.0f ), 1.0e-6f );   // 완만하고 높다
-    SW_EXPECT_NEAR( 0.5f, snow.computeCoverage( 10.0f, 20.0f ), 1.0e-6f );   // 설선 끝값은 띠 안이다
-    SW_EXPECT_NEAR( 0.25f, snow.computeCoverage( 10.0f, 18.0f ), 1.0e-6f );  // 설선 아래 페이드 가운데
-    SW_EXPECT_NEAR( 0.0f, snow.computeCoverage( 10.0f, 10.0f ), 1.0e-6f );   // 설선 아래
-    SW_EXPECT_NEAR( 0.0f, snow.computeCoverage( 60.0f, 30.0f ), 1.0e-6f );   // 가파르면 쌓이지 않는다
-    SW_EXPECT_NEAR( 0.125f, snow.computeCoverage( 45.0f, 18.0f ), 1.0e-6f ); // 두 페이드의 가운데가 곱해진다
+    SW_EXPECT_NEAR( 0.5f, snow.computeCoverage( 10.0f * kDeg, 30.0f ), 1.0e-6f );   // 완만하고 높다
+    SW_EXPECT_NEAR( 0.5f, snow.computeCoverage( 10.0f * kDeg, 20.0f ), 1.0e-6f );   // 설선 끝값은 띠 안이다
+    SW_EXPECT_NEAR( 0.25f, snow.computeCoverage( 10.0f * kDeg, 18.0f ), 1.0e-6f );  // 설선 아래 페이드 가운데
+    SW_EXPECT_NEAR( 0.0f, snow.computeCoverage( 10.0f * kDeg, 10.0f ), 1.0e-6f );   // 설선 아래
+    SW_EXPECT_NEAR( 0.0f, snow.computeCoverage( 60.0f * kDeg, 30.0f ), 1.0e-6f );   // 가파르면 쌓이지 않는다
+    SW_EXPECT_NEAR( 0.125f, snow.computeCoverage( 45.0f * kDeg, 18.0f ), 1.0e-6f ); // 두 페이드의 가운데가 곱해진다
 }
 
 /**
@@ -128,7 +133,7 @@ SW_TEST_CASE( TerrainLayerRuleTest, HeightfieldWorldQueryAppliesRules )
 
     TerrainLayerRule rock{};
     rock._strength   = 1.0f;
-    rock._slopeRange = float2{ 40.0f, 90.0f };
+    rock._slopeRange = float2{ 40.0f * kDeg, 90.0f * kDeg };
     TerrainLayerRule snow{};
     snow._strength      = 0.5f;
     snow._altitudeRange = float2{ 20.0f, 100000.0f };

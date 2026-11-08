@@ -1147,7 +1147,17 @@ namespace sw
 
     bool VulkanRHIDevice::verifyRequiredColorAttachmentFormats() const
     {
-        const VkFormat arrRequired[] = { VK_FORMAT_R16G16_SNORM };
+        // MRT 한도 — G버퍼(판 3)가 여섯 장을 함께 쓴다. Vulkan 의 최소 보장은 4 라 장치마다 확인한다(DX · GL · WebGPU 는 8 을 보장한다).
+        VkPhysicalDeviceProperties deviceProperties{};
+        vkGetPhysicalDeviceProperties( _physicalDevice, &deviceProperties );
+        if ( deviceProperties.limits.maxColorAttachments < kMaxColorAttachments )
+        {
+            SW_LOG_ERROR_ID( "Vulkan.GPUColorAttachmentLimit", "This GPU binds %# color attachments at once, the renderer needs %# (G-buffer)", deviceProperties.limits.maxColorAttachments,
+                             kMaxColorAttachments );
+            return false;
+        }
+        // 화면 속도 · 왜곡 첨부(R16G16 실수)도 G버퍼 노멀(R16G16 부호 정규화)처럼 샘플 가능한 컬러 첨부여야 한다.
+        const VkFormat arrRequired[] = { VK_FORMAT_R16G16_SNORM, VK_FORMAT_R16G16_SFLOAT };
         for ( const VkFormat format : arrRequired )
         {
             VkFormatProperties props{};

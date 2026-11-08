@@ -101,13 +101,14 @@ SW_TEST_CASE( GBufferLayoutTest, ShaderShadingModelTableMatchesTheEnum )
 }
 
 /**
- * @brief [GBufferLayoutTest] 판 2 의 넷째 슬롯은 화면 속도다 — 역할 Velocity, R16G16 실수, 클리어 0, 값은 u · v 그대로(부호 있는 UV 차이)
+ * @brief [GBufferLayoutTest] 판 3 의 넷째 슬롯(SV_TARGET3)은 화면 속도다 — 역할 Velocity, R16G16 실수, 클리어 0, 값은 u · v 그대로(부호 있는 UV 차이)
  */
-SW_TEST_CASE( GBufferLayoutTest, VelocityIsTheLastSlot )
+SW_TEST_CASE( GBufferLayoutTest, VelocityIsTheFourthSlot )
 {
-    SW_EXPECT_EQUAL( 2u, GBufferLayout::kVersion );
+    SW_EXPECT_EQUAL( 3u, GBufferLayout::kVersion );
     const GBufferAttachmentSpec& velocity = GBufferLayout::kArrAttachment[GBufferLayout::kVelocitySlot];
-    SW_EXPECT_EQUAL( GBufferLayout::kAttachmentCount - 1u, GBufferLayout::kVelocitySlot );
+    SW_EXPECT_EQUAL( 3u, GBufferLayout::kVelocitySlot );
+    SW_EXPECT_EQUAL( 6u, GBufferLayout::kAttachmentCount ); // 사용자 칸 · 장면 색이 뒤를 잇는다
     SW_EXPECT_TRUE( velocity._role == RenderPassInputRole::Velocity );
     SW_EXPECT_TRUE( velocity._format == RHIFormat::R16G16_FLOAT );
     SW_EXPECT_TRUE( resolveRenderPassInputRole( velocity._pName, false, "" ) == RenderPassInputRole::Velocity ); // 이름이 곧 역할이다

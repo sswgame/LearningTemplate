@@ -112,7 +112,7 @@ namespace sw
 
     quaternion BoneProportion::makeRotation( const BoneProportionEntry& entry )
     {
-        return quaternion::makeFromYawPitchRoll( entry._rotation * MathUtil::kDegreeToRadian );
+        return quaternion::makeFromYawPitchRoll( entry._rotation );
     }
 
     const BoneProportionEntry* BoneProportion::findBone( const hashed_string& bone ) const

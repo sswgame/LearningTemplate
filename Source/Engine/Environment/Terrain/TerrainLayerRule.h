@@ -31,10 +31,10 @@ namespace sw
 
         PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "How strongly the rule overrides the painted weights (0 = off)" )
         float32 _strength{ 0.0f };
-        PROPERTY( Units = deg, Tooltip = "Slope band in degrees from horizontal (min, max)" )
-        float2 _slopeRange{ 0.0f, 90.0f };
-        PROPERTY( Units = deg, Min = 0.0, Tooltip = "Width of the soft edge at both ends of the slope band" )
-        float32 _slopeFade{ 6.0f };
+        PROPERTY( Units = rad, Tooltip = "Slope band from horizontal (min, max)" )
+        float2 _slopeRange{ 0.0f, MathUtil::kHalfPi };
+        PROPERTY( Units = rad, Min = 0.0, Tooltip = "Width of the soft edge at both ends of the slope band" )
+        float32 _slopeFade{ 6.0f * MathUtil::kDegreeToRadian };
         PROPERTY( Units = m, Tooltip = "World height band (min, max)" )
         float2 _altitudeRange{ -100000.0f, 100000.0f };
         PROPERTY( Units = m, Min = 0.0, Tooltip = "Width of the soft edge at both ends of the height band" )
@@ -43,15 +43,15 @@ namespace sw
         /** @brief 규칙이 켜졌으면(세기 > 0) true 입니다. */
         bool isActive() const { return _strength > 0.0f; }
         /**
-         * @brief 경사 @p slopeDegrees(수평에서 잰 도) · 높이 @p altitude(월드 m)에서 이 레이어가 덮는 정도(0..1)입니다.
+         * @brief 경사 @p slopeRadians(수평에서 잰 각, 라디안 — 엔진이 쥐는 각은 라디안이다) · 높이 @p altitude(월드 m)에서 이 레이어가 덮는 정도(0..1)입니다.
          */
-        float32 computeCoverage( float32 slopeDegrees, float32 altitude ) const;
+        float32 computeCoverage( float32 slopeRadians, float32 altitude ) const;
         /**
          * @brief 값 @p value 가 띠 [@p low, @p high] 안(끝값 포함)이면 1, 바깥으로 폭 @p fade 만큼 0 까지 선형으로 내려가는 사다리꼴입니다.
-         * @details 페이드를 띠 바깥에 둔다 — 경사 [0, 40] 은 평지(0 도)가 가득이다(가운데 페이드면 평지가 반만 덮인다).
+         * @details 페이드를 띠 바깥에 둔다 — 경사 [0, 40°] 은 평지(0)가 가득이다(가운데 페이드면 평지가 반만 덮인다).
          */
         static float32 computeBand( float32 value, float32 low, float32 high, float32 fade );
-        /** @brief 단위 노멀의 y 로 수평에서 잰 경사(도, 0..90)입니다. */
-        static float32 computeSlopeDegrees( float32 normalY );
+        /** @brief 단위 노멀의 y 로 수평에서 잰 경사(라디안, 0..π/2)입니다. */
+        static float32 computeSlopeRadians( float32 normalY );
     };
 } // namespace sw

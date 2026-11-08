@@ -6,8 +6,8 @@
 <BodyShapeSet footLiftAxis="Heel.Height">
   <Axis name="Heel.Height" min="0" max="0.12" default="0">
     <Positive>
-      <Bone name="foot.l" rotation="0 -30 0"/>
-      <Bone name="foot.r" rotation="0 -30 0"/>
+      <Bone name="foot.l" rotation="0 -0.523599 0"/>
+      <Bone name="foot.r" rotation="0 -0.523599 0"/>
       <Bone name="hips" offset="0 0.12 0"/>
     </Positive>
   </Axis>

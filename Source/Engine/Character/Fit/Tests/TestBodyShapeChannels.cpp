@@ -11,7 +11,7 @@ namespace
 {
     constexpr const char* kShapeText = R"(<BodyShapeSet footLiftAxis="Heel.Height">
       <Axis name="Heel.Height" min="0" max="0.1">
-        <Positive><Bone name="foot_l" rotation="0 -20 0"/><Bone name="pelvis" offset="0 0.1 0"/></Positive>
+        <Positive><Bone name="foot_l" rotation="0 -0.349066 0"/><Bone name="pelvis" offset="0 0.1 0"/></Positive>
       </Axis>
       <Axis name="Bust.Compression" min="0" max="1" response="2">
         <Positive morph="BustFlat"><Bone name="breast_l" scale="1 0.8 1"/></Positive>
@@ -36,7 +36,7 @@ SW_TEST_CASE( BodyShapeChannelsTest, HeelChannelRotatesAndLifts )
     const sw::BoneProportionEntry* pFoot   = proportion.findBone( sw::hashed_string( "foot_l" ) );
     const sw::BoneProportionEntry* pPelvis = proportion.findBone( sw::hashed_string( "pelvis" ) );
     SW_REQUIRE_TRUE( pFoot != nullptr && pPelvis != nullptr );
-    SW_EXPECT_NEAR( -10.0f, pFoot->_rotation._y, 1e-4f );
+    SW_EXPECT_NEAR( -0.174533f, pFoot->_rotation._y, 1e-4f ); // 반 무게 — -10 도(라디안으로 쥔다)
     SW_EXPECT_NEAR( 0.05f, pPelvis->_offset._y, 1e-5f );
     SW_EXPECT_NEAR( 0.05f, shapes.computeFootLift( sw::vector_reference<const sw::BodyShapeValue>( arrValue, 1 ) ), 1e-6f );
 }

@@ -20,7 +20,7 @@
 	<Screenshot file="lensflare_on.ppm"/>
 	<Wait frames="2"/>
 	<ExpectLog id="RenderPacketSceneCollector.LensFlareUnreadable" count="0"/>
-	<ExpectImagesDiffer first="lensflare_off.ppm" second="lensflare_on.ppm" region="0.5,0,0.5,0.5" minDiffering="0.02"/>
+	<ExpectImagesDiffer first="lensflare_off.ppm" second="lensflare_on.ppm" region="0.5,0,1,0.5" minDiffering="0.02"/>
 	<ExpectImage file="lensflare_on.ppm" golden="lensflare"/>
 	<Pass/>
 </Scenario>

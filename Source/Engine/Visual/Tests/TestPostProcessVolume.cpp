@@ -57,8 +57,8 @@ SW_TEST_CASE( PostProcessVolumeTest, WeightFallsOffOverBlendRadius )
 
     pVolume->setShape( PostProcessVolumeShape::Box, float3{ 2.0f, 2.0f, 2.0f }, 0.0f, 4.0f, 1.0f, 0.0f );
     SW_EXPECT_NEAR( 1.0f, pVolume->computeWeight( float3{ 11.0f, 1.0f, 0.0f } ), 1.0e-5f );
-    SW_EXPECT_NEAR( 0.5f, pVolume->computeWeight( float3{ 4.0f, 0.0f, 0.0f } ), 1.0e-5f ); // 상자 면에서 2 m 밖
-    SW_EXPECT_NEAR( 0.0f, pVolume->computeWeight( float3{ 0.0f, 0.0f, 0.0f } ), 1.0e-5f ); // 4 m 밖 — 반경 끝
+    SW_EXPECT_NEAR( 0.5f, pVolume->computeWeight( float3{ 6.0f, 0.0f, 0.0f } ), 1.0e-5f ); // 상자 면(x 8)에서 2 m 밖
+    SW_EXPECT_NEAR( 0.0f, pVolume->computeWeight( float3{ 4.0f, 0.0f, 0.0f } ), 1.0e-5f ); // 4 m 밖 — 반경 끝
 
     pVolume->setShape( PostProcessVolumeShape::Sphere, float3{}, 3.0f, 2.0f, 0.5f, 0.0f );
     SW_EXPECT_NEAR( 0.5f, pVolume->computeWeight( float3{ 10.0f, 0.0f, 0.0f } ), 1.0e-5f );

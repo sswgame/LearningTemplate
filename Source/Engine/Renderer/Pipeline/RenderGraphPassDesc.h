@@ -128,11 +128,6 @@ namespace sw
          */
         ContactShadow,
         /**
-         * @brief 파이프라인 XML 이 고른 컴퓨트 셰이더(`_shaderPath` · `_computeEntryPoint`)를 돌립니다 — 코드 없이 데이터만으로 효과를 더하는 패스입니다(언리얼 RDG 의 컴퓨트 패스 자리).
-         *        선언한 컬러 출력 하나에 쓰고 입력(최대 둘, 깊이 형식 제외)을 읽습니다. 첨부는 RW 텍스처로 묶입니다(`compute_pass.hlsli` 의 루트 상수). 그룹 수는 첨부 크기를 `_threadGroupSize` 로 나눈 값입니다.
-         */
-        Compute,
-        /**
          * @brief 화면 공간 간접 확산광(SSGI)입니다(ssgi.hlsl). 반투명 앞에 떠 둔 장면 색(`SceneColorCopy`)을 깊이 · G버퍼 노멀로 반구에서 걸어 가까운 면이 튕긴 빛을 모으고,
          *        G버퍼 알베도를 곱해 선언한 컬러 출력(조명 첨부)에 **더한다**(XML `_blendPreset="Additive"`). 프로브 GI(먼 빛)는 조명 패스가 이미 그렸고 이 패스는 가까운 튐만 더한다
          *        (언리얼 UE4 의 화면 공간 GI 가 라이트맵 · 스카이 위에 더하는 것과 같은 자리). 세기 · 반경 · 걸음 수는 XML 퍼뮤테이션 값이다(셰이더에 기본값이 없다 — `kRequiresPassDesc`).
@@ -145,6 +140,11 @@ namespace sw
          *        (XML `_blendPreset="Additive"`) — 톤맵 · 블룸 앞에 둔다. 블룸에서 고스트를 뽑는 화면 효과와 별개다. 플레어를 단 빛이 없으면 그리지 않는다(출력 그대로). 주 시점만 그린다.
          */
         LensFlare,
+        /**
+         * @brief 파이프라인 XML 이 고른 컴퓨트 셰이더(`_shaderPath` · `_computeEntryPoint`)를 돌립니다 — 코드 없이 데이터만으로 효과를 더하는 패스입니다(언리얼 RDG 의 컴퓨트 패스 자리).
+         *        선언한 컬러 출력 하나에 쓰고 입력(최대 둘, 깊이 형식 제외)을 읽습니다. 첨부는 RW 텍스처로 묶입니다(`compute_pass.hlsli` 의 루트 상수). 그룹 수는 첨부 크기를 `_threadGroupSize` 로 나눈 값입니다.
+         */
+        Compute,
 
         // --- 아래는 뷰 패스(`_listPass`)로 쓸 수 없다. 프레임 패스(`isFramePassType` — 깊이 히스토리 · 가림 타일 · 입자 · 애니메이션 · 모프 · 스킨 · 컬링 · 라이트 그리드 ·
         //     볼륨 안개 · 프로브 · 마커)는 `_listFramePass` 에 선언하고, 나머지는 엔진 내부 PSO 슬롯이라 XML 에 나올 수 없다(검증이 거부한다). ---

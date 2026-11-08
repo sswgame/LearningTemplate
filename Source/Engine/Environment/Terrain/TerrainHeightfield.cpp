@@ -450,12 +450,12 @@ namespace sw
         float3  normal{ 0.0f, 1.0f, 0.0f };
         if ( _bAnyLayerRule == SW_FALSE || findHeightAt( worldX, worldZ, height ) == false || findNormalAt( worldX, worldZ, normal ) == false )
             return painted;
-        const float32       slopeDegrees = TerrainLayerRule::computeSlopeDegrees( normal._y );
+        const float32       slopeRadians = TerrainLayerRule::computeSlopeRadians( normal._y );
         SurfaceLayerWeights result       = painted;
         for ( uint32 layer = 0; layer < SurfaceLayerWeights::kLayerCount; ++layer )
         {
             if ( _arrLayerRule[layer].isActive() )
-                result = result.computeCovered( layer, _arrLayerRule[layer].computeCoverage( slopeDegrees, height ) );
+                result = result.computeCovered( layer, _arrLayerRule[layer].computeCoverage( slopeRadians, height ) );
         }
         return result;
     }

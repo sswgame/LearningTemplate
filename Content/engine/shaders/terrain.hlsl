@@ -113,9 +113,9 @@ float4 oneHotLayer( float layer, float firstLayer )
  * @brief 레이어 @p layer 의 자동 규칙을 덮는다 — 덮는 정도 c = 세기 × 경사 띠 × 고도 띠, 가중치 = lerp( 가중치, 원-핫, c ).
  * @details C++ `TerrainLayerRule::computeCoverage` + `SurfaceLayerWeights::computeCovered` 와 같은 식이다(세기 0 이면 c = 0 이라 그대로).
  */
-void applyLayerRule( inout float4 inoutLow, inout float4 inoutHigh, float layer, float4 rule, float4 params, float slopeDegrees, float altitude )
+void applyLayerRule( inout float4 inoutLow, inout float4 inoutHigh, float layer, float4 rule, float4 params, float slopeRadians, float altitude )
 {
-    const float slope    = SurfaceFunction::computeBand( slopeDegrees, rule.x, rule.y, params.x );
+    const float slope    = SurfaceFunction::computeBand( slopeRadians, rule.x, rule.y, params.x );
     const float height   = SurfaceFunction::computeBand( altitude, rule.z, rule.w, params.y );
     const float coverage = saturate( params.z ) * slope * height;
     inoutLow             = lerp( inoutLow, oneHotLayer( layer, 0.0f ), coverage );
@@ -147,15 +147,15 @@ MaterialSurface computeMaterialSurface( PixelContext context )
     normalizeWeights( weightLow, weightHigh );
 
     // 2. 자동 규칙 — 레이어 순서대로(뒤 레이어가 앞을 덮는다).
-    const float slopeDegrees = SurfaceFunction::computeSlopeDegrees( normal.y );
-    applyLayerRule( weightLow, weightHigh, 0.0f, material._layer0Rule, material._layer0Params, slopeDegrees, position.y );
-    applyLayerRule( weightLow, weightHigh, 1.0f, material._layer1Rule, material._layer1Params, slopeDegrees, position.y );
-    applyLayerRule( weightLow, weightHigh, 2.0f, material._layer2Rule, material._layer2Params, slopeDegrees, position.y );
-    applyLayerRule( weightLow, weightHigh, 3.0f, material._layer3Rule, material._layer3Params, slopeDegrees, position.y );
-    applyLayerRule( weightLow, weightHigh, 4.0f, material._layer4Rule, material._layer4Params, slopeDegrees, position.y );
-    applyLayerRule( weightLow, weightHigh, 5.0f, material._layer5Rule, material._layer5Params, slopeDegrees, position.y );
-    applyLayerRule( weightLow, weightHigh, 6.0f, material._layer6Rule, material._layer6Params, slopeDegrees, position.y );
-    applyLayerRule( weightLow, weightHigh, 7.0f, material._layer7Rule, material._layer7Params, slopeDegrees, position.y );
+    const float slopeRadians = SurfaceFunction::computeSlopeRadians( normal.y );
+    applyLayerRule( weightLow, weightHigh, 0.0f, material._layer0Rule, material._layer0Params, slopeRadians, position.y );
+    applyLayerRule( weightLow, weightHigh, 1.0f, material._layer1Rule, material._layer1Params, slopeRadians, position.y );
+    applyLayerRule( weightLow, weightHigh, 2.0f, material._layer2Rule, material._layer2Params, slopeRadians, position.y );
+    applyLayerRule( weightLow, weightHigh, 3.0f, material._layer3Rule, material._layer3Params, slopeRadians, position.y );
+    applyLayerRule( weightLow, weightHigh, 4.0f, material._layer4Rule, material._layer4Params, slopeRadians, position.y );
+    applyLayerRule( weightLow, weightHigh, 5.0f, material._layer5Rule, material._layer5Params, slopeRadians, position.y );
+    applyLayerRule( weightLow, weightHigh, 6.0f, material._layer6Rule, material._layer6Params, slopeRadians, position.y );
+    applyLayerRule( weightLow, weightHigh, 7.0f, material._layer7Rule, material._layer7Params, slopeRadians, position.y );
 
     // 디테일 — 평면(위에서) 하나와 3 축 셋. 평면 표본은 3 축의 xz 면과 같다.
     const float  tiling     = material._terrainParams.y;

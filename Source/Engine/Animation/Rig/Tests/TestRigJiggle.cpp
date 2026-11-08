@@ -65,14 +65,19 @@ SW_TEST_CASE( RigJiggleTest, ImpulseDisplacesThenSettles )
     chain.simulate( buffer, arrBone, settings, {}, sw::float4x4::Identity, sw::float3{}, delta, space );
     chain.addVelocity( sw::float3{ 0.0f, 3.0f, 0.0f }, settings._fixedStep );
     float32 peak = 0.0f;
+    // 리그 평가는 프레임마다 애니메이션 자세에서 다시 시작한다 — 사슬이 돌린 본을 다음 프레임의 목표로 쓰지 않게 자세를 다시 세운다.
     for ( int32 frame = 0; frame < 10; ++frame )
     {
+        makeBustPose( buffer );
         chain.simulate( buffer, arrBone, settings, {}, sw::float4x4::Identity, sw::float3{}, delta, space );
         peak = sw::MathUtil::max( peak, measureSwingDegrees( chain ) );
     }
     SW_EXPECT_TRUE( peak > 5.0f );
     for ( int32 frame = 0; frame < 240; ++frame )
+    {
+        makeBustPose( buffer );
         chain.simulate( buffer, arrBone, settings, {}, sw::float4x4::Identity, sw::float3{}, delta, space );
+    }
     SW_EXPECT_TRUE( measureSwingDegrees( chain ) < 1.0f );
 }
 
@@ -94,6 +99,7 @@ SW_TEST_CASE( RigJiggleTest, MaxSwingClampsDisplacement )
     chain.addVelocity( sw::float3{ 0.0f, 50.0f, 0.0f }, settings._fixedStep );
     for ( int32 frame = 0; frame < 30; ++frame )
     {
+        makeBustPose( buffer ); // 목표는 프레임마다 애니메이션 자세다
         chain.simulate( buffer, arrBone, settings, {}, sw::float4x4::Identity, sw::float3{}, 1.0f / 60.0f, space );
         SW_EXPECT_TRUE( measureSwingDegrees( chain ) <= 10.0f + 0.05f );
     }

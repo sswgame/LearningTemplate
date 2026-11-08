@@ -1,4 +1,4 @@
-// ShadingMathTest ???곗씠??紐⑤뜽 ?ㅼ뭡????shading_math.hlsli, ?곗씠?붿? 媛숈? ?뚯씪)??臾쇰━ ?깆쭏怨??덈룞??쨌 ????엫 洹쒖튃(nogpu).
+// ShadingMathTest — 셰이딩 모델 스칼라 식(shading_math.hlsli, C++ 와 같은 파일)의 물리 성질과 경계 · 극한값을 잰다(nogpu).
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
@@ -14,9 +14,8 @@ namespace
     struct ShadingMathTestUtil
     {
         static constexpr int32 kThetaSteps = 512;
-        static constexpr int32 kPhiSteps   = 256;
 
-        /** @brief 諛섍뎄 ????f(cos罐) d? 瑜?以묒젏 洹쒖튃?쇰줈 ?쎈땲??f 媛 諛⑹쐞媛곸뿉 臾닿?????. */
+        /** @brief 반구 위의 ∫ f(cosθ) dω 를 중점 규칙으로 잽니다(f 가 방위각에 무관할 때). */
         template <typename TFunction>
         [[nodiscard]] static float64 integrateHemisphere( TFunction pfnValue )
         {
@@ -29,7 +28,7 @@ namespace
             return sum * 2.0 * MathUtil::kPi;
         }
 
-        /** @brief 援??꾩껜 ????f(cos罐) d? ?낅땲?? */
+        /** @brief 구 전체의 ∫ f(cosθ) dω 입니다. */
         template <typename TFunction>
         [[nodiscard]] static float64 integrateSphere( TFunction pfnValue )
         {
@@ -42,7 +41,7 @@ namespace
             return sum * 2.0 * MathUtil::kPi;
         }
 
-        /** @brief ??移?二쇨린 1)??怨좊Ⅴ寃??묒? ??엫???됯퇏?낅땲?? */
+        /** @brief 한 주기(주기 1)를 고르게 나눈 표본의 평균입니다. */
         [[nodiscard]] static float64 computeAverageCoverage( float32 halfWidth, float32 footprint )
         {
             constexpr int32 kSamples = 4096;
@@ -54,7 +53,7 @@ namespace
     };
 } // namespace
 
-/** @brief [ShadingMathTest] GGX ? ?쒖뿏(Charlie) 遺꾪룷???뺢퇋?붾릺???덈떎 ????D cos罐h d? = 1(?붿쭊 ?⑥쐞 D쨌? 瑜?? 濡??섎늿 媛? */
+/** @brief [ShadingMathTest] GGX · 시엔(Charlie) 분포가 정규화되어 있다 — ∫ D cosθh dω = 1(엔진 단위 D·π 를 되돌려 잰다) */
 SW_TEST_CASE( ShadingMathTest, DistributionsAreNormalized )
 {
     for ( const float32 alpha : { 0.2f, 0.5f, 0.9f } )
@@ -71,25 +70,25 @@ SW_TEST_CASE( ShadingMathTest, DistributionsAreNormalized )
     }
 }
 
-/** @brief [ShadingMathTest] 慣 媛 媛숈? 鍮꾨벑諛?GGX ???깅갑 GGX ? 媛숇떎(鍮꾨떒 쨌 ?붿쭏 湲덉냽???앷컪) */
+/** @brief [ShadingMathTest] α 가 같은 비등방 GGX 는 등방 GGX 와 같다(비단 · 헤어라인 금속의 시작값) */
 SW_TEST_CASE( ShadingMathTest, AnisotropicGGXMatchesIsotropicAtZeroAnisotropy )
 {
     const float32 alpha          = 0.3f;
     const float32 alphaTangent   = ShadingMath::computeAlphaTangent( alpha, 0.0f );
     const float32 alphaBitangent = ShadingMath::computeAlphaBitangent( alpha, 0.0f );
     SW_EXPECT_NEAR( alpha, alphaTangent, 1e-6 );
-    // 諛섍컖 踰≫꽣 (sin 罐 cos ?, sin 罐 sin ?, cos 罐) ?먯꽌 媛숈? 媛?
+    // 반각 벡터 (sin θ cos φ, sin θ sin φ, cos θ) 에서 같은 값
     const float32 normalDotHalf = 0.9f;
     const float32 sinHalf       = std::sqrt( 1.0f - normalDotHalf * normalDotHalf );
     const float32 anisotropic   = ShadingMath::computeDistributionAnisotropicGGXTimesPi( normalDotHalf, sinHalf * 0.6f, sinHalf * 0.8f, alphaTangent, alphaBitangent );
     SW_EXPECT_NEAR( ShadingMath::computeDistributionGGXTimesPi( normalDotHalf, alpha ), anisotropic, 1e-3 );
-    // 鍮꾨벑諛⑹씠 耳쒖?硫??꾩젨??履쎌쑝濡??섏뼱?쒕떎 ???꾩젨??諛⑺뼢 諛섍컖?먯꽌 媛믪씠 而ㅼ쭊??湲멸쾶 ?뚮┛ ?섏씠?쇱씠??.
+    // 비등방이 켜지면 탄젠트 쪽으로 늘어난다 — 탄젠트 방향 반각에서 값이 커진다
     const float32 stretched = ShadingMath::computeDistributionAnisotropicGGXTimesPi( normalDotHalf, sinHalf, 0.0f, ShadingMath::computeAlphaTangent( alpha, 0.8f ),
                                                                                      ShadingMath::computeAlphaBitangent( alpha, 0.8f ) );
     SW_EXPECT_TRUE( stretched > anisotropic );
 }
 
-/** @brief [ShadingMathTest] 媛먯떬 ?뺤궛? 鍮쏆쓣 ??만 肉??뷀븯吏 ?딅뒗????援??꾩껜 ?곷텇???⑤쾭???)? 媛숆퀬, 媛먯뙂 0 ? ?⑤쾭?몃떎 */
+/** @brief [ShadingMathTest] 감싼 확산은 빛을 늘리거나 줄이지 않는다 — 구 전체 적분이 램버트(π)와 같다 */
 SW_TEST_CASE( ShadingMathTest, WrappedDiffuseConservesEnergy )
 {
     for ( const float32 wrap : { 0.0f, 0.3f, 0.8f } )
@@ -100,12 +99,13 @@ SW_TEST_CASE( ShadingMathTest, WrappedDiffuseConservesEnergy )
     }
     SW_EXPECT_NEAR( 0.5, ShadingMath::computeWrappedDiffuse( 0.5f, 0.0f ), 1e-6 );
     SW_EXPECT_NEAR( 0.0, ShadingMath::computeWrappedDiffuse( -0.2f, 0.0f ), 1e-6 );
-    SW_EXPECT_TRUE( ShadingMath::computeWrappedDiffuse( -0.2f, 0.5f ) > 0.0f ); // ?쇰?: 洹몃뒛 履쎌쑝濡?鍮쏆씠 踰덉쭊??    // ?ш낵???ㅼ뿉???ㅻ뒗 鍮쏅쭔 諛쏅뒗??
+    SW_EXPECT_TRUE( ShadingMath::computeWrappedDiffuse( -0.2f, 0.5f ) > 0.0f ); // 감쌈: 그늘 쪽으로 빛이 번진다
+    // 투과는 뒤에서 오는 빛만 받는다
     SW_EXPECT_NEAR( 0.0, ShadingMath::computeDiffuseTransmission( 1.0f, 0.0f ), 1e-6 );
     SW_EXPECT_NEAR( 1.0, ShadingMath::computeDiffuseTransmission( -1.0f, 0.0f ), 1e-6 );
 }
 
-/** @brief [ShadingMathTest] ?먮┃ ?꾨젅?ш낵 援댁젅瑜?F0 ???섏쭅? F0, ?ㅼ튂硫?1, ?좊━(1.5)??0.04 */
+/** @brief [ShadingMathTest] 슐릭 프레넬과 굴절률 F0 — 수직은 F0, 스치면 1, 유리(1.5)는 0.04 */
 SW_TEST_CASE( ShadingMathTest, FresnelEndpoints )
 {
     SW_EXPECT_NEAR( 0.04, ShadingMath::computeDielectricF0( 1.5f ), 1e-4 );
@@ -114,10 +114,10 @@ SW_TEST_CASE( ShadingMathTest, FresnelEndpoints )
     SW_EXPECT_NEAR( 0.0, ShadingMath::computeDielectricF0( 1.0f ), 1e-6 );
 }
 
-/** @brief [ShadingMathTest] 諛뺣쭑 ?먭퍡 0 ? 留??녿뒗 諛뷀깢???꾨젅?ъ씠怨? 諛섏궗?⑥? 0..1 ?대ŉ ?먭퍡???곕씪 ?뚯옣留덈떎 ?ㅻⅤ??臾댁?媛?튆) */
+/** @brief [ShadingMathTest] 박막 두께 0 은 막 없는 바탕의 프레넬이고, 반사율은 0..1 이며 두께에 따라 색이 바뀐다 */
 SW_TEST_CASE( ShadingMathTest, ThinFilmReducesToBaseFresnelAndIridesces )
 {
-    const float32 baseIor = 1.68f; // 吏꾩＜痢??꾨씪怨좊굹?댄듃)
+    const float32 baseIor = 1.68f; // 진주층(아라고나이트)
     SW_EXPECT_NEAR( ShadingMath::computeDielectricF0( baseIor ), ShadingMath::computeThinFilmReflectance( 1.0f, 0.0f, 1.33f, baseIor, 550.0f ), 1e-4 );
     for ( float32 thickness = 0.0f; thickness <= 1000.0f; thickness += 50.0f )
     {
@@ -132,7 +132,7 @@ SW_TEST_CASE( ShadingMathTest, ThinFilmReducesToBaseFresnelAndIridesces )
     SW_EXPECT_TRUE( std::abs( red - blue ) > 0.005f );
 }
 
-/** @brief [ShadingMathTest] ?곸옄濡?嫄곕Ⅸ ????엫 ??諛쒖옄援?씠 移??댁긽?대㈃ ??諛??2w, ?묒쑝硫?怨꾨떒, ?대뒓 諛쒖옄援?뿉?쒕룄 ?됯퇏? 2w(硫由ъ꽌 洹몃Ъ???щ씪吏嫄곕굹 源쒕컯?댁? ?딅뒗?? */
+/** @brief [ShadingMathTest] 상자로 거른 선 덮임 — 발자국이 칸 이상이면 덮임 비율 2w, 작으면 계단, 그 사이는 이어진다 */
 SW_TEST_CASE( ShadingMathTest, LineCoverageIsStableAcrossFootprints )
 {
     const float32 halfWidth = 0.05f;
@@ -144,18 +144,18 @@ SW_TEST_CASE( ShadingMathTest, LineCoverageIsStableAcrossFootprints )
         SW_EXPECT_NEAR( 2.0f * halfWidth, ShadingMathTestUtil::computeAverageCoverage( halfWidth, footprint ), 2e-3 );
 }
 
-/** @brief [ShadingMathTest] 癒몃━寃?諛섏궗 ???꾩젨?몄뿉 ?섏쭅??諛섍컖?먯꽌 媛??諛앷퀬, 嫄곗튌?섎줉 吏?섍? ?묐떎 */
+/** @brief [ShadingMathTest] 머리결 반사 — 탄젠트에 수직인 반각에서 가장 밝고, 거칠수록 퍼진다 */
 SW_TEST_CASE( ShadingMathTest, StrandSpecularPeaksPerpendicular )
 {
     const float32 exponent = ShadingMath::computeStrandExponent( 0.3f );
     SW_EXPECT_NEAR( 1.0, ShadingMath::computeStrandSpecular( 0.0f, exponent ), 1e-6 );
     SW_EXPECT_TRUE( ShadingMath::computeStrandSpecular( 0.5f, exponent ) < 1.0f );
     SW_EXPECT_TRUE( ShadingMath::computeStrandExponent( 0.8f ) < exponent );
-    // ?쒖뿏 媛?쒖꽦? ?묒닔?닿퀬 ?좏븳?섎떎.
+    // 시엔 가시성은 양수이고 유한하다.
     SW_EXPECT_TRUE( ShadingMath::computeVisibilityNeubelt( 0.0f, 0.0f ) > 0.0f );
 }
 
-/** @brief [ShadingMathTest] ?띿콈 ?쒖감 ??媛곷쭑 援댁젅? 湲곗슱湲곕? 以꾩씠怨?援댁젅瑜?1 ?대㈃ 洹몃?濡?, ?섏쭅?쇰줈 蹂대㈃ 0 ?대떎 */
+/** @brief [ShadingMathTest] 홍채 시차 — 각막 굴절은 기울기를 줄이고 굴절률 1 이면 그대로다 */
 SW_TEST_CASE( ShadingMathTest, IrisParallaxFollowsSnell )
 {
     const float32 sinIncident = 0.5f;
@@ -165,7 +165,7 @@ SW_TEST_CASE( ShadingMathTest, IrisParallaxFollowsSnell )
     SW_EXPECT_NEAR( 0.0, ShadingMath::computeRefractedTangent( 0.0f, 1.376f ), 1e-6 );
 }
 
-/** @brief [ShadingMathTest] ?숆났 ???뺤옣??諛섏?由꾩쓣 ?뺥븯怨? 諛앹쓣?섎줉 醫곸쑝硫? 紐⑥뼇留덈떎 媛?대뜲????쨌 ?띿콈 媛?μ옄由щ뒗 諛뽰씠??*/
+/** @brief [ShadingMathTest] 동공 — 확장은 반지름을 정하고, 밝을수록 좁으며, 모양마다 가운데 · 가장자리가 안 · 밖이다 */
 SW_TEST_CASE( ShadingMathTest, PupilShapesAndDilation )
 {
     SW_EXPECT_NEAR( 0.2, ShadingMath::computePupilRadius( 0.2f, 0.6f, 0.0f ), 1e-6 );
@@ -176,22 +176,22 @@ SW_TEST_CASE( ShadingMathTest, PupilShapesAndDilation )
 
     for ( float32 shape = 0.0f; shape < shadermath::kPupilShapeCount; shape += 1.0f )
     {
-        // 諛섏? ?대┛ ?숆났: ?띿콈 媛?μ옄由?諛섏?由?0.95)????諛뽰씠??
+        // 반지름 0.95 의 열린 동공: 홍채 가장자리 근처는 밖이다
         SW_EXPECT_TRUE( ShadingMath::computePupilDistance( shape, 0.95f, 0.0f, 0.2f, 0.6f, 0.5f ) > 0.0f );
         SW_EXPECT_TRUE( ShadingMath::computePupilDistance( shape, 0.0f, 0.95f, 0.2f, 0.6f, 0.5f ) > 0.0f );
     }
-    // ?κ렐 쨌 ??쨌 留됰???媛?대뜲媛 ?덉씠??W ?먮뒗 媛?대뜲媛 ?잛? ?좊씪 媛?대뜲 ?꾧? ?덉씠??.
+    // 둥근 · 틈 · 막대는 가운데가 안이고, W 는 가운데가 홍채(혀) 쪽이라 가운데 위가 안이다.
     SW_EXPECT_TRUE( ShadingMath::computePupilDistance( shadermath::kPupilShapeRound, 0.0f, 0.0f, 0.2f, 0.6f, 0.5f ) < 0.0f );
     SW_EXPECT_TRUE( ShadingMath::computePupilDistance( shadermath::kPupilShapeVerticalSlit, 0.0f, 0.0f, 0.2f, 0.6f, 0.0f ) < 0.0f );
     SW_EXPECT_TRUE( ShadingMath::computePupilDistance( shadermath::kPupilShapeHorizontalBar, 0.0f, 0.0f, 0.2f, 0.6f, 0.0f ) < 0.0f );
-    // ?몃줈 ?? 醫곸쑝硫??놁? 諛? ?꾩븘?섎뒗 ?? ?쒖쭩 ?대━硫??녿룄 ??
+    // 세로 틈: 좁으면 옆은 밖, 위아래는 안 — 넓게 열리면 옆도 안
     SW_EXPECT_TRUE( ShadingMath::computePupilDistance( shadermath::kPupilShapeVerticalSlit, 0.2f, 0.0f, 0.2f, 0.6f, 0.0f ) > 0.0f );
     SW_EXPECT_TRUE( ShadingMath::computePupilDistance( shadermath::kPupilShapeVerticalSlit, 0.0f, 0.5f, 0.2f, 0.6f, 0.0f ) < 0.0f );
     SW_EXPECT_TRUE( ShadingMath::computePupilDistance( shadermath::kPupilShapeVerticalSlit, 0.2f, 0.0f, 0.2f, 0.6f, 1.0f ) < 0.0f );
-    // 媛濡?留됰?: 醫곸쑝硫??꾨뒗 諛? ?놁? ??
+    // 가로 막대: 좁으면 위는 밖, 옆은 안
     SW_EXPECT_TRUE( ShadingMath::computePupilDistance( shadermath::kPupilShapeHorizontalBar, 0.0f, 0.2f, 0.2f, 0.6f, 0.0f ) > 0.0f );
     SW_EXPECT_TRUE( ShadingMath::computePupilDistance( shadermath::kPupilShapeHorizontalBar, 0.5f, 0.0f, 0.2f, 0.6f, 0.0f ) < 0.0f );
-    // W ?? 怨⑥쭨湲?x = 짹0.3, 怨≪꽑 ?????덉씠怨??꾩そ ?앹? 諛?
+    // W 자: 골짜기(x = ±0.3, 곡선 아래)는 안이고 위쪽 끝은 밖
     const float32 valleyY = shadermath::kPupilShapeCephalopodCurve * ( 0.0f - 0.125f * 0.36f );
     SW_EXPECT_TRUE( ShadingMath::computePupilDistance( shadermath::kPupilShapeCephalopod, 0.3f, valleyY, 0.2f, 0.6f, 0.5f ) < 0.0f );
     SW_EXPECT_TRUE( ShadingMath::computePupilDistance( shadermath::kPupilShapeCephalopod, 0.3f, 0.6f, 0.2f, 0.6f, 0.5f ) > 0.0f );
