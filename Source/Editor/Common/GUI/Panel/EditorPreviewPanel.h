@@ -15,12 +15,12 @@ namespace sw
 {
     struct ObjectSnapshot;
 
+    class CommandStack;
     class GameObject;
 } // namespace sw
 
 namespace sw::editor
 {
-    class CommandStack;
     class EditorSelection;
 
     /**

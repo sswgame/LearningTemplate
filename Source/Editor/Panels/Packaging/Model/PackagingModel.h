@@ -42,6 +42,8 @@ namespace sw::editor
         ProcessCommand makeCommand() const;
         /** @brief 패키징을 띄웁니다. 이미 돌면 false 입니다. */
         bool startPackaging();
+        /** @brief 끝난 패키징의 출력 폴더를 탐색기로 엽니다. 못 띄우면 경고가 남고 false 입니다. 디스크를 바꾸지 않아 되돌리기에 남지 않는다. */
+        bool openOutputFolder() const;
 
         // ------------------------------------------------------------------------------
         // 설정 — 콤보 · 체크칸이 바로 고친다

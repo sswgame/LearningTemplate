@@ -6,18 +6,12 @@
  */
 #include "pch.h"
 
-#include "Core/String/hashed_string.h"
-
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorComponentIconRow.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/Scene/HierarchyPanel.h"
 #include "Editor/SelfTest/EditorWatchSupport.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
 
 namespace sw::editor
 {
@@ -25,9 +19,8 @@ namespace sw::editor
     {
         [[nodiscard]] bool readHierarchyVisibleRoots( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            EditorContext*        pContext = getWatchContext( __func__ );
-            const HierarchyPanel* pHierarchy =
-                pContext != nullptr ? pContext->getSubsystem<EditorPanelManager>().findPanel<HierarchyPanel>() : nullptr;
+            const EditorPanelManager* pPanels    = getWatchPanelManager( __func__ );
+            const HierarchyPanel*     pHierarchy = pPanels != nullptr ? pPanels->findPanel<HierarchyPanel>() : nullptr;
             if ( pHierarchy == nullptr )
                 return false;
             outValue = static_cast<float64>( pHierarchy->getVisibleRootCount() );
@@ -37,10 +30,7 @@ namespace sw::editor
         /** @brief `-gv_editorWatchObject` 이름의 오브젝트가 Hierarchy 행에 그리는 아이콘의 코드 포인트입니다. 그 이름의 오브젝트가 없으면 값을 내지 않습니다. */
         [[nodiscard]] bool readHierarchyRowIcon( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            const GameObjectManager* pManager = editor::getActiveObjectManager();
-            if ( pManager == nullptr )
-                return false;
-            const GameObject* pObject = pManager->findGameObjectByName( hashed_string( gv_editorWatchObject.c_str() ) );
+            const GameObject* pObject = findWatchedObject();
             if ( pObject == nullptr )
                 return false;
             outValue = static_cast<float64>( EditorComponentIconRow::decodeGlyph( EditorComponentIconRow::findObjectRow( *pObject )._pGlyph ) );

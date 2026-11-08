@@ -44,6 +44,10 @@
         "Source/Editor/Panels/SourceControl/SourceControlChangesPanel",
         "Source/Editor/Panels/AudioMixer/AudioMixerPanel",
         "Source/Editor/Panels/InputMap/InputMapPanel",
-        "Source/Editor/Panels/Settings/ModulesPanel"
+        "Source/Editor/Panels/Settings/ModulesPanel",
+        "Source/Editor/Panels/Profiler/ProfilerWatches",
+        "Source/Editor/Panels/Packaging/PackagingPanel",
+        "Source/Editor/Panels/Scene/HierarchyWatches",
+        "Source/Editor/Panels/Animation/AnimationWatches"
     ]
 }

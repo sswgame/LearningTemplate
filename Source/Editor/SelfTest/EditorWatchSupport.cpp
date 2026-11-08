@@ -12,6 +12,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -44,5 +45,15 @@ namespace sw::editor
     {
         const GameObjectManager* pManager = editor::getActiveObjectManager();
         return pManager != nullptr ? pManager->findGameObjectByName( hashed_string( gv_editorWatchObject.c_str() ) ) : nullptr;
+    }
+
+    bool readWatchedObjectLocalPosition( float3& outPosition )
+    {
+        const GameObject*     pObject = findWatchedObject();
+        const SceneComponent* pScene  = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
+        if ( pScene == nullptr )
+            return false;
+        outPosition = pScene->getLocalPosition();
+        return true;
     }
 } // namespace sw::editor
