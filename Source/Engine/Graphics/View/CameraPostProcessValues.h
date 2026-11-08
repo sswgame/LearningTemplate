@@ -52,5 +52,12 @@ namespace sw
 
         /** @brief 자동 노출이 장면을 측정하는지(최소 EV 가 최대보다 작다) 나타냅니다. 같으면 고정 노출 2^-최소 EV 입니다. */
         bool usesAutoExposure() const { return _autoExposureMinEv < _autoExposureMaxEv; }
+
+        /**
+         * @brief 두 카메라의 값을 섞습니다. 칸은 리플렉션으로 직선 보간하고(`PropertyRoleUtil::blendValues` — 새 칸도 따로 적지 않아 섞인다),
+         *        레터박스는 한쪽이 없음(0)이면 섞을 비율이 없어 절반에서 바꿉니다.
+         * @param weight 0 이면 from, 1 이면 to
+         */
+        static CameraPostProcessValues blend( const CameraPostProcessValues& from, const CameraPostProcessValues& to, float32 weight );
     };
 } // namespace sw

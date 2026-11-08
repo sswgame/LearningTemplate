@@ -46,5 +46,26 @@ namespace sw
          * @return 섞을 수 없는 타입이면 false(아무것도 쓰지 않는다)
          */
         [[nodiscard]] static bool applyInterpolated( const PropertyInfo& prop, MutableObjectAddress instance, ValueAddress from, ValueAddress to, float32 alpha );
+        /**
+         * @brief @p type 의 섞을 수 있는 프로퍼티(상속분까지, `isInterpolatable`)를 모두 @p from · @p to(객체의 주소) 사이에서 @p alpha 로 섞어 @p out 에 씁니다.
+         * @details 섞을 수 없는 칸은 건드리지 않는다 — 부르는 쪽이 @p out 을 먼저 채운다(`blendValues` 는 절반에서 바꾼다). 칸을 손으로 나열해 섞으면 새 칸이 블렌드에서 빠진다.
+         *          언리얼 PostProcessSettings 블렌드가 칸마다 손으로 쓴 것(생성 코드)과 달리 리플렉션 한 길이다.
+         */
+        static void blendProperties( const TypeInfo& type, ObjectAddress from, ObjectAddress to, float32 alpha, MutableObjectAddress out );
+        /**
+         * @brief 리플렉션 값 타입 @p T 두 값을 섞은 값입니다 — 섞을 수 있는 칸은 `blendProperties`, 그 밖의 칸(bool · 열거 · 문자열)은 @p alpha 가 절반 미만이면 from, 아니면 to 다.
+         * @details 칸마다 다른 규칙(조리개의 역수 · 한쪽이 없음인 레터박스)은 부르는 쪽이 결과 위에 덮어쓴다.
+         */
+        template <typename T>
+        static T blendValues( const T& from, const T& to, float32 alpha )
+        {
+            T out = alpha < 0.5f ? from : to;
+            blendProperties( requireType( T::StaticType() ), ObjectAddress{ &from }, ObjectAddress{ &to }, alpha, MutableObjectAddress{ &out } );
+            return out;
+        }
+
+    private:
+        /** @brief 등록되지 않은 타입(리플렉션이 서지 않은 실행)은 프로그램 오류라 멈춘다 — 섞지 않은 값을 내지 않는다. */
+        static const TypeInfo& requireType( const TypeInfo* pType );
     };
 } // namespace sw

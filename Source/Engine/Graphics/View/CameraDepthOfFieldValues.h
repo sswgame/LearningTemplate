@@ -36,7 +36,7 @@ namespace sw
         bool hasDepthOfField() const { return _aperture > 0.0f && _focusDistance > 0.0f && _sensorHeight > 0.0f; }
 
         /**
-         * @brief 두 렌즈 값을 섞습니다. 초점 거리 · 센서 높이는 그대로, 조리개는 f 값의 역수로 섞습니다(0 은 역수 0 — 구경이 닫힌 핀홀).
+         * @brief 두 렌즈 값을 섞습니다. 칸은 리플렉션으로 직선 보간하고(`PropertyRoleUtil::blendValues`), 조리개만 f 값의 역수로 섞습니다(0 은 역수 0 — 구경이 닫힌 핀홀).
          * @param weight 0 이면 from, 1 이면 to
          */
         static CameraDepthOfFieldValues blend( const CameraDepthOfFieldValues& from, const CameraDepthOfFieldValues& to, float32 weight );

@@ -9,6 +9,7 @@
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 namespace sw
 {
@@ -131,5 +132,22 @@ namespace sw
         if ( bBlendUnavailable )
             return false;
         return pBlend( from.get(), to.get(), alpha, prop.getRawPtr( instance.get() ) );
+    }
+
+    void PropertyRoleUtil::blendProperties( const TypeInfo& type, const ObjectAddress from, const ObjectAddress to, const float32 alpha, const MutableObjectAddress out )
+    {
+        for ( const PropertyInfo& prop : type.getPropertiesWithBase() )
+        {
+            const PropertyRoleUtilInternal::BlendFn pBlend = PropertyRoleUtilInternal::findBlend( prop );
+            if ( pBlend != nullptr )
+                (void)pBlend( prop.getRawPtr( from.get() ), prop.getRawPtr( to.get() ), alpha, prop.getRawPtr( out.get() ) );
+        }
+    }
+
+    const TypeInfo& PropertyRoleUtil::requireType( const TypeInfo* pType )
+    {
+        if ( pType == nullptr )
+            SW_FATAL( "PropertyRoleUtil::blendValues: the value type is not registered with reflection" );
+        return *pType;
     }
 } // namespace sw
