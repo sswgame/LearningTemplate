@@ -9,6 +9,7 @@
 #include "Editor/Common/Widgets/Model/EditorDisplayNameUtil.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 
+#include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 
@@ -40,7 +41,7 @@ namespace sw::editor
         // 상속분은 기반 → 파생 순으로 온다(파생이 같은 이름을 다시 선언하면 그 위치에서 바뀐다 — `TypeInfo::getPropertiesWithBase`).
         type.forEachProperty( [&]( const PropertyInfo& prop )
         {
-            if ( prop._metadata->_bHideInInspector == SW_TRUE )
+            if ( prop._metadata->getEditor()._bHideInInspector == SW_TRUE )
                 return;
             for ( const hashed_string& drawnName : listDrawnName )
             {
@@ -48,10 +49,10 @@ namespace sw::editor
                     return;
             }
             const string label = getPropertyLabel( prop );
-            if ( filter.matchesAny( { string_view{ prop._name.c_str() }, string_view{ label }, string_view{ prop._metadata->_category.c_str() } } ) == false )
+            if ( filter.matchesAny( { string_view{ prop._name.c_str() }, string_view{ label }, string_view{ prop._metadata->getEditor()._category.c_str() } } ) == false )
                 return;
 
-            const string_view       category = prop._metadata->_category.empty() ? string_view{ "General" } : string_view{ prop._metadata->_category.c_str() };
+            const string_view       category = prop._metadata->getEditor()._category.empty() ? string_view{ "General" } : string_view{ prop._metadata->getEditor()._category.c_str() };
             InspectorPropertyGroup* pGroup   = nullptr;
             for ( InspectorPropertyGroup& group : outListGroup )
             {
@@ -72,7 +73,7 @@ namespace sw::editor
 
     string InspectorPropertyLayout::getPropertyLabel( const PropertyInfo& prop )
     {
-        return EditorDisplayNameUtil::chooseLabel( prop._metadata->_displayName, prop._name.c_str() );
+        return EditorDisplayNameUtil::chooseLabel( prop._metadata->getEditor()._displayName, prop._name.c_str() );
     }
 
     string InspectorPropertyLayout::makeUndoLabel( const utf8* pPropertyLabel )
@@ -148,14 +149,15 @@ namespace sw::editor
         range._clampMin                    = allowed._min;
         range._clampMax                    = allowed._max;
 
-        range._bHasWidgetMin = meta._bHasUIMinRange != SW_FALSE || range._bHasClampMin;
-        range._bHasWidgetMax = meta._bHasUIMaxRange != SW_FALSE || range._bHasClampMax;
-        range._widgetMin     = meta._bHasUIMinRange != SW_FALSE ? static_cast<float64>( meta._uiMinRange ) : range._clampMin;
-        range._widgetMax     = meta._bHasUIMaxRange != SW_FALSE ? static_cast<float64>( meta._uiMaxRange ) : range._clampMax;
+        const PropertyEditorMetadata& editor = meta.getEditor();
+        range._bHasWidgetMin                 = editor._bHasUIMinRange != SW_FALSE || range._bHasClampMin;
+        range._bHasWidgetMax                 = editor._bHasUIMaxRange != SW_FALSE || range._bHasClampMax;
+        range._widgetMin                     = editor._bHasUIMinRange != SW_FALSE ? static_cast<float64>( editor._uiMinRange ) : range._clampMin;
+        range._widgetMax                     = editor._bHasUIMaxRange != SW_FALSE ? static_cast<float64>( editor._uiMaxRange ) : range._clampMax;
 
-        const bool bSliderMeta = prop.findCustomMeta( hashed_string( "Slider" ) ) != nullptr;
+        const bool bSliderMeta = editor.findCustomMeta( hashed_string( "Slider" ) ) != nullptr;
         const bool bFullClamp  = range._bHasClampMin && range._bHasClampMax;
-        range._bSlider         = meta.hasFullUIRange() || ( bFullClamp && bSliderMeta );
+        range._bSlider         = editor.hasFullUIRange() || ( bFullClamp && bSliderMeta );
         return range;
     }
 
@@ -170,7 +172,7 @@ namespace sw::editor
 
     bool InspectorPropertyLayout::isColorRequested( const PropertyInfo& prop )
     {
-        if ( prop._metadata->_bColorHDR != SW_FALSE || prop.findCustomMeta( hashed_string( "Color" ) ) != nullptr )
+        if ( prop._metadata->getEditor()._bColorHDR != SW_FALSE || prop.findCustomMeta( hashed_string( "Color" ) ) != nullptr )
             return true;
         return StringUtil::stristr( prop._name.c_str(), "color" ) != nullptr;
     }

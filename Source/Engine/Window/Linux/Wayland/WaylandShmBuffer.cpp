@@ -2,7 +2,7 @@
 
 #include "Engine/Window/Linux/Wayland/WaylandShmBuffer.h"
 
-#if defined( SW_WITH_CLIENT_CODE ) && defined( SW_WITH_WAYLAND )
+#if defined( SW_WITH_WAYLAND )
     #include "Core/Algorithm/VectorUtil.h"
 
     #include <sys/mman.h>

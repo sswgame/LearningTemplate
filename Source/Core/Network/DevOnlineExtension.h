@@ -1,6 +1,6 @@
 /**
  * @file DevOnlineExtension.h
- * @brief 온라인 기반 · 키트의 개발 대체물(개발 인증서 · 개발 티켓 키 · 가벼운 해시 · 테스트 계정 · 가짜 제공자)을 꽂는 확장점입니다.
+ * @brief 네트워크 · 온라인 기반과 키트의 개발 대체물(평문 공개 게임 포트 허용 · 개발 인증서 · 개발 티켓 키 · 가벼운 해시 · 테스트 계정 · 가짜 제공자)을 꽂는 확장점입니다.
  * @details - 확장점은 기능이 자기 `.cpp` 에 정의하고(`SW_DEFINE_DEV_ONLINE_EXTENSION`), 값은 정적 등록자로 올린다(`SW_REGISTER_DEV_ONLINE_EXTENSION`).
  *            배포 구성은 등록하지 않고 값을 `[[maybe_unused]]` 로만 붙잡는다 — 개발 대체물 코드는 모든 구성에서 컴파일되고, 쓰는 곳이 없어 배포 실행 파일에서 빠진다.
  *            파일 이름으로 배포에서 빼지 않는다(`docs/agents/BuildConfigSwitch.md`).
@@ -32,7 +32,7 @@ namespace sw
             const TValue* const                   pValue = slot.get();
             if ( pValue != nullptr )
                 return pValue;
-            return unexpected( Error{ ErrorKind::Unsupported, "a development option - this build has no DevOnline unit (Shipping does not build *DevOnline.cpp)", slot.getListName() } );
+            return unexpected( Error{ ErrorKind::Unsupported, "a development option - this build registers no development substitutes (Shipping)", slot.getListName() } );
         }
         /** @brief 값이 등록되었는가 — 개발 전용 값이 들어와도 되는 구성인지 묻는 쪽(배포가 거절할 개발 제공자 검사)이 씁니다. */
         static bool isRegistered() { return TValue::getDevOnline().get() != nullptr; }

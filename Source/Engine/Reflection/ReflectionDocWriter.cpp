@@ -8,6 +8,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionEnumNames.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
@@ -99,13 +100,12 @@ namespace sw
                     appendFlag( text, meta._assetType.empty() ? string( "Asset" ) : "Asset=" + meta._assetType );
                 if ( prop._bIsContainer == SW_TRUE )
                     appendFlag( text, toString( prop._containerKind ) );
-#if !defined( SW_SHIPPING )
-                if ( meta._editCondition.empty() == false )
-                    appendFlag( text, "EditCondition=`" + meta._editCondition + "`" );
-                const string* pUnits = meta.findCustomMeta( hashed_string( "Units" ) );
+                const PropertyEditorMetadata& editor = meta.getEditor(); // 에디터 메타데이터가 붙지 않은 구성(배포)은 기본값이라 빈 칸이다
+                if ( editor._editCondition.empty() == false )
+                    appendFlag( text, "EditCondition=`" + editor._editCondition + "`" );
+                const string* pUnits = editor.findCustomMeta( hashed_string( "Units" ) );
                 if ( pUnits != nullptr )
                     appendFlag( text, "Units=" + *pUnits );
-#endif
                 return text;
             }
 
@@ -138,12 +138,11 @@ namespace sw
             out += "- Abstract\n";
         if ( type._addComponent != nullptr )
             out += "- 컴포넌트(이름으로 만들 수 있다)\n";
-#if !defined( SW_SHIPPING )
-        if ( type._metadata->_category.empty() == false )
-            out += "- 분류: " + type._metadata->_category + "\n";
-        if ( type._metadata->_tooltip.empty() == false )
-            out += "- 설명: " + ReflectionDocWriterInternal::escapeCell( type._metadata->_tooltip ) + "\n";
-#endif
+        const TypeEditorMetadata& typeEditor = type._metadata->getEditor();
+        if ( typeEditor._category.empty() == false )
+            out += "- 분류: " + typeEditor._category + "\n";
+        if ( typeEditor._tooltip.empty() == false )
+            out += "- 설명: " + ReflectionDocWriterInternal::escapeCell( typeEditor._tooltip ) + "\n";
         if ( type._pValidate != nullptr )
             out += "- 타입 검증 함수가 있다\n";
 
@@ -152,10 +151,7 @@ namespace sw
             out += "\n| 프로퍼티 | 타입 | 기본값 | 범위 | 플래그 | 설명 |\n|---|---|---|---|---|---|\n";
             for ( const PropertyInfo& prop : type._listProperty )
             {
-                string tooltip;
-#if !defined( SW_SHIPPING )
-                tooltip = prop._metadata->_tooltip;
-#endif
+                const string& tooltip = prop._metadata->getEditor()._tooltip;
                 out += "| `" + string( prop._name.c_str() ) + "` | `" + ReflectionDocWriterInternal::escapeCell( prop._typeName.view() ) + "` | " +
                        ReflectionDocWriterInternal::escapeCell( prop._metadata->_defaultValue ) + " | " + ReflectionDocWriterInternal::makeRange( *prop._metadata ) +
                        " | " + ReflectionDocWriterInternal::makePropertyFlags( prop ) + " | " + ReflectionDocWriterInternal::escapeCell( tooltip ) + " |\n";

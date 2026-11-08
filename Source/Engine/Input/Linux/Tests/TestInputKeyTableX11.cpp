@@ -6,7 +6,6 @@
 
 // InputKeyTableX11Test - X11 · Wayland 키 이벤트를 Key 로 읽는 규칙(nogpu). X11 헤더 없이 프로토콜 번호로 적는다.
 
-#if defined( SW_WITH_CLIENT_CODE )
 using namespace sw;
 
 namespace
@@ -48,4 +47,3 @@ SW_TEST_CASE( InputKeyTableX11Test, UnknownKeySymReadsThePhysicalKey )
     SW_EXPECT_TRUE( InputKeyTable::mapX11Key( kCyrillicEf, kUnmappedCode ) == Key::Unknown );
     SW_EXPECT_TRUE( InputKeyTable::mapX11Key( kCyrillicEf, 0 ) == Key::Unknown ); // 입력기가 만든 가짜 키 이벤트
 }
-#endif

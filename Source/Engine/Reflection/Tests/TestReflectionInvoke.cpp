@@ -3,6 +3,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionInvoke.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
@@ -144,7 +145,7 @@ SW_TEST_CASE( ReflectionInvokeTest, MulticastDelegatePropertyIsReflectedAsEvent 
     SW_EXPECT_EQUAL( sw::string( "reason" ), pEvent->_listParameter[1]._name );
     SW_EXPECT_EQUAL( sw::string( "string" ), pEvent->_listParameter[1]._typeName );
     SW_EXPECT_NOT_NULL( pEvent->_listParameter[1]._pType );
-    SW_EXPECT_EQUAL( sw::string( "Events" ), pEvent->_metadata->_category );
+    SW_EXPECT_EQUAL( sw::string( "Events" ), pEvent->_metadata->getEditor()._category );
 
     const sw::EventInfo* pDied = pType->findEvent( "_onDied" );
     SW_REQUIRE_NOT_NULL( pDied );

@@ -48,6 +48,15 @@ namespace sw::editor
                 return false;
             return saveDocumentAndClearDirty();
         }
+        /**
+         * @brief dirty 와 무관하게 디스크(또는 기본값)에서 문서를 다시 읽고 dirty 를 지웁니다(`revertDocument`).
+         * @details 저장 왕복 확인(`panel.reloadDocument` — 저장 → 다시 읽기 → 저장이 같은 바이트인지)이 쓴다. 편집을 버리는 사용자 동작은 `discardDirtyDocument` 다.
+         */
+        void reloadDocument()
+        {
+            revertDocument();
+            clearDocumentDirty();
+        }
         /** @brief dirty 이면 revertDocument() 를 호출하고 dirty 를 지웁니다. */
         void discardDirtyDocument()
         {

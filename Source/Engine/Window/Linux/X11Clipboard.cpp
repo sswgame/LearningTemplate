@@ -4,7 +4,7 @@
 #include "Engine/Window/MainWindowSubsystem.h"
 #include "Engine/Window/PlatformClipboard.h"
 
-#if defined( SW_WITH_CLIENT_CODE )
+#if defined( SW_PLATFORM_LINUX )
     #include "Engine/Window/IWindow.h"
 
 namespace sw
@@ -47,25 +47,6 @@ namespace sw
         if ( bWritten == false )
             SW_LOG_WARNING_ID( "PlatformClipboard.ClipboardSelectionCouldNot", "Clipboard selection could not be set (X11: the server refused ownership; Wayland: no key/button input yet to take a serial from) - not written" );
         return bWritten;
-    }
-} // namespace sw
-#else
-namespace sw
-{
-    // 창이 없는 서버 빌드다. 클립보드를 이을 창이 없으므로 호스트는 `isAvailable` 을 보고 끼우지 않는다.
-    bool PlatformClipboard::isAvailable()
-    {
-        return false;
-    }
-
-    bool PlatformClipboard::readText( [[maybe_unused]] string& outText )
-    {
-        return false;
-    }
-
-    bool PlatformClipboard::writeText( [[maybe_unused]] string_view text )
-    {
-        return false;
     }
 } // namespace sw
 #endif

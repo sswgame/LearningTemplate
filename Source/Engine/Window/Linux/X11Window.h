@@ -100,7 +100,7 @@ namespace sw
         /** @brief `XMoveWindow` 이고, 띄우기 전이면 창 관리자가 그 자리를 따르도록 `WM_NORMAL_HINTS` 에 USPosition 을 켠다. */
         [[nodiscard]] bool setFramePosition( int32 x, int32 y ) override;
 
-#if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
+#if defined( SW_PLATFORM_LINUX )
         /**
          * @brief 이 창을 CLIPBOARD 선택의 주인으로 두고 @p text 를 들고 있습니다. 다른 프로그램의 요청(`SelectionRequest`)은 `processMessages` 가 답합니다.
          * @return 주인이 되지 못하면(창이 없거나 서버가 거절) false 입니다.
@@ -148,7 +148,7 @@ namespace sw
         void applyTextInputArea( const WindowTextInputArea& area ) override;
 
     private:
-#if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
+#if defined( SW_PLATFORM_LINUX )
         /** @brief 선택 이벤트(`SelectionRequest` · `SelectionClear`)면 처리하고 true 입니다. @p pEvent 는 `XEvent*` 입니다. */
         bool handleSelectionEvent( const void* pEvent );
         /** @brief 진행 중인 INCR 보내기가 기다리던 `PropertyNotify`(상대가 조각을 지움)면 다음 조각을 적고 true 입니다. @p pEvent 는 `XEvent*` 입니다. */

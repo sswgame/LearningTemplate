@@ -7,7 +7,7 @@
 #include "Engine/Window/Linux/X11Monitors.h"
 #include "Engine/Window/WindowMonitor.h"
 
-#if defined( SW_WITH_CLIENT_CODE )
+#if defined( SW_PLATFORM_LINUX )
     #include "Core/Foundation/PlatformOSHeaders.h"
     #include "Core/Foundation/X11Headers.h"
 

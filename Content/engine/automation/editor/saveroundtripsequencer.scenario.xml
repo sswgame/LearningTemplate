@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — Sequencer 저장 왕복: 테스트 시퀀스(sequencerkeys/sequencerkeys.seq.xml — 바인딩 하나, 빈 트랜스폼 트랙)의 실행마다 새 사본(scratch/saveroundtripsequencer)을 연다.
+  고치지 않고 저장(panel.saveDocument) → 글 붙잡기(asset.snapshotScratch) → 디스크에서 다시 읽기(panel.reloadDocument) → 다시 저장 → 같은 바이트(asset.expectScratchUnchanged).
+  다르면 읽기가 저장한 값을 잃거나 바꾼다. 틀은 saveroundtripmaterial 과 같다. 원본은 건드리지 않는다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/saveroundtripsequencer.scenario.xml -unattended
+-->
+<Scenario name="editor.saveroundtripsequencer" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
+	<Scratch from="engine/automation/editor/sequencerkeys" as="scratch/saveroundtripsequencer"/>
+	<EditorWaitSettled/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.focus sequencer"/>
+	<EditorWaitSettled/>
+	<DevCommand line="asset.openScratch scratch/saveroundtripsequencer/sequencerkeys.seq.xml"/>
+	<WaitUntil watch="Editor.SequencerBindingCount" equals="1" timeoutFrames="120"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.saveDocument sequencer"/>
+	<DevCommand line="asset.snapshotScratch scratch/saveroundtripsequencer/sequencerkeys.seq.xml"/>
+	<DevCommand line="panel.reloadDocument sequencer"/>
+	<WaitUntil watch="Editor.SequencerBindingCount" equals="1" timeoutFrames="120"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.saveDocument sequencer"/>
+	<DevCommand line="asset.expectScratchUnchanged scratch/saveroundtripsequencer/sequencerkeys.seq.xml"/>
+	<Expect watch="Editor.DirtyDocumentCount" equals="0"/>
+	<EditorWaitSettled/>
+	<Pass/>
+</Scenario>

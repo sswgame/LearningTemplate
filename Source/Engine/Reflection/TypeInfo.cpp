@@ -16,6 +16,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionConstants.h"
+#include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionEnumNames.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionValidation.h"
@@ -59,43 +60,28 @@ namespace sw
 
     const string* TypeInfo::findCustomMeta( const hashed_string& key ) const noexcept
     {
-        return _metadata->findCustomMeta( key );
+        return _metadata->getEditor().findCustomMeta( key );
     }
 
     string_view TypeInfo::getCategory() const noexcept
     {
-#if !defined( SW_SHIPPING )
-        return _metadata->_category;
-#else
-        return {};
-#endif
+        return _metadata->getEditor()._category;
     }
 
     const utf8* TypeInfo::getDisplayName() const noexcept
     {
-#if !defined( SW_SHIPPING )
-        if ( _metadata->_displayName.empty() == false )
-            return _metadata->_displayName.c_str();
-#endif
-        return _name.c_str();
+        const string& displayName = _metadata->getEditor()._displayName;
+        return displayName.empty() ? _name.c_str() : displayName.c_str();
     }
 
     string_view TypeInfo::getTooltip() const noexcept
     {
-#if !defined( SW_SHIPPING )
-        return _metadata->_tooltip;
-#else
-        return {};
-#endif
+        return _metadata->getEditor()._tooltip;
     }
 
     bool TypeInfo::isHiddenInMenu() const noexcept
     {
-#if !defined( SW_SHIPPING )
-        return _metadata->_bHideInMenu != SW_FALSE;
-#else
-        return false;
-#endif
+        return _metadata->getEditor()._bHideInMenu != SW_FALSE;
     }
 
     TypeInfo::TypeInfo() noexcept

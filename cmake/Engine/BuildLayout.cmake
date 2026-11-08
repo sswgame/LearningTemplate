@@ -95,6 +95,9 @@ if(SW_TARGET_TYPE STREQUAL "Server")
 	# `ISoundPlayer` · `IVoiceDecoder` 와 게임 코드의 창구(Engine/Presentation · GameFramework 의 Presentation)로만 이어진다. 클라이언트 전용 소스(`Client/`)도
 	# 짓지 않는다(`SW_CLIENT_ONLY_SOURCE_PATTERNS`). 언리얼 데디케이티드 서버는 오디오 모듈을 싣고 장치만 만들지 않는다 — 여기는 코드를 싣지 않는다(기억).
 	list(APPEND SW_UNBUILT_ENGINE_FOLDERS "Audio" "Renderer" "UI")
+	# 창 · 입력의 리눅스 데스크톱 구현(X11 · Wayland · evdev)도 짓지 않는다 — 리눅스 서버는 `Window/Headless` · `Input/Headless` 가 같은 함수를 정의한다.
+	# Windows 서버는 Win32 구현을 그대로 짓는다(user32 는 모든 Windows Server 에 있다). 클라이언트는 거꾸로 `Headless` 를 짓지 않는다(Source/Engine/CMakeLists.txt).
+	list(APPEND SW_UNBUILT_ENGINE_FOLDERS "Window/Linux" "Input/Linux")
 endif()
 
 if(SW_SHIPPING_BUILD)

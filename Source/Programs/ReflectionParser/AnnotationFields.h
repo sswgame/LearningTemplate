@@ -24,8 +24,8 @@ namespace sw
     enum class AnnotationEmit : uint8
     {
         Display, ///< Editor 와 같은 자리에 쓰는 표시 메타 — 어느 멤버(이벤트 포함)에나 붙는다
-        Editor,  ///< `#if !defined( SW_SHIPPING )` 블록 안의 `<접두>_metadata-><멤버>`
-        Runtime, ///< 같은 꼴, 블록 밖
+        Editor,  ///< 개발 전용 단위(`<이름>.gen.meta.cpp`)의 에디터 메타데이터 `<접두><멤버>`(엔진 `ReflectionEditorMetadata.h`)
+        Runtime, ///< 등록 단위(.gen.cpp)의 `<접두>_metadata-><멤버>`(엔진 `ReflectionMetadata.h`)
         Manual,  ///< CodeGenerator 가 직접 쓴다(템플릿 변수 · 별칭 등록 · 범위처럼 메타데이터 멤버가 아닌 자리)
     };
 
@@ -106,12 +106,20 @@ namespace sw
     struct AnnotationFields
     {
         /**
-         * @brief Editor · Runtime 필드를 표 순서대로 씁니다.
-         * @details Editor 묶음은 쓸 것이 있을 때만 `#if !defined( SW_SHIPPING )` 로 감쌉니다(빈 블록을 남기지 않습니다).
-         * @param prefix 생성 코드의 대상 식. 예: "p._metadata->" · "info._metadata->" · "info."
+         * @brief Runtime 필드를 표 순서대로 등록 단위(.gen.cpp)에 씁니다.
+         * @param prefix 생성 코드의 대상 식. 예: "p._metadata->" · "info._metadata->"
          */
         template <typename TParsed>
-        static void emitMetadata( CodeEmit& emit, const TParsed& parsed, string_view prefix );
+        static void emitRuntimeMetadata( CodeEmit& emit, const TParsed& parsed, string_view prefix );
+        /** @brief 개발 전용 단위에 쓸 에디터 메타데이터(Display · Editor 필드)가 하나라도 있으면 true 입니다. */
+        template <typename TParsed>
+        static bool hasEditorMetadata( const TParsed& parsed );
+        /**
+         * @brief Display · Editor 필드를 표 순서대로 개발 전용 단위(`<이름>.gen.meta.cpp`)에 씁니다. 배포 구성은 그 단위를 짓지 않는다 — 구조체 칸을 `#if` 로 가르지 않는다.
+         * @param prefix 생성 코드의 대상 식(에디터 메타데이터 객체). 예: "p." · "set._type."
+         */
+        template <typename TParsed>
+        static void emitEditorMetadata( CodeEmit& emit, const TParsed& parsed, string_view prefix );
 
         /**
          * @brief AnnotationMeta.txt 의 바인딩과 필드 표가 서로를 빠짐없이 가리키는지 봅니다.
@@ -128,8 +136,16 @@ namespace sw
     };
 
     // 정의는 AnnotationFields.cpp 에 있고 네 DTO 로만 인스턴스화합니다.
-    extern template void AnnotationFields::emitMetadata<ParsedTypeInfo>( CodeEmit&, const ParsedTypeInfo&, string_view );
-    extern template void AnnotationFields::emitMetadata<ParsedEnumInfo>( CodeEmit&, const ParsedEnumInfo&, string_view );
-    extern template void AnnotationFields::emitMetadata<ParsedPropertyInfo>( CodeEmit&, const ParsedPropertyInfo&, string_view );
-    extern template void AnnotationFields::emitMetadata<ParsedFunctionInfo>( CodeEmit&, const ParsedFunctionInfo&, string_view );
+    extern template void AnnotationFields::emitRuntimeMetadata<ParsedTypeInfo>( CodeEmit&, const ParsedTypeInfo&, string_view );
+    extern template void AnnotationFields::emitRuntimeMetadata<ParsedEnumInfo>( CodeEmit&, const ParsedEnumInfo&, string_view );
+    extern template void AnnotationFields::emitRuntimeMetadata<ParsedPropertyInfo>( CodeEmit&, const ParsedPropertyInfo&, string_view );
+    extern template void AnnotationFields::emitRuntimeMetadata<ParsedFunctionInfo>( CodeEmit&, const ParsedFunctionInfo&, string_view );
+    extern template bool AnnotationFields::hasEditorMetadata<ParsedTypeInfo>( const ParsedTypeInfo& );
+    extern template bool AnnotationFields::hasEditorMetadata<ParsedEnumInfo>( const ParsedEnumInfo& );
+    extern template bool AnnotationFields::hasEditorMetadata<ParsedPropertyInfo>( const ParsedPropertyInfo& );
+    extern template bool AnnotationFields::hasEditorMetadata<ParsedFunctionInfo>( const ParsedFunctionInfo& );
+    extern template void AnnotationFields::emitEditorMetadata<ParsedTypeInfo>( CodeEmit&, const ParsedTypeInfo&, string_view );
+    extern template void AnnotationFields::emitEditorMetadata<ParsedEnumInfo>( CodeEmit&, const ParsedEnumInfo&, string_view );
+    extern template void AnnotationFields::emitEditorMetadata<ParsedPropertyInfo>( CodeEmit&, const ParsedPropertyInfo&, string_view );
+    extern template void AnnotationFields::emitEditorMetadata<ParsedFunctionInfo>( CodeEmit&, const ParsedFunctionInfo&, string_view );
 } // namespace sw

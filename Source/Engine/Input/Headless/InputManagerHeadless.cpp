@@ -9,7 +9,7 @@
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/InputManager.h"
 
-#if defined( SW_PLATFORM_LINUX ) && !defined( SW_WITH_CLIENT_CODE )
+#if defined( SW_PLATFORM_LINUX )
 
 namespace sw
 {

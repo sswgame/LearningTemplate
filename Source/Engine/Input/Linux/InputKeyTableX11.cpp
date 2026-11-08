@@ -4,7 +4,7 @@
 
 #include "Engine/Input/Map/InputKeyTable.h"
 
-#if defined( SW_WITH_CLIENT_CODE )
+#if defined( SW_PLATFORM_LINUX )
     #include "Core/Foundation/X11Headers.h"
 
     #include <linux/input-event-codes.h>

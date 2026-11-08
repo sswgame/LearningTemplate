@@ -6,8 +6,7 @@
 
 #include "Engine/Window/Linux/X11InputMethod.h"
 
-#if defined( SW_WITH_CLIENT_CODE )
-    #include <clocale>
+#include <clocale>
 
 using namespace sw;
 
@@ -52,4 +51,3 @@ SW_TEST_CASE( X11InputMethodTest, PreeditTextIsDecodedWithTheLocale )
                                                        broken ) );
     SW_EXPECT_EQUAL( string( "a" ), broken );
 }
-#endif

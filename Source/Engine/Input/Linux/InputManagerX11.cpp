@@ -6,7 +6,7 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Window/MainWindowSubsystem.h"
 
-#if defined( SW_WITH_CLIENT_CODE )
+#if defined( SW_PLATFORM_LINUX )
     #include "Core/Foundation/X11Headers.h"
     #include "Core/Concurrency/atomic.h"
 

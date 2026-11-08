@@ -51,6 +51,7 @@
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionContainers.h"
+#include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/Scene.h"
@@ -493,7 +494,7 @@ namespace sw::editor
             ImGui::SameLine();
         }
         ImGui::TextUnformatted( InspectorPropertyLayout::getPropertyLabel( prop ).c_str() );
-        EditorWidgets::drawTooltip( prop._metadata->_tooltip.c_str() );
+        EditorWidgets::drawTooltip( prop._metadata->getEditor()._tooltip.c_str() );
         // 시나리오가 행 메뉴를 오른쪽 클릭으로 열 수 있게 이름 글에 레이블을 남긴다(`inspector.label.<타입>.<프로퍼티>`).
         fixed_string<constant::buffer::kMax128> labelMark;
         formatstring( labelMark.data(), labelMark.capacity(), "inspector.label.%#.%#", typeInfo._name.c_str(), prop._name.c_str() );
@@ -994,7 +995,7 @@ namespace sw::editor
 
     bool EditorPropertyGrid::isMethodListed( const FunctionInfo& method ) const
     {
-        return method._metadata->_bCallInEditor != SW_FALSE || _bShowAllMethods == SW_TRUE;
+        return method._metadata->getEditor()._bCallInEditor != SW_FALSE || _bShowAllMethods == SW_TRUE;
     }
 
     void EditorPropertyGrid::drawTypeMethod( void* pInstance, const TypeInfo* pTypeInfo, const FunctionInfo& method )
@@ -1004,14 +1005,14 @@ namespace sw::editor
             return;
 
         const utf8* pLabelName = method._name.c_str();
-        if ( method._metadata->_displayName.empty() == false )
-            pLabelName = method._metadata->_displayName.c_str();
+        if ( method._metadata->getEditor()._displayName.empty() == false )
+            pLabelName = method._metadata->getEditor()._displayName.c_str();
 
         const uint32 paramCount = method.getParameterCount();
         // 네트워크 함수(Server · Client · Multicast)를 여기서 부르면 RPC 경로(`RemoteCall`)를 지나지 않고 이 프로세스에서 바로 돈다 — 툴팁이 그렇게 알린다.
         const bool bNetRole = method._metadata->_netRole != FunctionNetRole::Local;
 
-        if ( method._metadata->_bCallInEditor != SW_FALSE && paramCount == 0 )
+        if ( method._metadata->getEditor()._bCallInEditor != SW_FALSE && paramCount == 0 )
         {
             // 강조색을 쓰지 않는다 — 앱 화면 규칙상 강조는 데이터 · 선택에만 둔다(전에는 패널 전용 파란 단추였다).
             ImGui::PushID( method._hashName.c_str() );
@@ -1023,7 +1024,7 @@ namespace sw::editor
             }
             if ( EditorSelfTestMarks::isEnabled() )
                 EditorSelfTestMarks::record( ( string( "inspector.method.run." ) + method._name.c_str() ).c_str() );
-            EditorWidgets::drawTooltip( bNetRole ? SW_LOCKEY( "EditorInspector", "NetRoleMethodRunsLocally" ) : method._metadata->_tooltip.c_str() );
+            EditorWidgets::drawTooltip( bNetRole ? SW_LOCKEY( "EditorInspector", "NetRoleMethodRunsLocally" ) : method._metadata->getEditor()._tooltip.c_str() );
             ImGui::PopID();
             return;
         }
@@ -1031,7 +1032,7 @@ namespace sw::editor
         ImGui::PushID( method._hashName.c_str() );
         ImGui::Text( "%s (%s)", pLabelName,
                      method._returnTypeName.empty() ? "?" : method._returnTypeName.c_str() );
-        if ( method._metadata->_bCallInEditor == SW_FALSE )
+        if ( method._metadata->getEditor()._bCallInEditor == SW_FALSE )
         {
             // 진단 보기에서만 보이는 줄이다 — 실행 안전성을 선언하지 않은 함수라는 표시를 색이 아니라 글로 단다.
             ImGui::SameLine();
@@ -1043,7 +1044,7 @@ namespace sw::editor
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorInspector", "NetRoleNotRoutedTag" ) );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "NetRoleMethodRunsLocally" ) );
         }
-        EditorWidgets::drawTooltip( method._metadata->_tooltip.c_str() );
+        EditorWidgets::drawTooltip( method._metadata->getEditor()._tooltip.c_str() );
         // 키는 타입 · 메서드 이름 원문이다(해시 조합은 부딪히면 다른 메서드의 인자 슬롯을 쓴다).
         const string                    slotKey  = string( pTypeInfo->_fullyQualifiedName.c_str() ) + '\x1F' + method._hashName.c_str();
         vector<InspectorMethodArgSlot>& listSlot = _mapMethodArgSlot[slotKey];
@@ -1116,7 +1117,7 @@ namespace sw::editor
             ImGui::PushID( event._name.c_str() );
             const string signature = InspectorPropertyLayout::formatParameterList( event._listParameter );
             ImGui::BulletText( "%s(%s)", event._name.c_str(), signature.c_str() );
-            EditorWidgets::drawTooltip( event._metadata->_tooltip.c_str() );
+            EditorWidgets::drawTooltip( event._metadata->getEditor()._tooltip.c_str() );
             ImGui::SameLine();
             ImGui::TextDisabled( "%s", ReflectionInvoke::isEventBound( event, pInstance ) ? "(bound)" : "(unbound)" );
             if ( event.getParameterCount() == 0 )

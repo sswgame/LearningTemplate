@@ -63,6 +63,8 @@ namespace sw
         , _mapCache{}
         , _mapLoading{}
         , _mutexCache{}
+        , _memoryHitCount{ 0 }
+        , _providerLoadCount{ 0 }
     {
     }
 
@@ -73,12 +75,23 @@ namespace sw
 
     bool ShaderCache::initialize()
     {
-        clearCache();
         // 콘텐츠 정책은 기동 때 정해지고(에셋 매니저 - 이 서브시스템이 그 뒤에 선다) 실행 중 바뀌지 않는다 - 공급자를 한 번 고른다.
         if ( AssetIO::getContentSource() == ContentSource::Cooked )
-            _pProvider = make_unique<CookedShaderBytecodeProvider>();
-        else
-            _pProvider = make_unique<LiveShaderBytecodeProvider>();
+            return initializeWithProvider( make_unique<CookedShaderBytecodeProvider>() );
+        return initializeWithProvider( make_unique<LiveShaderBytecodeProvider>() );
+    }
+
+    bool ShaderCache::initializeWithProvider( unique_ptr<IShaderBytecodeProvider> pProvider )
+    {
+        if ( pProvider == nullptr )
+        {
+            SW_LOG_ERROR_ID( "ShaderCache.NoProvider", "ShaderCache needs a bytecode provider (cooked or live) - not initialized" );
+            return false;
+        }
+        clearCache();
+        _memoryHitCount.store( 0 );
+        _providerLoadCount.store( 0 );
+        _pProvider = std::move( pProvider );
         return true;
     }
 
@@ -202,11 +215,15 @@ namespace sw
             {
                 const uint64 currentFingerprint = provider.computeFingerprint( cachedEntry._result );
                 if ( currentFingerprint != 0 && currentFingerprint == cachedEntry._sourceFingerprint )
+                {
+                    ++_memoryHitCount;
                     return cachedEntry._result;
+                }
             }
         }
 
         // 1) 공급자 — 쿠킹본 정책은 팩의 쿠킹본, 소스 정책은 실행 중 컴파일(셰이더 DDC 를 먼저 본다).
+        ++_providerLoadCount;
         ShaderCompileResult result = provider.load( desc );
         if ( result._bSuccess )
             storeEntry( std::move( cacheKey ), desc, result );

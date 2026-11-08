@@ -16,6 +16,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionConstants.h"
+#include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionEnumNames.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionValidation.h"
@@ -31,9 +32,7 @@ namespace sw
         : _mapNameToValue{}
         , _mapValueToName{}
         , _mapRedirectNameToValue{}
-#if !defined( SW_SHIPPING )
-        , _mapCustomMeta{}
-#endif
+        , _pEditor{ nullptr }
         , _name{}
         , _fullyQualifiedName{}
         , _moduleName{}
@@ -47,5 +46,10 @@ namespace sw
         , _bIsSigned{ SW_TRUE }
         , _reservedFlags{ 0 }
     {
+    }
+
+    const string* EnumInfo::findCustomMeta( const hashed_string& key ) const noexcept
+    {
+        return _pEditor != nullptr ? _pEditor->findCustomMeta( key ) : nullptr;
     }
 } // namespace sw

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 스프라이트 클립 창 저장 왕복: 테스트 클립(spriteclipregion/hero.sprite.xml — 프레임 둘)의 실행마다 새 사본(scratch/saveroundtripspriteclip)을 연다.
+  고치지 않고 저장(panel.saveDocument) → 글 붙잡기(asset.snapshotScratch) → 디스크에서 다시 읽기(panel.reloadDocument) → 다시 저장 → 같은 바이트(asset.expectScratchUnchanged).
+  다시 읽은 뒤에도 프레임은 둘이다. 틀은 saveroundtripmaterial 과 같다. 원본은 건드리지 않는다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/saveroundtripspriteclip.scenario.xml -unattended
+-->
+<Scenario name="editor.saveroundtripspriteclip" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
+	<Scratch from="engine/automation/editor/spriteclipregion" as="scratch/saveroundtripspriteclip"/>
+	<EditorWaitSettled/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.focus sprite_clip"/>
+	<EditorWaitSettled/>
+	<DevCommand line="asset.openScratch scratch/saveroundtripspriteclip/hero.sprite.xml"/>
+	<WaitUntil watch="Editor.SpriteClipFrameCount" equals="2" timeoutFrames="120"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.saveDocument sprite_clip"/>
+	<DevCommand line="asset.snapshotScratch scratch/saveroundtripspriteclip/hero.sprite.xml"/>
+	<DevCommand line="panel.reloadDocument sprite_clip"/>
+	<WaitUntil watch="Editor.SpriteClipFrameCount" equals="2" timeoutFrames="120"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.saveDocument sprite_clip"/>
+	<DevCommand line="asset.expectScratchUnchanged scratch/saveroundtripspriteclip/hero.sprite.xml"/>
+	<Expect watch="Editor.DirtyDocumentCount" equals="0"/>
+	<EditorWaitSettled/>
+	<Pass/>
+</Scenario>

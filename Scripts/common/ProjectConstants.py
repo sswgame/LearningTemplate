@@ -54,6 +54,8 @@ kFileAssetReferenceFieldsList = "AssetReferenceFields.list"
 # 리플렉션 생성 계약 — 파서(`sw::config`) · CMake(`SW_*`) · 템플릿(`$Banner`)이 이 표 하나를 쓴다(예전에는 JSON `emit` · 파서 기본값 · CMake 글자 · 템플릿 네 곳).
 # 자리 표시자는 "스탬프 없음" 하나로 알아본다 — CMake 가 자리 표시자를 심을 때 스탬프(`<.gen.cpp><kExtReflectionStamp>`)를 지운다.
 kExtReflectionGenCpp = ".gen.cpp"
+# 헤더마다의 개발 전용 단위 — 에디터 메타데이터(표시 · 편집 필드)를 채워 올린다. 배포 구성은 짓지 않는다(`sw_addReflectionStep`, 언리얼 WITH_METADATA 자리)
+kExtReflectionGenMetaCpp = ".gen.meta.cpp"
 kExtReflectionGenHeader = ".gen.h"
 kExtReflectionTemplate = ".tpl"
 kExtReflectionStamp = ".stamp"

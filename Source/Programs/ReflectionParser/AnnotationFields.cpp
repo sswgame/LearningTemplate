@@ -69,7 +69,7 @@ namespace sw
             static bool isValueSet( const vector<pair<string, string>>& listPair ) noexcept { return listPair.empty() == false; }
             static bool isValueSet( const FunctionNetRole role ) noexcept { return role != FunctionNetRole::Local; }
 
-            /** @brief `#if !defined( SW_SHIPPING )` 블록 안에 쓰는 줄인지 봅니다(Display · Editor). */
+            /** @brief 개발 전용 단위(`<이름>.gen.meta.cpp`)에 쓰는 에디터 메타데이터 줄인지 봅니다(Display · Editor). */
             static constexpr bool isEditorBlock( const AnnotationEmit emit ) { return emit == AnnotationEmit::Display || emit == AnnotationEmit::Editor; }
 
             static void emitValue( CodeEmit& emit, const string_view prefix, const string_view member, const uint8 value )
@@ -488,42 +488,48 @@ namespace sw
     }
 
     template <typename TParsed>
-    void AnnotationFields::emitMetadata( CodeEmit& emit, const TParsed& parsed, const string_view prefix )
+    void AnnotationFields::emitRuntimeMetadata( CodeEmit& emit, const TParsed& parsed, const string_view prefix )
     {
-        const AnnotationScope<TParsed>& scope = getAnnotationScope<TParsed>();
-
-        bool bHasEditorField = false;
-        for ( const AnnotationField<TParsed>& field : scope )
-        {
-            if ( AnnotationFieldsInternal::isEditorBlock( field._emit ) && field._pIsSet( parsed ) )
-            {
-                bHasEditorField = true;
-                break;
-            }
-        }
-
-        if ( bHasEditorField )
-        {
-            emit.line( "#if !defined( SW_SHIPPING )" );
-            for ( const AnnotationField<TParsed>& field : scope )
-            {
-                if ( AnnotationFieldsInternal::isEditorBlock( field._emit ) )
-                    field._pEmit( emit, prefix, parsed );
-            }
-            emit.line( "#endif" );
-        }
-
-        for ( const AnnotationField<TParsed>& field : scope )
+        for ( const AnnotationField<TParsed>& field : getAnnotationScope<TParsed>() )
         {
             if ( field._emit == AnnotationEmit::Runtime )
                 field._pEmit( emit, prefix, parsed );
         }
     }
 
-    template void AnnotationFields::emitMetadata<ParsedTypeInfo>( CodeEmit&, const ParsedTypeInfo&, string_view );
-    template void AnnotationFields::emitMetadata<ParsedEnumInfo>( CodeEmit&, const ParsedEnumInfo&, string_view );
-    template void AnnotationFields::emitMetadata<ParsedPropertyInfo>( CodeEmit&, const ParsedPropertyInfo&, string_view );
-    template void AnnotationFields::emitMetadata<ParsedFunctionInfo>( CodeEmit&, const ParsedFunctionInfo&, string_view );
+    template <typename TParsed>
+    bool AnnotationFields::hasEditorMetadata( const TParsed& parsed )
+    {
+        for ( const AnnotationField<TParsed>& field : getAnnotationScope<TParsed>() )
+        {
+            if ( AnnotationFieldsInternal::isEditorBlock( field._emit ) && field._pIsSet( parsed ) )
+                return true;
+        }
+        return false;
+    }
+
+    template <typename TParsed>
+    void AnnotationFields::emitEditorMetadata( CodeEmit& emit, const TParsed& parsed, const string_view prefix )
+    {
+        for ( const AnnotationField<TParsed>& field : getAnnotationScope<TParsed>() )
+        {
+            if ( AnnotationFieldsInternal::isEditorBlock( field._emit ) )
+                field._pEmit( emit, prefix, parsed );
+        }
+    }
+
+    template void AnnotationFields::emitRuntimeMetadata<ParsedTypeInfo>( CodeEmit&, const ParsedTypeInfo&, string_view );
+    template void AnnotationFields::emitRuntimeMetadata<ParsedEnumInfo>( CodeEmit&, const ParsedEnumInfo&, string_view );
+    template void AnnotationFields::emitRuntimeMetadata<ParsedPropertyInfo>( CodeEmit&, const ParsedPropertyInfo&, string_view );
+    template void AnnotationFields::emitRuntimeMetadata<ParsedFunctionInfo>( CodeEmit&, const ParsedFunctionInfo&, string_view );
+    template bool AnnotationFields::hasEditorMetadata<ParsedTypeInfo>( const ParsedTypeInfo& );
+    template bool AnnotationFields::hasEditorMetadata<ParsedEnumInfo>( const ParsedEnumInfo& );
+    template bool AnnotationFields::hasEditorMetadata<ParsedPropertyInfo>( const ParsedPropertyInfo& );
+    template bool AnnotationFields::hasEditorMetadata<ParsedFunctionInfo>( const ParsedFunctionInfo& );
+    template void AnnotationFields::emitEditorMetadata<ParsedTypeInfo>( CodeEmit&, const ParsedTypeInfo&, string_view );
+    template void AnnotationFields::emitEditorMetadata<ParsedEnumInfo>( CodeEmit&, const ParsedEnumInfo&, string_view );
+    template void AnnotationFields::emitEditorMetadata<ParsedPropertyInfo>( CodeEmit&, const ParsedPropertyInfo&, string_view );
+    template void AnnotationFields::emitEditorMetadata<ParsedFunctionInfo>( CodeEmit&, const ParsedFunctionInfo&, string_view );
 
     bool AnnotationFields::acceptsOnEvent( const string_view propertyFieldID )
     {

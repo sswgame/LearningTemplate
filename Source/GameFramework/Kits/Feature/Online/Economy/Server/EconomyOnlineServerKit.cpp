@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Network/DevOnlineExtension.h"
+
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/Catalog/CurrencyCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/Catalog/OfferCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyDevOptions.h"
@@ -8,7 +10,6 @@
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptProviderSet.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptValidator.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Provider/OnlineProviderFile.h"
-#include "GameFramework/Runtime/Online/Config/DevOnlineExtension.h"
 #include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"

@@ -3,12 +3,12 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginTicketKey.h"
 
 #include "Core/Memory/Memory.h"
+#include "Core/Network/DevOnlineExtension.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Config/Server/ServerSecret.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/AccountDevOptions.h"
-#include "GameFramework/Runtime/Online/Config/DevOnlineExtension.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 namespace sw

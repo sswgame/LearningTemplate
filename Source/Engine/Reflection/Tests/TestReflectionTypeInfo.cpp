@@ -5,6 +5,7 @@
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/Reflection.h"
+#include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/Tests/ReflectionTestTypes.h"
 #include "Engine/Reflection/Tests/ScopedTestModule.h"
@@ -133,23 +134,21 @@ SW_TEST_CASE( ReflectionTypeInfoTest, MetadataBoxCopiesByValue )
  */
 SW_TEST_CASE( ReflectionTypeInfoTest, PropertyMetadataSupport )
 {
-    sw::PropertyInfo prop;
-#if !defined( SW_SHIPPING )
-    prop._metadata->_category    = "Rendering";
-    prop._metadata->_displayName = "Light Intensity";
-    prop._metadata->_tooltip     = "Controls light intensity";
-#endif
+    sw::PropertyInfo           prop;
+    sw::PropertyEditorMetadata editor; // 에디터 메타데이터는 옆 표다 — 런타임 메타데이터는 포인터로만 가리킨다(`ReflectionEditorMetadata.h`)
+    editor._category              = "Rendering";
+    editor._displayName           = "Light Intensity";
+    editor._tooltip               = "Controls light intensity";
+    prop._metadata->_pEditor      = &editor;
     prop._metadata->_minRange     = 0.0f;
     prop._metadata->_maxRange     = 100.0f;
     prop._metadata->_bHasMinRange = SW_TRUE;
     prop._metadata->_bHasMaxRange = SW_TRUE;
     prop._metadata->_bReadOnly    = SW_TRUE;
 
-#if !defined( SW_SHIPPING )
-    SW_EXPECT_EQUAL( sw::string( "Rendering" ), prop._metadata->_category );
-    SW_EXPECT_EQUAL( sw::string( "Light Intensity" ), prop._metadata->_displayName );
-    SW_EXPECT_EQUAL( sw::string( "Controls light intensity" ), prop._metadata->_tooltip );
-#endif
+    SW_EXPECT_EQUAL( sw::string( "Rendering" ), prop._metadata->getEditor()._category );
+    SW_EXPECT_EQUAL( sw::string( "Light Intensity" ), prop._metadata->getEditor()._displayName );
+    SW_EXPECT_EQUAL( sw::string( "Controls light intensity" ), prop._metadata->getEditor()._tooltip );
     SW_EXPECT_NEAR( 0.0f, prop._metadata->_minRange, 1e-4f );
     SW_EXPECT_NEAR( 100.0f, prop._metadata->_maxRange, 1e-4f );
     SW_EXPECT_TRUE( prop._metadata->hasFullRange() );
@@ -441,11 +440,9 @@ SW_TEST_CASE( ReflectionTypeInfoTest, PropertyAnnotationMetadataCodegen )
     SW_REQUIRE_TRUE( typeInfo != nullptr );
     const sw::PropertyInfo* hp = typeInfo->findProperty( sw::hashed_string( "_hp" ) );
     SW_REQUIRE_TRUE( hp != nullptr );
-#if !defined( SW_SHIPPING )
-    SW_EXPECT_EQUAL( sw::string( "Stats" ), hp->_metadata->_category );
-    SW_EXPECT_EQUAL( sw::string( "Hit Points" ), hp->_metadata->_displayName );
-    SW_EXPECT_EQUAL( sw::string( "Current HP" ), hp->_metadata->_tooltip );
-#endif
+    SW_EXPECT_EQUAL( sw::string( "Stats" ), hp->_metadata->getEditor()._category );
+    SW_EXPECT_EQUAL( sw::string( "Hit Points" ), hp->_metadata->getEditor()._displayName );
+    SW_EXPECT_EQUAL( sw::string( "Current HP" ), hp->_metadata->getEditor()._tooltip );
     SW_EXPECT_TRUE( hp->_metadata->_bReadOnly );
 }
 
@@ -454,7 +451,6 @@ SW_TEST_CASE( ReflectionTypeInfoTest, PropertyAnnotationMetadataCodegen )
  */
 SW_TEST_CASE( ReflectionMetadataTest, TypeMetadataQuery )
 {
-#if !defined( SW_SHIPPING )
     const sw::TypeInfo* pType = sw::engine::getSubsystem<sw::TypeRegistry>().findType<sw::MetaTestActor>();
     SW_REQUIRE_NOT_NULL( pType );
 
@@ -470,7 +466,6 @@ SW_TEST_CASE( ReflectionMetadataTest, TypeMetadataQuery )
     const sw::string* pPriority = pType->findCustomMeta( sw::hashed_string( "Priority" ) );
     SW_REQUIRE_NOT_NULL( pPriority );
     SW_EXPECT_TRUE( *pPriority == "10" );
-#endif
 }
 
 /**
@@ -478,7 +473,6 @@ SW_TEST_CASE( ReflectionMetadataTest, TypeMetadataQuery )
  */
 SW_TEST_CASE( ReflectionMetadataTest, PropertyMetadataQuery )
 {
-#if !defined( SW_SHIPPING )
     const sw::TypeInfo* pType = sw::engine::getSubsystem<sw::TypeRegistry>().findType<sw::MetaTestActor>();
     SW_REQUIRE_NOT_NULL( pType );
 
@@ -486,10 +480,10 @@ SW_TEST_CASE( ReflectionMetadataTest, PropertyMetadataQuery )
     SW_REQUIRE_NOT_NULL( pHealth );
 
     SW_EXPECT_TRUE( pHealth->_metadata->_bTransient == SW_TRUE );
-    SW_EXPECT_TRUE( pHealth->_metadata->_bHideInInspector == SW_TRUE );
-    SW_EXPECT_TRUE( pHealth->_metadata->_displayName == "Health Points" );
-    SW_EXPECT_TRUE( pHealth->_metadata->_category == "Stats" );
-    SW_EXPECT_TRUE( pHealth->_metadata->_tooltip == "Current health" );
+    SW_EXPECT_TRUE( pHealth->_metadata->getEditor()._bHideInInspector == SW_TRUE );
+    SW_EXPECT_TRUE( pHealth->_metadata->getEditor()._displayName == "Health Points" );
+    SW_EXPECT_TRUE( pHealth->_metadata->getEditor()._category == "Stats" );
+    SW_EXPECT_TRUE( pHealth->_metadata->getEditor()._tooltip == "Current health" );
 
     const sw::string* pUnits = pHealth->findCustomMeta( sw::hashed_string( "Units" ) );
     SW_REQUIRE_NOT_NULL( pUnits );
@@ -502,8 +496,7 @@ SW_TEST_CASE( ReflectionMetadataTest, PropertyMetadataQuery )
     const sw::PropertyInfo* pArmor = pType->findProperty( sw::hashed_string( "_armor" ) );
     SW_REQUIRE_NOT_NULL( pArmor );
     SW_EXPECT_TRUE( pArmor->_metadata->_bTransient == SW_FALSE );
-    SW_EXPECT_TRUE( pArmor->_metadata->_bHideInInspector == SW_FALSE );
-#endif
+    SW_EXPECT_TRUE( pArmor->_metadata->getEditor()._bHideInInspector == SW_FALSE );
 }
 
 /**
@@ -511,23 +504,21 @@ SW_TEST_CASE( ReflectionMetadataTest, PropertyMetadataQuery )
  */
 SW_TEST_CASE( ReflectionMetadataTest, FunctionMetadataQuery )
 {
-#if !defined( SW_SHIPPING )
     const sw::TypeInfo* pType = sw::engine::getSubsystem<sw::TypeRegistry>().findType<sw::MetaTestActor>();
     SW_REQUIRE_NOT_NULL( pType );
 
     const sw::FunctionInfo* pMethod = pType->findMethod( sw::hashed_string( "resetHealth" ) );
     SW_REQUIRE_NOT_NULL( pMethod );
 
-    SW_EXPECT_TRUE( pMethod->_metadata->_bCallInEditor == SW_TRUE );
-    SW_EXPECT_TRUE( pMethod->_metadata->_displayName == "Reset Health" );
-    SW_EXPECT_TRUE( pMethod->_metadata->_category == "Actions" );
-    SW_EXPECT_TRUE( pMethod->_metadata->_tooltip == "Resets health to 100" );
-    SW_EXPECT_TRUE( pMethod->_metadata->_editorPreview == "HealthReset" );
+    SW_EXPECT_TRUE( pMethod->_metadata->getEditor()._bCallInEditor == SW_TRUE );
+    SW_EXPECT_TRUE( pMethod->_metadata->getEditor()._displayName == "Reset Health" );
+    SW_EXPECT_TRUE( pMethod->_metadata->getEditor()._category == "Actions" );
+    SW_EXPECT_TRUE( pMethod->_metadata->getEditor()._tooltip == "Resets health to 100" );
+    SW_EXPECT_TRUE( pMethod->_metadata->getEditor()._editorPreview == "HealthReset" );
 
     const sw::string* pActionType = pMethod->findCustomMeta( sw::hashed_string( "ActionType" ) );
     SW_REQUIRE_NOT_NULL( pActionType );
     SW_EXPECT_TRUE( *pActionType == "Reset" );
-#endif
 }
 
 /**
@@ -535,7 +526,6 @@ SW_TEST_CASE( ReflectionMetadataTest, FunctionMetadataQuery )
  */
 SW_TEST_CASE( ReflectionMetadataTest, EnumMetadataQuery )
 {
-#if !defined( SW_SHIPPING )
     const sw::EnumInfo* pEnumInfo = sw::engine::getSubsystem<sw::TypeRegistry>().findEnum( sw::hashed_string( "TestMetaEnum" ) );
     SW_REQUIRE_NOT_NULL( pEnumInfo );
 
@@ -546,7 +536,6 @@ SW_TEST_CASE( ReflectionMetadataTest, EnumMetadataQuery )
     const sw::string* pVersion = pEnumInfo->findCustomMeta( sw::hashed_string( "Version" ) );
     SW_REQUIRE_NOT_NULL( pVersion );
     SW_EXPECT_TRUE( *pVersion == "2" );
-#endif
 }
 
 /**

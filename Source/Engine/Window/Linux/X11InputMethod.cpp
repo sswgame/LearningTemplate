@@ -6,7 +6,7 @@
 #include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/String/StringUtil.h"
 
-#if defined( SW_WITH_CLIENT_CODE )
+#if defined( SW_PLATFORM_LINUX )
     #include "Core/Foundation/X11Headers.h"
 
     #include <clocale>

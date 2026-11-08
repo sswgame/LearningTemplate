@@ -32,6 +32,7 @@
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/Reflection.h"
+#include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
@@ -348,7 +349,7 @@ namespace sw::editor
                 item._componentName   = pTypeInfo->getDisplayName();
                 item._componentKey    = key;
                 item._propertyName    = prop._name.c_str();
-                item._propertyLabel   = EditorDisplayNameUtil::chooseLabel( prop._metadata->_displayName, prop._name.c_str() );
+                item._propertyLabel   = EditorDisplayNameUtil::chooseLabel( prop._metadata->getEditor()._displayName, prop._name.c_str() );
                 item._defaultValue    = SerializerUtil::formatPropertyText( prop, ObjectAddress{ pCdoComp }, context );
                 item._overriddenValue = SerializerUtil::formatPropertyText( prop, ObjectAddress{ pInstanceComponent }, context );
                 item._bModified       = ( SerializerUtil::arePropertyValuesEqual( prop, ObjectAddress{ pCdoComp }, ObjectAddress{ pInstanceComponent }, context ) == false );

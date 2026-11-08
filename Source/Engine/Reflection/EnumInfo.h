@@ -7,6 +7,8 @@
 
 namespace sw
 {
+    struct EnumEditorMetadata;
+
     /// @brief 등록된 enum 의 정보입니다. 이름과 값의 대응, Flags 여부, Invalid 와 Count 센티널을 담습니다.
     struct SW_API EnumInfo
     {
@@ -19,12 +21,11 @@ namespace sw
          *          선언이 없는 옛 이름은 여기 없으므로 읽기가 실패합니다(조용히 기본값으로 읽지 않습니다).
          */
         unordered_map<hashed_string, int64> _mapRedirectNameToValue;
-#if !defined( SW_SHIPPING )
-        unordered_map<hashed_string, string> _mapCustomMeta;
-#endif
-        hashed_string _name;
-        hashed_string _fullyQualifiedName;
-        hashed_string _moduleName;
+        /** @brief 에디터 메타데이터(`ReflectionEditorMetadata.h` — 커스텀 메타)입니다. 열거형을 등록할 때 `TypeRegistry` 가 붙이고, 없으면(배포 · 적은 것 없음) nullptr 입니다. */
+        const EnumEditorMetadata* _pEditor;
+        hashed_string             _name;
+        hashed_string             _fullyQualifiedName;
+        hashed_string             _moduleName;
         /**
          * @brief 값이 곧 인덱스인 이름 목록입니다. 열거자 값이 `0..N-1` 로 빈틈없는 열거형에만 생성기가 채우고, 그 밖에는 비어 있습니다.
          * @details `valueToCString` 이 해시 맵 대신 이 목록을 봅니다. 원소는 `_mapValueToName` 과 같은 intern 된 이름이라 돌려주는 포인터도 같습니다.
@@ -44,17 +45,8 @@ namespace sw
         /** @brief 비어 있는 이름-값 맵으로 만듭니다. */
         EnumInfo() noexcept;
 
-        /** @brief 커스텀 메타데이터를 조회합니다. Shipping 빌드에서는 nullptr 를 반환합니다. */
-        const string* findCustomMeta( const hashed_string& key ) const noexcept
-        {
-#if !defined( SW_SHIPPING )
-            auto iter = _mapCustomMeta.find( key );
-            return ( iter != _mapCustomMeta.end() ) ? &iter->second : nullptr;
-#else
-            (void)key;
-            return nullptr;
-#endif
-        }
+        /** @brief 커스텀 메타데이터를 조회합니다. 에디터 메타데이터가 붙지 않았으면(배포) nullptr 입니다. */
+        const string* findCustomMeta( const hashed_string& key ) const noexcept;
 
         /**
          * @brief 메모리 포인터에서 실제 enum 크기만큼 안전하게 읽어 int64 로 반환합니다.

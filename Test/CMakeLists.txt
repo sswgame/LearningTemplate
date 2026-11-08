@@ -42,8 +42,20 @@ if(SW_UNIT_TEST_SHARDS LESS_EQUAL 1)
 		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Testing")
 	set_tests_properties(UnitTests.OtherWorkingFolder PROPERTIES LABELS nogpu TIMEOUT 300)
 
+	# 작업 폴더를 바꿔도 같은 자리를 가리키는 상대 경로 인자의 산출물은 같은 자리에 생기고, 빈 작업 폴더에는 아무것도 생기지 않는다(R5 — 스크립트 머리말).
+	add_test(NAME CommandLine.WorkingFolderPair
+		COMMAND ${CMAKE_COMMAND} -DAPP=$<TARGET_FILE:App> "-DBIN_DIR=${CMAKE_BINARY_DIR}/Bin" "-DOTHER_DIR=${CMAKE_BINARY_DIR}/Testing/WorkingFolder/Empty"
+			"-DOUT_DIR=${CMAKE_BINARY_DIR}/Testing/WorkingFolder/Out" "-DFILTER=FileSystemTest.*,AbsolutePathTest.*"
+			-P "${CMAKE_CURRENT_SOURCE_DIR}/CommandLine/RunWorkingFolderPair.cmake")
+	set_tests_properties(CommandLine.WorkingFolderPair PROPERTIES LABELS nogpu TIMEOUT 300)
+
 	# 틀린 명령줄은 기동을 멈춘다(값을 0 · false 로 바꿔 계속하던 폴백을 없앴다) — 모르는 인자 · 정수 아닌 정수 · 빈 경로.
-	foreach(swBadArgument IN ITEMS "--no-such-argument" "-W=abc" "-log-file=")
+	# Windows 의 드라이브 상대(`C:foo`) · 루트 상대(`\foo`) 경로는 절대도 상대도 아니라 디스크 경로 인자가 거절한다(`AbsolutePath::tryResolve`). POSIX 에서 `\foo` 는 이름일 뿐이다.
+	set(listBadArgument "--no-such-argument" "-W=abc" "-log-file=")
+	if(WIN32)
+		list(APPEND listBadArgument "--test-report=C:foo.json" "--test-report=\\foo.json")
+	endif()
+	foreach(swBadArgument IN LISTS listBadArgument)
 		string(MAKE_C_IDENTIFIER "${swBadArgument}" swBadArgumentName)
 		add_test(NAME CommandLine.Rejects${swBadArgumentName}
 			COMMAND $<TARGET_FILE:App> --test -unattended ${swBadArgument}
@@ -196,6 +208,14 @@ if(TARGET OnlineLoadBot)
 	endif()
 endif()
 
+# 셰이더 캐시 — DDC 와 쿠킹 스테이징을 모두 지운 뒤 굽고 판정한다(`Shader/RunShaderCacheRebuild.cmake`). DDC 는 빌드 폴더가 함께 쓰는 자리라 다른 테스트와 나란히 돌지 않는다.
+add_test(NAME ShaderCache.RebuildFromEmpty
+	COMMAND ${CMAKE_COMMAND} -DAPP=$<TARGET_FILE:App> "-DDDC_DIR=${CMAKE_BINARY_DIR}/Bin/Saved/ShaderCompileCache"
+		"-DCOOKED_DIR=${CMAKE_BINARY_DIR}/Testing/ShaderCache/Cooked" "-DLOG_DIR=${CMAKE_BINARY_DIR}/Testing/Logs"
+		-P "${CMAKE_CURRENT_SOURCE_DIR}/Shader/RunShaderCacheRebuild.cmake"
+	WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
+set_tests_properties(ShaderCache.RebuildFromEmpty PROPERTIES LABELS nogpu TIMEOUT 3600 RUN_SERIAL TRUE)
+
 # 리플렉션 파서 — Engine 을 링크하지 못해 단위 테스트 틀에 들어가지 못한다. 사례 헤더 하나마다 실제 실행 파일을 돌려 산출물 · 오류를 대조한다(`ReflectionParser/RunParserFixture.cmake`, 왜 이 모양인지 거기 적었다).
 if(TARGET ReflectionParser)
 	file(GLOB listParserFixture CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/ReflectionParser/Fixtures/*.h")
@@ -215,8 +235,27 @@ if(TARGET ReflectionParser)
 				"-DTYPES_LIST_NAME=${SW_FILE_REFLECTED_TYPES_LIST}"
 				"-DASSET_FIELDS_LIST_NAME=${SW_FILE_ASSET_REFERENCE_FIELDS_LIST}"
 				"-DGEN_CPP_SUFFIX=${SW_EXT_REFLECTION_GEN_CPP}"
+				"-DGEN_META_CPP_SUFFIX=${SW_EXT_REFLECTION_GEN_META_CPP}"
 				-P "${CMAKE_CURRENT_SOURCE_DIR}/ReflectionParser/RunParserFixture.cmake")
 		set_tests_properties(ReflectionParser.${swParserFixtureName} PROPERTIES LABELS nogpu TIMEOUT 120)
+	endforeach()
+	# 도구 입력 — 같은 입력 두 번이면 같은 바이트 · 시각 그대로, 설정 · 템플릿 · 철자 표가 깨지면 0 이 아닌 종료(`ReflectionParser/RunParserToolInputs.cmake`).
+	foreach(swParserToolMode IN ITEMS determinism broken-config broken-templates broken-spelling)
+		add_test(NAME ReflectionParser.ToolInputs.${swParserToolMode}
+			COMMAND ${CMAKE_COMMAND}
+				"-DMODE=${swParserToolMode}"
+				"-DPARSER=$<TARGET_FILE:ReflectionParser>"
+				"-DFIXTURE=${CMAKE_CURRENT_SOURCE_DIR}/ReflectionParser/Fixtures/ValidTypes.h"
+				"-DWORK_DIR=${CMAKE_BINARY_DIR}/Testing/ReflectionParser/ToolInputs.${swParserToolMode}"
+				"-DSOURCE_ROOT=${CMAKE_SOURCE_DIR}"
+				"-DGENERATED_DIR=${CMAKE_BINARY_DIR}/generated"
+				"-DBUILTINS=${CMAKE_SOURCE_DIR}/${SW_FILE_REFLECT_BUILTINS}"
+				"-DANNOTATION_META=${CMAKE_SOURCE_DIR}/${SW_FILE_ANNOTATION_META}"
+				"-DTEMPLATES=${CMAKE_SOURCE_DIR}/${SW_DIR_TOOLS_REFLECTION_TEMPLATES}"
+				"-DCONFIG=${CMAKE_SOURCE_DIR}/${SW_DIR_CONFIG_ENV}/${SW_FILE_PARSER_DEFAULTS}"
+				"-DGEN_CPP_SUFFIX=${SW_EXT_REFLECTION_GEN_CPP}"
+				-P "${CMAKE_CURRENT_SOURCE_DIR}/ReflectionParser/RunParserToolInputs.cmake")
+		set_tests_properties(ReflectionParser.ToolInputs.${swParserToolMode} PROPERTIES LABELS nogpu TIMEOUT 120)
 	endforeach()
 	# 틀린 명령줄은 파서를 멈춘다 — 모르는 인자 · 필수 인자 빠짐. 입력을 읽기 전이라 사례 헤더가 필요 없다.
 	add_test(NAME ReflectionParser.RejectsUnknownArgument COMMAND $<TARGET_FILE:ReflectionParser> --no-such-argument)

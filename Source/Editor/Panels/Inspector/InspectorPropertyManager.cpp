@@ -40,6 +40,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/Reflection.h"
+#include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/SceneManager.h"
@@ -86,7 +87,7 @@ namespace sw::editor
         protected:
             void showTooltipIfHovered( const PropertyInfo& prop )
             {
-                EditorWidgets::drawTooltip( prop._metadata->_tooltip.c_str() );
+                EditorWidgets::drawTooltip( prop._metadata->getEditor()._tooltip.c_str() );
             }
             void drawReadOnlyText( const PropertyInfo& prop, const utf8* pValue )
             {
@@ -108,7 +109,7 @@ namespace sw::editor
             /** @brief 색 편집 플래그입니다. `ColorHDR` 이면 1 을 넘는 값을 받습니다. */
             ImGuiColorEditFlags getColorFlags( const PropertyInfo& prop )
             {
-                return ImGuiColorEditFlags_Float | ( prop._metadata->_bColorHDR != SW_FALSE ? ImGuiColorEditFlags_HDR : ImGuiColorEditFlags_None );
+                return ImGuiColorEditFlags_Float | ( prop._metadata->getEditor()._bColorHDR != SW_FALSE ? ImGuiColorEditFlags_HDR : ImGuiColorEditFlags_None );
             }
 
             /** @brief 비트필드는 포인터를 잡을 수 없으므로 값으로 읽고 씁니다. 정수 계열과 bool 이 같은 체크박스를 씁니다. */
@@ -174,7 +175,7 @@ namespace sw::editor
                     for ( const EditorAssetIndexEntry& entry : picker._listEntry )
                     {
                         // 타입 있는 참조는 대상 종류가 거른다(언리얼 `TSoftObjectPtr<T>` 의 선택기와 같다). 그 밖의 경로 칸은 `FileFilter` 를 본다.
-                        const bool bMatchesKind = pTargetType != nullptr ? AssetRefBase::isPathOfTarget( entry._path, *pTargetType ) : InspectorPropertyLayout::matchesFileFilter( prop._metadata->_fileFilter, entry._path );
+                        const bool bMatchesKind = pTargetType != nullptr ? AssetRefBase::isPathOfTarget( entry._path, *pTargetType ) : InspectorPropertyLayout::matchesFileFilter( prop._metadata->getEditor()._fileFilter, entry._path );
                         if ( bMatchesKind == false ||
                              filter.matchesAny( { string_view{ entry._path }, string_view{ entry._title } } ) == false )
                             continue;
@@ -734,12 +735,12 @@ namespace sw::editor
                         [pPtr]( const utf8* pID )
                     { EditorWidgets::drawTextField( pID, *pPtr ); }, prop, string_view{ *pPtr }, droppedPath );
                     // `FileFilter` 에 맞지 않는 파일은 받지 않는다. 드롭, 선택, 지우기는 위젯 편집이 아니라 그리드가 적용해야 알림과 되돌리기에 남는다.
-                    if ( action == AssetFieldAction::Dropped && InspectorPropertyLayout::matchesFileFilter( prop._metadata->_fileFilter, droppedPath ) )
+                    if ( action == AssetFieldAction::Dropped && InspectorPropertyLayout::matchesFileFilter( prop._metadata->getEditor()._fileFilter, droppedPath ) )
                         grid.applyPropertyTextAsEdit( instance, prop, droppedPath, "Set Asset" );
                     else if ( action == AssetFieldAction::Cleared )
                         grid.applyPropertyTextAsEdit( instance, prop, "", "Clear Asset" );
                 }
-                else if ( prop._metadata->_bMultiline != SW_FALSE )
+                else if ( prop._metadata->getEditor()._bMultiline != SW_FALSE )
                 {
                     EditorWidgets::drawTextFieldMultiline( _pLabel, *pPtr );
                 }
@@ -775,7 +776,7 @@ namespace sw::editor
                     const AssetFieldAction action = drawAssetPathField(
                         [pPtr]( const utf8* pID )
                     { drawNameInput( pID, *pPtr ); }, prop, pPtr->view(), droppedPath );
-                    if ( action == AssetFieldAction::Dropped && InspectorPropertyLayout::matchesFileFilter( prop._metadata->_fileFilter, droppedPath ) )
+                    if ( action == AssetFieldAction::Dropped && InspectorPropertyLayout::matchesFileFilter( prop._metadata->getEditor()._fileFilter, droppedPath ) )
                         grid.applyPropertyTextAsEdit( instance, prop, droppedPath, "Set Asset" );
                     else if ( action == AssetFieldAction::Cleared )
                         grid.applyPropertyTextAsEdit( instance, prop, "", "Clear Asset" );

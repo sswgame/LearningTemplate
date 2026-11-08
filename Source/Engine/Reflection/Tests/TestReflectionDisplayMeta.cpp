@@ -3,6 +3,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Reflection/ReflectionContainers.h"
+#include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/ReflectionUnits.h"
@@ -101,13 +102,13 @@ SW_TEST_CASE( ReflectionDisplayMetaTest, AnnotationsReachPropertyMetadata )
     const sw::string* pUnits = pHeight->findCustomMeta( "Units" );
     SW_REQUIRE_NOT_NULL( pUnits );
     SW_EXPECT_EQUAL( sw::string( "cm" ), *pUnits );
-    SW_EXPECT_TRUE( pHeight->_metadata->hasFullRange() && pHeight->_metadata->hasFullUIRange() );
+    SW_EXPECT_TRUE( pHeight->_metadata->hasFullRange() && pHeight->_metadata->getEditor().hasFullUIRange() );
     SW_EXPECT_NEAR( 1000.0f, pHeight->_metadata->_maxRange, 1e-4f );
-    SW_EXPECT_NEAR( 250.0f, pHeight->_metadata->_uiMaxRange, 1e-4f );
+    SW_EXPECT_NEAR( 250.0f, pHeight->_metadata->getEditor()._uiMaxRange, 1e-4f );
 
-    SW_EXPECT_TRUE( pEmissive->_metadata->_bColorHDR == SW_TRUE );
-    SW_EXPECT_TRUE( pNotes->_metadata->_bMultiline == SW_TRUE );
-    SW_EXPECT_EQUAL( sw::string( "*.png;*.dds" ), pTexture->_metadata->_fileFilter );
-    SW_EXPECT_EQUAL( sw::string( "!_bEnabled" ), pFallback->_metadata->_editCondition );
-    SW_EXPECT_TRUE( pFallback->_metadata->_bEditConditionHides == SW_TRUE );
+    SW_EXPECT_TRUE( pEmissive->_metadata->getEditor()._bColorHDR == SW_TRUE );
+    SW_EXPECT_TRUE( pNotes->_metadata->getEditor()._bMultiline == SW_TRUE );
+    SW_EXPECT_EQUAL( sw::string( "*.png;*.dds" ), pTexture->_metadata->getEditor()._fileFilter );
+    SW_EXPECT_EQUAL( sw::string( "!_bEnabled" ), pFallback->_metadata->getEditor()._editCondition );
+    SW_EXPECT_TRUE( pFallback->_metadata->getEditor()._bEditConditionHides == SW_TRUE );
 }

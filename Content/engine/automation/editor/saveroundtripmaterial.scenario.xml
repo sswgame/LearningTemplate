@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 머티리얼 패널 저장 왕복: 테스트 머티리얼(materialpreview/previewblue.material)의 실행마다 새 사본(scratch/saveroundtripmaterial — <Scratch>)을 연다.
+  고치지 않고 저장해 정규 꼴로 만든 뒤(panel.saveDocument — dirty 와 무관하게 저장) 그 글을 붙잡고(asset.snapshotScratch), 디스크에서 다시 읽어(panel.reloadDocument) 또 저장한다.
+  둘째 저장이 첫 저장과 같은 바이트여야 한다(asset.expectScratchUnchanged) — 다르면 읽기가 저장한 값을 잃거나 바꾼다. 원본은 건드리지 않는다.
+  저장 왕복 틀은 패널마다 같다(saveroundtripsequencer · saveroundtripspriteclip).
+  실행: App -EnableEditor -scenario=engine/automation/editor/saveroundtripmaterial.scenario.xml -unattended
+-->
+<Scenario name="editor.saveroundtripmaterial" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
+	<Scratch from="engine/automation/editor/materialpreview" as="scratch/saveroundtripmaterial"/>
+	<EditorWaitSettled/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.focus material"/>
+	<EditorWaitSettled/>
+	<DevCommand line="asset.openScratch scratch/saveroundtripmaterial/previewblue.material"/>
+	<EditorWaitSettled/>
+	<Wait frames="5"/>
+	<DevCommand line="panel.saveDocument material"/>
+	<DevCommand line="asset.snapshotScratch scratch/saveroundtripmaterial/previewblue.material"/>
+	<DevCommand line="panel.reloadDocument material"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.saveDocument material"/>
+	<DevCommand line="asset.expectScratchUnchanged scratch/saveroundtripmaterial/previewblue.material"/>
+	<Expect watch="Editor.DirtyDocumentCount" equals="0"/>
+	<EditorWaitSettled/>
+	<Pass/>
+</Scenario>
