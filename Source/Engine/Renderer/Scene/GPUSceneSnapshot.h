@@ -309,14 +309,14 @@ namespace sw
     /**
      * @struct GPUViewTransparentOrder
      * @brief 추가 뷰 하나의 투명 그리기 순서입니다. 주 뷰의 순서(꼬리 인스턴스 배치)는 그대로 두고, 이 뷰가 다르게 그릴 것만 싣습니다.
-     * @details GT 가 그 뷰의 시점과 시선 축으로 꼬리를 다시 정렬해 만든다(`GPUSceneBuilder::computeViewTransparentOrders`). RT 는 순번 테이블을 정렬 디스패치에,
-     *          꼬리 슬롯 테이블을 컬링이 없는 백엔드의 인스턴스 슬롯 스트림에, 배치 순서를 투명 패스 드로우 순서에 쓴다.
-     *          메시 투명 배치가 없고 입자만 있는 뷰는 순번 · 꼬리 슬롯이 nullptr 이고 배치 순서가 비며 입자 자리만 싣는다.
+     * @details GT 가 그 뷰의 시점과 시선 축으로 꼬리를 다시 정렬해 만든다(`GPUSceneBuilder::computeViewTransparentOrders`). RT 는 순번 테이블을 정렬 디스패치(instance_sort.hlsl)에,
+     *          배치 순서를 투명 패스 드로우 순서에 쓴다. 컬링이 없는 백엔드만 순번으로 배치 안을 다시 놓은 인스턴스 슬롯 스트림을 RT 에서 만든다
+     *          (`GPUTransparentSorter::buildViewTailSlots`) — 배치 안 정렬은 GPU 정렬과 CPU 정렬 중 한 곳에서만 돈다.
+     *          메시 투명 배치가 없고 입자만 있는 뷰는 순번이 nullptr 이고 배치 순서가 비며 입자 자리만 싣는다.
      */
     struct GPUViewTransparentOrder
     {
         shared_ptr<const vector<uint32>>   _pListRank;        ///< 꼬리 인스턴스(꼬리 시작 기준)마다 이 뷰에서 그리는 순번(0이면 가장 먼저, 곧 가장 멀다)
-        shared_ptr<const vector<uint32>>   _pListTailSlot;    ///< 배치마다 안쪽을 이 뷰 순서로 다시 배치한 꼬리 인스턴스 번호(전역). 꼬리 길이와 같다.
         vector<uint32>                     _listBatchOrder;   ///< 이 뷰에서 투명 배치를 그리는 순서(`GPUSceneSnapshot::getTransparentBatches` 의 번호)
         vector<GPUTransparentParticleSlot> _listParticleSlot; ///< 이 뷰에서 입자 그리기의 순서와 자리(`_drawPosition` 은 `_listBatchOrder` 안의 자리)
         uint64                             _viewID{ 0 };      ///< `RenderViewRequest::_viewID`
