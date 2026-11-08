@@ -298,7 +298,7 @@ SW_TEST_CASE( AccountServerTest, SessionMethodsCheckTheirBodies )
     SW_EXPECT_NOT_EQUAL( uint64( 0 ), rig._accountServer.findSessionID( accountID ) );
 }
 
-/** @brief [AccountServerTest] 로그인 전: 세션 메서드는 호스트가 kUnauthenticated 로 막아 클라이언트에 InvalidToken 이다 */
+/** @brief [AccountServerTest] 로그인 전: 세션 메서드는 호스트가 kUnauthenticated 로 막는다 — 클라이언트 결과는 공통 범주 실패다(업무 결과 InvalidToken 이 아니다 — OnlineOutcome 계약) */
 SW_TEST_CASE( AccountServerTest, SessionMethodsNeedALogin )
 {
     AccountServerFixture rig;
@@ -306,7 +306,7 @@ SW_TEST_CASE( AccountServerTest, SessionMethodsNeedALogin )
     (void)rig.getAccount( client ).logout();
     const AccountClientReply reply = rig.take( client );
     SW_EXPECT_EQUAL( OnlineError::kUnauthenticated, reply._errorCode );
-    SW_EXPECT_TRUE( reply._result == LoginResult::InvalidToken );
+    SW_EXPECT_TRUE( reply._result.isFailed() && reply._result._errorCode == OnlineError::kUnauthenticated );
     SW_EXPECT_EQUAL( OnlineError::kUnauthenticated, rig.sendRaw( client, static_cast<uint16>( OnlineMethodRange::kAccount + 0x70 ), BitWriter{} )._errorCode );
 }
 

@@ -85,7 +85,7 @@ SW_TEST_CASE( VelmoraCampaignTest, RegionCatalogReadsAndRejects )
     VelmoraRegionCatalog outside;
     SW_EXPECT_LOG( "Velmora.RegionPointOutside" );
     SW_EXPECT_LOG( "Velmora.RegionSkipped" );
-    SW_EXPECT_LOG( "XMLCatalog.NoEntries" ); // 하나도 못 읽은 표는 빈 표가 아니라 실패다
+    // 하나도 못 읽은 표는 실패다 — 틀린 원소의 오류가 까닭을 말했으므로 빈 표 경고(XMLCatalog.NoEntries)는 따로 내지 않는다(XMLCatalogReadResult::reportIfEmpty)
     SW_EXPECT_FALSE( outside.loadFromXMLText( R"(<VelmoraRegionCatalog><Region id="a" min="0,0" max="10,10" respawn="1,1"><Camp id="c" at="50,50"/></Region></VelmoraRegionCatalog>)",
                                               "VelmoraCampaignTest" ) );
 }

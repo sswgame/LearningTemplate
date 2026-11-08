@@ -52,6 +52,7 @@ SW_TEST_CASE( OnlineServerCallTableTest, CallIsAnsweredOnce )
     SW_EXPECT_TRUE( table.fail( second, OnlineError::kInternal ) );
     SW_EXPECT_FALSE( table.isOpen( second ) );
     SW_EXPECT_TRUE( table.isOpen( first ) );
+    SW_EXPECT_LOG( "ServiceServerCallTable.UnknownCall" ); // 끝난 번호를 다시 끝내면 모르는 호출로 알린다
     SW_EXPECT_FALSE( table.fail( second, OnlineError::kInternal ) );
     SW_EXPECT_TRUE( table.fail( first, OnlineError::kInternal ) );
     SW_EXPECT_TRUE( table.isEmpty() );
