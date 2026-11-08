@@ -2,7 +2,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"
-#include "Core/Time/MonotonicClock.h"
+#include "Core/Testing/TestWait.h"
 #include "Core/Time/TimePoint.h"
 
 #define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
@@ -15,9 +15,6 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Online/Server/IOnlineStoreDriver.h"
 #include "GameFramework/Runtime/Online/Store/MemoryServiceStore.h"
-
-#include <chrono>
-#include <thread>
 
 // SQLServiceStoreTest · ServiceStoreParityTest — SQL 서비스 저장소: 가짜 드라이버로 문장 · 트랜잭션 · 실패 처리를 보고, 실제 SQLite 가 메모리 구현과 같은 시나리오를 같은 결과로 지나는지 본다.
 // 서버 키트 케이스다(Game 타깃의 `App --test`, nogpu). PostgreSQL 은 쓰지 않는다 — 외부 DB 없이 돈다.
@@ -65,12 +62,11 @@ namespace
             int32 completeCount  = 0;
             int32 cancelledCount = 0;
             store.submit( sw::make_unique<ServiceStoreTestJob<FunctionType>>( std::move( function ), completeCount, cancelledCount ) );
-            const Deadline deadline = Deadline::afterMilliseconds( 10000 );
-            while ( completeCount == 0 && deadline.isExpired() == false )
+            (void)test::waitUntil( [&]()
             {
-                if ( store.pollCompletions() == 0 )
-                    std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
-            }
+                (void)store.pollCompletions();
+                return completeCount > 0;
+            } );
             return completeCount == 1;
         }
 
@@ -324,12 +320,11 @@ SW_TEST_CASE( ServiceStoreParityTest, ConcurrentCreatesHaveOneWinner, ._timeoutS
         };
         fixture._store.submit( sw::make_unique<ServiceStoreTestJob<decltype( function )>>( std::move( function ), completeCount, cancelledCount ) );
     }
-    const Deadline deadline = Deadline::afterMilliseconds( 45000 );
-    while ( completeCount < kWorkCount && deadline.isExpired() == false )
+    (void)test::waitUntil( [&]()
     {
-        if ( fixture._store.pollCompletions() == 0 )
-            std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
-    }
+        (void)fixture._store.pollCompletions();
+        return completeCount >= kWorkCount;
+    }, 45.0 );
     SW_REQUIRE_EQUAL( kWorkCount, completeCount );
     int32 okCount       = 0;
     int32 conflictCount = 0;

@@ -1,13 +1,11 @@
 /**
  * @file NetTestUtil.h
- * @brief 네트워크 단위 테스트가 함께 쓰는 도우미 — 번호를 담은 메시지, 자리마다 다른 바이트 덩어리, 시한 있는 대기, 서버가 받은 메시지 꺼내기.
+ * @brief 네트워크 단위 테스트가 함께 쓰는 도우미 — 번호를 담은 메시지, 자리마다 다른 바이트 덩어리, 서버가 받은 메시지 꺼내기. 조건 대기는 `test::waitUntil`(Core/Testing/TestWait.h).
  */
 #pragma once
-#include "Core/Concurrency/thread.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Tests/LoopbackCluster.h"
-#include "Core/Time/MonotonicClock.h"
 
 namespace sw::test
 {
@@ -66,23 +64,6 @@ namespace sw::test
             {
                 outListMessage.push_back( buffer );
             }
-        }
-
-        /**
-         * @brief @p predicate 가 참이 될 때까지 기다립니다(최대 @p timeoutSeconds). 시한이 지나면 false 입니다.
-         * @details 다른 스레드(네트워크 스레드 · 소켓)가 상태를 바꾸기를 기다리는 자리다 — 고정 시간을 자지 않고 조건을 1 ms 마다 다시 본다.
-         */
-        template <typename FPredicate>
-        static bool waitUntil( FPredicate&& predicate, float64 timeoutSeconds = 5.0 )
-        {
-            const Deadline deadline = Deadline::afterMilliseconds( static_cast<int64>( timeoutSeconds * 1000.0 ) );
-            while ( predicate() == false )
-            {
-                if ( deadline.isExpired() )
-                    return false;
-                ThreadUtil::sleepForMilliseconds( 1 );
-            }
-            return true;
         }
     };
 } // namespace sw::test

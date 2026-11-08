@@ -25,6 +25,7 @@
 
 namespace sw
 {
+    class IClock;
     class NetRequestServer;
     class StreamMessageEndpoint;
 } // namespace sw
@@ -157,7 +158,10 @@ namespace sw
     class SW_API NetRequestClient
     {
     public:
+        /** @brief 요청 시한을 실제 단조 시계로 잽니다. */
         NetRequestClient();
+        /** @brief 요청 시한을 @p clock 으로 잽니다(테스트는 `ManualClock` 을 밀어 잠들지 않고 시한을 넘긴다). 시계는 빌려 쓰므로 이 객체보다 오래 살아야 합니다. */
+        explicit NetRequestClient( const IClock& clock );
 
         void initialize( StreamMessageEndpoint* pEndpoint, int32 maxPendingRequests = 1024 );
         /** @brief 남은 요청을 Cancelled 로 끝냅니다. */
@@ -187,6 +191,7 @@ namespace sw
 
         static void finish( uint64 requestID, Pending&& pending, NetRequestStatus status, const uint8* pBody, int32 bodySize );
 
+        const IClock*                              _pClock; ///< 요청 시한을 재는 시계. 빌려 쓴다
         mutable mutex                              _mutex;
         unordered_map<uint64, Pending> _mapPending SW_GUARDED_BY( _mutex );
         BitWriter _writer                          SW_GUARDED_BY( _mutex ); ///< _mutex 안에서만 쓴다.

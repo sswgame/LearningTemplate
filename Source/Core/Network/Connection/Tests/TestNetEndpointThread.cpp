@@ -9,6 +9,7 @@
 #include "Core/Network/Tests/NetTestUtil.h"
 #include "Core/Network/Transport/UDPNetTransport.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Testing/TestWait.h"
 #include "Core/Time/MonotonicClock.h"
 
 // 네트워크 스레드 · 비동기 — 전용 스레드가 도는 엔드포인트(루프백 · 실제 UDP), 비동기 연결(성공 · 가득 참 · 타임아웃 · 끊음 · 잘못된 주소),
@@ -80,7 +81,7 @@ SW_TEST_CASE( NetEndpointThreadTest, ThreadedHostsConnectAsyncAndExchangeWithout
     SW_EXPECT_EQUAL( 0, next.get() );
     SW_EXPECT_EQUAL( 1, continuationCount.load() );
     SW_EXPECT_EQUAL( 0, client.getClientIndex() );
-    SW_REQUIRE_TRUE( NetTestUtil::waitUntil( [&cluster]()
+    SW_REQUIRE_TRUE( test::waitUntil( [&cluster]()
     { return cluster.getServer().getConnectedCount() == 1; } ) );
 
     // 서버 → 클라이언트, 클라이언트 → 서버 신뢰 메시지 — 받는 쪽은 게임 스레드에서 꺼내기만 한다.
@@ -94,7 +95,7 @@ SW_TEST_CASE( NetEndpointThreadTest, ThreadedHostsConnectAsyncAndExchangeWithout
     int32          connectionID   = -1;
     NetChannelType channel        = NetChannelType::Unreliable;
     vector<uint8>  buffer;
-    const bool     bAllReceived = NetTestUtil::waitUntil( [&]()
+    const bool     bAllReceived = test::waitUntil( [&]()
     {
         while ( client.receiveMessage( connectionID, channel, buffer ) )
         {
@@ -133,7 +134,7 @@ SW_TEST_CASE( NetEndpointThreadTest, GameThreadsSendAndReceiveConcurrently )
     {
         SW_REQUIRE_TRUE( cluster.getClient( index ).connectAsync( NetAddress::makeLoopback( 4000 ) ).waitFor( NetEndpointThreadTestInternal::kFutureWaitMilli ) );
     }
-    SW_REQUIRE_TRUE( NetTestUtil::waitUntil( [&cluster]()
+    SW_REQUIRE_TRUE( test::waitUntil( [&cluster]()
     { return cluster.getServer().getConnectedCount() == 2; } ) );
 
     vector<sw::thread> listSender;
@@ -200,11 +201,11 @@ SW_TEST_CASE( NetEndpointThreadTest, GameThreadsSendAndReceiveConcurrently )
     {
         thread.join();
     }
-    const bool bAllReceived = NetTestUtil::waitUntil( [&receivedTotal]()
+    const bool bAllReceived = test::waitUntil( [&receivedTotal]()
     { return receivedTotal.load() >= kSenderCount * kMessagePerSender; }, 10.0 );
     // 겹쳐 나올 것이 있으면 세어지게 — 서버 네트워크 스레드가 몇 번 더 돌 때까지(고정 시간이 아니라 돈 횟수로) 받는 스레드를 둔다.
     const uint64 serverUpdateCount = cluster.getThread( 0 ).getUpdateCount();
-    SW_EXPECT_TRUE( NetTestUtil::waitUntil( [&cluster, serverUpdateCount]()
+    SW_EXPECT_TRUE( test::waitUntil( [&cluster, serverUpdateCount]()
     { return cluster.getThread( 0 ).getUpdateCount() >= serverUpdateCount + 10; } ) );
     bStop.store( true );
     for ( sw::thread& thread : listReceiver )
@@ -287,7 +288,7 @@ SW_TEST_CASE( NetEndpointThreadTest, ConnectionsSurviveStalledGameThread )
     int32          connectionID = -1;
     NetChannelType channel      = NetChannelType::Unreliable;
     vector<uint8>  buffer;
-    SW_EXPECT_TRUE( NetTestUtil::waitUntil( [&]()
+    SW_EXPECT_TRUE( test::waitUntil( [&]()
     {
         while ( cluster.getServer().receiveMessage( connectionID, channel, buffer ) )
         {
@@ -331,7 +332,7 @@ SW_TEST_CASE( NetEndpointThreadTest, UDPHostsRunOnThreadsOverLocalhost )
     int32          connectionID = -1;
     NetChannelType channel      = NetChannelType::Unreliable;
     vector<uint8>  buffer;
-    SW_EXPECT_TRUE( NetTestUtil::waitUntil( [&]()
+    SW_EXPECT_TRUE( test::waitUntil( [&]()
     {
         while ( server.receiveMessage( connectionID, channel, buffer ) )
         {
@@ -343,7 +344,7 @@ SW_TEST_CASE( NetEndpointThreadTest, UDPHostsRunOnThreadsOverLocalhost )
 
     // 끊김 알림은 바로 나간다 — 서버가 타임아웃 전에 안다.
     client.disconnect( 0 );
-    SW_EXPECT_TRUE( NetTestUtil::waitUntil( [&server]()
+    SW_EXPECT_TRUE( test::waitUntil( [&server]()
     { return server.getConnectedCount() == 0; }, 1.0 ) );
     clientThread.stop();
     serverThread.stop();
@@ -361,7 +362,7 @@ SW_TEST_CASE( NetEndpointThreadTest, LargeReliableMessagesCrossHostThreads )
     SW_REQUIRE_TRUE( NetEndpointThreadTestInternal::startThreadedCluster( cluster, 1, settings ) );
     NetEndpoint& client = cluster.getClient( 0 );
     SW_REQUIRE_TRUE( client.connectAsync( NetAddress::makeLoopback( 4000 ) ).waitFor( NetEndpointThreadTestInternal::kFutureWaitMilli ) );
-    SW_REQUIRE_TRUE( NetTestUtil::waitUntil( [&cluster]()
+    SW_REQUIRE_TRUE( test::waitUntil( [&cluster]()
     { return cluster.getServer().getConnectedCount() == 1; } ) );
 
     vector<vector<uint8>> listSent;
@@ -379,7 +380,7 @@ SW_TEST_CASE( NetEndpointThreadTest, LargeReliableMessagesCrossHostThreads )
     int32                 connectionID = -1;
     NetChannelType        channel      = NetChannelType::Unreliable;
     vector<uint8>         buffer;
-    const bool            bAllReceived = NetTestUtil::waitUntil( [&]()
+    const bool            bAllReceived = test::waitUntil( [&]()
     {
         while ( cluster.getServer().receiveMessage( connectionID, channel, buffer ) )
         {
@@ -406,7 +407,7 @@ SW_TEST_CASE( NetEndpointThreadTest, SendRateCapHoldsOnHostThreads )
     SW_REQUIRE_TRUE( NetEndpointThreadTestInternal::startThreadedCluster( cluster, 1, settings ) );
     NetEndpoint& client = cluster.getClient( 0 );
     SW_REQUIRE_TRUE( client.connectAsync( NetAddress::makeLoopback( 4000 ) ).waitFor( NetEndpointThreadTestInternal::kFutureWaitMilli ) );
-    SW_REQUIRE_TRUE( NetTestUtil::waitUntil( [&cluster]()
+    SW_REQUIRE_TRUE( test::waitUntil( [&cluster]()
     { return cluster.getServer().getConnectedCount() == 1; } ) );
 
     const vector<uint8> message( static_cast<size_t>( NetConnection::kMaxReliableMessageSize ), static_cast<uint8>( 0x5A ) );
@@ -415,7 +416,7 @@ SW_TEST_CASE( NetEndpointThreadTest, SendRateCapHoldsOnHostThreads )
     int32          connectionID = -1;
     NetChannelType channel      = NetChannelType::Unreliable;
     vector<uint8>  buffer;
-    SW_REQUIRE_TRUE( NetTestUtil::waitUntil( [&]()
+    SW_REQUIRE_TRUE( test::waitUntil( [&]()
     { return cluster.getServer().receiveMessage( connectionID, channel, buffer ); }, 5.0 ) );
     const int64 milliseconds = stopwatch.getElapsedMilliseconds();
     SW_EXPECT_TRUE( buffer == message );

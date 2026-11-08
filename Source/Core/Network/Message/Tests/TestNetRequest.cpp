@@ -1,6 +1,5 @@
 #include "pch.h"
 
-#include "Core/Concurrency/thread.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Log/LogContext.h"
@@ -9,6 +8,7 @@
 #include "Core/Network/Message/Tests/StreamEndpointPair.h"
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Time/Clock.h"
 
 // 서비스 요청-응답 — 응답 · 모르는 메서드, 시한(늦은 응답은 무시), 취소, 재접속 뒤 같은 멱등 키는 한 번만 처리, 처리 중인 같은 키는 첫 응답을 같이,
 // 연결별 처리 중 상한(Overloaded) · 연결 끊김(ConnectionLost), 요청 머리의 추적 id 와 처리기의 로그 문맥. 루프백 위의 두 엔드포인트를 한 스레드로 돈다.
@@ -77,10 +77,11 @@ namespace
         }
     };
 
-    /** @brief 클라이언트 쪽 리스너 — 프레임은 `NetRequestClient`, 닫힘은 `onConnectionClosed`. */
+    /** @brief 클라이언트 쪽 리스너 — 프레임은 `NetRequestClient`, 닫힘은 `onConnectionClosed`. 요청 시한은 손으로 미는 시계로 잰다(잠들지 않는다). */
     struct ClientSide final : public IStreamEndpointListener
     {
-        NetRequestClient _client{};
+        ManualClock      _clock{ MonotonicMilliseconds{ 1000 } }; ///< `_client` 가 빌리므로 먼저 선언한다
+        NetRequestClient _client{ _clock };
         int32            _openedCount{ 0 };
 
         void onEndpointOpened( StreamConnectionHandle handle, const NetAddress& remote, bool bAccepted ) override
@@ -154,7 +155,7 @@ SW_TEST_CASE( NetRequestTest, DeadlineEndsRequestAndLateResponseIsIgnored )
     SW_EXPECT_TRUE( rig.send( rig._pair._clientHandle, 2, vector<uint8>{ 5 }, options, log ) != 0 );
     rig._pair.step( 2 );
     SW_REQUIRE_EQUAL( 1, static_cast<int32>( rig._echo._listDeferred.size() ) );
-    ThreadUtil::sleepForMilliseconds( 30 );
+    rig._clientSide._clock.advanceMilliseconds( 30 ); // 시한(20 ms)을 넘긴다 — 실제로 자지 않는다
     rig._clientSide._client.update();
     SW_REQUIRE_EQUAL( 1, static_cast<int32>( log._listStatus.size() ) );
     SW_EXPECT_TRUE( log._listStatus[0] == NetRequestStatus::DeadlineExceeded );

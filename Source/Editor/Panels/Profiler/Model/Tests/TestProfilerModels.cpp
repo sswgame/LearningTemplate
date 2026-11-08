@@ -1,8 +1,8 @@
 #include "pch.h"
 
-#include "Core/Concurrency/thread.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Time/Clock.h"
 
 #include "Editor/Panels/Profiler/Model/ProfilerCallTree.h"
 #include "Editor/Panels/Profiler/Model/ProfilerCaptureModel.h"
@@ -548,19 +548,22 @@ SW_TEST_CASE( ProfilerCaptureModelTest, SpikeOverTheThresholdPausesOnlyWhenAsked
 // 창이 차기 전에도 평균은 담은 표본의 평균이다. 빈 칸을 0 으로 세면 처음 2 초 동안 FPS 가 몇십 배로 보인다.
 SW_TEST_CASE( ProfilerPerformanceModelTest, AverageCountsOnlyTheSamplesTaken )
 {
-    unique_ptr<ProfilerPerformanceModel> pModel = make_unique<ProfilerPerformanceModel>();
-    ThreadUtil::sleepForMilliseconds( 2 );
+    // 시계는 손으로 민다 — 잠들지 않고 경과를 정하므로 통계를 정확한 값으로 본다.
+    ManualClock                          clock{ MonotonicMilliseconds{ 1000 } };
+    unique_ptr<ProfilerPerformanceModel> pModel = make_unique<ProfilerPerformanceModel>( clock );
+    clock.advanceMilliseconds( 2 );
     const ProfilerFrameTimeStats first = pModel->sampleFrame();
-    SW_EXPECT_TRUE( first._currentMs > 0.0f );
+    SW_EXPECT_NEAR( 2.0f, first._currentMs, 1e-3f );
     SW_EXPECT_NEAR( first._currentMs, first._averageMs, 1e-3f );
-    SW_EXPECT_NEAR( first._currentFPS, first._averageFPS, first._currentFPS * 0.01f );
+    SW_EXPECT_NEAR( 500.0f, first._averageFPS, 0.5f );
     SW_EXPECT_NEAR( first._currentMs, first._minMs, 1e-3f );
     SW_EXPECT_NEAR( first._currentMs, first._maxMs, 1e-3f );
 
-    ThreadUtil::sleepForMilliseconds( 2 );
+    clock.advanceMilliseconds( 4 );
     const ProfilerFrameTimeStats second = pModel->sampleFrame();
-    SW_EXPECT_TRUE( second._minMs <= second._averageMs );
-    SW_EXPECT_TRUE( second._averageMs <= second._maxMs );
+    SW_EXPECT_NEAR( 2.0f, second._minMs, 1e-3f );
+    SW_EXPECT_NEAR( 3.0f, second._averageMs, 1e-3f ); // 빈 칸은 세지 않는다 — 118 칸을 0 으로 세면 0.05 ms 다
+    SW_EXPECT_NEAR( 4.0f, second._maxMs, 1e-3f );
     SW_EXPECT_EQUAL( 2u, pModel->getHistoryOffset() );
 }
 

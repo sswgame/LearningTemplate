@@ -5,7 +5,7 @@
 #pragma once
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Time/MonotonicClock.h"
+#include "Core/Time/Clock.h"
 
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
 
@@ -25,7 +25,8 @@ namespace sw::editor
     /**
      * @class ProfilerPerformanceModel
      * @brief 최근 120 프레임의 벽시계 프레임 시간과 리소스 카탈로그 개수를 가집니다.
-     * @details ImGui 경과는 엔진 경과(자동화에서는 고정 프레임 시간)라 프레임 비용을 재려면 벽시계를 따로 읽는다.
+     * @details ImGui 경과는 엔진 경과(자동화에서는 고정 프레임 시간)라 프레임 비용을 재려면 벽시계를 따로 읽는다. 시계는 받는다 — 운영은 실제 단조 시계,
+     *          테스트는 `ManualClock` 을 밀어 잠들지 않고 경과를 정한다.
      */
     class ProfilerPerformanceModel
     {
@@ -33,7 +34,10 @@ namespace sw::editor
         /** @brief 기록하는 프레임 수입니다. */
         static constexpr uint32 kHistoryCount = 120;
 
+        /** @brief 실제 단조 시계로 잽니다. */
         ProfilerPerformanceModel();
+        /** @brief @p clock 으로 잽니다. 시계는 빌려 쓰므로 이 객체보다 오래 살아야 합니다. */
+        explicit ProfilerPerformanceModel( const IClock& clock );
 
         /** @brief 지난 호출 뒤의 벽시계 경과를 한 칸 기록하고 통계를 돌려줍니다. Performance 탭을 그릴 때마다 부릅니다. */
         ProfilerFrameTimeStats sampleFrame();
@@ -51,7 +55,8 @@ namespace sw::editor
     private:
         float32                     _arrFrameTimeHistory[kHistoryCount];
         uint32                      _historyOffset;
-        Stopwatch                   _drawStopwatch; ///< 성능 탭을 마지막으로 그린 뒤의 벽시계 경과
+        const IClock*               _pClock;                ///< 프레임 비용을 재는 시계. 빌려 쓴다
+        int64                       _lastSampleNanoseconds; ///< 성능 탭을 마지막으로 그린 시각(`_pClock` 의 나노초)
         EditorResourceCatalogJob    _catalogJob;
         EditorResourceCatalogCounts _catalogCounts;
         uint8                       _bCatalogDirty : 1;
