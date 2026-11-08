@@ -228,13 +228,13 @@ namespace sw
                 unique_ptr<ITLSContext> tlsContext;
                 if ( options._tlsTrustFile.empty() == false )
                 {
-                    string error; // TLS 맥락 만들기(GF NetSecurity)의 글 — 그 쪽이 결과 형식으로 옮기면 이 줄도 따라간다
-                    tlsContext = NetSecurity::createClientTLSContext( game::getSubsystem<INetSecurityProvider>(), options._tlsTrustFile, "", error );
-                    if ( tlsContext == nullptr )
+                    expected<unique_ptr<ITLSContext>> created = NetSecurity::createClientTLSContext( game::getSubsystem<INetSecurityProvider>(), options._tlsTrustFile, "" );
+                    if ( created.has_value() == false )
                     {
-                        SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBotTLSClientContext", "OnlineLoadBot: TLS client context failed: %#", error );
+                        SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBotTLSClientContext", "OnlineLoadBot: TLS client context failed: %# (%#)", created.error().message(), created.error().detail() );
                         return Exit::kExitUsage;
                     }
+                    tlsContext                  = std::move( *created );
                     runnerSettings._pTLSContext = tlsContext.get();
                 }
 

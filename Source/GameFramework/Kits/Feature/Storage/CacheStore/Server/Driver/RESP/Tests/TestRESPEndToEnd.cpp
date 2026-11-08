@@ -13,6 +13,16 @@
 #include "GameFramework/Runtime/Online/Server/Tests/OnlineEndpointTestUtil.h"
 #include "GameFramework/Runtime/Online/Service/Tests/OnlineHostTestUtil.h"
 
+namespace
+{
+    /** @brief 실패의 문장과 대상을 이은 글입니다(성공이면 빈 글). 오류 글을 확인하는 테스트가 씁니다. */
+    template <typename T>
+    sw::string describeError( const sw::expected<T>& result )
+    {
+        return result.has_value() ? sw::string{} : sw::string( result.error().message() ) + " " + sw::string( result.error().detail() );
+    }
+} // namespace
+
 // RESPEndToEndTest — 서버 설정이 고른 `resp` 캐시: 조립(`OnlineServerRuntime`)이 드라이버 키트에서 저장소를 만들고, 실제 TCP 로 로컬 가짜 RESP 서버에 붙어 AUTH(환경 변수 비밀) · 쓰기 · 읽기 · 발행 · 구독을 끝까지 돈다.
 // 가짜 서버는 Valkey 의 명령 부분집합을 값으로 흉내 낸다 — 답을 대본으로 주는 `TestRespEphemeralStore.cpp` 와 달리 무엇이 키로 닿았는지 본다. 드라이버 표에 없는 이름 · 없는 환경 변수는 메모리로 물러나지 않고 기동이 멈춘다(nogpu).
 
@@ -208,7 +218,10 @@ SW_TEST_CASE( RESPEndToEndTest, ConfigSelectsRESPAndReachesTheEndpoint )
 
     test::OnlineRuntimeFixture rig;
     string                     error;
-    SW_REQUIRE_TRUE_MSG( rig.fromConfig( RESPEndToEndTestUtil::makeServerJSON( server.getPort() ), RESPEndToEndTestUtil::kOnlineJSON, kNowMs, error ), error.c_str() );
+    {
+        const auto result = rig.fromConfig( RESPEndToEndTestUtil::makeServerJSON( server.getPort() ), RESPEndToEndTestUtil::kOnlineJSON, kNowMs );
+        SW_REQUIRE_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() );
+    }
     const auto pump = [&rig]()
     {
         rig.updateAll( kNowMs, 1 );
@@ -250,7 +263,8 @@ SW_TEST_CASE( RESPEndToEndTest, MissingSecretStopsStartup )
     SW_EXPECT_LOG( "Server.SecretNotSet" );
     test::OnlineRuntimeFixture rig;
     string                     error;
-    SW_EXPECT_FALSE( rig.fromConfig( RESPEndToEndTestUtil::makeServerJSON( 6379 ), RESPEndToEndTestUtil::kOnlineJSON, kNowMs, error ) );
+    error = describeError( rig.fromConfig( RESPEndToEndTestUtil::makeServerJSON( 6379 ), RESPEndToEndTestUtil::kOnlineJSON, kNowMs ) );
+    SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.find( "valkey" ) != string::npos );
 }
 
@@ -260,6 +274,7 @@ SW_TEST_CASE( RESPEndToEndTest, UnknownDriverStopsStartup )
     constexpr const utf8*      kServerJSON = R"({ "_listStore": [ { "_name": "local", "_driver": "memory" } ], "_listCache": [ { "_name": "valkey", "_driver": "memcached", "_endpoint": "127.0.0.1:1" } ] })";
     test::OnlineRuntimeFixture rig;
     string                     error;
-    SW_EXPECT_FALSE( rig.fromConfig( kServerJSON, RESPEndToEndTestUtil::kOnlineJSON, kNowMs, error ) );
+    error = describeError( rig.fromConfig( kServerJSON, RESPEndToEndTestUtil::kOnlineJSON, kNowMs ) );
+    SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.find( "memcached" ) != string::npos );
 }

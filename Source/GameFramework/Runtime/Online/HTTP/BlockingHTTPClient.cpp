@@ -42,10 +42,10 @@ namespace sw
         _client.shutdown();
     }
 
-    bool BlockingHTTPClient::registerHostTLS( string_view url, string_view trustFile, string_view trustOption, string& outError )
+    expected<void> BlockingHTTPClient::registerHostTLS( string_view url, string_view trustFile, string_view trustOption )
     {
         ScopedLock<mutex> lock{ _sendMutex };
-        return _client.registerHostTLS( url, trustFile, trustOption, outError );
+        return _client.registerHostTLS( url, trustFile, trustOption );
     }
 
     bool BlockingHTTPClient::makeClientRequest( const HTTPRequest& request, HTTPClientRequest& outRequest )

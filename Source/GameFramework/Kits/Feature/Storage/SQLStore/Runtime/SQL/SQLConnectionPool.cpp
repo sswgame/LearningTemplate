@@ -77,23 +77,15 @@ namespace sw
         _listCompleted.clear();
     }
 
-    bool SQLConnectionPool::initialize( ISQLDriver* pDriver, const SQLConnectionPoolConfig& settings, string& outError )
+    expected<void> SQLConnectionPool::initialize( ISQLDriver* pDriver, const SQLConnectionPoolConfig& settings )
     {
         if ( pDriver == nullptr )
-        {
-            outError = "SQL connection pool has no driver";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "SQL connection pool has no driver" } );
         // 연결 수는 설정이 정한다 — 범위 밖 값을 조용히 1로 맞추면 설정을 틀리게 준 쪽이 모른다(폴백 금지).
         if ( settings._workerCount < 1 )
-        {
-            outError = "SQL connection pool needs _workerCount >= 1";
-            return false;
-        }
-        unique_ptr<ISQLConnection> probe = pDriver->openConnection( settings._connection, settings._secret, outError );
-        if ( probe == nullptr )
-            return false;
-        probe.reset();
+            return unexpected( Error{ ErrorKind::InvalidArgument, "SQL connection pool needs _workerCount >= 1" } );
+        if ( expected<unique_ptr<ISQLConnection>> probe = pDriver->openConnection( settings._connection, settings._secret ); probe.has_value() == false )
+            return unexpected( probe.error() );
         _pDriver.set( pDriver );
         _settings.set( settings );
         {
@@ -106,7 +98,7 @@ namespace sw
         {
             _listWorker.emplace_back( &SQLConnectionPool::runWorker, this, workerIndex );
         }
-        return true;
+        return {};
     }
 
     void SQLConnectionPool::shutdown()
@@ -197,12 +189,13 @@ namespace sw
         ThreadName::setCurrentThreadName( threadName.c_str() );
 
         SQLConnectionPoolInternal::ClosedConnection closed;
-        string                                      error;
-        unique_ptr<ISQLConnection>                  connection   = _pDriver->openConnection( _settings->_connection, _settings->_secret, error );
+        unique_ptr<ISQLConnection>                  connection;
         int64                                       retryDelayMs = SQLConnectionPoolInternal::kFirstRetryDelayMs;
         Deadline                                    retryAt      = Deadline::afterMilliseconds( 0 );
-        if ( connection == nullptr )
-            SW_LOG_WARNING_ID( "SQLConnectionPool.SQLWorkerCouldNot", "SQL worker %# could not connect: %#", workerIndex, error.c_str() );
+        if ( expected<unique_ptr<ISQLConnection>> opened = _pDriver->openConnection( _settings->_connection, _settings->_secret ); opened.has_value() )
+            connection = std::move( *opened );
+        else
+            SW_LOG_WARNING_ID( "SQLConnectionPool.SQLWorkerCouldNot", "SQL worker %# could not connect: %# (%#)", workerIndex, opened.error().message(), opened.error().detail() );
         for ( ;; )
         {
             unique_ptr<ISQLJob> job;
@@ -221,10 +214,11 @@ namespace sw
             const bool bShouldReconnect = bNeedsReconnect && bStopping == false && retryAt.isExpired();
             if ( bShouldReconnect )
             {
-                connection = _pDriver->openConnection( _settings->_connection, _settings->_secret, error );
-                if ( connection == nullptr )
+                expected<unique_ptr<ISQLConnection>> reopened = _pDriver->openConnection( _settings->_connection, _settings->_secret );
+                connection                                    = reopened.has_value() ? std::move( *reopened ) : unique_ptr<ISQLConnection>{};
+                if ( reopened.has_value() == false )
                 {
-                    SW_LOG_WARNING_ID( "SQLConnectionPool.SQLWorkerCouldNot2", "SQL worker %# could not reconnect: %#", workerIndex, error.c_str() );
+                    SW_LOG_WARNING_ID( "SQLConnectionPool.SQLWorkerCouldNot2", "SQL worker %# could not reconnect: %# (%#)", workerIndex, reopened.error().message(), reopened.error().detail() );
                     retryAt      = Deadline::afterMilliseconds( retryDelayMs ); // 먼저 기다리고 늘린다 - 예전에는 늘린 뒤 기다려 첫 값(`kFirstRetryDelayMs`)을 쓰는 일이 없었다
                     retryDelayMs = MathUtil::min( retryDelayMs * 2, SQLConnectionPoolInternal::kMaxRetryDelayMs );
                 }

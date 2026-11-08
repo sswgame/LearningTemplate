@@ -154,11 +154,10 @@ namespace sw::editor
                     settings._gameName += " ";
                     settings._gameName += listArgument[index];
                 }
-                string               error;
                 EditorNetSimSession& session = editor::getSubsystem<EditorNetSimSession>();
-                if ( session.start( settings, error ) == false )
+                if ( const expected<void> started = session.start( settings ); started.has_value() == false )
                 {
-                    outReply = "netsim.start: " + error;
+                    outReply = "netsim.start: " + string( started.error().message() ) + " (" + string( started.error().detail() ) + ")";
                     return true;
                 }
                 (void)session.setInputFocus( 1 );

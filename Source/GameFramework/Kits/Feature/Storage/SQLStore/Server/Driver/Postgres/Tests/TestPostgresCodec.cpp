@@ -7,6 +7,16 @@
 
 #include <limits>
 
+namespace
+{
+    /** @brief 실패의 문장과 대상을 이은 글입니다(성공이면 빈 글). 오류 글을 확인하는 테스트가 씁니다. */
+    template <typename T>
+    sw::string describeError( const sw::expected<T>& result )
+    {
+        return result.has_value() ? sw::string{} : sw::string( result.error().message() ) + " " + sw::string( result.error().detail() );
+    }
+} // namespace
+
 // PostgresCodecTest — PostgreSQL 드라이버의 변환을 DB 없이 본다: 자리표시자 바꾸기, 매개변수 인코딩(NUL · 자리 수 · 빈 바이트), 이진 칸 읽기(길이는 믿지 않는다), SQLSTATE 분류(nogpu).
 
 using namespace sw;
@@ -78,7 +88,7 @@ SW_TEST_CASE( PostgresCodecTest, ParametersKeepTheirFormats )
                                       SQLValue::makeBlob( nullptr, 0 ), SQLValue::makeText( "" ) };
     PostgresParameters parameters;
     string             error;
-    SW_REQUIRE_TRUE( PostgresCodec::encodeParameters( arrParam, 6, 6, parameters, error ) );
+    SW_REQUIRE_TRUE( PostgresCodec::encodeParameters( arrParam, 6, 6, parameters ) );
     SW_EXPECT_NULL( parameters._listValue[0] ); // NULL
     SW_EXPECT_EQUAL( string( "-9223372036854775808" ), string( parameters._listValue[1] ) );
     SW_EXPECT_EQUAL( PostgresCodec::kFormatText, parameters._listFormat[1] );
@@ -101,12 +111,14 @@ SW_TEST_CASE( PostgresCodecTest, ParameterCountMustMatch )
     const SQLValue     arrParam[] = { SQLValue::makeInt64( 1 ), SQLValue::makeInt64( 2 ) };
     PostgresParameters parameters;
     string             error;
-    SW_EXPECT_FALSE( PostgresCodec::encodeParameters( arrParam, 1, 2, parameters, error ) );
+    error = describeError( PostgresCodec::encodeParameters( arrParam, 1, 2, parameters ) );
+    SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.empty() == false );
     error.clear();
-    SW_EXPECT_FALSE( PostgresCodec::encodeParameters( arrParam, 2, 1, parameters, error ) );
+    error = describeError( PostgresCodec::encodeParameters( arrParam, 2, 1, parameters ) );
+    SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.empty() == false );
-    SW_EXPECT_TRUE( PostgresCodec::encodeParameters( nullptr, 0, 0, parameters, error ) );
+    SW_EXPECT_TRUE( PostgresCodec::encodeParameters( nullptr, 0, 0, parameters ) );
 }
 
 /**
@@ -119,7 +131,8 @@ SW_TEST_CASE( PostgresCodecTest, TextWithNulIsRefusedNotTruncated )
     const SQLValue     arrParam[] = { SQLValue::makeText( withNul ) };
     PostgresParameters parameters;
     string             error;
-    SW_EXPECT_FALSE( PostgresCodec::encodeParameters( arrParam, 1, 1, parameters, error ) );
+    error = describeError( PostgresCodec::encodeParameters( arrParam, 1, 1, parameters ) );
+    SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.empty() == false );
 }
 
@@ -128,20 +141,20 @@ SW_TEST_CASE( PostgresCodecTest, IntegersDecodeBigEndianWithSign )
     string      error;
     SQLValue    value;
     const uint8 arrMinusOne2[] = { 0xFF, 0xFF };
-    SW_REQUIRE_TRUE( PostgresCodec::decodeColumn( kOidInt2, arrMinusOne2, 2, value, error ) );
+    SW_REQUIRE_TRUE( PostgresCodec::decodeColumn( kOidInt2, arrMinusOne2, 2, value ) );
     SW_EXPECT_TRUE( value._type == SQLValueType::Int64 );
     SW_EXPECT_EQUAL( int64( -1 ), value._integer );
 
     const uint8 arrInt4[] = { 0x01, 0x02, 0x03, 0x04 };
-    SW_REQUIRE_TRUE( PostgresCodec::decodeColumn( kOidInt4, arrInt4, 4, value, error ) );
+    SW_REQUIRE_TRUE( PostgresCodec::decodeColumn( kOidInt4, arrInt4, 4, value ) );
     SW_EXPECT_EQUAL( int64( 0x01020304 ), value._integer );
 
     const uint8 arrMin8[] = { 0x80, 0, 0, 0, 0, 0, 0, 0 };
-    SW_REQUIRE_TRUE( PostgresCodec::decodeColumn( kOidInt8, arrMin8, 8, value, error ) );
+    SW_REQUIRE_TRUE( PostgresCodec::decodeColumn( kOidInt8, arrMin8, 8, value ) );
     SW_EXPECT_EQUAL( std::numeric_limits<int64>::min(), value._integer );
 
     const uint8 arrTrue[] = { 1 };
-    SW_REQUIRE_TRUE( PostgresCodec::decodeColumn( kOidBool, arrTrue, 1, value, error ) );
+    SW_REQUIRE_TRUE( PostgresCodec::decodeColumn( kOidBool, arrTrue, 1, value ) );
     SW_EXPECT_EQUAL( int64( 1 ), value._integer ); // bool 이 부호 확장으로 -1 이 되지 않는다(값이 1 이다)
 }
 
@@ -154,11 +167,12 @@ SW_TEST_CASE( PostgresCodecTest, IntegerLengthIsNotTrusted )
     string      error;
     SQLValue    value;
     const uint8 arrByte[16] = {};
-    SW_EXPECT_FALSE( PostgresCodec::decodeColumn( kOidInt8, arrByte, 0, value, error ) );
+    error                   = describeError( PostgresCodec::decodeColumn( kOidInt8, arrByte, 0, value ) );
+    SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.empty() == false );
-    SW_EXPECT_FALSE( PostgresCodec::decodeColumn( kOidInt8, arrByte, 16, value, error ) );
-    SW_EXPECT_FALSE( PostgresCodec::decodeColumn( kOidInt4, arrByte, 8, value, error ) );
-    SW_EXPECT_FALSE( PostgresCodec::decodeColumn( kOidBool, arrByte, 2, value, error ) );
+    SW_EXPECT_FALSE( PostgresCodec::decodeColumn( kOidInt8, arrByte, 16, value ) );
+    SW_EXPECT_FALSE( PostgresCodec::decodeColumn( kOidInt4, arrByte, 8, value ) );
+    SW_EXPECT_FALSE( PostgresCodec::decodeColumn( kOidBool, arrByte, 2, value ) );
 }
 
 SW_TEST_CASE( PostgresCodecTest, TextAndBytesKeepTheirKinds )
@@ -166,16 +180,16 @@ SW_TEST_CASE( PostgresCodecTest, TextAndBytesKeepTheirKinds )
     string      error;
     const uint8 arrByte[] = { 'a', 0x00, 'b' };
     SQLValue    text;
-    SW_REQUIRE_TRUE( PostgresCodec::decodeColumn( kOidText, arrByte, 3, text, error ) );
+    SW_REQUIRE_TRUE( PostgresCodec::decodeColumn( kOidText, arrByte, 3, text ) );
     SW_EXPECT_TRUE( text._type == SQLValueType::Text && text._bytes.size() == 3 );
     SQLValue varchar;
-    SW_REQUIRE_TRUE( PostgresCodec::decodeColumn( kOidVarchar, arrByte, 1, varchar, error ) );
+    SW_REQUIRE_TRUE( PostgresCodec::decodeColumn( kOidVarchar, arrByte, 1, varchar ) );
     SW_EXPECT_TRUE( varchar._type == SQLValueType::Text && varchar.getText() == "a" );
     SQLValue bytes;
-    SW_REQUIRE_TRUE( PostgresCodec::decodeColumn( kOidBytea, arrByte, 3, bytes, error ) );
+    SW_REQUIRE_TRUE( PostgresCodec::decodeColumn( kOidBytea, arrByte, 3, bytes ) );
     SW_EXPECT_TRUE( bytes._type == SQLValueType::Blob && bytes._bytes == vector<uint8>( arrByte, arrByte + 3 ) );
     SQLValue empty;
-    SW_REQUIRE_TRUE( PostgresCodec::decodeColumn( kOidBytea, arrByte, 0, empty, error ) );
+    SW_REQUIRE_TRUE( PostgresCodec::decodeColumn( kOidBytea, arrByte, 0, empty ) );
     SW_EXPECT_TRUE( empty._type == SQLValueType::Blob && empty._bytes.empty() );
 }
 
@@ -188,7 +202,8 @@ SW_TEST_CASE( PostgresCodecTest, UnknownTypeIsRefused )
     string      error;
     SQLValue    value;
     const uint8 arrByte[8] = {};
-    SW_EXPECT_FALSE( PostgresCodec::decodeColumn( kOidFloat8, arrByte, 8, value, error ) );
+    error                  = describeError( PostgresCodec::decodeColumn( kOidFloat8, arrByte, 8, value ) );
+    SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.empty() == false );
 }
 
@@ -219,8 +234,9 @@ SW_TEST_CASE( PostgresCodecTest, SQLStatesClassify )
 SW_TEST_CASE( PostgresCodecTest, EmptyConnectionStringIsRefused )
 {
     string      error;
-    ISQLDriver* pDriver = SQLDriverRegistry::findDriver( "postgres", error );
+    ISQLDriver* pDriver = SQLDriverRegistry::findDriver( "postgres" ).value_or( nullptr );
     SW_REQUIRE_NOT_NULL( pDriver );
-    SW_EXPECT_NULL( pDriver->openConnection( "", "", error ) );
+    error = describeError( pDriver->openConnection( "", "" ) );
+    SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.empty() == false );
 }

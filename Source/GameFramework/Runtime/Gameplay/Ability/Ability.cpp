@@ -131,11 +131,11 @@ namespace sw
         finishActivation( true );
     }
 
-    std::optional<float32> Ability::getParameter( const hashed_string& name ) const
+    optional<float32> Ability::getParameter( const hashed_string& name ) const
     {
         const auto mapIter = _config._mapParameter.find( name );
         if ( mapIter == _config._mapParameter.end() )
-            return std::nullopt;
+            return nullopt;
         return mapIter->second;
     }
 
@@ -375,8 +375,8 @@ namespace sw
                 int32 healedCount = 0;
                 for ( AbilityComponent* pComponent : listComponent )
                 {
-                    const hashed_string&         health    = pComponent->getHealthAttribute();
-                    const std::optional<float32> maxHealth = pComponent->getAttributeValue( pComponent->getMaxHealthAttribute() );
+                    const hashed_string&    health    = pComponent->getHealthAttribute();
+                    const optional<float32> maxHealth = pComponent->getAttributeValue( pComponent->getMaxHealthAttribute() );
                     if ( pComponent->hasAttribute( health ) == false || maxHealth.has_value() == false )
                         continue;
                     if ( pComponent->setAttributeBaseValue( health, *maxHealth ) )

@@ -238,8 +238,10 @@ namespace
             settings._pRemoteConfig                    = &_remoteConfig;
             settings._requestBurstPerRemote            = 1000;
             settings._requestBurstPerAccount           = 1000;
-            string error;
-            SW_EXPECT_TRUE_MSG( server._host.initialize( server._transport.get(), settings, error ), error.c_str() );
+            {
+                const auto result = server._host.initialize( server._transport.get(), settings );
+                SW_EXPECT_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() );
+            }
         }
 
         void pump() { test::updateAll( { &_pRig->_server }, _pRig->_clients, kNowMs, 12 ); }

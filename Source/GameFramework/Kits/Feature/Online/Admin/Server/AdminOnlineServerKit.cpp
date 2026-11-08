@@ -28,26 +28,23 @@ namespace sw
             {
             }
 
-            [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
+            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry ) override
             {
                 AdminKitConfig kitConfig;
-                if ( entry.readSettings( kitConfig, outError ) == false )
-                    return false;
+                if ( expected<void> result = entry.readSettings( kitConfig ); result.has_value() == false )
+                    return result;
                 for ( const AdminSeedEntry& seed : kitConfig._listSeedAdmin )
                 {
                     if ( seed._role == AdminRole::None || seed._role == AdminRole::Count )
-                    {
-                        outError = "_listSeedAdmin needs a role of Viewer, Support, Operator or Super";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "_listSeedAdmin needs a role of Viewer, Support, Operator or Super" } );
                 }
                 _listSeed = std::move( kitConfig._listSeedAdmin );
-                if ( registerServerService( context, entry, &_service, outError ) == false )
-                    return false;
-                return true;
+                if ( expected<void> result = registerServerService( context, entry, &_service ); result.has_value() == false )
+                    return result;
+                return {};
             }
 
-            bool start( OnlineServerKitContext& context, string& outError ) override
+            expected<void> start( OnlineServerKitContext& context ) override
             {
                 AdminServiceConfig settings;
                 SubsystemScope&    kits     = context._kits;
@@ -61,15 +58,12 @@ namespace sw
                 settings._pNameIndex        = kits.find<const IAccountNameIndex>(); // 접속하지 않은 계정도 이름으로 찾는다
                 settings._pLiveEventControl = kits.find<ILiveEventControl>();
                 if ( _service.initialize( context._pStore, settings ) == false )
-                {
-                    outError = "the admin service needs a store";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the admin service needs a store" } );
                 for ( const AdminSeedEntry& seed : _listSeed )
                 {
                     _service.seedRole( static_cast<AccountID>( seed._accountID ), seed._role, context._nowMs );
                 }
-                return true;
+                return {};
             }
 
             /** @brief 종료 드레인이 기다릴 진행 중인 일 — 끝나지 않은 GM 호출. */

@@ -32,7 +32,7 @@ namespace sw
                 const AbilityComponent* pAbility = findAbility( query, outValue );
                 if ( pAbility == nullptr )
                     return false;
-                const std::optional<float32> value = pAbility->getAttributeValue( hashed_string( string( query._key ).c_str() ) );
+                const optional<float32> value = pAbility->getAttributeValue( hashed_string( string( query._key ).c_str() ) );
                 if ( value.has_value() == false )
                 {
                     outValue.setText( string( "the target has no attribute '" ) + string( query._key ) + "'" );

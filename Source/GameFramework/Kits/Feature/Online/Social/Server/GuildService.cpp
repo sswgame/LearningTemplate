@@ -877,29 +877,27 @@ namespace sw
         submit( request, 0 );
     }
 
-    bool GuildService::setLevelTable( const vector<int64>& listLevelExperience, string& outError )
+    expected<void> GuildService::setLevelTable( const vector<int64>& listLevelExperience )
     {
         if ( listLevelExperience.size() > static_cast<size_t>( GuildLimit::kMaxLevelCount ) )
         {
-            StringBuilder<constant::buffer::kMax256> errorBuilder;
-            errorBuilder.appendFormat( "the level table has %# levels, at most %# are allowed", listLevelExperience.size(), static_cast<int32>( GuildLimit::kMaxLevelCount ) );
-            outError = string( errorBuilder.view() );
-            return false;
+            StringBuilder<constant::buffer::kMax128> detailBuilder;
+            detailBuilder.appendFormat( "%# levels, at most %#", listLevelExperience.size(), static_cast<int32>( GuildLimit::kMaxLevelCount ) );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the level table has too many levels", detailBuilder.view() } );
         }
         int64 previous = 0;
         for ( const int64 experience : listLevelExperience )
         {
             if ( experience <= previous )
             {
-                StringBuilder<constant::buffer::kMax256> errorBuilder;
-                errorBuilder.appendFormat( "level experience %# must be positive and greater than the previous %#", experience, previous );
-                outError = string( errorBuilder.view() );
-                return false;
+                StringBuilder<constant::buffer::kMax128> detailBuilder;
+                detailBuilder.appendFormat( "%# after %#", experience, previous );
+                return unexpected( Error{ ErrorKind::InvalidArgument, "level experience must be positive and greater than the previous level", detailBuilder.view() } );
             }
             previous = experience;
         }
         _listLevelExperience = listLevelExperience;
-        return true;
+        return {};
     }
 
     int32 GuildService::computeLevel( int64 experience ) const

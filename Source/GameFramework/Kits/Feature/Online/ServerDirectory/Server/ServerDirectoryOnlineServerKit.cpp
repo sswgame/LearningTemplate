@@ -29,30 +29,28 @@ namespace sw
             {
             }
 
-            [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
+            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry ) override
             {
                 ServerDirectoryKitConfig kitConfig;
-                if ( entry.readSettings( kitConfig, outError ) == false )
-                    return false;
+                if ( expected<void> result = entry.readSettings( kitConfig ); result.has_value() == false )
+                    return result;
                 _settings._listServerKind = std::move( kitConfig._listServerKind );
                 // 점검 · 공지 창은 GM 키트가 `start` 에서 읽는다(GM 키트의 선택 의존).
-                return registerServerService( context, entry, &_server, outError ) && exposeInterface<IServerDirectoryControl>( context, entry, _service, outError );
+                return registerServerService( context, entry, &_server ).and_then( [&]
+                { return exposeInterface<IServerDirectoryControl>( context, entry, _service ); } );
             }
 
-            bool start( OnlineServerKitContext& context, string& outError ) override
+            expected<void> start( OnlineServerKitContext& context ) override
             {
                 if ( context._pRouter == nullptr )
-                {
-                    outError = "the server directory needs a cache";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the server directory needs a cache" } );
                 ServerDirectoryDependencies dependencies;
                 dependencies._pStore  = context._pStore;
                 dependencies._pRouter = context._pRouter;
                 dependencies._pBus    = context._pBus;
                 _service.initialize( dependencies, _settings );
                 _server.initialize( &_service, context._pMetricRegistry );
-                return true;
+                return {};
             }
 
             /** @brief 종료 드레인이 기다릴 진행 중인 일 — 저장소에 맡긴 서버 등록 · 배정 요청. */

@@ -31,10 +31,9 @@ SW_TEST_CASE( GameSettingsTest, RequiredDataNamesThePackOfAKind )
     SW_EXPECT_EQUAL( sw::string( "common" ), settings._mapRequiredDataPack.at( "items" ) );
 
     sw::string path;
-    sw::string error;
-    SW_REQUIRE_TRUE( sw::GamePackDataUtil::tryMakeKindPath( "common", "items", path, error ) );
+    SW_REQUIRE_TRUE( sw::GamePackDataUtil::tryMakeKindPath( "common", "items", path ) );
     SW_EXPECT_EQUAL( sw::string( "common/data/items.xml" ), path );
-    SW_REQUIRE_TRUE( sw::GamePackDataUtil::tryMakeKindPath( "common", "appearance", path, error ) );
+    SW_REQUIRE_TRUE( sw::GamePackDataUtil::tryMakeKindPath( "common", "appearance", path ) );
     SW_EXPECT_EQUAL( sw::string( "common/data/appearance" ), path );
 }
 
@@ -69,8 +68,7 @@ SW_TEST_CASE( GameSettingsTest, CookRequiredDataPathsMatchTheKindRegistry )
     for ( const sw::PackRequiredDataPath& entry : config._cookRules._listRequiredData )
     {
         sw::string kindPath;
-        sw::string error;
-        SW_REQUIRE_TRUE( sw::GamePackDataUtil::tryMakeKindPath( "common", entry._kind, kindPath, error ) );
+        SW_REQUIRE_TRUE( sw::GamePackDataUtil::tryMakeKindPath( "common", entry._kind, kindPath ) );
         SW_EXPECT_EQUAL( sw::FileUtil::joinPath( "common", entry._path ), kindPath );
     }
 }
@@ -88,9 +86,8 @@ SW_TEST_CASE( GameSettingsTest, CookEntryCatalogsMatchTheRuntimeFiles )
 
     sw::string itemPath;
     sw::string appearanceFolder;
-    sw::string error;
-    SW_REQUIRE_TRUE( sw::GamePackDataUtil::tryMakeKindPath( "common", "items", itemPath, error ) );
-    SW_REQUIRE_TRUE( sw::GamePackDataUtil::tryMakeKindPath( "common", "appearance", appearanceFolder, error ) );
+    SW_REQUIRE_TRUE( sw::GamePackDataUtil::tryMakeKindPath( "common", "items", itemPath ) );
+    SW_REQUIRE_TRUE( sw::GamePackDataUtil::tryMakeKindPath( "common", "appearance", appearanceFolder ) );
     for ( const sw::PackEntryCatalog& entry : config._cookRules._listEntryCatalog )
     {
         const sw::string      entryPath = sw::FileUtil::joinPath( "common", entry._path );

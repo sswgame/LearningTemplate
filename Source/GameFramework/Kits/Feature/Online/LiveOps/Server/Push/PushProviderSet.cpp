@@ -35,63 +35,56 @@ namespace sw
             }
 
             /** @brief 환경 변수의 서비스 계정으로 FCM 제공자를 만들고 HTTP 클라이언트의 TLS 를 준비합니다. */
-            [[nodiscard]] static unique_ptr<IPushNotificationProvider> createFCM( const PushProviderConfig& config, string_view trustFile, OwnedHTTPClient& httpClient,
-                                                                                  string& outError )
+            [[nodiscard]] static expected<unique_ptr<IPushNotificationProvider>> createFCM( const PushProviderConfig& config, string_view trustFile, OwnedHTTPClient& httpClient )
             {
                 string     serviceAccountJSON;
                 const bool bNamed      = config._serviceAccountEnvironment.empty() == false;
                 const bool bSecretRead = bNamed && ServerSecret::read( config._serviceAccountEnvironment, serviceAccountJSON ) && serviceAccountJSON.empty() == false;
                 if ( bSecretRead == false )
-                {
-                    outError = "the FCM service account environment variable '" + config._serviceAccountEnvironment + "' is not set";
-                    return nullptr;
-                }
-                FCMPushSettings settings;
-                const bool      bRead = ServiceAccountCredentials::read( serviceAccountJSON, settings._credentials, outError );
+                    return unexpected( Error{ ErrorKind::NotFound, "the FCM service account environment variable is not set", config._serviceAccountEnvironment } );
+                FCMPushSettings      settings;
+                const expected<void> read = ServiceAccountCredentials::read( serviceAccountJSON, settings._credentials );
                 Memory::set( serviceAccountJSON.data(), 0, serviceAccountJSON.size() ); // 키가 든 글을 남기지 않는다
-                if ( bRead == false )
-                    return nullptr;
+                if ( read.has_value() == false )
+                    return unexpected( read.error() );
                 if ( config._tokenURL.empty() == false )
                     settings._credentials._tokenURL = config._tokenURL;
                 if ( config._sendBaseURL.empty() == false )
                     settings._sendBaseURL = config._sendBaseURL;
-                if ( httpClient.registerHostTLS( settings._credentials._tokenURL, trustFile, "pushTrustFile", outError ) == false ||
-                     httpClient.registerHostTLS( settings._sendBaseURL, trustFile, "pushTrustFile", outError ) == false )
-                    return nullptr;
-                return make_unique<FCMPushProvider>( std::move( settings ), &game::getSubsystem<INetSecurityProvider>(), &httpClient.get() );
+                if ( expected<void> tls = httpClient.registerHostTLS( settings._credentials._tokenURL, trustFile, "pushTrustFile" ).and_then( [&]
+                {
+                    return httpClient.registerHostTLS( settings._sendBaseURL, trustFile, "pushTrustFile" );
+                } );
+                     tls.has_value() == false )
+                    return unexpected( tls.error() );
+                return unique_ptr<IPushNotificationProvider>( make_unique<FCMPushProvider>( std::move( settings ), &game::getSubsystem<INetSecurityProvider>(), &httpClient.get() ) );
             }
 
             /** @brief 환경 변수의 인증 키로 APNs 제공자를 만들고 HTTP/2 클라이언트의 TLS(ALPN h2)를 준비합니다. 키가 ES256 서명에 못 쓰이면 기동을 멈춘다. */
-            [[nodiscard]] static unique_ptr<IPushNotificationProvider> createAPNS( const PushProviderConfig& config, string_view trustFile, OwnedHTTP2Client& httpClient,
-                                                                                   string& outError )
+            [[nodiscard]] static expected<unique_ptr<IPushNotificationProvider>> createAPNS( const PushProviderConfig& config, string_view trustFile, OwnedHTTP2Client& httpClient )
             {
                 APNSPushSettings settings;
                 const bool       bNamed      = config._keyEnvironment.empty() == false;
                 const bool       bSecretRead = bNamed && ServerSecret::read( config._keyEnvironment, settings._privateKeyPem ) && settings._privateKeyPem.empty() == false;
                 if ( bSecretRead == false )
-                {
-                    outError = "the APNs authentication key environment variable '" + config._keyEnvironment + "' is not set";
-                    return nullptr;
-                }
+                    return unexpected( Error{ ErrorKind::NotFound, "the APNs authentication key environment variable is not set", config._keyEnvironment } );
                 settings._keyID  = config._keyID;
                 settings._teamID = config._teamID;
                 settings._topic  = config._topic;
                 if ( config._sendBaseURL.empty() == false )
                     settings._baseURL = config._sendBaseURL;
-                vector<uint8> probeSignature;
-                const uint8   probe      = 0;
-                const bool    bKeyUsable = game::getSubsystem<INetSecurityProvider>().signData( NetSignatureAlgorithm::EcdsaP256Sha256, settings._privateKeyPem, &probe, 1, probeSignature );
-                bool          bReady     = bKeyUsable;
-                if ( bKeyUsable == false )
-                    outError = "the APNs authentication key in '" + config._keyEnvironment + "' is not a usable ES256 private key (.p8 PEM)";
-                else
-                    bReady = httpClient.registerHostTLS( settings._baseURL, trustFile, "pushTrustFile", outError ); // 실패 이유는 등록이 채운다
-                if ( bReady == false )
+                vector<uint8>        probeSignature;
+                const uint8          probe      = 0;
+                const bool           bKeyUsable = game::getSubsystem<INetSecurityProvider>().signData( NetSignatureAlgorithm::EcdsaP256Sha256, settings._privateKeyPem, &probe, 1, probeSignature );
+                const expected<void> ready      = bKeyUsable ? httpClient.registerHostTLS( settings._baseURL, trustFile, "pushTrustFile" ) // 실패 이유는 등록이 채운다
+                                                             : expected<void>{ unexpected( Error{ ErrorKind::InvalidArgument, "the APNs authentication key is not a usable ES256 private key (.p8 PEM)",
+                                                                                             config._keyEnvironment } ) };
+                if ( ready.has_value() == false )
                 {
                     Memory::set( settings._privateKeyPem.data(), 0, settings._privateKeyPem.size() ); // 키가 든 글을 남기지 않는다
-                    return nullptr;
+                    return unexpected( ready.error() );
                 }
-                return make_unique<APNSPushProvider>( std::move( settings ), &game::getSubsystem<INetSecurityProvider>(), &httpClient.get() );
+                return unique_ptr<IPushNotificationProvider>( make_unique<APNSPushProvider>( std::move( settings ), &game::getSubsystem<INetSecurityProvider>(), &httpClient.get() ) );
             }
         };
     } // namespace
@@ -109,23 +102,21 @@ namespace sw
         shutdown();
     }
 
-    bool PushProviderSet::readEntry( const JSONValue& entry, PushProviderConfig& outConfig, string& outError )
+    expected<void> PushProviderSet::readEntry( const JSONValue& entry, PushProviderConfig& outConfig )
     {
         using Internal  = PushProviderSetInternal;
         outConfig._kind = Internal::readText( entry, "kind" );
         const bool bFCM = outConfig._kind == Internal::kKindFCM;
         if ( bFCM == false && outConfig._kind != Internal::kKindAPNS )
-        {
-            outError = "push provider kind '" + outConfig._kind + "' is unknown (fcm, apns)";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the push provider kind is unknown (fcm, apns)", outConfig._kind } );
         for ( const string& key : entry.getMemberNames() )
         {
             const bool bKnown = bFCM ? VectorUtil::contains( Internal::kKeysFCM, key ) : VectorUtil::contains( Internal::kKeysAPNS, key );
             if ( bKnown == false )
             {
-                outError = "unknown " + outConfig._kind + " push provider setting '" + key + "'";
-                return false;
+                Error error{ ErrorKind::InvalidArgument, "unknown push provider setting", outConfig._kind };
+                error.appendDetail( " " ).appendDetail( key );
+                return unexpected( error );
             }
         }
         outConfig._sendBaseURL = Internal::readText( entry, "sendUrl" );
@@ -134,11 +125,8 @@ namespace sw
             outConfig._serviceAccountEnvironment = Internal::readText( entry, "serviceAccountEnvironment" );
             outConfig._tokenURL                  = Internal::readText( entry, "tokenUrl" );
             if ( outConfig._serviceAccountEnvironment.empty() )
-            {
-                outError = "push provider 'fcm' needs serviceAccountEnvironment";
-                return false;
-            }
-            return true;
+                return unexpected( Error{ ErrorKind::InvalidArgument, "push provider 'fcm' needs serviceAccountEnvironment" } );
+            return {};
         }
         outConfig._keyEnvironment   = Internal::readText( entry, "keyEnvironment" );
         outConfig._keyID            = Internal::readText( entry, "keyId" );
@@ -147,14 +135,11 @@ namespace sw
         const bool bKeyMissing      = outConfig._keyEnvironment.empty() || outConfig._keyID.empty();
         const bool bIdentityMissing = outConfig._teamID.empty() || outConfig._topic.empty();
         if ( bKeyMissing || bIdentityMissing )
-        {
-            outError = "push provider 'apns' needs keyEnvironment, keyId, teamId and topic";
-            return false;
-        }
-        return true;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "push provider 'apns' needs keyEnvironment, keyId, teamId and topic" } );
+        return {};
     }
 
-    bool PushProviderSet::initialize( const vector<PushProviderConfig>& listSettings, string_view trustFile, const IClock& clock, string& outError )
+    expected<void> PushProviderSet::initialize( const vector<PushProviderConfig>& listSettings, string_view trustFile, const IClock& clock )
     {
         using Internal = PushProviderSetInternal;
         shutdown();
@@ -175,19 +160,21 @@ namespace sw
             }
             if ( bHTTPStarted == false )
             {
-                outError = "cannot start the HTTP client of push provider '" + config._kind + "'";
                 shutdown();
-                return false;
+                return unexpected( Error{ ErrorKind::ExternalFailure, "cannot start the HTTP client of the push provider", config._kind } );
             }
-            entry._provider = bFCM ? Internal::createFCM( config, trustFile, *entry._httpClient, outError ) : Internal::createAPNS( config, trustFile, *entry._http2Client, outError );
-            if ( entry._provider == nullptr )
+            expected<unique_ptr<IPushNotificationProvider>> provider =
+                bFCM ? Internal::createFCM( config, trustFile, *entry._httpClient ) : Internal::createAPNS( config, trustFile, *entry._http2Client );
+            if ( provider.has_value() == false )
             {
-                outError = "push provider '" + config._kind + "': " + outError;
+                Error error{ provider.error().kind(), provider.error().message().data(), config._kind };
+                error.appendDetail( ": " ).appendDetail( provider.error().detail() );
                 shutdown();
-                return false;
+                return unexpected( error );
             }
+            entry._provider = std::move( *provider );
         }
-        return true;
+        return {};
     }
 
     void PushProviderSet::shutdown()

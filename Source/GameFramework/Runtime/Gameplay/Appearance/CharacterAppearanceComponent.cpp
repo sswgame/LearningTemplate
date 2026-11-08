@@ -1679,7 +1679,7 @@ namespace sw
         // 합친 부품의 조각마다 몸 오브젝트에 구간 컴포넌트를 둔다(있으면 그대로 두고 이름 · 머티리얼만 맞춘다).
         for ( SpawnedPart& spawned : _listSpawnedPart )
         {
-            std::optional<size_t> mergeIndex;
+            optional<size_t> mergeIndex;
             for ( size_t index = 0; index < build._listMergeLoad.size() && mergeIndex.has_value() == false; ++index )
             {
                 if ( build._listLoadPartIndex[build._listMergeLoad[index]] == spawned._partIndex )

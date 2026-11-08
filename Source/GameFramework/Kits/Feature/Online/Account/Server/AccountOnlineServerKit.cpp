@@ -47,24 +47,28 @@ namespace sw
             {
             }
 
-            [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
+            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry ) override
             {
-                AccountKitConfig            kitConfig;
-                std::optional<AbsolutePath> providersFile;
-                std::optional<AbsolutePath> trustFile;
-                if ( entry.readSettings( kitConfig, outError ) == false || entry.resolveFile( kitConfig._platformProvidersFile, "_platformProvidersFile", providersFile, outError ) == false || entry.resolveFile( kitConfig._platformTrustFile, "_platformTrustFile", trustFile, outError ) == false )
-                    return false;
+                AccountKitConfig kitConfig;
+                if ( expected<void> settings = entry.readSettings( kitConfig ); settings.has_value() == false )
+                    return settings;
+                const expected<optional<AbsolutePath>> providersFile = entry.resolveFile( kitConfig._platformProvidersFile, "_platformProvidersFile" );
+                if ( providersFile.has_value() == false )
+                    return unexpected( providersFile.error() );
+                const expected<optional<AbsolutePath>> trustFile = entry.resolveFile( kitConfig._platformTrustFile, "_platformTrustFile" );
+                if ( trustFile.has_value() == false )
+                    return unexpected( trustFile.error() );
                 LoginServiceConfig loginSettings;
                 loginSettings._attemptBurst = kitConfig._attemptBurst;
                 // 개발 설정은 DevOnline 단위가 있을 때만 받는다 — 그 단위가 없는 구성(배포)은 기동 오류다.
                 const bool bDevOption = kitConfig._bLightPasswordHash || kitConfig._listSeedTestAccount.empty() == false;
                 if ( bDevOption )
                 {
-                    const AccountDevOptions* pDevOptions = DevOnlineExtension<AccountDevOptions>::require( outError );
-                    if ( pDevOptions == nullptr )
-                        return false;
+                    const expected<const AccountDevOptions*> devOptions = DevOnlineExtension<AccountDevOptions>::require();
+                    if ( devOptions.has_value() == false )
+                        return unexpected( devOptions.error() );
                     if ( kitConfig._bLightPasswordHash )
-                        loginSettings._passwordHashParams = pDevOptions->_lightPasswordHashParams;
+                        loginSettings._passwordHashParams = ( *devOptions )->_lightPasswordHashParams;
                     for ( const AccountSeedEntry& seed : kitConfig._listSeedTestAccount )
                     {
                         _listSeedAccount.push_back( LoginCredential{ seed._loginName, seed._password } );
@@ -73,23 +77,24 @@ namespace sw
                 const string& ticketKeyEnvironment     = kitConfig._ticketKeySecretEnvironment;
                 const string& linkSecretKeyEnvironment = kitConfig._linkSecretKeySecretEnvironment;
                 uint8         arrTicketKey[LoginTicketAuthority::kMasterKeySize];
-                if ( LoginTicketKey::readFromEnvironment( ticketKeyEnvironment, arrTicketKey, outError ) == false )
-                    return false;
+                if ( expected<void> result = LoginTicketKey::readFromEnvironment( ticketKeyEnvironment, arrTicketKey ); result.has_value() == false )
+                    return result;
                 _loginService.initialize( context._pStore, &_crypto, loginSettings, arrTicketKey );
                 Memory::wipe( arrTicketKey, sizeof( arrTicketKey ) );
                 // 여기부터 실패하면 세운 로그인 서비스를 스스로 내린다 — 초기화에 실패한 키트는 shutdown 을 받지 않는다.
-                const bool bAssembled = createPlatformProviders( providersFile, trustFile, linkSecretKeyEnvironment, context._clock, outError ) && exposeAccount( context, entry, outError );
-                if ( bAssembled == false )
+                expected<void> assembled =
+                    createPlatformProviders( *providersFile, *trustFile, linkSecretKeyEnvironment, context._clock ).and_then( [&]
+                { return exposeAccount( context, entry ); } );
+                if ( assembled.has_value() == false )
                     shutdown();
-                return bAssembled;
+                return assembled;
             }
 
-            bool start( OnlineServerKitContext& context, string& outError ) override
+            expected<void> start( OnlineServerKitContext& context ) override
             {
                 // 바인딩이 첫 틱에 호스트의 캐시 · 버스를 잇는다(접속 상태 · account.revoke). 여기서 할 일은 없다.
                 (void)context;
-                (void)outError;
-                return true;
+                return {};
             }
 
             void update( UnixMilliseconds nowMs ) override
@@ -121,50 +126,55 @@ namespace sw
 
         private:
             /** @brief 바인딩을 호스트에 올리고 신원 · 접속 상태 · 세션 끊기 · 이름 찾기 · 외부 로그인 연동 조회를 문맥에 겁니다. */
-            [[nodiscard]] bool exposeAccount( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError )
+            [[nodiscard]] expected<void> exposeAccount( OnlineServerKitContext& context, const OnlineServerKitEntry& entry )
             {
                 _loginService.setRemoteConfig( context._pRemoteConfig );
                 AccountServerConfig serverSettings;
                 serverSettings._pMetricRegistry = context._pMetricRegistry;
                 _accountServer.initialize( &_loginService, serverSettings );
-                return registerServerService( context, entry, &_accountServer, outError ) && exposeInterface<IAccountDirectory>( context, entry, _loginService, outError ) && exposeInterface<IAccountPresence>( context, entry, *_accountServer.getPresence(), outError ) && exposeInterface<IAccountSessionControl>( context, entry, _accountServer.getSessionControl(), outError ) && exposeInterface<IAccountNameIndex>( context, entry, _nameIndex, outError ) && exposeInterface<IAccountExternalLinks>( context, entry, _externalLinks, outError );
+                return registerServerService( context, entry, &_accountServer )
+                    .and_then( [&]
+                { return exposeInterface<IAccountDirectory>( context, entry, _loginService ); } )
+                    .and_then( [&]
+                { return exposeInterface<IAccountPresence>( context, entry, *_accountServer.getPresence() ); } )
+                    .and_then( [&]
+                { return exposeInterface<IAccountSessionControl>( context, entry, _accountServer.getSessionControl() ); } )
+                    .and_then( [&]
+                { return exposeInterface<IAccountNameIndex>( context, entry, _nameIndex ); } )
+                    .and_then( [&]
+                { return exposeInterface<IAccountExternalLinks>( context, entry, _externalLinks ); } );
             }
 
             /** @brief 제공자 설정 파일을 읽어 제공자를 만들고 로그인 서비스에 등록합니다. 파일을 정하지 않았으면 외부 로그인이 없습니다. */
-            [[nodiscard]] bool createPlatformProviders( const std::optional<AbsolutePath>& providersFile, const std::optional<AbsolutePath>& trustFile, const string& linkSecretKeyEnvironment,
-                                                        const IClock& clock, string& outError )
+            [[nodiscard]] expected<void> createPlatformProviders( const optional<AbsolutePath>& providersFile, const optional<AbsolutePath>& trustFile, const string& linkSecretKeyEnvironment,
+                                                                  const IClock& clock )
             {
                 vector<PlatformLoginProviderConfig> listSettings;
-                if ( OnlineProviderFile::read<PlatformLoginProviderConfig>( providersFile, trustFile, "_platformProvidersFile", "_platformTrustFile", &PlatformLoginProviderConfig::readEntry,
-                                                                            listSettings, outError ) == false )
-                    return false;
-                if ( _platformProviders.initialize( listSettings, OnlineProviderFile::getTrustText( trustFile ), clock, outError ) == false )
-                    return false;
+                if ( expected<void> result = OnlineProviderFile::read<PlatformLoginProviderConfig>( providersFile, trustFile, "_platformProvidersFile", "_platformTrustFile", &PlatformLoginProviderConfig::readEntry,
+                                                                                                    listSettings );
+                     result.has_value() == false )
+                    return result;
+                if ( expected<void> result = _platformProviders.initialize( listSettings, OnlineProviderFile::getTrustText( trustFile ), clock ); result.has_value() == false )
+                    return result;
                 bool bNeedsSecretVault = false;
                 for ( int32 index = 0; index < _platformProviders.getProviderCount(); ++index )
                 {
                     if ( _loginService.registerPlatformProvider( _platformProviders.getProvider( index ) ) == false )
-                    {
-                        outError = "platform login provider names must be unique and valid";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "platform login provider names must be unique and valid" } );
                     bNeedsSecretVault = bNeedsSecretVault || _platformProviders.getProvider( index )->supportsRevocation();
                 }
                 if ( bNeedsSecretVault == false )
-                    return true;
+                    return {};
                 // 탈퇴 때 토큰을 철회하는 제공자가 있다 — 연동 비밀을 암호화할 키가 반드시 있어야 한다(개발용 키로 대신하지 않는다).
                 if ( linkSecretKeyEnvironment.empty() )
-                {
-                    outError = "a login provider revokes link secrets on account deletion - set _linkSecretKeySecretEnvironment";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "a login provider revokes link secrets on account deletion - set _linkSecretKeySecretEnvironment" } );
                 uint8 arrVaultKey[LoginSecretVault::kKeySize];
-                if ( LoginTicketKey::readFromEnvironment( linkSecretKeyEnvironment, arrVaultKey, outError ) == false )
-                    return false;
+                if ( expected<void> result = LoginTicketKey::readFromEnvironment( linkSecretKeyEnvironment, arrVaultKey ); result.has_value() == false )
+                    return result;
                 _secretVault.initialize( &game::getSubsystem<INetSecurityProvider>(), arrVaultKey );
                 Memory::wipe( arrVaultKey, sizeof( arrVaultKey ) );
                 _loginService.setSecretVault( &_secretVault );
-                return true;
+                return {};
             }
 
         private:

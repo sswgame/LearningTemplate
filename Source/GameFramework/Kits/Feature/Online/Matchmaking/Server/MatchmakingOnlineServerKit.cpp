@@ -39,11 +39,11 @@ namespace sw
             {
             }
 
-            [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
+            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry ) override
             {
                 MatchmakingKitConfig kitConfig;
-                if ( entry.readSettings( kitConfig, outError ) == false )
-                    return false;
+                if ( expected<void> result = entry.readSettings( kitConfig ); result.has_value() == false )
+                    return result;
                 const string& catalogPath = kitConfig._catalog;
                 _maxPartySize             = kitConfig._maxPartySize;
                 _reconnectGraceMs         = kitConfig._reconnectGraceMs;
@@ -52,39 +52,27 @@ namespace sw
                 {
                     _pCatalog = SharedAssetCache<MatchModeCatalog>::acquire( catalogPath );
                     if ( _pCatalog == nullptr )
-                    {
-                        outError = "the match mode catalog '" + catalogPath + "' could not be read";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::NotFound, "the match mode catalog could not be read", catalogPath } );
                     _listMode = _pCatalog->getModes();
                 }
                 _listMode.insert( _listMode.end(), kitConfig._listMode.begin(), kitConfig._listMode.end() );
                 if ( _listMode.empty() )
-                {
-                    outError = "the matchmaking kit needs at least one mode (_catalog or _listMode)";
-                    return false;
-                }
-                if ( registerServerService( context, entry, &_server, outError ) == false )
-                    return false;
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the matchmaking kit needs at least one mode (_catalog or _listMode)" } );
+                if ( expected<void> result = registerServerService( context, entry, &_server ); result.has_value() == false )
+                    return result;
                 if ( _bGameServer == SW_FALSE )
-                    return true;
+                    return {};
                 // 배정받은 계정만 게임 포트에 들이는 정책이다. 계정 키트의 `gameConnect` 가 `start` 에서 찾는다.
                 _agent.initialize( context._serverDescriptor );
-                return exposeInterface<IConnectAdmission>( context, entry, _agent, outError );
+                return exposeInterface<IConnectAdmission>( context, entry, _agent );
             }
 
-            bool start( OnlineServerKitContext& context, string& outError ) override
+            expected<void> start( OnlineServerKitContext& context ) override
             {
                 if ( context._pRouter == nullptr )
-                {
-                    outError = "matchmaking needs a cache (authority leases and server lists)";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "matchmaking needs a cache (authority leases and server lists)" } );
                 if ( _partyLobby.initialize( context._pRouter, context._serverID, _maxPartySize ) == false )
-                {
-                    outError = "matchmaking setting _maxPartySize is out of range (the party lobby service logged the range)";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "matchmaking setting _maxPartySize is out of range (the party lobby service logged the range)" } );
                 MatchQueueDependencies dependencies;
                 dependencies._pRouter     = context._pRouter;
                 dependencies._pBus        = context._pBus;
@@ -93,14 +81,13 @@ namespace sw
                 dependencies._pStatSource = context._kits.find<IAccountStatSource>(); // 실력 모드의 통계이다. 순위표 키트가 없으면 실력 모드는 기동 오류다
                 if ( _queue.initialize( dependencies, _listMode ) == false )
                 {
-                    outError = "matchmaking has a rated mode but the leaderboard kit (stat source) is not assembled";
                     _partyLobby.shutdown(); // 실패한 start 는 `stop` 이 보지 않으므로 세운 파티 · 로비를 여기서 내린다
-                    return false;
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "matchmaking has a rated mode but the leaderboard kit (stat source) is not assembled" } );
                 }
                 _server.initialize( &_partyLobby, &_queue, _bGameServer == SW_TRUE ? &_agent : nullptr, context._kits.find<IAccountPresence>(), context._pMetricRegistry ); // 배정 구독 · 시한은 서버가 돈다
                 _server.setReconnectGrace( _reconnectGraceMs );
                 _server.setGroupChannels( context._kits.find<IGroupChannelMembership>() );
-                return true;
+                return {};
             }
 
             /** @brief 종료 드레인이 기다릴 진행 중인 일 — 큐에 선 이 서버의 티켓과 파티 · 로비 갱신. */

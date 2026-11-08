@@ -16,6 +16,16 @@
 #include "GameFramework/Runtime/Online/Server/IOnlineStoreDriver.h"
 #include "GameFramework/Runtime/Online/Store/MemoryServiceStore.h"
 
+namespace
+{
+    /** @brief 실패의 문장과 대상을 이은 글입니다(성공이면 빈 글). 오류 글을 확인하는 테스트가 씁니다. */
+    template <typename T>
+    sw::string describeError( const sw::expected<T>& result )
+    {
+        return result.has_value() ? sw::string{} : sw::string( result.error().message() ) + " " + sw::string( result.error().detail() );
+    }
+} // namespace
+
 // SQLServiceStoreTest · ServiceStoreParityTest — SQL 서비스 저장소: 가짜 드라이버로 문장 · 트랜잭션 · 실패 처리를 보고, 실제 SQLite 가 메모리 구현과 같은 시나리오를 같은 결과로 지나는지 본다.
 // 서버 키트 케이스다(Game 타깃의 `App --test`, nogpu). PostgreSQL 은 쓰지 않는다 — 외부 DB 없이 돈다.
 
@@ -108,12 +118,11 @@ namespace
             SW_EXPECT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folder, "0001_fake.sql" ), "CREATE FAKE" ) );
             _driver.addRows( test::FakeSQLDriver::kNextCommitVersion, { vector<SQLValue>{ SQLValue::makeInt64( 77 ) } }, 1 );
             SQLConnectionPoolConfig settings;
-            settings._connection  = "fake";
-            settings._secret      = "not logged";
-            settings._workerCount = 1;
-            string     error;
-            const bool bStarted = _store.initialize( test::FakeSQLDriver::kName, settings, string( test::ScopedScratchDomain::kDomain ) + "/sql", UnixMilliseconds{ 1 }, error );
-            SW_EXPECT_TRUE_MSG( bStarted, error );
+            settings._connection         = "fake";
+            settings._secret             = "not logged";
+            settings._workerCount        = 1;
+            const expected<void> started = _store.initialize( test::FakeSQLDriver::kName, settings, string( test::ScopedScratchDomain::kDomain ) + "/sql", UnixMilliseconds{ 1 } );
+            SW_EXPECT_TRUE_MSG( started.has_value(), describeError( started ) );
             _driver.clearLog();
         }
 
@@ -128,11 +137,10 @@ namespace
         SQLiteStoreFixture()
         {
             SQLConnectionPoolConfig settings;
-            settings._connection  = test::makeScratchPath( "store.db" );
-            settings._workerCount = 2;
-            string     error;
-            const bool bStarted = _store.initialize( "sqlite", settings, SQLServiceStore::kMigrationFolder, UnixMilliseconds{ 1 }, error );
-            SW_EXPECT_TRUE_MSG( bStarted, error );
+            settings._connection         = test::makeScratchPath( "store.db" );
+            settings._workerCount        = 2;
+            const expected<void> started = _store.initialize( "sqlite", settings, SQLServiceStore::kMigrationFolder, UnixMilliseconds{ 1 } );
+            SW_EXPECT_TRUE_MSG( started.has_value(), describeError( started ) );
         }
     };
 
@@ -574,14 +582,16 @@ SW_TEST_CASE( SQLServiceStoreTest, InitializeFailuresAreStartupErrors )
     string error;
     {
         SQLServiceStore store;
-        SW_EXPECT_FALSE( store.initialize( "no_such_driver", settings, SQLServiceStore::kMigrationFolder, UnixMilliseconds{ 1 }, error ) );
+        error = describeError( store.initialize( "no_such_driver", settings, SQLServiceStore::kMigrationFolder, UnixMilliseconds{ 1 } ) );
+        SW_EXPECT_FALSE( error.empty() );
         SW_EXPECT_TRUE( error.find( "no_such_driver" ) != string::npos ); // 다른 드라이버로 대신하지 않는다
     }
     {
         SQLServiceStore store;
         error.clear();
         settings._workerCount = 0;
-        SW_EXPECT_FALSE( store.initialize( "sqlite", settings, SQLServiceStore::kMigrationFolder, UnixMilliseconds{ 1 }, error ) );
+        error                 = describeError( store.initialize( "sqlite", settings, SQLServiceStore::kMigrationFolder, UnixMilliseconds{ 1 } ) );
+        SW_EXPECT_FALSE( error.empty() );
         SW_EXPECT_TRUE( error.empty() == false );
         settings._workerCount = 1;
     }
@@ -590,7 +600,8 @@ SW_TEST_CASE( SQLServiceStoreTest, InitializeFailuresAreStartupErrors )
         const SQLDriverRegistration registration{ driver };
         SQLServiceStore             store;
         error.clear();
-        SW_EXPECT_FALSE( store.initialize( test::FakeSQLDriver::kName, settings, SQLServiceStore::kMigrationFolder, UnixMilliseconds{ 1 }, error ) ); // 0002 에 "fake" 방언이 없고 공통 파일도 없다
+        error = describeError( store.initialize( test::FakeSQLDriver::kName, settings, SQLServiceStore::kMigrationFolder, UnixMilliseconds{ 1 } ) ); // 0002 에 "fake" 방언이 없고 공통 파일도 없다
+        SW_EXPECT_FALSE( error.empty() );
         SW_EXPECT_TRUE( error.find( test::FakeSQLDriver::kName ) != string::npos );
         SW_EXPECT_EQUAL( 0, driver.getOpenCount() );
     }
@@ -611,7 +622,8 @@ SW_TEST_CASE( SQLServiceStoreTest, FailedMigrationStopsTheStartup )
     settings._workerCount = 2;
     SQLServiceStore store;
     string          error;
-    SW_EXPECT_FALSE( store.initialize( test::FakeSQLDriver::kName, settings, string( test::ScopedScratchDomain::kDomain ) + "/sql", UnixMilliseconds{ 1 }, error ) );
+    error = describeError( store.initialize( test::FakeSQLDriver::kName, settings, string( test::ScopedScratchDomain::kDomain ) + "/sql", UnixMilliseconds{ 1 } ) );
+    SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.empty() == false );
     SW_EXPECT_EQUAL( 1, driver.getOpenCount() ); // 마이그레이션 연결 하나뿐이다 — 워커가 없다
 }
@@ -622,9 +634,9 @@ SW_TEST_CASE( SQLServiceStoreTest, StoreDriverSubsystemMakesStores )
     IServiceStoreDriver* pDriver = game::findSubsystem<IServiceStoreDriver>();
     SW_REQUIRE_NOT_NULL( pDriver );
     string                    error;
-    unique_ptr<IServiceStore> first = pDriver->createServiceStore( "memory", "", "", 1, UnixMilliseconds{ 1 }, error );
+    unique_ptr<IServiceStore> first = pDriver->createServiceStore( "memory", "", "", 1, UnixMilliseconds{ 1 } ).value_or( nullptr );
     SW_REQUIRE_NOT_NULL( first );
-    unique_ptr<IServiceStore> second = pDriver->createServiceStore( "memory", "", "", 1, UnixMilliseconds{ 1 }, error );
+    unique_ptr<IServiceStore> second = pDriver->createServiceStore( "memory", "", "", 1, UnixMilliseconds{ 1 } ).value_or( nullptr );
     SW_REQUIRE_NOT_NULL( second );
     ServiceTransaction transaction;
     transaction.put( kTable, "factorytestshared", SQLServiceStoreTestUtil::makeBytes( "1" ) );
@@ -632,10 +644,10 @@ SW_TEST_CASE( SQLServiceStoreTest, StoreDriverSubsystemMakesStores )
     ServiceRecord record;
     SW_EXPECT_TRUE( SQLServiceStoreTestUtil::read( *second, "factorytestshared", record ) == ServiceStoreResult::Ok );
 
-    SW_EXPECT_NULL( pDriver->createServiceStore( "no_such_driver", "", "", 1, UnixMilliseconds{ 1 }, error ) );
+    error = describeError( pDriver->createServiceStore( "no_such_driver", "", "", 1, UnixMilliseconds{ 1 } ) );
+    SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.find( "no_such_driver" ) != string::npos );
 
-    error.clear();
-    unique_ptr<IServiceStore> sqlite = pDriver->createServiceStore( "sqlite", test::makeScratchPath( "factory.db" ), "", 1, UnixMilliseconds{ 1 }, error );
-    SW_EXPECT_TRUE_MSG( sqlite != nullptr, error );
+    expected<unique_ptr<IServiceStore>> sqlite = pDriver->createServiceStore( "sqlite", test::makeScratchPath( "factory.db" ), "", 1, UnixMilliseconds{ 1 } );
+    SW_EXPECT_TRUE_MSG( sqlite.has_value() && *sqlite != nullptr, describeError( sqlite ) );
 }

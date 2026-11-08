@@ -26,16 +26,13 @@ namespace sw
         class OnlineServerService final : public IServerService
         {
         public:
+            /** @brief 설정을 읽어 런타임을 세웁니다. 서버 설정이 없거나 온라인 설정 파일이 없으면 할 일 없이 성공입니다. */
             [[nodiscard]] expected<void> initialize( const ServerServiceContext& context ) override;
             void                         shutdown() override { _runtime.shutdown(); }
             void                         update( UnixMilliseconds nowMs ) override { _runtime.update( nowMs ); }
             int32                        getConnectionCount() const override { return _runtime.getConnectionCount(); }
             int32                        getOpenWorkCount() const override { return _runtime.getOpenWorkCount(); }
             void                         beginShutdown( const ServerShutdownNotice& notice ) override { _runtime.beginShutdown( notice ); }
-
-        private:
-            /** @brief `initialize` 의 몸통입니다. shortcut: 런타임 쪽 함수가 아직 `string& outError` 라 그 모양으로 남겼다 — GameFramework 이전(EX-G)이 런타임을 옮기면 `initialize` 에 합친다. */
-            [[nodiscard]] bool start( const ServerServiceContext& context, string& outError );
 
         private:
             SystemMonotonicClock _clock; ///< 런타임이 빌린다(메모리 캐시 만료 · 외부 HTTP 시한). 런타임보다 먼저 선언한다
@@ -48,17 +45,9 @@ namespace sw
 {
     expected<void> OnlineServerService::initialize( const ServerServiceContext& context )
     {
-        string reason;
-        if ( start( context, reason ) == false )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "online services could not start", reason } );
-        return {};
-    }
-
-    bool OnlineServerService::start( const ServerServiceContext& context, string& outError )
-    {
         const bool bNoServerConfig = context._pServerConfig == nullptr || context._serverConfigPath.empty();
         if ( bNoServerConfig )
-            return true; // 서버 설정이 없는 호스트(테스트)에서는 할 일이 없다
+            return {}; // 서버 설정이 없는 호스트(테스트)에서는 할 일이 없다
         const string path = OnlineServerConfig::makeConfigPath( context._serverConfigPath );
         // 설정 타입이 이 모듈에 있다 — 엔진의 ConfigManager 는 모듈보다 오래 살므로 테이블에 등록하지 않고 이 서비스가 직접 소유한다.
         OnlineServerConfig     onlineConfig;
@@ -66,19 +55,13 @@ namespace sw
         if ( result == ConfigReadResult::Missing )
         {
             SW_LOG_INFO_ID( "OnlineServerService.OnlineServicesOffDoes", "Online services are off - '%#' does not exist", path.c_str() );
-            return true;
+            return {};
         }
         if ( result != ConfigReadResult::Loaded )
-        {
-            outError = "online service config '" + path + "' is invalid";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the online service config is invalid", path } );
         const ServerConfig& serverConfig = *context._pServerConfig;
         if ( serverConfig._servicePort <= 0 )
-        {
-            outError = "online service config '" + path + "' exists but the server config's _servicePort is 0";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the online service config exists but the server config's _servicePort is 0", path } );
 
         OnlineServerRuntimeConfig settings;
         settings._config          = std::move( onlineConfig );
@@ -89,34 +72,25 @@ namespace sw
         // 연이은 포트 샤드면 배정이 계정마다 한 포트를 고른다. 한 포트를 나누면(`_bGamePortReuse`) 커널이 나누므로 알릴 포트는 하나다.
         settings._gamePortCount = static_cast<uint8>( serverConfig._bGamePortReuse ? 1 : serverConfig._gamePortShardCount );
         if ( NetAddress::parse( serverConfig._listenAddress, static_cast<uint16>( serverConfig._servicePort ), settings._listenAddress ) == false )
-        {
-            outError = "server config _listenAddress '" + serverConfig._listenAddress + "' is not an IPv4 address";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "server config _listenAddress is not an IPv4 address", serverConfig._listenAddress } );
         settings._listenAddress._port = static_cast<uint16>( serverConfig._servicePort ); // 포트는 `_servicePort` 가 기준이다
         if ( serverConfig._adminServicePort > 0 )
         {
             const uint16 adminPort = static_cast<uint16>( serverConfig._adminServicePort );
             if ( NetAddress::parse( serverConfig._adminListenAddress, adminPort, settings._adminListenAddress ) == false )
-            {
-                outError = "server config _adminListenAddress '" + serverConfig._adminListenAddress + "' is not an IPv4 address";
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::InvalidArgument, "server config _adminListenAddress is not an IPv4 address", serverConfig._adminListenAddress } );
             settings._adminListenAddress._port = adminPort;
             settings._bAdminListener           = SW_TRUE;
         }
-        if ( OnlineServerRuntime::resolveStores( serverConfig, settings._config, settings, outError ) == false )
-            return false;
+        if ( expected<void> stores = OnlineServerRuntime::resolveStores( serverConfig, settings._config, settings ); stores.has_value() == false )
+            return stores;
         // 서비스 스트림은 TLS 1.3 이다. 인증서와 키 경로는 서버 설정에 있고, 키 암호는 환경 변수에서 읽는다.
         settings._bTLS               = SW_TRUE;
         settings._tlsCertificateFile = serverConfig._tlsCertificateFile;
         settings._tlsPrivateKeyFile  = serverConfig._tlsPrivateKeyFile;
         if ( ServerSecret::read( serverConfig._tlsPrivateKeySecretEnvironment, settings._tlsPrivateKeyPassphrase ) == false )
-        {
-            outError = "the TLS private key passphrase environment variable is not set (name in _tlsPrivateKeySecretEnvironment)";
-            return false;
-        }
-        return _runtime.initialize( std::move( settings ), WallClock::nowUnixMilliseconds(), outError ); // 예외 — 호스트 최상위(서버 서비스의 뿌리)가 시각을 정한다
+            return unexpected( Error{ ErrorKind::NotFound, "the TLS private key passphrase environment variable is not set", serverConfig._tlsPrivateKeySecretEnvironment } );
+        return _runtime.initialize( std::move( settings ), WallClock::nowUnixMilliseconds() ); // 예외 — 호스트 최상위(서버 서비스의 뿌리)가 시각을 정한다
     }
 
     /** @brief 서버 서비스 중 앞쪽에 둔다. 게임과 키트가 올린 서버 서비스가 온라인 서비스를 볼 수 있게 한다. */

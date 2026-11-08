@@ -229,7 +229,7 @@ namespace sw::editor
 
     bool AbilityCatalogPanel::saveDocument()
     {
-        const std::optional<AbsolutePath> absolutePath = editor::getSubsystem<AssetPaths>().toDiskPath( _openPath );
+        const auto absolutePath = editor::getSubsystem<AssetPaths>().toDiskPath( _openPath );
         if ( _openPath.empty() || absolutePath.has_value() == false || _model.getDocument().isParsed() == false )
         {
             _status = "Nothing to save - open a well-formed file first";

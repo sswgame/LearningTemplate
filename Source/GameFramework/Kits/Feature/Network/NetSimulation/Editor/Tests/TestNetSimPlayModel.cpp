@@ -92,20 +92,20 @@ SW_TEST_CASE( EditorNetSimSessionTest, StartRefusesWhatCannotRunAndLeavesNothing
 {
     EditorNetSimSession  session;
     EditorNetSimSettings settings;
-    string               error;
-    settings._gameName = "no such game";
-    SW_EXPECT_FALSE( session.start( settings, error ) );
-    SW_EXPECT_TRUE( error.find( "no such game" ) != string::npos );
+    settings._gameName           = "no such game";
+    const expected<void> unknown = session.start( settings );
+    SW_REQUIRE_FALSE( unknown.has_value() );
+    SW_EXPECT_TRUE( unknown.error().detail() == "no such game" );
     SW_EXPECT_FALSE( session.isRunning() );
 
     settings._gameName = NetSimSampleGame::kName; // 이 확장이 올린다
     SW_REQUIRE_NOT_NULL( NetSimGameRegistry::findGame( settings._gameName ) );
     for ( const int32 clientCount : { 0, -1, EditorNetSimSession::kMaxClients + 1 } )
     {
-        error.clear();
-        settings._clientCount = clientCount;
-        SW_EXPECT_FALSE( session.start( settings, error ) ); // 범위로 맞추지 않는다
-        SW_EXPECT_TRUE( error.empty() == false );
+        settings._clientCount        = clientCount;
+        const expected<void> started = session.start( settings ); // 범위로 맞추지 않는다
+        SW_REQUIRE_FALSE( started.has_value() );
+        SW_EXPECT_FALSE( started.error().message().empty() );
         SW_EXPECT_FALSE( session.isRunning() );
     }
 }

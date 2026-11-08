@@ -31,8 +31,8 @@ namespace sw
         string _privateKeyPem{};
         string _tokenURL{ kDefaultTokenURL };
 
-        /** @brief 서비스 계정 JSON 을 읽습니다. `project_id` · `client_email` · `private_key` 가 빠졌거나 JSON 이 아니면 false 와 까닭입니다. */
-        [[nodiscard]] static bool read( string_view json, ServiceAccountCredentials& outCredentials, string& outError );
+        /** @brief 서비스 계정 JSON 을 읽습니다. `project_id` · `client_email` · `private_key` 가 빠졌거나 JSON 이 아니면 그 까닭입니다. */
+        [[nodiscard]] static expected<void> read( string_view json, ServiceAccountCredentials& outCredentials );
         /** @brief 서명 키를 메모리에서 지웁니다. */
         void wipe();
     };

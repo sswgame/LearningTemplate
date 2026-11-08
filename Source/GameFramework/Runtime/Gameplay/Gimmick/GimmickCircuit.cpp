@@ -485,10 +485,10 @@ namespace sw
         return pValue != nullptr ? float3{ pValue->_vector._x, pValue->_vector._y, pValue->_vector._z } : float3{};
     }
 
-    std::optional<float32> GimmickCircuit::readParamNumber( int32 node, const utf8* pName ) const
+    optional<float32> GimmickCircuit::readParamNumber( int32 node, const utf8* pName ) const
     {
         const GimmickParamValue* pValue = findParam( node, hashed_string( pName ) );
-        return pValue != nullptr ? std::optional<float32>{ pValue->_vector._x } : std::nullopt; // 없을 때의 값은 호출부가 정한다
+        return pValue != nullptr ? optional<float32>{ pValue->_vector._x } : nullopt; // 없을 때의 값은 호출부가 정한다
     }
 
     const string* GimmickCircuit::readParamText( int32 node, const utf8* pName ) const

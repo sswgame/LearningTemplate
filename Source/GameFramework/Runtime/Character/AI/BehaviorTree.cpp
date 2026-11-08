@@ -21,8 +21,8 @@ namespace sw
             /** @brief 값이 없으면 NaN 이라 어떤 비교도 참이 아니다 — 없는 키를 0 으로 보지 않는다(있는지는 `hasBlackboard` 로 묻는다). */
             static float64 readBlackboard( const GameplayContext& context, const ConditionNameArg& args )
             {
-                const Blackboard*            pBlackboard = context.find<BlackboardSlot>();
-                const std::optional<float32> value       = pBlackboard != nullptr ? pBlackboard->getFloat( args._name ) : std::nullopt;
+                const Blackboard*       pBlackboard = context.find<BlackboardSlot>();
+                const optional<float32> value       = pBlackboard != nullptr ? pBlackboard->getFloat( args._name ) : nullopt;
                 return value.has_value() ? static_cast<float64>( *value ) : std::numeric_limits<float64>::quiet_NaN();
             }
 
@@ -52,8 +52,8 @@ namespace sw
 
             static ActionResult runAddBlackboard( ActionContext& context, const BlackboardAddParams& params )
             {
-                Blackboard*                  pBlackboard = context._world.find<BlackboardWriteSlot>();
-                const std::optional<float32> current     = pBlackboard != nullptr ? pBlackboard->getFloat( params._key ) : std::nullopt;
+                Blackboard*             pBlackboard = context._world.find<BlackboardWriteSlot>();
+                const optional<float32> current     = pBlackboard != nullptr ? pBlackboard->getFloat( params._key ) : nullopt;
                 if ( current.has_value() == false )
                     return ActionResult::Failed;
                 pBlackboard->setFloat( params._key, *current + params._value );
@@ -721,9 +721,9 @@ namespace sw
 
     BehaviorStatus BehaviorTreeRunner::tickMoveTo( int32 index, bool bFirst )
     {
-        const BehaviorNode&         node   = _pTree->getNode( index );
-        INavMover*                  pMover = _context._pMover;
-        const std::optional<float3> target = _context._pBlackboard->getVector( node._key );
+        const BehaviorNode&    node   = _pTree->getNode( index );
+        INavMover*             pMover = _context._pMover;
+        const optional<float3> target = _context._pBlackboard->getVector( node._key );
         if ( pMover == nullptr )
             return BehaviorStatus::Failure;
         if ( target.has_value() == false )

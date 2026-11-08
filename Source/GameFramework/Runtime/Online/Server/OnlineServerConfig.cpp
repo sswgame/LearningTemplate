@@ -21,25 +21,24 @@ namespace sw
 
 namespace sw
 {
-    bool OnlineServerKitEntry::readSettingsInto( void* pSettings, const TypeInfo& typeInfo, string& outError ) const
+    expected<void> OnlineServerKitEntry::readSettingsInto( void* pSettings, const TypeInfo& typeInfo ) const
     {
         const string label = "kit '" + _name + "' settings";
         if ( ConfigManager::readConfigJSON( pSettings, typeInfo, _settings.empty() ? string_view( "{}" ) : string_view( _settings ), label.c_str() ) )
-            return true;
-        outError = "the settings of kit '" + _name + "' are invalid (see the errors above)";
-        return false;
+            return {};
+        return unexpected( Error{ ErrorKind::InvalidArgument, "the kit settings are invalid (see the errors above)", _name } );
     }
 
-    bool OnlineServerKitEntry::resolveFile( const string& text, const utf8* pFieldName, std::optional<AbsolutePath>& outPath, string& outError ) const
+    expected<optional<AbsolutePath>> OnlineServerKitEntry::resolveFile( const string& text, const utf8* pFieldName ) const
     {
-        outPath.reset();
         if ( text.empty() )
-            return true;
-        outPath = AbsolutePath::tryResolve( text, ProcessRoots::get()._project );
-        if ( outPath.has_value() )
-            return true;
-        outError = "setting '" + string( pFieldName ) + "' of kit '" + _name + "' must be a file path (absolute or relative to the project root; got '" + text + "')";
-        return false;
+            return optional<AbsolutePath>{};
+        optional<AbsolutePath> path = AbsolutePath::tryResolve( text, ProcessRoots::get()._project );
+        if ( path.has_value() )
+            return path;
+        Error error{ ErrorKind::InvalidArgument, "a kit setting must be a file path (absolute or relative to the project root)", pFieldName };
+        error.appendDetail( " = '" ).appendDetail( text ).appendDetail( "'" );
+        return unexpected( error );
     }
 
     string OnlineServerConfig::makeConfigPath( string_view serverConfigPath )

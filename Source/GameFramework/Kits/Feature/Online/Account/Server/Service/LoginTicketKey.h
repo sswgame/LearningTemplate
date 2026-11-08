@@ -18,8 +18,8 @@ namespace sw
      */
     struct LoginTicketKey
     {
-        /** @brief @p environment 변수에서 주 키를 읽습니다. 실패하면 @p outError 와 false 입니다. */
-        [[nodiscard]] static bool readFromEnvironment( const string& environment, uint8 ( &outArrKey )[LoginTicketAuthority::kMasterKeySize], string& outError );
+        /** @brief @p environment 변수에서 주 키를 읽습니다. 실패하면 그 까닭입니다. */
+        [[nodiscard]] static expected<void> readFromEnvironment( const string& environment, uint8 ( &outArrKey )[LoginTicketAuthority::kMasterKeySize] );
         /** @brief 16 진수 64 자를 32 바이트로 읽습니다(앞이 높은 자리). 형식이 틀리면 false 입니다. */
         [[nodiscard]] static bool parseHex( string_view text, uint8 ( &outArrKey )[LoginTicketAuthority::kMasterKeySize] );
     };

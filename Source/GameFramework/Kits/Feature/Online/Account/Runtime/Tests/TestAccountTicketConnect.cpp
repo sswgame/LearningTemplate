@@ -31,9 +31,10 @@ namespace
         {
             AccountTicketConnector connector;
             NetConnectCredentials  credentials;
-            string                 error;
-            SW_EXPECT_FALSE( connector.acquire( std::move( request ), credentials, error ) );
-            SW_EXPECT_TRUE( error.find( pExpectedPart ) != string::npos );
+            const auto             failed1 = connector.acquire( std::move( request ), credentials );
+            SW_REQUIRE_FALSE( failed1.has_value() );
+            const sw::string error1 = sw::string( failed1.error().message() ) + " " + sw::string( failed1.error().detail() );
+            SW_EXPECT_TRUE( error1.find( pExpectedPart ) != string::npos );
         }
     };
     using Util = TicketConnectTestUtil;
@@ -83,11 +84,11 @@ SW_TEST_CASE( AccountTicketConnectTest, ShutdownWithoutConnectionIsSafe )
 {
     AccountTicketConnector connector;
     NetConnectCredentials  credentials;
-    string                 error;
     AccountTicketRequest   request = Util::makeRequest();
     request._password.clear();
-    SW_EXPECT_FALSE( connector.acquire( std::move( request ), credentials, error ) );
+    const expected<void> acquired = connector.acquire( std::move( request ), credentials );
     connector.shutdown();
     connector.shutdown();
-    SW_EXPECT_FALSE( error.empty() );
+    SW_REQUIRE_FALSE( acquired.has_value() );
+    SW_EXPECT_FALSE( acquired.error().message().empty() );
 }

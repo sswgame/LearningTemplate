@@ -72,8 +72,8 @@ namespace sw
          * @param requestID 0 이 아닌 요청 id(응답의 `_requestID`). @param url 는 `https://` 로 나눈 주소(`:authority` · `:path` 가 된다).
          */
         void submit( uint64 requestID, const HTTPClientRequest& request, const HTTPAddress& url, vector<uint8>& outBytes );
-        /** @brief 받은 평문 바이트를 먹입니다. false 면 연결 오류이고 @p outError 에 이유가 있으며 요청은 모두 실패로 끝났습니다. */
-        [[nodiscard]] bool feed( const uint8* pData, size_t size, vector<uint8>& outBytes, string& outError );
+        /** @brief 받은 평문 바이트를 먹입니다. 실패면 연결 오류(그 이유)이고 요청은 모두 실패로 끝났습니다. */
+        [[nodiscard]] expected<void> feed( const uint8* pData, size_t size, vector<uint8>& outBytes );
         /** @brief 요청 하나를 실패(@p pFailure)로 끝내고 열린 스트림이면 RST_STREAM(CANCEL)을 씁니다. 모르는 요청 id 는 무시합니다. */
         void cancel( uint64 requestID, const utf8* pFailure, vector<uint8>& outBytes );
         /** @brief 남은 요청을 모두 실패로 끝내고 연결을 쓸 수 없게 합니다(전송이 닫혔다). */
@@ -112,22 +112,24 @@ namespace sw
             uint64        _requestID{ 0 };
         };
 
-        void               openStream( Queued&& queued, vector<uint8>& outBytes );
-        void               promoteQueued( vector<uint8>& outBytes );
-        void               flushData( vector<uint8>& outBytes );
-        [[nodiscard]] bool handleFrame( const HTTP2FrameHeader& header, const uint8* pBody, vector<uint8>& outBytes, string& outError );
-        [[nodiscard]] bool handleSettings( const HTTP2FrameHeader& header, const uint8* pBody, vector<uint8>& outBytes, string& outError );
-        [[nodiscard]] bool handleWindowUpdate( const HTTP2FrameHeader& header, const uint8* pBody, string& outError );
-        [[nodiscard]] bool handleHeaders( const HTTP2FrameHeader& header, const uint8* pBody, vector<uint8>& outBytes, string& outError );
-        [[nodiscard]] bool handleContinuation( const HTTP2FrameHeader& header, const uint8* pBody, vector<uint8>& outBytes, string& outError );
-        [[nodiscard]] bool handleData( const HTTP2FrameHeader& header, const uint8* pBody, vector<uint8>& outBytes, string& outError );
-        [[nodiscard]] bool finishHeaderBlock( vector<uint8>& outBytes, string& outError );
-        void               handleGoAway( const HTTP2GoAway& goAway );
-        void               completeStream( uint32 streamID, vector<uint8>& outBytes );
+        void                         openStream( Queued&& queued, vector<uint8>& outBytes );
+        void                         promoteQueued( vector<uint8>& outBytes );
+        void                         flushData( vector<uint8>& outBytes );
+        [[nodiscard]] expected<void> handleFrame( const HTTP2FrameHeader& header, const uint8* pBody, vector<uint8>& outBytes );
+        [[nodiscard]] expected<void> handleSettings( const HTTP2FrameHeader& header, const uint8* pBody, vector<uint8>& outBytes );
+        [[nodiscard]] expected<void> handleWindowUpdate( const HTTP2FrameHeader& header, const uint8* pBody );
+        [[nodiscard]] expected<void> handleHeaders( const HTTP2FrameHeader& header, const uint8* pBody, vector<uint8>& outBytes );
+        [[nodiscard]] expected<void> handleContinuation( const HTTP2FrameHeader& header, const uint8* pBody, vector<uint8>& outBytes );
+        [[nodiscard]] expected<void> handleData( const HTTP2FrameHeader& header, const uint8* pBody, vector<uint8>& outBytes );
+        [[nodiscard]] expected<void> finishHeaderBlock( vector<uint8>& outBytes );
+        void                         handleGoAway( const HTTP2GoAway& goAway );
+        void                         completeStream( uint32 streamID, vector<uint8>& outBytes );
         /** @brief 스트림 하나를 실패 응답으로 끝내고 지웁니다. @p bResetPeer 면 RST_STREAM(@p errorCode)을 씁니다. */
-        void               failStream( uint32 streamID, const utf8* pFailure, bool bResetPeer, uint32 errorCode, vector<uint8>& outBytes );
-        void               pushFailure( uint64 requestID, const utf8* pFailure );
-        [[nodiscard]] bool failConnection( const utf8* pReason, string& outError );
+        void                         failStream( uint32 streamID, const utf8* pFailure, bool bResetPeer, uint32 errorCode, vector<uint8>& outBytes );
+        void                         pushFailure( uint64 requestID, const utf8* pFailure );
+        [[nodiscard]] expected<void> failConnection( const utf8* pReason );
+        /** @brief @p error 로 연결을 실패시킵니다(모든 요청을 그 문장으로 끝낸다). */
+        [[nodiscard]] expected<void> failConnection( const Error& error );
 
     private:
         HPACKDecoder                  _decoder;

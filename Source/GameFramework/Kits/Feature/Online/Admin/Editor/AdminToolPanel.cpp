@@ -132,12 +132,11 @@ namespace sw::editor
         const bool bCanOpen = session.getConnection().canOpen();
         if ( bCanOpen && ImGui::Button( SW_LOCKEY( "EdPlugin", "Connect" ) ) )
         {
-            string     error;
-            const bool bOpened =
-                bNeedsLogin ? session.connectWithLogin( _gmAddressText, "editor", _loginNameText, _arrPassword, error ) : session.connectLive( _gmAddressText, "editor", error );
+            const expected<void> opened =
+                bNeedsLogin ? session.connectWithLogin( _gmAddressText, "editor", _loginNameText, _arrPassword ) : session.connectLive( _gmAddressText, "editor" );
             Memory::set( _arrPassword, 0, sizeof( _arrPassword ) ); // 비밀번호를 입력 칸에 남기지 않는다(로그인을 맡은 쪽이 받아 갔다)
-            if ( bOpened == false )
-                SW_LOG_WARNING_ID( "AdminToolPanel.AdminToolGMConnection", "Admin tool: GM connection failed - %#", error.c_str() );
+            if ( opened.has_value() == false )
+                SW_LOG_WARNING_ID( "AdminToolPanel.AdminToolGMConnection", "Admin tool: GM connection failed - %# (%#)", opened.error().message(), opened.error().detail() );
         }
         if ( bCanOpen == false && ImGui::Button( SW_LOCKEY( "EdPlugin", "Disconnect" ) ) )
             session.disconnectLive();

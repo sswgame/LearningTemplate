@@ -30,42 +30,35 @@ namespace sw
                 return s_clock;
             }
 
-            [[nodiscard]] static bool applyQueryArgument( string_view name, string_view value, CacheEndpoint& outEndpoint, string& outError )
+            [[nodiscard]] static expected<void> applyQueryArgument( string_view name, string_view value, CacheEndpoint& outEndpoint )
             {
                 if ( name == "prefix" )
                 {
                     outEndpoint._keyPrefix = string( value );
-                    return true;
+                    return {};
                 }
                 if ( name == "ca" )
                 {
                     outEndpoint._trustFile = string( value );
-                    return true;
+                    return {};
                 }
                 if ( name == "tls" )
                 {
                     bool bOn = false;
                     if ( StringUtil::tryParseBool( value, bOn ) == false )
-                    {
-                        outError = "cache endpoint: tls must be a boolean (0, 1, true or false)";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "cache endpoint: tls must be a boolean (0, 1, true or false)" } );
                     outEndpoint._bTLS = bOn ? SW_TRUE : SW_FALSE;
-                    return true;
+                    return {};
                 }
                 if ( name == "timeoutMs" )
                 {
                     int64 timeoutMs = 0;
                     if ( StringUtil::parseInt64( value, timeoutMs ) == false || timeoutMs <= 0 )
-                    {
-                        outError = "cache endpoint: timeoutMs must be a positive integer";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "cache endpoint: timeoutMs must be a positive integer" } );
                     outEndpoint._timeoutMs = timeoutMs;
-                    return true;
+                    return {};
                 }
-                outError = "cache endpoint: unknown argument '" + string( name ) + "'";
-                return false;
+                return unexpected( Error{ ErrorKind::InvalidArgument, "cache endpoint: unknown argument", name } );
             }
         };
     } // namespace
@@ -98,10 +91,10 @@ namespace sw
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
         /**
-         * @brief 저장소를 만들고 초기화합니다. 실패하면 nullptr 과 실패 이유를 반환합니다.
+         * @brief 저장소를 만들고 초기화합니다. 실패하면 그 이유입니다(대상에 비밀을 담지 않는다).
          * @param secret AUTH 비밀(`ServerSecret::read` 로 읽은 것)입니다. 쓰고 나면 호출한 쪽이 비웁니다.
          */
-        unique_ptr<IEphemeralStore> createEphemeralStore( string_view driverName, string_view endpoint, string_view secret, string& outError );
+        expected<unique_ptr<IEphemeralStore>> createEphemeralStore( string_view driverName, string_view endpoint, string_view secret );
 
         /** @brief 공개할 캐시 드라이버입니다(`ModuleSubsystemRegistration` 이 `IEphemeralStoreDriver` 로 공개한다). 이 서브시스템과 수명이 같습니다. */
         IEphemeralStoreDriver& getPublishedPart() { return _driver; }
@@ -116,9 +109,9 @@ namespace sw
             {
             }
 
-            unique_ptr<IEphemeralStore> createEphemeralStore( string_view driverName, string_view endpoint, string_view secret, string& outError ) override
+            expected<unique_ptr<IEphemeralStore>> createEphemeralStore( string_view driverName, string_view endpoint, string_view secret ) override
             {
-                return _owner.createEphemeralStore( driverName, endpoint, secret, outError );
+                return _owner.createEphemeralStore( driverName, endpoint, secret );
             }
 
         private:
@@ -132,24 +125,22 @@ namespace sw
 
     SW_MODULE_SUBSYSTEM( Engine, RESPEphemeralStoreDriver, IEphemeralStoreDriver );
 
-    unique_ptr<IEphemeralStore> RESPEphemeralStoreDriver::createEphemeralStore( string_view driverName, string_view endpoint, string_view secret, string& outError )
+    expected<unique_ptr<IEphemeralStore>> RESPEphemeralStoreDriver::createEphemeralStore( string_view driverName, string_view endpoint, string_view secret )
     {
         if ( driverName == kMemoryStoreDriverName )
-            return make_unique<MemoryEphemeralStore>( &_memoryDatabase );
+            return unique_ptr<IEphemeralStore>( make_unique<MemoryEphemeralStore>( &_memoryDatabase ) );
         if ( driverName != CacheEndpoint::kRESPDriverName )
-        {
-            outError = "cache driver '" + string( driverName ) + "' is not in this build (memory, resp)";
-            return nullptr;
-        }
+            return unexpected( Error{ ErrorKind::Unsupported, "the cache driver is not in this build (memory, resp)", driverName } );
         CacheEndpoint parsed;
-        if ( CacheEndpoint::parseEndpoint( endpoint, parsed, outError ) == false )
-            return nullptr;
+        if ( expected<void> endpointRead = CacheEndpoint::parseEndpoint( endpoint, parsed ); endpointRead.has_value() == false )
+            return unexpected( endpointRead.error() );
         unique_ptr<ITLSContext> tlsContext;
         if ( parsed._bTLS == SW_TRUE )
         {
-            tlsContext = NetSecurity::createClientTLSContext( game::getSubsystem<INetSecurityProvider>(), parsed._trustFile, parsed._host, outError );
-            if ( tlsContext == nullptr )
-                return nullptr;
+            expected<unique_ptr<ITLSContext>> created = NetSecurity::createClientTLSContext( game::getSubsystem<INetSecurityProvider>(), parsed._trustFile, parsed._host );
+            if ( created.has_value() == false )
+                return unexpected( created.error() );
+            tlsContext = std::move( *created );
         }
         RESPStoreConfig settings;
         settings._address   = parsed._address;
@@ -167,21 +158,18 @@ namespace sw
         }
         unique_ptr<IStreamTransport> transport = StreamTransportFactory::createPlatformTransport();
         if ( transport == nullptr )
-        {
-            outError = "cache driver resp: this platform has no stream transport";
-            return nullptr;
-        }
+            return unexpected( Error{ ErrorKind::Unsupported, "cache driver resp: this platform has no stream transport" } );
         StreamTransportConfig transportSettings;
         transportSettings._ioThreadCount      = 1;
         transportSettings._maxConnections     = 4;
         transportSettings._idleTimeoutSeconds = 0.0; // 캐시 연결은 조용해도 유지한다. 구독 연결이 그렇다
         unique_ptr<RESPEphemeralStore> store  = make_unique<RESPEphemeralStore>( CacheStoreFactoryInternal::getRESPClock() );
-        if ( store->initialize( std::move( transport ), transportSettings, settings, std::move( tlsContext ), outError ) == false )
-            return nullptr;
-        return store;
+        if ( expected<void> initialized = store->initialize( std::move( transport ), transportSettings, settings, std::move( tlsContext ) ); initialized.has_value() == false )
+            return unexpected( initialized.error() );
+        return unique_ptr<IEphemeralStore>( std::move( store ) );
     }
 
-    bool CacheEndpoint::parseEndpoint( string_view endpoint, CacheEndpoint& outEndpoint, string& outError )
+    expected<void> CacheEndpoint::parseEndpoint( string_view endpoint, CacheEndpoint& outEndpoint )
     {
         outEndpoint               = CacheEndpoint{};
         const size_t      query   = endpoint.find( '?' );
@@ -189,17 +177,11 @@ namespace sw
         const size_t      colon   = address.rfind( ':' );
         outEndpoint._host         = string( address.substr( 0, colon ) );
         if ( outEndpoint._host.empty() )
-        {
-            outError = "cache endpoint needs host:port";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "cache endpoint needs host:port" } );
         if ( PlatformSocketUtil::resolveAddress( address, kDefaultRESPPort, outEndpoint._address ) == false )
-        {
-            outError = "cache endpoint '" + string( address ) + "' is not a host:port that resolves to IPv4";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the cache endpoint is not a host:port that resolves to IPv4", address } );
         if ( query == string_view::npos )
-            return true;
+            return {};
         string_view rest = endpoint.substr( query + 1 );
         while ( rest.empty() == false )
         {
@@ -209,13 +191,10 @@ namespace sw
             string_view key;
             string_view value;
             if ( StringUtil::trySplitKeyValue( argument, key, value ) == false )
-            {
-                outError = "cache endpoint: argument '" + string( argument ) + "' is not key=value";
-                return false;
-            }
-            if ( CacheStoreFactoryInternal::applyQueryArgument( key, value, outEndpoint, outError ) == false )
-                return false;
+                return unexpected( Error{ ErrorKind::InvalidArgument, "cache endpoint: an argument is not key=value", argument } );
+            if ( expected<void> result = CacheStoreFactoryInternal::applyQueryArgument( key, value, outEndpoint ); result.has_value() == false )
+                return result;
         }
-        return true;
+        return {};
     }
 } // namespace sw

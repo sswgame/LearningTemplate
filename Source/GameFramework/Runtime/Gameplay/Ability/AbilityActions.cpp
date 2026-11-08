@@ -46,8 +46,8 @@ namespace sw
                 if ( params._setByCaller.empty() == false )
                 {
                     // 값은 실행기가 그 순간 계산한 수다. 이름을 적었는데 값이 없으면 데이터가 틀렸다 — 0 을 지어내지 않는다.
-                    const ActionValues* const    pValues = context._world.find<ActionValuesSlot>();
-                    const std::optional<float32> value   = pValues != nullptr ? pValues->find( params._value ) : std::nullopt;
+                    const ActionValues* const pValues = context._world.find<ActionValuesSlot>();
+                    const optional<float32>   value   = pValues != nullptr ? pValues->find( params._value ) : nullopt;
                     if ( value.has_value() == false )
                     {
                         SW_LOG_ERROR_ID( "AbilityActions.ValueMissing", "ability.applyEffect '%#': value '%#' for SetByCaller '%#' was not given by the caller", params._effect.c_str(),

@@ -43,34 +43,25 @@ namespace sw
         return true;
     }
 
-    bool LoginTicketKey::readFromEnvironment( const string& environment, uint8 ( &outArrKey )[LoginTicketAuthority::kMasterKeySize], string& outError )
+    expected<void> LoginTicketKey::readFromEnvironment( const string& environment, uint8 ( &outArrKey )[LoginTicketAuthority::kMasterKeySize] )
     {
         if ( environment.empty() )
         {
             // 개발 키는 DevOnline 단위만 준다 — 그 단위가 없는 구성(배포)은 주 키가 반드시 있어야 한다.
-            const AccountDevOptions* pDevOptions = DevOnlineExtension<AccountDevOptions>::require( outError );
-            if ( pDevOptions == nullptr )
-            {
-                outError.append( " - the game ticket master key is required, set the ticketKeySecretEnvironment option" );
-                return false;
-            }
+            expected<const AccountDevOptions*> devOptions = DevOnlineExtension<AccountDevOptions>::require();
+            if ( devOptions.has_value() == false )
+                return unexpected( std::move( devOptions.error().appendDetail( " - the game ticket master key is required, set the ticketKeySecretEnvironment option" ) ) );
             SW_LOG_WARNING_ID( "LoginTicketKey.AccountKitNoTicketKeySecretEnvironment", "Account kit: no ticketKeySecretEnvironment - using the development ticket key (DevOnline)" );
-            Memory::set( outArrKey, pDevOptions->_devTicketKeyByte, sizeof( outArrKey ) );
-            return true;
+            Memory::set( outArrKey, ( *devOptions )->_devTicketKeyByte, sizeof( outArrKey ) );
+            return {};
         }
         string secret;
         if ( ServerSecret::read( environment, secret ) == false || secret.empty() )
-        {
-            outError = "the game ticket master key environment variable '" + environment + "' is not set";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "the game ticket master key environment variable is not set", environment } );
         const bool bParsed = parseHex( secret, outArrKey );
         Memory::wipe( secret.data(), secret.size() );
         if ( bParsed == false )
-        {
-            outError = "the game ticket master key must be 64 hexadecimal digits (32 bytes)";
-            return false;
-        }
-        return true;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the game ticket master key must be 64 hexadecimal digits (32 bytes)" } );
+        return {};
     }
 } // namespace sw

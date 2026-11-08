@@ -50,17 +50,17 @@ namespace sw
          * @brief 리소스 폴더 @p folder(`common/sql/servicestore`. OS 경로는 `AssetPaths::mountDiskDomain` 으로 붙여 id 로 준다)의 목록(`migrations.xml`)대로 `.sql` 을 읽어 @p driverName 에 맞게 고릅니다.
          * @return 목록을 못 읽거나, 번호가 1 부터 빈틈없이 이어지지 않거나, 그 드라이버의 파일이 없거나, 디스크 폴더에 목록에 없는 `.sql` 이 있으면 false 를 반환합니다.
          */
-        [[nodiscard]] static bool loadMigrations( string_view folder, string_view driverName, vector<SQLMigration>& outListMigration, string& outError );
+        [[nodiscard]] static expected<void> loadMigrations( string_view folder, string_view driverName, vector<SQLMigration>& outListMigration );
         /**
          * @brief 원본 폴더 @p folder 가 디스크에 있으면 그 안의 방언 분기 파일(`NNNN_이름.<드라이버>.sql`)이 가리키는 드라이버 이름을 @p inoutListName 에 겹치지 않게 더합니다.
          * @details 팩에는 폴더가 없어 더할 것이 없다. 드라이버 등록 표(`SQLDriverRegistry`)에 없는 드라이버(서버 키트가 실리지 않은 실행 파일의 PostgreSQL)의
          *          방언 분기도 목록 검사가 보게 한다.
          * @return 폴더를 읽지 못하면 false 를 반환합니다.
          */
-        [[nodiscard]] static bool collectDialectDriverNames( string_view folder, vector<string>& inoutListName, string& outError );
+        [[nodiscard]] static expected<void> collectDialectDriverNames( string_view folder, vector<string>& inoutListName );
         /** @brief 아직 적용하지 않은 마이그레이션을 적용하고, 적용된 것은 체크섬을 확인합니다. 이 목록에 없는 번호가 적용돼 있으면(더 새 빌드의 스키마) 거절합니다. 실패하면 아무것도 적용하지 않고 false 를 반환합니다. */
-        [[nodiscard]] static bool apply( ISQLConnection& connection, const vector<SQLMigration>& listMigration, UnixMilliseconds nowMs, string& outError );
-        static string             substituteTokens( string_view sql, const SQLDialect& dialect );
+        [[nodiscard]] static expected<void> apply( ISQLConnection& connection, const vector<SQLMigration>& listMigration, UnixMilliseconds nowMs );
+        static string                       substituteTokens( string_view sql, const SQLDialect& dialect );
         /** @brief FNV-1a 64비트 해시를 16진 문자열로 반환합니다. 대소문자를 구분합니다. */
         static string computeChecksum( string_view sql );
     };

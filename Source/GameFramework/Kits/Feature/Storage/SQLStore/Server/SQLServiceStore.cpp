@@ -259,21 +259,22 @@ namespace sw
         _pool.shutdown();
     }
 
-    bool SQLServiceStore::initialize( string_view driverName, const SQLConnectionPoolConfig& settings, string_view migrationFolder, UnixMilliseconds nowMs, string& outError )
+    expected<void> SQLServiceStore::initialize( string_view driverName, const SQLConnectionPoolConfig& settings, string_view migrationFolder, UnixMilliseconds nowMs )
     {
-        ISQLDriver* pDriver = SQLDriverRegistry::findDriver( driverName, outError );
-        if ( pDriver == nullptr )
-            return false;
+        const expected<ISQLDriver*> driver = SQLDriverRegistry::findDriver( driverName );
+        if ( driver.has_value() == false )
+            return unexpected( driver.error() );
+        ISQLDriver* const    pDriver = *driver;
         vector<SQLMigration> listMigration;
-        if ( SQLMigrationRunner::loadMigrations( migrationFolder, pDriver->getName(), listMigration, outError ) == false )
-            return false;
-        unique_ptr<ISQLConnection> connection = pDriver->openConnection( settings._connection, settings._secret, outError );
-        if ( connection == nullptr )
-            return false;
-        if ( SQLMigrationRunner::apply( *connection, listMigration, nowMs, outError ) == false )
-            return false;
-        connection.reset();
-        return _pool.initialize( pDriver, settings, outError );
+        if ( expected<void> result = SQLMigrationRunner::loadMigrations( migrationFolder, pDriver->getName(), listMigration ); result.has_value() == false )
+            return result;
+        expected<unique_ptr<ISQLConnection>> connection = pDriver->openConnection( settings._connection, settings._secret );
+        if ( connection.has_value() == false )
+            return unexpected( connection.error() );
+        if ( expected<void> result = SQLMigrationRunner::apply( **connection, listMigration, nowMs ); result.has_value() == false )
+            return result;
+        connection->reset();
+        return _pool.initialize( pDriver, settings );
     }
 
     void SQLServiceStore::submit( unique_ptr<IServiceStoreJob> work )

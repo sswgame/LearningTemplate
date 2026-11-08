@@ -30,59 +30,49 @@ namespace sw::editor
         stop();
     }
 
-    bool EditorNetSimSession::start( const EditorNetSimSettings& settings, string& outError )
+    expected<void> EditorNetSimSession::start( const EditorNetSimSettings& settings )
     {
         stop();
         const NetSimGameEntry* pEntry = NetSimGameRegistry::findGame( settings._gameName );
         if ( pEntry == nullptr )
-        {
-            outError = "no in-process game named '" + settings._gameName + "' (NetSimGameRegistry)";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "no in-process game has this name (NetSimGameRegistry)", settings._gameName } );
         if ( settings._clientCount < 1 || settings._clientCount > kMaxClients )
         {
-            StringBuilder<constant::buffer::kMax256> errorBuilder;
-            errorBuilder.appendFormat( "client count must be 1 to %#", kMaxClients );
-            outError = string( errorBuilder.view() );
-            return false;
+            StringBuilder<constant::buffer::kMax128> detailBuilder;
+            detailBuilder.appendFormat( "%# (1 to %#)", settings._clientCount, kMaxClients );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the client count is out of range", detailBuilder.view() } );
         }
         SceneManager* pSceneManager = game::findSubsystem<SceneManager>();
         if ( pSceneManager == nullptr )
-        {
-            outError = "no scene manager";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "no scene manager" } );
 
         _pSceneSource = make_unique<NetSimPreviewSceneSource>( *pSceneManager );
         _pGame        = pEntry->_pfnCreate();
         if ( _pGame == nullptr )
         {
-            outError = "the game '" + settings._gameName + "' created nothing";
             stop();
-            return false;
+            return unexpected( Error{ ErrorKind::ExternalFailure, "the game created nothing", settings._gameName } );
         }
         NetSimConfig config  = settings._harness;
         config._pSceneSource = _pSceneSource.get();
         _pHarness            = make_unique<NetSimHarness>();
         if ( _pHarness->initialize( pSceneManager->getEngineServices(), config, _pGame.get() ) == false )
         {
-            outError = "the harness did not start (see the log)";
             stop();
-            return false;
+            return unexpected( Error{ ErrorKind::ExternalFailure, "the harness did not start (see the log)" } );
         }
         for ( int32 index = 0; index < settings._clientCount; ++index )
         {
             if ( _pHarness->addClient( settings._conditions ) < 0 )
             {
-                StringBuilder<constant::buffer::kMax256> errorBuilder;
-                errorBuilder.appendFormat( "client %# did not start (see the log)", index + 1 );
-                outError = string( errorBuilder.view() );
+                StringBuilder<constant::buffer::kMax128> detailBuilder;
+                detailBuilder.appendFormat( "client %#", index + 1 );
                 stop();
-                return false;
+                return unexpected( Error{ ErrorKind::ExternalFailure, "a client did not start (see the log)", detailBuilder.view() } );
             }
         }
         SW_LOG_INFO_ID( "NetSim.PlayStarted", "In-process play started: %# with %# client(s)", settings._gameName, settings._clientCount );
-        return true;
+        return {};
     }
 
     void EditorNetSimSession::stop()

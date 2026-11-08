@@ -32,10 +32,9 @@ namespace sw::editor
 
     SubsystemInitResult CharacterEditorLocalStore::initializeSubsystem()
     {
-        string error;
-        if ( _channel.open( GameSelection::getName(), *LocalStoreLocation::tryUnderUserData( kDirectory ), nullptr, error ) == false ) // 자리는 상수라 늘 풀린다
+        if ( const expected<void> opened = _channel.open( GameSelection::getName(), *LocalStoreLocation::tryUnderUserData( kDirectory ), nullptr ); opened.has_value() == false ) // 자리는 상수라 늘 풀린다
         {
-            SW_LOG_ERROR_ID( "CharacterEditorLocalStore.CharacterEditorLocalStore", "Character editor local store could not open: %#", error.c_str() );
+            SW_LOG_ERROR_ID( "CharacterEditorLocalStore.CharacterEditorLocalStore", "Character editor local store could not open: %# (%#)", opened.error().message(), opened.error().detail() );
             return SubsystemInitResult::Failed;
         }
         return SubsystemInitResult::Succeeded;

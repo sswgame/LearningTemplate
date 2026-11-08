@@ -30,7 +30,7 @@ namespace
         writer.key( "exp" );
         writer.valueInt( expSeconds );
         writer.endObject();
-        std::optional<sw::JSONText> text = writer.finish();
+        auto text = writer.finish();
         SW_EXPECT_TRUE( text.has_value() );
         return std::move( *text );
     }
@@ -56,12 +56,12 @@ namespace
     }
 
     /** @brief 읽고 ID 토큰 규칙으로 확인합니다. 읽기부터 틀리면 비어 있습니다. */
-    std::optional<sw::JWTVerified> verifyIDToken( sw::INetSecurityProvider& provider, sw::string_view compact, const sw::NetPublicKey& publicKey )
+    sw::optional<sw::JWTVerified> verifyIDToken( sw::INetSecurityProvider& provider, sw::string_view compact, const sw::NetPublicKey& publicKey )
     {
         static const sw::vector<sw::string> s_listAudience{ kAudience };
         sw::JWTUnverified                   token;
         if ( token.parse( compact ) == false )
-            return std::nullopt;
+            return sw::nullopt;
         return std::move( token ).verify( provider, publicKey, sw::JWTClaimRule::makeIDToken( kIssuer, s_listAudience, kNowMs, 60000 ) );
     }
 } // namespace
@@ -75,7 +75,7 @@ SW_TEST_CASE( JSONWebTokenTest, AcceptsAValidToken )
     const SigningKey          key      = makeKey( provider );
     const sw::string          compact  = sign( provider, key, makePayload( kIssuer, kAudience, kNowMs / 1000 + 3600 ) );
 
-    const std::optional<sw::JWTVerified> verified = verifyIDToken( provider, compact, key._publicKey );
+    const sw::optional<sw::JWTVerified> verified = verifyIDToken( provider, compact, key._publicKey );
     SW_REQUIRE_TRUE( verified.has_value() );
     sw::string subject;
     SW_EXPECT_TRUE( verified->findText( "sub", subject ) );

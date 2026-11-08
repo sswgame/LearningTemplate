@@ -32,8 +32,7 @@ namespace
     bool decode( sw::HPACKDecoder& decoder, sw::string_view hex, sw::vector<sw::HTTPHeader>& outListHeader )
     {
         const sw::vector<uint8> listByte = fromHex( hex );
-        sw::string              error;
-        return decoder.decode( listByte.data(), listByte.size(), outListHeader, error );
+        return decoder.decode( listByte.data(), listByte.size(), outListHeader ).has_value();
     }
 
     void expectHeader( const sw::vector<sw::HTTPHeader>& listHeader, size_t index, sw::string_view name, sw::string_view value )
@@ -90,8 +89,7 @@ SW_TEST_CASE( HPACKTest, EncoderRoundTrips )
 
     sw::HPACKDecoder           decoder;
     sw::vector<sw::HTTPHeader> decoded;
-    sw::string                 error;
-    SW_REQUIRE_TRUE( decoder.decode( block.data(), block.size(), decoded, error ) );
+    SW_REQUIRE_TRUE( decoder.decode( block.data(), block.size(), decoded ) );
     SW_REQUIRE_EQUAL( listHeader.size(), decoded.size() );
     for ( size_t index = 0; index < listHeader.size(); ++index )
     {

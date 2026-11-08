@@ -52,34 +52,34 @@ namespace sw::editor
         _pActive = &_live;
     }
 
-    bool AdminToolSession::connectLive( string_view address, string_view gameBuild, string& outError )
+    expected<void> AdminToolSession::connectLive( string_view address, string_view gameBuild )
     {
-        if ( _connection.open( address, gameBuild, outError ) == false )
+        if ( expected<void> opened = _connection.open( address, gameBuild ); opened.has_value() == false )
         {
             useFake();
-            _statusLine = "GM connection failed: " + outError;
-            return false;
+            _statusLine = "GM connection failed: " + string( opened.error().message() ) + " (" + string( opened.error().detail() ) + ")";
+            return opened;
         }
         useLiveClient( _connection.getAdminClient() );
         _statusLine = "Connecting to the GM port...";
-        return true;
+        return {};
     }
 
-    bool AdminToolSession::connectWithLogin( string_view address, string_view gameBuild, string_view loginName, string_view password, string& outError )
+    expected<void> AdminToolSession::connectWithLogin( string_view address, string_view gameBuild, string_view loginName, string_view password )
     {
-        outError.clear();
+        const utf8* pRefusal = nullptr;
         if ( _onCredentials.isBound() == false )
-            outError = "no login handler is bound - the tool assembly must bind one (bindCredentialsHandler)";
+            pRefusal = "no login handler is bound - the tool assembly must bind one (bindCredentialsHandler)";
         else if ( loginName.empty() || password.empty() )
-            outError = "the account name and the password are required";
+            pRefusal = "the account name and the password are required";
         else if ( _onCredentials.get()( loginName, password ) == false )
-            outError = "the login handler refused the account name or the password";
-        if ( outError.empty() == false )
+            pRefusal = "the login handler refused the account name or the password";
+        if ( pRefusal != nullptr )
         {
-            _statusLine = "GM connection failed: " + outError;
-            return false;
+            _statusLine = string( "GM connection failed: " ) + pRefusal;
+            return unexpected( Error{ ErrorKind::InvalidArgument, pRefusal } );
         }
-        return connectLive( address, gameBuild, outError );
+        return connectLive( address, gameBuild );
     }
 
     void AdminToolSession::disconnectLive()

@@ -200,7 +200,7 @@ namespace sw
         void cancelRequestsOf( uint16 methodRange );
 
         /** @brief 자기 엔드포인트 모드로 시작합니다. 전송(빌려 쓴다)을 띄우고 서버에 연결을 겁니다. */
-        [[nodiscard]] bool initialize( IStreamTransport* pTransport, const OnlineServiceClientConfig& settings, string& outError );
+        [[nodiscard]] expected<void> initialize( IStreamTransport* pTransport, const OnlineServiceClientConfig& settings );
         /**
          * @brief 공유 엔드포인트 모드로 시작합니다.
          * @details 엔드포인트, 요청 클라이언트, 전송은 부르는 쪽(봇 실행기)이 갖는다. 이 객체는 연결 하나(@p handle, 이미 열린 것)의 Hello 와 알림 나누기만 한다.

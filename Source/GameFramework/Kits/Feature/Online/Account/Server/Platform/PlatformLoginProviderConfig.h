@@ -76,9 +76,9 @@ namespace sw
         /**
          * @brief 제공자 파일(`OnlineProviderFile::read`)의 항목 하나 `{"name","kind":"oidc|profile|ticketQuery|appleSignIn","issuer","jwksUrl","clientIds":[…],"requireNonce","profileUrl",
          *        "subjectPath","displayNamePath","ticketParam","keyParam","keySecretEnvironment","identityParam","identity","resultPath","resultValue","teamId","signingKeyId","tokenUrl","revokeUrl"}` 를 읽습니다.
-         * @details 모르는 키, 빠진 필수 키, 규칙에 맞지 않는 이름은 오류(@p outError)로 처리한다. 철자가 틀린 설정이 조용히 기본값이 되지 않게 하려는 것이다.
+         * @details 모르는 키, 빠진 필수 키, 규칙에 맞지 않는 이름은 오류로 처리한다. 철자가 틀린 설정이 조용히 기본값이 되지 않게 하려는 것이다.
          */
-        [[nodiscard]] static bool readEntry( const JSONValue& entry, PlatformLoginProviderConfig& outSettings, string& outError );
+        [[nodiscard]] static expected<void> readEntry( const JSONValue& entry, PlatformLoginProviderConfig& outSettings );
         /** @brief 설정을 쓸 수 있으면 true 입니다. 이름 규칙과 방식별 필수 항목을 검사합니다. */
         static bool isValidSettings( const PlatformLoginProviderConfig& settings );
     };

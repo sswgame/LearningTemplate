@@ -130,7 +130,7 @@ namespace sw
         if ( pKey == nullptr )
             return Decision::NeedKey;
         // 서명과 iss · aud · exp · iat 는 `verify` 가 한 번에 본다. 여기서는 제공자마다 다른 nonce · subject 만 본다.
-        const std::optional<JWTVerified> token =
+        const optional<JWTVerified> token =
             std::move( unverified ).verify( *_pProvider, *pKey, JWTClaimRule::makeIDToken( _settings._issuer, _settings._listClientID, now.count(), _settings._clockSkewMs ) );
         if ( token.has_value() == false )
         {

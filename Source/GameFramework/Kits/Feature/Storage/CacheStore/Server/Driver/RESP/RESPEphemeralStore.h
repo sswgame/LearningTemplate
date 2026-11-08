@@ -64,8 +64,8 @@ namespace sw
          * @param transport 이 저장소가 소유합니다. `_ioThreadCount` 는 설정 그대로 둡니다. 0이면 이 저장소가 직접 돌립니다.
          * @param tlsContext 있으면 연결마다 TLS 세션(클라이언트 역할)을 만듭니다.
          */
-        [[nodiscard]] bool initialize( unique_ptr<IStreamTransport> transport, const StreamTransportConfig& transportSettings, const RESPStoreConfig& settings,
-                                       unique_ptr<ITLSContext> tlsContext, string& outError );
+        [[nodiscard]] expected<void> initialize( unique_ptr<IStreamTransport> transport, const StreamTransportConfig& transportSettings, const RESPStoreConfig& settings,
+                                                 unique_ptr<ITLSContext> tlsContext );
 
         uint64 submit( const EphemeralRequest& request ) override;
         int32  pollReplies( vector<EphemeralReply>& outListReply ) override;

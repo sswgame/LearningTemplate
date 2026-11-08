@@ -20,10 +20,9 @@ namespace
         {
             JSONDocument document;
             SW_EXPECT_TRUE( document.tryParse( text ) );
-            string     error;
-            const bool bRead = PlatformLoginProviderConfig::readEntry( document.getRoot(), outSettings, error );
-            SW_EXPECT_EQUAL( bRead, error.empty() ); // 실패면 까닭이 있다
-            return bRead;
+            const expected<void> read = PlatformLoginProviderConfig::readEntry( document.getRoot(), outSettings );
+            SW_EXPECT_TRUE( read.has_value() || read.error().message().empty() == false ); // 실패면 까닭이 있다
+            return read.has_value();
         }
     };
 } // namespace

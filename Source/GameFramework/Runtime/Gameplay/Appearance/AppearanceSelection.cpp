@@ -427,15 +427,12 @@ namespace sw
         }
     }
 
-    bool AppearanceSelection::makePresetDef( const AppearanceDatabase& database, const AppearanceSelection& selection, const hashed_string& presetID,
-                                             CharacterAppearanceDef& outDef, string& outReason )
+    expected<void> AppearanceSelection::makePresetDef( const AppearanceDatabase& database, const AppearanceSelection& selection, const hashed_string& presetID,
+                                                       CharacterAppearanceDef& outDef )
     {
         outDef = CharacterAppearanceDef{};
         if ( presetID.empty() || selection.isPartial() )
-        {
-            outReason = presetID.empty() ? "a preset needs an id" : "a partial selection (only some categories) cannot become a preset";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, presetID.empty() ? "a preset needs an id" : "a partial selection (only some categories) cannot become a preset" } );
         outDef._id     = presetID;
         outDef._parent = selection._basePresetID;
         outDef._schema = selection._schema;
@@ -453,8 +450,9 @@ namespace sw
             const CustomizationParamDef* pParam = pSchema != nullptr ? pSchema->findParameter( value._parameter ) : nullptr;
             if ( pParam == nullptr )
             {
-                outReason = string( "value '" ) + value._parameter.c_str() + "' is not a parameter of schema '" + selection._schema.c_str() + "'";
-                return false;
+                Error error{ ErrorKind::NotFound, "the value is not a parameter of the schema (value, schema)", value._parameter.c_str() };
+                error.appendDetail( ", " ).appendDetail( selection._schema.c_str() );
+                return unexpected( error );
             }
             CharacterAppearanceValueDef valueDef;
             valueDef._parameter = value._parameter;
@@ -486,10 +484,7 @@ namespace sw
         {
             const bool bUnrepresentable = request._customization.isEmpty() == false || request._listDetachedPart.empty() == false || request._bSuppressed == SW_TRUE;
             if ( bUnrepresentable )
-            {
-                outReason = string( "slot '" ) + request._slot.c_str() + "' has item instance values, detached parts or a suppressed state, which a preset cannot carry yet";
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::Unsupported, "the slot has item instance values, detached parts or a suppressed state, which a preset cannot carry yet", request._slot.c_str() } );
             CharacterAppearanceSlotDef slot;
             slot._slot = request._slot;
             if ( request._itemID.empty() )
@@ -501,7 +496,7 @@ namespace sw
             slot._damage        = request._damage;
             outDef._listSlot.push_back( slot );
         }
-        return true;
+        return {};
     }
 
     void AppearanceSelection::previewSelection( const AppearanceDatabase& database, const AppearanceSelection& selection, const CharacterAppearanceSpec& current,

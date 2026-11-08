@@ -321,8 +321,7 @@ SW_TEST_CASE( PushProviderSetTest, ReadEntry )
     {
         JSONDocument document;
         SW_EXPECT_TRUE( document.tryParse( text ) );
-        string error;
-        return PushProviderSet::readEntry( document.getRoot(), outConfig, error );
+        return PushProviderSet::readEntry( document.getRoot(), outConfig ).has_value();
     };
     {
         PushProviderConfig config;

@@ -240,8 +240,10 @@ namespace
             settings._transportSettings._ioThreadCount = 0;
             settings._serverAddress                    = NetAddress::makeLoopback( port );
             settings._gameBuild                        = "test-1";
-            string error;
-            SW_EXPECT_TRUE_MSG( _client.initialize( _transport.get(), settings, error ), error.c_str() );
+            {
+                const auto result = _client.initialize( _transport.get(), settings );
+                SW_EXPECT_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() );
+            }
         }
     };
 
@@ -270,8 +272,10 @@ namespace
             SW_EXPECT_TRUE( _host.registerServerService( &_serviceA ) );
             SW_EXPECT_TRUE( _host.registerServerService( &_serviceB ) );
             settings._pAdminTransport = _adminTransport.get();
-            string error;
-            SW_EXPECT_TRUE_MSG( _host.initialize( _hostTransport.get(), settings, error ), error.c_str() );
+            {
+                const auto result = _host.initialize( _hostTransport.get(), settings );
+                SW_EXPECT_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() );
+            }
         }
 
         static OnlineServiceHostConfig makeSettings()
@@ -719,16 +723,18 @@ SW_TEST_CASE( OnlineServiceHostTest, AdminServiceWithoutAnAdminListenerFailsToSt
     {
         OnlineServiceHost host;
         SW_REQUIRE_TRUE( host.registerServerService( &adminService ) );
-        string error;
-        SW_EXPECT_FALSE( host.initialize( startTransport.get(), HostFixture::makeSettings(), error ) );
-        SW_EXPECT_FALSE( error.empty() );
+        const expected<void> started = host.initialize( startTransport.get(), HostFixture::makeSettings() );
+        SW_REQUIRE_FALSE( started.has_value() );
+        SW_EXPECT_FALSE( started.error().message().empty() );
     }
     {
         FakeOnlineService playerService{ kProtocolA };
         OnlineServiceHost host;
         SW_REQUIRE_TRUE( host.registerServerService( &playerService ) );
-        string error;
-        SW_REQUIRE_TRUE_MSG( host.initialize( lateTransport.get(), HostFixture::makeSettings(), error ), error.c_str() );
+        {
+            const auto result = host.initialize( lateTransport.get(), HostFixture::makeSettings() );
+            SW_REQUIRE_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() );
+        }
         SW_EXPECT_LOG( "OnlineHost.ExposureRefused" ); // GM 리슨이 없는 호스트는 GM 전용 서비스를 받지 않는다
         SW_EXPECT_FALSE( host.registerServerService( &adminService ) );
     }

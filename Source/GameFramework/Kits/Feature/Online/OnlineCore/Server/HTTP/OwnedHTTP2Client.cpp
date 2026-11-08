@@ -37,34 +37,30 @@ namespace sw
         _uniqueSetHost.clear();
     }
 
-    bool OwnedHTTP2Client::registerHostTLS( string_view url, string_view trustFile, string_view trustOption, string& outError )
+    expected<void> OwnedHTTP2Client::registerHostTLS( string_view url, string_view trustFile, string_view trustOption )
     {
         if ( url.empty() )
-            return true;
+            return {};
         HTTPAddress address;
         if ( HTTPAddress::parse( url, address ) == false )
-        {
-            outError = "malformed URL '" + string( url ) + "'";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "malformed URL", url } );
         if ( address._bSecure == SW_FALSE )
-        {
-            outError = "HTTP/2 needs an https URL, got '" + string( url ) + "'";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "HTTP/2 needs an https URL", url } );
         if ( _uniqueSetHost.find( address._host ) != _uniqueSetHost.end() )
-            return true;
+            return {};
         if ( trustFile.empty() )
         {
-            outError = "https URL '" + string( url ) + "' needs " + string( trustOption ) + " (a CA bundle PEM that verifies the provider)";
-            return false;
+            Error error{ ErrorKind::InvalidArgument, "an https URL needs a CA bundle PEM that verifies the provider", trustOption };
+            error.appendDetail( " for " ).appendDetail( url );
+            return unexpected( error );
         }
-        unique_ptr<ITLSContext> context = NetSecurity::createClientTLSContext( game::getSubsystem<INetSecurityProvider>(), trustFile, address._host, outError, HTTP2Client::kALPNProtocol );
-        if ( context == nullptr )
-            return false;
-        _client.registerTLSContext( address._host, context.get() );
-        _listTLSContext.push_back( std::move( context ) );
+        expected<unique_ptr<ITLSContext>> context =
+            NetSecurity::createClientTLSContext( game::getSubsystem<INetSecurityProvider>(), trustFile, address._host, HTTP2Client::kALPNProtocol );
+        if ( context.has_value() == false )
+            return unexpected( context.error() );
+        _client.registerTLSContext( address._host, context->get() );
+        _listTLSContext.push_back( std::move( *context ) );
         _uniqueSetHost.insert( address._host );
-        return true;
+        return {};
     }
 } // namespace sw

@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/Casual/Rhythm/RhythmChart.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Module/ModuleSharedAssetCache.h"
@@ -12,7 +13,6 @@
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 #include <algorithm>
-#include <optional>
 
 namespace sw
 {

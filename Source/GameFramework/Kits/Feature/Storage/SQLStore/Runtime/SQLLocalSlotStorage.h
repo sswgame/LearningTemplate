@@ -33,7 +33,7 @@ namespace sw
         ~SQLLocalSlotStorage() override;
 
         /** @brief @p databasePath(파일 경로나 `:memory:`)를 열고 마이그레이션을 적용합니다. 실패하면 false 와 실패 이유를 반환합니다. */
-        [[nodiscard]] bool initialize( string_view databasePath, string& outError );
+        [[nodiscard]] expected<void> initialize( string_view databasePath );
 
         LocalStoreResult readSlot( const string& slot, vector<uint8>& outEnvelopeBytes ) override;
         LocalStoreResult writeSlot( const string& slot, const vector<uint8>& envelopeBytes ) override;
@@ -41,7 +41,7 @@ namespace sw
         LocalStoreResult listSlots( const string& groupPrefix, vector<LocalSlotInfo>& outListSlotInfo ) override;
 
         /** @brief 팩토리가 부르는 생성 함수입니다. 디스크 자리면 `<자리>/localstore.db`, 메모리 자리면 SQLite 메모리 데이터베이스를 엽니다. */
-        static unique_ptr<ILocalSlotStorage> createForLocation( const LocalStoreLocation& location, string_view gameName, string& outError );
+        static expected<unique_ptr<ILocalSlotStorage>> createForLocation( const LocalStoreLocation& location, string_view gameName );
 
     private:
         unique_ptr<ISQLConnection> _connection;

@@ -204,11 +204,11 @@ namespace sw::editor
         const bool      bInvalidLatticeData = resolution.isArray() == false || resolution.size() != 3 || points.isArray() == false;
         if ( bInvalidLatticeData )
             return false;
-        const std::optional<int32> countX     = resolution.at( 0 ).read<int32>();
-        const std::optional<int32> countY     = resolution.at( 1 ).read<int32>();
-        const std::optional<int32> countZ     = resolution.at( 2 ).read<int32>();
-        const bool                 bCountRead = countX.has_value() && countY.has_value() && countZ.has_value();
-        const bool                 bValidSize = bCountRead && kMinResolution <= *countX && *countX <= kMaxResolution && kMinResolution <= *countY && *countY <= kMaxResolution &&
+        const auto countX     = resolution.at( 0 ).read<int32>();
+        const auto countY     = resolution.at( 1 ).read<int32>();
+        const auto countZ     = resolution.at( 2 ).read<int32>();
+        const bool bCountRead = countX.has_value() && countY.has_value() && countZ.has_value();
+        const bool bValidSize = bCountRead && kMinResolution <= *countX && *countX <= kMaxResolution && kMinResolution <= *countY && *countY <= kMaxResolution &&
                                 kMinResolution <= *countZ && *countZ <= kMaxResolution;
         if ( bValidSize == false || points.size() != static_cast<size_t>( *countX * *countY * *countZ * 3 ) )
         {

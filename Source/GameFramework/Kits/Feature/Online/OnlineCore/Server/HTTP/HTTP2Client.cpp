@@ -469,12 +469,11 @@ namespace sw
         }
         if ( session._state != SessionState::Ready || session._plainBytes.empty() )
             return;
-        string     error;
-        const bool bFed     = session._connection->feed( session._plainBytes.data(), session._plainBytes.size(), session._outBytes, error );
-        const bool bWritten = pumpLocked( session ); // 연결 오류로 끝난 요청의 실패 응답도 여기서 회수한다
-        if ( bFed == false || bWritten == false )
+        const expected<void> fed      = session._connection->feed( session._plainBytes.data(), session._plainBytes.size(), session._outBytes );
+        const bool           bWritten = pumpLocked( session ); // 연결 오류로 끝난 요청의 실패 응답도 여기서 회수한다
+        if ( fed.has_value() == false || bWritten == false )
         {
-            failSessionLocked( session, bFed ? "could not send the request" : error.c_str() );
+            failSessionLocked( session, fed.has_value() ? "could not send the request" : fed.error().message().data() ); // 문장은 리터럴이라 널로 끝난다
             _transport->close( handle, StreamCloseMode::Abort );
             return;
         }

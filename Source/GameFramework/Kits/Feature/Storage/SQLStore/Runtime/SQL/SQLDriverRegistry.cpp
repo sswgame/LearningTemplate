@@ -50,7 +50,7 @@ namespace sw
         } );
     }
 
-    ISQLDriver* SQLDriverRegistry::findDriver( string_view driverName, string& outError )
+    expected<ISQLDriver*> SQLDriverRegistry::findDriver( string_view driverName )
     {
         vector<string>    listAvailable;
         ISQLDriver* const pDriver = getDrivers().withLock( [driverName, &listAvailable]( const RegistrationList<ISQLDriver>& list ) -> ISQLDriver*
@@ -69,10 +69,9 @@ namespace sw
                 available += ", ";
             available += name;
         }
-        StringBuilder<constant::buffer::kMax512> text;
-        text.appendFormat( "no SQL driver '%#' in this build target (%#) - available: %#", driverName, build::kTargetName, available.c_str() );
-        outError = string( text.view() );
-        return nullptr;
+        StringBuilder<constant::buffer::kMax256> detailBuilder;
+        detailBuilder.appendFormat( "%# (target %#, available: %#)", driverName, build::kTargetName, available.c_str() );
+        return unexpected( Error{ ErrorKind::NotFound, "no such SQL driver in this build target", detailBuilder.view() } );
     }
 
     void SQLDriverRegistry::getDriverNames( vector<string>& outListName )

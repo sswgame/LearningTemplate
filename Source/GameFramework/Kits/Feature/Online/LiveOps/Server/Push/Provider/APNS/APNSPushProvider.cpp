@@ -144,9 +144,9 @@ namespace sw
         writer.key( "iat" );
         writer.valueInt( nowMs.toSeconds() );
         writer.endObject();
-        const std::optional<JSONText> payload = writer.finish();
-        string                        token;
-        const bool                    bSigned = payload.has_value() &&
+        const auto payload = writer.finish();
+        string     token;
+        const bool bSigned = payload.has_value() &&
                              JWTUtil::makeSigned( *_pSecurity, NetSignatureAlgorithm::EcdsaP256Sha256, _settings._keyID, *payload, _settings._privateKeyPem, token );
         if ( bSigned == false )
         {

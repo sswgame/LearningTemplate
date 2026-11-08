@@ -235,8 +235,7 @@ SW_TEST_CASE( ControlIntentHistoryTest, TicksRoundTripThroughBytes )
 
     ControlIntentHistory loaded;
     BitReader            reader( writer.getBytes().data(), static_cast<int32>( writer.getByteCount() ) );
-    string               error;
-    SW_REQUIRE_TRUE( loaded.read( reader, error ) );
+    SW_REQUIRE_TRUE( loaded.read( reader ) );
     SW_REQUIRE_EQUAL( 1, loaded.getTrackCount() );
     SW_EXPECT_TRUE( loaded.getTrack( 0 )._pawnName == hashed_string( "Hero" ) );
     vector<ControlIntent> listIntent;
@@ -250,18 +249,19 @@ SW_TEST_CASE( ControlIntentHistoryTest, TicksRoundTripThroughBytes )
 SW_TEST_CASE( ControlIntentHistoryTest, BrokenBytesAreRefusedWithAReason )
 {
     ControlIntentHistory history;
-    string               error;
     const uint8          arrGarbage[] = { 1, 2, 3, 4, 5, 6, 7, 8 };
     BitReader            garbage( arrGarbage, 8 );
-    SW_EXPECT_FALSE( history.read( garbage, error ) );
-    SW_EXPECT_TRUE( error.find( "magic" ) != string::npos );
+    const expected<void> garbageRead = history.read( garbage );
+    SW_REQUIRE_FALSE( garbageRead.has_value() );
+    SW_EXPECT_TRUE( garbageRead.error().message().find( "magic" ) != string_view::npos );
 
     BitWriter writer;
     writer.writeUint32( ControlIntentHistory::kMagic );
     writer.writeVarUint( ControlIntentHistory::kVersion + 1 );
-    BitReader badVersion( writer.getBytes().data(), static_cast<int32>( writer.getByteCount() ) );
-    SW_EXPECT_FALSE( history.read( badVersion, error ) );
-    SW_EXPECT_TRUE( error.find( "version" ) != string::npos );
+    BitReader            badVersion( writer.getBytes().data(), static_cast<int32>( writer.getByteCount() ) );
+    const expected<void> badVersionRead = history.read( badVersion );
+    SW_REQUIRE_FALSE( badVersionRead.has_value() );
+    SW_EXPECT_TRUE( badVersionRead.error().message().find( "version" ) != string_view::npos );
 
     // 틱 수가 남은 바이트보다 크면 큰 고리를 잡기 전에 거절한다.
     BitWriter hugeWriter;
@@ -272,9 +272,10 @@ SW_TEST_CASE( ControlIntentHistoryTest, BrokenBytesAreRefusedWithAReason )
     hugeWriter.writeBlob( arrName, 1 );
     hugeWriter.writeVarUint( 0 );
     hugeWriter.writeVarUint( uint64{ 1 } << 40 );
-    BitReader huge( hugeWriter.getBytes().data(), static_cast<int32>( hugeWriter.getByteCount() ) );
-    SW_EXPECT_FALSE( history.read( huge, error ) );
-    SW_EXPECT_TRUE( error.find( "tick count" ) != string::npos );
+    BitReader            huge( hugeWriter.getBytes().data(), static_cast<int32>( hugeWriter.getByteCount() ) );
+    const expected<void> hugeRead = history.read( huge );
+    SW_REQUIRE_FALSE( hugeRead.has_value() );
+    SW_EXPECT_TRUE( hugeRead.error().message().find( "tick count" ) != string_view::npos );
     SW_EXPECT_EQUAL( 0, history.getTrackCount() );
 }
 
@@ -537,10 +538,8 @@ SW_TEST_CASE( IntentPlaybackTest, RestartReusesTheControllerAndHonoursTheFirstIn
 SW_TEST_CASE( IntentPlaybackTest, MissingFileReportsAnError )
 {
     SW_EXPECT_LOG( "File.NotFound" );
-    ControlRig rig;
-    string     error;
-    uint32     started = 9;
-    SW_EXPECT_FALSE( IntentPlayback::startFromFile( rig._manager, test::makeScratchPath( "SwNoSuchIntentFile.swintent" ), false, error, &started ) );
-    SW_EXPECT_EQUAL( 0u, started );
-    SW_EXPECT_FALSE( error.empty() );
+    ControlRig             rig;
+    const expected<uint32> started = IntentPlayback::startFromFile( rig._manager, test::makeScratchPath( "SwNoSuchIntentFile.swintent" ), false );
+    SW_REQUIRE_FALSE( started.has_value() );
+    SW_EXPECT_FALSE( started.error().message().empty() );
 }

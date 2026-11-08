@@ -10,6 +10,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Registry/RegistrationSlot.h"
 
@@ -24,16 +25,14 @@ namespace sw
     template <typename TValue>
     struct DevOnlineExtension
     {
-        /** @brief 등록된 값입니다. 없으면(배포 · DevOnline 단위가 없는 구성) @p outError 에 까닭을 쓰고 nullptr 입니다. */
-        [[nodiscard]] static const TValue* require( string& outError )
+        /** @brief 등록된 값입니다. 없으면(배포 · DevOnline 단위가 없는 구성) 대상이 개발 옵션 이름인 오류입니다. */
+        [[nodiscard]] static expected<const TValue*> require()
         {
             const RegistrationSlot<const TValue>& slot   = TValue::getDevOnline();
             const TValue* const                   pValue = slot.get();
             if ( pValue != nullptr )
                 return pValue;
-            outError.assign( slot.getListName() );
-            outError.append( " is a development option - this build has no DevOnline unit (Shipping does not build *DevOnline.cpp)" );
-            return nullptr;
+            return unexpected( Error{ ErrorKind::Unsupported, "a development option - this build has no DevOnline unit (Shipping does not build *DevOnline.cpp)", slot.getListName() } );
         }
         /** @brief 값이 등록되었는가 — 개발 전용 값이 들어와도 되는 구성인지 묻는 쪽(배포가 거절할 개발 제공자 검사)이 씁니다. */
         static bool isRegistered() { return TValue::getDevOnline().get() != nullptr; }

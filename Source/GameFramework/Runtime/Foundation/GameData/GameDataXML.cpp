@@ -43,8 +43,8 @@ namespace sw
         {
             bValid = XMLNameCheck::reportUnknownAttributes( keyNode, GameDataXMLInternal::kArrCurveKeyAttribute, sourceName ) && bValid;
             // 키의 시간과 값은 필수다. 값은 @p minValue 아래면 자르지 않고 오류다.
-            const std::optional<float32> time  = keyNode.readRequiredAttribute<float32>( "time" );
-            const std::optional<float32> value = keyNode.readRequiredAttribute<float32>( "value" );
+            const auto time  = keyNode.readRequiredAttribute<float32>( "time" );
+            const auto value = keyNode.readRequiredAttribute<float32>( "value" );
             if ( time.has_value() == false || value.has_value() == false )
             {
                 bValid = false;

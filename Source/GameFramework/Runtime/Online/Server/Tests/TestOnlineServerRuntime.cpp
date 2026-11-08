@@ -61,16 +61,15 @@ namespace
     public:
         static constexpr const utf8* kName = "test.provider";
 
-        [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
+        [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry ) override
         {
             addKitEvent( kName, context._pHost != nullptr && context._pStore != nullptr ? "init" : "init-without-base" );
-            return exposeInterface<IAccountDirectory>( context, entry, _directory, outError );
+            return exposeInterface<IAccountDirectory>( context, entry, _directory );
         }
-        bool start( OnlineServerKitContext& context, string& outError ) override
+        expected<void> start( OnlineServerKitContext& context ) override
         {
-            (void)outError;
             addKitEvent( kName, context._pRouter != nullptr ? "start" : "start-without-router" );
-            return true;
+            return {};
         }
         void stop() override { addKitEvent( kName, "stop" ); }
         void shutdown() override { addKitEvent( kName, "shutdown" ); }
@@ -89,31 +88,25 @@ namespace
             : _bFailStart{ SW_FALSE }
         {
         }
-        [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
+        [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry ) override
         {
             (void)context;
             OnlineRuntimeTestKitConfig kitConfig;
-            if ( entry.readSettings( kitConfig, outError ) == false )
-                return false;
+            if ( expected<void> settings = entry.readSettings( kitConfig ); settings.has_value() == false )
+                return settings;
             const string& failStage = kitConfig._failStage;
             if ( failStage == "init" )
-            {
-                outError = "test init failure";
-                return false;
-            }
+                return sw::unexpected( Error{ ErrorKind::InvalidArgument, "test init failure" } );
             _bFailStart = failStage == "start";
             addKitEvent( kName, "init" );
-            return true;
+            return {};
         }
-        bool start( OnlineServerKitContext& context, string& outError ) override
+        expected<void> start( OnlineServerKitContext& context ) override
         {
             if ( _bFailStart )
-            {
-                outError = "test start failure";
-                return false;
-            }
+                return sw::unexpected( Error{ ErrorKind::InvalidArgument, "test start failure" } );
             addKitEvent( kName, context._kits.get<IAccountDirectory>().isAccountOnline( 7 ) ? "start" : "start-without-directory" );
-            return true;
+            return {};
         }
         void stop() override { addKitEvent( kName, isStarted() ? "stop" : "stop-unstarted" ); }
         void shutdown() override { addKitEvent( kName, "shutdown" ); }
@@ -181,8 +174,10 @@ SW_TEST_CASE_F( OnlineServerRuntimeTest, KitsStartInOrderShareInterfacesAndStopI
     settings._listenAddress            = NetAddress::makeLoopback( 7451 );
     {
         OnlineServerRuntime runtime;
-        string              error;
-        SW_REQUIRE_TRUE_MSG( runtime.initialize( settings, UnixMilliseconds{ 1000 }, error ), error.c_str() );
+        {
+            const auto result = runtime.initialize( settings, UnixMilliseconds{ 1000 } );
+            SW_REQUIRE_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() );
+        }
         SW_EXPECT_EQUAL( runtime.getListenPort(), uint16( 7451 ) );
         vector<string> listKitName;
         runtime.collectKitNames( listKitName );
@@ -212,9 +207,10 @@ SW_TEST_CASE_F( OnlineServerRuntimeTest, MissingRequiredKitStopsStartup )
 {
     {
         OnlineServerRuntime runtime;
-        string              error;
-        SW_EXPECT_FALSE( runtime.initialize( makeSettings( { ConsumerTestKit::kName } ), UnixMilliseconds{ 1000 }, error ) );
-        SW_EXPECT_TRUE( error.find( "needs kit 'test.provider'" ) != string::npos );
+        const auto          failed1 = runtime.initialize( makeSettings( { ConsumerTestKit::kName } ), UnixMilliseconds{ 1000 } );
+        SW_REQUIRE_FALSE( failed1.has_value() );
+        const sw::string error1 = sw::string( failed1.error().message() ) + " " + sw::string( failed1.error().detail() );
+        SW_EXPECT_TRUE( error1.find( "needs test.provider" ) != string::npos );
         runtime.shutdown();
     }
     SW_EXPECT_TRUE( getKitEventLog().empty() );
@@ -227,9 +223,10 @@ SW_TEST_CASE_F( OnlineServerRuntimeTest, KitInitializeFailureSkipsItsOwnShutdown
         OnlineServerRuntimeConfig settings     = makeSettings( { ProviderTestKit::kName, ConsumerTestKit::kName } );
         settings._config._listKit[1]._settings = R"({ "_failStage": "init" })";
         OnlineServerRuntime runtime;
-        string              error;
-        SW_EXPECT_FALSE( runtime.initialize( settings, UnixMilliseconds{ 1000 }, error ) );
-        SW_EXPECT_TRUE( error.find( "test.consumer" ) != string::npos && error.find( "test init failure" ) != string::npos );
+        const auto          failed1 = runtime.initialize( settings, UnixMilliseconds{ 1000 } );
+        SW_REQUIRE_FALSE( failed1.has_value() );
+        const sw::string error1 = sw::string( failed1.error().message() ) + " " + sw::string( failed1.error().detail() );
+        SW_EXPECT_TRUE( error1.find( "test.consumer" ) != string::npos && error1.find( "test init failure" ) != string::npos );
         runtime.shutdown();
     }
     const vector<string>& listLine = getKitEventLog();
@@ -243,9 +240,10 @@ SW_TEST_CASE_F( OnlineServerRuntimeTest, KitInitializeFailureSkipsItsOwnShutdown
 SW_TEST_CASE_F( OnlineServerRuntimeTest, UnknownKitStopsStartup )
 {
     OnlineServerRuntime runtime;
-    string              error;
-    SW_EXPECT_FALSE( runtime.initialize( makeSettings( { ProviderTestKit::kName, "test.missing" } ), UnixMilliseconds{ 1000 }, error ) );
-    SW_EXPECT_TRUE( error.find( "test.missing" ) != string::npos && error.find( "not in this build" ) != string::npos );
+    const auto          failed1 = runtime.initialize( makeSettings( { ProviderTestKit::kName, "test.missing" } ), UnixMilliseconds{ 1000 } );
+    SW_REQUIRE_FALSE( failed1.has_value() );
+    const sw::string error1 = sw::string( failed1.error().message() ) + " " + sw::string( failed1.error().detail() );
+    SW_EXPECT_TRUE( error1.find( "test.missing" ) != string::npos && error1.find( "not in this build" ) != string::npos );
     runtime.shutdown();
     runtime.shutdown();
     SW_EXPECT_FALSE( runtime.isInitialized() );
@@ -259,9 +257,10 @@ SW_TEST_CASE_F( OnlineServerRuntimeTest, KitStartFailureUnwindsEveryKit )
         settings._config._listKit[1]._settings = R"({ "_failStage": "start" })";
         settings._listenAddress                = NetAddress::makeLoopback( 7452 );
         OnlineServerRuntime runtime;
-        string              error;
-        SW_EXPECT_FALSE( runtime.initialize( settings, UnixMilliseconds{ 1000 }, error ) );
-        SW_EXPECT_TRUE( error.find( "test.consumer" ) != string::npos && error.find( "test start failure" ) != string::npos );
+        const auto          failed1 = runtime.initialize( settings, UnixMilliseconds{ 1000 } );
+        SW_REQUIRE_FALSE( failed1.has_value() );
+        const sw::string error1 = sw::string( failed1.error().message() ) + " " + sw::string( failed1.error().detail() );
+        SW_EXPECT_TRUE( error1.find( "test.consumer" ) != string::npos && error1.find( "test start failure" ) != string::npos );
         runtime.shutdown();
     }
     const vector<string>& listLine = getKitEventLog();
@@ -279,9 +278,10 @@ SW_TEST_CASE_F( OnlineServerRuntimeTest, MissingClockStopsStartup )
     OnlineServerRuntimeConfig settings = makeSettings( { ProviderTestKit::kName } );
     settings._pClock                   = nullptr;
     OnlineServerRuntime runtime;
-    string              error;
-    SW_EXPECT_FALSE( runtime.initialize( settings, UnixMilliseconds{ 1000 }, error ) );
-    SW_EXPECT_TRUE( error.find( "_pClock" ) != string::npos );
+    const auto          failed1 = runtime.initialize( settings, UnixMilliseconds{ 1000 } );
+    SW_REQUIRE_FALSE( failed1.has_value() );
+    const sw::string error1 = sw::string( failed1.error().message() ) + " " + sw::string( failed1.error().detail() );
+    SW_EXPECT_TRUE( error1.find( "_pClock" ) != string::npos );
     SW_EXPECT_FALSE( runtime.isInitialized() );
     SW_EXPECT_TRUE( getKitEventLog().empty() );
 }
@@ -290,9 +290,10 @@ SW_TEST_CASE_F( OnlineServerRuntimeTest, MissingClockStopsStartup )
 SW_TEST_CASE_F( OnlineServerRuntimeTest, EmptyKitListStopsStartup )
 {
     OnlineServerRuntime runtime;
-    string              error;
-    SW_EXPECT_FALSE( runtime.initialize( makeSettings( {} ), UnixMilliseconds{ 1000 }, error ) );
-    SW_EXPECT_TRUE( error.find( "lists no kits" ) != string::npos );
+    const auto          failed1 = runtime.initialize( makeSettings( {} ), UnixMilliseconds{ 1000 } );
+    SW_REQUIRE_FALSE( failed1.has_value() );
+    const sw::string error1 = sw::string( failed1.error().message() ) + " " + sw::string( failed1.error().detail() );
+    SW_EXPECT_TRUE( error1.find( "lists no kits" ) != string::npos );
     runtime.shutdown();
     SW_EXPECT_TRUE( getKitEventLog().empty() );
 }
@@ -303,15 +304,16 @@ SW_TEST_CASE_F( OnlineServerRuntimeTest, EmptyDriverStopsStartup )
     OnlineServerRuntimeConfig noStore = makeSettings( { ProviderTestKit::kName } );
     noStore._store._driver.clear();
     OnlineServerRuntime runtime;
-    string              error;
-    SW_EXPECT_FALSE( runtime.initialize( std::move( noStore ), UnixMilliseconds{ 1000 }, error ) );
-    SW_EXPECT_TRUE( error.find( "store and a cache driver" ) != string::npos );
+    const auto          failed1 = runtime.initialize( std::move( noStore ), UnixMilliseconds{ 1000 } );
+    SW_REQUIRE_FALSE( failed1.has_value() );
+    const sw::string error1 = sw::string( failed1.error().message() ) + " " + sw::string( failed1.error().detail() );
+    SW_EXPECT_TRUE( error1.find( "store and a cache driver" ) != string::npos );
     runtime.shutdown();
 
     OnlineServerRuntimeConfig noCache = makeSettings( { ProviderTestKit::kName } );
     noCache._cache._driver.clear();
     OnlineServerRuntime runtimeNoCache;
-    SW_EXPECT_FALSE( runtimeNoCache.initialize( std::move( noCache ), UnixMilliseconds{ 1000 }, error ) );
+    SW_EXPECT_FALSE( runtimeNoCache.initialize( std::move( noCache ), UnixMilliseconds{ 1000 } ) );
 }
 
 /** @brief [OnlineServerRuntimeTest] 온라인 설정이 이름으로 고른 항목만 쓴다 - 이름이 비었거나 목록에 없으면 첫 항목으로 대신하지 않고 오류이다 */
@@ -330,22 +332,27 @@ SW_TEST_CASE_F( OnlineServerRuntimeTest, ResolveStoresNeedsNamedEntries )
 
     OnlineServerConfig        onlineConfig;
     OnlineServerRuntimeConfig settings;
-    string                    error;
-    SW_EXPECT_FALSE( OnlineServerRuntime::resolveStores( serverConfig, onlineConfig, settings, error ) ); // 이름을 적지 않았다
-    SW_EXPECT_TRUE( error.find( "_storeName" ) != string::npos );
+    const auto                failed1 = OnlineServerRuntime::resolveStores( serverConfig, onlineConfig, settings ); // 이름을 적지 않았다
+    SW_REQUIRE_FALSE( failed1.has_value() );
+    const sw::string error1 = sw::string( failed1.error().message() ) + " " + sw::string( failed1.error().detail() );
+    SW_EXPECT_TRUE( error1.find( "_storeName" ) != string::npos );
 
     onlineConfig._storeName = "missing";
     onlineConfig._cacheName = "local";
-    SW_EXPECT_FALSE( OnlineServerRuntime::resolveStores( serverConfig, onlineConfig, settings, error ) );
-    SW_EXPECT_TRUE( error.find( "missing" ) != string::npos );
+    const auto failed2      = OnlineServerRuntime::resolveStores( serverConfig, onlineConfig, settings );
+    SW_REQUIRE_FALSE( failed2.has_value() );
+    const sw::string error2 = sw::string( failed2.error().message() ) + " " + sw::string( failed2.error().detail() );
+    SW_EXPECT_TRUE( error2.find( "missing" ) != string::npos );
 
     onlineConfig._storeName = "local";
     onlineConfig._cacheName = "";
-    SW_EXPECT_FALSE( OnlineServerRuntime::resolveStores( serverConfig, onlineConfig, settings, error ) );
-    SW_EXPECT_TRUE( error.find( "_cacheName" ) != string::npos );
+    const auto failed3      = OnlineServerRuntime::resolveStores( serverConfig, onlineConfig, settings );
+    SW_REQUIRE_FALSE( failed3.has_value() );
+    const sw::string error3 = sw::string( failed3.error().message() ) + " " + sw::string( failed3.error().detail() );
+    SW_EXPECT_TRUE( error3.find( "_cacheName" ) != string::npos );
 
     onlineConfig._cacheName = "local";
-    SW_REQUIRE_TRUE( OnlineServerRuntime::resolveStores( serverConfig, onlineConfig, settings, error ) );
+    SW_REQUIRE_TRUE( OnlineServerRuntime::resolveStores( serverConfig, onlineConfig, settings ) );
     SW_EXPECT_EQUAL( string( kMemoryStoreDriverName ), settings._store._driver );
     SW_EXPECT_EQUAL( string( kMemoryStoreDriverName ), settings._cache._driver );
 }

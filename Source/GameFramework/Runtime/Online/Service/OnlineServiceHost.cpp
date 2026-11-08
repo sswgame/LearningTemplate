@@ -40,14 +40,13 @@ namespace sw
                 return false;
             }
 
-            /** @brief GM 리슨 없이 GM 서비스(`Admin`)를 올리려 하면 오류 문장을 채우고 false 입니다. 플레이어 포트로 받는 숨은 폴백은 두지 않는다. */
-            [[nodiscard]] static bool checkExposure( const IOnlineServerService& service, bool bHasAdminListener, string& outError )
+            /** @brief GM 리슨 없이 GM 서비스(`Admin`)를 올리려 하면 대상이 메서드 영역인 오류입니다. 플레이어 포트로 받는 숨은 폴백은 두지 않는다. */
+            [[nodiscard]] static expected<void> checkExposure( const IOnlineServerService& service, bool bHasAdminListener )
             {
                 if ( bHasAdminListener || service.getExposure() != OnlineServiceExposure::Admin )
-                    return true;
-                outError = "online service range " + to_string( static_cast<uint32>( service.getMethodRange() ) ) +
-                           " is admin-only but the host has no admin listener (set the server config _adminServicePort)";
-                return false;
+                    return {};
+                return unexpected( Error{ ErrorKind::InvalidArgument, "the online service range is admin-only but the host has no admin listener (set the server config _adminServicePort)",
+                                          to_string( static_cast<uint32>( service.getMethodRange() ) ) } );
             }
         };
     } // namespace
@@ -230,14 +229,11 @@ namespace sw
         shutdown();
     }
 
-    bool OnlineServiceHost::initialize( IStreamTransport* pTransport, const OnlineServiceHostConfig& settings, string& outError )
+    expected<void> OnlineServiceHost::initialize( IStreamTransport* pTransport, const OnlineServiceHostConfig& settings )
     {
         SW_ASSERT( _bInitialized == SW_FALSE );
         if ( pTransport == nullptr )
-        {
-            outError = "online service host needs a stream transport";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "online service host needs a stream transport" } );
         _settings          = settings;
         _listenerTransport = make_unique<ListenerTransport>( pTransport, settings._pAdminTransport );
         _pServerBus        = settings._pServerBusTransport != nullptr ? make_unique<ServerBus>( *settings._pServerBusTransport ) : nullptr;
@@ -246,24 +242,22 @@ namespace sw
         _remoteBucket.initialize( settings._requestBurstPerRemote, settings._requestRefillMsPerRemote, OnlineServiceHostInternal::kMaxTrackedBucketCount );
         if ( _endpoint.initialize( _listenerTransport.get(), settings._endpointSettings ) == false )
         {
-            outError = "online service host could not set up its stream endpoint";
             releaseTransportSide();
-            return false;
+            return unexpected( Error{ ErrorKind::ExternalFailure, "online service host could not set up its stream endpoint" } );
         }
         NetRequestServerConfig requestSettings;
         _requestServer.initialize( &_endpoint, requestSettings );
         if ( _requestServer.registerMethod( OnlineHostMethod::kHello, NetRequestFunction::create<&OnlineServiceHost::onNetRequest>( this ) ) == false || _requestServer.registerMethod( OnlineHostMethod::kPing, NetRequestFunction::create<&OnlineServiceHost::onNetRequest>( this ) ) == false )
         {
-            outError = "online service host methods are already registered";
             releaseTransportSide();
-            return false;
+            return unexpected( Error{ ErrorKind::AlreadyExists, "online service host methods are already registered" } );
         }
         for ( IOnlineServerService* pService : _listService )
         {
-            if ( OnlineServiceHostInternal::checkExposure( *pService, _listenerTransport->hasAdminListener(), outError ) == false )
+            if ( expected<void> exposure = OnlineServiceHostInternal::checkExposure( *pService, _listenerTransport->hasAdminListener() ); exposure.has_value() == false )
             {
                 releaseTransportSide();
-                return false;
+                return exposure;
             }
             for ( uint16 offset = 0; offset < OnlineMethodRange::kMethodCount; ++offset )
             {
@@ -272,21 +266,19 @@ namespace sw
         }
         if ( _listenerTransport->initialize( &_endpoint, settings._transportSettings ) == false || _listenerTransport->listen( settings._listenAddress ) == false )
         {
-            outError = "online service host could not listen on " + settings._listenAddress.toString();
             releaseTransportSide(); // 이미 선 엔드포인트 · 요청 서버 · 전송을 해제한다 — `_bInitialized` 가 거짓이라 `shutdown` 은 아무것도 하지 않는다
-            return false;
+            return unexpected( Error{ ErrorKind::ExternalFailure, "online service host could not listen", settings._listenAddress.toString() } );
         }
         const bool bAdminListenFailed = _listenerTransport->hasAdminListener() && _listenerTransport->listenAdmin( settings._adminListenAddress ) == false;
         if ( bAdminListenFailed )
         {
-            outError = "online service host could not listen for the admin port on " + settings._adminListenAddress.toString();
             releaseTransportSide();
-            return false;
+            return unexpected( Error{ ErrorKind::ExternalFailure, "online service host could not listen for the admin port", settings._adminListenAddress.toString() } );
         }
         if ( settings._pEphemeralStore != nullptr )
             _ephemeralRouter.initialize( settings._pEphemeralStore );
         _bInitialized = SW_TRUE;
-        return true;
+        return {};
     }
 
     void OnlineServiceHost::shutdown()

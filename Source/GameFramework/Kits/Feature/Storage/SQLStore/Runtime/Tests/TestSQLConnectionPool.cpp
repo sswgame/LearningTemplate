@@ -9,6 +9,16 @@
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLConnectionPool.h"
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/Tests/FakeSQLDriver.h"
 
+namespace
+{
+    /** @brief 실패의 문장과 대상을 이은 글입니다(성공이면 빈 글). 오류 글을 확인하는 테스트가 씁니다. */
+    template <typename T>
+    sw::string describeError( const sw::expected<T>& result )
+    {
+        return result.has_value() ? sw::string{} : sw::string( result.error().message() ) + " " + sw::string( result.error().detail() );
+    }
+} // namespace
+
 // SQLConnectionPoolTest — 연결 풀: 기동 오류, 워커 실행과 완료 회수, 끊긴 연결 다시 열기와 백오프, 종료가 남은 일을 취소로 끝내기, 완료 안에서 새 일 맡기기(가짜 드라이버, nogpu).
 
 using namespace sw;
@@ -123,17 +133,20 @@ SW_TEST_CASE( SQLConnectionPoolTest, InitializeRefusesWhatCannotRun )
     SQLConnectionPool   pool;
     test::FakeSQLDriver driver;
     string              error;
-    SW_EXPECT_FALSE( pool.initialize( nullptr, SQLConnectionPoolTestUtil::makeSettings( 1 ), error ) );
+    error = describeError( pool.initialize( nullptr, SQLConnectionPoolTestUtil::makeSettings( 1 ) ) );
+    SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.empty() == false );
 
     error.clear();
-    SW_EXPECT_FALSE( pool.initialize( &driver, SQLConnectionPoolTestUtil::makeSettings( 0 ), error ) ); // 0 을 1 로 맞추지 않는다
+    error = describeError( pool.initialize( &driver, SQLConnectionPoolTestUtil::makeSettings( 0 ) ) ); // 0 을 1 로 맞추지 않는다
+    SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.empty() == false );
     SW_EXPECT_EQUAL( 0, driver.getOpenCount() );
 
     error.clear();
     driver.setAllowedOpenCount( 0 );
-    SW_EXPECT_FALSE( pool.initialize( &driver, SQLConnectionPoolTestUtil::makeSettings( 1 ), error ) ); // 기동 오류를 바로 알린다
+    error = describeError( pool.initialize( &driver, SQLConnectionPoolTestUtil::makeSettings( 1 ) ) ); // 기동 오류를 바로 알린다
+    SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.empty() == false );
 }
 
@@ -153,7 +166,7 @@ SW_TEST_CASE( SQLConnectionPoolTest, RunsOnWorkerAndCompletesOnPoll )
     test::FakeSQLDriver driver;
     SQLConnectionPool   pool;
     string              error;
-    SW_REQUIRE_TRUE( pool.initialize( &driver, SQLConnectionPoolTestUtil::makeSettings( 2 ), error ) );
+    SW_REQUIRE_TRUE( pool.initialize( &driver, SQLConnectionPoolTestUtil::makeSettings( 2 ) ) );
 
     deque<PoolJobResult> listOutcome( 16 );
     for ( PoolJobResult& outcome : listOutcome )
@@ -177,7 +190,7 @@ SW_TEST_CASE( SQLConnectionPoolTest, CompleteMaySubmitANewJob )
     test::FakeSQLDriver driver;
     SQLConnectionPool   pool;
     string              error;
-    SW_REQUIRE_TRUE( pool.initialize( &driver, SQLConnectionPoolTestUtil::makeSettings( 1 ), error ) );
+    SW_REQUIRE_TRUE( pool.initialize( &driver, SQLConnectionPoolTestUtil::makeSettings( 1 ) ) );
     PoolJobResult next;
     pool.submit( sw::make_unique<PoolChainJob>( pool, next ) );
     SW_REQUIRE_TRUE( SQLConnectionPoolTestUtil::pollAll( pool ) );
@@ -191,7 +204,7 @@ SW_TEST_CASE( SQLConnectionPoolTest, ReconnectsBeforeTheNextJob )
     test::FakeSQLDriver driver;
     SQLConnectionPool   pool;
     string              error;
-    SW_REQUIRE_TRUE( pool.initialize( &driver, SQLConnectionPoolTestUtil::makeSettings( 1 ), error ) );
+    SW_REQUIRE_TRUE( pool.initialize( &driver, SQLConnectionPoolTestUtil::makeSettings( 1 ) ) );
     SW_EXPECT_TRUE( SQLConnectionPoolTestUtil::runOne( pool )._result == SQLResult::Ok );
     const int32 openedBefore = driver.getOpenCount();
 
@@ -215,7 +228,7 @@ SW_TEST_CASE( SQLConnectionPoolTest, FailedReconnectBacksOffAndRecovers )
     test::FakeSQLDriver driver;
     SQLConnectionPool   pool;
     string              error;
-    SW_REQUIRE_TRUE( pool.initialize( &driver, SQLConnectionPoolTestUtil::makeSettings( 1 ), error ) );
+    SW_REQUIRE_TRUE( pool.initialize( &driver, SQLConnectionPoolTestUtil::makeSettings( 1 ) ) );
     SW_EXPECT_TRUE( SQLConnectionPoolTestUtil::runOne( pool )._result == SQLResult::Ok );
 
     driver.setAllowedOpenCount( 0 );
@@ -251,7 +264,7 @@ SW_TEST_CASE( SQLConnectionPoolTest, WorkerThatCouldNotConnectStillAnswers )
     driver.setAllowedOpenCount( 1 ); // 먼저 열어 보는 하나만 된다
     SQLConnectionPool pool;
     string            error;
-    SW_REQUIRE_TRUE( pool.initialize( &driver, SQLConnectionPoolTestUtil::makeSettings( 1 ), error ) );
+    SW_REQUIRE_TRUE( pool.initialize( &driver, SQLConnectionPoolTestUtil::makeSettings( 1 ) ) );
     const PoolJobResult outcome = SQLConnectionPoolTestUtil::runOne( pool ); // 첫 일 앞에서 한 번 더 시도한다 — 둘째 경고
     SW_EXPECT_TRUE( outcome._result == SQLResult::ConnectionLost );
     SW_EXPECT_EQUAL( 0, outcome._cancelCount ); // 고장이지 종료가 아니다
@@ -263,7 +276,7 @@ SW_TEST_CASE( SQLConnectionPoolTest, ShutdownCancelsQueuedJobsAndCanRestart )
     test::FakeSQLDriver driver;
     SQLConnectionPool   pool;
     string              error;
-    SW_REQUIRE_TRUE( pool.initialize( &driver, SQLConnectionPoolTestUtil::makeSettings( 1 ), error ) );
+    SW_REQUIRE_TRUE( pool.initialize( &driver, SQLConnectionPoolTestUtil::makeSettings( 1 ) ) );
 
     atomic<bool> bEntered{ false };
     atomic<bool> bRelease{ false };
@@ -299,6 +312,6 @@ SW_TEST_CASE( SQLConnectionPoolTest, ShutdownCancelsQueuedJobsAndCanRestart )
         SW_EXPECT_EQUAL( 1, probe._completeCount );
     }
 
-    SW_REQUIRE_TRUE( pool.initialize( &driver, SQLConnectionPoolTestUtil::makeSettings( 1 ), error ) ); // 설정을 비웠으니 다시 정할 수 있다
+    SW_REQUIRE_TRUE( pool.initialize( &driver, SQLConnectionPoolTestUtil::makeSettings( 1 ) ) ); // 설정을 비웠으니 다시 정할 수 있다
     SW_EXPECT_TRUE( SQLConnectionPoolTestUtil::runOne( pool )._result == SQLResult::Ok );
 }

@@ -34,26 +34,27 @@ namespace sw
 
     SQLLocalSlotStorage::~SQLLocalSlotStorage() = default;
 
-    bool SQLLocalSlotStorage::initialize( string_view databasePath, string& outError )
+    expected<void> SQLLocalSlotStorage::initialize( string_view databasePath )
     {
-        ISQLDriver* pDriver = SQLDriverRegistry::findDriver( SQLLocalSlotStorageInternal::kLocalSlotDriverName, outError );
-        if ( pDriver == nullptr )
-            return false;
-        ISQLDriver&          driver = *pDriver;
+        const expected<ISQLDriver*> found = SQLDriverRegistry::findDriver( SQLLocalSlotStorageInternal::kLocalSlotDriverName );
+        if ( found.has_value() == false )
+            return unexpected( found.error() );
+        ISQLDriver&          driver = **found;
         vector<SQLMigration> listMigration;
-        if ( SQLMigrationRunner::loadMigrations( kMigrationFolder, driver.getName(), listMigration, outError ) == false )
-            return false;
+        if ( expected<void> result = SQLMigrationRunner::loadMigrations( kMigrationFolder, driver.getName(), listMigration ); result.has_value() == false )
+            return result;
         if ( databasePath != kMemoryDatabasePath )
             (void)FileUtil::ensureParentDirectoryExists( databasePath ); // 못 만들면 ensure 가 알리고 바로 뒤 openConnection 이 오류로 답한다
-        _connection = driver.openConnection( databasePath, "", outError );
-        if ( _connection == nullptr )
-            return false;
-        if ( SQLMigrationRunner::apply( *_connection, listMigration, WallClock::nowUnixMilliseconds(), outError ) == false )
+        expected<unique_ptr<ISQLConnection>> connection = driver.openConnection( databasePath, "" );
+        if ( connection.has_value() == false )
+            return unexpected( connection.error() );
+        _connection = std::move( *connection );
+        if ( expected<void> applied = SQLMigrationRunner::apply( *_connection, listMigration, WallClock::nowUnixMilliseconds() ); applied.has_value() == false )
         {
             _connection.reset();
-            return false;
+            return applied;
         }
-        return true;
+        return {};
     }
 
     LocalStoreResult SQLLocalSlotStorage::readSlot( const string& slot, vector<uint8>& outEnvelopeBytes )
@@ -106,15 +107,15 @@ namespace sw
         return LocalStoreResult::Ok;
     }
 
-    unique_ptr<ILocalSlotStorage> SQLLocalSlotStorage::createForLocation( const LocalStoreLocation& location, string_view gameName, string& outError )
+    expected<unique_ptr<ILocalSlotStorage>> SQLLocalSlotStorage::createForLocation( const LocalStoreLocation& location, string_view gameName )
     {
         // 메모리 자리는 SQLite 의 메모리 데이터베이스다 - 그 약속(`:memory:`)은 이 바닥만 안다(예전에는 경로 글로 모든 바닥에 통했다).
         const bool                      bMemory      = location.getKind() == LocalStoreLocation::Kind::Memory;
         const string                    databasePath = bMemory ? string( kMemoryDatabasePath ) : FileUtil::joinPath( location.resolveDiskPath( gameName ), kDatabaseFileName );
         unique_ptr<SQLLocalSlotStorage> storage      = sw::make_unique<SQLLocalSlotStorage>();
-        if ( storage->initialize( databasePath, outError ) == false )
-            return nullptr;
-        return storage;
+        if ( expected<void> initialized = storage->initialize( databasePath ); initialized.has_value() == false )
+            return unexpected( initialized.error() );
+        return unique_ptr<ILocalSlotStorage>( std::move( storage ) );
     }
 } // namespace sw
 

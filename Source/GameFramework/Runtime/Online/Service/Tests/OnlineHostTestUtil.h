@@ -142,8 +142,10 @@ namespace sw::test
             settings._pServerBusTransport              = &_bus;
             settings._requestBurstPerRemote            = 1000; // 테스트 클라이언트는 모두 127.0.0.1 이다
             settings._requestBurstPerAccount           = 1000;
-            string error;
-            SW_EXPECT_TRUE_MSG( _host.initialize( _transport.get(), settings, error ), error.c_str() );
+            {
+                const auto result = _host.initialize( _transport.get(), settings );
+                SW_EXPECT_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() );
+            }
         }
 
         /** @brief 호스트 틱(전송 · 저장소 완료 · 캐시 라우터 · 버스 · 서비스)입니다. 테스트 클라이언트와 같은 틱 시각을 서버 시각으로 씁니다. */
@@ -307,7 +309,7 @@ namespace sw::test
         OnlineTestClients            _clients{ _network };
 
         /** @brief @p serverJSON(`ServerConfig`)과 @p onlineJSON(`OnlineServerConfig`)으로 조립을 세웁니다. 실패하면 false 와 @p outError 입니다. */
-        [[nodiscard]] SW_GF_API bool fromConfig( string_view serverJSON, string_view onlineJSON, int64 nowMs, string& outError );
+        [[nodiscard]] SW_GF_API expected<void> fromConfig( string_view serverJSON, string_view onlineJSON, int64 nowMs );
 
         void updateAll( int64 nowMs, int32 roundCount = 6 )
         {

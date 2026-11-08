@@ -69,37 +69,30 @@ namespace sw
         shutdown();
     }
 
-    bool RESPEphemeralStore::initialize( unique_ptr<IStreamTransport> transport, const StreamTransportConfig& transportSettings, const RESPStoreConfig& settings,
-                                         unique_ptr<ITLSContext> tlsContext, string& outError )
+    expected<void> RESPEphemeralStore::initialize( unique_ptr<IStreamTransport> transport, const StreamTransportConfig& transportSettings, const RESPStoreConfig& settings,
+                                                   unique_ptr<ITLSContext> tlsContext )
     {
         SW_ASSERT( _bInitialized == SW_FALSE );
         if ( transport == nullptr )
-        {
-            outError = "RESP store needs a stream transport";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "RESP store needs a stream transport" } );
         if ( settings._address.isValid() == false )
-        {
-            outError = "RESP store needs a host:port endpoint";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "RESP store needs a host:port endpoint" } );
         _settings.set( settings );
         _transportSettings.set( transportSettings );
         _transport.set( std::move( transport ) );
         _tlsContext.set( std::move( tlsContext ) );
         if ( _transport->initialize( &_streamEvents, _transportSettings.get() ) == false )
         {
-            outError = "RESP store could not start its stream transport";
             _transport.reset();
             _settings.reset();
             _transportSettings.reset();
             _tlsContext.reset();
-            return false;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "RESP store could not start its stream transport" } );
         }
         _bInitialized = SW_TRUE;
         ScopedLock<mutex> lock{ _mutex };
         (void)ensureCommandConnection(); // 연결 실패는 물러섬 뒤 다음 요청이 다시 시도한다
-        return true;
+        return {};
     }
 
     uint64 RESPEphemeralStore::submit( const EphemeralRequest& request )

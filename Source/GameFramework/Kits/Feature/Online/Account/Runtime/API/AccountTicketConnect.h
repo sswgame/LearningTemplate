@@ -59,10 +59,10 @@ namespace sw
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
         /**
-         * @brief 로그인해 티켓을 받습니다. 시한 안에 끝나지 않거나 서버가 거절하면 이유를 @p outError 에 적고 false 입니다(자격 없이 붙는 길로 대신하지 않는다).
+         * @brief 로그인해 티켓을 받습니다. 시한 안에 끝나지 않거나 서버가 거절하면 그 이유입니다(자격 없이 붙는 길로 대신하지 않는다).
          * @details 이미 연결이 있으면 먼저 닫는다. 성공하면 연결은 열린 채로 남는다(`shutdown` 으로 닫는다).
          */
-        [[nodiscard]] bool acquire( AccountTicketRequest request, NetConnectCredentials& outCredentials, string& outError );
+        [[nodiscard]] expected<void> acquire( AccountTicketRequest request, NetConnectCredentials& outCredentials );
         /** @brief 로그인 연결을 닫습니다. 두 번 불러도 됩니다. */
         void shutdown();
 

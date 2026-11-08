@@ -38,35 +38,36 @@ namespace sw
             {
             }
 
-            [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
+            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry ) override
             {
-                EconomyKitConfig            kitConfig;
-                std::optional<AbsolutePath> providersFile;
-                std::optional<AbsolutePath> trustFile;
-                if ( entry.readSettings( kitConfig, outError ) == false || entry.resolveFile( kitConfig._receiptProvidersFile, "_receiptProvidersFile", providersFile, outError ) == false || entry.resolveFile( kitConfig._receiptTrustFile, "_receiptTrustFile", trustFile, outError ) == false )
-                    return false;
+                EconomyKitConfig kitConfig;
+                if ( expected<void> settings = entry.readSettings( kitConfig ); settings.has_value() == false )
+                    return settings;
+                const expected<optional<AbsolutePath>> providersFile = entry.resolveFile( kitConfig._receiptProvidersFile, "_receiptProvidersFile" );
+                if ( providersFile.has_value() == false )
+                    return unexpected( providersFile.error() );
+                const expected<optional<AbsolutePath>> trustFile = entry.resolveFile( kitConfig._receiptTrustFile, "_receiptTrustFile" );
+                if ( trustFile.has_value() == false )
+                    return unexpected( trustFile.error() );
                 const string& currencyPath = kitConfig._currencyCatalog;
                 const string& offerPath    = kitConfig._offerCatalog;
                 _pCurrencyCatalog          = SharedAssetCache<CurrencyCatalog>::acquire( currencyPath );
                 if ( _pCurrencyCatalog == nullptr )
-                {
-                    outError = "the currency catalog could not be read ('" + currencyPath + "')";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::NotFound, "the currency catalog could not be read", currencyPath } );
                 _pOfferCatalog = SharedAssetCache<OfferCatalog>::acquire( offerPath );
                 if ( _pOfferCatalog == nullptr )
+                    return unexpected( Error{ ErrorKind::NotFound, "the offer catalog could not be read", offerPath } );
+                if ( kitConfig._bFakeReceipts )
                 {
-                    outError = "the offer catalog could not be read ('" + offerPath + "')";
-                    return false;
+                    if ( expected<void> fake = registerFakeReceipts(); fake.has_value() == false )
+                        return fake;
                 }
-                if ( kitConfig._bFakeReceipts && registerFakeReceipts( outError ) == false )
-                    return false;
                 // 여기부터 실패하면 세운 것을 스스로 내린다 — 초기화에 실패한 키트는 stop · shutdown 을 받지 않는다.
-                if ( createReceiptProviders( providersFile, trustFile, context._clock, outError ) == false )
+                if ( expected<void> providers = createReceiptProviders( *providersFile, *trustFile, context._clock ); providers.has_value() == false )
                 {
                     _receiptRegistry.shutdown();
                     shutdown();
-                    return false;
+                    return providers;
                 }
                 EconomyServiceConfig settings;
                 settings._pCurrencyCatalog       = _pCurrencyCatalog.get();
@@ -79,26 +80,28 @@ namespace sw
                 settings._bAcceptSandboxReceipts = kitConfig._bAcceptSandboxReceipts ? SW_TRUE : SW_FALSE;
                 if ( _service.initialize( context._pStore, settings ) == false )
                 {
-                    outError = "the economy service refused its settings (see the error above)";
                     _receiptRegistry.shutdown();
                     shutdown();
-                    return false;
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the economy service refused its settings (see the error above)" } );
                 }
                 // 원장 정책은 우편함 · GM · 거래가, 잔액 변경 알림은 GM 키트가 지급 · 회수 뒤에 쓴다.
-                const bool bExposed = registerServerService( context, entry, &_service, outError ) && exposeInterface<const ILedgerPolicy>( context, entry, _pCurrencyCatalog->getLedgerPolicy(), outError ) && exposeInterface<IBalanceChangedListener>( context, entry, _service.getBalanceNotice(), outError );
-                if ( bExposed == false )
+                expected<void> exposed = registerServerService( context, entry, &_service )
+                                             .and_then( [&]
+                { return exposeInterface<const ILedgerPolicy>( context, entry, _pCurrencyCatalog->getLedgerPolicy() ); } )
+                                             .and_then( [&]
+                { return exposeInterface<IBalanceChangedListener>( context, entry, _service.getBalanceNotice() ); } );
+                if ( exposed.has_value() == false )
                 {
                     stop();
                     shutdown();
                 }
-                return bExposed;
+                return exposed;
             }
 
-            bool start( OnlineServerKitContext& context, string& outError ) override
+            expected<void> start( OnlineServerKitContext& context ) override
             {
                 (void)context;
-                (void)outError;
-                return true;
+                return {};
             }
 
             /** @brief 종료 드레인이 기다릴 진행 중인 일 — 끝나지 않은 지급 · 구매 · 환불 호출(돈이 오가는 일이라 끊지 않고 마무리한다). */
@@ -125,35 +128,33 @@ namespace sw
 
         private:
             /** @brief 설정 파일을 읽어 실제 영수증 제공자를 만들고 레지스트리에 등록합니다. 파일을 정하지 않았으면 실제 제공자가 없습니다. */
-            [[nodiscard]] bool createReceiptProviders( const std::optional<AbsolutePath>& providersFile, const std::optional<AbsolutePath>& trustFile, const IClock& clock, string& outError )
+            [[nodiscard]] expected<void> createReceiptProviders( const optional<AbsolutePath>& providersFile, const optional<AbsolutePath>& trustFile, const IClock& clock )
             {
                 vector<ReceiptProviderConfig> listSettings;
-                const bool                    bRead = OnlineProviderFile::read<ReceiptProviderConfig>( providersFile, trustFile, "_receiptProvidersFile", "_receiptTrustFile",
-                                                                                                       &ReceiptProviderSet::readEntry, listSettings, outError );
-                if ( bRead == false || _receiptProviders.initialize( listSettings, OnlineProviderFile::getTrustText( trustFile ), clock, outError ) == false )
-                    return false;
+                if ( expected<void> read = OnlineProviderFile::read<ReceiptProviderConfig>( providersFile, trustFile, "_receiptProvidersFile", "_receiptTrustFile",
+                                                                                            &ReceiptProviderSet::readEntry, listSettings );
+                     read.has_value() == false )
+                    return read;
+                if ( expected<void> providers = _receiptProviders.initialize( listSettings, OnlineProviderFile::getTrustText( trustFile ), clock ); providers.has_value() == false )
+                    return providers;
                 for ( int32 index = 0; index < _receiptProviders.getProviderCount(); ++index )
                 {
                     if ( _receiptRegistry.registerValidator( _receiptProviders.getProvider( index ) ) == false )
-                    {
-                        outError = "receipt provider store names must be unique";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "receipt provider store names must be unique" } );
                 }
-                return true;
+                return {};
             }
 
             /** @brief 설정 `_bFakeReceipts` 의 가짜 스토어를 레지스트리에 올립니다(DevOnline 단위가 만든다 — 그 단위가 없는 구성은 거절한다). */
-            [[nodiscard]] bool registerFakeReceipts( string& outError )
+            [[nodiscard]] expected<void> registerFakeReceipts()
             {
-                const EconomyDevOptions* pDevOptions = DevOnlineExtension<EconomyDevOptions>::require( outError );
-                if ( pDevOptions == nullptr )
-                    return false;
-                _pFakeValidator = pDevOptions->_pCreateFakeReceiptValidator();
+                const expected<const EconomyDevOptions*> devOptions = DevOnlineExtension<EconomyDevOptions>::require();
+                if ( devOptions.has_value() == false )
+                    return unexpected( devOptions.error() );
+                _pFakeValidator = ( *devOptions )->_pCreateFakeReceiptValidator();
                 if ( _receiptRegistry.registerValidator( _pFakeValidator.get() ) )
-                    return true;
-                outError = "the fake receipt validator could not be registered";
-                return false;
+                    return {};
+                return unexpected( Error{ ErrorKind::InvalidArgument, "the fake receipt validator could not be registered" } );
             }
 
         private:

@@ -85,12 +85,12 @@ namespace sw::editor
                     const JSONValue pair = source.at( index );
                     if ( pair.isArray() == false || ( pair.size() != 2 && pair.size() != 3 && pair.size() != 5 ) )
                         return false;
-                    const std::optional<float32> time          = pair.at( 0 ).read<float32>();
-                    const std::optional<float32> value         = pair.at( 1 ).read<float32>();
-                    const optional<uint32>       interpolation = pair.size() >= 3 ? pair.at( 2 ).read<uint32>() : optional<uint32>{ 0u };
-                    const optional<float32>      arrive        = pair.size() == 5 ? pair.at( 3 ).read<float32>() : optional<float32>{ 0.0f };
-                    const optional<float32>      leave         = pair.size() == 5 ? pair.at( 4 ).read<float32>() : optional<float32>{ 0.0f };
-                    const bool                   bRead         = time.has_value() && value.has_value() && interpolation.has_value() && arrive.has_value() && leave.has_value();
+                    const auto              time          = pair.at( 0 ).read<float32>();
+                    const auto              value         = pair.at( 1 ).read<float32>();
+                    const optional<uint32>  interpolation = pair.size() >= 3 ? pair.at( 2 ).read<uint32>() : optional<uint32>{ 0u };
+                    const optional<float32> arrive        = pair.size() == 5 ? pair.at( 3 ).read<float32>() : optional<float32>{ 0.0f };
+                    const optional<float32> leave         = pair.size() == 5 ? pair.at( 4 ).read<float32>() : optional<float32>{ 0.0f };
+                    const bool              bRead         = time.has_value() && value.has_value() && interpolation.has_value() && arrive.has_value() && leave.has_value();
                     if ( bRead == false || *interpolation > static_cast<uint32>( CurveInterpolation::Cubic ) )
                         return false;
                     FloatCurveKey key{};
@@ -243,7 +243,7 @@ namespace sw::editor
                         listNumber.reserve( source.size() );
                         for ( size_t index = 0; index < source.size(); ++index )
                         {
-                            const std::optional<float32> number = source.at( index ).read<float32>();
+                            const auto number = source.at( index ).read<float32>();
                             if ( number.has_value() == false )
                                 return false;
                             listNumber.push_back( *number );

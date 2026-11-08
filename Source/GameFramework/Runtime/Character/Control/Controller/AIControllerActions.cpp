@@ -33,7 +33,7 @@ namespace sw
                 const Blackboard*      pBlackboard = nullptr;
                 if ( resolve( context, pController, pBlackboard ) == false )
                     return ActionResult::Failed;
-                const std::optional<float3> destination = pBlackboard->getVector( params._key );
+                const optional<float3> destination = pBlackboard->getVector( params._key );
                 if ( destination.has_value() == false )
                     return ActionResult::Failed;
                 // 쫓는 목표가 조금 움직일 때마다 경로를 다시 잡지 않는다(언리얼 MoveTo 의 관찰 허용 거리).
@@ -50,8 +50,8 @@ namespace sw
                 const Blackboard*      pBlackboard = nullptr;
                 if ( resolve( context, pController, pBlackboard ) == false )
                     return ActionResult::Failed;
-                const std::optional<float3> from = pBlackboard->getVector( params._from );
-                const std::optional<float3> away = pBlackboard->getVector( params._away );
+                const optional<float3> from = pBlackboard->getVector( params._from );
+                const optional<float3> away = pBlackboard->getVector( params._away );
                 if ( from.has_value() == false || away.has_value() == false )
                     return ActionResult::Failed;
                 // 수평 방향만 본다. 두 자리가 겹치면 +Z 를 앞으로 본다(물러날 쪽이 정해지지 않으면 뒤 -Z 로 간다).
@@ -68,8 +68,8 @@ namespace sw
                 const Blackboard*      pBlackboard = nullptr;
                 if ( resolve( context, pController, pBlackboard ) == false )
                     return ActionResult::Failed;
-                const std::optional<float3> spot = pBlackboard->getVector( params._key );
-                const std::optional<float3> self = pBlackboard->getVector( params._self );
+                const optional<float3> spot = pBlackboard->getVector( params._key );
+                const optional<float3> self = pBlackboard->getVector( params._self );
                 if ( spot.has_value() == false || self.has_value() == false )
                     return ActionResult::Failed;
                 if ( float3::getHorizontalDistance( *self, *spot ) <= params._tolerance )
@@ -97,7 +97,7 @@ namespace sw
                 const Blackboard*      pBlackboard = nullptr;
                 if ( resolve( context, pController, pBlackboard ) == false )
                     return ActionResult::Failed;
-                const std::optional<float3> point = pBlackboard->getVector( params._key );
+                const optional<float3> point = pBlackboard->getVector( params._key );
                 if ( point.has_value() == false )
                     return ActionResult::Failed;
                 pController->setFocus( *point + float3{ 0.0f, params._height, 0.0f } );

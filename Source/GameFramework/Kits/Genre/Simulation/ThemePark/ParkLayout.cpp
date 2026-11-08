@@ -28,10 +28,9 @@ namespace sw
         _pCoasterLayouts.reset();
         const string& layoutPath = assetID.str();
         string        coasterPath;
-        string        error;
-        if ( GamePackDataUtil::tryMakeSiblingKindPath( layoutPath, kDataKind, CoasterLayoutCatalog::kDataKind, coasterPath, error ) == false )
+        if ( const expected<void> path = GamePackDataUtil::tryMakeSiblingKindPath( layoutPath, kDataKind, CoasterLayoutCatalog::kDataKind, coasterPath ); path.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "ParkLayout.CoasterLayoutsNoPath", "%#: the coaster layouts have no path - %#", layoutPath.c_str(), error.c_str() );
+            SW_LOG_ERROR_ID( "ParkLayout.CoasterLayoutsNoPath", "%#: the coaster layouts have no path - %# (%#)", layoutPath.c_str(), path.error().message(), path.error().detail() );
             return false;
         }
         // 코스터 레이아웃은 공유 캐시의 한 벌이다 — 배치를 쓰는 쪽과 같은 객체를 읽고 배치가 쥔다.

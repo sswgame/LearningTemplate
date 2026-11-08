@@ -496,8 +496,7 @@ SW_TEST_CASE( StoreReceiptValidatorTest, ProviderEntryRequiresABuyerBinding )
     {
         JSONDocument document;
         SW_EXPECT_TRUE( document.tryParse( text ) );
-        string error;
-        return ReceiptProviderSet::readEntry( document.getRoot(), outConfig, error );
+        return ReceiptProviderSet::readEntry( document.getRoot(), outConfig ).has_value();
     };
     {
         ReceiptProviderConfig config;

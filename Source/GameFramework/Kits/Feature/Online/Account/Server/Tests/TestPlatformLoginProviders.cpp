@@ -177,7 +177,7 @@ namespace
                 writer.valueString( claims._name );
             }
             writer.endObject();
-            const std::optional<JSONText> payload = writer.finish();
+            const auto payload = writer.finish();
             SW_EXPECT_TRUE( payload.has_value() );
             string compact;
             if ( payload.has_value() )
@@ -504,8 +504,8 @@ SW_TEST_CASE( AppleLoginProviderTest, ClientSecretCarriesTheDocumentedClaims )
     SW_EXPECT_TRUE( token.getAlgorithm() == NetSignatureAlgorithm::EcdsaP256Sha256 );
     SW_EXPECT_EQUAL( string( "KEY456" ), token.getKeyID() );
     NetPublicKey anyKey;
-    anyKey._algorithm                       = NetSignatureAlgorithm::EcdsaP256Sha256;
-    const std::optional<JWTVerified> claims = std::move( token ).verify( rig._http._security, anyKey, JWTClaimRule::makeSignatureOnly() );
+    anyKey._algorithm                      = NetSignatureAlgorithm::EcdsaP256Sha256;
+    const sw::optional<JWTVerified> claims = std::move( token ).verify( rig._http._security, anyKey, JWTClaimRule::makeSignatureOnly() );
     SW_REQUIRE_TRUE( claims.has_value() );
     string issuer;
     string subject;
@@ -577,12 +577,14 @@ SW_TEST_CASE( AppleLoginProviderTest, RevokesTheRefreshToken )
     SW_EXPECT_EQUAL( string( "com.example.game" ), TestUtil::findForm( *pRevoke, "client_id" ) );
     SW_EXPECT_EQUAL( string( "R-1" ), TestUtil::findForm( *pRevoke, "token" ) );
     SW_EXPECT_EQUAL( string( "refresh_token" ), TestUtil::findForm( *pRevoke, "token_type_hint" ) );
-    SW_EXPECT_FALSE( TestUtil::findForm( *pRevoke, "client_secret" ).empty() );
+    const auto failed1 = TestUtil::findForm( *pRevoke, "client_secret" ).empty();
+    SW_REQUIRE_FALSE( failed1.has_value() );
+    const sw::string error1 = sw::string( failed1.error().message() ) + " " + sw::string( failed1.error().detail() );
 
     rig._http._revokeStatus = 400;
-    rig._http._revokeBody   = R"({"error":"invalid_grant"})";
+    rig._http._revokeBody   = R"({"error1":"invalid_grant"})";
     SW_EXPECT_TRUE( rig.revoke( "R-2" )._bUnavailable == SW_FALSE );
-    rig._http._revokeBody = R"({"error":"invalid_client"})";
+    rig._http._revokeBody = R"({"error1":"invalid_client"})";
     SW_EXPECT_LOG( "AppleLoginProvider.LoginProviderRejectedRevocation" );
     SW_EXPECT_TRUE( rig.revoke( "R-3" )._bUnavailable == SW_TRUE );
     rig._http._revokeStatus = HTTPConstant::kStatusServerError;

@@ -132,47 +132,47 @@ namespace sw
         return pValue->_type != BlackboardValueType::None;
     }
 
-    std::optional<float32> Blackboard::getFloat( const hashed_string& key ) const
+    optional<float32> Blackboard::getFloat( const hashed_string& key ) const
     {
         const BlackboardValue* pValue = findValue( key );
         if ( pValue == nullptr || pValue->_type == BlackboardValueType::None )
-            return std::nullopt;
+            return nullopt;
         return pValue->computeNumeric();
     }
 
-    std::optional<int32> Blackboard::getInt( const hashed_string& key ) const
+    optional<int32> Blackboard::getInt( const hashed_string& key ) const
     {
         const BlackboardValue* pValue = findValue( key );
         if ( pValue == nullptr )
-            return std::nullopt;
+            return nullopt;
         if ( pValue->_type == BlackboardValueType::Int || pValue->_type == BlackboardValueType::Bool )
             return pValue->_int;
         if ( pValue->_type == BlackboardValueType::Float )
             return static_cast<int32>( pValue->_float );
-        return std::nullopt;
+        return nullopt;
     }
 
-    std::optional<bool> Blackboard::getBool( const hashed_string& key ) const
+    optional<bool> Blackboard::getBool( const hashed_string& key ) const
     {
         const BlackboardValue* pValue = findValue( key );
         if ( pValue == nullptr || pValue->_type == BlackboardValueType::None )
-            return std::nullopt;
+            return nullopt;
         return pValue->computeNumeric() != 0.0f;
     }
 
-    std::optional<float3> Blackboard::getVector( const hashed_string& key ) const
+    optional<float3> Blackboard::getVector( const hashed_string& key ) const
     {
         const BlackboardValue* pValue = findValue( key );
         if ( pValue == nullptr || pValue->_type != BlackboardValueType::Vector )
-            return std::nullopt;
+            return nullopt;
         return pValue->_vector;
     }
 
-    std::optional<uint64> Blackboard::getObject( const hashed_string& key ) const
+    optional<uint64> Blackboard::getObject( const hashed_string& key ) const
     {
         const BlackboardValue* pValue = findValue( key );
         if ( pValue == nullptr || pValue->_type != BlackboardValueType::Object )
-            return std::nullopt;
+            return nullopt;
         return pValue->_object;
     }
 

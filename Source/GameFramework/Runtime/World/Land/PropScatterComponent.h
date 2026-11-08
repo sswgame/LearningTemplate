@@ -124,11 +124,11 @@ namespace sw
         /** @brief 비중대로 고른 모델 번호를 반환합니다. @p unit 은 [0, 1] 입니다. 모델이 없거나 비중 합이 0 이면 -1 입니다. */
         static int32 pickModel( const vector<PropScatterModel>& listModel, float32 unit );
         /**
-         * @brief 모델 목록이 그릴 수 있는 모양인지 봅니다. 문제가 있으면 첫 문제를 @p outError 에 담고 false 입니다.
+         * @brief 모델 목록이 그릴 수 있는 모양인지 봅니다. 문제가 있으면 첫 문제가 오류입니다.
          * @details 메시가 비면 안 된다. 구간을 적은 모델은 구간마다 이름 · 머티리얼이 있어야 하고 이름이 겹치면 안 되며, 컴포넌트 머티리얼(@p componentMaterial)과
          *          함께 적으면 안 된다(어느 쪽이 그릴지 모호하다). 구간 없는 모델은 컴포넌트 머티리얼로 그린다(비면 장면 기본).
          */
-        [[nodiscard]] static bool validateModels( const vector<PropScatterModel>& listModel, string_view componentMaterial, string& outError );
+        [[nodiscard]] static expected<void> validateModels( const vector<PropScatterModel>& listModel, string_view componentMaterial );
     };
 } // namespace sw
 

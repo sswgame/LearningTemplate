@@ -99,22 +99,23 @@ namespace sw
 
     bool LocalDeviceKeyProvider::getSealKey( uint8 ( &outKey )[kKeySize] )
     {
-        string error;
+        optional<Error> failure;
         {
             ScopedLock<mutex> lock{ _mutex };
-            if ( _bLoaded == SW_TRUE || loadOrCreateKeyLocked( error ) )
+            expected<void>    loaded = _bLoaded == SW_TRUE ? expected<void>{} : loadOrCreateKeyLocked();
+            if ( loaded.has_value() )
             {
                 std::memcpy( outKey, _arrKey, sizeof( _arrKey ) );
                 return true;
             }
+            failure = std::move( loaded ).error();
         }
         // 로그는 잠금을 놓은 뒤 남긴다(잠금은 잎 잠금, 결정 5-3).
-        if ( error.empty() == false )
-            SW_LOG_ERROR_ID( "LocalDeviceKeyProvider.KeyUnavailable", "%#", error.c_str() );
+        SW_LOG_ERROR_ID( "LocalDeviceKeyProvider.KeyUnavailable", "%# (%#)", failure->message(), failure->detail() );
         return false;
     }
 
-    bool LocalDeviceKeyProvider::loadOrCreateKeyLocked( string& outError )
+    expected<void> LocalDeviceKeyProvider::loadOrCreateKeyLocked()
     {
         using Internal = LocalDeviceKeyProviderInternal;
         if ( FileUtil::isRegularFile( _keyFilePath ) )
@@ -123,28 +124,22 @@ namespace sw
             if ( FileUtil::readFile( _keyFilePath, bytes ) == false || Internal::unprotectKey( bytes, _arrKey, kKeySize ) == false )
             {
                 // 다른 PC · 다른 사용자에서 온 키 파일이다 — 새로 만들지 않는다(그러면 이 키로 봉인한 슬롯을 영영 못 푼다). 슬롯은 WrongKey 가 아니라 IOError 다.
-                utf8 arrError[constant::buffer::kMax512]{};
-                formatstring( arrError, sizeof( arrError ), "Local store key file cannot be opened on this device/user: %#", _keyFilePath.c_str() );
-                outError = arrError;
-                return false;
+                return unexpected( Error{ ErrorKind::ExternalFailure, "Local store key file cannot be opened on this device/user", _keyFilePath } );
             }
             _bLoaded = SW_TRUE;
-            return true;
+            return {};
         }
         if ( _pSecurityProvider == nullptr || _pSecurityProvider->fillRandomBytes( _arrKey, kKeySize ) == false )
-            return false;
+            return unexpected( Error{ ErrorKind::ExternalFailure, "Could not generate a local store key (no security provider or no random bytes)" } );
         vector<uint8> bytes;
         const bool    bWritten = Internal::protectKey( _arrKey, kKeySize, bytes ) && FileUtil::ensureParentDirectoryExists( _keyFilePath ) &&
                               FileUtil::writeFile( _keyFilePath, bytes.data(), bytes.size() );
         if ( bWritten == false )
         {
-            utf8 arrError[constant::buffer::kMax512]{};
-            formatstring( arrError, sizeof( arrError ), "Could not write the local store key file: %#", _keyFilePath.c_str() );
-            outError = arrError;
-            return false;
+            return unexpected( Error{ ErrorKind::ExternalFailure, "Could not write the local store key file", _keyFilePath } );
         }
         Internal::restrictToOwner( _keyFilePath );
         _bLoaded = SW_TRUE;
-        return true;
+        return {};
     }
 } // namespace sw

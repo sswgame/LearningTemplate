@@ -37,24 +37,24 @@ namespace sw
 
         /**
          * @brief `_settings` 를 키트의 설정 구조체 @p outSettings 로 읽습니다. 키트의 설정 읽기는 이 호출 하나입니다(`ConfigManager::readConfigJSON`).
-         * @details 모르는 키, 읽지 못한 값, 빠진 필수 칸(`PROPERTY( Required )`), 범위 밖 값은 키 이름과 함께 오류 로그를 남기고 false 와 @p outError 입니다. 설정을 적지 않은 키트는 빈 객체로 읽습니다.
+         * @details 모르는 키, 읽지 못한 값, 빠진 필수 칸(`PROPERTY( Required )`), 범위 밖 값은 키 이름과 함께 오류 로그를 남기고 대상이 키트 이름인 오류입니다. 설정을 적지 않은 키트는 빈 객체로 읽습니다.
          *          언리얼 `UDeveloperSettings` · Unity ScriptableObject 설정의 자리입니다(기억에 의존).
          */
         template <typename TSettings>
-        [[nodiscard]] bool readSettings( TSettings& outSettings, string& outError ) const
+        [[nodiscard]] expected<void> readSettings( TSettings& outSettings ) const
         {
-            return readSettingsInto( &outSettings, *TSettings::StaticType(), outError );
+            return readSettingsInto( &outSettings, *TSettings::StaticType() );
         }
 
         /**
-         * @brief 설정의 파일 경로 글 @p text 를 절대 경로로 풉니다(상대면 프로젝트 루트 아래). 빈 글은 "정하지 않음"으로 @p outPath 를 비우고 true 입니다.
+         * @brief 설정의 파일 경로 글 @p text 를 절대 경로로 풉니다(상대면 프로젝트 루트 아래). 빈 글은 "정하지 않음"으로 빈 `optional` 입니다.
          * @details 풀 수 없는 값(드라이브 상대)은 오류입니다 — 못 푼 경로가 "정하지 않음"으로 읽히면 다른 동작(개발 인증서 · 제공자 없음)으로 물러난다.
          * @param pFieldName 오류 글에 쓸 칸 이름
          */
-        [[nodiscard]] bool resolveFile( const string& text, const utf8* pFieldName, std::optional<AbsolutePath>& outPath, string& outError ) const;
+        [[nodiscard]] expected<optional<AbsolutePath>> resolveFile( const string& text, const utf8* pFieldName ) const;
 
     private:
-        [[nodiscard]] bool readSettingsInto( void* pSettings, const TypeInfo& typeInfo, string& outError ) const;
+        [[nodiscard]] expected<void> readSettingsInto( void* pSettings, const TypeInfo& typeInfo ) const;
     };
 } // namespace sw
 

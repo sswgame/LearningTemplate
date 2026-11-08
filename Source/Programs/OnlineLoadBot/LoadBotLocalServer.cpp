@@ -79,9 +79,9 @@ namespace sw
         runtimeSettings._cache._driver = kMemoryStoreDriverName;
         runtimeSettings._pClock        = settings._pClock;
         const UnixMilliseconds startMs = settings._startMs != UnixMilliseconds{ 0 } ? settings._startMs : WallClock::nowUnixMilliseconds();
-        string                 runtimeError; // 서버 조립(GF OnlineServerRuntime)의 글 — 그 쪽이 결과 형식으로 옮기면 이 줄도 따라간다
-        if ( _runtime->initialize( std::move( runtimeSettings ), startMs, runtimeError ) == false )
-            return unexpected( Error{ ErrorKind::ExternalFailure, "the online server runtime did not start", runtimeError } );
+        const expected<void>   started = _runtime->initialize( std::move( runtimeSettings ), startMs );
+        if ( started.has_value() == false )
+            return unexpected( Error{ ErrorKind::ExternalFailure, "the online server runtime did not start", started.error().message() }.appendDetail( started.error().detail() ) );
         return {};
     }
 

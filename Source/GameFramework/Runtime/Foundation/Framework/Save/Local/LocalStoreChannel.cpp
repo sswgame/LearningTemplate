@@ -102,7 +102,7 @@ namespace sw
         return false;
     }
 
-    bool LocalStoreChannel::open( string_view gameName, const LocalStoreLocation& location, INetSecurityProvider* pSecurityProvider, string& outError )
+    expected<void> LocalStoreChannel::open( string_view gameName, const LocalStoreLocation& location, INetSecurityProvider* pSecurityProvider )
     {
         SW_ASSERT( _store == nullptr );
         if ( pSecurityProvider != nullptr )
@@ -110,13 +110,16 @@ namespace sw
             _keyProvider = make_unique<LocalDeviceKeyProvider>( FileUtil::joinPath( UserDataPath::getDataDirectory( gameName ), LocalDeviceKeyProvider::kKeyFileName ), pSecurityProvider );
             _sealContext = LocalSealContext{ pSecurityProvider, _keyProvider.get(), nullptr };
         }
-        const LocalStoreConfig config{ LocalStoreBackend::kFileBackendName, location };
-        _store = LocalStoreBackend::createLocalStore( gameName, config, _sealContext, outError );
-        if ( _store != nullptr )
-            return true;
+        const LocalStoreConfig            config{ LocalStoreBackend::kFileBackendName, location };
+        expected<unique_ptr<ILocalStore>> store = LocalStoreBackend::createLocalStore( gameName, config, _sealContext );
+        if ( store.has_value() )
+        {
+            _store = std::move( *store );
+            return {};
+        }
         _sealContext = LocalSealContext{};
         _keyProvider.reset();
-        return false;
+        return unexpected( store.error() );
     }
 
     void LocalStoreChannel::flush()

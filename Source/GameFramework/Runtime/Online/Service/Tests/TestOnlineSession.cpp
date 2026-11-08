@@ -65,13 +65,14 @@ SW_TEST_CASE_F( OnlineSessionTest, BuildsRegisteredClients )
 /** @brief [OnlineSessionTest] 주소나 빌드 글이 없으면 연결하지 않고 까닭을 돌려준다 */
 SW_TEST_CASE_F( OnlineSessionTest, ConnectNeedsSettings )
 {
-    string error;
-    SW_EXPECT_FALSE( _session.connect( error ) );
-    SW_EXPECT_TRUE( error.find( "onlineServerAddress" ) != string::npos );
+    const expected<void> noAddress = _session.connect();
+    SW_REQUIRE_FALSE( noAddress.has_value() );
+    SW_EXPECT_TRUE( noAddress.error().message().find( "onlineServerAddress" ) != string_view::npos );
 
     _settings._onlineServerAddress = "127.0.0.1:7100";
-    SW_EXPECT_FALSE( _session.connect( error ) );
-    SW_EXPECT_TRUE( error.find( "onlineGameBuild" ) != string::npos );
+    const expected<void> noBuild   = _session.connect();
+    SW_REQUIRE_FALSE( noBuild.has_value() );
+    SW_EXPECT_TRUE( noBuild.error().message().find( "onlineGameBuild" ) != string_view::npos );
     SW_EXPECT_TRUE( _session.getState() == OnlineClientState::Disconnected );
 }
 
@@ -81,8 +82,10 @@ SW_TEST_CASE_F( OnlineSessionTest, ConnectsAndDisconnects )
     // 서버 쪽 테스트 로그인이 같은 영역이므로 세션의 가짜 클라이언트와 해시가 맞다
     test::OnlineTestFixture      rig;
     unique_ptr<IStreamTransport> transport = rig._network.createTransport();
-    string                       error;
-    SW_REQUIRE_TRUE_MSG( _session.connectTo( transport.get(), OnlineClientSecurity::plaintextLoopback(), NetAddress::makeLoopback( rig._server._port ), error ), error.c_str() );
+    {
+        const auto result = _session.connectTo( transport.get(), OnlineClientSecurity::plaintextLoopback(), NetAddress::makeLoopback( rig._server._port ) );
+        SW_REQUIRE_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() );
+    }
     for ( int32 round = 0; round < 8; ++round )
     {
         _session.updateAt( MonotonicMilliseconds{ kNowMs } );

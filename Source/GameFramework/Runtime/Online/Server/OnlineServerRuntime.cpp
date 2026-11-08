@@ -40,19 +40,28 @@ namespace sw
 
             static bool isMemoryDriver( string_view driver ) { return driver == kMemoryStoreDriverName; }
 
-            /** @brief 서버 설정의 항목 목록에서 @p name 을 찾습니다. 비었거나 없으면 nullptr 과 @p outError 입니다(첫 항목이나 메모리로 대신하지 않는다). */
+            /** @brief 서버 설정의 항목 목록에서 @p name 을 찾습니다. 비었거나 없으면 오류입니다(첫 항목이나 메모리로 대신하지 않는다). */
             template <typename TEntry>
-            [[nodiscard]] static const TEntry* findEntry( const vector<TEntry>& listEntry, const string& name, const utf8* pNameField, const utf8* pListField, string& outError )
+            [[nodiscard]] static expected<const TEntry*> findEntry( const vector<TEntry>& listEntry, const string& name, const utf8* pNameField, const utf8* pListField )
             {
                 if ( name.empty() )
-                {
-                    outError = string( "the online service config must name its entry in " ) + pNameField + " (use a 'memory' driver entry for an in-process one)";
-                    return nullptr;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the online service config must name its entry (use a 'memory' driver entry for an in-process one)", pNameField } );
                 const TEntry* const pEntry = VectorUtil::findBy<&TEntry::_name>( listEntry, name );
                 if ( pEntry == nullptr )
-                    outError = "'" + name + "' (" + pNameField + ") is not in the server config " + pListField;
+                {
+                    Error error{ ErrorKind::NotFound, "the named entry is not in the server config list", name };
+                    error.appendDetail( " (" ).appendDetail( pNameField ).appendDetail( " in " ).appendDetail( pListField ).appendDetail( ")" );
+                    return unexpected( error );
+                }
                 return pEntry;
+            }
+
+            /** @brief 키트 @p kitName 의 @p pPhase 단계 오류에 키트 이름을 붙입니다(종류 · 문장은 키트가 준 그대로, 대상 앞에 "kit '<이름>' <단계>: "). */
+            static Error makeKitError( const Error& inner, const string& kitName, const utf8* pPhase )
+            {
+                Error error{ inner.kind(), inner.message().data(), "kit '" };
+                error.appendDetail( kitName ).appendDetail( "' " ).appendDetail( pPhase ).appendDetail( ": " ).appendDetail( inner.detail() );
+                return error;
             }
 
             static constexpr int64 kDayMs = 24 * constant::time::kSecondsPerHour * constant::time::kMillisecondsPerSecond;
@@ -115,22 +124,22 @@ namespace sw
         {
         public:
             OnlineServerKitNode( unique_ptr<IOnlineServerKit> kit, const utf8* pName, const OnlineServerKitEntry& entry, vector<const utf8*> listDependency,
-                                 OnlineServerKitContext& context, string& outError )
+                                 OnlineServerKitContext& context, optional<Error>& startupError )
                 : _kit{ std::move( kit ) }
                 , _entry{ entry }
                 , _listDependency{ std::move( listDependency ) }
                 , _context{ context }
-                , _error{ outError }
+                , _startupError{ startupError }
                 , _pName{ pName }
             {
             }
 
             SubsystemInitResult initializeSubsystem() override
             {
-                string error;
-                if ( _kit->initialize( _context, _entry, error ) )
+                const expected<void> result = _kit->initialize( _context, _entry );
+                if ( result.has_value() )
                     return SubsystemInitResult::Succeeded;
-                _error = "online kit '" + _entry._name + "' could not initialize: " + error;
+                _startupError = OnlineServerRuntimeInternal::makeKitError( result.error(), _entry._name, "initialize" );
                 return SubsystemInitResult::Failed;
             }
             void stopSubsystem() override { _kit->stop(); }
@@ -139,13 +148,12 @@ namespace sw
             const utf8*             getSubsystemName() const override { return _pName; }
             span<const utf8* const> getSubsystemDependencies() const override { return { _listDependency.data(), _listDependency.size() }; }
 
-            [[nodiscard]] bool start( string& outError )
+            [[nodiscard]] expected<void> start()
             {
-                string error;
-                if ( _kit->startKit( _context, error ) )
-                    return true;
-                outError = "online kit '" + _entry._name + "' could not start: " + error;
-                return false;
+                const expected<void> result = _kit->startKit( _context );
+                if ( result.has_value() )
+                    return {};
+                return unexpected( OnlineServerRuntimeInternal::makeKitError( result.error(), _entry._name, "start" ) );
             }
             void          update( UnixMilliseconds nowMs ) { _kit->update( nowMs ); }
             int32         getOpenWorkCount() const { return _kit->getOpenWorkCount(); }
@@ -204,8 +212,8 @@ namespace sw
             OnlineServerKitEntry         _entry;
             vector<const utf8*>          _listDependency; ///< 이 노드가 살아 있는 동안 컬렉션이 읽는다
             OnlineServerKitContext&      _context;
-            string&                      _error; ///< 런타임의 기동 오류 칸(컬렉션 오류는 어느 노드인지만 적는다)
-            const utf8*                  _pName; ///< 팩토리의 이름(키트 모듈 라이브러리의 상수, 노드보다 오래 산다)
+            optional<Error>&             _startupError; ///< 런타임의 기동 오류 칸(컬렉션 오류는 어느 노드인지만 적는다)
+            const utf8*                  _pName;        ///< 팩토리의 이름(키트 모듈 라이브러리의 상수, 노드보다 오래 산다)
         };
     } // namespace
 } // namespace sw
@@ -235,7 +243,7 @@ namespace sw
         unique_ptr<ServerBus>               _busFront{}; ///< 키트 문맥에 넘기는 타입 있는 앞이다. 전송(`_bus`)은 호스트만 받는다
         ServerRegistration                  _registration{};
         vector<OnlineServerKitNode*>        _listKit{};      ///< 초기화한 키트(초기화 순서). 소유는 `_kitScope`
-        string                              _startupError{}; ///< 노드가 남긴 기동 오류(어느 키트 · 무엇)
+        optional<Error>                     _startupError{}; ///< 노드가 남긴 기동 오류(어느 키트 · 무엇)
         ServiceHealthRegistry*              _pHealthRegistry{ nullptr };
         UnixMilliseconds                    _nextRemoteConfigReloadMs{ 0 };
         int32                               _healthCheckIndex{ constant::invalid_index::kInt32 };
@@ -264,8 +272,10 @@ namespace sw
 
         SubsystemInitResult initializeSubsystem() override
         {
-            if ( _runtime.createStores( _settings, _nowMs, _runtime._parts->_startupError ) )
+            expected<void> result = _runtime.createStores( _settings, _nowMs );
+            if ( result.has_value() )
                 return SubsystemInitResult::Succeeded;
+            _runtime._parts->_startupError = std::move( result ).error();
             // 컬렉션은 초기화에 실패한 노드를 종료하지 않는다 — 반쯤 만든 저장소 · 캐시를 여기서 내린다.
             stopSubsystem();
             shutdownSubsystem();
@@ -315,40 +325,31 @@ namespace sw
         shutdown();
     }
 
-    bool OnlineServerRuntime::resolveStores( const ServerConfig& serverConfig, const OnlineServerConfig& onlineConfig, OnlineServerRuntimeConfig& outSettings, string& outError )
+    expected<void> OnlineServerRuntime::resolveStores( const ServerConfig& serverConfig, const OnlineServerConfig& onlineConfig, OnlineServerRuntimeConfig& outSettings )
     {
-        using Internal                 = OnlineServerRuntimeInternal;
-        const ServerStoreEntry* pStore = Internal::findEntry( serverConfig._listStore, onlineConfig._storeName, "_storeName", "_listStore", outError );
-        if ( pStore == nullptr )
-            return false;
-        outSettings._store._driver     = pStore->_driver;
-        outSettings._store._connection = pStore->_connection;
-        if ( ServerSecret::read( pStore->_secretEnvironment, outSettings._store._secret ) == false )
-        {
-            outError = "the secret environment variable of store '" + pStore->_name + "' is not set";
-            return false;
-        }
-        const ServerCacheEntry* pCache = Internal::findEntry( serverConfig._listCache, onlineConfig._cacheName, "_cacheName", "_listCache", outError );
-        if ( pCache == nullptr )
-            return false;
-        outSettings._cache._driver     = pCache->_driver;
-        outSettings._cache._connection = pCache->_endpoint;
-        if ( ServerSecret::read( pCache->_secretEnvironment, outSettings._cache._secret ) == false )
-        {
-            outError = "the secret environment variable of cache '" + pCache->_name + "' is not set";
-            return false;
-        }
-        return true;
+        using Internal                                 = OnlineServerRuntimeInternal;
+        const expected<const ServerStoreEntry*> pStore = Internal::findEntry( serverConfig._listStore, onlineConfig._storeName, "_storeName", "_listStore" );
+        if ( pStore.has_value() == false )
+            return unexpected( pStore.error() );
+        outSettings._store._driver     = ( *pStore )->_driver;
+        outSettings._store._connection = ( *pStore )->_connection;
+        if ( ServerSecret::read( ( *pStore )->_secretEnvironment, outSettings._store._secret ) == false )
+            return unexpected( Error{ ErrorKind::NotFound, "the secret environment variable of the store is not set", ( *pStore )->_name } );
+        const expected<const ServerCacheEntry*> pCache = Internal::findEntry( serverConfig._listCache, onlineConfig._cacheName, "_cacheName", "_listCache" );
+        if ( pCache.has_value() == false )
+            return unexpected( pCache.error() );
+        outSettings._cache._driver     = ( *pCache )->_driver;
+        outSettings._cache._connection = ( *pCache )->_endpoint;
+        if ( ServerSecret::read( ( *pCache )->_secretEnvironment, outSettings._cache._secret ) == false )
+            return unexpected( Error{ ErrorKind::NotFound, "the secret environment variable of the cache is not set", ( *pCache )->_name } );
+        return {};
     }
 
-    bool OnlineServerRuntime::initialize( OnlineServerRuntimeConfig settings, UnixMilliseconds nowMs, string& outError )
+    expected<void> OnlineServerRuntime::initialize( OnlineServerRuntimeConfig settings, UnixMilliseconds nowMs )
     {
         SW_ASSERT( _bInitialized == SW_FALSE );
         if ( settings._pClock == nullptr )
-        {
-            outError = "the online runtime needs a monotonic clock (_pClock)";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the online runtime needs a monotonic clock (_pClock)" } );
         _parts        = make_unique<Parts>( *settings._pClock );
         _bInitialized = SW_TRUE; // 실패해도 `shutdown` 이 만든 것까지 정리한다
         Parts& parts  = *_parts;
@@ -360,12 +361,13 @@ namespace sw
 
         SubsystemCollection& collection = parts._kitScope.getCollection();
         const ISubsystem&    baseNode   = collection.add( make_unique<BaseNode>( *this, settings, nowMs ) );
-        if ( addKits( settings._bReverseIndependentKitOrder == SW_TRUE, outError ) == false )
-            return false;
+        if ( expected<void> kits = addKits( settings._bReverseIndependentKitOrder == SW_TRUE ); kits.has_value() == false )
+            return kits;
         if ( collection.initializeAll( SubsystemHostMask::All ) == false )
         {
-            outError = parts._startupError.empty() ? collection.getError() : parts._startupError; // 정렬 오류(순환)는 컬렉션 글이다
-            return false;
+            if ( parts._startupError.has_value() )
+                return unexpected( *parts._startupError );
+            return unexpected( Error{ ErrorKind::Cycle, "the online kits could not be ordered", collection.getError() } ); // 정렬 오류(순환)는 컬렉션 글이다
         }
         for ( const uint32 index : collection.getInitializedIndices() )
         {
@@ -373,15 +375,15 @@ namespace sw
             if ( &node != &baseNode )
                 parts._listKit.push_back( static_cast<OnlineServerKitNode*>( &node ) );
         }
-        if ( startHost( settings, outError ) == false )
-            return false;
+        if ( expected<void> host = startHost( settings ); host.has_value() == false )
+            return host;
         for ( OnlineServerKitNode* pKit : parts._listKit )
         {
-            if ( pKit->start( outError ) == false )
-                return false;
+            if ( expected<void> started = pKit->start(); started.has_value() == false )
+                return started;
         }
-        if ( registerServer( nowMs, outError ) == false )
-            return false;
+        if ( expected<void> registered = registerServer( nowMs ); registered.has_value() == false )
+            return registered;
 
         if ( parts._pHealthRegistry != nullptr )
             parts._pHealthRegistry->setCheck( parts._healthCheckIndex, HealthState::Ok, "" );
@@ -396,20 +398,19 @@ namespace sw
         }
         SW_LOG_INFO_ID( "OnlineServerRuntime.OnlineServicesListeningPort", "Online services listening on port %# (admin port %#, server %#, kits: %#)", parts._host.getListenPort(), parts._host.getAdminListenPort(),
                         parts._context._serverID, kitText.empty() ? "none" : kitText.c_str() );
-        return true;
+        return {};
     }
 
-    bool OnlineServerRuntime::createStores( OnlineServerRuntimeConfig& settings, UnixMilliseconds nowMs, string& outError )
+    expected<void> OnlineServerRuntime::createStores( OnlineServerRuntimeConfig& settings, UnixMilliseconds nowMs )
     {
         using Internal = OnlineServerRuntimeInternal;
         Parts& parts   = *_parts;
         // 드라이버는 필수다 - 항목을 빠뜨린 설정이 재시작에 데이터를 잃는 저장소로 정상 기동하지 않게 한다.
         if ( settings._store._driver.empty() || settings._cache._driver.empty() )
         {
-            outError = "the online runtime needs a store and a cache driver (use 'memory' for an in-process one)";
             StringUtil::wipeSecret( settings._store._secret );
             StringUtil::wipeSecret( settings._cache._secret );
-            return false;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the online runtime needs a store and a cache driver (use 'memory' for an in-process one)" } );
         }
         if ( Internal::isMemoryDriver( settings._store._driver ) )
         {
@@ -420,15 +421,17 @@ namespace sw
             IServiceStoreDriver* const pDriver = game::findSubsystem<IServiceStoreDriver>();
             if ( pDriver == nullptr )
             {
-                outError = "store driver '" + settings._store._driver + "' needs a storage kit (GF_Server_SQLStore) that is not loaded";
                 StringUtil::wipeSecret( settings._store._secret );
-                return false;
+                return unexpected( Error{ ErrorKind::Unsupported, "the store driver needs a storage kit (GF_Server_SQLStore) that is not loaded", settings._store._driver } );
             }
-            parts._store = pDriver->createServiceStore( settings._store._driver, settings._store._connection, settings._store._secret, parts._config._storeWorkerCount, nowMs, outError );
+            expected<unique_ptr<IServiceStore>> store =
+                pDriver->createServiceStore( settings._store._driver, settings._store._connection, settings._store._secret, parts._config._storeWorkerCount, nowMs );
+            StringUtil::wipeSecret( settings._store._secret );
+            if ( store.has_value() == false )
+                return unexpected( store.error() );
+            parts._store = std::move( *store );
         }
         StringUtil::wipeSecret( settings._store._secret );
-        if ( parts._store == nullptr )
-            return false;
 
         if ( Internal::isMemoryDriver( settings._cache._driver ) )
         {
@@ -440,25 +443,23 @@ namespace sw
             IEphemeralStoreDriver* const pDriver = game::findSubsystem<IEphemeralStoreDriver>();
             if ( pDriver == nullptr )
             {
-                outError = "cache driver '" + settings._cache._driver + "' needs a storage kit (GF_Server_CacheStore) that is not loaded";
                 StringUtil::wipeSecret( settings._cache._secret );
-                return false;
+                return unexpected( Error{ ErrorKind::Unsupported, "the cache driver needs a storage kit (GF_Server_CacheStore) that is not loaded", settings._cache._driver } );
             }
-            parts._cache = pDriver->createEphemeralStore( settings._cache._driver, settings._cache._connection, settings._cache._secret, outError );
+            expected<unique_ptr<IEphemeralStore>> cache = pDriver->createEphemeralStore( settings._cache._driver, settings._cache._connection, settings._cache._secret );
+            StringUtil::wipeSecret( settings._cache._secret );
+            if ( cache.has_value() == false )
+                return unexpected( cache.error() );
+            parts._cache = std::move( *cache );
         }
         StringUtil::wipeSecret( settings._cache._secret );
-        if ( parts._cache == nullptr )
-            return false;
 
         const uint64 serverID = static_cast<uint64>( parts._config._serverID );
         parts._bus            = make_unique<EphemeralServerBus>( nullptr, serverID ); // 라우터는 호스트가 연 뒤에 묶는다
         parts._busFront       = make_unique<ServerBus>( *parts._bus );
         parts._scheduler.initialize( parts._store.get(), serverID );
         if ( parts._retention.initialize( parts._store.get(), &parts._scheduler, Internal::makeRetentionRules( parts._config ), Internal::makeRetentionSettings( parts._config ) ) == false )
-        {
-            outError = "the retention sweep job could not be scheduled";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::ExternalFailure, "the retention sweep job could not be scheduled" } );
         parts._remoteConfig.requestReload( *parts._store );
         parts._nextRemoteConfigReloadMs = nowMs + Internal::kRemoteConfigReloadMs;
 
@@ -482,10 +483,10 @@ namespace sw
         descriptor._port                = settings._gamePort;
         descriptor._portCount           = settings._gamePortCount;
         descriptor._capacity            = parts._config._capacity;
-        return true;
+        return {};
     }
 
-    bool OnlineServerRuntime::addKits( bool bReverseIndependentOrder, string& outError )
+    expected<void> OnlineServerRuntime::addKits( bool bReverseIndependentOrder )
     {
         Parts&                          parts = *_parts;
         vector<OnlineServerKitFactory*> listFactory;
@@ -494,8 +495,7 @@ namespace sw
         if ( parts._config._listKit.empty() )
         {
             // 띄울 키트는 운영자가 고른다. 빌드에 포함된 키트를 모두 띄우면 데이터가 필요한 키트(경제의 카탈로그)가 기동을 막고, 띄울 생각이 없던 포트가 열린다.
-            outError = "the online service config lists no kits (_listKit)";
-            return false;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the online service config lists no kits (_listKit)" } );
         }
         for ( const OnlineServerKitEntry& entry : parts._config._listKit )
         {
@@ -505,10 +505,7 @@ namespace sw
                 if ( string_view( listFactory[factoryIndex]->_pName ) != entry._name )
                     continue;
                 if ( listEntryByFactory[factoryIndex] != nullptr )
-                {
-                    outError = "online kit '" + entry._name + "' is listed twice";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::AlreadyExists, "the online kit is listed twice", entry._name } );
                 listEntryByFactory[factoryIndex] = &entry;
                 bFound                           = true;
                 break;
@@ -521,8 +518,9 @@ namespace sw
                     known += known.empty() ? "" : ", ";
                     known += pFactory->_pName;
                 }
-                outError = "online kit '" + entry._name + "' is not in this build (registered: " + ( known.empty() ? string( "none" ) : known ) + ")";
-                return false;
+                Error error{ ErrorKind::NotFound, "the online kit is not in this build", entry._name };
+                error.appendDetail( " (registered: " ).appendDetail( known.empty() ? string_view( "none" ) : string_view( known ) ).appendDetail( ")" );
+                return unexpected( error );
             }
         }
         // 순서는 설정에 적힌 순서가 아니라 노드의 이름 의존이 정한다(컬렉션의 위상 정렬).
@@ -534,17 +532,15 @@ namespace sw
                 continue;
             unique_ptr<IOnlineServerKit> kit = listFactory[factoryIndex]->_pCreate();
             if ( kit == nullptr )
-            {
-                outError = "online kit '" + pEntry->_name + "' could not be created";
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::ExternalFailure, "the online kit could not be created", pEntry->_name } );
             vector<const utf8*> listDependency{ OnlineServerKitName::kBase };
             for ( const utf8* pRequired : kit->getRequiredKits() )
             {
                 if ( OnlineServerRuntimeInternal::isKitListed( parts._config, pRequired ) == false )
                 {
-                    outError = "online kit '" + pEntry->_name + "' needs kit '" + pRequired + "', which the online service config does not list (_listKit)";
-                    return false;
+                    Error error{ ErrorKind::NotFound, "the online kit needs a kit the online service config does not list (_listKit)", pEntry->_name };
+                    error.appendDetail( " needs " ).appendDetail( pRequired );
+                    return unexpected( error );
                 }
                 listDependency.push_back( pRequired );
             }
@@ -562,10 +558,10 @@ namespace sw
         {
             (void)parts._kitScope.getCollection().add( std::move( node ) );
         }
-        return true;
+        return {};
     }
 
-    bool OnlineServerRuntime::startHost( OnlineServerRuntimeConfig& settings, string& outError )
+    expected<void> OnlineServerRuntime::startHost( OnlineServerRuntimeConfig& settings )
     {
         Parts&                  parts = *_parts;
         OnlineServiceHostConfig hostSettings;
@@ -582,13 +578,12 @@ namespace sw
         if ( settings._bTLS == SW_TRUE )
         {
             // 서비스 스트림은 TLS 1.3 이다. 경로가 둘 다 비면 Dev 만 개발용 인증서를 쓰고 Shipping 은 여기서 멈춘다.
-            parts._tlsContext = NetSecurity::createServerTLSContext( game::getSubsystem<INetSecurityProvider>(), settings._tlsCertificateFile, settings._tlsPrivateKeyFile, settings._tlsPrivateKeyPassphrase, outError );
+            expected<unique_ptr<ITLSContext>> tlsContext =
+                NetSecurity::createServerTLSContext( game::getSubsystem<INetSecurityProvider>(), settings._tlsCertificateFile, settings._tlsPrivateKeyFile, settings._tlsPrivateKeyPassphrase );
             StringUtil::wipeSecret( settings._tlsPrivateKeyPassphrase );
-            if ( parts._tlsContext == nullptr )
-            {
-                outError = "online service TLS context could not be created: " + outError;
-                return false;
-            }
+            if ( tlsContext.has_value() == false )
+                return unexpected( tlsContext.error() );
+            parts._tlsContext                                     = std::move( *tlsContext );
             hostSettings._endpointSettings._security._pTLSContext = parts._tlsContext.get();
         }
         IStreamTransport* pTransport = settings._pTransport;
@@ -610,33 +605,31 @@ namespace sw
         }
         const bool bAdminTransportMissing = settings._bAdminListener == SW_TRUE && hostSettings._pAdminTransport == nullptr;
         if ( pTransport == nullptr || bAdminTransportMissing )
-        {
-            outError = "online services need a stream transport and this platform has none";
-            return false;
-        }
-        if ( parts._host.initialize( pTransport, hostSettings, outError ) == false )
-            return false;
+            return unexpected( Error{ ErrorKind::Unsupported, "online services need a stream transport and this platform has none" } );
+        if ( expected<void> host = parts._host.initialize( pTransport, hostSettings ); host.has_value() == false )
+            return host;
         parts._context._pRouter                  = parts._host.getEphemeralRouter();
         [[maybe_unused]] const bool bRouterBound = parts._bus->bindRouter( parts._context._pRouter );
         SW_ASSERT( bRouterBound ); // 호스트를 띄우기 전에는 아무도 버스를 구독하지 않았다
-        return true;
+        return {};
     }
 
-    bool OnlineServerRuntime::registerServer( UnixMilliseconds nowMs, string& outError )
+    expected<void> OnlineServerRuntime::registerServer( UnixMilliseconds nowMs )
     {
         Parts& parts = *_parts;
         if ( parts._config._publicAddress.empty() )
-            return true; // 서비스 전용 서버 — 게임 서버로 고를 대상이 아니다
+            return {}; // 서비스 전용 서버 — 게임 서버로 고를 대상이 아니다
         const ServerDescriptor& descriptor = parts._context._serverDescriptor;
         if ( parts._registration.initialize( parts._context._pRouter, descriptor ) == false )
         {
-            outError = "this server could not be registered in the server directory (kind '" + descriptor._kind + "', region '" + descriptor._region + "')";
-            return false;
+            Error error{ ErrorKind::ExternalFailure, "this server could not be registered in the server directory", "kind '" };
+            error.appendDetail( descriptor._kind ).appendDetail( "', region '" ).appendDetail( descriptor._region ).appendDetail( "'" );
+            return unexpected( error );
         }
         parts._registration.setState( ServerState::Open );
         parts._registration.update( nowMs ); // 기동 안에서 바로 쓴다 — 첫 틱에 서버 목록을 읽는 키트(매칭 · 디렉터리)가 이 서버를 본다. 첫 틱의 키트 뒤로 미루면 첫 읽기가 빈 목록을 받고 읽기 주기(벽시계)만큼 배정이 늦다
         parts._bRegistered = SW_TRUE;
-        return true;
+        return {};
     }
 
     void OnlineServerRuntime::shutdown()

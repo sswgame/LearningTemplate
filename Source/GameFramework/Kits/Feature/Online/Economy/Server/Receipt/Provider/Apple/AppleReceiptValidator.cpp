@@ -73,18 +73,18 @@ namespace sw
         return url;
     }
 
-    std::optional<JWTVerified> AppleReceiptValidator::verifyJws( string_view compact, int64 unixSeconds ) const
+    optional<JWTVerified> AppleReceiptValidator::verifyJws( string_view compact, int64 unixSeconds ) const
     {
         JWTUnverified token;
         if ( token.parse( compact ) == false || token.getAlgorithm() != NetSignatureAlgorithm::EcdsaP256Sha256 )
-            return std::nullopt;
+            return nullopt;
         const bool   bMarkers = _settings._bRequireAppleMarkers == SW_TRUE;
         NetPublicKey leafKey;
         const bool   bChainOk = _pSecurity->verifyCertificateChain( token.getCertificateChain(), _settings._trustedRootsPem, unixSeconds,
                                                                   bMarkers ? string_view( AppleReceiptSettings::kLeafOid ) : string_view{},
                                                                   bMarkers ? string_view( AppleReceiptSettings::kIntermediateOid ) : string_view{}, leafKey );
         if ( bChainOk == false )
-            return std::nullopt;
+            return nullopt;
         // 애플 서명 거래에는 iss · aud · exp 가 없다 — 신뢰는 위에서 확인한 애플 루트 사슬의 리프 키에서 온다.
         return std::move( token ).verify( *_pSecurity, leafKey, JWTClaimRule::makeSignatureOnly() );
     }
@@ -109,9 +109,9 @@ namespace sw
         writer.key( "bid" );
         writer.valueString( _settings._bundleID );
         writer.endObject();
-        const std::optional<JSONText> payload = writer.finish();
-        string                        token;
-        const bool                    bSigned =
+        const auto payload = writer.finish();
+        string     token;
+        const bool bSigned =
             payload.has_value() && JWTUtil::makeSigned( *_pSecurity, NetSignatureAlgorithm::EcdsaP256Sha256, _settings._keyID, *payload, _settings._privateKeyPem, token );
         if ( bSigned == false )
         {
@@ -164,9 +164,9 @@ namespace sw
 
     void AppleReceiptValidator::parseOrder( const JSONValue& root, const ReceiptCall& call, UnixMilliseconds now, ReceiptOrderFacts& outFacts )
     {
-        using Internal                              = AppleReceiptValidatorInternal;
-        const JSONValue                  signedInfo = root.get( "signedTransactionInfo" );
-        const std::optional<JWTVerified> verified   = signedInfo.isString() ? verifyJws( signedInfo.asString(), now.toSeconds() ) : std::nullopt;
+        using Internal                         = AppleReceiptValidatorInternal;
+        const JSONValue             signedInfo = root.get( "signedTransactionInfo" );
+        const optional<JWTVerified> verified   = signedInfo.isString() ? verifyJws( signedInfo.asString(), now.toSeconds() ) : nullopt;
         if ( verified.has_value() == false )
         {
             // 영수증은 거래 id 뿐이고 이 글은 TLS 너머 애플이 준다 — 확인이 안 되면 루트 파일이나 중간 장비 탓이지 "그런 거래가 없다" 가 아니다. Invalid 면 결제한 사람의 영수증을 버린다.
@@ -215,8 +215,8 @@ namespace sw
         const JSONValue history         = root.get( "notificationHistory" );
         for ( size_t index = 0; history.isArray() && index < history.size(); ++index )
         {
-            const JSONValue                  signedPayload = history.at( index ).get( "signedPayload" );
-            const std::optional<JWTVerified> notification  = signedPayload.isString() ? verifyJws( signedPayload.asString(), now.toSeconds() ) : std::nullopt;
+            const JSONValue             signedPayload = history.at( index ).get( "signedPayload" );
+            const optional<JWTVerified> notification  = signedPayload.isString() ? verifyJws( signedPayload.asString(), now.toSeconds() ) : nullopt;
             if ( notification.has_value() == false )
             {
                 outPage._bIncomplete = SW_TRUE; // 읽지 못한 알림이 환불일 수 있다 — 구간을 옮기지 않는다
@@ -232,7 +232,7 @@ namespace sw
             const bool bOurRefund = bShapeOk && notificationType == "REFUND" && bundleID == _settings._bundleID && environment == pOurEnvironment;
             if ( bOurRefund == false )
                 continue;
-            const std::optional<JWTVerified> transaction = verifyJws( signedTransaction, now.toSeconds() );
+            const optional<JWTVerified> transaction = verifyJws( signedTransaction, now.toSeconds() );
             if ( transaction.has_value() == false )
             {
                 outPage._bIncomplete = SW_TRUE;

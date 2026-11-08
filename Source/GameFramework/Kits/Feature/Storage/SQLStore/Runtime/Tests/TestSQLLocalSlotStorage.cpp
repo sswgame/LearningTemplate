@@ -48,9 +48,8 @@ namespace
         static unique_ptr<SQLLocalSlotStorage> open( string_view path )
         {
             unique_ptr<SQLLocalSlotStorage> storage = sw::make_unique<SQLLocalSlotStorage>();
-            string                          error;
-            const bool                      bOpened = storage->initialize( path, error );
-            SW_EXPECT_TRUE_MSG( bOpened, error );
+            const expected<void>            opened  = storage->initialize( path );
+            SW_EXPECT_TRUE_MSG( opened.has_value(), opened.has_value() ? string_view{} : opened.error().message() );
             return storage;
         }
     };

@@ -34,9 +34,9 @@ namespace sw
 {
     /**
      * @brief 백엔드를 만드는 함수입니다. 디스크 자리면 @p location 을 `resolveDiskPath( gameName )` 으로 풉니다.
-     *        열 수 없는 종류(파일 바닥에 메모리 자리)거나 실패하면 nullptr 과 까닭을 돌려줍니다.
+     *        열 수 없는 종류(파일 바닥에 메모리 자리)거나 실패하면 그 까닭입니다.
      */
-    using LocalSlotStorageCreateSignature = unique_ptr<ILocalSlotStorage>( const LocalStoreLocation& location, string_view gameName, string& outError );
+    using LocalSlotStorageCreateSignature = expected<unique_ptr<ILocalSlotStorage>>( const LocalStoreLocation& location, string_view gameName );
     using LocalSlotStorageCreateFunction  = LocalSlotStorageCreateSignature*;
 
     /** @brief 백엔드 하나입니다. 이름은 설정 `_backend` 에 쓰고(정적 문자열), 만들기 함수는 비어 있을 수 없습니다(등록 객체가 함수 참조로만 받습니다). */
@@ -52,8 +52,7 @@ namespace sw
         static constexpr const utf8* kMemoryBackendName = "memory";
 
         /** @brief 프런트를 만듭니다. 봉인 인터페이스(@p sealContext)는 빌려 쓰므로 프런트보다 오래 살아야 합니다. */
-        static unique_ptr<ILocalStore> createLocalStore( string_view gameName, const LocalStoreConfig& settings, const LocalSealContext& sealContext,
-                                                         string& outError );
+        [[nodiscard]] static expected<unique_ptr<ILocalStore>> createLocalStore( string_view gameName, const LocalStoreConfig& settings, const LocalSealContext& sealContext );
 
     private:
         /** @brief 바닥을 올립니다. 기반 이름("file" · "memory")이거나 같은 이름이 이미 있으면 오류다(앞 것을 덮지 않는다). */

@@ -292,15 +292,14 @@ namespace sw
             SW_LOG_ERROR_ID( "LanternVale.ProfileFolderInvalid", "[LanternVale] Profile Folder '%#' must be a relative path under the user data folder", _profileFolder.c_str() );
             return false;
         }
-        const LocalStoreConfig  settings{ string( LocalStoreBackend::kFileBackendName ), *location };
-        string                  error;
-        unique_ptr<ILocalStore> pStore = LocalStoreBackend::createLocalStore( "LanternVale", settings, LocalSealContext{}, error );
-        if ( pStore == nullptr )
+        const LocalStoreConfig            settings{ string( LocalStoreBackend::kFileBackendName ), *location };
+        expected<unique_ptr<ILocalStore>> pStore = LocalStoreBackend::createLocalStore( "LanternVale", settings, LocalSealContext{} );
+        if ( pStore.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "LanternVale.ProfileStoreFailed", "[LanternVale] the profile store did not open: %#", error.c_str() );
+            SW_LOG_ERROR_ID( "LanternVale.ProfileStoreFailed", "[LanternVale] the profile store did not open: %# (%#)", pStore.error().message(), pStore.error().detail() );
             return false;
         }
-        return _server.initialize( peers, router, _rules, _interestGrid, std::move( pStore ) );
+        return _server.initialize( peers, router, _rules, _interestGrid, std::move( *pStore ) );
     }
 
     void ValeWorldComponent::onEndPlay()

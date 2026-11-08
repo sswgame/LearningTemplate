@@ -35,7 +35,7 @@ namespace sw
         const TagCountTable& tags = pAbility->getOwnedTagCounts();
         constraint._bMoveBlocked  = tags.hasMatchingTag( getMoveBlockedTag() ) ? SW_TRUE : SW_FALSE;
         constraint._bJumpBlocked  = ( constraint._bMoveBlocked == SW_TRUE || tags.hasMatchingTag( getJumpBlockedTag() ) ) ? SW_TRUE : SW_FALSE;
-        if ( const std::optional<float32> scale = pAbility->getAttributeValue( getSpeedScaleAttribute() ); scale.has_value() )
+        if ( const optional<float32> scale = pAbility->getAttributeValue( getSpeedScaleAttribute() ); scale.has_value() )
             constraint._speedScale = MathUtil::max( *scale, 0.0f );
         return constraint;
     }

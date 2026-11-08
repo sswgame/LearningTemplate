@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
@@ -19,8 +20,6 @@
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstanceClientHook.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameInstanceSubsystem.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
-
-#include <optional>
 
 namespace sw
 {
@@ -106,7 +105,7 @@ namespace sw
          * @param loadProgress 로드 진행(0~1)입니다. 모르면 비웁니다 — 진행 슬라이더(`Progress`)를 접는다.
          * @param fade     그릴 화면 페이드이다. 로딩 화면을 닫을 때 페이드 인을 시작한다. 페이드를 진행시키는 것(`ScreenFade::update`)은 주인(전환 관리자)의 일이다.
          */
-        void update( float32 deltaSeconds, bool bLoading, std::optional<float32> loadProgress, ScreenFade& fade );
+        void update( float32 deltaSeconds, bool bLoading, optional<float32> loadProgress, ScreenFade& fade );
         /** @brief 게임 인스턴스의 씬 흐름이 받는 창구(`ILoadingScreen`)입니다. 컨트롤러가 그 인터페이스를 함께 상속하지 않는다(다중 상속 금지 — 린트 `cpp-shape`). */
         ILoadingScreen& getLoadingScreen() { return _loadingScreenPort; }
 
@@ -127,7 +126,7 @@ namespace sw
         /** @brief 페이드 패널을 알파에 맞춥니다. 알파가 0 이면 닫고, 0 보다 크면 열고 불투명도를 맞춥니다. */
         void syncFadeOverlay( float32 alpha );
         /** @brief 진행 슬라이더(`Progress`)를 로드 진행에 맞춥니다. 진행을 모르면 접는다. 문서에 슬라이더가 없으면 아무것도 하지 않는다. */
-        static void applyProgress( UIScreen& screen, std::optional<float32> loadProgress );
+        static void applyProgress( UIScreen& screen, optional<float32> loadProgress );
         /** @brief 팁을 하나 골라 `Tip` 위젯에 넣습니다. 목록이 비면 팁 위젯을 접습니다. */
         void applyTip( UIScreen& screen );
 
@@ -143,7 +142,7 @@ namespace sw
 
             [[nodiscard]] bool hasLoadingScreenDocument() const override { return _owner.hasLoadingScreenDocument(); }
             bool               beginLoading() override { return _owner.beginLoading(); }
-            void               update( float32 deltaSeconds, bool bLoading, std::optional<float32> loadProgress, ScreenFade& fade ) override { _owner.update( deltaSeconds, bLoading, loadProgress, fade ); }
+            void               update( float32 deltaSeconds, bool bLoading, optional<float32> loadProgress, ScreenFade& fade ) override { _owner.update( deltaSeconds, bLoading, loadProgress, fade ); }
 
         private:
             LoadingScreenController& _owner;

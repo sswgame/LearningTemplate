@@ -31,44 +31,39 @@ namespace sw
             {
             }
 
-            [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
+            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry ) override
             {
                 LeaderboardKitConfig kitConfig;
-                if ( entry.readSettings( kitConfig, outError ) == false )
-                    return false;
+                if ( expected<void> result = entry.readSettings( kitConfig ); result.has_value() == false )
+                    return result;
                 const string& catalogPath = kitConfig._catalog;
                 _listInlineBoardID        = std::move( kitConfig._listBoardID );
                 _pCatalog                 = catalogPath.empty() ? nullptr : SharedAssetCache<LeaderboardCatalog>::acquire( catalogPath );
                 if ( catalogPath.empty() == false && _pCatalog == nullptr )
-                {
-                    outError = "the leaderboard catalog '" + catalogPath + "' could not be read";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::NotFound, "the leaderboard catalog could not be read", catalogPath } );
                 if ( catalogPath.empty() && _listInlineBoardID.empty() )
                     SW_LOG_WARNING_ID( "LeaderboardOnlineServerKit.LeaderboardKitNeitherCatalog", "Leaderboard kit: neither _catalog nor _listBoardID - no boards are registered" );
                 // 매칭 키트가 실력 모드의 통계를 읽는다. 접속한 계정의 통계만 메모리에 있다.
-                return registerServerService( context, entry, &_server, outError ) && exposeInterface<IAccountStatSource>( context, entry, _service, outError );
+                return registerServerService( context, entry, &_server ).and_then( [&]
+                { return exposeInterface<IAccountStatSource>( context, entry, _service ); } );
             }
 
-            bool start( OnlineServerKitContext& context, string& outError ) override
+            expected<void> start( OnlineServerKitContext& context ) override
             {
                 if ( context._pRouter == nullptr )
-                {
-                    outError = "the leaderboard needs a cache (ranks live in sorted sets)";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the leaderboard needs a cache (ranks live in sorted sets)" } );
                 LeaderboardServiceDependencies dependencies;
                 dependencies._pStore  = context._pStore;
                 dependencies._pRouter = context._pRouter;
                 _service.initialize( dependencies );
                 _service.setScheduler( context._pScheduler ); // 보드 등록 전 — 시즌 보드의 정산 작업이 예약 테이블에 걸린다
-                if ( registerDefinitions( outError ) == false )
+                if ( expected<void> definitions = registerDefinitions(); definitions.has_value() == false )
                 {
                     _service.shutdown(); // 실패한 start 는 `stop` · `shutdown` 이 보지 않으므로 세운 서비스를 여기서 내린다
-                    return false;
+                    return definitions;
                 }
                 _server.initialize( &_service, context._kits.find<IAccountDirectory>(), context._kits.find<IAccountPresence>(), context._pMetricRegistry );
-                return true;
+                return {};
             }
 
             /** @brief 종료 드레인이 기다릴 진행 중인 일 — 저장소에 맡긴 기록 쓰기. */
@@ -94,8 +89,8 @@ namespace sw
             }
 
         private:
-            /** @brief 보드 · 업적 정의를 서비스에 올립니다. 규칙을 어긴 정의가 있으면 false 와 까닭입니다. */
-            [[nodiscard]] bool registerDefinitions( string& outError )
+            /** @brief 보드 · 업적 정의를 서비스에 올립니다. 규칙을 어긴 정의가 있으면 대상이 그 id 인 오류입니다. */
+            [[nodiscard]] expected<void> registerDefinitions()
             {
                 const vector<LeaderboardDef>        listNoBoard;
                 const vector<OnlineAchievementDef>  listNoAchievement;
@@ -104,30 +99,21 @@ namespace sw
                 for ( const LeaderboardDef& board : listBoard )
                 {
                     if ( _service.registerBoard( board ) == false )
-                    {
-                        outError = "leaderboard '" + board._boardID + "' breaks a board rule (see the warning above)";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "the leaderboard breaks a board rule (see the warning above)", board._boardID } );
                 }
                 for ( const string& boardID : _listInlineBoardID )
                 {
                     LeaderboardDef board;
                     board._boardID = boardID;
                     if ( _service.registerBoard( board ) == false )
-                    {
-                        outError = "leaderboard '" + boardID + "' breaks a board rule (see the warning above)";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "the leaderboard breaks a board rule (see the warning above)", boardID } );
                 }
                 for ( const OnlineAchievementDef& achievement : listAchievement )
                 {
                     if ( _service.registerAchievement( achievement ) == false )
-                    {
-                        outError = "achievement '" + achievement._achievementID + "' breaks an achievement rule (see the warning above)";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "the achievement breaks an achievement rule (see the warning above)", achievement._achievementID } );
                 }
-                return true;
+                return {};
             }
 
         private:

@@ -77,40 +77,38 @@ namespace sw
 
             static void rollback( ISQLConnection& connection ) { (void)connection.executeScript( "ROLLBACK" ); } // 이미 실패한 트랜잭션의 정리다 — 원래 오류를 돌려준다
 
-            static string makeText( string_view prefix, int32 version, string_view middle, string_view suffix )
+            /** @brief 대상이 "<번호> <무엇>" 인 마이그레이션 오류입니다. */
+            static Error makeError( ErrorKind kind, const utf8* pMessage, int32 version, string_view what )
             {
-                StringBuilder<constant::buffer::kMax1024> text;
-                text.appendFormat( "%#%#%#%#", prefix, version, middle, suffix );
-                return string( text.view() );
+                StringBuilder<constant::buffer::kMax256> detailBuilder;
+                detailBuilder.appendFormat( "%# %#", version, what );
+                return Error{ kind, pMessage, detailBuilder.view() };
             }
 
             /** @brief 목록 파일(`<SQLMigrationList><Migration _name="NNNN_이름" />…</SQLMigrationList>`)을 읽습니다. 다른 요소 · 속성 · 빈 이름 · 빈 목록은 오류입니다. */
-            [[nodiscard]] static bool readList( string_view folder, vector<string>& outListStem, string& outError )
+            [[nodiscard]] static expected<void> readList( string_view folder, vector<string>& outListStem )
             {
                 const string listPath = FileUtil::joinPath( folder, SQLMigrationRunner::kListFileName );
                 string       text;
                 if ( AssetIO::readTextAsset( AssetID{ listPath }, text ) == false )
                 {
-                    StringBuilder<constant::buffer::kMax256> errorBuilder;
-                    errorBuilder.appendFormat( "cannot read the migration list '%#'", listPath );
-                    outError = string( errorBuilder.view() );
-                    return false;
+                    StringBuilder<constant::buffer::kMax128> errorBuilder;
+                    errorBuilder.appendFormat( "%#", listPath );
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "cannot read the migration list", errorBuilder.view() } );
                 }
                 XMLDocument document;
                 if ( document.parse( text, listPath ) == false )
                 {
-                    StringBuilder<constant::buffer::kMax256> errorBuilder;
-                    errorBuilder.appendFormat( "migration list '%#' is not XML: %#", listPath, document.getLastError() );
-                    outError = string( errorBuilder.view() );
-                    return false;
+                    StringBuilder<constant::buffer::kMax128> errorBuilder;
+                    errorBuilder.appendFormat( "%#, %#", listPath, document.getLastError() );
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "migration list is not XML", errorBuilder.view() } );
                 }
                 const XMLNode root = document.getRoot( "SQLMigrationList" );
                 if ( root.isValid() == false || root.getFirstAttribute().isValid() )
                 {
-                    StringBuilder<constant::buffer::kMax256> errorBuilder;
-                    errorBuilder.appendFormat( "migration list '%#' must be a <SQLMigrationList> element without attributes", listPath );
-                    outError = string( errorBuilder.view() );
-                    return false;
+                    StringBuilder<constant::buffer::kMax128> errorBuilder;
+                    errorBuilder.appendFormat( "%#", listPath );
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "migration list must be a <SQLMigrationList> element without attributes", errorBuilder.view() } );
                 }
                 outListStem.clear();
                 for ( XMLNode entry = root.findChild(); entry.isValid(); entry = entry.findNextSibling() )
@@ -120,55 +118,51 @@ namespace sw
                                              string_view{ nameAttribute.getName() } == "_name" && string_view{ nameAttribute.getValue() }.empty() == false;
                     if ( bValidEntry == false )
                     {
-                        StringBuilder<constant::buffer::kMax256> errorBuilder;
-                        errorBuilder.appendFormat( "migration list '%#' must hold only <Migration _name=\"NNNN_name\" /> elements", listPath );
-                        outError = string( errorBuilder.view() );
-                        return false;
+                        StringBuilder<constant::buffer::kMax128> errorBuilder;
+                        errorBuilder.appendFormat( "%#", listPath );
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "migration list must hold only <Migration _name=\"NNNN_name\" /> elements", errorBuilder.view() } );
                     }
                     outListStem.push_back( nameAttribute.getValue() );
                 }
                 if ( outListStem.empty() )
                 {
-                    StringBuilder<constant::buffer::kMax256> errorBuilder;
-                    errorBuilder.appendFormat( "migration list '%#' must hold at least one <Migration>", listPath );
-                    outError = string( errorBuilder.view() );
-                    return false;
+                    StringBuilder<constant::buffer::kMax128> errorBuilder;
+                    errorBuilder.appendFormat( "%#", listPath );
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "migration list must hold at least one <Migration>", errorBuilder.view() } );
                 }
-                return true;
+                return {};
             }
 
             /**
              * @brief 폴더(리소스 id)의 `.sql` 을 읽기와 같은 규칙(`AssetIO::collectAssets` - 낱개 파일 · 팩)으로 나열합니다. 폴더가 없으면 빈 목록이고 true 입니다.
              * @details 예전에는 글이 디스크 폴더인지 먼저 보고(`isDirectory`) 아니면 낱개 파일 자리로 풀었다 - 팩 구성에서는 대조할 것이 없었다.
              */
-            [[nodiscard]] static bool collectMigrationFiles( string_view folder, vector<AssetID>& outListFile, string& outError )
+            [[nodiscard]] static expected<void> collectMigrationFiles( string_view folder, vector<AssetID>& outListFile )
             {
                 if ( AssetIO::collectAssets( AssetID{ folder }, ".sql", outListFile ) == AssetFolderListing::Failed )
                 {
-                    StringBuilder<constant::buffer::kMax256> errorBuilder;
-                    errorBuilder.appendFormat( "cannot read the migration folder '%#'", folder );
-                    outError = string( errorBuilder.view() );
-                    return false;
+                    StringBuilder<constant::buffer::kMax128> errorBuilder;
+                    errorBuilder.appendFormat( "%#", folder );
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "cannot read the migration folder", errorBuilder.view() } );
                 }
-                return true;
+                return {};
             }
 
             /** @brief 폴더의 `.sql` 이 모두 목록의 마이그레이션(공통이나 방언 분기)인지 대조합니다. */
-            [[nodiscard]] static bool checkFolderMatchesList( string_view folder, const vector<string>& listStem, string& outError )
+            [[nodiscard]] static expected<void> checkFolderMatchesList( string_view folder, const vector<string>& listStem )
             {
                 vector<AssetID> listFilePath;
-                if ( collectMigrationFiles( folder, listFilePath, outError ) == false )
-                    return false;
+                if ( expected<void> result = collectMigrationFiles( folder, listFilePath ); result.has_value() == false )
+                    return result;
                 for ( const AssetID& filePath : listFilePath )
                 {
                     const string  fileName = FileUtil::getFileNamePart( filePath.view() );
                     MigrationFile file;
                     if ( parseFileName( fileName, file ) == false )
                     {
-                        StringBuilder<constant::buffer::kMax256> errorBuilder;
-                        errorBuilder.appendFormat( "migration file '%#' is not named NNNN_name.sql or NNNN_name.<driver>.sql", fileName );
-                        outError = string( errorBuilder.view() );
-                        return false;
+                        StringBuilder<constant::buffer::kMax128> errorBuilder;
+                        errorBuilder.appendFormat( "%#", fileName );
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "migration file is not named NNNN_name.sql or NNNN_name.<driver>.sql", errorBuilder.view() } );
                     }
                     StringBuilder<constant::buffer::kMax256> stemBuilder;
                     stemBuilder.appendFormat( "%#%#", string_view( fileName ).substr( 0, static_cast<size_t>( kVersionDigitCount + 1 ) ), file._name );
@@ -176,13 +170,12 @@ namespace sw
                     const bool   bListed = VectorUtil::contains( listStem, stem );
                     if ( bListed == false )
                     {
-                        StringBuilder<constant::buffer::kMax256> errorBuilder;
-                        errorBuilder.appendFormat( "migration file '%#' is not listed in %# of '%#'", fileName, SQLMigrationRunner::kListFileName, folder );
-                        outError = string( errorBuilder.view() );
-                        return false;
+                        StringBuilder<constant::buffer::kMax128> errorBuilder;
+                        errorBuilder.appendFormat( "%#, %#, %#", fileName, SQLMigrationRunner::kListFileName, folder );
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "migration file is not listed in the migration list of its folder", errorBuilder.view() } );
                     }
                 }
-                return true;
+                return {};
             }
         };
     } // namespace
@@ -190,13 +183,13 @@ namespace sw
 
 namespace sw
 {
-    bool SQLMigrationRunner::loadMigrations( string_view folder, string_view driverName, vector<SQLMigration>& outListMigration, string& outError )
+    expected<void> SQLMigrationRunner::loadMigrations( string_view folder, string_view driverName, vector<SQLMigration>& outListMigration )
     {
         vector<string> listStem;
-        if ( SQLMigrationRunnerInternal::readList( folder, listStem, outError ) == false )
-            return false;
-        if ( SQLMigrationRunnerInternal::checkFolderMatchesList( folder, listStem, outError ) == false )
-            return false;
+        if ( expected<void> result = SQLMigrationRunnerInternal::readList( folder, listStem ); result.has_value() == false )
+            return result;
+        if ( expected<void> result = SQLMigrationRunnerInternal::checkFolderMatchesList( folder, listStem ); result.has_value() == false )
+            return result;
         for ( size_t stemIndex = 0; stemIndex < listStem.size(); ++stemIndex )
         {
             const string&                             stem = listStem[stemIndex];
@@ -206,17 +199,13 @@ namespace sw
             const bool bNamed = SQLMigrationRunnerInternal::parseFileName( string( textBuilder3.view() ), file ) && file._driverName.empty();
             if ( bNamed == false )
             {
-                StringBuilder<constant::buffer::kMax256> errorBuilder;
-                errorBuilder.appendFormat( "migration '%#' in %# is not named NNNN_name", stem, SQLMigrationRunner::kListFileName );
-                outError = string( errorBuilder.view() );
-                return false;
+                StringBuilder<constant::buffer::kMax128> errorBuilder;
+                errorBuilder.appendFormat( "%#, %#", stem, SQLMigrationRunner::kListFileName );
+                return unexpected( Error{ ErrorKind::InvalidArgument, "a migration in the migration list is not named NNNN_name", errorBuilder.view() } );
             }
             const int32 expectedVersion = static_cast<int32>( stemIndex ) + 1;
             if ( file._version != expectedVersion )
-            {
-                outError = SQLMigrationRunnerInternal::makeText( "migration numbers must run 1, 2, 3 ... without gaps - expected ", expectedVersion, " at ", stem );
-                return false;
-            }
+                return unexpected( SQLMigrationRunnerInternal::makeError( ErrorKind::InvalidArgument, "migration numbers must run 1, 2, 3 ... without gaps - expected this number at the stem", expectedVersion, stem ) );
             // 방언 분기 파일이 있으면 공통 파일 대신 쓴다. 다른 드라이버의 방언 파일은 읽지 않는다.
             StringBuilder<constant::buffer::kMax256> textBuilder2;
             textBuilder2.appendFormat( "%#.%#.sql", stem, driverName );
@@ -226,31 +215,27 @@ namespace sw
             const string commonPath = FileUtil::joinPath( folder, textBuilder.view() );
             const bool   bHasDriver = AssetIO::hasAsset( AssetID{ driverPath } );
             if ( bHasDriver == false && AssetIO::hasAsset( AssetID{ commonPath } ) == false )
-            {
-                outError = SQLMigrationRunnerInternal::makeText( "migration ", file._version, " has no common file and no file for driver ", driverName );
-                return false;
-            }
+                return unexpected( SQLMigrationRunnerInternal::makeError( ErrorKind::NotFound, "the migration has no common file and no file for the driver", file._version, driverName ) );
             const string& path      = bHasDriver ? driverPath : commonPath;
             SQLMigration& migration = outListMigration.emplace_back();
             migration._version      = file._version;
             migration._name         = file._name;
             if ( AssetIO::readTextAsset( AssetID{ path }, migration._sql ) == false )
             {
-                StringBuilder<constant::buffer::kMax256> errorBuilder;
-                errorBuilder.appendFormat( "cannot read migration file '%#'", path );
-                outError = string( errorBuilder.view() );
-                return false;
+                StringBuilder<constant::buffer::kMax128> errorBuilder;
+                errorBuilder.appendFormat( "%#", path );
+                return unexpected( Error{ ErrorKind::InvalidArgument, "cannot read migration file", errorBuilder.view() } );
             }
             SQLMigrationRunnerInternal::removeCarriageReturns( migration._sql );
         }
-        return true;
+        return {};
     }
 
-    bool SQLMigrationRunner::collectDialectDriverNames( string_view folder, vector<string>& inoutListName, string& outError )
+    expected<void> SQLMigrationRunner::collectDialectDriverNames( string_view folder, vector<string>& inoutListName )
     {
         vector<AssetID> listFilePath;
-        if ( SQLMigrationRunnerInternal::collectMigrationFiles( folder, listFilePath, outError ) == false )
-            return false;
+        if ( expected<void> result = SQLMigrationRunnerInternal::collectMigrationFiles( folder, listFilePath ); result.has_value() == false )
+            return result;
         for ( const AssetID& filePath : listFilePath )
         {
             SQLMigrationRunnerInternal::MigrationFile file;
@@ -259,36 +244,34 @@ namespace sw
             if ( VectorUtil::contains( inoutListName, file._driverName ) == false )
                 inoutListName.push_back( file._driverName );
         }
-        return true;
+        return {};
     }
 
-    bool SQLMigrationRunner::apply( ISQLConnection& connection, const vector<SQLMigration>& listMigration, UnixMilliseconds nowMs, string& outError )
+    expected<void> SQLMigrationRunner::apply( ISQLConnection& connection, const vector<SQLMigration>& listMigration, UnixMilliseconds nowMs )
     {
         const SQLDialect& dialect = connection.getDialect();
         // PostgreSQL 의 `CREATE TABLE IF NOT EXISTS` 는 서버 둘이 동시에 돌면 진 쪽이 고유 키 위반(23505)을 받는다 - 다른 서버가 방금 만든 것이므로 있는 것이다(아래 락이 그 다음을 줄 세운다).
         const SQLResult createResult = connection.executeScript( SQLMigrationRunnerInternal::kCreateHistorySQL );
         if ( createResult != SQLResult::Ok && createResult != SQLResult::Constraint )
         {
-            outError = string( "cannot create the migration history table: " ) + connection.getLastErrorText();
-            return false;
+            return unexpected( Error{ ErrorKind::ExternalFailure, "cannot create the migration history table", connection.getLastErrorText() } );
         }
         if ( connection.executeScript( dialect._pBeginWrite ) != SQLResult::Ok )
         {
-            outError = string( "cannot begin the migration transaction: " ) + connection.getLastErrorText();
-            return false;
+            return unexpected( Error{ ErrorKind::ExternalFailure, "cannot begin the migration transaction", connection.getLastErrorText() } );
         }
         if ( connection.executeScript( dialect._pLockMigrationTable ) != SQLResult::Ok )
         {
-            outError = string( "cannot lock the migration history table: " ) + connection.getLastErrorText();
+            const Error error{ ErrorKind::ExternalFailure, "cannot lock the migration history table", connection.getLastErrorText() }; // 되돌리기가 마지막 오류 글을 바꾸기 전에 복사한다
             SQLMigrationRunnerInternal::rollback( connection );
-            return false;
+            return unexpected( error );
         }
         SQLRowSet rowSet;
         if ( connection.execute( SQLMigrationRunnerInternal::kReadHistorySQL, nullptr, 0, &rowSet ) != SQLResult::Ok )
         {
-            outError = string( "cannot read the migration history table: " ) + connection.getLastErrorText();
+            const Error error{ ErrorKind::ExternalFailure, "cannot read the migration history table", connection.getLastErrorText() }; // 되돌리기가 마지막 오류 글을 바꾸기 전에 복사한다
             SQLMigrationRunnerInternal::rollback( connection );
-            return false;
+            return unexpected( error );
         }
         map<int32, string> mapAppliedChecksum;
         for ( const vector<SQLValue>& row : rowSet._listRow )
@@ -301,9 +284,8 @@ namespace sw
             (void)appliedChecksum;
             if ( VectorUtil::findBy<&SQLMigration::_version>( listMigration, appliedVersion ) == nullptr )
             {
-                outError = SQLMigrationRunnerInternal::makeText( "migration ", appliedVersion, " is applied but unknown to this build - the database is newer", "" );
                 SQLMigrationRunnerInternal::rollback( connection );
-                return false;
+                return unexpected( SQLMigrationRunnerInternal::makeError( ErrorKind::Unsupported, "the migration is applied but unknown to this build - the database is newer", appliedVersion, "" ) );
             }
         }
 
@@ -315,33 +297,32 @@ namespace sw
             {
                 if ( appliedIt->second == checksum )
                     continue;
-                outError = SQLMigrationRunnerInternal::makeText( "migration ", migration._version, " changed after it was applied - add a new migration instead of editing ",
-                                                                 migration._name );
                 SQLMigrationRunnerInternal::rollback( connection );
-                return false;
+                return unexpected( SQLMigrationRunnerInternal::makeError( ErrorKind::InvalidArgument, "the migration changed after it was applied - add a new migration instead of editing it",
+                                                                          migration._version, migration._name ) );
             }
             if ( connection.executeScript( substituteTokens( migration._sql, dialect ) ) != SQLResult::Ok )
             {
-                outError = SQLMigrationRunnerInternal::makeText( "migration ", migration._version, " failed: ", connection.getLastErrorText() );
+                const Error error = SQLMigrationRunnerInternal::makeError( ErrorKind::ExternalFailure, "the migration failed", migration._version, connection.getLastErrorText() );
                 SQLMigrationRunnerInternal::rollback( connection );
-                return false;
+                return unexpected( error );
             }
             const SQLValue arrParam[] = { SQLValue::makeInt64( migration._version ), SQLValue::makeText( migration._name ), SQLValue::makeText( checksum ),
                                           SQLValue::makeInt64( nowMs.count() ) };
             if ( connection.execute( SQLMigrationRunnerInternal::kInsertHistorySQL, arrParam, 4, nullptr ) != SQLResult::Ok )
             {
-                outError = string( "cannot record a migration: " ) + connection.getLastErrorText();
+                const Error error{ ErrorKind::ExternalFailure, "cannot record a migration", connection.getLastErrorText() }; // 되돌리기가 마지막 오류 글을 바꾸기 전에 복사한다
                 SQLMigrationRunnerInternal::rollback( connection );
-                return false;
+                return unexpected( error );
             }
         }
         if ( connection.executeScript( "COMMIT" ) != SQLResult::Ok )
         {
-            outError = string( "cannot commit the migrations: " ) + connection.getLastErrorText();
+            const Error error{ ErrorKind::ExternalFailure, "cannot commit the migrations", connection.getLastErrorText() }; // 되돌리기가 마지막 오류 글을 바꾸기 전에 복사한다
             SQLMigrationRunnerInternal::rollback( connection );
-            return false;
+            return unexpected( error );
         }
-        return true;
+        return {};
     }
 
     string SQLMigrationRunner::substituteTokens( string_view sql, const SQLDialect& dialect )

@@ -67,50 +67,46 @@ namespace sw
         return lastIndex;
     }
 
-    bool PropScatterPlacement::validateModels( const vector<PropScatterModel>& listModel, string_view componentMaterial, string& outError )
+    expected<void> PropScatterPlacement::validateModels( const vector<PropScatterModel>& listModel, string_view componentMaterial )
     {
         for ( size_t modelIndex = 0; modelIndex < listModel.size(); ++modelIndex )
         {
             const PropScatterModel& model = listModel[modelIndex];
             if ( model._meshID.empty() )
             {
-                StringBuilder<constant::buffer::kMax256> errorBuilder;
-                errorBuilder.appendFormat( "model %# has no mesh", modelIndex );
-                outError = string( errorBuilder.view() );
-                return false;
+                StringBuilder<constant::buffer::kMax128> errorBuilder;
+                errorBuilder.appendFormat( "%#", modelIndex );
+                return unexpected( Error{ ErrorKind::InvalidArgument, "the model has no mesh (model index)", errorBuilder.view() } );
             }
             if ( model._listSection.empty() )
                 continue;
             if ( componentMaterial.empty() == false )
             {
-                StringBuilder<constant::buffer::kMax256> errorBuilder;
-                errorBuilder.appendFormat( "model '%#' lists section materials and the component also sets a material - set one of them", model._meshID.c_str() );
-                outError = string( errorBuilder.view() );
-                return false;
+                StringBuilder<constant::buffer::kMax128> errorBuilder;
+                errorBuilder.appendFormat( "%#", model._meshID.c_str() );
+                return unexpected( Error{ ErrorKind::InvalidArgument, "the model lists section materials and the component also sets a material - set one of them", errorBuilder.view() } );
             }
             for ( size_t sectionIndex = 0; sectionIndex < model._listSection.size(); ++sectionIndex )
             {
                 const PropScatterSection& section = model._listSection[sectionIndex];
                 if ( section._sectionName.empty() || section._materialPath.empty() )
                 {
-                    StringBuilder<constant::buffer::kMax256> errorBuilder;
-                    errorBuilder.appendFormat( "model '%#' section %# needs both a section name and a material", model._meshID.c_str(), sectionIndex );
-                    outError = string( errorBuilder.view() );
-                    return false;
+                    StringBuilder<constant::buffer::kMax128> errorBuilder;
+                    errorBuilder.appendFormat( "%#, %#", model._meshID.c_str(), sectionIndex );
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the model section needs both a section name and a material (mesh, section index)", errorBuilder.view() } );
                 }
                 for ( size_t earlierIndex = 0; earlierIndex < sectionIndex; ++earlierIndex )
                 {
                     if ( model._listSection[earlierIndex]._sectionName == section._sectionName )
                     {
-                        StringBuilder<constant::buffer::kMax256> errorBuilder;
-                        errorBuilder.appendFormat( "model '%#' lists section '%#' twice", model._meshID.c_str(), section._sectionName.c_str() );
-                        outError = string( errorBuilder.view() );
-                        return false;
+                        StringBuilder<constant::buffer::kMax128> errorBuilder;
+                        errorBuilder.appendFormat( "%#, %#", model._meshID.c_str(), section._sectionName.c_str() );
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "the model lists a section twice (mesh, section)", errorBuilder.view() } );
                     }
                 }
             }
         }
-        return true;
+        return {};
     }
 
     void PropScatterPlacement::computePlacements( const PropScatterParams& params, vector<PropScatterPlacement>& outListPlacement )
@@ -264,10 +260,9 @@ namespace sw
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr )
             return;
-        string modelError;
-        if ( PropScatterPlacement::validateModels( _listModel, _materialPath, modelError ) == false )
+        if ( const expected<void> models = PropScatterPlacement::validateModels( _listModel, _materialPath ); models.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "PropScatter.InvalidModels", "Prop scatter '%#' is not spawned: %#", _propName.c_str(), modelError.c_str() );
+            SW_LOG_ERROR_ID( "PropScatter.InvalidModels", "Prop scatter '%#' is not spawned: %# (%#)", _propName.c_str(), models.error().message(), models.error().detail() );
             return;
         }
         vector<PropScatterPlacement> listPlacement;

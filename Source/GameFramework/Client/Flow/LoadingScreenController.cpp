@@ -155,7 +155,7 @@ namespace sw
         return true;
     }
 
-    void LoadingScreenController::update( float32 deltaSeconds, bool bLoading, std::optional<float32> loadProgress, ScreenFade& fade )
+    void LoadingScreenController::update( float32 deltaSeconds, bool bLoading, optional<float32> loadProgress, ScreenFade& fade )
     {
         UIScreen* pScreen = findLoadingScreen();
         if ( pScreen != nullptr )
@@ -185,7 +185,7 @@ namespace sw
         syncFadeOverlay( fade.getOverlayAlpha() );
     }
 
-    void LoadingScreenController::applyProgress( UIScreen& screen, std::optional<float32> loadProgress )
+    void LoadingScreenController::applyProgress( UIScreen& screen, optional<float32> loadProgress )
     {
         SliderWidget* pProgress = screen.getTree().findWidget<SliderWidget>( hashed_string( kProgressWidgetName ) );
         if ( pProgress == nullptr )

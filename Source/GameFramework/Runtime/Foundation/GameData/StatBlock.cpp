@@ -38,24 +38,24 @@ namespace sw
 
     float32 StatBlock::getValue( const hashed_string& name ) const
     {
-        const std::optional<float32> value = findValue( name );
+        const optional<float32> value = findValue( name );
         return value.has_value() ? *value : 0.0f; // 더하는 묶음이라 없는 이름의 기여는 0 이다(합의 항등원)
     }
 
     float32 StatBlock::getScale( const hashed_string& name ) const
     {
-        const std::optional<float32> value = findValue( name );
+        const optional<float32> value = findValue( name );
         return value.has_value() ? *value : 1.0f; // 곱하는 묶음이라 없는 이름은 보정이 없다(곱의 항등원)
     }
 
-    std::optional<float32> StatBlock::findValue( const hashed_string& name ) const
+    optional<float32> StatBlock::findValue( const hashed_string& name ) const
     {
         for ( const StatValue& value : _listValue )
         {
             if ( value._name == name )
                 return value._value;
         }
-        return std::nullopt;
+        return nullopt;
     }
 
     bool StatBlock::hasValue( const hashed_string& name ) const

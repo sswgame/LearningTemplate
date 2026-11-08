@@ -79,7 +79,7 @@ namespace sw
                 const AbilityComponent* pAbility = pSample->_pTarget->getComponent<AbilityComponent>();
                 if ( pAbility == nullptr )
                     return std::nan( "" );
-                const std::optional<float32> value = pAbility->getAttributeValue( hashed_string( name.substr( string_view( kTargetPrefix ).size() ) ) );
+                const optional<float32> value = pAbility->getAttributeValue( hashed_string( name.substr( string_view( kTargetPrefix ).size() ) ) );
                 return value.has_value() ? static_cast<float64>( *value ) : std::nan( "" );
             }
 

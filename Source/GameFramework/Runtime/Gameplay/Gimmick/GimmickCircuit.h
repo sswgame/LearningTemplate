@@ -110,7 +110,7 @@ namespace sw
         /** @brief 노드 매개변수의 벡터 값입니다. 없으면 0 입니다. */
         float3 readParamVector( int32 node, const utf8* pName ) const;
         /** @brief 노드 매개변수의 수입니다. 없으면 비어 있습니다(없을 때의 값은 호출부가 정한다). */
-        [[nodiscard]] std::optional<float32> readParamNumber( int32 node, const utf8* pName ) const;
+        [[nodiscard]] optional<float32> readParamNumber( int32 node, const utf8* pName ) const;
         /** @brief 노드 매개변수의 글입니다. 없으면 nullptr 입니다. */
         const string* readParamText( int32 node, const utf8* pName ) const;
 

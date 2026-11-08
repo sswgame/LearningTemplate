@@ -77,13 +77,13 @@ namespace sw
          */
         [[nodiscard]] bool write( BitWriter& writer ) const;
         /** @brief `write` 의 바이트를 읽어 이 기록을 바꿉니다. 표식, 버전, 상한이 틀리거나 바이트가 모자라면 false 와 이유를 반환하고 기록은 비워집니다. */
-        [[nodiscard]] bool read( BitReader& reader, string& outError );
+        [[nodiscard]] expected<void> read( BitReader& reader );
         /** @brief @p path 에 원자적으로 씁니다. */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
         /** @brief 디스크 파일 @p path(절대 경로 - 녹화 · 개발 명령)를 읽습니다. 못 읽으면 false 와 이유를 반환합니다. */
-        [[nodiscard]] bool loadFromFile( string_view path, string& outError );
+        [[nodiscard]] expected<void> loadFromFile( string_view path );
         /** @brief 리소스 @p assetID(씬 데이터의 트랙 칸 - 낱개 파일 또는 팩)를 읽습니다. 못 읽으면 false 와 이유를 반환합니다. */
-        [[nodiscard]] bool loadFromAsset( const AssetID& assetID, string& outError );
+        [[nodiscard]] expected<void> loadFromAsset( const AssetID& assetID );
 
         int32 getTrackCount() const { return static_cast<int32>( _listTrack.size() ); }
         /** @brief 트랙 하나를 반환합니다. @p trackIndex 는 0 부터 `getTrackCount` 미만입니다. */
@@ -98,7 +98,7 @@ namespace sw
 
     private:
         /** @brief 읽은 바이트를 기록으로 옮깁니다(두 읽기 입구가 함께 쓴다). @p label 은 오류 글의 출처입니다. */
-        [[nodiscard]] bool loadFromBytes( const vector<uint8>& bytes, string_view label, string& outError );
+        [[nodiscard]] expected<void> loadFromBytes( const vector<uint8>& bytes, string_view label );
 
         /** @brief 고리에 남아 있는 가장 이른 틱을 반환합니다. */
         static uint32 computeOldestTick( const ControlIntentTrack& track );
