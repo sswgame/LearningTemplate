@@ -31,6 +31,7 @@
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
 #include "Engine/Renderer/RenderThread.h"
+#include "Engine/Scene/SceneManager.h"
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
 #include "Engine/Window/NativeWindowEvent.h"
@@ -130,6 +131,8 @@ namespace sw
         , _bEnableEditor{ SW_FALSE }
         , _bQuitAfterInitialize{ SW_FALSE }
         , _bRenderPaused{ SW_FALSE }
+        , _bShowWindowPending{ SW_FALSE }
+        , _bActiveSceneSeen{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -234,13 +237,16 @@ namespace sw
         splash.updateStatus( "Finalizing Setup...", 0.95f );
         bindHostCallbacks();
 
-        splash.updateStatus( "Ready", 1.0f );
-
-        // 준비가 끝났다. 스플래시 창을 닫고 메인 창을 화면에 띄운다.
-        splash.dismiss();
         // 보는 사람이 있으면(무인이 아니거나, 무인이어도 지켜보는 표시가 있으면) 창을 띄운다 — `MainWindowSubsystem::shouldRenderOffScreen`.
+        // 띄우는 것은 첫 그림이 나온 뒤다(`onStartupFrameEnded`): 첫 프레임은 시작 씬을 받느라 길어(Debug 수 초) 그동안 빈 흰 창이 보였다. 그 사이는 스플래시가 진행을 보인다
+        // (언리얼도 첫 맵이 설 때까지 스플래시를 둔다).
         if ( MainWindowSubsystem::shouldRenderOffScreen( *_launch.getEngine().getCommandLineManager() ) == false )
-            _pWindow->showWindow( true );
+        {
+            splash.updateStatus( "Loading First Scene...", 1.0f );
+            _bShowWindowPending = SW_TRUE;
+        }
+        else
+            splash.dismiss();
 
         logStartupPhases( timings );
 
@@ -481,15 +487,30 @@ namespace sw
                         _launch.getEngine().describeSubsystemInitTimings().c_str() );
     }
 
-    void App::logStartupFrame()
+    void App::onStartupFrameEnded()
     {
-        // 창이 뜬 뒤 첫 프레임들이 끝난 시각 — 첫 프레임이 씬 받기(등록 · 로드 뒤 처리)로 길면 그동안 창은 빈 채로 보인다. 렌더 스레드가 한 프레임 늦게 내므로 셋을 찍는다.
+        // 메인 루프에 든 뒤 첫 프레임들이 끝난 시각 — 시작 씬을 받는 프레임이 길다(Debug 수 초).
         constexpr uint32 kStartupFramesLogged = 3;
-        if ( _startupFrameCount >= kStartupFramesLogged )
+        if ( _startupFrameCount < kStartupFramesLogged )
+        {
+            ++_startupFrameCount;
+            SW_LOG_INFO_ID( "App.StartupFrameEndMs", "Startup frame %# ended %# ms after entering the main loop", _startupFrameCount,
+                            ( MonotonicClock::nowMicroseconds() - _mainLoopStartMicro ) / constant::time::kMicrosecondsPerMillisecond );
+        }
+        if ( _bShowWindowPending == SW_FALSE )
             return;
-        ++_startupFrameCount;
-        SW_LOG_INFO_ID( "App.StartupFrameEndMs", "Startup frame %# ended %# ms after the window was shown", _startupFrameCount,
-                        ( MonotonicClock::nowMicroseconds() - _mainLoopStartMicro ) / constant::time::kMicrosecondsPerMillisecond );
+        // 활성 씬이 선 프레임 다음 프레임이 끝나면 그 씬의 첫 그림이 나와 있다(렌더 스레드가 한 프레임 늦게 낸다). 그때 스플래시를 닫고 주 창을 띄운다.
+        const bool bSceneActive = engine::getSubsystem<SceneManager>().getActiveScene() != nullptr;
+        if ( bSceneActive && _bActiveSceneSeen == SW_TRUE )
+        {
+            _bShowWindowPending = SW_FALSE;
+            if ( SplashSubsystem* const pSplashHost = engine::findSubsystem<SplashSubsystem>() ) // 선택: 렌더러 없는 구성은 스플래시가 없다
+                pSplashHost->getSplash().dismiss();
+            _pWindow->showWindow( true );
+            SW_LOG_INFO_ID( "App.MainWindowShownMs", "Main window shown %# ms after entering the main loop (first scene drawn)",
+                            ( MonotonicClock::nowMicroseconds() - _mainLoopStartMicro ) / constant::time::kMicrosecondsPerMillisecond );
+        }
+        _bActiveSceneSeen = bSceneActive ? SW_TRUE : SW_FALSE;
     }
 
     FramePacingInputs App::makeFramePacingInputs() const
@@ -558,7 +579,7 @@ namespace sw
         _backendSwitcher.applyIfPending();
 
         _launch.getEngine().endFrame();
-        logStartupFrame();
+        onStartupFrameEnded();
         // 배경이면 상한 주기까지, 최소화면 창 메시지가 올 때까지 잔다. 다른 상태는 바로 다음 프레임이다.
         framePacer.endFrame( *_pWindow );
         return true;

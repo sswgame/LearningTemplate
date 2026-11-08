@@ -109,8 +109,8 @@ namespace sw
         void logMainLoopStart() const;
         /** @brief 시동 요약 한 줄(단계별 ms · 오래 걸린 서브시스템)을 남깁니다. 창을 띄운 뒤에 부릅니다. */
         void logStartupPhases( const StartupTimings& timings ) const;
-        /** @brief 창이 뜬 뒤 첫 프레임들이 끝난 시각을 로그로 남깁니다(빈 창으로 보이는 시간의 진단). */
-        void logStartupFrame();
+        /** @brief 첫 프레임들이 끝난 시각을 로그로 남기고, 첫 그림이 나왔으면 스플래시를 닫고 주 창을 띄웁니다. */
+        void onStartupFrameEnded();
         /** @brief 이번 프레임의 페이싱 입력을 모읍니다. 에디터가 이번 프레임의 다시 그릴 까닭을 정한 뒤에 부릅니다. */
         [[nodiscard]] FramePacingInputs makeFramePacingInputs() const;
         /**
@@ -162,12 +162,14 @@ namespace sw
         FramePacer* _pFramePacer;
         /// @brief `initialize` 가 시작된 시각(마이크로초, `MonotonicClock`)입니다. 메인 루프에 들어갈 때 로그에 시작 시간을 찍습니다.
         int64 _initializeStartMicro;
-        /// @brief 메인 루프에 들어간 시각(창을 띄운 직후)입니다. 첫 프레임들이 끝난 시각을 이 기준으로 찍는다 — 창이 뜬 뒤 첫 그림까지(빈 창으로 보이는 시간)를 잰다.
+        /// @brief 메인 루프에 들어간 시각입니다. 첫 프레임들이 끝난 시각을 이 기준으로 찍는다 — 첫 그림까지 걸린 시간(주 창은 그 뒤에 뜬다)을 잰다.
         int64                  _mainLoopStartMicro;
         uint32                 _startupFrameCount; ///< 로그로 찍은 첫 프레임 수(`kStartupFramesLogged` 까지)
         uint8                  _bEnableEditor        : 1;
         uint8                  _bQuitAfterInitialize : 1; ///< 한 번 하고 끝나는 작업(`--render-portraits`)을 마쳤다. 루프에 들어가지 않는다.
         uint8                  _bRenderPaused        : 1; ///< 지난 틱에 표면이 없거나 앱이 멈춰 프레임을 돌지 않았다. 다시 돌 때 시계를 새로 잡는다
-        [[maybe_unused]] uint8 _reserved             : 4;
+        uint8                  _bShowWindowPending   : 1; ///< 첫 그림이 나오면 스플래시를 닫고 주 창을 띄운다(`onStartupFrameEnded`)
+        uint8                  _bActiveSceneSeen     : 1; ///< 지난 프레임 끝에 활성 씬이 있었다 — 다음 프레임 끝에 그 씬의 첫 그림이 나와 있다
+        [[maybe_unused]] uint8 _reserved             : 2;
     };
 } // namespace sw
