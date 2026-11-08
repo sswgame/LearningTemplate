@@ -1,6 +1,7 @@
 /**
- * @file GameAutoplay.h
- * @brief 게임의 자동 플레이(입력 없이 AI 가 조종 — 확인 · 녹화 · 벤치) 계약입니다. 게임이 한 줄로 등록하고, 에디터 툴바 · 콘솔 · 명령줄이 같은 스위치를 켭니다.
+ * @file Engine/Config/Dev/GameAutoplay.h
+ * @brief 게임의 자동 플레이(입력 없이 AI 가 조종 — 확인 · 녹화 · 벤치) 개발 스위치입니다. 게임이 자기 `Dev/` 에서 한 줄로 등록하고, 에디터 툴바 · 콘솔 · 명령줄이 같은 스위치를 켭니다.
+ * @details 개발 전용 소스다(Dev/ — 배포 구성이 짓지 않는다). 게임 모드는 이 헤더를 모르고 런타임 칸 `IGameAutoplayQuery` 만 읽는다 — 이 파일의 서브시스템이 그 칸을 채운다.
  */
 #pragma once
 #include "Core/Foundation/Macros.h"
@@ -26,8 +27,8 @@ namespace sw
 {
     /**
      * @class GameAutoplay
-     * @brief 지금 올라온 게임의 자동 플레이 스위치입니다. 게임 코드는 `isOn()` 하나만 묻습니다.
-     * @details 등록은 게임 .cpp 의 `SW_GAME_AUTOPLAY` 한 줄이고, 모듈을 내리면(핫 리로드) 등록도 빠집니다. 레지스트리는 Engine 에 있습니다. 둘 이상이
+     * @brief 지금 올라온 게임의 자동 플레이 스위치입니다. 게임 코드는 이것을 부르지 않고 런타임 칸 `IGameAutoplayQuery` 를 읽습니다.
+     * @details 등록은 게임 `Dev/` .cpp 의 `SW_GAME_AUTOPLAY` 한 줄이고, 모듈을 내리면(핫 리로드) 등록도 빠집니다. 레지스트리는 Engine 에 있습니다. 둘 이상이
      *          등록돼 있으면 마지막 것을 씁니다(테스트 게임은 한 번에 하나다). 이름(전역 변수 이름)이 같은 다른 등록은 거절하고, 핫 리로드가 올리는
      *          교체 이미지는 그 이름을 대체합니다(`RegistrationReloadScope` — 옛 이미지가 내려가도 새 등록이 남습니다). 게임 스레드에서만 씁니다.
      */
@@ -65,18 +66,14 @@ namespace sw
 } // namespace sw
 
 /**
- * @brief 게임의 자동 플레이를 그 전역 변수 바로 아래에서 등록합니다(`SW_TEST_GLOBAL_VARIABLE( int32, gv_x, 0, … )` 다음 줄).
+ * @brief 게임의 자동 플레이를 그 전역 변수 바로 아래에서 등록합니다(게임 `Dev/` 의 `SW_TEST_GLOBAL_VARIABLE( int32, gv_x, 0, … )` 다음 줄).
  * @param gvName       켜짐을 든 int32 전역 변수
  * @param pGameName    게임 이름(리터럴)
  * @param pDescription 무엇을 자동으로 하는가(리터럴)
  */
-#if defined( SW_SHIPPING ) // 자동 플레이는 개발 기능이다 — 켜는 변수가 Shipping 에서는 상수라(`SW_TEST_GLOBAL_VARIABLE`) 등록하지 않는다
-    #define SW_GAME_AUTOPLAY( gvName, pGameName, pDescription ) static_assert( true, "" )
-#else
-    #define SW_GAME_AUTOPLAY( gvName, pGameName, pDescription )                                                            \
-        static const ::sw::GameAutoplayRegistration sw_gameAutoplay_##gvName{ pGameName, pDescription, #gvName, &gvName }; \
-        static const ::sw::GameAutoplayRegistrar    sw_gameAutoplayRegistrar_##gvName                                      \
-        {                                                                                                                  \
-            &sw_gameAutoplay_##gvName                                                                                      \
-        }
-#endif
+#define SW_GAME_AUTOPLAY( gvName, pGameName, pDescription )                                                            \
+    static const ::sw::GameAutoplayRegistration sw_gameAutoplay_##gvName{ pGameName, pDescription, #gvName, &gvName }; \
+    static const ::sw::GameAutoplayRegistrar    sw_gameAutoplayRegistrar_##gvName                                      \
+    {                                                                                                                  \
+        &sw_gameAutoplay_##gvName                                                                                      \
+    }

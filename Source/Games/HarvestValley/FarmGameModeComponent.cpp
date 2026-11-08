@@ -2,14 +2,12 @@
 
 #include "Games/HarvestValley/FarmGameModeComponent.h"
 
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/FourCcUtil.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Config/GameAutoplay.h"
 #include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
@@ -97,13 +95,6 @@ namespace sw
         }
 
     } // namespace
-
-    /**
-     * @brief `-gv_farmAutoPlay=1`: 디렉터의 자동 농부를 켭니다(씬의 `_bAutoPlay` 가 꺼져 있어도 켭니다). 입력 없이 계절을 넘겨 보는 확인용입니다.
-     * @details 배포본으로도 돌릴 수 있다. `App -gv_farmAutoPlay=1 -gv_profileFrames=36000` 은 약 10분이며 하루 다섯 번이다.
-     */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_farmAutoPlay, 0, "HarvestValley: 농부도 AI 가 조종 (1=켜기)" );
-    SW_GAME_AUTOPLAY( gv_farmAutoPlay, "HarvestValley", "The auto farmer AI controller possesses the farmer" );
 
     SW_AUTOMATION_COMPONENT_WATCH( farmFarmerX, "Farm.FarmerX", "World X of the farmer", FarmGameModeComponent, &readFarmerX );
     SW_AUTOMATION_GETTER_WATCH( farmFarmerTool, "Farm.FarmerTool", "Tool in the farmer's hand (0 hoe, 1 watering can, 2 seeds, 3 hand)", FarmGameModeComponent, &FarmGameModeComponent::getTool );

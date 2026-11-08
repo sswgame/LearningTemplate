@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  LanternVale 두 프로세스 — 첫 접속(클라이언트). `py -3 -m Scripts net-pair mmo` 가 전용 서버(-game=LanternVale, 게임 접속 티켓 · -gv_valeMemoryProfiles=1)를 띄운 뒤 이 시나리오로 클라이언트를 돌린다.
+  LanternVale 두 프로세스 — 첫 접속(클라이언트). `py -3 -m Scripts net-pair mmo` 가 전용 서버(-game=LanternVale, 게임 접속 티켓 · 실행마다 빈 사용자 데이터 폴더 SW_USER_DATA_ROOT)를 띄운 뒤 이 시나리오로 클라이언트를 돌린다.
   로그인 → 티켓 → 암호화 UDP 접속 → 서버가 계정 진행(새 계정)을 읽어 아바타를 세움 → 짐승 둘을 세 번씩 쳐 쓰러뜨림(경험 60 씩, 동전 5 씩) → 레벨 2 → 버섯 채집(경험 15)
   → 사거리 밖 짐승은 서버가 OutOfRange(2) 로 거절 → 비신뢰 이동. 행동은 모두 반사 함수 호출(`ValeAvatarAgent` 의 Server 함수)이고 판정 · 보상은 서버가 한다.
   끝나면 앱이 나가고 서버가 연결 끝에 진행을 저장한다. 이어 `return.scenario.xml` 이 같은 계정으로 다시 붙어 같은 진행을 읽는지 본다.

@@ -3,11 +3,9 @@
 #include "Games/WildWest/WildWestGameModeComponent.h"
 
 #include "Core/Container/formatString.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Config/GameAutoplay.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -54,10 +52,6 @@ namespace sw
             }
         };
     } // namespace
-
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_wildWestAutoPlay, 0, "WildWest: 기수를 가장 가까운 말에 태운다 (1=켜기)" );
-    SW_GAME_AUTOPLAY( gv_wildWestAutoPlay, "WildWest", "The rider mounts the nearest horse" );
-
 } // namespace sw
 
 namespace sw

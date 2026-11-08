@@ -3,8 +3,8 @@
  * @brief 씬의 골짜기 오브젝트입니다 — 게임 네트워크 세션의 역할을 보고 서버면 `ValeServerLink`, 클라이언트면 `ValeClientLink` 를 세웁니다.
  * @details 역할은 실행 인자 · 서버 설정이 정한다(`GameNetSession`). 전용 서버(`Server -game=LanternVale -server-config=…`)가 골짜기를 돌리고,
  *          클라이언트는 로그인 뒤 게임 접속 티켓으로 붙는다(`net.ticketconnect` — 서버는 티켓의 계정으로 진행을 읽는다). 세션이 없으면(혼자 띄운 App) 규칙만 확인하고 쉰다.
- *          진행 저장소는 서버 사용자 데이터 폴더 아래 `_profileFolder` 의 파일이다. 두 프로세스 시나리오는 `-gv_valeMemoryProfiles=1` 로 서버 메모리에 둔다(한 번의 서버 실행
- *          안에서 저장 → 재접속 읽기는 그대로 지나고, 실행마다 새로 시작한다 — `py -3 -m Scripts net-pair mmo`).
+ *          진행 저장소는 서버 사용자 데이터 폴더 아래 `_profileFolder` 의 파일이다. 두 프로세스 시나리오는 서버의 사용자 데이터 폴더(`SW_USER_DATA_ROOT`)를 실행마다 빈 폴더로
+ *          옮긴다(한 번의 서버 실행 안에서 저장 → 재접속 읽기는 그대로 지나고, 실행마다 새로 시작한다 — `py -3 -m Scripts net-pair mmo`).
  *          개발 명령 `vale.*` 과 감시 값 `LanternVale.*` 가 시나리오의 손이다(`game/lanternvale/automation/`).
  */
 #pragma once

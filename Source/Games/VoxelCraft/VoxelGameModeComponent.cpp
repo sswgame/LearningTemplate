@@ -2,11 +2,9 @@
 
 #include "Games/VoxelCraft/VoxelGameModeComponent.h"
 
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/FourCcUtil.h"
 
-#include "Engine/Config/GameAutoplay.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Rendering/MeshComponent.h"
@@ -42,10 +40,6 @@ namespace sw
             }
         };
     } // namespace
-
-    /** @brief `-gv_voxelAutoPlay=1` 이면 씬의 `_bAutoPlay` 가 꺼져 있어도 디렉터의 자동 플레이를 켭니다. 걷기, 점프, 부수기, 놓기를 AI 가 합니다. */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_voxelAutoPlay, 0, "VoxelCraft: 걷기 · 부수기 · 놓기도 AI 가 (1=켜기)" );
-    SW_GAME_AUTOPLAY( gv_voxelAutoPlay, "VoxelCraft", "Walk, break and place blocks by AI" );
 } // namespace sw
 
 namespace sw

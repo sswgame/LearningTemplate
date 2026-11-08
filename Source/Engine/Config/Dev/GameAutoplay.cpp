@@ -1,15 +1,18 @@
 #include "pch.h"
 
-#include "Engine/Config/GameAutoplay.h"
+#include "Engine/Config/Dev/GameAutoplay.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/RegistrationList.h"
+#include "Core/Subsystem/ISubsystem.h"
 
+#include "Engine/Config/IGameAutoplayQuery.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 
 namespace sw
 {
@@ -104,4 +107,42 @@ namespace sw
 
     SW_DEV_COMMAND( Autoplay, "autoplay", "autoplay [on|off]", "Show or switch the game's autoplay (AI drives the player - SW_GAME_AUTOPLAY)",
                     &runAutoplay );
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 런타임 칸 `IGameAutoplayQuery` 의 구현입니다 — 등록된 개발 스위치를 읽습니다. */
+    class GameAutoplayQuery final : public IGameAutoplayQuery
+    {
+    public:
+        [[nodiscard]] bool isGameAutoplayOn() const override { return GameAutoplay::isOn(); }
+    };
+
+    /**
+     * @class GameAutoplaySubsystem
+     * @brief 개발 구성에서 런타임 칸 `IGameAutoplayQuery` 를 채우는 서브시스템입니다. 배포 구성은 이 파일을 짓지 않아 칸이 비고, 게임 모드는 씬 데이터만 본다.
+     * @details 창구는 멤버로 들고 `exposeMember` 로 건다(다중 상속을 두지 않는다).
+     */
+    class GameAutoplaySubsystem final : public ISubsystem
+    {
+    public:
+        static constexpr const utf8* kSubsystemName = "GameAutoplaySubsystem";
+
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
+        IGameAutoplayQuery& getQuery() { return _query; }
+
+    private:
+        GameAutoplayQuery _query;
+    };
+
+    SW_ENGINE_SUBSYSTEM( GameAutoplaySubsystem, Services, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
+    {
+        (void)build;
+        GameAutoplaySubsystem& subsystem = scope.emplaceSubsystem<GameAutoplaySubsystem>();
+        const bool             bExposed  = scope.exposeMember<IGameAutoplayQuery>( subsystem, subsystem.getQuery() );
+        SW_ASSERT( bExposed );
+        (void)bExposed;
+    } );
 } // namespace sw

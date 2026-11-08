@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/Empty/Client/StressTestScene.h"
+#include "Games/Empty/Client/Dev/StressTestScene.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
@@ -50,9 +50,9 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/MaterialTintCache.h"
 
-#include "Games/Empty/Client/StressTestCombatComponent.h"
-#include "Games/Empty/Client/StressTestMoverComponent.h"
-#include "Games/Empty/Client/StressTestSceneSettings.h"
+#include "Games/Empty/Client/Dev/StressTestCombatComponent.h"
+#include "Games/Empty/Client/Dev/StressTestMoverComponent.h"
+#include "Games/Empty/Client/Dev/StressTestSceneSettings.h"
 
 namespace sw
 {

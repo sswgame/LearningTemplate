@@ -3,7 +3,6 @@
 #include "Games/StarSkirmish/SkirmishGameModeComponent.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/XorShift32.h"
 #include "Core/String/FourCcUtil.h"
@@ -12,7 +11,6 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Config/GameAutoplay.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
@@ -192,13 +190,6 @@ namespace sw
             }
         };
     } // namespace
-
-    /**
-     * @brief `-gv_skirmishAutoPlay=1`: 디렉터를 컴퓨터 대 컴퓨터(러시 대 운영)로 엽니다(씬의 `_bAutoPlay` 가 꺼져 있어도 엽니다). 입력 없이 승패까지 가므로 확인과 화면 녹화에 씁니다.
-     * @details 배포본으로도 돌릴 수 있게 남겨 둔다. `App -gv_skirmishAutoPlay=1` 로 실행하면 30초마다 `[Skirmish] t=.. p0 workers .. army ..` 가, 끝에는 승패가 로그에 남는다.
-     */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_skirmishAutoPlay, 0, "StarSkirmish: 두 플레이어 모두 AI 로 돌리기 (1=켜기)" );
-    SW_GAME_AUTOPLAY( gv_skirmishAutoPlay, "StarSkirmish", "Both players are AI" );
 
     SW_AUTOMATION_COMPONENT_WATCH( skirmishSelectedCount, "Skirmish.SelectedCount", "Units in the human selection", SkirmishGameModeComponent, &readSelectedCount );
     SW_AUTOMATION_COMPONENT_WATCH( skirmishSelectedMovingCount, "Skirmish.SelectedMovingCount", "Selected units whose current order is a move", SkirmishGameModeComponent, &readSelectedMovingCount );
