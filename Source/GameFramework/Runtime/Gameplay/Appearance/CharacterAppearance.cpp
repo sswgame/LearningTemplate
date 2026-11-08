@@ -169,6 +169,12 @@ namespace sw
                     {
                         readEquip( child, outDef, report, sourceName );
                     }
+                    else if ( StringUtil::equals( pName, "SkinLayer" ) )
+                    {
+                        SkinLayerValue layer;
+                        if ( layer.readFromXML( child, report, sourceName ) )
+                            outDef._listSkinLayer.push_back( layer );
+                    }
                     else if ( StringUtil::equals( pName, "SocketOverride" ) )
                     {
                         (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrSocketAttribute, report, sourceName );
@@ -527,6 +533,10 @@ namespace sw
         {
             Internal::writeSocketOverride( outNode, socketOverride );
         }
+        for ( const SkinLayerValue& layer : def._listSkinLayer )
+        {
+            layer.writeToXML( outNode.appendChild( "SkinLayer" ) );
+        }
         return true;
     }
 
@@ -568,6 +578,8 @@ namespace sw
                 outMerged._schema = level._schema;
             if ( level._bodyProfile.empty() == false )
                 outMerged._bodyProfile = level._bodyProfile;
+            if ( level._listSkinLayer.empty() == false )
+                outMerged._listSkinLayer = level._listSkinLayer;
             CharacterAppearanceInternal::replaceIfGiven( outMerged._listBodyType, level._listBodyType );
             CharacterAppearanceInternal::replaceIfGiven( outMerged._listBodyShape, level._listBodyShape );
             CharacterAppearanceInternal::replaceIfGiven( outMerged._listFace, level._listFace );
@@ -655,6 +667,7 @@ namespace sw
         outSpec._face               = Internal::pickName( merged._listFace, seed, Internal::kKeyFace );
         outSpec._bodyVisual         = Internal::pickName( merged._listBody, seed, Internal::kKeyBody );
         outSpec._listSocketOverride = merged._listSocketOverride;
+        outSpec._listSkinLayer      = merged._listSkinLayer;
         Internal::pickCustomization( merged, schemas, seed, outSpec );
 
         for ( const AppearanceSlotDef& slotDef : slotTable.getSlots() )

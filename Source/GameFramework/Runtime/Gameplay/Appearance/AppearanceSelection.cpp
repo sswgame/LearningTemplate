@@ -412,9 +412,10 @@ namespace sw
             outReason = presetID.empty() ? "a preset needs an id" : "a partial selection (only some categories) cannot become a preset";
             return false;
         }
-        outDef._id     = presetID;
-        outDef._parent = selection._basePresetID;
-        outDef._schema = selection._schema;
+        outDef._id            = presetID;
+        outDef._parent        = selection._basePresetID;
+        outDef._schema        = selection._schema;
+        outDef._listSkinLayer = selection._listSkinLayer;
         if ( selection._bodyType.empty() == false )
             outDef._listBodyType.push_back( selection._bodyType );
         if ( selection._bodyShape.empty() == false )

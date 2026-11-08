@@ -109,6 +109,13 @@ namespace sw
          * @details 층 UV = R(−θ) · (피부 UV − 이동) ÷ 크기 + 0.5. 대칭 짝은 피부 UV 의 u 를 1 − u 로 뒤집어 같은 식을 쓴다(층 UV 의 u 도 뒤집어 거울상).
          */
         float2 toLayerUV( const float2& skinUV, bool bMirrorCopy ) const;
+        /**
+         * @brief 프리셋의 `<SkinLayer layer color opacity offset scale rotation mirror hidden/>` 하나를 읽습니다(NPC 화장 · 문신). 적지 않은 칸은 이 형식의 초기값이다.
+         * @return 층 이름이 없으면 false 이고 오류는 @p report 에 있다.
+         */
+        [[nodiscard]] bool readFromXML( const XMLNode& node, AppearanceLoadReport& report, string_view sourceName );
+        /** @brief `readFromXML` 이 같은 값으로 다시 읽는 원소로 씁니다. */
+        void writeToXML( const XMLNode& node ) const;
     };
 } // namespace sw
 

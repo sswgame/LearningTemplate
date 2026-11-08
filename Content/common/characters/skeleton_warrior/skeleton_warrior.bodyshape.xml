@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- KayKit 해골 리그(41 관절)의 몸 채널 매핑 — 아이템 · 몸 프로필은 채널 이름에만 값을 적고, 이 파일이 이 스켈레톤의 본으로 옮긴다(다른 스켈레톤은 자기 파일).
+     Heel.Height(m): 발목을 굽히고 골반을 굽 높이만큼 올린다. footLiftAxis 라 발 디딤 IK 가 발바닥을 땅 + 이 값에 둔다(RigBodyInput::getFootLift).
+     회전은 makeFromYawPitchRoll 순서의 도다 — 발 뼈의 앞축이 무엇인지에 따라 성분이 바뀌므로 각은 시나리오 사진(bodydynamics)으로 맞춘다.
+     이 리그에 없는 몸(가슴 · 꼬리)의 채널은 Unsupported 로 선언한다 — 선언 없이 오면 오류다. -->
+<BodyShapeSet footLiftAxis="Heel.Height">
+  <Axis name="Heel.Height" min="0" max="0.12" default="0">
+    <Positive>
+      <Bone name="foot.l" rotation="0 -30 0"/>
+      <Bone name="foot.r" rotation="0 -30 0"/>
+      <Bone name="hips" offset="0 0.12 0"/>
+    </Positive>
+  </Axis>
+  <Axis name="Shoulder.Width" min="-1" max="1" default="0">
+    <Positive><Bone name="chest" scale="1.15 1 1"/></Positive>
+    <Negative><Bone name="chest" scale="0.9 1 1"/></Negative>
+  </Axis>
+  <Axis name="Waist.Width" min="-1" max="1" default="0" response="1.5">
+    <Positive><Bone name="spine" scale="1.12 1 1.08"/></Positive>
+    <Negative><Bone name="spine" scale="0.88 1 0.92"/></Negative>
+  </Axis>
+  <Unsupported name="Bust.Compression"/>
+  <Unsupported name="Bust.Lift"/>
+  <Unsupported name="Hair.Length"/>
+</BodyShapeSet>

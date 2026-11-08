@@ -102,6 +102,8 @@ namespace sw
         uint32 getLastStepCount() const { return _lastStepCount; }
         /** @brief 입자의 월드 위치입니다. */
         const vector<float3>& getParticles() const { return _listPosition; }
+        /** @brief 지난 시뮬레이션의 애니메이션 자세(월드)입니다. 입자와의 차이가 흔들림이다(지글 감시 값 · 진단). */
+        const vector<float3>& getAnimatedPositions() const { return _listAnimated; }
         /**
          * @brief 루트 다음 입자들에 월드 속도(m/s)를 더합니다(맞음 · 착지 충격). 베를레 입자라 이전 위치를 속도 × @p fixedStep 만큼 뒤로 옮긴다. 시뮬레이션 상태가 없으면 아무것도 하지 않는다.
          * @details 끝으로 갈수록 크게(입자 번호 / (수 − 1)) 준다 — 뿌리는 몸에 붙어 있고 끝이 흔들린다.

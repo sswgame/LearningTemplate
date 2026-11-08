@@ -512,6 +512,11 @@ namespace sw
                 _report.addErrorWithID( "Appearance.SchemaUnknown", "%# names unknown schema '%#'", where, preset._schema.c_str() );
             if ( preset._bodyProfile.empty() == false && _bodyProfiles.findProfile( preset._bodyProfile ) == nullptr )
                 _report.addErrorWithID( "Appearance.BodyProfileUnknown", "%# names unknown body profile '%#'", where, preset._bodyProfile.c_str() );
+            for ( const SkinLayerValue& layer : preset._listSkinLayer )
+            {
+                if ( _skinLayers.findLayer( layer._layer ) == nullptr )
+                    _report.addErrorWithID( "Appearance.SkinLayerUnknown", "%# names unknown skin layer '%#'", where, layer._layer.c_str() );
+            }
             const CustomizationSchemaDef* pSchema = _schemas.findSchema( merged._schema );
             // 몸 외형의 구간 별칭도 캐릭터 스키마의 머티리얼 드라이브(피부 화장 · 홍채 · 머리 색)가 고른다.
             for ( const hashed_string& bodyVisual : merged._listBody )

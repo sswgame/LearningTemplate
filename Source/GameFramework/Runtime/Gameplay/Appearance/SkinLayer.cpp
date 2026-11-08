@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -17,6 +18,8 @@ namespace sw
     {
         struct SkinLayerInternal
         {
+            static constexpr const utf8* kArrValueAttribute[] = { "layer", "color", "opacity", "offset", "scale", "rotation", "mirror", "hidden" };
+
             static float32 quantizeUnit( float32 value, uint32 steps )
             {
                 return static_cast<float32>( static_cast<uint32>( MathUtil::saturate( value ) * static_cast<float32>( steps ) + 0.5f ) ) / static_cast<float32>( steps );
@@ -89,6 +92,39 @@ namespace sw
         const float2  rotated{ local._x * cosine - local._y * sine, local._x * sine + local._y * cosine };
         const float2  layerUV{ rotated._x / MathUtil::max( _scale._x, kMinScale ) + 0.5f, rotated._y / MathUtil::max( _scale._y, kMinScale ) + 0.5f };
         return bMirrorCopy ? float2{ 1.0f - layerUV._x, layerUV._y } : layerUV;
+    }
+
+    bool SkinLayerValue::readFromXML( const XMLNode& node, AppearanceLoadReport& report, string_view sourceName )
+    {
+        (void)AppearanceXMLUtil::reportUnknownAttributes( node, SkinLayerInternal::kArrValueAttribute, report, sourceName );
+        _layer = AppearanceXMLUtil::readRequiredName( node, "layer", report, sourceName );
+        AppearanceXMLUtil::readOptionalFloat4( node, "color", _color, report, sourceName );
+        AppearanceXMLUtil::readOptionalFloat( node, "opacity", 0.0f, 1.0f, _opacity, report, sourceName );
+        SkinLayerInternal::readOptionalFloat2( node, "offset", _offset, report, sourceName );
+        SkinLayerInternal::readOptionalFloat2( node, "scale", _scale, report, sourceName );
+        AppearanceXMLUtil::readOptionalFloat( node, "rotation", -kMaxRotation, kMaxRotation, _rotationDegrees, report, sourceName );
+        _bMirror = StringUtil::equals( node.getAttributeText( "mirror" ), "true" ) ? SW_TRUE : SW_FALSE;
+        _bHidden = StringUtil::equals( node.getAttributeText( "hidden" ), "true" ) ? SW_TRUE : SW_FALSE;
+        return _layer.empty() == false;
+    }
+
+    void SkinLayerValue::writeToXML( const XMLNode& node ) const
+    {
+        const string color   = formatToString( "%# %# %# %#", _color._x, _color._y, _color._z, _color._w );
+        const string opacity = formatToString( "%#", _opacity );
+        const string offset  = formatToString( "%# %#", _offset._x, _offset._y );
+        const string scale   = formatToString( "%# %#", _scale._x, _scale._y );
+        const string angle   = formatToString( "%#", _rotationDegrees );
+        node.appendAttribute( "layer", _layer.c_str() );
+        node.appendAttribute( "color", color.c_str() );
+        node.appendAttribute( "opacity", opacity.c_str() );
+        node.appendAttribute( "offset", offset.c_str() );
+        node.appendAttribute( "scale", scale.c_str() );
+        node.appendAttribute( "rotation", angle.c_str() );
+        if ( _bMirror == SW_TRUE )
+            node.appendAttribute( "mirror", "true" );
+        if ( _bHidden == SW_TRUE )
+            node.appendAttribute( "hidden", "true" );
     }
 
     bool SkinLayerDef::isInsideRegion( const float2& skinUV ) const

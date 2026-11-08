@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  몸 동작(CharacterBodyDynamicsComponent) — 무대 maps/bodycustomization(해골 Dancer, 외형 BodyDemoWarrior · 몸 프로필 BodyDemoWarrior).
+  ① 굽 높이: 몸 프로필의 Heel.Height 층 0.08 m 가 체형 축 footLiftAxis 를 지나 발 들림이 된다(발 디딤 IK 입력).
+  ② 동공 — 날씨 · 그늘: 맑은 열린 하늘은 작고, 흐림(skyLight 0.2)은 천천히 넓어지고(넓힘 τ 3 s), 지붕 아래(Hut)는 더 넓고, 다시 해로 나가면 빨리 좁아진다(좁힘 τ 0.3 s).
+  ③ 지글: 위로 친 충격이 몸통 끝을 애니메이션 자세에서 밀었다가 감쇠로 돌아온다.
+  ④ 눈물: 울기(body.fluid Cry 3 s)가 눈물 자국을 올리고, 눈물 길 아래 마스카라 층이 묽어지며(번짐), 멈추면 자국이 마른다.
+  값으로 판정한다(골든 없음 — 사진 한 장은 굽 · 지글 각을 눈으로 맞출 때 쓴다). 실행: App -scenario=game/empty/automation/bodydynamics.scenario.xml -unattended
+-->
+<Scenario name="game.empty.bodydynamics" fixedDelta="0.0166667" timeoutFrames="5400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/bodycustomization.scene.xml"/>
+	<Wait frames="20"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Wait frames="30"/>
+
+	<!-- ① 굽 높이 -->
+	<Expect watch="Body.FootLift" target="Dancer" near="0.08" tolerance="0.001"/>
+
+	<!-- ② 동공 — 맑음 · 열린 하늘 -->
+	<DevCommand line="cheat.weather clear"/>
+	<Wait frames="240"/>
+	<Expect watch="Body.EyeLuminance" target="Dancer" atLeast="1.2"/>
+	<Expect watch="Body.PupilSize" target="Dancer" atMost="0.25"/>
+	<!-- 흐림 — 직사광이 줄어 넓어진다(느리게) -->
+	<DevCommand line="cheat.weather overcast"/>
+	<Wait frames="60"/>
+	<Expect watch="Body.PupilSize" target="Dancer" atMost="0.33"/>
+	<WaitUntil watch="Body.PupilSize" target="Dancer" atLeast="0.38" timeoutSeconds="12"/>
+	<!-- 지붕 아래 — 해가 가려 주변광만 -->
+	<DevCommand line="cheat.weather clear"/>
+	<DevCommand line="object.place Dancer -8 0.05 0"/>
+	<Wait frames="30"/>
+	<Expect watch="Body.EyeLuminance" target="Dancer" atMost="0.3"/>
+	<WaitUntil watch="Body.PupilSize" target="Dancer" atLeast="0.55" timeoutSeconds="15"/>
+	<!-- 다시 해 — 빨리 좁아진다 -->
+	<DevCommand line="object.place Dancer 0 0.05 0"/>
+	<WaitUntil watch="Body.PupilSize" target="Dancer" atMost="0.25" timeoutSeconds="2"/>
+
+	<!-- ③ 지글 — 충격 뒤 흔들리고 가라앉는다 -->
+	<Wait frames="60"/>
+	<DevCommand line="body.impulse Dancer 0 3 0"/>
+	<WaitUntil watch="Body.JiggleDisplacement" target="Dancer" atLeast="0.01" timeoutSeconds="1"/>
+	<WaitUntil watch="Body.JiggleDisplacement" target="Dancer" atMost="0.02" timeoutSeconds="5"/>
+
+	<!-- ④ 눈물과 마스카라 번짐 -->
+	<Expect watch="Body.FluidWetness" target="Dancer" atMost="0.01"/>
+	<Expect watch="Body.SmearDilution" target="Dancer" atMost="0.001"/>
+	<DevCommand line="body.fluid Dancer Cry 3 1"/>
+	<WaitUntil watch="Body.FluidWetness" target="Dancer" atLeast="0.5" timeoutSeconds="3"/>
+	<WaitUntil watch="Body.SmearDilution" target="Dancer" atLeast="0.05" timeoutSeconds="4"/>
+	<Wait frames="240"/>
+	<WaitUntil watch="Body.FluidWetness" target="Dancer" atMost="0.6" timeoutSeconds="8"/>
+	<Pass/>
+</Scenario>

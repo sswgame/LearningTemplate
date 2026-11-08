@@ -222,6 +222,10 @@ namespace sw
         uint32 getFitResultRevision() const { return _fitResultRevision; }
         /** @brief 체형 축(`bodyShapes` 의 축 값 = 꾸미기 `BoneProportion` 드라이브)이 정한 본 비율입니다. 단계 작업이 몸 포즈 위에 겹칩니다. 비어 있으면 비율이 없습니다. */
         const BoneProportion& getBodyProportion() const { return _bodyProportion; }
+        /** @brief 체형 축 데이터의 발 들림 축(`footLiftAxis` — 굽 높이 채널)이 정한 발 들림(m)입니다. 몸 동작(`CharacterBodyDynamicsComponent`)이 발 디딤 IK 입력으로 넘긴다. */
+        float32 getFootLift() const { return _footLift; }
+        /** @brief 이 컴포넌트가 조립에 쓰는 외형 데이터입니다(미리보기 데이터, 아니면 게임 서비스). 없으면 nullptr 입니다. */
+        const AppearanceDatabase* findDatabase() const;
         /** @brief 지금 스폰해 둔 부품 오브젝트입니다. */
         void collectPartObjects( vector<GameObjectHandle>& outListObject ) const;
         /**
@@ -405,6 +409,7 @@ namespace sw
         BoneProportion                                 _bodyProportion;             ///< 체형 축이 정한 본 비율(`applyBodyShapes`)
         vector<BodyMorphWeight>                        _listShapeMorph;             ///< 체형 축이 정한 몸 모프 가중치 — 구울 때 해석의 모프에 더한다
         shared_ptr<const BodyShapeSet>                 _bodyShapeSet;               ///< 쥐고 있는 체형 축 데이터(핫 리로드 판정)
+        float32                                        _footLift;                   ///< 발 들림 축 값(m, `applyBodyShapes`)
         AssetReloadWatch<BodyShapeSet>                 _shapeReload;                ///< `applyBodyShapes` 가 본 `SharedAssetCache<BodyShapeSet>` 의 다시 읽은 횟수
         AppearanceSocketRig                            _rig;
         AppearanceSocketSetCache                       _socketCache;

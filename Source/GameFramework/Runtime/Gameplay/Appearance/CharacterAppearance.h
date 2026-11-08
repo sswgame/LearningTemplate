@@ -63,6 +63,7 @@ namespace sw
         vector<CharacterAppearanceValueDef> _listValue{};
         vector<CharacterAppearanceSlotDef>  _listSlot{};
         vector<AppearanceSocketOverride>    _listSocketOverride{};
+        vector<SkinLayerValue>              _listSkinLayer{}; ///< 피부 층(`<SkinLayer>` — NPC 화장 · 문신). 적으면 부모의 층 목록을 통째로 바꾼다(쌓는 순서가 뜻이다)
         vector<hashed_string>               _listSet{};
         PROPERTY( Name = "bodyType" )
         vector<hashed_string> _listBodyType{}; ///< 후보
