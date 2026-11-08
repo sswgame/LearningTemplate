@@ -8,7 +8,6 @@
 
 | 항목 | 지금 | 막는 것 | 풀 모양 |
 | --- | --- | --- | --- |
-| `Engine/Profiling/Tracy/TracyProfilerBackend` → DevTools/Profiling/Tracy | `ProfilerBackend::startTracy` 가 Tracy 출력을 직접 만든다 | `ProfilerBackend` 의 정적 칸(지점 표 · 이름 저장소 · 활성 출력)은 프로세스 수명 바닥이라 그대로 둔다(`Config/Dev/MutableStaticExceptions.json`) — 엔진이 Tracy 형식을 아는 것만 남았다 | `startTracy` 를 지우고 DevTools `ProfilerLaunchSwitches` · 에디터 "Tracy 열기" 가 `TracyProfilerBackend` 를 만들어 `ProfilerBackend::setActiveBackend` 로 꽂는다 |
 | `App/RuntimeUIHost` · `App/UserSettingsHost` → Engine(UI · UserSettings) | 엔진 헤더만 쓰는 엔진 일인데 App 에 있다 | `Engine/Engine.h`(층 8)를 받아 서비스를 꺼낸다 — 층 6 폴더가 못 본다 | `Engine&` 대신 필요한 서비스(UISystem · UserSettingsManager · RenderThread · IWindow)를 인자로 받게 한 뒤 옮긴다 |
 | 엔진 쪽 `Dev/` 예외(`Config/Dev/FolderLayout.json` `_devFolderAllowed`) | ModuleManager/Dev · Host/Dev · App/Dev · GF GameData/Dev · Graphics/Material/Dev (+ 게임 Dev/ 는 영구) | DevTools 가 볼 수 없는 모듈 안(TargetLayers devtools 게이트), ModuleManager 는 정적 라이브러리(DevTools.dll 로 옮기면 상태가 둘), 머티리얼 그래프는 REFLECT 에셋(DevTools 에 리플렉션 단계가 없다) | ModuleManager 를 공유 라이브러리로(언리얼 HotReload 처럼 공유 모듈 관리자 위 Developer 모듈), DevTools 에 리플렉션 단계를 더하면 핫 리로드 · 머티리얼 그래프가 DevTools 로 간다 |
 | 약어 `OK`, `gv_` 이름의 소문자 약어(`gv_editorUiScale` · `gv_meshLodForce`) | 그대로 | `OK` 는 약어 목록에 넣을지 정하지 않았다(`_bOk` 103 곳). `gv_` 이름은 명령줄 데이터(NamingCpp: 철자 유지) | `OK` 를 목록에 넣으면 같은 커밋에 전수로 |
