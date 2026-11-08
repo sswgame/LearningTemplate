@@ -948,11 +948,16 @@ namespace sw
                 // 보간의 출발점 — 지금 보이던 포즈(직전 프레임의 결과)다.
                 if ( _lodState._bInterpolate == SW_TRUE && _effectiveDivisor > 1 )
                     _interpolationFrom = _localPose;
-                _localPose.setToReference( *_skeleton );
-                // 모프 가중치도 포즈와 같이 새로 만든다 — 일들(커브 · 얼굴)이 이 단계와 후처리 단계에서 더한다.
-                std::fill( _listMorphWeight.begin(), _listMorphWeight.end(), 0.0f );
                 // 리더는 의존이라 이 유닛보다 먼저 모든 단계를 마쳤다(`AnimationDependencyEdge`) — 부착 · 후처리(체형 비율 · IK)까지 적용된 최종 로컬 포즈를 읽는다.
                 const SkeletalMeshComponent* pLeader = findLeaderPose();
+                // 포즈를 만드는 쪽(작업 · 리더)이 없으면 들고 있는 포즈(외부 · 되감기 · 잔상 고정 포즈)가 답이다 — 더러움은 모델 공간 · 팔레트를 다시 구하라는 뜻일 뿐
+                // 레퍼런스로 덮으라는 뜻이 아니다(덮으면 잔상 사본이 바인드 포즈로 보였다). 리셋 직후의 포즈는 이미 레퍼런스다(resetPoseBuffers).
+                if ( pLeader != nullptr || _listTask.empty() == false )
+                {
+                    _localPose.setToReference( *_skeleton );
+                    // 모프 가중치도 포즈와 같이 새로 만든다 — 일들(커브 · 얼굴)이 이 단계와 후처리 단계에서 더한다.
+                    std::fill( _listMorphWeight.begin(), _listMorphWeight.end(), 0.0f );
+                }
                 if ( pLeader != nullptr )
                     copyLeaderPose( *pLeader );
                 runTasks( phase );
