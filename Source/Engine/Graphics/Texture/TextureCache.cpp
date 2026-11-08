@@ -331,6 +331,7 @@ namespace sw
         : AssetCacheBase{ CacheTracking::counted( kAssetKindName ) }
         , _impl{ sw::make_shared<Impl>() }
         , _renderTargetDeclarationSink{ *this }
+        , _cpuTextureSerial{ 0 }
     {
     }
 
@@ -721,6 +722,14 @@ namespace sw
     bool TextureCache::isCPUTexturePath( string_view relativePath )
     {
         return StringUtil::startsWith( relativePath, string_view{ kCPUTexturePrefix }, true );
+    }
+
+    string TextureCache::makeUniqueCPUTexturePath( string_view stem )
+    {
+        string path{ kCPUTexturePrefix };
+        path += stem;
+        path += to_string( _cpuTextureSerial.fetch_add( 1u, std::memory_order_relaxed ) );
+        return path;
     }
 
     bool TextureCache::createCPUTexture( string_view relativePath, uint32 width, uint32 height, vector<uint8> rgbaBytes )

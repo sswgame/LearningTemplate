@@ -19,29 +19,22 @@ namespace sw
 {
     namespace
     {
-        /** @brief 프로세스 고유 번호 발급기 — 상태가 아니라 번호 공간이다(상수 초기화라 정적 초기화 순서와 무관하다). 함수 정적에 숨기지 않고 파일 범위에 둔다. */
-        atomic<uint32> s_profilerTimelineNextGeneration{ 1 };
-    } // namespace
-
-    namespace
-    {
         struct ProfilerTimelineInternal
         {
             /** @brief 사건 칸의 슬롯 · 깊이를 한 칸에 담을 때 깊이를 올리는 비트 수입니다. */
             static constexpr uint32 kDepthShift = 32;
-
-            /** @brief 타임라인마다 고유 번호를 나눠 줍니다(0 은 "캐시 없음"). */
-            static uint32 allocateGeneration()
-            {
-                return s_profilerTimelineNextGeneration.fetch_add( 1, std::memory_order_relaxed );
-            }
         };
 
-        /** @brief 이 스레드가 마지막으로 쓴 타임라인의 버퍼입니다. 세대가 다르면(다른 타임라인) 다시 찾는다. */
+        /**
+         * @brief 이 스레드가 마지막으로 쓴 타임라인의 버퍼입니다. 맞는지는 타임라인 쪽 표로 확인한다 — 타임라인 주소 · 슬롯 · 버퍼가 모두 같고 그 버퍼의 주인이 이 스레드여야 쓴다.
+         * @details 프로세스 고유 세대 번호(전역 발급기)로 가리지 않는다: 지워진 타임라인 자리에 새 타임라인이 서도 새 표의 그 슬롯에는 낡은 버퍼 주소가 없거나 다른 스레드의 버퍼다.
+         *          낡은 `_pBuffer` 는 따라가지 않고 주소만 맞댄다(언리얼 트레이스의 스레드 버퍼도 스레드 지역 포인터를 쓰고 소유 표로 검증한다 — 기억에 의존).
+         */
         struct ThreadBufferCache
         {
-            uint32 _generation{ 0 };
-            void*  _pBuffer{ nullptr };
+            const void* _pOwner{ nullptr };
+            uint32      _slot{ 0 }; ///< `_arrThreadBuffer` 의 칸. 슬롯이 모자라 기록하지 않는 스레드면 `kMaxThread`
+            void*       _pBuffer{ nullptr };
         };
         thread_local ThreadBufferCache t_threadBufferCache{};
     } // namespace
@@ -70,7 +63,6 @@ namespace sw
         , _arrFrameBeginNanos{}
         , _frameWriteCount{ 0 }
         , _threadCount{ 0 }
-        , _generation{ ProfilerTimelineInternal::allocateGeneration() }
         , _bRecording{ SW_FALSE }
 #if !defined( SW_SHIPPING )
         , _longLimit{ 0 }
@@ -93,20 +85,31 @@ namespace sw
 
     ProfilerTimeline::ThreadBuffer* ProfilerTimeline::ensureThreadBuffer()
     {
-        ThreadBufferCache& cache = t_threadBufferCache;
-        if ( cache._generation == _generation )
-            return static_cast<ThreadBuffer*>( cache._pBuffer );
-
-        // 캐시가 다른 타임라인을 가리킨다. 이 스레드의 버퍼가 이미 있으면 그것을 쓴다(스레드 하나가 타임라인 둘을 오가도 슬롯이 늘지 않게).
-        cache._generation                   = _generation;
-        cache._pBuffer                      = nullptr;
+        ThreadBufferCache&    cache         = t_threadBufferCache;
         const std::thread::id currentThread = std::this_thread::get_id();
-        const uint32          registered    = MathUtil::min( _threadCount.load( std::memory_order_acquire ), kMaxThread );
+        if ( cache._pOwner == this )
+        {
+            if ( cache._slot < kMaxThread )
+            {
+                ThreadBuffer* pCached = _arrThreadBuffer[cache._slot].load( std::memory_order_acquire );
+                if ( pCached != nullptr && pCached == cache._pBuffer && pCached->_ownerThread == currentThread )
+                    return pCached;
+            }
+            else if ( _threadCount.load( std::memory_order_acquire ) >= kMaxThread )
+                return nullptr; // 슬롯이 모자라 이 스레드는 기록하지 않는다
+        }
+
+        // 캐시가 다른(또는 지워진 자리에 새로 선) 타임라인을 가리킨다. 이 스레드의 버퍼가 이미 있으면 그것을 쓴다(스레드 하나가 타임라인 둘을 오가도 슬롯이 늘지 않게).
+        cache._pOwner           = this;
+        cache._slot             = kMaxThread;
+        cache._pBuffer          = nullptr;
+        const uint32 registered = MathUtil::min( _threadCount.load( std::memory_order_acquire ), kMaxThread );
         for ( uint32 bufferIndex = 0; bufferIndex < registered; ++bufferIndex )
         {
             ThreadBuffer* pExisting = _arrThreadBuffer[bufferIndex].load( std::memory_order_acquire );
             if ( pExisting != nullptr && pExisting->_ownerThread == currentThread )
             {
+                cache._slot    = bufferIndex;
                 cache._pBuffer = pExisting;
                 return pExisting;
             }
@@ -127,6 +130,7 @@ namespace sw
         else
             pBuffer->_name = string( "Thread " ) + to_string( index );
         _arrThreadBuffer[index].store( pBuffer, std::memory_order_release );
+        cache._slot    = index;
         cache._pBuffer = pBuffer;
         return pBuffer;
     }
