@@ -211,18 +211,18 @@ namespace sw::editor
         return direction;
     }
 
-    int32 ModifierGizmoLogic::findMirrorIndex2D( int32 index, int32 countX, int32 countY, uint32 axisIndex )
+    optional<int32> ModifierGizmoLogic::findMirrorIndex2D( int32 index, int32 countX, int32 countY, uint32 axisIndex )
     {
         const bool bInvalidMirrorIndex = countX <= 0 || countY <= 0 || index < 0 || index >= countX * countY;
         if ( bInvalidMirrorIndex )
-            return -1;
+            return nullopt;
         const int32 indexX = index % countX;
         const int32 indexY = index / countX;
         if ( axisIndex == 0 )
             return ( countX - 1 - indexX ) + countX * indexY;
         if ( axisIndex == 1 )
             return indexX + countX * ( countY - 1 - indexY );
-        return -1;
+        return nullopt;
     }
 
     float3 ModifierGizmoLogic::applyRotationDelta( const float3& eulerDegree, uint32 axisIndex, float32 deltaDegree )

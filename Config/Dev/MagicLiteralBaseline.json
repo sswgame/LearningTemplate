@@ -936,7 +936,7 @@
     "Source/GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifierGPUProgram.cpp": {"minus-one": 2},
     "Source/GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifierNoise.h": {"float": 6, "hex": 7},
     "Source/GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifierStack.cpp": {"minus-one": 3},
-    "Source/GameFramework/Plugin/Editor/MeshModifiers/Stack/ModifierGizmoLogic.cpp": {"minus-one": 3, "float": 1},
+    "Source/GameFramework/Plugin/Editor/MeshModifiers/Stack/ModifierGizmoLogic.cpp": {"minus-one": 1, "float": 1},
     "Source/GameFramework/Runtime/Character/AI/AIDebugSections.cpp": {"minus-one": 1, "integer": 1},
     "Source/GameFramework/Runtime/Character/AI/AIPerception.cpp": {"float": 1},
     "Source/GameFramework/Runtime/Character/AI/BehaviorTree.cpp": {"minus-one": 11, "float": 1},

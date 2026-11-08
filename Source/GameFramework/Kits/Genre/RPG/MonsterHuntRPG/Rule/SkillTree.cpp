@@ -146,10 +146,10 @@ namespace sw
         _points = 0; // 랭크만 비우면 다시 시작한 캐릭터가 앞 판의 남은 점수를 들고 간다
     }
 
-    int32 SkillTreeState::findIndex( const hashed_string& skillID ) const
+    optional<int32> SkillTreeState::findIndex( const hashed_string& skillID ) const
     {
         if ( _pTree == nullptr )
-            return constant::invalid_index::kInt32;
+            return nullopt;
         for ( size_t index = 0; index < _pTree->_listSkill.size(); ++index )
         {
             if ( _pTree->_listSkill[index]._id == skillID )
@@ -160,8 +160,8 @@ namespace sw
 
     int32 SkillTreeState::getRank( const hashed_string& skillID ) const
     {
-        const int32 index = findIndex( skillID );
-        return index >= 0 ? _listRank[static_cast<size_t>( index )] : 0;
+        const optional<int32> index = findIndex( skillID );
+        return index.has_value() ? _listRank[static_cast<size_t>( *index )] : 0;
     }
 
     int32 SkillTreeState::getSpentPoints() const
@@ -176,9 +176,10 @@ namespace sw
 
     SkillResult SkillTreeState::evaluateRankUp( const hashed_string& skillID, int32 characterLevel ) const
     {
-        const int32 index = findIndex( skillID );
-        if ( index < 0 )
+        const optional<int32> found = findIndex( skillID );
+        if ( found.has_value() == false )
             return SkillResult::UnknownSkill;
+        const int32     index = *found;
         const SkillDef& skill = _pTree->_listSkill[static_cast<size_t>( index )];
         const int32     rank  = _listRank[static_cast<size_t>( index )];
         if ( rank >= skill._maxRank )
@@ -262,7 +263,7 @@ namespace sw
         const SkillResult result = evaluateRankUp( skillID, characterLevel );
         if ( result != SkillResult::Ok )
             return result;
-        const int32 index = findIndex( skillID );
+        const int32 index = findIndex( skillID ).value(); // 위의 검사가 기술을 확인했다
         _points -= _pTree->_listSkill[static_cast<size_t>( index )]._cost;
         ++_listRank[static_cast<size_t>( index )];
         return SkillResult::Ok;
@@ -270,9 +271,10 @@ namespace sw
 
     SkillResult SkillTreeState::rankDown( const hashed_string& skillID )
     {
-        const int32 index = findIndex( skillID );
-        if ( index < 0 || _listRank[static_cast<size_t>( index )] <= 0 )
+        const optional<int32> found = findIndex( skillID );
+        if ( found.has_value() == false || _listRank[static_cast<size_t>( *found )] <= 0 )
             return SkillResult::UnknownSkill;
+        const int32     index   = *found;
         const SkillDef& skill   = _pTree->_listSkill[static_cast<size_t>( index )];
         const int32     newRank = _listRank[static_cast<size_t>( index )] - 1;
         for ( size_t other = 0; other < _listRank.size(); ++other )
