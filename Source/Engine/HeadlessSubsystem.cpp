@@ -169,7 +169,7 @@ namespace sw
                 (void)commandLine.getArgument( CommandLineArgument::PACK_DIR, params._packOutputDir ); // 비면 cookAllPacks 가 오류로 멈춘다
                 params._shaderFolder = shaderFolder;
                 params._buildTarget  = bDedicatedServer ? "Server" : "Client";
-                // 자동화 없는 배포(`SW_ENABLE_AUTOMATION=OFF`)는 실행기가 스스로 등록하지 않는다 — 그 구성이 굽는 팩에는 시나리오를 담지 않는다.
+                // 실행기가 없는 구성(Shipping · 전용 서버)은 실행기가 스스로 등록하지 않는다 — 그 구성이 굽는 팩에는 시나리오를 담지 않는다.
                 params._automationContent = engine::findSubsystem<IAutomationRuntime>() != nullptr ? PackAutomationContent::Included : PackAutomationContent::Excluded;
                 // 출시 문화권(`stagedCultures`) 밖의 번역 테이블은 팩에 넣지 않는다 — 규칙은 로컬라이제이션 층이 갖고 쿠커는 목록만 받는다.
                 string localizationError;
@@ -295,7 +295,7 @@ namespace sw
              */
             [[nodiscard]] static bool runTestTask( CommandLineManager& commandLine, HeadlessTaskState& inoutState )
             {
-#if SW_TESTS_ENABLED
+#if !defined( SW_SHIPPING )
                 bool bTest = false;
                 if ( commandLine.getArgument( CommandLineArgument::TEST, bTest ) == false || bTest == false )
                     return false;
@@ -565,7 +565,7 @@ namespace sw
         {
             // 백엔드마다 실행을 시킨 실행은 실행기 없이 결과를 낼 수 없다 — 이유를 남기고 실패로 끝낸다(폴백 없음).
             inoutState.enterHeadless();
-            SW_LOG_ERROR_ID( "Headless.ScenarioBackendsNeedsBuild", "-scenario-backends needs a build with SW_ENABLE_AUTOMATION=ON (this build has no automation runtime)" );
+            SW_LOG_ERROR_ID( "Headless.ScenarioBackendsNeedsBuild", "-scenario-backends needs a development build (Debug or Release) - Shipping has no automation runner" );
             inoutState._bFailed = SW_TRUE;
             return true;
         }

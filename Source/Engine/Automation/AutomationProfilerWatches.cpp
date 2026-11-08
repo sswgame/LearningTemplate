@@ -9,7 +9,7 @@
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/ProfilerTraceExport.h"
 
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
 namespace sw
 {
     namespace

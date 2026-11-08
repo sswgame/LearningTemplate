@@ -30,7 +30,7 @@ namespace sw::editor
         , _bTimelineFrozen{ SW_FALSE }
         , _bTimelineZoomed{ SW_FALSE }
         , _bCallTreeFrozen{ SW_FALSE }
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
         , _loadedTrace{}
         , _listDraw{}
         , _listLoadedFrameDraw{}
@@ -94,14 +94,14 @@ namespace sw::editor
         if ( _bTimelineFrozen == SW_FALSE && timeline.collectRecentFrames( _frameCount, _listThread, _windowBegin, _windowEnd ) == false )
             _listThread.clear();
         followWindow();
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
         composeDraw();
 #endif
         _listFrameBegin.clear();
         if ( getDrawThreads().empty() )
             return;
         timeline.collectFrameBegins( _viewBegin, _viewEnd, _listFrameBegin );
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
         if ( _bLoadedTrace == SW_TRUE )
         {
             for ( const uint64 frameBegin : _listLoadedFrameDraw )
@@ -115,7 +115,7 @@ namespace sw::editor
 
     const vector<ProfilerTimelineThread>& ProfilerTimelineModel::getDrawThreads() const
     {
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
         return _bLoadedTrace == SW_TRUE ? _listDraw : _listThread;
 #else
         return _listThread;
@@ -124,7 +124,7 @@ namespace sw::editor
 
     const vector<string>* ProfilerTimelineModel::getLoadedSlotNames() const
     {
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
         return _bLoadedTrace == SW_TRUE ? &_loadedTrace._listSlotName : nullptr;
 #else
         return nullptr;
@@ -148,7 +148,7 @@ namespace sw::editor
         _bTimelineZoomed = SW_TRUE;
     }
 
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
     void ProfilerTimelineModel::saveTrace( const FrameProfiler& profiler ) const
     {
         string     savedPath;

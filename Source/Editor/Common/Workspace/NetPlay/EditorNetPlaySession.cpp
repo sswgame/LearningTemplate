@@ -69,7 +69,7 @@ namespace sw::editor
             /** @brief 로그 출력이 사건 줄 다음에 붙이는 소스 위치 줄의 머리입니다. */
             static constexpr const utf8* kSourceLocationPrefix = " -> ";
             /** @brief 트레이스 파일 확장자입니다. `ProfilerTraceExport::kFileExtension` 과 같은 값을 따로 둡니다. 트레이스가 빠진 빌드에도 이름은 있어야 하기 때문입니다. */
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
             static constexpr const utf8* kTraceExtension = ProfilerTraceExport::kFileExtension;
 #else
             static constexpr const utf8* kTraceExtension = ".trace.json";
@@ -178,7 +178,7 @@ namespace sw::editor
         static string mergeTraces( const EditorNetPlayStopInput& input )
         {
             string mergedPath;
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
             if ( input._traceDirectory.empty() )
                 return mergedPath;
             vector<ProfilerTraceMergeInput> listInput;
@@ -431,7 +431,7 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "NetPlay.NoFreeUDPPort", "No free UDP port for the multiplayer session" );
             return false;
         }
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
         if ( settings._bRecordTraces )
         {
             _traceDirectory = settings._traceDirectory.empty()

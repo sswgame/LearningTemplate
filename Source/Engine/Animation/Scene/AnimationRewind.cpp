@@ -13,7 +13,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/SceneManager.h"
 
-#if SW_ANIMATION_REWIND_ENABLED
+#if !defined( SW_SHIPPING )
 
     #include "Core/GlobalVariable/GlobalVariableManager.h"
     #include "Core/Math/MathUtil.h"

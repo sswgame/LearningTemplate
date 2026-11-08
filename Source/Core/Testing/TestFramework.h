@@ -30,12 +30,6 @@
 #include <type_traits>
 #include <utility>
 
-#if !defined( SW_SHIPPING )
-    #define SW_TESTS_ENABLED 1
-#else
-    #define SW_TESTS_ENABLED 0
-#endif
-
 namespace sw::test
 {
     /** @brief 케이스 본문 함수입니다. */
@@ -272,7 +266,7 @@ namespace sw::test
     SW_API bool checkCondition( bool bPassed, const utf8* pExpression, const utf8* pFile, int32 line );
 } // namespace sw::test
 
-#if SW_TESTS_ENABLED
+#if !defined( SW_SHIPPING )
     /**
      * @brief 케이스 하나를 정의합니다 — `SW_TEST_CASE( Base64UtilTest, RoundTrips ) { … }`(기능 폴더의 `Tests/` 파일, 파일 범위). 이름은 `<스위트>.<케이스>` 입니다.
      * @details 끝에 옵션을 붙일 수 있다: `SW_TEST_CASE( A, B, ._tags = "slow", ._timeoutSeconds = 60 )`.

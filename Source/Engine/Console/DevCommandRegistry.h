@@ -15,7 +15,6 @@
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
 
-#include "Engine/Console/DevCommandsEnabled.h"
 #include "Engine/Module/ModuleEntryRegistrar.h"
 
 namespace sw
@@ -103,7 +102,7 @@ namespace sw
     using DevCommandRegistrar = ModuleEntryRegistrar<DevCommandRegistry, const DevCommandRegistration*>;
 } // namespace sw
 
-#if SW_DEV_COMMANDS_ENABLED
+#if !defined( SW_SHIPPING )
 
 /**
  * @brief 개발 명령을 기능의 `.cpp` 에서 등록합니다(언리얼 `FAutoConsoleCommand` 처럼 기능 옆에 둔다).

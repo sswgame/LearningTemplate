@@ -472,7 +472,7 @@ namespace sw
             RenderThread::requestScreenshot( FileUtil::joinPath( directory, kScreenshotFileName ) );
         if ( inputs._logFilePath.empty() == false && FileUtil::copyFile( inputs._logFilePath, FileUtil::joinPath( directory, kLogFileName ) ) == false )
             SW_LOG_WARNING_ID( "BugReport.BugreportLogFileCould", "bugreport: the log file could not be copied" );
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
         if ( inputs._pFrameProfiler != nullptr )
         {
             // 타임라인 기록이 켜져 있었으면 최근 프레임의 시간축을 같이 담는다(꺼져 있으면 조용히 건너뛴다).

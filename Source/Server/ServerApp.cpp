@@ -485,7 +485,7 @@ namespace sw
             const int64 tickStart = MonotonicClock::nowNanoseconds();
             updateOnce( deltaSeconds );
             const int64 tickTime = MonotonicClock::nowNanoseconds() - tickStart;
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
             // 느린 틱 자동 캡처(`-gv_traceSlowTickMs`)는 꺼져 있으면 정수 비교 하나다. Shipping 서버에는 없다(지표 `server_tick_seconds` 만 있다).
             ProfilerTraceExport::updateSlowFrameCapture( engine::getSubsystem<FrameProfiler>(), static_cast<uint64>( tickStart ),
                                                          static_cast<uint64>( tickStart + tickTime ), "Server" );

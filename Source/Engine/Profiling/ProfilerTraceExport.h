@@ -1,7 +1,7 @@
 /**
  * @file ProfilerTraceExport.h
  * @brief `ProfilerTimeline` 의 사건을 Chrome Trace Event 형식(JSON)으로 바꾸고 저장합니다. `chrome://tracing` 과 Perfetto UI 가 읽습니다.
- * @note Shipping 에서는 통째로 빠집니다(`SW_PROFILER_TRACE_ENABLED` 0 — 헤더는 비고 소스도 컴파일되지 않는다).
+ * @note Shipping 에서는 통째로 빠집니다(`SW_SHIPPING` — 헤더는 비고 소스도 컴파일되지 않는다).
  * @details 변환은 저장하는 순간에만 합니다 — 링 버퍼를 복사해 문자열로 바꾸므로 프레임당 비용이 없습니다.
  *          구간은 완전 이벤트(`X`, 시작 · 길이 마이크로초), 스레드 · 프로세스 이름은 메타 이벤트(`M`), 프레임 경계는 인스턴트 이벤트(`i`)입니다.
  *          파일 머리말(`otherData`)에 저장 시점의 벽시계와 단조 시계 쌍 · 호스트 이름을 남겨, 프로세스마다 저장한 파일을 `mergeTraceJSON` 이
@@ -16,7 +16,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Connection/NetFlowLog.h"
 
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
 
 namespace sw
 {
@@ -202,4 +202,4 @@ namespace sw
     };
 } // namespace sw
 
-#endif // SW_PROFILER_TRACE_ENABLED
+#endif // !SW_SHIPPING

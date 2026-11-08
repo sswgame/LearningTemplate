@@ -102,7 +102,7 @@ namespace sw
         vector<string> _listPattern; ///< 리소스 id 패턴(`game/*/maps/**`)
 
         PROPERTY( Required )
-        bool _bAutomationOnly{ SW_FALSE }; ///< 참이면 자동화 실행기가 있는 구성(`SW_ENABLE_AUTOMATION=ON`)만 담는다 — 시나리오는 실행기가 없으면 읽히지 않는다
+        bool _bAutomationOnly{ SW_FALSE }; ///< 참이면 자동화 실행기가 있는 구성(개발 구성 클라이언트)만 담는다 — 시나리오는 실행기가 없으면 읽히지 않는다
     };
 
     /**

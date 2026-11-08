@@ -4,7 +4,7 @@
 
 #include "Core/Container/VectorUtil.h"
 
-#if SW_NET_FLOW_LOG_ENABLED
+#if !defined( SW_SHIPPING )
 
     #include "Core/Hash/HashUtil.h"
     #include "Core/Foundation/StdHeaders.h"
@@ -106,4 +106,4 @@ namespace sw
     }
 } // namespace sw
 
-#endif // SW_NET_FLOW_LOG_ENABLED
+#endif // !SW_SHIPPING

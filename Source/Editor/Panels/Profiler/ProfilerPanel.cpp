@@ -101,7 +101,7 @@ namespace sw::editor
                 return ImGui::GetColorU32( EditorColorUtil::toImVec4( Color{ red, green, blue, 1.0f } ) );
             }
 
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
             /**
              * @brief 프레임 단계 — 멀티 프로세스 재생이 Stop 뒤에 합친 트레이스를 Profiler 창 Timeline 탭에 한 번 엽니다.
              * @details 멈추는 길(툴바 · Session 탭 · `netplay.stop`)이 셋이고 툴바(GUI 층)는 이 창(Panels 층)을 include 하지 못하므로, 창이 닫혀 있어도 도는 단계에서 묻는다.
@@ -260,7 +260,7 @@ namespace sw::editor
 namespace sw::editor
 {
     SW_EDITOR_PANEL( ProfilerPanel, ProfilerPanel::kPanelID, EditorPanelCategory::Core, 500 );
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
     // 패널보다 앞 — 이번 프레임에 연 창이 그대로 그려진다(`EditorFrameStepOrder::kCommands` 와 같은 위치).
     SW_EDITOR_FRAME_STEP( ProfilerOpenMergedNetPlayTrace, "profiler.openMergedNetPlayTrace", EditorFrameStepOrder::kCommands + 10,
                           &ProfilerPanelInternal::openMergedNetPlayTrace );
@@ -301,7 +301,7 @@ namespace sw::editor
                 drawScopeTab( ProfilerScopeKind::Counter );
                 ImGui::EndTabItem();
             }
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
             const ImGuiTabItemFlags timelineFlags = _timeline.consumeTimelineTabRequest() ? ImGuiTabItemFlags_SetSelected : ImGuiTabItemFlags_None;
 #else
             constexpr ImGuiTabItemFlags timelineFlags = ImGuiTabItemFlags_None;
@@ -465,7 +465,7 @@ namespace sw::editor
         if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "Fit" ) ) )
             _timeline.fit();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "Fit" ) );
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "SaveTrace" ) ) );
         if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "SaveTrace" ) ) )
             _timeline.saveTrace( profiler );
@@ -495,7 +495,7 @@ namespace sw::editor
         drawTimelineCanvas( listDraw, _timeline.getLoadedSlotNames() );
     }
 
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
     bool ProfilerPanel::openTraceInTimeline( EditorPanelManager& panelManager, string_view path )
     {
         ProfilerPanel* pPanel = panelManager.findPanel<ProfilerPanel>();
@@ -608,7 +608,7 @@ namespace sw::editor
         ImDrawList*          pDrawList = ImGui::GetWindowDrawList();
         pDrawList->PushClipRect( ImVec2{ geometry._trackLeft, geometry._origin.y }, ImVec2{ geometry._origin.x + geometry._totalWidth, geometry._origin.y + geometry._totalHeight }, true );
         const ProfilerTimelineRect* pHoveredRect = nullptr;
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
         uint32 searchMatched{ 0 };
 #endif
         for ( const ProfilerTimelineRect& rect : _timeline.getRects() )
@@ -618,7 +618,7 @@ namespace sw::editor
             const ImVec2                 maxPoint{ geometry._trackLeft + rect._x1, minPoint.y + geometry._laneHeight - 1.0f };
             const utf8*                  pName     = ProfilerTimelineModel::findSlotName( pProfiler, pLoadedSlotName, event._slot );
             ImU32                        slotColor = ProfilerPanelInternal::computeSlotColor( event._slot );
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
             // 검색어가 있으면 일치하는 구간만 또렷하게 두고 나머지는 흐리게 한다.
             if ( _timeline.matchesTraceSearch( pName ) )
                 ++searchMatched;
@@ -636,7 +636,7 @@ namespace sw::editor
             if ( bUnderMouse )
                 pHoveredRect = &rect;
         }
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
         _timeline.setTraceSearchMatchCount( searchMatched );
 #endif
         // 프레임 경계는 세로선으로 그린다.

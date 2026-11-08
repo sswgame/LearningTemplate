@@ -66,12 +66,6 @@ endif()
 # 생성기 식이라 다중 구성 생성기에서도 그 구성의 이름이 된다.
 target_compile_definitions(sw_global_options INTERFACE "SW_BUILD_CONFIG_NAME=\"$<IF:$<BOOL:${SW_SHIPPING_BUILD}>,Shipping,$<CONFIG>>\"")
 
-# 자동화 런타임 유무(`SW_ENABLE_AUTOMATION`) — 실행기 자체는 Engine 이 `Automation/Runner/` 를 빼서 사라지고(찾는 쪽이 없음을 다룬다), 이 매크로는 실행기가 있는 개발 구성을 알린다.
-# Shipping 은 늘 끈다(`cmake/Config/BuildOptions.cmake`) — 기능 폴더의 자동화 등록은 `Engine/Automation/Watch/AutomationHooksEnabled.h` 가 `SW_SHIPPING` 으로 끈다.
-if(SW_ENABLE_AUTOMATION)
-	target_compile_definitions(sw_global_options INTERFACE SW_WITH_AUTOMATION)
-endif()
-
 # 빌드 타깃 종류(SW_TARGET_TYPE) — 코드는 이 둘과 `sw::build::kTargetName` 만 읽는다(`Core/Foundation/BuildInfo.h` · `TargetMacroCheck.h`).
 #   SW_WITH_CLIENT_CODE : Game · Client — 창 · 렌더 · 입력 장치 · 오디오 장치 코드
 #   SW_WITH_SERVER_CODE : Game · Server — 서버 코드

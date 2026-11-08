@@ -9,7 +9,7 @@
 
 #include "Engine/Console/DebugHUDRegistry.h"
 
-#if SW_DEV_COMMANDS_ENABLED
+#if !defined( SW_SHIPPING )
 
 namespace sw
 {

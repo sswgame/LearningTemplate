@@ -2,7 +2,7 @@
  * @file AutomationRuntime.h
  * @brief 자동화 실행기(`Automation/Runner`)가 스스로 공개하는 창구 `IAutomationRuntime` 입니다.
  * @details 실행기 세션이 엔진 이미지의 모듈 서브시스템으로 엔진 범위에 서며 이 인터페이스를 공개한다(`SW_MODULE_SUBSYSTEM`). 호스트(App)와 헤드리스 작업은
- *          `engine::findSubsystem<IAutomationRuntime>()` 으로 찾기만 한다 — 실행기를 짓지 않은 구성(`SW_ENABLE_AUTOMATION=OFF`)은 등록이 없어 nullptr 이고,
+ *          `engine::findSubsystem<IAutomationRuntime>()` 으로 찾기만 한다 — 실행기를 짓지 않은 구성(Shipping · 전용 서버)은 등록이 없어 nullptr 이고,
  *          그 실행이 `-scenario` 를 받았으면 찾는 쪽이 기동 오류로 멈춘다. 빈 구현 파일을 두지 않는다(`docs/agents/BuildConfigSwitch.md`).
  */
 #pragma once

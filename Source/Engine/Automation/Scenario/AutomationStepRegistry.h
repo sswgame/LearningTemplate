@@ -7,8 +7,6 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Automation/Watch/AutomationHooksEnabled.h"
-
 namespace sw
 {
     struct AutomationStep;
@@ -239,7 +237,7 @@ namespace sw
     };
 } // namespace sw
 
-#if SW_AUTOMATION_HOOKS_ENABLED
+#if !defined( SW_SHIPPING )
 
     /**
      * @brief 단계 종류를 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). 모양이 다른 단계도 이 매크로 하나이고, 다른 점은 @p options 에만 적습니다.
@@ -311,4 +309,4 @@ namespace sw
         [[maybe_unused]] static constexpr auto sw_automationFinishBlockerDescribeUnused_##id = pDescribe
     #define SW_AUTOMATION_CAPTURE_BLOCKER( id, pName, pIsBlocking ) [[maybe_unused]] static constexpr auto sw_automationCaptureBlockerUnused_##id = pIsBlocking
 
-#endif // SW_AUTOMATION_HOOKS_ENABLED
+#endif // !SW_SHIPPING

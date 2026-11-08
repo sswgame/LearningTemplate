@@ -119,7 +119,7 @@ namespace sw
              */
             static const AutomationStep* findStepMissingFromThisBuild( [[maybe_unused]] const AutomationScenario& scenario )
             {
-#if SW_DEV_COMMANDS_ENABLED
+#if !defined( SW_SHIPPING )
                 return nullptr;
 #else
                 for ( const AutomationStep& step : scenario.getSteps() )

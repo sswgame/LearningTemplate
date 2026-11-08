@@ -2,21 +2,14 @@
  * @file AnimationRewind.h
  * @brief 애니메이션 되감기 기록기 — 유닛 · 스프라이트 애니메이터마다 최근 몇 초의 포즈(압축) · 그래프 상태 · 알림 · 커브 · 루트 모션을 고리 버퍼에 둡니다.
  * @details 언리얼 Rewind Debugger(Animation Insights)의 자리입니다. 기본은 꺼져 있고(`-gv_animationRewind=1` · 콘솔 `anim.rewind on` · 에디터 패널),
- *          Shipping 에서는 통째로 빠집니다(`SW_ANIMATION_REWIND_ENABLED`). 기록은 평가가 끝난 뒤 게임 스레드에서 하고, 되감기(`setScrubTime`)
+ *          Shipping 에서는 통째로 빠집니다(`#if !defined( SW_SHIPPING )`). 기록은 평가가 끝난 뒤 게임 스레드에서 하고, 되감기(`setScrubTime`)
  *          동안 `AnimationSystem` 은 평가를 멈추고 기록된 포즈를 유닛에 겁니다.
  */
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-/** @brief 되감기 기록기가 컴파일되는 구성이면 1 입니다. Shipping 은 0 이고 기록기 · 명령 · 패널이 모두 빠집니다. */
-#if defined( SW_SHIPPING )
-    #define SW_ANIMATION_REWIND_ENABLED 0
-#else
-    #define SW_ANIMATION_REWIND_ENABLED 1
-#endif
-
-#if SW_ANIMATION_REWIND_ENABLED
+#if !defined( SW_SHIPPING )
 
     #include "Engine/Foundation/ComponentHandle.h"
     #include "Core/Container/string.h"

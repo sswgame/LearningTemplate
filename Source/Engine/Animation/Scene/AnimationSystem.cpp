@@ -150,7 +150,7 @@ namespace sw
         , _groupSyncScratch{}
         , _lodSettings{}
         , _crowd{}
-#if SW_ANIMATION_REWIND_ENABLED
+#if !defined( SW_SHIPPING )
         , _rewind{}
         , _rewindScratchPose{}
         , _bRewindApplied{ SW_FALSE }
@@ -653,7 +653,7 @@ namespace sw
     void AnimationSystem::endEvaluationFrame( float32 deltaSeconds )
     {
         _crowd.endFrame();
-#if SW_ANIMATION_REWIND_ENABLED
+#if !defined( SW_SHIPPING )
         recordRewindFrame();
         _rewind.endFrame( deltaSeconds );
 #else
@@ -665,7 +665,7 @@ namespace sw
     {
         SW_PROFILE_SCOPE( "GT.Animation.evaluate" );
         flushSingletonRemoval();
-#if SW_ANIMATION_REWIND_ENABLED
+#if !defined( SW_SHIPPING )
         // 되감기: 요청(콘솔 · 패널 · -gv_animationRewind)을 따르고, 되감는 동안에는 평가 대신 기록된 포즈를 건다.
         _rewind.syncWithRequest();
         if ( _rewind.isScrubbing() )
@@ -717,7 +717,7 @@ namespace sw
         endEvaluationFrame( deltaSeconds );
     }
 
-#if SW_ANIMATION_REWIND_ENABLED
+#if !defined( SW_SHIPPING )
     void AnimationSystem::recordRewindFrame()
     {
         if ( _rewind.isEnabled() == false )

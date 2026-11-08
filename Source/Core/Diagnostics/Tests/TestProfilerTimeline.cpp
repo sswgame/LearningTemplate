@@ -130,7 +130,7 @@ SW_TEST_CASE( ProfilerTimelineTest, NothingIsRecordedWhileOff )
     SW_EXPECT_EQUAL( 0u, timeline.countActiveThreads( 4 ) );
 }
 
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
 
 /**
  * @brief [ProfilerTimelineTest] 긴 캡처는 링이 넘치는 양도 처음부터 담고, 예산을 넘으면 거기서 멈춰 잘림 표지를 남긴다
@@ -252,4 +252,4 @@ SW_TEST_CASE( ProfilerTimelineTest, NetFlowsAreKeptOnlyWhileATimelineRecords )
     SW_EXPECT_TRUE( listFlow.empty() );
 }
 
-#endif // SW_PROFILER_TRACE_ENABLED
+#endif // !SW_SHIPPING

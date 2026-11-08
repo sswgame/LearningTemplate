@@ -35,7 +35,6 @@
 #include "Engine/Config/GameSelection.h"
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Config/PackEngineSettings.h"
-#include "Engine/Console/DevCommandsEnabled.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/Pack/PackManager.h"
 #include "Engine/CoreServices/CommandLineSubsystem.h"
@@ -318,7 +317,7 @@ namespace sw
             _netFrameSubscription = _frameHooks.add( engine::getSubsystem<GameNetSession>().makeClientHostFrameHooks() );
 
         _profileSession.begin();
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
         ProfilerTraceExport::startExitCapture( engine::getSubsystem<FrameProfiler>() ); // `-gv_traceSaveOnExit` — 없으면 아무것도 하지 않는다
 #endif
 
@@ -337,7 +336,7 @@ namespace sw
 
     void Engine::shutdown( SubsystemScope& hostScope )
     {
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
         // 종료 트레이스(`-gv_traceSaveOnExit`)는 서비스 · 프로파일러가 아직 있을 때 쓴다. 기동이 서비스 표 전에 멈췄으면 쓸 것이 없다.
         if ( engine::areEngineServicesBound() && _headlessState.isHeadless() == false )
             ProfilerTraceExport::finishExitCapture( engine::getSubsystem<FrameProfiler>(), _hostRole == EngineHostRole::DedicatedServer ? "Server" : "App" );
@@ -621,7 +620,7 @@ namespace sw
     void Engine::endFrame()
     {
         engine::getSubsystem<FrameProfiler>().endFrame();
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
         ProfilerTraceExport::updateRecording( engine::getSubsystem<FrameProfiler>() ); // `profile.trace record` 의 끝 시각 확인(진행 중이 아니면 atomic 하나)
 #endif
         // 외부 프로파일러(Tracy)의 주 프레임 경계 — 게임 스레드 프레임이다.

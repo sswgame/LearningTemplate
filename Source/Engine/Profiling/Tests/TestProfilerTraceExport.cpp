@@ -6,7 +6,7 @@
 #include "Engine/Profiling/ProfilerTraceExport.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
 
 namespace
 {
@@ -454,4 +454,4 @@ SW_TEST_CASE( ProfilerTraceExportTest, NetFlowsAreWrittenAsBoundFlowEvents )
     SW_EXPECT_TRUE( sw::ProfilerTraceExport::parseTraceJSON( json, trace, error ) );
 }
 
-#endif // SW_PROFILER_TRACE_ENABLED
+#endif // !SW_SHIPPING

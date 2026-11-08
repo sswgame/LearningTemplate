@@ -38,7 +38,7 @@ namespace sw
      *          할당마다 콜스택을 잡으므로 느립니다. 숫자를 읽는 용도이지 프레임 시간을 같이 측정하는 용도가 아닙니다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_profileAllocSites, 0, "측정 구간의 할당을 콜스택별로 세어 상위 N 곳을 보고 (0=끄기)" );
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
     /**
      * @brief `-gv_profileTracePath=<경로>`: 측정 창(워밍업 뒤 ~ 보고) 전체를 트레이스로 저장합니다(비면 끄기).
      * @details 성능 회귀 스크립트가 진 게임을 한 번 더 돌려 "어느 스레드의 어느 구간이 늘었나" 를 볼 파일을 남길 때 씁니다.
@@ -105,7 +105,7 @@ namespace sw
             CacheStats::markWindowStart(); // 캐시 적중 · 실패는 워밍업(첫 로드가 모두 실패)을 빼고 센다
             SW_LOG_INFO_ID( "FrameProfileSession.DiscardedWarmupFramesMeasuring", "[Profile] Discarded %# warmup frames. Measuring %# frames from now.", kWarmupFrames,
                             _frameTarget );
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
             if ( gv_profileTracePath.empty() == false )
             {
                 string reply;
@@ -140,7 +140,7 @@ namespace sw
         reportHitches();
         fillReport( profiler, frames, elapsedMicro );
         reportAllocations( frames );
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
         if ( gv_profileTracePath.empty() == false )
             (void)ProfilerTraceExport::finishRecording( profiler ); // 저장 경로 · 실패 이유는 finishRecording 이 로그로 남긴다
 #endif

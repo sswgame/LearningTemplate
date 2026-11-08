@@ -45,7 +45,7 @@ namespace sw::editor
                 }
                 case 4:
                 {
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
                     outValue = static_cast<float64>( pPanel->getLoadedTraceThreadCount() );
 #else
                     outValue = 0.0;
@@ -54,7 +54,7 @@ namespace sw::editor
                 }
                 case 5:
                 {
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
                     outValue = static_cast<float64>( pPanel->getTraceSearchMatchCount() );
 #else
                     outValue = 0.0;

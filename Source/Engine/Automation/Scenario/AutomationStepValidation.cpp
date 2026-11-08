@@ -68,7 +68,7 @@ namespace sw
         if ( step._kind == AutomationEnvironmentSteps::kDevCommandKind )
         {
             const string* pLine = step.findAttribute( "line" );
-#if SW_DEV_COMMANDS_ENABLED
+#if !defined( SW_SHIPPING )
             vector<string> listToken;
             if ( pLine != nullptr )
                 listToken = StringUtil::splitQuotedTokens( *pLine );

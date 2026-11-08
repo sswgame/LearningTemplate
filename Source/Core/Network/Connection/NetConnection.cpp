@@ -271,7 +271,7 @@ namespace sw
 
     void NetConnection::recordFlow( NetChannelType channel, uint64 wireIndex, const uint8* pData, size_t size, bool bReceive ) const
     {
-#if SW_NET_FLOW_LOG_ENABLED
+#if !defined( SW_SHIPPING )
         if ( _bFlowIdentity == SW_FALSE )
             return;
         // 보낸 쪽이 서버인가 — 보낼 때는 이쪽, 받을 때는 상대다.

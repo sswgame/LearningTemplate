@@ -162,7 +162,7 @@ namespace sw
     {
         if ( _bPlaying == SW_FALSE || _bPaused == SW_TRUE )
             return;
-#if SW_ANIMATION_REWIND_ENABLED
+#if !defined( SW_SHIPPING )
         // 되감는 동안에는 흐르지 않는다 — 애니메이션 시스템이 기록된 프레임을 건다.
         if ( _pAnimationSystem != nullptr && _pAnimationSystem->getRewind().isScrubbing() )
             return;

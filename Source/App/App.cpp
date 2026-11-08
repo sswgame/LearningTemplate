@@ -260,7 +260,7 @@ namespace sw
         string     value;
         const bool bAsked = commandLineManager.getArgument( CommandLineArgument::SCENARIO, value ) || commandLineManager.getArgument( CommandLineArgument::SCENARIO_RECORD, value );
         if ( bAsked )
-            SW_LOG_ERROR_ID( "App.ScenarioScenarioRecordNeed", "-scenario / -scenario-record need a build with SW_ENABLE_AUTOMATION=ON (this build has no automation runtime)" );
+            SW_LOG_ERROR_ID( "App.ScenarioScenarioRecordNeed", "-scenario / -scenario-record need a development build (Debug or Release) - Shipping has no automation runner" );
         return bAsked == false;
     }
 

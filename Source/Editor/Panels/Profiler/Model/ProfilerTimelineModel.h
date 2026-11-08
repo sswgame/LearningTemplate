@@ -101,7 +101,7 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         // 3) 트레이스 저장 · 불러오기 · 검색
         // ------------------------------------------------------------------------------
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
         /** @brief 최근 프레임을 `Saved/Traces` 에 씁니다. 결과를 로그에 남깁니다. */
         void saveTrace( const FrameProfiler& profiler ) const;
         /** @brief 지정한 파일을 불러옵니다. 성공하면 true 이며, 결과 한 줄은 `getTraceStatus` 에 남습니다. */
@@ -143,7 +143,7 @@ namespace sw::editor
         const ProfilerCallTreeWindow& getCallTree() const { return _callTree; }
 
     private:
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
         /** @brief 불러온 트레이스를 살아 있는 기록 아래에 겹쳐 그릴 목록으로 만듭니다. 첫 시각을 맞춰 겹칩니다. */
         void composeDraw();
 #endif
@@ -167,7 +167,7 @@ namespace sw::editor
         uint8                          _bTimelineFrozen : 1; ///< Freeze 상태다. 녹화는 계속하고 화면만 멈춘다
         uint8                          _bTimelineZoomed : 1; ///< 사용자가 확대하거나 이동했다. 아니면 보이는 범위가 수집한 구간을 따라간다
         uint8                          _bCallTreeFrozen : 1; ///< 호출 트리를 다시 합치지 않는다
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
         ProfilerLoadedTrace            _loadedTrace;         ///< 불러온 트레이스. `_bLoadedTrace` 일 때만 의미가 있다
         vector<ProfilerTimelineThread> _listDraw;            ///< 이번 프레임에 그릴 스레드(살아 있는 것과 불러온 것, 프레임마다 다시 채운다)
         vector<uint64>                 _listLoadedFrameDraw; ///< 불러온 트레이스의 프레임 경계(살아 있는 기록의 시각으로 변환한 것)

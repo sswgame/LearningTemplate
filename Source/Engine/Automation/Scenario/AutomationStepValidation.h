@@ -13,7 +13,6 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
-#include "Engine/Automation/Watch/AutomationHooksEnabled.h"
 
 namespace sw
 {
@@ -99,7 +98,7 @@ namespace sw
     };
 } // namespace sw
 
-#if SW_AUTOMATION_HOOKS_ENABLED
+#if !defined( SW_SHIPPING )
 
     /**
      * @brief 단계 종류의 검사 함수만 등록합니다(.cpp 의 파일 범위). 단계를 등록하는 모듈(에디터 · App)이 올라오지 않은 프로세스(nogpu 테스트)도 시나리오 데이터를 검사하게 한다.
@@ -121,4 +120,4 @@ namespace sw
     #define SW_AUTOMATION_STEP_VALIDATOR( id, pKind, pValidate ) [[maybe_unused]] static constexpr auto sw_automationStepValidatorUnused_##id = pValidate
     #define SW_AUTOMATION_STEP_SCHEMA( id, pKind, TParams )      SW_AUTOMATION_STEP_VALIDATOR( id, pKind, &::sw::AutomationStep::validateFields<TParams> )
 
-#endif // SW_AUTOMATION_HOOKS_ENABLED
+#endif // !SW_SHIPPING

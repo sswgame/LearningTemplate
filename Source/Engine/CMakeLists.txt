@@ -35,16 +35,19 @@ endforeach()
 sw_getAllRHIBackendSources(listRHIBackendSource)
 list(REMOVE_ITEM ENGINE_SOURCES ${listRHIBackendSource})
 
-# 자동화 런타임을 뺀 구성(`SW_ENABLE_AUTOMATION=OFF`) — `Automation/Runner/`(실행기 · 세션 · 판정 · 보고)를 폴더째 뺀다. 창 제목 추적(RunTitle) · 사진 준비 판정(CaptureUtil) · 감시 값(Probe/ · *Probes) · 단계 등록(Scenario/)은
-# 엔진 프레임이 읽거나 기능이 등록하는 것이라 남는다.
-if(NOT SW_ENABLE_AUTOMATION)
+# 자동화 실행기(`Automation/Runner/` — 실행기 · 세션 · 판정 · 보고)는 개발 구성 클라이언트만 짓는다. 빼는 구성은 둘이다:
+#   - Shipping: 테스트 장치는 Release(개발 구성)까지만 들어간다 — 기능 폴더의 자동화 등록도 `SW_SHIPPING` 에서 등록하지 않는다(`AutomationStepRegistry.h` · `AutomationWatch.h`).
+#   - 전용 서버: 실행기는 창 · RHI · 렌더러(사진 우편함 `ScreenshotRequestQueue`)를 모는 클라이언트 구동기라 서버가 짓지 않는 `Renderer/` 를 링크한다(언리얼도 스크린샷 비교는 클라이언트 쪽).
+# 예전에는 옵션 `SW_ENABLE_AUTOMATION` 을 Shipping · 서버에서 몰래 끄는 규칙이었다 — 코드에서 보이지 않아 구성 하나를 더 두었다. 조건을 여기 한 곳에 드러낸다.
+# 창 제목 추적(RunTitle) · 사진 준비 판정(CaptureUtil) · 감시 값(Probe/ · *Probes) · 단계 등록(Scenario/)은 엔진 프레임이 읽거나 기능이 등록하는 것이라 남는다.
+if(SW_SHIPPING_BUILD OR SW_TARGET_TYPE STREQUAL "Server")
 	sw_excludeUnbuiltSources(ENGINE_SOURCES
 		"/Source/Engine/Automation/Runner/.*\\.(cpp|h)$")
 	# 실행기 헤더를 include 하는 나머지(실행기 단위 테스트)도 뺀다. 실행기는 스스로 등록하므로(`IAutomationRuntime`) 호스트 쪽에 고를 짝이 없다.
 	sw_excludeSourcesIncludingPrefix(ENGINE_SOURCES "Engine/Automation/Runner/")
 	# 시나리오 파일 검사는 실행기가 올리는 단계(`Press` 등)를 읽는다 — include 가 없어 위 줄에 걸리지 않는다.
 	sw_excludeUnbuiltSources(ENGINE_SOURCES "/Source/Engine/Automation/Tests/TestScenarioFiles\\.cpp$")
-	message(STATUS "[Engine] SW_ENABLE_AUTOMATION=OFF: automation runtime is not built")
+	message(STATUS "[Engine] automation runner is not built (Shipping or dedicated server)")
 endif()
 
 # 이 타깃이 짓지 않는 폴더(전용 서버의 `Renderer/` — 목록은 cmake/Engine/BuildLayout.cmake 의 `SW_UNBUILT_ENGINE_FOLDERS`).

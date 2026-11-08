@@ -51,7 +51,7 @@ namespace sw
         atomic<uint64> _arrBeginNanos[kEventCapacity]{}; ///< 사건 시작
         atomic<uint64> _arrEndNanos[kEventCapacity]{};   ///< 사건 끝
         atomic<uint64> _arrSlotDepth[kEventCapacity]{};  ///< 슬롯(아래 32 비트) · 깊이(위 32 비트)
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
         vector<ProfilerTimelineEvent> _listLong;           ///< 긴 캡처의 사건(쓰는 스레드만 덧붙인다 — 읽기는 캡처를 멈춘 뒤)
         uint32                        _longEpoch{ 0 };     ///< `_listLong` 이 속한 캡처 번호
         atomic<bool>                  _bLongBusy{ false }; ///< 덧붙이는 중 — 멈추는 쪽이 끝나기를 기다린다
@@ -67,7 +67,7 @@ namespace sw
         , _threadCount{ 0 }
         , _generation{ ProfilerTimelineInternal::allocateGeneration() }
         , _bRecording{ SW_FALSE }
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
         , _longLimit{ 0 }
         , _longEpoch{ 0 }
         , _bLongTruncated{ false }
@@ -129,7 +129,7 @@ namespace sw
     void ProfilerTimeline::setRecording( bool bRecording )
     {
         const bool bWasRecording = _bRecording.exchange( bRecording, std::memory_order_relaxed );
-#if SW_NET_FLOW_LOG_ENABLED
+#if !defined( SW_SHIPPING )
         // 타임라인이 기록하는 동안 네트워크 흐름도 남긴다 — 트레이스 저장이 같은 구간의 흐름을 함께 쓴다(`NetFlowLog`).
         if ( bWasRecording != bRecording )
         {
@@ -158,7 +158,7 @@ namespace sw
                                             std::memory_order_relaxed );
         pBuffer->_writeCount.store( writeIndex + 1, std::memory_order_release );
 
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
         if ( _longLimit.load( std::memory_order_relaxed ) != 0 )
         {
             // 멈추는 쪽과 맞물린다: 바쁨 표시를 먼저 올리고 상한을 다시 읽는다(seq_cst) — 멈춘 뒤에는 덧붙이지 않거나, 멈추는 쪽이 끝나기를 기다린다.
@@ -200,7 +200,7 @@ namespace sw
         _arrFrameBeginNanos[writeIndex % kFrameCapacity].store( nanos, std::memory_order_relaxed );
         _frameWriteCount.store( writeIndex + 1, std::memory_order_release );
 
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
         if ( _longLimit.load( std::memory_order_relaxed ) != 0 )
         {
             _bLongFrameBusy.store( true, std::memory_order_seq_cst );
@@ -217,7 +217,7 @@ namespace sw
 #endif
     }
 
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
     void ProfilerTimeline::beginLongCapture( uint32 maxEventsPerThread )
     {
         endLongCapture(); // 진행 중이던 것을 먼저 닫아 쓰는 쪽이 모두 멈춘 뒤에 비운다

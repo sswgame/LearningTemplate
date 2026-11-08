@@ -32,7 +32,7 @@ namespace sw
     /** @brief 이 쿠킹이 자동화 콘텐츠(시나리오 — `PackAlwaysCookRule::_bAutomationOnly`)를 담는가입니다. 쿠킹하는 구성에 실행기(`IAutomationRuntime`)가 있는지로 정한다. */
     enum class PackAutomationContent : uint8
     {
-        Excluded, ///< 자동화 없는 배포(`SW_ENABLE_AUTOMATION=OFF`) — 시나리오를 담지 않는다
+        Excluded, ///< 실행기가 없는 구성(Shipping · 전용 서버) — 시나리오를 담지 않는다
         Included, ///< 실행기가 있는 구성 — 시나리오를 뿌리로 담는다
     };
 

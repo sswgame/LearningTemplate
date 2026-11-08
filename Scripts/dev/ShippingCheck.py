@@ -50,7 +50,7 @@ kExitTimeoutSeconds = 60.0
 #: 배포 서버를 살려 두는 시간(초) — 기동 · 몇 틱이 지나기에 넉넉하다. 그 뒤 종료 신호를 보낸다.
 kServerRunSeconds = 6.0
 #: 배포 구성이 `-scenario` 를 받았을 때 남기는 오류(`App::startAutomation` — 실행기의 자기 등록 `IAutomationRuntime` 이 없을 때).
-kNoAutomationError = "need a build with SW_ENABLE_AUTOMATION=ON"
+kNoAutomationError = "Shipping has no automation runner"
 kLogLinePattern = re.compile(r"\[(Error|Warning)\]")
 #: 테스트용 전역 변수 정의(`SW_TEST_GLOBAL_VARIABLE( 형, gv_이름, …)`) — 배포 실행 파일에 이 이름이 남으면 안 된다.
 kTestVariablePattern = re.compile(r"SW_TEST_GLOBAL_VARIABLE\(\s*[^,]+?,\s*(gv_\w+)")
@@ -223,6 +223,9 @@ def main(argv: list[str] | None = None) -> int:
             return ExitCode.Violation
 
     bAllPassed = True
+    variableCheck = checkNoTestVariables(projectRoot)
+    print(f"[shipping-check] {variableCheck.name}: {'PASS' if variableCheck.bPassed else 'FAIL'} - {variableCheck.reason}", flush=True)
+    bAllPassed = variableCheck.bPassed
     for run, _ in listRun:
         result = run(projectRoot)
         print(f"[shipping-check] {result.name}: {'PASS' if result.bPassed else 'FAIL'} - {result.reason} ({result.logPath})", flush=True)

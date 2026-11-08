@@ -7,8 +7,6 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Automation/Watch/AutomationHooksEnabled.h"
-
 namespace sw
 {
     class GameObject;
@@ -155,7 +153,7 @@ namespace sw
     };
 } // namespace sw
 
-#if SW_AUTOMATION_HOOKS_ENABLED
+#if !defined( SW_SHIPPING )
 
     /**
      * @brief 감시 값을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). @p id 는 정적 이름을 만드는 식별자, @p pName 은 시나리오가 쓰는 이름입니다.
@@ -198,4 +196,4 @@ namespace sw
     #define SW_AUTOMATION_WALL_WATCH( id, pName, pTooltip, pFunction )                                [[maybe_unused]] static constexpr auto sw_automationWatchUnused_##id = pFunction
     #define SW_AUTOMATION_QUERY_WATCH( id, pName, pTooltip, pQueryFunction, bNeedsTarget, bNeedsKey ) [[maybe_unused]] static constexpr auto sw_automationWatchUnused_##id = pQueryFunction
 
-#endif // SW_AUTOMATION_HOOKS_ENABLED
+#endif // !SW_SHIPPING

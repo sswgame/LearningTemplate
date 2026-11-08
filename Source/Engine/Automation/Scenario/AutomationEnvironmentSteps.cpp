@@ -39,7 +39,7 @@ namespace sw
                 AutomationDevCommandParams params;
                 if ( step.readFields( params, outError ) == false )
                     return false;
-#if SW_DEV_COMMANDS_ENABLED
+#if !defined( SW_SHIPPING )
                 vector<string> listToken;
                 listToken = StringUtil::splitQuotedTokens( params._line );
                 if ( listToken.empty() )
@@ -62,7 +62,7 @@ namespace sw
 
             static bool runDevCommand( AutomationStepContext& runner, const AutomationStep& step )
             {
-#if SW_DEV_COMMANDS_ENABLED
+#if !defined( SW_SHIPPING )
                 vector<string> listToken;
                 listToken                              = StringUtil::splitQuotedTokens( step.readValidatedFields<AutomationDevCommandParams>()._line );
                 const DevCommandRegistration* pCommand = listToken.empty() ? nullptr : engine::getSubsystem<DevCommandRegistry>().findCommand( listToken[0] );

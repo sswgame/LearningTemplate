@@ -11,15 +11,6 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-/**
- * @brief 트레이스 내보내기(긴 캡처 · Chrome Trace Event 저장)가 컴파일되는 구성이면 1 입니다(Dev). Shipping 은 0 이고 긴 캡처 기록 경로 · 변환기 · 개발 명령이 모두 빠집니다.
- */
-#if defined( SW_SHIPPING )
-    #define SW_PROFILER_TRACE_ENABLED 0
-#else
-    #define SW_PROFILER_TRACE_ENABLED 1
-#endif
-
 namespace sw
 {
     /** @brief 타임라인 사건 하나 — 계측 구간 하나의 시작 · 끝(단조 시계 나노초), `FrameProfiler` 슬롯, 깊이(바깥 구간 0)입니다. */
@@ -90,7 +81,7 @@ namespace sw
         void collectFrameBegins( uint64 beginNanos, uint64 endNanos, vector<uint64>& outListFrameBegin ) const;
         /** @brief 최근 @p frameCount 프레임 구간에 사건을 남긴 스레드 수입니다(감시 값 · 테스트용). */
         uint32 countActiveThreads( uint32 frameCount ) const;
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
         /**
          * @brief 긴 캡처를 시작합니다 — 링과 따로, 스레드마다 @p maxEventsPerThread 사건까지 **처음부터** 모읍니다(오래된 것을 버리지 않는다).
          * @details 기록이 꺼져 있으면 켭니다(끝날 때 원래대로). 예산을 넘은 스레드는 더 담지 않고 잘림 표지만 남깁니다. 프레임 경계도 같은 수까지 담습니다.
@@ -126,7 +117,7 @@ namespace sw
         atomic<uint32>        _threadCount;
         uint32                _generation; ///< 이 타임라인의 고유 번호 — 스레드 지역 캐시가 다른(이미 종료된) 타임라인의 버퍼를 쓰지 않게 한다
         atomic<bool>          _bRecording;
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
         atomic<uint32> _longLimit; ///< 긴 캡처의 스레드당 사건 수 상한(0 = 꺼짐)
         atomic<uint32> _longEpoch; ///< 긴 캡처를 시작할 때마다 올린다 — 스레드 버퍼가 옛 캡처의 사건을 비운다
         atomic<bool>   _bLongTruncated;

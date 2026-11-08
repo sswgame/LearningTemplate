@@ -6,7 +6,7 @@
  *          - **기록하는 쪽이 있을 때만 남긴다**: 타임라인 기록이 켜진 동안(`ProfilerTimeline::setRecording` 이 `addRecorder` · `removeRecorder`)만이다. 없으면 원자 하나 읽고 돌아온다.
  *          - 링은 Network 층에 있다 — Core 층 규칙상 네트워크가 진단(`ProfilerTimeline`)을 include 하지 못하므로, 진단 · 엔진이 이 링을 읽는다.
  *          - **스레드**: 어느 스레드에서 불러도 된다. 칸은 원자 덧셈으로 잡고 칸마다 스탬프(쓴 번호 + 1, 쓰는 중 0)으로 읽는 쪽이 덮이는 중인 칸을 버린다.
- * @note Shipping 에서는 빠집니다(`SW_NET_FLOW_LOG_ENABLED` 0 — 트레이스 내보내기가 없다).
+ * @note Shipping 에서는 빠집니다(`SW_SHIPPING` — 트레이스 내보내기가 없다).
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -14,14 +14,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Network/NetTypes.h"
 
-/** @brief 메시지 흐름 링이 컴파일되는 구성이면 1 입니다(트레이스 내보내기 `SW_PROFILER_TRACE_ENABLED` 와 같은 조건). */
-#if defined( SW_SHIPPING )
-    #define SW_NET_FLOW_LOG_ENABLED 0
-#else
-    #define SW_NET_FLOW_LOG_ENABLED 1
-#endif
-
-#if SW_NET_FLOW_LOG_ENABLED
+#if !defined( SW_SHIPPING )
 
 namespace sw
 {
@@ -66,4 +59,4 @@ namespace sw
     };
 } // namespace sw
 
-#endif // SW_NET_FLOW_LOG_ENABLED
+#endif // !SW_SHIPPING

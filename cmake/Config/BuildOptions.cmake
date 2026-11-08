@@ -58,17 +58,6 @@ option(SW_ENABLE_ATSPI "리눅스 클라이언트에 AT-SPI 접근성 브리지�
 # 구성을 세우지 않고 기능만 끈 채 "XTest 주입기 없음"을 알린다(`XTestInputInjector::isCompiledIn()` false). 패키지: libxtst-dev.
 option(SW_ENABLE_XTEST "리눅스 클라이언트에 XTest 입력 주입기를 짓는다(libxtst 가 없으면 기능을 끈다)" OFF)
 
-# 자동화 런타임(`Engine/Automation/Runner` 의 시나리오 실행기 · 세션 · 판정 · 보고 — `-scenario` 가 쓴다). 개발 구성은 켠다. 배포 구성(Shipping)은 끈다 — 테스트 장치는
-# Release(개발 구성)까지만 들어가고 Shipping 바이너리에는 없다(예전에는 배포 구성 App 으로 GPU 검증을 돌리려고 켰다 — 그 검증은 Release 가 한다).
-# 끄면 그 소스를 Engine 이 짓지 않고 실행기의 자기 등록(`IAutomationRuntime`)도 사라져 App 이 `-scenario` 를 기동 오류로 멈춘다. 단계 등록 · 감시 값 표(`Engine/Automation/Scenario` · `Engine/Automation/Watch`)는 남는다 — 기능이 자기 폴더에서 등록하는 형식이다.
-option(SW_ENABLE_AUTOMATION "자동화 시나리오 런타임(Engine/Automation/Runner)을 짓는다(끄면 -scenario 불가)" ON)
-# 전용 서버 타깃은 자동화 런타임을 짓지 않는다 — 실행기는 창 · RHI · 렌더러(사진 우편함 `ScreenshotRequestQueue`)를 모는 클라이언트 구동기라
-# 서버가 짓지 않는 `Renderer/` 를 링크한다(언리얼도 스크린샷 비교 테스트는 클라이언트 쪽이다). 서버 확인은 `-gv_serverExitAfterTicks` 와 두 프로세스 체인이 한다.
-# 캐시 값은 두고 같은 이름의 보통 변수로 가린다(SW_TARGET_TYPE 과 같은 방식).
-if(SW_TARGET_TYPE STREQUAL "Server" OR SW_SHIPPING_BUILD)
-	set(SW_ENABLE_AUTOMATION OFF)
-endif()
-
 if(NOT SW_TARGET_TYPE MATCHES "^(Game|Client|Server)$")
 	message(FATAL_ERROR "SW_TARGET_TYPE='${SW_TARGET_TYPE}' — one of Game, Client, Server")
 endif()

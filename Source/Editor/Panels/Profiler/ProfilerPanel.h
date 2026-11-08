@@ -90,7 +90,7 @@ namespace sw::editor
                                                         const vector<string>* pLoadedSlotName, bool bHovered );
         /** @brief 마우스 아래 구간의 이름 · 길이 · 같은 구간의 횟수 · 합계 · 최대를 툴팁으로 보입니다. */
         void drawTimelineTooltip( const vector<ProfilerTimelineThread>& listThread, const ProfilerTimelineRect& hoveredRect, const vector<string>* pLoadedSlotName );
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
         /** @brief 저장한 트레이스를 불러오고 지우는 행과 구간 이름 검색란을 그립니다. */
         void drawTraceControls();
 #endif
@@ -109,7 +109,7 @@ namespace sw::editor
         uint64 getCapturedFrameCount() const { return _capture.getHistory().getCapturedFrameCount(); }
         /** @brief 프로브용입니다. 마지막으로 그린 호출 트리의 노드 수를 반환합니다. */
         uint32 getCallTreeNodeCount() const { return _timeline.getCallTree().countLiveNodes(); }
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
         /** @brief 프로브용입니다. 불러온 트레이스의 스레드 수를 반환합니다. 없으면 0 입니다. */
         uint32 getLoadedTraceThreadCount() const { return _timeline.getLoadedTraceThreadCount(); }
         /** @brief 프로브용입니다. 마지막으로 그린 타임라인에서 검색어와 일치한 이벤트 수를 반환합니다. 검색어가 없으면 모든 이벤트입니다. */

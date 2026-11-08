@@ -10,7 +10,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Profiling/FrameProfiler.h"
 
-#if SW_PROFILER_TRACE_ENABLED
+#if !defined( SW_SHIPPING )
 
     #include "Core/Container/StringUtil.h"
     #include "Core/File/FileUtil.h"
@@ -1151,4 +1151,4 @@ namespace sw
                     &runTrace );
 } // namespace sw
 
-#endif // SW_PROFILER_TRACE_ENABLED
+#endif // !SW_SHIPPING

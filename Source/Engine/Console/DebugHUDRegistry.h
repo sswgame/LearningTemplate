@@ -1,6 +1,6 @@
 /**
  * @file DebugHUDRegistry.h
- * @brief 디버그 HUD 섹션 레지스트리와 `SW_DEBUG_HUD_SECTION` 입니다. Shipping 에서는 등록 매크로가 꺼져 표가 비어 있습니다(`SW_DEV_COMMANDS_ENABLED`).
+ * @brief 디버그 HUD 섹션 레지스트리와 `SW_DEBUG_HUD_SECTION` 입니다. Shipping 에서는 등록 매크로가 꺼져 표가 비어 있습니다(`SW_SHIPPING`).
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
@@ -13,7 +13,6 @@
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
 
-#include "Engine/Console/DevCommandsEnabled.h"
 #include "Engine/Module/ModuleEntryRegistrar.h"
 
 namespace sw
@@ -173,10 +172,10 @@ namespace sw
     using DebugHUDSectionRegistrar = ModuleEntryRegistrar<DebugHUDRegistry, const DebugHUDSectionRegistration*>;
 } // namespace sw
 
-#if SW_DEV_COMMANDS_ENABLED
+#if !defined( SW_SHIPPING )
 
 /**
- * @brief 디버그 HUD 섹션을 그 섹션의 .cpp 에서 등록합니다. Shipping 에서는 아무것도 남기지 않습니다 — 본문 함수도 `#if SW_DEV_COMMANDS_ENABLED`
+ * @brief 디버그 HUD 섹션을 그 섹션의 .cpp 에서 등록합니다. Shipping 에서는 아무것도 남기지 않습니다 — 본문 함수도 `#if !defined( SW_SHIPPING )`
  *        안에 두십시오.
  * @param varName 파일 안에서 유일한 이름 조각(변수 이름용)
  * @param pName   명령 · 설정에 쓰는 이름(리터럴, `hud <이름> on`)

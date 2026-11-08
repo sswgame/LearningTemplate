@@ -544,7 +544,7 @@ namespace sw
         uint64 getFrameIndex() const { return _frameIndex; }
         /** @brief 지난 프레임에 일한(쉬지 않은) 유닛 수를 반환합니다. */
         uint32 getActiveMeshCount() const { return _activeMeshCount; }
-#if SW_ANIMATION_REWIND_ENABLED
+#if !defined( SW_SHIPPING )
         // --- 되감기 (AnimationRewind.h, Shipping 에는 없다) ---
         /** @brief 되감기 기록기입니다. 켜져 있으면 평가 뒤 일한 유닛을 기록하고, 되감는 동안에는 평가 대신 기록된 포즈를 적용합니다. */
         AnimationRewindRecorder&       getRewind() { return _rewind; }
@@ -609,7 +609,7 @@ namespace sw
         };
         /** @brief 군중 공유를 켠 유닛의 묶음, 사본, VAT 를 정하고 묶음을 평가합니다(시간 단계 뒤). */
         void updateCrowd();
-#if SW_ANIMATION_REWIND_ENABLED
+#if !defined( SW_SHIPPING )
         /** @brief 되감는 동안 기록된 포즈를 유닛마다, 기록된 상태를 스프라이트 애니메이터마다 적용합니다(평가하지 않습니다). */
         void applyRewindScrub();
         /** @brief 이번 프레임을 기록합니다. 일한 유닛(포즈와 상태)과, 상태만 남기는 LOD 클라이언트를 기록합니다. */
@@ -640,7 +640,7 @@ namespace sw
         GroupSyncScratch                            _groupSyncScratch;           ///< `synchronizeGroups` 의 배열과 맵(재사용)
         AnimationLODSettings                        _lodSettings;
         AnimationCrowd                              _crowd;
-#if SW_ANIMATION_REWIND_ENABLED
+#if !defined( SW_SHIPPING )
         AnimationRewindRecorder _rewind;
         Pose                    _rewindScratchPose; ///< 되감기 포즈를 해석할 임시 포즈다(재사용)
         uint8                   _bRewindApplied;    ///< 지난 프레임에 되감기 포즈를 적용했다는 표시다. 되감기가 끝나면 다시 평가하게 한다
