@@ -11,27 +11,33 @@
 #include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Process/Process.h"
+#include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Module/ModuleSubsystemRegistrar.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 
 namespace sw
 {
     /**
      * @struct AutomationScratchCounter
-     * @brief 사본 폴더를 끝까지 만든 횟수입니다(`AutomationScratch::getPrepareCount` — 세대 번호). 엔진 이미지의 모듈 부분이라 엔진 범위와 함께 생기고 사라진다.
+     * @brief 사본 폴더를 끝까지 만든 횟수입니다(`AutomationScratch::getPrepareCount` — 세대 번호). 엔진 범위 서비스라 엔진 범위와 함께 생기고 사라진다.
      * @details 시나리오 실행기는 단계마다 새로 서므로 실행기 멤버로 두면 번호가 되돌아가 에디터 울타리가 새 사본을 놓친다 — 엔진 범위가 든다(예전에는 프로세스 원자 칸).
      */
-    struct AutomationScratchCounter
+    class AutomationScratchCounter final : public ISubsystem
     {
-        static constexpr const utf8* kModulePartName = "AutomationScratchCounter";
-
+    public:
         atomic<uint64> _prepareCount{ 0 };
+
+        static constexpr const utf8* kSubsystemName = "AutomationScratchCounter";
+        SubsystemInitResult          initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                         shutdownSubsystem() override {}
+        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
     };
 
-    SW_MODULE_PART( Engine, AutomationScratchCounter, AutomationScratchCounter );
+    SW_SERVICE_SLOT( AutomationScratchCounter, Optional );
+    SW_ENGINE_SERVICE_SUBSYSTEM( AutomationScratchCounter, HostOnly, Services, (), SW_ENGINE_DEFAULT_FACTORY( AutomationScratchCounter ) ); // 엔진 범위 서비스(아래 층이라 모듈 부분 `SW_MODULE_PART` 를 쓸 수 없다)
 
     namespace
     {

@@ -9,7 +9,6 @@
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Config/EditorUserFile.h"
-#include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Reflection/ReflectionTypes.h"
@@ -286,7 +285,7 @@ namespace sw::editor
     bool EditorPreferencesStore::saveOpened()
     {
         // 열린 동안은 에디터 컨텍스트가 선 동안이다 — 환경설정은 컨텍스트 안의 UI 만 고친다. 정적 깃발을 두지 않는다: 모듈이 내려가는 정적 해제 · 셸이 컨텍스트를 내린 뒤의 부름은 쓰지 않는다.
-        if ( editor::findSubsystem<EditorContext>() == nullptr )
+        if ( editor::findEditorScope() == nullptr ) // 에디터 컨텍스트가 건 서비스 범위 — 이 층(tier 0)은 컨텍스트 타입을 볼 수 없다
             return true;
         return saveAll( getDefaultFilePath() );
     }

@@ -220,8 +220,9 @@ SW_TEST_CASE( LiveReloadLogicTest, ShadowCopyRefusesUnstampedFile )
     ShadowLibraryNameState name{};
     name._current = "current";
     name._loaded  = "loaded";
-    string shadowPath{ "untouched" };
-    SW_EXPECT_FALSE( ModuleShadowCopy::writeShadowCopy( params, name, shadowPath ) );
+    ShadowCopySerials serials{};
+    string            shadowPath{ "untouched" };
+    SW_EXPECT_FALSE( ModuleShadowCopy::writeShadowCopy( params, serials, name, shadowPath ) );
     SW_EXPECT_EQUAL( string( "untouched" ), shadowPath );
     SW_EXPECT_EQUAL( string( "current" ), name._current );
 

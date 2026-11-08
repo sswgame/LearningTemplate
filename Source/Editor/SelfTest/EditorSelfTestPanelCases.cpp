@@ -381,7 +381,6 @@ namespace sw::editor
 
             private:
                 uint64 _objectID{ 0 };
-                uint64 _previousSelectionID{ 0 };
             };
 
             // ------------------------------------------------------------------------------

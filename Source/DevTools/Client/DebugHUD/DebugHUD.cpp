@@ -486,7 +486,7 @@ namespace sw
                     box->setOrientation( UIOrientation::Vertical );
                     box->setSpacing( 2.0f );
                     (void)box->addChild( DebugHUDInternal::makeText( pRegistration->_pTitle, DebugHUDInternal::kTitleFontSize, DebugHUDInternal::kTitleColor ) );
-                    _listView.push_back( SectionView{ string( pRegistration->_pName ), box->getID(), 0, 0, pRegistration->isUserSection() ? SW_TRUE : SW_FALSE } );
+                    _listView.push_back( SectionView{ string( pRegistration->_pName ), box->getID(), 0, 0, static_cast<uint8>( pRegistration->isUserSection() ? SW_TRUE : SW_FALSE ) } );
                     (void)pColumn->addChild( std::move( box ) );
                 }
             }

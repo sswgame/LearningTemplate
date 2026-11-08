@@ -22,7 +22,6 @@
 #include "Core/Serialization/BitStream.h"
 
 #include "Engine/EngineMinimal.h"
-#include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 namespace sw
@@ -334,10 +333,8 @@ namespace sw
         template <typename T>
         [[nodiscard]] static const FixedCodec* findCodec( string& outReason )
         {
-            // 리플렉션 타입은 클래스마다 둔 정적 타입 칸(`StaticType()` — 코드젠 캐시)으로 찾는다. 칸이 없는 타입은 레지스트리를 바로 본다(함수 정적 캐시를 두지 않는다).
-            const TypeInfo* pType = findStaticType<T>();
-            if ( pType == nullptr )
-                pType = TypeLookupCache{}.find( typeFqn<T>() );
+            // 레지스트리를 이름으로 바로 찾는다 — `StaticType()` 은 DLL 밖으로 내보내지 않은 키트 타입에서 링크가 깨지고, 함수 정적 캐시는 감춘 싱글턴이다.
+            const TypeInfo* pType = TypeLookupCache{}.find( typeFqn<T>() );
             if ( pType == nullptr )
             {
                 outReason = "type is not registered";

@@ -10,13 +10,14 @@
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
+#include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Audio/AudioChannelLayout.h"
 #include "Engine/Audio/AudioPcm.h"
 #include "Engine/Audio/AudioRenderListener.h"
 #include "Engine/Audio/AudioTypes.h"
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Module/ModuleSubsystemRegistrar.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 
 namespace sw
 {
@@ -25,16 +26,21 @@ namespace sw
 
     /**
      * @struct AudioDumpBuffer
-     * @brief 쌓은 오프라인 렌더(채널 교차)입니다. 엔진 이미지의 모듈 부분이라 엔진 범위와 함께 생기고 사라진다 — 리스너(정적 등록 항목)는 칸을 들지 않는다.
+     * @brief 쌓은 오프라인 렌더(채널 교차)입니다. 엔진 범위 서비스라 엔진 범위와 함께 생기고 사라진다 — 리스너(정적 등록 항목)는 칸을 들지 않는다.
      */
-    struct AudioDumpBuffer
+    class AudioDumpBuffer final : public ISubsystem
     {
-        static constexpr const utf8* kModulePartName = "AudioDumpBuffer";
-
+    public:
         vector<float32> _listSample;
+
+        static constexpr const utf8* kSubsystemName = "AudioDumpBuffer";
+        SubsystemInitResult          initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                         shutdownSubsystem() override {}
+        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
     };
 
-    SW_MODULE_PART( Engine, AudioDumpBuffer, AudioDumpBuffer );
+    SW_SERVICE_SLOT( AudioDumpBuffer, Optional );
+    SW_ENGINE_SERVICE_SUBSYSTEM( AudioDumpBuffer, HostOnly, Services, (), SW_ENGINE_DEFAULT_FACTORY( AudioDumpBuffer ) ); // 엔진 범위 서비스(아래 층이라 모듈 부분 `SW_MODULE_PART` 를 쓸 수 없다)
 
     namespace
     {

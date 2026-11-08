@@ -155,7 +155,8 @@ namespace sw
 
     bool CookJob::requiresCallingThreadRead()
     {
-        return CookJobInternal::_t_pCurrent != nullptr || CookSession::isActive();
+        const AssetPaths* const pAssetPaths = engine::findSubsystem<AssetPaths>(); // 엔진 범위 없이 도는 도구 · 테스트는 쿠킹 세션이 없다
+        return CookJobInternal::_t_pCurrent != nullptr || ( pAssetPaths != nullptr && pAssetPaths->isCookSessionOpen() );
     }
 
     bool CookJob::allowAsyncRead( const AssetID& id )

@@ -6,7 +6,7 @@
 
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Module/ModuleSubsystemRegistrar.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 
 #if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE ) && defined( SW_WITH_XTEST )
 
@@ -224,7 +224,8 @@ namespace sw
         }
     } // namespace
 
-    SW_MODULE_PART( Engine, XTestInputInjector, XTestInputInjector );
+    SW_SERVICE_SLOT( XTestInputInjector, Optional );
+    SW_ENGINE_SERVICE_SUBSYSTEM( XTestInputInjector, HostOnly, Services, (), SW_ENGINE_DEFAULT_FACTORY( XTestInputInjector ) ); // 엔진 범위 서비스(아래 층이라 모듈 부분 `SW_MODULE_PART` 를 쓸 수 없다)
 
     SW_DEV_COMMAND( XTestInput, "input.xtest", "input.xtest move <x> <y> | button <1-9> <down|up|click> | key <keysym> <down|up|tap>",
                     "Inject mouse / key input into the X server through XTest (screen coordinates; X11 window input checks)", &runXTest );
