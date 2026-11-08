@@ -74,7 +74,12 @@ namespace sw
             /** @brief 오른쪽 화살표 영역(안쪽 여백)입니다. */
             static constexpr float32 kArrowSpace = 32.0f;
 
-            static hashed_string makeOptionName( uint32 index ) { return hashed_string( formatToString( "option%#", index ) ); }
+            static hashed_string makeOptionName( uint32 index )
+            {
+                fixed_string<constant::buffer::kMax32> name;
+                formatstring( name.data(), name.capacity(), "option%#", index );
+                return hashed_string( name.c_str() );
+            }
         };
     } // namespace
 } // namespace sw

@@ -58,7 +58,9 @@ namespace sw
 
             string makeNodePath( const AccessibleNode& node )
             {
-                return formatToString( "%#/n%#_%#", string( kPathPrefix ), node._screen, node._widget );
+                StringBuilder<constant::buffer::kMax256> resultBuilder;
+                resultBuilder.appendFormat( "%#/n%#_%#", string( kPathPrefix ), node._screen, node._widget );
+                return string( resultBuilder.view() );
             }
 
             /** @brief `/org/a11y/atspi/accessible/n<화면>_<위젯>` 에서 두 번호를 읽습니다. 모양이 다르면 false. */

@@ -122,9 +122,11 @@ namespace sw::editor
             const size_t count = rulesVal.size();
             for ( size_t index = 0; index < count; ++index )
             {
-                const JSONValue   ruleObj = rulesVal.at( index );
-                TextureImportRule rule;
-                if ( applyInheritance( ruleObj, rule ) == false || JSONFields::readFields( ruleObj, rule, formatToString( "TextureImportConfig rule %#", index ) ) == false )
+                const JSONValue                        ruleObj = rulesVal.at( index );
+                TextureImportRule                      rule;
+                fixed_string<constant::buffer::kMax64> sourceName;
+                formatstring( sourceName.data(), sourceName.capacity(), "TextureImportConfig rule %#", index );
+                if ( applyInheritance( ruleObj, rule ) == false || JSONFields::readFields( ruleObj, rule, sourceName.view() ) == false )
                     return clearAndFail();
                 _listRule.push_back( rule );
             }

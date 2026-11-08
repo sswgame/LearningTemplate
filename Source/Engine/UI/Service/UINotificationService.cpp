@@ -289,7 +289,9 @@ namespace sw
             pMessage->setText( entry._desc._text );
         if ( TextWidget* pCount = castTo<TextWidget>( Internal::findDescendant( *pEntry, getEntryWidgetName( entry._order, Internal::kCountName ) ) ); pCount != nullptr )
         {
-            pCount->setText( formatToString( "x%#", entry._count ) );
+            StringBuilder<constant::buffer::kMax256> textBuilder;
+            textBuilder.appendFormat( "x%#", entry._count );
+            pCount->setText( string( textBuilder.view() ) );
             pCount->setVisibility( entry._count > 1 ? WidgetVisibility::Visible : WidgetVisibility::Collapsed );
         }
     }

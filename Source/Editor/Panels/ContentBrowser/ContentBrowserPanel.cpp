@@ -569,8 +569,10 @@ namespace sw::editor
         string droppedAssetID;
         for ( const ContentBrowserCollection& collection : _collections.getCollections() )
         {
-            const bool   bActive = collection._name == _activeCollectionName && collection._bShared == ( _bActiveCollectionShared == SW_TRUE );
-            const string label   = formatToString( "%#  %# (%#)%#", SW_EDITOR_ICON( "Bookmark" ), collection._name, collection._listAssetID.size(), collection._bShared ? "  shared" : "" );
+            const bool                               bActive = collection._name == _activeCollectionName && collection._bShared == ( _bActiveCollectionShared == SW_TRUE );
+            StringBuilder<constant::buffer::kMax256> labelBuilder;
+            labelBuilder.appendFormat( "%#  %# (%#)%#", SW_EDITOR_ICON( "Bookmark" ), collection._name, collection._listAssetID.size(), collection._bShared ? "  shared" : "" );
+            const string label{ labelBuilder.view() };
             if ( ImGui::Selectable( label.c_str(), bActive ) )
             {
                 _activeCollectionName    = collection._name;

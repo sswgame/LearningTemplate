@@ -79,7 +79,9 @@ namespace sw
                     text += ServiceKeyUtil::makeHex64( side._accountID );
                     for ( const TradeLeg& leg : side._listLeg )
                     {
-                        text += formatToString( ",%#x%#", leg._assetID, leg._amount );
+                        StringBuilder<constant::buffer::kMax256> textPart;
+                        textPart.appendFormat( ",%#x%#", leg._assetID, leg._amount );
+                        text += textPart.c_str();
                     }
                 }
                 return text;

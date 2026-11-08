@@ -254,12 +254,16 @@ namespace sw::editor
             {
                 if ( mesh >= names._listMeshMorphName.size() )
                 {
-                    outError = formatToString( "%#: mesh %# is not a mesh of the model", string( context ), mesh );
+                    StringBuilder<constant::buffer::kMax256> errorBuilder;
+                    errorBuilder.appendFormat( "%#: mesh %# is not a mesh of the model", string( context ), mesh );
+                    outError = string( errorBuilder.view() );
                     return false;
                 }
-                const vector<string>& listMorph = names._listMeshMorphName[mesh];
-                uint32                index{ 0 };
-                if ( readIndex( indexValue, listMorph.size(), context, "morph target", formatToString( "is not a target of mesh %#", mesh ), index, outError ) == false )
+                const vector<string>&                    listMorph = names._listMeshMorphName[mesh];
+                uint32                                   index{ 0 };
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "is not a target of mesh %#", mesh );
+                if ( readIndex( indexValue, listMorph.size(), context, "morph target", string( textBuilder.view() ), index, outError ) == false )
                     return false;
                 outName = listMorph[index];
                 return true;
@@ -270,7 +274,9 @@ namespace sw::editor
                 const bool bHasMeshName = mesh < names._listMeshName.size() && names._listMeshName[mesh].empty() == false;
                 if ( bHasMeshName )
                     return names._listMeshName[mesh];
-                return formatToString( "mesh%#", mesh );
+                StringBuilder<constant::buffer::kMax256> resultBuilder;
+                resultBuilder.appendFormat( "mesh%#", mesh );
+                return string( resultBuilder.view() );
             }
 
             [[nodiscard]] static bool parseFirstPersonMode( const string& text, VrmFirstPersonMode& outMode )
@@ -447,19 +453,25 @@ namespace sw::editor
                 {
                     const JSONValue group = listColliderGroup.at( groupIndex );
                     collectUnknownKeys( group, kArrVrm0ColliderGroupKey, "VRM.secondaryAnimation.colliderGroups", pOutListIgnored );
-                    string bone;
-                    if ( resolveNode( names, group.get( "node" ), formatToString( "VRM 0.x collider group %#", static_cast<uint64>( groupIndex ) ), bone, outError ) == false )
+                    string                                   bone;
+                    StringBuilder<constant::buffer::kMax256> textBuilder;
+                    textBuilder.appendFormat( "VRM 0.x collider group %#", static_cast<uint64>( groupIndex ) );
+                    if ( resolveNode( names, group.get( "node" ), string( textBuilder.view() ), bone, outError ) == false )
                         return false;
-                    VrmSpringColliderGroup colliderGroup;
-                    colliderGroup._name               = formatToString( "colliderGroup%#", static_cast<uint64>( groupIndex ) );
+                    VrmSpringColliderGroup                   colliderGroup;
+                    StringBuilder<constant::buffer::kMax256> nameBuilder;
+                    nameBuilder.appendFormat( "colliderGroup%#", static_cast<uint64>( groupIndex ) );
+                    colliderGroup._name               = string( nameBuilder.view() );
                     const JSONValue listColliderValue = group.get( "colliders" );
                     for ( size_t colliderIndex = 0; colliderIndex < listColliderValue.size(); ++colliderIndex )
                     {
                         const JSONValue colliderValue = listColliderValue.at( colliderIndex );
                         collectUnknownKeys( colliderValue, kArrVrm0ColliderKey, "VRM.secondaryAnimation.colliderGroups.colliders", pOutListIgnored );
                         VrmSpringCollider collider;
-                        collider._bone               = bone;
-                        const string colliderContext = formatToString( "VRM 0.x collider group %#", static_cast<uint64>( groupIndex ) );
+                        collider._bone = bone;
+                        StringBuilder<constant::buffer::kMax256> colliderContextBuilder;
+                        colliderContextBuilder.appendFormat( "VRM 0.x collider group %#", static_cast<uint64>( groupIndex ) );
+                        const string colliderContext{ colliderContextBuilder.view() };
                         float3       offset{};
                         if ( readVector( colliderValue.get( "offset" ), colliderContext, offset, outError ) == false ||
                              readFloat( colliderValue, "radius", colliderContext, collider._radius, outError ) == false )
@@ -478,7 +490,9 @@ namespace sw::editor
                 {
                     const JSONValue group = listBoneGroup.at( groupIndex );
                     collectUnknownKeys( group, kArrVrm0BoneGroupKey, "VRM.secondaryAnimation.boneGroups", pOutListIgnored );
-                    const string context = formatToString( "VRM 0.x bone group %#", static_cast<uint64>( groupIndex ) );
+                    StringBuilder<constant::buffer::kMax256> contextBuilder;
+                    contextBuilder.appendFormat( "VRM 0.x bone group %#", static_cast<uint64>( groupIndex ) );
+                    const string context{ contextBuilder.view() };
                     // 키가 없으면 UniVRM 의 기본값이다. 끌림 · 충돌 반지름만 1.0 의 초기값과 다르다. 중력 방향은 원본 공간에서 읽고 옮긴다.
                     VrmSpringJoint jointValue;
                     jointValue._dragForce = kVrm0DragForce;
@@ -523,9 +537,17 @@ namespace sw::editor
                         VrmSpring spring;
                         spring._name = comment;
                         if ( spring._name.empty() )
-                            spring._name = formatToString( "spring%#", static_cast<uint64>( groupIndex ) );
+                        {
+                            StringBuilder<constant::buffer::kMax256> nameBuilder;
+                            nameBuilder.appendFormat( "spring%#", static_cast<uint64>( groupIndex ) );
+                            spring._name = string( nameBuilder.view() );
+                        }
                         if ( listRoot.size() > 1 )
-                            spring._name += formatToString( "_%#", static_cast<uint64>( rootIndex ) );
+                        {
+                            StringBuilder<constant::buffer::kMax256> namePart;
+                            namePart.appendFormat( "_%#", static_cast<uint64>( rootIndex ) );
+                            spring._name += namePart.c_str();
+                        }
                         spring._centerBone        = centerBone;
                         spring._listColliderGroup = listColliderGroupIndex;
                         collectDescendants( names, rootNode, listChain );
@@ -623,10 +645,14 @@ namespace sw::editor
                     const int64 mesh = names._listNodeMesh[node];
                     if ( mesh < 0 )
                     {
-                        outError = formatToString( "%#: node %# has no mesh", context, node );
+                        StringBuilder<constant::buffer::kMax256> errorBuilder;
+                        errorBuilder.appendFormat( "%#: node %# has no mesh", context, node );
+                        outError = string( errorBuilder.view() );
                         return false;
                     }
-                    const bool bBindRead = resolveMorphTarget( names, static_cast<uint32>( mesh ), bindValue.get( "index" ), formatToString( "%# node %#", context, node ),
+                    StringBuilder<constant::buffer::kMax256> textBuilder;
+                    textBuilder.appendFormat( "%# node %#", context, node );
+                    const bool bBindRead = resolveMorphTarget( names, static_cast<uint32>( mesh ), bindValue.get( "index" ), string( textBuilder.view() ),
                                                                bind._morphTarget, outError ) &&
                                            readFloat( bindValue, "weight", context, bind._weight, outError );
                     if ( bBindRead == false )
@@ -649,15 +675,19 @@ namespace sw::editor
                 {
                     const JSONValue colliderValue = listCollider.at( index );
                     collectUnknownKeys( colliderValue, kArrVrm1ColliderKey, "VRMC_springBone.colliders", pOutListIgnored );
-                    VrmSpringCollider collider;
-                    if ( resolveNode( names, colliderValue.get( "node" ), formatToString( "VRM 1.0 collider %#", static_cast<uint64>( index ) ), collider._bone, outError ) ==
+                    VrmSpringCollider                        collider;
+                    StringBuilder<constant::buffer::kMax256> textBuilder;
+                    textBuilder.appendFormat( "VRM 1.0 collider %#", static_cast<uint64>( index ) );
+                    if ( resolveNode( names, colliderValue.get( "node" ), string( textBuilder.view() ), collider._bone, outError ) ==
                          false )
                         return false;
                     const JSONValue shape   = colliderValue.get( "shape" );
                     const JSONValue sphere  = shape.get( "sphere" );
                     const JSONValue capsule = shape.get( "capsule" );
                     collectUnknownKeys( shape, kArrVrm1ShapeKey, "VRMC_springBone.colliders.shape", pOutListIgnored );
-                    const string colliderContext = formatToString( "VRM 1.0 collider %#", static_cast<uint64>( index ) );
+                    StringBuilder<constant::buffer::kMax256> colliderContextBuilder;
+                    colliderContextBuilder.appendFormat( "VRM 1.0 collider %#", static_cast<uint64>( index ) );
+                    const string colliderContext{ colliderContextBuilder.view() };
                     float3       offset{};
                     float3       tail{};
                     if ( sphere.isObject() )
@@ -683,7 +713,9 @@ namespace sw::editor
                     }
                     else
                     {
-                        outError = formatToString( "VRM 1.0 collider %# has neither a sphere nor a capsule shape", static_cast<uint64>( index ) );
+                        StringBuilder<constant::buffer::kMax256> errorBuilder;
+                        errorBuilder.appendFormat( "VRM 1.0 collider %# has neither a sphere nor a capsule shape", static_cast<uint64>( index ) );
+                        outError = string( errorBuilder.view() );
                         return false;
                     }
                     inoutDef._listCollider.push_back( std::move( collider ) );
@@ -938,7 +970,9 @@ namespace sw::editor
             const int64 nodeMesh = names._listNodeMesh[node];
             if ( nodeMesh < 0 )
             {
-                outError = formatToString( "VRM 1.0 meshAnnotations: node %# has no mesh", node );
+                StringBuilder<constant::buffer::kMax256> errorBuilder;
+                errorBuilder.appendFormat( "VRM 1.0 meshAnnotations: node %# has no mesh", node );
+                outError = string( errorBuilder.view() );
                 return false;
             }
             VrmFirstPersonMesh mesh;

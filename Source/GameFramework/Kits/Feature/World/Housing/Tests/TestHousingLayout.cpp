@@ -33,8 +33,12 @@ namespace
             if ( bOldCot )
                 text += R"(<Part id="cot" name="Cot" prefab="game/empty/prefabs/housing/bed.prefab.xml" sizeX="2" sizeZ="2" height="0.6" cost="40"/>)";
             else
-                text += formatToString( R"(<Part id="bed" name="Bed" prefab="game/empty/prefabs/housing/bed.prefab.xml" sizeX="2" sizeZ="2" height="0.6" cost="60" version="%#" minLoadVersion="%#" replaces="cot"/>)",
-                                        bedVersion, bedMinLoadVersion );
+            {
+                StringBuilder<constant::buffer::kMax256> textPart;
+                textPart.appendFormat( R"(<Part id="bed" name="Bed" prefab="game/empty/prefabs/housing/bed.prefab.xml" sizeX="2" sizeZ="2" height="0.6" cost="60" version="%#" minLoadVersion="%#" replaces="cot"/>)",
+                                       bedVersion, bedMinLoadVersion );
+                text += textPart.c_str();
+            }
             text += "</HousingPartCatalog>";
             return text;
         }

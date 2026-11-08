@@ -127,7 +127,9 @@ namespace sw
                 }
                 if ( propIndex == listProperty.size() )
                 {
-                    outError = formatToString( "'%#' is not a field of %#", name, typeInfo._name.c_str() );
+                    StringBuilder<constant::buffer::kMax256> errorBuilder;
+                    errorBuilder.appendFormat( "'%#' is not a field of %#", name, typeInfo._name.c_str() );
+                    outError = string( errorBuilder.view() );
                     return false;
                 }
             }
@@ -136,7 +138,9 @@ namespace sw
                 propIndex = nextPositional;
                 if ( propIndex >= listProperty.size() )
                 {
-                    outError = formatToString( "too many arguments for %# at '%#'", typeInfo._name.c_str(), token );
+                    StringBuilder<constant::buffer::kMax256> errorBuilder;
+                    errorBuilder.appendFormat( "too many arguments for %# at '%#'", typeInfo._name.c_str(), token );
+                    outError = string( errorBuilder.view() );
                     return false;
                 }
                 if ( Internal::findTextList( listProperty[propIndex], context ) == nullptr )
@@ -144,7 +148,9 @@ namespace sw
             }
             if ( Internal::applyToken( listProperty[propIndex], pInstance, value, context ) == false )
             {
-                outError = formatToString( "'%#' cannot be read as %# of %#", value, XMLFields::getAttributeName( listProperty[propIndex] ).c_str(), typeInfo._name.c_str() );
+                StringBuilder<constant::buffer::kMax256> errorBuilder;
+                errorBuilder.appendFormat( "'%#' cannot be read as %# of %#", value, XMLFields::getAttributeName( listProperty[propIndex] ).c_str(), typeInfo._name.c_str() );
+                outError = string( errorBuilder.view() );
                 return false;
             }
             listWritten[propIndex] = 1;
@@ -159,7 +165,9 @@ namespace sw
             }
             if ( listProperty[index]._metadata->_bRequired != SW_FALSE )
             {
-                outError = formatToString( "%# needs '%#'", typeInfo._name.c_str(), XMLFields::getAttributeName( listProperty[index] ).c_str() );
+                StringBuilder<constant::buffer::kMax256> errorBuilder;
+                errorBuilder.appendFormat( "%# needs '%#'", typeInfo._name.c_str(), XMLFields::getAttributeName( listProperty[index] ).c_str() );
+                outError = string( errorBuilder.view() );
                 return false;
             }
         }

@@ -145,7 +145,9 @@ namespace
     {
         static void addLine( vector<string>& inoutListLine, string_view step, ServiceStoreResult result, int32 detail = 0 )
         {
-            inoutListLine.push_back( formatToString( "%#: %# %#", step, static_cast<int32>( result ), detail ) );
+            StringBuilder<constant::buffer::kMax256> textBuilder;
+            textBuilder.appendFormat( "%#: %# %#", step, static_cast<int32>( result ), detail );
+            inoutListLine.push_back( string( textBuilder.view() ) );
         }
 
         /** @brief 커밋하고 결과와 어긋난 쓰기 번호를 적습니다. 커밋 정보는 @p outInfo 에 남습니다. */
@@ -266,9 +268,11 @@ namespace
         static void noteList( vector<string>& inoutListLine, IServiceStoreConnection& connection, string_view step, string_view prefix, string_view cursor, int32 maxCount, bool bDescending,
                               const hashed_string& table = kTable )
         {
-            vector<ServiceRecord>    listRecord;
-            const ServiceStoreResult result = connection.listRecords( table, prefix, cursor, maxCount, bDescending, listRecord );
-            string                   line   = formatToString( "%#: %#", step, static_cast<int32>( result ) );
+            vector<ServiceRecord>                    listRecord;
+            const ServiceStoreResult                 result = connection.listRecords( table, prefix, cursor, maxCount, bDescending, listRecord );
+            StringBuilder<constant::buffer::kMax256> lineBuilder;
+            lineBuilder.appendFormat( "%#: %#", step, static_cast<int32>( result ) );
+            string line{ lineBuilder.view() };
             for ( const ServiceRecord& record : listRecord )
             {
                 line += " " + record._key + "=" + string( reinterpret_cast<const utf8*>( record._bytes.data() ), record._bytes.size() );

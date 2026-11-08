@@ -78,7 +78,11 @@ namespace sw
             return;
         _shownMeters = meters;
         if ( TextWidget* pDistance = castTo<TextWidget>( pPanel->getChild( Internal::kDistanceIndex ) ); pDistance != nullptr )
-            pDistance->setText( formatToString( "%# m", meters ) );
+        {
+            StringBuilder<constant::buffer::kMax256> textBuilder;
+            textBuilder.appendFormat( "%# m", meters );
+            pDistance->setText( string( textBuilder.view() ) );
+        }
     }
 
     unique_ptr<Widget> ObjectiveMarkerComponent::createContent() const

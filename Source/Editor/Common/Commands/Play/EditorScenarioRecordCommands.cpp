@@ -74,7 +74,9 @@ namespace sw::editor
                     outReply = "could not write '" + getState()._outputPath + "'";
                     return false;
                 }
-                outReply = formatToString( "wrote %# (%# steps, %# events skipped)", getState()._outputPath, output._writtenStepCount, output._skippedEventCount );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "wrote %# (%# steps, %# events skipped)", getState()._outputPath, output._writtenStepCount, output._skippedEventCount );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 

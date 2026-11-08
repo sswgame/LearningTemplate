@@ -180,7 +180,9 @@ namespace sw::editor
                     PreparedRewrite                   rewrite{};
                     if ( referrerFile.has_value() == false || FileUtil::readTextFile( referrerFile->str(), rewrite._originalText ) == false )
                     {
-                        inoutPlan._failure = formatToString( "could not read the referencing file '%#'", referrerID );
+                        StringBuilder<constant::buffer::kMax256> failureBuilder;
+                        failureBuilder.appendFormat( "could not read the referencing file '%#'", referrerID );
+                        inoutPlan._failure = string( failureBuilder.view() );
                         return false;
                     }
                     rewrite._referrerID    = mapMovedID( inoutPlan, referrerID );
@@ -351,24 +353,32 @@ namespace sw::editor
             const string    newID = assetPaths.toAssetID( normalized._destinationAbs );
             if ( oldID.empty() || newID.empty() || oldID == newID )
             {
-                outPlan._failure = formatToString( "'%#' cannot move to '%#' (outside the resource tree or the same place)", normalized._sourceAbs, normalized._destinationAbs );
+                StringBuilder<constant::buffer::kMax256> failureBuilder;
+                failureBuilder.appendFormat( "'%#' cannot move to '%#' (outside the resource tree or the same place)", normalized._sourceAbs, normalized._destinationAbs );
+                outPlan._failure = string( failureBuilder.view() );
                 return false;
             }
             if ( isValidAssetName( FileUtil::getFileNamePart( normalized._destinationAbs ) ) == false )
             {
-                outPlan._failure = formatToString( "'%#' is not a resource name - use lowercase letters, digits, '_', '-' and '.'", FileUtil::getFileNamePart( normalized._destinationAbs ) );
+                StringBuilder<constant::buffer::kMax256> failureBuilder;
+                failureBuilder.appendFormat( "'%#' is not a resource name - use lowercase letters, digits, '_', '-' and '.'", FileUtil::getFileNamePart( normalized._destinationAbs ) );
+                outPlan._failure = string( failureBuilder.view() );
                 return false;
             }
             if ( FileUtil::exists( normalized._destinationAbs ) || EditorAssetFileCommandsInternal::mapMovedID( outPlan, oldID ) != oldID )
             {
-                outPlan._failure = formatToString( "'%#' already exists or is moved twice - nothing was moved", newID );
+                StringBuilder<constant::buffer::kMax256> failureBuilder;
+                failureBuilder.appendFormat( "'%#' already exists or is moved twice - nothing was moved", newID );
+                outPlan._failure = string( failureBuilder.view() );
                 return false;
             }
             for ( const string& plannedNewID : outPlan._listNewID )
             {
                 if ( plannedNewID == newID )
                 {
-                    outPlan._failure = formatToString( "two assets would move to '%#' - nothing was moved", newID );
+                    StringBuilder<constant::buffer::kMax256> failureBuilder;
+                    failureBuilder.appendFormat( "two assets would move to '%#' - nothing was moved", newID );
+                    outPlan._failure = string( failureBuilder.view() );
                     return false;
                 }
             }
@@ -380,7 +390,9 @@ namespace sw::editor
         AssetReferenceFields params;
         if ( params.load( ProcessRoots::get()._project.str() ) == false )
         {
-            outPlan._failure = formatToString( "could not read %#", AssetReferenceFields::kConfigFile );
+            StringBuilder<constant::buffer::kMax256> failureBuilder;
+            failureBuilder.appendFormat( "could not read %#", AssetReferenceFields::kConfigFile );
+            outPlan._failure = string( failureBuilder.view() );
             return false;
         }
         vector<EditorAssetFileCommandsInternal::PreparedRewrite> listRewrite;
@@ -388,8 +400,10 @@ namespace sw::editor
             return false;
         if ( outPlan._listUnfixedReferrer.empty() == false )
         {
-            outPlan._failure = formatToString( "%# file(s) name a moved asset outside a path field of %# (first: '%#') - fix them or add the field, nothing was moved",
-                                               outPlan._listUnfixedReferrer.size(), AssetReferenceFields::kConfigFile, outPlan._listUnfixedReferrer.front() );
+            StringBuilder<constant::buffer::kMax256> failureBuilder;
+            failureBuilder.appendFormat( "%# file(s) name a moved asset outside a path field of %# (first: '%#') - fix them or add the field, nothing was moved",
+                                         outPlan._listUnfixedReferrer.size(), AssetReferenceFields::kConfigFile, outPlan._listUnfixedReferrer.front() );
+            outPlan._failure = string( failureBuilder.view() );
             return false;
         }
         return true;
@@ -427,7 +441,11 @@ namespace sw::editor
         }
         bool bFailed = movedCount < outPlan._listMove.size();
         if ( bFailed )
-            outPlan._failure = formatToString( "could not move '%#' (locked or read-only?)", outPlan._listOldID[movedCount] );
+        {
+            StringBuilder<constant::buffer::kMax256> failureBuilder2;
+            failureBuilder2.appendFormat( "could not move '%#' (locked or read-only?)", outPlan._listOldID[movedCount] );
+            outPlan._failure = string( failureBuilder2.view() );
+        }
 
         // ② 참조 파일을 쓴다. 하나라도 지면 쓴 것을 원래 글로 되돌린다.
         size_t writtenCount = 0;
@@ -438,8 +456,10 @@ namespace sw::editor
                 const EditorAssetFileCommandsInternal::PreparedRewrite& rewrite = listRewrite[writtenCount];
                 if ( FileUtil::writeTextFile( rewrite._referrerAbs, rewrite._rewrittenText ) == false )
                 {
-                    bFailed          = true;
-                    outPlan._failure = formatToString( "could not write the referencing file '%#' (locked or read-only?)", rewrite._referrerID );
+                    bFailed = true;
+                    StringBuilder<constant::buffer::kMax256> failureBuilder;
+                    failureBuilder.appendFormat( "could not write the referencing file '%#' (locked or read-only?)", rewrite._referrerID );
+                    outPlan._failure = string( failureBuilder.view() );
                     break;
                 }
             }
@@ -508,25 +528,33 @@ namespace sw::editor
         const string destination = FileUtil::joinPath( destinationParentAbs, FileUtil::getFileNamePart( source ) );
         if ( FileUtil::isDirectory( source ) == false )
         {
-            outFailure = formatToString( "'%#' is not a folder", source );
+            StringBuilder<constant::buffer::kMax256> failureBuilder;
+            failureBuilder.appendFormat( "'%#' is not a folder", source );
+            outFailure = string( failureBuilder.view() );
             return false;
         }
         // 폴더를 자기 안으로 옮기면 끝없이 깊어진다
         const string sourcePrefix = source + "/";
         if ( FileUtil::pathsEqualNormalized( destination, source ) || StringUtil::startsWith( FileUtil::normalizeSeparators( destination ), sourcePrefix ) )
         {
-            outFailure = formatToString( "'%#' cannot move into itself", FileUtil::getFileNamePart( source ) );
+            StringBuilder<constant::buffer::kMax256> failureBuilder;
+            failureBuilder.appendFormat( "'%#' cannot move into itself", FileUtil::getFileNamePart( source ) );
+            outFailure = string( failureBuilder.view() );
             return false;
         }
         if ( FileUtil::exists( destination ) )
         {
-            outFailure = formatToString( "'%#' already exists - nothing was moved", destination );
+            StringBuilder<constant::buffer::kMax256> failureBuilder;
+            failureBuilder.appendFormat( "'%#' already exists - nothing was moved", destination );
+            outFailure = string( failureBuilder.view() );
             return false;
         }
         vector<string> listFile;
         if ( FileUtil::collectFiles( source, "", listFile, true ) == false )
         {
-            outFailure = formatToString( "could not list '%#'", source );
+            StringBuilder<constant::buffer::kMax256> failureBuilder;
+            failureBuilder.appendFormat( "could not list '%#'", source );
+            outFailure = string( failureBuilder.view() );
             return false;
         }
         for ( const string& fileAbs : listFile )
@@ -536,7 +564,9 @@ namespace sw::editor
         }
         if ( outListMove.empty() )
         {
-            outFailure = formatToString( "'%#' is empty - nothing to move", FileUtil::getFileNamePart( source ) );
+            StringBuilder<constant::buffer::kMax256> failureBuilder;
+            failureBuilder.appendFormat( "'%#' is empty - nothing to move", FileUtil::getFileNamePart( source ) );
+            outFailure = string( failureBuilder.view() );
             return false;
         }
         return true;

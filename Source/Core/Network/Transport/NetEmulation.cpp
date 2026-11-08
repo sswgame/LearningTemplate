@@ -104,11 +104,19 @@ namespace sw
 
     string NetEmulationReport::makeLine() const
     {
-        string text{ kLinePrefix };
-        text += formatToString( " connections=%#", _connectionCount );
-        text += formatToString( " sent=%#", _sentPacketCount );
-        text += formatToString( " dropped=%#", _droppedPacketCount );
-        text += formatToString( " resent=%#", _resentMessageCount );
+        string                                   text{ kLinePrefix };
+        StringBuilder<constant::buffer::kMax256> textPart4;
+        textPart4.appendFormat( " connections=%#", _connectionCount );
+        text += textPart4.c_str();
+        StringBuilder<constant::buffer::kMax256> textPart3;
+        textPart3.appendFormat( " sent=%#", _sentPacketCount );
+        text += textPart3.c_str();
+        StringBuilder<constant::buffer::kMax256> textPart2;
+        textPart2.appendFormat( " dropped=%#", _droppedPacketCount );
+        text += textPart2.c_str();
+        StringBuilder<constant::buffer::kMax256> textPart;
+        textPart.appendFormat( " resent=%#", _resentMessageCount );
+        text += textPart.c_str();
         NetEmulationInternal::appendValue( text, "lossPercent", static_cast<float64>( _measuredLossPercent ) );
         NetEmulationInternal::appendValue( text, "rttMs", static_cast<float64>( _rttMilliseconds ) );
         return DebugReplyLine::makeFixed( std::move( text ) );

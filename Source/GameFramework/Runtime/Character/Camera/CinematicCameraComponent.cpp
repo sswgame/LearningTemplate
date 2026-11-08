@@ -54,11 +54,17 @@ namespace sw
                 const GameObjectManager*        pManager   = pOwner != nullptr ? pOwner->getManager() : nullptr;
                 if ( pCinematic == nullptr || pManager == nullptr )
                     return false;
-                const GameObject*             pCut           = pCinematic->isCinematicActive() ? pManager->resolveGameObject( pCinematic->getCurrentCutCamera() ) : nullptr;
-                const CameraManagerComponent* pCameraManager = CameraManagerComponent::findForPlayer( *pManager, pCinematic->getLocalPlayerIndex() );
-                outText                                      = formatToString( "Cut camera: %#", pCut != nullptr ? pCut->getName().c_str() : "none" );
+                const GameObject*                        pCut           = pCinematic->isCinematicActive() ? pManager->resolveGameObject( pCinematic->getCurrentCutCamera() ) : nullptr;
+                const CameraManagerComponent*            pCameraManager = CameraManagerComponent::findForPlayer( *pManager, pCinematic->getLocalPlayerIndex() );
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "Cut camera: %#", pCut != nullptr ? pCut->getName().c_str() : "none" );
+                outText = string( textBuilder.view() );
                 if ( pCameraManager != nullptr )
-                    outText += formatToString( "\nPlayer camera blend: %# (weight %#)", pCameraManager->isBlending() ? "blending" : "settled", pCameraManager->getBlendWeight() );
+                {
+                    StringBuilder<constant::buffer::kMax256> textPart;
+                    textPart.appendFormat( "\nPlayer camera blend: %# (weight %#)", pCameraManager->isBlending() ? "blending" : "settled", pCameraManager->getBlendWeight() );
+                    outText += textPart.c_str();
+                }
                 return true;
             }
         };

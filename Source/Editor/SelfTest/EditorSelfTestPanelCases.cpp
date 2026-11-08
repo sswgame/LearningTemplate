@@ -123,9 +123,10 @@ namespace sw::editor
                             {
                                 if ( probe.hasPhaseTimedOut( stepIndex ) )
                                 {
-                                    (void)context.expect( false, formatToString( "the self test folder listing never arrived (entries %#, refresh pending %#, folder %#)", pPanel->getEntryCount(),
-                                                                                 pPanel->isFolderRefreshPending(), probe._folderAbs )
-                                                                     .c_str() );
+                                    fixed_string<constant::buffer::kMax512> text;
+                                    formatstring( text.data(), text.capacity(), "the self test folder listing never arrived (entries %#, refresh pending %#, folder %#)", pPanel->getEntryCount(),
+                                                  pPanel->isFolderRefreshPending(), probe._folderAbs );
+                                    (void)context.expect( false, text.c_str() );
                                     probe.enterPhase( kPhaseCleanup, stepIndex );
                                 }
                                 return EditorSelfTestStep::Continue;

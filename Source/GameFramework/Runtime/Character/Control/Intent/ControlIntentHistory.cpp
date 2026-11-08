@@ -113,7 +113,9 @@ namespace sw
         }
         if ( version != kVersion )
         {
-            outError = formatToString( "intent recording version %# is not %#", version, kVersion );
+            StringBuilder<constant::buffer::kMax256> errorBuilder;
+            errorBuilder.appendFormat( "intent recording version %# is not %#", version, kVersion );
+            outError = string( errorBuilder.view() );
             return false;
         }
         const uint64 trackCount = reader.readVarUint();

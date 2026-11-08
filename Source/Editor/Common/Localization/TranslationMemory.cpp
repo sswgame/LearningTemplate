@@ -60,7 +60,9 @@ namespace sw
                                          entry.findAttribute( "source" ) == nullptr || entry.findAttribute( "text" ) == nullptr;
             if ( bMalformedEntry )
             {
-                error = formatToString( "%#: entries[%#] needs exactly \"source\" and \"text\"", string( sourceName ), static_cast<uint64>( index ) );
+                StringBuilder<constant::buffer::kMax256> errorBuilder;
+                errorBuilder.appendFormat( "%#: entries[%#] needs exactly \"source\" and \"text\"", string( sourceName ), static_cast<uint64>( index ) );
+                error = string( errorBuilder.view() );
                 break;
             }
             mapPair[string{ entry.getAttributeText( "source" ) }] = string{ entry.getAttributeText( "text" ) };

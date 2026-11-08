@@ -232,7 +232,9 @@ namespace sw::editor
             EditorWidgets::drawChip( SW_LOCKEY( "EdWidget", "NoFileDefaults" ), SW_THEME_COLOR( "Signal", "Warning" ) );
         const uint32 keyCount = document.countNonDefaultKeys();
         ImGui::SameLine();
-        EditorWidgets::drawChip( ( formatToString( "%# non-default", keyCount ) ).c_str(), SW_THEME_COLOR( "Base", "Accent" ) );
+        fixed_string<constant::buffer::kMax64> text;
+        formatstring( text.data(), text.capacity(), "%# non-default", keyCount );
+        EditorWidgets::drawChip( text.c_str(), SW_THEME_COLOR( "Base", "Accent" ) );
         if ( document.isLoadFailed() )
             EditorThemeUtil::textError( "The file could not be read (see the log). Reset to Default replaces it when saved" );
 

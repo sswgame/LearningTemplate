@@ -39,7 +39,11 @@ namespace sw::editor
                     message += "\n  " + listFailure[index];
                 }
                 if ( listFailure.size() > kMaxReportedFailure )
-                    message += formatToString( "\n  ... and %# more", listFailure.size() - kMaxReportedFailure );
+                {
+                    StringBuilder<constant::buffer::kMax256> messagePart;
+                    messagePart.appendFormat( "\n  ... and %# more", listFailure.size() - kMaxReportedFailure );
+                    message += messagePart.c_str();
+                }
                 (void)context.expect( false, message.c_str() );
                 return EditorSelfTestStep::Done;
             }

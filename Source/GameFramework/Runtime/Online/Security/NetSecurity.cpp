@@ -113,7 +113,9 @@ namespace sw
         settings._privateKeyPassphrase.assign( settings._privateKeyPassphrase.size(), '\0' );
         if ( context.has_value() == false )
         {
-            outError = formatToString( "%#: %#", context.error().message(), context.error().detail() );
+            StringBuilder<constant::buffer::kMax256> errorBuilder;
+            errorBuilder.appendFormat( "%#: %#", context.error().message(), context.error().detail() );
+            outError = string( errorBuilder.view() );
             return nullptr;
         }
         return std::move( context ).value();
@@ -148,7 +150,9 @@ namespace sw
         expected<unique_ptr<ITLSContext>> context = provider.createTLSContext( settings );
         if ( context.has_value() == false )
         {
-            outError = formatToString( "%#: %#", context.error().message(), context.error().detail() );
+            StringBuilder<constant::buffer::kMax256> errorBuilder;
+            errorBuilder.appendFormat( "%#: %#", context.error().message(), context.error().detail() );
+            outError = string( errorBuilder.view() );
             return nullptr;
         }
         return std::move( context ).value();

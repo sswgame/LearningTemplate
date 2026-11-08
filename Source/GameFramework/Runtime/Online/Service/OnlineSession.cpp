@@ -98,8 +98,14 @@ namespace sw
                 if ( listArgument.empty() == false )
                     return false;
                 const OnlineSession* const pSession = game::findSubsystem<OnlineSession>();
-                outReply                            = pSession == nullptr ? string( "online: no game instance" )
-                                                                          : formatToString( "online: %#, %# kit clients, local server %#", describeState( pSession->getState() ), pSession->getClientCount(), pSession->hasLocalServer() ? "on" : "off" );
+                if ( pSession == nullptr )
+                {
+                    outReply = "online: no game instance";
+                    return true;
+                }
+                StringBuilder<constant::buffer::kMax256> reply;
+                reply.appendFormat( "online: %#, %# kit clients, local server %#", describeState( pSession->getState() ), pSession->getClientCount(), pSession->hasLocalServer() ? "on" : "off" );
+                outReply = string( reply.view() );
                 return true;
             }
 

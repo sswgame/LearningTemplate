@@ -120,7 +120,9 @@ namespace sw
 
     string ModVersion::toString() const
     {
-        return formatToString( "%#.%#.%#", _major, _minor, _patch );
+        StringBuilder<constant::buffer::kMax256> resultBuilder;
+        resultBuilder.appendFormat( "%#.%#.%#", _major, _minor, _patch );
+        return string( resultBuilder.view() );
     }
 
     bool ModManifest::isValidID( string_view id )
@@ -138,12 +140,16 @@ namespace sw
 
     string ModManifest::makeContentPrefix( string_view id )
     {
-        return formatToString( "%#/%#/", kModDomainRoot, id );
+        StringBuilder<constant::buffer::kMax256> resultBuilder;
+        resultBuilder.appendFormat( "%#/%#/", kModDomainRoot, id );
+        return string( resultBuilder.view() );
     }
 
     string ModManifest::makeLayerRoot( string_view id )
     {
-        return formatToString( "%#/%#/%#", kModDomainRoot, id, kLayerFolder );
+        StringBuilder<constant::buffer::kMax256> resultBuilder;
+        resultBuilder.appendFormat( "%#/%#/%#", kModDomainRoot, id, kLayerFolder );
+        return string( resultBuilder.view() );
     }
 
     bool ModManifest::parseXMLText( string_view text, string_view sourceName, ModManifest& outManifest )

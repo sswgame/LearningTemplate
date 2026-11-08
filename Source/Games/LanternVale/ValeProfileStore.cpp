@@ -18,7 +18,9 @@ namespace sw
 
     string ValeProfileStore::makeSlotName( uint64 accountID )
     {
-        return formatToString( "vale/a%#", accountID );
+        StringBuilder<constant::buffer::kMax256> resultBuilder;
+        resultBuilder.appendFormat( "vale/a%#", accountID );
+        return string( resultBuilder.view() );
     }
 
     void ValeProfileStore::requestLoad( uint64 accountID )

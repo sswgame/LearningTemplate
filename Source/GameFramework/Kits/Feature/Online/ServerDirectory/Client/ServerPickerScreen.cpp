@@ -54,7 +54,9 @@ namespace sw
 
             static string makeRowText( const ServerListEntry& server )
             {
-                return formatToString( "%#  %#%%  %#", server._region, static_cast<int32>( server._fillPercent ), getStateText( server._state ) );
+                StringBuilder<constant::buffer::kMax256> resultBuilder;
+                resultBuilder.appendFormat( "%#  %#%%  %#", server._region, static_cast<int32>( server._fillPercent ), getStateText( server._state ) );
+                return string( resultBuilder.view() );
             }
         };
     } // namespace
@@ -180,7 +182,9 @@ namespace sw
             }
             case ServerListState::Failed:
             {
-                pStatus->setText( formatToString( "Could not load the server list (error %#)", static_cast<int32>( _pModel->getErrorCode() ) ) );
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "Could not load the server list (error %#)", static_cast<int32>( _pModel->getErrorCode() ) );
+                pStatus->setText( string( textBuilder.view() ) );
                 break;
             }
         }

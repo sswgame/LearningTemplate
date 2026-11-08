@@ -101,7 +101,11 @@ SW_TEST_CASE_F( CrashReportTest, ContextStoreOverwritesKeyAndDropsOverflowSafely
 
     // 정원을 넘겨 본다. 개수는 정원에서 멈추고 첫 항목은 그대로여야 한다.
     for ( uint32 index = 0; index < CrashContextStore::kMaxEntry + 8; ++index )
-        store.set( formatToString( "Key%#", index ), "value" );
+    {
+        StringBuilder<constant::buffer::kMax256> textBuilder;
+        textBuilder.appendFormat( "Key%#", index );
+        store.set( string( textBuilder.view() ), "value" );
+    }
     SW_EXPECT_EQUAL( CrashContextStore::kMaxEntry, store._entryCount );
     SW_EXPECT_TRUE( store._arrEntry[0]._value.view() == string_view( "DX11" ) );
 

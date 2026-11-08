@@ -185,7 +185,7 @@ SW_TEST_CASE( GlobalVariableTest, CommandLineIntegration )
     SW_EXPECT_EQUAL( sw::string( "FromCLI" ), parsedStr );
 
     SW_EXPECT_TRUE( cmd.getParseErrors().empty() );
-    SW_EXPECT_TRUE( fixture._manager.setValueFromString( "gv_testInt", sw::formatToString( "%#", parsedInt ) ) );
+    SW_EXPECT_TRUE( fixture._manager.setValueFromString( "gv_testInt", sw::to_string( parsedInt ) ) );
     SW_EXPECT_TRUE( fixture._manager.setValueFromString( "gv_testString", parsedStr ) );
     SW_EXPECT_EQUAL( 777, fixture._intValue );
     SW_EXPECT_EQUAL( sw::string( "FromCLI" ), fixture._stringValue );
@@ -339,7 +339,9 @@ SW_TEST_CASE( GlobalVariableTest, MultithreadedStringReadWriteThreadSafety, ._ta
         const bool bEnoughReads  = readCount.load() - readBeforeWrite >= kMinOverlappedRead;
         if ( bEnoughWrites && ( bEnoughReads || overlapDeadline.isExpired() ) )
             break;
-        (void)fixture._manager.setValueFromString( "gv_testString", sw::formatToString( "Value_%#", iter ) );
+        sw::StringBuilder<sw::constant::buffer::kMax256> textBuilder;
+        textBuilder.appendFormat( "Value_%#", iter );
+        (void)fixture._manager.setValueFromString( "gv_testString", sw::string( textBuilder.view() ) );
         sw::ThreadUtil::yield();
     }
     const uint32 overlappedRead = readCount.load() - readBeforeWrite;
@@ -372,7 +374,9 @@ SW_TEST_CASE( GlobalVariableTest, FoundPointerSurvivesOtherRegistrations )
     sw::vector<int32> listStorage( kFillCount, 0 );
     for ( size_t fillIndex = 0; fillIndex < kFillCount; ++fillIndex )
     {
-        const sw::string name = sw::formatToString( "gv_filler%#", fillIndex );
+        sw::StringBuilder<sw::constant::buffer::kMax256> nameBuilder;
+        nameBuilder.appendFormat( "gv_filler%#", fillIndex );
+        const sw::string name{ nameBuilder.view() };
         SW_REQUIRE_TRUE( gvm.registerVariable( name, sw::GlobalVariableType::Int32, &listStorage[fillIndex], int32{ 0 }, "" ) );
     }
 

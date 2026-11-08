@@ -159,24 +159,38 @@ namespace sw
 
     bool GeneratedFileUtil::writeStamp( const string& stampPath, const GeneratedStamp& stamp )
     {
-        string stampText = formatToString( "%#\n%# %#\n", stamp._sourcePath, string( GeneratedFilesInternal::kStampInputTimeKey ), stamp._inputWriteTime );
+        StringBuilder<constant::buffer::kMax256> stampTextBuilder;
+        stampTextBuilder.appendFormat( "%#\n%# %#\n", stamp._sourcePath, string( GeneratedFilesInternal::kStampInputTimeKey ), stamp._inputWriteTime );
+        string stampText{ stampTextBuilder.view() };
         if ( stamp._bHasBitFlagEnum )
-            stampText += formatToString( "%#\n", string( GeneratedFilesInternal::kStampBitFlagLine ) );
+        {
+            StringBuilder<constant::buffer::kMax256> stampTextPart2;
+            stampTextPart2.appendFormat( "%#\n", string( GeneratedFilesInternal::kStampBitFlagLine ) );
+            stampText += stampTextPart2.c_str();
+        }
         for ( const string& typeFqn : stamp._listTypeFqn )
         {
-            stampText += formatToString( "%# %#\n", string( GeneratedFilesInternal::kStampTypeKey ), typeFqn );
+            StringBuilder<constant::buffer::kMax256> stampTextPart;
+            stampTextPart.appendFormat( "%# %#\n", string( GeneratedFilesInternal::kStampTypeKey ), typeFqn );
+            stampText += stampTextPart.c_str();
         }
         for ( const string& schemaLine : stamp._listFixedSchema )
         {
-            stampText += formatToString( "%# %#\n", string( GeneratedFilesInternal::kStampFixedSchemaKey ), schemaLine );
+            StringBuilder<constant::buffer::kMax256> stampTextPart;
+            stampTextPart.appendFormat( "%# %#\n", string( GeneratedFilesInternal::kStampFixedSchemaKey ), schemaLine );
+            stampText += stampTextPart.c_str();
         }
         for ( const string& assetField : stamp._listAssetField )
         {
-            stampText += formatToString( "%# %#\n", string( GeneratedFilesInternal::kStampAssetFieldKey ), assetField );
+            StringBuilder<constant::buffer::kMax256> stampTextPart;
+            stampTextPart.appendFormat( "%# %#\n", string( GeneratedFilesInternal::kStampAssetFieldKey ), assetField );
+            stampText += stampTextPart.c_str();
         }
         for ( const StampDependency& dependency : stamp._listDependency )
         {
-            stampText += formatToString( "%# %# %#\n", string( GeneratedFilesInternal::kStampDependencyKey ), dependency._writeTime, dependency._path );
+            StringBuilder<constant::buffer::kMax256> stampTextPart;
+            stampTextPart.appendFormat( "%# %# %#\n", string( GeneratedFilesInternal::kStampDependencyKey ), dependency._writeTime, dependency._path );
+            stampText += stampTextPart.c_str();
         }
         if ( FileUtil::writeTextFile( stampPath, stampText ) == false )
         {

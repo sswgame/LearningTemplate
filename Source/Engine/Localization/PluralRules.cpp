@@ -204,7 +204,7 @@ namespace sw
             /** @brief 정수 @p scaled 를 소수 @p fractionCount 자리 글로 씁니다(`150`, 2 → `1.50`). 보기 범위를 펼칠 때 쓴다. */
             static string formatScaled( int64 scaled, uint32 fractionCount )
             {
-                string digits = formatToString( "%#", scaled );
+                string digits = to_string( scaled );
                 while ( digits.size() <= fractionCount )
                 {
                     digits.insert( digits.begin(), '0' );

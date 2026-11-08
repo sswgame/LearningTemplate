@@ -78,7 +78,14 @@ namespace sw
                 {
                     bSet = state.setRegionValue( region, channel, value ) && bSet;
                 }
-                outReply = bSet ? formatToString( "surface.set %# %# = %#", listArgument[0], listArgument[1], value ) : "surface.set: unknown surface channel '" + listArgument[1] + "'";
+                if ( bSet == false )
+                {
+                    outReply = "surface.set: unknown surface channel '" + listArgument[1] + "'";
+                    return true;
+                }
+                StringBuilder<constant::buffer::kMax256> reply;
+                reply.appendFormat( "surface.set %# %# = %#", listArgument[0], listArgument[1], value );
+                outReply = string( reply.view() );
                 return true;
             }
         };

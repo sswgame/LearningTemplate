@@ -41,7 +41,9 @@ namespace sw::editor
         }
         if ( settings._clientCount < 1 || settings._clientCount > kMaxClients )
         {
-            outError = formatToString( "client count must be 1 to %#", kMaxClients );
+            StringBuilder<constant::buffer::kMax256> errorBuilder;
+            errorBuilder.appendFormat( "client count must be 1 to %#", kMaxClients );
+            outError = string( errorBuilder.view() );
             return false;
         }
         SceneManager* pSceneManager = game::findSubsystem<SceneManager>();
@@ -72,7 +74,9 @@ namespace sw::editor
         {
             if ( _pHarness->addClient( settings._conditions ) < 0 )
             {
-                outError = formatToString( "client %# did not start (see the log)", index + 1 );
+                StringBuilder<constant::buffer::kMax256> errorBuilder;
+                errorBuilder.appendFormat( "client %# did not start (see the log)", index + 1 );
+                outError = string( errorBuilder.view() );
                 stop();
                 return false;
             }

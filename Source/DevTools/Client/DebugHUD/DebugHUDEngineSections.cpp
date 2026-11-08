@@ -285,7 +285,9 @@ namespace sw
                 if ( status._failureCount > 0 )
                 {
                     // 첫 실패 줄만 — HUD 한 줄 폭에 맞춰 자른다(전문은 로그 · 보고에 있다).
-                    const string failure = formatToString( "%# - %#", status._failureCount, status._firstFailure.c_str() );
+                    StringBuilder<constant::buffer::kMax256> failureBuilder;
+                    failureBuilder.appendFormat( "%# - %#", status._failureCount, status._firstFailure.c_str() );
+                    const string failure{ failureBuilder.view() };
                     writer.addLine( "failures", AutomationRunTitleInput::truncateUTF8( failure, kFailureLineBytes ), DebugHUDLineStyle::Warning );
                 }
                 // 진행 중에는 모은 Warning · Error 수(허용 판정 전 — 중립), 끝나면 로그 게이트가 처리하지 않은 줄 수(있으면 경고색).
@@ -294,8 +296,10 @@ namespace sw
                 writer.addLineFormat( "frame", "%#", status._frame );
                 if ( status._previousStageName.empty() == false )
                 {
-                    const bool   bPreviousGood = status._previousStageResult == AutomationResult::Passed || status._previousStageResult == AutomationResult::Skipped;
-                    const string previous      = formatToString( "%# %#", status._previousStageName.c_str(), getEnumName( status._previousStageResult ) );
+                    const bool                               bPreviousGood = status._previousStageResult == AutomationResult::Passed || status._previousStageResult == AutomationResult::Skipped;
+                    StringBuilder<constant::buffer::kMax256> previousBuilder;
+                    previousBuilder.appendFormat( "%# %#", status._previousStageName.c_str(), getEnumName( status._previousStageResult ) );
+                    const string previous{ previousBuilder.view() };
                     writer.addLine( "previous", AutomationRunTitleInput::truncateUTF8( previous, kFailureLineBytes ), bPreviousGood ? DebugHUDLineStyle::Neutral : DebugHUDLineStyle::Warning );
                 }
             }

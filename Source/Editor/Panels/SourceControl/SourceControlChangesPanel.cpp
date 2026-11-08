@@ -140,7 +140,9 @@ namespace sw::editor
                 (void)sourceControl.requestStatus();
             EditorSelfTestMarks::record( "sourceControl.refresh" );
             ImGui::SameLine();
-            ImGui::TextDisabled( "%s", formatToString( "%# - %#", sourceControl.getProvider().getName(), sourceControl.isBusy() ? "working..." : "idle" ).c_str() );
+            fixed_string<constant::buffer::kMax256> text;
+            formatstring( text.data(), text.capacity(), "%# - %#", sourceControl.getProvider().getName(), sourceControl.isBusy() ? "working..." : "idle" );
+            ImGui::TextDisabled( "%s", text.c_str() );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSourceControl", "ScopeTooltip" ) );
         }
         EditorChrome::endToolbar();
@@ -189,7 +191,11 @@ namespace sw::editor
                     (void)sourceControl.requestDiff( change._path );
                 }
                 if ( EditorSelfTestMarks::isEnabled() )
-                    EditorSelfTestMarks::record( formatToString( "sourceControl.row.%#", rowIndex ).c_str() );
+                {
+                    fixed_string<constant::buffer::kMax64> text;
+                    formatstring( text.data(), text.capacity(), "sourceControl.row.%#", rowIndex );
+                    EditorSelfTestMarks::record( text.c_str() );
+                }
                 ImGui::TableSetColumnIndex( 1 );
                 if ( change._originalPath.empty() )
                     ImGui::TextUnformatted( change._path.c_str() );

@@ -283,7 +283,9 @@ namespace sw::editor
                     outReply = "outfit atlas '" + listArgument[0] + "' failed (see the log) - nothing was written";
                     return false;
                 }
-                outReply = formatToString( "baked %# parts (%# vertices) into %# and %# atlas image(s) - run --import-textures for the images", result._partCount, result._vertexCount, result._meshPath, static_cast<uint32>( result._listTexturePath.size() ) );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "baked %# parts (%# vertices) into %# and %# atlas image(s) - run --import-textures for the images", result._partCount, result._vertexCount, result._meshPath, static_cast<uint32>( result._listTexturePath.size() ) );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
         };

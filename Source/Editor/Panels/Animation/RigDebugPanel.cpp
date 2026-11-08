@@ -311,7 +311,11 @@ namespace sw::editor
                     return string{ "-" };
                 string text = listBone[0] < skeleton.getBoneCount() ? string{ skeleton.getBone( listBone[0] )._name.c_str() } : string{ "?" };
                 if ( listBone.size() > 1 )
-                    text += formatToString( " (+%#)", listBone.size() - 1 );
+                {
+                    StringBuilder<constant::buffer::kMax256> textPart;
+                    textPart.appendFormat( " (+%#)", listBone.size() - 1 );
+                    text += textPart.c_str();
+                }
                 return text;
             }
 

@@ -981,8 +981,10 @@ namespace sw::editor
         const bool bVrm = ModelImportVrm::containsVrmExtension( bytes );
         if ( bVrm )
         {
-            const string avatarText = formatToString( "avatar=%#", VrmAvatarDef::kVersion );
-            hash                    = HashUtil::computeStringHash64( avatarText.c_str(), avatarText.size(), false, hash );
+            StringBuilder<constant::buffer::kMax256> avatarTextBuilder;
+            avatarTextBuilder.appendFormat( "avatar=%#", VrmAvatarDef::kVersion );
+            const string avatarText{ avatarTextBuilder.view() };
+            hash = HashUtil::computeStringHash64( avatarText.c_str(), avatarText.size(), false, hash );
         }
         // 모델 옆 머티리얼을 찍어 내는 견본(VRM 은 툰, 그 밖은 PBR)도 섞는다 — 견본에 프로퍼티 · 스위치를 더하면 이미 쓴 머티리얼도 다시 써야 한다.
         const unique_ptr<EngineDefaultAssets> pDefaultAssets = EngineDefaultAssets::load();
@@ -997,8 +999,10 @@ namespace sw::editor
         const string fractureText = rule.makeFractureHashText();
         if ( fractureText.empty() == false )
         {
-            const string fractureVersion = formatToString( "%#;format=%#;algorithm=%#", fractureText, FractureAsset::kVersion, MeshFractureUtil::kAlgorithmVersion );
-            hash                         = HashUtil::computeStringHash64( fractureVersion.c_str(), fractureVersion.size(), false, hash );
+            StringBuilder<constant::buffer::kMax256> fractureVersionBuilder;
+            fractureVersionBuilder.appendFormat( "%#;format=%#;algorithm=%#", fractureText, FractureAsset::kVersion, MeshFractureUtil::kAlgorithmVersion );
+            const string fractureVersion{ fractureVersionBuilder.view() };
+            hash = HashUtil::computeStringHash64( fractureVersion.c_str(), fractureVersion.size(), false, hash );
         }
         // LOD 규칙이 없으면 섞지 않는다 — LOD 를 쓰지 않는 모델의 해시가 그대로다(다시 임포트하지 않는다).
         const string lodText = rule.makeLODHashText();

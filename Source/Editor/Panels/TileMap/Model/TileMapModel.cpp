@@ -709,15 +709,21 @@ namespace sw::editor
         {
             case PaintLayer::Visual:
             {
-                const TileMapXMLData::Visual& visual = _map._listVisual[tileIndex];
-                return formatToString( "%#, %#: %# / %#", x, y, static_cast<int32>( visual._height ), static_cast<int32>( visual._atlasID ) );
+                const TileMapXMLData::Visual&            visual = _map._listVisual[tileIndex];
+                StringBuilder<constant::buffer::kMax256> resultBuilder;
+                resultBuilder.appendFormat( "%#, %#: %# / %#", x, y, static_cast<int32>( visual._height ), static_cast<int32>( visual._atlasID ) );
+                return string( resultBuilder.view() );
             }
             case PaintLayer::Warp:
             {
                 for ( const TileMapXMLData::Warp& warp : _map._listWarp )
                 {
                     if ( warp._tileX == x && warp._tileY == y )
-                        return formatToString( "%#, %#: %# (%#, %#)", x, y, warp._targetMap, warp._targetTileX, warp._targetTileY );
+                    {
+                        StringBuilder<constant::buffer::kMax256> resultBuilder;
+                        resultBuilder.appendFormat( "%#, %#: %# (%#, %#)", x, y, warp._targetMap, warp._targetTileX, warp._targetTileY );
+                        return string( resultBuilder.view() );
+                    }
                 }
                 break;
             }
@@ -725,22 +731,34 @@ namespace sw::editor
             {
                 const string_view brushName = _map.getTileBrushName( x, y );
                 if ( brushName.empty() == false )
-                    return formatToString( "%#, %#: %#", x, y, brushName );
+                {
+                    StringBuilder<constant::buffer::kMax256> resultBuilder;
+                    resultBuilder.appendFormat( "%#, %#: %#", x, y, brushName );
+                    return string( resultBuilder.view() );
+                }
                 break;
             }
             case PaintLayer::Flag:
             {
-                return formatToString( "%#, %#: %#", x, y, static_cast<int32>( _map.getFlagLayer( _flagLayer )[tileIndex] ) );
+                StringBuilder<constant::buffer::kMax256> resultBuilder;
+                resultBuilder.appendFormat( "%#, %#: %#", x, y, static_cast<int32>( _map.getFlagLayer( _flagLayer )[tileIndex] ) );
+                return string( resultBuilder.view() );
             }
             case PaintLayer::Data:
             {
                 int32 value = 0;
                 if ( _map.getCellData( _dataLayerIndex, x, y, value ) )
-                    return formatToString( "%#, %#: %#", x, y, value );
+                {
+                    StringBuilder<constant::buffer::kMax256> resultBuilder;
+                    resultBuilder.appendFormat( "%#, %#: %#", x, y, value );
+                    return string( resultBuilder.view() );
+                }
                 break;
             }
         }
-        return formatToString( "%#, %#", x, y );
+        StringBuilder<constant::buffer::kMax256> resultBuilder;
+        resultBuilder.appendFormat( "%#, %#", x, y );
+        return string( resultBuilder.view() );
     }
 
     bool TileMapModel::isInBounds( int32 x, int32 y ) const

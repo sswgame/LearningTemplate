@@ -76,8 +76,14 @@ namespace sw::editor
                 if ( comparison._commonTickCount == 0 )
                     return "the two histories share no tick - record them over the same ticks";
                 if ( comparison._bDiverged )
-                    return formatToString( "first divergent tick %# (%# common tick(s))", comparison._firstDivergentTick, comparison._commonTickCount );
-                return formatToString( "no divergence over %# common tick(s)", comparison._commonTickCount );
+                {
+                    StringBuilder<constant::buffer::kMax256> resultBuilder2;
+                    resultBuilder2.appendFormat( "first divergent tick %# (%# common tick(s))", comparison._firstDivergentTick, comparison._commonTickCount );
+                    return string( resultBuilder2.view() );
+                }
+                StringBuilder<constant::buffer::kMax256> resultBuilder;
+                resultBuilder.appendFormat( "no divergence over %# common tick(s)", comparison._commonTickCount );
+                return string( resultBuilder.view() );
             }
 
             /** @brief 감시 값 `Editor.NetPlaySyncCommonTicks` — 마지막 비교에서 두 이력에 모두 있던 틱 수입니다. */
@@ -147,15 +153,24 @@ namespace sw::editor
                     const EditorNetPlayProcessStatus status = pSession->getProcessStatus( 1 );
                     if ( status._objectHashReportCount == 0 || status._objectHashTick < serverTick )
                     {
-                        outReply = pSession->requestObjectHashes( 1, serverTick )
-                                     ? formatToString( "asked %# for its object hashes at tick %# - wait until Editor.NetPlayObjectHashReports changes, then run this again", status._label, serverTick )
-                                     : "netplay sync objects client could not ask the client (its process is gone)";
+                        if ( pSession->requestObjectHashes( 1, serverTick ) == false )
+                        {
+                            outReply = "netplay sync objects client could not ask the client (its process is gone)";
+                            return true;
+                        }
+                        StringBuilder<constant::buffer::kMax256> reply;
+                        reply.appendFormat( "asked %# for its object hashes at tick %# - wait until Editor.NetPlayObjectHashReports changes, then run this again", status._label, serverTick );
+                        outReply = string( reply.view() );
                         return true;
                     }
                     bDone = compare.compareObjects( serverTick, listServer, status._objectHashTick, status._listObjectHash );
                 }
                 if ( bDone )
-                    outReply = formatToString( "netplay sync objects tick %#: %# differing object(s)", compare.getObjectTick(), compare.getDifferingObjects().size() );
+                {
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "netplay sync objects tick %#: %# differing object(s)", compare.getObjectTick(), compare.getDifferingObjects().size() );
+                    outReply = string( replyBuilder.view() );
+                }
                 else
                     outReply = compare.getLastError();
                 return true;
@@ -368,8 +383,13 @@ namespace sw::editor
         ImGui::InputInt( "##SyncReplayStep", &_replayStepCount, 1, 10 );
         _replayStepCount = _replayStepCount < 1 ? 1 : _replayStepCount;
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Step" ) ) );
-        if ( ImGui::Button( SW_LOCKEY( "EdText", "Step" ) ) && session.sendServerCommand( formatToString( "step %#", _replayStepCount ) ) == false )
-            _model.setError( "The server did not take the step command" );
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "Step" ) ) )
+        {
+            fixed_string<constant::buffer::kMax32> command;
+            formatstring( command.data(), command.capacity(), "step %#", _replayStepCount );
+            if ( session.sendServerCommand( command.view() ) == false )
+                _model.setError( "The server did not take the step command" );
+        }
         ImGui::EndDisabled();
     }
 
@@ -412,7 +432,9 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "SyncObjects" ) );
         if ( compare.hasObjectComparison() )
         {
-            ImGui::TextUnformatted( ( formatToString( "tick %#", compare.getObjectTick() ) ).c_str() );
+            fixed_string<constant::buffer::kMax64> text;
+            formatstring( text.data(), text.capacity(), "tick %#", compare.getObjectTick() );
+            ImGui::TextUnformatted( text.c_str() );
             if ( compare.getDifferingObjects().empty() )
                 ImGui::TextUnformatted( "every named object matches" );
             for ( const string& name : compare.getDifferingObjects() )

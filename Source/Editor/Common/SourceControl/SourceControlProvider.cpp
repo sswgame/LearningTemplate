@@ -140,7 +140,7 @@ namespace sw::editor
 
     ProcessCommand GitChangeCommands::makeHistoryCommand( string_view repositoryPath )
     {
-        return ProcessCommand::fromSearchPath( "git", { "--no-pager", "log", "--no-color", "--date=short", "--pretty=format:%h %ad %an  %s", "-n", formatToString( "%#", kHistoryCount ), "--", string( repositoryPath ) } );
+        return ProcessCommand::fromSearchPath( "git", { "--no-pager", "log", "--no-color", "--date=short", "--pretty=format:%h %ad %an  %s", "-n", to_string( kHistoryCount ), "--", string( repositoryPath ) } );
     }
 
     ProcessCommand GitChangeCommands::makeRevertCommand( string_view repositoryPath )

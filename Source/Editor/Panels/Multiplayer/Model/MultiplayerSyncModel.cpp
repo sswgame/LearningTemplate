@@ -24,9 +24,11 @@ namespace sw::editor
 
     bool MultiplayerSyncModel::requestClientHistory( IEditorNetPlayProcesses& processes, const EditorStateHashCompare& compare, int32 sourceIndex, int32 processIndex )
     {
-        const EditorNetPlayProcessStatus status  = processes.getProcessStatus( processIndex );
-        const string&                    channel = compare.getHashChannel();
-        const string                     command = formatToString( "state.hashline %#%#", kClientHistoryTicks, ( channel == StateHashHistory::kSceneChannelName ? string{} : " " + channel ) );
+        const EditorNetPlayProcessStatus         status  = processes.getProcessStatus( processIndex );
+        const string&                            channel = compare.getHashChannel();
+        StringBuilder<constant::buffer::kMax256> commandBuilder;
+        commandBuilder.appendFormat( "state.hashline %#%#", kClientHistoryTicks, ( channel == StateHashHistory::kSceneChannelName ? string{} : " " + channel ) );
+        const string command{ commandBuilder.view() };
         if ( processes.sendProcessCommand( processIndex, command ) == false )
         {
             SW_LOG_WARNING_ID( "MultiplayerSync.SyncCouldNotAsk", "Sync could not ask %# for its history (the process has exited)", status._label );
@@ -58,7 +60,9 @@ namespace sw::editor
                 if ( _arrPendingWatch[sourceIndex].getElapsedMilliseconds() >= timeoutMilliseconds )
                 {
                     _arrPendingProcess[sourceIndex] = -1;
-                    _errorText                      = formatToString( "Timed out waiting for %#'s history (no valid answer within %# ms)", status._label, timeoutMilliseconds );
+                    StringBuilder<constant::buffer::kMax256> errorTextBuilder;
+                    errorTextBuilder.appendFormat( "Timed out waiting for %#'s history (no valid answer within %# ms)", status._label, timeoutMilliseconds );
+                    _errorText = string( errorTextBuilder.view() );
                     SW_LOG_WARNING_ID( "MultiplayerSync.Sync", "Sync %#", _errorText );
                 }
                 continue;
@@ -141,7 +145,9 @@ namespace sw::editor
             if ( _objectWatch.getElapsedMilliseconds() >= timeoutMilliseconds )
             {
                 _bObjectRequest = SW_FALSE;
-                _errorText      = formatToString( "Timed out waiting for the object hashes (no valid answer within %# ms)", timeoutMilliseconds );
+                StringBuilder<constant::buffer::kMax256> errorTextBuilder;
+                errorTextBuilder.appendFormat( "Timed out waiting for the object hashes (no valid answer within %# ms)", timeoutMilliseconds );
+                _errorText = string( errorTextBuilder.view() );
                 SW_LOG_WARNING_ID( "MultiplayerSync.Sync", "Sync %#", _errorText );
             }
             return;

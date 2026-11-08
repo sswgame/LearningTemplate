@@ -631,9 +631,11 @@ SW_TEST_CASE( TaskManagerTest, DestroyedManagerReturnsItsStageNodes )
 
     // 스테이지 하나가 새면 그 안의 목록·뮤텍스까지 따라 남으므로 새면 스테이지 수보다 크게 벌어진다.
     // 임계값을 스테이지 수로 둔 것은 로거가 아직 안 비운 메시지 같은 잡음을 결함으로 읽지 않기 위해서다.
-    const uint64 leaked = after > before ? after - before : 0;
+    const uint64                                     leaked = after > before ? after - before : 0;
+    sw::StringBuilder<sw::constant::buffer::kMax256> textBuilder;
+    textBuilder.appendFormat( "%# live allocations remain after the manager is destroyed - %# stages were not returned", leaked, kLeakProbeStageCount );
     SW_EXPECT_TRUE_MSG( leaked < kLeakProbeStageCount,
-                        sw::formatToString( "%# live allocations remain after the manager is destroyed - %# stages were not returned", leaked, kLeakProbeStageCount ) );
+                        sw::string( textBuilder.view() ) );
 }
 
 /**
@@ -673,9 +675,11 @@ SW_TEST_CASE( TaskManagerTest, HandlesOutlivingTheManagerKeepTheirNodes )
     pMemory->setTrackingEnabled( bWasTracking );
 
     // 풀 하나 · 태스크 슬랩 하나 · 스테이지 하나가 마지막 핸들과 함께 돌아가야 한다.
-    const uint64 returnedCount = heldCount > releasedCount ? heldCount - releasedCount : 0;
+    const uint64                                     returnedCount = heldCount > releasedCount ? heldCount - releasedCount : 0;
+    sw::StringBuilder<sw::constant::buffer::kMax256> textBuilder;
+    textBuilder.appendFormat( "only %# allocations were returned with the last handle - the pool went away with the manager", returnedCount );
     SW_EXPECT_TRUE_MSG( returnedCount >= 3,
-                        sw::formatToString( "only %# allocations were returned with the last handle - the pool went away with the manager", returnedCount ) );
+                        sw::string( textBuilder.view() ) );
 }
 
 /**
@@ -897,8 +901,10 @@ SW_TEST_CASE( TaskManagerTest, WakeAllDoesNotChaseWorkersThatSleepAgain )
         manager.wakeSleepingWorkers();
         elapsedMilli = stopwatch.getElapsedMilliseconds();
     }
+    sw::StringBuilder<sw::constant::buffer::kMax256> textBuilder;
+    textBuilder.appendFormat( "%# wake-all calls took %# ms - it chases workers that went back to sleep", callCount, elapsedMilli );
     SW_EXPECT_TRUE_MSG( elapsedMilli < kWakeProbeLimitMilli,
-                        sw::formatToString( "%# wake-all calls took %# ms - it chases workers that went back to sleep", callCount, elapsedMilli ) );
+                        sw::string( textBuilder.view() ) );
 
     manager.shutdown();
 }

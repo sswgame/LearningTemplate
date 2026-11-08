@@ -299,7 +299,9 @@ namespace sw
                 uint32                  issueCount{ 0 };
                 const auto              report = [&]( const utf8* pID, const RenderGraphPassDesc& pass, const utf8* pReason )
                 {
-                    Logger::writeLogGlobal( LogLevel::Error, SW_LOG_TAG, formatToString( "[%#] pass '%#': %#", sourcePath, pass._name, pReason ).c_str(), __FILE__, __LINE__, pID );
+                    fixed_string<constant::buffer::kMax512> text;
+                    formatstring( text.data(), text.capacity(), "[%#] pass '%#': %#", sourcePath, pass._name, pReason );
+                    Logger::writeLogGlobal( LogLevel::Error, SW_LOG_TAG, text.c_str(), __FILE__, __LINE__, pID );
                     ++issueCount;
                 };
                 for ( const RenderGraphPassDesc& pass : desc._listPass )

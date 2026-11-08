@@ -41,12 +41,16 @@ namespace sw
 
     hashed_string SurfaceParameterNames::makeRegion( uint32 region, uint32 chunk )
     {
-        return hashed_string( ( formatToString( "%#%#Chunk%#", string( "_surfaceRegion" ), region, chunk ) ).c_str() );
+        fixed_string<constant::buffer::kMax256> text;
+        formatstring( text.data(), text.capacity(), "%#%#Chunk%#", string( "_surfaceRegion" ), region, chunk );
+        return hashed_string( text.c_str() );
     }
 
     string SurfaceParameterNames::makeMaskTexturePath( uint64 ownerKey, uint32 part, const hashed_string& channel )
     {
-        return formatToString( "%#%#/%#/%#", string( "cpu/surface/" ), ownerKey, part, channel.c_str() );
+        StringBuilder<constant::buffer::kMax256> resultBuilder;
+        resultBuilder.appendFormat( "%#%#/%#/%#", string( "cpu/surface/" ), ownerKey, part, channel.c_str() );
+        return string( resultBuilder.view() );
     }
 } // namespace sw
 

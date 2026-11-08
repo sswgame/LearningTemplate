@@ -29,12 +29,16 @@ namespace sw::editor
             template <typename TEntry>
             [[nodiscard]] static string makeNumberedName( const vector<TEntry>& listEntry, string_view prefix )
             {
-                size_t number = listEntry.size();
-                string name   = formatToString( "%# %#", prefix, number );
+                size_t                                   number = listEntry.size();
+                StringBuilder<constant::buffer::kMax256> nameBuilder2;
+                nameBuilder2.appendFormat( "%# %#", prefix, number );
+                string name{ nameBuilder2.view() };
                 while ( isNameTaken( listEntry, name ) )
                 {
                     ++number;
-                    name = formatToString( "%# %#", prefix, number );
+                    StringBuilder<constant::buffer::kMax256> nameBuilder;
+                    nameBuilder.appendFormat( "%# %#", prefix, number );
+                    name = string( nameBuilder.view() );
                 }
                 return name;
             }

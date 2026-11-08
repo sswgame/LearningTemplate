@@ -15,24 +15,32 @@ namespace sw
         {
             if ( trustFile.has_value() == false )
                 return true;
-            outError = formatToString( "%# is set but %# is not", pTrustOption, pProvidersOption );
+            StringBuilder<constant::buffer::kMax256> errorBuilder;
+            errorBuilder.appendFormat( "%# is set but %# is not", pTrustOption, pProvidersOption );
+            outError = string( errorBuilder.view() );
             return false;
         }
         string jsonText;
         if ( FileUtil::readTextFile( providersFile->str(), jsonText ) == false )
         {
-            outError = formatToString( "cannot read the %# file %#", pProvidersOption, providersFile->c_str() );
+            StringBuilder<constant::buffer::kMax256> errorBuilder;
+            errorBuilder.appendFormat( "cannot read the %# file %#", pProvidersOption, providersFile->c_str() );
+            outError = string( errorBuilder.view() );
             return false;
         }
         if ( outDocument.tryParse( jsonText ) == false )
         {
-            outError = formatToString( "%# (%#) is not JSON", pProvidersOption, providersFile->c_str() );
+            StringBuilder<constant::buffer::kMax256> errorBuilder;
+            errorBuilder.appendFormat( "%# (%#) is not JSON", pProvidersOption, providersFile->c_str() );
+            outError = string( errorBuilder.view() );
             return false;
         }
         const JSONValue providers = outDocument.getRoot().get( "providers" );
         if ( providers.isArray() == false )
         {
-            outError = formatToString( "%# (%#) needs a 'providers' array", pProvidersOption, providersFile->c_str() );
+            StringBuilder<constant::buffer::kMax256> errorBuilder;
+            errorBuilder.appendFormat( "%# (%#) needs a 'providers' array", pProvidersOption, providersFile->c_str() );
+            outError = string( errorBuilder.view() );
             return false;
         }
         for ( size_t index = 0; index < providers.size(); ++index )
@@ -40,7 +48,9 @@ namespace sw
             const JSONValue entry = providers.at( index );
             if ( entry.isObject() == false )
             {
-                outError = formatToString( "%# (%#) has a provider entry that is not an object", pProvidersOption, providersFile->c_str() );
+                StringBuilder<constant::buffer::kMax256> errorBuilder;
+                errorBuilder.appendFormat( "%# (%#) has a provider entry that is not an object", pProvidersOption, providersFile->c_str() );
+                outError = string( errorBuilder.view() );
                 return false;
             }
             outListEntry.push_back( entry );

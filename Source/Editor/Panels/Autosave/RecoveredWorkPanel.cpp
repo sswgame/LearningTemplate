@@ -80,13 +80,21 @@ namespace sw::editor
             ImGui::EndDisabled();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAutosave", "RestoreTooltip" ) );
             if ( EditorSelfTestMarks::isEnabled() )
-                EditorSelfTestMarks::record( formatToString( "recoveredWork.restore.%#", rowIndex ).c_str() );
+            {
+                fixed_string<constant::buffer::kMax64> text2;
+                formatstring( text2.data(), text2.capacity(), "recoveredWork.restore.%#", rowIndex );
+                EditorSelfTestMarks::record( text2.c_str() );
+            }
             ImGui::SameLine();
             if ( ImGui::SmallButton( SW_LOCKEY( "EdButton", "Discard" ) ) )
                 discardIndex = rowIndex;
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAutosave", "DiscardTooltip" ) );
             if ( EditorSelfTestMarks::isEnabled() )
-                EditorSelfTestMarks::record( formatToString( "recoveredWork.discard.%#", rowIndex ).c_str() );
+            {
+                fixed_string<constant::buffer::kMax64> text;
+                formatstring( text.data(), text.capacity(), "recoveredWork.discard.%#", rowIndex );
+                EditorSelfTestMarks::record( text.c_str() );
+            }
             ImGui::PopID();
         }
         ImGui::EndTable();

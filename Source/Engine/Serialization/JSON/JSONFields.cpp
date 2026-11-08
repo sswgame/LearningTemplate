@@ -58,7 +58,9 @@ namespace sw
             const TypeInfo* const pNested = prop._bIsContainer == SW_TRUE ? nullptr : SerializerUtil::findNestedObjectType( prop._typeName, context );
             if ( pNested != nullptr )
             {
-                bOk = readFields( field, prop.getRawPtr( pInstance ), *pNested, formatToString( "%#.%#", sourceName, key ) ) && bOk;
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "%#.%#", sourceName, key );
+                bOk = readFields( field, prop.getRawPtr( pInstance ), *pNested, textBuilder.view() ) && bOk;
                 continue;
             }
             // 고정 배열의 길이가 다르면 남는 칸이 조용히 옛 값으로 남는다. 저작 파일에서는 오류다(일반 읽기는 판이 달라진 데이터를 위해 받는다).

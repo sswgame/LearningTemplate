@@ -21,7 +21,9 @@ namespace
         {
             return sw::AutosaveManager::SaveDelegate::create( [this]( sw::vector<uint8>& outBytes )
             {
-                const sw::string state = sw::formatToString( "state%#", _listSavedState.size() );
+                sw::StringBuilder<sw::constant::buffer::kMax256> stateBuilder;
+                stateBuilder.appendFormat( "state%#", _listSavedState.size() );
+                const sw::string state{ stateBuilder.view() };
                 _listSavedState.push_back( state );
                 outBytes.assign( state.begin(), state.end() );
                 return true;

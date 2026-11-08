@@ -84,8 +84,12 @@ namespace sw::editor
                 if ( _bActive == false )
                     return "not running";
                 using Registry = EditorExtensionRegistry<EditorSelfTestRegistration>;
-                string text    = _cursor < _listSelectedIndex.size() ? formatToString( "test %# step %#", Registry::getAt( _listSelectedIndex[_cursor] )._pID, _context.getStepIndex() )
-                                                                     : string( "starting" );
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                if ( _cursor < _listSelectedIndex.size() )
+                    textBuilder.appendFormat( "test %# step %#", Registry::getAt( _listSelectedIndex[_cursor] )._pID, _context.getStepIndex() );
+                else
+                    textBuilder.append( "starting" );
+                string text{ textBuilder.view() };
                 if ( _settleWait.has_value() )
                     text += ", waiting for " + _settleWait->describeWait();
                 return text;

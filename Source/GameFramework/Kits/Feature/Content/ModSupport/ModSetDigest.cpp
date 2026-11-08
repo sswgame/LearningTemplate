@@ -68,16 +68,32 @@ namespace sw
         {
             const ModDigestEntry* pMine = findEntry( theirs._id );
             if ( pMine == nullptr )
-                return formatToString( "mod '%#' %# is missing here", theirs._id, theirs._version.toString() );
+            {
+                StringBuilder<constant::buffer::kMax256> resultBuilder3;
+                resultBuilder3.appendFormat( "mod '%#' %# is missing here", theirs._id, theirs._version.toString() );
+                return string( resultBuilder3.view() );
+            }
             if ( pMine->_version != theirs._version )
-                return formatToString( "mod '%#' is %# here but %# there", theirs._id, pMine->_version.toString(), theirs._version.toString() );
+            {
+                StringBuilder<constant::buffer::kMax256> resultBuilder2;
+                resultBuilder2.appendFormat( "mod '%#' is %# here but %# there", theirs._id, pMine->_version.toString(), theirs._version.toString() );
+                return string( resultBuilder2.view() );
+            }
             if ( pMine->_contentHash != theirs._contentHash )
-                return formatToString( "mod '%#' %# has different content here", theirs._id, theirs._version.toString() );
+            {
+                StringBuilder<constant::buffer::kMax256> resultBuilder;
+                resultBuilder.appendFormat( "mod '%#' %# has different content here", theirs._id, theirs._version.toString() );
+                return string( resultBuilder.view() );
+            }
         }
         for ( const ModDigestEntry& mine : _listEntry )
         {
             if ( other.findEntry( mine._id ) == nullptr )
-                return formatToString( "mod '%#' %# is only here", mine._id, mine._version.toString() );
+            {
+                StringBuilder<constant::buffer::kMax256> resultBuilder;
+                resultBuilder.appendFormat( "mod '%#' %# is only here", mine._id, mine._version.toString() );
+                return string( resultBuilder.view() );
+            }
         }
         if ( _configHash != other._configHash )
             return string( "the same mods are mounted in a different order" );

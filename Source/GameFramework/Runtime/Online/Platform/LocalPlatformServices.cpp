@@ -47,7 +47,7 @@ namespace sw
     {
         if ( statID.empty() )
             return false;
-        _mapStat[string( statID )] = formatToString( "%#", value );
+        _mapStat[string( statID )] = to_string( value );
         _bStatsDirty               = SW_TRUE;
         return true;
     }

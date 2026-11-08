@@ -156,7 +156,9 @@ namespace sw
                         sentCount += bSent ? 1 : 0;
                     }
                 }
-                outReply = formatToString( "net traffic queued %# reliable message(s) to %# connection(s)", sentCount, listConnection.size() );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "net traffic queued %# reliable message(s) to %# connection(s)", sentCount, listConnection.size() );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -183,7 +185,11 @@ namespace sw
                 }
                 outReply = string( "net session: " ) + getEnumName( pSession->getRole() ) + ", connected " + to_string( pSession->getConnectedCount() );
                 if ( pSession->getRole() == GameNetRole::Server )
-                    outReply += formatToString( ", port %#, shards %#", pSession->getListenPort(), pSession->getShardCount() );
+                {
+                    StringBuilder<constant::buffer::kMax256> replyPart;
+                    replyPart.appendFormat( ", port %#, shards %#", pSession->getListenPort(), pSession->getShardCount() );
+                    outReply += replyPart.c_str();
+                }
                 return true;
             }
         };

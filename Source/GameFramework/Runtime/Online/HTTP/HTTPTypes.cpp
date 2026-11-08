@@ -558,7 +558,11 @@ namespace sw
         Internal::appendText( outBytes, " HTTP/1.1\r\n" );
         string host = url._host;
         if ( ( url._bSecure == SW_TRUE && url._port != 443 ) || ( url._bSecure == SW_FALSE && url._port != 80 ) )
-            host += formatToString( ":%#", static_cast<int32>( url._port ) );
+        {
+            StringBuilder<constant::buffer::kMax256> hostPart;
+            hostPart.appendFormat( ":%#", static_cast<int32>( url._port ) );
+            host += hostPart.c_str();
+        }
         Internal::appendHeader( outBytes, "Host", host );
         Internal::appendHeader( outBytes, "Connection", "close" );
         if ( request._method == HTTPMethod::Post || request._bodyBytes.empty() == false )

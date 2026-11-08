@@ -115,7 +115,9 @@ namespace sw::editor
         (void)StringUtil::parseInt( string_view( Internal::readVariable( Internal::kSliceVariable ) ), slice ); // 등록한 int 변수의 글이다
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorVolumetricFog", "Slice" ), SW_LOCKEY( "EditorVolumetricFog", "SliceTip" ) );
         if ( ImGui::SliderInt( "##fogSlice", &slice, 0, static_cast<int32>( SW_FOG_VOLUME_DIM_Z ) - 1 ) )
-            Internal::writeVariable( Internal::kSliceVariable, formatToString( "%#", slice ) );
+        {
+            Internal::writeVariable( Internal::kSliceVariable, to_string( slice ) );
+        }
         EditorSelfTestMarks::record( "volumetricFog.slice" );
     }
 

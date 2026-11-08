@@ -138,8 +138,10 @@ namespace sw
                 const expected<NetEmulationConditions> downConditions = NetEmulationConditions::parseOverrides( overrideText, bPreset ? preset : pEmulation->getIncomingConditions() );
                 if ( upConditions.has_value() == false || downConditions.has_value() == false )
                 {
-                    const Error& error = upConditions.has_value() ? downConditions.error() : upConditions.error();
-                    outReply           = formatToString( "net.emulation: %# '%#'", error.message(), error.detail() );
+                    const Error&                             error = upConditions.has_value() ? downConditions.error() : upConditions.error();
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "net.emulation: %# '%#'", error.message(), error.detail() );
+                    outReply = string( replyBuilder.view() );
                     return true;
                 }
                 for ( int32 shardIndex = 0; shardIndex < pSession->getShardCount(); ++shardIndex )

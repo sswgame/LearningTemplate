@@ -25,7 +25,11 @@ namespace sw::editor
     {
         string full = formatEntryLine( entry );
         if ( entry._file.empty() == false )
-            full += formatToString( " (%#:%#)", entry._file, entry._line );
+        {
+            StringBuilder<constant::buffer::kMax256> fullPart;
+            fullPart.appendFormat( " (%#:%#)", entry._file, entry._line );
+            full += fullPart.c_str();
+        }
         return full;
     }
 

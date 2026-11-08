@@ -595,7 +595,9 @@ namespace sw
                 }
                 if ( applied == 0 )
                     SW_LOG_ERROR_ID( "Camera.UnknownPreset", "camera.preset '%#': no camera director in the active scene has that preset", id.c_str() );
-                outReply = formatToString( "camera.preset '%#': %# director(s)", id.c_str(), applied );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "camera.preset '%#': %# director(s)", id.c_str(), applied );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
         };

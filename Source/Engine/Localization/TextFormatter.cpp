@@ -76,7 +76,11 @@ namespace sw
             bool fail( string_view reason )
             {
                 if ( _error.empty() )
-                    _error = formatToString( "%# at offset %#", string( reason ), static_cast<uint64>( _position ) );
+                {
+                    StringBuilder<constant::buffer::kMax256> errorBuilder;
+                    errorBuilder.appendFormat( "%# at offset %#", string( reason ), static_cast<uint64>( _position ) );
+                    _error = string( errorBuilder.view() );
+                }
                 return false;
             }
 

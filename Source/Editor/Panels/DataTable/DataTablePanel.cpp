@@ -294,7 +294,9 @@ namespace sw::editor
             // 머리에 진행도를 적는다(유니티 Localization 표의 완료율 자리). 줄마다 세지 않고 문화권마다 한 번 센다.
             for ( size_t cultureIndex = 0; cultureIndex < cultureCount; ++cultureIndex )
             {
-                const string cultureHeader = formatToString( "%# (%#/%#)", sheet._listCulture[cultureIndex].c_str(), static_cast<uint64>( _model.countCurrentTranslations( cultureIndex ) ), static_cast<uint64>( sheet._listRecord.size() ) );
+                StringBuilder<constant::buffer::kMax256> cultureHeaderBuilder;
+                cultureHeaderBuilder.appendFormat( "%# (%#/%#)", sheet._listCulture[cultureIndex].c_str(), static_cast<uint64>( _model.countCurrentTranslations( cultureIndex ) ), static_cast<uint64>( sheet._listRecord.size() ) );
+                const string cultureHeader{ cultureHeaderBuilder.view() };
                 ImGui::TableSetupColumn( cultureHeader.c_str(), ImGuiTableColumnFlags_WidthStretch, 0.5f / static_cast<float32>( cultureCount > 0 ? cultureCount : 1 ) );
             }
             ImGui::TableSetupColumn( "Action", ImGuiTableColumnFlags_WidthFixed, 50.0f * EditorThemeUtil::getDPIScale() );

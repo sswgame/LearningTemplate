@@ -100,7 +100,9 @@ namespace sw
         PushPayloadUtil::writeOptionalText( writer, "body_key", message._bodyKey );
         for ( int32 index = 0; index < argumentCount; ++index )
         {
-            writer.key( formatToString( "arg%#", index ) );
+            StringBuilder<constant::buffer::kMax256> textBuilder;
+            textBuilder.appendFormat( "arg%#", index );
+            writer.key( textBuilder.view() );
             writer.valueString( message._arrArgument[index] );
         }
         writer.endObject();

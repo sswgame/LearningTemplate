@@ -190,7 +190,9 @@ namespace sw
                 return;
             }
 
-            _listParseError.push_back( formatToString( "No argument matches %# (see -help)", rawKey ) );
+            StringBuilder<constant::buffer::kMax256> textBuilder;
+            textBuilder.appendFormat( "No argument matches %# (see -help)", rawKey );
+            _listParseError.push_back( string( textBuilder.view() ) );
             return;
         }
 
@@ -201,7 +203,9 @@ namespace sw
         // int32 항목에 bool 을 밀어 넣고 **경고 한 줄 없이 아무 일도 하지 않는다**(readValue 의 get_if 가 nullptr).
         if ( bHasValue == false && argument.isFlagArgument() == false )
         {
-            _listParseError.push_back( formatToString( "No value was given for %#", rawKey ) );
+            StringBuilder<constant::buffer::kMax256> textBuilder;
+            textBuilder.appendFormat( "No value was given for %#", rawKey );
+            _listParseError.push_back( string( textBuilder.view() ) );
             return;
         }
 
@@ -211,7 +215,9 @@ namespace sw
             const expected<void> result = trySetValue( argument, valueStr, baseDirectory );
             if ( result.has_value() == false )
             {
-                _listParseError.push_back( formatToString( "%#: %# (%#)", cleanKey, result.error().message(), result.error().detail() ) );
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "%#: %# (%#)", cleanKey, result.error().message(), result.error().detail() );
+                _listParseError.push_back( string( textBuilder.view() ) );
                 return;
             }
         }

@@ -163,9 +163,11 @@ namespace sw
                     if ( bArmy && static_cast<int32>( command._listUnit.size() ) < RTSCommand::kMaxUnitCount )
                         command._listUnit.push_back( unit._id );
                 } );
-                const uint32 unitCount = static_cast<uint32>( command._listUnit.size() );
-                const int32  applied   = pDirector->submitCommand( std::move( command ) );
-                outReply               = formatToString( "skirmish: player %# attack-moves %# units - %#", player, unitCount, applied < 0 ? "sent with the next lockstep input" : "applied" );
+                const uint32                             unitCount = static_cast<uint32>( command._listUnit.size() );
+                const int32                              applied   = pDirector->submitCommand( std::move( command ) );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "skirmish: player %# attack-moves %# units - %#", player, unitCount, applied < 0 ? "sent with the next lockstep input" : "applied" );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -182,9 +184,11 @@ namespace sw
                     outReply = "skirmish: not a network match";
                     return true;
                 }
-                const LockstepSession& session = lockstep.getSession();
-                outReply                       = formatToString( "skirmish lockstep: player %# tick %# stalls %# desynced %# applied %# %#", lockstep.getLocalPlayer(), session.getCurrentTick(), session.getStallCount(),
+                const LockstepSession&                   session = lockstep.getSession();
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "skirmish lockstep: player %# tick %# stalls %# desynced %# applied %# %#", lockstep.getLocalPlayer(), session.getCurrentTick(), session.getStallCount(),
                                            session.isDesynced() ? 1 : 0, lockstep.getAppliedCommandCount( 0 ), lockstep.getAppliedCommandCount( 1 ) );
+                outReply = string( replyBuilder.view() );
                 SW_LOG_INFO_ID( "SkirmishGameMode.LockstepStatus", "[Skirmish] %#", outReply.c_str() );
                 return true;
             }

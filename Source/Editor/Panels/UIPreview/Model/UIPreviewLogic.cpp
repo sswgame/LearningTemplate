@@ -584,7 +584,9 @@ namespace sw::editor
 
     string UIPreviewLogic::makeEditCoalesceKey( uint32 generation, uint32 ordinal, string_view propertyName )
     {
-        return formatToString( "uipreview.%#.%#.%#", generation, ordinal, propertyName );
+        StringBuilder<constant::buffer::kMax256> resultBuilder;
+        resultBuilder.appendFormat( "uipreview.%#.%#.%#", generation, ordinal, propertyName );
+        return string( resultBuilder.view() );
     }
 
     bool UIPreviewLogic::makeDocumentText( UIDocumentCache& documents, const UIScreen& screen, string_view documentPath, string& outText, string& outError )

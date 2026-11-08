@@ -130,8 +130,10 @@ namespace sw::editor
                     history.update( *pSession, nowSeconds() );
                     return false; // 시한까지 모은다
                 } );
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( " process(es), peak sent %# B/s", static_cast<int64>( history.computePeak( EditorNetProfilerChannel::SentBytesPerSecond ) ) );
                 outReply = "netplay profile has " + to_string( history.computeSampleCount() ) + " sample(s) from " + to_string( history.getTrackCount() ) +
-                           formatToString( " process(es), peak sent %# B/s", static_cast<int64>( history.computePeak( EditorNetProfilerChannel::SentBytesPerSecond ) ) );
+                           string( textBuilder.view() );
                 return true;
             }
         };

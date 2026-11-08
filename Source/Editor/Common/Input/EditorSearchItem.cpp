@@ -90,7 +90,9 @@ namespace sw::editor
             item._source   = EditorSearchSource::SceneObject;
             item._category = "GameObject";
             item._title    = string{ pObj->getName().c_str() };
-            item._detail   = formatToString( "Scene GameObject (ID: %#)", pObj->getObjectID() );
+            StringBuilder<constant::buffer::kMax256> detailBuilder;
+            detailBuilder.appendFormat( "Scene GameObject (ID: %#)", pObj->getObjectID() );
+            item._detail   = string( detailBuilder.view() );
             item._objectID = pObj->getObjectID();
             // 칸 필터(type: · tag: · is:)가 볼 값 — 이미 있는 데이터(컴포넌트 유형 · 태그 · 활성)만 싣는다.
             for ( const Component* pComponent : pObj->getComponents() )

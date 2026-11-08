@@ -142,11 +142,13 @@ namespace sw
             /** @brief 모듈 하나를 처리기 표로 해석합니다. */
             static bool compileModule( const ZoneModuleDef& def, const string& profileName, const AbilityCatalog* pCatalog, ZoneCompiledModule& outModule )
             {
-                const string sourceName = formatToString( "%# module '%#'", profileName, def._name.c_str() );
-                outModule._name         = def._name;
-                outModule._kind         = def._kind;
-                outModule._pProcessor   = ZoneModuleRegistry::find( def._kind.view() );
-                outModule._target       = def._target == ZoneTargetRole::Inherit ? ZoneTargetRole::Occupant : def._target;
+                StringBuilder<constant::buffer::kMax256> sourceNameBuilder;
+                sourceNameBuilder.appendFormat( "%# module '%#'", profileName, def._name.c_str() );
+                const string sourceName{ sourceNameBuilder.view() };
+                outModule._name       = def._name;
+                outModule._kind       = def._kind;
+                outModule._pProcessor = ZoneModuleRegistry::find( def._kind.view() );
+                outModule._target     = def._target == ZoneTargetRole::Inherit ? ZoneTargetRole::Occupant : def._target;
                 if ( outModule._pProcessor == nullptr )
                 {
                     SW_LOG_ERROR_ID( "Zone.ModuleKindUnknown", "%#: kind '%#' has no processor (known: %#)", sourceName, def._kind.c_str(), ZoneModuleRegistry::joinNames() );

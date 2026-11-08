@@ -171,7 +171,9 @@ namespace sw::editor
         }
         _bLoadedTrace    = SW_TRUE;
         _bTimelineZoomed = SW_FALSE;
-        _traceStatus     = formatToString( "Loaded %# (%# threads, %# scopes)", FileUtil::getFileNamePart( path ), _loadedTrace._listThread.size(), _loadedTrace._listSlotName.size() );
+        StringBuilder<constant::buffer::kMax256> traceStatusBuilder;
+        traceStatusBuilder.appendFormat( "Loaded %# (%# threads, %# scopes)", FileUtil::getFileNamePart( path ), _loadedTrace._listThread.size(), _loadedTrace._listSlotName.size() );
+        _traceStatus = string( traceStatusBuilder.view() );
         SW_LOG_INFO_ID( "ProfilerTimelineModel.TraceLoaded", "Trace loaded: %#", _traceStatus );
         return true;
     }

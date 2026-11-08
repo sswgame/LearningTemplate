@@ -92,7 +92,11 @@ namespace sw::editor
                 if ( listArgument.empty() )
                 {
                     if ( inspector.refreshTree() )
-                        outReply = formatToString( "inspector read %# object(s)", inspector.getObjectRows().size() );
+                    {
+                        StringBuilder<constant::buffer::kMax256> replyBuilder;
+                        replyBuilder.appendFormat( "inspector read %# object(s)", inspector.getObjectRows().size() );
+                        outReply = string( replyBuilder.view() );
+                    }
                     else
                         outReply = inspector.getLastError();
                     return true;

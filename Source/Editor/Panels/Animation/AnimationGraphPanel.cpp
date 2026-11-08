@@ -633,7 +633,11 @@ namespace sw::editor
                 _selectedNodeID = 0;
             }
             if ( EditorSelfTestMarks::isEnabled() )
-                EditorSelfTestMarks::record( ( formatToString( "animationGraph.link.%#", static_cast<uint64>( index ) ) ).c_str() );
+            {
+                fixed_string<constant::buffer::kMax64> text;
+                formatstring( text.data(), text.capacity(), "animationGraph.link.%#", static_cast<uint64>( index ) );
+                EditorSelfTestMarks::record( text.c_str() );
+            }
             ImGui::PopID();
         }
     }
@@ -682,7 +686,11 @@ namespace sw::editor
                     bEdited    = true;
                 }
                 if ( EditorSelfTestMarks::isEnabled() )
-                    EditorSelfTestMarks::record( ( formatToString( "animationGraph.condition.op.%#", static_cast<uint64>( op ) ) ).c_str() );
+                {
+                    fixed_string<constant::buffer::kMax64> text;
+                    formatstring( text.data(), text.capacity(), "animationGraph.condition.op.%#", static_cast<uint64>( op ) );
+                    EditorSelfTestMarks::record( text.c_str() );
+                }
             }
             ImGui::EndCombo();
         }

@@ -240,8 +240,10 @@ namespace sw::editor
         if ( pDevice == nullptr )
             return;
         // 스냅샷마다 새 경로다. 쓰던 것에 다시 올리면 아직 그것을 그리는 프레임과 겹친다(옛 것은 위 해제가 그 프레임들 뒤에 놓는다).
-        TextureCache& textures = editor::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
-        _snapshotPath          = formatToString( "%#editor/rendertargetpreview%#", TextureCache::kCPUTexturePrefix, ++_snapshotSerial );
+        TextureCache&                            textures = editor::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
+        StringBuilder<constant::buffer::kMax256> snapshotPathBuilder;
+        snapshotPathBuilder.appendFormat( "%#editor/rendertargetpreview%#", TextureCache::kCPUTexturePrefix, ++_snapshotSerial );
+        _snapshotPath = string( snapshotPathBuilder.view() );
         if ( textures.createCPUTexture( _snapshotPath, image._width, image._height, std::move( image._byte ) ) == false )
         {
             SW_LOG_WARNING_ID( "RenderTargetPanel.RenderTargetPreviewX", "Render target preview %#x%# could not be made ('%#')", image._width, image._height, _snapshotPath.c_str() );

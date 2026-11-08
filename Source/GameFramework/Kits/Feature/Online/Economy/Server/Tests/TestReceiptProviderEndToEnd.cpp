@@ -177,7 +177,9 @@ namespace
         {
             string header = R"({"alg":"ES256","x5c":[")" + ReceiptEndpointTestUtil::extractPemBody( _listChainPem[0] ) + R"(",")" + ReceiptEndpointTestUtil::extractPemBody( _listChainPem[1] ) + R"(",")" +
                             ReceiptEndpointTestUtil::extractPemBody( _listChainPem[2] ) + R"("]})";
-            string        payload      = formatToString( R"({"transactionId":"%#","productId":"gem100","bundleId":"%#","environment":"Production","appAccountToken":"tok","purchaseDate":1700000000000})", kAppleOrder, kBundle );
+            StringBuilder<constant::buffer::kMax256> payloadBuilder;
+            payloadBuilder.appendFormat( R"({"transactionId":"%#","productId":"gem100","bundleId":"%#","environment":"Production","appAccountToken":"tok","purchaseDate":1700000000000})", kAppleOrder, kBundle );
+            string        payload{ payloadBuilder.view() };
             const string  signingInput = ReceiptEndpointTestUtil::encodeURL( header ) + "." + ReceiptEndpointTestUtil::encodeURL( payload );
             vector<uint8> signature;
             SW_EXPECT_TRUE( game::getSubsystem<INetSecurityProvider>().signData( NetSignatureAlgorithm::EcdsaP256Sha256, _appleLeafKey, reinterpret_cast<const uint8*>( signingInput.data() ),
@@ -187,12 +189,14 @@ namespace
 
         string writeProvidersFile( const string& baseURL ) const
         {
-            const string text = formatToString( R"({"providers":[
+            StringBuilder<constant::buffer::kMax256> textBuilder;
+            textBuilder.appendFormat( R"({"providers":[
                 {"kind":"steam","appId":"480","keySecretEnvironment":"%#","baseUrl":"%#","buyerBinding":"linkedLogin","buyerLoginProvider":"steam"},
                 {"kind":"google","packageName":"%#","serviceAccountEnvironment":"%#","baseUrl":"%#","tokenUrl":"%#/token","buyerBinding":"accountToken"},
                 {"kind":"apple","issuerId":"issuer","keyId":"key","bundleId":"%#","signingKeySecretEnvironment":"%#","rootCertificateFile":"%#","baseUrl":"%#","buyerBinding":"accountToken"}
             ]})",
-                                                kSteamEnv, baseURL, kBundle, kGoogleEnv, baseURL, baseURL, kBundle, kAppleEnv, _appleRootFile, baseURL );
+                                      kSteamEnv, baseURL, kBundle, kGoogleEnv, baseURL, baseURL, kBundle, kAppleEnv, _appleRootFile, baseURL );
+            const string text{ textBuilder.view() };
             return test::writeScratchText( "receipts.json", text );
         }
     };
@@ -337,19 +341,23 @@ SW_TEST_CASE( ReceiptKitAssemblyTest, KitOptionsSelectTheProviders )
     string                googleKey;
     NetPublicKey          publicKey;
     SW_REQUIRE_TRUE( security.createSigningKeyPair( NetSignatureAlgorithm::RsaPkcs1SHA256, googleKey, publicKey ) );
-    const test::ScopedEnvironmentVariable googleEnv{ kGoogleEnv, R"({"project_id":"proj","client_email":"a@b","private_key":")" + test::escapeJSONText( googleKey ) + R"("})" };
-    const string                          baseURL = endpoint.makeBaseURL();
-    const string                          providersFile =
-        test::writeScratchText( "kit-receipts.json", formatToString( R"({"providers":[{"kind":"google","packageName":"%#","serviceAccountEnvironment":"%#","baseUrl":"%#","tokenUrl":"%#/token","buyerBinding":"accountToken"}]})", kBundle, kGoogleEnv, baseURL, baseURL ) );
+    const test::ScopedEnvironmentVariable    googleEnv{ kGoogleEnv, R"({"project_id":"proj","client_email":"a@b","private_key":")" + test::escapeJSONText( googleKey ) + R"("})" };
+    const string                             baseURL = endpoint.makeBaseURL();
+    StringBuilder<constant::buffer::kMax256> textBuilder;
+    textBuilder.appendFormat( R"({"providers":[{"kind":"google","packageName":"%#","serviceAccountEnvironment":"%#","baseUrl":"%#","tokenUrl":"%#/token","buyerBinding":"accountToken"}]})", kBundle, kGoogleEnv, baseURL, baseURL );
+    const string providersFile =
+        test::writeScratchText( "kit-receipts.json", string( textBuilder.view() ) );
 
     constexpr const utf8* kServerJSON    = R"({ "_listStore": [ { "_name": "local", "_driver": "memory" } ], "_listCache": [ { "_name": "local", "_driver": "memory" } ] })";
     const auto            makeOnlineJSON = [&providersFile]( string_view trustOption )
     {
-        return formatToString( R"({ "_storeName": "local", "_cacheName": "local", "_listKit": [ { "_name": "economy", "_settings": {
+        StringBuilder<constant::buffer::kMax256> resultBuilder;
+        resultBuilder.appendFormat( R"({ "_storeName": "local", "_cacheName": "local", "_listKit": [ { "_name": "economy", "_settings": {
             "_currencyCatalog": "%#/e2e.currencies.xml",
             "_offerCatalog": "%#/e2e.offers.xml",
             "_receiptProvidersFile": "%#"%# } } ] })",
-                               test::ScopedScratchDomain::kDomain, test::ScopedScratchDomain::kDomain, providersFile, trustOption );
+                                    test::ScopedScratchDomain::kDomain, test::ScopedScratchDomain::kDomain, providersFile, trustOption );
+        return string( resultBuilder.view() );
     };
 
     {
@@ -359,7 +367,9 @@ SW_TEST_CASE( ReceiptKitAssemblyTest, KitOptionsSelectTheProviders )
         SW_EXPECT_TRUE( error.find( "receiptTrustFile" ) != string::npos );
     }
 
-    const string               trustOption = formatToString( R"(, "_receiptTrustFile": "%#")", endpoint._trustFile );
+    StringBuilder<constant::buffer::kMax256> trustOptionBuilder;
+    trustOptionBuilder.appendFormat( R"(, "_receiptTrustFile": "%#")", endpoint._trustFile );
+    const string               trustOption{ trustOptionBuilder.view() };
     test::OnlineRuntimeFixture rig;
     string                     error;
     SW_REQUIRE_TRUE_MSG( rig.fromConfig( kServerJSON, makeOnlineJSON( trustOption ), ReceiptEndpointTestUtil::getNowMs(), error ), error.c_str() );

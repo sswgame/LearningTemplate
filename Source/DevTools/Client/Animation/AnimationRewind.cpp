@@ -176,12 +176,18 @@ namespace sw
             /** @brief 되감기 상태 한 줄입니다. */
             static string describeRewind( const AnimationRewindRecorder& rewind )
             {
+                fixed_string<constant::buffer::kMax64> history;
+                formatstring( history.data(), history.capacity(), "%# s", static_cast<float32>( rewind.getLatestTime() - rewind.getEarliestTime() ) );
                 string line = string( "rewind " ) + ( AnimationRewindRecorder::isRecordingRequested() ? "on" : "off" ) + ", window " +
                               to_string( AnimationRewindRecorder::getRequestedWindowSeconds() ) + " s, " + to_string( static_cast<uint32>( rewind.getTracks().size() ) ) +
                               " tracks, " + to_string( rewind.getByteCount() / 1024u ) + " KB, history " +
-                              formatToString( "%# s", static_cast<float32>( rewind.getLatestTime() - rewind.getEarliestTime() ) );
+                              history.c_str();
                 if ( rewind.isScrubbing() )
-                    line += formatToString( ", scrubbing %# s ago", static_cast<float32>( rewind.getLatestTime() - rewind.getScrubTime() ) );
+                {
+                    StringBuilder<constant::buffer::kMax256> linePart;
+                    linePart.appendFormat( ", scrubbing %# s ago", static_cast<float32>( rewind.getLatestTime() - rewind.getScrubTime() ) );
+                    line += linePart.c_str();
+                }
                 return line;
             }
 
@@ -210,7 +216,9 @@ namespace sw
                 if ( bInvalidWindowArguments )
                     return false;
                 AnimationRewindRecorder::setRequestedWindowSeconds( seconds );
-                outReply = formatToString( "rewind window = %# s", AnimationRewindRecorder::getRequestedWindowSeconds() );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "rewind window = %# s", AnimationRewindRecorder::getRequestedWindowSeconds() );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 

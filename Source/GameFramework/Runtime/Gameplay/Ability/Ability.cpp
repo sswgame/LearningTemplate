@@ -382,7 +382,9 @@ namespace sw
                     if ( pComponent->setAttributeBaseValue( health, *maxHealth ) )
                         ++healedCount;
                 }
-                outReply = formatToString( "cheat.heal healed %# of %# ability system(s)", healedCount, listComponent.size() );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "cheat.heal healed %# of %# ability system(s)", healedCount, listComponent.size() );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -407,7 +409,9 @@ namespace sw
                     outReply = "cheat.attribute: no ability system has the attribute '" + listArgument[0] + "'";
                     return true;
                 }
-                outReply = formatToString( "cheat.attribute set %# on %# ability system(s)", listArgument[0], changedCount );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "cheat.attribute set %# on %# ability system(s)", listArgument[0], changedCount );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -462,7 +466,9 @@ namespace sw
                     outReply = "cheat.god: no player-controlled ability system in the active scene";
                     return true;
                 }
-                outReply = formatToString( "cheat.god invulnerable %# of %# player ability system(s)", godCount, playerCount );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "cheat.god invulnerable %# of %# player ability system(s)", godCount, playerCount );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -494,7 +500,9 @@ namespace sw
                     if ( cooldownTags.getTagCount() > 0 )
                         removedCount += pComponent->removeActiveEffectsWithTags( cooldownTags );
                 }
-                outReply = formatToString( "cheat.resetCooldowns removed %# cooldown effect(s)", removedCount );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "cheat.resetCooldowns removed %# cooldown effect(s)", removedCount );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
         };

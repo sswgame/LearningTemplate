@@ -207,7 +207,9 @@ SW_TEST_CASE( ModSessionTest, RejectsUntrustedFolders )
     };
     for ( int32 index = 0; index < 9; ++index )
     {
-        listMany.emplace_back( formatToString( "mods/crowd/data/%#.txt", index ), "x" );
+        StringBuilder<constant::buffer::kMax256> textBuilder;
+        textBuilder.appendFormat( "mods/crowd/data/%#.txt", index );
+        listMany.emplace_back( string( textBuilder.view() ), "x" );
     }
     SW_REQUIRE_TRUE( writePack( "crowd", listMany ) );
     SW_EXPECT_LOG( "ModSession.TooManyEntries" );

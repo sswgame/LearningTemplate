@@ -679,8 +679,10 @@ namespace sw::editor
             }
             return;
         }
-        EditorContext* pContext = editor::findSubsystem<EditorContext>();
-        const string   label    = formatToString( "Paste %# GameObject(s)", listCopy.size() );
+        EditorContext*                           pContext = editor::findSubsystem<EditorContext>();
+        StringBuilder<constant::buffer::kMax256> labelBuilder;
+        labelBuilder.appendFormat( "Paste %# GameObject(s)", listCopy.size() );
+        const string label{ labelBuilder.view() };
         EditorTransaction::beginTransaction( label );
         for ( size_t copyIndex = 0; copyIndex < listCopy.size(); ++copyIndex )
         {

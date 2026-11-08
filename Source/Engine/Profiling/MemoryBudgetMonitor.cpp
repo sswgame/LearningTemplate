@@ -57,18 +57,24 @@ namespace sw
             MemoryTag                tag{ MemoryTag::Unknown };
             if ( MemoryProfiler::findMemoryTagByName( entry._tag, tag ) == false )
             {
-                outError = formatToString( "budget entry %#: unknown memory tag '%#'", index, entry._tag );
+                StringBuilder<constant::buffer::kMax256> errorBuilder;
+                errorBuilder.appendFormat( "budget entry %#: unknown memory tag '%#'", index, entry._tag );
+                outError = string( errorBuilder.view() );
                 return false;
             }
             if ( entry._megabytes <= 0.0 )
             {
-                outError = formatToString( "budget entry %# (%#): _megabytes must be a positive number", index, entry._tag );
+                StringBuilder<constant::buffer::kMax256> errorBuilder;
+                errorBuilder.appendFormat( "budget entry %# (%#): _megabytes must be a positive number", index, entry._tag );
+                outError = string( errorBuilder.view() );
                 return false;
             }
             const uint32 tagIndex = static_cast<uint32>( tag );
             if ( arrBudgetBytes[tagIndex] != 0 )
             {
-                outError = formatToString( "budget entry %#: tag '%#' is listed twice", index, entry._tag );
+                StringBuilder<constant::buffer::kMax256> errorBuilder;
+                errorBuilder.appendFormat( "budget entry %#: tag '%#' is listed twice", index, entry._tag );
+                outError = string( errorBuilder.view() );
                 return false;
             }
             arrBudgetBytes[tagIndex] = static_cast<uint64>( entry._megabytes * static_cast<float64>( constant::memory::kBytesPerMegabyte ) );

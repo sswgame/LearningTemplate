@@ -232,7 +232,9 @@ namespace sw::editor
             const CommandStack* pStack = editor::findSubsystem<CommandStack>();
             if ( pStack == nullptr )
                 return false;
-            outText = formatToString( "%#/%#:", pStack->getCurrentIndex(), pStack->getCommandCount() );
+            StringBuilder<constant::buffer::kMax256> textBuilder;
+            textBuilder.appendFormat( "%#/%#:", pStack->getCurrentIndex(), pStack->getCommandCount() );
+            outText = string( textBuilder.view() );
             for ( size_t index = 0; index < pStack->getCommandCount(); ++index )
             {
                 if ( index > 0 )

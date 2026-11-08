@@ -105,7 +105,12 @@ namespace
 
         void reply( StreamConnectionHandle handle, string_view text ) { (void)_transport->send( handle, reinterpret_cast<const uint8*>( text.data() ), static_cast<int32>( text.size() ) ); }
 
-        static string makeBulk( string_view text ) { return formatToString( "$%#\r\n%#\r\n", text.size(), text ); }
+        static string makeBulk( string_view text )
+        {
+            StringBuilder<constant::buffer::kMax256> bulk;
+            bulk.appendFormat( "$%#\r\n%#\r\n", text.size(), text );
+            return string( bulk.view() );
+        }
 
         void handleCommand( StreamConnectionHandle handle, Peer& peer, const RESPValue& command )
         {
@@ -166,7 +171,9 @@ namespace
                     ++receiverCount;
                 }
             }
-            return formatToString( ":%#\r\n", receiverCount );
+            StringBuilder<constant::buffer::kMax256> resultBuilder;
+            resultBuilder.appendFormat( ":%#\r\n", receiverCount );
+            return string( resultBuilder.view() );
         }
 
     private:
@@ -183,7 +190,9 @@ namespace
     {
         static string makeServerJSON( uint16 port )
         {
-            return formatToString( R"({ "_listStore": [ { "_name": "local", "_driver": "memory" } ], "_listCache": [ { "_name": "valkey", "_driver": "resp", "_endpoint": "127.0.0.1:%#?prefix=g:", "_secretEnvironment": "%#" } ] })", port, kSecretEnv );
+            StringBuilder<constant::buffer::kMax256> resultBuilder;
+            resultBuilder.appendFormat( R"({ "_listStore": [ { "_name": "local", "_driver": "memory" } ], "_listCache": [ { "_name": "valkey", "_driver": "resp", "_endpoint": "127.0.0.1:%#?prefix=g:", "_secretEnvironment": "%#" } ] })", port, kSecretEnv );
+            return string( resultBuilder.view() );
         }
 
         static constexpr const utf8* kOnlineJSON = R"({ "_storeName": "local", "_cacheName": "valkey", "_listKit": [ { "_name": "testLogin" } ] })";

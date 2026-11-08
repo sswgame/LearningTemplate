@@ -161,7 +161,9 @@ namespace sw
                     dependency._name = entry._name;
                     if ( dependency._name.empty() || dependency._name == inoutManifest._name )
                     {
-                        outError = formatToString( "%#: dependency %# has no name or names the module itself", errorContext, index );
+                        StringBuilder<constant::buffer::kMax256> errorBuilder;
+                        errorBuilder.appendFormat( "%#: dependency %# has no name or names the module itself", errorContext, index );
+                        outError = string( errorBuilder.view() );
                         return false;
                     }
                     if ( entry._minVersion.empty() == false && ModuleVersion::parse( entry._minVersion, dependency._minVersion ) == false )
@@ -186,7 +188,9 @@ namespace sw
                 {
                     if ( inoutFile._listModuleOverride[index]._name.empty() )
                     {
-                        outError = formatToString( "%#: module override %# must be { \"_name\": ..., \"_bEnabled\": true|false }", errorContext, index );
+                        StringBuilder<constant::buffer::kMax256> errorBuilder;
+                        errorBuilder.appendFormat( "%#: module override %# must be { \"_name\": ..., \"_bEnabled\": true|false }", errorContext, index );
+                        outError = string( errorBuilder.view() );
                         return false;
                     }
                 }
@@ -422,7 +426,9 @@ namespace sw
 
     string ModuleVersion::toString() const
     {
-        return formatToString( "%#.%#.%#", _major, _minor, _patch );
+        StringBuilder<constant::buffer::kMax256> resultBuilder;
+        resultBuilder.appendFormat( "%#.%#.%#", _major, _minor, _patch );
+        return string( resultBuilder.view() );
     }
 
     bool ModuleResolution::isActive( string_view name ) const

@@ -153,13 +153,15 @@ namespace sw
             if ( pZone->_kind == kind )
                 return *pZone;
         }
-        unique_ptr<SurfaceZone> pZone            = make_unique<SurfaceZone>();
-        pZone->_kind                             = kind;
-        const SurfaceKindDef*         pKind      = table.findKind( kind );
-        const string                  path       = pKind != nullptr ? pKind->_zoneProfile.get() : string{};
-        shared_ptr<const ZoneProfile> pProfile   = path.empty() ? nullptr : SharedAssetCache<ZoneProfile>::acquire( path );
-        const GameObject* const       pOwner     = getOwner();
-        const string                  sourceName = formatToString( "%# (surface %# on '%#')", path, kind.c_str(), pOwner != nullptr ? pOwner->getName().c_str() : "?" );
+        unique_ptr<SurfaceZone> pZone                     = make_unique<SurfaceZone>();
+        pZone->_kind                                      = kind;
+        const SurfaceKindDef*                    pKind    = table.findKind( kind );
+        const string                             path     = pKind != nullptr ? pKind->_zoneProfile.get() : string{};
+        shared_ptr<const ZoneProfile>            pProfile = path.empty() ? nullptr : SharedAssetCache<ZoneProfile>::acquire( path );
+        const GameObject* const                  pOwner   = getOwner();
+        StringBuilder<constant::buffer::kMax256> sourceNameBuilder;
+        sourceNameBuilder.appendFormat( "%# (surface %# on '%#')", path, kind.c_str(), pOwner != nullptr ? pOwner->getName().c_str() : "?" );
+        const string sourceName{ sourceNameBuilder.view() };
         if ( pProfile == nullptr )
             SW_LOG_ERROR_ID( "Zone.ProfileMissing", "%#: zone profile could not be read", sourceName );
         else if ( pZone->_compiled.compile( *pProfile, sourceName, game::findSubsystem<const AbilityCatalog>() ) )

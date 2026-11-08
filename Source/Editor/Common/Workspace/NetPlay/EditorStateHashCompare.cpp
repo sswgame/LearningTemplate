@@ -42,7 +42,11 @@ namespace sw::editor
     {
         const bool bValid = 0 <= sourceIndex && sourceIndex < kSourceCount;
         if ( bValid == false )
-            _lastError = formatToString( "no history slot %#", sourceIndex );
+        {
+            StringBuilder<constant::buffer::kMax256> lastErrorBuilder;
+            lastErrorBuilder.appendFormat( "no history slot %#", sourceIndex );
+            _lastError = string( lastErrorBuilder.view() );
+        }
         return bValid;
     }
 
@@ -91,9 +95,11 @@ namespace sw::editor
             _lastError = "could not connect to the debug channel at " + remote.toString();
             return false;
         }
-        string     body;
-        const bool bSceneChannel = _hashChannel == StateHashHistory::kSceneChannelName;
-        const bool bAnswered     = client.request( formatToString( "state.hashes 0 %#%#", kMaxRequestedTicks, ( bSceneChannel ? string{} : " " + _hashChannel ) ), kChannelTimeoutMilliseconds, body );
+        string                                   body;
+        const bool                               bSceneChannel = _hashChannel == StateHashHistory::kSceneChannelName;
+        StringBuilder<constant::buffer::kMax256> textBuilder;
+        textBuilder.appendFormat( "state.hashes 0 %#%#", kMaxRequestedTicks, ( bSceneChannel ? string{} : " " + _hashChannel ) );
+        const bool bAnswered = client.request( textBuilder.view(), kChannelTimeoutMilliseconds, body );
         client.disconnect();
         if ( bAnswered == false )
         {
@@ -114,7 +120,9 @@ namespace sw::editor
         const ChannelOrigin& origin = _arrChannel[sourceIndex];
         if ( origin._bValid == false )
         {
-            _lastError = formatToString( "slot %# was not read from a debug channel - object hashes come only from a live process", sourceIndex );
+            StringBuilder<constant::buffer::kMax256> lastErrorBuilder;
+            lastErrorBuilder.appendFormat( "slot %# was not read from a debug channel - object hashes come only from a live process", sourceIndex );
+            _lastError = string( lastErrorBuilder.view() );
             return false;
         }
         DebugChannelClient client;
@@ -186,7 +194,9 @@ namespace sw::editor
         if ( leftTick != rightTick )
         {
             // 두 서버가 다른 틱에서 답했다 — 그 해시를 견주면 움직이는 오브젝트가 모두 다른 것으로 나온다. 두 서버를 pause 한 채 다시 누른다.
-            _lastError = formatToString( "the two servers answered at different ticks (%# vs %#) - pause both and try again", leftTick, rightTick );
+            StringBuilder<constant::buffer::kMax256> lastErrorBuilder;
+            lastErrorBuilder.appendFormat( "the two servers answered at different ticks (%# vs %#) - pause both and try again", leftTick, rightTick );
+            _lastError = string( lastErrorBuilder.view() );
             return false;
         }
         vector<string> listName;

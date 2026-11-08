@@ -92,11 +92,13 @@ namespace sw
                 {
                     if ( isElement( child ) == false )
                         continue;
-                    const utf8*  pLabel     = child.findAttribute( kComponentName );
-                    const bool   bNoLabel   = StringUtil::isNullOrEmpty( pLabel ) || StringUtil::equals( pLabel, "None" );
-                    const string baseName   = bNoLabel ? string{ child.getName() } : string{ pLabel };
-                    int32&       occurrence = mapCount[baseName];
-                    outListComponent.push_back( KeyedComponent{ child, formatToString( "%##%#", baseName, occurrence ), false } );
+                    const utf8*                              pLabel     = child.findAttribute( kComponentName );
+                    const bool                               bNoLabel   = StringUtil::isNullOrEmpty( pLabel ) || StringUtil::equals( pLabel, "None" );
+                    const string                             baseName   = bNoLabel ? string{ child.getName() } : string{ pLabel };
+                    int32&                                   occurrence = mapCount[baseName];
+                    StringBuilder<constant::buffer::kMax256> textBuilder;
+                    textBuilder.appendFormat( "%##%#", baseName, occurrence );
+                    outListComponent.push_back( KeyedComponent{ child, string( textBuilder.view() ), false } );
                     ++occurrence;
                 }
             }

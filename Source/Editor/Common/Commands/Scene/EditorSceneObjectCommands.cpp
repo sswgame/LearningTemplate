@@ -371,7 +371,9 @@ namespace sw::editor
                 }
                 vector<GameObject*> listObject;
                 EditorSceneCommands::collectObjectsWithComponent( *pManager, pType, listObject );
-                outReply = formatToString( "selected %#", EditorSceneCommands::selectObjects( listObject ) );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "selected %#", EditorSceneCommands::selectObjects( listObject ) );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -390,7 +392,9 @@ namespace sw::editor
                     if ( EditorSceneCommands::addComponent( pObject, hashed_string( listArgument[0] ) ) != nullptr )
                         ++addedCount;
                 }
-                outReply = formatToString( "added %# to %# object(s)", listArgument[0], addedCount );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "added %# to %# object(s)", listArgument[0], addedCount );
+                outReply = string( replyBuilder.view() );
                 return addedCount > 0;
             }
 
@@ -401,7 +405,9 @@ namespace sw::editor
                     return false;
                 vector<GameObject*> listObject;
                 EditorSceneCommands::collectObjectsWithTag( *pManager, TagID::request( listArgument[0] ), listObject );
-                outReply = formatToString( "selected %#", EditorSceneCommands::selectObjects( listObject ) );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "selected %#", EditorSceneCommands::selectObjects( listObject ) );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
         };

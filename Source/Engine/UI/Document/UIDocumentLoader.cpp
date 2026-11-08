@@ -326,7 +326,11 @@ namespace sw
             {
                 string error( path );
                 if ( line > 0 )
-                    error += formatToString( ":%#", line );
+                {
+                    StringBuilder<constant::buffer::kMax256> errorPart;
+                    errorPart.appendFormat( ":%#", line );
+                    error += errorPart.c_str();
+                }
                 error += ": ";
                 error += message;
                 return error;
@@ -428,7 +432,11 @@ namespace sw
                 return context.fail( root, string( "UIDocument has unknown attribute '" ) + attribute.getName() + "'" );
             int32 version{ 0 };
             if ( StringUtil::parseInt( string( attribute.getValue() ), version ) == false || version != static_cast<int32>( UIDocumentAsset::kVersion ) )
-                return context.fail( root, formatToString( "%#%#' is not supported (expected %#)", string( "_schemaVersion '" ), attribute.getValue(), UIDocumentAsset::kVersion ) );
+            {
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "%#%#' is not supported (expected %#)", string( "_schemaVersion '" ), attribute.getValue(), UIDocumentAsset::kVersion );
+                return context.fail( root, textBuilder.view() );
+            }
             bVersioned = true;
         }
         if ( bVersioned == false )

@@ -49,9 +49,17 @@ namespace sw
         using Internal          = HousingPartInternal;
         const size_t firstCount = outListProblem.size();
         if ( part._minLoadVersion > part._version )
-            outListProblem.push_back( formatToString( "part '%#' has minLoadVersion %# above its version %#", part._id.c_str(), part._minLoadVersion, part._version ) );
+        {
+            StringBuilder<constant::buffer::kMax256> textBuilder3;
+            textBuilder3.appendFormat( "part '%#' has minLoadVersion %# above its version %#", part._id.c_str(), part._minLoadVersion, part._version );
+            outListProblem.push_back( string( textBuilder3.view() ) );
+        }
         if ( part._replacedID.empty() == false && findPart( part._replacedID ) != nullptr )
-            outListProblem.push_back( formatToString( "part '%#' replaces '%#', which is still a part of this catalog", part._id.c_str(), part._replacedID.c_str() ) );
+        {
+            StringBuilder<constant::buffer::kMax256> textBuilder2;
+            textBuilder2.appendFormat( "part '%#' replaces '%#', which is still a part of this catalog", part._id.c_str(), part._replacedID.c_str() );
+            outListProblem.push_back( string( textBuilder2.view() ) );
+        }
         // 소켓은 점유 상자(회전 0) 안이다 — 밖의 소켓에 붙은 부품은 자기 칸 밖에 놓여 겹침 검사와 어긋난다.
         const float32 halfX = static_cast<float32>( part._sizeX ) * _root._cellSize * 0.5f + Internal::kBoundsEpsilon;
         const float32 halfZ = static_cast<float32>( part._sizeZ ) * _root._cellSize * 0.5f + Internal::kBoundsEpsilon;
@@ -61,8 +69,12 @@ namespace sw
             const bool    bInside  = MathUtil::abs( position._x ) <= halfX && MathUtil::abs( position._z ) <= halfZ && position._y >= -Internal::kBoundsEpsilon &&
                                  position._y <= part._height + Internal::kBoundsEpsilon;
             if ( bInside == false )
-                outListProblem.push_back( formatToString( "part '%#' has socket '%#' at %#,%#,%# outside its %#x%# footprint and %# m height", part._id.c_str(), socket._kind.c_str(),
-                                                          position._x, position._y, position._z, part._sizeX, part._sizeZ, part._height ) );
+            {
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "part '%#' has socket '%#' at %#,%#,%# outside its %#x%# footprint and %# m height", part._id.c_str(), socket._kind.c_str(),
+                                          position._x, position._y, position._z, part._sizeX, part._sizeZ, part._height );
+                outListProblem.push_back( string( textBuilder.view() ) );
+            }
         }
         if ( part._snapKind.empty() == false )
         {
@@ -73,7 +85,11 @@ namespace sw
                     bKnownKind = bKnownKind || socket._kind == part._snapKind;
             }
             if ( bKnownKind == false )
-                outListProblem.push_back( formatToString( "part '%#' snaps to socket kind '%#', which no part of this catalog has", part._id.c_str(), part._snapKind.c_str() ) );
+            {
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "part '%#' snaps to socket kind '%#', which no part of this catalog has", part._id.c_str(), part._snapKind.c_str() );
+                outListProblem.push_back( string( textBuilder.view() ) );
+            }
         }
         return outListProblem.size() == firstCount;
     }

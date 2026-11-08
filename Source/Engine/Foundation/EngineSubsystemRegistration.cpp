@@ -217,7 +217,9 @@ namespace sw::engine
         const expected<SubsystemGraph> graph = SubsystemCollection::computeGraph( listNode );
         if ( graph.has_value() == false )
         {
-            outError = formatToString( "Engine subsystem build order: %#: %#", graph.error().message(), graph.error().detail() );
+            StringBuilder<constant::buffer::kMax256> errorBuilder;
+            errorBuilder.appendFormat( "Engine subsystem build order: %#: %#", graph.error().message(), graph.error().detail() );
+            outError = string( errorBuilder.view() );
             return false;
         }
         outListOrder.reserve( graph->_listOrder.size() );

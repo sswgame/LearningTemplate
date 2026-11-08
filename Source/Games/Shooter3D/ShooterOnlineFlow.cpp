@@ -363,8 +363,10 @@ namespace sw
             return false;
         ServiceMailMessage message;
         message._listAttachment.push_back( ServiceMailAttachment{ kAssetGold, amount } );
-        message._titleKey           = "mail.reward";
-        message._idempotencyKey     = formatToString( "shooter.selfmail.%#", nowMs );
+        message._titleKey = "mail.reward";
+        StringBuilder<constant::buffer::kMax256> idempotencyKeyBuilder;
+        idempotencyKeyBuilder.appendFormat( "shooter.selfmail.%#", nowMs );
+        message._idempotencyKey     = string( idempotencyKeyBuilder.view() );
         message._fundingHolder      = LedgerHolder::makeMint();
         message._recipientAccountID = accountID;
         message._createdMs          = nowMs;

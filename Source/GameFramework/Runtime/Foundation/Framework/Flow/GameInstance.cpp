@@ -62,11 +62,15 @@ namespace sw
                 const utf8* const   pVerb     = bSave ? "game.save" : "game.load";
                 if ( pInstance == nullptr )
                 {
-                    outReply = formatToString( "%#: no game is running", pVerb );
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "%#: no game is running", pVerb );
+                    outReply = string( replyBuilder.view() );
                     return true;
                 }
-                const bool bQueued = bSave ? pInstance->saveGameToSlot( slot ) : pInstance->loadGameFromSlot( slot );
-                outReply           = formatToString( "%#: %# '%#'", pVerb, bQueued ? "queued" : "refused", slot.empty() ? string_view( "<default>" ) : slot );
+                const bool                               bQueued = bSave ? pInstance->saveGameToSlot( slot ) : pInstance->loadGameFromSlot( slot );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "%#: %# '%#'", pVerb, bQueued ? "queued" : "refused", slot.empty() ? string_view( "<default>" ) : slot );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 

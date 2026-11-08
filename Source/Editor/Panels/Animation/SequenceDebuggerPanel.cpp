@@ -142,8 +142,10 @@ namespace sw::editor
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorSequenceDebugger", "NoActiveItemsHint" ) );
         for ( const SequenceTrackItem* pItem : listActive )
         {
-            const SequenceBinding* pBinding = asset.findBinding( pItem->_binding );
-            ImGui::BulletText( "%s", formatToString( "%# (%#) %#..%#", pItem->_name, pBinding != nullptr ? pBinding->_name.c_str() : "-", pItem->_start, pItem->_end ).c_str() );
+            const SequenceBinding*                  pBinding = asset.findBinding( pItem->_binding );
+            fixed_string<constant::buffer::kMax256> text;
+            formatstring( text.data(), text.capacity(), "%# (%#) %#..%#", pItem->_name, pBinding != nullptr ? pBinding->_name.c_str() : "-", pItem->_start, pItem->_end );
+            ImGui::BulletText( "%s", text.c_str() );
         }
 
         drawBindingTable( *pWatched );

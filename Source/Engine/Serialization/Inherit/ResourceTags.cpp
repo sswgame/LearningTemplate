@@ -55,7 +55,9 @@ namespace sw
             {
                 if ( value.empty() || value.find( ResourceTags::kSeparator ) != string_view::npos )
                 {
-                    outError = formatToString( "'%#' is not a value of axis '%#' (empty, or it has '%#')", value, axis._pName, ResourceTags::kSeparator );
+                    StringBuilder<constant::buffer::kMax256> errorBuilder;
+                    errorBuilder.appendFormat( "'%#' is not a value of axis '%#' (empty, or it has '%#')", value, axis._pName, ResourceTags::kSeparator );
+                    outError = string( errorBuilder.view() );
                     return false;
                 }
                 if ( axis._ppValue == nullptr )
@@ -65,7 +67,9 @@ namespace sw
                     if ( value == axis._ppValue[index] )
                         return true;
                 }
-                outError = formatToString( "'%#' is not one of the values of axis '%#'", value, axis._pName );
+                StringBuilder<constant::buffer::kMax256> errorBuilder;
+                errorBuilder.appendFormat( "'%#' is not one of the values of axis '%#'", value, axis._pName );
+                outError = string( errorBuilder.view() );
                 return false;
             }
 
@@ -300,7 +304,9 @@ namespace sw
                     }
                     axisText += axis;
                 }
-                error = formatToString( "'%#' is not axis.value of a known axis (%#)", tag, axisText.c_str() );
+                StringBuilder<constant::buffer::kMax256> errorBuilder;
+                errorBuilder.appendFormat( "'%#' is not axis.value of a known axis (%#)", tag, axisText.c_str() );
+                error = string( errorBuilder.view() );
                 return;
             }
             if ( ResourceTagsInternal::isValidValue( *pAxis, tag.substr( string_view( pAxis->_pName ).size() + 1 ), error ) == false )

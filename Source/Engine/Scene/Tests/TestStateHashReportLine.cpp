@@ -143,7 +143,9 @@ SW_TEST_CASE( StateHashReportLineTest, ALineOverTheLimitIsAnErrorOnBothSides )
     vector<SceneObjectHash> listObject;
     for ( size_t index = 0; index < DebugReplyLine::kMaxBytes / 26 + 8; ++index )
     {
-        listObject.push_back( SceneObjectHash{ formatToString( "Obj%#", 10000 + index ), index } );
+        StringBuilder<constant::buffer::kMax256> textBuilder;
+        textBuilder.appendFormat( "Obj%#", 10000 + index );
+        listObject.push_back( SceneObjectHash{ string( textBuilder.view() ), index } );
     }
     string line = "stale";
     SW_EXPECT_FALSE( SceneObjectHash::writeObjectReportLine( 1, listObject, line ) );

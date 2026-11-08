@@ -212,7 +212,9 @@ namespace sw
                     return orphan._writtenName;
                 if ( orphan._name.empty() == false )
                     return string( orphan._name.c_str() );
-                return formatToString( "#%#", getOrphanNameHash( orphan ) );
+                StringBuilder<constant::buffer::kMax256> resultBuilder;
+                resultBuilder.appendFormat( "#%#", getOrphanNameHash( orphan ) );
+                return string( resultBuilder.view() );
             }
 
             /**

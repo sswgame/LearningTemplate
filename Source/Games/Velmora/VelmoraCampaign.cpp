@@ -28,7 +28,12 @@ namespace sw
             static constexpr const utf8* kEventDefeat = "Defeat";
 
             /** @brief 지역 깃발 이름입니다. 일이 일어날 때만 만든다(프레임마다 만들지 않는다). */
-            static hashed_string makeFlag( const utf8* pPrefix, const VelmoraRegionDef& region ) { return hashed_string( formatToString( "%#%#", pPrefix, region._id.c_str() ) ); }
+            static hashed_string makeFlag( const utf8* pPrefix, const VelmoraRegionDef& region )
+            {
+                fixed_string<constant::buffer::kMax128> flag;
+                formatstring( flag.data(), flag.capacity(), "%#%#", pPrefix, region._id.c_str() );
+                return hashed_string( flag.c_str() );
+            }
         };
     } // namespace
 

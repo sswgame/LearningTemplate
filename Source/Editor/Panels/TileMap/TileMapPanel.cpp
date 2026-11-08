@@ -353,7 +353,11 @@ namespace sw::editor
         input._bPainting   = ImGui::IsItemActive() && input._bButtonDown;
         // 한 프레임에 칠한 셀은 기록 하나다 — 획마다 다른 묶음 키라 끄는 동안의 프레임은 합쳐지고 다음 획은 새 기록이다(같은 키면 다른 편집이 끼기 전까지 모든 획이 한 기록이 됐다).
         if ( _document.applyToolInput( input ) )
-            notifyDocumentEdited( "Paint Tile Map", formatToString( "tilemap-paint-%#", _document.getStrokeSerial() ) );
+        {
+            StringBuilder<constant::buffer::kMax256> textBuilder;
+            textBuilder.appendFormat( "tilemap-paint-%#", _document.getStrokeSerial() );
+            notifyDocumentEdited( "Paint Tile Map", textBuilder.view() );
+        }
     }
 
     void TileMapPanel::drawDataLayerControls()

@@ -41,15 +41,19 @@ namespace sw::editor
         const float32 arrValue[4] = { _animationSampleRate, _animationPrecision, _animationShellDistance, _bodySurfaceDistance };
         for ( const float32 value : arrValue )
         {
-            text += formatToString( ";%#", BitUtil::floatToBits( value ) );
+            StringBuilder<constant::buffer::kMax256> textPart;
+            textPart.appendFormat( ";%#", BitUtil::floatToBits( value ) );
+            text += textPart.c_str();
         }
         return text;
     }
 
     string ModelImportRule::makeClipSettingsText() const
     {
-        return formatToString( "codec=%#;root=%#;rate=%#;precision=%#;shell=%#", _animationCodec, _rootMotionBone, BitUtil::floatToBits( _animationSampleRate ), BitUtil::floatToBits( _animationPrecision ),
-                               BitUtil::floatToBits( _animationShellDistance ) );
+        StringBuilder<constant::buffer::kMax256> resultBuilder;
+        resultBuilder.appendFormat( "codec=%#;root=%#;rate=%#;precision=%#;shell=%#", _animationCodec, _rootMotionBone, BitUtil::floatToBits( _animationSampleRate ), BitUtil::floatToBits( _animationPrecision ),
+                                    BitUtil::floatToBits( _animationShellDistance ) );
+        return string( resultBuilder.view() );
     }
 
     string ModelImportRule::makeFractureHashText() const
@@ -60,22 +64,30 @@ namespace sw::editor
         text += FractureSettings::getPatternName( _fracture._pattern );
         text += ";volume=";
         text += FractureSettings::getVolumeName( _fracture._volume );
-        text += formatToString( ";pieces=%#;seed=%#;hull=%#;levels=", _fracture._pieceCount, _fracture._seed, _fracture._maxHullPoint );
+        StringBuilder<constant::buffer::kMax256> textPart2;
+        textPart2.appendFormat( ";pieces=%#;seed=%#;hull=%#;levels=", _fracture._pieceCount, _fracture._seed, _fracture._maxHullPoint );
+        text += textPart2.c_str();
         for ( const uint32 count : _fracture._listLevelCount )
         {
-            text += formatToString( "%#,", count );
+            StringBuilder<constant::buffer::kMax256> textPart;
+            textPart.appendFormat( "%#,", count );
+            text += textPart.c_str();
         }
         text += ";slices=";
         for ( const uint32 count : _fracture._arrSliceCount )
         {
-            text += formatToString( "%#,", count );
+            StringBuilder<constant::buffer::kMax256> textPart;
+            textPart.appendFormat( "%#,", count );
+            text += textPart.c_str();
         }
         const float32 arrValue[11] = { _fracture._impactPoint._x, _fracture._impactPoint._y, _fracture._impactPoint._z, _fracture._clusterRadius,
                                        _fracture._clusterFraction, _fracture._sliceJitter, _fracture._interiorUvScale, _fracture._interiorColor._x,
                                        _fracture._interiorColor._y, _fracture._interiorColor._z, _fracture._interiorColor._w };
         for ( const float32 value : arrValue )
         {
-            text += formatToString( ";%#", BitUtil::floatToBits( value ) );
+            StringBuilder<constant::buffer::kMax256> textPart;
+            textPart.appendFormat( ";%#", BitUtil::floatToBits( value ) );
+            text += textPart.c_str();
         }
         return text;
     }
@@ -133,11 +145,13 @@ namespace sw::editor
             }
 
             // 망가진 규칙은 설정 전체를 거부한다(위 주석). 키 · 값 · 범위는 `PROPERTY` 가 정본이다.
-            ModelImportRule rule;
-            const string    source = formatToString( "ModelImportConfig rule %#", ruleIndex );
-            bool            bRead  = JSONFields::readFields( ruleValue, rule, source, { "lods" } );
-            rule._bFracture        = ruleValue.has( "fracture" ) ? SW_TRUE : SW_FALSE;
-            bRead                  = bRead && ( ruleValue.has( "lods" ) == false || parseLODKeys( ruleValue.get( "lods" ), rule ) );
+            ModelImportRule                          rule;
+            StringBuilder<constant::buffer::kMax256> sourceBuilder;
+            sourceBuilder.appendFormat( "ModelImportConfig rule %#", ruleIndex );
+            const string source{ sourceBuilder.view() };
+            bool         bRead = JSONFields::readFields( ruleValue, rule, source, { "lods" } );
+            rule._bFracture    = ruleValue.has( "fracture" ) ? SW_TRUE : SW_FALSE;
+            bRead              = bRead && ( ruleValue.has( "lods" ) == false || parseLODKeys( ruleValue.get( "lods" ), rule ) );
             if ( bRead && AnimationCodecRegistry::findCodecByName( rule._animationCodec ) == nullptr )
             {
                 SW_LOG_ERROR_ID( "ModelImportConfig.ModelImportConfigRuleUnknownAnimation", "ModelImportConfig rule '%#': unknown animationCodec '%#' (raw | acl).", rule._name.c_str(), rule._animationCodec.c_str() );
@@ -175,11 +189,13 @@ namespace sw::editor
         float32 previousScreenSize = 1.0f;
         for ( size_t lodIndex = 0; lodIndex < lodsValue.size(); ++lodIndex )
         {
-            ModelImportLODRule lod{};
-            const bool         bRead       = JSONFields::readFields( lodsValue.at( lodIndex ), lod, formatToString( "%# %#", context, lodIndex ) );
-            const bool         bRatio      = 0.0f < lod._triangleRatio && lod._triangleRatio < previousRatio;
-            const bool         bScreenSize = 0.0f < lod._screenSize && lod._screenSize < previousScreenSize;
-            const bool         bValidLOD   = bRead && bRatio && bScreenSize && lod._maxError >= 0.0f;
+            ModelImportLODRule                       lod{};
+            StringBuilder<constant::buffer::kMax256> textBuilder;
+            textBuilder.appendFormat( "%# %#", context, lodIndex );
+            const bool bRead       = JSONFields::readFields( lodsValue.at( lodIndex ), lod, textBuilder.view() );
+            const bool bRatio      = 0.0f < lod._triangleRatio && lod._triangleRatio < previousRatio;
+            const bool bScreenSize = 0.0f < lod._screenSize && lod._screenSize < previousScreenSize;
+            const bool bValidLOD   = bRead && bRatio && bScreenSize && lod._maxError >= 0.0f;
             if ( bValidLOD == false )
             {
                 SW_LOG_ERROR_ID( "ModelImportConfig.EntryNeedsNumbersTriangle", "%#: entry %# needs numbers with 0 < triangleRatio < %#, 0 < screenSize < %# and maxError >= 0.", context.c_str(), lodIndex, previousRatio,
@@ -204,7 +220,9 @@ namespace sw::editor
             const float32 arrValue[3] = { lod._triangleRatio, lod._screenSize, lod._maxError };
             for ( const float32 value : arrValue )
             {
-                text += formatToString( "%#,", BitUtil::floatToBits( value ) );
+                StringBuilder<constant::buffer::kMax256> textPart;
+                textPart.appendFormat( "%#,", BitUtil::floatToBits( value ) );
+                text += textPart.c_str();
             }
             text += ";";
         }

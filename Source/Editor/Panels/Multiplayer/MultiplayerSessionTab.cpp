@@ -208,7 +208,11 @@ namespace sw::editor
             _stepTickCount = MathUtil::clamp( _stepTickCount, 1, MultiplayerSessionTabInternal::kMaxStepTickCount );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "StepForward" ), SW_LOCKEY( "EdButton", "Step" ), "Step" ) ) );
             if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "StepForward" ), SW_LOCKEY( "EdButton", "Step" ), "Step" ) ) )
-                (void)session.sendServerCommand( formatToString( "step %#", _stepTickCount ) ); // 답은 서버 로그 줄로 온다
+            {
+                fixed_string<constant::buffer::kMax32> command;
+                formatstring( command.data(), command.capacity(), "step %#", _stepTickCount );
+                (void)session.sendServerCommand( command.view() ); // 답은 서버 로그 줄로 온다
+            }
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "StepServer" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Play" ), SW_LOCKEY( "EdButton", "ResumeServer" ), "Resume server" ) ) );
             if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Play" ), SW_LOCKEY( "EdButton", "ResumeServer" ), "Resume server" ) ) )
@@ -251,7 +255,11 @@ namespace sw::editor
             if ( status._bRunning )
                 EditorWidgets::drawChip( "running", SW_THEME_COLOR( "Signal", "Success" ) );
             else
-                EditorWidgets::drawChip( ( formatToString( "exited %#", status._exitCode ) ).c_str(), SW_THEME_COLOR( "Signal", "Warning" ) );
+            {
+                fixed_string<constant::buffer::kMax64> text;
+                formatstring( text.data(), text.capacity(), "exited %#", status._exitCode );
+                EditorWidgets::drawChip( text.c_str(), SW_THEME_COLOR( "Signal", "Warning" ) );
+            }
             ImGui::TableNextColumn();
             ImGui::TextUnformatted( processIndex == EditorNetPlaySession::kServerProcessIndex ? "server" : ( status._bConnected ? "connected" : "-" ) );
             ImGui::TableNextColumn();

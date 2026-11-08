@@ -126,7 +126,11 @@ namespace sw::editor
                     // 카메라 끌기는 초점 월드에서만 받는다 — 다른 칸을 클릭하면 먼저 초점이 옮겨 간다.
                     pViewport->draw( viewSize, bFocused );
                     if ( EditorSelfTestMarks::isEnabled() )
-                        EditorSelfTestMarks::record( ( formatToString( "multiplayer.inprocess.world%#", worldIndex ) ).c_str() ); // 자동화가 클릭해 입력 초점을 옮긴다
+                    {
+                        fixed_string<constant::buffer::kMax64> text;
+                        formatstring( text.data(), text.capacity(), "multiplayer.inprocess.world%#", worldIndex );
+                        EditorSelfTestMarks::record( text.c_str() ); // 자동화가 클릭해 입력 초점을 옮긴다
+                    }
                     if ( EditorInputGUI::wasItemClicked() && bFocused == false )
                         (void)session.setInputFocus( worldIndex );
                 }

@@ -109,7 +109,7 @@ namespace sw
                 {
                     if ( frames.empty() == false )
                         frames += " ";
-                    frames += formatToString( "%#", cell );
+                    frames += to_string( cell );
                 }
                 node.appendAttribute( "frames", string_view( frames ) );
                 node.appendAttribute( "fps", visual._framesPerSecond );
@@ -118,18 +118,35 @@ namespace sw
             /** @brief 모습 하나의 규칙 위반을 덧붙입니다(셀 없음 · 아틀라스 밖 셀 · fps 없는 애니메이션). */
             static void collectVisualIssues( const TileSetContent& content, const TileVisual& visual, int32 brushIndex, int32 ruleIndex, vector<TileSetIssue>& outListIssue )
             {
-                const string_view brushName = content._listBrush[static_cast<size_t>( brushIndex )]._name.view();
-                const string      owner     = ruleIndex < 0 ? formatToString( "brush '%#'", brushName ) : formatToString( "rule %# of '%#'", ruleIndex, brushName );
+                const string_view                        brushName = content._listBrush[static_cast<size_t>( brushIndex )]._name.view();
+                StringBuilder<constant::buffer::kMax256> ownerBuilder;
+                if ( ruleIndex < 0 )
+                    ownerBuilder.appendFormat( "brush '%#'", brushName );
+                else
+                    ownerBuilder.appendFormat( "rule %# of '%#'", ruleIndex, brushName );
+                const string_view owner = ownerBuilder.view();
                 if ( visual._listFrameCell.empty() )
-                    outListIssue.push_back( TileSetIssue{ formatToString( "%# has no cell", owner ), brushIndex, ruleIndex } );
+                {
+                    StringBuilder<constant::buffer::kMax256> textBuilder;
+                    textBuilder.appendFormat( "%# has no cell", owner );
+                    outListIssue.push_back( TileSetIssue{ string( textBuilder.view() ), brushIndex, ruleIndex } );
+                }
                 const int32 cellCount = content.getCellCount();
                 for ( const int32 cell : visual._listFrameCell )
                 {
                     if ( cell < 0 || cell >= cellCount )
-                        outListIssue.push_back( TileSetIssue{ formatToString( "%# cell %# is outside the %#x%# atlas", owner, cell, content._columnCount, content._rowCount ), brushIndex, ruleIndex } );
+                    {
+                        StringBuilder<constant::buffer::kMax256> textBuilder;
+                        textBuilder.appendFormat( "%# cell %# is outside the %#x%# atlas", owner, cell, content._columnCount, content._rowCount );
+                        outListIssue.push_back( TileSetIssue{ string( textBuilder.view() ), brushIndex, ruleIndex } );
+                    }
                 }
                 if ( visual._listFrameCell.size() > 1 && visual._framesPerSecond <= 0.0f )
-                    outListIssue.push_back( TileSetIssue{ formatToString( "%# has frames but no positive fps", owner ), brushIndex, ruleIndex } );
+                {
+                    StringBuilder<constant::buffer::kMax256> textBuilder;
+                    textBuilder.appendFormat( "%# has frames but no positive fps", owner );
+                    outListIssue.push_back( TileSetIssue{ string( textBuilder.view() ), brushIndex, ruleIndex } );
+                }
             }
         };
     } // namespace
@@ -162,19 +179,39 @@ namespace sw
     {
         using Internal = TileSetAssetInternal;
         if ( _columnCount < 1 || _rowCount < 1 )
-            outListIssue.push_back( TileSetIssue{ formatToString( "the atlas grid %#x%# needs at least one column and one row", _columnCount, _rowCount ), constant::invalid_index::kInt32, constant::invalid_index::kInt32 } );
+        {
+            StringBuilder<constant::buffer::kMax256> textBuilder;
+            textBuilder.appendFormat( "the atlas grid %#x%# needs at least one column and one row", _columnCount, _rowCount );
+            outListIssue.push_back( TileSetIssue{ string( textBuilder.view() ), constant::invalid_index::kInt32, constant::invalid_index::kInt32 } );
+        }
         if ( _tileSize <= 0.0f )
-            outListIssue.push_back( TileSetIssue{ formatToString( "tileSize %# must be positive", _tileSize ), constant::invalid_index::kInt32, constant::invalid_index::kInt32 } );
+        {
+            StringBuilder<constant::buffer::kMax256> textBuilder;
+            textBuilder.appendFormat( "tileSize %# must be positive", _tileSize );
+            outListIssue.push_back( TileSetIssue{ string( textBuilder.view() ), constant::invalid_index::kInt32, constant::invalid_index::kInt32 } );
+        }
         for ( size_t brushIndex = 0; brushIndex < _listBrush.size(); ++brushIndex )
         {
             const TileBrush& brush = _listBrush[brushIndex];
             const int32      index = static_cast<int32>( brushIndex );
             if ( brush._name.empty() )
-                outListIssue.push_back( TileSetIssue{ formatToString( "brush %# has no name", index ), index, constant::invalid_index::kInt32 } );
+            {
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "brush %# has no name", index );
+                outListIssue.push_back( TileSetIssue{ string( textBuilder.view() ), index, constant::invalid_index::kInt32 } );
+            }
             else if ( findBrush( brush._name ) != index )
-                outListIssue.push_back( TileSetIssue{ formatToString( "brush '%#' is listed twice", brush._name.view() ), index, constant::invalid_index::kInt32 } );
+            {
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "brush '%#' is listed twice", brush._name.view() );
+                outListIssue.push_back( TileSetIssue{ string( textBuilder.view() ), index, constant::invalid_index::kInt32 } );
+            }
             if ( brush._navCost < 1 )
-                outListIssue.push_back( TileSetIssue{ formatToString( "brush '%#' navCost must be 1 to 255", brush._name.view() ), index, constant::invalid_index::kInt32 } );
+            {
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "brush '%#' navCost must be 1 to 255", brush._name.view() );
+                outListIssue.push_back( TileSetIssue{ string( textBuilder.view() ), index, constant::invalid_index::kInt32 } );
+            }
             Internal::collectVisualIssues( *this, brush._defaultVisual, index, constant::invalid_index::kInt32, outListIssue );
             for ( size_t ruleIndex = 0; ruleIndex < brush._listRule.size(); ++ruleIndex )
             {

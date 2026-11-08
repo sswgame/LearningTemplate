@@ -235,7 +235,9 @@ namespace sw
                     return false;
                 if ( count > StateHashHistory::kMaxReportLineSamples )
                 {
-                    outReply = formatToString( "count %# does not fit one line (at most %#) - use state.hashes", count, StateHashHistory::kMaxReportLineSamples );
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "count %# does not fit one line (at most %#) - use state.hashes", count, StateHashHistory::kMaxReportLineSamples );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
                 const StateHashHistory* pHistory = findRecordingHistory( outReply );
@@ -253,7 +255,9 @@ namespace sw
                 }
                 if ( StateHashHistory::writeReportLine( listSample, outReply ) == false )
                 {
-                    outReply = formatToString( "the hash history does not fit one line (limit %# bytes) - use state.hashes", DebugReplyLine::kMaxBytes );
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "the hash history does not fit one line (limit %# bytes) - use state.hashes", DebugReplyLine::kMaxBytes );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
                 return true;
@@ -344,7 +348,9 @@ namespace sw
 
     void SceneObjectHash::writeTickedObjectReport( uint64 tick, const vector<SceneObjectHash>& listObject, string& outText )
     {
-        outText = formatToString( "tick %#\n", tick );
+        StringBuilder<constant::buffer::kMax256> textBuilder;
+        textBuilder.appendFormat( "tick %#\n", tick );
+        outText = string( textBuilder.view() );
         writeObjectReport( listObject, outText );
     }
 

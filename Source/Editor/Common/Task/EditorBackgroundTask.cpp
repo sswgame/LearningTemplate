@@ -98,8 +98,10 @@ namespace sw::editor
         TaskManager*      pTaskManager = editor::findSubsystem<TaskManager>();
         if ( pStore == nullptr || pTaskManager == nullptr )
             return "no editor";
-        const TaskStageHandle& stage = pStore->get<EditorBackgroundJob>()._stage;
-        return formatToString( "%# job(s) left, one is '%#'", pTaskManager->getStagePendingCount( stage ), pTaskManager->describeStageFirstUnfinished( stage ).c_str() );
+        const TaskStageHandle&                   stage = pStore->get<EditorBackgroundJob>()._stage;
+        StringBuilder<constant::buffer::kMax256> resultBuilder;
+        resultBuilder.appendFormat( "%# job(s) left, one is '%#'", pTaskManager->getStagePendingCount( stage ), pTaskManager->describeStageFirstUnfinished( stage ).c_str() );
+        return string( resultBuilder.view() );
     }
 } // namespace sw::editor
 
