@@ -6,7 +6,7 @@
  *          구간은 완전 이벤트(`X`, 시작 · 길이 마이크로초), 스레드 · 프로세스 이름은 메타 이벤트(`M`), 프레임 경계는 인스턴트 이벤트(`i`)입니다.
  *          파일 머리말(`otherData`)에 저장 시점의 벽시계와 단조 시계 쌍 · 호스트 이름을 남겨, 프로세스마다 저장한 파일을 `mergeTraceJSON` 이
  *          한 타임라인으로 합칩니다(`profile.trace merge`). 사람이 누르지 않아도 남는 길은 셋입니다 — `bugreport`(타임라인 기록이 켜져 있으면),
- *          측정 창 전체(`-gv_profileTracePath`), 느린 틱(`-gv_traceSlowTickMs`).
+ *          측정 창 전체(`-gv_profileTracePath`), 느린 틱(`-gv_traceSlowTickMs`) — 실행 인자는 개발 도구(`DevTools/Profiling`)가 읽는다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -129,14 +129,14 @@ namespace sw
         static constexpr uint32 kSlowFrameMaxFileCount = 20;
 
         /**
-         * @brief 느린 틱 자동 캡처입니다 — `-gv_traceSlowTickMs=N` 이 0 보다 크면 타임라인 링 버퍼를 켜 두고, 틱 본문이 N ms 를 넘으면
+         * @brief 느린 틱 자동 캡처입니다 — @p budgetMilliseconds 가 0 보다 크면 타임라인 링 버퍼를 켜 두고, 틱 본문이 그만큼을 넘으면
          *        `kSlowFrameFramesAfter` 프레임 뒤 링 버퍼 전체(그 틱 앞뒤)를 `Saved/Traces/slowtick_<유닉스 밀리초>.trace.json` 에 저장합니다.
          * @param frameBeginNanos 틱 본문 시작(단조 시계) — 파일에 "Slow tick" 표식으로 찍힌다
          * @param frameEndNanos 틱 본문 끝
-         * @details 게임 스레드가 틱(프레임)을 마친 뒤 한 번 부릅니다. 꺼져 있으면 정수 하나 비교하고 돌아옵니다.
+         * @details 게임 스레드가 틱(프레임)을 마친 뒤 한 번 부릅니다(개발 도구 `ProfilerLaunchSwitches` 가 `-gv_traceSlowTickMs` 로). 꺼져 있으면 정수 하나 비교하고 돌아옵니다.
          *          Shipping 에는 없습니다 — 운영에서 쓰려면 Dev 구성 서버(`Ninja-Release`)를 씁니다.
          */
-        static void updateSlowFrameCapture( FrameProfiler& profiler, uint64 frameBeginNanos, uint64 frameEndNanos, string_view processName );
+        static void updateSlowFrameCapture( FrameProfiler& profiler, int32 budgetMilliseconds, uint64 frameBeginNanos, uint64 frameEndNanos, string_view processName );
 
         /**
          * @brief 프로세스마다 저장한 트레이스 여럿을 한 타임라인으로 합칩니다(순수 함수).
@@ -174,16 +174,16 @@ namespace sw
                                                     string& outSavedPath, string& outReply );
 
         /**
-         * @brief 종료 때 트레이스 저장을 준비합니다 — `-gv_traceSaveOnExit=<경로>` 가 있으면 타임라인 링 버퍼 기록을 켭니다(없으면 아무것도 하지 않는다).
-         * @details 엔진 기동 끝에 부릅니다(`Engine::initialize`). 여러 프로세스를 띄운 부모(에디터의 멀티 프로세스 재생)가 프로세스마다 경로를 주고,
-         *          모두 끝난 뒤 그 파일들을 `mergeTraceJSON` 으로 합칩니다.
+         * @brief 종료 때 트레이스 저장을 준비합니다 — 타임라인 링 버퍼 기록을 켭니다. @p path 는 로그에 알릴 저장 경로입니다.
+         * @details 개발 도구가 `-gv_traceSaveOnExit=<경로>` 로 기동 단계에 부릅니다(`ProfilerLaunchSwitches`). 여러 프로세스를 띄운 부모(에디터의 멀티 프로세스 재생)가
+         *          프로세스마다 경로를 주고, 모두 끝난 뒤 그 파일들을 `mergeTraceJSON` 으로 합칩니다.
          */
-        static void startExitCapture( FrameProfiler& profiler );
+        static void startExitCapture( FrameProfiler& profiler, string_view path );
         /**
-         * @brief `-gv_traceSaveOnExit` 가 있으면 링 버퍼의 최근 프레임을 그 경로에 저장합니다. 결과는 로그에 남깁니다(`Exit trace saved <경로>`).
-         * @details 엔진 종료 첫머리에 부릅니다(서비스가 아직 있다). @p processName 은 머리말의 프로세스 이름입니다.
+         * @brief 링 버퍼의 최근 프레임을 @p path 에 저장합니다. 결과는 로그에 남깁니다(`Exit trace saved <경로>`).
+         * @details 기동 단계가 내려갈 때 부릅니다(서비스가 아직 있다). @p processName 은 머리말의 프로세스 이름입니다.
          */
-        static void finishExitCapture( const FrameProfiler& profiler, string_view processName );
+        static void finishExitCapture( const FrameProfiler& profiler, string_view path, string_view processName );
 
         /** @brief 개발 명령 `profile.trace` 의 첫 낱말이 가리키는 하위 명령입니다. */
         enum class CommandWord : uint8

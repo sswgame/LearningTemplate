@@ -79,7 +79,7 @@ namespace sw::editor
         }
 
         // 뷰어가 붙기 전에 출력을 켠다 — 켜는 순간부터 기록하고, 뷰어는 붙을 때 그때까지 쌓인 것을 받는다.
-        if ( ProfilerBackend::startTracy() == false )
+        if ( ProfilerBackend::startTracy( false ) == false )
             return EditorTracyLaunchResult::TracyNotCompiled;
 
         const ProcessCommand command = makeViewerCommand( viewerPath, ProfilerBackend::getTracyPort() );

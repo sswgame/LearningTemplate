@@ -301,10 +301,6 @@ namespace sw
         if ( bDedicatedServer == false )
             _netFrameSubscription = _frameHooks.add( engine::getSubsystem<GameNetSession>().makeClientHostFrameHooks() );
 
-#if !defined( SW_SHIPPING )
-        ProfilerTraceExport::startExitCapture( engine::getSubsystem<FrameProfiler>() ); // `-gv_traceSaveOnExit` — 없으면 아무것도 하지 않는다
-#endif
-
         MemoryProfiler::captureMemoryLeakBaseline();
 
         return true;
@@ -320,11 +316,6 @@ namespace sw
 
     void Engine::shutdown( SubsystemScope& hostScope )
     {
-#if !defined( SW_SHIPPING )
-        // 종료 트레이스(`-gv_traceSaveOnExit`)는 서비스 · 프로파일러가 아직 있을 때 쓴다. 기동이 서비스 표 전에 멈췄으면 쓸 것이 없다.
-        if ( engine::areEngineServicesBound() && _headlessState.isHeadless() == false )
-            ProfilerTraceExport::finishExitCapture( engine::getSubsystem<FrameProfiler>(), _hostRole == EngineHostRole::DedicatedServer ? "Server" : "App" );
-#endif
         // 프레임 관찰자는 붙인 쪽이 서비스보다 먼저 내린다(로그 리스너 · 입력을 빌려 쓴다). 남은 것은 더 부르지 않는다.
         // 목록의 용량은 기동 뒤에 잡았으므로 누수 보고 전에 해제한다.
         _frameHooks.clear(); // 남은 구독을 무효화하고 저장소를 놓는다
