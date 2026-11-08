@@ -20,6 +20,9 @@
  *             SW_MATERIAL_CUSTOM_LIGHTING(훅 정의) · SW_MATERIAL_DEFAULT_LIGHTING(PBR) · SW_MATERIAL_UNLIT(표면 색 그대로) 중 하나.
  *             SW_MATERIAL_RIM_LIGHT 는 기본 PBR 에 포워드 림 라이트를 더한다(선택이 아니라 덧붙임이다).
  *             SW_MATERIAL_EMISSIVE 는 기본 PBR 에 `float3 computeMaterialEmissive( PixelContext context )` 훅의 빛을 더한다(덧붙임 — G버퍼 패스는 장면 색에 미리 적어 디퍼드로도 그린다).
+ *   셰이딩 값 `SurfaceShading computeMaterialShading( PixelContext context, MaterialSurface surface )`  G버퍼 패스에서만 부른다(덧붙임 — SW_MATERIAL_CUSTOM_SHADING).
+ *             셰이딩 모델 번호 · 번호마다의 사용자 칸 · 반사율 · 발광을 낸다(shading_model_ids.hlsli 표). 정의하지 않은 셰이더는 조명 훅이 정한 번호(Unlit · 기본 PBR)다.
+ *             언리얼 머티리얼의 Shading Model 과 CustomData 핀 자리다 — 겹 셰이딩(appearance_lit.hlsl)이 엽 하나를 디퍼드로 싣는다.
  *   월드 위치 오프셋 `float3 computeWorldPositionOffset( VertexContext context )`        MATERIAL_VERTEX_DEFORM 퍼뮤테이션에서만 부른다
  *   사용자 보간 칸  `MaterialVaryings computeMaterialVaryings( VertexContext context )`
  *             SW_MATERIAL_CUSTOM_VARYINGS(구조체 + 훅 정의) · SW_MATERIAL_DEFAULT_VARYINGS(칸 없음) 중 하나. 시맨틱은 TEXCOORD8 ~ TEXCOORD14.
@@ -261,6 +264,7 @@ struct PixelContext
     static void addRimLight( float3 normal, inout float3 inoutLit ); // SW_MATERIAL_RIM_LIGHT 의 단계
     void addEmissive( inout float3 inoutLit );                       // SW_MATERIAL_EMISSIVE 의 단계(포워드 빛 · G버퍼 셰이딩 값)
     static uint getShadingModel();                                   // G버퍼에 적을 셰이딩 모델 번호
+    SurfaceShading makeShading( MaterialSurface surface );           // G버퍼에 적을 셰이딩 값(SW_MATERIAL_CUSTOM_SHADING 이면 훅)
     float4 computeSelectedLighting( MaterialSurface surface );       // 조명 훅의 선택(훅 정의 · 기본 PBR · 조명 없음)을 푼다
     SurfaceOutput storeSurface( MaterialSurface surface );           // 패스가 원하는 출력(포워드 색 · G버퍼 셋)으로 낸다
 };

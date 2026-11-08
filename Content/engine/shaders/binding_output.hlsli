@@ -45,6 +45,8 @@ struct SurfaceShading
 
     static SurfaceShading make( uint shadingModel );
     static uint resolveViewMode( uint shadingModel ); // 보기 모드가 조명을 끄면 Unlit
+    static float packPair( float high, float low );   // 0..1 둘을 8 비트 칸 하나에(4 비트씩 — 천의 시엔 거칠기 · 무게)
+    static float2 unpackPair( float packed );         // packPair 의 역 — (high, low)
 };
 
 struct SurfaceOutput
@@ -337,6 +339,20 @@ static SurfaceShading SurfaceShading::make( uint shadingModel )
     shading._customData   = float4( 0.0f, 0.0f, 0.0f, 0.0f );
     shading._emissive     = float3( 0.0f, 0.0f, 0.0f );
     return shading;
+}
+
+/** @brief 0..1 둘을 4 비트씩(16 단계) 8 비트 UNORM 칸 하나에 싣는다 — 위 4 비트 @p high, 아래 4 비트 @p low. 읽는 쪽은 unpackPair 하나다. */
+static float SurfaceShading::packPair( float high, float low )
+{
+    const uint highBits = (uint)round( saturate( high ) * 15.0f );
+    const uint lowBits  = (uint)round( saturate( low ) * 15.0f );
+    return (float)( highBits * 16u + lowBits ) / 255.0f;
+}
+
+static float2 SurfaceShading::unpackPair( float packed )
+{
+    const uint bits = (uint)round( saturate( packed ) * 255.0f );
+    return float2( (float)( bits >> 4u ), (float)( bits & 15u ) ) / 15.0f;
 }
 
 #if SW_VIEWMODE_SKIPS_LIGHTING

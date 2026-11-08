@@ -30,7 +30,8 @@ void applyShadingModel( inout SurfaceBRDF brdf, uint shadingModel, float4 custom
     }
     else if ( shadingModel == SW_SHADING_MODEL_ID_CLOTH )
     {
-        brdf.setSheen( customData.rgb, customData.a, 1.0f );
+        const float2 sheenRoughnessWeight = SurfaceShading::unpackPair( customData.a );
+        brdf.setSheen( customData.rgb, sheenRoughnessWeight.x, sheenRoughnessWeight.y );
     }
     else if ( shadingModel == SW_SHADING_MODEL_ID_CLEAR_COAT )
     {

@@ -10,12 +10,16 @@
  * | 번호              | r                 | g                 | b                 | a                    |
  * |-------------------|-------------------|-------------------|-------------------|----------------------|
  * | SUBSURFACE        | 감쌈 R            | 감쌈 G            | 감쌈 B            | 투과 세기            |
- * | CLOTH             | 시엔 색 R         | 시엔 색 G         | 시엔 색 B         | 시엔 거칠기          |
+ * | CLOTH             | 시엔 색 R         | 시엔 색 G         | 시엔 색 B         | 거칠기 · 무게 4 비트씩(SurfaceShading::packPair) |
  * | CLEAR_COAT        | 코트 무게         | 코트 거칠기       | —                 | —                    |
  * | HAIR              | W13 이 정한다(탄젠트 옥타헤드럴 · 옮김) — 병합 지점                                         |
  * | EYE               | 코트(각막 젖음)   | 코트 거칠기       | 공막 감쌈         | 홍채 마스크          |
  * | THIN_TRANSLUCENT  | 투과 색 R         | 투과 색 G         | 투과 색 B         | 감쌈                 |
  * | ANISOTROPIC       | 탄젠트 옥타 u     | 탄젠트 옥타 v     | 비등방 (0..1 → -1..1) | —                |
+ *
+ * 번호 하나에 엽 하나다. 코트를 칸에 싣지 않는 번호(SUBSURFACE · CLOTH · THIN_TRANSLUCENT · ANISOTROPIC)의 젖음 · 기름막은 G버퍼 거칠기에 접는다
+ * (appearance_lit.hlsl AppearanceSurface::computeStoredRoughness — 언리얼도 Clear Coat 는 따로 된 번호라 피부 위 코트를 같은 픽셀에 싣지 못한다).
+ * 엽이 둘 이상 겹치는 머티리얼(박막 · 털 · 그물 아래층 · 시엔 + 비등방/산란)은 칸이 넷을 넘어 포워드 전용이다.
  */
 
 #ifndef SW_ENGINE_SHADINGMODELIDS_HLSLI

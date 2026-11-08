@@ -8,7 +8,15 @@
  *          MATERIAL_LOBE_STRAND. 코트(MATERIAL_LOBE_COAT)는 이 셰이더가 늘 켠다 — 젖음 · 기름막(피지 · 눈물 · 침 · 니스)이 어느 면에나 얹히는 한 벌이라서다.
  *          기능 define: MATERIAL_PATTERN_*(appearance_pattern.hlsli) · MATERIAL_NET_UNDERLAYER · MATERIAL_REFRACTION(유리) · MATERIAL_EYE(appearance_eye.hlsli) ·
  *          MATERIAL_FUR_SHELL(appearance_fur.hlsli, MATERIAL_VERTEX_DEFORM 과 함께).
- *          G버퍼에 엽 칸이 없어 모두 포워드 전용이다(MATERIAL_FORWARD_ONLY — 툰과 같은 길).
+ *          디퍼드: 엽 하나는 셰이딩 모델 번호 + 사용자 칸 네 채널로 G버퍼에 싣는다(SW_MATERIAL_CUSTOM_SHADING — computeMaterialShading, 표는 shading_model_ids.hlsli).
+ *            눈 → EYE(코트 · 공막 감쌈), 피부 → SUBSURFACE, 천 · 레이스 → CLOTH, 솔질 금속 → ANISOTROPIC, 얇은 면 → THIN_TRANSLUCENT, 엽 없는 갈래(나무 · 돌 · 가죽 · 금속 · 녹 · 코트) → CLEAR_COAT.
+ *            코트를 칸에 싣지 않는 번호의 젖음은 G버퍼 거칠기에 접는다(computeStoredRoughness).
+ *          포워드 전용(MATERIAL_FORWARD_ONLY)은 엽이 겹쳐 칸 넷에 들지 않는 갈래뿐이다 — 아래 검사가 G버퍼 변형을 쿠킹에서 멈춘다.
+ *            박막(진주층 · 비늘): 시선 각마다 다른 F0 색(채널 셋) + 바탕 PBR — G버퍼의 반사율 칸은 스칼라다.
+ *            털: 가닥 방향(둘) · 흡수 색(셋) · 큐티클 기울기(하나) — 여섯 채널.
+ *            스타킹(그물 아래층): 피부 BRDF 와 천 BRDF 를 덮임으로 섞는다 — 번호가 둘이다.
+ *            비단(시엔 + 비등방): 시엔 색 · 거칠기(넷) + 탄젠트 · 비등방(셋) — 일곱 채널.
+ *            유리 · 반투명은 반투명 목록이라 G버퍼에 그리지 않는다.
  *
  *          젖음 · 마른 자국(모든 갈래, 런타임 — W16 의 캐릭터 표면 상태가 UV 공간 마스크를 머티리얼 인스턴스에 올린다):
  *            `_wetness`(스칼라 문) × `_wetMask`(텍스처 R) — 알베도를 어둡게, 코트 무게 ↑, 코트 거칠기 ↓, 노멀을 매끈하게(막이 잔결을 메운다).
@@ -92,8 +100,34 @@ SW_MATERIAL_END
 #if defined( MATERIAL_REFRACTION ) && !defined( MATERIAL_BLEND_TRANSLUCENT )
     #error "MATERIAL_REFRACTION draws in the translucent list: the material needs alphaMode=\"Blend\" and MATERIAL_BLEND_TRANSLUCENT"
 #endif
+// 엽이 겹치는 갈래는 G버퍼 칸 넷에 들지 않는다(머리말의 포워드 전용 표) — define 을 빠뜨린 머티리얼이 G버퍼에서 조용히 엽을 잃지 않게 쿠킹에서 멈춘다.
+#if defined( SW_PASS_GBUFFER ) && ( defined( MATERIAL_LOBE_THIN_FILM ) || defined( MATERIAL_LOBE_STRAND ) || defined( MATERIAL_NET_UNDERLAYER ) || ( defined( MATERIAL_LOBE_SHEEN ) && ( defined( MATERIAL_LOBE_ANISOTROPY ) || defined( MATERIAL_LOBE_SUBSURFACE ) ) ) )
+    #error "appearance_lit.hlsl: layered lobes (thin film, fur strand, net underlayer, sheen with anisotropy or subsurface) do not fit the G-buffer: list MATERIAL_FORWARD_ONLY"
+#endif
+
+// G버퍼의 셰이딩 모델 번호 — 엽 define 하나가 고른다(눈은 산란 define 도 가져 먼저 고른다). 코트를 칸에 싣는 번호만 SW_APPEARANCE_STORES_COAT 1 이다.
+#if defined( MATERIAL_EYE )
+    #define SW_APPEARANCE_SHADING_MODEL SW_SHADING_MODEL_ID_EYE
+    #define SW_APPEARANCE_STORES_COAT   1
+#elif defined( MATERIAL_LOBE_SUBSURFACE )
+    #define SW_APPEARANCE_SHADING_MODEL SW_SHADING_MODEL_ID_SUBSURFACE
+    #define SW_APPEARANCE_STORES_COAT   0
+#elif defined( MATERIAL_LOBE_SHEEN )
+    #define SW_APPEARANCE_SHADING_MODEL SW_SHADING_MODEL_ID_CLOTH
+    #define SW_APPEARANCE_STORES_COAT   0
+#elif defined( MATERIAL_LOBE_ANISOTROPY )
+    #define SW_APPEARANCE_SHADING_MODEL SW_SHADING_MODEL_ID_ANISOTROPIC
+    #define SW_APPEARANCE_STORES_COAT   0
+#elif defined( MATERIAL_LOBE_TRANSMISSION )
+    #define SW_APPEARANCE_SHADING_MODEL SW_SHADING_MODEL_ID_THIN_TRANSLUCENT
+    #define SW_APPEARANCE_STORES_COAT   0
+#else
+    #define SW_APPEARANCE_SHADING_MODEL SW_SHADING_MODEL_ID_CLEAR_COAT // 코트 무게 0 이면 기본 PBR 과 같다
+    #define SW_APPEARANCE_STORES_COAT   1
+#endif
 
 #define SW_MATERIAL_CUSTOM_LIGHTING
+#define SW_MATERIAL_CUSTOM_SHADING
 #define SW_MATERIAL_CUSTOM_VARYINGS
 #if !defined( SW_PASS_SHADOW ) && !defined( SW_PASS_DEPTH_PREPASS )
     #define SW_MATERIAL_USES_TANGENT
@@ -183,6 +217,8 @@ struct AppearanceSurface
     void perturbNormal( float2 slope, PixelContext context ); // UV 공간 높이 기울기로 노멀을 기울인다(무늬)
     void applyWetFilm( PixelContext context );
     SurfaceBRDF makeBRDF( float3 worldPosition );
+    float4 computeCustomData();     // G버퍼 사용자 칸 — 셰이딩 모델 번호마다(shading_model_ids.hlsli 표)
+    float computeStoredRoughness(); // G버퍼 거칠기 — 코트를 싣지 않는 번호는 코트를 접는다
 };
 
 #include "appearance_pattern.hlsli"
@@ -324,13 +360,71 @@ SurfaceBRDF AppearanceSurface::makeBRDF( float3 worldPosition )
     return brdf;
 }
 
+#if defined( MATERIAL_EYE )
+float4 AppearanceSurface::computeCustomData()
+{
+    // 홍채 마스크는 make 가 감쌈에 이미 곱했다(appearance_eye.hlsli) — a 는 0 이다.
+    return float4( _coatWeight, _coatRoughness, _subsurfaceWrap.r, 0.0f );
+}
+#elif defined( MATERIAL_LOBE_SUBSURFACE )
+float4 AppearanceSurface::computeCustomData()
+{
+    // 디퍼드는 투과 색을 알베도 × 세기로 푼다(deferred_lighting.hlsl) — 세기는 투과 색의 가장 밝은 채널이다.
+    return float4( _subsurfaceWrap, max( _transmissionColor.r, max( _transmissionColor.g, _transmissionColor.b ) ) );
+}
+#elif defined( MATERIAL_LOBE_SHEEN )
+float4 AppearanceSurface::computeCustomData()
+{
+    return float4( _sheenColor, SurfaceShading::packPair( _sheenRoughness, _sheenWeight ) );
+}
+#elif defined( MATERIAL_LOBE_ANISOTROPY )
+float4 AppearanceSurface::computeCustomData()
+{
+    return float4( Octahedral::encode( _tangent ) * 0.5f + 0.5f, _anisotropy * 0.5f + 0.5f, 0.0f );
+}
+#elif defined( MATERIAL_LOBE_TRANSMISSION )
+float4 AppearanceSurface::computeCustomData()
+{
+    return float4( _transmissionColor, _transmissionWrap );
+}
+#else
+float4 AppearanceSurface::computeCustomData()
+{
+    return float4( _coatWeight, _coatRoughness, 0.0f, 0.0f );
+}
+#endif
+
+#if SW_APPEARANCE_STORES_COAT
+float AppearanceSurface::computeStoredRoughness()
+{
+    return _roughness;
+}
+#else
+/** @brief 코트 칸이 없는 번호 — 젖음 · 기름막을 코트 무게만큼 코트 거칠기로 접는다(shortcut: 코트의 둘째 반사 · 아래층 감쇠는 잃는다, 젖은 피부 클로즈업이 중요해지면 번호를 나눈다). */
+float AppearanceSurface::computeStoredRoughness()
+{
+    return lerp( _roughness, min( _roughness, _coatRoughness ), _coatWeight );
+}
+#endif
+
+/** @brief G버퍼 셰이딩 값 — 갈래의 번호 · 사용자 칸 · 반사율 · 발광(눈빛). 조명 훅과 같은 make 를 부른다(같은 식이라 컴파일러가 한 번만 계산한다). */
+SurfaceShading computeMaterialShading( PixelContext context, MaterialSurface surface )
+{
+    AppearanceSurface appearance = AppearanceSurface::make( context );
+    SurfaceShading    shading    = SurfaceShading::make( SW_APPEARANCE_SHADING_MODEL );
+    shading._specular            = saturate( appearance._specular );
+    shading._customData          = appearance.computeCustomData();
+    shading._emissive            = appearance._emissive;
+    return shading;
+}
+
 MaterialSurface computeMaterialSurface( PixelContext context )
 {
-    const AppearanceSurface appearance = AppearanceSurface::make( context );
-    MaterialSurface         surface;
+    AppearanceSurface appearance = AppearanceSurface::make( context );
+    MaterialSurface   surface;
     surface._albedo    = appearance._albedo;
     surface._normal    = appearance._normal;
-    surface._roughness = appearance._roughness;
+    surface._roughness = appearance.computeStoredRoughness();
     surface._metallic  = appearance._metallic;
     surface.setAlphaCutoff( context._material._alphaCutoff );
     return surface;

@@ -31,6 +31,17 @@ namespace
             return VectorUtil::contains( material.getPermutations()._listAlwaysDefine, string( define ) );
         }
 
+        /**
+         * @brief 엽이 겹쳐 G버퍼 칸(셰이딩 모델 번호 하나 + 사용자 칸 넷)에 들지 않는 갈래인지 — appearance_lit.hlsl 의 G버퍼 #error 와 같은 조건이다.
+         * @details 박막(F0 색) · 털(가닥 방향 + 흡수 색 + 기울기) · 그물 아래층(BRDF 둘) · 시엔 + 비등방/산란(엽 둘).
+         */
+        [[nodiscard]] static bool needsForwardShading( const Material& material )
+        {
+            const bool bSheen = hasDefine( material, "MATERIAL_LOBE_SHEEN" );
+            return hasDefine( material, "MATERIAL_LOBE_THIN_FILM" ) || hasDefine( material, "MATERIAL_LOBE_STRAND" ) || hasDefine( material, "MATERIAL_NET_UNDERLAYER" ) ||
+                   ( bSheen && ( hasDefine( material, "MATERIAL_LOBE_ANISOTROPY" ) || hasDefine( material, "MATERIAL_LOBE_SUBSURFACE" ) ) );
+        }
+
         /** @brief 라이브러리의 .material 을 모두 리소스 id 로 읽습니다(`_base` 를 펼친 결과). 하나라도 못 읽으면 실패를 남긴다. */
         [[nodiscard]] static vector<LoadedMaterial> loadAll()
         {
@@ -64,7 +75,8 @@ SW_TEST_CASE( MaterialLibraryTest, EveryPresetLoadsWithTheRootLayout )
     {
         const Material& material = *loaded._material;
         SW_EXPECT_TRUE_MSG( material.getShaderPath() == root->getShaderPath(), loaded._id.c_str() );
-        SW_EXPECT_TRUE_MSG( MaterialLibraryTestUtil::hasDefine( material, "MATERIAL_FORWARD_ONLY" ), loaded._id.c_str() ); // G버퍼에 엽 칸이 없다
+        // 디퍼드는 엽 하나를 셰이딩 모델 번호로 싣는다 — 겹치는 갈래만 포워드 전용이고, 나머지가 포워드 전용이면 디퍼드에서 쓸데없이 포워드로 그린다.
+        SW_EXPECT_TRUE_MSG( MaterialLibraryTestUtil::needsForwardShading( material ) == MaterialLibraryTestUtil::hasDefine( material, "MATERIAL_FORWARD_ONLY" ), loaded._id.c_str() );
         SW_EXPECT_EQUAL( root->getProperties().size(), material.getProperties().size() );
         for ( size_t index = 0; index < root->getProperties().size() && index < material.getProperties().size(); ++index )
             SW_EXPECT_TRUE_MSG( root->getProperties()[index]._name == material.getProperties()[index]._name, loaded._id.c_str() );
