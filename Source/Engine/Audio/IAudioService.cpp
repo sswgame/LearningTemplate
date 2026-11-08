@@ -165,7 +165,6 @@ namespace sw
         }
 
         _listOfflineBlock.assign( static_cast<size_t>( audio::kBlockFrameCount ) * AudioChannelLayoutUtil::getChannelCount( layout ), 0.0f );
-        _listDumpSample.clear();
         _pEngine->releaseAudioThread(); // 렌더를 부를 스레드가 바뀐다(오프라인 → 장치 스레드)
         _bOutputOpen = _bDeviceOpen && startOutput( layout );
         if ( _bDeviceOpen && _bOutputOpen == false )
