@@ -15,7 +15,7 @@ namespace sw::editor
      */
     struct EditorStatusBarItemRegistration : EditorExtensionRegistration
     {
-        static constexpr const utf8* kKindName = "statusBarItem";
+        SW_EDITOR_EXTENSION_KIND( "statusBarItem" );
 
         void ( *_pfnDraw )();
     };

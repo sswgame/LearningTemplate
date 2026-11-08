@@ -30,7 +30,7 @@ namespace sw::editor
      */
     struct EditorSettingsRegistration : EditorExtensionRegistration
     {
-        static constexpr const utf8* kKindName = "settings";
+        SW_EDITOR_EXTENSION_KIND( "settings" );
 
         /**
          * @brief 섹션을 떼기 직전(`EditorExtensionRegistrar::detach`)에 파일에 씁니다. 값은 그 모듈의 소유자(`EditorSettingsRegistrar`) 멤버라 모듈을 내리면 사라지고,

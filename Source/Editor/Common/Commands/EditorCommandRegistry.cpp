@@ -330,4 +330,7 @@ namespace sw::editor
 
     SW_DEV_COMMAND( EditorCommand, "editor", "editor <commandID>", "Run an editor command by id (the command palette ids, e.g. scene.saveScene)",
                     &EditorCommandConsoleInternal::runEditorCommand );
+
+    // 이 종류의 등록 목록 — EditorModule 이미지에 하나(확장 DLL 의 등록자도 내보낸 이 함수로 오른다).
+    SW_DEFINE_EDITOR_EXTENSION_KIND( EditorCommandRegistration )
 } // namespace sw::editor

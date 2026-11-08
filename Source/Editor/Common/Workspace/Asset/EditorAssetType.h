@@ -218,7 +218,7 @@ namespace sw::editor
      */
     struct EditorAssetTypeRegistration : EditorExtensionRegistration
     {
-        static constexpr const utf8* kKindName = "AssetType";
+        SW_EDITOR_EXTENSION_KIND( "AssetType" );
 
         const utf8*                    _pDisplayName;       ///< 단수 이름. 퀵 런처 분류와 배지에 쓴다
         const utf8*                    _pBrowserLabel;      ///< 콘텐츠 브라우저 필터와 리소스 카탈로그의 라벨

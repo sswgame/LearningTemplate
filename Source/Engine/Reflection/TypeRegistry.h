@@ -63,6 +63,14 @@ namespace sw
         /** @brief 구독자에게 @p moduleName 이 내려간다고 알립니다(`engine::unregisterModuleTypes`). */
         void publishModuleUnloading( string_view moduleName );
         /**
+         * @brief 모듈의 등록 줄을 한 차례(`ModuleObjectRegistrar::getDetachPass`) 뗀 뒤의 알림을 받습니다(그 모듈의 코드가 아직 살아 있을 때). 구독이 사라지면 뗍니다.
+         * @details 등록 줄로 인스턴스를 만든 쪽(에디터 패널 · 팝업 · 확장 서브시스템)이 목록의 세대 번호(`RegistrationList::getGeneration`)와 맞춰 빠진 줄의 인스턴스를 거둔다.
+         *          목록이 빼는 자리에서 전역 신호를 쏘던 것을 대신한다 — 신호는 모듈 범위의 이 서브시스템이 들고, 바뀜 판단은 받는 쪽이 번호로 한다.
+         */
+        [[nodiscard]] Subscription subscribeModuleObjectsDetached( const ModuleUnloadingDelegate& delegate );
+        /** @brief 구독자에게 @p moduleName 의 등록 줄을 한 차례 뗐다고 알립니다(`engine::unregisterModuleTypes` 의 떼기). */
+        void publishModuleObjectsDetached( string_view moduleName );
+        /**
          * @brief 호스트의 모든 타입 공급자(엔진, GameFramework, 킷, 게임 모듈)가 등록을 끝냈다고 기록합니다. 기동 단계 `ModuleLoadStage` 가 부릅니다.
          * @details 씬을 읽는 쪽(`SceneManager::requestLoadFuture`, `SceneCooker::cookAllScenes`)은 이 뒤에만 읽는다. 그 전에 읽으면 아직 올라오지
          *          않은 모듈의 컴포넌트가 `MissingComponent` 로 생성된다. 핫 리로드가 모듈을 언로드했다 다시 로드해도 이 값은 내리지 않는다.
@@ -320,6 +328,8 @@ namespace sw
         unordered_map<uint32, hashed_string> _mapHashToCanonicalName SW_GUARDED_BY( _mutex );
         /** @brief 모듈 내림 알림 구독자입니다(`subscribeModuleUnloading`). 모듈을 올리고 내리는 스레드만 만진다. */
         MulticastDelegate<void( string_view )> _moduleUnloading;
+        /** @brief 등록 줄 떼기 알림 구독자입니다(`subscribeModuleObjectsDetached`). 모듈을 올리고 내리는 스레드만 만진다. */
+        MulticastDelegate<void( string_view )> _moduleObjectsDetached;
         /** @brief 모든 타입 공급자가 등록을 끝냈는지 나타냅니다(`markAllModuleTypesRegistered`). 기동 스레드가 쓰고 씬을 읽는 쪽이 읽습니다. */
         atomic<bool> _bAllModuleTypesRegistered;
     };

@@ -33,9 +33,9 @@ namespace sw::editor
 
     SubsystemInitResult EditorModuleUnloadListener::initializeSubsystem()
     {
-        _registrationRemovedSubscription = subscribeEditorExtensionRemoved( Delegate<void()>::create<&EditorModuleUnloadListener::onRegistrationRemoved>( this ) );
-        _moduleUnloadingSubscription     = editor::getSubsystem<TypeRegistry>().subscribeModuleUnloading(
-            TypeRegistry::ModuleUnloadingDelegate::create<&EditorModuleUnloadListener::onModuleUnloading>( this ) );
+        TypeRegistry& types              = editor::getSubsystem<TypeRegistry>();
+        _registrationRemovedSubscription = types.subscribeModuleObjectsDetached( TypeRegistry::ModuleUnloadingDelegate::create<&EditorModuleUnloadListener::onModuleObjectsDetached>( this ) );
+        _moduleUnloadingSubscription     = types.subscribeModuleUnloading( TypeRegistry::ModuleUnloadingDelegate::create<&EditorModuleUnloadListener::onModuleUnloading>( this ) );
         return SubsystemInitResult::Succeeded;
     }
 
@@ -45,8 +45,9 @@ namespace sw::editor
         _registrationRemovedSubscription = Subscription{};
     }
 
-    void EditorModuleUnloadListener::onRegistrationRemoved()
+    void EditorModuleUnloadListener::onModuleObjectsDetached( string_view /*moduleName*/ )
     {
+        // 매니저마다 목록의 세대 번호와 맞춘다 — 바뀐 종류만 다시 짓는다.
         EditorSubsystemSet::syncExtensionRegistrations( _context );
     }
 

@@ -320,6 +320,9 @@ namespace sw::editor
         // 실패가 하나라도 있으면 프로세스가 실패 코드로 끝난다(CTest 가 읽는다) — 창만 닫으면 코드가 0 이었다.
         editor::getSubsystem<QuitRequest>().request( state._failedCount > 0 ? ProcessExitCode::Failed : ProcessExitCode::Passed );
     }
+
+    // 이 종류의 등록 목록 — EditorModule 이미지에 하나(확장 DLL 의 등록자도 내보낸 이 함수로 오른다).
+    SW_DEFINE_EDITOR_EXTENSION_KIND( EditorSelfTestRegistration )
 } // namespace sw::editor
 
 namespace sw

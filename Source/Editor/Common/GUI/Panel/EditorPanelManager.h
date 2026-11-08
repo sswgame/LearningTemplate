@@ -57,7 +57,7 @@ namespace sw::editor
      */
     struct EditorPanelRegistration : EditorExtensionRegistration
     {
-        static constexpr const utf8* kKindName = "panel";
+        SW_EDITOR_EXTENSION_KIND( "panel" );
 
         EditorPanelCategory _category;
         unique_ptr<IEditorPanel> ( *_pCreate )();

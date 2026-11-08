@@ -82,7 +82,7 @@ namespace sw::editor
     /** @brief 모듈 하나가 명령 표시 파일을 더하는 등록 줄입니다(`SW_EDITOR_COMMAND_TEXT`). */
     struct EditorCommandTextRegistration : EditorExtensionRegistration
     {
-        static constexpr const utf8* kKindName = "commandText";
+        SW_EDITOR_EXTENSION_KIND( "commandText" );
 
         const utf8* _pAssetPath; ///< 리소스 경로(`editor/commands/editor.commands.xml`)
     };

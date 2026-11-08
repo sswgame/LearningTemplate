@@ -45,7 +45,7 @@ namespace sw::editor
      */
     struct EditorFrameStepRegistration : EditorExtensionRegistration
     {
-        static constexpr const utf8* kKindName = "frameStep";
+        SW_EDITOR_EXTENSION_KIND( "frameStep" );
 
         void ( *_pfnRun )( EditorContext& context );
     };

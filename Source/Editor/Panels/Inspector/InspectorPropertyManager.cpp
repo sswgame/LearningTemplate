@@ -1048,4 +1048,7 @@ namespace sw::editor
         slot._value = TaskValue{ picked };
         return true;
     }
+
+    // 이 종류의 등록 목록 — EditorModule 이미지에 하나(확장 DLL 의 등록자도 내보낸 이 함수로 오른다).
+    SW_DEFINE_EDITOR_EXTENSION_KIND( EditorPropertyDrawerRegistration )
 } // namespace sw::editor

@@ -31,7 +31,7 @@ namespace sw::editor
      */
     struct EditorInputMapRegistration : EditorExtensionRegistration
     {
-        static constexpr const utf8* kKindName = "inputMap";
+        SW_EDITOR_EXTENSION_KIND( "inputMap" );
 
         const utf8* _pAssetPath; ///< 리소스 경로(`editor/input/…` 또는 확장 팩의 경로)
     };

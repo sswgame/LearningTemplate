@@ -54,7 +54,7 @@ namespace sw::editor
      */
     struct EditorMultiplayerTabRegistration : EditorExtensionRegistration
     {
-        static constexpr const utf8* kKindName = "multiplayerTab";
+        SW_EDITOR_EXTENSION_KIND( "multiplayerTab" );
 
         const utf8* _pLabel;
         unique_ptr<IMultiplayerTab> ( *_pCreate )();

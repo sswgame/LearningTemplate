@@ -82,6 +82,7 @@ namespace sw
                     if ( listAttached[index - 1]->getDetachPass() == pass )
                         listAttached[index - 1]->detach( *engine::getEngineSubsystems() );
                 }
+                engine::getSubsystem<TypeRegistry>().publishModuleObjectsDetached( moduleName ); // 이 차례의 줄로 만든 인스턴스를 다음 차례 전에 거둔다
             }
         }
 

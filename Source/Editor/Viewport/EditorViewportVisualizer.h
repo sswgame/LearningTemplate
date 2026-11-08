@@ -65,7 +65,7 @@ namespace sw::editor
         /** @brief 시각화 하나를 그립니다. */
         using DrawFunc = void ( * )( const EditorViewportVisualizerArgs& args );
 
-        static constexpr const utf8* kKindName = "visualizer";
+        SW_EDITOR_EXTENSION_KIND( "visualizer" );
 
         EditorIconName _pIconName;    ///< 툴바 토글 버튼의 아이콘 이름(`SW_EDITOR_ICON_NAME`). 비었으면 라벨 문자로 된 버튼이다
         const utf8*    _pToggleLabel; ///< 짧은 이름. 툴팁의 제목이며, 아이콘이 없으면 버튼 문자로 쓴다

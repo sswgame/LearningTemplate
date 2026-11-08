@@ -2,70 +2,17 @@
 
 #include "Editor/Common/Workspace/EditorExtensionRegistry.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Log/Logger.h"
-
 namespace sw::editor
 {
-    namespace
-    {
-        /** @brief 종류 이름 → 목록입니다. 종류는 열 개 안팎이라 줄 찾기로 충분하다. 함수 정적이라 다른 TU 의 정적 등록자보다 늦게 만들어질 걱정이 없다. */
-        vector<unique_ptr<EditorExtensionRegistrationList>>& getLists()
-        {
-            static vector<unique_ptr<EditorExtensionRegistrationList>> s_listList;
-            return s_listList;
-        }
-
-        /** @brief 등록이 빠졌다는 알림입니다(`subscribeEditorExtensionRemoved`). 목록과 같은 이미지(EditorModule)가 가진다. */
-        MulticastDelegate<void()>& getRemovedSignal()
-        {
-            static MulticastDelegate<void()> s_removed;
-            return s_removed;
-        }
-    } // namespace
-} // namespace sw::editor
-
-namespace sw::editor
-{
-    EditorExtensionRegistrationList::EditorExtensionRegistrationList( const utf8* pKindName )
-        : _pKindName{ pKindName }
-        , _registered{ pKindName, RegistrationOrder::ByOrderThenName, true }
-        , _generation{ 0 }
-    {
-    }
-
-    bool EditorExtensionRegistrationList::addRegistration( const EditorExtensionRegistration& registration )
+    bool EditorExtensionRegistration::addTo( RegistrationList<const EditorExtensionRegistration>& list, const EditorExtensionRegistration& registration )
     {
         const string_view        id     = ( registration._pID != nullptr ) ? string_view{ registration._pID } : string_view{};
-        const RegistrationResult result = _registered.addLogged( &registration, _pKindName, id, registration._order );
-        if ( result == RegistrationResult::Added )
-            ++_generation;
+        const RegistrationResult result = list.addLogged( &registration, list.getListName(), id, registration._order );
         return result == RegistrationResult::Added || result == RegistrationResult::AlreadyPresent;
     }
 
-    void EditorExtensionRegistrationList::removeRegistration( const EditorExtensionRegistration& registration )
+    void EditorExtensionRegistration::removeFrom( RegistrationList<const EditorExtensionRegistration>& list, const EditorExtensionRegistration& registration )
     {
-        // 거절된 등록자의 소멸도 여기로 온다 — 올라 있지 않으면 할 일이 없다
-        if ( _registered.remove( &registration ) == false )
-            return;
-        ++_generation;
-        getRemovedSignal().broadcast();
-    }
-
-    Subscription subscribeEditorExtensionRemoved( const Delegate<void()>& delegate )
-    {
-        return getRemovedSignal().add( delegate );
-    }
-
-    EditorExtensionRegistrationList& getEditorExtensionRegistrationList( const utf8* pKindName )
-    {
-        vector<unique_ptr<EditorExtensionRegistrationList>>& listList = getLists();
-        for ( const unique_ptr<EditorExtensionRegistrationList>& pList : listList )
-        {
-            if ( StringUtil::equals( pList->getKindName(), pKindName, false ) )
-                return *pList;
-        }
-        listList.push_back( make_unique<EditorExtensionRegistrationList>( pKindName ) );
-        return *listList.back();
+        (void)list.remove( &registration ); // 거절된 등록자의 소멸도 여기로 온다 — 올라 있지 않으면 할 일이 없다
     }
 } // namespace sw::editor

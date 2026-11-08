@@ -34,7 +34,7 @@ namespace sw::editor
      */
     struct EditorPopupRegistration : EditorExtensionRegistration
     {
-        static constexpr const utf8* kKindName = "popup";
+        SW_EDITOR_EXTENSION_KIND( "popup" );
 
         unique_ptr<IEditorPopup> ( *_pCreate )();
     };
