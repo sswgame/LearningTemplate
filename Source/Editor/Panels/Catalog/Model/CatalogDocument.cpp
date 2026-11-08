@@ -193,13 +193,20 @@ namespace sw::editor
         }
     }
 
+    void CatalogDocument::setError( const Error& error )
+    {
+        _error = error.detail().empty() ? string( error.message() ) : string( error.detail() ) + ": " + string( error.message() );
+    }
+
     void CatalogDocument::rebuildFromText()
     {
         _listGroup.clear();
         _error.clear();
-        const bool bParsed = _parsed.parse( _text, _error );
+        const expected<void> parsed = _parsed.parse( _text );
+        if ( parsed.has_value() == false )
+            setError( parsed.error() );
         _inheritance.rebuild( _text, _parsed );
-        if ( bParsed == false )
+        if ( parsed.has_value() == false )
             return;
         for ( const int32 rowIndex : _parsed.getRowIndices() )
         {
@@ -239,13 +246,21 @@ namespace sw::editor
         _bTextEditOpen = SW_FALSE;
     }
 
+    bool CatalogDocument::applyEdit( const expected<string>& edited )
+    {
+        if ( edited.has_value() )
+            return replaceTextChecked( string_view{ *edited } );
+        setError( edited.error() );
+        return false;
+    }
+
     bool CatalogDocument::replaceTextChecked( string_view text )
     {
-        string         error;
-        CatalogXMLText probe;
-        if ( probe.parse( text, error ) == false )
+        CatalogXMLText       probe;
+        const expected<void> parsed = probe.parse( text );
+        if ( parsed.has_value() == false )
         {
-            _error = error; // 원문 편집이 문서를 깨뜨리면 없던 일로 한다
+            setError( parsed.error() ); // 원문 편집이 문서를 깨뜨리면 없던 일로 한다
             return false;
         }
         pushUndo();
@@ -269,14 +284,7 @@ namespace sw::editor
         const utf8*              pInherited = bOwnColumn ? nullptr : findInheritedValue( elementIndex, column );
         if ( pInherited != nullptr && value == string_view( pInherited ) )
             return target.findAttribute( column ) >= 0 ? unsetCell( elementIndex, column ) : true;
-        string edited;
-        string error;
-        if ( CatalogXMLText::setAttributeValue( _text, _parsed.getElement( elementIndex ), column, value, edited, error ) == false )
-        {
-            _error = error;
-            return false;
-        }
-        return replaceTextChecked( edited );
+        return applyEdit( CatalogXMLText::setAttributeValue( _text, _parsed.getElement( elementIndex ), column, value ) );
     }
 
     bool CatalogDocument::unsetCell( int32 elementIndex, string_view column )
@@ -287,14 +295,7 @@ namespace sw::editor
             _error = "the document is not parsed";
             return false;
         }
-        string edited;
-        string error;
-        if ( CatalogXMLText::removeAttribute( _text, _parsed.getElement( elementIndex ), column, edited, error ) == false )
-        {
-            _error = error;
-            return false;
-        }
-        return replaceTextChecked( edited );
+        return applyEdit( CatalogXMLText::removeAttribute( _text, _parsed.getElement( elementIndex ), column ) );
     }
 
     bool CatalogDocument::addRow( string_view groupName )
@@ -320,14 +321,7 @@ namespace sw::editor
         }
         if ( listAttribute.empty() )
             listAttribute.push_back( CatalogXMLNewAttribute{ "id", "new" } );
-        string edited;
-        string error;
-        if ( CatalogXMLText::appendChildElement( _text, _parsed.getElement( _parsed.getRootIndex() ), _parsed.getElements(), groupName, listAttribute, edited, error ) == false )
-        {
-            _error = error;
-            return false;
-        }
-        return replaceTextChecked( edited );
+        return applyEdit( CatalogXMLText::appendChildElement( _text, _parsed.getElement( _parsed.getRootIndex() ), _parsed.getElements(), groupName, listAttribute ) );
     }
 
     bool CatalogDocument::addChild( int32 parentIndex, string_view name, const vector<CatalogXMLNewAttribute>& listAttribute )
@@ -338,14 +332,7 @@ namespace sw::editor
             _error = "the document is not parsed";
             return false;
         }
-        string edited;
-        string error;
-        if ( CatalogXMLText::appendChildElement( _text, _parsed.getElement( parentIndex ), _parsed.getElements(), name, listAttribute, edited, error ) == false )
-        {
-            _error = error;
-            return false;
-        }
-        return replaceTextChecked( edited );
+        return applyEdit( CatalogXMLText::appendChildElement( _text, _parsed.getElement( parentIndex ), _parsed.getElements(), name, listAttribute ) );
     }
 
     bool CatalogDocument::removeRow( int32 elementIndex )
@@ -356,14 +343,7 @@ namespace sw::editor
             _error = "the document is not parsed";
             return false;
         }
-        string edited;
-        string error;
-        if ( CatalogXMLText::removeElement( _text, _parsed.getElement( elementIndex ), edited, error ) == false )
-        {
-            _error = error;
-            return false;
-        }
-        return replaceTextChecked( edited );
+        return applyEdit( CatalogXMLText::removeElement( _text, _parsed.getElement( elementIndex ) ) );
     }
 
     bool CatalogDocument::duplicateRow( int32 elementIndex )
@@ -382,22 +362,23 @@ namespace sw::editor
             _error = "only a table row can be duplicated";
             return false;
         }
-        string edited;
-        string error;
-        if ( CatalogXMLText::duplicateElement( _text, original, edited, error ) == false )
+        expected<string> duplicated = CatalogXMLText::duplicateElement( _text, original );
+        if ( duplicated.has_value() == false )
         {
-            _error = error;
+            setError( duplicated.error() );
             return false;
         }
+        string edited = std::move( *duplicated );
         // 복사본의 이름 칸을 하나씩 바꾼다. 바꿀 때마다 위치가 밀리므로 다시 훑는다. 복사본은 원본의 다음 형제다(원본의 인덱스는 그대로다).
         CatalogXMLText draft;
         for ( const CatalogXMLAttribute& attribute : original._listAttribute )
         {
             if ( Internal::isNameColumn( attribute._name ) == false )
                 continue;
-            if ( draft.parse( edited, error ) == false )
+            const expected<void> draftParsed = draft.parse( edited );
+            if ( draftParsed.has_value() == false )
             {
-                _error = error;
+                setError( draftParsed.error() );
                 return false;
             }
             const vector<int32>& listRow   = draft.getRowIndices();
@@ -407,14 +388,14 @@ namespace sw::editor
                 if ( listRow[rowPosition] == elementIndex )
                     copyIndex = listRow[rowPosition + 1];
             }
-            const string copiedValue = Internal::makeUniqueValue( *this, *pGroup, attribute._name, attribute._value + "_copy" );
-            string       editedAgain;
-            if ( CatalogXMLText::setAttributeValue( edited, draft.getElement( copyIndex ), attribute._name, copiedValue, editedAgain, error ) == false )
+            const string     copiedValue = Internal::makeUniqueValue( *this, *pGroup, attribute._name, attribute._value + "_copy" );
+            expected<string> editedAgain = CatalogXMLText::setAttributeValue( edited, draft.getElement( copyIndex ), attribute._name, copiedValue );
+            if ( editedAgain.has_value() == false )
             {
-                _error = error;
+                setError( editedAgain.error() );
                 return false;
             }
-            edited = std::move( editedAgain );
+            edited = std::move( *editedAgain );
         }
         return replaceTextChecked( edited );
     }

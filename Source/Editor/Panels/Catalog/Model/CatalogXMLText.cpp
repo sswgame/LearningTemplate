@@ -32,12 +32,12 @@ namespace sw::editor
                 return line;
             }
 
-            static bool fail( string_view text, size_t offset, string_view what, string& outError )
+            /** @brief 읽기 오류입니다 — 문장은 무엇이 틀렸는지(리터럴), 대상은 `line N`. */
+            static Error fail( string_view text, size_t offset, const utf8* pWhat )
             {
-                StringBuilder<constant::buffer::kMax256> message;
-                message.appendFormat( "line %#: %#", computeLineNumber( text, offset ), what );
-                outError = string( message.view() );
-                return false;
+                StringBuilder<constant::buffer::kMax64> lineBuilder;
+                lineBuilder.appendFormat( "line %#", computeLineNumber( text, offset ) );
+                return Error{ ErrorKind::InvalidArgument, pWhat, lineBuilder.view() };
             }
 
             /** @brief @p offset 가 있는 줄의 앞쪽 공백(들여쓰기)입니다. */
@@ -81,18 +81,17 @@ namespace sw::editor
             enum class MarkupSkip : uint8
             {
                 NotMarkup, ///< 건너뛸 마크업이 아니다
-                Skipped,   ///< 주석 · CDATA · 처리 지시문 · 선언을 건너뛰었다
-                Failed,    ///< 끝나지 않은 마크업이다
+                Skipped,   ///< 주석 · CDATA · 처리 지시문 · 선언을 건너뛰었다(끝나지 않은 마크업은 오류다)
             };
 
             /** @brief @p lessThan 의 `<` 가 주석 · CDATA · 처리 지시문 · 선언이면 끝까지 건너뛰어 @p outPosition 을 그 다음으로 둡니다. 순서가 곧 의미입니다(`<!--` · `<![CDATA[` 가 `<!` 보다 앞). */
-            static MarkupSkip skipNonElementMarkup( string_view text, size_t lessThan, size_t& outPosition, string& outError )
+            static expected<MarkupSkip> skipNonElementMarkup( string_view text, size_t lessThan, size_t& outPosition )
             {
                 struct Rule
                 {
                     string_view _prefix;
                     string_view _terminator;
-                    string_view _error;
+                    const utf8* _pError;
                 };
                 static constexpr Rule kArrRule[] = {
                     {     "<!--", "-->",                "unterminated comment"},
@@ -106,10 +105,7 @@ namespace sw::editor
                         continue;
                     const size_t endPosition = text.find( rule._terminator, lessThan + rule._prefix.size() );
                     if ( endPosition == string_view::npos )
-                    {
-                        fail( text, lessThan, rule._error, outError );
-                        return MarkupSkip::Failed;
-                    }
+                        return unexpected( fail( text, lessThan, rule._pError ) );
                     outPosition = endPosition + rule._terminator.size();
                     return MarkupSkip::Skipped;
                 }
@@ -117,11 +113,11 @@ namespace sw::editor
             }
 
             /** @brief `</이름>` 을 읽어 열려 있는 요소를 닫습니다. @p lessThan 은 `</` 의 `<` 위치이고, 성공하면 @p outPosition 이 `>` 다음입니다. */
-            static bool closeElement( string_view text, size_t lessThan, vector<CatalogXMLElement>& listElement, vector<int32>& listOpen, size_t& outPosition, string& outError )
+            static expected<void> closeElement( string_view text, size_t lessThan, vector<CatalogXMLElement>& listElement, vector<int32>& listOpen, size_t& outPosition )
             {
                 const size_t greaterThan = text.find( '>', lessThan + 2 );
                 if ( greaterThan == string_view::npos )
-                    return fail( text, lessThan, "unterminated closing tag", outError );
+                    return unexpected( fail( text, lessThan, "unterminated closing tag" ) );
                 size_t nameEnd = greaterThan;
                 while ( nameEnd > lessThan + 2 && isSpace( text[nameEnd - 1] ) )
                 {
@@ -129,15 +125,15 @@ namespace sw::editor
                 }
                 const string_view name = text.substr( lessThan + 2, nameEnd - ( lessThan + 2 ) );
                 if ( listOpen.empty() )
-                    return fail( text, lessThan, "closing tag without an opening tag", outError );
+                    return unexpected( fail( text, lessThan, "closing tag without an opening tag" ) );
                 CatalogXMLElement& open = listElement[static_cast<size_t>( listOpen.back() )];
                 if ( string_view( open._name ) != name )
-                    return fail( text, lessThan, "closing tag does not match the open element", outError );
+                    return unexpected( fail( text, lessThan, "closing tag does not match the open element" ) );
                 open._closeBegin = static_cast<uint32>( lessThan );
                 open._end        = static_cast<uint32>( greaterThan + 1 );
                 listOpen.pop_back();
                 outPosition = greaterThan + 1;
-                return true;
+                return {};
             }
 
             static void skipSpaces( string_view text, size_t& inoutCursor )
@@ -149,7 +145,7 @@ namespace sw::editor
             }
 
             /** @brief 시작 태그 안의 속성 하나(`이름 = "값"`)를 @p inoutCursor 에서 읽습니다. */
-            [[nodiscard]] static bool readAttribute( string_view text, size_t& inoutCursor, CatalogXMLAttribute& outAttribute, string& outError )
+            [[nodiscard]] static expected<void> readAttribute( string_view text, size_t& inoutCursor, CatalogXMLAttribute& outAttribute )
             {
                 const size_t size       = text.size();
                 size_t       cursor     = inoutCursor;
@@ -159,29 +155,29 @@ namespace sw::editor
                     ++cursor;
                 }
                 if ( cursor == outAttribute._nameBegin )
-                    return fail( text, cursor, "unexpected character in a start tag", outError );
+                    return unexpected( fail( text, cursor, "unexpected character in a start tag" ) );
                 outAttribute._name = string( text.substr( outAttribute._nameBegin, cursor - outAttribute._nameBegin ) );
                 skipSpaces( text, cursor );
                 if ( cursor >= size || text[cursor] != '=' )
-                    return fail( text, cursor, "attribute without a value", outError );
+                    return unexpected( fail( text, cursor, "attribute without a value" ) );
                 ++cursor;
                 skipSpaces( text, cursor );
                 if ( cursor >= size || ( text[cursor] != '"' && text[cursor] != '\'' ) )
-                    return fail( text, cursor, "attribute value must be quoted", outError );
+                    return unexpected( fail( text, cursor, "attribute value must be quoted" ) );
                 const utf8   quote      = text[cursor];
                 const size_t valueBegin = cursor + 1;
                 const size_t valueEnd   = text.find( quote, valueBegin );
                 if ( valueEnd == string_view::npos )
-                    return fail( text, cursor, "unterminated attribute value", outError );
+                    return unexpected( fail( text, cursor, "unterminated attribute value" ) );
                 outAttribute._valueBegin = static_cast<uint32>( valueBegin );
                 outAttribute._valueEnd   = static_cast<uint32>( valueEnd );
                 outAttribute._value      = XMLDocument::unescapeString( text.substr( valueBegin, valueEnd - valueBegin ) );
                 inoutCursor              = valueEnd + 1;
-                return true;
+                return {};
             }
 
             /** @brief `<이름 속성…>` 또는 `<이름 속성…/>` 시작 태그를 읽어 @p outElement 에 채웁니다. */
-            [[nodiscard]] static bool readStartTag( string_view text, size_t lessThan, CatalogXMLElement& outElement, string& outError )
+            [[nodiscard]] static expected<void> readStartTag( string_view text, size_t lessThan, CatalogXMLElement& outElement )
             {
                 const size_t size      = text.size();
                 outElement._begin      = static_cast<uint32>( lessThan );
@@ -192,32 +188,33 @@ namespace sw::editor
                     ++cursor;
                 }
                 if ( cursor == nameBegin )
-                    return fail( text, lessThan, "element without a name", outError );
+                    return unexpected( fail( text, lessThan, "element without a name" ) );
                 outElement._name = string( text.substr( nameBegin, cursor - nameBegin ) );
 
                 while ( true )
                 {
                     skipSpaces( text, cursor );
                     if ( cursor >= size )
-                        return fail( text, lessThan, "unterminated start tag", outError );
+                        return unexpected( fail( text, lessThan, "unterminated start tag" ) );
                     const utf8 ch = text[cursor];
                     if ( ch == '>' )
                     {
                         outElement._startTagEnd = static_cast<uint32>( cursor + 1 );
-                        return true;
+                        return {};
                     }
                     if ( ch == '/' )
                     {
                         if ( cursor + 1 >= size || text[cursor + 1] != '>' )
-                            return fail( text, cursor, "stray '/' in a start tag", outError );
+                            return unexpected( fail( text, cursor, "stray '/' in a start tag" ) );
                         outElement._bSelfClosing = true;
                         outElement._startTagEnd  = static_cast<uint32>( cursor + 2 );
-                        return true;
+                        return {};
                     }
 
-                    CatalogXMLAttribute attribute;
-                    if ( readAttribute( text, cursor, attribute, outError ) == false )
-                        return false;
+                    CatalogXMLAttribute  attribute;
+                    const expected<void> read = readAttribute( text, cursor, attribute );
+                    if ( read.has_value() == false )
+                        return read;
                     outElement._listAttribute.push_back( std::move( attribute ) );
                 }
             }
@@ -240,22 +237,22 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    bool CatalogXMLText::parse( string_view text, string& outError )
+    expected<void> CatalogXMLText::parse( string_view text )
     {
         // 읽다가 실패하면 앞에서 채운 요소와 루트 번호가 남아 `isParsed()` 가 참이 된다 — 실패하면 모두 비워 "깨진 문서는 테이블이 없다" 를 지킨다.
-        if ( parseInternal( text, outError ) )
-            return true;
+        const expected<void> parsed = parseInternal( text );
+        if ( parsed.has_value() )
+            return parsed;
         _listElement.clear();
         _rootIndex = -1;
-        return false;
+        return parsed;
     }
 
-    bool CatalogXMLText::parseInternal( string_view text, string& outError )
+    expected<void> CatalogXMLText::parseInternal( string_view text )
     {
         using Internal = CatalogXMLTextInternal;
         _listElement.clear();
         _rootIndex = -1;
-        outError.clear();
 
         vector<int32> listOpen;
         size_t        position = 0;
@@ -266,25 +263,27 @@ namespace sw::editor
             if ( lessThan == string_view::npos )
                 break;
 
-            const Internal::MarkupSkip skip = Internal::skipNonElementMarkup( text, lessThan, position, outError );
-            if ( skip == Internal::MarkupSkip::Failed )
-                return false;
-            if ( skip == Internal::MarkupSkip::Skipped )
+            const expected<Internal::MarkupSkip> skip = Internal::skipNonElementMarkup( text, lessThan, position );
+            if ( skip.has_value() == false )
+                return unexpected( skip.error() );
+            if ( *skip == Internal::MarkupSkip::Skipped )
                 continue;
             if ( Internal::startsWithAt( text, lessThan, "</" ) )
             {
-                if ( Internal::closeElement( text, lessThan, _listElement, listOpen, position, outError ) == false )
-                    return false;
+                const expected<void> closed = Internal::closeElement( text, lessThan, _listElement, listOpen, position );
+                if ( closed.has_value() == false )
+                    return closed;
                 continue;
             }
 
-            CatalogXMLElement element;
-            if ( Internal::readStartTag( text, lessThan, element, outError ) == false )
-                return false;
+            CatalogXMLElement    element;
+            const expected<void> started = Internal::readStartTag( text, lessThan, element );
+            if ( started.has_value() == false )
+                return started;
 
             element._parent = listOpen.empty() ? -1 : listOpen.back();
             if ( element._parent < 0 && _rootIndex >= 0 )
-                return Internal::fail( text, lessThan, "more than one root element", outError );
+                return unexpected( Internal::fail( text, lessThan, "more than one root element" ) );
             const bool   bSelfClosing = element._bSelfClosing;
             const uint32 startTagEnd  = element._startTagEnd;
             if ( bSelfClosing )
@@ -307,68 +306,50 @@ namespace sw::editor
         if ( listOpen.empty() == false )
         {
             const CatalogXMLElement& open = _listElement[static_cast<size_t>( listOpen.back() )];
-            return Internal::fail( text, open._begin, "element is never closed", outError );
+            return unexpected( Internal::fail( text, open._begin, "element is never closed" ) );
         }
         if ( _rootIndex < 0 )
-        {
-            outError = "no root element";
-            return false;
-        }
-        return true;
+            return unexpected( Error{ ErrorKind::NotFound, "no root element" } );
+        return {};
     }
 
-    bool CatalogXMLText::setAttributeValue( string_view text, const CatalogXMLElement& element, string_view name, string_view value, string& outText, string& outError )
+    expected<string> CatalogXMLText::setAttributeValue( string_view text, const CatalogXMLElement& element, string_view name, string_view value )
     {
-        outError.clear();
         const int32 attributeIndex = element.findAttribute( name );
         if ( attributeIndex >= 0 )
         {
             const CatalogXMLAttribute& attribute = element._listAttribute[static_cast<size_t>( attributeIndex )];
             string                     escaped;
             XMLWriter::appendEscaped( escaped, value, true );
-            outText = CatalogXMLTextInternal::joinPieces( text.substr( 0, attribute._valueBegin ), escaped, text.substr( attribute._valueEnd ) );
-            return true;
+            return CatalogXMLTextInternal::joinPieces( text.substr( 0, attribute._valueBegin ), escaped, text.substr( attribute._valueEnd ) );
         }
         if ( name.empty() )
-        {
-            outError = "attribute name is empty";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "attribute name is empty" } );
         size_t insertAt = element._begin + 1 + element._name.size();
         if ( element._listAttribute.empty() == false )
             insertAt = static_cast<size_t>( element._listAttribute.back()._valueEnd ) + 1;
-        outText = CatalogXMLTextInternal::joinPieces( text.substr( 0, insertAt ), CatalogXMLTextInternal::makeAttributeText( name, value ), text.substr( insertAt ) );
-        return true;
+        return CatalogXMLTextInternal::joinPieces( text.substr( 0, insertAt ), CatalogXMLTextInternal::makeAttributeText( name, value ), text.substr( insertAt ) );
     }
 
-    bool CatalogXMLText::removeAttribute( string_view text, const CatalogXMLElement& element, string_view name, string& outText, string& outError )
+    expected<string> CatalogXMLText::removeAttribute( string_view text, const CatalogXMLElement& element, string_view name )
     {
-        outError.clear();
         const int32 attributeIndex = element.findAttribute( name );
         if ( attributeIndex < 0 )
-        {
-            outError = "the element has no such attribute";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "the element has no such attribute", name } );
         const CatalogXMLAttribute& attribute = element._listAttribute[static_cast<size_t>( attributeIndex )];
         size_t                     begin     = attribute._nameBegin;
         while ( begin > 0 && CatalogXMLTextInternal::isSpace( text[begin - 1] ) )
         {
             --begin;
         }
-        outText = CatalogXMLTextInternal::joinPieces( text.substr( 0, begin ), string_view{}, text.substr( static_cast<size_t>( attribute._valueEnd ) + 1 ) );
-        return true;
+        return CatalogXMLTextInternal::joinPieces( text.substr( 0, begin ), string_view{}, text.substr( static_cast<size_t>( attribute._valueEnd ) + 1 ) );
     }
 
-    bool CatalogXMLText::appendChildElement( string_view text, const CatalogXMLElement& parent, const vector<CatalogXMLElement>& listElement, string_view name,
-                                             const vector<CatalogXMLNewAttribute>& listAttribute, string& outText, string& outError )
+    expected<string> CatalogXMLText::appendChildElement( string_view text, const CatalogXMLElement& parent, const vector<CatalogXMLElement>& listElement, string_view name,
+                                                         const vector<CatalogXMLNewAttribute>& listAttribute )
     {
-        outError.clear();
         if ( name.empty() )
-        {
-            outError = "element name is empty";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "element name is empty" } );
         string child = "<";
         child.append( name.data(), name.size() );
         for ( const CatalogXMLNewAttribute& attribute : listAttribute )
@@ -376,12 +357,11 @@ namespace sw::editor
             child += CatalogXMLTextInternal::makeAttributeText( attribute._name, attribute._value );
         }
         child += " />";
-        return appendChildText( text, parent, listElement, child, outText, outError );
+        return appendChildText( text, parent, listElement, child );
     }
 
-    bool CatalogXMLText::appendChildText( string_view text, const CatalogXMLElement& parent, const vector<CatalogXMLElement>& listElement, string_view childText, string& outText, string& outError )
+    string CatalogXMLText::appendChildText( string_view text, const CatalogXMLElement& parent, const vector<CatalogXMLElement>& listElement, string_view childText )
     {
-        outError.clear();
         const string_view newline      = CatalogXMLTextInternal::detectNewline( text );
         const string      parentIndent = CatalogXMLTextInternal::readLineIndent( text, parent._begin );
         string            indent       = parentIndent + "\t";
@@ -405,8 +385,7 @@ namespace sw::editor
             middle += "</";
             middle += parent._name;
             middle += ">";
-            outText = CatalogXMLTextInternal::joinPieces( text.substr( 0, tagTail ), middle, text.substr( parent._startTagEnd ) );
-            return true;
+            return CatalogXMLTextInternal::joinPieces( text.substr( 0, tagTail ), middle, text.substr( parent._startTagEnd ) );
         }
 
         size_t lineStart = parent._closeBegin;
@@ -421,26 +400,20 @@ namespace sw::editor
             middle = indent;
             middle += child;
             middle.append( newline.data(), newline.size() );
-            outText = CatalogXMLTextInternal::joinPieces( text.substr( 0, lineStart ), middle, text.substr( lineStart ) );
-            return true;
+            return CatalogXMLTextInternal::joinPieces( text.substr( 0, lineStart ), middle, text.substr( lineStart ) );
         }
         middle.append( newline.data(), newline.size() );
         middle += indent;
         middle += child;
         middle.append( newline.data(), newline.size() );
         middle += parentIndent;
-        outText = CatalogXMLTextInternal::joinPieces( text.substr( 0, parent._closeBegin ), middle, text.substr( parent._closeBegin ) );
-        return true;
+        return CatalogXMLTextInternal::joinPieces( text.substr( 0, parent._closeBegin ), middle, text.substr( parent._closeBegin ) );
     }
 
-    bool CatalogXMLText::removeElement( string_view text, const CatalogXMLElement& element, string& outText, string& outError )
+    expected<string> CatalogXMLText::removeElement( string_view text, const CatalogXMLElement& element )
     {
-        outError.clear();
         if ( element._parent < 0 )
-        {
-            outError = "the root element cannot be removed";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the root element cannot be removed" } );
         size_t begin = element._begin;
         while ( begin > 0 && ( text[begin - 1] == ' ' || text[begin - 1] == '\t' ) )
         {
@@ -459,28 +432,21 @@ namespace sw::editor
                 ++end;
             if ( end < text.size() && text[end] == '\n' )
                 ++end;
-            outText = CatalogXMLTextInternal::joinPieces( text.substr( 0, begin ), string_view{}, text.substr( end ) );
-            return true;
+            return CatalogXMLTextInternal::joinPieces( text.substr( 0, begin ), string_view{}, text.substr( end ) );
         }
-        outText = CatalogXMLTextInternal::joinPieces( text.substr( 0, element._begin ), string_view{}, text.substr( element._end ) );
-        return true;
+        return CatalogXMLTextInternal::joinPieces( text.substr( 0, element._begin ), string_view{}, text.substr( element._end ) );
     }
 
-    bool CatalogXMLText::duplicateElement( string_view text, const CatalogXMLElement& element, string& outText, string& outError )
+    expected<string> CatalogXMLText::duplicateElement( string_view text, const CatalogXMLElement& element )
     {
-        outError.clear();
         if ( element._parent < 0 )
-        {
-            outError = "the root element cannot be duplicated";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the root element cannot be duplicated" } );
         const string_view newline = CatalogXMLTextInternal::detectNewline( text );
         string            middle;
         middle.append( newline.data(), newline.size() );
         middle += CatalogXMLTextInternal::readLineIndent( text, element._begin );
         const string_view original = text.substr( element._begin, element._end - element._begin );
         middle.append( original.data(), original.size() );
-        outText = CatalogXMLTextInternal::joinPieces( text.substr( 0, element._end ), middle, text.substr( element._end ) );
-        return true;
+        return CatalogXMLTextInternal::joinPieces( text.substr( 0, element._end ), middle, text.substr( element._end ) );
     }
 } // namespace sw::editor

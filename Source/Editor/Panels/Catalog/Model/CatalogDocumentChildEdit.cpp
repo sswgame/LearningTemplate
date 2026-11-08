@@ -16,17 +16,18 @@ namespace sw::editor
          * @class CatalogChildDraft
          * @brief 자식 원소 편집 한 번의 초안 글입니다. 고칠 때마다 다시 훑고, 다 고친 글 하나를 문서에 넣어 되돌리기 한 단계가 됩니다.
          * @details 원소 번호는 문서 순서라 행의 안쪽을 고쳐도 행과 그 앞 원소의 번호는 그대로다. 경로의 원소는 고칠 때마다 다시 찾는다.
+         *          실패 이유는 문서의 상태 글(`CatalogDocument::setError`)에 남긴다 — 편집 함수는 참 · 거짓만 돌려주고 패널이 그 글을 보인다.
          */
         class CatalogChildDraft
         {
         public:
-            CatalogChildDraft( string_view text, int32 rowIndex, string& outError )
+            CatalogChildDraft( string_view text, int32 rowIndex, CatalogDocument& document )
                 : _text{ text }
                 , _parsed{}
                 , _rowIndex{ rowIndex }
-                , _outError{ outError }
+                , _document{ document }
             {
-                (void)_parsed.parse( _text, _outError ); // 문서가 이미 훑은 글이다
+                (void)_parsed.parse( _text ); // 문서가 이미 훑은 글이다
             }
 
             const string&            getText() const { return _text; }
@@ -68,8 +69,7 @@ namespace sw::editor
 
             [[nodiscard]] bool appendChild( int32 ownerIndex, string_view name, const vector<CatalogXMLNewAttribute>& listAttribute )
             {
-                string edited;
-                return CatalogXMLText::appendChildElement( _text, get( ownerIndex ), _parsed.getElements(), name, listAttribute, edited, _outError ) && accept( std::move( edited ) );
+                return accept( CatalogXMLText::appendChildElement( _text, get( ownerIndex ), _parsed.getElements(), name, listAttribute ) );
             }
 
             /** @brief 원소의 원문을 그대로 @p ownerIndex 의 마지막 자식으로 옮깁니다. */
@@ -80,33 +80,26 @@ namespace sw::editor
                 if ( get( ownerIndex )._listChild.back() == elementIndex )
                     return true;
                 const string raw{ string_view( _text ).substr( element._begin, element._end - element._begin ) };
-                string       edited;
-                if ( CatalogXMLText::removeElement( _text, element, edited, _outError ) == false || accept( std::move( edited ) ) == false )
+                if ( accept( CatalogXMLText::removeElement( _text, element ) ) == false )
                     return false;
-                return CatalogXMLText::appendChildText( _text, get( ownerIndex ), _parsed.getElements(), raw, edited, _outError ) && accept( std::move( edited ) );
+                return accept( CatalogXMLText::appendChildText( _text, get( ownerIndex ), _parsed.getElements(), raw ) );
             }
 
-            [[nodiscard]] bool setAttribute( int32 elementIndex, string_view name, string_view value )
-            {
-                string edited;
-                return CatalogXMLText::setAttributeValue( _text, get( elementIndex ), name, value, edited, _outError ) && accept( std::move( edited ) );
-            }
+            [[nodiscard]] bool setAttribute( int32 elementIndex, string_view name, string_view value ) { return accept( CatalogXMLText::setAttributeValue( _text, get( elementIndex ), name, value ) ); }
 
             /** @brief 칸이 없으면 할 일이 없습니다. */
             [[nodiscard]] bool removeAttribute( int32 elementIndex, string_view name )
             {
                 if ( get( elementIndex ).findAttribute( name ) < 0 )
                     return true;
-                string edited;
-                return CatalogXMLText::removeAttribute( _text, get( elementIndex ), name, edited, _outError ) && accept( std::move( edited ) );
+                return accept( CatalogXMLText::removeAttribute( _text, get( elementIndex ), name ) );
             }
 
             /** @brief 원소를 지웁니다. 담던 원소에 글이 남지 않으면 자기 닫힘으로 되돌립니다 — 더했다 지우면 원문이 처음과 같아야 한다. */
             [[nodiscard]] bool removeElement( int32 elementIndex )
             {
                 const int32 ownerIndex = get( elementIndex )._parent;
-                string      edited;
-                if ( CatalogXMLText::removeElement( _text, get( elementIndex ), edited, _outError ) == false || accept( std::move( edited ) ) == false )
+                if ( accept( CatalogXMLText::removeElement( _text, get( elementIndex ) ) ) == false )
                     return false;
                 const CatalogXMLElement& owner = get( ownerIndex );
                 if ( owner._bSelfClosing || owner._listChild.empty() == false )
@@ -146,7 +139,7 @@ namespace sw::editor
                 const utf8* pText = node.getText();
                 if ( pText != nullptr && pText[0] != '\0' )
                 {
-                    _outError = "an element with text cannot be overridden here - edit the raw text";
+                    _document.setError( "an element with text cannot be overridden here - edit the raw text" );
                     return false;
                 }
                 vector<CatalogXMLNewAttribute> listAttribute;
@@ -166,17 +159,30 @@ namespace sw::editor
             }
 
         private:
+            /** @brief 고친 글을 받아 다시 훑습니다. 고치기나 훑기가 실패하면 문서에 이유를 남기고 false 입니다. */
+            [[nodiscard]] bool accept( expected<string>&& edited )
+            {
+                if ( edited.has_value() == false )
+                {
+                    _document.setError( edited.error() );
+                    return false;
+                }
+                return accept( std::move( *edited ) );
+            }
             [[nodiscard]] bool accept( string&& edited )
             {
-                _text = std::move( edited );
-                return _parsed.parse( _text, _outError );
+                _text                       = std::move( edited );
+                const expected<void> parsed = _parsed.parse( _text );
+                if ( parsed.has_value() == false )
+                    _document.setError( parsed.error() );
+                return parsed.has_value();
             }
 
         private:
-            string         _text;
-            CatalogXMLText _parsed;
-            int32          _rowIndex;
-            string&        _outError;
+            string           _text;
+            CatalogXMLText   _parsed;
+            int32            _rowIndex;
+            CatalogDocument& _document;
         };
 
         struct CatalogDocumentChildEditInternal
@@ -286,7 +292,7 @@ namespace sw::editor
             return false;
         const CatalogXMLElement& row         = _parsed.getElement( rowIndex );
         const XMLNode            parentEntry = _inheritance.findParentEntry( row );
-        CatalogChildDraft        draft{ _text, rowIndex, _error };
+        CatalogChildDraft        draft{ _text, rowIndex, *this };
         const CatalogChildStep&  leaf    = path.back();
         const int32              written = draft.find( path );
 
@@ -339,7 +345,7 @@ namespace sw::editor
     {
         if ( checkChildRow( rowIndex ) == false || path.empty() )
             return false;
-        CatalogChildDraft draft{ _text, rowIndex, _error };
+        CatalogChildDraft draft{ _text, rowIndex, *this };
         const int32       written = draft.find( path );
         if ( written < 0 || draft.get( written ).findAttribute( column ) < 0 )
         {
@@ -356,7 +362,7 @@ namespace sw::editor
         if ( checkChildRow( rowIndex ) == false )
             return false;
         const CatalogXMLElement& row = _parsed.getElement( rowIndex );
-        CatalogChildDraft        draft{ _text, rowIndex, _error };
+        CatalogChildDraft        draft{ _text, rowIndex, *this };
         const string             nameText{ name };
         if ( keyAttribute.empty() == false )
         {
@@ -437,7 +443,7 @@ namespace sw::editor
             return false;
         const CatalogXMLElement& row         = _parsed.getElement( rowIndex );
         const XMLNode            parentEntry = _inheritance.findParentEntry( row );
-        CatalogChildDraft        draft{ _text, rowIndex, _error };
+        CatalogChildDraft        draft{ _text, rowIndex, *this };
         const CatalogChildPath   ownerPath = Internal::makeOwnerPath( path );
         const int32              written   = draft.find( path );
 
@@ -483,7 +489,7 @@ namespace sw::editor
     {
         if ( checkChildRow( rowIndex ) == false || path.empty() )
             return false;
-        CatalogChildDraft draft{ _text, rowIndex, _error };
+        CatalogChildDraft draft{ _text, rowIndex, *this };
         const int32       written = draft.find( path );
         if ( written < 0 || draft.removeElement( written ) == false )
             return false;
@@ -516,7 +522,7 @@ namespace sw::editor
         if ( ( bEarlier && position == 0 ) || ( bEarlier == false && position + 1 == listKey.size() ) )
             return true;
 
-        CatalogChildDraft draft{ _text, rowIndex, _error };
+        CatalogChildDraft draft{ _text, rowIndex, *this };
         int32             target = draft.ensure( path );
         if ( target < 0 || draft.removeAttribute( target, DataInheritance::kBeforeAttribute ) == false || draft.removeAttribute( draft.find( path ), DataInheritance::kAfterAttribute ) == false )
             return false;
@@ -532,7 +538,7 @@ namespace sw::editor
     {
         if ( checkChildRow( rowIndex ) == false || path.empty() )
             return false;
-        CatalogChildDraft draft{ _text, rowIndex, _error };
+        CatalogChildDraft draft{ _text, rowIndex, *this };
         const int32       written = draft.find( path );
         if ( written < 0 )
             return true;
@@ -547,7 +553,7 @@ namespace sw::editor
     {
         if ( checkChildRow( rowIndex ) == false )
             return false;
-        CatalogChildDraft draft{ _text, rowIndex, _error };
+        CatalogChildDraft draft{ _text, rowIndex, *this };
         const int32       ownerIndex = draft.ensure( ownerPath );
         if ( ownerIndex < 0 || draft.removeGroup( ownerIndex, name ) == false )
             return false;
@@ -562,7 +568,7 @@ namespace sw::editor
     {
         if ( checkChildRow( rowIndex ) == false )
             return false;
-        CatalogChildDraft draft{ _text, rowIndex, _error };
+        CatalogChildDraft draft{ _text, rowIndex, *this };
         const int32       ownerIndex = draft.find( ownerPath );
         if ( ownerIndex < 0 )
             return true;
@@ -583,7 +589,7 @@ namespace sw::editor
             _error = "there is nothing to override";
             return false;
         }
-        CatalogChildDraft draft{ _text, rowIndex, _error };
+        CatalogChildDraft draft{ _text, rowIndex, *this };
         const int32       ownerIndex = draft.ensure( ownerPath );
         if ( ownerIndex < 0 || draft.removeGroup( ownerIndex, name ) == false )
             return false;

@@ -9,6 +9,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/EditorExports.h"
@@ -60,13 +61,13 @@ namespace sw::editor
 {
     /**
      * @class CatalogXMLText
-     * @brief 훑은 결과와 원문 편집 함수 모음입니다. 편집 함수는 새 원문을 반환하며 실패하면 빈 문자열이 아니라 @p outError 에 이유를 적고 false 를 반환합니다.
+     * @brief 훑은 결과와 원문 편집 함수 모음입니다. 편집 함수는 새 원문을 돌려주며 실패하면 그 이유(`sw::Error`)입니다.
      */
     class CatalogXMLText
     {
     public:
-        /** @brief 원문을 훑습니다. 형식이 깨졌거나 루트가 없으면 false 이며 @p outError 에 이유(줄 번호 포함)를 적습니다. */
-        [[nodiscard]] bool parse( string_view text, string& outError );
+        /** @brief 원문을 훑습니다. 형식이 깨졌거나 루트가 없으면 그 이유입니다(문장은 무엇이 틀렸는지, 대상은 `line N`). */
+        [[nodiscard]] expected<void> parse( string_view text );
 
         bool                             isParsed() const { return _rootIndex >= 0; }
         int32                            getRootIndex() const { return _rootIndex; }
@@ -79,22 +80,22 @@ namespace sw::editor
         // 원문 편집 — 위치는 `parse` 가 낸 것을 넘깁니다. 고친 뒤에는 새 원문을 다시 `parse` 합니다.
         // ------------------------------------------------------------------------------
         /** @brief 속성 값을 바꿉니다(없으면 더합니다). */
-        [[nodiscard]] static bool setAttributeValue( string_view text, const CatalogXMLElement& element, string_view name, string_view value, string& outText, string& outError );
-        /** @brief 속성을 뺍니다. 없으면 false 입니다. */
-        [[nodiscard]] static bool removeAttribute( string_view text, const CatalogXMLElement& element, string_view name, string& outText, string& outError );
+        [[nodiscard]] static expected<string> setAttributeValue( string_view text, const CatalogXMLElement& element, string_view name, string_view value );
+        /** @brief 속성을 뺍니다. 없으면 오류입니다. */
+        [[nodiscard]] static expected<string> removeAttribute( string_view text, const CatalogXMLElement& element, string_view name );
         /** @brief @p parent 의 마지막 자식으로 `<name a="…" />` 를 더합니다. 부모가 자기 닫힘이면 열고 닫는 쌍으로 바꿉니다. 줄 끝(CRLF · LF)과 들여쓰기는 문서를 따릅니다. */
-        [[nodiscard]] static bool appendChildElement( string_view text, const CatalogXMLElement& parent, const vector<CatalogXMLElement>& listElement, string_view name,
-                                                      const vector<CatalogXMLNewAttribute>& listAttribute, string& outText, string& outError );
-        /** @brief @p parent 의 마지막 자식으로 원문 @p childText(원소 하나)를 그대로 넣습니다. 나머지는 `appendChildElement` 와 같습니다. */
-        [[nodiscard]] static bool appendChildText( string_view text, const CatalogXMLElement& parent, const vector<CatalogXMLElement>& listElement, string_view childText, string& outText, string& outError );
-        /** @brief 원소를 통째로 뺍니다. 그 원소만 있던 줄이면 줄째 뺍니다. */
-        [[nodiscard]] static bool removeElement( string_view text, const CatalogXMLElement& element, string& outText, string& outError );
-        /** @brief 원소의 원문(자식 · 주석 포함)을 그대로 복사해 바로 뒤 새 줄에 놓습니다. 루트는 false 입니다. 복사본은 다시 훑은 문서에서 다음 형제입니다. */
-        [[nodiscard]] static bool duplicateElement( string_view text, const CatalogXMLElement& element, string& outText, string& outError );
+        [[nodiscard]] static expected<string> appendChildElement( string_view text, const CatalogXMLElement& parent, const vector<CatalogXMLElement>& listElement, string_view name,
+                                                                  const vector<CatalogXMLNewAttribute>& listAttribute );
+        /** @brief @p parent 의 마지막 자식으로 원문 @p childText(원소 하나)를 그대로 넣은 새 원문입니다. 실패하지 않습니다. 나머지는 `appendChildElement` 와 같습니다. */
+        [[nodiscard]] static string appendChildText( string_view text, const CatalogXMLElement& parent, const vector<CatalogXMLElement>& listElement, string_view childText );
+        /** @brief 원소를 통째로 뺍니다. 그 원소만 있던 줄이면 줄째 뺍니다. 루트는 오류입니다. */
+        [[nodiscard]] static expected<string> removeElement( string_view text, const CatalogXMLElement& element );
+        /** @brief 원소의 원문(자식 · 주석 포함)을 그대로 복사해 바로 뒤 새 줄에 놓습니다. 루트는 오류입니다. 복사본은 다시 훑은 문서에서 다음 형제입니다. */
+        [[nodiscard]] static expected<string> duplicateElement( string_view text, const CatalogXMLElement& element );
 
     private:
         /** @brief `parse` 의 본문입니다. 실패해도 일부 요소를 남기므로 `parse` 가 실패 때 비웁니다. */
-        [[nodiscard]] bool parseInternal( string_view text, string& outError );
+        [[nodiscard]] expected<void> parseInternal( string_view text );
 
     private:
         vector<CatalogXMLElement> _listElement{};
