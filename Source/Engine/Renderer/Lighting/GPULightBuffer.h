@@ -227,7 +227,12 @@ namespace sw
         uint32 limitCPULightCount();
         /** @brief 업로드 목록([CPU 라이트][GPU 구간][그림자 타일])을 만들고 라이트 버퍼를 갖춰 올립니다. 버퍼를 잡지 못하면 개수를 0 으로 돌리고 false 입니다. */
         bool uploadLightList( IRHIDevice* pDevice, uint32 cpuCount );
-        /** @brief 라이트 프로브 SH9 원소를 올립니다(없으면 아무것도 하지 않습니다). 쓰는 컴퓨트가 없고 지난번에 올린 묶음과 같으면 올리지 않습니다. */
+        /**
+         * @brief 만든 업로드 목록에서 지난번과 바뀐 구간과 GPU 구간(늘 죽은 라이트로 다시 깐다)만 올리고, 올린 내용을 기억합니다.
+         *        버퍼가 새것이거나 구간 배치(CPU 수 · GPU 구간 수 · 전체 수)가 바뀌었으면 통째로 올립니다. 올린 바이트는 `RT.Light.uploadBytes` 입니다.
+         */
+        void uploadChangedLights( IRHIDevice* pDevice, uint32 cpuCount );
+        /** @brief 라이트 프로브 SH9 원소를 올립니다(없으면 아무것도 하지 않습니다). 쓰는 컴퓨트가 없고 지난번에 올린 묶음과 같으면 올리지 않고, 길이가 같은 새 묶음은 바뀐 구간만 올립니다. */
         void uploadProbeElements( IRHIDevice* pDevice );
         /** @brief CPU 생산자 — 뷰마다 `LightGrid` 를 채워 단어를 이어 붙여 올립니다. */
         void updateCPUGrid( IRHIDevice* pDevice, const vector<float4x4>& listGridViewProj );
@@ -251,6 +256,11 @@ namespace sw
         vector<GPULight>                 _listLightScratch;                        ///< 이번 프레임의 CPU 라이트(`populate` 가 담고 `update` 가 상한을 맞춰 올린다)
         vector<GPULight>                 _listTileScratch;                         ///< 이번 프레임의 그림자 타일 원소(`populate` 가 담는다)
         vector<GPULight>                 _listUploadScratch;                       ///< CPU 라이트 · GPU 구간(죽은 라이트) · 그림자 타일을 이어 붙여 한 번에 업로드하는 임시 버퍼(프레임마다 다시 쓴다)
+        vector<GPULight>                 _listUploadedLight;                       ///< 라이트 버퍼에 지난번에 올린 내용(바뀐 구간만 올리려고 견준다 — `_listUploadScratch` 와 바꿔 쓴다)
+        vector<RHIBufferCopyRegion>      _listScratchRegion;                       ///< 바뀐 구간 조각(라이트 · 프로브가 프레임마다 다시 쓴다)
+        RHIBufferHandle                  _uploadedLightBuffer{ 0 };                ///< `_listUploadedLight` 가 들어 있는 버퍼(다시 만들어졌으면 통째로 올린다)
+        uint32                           _uploadedCPUCount{ 0 };                   ///< `_listUploadedLight` 의 CPU 라이트 수(구간 배치가 바뀌면 통째로 올린다)
+        uint32                           _uploadedGPULightCount{ 0 };              ///< `_listUploadedLight` 의 GPU 구간 슬롯 수
         vector<LightGrid>                _listGrid;                                ///< 뷰마다의 라이트 그리드(CPU 생산자, 저장소를 프레임마다 다시 쓴다)
         vector<uint32>                   _listGridWordScratch;                     ///< 뷰마다의 그리드 단어를 이어 붙인 업로드 임시 버퍼(CPU 생산자)
         vector<float4>                   _listGridViewScratch;                     ///< 뷰마다의 뷰 정보(GPU 생산자)
