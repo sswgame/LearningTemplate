@@ -4,6 +4,9 @@
 
 #include "Core/File/FileUtil.h"
 
+#include "Editor/Common/Commands/Asset/EditorAssetIndex.h"
+#include "Editor/Common/Commands/Asset/EditorDataTableCommands.h"
+#include "Editor/Common/Commands/Asset/EditorFolderListing.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Content/AssetPaths.h"

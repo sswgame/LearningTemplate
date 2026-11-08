@@ -13,7 +13,11 @@
         "Editor/Common/Commands/EditorDragPayload.h": "끌어 놓기 페이로드 값({종류, id})",
         "Editor/Common/Workspace/EditorPanelID.h": "패널 id 형식과 상수 — 값",
         "Editor/Common/Workspace/Play/EditorSessionPolicy.h": "미저장 · 플레이 중 편집 판정 값(IEditorPanel 이 쓴다)",
-        "Editor/Common/Workspace/Asset/EditorAssetType.h": "에셋 종류 서술(IEditorPanel 이 쓴다)"
+        "Editor/Common/Workspace/Asset/EditorAssetType.h": "에셋 종류 서술(IEditorPanel 이 쓴다)",
+        "Editor/Common/Commands/EditorBackgroundIO.h": "백그라운드 잡(요청 · 꺼내기) — 결과 값 헤더와 잡 뼈대(Common/Task)만 include 한다. 작업 본문이 부르는 커맨드는 .cpp 가 본다(Model 이 잡을 값으로 든다)",
+        "Editor/Common/Commands/Asset/EditorAssetIndexEntry.h": "퀵 런처 항목 · 리소스 카탈로그 개수 값",
+        "Editor/Common/Commands/Asset/EditorFolderListingEntry.h": "콘텐츠 브라우저 폴더 항목 값",
+        "Editor/Common/Commands/Asset/EditorLocalizationSheet.h": "로컬라이즈 표 · 게임 데이터 파일 항목 값(판정 함수만 있다)"
     },
     "_migratedViews": [
         "Source/Editor/Panels/Animation/AnimationGraphLayerEditor",
