@@ -139,7 +139,7 @@ namespace sw
         tree._listStyleDirty.clear();
         // 글리프 래스터화 예산이 차서 글리프를 미룬 위젯은 다음 프레임에 다시 칠한다. 위 비움 뒤에 무효화해야 목록과 트리의 "바뀜" 표시가 남는다.
         vector<WidgetID>& listRetry = context._pScratch->_listGlyphRetryWidget;
-        for ( const WidgetID retryID : listRetry )
+        for ( const WidgetID& retryID : listRetry )
         {
             Widget* pRetry = tree.findWidgetByID( retryID );
             if ( pRetry != nullptr )

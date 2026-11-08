@@ -41,7 +41,7 @@ namespace sw
         vector<WidgetID> listDirty;
         listDirty.swap( tree._listStyleDirty );
         uint32 restyledCount = 0;
-        for ( const WidgetID id : listDirty )
+        for ( const WidgetID& id : listDirty )
         {
             Widget* pWidget = tree.findWidgetByID( id );
             if ( pWidget == nullptr || ( pWidget->_dirtyFlags & WidgetDirty::kStyle ) == 0 )

@@ -112,7 +112,7 @@ namespace sw
         if ( bRootPending )
             layoutTreeRoot( *pRoot, context );
 
-        for ( const WidgetID id : listRoot )
+        for ( const WidgetID& id : listRoot )
         {
             Widget* const pWidget        = tree.findWidgetByID( id );
             const bool    bNotLayoutRoot = pWidget == nullptr || pWidget == pRoot || ( pWidget->_dirtyFlags & WidgetDirty::kLayoutRoot ) == 0;

@@ -46,9 +46,9 @@ namespace sw::editor
                 const uint32 count = countIgnoredSites();
 #if defined( SW_DEBUG )
                 ::sw::internal::clearIgnoredAssertSites();
+#endif
                 StringBuilder<constant::buffer::kMax256> replyBuilder;
                 replyBuilder.appendFormat( "forgot %# ignored assert site(s)", count );
-#endif
                 outReply = string( replyBuilder.view() );
                 return true;
             }
