@@ -500,6 +500,8 @@ namespace sw
         hashed_string _velocity{ "Velocity" };
         /// 화면 왜곡 오프셋(SceneDistortion — 왜곡 누적 패스의 출력) — 왜곡 적용 패스가 선언한 입력을 역할로 건다(`g_DistortionIndex`).
         hashed_string _distortion{ "Distortion" };
+        /// 접촉 그림자 마스크(ContactShadow 패스의 출력, 채널 넷) — 조명 · 포워드 불투명 패스가 선언한 입력을 역할로 건다(`g_ContactShadowIndex`).
+        hashed_string _contactShadow{ "ContactShadow" };
         /// 2D 빛 쿠키 아틀라스(Light2DCookieAtlas) — 파이프라인 첨부가 아니라 렌더러가 소유한 텍스처를 역할 이름으로 건다.
         hashed_string _light2DCookieAtlas{ "Light2DCookieAtlas" };
         /// 자동 노출의 이번 프레임 EV(1x1, 뷰의 `_arrAutoExposure`) — 톤맵하는 패스가 `g_AutoExposureIndex` 로 읽는다. 렌더러가 소유한 텍스처다.
@@ -558,11 +560,15 @@ namespace sw
         /// @brief 안개 패스의 진단 보기입니다(`FrameFog::makeDebugParams`, fog.hlsl).
         hashed_string _fogDebugParams{ "g_FogDebugParams" };
         hashed_string _shadowParams{ "g_ShadowParams" };
-        /// @brief 방향광 캐스케이드 배치입니다 — x 수, y 칸 배율, z 경계 섞기 폭. `ViewShadowData::_cascadeLayout`.
+        /// @brief 방향광 캐스케이드 배치입니다 — x 수, y 칸 배율, z 경계 섞기 폭, w 거리 끝에서 옅어지기 시작하는 깊이. `ViewShadowData::_cascadeLayout`.
         hashed_string _shadowCascadeLayout{ "g_ShadowCascadeLayout" };
         /// @brief 캐스케이드마다 (배율, 이동 x, 이동 y, 깊이 끝)입니다. 이름이 넷인 까닭: 배열 멤버의 리플렉션 이름이 백엔드마다 다르다(GL 은 `[0]` 이 붙는다).
         hashed_string _arrShadowCascade[shaderslot::kShadowCascadeMax]{ hashed_string{ "g_ShadowCascade0" }, hashed_string{ "g_ShadowCascade1" },
                                                                         hashed_string{ "g_ShadowCascade2" }, hashed_string{ "g_ShadowCascade3" } };
+        /// @brief 그림자 필터입니다 — x 품질(0 PCF 3x3, 1 PCSS), y 방향광 반그림자 배율, z · w 커널 반지름 상한 · 하한(텍셀). `ShadowFilter::makeShaderParams`.
+        hashed_string _shadowFilter{ "g_ShadowFilter" };
+        /// @brief 접촉 그림자 채널 넷의 빛 원소 번호입니다(-1 = 빈 채널). `FrameShadowData::_contactShadowLights`, contact_shadow.hlsl.
+        hashed_string _contactShadowLights{ "g_ContactShadowLights" };
         hashed_string _bloomParams{ "g_BloomParams" };
         /// @brief 카메라별 색 보정입니다 — x 노출 배율(2^EV), y 채도, z 대비, w 비네트 세기. `PostProcessValues`, post_grade.hlsli.
         hashed_string _cameraGrade{ "g_CameraGrade" };

@@ -198,7 +198,9 @@ namespace sw
          * @details 속도는 깊이와 같은 픽셀의 것이어야 TAA · 모션 블러가 깊이와 짝지어 읽는다 — 깊이를 쓰지 않는 반투명 · 외곽선은 쓰지 않는다(언리얼 기본값도 반투명은 속도를 쓰지 않는다).
          *          G버퍼는 명세가 속도를 넷째 MRT 로 늘 가지고, 포워드는 출력 선언이 있을 때만 `kPassVelocityDefine` 으로 둘째 타깃에 쓴다.
          */
-        static constexpr uint32 kWritesVelocity = SW_BIT( 26 );
+        static constexpr uint32                kWritesVelocity = SW_BIT( 26 );
+        *@brief 컬러 출력 없이 픽셀 스테이지가 깊이( SV_Depth ) 를 쓰는 내부 패스다( 그림자 캐시 복원 ).컬러가 없는 패스는 픽셀 스테이지를 떼는데(`FramePSOManager::makePassPSODesc`) * 이 패스만 남긴다.쿠커는 내부 슬롯의 VS · PS 를 늘 굽는다.*/
+            static constexpr uint32 kWritesPixelDepth = SW_BIT( 27 );
     };
 } // namespace sw
 

@@ -2410,6 +2410,21 @@
 				<item>engine/settings/engine.settings.xml</item>
 			</origins>
 		</entry>
+		<entry key="settings.graphics.shadowFilter" source="Shadow Filter" context="Options menu label" maxLength="32">
+			<origins>
+				<item>engine/settings/engine.settings.xml</item>
+			</origins>
+		</entry>
+		<entry key="settings.graphics.shadowFilter.pcf" source="Sharp" context="Options menu label" maxLength="32">
+			<origins>
+				<item>engine/settings/engine.settings.xml</item>
+			</origins>
+		</entry>
+		<entry key="settings.graphics.shadowFilter.pcss" source="Soft" context="Options menu label" maxLength="32">
+			<origins>
+				<item>engine/settings/engine.settings.xml</item>
+			</origins>
+		</entry>
 		<entry key="settings.graphics.shadowQuality" source="Shadow Quality" context="Options menu label" maxLength="32">
 			<origins>
 				<item>engine/settings/engine.settings.xml</item>

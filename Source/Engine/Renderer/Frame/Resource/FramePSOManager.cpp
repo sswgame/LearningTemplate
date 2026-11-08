@@ -693,7 +693,8 @@ namespace sw
         // 않는다. 주의: 여기서 정하지 않으면 백엔드마다 판단이 갈리고, 그 위에 머티리얼 define 을 적용한 변형
         // (createMaterialPSOVariant 는 이 desc 를 그대로 물려받는다)은 쿠커가 쿠킹하지 않아 Shipping 에서 매니페스트 미스로
         // 실패한다. 쿠커 쪽 같은 규칙은 FrameRendererUtil::hasPixelStage 다.
-        if ( desc._numRenderTargets == 0 )
+        // 그림자 캐시 복원(kWritesPixelDepth)만 컬러 없이 픽셀 깊이를 쓰므로 픽셀 스테이지를 남긴다.
+        if ( desc._numRenderTargets == 0 && info.hasFlag( RenderPassTraitFlag::kWritesPixelDepth ) == false )
         {
             desc._pixelShaderPath.clear();
             desc._pixelEntryPoint.clear();

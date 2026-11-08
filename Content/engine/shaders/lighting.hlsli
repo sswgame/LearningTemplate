@@ -29,6 +29,10 @@ SW_DECLARE_STRUCTURED_BUFFER( float4, g_SwLightProbes, SW_SLOT_LIGHT_PROBE_SRV )
 struct Shadow
 {
     static float filterAtlas( float2 uv, float depth, float texelUv, bool bClamp, float2 clampMin, float2 clampMax );
+    static bool usesSoftFilter();
+    static float findBlockerDepth( float2 uv, float depth, float texelUv, float2 clampMin, float2 clampMax, float searchTexels, out bool outFound );
+    static float filterDisk( float2 uv, float depth, float texelUv, float2 clampMin, float2 clampMax, float radiusTexels );
+    static float linearizePerspectiveDepth( float ndcDepth, float nearPlane, float farPlane );
     static float4 loadCascade( uint cascadeIndex );
     static float sampleCascade( uint cascadeIndex, float3 worldPosition, float3 worldNormal, out bool outInside );
     static float sampleAtWorld( float3 worldPosition, float3 worldNormal );
@@ -75,6 +79,59 @@ static float Shadow::filterAtlas( float2 uv, float depth, float texelUv, bool bC
     return lit * ( 1.0f / 9.0f );
 }
 
+/** @brief 그림자 필터 품질이 PCSS 인지입니다(g_ShadowFilter.x — C++ ShadowFilter::getActiveMode). 0 이면 위의 3x3 PCF 그대로다. */
+static bool Shadow::usesSoftFilter()
+{
+    return g_ShadowFilter.x > 0.5f;
+}
+
+/**
+ * @brief PCSS 1 단계 — 반지름 @p searchTexels 안에서 받는 점보다 빛에 가까운 깊이(가리개)의 평균 NDC 깊이를 찾습니다. 탭은 4x4 격자이고 원본 깊이를 텍셀 그대로 읽는다(비교 샘플러가 아니다).
+ * @param outFound 가리개가 하나도 없으면 false — 그 점은 다 빛을 받으므로 필터를 건너뛴다.
+ */
+static float Shadow::findBlockerDepth( float2 uv, float depth, float texelUv, float2 clampMin, float2 clampMax, float searchTexels, out bool outFound )
+{
+    float blockerSum   = 0.0f;
+    float blockerCount = 0.0f;
+    SW_UNROLL for ( int offsetY = 0; offsetY < 4; ++offsetY )
+    {
+        SW_UNROLL for ( int offsetX = 0; offsetX < 4; ++offsetX )
+        {
+            const float2 offset = ( float2( offsetX, offsetY ) - 1.5f ) * ( searchTexels / 1.5f );
+            const float2 tapUv  = clamp( uv + offset * texelUv, clampMin, clampMax );
+            const float  stored = Bindless::loadEngineTexel( g_ShadowMapIndex, SW_EMU_SLOT_ShadowMap, int2( tapUv / texelUv ) ).r;
+            if ( stored < depth )
+            {
+                blockerSum += stored;
+                blockerCount += 1.0f;
+            }
+        }
+    }
+    outFound = g_ShadowMapIndex != kInvalidIndex && blockerCount > 0.0f;
+    return outFound ? blockerSum / blockerCount : depth;
+}
+
+/** @brief PCSS 2 단계 — 반지름 @p radiusTexels 의 4x4 격자 비교 탭(탭 하나가 2x2 쌍선형 비교)입니다. 탭은 칸 사각형 안으로 자른다. */
+static float Shadow::filterDisk( float2 uv, float depth, float texelUv, float2 clampMin, float2 clampMax, float radiusTexels )
+{
+    float lit = 0.0f;
+    SW_UNROLL for ( int offsetY = 0; offsetY < 4; ++offsetY )
+    {
+        SW_UNROLL for ( int offsetX = 0; offsetX < 4; ++offsetX )
+        {
+            const float2 offset = ( float2( offsetX, offsetY ) - 1.5f ) * ( radiusTexels / 1.5f );
+            lit += Bindless::sampleShadowComparison( g_ShadowMapIndex, clamp( uv + offset * texelUv, clampMin, clampMax ), depth );
+        }
+    }
+    return lit * ( 1.0f / 16.0f );
+}
+
+/** @brief 원근 그림자의 NDC 깊이(D3D 0 ~ 1)를 시선 깊이(m)로 되돌린다 — C++ ShadowFilter::linearizePerspectiveDepth 와 같은 식이다. */
+static float Shadow::linearizePerspectiveDepth( float ndcDepth, float nearPlane, float farPlane )
+{
+    return nearPlane * farPlane / max( farPlane - ndcDepth * ( farPlane - nearPlane ), 1e-6f );
+}
+
 /** @brief 캐스케이드 c 의 상수(배율, 이동 x, 이동 y, 깊이 끝)입니다. */
 static float4 Shadow::loadCascade( uint cascadeIndex )
 {
@@ -107,7 +164,22 @@ static float Shadow::sampleCascade( uint cascadeIndex, float3 worldPosition, flo
     const bool   bClamp   = tileScale < 1.0f;
     const float2 clampMin = tileOrigin + 0.5f * texelUv;
     const float2 clampMax = tileOrigin + tileScale - 0.5f * texelUv;
-    const float  lit      = outInside ? Shadow::filterAtlas( uv, ndc.z - g_ShadowParams.x / scale, texelUv, bClamp, clampMin, clampMax ) : 1.0f;
+    const float  depth    = ndc.z - g_ShadowParams.x / scale;
+    float        lit      = 1.0f;
+    if ( outInside && Shadow::usesSoftFilter() )
+    {
+        // PCSS — 반그림자 폭은 NDC 깊이 차 × g_ShadowFilter.y(기준 볼륨 텍셀) × 캐스케이드 배율이다(C++ ShadowFilter::computeDirectionalKernelRadius 와 같은 식).
+        // 가리개 찾기 반지름은 이 점이 가질 수 있는 가장 넓은 반그림자(가리개가 깊이 0)다.
+        const float searchTexels = clamp( 0.5f * depth * g_ShadowFilter.y * scale, g_ShadowFilter.w, g_ShadowFilter.z );
+        bool        bBlocked     = false;
+        const float blocker      = Shadow::findBlockerDepth( uv, depth, texelUv, clampMin, clampMax, searchTexels, bBlocked );
+        const float radius       = clamp( 0.5f * max( depth - blocker, 0.0f ) * g_ShadowFilter.y * scale, g_ShadowFilter.w, g_ShadowFilter.z );
+        lit                      = bBlocked ? Shadow::filterDisk( uv, depth, texelUv, clampMin, clampMax, radius ) : 1.0f;
+    }
+    else if ( outInside )
+    {
+        lit = Shadow::filterAtlas( uv, depth, texelUv, bClamp, clampMin, clampMax );
+    }
     // 세기는 g_ShadowParams.y — 완전한 검정이 아니라 "얼마나 어두워지는가" 다.
     return lerp( 1.0f - g_ShadowParams.y, 1.0f, saturate( lit ) );
 }
@@ -122,6 +194,7 @@ static float Shadow::sampleCascade( uint cascadeIndex, float3 worldPosition, flo
  *
  *          캐스케이드는 카메라 뷰 깊이(`g_ViewProj` 의 클립 w — 원근에서 뷰 z, 직교에서 1)로 고른다. 끝에서 `g_ShadowCascadeLayout.z` 만큼은
  *          다음 캐스케이드와 섞어 경계가 줄로 보이지 않게 한다(유니티 URP Cascade Blend). 고른 캐스케이드 볼륨 밖이면 다음 캐스케이드를 읽는다.
+ *          그림자 거리 끝은 `g_ShadowCascadeLayout.w` 부터 옅어진다(빛의 Distance Fade, 기본 0 — 칼로 자른 끝).
  * @note 맵 밖은 1(가려지지 않음)이다. 0 으로 두면 그림자 볼륨 밖이 통째로 검게 죽는다. early-return 이 없다(GL 드라이버 함정, binding.hlsli MorphPool::computeElement).
  */
 static float Shadow::sampleAtWorld( float3 worldPosition, float3 worldNormal )
@@ -154,6 +227,11 @@ static float Shadow::sampleAtWorld( float3 worldPosition, float3 worldNormal )
                 const float second      = Shadow::sampleCascade( nextIndex, worldPosition, worldNormal, bNextInside );
                 result                  = ( bInside == false ) ? second : lerp( first, second, bNextInside ? blend : 0.0f );
             }
+            // 그림자 거리 끝 — g_ShadowCascadeLayout.w 에서 마지막 캐스케이드 끝까지 1 로 옅어진다(언리얼 ShadowDistanceFadeoutFraction). 1e30 이면 옅어지지 않는다.
+            const float fadeStart = g_ShadowCascadeLayout.w;
+            const float shadowEnd = Shadow::loadCascade( cascadeCount - 1u ).w;
+            const float fade      = saturate( ( viewDepth - fadeStart ) / max( shadowEnd - fadeStart, 1e-4f ) );
+            result                = lerp( result, 1.0f, fade );
         }
     }
     return result;
@@ -193,7 +271,25 @@ float LightData::sampleLocalShadow( float3 worldPosition, float3 worldNormal )
     const float2 uv             = ndc.xy * float2( 0.5f, -0.5f ) + 0.5f;
     const bool   bInside        = lightClip.w > 0.0f && ndc.z >= 0.0f && ndc.z <= 1.0f && uv.x >= info._positionRadius.x && uv.x <= info._positionRadius.z &&
                          uv.y >= info._positionRadius.y && uv.y <= info._positionRadius.w;
-    const float lit = bInside ? Shadow::filterAtlas( uv, ndc.z, info._colorIntensity.z, true, info._positionRadius.xy, info._positionRadius.zw ) : 1.0f;
+    const float texelUv = info._colorIntensity.z;
+    float       lit     = 1.0f;
+    if ( bInside && Shadow::usesSoftFilter() )
+    {
+        // PCSS — info._directionType 은 (가까운 면, 먼 면, 거리 1 m 의 텍셀 길이, 원천 반지름)이다(C++ FrameShadowData::populateLocalShadows).
+        // 반그림자 반지름(텍셀) = 원천 반지름 × (받는 깊이 − 가리개 깊이) / 가리개 깊이 ÷ (텍셀 길이 × 받는 깊이) — C++ ShadowFilter::computeLocalKernelRadius 와 같은 식.
+        const float4 soft          = info._directionType;
+        const float  receiverDepth = Shadow::linearizePerspectiveDepth( ndc.z, soft.x, soft.y );
+        bool         bBlocked      = false;
+        const float  blockerNdc    = Shadow::findBlockerDepth( uv, ndc.z, texelUv, info._positionRadius.xy, info._positionRadius.zw, g_ShadowFilter.z, bBlocked );
+        const float  blockerDepth  = max( Shadow::linearizePerspectiveDepth( blockerNdc, soft.x, soft.y ), 1e-4f );
+        const float  penumbra      = soft.w * max( receiverDepth - blockerDepth, 0.0f ) / blockerDepth / max( soft.z * receiverDepth, 1e-6f );
+        const float  radius        = clamp( penumbra, g_ShadowFilter.w, g_ShadowFilter.z );
+        lit                        = bBlocked ? Shadow::filterDisk( uv, ndc.z, texelUv, info._positionRadius.xy, info._positionRadius.zw, radius ) : 1.0f;
+    }
+    else if ( bInside )
+    {
+        lit = Shadow::filterAtlas( uv, ndc.z, texelUv, true, info._positionRadius.xy, info._positionRadius.zw );
+    }
     return lerp( 1.0f - info._colorIntensity.w, 1.0f, saturate( lit ) );
 }
 
@@ -207,6 +303,21 @@ float LightData::computeShadow( float3 worldPosition, float3 worldNormal, float 
     float      shadow    = 1.0f;
     if ( _params.x > 0.5f )
         shadow = ( lightType == SW_LIGHT_TYPE_DIRECTIONAL ) ? directionalShadow : sampleLocalShadow( worldPosition, worldNormal );
+    // 접촉 그림자 — 채널(_extra.z = 채널 + 1, C++ FrameShadowData::populateContactShadows)을 받은 3D 빛만 그 마스크 채널을 읽는다. 화면 자리는 월드 점을 투영해 구한다
+    // (포워드 · 디퍼드가 같은 식). 패스가 마스크를 걸지 않았으면 1 이다. 방향광은 그림자 맵과 같은 세기(g_ShadowParams.y)로 어두워진다. 2D 빛의 _extra.z 는 다른 뜻이라 보지 않는다.
+    const uint channel  = (uint)( _extra.z + 0.5f );
+    const bool b3DLight = lightType == SW_LIGHT_TYPE_DIRECTIONAL || lightType == SW_LIGHT_TYPE_POINT || lightType == SW_LIGHT_TYPE_SPOT;
+    if ( b3DLight && channel > 0u )
+    {
+        const float4 clip     = mul( float4( worldPosition, 1.0f ), g_ViewProj );
+        const float2 screenUv = clip.xy / max( clip.w, 1e-4f ) * float2( 0.5f, -0.5f ) + 0.5f;
+        const float4 mask     = PassTexture::sampleContactShadow( screenUv );
+        const float  contact  = ( channel == 1u ) ? mask.x : ( channel == 2u ) ? mask.y
+                                                       : ( channel == 3u )     ? mask.z
+                                                                               : mask.w;
+        const float  strength = ( lightType == SW_LIGHT_TYPE_DIRECTIONAL ) ? g_ShadowParams.y : 1.0f;
+        shadow                = min( shadow, lerp( 1.0f - strength, 1.0f, contact ) );
+    }
     return shadow;
 }
 

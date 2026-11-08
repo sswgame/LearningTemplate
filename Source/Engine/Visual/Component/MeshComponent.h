@@ -171,6 +171,15 @@ namespace sw
         uint32 getSortKey() const { return _sortKey; }
 
         /**
+         * @brief 실행 중에 움직이지 않는 메시인지 반환합니다(언리얼 `EComponentMobility::Static` 자리, 기본은 움직인다).
+         * @details 정적 메시는 서 있는 점광 · 스폿의 그림자 캐시(`gv_shadowCache`)에 한 번 그려지고 프레임마다 다시 그려지지 않는다. 정적 메시를 움직이거나
+         *          더하고 빼면 캐시가 다시 그려지므로 틀린 그림은 나지 않지만 이득이 사라진다(`GPUSceneBuilder` 의 정적 그림자 세대). 배치 키라 정적과 움직이는 메시는 다른 배치다.
+         */
+        bool isStatic() const { return _bStatic == SW_TRUE; }
+        /** @brief 정적 여부를 정합니다. 배치 키와 정적 그림자 세대가 바뀌므로 레지스트리에 집합 변경을 알립니다. */
+        void setStatic( bool bStatic );
+
+        /**
          * @brief 강조(상호작용 외곽선 · 감각 모드)를 정합니다. 빌더가 `GPUInstance::_highlight` 로 옮기고 강조 패스(highlight_outline.hlsl)가 그립니다.
          * @details 배치 키가 아니라 인스턴스 내용이라 켜고 꺼도 배치를 다시 나누지 않는다. 저장하지 않는 런타임 값이다 — 상호작용 쪽(`InteractionHighlightComponent`)이 매 프레임 정한다.
          *          불투명 배치만 그린다(반투명 메시는 강조 패스가 보지 않는다).
@@ -370,6 +379,8 @@ namespace sw
         uint8 _bAwaitingAppearance : 1; ///< 등장을 미루는 중이다(`holdAppearanceUntilReady`, 저장하지 않음)
         PROPERTY( Category = "Rendering", DisplayName = "Appear On Teleport", Tooltip = "Dither in again after teleportTo (respawn); off for network corrections and camera cuts" )
         uint8 _bAppearOnTeleport : 1;
-        uint8 _reserved          : 4;
+        PROPERTY( Category = "Rendering", DisplayName = "Static", Tooltip = "Never moves at runtime; drawn once into the shadow cache of stationary point and spot lights (gv_shadowCache)" )
+        uint8 _bStatic  : 1;
+        uint8 _reserved : 3;
     };
 } // namespace sw

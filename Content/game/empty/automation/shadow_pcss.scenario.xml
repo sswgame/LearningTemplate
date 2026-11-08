@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  그림자 필터 — 같은 무대를 3x3 PCF(gv_shadowFilter 0)와 PCSS(1)로 찍어 둘이 다른지(반그림자가 원천 크기만큼 넓어진다) 보고, 두 장을 골든으로 지킨다.
+  무대(maps/shadowtest)는 해(시직경 3°, 캐스케이드 둘)와 그림자 점광(반지름 0.15 m)이 기둥 · 상자 그림자를 바닥에 드리운다. PCF 사진은 이 기능 전의 그림과 같아야 한다.
+  실행: ctest -R Scenario.game.empty.shadow_pcss
+-->
+<Scenario name="game.empty.shadow_pcss" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/shadowtest.scene.xml"/>
+	<Launch variable="gv_deferredShading" value="1"/>
+	<Launch variable="gv_postQuality" value="2"/>
+	<Launch variable="gv_renderScale" value="1"/>
+	<Launch variable="gv_viewDistanceScale" value="1"/>
+	<Launch variable="gv_shadowMapResolution" value="2048"/>
+	<Wait frames="20"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Wait frames="10"/>
+	<Variable name="gv_shadowFilter" value="0"/>
+	<Wait frames="10"/>
+	<Screenshot file="shadow_pcf.ppm"/>
+	<Variable name="gv_shadowFilter" value="1"/>
+	<Wait frames="10"/>
+	<Screenshot file="shadow_pcss.ppm"/>
+	<Wait frames="2"/>
+	<ExpectImagesDiffer first="shadow_pcf.ppm" second="shadow_pcss.ppm" region="0.05,0.3,0.95,0.95" minDiffering="0.005"/>
+	<ExpectImage file="shadow_pcf.ppm" golden="shadow_pcf"/>
+	<ExpectImage file="shadow_pcss.ppm" golden="shadow_pcss"/>
+	<Variable name="gv_shadowFilter" value="0"/>
+	<Pass/>
+</Scenario>

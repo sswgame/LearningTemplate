@@ -54,6 +54,7 @@
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Frame/Resource/RenderPSOCache.h"
 #include "Engine/Renderer/Frame/Resource/ShaderParameterBinder.h"
+#include "Engine/Renderer/Lighting/ShadowFilter.h"
 #include "Engine/Renderer/Pipeline/GBufferLayout.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
@@ -422,6 +423,12 @@ namespace sw
         return FrameRendererUtil::drawsMaterialInPass( passType, pPermutation != nullptr ? &pPermutation->_listDefine : nullptr );
     }
 
+    bool FramePassExecutor::drawsCasterBatch( ShadowCasterFilter filter, const GPUMeshBatch& batch )
+    {
+        const bool bStatic = batch._bStaticShadowCaster != SW_FALSE;
+        return filter == ShadowCasterFilter::All || ( filter == ShadowCasterFilter::StaticOnly ) == bStatic;
+    }
+
     void FramePassExecutor::applyViewShadowConstants( FramePassContext& context, const ViewShadowData& shadow )
     {
         const PassConstantNames& names = passConstantNames();
@@ -432,6 +439,9 @@ namespace sw
         {
             context._passValues.setFloat4( names._arrShadowCascade[cascadeIndex], shadow._arrCascade[cascadeIndex] );
         }
+        context._passValues.setFloat4( names._shadowFilter, ShadowFilter::makeShaderParams( ShadowFilter::getActiveMode(), shadow._directionalPenumbraScale ) );
+        // 접촉 그림자 채널은 프레임 공통이다(빛 목록이 프레임 공통이다) — 추가 뷰도 같은 값이다.
+        context._passValues.setFloat4( names._contactShadowLights, _state._frameShadow._contactShadowLights );
     }
 
     void FramePassExecutor::applyViewPassConstants( FramePassContext& context, FrameViewTarget& view )
@@ -896,6 +906,8 @@ namespace sw
                 return names._velocity;
             case RenderPassInputRole::Distortion:
                 return names._distortion;
+            case RenderPassInputRole::ContactShadow:
+                return names._contactShadow;
             case RenderPassInputRole::Invalid:
             case RenderPassInputRole::Count:
                 return names._sourceColor;
@@ -983,10 +995,13 @@ namespace sw
                 case RenderPassType::Shadow:
                 {
                     // 클리어 값은 실제로 바인딩하는 뎁스 첨부의 선언에서 읽는다(이름 ShadowMap 으로 찾지 않는다).
+                    // 그림자 캐시 층은 아틀라스 패스 앞에 다시 그리고(다른 깊이 대상이다) 셰이더 읽기로 돌린다 — 렌더 패스 안에서는 상태를 바꿀 수 없다.
+                    const bool bShadows    = _pActiveView->_settings._bShadows == SW_TRUE;
+                    const bool bCacheLayer = bShadows && prepareShadowCacheLayer( context, passDepth, input._bTransparentBatch );
                     beginDepthOnlyPass( context, passDepth, colorLoadFor( passDepth ) );
                     // 그림자를 끈 뷰는 지우기만 한다. 깊이 1(가장 멀다)이면 모두 빛을 받는다.
-                    if ( _pActiveView->_settings._bShadows == SW_TRUE )
-                        drawShadowTiles( context, input._bTransparentBatch );
+                    if ( bShadows )
+                        drawShadowTiles( context, input._bTransparentBatch, bCacheLayer );
                     context._pCmd->endRenderPass();
                     break;
                 }
@@ -1079,6 +1094,7 @@ namespace sw
                 case RenderPassType::Invalid:
                 case RenderPassType::Lighting:
                 case RenderPassType::SSAO:
+                case RenderPassType::ContactShadow:
                 case RenderPassType::Bloom:
                 case RenderPassType::BloomDownsample:
                 case RenderPassType::Outline:
@@ -1102,6 +1118,7 @@ namespace sw
                 case RenderPassType::OcclusionTiles:
                 case RenderPassType::VolumetricFog:
                 case RenderPassType::CanvasMarker:
+                case RenderPassType::ShadowCacheRestore:
                 case RenderPassType::NanCheck:
                 case RenderPassType::ProbeUpdate:
                 {
@@ -1219,6 +1236,10 @@ namespace sw
         const RenderGraphPassDesc::ResolvedAttachment* pShadowInput = Internal::findInputByRole( input._passDesc, RenderPassInputRole::ShadowMap );
         if ( pShadowInput != nullptr )
             registerPassTexture( context, attachmentNames()._shadowMap, pShadowInput->_attachment );
+        // 접촉 그림자 마스크는 그 패스가 이 뷰에서 돌았을 때만 건다(꺼지면 출력이 없다 — 셰이더는 1). 나머지 선언 입력(원본 색 · 깊이)은 이 패스가 그리는 첨부라 걸지 않는다.
+        const RenderGraphPassDesc::ResolvedAttachment* pContactInput = Internal::findInputByRole( input._passDesc, RenderPassInputRole::ContactShadow );
+        if ( pContactInput != nullptr && activePool().resolveName( pContactInput->_attachment ).empty() == false )
+            registerPassTexture( context, attachmentNames()._contactShadow, pContactInput->_attachment );
         // 선언한 컬러 출력을 모두 연다 — 화면 속도를 선언했으면 [색, 속도] 두 타깃이다(검증 3-3, 셰이더 SV_TARGET0 · 1).
         const vector<RenderGraphPassDesc::ResolvedAttachment>& declaredColor = input._declaredColor;
         const uint32                                           colorCount    = static_cast<uint32>( declaredColor.size() ) < kMaxColorAttachments ? static_cast<uint32>( declaredColor.size() ) : kMaxColorAttachments;
@@ -1757,7 +1778,66 @@ namespace sw
         return _state._frameShadow._layout.getCascadeCount() + static_cast<uint32>( _state._frameShadow._listLocalTile.size() );
     }
 
-    void FramePassExecutor::drawShadowTiles( FramePassContext& context, bool bTransparentBatch )
+    bool FramePassExecutor::prepareShadowCacheLayer( FramePassContext& context, const hashed_string& atlasName, bool bTransparentBatch )
+    {
+        ShadowCache& cache = _state._shadowCache;
+        if ( cache.usesCacheLayer() == false || context._pCmd == nullptr )
+            return false;
+        // 복원 PSO 가 없으면(셋업이 알렸다) 캐시한 타일의 정적 메시가 빠진다 — 이 프레임은 캐시 없이 다 그린다.
+        if ( _psoManager.getEnginePSO( RenderPassType::ShadowCacheRestore ) == 0 )
+        {
+            SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.ShadowCacheNoRestorePSO", "Shadow cache restore PSO is missing - cached point/spot shadows are drawn without the cache" );
+            return false;
+        }
+        const TransientAttachmentPool::Attachment atlas = findTransientAttachment( atlasName );
+        if ( atlas._texture == 0 || cache.ensureLayer( _pDevice, atlas._format, atlas._width ) == false )
+            return false;
+        const TransientAttachmentPool::Attachment layer = cache.getLayer();
+        if ( cache.needsRebuild() )
+        {
+            // 캐시 층을 지우고 캐시하는 타일마다 정적 배치만 그린다(그림자 컬링 칸 — 모든 그림자 볼륨을 덮는다). 타일은 모든 뷰가 같아 프레임에 한 번이다.
+            RHIRenderPassBeginInfo beginInfo{};
+            beginInfo._bBindColor       = SW_FALSE;
+            beginInfo._colorTargetCount = 0;
+            beginInfo._depthTarget      = layer._texture;
+            beginInfo._depthLoadOp      = RHIRenderPassLoadOp::Clear;
+            beginInfo._depthStoreOp     = RHIRenderPassStoreOp::Store;
+            beginInfo._clearDepth       = layer._ops._clearDepth;
+            beginInfo._clearStencil     = layer._ops._clearStencil;
+            beginInfo._width            = layer._width;
+            beginInfo._height           = layer._height;
+            context._pCmd->beginRenderPass( beginInfo );
+            const PassConstantNames&     names     = passConstantNames();
+            const RHIPipelineStateHandle pso       = _psoManager.getEnginePSO( RenderPassType::Shadow );
+            const uint32                 viewCull  = context._cullViewIndex;
+            context._cullViewIndex                 = _pActiveView->_shadowCullSlot;
+            context._shadowCasterFilter            = ShadowCasterFilter::StaticOnly;
+            const vector<ShadowTileDraw>& listTile = _state._frameShadow._listLocalTile;
+            for ( uint32 tileIndex = 0; tileIndex < static_cast<uint32>( listTile.size() ); ++tileIndex )
+            {
+                if ( cache.getAction( tileIndex ) == ShadowCacheTileAction::DrawAll || acquirePassCb( context ) == false )
+                    continue;
+                const ShadowTileDraw& tile = listTile[tileIndex];
+                RHIViewport           viewport{};
+                viewport._x      = static_cast<float32>( tile._cell._x );
+                viewport._y      = static_cast<float32>( tile._cell._y );
+                viewport._width  = static_cast<float32>( tile._cell._size );
+                viewport._height = static_cast<float32>( tile._cell._size );
+                context._pCmd->setViewport( viewport );
+                context._passValues.setMatrix( names._lightViewProj, tile._viewProj );
+                drawSceneMeshes( context, pso, bTransparentBatch );
+            }
+            context._shadowCasterFilter = ShadowCasterFilter::All;
+            context._cullViewIndex      = viewCull;
+            context._passValues.setMatrix( names._lightViewProj, _pActiveView->_shadow._lightViewProj );
+            context._pCmd->endRenderPass();
+            cache.markRebuilt();
+        }
+        context._pCmd->prepareTextureForShaderRead( layer._texture );
+        return true;
+    }
+
+    void FramePassExecutor::drawShadowTiles( FramePassContext& context, bool bTransparentBatch, bool bCacheLayer )
     {
         // 그림자는 모든 타일을 덮는 상자로 거른 목록을 쓴다(언리얼의 뷰별 인스턴스 컬링에 해당한다). 끝나면 지금 뷰의 슬롯으로 돌아간다.
         const ViewShadowData&        shadow   = _pActiveView->_shadow;
@@ -1775,8 +1855,15 @@ namespace sw
         else
         {
             // 타일마다 그 칸을 뷰포트로 잡고(가위도 같이 잡힌다) 그 타일의 행렬로 씬을 그린다. 상수가 바뀌므로 드로우는 새 상수 버퍼 슬롯을 받는다.
-            const PassConstantNames& names     = passConstantNames();
-            const uint32             tileCount = shadow._cascadeCount + static_cast<uint32>( _state._frameShadow._listLocalTile.size() );
+            // 캐시한 점광 · 스폿 타일은 캐시 층의 깊이를 픽셀 깊이로 옮긴 뒤(ShadowCacheRestore — 층을 ShadowMap 역할 이름으로 건다) 움직이는 배치만 그린다.
+            const PassConstantNames& names = passConstantNames();
+            if ( bCacheLayer )
+            {
+                const TransientAttachmentPool::Attachment layer = _state._shadowCache.getLayer();
+                context._resourceRegistry.registerTexture( attachmentNames()._shadowMap, layer._texture, layer._srv );
+            }
+            const RHIPipelineStateHandle restorePSO = _psoManager.getEnginePSO( RenderPassType::ShadowCacheRestore );
+            const uint32                 tileCount  = shadow._cascadeCount + static_cast<uint32>( _state._frameShadow._listLocalTile.size() );
             for ( uint32 tileIndex = 0; tileIndex < tileCount; ++tileIndex )
             {
                 const ShadowTileDraw& tile = tileIndex < shadow._cascadeCount ? shadow._arrCascadeTile[tileIndex] : _state._frameShadow._listLocalTile[tileIndex - shadow._cascadeCount];
@@ -1794,7 +1881,15 @@ namespace sw
                 // 주 시점의 캐스케이드 타일은 자기 컬링 슬롯의 목록을 그린다(그 캐스케이드 절두체로만 거른 것). 점광 · 스폿 타일과 추가 뷰는 합친 칸이다.
                 const bool bCascadeSlot = _pActiveView == &_state._mainView && tileIndex < _state._cascadeCullCount;
                 context._cullViewIndex  = bCascadeSlot ? _state._cascadeCullSlotBase + tileIndex : _pActiveView->_shadowCullSlot;
+                const bool bCachedTile  = bCacheLayer && tileIndex >= shadow._cascadeCount &&
+                                         _state._shadowCache.getAction( tileIndex - shadow._cascadeCount ) != ShadowCacheTileAction::DrawAll;
+                if ( bCachedTile )
+                {
+                    drawFullscreen( context, restorePSO );
+                    context._shadowCasterFilter = ShadowCasterFilter::MovableOnly;
+                }
                 drawSceneMeshes( context, pso, bTransparentBatch );
+                context._shadowCasterFilter = ShadowCasterFilter::All;
             }
             // 이 패스 컨텍스트는 패스마다 시드의 사본이지만, 기준 행렬로 되돌려 두면 뒤에 무엇이 붙어도 셰이딩과 같은 행렬을 본다.
             context._passValues.setMatrix( names._lightViewProj, shadow._lightViewProj );
@@ -2150,7 +2245,8 @@ namespace sw
             const bool bParticleInside = bDrawsParticles && state._particleSlotCursor < state._listParticleSlot.size() &&
                                          state._listParticleSlot[state._particleSlotCursor]._drawPosition <= orderIndex + groupCount;
             const bool bGroupEnds = nextBatchIndex != batchIndex + groupCount || bParticleInside;
-            if ( bGroupEnds || isSameDrawGroup( state._pso, state._passType, drawMode, head, headBinding, state._batches[nextBatchIndex], state._bindings[nextBatchIndex] ) == false )
+            if ( bGroupEnds || drawsCasterBatch( state._casterFilter, state._batches[nextBatchIndex] ) == false ||
+                 isSameDrawGroup( state._pso, state._passType, drawMode, head, headBinding, state._batches[nextBatchIndex], state._bindings[nextBatchIndex] ) == false )
                 break;
             ++groupCount;
         }
@@ -2171,7 +2267,8 @@ namespace sw
             const uint32               batchIndex       = ( inoutState._pOrder != nullptr ) ? ( *inoutState._pOrder )[orderIndex] : orderIndex;
             const GPUMeshBatch&        head             = inoutState._batches[batchIndex];
             const GPUMeshBatchBinding& headBinding      = inoutState._bindings[batchIndex];
-            const bool                 bHeadNotDrawable = headBinding.hasGeometry() == false || head.hasDrawSlots() == false || drawsBatchInPass( inoutState._passType, head, headBinding ) == false;
+            const bool                 bHeadNotDrawable = headBinding.hasGeometry() == false || head.hasDrawSlots() == false || drawsBatchInPass( inoutState._passType, head, headBinding ) == false ||
+                                          drawsCasterBatch( inoutState._casterFilter, head ) == false;
             if ( bHeadNotDrawable )
             {
                 ++orderIndex;
@@ -2207,10 +2304,11 @@ namespace sw
             registerInstanceBuffer( context );
 
         BatchDrawState state{};
-        state._pso      = pso;
-        state._boundPSO = pso;
-        state._batches  = bTransparentPass ? _state._gpuScene.getTransparentBatches() : _state._gpuScene.getOpaqueBatches();
-        state._bindings = bTransparentPass ? _state._gpuScene.getTransparentBatchBindings() : _state._gpuScene.getOpaqueBatchBindings();
+        state._pso          = pso;
+        state._boundPSO     = pso;
+        state._casterFilter = context._shadowCasterFilter;
+        state._batches      = bTransparentPass ? _state._gpuScene.getTransparentBatches() : _state._gpuScene.getOpaqueBatches();
+        state._bindings     = bTransparentPass ? _state._gpuScene.getTransparentBatchBindings() : _state._gpuScene.getOpaqueBatchBindings();
         SW_ASSERT( state._bindings.size() == state._batches.size() );
         // 시간만 보면 무엇이 비싼지 알 수 없다. 배치가 몇 개로 묶였는지가 해석의 전제다.
         SW_PROFILE_COUNT( "RT.Draw.gpuBatchCount", state._batches.size() );

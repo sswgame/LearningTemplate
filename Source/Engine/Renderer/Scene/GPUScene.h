@@ -231,6 +231,8 @@ namespace sw
         void assignVertexAnimationBases( const GPUVertexAnimationPool& pool );
         /** @brief 이번 프레임 VAT 시계(초)입니다. 스냅샷에 실려 온 게임 스레드의 군중 시계입니다. */
         float32 getVertexAnimationTime() const { return _snapshot._vertexAnimationTime; }
+        /** @brief 정적 그림자 세대입니다(`GPUSceneSnapshot::_staticShadowGeneration`). 그림자 캐시가 캐시 층을 다시 그릴지 정한다. */
+        uint64 getStaticShadowGeneration() const { return _snapshot._staticShadowGeneration; }
 
         /** @brief 인스턴스 버퍼 핸들을 반환합니다. */
         RHIBufferHandle getInstanceBuffer() const { return _instances._buffer; }

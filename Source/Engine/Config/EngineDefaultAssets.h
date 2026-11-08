@@ -187,6 +187,10 @@ namespace sw
         PROPERTY( Required )
         DataPath _shaderSSAO; ///< SSAO
         PROPERTY( Required )
+        DataPath _shaderShadowCacheRestore; ///< 그림자 캐시 복원(풀스크린, 픽셀 깊이) — 캐시 층의 정적 메시 깊이를 점광 · 스폿 칸에 옮긴다
+        PROPERTY( Required )
+        DataPath _shaderContactShadow; ///< 접촉 그림자(풀스크린) — 장면 깊이에서 접촉 그림자를 켠 빛 쪽으로 화면 공간에서 걷는다(채널 = 빛)
+        PROPERTY( Required )
         DataPath _shaderTAA; ///< TAA
         PROPERTY( Required )
         DataPath _shaderSceneDepthCopy; ///< 반투명 앞의 장면 깊이 사본(풀스크린) — 물의 화면 공간 두께가 읽는다

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  그림자 거리 끝 옅어짐 — 같은 무대를 옅어짐 없이(maps/shadowtest, 칼로 자른 끝)와 몫 0.5(maps/shadowtest_fade)로 찍어 둘이 다른지 보고, 두 장을 골든으로 지킨다.
+  해는 카메라에 맞춘 캐스케이드 둘(그림자 거리 14 m)이다. 캐스케이드 경계 섞기 · 텍셀 스냅은 그대로다(옅어짐만 다르다). PCF(gv_shadowFilter 0)로 찍는다.
+  실행: ctest -R Scenario.game.empty.shadow_fade
+-->
+<Scenario name="game.empty.shadow_fade" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/shadowtest.scene.xml"/>
+	<Launch variable="gv_deferredShading" value="1"/>
+	<Launch variable="gv_postQuality" value="2"/>
+	<Launch variable="gv_renderScale" value="1"/>
+	<Launch variable="gv_viewDistanceScale" value="1"/>
+	<Launch variable="gv_shadowMapResolution" value="2048"/>
+	<Launch variable="gv_shadowFilter" value="0"/>
+	<Wait frames="20"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Wait frames="10"/>
+	<Screenshot file="shadow_cut.ppm"/>
+	<LoadScene path="game/empty/maps/shadowtest_fade.scene.xml" timeoutFrames="600"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
+	<Wait frames="20"/>
+	<Screenshot file="shadow_fade.ppm"/>
+	<Wait frames="2"/>
+	<ExpectImagesDiffer first="shadow_cut.ppm" second="shadow_fade.ppm" region="0.05,0.3,0.95,0.95" minDiffering="0.005"/>
+	<ExpectImage file="shadow_cut.ppm" golden="shadow_cut"/>
+	<ExpectImage file="shadow_fade.ppm" golden="shadow_fade"/>
+	<Pass/>
+</Scenario>

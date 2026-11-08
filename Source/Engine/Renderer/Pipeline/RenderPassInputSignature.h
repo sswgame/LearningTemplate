@@ -45,6 +45,7 @@ namespace sw
          * 화면 왜곡 오프셋(SceneDistortion, R16G16 실수 — 화면 UV 오프셋, 클리어 0). 왜곡 누적 패스(`RenderPassType::Distortion`)가 쓰고 왜곡 적용 패스가 읽는다(`g_DistortionIndex`).
          */
         Distortion,
+        ContactShadow, ///< 접촉 그림자 마스크(ContactShadow 패스의 출력, 채널 넷 = 빛 넷). 조명이 빛의 채널(`GPULight::_extra.z`)을 곱한다(`g_ContactShadowIndex`) — 없으면 1(가림 없음).
         Count,
     };
 
@@ -56,7 +57,7 @@ namespace sw
 
     /**
      * @brief 첨부의 역할을 정합니다. 첨부가 선언한 역할(`RenderPassAttachment::_role`)이 먼저입니다.
-     * @details 선언이 없거나 모르는 문자열이면(검증이 오류로 알립니다) 고정 역할 이름(GBufferAlbedo, GBufferNormal, GBufferMaterial, ShadowMap, AOColor, BloomBright, SceneColorCopy, SceneDepthCopy, SceneVelocity, SceneDistortion)은 그 역할,
+     * @details 선언이 없거나 모르는 문자열이면(검증이 오류로 알립니다) 고정 역할 이름(GBufferAlbedo, GBufferNormal, GBufferMaterial, ShadowMap, AOColor, BloomBright, SceneColorCopy, SceneDepthCopy, ContactShadowMask)은 그 역할,
      *          그 밖의 깊이 포맷은 SceneDepth, 나머지 컬러는 SourceColor 입니다. ShadowMap 은 깊이 포맷이지만 이름이 먼저입니다.
      */
     RenderPassInputRole resolveRenderPassInputRole( string_view attachmentName, bool bDepthFormat, string_view declaredRole );

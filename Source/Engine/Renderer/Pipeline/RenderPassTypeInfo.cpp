@@ -80,8 +80,10 @@ namespace sw
                     }
                     case RenderPassType::ForwardOpaque:
                     {
+                        // 입력은 그림자 맵과 접촉 그림자(깊이 프리패스 뒤의 ContactShadow 패스)뿐이고 둘 다 선택이다 — 접촉 그림자는 꺼지면 출력이 없다(3-7).
                         info._pDefaultShader = &EngineDefaultAssets::_shaderForwardLit;
-                        info._flags          = Flag::kDepthTest | Flag::kDepthWrite | Flag::kMaterialFixedState | Flag::kMaterialBlend | Flag::kWritesVelocity | kSceneColorPassFlags;
+                        info._inputContract  = makeContract( {}, { Role::ShadowMap, Role::ContactShadow } );
+                        info._flags          = Flag::kDepthTest | Flag::kDepthWrite | Flag::kMaterialFixedState | Flag::kMaterialBlend | Flag::kWritesVelocity | Flag::kHasInputContract | kSceneColorPassFlags;
                         break;
                     }
                     case RenderPassType::GBuffer:
@@ -98,7 +100,7 @@ namespace sw
                     case RenderPassType::Lighting:
                     {
                         info._pDefaultShader = &EngineDefaultAssets::_shaderDeferredLighting;
-                        info._inputContract  = makeContract( { Role::GBufferAlbedo, Role::GBufferNormal, Role::GBufferMaterial, Role::SceneDepth }, { Role::ShadowMap } );
+                        info._inputContract  = makeContract( { Role::GBufferAlbedo, Role::GBufferNormal, Role::GBufferMaterial, Role::SceneDepth }, { Role::ShadowMap, Role::ContactShadow } );
                         info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract;
                         break;
                     }
@@ -114,6 +116,14 @@ namespace sw
                         // 꺼지면(후처리를 끈 뷰 · 품질) 기록하지 않고 출력이 없다 — 읽는 쪽은 AO 역할을 바인딩하지 않아 가림 없음(1)이다(kOmittedWhenOff).
                         info._pDefaultShader = &EngineDefaultAssets::_shaderSSAO;
                         info._inputContract  = makeContract( { Role::GBufferNormal, Role::SceneDepth }, {} );
+                        info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess | Flag::kOmittedWhenOff;
+                        break;
+                    }
+                    case RenderPassType::ContactShadow:
+                    {
+                        // 켠 빛이 없거나 후처리를 끈 뷰는 기록하지 않고 출력이 없다 — 읽는 쪽은 접촉 그림자 역할을 바인딩하지 않아 1 이다(kOmittedWhenOff, FrameViewResources::applyViewPassSelection).
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderContactShadow;
+                        info._inputContract  = makeContract( { Role::SceneDepth }, {} );
                         info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess | Flag::kOmittedWhenOff;
                         break;
                     }
@@ -270,302 +280,312 @@ namespace sw
                         info._pDefaultShader = &EngineDefaultAssets::_shaderDistortionApply;
                         info._inputContract  = makeContract( { Role::SceneColorCopy, Role::Distortion, Role::SceneDepth }, {} );
                         info._flags          = Flag::kHasInputContract | Flag::kDrawsDeclaredColor;
-                        case RenderPassType::ScreenSpaceReflection:
-                        {
-                            // 화면 공간 반사 — 장면 색 사본 · 깊이 · G버퍼 노멀(· 머티리얼)을 읽어 선언한 컬러 출력(장면 색) 위에 프리멀티플라이 블렌드한다(안개와 같은 모양).
-                            // 전용 실행이 세기 0 · 후처리를 끈 뷰 · 표면 값 보기에서 그리지 않는다. 출력이 장면 색이라 원본을 가리키는 끄기(kBypassesToSource)는 쓸 수 없다.
-                            info._pDefaultShader = &EngineDefaultAssets::_shaderScreenSpaceReflection;
-                            info._inputContract  = makeContract( { Role::SceneColorCopy, Role::SceneDepth, Role::GBufferNormal }, { Role::GBufferMaterial } );
-                            info._flags          = Flag::kBlend | Flag::kPremultipliedAlpha | Flag::kHasInputContract | Flag::kDrawsDeclaredColor;
-                            break;
-                        }
-                        case RenderPassType::MotionBlur:
-                        {
-                            // 원본 색 · 장면 깊이 · 화면 속도를 읽는 효과 패스다. 꺼지면(후처리를 끈 뷰 · 품질 · gv_motionBlur · 컷 · 카메라와 물체가 모두 서 있음) 패스를 기록하지 않고 출력이 원본을 가리킨다(kBypassesToSource).
-                            info._pDefaultShader = &EngineDefaultAssets::_shaderMotionBlur;
-                            info._inputContract  = makeContract( { Role::SourceColor, Role::SceneDepth, Role::Velocity }, {} );
-                            info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess | Flag::kBypassesToSource;
-                            break;
-                        }
-                        case RenderPassType::Compute:
-                        {
-                            // 셰이더는 XML 이 고른다 — 표의 기본값이 없고, 첨부를 RW 텍스처로 묶는 전용 실행이다(`FramePassExecutor::executeComputePass`).
-                            info._flags = Flag::kPipelineCompute | Flag::kDrawsDeclaredColor;
-                            break;
-                        }
-                        case RenderPassType::ForwardOpaqueNoDepthWrite:
-                        {
-                            // 깊이 프리패스가 돈 프레임의 불투명 패스다. 깊이는 테스트만 하고, 그리는 대상은 ForwardOpaque 패스의 선언이다.
-                            info._pDefaultShader   = &EngineDefaultAssets::_shaderForwardLit;
-                            info._flags            = Flag::kDepthTest | Flag::kMaterialFixedState | Flag::kMaterialBlend | Flag::kWritesVelocity | kSceneColorPassFlags;
-                            info._targetSourceType = RenderPassType::ForwardOpaque;
-                            break;
-                        }
-                        case RenderPassType::GPUCull:
-                        {
-                            info._pDefaultShader = &EngineDefaultAssets::_shaderGPUCull;
-                            info._flags          = Flag::kCompute | Flag::kRequiresGPUCulling | Flag::kGPUAssertTarget;
-                            break;
-                        }
-                        case RenderPassType::InstanceAnimation:
-                        {
-                            // 인스턴스 버퍼 UAV 하나만 쓰므로 컬링 능력(간접 인자 제약)과 무관하다.
-                            info._pDefaultShader = &EngineDefaultAssets::_shaderInstanceAnimation;
-                            info._flags          = Flag::kCompute;
-                            break;
-                        }
-                        case RenderPassType::InstanceSort:
-                        {
-                            // 컬링이 압축한 가시 목록을 정렬하므로 컬링과 같은 조건이다.
-                            info._pDefaultShader = &EngineDefaultAssets::_shaderInstanceSort;
-                            info._flags          = Flag::kCompute | Flag::kRequiresGPUCulling;
-                            break;
-                        }
-                        case RenderPassType::MeshMorph:
-                        {
-                            info._pDefaultShader = &EngineDefaultAssets::_shaderMeshMorph;
-                            info._flags          = Flag::kCompute | Flag::kGPUAssertTarget;
-                            break;
-                        }
-                        case RenderPassType::MeshSkin:
-                        {
-                            info._pDefaultShader = &EngineDefaultAssets::_shaderMeshSkin;
-                            info._flags          = Flag::kCompute;
-                            break;
-                        }
-                        case RenderPassType::LightGrid:
-                        {
-                            // 구조 버퍼 UAV 와 그룹 공유 메모리 원자 연산만 쓴다 — 간접 인자 능력과 무관하다(DX11 도 돈다).
-                            info._pDefaultShader = &EngineDefaultAssets::_shaderLightGrid;
-                            info._flags          = Flag::kCompute;
-                            break;
-                        }
-                        case RenderPassType::VFXSimulation:
-                        {
-                            // 입자 상태 · 렌더 입력은 구조 버퍼 UAV, 간접 인자는 따로 둔 버퍼(DX11 은 RAW UAV)라 구조 버퍼와 간접 인자 겸용 능력이 필요 없다(DX11 도 돈다).
-                            info._pDefaultShader = &EngineDefaultAssets::_shaderVFXSimulation;
-                            info._flags          = Flag::kCompute;
-                            break;
-                        }
-                        case RenderPassType::VFXMeshInstance:
-                        {
-                            // 인스턴스 버퍼 UAV 에 쓰고 구조 버퍼만 읽는다 — 간접 인자 능력과 무관하다(컬링이 없는 DX11 은 CPU 개수로 모두 그린다).
-                            info._pDefaultShader = &EngineDefaultAssets::_shaderVFXMeshInstance;
-                            info._flags          = Flag::kCompute;
-                            break;
-                        }
-                        case RenderPassType::DepthHistory:
-                        {
-                            // 깊이 없이 R32 실수 RT 하나에 풀스크린 삼각형을 그린다(입력은 C++ 가 직접 건다 — 파이프라인 패스가 아니라 입력 계약이 없다).
-                            info._pDefaultShader   = &EngineDefaultAssets::_shaderDepthHistory;
-                            info._pColorFormat     = kArrDepthHistoryFormat;
-                            info._colorTargetCount = 1;
-                            break;
-                        }
-                        case RenderPassType::AutoExposure:
-                        {
-                            // 1x1 R32 실수 RT 하나에 적응한 EV 를 쓴다. 입력(원본 · 지난 EV)은 C++ 가 루트 상수 · 엔진 슬롯으로 직접 건다(깊이 히스토리와 같은 모양).
-                            info._pDefaultShader   = &EngineDefaultAssets::_shaderAutoExposure;
-                            info._pColorFormat     = kArrAutoExposureFormat;
-                            info._colorTargetCount = 1;
-                            break;
-                        }
-                        case RenderPassType::UpscaleEasu:
-                        {
-                            // 뷰포트 크기 중간 RT(RGBA8 — 톤맵한 [0,1] 색) 하나에 그린다. 원본은 C++ 가 루트 상수 · 엔진 슬롯으로 건다.
-                            info._pDefaultShader   = &EngineDefaultAssets::_shaderUpscale;
-                            info._pColorFormat     = kArrUpscaleIntermediateFormat;
-                            info._colorTargetCount = 1;
-                            break;
-                        }
-                        case RenderPassType::UpscaleRcas:
-                        {
-                            // Present 대상에 그리는 출력 패스다 — 포맷마다 PSO 를 만든다(collectOutputPSOJobs). 엔진 PSO 는 쓰지 않는다.
-                            info._pDefaultShader   = &EngineDefaultAssets::_shaderUpscale;
-                            info._pPassDefine      = kPassFSRRcasDefine;
-                            info._colorTargetCount = 1;
-                            info._flags            = Flag::kOutputPass;
-                            break;
-                        }
-                        case RenderPassType::OcclusionTiles:
-                        {
-                            // 컬링이 읽는 타일이라 컬링과 같은 조건이다(간접 인자 능력 — DX11 은 컬링이 없다). 깊이 히스토리는 RW 텍스처로 읽는다.
-                            info._pDefaultShader = &EngineDefaultAssets::_shaderOcclusionTiles;
-                            info._flags          = Flag::kCompute | Flag::kRequiresGPUCulling;
-                            break;
-                        }
-                        case RenderPassType::VolumetricFog:
-                        {
-                            // 구조 버퍼 UAV 와 읽기 버퍼만 쓴다 — 간접 인자 능력과 무관하다(DX11 도 돈다).
-                            info._pDefaultShader = &EngineDefaultAssets::_shaderVolumetricFog;
-                            info._flags          = Flag::kCompute;
-                            break;
-                        }
-                        case RenderPassType::CanvasMarker:
-                        {
-                            // 구조 버퍼 UAV 와 읽기 버퍼만 쓴다 — 간접 인자 능력과 무관하다(컴퓨트 능력이 없는 백엔드는 렌더러가 마커 입력을 오류로 거절한다).
-                            info._pDefaultShader = &EngineDefaultAssets::_shaderCanvasMarker;
-                            info._flags          = Flag::kCompute | Flag::kGPUAssertTarget;
-                            break;
-                        }
-                        case RenderPassType::NanCheck:
-                        {
-                            // 부동소수 출력 텍스처를 엔진 텍스처(bindless)로 읽는 컴퓨트 — 샘플 텍스처를 컴퓨트에서 읽을 수 없는 에뮬 백엔드(DX11 · GL)에는 만들지 않는다.
-                            info._pDefaultShader = &EngineDefaultAssets::_shaderNanCheck;
-                            info._flags          = Flag::kCompute | Flag::kDiagnostic | Flag::kRequiresNativeBindless;
-                            break;
-                        }
-                        case RenderPassType::ProbeUpdate:
-                        {
-                            // 구조 버퍼 UAV 와 읽기 버퍼만 쓴다 — 간접 인자 능력과 무관하다(DX11 도 돈다).
-                            info._pDefaultShader = &EngineDefaultAssets::_shaderProbeUpdate;
-                            info._flags          = Flag::kCompute;
-                            break;
-                        }
+                        break;
                     }
-                        return info;
-                }
-
-                struct InfoTable
-                {
-                    RenderPassTypeInfo _arrRow[kRenderPassTypeCount];
-                };
-
-                static constexpr InfoTable makeTable()
-                {
-                    InfoTable table{};
-                    for ( uint32 index = 0; index < kRenderPassTypeCount; ++index )
+                    case RenderPassType::ScreenSpaceReflection:
                     {
-                        table._arrRow[index] = makeInfo( static_cast<RenderPassType>( index ) );
+                        // 화면 공간 반사 — 장면 색 사본 · 깊이 · G버퍼 노멀(· 머티리얼)을 읽어 선언한 컬러 출력(장면 색) 위에 프리멀티플라이 블렌드한다(안개와 같은 모양).
+                        // 전용 실행이 세기 0 · 후처리를 끈 뷰 · 표면 값 보기에서 그리지 않는다. 출력이 장면 색이라 원본을 가리키는 끄기(kBypassesToSource)는 쓸 수 없다.
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderScreenSpaceReflection;
+                        info._inputContract  = makeContract( { Role::SceneColorCopy, Role::SceneDepth, Role::GBufferNormal }, { Role::GBufferMaterial } );
+                        info._flags          = Flag::kBlend | Flag::kPremultipliedAlpha | Flag::kHasInputContract | Flag::kDrawsDeclaredColor;
+                        break;
                     }
-                    return table;
-                }
-
-                /** @brief 줄 사이의 규칙을 검사합니다. 하나라도 어기면 false 입니다(static_assert 가 봅니다). */
-                static constexpr bool isTableConsistent( const InfoTable& table )
-                {
-                    for ( uint32 index = 0; index < kRenderPassTypeCount; ++index )
+                    case RenderPassType::MotionBlur:
                     {
-                        const RenderPassTypeInfo& row = table._arrRow[index];
-                        if ( static_cast<uint32>( row._type ) != index )
-                            return false;
-                        // 깊이만 쓰는 패스는 컬러 RT 가 없다. 고정 포맷은 RT 수만큼 있어야 한다.
-                        if ( row.hasFlag( Flag::kDepthOnly ) && row._colorTargetCount != 0 )
-                            return false;
-                        if ( row._pColorFormat != nullptr && row._colorTargetCount == 0 )
-                            return false;
-                        // 머티리얼 셰이더 · 뷰 모드 · 반투명 배치는 씬 메시를 그리는 패스의 성질이다.
-                        const uint32 kMeshOnlyFlags = Flag::kUsesMaterialShader | Flag::kAppliesViewMode | Flag::kDrawsTransparentBatch | Flag::kDepthOnly | Flag::kCullFront | Flag::kMaterialFixedState | Flag::kMaterialBlend |
-                                                      Flag::kWritesVelocity;
-                        if ( row.hasFlag( kMeshOnlyFlags ) && row.hasFlag( Flag::kDrawsSceneMeshes ) == false )
-                            return false;
-                        // 머티리얼로 배치를 거르는 것도 씬 메시 패스의 성질이다.
-                        const bool bFiltersByMaterial = row._pRequiredMaterialDefine != nullptr || row._pExcludedMaterialDefine != nullptr;
-                        if ( bFiltersByMaterial && row.hasFlag( Flag::kDrawsSceneMeshes ) == false )
-                            return false;
-                        // 일반 풀스크린 실행은 선언한 입력을 계약대로 건다.
-                        if ( row.hasFlag( Flag::kGenericFullscreen ) && row.hasFlag( Flag::kHasInputContract ) == false )
-                            return false;
-                        // 꺼진 패스를 기록하지 않는 것은 실행이 출력 이름의 연결(`isForwarded`)을 볼 때만 된다 — 일반 풀스크린 실행과 TAA 실행(executeTAAPass)이 본다.
-                        // TAA 는 출력이 원본을 가리키는 길만 있다(출력이 없으면 셋업이 읽는 기록 형식이 사라진다).
-                        const bool bExecutorHonorsSelection =
-                            row.hasFlag( Flag::kGenericFullscreen ) || ( row._type == RenderPassType::TAA && row.hasFlag( Flag::kBypassesToSource ) );
-                        if ( row.hasFlag( Flag::kSkipsWithoutPostProcess ) && bExecutorHonorsSelection == false )
-                            return false;
-                        // 건너뛸 수 있는 효과는 빠지는 방법(원본을 가리킴 · 출력 없음)이 정확히 하나다. 그 방법이 있는 패스는 건너뛸 수 있는 효과다(`_minPostQuality` 를 받는다).
-                        const bool bBypasses = row.hasFlag( Flag::kBypassesToSource );
-                        const bool bOmitted  = row.hasFlag( Flag::kOmittedWhenOff );
-                        if ( row.hasFlag( Flag::kSkipsWithoutPostProcess ) != ( bBypasses || bOmitted ) || ( bBypasses && bOmitted ) )
-                            return false;
-                        // 컴퓨트 패스는 파이프라인 XML 에 나오지 않고 그래픽스 성질을 갖지 않는다.
-                        if ( row.hasFlag( Flag::kCompute ) && ( isPipelinePassType( row._type ) || row.hasFlag( Flag::kDrawsSceneMeshes | Flag::kGenericFullscreen ) ) )
-                            return false;
-                        if ( row.hasFlag( Flag::kRequiresGPUCulling ) && row.hasFlag( Flag::kCompute ) == false )
-                            return false;
-                        // 화면 속도는 깊이와 같은 픽셀의 값이다 — 깊이를 쓰는 불투명 패스(내부 슬롯은 대신 그리는 패스가 깊이를 쓴다)만 쓴다.
-                        const bool bDepthOwner = row.hasFlag( Flag::kDepthWrite ) || row._targetSourceType != RenderPassType::Invalid;
-                        if ( row.hasFlag( Flag::kWritesVelocity ) && ( bDepthOwner == false || row.hasFlag( Flag::kDrawsTransparentBatch ) ) )
-                            return false;
+                        // 원본 색 · 장면 깊이 · 화면 속도를 읽는 효과 패스다. 꺼지면(후처리를 끈 뷰 · 품질 · gv_motionBlur · 컷 · 카메라와 물체가 모두 서 있음) 패스를 기록하지 않고 출력이 원본을 가리킨다(kBypassesToSource).
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderMotionBlur;
+                        info._inputContract  = makeContract( { Role::SourceColor, Role::SceneDepth, Role::Velocity }, {} );
+                        info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess | Flag::kBypassesToSource;
+                        break;
                     }
-                    return true;
+                    case RenderPassType::Compute:
+                    {
+                        // 셰이더는 XML 이 고른다 — 표의 기본값이 없고, 첨부를 RW 텍스처로 묶는 전용 실행이다(`FramePassExecutor::executeComputePass`).
+                        info._flags = Flag::kPipelineCompute | Flag::kDrawsDeclaredColor;
+                        break;
+                    }
+                    case RenderPassType::ForwardOpaqueNoDepthWrite:
+                    {
+                        // 깊이 프리패스가 돈 프레임의 불투명 패스다. 깊이는 테스트만 하고, 그리는 대상은 ForwardOpaque 패스의 선언이다.
+                        info._pDefaultShader   = &EngineDefaultAssets::_shaderForwardLit;
+                        info._flags            = Flag::kDepthTest | Flag::kMaterialFixedState | Flag::kMaterialBlend | Flag::kWritesVelocity | kSceneColorPassFlags;
+                        info._targetSourceType = RenderPassType::ForwardOpaque;
+                        break;
+                    }
+                    case RenderPassType::GPUCull:
+                    {
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderGPUCull;
+                        info._flags          = Flag::kCompute | Flag::kRequiresGPUCulling | Flag::kGPUAssertTarget;
+                        break;
+                    }
+                    case RenderPassType::InstanceAnimation:
+                    {
+                        // 인스턴스 버퍼 UAV 하나만 쓰므로 컬링 능력(간접 인자 제약)과 무관하다.
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderInstanceAnimation;
+                        info._flags          = Flag::kCompute;
+                        break;
+                    }
+                    case RenderPassType::InstanceSort:
+                    {
+                        // 컬링이 압축한 가시 목록을 정렬하므로 컬링과 같은 조건이다.
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderInstanceSort;
+                        info._flags          = Flag::kCompute | Flag::kRequiresGPUCulling;
+                        break;
+                    }
+                    case RenderPassType::MeshMorph:
+                    {
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderMeshMorph;
+                        info._flags          = Flag::kCompute | Flag::kGPUAssertTarget;
+                        break;
+                    }
+                    case RenderPassType::MeshSkin:
+                    {
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderMeshSkin;
+                        info._flags          = Flag::kCompute;
+                        break;
+                    }
+                    case RenderPassType::LightGrid:
+                    {
+                        // 구조 버퍼 UAV 와 그룹 공유 메모리 원자 연산만 쓴다 — 간접 인자 능력과 무관하다(DX11 도 돈다).
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderLightGrid;
+                        info._flags          = Flag::kCompute;
+                        break;
+                    }
+                    case RenderPassType::VFXSimulation:
+                    {
+                        // 입자 상태 · 렌더 입력은 구조 버퍼 UAV, 간접 인자는 따로 둔 버퍼(DX11 은 RAW UAV)라 구조 버퍼와 간접 인자 겸용 능력이 필요 없다(DX11 도 돈다).
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderVFXSimulation;
+                        info._flags          = Flag::kCompute;
+                        break;
+                    }
+                    case RenderPassType::VFXMeshInstance:
+                    {
+                        // 인스턴스 버퍼 UAV 에 쓰고 구조 버퍼만 읽는다 — 간접 인자 능력과 무관하다(컬링이 없는 DX11 은 CPU 개수로 모두 그린다).
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderVFXMeshInstance;
+                        info._flags          = Flag::kCompute;
+                        break;
+                    }
+                    case RenderPassType::DepthHistory:
+                    {
+                        // 깊이 없이 R32 실수 RT 하나에 풀스크린 삼각형을 그린다(입력은 C++ 가 직접 건다 — 파이프라인 패스가 아니라 입력 계약이 없다).
+                        info._pDefaultShader   = &EngineDefaultAssets::_shaderDepthHistory;
+                        info._pColorFormat     = kArrDepthHistoryFormat;
+                        info._colorTargetCount = 1;
+                        break;
+                    }
+                    case RenderPassType::AutoExposure:
+                    {
+                        // 1x1 R32 실수 RT 하나에 적응한 EV 를 쓴다. 입력(원본 · 지난 EV)은 C++ 가 루트 상수 · 엔진 슬롯으로 직접 건다(깊이 히스토리와 같은 모양).
+                        info._pDefaultShader   = &EngineDefaultAssets::_shaderAutoExposure;
+                        info._pColorFormat     = kArrAutoExposureFormat;
+                        info._colorTargetCount = 1;
+                        break;
+                    }
+                    case RenderPassType::UpscaleEasu:
+                    {
+                        // 뷰포트 크기 중간 RT(RGBA8 — 톤맵한 [0,1] 색) 하나에 그린다. 원본은 C++ 가 루트 상수 · 엔진 슬롯으로 건다.
+                        info._pDefaultShader   = &EngineDefaultAssets::_shaderUpscale;
+                        info._pColorFormat     = kArrUpscaleIntermediateFormat;
+                        info._colorTargetCount = 1;
+                        break;
+                    }
+                    case RenderPassType::UpscaleRcas:
+                    {
+                        // Present 대상에 그리는 출력 패스다 — 포맷마다 PSO 를 만든다(collectOutputPSOJobs). 엔진 PSO 는 쓰지 않는다.
+                        info._pDefaultShader   = &EngineDefaultAssets::_shaderUpscale;
+                        info._pPassDefine      = kPassFSRRcasDefine;
+                        info._colorTargetCount = 1;
+                        info._flags            = Flag::kOutputPass;
+                        break;
+                    }
+                    case RenderPassType::OcclusionTiles:
+                    {
+                        // 컬링이 읽는 타일이라 컬링과 같은 조건이다(간접 인자 능력 — DX11 은 컬링이 없다). 깊이 히스토리는 RW 텍스처로 읽는다.
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderOcclusionTiles;
+                        info._flags          = Flag::kCompute | Flag::kRequiresGPUCulling;
+                        break;
+                    }
+                    case RenderPassType::VolumetricFog:
+                    {
+                        // 구조 버퍼 UAV 와 읽기 버퍼만 쓴다 — 간접 인자 능력과 무관하다(DX11 도 돈다).
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderVolumetricFog;
+                        info._flags          = Flag::kCompute;
+                        break;
+                    }
+                    case RenderPassType::CanvasMarker:
+                    {
+                        // 구조 버퍼 UAV 와 읽기 버퍼만 쓴다 — 간접 인자 능력과 무관하다(컴퓨트 능력이 없는 백엔드는 렌더러가 마커 입력을 오류로 거절한다).
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderCanvasMarker;
+                        info._flags          = Flag::kCompute | Flag::kGPUAssertTarget;
+                        break;
+                    }
+                    case RenderPassType::ShadowCacheRestore:
+                    {
+                        // 그림자 아틀라스(깊이만)에 그리는 풀스크린 — 깊이 테스트(지운 1 위라 늘 통과) · 쓰기를 하고 컬러 RT 는 없다. 입력(캐시 층)은 C++ 가 ShadowMap 역할 이름으로 직접 건다.
+                        info._pDefaultShader   = &EngineDefaultAssets::_shaderShadowCacheRestore;
+                        info._colorTargetCount = 0;
+                        info._flags            = Flag::kDepthTest | Flag::kDepthWrite | Flag::kWritesPixelDepth;
+                        break;
+                    }
+                    case RenderPassType::NanCheck:
+                    {
+                        // 부동소수 출력 텍스처를 엔진 텍스처(bindless)로 읽는 컴퓨트 — 샘플 텍스처를 컴퓨트에서 읽을 수 없는 에뮬 백엔드(DX11 · GL)에는 만들지 않는다.
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderNanCheck;
+                        info._flags          = Flag::kCompute | Flag::kDiagnostic | Flag::kRequiresNativeBindless;
+                        break;
+                    }
+                    case RenderPassType::ProbeUpdate:
+                    {
+                        // 구조 버퍼 UAV 와 읽기 버퍼만 쓴다 — 간접 인자 능력과 무관하다(DX11 도 돈다).
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderProbeUpdate;
+                        info._flags          = Flag::kCompute;
+                        break;
+                    }
                 }
+                return info;
+            }
+
+            struct InfoTable
+            {
+                RenderPassTypeInfo _arrRow[kRenderPassTypeCount];
             };
 
-            constexpr RenderPassTypeInfoInternal::InfoTable s_infoTable = RenderPassTypeInfoInternal::makeTable();
-            static_assert( RenderPassTypeInfoInternal::isTableConsistent( s_infoTable ), "RenderPassTypeInfo 표의 줄이 규칙을 어긴다" );
-        } // namespace
-
-        const RenderPassTypeInfo&
-        getRenderPassTypeInfo( RenderPassType type )
-        {
-            const uint32 index = static_cast<uint32>( type );
-            return index < kRenderPassTypeCount ? s_infoTable._arrRow[index] : s_infoTable._arrRow[0];
-        }
-
-        bool passWritesVelocity( RenderPassType type, const RenderGraphPassDesc* pTargetDesc )
-        {
-            if ( pTargetDesc == nullptr || getRenderPassTypeInfo( type ).hasFlag( RenderPassTraitFlag::kWritesVelocity ) == false )
-                return false;
-            return VectorUtil::containsIf( pTargetDesc->_listResolvedColorOutput, []( const RenderGraphPassDesc::ResolvedAttachment& output )
-            { return static_cast<RenderPassInputRole>( output._role ) == RenderPassInputRole::Velocity; } );
-        }
-
-        RenderPassShaderSelection selectRenderPassShader( RenderPassType type, const RenderGraphPassDesc* pPassDesc, const RenderGraphPassDesc* pTargetDesc,
-                                                          const EngineDefaultAssets& engineDefaultAssets )
-        {
-            const RenderPassTypeInfo& info = getRenderPassTypeInfo( type );
-
-            RenderPassShaderSelection selection;
-            if ( pPassDesc != nullptr && pPassDesc->_shaderPath.empty() == false )
-                selection._shaderPath = pPassDesc->_shaderPath;
-            else if ( info._pDefaultShader != nullptr )
-                selection._shaderPath = ( engineDefaultAssets.*info._pDefaultShader ).get();
-
-            if ( pPassDesc != nullptr )
-                selection._listDefine = pPassDesc->_listPermutation;
-            if ( info._pPassDefine != nullptr )
+            static constexpr InfoTable makeTable()
             {
-                const string passDefine{ info._pPassDefine };
-                if ( VectorUtil::contains( selection._listDefine, passDefine ) == false )
-                    selection._listDefine.push_back( passDefine );
+                InfoTable table{};
+                for ( uint32 index = 0; index < kRenderPassTypeCount; ++index )
+                {
+                    table._arrRow[index] = makeInfo( static_cast<RenderPassType>( index ) );
+                }
+                return table;
             }
-            // 화면 속도 — 출력 선언(데이터)이 정한다. 내부 슬롯은 대신 그리는 패스의 선언을 본다(컬러 포맷과 같은 근거).
-            if ( passWritesVelocity( type, pTargetDesc ) )
-                selection._listDefine.push_back( kPassVelocityDefine );
-            // 셰이더 assert 변형 — 요구되지 않으면(Shipping 은 늘) define 도 PSO 변형도 없다.
-            if ( info.hasFlag( RenderPassTraitFlag::kGPUAssertTarget ) && GPUAssertMonitor::isRequested() )
-                selection._listDefine.push_back( kGPUAssertDefine );
-            return selection;
-        }
 
-        bool isDiagnosticPassRequested( RenderPassType type )
-        {
-            const RenderPassTypeInfo& info = getRenderPassTypeInfo( type );
-            if ( info.hasFlag( RenderPassTraitFlag::kDiagnostic ) == false )
-                return false;
-            switch ( type )
+            /** @brief 줄 사이의 규칙을 검사합니다. 하나라도 어기면 false 입니다(static_assert 가 봅니다). */
+            static constexpr bool isTableConsistent( const InfoTable& table )
             {
-                case RenderPassType::NanCheck:
-                    return GPUNanCheck::isRequested();
-                default:
-                    return false;
-            }
-        }
-
-        bool passAppliesTonemap( const RenderGraphPassDesc& passDesc )
-        {
-            if ( passDesc._type == RenderPassType::Tonemap )
+                for ( uint32 index = 0; index < kRenderPassTypeCount; ++index )
+                {
+                    const RenderPassTypeInfo& row = table._arrRow[index];
+                    if ( static_cast<uint32>( row._type ) != index )
+                        return false;
+                    // 깊이만 쓰는 패스는 컬러 RT 가 없다. 고정 포맷은 RT 수만큼 있어야 한다.
+                    if ( row.hasFlag( Flag::kDepthOnly ) && row._colorTargetCount != 0 )
+                        return false;
+                    if ( row._pColorFormat != nullptr && row._colorTargetCount == 0 )
+                        return false;
+                    // 머티리얼 셰이더 · 뷰 모드 · 반투명 배치는 씬 메시를 그리는 패스의 성질이다.
+                    const uint32 kMeshOnlyFlags = Flag::kUsesMaterialShader | Flag::kAppliesViewMode | Flag::kDrawsTransparentBatch | Flag::kDepthOnly | Flag::kCullFront | Flag::kMaterialFixedState | Flag::kMaterialBlend |
+                                                  Flag::kWritesVelocity;
+                    if ( row.hasFlag( kMeshOnlyFlags ) && row.hasFlag( Flag::kDrawsSceneMeshes ) == false )
+                        return false;
+                    // 머티리얼로 배치를 거르는 것도 씬 메시 패스의 성질이다.
+                    const bool bFiltersByMaterial = row._pRequiredMaterialDefine != nullptr || row._pExcludedMaterialDefine != nullptr;
+                    if ( bFiltersByMaterial && row.hasFlag( Flag::kDrawsSceneMeshes ) == false )
+                        return false;
+                    // 일반 풀스크린 실행은 선언한 입력을 계약대로 건다.
+                    if ( row.hasFlag( Flag::kGenericFullscreen ) && row.hasFlag( Flag::kHasInputContract ) == false )
+                        return false;
+                    // 꺼진 패스를 기록하지 않는 것은 실행이 출력 이름의 연결(`isForwarded`)을 볼 때만 된다 — 일반 풀스크린 실행과 TAA 실행(executeTAAPass)이 본다.
+                    // TAA 는 출력이 원본을 가리키는 길만 있다(출력이 없으면 셋업이 읽는 기록 형식이 사라진다).
+                    const bool bExecutorHonorsSelection =
+                        row.hasFlag( Flag::kGenericFullscreen ) || ( row._type == RenderPassType::TAA && row.hasFlag( Flag::kBypassesToSource ) );
+                    if ( row.hasFlag( Flag::kSkipsWithoutPostProcess ) && bExecutorHonorsSelection == false )
+                        return false;
+                    // 건너뛸 수 있는 효과는 빠지는 방법(원본을 가리킴 · 출력 없음)이 정확히 하나다. 그 방법이 있는 패스는 건너뛸 수 있는 효과다(`_minPostQuality` 를 받는다).
+                    const bool bBypasses = row.hasFlag( Flag::kBypassesToSource );
+                    const bool bOmitted  = row.hasFlag( Flag::kOmittedWhenOff );
+                    if ( row.hasFlag( Flag::kSkipsWithoutPostProcess ) != ( bBypasses || bOmitted ) || ( bBypasses && bOmitted ) )
+                        return false;
+                    // 컴퓨트 패스는 파이프라인 XML 에 나오지 않고 그래픽스 성질을 갖지 않는다.
+                    if ( row.hasFlag( Flag::kCompute ) && ( isPipelinePassType( row._type ) || row.hasFlag( Flag::kDrawsSceneMeshes | Flag::kGenericFullscreen ) ) )
+                        return false;
+                    if ( row.hasFlag( Flag::kRequiresGPUCulling ) && row.hasFlag( Flag::kCompute ) == false )
+                        return false;
+                    // 화면 속도는 깊이와 같은 픽셀의 값이다 — 깊이를 쓰는 불투명 패스(내부 슬롯은 대신 그리는 패스가 깊이를 쓴다)만 쓴다.
+                    const bool bDepthOwner = row.hasFlag( Flag::kDepthWrite ) || row._targetSourceType != RenderPassType::Invalid;
+                    if ( row.hasFlag( Flag::kWritesVelocity ) && ( bDepthOwner == false || row.hasFlag( Flag::kDrawsTransparentBatch ) ) )
+                        return false;
+                }
                 return true;
-            if ( passDesc._type != RenderPassType::Present )
-                return false;
-            const string_view define{ kPostTonemapDefine };
-            for ( const string& permutation : passDesc._listPermutation )
-            {
-                // "이름" 또는 "이름=값" — 이름 부분만 비교한다(post_chain.hlsl 은 `defined()` 로 본다).
-                const string_view name = string_view{ permutation }.substr( 0, permutation.find( '=' ) );
-                if ( name == define )
-                    return true;
             }
+        };
+
+        constexpr RenderPassTypeInfoInternal::InfoTable s_infoTable = RenderPassTypeInfoInternal::makeTable();
+        static_assert( RenderPassTypeInfoInternal::isTableConsistent( s_infoTable ), "RenderPassTypeInfo 표의 줄이 규칙을 어긴다" );
+    } // namespace
+
+    const RenderPassTypeInfo&
+    getRenderPassTypeInfo( RenderPassType type )
+    {
+        const uint32 index = static_cast<uint32>( type );
+        return index < kRenderPassTypeCount ? s_infoTable._arrRow[index] : s_infoTable._arrRow[0];
+    }
+
+    bool passWritesVelocity( RenderPassType type, const RenderGraphPassDesc* pTargetDesc )
+    {
+        if ( pTargetDesc == nullptr || getRenderPassTypeInfo( type ).hasFlag( RenderPassTraitFlag::kWritesVelocity ) == false )
             return false;
+        return VectorUtil::containsIf( pTargetDesc->_listResolvedColorOutput, []( const RenderGraphPassDesc::ResolvedAttachment& output )
+        { return static_cast<RenderPassInputRole>( output._role ) == RenderPassInputRole::Velocity; } );
+    }
+
+    RenderPassShaderSelection selectRenderPassShader( RenderPassType type, const RenderGraphPassDesc* pPassDesc, const RenderGraphPassDesc* pTargetDesc,
+                                                      const EngineDefaultAssets& engineDefaultAssets )
+    {
+        const RenderPassTypeInfo& info = getRenderPassTypeInfo( type );
+
+        RenderPassShaderSelection selection;
+        if ( pPassDesc != nullptr && pPassDesc->_shaderPath.empty() == false )
+            selection._shaderPath = pPassDesc->_shaderPath;
+        else if ( info._pDefaultShader != nullptr )
+            selection._shaderPath = ( engineDefaultAssets.*info._pDefaultShader ).get();
+
+        if ( pPassDesc != nullptr )
+            selection._listDefine = pPassDesc->_listPermutation;
+        if ( info._pPassDefine != nullptr )
+        {
+            const string passDefine{ info._pPassDefine };
+            if ( VectorUtil::contains( selection._listDefine, passDefine ) == false )
+                selection._listDefine.push_back( passDefine );
         }
-    } // namespace sw
+        // 화면 속도 — 출력 선언(데이터)이 정한다. 내부 슬롯은 대신 그리는 패스의 선언을 본다(컬러 포맷과 같은 근거).
+        if ( passWritesVelocity( type, pTargetDesc ) )
+            selection._listDefine.push_back( kPassVelocityDefine );
+        // 셰이더 assert 변형 — 요구되지 않으면(Shipping 은 늘) define 도 PSO 변형도 없다.
+        if ( info.hasFlag( RenderPassTraitFlag::kGPUAssertTarget ) && GPUAssertMonitor::isRequested() )
+            selection._listDefine.push_back( kGPUAssertDefine );
+        return selection;
+    }
+
+    bool isDiagnosticPassRequested( RenderPassType type )
+    {
+        const RenderPassTypeInfo& info = getRenderPassTypeInfo( type );
+        if ( info.hasFlag( RenderPassTraitFlag::kDiagnostic ) == false )
+            return false;
+        switch ( type )
+        {
+            case RenderPassType::NanCheck:
+                return GPUNanCheck::isRequested();
+            default:
+                return false;
+        }
+    }
+
+    bool passAppliesTonemap( const RenderGraphPassDesc& passDesc )
+    {
+        if ( passDesc._type == RenderPassType::Tonemap )
+            return true;
+        if ( passDesc._type != RenderPassType::Present )
+            return false;
+        const string_view define{ kPostTonemapDefine };
+        for ( const string& permutation : passDesc._listPermutation )
+        {
+            // "이름" 또는 "이름=값" — 이름 부분만 비교한다(post_chain.hlsl 은 `defined()` 로 본다).
+            const string_view name = string_view{ permutation }.substr( 0, permutation.find( '=' ) );
+            if ( name == define )
+                return true;
+        }
+        return false;
+    }
+} // namespace sw

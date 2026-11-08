@@ -142,8 +142,9 @@ namespace sw
             /**
              * @brief 이 뷰에서 이번 프레임에 그 효과(`kSkipsWithoutPostProcess`)가 꺼졌으면 true 입니다. 꺼진 효과는 돌려도 원본(SSAO 는 가림 없음)과 같은 그림이다.
              * @param bMotionStill 기록을 버리는 프레임(컷 — 언리얼도 컷에서 모션 블러를 끈다)이거나, 이번 뷰-투영이 지난번 것과 같고 물체도 움직이지 않았다 — 화면 속도가 모두 0 이다.
+             * @param bContactShadows 이번 프레임에 접촉 그림자를 받는 빛이 있다(`FrameShadowData::hasContactShadows`) — 없으면 접촉 그림자 패스는 꺼진 효과다.
              */
-            static bool isEffectOff( const RenderGraphPassDesc& pass, const RenderViewSettings& settings, bool bMotionStill )
+            static bool isEffectOff( const RenderGraphPassDesc& pass, const RenderViewSettings& settings, bool bMotionStill, bool bContactShadows )
             {
                 if ( settings.usesPostProcess() == false || pass._minPostQuality > static_cast<int32>( gv_postQuality ) )
                     return true;
@@ -151,6 +152,8 @@ namespace sw
                     return settings._depthOfField.hasDepthOfField() == false || settings._projectionScaleY <= 0.0f; // 핀홀(조리개 0) · 직교
                 if ( pass._type == RenderPassType::MotionBlur )
                     return static_cast<bool>( gv_motionBlur ) == false || bMotionStill;
+                if ( pass._type == RenderPassType::ContactShadow )
+                    return bContactShadows == false; // 접촉 그림자를 켠 빛이 없는 프레임 — 마스크가 모두 1 이다
                 return false;
             }
         };
@@ -341,7 +344,7 @@ namespace sw
         view._transientPool.release( _pDevice );
     }
 
-    FrameViewResources::PassSelectionResult FrameViewResources::applyViewPassSelection( FrameViewTarget& view, const float4x4& viewProj, bool bObjectMotion )
+    FrameViewResources::PassSelectionResult FrameViewResources::applyViewPassSelection( FrameViewTarget& view, const float4x4& viewProj, bool bObjectMotion, bool bContactShadows )
     {
         using Internal = FrameViewResourcesInternal;
         // 모션 블러의 속도는 카메라(지난 뷰-투영과의 차이)와 물체(화면 속도)다. 컷이거나 둘 다 서 있으면 모든 픽셀이 원본이다(motion_blur.hlsl).
@@ -394,7 +397,7 @@ namespace sw
                 continue;
             }
             const RenderPassTypeInfo& info          = getRenderPassTypeInfo( pass._type );
-            const bool                bOff          = info.hasFlag( RenderPassTraitFlag::kSkipsWithoutPostProcess ) && Internal::isEffectOff( pass, view._settings, bMotionStill );
+            const bool                bOff          = info.hasFlag( RenderPassTraitFlag::kSkipsWithoutPostProcess ) && Internal::isEffectOff( pass, view._settings, bMotionStill, bContactShadows );
             const bool                bOutputNeeded = VectorUtil::containsIf( pass._listResolvedColorOutput, [&]( const RenderGraphPassDesc::ResolvedAttachment& output )
                            { return Internal::isNeeded( listAttachment, output._attachment, listNeeded ); } );
             const hashed_string*      pSource       = Internal::findSource( pass );

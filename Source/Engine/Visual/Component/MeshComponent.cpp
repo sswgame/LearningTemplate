@@ -53,6 +53,7 @@ namespace sw
         , _bFirstPersonView{ SW_FALSE }
         , _bAwaitingAppearance{ SW_FALSE }
         , _bAppearOnTeleport{ SW_FALSE }
+        , _bStatic{ SW_FALSE }
         , _reserved{ 0 }
     {
         // 월드가 바뀌면 트랜스폼 칸의 프리미티브 번호로 렌더 더티가 찍힌다(`ScenePrimitive::setPrimitiveIndex`). 훅은 받지 않는다.
@@ -430,8 +431,11 @@ namespace sw
         static const hashed_string s_sectionName( "_sectionName" );
         if ( propertyName == s_materialPathName || propertyName == s_meshIDName )
             resolveRenderAssets();
+        static const hashed_string s_staticName( "_bStatic" );
         if ( propertyName == s_sectionName )
             validateSectionName();
+        if ( propertyName == s_staticName && _pPrimitiveRegistry != nullptr )
+            _pPrimitiveRegistry->markSetDirty(); // setStatic 과 같은 까닭
         markRenderStateDirty();
     }
 
@@ -536,6 +540,18 @@ namespace sw
             return;
         _sortKey = sortKey;
         markRenderStateDirty();
+    }
+
+    void MeshComponent::setStatic( bool bStatic )
+    {
+        const uint8 value = bStatic ? SW_TRUE : SW_FALSE;
+        if ( _bStatic == value )
+            return;
+        _bStatic = value;
+        markRenderStateDirty();
+        // 정적 집합이 바뀌었다 — 빌더가 정적 그림자 세대를 다시 잰다(움직이는 쪽으로 바뀐 메시는 더티 슬롯만으로는 보이지 않는다).
+        if ( _pPrimitiveRegistry != nullptr )
+            _pPrimitiveRegistry->markSetDirty();
     }
 
     void MeshComponent::setBlendMode( RHIBlendMode mode )

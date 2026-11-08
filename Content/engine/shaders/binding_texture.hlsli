@@ -207,7 +207,10 @@ SW_DECLARE_ENGINE_TEXTURE( 10 );
 SW_DECLARE_ENGINE_TEXTURE( 11 );
 SW_DECLARE_ENGINE_TEXTURE( 12 );
 SW_DECLARE_ENGINE_TEXTURE( 13 );
-        #if SW_ENGINE_TEXTURE_COUNT != 14
+SW_DECLARE_ENGINE_TEXTURE( 14 );
+SW_DECLARE_ENGINE_TEXTURE( 15 );
+SW_DECLARE_ENGINE_TEXTURE( 16 );
+        #if SW_ENGINE_TEXTURE_COUNT != 17
             #error "SW_ENGINE_TEXTURE_COUNT changed - match the declarations above and SW_ENGINE_TEXTURE_SWITCH"
         #endif
 
@@ -329,6 +332,15 @@ static float4 Bindless::sampleSlotWith( Texture2D slotTexture, uint samplerID, f
                 case 13u:                                                  \
                     OP( SW_ENGINE_TEXTURE( 13 ), SW_ENGINE_SAMPLER( 13 ) ) \
                     break;                                                 \
+                case 14u:                                                  \
+                    OP( SW_ENGINE_TEXTURE( 14 ), SW_ENGINE_SAMPLER( 14 ) ) \
+                    break;                                                 \
+                case 15u:                                                  \
+                    OP( SW_ENGINE_TEXTURE( 15 ), SW_ENGINE_SAMPLER( 15 ) ) \
+                    break;                                                 \
+                case 16u:                                                  \
+                    OP( SW_ENGINE_TEXTURE( 16 ), SW_ENGINE_SAMPLER( 16 ) ) \
+                    break;                                                 \
                 default:                                                   \
                     break;                                                 \
             }
@@ -381,6 +393,8 @@ static uint Bindless::emulatedSlot( uint index )
         return 14u;
     if ( index == SW_ENGINE_TEXTURE_INDEX_15 )
         return 15u;
+    if ( index == SW_ENGINE_TEXTURE_INDEX_16 )
+        return 16u;
     return kUnmappedEngineTextureSlot;
 }
 
@@ -977,6 +991,13 @@ static void PassTexture::sampleDepthCross( float2 uv, float2 texel, out float ou
     float4 gatherLo  = PassTexture::gatherDepthRed( uv - texel * 0.25f );
     outCenterDepth   = gatherHi.w;
     outNeighborDepth = float4( gatherHi.z, gatherHi.x, gatherLo.x, gatherLo.z );
+}
+/** @brief 접촉 그림자 마스크(채널 넷 = 접촉 그림자 빛 넷). 패스가 걸지 않았으면(파이프라인에 없음 · 켠 빛 없음 · 반투명) 가림 없음(1)이다. */
+static float4 PassTexture::sampleContactShadow( float2 uv )
+{
+    if ( g_ContactShadowIndex == kInvalidIndex )
+        return float4( 1, 1, 1, 1 );
+    return Bindless::sampleIndex( g_ContactShadowIndex, uv );
 }
 /** @brief SSAO 결과. 파이프라인에 SSAO 가 없으면(인덱스 무효) 가림 없음(1)이다 — 0 으로 폴백하면 화면이 검게 된다. */
 static float PassTexture::sampleAmbientOcclusion( float2 uv )

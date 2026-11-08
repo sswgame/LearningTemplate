@@ -98,6 +98,8 @@ namespace sw
         bool drawsBatchInPass( RenderPassType passType, const GPUMeshBatch& batch, const GPUMeshBatchBinding& binding ) const;
         /** @brief 지금 뷰가 화면 왜곡을 그리는지 — 씬에 왜곡 배치가 있고(`GPUScene::hasDistortionBatches`) 장면 색을 보이는 뷰 모드입니다. 왜곡 누적 · 적용 패스가 같은 판정을 본다. */
         bool drawsDistortionThisView() const;
+        /** @brief 그림자 캐시의 거르기(@p filter)가 이 배치를 그리게 하면 true 입니다(`GPUMeshBatch::_bStaticShadowCaster`). */
+        static bool drawsCasterBatch( ShadowCasterFilter filter, const GPUMeshBatch& batch );
 
         // ------------------------------------------------------------------------------
         // 3) 뷰 패스 상수(셋업의 주 시점 시드와 추가 뷰 기록이 함께 쓴다)
@@ -182,7 +184,8 @@ namespace sw
             RHIBufferHandle                                    _slotStream{ 0 }; ///< 인스턴스 슬롯 스트림(슬롯 1)
             RHIBufferHandle                                    _argsBuffer{ 0 }; ///< 이 패스의 뷰가 만든 간접 인자
             RenderPassType                                     _passType{};
-            uint32                                             _batchOffset{ 0 }; ///< 간접 인자 슬롯의 시작(불투명 다음 투명)
+            ShadowCasterFilter                                 _casterFilter{ ShadowCasterFilter::All }; ///< 그림자 캐시의 정적 · 움직임 거르기(패스 컨텍스트의 값)
+            uint32                                             _batchOffset{ 0 };                        ///< 간접 인자 슬롯의 시작(불투명 다음 투명)
             uint32                                             _particleSlotCursor{ 0 };
             uint32                                             _drawCallCount{ 0 };
             bool                                               _bMerge{ false }; ///< 연속 배치를 멀티 드로우 한 번으로 묶는지 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
@@ -263,8 +266,14 @@ namespace sw
         /**
          * @brief 그림자 패스 하나를 그립니다 — 지금 뷰의 캐스케이드 타일과 프레임의 점광 · 스폿 타일을 아틀라스의 자기 칸(뷰포트)에 그립니다.
          * @details 타일마다 `g_LightViewProj` 를 그 타일의 행렬로 바꿔 씬을 한 번씩 그린다. 컬링은 모든 타일을 덮는 상자(`ViewShadowData::_cullViewProj`) 하나다.
+         *          @p bCacheLayer 면 그림자 캐시가 캐시하는 점광 · 스폿 타일(`ShadowCache::getAction` 이 DrawAll 이 아닌 것)은 캐시 층을 옮기고 움직이는 배치만 그린다.
          */
-        void drawShadowTiles( FramePassContext& context, bool bTransparentBatch );
+        void drawShadowTiles( FramePassContext& context, bool bTransparentBatch, bool bCacheLayer );
+        /**
+         * @brief 그림자 캐시 층을 이번 프레임에 쓸 수 있게 합니다 — 층 텍스처를 아틀라스(@p atlasName) 형식 · 크기로 두고, 다시 그릴 프레임이면 정적 배치만 그리고, 셰이더 읽기로 돌린다.
+         * @details 아틀라스 렌더 패스를 열기 전에 부른다(다른 깊이 대상 · 상태 전환). 캐시를 쓰지 않는 프레임 · 복원 PSO 가 없을 때는 false 이고 그림자 패스는 지금처럼 다 그린다.
+         */
+        [[nodiscard]] bool prepareShadowCacheLayer( FramePassContext& context, const hashed_string& atlasName, bool bTransparentBatch );
         /** @brief 컬러(및 깊이) 패스를 시작합니다. 열지 못하면 false 를 반환하며, 그때는 그리지도 닫지도 않습니다(`beginColorPassMrt` 도 같습니다). */
         bool beginColorPass( FramePassContext& context, const hashed_string& colorName, const hashed_string& depthName, const float4& clearColor,
                              RHIRenderPassLoadOp colorLoad, RHIRenderPassLoadOp depthLoad );

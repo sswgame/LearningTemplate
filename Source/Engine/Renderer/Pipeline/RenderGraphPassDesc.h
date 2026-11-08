@@ -112,10 +112,20 @@ namespace sw
          *        비껴 읽은 자리의 깊이가 이 픽셀보다 가까우면(앞의 물체) 끌어오지 않는다. 왜곡 누적과 같은 조건으로 돌지 않는다 — 출력이 곧 왜곡 없는 장면 색이라 그대로 둔다(안개와 같은 전용 실행).
          */
         DistortionApply,
-        *@brief 화면 공간 반사입니다( screen_space_reflection.hlsl ).G버퍼 노멀로 반사한 광선을 장면 깊이에 대고 나아가 맞은 자리의 장면 색 사본(`SceneColorCopy`) 을 읽어* 선언한 컬러 출력( 장면 색 ) * *위에 프리멀티플라이 블렌드** 합니다 — 안개와 같은 모양이라 출력이 장면 색 그대로이고 반투명이 그 위에 그린다.디퍼드에서 하늘 · 사본 뒤,
-        반투명 앞에 둡니다.*뷰의 후처리 값 `_screenSpaceReflectionIntensity` 가 0 이거나 후처리를 끈 뷰 · 표면 값 보기에서는 그리지 않습니다( 전용 실행 : `FramePassExecutor::executeScreenSpaceReflectionPass`).*끄는 길이 "원본을 가리킴"(`kBypassesToSource`)이 아닌 까닭 : 그 길은 출력을 그 패스만 써야 하는데( 로드 검증 3 - 6 ),
-        반투명이 같은 장면 색에 그려야                                                                                                                                                                                                                                                                       한다.*/
-            ScreenSpaceReflection,
+        /**
+         * @brief 화면 공간 반사입니다(screen_space_reflection.hlsl). G버퍼 노멀로 반사한 광선을 장면 깊이에 대고 나아가 맞은 자리의 장면 색 사본(`SceneColorCopy`)을 읽어
+         *        선언한 컬러 출력(장면 색) **위에 프리멀티플라이 블렌드**합니다 — 안개와 같은 모양이라 출력이 장면 색 그대로이고 반투명이 그 위에 그린다. 디퍼드에서 하늘 · 사본 뒤, 반투명 앞에 둡니다.
+         *        뷰의 후처리 값 `_screenSpaceReflectionIntensity` 가 0 이거나 후처리를 끈 뷰 · 표면 값 보기에서는 그리지 않습니다(전용 실행: `FramePassExecutor::executeScreenSpaceReflectionPass`).
+         *        끄는 길이 "원본을 가리킴"(`kBypassesToSource`)이 아닌 까닭: 그 길은 출력을 그 패스만 써야 하는데(로드 검증 3-6), 반투명이 같은 장면 색에 그려야 한다.
+         */
+        ScreenSpaceReflection,
+        /**
+         * @brief 접촉 그림자입니다(contact_shadow.hlsl). 장면 깊이에서 복원한 점마다 접촉 그림자를 켠 빛(`LightShadowSettings::_contactShadowLength`, 넷까지) 쪽으로 화면 공간에서 짧게 걸어
+         *        깊이 버퍼에 가리는 것이 있으면 그 빛의 채널을 0 으로 쓴다(언리얼 Contact Shadows · 유니티 HDRP Contact Shadows 와 같은 자리). 그림자 맵 텍셀보다 작은 가림(발치 · 틈)을 잡는다.
+         *        출력은 RGBA 첨부 하나(채널 = 빛, `FrameShadowData::populateContactShadows`)이고 조명(Lighting) · 포워드 불투명이 선택 입력(`ContactShadow` 역할)으로 읽는다.
+         *        켠 빛이 없거나 후처리를 끈 뷰는 패스를 기록하지 않고 출력이 없다(`kOmittedWhenOff` — 읽는 쪽은 1). 장면 깊이를 다 쓴 뒤(디퍼드 G버퍼 · 포워드 깊이 프리패스) 조명 앞에 둔다.
+         */
+        ContactShadow,
         /**
          * @brief 파이프라인 XML 이 고른 컴퓨트 셰이더(`_shaderPath` · `_computeEntryPoint`)를 돌립니다 — 코드 없이 데이터만으로 효과를 더하는 패스입니다(언리얼 RDG 의 컴퓨트 패스 자리).
          *        선언한 컬러 출력 하나에 쓰고 입력(최대 둘, 깊이 형식 제외)을 읽습니다. 첨부는 RW 텍스처로 묶입니다(`compute_pass.hlsli` 의 루트 상수). 그룹 수는 첨부 크기를 `_threadGroupSize` 로 나눈 값입니다.
@@ -170,6 +180,11 @@ namespace sw
          *        캔버스 업로드 뒤 · 캔버스 그리기 앞의 컴퓨트 프리패스에서 `gv_uiMarkerGpuProjection` 로 올린 마커가 있는 프레임에만 돈다.
          */
         CanvasMarker,
+        /**
+         * @brief 그림자 캐시 복원 풀스크린(shadow_cache_restore.hlsl)입니다. 점광 · 스폿 타일 칸을 뷰포트로 잡고 캐시 층(정적 메시의 깊이, `ShadowCache`)의 텍셀을
+         *        픽셀 깊이(SV_Depth)로 그림자 아틀라스에 옮긴다 — 그 위에 움직이는 메시만 그린다(`FramePassExecutor::drawShadowTiles`). 컬러 출력이 없고 픽셀 스테이지가 있다(`kWritesPixelDepth`).
+         */
+        ShadowCacheRestore,
         /**
          * @brief 패스 출력의 NaN · Inf 감시 컴퓨트(gpu_nan_check.hlsl)입니다. 부동소수 컬러 출력 텍스처를 텍셀마다 훑어 NaN · Inf 가 든 텍셀 수를 슬롯별 카운터에 더합니다(`GPUNanCheck`, 언리얼 r.CheckNaN 선).
          *        `-gv_nanCheck=1` 일 때만 PSO 가 만들어지고, 그래프가 끝난 뒤 주 시점의 패스 출력마다 한 번 돈다(`FramePassExecutor::scanPassOutputsForNan`). 네이티브 bindless(DX12 · Vulkan)만 쓴다.

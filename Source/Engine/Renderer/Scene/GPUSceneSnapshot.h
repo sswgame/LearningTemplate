@@ -143,6 +143,11 @@ namespace sw
          *          배치 키에 들어간다. 한 배치의 인스턴스는 모두 같은 부호다(`FramePSOManager::psoForBatch`).
          */
         uint8 _bReverseCulling{ SW_FALSE };
+        /**
+         * @brief 정적 메시(`MeshComponent::isStatic`)의 배치입니다. 배치 키라 불투명 배치는 정적과 움직이는 것이 섞이지 않는다(반투명은 그림자 패스가 그리지 않아 섞일 수 있다).
+         * @details 그림자 캐시가 정적 배치만 캐시 층에, 움직이는 배치만 그 위에 그린다(`FramePassExecutor::drawShadowTiles`).
+         */
+        uint8 _bStaticShadowCaster{ SW_FALSE };
         /** @brief 머티리얼 데이터 그룹(셰이더 타입) 인덱스입니다(`GPUSceneSnapshot::getMaterialGroups`). 없으면 kInvalidMaterialGroup 입니다. */
         uint32 _materialGroup{ 0xFFFFFFFFu };
         /**
@@ -426,6 +431,11 @@ namespace sw
          *        본 클립 시각과 같습니다. 패스마다 PassCB `g_SwVertexAnimationTime` 으로 전달됩니다.
          */
         float32 _vertexAnimationTime{ 0.0f };
+        /**
+         * @brief 정적 그림자 세대입니다. 정적 메시가 움직이거나 바뀌거나 더해지거나 빠질 때 오른다(`GPUSceneBuilder::updateStaticShadowGeneration`).
+         * @details 그림자 캐시(`ShadowCachePolicy`)가 이 값이 바뀌면 캐시 층을 다시 그린다 — 언리얼이 정적 프리미티브의 등록 · 이동으로 캐시한 그림자 맵을 버리는 것과 같은 자리다.
+         */
+        uint64 _staticShadowGeneration{ 0 };
         /**
          * @brief 인스턴스 **번호의 배치**가 바뀔 때마다 오르는 세대입니다(배치를 처음부터 다시 만든 빌드). 제자리 갱신(움직임 · 색)은 올리지 않는다.
          * @details 인스턴스 번호에 묶어 둔 GPU 상태(LOD 전환 상태 `GPUCullViewResources::_lodState`)가 이 값이 달라지면 낡은 것이라 비운다.

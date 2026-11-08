@@ -62,6 +62,11 @@
 		<Option value="high" targetValue="2048"/>
 		<Option value="ultra" targetValue="4096"/>
 	</Setting>
+	<!-- 그림자 필터 — pcf 고정 3x3(값싼 단계), pcss 빛 원천 크기에 따른 반그림자(LightShadowSettings::_sourceSize, 언리얼 r.Shadow.FilterMethod 1). -->
+	<Setting id="graphics.shadowFilter" category="graphics" type="Enum" default="pcf" target="gv:gv_shadowFilter" text="settings.graphics.shadowFilter">
+		<Option value="pcf" text="settings.graphics.shadowFilter.pcf"/>
+		<Option value="pcss" text="settings.graphics.shadowFilter.pcss"/>
+	</Setting>
 	<Setting id="graphics.viewDistance" category="graphics" type="Float" default="1" min="0.25" max="2" step="0.25" target="gv:gv_viewDistanceScale" text="settings.graphics.viewDistance"/>
 	<Setting id="graphics.postQuality" category="graphics" type="Enum" default="high" target="gv:gv_postQuality" text="settings.graphics.postQuality">
 		<Option value="low"/>

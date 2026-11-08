@@ -24,6 +24,7 @@ namespace sw
             "SceneDepthCopy",
             "Velocity",
             "Distortion",
+            "ContactShadow",
         };
 
         /// 이름이 곧 역할인 첨부입니다. 파이프라인이 이 이름을 쓰면 그 역할로 걸립니다.
@@ -33,16 +34,25 @@ namespace sw
             RenderPassInputRole _role;
         };
         constexpr FixedRoleName s_arrFixedRoleName[] = {
-            {  "GBufferAlbedo",    RenderPassInputRole::GBufferAlbedo},
-            {  "GBufferNormal",    RenderPassInputRole::GBufferNormal},
-            {"GBufferMaterial",  RenderPassInputRole::GBufferMaterial},
-            {      "ShadowMap",        RenderPassInputRole::ShadowMap},
-            {        "AOColor", RenderPassInputRole::AmbientOcclusion},
-            {    "BloomBright",      RenderPassInputRole::BloomBright},
-            { "SceneColorCopy",   RenderPassInputRole::SceneColorCopy},
-            { "SceneDepthCopy",   RenderPassInputRole::SceneDepthCopy},
-            {  "SceneVelocity",         RenderPassInputRole::Velocity},
-            {"SceneDistortion",       RenderPassInputRole::Distortion},
+            {    "GBufferAlbedo",    RenderPassInputRole::GBufferAlbedo},
+            {    "GBufferNormal",    RenderPassInputRole::GBufferNormal},
+            {  "GBufferMaterial",  RenderPassInputRole::GBufferMaterial},
+            {        "ShadowMap",        RenderPassInputRole::ShadowMap},
+            {          "AOColor", RenderPassInputRole::AmbientOcclusion},
+            {      "BloomBright",      RenderPassInputRole::BloomBright},
+            {   "SceneColorCopy",   RenderPassInputRole::SceneColorCopy},
+            {   "SceneDepthCopy",   RenderPassInputRole::SceneDepthCopy},
+            {    "SceneVelocity",         RenderPassInputRole::Velocity},
+            {  "SceneDistortion",       RenderPassInputRole::Distortion},
+            {    "GBufferAlbedo",    RenderPassInputRole::GBufferAlbedo},
+            {    "GBufferNormal",    RenderPassInputRole::GBufferNormal},
+            {  "GBufferMaterial",  RenderPassInputRole::GBufferMaterial},
+            {        "ShadowMap",        RenderPassInputRole::ShadowMap},
+            {          "AOColor", RenderPassInputRole::AmbientOcclusion},
+            {      "BloomBright",      RenderPassInputRole::BloomBright},
+            {   "SceneColorCopy",   RenderPassInputRole::SceneColorCopy},
+            {   "SceneDepthCopy",   RenderPassInputRole::SceneDepthCopy},
+            {"ContactShadowMask",    RenderPassInputRole::ContactShadow},
         };
     } // namespace
 

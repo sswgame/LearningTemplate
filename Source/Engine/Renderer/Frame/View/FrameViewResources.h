@@ -58,8 +58,9 @@ namespace sw
          * @details 셋업 단계에서(기록 전) 뷰마다 한 번 부른다. 빠질 수 있는 것은 출력을 혼자 쓰는 일반 풀스크린 패스뿐이고, 파이프라인에 읽는 패스가 하나도 없는 출력의 패스는 그대로 돈다.
          * @param viewProj 이번 프레임 이 뷰의 뷰-투영입니다(지난번 것 `_prevViewProj` 와 같고 물체도 서 있으면 모션 블러는 꺼진 것이다). `_bHistoryReset` 을 정한 뒤 부른다.
          * @param bObjectMotion 기록이 있는 물체가 움직였는지(`GPUScene::hasObjectMotion`)입니다. 씬 업로드 앞에 부르므로 지난 프레임의 값이다 — 물체가 막 움직이기 시작한 한 프레임은 모션 블러가 늦게 켜진다.
+         * @param bContactShadows 이번 프레임에 접촉 그림자를 받는 빛이 있는지입니다(`FrameShadowData::hasContactShadows`). 없으면 접촉 그림자 패스가 빠진다.
          */
-        [[nodiscard]] PassSelectionResult applyViewPassSelection( FrameViewTarget& view, const float4x4& viewProj, bool bObjectMotion );
+        [[nodiscard]] PassSelectionResult applyViewPassSelection( FrameViewTarget& view, const float4x4& viewProj, bool bObjectMotion, bool bContactShadows );
 
     private:
         /**

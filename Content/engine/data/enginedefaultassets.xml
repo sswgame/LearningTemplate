@@ -74,6 +74,8 @@
                      _shaderUpscale="engine/shaders/fsr1.hlsl"
                      _shaderOcclusionTiles="engine/shaders/occlusion_tiles.hlsl"
                      _shaderSSAO="engine/shaders/ssao.hlsl"
+                     _shaderContactShadow="engine/shaders/contact_shadow.hlsl"
+                     _shaderShadowCacheRestore="engine/shaders/shadow_cache_restore.hlsl"
                      _shaderTAA="engine/shaders/taa.hlsl"
                      _shaderSceneDepthCopy="engine/shaders/scene_depth_copy.hlsl"
                      _shaderMotionBlur="engine/shaders/motion_blur.hlsl"

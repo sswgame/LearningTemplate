@@ -28,6 +28,7 @@ namespace sw
         /**
          * @brief 종류마다의 덧칸입니다. 3D 빛은 0 입니다.
          * @details 2D 빛(점 · 자유 모양)은 x 그림자 원천 반경(m, 0 이면 딱딱한 그림자), y 섞는 방식(`shaderslot::kLight2DBlend*`), z 자유 모양의 변 수(바로 뒤 원소 수)입니다.
+         *          3D 빛(방향광 · 점광 · 스폿)은 x 원천 크기(PCSS), y 접촉 그림자 길이(m, 0 = 끔), z 접촉 그림자 채널 + 1(0 = 채널 없음, `FrameShadowData::populateContactShadows`)입니다(`LightShadowSettings`).
          *          셰이더는 구조 버퍼의 멤버를 따로 읽으므로 이 칸을 읽지 않는 3D 조명 루프에는 대역폭이 들지 않는다.
          */
         float4 _extra{};
