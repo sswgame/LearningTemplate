@@ -19,6 +19,7 @@
 #endif
 #include "material_shader.hlsli"
 #include "normal_map.hlsli"
+#include "material_functions.hlsli" // 함수 묶음 노드(SurfaceFunction::*) — MaterialGraphNodes.cpp 의 "Surface Function" 묶음
 
 // 알파 컷오프의 깊이 패스에는 탄젠트 칸이 없다 — 그 패스는 표면의 알파만 읽어 이 값의 영향을 받지 않는다.
 #if defined( SW_MATERIAL_USES_TANGENT )

@@ -62,7 +62,7 @@ SW_MATERIAL_GRAPH_PARAMETER_NODE( ScalarParameter, "Parameter", "", "Out:float=%
 | `any` | 이어진 입력의 벡터 크기를 따른다. `float` 만 넓어지고 다른 크기가 섞이면 오류다 |
 | 머티리얼 칸 형식 | `float` · `float4` · `uint`(텍스처 번호). 원소 채움이 이 셋을 전제한다 |
 
-식에서 쓸 수 있는 문맥은 `PixelContext` 칸(`context._uv` · `context._normal` · `context._worldPosition` · `context._color`)과 `g_SwMaterialTime` · `View::computeToView` · `MaterialTexture::sampleIndex` · `applyNormalMap` 이다. 식 안에 `|` 를 쓰지 않는다(`abs`, 비트 연산은 함수로 감싼 `.hlsli` 를 include 뼈대에 더한다).
+식에서 쓸 수 있는 문맥은 `PixelContext` 칸(`context._uv` · `context._normal` · `context._worldPosition` · `context._color`)과 `g_SwMaterialTime` · `View::computeToView` · `MaterialTexture::sampleIndex` · `applyNormalMap`, 함수 묶음 `SurfaceFunction::*`(`material_functions.hlsli` — 노이즈 · 3 축 · 높이 섞기 · 경사/고도 띠 · 마모/녹/때/변색 · 웅덩이/눈 마스크 · 미분 범프, 메뉴 묶음 "Surface Function")이다. 같은 함수를 손으로 쓴 지형 · 환경 · 기믹 셰이더가 쓰고, CPU 짝(`MaterialProjection` · `SurfaceLayerWeights` · `TerrainLayerRule`)이 테스트로 값을 박는다. 식 안에 `|` 를 쓰지 않는다(`abs`, 비트 연산은 함수로 감싼 `.hlsli` 를 include 뼈대에 더한다).
 
 **등록은 엔진 안에만 둔다.** 팩 쿠킹은 게임 모듈을 올리기 전에 돌아 키트 · 게임의 등록을 보지 못한다. 게임 전용 재사용은 하위 그래프로 한다. 단위 테스트 `EveryRegisteredKindParses` · `EverySnippetExpands` 가 새 줄의 오타를 잡는다.
 
