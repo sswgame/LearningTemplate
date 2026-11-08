@@ -693,6 +693,7 @@ namespace sw
         GameObjectManager* pManager = findManager();
         if ( pManager == nullptr || _bAssembleScheduled == SW_TRUE )
             return;
+        // 조립은 사건(시작 · 선택 · 장비 · 데이터 다시 읽기)마다 한 번이고 깃발로 합친다 — 매 프레임 일(표면 감쇠 · 올리기)은 자기 오브젝트 쓰기라 틱에 남는다.
         _bAssembleScheduled = SW_TRUE;
         pManager->executeOrDeferPostTickOnComponent( *this, []( CharacterAppearanceComponent& appearance )
         {

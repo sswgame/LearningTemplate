@@ -357,6 +357,7 @@ namespace sw
 
     void WaterBodyComponent::queueRebuild( GameObjectManager& manager )
     {
+        // 사건(원점 이동 · 강 경로 · 지형이 뒤에 생김)마다 한 번이고 매 프레임 일이 아니다 — 서비스로 돌 것이 없어 틱 뒤 큐에 둔다(언리얼도 수면 재생성은 속성 변경 때 한 번).
         if ( _bRebuildQueued )
             return;
         _bRebuildQueued = true;
