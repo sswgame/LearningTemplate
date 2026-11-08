@@ -16,26 +16,20 @@ namespace sw
         struct LocalStoreFactoryInternal
         {
             /** @brief 기반 백엔드 "file" 의 만들기 함수입니다. 디스크 자리만 연다. */
-            static unique_ptr<ILocalSlotStorage> createFileStorage( const LocalStoreLocation& location, string_view gameName, string& outError )
+            static expected<unique_ptr<ILocalSlotStorage>> createFileStorage( const LocalStoreLocation& location, string_view gameName )
             {
                 if ( location.getKind() == LocalStoreLocation::Kind::Memory )
-                {
-                    outError = "the file local store backend needs a disk location (user data or absolute), not memory";
-                    return nullptr;
-                }
-                return sw::make_unique<FileLocalSlotStorage>( location.resolveDiskPath( gameName ) );
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the file local store backend needs a disk location (user data or absolute), not memory" } );
+                return unique_ptr<ILocalSlotStorage>( sw::make_unique<FileLocalSlotStorage>( location.resolveDiskPath( gameName ) ) );
             }
 
             /** @brief 기반 백엔드 "memory" 의 만들기 함수입니다. 메모리 자리만 연다(디스크 자리를 주면 쓴 줄 알았던 세이브가 사라진다). */
-            static unique_ptr<ILocalSlotStorage> createMemoryStorage( const LocalStoreLocation& location, string_view gameName, string& outError )
+            static expected<unique_ptr<ILocalSlotStorage>> createMemoryStorage( const LocalStoreLocation& location, string_view gameName )
             {
                 (void)gameName;
                 if ( location.getKind() != LocalStoreLocation::Kind::Memory )
-                {
-                    outError = "the memory local store backend takes only a memory location";
-                    return nullptr;
-                }
-                return sw::make_unique<MemoryLocalDatabase>();
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the memory local store backend takes only a memory location" } );
+                return unique_ptr<ILocalSlotStorage>( sw::make_unique<MemoryLocalDatabase>() );
             }
         };
 
@@ -53,8 +47,7 @@ namespace sw
 
 namespace sw
 {
-    unique_ptr<ILocalStore> LocalStoreBackend::createLocalStore( string_view gameName, const LocalStoreConfig& settings, const LocalSealContext& sealContext,
-                                                                 string& outError )
+    expected<unique_ptr<ILocalStore>> LocalStoreBackend::createLocalStore( string_view gameName, const LocalStoreConfig& settings, const LocalSealContext& sealContext )
     {
         const LocalSlotStorageCreateFunction createFunction = getBackends().withLock( [&settings]( const RegistrationList<const LocalStoreBackend>& list ) -> LocalSlotStorageCreateFunction
         {
@@ -62,14 +55,11 @@ namespace sw
             return pBackend == nullptr ? nullptr : pBackend->_createFunction;
         } );
         if ( createFunction == nullptr )
-        {
-            outError = "local store backend '" + settings._backend + "' is not registered (file, memory, or a loaded kit's backend)";
-            return nullptr;
-        }
-        unique_ptr<ILocalSlotStorage> storage = createFunction( settings._location, gameName, outError );
-        if ( storage == nullptr )
-            return nullptr;
-        return sw::make_unique<ThreadedLocalStore>( std::move( storage ), sealContext );
+            return unexpected( Error{ ErrorKind::NotFound, "the local store backend is not registered (file, memory, or a loaded kit's backend)", settings._backend } );
+        expected<unique_ptr<ILocalSlotStorage>> storage = createFunction( settings._location, gameName );
+        if ( storage.has_value() == false )
+            return unexpected( storage.error() );
+        return unique_ptr<ILocalStore>( sw::make_unique<ThreadedLocalStore>( std::move( *storage ), sealContext ) );
     }
 
     void LocalStoreBackend::registerBackend( const LocalStoreBackend& backend )

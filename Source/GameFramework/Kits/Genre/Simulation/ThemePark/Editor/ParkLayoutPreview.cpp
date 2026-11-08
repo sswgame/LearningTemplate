@@ -51,12 +51,15 @@ namespace sw::editor
 
     bool ParkLayoutPreview::refresh( bool bForce )
     {
-        const string& packRoot = editor::getSubsystem<const GameConfig>()._packRoot.get();
-        string        coasterPath;
-        string        error;
-        if ( GamePackDataUtil::tryMakeKindPath( packRoot, ParkLayout::kDataKind, _layoutPath, error ) == false ||
-             GamePackDataUtil::tryMakeKindPath( packRoot, CoasterLayoutCatalog::kDataKind, coasterPath, error ) == false )
+        const string&        packRoot = editor::getSubsystem<const GameConfig>()._packRoot.get();
+        string               coasterPath;
+        const expected<void> paths = GamePackDataUtil::tryMakeKindPath( packRoot, ParkLayout::kDataKind, _layoutPath ).and_then( [&]
         {
+            return GamePackDataUtil::tryMakeKindPath( packRoot, CoasterLayoutCatalog::kDataKind, coasterPath );
+        } );
+        if ( paths.has_value() == false )
+        {
+            const string error = string( paths.error().message() ) + " (" + string( paths.error().detail() ) + ")";
             if ( _bWarned == false )
                 SW_LOG_ERROR_ID( "ParkLayoutPreview.ParkLayoutPreviewNo", "The park layout preview has no path in pack '%#': %#", packRoot.c_str(), error.c_str() );
             _bWarned    = SW_TRUE;

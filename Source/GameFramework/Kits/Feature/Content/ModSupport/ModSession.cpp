@@ -170,10 +170,9 @@ namespace sw
             return false;
         }
         string settingsPath;
-        string error;
-        if ( GamePackDataUtil::tryMakeKindPath( packRoot, ModSupportSettings::kDataKind, settingsPath, error ) == false )
+        if ( const expected<void> path = GamePackDataUtil::tryMakeKindPath( packRoot, ModSupportSettings::kDataKind, settingsPath ); path.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "ModSession.ExportNoSettings", "mod.pack: the game has no mod support settings path: %#", error );
+            SW_LOG_ERROR_ID( "ModSession.ExportNoSettings", "mod.pack: the game has no mod support settings path: %# (%#)", path.error().message(), path.error().detail() );
             return false;
         }
         ModSupportSettings settings;
@@ -216,10 +215,9 @@ namespace sw
         if ( request._listEnabledID.empty() )
             return true;
         string settingsPath;
-        string error;
-        if ( GamePackDataUtil::tryMakeKindPath( packRoot, ModSupportSettings::kDataKind, settingsPath, error ) == false )
+        if ( const expected<void> path = GamePackDataUtil::tryMakeKindPath( packRoot, ModSupportSettings::kDataKind, settingsPath ); path.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "ModSession.NoSettingsPath", "Mods were requested (%#) but the game has no mod support settings path: %#", gv_modList, error );
+            SW_LOG_ERROR_ID( "ModSession.NoSettingsPath", "Mods were requested (%#) but the game has no mod support settings path: %# (%#)", gv_modList, path.error().message(), path.error().detail() );
             return false;
         }
         ModSupportSettings settings;

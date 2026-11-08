@@ -31,15 +31,16 @@ namespace sw
         struct ControlAutomationStepsInternal
         {
             /** @brief 있으면 수로 읽습니다. @p outbPresent 는 속성이 있었는가입니다. 형식이 틀리면 false 와 이유. */
-            [[nodiscard]] static bool readFloat( const AutomationStep& step, string_view name, float32& outValue, bool& outbPresent, string& outError )
+            [[nodiscard]] static expected<void> readFloat( const AutomationStep& step, string_view name, float32& outValue, bool& outbPresent )
             {
                 const string* pValue = step.findAttribute( name );
                 outbPresent          = pValue != nullptr;
                 outValue             = 0.0f;
                 if ( pValue == nullptr || StringUtil::parseFloat( StringUtil::trim( string_view{ *pValue } ), outValue ) )
-                    return true;
-                outError = step.describe() + ": " + string( name ) + " must be a number, got '" + *pValue + "'";
-                return false;
+                    return {};
+                Error error{ ErrorKind::InvalidArgument, "the attribute must be a number", name };
+                error.appendDetail( " = '" ).appendDetail( *pValue ).appendDetail( "'" );
+                return unexpected( error );
             }
 
             /** @brief 이름의 오브젝트입니다. 없으면 실패를 적고 nullptr 입니다. */
@@ -52,14 +53,21 @@ namespace sw
                 return pObject;
             }
 
+            // 검사 함수의 모양(bool + outError)은 엔진의 `AutomationStepValidateFunction` 이 정한다 — 그 형식이 옮겨지면 함께 옮긴다.
             static bool validateIntentStep( const AutomationStep& step, string& outError )
             {
                 ControlIntentStepParams params;
-                float32                 value    = 0.0f;
-                bool                    bPresent = false;
-                if ( step.readFields( params, outError, { "yaw", "pitch" } ) == false || readFloat( step, "yaw", value, bPresent, outError ) == false ||
-                     readFloat( step, "pitch", value, bPresent, outError ) == false )
+                if ( step.readFields( params, outError, { "yaw", "pitch" } ) == false )
                     return false;
+                float32              value    = 0.0f;
+                bool                 bPresent = false;
+                const expected<void> numbers  = readFloat( step, "yaw", value, bPresent ).and_then( [&]
+                { return readFloat( step, "pitch", value, bPresent ); } );
+                if ( numbers.has_value() == false )
+                {
+                    outError = step.describe() + ": " + string( numbers.error().message() ) + " (" + string( numbers.error().detail() ) + ")";
+                    return false;
+                }
                 // 이동 길이는 1 이하다(`ControlIntent::_move`) — 선 · 파일은 넘는 값을 거절하므로 시나리오도 받지 않는다.
                 if ( params._move._x * params._move._x + params._move._y * params._move._y <= 1.0f + MathUtil::kEpsilon )
                     return true;
@@ -80,14 +88,15 @@ namespace sw
                     runner.recordFailure( step, "object '" + params._pawn + "' has no pawn" );
                     return true;
                 }
-                string        error;
                 ControlIntent intent{};
                 float32       yaw       = 0.0f;
                 float32       pitch     = 0.0f;
                 bool          bHasYaw   = false;
                 bool          bHasPitch = false;
-                if ( readFloat( step, "yaw", yaw, bHasYaw, error ) == false || readFloat( step, "pitch", pitch, bHasPitch, error ) == false )
-                    return false;
+                if ( readFloat( step, "yaw", yaw, bHasYaw ).and_then( [&]
+                { return readFloat( step, "pitch", pitch, bHasPitch ); } )
+                         .has_value() == false )
+                    return false; // 검사(`validateIntentStep`)가 같은 읽기를 이미 통과시켰다
                 intent._move         = params._move;
                 intent._moveUp       = params._up;
                 intent._controlYaw   = bHasYaw ? yaw : pPawn->getIntent()._controlYaw;

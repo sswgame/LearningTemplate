@@ -35,9 +35,9 @@ namespace sw
          */
         static uint32 start( GameObjectManager& manager, const ControlIntentHistory& history, bool bReturnWhenDone, uint32 firstIndex, uint32* pOutSkippedCount = nullptr );
         /**
-         * @brief `.swintent` 파일을 읽어 `start` 합니다. 파일을 읽지 못하면 @p outError 를 채우고 false 입니다(재생한 트랙이 0 이어도 읽었으면 true).
-         * @param pOutStartedCount 시작한 트랙 수를 받습니다(nullptr 이면 안 받음).
+         * @brief `.swintent` 파일을 읽어 `start` 합니다. 재생을 시작한 트랙 수이고, 파일을 읽지 못하면 그 이유입니다(재생한 트랙이 0 이어도 읽었으면 성공).
+
          */
-        [[nodiscard]] static bool startFromFile( GameObjectManager& manager, string_view path, bool bReturnWhenDone, string& outError, uint32* pOutStartedCount = nullptr );
+        [[nodiscard]] static expected<uint32> startFromFile( GameObjectManager& manager, string_view path, bool bReturnWhenDone );
     };
 } // namespace sw

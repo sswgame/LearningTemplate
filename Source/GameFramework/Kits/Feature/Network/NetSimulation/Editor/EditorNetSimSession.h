@@ -59,8 +59,8 @@ namespace sw::editor
         /** @brief 확장이 내려가거나 에디터가 닫힐 때 하니스를 내립니다. */
         void shutdownSubsystem() override { stop(); }
 
-        /** @brief 하니스를 세우고 클라이언트를 붙입니다. 실패하면 이유를 @p outError 에 적고 아무것도 남기지 않습니다. */
-        [[nodiscard]] bool start( const EditorNetSimSettings& settings, string& outError );
+        /** @brief 하니스를 세우고 클라이언트를 붙입니다. 실패하면 그 이유이고 아무것도 남기지 않습니다. */
+        [[nodiscard]] expected<void> start( const EditorNetSimSettings& settings );
         /** @brief 뷰포트를 놓고 하니스를 내립니다(씬은 하니스가 공급자에 돌려준다). 돌고 있지 않으면 아무것도 하지 않습니다. */
         void stop();
         bool isRunning() const { return _pHarness != nullptr; }

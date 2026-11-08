@@ -478,21 +478,15 @@ namespace sw
         return true;
     }
 
-    bool CharacterAppearanceCatalog::writePresetToNode( const CharacterAppearanceDef& def, const XMLNode& outNode, string& outReason )
+    expected<void> CharacterAppearanceCatalog::writePresetToNode( const CharacterAppearanceDef& def, const XMLNode& outNode )
     {
         using Internal = CharacterAppearanceInternal;
         if ( def._id.empty() )
-        {
-            outReason = "a preset needs an id";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "a preset needs an id" } );
         for ( const CharacterAppearanceSlotDef& slot : def._listSlot )
         {
             if ( slot._customization.isEmpty() == false )
-            {
-                outReason = string( "slot '" ) + slot._slot.c_str() + "' has item instance values, which a preset asset cannot carry yet";
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::Unsupported, "the slot has item instance values, which a preset asset cannot carry yet", slot._slot.c_str() } );
         }
         outNode.appendAttribute( "id", def._id.c_str() );
         Internal::appendName( outNode, "parent", def._parent );
@@ -526,7 +520,7 @@ namespace sw
         {
             Internal::writeSocketOverride( outNode, socketOverride );
         }
-        return true;
+        return {};
     }
 
     const CharacterAppearanceDef* CharacterAppearanceCatalog::findPreset( const hashed_string& id ) const

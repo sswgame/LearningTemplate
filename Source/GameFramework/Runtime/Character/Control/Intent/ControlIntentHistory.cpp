@@ -101,37 +101,29 @@ namespace sw
         return true;
     }
 
-    bool ControlIntentHistory::read( BitReader& reader, string& outError )
+    expected<void> ControlIntentHistory::read( BitReader& reader )
     {
         reset();
         const uint32 magic   = reader.readUint32();
         const uint64 version = reader.readVarUint();
         if ( reader.hasOverflowed() || magic != kMagic )
-        {
-            outError = "not an intent recording (magic)";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "not an intent recording (magic)" } );
         if ( version != kVersion )
         {
-            StringBuilder<constant::buffer::kMax256> errorBuilder;
-            errorBuilder.appendFormat( "intent recording version %# is not %#", version, kVersion );
-            outError = string( errorBuilder.view() );
-            return false;
+            StringBuilder<constant::buffer::kMax128> errorBuilder;
+            errorBuilder.appendFormat( "%#, %#", version, kVersion );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the intent recording version is not supported (found, expected)", errorBuilder.view() } );
         }
         const uint64 trackCount = reader.readVarUint();
         if ( reader.hasOverflowed() || trackCount > static_cast<uint64>( kMaxTrackCount ) )
-        {
-            outError = "intent recording has a broken track count";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "intent recording has a broken track count" } );
         vector<uint8> nameBytes;
         for ( uint64 trackIndex = 0; trackIndex < trackCount; ++trackIndex )
         {
             if ( reader.readBlob( nameBytes, kMaxNameBytes ) == false )
             {
-                outError = "intent recording has a broken pawn name";
                 reset();
-                return false;
+                return unexpected( Error{ ErrorKind::InvalidArgument, "intent recording has a broken pawn name" } );
             }
             const uint64 firstTick = reader.readVarUint();
             const uint64 tickCount = reader.readVarUint();
@@ -139,9 +131,8 @@ namespace sw
             const bool bCountFits = tickCount <= static_cast<uint64>( reader.getBitsRemaining() / 8 ) && firstTick <= constant::invalid_index::kUint32 - tickCount;
             if ( reader.hasOverflowed() || bCountFits == false )
             {
-                outError = "intent recording has a broken tick count";
                 reset();
-                return false;
+                return unexpected( Error{ ErrorKind::InvalidArgument, "intent recording has a broken tick count" } );
             }
             ControlIntentTrack& track = _listTrack.emplace_back();
             track._pawnName           = hashed_string( string_view( reinterpret_cast<const utf8*>( nameBytes.data() ), nameBytes.size() ) );
@@ -152,13 +143,12 @@ namespace sw
             {
                 if ( track._ring.acquire( static_cast<uint32>( firstTick + tickOffset ) ).read( reader ) == false )
                 {
-                    outError = "intent recording ends inside track '" + string( track._pawnName.c_str() ) + "'";
                     reset();
-                    return false;
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "intent recording ends inside track", string( track._pawnName.c_str() ) } );
                 }
             }
         }
-        return true;
+        return {};
     }
 
     bool ControlIntentHistory::saveToFile( const AbsolutePath& absPath ) const
@@ -169,37 +159,38 @@ namespace sw
         return FileUtil::writeFile( absPath.str(), writer.getBytes().data(), static_cast<uint64>( writer.getByteCount() ) );
     }
 
-    bool ControlIntentHistory::loadFromFile( string_view path, string& outError )
+    expected<void> ControlIntentHistory::loadFromFile( string_view path )
     {
         vector<uint8> bytes;
         if ( FileUtil::readFile( path, bytes ) == false )
         {
-            outError = string( path ) + ": could not read";
             reset();
-            return false;
+            return unexpected( Error{ ErrorKind::NotFound, "the intent recording could not be read", path } );
         }
-        return loadFromBytes( bytes, path, outError );
+        return loadFromBytes( bytes, path );
     }
 
-    bool ControlIntentHistory::loadFromAsset( const AssetID& assetID, string& outError )
+    expected<void> ControlIntentHistory::loadFromAsset( const AssetID& assetID )
     {
         vector<uint8> bytes;
         if ( AssetIO::readBinaryAsset( assetID, bytes ) == false )
         {
-            outError = assetID.str() + ": could not read";
             reset();
-            return false;
+            return unexpected( Error{ ErrorKind::NotFound, "the intent recording could not be read", assetID.view() } );
         }
-        return loadFromBytes( bytes, assetID.view(), outError );
+        return loadFromBytes( bytes, assetID.view() );
     }
 
-    bool ControlIntentHistory::loadFromBytes( const vector<uint8>& bytes, string_view label, string& outError )
+    expected<void> ControlIntentHistory::loadFromBytes( const vector<uint8>& bytes, string_view label )
     {
-        BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-        if ( read( reader, outError ) )
-            return true;
-        outError = string( label ) + ": " + outError;
-        return false;
+        BitReader      reader( bytes.data(), static_cast<int32>( bytes.size() ) );
+        expected<void> result = read( reader );
+        if ( result.has_value() )
+            return {};
+        Error error{ result.error().kind(), result.error().message().data(), label };
+        if ( result.error().detail().empty() == false )
+            error.appendDetail( ": " ).appendDetail( result.error().detail() );
+        return unexpected( error );
     }
 
     int32 ControlIntentHistory::findTrack( const hashed_string& pawnName ) const

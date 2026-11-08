@@ -45,9 +45,9 @@ namespace sw
         /**
          * @brief 파일 백엔드를 @p location 에 엽니다(@p gameName 의 사용자 데이터 폴더 기준).
          * @param pSecurityProvider 봉인 슬롯의 암호 제공자 - 주면 장치 키(`device.key`)로 봉인하고, nullptr 이면 봉인 없는 저장소다(봉인 쓰기는 `Invalid` 로 끝난다).
-         * @return 열지 못하면 false 와 까닭(@p outError)입니다.
+         * @return 열지 못하면 그 까닭입니다.
          */
-        [[nodiscard]] bool open( string_view gameName, const LocalStoreLocation& location, INetSecurityProvider* pSecurityProvider, string& outError );
+        [[nodiscard]] expected<void> open( string_view gameName, const LocalStoreLocation& location, INetSecurityProvider* pSecurityProvider );
         /** @brief 저장소가 열려 있으면 true 입니다. */
         bool isOpen() const { return _store != nullptr; }
         /** @brief 맡긴 일과 완료 콜백이 잇는 일이 바닥날 때까지 완료를 넘기고(끝낼 때 쓴 세이브를 잃지 않는다 - 남은 읽기는 IOError) 저장소를 닫습니다(`ILocalStore::shutdown`). */

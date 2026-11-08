@@ -91,11 +91,10 @@ namespace sw::editor
             return;
         _packRoot = packRoot;
         _packDataMessage.clear();
-        string error;
-        if ( GamePackDataUtil::tryMakeKindPath( packRoot, CharacterEditorPackData::kDataKind, _packDataPath, error ) == false )
+        if ( const expected<void> path = GamePackDataUtil::tryMakeKindPath( packRoot, CharacterEditorPackData::kDataKind, _packDataPath ); path.has_value() == false )
         {
             _packDataState   = PackDataState::Invalid;
-            _packDataMessage = "Character editor data has no path: " + error;
+            _packDataMessage = "Character editor data has no path: " + string( path.error().message() ) + " (" + string( path.error().detail() ) + ")";
             return;
         }
         if ( AssetIO::hasAsset( AssetID{ _packDataPath } ) == false )
@@ -454,13 +453,14 @@ namespace sw::editor
     {
         const hashed_string    presetID( string_view( _paths._exportID.c_str() ) );
         CharacterAppearanceDef def;
-        string                 reason;
         XMLDocument            doc;
-        const bool             bMade = AppearanceSelection::makePresetDef( _database, _appearance.getSelection(), presetID, def, reason ) &&
-                           CharacterAppearanceCatalog::writePresetToNode( def, doc.appendRoot( "CharacterAppearance" ), reason );
-        if ( bMade == false )
+        const expected<void>   made = AppearanceSelection::makePresetDef( _database, _appearance.getSelection(), presetID, def ).and_then( [&]
         {
-            _status = "Data preset could not be made - " + reason;
+            return CharacterAppearanceCatalog::writePresetToNode( def, doc.appendRoot( "CharacterAppearance" ) );
+        } );
+        if ( made.has_value() == false )
+        {
+            _status = "Data preset could not be made - " + string( made.error().message() ) + ( made.error().detail().empty() ? string() : " (" + string( made.error().detail() ) + ")" );
             return false;
         }
         const string assetID   = FileUtil::joinPath( string_view( _paths._exportFolder.c_str() ), string( presetID.c_str() ) + AppearanceDatabase::kPresetExtension );

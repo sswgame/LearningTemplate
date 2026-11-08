@@ -96,8 +96,10 @@ namespace sw::editor
                 settings._gameName    = listGame[static_cast<size_t>( _gameIndex )]->_name;
                 settings._clientCount = _clientCount;
                 _lastError.clear();
-                if ( session.start( settings, _lastError ) )
+                if ( const expected<void> started = session.start( settings ); started.has_value() )
                     (void)session.setInputFocus( 1 ); // 첫 클라이언트가 입력을 받으며 시작한다
+                else
+                    _lastError = string( started.error().message() ) + " (" + string( started.error().detail() ) + ")";
             }
             if ( _lastError.empty() == false )
                 ImGui::TextUnformatted( _lastError.c_str() );

@@ -65,19 +65,12 @@ namespace sw
         return started;
     }
 
-    bool IntentPlayback::startFromFile( GameObjectManager& manager, string_view path, bool bReturnWhenDone, string& outError, uint32* pOutStartedCount )
+    expected<uint32> IntentPlayback::startFromFile( GameObjectManager& manager, string_view path, bool bReturnWhenDone )
     {
         ControlIntentHistory history;
-        if ( history.loadFromFile( path, outError ) == false )
-        {
-            if ( pOutStartedCount != nullptr )
-                *pOutStartedCount = 0;
-            return false;
-        }
-        const uint32 started = start( manager, history, bReturnWhenDone, 0 );
-        if ( pOutStartedCount != nullptr )
-            *pOutStartedCount = started;
-        return true;
+        if ( expected<void> loaded = history.loadFromFile( path ); loaded.has_value() == false )
+            return unexpected( loaded.error() );
+        return start( manager, history, bReturnWhenDone, 0 );
     }
 
     namespace
@@ -164,17 +157,16 @@ namespace sw
                 string path;
                 if ( DevCommandRegistry::readDiskPathArgument( listArgument[0], path, outReply ) == false )
                     return true;
-                string error;
-                uint32 startedCount = 0;
-                if ( IntentPlayback::startFromFile( *pManager, string_view( path.c_str(), path.size() ), true, error, &startedCount ) == false )
+                const expected<uint32> startedCount = IntentPlayback::startFromFile( *pManager, string_view( path.c_str(), path.size() ), true );
+                if ( startedCount.has_value() == false )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
-                    replyBuilder.appendFormat( "intent: could not read '%#': %#", path.c_str(), error.c_str() );
+                    replyBuilder.appendFormat( "intent: could not read '%#': %# (%#)", path.c_str(), startedCount.error().message(), startedCount.error().detail() );
                     outReply = string( replyBuilder.view() );
                     return true;
                 }
                 StringBuilder<constant::buffer::kMax256> replyBuilder;
-                replyBuilder.appendFormat( "intent: playing %# track(s) from '%#'", startedCount, path.c_str() );
+                replyBuilder.appendFormat( "intent: playing %# track(s) from '%#'", *startedCount, path.c_str() );
                 outReply = string( replyBuilder.view() );
                 return true;
             }

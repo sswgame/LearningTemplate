@@ -33,10 +33,9 @@ namespace sw
             SW_LOG_ERROR_ID( "GameLocalStore.GameLocalStoreNeedsINetSecurityProviderGame", "GameLocalStore needs the INetSecurityProvider game service (device key and sealed slots) - saves are unavailable and the game does not start" );
             return SubsystemInitResult::Failed;
         }
-        string error;
-        if ( _channel.open( GameSelection::getName(), *LocalStoreLocation::tryUnderUserData( kSaveDirectory ), pSecurityProvider, error ) == false ) // 자리는 상수라 늘 풀린다
+        if ( const expected<void> opened = _channel.open( GameSelection::getName(), *LocalStoreLocation::tryUnderUserData( kSaveDirectory ), pSecurityProvider ); opened.has_value() == false ) // 자리는 상수라 늘 풀린다
         {
-            SW_LOG_ERROR_ID( "GameLocalStore.GameLocalStoreCouldNotOpen", "GameLocalStore could not open the local store: %# - the game does not start", error.c_str() );
+            SW_LOG_ERROR_ID( "GameLocalStore.GameLocalStoreCouldNotOpen", "GameLocalStore could not open the local store: %# (%#) - the game does not start", opened.error().message(), opened.error().detail() );
             return SubsystemInitResult::Failed;
         }
         return SubsystemInitResult::Succeeded;

@@ -274,35 +274,34 @@ SW_TEST_CASE_F( AppearanceSelectionTest, MakePresetDefRefusesWhatItCannotCarry )
     selection._listSlot.push_back( makeSlot( "Torso", "" ) );
 
     CharacterAppearanceDef def;
-    string                 reason;
-    SW_REQUIRE_TRUE( AppearanceSelection::makePresetDef( _database, selection, hashed_string( "Mine" ), def, reason ) );
+    SW_REQUIRE_TRUE( AppearanceSelection::makePresetDef( _database, selection, hashed_string( "Mine" ), def ) );
     SW_EXPECT_TRUE( def._parent == hashed_string( "Base" ) );
     SW_REQUIRE_EQUAL( size_t( 2 ), def._listSlot.size() );
     SW_EXPECT_EQUAL( SW_FALSE, def._listSlot[0]._bClear );
     SW_EXPECT_EQUAL( SW_TRUE, def._listSlot[1]._bClear );
     SW_EXPECT_EQUAL( selection._customization.getValues().size(), def._listValue.size() );
 
-    SW_EXPECT_FALSE( AppearanceSelection::makePresetDef( _database, selection, hashed_string{}, def, reason ) );
+    SW_EXPECT_FALSE( AppearanceSelection::makePresetDef( _database, selection, hashed_string{}, def ) );
 
     AppearanceSelection partial;
     AppearanceSelection::makePartial( selection, _database, { hashed_string( "Hair" ) }, partial );
-    SW_EXPECT_FALSE( AppearanceSelection::makePresetDef( _database, partial, hashed_string( "Mine" ), def, reason ) );
+    SW_EXPECT_FALSE( AppearanceSelection::makePresetDef( _database, partial, hashed_string( "Mine" ), def ) );
 
     AppearanceSelection unknownValue = selection;
     unknownValue._customization.setNumber( hashed_string( "Gone" ), 1.0f );
-    SW_EXPECT_FALSE( AppearanceSelection::makePresetDef( _database, unknownValue, hashed_string( "Mine" ), def, reason ) );
+    SW_EXPECT_FALSE( AppearanceSelection::makePresetDef( _database, unknownValue, hashed_string( "Mine" ), def ) );
 
     AppearanceSelection detached = selection;
     detached._listSlot[0]._listDetachedPart.push_back( hashed_string( "Shell" ) );
-    SW_EXPECT_FALSE( AppearanceSelection::makePresetDef( _database, detached, hashed_string( "Mine" ), def, reason ) );
+    SW_EXPECT_FALSE( AppearanceSelection::makePresetDef( _database, detached, hashed_string( "Mine" ), def ) );
 
     AppearanceSelection instanceValue = selection;
     instanceValue._listSlot[0]._customization.setNumber( hashed_string( "Wear" ), 0.5f );
-    SW_EXPECT_FALSE( AppearanceSelection::makePresetDef( _database, instanceValue, hashed_string( "Mine" ), def, reason ) );
+    SW_EXPECT_FALSE( AppearanceSelection::makePresetDef( _database, instanceValue, hashed_string( "Mine" ), def ) );
 
     AppearanceSelection suppressed       = selection;
     suppressed._listSlot[0]._bSuppressed = SW_TRUE;
-    SW_EXPECT_FALSE( AppearanceSelection::makePresetDef( _database, suppressed, hashed_string( "Mine" ), def, reason ) );
+    SW_EXPECT_FALSE( AppearanceSelection::makePresetDef( _database, suppressed, hashed_string( "Mine" ), def ) );
 }
 
 /** @brief [AppearanceSelectionTest] 비트 코덱: 값 · 슬롯이 되돌아오고, 받는 쪽이 모르는 이름은 임시 이름이 되어 펼칠 때 지워진 것으로 보고된다 */
