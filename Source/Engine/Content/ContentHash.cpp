@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/Time/WallClock.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
@@ -14,6 +15,25 @@ namespace sw
     {
         struct ContentHashInternal
         {
+            /** @brief 1601-01-01 부터 1970-01-01 까지의 밀리초(`FileStamp::_writeTime` 의 기원과 유닉스 기원의 차). */
+            static constexpr int64 kFileTimeEpochOffsetMs = 11644473600000LL;
+            /** @brief 이보다 최근에 쓴 파일의 해시는 캐시에 두지 않는다(밀리초). 쓰기 시각은 시계 틱(Windows 약 16 ms) 단위라 그 안에서 같은 크기로 다시 쓰면 도장이 같다. */
+            static constexpr int64 kRacyWindowMs = 2000;
+            /** @brief `FileStamp::_writeTime` 의 100 ns 눈금이 1 ms 에 드는 수입니다. */
+            static constexpr uint64 kWriteTicksPerMs = 10000u;
+
+            /**
+             * @brief @p stamp 가 캐시해도 되는 도장인지 — 쓴 지 `kRacyWindowMs` 가 지났는지입니다.
+             * @details git 의 racy-git 과 같은 결함이다: 같은 틱 안에 같은 크기로 다시 쓴 파일은 (크기, 시각) 도장이 같아 옛 해시가 돌아왔다
+             *          (`ShaderCookStampTest` 가 전체 실행에서만 졌다). 막 쓴 파일은 매번 읽고, 자리 잡은 파일만 캐시한다.
+             */
+            static bool isSettled( const FileStamp& stamp )
+            {
+                const int64 nowFileTimeMs = WallClock::nowUnixMilliseconds().count() + kFileTimeEpochOffsetMs;
+                const int64 writeTimeMs   = static_cast<int64>( stamp._writeTime / kWriteTicksPerMs );
+                return nowFileTimeMs - writeTimeMs > kRacyWindowMs;
+            }
+
             /** @brief 파일을 읽어 해시를 구합니다(캐시 밖 본체). */
             static uint64 readFileHash( string_view absPath )
             {
@@ -69,7 +89,7 @@ namespace sw
 
         const uint64 hash = ContentHashInternal::readFileHash( absPath );
         // 읽는 사이에 파일이 바뀌었으면 옛 시각에 새 해시가 붙는다. 다음 조회는 시각이 달라 다시 읽으므로 틀린 값이 남지 않는다.
-        if ( bStamped && hash != 0 )
+        if ( bStamped && hash != 0 && ContentHashInternal::isSettled( stamp ) )
         {
             ScopedLock<mutex> lock{ _mutex };
             _mapEntry[string( absPath )] = Entry{ stamp, hash };
