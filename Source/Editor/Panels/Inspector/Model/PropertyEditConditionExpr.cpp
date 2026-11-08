@@ -7,6 +7,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Reflection/ReflectedValue.h"
+#include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -41,7 +42,7 @@ namespace sw
     expected<PropertyEditConditionExpr> PropertyEditConditionExpr::parse( const TypeInfo& type, const PropertyInfo& prop )
     {
         PropertyEditConditionExpr expr;
-        string_view               text = StringUtil::trim( prop._metadata->_editCondition );
+        string_view               text = StringUtil::trim( prop._metadata->getEditor()._editCondition );
         if ( text.empty() )
             return expr;
 
@@ -105,11 +106,11 @@ namespace sw
 
     PropertyEditState PropertyEditConditionExpr::getEditState( const TypeInfo& type, const PropertyInfo& prop, const ObjectAddress instance )
     {
-        if ( prop._metadata->_editCondition.empty() )
+        if ( prop._metadata->getEditor()._editCondition.empty() )
             return PropertyEditState::Enabled;
         const expected<PropertyEditConditionExpr> expr = parse( type, prop );
         if ( expr.has_value() == false || evaluate( *expr, instance ) )
             return PropertyEditState::Enabled;
-        return prop._metadata->_bEditConditionHides == SW_TRUE ? PropertyEditState::Hidden : PropertyEditState::Disabled;
+        return prop._metadata->getEditor()._bEditConditionHides == SW_TRUE ? PropertyEditState::Hidden : PropertyEditState::Disabled;
     }
 } // namespace sw

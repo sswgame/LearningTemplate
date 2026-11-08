@@ -36,6 +36,13 @@ namespace sw
         /** @brief .gen.h 의 내용(ENUM(Flags) 트레이트)을 만듭니다. 기반 정수 타입을 모르는 ENUM(Flags) 가 있으면 false 입니다. */
         bool makeHeaderText( string& outText ) const;
 
+        /**
+         * @brief 개발 전용 단위(`<이름>.gen.meta.cpp`)의 내용 — 에디터 메타데이터(표시 · 편집 필드, 슬라이더 범위)를 채우는 함수와 정적 등록입니다.
+         * @details 배포 구성은 이 단위를 짓지 않는다(CMake `sw_addReflectionStep`) — 런타임 메타데이터 구조체의 배치가 구성마다 같다.
+         *          언리얼 `WITH_METADATA` 가 같은 칸을 `#if` 로 가르는 자리를 빌드 단위로 가른다. 적은 것이 없으면 한 줄 주석짜리 단위다(산출물 목록은 헤더마다 고정).
+         */
+        string makeEditorMetadataText() const;
+
     private:
         // ------------------------------------------------------------------------------
         // 2) emit — Type/Property/Method/Enum 골격
@@ -50,6 +57,10 @@ namespace sw
         void emitPropertyInfoEntry( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop ) const;
         /** @brief 프로퍼티 메타데이터(필드 표 + 범위)를 출력합니다. 필드 이름 꼴 범위는 @p typeInfo 의 필드를 읽는 함수가 됩니다. */
         void emitPropertyMetadata( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop ) const;
+        /** @brief 프로퍼티 · 이벤트 하나의 에디터 메타데이터 블록을 개발 전용 단위에 출력합니다(@p pAddFunction 은 `addProperty` · `addEvent`). */
+        void emitPropertyEditorMetadata( CodeEmit& emit, const ParsedPropertyInfo& prop, const utf8* pAddFunction ) const;
+        /** @brief 타입 하나의 에디터 메타데이터 채우기 함수와 정적 등록을 출력합니다. 적은 것이 없으면 아무것도 쓰지 않고 false 입니다. */
+        bool emitTypeEditorMetadata( CodeEmit& emit, const ParsedTypeInfo& typeInfo ) const;
         /** @brief 중첩 컨테이너 트리를 출력합니다. */
         void emitNestedContainerTree( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop ) const;
         /** @brief 이벤트(멀티캐스트 델리게이트 PROPERTY) 목록을 출력합니다. */

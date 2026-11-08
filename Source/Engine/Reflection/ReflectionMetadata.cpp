@@ -16,50 +16,30 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionConstants.h"
+#include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionEnumNames.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 /**
  * @file ReflectionMetadata.cpp
- * @brief `TypeMetadata` · `PropertyMetadata` · `FunctionMetadata` 의 기본값입니다.
+ * @brief `TypeMetadata` · `PropertyMetadata` · `FunctionMetadata` 의 기본값과 에디터 메타데이터 읽기입니다.
  */
 namespace sw
 {
     TypeMetadata::TypeMetadata() noexcept
-#if !defined( SW_SHIPPING )
-        : _category{ constant::reflection::kDefaultCategory }
-        , _displayName{}
-        , _tooltip{}
-        , _mapCustomMeta{}
-        , _bHideInMenu{ SW_FALSE }
-        , _reservedFlags{ 0 }
-#else
-        : _reservedEmpty{ 0 }
-#endif
+        : _pEditor{ nullptr }
     {
     }
 
+    const TypeEditorMetadata& TypeMetadata::getEditor() const noexcept
+    {
+        return _pEditor != nullptr ? *_pEditor : TypeEditorMetadata::getDefault();
+    }
+
     PropertyMetadata::PropertyMetadata() noexcept
-#if !defined( SW_SHIPPING )
-        : _category{ constant::reflection::kDefaultCategory }
-        , _displayName{}
-        , _tooltip{}
-        , _mapCustomMeta{}
-        , _editCondition{}
-        , _fileFilter{}
-        , _uiMinRange{ 0.0f }
-        , _uiMaxRange{ 1.0f }
-        , _bHasUIMinRange{ SW_FALSE }
-        , _bHasUIMaxRange{ SW_FALSE }
-        , _bEditConditionHides{ SW_FALSE }
-        , _bColorHDR{ SW_FALSE }
-        , _bMultiline{ SW_FALSE }
-        , _reservedDisplay{ 0 }
+        : _pEditor{ nullptr }
         , _defaultValue{}
-#else
-        : _defaultValue{}
-#endif
         , _assetType{}
         , _repNotify{}
         , _validate{}
@@ -76,11 +56,6 @@ namespace sw
         , _bPolymorphic{ SW_FALSE }
         , _bTransient{ SW_FALSE }
         , _bSkipIfEmpty{ SW_FALSE }
-#if !defined( SW_SHIPPING )
-        , _bHideInInspector{ SW_FALSE }
-#else
-        , _reservedFlags{ 0 }
-#endif
         , _bReplicated{ SW_FALSE }
         , _bRequired{ SW_FALSE }
         , _bInheritKey{ SW_FALSE }
@@ -89,6 +64,11 @@ namespace sw
         , _bRuntimeState{ SW_FALSE }
         , _reservedRoles{ 0 }
     {
+    }
+
+    const PropertyEditorMetadata& PropertyMetadata::getEditor() const noexcept
+    {
+        return _pEditor != nullptr ? *_pEditor : PropertyEditorMetadata::getDefault();
     }
 
     PropertyAllowedRange PropertyMetadata::computeAllowedRange( const void* pOwner ) const noexcept
@@ -105,27 +85,19 @@ namespace sw
     }
 
     FunctionMetadata::FunctionMetadata() noexcept
-#if !defined( SW_SHIPPING )
-        : _category{ constant::reflection::kDefaultCategory }
-        , _displayName{}
-        , _tooltip{}
-        , _editorPreview{}
-        , _mapCustomMeta{}
+        : _pEditor{ nullptr }
         , _netRole{ FunctionNetRole::Local }
-#else
-        : _netRole{ FunctionNetRole::Local }
-#endif
         , _bReliable{ SW_FALSE }
         , _bValidate{ SW_FALSE }
         , _bConstructor{ SW_FALSE }
         , _bStatic{ SW_FALSE }
         , _bConst{ SW_FALSE }
-#if !defined( SW_SHIPPING )
-        , _bCallInEditor{ SW_FALSE }
         , _reserved{ 0 }
-#else
-        , _reserved{ 0 }
-#endif
     {
+    }
+
+    const FunctionEditorMetadata& FunctionMetadata::getEditor() const noexcept
+    {
+        return _pEditor != nullptr ? *_pEditor : FunctionEditorMetadata::getDefault();
     }
 } // namespace sw

@@ -134,9 +134,10 @@ namespace sw
     GeneratedPaths GeneratedFileUtil::makePaths( const string& outputDir, const string& inputFile )
     {
         GeneratedPaths paths;
-        paths._cppPath    = ParserUtil::makeGeneratedPath( outputDir, inputFile, sw::config::kExtReflectionGenCpp );
-        paths._headerPath = ParserUtil::makeGeneratedPath( outputDir, inputFile, sw::config::kExtReflectionGenHeader );
-        paths._stampPath  = paths._cppPath + sw::config::kExtReflectionStamp;
+        paths._cppPath            = ParserUtil::makeGeneratedPath( outputDir, inputFile, sw::config::kExtReflectionGenCpp );
+        paths._headerPath         = ParserUtil::makeGeneratedPath( outputDir, inputFile, sw::config::kExtReflectionGenHeader );
+        paths._editorMetadataPath = ParserUtil::makeGeneratedPath( outputDir, inputFile, sw::config::kExtReflectionGenMetaCpp );
+        paths._stampPath          = paths._cppPath + sw::config::kExtReflectionStamp;
         return paths;
     }
 
@@ -250,7 +251,8 @@ namespace sw
     bool IncrementalCheck::isUpToDate( const string& inputFile, const GeneratedPaths& paths ) const
     {
         const uint64 stampTime     = GeneratedFilesInternal::getWriteTime( paths._stampPath );
-        const bool   bStampMissing = stampTime == 0 || FileUtil::exists( paths._cppPath ) == false || FileUtil::exists( paths._headerPath ) == false;
+        const bool   bStampMissing = stampTime == 0 || FileUtil::exists( paths._cppPath ) == false || FileUtil::exists( paths._headerPath ) == false ||
+                                   FileUtil::exists( paths._editorMetadataPath ) == false;
         if ( bStampMissing )
             return false;
 

@@ -59,6 +59,7 @@ namespace sw::config
     inline constexpr const utf8* kFileAssetReferenceFieldsList = "@SW_FILE_ASSET_REFERENCE_FIELDS_LIST@";
     /** @brief 리플렉션 생성 계약(`Scripts/common/ProjectConstants.py` 한 곳) — 산출물 확장자 · 스탬프 · FlagOps 우산 · 머리 글입니다. */
     inline constexpr const utf8* kExtReflectionGenCpp    = "@SW_EXT_REFLECTION_GEN_CPP@";
+    inline constexpr const utf8* kExtReflectionGenMetaCpp = "@SW_EXT_REFLECTION_GEN_META_CPP@"; ///< 개발 전용 에디터 메타데이터 단위(배포는 짓지 않는다)
     inline constexpr const utf8* kExtReflectionGenHeader = "@SW_EXT_REFLECTION_GEN_HEADER@";
     inline constexpr const utf8* kExtReflectionTemplate  = "@SW_EXT_REFLECTION_TEMPLATE@";
     inline constexpr const utf8* kExtReflectionStamp     = "@SW_EXT_REFLECTION_STAMP@";

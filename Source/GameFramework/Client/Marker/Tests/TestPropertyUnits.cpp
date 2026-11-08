@@ -4,6 +4,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -119,7 +120,7 @@ SW_TEST_CASE( PropertyUnitsTest, UnitsMatchHowValuesAreStored )
                 offenders += where + "Max is above 2*pi — the range looks like degrees\n";
             for ( const ConflictingUnitWord& conflict : kArrConflictingUnitWord )
             {
-                if ( units == conflict._pUnits && sw::StringUtil::stristr( prop._metadata->_tooltip.c_str(), conflict._pWord ) != nullptr )
+                if ( units == conflict._pUnits && sw::StringUtil::stristr( prop._metadata->getEditor()._tooltip.c_str(), conflict._pWord ) != nullptr )
                     offenders += where + "the tooltip says '" + conflict._pWord + "' — tooltip and Units must name the same unit\n";
             }
         }

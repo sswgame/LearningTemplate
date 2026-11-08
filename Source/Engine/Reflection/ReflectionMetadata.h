@@ -1,43 +1,32 @@
 /**
  * @file ReflectionMetadata.h
- * @brief `REFLECT()` · `PROPERTY()` · `FUNCTION()` 에 적은 메타데이터(속성 키 표)입니다. 카테고리, 기본값, 범위, 직렬화 · 복제 · 세이브 플래그를 담습니다.
+ * @brief `REFLECT()` · `PROPERTY()` · `FUNCTION()` 에 적은 런타임 메타데이터(속성 키 표)입니다. 기본값, 범위, 직렬화 · 복제 · 세이브 플래그를 담습니다.
  * @details 속성 키를 더할 때마다 바뀌는 구조라 `ReflectionTypes.h` 에서 갈랐습니다. `ReflectionTypes.h` 는
  *          `ReflectionMetadataBox` 로 이 구조를 값처럼 들 뿐 정의를 모르므로, `GameObject.h` · `Component.h` 를 거쳐 그 헤더를 읽는 TU 는
- *          이 파일이 바뀌어도 다시 컴파일되지 않습니다. 메타데이터 칸(`info._metadata->_category` 등)을 읽거나 쓰는 TU 만 이 파일을 include 합니다.
+ *          이 파일이 바뀌어도 다시 컴파일되지 않습니다. 메타데이터 칸(`info._metadata->_bTransient` 등)을 읽거나 쓰는 TU 만 이 파일을 include 합니다.
  *          생성 코드(.gen.cpp)는 `ReflectGenerated.h` 가 include 합니다.
+ *          에디터 · 문서만 읽는 칸(카테고리 · 툴팁 · 커스텀 메타 · 편집 조건 · 슬라이더 범위)은 옆 표(`ReflectionEditorMetadata.h`)에 있고 여기서는 포인터(`_pEditor`)로만
+ *          가리킨다 — 그래서 이 구조체들의 배치는 구성(개발 · 배포)마다 같다(언리얼 `WITH_METADATA` 는 같은 칸을 `#if` 로 가른다).
  */
 #pragma once
 #include "Engine/Reflection/ReflectionTypes.h"
 
 namespace sw
 {
-    /// @brief `REFLECT()` 를 붙인 클래스와 구조체의 메타데이터입니다.
+    struct FunctionEditorMetadata;
+    struct PropertyEditorMetadata;
+    struct TypeEditorMetadata;
+
+    /// @brief `REFLECT()` 를 붙인 클래스와 구조체의 메타데이터입니다. 지금은 에디터 메타데이터를 가리키는 칸뿐입니다.
     struct SW_API TypeMetadata
     {
-#if !defined( SW_SHIPPING )
-        string                               _category;
-        string                               _displayName;
-        string                               _tooltip;
-        unordered_map<hashed_string, string> _mapCustomMeta;
-        uint8                                _bHideInMenu   : 1; ///< "Add Component" 메뉴에서 숨긴다
-        [[maybe_unused]] uint8               _reservedFlags : 7;
-#else
-        [[maybe_unused]] uint8 _reservedEmpty;
-#endif
+        /** @brief 에디터 메타데이터(`ReflectionEditorMetadata.h`)입니다. 타입을 등록할 때 `TypeRegistry` 가 붙이고, 없으면(배포 · 적은 것 없음) nullptr 입니다. 읽기는 `getEditor` 로. */
+        const TypeEditorMetadata* _pEditor;
 
         TypeMetadata() noexcept;
 
-        /** @brief 커스텀 메타데이터를 조회합니다. Shipping 빌드에서는 nullptr 를 반환합니다. */
-        const string* findCustomMeta( const hashed_string& key ) const noexcept
-        {
-#if !defined( SW_SHIPPING )
-            auto iter = _mapCustomMeta.find( key );
-            return ( iter != _mapCustomMeta.end() ) ? &iter->second : nullptr;
-#else
-            (void)key;
-            return nullptr;
-#endif
-        }
+        /** @brief 에디터 메타데이터입니다. 붙지 않았으면 기본값(`TypeEditorMetadata::getDefault`)입니다. */
+        const TypeEditorMetadata& getEditor() const noexcept;
     };
 } // namespace sw
 
@@ -66,28 +55,11 @@ namespace sw
 
 namespace sw
 {
-    /// @brief `PROPERTY()` 에 적은 메타데이터입니다. 카테고리, 기본값, 범위, XML 속성을 담습니다.
+    /// @brief `PROPERTY()` 에 적은 런타임 메타데이터입니다. 기본값, 범위, 직렬화 · 복제 · 세이브 플래그를 담습니다.
     struct SW_API PropertyMetadata
     {
-#if !defined( SW_SHIPPING )
-        string                               _category;
-        string                               _displayName;
-        string                               _tooltip;
-        unordered_map<hashed_string, string> _mapCustomMeta;
-        /** @brief `EditCondition = "…"` 식입니다. 식이 거짓이면 인스펙터가 편집을 막습니다(`PropertyEditConditionExpr`). */
-        string _editCondition;
-        /** @brief `FileFilter = "*.png;*.dds"` 로 적은, 경로 필드가 받는 파일 형식입니다. */
-        string _fileFilter;
-        /** @brief `UIMin` 과 `UIMax` 로 정한 인스펙터 슬라이더와 드래그 범위입니다. 허용 범위(`_minRange`, `_maxRange`)와는 별개입니다. */
-        float32                _uiMinRange;
-        float32                _uiMaxRange;
-        uint8                  _bHasUIMinRange      : 1;
-        uint8                  _bHasUIMaxRange      : 1;
-        uint8                  _bEditConditionHides : 1; ///< 조건이 거짓이면 막지 않고 숨긴다
-        uint8                  _bColorHDR           : 1; ///< 색을 HDR 로 편집한다. 1 을 넘는 값을 허용한다
-        uint8                  _bMultiline          : 1; ///< 여러 줄 텍스트 필드
-        [[maybe_unused]] uint8 _reservedDisplay     : 3;
-#endif
+        /** @brief 에디터 메타데이터(`ReflectionEditorMetadata.h`)입니다. 타입을 등록할 때 붙고, 없으면 nullptr 입니다. 읽기는 `getEditor` 로. */
+        const PropertyEditorMetadata* _pEditor;
         /**
          * @brief 에셋이 이 프로퍼티를 생략할 때 쓰는 기본값입니다(`PROPERTY( Default = "..." )`).
          * @details XML, JSON, 바이너리 역직렬화가 이 값을 적용한다. C++ 멤버 초기화자와는 별개이므로 둘을 맞춰 둔다.
@@ -139,12 +111,6 @@ namespace sw
          * @note 읽기에는 영향이 없다. 파일에 없으면 멤버 초기값이 그대로 남는다.
          */
         uint8 _bSkipIfEmpty : 1;
-#if !defined( SW_SHIPPING )
-        /** @brief 에디터 인스펙터에서 숨깁니다(`HideInInspector`). */
-        uint8 _bHideInInspector : 1;
-#else
-        [[maybe_unused]] uint8 _reservedFlags : 1;
-#endif
         /** @brief 네트워크 복제 대상입니다(`Replicated`, `RepNotify`). 네트워크 계층이 `PropertyRoleUtil::collectReplicatedProperties` 로 모읍니다. */
         uint8 _bReplicated : 1;
         /**
@@ -192,68 +158,30 @@ namespace sw
          */
         PropertyAllowedRange computeAllowedRange( const void* pOwner ) const noexcept;
 
-        /** @brief 슬라이더 범위(`UIMin`, `UIMax`)가 모두 있으면 true 입니다. Shipping 빌드에는 없습니다. */
-        bool hasFullUIRange() const noexcept
-        {
-#if !defined( SW_SHIPPING )
-            return _bHasUIMinRange != SW_FALSE && _bHasUIMaxRange != SW_FALSE;
-#else
-            return false;
-#endif
-        }
-
-        /** @brief 커스텀 메타데이터를 조회합니다. Shipping 빌드에서는 nullptr 를 반환합니다. */
-        const string* findCustomMeta( const hashed_string& key ) const noexcept
-        {
-#if !defined( SW_SHIPPING )
-            auto iter = _mapCustomMeta.find( key );
-            return ( iter != _mapCustomMeta.end() ) ? &iter->second : nullptr;
-#else
-            (void)key;
-            return nullptr;
-#endif
-        }
+        /** @brief 에디터 메타데이터입니다. 붙지 않았으면 기본값(`PropertyEditorMetadata::getDefault`)입니다. */
+        const PropertyEditorMetadata& getEditor() const noexcept;
     };
 } // namespace sw
 
 namespace sw
 {
-    /// @brief `FUNCTION()` 에 적은 메타데이터입니다. 카테고리, NetRole, static, const 를 담습니다.
+    /// @brief `FUNCTION()` 에 적은 런타임 메타데이터입니다. NetRole, static, const 를 담습니다.
     struct SW_API FunctionMetadata
     {
-#if !defined( SW_SHIPPING )
-        string                               _category;
-        string                               _displayName;
-        string                               _tooltip;
-        string                               _editorPreview; ///< `FUNCTION( EditorPreview = "..." )` 의 값이다. 에디터 뷰포트 미리보기가 이 값으로 메서드를 찾는다
-        unordered_map<hashed_string, string> _mapCustomMeta;
-#endif
-        FunctionNetRole _netRole;
-        uint8           _bReliable    : 1;
-        uint8           _bValidate    : 1;
-        uint8           _bConstructor : 1; ///< REFLECT 타입의 생성자 호출기다. objPtr 에 placement new 한다
-        uint8           _bStatic      : 1; ///< C++ static 멤버 함수
-        uint8           _bConst       : 1; ///< const 멤버 함수
-#if !defined( SW_SHIPPING )
-        uint8                  _bCallInEditor : 1; ///< 에디터 인스펙터에 실행 버튼을 보여 준다
-        [[maybe_unused]] uint8 _reserved      : 2;
-#else
-        [[maybe_unused]] uint8 _reserved : 3;
-#endif
+        /** @brief 에디터 메타데이터(`ReflectionEditorMetadata.h`)입니다. 타입을 등록할 때 붙고, 없으면 nullptr 입니다. 읽기는 `getEditor` 로. */
+        const FunctionEditorMetadata* _pEditor;
+        FunctionNetRole               _netRole;
+        uint8                         _bReliable    : 1;
+        uint8                         _bValidate    : 1;
+        uint8                         _bConstructor : 1; ///< REFLECT 타입의 생성자 호출기다. objPtr 에 placement new 한다
+        uint8                         _bStatic      : 1; ///< C++ static 멤버 함수
+        uint8                         _bConst       : 1; ///< const 멤버 함수
+        [[maybe_unused]] uint8        _reserved     : 3;
 
         /** @brief 플래그를 끈 기본값으로 만듭니다. */
         FunctionMetadata() noexcept;
 
-        /** @brief 커스텀 메타데이터를 조회합니다. Shipping 빌드에서는 nullptr 를 반환합니다. */
-        const string* findCustomMeta( const hashed_string& key ) const noexcept
-        {
-#if !defined( SW_SHIPPING )
-            auto iter = _mapCustomMeta.find( key );
-            return ( iter != _mapCustomMeta.end() ) ? &iter->second : nullptr;
-#else
-            (void)key;
-            return nullptr;
-#endif
-        }
+        /** @brief 에디터 메타데이터입니다. 붙지 않았으면 기본값(`FunctionEditorMetadata::getDefault`)입니다. */
+        const FunctionEditorMetadata& getEditor() const noexcept;
     };
 } // namespace sw

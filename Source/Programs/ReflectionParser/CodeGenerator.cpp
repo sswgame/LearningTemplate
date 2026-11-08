@@ -25,6 +25,27 @@ namespace sw
             static constexpr int32 kMaxNestedContainerDepth = 3;
 
             /**
+             * @brief 범위 경계 하나를 float32 글(`1.5f`)로 냅니다. 등록 단위의 허용 범위와 개발 전용 단위의 슬라이더 범위가 함께 쓴다.
+             * @details 접미사 f 가 없으면 `0.100000` 은 double 이라, float32 멤버에 넣을 때 정밀도 손실 경고가 **생성된 파일마다** 난다.
+             *          경계는 float32 가 되돌아오는 자릿수(9)로 낸다. 6 자리로 자르면 `Max = 6.2831853` 이 6.283185f 가 되어 2π 를 담은 값이 범위 밖이 된다.
+             */
+            static string formatRangeLiteral( const float32 value )
+            {
+                utf8 arrBuffer[constant::buffer::kMax64]{};
+                formatstring( arrBuffer, sizeof( arrBuffer ), "%.9g", static_cast<float64>( value ) );
+                string literal( arrBuffer );
+                if ( literal.find_first_of( ".eE" ) == string::npos )
+                    literal += ".0";
+                return literal + "f";
+            }
+
+            /** @brief 프로퍼티에 개발 전용 단위로 낼 에디터 메타데이터(표시 · 편집 필드, 슬라이더 범위)가 있으면 true 입니다. */
+            static bool hasPropertyEditorMetadata( const ParsedPropertyInfo& prop )
+            {
+                return AnnotationFields::hasEditorMetadata( prop ) || prop._bHasUIMinRange != SW_FALSE || prop._bHasUIMaxRange != SW_FALSE;
+            }
+
+            /**
              * @brief `Min` · `Max` 글이 이 타입의 필드 하나(`_halfSize`, `-_halfSize`)이면 그 필드와 부호를 찾습니다.
              * @return 그 필드입니다. 숫자 · 성분 목록 · 이 타입에 없는 이름(바깥 타입의 필드)이면 nullptr 입니다. 그 꼴은 고정 배치형 코덱만 씁니다.
              */
@@ -334,29 +355,18 @@ namespace sw
 
     void CodeGenerator::emitPropertyMetadata( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop ) const
     {
-        AnnotationFields::emitMetadata( emit, prop, "p._metadata->" );
+        AnnotationFields::emitRuntimeMetadata( emit, prop, "p._metadata->" );
 
         // 범위는 경계마다 값과 "있음" 표시가 함께 가는 Manual 필드다. 적힌 쪽만 낸다 — 표시가 하나면 `Min` 만 적어도
         // 위 경계(기본 1)까지 나가 인스펙터가 그 값을 1 에서 막는다.
-        // 접미사 f 가 없으면 `0.100000` 은 double 이라, float32 멤버에 넣을 때 정밀도 손실 경고가 **생성된 파일마다** 난다.
-        // 경계는 float32 가 되돌아오는 자릿수(9)로 낸다. 6 자리로 자르면 `Max = 6.2831853` 이 6.283185f 가 되어 2π 를 담은 값이 범위 밖이 된다.
-        const auto formatRangeLiteral = []( const float32 value ) -> string
-        {
-            utf8 arrBuffer[constant::buffer::kMax64]{};
-            formatstring( arrBuffer, sizeof( arrBuffer ), "%.9g", static_cast<float64>( value ) );
-            string literal( arrBuffer );
-            if ( literal.find_first_of( ".eE" ) == string::npos )
-                literal += ".0";
-            return literal + "f";
-        };
         if ( prop._bHasMinRange != SW_FALSE )
         {
-            emit.linef( "p._metadata->_minRange     = %#;", formatRangeLiteral( prop._minRange ).c_str() );
+            emit.linef( "p._metadata->_minRange     = %#;", CodeGeneratorInternal::formatRangeLiteral( prop._minRange ).c_str() );
             emit.assign( "p._metadata->_bHasMinRange", "SW_TRUE" );
         }
         if ( prop._bHasMaxRange != SW_FALSE )
         {
-            emit.linef( "p._metadata->_maxRange     = %#;", formatRangeLiteral( prop._maxRange ).c_str() );
+            emit.linef( "p._metadata->_maxRange     = %#;", CodeGeneratorInternal::formatRangeLiteral( prop._maxRange ).c_str() );
             emit.assign( "p._metadata->_bHasMaxRange", "SW_TRUE" );
         }
         // 상한은 코덱이 지키는 값 그대로다(상수 이름으로 적었으면 `PropertyResolver` 가 푼 값).
@@ -365,22 +375,27 @@ namespace sw
         // 숫자가 아닌 경계 중 이 타입의 필드 하나를 가리키는 것은 인스턴스에서 읽는 함수로 낸다(인스펙터와 읽기 공통 끝이 그 값으로 막는다).
         CodeGeneratorInternal::emitRangeReader( emit, typeInfo, prop._minRangeExpr._text, "_pReadMinRange" );
         CodeGeneratorInternal::emitRangeReader( emit, typeInfo, prop._maxRangeExpr._text, "_pReadMaxRange" );
-        // 슬라이더 범위는 에디터 메타다(Shipping 에 멤버가 없다).
-        if ( prop._bHasUIMinRange != SW_FALSE || prop._bHasUIMaxRange != SW_FALSE )
+        // 슬라이더 범위는 에디터 메타데이터다 — 개발 전용 단위가 낸다(`emitPropertyEditorMetadata`).
+    }
+
+    void CodeGenerator::emitPropertyEditorMetadata( CodeEmit& emit, const ParsedPropertyInfo& prop, const utf8* pAddFunction ) const
+    {
+        emit.line( "{" );
+        emit.push();
+        emit.linef( "::sw::PropertyEditorMetadata& p = set.%#( %# );", pAddFunction, CodeEmit::hs( prop._name ) );
+        AnnotationFields::emitEditorMetadata( emit, prop, "p." );
+        if ( prop._bHasUIMinRange != SW_FALSE )
         {
-            emit.line( "#if !defined( SW_SHIPPING )" );
-            if ( prop._bHasUIMinRange != SW_FALSE )
-            {
-                emit.linef( "p._metadata->_uiMinRange   = %#;", formatRangeLiteral( prop._uiMinRange ).c_str() );
-                emit.assign( "p._metadata->_bHasUIMinRange", "SW_TRUE" );
-            }
-            if ( prop._bHasUIMaxRange != SW_FALSE )
-            {
-                emit.linef( "p._metadata->_uiMaxRange   = %#;", formatRangeLiteral( prop._uiMaxRange ).c_str() );
-                emit.assign( "p._metadata->_bHasUIMaxRange", "SW_TRUE" );
-            }
-            emit.line( "#endif" );
+            emit.linef( "p._uiMinRange     = %#;", CodeGeneratorInternal::formatRangeLiteral( prop._uiMinRange ).c_str() );
+            emit.assign( "p._bHasUIMinRange", "SW_TRUE" );
         }
+        if ( prop._bHasUIMaxRange != SW_FALSE )
+        {
+            emit.linef( "p._uiMaxRange     = %#;", CodeGeneratorInternal::formatRangeLiteral( prop._uiMaxRange ).c_str() );
+            emit.assign( "p._bHasUIMaxRange", "SW_TRUE" );
+        }
+        emit.pop();
+        emit.line( "}" );
     }
 
     void CodeGenerator::emitNestedContainerTree( CodeEmit& emit, const ParsedTypeInfo& typeInfo,
@@ -624,7 +639,7 @@ namespace sw
                 emit.assign( "funcInfo._pReturnType", CodeGeneratorInternal::makeTypeOpsExpr( returnType ) );
             CodeGeneratorInternal::emitParameterList( emit, "funcInfo._listParameter", method._listParameter, _session, true );
 
-            AnnotationFields::emitMetadata( emit, method, "funcInfo._metadata->" );
+            AnnotationFields::emitRuntimeMetadata( emit, method, "funcInfo._metadata->" );
 
             // 애노테이션이 아니라 선언에서 온 사실들이다.
             emit.flagIf( method._bConstructor != SW_FALSE, "funcInfo._metadata->_bConstructor", "SW_TRUE" );
@@ -654,7 +669,7 @@ namespace sw
             CodeGeneratorInternal::emitParameterList( emit, "e._listParameter", event._listParameter, _session, false );
             // 묶기 · 부르기 · 인자 변환 표는 필드 타입(`MulticastDelegate<void( Args... )>`)에서 템플릿이 만든다.
             emit.linef( "e.setOps( &::sw::ReflectEventOpsOf<decltype(%#::%#)>::kOps );", typeInfo._fullyQualifiedName, event._memberName );
-            AnnotationFields::emitMetadata( emit, event._annotation, "e._metadata->" );
+            AnnotationFields::emitRuntimeMetadata( emit, event._annotation, "e._metadata->" );
             emit.line( "return e;" );
             emit.pop();
             emit.line( "}()," );
@@ -694,7 +709,7 @@ namespace sw
         CodeEmit emit( outBuffer );
         emit.push( 3 );
 
-        AnnotationFields::emitMetadata( emit, typeInfo, "info._metadata->" );
+        AnnotationFields::emitRuntimeMetadata( emit, typeInfo, "info._metadata->" );
 
         if ( typeInfo._listProperty.empty() == false )
         {
@@ -756,8 +771,8 @@ namespace sw
         CodeEmit emit( outBuffer );
         emit.push( 3 );
 
-        // EnumInfo 는 메타데이터 블록 없이 `_mapCustomMeta` 를 직접 든다.
-        AnnotationFields::emitMetadata( emit, enumInfo, "info." );
+        // 열거형의 커스텀 메타는 에디터 메타데이터다 — 개발 전용 단위가 낸다(`makeEditorMetadataText`).
+        AnnotationFields::emitRuntimeMetadata( emit, enumInfo, "info." );
 
         if ( enumInfo._listEnumerator.empty() == false )
         {
@@ -844,6 +859,96 @@ namespace sw
                 return &en;
         }
         return nullptr;
+    }
+
+    string CodeGenerator::makeEditorMetadataText() const
+    {
+        CodeEmitBuffer buffer;
+        appendTemplate( buffer, EmitTemplate::EditorMetadataFileHeader, {
+                                                                            {templatekey::kSourcePath,                   _sourceFilePath},
+                                                                            {    templatekey::kBanner, sw::config::kTextReflectionBanner}
+        } );
+        CodeEmit emit( buffer );
+        bool     bAny = false;
+        for ( const ParsedTypeInfo& typeInfo : _header._listType )
+        {
+            bAny = emitTypeEditorMetadata( emit, typeInfo ) || bAny;
+        }
+        for ( const ParsedEnumInfo& enumInfo : _header._listEnum )
+        {
+            if ( AnnotationFields::hasEditorMetadata( enumInfo ) == false )
+                continue;
+            const string id = sanitizeIdentifier( enumInfo._fullyQualifiedName );
+            emit.linef( "static void fillEnum_%#( ::sw::EnumEditorMetadata& meta )", id );
+            emit.line( "{" );
+            emit.push();
+            AnnotationFields::emitEditorMetadata( emit, enumInfo, "meta." );
+            emit.pop();
+            emit.line( "}" );
+            emit.linef( "static const ::sw::EnumEditorMetadataSource    s_%#_editorMetadata{ %#, &fillEnum_%# };", id, CodeEmit::quoted( enumInfo._fullyQualifiedName ), id );
+            emit.linef( "static const ::sw::EnumEditorMetadataRegistrar s_%#_editorMetadataRegistrar{ &s_%#_editorMetadata };", id, id );
+            emit.blank();
+            bAny = true;
+        }
+        if ( bAny == false )
+            emit.linef( "// No editor metadata in %#", _sourceFilePath );
+        buffer.append( "} // namespace sw::generated::editormetadata\n" );
+        return string( buffer.view() );
+    }
+
+    bool CodeGenerator::emitTypeEditorMetadata( CodeEmit& emit, const ParsedTypeInfo& typeInfo ) const
+    {
+        bool bAny = AnnotationFields::hasEditorMetadata( typeInfo );
+        for ( const ParsedPropertyInfo& prop : typeInfo._listProperty )
+        {
+            bAny = bAny || CodeGeneratorInternal::hasPropertyEditorMetadata( prop );
+        }
+        for ( const ParsedEventInfo& event : typeInfo._listEvent )
+        {
+            bAny = bAny || AnnotationFields::hasEditorMetadata( event._annotation );
+        }
+        for ( const ParsedFunctionInfo& method : typeInfo._listMethod )
+        {
+            bAny = bAny || AnnotationFields::hasEditorMetadata( method );
+        }
+        if ( bAny == false )
+            return false;
+
+        // 열쇠는 등록 단위와 같다 — 프로퍼티 · 이벤트는 이름, 메서드는 찾는 이름(`FunctionInfo::_hashName`, 생성자는 `makeCtorLookupName`).
+        const string id = sanitizeIdentifier( typeInfo._fullyQualifiedName );
+        emit.linef( "// ── %# ──────────────────────────────", typeInfo._fullyQualifiedName );
+        emit.linef( "static void fillType_%#( ::sw::TypeEditorMetadataSet& set )", id );
+        emit.line( "{" );
+        emit.push();
+        AnnotationFields::emitEditorMetadata( emit, typeInfo, "set._type." );
+        for ( const ParsedPropertyInfo& prop : typeInfo._listProperty )
+        {
+            if ( CodeGeneratorInternal::hasPropertyEditorMetadata( prop ) )
+                emitPropertyEditorMetadata( emit, prop, "addProperty" );
+        }
+        for ( const ParsedEventInfo& event : typeInfo._listEvent )
+        {
+            if ( AnnotationFields::hasEditorMetadata( event._annotation ) )
+                emitPropertyEditorMetadata( emit, event._annotation, "addEvent" );
+        }
+        for ( const ParsedFunctionInfo& method : typeInfo._listMethod )
+        {
+            if ( AnnotationFields::hasEditorMetadata( method ) == false )
+                continue;
+            const string lookupName = ( method._bConstructor != SW_FALSE ) ? CodeGeneratorInternal::makeCtorLookupName( method, _session ) : method._name;
+            emit.line( "{" );
+            emit.push();
+            emit.linef( "::sw::FunctionEditorMetadata& f = set.addFunction( %# );", CodeEmit::hs( lookupName ) );
+            AnnotationFields::emitEditorMetadata( emit, method, "f." );
+            emit.pop();
+            emit.line( "}" );
+        }
+        emit.pop();
+        emit.line( "}" );
+        emit.linef( "static const ::sw::TypeEditorMetadataSource    s_%#_editorMetadata{ %#, &fillType_%# };", id, CodeEmit::quoted( typeInfo._fullyQualifiedName ), id );
+        emit.linef( "static const ::sw::TypeEditorMetadataRegistrar s_%#_editorMetadataRegistrar{ &s_%#_editorMetadata };", id, id );
+        emit.blank();
+        return true;
     }
 
     bool CodeGenerator::makeHeaderText( string& outText ) const

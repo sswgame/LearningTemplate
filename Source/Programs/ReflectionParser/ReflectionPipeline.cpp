@@ -587,6 +587,7 @@ namespace sw
         }
         const bool bWritten = GeneratedFileUtil::writeIfChanged( paths._cppPath, generator.makeSourceText() ) &&
                               GeneratedFileUtil::writeIfChanged( paths._headerPath, headerText ) &&
+                              GeneratedFileUtil::writeIfChanged( paths._editorMetadataPath, generator.makeEditorMetadataText() ) &&
                               GeneratedFileUtil::writeStamp( paths._stampPath, stamp );
         if ( bWritten == false )
             SW_LOG_ERROR_ID( "ReflectionPipeline.CodeGenerationFailed", "Code generation failed: %#", inputFile );
@@ -610,6 +611,7 @@ namespace sw
             const GeneratedPaths paths = GeneratedFileUtil::makePaths( _pOptions->_outputDir, inputFile );
             listTarget.push_back( paths._cppPath );
             listTarget.push_back( paths._headerPath );
+            listTarget.push_back( paths._editorMetadataPath );
             GeneratedStamp stamp;
             if ( GeneratedFileUtil::readStamp( paths._stampPath, stamp ) == false )
                 continue; // 스탬프가 없으면(이번 실행에 실패한 입력) 더할 의존이 없다 - 실패는 이미 오류로 셌다

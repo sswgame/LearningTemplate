@@ -26,6 +26,7 @@ namespace sw
         BuiltinFileHeader,
         BuiltinTypeRegistrar,
         BuiltinFileFooter,
+        EditorMetadataFileHeader,
         Count,
     };
 
@@ -41,6 +42,7 @@ namespace sw
         "BuiltinFileHeader",
         "BuiltinTypeRegistrar",
         "BuiltinFileFooter",
+        "EditorMetadataFileHeader",
     };
     static_assert( std::size( kArrEmitTemplateName ) == static_cast<size_t>( EmitTemplate::Count ), "kArrEmitTemplateName must list every EmitTemplate" );
 

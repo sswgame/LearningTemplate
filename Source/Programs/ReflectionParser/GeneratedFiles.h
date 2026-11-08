@@ -17,6 +17,7 @@ namespace sw
     {
         string _cppPath;
         string _headerPath;
+        string _editorMetadataPath; ///< 개발 전용 단위(`<이름>.gen.meta.cpp` — 에디터 메타데이터). 배포 구성은 짓지 않는다
         /**
          * @brief 마지막으로 **성공한 생성**의 시각을 담는 빈 파일(`<.gen.cpp>.stamp`)입니다.
          * @details 산출물은 내용이 같으면 다시 쓰지 않습니다 — 쓰면 그 파일을 include 하는 TU 가 전부 다시 컴파일됩니다. 그래서

@@ -5,6 +5,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/Inspector/Model/PropertyEditConditionExpr.h"
 
+#include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/Tests/ReflectionTestTypes.h"
@@ -52,13 +53,15 @@ SW_TEST_CASE( PropertyEditConditionTest, EditConditionFollowsTheOtherProperty )
     SW_EXPECT_TRUE( getState( type, actor, "_orbitRadius" ) == sw::PropertyEditState::Disabled );
     SW_EXPECT_TRUE( getState( type, actor, "_blend" ) == sw::PropertyEditState::Enabled );
 
-    // 풀지 못하는 식은 막지 않고 이유를 말한다
-    sw::PropertyInfo broken                                    = *type.findPropertyInHierarchy( "_speed" );
-    broken._metadata->_editCondition                           = "_mode == Sideways";
+    // 풀지 못하는 식은 막지 않고 이유를 말한다 — 에디터 메타데이터는 등록이 붙인 표를 가리키므로 사본은 자기 것을 가리키게 한다
+    sw::PropertyInfo           broken = *type.findPropertyInHierarchy( "_speed" );
+    sw::PropertyEditorMetadata brokenEditor{ broken._metadata->getEditor() };
+    broken._metadata->_pEditor                                 = &brokenEditor;
+    brokenEditor._editCondition                                = "_mode == Sideways";
     const sw::expected<sw::PropertyEditConditionExpr> sideways = sw::PropertyEditConditionExpr::parse( type, broken );
     SW_REQUIRE_FALSE( sideways.has_value() );
     SW_EXPECT_TRUE( sideways.error().detail().find( "Sideways" ) != sw::string_view::npos );
-    broken._metadata->_editCondition = "_noSuchProperty";
+    brokenEditor._editCondition = "_noSuchProperty";
     SW_EXPECT_FALSE( sw::PropertyEditConditionExpr::parse( type, broken ).has_value() );
     SW_EXPECT_TRUE( sw::PropertyEditConditionExpr::getEditState( type, broken, sw::ObjectAddress{ &actor } ) == sw::PropertyEditState::Enabled );
 }
@@ -74,7 +77,7 @@ SW_TEST_CASE( PropertyEditConditionTest, EveryEditConditionResolves )
     {
         for ( const sw::PropertyInfo& prop : type.getPropertiesWithBase() )
         {
-            if ( prop._metadata->_editCondition.empty() )
+            if ( prop._metadata->getEditor()._editCondition.empty() )
                 continue;
             ++checkedCount;
             const sw::expected<sw::PropertyEditConditionExpr> expr = sw::PropertyEditConditionExpr::parse( type, prop );

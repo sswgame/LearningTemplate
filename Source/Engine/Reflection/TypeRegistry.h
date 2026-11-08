@@ -19,6 +19,9 @@
 
 namespace sw
 {
+    struct EnumEditorMetadata;
+    struct TypeEditorMetadataSet;
+
     /**
      * @class TypeRegistry
      * @brief 리플렉션 TypeInfo 와 EnumInfo 를 등록하고 조회하며, 별칭을 관리합니다.
@@ -298,6 +301,15 @@ namespace sw
         TaskValue invokeMethod( void* pInstance, const hashed_string& classFqn, const hashed_string& methodName, const TaskArgs& args = {} ) const;
 
     private:
+        /**
+         * @brief 개발 전용 생성 단위가 올린 에디터 메타데이터(`TypeEditorMetadataSource`)를 @p info 와 그 프로퍼티 · 이벤트 · 메서드에 붙입니다. 잠금 안에서 부른다.
+         * @details 줄이 없으면(배포 구성 · 적은 것 없음) 아무것도 하지 않아 포인터가 빈 채다. 묶음은 이 레지스트리가 든다 — 다시 등록하면 새 묶음을 만들고 옛 묶음은
+         *          버리지 않고 모아 둔다(밖에서 든 옛 정보 사본이 가리킬 수 있다 — 핫 리로드 한 번에 타입 몇 개 분량이다).
+         */
+        void attachEditorMetadata( TypeInfo& info );
+        /** @brief 열거형 @p info 에 에디터 메타데이터를 붙입니다(`attachEditorMetadata` 의 짝). 잠금 안에서 부른다. */
+        void attachEditorMetadata( EnumInfo& info );
+
         /** @brief 템플릿 enum 의 EnumInfo 입니다. 찾는 규칙은 `findEnumByTypeFqn` 입니다. */
         template <typename E>
         const EnumInfo* findEnumOf() const
@@ -326,6 +338,13 @@ namespace sw
         /** @brief FQN, 짧은 이름, 별칭에서 `_mapFqnToEnum` 의 객체로 가는 맵입니다. 모듈을 해제하면 여기서만 지웁니다. */
         unordered_map<hashed_string, EnumInfo*> _mapNameToEnum       SW_GUARDED_BY( _mutex );
         unordered_map<uint32, hashed_string> _mapHashToCanonicalName SW_GUARDED_BY( _mutex );
+        /** @brief 타입 FQN 마다 붙인 에디터 메타데이터 묶음입니다(`attachEditorMetadata`). 배포 구성은 비어 있다. */
+        unordered_map<hashed_string, unique_ptr<TypeEditorMetadataSet>> _mapTypeEditorMetadata SW_GUARDED_BY( _mutex );
+        /** @brief 열거형 FQN 마다 붙인 에디터 메타데이터입니다. */
+        unordered_map<hashed_string, unique_ptr<EnumEditorMetadata>> _mapEnumEditorMetadata SW_GUARDED_BY( _mutex );
+        /** @brief 다시 등록되어 물러난 묶음입니다(옛 정보 사본이 가리킬 수 있어 지우지 않는다). */
+        vector<unique_ptr<TypeEditorMetadataSet>> _listRetiredTypeEditorMetadata SW_GUARDED_BY( _mutex );
+        vector<unique_ptr<EnumEditorMetadata>> _listRetiredEnumEditorMetadata    SW_GUARDED_BY( _mutex );
         /** @brief 모듈 내림 알림 구독자입니다(`subscribeModuleUnloading`). 모듈을 올리고 내리는 스레드만 만진다. */
         MulticastDelegate<void( string_view )> _moduleUnloading;
         /** @brief 등록 줄 떼기 알림 구독자입니다(`subscribeModuleObjectsDetached`). 모듈을 올리고 내리는 스레드만 만진다. */

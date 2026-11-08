@@ -230,6 +230,7 @@ if(TARGET ReflectionParser)
 				"-DTYPES_LIST_NAME=${SW_FILE_REFLECTED_TYPES_LIST}"
 				"-DASSET_FIELDS_LIST_NAME=${SW_FILE_ASSET_REFERENCE_FIELDS_LIST}"
 				"-DGEN_CPP_SUFFIX=${SW_EXT_REFLECTION_GEN_CPP}"
+				"-DGEN_META_CPP_SUFFIX=${SW_EXT_REFLECTION_GEN_META_CPP}"
 				-P "${CMAKE_CURRENT_SOURCE_DIR}/ReflectionParser/RunParserFixture.cmake")
 		set_tests_properties(ReflectionParser.${swParserFixtureName} PROPERTIES LABELS nogpu TIMEOUT 120)
 	endforeach()

@@ -5,10 +5,11 @@
 #   // EXPECT-ERROR: <글>      파서가 실패(0 이 아닌 종료)하고 출력에 이 글이 있다. 이 줄이 하나라도 있으면 실패를 기대하는 사례다.
 #   // EXPECT-GEN: <글>        파서가 성공하고 <이름>.gen.cpp 에 이 글이 있다.
 #   // EXPECT-NOT-GEN: <글>    <이름>.gen.cpp 에 이 글이 없다.
+#   // EXPECT-META: <글>       <이름>.gen.meta.cpp(개발 전용 에디터 메타데이터 단위)에 이 글이 있다.
 #   // EXPECT-TYPE: <FQN>      ReflectedTypes.list 에 `<FQN>\t<모듈>` 줄이 있다.
 #   // EXPECT-ASSET-FIELD: <이름> <대상>  AssetReferenceFields.list 에 `<이름>\t<대상>` 줄이 있다.
-# 입력: PARSER · FIXTURE · WORK_DIR · SOURCE_ROOT · GENERATED_DIR · BUILTINS · ANNOTATION_META · TEMPLATES · CONFIG · TYPES_LIST_NAME · ASSET_FIELDS_LIST_NAME · GEN_CPP_SUFFIX
-foreach(swRequired PARSER FIXTURE WORK_DIR SOURCE_ROOT GENERATED_DIR BUILTINS ANNOTATION_META TEMPLATES CONFIG TYPES_LIST_NAME ASSET_FIELDS_LIST_NAME GEN_CPP_SUFFIX)
+# 입력: PARSER · FIXTURE · WORK_DIR · SOURCE_ROOT · GENERATED_DIR · BUILTINS · ANNOTATION_META · TEMPLATES · CONFIG · TYPES_LIST_NAME · ASSET_FIELDS_LIST_NAME · GEN_CPP_SUFFIX · GEN_META_CPP_SUFFIX
+foreach(swRequired PARSER FIXTURE WORK_DIR SOURCE_ROOT GENERATED_DIR BUILTINS ANNOTATION_META TEMPLATES CONFIG TYPES_LIST_NAME ASSET_FIELDS_LIST_NAME GEN_CPP_SUFFIX GEN_META_CPP_SUFFIX)
 	if(NOT DEFINED ${swRequired})
 		message(FATAL_ERROR "RunParserFixture: ${swRequired} is not given")
 	endif()
@@ -21,6 +22,7 @@ file(MAKE_DIRECTORY "${WORK_DIR}")
 set(listExpectError "")
 set(listExpectGen "")
 set(listExpectNotGen "")
+set(listExpectMeta "")
 set(listExpectType "")
 set(listExpectAssetField "")
 file(STRINGS "${FIXTURE}" listExpectLine REGEX "^// EXPECT-")
@@ -35,6 +37,8 @@ foreach(line IN LISTS listExpectLine)
 		list(APPEND listExpectGen "${CMAKE_MATCH_2}")
 	elseif(CMAKE_MATCH_1 STREQUAL "NOT-GEN")
 		list(APPEND listExpectNotGen "${CMAKE_MATCH_2}")
+	elseif(CMAKE_MATCH_1 STREQUAL "META")
+		list(APPEND listExpectMeta "${CMAKE_MATCH_2}")
 	elseif(CMAKE_MATCH_1 STREQUAL "TYPE")
 		list(APPEND listExpectType "${CMAKE_MATCH_2}")
 	elseif(CMAKE_MATCH_1 STREQUAL "ASSET-FIELD")
@@ -94,6 +98,13 @@ foreach(needle IN LISTS listExpectNotGen)
 	string(FIND "${genText}" "${needle}" swFound)
 	if(NOT swFound EQUAL -1)
 		message(FATAL_ERROR "${swFixtureName}: '${needle}' must not be in the generated code\n${genText}")
+	endif()
+endforeach()
+file(READ "${WORK_DIR}/${swFixtureName}${GEN_META_CPP_SUFFIX}" metaText)
+foreach(needle IN LISTS listExpectMeta)
+	string(FIND "${metaText}" "${needle}" swFound)
+	if(swFound EQUAL -1)
+		message(FATAL_ERROR "${swFixtureName}: '${needle}' is not in the editor metadata unit\n${metaText}")
 	endif()
 endforeach()
 file(READ "${WORK_DIR}/${TYPES_LIST_NAME}" typesText)
