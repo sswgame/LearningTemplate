@@ -224,19 +224,21 @@ namespace
         }
 
         /** @brief 운영의 경제 키트 조립과 같은 순서로 파일에서 제공자를 세웁니다. */
-        [[nodiscard]] bool assemble( string& outError )
+        [[nodiscard]] expected<void> assemble()
         {
             const optional<AbsolutePath>  providersFile = AbsolutePath::tryMake( _secrets.writeProvidersFile( _endpoint.makeBaseURL() ) );
             const optional<AbsolutePath>  trustFile     = AbsolutePath::tryMake( _endpoint._trustFile );
             vector<ReceiptProviderConfig> listConfig;
-            const bool                    bRead = OnlineProviderFile::read<ReceiptProviderConfig>( providersFile, trustFile, "receiptProvidersFile", "receiptTrustFile", &ReceiptProviderSet::readEntry, listConfig, outError );
-            if ( bRead == false || _providers.initialize( listConfig, OnlineProviderFile::getTrustText( trustFile ), _clock, outError ) == false )
-                return false;
+            if ( expected<void> read = OnlineProviderFile::read<ReceiptProviderConfig>( providersFile, trustFile, "receiptProvidersFile", "receiptTrustFile", &ReceiptProviderSet::readEntry, listConfig );
+                 read.has_value() == false )
+                return read;
+            if ( expected<void> providers = _providers.initialize( listConfig, OnlineProviderFile::getTrustText( trustFile ), _clock ); providers.has_value() == false )
+                return providers;
             for ( int32 index = 0; index < _providers.getProviderCount(); ++index )
             {
                 SW_EXPECT_TRUE( _registry.registerValidator( _providers.getProvider( index ) ) );
             }
-            return true;
+            return {};
         }
 
         void pump()
@@ -265,8 +267,10 @@ namespace
 /** @brief [ReceiptEndToEndTest] 스팀: 파일이 고른 제공자가 환경 변수의 키로 TLS 끝점에 묻고 주문이 지급 가능으로 돌아온다 */
 SW_TEST_CASE_F( ReceiptEndToEndTest, SteamReachesTheEndpoint )
 {
-    string error;
-    SW_REQUIRE_TRUE_MSG( assemble( error ), error.c_str() );
+    {
+        const expected<void> assembled = assemble();
+        SW_REQUIRE_TRUE_MSG( assembled.has_value(), assembled.has_value() ? string_view{} : assembled.error().message() );
+    }
     SW_EXPECT_EQUAL( 3, _providers.getProviderCount() );
     const ReceiptValidationResult result = validate( "steam", kSteamOrder );
     SW_EXPECT_TRUE( result._status == ReceiptStatus::Valid );
@@ -278,8 +282,10 @@ SW_TEST_CASE_F( ReceiptEndToEndTest, SteamReachesTheEndpoint )
 /** @brief [ReceiptEndToEndTest] 구글: 환경 변수의 서비스 계정을 OpenSSL 로 서명해 토큰을 받고, 구매를 확인한 뒤 지급 알림까지 끝점에 닿는다 */
 SW_TEST_CASE_F( ReceiptEndToEndTest, GoogleReachesTheEndpoint )
 {
-    string error;
-    SW_REQUIRE_TRUE_MSG( assemble( error ), error.c_str() );
+    {
+        const expected<void> assembled = assemble();
+        SW_REQUIRE_TRUE_MSG( assembled.has_value(), assembled.has_value() ? string_view{} : assembled.error().message() );
+    }
     const ReceiptValidationResult result = validate( "google", kGooglePayload );
     SW_EXPECT_TRUE( result._status == ReceiptStatus::Valid );
     SW_EXPECT_EQUAL( string( "GPA.1" ), result._transactionID );
@@ -306,8 +312,10 @@ SW_TEST_CASE_F( ReceiptEndToEndTest, GoogleReachesTheEndpoint )
 /** @brief [ReceiptEndToEndTest] 애플: 환경 변수의 키로 서명한 JWT 를 보내고, 답의 JWS 를 실제 사슬 · 표지 확인으로 설정의 루트 파일까지 잇는다 */
 SW_TEST_CASE_F( ReceiptEndToEndTest, AppleReachesTheEndpointAndVerifiesTheChain )
 {
-    string error;
-    SW_REQUIRE_TRUE_MSG( assemble( error ), error.c_str() );
+    {
+        const expected<void> assembled = assemble();
+        SW_REQUIRE_TRUE_MSG( assembled.has_value(), assembled.has_value() ? string_view{} : assembled.error().message() );
+    }
     const ReceiptValidationResult result = validate( "apple", kAppleOrder );
     SW_EXPECT_TRUE_MSG( result._status == ReceiptStatus::Valid, result._failureText.c_str() );
     SW_EXPECT_EQUAL( string( kAppleOrder ), result._transactionID );
@@ -322,9 +330,10 @@ SW_TEST_CASE_F( ReceiptEndToEndTest, MissingSecretStopsAssembly )
 {
     SW_EXPECT_LOG( "Server.SecretNotSet" );
     _secrets._steamEnv.reset();
-    string error;
-    SW_EXPECT_FALSE( assemble( error ) );
-    SW_EXPECT_TRUE( error.find( kSteamEnv ) != string::npos );
+    const auto failed1 = assemble();
+    SW_REQUIRE_FALSE( failed1.has_value() );
+    const sw::string error1 = sw::string( failed1.error().message() ) + " " + sw::string( failed1.error().detail() );
+    SW_EXPECT_TRUE( error1.find( kSteamEnv ) != string::npos );
     SW_EXPECT_EQUAL( 0, _providers.getProviderCount() );
 }
 
@@ -362,17 +371,20 @@ SW_TEST_CASE( ReceiptKitAssemblyTest, KitOptionsSelectTheProviders )
 
     {
         test::OnlineRuntimeFixture noTrust;
-        string                     error;
-        SW_EXPECT_FALSE( noTrust.fromConfig( kServerJSON, makeOnlineJSON( "" ), ReceiptEndpointTestUtil::getNowMs(), error ) );
-        SW_EXPECT_TRUE( error.find( "receiptTrustFile" ) != string::npos );
+        const auto                 failed1 = noTrust.fromConfig( kServerJSON, makeOnlineJSON( "" ), ReceiptEndpointTestUtil::getNowMs() );
+        SW_REQUIRE_FALSE( failed1.has_value() );
+        const sw::string error1 = sw::string( failed1.error().message() ) + " " + sw::string( failed1.error().detail() );
+        SW_EXPECT_TRUE( error1.find( "receiptTrustFile" ) != string::npos );
     }
 
     StringBuilder<constant::buffer::kMax256> trustOptionBuilder;
     trustOptionBuilder.appendFormat( R"(, "_receiptTrustFile": "%#")", endpoint._trustFile );
     const string               trustOption{ trustOptionBuilder.view() };
     test::OnlineRuntimeFixture rig;
-    string                     error;
-    SW_REQUIRE_TRUE_MSG( rig.fromConfig( kServerJSON, makeOnlineJSON( trustOption ), ReceiptEndpointTestUtil::getNowMs(), error ), error.c_str() );
+    {
+        const expected<void> started = rig.fromConfig( kServerJSON, makeOnlineJSON( trustOption ), ReceiptEndpointTestUtil::getNowMs() );
+        SW_REQUIRE_TRUE_MSG( started.has_value(), started.has_value() ? string_view{} : started.error().message() );
+    }
     SW_REQUIRE_TRUE( test::pumpUntil( [&rig, &endpoint]()
     {
         rig.updateAll( ReceiptEndpointTestUtil::getNowMs(), 1 );
@@ -397,10 +409,10 @@ SW_TEST_CASE( ReceiptKitAssemblyTest, ExternalSampleConfigReads )
     SW_EXPECT_EQUAL( serverConfig._listStore[0]._name, onlineConfig._storeName );
     SW_EXPECT_EQUAL( serverConfig._listCache[0]._name, onlineConfig._cacheName );
 
-    string                       error;
     const optional<AbsolutePath> providersFile = AbsolutePath::tryResolve( "Config/Server/Online/Providers/Shooter3D.receipts.json", ProcessRoots::get()._project );
     SW_REQUIRE_TRUE( providersFile.has_value() );
     vector<ReceiptProviderConfig> listConfig;
-    SW_REQUIRE_TRUE_MSG( OnlineProviderFile::read<ReceiptProviderConfig>( providersFile, sw::nullopt, "receiptProvidersFile", "receiptTrustFile", &ReceiptProviderSet::readEntry, listConfig, error ), error.c_str() );
+    const expected<void>          read = OnlineProviderFile::read<ReceiptProviderConfig>( providersFile, sw::nullopt, "receiptProvidersFile", "receiptTrustFile", &ReceiptProviderSet::readEntry, listConfig );
+    SW_REQUIRE_TRUE_MSG( read.has_value(), read.has_value() ? string_view{} : read.error().message() );
     SW_EXPECT_EQUAL( size_t( 3 ), listConfig.size() );
 }

@@ -54,16 +54,13 @@ namespace sw
         return make_unique<ProfileAPILoginProvider>( settings, pHTTPClient );
     }
 
-    bool PlatformLoginProviderConfig::readEntry( const JSONValue& entry, PlatformLoginProviderConfig& outSettings, string& outError )
+    expected<void> PlatformLoginProviderConfig::readEntry( const JSONValue& entry, PlatformLoginProviderConfig& outSettings )
     {
         using Internal = PlatformLoginProviderSettingsInternal;
         for ( const string& key : entry.getMemberNames() )
         {
             if ( Internal::isKnownKey( key ) == false )
-            {
-                outError = "unknown provider setting '" + key + "'";
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::InvalidArgument, "unknown login provider setting", key } );
         }
         outSettings._name = Internal::readText( entry, "name", "" );
         const string kind = Internal::readText( entry, "kind", "" );
@@ -77,8 +74,9 @@ namespace sw
             outSettings._kind = PlatformLoginProviderKind::AppleSignIn;
         else
         {
-            outError = "provider '" + outSettings._name + "' has an unknown kind '" + kind + "'";
-            return false;
+            Error error{ ErrorKind::InvalidArgument, "the login provider has an unknown kind", outSettings._name };
+            error.appendDetail( " " ).appendDetail( kind );
+            return unexpected( error );
         }
         outSettings._issuer               = Internal::readText( entry, "issuer", "" );
         outSettings._jwksURL              = Internal::readText( entry, "jwksUrl", "" );
@@ -98,10 +96,7 @@ namespace sw
         outSettings._revokeURL            = Internal::readText( entry, "revokeUrl", "" );
         bool bRequireNonce                = outSettings._bRequireNonce != SW_FALSE; // 없으면 설정의 초기값이다
         if ( entry.readOptionalInto( "requireNonce", bRequireNonce ) == false )
-        {
-            outError = "provider '" + outSettings._name + "' has a requireNonce that is not true or false";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the login provider has a requireNonce that is not true or false", outSettings._name } );
         outSettings._bRequireNonce = bRequireNonce ? SW_TRUE : SW_FALSE;
         const JSONValue clientIDs  = entry.get( "clientIds" );
         for ( size_t clientIndex = 0; clientIDs.isArray() && clientIndex < clientIDs.size(); ++clientIndex )
@@ -109,11 +104,8 @@ namespace sw
             outSettings._listClientID.push_back( clientIDs.at( clientIndex ).asString() );
         }
         if ( isValidSettings( outSettings ) == false )
-        {
-            outError = "provider '" + outSettings._name + "' is missing a required setting or has an invalid name";
-            return false;
-        }
-        return true;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the login provider is missing a required setting or has an invalid name", outSettings._name } );
+        return {};
     }
 
     bool PlatformLoginProviderConfig::isValidSettings( const PlatformLoginProviderConfig& settings )

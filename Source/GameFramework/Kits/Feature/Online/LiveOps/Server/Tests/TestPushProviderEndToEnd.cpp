@@ -184,8 +184,10 @@ namespace
             }
             if ( type == HTTP2FrameType::Headers )
             {
-                string error;
-                SW_EXPECT_TRUE_MSG( peer._decoder.decode( pBody, header._length, peer._mapStream[header._streamID]._listHeader, error ), error.c_str() );
+                {
+                    const auto result = peer._decoder.decode( pBody, header._length, peer._mapStream[header._streamID]._listHeader );
+                    SW_EXPECT_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() );
+                }
             }
             else if ( type == HTTP2FrameType::Data )
             {
@@ -306,20 +308,22 @@ namespace
         }
 
         /** @brief 운영의 라이브 운영 키트 조립과 같은 순서로 파일에서 제공자를 세워 발송기에 올립니다. */
-        [[nodiscard]] bool assemble( string& outError )
+        [[nodiscard]] expected<void> assemble()
         {
             const optional<AbsolutePath> providersFile = AbsolutePath::tryMake( writeProvidersFile() );
             const optional<AbsolutePath> trustFile     = AbsolutePath::tryMake( _apns.getTrustFile() );
             vector<PushProviderConfig>   listConfig;
-            const bool                   bRead = OnlineProviderFile::read<PushProviderConfig>( providersFile, trustFile, "pushProvidersFile", "pushTrustFile", &PushProviderSet::readEntry, listConfig, outError );
-            if ( bRead == false || _providers.initialize( listConfig, OnlineProviderFile::getTrustText( trustFile ), _clock, outError ) == false )
-                return false;
+            if ( expected<void> read = OnlineProviderFile::read<PushProviderConfig>( providersFile, trustFile, "pushProvidersFile", "pushTrustFile", &PushProviderSet::readEntry, listConfig );
+                 read.has_value() == false )
+                return read;
+            if ( expected<void> providers = _providers.initialize( listConfig, OnlineProviderFile::getTrustText( trustFile ), _clock ); providers.has_value() == false )
+                return providers;
             _dispatcher.initialize( &_store, PushDispatcherConfig{} );
             for ( int32 index = 0; index < _providers.getProviderCount(); ++index )
             {
                 SW_EXPECT_TRUE( _dispatcher.registerProvider( _providers.getProvider( index ) ) );
             }
-            return true;
+            return {};
         }
 
         static UnixMilliseconds getNow() { return WallClock::nowUnixMilliseconds(); }
@@ -365,8 +369,10 @@ namespace
 /** @brief [PushEndToEndTest] 파일이 고른 두 제공자가 기기마다 실제 전송으로 닿는다: FCM 은 서명으로 받은 토큰, APNs 는 HTTP/2 스트림에 ES256 제공자 토큰 · 토픽 · 경로를 싣는다 */
 SW_TEST_CASE_F( PushEndToEndTest, ProvidersReachTheirEndpoints )
 {
-    string error;
-    SW_REQUIRE_TRUE_MSG( assemble( error ), error.c_str() );
+    {
+        const expected<void> assembled = assemble();
+        SW_REQUIRE_TRUE_MSG( assembled.has_value(), assembled.has_value() ? string_view{} : assembled.error().message() );
+    }
     SW_EXPECT_EQUAL( 2, _providers.getProviderCount() );
     addDevice( "fcm", kFCMToken );
     addDevice( "apns", kAPNSToken );
@@ -394,8 +400,10 @@ SW_TEST_CASE_F( PushEndToEndTest, ProvidersReachTheirEndpoints )
 /** @brief [PushEndToEndTest] APNs 410 이 전송을 지나 돌아오면 기기를 지워 다음 알림은 그 기기에 가지 않는다 */
 SW_TEST_CASE_F( PushEndToEndTest, APNSGoneRemovesTheDevice )
 {
-    string error;
-    SW_REQUIRE_TRUE_MSG( assemble( error ), error.c_str() );
+    {
+        const expected<void> assembled = assemble();
+        SW_REQUIRE_TRUE_MSG( assembled.has_value(), assembled.has_value() ? string_view{} : assembled.error().message() );
+    }
     addDevice( "apns", kAPNSToken );
     _apns._status = 410;
     notifyAndWait();
@@ -411,9 +419,10 @@ SW_TEST_CASE_F( PushEndToEndTest, BadSettingsStopAssembly )
 {
     SW_EXPECT_LOG( "Server.SecretNotSet" );
     _apnsEnv.reset();
-    string error;
-    SW_EXPECT_FALSE( assemble( error ) );
-    SW_EXPECT_TRUE( error.find( kAPNSEnv ) != string::npos );
+    const auto failed1 = assemble();
+    SW_REQUIRE_FALSE( failed1.has_value() );
+    const sw::string error1 = sw::string( failed1.error().message() ) + " " + sw::string( failed1.error().detail() );
+    SW_EXPECT_TRUE( error1.find( kAPNSEnv ) != string::npos );
     SW_EXPECT_EQUAL( 0, _providers.getProviderCount() );
 }
 
@@ -441,26 +450,29 @@ SW_TEST_CASE( PushKitAssemblyTest, KitOptionsSelectTheProviders )
 
     {
         test::OnlineRuntimeFixture noTrust;
-        string                     error;
-        SW_EXPECT_FALSE( noTrust.fromConfig( kServerJSON, makeOnlineJSON( "" ), nowMs, error ) );
-        SW_EXPECT_TRUE( error.find( "pushTrustFile" ) != string::npos );
+        const auto                 failed1 = noTrust.fromConfig( kServerJSON, makeOnlineJSON( "" ), nowMs );
+        SW_REQUIRE_FALSE( failed1.has_value() );
+        const sw::string error1 = sw::string( failed1.error().message() ) + " " + sw::string( failed1.error().detail() );
+        SW_EXPECT_TRUE( error1.find( "pushTrustFile" ) != string::npos );
     }
 
     test::OnlineRuntimeFixture               rig;
-    string                                   error;
     StringBuilder<constant::buffer::kMax256> textBuilder;
     textBuilder.appendFormat( R"(, "_pushTrustFile": "%#")", apns.getTrustFile() );
-    SW_REQUIRE_TRUE_MSG( rig.fromConfig( kServerJSON, makeOnlineJSON( string( textBuilder.view() ) ), nowMs, error ), error.c_str() );
+    {
+        const expected<void> started = rig.fromConfig( kServerJSON, makeOnlineJSON( string( textBuilder.view() ) ), nowMs );
+        SW_REQUIRE_TRUE_MSG( started.has_value(), started.has_value() ? string_view{} : started.error().message() );
+    }
     SW_EXPECT_TRUE( rig._runtime.getContext()._kits.find<IOfflinePushSender>() != nullptr );
 }
 
 /** @brief [PushKitAssemblyTest] 저장소에 든 견본(`Shooter3D.push.json`)이 같은 읽기를 지난다 - 견본이 코드와 어긋나 낡지 않게 한다 */
 SW_TEST_CASE( PushKitAssemblyTest, ExternalSampleConfigReads )
 {
-    string                       error;
     const optional<AbsolutePath> providersFile = AbsolutePath::tryResolve( "Config/Server/Online/Providers/Shooter3D.push.json", ProcessRoots::get()._project );
     SW_REQUIRE_TRUE( providersFile.has_value() );
     vector<PushProviderConfig> listConfig;
-    SW_REQUIRE_TRUE_MSG( OnlineProviderFile::read<PushProviderConfig>( providersFile, sw::nullopt, "pushProvidersFile", "pushTrustFile", &PushProviderSet::readEntry, listConfig, error ), error.c_str() );
+    const expected<void>       read = OnlineProviderFile::read<PushProviderConfig>( providersFile, sw::nullopt, "pushProvidersFile", "pushTrustFile", &PushProviderSet::readEntry, listConfig );
+    SW_REQUIRE_TRUE_MSG( read.has_value(), read.has_value() ? string_view{} : read.error().message() );
     SW_EXPECT_EQUAL( size_t( 2 ), listConfig.size() );
 }

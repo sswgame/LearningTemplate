@@ -53,31 +53,27 @@ namespace sw
             {
             }
 
-            [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
+            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry ) override
             {
                 TradeKitConfig kitConfig;
-                if ( entry.readSettings( kitConfig, outError ) == false )
-                    return false;
+                if ( expected<void> result = entry.readSettings( kitConfig ); result.has_value() == false )
+                    return result;
                 if ( kitConfig._listTradablePrefix.empty() )
-                {
-                    outError = "the trade kit needs at least one _listTradablePrefix entry (an asset id prefix)";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the trade kit needs at least one _listTradablePrefix entry (an asset id prefix)" } );
                 _policy._listTradablePrefix = std::move( kitConfig._listTradablePrefix );
                 _policy._maxLegsPerSide     = kitConfig._maxLegsPerSide;
-                if ( registerServerService( context, entry, &_server, outError ) == false )
-                    return false;
-                return true;
+                if ( expected<void> result = registerServerService( context, entry, &_server ); result.has_value() == false )
+                    return result;
+                return {};
             }
 
-            bool start( OnlineServerKitContext& context, string& outError ) override
+            expected<void> start( OnlineServerKitContext& context ) override
             {
-                (void)outError;
                 _service.initialize( context._pStore, &_policy, context._kits.find<const ILedgerPolicy>(), context._serverID, TradeServiceConfig{} );
                 // 상대 찾기는 필수 키트라 정렬이 없으면 기동 오류로 막았다.
                 _server.initialize( &_service, &context._kits.get<IAccountDirectory>(), context._kits.find<IAccountPresence>(), context._pMetricRegistry );
                 _server.setBalanceNotice( context._kits.find<IBalanceChangedListener>() ); // 경제 키트(정산 잔액 변경 알림)
-                return true;
+                return {};
             }
 
             /** @brief 종료 드레인이 기다릴 진행 중인 일 — 정산을 맡긴 요청과 열려 있는 거래(재시작 복구가 마무리하지만 서버가 비는 동안 끝나는 편이 낫다). */

@@ -56,10 +56,10 @@ namespace sw::editor
         FakeAdminProvider&     getFakeProvider() { return _fake; }
 
         /**
-         * @brief 서버의 GM 포트(`host:port`)에 연결을 걸고 실제 클라이언트로 보냅니다. 실패하면 메모리 제공자로 돌아가고 @p outError 에 이유가 있습니다.
+         * @brief 서버의 GM 포트(`host:port`)에 연결을 걸고 실제 클라이언트로 보냅니다. 실패하면 메모리 제공자로 돌아가고 그 이유입니다.
          * @details 로그인은 `getConnection().bindLoginHook` 으로 끼운 쪽이 한다(에디터 확장은 계정 키트를 모른다). 연결이 닫혀 있는 동안은 `Unavailable` 응답입니다.
          */
-        [[nodiscard]] bool connectLive( string_view address, string_view gameBuild, string& outError );
+        [[nodiscard]] expected<void> connectLive( string_view address, string_view gameBuild );
         /** @brief 연결을 닫고 메모리 제공자로 돌아갑니다. */
         void disconnectLive();
         /** @brief 프레임 처리기를 겁니다. 칸 주인은 하나다(이미 걸려 있으면 단언) - 구독이 풀리면 빈다. 에디터 확장이 inline 으로 부르므로 이 함수는 헤더에 둔다. */
@@ -75,7 +75,7 @@ namespace sw::editor
          * @brief 계정 이름 · 비밀번호를 처리기에 넘기고 GM 포트에 연결합니다(`connectLive`). 처리기가 없거나 이름 · 비밀번호가 비었거나 처리기가 거절하면 연결하지 않고 false 입니다 — 로그인 없이 연결한 척하지 않는다.
          * @details 비밀번호는 처리기가 받아 보관하는 쪽의 몫이다. 이 세션은 어디에도 복사해 두지 않는다(호출한 패널이 부른 뒤 입력 칸을 지운다).
          */
-        [[nodiscard]] bool connectWithLogin( string_view address, string_view gameBuild, string_view loginName, string_view password, string& outError );
+        [[nodiscard]] expected<void> connectWithLogin( string_view address, string_view gameBuild, string_view loginName, string_view password );
         /** @brief 연결을 한 걸음 돌립니다(패널이 프레임마다 부른다). 연결이 없으면 아무것도 하지 않습니다. */
         void                 updateConnection();
         AdminToolConnection& getConnection() { return _connection; }

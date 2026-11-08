@@ -85,22 +85,25 @@ namespace sw
             {
             }
 
-            [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
+            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry ) override
             {
                 ChatKitConfig kitConfig;
-                if ( entry.readSettings( kitConfig, outError ) == false )
-                    return false;
-                optional<AbsolutePath> bannedWordsPath;
-                optional<AbsolutePath> ignoredCharactersPath;
-                if ( entry.resolveFile( kitConfig._bannedWordsFile, "_bannedWordsFile", bannedWordsPath, outError ) == false || entry.resolveFile( kitConfig._ignoredCharactersFile, "_ignoredCharactersFile", ignoredCharactersPath, outError ) == false )
-                    return false;
-                _settings._bannedWordsPath       = bannedWordsPath.has_value() ? bannedWordsPath->str() : string();
-                _settings._ignoredCharactersPath = ignoredCharactersPath.has_value() ? ignoredCharactersPath->str() : string();
+                if ( expected<void> result = entry.readSettings( kitConfig ); result.has_value() == false )
+                    return result;
+                const expected<optional<AbsolutePath>> bannedWordsPath = entry.resolveFile( kitConfig._bannedWordsFile, "_bannedWordsFile" );
+                if ( bannedWordsPath.has_value() == false )
+                    return unexpected( bannedWordsPath.error() );
+                const expected<optional<AbsolutePath>> ignoredCharactersPath = entry.resolveFile( kitConfig._ignoredCharactersFile, "_ignoredCharactersFile" );
+                if ( ignoredCharactersPath.has_value() == false )
+                    return unexpected( ignoredCharactersPath.error() );
+                _settings._bannedWordsPath       = bannedWordsPath->has_value() ? ( *bannedWordsPath )->str() : string();
+                _settings._ignoredCharactersPath = ignoredCharactersPath->has_value() ? ( *ignoredCharactersPath )->str() : string();
                 // 멤버 창은 친구와 매칭 키트가 `start` 에서 읽는다. 부르는 것은 모든 키트가 시작한 뒤다.
-                return registerServerService( context, entry, &_server, outError ) && exposeInterface<IGroupChannelMembership>( context, entry, _groupChannels, outError );
+                return registerServerService( context, entry, &_server ).and_then( [&]
+                { return exposeInterface<IGroupChannelMembership>( context, entry, _groupChannels ); } );
             }
 
-            bool start( OnlineServerKitContext& context, string& outError ) override
+            expected<void> start( OnlineServerKitContext& context ) override
             {
                 const IAccountBlockList* pBlockList = context._kits.find<const IAccountBlockList>();
                 if ( pBlockList != nullptr )
@@ -113,13 +116,10 @@ namespace sw
                 dependencies._pPolicy    = _policy.get();
                 dependencies._serverID   = context._serverID;
                 if ( _service.initialize( dependencies, _settings ) == false )
-                {
-                    outError = "the chat service refused its dependencies";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the chat service refused its dependencies" } );
                 _server.initialize( &_service, context._pMetricRegistry );
                 _groupChannels.setService( &_service );
-                return true;
+                return {};
             }
 
             /** @brief 종료 드레인이 기다릴 진행 중인 일 — 저장소에 맡긴 채팅 기록 · 접속 상태 조회. */

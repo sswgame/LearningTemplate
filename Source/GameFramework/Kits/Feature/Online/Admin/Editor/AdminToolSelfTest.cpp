@@ -101,20 +101,20 @@ namespace sw::editor
              */
             static EditorSelfTestStep runCredentialsHandoff( EditorSelfTestContext& context )
             {
-                AdminToolSession session;
-                string           error;
-                context.expect( session.connectWithLogin( "nohost", "editor", "gm", "pw", error ) == false && error.empty() == false, "without a login handler the connection must be refused" );
+                AdminToolSession     session;
+                const expected<void> unbound = session.connectWithLogin( "nohost", "editor", "gm", "pw" );
+                context.expect( unbound.has_value() == false && unbound.error().message().empty() == false, "without a login handler the connection must be refused" );
 
                 CredentialsRecorder recorder;
                 const Subscription  subscription = session.bindCredentialsHandler( AdminToolSession::CredentialsHandler::create<&CredentialsRecorder::accept>( &recorder ) );
                 context.expect( session.hasCredentialsHandler(), "the credentials handler should be bound" );
-                context.expect( session.connectWithLogin( "nohost", "editor", "", "pw", error ) == false && recorder._callCount == 0, "an empty account name must not reach the handler" );
-                context.expect( session.connectWithLogin( "nohost", "editor", "gm", "", error ) == false && recorder._callCount == 0, "an empty password must not reach the handler" );
+                context.expect( session.connectWithLogin( "nohost", "editor", "", "pw" ).has_value() == false && recorder._callCount == 0, "an empty account name must not reach the handler" );
+                context.expect( session.connectWithLogin( "nohost", "editor", "gm", "" ).has_value() == false && recorder._callCount == 0, "an empty password must not reach the handler" );
 
                 recorder._bAccept = false;
-                context.expect( session.connectWithLogin( "nohost", "editor", "gm", "pw", error ) == false && recorder._callCount == 1, "a refused login must not connect" );
+                context.expect( session.connectWithLogin( "nohost", "editor", "gm", "pw" ).has_value() == false && recorder._callCount == 1, "a refused login must not connect" );
                 recorder._bAccept     = true;
-                const bool bConnected = session.connectWithLogin( "nohost", "editor", "gm", "pw", error );
+                const bool bConnected = session.connectWithLogin( "nohost", "editor", "gm", "pw" ).has_value();
                 context.expect( bConnected == false && recorder._callCount == 2, "an address without a port is refused at the connection step, after the handler took the credentials" );
                 context.expect( recorder._loginName == "gm" && recorder._password == "pw", "the handler should receive the typed account name and password" );
                 context.expect( session.getProvider().isLive() == false, "a failed connection falls back to the in-memory provider" );

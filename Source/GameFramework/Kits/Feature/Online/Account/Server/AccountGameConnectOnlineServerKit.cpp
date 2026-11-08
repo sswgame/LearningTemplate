@@ -42,27 +42,24 @@ namespace sw
             {
             }
 
-            [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
+            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry ) override
             {
                 (void)context;
                 AccountGameConnectKitConfig kitConfig;
-                if ( entry.readSettings( kitConfig, outError ) == false )
-                    return false;
+                if ( expected<void> result = entry.readSettings( kitConfig ); result.has_value() == false )
+                    return result;
                 if ( kitConfig._serverName.empty() )
-                {
-                    outError = "gameConnect needs _serverName - the name game tickets are issued for";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "gameConnect needs _serverName - the name game tickets are issued for" } );
                 _serverName = std::move( kitConfig._serverName );
                 uint8 arrTicketKey[LoginTicketAuthority::kMasterKeySize];
-                if ( LoginTicketKey::readFromEnvironment( kitConfig._ticketKeySecretEnvironment, arrTicketKey, outError ) == false )
-                    return false;
+                if ( expected<void> result = LoginTicketKey::readFromEnvironment( kitConfig._ticketKeySecretEnvironment, arrTicketKey ); result.has_value() == false )
+                    return result;
                 _ticketAuthority.initialize( &_crypto, arrTicketKey );
                 Memory::wipe( arrTicketKey, sizeof( arrTicketKey ) );
-                return true;
+                return {};
             }
 
-            bool start( OnlineServerKitContext& context, string& outError ) override
+            expected<void> start( OnlineServerKitContext& context ) override
             {
                 // 받아들이기 정책은 매칭 키트(`gameServer`)가 `initialize` 에서 내놓는다 — 없으면 티켓이 맞는 계정은 모두 받는 서버다(배정 없는 상시 서버).
                 const IConnectAdmission* pAdmission = context._kits.find<const IConnectAdmission>();
@@ -73,19 +70,17 @@ namespace sw
                 GameNetSession* pNetSession = game::findSubsystem<GameNetSession>();
                 if ( pNetSession == nullptr )
                 {
-                    outError = "gameConnect needs the engine net session service to bind the game connect authenticator";
                     _pAuthenticator.reset();
-                    return false;
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "gameConnect needs the engine net session service to bind the game connect authenticator" } );
                 }
                 GameConnectSecurity& security = pNetSession->getConnectSecurity();
                 if ( security.bindAuthenticator( _pAuthenticator.get() ) == false )
                 {
-                    outError = "gameConnect could not bind the game connect authenticator (another assembly already did)";
                     _pAuthenticator.reset();
-                    return false;
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "gameConnect could not bind the game connect authenticator (another assembly already did)" } );
                 }
                 _pSecurity = &security;
-                return true;
+                return {};
             }
 
             void update( UnixMilliseconds nowMs ) override

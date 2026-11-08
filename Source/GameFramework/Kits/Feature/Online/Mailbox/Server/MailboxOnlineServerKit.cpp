@@ -25,18 +25,18 @@ namespace sw
             {
             }
 
-            [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
+            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry ) override
             {
                 MailboxKitConfig kitConfig;
-                if ( entry.readSettings( kitConfig, outError ) == false )
-                    return false;
+                if ( expected<void> result = entry.readSettings( kitConfig ); result.has_value() == false )
+                    return result;
                 _settings._sweepIntervalMs = kitConfig._sweepIntervalMs;
-                if ( registerServerService( context, entry, &_service, outError ) == false )
-                    return false;
-                return true;
+                if ( expected<void> result = registerServerService( context, entry, &_service ); result.has_value() == false )
+                    return result;
+                return {};
             }
 
-            bool start( OnlineServerKitContext& context, string& outError ) override
+            expected<void> start( OnlineServerKitContext& context ) override
             {
                 _settings._pPolicy         = context._kits.find<const ILedgerPolicy>(); // 경제 키트가 없으면 원장 상한만 적용된다
                 _settings._pMetricRegistry = context._pMetricRegistry;
@@ -45,11 +45,8 @@ namespace sw
                 _settings._pOfflinePush    = context._kits.find<IOfflinePushSender>();      // 라이브 운영 키트(접속하지 않은 계정의 기기 푸시)
                 _settings._pScheduler      = context._pScheduler;                           // 만료 정리를 예약 작업(`mail.sweep`)으로 서버 하나만 돌린다
                 if ( _service.initialize( context._pStore, _settings ) == false )
-                {
-                    outError = "the mailbox service needs a store and a sweep interval of at least a minute";
-                    return false;
-                }
-                return true;
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the mailbox service needs a store and a sweep interval of at least a minute" } );
+                return {};
             }
 
             /** @brief 종료 드레인이 기다릴 진행 중인 일 — 끝나지 않은 우편 호출. */

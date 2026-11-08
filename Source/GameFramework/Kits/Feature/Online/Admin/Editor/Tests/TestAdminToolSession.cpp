@@ -206,9 +206,10 @@ SW_TEST_CASE( AdminToolSessionTest, LiveProviderWithoutClientAnswersUnavailable 
 SW_TEST_CASE( AdminToolSessionTest, FailedConnectionCanBeRetried )
 {
     AdminToolSession session;
-    string           error;
-    SW_EXPECT_FALSE( session.connectLive( "nohost", "editor", error ) );
-    SW_EXPECT_TRUE( error.empty() == false );
+    const auto       failed1 = session.connectLive( "nohost", "editor" );
+    SW_REQUIRE_FALSE( failed1.has_value() );
+    const sw::string error1 = sw::string( failed1.error().message() ) + " " + sw::string( failed1.error().detail() );
+    SW_EXPECT_TRUE( error1.empty() == false );
     SW_EXPECT_TRUE( session.getConnection().getState() == AdminToolConnectionState::Failed );
     SW_EXPECT_TRUE( session.getConnection().canOpen() );
     SW_EXPECT_FALSE( session.getProvider().isLive() );
@@ -223,17 +224,18 @@ SW_TEST_CASE( AdminToolSessionTest, FailedConnectionCanBeRetried )
 SW_TEST_CASE( AdminToolSessionTest, LoginNeedsAHandlerAndCredentials )
 {
     AdminToolSession session;
-    string           error;
-    SW_EXPECT_FALSE( session.connectWithLogin( "nohost", "editor", "gm", "pw", error ) );
-    SW_EXPECT_TRUE( error.find( "login handler" ) != string::npos );
+    const auto       failed1 = session.connectWithLogin( "nohost", "editor", "gm", "pw" );
+    SW_REQUIRE_FALSE( failed1.has_value() );
+    const sw::string error1 = sw::string( failed1.error().message() ) + " " + sw::string( failed1.error().detail() );
+    SW_EXPECT_TRUE( error1.find( "login handler" ) != string::npos );
     SW_EXPECT_FALSE( session.hasCredentialsHandler() );
 
     AdminCredentialsRecorder recorder;
     const Subscription       subscription = session.bindCredentialsHandler( AdminToolSession::CredentialsHandler::create<&AdminCredentialsRecorder::accept>( &recorder ) );
     SW_EXPECT_TRUE( session.hasCredentialsHandler() );
-    SW_EXPECT_FALSE( session.connectWithLogin( "nohost", "editor", "", "pw", error ) );
-    SW_EXPECT_FALSE( session.connectWithLogin( "nohost", "editor", "gm", "", error ) );
+    SW_EXPECT_FALSE( session.connectWithLogin( "nohost", "editor", "", "pw" ) );
+    SW_EXPECT_FALSE( session.connectWithLogin( "nohost", "editor", "gm", "" ) );
     SW_EXPECT_EQUAL( 0, recorder._callCount );
-    SW_EXPECT_FALSE( session.connectWithLogin( "nohost", "editor", "gm", "pw", error ) ); // 처리기는 받고 연결 단계에서 진다
+    SW_EXPECT_FALSE( session.connectWithLogin( "nohost", "editor", "gm", "pw" ) ); // 처리기는 받고 연결 단계에서 진다
     SW_EXPECT_EQUAL( 1, recorder._callCount );
 }

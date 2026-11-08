@@ -44,48 +44,38 @@ namespace sw
                 return value.isString() ? value.asString() : string();
             }
 
-            [[nodiscard]] static unique_ptr<IReceiptValidator> createSteam( const ReceiptProviderConfig& config, string_view trustFile, OwnedHTTPClient& httpClient, string& outError )
+            using ValidatorResult = expected<unique_ptr<IReceiptValidator>>;
+
+            [[nodiscard]] static ValidatorResult createSteam( const ReceiptProviderConfig& config, string_view trustFile, OwnedHTTPClient& httpClient )
             {
                 SteamReceiptSettings settings;
                 if ( ServerSecret::read( config._keySecretEnvironment, settings._key ) == false || settings._key.empty() )
-                {
-                    outError = "the steam publisher key environment variable '" + config._keySecretEnvironment + "' is not set";
-                    return nullptr;
-                }
+                    return unexpected( Error{ ErrorKind::NotFound, "the steam publisher key environment variable is not set", config._keySecretEnvironment } );
                 if ( settings._key.find_first_of( "&=?# %+/" ) != string::npos )
-                {
-                    outError = "the steam publisher key has characters that cannot go into a query";
-                    return nullptr;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the steam publisher key has characters that cannot go into a query" } );
                 settings._appID     = config._appID;
                 settings._buyerRule = config._buyerRule;
                 if ( config._baseURL.empty() == false )
                     settings._baseURL = config._baseURL;
                 settings._bSandbox             = config._bSandbox;
                 settings._reportPollIntervalMs = config._pollSeconds * constant::time::kMillisecondsPerSecond;
-                if ( httpClient.registerHostTLS( settings._baseURL, trustFile, "receiptTrustFile", outError ) == false )
-                    return nullptr;
-                return make_unique<SteamReceiptValidator>( std::move( settings ), &httpClient.get() );
+                if ( expected<void> tls = httpClient.registerHostTLS( settings._baseURL, trustFile, "receiptTrustFile" ); tls.has_value() == false )
+                    return unexpected( tls.error() );
+                return ValidatorResult( make_unique<SteamReceiptValidator>( std::move( settings ), &httpClient.get() ) );
             }
 
-            [[nodiscard]] static unique_ptr<IReceiptValidator> createApple( const ReceiptProviderConfig& config, string_view trustFile, OwnedHTTPClient& httpClient, string& outError )
+            [[nodiscard]] static ValidatorResult createApple( const ReceiptProviderConfig& config, string_view trustFile, OwnedHTTPClient& httpClient )
             {
                 AppleReceiptSettings settings;
                 const bool           bNamed      = config._signingKeySecretEnvironment.empty() == false;
                 const bool           bSecretRead = bNamed && ServerSecret::read( config._signingKeySecretEnvironment, settings._privateKeyPem ) && settings._privateKeyPem.empty() == false;
                 if ( bSecretRead == false )
-                {
-                    outError = "the apple signing key environment variable '" + config._signingKeySecretEnvironment + "' is not set";
-                    return nullptr;
-                }
-                string rootPath;
-                if ( NetSecurity::resolveProjectPath( config._rootCertificateFile, rootPath, outError ) == false )
-                    return nullptr;
-                if ( FileUtil::readTextFile( rootPath, settings._trustedRootsPem ) == false || settings._trustedRootsPem.empty() )
-                {
-                    outError = "cannot read the apple root certificate file " + rootPath;
-                    return nullptr;
-                }
+                    return unexpected( Error{ ErrorKind::NotFound, "the apple signing key environment variable is not set", config._signingKeySecretEnvironment } );
+                const expected<string> rootPath = NetSecurity::resolveProjectPath( config._rootCertificateFile );
+                if ( rootPath.has_value() == false )
+                    return unexpected( rootPath.error() );
+                if ( FileUtil::readTextFile( *rootPath, settings._trustedRootsPem ) == false || settings._trustedRootsPem.empty() )
+                    return unexpected( Error{ ErrorKind::NotFound, "cannot read the apple root certificate file", *rootPath } );
                 settings._issuerID  = config._issuerID;
                 settings._keyID     = config._keyID;
                 settings._bundleID  = config._bundleID;
@@ -95,24 +85,21 @@ namespace sw
                     settings._baseURL = config._baseURL;
                 settings._bSandboxServer        = config._bSandbox;
                 settings._historyPollIntervalMs = config._pollSeconds * constant::time::kMillisecondsPerSecond;
-                if ( httpClient.registerHostTLS( settings._baseURL, trustFile, "receiptTrustFile", outError ) == false )
-                    return nullptr;
-                return make_unique<AppleReceiptValidator>( std::move( settings ), &game::getSubsystem<INetSecurityProvider>(), &httpClient.get() );
+                if ( expected<void> tls = httpClient.registerHostTLS( settings._baseURL, trustFile, "receiptTrustFile" ); tls.has_value() == false )
+                    return unexpected( tls.error() );
+                return ValidatorResult( make_unique<AppleReceiptValidator>( std::move( settings ), &game::getSubsystem<INetSecurityProvider>(), &httpClient.get() ) );
             }
 
-            [[nodiscard]] static unique_ptr<IReceiptValidator> createGoogle( const ReceiptProviderConfig& config, string_view trustFile, OwnedHTTPClient& httpClient, string& outError )
+            [[nodiscard]] static ValidatorResult createGoogle( const ReceiptProviderConfig& config, string_view trustFile, OwnedHTTPClient& httpClient )
             {
                 string serviceAccountJSON;
                 if ( ServerSecret::read( config._serviceAccountEnvironment, serviceAccountJSON ) == false || serviceAccountJSON.empty() )
-                {
-                    outError = "the google service account environment variable '" + config._serviceAccountEnvironment + "' is not set";
-                    return nullptr;
-                }
+                    return unexpected( Error{ ErrorKind::NotFound, "the google service account environment variable is not set", config._serviceAccountEnvironment } );
                 GoogleReceiptSettings settings;
-                const bool            bRead = ServiceAccountCredentials::read( serviceAccountJSON, settings._credentials, outError );
+                const expected<void>  read = ServiceAccountCredentials::read( serviceAccountJSON, settings._credentials );
                 Memory::set( serviceAccountJSON.data(), 0, serviceAccountJSON.size() ); // 키가 든 글을 남기지 않는다
-                if ( bRead == false )
-                    return nullptr;
+                if ( read.has_value() == false )
+                    return unexpected( read.error() );
                 settings._packageName = config._packageName;
                 settings._buyerRule   = config._buyerRule;
                 if ( config._tokenURL.empty() == false )
@@ -120,30 +107,30 @@ namespace sw
                 if ( config._baseURL.empty() == false )
                     settings._baseURL = config._baseURL;
                 settings._voidedPollIntervalMs = config._pollSeconds * constant::time::kMillisecondsPerSecond;
-                if ( httpClient.registerHostTLS( settings._credentials._tokenURL, trustFile, "receiptTrustFile", outError ) == false ||
-                     httpClient.registerHostTLS( settings._baseURL, trustFile, "receiptTrustFile", outError ) == false )
-                    return nullptr;
-                return make_unique<GoogleReceiptValidator>( std::move( settings ), &game::getSubsystem<INetSecurityProvider>(), &httpClient.get() );
+                if ( expected<void> tls = httpClient.registerHostTLS( settings._credentials._tokenURL, trustFile, "receiptTrustFile" ).and_then( [&]
+                {
+                    return httpClient.registerHostTLS( settings._baseURL, trustFile, "receiptTrustFile" );
+                } );
+                     tls.has_value() == false )
+                    return unexpected( tls.error() );
+                return ValidatorResult( make_unique<GoogleReceiptValidator>( std::move( settings ), &game::getSubsystem<INetSecurityProvider>(), &httpClient.get() ) );
             }
 
-            /** @brief 항목의 `sandbox`(참 · 거짓, 없으면 거짓)를 읽습니다. 참 · 거짓이 아니면 오류를 남기고 false 입니다. */
-            [[nodiscard]] static bool readSandbox( const JSONValue& entry, const utf8* pKind, ReceiptProviderConfig& outConfig, string& outError )
+            /** @brief 항목의 `sandbox`(참 · 거짓, 없으면 거짓)를 읽습니다. 참 · 거짓이 아니면 대상이 제공자 종류인 오류입니다. */
+            [[nodiscard]] static expected<void> readSandbox( const JSONValue& entry, const utf8* pKind, ReceiptProviderConfig& outConfig )
             {
                 bool bSandbox = false;
                 if ( entry.readOptionalInto( "sandbox", bSandbox ) == false )
-                {
-                    outError = string( "receipt provider '" ) + pKind + "' has a sandbox that is not true or false";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the receipt provider has a sandbox that is not true or false", pKind } );
                 outConfig._bSandbox = bSandbox ? SW_TRUE : SW_FALSE;
-                return true;
+                return {};
             }
 
             /**
              * @brief 항목의 구매자 규칙을 읽습니다. 필수 키입니다 — 묶지 않는 것도 `none` 으로 적어야 한다. 그 스토어가 줄 수 없는 묶기(@p allowedBinding 밖)나 모르는 값은 오류입니다.
              * @details 대응 데이터가 없는 경우를 조용히 넘기지 않으려는 것이다 — 키를 빠뜨린 설정이 "먼저 낸 계정이 받는다" 로 뜨면 그 결함을 다시 만든다.
              */
-            [[nodiscard]] static bool readBuyerRule( const JSONValue& entry, ReceiptBuyerBinding allowedBinding, ReceiptProviderConfig& outConfig, string& outError )
+            [[nodiscard]] static expected<void> readBuyerRule( const JSONValue& entry, ReceiptBuyerBinding allowedBinding, ReceiptProviderConfig& outConfig )
             {
                 const string binding                = readText( entry, "buyerBinding" );
                 outConfig._buyerRule._loginProvider = readText( entry, "buyerLoginProvider" );
@@ -151,71 +138,63 @@ namespace sw
                 const bool bToken                   = binding == kBuyerAccountToken && allowedBinding == ReceiptBuyerBinding::AccountToken;
                 if ( bLinked == false && bToken == false && binding != kBuyerNone )
                 {
-                    StringBuilder<constant::buffer::kMax256> errorBuilder;
-                    errorBuilder.appendFormat( "receipt provider '%#' needs buyerBinding '%#' or '%#'", outConfig._kind, allowedBinding == ReceiptBuyerBinding::LinkedLogin ? kBuyerLinkedLogin : kBuyerAccountToken, kBuyerNone );
-                    outError = string( errorBuilder.view() );
-                    return false;
+                    StringBuilder<constant::buffer::kMax128> detailBuilder;
+                    detailBuilder.appendFormat( "%# needs '%#' or '%#'", outConfig._kind, allowedBinding == ReceiptBuyerBinding::LinkedLogin ? kBuyerLinkedLogin : kBuyerAccountToken, kBuyerNone );
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the receipt provider has a buyerBinding its store cannot give", detailBuilder.view() } );
                 }
                 if ( bLinked != ( outConfig._buyerRule._loginProvider.empty() == false ) )
                 {
-                    StringBuilder<constant::buffer::kMax256> errorBuilder;
-                    errorBuilder.appendFormat( "receipt provider '%#' needs buyerLoginProvider exactly when buyerBinding is '%#'", outConfig._kind, kBuyerLinkedLogin );
-                    outError = string( errorBuilder.view() );
-                    return false;
+                    Error error{ ErrorKind::InvalidArgument, "the receipt provider needs buyerLoginProvider exactly when buyerBinding is linkedLogin", outConfig._kind };
+                    return unexpected( error );
                 }
                 outConfig._buyerRule._binding = bLinked ? ReceiptBuyerBinding::LinkedLogin : ( bToken ? ReceiptBuyerBinding::AccountToken : ReceiptBuyerBinding::None );
-                return true;
+                return {};
             }
 
             /** @brief 스팀 항목의 설정을 읽고 검사합니다. 틀리면 오류를 남기고 false 입니다. */
-            [[nodiscard]] static bool readSteamEntry( const JSONValue& entry, ReceiptProviderConfig& outConfig, string& outError )
+            [[nodiscard]] static expected<void> readSteamEntry( const JSONValue& entry, ReceiptProviderConfig& outConfig )
             {
                 outConfig._appID                = readText( entry, "appId" );
                 outConfig._keySecretEnvironment = readText( entry, "keySecretEnvironment" );
-                if ( readSandbox( entry, kKindSteam, outConfig, outError ) == false || readBuyerRule( entry, ReceiptBuyerBinding::LinkedLogin, outConfig, outError ) == false )
-                    return false;
+                if ( expected<void> read = readSandbox( entry, kKindSteam, outConfig ).and_then( [&]
+                { return readBuyerRule( entry, ReceiptBuyerBinding::LinkedLogin, outConfig ); } );
+                     read.has_value() == false )
+                    return read;
                 if ( SteamReceiptValidator::isOrderID( outConfig._appID ) == false || outConfig._keySecretEnvironment.empty() )
-                {
-                    outError = "receipt provider 'steam' needs a numeric appId and keySecretEnvironment";
-                    return false;
-                }
-                return true;
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "receipt provider 'steam' needs a numeric appId and keySecretEnvironment" } );
+                return {};
             }
 
             /** @brief 애플 항목의 설정을 읽고 검사합니다. 틀리면 오류를 남기고 false 입니다. */
-            [[nodiscard]] static bool readAppleEntry( const JSONValue& entry, ReceiptProviderConfig& outConfig, string& outError )
+            [[nodiscard]] static expected<void> readAppleEntry( const JSONValue& entry, ReceiptProviderConfig& outConfig )
             {
                 outConfig._issuerID                    = readText( entry, "issuerId" );
                 outConfig._keyID                       = readText( entry, "keyId" );
                 outConfig._bundleID                    = readText( entry, "bundleId" );
                 outConfig._signingKeySecretEnvironment = readText( entry, "signingKeySecretEnvironment" );
                 outConfig._rootCertificateFile         = readText( entry, "rootCertificateFile" );
-                if ( readSandbox( entry, kKindApple, outConfig, outError ) == false || readBuyerRule( entry, ReceiptBuyerBinding::AccountToken, outConfig, outError ) == false )
-                    return false;
+                if ( expected<void> read = readSandbox( entry, kKindApple, outConfig ).and_then( [&]
+                { return readBuyerRule( entry, ReceiptBuyerBinding::AccountToken, outConfig ); } );
+                     read.has_value() == false )
+                    return read;
                 const bool bIdentityGiven = outConfig._issuerID.empty() == false && outConfig._keyID.empty() == false && outConfig._bundleID.empty() == false;
                 const bool bFilesGiven    = outConfig._signingKeySecretEnvironment.empty() == false && outConfig._rootCertificateFile.empty() == false;
                 if ( bIdentityGiven == false || bFilesGiven == false )
-                {
-                    outError = "receipt provider 'apple' needs issuerId, keyId, bundleId, signingKeySecretEnvironment and rootCertificateFile";
-                    return false;
-                }
-                return true;
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "receipt provider 'apple' needs issuerId, keyId, bundleId, signingKeySecretEnvironment and rootCertificateFile" } );
+                return {};
             }
 
             /** @brief 구글 항목의 설정을 읽고 검사합니다. 틀리면 오류를 남기고 false 입니다. */
-            [[nodiscard]] static bool readGoogleEntry( const JSONValue& entry, ReceiptProviderConfig& outConfig, string& outError )
+            [[nodiscard]] static expected<void> readGoogleEntry( const JSONValue& entry, ReceiptProviderConfig& outConfig )
             {
                 outConfig._packageName               = readText( entry, "packageName" );
                 outConfig._serviceAccountEnvironment = readText( entry, "serviceAccountEnvironment" );
                 outConfig._tokenURL                  = readText( entry, "tokenUrl" );
-                if ( readBuyerRule( entry, ReceiptBuyerBinding::AccountToken, outConfig, outError ) == false )
-                    return false;
+                if ( expected<void> result = readBuyerRule( entry, ReceiptBuyerBinding::AccountToken, outConfig ); result.has_value() == false )
+                    return result;
                 if ( outConfig._packageName.empty() || outConfig._serviceAccountEnvironment.empty() )
-                {
-                    outError = "receipt provider 'google' needs packageName and serviceAccountEnvironment";
-                    return false;
-                }
-                return true;
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "receipt provider 'google' needs packageName and serviceAccountEnvironment" } );
+                return {};
             }
         };
     } // namespace
@@ -233,16 +212,13 @@ namespace sw
         shutdown();
     }
 
-    bool ReceiptProviderSet::readEntry( const JSONValue& entry, ReceiptProviderConfig& outConfig, string& outError )
+    expected<void> ReceiptProviderSet::readEntry( const JSONValue& entry, ReceiptProviderConfig& outConfig )
     {
         using Internal = ReceiptProviderSetInternal;
         for ( const string& key : entry.getMemberNames() )
         {
             if ( VectorUtil::contains( Internal::kKnownKeys, key ) == false )
-            {
-                outError = "unknown receipt provider setting '" + key + "'";
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::InvalidArgument, "unknown receipt provider setting", key } );
         }
         outConfig._kind       = Internal::readText( entry, "kind" );
         outConfig._baseURL    = Internal::readText( entry, "baseUrl" );
@@ -251,26 +227,22 @@ namespace sw
         const bool bApple     = outConfig._kind == Internal::kKindApple;
         const bool bKnownKind = bSteam || bGoogle || bApple;
         if ( bKnownKind == false )
-        {
-            outError = "receipt provider kind '" + outConfig._kind + "' is unknown (steam, google, apple)";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the receipt provider kind is unknown (steam, google, apple)", outConfig._kind } );
         const utf8* pPollKey = bSteam ? "reportPollSeconds" : ( bGoogle ? "voidedPollSeconds" : "historyPollSeconds" );
         if ( entry.readOptionalInto( pPollKey, outConfig._pollSeconds ) == false || outConfig._pollSeconds < Internal::kMinPollSeconds )
         {
-            StringBuilder<constant::buffer::kMax256> errorBuilder;
-            errorBuilder.appendFormat( "receipt provider '%#' needs %# of at least %#", outConfig._kind, pPollKey, Internal::kMinPollSeconds );
-            outError = string( errorBuilder.view() );
-            return false;
+            StringBuilder<constant::buffer::kMax128> detailBuilder;
+            detailBuilder.appendFormat( "%# needs %# of at least %#", outConfig._kind, pPollKey, Internal::kMinPollSeconds );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the receipt provider poll interval is too short or not a number", detailBuilder.view() } );
         }
         if ( bSteam )
-            return Internal::readSteamEntry( entry, outConfig, outError );
+            return Internal::readSteamEntry( entry, outConfig );
         if ( bApple )
-            return Internal::readAppleEntry( entry, outConfig, outError );
-        return Internal::readGoogleEntry( entry, outConfig, outError );
+            return Internal::readAppleEntry( entry, outConfig );
+        return Internal::readGoogleEntry( entry, outConfig );
     }
 
-    bool ReceiptProviderSet::initialize( const vector<ReceiptProviderConfig>& listSettings, string_view trustFile, const IClock& clock, string& outError )
+    expected<void> ReceiptProviderSet::initialize( const vector<ReceiptProviderConfig>& listSettings, string_view trustFile, const IClock& clock )
     {
         using Internal = ReceiptProviderSetInternal;
         shutdown();
@@ -282,24 +254,22 @@ namespace sw
             entry._httpClient = make_unique<OwnedHTTPClient>( clock );
             if ( entry._httpClient->initialize() == false )
             {
-                outError = "cannot start the HTTP client of receipt provider '" + config._kind + "'";
                 shutdown();
-                return false;
+                return unexpected( Error{ ErrorKind::ExternalFailure, "cannot start the HTTP client of the receipt provider", config._kind } );
             }
-            if ( config._kind == Internal::kKindSteam )
-                entry._provider = Internal::createSteam( config, trustFile, *entry._httpClient, outError );
-            else if ( config._kind == Internal::kKindApple )
-                entry._provider = Internal::createApple( config, trustFile, *entry._httpClient, outError );
-            else
-                entry._provider = Internal::createGoogle( config, trustFile, *entry._httpClient, outError );
-            if ( entry._provider == nullptr )
+            Internal::ValidatorResult provider = config._kind == Internal::kKindSteam ? Internal::createSteam( config, trustFile, *entry._httpClient )
+                                               : config._kind == Internal::kKindApple ? Internal::createApple( config, trustFile, *entry._httpClient )
+                                                                                      : Internal::createGoogle( config, trustFile, *entry._httpClient );
+            if ( provider.has_value() == false )
             {
-                outError = "receipt provider '" + config._kind + "': " + outError;
+                Error error{ provider.error().kind(), provider.error().message().data(), config._kind };
+                error.appendDetail( ": " ).appendDetail( provider.error().detail() );
                 shutdown();
-                return false;
+                return unexpected( error );
             }
+            entry._provider = std::move( *provider );
         }
-        return true;
+        return {};
     }
 
     void ReceiptProviderSet::shutdown()

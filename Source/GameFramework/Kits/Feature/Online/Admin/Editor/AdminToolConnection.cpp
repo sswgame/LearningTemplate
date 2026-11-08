@@ -27,52 +27,50 @@ namespace sw::editor
         close();
     }
 
-    bool AdminToolConnection::open( string_view address, string_view gameBuild, string& outError, string_view tlsTrustFile )
+    expected<void> AdminToolConnection::open( string_view address, string_view gameBuild, string_view tlsTrustFile )
     {
         close();
         NetAddress serverAddress;
         if ( NetAddress::parse( address, 0, serverAddress ) == false || serverAddress.isValid() == false )
         {
-            outError = "GM address needs host:port (for example 127.0.0.1:7778)";
-            _state   = AdminToolConnectionState::Failed;
-            return false;
+            _state = AdminToolConnectionState::Failed;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "GM address needs host:port (for example 127.0.0.1:7778)" } );
         }
         _pTransport = StreamTransportFactory::createPlatformTransport();
         if ( _pTransport == nullptr )
         {
-            outError = "this platform has no stream transport";
-            _state   = AdminToolConnectionState::Failed;
-            return false;
+            _state = AdminToolConnectionState::Failed;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "this platform has no stream transport" } );
         }
         if ( _bServiceRegistered == false )
         {
             _admin.initialize( &_client );
             if ( _client.registerClientService( &_admin ) == false )
             {
-                outError = "the GM client could not be registered (method range already taken)";
-                _state   = AdminToolConnectionState::Failed;
-                return false;
+                _state = AdminToolConnectionState::Failed;
+                return unexpected( Error{ ErrorKind::InvalidArgument, "the GM client could not be registered (method range already taken)" } );
             }
             _bServiceRegistered = SW_TRUE;
         }
-        _tlsContext = NetSecurity::createClientTLSContext( game::getSubsystem<INetSecurityProvider>(), tlsTrustFile, "", outError );
-        if ( _tlsContext == nullptr )
+        expected<unique_ptr<ITLSContext>> tlsContext = NetSecurity::createClientTLSContext( game::getSubsystem<INetSecurityProvider>(), tlsTrustFile, "" );
+        if ( tlsContext.has_value() == false )
         {
             _state = AdminToolConnectionState::Failed;
-            return false;
+            return unexpected( tlsContext.error() );
         }
+        _tlsContext = std::move( *tlsContext );
         OnlineServiceClientConfig settings{ OnlineClientSecurity::tls( *_tlsContext ) };
         settings._transportSettings._ioThreadCount = 0; // 에디터 프레임의 update 가 전송을 돌린다
         settings._serverAddress                    = serverAddress;
         settings._gameBuild                        = string( gameBuild );
-        if ( _client.initialize( _pTransport.get(), settings, outError ) == false )
+        if ( expected<void> started = _client.initialize( _pTransport.get(), settings ); started.has_value() == false )
         {
             _state = AdminToolConnectionState::Failed;
-            return false;
+            return started;
         }
         _bReadyReported = SW_FALSE;
         _state          = AdminToolConnectionState::Connecting;
-        return true;
+        return {};
     }
 
     void AdminToolConnection::close()

@@ -52,23 +52,23 @@ namespace sw
             {
             }
 
-            [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
+            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry ) override
             {
                 SocialKitConfig kitConfig;
-                if ( entry.readSettings( kitConfig, outError ) == false )
-                    return false;
-                string tableError;
-                if ( _guildService.setLevelTable( kitConfig._listGuildLevelExperience, tableError ) == false )
+                if ( expected<void> result = entry.readSettings( kitConfig ); result.has_value() == false )
+                    return result;
+                if ( expected<void> table = _guildService.setLevelTable( kitConfig._listGuildLevelExperience ); table.has_value() == false )
                 {
-                    outError = "social: _listGuildLevelExperience: " + tableError;
-                    return false;
+                    Error error{ table.error().kind(), table.error().message().data(), "_listGuildLevelExperience: " };
+                    error.appendDetail( table.error().detail() );
+                    return unexpected( error );
                 }
-                return registerServerService( context, entry, &_socialServer, outError ) && exposeInterface<IAccountBlockList>( context, entry, _blockList, outError );
+                return registerServerService( context, entry, &_socialServer ).and_then( [&]
+                { return exposeInterface<IAccountBlockList>( context, entry, _blockList ); } );
             }
 
-            bool start( OnlineServerKitContext& context, string& outError ) override
+            expected<void> start( OnlineServerKitContext& context ) override
             {
-                (void)outError;
                 SocialServiceDependencies dependencies;
                 dependencies._pStore     = context._pStore;
                 dependencies._pRouter    = context._pRouter;
@@ -83,7 +83,7 @@ namespace sw
                 if ( _pGroupChannels != nullptr )
                     _guildEventSubscription = _guildService.bindEventDelegate( GuildEventDelegate::create<&SocialOnlineServerKit::onGuildEvent>( this ) );
                 _socialServer.initialize( &_socialService, &_guildService, context._kits.find<IAccountPresence>(), context._pMetricRegistry );
-                return true;
+                return {};
             }
 
             /** @brief 종료 드레인이 기다릴 진행 중인 일 — 저장소에 맡긴 친구 · 길드 요청. */

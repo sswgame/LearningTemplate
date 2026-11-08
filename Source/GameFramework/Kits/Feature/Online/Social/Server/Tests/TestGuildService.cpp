@@ -466,14 +466,14 @@ SW_TEST_CASE( GuildServiceTest, ApplicationsExpireAndAreCapped )
 /** @brief [GuildServiceTest] 경험치와 레벨: 서버 시스템이 늘리고 레벨은 표로 응답 때 정한다 — 표를 바꾸면 저장값 그대로 레벨이 따라간다. 상한에서 멈추고, 틀린 표는 받지 않는다 */
 SW_TEST_CASE( GuildServiceTest, ExperienceDrivesLevels )
 {
-    GuildFixture rig;
-    const uint64 guildID = rig.makeGuild();
-    string       error;
-    SW_EXPECT_FALSE( rig._service.setLevelTable( vector<int64>{ 10, 10 }, error ) );
-    SW_EXPECT_FALSE( error.empty() );
-    SW_EXPECT_FALSE( rig._service.setLevelTable( vector<int64>{ 0 }, error ) );
-    SW_EXPECT_FALSE( rig._service.setLevelTable( vector<int64>( static_cast<size_t>( GuildLimit::kMaxLevelCount ) + 1, 1 ), error ) );
-    SW_REQUIRE_TRUE( rig._service.setLevelTable( vector<int64>{ 10, 30 }, error ) );
+    GuildFixture         rig;
+    const uint64         guildID = rig.makeGuild();
+    const expected<void> equal   = rig._service.setLevelTable( vector<int64>{ 10, 10 } );
+    SW_REQUIRE_FALSE( equal.has_value() );
+    SW_EXPECT_FALSE( equal.error().detail().empty() );
+    SW_EXPECT_FALSE( rig._service.setLevelTable( vector<int64>{ 0 } ) );
+    SW_EXPECT_FALSE( rig._service.setLevelTable( vector<int64>( static_cast<size_t>( GuildLimit::kMaxLevelCount ) + 1, 1 ) ) );
+    SW_REQUIRE_TRUE( rig._service.setLevelTable( vector<int64>{ 10, 30 } ) );
     SW_EXPECT_EQUAL( 1, rig._service.computeLevel( 9 ) );
     SW_EXPECT_EQUAL( 2, rig._service.computeLevel( 10 ) );
     SW_EXPECT_EQUAL( 3, rig._service.computeLevel( 1000 ) );
@@ -491,7 +491,7 @@ SW_TEST_CASE( GuildServiceTest, ExperienceDrivesLevels )
     const GuildCompletion got = rig.run( GuildOperation::Get, kMember );
     SW_EXPECT_EQUAL( int64( 15 ), got._info._experience );
     SW_EXPECT_EQUAL( 2, got._info._level );
-    SW_REQUIRE_TRUE( rig._service.setLevelTable( vector<int64>{ 5, 7, 9 }, error ) );
+    SW_REQUIRE_TRUE( rig._service.setLevelTable( vector<int64>{ 5, 7, 9 } ) );
     SW_EXPECT_EQUAL( 4, rig.run( GuildOperation::Get, kMember )._info._level );
 
     rig._service.addExperience( guildID, 1ll << 60, UnixMilliseconds{ kNowMs } );

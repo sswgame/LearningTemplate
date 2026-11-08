@@ -61,31 +61,42 @@ namespace sw
             {
             }
 
-            [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
+            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry ) override
             {
-                LiveOpsKitConfig       kitConfig;
-                optional<AbsolutePath> providersFile;
-                optional<AbsolutePath> trustFile;
-                if ( entry.readSettings( kitConfig, outError ) == false || entry.resolveFile( kitConfig._pushProvidersFile, "_pushProvidersFile", providersFile, outError ) == false || entry.resolveFile( kitConfig._pushTrustFile, "_pushTrustFile", trustFile, outError ) == false )
-                    return false;
+                LiveOpsKitConfig kitConfig;
+                if ( expected<void> settings = entry.readSettings( kitConfig ); settings.has_value() == false )
+                    return settings;
+                const expected<optional<AbsolutePath>> providersFile = entry.resolveFile( kitConfig._pushProvidersFile, "_pushProvidersFile" );
+                if ( providersFile.has_value() == false )
+                    return unexpected( providersFile.error() );
+                const expected<optional<AbsolutePath>> trustFile = entry.resolveFile( kitConfig._pushTrustFile, "_pushTrustFile" );
+                if ( trustFile.has_value() == false )
+                    return unexpected( trustFile.error() );
                 _dispatcher.initialize( context._pStore, PushDispatcherConfig{} );
                 // 오프라인 푸시는 우편함 키트가 접속하지 않은 계정의 새 우편에, 이벤트 운영은 GM 키트가 쓴다. 부르는 것은 모든 키트가 시작한 뒤다.
-                const bool bAssembled = createPushProviders( providersFile, trustFile, context._clock, outError ) && registerFakePush( kitConfig._bFakePush, outError ) && registerServerService( context, entry, &_server, outError ) && exposeInterface<IOfflinePushSender>( context, entry, _offlinePush, outError ) && exposeInterface<ILiveEventControl>( context, entry, _service, outError );
-                if ( bAssembled == false )
+                expected<void> assembled = createPushProviders( *providersFile, *trustFile, context._clock )
+                                               .and_then( [&]
+                { return registerFakePush( kitConfig._bFakePush ); } )
+                                               .and_then( [&]
+                { return registerServerService( context, entry, &_server ); } )
+                                               .and_then( [&]
+                { return exposeInterface<IOfflinePushSender>( context, entry, _offlinePush ); } )
+                                               .and_then( [&]
+                { return exposeInterface<ILiveEventControl>( context, entry, _service ); } );
+                if ( assembled.has_value() == false )
                     shutdown(); // 초기화에 실패한 키트는 shutdown 을 받지 않는다 — 만든 제공자를 여기서 내린다
-                return bAssembled;
+                return assembled;
             }
 
-            bool start( OnlineServerKitContext& context, string& outError ) override
+            expected<void> start( OnlineServerKitContext& context ) override
             {
-                (void)outError;
                 LiveOpsDependencies dependencies;
                 dependencies._pStore        = context._pStore;
                 dependencies._pBus          = context._pBus;
                 dependencies._pRemoteConfig = context._pRemoteConfig;
                 _service.initialize( dependencies );
                 _server.initialize( &_service, &_dispatcher, context._pMetricRegistry );
-                return true;
+                return {};
             }
 
             /** @brief 종료 드레인이 기다릴 진행 중인 일 — 저장소에 맡긴 요청. */
@@ -107,37 +118,34 @@ namespace sw
 
         private:
             /** @brief 설정 `_bFakePush` 이면 가짜 제공자를 발송기에 올립니다(DevOnline 단위가 만든다 — 그 단위가 없는 구성은 거절한다). */
-            [[nodiscard]] bool registerFakePush( bool bFakePush, string& outError )
+            [[nodiscard]] expected<void> registerFakePush( bool bFakePush )
             {
                 if ( bFakePush == false )
-                    return true;
-                const LiveOpsDevOptions* pDevOptions = DevOnlineExtension<LiveOpsDevOptions>::require( outError );
-                if ( pDevOptions == nullptr )
-                    return false;
-                _pFakeProvider = pDevOptions->_pCreateFakePushProvider();
+                    return {};
+                const expected<const LiveOpsDevOptions*> devOptions = DevOnlineExtension<LiveOpsDevOptions>::require();
+                if ( devOptions.has_value() == false )
+                    return unexpected( devOptions.error() );
+                _pFakeProvider = ( *devOptions )->_pCreateFakePushProvider();
                 if ( _dispatcher.registerProvider( _pFakeProvider.get() ) )
-                    return true;
-                outError = "the fake push provider could not be registered";
-                return false;
+                    return {};
+                return unexpected( Error{ ErrorKind::InvalidArgument, "the fake push provider could not be registered" } );
             }
 
             /** @brief 설정 파일을 읽어 실제 푸시 제공자를 만들고 발송기에 등록합니다. 파일을 정하지 않았으면 실제 제공자가 없습니다. */
-            [[nodiscard]] bool createPushProviders( const optional<AbsolutePath>& providersFile, const optional<AbsolutePath>& trustFile, const IClock& clock, string& outError )
+            [[nodiscard]] expected<void> createPushProviders( const optional<AbsolutePath>& providersFile, const optional<AbsolutePath>& trustFile, const IClock& clock )
             {
                 vector<PushProviderConfig> listSettings;
-                const bool                 bRead = OnlineProviderFile::read<PushProviderConfig>( providersFile, trustFile, "_pushProvidersFile", "_pushTrustFile", &PushProviderSet::readEntry,
-                                                                                                 listSettings, outError );
-                if ( bRead == false || _providerSet.initialize( listSettings, OnlineProviderFile::getTrustText( trustFile ), clock, outError ) == false )
-                    return false;
+                if ( expected<void> read = OnlineProviderFile::read<PushProviderConfig>( providersFile, trustFile, "_pushProvidersFile", "_pushTrustFile", &PushProviderSet::readEntry, listSettings );
+                     read.has_value() == false )
+                    return read;
+                if ( expected<void> providers = _providerSet.initialize( listSettings, OnlineProviderFile::getTrustText( trustFile ), clock ); providers.has_value() == false )
+                    return providers;
                 for ( int32 index = 0; index < _providerSet.getProviderCount(); ++index )
                 {
                     if ( _dispatcher.registerProvider( _providerSet.getProvider( index ) ) == false )
-                    {
-                        outError = "push provider ids must be unique";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "push provider ids must be unique" } );
                 }
-                return true;
+                return {};
             }
 
         private:
