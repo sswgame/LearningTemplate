@@ -9,6 +9,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Foundation/Expected.h"
 
 #include "Engine/Window/CallbackInputWindow.h"
 #include "Engine/Window/PlatformInputEvent.h"
@@ -58,8 +59,8 @@ namespace sw
         void syncSurfaceMetrics();
         /** @brief JNI 로 창 안전 여백(왼쪽, 위, 오른쪽, 아래, 물리 픽셀)을 읽습니다. 못 읽으면 0 입니다. */
         float4 readSafeInsets() const;
-        /** @brief 입력 장치 @p deviceId 의 패드 칸입니다. 처음 보는 장치면 빈 칸을 주고 연결을 알린다. 칸이 모두 찼으면 -1 입니다. */
-        [[nodiscard]] int32 findOrAssignGamepadSlot( int32 deviceId );
+        /** @brief 입력 장치 @p deviceId 의 패드 칸입니다. 처음 보는 장치면 빈 칸을 주고 연결을 알린다. 칸이 모두 찼으면 비어 있습니다. */
+        [[nodiscard]] optional<uint32> findOrAssignGamepadSlot( int32 deviceId );
         /** @brief 지금 붙은 패드 장치를 JNI 로 읽어 칸과 대조합니다 — 사라진 장치는 끊김, 새 장치는 연결을 알린다(`processMessages` 가 주기적으로). */
         void syncGamepadDevices();
         /** @brief 패드 장치의 키 이벤트를 칸에 실어 보냅니다. 패드 장치가 아니면 false 입니다(키보드 길로 간다). */

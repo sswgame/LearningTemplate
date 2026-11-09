@@ -197,7 +197,7 @@ namespace sw
             for ( const hashed_string& candidate : socketOverride._placement._listSocket )
             {
                 const SocketDef* pExisting = inoutBodySockets.findSocket( candidate );
-                if ( bodyBindBones.findBone( candidate ) >= 0 )
+                if ( bodyBindBones.findBone( candidate ).has_value() )
                     def._parent = candidate;
                 else if ( pExisting != nullptr )
                     def._parent = pExisting->_parent;

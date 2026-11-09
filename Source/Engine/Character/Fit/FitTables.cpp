@@ -227,7 +227,7 @@ namespace sw
     {
         const uint32 vertexCount = geometry.getVertexCount();
         outListVertexRegion.assign( vertexCount, CharacterGeometryConstant::kNoGroup );
-        vector<int32> listBoneIndex;
+        vector<uint32> listBoneIndex;
         for ( size_t regionIndex = 0; regionIndex < _listRegion.size(); ++regionIndex )
         {
             const BodyRegionDef& region = _listRegion[regionIndex];
@@ -248,9 +248,9 @@ namespace sw
             listBoneIndex.clear();
             for ( const hashed_string& boneName : region._listBone )
             {
-                const int32 boneIndex = bones.findBone( boneName );
-                if ( boneIndex >= 0 )
-                    listBoneIndex.push_back( boneIndex );
+                const optional<uint32> boneIndex = bones.findBone( boneName );
+                if ( boneIndex.has_value() )
+                    listBoneIndex.push_back( *boneIndex );
             }
             for ( uint32 vertex = 0; vertex < vertexCount; ++vertex )
             {
@@ -260,9 +260,9 @@ namespace sw
                 float32              weight    = 0.0f;
                 for ( uint32 slot = 0; slot < CharacterGeometryConstant::kMaxSkinInfluence; ++slot )
                 {
-                    for ( const int32 boneIndex : listBoneIndex )
+                    for ( const uint32 boneIndex : listBoneIndex )
                     {
-                        if ( static_cast<int32>( influence._arrJoint[slot] ) == boneIndex )
+                        if ( static_cast<uint32>( influence._arrJoint[slot] ) == boneIndex )
                             weight += influence._arrWeight[slot];
                     }
                 }

@@ -50,9 +50,9 @@ namespace sw
                 }
                 for ( uint32 vertex = 0; vertex < geometry.getVertexCount(); ++vertex )
                 {
-                    const int32 joint = geometry._listSkin[vertex].findDominantJoint();
-                    if ( 0 <= joint && joint < static_cast<int32>( boneCount ) )
-                        outListAxis[vertex] = listBoneAxis[static_cast<size_t>( joint )];
+                    const optional<uint32> joint = geometry._listSkin[vertex].findDominantJoint();
+                    if ( joint.has_value() && *joint < boneCount )
+                        outListAxis[vertex] = listBoneAxis[*joint];
                 }
             }
 

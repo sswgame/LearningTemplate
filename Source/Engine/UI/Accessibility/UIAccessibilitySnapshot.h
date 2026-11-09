@@ -9,6 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
@@ -24,11 +25,11 @@ namespace sw
     /** @brief 접근성 트리의 노드 하나입니다. */
     struct AccessibleNode
     {
-        WidgetID       _widget{ kInvalidWidgetID };                ///< 위젯 토큰입니다(`WidgetID`).
-        uint32         _screen{ 0 };                               ///< 위젯이 속한 화면 핸들입니다(`UIScreenHandle`, 0 은 화면 없음).
-        int32          _parent{ constant::invalid_index::kInt32 }; ///< 가장 가까운 노드 조상의 목록 번호입니다(-1 이면 접근성 루트 바로 아래).
-        float4         _bounds{};                                  ///< 화면 사각형입니다(x, y, 너비, 높이, UI 단위·뷰포트 원점 기준).
-        AccessibleInfo _info{};
+        WidgetID         _widget{ kInvalidWidgetID }; ///< 위젯 토큰입니다(`WidgetID`).
+        uint32           _screen{ 0 };                ///< 위젯이 속한 화면 핸들입니다(`UIScreenHandle`, 0 은 화면 없음).
+        optional<uint32> _parent{};                   ///< 가장 가까운 노드 조상의 목록 번호입니다(비어 있으면 접근성 루트 바로 아래).
+        float4           _bounds{};                   ///< 화면 사각형입니다(x, y, 너비, 높이, UI 단위·뷰포트 원점 기준).
+        AccessibleInfo   _info{};
     };
 } // namespace sw
 
@@ -38,17 +39,17 @@ namespace sw
     struct SW_API UIAccessibilitySnapshot
     {
         vector<AccessibleNode> _listNode{};
-        int32                  _focusedNode{ constant::invalid_index::kInt32 }; ///< 포커스 위젯의 노드 번호입니다(없으면 -1).
+        optional<uint32>       _focusedNode{}; ///< 포커스 위젯의 노드 번호입니다(없으면 비어 있다).
 
         void clear()
         {
             _listNode.clear();
-            _focusedNode = constant::invalid_index::kInt32;
+            _focusedNode.reset();
         }
-        /** @brief (화면, 위젯)의 노드 번호입니다. 없으면 -1 입니다. */
-        int32 findNode( uint32 screen, WidgetID widget ) const;
-        /** @brief (화면, 위젯 토큰 키 `WidgetID::getKey`)의 노드 번호입니다 — 글자 경로에서 읽은 키로 찾는 쪽(AT-SPI)이 쓴다. 없으면 -1 입니다. */
-        int32 findNodeByWidgetKey( uint32 screen, uint64 widgetKey ) const;
+        /** @brief (화면, 위젯)의 노드 번호입니다. 없으면 비어 있습니다. */
+        optional<uint32> findNode( uint32 screen, WidgetID widget ) const;
+        /** @brief (화면, 위젯 토큰 키 `WidgetID::getKey`)의 노드 번호입니다 — 글자 경로에서 읽은 키로 찾는 쪽(AT-SPI)이 쓴다. 없으면 비어 있습니다. */
+        optional<uint32> findNodeByWidgetKey( uint32 screen, uint64 widgetKey ) const;
 
         // 접근성 트리를 뽑는 도구입니다.
         /**

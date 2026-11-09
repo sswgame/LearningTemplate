@@ -204,7 +204,7 @@ namespace sw
         bool bValid = true;
         for ( const BoneOverride& boneOverride : _listOverride )
         {
-            if ( bones.findBone( boneOverride._bone ) >= 0 )
+            if ( bones.findBone( boneOverride._bone ).has_value() )
                 continue;
             bValid = false;
             if ( pOutIssues != nullptr )
@@ -212,8 +212,8 @@ namespace sw
         }
         for ( const BoneMirrorPair& pair : _listMirrorPair )
         {
-            const bool bLeftKnown  = bones.findBone( pair._left ) >= 0;
-            const bool bRightKnown = bones.findBone( pair._right ) >= 0;
+            const bool bLeftKnown  = bones.findBone( pair._left ).has_value();
+            const bool bRightKnown = bones.findBone( pair._right ).has_value();
             if ( bLeftKnown && bRightKnown )
                 continue;
             bValid = false;
@@ -227,10 +227,10 @@ namespace sw
     {
         for ( const BoneOverride& boneOverride : _listOverride )
         {
-            const int32 boneIndex = inoutBones.findBone( boneOverride._bone );
-            if ( boneIndex < 0 )
+            const optional<uint32> boneIndex = inoutBones.findBone( boneOverride._bone );
+            if ( boneIndex.has_value() == false )
                 continue;
-            float4x4&  local = inoutBones._listLocal[static_cast<size_t>( boneIndex )];
+            float4x4&  local = inoutBones._listLocal[*boneIndex];
             float3     scale;
             quaternion rotation;
             float3     translation;

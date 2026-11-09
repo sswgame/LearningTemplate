@@ -383,8 +383,8 @@ namespace sw
         void applyPostEvent( const Command& command );
         /** @brief 쿨다운과 동시 재생 상한을 봅니다. 상한이면 뺏을 인스턴스를 멈춥니다. 버려야 하면(버린 수를 올리고) false 입니다. */
         [[nodiscard]] bool tryAcceptEvent( const EventState& state, const AudioEventDef& event );
-        /** @brief 이벤트의 살아 있는 인스턴스 수와, 뺏을 인스턴스(정책에 가장 맞는 것)의 번호를 구합니다. 없으면 -1 입니다. */
-        int32 findStealVictim( const AudioEventDef& event, uint32& outLiveCount ) const;
+        /** @brief 이벤트의 살아 있는 인스턴스 수와, 뺏을 인스턴스(정책에 가장 맞는 것)의 번호를 구합니다. 없으면 비어 있습니다. */
+        optional<uint32> findStealVictim( const AudioEventDef& event, uint32& outLiveCount ) const;
         /** @brief 컨테이너 종류에 따라 이번에 낼 첫 클립과 개수를 고릅니다(무작위는 앞서 낸 것을 피하고, 순차는 커서를 옮긴다). */
         void pickEventClips( EventState& inoutState, const AudioEventDef& event, uint32& outFirstClip, uint32& outPickCount );
         /** @brief 라이브러리를 교체하거나 언로드하고, 이벤트와 감쇠 테이블을 다시 만듭니다. */
@@ -393,16 +393,16 @@ namespace sw
         void rebuildAttenuationTable();
         /** @brief 이벤트 이름 테이블을 다시 만듭니다. 이름으로 유지되는 상태는 이어 갑니다. */
         void rebuildEventTable();
-        /** @brief 감쇠 프리셋 이름의 테이블 번호를 반환합니다. 없으면 -1 입니다. */
-        int32 resolveAttenuationIndex( const hashed_string& name ) const;
+        /** @brief 감쇠 프리셋 이름의 테이블 번호를 반환합니다. 이름이 비었거나 없으면 비어 있습니다(2D). */
+        optional<uint32> resolveAttenuationIndex( const hashed_string& name ) const;
         /** @brief 파라미터를 이 블록만큼 목표로 옮깁니다. */
         void updateParameters();
         /** @brief 이 에미터에서 본 파라미터 값을 반환합니다. 에미터 값, 전역 값, 0 순서로 찾습니다. */
         float32 findParameterValue( AudioEmitterID emitterID, const hashed_string& name ) const;
         /** @brief 인스턴스의 들림과 거리를 모으고, 보이스가 없는 인스턴스를 비웁니다. */
         void updateInstances();
-        /** @brief 빈 인스턴스 슬롯을 잡습니다. */
-        int32 allocateInstance();
+        /** @brief 빈 인스턴스 슬롯을 잡습니다. 모두 쓰는 중이면 비어 있습니다. */
+        optional<uint32> allocateInstance();
 
         // AudioEngine.cpp: 음악 플레이어에게 내주는 보이스 풀의 창(`IAudioMusicVoices`)
         uint64             getMusicClock() const override { return _renderedFrameCount; }

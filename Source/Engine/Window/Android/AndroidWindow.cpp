@@ -224,25 +224,25 @@ namespace sw
         return CallbackInputWindow::processMessages();
     }
 
-    int32 AndroidWindow::findOrAssignGamepadSlot( int32 deviceId )
+    optional<uint32> AndroidWindow::findOrAssignGamepadSlot( int32 deviceId )
     {
-        int32 emptySlot = AndroidWindowInternal::kEmptyGamepadSlot;
+        optional<uint32> emptySlot;
         for ( uint32 slot = 0; slot < kPlatformGamepadSlotCount; ++slot )
         {
             if ( _arrGamepadDeviceID[slot] == deviceId )
-                return static_cast<int32>( slot );
-            if ( emptySlot == AndroidWindowInternal::kEmptyGamepadSlot && _arrGamepadDeviceID[slot] == AndroidWindowInternal::kEmptyGamepadSlot )
-                emptySlot = static_cast<int32>( slot );
+                return slot;
+            if ( emptySlot.has_value() == false && _arrGamepadDeviceID[slot] == AndroidWindowInternal::kEmptyGamepadSlot )
+                emptySlot = slot;
         }
-        if ( emptySlot == AndroidWindowInternal::kEmptyGamepadSlot )
+        if ( emptySlot.has_value() == false )
         {
             SW_LOG_WARNING_ID( "AndroidWindow.GamepadSlotsFull", "Android: gamepad device %# has no free slot (%# slots) - its input is ignored", deviceId, kPlatformGamepadSlotCount );
-            return emptySlot;
+            return nullopt;
         }
-        _arrGamepadDeviceID[emptySlot] = deviceId;
+        _arrGamepadDeviceID[*emptySlot] = deviceId;
         PlatformInputEvent connected{};
         connected._kind         = PlatformInputKind::GamepadConnected;
-        connected._pointerIndex = static_cast<uint16>( emptySlot );
+        connected._pointerIndex = static_cast<uint16>( *emptySlot );
         queueInput( connected );
         return emptySlot;
     }
@@ -273,12 +273,12 @@ namespace sw
     {
         if ( AndroidWindowInternal::isGamepadSource( AInputEvent_getSource( pEvent ) ) == false )
             return false;
-        const int32 slot = findOrAssignGamepadSlot( AInputEvent_getDeviceId( pEvent ) );
-        if ( slot == AndroidWindowInternal::kEmptyGamepadSlot || AKeyEvent_getRepeatCount( pEvent ) > 0 )
+        const optional<uint32> slot = findOrAssignGamepadSlot( AInputEvent_getDeviceId( pEvent ) );
+        if ( slot.has_value() == false || AKeyEvent_getRepeatCount( pEvent ) > 0 )
             return true; // 되풀이 키는 버튼 상태를 바꾸지 않는다
         PlatformInputEvent input{};
         input._kind         = AKeyEvent_getAction( pEvent ) == AKEY_EVENT_ACTION_UP ? PlatformInputKind::GamepadKeyUp : PlatformInputKind::GamepadKeyDown;
-        input._pointerIndex = static_cast<uint16>( slot );
+        input._pointerIndex = static_cast<uint16>( *slot );
         input._keyCode      = AKeyEvent_getKeyCode( pEvent );
         queueInput( input );
         return true;
@@ -288,10 +288,11 @@ namespace sw
     {
         if ( ( AInputEvent_getSource( pEvent ) & AINPUT_SOURCE_JOYSTICK ) != AINPUT_SOURCE_JOYSTICK )
             return false;
-        const int32 slot = findOrAssignGamepadSlot( AInputEvent_getDeviceId( pEvent ) );
-        if ( slot == AndroidWindowInternal::kEmptyGamepadSlot )
+        const optional<uint32> foundSlot = findOrAssignGamepadSlot( AInputEvent_getDeviceId( pEvent ) );
+        if ( foundSlot.has_value() == false )
             return true;
-        const auto queueAxis = [this, slot]( int32 axis, float32 value )
+        const uint32 slot      = *foundSlot;
+        const auto   queueAxis = [this, slot]( int32 axis, float32 value )
         {
             PlatformInputEvent input{};
             input._kind         = PlatformInputKind::GamepadAxis;

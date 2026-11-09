@@ -92,7 +92,7 @@ SW_TEST_CASE( TileSetEditModelTest, BrushNamesStayUnique )
     SW_EXPECT_TRUE( model.renameSelectedBrush( "grass" ) );
     TileSetAsset asset;
     SW_EXPECT_TRUE( Util::rereads( model, asset ) );
-    SW_EXPECT_EQUAL( 2, asset.findBrush( hashed_string( "grass" ) ) );
+    SW_EXPECT_TRUE( asset.findBrush( hashed_string( "grass" ) ) == 2u );
 }
 
 // 규칙 타일의 마지막 규칙은 지우지 않는다(규칙 없는 규칙 타일은 로드 오류). 격자를 줄여 셀이 밖으로 나가면 위반으로 보이고 저장하지 않는다.

@@ -332,13 +332,13 @@ namespace sw
         uint16 value = 0;
         if ( brushName.empty() == false )
         {
-            const int32 brush = getTileSet().findBrush( hashed_string( brushName ) );
-            if ( brush < 0 )
+            const optional<uint32> brush = getTileSet().findBrush( hashed_string( brushName ) );
+            if ( brush.has_value() == false )
             {
                 SW_LOG_ERROR_ID( "TileMapRenderer.TileSetNoBrush", "Tile set '%#' has no brush '%#'", _map._tileSetPath, brushName );
                 return false;
             }
-            value = static_cast<uint16>( brush + 1 );
+            value = static_cast<uint16>( *brush + 1u );
         }
         (void)_map.setTileBrush( x, y, brushName ); // 칸 범위는 위에서 봤다
         _listBrushIndex[indexOf( x, y )] = value;

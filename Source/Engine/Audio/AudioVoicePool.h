@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -34,8 +35,8 @@ namespace sw
         float32          _audibility{ 0.0f }; ///< 이번 블록 목표 게인(버스 페이더는 넣지 않는다)
         float32          _distance{ 0.0f };
         uint32           _busIndex{ 0 };
-        int32            _attenuationIndex{ constant::invalid_index::kInt32 }; ///< 감쇠 테이블 번호다(-1 = 2D).
-        int32            _instanceIndex{ constant::invalid_index::kInt32 };    ///< 이벤트 인스턴스(-1 = 클립 재생)
+        optional<uint32> _attenuationIndex{};                               ///< 감쇠 테이블 번호다(비어 있으면 2D).
+        int32            _instanceIndex{ constant::invalid_index::kInt32 }; ///< 이벤트 인스턴스(-1 = 클립 재생)
         int32            _priority{ 50 };
         int32            _musicSegment{ constant::invalid_index::kInt32 }; ///< 음악 레이어의 구간이다(-1 = 음악 아님).
         int32            _musicLayer{ constant::invalid_index::kInt32 };   ///< 음악 레이어 번호다.

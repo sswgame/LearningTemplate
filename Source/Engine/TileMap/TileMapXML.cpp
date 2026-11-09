@@ -290,7 +290,7 @@ namespace sw
                 {
                     TileDataLayerParams params;
                     const bool          bFieldsRead  = XMLFields::readFields( layerNode, params, data._name ); // 이름 · 기본값 필수는 PROPERTY
-                    const bool          bHeaderValid = bFieldsRead && params._name.empty() == false && data.findDataLayer( params._name ) < 0;
+                    const bool          bHeaderValid = bFieldsRead && params._name.empty() == false && data.findDataLayer( params._name ).has_value() == false;
                     if ( bHeaderValid == false )
                     {
                         SW_LOG_ERROR_ID( "TileMap.InvalidDataLayer", "TileMap '%#': <dataLayers><layer> needs a unique non-empty name and a default (name '%#')", data._name, params._name );
@@ -553,19 +553,19 @@ namespace sw
         return true;
     }
 
-    int32 TileMapXMLData::findDataLayer( string_view name ) const
+    optional<uint32> TileMapXMLData::findDataLayer( string_view name ) const
     {
         for ( size_t layerIndex = 0; layerIndex < _listDataLayer.size(); ++layerIndex )
         {
             if ( _listDataLayer[layerIndex]._name == name )
-                return static_cast<int32>( layerIndex );
+                return static_cast<uint32>( layerIndex );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     bool TileMapXMLData::addDataLayer( string_view name, int32 defaultValue )
     {
-        if ( name.empty() || findDataLayer( name ) >= 0 )
+        if ( name.empty() || findDataLayer( name ).has_value() )
             return false;
         DataLayer layer;
         layer._name         = string( name );
@@ -617,12 +617,12 @@ namespace sw
 
     bool TileMapXMLData::mapTileCells( const TileSetAsset& tileSet, vector<uint16>& outListBrushIndex ) const
     {
-        vector<int32> listPaletteToBrush( _listPaletteName.size(), constant::invalid_index::kInt32 );
-        bool          bAllKnown = true;
+        vector<optional<uint32>> listPaletteToBrush( _listPaletteName.size() );
+        bool                     bAllKnown = true;
         for ( size_t paletteIndex = 0; paletteIndex < _listPaletteName.size(); ++paletteIndex )
         {
             listPaletteToBrush[paletteIndex] = tileSet.findBrush( hashed_string( string_view( _listPaletteName[paletteIndex] ) ) );
-            bAllKnown                        = bAllKnown && listPaletteToBrush[paletteIndex] >= 0;
+            bAllKnown                        = bAllKnown && listPaletteToBrush[paletteIndex].has_value();
         }
         const size_t count = static_cast<size_t>( _width ) * static_cast<size_t>( _height );
         outListBrushIndex.assign( count, 0 );
@@ -631,9 +631,9 @@ namespace sw
             const uint16 paletteValue = _listTileCell[cellIndex];
             if ( paletteValue == 0 || paletteValue > listPaletteToBrush.size() )
                 continue;
-            const int32 brush = listPaletteToBrush[paletteValue - 1u];
-            if ( brush >= 0 )
-                outListBrushIndex[cellIndex] = static_cast<uint16>( brush + 1 );
+            const optional<uint32> brush = listPaletteToBrush[paletteValue - 1u];
+            if ( brush.has_value() )
+                outListBrushIndex[cellIndex] = static_cast<uint16>( *brush + 1u );
         }
         return bAllKnown;
     }

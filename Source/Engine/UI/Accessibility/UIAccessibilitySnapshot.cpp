@@ -17,14 +17,14 @@ namespace sw
         struct UIAccessibilityTreeInternal
         {
             /** @brief @p widget 와 자손을 읽는 순서로 훑어 노드를 덧붙입니다. @p parentNode 는 지금까지 가장 가까운 노드 조상(-1 이면 루트 아래)입니다. */
-            static void visit( Widget& widget, int32 parentNode, uint32 screen, WidgetID focusedWidget, UIAccessibilitySnapshot& inoutSnapshot )
+            static void visit( Widget& widget, optional<uint32> parentNode, uint32 screen, WidgetID focusedWidget, UIAccessibilitySnapshot& inoutSnapshot )
             {
                 // 보이지 않거나 완전히 투명하면 자손까지 읽지 않는다(화면에 없는 것을 읽어 주면 안 된다).
                 if ( widget.isVisible() == false || widget.getOpacity() <= 0.0f )
                     return;
                 AccessibleInfo info{};
                 widget.describeAccessible( info );
-                int32 nodeIndex = parentNode;
+                optional<uint32> nodeIndex = parentNode;
                 if ( info._role != AccessibleRole::None )
                 {
                     // 이름이 없으면 레이블 위젯의 글이 이름이다(옵션 행: 슬라이더 옆 글).
@@ -51,7 +51,7 @@ namespace sw
                     node._bounds     = float4{ bounds._left, bounds._top, bounds._right - bounds._left, bounds._bottom - bounds._top };
                     const bool bLeaf = info._bLeaf;
                     node._info       = std::move( info );
-                    nodeIndex        = static_cast<int32>( inoutSnapshot._listNode.size() );
+                    nodeIndex        = static_cast<uint32>( inoutSnapshot._listNode.size() );
                     inoutSnapshot._listNode.push_back( std::move( node ) );
                     if ( bFocused )
                         inoutSnapshot._focusedNode = nodeIndex;
@@ -108,31 +108,31 @@ namespace sw
 
 namespace sw
 {
-    int32 UIAccessibilitySnapshot::findNode( uint32 screen, WidgetID widget ) const
+    optional<uint32> UIAccessibilitySnapshot::findNode( uint32 screen, WidgetID widget ) const
     {
         for ( size_t index = 0; index < _listNode.size(); ++index )
         {
             if ( _listNode[index]._screen == screen && _listNode[index]._widget == widget )
-                return static_cast<int32>( index );
+                return static_cast<uint32>( index );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
-    int32 UIAccessibilitySnapshot::findNodeByWidgetKey( uint32 screen, uint64 widgetKey ) const
+    optional<uint32> UIAccessibilitySnapshot::findNodeByWidgetKey( uint32 screen, uint64 widgetKey ) const
     {
         for ( size_t index = 0; index < _listNode.size(); ++index )
         {
             if ( _listNode[index]._screen == screen && _listNode[index]._widget.isValid() && _listNode[index]._widget.getKey() == widgetKey )
-                return static_cast<int32>( index );
+                return static_cast<uint32>( index );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     void UIAccessibilitySnapshot::appendTree( const WidgetTree& tree, uint32 screen, WidgetID focusedWidget, UIAccessibilitySnapshot& inoutSnapshot )
     {
         Widget* pRoot = tree.getRoot();
         if ( pRoot != nullptr )
-            UIAccessibilityTreeInternal::visit( *pRoot, constant::invalid_index::kInt32, screen, focusedWidget, inoutSnapshot );
+            UIAccessibilityTreeInternal::visit( *pRoot, nullopt, screen, focusedWidget, inoutSnapshot );
     }
 
     string UIAccessibilitySnapshot::collectLabel( Widget& root )

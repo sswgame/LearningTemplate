@@ -6,6 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
@@ -156,8 +157,8 @@ namespace sw
         int32             _columnCount{ 1 };
         int32             _rowCount{ 1 };
 
-        /** @brief 이름의 브러시 순번입니다. 없으면 -1 입니다. */
-        int32 findBrush( const hashed_string& name ) const;
+        /** @brief 이름의 브러시 순번입니다. 없으면 비어 있습니다. */
+        optional<uint32> findBrush( const hashed_string& name ) const;
         /** @brief 아틀라스 셀 수(`columns` × `rows`)입니다. */
         int32 getCellCount() const { return _columnCount * _rowCount; }
         /**
@@ -236,8 +237,8 @@ namespace sw
 
         /** @brief 브러시 목록입니다. */
         const vector<TileBrush>& getBrushes() const { return _content._listBrush; }
-        /** @brief 이름의 브러시 순번입니다. 없으면 -1 입니다. */
-        int32 findBrush( const hashed_string& name ) const { return _content.findBrush( name ); }
+        /** @brief 이름의 브러시 순번입니다. 없으면 비어 있습니다. */
+        optional<uint32> findBrush( const hashed_string& name ) const { return _content.findBrush( name ); }
 
         /**
          * @brief 셀 하나의 모습을 고릅니다. 그냥 타일은 그 모습이고, 규칙 타일은 이웃 조건이 맞는 첫 규칙입니다(없으면 기본 모습).

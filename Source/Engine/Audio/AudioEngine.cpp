@@ -1066,13 +1066,13 @@ namespace sw
         float32           lowPassHz = audio::kFilterOpenHz;
         slot._distance              = 0.0f;
 
-        const bool bSpatial = slot._attenuationIndex >= 0 && slot._emitterID != 0;
+        const bool bSpatial = slot._attenuationIndex.has_value() && slot._emitterID != 0;
         if ( bSpatial )
         {
             const auto it = _mapEmitter.find( slot._emitterID );
             if ( it != _mapEmitter.end() )
             {
-                const AudioAttenuationDef& attenuation = _listAttenuation[static_cast<size_t>( slot._attenuationIndex )];
+                const AudioAttenuationDef& attenuation = _listAttenuation[*slot._attenuationIndex];
                 // 리스너가 여럿이면 그래프의 `_listenerMix` 대로 합친다(기본은 가장 크게 들리는 리스너, 언리얼과 Wwise 의 "가장 가까운 리스너").
                 AudioSpatialResult arrResult[kMaxListenerCount];
                 uint32             listenerCount = 0;
@@ -1396,19 +1396,19 @@ namespace sw
         }
     }
 
-    int32 AudioEngine::resolveAttenuationIndex( const hashed_string& name ) const
+    optional<uint32> AudioEngine::resolveAttenuationIndex( const hashed_string& name ) const
     {
         if ( name.empty() )
-            return constant::invalid_index::kInt32;
+            return nullopt;
         for ( size_t attenuationIndex = 0; attenuationIndex < _listAttenuation.size(); ++attenuationIndex )
         {
             if ( _listAttenuation[attenuationIndex]._name == name )
-                return static_cast<int32>( attenuationIndex );
+                return static_cast<uint32>( attenuationIndex );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
-    int32 AudioEngine::allocateInstance()
+    optional<uint32> AudioEngine::allocateInstance()
     {
         for ( size_t instanceIndex = 0; instanceIndex < _listInstance.size(); ++instanceIndex )
         {
@@ -1416,16 +1416,16 @@ namespace sw
             {
                 _listInstance[instanceIndex]         = EventInstance{};
                 _listInstance[instanceIndex]._bInUse = true;
-                return static_cast<int32>( instanceIndex );
+                return static_cast<uint32>( instanceIndex );
             }
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
-    int32 AudioEngine::findStealVictim( const AudioEventDef& event, uint32& outLiveCount ) const
+    optional<uint32> AudioEngine::findStealVictim( const AudioEventDef& event, uint32& outLiveCount ) const
     {
-        outLiveCount      = 0;
-        int32 victimIndex = constant::invalid_index::kInt32;
+        outLiveCount = 0;
+        optional<uint32> victimIndex;
         for ( size_t instanceIndex = 0; instanceIndex < _listInstance.size(); ++instanceIndex )
         {
             const EventInstance& instance                = _listInstance[instanceIndex];
@@ -1433,12 +1433,12 @@ namespace sw
             if ( bNotLiveInstanceOfEvent )
                 continue;
             ++outLiveCount;
-            if ( victimIndex < 0 )
+            if ( victimIndex.has_value() == false )
             {
-                victimIndex = static_cast<int32>( instanceIndex );
+                victimIndex = static_cast<uint32>( instanceIndex );
                 continue;
             }
-            const EventInstance& victim  = _listInstance[static_cast<size_t>( victimIndex )];
+            const EventInstance& victim  = _listInstance[*victimIndex];
             bool                 bBetter = false;
             switch ( event._steal )
             {
@@ -1463,7 +1463,7 @@ namespace sw
                 }
             }
             if ( bBetter )
-                victimIndex = static_cast<int32>( instanceIndex );
+                victimIndex = static_cast<uint32>( instanceIndex );
         }
         return victimIndex;
     }
@@ -1482,16 +1482,16 @@ namespace sw
         // 동시 재생 상한과 뺏기다(Wwise 의 Playback Limit, 언리얼의 Sound Concurrency).
         if ( event._maxInstances > 0 )
         {
-            uint32      liveCount{ 0 };
-            const int32 victimIndex = findStealVictim( event, liveCount );
+            uint32                 liveCount{ 0 };
+            const optional<uint32> victimIndex = findStealVictim( event, liveCount );
             if ( liveCount >= event._maxInstances )
             {
-                if ( event._steal == AudioStealPolicy::Reject || victimIndex < 0 )
+                if ( event._steal == AudioStealPolicy::Reject || victimIndex.has_value() == false )
                 {
                     ++_droppedEventCount;
                     return false;
                 }
-                EventInstance& victim = _listInstance[static_cast<size_t>( victimIndex )];
+                EventInstance& victim = _listInstance[*victimIndex];
                 victim._bStopping     = true;
                 stopVoices( victim._playingID, 0, event._fadeOutSeconds );
             }
@@ -1558,8 +1558,8 @@ namespace sw
         if ( tryAcceptEvent( state, event ) == false )
             return;
 
-        const int32 instanceIndex = allocateInstance();
-        if ( instanceIndex < 0 )
+        const optional<uint32> instanceIndex = allocateInstance();
+        if ( instanceIndex.has_value() == false )
         {
             ++_droppedEventCount;
             return;
@@ -1568,7 +1568,7 @@ namespace sw
         state._bPostedOnce   = true;
         state._lastPostFrame = _renderedFrameCount;
 
-        EventInstance& instance = _listInstance[static_cast<size_t>( instanceIndex )];
+        EventInstance& instance = _listInstance[*instanceIndex];
         instance._pLibrary      = state._pLibrary;
         instance._pDesc         = &event;
         instance._playingID     = command._playingID;
@@ -1583,7 +1583,7 @@ namespace sw
         uint32 pickCount = 1;
         pickEventClips( state, event, firstClip, pickCount );
 
-        const int32 attenuationIndex = resolveAttenuationIndex( event._attenuation );
+        const optional<uint32> attenuationIndex = resolveAttenuationIndex( event._attenuation );
         for ( uint32 pickIndex = 0; pickIndex < pickCount; ++pickIndex )
         {
             const AudioClipEntry& clip  = event._listClip[firstClip + pickIndex];
