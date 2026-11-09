@@ -24,7 +24,10 @@
         "Editor/Common/Workspace/Undo/EditorDocumentState.h": "문서 한 벌의 저장한 값과 창 안 되돌리기 기록 — Core 와 EditSnapshotHistory 만 include 하는 값 템플릿(문서 Model 이 값으로 든다)",
         "Editor/Common/Workspace/Undo/EditSnapshotHistory.h": "창 안 되돌리기 스냅숏 기록 — Core 만 include 하는 값 템플릿",
         "Editor/Common/Workspace/EditorViewTargetUtil.h": "뷰 종류 · 게임 뷰 비율 값과 렌더 타깃 크기 · 이미지 사각형 판정 — Core 만 include 하는 값 · 순수 계산",
-        "Editor/Common/Commands/Asset/EditorPrefabOverrideItem.h": "프리팹 오버라이드 항목 값"
+        "Editor/Common/Commands/Asset/EditorPrefabOverrideItem.h": "프리팹 오버라이드 항목 값",
+        "Editor/Common/Workspace/NetPlay/EditorNetPlaySettings.h": "멀티 프로세스 재생 구성 · 프리셋 파일 값(리플렉션 집합체) — Core 와 리플렉션 매크로만 include 한다. Multiplayer 세션 ViewState 가 구성 사본을 들고 Net Mode 위젯이 고친다",
+        "Editor/Common/Commands/Play/EditorNetConditions.h": "회선 조절 패널 값(ms · % · KB/s)과 명령 글을 만드는 순수 함수 — Core 만 include 한다. Conditions ViewState 가 대상의 패널 값을 든다",
+        "Editor/Common/Workspace/NetPlay/EditorNetProfilerSample.h": "Profiler 표본 값 형식(채널 열거 · 종류별 비중 · 복제 셈)과 그 계산 — Core 와 리플렉션 매크로만 include 한다. Profiler ViewState 가 그대로 든다"
     },
     "_migratedViews": [
         "Source/Editor/Panels/Animation/AnimationClipPreviewPanel",
@@ -57,6 +60,12 @@
         "Source/Editor/Panels/Material/MaterialPanel",
         "Source/Editor/Panels/MaterialGraph/MaterialGraphPanel",
         "Source/Editor/Panels/Mesh/MeshPreviewPanel",
+        "Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab",
+        "Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab",
+        "Source/Editor/Panels/Multiplayer/MultiplayerPanel",
+        "Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab",
+        "Source/Editor/Panels/Multiplayer/MultiplayerSessionTab",
+        "Source/Editor/Panels/Multiplayer/MultiplayerSyncTab",
         "Source/Editor/Panels/Multiplayer/MultiplayerTab",
         "Source/Editor/Panels/Packaging/PackagingPanel",
         "Source/Editor/Panels/Physics/RagdollPreviewPanel",
@@ -81,6 +90,7 @@
         "Source/Editor/Panels/TileMap/TileMapPanel",
         "Source/Editor/Panels/TileSet/TileSetPanel",
         "Source/Editor/Panels/UIPreview/UIPreviewPanel",
-        "Source/Editor/Panels/VFX/VFXPreviewPanel"
+        "Source/Editor/Panels/VFX/VFXPreviewPanel",
+        "Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab"
     ]
 }

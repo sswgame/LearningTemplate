@@ -16,7 +16,6 @@
     "Source/Editor/Common/Localization/PortableObjectFile.h": {"out-error-pointer": 1},
     "Source/Editor/Common/Localization/TranslationMemory.cpp": {"out-error-pointer": 2},
     "Source/Editor/Common/Localization/TranslationMemory.h": {"out-error-pointer": 2},
-    "Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp": {"out-text-on-failure": 1},
     "Source/Engine/Automation/Watch/AutomationWatch.cpp": {"out-text-on-failure": 1},
     "Source/Engine/Character/Fit/BodyShape.cpp": {"out-error-pointer": 4},
     "Source/Engine/Character/Fit/BodyShape.h": {"out-error-pointer": 2},

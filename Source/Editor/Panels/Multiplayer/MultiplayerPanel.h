@@ -2,7 +2,7 @@
  * @file MultiplayerPanel.h
  * @brief Multiplayer 창 — 멀티 프로세스 재생을 보는 창 하나입니다. 위쪽의 대상 고르기와, 등록된 탭(`SW_EDITOR_MULTIPLAYER_TAB`)을 그립니다.
  * @details 언리얼 Network Insights · 유니티 Multiplayer Play Mode 창 + Network Simulator 에 해당합니다. 세션은 `EditorContext::getSubsystem<EditorNetPlaySession>()` 하나이고,
- *          툴바의 Net Mode 드롭다운과 이 창이 같은 세션을 봅니다. 탭은 이 폴더의 `Multiplayer<이름>Tab.cpp` 가 한 줄로 더하고(Session · Conditions),
+ *          툴바의 Net Mode 드롭다운과 이 창이 같은 세션을 봅니다. 창은 세션을 `MultiplayerSessionViewModel` 로만 보고, 프레임 첫머리에 모은 값과 함께 탭에 넘깁니다(MVVM 계약). 탭은 이 폴더의 `Multiplayer<이름>Tab.cpp` 가 한 줄로 더하고(Session · Conditions),
  *          서버 디버깅의 다음 단위와 확장 모듈도 같은 줄을 씁니다.
  */
 #pragma once
@@ -11,6 +11,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Panels/Multiplayer/Model/MultiplayerSessionViewModel.h"
 #include "Editor/Panels/Multiplayer/MultiplayerTab.h"
 
 namespace sw::editor
@@ -42,11 +43,13 @@ namespace sw::editor
         /** @brief 등록 세대가 바뀌었으면(확장 모듈 로드 · 언로드) 탭 인스턴스를 등록 순서대로 다시 만듭니다. */
         void syncTabs();
         /** @brief 창 위쪽의 대상 고르기(서버 · 클라이언트 N)를 그리고 고른 프로세스 번호를 반환합니다. 세션이 돌지 않으면 -1 입니다. */
-        int32 drawTargetPicker( EditorNetPlaySession& session );
+        int32 drawTargetPicker();
 
     private:
-        vector<TabEntry> _listTab;
-        uint32           _tabGeneration;      ///< `_listTab` 을 맞춘 등록 세대
-        int32            _targetProcessIndex; ///< 고른 대상(0 = 서버)
+        MultiplayerSessionViewModel _viewModel;
+        MultiplayerSessionViewState _viewState; ///< 프레임 첫머리에 모은 세션 값(목록 저장 공간을 다시 쓴다)
+        vector<TabEntry>            _listTab;
+        uint32                      _tabGeneration;      ///< `_listTab` 을 맞춘 등록 세대
+        int32                       _targetProcessIndex; ///< 고른 대상(0 = 서버)
     };
 } // namespace sw::editor
