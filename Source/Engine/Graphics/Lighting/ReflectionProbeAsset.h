@@ -14,6 +14,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Encoding/FourCCUtil.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
@@ -49,8 +50,8 @@ namespace sw
         /** @brief 단계 @p level 의 거칠기(0 ~ 1)입니다. */
         float32 computeLevelRoughness( uint32 level ) const;
 
-        /** @brief 범위와 텍셀 수가 맞는지 봅니다. */
-        [[nodiscard]] bool isValid( string* pOutError = nullptr ) const;
+        /** @brief 범위와 텍셀 수가 맞는지 봅니다. 틀리면 그 까닭입니다. */
+        [[nodiscard]] expected<void> validate() const;
         /** @brief 비웁니다. */
         void clear();
 
@@ -59,12 +60,12 @@ namespace sw
 
         /** @brief 바이트로 만듭니다(리틀 엔디언). */
         void makeBytes( vector<uint8>& outBytes ) const;
-        /** @brief 바이트를 읽습니다. 매직, 버전, 길이, 범위가 틀리면 false 이고 내용을 비웁니다. */
-        [[nodiscard]] bool readFromBytes( const uint8* pData, size_t size, string* pOutError = nullptr );
+        /** @brief 바이트를 읽습니다. 매직, 버전, 길이, 범위가 틀리면 그 까닭이고 내용을 비웁니다. */
+        [[nodiscard]] expected<void> readFromBytes( const uint8* pData, size_t size );
         /** @brief 파일로 씁니다. 부모 폴더가 없으면 만듭니다. */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
-        /** @brief 리소스 경로(또는 절대 경로)에서 읽습니다. */
-        [[nodiscard]] bool loadFromAsset( const AssetID& assetID, string* pOutError = nullptr );
+        /** @brief 리소스 경로(또는 절대 경로)에서 읽습니다. 못 읽거나 틀리면 그 까닭입니다. */
+        [[nodiscard]] expected<void> loadFromAsset( const AssetID& assetID );
 
         /** @brief 길이 1 의 방향을 옥타헤드럴 사각형의 UV([0, 1]²)로 접습니다(+Y 가 가운데). */
         static float2 encodeOctahedral( const float3& direction );
@@ -83,10 +84,10 @@ namespace sw
         /**
          * @brief 면 여섯을 접어 단계 0 을 만들고, 단계 1 부터는 GGX 중요도 표본 @p sampleCount 개로 거릅니다(언리얼 · 카리스 2013 의 "N = V = R" 근사).
          * @param capturePosition 찍은 위치(면 카메라의 위치와 같다)
-         * @return 면이 비었거나 크기가 다르거나 범위 밖이면 false 이고 이유를 @p pOutError 에 적습니다.
+         * @return 면이 비었거나 크기가 다르거나 범위 밖이면 그 까닭입니다.
          */
-        [[nodiscard]] static bool makeFromFaces( const float3& capturePosition, const ReflectionProbeFace* pArrFace, uint32 resolution, uint32 levelCount,
-                                                 uint32 sampleCount, ReflectionProbeAsset& outData, string* pOutError = nullptr );
+        [[nodiscard]] static expected<void> makeFromFaces( const float3& capturePosition, const ReflectionProbeFace* pArrFace, uint32 resolution, uint32 levelCount,
+                                                           uint32 sampleCount, ReflectionProbeAsset& outData );
     };
 } // namespace sw
 

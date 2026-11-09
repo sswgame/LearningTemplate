@@ -10,6 +10,7 @@
 #include "Core/Container/span.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
@@ -60,8 +61,8 @@ namespace sw
         vector_reference<const uint32> getChildren( uint32 node ) const;
         /** @brief 가장 깊은 노드의 깊이 + 1 입니다. */
         uint32 getDepthCount() const;
-        /** @brief 구조가 맞는지(잎 구간, 부모, 자식, 연결 범위) 검사합니다. 틀리면 @p pOutError 에 이유를 적고 false 를 반환합니다. */
-        bool isValid( string* pOutError = nullptr ) const;
+        /** @brief 구조가 맞는지(잎 구간, 부모, 자식, 연결 범위) 검사합니다. 틀리면 그 까닭(문장이 틀린 곳)입니다. */
+        [[nodiscard]] expected<void> validate() const;
         /** @brief 모두 비웁니다. */
         void clear();
 
@@ -74,7 +75,5 @@ namespace sw
         static void populateHierarchy( FractureGraph& inoutGraph, vector_reference<const uint32> listLevelCount, vector<uint32>& outListLeafOrder );
         /** @brief 연결 목록을 A < B, A 와 B 순으로 정렬하고 같은 쌍을 합칩니다(넓이를 더합니다). */
         static void normalizeLinks( vector<FractureLink>& inoutListLink );
-        /** @brief 검사 실패를 알립니다. @p pOutError 가 있으면 이유를 담고, 언제나 false 를 돌려줍니다(`return reportInvalid(...)` 꼴로 씁니다). */
-        static bool reportInvalid( string* pOutError, const utf8* pReason );
     };
 } // namespace sw

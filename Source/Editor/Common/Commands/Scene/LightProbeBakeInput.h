@@ -47,16 +47,16 @@ namespace sw
         /**
          * @brief 씬과 볼륨에서 베이크 입력을 모읍니다 — 라이트(`collectSceneLights`), 하늘(`SkyComponent::findSky`), 가림 씬, 볼륨의 레이 수 · 반사율.
          * @details 가림 씬은 씬의 정적 콜라이더로 새로 세워 @p outOccluders 가 갖고, @p outInput 의 `_pPhysics` 는 그것을 빌린다 — 베이크하는 동안 @p outOccluders 를 살려 둔다.
-         * @return 물리 서비스가 없어 가림 씬을 세우지 못하면 false 이고 @p pOutError 에 이유를 적습니다(가림 없이 베이크하지 않는다).
+         * @return 물리 서비스가 없어 가림 씬을 세우지 못하면 그 까닭입니다(가림 없이 베이크하지 않는다).
          */
-        [[nodiscard]] static bool collectInput( const Scene& scene, const LightProbeVolumeComponent& volume, unique_ptr<IPhysicsScene3D>& outOccluders,
-                                                LightProbeBakeInput& outInput, string* pOutError = nullptr );
+        [[nodiscard]] static expected<void> collectInput( const Scene& scene, const LightProbeVolumeComponent& volume, unique_ptr<IPhysicsScene3D>& outOccluders,
+                                                          LightProbeBakeInput& outInput );
 
         /**
          * @brief 격자 @p layout 의 프로브마다 간접광을 투영해 @p outGrid 를 채웁니다.
-         * @return 입력이 모자라면(물리 씬이 없거나 레이 수가 0) false 이고 @p outGrid 는 비어 있습니다.
+         * @return 입력이 모자라면(물리 씬이 없거나 레이 수가 0) 그 까닭이고 @p outGrid 는 비어 있습니다.
          */
-        [[nodiscard]] static bool bakeGrid( const LightProbeGridLayout& layout, const LightProbeBakeInput& input, LightProbeGrid& outGrid, string* pOutError = nullptr );
+        [[nodiscard]] static expected<void> bakeGrid( const LightProbeGridLayout& layout, const LightProbeBakeInput& input, LightProbeGrid& outGrid );
 
         /**
          * @brief 위치 @p position · 노멀 @p normal 인 면이 라이트에서 직접 받는 빛(세기 × 감쇠 × max(0, n·l), 가려진 빛은 빼고)입니다.
@@ -89,9 +89,9 @@ namespace sw
 
         /**
          * @brief 격자 @p layout 을 @p input 으로 베이크 시작합니다. 지난 진행은 버립니다.
-         * @return 입력이 모자라면(물리 씬이 없거나 레이 수가 0 이거나 프로브가 없다) false 이고 이유를 @p pOutError 에 적습니다.
+         * @return 입력이 모자라면(물리 씬이 없거나 레이 수가 0 이거나 프로브가 없다) 그 까닭입니다.
          */
-        [[nodiscard]] bool begin( const LightProbeGridLayout& layout, const LightProbeBakeInput& input, string* pOutError = nullptr );
+        [[nodiscard]] expected<void> begin( const LightProbeGridLayout& layout, const LightProbeBakeInput& input );
         /** @brief 다음 프로브를 @p maxProbeCount 개까지 베이크합니다. 모두 구웠으면 true 입니다. `begin` 전이면 아무것도 하지 않고 false 입니다. */
         bool step( uint32 maxProbeCount );
         /** @brief 모든 프로브를 구웠으면 true 입니다. */

@@ -21,12 +21,6 @@ namespace sw
             /// @brief 거칠기 0 근처의 GGX α 하한 — 셰이더 lighting.hlsli 의 kMinRoughness 와 같은 뜻(0.045² 근처에서 표본이 한 점에 모인다).
             static constexpr float32 kMinRoughness = 0.045f;
 
-            static void setError( string* pOutError, const utf8* pMessage )
-            {
-                if ( pOutError != nullptr )
-                    *pOutError = pMessage;
-            }
-
             /** @brief 한 축에서 상자 안의 점이 방향을 따라 상자 벽을 나가기까지의 거리입니다(시차 보정). 셰이더 lighting.hlsli 와 같은 식이다. */
             [[nodiscard]] static float32 computeAxisExit( float32 position, float32 direction, float32 center, float32 halfExtent )
             {
@@ -35,19 +29,13 @@ namespace sw
             }
 
             /** @brief 한 변 텍셀 수와 단계 수가 범위 안인지 봅니다. 텍셀을 잡기 전에 부릅니다 — 범위 밖 값이 큰 할당을 일으키지 않게. */
-            [[nodiscard]] static bool isSizeInRange( uint32 resolution, uint32 levelCount, string* pOutError )
+            [[nodiscard]] static expected<void> checkSizeInRange( uint32 resolution, uint32 levelCount )
             {
                 if ( resolution < ReflectionProbeAsset::kMinResolution || ReflectionProbeAsset::kMaxResolution < resolution )
-                {
-                    setError( pOutError, "reflection probe resolution is out of range" );
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "reflection probe resolution is out of range" } );
                 if ( levelCount < ReflectionProbeAsset::kMinLevelCount || ReflectionProbeAsset::kMaxLevelCount < levelCount )
-                {
-                    setError( pOutError, "reflection probe level count is out of range" );
-                    return false;
-                }
-                return true;
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "reflection probe level count is out of range" } );
+                return {};
             }
 
             /** @brief 0 을 양수로 치는 부호입니다(HLSL `sign` 은 0 에서 0 이라 셰이더도 같은 식을 쓴다). */
@@ -147,17 +135,13 @@ namespace sw
         return _levelCount > 1u ? static_cast<float32>( level ) / static_cast<float32>( _levelCount - 1u ) : 0.0f;
     }
 
-    bool ReflectionProbeAsset::isValid( string* pOutError ) const
+    expected<void> ReflectionProbeAsset::validate() const
     {
-        using Internal = ReflectionProbeAssetInternal;
-        if ( Internal::isSizeInRange( _resolution, _levelCount, pOutError ) == false )
-            return false;
+        if ( expected<void> size = ReflectionProbeAssetInternal::checkSizeInRange( _resolution, _levelCount ); size.has_value() == false )
+            return size;
         if ( _listTexel.size() != static_cast<size_t>( _resolution ) * _resolution * _levelCount )
-        {
-            Internal::setError( pOutError, "reflection probe texels do not match its size" );
-            return false;
-        }
-        return true;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "reflection probe texels do not match its size" } );
+        return {};
     }
 
     void ReflectionProbeAsset::clear()
@@ -197,26 +181,17 @@ namespace sw
         }
     }
 
-    bool ReflectionProbeAsset::readFromBytes( const uint8* pData, size_t size, string* pOutError )
+    expected<void> ReflectionProbeAsset::readFromBytes( const uint8* pData, size_t size )
     {
         using Internal = ReflectionProbeAssetInternal;
         clear();
         if ( pData == nullptr || size < Internal::kHeaderBytes )
-        {
-            Internal::setError( pOutError, "reflection probe file is shorter than its header" );
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "reflection probe file is shorter than its header" } );
         ByteReader reader{ pData, size };
         if ( reader.readUint32() != kMagic )
-        {
-            Internal::setError( pOutError, "reflection probe file magic is not SWRP" );
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "reflection probe file magic is not SWRP" } );
         if ( reader.readUint32() != kVersion )
-        {
-            Internal::setError( pOutError, "reflection probe file version differs - bake the probe again" );
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "reflection probe file version differs - bake the probe again" } );
         float3 capturePosition{};
         capturePosition._x        = reader.readFloat32();
         capturePosition._y        = reader.readFloat32();
@@ -233,14 +208,13 @@ namespace sw
         } );
         if ( bRead == false || reader.isFullyRead() == false )
         {
-            Internal::setError( pOutError, "reflection probe file length does not match its size, or it holds a non-finite value" );
             clear();
-            return false;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "reflection probe file length does not match its size, or it holds a non-finite value" } );
         }
         _capturePosition = capturePosition;
         _resolution      = resolution;
         _levelCount      = levelCount;
-        return true;
+        return {};
     }
 
     bool ReflectionProbeAsset::saveToFile( const AbsolutePath& absPath ) const
@@ -252,16 +226,13 @@ namespace sw
         return FileUtil::writeFile( absPath.str(), bytes.data(), bytes.size() );
     }
 
-    bool ReflectionProbeAsset::loadFromAsset( const AssetID& assetID, string* pOutError )
+    expected<void> ReflectionProbeAsset::loadFromAsset( const AssetID& assetID )
     {
         clear();
         vector<uint8> bytes;
         if ( AssetIO::readBinaryAsset( assetID, bytes ) == false )
-        {
-            ReflectionProbeAssetInternal::setError( pOutError, "reflection probe file could not be read" );
-            return false;
-        }
-        return readFromBytes( bytes.data(), bytes.size(), pOutError );
+            return unexpected( Error{ ErrorKind::NotFound, "reflection probe file could not be read", assetID.view() } );
+        return readFromBytes( bytes.data(), bytes.size() );
     }
 
     float2 ReflectionProbeAsset::encodeOctahedral( const float3& direction )
@@ -301,28 +272,22 @@ namespace sw
 
 namespace sw
 {
-    bool ReflectionProbeAsset::makeFromFaces( const float3& capturePosition, const ReflectionProbeFace* pArrFace, uint32 resolution, uint32 levelCount, uint32 sampleCount,
-                                              ReflectionProbeAsset& outData, string* pOutError )
+    expected<void> ReflectionProbeAsset::makeFromFaces( const float3& capturePosition, const ReflectionProbeFace* pArrFace, uint32 resolution, uint32 levelCount, uint32 sampleCount,
+                                                        ReflectionProbeAsset& outData )
     {
         using Internal = ReflectionProbeAssetInternal;
         outData.clear();
         if ( pArrFace == nullptr || sampleCount == 0 )
-        {
-            Internal::setError( pOutError, "reflection probe filter needs six faces and at least one sample" );
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "reflection probe filter needs six faces and at least one sample" } );
         for ( uint32 faceIndex = 0; faceIndex < kFaceCount; ++faceIndex )
         {
             const ReflectionProbeFace& face      = pArrFace[faceIndex];
             const bool                 bFaceFits = face._size > 0 && face._listPixel.size() == static_cast<size_t>( face._size ) * face._size;
             if ( bFaceFits == false )
-            {
-                Internal::setError( pOutError, "a captured face is empty or its pixels do not match its size" );
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::InvalidArgument, "a captured face is empty or its pixels do not match its size" } );
         }
-        if ( Internal::isSizeInRange( resolution, levelCount, pOutError ) == false )
-            return false;
+        if ( expected<void> size = Internal::checkSizeInRange( resolution, levelCount ); size.has_value() == false )
+            return size;
         outData._capturePosition = capturePosition;
         outData._resolution      = resolution;
         outData._levelCount      = levelCount;
@@ -351,6 +316,6 @@ namespace sw
                 }
             }
         }
-        return true;
+        return {};
     }
 } // namespace sw

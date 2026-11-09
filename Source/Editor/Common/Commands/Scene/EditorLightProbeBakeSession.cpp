@@ -194,12 +194,12 @@ namespace sw::editor
             reportFailure( "a light probe volume was removed before it was baked" );
             return false;
         }
-        LightProbeBakeInput input{};
-        string              error;
-        const bool          bStarted = LightProbeBakeInput::collectInput( scene, *pVolume, _pOccluders, input, &error ) && _job.begin( pVolume->computeLayout(), input, &error );
-        if ( bStarted == false )
+        LightProbeBakeInput  input{};
+        const expected<void> started = LightProbeBakeInput::collectInput( scene, *pVolume, _pOccluders, input ).and_then( [&]()
+        { return _job.begin( pVolume->computeLayout(), input ); } );
+        if ( started.has_value() == false )
         {
-            reportFailure( error );
+            reportFailure( string( started.error().message() ) );
             return false;
         }
         _bJobActive = SW_TRUE;

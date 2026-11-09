@@ -393,11 +393,10 @@ namespace sw
         {
             Internal::appendPiece( listCell[pieces._listSiteOfPiece[listLeafOrder[leaf]]], leaf, boundsMin, boundsMax - boundsMin, outAsset );
         }
-        string validation;
-        if ( outAsset.isValid( &validation ) == false )
+        if ( const expected<void> valid = outAsset.validate(); valid.has_value() == false )
         {
             outAsset.clear();
-            return unexpected( Error{ ErrorKind::InvalidArgument, "polygon fracture produced an invalid asset", validation } );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "polygon fracture produced an invalid asset", valid.error().message() } );
         }
         return {};
     }

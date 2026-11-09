@@ -364,48 +364,48 @@ namespace sw
         return _listNode.empty() ? 0u : maxDepth + 1;
     }
 
-    bool FractureGraph::isValid( string* pOutError ) const
+    expected<void> FractureGraph::validate() const
     {
         if ( _leafCount == 0 || _listNode.size() < _leafCount )
-            return FractureGraph::reportInvalid( pOutError, "no leaves" );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "no leaves" } );
         const uint32 root             = getRootNode();
         const bool   bInvalidRootNode = _listNode[root]._parent != -1 || _listNode[root]._firstLeaf != 0 || _listNode[root]._leafCount != _leafCount;
         if ( bInvalidRootNode )
-            return FractureGraph::reportInvalid( pOutError, "root must hold every leaf" );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "root must hold every leaf" } );
         for ( uint32 nodeIndex = 0; nodeIndex < static_cast<uint32>( _listNode.size() ); ++nodeIndex )
         {
             const FractureNode& node      = _listNode[nodeIndex];
             const bool          bLeafSlot = nodeIndex < _leafCount;
             if ( bLeafSlot != node.isLeaf() )
-                return FractureGraph::reportInvalid( pOutError, "leaves must be the first nodes" );
+                return unexpected( Error{ ErrorKind::InvalidArgument, "leaves must be the first nodes" } );
             if ( bLeafSlot && ( node._firstLeaf != nodeIndex || node._leafCount != 1 ) )
-                return FractureGraph::reportInvalid( pOutError, "a leaf must hold itself" );
+                return unexpected( Error{ ErrorKind::InvalidArgument, "a leaf must hold itself" } );
             if ( node._firstLeaf + node._leafCount > _leafCount )
-                return FractureGraph::reportInvalid( pOutError, "leaf range out of bounds" );
+                return unexpected( Error{ ErrorKind::InvalidArgument, "leaf range out of bounds" } );
             if ( nodeIndex != root && ( node._parent < 0 || static_cast<uint32>( node._parent ) <= nodeIndex || static_cast<uint32>( node._parent ) >= _listNode.size() ) )
-                return FractureGraph::reportInvalid( pOutError, "a parent must come after its child" );
+                return unexpected( Error{ ErrorKind::InvalidArgument, "a parent must come after its child" } );
             if ( node._firstChild + node._childCount > _listChildNode.size() )
-                return FractureGraph::reportInvalid( pOutError, "child range out of bounds" );
+                return unexpected( Error{ ErrorKind::InvalidArgument, "child range out of bounds" } );
             uint32 leafSum = 0;
             for ( uint32 offset = 0; offset < node._childCount; ++offset )
             {
                 const uint32 child = _listChildNode[node._firstChild + offset];
                 if ( child >= _listNode.size() || _listNode[child]._parent != static_cast<int32>( nodeIndex ) )
-                    return FractureGraph::reportInvalid( pOutError, "child does not point back at its parent" );
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "child does not point back at its parent" } );
                 if ( _listNode[child]._firstLeaf != node._firstLeaf + leafSum )
-                    return FractureGraph::reportInvalid( pOutError, "children must cover the leaf range in order" );
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "children must cover the leaf range in order" } );
                 leafSum += _listNode[child]._leafCount;
             }
             if ( node.isLeaf() == false && leafSum != node._leafCount )
-                return FractureGraph::reportInvalid( pOutError, "children must cover the whole leaf range" );
+                return unexpected( Error{ ErrorKind::InvalidArgument, "children must cover the whole leaf range" } );
         }
         for ( const FractureLink& link : _listLink )
         {
             const bool bInvalidLink = link._leafA >= link._leafB || link._leafB >= _leafCount || link._area < 0.0f;
             if ( bInvalidLink )
-                return FractureGraph::reportInvalid( pOutError, "bad link" );
+                return unexpected( Error{ ErrorKind::InvalidArgument, "bad link" } );
         }
-        return true;
+        return {};
     }
 
     void FractureGraph::clear()
@@ -414,13 +414,6 @@ namespace sw
         _listChildNode.clear();
         _listLink.clear();
         _leafCount = 0;
-    }
-
-    bool FractureGraph::reportInvalid( string* pOutError, const utf8* pReason )
-    {
-        if ( pOutError != nullptr )
-            *pOutError = pReason;
-        return false;
     }
 
     void FractureGraph::normalizeLinks( vector<FractureLink>& inoutListLink )

@@ -65,12 +65,12 @@ namespace sw
 
     bool ReflectionProbeComponent::applyProbeData( ReflectionProbeAsset&& data, string_view path )
     {
-        string     error;
-        const bool bValid   = data.isValid( &error );
-        const bool bMatches = bValid && matchesCapturePosition( data );
+        const expected<void> valid    = data.validate();
+        const bool           bMatches = valid.has_value() && matchesCapturePosition( data );
         if ( bMatches == false )
         {
-            SW_LOG_ERROR_ID( "ReflectionProbe.ReflectionProbeDataDoes", "Reflection probe data for '%#' does not fit this probe (%#)", string( path ).c_str(), bValid ? "captured at another position" : error.c_str() );
+            SW_LOG_ERROR_ID( "ReflectionProbe.ReflectionProbeDataDoes", "Reflection probe data for '%#' does not fit this probe (%#)", string( path ).c_str(),
+                             valid.has_value() ? string_view{ "captured at another position" } : valid.error().message() );
             return false;
         }
         _probeData     = std::move( data );
@@ -111,15 +111,15 @@ namespace sw
         _probeData.clear();
         if ( _probeDataPath.empty() )
             return;
-        string error;
-        if ( _probeData.loadFromAsset( AssetID{ _probeDataPath }, &error ) == false )
+        if ( const expected<void> loaded = _probeData.loadFromAsset( AssetID{ _probeDataPath } ); loaded.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "ReflectionProbe.ReflectionProbeDataCould", "Reflection probe data '%#' could not be loaded (%#) - the probe gives no reflection until it is baked again", _probeDataPath.c_str(), error.c_str() );
+            SW_LOG_ERROR_ID( "ReflectionProbe.ReflectionProbeDataCould", "Reflection probe data '%#' could not be loaded (%#) - the probe gives no reflection until it is baked again", _probeDataPath.c_str(),
+                             loaded.error().message() );
             return;
         }
-        if ( _probeData.isValid( &error ) == false )
+        if ( const expected<void> valid = _probeData.validate(); valid.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "ReflectionProbe.ReflectionProbeDataBroken", "Reflection probe data '%#' is broken (%#) - bake the probe again", _probeDataPath.c_str(), error.c_str() );
+            SW_LOG_ERROR_ID( "ReflectionProbe.ReflectionProbeDataBroken", "Reflection probe data '%#' is broken (%#) - bake the probe again", _probeDataPath.c_str(), valid.error().message() );
             _probeData.clear();
             return;
         }

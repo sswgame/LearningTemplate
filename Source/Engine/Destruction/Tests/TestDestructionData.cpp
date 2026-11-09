@@ -247,8 +247,7 @@ SW_TEST_CASE( FractureGraphTest, PopulateHierarchyKeepsLeavesAndLinks )
     const vector<uint32> listLevel{ 2, 4 };
     FractureGraph::populateHierarchy( graph, listLevel, listOrder );
 
-    string error;
-    SW_REQUIRE_TRUE( graph.isValid( &error ) );
+    SW_REQUIRE_TRUE( graph.validate() );
     SW_EXPECT_EQUAL( graph._leafCount, 8u );
     SW_EXPECT_EQUAL( graph.getDepthCount(), 4u ); // 루트 · 2 · 4 · 잎 - 줄로 이어져 묶음이 갈리지 않는다
     SW_REQUIRE_EQUAL( listOrder.size(), size_t{ 8 } );
@@ -288,8 +287,7 @@ SW_TEST_CASE( FractureGraphTest, DisconnectedLeavesAreNotClusteredTogether )
     const vector<uint32> listLevel{ 3 };
     FractureGraph::populateHierarchy( graph, listLevel, listOrder );
 
-    string error;
-    SW_REQUIRE_TRUE( graph.isValid( &error ) );
+    SW_REQUIRE_TRUE( graph.validate() );
     for ( uint32 node = graph._leafCount; node < graph.getRootNode(); ++node )
     {
         const FractureNode& cluster = graph._listNode[node];
@@ -308,8 +306,7 @@ SW_TEST_CASE( FractureGraphTest, SingleLeafIsItsOwnRoot )
     FractureGraph  graph = DestructionDataTestUtil::makeLeaves( 1 );
     vector<uint32> listOrder;
     FractureGraph::populateHierarchy( graph, {}, listOrder );
-    string error;
-    SW_REQUIRE_TRUE( graph.isValid( &error ) );
+    SW_REQUIRE_TRUE( graph.validate() );
     SW_EXPECT_EQUAL( graph.getRootNode(), 0u );
     SW_EXPECT_EQUAL( graph.getDepthCount(), 1u );
     SW_EXPECT_TRUE( graph.getChildren( 0 ).empty() );
@@ -320,8 +317,8 @@ SW_TEST_CASE( FractureGraphTest, IsValidExplainsWhatIsWrong )
 {
     const auto reasonOf = []( const FractureGraph& graph )
     {
-        string error;
-        return graph.isValid( &error ) ? string{} : error;
+        const expected<void> valid = graph.validate();
+        return valid.has_value() ? string{} : string( valid.error().message() );
     };
     SW_EXPECT_EQUAL( reasonOf( FractureGraph{} ), string( "no leaves" ) );
 
@@ -329,7 +326,7 @@ SW_TEST_CASE( FractureGraphTest, IsValidExplainsWhatIsWrong )
     vector<uint32> listOrder;
     FractureGraph::populateHierarchy( base, {}, listOrder );
     base._listLink.push_back( FractureLink{ 0, 1, 1.0f } );
-    SW_EXPECT_TRUE( base.isValid() );
+    SW_EXPECT_TRUE( base.validate() );
 
     FractureGraph badLink = base;
     badLink._listLink[0]  = FractureLink{ 1, 0, 1.0f };

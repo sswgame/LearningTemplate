@@ -179,8 +179,7 @@ SW_TEST_CASE( DestructionStateTest, InitializeMakesOneGroupWithTheRootActive )
 {
     using Util                = DestructionStateTestUtil;
     const FractureGraph graph = Util::makeTwoLevelGraph();
-    string              error;
-    SW_REQUIRE_TRUE( graph.isValid( &error ) );
+    SW_REQUIRE_TRUE( graph.validate() );
 
     DestructionState state;
     SW_EXPECT_FALSE( state.isInitialized() );
@@ -472,8 +471,7 @@ SW_TEST_CASE( DestructionStateTest, LinkBrokenOnTheLastSupportPassStillSplitsThe
     const float32       gravity = PhysicsSystem::getConfiguredGravityMagnitude();
     const FractureGraph graph   = Util::makeHangingGraph( DestructionState::kMaxSupportPass );
     const uint32        top     = graph._leafCount - 1;
-    string              error;
-    SW_REQUIRE_TRUE( graph.isValid( &error ) );
+    SW_REQUIRE_TRUE( graph.validate() );
     DestructionProfile profile = Util::makeProfile();
     profile._supportStrength   = gravity; // 약한 연결이 버티는 하중은 꼭대기 무게의 1/10 이다
     vector<uint8> listAnchor( graph._leafCount, 0 );
