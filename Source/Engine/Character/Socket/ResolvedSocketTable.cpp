@@ -72,19 +72,10 @@ namespace sw
     }
 
     bool ResolvedSocketTable::addUnit( const hashed_string& prefix, uint32 unitIndex, const SocketSet& sockets, const CharacterBoneArray& bindBones,
-                                       const AppearanceGeometry* pBindGeometry, string* pOutError )
+                                       const AppearanceGeometry* pBindGeometry, CharacterIssueList& outIssues )
     {
-        CharacterIssueList issues;
-        if ( sockets.validateBones( bindBones, &issues ) == false )
-        {
-            if ( pOutError != nullptr )
-            {
-                if ( pOutError->empty() == false )
-                    *pOutError += "\n";
-                *pOutError += issues.joined();
-            }
+        if ( sockets.validateBones( bindBones, &outIssues ) == false )
             return false;
-        }
         Unit unit;
         unit._sockets   = sockets;
         unit._prefix    = prefix;

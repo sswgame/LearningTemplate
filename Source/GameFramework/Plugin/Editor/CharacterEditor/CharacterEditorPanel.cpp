@@ -762,13 +762,14 @@ namespace sw::editor
         CharacterBoneArray poseBones = bindBones;
         (void)CharacterPoseUtil::copyUnitPose( *pUnit, poseBones ); // 포즈가 아직 없으면 바인드 포즈 그대로 둔다(정상)
         ResolvedSocketTable table;
-        string              resolveError;
+        CharacterIssueList  resolveIssues;
         table.beginResolve();
         const SocketSet& sockets   = _document.getSocketModel().getSockets();
-        const bool       bResolved = table.addUnit( hashed_string{}, 0, sockets, bindBones, nullptr, &resolveError );
+        const bool       bResolved = table.addUnit( hashed_string{}, 0, sockets, bindBones, nullptr, resolveIssues );
         table.endResolve();
         if ( bResolved == false )
         {
+            const string resolveError = resolveIssues.joined();
             _document.setStatus( resolveError ); // 모르는 부모 본 같은 편집 오류 — 축을 그리지 않고 알린다
             _socketResolveError = resolveError;
             return;

@@ -16,22 +16,12 @@ namespace sw
     {
         struct FitPartDefInternal
         {
-
-            static void appendError( string* pOutError, const string& message )
-            {
-                if ( pOutError == nullptr )
-                    return;
-                if ( pOutError->empty() == false )
-                    *pOutError += "\n";
-                *pOutError += message;
-            }
-
-            /** @brief "names unknown <종류> '<이름>'" 오류를 덧붙입니다(피팅 표에 없는 이름). */
-            static void appendNameError( string* pOutError, const utf8* pKind, const hashed_string& name )
+            /** @brief "names unknown <종류> '<이름>'" 문제를 더합니다(피팅 표에 없는 이름). */
+            static void addNameIssue( CharacterIssueList& outIssues, const utf8* pKind, const hashed_string& name )
             {
                 utf8 arrMessage[constant::buffer::kMax256]{};
                 formatstring( arrMessage, constant::buffer::kMax256, "names unknown %# '%#'", pKind, name.c_str() );
-                appendError( pOutError, string( arrMessage ) );
+                outIssues.add( "FitPart.NameUnknown", string( arrMessage ) );
             }
         };
     } // namespace
@@ -113,30 +103,30 @@ namespace sw
         }
     }
 
-    bool FitPartDef::validateNames( const FitTables& tables, string* pOutError ) const
+    bool FitPartDef::validateNames( const FitTables& tables, CharacterIssueList& outIssues ) const
     {
         bool bValid = true;
         if ( _layer.empty() == false && tables.findLayer( _layer ) == nullptr )
         {
             bValid = false;
-            FitPartDefInternal::appendNameError( pOutError, "layer", _layer );
+            FitPartDefInternal::addNameIssue( outIssues, "layer", _layer );
         }
         if ( _profile.empty() == false && tables.findProfile( _profile ) == nullptr )
         {
             bValid = false;
-            FitPartDefInternal::appendNameError( pOutError, "profile", _profile );
+            FitPartDefInternal::addNameIssue( outIssues, "profile", _profile );
         }
         for ( const hashed_string& region : _listHiddenRegion )
         {
             if ( tables.findRegionIndex( region ).has_value() )
                 continue;
             bValid = false;
-            FitPartDefInternal::appendNameError( pOutError, "region", region );
+            FitPartDefInternal::addNameIssue( outIssues, "region", region );
         }
         return bValid;
     }
 
-    bool FitPartDef::validate( const CharacterBoneArray* pBones, const AppearanceGeometry* pGeometry, string* pOutError ) const
+    bool FitPartDef::validate( const CharacterBoneArray* pBones, const AppearanceGeometry* pGeometry, CharacterIssueList& outIssues ) const
     {
         bool bValid = true;
         if ( pBones != nullptr )
@@ -146,7 +136,7 @@ namespace sw
                 if ( ring._bone.empty() || pBones->findBone( ring._bone ) >= 0 )
                     continue;
                 bValid = false;
-                FitPartDefInternal::appendError( pOutError, string( "ring names unknown bone '" ) + ring._bone.c_str() + "'" );
+                outIssues.add( "FitPart.RingBoneUnknown", string( "ring names unknown bone '" ) + ring._bone.c_str() + "'" );
             }
         }
         if ( pGeometry != nullptr )
@@ -163,7 +153,7 @@ namespace sw
                     string       message( "corrective delta names vertex " );
                     message += string_view( arrNumber, numberLength );
                     message += " beyond the mesh";
-                    FitPartDefInternal::appendError( pOutError, message );
+                    outIssues.add( "FitPart.CorrectiveVertexOutOfRange", std::move( message ) );
                 }
             }
         }

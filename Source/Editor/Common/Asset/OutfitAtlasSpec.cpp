@@ -187,10 +187,9 @@ namespace sw::editor
                         }
                     }
                 }
-                string error;
-                if ( OutfitAtlasLayout::pack( listSource, atlasSize, padding, outListRect, &error ) == false )
+                if ( const expected<void> packed = OutfitAtlasLayout::pack( listSource, atlasSize, padding, outListRect ); packed.has_value() == false )
                 {
-                    SW_LOG_ERROR_ID( "OutfitAtlasBaker.OutfitAtlasLayout", "Outfit atlas layout: %#", error.c_str() );
+                    SW_LOG_ERROR_ID( "OutfitAtlasBaker.OutfitAtlasLayout", "Outfit atlas layout: %# '%#'", packed.error().message(), packed.error().detail() );
                     return false;
                 }
                 return true;
@@ -227,17 +226,17 @@ namespace sw::editor
             {
                 outListAtlas.clear();
                 outListAtlas.resize( spec._listMap.size() );
-                string error;
                 for ( size_t mapIndex = 0; mapIndex < spec._listMap.size(); ++mapIndex )
                 {
                     OutfitAtlasComposer::initialize( atlasSize, outListAtlas[mapIndex] );
                     for ( size_t partIndex = 0; partIndex < spec._listPart.size(); ++partIndex )
                     {
-                        const RawImageData& image = listMapImage[mapIndex][partIndex];
-                        if ( OutfitAtlasComposer::blit( atlasSize, listRect[partIndex], padding, image._bytes, static_cast<uint32>( image._width ), static_cast<uint32>( image._height ),
-                                                        outListAtlas[mapIndex], &error ) == false )
+                        const RawImageData&  image   = listMapImage[mapIndex][partIndex];
+                        const expected<void> blitted = OutfitAtlasComposer::blit( atlasSize, listRect[partIndex], padding, image._bytes, static_cast<uint32>( image._width ),
+                                                                                  static_cast<uint32>( image._height ), outListAtlas[mapIndex] );
+                        if ( blitted.has_value() == false )
                         {
-                            SW_LOG_ERROR_ID( "OutfitAtlasBaker.OutfitAtlasCompose", "Outfit atlas compose: %#", error.c_str() );
+                            SW_LOG_ERROR_ID( "OutfitAtlasBaker.OutfitAtlasCompose", "Outfit atlas compose: %# '%#'", blitted.error().message(), blitted.error().detail() );
                             return false;
                         }
                     }

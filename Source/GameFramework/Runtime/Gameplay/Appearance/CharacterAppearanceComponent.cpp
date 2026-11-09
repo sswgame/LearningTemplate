@@ -718,9 +718,9 @@ namespace sw
         CharacterPoseUtil::makeBindBones( pBody->getSkeleton(), _bodyBindBones );
         _bodyBones = _bodyBindBones;
         (void)CharacterPoseUtil::copyUnitPose( *pBody, _bodyBones ); // 포즈가 아직 없으면 바인드 본 그대로 소켓을 계산한다
-        string socketError;
-        if ( _rig.rebuild( _state.getResolved(), _bodyBindBones, _socketCache, &socketError ) == false )
-            SW_LOG_ERROR_ID( "CharacterAppearance.AppearanceSockets", "Appearance '%#' sockets: %#", _presetID.c_str(), socketError.c_str() );
+        CharacterIssueList socketIssues;
+        if ( _rig.rebuild( _state.getResolved(), _bodyBindBones, _socketCache, socketIssues ) == false )
+            SW_LOG_ERROR_ID( "CharacterAppearance.AppearanceSockets", "Appearance '%#' sockets: %#", _presetID.c_str(), socketIssues.joined().c_str() );
         // 장비 소켓은 차림을 풀어야 안다(임포트 때 알 수 없다) — 소켓 표를 다시 지을 때마다 몸 소켓의 부모 본을 몸 유닛 본 LOD 의 핵심 본으로 다시 낸다.
         const ResolvedSocketTable& socketTable = _rig.getTable();
         vector<hashed_string>      listSocketBone;
@@ -831,9 +831,9 @@ namespace sw
         _footLift = 0.0f;
         if ( _bodyShapeSet != nullptr )
         {
-            string error;
-            if ( _bodyShapeSet->evaluate( vector_reference<const BodyShapeValue>( listValue.data(), listValue.size() ), _listShapeMorph, _bodyProportion, &error ) == false )
-                SW_LOG_ERROR_ID( "CharacterAppearance.AppearanceBodyShapeAxes", "Appearance '%#' body shape axes: %#", _presetID.c_str(), error.c_str() );
+            CharacterIssueList issues;
+            if ( _bodyShapeSet->evaluate( vector_reference<const BodyShapeValue>( listValue.data(), listValue.size() ), _listShapeMorph, _bodyProportion, issues ) == false )
+                SW_LOG_ERROR_ID( "CharacterAppearance.AppearanceBodyShapeAxes", "Appearance '%#' body shape axes: %#", _presetID.c_str(), issues.joined().c_str() );
             _footLift = _bodyShapeSet->computeFootLift( vector_reference<const BodyShapeValue>( listValue.data(), listValue.size() ) );
         }
         // 암묵 스켈레톤은 몸을 입기 전이다 — 몸 스켈레톤이 정해진 뒤에만 견준다.

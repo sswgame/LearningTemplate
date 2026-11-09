@@ -91,9 +91,9 @@ namespace sw
          * @brief 해석 결과로 테이블을 다시 만듭니다. 몸 소켓은 몸 부품(주인이 비어 있는 첫 스킨드 부품)의 소켓 에셋에 외형의 소켓 덮어쓰기를 더한 것입니다.
          *        부품 소켓은 소켓 에셋을 가진 부품마다 유닛 하나이고, 이 유닛은 본 "root" 하나짜리 강체입니다.
          * @param bodyBindBones 몸의 바인드 본입니다. 소켓의 부모 본 이름을 대조하며, 없는 본은 오류입니다.
-         * @return 소켓 에셋을 읽지 못했거나 부모 본이 없으면 false 입니다. 이때도 나머지 유닛은 들어갑니다. 오류 메시지는 @p pOutError 에 추가합니다.
+         * @return 소켓 에셋을 읽지 못했거나 부모 본이 없으면 false 입니다. 이때도 나머지 유닛은 들어갑니다. 부모 본 문제는 @p outIssues 에 더합니다.
          */
-        bool rebuild( const ResolvedAppearance& resolved, const CharacterBoneArray& bodyBindBones, IAppearanceSocketSource& source, string* pOutError );
+        bool rebuild( const ResolvedAppearance& resolved, const CharacterBoneArray& bodyBindBones, IAppearanceSocketSource& source, CharacterIssueList& outIssues );
 
         /** @brief 부품(해석 결과의 `_listPart` 번호)의 유닛 번호입니다. 소켓 에셋이 없으면 `kNoUnit` 입니다. */
         uint32 findPartUnit( uint32 partIndex ) const;

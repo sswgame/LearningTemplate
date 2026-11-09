@@ -10,6 +10,7 @@
 #include "Core/Container/span.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
@@ -74,9 +75,9 @@ namespace sw
         // 부품 병합과 분리를 처리합니다(전부 static). */
         /**
          * @brief 부품들을 병합합니다. 보이는 삼각형만 남기고, 그것이 쓰는 정점만 남깁니다(압축). 모프는 이름으로 합칩니다(없는 부품은 0).
-         * @return 스켈레톤이 섞였거나 형상이 없으면 오류 글을 남기고 false 입니다.
+         * @return 스켈레톤이 섞였거나 형상이 없으면 그 까닭(대상은 부품 이름)입니다.
          */
-        static bool merge( vector_reference<const MeshMergeSource> listSource, const IMeshMergeHooks* pHooks, MergedMesh& outMerged, string* pOutError );
+        [[nodiscard]] static expected<void> merge( vector_reference<const MeshMergeSource> listSource, const IMeshMergeHooks* pHooks, MergedMesh& outMerged );
         /**
          * @brief 병합된 형상에서 부품 하나를 분리합니다(강체 부품을 뽑을 때). 강체 부품은 쉬는 변환의 역으로 부품 공간에 되돌려 놓습니다.
          * @return 이름의 부품이 없으면 false 를 반환합니다.

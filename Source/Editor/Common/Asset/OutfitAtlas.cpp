@@ -18,39 +18,27 @@ namespace sw
 
             /** @brief 0..count-1 안으로 자른 좌표입니다(가장자리 번짐용). */
             static int64 clampIndex( int64 value, uint32 count ) { return value < 0 ? 0 : ( value >= static_cast<int64>( count ) ? static_cast<int64>( count ) - 1 : value ); }
-
-            [[nodiscard]] static bool fail( string* pOutError, const string& reason )
-            {
-                if ( pOutError != nullptr )
-                    *pOutError = reason;
-                return false;
-            }
         };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
-    bool OutfitAtlasLayout::pack( vector_reference<const OutfitAtlasSource> listSource, uint32 atlasSize, uint32 padding, vector<OutfitAtlasRect>& outListRect, string* pOutError )
+    expected<void> OutfitAtlasLayout::pack( vector_reference<const OutfitAtlasSource> listSource, uint32 atlasSize, uint32 padding, vector<OutfitAtlasRect>& outListRect )
     {
-        using Internal = OutfitAtlasInternal;
         outListRect.clear();
         if ( atlasSize == 0 || atlasSize > kMaxAtlasSize )
-            return Internal::fail( pOutError, string( "atlas size must be 1.." ) + to_string( kMaxAtlasSize ) );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the atlas size must be 1..kMaxAtlasSize", to_string( atlasSize ) } );
         for ( size_t index = 0; index < listSource.size(); ++index )
         {
             const OutfitAtlasSource& source    = listSource[index];
             const bool               bNoPixels = source._width == 0 || source._height == 0;
             if ( source._part.empty() || bNoPixels )
-            {
-                StringBuilder<constant::buffer::kMax256> textBuilder;
-                textBuilder.appendFormat( "%#%# has no part name or no pixels", string( "atlas texture " ), index );
-                return Internal::fail( pOutError, string( textBuilder.view() ) );
-            }
+                return unexpected( Error{ ErrorKind::InvalidArgument, "an atlas texture has no part name or no pixels", "atlas texture " }.appendDetail( to_string( static_cast<uint64>( index ) ) ) );
             for ( size_t other = 0; other < index; ++other )
             {
                 if ( listSource[other]._part == source._part )
-                    return Internal::fail( pOutError, string( "atlas part '" ) + source._part.c_str() + "' is listed twice" );
+                    return unexpected( Error{ ErrorKind::AlreadyExists, "an atlas part is listed twice", source._part.c_str() } );
             }
         }
 
@@ -77,7 +65,7 @@ namespace sw
             const uint32             cellW  = source._width + 2 * padding;
             const uint32             cellH  = source._height + 2 * padding;
             if ( cellW > atlasSize )
-                return Internal::fail( pOutError, string( "atlas part '" ) + source._part.c_str() + "' is wider than the atlas" );
+                return unexpected( Error{ ErrorKind::InvalidArgument, "an atlas part is wider than the atlas", source._part.c_str() } );
             if ( cursorX + cellW > atlasSize )
             {
                 cursorX = 0;
@@ -85,11 +73,7 @@ namespace sw
                 shelfSize = 0;
             }
             if ( cursorY + cellH > atlasSize )
-            {
-                StringBuilder<constant::buffer::kMax256> textBuilder;
-                textBuilder.appendFormat( "%#%# is too small - part '%#' does not fit", string( "atlas " ), atlasSize, source._part.c_str() );
-                return Internal::fail( pOutError, string( textBuilder.view() ) );
-            }
+                return unexpected( Error{ ErrorKind::InvalidArgument, "the atlas is too small - a part does not fit", source._part.c_str() } );
             OutfitAtlasRect rect;
             rect._part         = source._part;
             rect._x            = cursorX + padding;
@@ -100,7 +84,7 @@ namespace sw
             cursorX += cellW;
             shelfSize = MathUtil::max( shelfSize, cellH );
         }
-        return true;
+        return {};
     }
 } // namespace sw
 
@@ -150,15 +134,15 @@ namespace sw
         outListPixel.assign( static_cast<size_t>( atlasSize ) * atlasSize * OutfitAtlasInternal::kChannelCount, 0 );
     }
 
-    bool OutfitAtlasComposer::blit( uint32 atlasSize, const OutfitAtlasRect& rect, uint32 padding, const vector<uint8>& textureRGBA, uint32 textureWidth, uint32 textureHeight,
-                                    vector<uint8>& inoutAtlas, string* pOutError )
+    expected<void> OutfitAtlasComposer::blit( uint32 atlasSize, const OutfitAtlasRect& rect, uint32 padding, const vector<uint8>& textureRGBA, uint32 textureWidth, uint32 textureHeight,
+                                              vector<uint8>& inoutAtlas )
     {
         using Internal = OutfitAtlasInternal;
         if ( textureWidth != rect._width || textureHeight != rect._height )
         {
-            StringBuilder<constant::buffer::kMax256> textBuilder;
-            textBuilder.appendFormat( "%#%#' is %#x%# but its atlas slot is %#x%#", string( "texture of part '" ), rect._part.c_str(), textureWidth, textureHeight, rect._width, rect._height );
-            return Internal::fail( pOutError, string( textBuilder.view() ) );
+            StringBuilder<constant::buffer::kMax256> detail;
+            detail.appendFormat( "%#: %#x%# vs %#x%#", rect._part.c_str(), textureWidth, textureHeight, rect._width, rect._height );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "a part texture differs in size from its atlas slot", detail.view() } );
         }
         const size_t expectedBytes = static_cast<size_t>( textureWidth ) * textureHeight * Internal::kChannelCount;
         const size_t atlasBytes    = static_cast<size_t>( atlasSize ) * atlasSize * Internal::kChannelCount;
@@ -167,7 +151,7 @@ namespace sw
         const bool   bOutside      = rect._x < padding || rect._y < padding || rect._x + rect._width + padding > atlasSize || rect._y + rect._height + padding > atlasSize;
         const bool   bBadBuffer    = bTextureShort || bAtlasShort;
         if ( bBadBuffer || bOutside )
-            return Internal::fail( pOutError, string( "part '" ) + rect._part.c_str() + "' does not fit the atlas buffer (short pixels or a slot outside the padded atlas)" );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "a part does not fit the atlas buffer (short pixels or a slot outside the padded atlas)", rect._part.c_str() } );
 
         // 사각형 + 사방 패딩을 훑으며 가장자리로 자른 원본 좌표의 픽셀을 복사한다 — 안쪽은 그대로, 바깥 띠는 가장자리 번짐이다.
         const int64 firstX = static_cast<int64>( rect._x ) - static_cast<int64>( padding );

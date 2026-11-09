@@ -187,16 +187,16 @@ namespace sw
             }
             if ( part._pFitData == nullptr )
                 continue;
-            string nameError;
             if ( pTables == nullptr )
             {
                 Internal::appendReportFormat( outReport, "part '%#' has fit data but the body has no fit tables", part._name.c_str() );
                 bValid = false;
                 continue;
             }
-            if ( part._pFitData->validateNames( *pTables, &nameError ) == false )
+            CharacterIssueList nameIssues;
+            if ( part._pFitData->validateNames( *pTables, nameIssues ) == false )
             {
-                Internal::appendReportFormat( outReport, "part '%#' fit data %#", part._name.c_str(), nameError.c_str() );
+                Internal::appendReportFormat( outReport, "part '%#' fit data %#", part._name.c_str(), nameIssues.joined().c_str() );
                 bValid = false;
                 continue;
             }

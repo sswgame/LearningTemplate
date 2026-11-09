@@ -398,20 +398,18 @@ SW_TEST_CASE_F( AppearanceSelectionTest, ShareCodeRoundTripAndRejects )
     SW_REQUIRE_FALSE( code.empty() );
 
     AppearanceSelection decoded;
-    string              reason;
-    SW_REQUIRE_TRUE( AppearanceSelection::decode( string( "  " ) + code + "\n", _database, decoded, &reason ) );
+    SW_REQUIRE_TRUE( AppearanceSelection::decode( string( "  " ) + code + "\n", _database, decoded ) );
     SW_EXPECT_TRUE( decoded._basePresetID == hashed_string( "Base" ) );
     SW_EXPECT_EQUAL( code, AppearanceSelection::encode( decoded, _database ) );
 
-    SW_EXPECT_FALSE( AppearanceSelection::decode( "", _database, decoded, &reason ) );
-    SW_EXPECT_EQUAL( string( "not a share code" ), reason );
-    SW_EXPECT_FALSE( AppearanceSelection::decode( "***", _database, decoded, &reason ) );
-    SW_EXPECT_EQUAL( string( "not a share code" ), reason );
+    const auto reasonOf = []( const expected<void>& result )
+    { return result.has_value() ? string{} : string( result.error().message() ); };
+    SW_EXPECT_EQUAL( string( "not a share code" ), reasonOf( AppearanceSelection::decode( "", _database, decoded ) ) );
+    SW_EXPECT_EQUAL( string( "not a share code" ), reasonOf( AppearanceSelection::decode( "***", _database, decoded ) ) );
 
     string tampered               = code;
     tampered[tampered.size() / 2] = tampered[tampered.size() / 2] == 'A' ? 'B' : 'A';
-    SW_EXPECT_FALSE( AppearanceSelection::decode( tampered, _database, decoded, &reason ) );
-    SW_EXPECT_EQUAL( string( "checksum mismatch" ), reason );
+    SW_EXPECT_EQUAL( string( "checksum mismatch" ), reasonOf( AppearanceSelection::decode( tampered, _database, decoded ) ) );
 }
 
 /** @brief [AppearanceSelectionTest] 공유 코드의 슬라이더는 실제 값이다 — 뒤 판이 범위를 넓혀도 같은 키로 읽고, 범위를 좁히면 끝에 붙이고 보고한다 */
@@ -495,13 +493,14 @@ SW_TEST_CASE_F( AppearanceSelectionTest, ShareCodeReadsTheOlderVersion )
         }
         return Base64Util::encodeURL( bytes.data(), bytes.size() );
     };
-    AppearanceSelection decoded;
-    string              reason;
-    SW_REQUIRE_TRUE_MSG( AppearanceSelection::decode( makeCode( 1 ), _database, decoded, &reason ), reason.c_str() );
+    AppearanceSelection  decoded;
+    const expected<void> first = AppearanceSelection::decode( makeCode( 1 ), _database, decoded );
+    SW_REQUIRE_TRUE_MSG( first.has_value(), first.has_value() ? "" : first.error().message().data() );
     SW_EXPECT_TRUE( decoded._basePresetID == hashed_string( "Base" ) );
     SW_REQUIRE_TRUE( decoded._customization.findValue( hashed_string( "Height" ) ) != nullptr );
     SW_EXPECT_NEAR( 1.5f, decoded._customization.findValue( hashed_string( "Height" ) )->_number._x, 1.0e-3f );
 
-    SW_EXPECT_FALSE( AppearanceSelection::decode( makeCode( AppearanceSelection::kShareCodeVersion + 1 ), _database, decoded, &reason ) );
-    SW_EXPECT_EQUAL( string( "unsupported share code version" ), reason );
+    const expected<void> future = AppearanceSelection::decode( makeCode( AppearanceSelection::kShareCodeVersion + 1 ), _database, decoded );
+    SW_EXPECT_FALSE( future );
+    SW_EXPECT_EQUAL( string( "unsupported share code version" ), future.has_value() ? string{} : string( future.error().message() ) );
 }

@@ -59,9 +59,10 @@ namespace sw
          * @param unitIndex `SocketPoseView` 에서 이 유닛을 찾을 번호입니다.
          * @param bindBones 바인드(레퍼런스) 포즈의 본 배열입니다. 부모 본 이름을 여기에 대조합니다(없는 본은 오류, false).
          * @param pBindGeometry 있으면 표면 기준 소켓을 이 형상의 가장 가까운 삼각형에 묶습니다. 없으면 표면 기준도 본을 따릅니다.
+         * @param outIssues 부모 본이 없으면 그 문제를 더합니다(유닛은 더하지 않고 false).
          */
         [[nodiscard]] bool addUnit( const hashed_string& prefix, uint32 unitIndex, const SocketSet& sockets, const CharacterBoneArray& bindBones,
-                                    const AppearanceGeometry* pBindGeometry, string* pOutError );
+                                    const AppearanceGeometry* pBindGeometry, CharacterIssueList& outIssues );
         /** @brief 후보 목록을 해석합니다. 이 함수를 호출한 뒤부터 이번 해석의 테이블이 보입니다. */
         void endResolve();
 
