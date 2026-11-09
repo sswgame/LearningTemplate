@@ -4,202 +4,25 @@
 
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringBuilder.h"
-#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
-#include "Editor/Common/Widgets/EditorNetModeCombo.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/NetPlay/EditorNetPlaySession.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Localization/LocText.h"
 
 #include <imgui.h>
 
 namespace sw::editor
 {
-    namespace
-    {
-        struct MultiplayerPanelInternal
-        {
-            /** @brief `netplay.start` 의 씬 인자 머리입니다(`scene=game/…/a.scene.xml`). */
-            static constexpr string_view kSceneArgumentPrefix = "scene=";
-            /** @brief `netplay.wait` 의 기본 시한(초)입니다. */
-            static constexpr int32 kDefaultWaitSeconds = 60;
-
-            static EditorNetPlaySession* findSession()
-            {
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                return pContext != nullptr ? &pContext->getSubsystem<EditorNetPlaySession>() : nullptr;
-            }
-
-            /** @brief 감시 값 `Editor.NetPlayProcessCount` — 돌고 있는 멀티 프로세스 재생의 프로세스 수입니다. */
-            [[nodiscard]] static bool readProcessCount( const GameObjectManager* /*pManager*/, float64& outValue )
-            {
-                const EditorNetPlaySession* pSession = findSession();
-                outValue                             = pSession != nullptr ? static_cast<float64>( pSession->getProcessCount() ) : 0.0;
-                return true;
-            }
-
-            /**
-             * @brief 감시 값 `Editor.NetPlayObjectHashReports` — 세션의 프로세스들에게서 받은 `state.objectline` 답의 합입니다.
-             * @details 답은 다른 프로세스에서 비동기로 온다 — 시나리오는 보내기 전 값을 `Remember` 하고 바뀔 때까지 기다린다(예전에는 답이 올 틈을 프레임 수로 두었다).
-             */
-            [[nodiscard]] static bool readObjectHashReports( const GameObjectManager* /*pManager*/, float64& outValue )
-            {
-                const EditorNetPlaySession* pSession = findSession();
-                uint32                      reports  = 0;
-                for ( int32 processIndex = 0; pSession != nullptr && processIndex < pSession->getProcessCount(); ++processIndex )
-                    reports += pSession->getProcessStatus( processIndex )._objectHashReportCount;
-                outValue = static_cast<float64>( reports );
-                return true;
-            }
-
-            /** @brief 감시 값 `Editor.NetPlayConnectedClients` — 지금 서버에 붙어 있다고 알린 클라이언트 수입니다(서버를 잃은 클라이언트는 빠진다). */
-            [[nodiscard]] static bool readConnectedClients( const GameObjectManager* /*pManager*/, float64& outValue )
-            {
-                const EditorNetPlaySession* pSession = findSession();
-                outValue                             = pSession != nullptr ? static_cast<float64>( pSession->getConnectedClientCount() ) : 0.0;
-                return true;
-            }
-
-            /** @brief `netplay.start [dedicated|listen] [<플레이어 수>] [scene=<리소스 경로>]` — 구성을 고치고 세션을 시작합니다. 씬을 주면 모든 프로세스가 그 씬으로 시작합니다(구성에 남지 않는다). */
-            static bool runStart( const vector<string>& listArgument, string& outReply )
-            {
-                EditorNetPlaySession* pSession = findSession();
-                if ( pSession == nullptr )
-                {
-                    outReply = "the editor is not running";
-                    return true;
-                }
-                EditorNetPlaySettings& settings = pSession->getSettings();
-                settings._mode                  = settings._mode == EditorNetMode::Standalone ? EditorNetMode::DedicatedServer : settings._mode;
-                string firstScenePath;
-                for ( const string& argument : listArgument )
-                {
-                    if ( StringUtil::startsWith( argument, kSceneArgumentPrefix ) )
-                    {
-                        firstScenePath = argument.substr( kSceneArgumentPrefix.size() );
-                        if ( firstScenePath.empty() )
-                            return false;
-                        continue;
-                    }
-                    int32      playerCount          = 0;
-                    const bool bPlayerCountArgument = StringUtil::parseInt( argument, playerCount ) && 1 <= playerCount && playerCount <= EditorNetModeCombo::kMaxPlayerCount;
-                    if ( argument == "dedicated" )
-                        settings._mode = EditorNetMode::DedicatedServer;
-                    else if ( argument == "listen" )
-                        settings._mode = EditorNetMode::ListenHost;
-                    else if ( bPlayerCountArgument )
-                        settings._clientCount = playerCount;
-                    else
-                        return false;
-                }
-                const bool bStarted = pSession->start( pSession->getSettings(), firstScenePath );
-                outReply            = bStarted ? "multiplayer session started on UDP port " + to_string( pSession->getPort() ) : "multiplayer session did not start (see the log)";
-                return true;
-            }
-
-            /** @brief 감시 값 `Editor.NetPlayStopping` — `netplay.stop` 뒤 프로세스 거두기 · 트레이스 합치기가 아직이면 1 입니다(시나리오가 `<WaitUntil>` 로 끝을 기다린다). */
-            [[nodiscard]] static bool readStopping( const GameObjectManager* /*pManager*/, float64& outValue )
-            {
-                const EditorNetPlaySession* pSession = findSession();
-                outValue                             = pSession != nullptr && pSession->isStopping() ? 1.0 : 0.0;
-                return true;
-            }
-
-            /**
-             * @brief `netplay.stop` — 모두에 정상 종료를 알리고 멈춤을 시작합니다(기다리지 않는다).
-             * @details 끝은 감시 값 `Editor.NetPlayStopping` == 0 이고, 그때 `Multiplayer session stopped` 줄(합친 트레이스 경로)이 남는다.
-             */
-            static bool runStop( const vector<string>& listArgument, string& outReply )
-            {
-                (void)listArgument;
-                EditorNetPlaySession* pSession = findSession();
-                if ( pSession == nullptr || pSession->isRunning() == false )
-                {
-                    outReply = "no multiplayer session is running";
-                    return true;
-                }
-                pSession->requestStop();
-                outReply = "multiplayer session stopping (done when Editor.NetPlayStopping is 0)";
-                return true;
-            }
-
-            /** @brief `netplay.wait <클라이언트 수> [<초>]` — 그만큼 붙을 때까지 이 프레임을 붙잡습니다(자동화 시나리오용 — 시나리오는 프레임 단위라 기동 시간을 모른다). */
-            static bool runWait( const vector<string>& listArgument, string& outReply )
-            {
-                int32      clientCount             = 0;
-                int32      seconds                 = kDefaultWaitSeconds;
-                const bool bInvalidClientArguments = listArgument.empty() || StringUtil::parseInt( listArgument[0], clientCount ) == false ||
-                                                     ( listArgument.size() > 1 && StringUtil::parseInt( listArgument[1], seconds ) == false );
-                if ( bInvalidClientArguments )
-                    return false;
-                EditorNetPlaySession* pSession = findSession();
-                if ( pSession == nullptr || pSession->isRunning() == false )
-                {
-                    outReply = "no multiplayer session is running";
-                    return true;
-                }
-                pSession->updateUntil( static_cast<int64>( seconds ) * constant::time::kMillisecondsPerSecond, [&]()
-                { return pSession->getConnectedClientCount() >= clientCount; } );
-                StringBuilder<constant::buffer::kMax256> replyBuilder;
-                replyBuilder.appendFormat( "netplay connected clients %# of %#", pSession->getConnectedClientCount(), clientCount );
-                outReply = string( replyBuilder.view() );
-                return true;
-            }
-
-            /** @brief `netplay.server <명령>` — 서버 표준 입력에 한 줄을 보냅니다(`pause` · `step 3` · `resume` · 서버 개발 명령). */
-            static bool runServer( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.empty() )
-                    return false;
-                string command;
-                for ( const string& argument : listArgument )
-                {
-                    if ( command.empty() == false )
-                        command += ' ';
-                    command += argument;
-                }
-                EditorNetPlaySession* pSession = findSession();
-                const bool            bSent    = pSession != nullptr && pSession->sendServerCommand( command );
-                outReply                       = bSent ? "sent to the server: " + command : string( "no server to send to" );
-                return true;
-            }
-        };
-    } // namespace
-
-    SW_AUTOMATION_WATCH( editorNetPlayProcessCount, "Editor.NetPlayProcessCount", "Processes of the running multiplayer session (server and clients, 0 when stopped)",
-                         &MultiplayerPanelInternal::readProcessCount );
-    SW_AUTOMATION_WALL_WATCH( editorNetPlayStopping, "Editor.NetPlayStopping", "1 while a stopped multiplayer session is still reaping its processes and merging traces",
-                              &MultiplayerPanelInternal::readStopping );
-    SW_AUTOMATION_WALL_WATCH( editorNetPlayObjectHashReports, "Editor.NetPlayObjectHashReports",
-                              "state.objectline replies received from the session's processes so far (remember it, send the command, wait until it differs)",
-                              &MultiplayerPanelInternal::readObjectHashReports );
-    SW_AUTOMATION_WATCH( editorNetPlayConnectedClients, "Editor.NetPlayConnectedClients", "Clients of the multiplayer session that logged a connection to the server and have not lost it since",
-                         &MultiplayerPanelInternal::readConnectedClients );
-    SW_DEV_COMMAND( NetPlayStart, "netplay.start", "netplay.start [dedicated|listen] [<players>] [scene=<resource path>]", "Start the editor's multi-process play session",
-                    &MultiplayerPanelInternal::runStart );
-    SW_DEV_COMMAND( NetPlayStop, "netplay.stop", "netplay.stop", "Stop every process of the multi-process play session and merge their traces",
-                    &MultiplayerPanelInternal::runStop );
-    SW_DEV_COMMAND( NetPlayWait, "netplay.wait", "netplay.wait <clients> [<seconds>]", "Block until that many clients of the multiplayer session connected",
-                    &MultiplayerPanelInternal::runWait );
-    SW_DEV_COMMAND( NetPlayServer, "netplay.server", "netplay.server <command>", "Send a console line (pause, step N, resume, dev commands) to the session's server",
-                    &MultiplayerPanelInternal::runServer );
-} // namespace sw::editor
-
-namespace sw::editor
-{
     MultiplayerPanel::MultiplayerPanel()
         : IEditorPanel( false )
+        , _viewModel{}
+        , _viewState{}
         , _listTab{}
         , _tabGeneration{ constant::invalid_index::kUint32 }
-        , _targetProcessIndex{ EditorNetPlaySession::kServerProcessIndex }
+        , _targetProcessIndex{ MultiplayerSessionViewModel::kServerProcessIndex }
     {
     }
 
@@ -221,9 +44,9 @@ namespace sw::editor
         }
     }
 
-    int32 MultiplayerPanel::drawTargetPicker( EditorNetPlaySession& session )
+    int32 MultiplayerPanel::drawTargetPicker()
     {
-        const int32 processCount = session.getProcessCount();
+        const int32 processCount = static_cast<int32>( _viewState._listProcess.size() );
         if ( processCount == 0 )
             return -1; // 안내는 탭마다 제 자리에 있다(Session 의 "No processes" · Conditions · Profiler) — 탭 위에 한 줄 더 두면 같은 말을 두 번 한다
         _targetProcessIndex = MathUtil::clamp( _targetProcessIndex, 0, processCount - 1 );
@@ -231,12 +54,12 @@ namespace sw::editor
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Target" ) );
         ImGui::SameLine();
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldMediumEm" ) );
-        const EditorNetPlayProcessStatus target = session.getProcessStatus( _targetProcessIndex );
+        const MultiplayerProcessRow& target = _viewState._listProcess[static_cast<size_t>( _targetProcessIndex )];
         if ( ImGui::BeginCombo( "##MultiplayerTarget", target._label.c_str() ) )
         {
             for ( int32 processIndex = 0; processIndex < processCount; ++processIndex )
             {
-                if ( ImGui::Selectable( session.getProcessStatus( processIndex )._label.c_str(), processIndex == _targetProcessIndex ) )
+                if ( ImGui::Selectable( _viewState._listProcess[static_cast<size_t>( processIndex )]._label.c_str(), processIndex == _targetProcessIndex ) )
                     _targetProcessIndex = processIndex;
             }
             ImGui::EndCombo();
@@ -247,11 +70,12 @@ namespace sw::editor
 
     void MultiplayerPanel::drawContent()
     {
-        EditorNetPlaySession& session = editor::getSubsystem<EditorContext>().getSubsystem<EditorNetPlaySession>();
+        _viewModel.gather( _viewState );
         syncTabs();
         MultiplayerTabContext context;
-        context._pSession           = &session;
-        context._targetProcessIndex = drawTargetPicker( session );
+        context._pSession           = &_viewModel;
+        context._pState             = &_viewState;
+        context._targetProcessIndex = drawTargetPicker();
         if ( ImGui::BeginTabBar( "##MultiplayerTabs" ) )
         {
             for ( TabEntry& entry : _listTab )

@@ -9,7 +9,7 @@
 
 namespace sw::editor
 {
-    class EditorNetPlaySession;
+    struct EditorNetPlaySettings;
 
     /**
      * @struct EditorNetModeCombo
@@ -21,9 +21,10 @@ namespace sw::editor
         static constexpr int32 kMaxPlayerCount = 8;
 
         /**
-         * @brief 구성을 고르는 위젯을 그립니다. 세션이 도는 동안은 잠깁니다. 바꿨으면 true 입니다(바뀐 구성은 다음 Play 에 쓰인다).
+         * @brief 구성 @p inoutSettings 의 모드 · 플레이어 수를 고르는 위젯을 그립니다. @p bLocked(세션이 도는 동안)면 잠깁니다. 바꿨으면 true 입니다(바뀐 구성은 다음 Play 에 쓰인다).
+         * @details 세션이 아니라 구성 값을 받는다 — Multiplayer 창은 ViewModel 이 모은 구성 사본을 고쳐 돌려주고(MVVM), 툴바는 세션의 구성을 그대로 준다.
          * @param pMark 드롭다운의 레이블입니다. 툴바와 Multiplayer 창이 함께 보이면 같은 레이블이 두 자리에 남으므로 자리마다 다르다.
          */
-        static bool draw( EditorNetPlaySession& session, const utf8* pMark );
+        static bool draw( EditorNetPlaySettings& inoutSettings, bool bLocked, const utf8* pMark );
     };
 } // namespace sw::editor

@@ -12,16 +12,19 @@
 
 namespace sw::editor
 {
-    class EditorNetPlaySession;
+    class MultiplayerSessionViewModel;
+    struct MultiplayerSessionViewState;
 
     /**
      * @struct MultiplayerTabContext
      * @brief 탭이 그릴 때 받는 문맥입니다. 창 위쪽의 대상 고르기가 모든 탭에 같은 대상을 줍니다.
+     * @details 세션은 ViewModel(명령)과 이 프레임에 모은 값(ViewState)으로만 닿는다 — 탭은 세션 모델을 보지 않는다(`docs/agents/EditorUI.md` MVVM 계약).
      */
     struct MultiplayerTabContext
     {
-        EditorNetPlaySession* _pSession{ nullptr };      ///< 에디터의 멀티 프로세스 재생 세션(언제나 있다 — 돌고 있는지는 `isRunning`)
-        int32                 _targetProcessIndex{ -1 }; ///< 고른 대상 프로세스(0 = 서버, N = 클라이언트 N). 세션이 돌지 않으면 -1
+        MultiplayerSessionViewModel*       _pSession{ nullptr };      ///< 멀티 프로세스 재생 세션의 명령(창이 들고 있다 — 언제나 있다)
+        const MultiplayerSessionViewState* _pState{ nullptr };        ///< 창이 이 프레임 첫머리에 모은 세션 값(돌고 있는지는 `_bRunning`)
+        int32                              _targetProcessIndex{ -1 }; ///< 고른 대상 프로세스(0 = 서버, N = 클라이언트 N). 세션이 돌지 않으면 -1
     };
 } // namespace sw::editor
 

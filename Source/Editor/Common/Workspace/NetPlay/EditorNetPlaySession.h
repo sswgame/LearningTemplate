@@ -108,7 +108,7 @@ namespace sw::editor
     /**
      * @class EditorNetPlaySession
      * @brief 서버와 클라이언트 프로세스를 묶은 세션 하나입니다. `start`, 프레임마다 `update`, `stop` 순서로 씁니다. 게임(UI) 스레드에서만 호출합니다.
-     * @details 확장 모듈의 Multiplayer 창 탭(`SW_EDITOR_MULTIPLAYER_TAB`)도 이 세션을 받으므로 EditorModule 밖으로 내보낸다.
+     * @details 확장 모듈(키트 에디터 확장)도 이 세션을 쓸 수 있도록 EditorModule 밖으로 내보낸다. Multiplayer 창 탭은 세션 대신 `MultiplayerSessionViewModel` 을 받는다.
      */
     class SW_EDITOR_API EditorNetPlaySession : public EditorSubsystem
     {

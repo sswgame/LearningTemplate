@@ -7,7 +7,7 @@
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/NetPlay/EditorNetPlaySession.h"
+#include "Editor/Common/Workspace/NetPlay/EditorNetPlaySettings.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
@@ -34,11 +34,11 @@ namespace sw::editor
         }
     } // namespace
 
-    bool EditorNetModeCombo::draw( EditorNetPlaySession& session, const utf8* pMark )
+    bool EditorNetModeCombo::draw( EditorNetPlaySettings& inoutSettings, bool bLocked, const utf8* pMark )
     {
-        EditorNetPlaySettings& settings = session.getSettings();
+        EditorNetPlaySettings& settings = inoutSettings;
         bool                   bChanged = false;
-        ImGui::BeginDisabled( session.isRunning() );
+        ImGui::BeginDisabled( bLocked );
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldModeEm" ) );
         if ( ImGui::BeginCombo( "##NetMode", getNetModeDisplayName( settings._mode ) ) )
         {
