@@ -46,8 +46,8 @@ namespace sw
                 { return pLhs->getObjectID() < pRhs->getObjectID(); } );
             }
 
-            /** @brief `Name[N]` 이면 밑과 번호를 나눕니다. 대괄호가 없으면 false 이고, 대괄호가 있는데 번호가 틀리면 @p outProblem 을 적고 false 입니다. */
-            static bool splitIndex( string_view target, string_view& outBaseName, int32& outIndex, string& outProblem )
+            /** @brief `Name[N]` 이면 밑과 번호를 나누고 true 입니다. 대괄호가 없으면 false 이고, 대괄호가 있는데 번호가 틀리면 그 까닭(대상은 글)입니다. */
+            [[nodiscard]] static expected<bool> splitIndex( string_view target, string_view& outBaseName, int32& outIndex )
             {
                 const size_t open = target.find( '[' );
                 if ( open == string_view::npos )
@@ -55,14 +55,18 @@ namespace sw
                 const bool bWellFormed = open > 0 && target.back() == ']' && open + 2 < target.size() &&
                                          StringUtil::parseInt( target.substr( open + 1, target.size() - open - 2 ), outIndex ) && outIndex >= 0;
                 if ( bWellFormed == false )
-                {
-                    utf8 arrProblem[kProblemCapacity]{};
-                    formatstring( arrProblem, kProblemCapacity, "target '%#' must be Name[N] with N a non-negative integer", target );
-                    outProblem = arrProblem;
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "a target must be Name[N] with N a non-negative integer", target } );
                 outBaseName = target.substr( 0, open );
                 return true;
+            }
+
+            /** @brief 고르지 못한 까닭입니다 — 대상(@p pFormat 은 `formatstring` 글꼴)에 무엇을 찾았는지 적는다. */
+            template <typename... Args>
+            [[nodiscard]] static unexpected<Error> fail( ErrorKind kind, const utf8* pMessage, const utf8* pFormat, Args&&... args )
+            {
+                utf8 arrDetail[kProblemCapacity]{};
+                formatstring( arrDetail, kProblemCapacity, pFormat, std::forward<Args>( args )... );
+                return unexpected( Error{ kind, pMessage, string_view( arrDetail ) } );
             }
 
             /** @brief 고를 수 없다는 실패 줄에 이름을 몇 개까지 적을지입니다. */
@@ -122,68 +126,48 @@ namespace sw
         return true;
     }
 
-    GameObject* AutomationTarget::find( const GameObjectManager* pManager, string_view target, AutomationTargetLookup& outLookup, string& outProblem )
+    expected<GameObject*> AutomationTarget::find( const GameObjectManager* pManager, string_view target )
     {
         using Internal = AutomationWatchInternal;
-        outProblem.clear();
         if ( target.empty() )
-        {
-            outLookup = AutomationTargetLookup::NotGiven;
-            return nullptr;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "no target is given" } );
         if ( pManager == nullptr )
-        {
-            outLookup  = AutomationTargetLookup::Missing;
-            outProblem = "there is no active scene";
-            return nullptr;
-        }
-        vector<GameObject*> listObject;
-        string_view         baseName;
-        int32               index = 0;
-        if ( Internal::splitIndex( target, baseName, index, outProblem ) )
+            return unexpected( Error{ ErrorKind::NotFound, "there is no active scene" } );
+        vector<GameObject*>  listObject;
+        string_view          baseName;
+        int32                index = 0;
+        const expected<bool> split = Internal::splitIndex( target, baseName, index );
+        if ( split.has_value() == false )
+            return unexpected( split.error() );
+        if ( *split )
         {
             Internal::collectByBaseName( *pManager, baseName, listObject );
             if ( static_cast<size_t>( index ) < listObject.size() )
-            {
-                outLookup = AutomationTargetLookup::Found;
                 return listObject[static_cast<size_t>( index )];
-            }
-            outLookup = AutomationTargetLookup::Missing;
-            utf8 arrProblem[Internal::kProblemCapacity]{};
-            formatstring( arrProblem, Internal::kProblemCapacity, "no object %# (%# live object(s) named %#)", target, listObject.size(), baseName );
-            outProblem = arrProblem;
-            return nullptr;
-        }
-        if ( outProblem.empty() == false )
-        {
-            outLookup = AutomationTargetLookup::Rejected;
-            return nullptr;
+            return Internal::fail( ErrorKind::NotFound, "no object at that index", "%# (%# live object(s) named %#)", target, listObject.size(), baseName );
         }
         GameObject* pObject = pManager->findGameObjectByName( hashed_string( target ) );
         if ( pObject == nullptr )
-        {
-            outLookup = AutomationTargetLookup::Missing;
-            utf8 arrProblem[Internal::kProblemCapacity]{};
-            formatstring( arrProblem, Internal::kProblemCapacity, "no object named '%#'", target );
-            outProblem = arrProblem;
-            return nullptr;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "no object named", target } );
         // 번호를 적지 않은 이름인데 같은 밑의 오브젝트가 여럿이면 어느 것을 뜻했는지 모른다.
         if ( Internal::computeBaseName( target ).size() == target.size() )
         {
             Internal::collectByBaseName( *pManager, target, listObject );
             if ( listObject.size() > 1 )
-            {
-                outLookup = AutomationTargetLookup::Rejected;
-                utf8 arrProblem[Internal::kProblemCapacity]{};
-                formatstring( arrProblem, Internal::kProblemCapacity, "%# objects are named %# (%#) - pick one with %#[0..%#]", listObject.size(), target,
-                              Internal::describeSiblings( listObject ), target, listObject.size() - 1 );
-                outProblem = arrProblem;
-                return nullptr;
-            }
+                return Internal::fail( ErrorKind::InvalidArgument, "several objects share the name - pick one with Name[N]", "%# objects are named %# (%#) - %#[0..%#]",
+                                       listObject.size(), target, Internal::describeSiblings( listObject ), target, listObject.size() - 1 );
         }
-        outLookup = AutomationTargetLookup::Found;
         return pObject;
+    }
+
+    AutomationTargetLookup AutomationTarget::toLookup( const Error& error )
+    {
+        return error.kind() == ErrorKind::NotFound ? AutomationTargetLookup::Missing : AutomationTargetLookup::Rejected;
+    }
+
+    string AutomationTarget::describe( const Error& error )
+    {
+        return error.detail().empty() ? string( error.message() ) : string( error.message() ) + ": " + string( error.detail() );
     }
 
     string AutomationWatchQuery::describeMissing( const utf8* pWhat ) const
@@ -196,10 +180,22 @@ namespace sw
     AutomationWatchQuery AutomationWatchQuery::make( const GameObjectManager* pManager, string_view target, string_view key )
     {
         AutomationWatchQuery query;
-        query._pManager      = pManager;
-        query._target        = target;
-        query._key           = key;
-        query._pTargetObject = AutomationTarget::find( pManager, target, query._targetLookup, query._targetProblem );
+        query._pManager = pManager;
+        query._target   = target;
+        query._key      = key;
+        if ( target.empty() )
+            return query; // 대상이 없는 질의다(`NotGiven`)
+        const expected<GameObject*> found = AutomationTarget::find( pManager, target );
+        if ( found.has_value() )
+        {
+            query._pTargetObject = *found;
+            query._targetLookup  = AutomationTargetLookup::Found;
+        }
+        else
+        {
+            query._targetLookup  = AutomationTarget::toLookup( found.error() );
+            query._targetProblem = AutomationTarget::describe( found.error() );
+        }
         return query;
     }
 } // namespace sw

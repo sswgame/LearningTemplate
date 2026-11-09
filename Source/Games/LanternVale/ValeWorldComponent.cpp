@@ -28,7 +28,11 @@ namespace sw
         /** @brief 개발 명령과 감시 값입니다. 골짜기 컴포넌트는 활성 씬에서 찾습니다. */
         struct ValeWorldComponentDevInternal
         {
-            [[nodiscard]] static ValeWorldComponent* findVale( string& outReply )
+            /** @brief 골짜기 컴포넌트가 없을 때의 명령 답입니다. */
+            static constexpr const utf8* kNoValeReply = "vale: no connected LanternVale client in the active scene";
+
+            /** @brief 활성 씬의 연결된 골짜기 컴포넌트입니다. 없으면 nullptr 이고 부르는 쪽이 `kNoValeReply` 로 답한다. */
+            [[nodiscard]] static ValeWorldComponent* findVale()
             {
                 const SceneManager* const pScenes  = game::findSubsystem<SceneManager>();
                 const Scene* const        pScene   = pScenes != nullptr ? pScenes->getActiveScene() : nullptr;
@@ -42,12 +46,7 @@ namespace sw
                             pVale = pFound;
                     } );
                 }
-                if ( pVale == nullptr || pVale->getClient().isActive() == false )
-                {
-                    outReply = "vale: no connected LanternVale client in the active scene";
-                    return nullptr;
-                }
-                return pVale;
+                return pVale != nullptr && pVale->getClient().isActive() ? pVale : nullptr;
             }
 
             [[nodiscard]] static bool parseID( const string& text, uint32& outID )
@@ -65,9 +64,12 @@ namespace sw
                 uint32 targetID = 0;
                 if ( listArgument.size() != 1 || parseID( listArgument[0], targetID ) == false )
                     return false;
-                ValeWorldComponent* const pVale = findVale( outReply );
+                ValeWorldComponent* const pVale = findVale();
                 if ( pVale == nullptr )
+                {
+                    outReply = kNoValeReply;
                     return true;
+                }
                 const uint32                             sequence = pVale->getClient().callServerFunction( pFunctionName, { ReflectedValue::make( targetID ) } );
                 StringBuilder<constant::buffer::kMax256> replyBuilder;
                 replyBuilder.appendFormat( "vale: %# %# sent (call %#)", pFunctionName, targetID, sequence );
@@ -86,9 +88,12 @@ namespace sw
                 float32 z = 0.0f;
                 if ( listArgument.size() != 2 || StringUtil::parseFloat( listArgument[0], x ) == false || StringUtil::parseFloat( listArgument[1], z ) == false )
                     return false;
-                ValeWorldComponent* const pVale = findVale( outReply );
+                ValeWorldComponent* const pVale = findVale();
                 if ( pVale == nullptr )
+                {
+                    outReply = kNoValeReply;
                     return true;
+                }
                 const uint32                             sequence = pVale->getClient().callServerFunction( "moveTo", { ReflectedValue::make( x ), ReflectedValue::make( z ) } );
                 StringBuilder<constant::buffer::kMax256> replyBuilder;
                 replyBuilder.appendFormat( "vale: moveTo %# %# sent (call %#)", x, z, sequence );
@@ -100,9 +105,12 @@ namespace sw
             {
                 if ( listArgument.empty() == false )
                     return false;
-                ValeWorldComponent* const pVale = findVale( outReply );
+                ValeWorldComponent* const pVale = findVale();
                 if ( pVale == nullptr )
+                {
+                    outReply = kNoValeReply;
                     return true;
+                }
                 StringBuilder<constant::buffer::kMax256> replyBuilder;
                 replyBuilder.appendFormat( "vale: leaveParty sent (call %#)", pVale->getClient().callServerFunction( "leaveParty", {} ) );
                 outReply = string( replyBuilder.view() );
@@ -113,9 +121,12 @@ namespace sw
             {
                 if ( listArgument.empty() == false )
                     return false;
-                const ValeWorldComponent* const pVale = findVale( outReply );
+                const ValeWorldComponent* const pVale = findVale();
                 if ( pVale == nullptr )
+                {
+                    outReply = kNoValeReply;
                     return true;
+                }
                 const ValeAvatarAgent&                   agent = pVale->getClient().getAgent();
                 StringBuilder<constant::buffer::kMax256> replyBuilder;
                 replyBuilder.appendFormat( "vale: avatar %# level %# experience %# coins %# herbs %# defeats %# party %# visible %#", agent._avatarID, agent._shownLevel, agent._shownExperience,

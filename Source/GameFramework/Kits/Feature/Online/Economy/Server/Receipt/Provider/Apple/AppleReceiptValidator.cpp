@@ -123,15 +123,12 @@ namespace sw
         return _authorization;
     }
 
-    bool AppleReceiptValidator::readPayload( string_view payload, ReceiptAsk& outAsk, string& outFailureText ) const
+    expected<void> AppleReceiptValidator::readPayload( string_view payload, ReceiptAsk& outAsk ) const
     {
         if ( isTransactionID( payload ) == false )
-        {
-            outFailureText = "apple receipt must be the numeric transaction id";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "apple receipt must be the numeric transaction id" } );
         outAsk._transactionID = string( payload );
-        return true;
+        return {};
     }
 
     HTTPClientRequest AppleReceiptValidator::makeHTTPRequest( const ReceiptCall& call, UnixMilliseconds now )

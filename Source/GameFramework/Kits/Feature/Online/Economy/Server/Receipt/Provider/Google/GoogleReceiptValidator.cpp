@@ -121,14 +121,11 @@ namespace sw
         return url;
     }
 
-    bool GoogleReceiptValidator::readPayload( string_view payload, ReceiptAsk& outAsk, string& outFailureText ) const
+    expected<void> GoogleReceiptValidator::readPayload( string_view payload, ReceiptAsk& outAsk ) const
     {
         if ( splitPayload( payload, outAsk._productID, outAsk._askedKey ) == false )
-        {
-            outFailureText = "google receipt must be <product id>|<purchase token>";
-            return false;
-        }
-        return true;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "google receipt must be <product id>|<purchase token>" } );
+        return {};
     }
 
     StoreReceiptValidator::AuthState GoogleReceiptValidator::prepareAuth( UnixMilliseconds now )

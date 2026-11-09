@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Registry/RegistrationList.h"
@@ -97,8 +98,15 @@ namespace sw
      */
     struct SW_API AutomationTarget
     {
-        /** @brief @p target 을 고릅니다. 찾으면 그 오브젝트이고, 못 찾으면 nullptr 이며 @p outLookup · @p outProblem 에 까닭을 적습니다. */
-        static GameObject* find( const GameObjectManager* pManager, string_view target, AutomationTargetLookup& outLookup, string& outProblem );
+        /**
+         * @brief @p target 을 고릅니다. 찾으면 그 오브젝트(널 아님)입니다. 못 찾으면 그 까닭 — 종류 `NotFound` 는 없다(`Missing`),
+         *        `InvalidArgument` 는 글이 틀렸거나 여럿 중 하나를 고를 수 없다(`Rejected`). 빈 @p target 은 `InvalidArgument` 다.
+         */
+        [[nodiscard]] static expected<GameObject*> find( const GameObjectManager* pManager, string_view target );
+        /** @brief `find` 의 까닭을 질의의 결과 종류로 옮깁니다. */
+        [[nodiscard]] static AutomationTargetLookup toLookup( const Error& error );
+        /** @brief `find` 의 까닭을 실패 줄 글(`문장: 대상`)로 짓습니다. */
+        [[nodiscard]] static string describe( const Error& error );
     };
 } // namespace sw
 

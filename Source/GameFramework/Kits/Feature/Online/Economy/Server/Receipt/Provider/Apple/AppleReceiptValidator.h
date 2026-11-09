@@ -85,12 +85,12 @@ namespace sw
         string makeHistoryURL( string_view paginationToken ) const;
 
     private:
-        [[nodiscard]] bool readPayload( string_view payload, ReceiptAsk& outAsk, string& outFailureText ) const override;
-        HTTPClientRequest  makeHTTPRequest( const ReceiptCall& call, UnixMilliseconds now ) override;
-        void               parseOrder( const JSONValue& root, const ReceiptCall& call, UnixMilliseconds now, ReceiptOrderFacts& outFacts ) override;
-        void               parseRefundPage( const JSONValue& root, UnixMilliseconds now, ReceiptRefundPage& outPage ) override;
-        void               onCredentialRejected( const HTTPClientResponse& response ) override;
-        string             makeAuthorization( UnixMilliseconds now );
+        [[nodiscard]] expected<void> readPayload( string_view payload, ReceiptAsk& outAsk ) const override;
+        HTTPClientRequest            makeHTTPRequest( const ReceiptCall& call, UnixMilliseconds now ) override;
+        void                         parseOrder( const JSONValue& root, const ReceiptCall& call, UnixMilliseconds now, ReceiptOrderFacts& outFacts ) override;
+        void                         parseRefundPage( const JSONValue& root, UnixMilliseconds now, ReceiptRefundPage& outPage ) override;
+        void                         onCredentialRejected( const HTTPClientResponse& response ) override;
+        string                       makeAuthorization( UnixMilliseconds now );
 
     private:
         AppleReceiptSettings  _settings;

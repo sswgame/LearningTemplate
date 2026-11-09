@@ -18,6 +18,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -185,8 +186,8 @@ namespace sw
         StoreReceiptValidator( ReceiptBuyerRule buyerRule, ReceiptPollWindow refundWindow, HTTPClient* pHTTPClient );
         ~StoreReceiptValidator() override;
 
-        /** @brief 영수증 글을 읽어 @p outAsk 를 채웁니다. 요청에 실을 수 없는 글이면 false 와 까닭입니다 — 스토어에 묻지 않고 Invalid 로 끝납니다. */
-        [[nodiscard]] virtual bool readPayload( string_view payload, ReceiptAsk& outAsk, string& outFailureText ) const = 0;
+        /** @brief 영수증 글을 읽어 @p outAsk 를 채웁니다. 요청에 실을 수 없는 글이면 그 까닭(문장이 실패 글이다)입니다 — 스토어에 묻지 않고 Invalid 로 끝납니다. */
+        [[nodiscard]] virtual expected<void> readPayload( string_view payload, ReceiptAsk& outAsk ) const = 0;
         /** @brief @p call 의 HTTP 요청을 만듭니다. */
         virtual HTTPClientRequest makeHTTPRequest( const ReceiptCall& call, UnixMilliseconds now ) = 0;
         /** @brief 영수증 확인 답을 사실로 옮겨 적습니다. @p root 는 JSON 이지만 모양은 보장하지 않습니다. */

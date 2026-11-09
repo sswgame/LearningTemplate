@@ -73,13 +73,13 @@ namespace sw
         string makeVoidedURL( int64 sinceUnixMs, string_view pageToken ) const;
 
     private:
-        [[nodiscard]] bool readPayload( string_view payload, ReceiptAsk& outAsk, string& outFailureText ) const override;
-        HTTPClientRequest  makeHTTPRequest( const ReceiptCall& call, UnixMilliseconds now ) override;
-        void               parseOrder( const JSONValue& root, const ReceiptCall& call, UnixMilliseconds now, ReceiptOrderFacts& outFacts ) override;
-        void               parseRefundPage( const JSONValue& root, UnixMilliseconds now, ReceiptRefundPage& outPage ) override;
-        void               onCredentialRejected( const HTTPClientResponse& response ) override;
-        AuthState          prepareAuth( UnixMilliseconds now ) override;
-        bool               consumeAuthResponse( const HTTPClientResponse& response, UnixMilliseconds now ) override;
+        [[nodiscard]] expected<void> readPayload( string_view payload, ReceiptAsk& outAsk ) const override;
+        HTTPClientRequest            makeHTTPRequest( const ReceiptCall& call, UnixMilliseconds now ) override;
+        void                         parseOrder( const JSONValue& root, const ReceiptCall& call, UnixMilliseconds now, ReceiptOrderFacts& outFacts ) override;
+        void                         parseRefundPage( const JSONValue& root, UnixMilliseconds now, ReceiptRefundPage& outPage ) override;
+        void                         onCredentialRejected( const HTTPClientResponse& response ) override;
+        AuthState                    prepareAuth( UnixMilliseconds now ) override;
+        bool                         consumeAuthResponse( const HTTPClientResponse& response, UnixMilliseconds now ) override;
 
     private:
         GoogleReceiptSettings     _settings;

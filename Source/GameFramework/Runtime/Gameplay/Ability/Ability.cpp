@@ -344,24 +344,19 @@ namespace sw
     {
         struct AbilityDevCommandsInternal
         {
-            /** @brief 활성 씬의 어빌리티 시스템을 모읍니다. 씬이 없거나 하나도 없으면 답을 채우고 false 입니다. */
-            [[nodiscard]] static bool collectAbilitySystems( vector<AbilityComponent*>& outListComponent, string& outReply )
+            /** @brief 활성 씬의 어빌리티 시스템을 모읍니다. 씬이 없거나 하나도 없으면 그 까닭(문장이 명령 답이다)입니다. */
+            [[nodiscard]] static expected<vector<AbilityComponent*>> collectAbilitySystems()
             {
                 SceneManager* const pSceneManager = game::findSubsystem<SceneManager>();
                 GameObjectManager*  pManager      = pSceneManager != nullptr ? pSceneManager->findActiveObjectManager() : nullptr;
                 if ( pManager == nullptr )
-                {
-                    outReply = "cheat: no active scene";
-                    return false;
-                }
-                pManager->forEachComponentOfType<AbilityComponent>( [&outListComponent]( AbilityComponent* pComponent )
-                { outListComponent.push_back( pComponent ); } );
-                if ( outListComponent.empty() )
-                {
-                    outReply = "cheat: no AbilityComponent in the active scene";
-                    return false;
-                }
-                return true;
+                    return unexpected( Error{ ErrorKind::NotFound, "cheat: no active scene" } );
+                vector<AbilityComponent*> listComponent;
+                pManager->forEachComponentOfType<AbilityComponent>( [&listComponent]( AbilityComponent* pComponent )
+                { listComponent.push_back( pComponent ); } );
+                if ( listComponent.empty() )
+                    return unexpected( Error{ ErrorKind::NotFound, "cheat: no AbilityComponent in the active scene" } );
+                return listComponent;
             }
 
             /** @brief `cheat.heal` — 체력 어트리뷰트가 있는 어빌리티 시스템마다 체력을 최대 체력으로 채웁니다. */
@@ -369,10 +364,14 @@ namespace sw
             {
                 if ( listArgument.empty() == false )
                     return false;
-                vector<AbilityComponent*> listComponent;
-                if ( collectAbilitySystems( listComponent, outReply ) == false )
+                expected<vector<AbilityComponent*>> collected = collectAbilitySystems();
+                if ( collected.has_value() == false )
+                {
+                    outReply = string( collected.error().message() );
                     return true;
-                int32 healedCount = 0;
+                }
+                const vector<AbilityComponent*> listComponent = std::move( *collected );
+                int32                           healedCount   = 0;
                 for ( AbilityComponent* pComponent : listComponent )
                 {
                     const hashed_string&    health    = pComponent->getHealthAttribute();
@@ -394,11 +393,15 @@ namespace sw
                 float32 value = 0.0f;
                 if ( listArgument.size() != 2 || StringUtil::parseFloat( listArgument[1], value ) == false )
                     return false;
-                vector<AbilityComponent*> listComponent;
-                if ( collectAbilitySystems( listComponent, outReply ) == false )
+                expected<vector<AbilityComponent*>> collected = collectAbilitySystems();
+                if ( collected.has_value() == false )
+                {
+                    outReply = string( collected.error().message() );
                     return true;
-                const hashed_string name( listArgument[0] );
-                int32               changedCount = 0;
+                }
+                const vector<AbilityComponent*> listComponent = std::move( *collected );
+                const hashed_string             name( listArgument[0] );
+                int32                           changedCount = 0;
                 for ( AbilityComponent* pComponent : listComponent )
                 {
                     if ( pComponent->setAttributeBaseValue( name, value ) )
@@ -438,11 +441,15 @@ namespace sw
                 bool       bArgumentOn{ false };
                 if ( listArgument.size() > 1 || readOptionalBoolArgument( listArgument, 0, bArgumentOn ) == false )
                     return false;
-                vector<AbilityComponent*> listComponent;
-                if ( collectAbilitySystems( listComponent, outReply ) == false )
+                expected<vector<AbilityComponent*>> collected = collectAbilitySystems();
+                if ( collected.has_value() == false )
+                {
+                    outReply = string( collected.error().message() );
                     return true;
-                SceneManager* const      pSceneManager = game::findSubsystem<SceneManager>();
-                const GameObjectManager* pManager      = pSceneManager != nullptr ? pSceneManager->findActiveObjectManager() : nullptr;
+                }
+                const vector<AbilityComponent*> listComponent = std::move( *collected );
+                SceneManager* const             pSceneManager = game::findSubsystem<SceneManager>();
+                const GameObjectManager*        pManager      = pSceneManager != nullptr ? pSceneManager->findActiveObjectManager() : nullptr;
                 // 무적 태그의 하위 태그로 붙인다 — 무적 판정(`hasMatchingTag`)은 하위를 함께 보고, 치트의 몫은 이펙트가 준 무적과 따로 센다.
                 const TagID tag         = "State.Invulnerable.Cheat"_tag;
                 int32       playerCount = 0;
@@ -477,11 +484,15 @@ namespace sw
             {
                 if ( listArgument.empty() == false )
                     return false;
-                vector<AbilityComponent*> listComponent;
-                if ( collectAbilitySystems( listComponent, outReply ) == false )
+                expected<vector<AbilityComponent*>> collected = collectAbilitySystems();
+                if ( collected.has_value() == false )
+                {
+                    outReply = string( collected.error().message() );
                     return true;
-                int32                     removedCount = 0;
-                vector<AbilitySpecHandle> listHandle;
+                }
+                const vector<AbilityComponent*> listComponent = std::move( *collected );
+                int32                           removedCount  = 0;
+                vector<AbilitySpecHandle>       listHandle;
                 for ( AbilityComponent* pComponent : listComponent )
                 {
                     TagContainer cooldownTags;

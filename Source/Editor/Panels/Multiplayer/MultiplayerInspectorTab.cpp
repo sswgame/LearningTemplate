@@ -48,23 +48,23 @@ namespace sw::editor
                        inspector.getRemoteAddress() == NetAddress::makeLoopback( session.getDebugChannelPort() );
             }
 
-            /** @brief 세션이 띄운 전용 서버의 채널에 붙습니다(이미 붙어 있으면 그대로). 채널이 없으면 false 이고 @p outReply 에 이유를 씁니다. */
-            [[nodiscard]] static bool attachToSession( EditorNetPlaySession& session, string& outReply )
+            /** @brief 세션이 띄운 전용 서버의 채널에 붙습니다(이미 붙어 있으면 그대로). 채널이 없거나 붙지 못하면 그 까닭입니다. */
+            [[nodiscard]] static expected<void> attachToSession( EditorNetPlaySession& session )
             {
                 if ( isAttachedToSession( session ) )
-                    return true;
+                    return {};
                 if ( session.isRunning() == false || session.getDebugChannelPort() == 0 )
-                {
-                    outReply = "no dedicated server session with a debug channel is running";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::NotFound, "no dedicated server session with a debug channel is running" } );
                 EditorRemoteInspector& inspector = getInspector();
                 if ( inspector.connect( NetAddress::makeLoopback( session.getDebugChannelPort() ), session.getDebugChannelToken() ) == false )
-                {
-                    outReply = inspector.getLastError();
-                    return false;
-                }
-                return true;
+                    return unexpected( Error{ ErrorKind::ExternalFailure, "the inspector could not connect to the debug channel", inspector.getLastError() } );
+                return {};
+            }
+
+            /** @brief 붙기 실패를 명령 답 글(`문장: 대상`)로 짓습니다. */
+            [[nodiscard]] static string makeReply( const Error& error )
+            {
+                return error.detail().empty() ? string( error.message() ) : string( error.message() ) + ": " + string( error.detail() );
             }
 
             /** @brief 감시 값 `Editor.NetPlayInspectorObjects` — 검사기가 마지막으로 읽은 하이어라키의 오브젝트 수입니다. */
@@ -86,8 +86,11 @@ namespace sw::editor
                     outReply = "no editor context";
                     return true;
                 }
-                if ( attachToSession( *pSession, outReply ) == false )
+                if ( const expected<void> attached = attachToSession( *pSession ); attached.has_value() == false )
+                {
+                    outReply = makeReply( attached.error() );
                     return true;
+                }
                 EditorRemoteInspector& inspector = getInspector();
                 if ( listArgument.empty() )
                 {
@@ -217,12 +220,15 @@ namespace sw::editor
         {
             ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "SessionServerDebugChannel", TextArgumentList().addInteger( "debugChannelPort", static_cast<int64>( session.getDebugChannelPort() ) ) ).c_str() );
             ImGui::SameLine();
-            string     reply;
-            const bool bAttached = ImGui::Button( SW_LOCKEY( "EdText", "Connect" ) ) && MultiplayerInspectorTabInternal::attachToSession( session, reply );
-            if ( bAttached && inspector.refreshTree() == false )
-                SW_LOG_WARNING_ID( "MultiplayerInspector.InspectorCouldNotRead", "Inspector could not read the hierarchy: %#", inspector.getLastError() );
-            if ( reply.empty() == false )
-                SW_LOG_WARNING_ID( "MultiplayerInspector.InspectorCouldNotAttach", "Inspector could not attach to the session server: %#", reply );
+            if ( ImGui::Button( SW_LOCKEY( "EdText", "Connect" ) ) )
+            {
+                const expected<void> attached = MultiplayerInspectorTabInternal::attachToSession( session );
+                if ( attached.has_value() == false )
+                    SW_LOG_WARNING_ID( "MultiplayerInspector.InspectorCouldNotAttach", "Inspector could not attach to the session server: %#",
+                                       MultiplayerInspectorTabInternal::makeReply( attached.error() ) );
+                else if ( inspector.refreshTree() == false )
+                    SW_LOG_WARNING_ID( "MultiplayerInspector.InspectorCouldNotRead", "Inspector could not read the hierarchy: %#", inspector.getLastError() );
+            }
         }
         else
         {
