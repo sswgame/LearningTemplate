@@ -114,6 +114,18 @@ namespace sw
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 이름의 매개변수입니다. 없으면 nullptr 입니다. */
         const ZoneParamDef* findParam( const hashed_string& name ) const;
+        /** @brief 배치 덮어쓰기 항목으로서 아무것도 바꾸지 않는지입니다(합치기인데 적은 칸 · 매개변수 · 경우가 없다). 되돌리기가 빈 항목을 남기지 않게 지운다. */
+        bool isEmptyOverride() const;
+
+        /**
+         * @brief 배치 덮어쓰기 목록 @p inoutListOverride 에서 모듈 @p moduleName 의 매개변수 @p paramName 을 @p value 로 덮어씁니다(인스펙터에서 물려받은 값을 고칠 때).
+         * @details 그 모듈의 덮어쓰기 항목이 없으면 합치기 항목을 더하고, 있으면 그 항목의 매개변수를 고치거나 더한다. 통째로 바꾸기 · 빼기 항목에는 쓰지 않는다(false — 그 항목은 반사 칸에서 고친다).
+         */
+        [[nodiscard]] static bool setOverrideParam( vector<ZoneModuleDef>& inoutListOverride, const hashed_string& moduleName, const hashed_string& paramName, string_view value );
+        /** @brief 모듈 @p moduleName 덮어쓰기에서 매개변수 @p paramName 을 지웁니다(물려받은 값으로 되돌림). 항목이 비면 항목째 지운다. 지운 것이 없으면 false 입니다. */
+        static bool revertOverrideParam( vector<ZoneModuleDef>& inoutListOverride, const hashed_string& moduleName, const hashed_string& paramName );
+        /** @brief 모듈 @p moduleName 의 덮어쓰기 항목을 통째로 지웁니다. 없으면 false 입니다. */
+        static bool revertOverrideModule( vector<ZoneModuleDef>& inoutListOverride, const hashed_string& moduleName );
     };
 
     /**

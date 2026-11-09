@@ -1830,6 +1830,7 @@
 		<entry key="EditorContentBrowser.EmptyCollection"
 		       text="이 컬렉션은 비었습니다. 에셋을 이름 위에 놓으면 더해집니다."
 		       sourceHash="7b266442dc624f84" />
+		<entry key="EditorContentBrowser.FindSelected" text="선택 항목 찾기" sourceHash="418d11f7640d60f7" />
 		<entry key="EditorContentBrowser.Import"
 		       text="외부 파일(텍스처, 셰이더, 사운드 등)을 현재 폴더로 가져옵니다"
 		       sourceHash="2898d0429b60b307" />
@@ -2792,18 +2793,6 @@
 		<entry key="EditorSequencer.AddKeyTip"
 		       text="대상의 지금 값을 이 프레임의 키로 모든 채널에 찍습니다"
 		       sourceHash="16f07e74ed05266c" />
-		<entry key="EditorSequencer.AddLensTrackTip"
-		       text="선택한 바인딩의 카메라에 렌즈 트랙(시야각 · 초점 · 조리개 · 렌즈 시프트)을 더합니다."
-		       sourceHash="f6743e7776d3311c" />
-		<entry key="EditorSequencer.AddPropertyTrackTip"
-		       text="고른 오브젝트 컴포넌트의 숫자 프로퍼티 하나를 키로 모는 트랙을 더합니다"
-		       sourceHash="85e564686f766382" />
-		<entry key="EditorSequencer.AddRigSlotTrackTip"
-		       text="리그 슬롯 가중치(PoseModifierComponent)에 키를 찍는 트랙을 추가합니다"
-		       sourceHash="4f864229801873f0" />
-		<entry key="EditorSequencer.AddTransformTrackTip"
-		       text="고른 오브젝트의 이동 · 회전 · 크기를 키로 모는 트랙을 더합니다"
-		       sourceHash="0a22f5584fe08e9e" />
 		<entry key="EditorSequencer.BindSelection" text="선택 바인딩" sourceHash="9c0aa4f91f4c05ac" />
 		<entry key="EditorSequencer.BindSelectionTip"
 		       text="선택한 바인딩을 씬에서 선택한 오브젝트에 바인딩합니다. 실행 취소하면 이전 오브젝트로 돌아갑니다."
@@ -2866,6 +2855,8 @@
 		<entry key="EditorSequencer.LoadTip"
 		       text="저장하지 않은 편집을 버리고 포커스된 .seq 파일을 디스크에서 다시 읽습니다."
 		       sourceHash="a7fd6955fa49a19b" />
+		<entry key="EditorSequencer.MoveTrackDown" text="아래로 옮기기" sourceHash="b233557012dcb328" />
+		<entry key="EditorSequencer.MoveTrackUp" text="위로 옮기기" sourceHash="4ea0f21fc2a338a1" />
 		<entry key="EditorSequencer.NextKeyTip" text="다음 키로" sourceHash="3e237c799dc70cd3" />
 		<entry key="EditorSequencer.NoBindingChoice" text="(없음)" sourceHash="8c36545f724b9460" />
 		<entry key="EditorSequencer.NoBindingContextHint"
@@ -2926,6 +2917,8 @@
 		<entry key="EditorSequencer.SelectItemHint"
 		       text="편집하려면 타임라인에서 항목을 선택합니다."
 		       sourceHash="a4d100ffc931f778" />
+		<entry key="EditorSequencer.ShotCameraColumn" text="카메라" sourceHash="54d1b2a64667e32e" />
+		<entry key="EditorSequencer.ShotLengthColumn" text="프레임" sourceHash="11a25b24cd33bb4f" />
 		<entry key="EditorSequencer.SoundLabel" text="소리" sourceHash="2593d0c70a1c5074" />
 		<entry key="EditorSequencer.SoundTip"
 		       text="시작 프레임을 지날 때 보내고 구간이 끝나면 멈추는 오디오 이벤트입니다."
@@ -2947,6 +2940,10 @@
 		<entry key="EditorSequencer.TrackNameLabel" text="이름" sourceHash="ef49aec68fd1dc66" />
 		<entry key="EditorSequencer.TrackTargetLabel" text="대상" sourceHash="ff5bb7742c2896c8" />
 		<entry key="EditorSequencer.UnboundBinding" text="바인딩 안 됨" sourceHash="e7a38a6492965c7a" />
+		<entry key="EditorSequencer.ViewRangeFormat" text="첫 프레임 %d" sourceHash="8395e0dda753a249" />
+		<entry key="EditorSequencer.ZoomFit" text="맞춤" sourceHash="f2a69a199c808e4c" />
+		<entry key="EditorSequencer.ZoomIn" text="확대" sourceHash="236ae937cbcd6a39" />
+		<entry key="EditorSequencer.ZoomOut" text="축소" sourceHash="c65ea2cf2f21a13a" />
 		<entry key="EditorSettings.BuildModules"
 		       text="바뀐 모듈 구성으로 모든 모듈을 컴파일합니다"
 		       sourceHash="8b6c73917e57c622" />

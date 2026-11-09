@@ -157,6 +157,68 @@ namespace sw
         return bOk;
     }
 
+    bool ZoneModuleDef::isEmptyOverride() const
+    {
+        return _op == ZoneOverrideOp::Merge && _kind.empty() && _modulePath.isSet() == false && _condition.empty() && _target == ZoneTargetRole::Inherit && _listParam.empty() &&
+               _listCase.empty();
+    }
+
+    bool ZoneModuleDef::setOverrideParam( vector<ZoneModuleDef>& inoutListOverride, const hashed_string& moduleName, const hashed_string& paramName, string_view value )
+    {
+        auto found = std::find_if( inoutListOverride.begin(), inoutListOverride.end(), [&moduleName]( const ZoneModuleDef& over )
+        { return over._name == moduleName; } );
+        if ( found == inoutListOverride.end() )
+        {
+            ZoneModuleDef over;
+            over._name = moduleName;
+            over._op   = ZoneOverrideOp::Merge;
+            inoutListOverride.push_back( std::move( over ) );
+            found = inoutListOverride.end() - 1;
+        }
+        if ( found->_op != ZoneOverrideOp::Merge )
+            return false; // 통째로 바꾸기 · 빼기는 매개변수 하나를 얹는 항목이 아니다
+        for ( ZoneParamDef& param : found->_listParam )
+        {
+            if ( param._name == paramName )
+            {
+                param._value = string( value );
+                return true;
+            }
+        }
+        ZoneParamDef param;
+        param._name  = paramName;
+        param._value = string( value );
+        found->_listParam.push_back( std::move( param ) );
+        return true;
+    }
+
+    bool ZoneModuleDef::revertOverrideParam( vector<ZoneModuleDef>& inoutListOverride, const hashed_string& moduleName, const hashed_string& paramName )
+    {
+        const auto found = std::find_if( inoutListOverride.begin(), inoutListOverride.end(), [&moduleName]( const ZoneModuleDef& over )
+        { return over._name == moduleName; } );
+        if ( found == inoutListOverride.end() )
+            return false;
+        vector<ZoneParamDef>& listParam = found->_listParam;
+        const auto            param     = std::find_if( listParam.begin(), listParam.end(), [&paramName]( const ZoneParamDef& item )
+                       { return item._name == paramName; } );
+        if ( param == listParam.end() )
+            return false;
+        listParam.erase( param );
+        if ( found->isEmptyOverride() )
+            inoutListOverride.erase( found ); // 빈 합치기 항목은 남기지 않는다 — "바꿈" 으로 보이면 안 된다
+        return true;
+    }
+
+    bool ZoneModuleDef::revertOverrideModule( vector<ZoneModuleDef>& inoutListOverride, const hashed_string& moduleName )
+    {
+        const auto found = std::find_if( inoutListOverride.begin(), inoutListOverride.end(), [&moduleName]( const ZoneModuleDef& over )
+        { return over._name == moduleName; } );
+        if ( found == inoutListOverride.end() )
+            return false;
+        inoutListOverride.erase( found );
+        return true;
+    }
+
     bool ZoneProfile::applyOverrides( const vector<ZoneModuleDef>& listOverride, string_view sourceName )
     {
         bool bOk = true;

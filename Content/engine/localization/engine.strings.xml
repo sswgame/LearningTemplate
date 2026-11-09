@@ -701,7 +701,8 @@
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPlugin.BodyDynamicsNoProfile" source="The preview body has no body profile. Pick a preset with bodyProfile.">
+		<entry key="EdPlugin.BodyDynamicsNoProfile"
+		       source="The preview body has no body profile. Pick a preset with bodyProfile.">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
@@ -1076,11 +1077,6 @@
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPlugin.No" source="No">
-			<origins>
-				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPlugin.NoCustomizationSchemaForThisSelectionLoadThe"
@@ -1462,11 +1458,6 @@
 			</origins>
 		</entry>
 		<entry key="EdPlugin.Wrinkles" source="Wrinkles">
-			<origins>
-				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPlugin.Yes" source="Yes">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
@@ -2206,7 +2197,17 @@
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdUndo.ZoneOverrideParam" source="Override zone parameter">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdUndo.ZoneRevertModule" source="Revert zone module">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdUndo.ZoneRevertParam" source="Revert zone parameter">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
 			</origins>
@@ -2238,6 +2239,11 @@
 			</origins>
 		</entry>
 		<entry key="EditorTip.ZoneRevert" source="Drop this placement override and use the preset again.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTip.ZoneRevertParam" source="Use the preset's value for this parameter again.">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
 			</origins>

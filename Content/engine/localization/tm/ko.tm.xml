@@ -26,12 +26,15 @@
 		<entry source="Add bone turn" text="뼈 회전 추가" />
 		<entry source="Add chain" text="사슬 추가" />
 		<entry source="Add effect" text="이펙트 더하기" />
+		<entry source="Add layer" text="층 더하기" />
 		<entry source="Add node" text="노드 추가" />
 		<entry source="Add notify at t" text="t 에 알림 추가" />
 		<entry source="Add pair" text="짝 추가" />
+		<entry source="Add point" text="점 더하기" />
 		<entry source="Add set" text="세트 더하기" />
 		<entry source="Add slot" text="칸 추가" />
 		<entry source="Aim" text="조준" />
+		<entry source="Alias" text="별칭" />
 		<entry source="Already used by" text="이미 사용 중:" />
 		<entry source="Ambient Volume" text="환경음 음량" />
 		<entry source="Amount" text="양" />
@@ -59,6 +62,10 @@
 		<entry source="Binds: {mappedTargetBoneCount} of {targetBoneCount} target bones follow the source, height ratio {heightRatio}"
 		       text="묶음: 대상 본 {targetBoneCount}개 중 {mappedTargetBoneCount}개가 원본을 따름, 키 비율 {heightRatio}" />
 		<entry source="Blackboard key" text="블랙보드 키" />
+		<entry source="Body" text="몸" />
+		<entry source="Body channels" text="몸 채널" />
+		<entry source="Body data has unsaved edits" text="몸 데이터에 저장하지 않은 편집이 있습니다" />
+		<entry source="Body dynamics preview" text="몸 동작 미리보기" />
 		<entry source="Body shape" text="체형" />
 		<entry source="Body type" text="몸 종류" />
 		<entry source="Bone map" text="본 매핑" />
@@ -77,8 +84,11 @@
 		<entry source="Chains" text="체인" />
 		<entry source="Check" text="검사" />
 		<entry source="Clamped to range: {clamped}" text="범위로 자름: {clamped}" />
+		<entry source="Clear smears" text="번짐 지우기" />
 		<entry source="Clear target" text="대상 지우기" />
 		<entry source="Click a node to edit it" text="노드를 누르면 편집합니다" />
+		<entry source="Click the body in the viewport (Esc cancels)"
+		       text="뷰포트에서 몸을 누르세요(Esc 로 끕니다)" />
 		<entry source="Click to edit the curve" text="눌러서 곡선 편집" />
 		<entry source="Clients" text="클라이언트" />
 		<entry source="Close" text="닫기" />
@@ -122,13 +132,16 @@
 		<entry source="Disconnect" text="연결 끊기" />
 		<entry source="Dismiss" text="닫기" />
 		<entry source="Display" text="화면" />
-		<entry source="Down" text="아래" />
+		<entry source="Down" text="아래로" />
 		<entry source="Drop this placement override and use the preset again."
 		       text="이 배치 덮어쓰기를 지우고 프리셋을 다시 씁니다." />
 		<entry source="Dropped: {dropped}" text="빠짐: {dropped}" />
 		<entry source="Duplicate" text="복제" />
 		<entry source="Duplicate row" text="행 복제" />
 		<entry source="Duration (s)" text="길이(초)" />
+		<entry source="Dye channels" text="염색 채널" />
+		<entry source="Dye sections" text="염색 구간" />
+		<entry source="Dyeable" text="염색" />
 		<entry source="Edit" text="편집" />
 		<entry source="Edit this group's nested stack" text="이 묶음의 하위 스택 편집" />
 		<entry source="Effects" text="이펙트" />
@@ -155,9 +168,11 @@
 		<entry source="Filter by id" text="id 로 거르기" />
 		<entry source="Fit check (view only)" text="맞춤 검사(보기만)" />
 		<entry source="Fit to Bounds" text="경계 상자에 맞추기" />
+		<entry source="Fluid paths" text="체액 경로" />
 		<entry source="Focus gate" text="정문 보기" />
 		<entry source="Foliage Density" text="초목 밀도" />
 		<entry source="Follow game clock" text="게임 시계 따라가기" />
+		<entry source="Foot lift (m)" text="발 들림(m)" />
 		<entry source="From" text="보내는 곳" />
 		<entry source="GM connection: {stateText}" text="GM 연결: {stateText}" />
 		<entry source="GM password" text="GM 비밀번호" />
@@ -173,14 +188,18 @@
 		<entry source="Granted Abilities" text="부여된 어빌리티" />
 		<entry source="Graphics" text="그래픽" />
 		<entry source="Graphics Quality" text="그래픽 품질" />
+		<entry source="Groups" text="묶음" />
 		<entry source="Head Bob" text="걸음 흔들림" />
 		<entry source="Headphones (3D)" text="헤드폰 (3D)" />
 		<entry source="Height ratio (0 = pelvis)" text="높이 비(0 = 골반)" />
 		<entry source="High" text="높음" />
 		<entry source="High Contrast" text="고대비" />
+		<entry source="Highlight drive" text="강조할 드라이브" />
+		<entry source="Hit" text="맞기" />
 		<entry source="Hold" text="누르고 있기" />
 		<entry source="How root and pelvis movement is carried over (scaled by the pelvis height ratio, copied, or kept in place)"
 		       text="뿌리 · 골반 움직임을 옮기는 방법(골반 높이 비로 늘림 · 그대로 · 제자리)" />
+		<entry source="How strongly the layer covers the skin" text="층이 피부를 덮는 정도" />
 		<entry source="How the curve moves from this key to the next: Constant holds the value, Linear is a straight line, Cubic is a smooth spline."
 		       text="이 키에서 다음 키까지 곡선이 움직이는 방식입니다. Constant 는 값을 유지하고, Linear 는 직선, Cubic 은 부드러운 스플라인입니다." />
 		<entry source="IK goal" text="IK 목표" />
@@ -190,6 +209,8 @@
 		<entry source="Interface Volume" text="인터페이스 음량" />
 		<entry source="Invert" text="반전" />
 		<entry source="Invert Vertical Look" text="상하 시점 반전" />
+		<entry source="Jiggle" text="지글" />
+		<entry source="Jiggle (m)" text="흔들림(m)" />
 		<entry source="Keep" text="유지" />
 		<entry source="Keep Local" text="로컬에만 보관" />
 		<entry source="Keep these display settings?" text="이 디스플레이 설정을 유지할까요?" />
@@ -198,6 +219,7 @@
 		<entry source="Kind" text="종류" />
 		<entry source="Language" text="언어" />
 		<entry source="Lift sanction" text="제재 풀기" />
+		<entry source="Light at the eye" text="눈에 닿는 빛" />
 		<entry source="List audit" text="감사 기록 보기" />
 		<entry source="List live events" text="라이브 이벤트 보기" />
 		<entry source="Live events" text="라이브 이벤트" />
@@ -223,6 +245,8 @@
 		<entry source="Low" text="낮음" />
 		<entry source="Maintenance / Notice" text="점검 / 공지" />
 		<entry source="Maintenance seconds (0 = until cleared)" text="점검 초(0 = 풀 때까지)" />
+		<entry source="Makeup smear" text="화장 번짐" />
+		<entry source="Map" text="축 더하기" />
 		<entry source="Map same names" text="같은 이름끼리 잇기" />
 		<entry source="Master Volume" text="전체 음량" />
 		<entry source="Medium" text="중간" />
@@ -247,6 +271,8 @@
 		<entry source="No AbilityComponent in the active scene" text="활성 씬에 AbilityComponent 가 없습니다" />
 		<entry source="No animation clips in ''{clipFolder}''"
 		       text="''{clipFolder}'' 에 애니메이션 클립이 없습니다" />
+		<entry source="No body channels. Sliders, body profiles and equipment set them."
+		       text="몸 채널이 없습니다. 슬라이더 · 몸 프로필 · 장비가 정합니다." />
 		<entry source="No customization schema for this selection (load the appearance data and pick a base preset with a schema)."
 		       text="이 선택에는 꾸미기 스키마가 없습니다(외형 데이터를 불러오고 스키마가 있는 기준 프리셋을 고르세요)." />
 		<entry source="No effect applied, rejected or removed yet."
@@ -258,17 +284,22 @@
 		       text="한 프로세스 게임이 등록되지 않았습니다(NetSimGameRegistry) — 키트 세션(INetSimSession)이 있는 게임만 여기서 돕니다." />
 		<entry source="No login handler is bound: GM commands are refused as not logged in"
 		       text="로그인 처리기가 없습니다: GM 명령은 로그인하지 않은 것으로 거절됩니다" />
+		<entry source="No mesh sections. List sections with aliases in the item visual."
+		       text="메시 구간이 없습니다. 아이템 외형에 별칭과 함께 구간을 적으세요." />
 		<entry source="No object has component:" text="이 컴포넌트를 가진 오브젝트가 없습니다:" />
 		<entry source="No penetration." text="뚫림 없음." />
 		<entry source="No plan for today" text="오늘 계획이 없습니다" />
 		<entry source="No rule fired." text="발동한 규칙이 없습니다." />
 		<entry source="No schedule system is running. Start play with NPCs that have schedules."
 		       text="실행 중인 일정 시스템이 없습니다. 일정을 가진 NPC 가 있는 상태로 플레이를 시작하세요." />
+		<entry source="No skin layers. Add makeup or a tattoo from the list above."
+		       text="피부 층이 없습니다. 위 목록에서 화장이나 문신을 더하세요." />
 		<entry source="No target" text="대상 없음" />
 		<entry source="Notice id" text="공지 id" />
 		<entry source="Notice seconds (0 = until removed)" text="공지 초(0 = 지울 때까지)" />
 		<entry source="Notice text" text="공지 글" />
 		<entry source="Off" text="끔" />
+		<entry source="Offset" text="위치" />
 		<entry source="Offset (m)" text="오프셋(m)" />
 		<entry source="Opacity" text="불투명도" />
 		<entry source="Open a .cameras.xml preset file to see its cameras here. Edit presets in the Catalog Editor."
@@ -286,6 +317,7 @@
 		<entry source="Overlaps {name}" text="{name}와 겹침" />
 		<entry source="Overlays, in another color, the result with only the modifiers up to the selected one applied (deformation influence preview)"
 		       text="고른 모디파이어까지만 건 결과를 다른 색 선으로 겹쳐 그립니다(변형 영향 미리보기)" />
+		<entry source="Override zone parameter" text="지역 매개변수 덮어쓰기" />
 		<entry source="Owned Tags" text="소유 태그" />
 		<entry source="Parent" text="부모" />
 		<entry source="Park" text="놀이공원" />
@@ -300,7 +332,9 @@
 		<entry source="Pick an ability system..." text="어빌리티 시스템 고르기..." />
 		<entry source="Pick an entry on the left to see what it uses and what uses it."
 		       text="왼쪽에서 항목을 고르면 그 항목이 쓰는 것과 그것을 쓰는 곳을 봅니다." />
+		<entry source="Pick section in Preview" text="미리보기에서 구간 집기" />
 		<entry source="Place" text="장소" />
+		<entry source="Place in Preview" text="미리보기에서 배치" />
 		<entry source="Play" text="재생" />
 		<entry source="Plots" text="부지" />
 		<entry source="Point" text="점" />
@@ -319,6 +353,7 @@
 		<entry source="Problems" text="문제" />
 		<entry source="Protanopia" text="적색약" />
 		<entry source="Provider: {providerName}" text="제공자: {providerName}" />
+		<entry source="Pupil size" text="동공 크기" />
 		<entry source="Put live event" text="라이브 이벤트 넣기" />
 		<entry source="Quit Game" text="게임 종료" />
 		<entry source="Raw timeline" text="타임라인 원문" />
@@ -333,6 +368,7 @@
 		<entry source="Recompute Normals" text="법선 다시 계산" />
 		<entry source="Redo" text="다시 실행" />
 		<entry source="Redo appearance" text="외형 다시 실행" />
+		<entry source="Redo body edit" text="몸 편집 다시 하기" />
 		<entry source="Redo pose" text="포즈 다시 실행" />
 		<entry source="Reduce Flashing" text="번쩍임 줄이기" />
 		<entry source="Reduce Motion" text="움직임 줄이기" />
@@ -342,11 +378,12 @@
 		<entry source="Reload Stack" text="스택 다시 읽기" />
 		<entry source="Reload from disk (discard edits)" text="디스크에서 다시 읽기(편집 버림)" />
 		<entry source="Remaining" text="남은 시간" />
-		<entry source="Remove" text="제거" />
+		<entry source="Remove" text="지우기" />
 		<entry source="Remove Item" text="항목 제거" />
 		<entry source="Remove broken wires" text="끊어진 선 지우기" />
 		<entry source="Remove live event" text="라이브 이벤트 지우기" />
 		<entry source="Remove notice" text="공지 지우기" />
+		<entry source="Remove point" text="점 빼기" />
 		<entry source="Remove row" text="행 삭제" />
 		<entry source="Rename" text="이름 바꾸기" />
 		<entry source="Render Scale" text="렌더 배율" />
@@ -362,6 +399,7 @@
 		<entry source="Return to Title" text="타이틀로 돌아가기" />
 		<entry source="Revert" text="되돌리기" />
 		<entry source="Revert zone module" text="지역 모듈 되돌리기" />
+		<entry source="Revert zone parameter" text="지역 매개변수 되돌리기" />
 		<entry source="Reverting in" text="되돌리기까지" />
 		<entry source="Revoke" text="회수" />
 		<entry source="Ride" text="놀이기구" />
@@ -370,6 +408,7 @@
 		<entry source="Roles" text="역할" />
 		<entry source="Root and pelvis" text="루트와 골반" />
 		<entry source="Rotation" text="회전" />
+		<entry source="Rotation of the layer in degrees" text="층의 회전(도)" />
 		<entry source="Runtime ability state exists only during play. Press Play to inspect it."
 		       text="어빌리티 런타임 상태는 플레이 중에만 있습니다. 플레이를 눌러 확인하세요." />
 		<entry source="Same id as {name}" text="{name}와 id 가 같음" />
@@ -377,6 +416,7 @@
 		<entry source="Save" text="저장" />
 		<entry source="Save Stack" text="스택 저장" />
 		<entry source="Save as preset" text="프리셋으로 저장" />
+		<entry source="Save body data" text="몸 데이터 저장" />
 		<entry source="Save or reload the modifier stack before picking another mesh"
 		       text="다른 메시를 고르기 전에 모디파이어 스택을 저장하거나 다시 불러오세요" />
 		<entry source="Save pose" text="포즈 저장" />
@@ -385,6 +425,7 @@
 		<entry source="Schedule system" text="일정 시스템" />
 		<entry source="Scope (all or server kind)" text="범위(all 또는 서버 종류)" />
 		<entry source="Seconds" text="초" />
+		<entry source="Section" text="구간" />
 		<entry source="Sections" text="섹션" />
 		<entry source="Select a bone to edit its reference pose." text="뼈를 고르면 기준 포즈를 편집합니다." />
 		<entry source="Select a modifier in the stack." text="스택에서 모디파이어를 고르세요." />
@@ -417,8 +458,12 @@
 		       text="게임 안 디버그 HUD 의 이 구역을 보이거나 숨깁니다. 회색 글자는 구역의 등록 이름입니다." />
 		<entry source="Skeleton" text="스켈레톤" />
 		<entry source="Skeletons" text="스켈레톤" />
+		<entry source="Skin UV of the layer centre" text="층 가운데의 피부 UV" />
+		<entry source="Skin UV size one layer covers" text="층 하나가 덮는 피부 UV 크기" />
+		<entry source="Skin layers" text="피부 층" />
 		<entry source="Sliders, colours and choices of the schema are in the Preview tab (the body updates when you release a slider)."
 		       text="스키마의 슬라이더 · 색 · 선택은 미리보기 탭에 있습니다(슬라이더를 놓으면 몸이 바뀝니다)." />
+		<entry source="Slot visibility" text="슬롯 보이기" />
 		<entry source="Slot {slot}: {requestedItem} -> {fallbackItem} ({reason})"
 		       text="칸 {slot}: {requestedItem} -> {fallbackItem}({reason})" />
 		<entry source="Slots" text="칸" />
@@ -442,6 +487,7 @@
 		<entry source="Stereo" text="스테레오" />
 		<entry source="Stick Dead Zone" text="스틱 데드존" />
 		<entry source="Stop" text="정지" />
+		<entry source="Stop picking" text="집기 끄기" />
 		<entry source="Stores the Preview tab's picture in the user data slot of the preset of this name (save the preset first)"
 		       text="미리보기 탭의 그림을 이 이름 프리셋의 사용자 데이터 칸에 담습니다(프리셋을 먼저 저장하세요)" />
 		<entry source="Subject prefix" text="주체 접두어" />
@@ -454,6 +500,8 @@
 		<entry source="Target object" text="대상 오브젝트" />
 		<entry source="Target yaw" text="대상 방향" />
 		<entry source="Task" text="작업" />
+		<entry source="Tears and saliva" text="눈물 · 침" />
+		<entry source="Test tags:" text="태그 시험:" />
 		<entry source="Text Language" text="표시 언어" />
 		<entry source="Text Size" text="글자 크기" />
 		<entry source="Texture Quality" text="텍스처 품질" />
@@ -465,6 +513,8 @@
 		       text="덮어쓰기가 이 프로필에 맞지 않습니다 - 모듈 이름은 로그를 보세요." />
 		<entry source="The park layout could not be read ({path}). Fix the file (see the log) and press Reload."
 		       text="공원 배치를 읽지 못했습니다({path}). 로그를 보고 파일을 고친 뒤 다시 불러오세요." />
+		<entry source="The preview body has no body profile. Pick a preset with bodyProfile."
+		       text="미리보기 몸에 몸 프로필이 없습니다. bodyProfile 이 있는 프리셋을 고르세요." />
 		<entry source="The runtime loader could not read the saved file. See the log for the reason."
 		       text="런타임 로더가 저장한 파일을 읽지 못했습니다. 이유는 로그를 보세요." />
 		<entry source="The runtime loader reads the saved file."
@@ -492,13 +542,17 @@
 		<entry source="Ultra" text="최고" />
 		<entry source="Undo" text="실행 취소" />
 		<entry source="Undo appearance" text="외형 실행 취소" />
+		<entry source="Undo body edit" text="몸 편집 되돌리기" />
 		<entry source="Undo pose" text="포즈 실행 취소" />
+		<entry source="Unsupported" text="받지 않음" />
 		<entry source="Up" text="위" />
 		<entry source="Upscaler" text="업스케일러" />
 		<entry source="Use Selection" text="선택 사용" />
 		<entry source="Use a parallel (non-perspective) projection, as for 2D or isometric views. FOV is ignored while on."
 		       text="원근 없는 평행 투영을 씁니다(2D · 아이소메트릭 시점). 켜져 있는 동안 FOV 는 무시됩니다." />
 		<entry source="Use selected object" text="고른 오브젝트 쓰기" />
+		<entry source="Use the preset's value for this parameter again."
+		       text="이 매개변수에 프리셋 값을 다시 씁니다." />
 		<entry source="Used by" text="쓰는 곳" />
 		<entry source="Uses" text="쓰는 것" />
 		<entry source="Uses no other entry." text="다른 항목을 쓰지 않습니다." />
@@ -530,6 +584,8 @@
 		<entry source="World Space" text="월드 공간" />
 		<entry source="World-space height of the visible area; the width follows the aspect ratio."
 		       text="보이는 영역의 월드 높이입니다. 너비는 화면 비율을 따라갑니다." />
+		<entry source="Wrinkle intensity" text="주름 세기" />
+		<entry source="Wrinkles" text="주름" />
 		<entry source="Yaw (deg)" text="방향(도)" />
 		<entry source="You have changes that are not applied." text="적용하지 않은 변경이 있습니다." />
 		<entry source="Zone modules" text="지역 모듈" />
@@ -538,11 +594,14 @@
 		<entry source="added here" text="여기서 더함" />
 		<entry source="changed here" text="여기서 바꿈" />
 		<entry source="inherited" text="물려받음" />
+		<entry source="mapped" text="매핑됨" />
+		<entry source="no mapping" text="매핑 없음" />
 		<entry source="offset {offsetX}, {offsetY}, {offsetZ}  distance {distance}  pitch {pitch}  yaw {yaw}  fov {computeFieldOfViewY}"
 		       text="오프셋 {offsetX}, {offsetY}, {offsetZ}  거리 {distance}  피치 {pitch}  요 {yaw}  시야각 {computeFieldOfViewY}" />
 		<entry source="removed here" text="여기서 뺌" />
 		<entry source="replaced here" text="여기서 갈아끼움" />
 		<entry source="tick {tick}  input focus: world {inputFocus}" text="틱 {tick}  입력 초점: 월드 {inputFocus}" />
+		<entry source="unsupported" text="받지 않음" />
 		<entry source="{anchor}  clip {clip}  {stage} {clipSeconds} s{f}"
 		       text="{anchor}  클립 {clip}  {stage} {clipSeconds}초{f}" />
 		<entry source="{boneCount, plural, one {# bone} other {# bones}}, {overridesCount} overridden{dirty}"

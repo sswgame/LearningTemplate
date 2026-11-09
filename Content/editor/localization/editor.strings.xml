@@ -3693,7 +3693,8 @@
 				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdText.PickACurvePreviewToEditItInTheGraph" source="Click a curve preview below to edit its keys in the graph.">
+		<entry key="EdText.PickACurvePreviewToEditItInTheGraph"
+		       source="Click a curve preview below to edit its keys in the graph.">
 			<origins>
 				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
 			</origins>
@@ -3992,6 +3993,7 @@
 			<origins>
 				<item>Source/Editor/Panels/Animation/AnimationClipPreviewPanel.cpp</item>
 				<item>Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp</item>
+				<item>Source/Editor/Panels/VFX/VFXPreviewPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdText.Spike" source="Spike">
@@ -4341,7 +4343,8 @@
 				<item>Source/Editor/Panels/VFX/VFXPreviewPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdVFX.SoloTip" source="Play only this emitter in the preview. The effect file does not change. Click again to play every emitter.">
+		<entry key="EdVFX.SoloTip"
+		       source="Play only this emitter in the preview. The effect file does not change. Click again to play every emitter.">
 			<origins>
 				<item>Source/Editor/Panels/VFX/VFXPreviewPanel.cpp</item>
 			</origins>
@@ -4351,12 +4354,14 @@
 				<item>Source/Editor/Panels/VFX/VFXPreviewPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdVFX.TargetSpawnTip" source="Place the character target in the preview scene. With an empty field the target is removed and the effect stands at the origin.">
+		<entry key="EdVFX.TargetSpawnTip"
+		       source="Place the character target in the preview scene. With an empty field the target is removed and the effect stands at the origin.">
 			<origins>
 				<item>Source/Editor/Panels/VFX/VFXPreviewPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdVFX.TargetTip" source="Prefab of an animated character. The effect rides on it at chest height while it walks a circle, so trails and afterimages show their motion.">
+		<entry key="EdVFX.TargetTip"
+		       source="Prefab of an animated character. The effect rides on it at chest height while it walks a circle, so trails and afterimages show their motion.">
 			<origins>
 				<item>Source/Editor/Panels/VFX/VFXPreviewPanel.cpp</item>
 			</origins>
@@ -5856,7 +5861,8 @@
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorContentBrowser.FindSelectedTip" source="Go to the asset of the object selected in the main scene and select it here. Selections in preview windows are not followed.">
+		<entry key="EditorContentBrowser.FindSelectedTip"
+		       source="Go to the asset of the object selected in the main scene and select it here. Selections in preview windows are not followed.">
 			<origins>
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 			</origins>
@@ -7958,7 +7964,8 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSequencer.CopyKeysTip" source="Copy the selected keys with their values, tangents and interpolation.">
+		<entry key="EditorSequencer.CopyKeysTip"
+		       source="Copy the selected keys with their values, tangents and interpolation.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
@@ -8011,7 +8018,8 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSequencer.DeleteCutTip" source="Delete the selected camera cut. The cut just before it grows to fill the gap.">
+		<entry key="EditorSequencer.DeleteCutTip"
+		       source="Delete the selected camera cut. The cut just before it grows to fill the gap.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
@@ -8135,7 +8143,8 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSequencer.PasteItemTip" source="Paste the copied item so it starts at the current frame. Spawn items cannot be pasted: each spawned object needs its own binding.">
+		<entry key="EditorSequencer.PasteItemTip"
+		       source="Paste the copied item so it starts at the current frame. Spawn items cannot be pasted: each spawned object needs its own binding.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
@@ -8145,7 +8154,8 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSequencer.PasteKeysTip" source="Paste the copied keys at the current frame, starting at the selected track. Tracks with a different channel count are skipped.">
+		<entry key="EditorSequencer.PasteKeysTip"
+		       source="Paste the copied keys at the current frame, starting at the selected track. Tracks with a different channel count are skipped.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
@@ -8288,7 +8298,8 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSequencer.SplitCutTip" source="Split the camera cut under the current frame into two shots with the same camera.">
+		<entry key="EditorSequencer.SplitCutTip"
+		       source="Split the camera cut under the current frame into two shots with the same camera.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
@@ -8315,27 +8326,32 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSequencer.TrackIssueChannelCount" source="Wrong channel count for the kind. The file will not load; delete and add the track again.">
+		<entry key="EditorSequencer.TrackIssueChannelCount"
+		       source="Wrong channel count for the kind. The file will not load; delete and add the track again.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSequencer.TrackIssueKeysOutsideTimeline" source="Some keys are outside the timeline and never play. Move them inside or widen the timeline.">
+		<entry key="EditorSequencer.TrackIssueKeysOutsideTimeline"
+		       source="Some keys are outside the timeline and never play. Move them inside or widen the timeline.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSequencer.TrackIssueMissingBinding" source="The track's binding is not in this sequence. The file will not load; delete the track.">
+		<entry key="EditorSequencer.TrackIssueMissingBinding"
+		       source="The track's binding is not in this sequence. The file will not load; delete the track.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSequencer.TrackIssueMissingPropertyPath" source="No target path. Playback drives nothing; enter the property or rig slot.">
+		<entry key="EditorSequencer.TrackIssueMissingPropertyPath"
+		       source="No target path. Playback drives nothing; enter the property or rig slot.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSequencer.TrackIssueUnknownKind" source="Unknown track kind. The file will not load; delete the track.">
+		<entry key="EditorSequencer.TrackIssueUnknownKind"
+		       source="Unknown track kind. The file will not load; delete the track.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
@@ -8360,7 +8376,8 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSequencer.ViewScrollTip" source="Scroll the zoomed view. Shift+wheel over the key strips scrolls too.">
+		<entry key="EditorSequencer.ViewScrollTip"
+		       source="Scroll the zoomed view. Shift+wheel over the key strips scrolls too.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
@@ -8380,7 +8397,8 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSequencer.ZoomInTip" source="Show fewer frames around the current frame. Ctrl+wheel over the key strips zooms at the pointer.">
+		<entry key="EditorSequencer.ZoomInTip"
+		       source="Show fewer frames around the current frame. Ctrl+wheel over the key strips zooms at the pointer.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>

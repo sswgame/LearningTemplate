@@ -457,3 +457,39 @@ SW_TEST_CASE( ZoneTest, ScreenReactionFadesWithTag )
         pSystem->runFramePass( fixture._manager, step );
     SW_EXPECT_NEAR( 0.0f, pScreen->getWeight(), 1.0e-6f );
 }
+
+// 인스펙터의 매개변수 덮어쓰기 · 되돌리기 — 물려받은 값을 고치면 합치기 항목이 생기고, 그 매개변수를 되돌려 항목이 비면 항목째 사라진다(빈 "바꿈" 줄을 남기지 않는다).
+SW_TEST_CASE( ZoneOverrideTest, ParamOverrideAndRevertLeaveNoEmptyEntry )
+{
+    sw::vector<sw::ZoneModuleDef> listOverride;
+    const sw::hashed_string       kModule{ "Burn" };
+    const sw::hashed_string       kDamage{ "damage" };
+    SW_REQUIRE_TRUE( sw::ZoneModuleDef::setOverrideParam( listOverride, kModule, kDamage, "12" ) );
+    SW_REQUIRE_EQUAL( size_t( 1 ), listOverride.size() );
+    SW_EXPECT_TRUE( listOverride[0]._op == sw::ZoneOverrideOp::Merge );
+    SW_REQUIRE_NOT_NULL( listOverride[0].findParam( kDamage ) );
+    SW_EXPECT_EQUAL( sw::string( "12" ), listOverride[0].findParam( kDamage )->_value );
+
+    SW_REQUIRE_TRUE( sw::ZoneModuleDef::setOverrideParam( listOverride, kModule, kDamage, "20 * immersion" ) ); // 같은 매개변수는 고친다
+    SW_EXPECT_EQUAL( size_t( 1 ), listOverride[0]._listParam.size() );
+
+    SW_EXPECT_TRUE( sw::ZoneModuleDef::revertOverrideParam( listOverride, kModule, kDamage ) );
+    SW_EXPECT_TRUE( listOverride.empty() );
+    SW_EXPECT_FALSE( sw::ZoneModuleDef::revertOverrideParam( listOverride, kModule, kDamage ) ); // 지울 것이 없다
+}
+
+// 매개변수를 되돌려도 다른 칸(조건)을 적은 항목은 남고, 통째로 바꾸기 항목에는 매개변수 하나를 얹지 않는다.
+SW_TEST_CASE( ZoneOverrideTest, RevertKeepsOtherFieldsAndSkipsReplace )
+{
+    sw::vector<sw::ZoneModuleDef> listOverride;
+    const sw::hashed_string       kModule{ "Sink" };
+    SW_REQUIRE_TRUE( sw::ZoneModuleDef::setOverrideParam( listOverride, kModule, sw::hashed_string( "speed" ), "0.5" ) );
+    listOverride[0]._condition = "timeInside > 2";
+    SW_EXPECT_TRUE( sw::ZoneModuleDef::revertOverrideParam( listOverride, kModule, sw::hashed_string( "speed" ) ) );
+    SW_REQUIRE_EQUAL( size_t( 1 ), listOverride.size() ); // 조건이 남아 항목은 산다
+
+    listOverride[0]._op = sw::ZoneOverrideOp::Replace;
+    SW_EXPECT_FALSE( sw::ZoneModuleDef::setOverrideParam( listOverride, kModule, sw::hashed_string( "speed" ), "1" ) );
+    SW_EXPECT_TRUE( sw::ZoneModuleDef::revertOverrideModule( listOverride, kModule ) );
+    SW_EXPECT_TRUE( listOverride.empty() );
+}

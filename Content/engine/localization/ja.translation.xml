@@ -165,42 +165,50 @@
 		<entry key="EdPlugin.ASceneSCharacterAppearanceComponentNamesThis"
 		       text="シーンのキャラクター外見コンポーネントがこの id を指します。"
 		       sourceHash="5163a04480efea53" />
-		<entry key="EdPlugin.ActionTagTest" text="タグのテスト:" />
+		<entry key="EdPlugin.ActionTagTest" text="タグのテスト:" sourceHash="114e1a832281c618" />
 		<entry key="EdPlugin.AddBoneTurn" text="ボーン回転を追加" sourceHash="9f9084fadd906ced" />
 		<entry key="EdPlugin.AddChain" text="チェーンを追加" sourceHash="057853bcd1500705" />
 		<entry key="EdPlugin.AddNode" text="ノードを追加" sourceHash="e63c78875f5b2178" />
 		<entry key="EdPlugin.AddNotifyAtT" text="t に通知を追加" sourceHash="d03b0ab100cbc98e" />
 		<entry key="EdPlugin.AddPair" text="ペアを追加" sourceHash="93345f519ff98430" />
-		<entry key="EdPlugin.AddSkinLayer" text="レイヤーを追加" />
+		<entry key="EdPlugin.AddSkinLayer" text="レイヤーを追加" sourceHash="b546e48af5e5c359" />
 		<entry key="EdPlugin.AddSlot" text="スロットを追加" sourceHash="02c64e6a6306c0b0" />
 		<entry key="EdPlugin.Appearance" text="外見" sourceHash="f0e261e04eda82ff" />
 		<entry key="EdPlugin.ApplySanction" text="制裁を適用" sourceHash="9f0c979ae0d9d618" />
 		<entry key="EdPlugin.AutoLayout" text="自動レイアウト" sourceHash="4f4251e697a0d1dc" />
-		<entry key="EdPlugin.BodyChannelMapped" text="マップ済み" />
-		<entry key="EdPlugin.BodyChannelMissing" text="マッピングなし" />
-		<entry key="EdPlugin.BodyChannelUnsupported" text="非対応" />
-		<entry key="EdPlugin.BodyChannels" text="ボディチャンネル" />
-		<entry key="EdPlugin.BodyChannelsEmpty" text="ボディチャンネルがありません。スライダー・ボディプロファイル・装備が設定します。" />
-		<entry key="EdPlugin.BodyDataRedo" text="ボディ編集をやり直す" />
-		<entry key="EdPlugin.BodyDataSave" text="ボディデータを保存" />
-		<entry key="EdPlugin.BodyDataUndo" text="ボディ編集を元に戻す" />
-		<entry key="EdPlugin.BodyDataUnsaved" text="ボディデータに未保存の編集があります" />
-		<entry key="EdPlugin.BodyDynamics" text="ボディダイナミクスのプレビュー" />
-		<entry key="EdPlugin.BodyDynamicsNoProfile" text="プレビューのボディにボディプロファイルがありません。bodyProfile のあるプリセットを選んでください。" />
-		<entry key="EdPlugin.BodySlotVisibility" text="スロットの表示" />
-		<entry key="EdPlugin.BodyTab" text="ボディ" />
-		<entry key="EdPlugin.ChannelMap" text="軸を追加" />
-		<entry key="EdPlugin.ChannelUnsupported" text="非対応" />
+		<entry key="EdPlugin.BodyChannelMapped" text="マップ済み" sourceHash="2cdab23ce325f812" />
+		<entry key="EdPlugin.BodyChannelMissing" text="マッピングなし" sourceHash="aaefc6231966ac60" />
+		<entry key="EdPlugin.BodyChannelUnsupported" text="非対応" sourceHash="64eda1185891f750" />
+		<entry key="EdPlugin.BodyChannels" text="ボディチャンネル" sourceHash="7329a594bdde30c7" />
+		<entry key="EdPlugin.BodyChannelsEmpty"
+		       text="ボディチャンネルがありません。スライダー・ボディプロファイル・装備が設定します。"
+		       sourceHash="7dd37a8fd548b4d1" />
+		<entry key="EdPlugin.BodyDataRedo" text="ボディ編集をやり直す" sourceHash="984528c8e15932ed" />
+		<entry key="EdPlugin.BodyDataSave" text="ボディデータを保存" sourceHash="1a83df7467a459f4" />
+		<entry key="EdPlugin.BodyDataUndo" text="ボディ編集を元に戻す" sourceHash="7d89dc2aec85ac3b" />
+		<entry key="EdPlugin.BodyDataUnsaved"
+		       text="ボディデータに未保存の編集があります"
+		       sourceHash="ad37f816f371f7e8" />
+		<entry key="EdPlugin.BodyDynamics"
+		       text="ボディダイナミクスのプレビュー"
+		       sourceHash="3169d3c412ac2c39" />
+		<entry key="EdPlugin.BodyDynamicsNoProfile"
+		       text="プレビューのボディにボディプロファイルがありません。bodyProfile のあるプリセットを選んでください。"
+		       sourceHash="d3d1c1d74795cc76" />
+		<entry key="EdPlugin.BodySlotVisibility" text="スロットの表示" sourceHash="d898acb1cad85187" />
+		<entry key="EdPlugin.BodyTab" text="ボディ" sourceHash="f7dbe8a7c839a675" />
+		<entry key="EdPlugin.ChannelMap" text="軸を追加" sourceHash="1e187919b52639f1" />
+		<entry key="EdPlugin.ChannelUnsupported" text="非対応" sourceHash="0e7c76ab41da08b0" />
 		<entry key="EdPlugin.Check" text="チェック" sourceHash="42cbd8dca939a9c7" />
-		<entry key="EdPlugin.ClearSmears" text="にじみを消す" />
+		<entry key="EdPlugin.ClearSmears" text="にじみを消す" sourceHash="ffe87947b7ce6927" />
 		<entry key="EdPlugin.ClearTarget" text="ターゲットを解除" sourceHash="d18a85c948654d57" />
 		<entry key="EdPlugin.ClickANodeToEditIt" text="ノードをクリックして編集" sourceHash="3300dd9449098b38" />
 		<entry key="EdPlugin.ClosedReports" text="閉じた通報" sourceHash="3c5905586fa5e736" />
-		<entry key="EdPlugin.ColumnAlias" text="エイリアス" />
-		<entry key="EdPlugin.ColumnDyeChannels" text="染色チャンネル" />
-		<entry key="EdPlugin.ColumnDyeable" text="染色可" />
-		<entry key="EdPlugin.ColumnGroups" text="グループ" />
-		<entry key="EdPlugin.ColumnSection" text="セクション" />
+		<entry key="EdPlugin.ColumnAlias" text="エイリアス" sourceHash="123effcb9f1a2c17" />
+		<entry key="EdPlugin.ColumnDyeChannels" text="染色チャンネル" sourceHash="87e693298327f96b" />
+		<entry key="EdPlugin.ColumnDyeable" text="染色可" sourceHash="d81c9173bb716ee1" />
+		<entry key="EdPlugin.ColumnGroups" text="グループ" sourceHash="9f26843287bb592d" />
+		<entry key="EdPlugin.ColumnSection" text="セクション" sourceHash="cc1db59d292cbc4c" />
 		<entry key="EdPlugin.Connect" text="接続" sourceHash="7a4f059aaa029719" />
 		<entry key="EdPlugin.CustomizationValues" text="カスタマイズ値" sourceHash="fb5d3ccc0d692148" />
 		<entry key="EdPlugin.CustomizeReleaseASliderToRefit"
@@ -215,34 +223,36 @@
 		<entry key="EdPlugin.Dismiss" text="閉じる" sourceHash="12d6dde9b30c3093" />
 		<entry key="EdPlugin.Down" text="下" sourceHash="032c13736048bf35" />
 		<entry key="EdPlugin.Duplicate" text="複製" sourceHash="fac15b89e0668996" />
-		<entry key="EdPlugin.DyeSections" text="染色セクション" />
-		<entry key="EdPlugin.DyeSectionsEmpty" text="メッシュセクションがありません。アイテム外観にエイリアス付きでセクションを記述してください。" />
+		<entry key="EdPlugin.DyeSections" text="染色セクション" sourceHash="d764e534223785af" />
+		<entry key="EdPlugin.DyeSectionsEmpty"
+		       text="メッシュセクションがありません。アイテム外観にエイリアス付きでセクションを記述してください。"
+		       sourceHash="fb04825228d546fe" />
 		<entry key="EdPlugin.Edit" text="編集" sourceHash="64ef2a6c2dd1d3d1" />
 		<entry key="EdPlugin.EndMaintenance" text="メンテナンス終了" sourceHash="7d5699fb9376bca1" />
 		<entry key="EdPlugin.ExportDataPreset" text="データプリセットを書き出す" sourceHash="64b8de7de2582e1c" />
-		<entry key="EdPlugin.EyeLight" text="目に届く光" />
+		<entry key="EdPlugin.EyeLight" text="目に届く光" sourceHash="5290a415808505be" />
 		<entry key="EdPlugin.FitCheckViewOnly" text="フィットチェック(表示のみ)" sourceHash="7b272a466c1e8140" />
-		<entry key="EdPlugin.FluidAddPoint" text="点を追加" />
-		<entry key="EdPlugin.FluidPaths" text="体液の経路" />
-		<entry key="EdPlugin.FluidRemovePoint" text="点を削除" />
-		<entry key="EdPlugin.FluidWetness" text="涙・唾液" />
-		<entry key="EdPlugin.FootLift" text="足の持ち上げ(m)" />
+		<entry key="EdPlugin.FluidAddPoint" text="点を追加" sourceHash="bd0d53e79eb92a92" />
+		<entry key="EdPlugin.FluidPaths" text="体液の経路" sourceHash="9c59b497c702ff93" />
+		<entry key="EdPlugin.FluidRemovePoint" text="点を削除" sourceHash="f48356f4d161499f" />
+		<entry key="EdPlugin.FluidWetness" text="涙・唾液" sourceHash="183947aee59fc5ab" />
+		<entry key="EdPlugin.FootLift" text="足の持ち上げ(m)" sourceHash="ada836515dd9f6b0" />
 		<entry key="EdPlugin.Grant" text="付与" sourceHash="ef16778fe7074a8d" />
-		<entry key="EdPlugin.HighlightDrive" text="ハイライトするドライブ" />
-		<entry key="EdPlugin.HighlightNone" text="(なし)" />
+		<entry key="EdPlugin.HighlightDrive" text="ハイライトするドライブ" sourceHash="ff3f63497344e3d7" />
+		<entry key="EdPlugin.HighlightNone" text="(なし)" sourceHash="8c36545f724b9460" />
 		<entry key="EdPlugin.IKGoal" text="IK ゴール" sourceHash="1d84f0c6c37ff4e8" />
 		<entry key="EdPlugin.Invert" text="反転" sourceHash="93b38b71b79d98c1" />
-		<entry key="EdPlugin.JiggleDisplacement" text="揺れ(m)" />
-		<entry key="EdPlugin.JiggleGroups" text="揺れ" />
-		<entry key="EdPlugin.LayerMirror" text="左右対称" />
-		<entry key="EdPlugin.LayerOffset" text="位置" />
-		<entry key="EdPlugin.LayerOffsetTooltip" text="レイヤー中心の肌UV" />
-		<entry key="EdPlugin.LayerOpacity" text="不透明度" />
-		<entry key="EdPlugin.LayerOpacityTooltip" text="レイヤーが肌を覆う強さ" />
-		<entry key="EdPlugin.LayerRotation" text="回転" />
-		<entry key="EdPlugin.LayerRotationTooltip" text="レイヤーの回転(度)" />
-		<entry key="EdPlugin.LayerScale" text="サイズ" />
-		<entry key="EdPlugin.LayerScaleTooltip" text="レイヤーが覆う肌UVのサイズ" />
+		<entry key="EdPlugin.JiggleDisplacement" text="揺れ(m)" sourceHash="971a1a1f6fa2b62b" />
+		<entry key="EdPlugin.JiggleGroups" text="揺れ" sourceHash="b36c723d74bc6b8d" />
+		<entry key="EdPlugin.LayerMirror" text="左右対称" sourceHash="1e5ff0f50c741122" />
+		<entry key="EdPlugin.LayerOffset" text="位置" sourceHash="f0257bb5b7130aaa" />
+		<entry key="EdPlugin.LayerOffsetTooltip" text="レイヤー中心の肌UV" sourceHash="710f5d2585243409" />
+		<entry key="EdPlugin.LayerOpacity" text="不透明度" sourceHash="ba64d8954d027206" />
+		<entry key="EdPlugin.LayerOpacityTooltip" text="レイヤーが肌を覆う強さ" sourceHash="eb5b4aaa8a250c39" />
+		<entry key="EdPlugin.LayerRotation" text="回転" sourceHash="cde2e53f46beac7f" />
+		<entry key="EdPlugin.LayerRotationTooltip" text="レイヤーの回転(度)" sourceHash="d6e16a6a13328f94" />
+		<entry key="EdPlugin.LayerScale" text="サイズ" sourceHash="2706a162264c46f1" />
+		<entry key="EdPlugin.LayerScaleTooltip" text="レイヤーが覆う肌UVのサイズ" sourceHash="6b3806797b35e05b" />
 		<entry key="EdPlugin.LiftSanction" text="制裁を解除" sourceHash="81fdfffbe8a3f431" />
 		<entry key="EdPlugin.ListAudit" text="監査ログ一覧" sourceHash="961acb5f276c143a" />
 		<entry key="EdPlugin.ListLiveEvents" text="ライブイベント一覧" sourceHash="418530c2b0d3dec6" />
@@ -270,11 +280,10 @@
 		<entry key="EdPlugin.MapSameNames" text="同名同士をつなぐ" sourceHash="18af1bfc89304055" />
 		<entry key="EdPlugin.Mirror" text="ミラー" sourceHash="1e5ff0f50c741122" />
 		<entry key="EdPlugin.MirrorBone" text="ボーンをミラー" sourceHash="76a77b2d4eb713d0" />
-		<entry key="EdPlugin.MoveDown" text="下へ" />
-		<entry key="EdPlugin.MoveUp" text="上へ" />
+		<entry key="EdPlugin.MoveDown" text="下へ" sourceHash="032c13736048bf35" />
+		<entry key="EdPlugin.MoveUp" text="上へ" sourceHash="09313a07b5c3ab60" />
 		<entry key="EdPlugin.Name" text="名前" sourceHash="ef49aec68fd1dc66" />
 		<entry key="EdPlugin.New" text="新規" sourceHash="3741f519c32ac391" />
-		<entry key="EdPlugin.No" text="いいえ" />
 		<entry key="EdPlugin.NoCustomizationSchemaForThisSelectionLoadThe"
 		       text="この選択にはカスタマイズスキーマがありません(外見データを読み込み、スキーマのある基準プリセットを選んでください)。"
 		       sourceHash="a15d48c44f912810" />
@@ -308,16 +317,18 @@
 		<entry key="EdPlugin.PickABasePresetToSeeWhichRules"
 		       text="基準プリセットを選ぶと、どのルールが何を隠した・変えたかが見えます。"
 		       sourceHash="b8d45b1a743fb251" />
-		<entry key="EdPlugin.PickActiveHint" text="ビューポートでボディをクリックしてください(Esc で取り消し)" />
-		<entry key="EdPlugin.PickCancel" text="選択をやめる" />
-		<entry key="EdPlugin.PickPlaceLayer" text="プレビューで配置" />
-		<entry key="EdPlugin.PickSection" text="プレビューで区間を選ぶ" />
+		<entry key="EdPlugin.PickActiveHint"
+		       text="ビューポートでボディをクリックしてください(Esc で取り消し)"
+		       sourceHash="1a30265440bdba53" />
+		<entry key="EdPlugin.PickCancel" text="選択をやめる" sourceHash="ea93412d8284f2ae" />
+		<entry key="EdPlugin.PickPlaceLayer" text="プレビューで配置" sourceHash="05eac8bfa956f1ab" />
+		<entry key="EdPlugin.PickSection" text="プレビューで区間を選ぶ" sourceHash="a88a406ac7c8db0e" />
 		<entry key="EdPlugin.PostNotice" text="お知らせを掲示" sourceHash="37e6931da5f87431" />
 		<entry key="EdPlugin.PresetsUserData" text="プリセット(ユーザーデータ)" sourceHash="5f4339cfe94334b7" />
 		<entry key="EdPlugin.Preview" text="プレビュー" sourceHash="417b90913e05bc17" />
 		<entry key="EdPlugin.PreviewConstraintRig" text="拘束リグをプレビュー" sourceHash="ca9d7f72602ecd10" />
-		<entry key="EdPlugin.PreviewHit" text="被弾" />
-		<entry key="EdPlugin.PupilSize" text="瞳孔サイズ" />
+		<entry key="EdPlugin.PreviewHit" text="被弾" sourceHash="497c4819cdbf8d0a" />
+		<entry key="EdPlugin.PupilSize" text="瞳孔サイズ" sourceHash="91a6a17a04158724" />
 		<entry key="EdPlugin.PutLiveEvent" text="ライブイベントを登録" sourceHash="9a54ec5c13858e78" />
 		<entry key="EdPlugin.Redo" text="やり直し" sourceHash="7417792bbe720149" />
 		<entry key="EdPlugin.RedoAppearance" text="外見をやり直し" sourceHash="90c27634b30aba49" />
@@ -333,7 +344,7 @@
 		<entry key="EdPlugin.RemoveBrokenWires" text="切れた配線を削除" sourceHash="56ba420ceb30c42c" />
 		<entry key="EdPlugin.RemoveLiveEvent" text="ライブイベントを削除" sourceHash="286ec822b6f1b615" />
 		<entry key="EdPlugin.RemoveNotice" text="お知らせを削除" sourceHash="9d6cadb063f5b14f" />
-		<entry key="EdPlugin.RemoveSkinLayer" text="削除" />
+		<entry key="EdPlugin.RemoveSkinLayer" text="削除" sourceHash="ea4f08110bb8f15d" />
 		<entry key="EdPlugin.Rename" text="名前を変更" sourceHash="60320a18282b2b33" />
 		<entry key="EdPlugin.ResetBone" text="ボーンをリセット" sourceHash="559f9c3dcb23c44e" />
 		<entry key="EdPlugin.Resolve" text="処理" sourceHash="4de430b40c94e903" />
@@ -360,13 +371,15 @@
 		       sourceHash="69fb10c2693ccadf" />
 		<entry key="EdPlugin.SharedNotifies" text="共有通知" sourceHash="d954714e8a7eefe9" />
 		<entry key="EdPlugin.Skeleton" text="スケルトン" sourceHash="73c6ad85b7235b4e" />
-		<entry key="EdPlugin.SkinLayers" text="スキンレイヤー" />
-		<entry key="EdPlugin.SkinLayersEmpty" text="スキンレイヤーがありません。上のリストからメイクやタトゥーを追加してください。" />
+		<entry key="EdPlugin.SkinLayers" text="スキンレイヤー" sourceHash="ab6c6ecbcb15a7ea" />
+		<entry key="EdPlugin.SkinLayersEmpty"
+		       text="スキンレイヤーがありません。上のリストからメイクやタトゥーを追加してください。"
+		       sourceHash="381d0cf2f415161e" />
 		<entry key="EdPlugin.SlidersColoursAndChoicesOfTheSchemaAre"
 		       text="スキーマのスライダー・色・選択はプレビュータブにあります(スライダーを離すと体が更新されます)。"
 		       sourceHash="58ea5f3287f882b9" />
 		<entry key="EdPlugin.Slots" text="スロット" sourceHash="f96b15cd3921d4a6" />
-		<entry key="EdPlugin.SmearDilution" text="メイクのにじみ" />
+		<entry key="EdPlugin.SmearDilution" text="メイクのにじみ" sourceHash="10eccc5d89713996" />
 		<entry key="EdPlugin.Sockets" text="ソケット" sourceHash="295e56d2a3af242d" />
 		<entry key="EdPlugin.StartInProcess" text="インプロセスで開始" sourceHash="a2fef448b6708fdf" />
 		<entry key="EdPlugin.StartMaintenance" text="メンテナンス開始" sourceHash="2e417dd12aa53688" />
@@ -389,9 +402,8 @@
 		<entry key="EdPlugin.WhyDoesItLookLikeThisRules"
 		       text="なぜこう見えるか(ルール)"
 		       sourceHash="aa54935a9461505e" />
-		<entry key="EdPlugin.WrinkleIntensity" text="しわの強さ" />
-		<entry key="EdPlugin.Wrinkles" text="しわ" />
-		<entry key="EdPlugin.Yes" text="はい" />
+		<entry key="EdPlugin.WrinkleIntensity" text="しわの強さ" sourceHash="1b33b65bfb5319d6" />
+		<entry key="EdPlugin.Wrinkles" text="しわ" sourceHash="95d81f16550e1cd8" />
 		<entry key="EdPluginButton.Reload" text="再読み込み" sourceHash="d5b6130b4937488c" />
 		<entry key="EdPluginField.Amount" text="量" sourceHash="ba98a7152d80b949" />
 		<entry key="EdPluginField.Anchor" text="アンカー" sourceHash="beff9ac02dc2c474" />
@@ -615,7 +627,9 @@
 		<entry key="EdSchedule.SystemIndex" text="スケジュールシステム" sourceHash="22b2a2f792a7281d" />
 		<entry key="EdSchedule.WhyNow" text="今この行動をする理由" sourceHash="998a39497efff850" />
 		<entry key="EdSection.ZoneModules" text="ゾーンモジュール" sourceHash="643c9a42b27e108a" />
+		<entry key="EdUndo.ZoneOverrideParam" text="ゾーンパラメーターを上書き" sourceHash="27a7315229ee3fbe" />
 		<entry key="EdUndo.ZoneRevertModule" text="ゾーンモジュールを元に戻す" sourceHash="bdcc597ed31c7231" />
+		<entry key="EdUndo.ZoneRevertParam" text="ゾーンパラメーターを元に戻す" sourceHash="ee424136ab42d00c" />
 		<entry key="EditorCharacterEditor.AddSocketButton" text="追加" sourceHash="f9aee319a006c9b4" />
 		<entry key="EditorCharacterEditor.NewSocketHint" text="新しいソケット名" sourceHash="d60dbc5a471e4bc5" />
 		<entry key="EditorCharacterEditor.SocketNoSelection"
@@ -630,6 +644,9 @@
 		<entry key="EditorTip.ZoneRevert"
 		       text="この配置の上書きを削除してプリセットを再び使います。"
 		       sourceHash="53a9278b632e3703" />
+		<entry key="EditorTip.ZoneRevertParam"
+		       text="このパラメーターにプリセットの値を再び使います。"
+		       sourceHash="2216bc5d4a3af475" />
 		<entry key="Keep" text="維持" sourceHash="d60a7dde73859828" />
 		<entry key="Keep these display settings?"
 		       text="この表示設定を維持しますか?"
