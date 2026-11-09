@@ -46,6 +46,7 @@
         "Source/Editor/Panels/Console/ConsolePanel",
         "Source/Editor/Panels/DataTable/DataTablePanel",
         "Source/Editor/Panels/Dialogue/DialogueGraphPanel",
+        "Source/Editor/Panels/Fog/VolumetricFogPanel",
         "Source/Editor/Panels/InputMap/InputMapPanel",
         "Source/Editor/Panels/InputMap/InputMapWatches",
         "Source/Editor/Panels/Inspector/CameraComponentInspector",
