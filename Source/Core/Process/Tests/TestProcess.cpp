@@ -193,7 +193,7 @@ SW_TEST_CASE( ProcessTest, IsRunningTurnsFalseWithoutEatingTheExitCode )
  * @details 다른 스레드가 거의 동시에 띄운 자식의 파이프(여기서는 테스트가 만든 상속 가능한 파이프로 흉내 낸다)를 새 자식이 물려받으면,
  *          그 파이프의 읽기는 **새 자식이 끝날 때까지** EOF 를 못 받는다. Windows 에서 `bInheritHandles = TRUE` 만 주면 상속
  *          가능한 핸들이 전부 넘어가고, POSIX 에서는 CLOEXEC 없는 서술자가 exec 를 넘어간다. 그래서 여기서는 오래 사는 자식을 띄운 뒤
- *          흉내 낸 파이프의 쓰기 끝을 닫고 읽는다 — 바로 EOF 여야 한다(물려받았다면 자식이 끝나는 3 초 뒤에야 온다).
+ *          흉내 낸 파이프의 쓰기 끝을 닫고 읽는다 — 바로 EOF 여야 한다(물려받았다면 자식이 끝나야 온다 — 판정은 읽기가 돌아온 순간 자식이 살아 있는가).
  */
 SW_TEST_CASE( ProcessTest, ChildInheritsOnlyItsOwnPipe )
 {
@@ -204,11 +204,11 @@ SW_TEST_CASE( ProcessTest, ChildInheritsOnlyItsOwnPipe )
     HANDLE hForeignRead        = nullptr;
     HANDLE hForeignWrite       = nullptr;
     SW_REQUIRE_TRUE( CreatePipe( &hForeignRead, &hForeignWrite, &inheritable, 0 ) != FALSE );
-    const sw::ProcessCommand longCommand = sw::ProcessCommand::fromSearchPath( "ping.exe", { "127.0.0.1", "-n", "4" } );
+    const sw::ProcessCommand longCommand = sw::ProcessCommand::fromSearchPath( "ping.exe", { "127.0.0.1", "-n", "30" } ); // 테스트가 끝낼 때 죽인다 — 바쁜 기계에서도 읽기 전에 끝나지 않게 길게
 #elif defined( SW_PLATFORM_POSIX )
     int32 arrForeignFd[2] = { -1, -1 };
     SW_REQUIRE_TRUE( pipe( arrForeignFd ) == 0 );
-    const sw::ProcessCommand longCommand = sw::ProcessCommand::fromSearchPath( "sleep", { "3" } );
+    const sw::ProcessCommand longCommand = sw::ProcessCommand::fromSearchPath( "sleep", { "30" } );
 #else
     #error "Unsupported platform"
 #endif
@@ -217,7 +217,7 @@ SW_TEST_CASE( ProcessTest, ChildInheritsOnlyItsOwnPipe )
     SW_REQUIRE_TRUE( child.launch( longCommand ) );
 
     // 흉내 낸 "남의 파이프" 의 쓰기 끝을 닫고 읽는다. 아무도 물려받지 않았다면 바로 끝(EOF)이다.
-    const sw::Stopwatch stopwatch;
+    // 판정은 시간이 아니라 사건이다: 물려받았다면 읽기는 자식이 끝나야 돌아오므로, 읽기가 돌아온 순간 자식은 이미 끝나 있다.
 #if defined( SW_PLATFORM_WINDOWS )
     CloseHandle( hForeignWrite );
     utf8       byte      = 0;
@@ -234,47 +234,51 @@ SW_TEST_CASE( ProcessTest, ChildInheritsOnlyItsOwnPipe )
 #else
     #error "Unsupported platform"
 #endif
-    const int64 elapsedMilli = stopwatch.getElapsedMilliseconds();
+    const bool bChildStillRunning = child.isRunning();
 
     child.terminate( 1 );
     child.waitForExit();
 
-    SW_EXPECT_TRUE_MSG( elapsedMilli < 1500, "새 자식이 남의 파이프를 물려받았다 — 그 파이프의 읽기가 자식이 끝날 때까지 막혔다" );
+    SW_EXPECT_TRUE_MSG( bChildStillRunning, "새 자식이 남의 파이프를 물려받았다 — 그 파이프의 읽기가 자식이 끝날 때까지 막혔다" );
 }
 
 /**
  * @brief 분리 실행은 기다리지 않고 돌아오고, 명령은 실제로 돈다
  * @details "탐색기에서 보기" 같은 자리 — 사용자가 닫을 때까지 사는 프로그램을 띄운다. `execute` 로 띄우면 부른 스레드(에디터 UI)가
- *          그 프로그램이 출력 파이프를 놓을 때까지 멈춘다. 여기서는 1 초쯤 걸리는 명령을 띄워 **곧바로** 돌아오는지, 그리고 명령이
- *          끝에 남기는 표식으로 실제로 돌았는지를 본다.
+ *          그 프로그램이 출력 파이프를 놓을 때까지 멈춘다. 판정은 시간이 아니라 사건이다: 자식은 "놓아 주기" 파일을 기다렸다가 표식에 done 을
+ *          쓰고, 그 파일은 `launchDetached` 가 **돌아온 뒤에** 이 케이스가 만든다. 분리 실행이 자식을 기다렸다면 놓아 주기가 영영 오지 않아
+ *          자식은 시한 뒤 timeout 을 쓴다. 예전 판정(돌아오기까지 700 ms 미만)은 기계가 바쁘면 2 초가 걸려 졌다(묶음 검증 2026-11-10).
  */
 SW_TEST_CASE( ProcessTest, DetachedLaunchReturnsWithoutWaiting )
 {
-    const sw::string markerPath = sw::test::makeScratchPath( "detached_marker.txt" );
+    const sw::string markerPath  = sw::test::makeScratchPath( "detached_marker.txt" );
+    const sw::string releasePath = sw::test::makeScratchPath( "detached_release.txt" );
     // 셸 줄에 경로를 넣지 않는다 — 작업 폴더를 표식의 폴더로 두고 파일 이름만 쓴다(셸 인용을 이 테스트가 떠안지 않게).
     sw::ProcessOptions options;
     options._workingDirectory = sw::FileUtil::getDirectoryPart( markerPath );
+    // 놓아 주기를 1 초 간격으로 10 번 본다(케이스 시한 30 초 안) — 그 안에 오지 않으면 timeout(분리 실행이 기다렸다는 뜻).
 #if defined( SW_PLATFORM_WINDOWS )
-    const sw::ProcessCommand command = sw::ProcessCommand::fromSearchPath( "cmd.exe", { "/c", "ping.exe 127.0.0.1 -n 2 > nul & echo done> detached_marker.txt" } );
+    const sw::ProcessCommand command = sw::ProcessCommand::fromSearchPath(
+        "cmd.exe", { "/c", "(for /l %i in (1,1,10) do @(if exist detached_release.txt (echo done> detached_marker.txt& exit 0) else ping.exe 127.0.0.1 -n 2 > nul)) & echo timeout> detached_marker.txt" } );
 #elif defined( SW_PLATFORM_POSIX )
-    const sw::ProcessCommand command = sw::ProcessCommand::fromSearchPath( "sh", { "-c", "sleep 1; echo done > detached_marker.txt" } );
+    const sw::ProcessCommand command = sw::ProcessCommand::fromSearchPath(
+        "sh", { "-c", "i=0; while [ $i -lt 10 ]; do if [ -f detached_release.txt ]; then echo done > detached_marker.txt; exit 0; fi; sleep 1; i=$((i+1)); done; echo timeout > detached_marker.txt" } );
 #else
     #error "Unsupported platform"
 #endif
 
-    const sw::Stopwatch stopwatch;
     SW_REQUIRE_TRUE( sw::Process::launchDetached( command, options ) );
-    const int64 launchMilli = stopwatch.getElapsedMilliseconds();
-    SW_EXPECT_TRUE_MSG( launchMilli < 700, "분리 실행이 명령이 끝나기를 기다렸다" );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( releasePath, "go" ) ); // 돌아온 뒤에만 닿는 줄 — 기다렸다면 자식은 이미 timeout 을 썼다
 
     // 명령이 끝에 남기는 표식 — 다 쓸 때까지 기다린다(케이스 폴더는 케이스가 끝나면 지워지므로 쓰는 중이면 안 된다).
-    const bool bFinished = sw::test::waitUntil( [&markerPath]()
+    sw::string text;
+    const bool bFinished = sw::test::waitUntil( [&markerPath, &text]()
     {
-        sw::string text;
         // 표식이 생기기 전에는 읽지 않는다 — 없는 파일을 읽으면 읽는 쪽이 Error 를 남기고, 기다리는 동안 그 줄이 쌓인다.
-        return sw::FileUtil::exists( markerPath ) && sw::FileUtil::readTextFile( markerPath, text ) && text.find( "done" ) != sw::string::npos;
-    } );
-    SW_EXPECT_TRUE_MSG( bFinished, "분리 실행한 명령이 10 초 안에 표식을 남기지 않았다 — 띄우지 못했거나 돌지 않았다" );
+        return sw::FileUtil::exists( markerPath ) && sw::FileUtil::readTextFile( markerPath, text ) && text.find( '\n' ) != sw::string::npos;
+    }, 20.0 );
+    SW_EXPECT_TRUE_MSG( bFinished, "분리 실행한 명령이 표식을 남기지 않았다 — 띄우지 못했거나 돌지 않았다" );
+    SW_EXPECT_TRUE_MSG( text.find( "done" ) != sw::string::npos, "분리 실행이 명령이 끝나기를 기다렸다 — 자식이 놓아 주기를 받지 못하고 timeout 을 썼다" );
     // shortcut: 분리 실행은 기다릴 핸들이 없어 셸이 작업 폴더(케이스 폴더)를 놓기를 사건으로 볼 수 없다 — 표식 뒤의 짧은 유예로 둔다. 분리 실행이 pid 를 돌려주게 되면 그 종료를 기다린다.
     sw::ThreadUtil::sleepForMilliseconds( 200 );
 }
