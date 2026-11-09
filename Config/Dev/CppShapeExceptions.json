@@ -5,7 +5,6 @@
         "Source/Editor/Common/Asset/Model/MeshFracture.cpp|CapState": "규칙 10 전 코드 — 단면 메움 단계(묶기 · 고리 · 표시 · 다시 짓기)가 CapState 를 차례로 바꾼다. CapState 의 멤버로 옮길 때 지운다",
         "Source/Engine/Asset/Cook/PackCooker.cpp|PackCookTiming": "규칙 10 전 코드 — 파일 넣기 · 묶음 굽기가 시간 누적을 손으로 더한다. PackCookTiming::add… 멤버로 옮길 때 지운다",
         "Source/Engine/Navigation/Recast/RecastNavMesh.cpp|BuildScratch": "규칙 10 전 코드 — Recast 높이장 · 윤곽 단계가 작업 버퍼를 채운다. BuildScratch 의 멤버로 옮길 때 지운다",
-        "Source/Engine/Profiling/ProfilerTraceExport.cpp|TraceParseState": "규칙 10 전 코드 — 추적 읽기 단계(스레드 찾기 · 이벤트 읽기)가 파싱 상태를 바꾼다. TraceParseState 의 멤버로 옮길 때 지운다",
         "Source/Engine/Renderer/Cook/ShaderCookDriver.cpp|CookState": "규칙 10 전 코드 — 요청 계획 · 결과 합치기 · 목록 쓰기가 굽기 상태를 차례로 바꾼다. CookState 의 멤버로 옮길 때 지운다"
     },
     "multipleBase": {

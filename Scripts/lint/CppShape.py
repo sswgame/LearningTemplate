@@ -30,6 +30,9 @@ C++ 모양 규칙 중 컴파일러가 보지 않는 열을 본다. 규칙 문서
 10. 상태와 그것을 바꾸는 논리는 한 타입(`docs/agents/Helpers.md` — 규칙 4 의 `.cpp` 짝): `.cpp` 에 정의한 상태 타입(공개 칸, 이름이 `…Internal` 아님)의 공개 칸을
    같은 파일 `…Internal` 의 static 함수가 `const` 아닌 참조 · 포인터(`outX` 이름 말고 — 한 번 채우는 기록은 제외)로 받아 바꾸는 수가 문턱 이상이면 위반이다.
    문턱 `stateMutatorMinFunctions` 과 예외 `stateMutator`(`경로|타입` → 까닭)는 `Config/Dev/CppShapeExceptions.json`, 전체 실행은 낡은 예외도 센다.
+11. 브라우저 JS 는 C++ 안에 쓰지 않는다(`EM_JS` · `EM_ASYNC_JS` · `EM_ASM…`): 매크로 본문을 C++ 포맷터가 C++ 로 다뤄 `=>` · `!==` 를 띄우고, 브라우저 JS 가 링크 뒤
+   문법 오류로 멈췄다(2026-11-09 — IDBFS 마운트 · URL 열기). 기능 옆 `Web/*.js` Emscripten 라이브러리(addToLibrary)에 두고 C++ 는 `extern "C"` 로 선언한다
+   (Platform/Web.cmake 가 모두 링크에 넘긴다). 예외는 없다.
 
 `py -3 -m Scripts cpp-shape [--files …|--all]` 로 돌리고, 커밋 훅(`PreCommit.py`)이 staged 파일에 돌린다.
 """
@@ -550,6 +553,14 @@ def checkSharedTempInTests(code: str, relative: str) -> list[tuple[int, str]]:
 kHandDepletion = re.compile(r"\b(_\w*(?:hp|health|durability|sanity)\w*)\s*(?:-=|=\s*MathUtil::max\(\s*0(?:\.0f)?\s*,\s*[\w.\->]*\1\s*-)", re.IGNORECASE)
 
 
+kInlineBrowserJS = re.compile(r"\b(EM_JS|EM_ASYNC_JS|EM_ASM\w*|MAIN_THREAD_(?:ASYNC_)?EM_ASM\w*)\s*\(")
+
+
+def checkInlineBrowserJS(code: str) -> list[tuple[int, str]]:
+    """브라우저 JS 를 C++ 매크로 본문에 쓰지 않는다 — 포맷터가 JS 연산자를 띄운다. `Web/*.js` 라이브러리로 옮긴다(규칙 11)."""
+    return [(lineOf(code, match.start()), f"`{match.group(1)}` — 브라우저 JS 는 기능 옆 Web/*.js(addToLibrary)에 두고 C++ 는 extern \"C\" 로 선언한다") for match in kInlineBrowserJS.finditer(code)]
+
+
 def checkHandDepletion(code: str, relative: str) -> list[tuple[int, str]]:
     """게임 수치(체력 · 내구도 · 정신력)는 `DepletingValue::take` 로 깎는다 — 0 고정과 소진 판정을 손으로 적으면 곳마다 갈린다(음수 체력이 저장 검사에 걸린다)."""
     isGameCode = relative.startswith(("Source/GameFramework/", "Source/Games/")) and "/Tests/" not in relative
@@ -723,6 +734,7 @@ def inspectFile(path: Path, relative: str) -> list[str]:
     listProblem += checkIncludesInsideBraces(raw, code)
     listProblem += checkSharedTempInTests(code, relative)
     listProblem += checkHandDepletion(code, relative)
+    listProblem += checkInlineBrowserJS(code)
     listProblem += checkOnlineProtocolTable(raw, code, relative)
     listProblem += checkNetMessageTable(code, relative)
     return [f"{relative}:{line}: {message}" for line, message in sorted(set(listProblem))]

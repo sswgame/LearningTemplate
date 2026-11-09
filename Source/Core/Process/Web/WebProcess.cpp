@@ -10,13 +10,14 @@
 #include "Core/Process/Process.h"
 
 #if defined( SW_PLATFORM_WEB )
-    #include <emscripten/emscripten.h>
     #include <unistd.h>
 
-// clang-format off
-EM_JS( int, swWebOpenURL, ( const char* pURL ), { return window.open( UTF8ToString( pURL ), "_blank" ) !== null ? 1 : 0; } );
-EM_JS( char*, swWebHostName, (), { return stringToNewUTF8( typeof location !== "undefined" ? location.hostname : "" ); } );
-// clang-format on
+// 브라우저 쪽 본문은 WebProcess.js(Emscripten JS 라이브러리)다.
+extern "C"
+{
+    int   swWebOpenURL( const char* pURL );
+    char* swWebHostName();
+}
 
 namespace sw
 {
