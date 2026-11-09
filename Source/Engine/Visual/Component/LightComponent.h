@@ -69,6 +69,13 @@ namespace sw
         /** @brief 빛 세기를 설정합니다. 음수는 0 으로 자릅니다. */
         void setIntensity( float32 intensity );
 
+        /**
+         * @brief 3D 빛(방향광 · 스폿)이 나아갈 방향(부모 공간)으로 로컬 회전을 정합니다. 롤은 0 입니다.
+         * @details 3D 빛은 로컬 앞(+Z)을 비춘다 — 카메라와 같은 규약이라 회전이 곧 방향이다(유니티 `transform.forward = dir`, 언리얼 라이트의 앞 축).
+         *          예전 규약(기울어진 기본 방향에 회전을 곱함)은 피치 1.5 를 준 해가 위를 향하는 함정이었다.
+         */
+        void setLocalLightDirection( const float3& localDirection );
+
         /** @brief 이 빛의 월드 위치입니다. */
         float3 getLightPosition() const;
 

@@ -1236,6 +1236,7 @@ namespace sw
 
         // 그림자 볼륨은 씬을 덮어야 한다. 엔진 기본값은 2 유닛이라 142 유닛 격자에서는
         // 그림자가 원점 근처 몇 개에만 걸린다.
+        pLight->setLocalLightDirection( DirectionalLightComponent::kSlantedKeyDirection ); // 측정 기준 그림과 같은 방향
         pLight->setShadowExtent( halfExtent * _settings._shadowExtentRatio );
         pLight->setShadowDistance( halfExtent * _settings._shadowDistanceRatio );
         pLight->setCastShadow( true );
@@ -1289,7 +1290,8 @@ namespace sw
                 pSpot->setRadius( radius );
                 pSpot->setOuterConeAngle( _settings._spotOuterConeAngle );
                 pSpot->setInnerConeAngle( _settings._spotInnerConeAngle );
-                pSpot->setLocalPosition( position ); // 회전은 주지 않는다 — 기본 방향이 아래다
+                pSpot->setLocalPosition( position );
+                pSpot->setLocalLightDirection( float3::Down );
                 _listBenchExtra.push_back( pSpot->getHandle() );
                 continue;
             }

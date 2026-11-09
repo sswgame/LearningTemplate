@@ -92,7 +92,7 @@ namespace sw
                 DirectionalLightComponent* pLight = pSun != nullptr ? pSun->addComponent<DirectionalLightComponent>() : nullptr;
                 if ( pLight == nullptr )
                     return nullptr;
-                pLight->setLocalRotation( float3{ 0.9f, 0.8f, 0.0f } );
+                pLight->setLocalRotation( float3{ 0.356582f, -1.938715f, 0.0f } );
                 pLight->setShadowExtent( 180.0f );
                 pLight->setShadowDistance( 120.0f );
                 pLight->setShadowViewDistance( viewDistance );

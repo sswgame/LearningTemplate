@@ -91,6 +91,9 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        /** @brief 위에서 비스듬히 오는 주광의 방향입니다(고도 약 62°) — 코드가 만드는 주광(초상 스튜디오 · 스트레스 무대)이 함께 쓴다. `setLocalLightDirection` 에 넣는다. */
+        static constexpr float3 kSlantedKeyDirection{ -0.35f, -0.85f, -0.25f };
+
         /**
          * @brief 씬의 주광입니다 — 켜져 있는 첫 방향광(등록 순서). 없으면 nullptr 이고, 렌더러가 기본값으로 폴백합니다.
          * @details 카메라와 달리 캐시하지 않고 그때그때 찾습니다(빛 레지스트리만 봅니다). 비용이 빛의 수에 비례하고 씬 크기와 무관합니다.
@@ -108,7 +111,7 @@ namespace sw
         /** @brief 기본 소멸자입니다. */
         virtual ~DirectionalLightComponent() override = default;
 
-        /** @brief 빛이 나아가는 방향(정규화)입니다. 기본 방향(위에서 비스듬히)을 월드 회전으로 돌린 것입니다. */
+        /** @brief 빛이 나아가는 방향(정규화)입니다 — 로컬 앞(+Z)을 월드 회전으로 돌린 것이라 회전이 곧 방향이다(피치 = 고도, 요 = 방위). */
         float3 getLightDirection() const;
 
         /** @brief 환경광 세기입니다. */

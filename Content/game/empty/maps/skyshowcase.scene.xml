@@ -28,7 +28,7 @@
 			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
 				<_listComponent>
 					<DirectionalLightComponent _localPosition="0,0,0"
-					                           _localRotation="0.4,0.5,0"
+					                           _localRotation="0.803281,-2.084012,0"
 					                           _localScale="1,1,1"
 					                           _attachOwner="None"
 					                           _attachComponent="None"

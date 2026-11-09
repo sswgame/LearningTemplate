@@ -14,7 +14,7 @@
 		<entity id="2" name="Sun">
 			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
 				<_listComponent>
-					<DirectionalLightComponent _localPosition="0,0,0" _localRotation="0.6,0.5,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,1,1" _intensity="1.2" _ambient="0.4" _shadowExtent="8" _shadowDistance="20" _bCastShadow="true" />
+					<DirectionalLightComponent _localPosition="0,0,0" _localRotation="0.628882,-2.16998,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,1,1" _intensity="1.2" _ambient="0.4" _shadowExtent="8" _shadowDistance="20" _bCastShadow="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>

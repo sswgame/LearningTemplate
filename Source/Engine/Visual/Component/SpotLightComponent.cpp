@@ -25,8 +25,6 @@ namespace sw
             /// @brief 기본 원뿔 각도입니다. 안쪽 15도, 바깥 30도(라디안).
             static constexpr float32 kDefaultInnerCone{ 0.262f };
             static constexpr float32 kDefaultOuterCone{ 0.524f };
-            /// @brief 로컬 기본 방향입니다. 아래를 비춥니다. 월드 회전이 이것을 돌립니다.
-            static constexpr float3 kDefaultDirection{ 0.0f, -1.0f, 0.0f };
             /// @brief 원뿔 반각의 상한입니다. 90도를 넘으면 원뿔이 뒤집혀 "빛이 뒤로도 나갑니다".
             static constexpr float32 kMaxConeAngle{ 1.5533f }; // 89도
         };
@@ -81,7 +79,7 @@ namespace sw
 
     float3 SpotLightComponent::getLightDirection() const
     {
-        return computeLightDirection( SpotLightComponentInternal::kDefaultDirection );
+        return computeLightDirection( float3::Forward );
     }
 
     void SpotLightComponent::writeGPULightKindFields( GPULight& outLight ) const

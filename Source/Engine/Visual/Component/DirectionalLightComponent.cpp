@@ -25,8 +25,6 @@ namespace sw
             static constexpr float32 kDefaultAmbient{ 0.28f };
             static constexpr float32 kDefaultShadowExtent{ 2.0f / 0.9f };
             static constexpr float32 kDefaultShadowDistance{ 2.0f };
-            /// @brief 로컬 기본 빛 방향입니다(위에서 비스듬히). 월드 회전이 이것을 돌립니다.
-            static constexpr float3 kDefaultDirection{ -0.35f, -0.85f, -0.25f };
             /// @brief 깊이 바이어스(텍셀 수). 노멀 오프셋이 기울기를 맡으므로 깊이 쪽은 텍셀 하나면 된다.
             static constexpr float32 kShadowDepthBiasTexels{ 1.0f };
             /// @brief 노멀 오프셋(텍셀 수). 받는 점을 노멀 쪽으로 h 띄우면 빛 광선 위 깊이 여유가 h / sin(고도) 다 — 고도 20° 바닥에서 여드름 없이 지나는 값이다.
@@ -334,7 +332,7 @@ namespace sw
 
     float3 DirectionalLightComponent::getLightDirection() const
     {
-        return computeLightDirection( DirectionalLightComponentInternal::kDefaultDirection );
+        return computeLightDirection( float3::Forward );
     }
 
     void DirectionalLightComponent::setAmbient( float32 ambient )

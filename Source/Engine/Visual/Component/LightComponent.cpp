@@ -7,6 +7,7 @@
 #include "Engine/Visual/Component/LightComponent.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/OrientationUtil.h"
 
 #include "Engine/Graphics/Shader/Binding/GPULight.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -56,6 +57,11 @@ namespace sw
         outLight._colorIntensity = float4{ _color._x, _color._y, _color._z, _intensity };
         outLight._directionType  = float4{ 0.0f, 0.0f, 0.0f, static_cast<float32>( _lightType ) };
         writeGPULightKindFields( outLight );
+    }
+
+    void LightComponent::setLocalLightDirection( const float3& localDirection )
+    {
+        setLocalRotation( OrientationUtil::computeEulerFromForwardUp( localDirection, float3::Up ) );
     }
 
     float3 LightComponent::computeLightDirection( const float3& defaultLocalDirection ) const

@@ -164,13 +164,14 @@ namespace sw
         pCamera->lookAt( center );
         studio.setActiveGameCamera( pCamera );
 
-        // 조명: 카메라 쪽 위에서 비스듬히 오는 키 라이트 하나와 환경광이다. 스튜디오의 빛만 대상에 닿는다. 빛의 기본 방향은 정면(+Z) 위에서 오므로
+        // 조명: 카메라 쪽 위에서 비스듬히 오는 키 라이트 하나와 환경광이다. 스튜디오의 빛만 대상에 닿는다. 요 0 의 키 라이트 방향을
         // 카메라와 같은 요만큼 돌린다.
         GameObject*                pLightObject = pManager->createGameObject( hashed_string( "PortraitKeyLight" ) );
         DirectionalLightComponent* pKeyLight    = pLightObject != nullptr ? pLightObject->addComponent<DirectionalLightComponent>() : nullptr;
         if ( pKeyLight != nullptr )
         {
-            pKeyLight->setLocalRotation( float3{ 0.0f, request._yaw, 0.0f } );
+            pKeyLight->setLocalLightDirection( DirectionalLightComponent::kSlantedKeyDirection );
+            pKeyLight->setLocalRotation( pKeyLight->getLocalRotation() + float3{ 0.0f, request._yaw, 0.0f } ); // 요는 마지막에 도는 축이라 더하면 된다
             pKeyLight->setIntensity( 2.2f );
             pKeyLight->setAmbient( 0.35f );
         }

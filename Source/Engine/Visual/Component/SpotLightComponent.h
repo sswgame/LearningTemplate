@@ -48,7 +48,7 @@ namespace sw
         /** @brief 바깥 원뿔 반각을 설정합니다. */
         void setOuterConeAngle( float32 radians );
 
-        /** @brief 빛이 나아가는 방향(정규화)입니다. 기본 방향(아래)을 월드 회전으로 돌린 것입니다. */
+        /** @brief 빛이 나아가는 방향(정규화)입니다 — 로컬 앞(+Z)을 월드 회전으로 돌린 것이다(카메라와 같은 규약). */
         float3 getLightDirection() const;
 
         /** @brief 그림자를 드리우면 true 입니다. */

@@ -29,7 +29,7 @@ namespace sw::editor
      */
     struct EditorPreviewEnvironment
     {
-        float3  _lightRotation{ -0.9f, 0.6f, 0.0f }; ///< 방향광의 로컬 회전(라디안, 피치와 요와 롤)
+        float3  _lightRotation{ 0.863641f, -0.001066f, 0.0f }; ///< 방향광의 로컬 회전(라디안, 피치와 요와 롤 — 피치가 고도다)
         float3  _lightColor{ 1.0f, 0.97f, 0.92f };
         float32 _lightIntensity{ 2.0f };
         float32 _ambient{ 0.35f };

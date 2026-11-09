@@ -38,7 +38,7 @@
 					<DirectionalLightComponent _componentName="DirectionalLightComponent"
 					                           _bActive="true"
 					                           _localPosition="0,0,0"
-					                           _localRotation="0.9,0.8,0"
+					                           _localRotation="0.356582,-1.938715,0"
 					                           _localScale="1,1,1"
 					                           _attachOwner="None"
 					                           _attachOwnerID="0"
