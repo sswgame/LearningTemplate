@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/DedicatedServer/ServerServiceManager.h"
+#include "Engine/Server/ServerServiceManager.h"
 
 namespace sw
 {

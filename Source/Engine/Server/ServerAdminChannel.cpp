@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/DedicatedServer/ServerAdminChannel.h"
+#include "Engine/Server/ServerAdminChannel.h"
 
 #include "Core/Log/Logger.h"
 #include "Core/Network/NetTypes.h"
@@ -10,8 +10,8 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Config/ServerConfig.h"
-#include "Engine/DedicatedServer/ServiceHealthRegistry.h"
 #include "Engine/Observability/DebugChannel.h"
+#include "Engine/Server/ServiceHealthRegistry.h"
 
 namespace sw
 {

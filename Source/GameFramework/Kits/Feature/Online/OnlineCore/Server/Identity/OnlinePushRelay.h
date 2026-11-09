@@ -12,9 +12,9 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
+#include "Core/Registry/ServiceFactoryList.h"
 #include "Core/Serialization/BitStream.h"
 
-#include "Engine/DedicatedServer/ServiceFactoryList.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

@@ -9,9 +9,9 @@
 #include "Core/Testing/TestWait.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/DedicatedServer/OpsHTTPEndpoint.h"
-#include "Engine/DedicatedServer/ServiceHealthRegistry.h"
 #include "Engine/Observability/MetricRegistry.h"
+#include "Engine/Server/OpsHTTPEndpoint.h"
+#include "Engine/Server/ServiceHealthRegistry.h"
 
 #include <charconv>
 #include <thread>

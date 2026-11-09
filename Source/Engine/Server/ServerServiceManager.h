@@ -12,7 +12,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Time/TimePoint.h"
 
-#include "Engine/DedicatedServer/ServerServiceRegistry.h"
+#include "Engine/Server/ServerServiceRegistry.h"
 
 namespace sw
 {

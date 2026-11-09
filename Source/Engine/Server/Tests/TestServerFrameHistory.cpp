@@ -2,7 +2,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/DedicatedServer/ServerFrameHistory.h"
+#include "Engine/Server/ServerFrameHistory.h"
 
 // 서버 프레임 이력 — 용량 안에서는 순서대로, 넘치면 가장 오래된 것부터 덮고, 용량 0 은 아무것도 남기지 않으며, 덤프 본문에 머리와 칸이 든다.
 

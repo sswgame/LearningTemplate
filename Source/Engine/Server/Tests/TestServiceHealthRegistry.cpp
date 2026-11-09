@@ -3,7 +3,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/DedicatedServer/ServiceHealthRegistry.h"
+#include "Engine/Server/ServiceHealthRegistry.h"
 
 // 서버 상태 — 틱이 멈추면 살아 있지 않음, 준비됨은 필수 검사 · 비우는 중을 본다, 보고 줄.
 

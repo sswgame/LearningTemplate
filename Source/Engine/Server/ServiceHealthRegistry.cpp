@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/DedicatedServer/ServiceHealthRegistry.h"
+#include "Engine/Server/ServiceHealthRegistry.h"
 
 namespace sw
 {

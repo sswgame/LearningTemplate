@@ -21,7 +21,6 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/ServerConfig.h"
 #include "Engine/Console/DevCommandRegistry.h"
-#include "Engine/DedicatedServer/ServerServiceRegistry.h"
 #include "Engine/EngineFrameHooks.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
@@ -305,11 +304,12 @@ namespace sw
         }
         if ( bConnect == false )
         {
-            // 덮어쓰기가 없으면 전용 서버는 서버 설정의 게임 포트를 연다. 리슨 호스트(App) · 테스트는 서버 문맥이 없어 열지 않는다.
-            const ServerServiceContext* pHostContext = engine::areEngineServicesBound() ? engine::findSubsystem<ServerServiceContext>() : nullptr;
-            if ( pHostContext == nullptr || pHostContext->_pServerConfig == nullptr )
+            // 덮어쓰기가 없으면 전용 서버는 서버 설정의 게임 포트를 연다. 리슨 호스트(App) · 테스트는 서버 설정이 걸려 있지 않아 열지 않는다.
+            // 공유 형식(`ServerConfig`)만 찾는다 — 서버 서비스 문맥(`Engine/Server/`)은 클라이언트 구성에 없다.
+            const ServerConfig* pServerConfig = engine::areEngineServicesBound() ? engine::findSubsystem<const ServerConfig>() : nullptr;
+            if ( pServerConfig == nullptr )
                 return GameNetLaunch::None;
-            return makeServerParams( *pHostContext->_pServerConfig, outParams ) ? GameNetLaunch::Open : GameNetLaunch::Invalid;
+            return makeServerParams( *pServerConfig, outParams ) ? GameNetLaunch::Open : GameNetLaunch::Invalid;
         }
         // 기동 때 한 번 막고 푼다 — HTTP 클라이언트의 해석 스레드와 같은 해석기다(이름 · hosts 파일 · 점 넷 숫자).
         const bool bResolved = PlatformSocketUtil::resolveAddress( gv_netConnectAddress, kDefaultPort, outParams._serverAddress );

@@ -61,7 +61,7 @@ endforeach()
 if(NOT SW_TARGET_TYPE STREQUAL "Server")
 	sw_excludeUnbuiltSources(ENGINE_SOURCES "/Source/Engine/(Window|Input)/Headless/.*\\.(c|cpp)$")
 endif()
-# 서버 전용 소스(`Config/Server` — 서버 비밀)는 클라이언트 구성이 짓지 않는다(`SW_SERVER_ONLY_SOURCE_PATTERNS`, 헤더는 게이트 `clientbuild`).
+# 서버 전용 소스(`Server` — 운영 HTTP 끝점 · 관리 채널 · 서버 서비스 레지스트리, `Config/Server` — 서버 비밀)는 클라이언트 구성이 짓지 않는다(`SW_SERVER_ONLY_SOURCE_PATTERNS`, 헤더는 게이트 `clientbuild`).
 if(SW_TARGET_TYPE STREQUAL "Client")
 	sw_excludeUnbuiltSources(ENGINE_SOURCES ${SW_SERVER_ONLY_SOURCE_PATTERNS})
 endif()

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/DedicatedServer/ServerObservability.h"
+#include "Engine/Server/ServerObservability.h"
 
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
@@ -12,13 +12,13 @@
 #include "Core/Time/WallClock.h"
 
 #include "Engine/Config/ServerConfig.h"
-#include "Engine/DedicatedServer/OpsHTTPEndpoint.h"
-#include "Engine/DedicatedServer/ServerFrameHistory.h"
-#include "Engine/DedicatedServer/ServiceHealthRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Net/GameNetSession.h"
 #include "Engine/Observability/MetricRegistry.h"
 #include "Engine/Observability/ProcessMetrics.h"
+#include "Engine/Server/OpsHTTPEndpoint.h"
+#include "Engine/Server/ServerFrameHistory.h"
+#include "Engine/Server/ServiceHealthRegistry.h"
 
 namespace sw
 {

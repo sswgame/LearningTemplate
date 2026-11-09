@@ -21,8 +21,6 @@
 #include "Engine/Config/GameSelection.h"
 #include "Engine/Config/ServerConfig.h"
 #include "Engine/Console/DevCommandRegistry.h"
-#include "Engine/DedicatedServer/ServerServiceManager.h"
-#include "Engine/DedicatedServer/ServiceHealthRegistry.h"
 #include "Engine/Engine.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Module/HostInterfaces.h"
@@ -35,6 +33,8 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneObjectHash.h"
+#include "Engine/Server/ServerServiceManager.h"
+#include "Engine/Server/ServiceHealthRegistry.h"
 #include "Engine/Telemetry/CrashReportService.h"
 
 #include "ModuleManager/GameModuleManager.h"
@@ -245,7 +245,8 @@ namespace sw
                 _serverServiceContext._pServerConfig    = _pServerConfig;
                 _serverServiceContext._pMetricRegistry  = _observability.getMetricRegistry();
                 _serverServiceContext._pHealthRegistry  = _observability.getHealthRegistry();
-                return _launch.getHostScope().bind( &_serverServiceContext ); // 게임 · 키트(네트워크 세션)가 `engine::findSubsystem<ServerServiceContext>()` 로 찾는다
+                // 게임 쪽(네트워크 세션)에는 공유 형식인 설정만 건다 — 서버 서비스 문맥은 `Engine/Server/` 형식이라 클라이언트와 함께 짓는 코드가 알면 안 된다.
+                return _launch.getHostScope().bind( _pServerConfig ); // `engine::findSubsystem<const ServerConfig>()` 로 찾는다
             }
             case HostServiceID::Game:
             {
@@ -302,7 +303,7 @@ namespace sw
             }
             case HostServiceID::ServiceContext:
             {
-                _launch.getHostScope().unbind<ServerServiceContext>(); // 게임과 모듈이 내려간 뒤 — 레지스트리를 지우기 전
+                _launch.getHostScope().unbind<const ServerConfig>(); // 게임과 모듈이 내려간 뒤 — 레지스트리를 지우기 전
                 return;
             }
             case HostServiceID::Game:

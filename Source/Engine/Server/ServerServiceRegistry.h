@@ -15,9 +15,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Process/ShutdownSignal.h"
+#include "Core/Registry/ServiceFactoryList.h"
 #include "Core/Time/TimePoint.h"
-
-#include "Engine/DedicatedServer/ServiceFactoryList.h"
 
 namespace sw
 {
@@ -28,8 +27,8 @@ namespace sw
 
     /**
      * @brief 서버 서비스가 기동 때 받는 서버 프로세스의 문맥입니다. 포인터는 모두 빌려 쓰며 서비스보다 오래 삽니다.
-     * @details 서버 서비스가 아닌 게임과 키트 코드(네트워크 세션)는 이것을 `engine::findSubsystem<ServerServiceContext>()` 로 찾는다 — 전용 서버가 게임을 세우기 전에
-     *          호스트 범위에 빌려 걸고(`SubsystemScope::bind`) 게임이 내려간 뒤 푼다. App · 테스트에는 없어 nullptr 이다(정적 칸을 두지 않는다).
+     * @details 서버 서비스만 받는다(`IServerService::initialize`). 클라이언트와 함께 짓는 게임 코드(네트워크 세션)는 이 서버 전용 형식을 모른다 — 전용 서버가
+     *          공유 형식인 `const ServerConfig` 만 호스트 범위에 빌려 건다(`engine::findSubsystem<const ServerConfig>()`, App · 테스트에는 없어 nullptr).
      */
     struct ServerServiceContext
     {

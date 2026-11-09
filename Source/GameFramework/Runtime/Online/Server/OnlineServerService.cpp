@@ -6,7 +6,7 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/Server/ServerSecret.h"
 #include "Engine/Config/ServerConfig.h"
-#include "Engine/DedicatedServer/ServerServiceRegistry.h"
+#include "Engine/Server/ServerServiceRegistry.h"
 
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerRuntime.h"

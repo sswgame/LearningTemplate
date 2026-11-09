@@ -17,11 +17,11 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Registry/ServiceFactoryList.h"
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Time/TimePoint.h"
 
-#include "Engine/DedicatedServer/ServerServiceRegistry.h"
-#include "Engine/DedicatedServer/ServiceFactoryList.h"
+#include "Engine/Server/ServerServiceRegistry.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Online/Directory/ServerRecord.h"

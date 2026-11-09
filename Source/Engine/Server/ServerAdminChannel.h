@@ -1,5 +1,5 @@
 /**
- * @file Engine/DedicatedServer/ServerAdminChannel.h
+ * @file Engine/Server/ServerAdminChannel.h
  * @brief 전용 서버의 관리 채널(서버 운영 O4) — 루프백 · 환경 변수 토큰의 줄 명령 채널과 허용 목록(`help` · `status` · `maintenance on|off|state` · `shutdown`), 점검 모드 상태.
  * @details `ServerApp` 이 호스트 서비스 `DebugChannel` 로 세우고 내리는 협력 객체다(언리얼 전용 서버의 RCON · 관리 명령 모듈과 같은 자리). 모든 구성(Shipping 포함)이다.
  *          서버 상태(틱 · 연결 · 드레인)는 세울 때 받은 델리게이트로 묻는다 — 채널은 서버 루프를 모른다. 점검 모드는 `/readyz` 를 503 으로 바꾼다(`ServiceHealthRegistry::setDraining`).

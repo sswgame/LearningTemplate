@@ -1,14 +1,14 @@
 #include "pch.h"
 
-#include "Engine/DedicatedServer/OpsHTTPEndpoint.h"
+#include "Engine/Server/OpsHTTPEndpoint.h"
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/DedicatedServer/ServiceHealthRegistry.h"
 #include "Engine/Observability/MetricRegistry.h"
+#include "Engine/Server/ServiceHealthRegistry.h"
 
 namespace sw
 {

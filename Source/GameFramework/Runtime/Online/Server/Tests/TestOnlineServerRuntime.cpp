@@ -5,7 +5,7 @@
 #include "Core/Time/Clock.h"
 
 #include "Engine/Config/ServerConfig.h"
-#include "Engine/DedicatedServer/ServiceHealthRegistry.h"
+#include "Engine/Server/ServiceHealthRegistry.h"
 
 #include "GameFramework/Runtime/Online/Cache/EphemeralStoreRouter.h"
 #include "GameFramework/Runtime/Online/Directory/ServerRecord.h"

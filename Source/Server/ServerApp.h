@@ -27,10 +27,10 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Console/StandardInputCommands.h"
-#include "Engine/DedicatedServer/ServerAdminChannel.h"
-#include "Engine/DedicatedServer/ServerObservability.h"
-#include "Engine/DedicatedServer/ServerServiceRegistry.h"
 #include "Engine/HostServiceSet.h"
+#include "Engine/Server/ServerAdminChannel.h"
+#include "Engine/Server/ServerObservability.h"
+#include "Engine/Server/ServerServiceRegistry.h"
 
 #include "ModuleManager/Host/HostLaunch.h"
 #include "ModuleManager/Host/ServerDebugControl.h"
@@ -103,7 +103,7 @@ namespace sw
          * @brief 부팅 열입니다 — 호스트 범위 · 개발 계층 · 엔진 · 모듈 관리자 · 호스트 서비스의 수명과 순서를 듭니다(App 과 같은 것, `HostLaunch`).
          * @details 맨 앞 멤버라 맨 나중에 사라진다. 호스트 서비스의 몸통이 아래 멤버를 쓰므로 `shutdown` 이 그 멤버가 사라지기 전에 호스트 서비스를 내린다.
          *          호스트 범위에는 종료 신호 처리기도 든다 — 엔진 종료가 끝날 때까지 걸려 있어야 한다(Windows 창 닫기 처리기가 `notifyShutdownComplete` 를 기다린다).
-         *          게임이 서 있는 동안은 서버 문맥(`_serverServiceContext`)도 빌려 건다.
+         *          게임이 서 있는 동안은 서버 설정(`const ServerConfig`)도 빌려 건다(네트워크 세션이 게임 포트를 찾는다).
          *          서버 서비스 관리자(`_serverServices`)는 이 범위에 넣지 않습니다. 모듈 리로드마다 멈췄다 다시 시작하는 수명이라 범위의 초기화 · 종료 한 쌍과 맞지 않기 때문입니다.
          */
         HostLaunch _launch;
@@ -117,7 +117,7 @@ namespace sw
         unique_ptr<ServerServiceManager> _serverServices;       ///< 모듈이 올린 서버 서비스(온라인 서비스 호스트 등)
         Subscription                     _reloadStopsServices;  ///< 리로드 배치 직전에 서버 서비스를 멈추는 콜백(Dev, `onBeforeModuleReload`)
         string                           _serverConfigPath;     ///< 읽은 서버 설정 파일 경로(서비스가 옆 파일을 찾는다)
-        ServerServiceContext             _serverServiceContext; ///< 서버 서비스와 게임 · 키트 모듈이 받는 서버 문맥(호스트 범위에 빌려 건다 — `engine::findSubsystem<ServerServiceContext>()`)
+        ServerServiceContext             _serverServiceContext; ///< 서버 서비스가 `initialize` 로 받는 서버 문맥(게임 쪽에는 `_pServerConfig` 만 호스트 범위에 건다)
         const ServerConfig*              _pServerConfig;        // ConfigManager 가 소유한다
         int64                            _drainDeadlineMs;      ///< 드레인 기한(단조 밀리초)
         uint64                           _tickCount;

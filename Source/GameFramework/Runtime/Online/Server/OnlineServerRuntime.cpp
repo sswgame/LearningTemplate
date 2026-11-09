@@ -11,7 +11,7 @@
 
 #include "Engine/Config/Server/ServerSecret.h"
 #include "Engine/Config/ServerConfig.h"
-#include "Engine/DedicatedServer/ServiceHealthRegistry.h"
+#include "Engine/Server/ServiceHealthRegistry.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Online/Audit/ServiceAuditLog.h"
