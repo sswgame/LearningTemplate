@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 캐릭터 편집 창의 몸 탭 동작: 몸 탭에서 바꾼 것이 미리보기 몸의 메시에 닿는지, 뷰포트 표면 집기가 지금 포즈의 몸 · 부품을 맞히는지 본다.
+  ① 외형 탭에서 데이터 · 기준 프리셋 · 세트를 입혀 미리보기 몸을 조립한다(감시 값 Editor.CharacterEditorPreviewPickVertices — 몸 + 부품 오브젝트 메시 정점 수).
+  ② 몸 탭에서 입은 칸 하나를 숨기면(장비는 두고 외형 · 몸 채널만 뺀다) 다시 조립되어 정점 수가 바뀐다 — 숨기기 앞뒤 그림을 찍는다.
+  ③ 몸 탭에서 구간 집기를 켜고 미리보기 뷰포트 가운데를 누르면 지금 포즈로 스키닝한 몸 · 부품 표면이 맞아 구간이 골라진다(Editor.CharacterEditorBodyPickCount).
+  ④ 칸 숨김을 되돌리면 숨긴 칸이 0 이다. 몸 데이터 파일은 고치지 않았다(미저장 없음).
+  실행: App -EnableEditor -scenario=engine/automation/editor/characterbodyedit.scenario.xml -unattended
+-->
+<Scenario name="editor.characterbodyedit" fixedDelta="0.0166667" timeoutFrames="1800" startAfter="Immediately" input="exclusive">
+	<DevCommand line="layout.reset"/>
+	<ResizeWindow width="1900" height="1200"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Variable name="gv_editorWatchPanel" value="charactereditor.main"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.focus charactereditor.main"/>
+	<WaitUntil watch="Editor.PanelOpen" equals="1" timeoutFrames="60"/>
+	<EditorWaitSettled/>
+
+	<!-- ① 입힌 몸을 조립한다 -->
+	<EditorClick mark="charactereditor.tab.appearance" state="Down"/>
+	<Wait frames="1"/>
+	<EditorClick mark="charactereditor.tab.appearance" state="Up"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="charactereditor.loadData"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="charactereditor.basePreset"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="charactereditor.basePreset.first"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="charactereditor.equipSet"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="charactereditor.equipSet.first"/>
+	<WaitUntil watch="Editor.CharacterEditorEquippedSlotCount" atLeast="1" timeoutFrames="90"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="charactereditor.tab.preview" state="Down"/>
+	<Wait frames="1"/>
+	<EditorClick mark="charactereditor.tab.preview" state="Up"/>
+	<WaitUntil watch="Editor.CharacterEditorPreviewAssembleCount" atLeast="1" timeoutFrames="177"/>
+	<WaitUntil watch="Editor.CharacterEditorPreviewPickVertices" atLeast="1" timeoutFrames="120"/>
+	<EditorWaitSettled/>
+	<Remember watch="Editor.CharacterEditorPreviewAssembleCount" as="dressedAssembles"/>
+	<Remember watch="Editor.CharacterEditorPreviewPickVertices" as="dressedVertices"/>
+	<CaptureEditorUI file="charactereditor/bodyedit_dressed.png"/>
+
+	<!-- ② 몸 탭에서 입은 칸을 숨기면 다시 조립되어 메시가 바뀐다 -->
+	<EditorClick mark="charactereditor.tab.body" state="Down"/>
+	<Wait frames="1"/>
+	<EditorClick mark="charactereditor.tab.body" state="Up"/>
+	<EditorWaitSettled/>
+	<Expect watch="Editor.CharacterEditorBodyHiddenSlots" equals="0"/>
+	<EditorClick mark="charactereditor.body.slot.equipped"/>
+	<WaitUntil watch="Editor.CharacterEditorBodyHiddenSlots" equals="1" timeoutFrames="30"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="charactereditor.tab.preview" state="Down"/>
+	<Wait frames="1"/>
+	<EditorClick mark="charactereditor.tab.preview" state="Up"/>
+	<WaitUntil watch="Editor.CharacterEditorPreviewAssembleCount" differsFrom="dressedAssembles" timeoutFrames="177"/>
+	<WaitUntil watch="Editor.CharacterEditorPreviewPickVertices" differsFrom="dressedVertices" timeoutFrames="120"/>
+	<EditorWaitSettled/>
+	<CaptureEditorUI file="charactereditor/bodyedit_hidden.png"/>
+
+	<!-- ③ 구간 집기 — 몸 탭에서 켜고 미리보기 뷰포트 가운데(몸통)를 누른다 -->
+	<EditorClick mark="charactereditor.tab.body" state="Down"/>
+	<Wait frames="1"/>
+	<EditorClick mark="charactereditor.tab.body" state="Up"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="charactereditor.body.pickSection"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="charactereditor.tab.preview" state="Down"/>
+	<Wait frames="1"/>
+	<EditorClick mark="charactereditor.tab.preview" state="Up"/>
+	<EditorWaitSettled/>
+	<Expect watch="Editor.CharacterEditorBodyPickCount" equals="0"/>
+	<EditorClick mark="charactereditor.previewScene" anchor="0.5,0.5"/>
+	<WaitUntil watch="Editor.CharacterEditorBodyPickCount" atLeast="1" timeoutFrames="30"/>
+	<EditorWaitSettled/>
+	<CaptureEditorUI file="charactereditor/bodyedit_pick.png"/>
+
+	<!-- ④ 숨김을 되돌린다 — 데이터 파일은 그대로다 -->
+	<EditorClick mark="charactereditor.tab.body" state="Down"/>
+	<Wait frames="1"/>
+	<EditorClick mark="charactereditor.tab.body" state="Up"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="charactereditor.body.slot.equipped"/>
+	<WaitUntil watch="Editor.CharacterEditorBodyHiddenSlots" equals="0" timeoutFrames="30"/>
+	<EditorWaitSettled/>
+	<Expect watch="Editor.CharacterEditorStatusSet" equals="0"/>
+	<Expect watch="Editor.CharacterEditorBodyDataDirty" equals="0"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

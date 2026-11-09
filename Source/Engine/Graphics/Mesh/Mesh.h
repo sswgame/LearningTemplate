@@ -72,8 +72,12 @@ namespace sw
          * @details 언리얼의 스켈레탈 메시 병합이 기준 자세를 맞추는 일과 같다. 본 하나에만 묶인 정점은 어느 자세에서든 정확하고, 여러 본에 걸친 정점은 가중 평균이라 자세가 바인드에서 멀수록 근사다.
          */
         [[nodiscard]] vector<float4x4> makeRebindMatrices( const MeshSkinBinding& target ) const;
-        /** @brief @p vertex 의 위치와 노멀을 @p listRebind(`makeRebindMatrices`)로 옮깁니다. */
-        static void rebindVertex( const vector<float4x4>& listRebind, const MeshSkinVertex& skin, RHIVertex& inoutVertex );
+        /**
+         * @brief @p inoutVertex 의 위치와 노멀을 본마다의 행렬 @p listMatrix 로 옮깁니다(선형 블렌드 — 가중치 합으로 나눈다). 목록 밖 본은 건너뛴다.
+         * @details 행렬이 스킨 팔레트(`SkeletalMeshComponent::getSkinPalette`)면 CPU 스키닝(GPU 스키닝 컴퓨트와 같은 행렬 — 듀얼 쿼터니언 방식이면 근사)이고,
+         *          `makeRebindMatrices` 면 다른 바인드 자세로 옮기기다. CPU 스키닝 한 벌 — 절단 조각 · 병합 · 편집기 표면 집기가 같이 쓴다.
+         */
+        static void skinVertex( const vector<float4x4>& listMatrix, const MeshSkinVertex& skin, RHIVertex& inoutVertex );
 
     private:
         /** @brief 본 하나의 역 바인드가 허용 오차 안이면 true 입니다. 본 수가 같아야 합니다. */
