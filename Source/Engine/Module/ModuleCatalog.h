@@ -262,7 +262,7 @@ namespace sw
         static ModulePlatform getCurrentPlatform();
         /** @brief 지금 빌드의 구성입니다(배포본이면 Shipping). */
         static ModuleConfiguration getCurrentConfiguration();
-        /** @brief 이 빌드가 담는 대상입니다(`SW_WITH_CLIENT_CODE` 는 Client, `SW_WITH_SERVER_CODE` 는 Server). CMake 해석이 쓴 마스크와 같습니다. */
+        /** @brief 이 빌드가 담는 대상입니다(`build::kWithClientCode` 는 Client, `build::kWithServerCode` 는 Server). CMake 해석이 쓴 마스크와 같습니다. */
         static uint8 getBuildTargetMask();
 
     private:

@@ -66,17 +66,11 @@ endif()
 # 생성기 식이라 다중 구성 생성기에서도 그 구성의 이름이 된다.
 target_compile_definitions(sw_global_options INTERFACE "SW_BUILD_CONFIG_NAME=\"$<IF:$<BOOL:${SW_SHIPPING_BUILD}>,Shipping,$<CONFIG>>\"")
 
-# 빌드 타깃 종류(SW_TARGET_TYPE) — 코드는 이 둘과 `sw::build::kTargetName` 만 읽는다(`Core/Foundation/BuildInfo.h` · `TargetMacroCheck.h`).
-#   SW_WITH_CLIENT_CODE : Game · Client — 창 · 렌더 · 입력 장치 · 오디오 장치 코드
-#   SW_WITH_SERVER_CODE : Game · Server — 서버 코드
-# `#if defined( SW_WITH_*_CODE )` 는 .cpp 본문에서만 쓴다. 리플렉션 선언 · 헤더의 클래스 모양을 가르지 않는다 — 나뉘는 코드는 모듈(`_listTarget`)로 나눈다.
+# 빌드 타깃 종류(SW_TARGET_TYPE) — 코드는 이름 글(`SW_TARGET_NAME`)에서 만든 상수 `sw::build::kTargetName` · `kWithClientCode` · `kWithServerCode` 만 읽는다
+# (`Core/Foundation/BuildInfo.h`). 전처리 갈래용 매크로(예전 `SW_WITH_CLIENT_CODE` · `SW_WITH_SERVER_CODE`)는 두지 않는다 — `#if` 구역은 서버가 짓지 않는
+# 헤더를 서버 게이트(`serverbuild`) 밖에 숨겨, 클라이언트 일은 폴더(`Client/` · `SW_UNBUILT_ENGINE_FOLDERS`)와 모듈(`_listTarget`)로 가른다. 상수 갈래(`if constexpr`)는
+# 두 갈래가 모든 구성에서 컴파일되므로 게이트를 비켜 가지 못한다. 옛 이름은 GCC · Clang 이 독으로 막는다(`TargetMacroCheck.h`).
 target_compile_definitions(sw_global_options INTERFACE "SW_TARGET_NAME=\"${SW_TARGET_TYPE}\"")
-if(NOT SW_TARGET_TYPE STREQUAL "Server")
-	target_compile_definitions(sw_global_options INTERFACE SW_WITH_CLIENT_CODE)
-endif()
-if(NOT SW_TARGET_TYPE STREQUAL "Client")
-	target_compile_definitions(sw_global_options INTERFACE SW_WITH_SERVER_CODE)
-endif()
 message(STATUS "[BuildConfig] Target type: ${SW_TARGET_TYPE}")
 
 # 이 타깃이 짓지 않는 Engine 폴더(`Source/Engine/` 기준) — 정본은 이 목록 하나다.

@@ -30,7 +30,7 @@ SW_TEST_CASE( BuildInfoTest, NamesAgreeWithTheBuildMacros )
 #endif
 }
 
-/** @brief [BuildInfoTest] 빌드 타깃 이름과 코드 매크로가 맞물린다 — Game 은 둘 다, Client 는 클라이언트만, Server 는 서버만 */
+/** @brief [BuildInfoTest] 빌드 타깃 이름과 코드 상수(`kWithClientCode` · `kWithServerCode`)가 맞물린다 — Game 은 둘 다, Client 는 클라이언트만, Server 는 서버만 */
 SW_TEST_CASE( BuildInfoTest, TargetNameMatchesTheCodeMacros )
 {
     // 분기 없이 비교한다 — 이름이 컴파일 시간 상수라 if 사슬은 쓰지 않는 분기가 "닿지 않는 코드" 경고가 된다.

@@ -28,8 +28,8 @@ option(SW_BUILD_GAME "GameFramework 및 게임 모듈(SWGame DLL/정적 링크) 
 # 아래 옵션들의 기본값이 이 값에 따라 갈리므로 가장 먼저 선언한다.
 option(SW_SHIPPING_BUILD "배포용 단일 실행 파일 정적 링크 빌드 (Editor 모듈 제외 및 최고 성능 최적화)" OFF)
 
-# 빌드 타깃 종류 — 언리얼 TargetType(Game · Client · Server)과 같은 자리. 모듈 매니페스트의 `_listTarget` 과 코드 매크로
-# (`SW_WITH_CLIENT_CODE` · `SW_WITH_SERVER_CODE`, `cmake/Engine/BuildLayout.cmake`)가 이 값을 따른다.
+# 빌드 타깃 종류 — 언리얼 TargetType(Game · Client · Server)과 같은 자리. 모듈 매니페스트의 `_listTarget` 과 코드 상수
+# (`sw::build::kWithClientCode` · `kWithServerCode` — `SW_TARGET_NAME`, `cmake/Engine/BuildLayout.cmake`)가 이 값을 따른다.
 # Game   — 클라이언트 + 서버 코드 전부(개발 · 에디터 · 한 프로세스 서버/클라 테스트 · 리슨 서버). App 과 Server 를 짓는다.
 # Client — 서버 전용 모듈이 없는 플레이어 배포본. App 만 짓는다.
 # Server — 클라이언트 전용 모듈(에디터 · RHI 백엔드)과 창 · GPU · 오디오 장치 코드가 없는 전용 서버. Server 만 짓는다.

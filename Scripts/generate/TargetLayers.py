@@ -8,6 +8,9 @@ Scripts/generate/TargetLayers.py
 파일을 `<빌드>/generated/sw/TargetLayerStubs/<게이트>/` 에 놓고, CMake(`sw_applyTargetLayerGate`)가 그 폴더를 타깃의 include 자리 맨 앞에 둔다.
 위반하면(헤더를 거쳐 닿는 전이 include 도) 컴파일이 멈춘다 — `EngineLayers.py` · `EditorLayers.py` 와 같은 틀이고, 그쪽이 폴더 층을 보면 이쪽은 타깃 경계를 본다.
 
+`[gatefolder]` 는 경로 접두어 대신 폴더 이름(`Client`)으로 막는다 — 서버 구성이 짓지 않는 클라이언트 전용 폴더가 모듈 · 게임마다 있어서다.
+`serverbuild` 는 서버가 짓지 않는 엔진 폴더(`cmake/Engine/BuildLayout.cmake` 의 `SW_UNBUILT_ENGINE_FOLDERS`)를 모두 막아야 한다 — 대조해 빠지면 멈춘다.
+
 파일 수가 많아(키트 60 여 개 × 헤더 수백) CMake 대신 여기서 쓴다. 게이트마다 목록 스탬프가 같으면 파일을 건드리지 않아 configure 가 파일 하나만 읽는다.
 
   python Scripts/generate/TargetLayers.py <출력 .cmake 파일>
@@ -35,6 +38,31 @@ kHeaderSuffix = {".h", ".hpp", ".inl", ".xxx"}
 kModuleKinds = {"Kit", "EditorExtension", "Game"}   # 모듈별 게이트를 받는 종류
 kStubFolderName = "TargetLayerStubs"
 kQuotedInclude = re.compile(r'^\s*#\s*include\s+"([^"]+)"', re.M)
+kServerGateName = "serverbuild"
+kUnbuiltFolderLine = re.compile(r'list\(APPEND SW_UNBUILT_ENGINE_FOLDERS ([^)]*)\)')
+
+
+def readServerUnbuiltFolders(projectRoot: Path) -> list[str]:
+    """전용 서버가 짓지 않는 엔진 폴더(`Source/Engine/` 기준) — 정본은 `cmake/Engine/BuildLayout.cmake` 의 `SW_UNBUILT_ENGINE_FOLDERS` 한 곳이다."""
+    text = (projectRoot / "cmake/Engine/BuildLayout.cmake").read_text(encoding="utf-8")
+    listFolder: list[str] = []
+    for match in kUnbuiltFolderLine.finditer(text):
+        listFolder.extend(name.strip('"') for name in match.group(1).split())
+    if not listFolder:
+        raise GeneratorError("cmake/Engine/BuildLayout.cmake: SW_UNBUILT_ENGINE_FOLDERS 를 읽지 못했다")
+    return listFolder
+
+
+def checkServerGateCoversUnbuiltFolders(listPrefix: list[str], listUnbuiltFolder: list[str]) -> None:
+    """서버 게이트가 서버가 짓지 않는 엔진 폴더를 모두 막는지 본다 — 빠지면 서버 구성이 짓지 않는 헤더를 읽어 링크에서야 드러난다."""
+    listMissing = [f"Engine/{folder}" for folder in listUnbuiltFolder if f"Engine/{folder}" not in listPrefix]
+    if listMissing:
+        raise GeneratorError(f"[gate] {kServerGateName} 에 서버가 짓지 않는 엔진 폴더가 빠졌다: {', '.join(listMissing)} — {kRuleFile.name} 에 더하세요(SW_UNBUILT_ENGINE_FOLDERS)")
+
+
+def isUnderFolderName(header: str, setFolderName: set[str]) -> bool:
+    """@p header 의 폴더 마디 중 하나가 @p setFolderName 에 있으면 참이다(파일 이름은 보지 않는다)."""
+    return any(segment in setFolderName for segment in header.split("/")[:-1])
 
 
 class ModuleInfo:
@@ -142,7 +170,7 @@ def checkAllowClosure(sourceDir: Path, gateName: str, listAllowed: list[str], se
         raise GeneratorError(f"[allow] {gateName}: 연 헤더가 막힌 헤더를 include 한다 — 그 헤더도 [allow] 에 더하거나 include 를 끊으세요: {'; '.join(listProblem)}")
 
 
-def collectGates(sourceDir: Path, mapRule: dict[str, list[str]], mapAllow: dict[str, list[str]]) -> dict[str, tuple[list[str], str]]:
+def collectGates(sourceDir: Path, mapRule: dict[str, list[str]], mapAllow: dict[str, list[str]], mapFolder: dict[str, list[str]]) -> dict[str, tuple[list[str], str]]:
     """게이트 이름 → (막는 헤더, 오류 문구). 파일을 쓰지 않는다 — 표를 코드와 대조하는 쪽도 이 함수를 쓴다."""
     listHeader = sorted(path.relative_to(sourceDir).as_posix() for path in sourceDir.rglob("*") if path.is_file() and path.suffix in kHeaderSuffix)
     listStale = [prefix for listPrefix in mapRule.values() for prefix in listPrefix if not (sourceDir / prefix).exists()]
@@ -154,13 +182,26 @@ def collectGates(sourceDir: Path, mapRule: dict[str, list[str]], mapAllow: dict[
     listMissingAllow = [header for listAllowed in mapAllow.values() for header in listAllowed if not (sourceDir / header).is_file()]
     if listMissingAllow:
         raise GeneratorError(f"[allow] 의 헤더가 없다: {', '.join(sorted(set(listMissingAllow)))} — {kRuleFile.name} 를 고치세요")
+    listUnknownFolderGate = [gateName for gateName in mapFolder if gateName not in mapRule]
+    if listUnknownFolderGate:
+        raise GeneratorError(f"[gatefolder] 에 [gate] 에 없는 게이트: {', '.join(sorted(listUnknownFolderGate))}")
+    setPresentFolder = {segment for header in listHeader for segment in header.split("/")[:-1]}
+    listStaleFolder = [name for listName in mapFolder.values() for name in listName if name not in setPresentFolder]
+    if listStaleFolder:
+        raise GeneratorError(f"[gatefolder] 의 폴더 이름을 가진 헤더가 없다: {', '.join(sorted(set(listStaleFolder)))} — {kRuleFile.name} 에서 지우세요")
     mapGate: dict[str, tuple[list[str], str]] = {}
     for gateName, listPrefix in mapRule.items():
         setAllowed = set(mapAllow.get(gateName, []))
-        listDenied = [header for header in listHeader if any(header.startswith(prefix + "/") for prefix in listPrefix) and header not in setAllowed]
+        setFolderName = set(mapFolder.get(gateName, []))
+        listDenied = [header for header in listHeader
+                      if (any(header.startswith(prefix + "/") for prefix in listPrefix) or isUnderFolderName(header, setFolderName)) and header not in setAllowed]
         if setAllowed:
             checkAllowClosure(sourceDir, gateName, sorted(setAllowed), set(listDenied))
-        mapGate[gateName] = (listDenied, f"Target gate '{gateName}' forbids this header (Config/Rules/Layers/TargetLayers.toml): a lower target must not see an upper one. Move what you need down, or invert the dependency.")
+        if gateName == kServerGateName:
+            message = f"Target gate '{gateName}' forbids this header (Config/Rules/Layers/TargetLayers.toml): a dedicated server does not build client-only code (Engine Audio/Renderer/UI, Client/ folders). Call it through a seam (GameSound, IHUDViewModelBinder, IGameClientPart, IEngineRenderDriver ...) or move the caller into a Client/ folder."
+        else:
+            message = f"Target gate '{gateName}' forbids this header (Config/Rules/Layers/TargetLayers.toml): a lower target must not see an upper one. Move what you need down, or invert the dependency."
+        mapGate[gateName] = (listDenied, message)
 
     listModule = readModules(sourceDir)
     mapByName = {module.name: module for module in listModule if module.kind != "Game"}
@@ -183,10 +224,14 @@ def generateTargetLayers(outputPath: Path) -> None:
         table = tomllib.loads(kRuleFile.read_text(encoding="utf-8"))
         mapRule: dict[str, list[str]] = table["gate"]
         mapAllow: dict[str, list[str]] = table["allow"]
+        mapFolder: dict[str, list[str]] = table["gatefolder"]
+        listServerPrefix = mapRule[kServerGateName]
     except (OSError, tomllib.TOMLDecodeError, KeyError) as exception:
-        raise GeneratorError(f"{kRuleFile.name}: 읽지 못했다 ({exception!r}) — [gate] · [allow] 표가 있어야 한다") from exception
-    sourceDir = getProjectRoot() / "Source"
-    mapGate = collectGates(sourceDir, mapRule, mapAllow)
+        raise GeneratorError(f"{kRuleFile.name}: 읽지 못했다 ({exception!r}) — [gate] · [gatefolder] · [allow] 표와 [gate] {kServerGateName} 가 있어야 한다") from exception
+    projectRoot = getProjectRoot()
+    checkServerGateCoversUnbuiltFolders(listServerPrefix, readServerUnbuiltFolders(projectRoot))
+    sourceDir = projectRoot / "Source"
+    mapGate = collectGates(sourceDir, mapRule, mapAllow, mapFolder)
     stubDir = outputPath.parent.parent / kStubFolderName
     for gateName, (listDenied, message) in mapGate.items():
         writeGateStubs(stubDir, gateName, listDenied, message)

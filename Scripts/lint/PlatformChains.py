@@ -12,7 +12,7 @@ Scripts/lint/PlatformChains.py
 1. 첫 조건이 플랫폼 매크로뿐인 사슬에 갈래가 둘 이상이면 끝은 `#else` + `#error` 다. 몸이 하나뿐인 `#if`(한 플랫폼만의 include · 파일 전체 가드)는 괜찮다.
 2. `!defined( SW_PLATFORM_* )` 를 쓰지 않는다. 부정은 새 플랫폼까지 삼킨다. Windows 가 아닌 곳은 `SW_PLATFORM_POSIX` 다.
 
-첫 조건에 다른 매크로가 섞인 사슬(`SW_PLATFORM_LINUX && SW_WITH_CLIENT_CODE`, 내장 함수 고르기)은 기능 검사라 보지 않는다.
+첫 조건에 다른 매크로가 섞인 사슬(`SW_PLATFORM_LINUX && SW_WITH_WAYLAND`, 내장 함수 고르기)은 기능 검사라 보지 않는다.
 예외는 `Config/Rules/Lint/PlatformChains.json` 에 이유와 함께 적는다(데스크톱 전용 폴더 · 플랫폼 폴더 · 매크로 검사 파일).
 
 CMake(`*.cmake` · `CMakeLists.txt`, ThirdParty 제외)도 같은 규칙이다 — `if(WIN32) … else()` 의 `else()` 가 몸을 가지면 Android · Emscripten 이 Linux 가지를
@@ -200,7 +200,7 @@ def runSelfCheck() -> None:
     clean = (
         "#if defined( SW_PLATFORM_WINDOWS )\nint a;\n#endif\n"
         + "#if defined( SW_PLATFORM_WINDOWS )\nint a;\n#elif defined( SW_PLATFORM_POSIX )\nint b;\n" + kError
-        + "#if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )\nint a;\n#else\nint b;\n#endif\n"
+        + "#if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_WAYLAND )\nint a;\n#else\nint b;\n#endif\n"
         + "#if defined( SW_DEBUG )\nint a;\n#else\nint b;\n#endif\n"
     )
     assert findProblems([("Source/a.cpp", clean)], table) == [], "허용 모양은 통과해야 한다"
