@@ -10,16 +10,12 @@
 #include "Core/Time/WallClock.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Config/ConfigManager.h"
-#include "Engine/Config/Server/ServerConfig.h"
 #include "Engine/Console/DevCommandRegistry.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
 #include "GameFramework/Runtime/Online/Security/NetSecurity.h"
-#include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
-#include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
-#include "GameFramework/Runtime/Online/Server/OnlineServerRuntime.h"
+#include "GameFramework/Runtime/Online/Service/IOnlineLocalServer.h"
 #include "GameFramework/Runtime/Online/Service/OnlineClientRegistry.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
 
@@ -239,26 +235,16 @@ namespace sw
     {
         if ( build::kShipping )
             return unexpected( Error{ ErrorKind::Unsupported, "the in-process online server is a development tool" } );
-        const string              serverPath{ serverConfigPath };
-        const string              onlinePath = OnlineServerConfig::makeConfigPath( serverConfigPath );
-        ServerConfig              serverConfig;
-        OnlineServerRuntimeConfig settings;
-        if ( ConfigManager::readConfigFileInto( serverPath, serverConfig ) != ConfigReadResult::Loaded || ConfigManager::readConfigFileInto( onlinePath, settings._config ) != ConfigReadResult::Loaded )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "the server config or its online config could not be read", serverPath } );
-        if ( expected<void> stores = OnlineServerRuntime::resolveStores( serverConfig, settings._config, settings ); stores.has_value() == false )
-            return stores;
+        IOnlineLocalServerFactory* const pFactory = game::findSubsystem<IOnlineLocalServerFactory>();
+        if ( pFactory == nullptr )
+            return unexpected( Error{ ErrorKind::Unsupported, "this build target has no online server code (a Client target does not build Server/ folders)", build::kTargetName } );
+        // 예외 - 서비스 시각의 뿌리다(`OnlineServerService` 와 같은 자리). 새 서버가 선 뒤에야 지금 연결을 닫는다 - 설정이 틀리면 연결이 그대로다.
+        expected<unique_ptr<IOnlineLocalServer>> server = pFactory->createLocalServer( serverConfigPath, _clock, WallClock::nowUnixMilliseconds() );
+        if ( server.has_value() == false )
+            return unexpected( server.error() );
         disconnect();
-        settings._config._ioThreadCount = 0; // `update` 가 전송을 돌린다
-        settings._bTLS                  = SW_FALSE;
-        settings._pClock                = &_clock;
-        settings._listenAddress         = NetAddress::makeLoopback( 0 );
-        _localServer                    = make_unique<OnlineServerRuntime>();
-        if ( expected<void> started = _localServer->initialize( std::move( settings ), WallClock::nowUnixMilliseconds() ); started.has_value() == false ) // 예외 - 서비스 시각의 뿌리다(`OnlineServerService` 와 같은 자리)
-        {
-            disconnect();
-            return started;
-        }
-        _transport = StreamTransportFactory::createPlatformTransport();
+        _localServer = std::move( *server );
+        _transport   = StreamTransportFactory::createPlatformTransport();
         if ( _transport == nullptr )
         {
             disconnect();
@@ -273,9 +259,7 @@ namespace sw
         _bConnected = SW_FALSE;
         _transport.reset();
         _tlsContext.reset();
-        if ( _localServer != nullptr )
-            _localServer->shutdown();
-        _localServer.reset();
+        _localServer.reset(); // 지우면 서버가 내려간다
     }
 
     void OnlineSession::update()
@@ -295,7 +279,7 @@ namespace sw
 
     IServiceStore* OnlineSession::findLocalServerStore() const
     {
-        return _localServer != nullptr ? _localServer->getContext()._pStore : nullptr;
+        return _localServer != nullptr ? _localServer->findStore() : nullptr;
     }
 
     IOnlineClientService* OnlineSession::findByType( uint64 typeHash ) const
