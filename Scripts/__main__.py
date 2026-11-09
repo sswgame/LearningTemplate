@@ -50,7 +50,7 @@ _kSubcommand: tuple[Subcommand, ...] = (
     Subcommand("setup", "setup.Environment", "개발 환경 및 도구체인 탐색/설정"),
     Subcommand("vcpkg", "setup.Vcpkg", "vcpkg 탐색 및 부트스트랩"),
     Subcommand("llvm", "setup.Llvm", "LLVM/Clang 탐색 및 설정"),
-    Subcommand("browser-mcp", "setup.BrowserMcp", "에이전트 브라우저 조종 MCP(Chrome DevTools MCP)를 Tools/BrowserMCP 에 고정 판으로 설치"),
+    Subcommand("browser-mcp", "setup.BrowserMcp", "에이전트 브라우저 조종 MCP(Chrome DevTools MCP)를 Tools/BrowserMCP 에 고정 판으로 설치(serve 는 띄운다 — .mcp.json)"),
     Subcommand("lint", "lint.PreCommit", "Staged 파일 대상 사전 커밋 린트 검사"),
     Subcommand("include-order", "lint.IncludeOrder:mainCheck", "include 순서 검사(--files 로 좁힌다)"),
     Subcommand("byte-read", "lint.ByteReadShape", "파일에서 읽은 개수를 믿고 할당하는 모양 · LittleEndianUtil 직접 읽기 검사(--files · --all · --self-check)"),
@@ -91,7 +91,7 @@ _kSubcommand: tuple[Subcommand, ...] = (
     Subcommand("shipping-check", "dev.ShippingCheck", "배포 프리셋 셋(클라이언트 · 서버 · 자동화 없음)을 빌드하고 산출물의 기동 · 종료를 본다(통합에서 한 번)"),
     Subcommand("magic-literals", "lint.MagicLiterals", "숫자 리터럴 래칫(일반 코드의 이름 없는 리터럴이 파일마다 늘지 않게 — 커밋 훅)과 집계: 장소 × 종류, `-1` 의 뜻(--check · --ratchet · --accept · --meaning · --out · --self-check)"),
     Subcommand("result-types", "lint.ResultTypes", "결과 형식 래칫(std::optional · string& outError · string* pOutError · 실패 때만 쓰는 글 출력 인자 모양이 Core 에 없고 그 밖에서 늘지 않게 — 커밋 훅, --check · --ratchet · --accept · --self-check)"),
-    Subcommand("destruction-net", "dev.DestructionNetPair", "파괴 복제 실제 세션 확인 — 서버 · 클라이언트 두 프로세스의 구조 해시 맞대기(run · compare)"),
+    Subcommand("destruction-net", "net.DestructionNetPair", "파괴 복제 실제 세션 확인 — 서버 · 클라이언트 두 프로세스의 구조 해시 맞대기(run · compare)"),
 )
 
 _kSubcommandByName: dict[str, Subcommand] = {command.name: command for command in _kSubcommand}

@@ -1,6 +1,6 @@
 <Scene formatVersion="2" name="ReflectionProbe">
 	<!-- 반사 프로브 시나리오(automation/reflectionprobe)의 무대 — 거울 판 위로 내려다보는 카메라. 프로브는 Probe 레이어라 처음에는 없다.
-	     reflectionprobe.reflprobe 는 에디터 굽기가 아니라 면마다 색이 다른 고정 데이터다(Scripts/dev/MakeReflectionProbeFaces.py 가 짓는다, check 인자로 대조; +X 빨강 · -X 파랑 · +Z 초록 · +Y 흰색, 판이 반사하는 방향이 무슨 색을 받는지가 뚜렷하다) — 굽기는 GPU 로 씬 옆 파일을 다시 쓰므로 체인에 두지 않는다(editor/reflectionprobebake). 찍은 위치는 프로브 위치(0,2,0)와 같아야 읽힌다. -->
+	     reflectionprobe.reflprobe 는 에디터 굽기가 아니라 면마다 색이 다른 고정 데이터다(일회성 스크립트로 지은 파일이 정본이다; +X 빨강 · -X 파랑 · +Z 초록 · +Y 흰색, 판이 반사하는 방향이 무슨 색을 받는지가 뚜렷하다) — 굽기는 GPU 로 씬 옆 파일을 다시 쓰므로 체인에 두지 않는다(editor/reflectionprobebake). 찍은 위치는 프로브 위치(0,2,0)와 같아야 읽힌다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 		<_listDataLayer>

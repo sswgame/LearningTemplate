@@ -62,7 +62,7 @@
 
 ## 7. SOLID 점검 — Core · Engine (2026-11-01)
 
-근거: `Scripts/dev/StructureAudit.py`, 정적 함수 이름 겹침 스크립트(Core · Engine `.cpp` 의 `static` 함수 이름이 두 파일 이상), 층 표(`CoreLayers.toml` · `EngineLayers.toml`)와 실제 include · 전방 선언 대조, 큰 파일 읽기. graphify 는 이 질문(중복 · 층)에 범위를 좁혀 주지 못해 쓰지 않았다. 이름이 같아도 하는 일이 다른 것(`appendFloat` 넷 중 셋, `isSpace` 둘, `isNameChar` 둘, `makePerpendicular` 둘, `isLive` 둘, `toTicks` 둘)은 표에서 뺐다.
+근거: 일회성 구조 감사 스크립트(지움), 정적 함수 이름 겹침 스크립트(Core · Engine `.cpp` 의 `static` 함수 이름이 두 파일 이상), 층 표(`CoreLayers.toml` · `EngineLayers.toml`)와 실제 include · 전방 선언 대조, 큰 파일 읽기. graphify 는 이 질문(중복 · 층)에 범위를 좁혀 주지 못해 쓰지 않았다. 이름이 같아도 하는 일이 다른 것(`appendFloat` 넷 중 셋, `isSpace` 둘, `isNameChar` 둘, `makePerpendicular` 둘, `isLive` 둘, `toTicks` 둘)은 표에서 뺐다.
 
 | 순위 | 종류 | 문제 | 고친 모양 | 상태 |
 |---|---|---|---|---|
@@ -76,7 +76,7 @@
 
 ## 8. SOLID 점검 — GameFramework · Editor · App
 
-2026-11-01. 범위: `GameFramework`(Runtime · Kits · Plugin/Editor) · `Editor` · `App` · `ModuleManager` · `DevTools` · `Games`(Core · Engine 내부는 다른 작업자). 방법: `Scripts/dev/StructureAudit.py`(폴더 크기 · 모호한 이름 · 정적 전용 타입), 영역별 정독 셋(키트 · 게임 / 편집기 패널 / 호스트 · 모듈 관리). graphify 그래프는 작업 트리에 없어 쓰지 않았다.
+2026-11-01. 범위: `GameFramework`(Runtime · Kits · Plugin/Editor) · `Editor` · `App` · `ModuleManager` · `DevTools` · `Games`(Core · Engine 내부는 다른 작업자). 방법: 일회성 구조 감사 스크립트(지움)(폴더 크기 · 모호한 이름 · 정적 전용 타입), 영역별 정독 셋(키트 · 게임 / 편집기 패널 / 호스트 · 모듈 관리). graphify 그래프는 작업 트리에 없어 쓰지 않았다.
 
 ### 8.1 우선순위 표
 
