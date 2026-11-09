@@ -1081,17 +1081,17 @@
 		</entry>
 		<entry key="EdCommon.NotifyPrefabIsolated" source="Opened the prefab in the Prefab Window">
 			<origins>
-				<item>Source/Editor/Panels/Prefab/PrefabEditorPanel.cpp</item>
+				<item>Source/Editor/Panels/Prefab/Model/PrefabEditorViewModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.NotifyPrefabIsolationExited" source="Exited prefab isolation">
 			<origins>
-				<item>Source/Editor/Panels/Prefab/PrefabEditorPanel.cpp</item>
+				<item>Source/Editor/Panels/Prefab/Model/PrefabEditorViewModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.NotifyPrefabTitle" source="Prefab">
 			<origins>
-				<item>Source/Editor/Panels/Prefab/PrefabEditorPanel.cpp</item>
+				<item>Source/Editor/Panels/Prefab/Model/PrefabEditorViewModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.NotifyPresetApplyFailed" source="Failed to apply the preset to this component">
@@ -6867,7 +6867,7 @@
 		<entry key="EditorMapCheck.SceneIssuesToast"
 		       source="{errorCount} error(s), {warningCount} warning(s). Open Map Check from the status bar.">
 			<origins>
-				<item>Source/Editor/Panels/MapCheck/MapCheckPanel.cpp</item>
+				<item>Source/Editor/Panels/MapCheck/Model/MapCheckViewModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorMapCheck.SearchHint" source="Search">

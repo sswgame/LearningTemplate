@@ -22,6 +22,7 @@ from common.HostPlatform import isWindowsHost
 
 kLockPollSeconds = 0.05
 kLockTimeoutSeconds = 300.0
+kReplaceTimeoutSeconds = 10.0  # Windows 는 대상을 연 프로세스(잠금 없이 읽는 쪽 · 백신 · 색인기)가 있으면 이름 바꾸기를 막는다 — 곧 풀리는 공유 위반이다
 
 
 @contextlib.contextmanager
@@ -76,11 +77,25 @@ def replaceTextAtomically(path: Path, text: str) -> None:
     try:
         with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as file:
             file.write(text)
-        os.replace(temporaryName, path)
+        replaceWhenReleased(temporaryName, path)
     except BaseException:
         with contextlib.suppress(OSError):
             os.remove(temporaryName)
         raise
+
+
+def replaceWhenReleased(source: str, target: Path) -> None:
+    """`os.replace` 를 하되, Windows 의 공유 위반(PermissionError)은 대상을 연 쪽이 닫을 때까지 `kReplaceTimeoutSeconds` 안에서 다시 한다.
+    시한을 넘으면 그 오류를 그대로 낸다(쓰기를 건너뛰지 않는다). 언리얼 `IFileManager::Move` 도 공유 위반을 재시도한다."""
+    deadline = time.monotonic() + kReplaceTimeoutSeconds
+    while True:
+        try:
+            os.replace(source, target)
+            return
+        except PermissionError:
+            if isWindowsHost() is False or time.monotonic() > deadline:
+                raise
+            time.sleep(kLockPollSeconds)
 
 
 def updateSharedTextFile(path: Path, update: Callable[[str], str]) -> bool:

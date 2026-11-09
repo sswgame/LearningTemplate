@@ -45,7 +45,9 @@ namespace sw::editor
 
         AudioEventBrowserPanel();
 
-        const utf8*      getPanelTitle() const override { return "Audio Events"; }
+        const utf8* getPanelTitle() const override { return "Audio Events"; }
+
+        EditorDockSlot   getDefaultDockSlot() const override { return EditorDockSlot::Floating; } // 도구 창 — 문서 기반의 기본(가운데 탭)이 아니라 옮기기 전처럼 떠 있는 창
         void             drawDocumentContent() override;
         EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 109.0f, 27.0f ); }
         /** @brief 고치는 라이브러리 사본을 파일에 씁니다(닫기 · 종료 확인의 Save). 검사를 통과하지 못하면 쓰지 않고 false 입니다. */

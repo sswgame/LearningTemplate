@@ -33,7 +33,9 @@ namespace sw::editor
         InputMapPanel();
         virtual ~InputMapPanel() override = default;
 
-        const utf8*      getPanelTitle() const override { return "Input Map Editor"; }
+        const utf8* getPanelTitle() const override { return "Input Map Editor"; }
+
+        EditorDockSlot   getDefaultDockSlot() const override { return EditorDockSlot::Floating; } // 도구 창 — 문서 기반의 기본(가운데 탭)이 아니라 옮기기 전처럼 떠 있는 창
         void             drawDocumentContent() override;
         EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 128.0f, 34.0f ); }
 

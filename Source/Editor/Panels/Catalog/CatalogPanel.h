@@ -36,7 +36,9 @@ namespace sw::editor
 
         CatalogPanel();
 
-        const utf8*        getPanelTitle() const override { return "Catalog Editor"; }
+        const utf8* getPanelTitle() const override { return "Catalog Editor"; }
+
+        EditorDockSlot     getDefaultDockSlot() const override { return EditorDockSlot::Floating; } // 도구 창 — 문서 기반의 기본(가운데 탭)이 아니라 옮기기 전처럼 떠 있는 창
         EditorTextExtent   getInitialPanelSize() const override { return EditorTextExtent::ofText( 133.0f, 36.0f ); }
         void               drawDocumentContent() override;
         [[nodiscard]] bool saveDocument() override;
