@@ -389,8 +389,13 @@ namespace sw
         : float4x4{}
     {
         // 기본 생성(항등 행렬)에 위임해 두고, 배열이 있으면 덮어쓴다. nullptr 이면 항등 행렬로 남는다.
-        if ( pArray != nullptr )
-            Memory::copy( &_11, pArray, sizeof( float32 ) * 16 );
+        if ( pArray == nullptr )
+            return;
+        float32* const pElement = &_11; // 행 우선 16 칸 — Math(티어 1)는 Memory(티어 2)를 보지 않는다(Config/Rules/Layers/CoreLayers.toml)
+        for ( uint32 index = 0; index < 16; ++index )
+        {
+            pElement[index] = pArray[index];
+        }
     }
 
     float4x4 float4x4::makeTranslation( const float3& position ) noexcept
