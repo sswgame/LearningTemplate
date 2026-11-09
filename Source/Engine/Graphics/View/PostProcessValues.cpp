@@ -57,6 +57,7 @@ namespace sw
         , _bBloomDirtMask{ SW_FALSE }
         , _bBloomDirtMaskIntensity{ SW_FALSE }
         , _bLensFlareIntensity{ SW_FALSE }
+        , _bLensFlareThreshold{ SW_FALSE }
         , _bLensFlareTint{ SW_FALSE }
         , _bLensFlareGhostSpacing{ SW_FALSE }
         , _bLensFlareHaloWidth{ SW_FALSE }

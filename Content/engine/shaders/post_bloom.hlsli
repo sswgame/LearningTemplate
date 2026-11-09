@@ -19,6 +19,7 @@ struct Bloom
     static float3 apply( float2 uv, float2 texel, float3 color );
     static float3 applyBright( float2 uv, float3 color );
     static float3 sampleBright( float2 uv, float2 texel, bool bDownsampled );
+    static float3 sampleFlareBright( float2 uv, float2 texel, bool bDownsampled );
     static float computeLensWeight( float2 uv, float sharpness );
     static float3 computeLensFlare( float2 uv, float2 texel, bool bDownsampled );
     static float3 applyDirt( float2 uv, float3 bloom );
@@ -85,6 +86,14 @@ static float3 Bloom::sampleBright( float2 uv, float2 texel, bool bDownsampled )
     return bright;
 }
 
+/** @brief 플레어가 다시 읽는 밝은 부분입니다 — 블룸의 밝은 부분에서 플레어 문턱(g_FlareTint.w)을 넘는 몫만 남긴다(언리얼 LensFlareThreshold). */
+static float3 Bloom::sampleFlareBright( float2 uv, float2 texel, bool bDownsampled )
+{
+    const float3 bright = Bloom::sampleBright( uv, texel, bDownsampled );
+    const float  peak   = max( max( bright.r, bright.g ), bright.b );
+    return bright * ( max( peak - g_FlareTint.w, 0.0f ) / max( peak, 1e-4f ) );
+}
+
 /** @brief 화면 가운데에서 멀수록 줄어드는 무게입니다(가운데 1, 모서리 0) — 화면 밖을 읽는 고스트가 가장자리에서 사라지게 한다. */
 static float Bloom::computeLensWeight( float2 uv, float sharpness )
 {
@@ -105,14 +114,14 @@ static float3 Bloom::computeLensFlare( float2 uv, float2 texel, bool bDownsample
         SW_UNROLL for ( int ghost = 0; ghost < kLensFlareGhostCount; ++ghost )
         {
             const float2 ghostUv = flipped + ghostStep * float( ghost );
-            flare += Bloom::sampleBright( ghostUv, texel, bDownsampled ) * Bloom::computeLensWeight( ghostUv, 4.0f );
+            flare += Bloom::sampleFlareBright( ghostUv, texel, bDownsampled ) * Bloom::computeLensWeight( ghostUv, 4.0f );
         }
         const float  aspect     = max( g_CameraFrame.y, 1e-4f );
         const float2 toCenter   = ( 0.5f - flipped ) * float2( aspect, 1.0f );
         const float  distance   = length( toCenter );
         const float2 haloOffset = distance > 1e-5f ? ( toCenter / distance ) * g_BloomLens.w / float2( aspect, 1.0f ) : float2( 0.0f, 0.0f );
         const float2 haloUv     = flipped + haloOffset;
-        flare += distance > 1e-5f ? Bloom::sampleBright( haloUv, texel, bDownsampled ) * Bloom::computeLensWeight( haloUv, 5.0f ) : float3( 0.0f, 0.0f, 0.0f );
+        flare += distance > 1e-5f ? Bloom::sampleFlareBright( haloUv, texel, bDownsampled ) * Bloom::computeLensWeight( haloUv, 5.0f ) : float3( 0.0f, 0.0f, 0.0f );
         flare *= g_FlareTint.rgb * g_BloomLens.y;
     }
     return flare;

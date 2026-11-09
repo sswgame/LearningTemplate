@@ -40,7 +40,8 @@
 	<Wait frames="5"/>
 	<ExpectImagesDiffer first="pplens_off.ppm" second="pplens_distortion.ppm" region="0,0,1,1" minDiffering="0.1"/>
 	<ExpectImagesDiffer first="pplens_off.ppm" second="pplens_fringe.ppm" region="0,0,1,1" minDiffering="0.02"/>
-	<ExpectImagesDiffer first="pplens_off.ppm" second="pplens_sharpen.ppm" region="0,0,1,1" minDiffering="0.02"/>
+	<!-- 선명화는 가장자리만 바꾸고 평균을 지킨다 — 화면 전체를 줄여 견주면 줄이는 평균이 지운다(0.03%). 줄이지 않는 폭(160 px 이하)의 왼쪽 상자 격자 칸에서 본다. -->
+	<ExpectImagesDiffer first="pplens_off.ppm" second="pplens_sharpen.ppm" region="0.12,0.3,0.24,0.5" minDiffering="0.03"/>
 	<ExpectImagesDiffer first="pplens_off.ppm" second="pplens_grain.ppm" region="0,0,1,1" minDiffering="0.2"/>
 	<ExpectImagesDiffer first="pplens_off.ppm" second="pplens_back.ppm" region="0,0,1,1" minDiffering="0" maxDiffering="0.001"/>
 	<ExpectImage file="pplens_distortion.ppm" golden="pplens_distortion"/>

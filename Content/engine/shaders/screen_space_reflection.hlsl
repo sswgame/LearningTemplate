@@ -65,6 +65,8 @@ float4 PSMain( PSInput input ) : SV_TARGET
         const float3 normal    = PassTexture::sampleNormal( uv );
         const float3 reflected = reflect( viewDir, normal );
         const float  stepSize  = g_SSRParams.y / float( kSsrStepCount );
+        // 걸음 출발을 픽셀마다 조금씩 비켜 걸음 사이의 띠를 잡음으로 바꾼다(접촉 그림자와 같은 interleaved gradient noise — TAA 가 고른다, 언리얼 SSR 의 걸음 지터와 같은 자리).
+        const float jitter = CommonMath::computeInterleavedGradientNoise( input._position.xy );
 
         // 같은 걸음으로 나아가 처음 뒤로 들어간 걸음을 찾는다. 화면 밖 · 두께보다 깊은 걸음에서 멈춘다(break 없이 표시로).
         bool  bSearching = true;
@@ -74,13 +76,14 @@ float4 PSMain( PSInput input ) : SV_TARGET
         float hitStep    = 0.0f;
         SW_LOOP for ( int step = 1; step <= kSsrStepCount; ++step )
         {
-            float2    stepUv;
-            const int state = bSearching ? classifyRayPoint( position + reflected * ( stepSize * float( step ) ), depthSize, stepUv ) : 0;
-            bHit            = bHit || ( bSearching && state == 1 );
-            hitLower        = bSearching && state == 1 ? stepSize * float( step - 1 ) : hitLower;
-            hitUpper        = bSearching && state == 1 ? stepSize * float( step ) : hitUpper;
-            hitStep         = bSearching && state == 1 ? float( step ) : hitStep;
-            bSearching      = bSearching && state == 0;
+            float2      stepUv;
+            const float travel = stepSize * ( float( step ) - jitter );
+            const int   state  = bSearching ? classifyRayPoint( position + reflected * travel, depthSize, stepUv ) : 0;
+            bHit               = bHit || ( bSearching && state == 1 );
+            hitLower           = bSearching && state == 1 ? max( travel - stepSize, 0.0f ) : hitLower;
+            hitUpper           = bSearching && state == 1 ? travel : hitUpper;
+            hitStep            = bSearching && state == 1 ? float( step ) : hitStep;
+            bSearching         = bSearching && state == 0;
         }
 
         SW_BRANCH if ( bHit )

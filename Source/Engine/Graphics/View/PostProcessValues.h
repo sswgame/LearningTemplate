@@ -188,7 +188,10 @@ namespace sw
         float32 _bloomDirtMaskIntensity{ 0.0f };
         PROPERTY( Min = 0.0, Max = 4.0, Tooltip = "Lens flare intensity (ghosts and halo from the bloom); 0 is off" )
         float32 _lensFlareIntensity{ 0.0f };
-        PROPERTY( Tooltip = "Lens flare tint (rgb; w is ignored)" )
+        /// 언리얼 LensFlareThreshold 와 같은 자리다 — 블룸 문턱(1 언저리)으로 고스트를 만들면 빛을 받은 바닥 전체가 화면 전체의 고스트가 되어 하얗게 덮는다.
+        PROPERTY( Min = 0.0, Max = 64.0, Tooltip = "Only bloom brighter than this makes lens flare ghosts and halo (Unreal Lens Flare Threshold)" )
+        float32 _lensFlareThreshold{ 8.0f };
+        PROPERTY( Tooltip = "Lens flare tint (rgb; w is ignored - the pass constant carries the threshold there)" )
         float4 _lensFlareTint{ 1.0f, 1.0f, 1.0f, 1.0f };
         PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "Spacing between lens flare ghosts along the line through the screen centre" )
         float32 _lensFlareGhostSpacing{ 0.3f };
@@ -336,6 +339,8 @@ namespace sw
         uint8 _bBloomDirtMaskIntensity : 1;
         PROPERTY()
         uint8 _bLensFlareIntensity : 1;
+        PROPERTY()
+        uint8 _bLensFlareThreshold : 1;
         PROPERTY()
         uint8 _bLensFlareTint : 1;
         PROPERTY()

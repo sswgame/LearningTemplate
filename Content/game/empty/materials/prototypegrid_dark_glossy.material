@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 후처리 시나리오 무대(maps/postprocessvolume)의 바닥 — 어두운 격자에 거칠기만 낮췄다(젖은 바닥처럼). 거칠기 0.8 바닥은 화면 공간 반사의 무게가 0 에 가까워 반사를 켜도 그림이 거의 같았다. -->
+<MaterialDef formatVersion="0" name="PrototypeGridDarkGlossy" _base="engine/materials/prototypegrid_dark.material">
+	<_properties>
+		<item name="_roughness" defaultValue="0.15" />
+	</_properties>
+</MaterialDef>

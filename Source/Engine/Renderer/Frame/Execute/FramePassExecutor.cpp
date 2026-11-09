@@ -547,7 +547,7 @@ namespace sw
         view._pBloomDirtMask        = pDirt;
         context._passValues.setFloat4( passConstantNames()._bloomLens, float4{ pDirt != nullptr ? post._bloomDirtMaskIntensity : 0.0f, MathUtil::max( 0.0f, post._lensFlareIntensity ),
                                                                                MathUtil::saturate( post._lensFlareGhostSpacing ), MathUtil::saturate( post._lensFlareHaloWidth ) } );
-        context._passValues.setFloat4( passConstantNames()._flareTint, float4{ post._lensFlareTint._x, post._lensFlareTint._y, post._lensFlareTint._z, 0.0f } );
+        context._passValues.setFloat4( passConstantNames()._flareTint, float4{ post._lensFlareTint._x, post._lensFlareTint._y, post._lensFlareTint._z, MathUtil::max( 0.0f, post._lensFlareThreshold ) } );
         context._passValues.setFloat4( passConstantNames()._ssrParams, float4{ MathUtil::saturate( post._screenSpaceReflectionIntensity ), MathUtil::max( 0.0f, post._screenSpaceReflectionMaxDistance ),
                                                                                MathUtil::max( 0.0f, post._screenSpaceReflectionThickness ),
                                                                                MathUtil::saturate( post._screenSpaceReflectionMaxRoughness ) } );

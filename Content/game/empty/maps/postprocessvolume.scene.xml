@@ -70,7 +70,7 @@
 					               _attachOwner="None"
 					               _attachComponent="None"
 					               _meshID="Plane"
-					               _materialPath="engine/materials/prototypegrid_dark.material"
+					               _materialPath="game/empty/materials/prototypegrid_dark_glossy.material"
 					               _boundsRadius="12"
 					               _blendMode="Opaque" />
 				</_listComponent>

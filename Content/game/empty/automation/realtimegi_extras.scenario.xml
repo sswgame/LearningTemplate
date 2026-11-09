@@ -16,7 +16,8 @@
 	<Wait frames="120"/>
 	<Screenshot file="realtimegi_extras_on.ppm"/>
 	<Wait frames="2"/>
-	<ExpectImagesDiffer first="realtimegi_extras_off.ppm" second="realtimegi_extras_on.ppm" region="0,0.3,1,0.7" minDiffering="0.02"/>
+	<!-- 발광이 물들이는 자리는 발광 큐브 둘레 바닥(화면 아래 y 0.6~0.95)이다 — 위쪽 띠(0.3~0.7)는 그 끝만 걸쳐 0.5% 였다. -->
+	<ExpectImagesDiffer first="realtimegi_extras_off.ppm" second="realtimegi_extras_on.ppm" region="0,0.6,1,0.95" minDiffering="0.05"/>
 	<ExpectImage file="realtimegi_extras_on.ppm" golden="realtimegi_extras"/>
 	<Pass/>
 </Scenario>

@@ -262,7 +262,7 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     // 렌즈 · 필름(post_grade.hlsli, C++ PostProcessValues) — (색수차 세기, 색수차 시작 반경, 렌즈 왜곡, 선명화) · (필름 그레인 세기, 그레인 크기 px, 0, 0). 톤맵하는 패스만 읽는다
     float4 g_LensParams;
     float4 g_GrainParams;
-    // 블룸 렌즈(post_bloom.hlsli, C++ PostProcessValues) — (먼지 마스크 세기 — 마스크가 없으면 0, 플레어 세기, 고스트 간격, 헤일로 반지름) · (플레어 색 rgb, 0). 블룸을 더하는 패스만 읽는다
+    // 블룸 렌즈(post_bloom.hlsli, C++ PostProcessValues) — (먼지 마스크 세기 — 마스크가 없으면 0, 플레어 세기, 고스트 간격, 헤일로 반지름) · (플레어 색 rgb, 플레어 문턱). 블룸을 더하는 패스만 읽는다
     float4 g_BloomLens;
     float4 g_FlareTint;
     // 화면 공간 반사(screen_space_reflection.hlsl, C++ PostProcessValues) — (세기, 최대 거리 m, 두께 m, 최대 거칠기). ScreenSpaceReflection 패스만 읽는다
