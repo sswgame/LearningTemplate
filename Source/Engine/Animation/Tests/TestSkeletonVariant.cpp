@@ -215,7 +215,7 @@ SW_TEST_CASE( SkeletonVariantTest, BaseClipPlaysOnVariant )
     Skeleton merged;
     SW_REQUIRE_TRUE( merged.applyVariant( variant, base, "test" ) );
 
-    vector<int32> listTrackToBone;
+    vector<optional<uint32>> listTrackToBone;
     SW_REQUIRE_TRUE( clip.makeTrackToBoneMap( merged, listTrackToBone ) );
     Pose pose;
     Pose scratchTrackPose;
@@ -246,17 +246,17 @@ SW_TEST_CASE( SkeletonVariantTest, ClipTracksMissingFromSkeletonAreReported )
     AnimationClip clip;
     Util::makeClip( Util::makeBase(), clip );
 
-    Skeleton      shorter = test::makeChainSkeleton( 2u );
-    vector<int32> listTrackToBone;
+    Skeleton                 shorter = test::makeChainSkeleton( 2u );
+    vector<optional<uint32>> listTrackToBone;
     SW_EXPECT_LOG( "AnimationClip.TracksNotInSkeleton" );
     SW_EXPECT_FALSE( clip.makeTrackToBoneMap( shorter, listTrackToBone ) );
     SW_REQUIRE_EQUAL( size_t{ 3 }, listTrackToBone.size() );
-    SW_EXPECT_EQUAL( 1, listTrackToBone[1] );
-    SW_EXPECT_EQUAL( -1, listTrackToBone[2] );
+    SW_EXPECT_TRUE( listTrackToBone[1] == 1u );
+    SW_EXPECT_FALSE( listTrackToBone[2].has_value() );
 
     shorter.setPartial( true );
     SW_EXPECT_TRUE( clip.makeTrackToBoneMap( shorter, listTrackToBone ) );
-    SW_EXPECT_EQUAL( -1, listTrackToBone[2] );
+    SW_EXPECT_FALSE( listTrackToBone[2].has_value() );
 }
 
 /**

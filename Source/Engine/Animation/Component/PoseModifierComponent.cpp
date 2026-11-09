@@ -435,8 +435,8 @@ namespace sw
         _instance.collectBoundBones( listBone );
         for ( const ExternalTarget& external : _listExternal )
         {
-            if ( external._spaceBone >= 0 )
-                listBone.push_back( static_cast<uint32>( external._spaceBone ) );
+            if ( external._spaceBone.has_value() )
+                listBone.push_back( *external._spaceBone );
         }
         vector<hashed_string> listBoneName;
         for ( const uint32 bone : listBone )
@@ -627,7 +627,7 @@ namespace sw
                     SW_LOG_ERROR_ID( "PoseModifier.RigTargetUnknownSpace", "Rig '%#': target '%#' has unknown space bone '%#'", label, def._name.c_str(), def._space.c_str() );
                     continue;
                 }
-                external._spaceBone = static_cast<int32>( *spaceBone );
+                external._spaceBone = spaceBone;
             }
 
             if ( def._kind == RigTargetKind::Object )
@@ -667,11 +667,11 @@ namespace sw
                                  pTargetUnit->getOwner() != nullptr ? pTargetUnit->getOwner()->getName().c_str() : "" );
                 continue;
             }
-            external._skeletalMeshBone = targetBone.has_value() ? static_cast<int32>( *targetBone ) : constant::invalid_index::kInt32;
+            external._skeletalMeshBone = targetBone;
             // 데이터 오프셋은 소켓 공간에서 먼저 적용된다(행 벡터: 오프셋 × 소켓 로컬).
             external._socketLocal  = BoneTransform::makeFromMatrix( def._offset.toMatrix() * socketLocal.toMatrix() );
             external._skeletalMesh = TComponentHandle<SkeletalMeshComponent>{ pTargetUnit };
-            if ( external._spaceBone >= 0 )
+            if ( external._spaceBone.has_value() )
             {
                 external._bBound = SW_TRUE; // 프레임 시작에 기록해 자기 본에 적용한다. 의존은 등록하지 않는다.
                 continue;
@@ -783,8 +783,8 @@ namespace sw
                 if ( external._bLive == SW_TRUE )
                     continue; // 평가 중에 그 유닛의 이번 프레임 포즈를 읽는다
                 const vector<float4x4>& listModel = pTargetUnit->getModelSpaceTransforms();
-                const float4x4          boneModel = ( 0 <= external._skeletalMeshBone && static_cast<size_t>( external._skeletalMeshBone ) < listModel.size() )
-                                                      ? listModel[static_cast<size_t>( external._skeletalMeshBone )]
+                const float4x4          boneModel = ( external._skeletalMeshBone.has_value() && *external._skeletalMeshBone < listModel.size() )
+                                                      ? listModel[*external._skeletalMeshBone]
                                                       : float4x4::Identity;
                 targetInModel                     = external._socketLocal.toMatrix() * boneModel * external._skeletalMeshToModel;
             }
@@ -792,12 +792,12 @@ namespace sw
             RigTargetValue value{};
             value._bValid = SW_TRUE;
             PoseModifierComponentInternal::decomposeRigid( targetInModel, value._position, value._rotation );
-            if ( 0 <= external._spaceBone && static_cast<size_t>( external._spaceBone ) < listOwnModel.size() )
+            if ( external._spaceBone.has_value() && *external._spaceBone < listOwnModel.size() )
             {
                 // 지난 프레임의 그 본 기준으로 바꿔 두면 평가할 때 이번 프레임의 그 본에 다시 적용된다.
                 float3     spacePosition{};
                 quaternion spaceRotation{};
-                PoseModifierComponentInternal::decomposeRigid( listOwnModel[static_cast<size_t>( external._spaceBone )], spacePosition, spaceRotation );
+                PoseModifierComponentInternal::decomposeRigid( listOwnModel[*external._spaceBone], spacePosition, spaceRotation );
                 const quaternion inverse = RigIKSolver::makeInverse( spaceRotation );
                 value._position          = float3::transform( value._position - spacePosition, inverse );
                 value._rotation          = ( inverse * value._rotation ).normalize();
@@ -829,8 +829,8 @@ namespace sw
             if ( external._bLive == SW_FALSE || pTargetUnit == nullptr )
                 continue;
             const vector<float4x4>& listModel = pTargetUnit->getModelSpaceTransforms();
-            const float4x4          boneModel = ( 0 <= external._skeletalMeshBone && static_cast<size_t>( external._skeletalMeshBone ) < listModel.size() ) ? listModel[static_cast<size_t>( external._skeletalMeshBone )]
-                                                                                                                                                            : float4x4::Identity;
+            const float4x4          boneModel = ( external._skeletalMeshBone.has_value() && *external._skeletalMeshBone < listModel.size() ) ? listModel[*external._skeletalMeshBone]
+                                                                                                                                             : float4x4::Identity;
             RigTargetValue          value{};
             value._bValid = SW_TRUE;
             PoseModifierComponentInternal::decomposeRigid( external._socketLocal.toMatrix() * boneModel * external._skeletalMeshToModel, value._position, value._rotation );

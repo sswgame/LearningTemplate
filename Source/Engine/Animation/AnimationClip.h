@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -117,10 +118,10 @@ namespace sw
          */
         [[nodiscard]] bool sampleTracks( float32 time, Pose& outTrackPose, const uint8* pTrackMask = nullptr ) const;
         /**
-         * @brief 트랙에서 스켈레톤 본 인덱스로 가는 테이블을 만듭니다(없는 본은 -1). 클립과 스켈레톤 쌍마다 한 번 만들어 둡니다.
+         * @brief 트랙에서 스켈레톤 본 인덱스로 가는 테이블을 만듭니다(없는 본은 비어 있다). 클립과 스켈레톤 쌍마다 한 번 만들어 둡니다.
          * @return 스켈레톤에 없는 본의 트랙이 있으면 오류를 남기고 false 입니다(테이블은 그래도 채워 있는 본은 재생한다). 부품 스켈레톤(`Skeleton::isPartial`)은 일부 트랙이 없는 것이 정상이라 true 입니다.
          */
-        [[nodiscard]] bool makeTrackToBoneMap( const Skeleton& skeleton, vector<int32>& outListBone ) const;
+        [[nodiscard]] bool makeTrackToBoneMap( const Skeleton& skeleton, vector<optional<uint32>>& outListBone ) const;
         /**
          * @brief 클립을 @p time 에 샘플해 본 포즈(레퍼런스나 리더 포즈로 채워 둔 @p inoutPose)에 씁니다. 애니메이터, 군중 공유, VAT 베이크가 함께 쓰는 하나의 경로입니다.
          * @param skeleton          @p listTrackToBone 을 만든 스켈레톤입니다. 변형이면 재생 규칙을 겁니다(`Skeleton::applyClipRule`).
@@ -129,10 +130,10 @@ namespace sw
          * @param bAnchorRootMotion 루트 모션 트랙의 본을 클립 시작 위치에 고정합니다(움직임은 오브젝트가 맡습니다).
          * @param pTrackMask        트랙마다 0 이면 디코드도 이동도 하지 않습니다(본 LOD).
          */
-        [[nodiscard]] bool samplePose( const Skeleton& skeleton, float32 time, const vector<int32>& listTrackToBone, Pose& inoutPose, Pose& scratchTrackPose, bool bAnchorRootMotion,
+        [[nodiscard]] bool samplePose( const Skeleton& skeleton, float32 time, const vector<optional<uint32>>& listTrackToBone, Pose& inoutPose, Pose& scratchTrackPose, bool bAnchorRootMotion,
                                        const uint8* pTrackMask = nullptr ) const;
         /** @brief 트랙 포즈를 테이블대로 본 포즈에 옮깁니다. 테이블에 없는 본과 @p pTrackMask 가 0 인 트랙은 그대로 둡니다. @p skeleton 이 변형이면 재생 규칙을 겁니다. */
-        static void copyTracksToPose( const Skeleton& skeleton, const Pose& trackPose, const vector<int32>& listTrackToBone, Pose& inoutPose, const uint8* pTrackMask = nullptr );
+        static void copyTracksToPose( const Skeleton& skeleton, const Pose& trackPose, const vector<optional<uint32>>& listTrackToBone, Pose& inoutPose, const uint8* pTrackMask = nullptr );
         /**
          * @brief 루트 모션 트랙이 @p step 동안 움직인 양을 반환합니다(부모 공간 이동 차이와 회전 차이 `inverse( 이전 ) * 현재`).
          * @details 반복을 넘으면 (끝 - 이전) + 온 바퀴 × (끝 - 시작) + (현재 - 시작)이다. 루트 모션 트랙이 없으면 단위 변환이다.

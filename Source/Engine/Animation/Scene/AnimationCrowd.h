@@ -12,6 +12,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Hash/HashUtil.h"
@@ -216,8 +217,8 @@ namespace sw
         shared_ptr<const AnimationClip> _nextClip; ///< 섞기 묶음의 들어가는 클립(아니면 nullptr)
         shared_ptr<Mesh>                _mesh;
         AnimationSkinSlot               _skinSlot;
-        vector<int32>                   _listTrackToBone;
-        vector<int32>                   _listNextTrackToBone;
+        vector<optional<uint32>>        _listTrackToBone;
+        vector<optional<uint32>>        _listNextTrackToBone;
         Pose                            _localPose;
         Pose                            _nextPose;
         Pose                            _scratchTrackPose;

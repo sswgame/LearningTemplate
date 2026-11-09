@@ -9,6 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Delegate/SubscriptionList.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -472,7 +473,7 @@ namespace sw
         /** @brief 레이어 하나를 @p inoutPose 에 얹습니다. */
         void applyLayer( LayerState& layer, const Skeleton& skeleton, Pose& inoutPose, const uint8* pBoneMask );
         /** @brief 클립의 트랙에서 본으로 가는 테이블입니다(유닛 스켈레톤 기준이며, 처음 쓸 때 만듭니다). */
-        const vector<int32>& getTrackMap( const AnimationClip& clip, const Skeleton& skeleton );
+        const vector<optional<uint32>>& getTrackMap( const AnimationClip& clip, const Skeleton& skeleton );
         /**
          * @brief 클립을 @p time 에 샘플해 @p inoutPose(레퍼런스로 시작한 본 포즈)에 씁니다.
          * @param pBoneMask 본 LOD 마스크(본 수 크기이며 0 이면 평가하지 않고 레퍼런스로 둔다). nullptr 이면 모든 본입니다.
@@ -535,7 +536,7 @@ namespace sw
         vector<ClipLoad>                                              _listClipLoad;      ///< 시작 때 요청해 아직 표에 넣지 않은 클립(`requestClipLoads`)
         hashed_string                                                 _deferredPlayState; ///< 클립을 기다리는 동안 미룬 `play` 의 상태
         float32                                                       _deferredPlayBlend; ///< 미룬 `play` 의 섞기 시간
-        unordered_map<const AnimationClip*, vector<int32>>            _mapTrackToBone;
+        unordered_map<const AnimationClip*, vector<optional<uint32>>> _mapTrackToBone;
         const Skeleton*                                               _pTrackMapSkeleton;
         vector<LayerState>                                            _listLayer;
         vector<LayerState>                                            _listGraphLayer;  ///< 그래프 "layers" 의 레이어다. 코드 레이어보다 먼저 얹는다

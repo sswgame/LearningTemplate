@@ -384,7 +384,6 @@
     "Source/Engine/Animation/Codec/AnimationCodec.cpp": {"integer": 1},
     "Source/Engine/Animation/Codec/AnimationCodec.h": {"integer": 2},
     "Source/Engine/Animation/Component/MotionWarpingComponent.cpp": {"float": 1},
-    "Source/Engine/Animation/Component/PoseModifierComponent.h": {"minus-one": 2},
     "Source/Engine/Animation/Component/SkeletalAnimatorComponent.cpp": {"float": 1},
     "Source/Engine/Animation/Component/SpriteAnimatorComponent.cpp": {"float": 1},
     "Source/Engine/Animation/Facial/LipSync.cpp": {"float": 10},

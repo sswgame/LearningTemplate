@@ -6,6 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
@@ -77,10 +78,10 @@ namespace sw
     /** @brief 호스트가 프레임마다 넣는 바깥 대상 값입니다(유닛 모델 공간). */
     struct RigTargetValue
     {
-        float3     _position{};
-        quaternion _rotation{};
-        int32      _relativeBone{ constant::invalid_index::kInt32 }; ///< 0 이상이면 값이 이 본 기준의 상대 변환이며, 평가할 때 현재 그 본에 적용한다.
-        uint8      _bValid{ SW_FALSE };
+        float3           _position{};
+        quaternion       _rotation{};
+        optional<uint32> _relativeBone{}; ///< 있으면 값이 이 본 기준의 상대 변환이며, 평가할 때 현재 그 본에 적용한다.
+        uint8            _bValid{ SW_FALSE };
     };
 } // namespace sw
 

@@ -239,9 +239,9 @@ namespace sw
         const RigTargetValue& value = _listTargetValue[targetIndex];
         if ( value._bValid == SW_FALSE )
             return false;
-        if ( 0 <= value._relativeBone && static_cast<uint32>( value._relativeBone ) < pose.getBoneCount() )
+        if ( value._relativeBone.has_value() && *value._relativeBone < pose.getBoneCount() )
         {
-            composeOnBone( pose, static_cast<uint32>( value._relativeBone ), value._position, value._rotation, false, outPosition, outRotation );
+            composeOnBone( pose, *value._relativeBone, value._position, value._rotation, false, outPosition, outRotation );
             return true;
         }
         outPosition = value._position;
