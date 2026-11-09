@@ -584,8 +584,7 @@ namespace sw::editor
                     return _untyped.draw( instance, prop, grid );
 
                 const TypeInfo*          pTargetType = InspectorComponentChoice::findTargetType( editor::getSubsystem<TypeRegistry>(), prop );
-                const GameObject*        pOwner      = grid.getEditOwner();
-                const GameObjectManager* pManager    = pOwner != nullptr ? pOwner->getManager() : nullptr;
+                const GameObjectManager* pManager    = grid.findEditOwnerManager();
                 if ( pTargetType == nullptr || pManager == nullptr )
                 {
                     drawUnavailable( prop, pTargetType == nullptr );

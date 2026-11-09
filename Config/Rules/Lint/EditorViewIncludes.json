@@ -54,6 +54,7 @@
         "Source/Editor/Panels/InputMap/InputMapWatches",
         "Source/Editor/Panels/Inspector/CameraComponentInspector",
         "Source/Editor/Panels/Inspector/DataPathPropertyDrawer",
+        "Source/Editor/Panels/Inspector/EditorPropertyGrid",
         "Source/Editor/Panels/Inspector/FloatCurvePropertyDrawer",
         "Source/Editor/Panels/Inspector/IInspectorComponent",
         "Source/Editor/Panels/Inspector/IInspectorProperty",

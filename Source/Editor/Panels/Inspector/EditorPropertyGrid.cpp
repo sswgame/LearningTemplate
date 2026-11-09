@@ -2,60 +2,34 @@
 
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
 
-#include "Core/Algorithm/VectorUtil.h"
-#include "Core/File/FileUtil.h"
-#include "Core/Log/LogOnce.h"
-#include "Core/Memory/MemoryBlock.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Task/TaskTypes.h"
 
-#include "Editor/Common/Commands/Diagnostics/EditorGlobalVariableCommands.h"
-#include "Editor/Common/Commands/Scene/EditorInspectorCommands.h"
-#include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
-#include "Editor/Common/Commands/Scene/EditorTransformCommands.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorCompactControls.h"
-#include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorDefaultObjects.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
-#include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Common/Workspace/EditorTransaction.h"
-#include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
-#include "Editor/Common/Workspace/Undo/CommandStack.h"
-#include "Editor/Panels/Inspector/IInspectorComponent.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
 #include "Editor/Panels/Inspector/InspectorPropertyManager.h"
 #include "Editor/Panels/Inspector/InspectorPropertyUndo.h"
-#include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
-#include "Editor/Panels/Inspector/Model/InspectorFavorites.h"
-#include "Editor/Panels/Inspector/Model/InspectorObjectEdit.h"
 #include "Editor/Panels/Inspector/Model/InspectorPropertyLayout.h"
 #include "Editor/Panels/Inspector/Model/PropertyEditConditionExpr.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
-#include "Engine/Object/Component/SceneComponent.h"
-#include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/Serialization/ObjectValidation.h"
 #include "Engine/Reflection/Reflection.h"
-#include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionContainers.h"
 #include "Engine/Reflection/ReflectionEditorMetadata.h"
+#include "Engine/Reflection/ReflectionInvoke.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Scene/Scene.h"
-#include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 #include <imgui.h>
@@ -68,52 +42,6 @@ namespace sw::editor
         struct EditorPropertyGridInternal
         {
             static constexpr Color kNestedHeader{ 0.15f, 0.15f, 0.15f, 1.0f };
-
-            /** @brief 컨테이너 구조 편집(추가, 삭제, 다시 넣기)입니다. 주인 오브젝트가 있으면 되돌리기에 남기고, 없으면 그냥 바꿉니다. */
-            template <typename EditFunc>
-            static void applyContainerEdit( GameObject* pOwner, string_view undoLabel, EditFunc&& edit )
-            {
-                if ( pOwner == nullptr )
-                    edit();
-                else
-                    InspectorObjectEdit::applyObjectEdit( pOwner, undoLabel, std::forward<EditFunc>( edit ) );
-            }
-
-            /** @brief 즐겨찾기한 프로퍼티만 타입 표시 이름 머리 하나로 모아 @p inoutListGroup 을 바꿉니다. 하나도 없으면 비웁니다. */
-            static void keepFavoriteProperties( const TypeInfo& typeInfo, const InspectorFavorites& favorites, vector<InspectorPropertyGroup>& inoutListGroup )
-            {
-                InspectorPropertyGroup favoriteGroup;
-                favoriteGroup._category = typeInfo.getDisplayName();
-                for ( const InspectorPropertyGroup& group : inoutListGroup )
-                {
-                    for ( const PropertyInfo* pProp : group._listProperty )
-                    {
-                        if ( favorites.contains( InspectorFavorites::makePropertyKey( typeInfo, *pProp ) ) )
-                            favoriteGroup._listProperty.push_back( pProp );
-                    }
-                }
-                inoutListGroup.clear();
-                if ( favoriteGroup._listProperty.empty() == false )
-                    inoutListGroup.push_back( std::move( favoriteGroup ) );
-            }
-
-            /**
-             * @brief 기본값과 같은 프로퍼티를 빼고, 남은 것이 없는 카테고리는 머리째 뺍니다.
-             * @details 다중 선택에서 값이 갈린(혼합) 프로퍼티는 남깁니다 — 값이 다르면 선택 중 적어도 하나는 기본값이 아닙니다. 갈리지 않았으면 모두 주 선택과 같으므로 주 선택만 보면 됩니다.
-             */
-            static void removeDefaultValued( MutableObjectAddress instance, ObjectAddress defaultInstance, Delegate<bool( const PropertyInfo& )>& isMixed, vector<InspectorPropertyGroup>& inoutListGroup )
-            {
-                for ( InspectorPropertyGroup& group : inoutListGroup )
-                {
-                    VectorUtil::removeIf( group._listProperty, [instance, defaultInstance, &isMixed]( const PropertyInfo* pProp )
-                    {
-                        const bool bMixed = isMixed.isBound() && isMixed( *pProp );
-                        return bMixed == false && EditorDefaultObjects::isDefaultValue( *pProp, instance, defaultInstance );
-                    } );
-                }
-                VectorUtil::removeIf( inoutListGroup, []( const InspectorPropertyGroup& group )
-                { return group._listProperty.empty(); } );
-            }
 
             /** @brief 비트 플래그 열거형을 콤보로 그립니다. 전체 선택 · 해제 · 항목 체크는 @p inoutEditedValue 만 바꿉니다. */
             static void drawBitFlagEnum( const EnumInfo& enumInfo, int64 currentValue, bool bReadOnly, int64& inoutEditedValue )
@@ -212,20 +140,13 @@ namespace sw::editor
     EditorPropertyGrid::EditorPropertyGrid()
         : _propertyFilter{}
         , _mapMethodArgSlot{}
-        , _lastInvokeResult{}
         , _mapContainerAddText{}
-        , _onEdited{}
-        , _isMixed{}
-        , _pEditTargetComponent{ nullptr }
-        , _pEditTargetObject{ nullptr }
+        , _model{}
         , _propertyDrawDepth{ 0 }
-        , _pFavorites{ nullptr }
         , _openAllRequest{ 0 }
         , _bFavoritesOnly{ SW_FALSE }
         , _bShowAllMethods{ SW_FALSE }
         , _bShowModifiedOnly{ false }
-        , _layoutCache{}
-        , _scratchDisplay{}
         , _layoutUseDepth{ 0 }
         , _methodCountFrame{ -1 }
         , _methodRowCount{ 0 }
@@ -278,17 +199,20 @@ namespace sw::editor
 
     void EditorPropertyGrid::drawProperties( const EditorPropertyGridTarget& target, const utf8* pSectionTitle, const vector<hashed_string>& listDrawnName )
     {
-        beginTarget( target );
-        drawTypeProperties( target._pInstance, target._pType, pSectionTitle, listDrawnName );
-        endTarget();
+        // 씬 대상은 이 프레임에 id 로 다시 찾는다 — 사라졌으면 그리지 않는다.
+        if ( _model.beginTarget( target ) )
+        {
+            drawTypeProperties( _model.getInstance(), _model.getType(), pSectionTitle, listDrawnName );
+            _model.endTarget();
+        }
         // 편집 알림(다중 선택의 나머지에 값 적용)이 끝난 뒤에 되돌리기를 남긴다.
         InspectorPropertyUndo::commitFinishedEdits();
     }
 
     void EditorPropertyGrid::drawFavoriteProperties( const EditorPropertyGridTarget& target )
     {
-        const bool bNoFavoritesToDraw = _pFavorites == nullptr || target._pType == nullptr || _pFavorites->hasAnyForTypeOrBase( *target._pType ) == false;
-        if ( bNoFavoritesToDraw )
+        // 즐겨찾기가 없는 타입은 `drawTypeProperties` 가 묶음을 비워 아무것도 그리지 않는다.
+        if ( _model.hasFavorites() == false )
             return;
         // 본문 그리드와 같은 카테고리 · 프로퍼티 id 를 쓰므로 id 공간을 나눈다.
         ImGui::PushID( "##favorites" );
@@ -300,67 +224,18 @@ namespace sw::editor
 
     void EditorPropertyGrid::drawMethodsAndEvents( const EditorPropertyGridTarget& target, bool bEvents )
     {
-        beginTarget( target );
-        drawTypeMethods( target._pInstance, target._pType );
+        if ( _model.beginTarget( target ) == false )
+            return;
+        drawTypeMethods( _model.getInstance(), _model.getType() );
         if ( bEvents )
-            drawTypeEvents( target._pInstance, target._pType );
-        endTarget();
-    }
-
-    void EditorPropertyGrid::resetPropertyToDefault( const MutableObjectAddress instance, const PropertyInfo& prop, const ObjectAddress defaultInstance )
-    {
-        const string text = defaultInstance.get() != nullptr ? SerializerUtil::formatPropertyText( prop, defaultInstance, SerializeContext::getDefault( SerializePurpose::Authoring ) )
-                                                             : prop._metadata->_defaultValue;
-        applyPropertyTextAsEdit( instance, prop, text, "Reset to Default" );
-    }
-
-    void EditorPropertyGrid::applyPropertyTextAsEdit( const MutableObjectAddress instance, const PropertyInfo& prop, string_view text, const utf8* pUndoLabel )
-    {
-        // 그 프로퍼티 하나만 쓰고(비트필드는 그 비트만) 알린 뒤 되돌리기에 남긴다. `{"이름":값}` 을 JSON 으로 읽히면 읽기에서 빠진
-        // 프로퍼티마다 기본값을 채우므로 다른 프로퍼티까지 바뀐다. 그래서 텍스트 하나로 프로퍼티 하나만 쓴다.
-        GameObject*  pOwnerObj = _pEditTargetComponent != nullptr ? _pEditTargetComponent->getOwner() : _pEditTargetObject;
-        const string value{ text };
-        auto         apply = [this, &prop, instance, &value]()
-        {
-            if ( SerializerUtil::applyPropertyText( prop, instance, value, SerializeContext::getDefault( SerializePurpose::Authoring ) ) )
-                notifyPropertyEdited( prop );
-            else
-                SW_LOG_WARNING_ID( "EditorPropertyGrid.CouldNotApplied", "'%#' could not be applied to %#", value.c_str(), prop._name.c_str() );
-        };
-        // 다중 편집 대상(`_isMixed` 가 걸렸다)은 `_onEdited` 가 값을 나머지에도 입힌다. 주 선택만 찍으면 되돌리기가 나머지를 돌리지 못하므로 선택 전부를 찍는다.
-        if ( _isMixed.isBound() )
-        {
-            InspectorPropertyUndo::recordImmediateEdit( prop );
-            apply();
-        }
-        else if ( pOwnerObj != nullptr )
-            InspectorObjectEdit::applyObjectEdit( pOwnerObj, pUndoLabel, apply );
-        else
-            apply();
-    }
-
-    void EditorPropertyGrid::beginTarget( const EditorPropertyGridTarget& target )
-    {
-        _pEditTargetComponent = target._pComponent;
-        _pEditTargetObject    = target._pComponent == nullptr ? target._pObject : nullptr;
-        _onEdited             = target._onEdited;
-        _isMixed              = target._isMixed;
-    }
-
-    void EditorPropertyGrid::endTarget()
-    {
-        _pEditTargetComponent = nullptr;
-        _pEditTargetObject    = nullptr;
-        _onEdited             = {};
-        _isMixed              = {};
+            drawTypeEvents( _model.getInstance(), _model.getType() );
+        _model.endTarget();
     }
 
     void EditorPropertyGrid::drawTypeProperties( void* pInstance, const TypeInfo* pTypeInfo, const utf8* pSectionTitle, const vector<hashed_string>& listDrawnName )
     {
-        using Internal = EditorPropertyGridInternal;
-
         // 즐겨찾기 거르기는 이번 한 번만이다. 중첩 그리기가 다시 들어와도 거르지 않게 먼저 지운다.
-        const bool bFavoritesOnly = _bFavoritesOnly && _pFavorites != nullptr;
+        const bool bFavoritesOnly = _bFavoritesOnly && _model.hasFavorites();
         _bFavoritesOnly           = SW_FALSE;
         if ( pInstance == nullptr || pTypeInfo == nullptr )
             return;
@@ -369,7 +244,7 @@ namespace sw::editor
         // 묶음은 (타입, 그린 이름, 검색 글, 레지스트리 세대)가 같으면 캐시한 것을 쓴다. 즐겨찾기 · 바뀐 것만 보기는 그 사본을 거른다.
         const EditorListFilter                filter{ _propertyFilter.c_str() };
         const vector<InspectorPropertyGroup>& listCachedGroup =
-            _layoutCache.getOrCreateGroups( *pTypeInfo, listDrawnName, filter, _propertyFilter.c_str(), TypeRegistry::getGeneration(), _layoutUseDepth == 0 );
+            _model.getOrCreateGroups( *pTypeInfo, listDrawnName, filter, _propertyFilter.c_str(), _layoutUseDepth == 0 );
         vector<InspectorPropertyGroup>        listFilteredGroup;
         const vector<InspectorPropertyGroup>* pListGroup = &listCachedGroup;
 
@@ -378,7 +253,7 @@ namespace sw::editor
         {
             listFilteredGroup = listCachedGroup;
             pListGroup        = &listFilteredGroup;
-            Internal::keepFavoriteProperties( *pTypeInfo, *_pFavorites, listFilteredGroup );
+            _model.keepFavoriteProperties( *pTypeInfo, listFilteredGroup );
             if ( listFilteredGroup.empty() )
                 return;
         }
@@ -391,18 +266,13 @@ namespace sw::editor
             return;
         }
         // 행 메뉴의 즐겨찾기 토글은 대상 자신(컴포넌트나 오브젝트)의 프로퍼티에만 둔다. 중첩 구조체의 필드는 키가 대상 타입이 아니다.
-        const bool bFavoriteTarget = _pFavorites != nullptr &&
-                                     ( pInstance == static_cast<void*>( _pEditTargetComponent ) || pInstance == static_cast<void*>( _pEditTargetObject ) );
+        const bool bFavoriteTarget = _model.hasFavorites() && _model.isTargetInstance( pInstance );
 
         if ( pSectionTitle != nullptr )
             ImGui::SeparatorText( pSectionTitle );
         // 컴포넌트이면 그 타입의 기본 인스턴스(CDO)와 비교한다. 중첩 구조체와 씬 밖 객체는 메타의 기본값 텍스트만 있다.
         const MutableObjectAddress instance{ pInstance };
-        const void*                pDefaultInstance   = nullptr;
-        const bool                 bIsEditedComponent = _pEditTargetComponent != nullptr && pInstance == _pEditTargetComponent;
-        if ( bIsEditedComponent )
-            pDefaultInstance = editor::getSubsystem<EditorContext>().getSubsystem<EditorDefaultObjects>().findDefault( *pTypeInfo );
-        const ObjectAddress defaultInstance{ pDefaultInstance };
+        const ObjectAddress        defaultInstance = _model.findDefaultInstance( pInstance, *pTypeInfo );
         // 바뀐 것만 보기이면 기본값과 같은 프로퍼티를 뺀다. 남은 것이 없는 카테고리는 머리째 감춘다.
         if ( _bShowModifiedOnly )
         {
@@ -411,7 +281,7 @@ namespace sw::editor
                 listFilteredGroup = listCachedGroup;
                 pListGroup        = &listFilteredGroup;
             }
-            Internal::removeDefaultValued( instance, defaultInstance, _isMixed, listFilteredGroup );
+            _model.removeDefaultValued( instance, defaultInstance, listFilteredGroup );
             if ( listFilteredGroup.empty() )
                 return;
         }
@@ -446,47 +316,20 @@ namespace sw::editor
         --_layoutUseDepth;
     }
 
-    const InspectorDisplayUnit& EditorPropertyGrid::getDisplayUnit( const PropertyInfo& prop )
-    {
-        const InspectorPropertyDisplay* pDisplay = _layoutCache.findDisplay( prop );
-        if ( pDisplay != nullptr )
-            return pDisplay->_unit;
-        // 묶음 밖 — 컨테이너 원소 · 맵 값은 `makeElementProperty` 가 값으로 만든 임시라 주소로 캐시할 수 없다.
-        _scratchDisplay._unit = InspectorPropertyLayout::getDisplayUnit( prop );
-        return _scratchDisplay._unit;
-    }
-
-    const utf8* EditorPropertyGrid::getUnitNumberFormat( const PropertyInfo& prop, const utf8* pNumberFormat )
-    {
-        InspectorPropertyDisplay* pDisplay = _layoutCache.findDisplay( prop );
-        if ( pDisplay == nullptr )
-        {
-            // 묶음 밖 임시 프로퍼티 — `getDisplayUnit` 과 같은 까닭으로 부를 때마다 짓는다.
-            _scratchDisplay._unitFormat = InspectorPropertyLayout::appendUnitSuffix( pNumberFormat, InspectorPropertyLayout::getDisplayUnit( prop )._suffix );
-            return _scratchDisplay._unitFormat.c_str();
-        }
-        if ( pDisplay->_pUnitFormatBase != pNumberFormat )
-        {
-            pDisplay->_unitFormat      = InspectorPropertyLayout::appendUnitSuffix( pNumberFormat, pDisplay->_unit._suffix );
-            pDisplay->_pUnitFormatBase = pNumberFormat;
-        }
-        return pDisplay->_unitFormat.c_str();
-    }
-
     void EditorPropertyGrid::drawPropertyRow( const MutableObjectAddress instance, const TypeInfo& typeInfo, const PropertyInfo& prop, bool bDisabled, bool bFavoriteTarget, const ObjectAddress defaultInstance )
     {
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
 
         ImGui::AlignTextToFramePadding();
-        if ( _isMixed.isBound() && _isMixed( prop ) )
+        if ( _model.isMixed( prop ) )
         {
             ImGui::TextDisabled( "\xe2\x80\x94" ); // — (혼합)
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "MultipleValues" ) );
             ImGui::SameLine();
         }
-        const string& favoriteKey = _layoutCache.getLaidOutDisplay( prop )._favoriteKey; // 묶음을 지을 때 만든 키 — 행마다 string 을 짓지 않는다
-        const bool    bFavorite   = bFavoriteTarget && _pFavorites->contains( favoriteKey );
+        const string& favoriteKey = _model.getLaidOutDisplay( prop )._favoriteKey; // 묶음을 지을 때 만든 키 — 행마다 string 을 짓지 않는다
+        const bool    bFavorite   = bFavoriteTarget && _model.isFavorite( favoriteKey );
         if ( bFavorite )
         {
             ImGui::TextUnformatted( SW_EDITOR_ICON( "Star" ) );
@@ -506,7 +349,7 @@ namespace sw::editor
         if ( EditorDefaultObjects::isDefaultValue( prop, instance, defaultInstance ) == false )
         {
             if ( EditorCompactControls::drawResetButton( "##reset", SW_LOCKEY( "EditorInspector", "ResetToDefaultTooltip" ) ) )
-                resetPropertyToDefault( instance, prop, defaultInstance );
+                _model.resetToDefault( instance, prop, defaultInstance );
             fixed_string<constant::buffer::kMax128> resetMark;
             formatstring( resetMark.data(), resetMark.capacity(), "inspector.reset.%#.%#", typeInfo._name.c_str(), prop._name.c_str() );
             EditorSelfTestMarks::record( resetMark.c_str() );
@@ -541,23 +384,20 @@ namespace sw::editor
         if ( bFavoriteTarget )
         {
             if ( ImGui::MenuItem( bFavorite ? SW_LOCKEY( "EditorInspector", "RemoveFromFavorites" ) : SW_LOCKEY( "EditorInspector", "AddToFavorites" ) ) )
-            {
-                (void)_pFavorites->toggle( favoriteKey );
-                (void)_pFavorites->saveToFile( InspectorFavorites::getDefaultFilePath() ); // 실패는 saveToFile 이 경고한다
-            }
+                _model.toggleFavorite( favoriteKey );
             ImGui::Separator();
         }
         if ( defaultInstance.get() != nullptr || prop._metadata->_defaultValue.empty() == false )
         {
             if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "ResetToDefault" ) ) )
-                resetPropertyToDefault( instance, prop, defaultInstance );
+                _model.resetToDefault( instance, prop, defaultInstance );
         }
         if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "CopyValue" ) ) )
             ImGui::SetClipboardText( SerializerUtil::formatPropertyText( prop, instance, SerializeContext::getDefault( SerializePurpose::Authoring ) ).c_str() );
         // 타입 핸들은 선택기만이 입력 길이다. 글로 붙이면 대상 타입을 확인하지 않은 값이 들어간다.
         const bool bPasteAllowed = ImGui::GetClipboardText() != nullptr && prop._handleTargetTypeName.empty();
         if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "PasteValue" ), nullptr, false, bPasteAllowed ) )
-            applyPropertyTextAsEdit( instance, prop, ImGui::GetClipboardText(), "Paste Value" );
+            _model.setPropertyText( instance, prop, ImGui::GetClipboardText(), "Paste Value" );
         EditorSelfTestMarks::record( "inspector.menu.pasteValue" );
         if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "CopyPropertyName" ) ) )
             ImGui::SetClipboardText( prop._name.c_str() );
@@ -580,31 +420,12 @@ namespace sw::editor
         // 컨테이너와 중첩 구조체는 이 함수가 재귀한다. 알림은 가장 바깥에서 한 번만 한다.
         const bool bOutermostEdit = _propertyDrawDepth == 0 && bEditedBefore == false && g.ActiveIdHasBeenEditedThisFrame;
         if ( bOutermostEdit )
-            notifyPropertyEdited( prop );
-    }
-
-    void EditorPropertyGrid::notifyPropertyEdited( const PropertyInfo& prop )
-    {
-        if ( _pEditTargetComponent != nullptr )
-            _pEditTargetComponent->onPropertyChanged( prop._name );
-        else if ( _pEditTargetObject != nullptr )
-            _pEditTargetObject->onPropertyChanged( prop._name );
-
-        // 씬 밖 객체(환경설정, 문서)는 대상이 지정한 곳으로 알린다.
-        if ( _onEdited.isBound() )
-            _onEdited( prop );
-
-        // 고친 값을 검증해 맵 검사 결과를 바꾼다. 로그는 남기지 않는다. 끄는 동안 프레임마다 호출되기 때문이다.
-        const GameObject* pOwner = ( _pEditTargetComponent != nullptr ) ? _pEditTargetComponent->getOwner() : _pEditTargetObject;
-        if ( pOwner != nullptr )
-            (void)ObjectValidation::reportGameObject( *pOwner, false );
+            _model.notifyPropertyEdited( prop );
     }
 
     void EditorPropertyGrid::drawPropertyWidgetBody( const MutableObjectAddress instance, const PropertyInfo& prop )
     {
-        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-
-        IInspectorProperty* pProperty = editorContext.getSubsystem<InspectorPropertyManager>().find( prop._typeName.c_str() );
+        IInspectorProperty* pProperty = PropertyGridModel::getPropertyManager().find( prop._typeName.c_str() );
         if ( pProperty != nullptr )
         {
             if ( pProperty->draw( instance, prop, *this ) )
@@ -613,7 +434,7 @@ namespace sw::editor
 
         const bool bReadOnly = prop._metadata->_bReadOnly != SW_FALSE;
 
-        const TypeRegistry& registry = editor::getSubsystem<TypeRegistry>();
+        const TypeRegistry& registry = PropertyGridModel::getTypeRegistry();
 
         const EnumInfo* pEnumInfo = registry.findEnum( prop._typeName );
         if ( pEnumInfo != nullptr )
@@ -654,16 +475,12 @@ namespace sw::editor
         if ( enumInfo._bIsBitFlag )
             Internal::drawBitFlagEnum( enumInfo, currentValue, bReadOnly, editedValue );
         else
-            Internal::drawPlainEnum( editor::getSubsystem<TypeRegistry>(), enumInfo, prop, currentValue, bReadOnly, editedValue );
+            Internal::drawPlainEnum( PropertyGridModel::getTypeRegistry(), enumInfo, prop, currentValue, bReadOnly, editedValue );
         if ( bReadOnly )
             return;
 
-        // 콤보에서 고른 값은 고르는 순간 바뀐다 — 콤보 단추의 활성화 · 해제로는 잡히지 않으므로 쓰기 직전에 편집 전을 찍어 남긴다.
         if ( editedValue != currentValue )
-        {
-            InspectorPropertyUndo::recordImmediateEdit( prop );
-            enumInfo.writeValueToMemory( pEnumMemory, editedValue );
-        }
+            _model.setEnumValue( prop, MutableValueAddress{ pEnumMemory }, enumInfo, editedValue );
     }
 
     void EditorPropertyGrid::drawContainerProperty( const MutableObjectAddress instance, const PropertyInfo& prop, bool bReadOnly )
@@ -712,18 +529,10 @@ namespace sw::editor
             if ( bReadOnly == false && pSeq->isFixedSize() == false )
             {
                 if ( ImGui::SmallButton( "+ Add" ) )
-                {
-                    EditorPropertyGridInternal::applyContainerEdit( getEditOwner(), "Add Element", [pSeq, pContainer]()
-                    { pSeq->addElementDefault( pContainer ); } );
-                    notifyPropertyEdited( prop );
-                }
+                    _model.addElement( prop, MutableValueAddress{ pContainer } );
                 EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Clear" ) ) );
                 if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Clear" ) ) )
-                {
-                    EditorPropertyGridInternal::applyContainerEdit( getEditOwner(), "Clear Elements", [pSeq, pContainer]()
-                    { pSeq->clear( pContainer ); } );
-                    notifyPropertyEdited( prop );
-                }
+                    _model.clearElements( prop, MutableValueAddress{ pContainer } );
                 ImGui::Separator();
             }
 
@@ -791,41 +600,11 @@ namespace sw::editor
         } ) );
 
         if ( eraseOrdinal != static_cast<size_t>( -1 ) )
-        {
-            EditorPropertyGridInternal::applyContainerEdit( getEditOwner(), "Remove Map Entry", [&mapWrapper, pContainer, eraseOrdinal]()
-            { (void)mapWrapper.eraseAt( pContainer, eraseOrdinal ); } );
-            notifyPropertyEdited( prop );
-        }
+            _model.removeMapEntry( prop, container, eraseOrdinal );
 
         string keyText;
         if ( bReadOnly == false && drawContainerAddRow( SW_LOCKEY( "EditorInspector", "NewKeyHint" ), keyText ) )
-        {
-            // 키를 키 타입으로 읽어 본다. 같은 키(텍스트가 같다)가 이미 있으면 값을 덮어쓰지 않는다.
-            const MemoryBlock keyBlock   = MemoryBlock::allocateAligned( mapWrapper.getKeySize(), alignof( std::max_align_t ) );
-            const MemoryBlock valueBlock = MemoryBlock::allocateAligned( mapWrapper.getValueSize(), alignof( std::max_align_t ) );
-            void* const       pKey       = keyBlock.get();
-            void* const       pValue     = valueBlock.get();
-            mapWrapper.defaultConstructKey( pKey );
-            mapWrapper.defaultConstructValue( pValue );
-            if ( SerializerUtil::parseTextValue( MutableValueAddress{ pKey }, prop._keyTypeName, keyText, context ) )
-            {
-                const string stagedText = SerializerUtil::formatValueText( ValueAddress{ pKey }, prop._keyTypeName, context );
-                bool         bExists    = false;
-                mapWrapper.forEach( pContainer, SW_DELEGATE_LAMBDA( MapForEachDelegate, [&]( const void* pExistingKey, const void* )
-                {
-                    if ( SerializerUtil::formatValueText( ValueAddress{ pExistingKey }, prop._keyTypeName, context ) == stagedText )
-                        bExists = true;
-                } ) );
-                if ( bExists == false )
-                {
-                    EditorPropertyGridInternal::applyContainerEdit( getEditOwner(), "Add Map Entry", [&mapWrapper, pContainer, pKey, pValue]()
-                    { mapWrapper.insertKeyValue( pContainer, pKey, pValue ); } );
-                    notifyPropertyEdited( prop );
-                }
-            }
-            mapWrapper.destroyKey( pKey );
-            mapWrapper.destroyValue( pValue );
-        }
+            _model.addMapEntry( prop, container, keyText ); // 같은 키(텍스트가 같다)가 이미 있으면 값을 덮어쓰지 않는다
         ImGui::TreePop();
     }
 
@@ -865,31 +644,13 @@ namespace sw::editor
         }
 
         if ( replaceIndex != static_cast<size_t>( -1 ) )
-        {
-            EditorPropertyGridInternal::applyContainerEdit( getEditOwner(), "Edit Set Element", [&]()
-            {
-                (void)sequence.replaceElement( pContainer, replaceIndex, SW_DELEGATE_LAMBDA( ElementFillDelegate, [&]( void* pElement ) -> bool
-                { return SerializerUtil::parseTextValue( MutableValueAddress{ pElement }, elementTypeName, replaceText, context ); } ) );
-            } );
-            notifyPropertyEdited( prop );
-        }
+            _model.replaceKeyedElement( prop, container, replaceIndex, replaceText );
         else if ( eraseIndex != static_cast<size_t>( -1 ) )
-        {
-            EditorPropertyGridInternal::applyContainerEdit( getEditOwner(), "Remove Set Element", [&sequence, pContainer, eraseIndex]()
-            { (void)sequence.eraseAt( pContainer, eraseIndex ); } );
-            notifyPropertyEdited( prop );
-        }
+            _model.removeKeyedElement( prop, container, eraseIndex );
 
         string addText;
         if ( bReadOnly == false && drawContainerAddRow( SW_LOCKEY( "EditorInspector", "NewElementHint" ), addText ) )
-        {
-            EditorPropertyGridInternal::applyContainerEdit( getEditOwner(), "Add Set Element", [&]()
-            {
-                (void)sequence.appendElement( pContainer, sequence.getSize( pContainer ), SW_DELEGATE_LAMBDA( ElementFillDelegate, [&]( void* pElement ) -> bool
-                { return SerializerUtil::parseTextValue( MutableValueAddress{ pElement }, elementTypeName, addText, context ); } ) );
-            } );
-            notifyPropertyEdited( prop );
-        }
+            _model.addKeyedElement( prop, container, addText );
         ImGui::TreePop();
     }
 
@@ -904,13 +665,6 @@ namespace sw::editor
         outText = text.c_str();
         text.clear();
         return true;
-    }
-
-    GameObject* EditorPropertyGrid::getEditOwner() const
-    {
-        if ( _pEditTargetComponent != nullptr )
-            return _pEditTargetComponent->getOwner();
-        return _pEditTargetObject;
     }
 
     void EditorPropertyGrid::drawStructOrStringProperty( const MutableObjectAddress instance, const PropertyInfo& prop, const TypeInfo* pFieldType )
@@ -981,8 +735,9 @@ namespace sw::editor
             return;
         }
 
-        if ( _lastInvokeResult.empty() == false )
-            ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "LastResult", TextArgumentList().addText( "lastInvokeResult", _lastInvokeResult.c_str() ) ).c_str() );
+        const utf8* pLastInvokeResult = _model.getLastInvokeResult();
+        if ( StringUtil::isNullOrEmpty( pLastInvokeResult ) == false )
+            ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "LastResult", TextArgumentList().addText( "lastInvokeResult", pLastInvokeResult ) ).c_str() );
 
         for ( const FunctionInfo& method : pTypeInfo->_listMethod )
         {
@@ -1020,7 +775,7 @@ namespace sw::editor
             formatstring( buttonLabel.data(), buttonLabel.capacity(), "Run %#", pLabelName );
             if ( ImGui::Button( buttonLabel.c_str(), ImVec2{ -FLT_MIN, 0.0f } ) )
             {
-                invokeTypeMethod( pInstance, pTypeInfo, method, TaskArgs{} );
+                _model.invokeMethod( pInstance, *pTypeInfo, method, TaskArgs{} );
             }
             if ( EditorSelfTestMarks::isEnabled() )
                 EditorSelfTestMarks::record( ( string( "inspector.method.run." ) + method._name.c_str() ).c_str() );
@@ -1070,7 +825,7 @@ namespace sw::editor
                 EditorSelfTestMarks::record( invokeMark.c_str() );
             }
             if ( bInvoke )
-                invokeTypeMethod( pInstance, pTypeInfo, method, InspectorBuiltinValue::makeMethodArgs( listSlot ) );
+                _model.invokeMethod( pInstance, *pTypeInfo, method, InspectorBuiltinValue::makeMethodArgs( listSlot ) );
         }
 
         ImGui::PopID();
@@ -1088,8 +843,7 @@ namespace sw::editor
                 formatstring( label.data(), label.capacity(), "arg%# (%#)", paramIndex, parameter._typeName.c_str() );
             else
                 formatstring( label.data(), label.capacity(), "%# (%#)", parameter._name.c_str(), parameter._typeName.c_str() );
-            const GameObject* pEditOwner = getEditOwner();
-            InspectorPropertyManager::drawMethodArg( label.c_str(), inoutListSlot[paramIndex], parameter, pEditOwner != nullptr ? pEditOwner->getManager() : nullptr );
+            InspectorPropertyManager::drawMethodArg( label.c_str(), inoutListSlot[paramIndex], parameter, _model.findEditOwnerManager() );
             if ( EditorSelfTestMarks::isEnabled() )
             {
                 // 시나리오가 인자 입력란을 누른다(핸들 선택기의 콤보가 마지막 항목이다). 인자 레이블 글("mesh (ComponentHandle)")이 오른쪽에 붙어
@@ -1124,28 +878,9 @@ namespace sw::editor
             {
                 EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Broadcast" ) ) );
                 if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "Broadcast" ) ) )
-                    (void)ReflectionInvoke::broadcastEvent( event, pInstance, {} );
+                    PropertyGridModel::broadcastEvent( event, pInstance );
             }
             ImGui::PopID();
         } );
-    }
-
-    void EditorPropertyGrid::invokeTypeMethod( void* pInstance, const TypeInfo* pTypeInfo, const FunctionInfo& method,
-                                               const TaskArgs& args )
-    {
-        TaskValue  result{};
-        const auto call = [&]()
-        { result = editor::getSubsystem<TypeRegistry>().invokeMethod( pInstance, pTypeInfo->_fullyQualifiedName, method._hashName, args ); };
-        GameObject* pOwner = getEditOwner();
-        if ( pOwner == nullptr )
-            call(); // 오브젝트 밖 대상(환경설정 구조체 등)은 되돌리기 대상이 없다
-        else
-        {
-            StringBuilder<constant::buffer::kMax256> textBuilder;
-            textBuilder.appendFormat( "Call %#", method._name.c_str() );
-            InspectorObjectEdit::applyObjectEdit( pOwner, textBuilder.view(), call );
-        }
-        InspectorBuiltinValue::formatMethodResult( result, method._returnTypeName, _lastInvokeResult.data(),
-                                                   _lastInvokeResult.capacity() );
     }
 } // namespace sw::editor

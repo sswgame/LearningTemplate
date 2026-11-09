@@ -213,7 +213,7 @@ namespace sw::editor
         const TypeInfo* pTypeInfo = pObj->getTypeInfo();
         if ( pTypeInfo != nullptr )
         {
-            const EditorPropertyGridTarget objectTarget{ pObj, pTypeInfo, nullptr, pObj, {}, {} };
+            const EditorPropertyGridTarget objectTarget = EditorPropertyGridTarget::makeSceneTarget( EditorPropertyGridScope::MainScene, pObj->getObjectID(), 0 );
             _propertyGrid.drawProperties( objectTarget, "Reflected Properties", {} );
             ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Methods" ) );
             _propertyGrid.drawMethodsAndEvents( objectTarget, false );
@@ -265,14 +265,10 @@ namespace sw::editor
                 ImGui::SetNextItemOpen( _propertyGrid.getOpenAllRequest() > 0 );
             if ( ImGui::CollapsingHeader( pComponent->getTypeInfo()->getDisplayName(), ImGuiTreeNodeFlags_DefaultOpen ) )
             {
-                _pMultiEditCurrent = &common;
-                EditorPropertyGridTarget target{};
-                target._pInstance  = pComponent;
-                target._pType      = pComponent->getTypeInfo();
-                target._pComponent = pComponent;
-                target._pObject    = pPrimary;
-                target._onEdited   = SW_DELEGATE_METHOD( Delegate<void( const PropertyInfo& )>, &InspectorPanel::copyEditToOthers, this );
-                target._isMixed    = SW_DELEGATE_METHOD( Delegate<bool( const PropertyInfo& )>, &InspectorPanel::isMultiEditMixed, this );
+                _pMultiEditCurrent              = &common;
+                EditorPropertyGridTarget target = EditorPropertyGridTarget::makeSceneTarget( EditorPropertyGridScope::MainScene, pPrimary->getObjectID(), pComponent->getComponentID() );
+                target._onEdited                = SW_DELEGATE_METHOD( Delegate<void( const PropertyInfo& )>, &InspectorPanel::copyEditToOthers, this );
+                target._isMixed                 = SW_DELEGATE_METHOD( Delegate<bool( const PropertyInfo& )>, &InspectorPanel::isMultiEditMixed, this );
                 _propertyGrid.drawProperties( target, nullptr, {} );
                 _pMultiEditCurrent = nullptr;
             }
@@ -302,13 +298,13 @@ namespace sw::editor
         vector<EditorPropertyGridTarget> listTarget;
         const TypeInfo*                  pObjectType = pObj->getTypeInfo();
         if ( pObjectType != nullptr && _favorites.hasAnyForTypeOrBase( *pObjectType ) )
-            listTarget.push_back( EditorPropertyGridTarget{ pObj, pObjectType, nullptr, pObj, {}, {} } );
+            listTarget.push_back( EditorPropertyGridTarget::makeSceneTarget( EditorPropertyGridScope::MainScene, pObj->getObjectID(), 0 ) );
         for ( Component* pComp : pObj->getComponents() )
         {
             const bool bNotFavoriteComponent = pComp == nullptr || pComp->getTypeInfo() == nullptr || _favorites.hasAnyForTypeOrBase( *pComp->getTypeInfo() ) == false;
             if ( bNotFavoriteComponent )
                 continue;
-            listTarget.push_back( EditorPropertyGridTarget{ pComp, pComp->getTypeInfo(), pComp, pComp->getOwner(), {}, {} } );
+            listTarget.push_back( EditorPropertyGridTarget::makeSceneTarget( EditorPropertyGridScope::MainScene, pObj->getObjectID(), pComp->getComponentID() ) );
         }
         if ( listTarget.empty() )
             return;
@@ -317,8 +313,8 @@ namespace sw::editor
         EditorSelfTestMarks::record( "inspector.favorites" );
         for ( const EditorPropertyGridTarget& target : listTarget )
         {
-            // 같은 타입의 컴포넌트가 둘이면 id 가 겹치므로 인스턴스 주소로 나눈다.
-            ImGui::PushID( target._pInstance );
+            // 같은 타입의 컴포넌트가 둘이면 id 가 겹치므로 컴포넌트 id 로 나눈다(오브젝트 자신은 0).
+            ImGui::PushID( static_cast<int32>( target._componentID ) );
             _propertyGrid.drawFavoriteProperties( target );
             ImGui::PopID();
         }
@@ -352,7 +348,7 @@ namespace sw::editor
             drawComponentContextMenu( pComp ); // 메인 카드와 같은 컴포넌트 메뉴 — 고른 명령은 다음 프레임 첫머리에 돈다
             if ( bOpen )
             {
-                const EditorPropertyGridTarget target{ pComp, pComp->getTypeInfo(), pComp, pObj, {}, {} };
+                const EditorPropertyGridTarget target = EditorPropertyGridTarget::makeSceneTarget( EditorPropertyGridScope::FocusedPreview, pObj->getObjectID(), pComp->getComponentID() );
                 _propertyGrid.drawProperties( target, nullptr, {} );
             }
             ImGui::PopID();
@@ -689,7 +685,7 @@ namespace sw::editor
             pInspector->collectDrawnProperties( listDrawnName );
         }
 
-        const EditorPropertyGridTarget componentTarget{ pComp, pTypeInfo, pComp, pComp->getOwner(), {}, {} };
+        const EditorPropertyGridTarget componentTarget = EditorPropertyGridTarget::makeSceneTarget( EditorPropertyGridScope::MainScene, pComp->getOwner()->getObjectID(), pComp->getComponentID() );
         _propertyGrid.drawProperties( componentTarget, "Properties", listDrawnName );
         ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Methods" ) );
         _propertyGrid.drawMethodsAndEvents( componentTarget, true );
