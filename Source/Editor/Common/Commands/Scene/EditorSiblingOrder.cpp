@@ -64,19 +64,6 @@ namespace sw::editor
         };
     } // namespace
 
-    SiblingDropZone EditorSiblingOrder::computeDropZone( float32 cursorY, float32 rowMinY, float32 rowMaxY )
-    {
-        const float32 height = rowMaxY - rowMinY;
-        if ( height <= 0.0f )
-            return SiblingDropZone::Onto;
-        const float32 fraction = ( cursorY - rowMinY ) / height;
-        if ( fraction < kEdgeFraction )
-            return SiblingDropZone::Before;
-        if ( fraction > 1.0f - kEdgeFraction )
-            return SiblingDropZone::After;
-        return SiblingDropZone::Onto;
-    }
-
     bool EditorSiblingOrder::isBefore( const GameObject* pLeft, const GameObject* pRight )
     {
         if ( pLeft->getSiblingIndex() != pRight->getSiblingIndex() )

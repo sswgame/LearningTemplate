@@ -15,14 +15,6 @@ namespace sw
 
 namespace sw::editor
 {
-    /** @brief 계층 창의 행 위에 끌어 놓은 위치입니다. */
-    enum class SiblingDropZone : uint8
-    {
-        Before = 0, ///< 행의 위쪽 가장자리. 그 오브젝트 앞의 형제로 옮긴다
-        Onto,       ///< 행의 가운데. 그 오브젝트의 자식으로 옮긴다
-        After       ///< 행의 아래쪽 가장자리. 그 오브젝트 뒤의 형제로 옮긴다
-    };
-
     /**
      * @struct EditorSiblingOrder
      * @brief 형제 순서(`GameObject::getSiblingIndex`)를 읽고 고치는 동작입니다. 유니티의 `Transform.SetSiblingIndex` 와 하이어라키 끌기, 언리얼 아웃라이너 폴더에 해당합니다.
@@ -32,13 +24,8 @@ namespace sw::editor
      */
     struct EditorSiblingOrder
     {
-        /** @brief 행 위쪽 몇 분의 일이 Before, 아래쪽 몇 분의 일이 After 인지입니다. 가운데는 Onto 입니다. */
-        static constexpr float32 kEdgeFraction = 0.3f;
         /** @brief 폴더 오브젝트에 붙는 태그입니다. */
         static constexpr const utf8* kFolderTagName = "Editor.Folder";
-
-        /** @brief 커서 높이 @p cursorY 가 행 [@p rowMinY, @p rowMaxY] 의 어느 위치인지 정합니다. 행 높이가 0 이면 Onto 입니다. */
-        static SiblingDropZone computeDropZone( float32 cursorY, float32 rowMinY, float32 rowMaxY );
 
         /** @brief 표시 순서에서 @p pLeft 가 @p pRight 보다 앞이면 true 입니다(형제 번호, 같으면 오브젝트 id). */
         static bool isBefore( const GameObject* pLeft, const GameObject* pRight );

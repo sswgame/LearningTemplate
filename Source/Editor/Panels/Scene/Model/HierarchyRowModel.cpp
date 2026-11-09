@@ -2,22 +2,15 @@
 
 #include "Editor/Panels/Scene/Model/HierarchyRowModel.h"
 
-#include "Core/Math/MathUtil.h"
 #include "Core/Name/TagID.h"
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/Commands/Scene/EditorSiblingOrder.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
-#include "Editor/Common/Workspace/EditorCamera.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
-#include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Common/Workspace/EditorStateStore.h"
-#include "Editor/Common/Workspace/EditorWorkspace.h"
 
-#include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -42,6 +35,17 @@ namespace sw::editor
                 }
                 return false;
             }
+
+            /** @brief @p pSceneComponent 에 같은 오브젝트의 자식 씬 컴포넌트가 있으면 true 입니다(다른 오브젝트의 것은 그 오브젝트 행 아래에 있다). */
+            static bool hasChildOnOwner( const GameObject* pObj, const SceneComponent* pSceneComponent )
+            {
+                for ( const SceneComponent* pChild : pSceneComponent->getChildren() )
+                {
+                    if ( pChild != nullptr && pChild->getOwner() == pObj )
+                        return true;
+                }
+                return false;
+            }
         };
     } // namespace
 
@@ -52,16 +56,15 @@ namespace sw::editor
         , _pManager{ nullptr }
         , _structureGeneration{ 0 }
         , _tagGeneration{ 0 }
+        , _hiddenRootID{ 0 }
         , _rebuildCount{ 0 }
+        , _uniqueExpandedObjectID{}
+        , _uniqueExpandedComponentID{}
+        , _listRow{}
+        , _objectRowCount{ 0 }
+        , _visibleRootCount{ 0 }
         , _bFilterActive{ SW_FALSE }
-        , _bClickedThisFrame{ SW_FALSE }
-        , _listDrawnRow{}
-        , _listPreviousRow{}
-        , _anchorObjectID{ 0 }
-        , _revealObjectID{ 0 }
-        , _lastPrimaryID{ 0 }
-        , _pendingRenameID{ 0 }
-        , _addComponentSearch{}
+        , _bRowsDirty{ SW_TRUE }
     {
     }
 
@@ -95,11 +98,6 @@ namespace sw::editor
         return EditorListFilter{ pFilter }.matches( pObj->getName().view() );
     }
 
-    HierarchyRowModel& HierarchyRowModel::get()
-    {
-        return getEditorState<HierarchyRowModel>();
-    }
-
     void HierarchyFilter::collectComponentTypeNames( const GameObjectManager& manager, vector<string>& outListName )
     {
         outListName.clear();
@@ -122,37 +120,51 @@ namespace sw::editor
         return filter.substr( 2 );
     }
 
-    void HierarchyRowModel::refresh( GameObjectManager& manager, string_view filterText )
+    void HierarchyRowModel::refresh( GameObjectManager& manager, string_view filterText, uint64 hiddenRootID )
     {
         const uint64 structureGeneration = manager.getStructureGeneration();
         const uint64 tagGeneration       = manager.getTagIndex().getGeneration();
-        const bool   bUpToDate           = _pManager == &manager && _structureGeneration == structureGeneration && _tagGeneration == tagGeneration &&
-                               _filterText.view() == filterText;
+        const bool   bSameManager        = _pManager == &manager;
+        const bool   bUpToDate           = bSameManager && _structureGeneration == structureGeneration && _tagGeneration == tagGeneration &&
+                               _filterText.view() == filterText && _hiddenRootID == hiddenRootID;
         if ( bUpToDate )
+        {
+            if ( _bRowsDirty )
+                rebuildRows();
             return;
+        }
 
+        // 다른 매니저(다른 씬)의 펼침은 다른 오브젝트의 id 다.
+        if ( bSameManager == false )
+        {
+            _uniqueExpandedObjectID.clear();
+            _uniqueExpandedComponentID.clear();
+        }
         _pManager            = &manager;
         _structureGeneration = structureGeneration;
         _tagGeneration       = tagGeneration;
         _filterText          = filterText;
+        _hiddenRootID        = hiddenRootID;
         ++_rebuildCount;
         EditorSceneCommands::collectRootsInOrder( manager, _listRoot ); // 루트만 형제 순서로 모은다. 지우고 되돌려도 위치가 그대로다
         _uniqueFilterMatchID.clear();
         _bFilterActive = EditorListFilter{ _filterText.c_str() }.isActive();
-        if ( _bFilterActive == false )
-            return;
-        const utf8*            pFilter     = _filterText.c_str();
-        unordered_set<uint64>& uniqueMatch = _uniqueFilterMatchID;
-        manager.forEachGameObject( [pFilter, &uniqueMatch]( GameObject* pObj )
+        if ( _bFilterActive )
         {
-            if ( HierarchyFilter::matches( pObj, pFilter ) == false )
-                return;
-            for ( const GameObject* pCursor = pObj; pCursor != nullptr; pCursor = pCursor->getParent() )
+            const utf8*            pFilter     = _filterText.c_str();
+            unordered_set<uint64>& uniqueMatch = _uniqueFilterMatchID;
+            manager.forEachGameObject( [pFilter, &uniqueMatch]( GameObject* pObj )
             {
-                if ( uniqueMatch.insert( pCursor->getObjectID() ).second == false )
-                    break;
-            }
-        } );
+                if ( HierarchyFilter::matches( pObj, pFilter ) == false )
+                    return;
+                for ( const GameObject* pCursor = pObj; pCursor != nullptr; pCursor = pCursor->getParent() )
+                {
+                    if ( uniqueMatch.insert( pCursor->getObjectID() ).second == false )
+                        break;
+                }
+            } );
+        }
+        rebuildRows();
     }
 
     bool HierarchyRowModel::isRowVisible( const GameObject* pObj ) const
@@ -160,164 +172,173 @@ namespace sw::editor
         return _bFilterActive == false || _uniqueFilterMatchID.contains( pObj->getObjectID() );
     }
 
-    void HierarchyRowModel::beginFrame()
+    bool HierarchyRowModel::isExpanded( HierarchyRowKind kind, uint64 id ) const
     {
-        _listPreviousRow.swap( _listDrawnRow );
-        _listDrawnRow.clear();
-
-        const GameObject* pPrimary             = editor::getMainSceneSelection().getPrimaryObject();
-        const uint64      primaryID            = pPrimary != nullptr ? pPrimary->getObjectID() : 0;
-        const bool        bRevealPrimaryObject = primaryID != _lastPrimaryID && _bClickedThisFrame == false && primaryID != 0;
-        if ( bRevealPrimaryObject )
-            _revealObjectID = primaryID;
-        _lastPrimaryID     = primaryID;
-        _bClickedThisFrame = SW_FALSE;
+        return kind == HierarchyRowKind::Object ? _uniqueExpandedObjectID.contains( id ) : _uniqueExpandedComponentID.contains( id );
     }
 
-    optional<uint32> HierarchyRowModel::findDrawnRowIndex( uint64 objectID ) const
+    void HierarchyRowModel::setExpanded( HierarchyRowKind kind, uint64 id, bool bExpanded )
     {
-        for ( size_t rowIndex = 0; rowIndex < _listDrawnRow.size(); ++rowIndex )
+        unordered_set<uint64>& uniqueExpanded = kind == HierarchyRowKind::Object ? _uniqueExpandedObjectID : _uniqueExpandedComponentID;
+        const bool             bChanged       = bExpanded ? uniqueExpanded.insert( id ).second : uniqueExpanded.erase( id ) > 0;
+        if ( bChanged )
+            _bRowsDirty = SW_TRUE;
+    }
+
+    void HierarchyRowModel::expandAncestorsOf( const GameObject& object )
+    {
+        for ( const GameObject* pParent = object.getParent(); pParent != nullptr; pParent = pParent->getParent() )
         {
-            if ( _listDrawnRow[rowIndex] == objectID )
+            setExpanded( HierarchyRowKind::Object, pParent->getObjectID(), true );
+        }
+    }
+
+    void HierarchyRowModel::rebuildRows()
+    {
+        _bRowsDirty       = SW_FALSE;
+        _objectRowCount   = 0;
+        _visibleRootCount = 0;
+        _listRow.clear();
+        for ( GameObject* pRoot : _listRoot )
+        {
+            if ( pRoot->getObjectID() == _hiddenRootID || isRowVisible( pRoot ) == false )
+                continue;
+            ++_visibleRootCount;
+            appendObjectRows( pRoot, kNoRow, 0 );
+        }
+    }
+
+    uint32 HierarchyRowModel::pushRow( HierarchyTreeRow row )
+    {
+        row._objectRowsBefore = _objectRowCount;
+        if ( row._kind == HierarchyRowKind::Object )
+            ++_objectRowCount;
+        _listRow.push_back( row );
+        return static_cast<uint32>( _listRow.size() - 1 );
+    }
+
+    void HierarchyRowModel::appendObjectRows( GameObject* pObj, uint32 parentRow, uint16 depth )
+    {
+        HierarchyTreeRow row{};
+        row._pObject          = pObj;
+        row._id               = pObj->getObjectID();
+        row._objectID         = row._id;
+        row._parentRow        = parentRow;
+        row._depth            = depth;
+        row._kind             = HierarchyRowKind::Object;
+        row._bLeaf            = pObj->hasChildren() == false && pObj->getComponentCount() == 0;
+        row._bExpanded        = row._bLeaf == false && _uniqueExpandedObjectID.contains( row._id );
+        const uint32 rowIndex = pushRow( row );
+        if ( row._bExpanded == false )
+            return;
+
+        vector<GameObject*> listChild; // 펼친 오브젝트에서만, 다시 펼 때만 만든다
+        EditorSiblingOrder::collectChildrenInOrder( *pObj, listChild );
+        for ( GameObject* pChild : listChild )
+        {
+            if ( isRowVisible( pChild ) )
+                appendObjectRows( pChild, rowIndex, static_cast<uint16>( depth + 1 ) );
+        }
+        for ( Component* pComp : pObj->getComponents() )
+        {
+            if ( pComp == nullptr )
+                continue;
+            // 행마다 확인하는 곳이라 리플렉션 캐스트 대신 생성자에서 설정한 비트를 본다.
+            if ( pComp->isSceneComponent() )
+            {
+                const SceneComponent* pParent = static_cast<SceneComponent*>( pComp )->getParent();
+                if ( pParent == nullptr || pParent->getOwner() != pObj ) // 같은 오브젝트의 부모 아래 것은 그 부모 행이 편다
+                    appendSceneComponentRows( pObj, pComp, rowIndex, static_cast<uint16>( depth + 1 ) );
+                continue;
+            }
+            HierarchyTreeRow componentRow{};
+            componentRow._pObject    = pObj;
+            componentRow._pComponent = pComp;
+            componentRow._id         = pComp->getComponentID();
+            componentRow._objectID   = row._id;
+            componentRow._parentRow  = rowIndex;
+            componentRow._depth      = static_cast<uint16>( depth + 1 );
+            componentRow._kind       = HierarchyRowKind::Component;
+            componentRow._bLeaf      = SW_TRUE;
+            (void)pushRow( componentRow ); // 잎이라 번호를 쓰지 않는다
+        }
+    }
+
+    void HierarchyRowModel::appendSceneComponentRows( GameObject* pObj, Component* pSceneComponent, uint32 parentRow, uint16 depth )
+    {
+        SceneComponent* const pScene = static_cast<SceneComponent*>( pSceneComponent );
+        HierarchyTreeRow      row{};
+        row._pObject          = pObj;
+        row._pComponent       = pSceneComponent;
+        row._id               = pSceneComponent->getComponentID();
+        row._objectID         = pObj->getObjectID();
+        row._parentRow        = parentRow;
+        row._depth            = depth;
+        row._kind             = HierarchyRowKind::SceneComponent;
+        row._bLeaf            = HierarchyRowModelInternal::hasChildOnOwner( pObj, pScene ) == false;
+        row._bExpanded        = row._bLeaf == false && _uniqueExpandedComponentID.contains( row._id );
+        const uint32 rowIndex = pushRow( row );
+        if ( row._bExpanded == false )
+            return;
+        for ( SceneComponent* pChild : pScene->getChildren() )
+        {
+            if ( pChild != nullptr && pChild->getOwner() == pObj )
+                appendSceneComponentRows( pObj, pChild, rowIndex, static_cast<uint16>( depth + 1 ) );
+        }
+    }
+
+    optional<uint32> HierarchyRowModel::findObjectRowIndex( uint64 objectID ) const
+    {
+        const optional<uint32> row = findRowOfObject( objectID );
+        if ( row.has_value() == false )
+            return nullopt;
+        return _listRow[*row]._objectRowsBefore;
+    }
+
+    optional<uint32> HierarchyRowModel::findRowOfObject( uint64 objectID ) const
+    {
+        for ( size_t rowIndex = 0; rowIndex < _listRow.size(); ++rowIndex )
+        {
+            const HierarchyTreeRow& row = _listRow[rowIndex];
+            if ( row._kind == HierarchyRowKind::Object && row._id == objectID )
                 return static_cast<uint32>( rowIndex );
         }
         return nullopt;
     }
 
-    void HierarchyRowModel::clickRow( GameObjectManager& manager, GameObject* pObj, bool bCtrl, bool bShift )
+    void HierarchyRowModel::collectObjectRowIDs( vector<uint64>& outListID ) const
     {
-        EditorWorkspace& workspace = editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>();
-        const uint64     objectID  = pObj->getObjectID();
-        _bClickedThisFrame         = SW_TRUE;
-        if ( bShift == false || _anchorObjectID == 0 )
+        outListID.clear();
+        outListID.reserve( _objectRowCount );
+        for ( const HierarchyTreeRow& row : _listRow )
         {
-            workspace.selectGameObject( pObj, bCtrl ? SelectionMode::Toggle : SelectionMode::Replace );
-            _anchorObjectID = objectID;
-            return;
-        }
-
-        // Shift 는 시작 행부터 이 행까지(지난 프레임에 그린 순서) 모두 선택한다. 유니티, 언리얼, 윈도 탐색기와 같다.
-        const vector<uint64>& listRow     = _listPreviousRow;
-        size_t                anchorIndex = listRow.size();
-        size_t                clickIndex  = listRow.size();
-        for ( size_t rowIndex = 0; rowIndex < listRow.size(); ++rowIndex )
-        {
-            if ( listRow[rowIndex] == _anchorObjectID )
-                anchorIndex = rowIndex;
-            if ( listRow[rowIndex] == objectID )
-                clickIndex = rowIndex;
-        }
-        if ( anchorIndex >= listRow.size() || clickIndex >= listRow.size() )
-        {
-            workspace.selectGameObject( pObj, SelectionMode::Add );
-            return;
-        }
-
-        const size_t first = MathUtil::min( anchorIndex, clickIndex );
-        const size_t last  = MathUtil::max( anchorIndex, clickIndex );
-        if ( bCtrl == false )
-            editor::getMainSceneSelection().clearObjectSelection();
-        for ( size_t rowIndex = first; rowIndex <= last; ++rowIndex )
-        {
-            GameObject* pRow = manager.findGameObjectByID( listRow[rowIndex] );
-            if ( pRow != nullptr )
-                workspace.selectGameObject( pRow, SelectionMode::Add );
-        }
-        workspace.selectGameObject( pObj, SelectionMode::Add ); // 누른 행이 주 선택이다
-    }
-
-    void HierarchyRowModel::selectAllRows( GameObjectManager& manager ) const
-    {
-        EditorSelection& editorSelection = editor::getMainSceneSelection();
-        editorSelection.clearObjectSelection();
-        for ( const uint64 rowID : _listPreviousRow )
-        {
-            GameObject* pRow = manager.findGameObjectByID( rowID );
-            if ( pRow != nullptr )
-                editorSelection.selectObject( pRow, SelectionMode::Add );
+            if ( row._kind == HierarchyRowKind::Object )
+                outListID.push_back( row._id );
         }
     }
 
-    void HierarchyRowModel::selectStep( GameObjectManager& manager, bool bUp )
+    float32 HierarchyRowModel::computeRowOffset( uint32 row, const HierarchyRowMetrics& stride ) const
     {
-        const vector<uint64>& listRow = _listPreviousRow;
-        if ( listRow.empty() )
-            return;
-        const GameObject* pPrimary = editor::getMainSceneSelection().getPrimaryObject();
-        size_t            current  = listRow.size();
-        for ( size_t rowIndex = 0; pPrimary != nullptr && rowIndex < listRow.size(); ++rowIndex )
+        const uint32 objectRows    = countObjectRowsBefore( row );
+        const uint32 componentRows = row - objectRows;
+        return static_cast<float32>( objectRows ) * stride._object + static_cast<float32>( componentRows ) * stride._component;
+    }
+
+    uint32 HierarchyRowModel::findRowAtOffset( float32 offset, const HierarchyRowMetrics& stride ) const
+    {
+        if ( _listRow.empty() )
+            return 0;
+        // 위치는 행 번호에 따라 늘어난다 — offset 이하인 마지막 행을 찾는다.
+        uint32 low  = 0;
+        uint32 high = static_cast<uint32>( _listRow.size() - 1 );
+        while ( low < high )
         {
-            if ( listRow[rowIndex] == pPrimary->getObjectID() )
-                current = rowIndex;
+            const uint32 mid = low + ( high - low + 1 ) / 2;
+            if ( computeRowOffset( mid, stride ) <= offset )
+                low = mid;
+            else
+                high = mid - 1;
         }
-        const size_t next  = current >= listRow.size() ? 0 : ( bUp ? ( current > 0 ? current - 1 : 0 ) : MathUtil::min( current + 1, listRow.size() - 1 ) );
-        GameObject*  pNext = manager.findGameObjectByID( listRow[next] );
-        if ( pNext == nullptr )
-            return;
-        editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>().selectGameObject( pNext, SelectionMode::Replace );
-        _anchorObjectID    = pNext->getObjectID();
-        _bClickedThisFrame = SW_TRUE; // 키로 선택한 것이므로 펼쳐 보이기 대상이 아니다
-    }
-
-    uint64 HierarchyRowModel::takePendingRename()
-    {
-        const uint64 objectID = _pendingRenameID;
-        _pendingRenameID      = 0;
-        return objectID;
-    }
-
-    void HierarchyCommands::moveSelectionStep( bool bDown )
-    {
-        GameObjectManager* pManager = editor::getActiveObjectManager();
-        GameObject*        pObject  = editor::getMainSceneSelection().getPrimaryObject();
-        if ( pManager != nullptr && pObject != nullptr )
-            (void)EditorSiblingOrder::moveStep( *pManager, pObject, bDown, findEditorCameraObject() ); // 끝이면 아무것도 하지 않는다
-    }
-
-    void HierarchyCommands::createFolder()
-    {
-        GameObjectManager* pManager = editor::getActiveObjectManager();
-        if ( pManager == nullptr )
-            return;
-        GameObject* pSelected = editor::getMainSceneSelection().getPrimaryObject();
-        GameObject* pParent   = pSelected != nullptr && EditorSiblingOrder::isFolder( *pSelected ) ? pSelected : nullptr;
-        (void)EditorSiblingOrder::createFolder( *pManager, pParent ); // 편집이 막혔으면 nullptr 이고 아무것도 바뀌지 않는다
-    }
-
-    void HierarchyCommands::selectOnlyObject( uint64 objectID )
-    {
-        GameObjectManager* pManager = editor::getActiveObjectManager();
-        GameObject*        pObj     = pManager != nullptr ? pManager->findGameObjectByID( objectID ) : nullptr;
-        if ( pObj != nullptr )
-            editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>().selectGameObject( pObj, SelectionMode::Replace );
-    }
-
-    vector<uint64> HierarchyCommands::collectSelectedObjectIDs()
-    {
-        vector<GameObject*> listSelected;
-        editor::getMainSceneSelection().getSelectedObjects( listSelected );
-        vector<uint64> listID;
-        listID.reserve( listSelected.size() );
-        for ( const GameObject* pSelected : listSelected )
-        {
-            listID.push_back( pSelected->getObjectID() );
-        }
-        return listID;
-    }
-
-    bool HierarchyCommands::isAncestorOf( const GameObject* pObj, const GameObject* pTarget )
-    {
-        for ( const GameObject* pParent = pTarget != nullptr ? pTarget->getParent() : nullptr; pParent != nullptr; pParent = pParent->getParent() )
-        {
-            if ( pParent == pObj )
-                return true;
-        }
-        return false;
-    }
-
-    const GameObject* HierarchyCommands::findEditorCameraObject()
-    {
-        const CameraComponent* pEditorCamera = EditorCamera::find( editor::getActiveScene() );
-        return pEditorCamera != nullptr ? pEditorCamera->getOwner() : nullptr;
+        return low;
     }
 } // namespace sw::editor
