@@ -221,7 +221,7 @@ def makeApk(game: str, buildDir: Path, packsDir: Path, projectRoot: Path) -> Pat
         raise ApkError(str(error)) from error
     settings = resolveSettings(config, game, minSdk, tools.targetSdk, abi, projectRoot)
 
-    library = buildDir / "Bin" / f"lib{settings.libName}.so"
+    library = buildDir / "Lib" / f"lib{settings.libName}.so"  # 공유 라이브러리는 CMAKE_LIBRARY_OUTPUT_DIRECTORY(cmake/Engine/BuildLayout.cmake 의 Lib)로 간다
     if not library.is_file():
         raise ApkError(f"{library} not found - build the {kPresetName} preset first")
     try:
