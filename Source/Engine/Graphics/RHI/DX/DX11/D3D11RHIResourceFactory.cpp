@@ -916,7 +916,7 @@ namespace sw
         _pDevice->_freeUAV.push( index );
     }
 
-    RHIPipelineStateHandle D3D11RHIResourceFactory::createPipelineState( const RHIPipelineStateDesc& desc )
+    RHIPipelineStateHandle D3D11RHIResourceFactory::createPipelineStateNative( const RHIPipelineStateDesc& desc )
     {
         // 디스크립터 해석(진입점 기본값, define, 뎁스 전용 판정)은 RHIShaderRequest 하나가 한다. 백엔드는 받기만 한다.
         // (그래픽스 요청에는 컴퓨트 스테이지가 없다. 컴퓨트 경로는 아래에서 define 을 직접 푼다.)
@@ -1044,7 +1044,7 @@ namespace sw
         return _pDevice->_pipelineStates.insert( std::move( pso ) );
     }
 
-    RHIPipelineStateHandle D3D11RHIResourceFactory::createComputePipelineState( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine )
+    RHIPipelineStateHandle D3D11RHIResourceFactory::createComputePipelineStateNative( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine )
     {
         D3D11RHIDevice::D3D11PipelineStateRecord pso{};
         if ( shaderPath.empty() ) // 빈 레코드를 등록하지 않는다(다른 백엔드와 같다)

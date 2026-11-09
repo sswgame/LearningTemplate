@@ -126,7 +126,7 @@
     "Source/DevTools/Client/Automation/Runner/AutomationJudge.cpp": {"float": 7},
     "Source/DevTools/Client/Automation/Runner/AutomationPerBackend.cpp": {"minus-one": 2, "integer": 1},
     "Source/DevTools/Client/Automation/Runner/AutomationPerBackend.h": {"minus-one": 1},
-    "Source/DevTools/Client/Automation/Runner/AutomationRunner.cpp": {"float": 8, "integer": 1},
+    "Source/DevTools/Client/Automation/Runner/AutomationRunner.cpp": {"float": 7, "integer": 1},
     "Source/DevTools/Client/Automation/Runner/AutomationRunnerSteps.cpp": {"float": 1},
     "Source/DevTools/Client/Automation/Runner/AutomationSession.cpp": {"float": 3},
     "Source/DevTools/Client/Automation/Scenario/AutomationFrameStats.cpp": {"float": 3},

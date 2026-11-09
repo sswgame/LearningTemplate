@@ -23,14 +23,18 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 리소스: PSO, 렌더 패스, 버퍼, 텍스처
         // ------------------------------------------------------------------------------
-        /** @brief 그래픽스 파이프라인 상태(PSO)를 만듭니다. */
-        virtual RHIPipelineStateHandle createPipelineState( const RHIPipelineStateDesc& desc ) = 0;
+        /**
+         * @brief 그래픽스 파이프라인 상태(PSO)를 만듭니다.
+         * @details 모든 PSO 생성이 지나는 한 입구다 — 셰이더 컴파일과 드라이버 링크 · 특수화(GL 은 프레임 하나에 수십 초)를 컴파일 바쁜 시계
+         *          (`ShaderCache::getCompileBusyClock`)에 센다. 자동화 시한이 그 시간을 뺀다. 백엔드는 `createPipelineStateNative` 를 구현한다.
+         */
+        RHIPipelineStateHandle createPipelineState( const RHIPipelineStateDesc& desc );
 
         /**
          * @brief 컴퓨트 파이프라인 상태(PSO)를 만듭니다.
          * @param listDefine 컴파일 매크로("NAME" 또는 "NAME=VALUE")입니다 — 그래픽스 PSO 의 `RHIPipelineStateDesc::_listShaderDefine` 과 같은 퍼뮤테이션입니다(셰이더 assert 변형이 쓴다).
          */
-        virtual RHIPipelineStateHandle createComputePipelineState( string_view shaderPath, string_view entryPoint = {}, const vector<string>& listDefine = {} ) = 0;
+        RHIPipelineStateHandle createComputePipelineState( string_view shaderPath, string_view entryPoint = {}, const vector<string>& listDefine = {} );
 
         /** @brief 파이프라인 상태 객체를 해제합니다. */
         virtual void destroyPipelineState( RHIPipelineStateHandle pso ) = 0;
@@ -345,5 +349,12 @@ namespace sw
 
         /** @brief bindless UAV 등록을 해제합니다. */
         virtual void unregisterBindlessUAV( RHIDescriptorIndex index ) = 0;
+
+    protected:
+        /** @brief 백엔드의 그래픽스 PSO 생성입니다 — 부르는 쪽은 `createPipelineState` 를 쓴다(컴파일 시계). */
+        virtual RHIPipelineStateHandle createPipelineStateNative( const RHIPipelineStateDesc& desc ) = 0;
+
+        /** @brief 백엔드의 컴퓨트 PSO 생성입니다 — 부르는 쪽은 `createComputePipelineState` 를 쓴다(컴파일 시계). */
+        virtual RHIPipelineStateHandle createComputePipelineStateNative( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine ) = 0;
     };
 } // namespace sw

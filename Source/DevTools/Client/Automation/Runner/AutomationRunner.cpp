@@ -552,7 +552,7 @@ namespace sw
         _run._lastFrameEndSeconds = _run._wallStartSeconds;
         // 셰이더 컴파일(빈 캐시의 첫 실행)은 일하는 시간이다 — 시한에 세지 않는다(언리얼 자동화도 셰이더 컴파일을 기다린다). 행 감시도 같은 값을 뺀다.
         const ShaderCache* const pShaderCache = engine::findSubsystem<ShaderCache>();
-        _run._pCompileBusy                    = pShaderCache != nullptr ? &pShaderCache->getProviderBusyClock() : nullptr;
+        _run._pCompileBusy                    = pShaderCache != nullptr ? &pShaderCache->getCompileBusyClock() : nullptr;
         _run._compileBusyAtStartNanoseconds   = _run._pCompileBusy != nullptr ? _run._pCompileBusy->getBusyNanoseconds( MonotonicClock::nowNanoseconds() ) : 0;
         _startedUnixMs                        = WallClock::nowUnixMilliseconds().count();
         LocalCalendarTime calendar{};
@@ -591,7 +591,7 @@ namespace sw
             _run._waitReportedSeconds = 0.0;
             return;
         }
-        const float64 nowSeconds   = AutomationRunnerInternal::readNowSeconds();
+        const float64 nowSeconds   = readNowSecondsWithoutCompile();
         const float64 startSeconds = bClockHeld ? _run._clockHoldStartSeconds : _run._holdStartSeconds;
         const float64 dueSeconds   = _run._waitReportedSeconds == 0.0 ? startSeconds + AutomationTimeLimits::kWaitReportFirstSeconds
                                                                       : _run._waitReportedSeconds + AutomationTimeLimits::kWaitReportIntervalSeconds;
@@ -634,6 +634,14 @@ namespace sw
     float64 AutomationRunner::scaleWallSeconds( float32 seconds )
     {
         return static_cast<float64>( seconds ) * static_cast<float64>( gv_scenarioWallScale );
+    }
+
+    float64 AutomationRunner::readNowSecondsWithoutCompile() const
+    {
+        const float64 nowSeconds = AutomationRunnerInternal::readNowSeconds();
+        if ( _run._pCompileBusy == nullptr )
+            return nowSeconds;
+        return nowSeconds - _run._pCompileBusy->getBusySecondsSince( 0, MonotonicClock::nowNanoseconds() );
     }
 
     float64 AutomationRunner::readElapsedSecondsWithoutCompile() const
@@ -889,7 +897,7 @@ namespace sw
             return AutomationStepHold::Run;
         }
         if ( _run._holdFrameCount == 0 )
-            _run._holdStartSeconds = AutomationRunnerInternal::readNowSeconds(); // 대기 보고(`reportOngoingWait`)의 기준 — 벽시계 시한 판(`holdUntilReadyWithin`)은 먼저 같은 값을 적었다
+            _run._holdStartSeconds = readNowSecondsWithoutCompile(); // 대기 보고(`reportOngoingWait`)의 기준 — 벽시계 시한 판(`holdUntilReadyWithin`)은 먼저 같은 값을 적었다
         ++_run._holdFrameCount;
         _run._waitingFor = waitingFor;
         // 이 프레임은 시나리오 프레임으로 세지 않는다. 다음 프레임에 낼 입력 이벤트부터 한 프레임씩 밀어 시나리오 프레임과 맞춘다.
@@ -899,7 +907,7 @@ namespace sw
 
     AutomationStepHold AutomationRunner::holdUntilReadyWithin( const AutomationStep& step, InputManager& input, bool bReady, float32 wallSeconds, string_view waitingFor )
     {
-        const float64 nowSeconds = AutomationRunnerInternal::readNowSeconds();
+        const float64 nowSeconds = readNowSecondsWithoutCompile(); // 컴파일(빈 캐시 · GL 링크)로 멈춘 프레임은 대기 시간이 아니다 — 전체 시한과 같은 시계
         if ( _run._holdFrameCount == 0 )
             _run._holdStartSeconds = nowSeconds;
         const bool bExpired = _run._holdFrameCount > 0 && nowSeconds - _run._holdStartSeconds >= scaleWallSeconds( wallSeconds );
@@ -931,7 +939,7 @@ namespace sw
             _run._bClockHeld          = SW_FALSE;
             return false;
         }
-        const float64 nowSeconds = static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6;
+        const float64 nowSeconds = readNowSecondsWithoutCompile();
         if ( _run._clockHoldFrameCount == 0 )
         {
             _run._clockHoldStartSeconds = nowSeconds;

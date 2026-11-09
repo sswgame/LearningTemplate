@@ -1327,7 +1327,7 @@ namespace sw
     }
 
     // 길이 유지(긴 함수 정리 기준): 파이프라인 상태 서술을 단계 순서로 채운 뒤 만드는 선형 목록이라 나누지 않는다.
-    RHIPipelineStateHandle VulkanRHIResourceFactory::createPipelineState( const RHIPipelineStateDesc& desc )
+    RHIPipelineStateHandle VulkanRHIResourceFactory::createPipelineStateNative( const RHIPipelineStateDesc& desc )
     {
         // 와이어프레임 채우기는 디바이스 기능 fillModeNonSolid 가 있어야 한다. 없으면 솔리드로 바꾸지 않고 셰이더 모듈을 만들기 전에 거절한다(아래 래스터 상태 주석).
         const RHIRenderState& renderState = desc._renderState;
@@ -1627,7 +1627,7 @@ namespace sw
         return _pDevice->_pipelineStates.insert( record );
     }
 
-    RHIPipelineStateHandle VulkanRHIResourceFactory::createComputePipelineState( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine )
+    RHIPipelineStateHandle VulkanRHIResourceFactory::createComputePipelineStateNative( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine )
     {
         const ShaderCompileDesc csDesc   = RHIShaderRequest::resolveCompute( shaderPath, entryPoint, listDefine, ShaderTargetFormat::SPIRV_Vulkan );
         ShaderCompileResult     csResult = RHIShaderRequest::compile( csDesc );

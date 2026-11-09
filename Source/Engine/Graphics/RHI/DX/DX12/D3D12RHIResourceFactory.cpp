@@ -1487,7 +1487,7 @@ namespace sw
         releaseBindlessRecord( BindlessRegistry::UnorderedAccess, index );
     }
 
-    RHIPipelineStateHandle D3D12RHIResourceFactory::createPipelineState( const RHIPipelineStateDesc& desc )
+    RHIPipelineStateHandle D3D12RHIResourceFactory::createPipelineStateNative( const RHIPipelineStateDesc& desc )
     {
         Microsoft::WRL::ComPtr<ID3D12PipelineState> pso;
         uint32                                      vertexSlotMask{ 0 };
@@ -1624,7 +1624,7 @@ namespace sw
         } );
     }
 
-    RHIPipelineStateHandle D3D12RHIResourceFactory::createComputePipelineState( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine )
+    RHIPipelineStateHandle D3D12RHIResourceFactory::createComputePipelineStateNative( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine )
     {
         Microsoft::WRL::ComPtr<ID3D12PipelineState> pso;
         if ( shaderPath.empty() == false )

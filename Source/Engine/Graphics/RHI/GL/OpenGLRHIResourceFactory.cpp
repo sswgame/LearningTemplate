@@ -972,7 +972,7 @@ namespace sw
                                     OpenGLRHIDevice::BindlessResourceRecord{} );
     }
 
-    RHIPipelineStateHandle OpenGLRHIResourceFactory::createPipelineState( const RHIPipelineStateDesc& desc )
+    RHIPipelineStateHandle OpenGLRHIResourceFactory::createPipelineStateNative( const RHIPipelineStateDesc& desc )
     {
         if ( _pDevice->_bInitialized == SW_FALSE )
             return 0;
@@ -1103,7 +1103,7 @@ namespace sw
         return _pDevice->_pipelineStates.insert( record );
     }
 
-    RHIPipelineStateHandle OpenGLRHIResourceFactory::createComputePipelineState( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine )
+    RHIPipelineStateHandle OpenGLRHIResourceFactory::createComputePipelineStateNative( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine )
     {
         if ( _pDevice->_bInitialized == SW_FALSE )
             return 0;

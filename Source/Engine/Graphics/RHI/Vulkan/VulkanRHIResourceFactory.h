@@ -13,8 +13,8 @@ namespace sw
     public:
         explicit VulkanRHIResourceFactory( VulkanRHIDevice* pDevice )
             : _pDevice{ pDevice } {}
-        RHIPipelineStateHandle createPipelineState( const RHIPipelineStateDesc& desc ) override;
-        RHIPipelineStateHandle createComputePipelineState( string_view shaderPath, string_view entryPoint = {}, const vector<string>& listDefine = {} ) override;
+        RHIPipelineStateHandle createPipelineStateNative( const RHIPipelineStateDesc& desc ) override;
+        RHIPipelineStateHandle createComputePipelineStateNative( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine ) override;
         void                   destroyPipelineState( RHIPipelineStateHandle pso ) override;
         RHIRenderPassHandle    createRenderPass( const RHIRenderPassDesc& desc ) override;
         void                   destroyRenderPass( RHIRenderPassHandle pass ) override;

@@ -82,7 +82,7 @@ namespace sw
     }
 
     // 길이 유지(긴 함수 정리 기준): 셰이더 · 정점 입력 · 래스터 · 깊이 · 블렌드 · 생성의 순서가 곧 파이프라인 서술이라 나누지 않는다.
-    RHIPipelineStateHandle WebGPURHIResourceFactory::createPipelineState( const RHIPipelineStateDesc& desc )
+    RHIPipelineStateHandle WebGPURHIResourceFactory::createPipelineStateNative( const RHIPipelineStateDesc& desc )
     {
         using Internal = WebGPURHIResourceFactoryInternal;
         if ( _pDevice->_bInitialized == SW_FALSE )
@@ -231,7 +231,7 @@ namespace sw
         return _pDevice->_pipelines.insert( std::move( record ) );
     }
 
-    RHIPipelineStateHandle WebGPURHIResourceFactory::createComputePipelineState( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine )
+    RHIPipelineStateHandle WebGPURHIResourceFactory::createComputePipelineStateNative( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine )
     {
         if ( _pDevice->_bInitialized == SW_FALSE )
             return 0;

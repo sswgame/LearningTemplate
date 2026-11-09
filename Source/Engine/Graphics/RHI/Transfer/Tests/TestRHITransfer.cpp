@@ -66,8 +66,8 @@ namespace
         }
         void discardTextureReadback( RHITransferTicket ) override { ++_discardCount; }
 
-        RHIPipelineStateHandle createPipelineState( const RHIPipelineStateDesc& ) override { return 0; }
-        RHIPipelineStateHandle createComputePipelineState( string_view, string_view, const vector<string>& ) override { return 0; }
+        RHIPipelineStateHandle createPipelineStateNative( const RHIPipelineStateDesc& ) override { return 0; }
+        RHIPipelineStateHandle createComputePipelineStateNative( string_view, string_view, const vector<string>& ) override { return 0; }
         void                   destroyPipelineState( RHIPipelineStateHandle ) override {}
         RHIRenderPassHandle    createRenderPass( const RHIRenderPassDesc& ) override { return 0; }
         void                   destroyRenderPass( RHIRenderPassHandle ) override {}

@@ -11,6 +11,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Time/MonotonicClock.h"
 
 namespace sw
 {
@@ -64,5 +65,25 @@ namespace sw
         uint32 _activeCount         SW_GUARDED_BY( _mutex ); ///< 진행 중인 일 수
         int64 _busySinceNanoseconds SW_GUARDED_BY( _mutex ); ///< 지금 바쁜 구간이 시작한 시각(진행 중일 때만 뜻이 있다)
         int64 _busyNanoseconds      SW_GUARDED_BY( _mutex ); ///< 닫힌 바쁜 구간의 합
+    };
+
+    /**
+     * @class BusyScope
+     * @brief 범위 동안 일 하나를 `BusyClock` 에 셉니다(지금 시각은 `MonotonicClock`). 끝을 잊는 길이 없게 begin · end 를 짝짓는다.
+     */
+    class BusyScope
+    {
+    public:
+        explicit BusyScope( BusyClock& clock )
+            : _clock{ clock }
+        {
+            _clock.begin( MonotonicClock::nowNanoseconds() );
+        }
+        ~BusyScope() { _clock.end( MonotonicClock::nowNanoseconds() ); }
+        BusyScope( const BusyScope& )            = delete;
+        BusyScope& operator=( const BusyScope& ) = delete;
+
+    private:
+        BusyClock& _clock;
     };
 } // namespace sw
