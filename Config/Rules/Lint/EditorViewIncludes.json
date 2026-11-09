@@ -34,6 +34,7 @@
         "Source/Editor/Panels/Animation/AnimationGraphLayerEditor",
         "Source/Editor/Panels/Animation/AnimationGraphPanel",
         "Source/Editor/Panels/Animation/AnimationWatches",
+        "Source/Editor/Panels/Animation/BoneHierarchyPopup",
         "Source/Editor/Panels/Animation/SequenceDebuggerPanel",
         "Source/Editor/Panels/Animation/SpriteClipPanel",
         "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel",
