@@ -378,8 +378,27 @@ namespace sw
         return renderedCount;
     }
 
+    void FramePassExecutor::prepareShadowCacheLayerResource()
+    {
+        // 그림자 캐시 층은 기록 **전에** 만든다 — 패스 기록(병렬 레벨) 안에서 텍스처를 만들면 자원 표를 바꿔 디바이스가 멈춘다(`requireRegistryMutableNow`).
+        // 아틀라스는 그림자 패스의 깊이 첨부다(첨부 풀이 이미 잡았다). 같은 형식 · 크기면 아무것도 하지 않는다.
+        ShadowCache& cache = _state._shadowCache;
+        if ( cache.usesCacheLayer() == false )
+            return;
+        for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPass() )
+        {
+            if ( pass._type != RenderPassType::Shadow )
+                continue;
+            const TransientAttachmentPool::Attachment atlas = findTransientAttachment( pass._resolvedDepthAttachment );
+            if ( atlas._texture != 0 )
+                (void)cache.ensureLayer( _pDevice, atlas._format, atlas._width ); // 실패하면 패스가 층 없음을 보고 캐시 없이 다 그린다
+            return;
+        }
+    }
+
     bool FramePassExecutor::executeMainGraph( IRHIDevice* pDevice )
     {
+        prepareShadowCacheLayerResource();
         // 병렬 기록이 가능하면(백엔드 capability, TaskManager, 레벨이 나올 만큼 컴파일된 그래프) 레벨마다 여러 리스트로 기록한다.
         // 첫 프레임처럼 그래프가 아직 컴파일되지 않았으면(getExecutionOrder() 가 비어 있으면) 직렬 경로로 간다.
         const bool bCanRunParallel = _state._pTaskManager != nullptr &&
@@ -421,6 +440,7 @@ namespace sw
         _state._frameContext._pCmd          = pCmd; // 직렬 경로의 패스는 시드의 리스트에 기록한다
         resetClearedAttachments();
         _bHasExecutedDepthPrepass.store( 0 );
+        prepareShadowCacheLayerResource(); // 주 시점보다 먼저 그리는 뷰도 있다 — 층은 기록 전에
 
         pCmd->beginCommandList();
         if ( _state._graph.execute( _graphContext, pCmd ) == false )
@@ -2236,10 +2256,11 @@ namespace sw
             SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.ShadowCacheNoRestorePSO", "Shadow cache restore PSO is missing - cached point/spot shadows are drawn without the cache" );
             return false;
         }
+        // 층은 기록 전에 만들었다(`prepareShadowCacheLayerResource`) — 여기서는 만들지 않는다. 아틀라스와 크기가 다르면(그 뒤에 바뀌었다) 이 프레임은 캐시 없이 다 그린다.
         const TransientAttachmentPool::Attachment atlas = findTransientAttachment( atlasName );
-        if ( atlas._texture == 0 || cache.ensureLayer( _pDevice, atlas._format, atlas._width ) == false )
-            return false;
         const TransientAttachmentPool::Attachment layer = cache.getLayer();
+        if ( atlas._texture == 0 || layer._texture == 0 || layer._width != atlas._width || layer._format != atlas._format )
+            return false;
         if ( cache.needsRebuild() )
         {
             // 캐시 층을 지우고 캐시하는 타일마다 정적 배치만 그린다(그림자 컬링 칸 — 모든 그림자 볼륨을 덮는다). 타일은 모든 뷰가 같아 프레임에 한 번이다.

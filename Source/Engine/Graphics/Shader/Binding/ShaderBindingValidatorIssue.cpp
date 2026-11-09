@@ -621,8 +621,10 @@ namespace sw
              */
             void checkMessageSlot( const Internal::ReflectedBinding& reflected )
             {
-                const bool bWritableKind = Internal::registerClassOf( reflected._kind ) == Internal::RegisterClass::UnorderedAccess ||
-                                           ( Internal::isSPIRV( _targetFormat ) && reflected._kind == ShaderBindingKind::StructuredBuffer );
+                // SPIR-V 의 StorageBuffer 는 읽기 · 쓰기를 모른다(Vulkan · GL) — 다만 WebGPU 리플렉션은 띠로 정확히 가른 이름을 준다(`reflectWebGPU`).
+                const bool bAmbiguousStorage = Internal::isSPIRV( _targetFormat ) && _targetFormat != ShaderTargetFormat::WGSL_WebGPU;
+                const bool bWritableKind     = Internal::registerClassOf( reflected._kind ) == Internal::RegisterClass::UnorderedAccess ||
+                                           ( bAmbiguousStorage && reflected._kind == ShaderBindingKind::StructuredBuffer );
                 if ( reflected._space != 0 || bWritableKind == false )
                     return;
                 const uint32 bindOffset   = _bVulkan ? shaderslot::vk::kUShift : ( _bOpenGl ? shaderslot::gl::kUAVBinding0 : 0u );

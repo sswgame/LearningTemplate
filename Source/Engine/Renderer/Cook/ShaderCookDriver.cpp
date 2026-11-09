@@ -198,9 +198,12 @@ namespace sw
                     SW_LOG_ERROR_ID( "ShaderCooker.ShaderCookRequestCannot", "Shader cook request cannot be resolved (%#): %# (%#)", request._entryPoint, input.error().message(), input.error().detail() );
                     return;
                 }
-                const string stemLower = source.getStemLower();
+                const string stemLower      = source.getStemLower();
+                const bool   bOptionalStage = request._stage == ShaderStage::Hull || request._stage == ShaderStage::Domain || request._stage == ShaderStage::Geometry;
                 for ( ShaderTargetFormat fmt : listTargetFormat )
                 {
+                    if ( bOptionalStage && ShaderTargetFormatTable::find( fmt )->_bOptionalStages == 0 )
+                        continue; // 이 형식에는 헐 · 도메인 · 지오메트리가 없다(WebGPU) — 런타임도 그 PSO 를 만들지 않는다
                     FormatTask task;
                     task._pRequest                                     = &request;
                     task._source                                       = source;

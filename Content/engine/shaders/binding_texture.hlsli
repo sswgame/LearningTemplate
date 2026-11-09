@@ -97,6 +97,18 @@ static float4 Bindless::sampleIndex( uint index, float2 uv )
 {
     return Bindless::sampleIndexWith( index, SW_ENGINE_TEXTURE_SAMPLER, uv );
 }
+/** @brief `sampleIndex` 의 밉 0 판 — 화면 미분을 쓰지 않아 반복 수가 정해지지 않은 루프(빛 루프) · 정점 단계에서도 읽힌다(FXC 는 루프 안 미분 샘플을 펼치려다 멈췄다). */
+static float4 Bindless::sampleIndexLevelZero( uint index, float2 uv )
+{
+    if ( index == kInvalidIndex )
+        return float4( 0, 0, 0, 1 );
+    const uint slot = Bindless::textureSlot( index );
+    #if defined( __spirv__ )
+    return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].SampleLevel( SW_SAMPLER_STATE( SW_ENGINE_TEXTURE_SAMPLER ), uv, 0.0f );
+    #else
+    return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].SampleLevel( g_SwSampler1, uv, 0.0f ); // 엔진 텍스처 샘플러(선형 · 클램프 — SW_ENGINE_TEXTURE_SAMPLER)
+    #endif
+}
 /**
  * @brief 씬 깊이의 2x2 이웃을 **텍스처 연산 한 번**으로 읽습니다 (`GatherRed`).
  * @details 게더는 필터를 하지 않고 텍셀 넷을 그대로 돌려준다 — 값은 바이리니어 샘플 하나와 비슷한데
@@ -414,6 +426,16 @@ static float4 Bindless::sampleIndex( uint index, float2 uv )
         #undef SW_OP
     return kUnmappedEngineTextureColor;
 }
+/** @brief `sampleIndex` 의 밉 0 판(에뮬) — 화면 미분을 쓰지 않는다. */
+static float4 Bindless::sampleIndexLevelZero( uint index, float2 uv )
+{
+    if ( index == kInvalidIndex )
+        return float4( 0, 0, 0, 1 );
+        #define SW_OP( tex, smp ) return tex.SampleLevel( smp, uv, 0.0f );
+    SW_ENGINE_TEXTURE_SWITCH( Bindless::emulatedSlot( index ), SW_OP )
+        #undef SW_OP
+    return kUnmappedEngineTextureColor;
+}
 /**
  * @brief 씬 깊이의 2x2 이웃을 **텍스처 연산 한 번**으로 읽습니다 (`GatherRed`).
  * @details 에뮬 백엔드는 깊이가 늘 SceneDepth 칸이다 — 인덱스로 되짚을 필요가 없다. 게더는 필터 모드를 보지 않는다.
@@ -580,6 +602,23 @@ static float4 PassTexture::sampleLight2dCookieAtlas( float2 uv )
      *          t16..t31 에 서수 순서로 걸고 머티리얼 데이터에는 서수를 넣는다. DX12/Vulkan 은 전역 인덱스 그대로다.
      */
     #if defined( SW_VIEWMODE_MIPMAPS )
+        // 밉 단계 조회 — WGSL 에는 LOD 조회(SPIR-V OpImageQueryLod)가 없어 웹은 텍스처 크기와 화면 미분으로 같은 식을 쓴다(이방성은 빠진다). 나머지는 하드웨어 조회.
+        #if defined( WEBGPU )
+            #define SW_QUERY_TEXTURE_LOD( textureObject, samplerState, textureUV ) ViewMode::computeTextureLod( textureObject, textureUV )
+/** @brief 텍스처 @p textureObject 를 @p uv 에서 읽는 밉 단계입니다(하드웨어 LOD 식 — 텍셀 단위 화면 미분의 더 긴 쪽, log2). */
+static float ViewMode::computeTextureLod( Texture2D textureObject, float2 uv )
+{
+    uint width  = 0u;
+    uint height = 0u;
+    textureObject.GetDimensions( width, height );
+    const float2 texel = uv * float2( width, height );
+    const float2 dx    = ddx( texel );
+    const float2 dy    = ddy( texel );
+    return 0.5f * log2( max( dot( dx, dx ), dot( dy, dy ) ) );
+}
+        #else
+            #define SW_QUERY_TEXTURE_LOD( textureObject, samplerState, textureUV ) textureObject.CalculateLevelOfDetail( samplerState, textureUV )
+        #endif
 /**
  * @brief 보기 모드 Mipmaps — 머티리얼 텍스처를 읽는 밉 단계를 색으로 바꾼다(유니티 Scene 뷰 Mipmaps 와 같은 목적).
  * @details 확대(밉 0 보다 작다 — 텍스처 해상도가 모자란다)는 파랑, 밉 0 은 초록, 1 노랑, 2 주황, 3 이상 빨강(해상도가 남는다)이다. 텍스처가 없으면 흰색.
@@ -599,79 +638,79 @@ static float4 MaterialTexture::sampleMipColor( uint index, float2 uv )
         return float4( 1, 1, 1, 1 );
     const uint slot = Bindless::textureSlot( index );
             #if defined( __spirv__ )
-    return ViewMode::computeMipColor( g_SwBindlessTex2D[NonUniformResourceIndex( slot )].CalculateLevelOfDetail( SW_SAMPLER_STATE( SW_MATERIAL_TEXTURE_SAMPLER ), uv ) );
+    return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwBindlessTex2D[NonUniformResourceIndex( slot )], SW_SAMPLER_STATE( SW_MATERIAL_TEXTURE_SAMPLER ), uv ) );
             #else
-    return ViewMode::computeMipColor( g_SwBindlessTex2D[NonUniformResourceIndex( slot )].CalculateLevelOfDetail( g_SwSampler0, uv ) );
+    return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwBindlessTex2D[NonUniformResourceIndex( slot )], g_SwSampler0, uv ) );
             #endif
         #else
     switch ( index )
     {
             #if defined( SW_SEPARATE_SAMPLER_EMULATION )
         case 0u:
-            return ViewMode::computeMipColor( g_SwMaterialTex0.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+            return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex0, g_SwSampler0, uv ) );
         case 1u:
-            return ViewMode::computeMipColor( g_SwMaterialTex1.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+            return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex1, g_SwSampler0, uv ) );
         case 2u:
-            return ViewMode::computeMipColor( g_SwMaterialTex2.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+            return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex2, g_SwSampler0, uv ) );
         case 3u:
-            return ViewMode::computeMipColor( g_SwMaterialTex3.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+            return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex3, g_SwSampler0, uv ) );
         case 4u:
-            return ViewMode::computeMipColor( g_SwMaterialTex4.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+            return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex4, g_SwSampler0, uv ) );
         case 5u:
-            return ViewMode::computeMipColor( g_SwMaterialTex5.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+            return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex5, g_SwSampler0, uv ) );
         case 6u:
-            return ViewMode::computeMipColor( g_SwMaterialTex6.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+            return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex6, g_SwSampler0, uv ) );
         case 7u:
-            return ViewMode::computeMipColor( g_SwMaterialTex7.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+            return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex7, g_SwSampler0, uv ) );
         case 8u:
-            return ViewMode::computeMipColor( g_SwMaterialTex8.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+            return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex8, g_SwSampler0, uv ) );
         case 9u:
-            return ViewMode::computeMipColor( g_SwMaterialTex9.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+            return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex9, g_SwSampler0, uv ) );
         case 10u:
-            return ViewMode::computeMipColor( g_SwMaterialTex10.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+            return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex10, g_SwSampler0, uv ) );
         case 11u:
-            return ViewMode::computeMipColor( g_SwMaterialTex11.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+            return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex11, g_SwSampler0, uv ) );
         case 12u:
-            return ViewMode::computeMipColor( g_SwMaterialTex12.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+            return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex12, g_SwSampler0, uv ) );
         case 13u:
-            return ViewMode::computeMipColor( g_SwMaterialTex13.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+            return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex13, g_SwSampler0, uv ) );
         case 14u:
-            return ViewMode::computeMipColor( g_SwMaterialTex14.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+            return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex14, g_SwSampler0, uv ) );
         case 15u:
-            return ViewMode::computeMipColor( g_SwMaterialTex15.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+            return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex15, g_SwSampler0, uv ) );
             #else
         case 0u:
-            return ViewMode::computeMipColor( g_SwMaterialTex0.CalculateLevelOfDetail( g_SwMaterialTex0Sampler, uv ) );
+            return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex0, g_SwMaterialTex0Sampler, uv ) );
         case 1u:
-            return ViewMode::computeMipColor( g_SwMaterialTex1.CalculateLevelOfDetail( g_SwMaterialTex1Sampler, uv ) );
+            return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex1, g_SwMaterialTex1Sampler, uv ) );
         case 2u:
-            return ViewMode::computeMipColor( g_SwMaterialTex2.CalculateLevelOfDetail( g_SwMaterialTex2Sampler, uv ) );
+            return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex2, g_SwMaterialTex2Sampler, uv ) );
         case 3u:
-            return ViewMode::computeMipColor( g_SwMaterialTex3.CalculateLevelOfDetail( g_SwMaterialTex3Sampler, uv ) );
+            return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex3, g_SwMaterialTex3Sampler, uv ) );
         case 4u:
-            return ViewMode::computeMipColor( g_SwMaterialTex4.CalculateLevelOfDetail( g_SwMaterialTex4Sampler, uv ) );
+            return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex4, g_SwMaterialTex4Sampler, uv ) );
         case 5u:
-            return ViewMode::computeMipColor( g_SwMaterialTex5.CalculateLevelOfDetail( g_SwMaterialTex5Sampler, uv ) );
+            return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex5, g_SwMaterialTex5Sampler, uv ) );
         case 6u:
-            return ViewMode::computeMipColor( g_SwMaterialTex6.CalculateLevelOfDetail( g_SwMaterialTex6Sampler, uv ) );
+            return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex6, g_SwMaterialTex6Sampler, uv ) );
         case 7u:
-            return ViewMode::computeMipColor( g_SwMaterialTex7.CalculateLevelOfDetail( g_SwMaterialTex7Sampler, uv ) );
+            return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex7, g_SwMaterialTex7Sampler, uv ) );
         case 8u:
-            return ViewMode::computeMipColor( g_SwMaterialTex8.CalculateLevelOfDetail( g_SwMaterialTex8Sampler, uv ) );
+            return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex8, g_SwMaterialTex8Sampler, uv ) );
         case 9u:
-            return ViewMode::computeMipColor( g_SwMaterialTex9.CalculateLevelOfDetail( g_SwMaterialTex9Sampler, uv ) );
+            return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex9, g_SwMaterialTex9Sampler, uv ) );
         case 10u:
-            return ViewMode::computeMipColor( g_SwMaterialTex10.CalculateLevelOfDetail( g_SwMaterialTex10Sampler, uv ) );
+            return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex10, g_SwMaterialTex10Sampler, uv ) );
         case 11u:
-            return ViewMode::computeMipColor( g_SwMaterialTex11.CalculateLevelOfDetail( g_SwMaterialTex11Sampler, uv ) );
+            return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex11, g_SwMaterialTex11Sampler, uv ) );
         case 12u:
-            return ViewMode::computeMipColor( g_SwMaterialTex12.CalculateLevelOfDetail( g_SwMaterialTex12Sampler, uv ) );
+            return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex12, g_SwMaterialTex12Sampler, uv ) );
         case 13u:
-            return ViewMode::computeMipColor( g_SwMaterialTex13.CalculateLevelOfDetail( g_SwMaterialTex13Sampler, uv ) );
+            return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex13, g_SwMaterialTex13Sampler, uv ) );
         case 14u:
-            return ViewMode::computeMipColor( g_SwMaterialTex14.CalculateLevelOfDetail( g_SwMaterialTex14Sampler, uv ) );
+            return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex14, g_SwMaterialTex14Sampler, uv ) );
         case 15u:
-            return ViewMode::computeMipColor( g_SwMaterialTex15.CalculateLevelOfDetail( g_SwMaterialTex15Sampler, uv ) );
+            return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex15, g_SwMaterialTex15Sampler, uv ) );
             #endif
         default:
             return float4( 1, 1, 1, 1 );
@@ -1008,7 +1047,7 @@ static float4 PassTexture::sampleContactShadow( float2 uv )
 {
     if ( g_ContactShadowIndex == kInvalidIndex )
         return float4( 1, 1, 1, 1 );
-    return Bindless::sampleIndex( g_ContactShadowIndex, uv );
+    return Bindless::sampleIndexLevelZero( g_ContactShadowIndex, uv ); // 빛 루프 안에서 읽는다 — 미분 없는 밉 0(마스크는 화면과 같은 크기라 밉이 없다)
 }
 /** @brief SSAO 결과. 파이프라인에 SSAO 가 없으면(인덱스 무효) 가림 없음(1)이다 — 0 으로 폴백하면 화면이 검게 된다. */
 static float PassTexture::sampleAmbientOcclusion( float2 uv )

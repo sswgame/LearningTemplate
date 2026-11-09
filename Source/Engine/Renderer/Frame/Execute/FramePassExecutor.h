@@ -300,8 +300,10 @@ namespace sw
          *          @p bCacheLayer 면 그림자 캐시가 캐시하는 점광 · 스폿 타일(`ShadowCache::getAction` 이 DrawAll 이 아닌 것)은 캐시 층을 옮기고 움직이는 배치만 그린다.
          */
         void drawShadowTiles( FramePassContext& context, bool bTransparentBatch, bool bCacheLayer );
+        /** @brief 그림자 캐시 층을 그래프 기록 전에 만듭니다(그림자 아틀라스와 같은 형식 · 크기). 기록 중에는 자원을 만들 수 없다. */
+        void prepareShadowCacheLayerResource();
         /**
-         * @brief 그림자 캐시 층을 이번 프레임에 쓸 수 있게 합니다 — 층 텍스처를 아틀라스(@p atlasName) 형식 · 크기로 두고, 다시 그릴 프레임이면 정적 배치만 그리고, 셰이더 읽기로 돌린다.
+         * @brief 그림자 캐시 층을 이번 프레임에 씁니다 — 층(기록 전에 `prepareShadowCacheLayerResource` 가 만든다)이 아틀라스(@p atlasName)와 맞으면, 다시 그릴 프레임이면 정적 배치만 그리고, 셰이더 읽기로 돌린다.
          * @details 아틀라스 렌더 패스를 열기 전에 부른다(다른 깊이 대상 · 상태 전환). 캐시를 쓰지 않는 프레임 · 복원 PSO 가 없을 때는 false 이고 그림자 패스는 지금처럼 다 그린다.
          */
         [[nodiscard]] bool prepareShadowCacheLayer( FramePassContext& context, const hashed_string& atlasName, bool bTransparentBatch );

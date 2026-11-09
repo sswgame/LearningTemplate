@@ -124,19 +124,20 @@ namespace sw
     {
         ShaderTargetFormat _format;
         ShaderCompilerTool _tool;
-        const utf8*        _pExtension; ///< 쿠킹 바이너리 확장자. SPIR-V 둘은 같아야 한다
-        uint8              _bSpirv : 1; ///< 리플렉션 · 바인딩 검사가 SPIR-V 를 읽는다(WGSL 꾸러미는 안의 SPIR-V 를 꺼내 읽는다 — `WebGPUShaderContainer::findSpirv`)
+        const utf8*        _pExtension;          ///< 쿠킹 바이너리 확장자. SPIR-V 둘은 같아야 한다
+        uint8              _bSpirv          : 1; ///< 리플렉션 · 바인딩 검사가 SPIR-V 를 읽는다(WGSL 꾸러미는 안의 SPIR-V 를 꺼내 읽는다 — `WebGPUShaderContainer::findSpirv`)
+        uint8              _bOptionalStages : 1; ///< 헐 · 도메인 · 지오메트리 스테이지가 있다 — WebGPU 는 셋 다 없어(명세) 쿠커가 그 스테이지 요청을 이 형식으로 굽지 않는다(런타임도 그 PSO 를 만들지 않는다)
     };
 
     /** @brief 형식 표입니다. 새 대상(WebGPU 의 SPIR-V → WGSL)은 여기와 컴파일러 표에 한 줄씩이다(언리얼 `IShaderFormat` 자리, 기억). 행 타입 안에는 자기 타입의 constexpr 배열을 둘 수 없어 표 타입이 따로다. */
     struct ShaderTargetFormatTable
     {
         static constexpr ShaderTargetFormatInfo kArrRow[] = {
-            {  ShaderTargetFormat::DXBC_D3D11, ShaderCompilerTool::Fxc, ".dxbc", 0},
-            {  ShaderTargetFormat::DXIL_D3D12, ShaderCompilerTool::Dxc, ".dxil", 0},
-            {ShaderTargetFormat::SPIRV_Vulkan, ShaderCompilerTool::Dxc,  ".spv", 1},
-            {ShaderTargetFormat::SPIRV_OpenGL, ShaderCompilerTool::Dxc,  ".spv", 1},
-            { ShaderTargetFormat::WGSL_WebGPU, ShaderCompilerTool::Dxc, ".wgsl", 1},
+            {  ShaderTargetFormat::DXBC_D3D11, ShaderCompilerTool::Fxc, ".dxbc", 0, 1},
+            {  ShaderTargetFormat::DXIL_D3D12, ShaderCompilerTool::Dxc, ".dxil", 0, 1},
+            {ShaderTargetFormat::SPIRV_Vulkan, ShaderCompilerTool::Dxc,  ".spv", 1, 1},
+            {ShaderTargetFormat::SPIRV_OpenGL, ShaderCompilerTool::Dxc,  ".spv", 1, 1},
+            { ShaderTargetFormat::WGSL_WebGPU, ShaderCompilerTool::Dxc, ".wgsl", 1, 0},
         };
 
         /** @brief 형식의 행입니다. `Count` 이상이면 nullptr 입니다. */

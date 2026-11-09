@@ -144,6 +144,7 @@ struct Bindless
     static uint rwTextureSlot( uint index );
     static uint emulatedSlot( uint index ); // 에뮬 백엔드(DX11 · GL)만 정의가 있다 — 엔진 텍스처 인덱스가 걸리는 슬롯(없으면 kUnmappedEngineTextureSlot)
     static float4 sampleIndex( uint index, float2 uv );
+    static float4 sampleIndexLevelZero( uint index, float2 uv ); // 밉 0 — 루프 · 정점 단계에서 읽는다(미분 없음)
     static float4 sampleIndexWith( uint index, uint samplerID, float2 uv );
     static float sampleShadowComparison( uint index, float2 uv, float depth );
     static void storeRwTexture2D( uint index, uint2 texelPosition, float4 value );
@@ -193,6 +194,9 @@ struct MaterialTexture
 struct ViewMode
 {
     static float4 computeMipColor( float lod );
+#if defined( WEBGPU ) && defined( SW_VIEWMODE_MIPMAPS )
+    static float computeTextureLod( Texture2D textureObject, float2 uv ); // WGSL 에 LOD 조회가 없다 — 크기와 미분으로(binding_texture.hlsli)
+#endif
     static float3 computeLightComplexityColor( uint visitCount );
     static float3 computeLODLevelColor( uint entry );
     static float3 computeLODFadeColor( uint entry );
@@ -516,9 +520,10 @@ static void MorphPool::loadVertex( uint batchIndex, uint skinSlot, uint vertexID
         outPosition     = asfloat( uint3( g_SwMorphVertices[word], g_SwMorphVertices[word + 1u], g_SwMorphVertices[word + 2u] ) );
         outNormal       = Octahedral::unpack( g_SwMorphVertices[word + 3u] );
     }
-    // 칸이 있는데 결과가 없다(풀 상한 초과 · 버퍼 실패 — 풀이 오류를 남겼다) — 레스트 포즈로 대신 그리지 않는다. NaN 위치의 삼각형은 래스터에서 버려진다.
+    // 칸이 있는데 결과가 없다(풀 상한 초과 · 버퍼 실패 — 풀이 오류를 남겼다) — 레스트 포즈로 대신 그리지 않는다. 거절은 스킨 칸(메시) 단위라 모든 정점을 한 점으로
+    // 모으면 넓이 0 삼각형이 되어 래스터가 그리지 않는다. NaN 위치는 쓰지 않는다 — WGSL 은 무한대 · NaN 상수를 받지 않는다(Tint 가 상수 접기에서 멈췄다).
     const bool bRefused = ( skinSlot != kInvalidIndex ) && ( element == kInvalidIndex );
-    outPosition         = bRefused ? asfloat( 0x7FC00000u ).xxx : outPosition;
+    outPosition         = bRefused ? float3( 0.0f, 0.0f, 0.0f ) : outPosition;
 }
 
 /**

@@ -21,6 +21,9 @@
 
 #ifndef SW_ENGINE_MATERIALDISPLACEMENT_HLSLI
 #define SW_ENGINE_MATERIALDISPLACEMENT_HLSLI
+#if defined( SW_MATERIAL_CUSTOM_VARYINGS )
+    #error "MATERIAL_DISPLACEMENT with custom varyings (SW_MATERIAL_CUSTOM_VARYINGS) is not supported - the domain stage cannot rebuild the material's own interpolants"
+#endif
 
 static const float kDisplacementMaxTessFactor = 64.0f; // MaterialDisplacement::kMaxTessFactor 와 같다
 static const float kDisplacementMinViewDepth  = 0.05f; // MaterialDisplacement::kMinViewDepth 와 같다
@@ -40,6 +43,9 @@ struct MaterialControlPoint
     uint   _materialIndex : TEXCOORD4;
     uint   _instanceSlot : TEXCOORD5;
     float  _appearance : TEXCOORD15;
+#if SW_WRITES_VELOCITY && !defined( SW_MATERIAL_DEPTH_ONLY )
+    float3 _previousWorldPosition : TEXCOORD8; ///< 화면 속도의 지난 월드 위치(지난 월드 행렬 · 스킨 결과의 지난 벌 + 이번 오프셋 훅) — 도메인이 같은 변위를 더해 지난 클립 위치를 만든다
+#endif
 };
 
 /** @brief 헐의 패치 상수 — 변 i 는 꼭짓점 i 의 맞은편(SV_DomainLocation 의 i 성분이 0 인 변)이다. */
@@ -94,16 +100,22 @@ MaterialControlPoint VSMain( MaterialVertexInput input, SW_INSTANCE_SLOT_INPUT( 
     VertexContext        context;
     float4               worldPosition;
     context.load( input, instanceSlot, vertexID, worldPosition );
-    worldPosition         = context.applyWorldPositionOffset( worldPosition );
-    output._worldPosition = worldPosition.xyz;
-    output._normal        = context._worldNormal;
-    output._uv            = context._input._uv;
-    output._color         = context._input._color;
-    output._tangent       = computeControlPointTangent( context );
-    output._viewDepth     = mul( worldPosition, g_ViewProj ).w;
-    output._materialIndex = context._instance._materialIndex;
-    output._instanceSlot  = instanceSlot;
-    output._appearance    = context._instance._appearance;
+    const float4 restWorldPosition = worldPosition; // 훅의 오프셋 전 — 화면 속도의 지난 위치가 같은 오프셋을 더한다(storeVelocity 와 같다)
+    worldPosition                  = context.applyWorldPositionOffset( worldPosition );
+    output._worldPosition          = worldPosition.xyz;
+    output._normal                 = context._worldNormal;
+    output._uv                     = context._input._uv;
+    output._color                  = context._input._color;
+    output._tangent                = computeControlPointTangent( context );
+    output._viewDepth              = mul( worldPosition, g_ViewProj ).w;
+    output._materialIndex          = context._instance._materialIndex;
+    output._instanceSlot           = instanceSlot;
+    output._appearance             = context._instance._appearance;
+#if SW_WRITES_VELOCITY && !defined( SW_MATERIAL_DEPTH_ONLY )
+    const float4x4 previousWorld         = InstanceData::loadPreviousWorld( instanceSlot, context._instance._world );
+    const float3   previousLocalPosition = MorphPool::loadPreviousPosition( context._instance._meshBatchIndex, context._instance._skinSlot, context._vertexID, context._localPosition );
+    output._previousWorldPosition        = Transform::computeWorldPosition( previousLocalPosition, previousWorld ).xyz + ( worldPosition.xyz - restWorldPosition.xyz );
+#endif
     return output;
 }
 
@@ -152,6 +164,9 @@ MaterialControlPoint interpolateControlPoint( MaterialControlPoint point0, Mater
     controlPoint._materialIndex = point0._materialIndex;
     controlPoint._instanceSlot  = point0._instanceSlot;
     controlPoint._appearance    = point0._appearance;
+#if SW_WRITES_VELOCITY && !defined( SW_MATERIAL_DEPTH_ONLY )
+    controlPoint._previousWorldPosition = point0._previousWorldPosition * barycentric.x + point1._previousWorldPosition * barycentric.y + point2._previousWorldPosition * barycentric.z;
+#endif
     return controlPoint;
 }
 
@@ -206,6 +221,11 @@ void storeDisplacedVaryings( inout MaterialInterpolants output, MaterialControlP
     MaterialInterpolants output;
     output._position = Transform::computeClipPosition( worldPosition, View::getViewProjection() );
     storeDisplacedVaryings( output, controlPoint, worldPosition.xyz );
+#if SW_WRITES_VELOCITY && !defined( SW_MATERIAL_DEPTH_ONLY )
+    // 화면 속도 — 지난 위치에도 같은 변위를 더한다(높이 맵은 시간에 따라 바뀌지 않는다). 픽셀 단계가 두 클립 위치로 속도를 만든다.
+    output._velocityClip     = output._position;
+    output._velocityPrevClip = Transform::computeClipPosition( float4( controlPoint._previousWorldPosition + normalize( controlPoint._normal ) * offset, 1.0f ), g_PrevViewProj );
+#endif
     SW_APPEARANCE_WRITE( output, controlPoint )
     SW_LODDEBUG_WRITE( output, controlPoint._instanceSlot )
     return output;

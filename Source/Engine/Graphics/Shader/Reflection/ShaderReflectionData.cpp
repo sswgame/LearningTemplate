@@ -42,6 +42,10 @@ namespace sw
                 }
                 for ( ShaderReflectedBinding& resource : data._listResource )
                 {
+                    // SPIR-V 는 읽기 · 쓰기 구조버퍼를 모두 StorageBuffer 로 보고한다 — WebGPU 는 띠(t · u)가 따로라 번호로 정확히 가른다. 번호를 레지스터로 되돌리면
+                    // 띠가 사라져 읽기 t4(인스턴스)와 쓰기 u4(메시지 링)가 같은 4 가 되므로, 되돌리기 전에 종류 이름을 정한다.
+                    if ( resource._type == "StorageBuffer" )
+                        resource._type = resource._bindPoint >= shaderslot::wgpu::kUShift ? "RWStructuredBuffer" : "StructuredBuffer";
                     resource._bindPoint = toRegister( resource._bindPoint );
                 }
                 return data;
