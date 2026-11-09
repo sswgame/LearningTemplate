@@ -21,7 +21,7 @@ namespace sw
         , _deceleration{ 50.0f }
         , _jumpSpeed{ 7.0f }
         , _velocity{ 0.0f }
-        , _jumpIndex{ constant::invalid_index::kInt32 }
+        , _jumpIndex{}
     {
         setCanEverTick( true );
     }
@@ -32,7 +32,7 @@ namespace sw
         setTickGroup( TickGroup::PrePhysics );
         const GameObject*    pOwner = getOwner();
         const PawnComponent* pPawn  = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
-        _jumpIndex                  = pPawn != nullptr && _jumpButton.empty() == false ? pPawn->findButton( _jumpButton ) : constant::invalid_index::kInt32;
+        _jumpIndex                  = pPawn != nullptr && _jumpButton.empty() == false ? pPawn->findButton( _jumpButton ) : nullopt;
     }
 
     float32 CharacterPawnMovement2DComponent::computeVelocity( float32 current, float32 moveRight, float32 walkSpeed, float32 acceleration, float32 deceleration, float32 deltaTime )

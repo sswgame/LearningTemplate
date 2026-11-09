@@ -82,9 +82,9 @@ namespace sw
         , _motor{}
         , _ground{}
         , _listFrameEvent{}
-        , _driftIndex{ constant::invalid_index::kInt32 }
-        , _boostIndex{ constant::invalid_index::kInt32 }
-        , _jumpIndex{ constant::invalid_index::kInt32 }
+        , _driftIndex{}
+        , _boostIndex{}
+        , _jumpIndex{}
         , _bReady{ false }
     {
         setCanEverTick( true );
@@ -99,9 +99,9 @@ namespace sw
         _bReady                     = false;
         GameObject*          pOwner = getOwner();
         const PawnComponent* pPawn  = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
-        _driftIndex                 = pPawn != nullptr ? pPawn->findButton( _driftButton ) : constant::invalid_index::kInt32;
-        _boostIndex                 = pPawn != nullptr ? pPawn->findButton( _boostButton ) : constant::invalid_index::kInt32;
-        _jumpIndex                  = pPawn != nullptr ? pPawn->findButton( _jumpButton ) : constant::invalid_index::kInt32;
+        _driftIndex                 = pPawn != nullptr ? pPawn->findButton( _driftButton ) : nullopt;
+        _boostIndex                 = pPawn != nullptr ? pPawn->findButton( _boostButton ) : nullopt;
+        _jumpIndex                  = pPawn != nullptr ? pPawn->findButton( _jumpButton ) : nullopt;
         const SceneComponent* pRoot = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         if ( pOwner == nullptr || pRoot == nullptr )
             return;
@@ -148,7 +148,7 @@ namespace sw
         return true;
     }
 
-    KinematicVehicleInput KinematicVehicleComponent::toVehicleInput( const ControlIntent& intent, float32 vehicleYaw, int32 driftIndex, int32 boostIndex, int32 jumpIndex )
+    KinematicVehicleInput KinematicVehicleComponent::toVehicleInput( const ControlIntent& intent, float32 vehicleYaw, optional<int32> driftIndex, optional<int32> boostIndex, optional<int32> jumpIndex )
     {
         // 가고 싶은 월드 방향을 차 기준으로 바꾼다. 앞 성분은 페달, 옆 성분은 조향이다. 요가 0 이면 앞은 +Z 이고 오른쪽은 +X 이다.
         const float3          worldMove = intent.computeWorldMove();

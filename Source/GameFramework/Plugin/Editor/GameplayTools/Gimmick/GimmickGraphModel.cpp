@@ -352,9 +352,9 @@ namespace sw::editor
         const GimmickNodeKind* pToKind   = findKind( _listNode[toIndex] );
         if ( pFromKind == nullptr || pToKind == nullptr )
             return unexpected( Error{ ErrorKind::NotFound, "The node kind is unknown" } );
-        if ( pFromKind->findOutput( hashed_string( fromPort ) ) < 0 )
+        if ( pFromKind->findOutput( hashed_string( fromPort ) ).has_value() == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "The first end is not an output port of its node", fromPort } );
-        if ( pToKind->findInput( hashed_string( toPort ) ) < 0 )
+        if ( pToKind->findInput( hashed_string( toPort ) ).has_value() == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "The second end is not an input port of its node", toPort } );
         for ( const GimmickGraphWire& wire : _listWire )
         {

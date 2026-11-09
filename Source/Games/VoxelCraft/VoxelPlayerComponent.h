@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -79,15 +80,15 @@ namespace sw
             VoxelBlockIndex _block{ kVoxelAirBlock };
         };
 
-        /** @brief 폰 스키마 안의 슬롯 번호입니다. 플레이 시작 때 이름으로 한 번 찾아 둡니다(없으면 −1). */
+        /** @brief 폰 스키마 안의 슬롯 번호입니다. 플레이 시작 때 이름으로 한 번 찾아 둡니다(없으면 비어 있다). */
         struct IntentSlots
         {
-            int32 _jump{ -1 };
-            int32 _sprint{ -1 };
-            int32 _break{ -1 };
-            int32 _place{ -1 };
-            int32 _arrSlot[VoxelHotbar::kSlotCount]{ -1, -1, -1, -1, -1, -1, -1, -1, -1 };
-            int32 _hotbarScroll{ -1 };
+            optional<int32> _jump{};
+            optional<int32> _sprint{};
+            optional<int32> _break{};
+            optional<int32> _place{};
+            optional<int32> _arrSlot[VoxelHotbar::kSlotCount]{};
+            optional<int32> _hotbarScroll{};
         };
 
     private:

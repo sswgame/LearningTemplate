@@ -7,6 +7,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -61,12 +62,12 @@ namespace sw
 
         /** @brief 이번 틱의 의도입니다. */
         const ControlIntent& getIntent() const { return _intent; }
-        /** @brief 버튼 이름의 인덱스(스키마 순서)입니다. 없으면 -1 입니다. 사용하는 쪽은 시작할 때 한 번 찾아 둡니다. */
-        int32 findButton( const hashed_string& name ) const;
-        /** @brief 아날로그 이름의 인덱스입니다. 없으면 -1 입니다. */
-        int32 findAnalog( const hashed_string& name ) const;
-        bool  isButtonDown( int32 buttonIndex ) const { return _intent.isDown( buttonIndex ); }
-        bool  wasButtonTriggered( int32 buttonIndex ) const { return _intent.wasTriggered( buttonIndex ); }
+        /** @brief 버튼 이름의 인덱스(스키마 순서)입니다. 없으면 비어 있습니다. 사용하는 쪽은 시작할 때 한 번 찾아 둡니다. */
+        optional<int32> findButton( const hashed_string& name ) const;
+        /** @brief 아날로그 이름의 인덱스입니다. 없으면 비어 있습니다. */
+        optional<int32> findAnalog( const hashed_string& name ) const;
+        bool            isButtonDown( optional<int32> buttonIndex ) const { return _intent.isDown( buttonIndex ); }
+        bool            wasButtonTriggered( optional<int32> buttonIndex ) const { return _intent.wasTriggered( buttonIndex ); }
 
         /** @brief 지금 쥔 조종자 컴포넌트입니다. 없으면 무효 핸들입니다. */
         const TComponentHandle<ControllerComponent>& getController() const { return _controller; }

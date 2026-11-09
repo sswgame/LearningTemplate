@@ -97,7 +97,7 @@ namespace sw
             SW_LOG_ERROR_ID( "TownGameMode.HeroObjectNoPawnComponent", "[Town] the hero object has no PawnComponent - the town cannot start" );
             return false;
         }
-        if ( findHeroPawn()->findButton( _interactButton ) < 0 )
+        if ( findHeroPawn()->findButton( _interactButton ).has_value() == false )
         {
             SW_LOG_ERROR_ID( "TownGameMode.HeroPawnNoButton", "[Town] the hero pawn has no button '%#' (Interact Button)", _interactButton.c_str() );
             return false;
@@ -229,8 +229,8 @@ namespace sw
         const PawnComponent* pHero = findHeroPawn();
         if ( pHero == nullptr )
             return;
-        const ControlIntent& intent         = pHero->getIntent();
-        const int32          interactButton = pHero->findButton( _interactButton );
+        const ControlIntent&  intent         = pHero->getIntent();
+        const optional<int32> interactButton = pHero->findButton( _interactButton );
         if ( isTalking() )
         {
             // 대화 중에는 걷지 않는다. 상호작용 버튼은 다음 줄이다.

@@ -9,6 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -38,8 +39,8 @@ namespace sw
     struct [[nodiscard]] GimmickStateLoad
     {
         GimmickStateMatch _match{ GimmickStateMatch::Mismatch };
-        int32             _changedNode{ constant::invalid_index::kInt32 }; ///< `Mismatch` 일 때 종류나 상태 뜻이 바뀐 이 회로의 노드 번호. 저장 상태 자체가 깨졌으면(같은 id 둘) -1
-        bool              _bApplied{ false };                              ///< 상태를 옮겼는지. 받아들이는 한계보다 약하게 맞으면 false 이고 회로는 그대로다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        optional<int32>   _changedNode{};     ///< `Mismatch` 일 때 종류나 상태 뜻이 바뀐 이 회로의 노드 번호. 저장 상태 자체가 깨졌으면(같은 id 둘) 비어 있다
+        bool              _bApplied{ false }; ///< 상태를 옮겼는지. 받아들이는 한계보다 약하게 맞으면 false 이고 회로는 그대로다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -93,14 +94,19 @@ namespace sw
         /** @brief 무버가 따라갈 경로의 길이를 지정합니다. 상태가 아니라 배치 정보이므로 저장하지 않습니다. */
         void setPathLength( int32 node, float32 length );
 
-        int32                  findNode( const hashed_string& id ) const;
+        /** @brief id 의 노드 번호입니다. 없으면 비어 있습니다. */
+        optional<int32>        findNode( const hashed_string& id ) const;
         int32                  getNodeCount() const { return static_cast<int32>( _listNode.size() ); }
         const GimmickNodeKind& getKind( int32 node ) const { return *_listNode[static_cast<size_t>( node )]._pKind; }
         const hashed_string&   getNodeID( int32 node ) const { return _listNode[static_cast<size_t>( node )]._id; }
         uint32                 getOutputBits( int32 node ) const { return _listNode[static_cast<size_t>( node )]._outputBits; }
         bool                   getOutput( int32 node, int32 port ) const { return port >= 0 && ( getOutputBits( node ) & ( 1u << static_cast<uint32>( port ) ) ) != 0; }
         /** @brief 이름으로 출력을 읽습니다. 알 수 없는 포트이면 false 입니다. */
-        bool getOutput( int32 node, const hashed_string& port ) const { return getOutput( node, getKind( node ).findOutput( port ) ); }
+        bool getOutput( int32 node, const hashed_string& port ) const
+        {
+            const optional<uint32> portIndex = getKind( node ).findOutput( port );
+            return portIndex.has_value() && getOutput( node, static_cast<int32>( *portIndex ) );
+        }
         /** @brief 액추에이터가 오브젝트에 적용하는 값입니다. 상태 float[0] 이며 열림, 거리, 높이, 각도를 나타냅니다. 실수 상태가 없으면 0 입니다. */
         float32 getActuatorValue( int32 node ) const;
         float32 getFloatState( int32 node, int32 slot ) const;

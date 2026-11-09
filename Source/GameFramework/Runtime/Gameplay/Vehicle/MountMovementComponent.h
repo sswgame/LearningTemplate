@@ -3,6 +3,7 @@
  * @brief 말의 이동입니다. 의도를 걸음새(서기, 걷기, 속보, 구보, 질주), 조향, 루트 모션으로 바꿉니다. 탈것 폰(말 캡슐 캐릭터 컨트롤러)의 이동 규칙입니다.
  */
 #pragma once
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -109,7 +110,7 @@ namespace sw
 
         float32                _forwardSpeed;
         float32                _facingYaw;
-        int32                  _sprintIndex;
+        optional<int32>        _sprintIndex;
         MountGait              _gait;
         MountGait              _maxGait;
         uint8                  _bGallopAllowed : 1;

@@ -238,20 +238,20 @@ namespace sw
 
     void AIControllerComponent::holdButton( const hashed_string& name, bool bHeld )
     {
-        const PawnComponent* pPawn       = findPawn();
-        const int32          buttonIndex = pPawn != nullptr ? pPawn->findButton( name ) : -1;
-        if ( buttonIndex < 0 || ControlIntent::kButtonCount <= buttonIndex )
+        const PawnComponent*  pPawn       = findPawn();
+        const optional<int32> buttonIndex = pPawn != nullptr ? pPawn->findButton( name ) : nullopt;
+        if ( ControlIntent::isInRange( buttonIndex ) == false )
             return;
-        const uint32 bit = 1u << buttonIndex;
+        const uint32 bit = 1u << *buttonIndex;
         _heldButtonMask  = bHeld ? ( _heldButtonMask | bit ) : ( _heldButtonMask & ~bit );
     }
 
     void AIControllerComponent::setAnalog( const hashed_string& name, float32 value )
     {
-        const PawnComponent* pPawn       = findPawn();
-        const int32          analogIndex = pPawn != nullptr ? pPawn->findAnalog( name ) : -1;
-        if ( 0 <= analogIndex && analogIndex < ControlIntent::kAnalogCount )
-            _pending._arrAnalog[analogIndex] = MathUtil::clamp( value, -1.0f, 1.0f );
+        const PawnComponent*  pPawn       = findPawn();
+        const optional<int32> analogIndex = pPawn != nullptr ? pPawn->findAnalog( name ) : nullopt;
+        if ( analogIndex.has_value() && 0 <= *analogIndex && *analogIndex < ControlIntent::kAnalogCount )
+            _pending._arrAnalog[*analogIndex] = MathUtil::clamp( value, -1.0f, 1.0f );
     }
 
     NavMoveStatus AIControllerComponent::getMoveStatus() const

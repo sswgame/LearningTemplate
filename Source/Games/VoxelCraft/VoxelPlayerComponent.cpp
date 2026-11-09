@@ -37,10 +37,10 @@ namespace sw
             static constexpr const utf8* kEventPlace = "BlockPlace";
 
             /** @brief 폰에서 버튼 @p name 의 칸을 찾습니다. 없으면 오류를 적고 @p outResolved 를 false 로 둡니다(true 로 되돌리지는 않는다). */
-            static int32 resolveButton( const PawnComponent& pawn, const hashed_string& name, const utf8* pRole, bool& outResolved )
+            static optional<int32> resolveButton( const PawnComponent& pawn, const hashed_string& name, const utf8* pRole, bool& outResolved )
             {
-                const int32 slot = pawn.findButton( name );
-                if ( slot < 0 )
+                const optional<int32> slot = pawn.findButton( name );
+                if ( slot.has_value() == false )
                 {
                     SW_LOG_ERROR_ID( "VoxelPlayer.ButtonNotPawnButton", "[Voxel] %# button '%#' is not in the pawn's button list", pRole, name.c_str() );
                     outResolved = false;
@@ -315,7 +315,7 @@ namespace sw
         _intentSlots._break        = VoxelPlayerComponentInternal::resolveButton( pawn, _breakButton, "break", bResolved );
         _intentSlots._place        = VoxelPlayerComponentInternal::resolveButton( pawn, _placeButton, "place", bResolved );
         _intentSlots._hotbarScroll = pawn.findAnalog( _hotbarScrollAnalog );
-        if ( _intentSlots._hotbarScroll < 0 )
+        if ( _intentSlots._hotbarScroll.has_value() == false )
         {
             SW_LOG_ERROR_ID( "VoxelPlayer.HotbarScrollAnalogNot", "[Voxel] hotbar scroll analog '%#' is not in the pawn's analog list", _hotbarScrollAnalog.c_str() );
             bResolved = false;
@@ -363,7 +363,7 @@ namespace sw
             if ( pawn.wasButtonTriggered( _intentSlots._arrSlot[slotIndex] ) )
                 _hotbar.select( slotIndex );
         }
-        const float32 scroll = _intentSlots._hotbarScroll >= 0 ? intent._arrAnalog[_intentSlots._hotbarScroll] : 0.0f;
+        const float32 scroll = _intentSlots._hotbarScroll.has_value() ? intent._arrAnalog[*_intentSlots._hotbarScroll] : 0.0f;
         if ( scroll != 0.0f )
             _hotbar.selectRelative( scroll > 0.0f ? -1 : 1 );
         if ( previousSlot != _hotbar.getSelectedIndex() )

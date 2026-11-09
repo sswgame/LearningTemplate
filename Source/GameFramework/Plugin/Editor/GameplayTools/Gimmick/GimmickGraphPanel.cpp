@@ -294,13 +294,13 @@ namespace sw::editor
             const GimmickNodeKind* pToKind   = _model.findKind( _model.getNodes()[_model.findNodeIndex( wire._toNode ).value()] );
             if ( pFromKind == nullptr || pToKind == nullptr )
                 continue;
-            const int32 outPort = pFromKind->findOutput( hashed_string( wire._fromPort ) );
-            const int32 inPort  = pToKind->findInput( hashed_string( wire._toPort ) );
-            if ( outPort < 0 || inPort < 0 )
+            const optional<uint32> outPort = pFromKind->findOutput( hashed_string( wire._fromPort ) );
+            const optional<uint32> inPort  = pToKind->findInput( hashed_string( wire._toPort ) );
+            if ( outPort.has_value() == false || inPort.has_value() == false )
                 continue;
             const ImVec4 color = wire._bInvert ? EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Error" ) ) : ImVec4{ 1.0f, 1.0f, 1.0f, 1.0f };
-            ed::Link( toLinkID( wire._graphID ), toPinID( GimmickGraphPanelInternal::makeOutputPin( wire._fromNode, outPort ) ),
-                      toPinID( GimmickGraphPanelInternal::makeInputPin( wire._toNode, inPort ) ), color, wire._bInvert ? 3.0f : 1.0f );
+            ed::Link( toLinkID( wire._graphID ), toPinID( GimmickGraphPanelInternal::makeOutputPin( wire._fromNode, static_cast<int32>( *outPort ) ) ),
+                      toPinID( GimmickGraphPanelInternal::makeInputPin( wire._toNode, static_cast<int32>( *inPort ) ) ), color, wire._bInvert ? 3.0f : 1.0f );
         }
 
         vector<EditorGraphNodeIssue> listNodeIssue;
@@ -397,8 +397,8 @@ namespace sw::editor
             const GimmickNodeKind* pKind     = nodeIndex.has_value() ? _model.findKind( _model.getNodes()[*nodeIndex] ) : nullptr;
             if ( pKind == nullptr )
                 continue;
-            const int32 wirePort = bOutput ? pKind->findOutput( hashed_string( wire._fromPort ) ) : pKind->findInput( hashed_string( wire._toPort ) );
-            if ( wirePort == port )
+            const optional<uint32> wirePort = bOutput ? pKind->findOutput( hashed_string( wire._fromPort ) ) : pKind->findInput( hashed_string( wire._toPort ) );
+            if ( wirePort.has_value() && static_cast<int32>( *wirePort ) == port )
                 return true;
         }
         return false;

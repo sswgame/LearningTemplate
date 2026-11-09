@@ -148,7 +148,7 @@ namespace sw
         GimmickCircuit&            getCircuit() { return _circuit; }
         const vector<string>&      getErrors() const { return _listError; }
         const GimmickCircuitState& getState() const { return _state; }
-        int32                      findNode( const hashed_string& id ) const { return _circuit.findNode( id ); }
+        optional<int32>            findNode( const hashed_string& id ) const { return _circuit.findNode( id ); }
 
     private:
         /** @brief 노드가 센서로서 무엇을 읽고, 액추에이터로서 무엇을 적용하는지 나타냅니다. 종류 이름으로 정하며, 게임이 추가한 종류는 None 입니다. */

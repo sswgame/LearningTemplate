@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Event/EventBuffer.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -113,10 +114,12 @@ namespace sw
         int32 toIndex( const int2& cell ) const { return _topology.toIndex( cell ); }
         Cell& getCell( const int2& cell ) { return _listCell[static_cast<size_t>( toIndex( cell ) )]; }
         bool  matchesRule( const Cell& cell, const ElementStimulusRule& rule ) const;
-        void  addStatus( Cell& cell, int32 status ) const;
-        void  removeStatus( Cell& cell, int32 status ) const;
-        void  pushEvent( const hashed_string& name, const int2& cell );
-        void  collectSpread( const ElementStepRule& rule, int32 ruleIndex, const int2& position );
+        /** @brief 상태를 붙입니다. 비어 있으면 아무것도 하지 않습니다(규칙이 그 동작을 적지 않았다). */
+        void addStatus( Cell& cell, optional<int32> status ) const;
+        /** @brief 상태를 뗍니다. 비어 있으면 아무것도 하지 않습니다. */
+        void removeStatus( Cell& cell, optional<int32> status ) const;
+        void pushEvent( const hashed_string& name, const int2& cell );
+        void collectSpread( const ElementStepRule& rule, int32 ruleIndex, const int2& position );
         /** @brief `step` 1 단계입니다. 상태의 시간을 넘깁니다. 셀마다 따로 처리하므로 순서와 상관없습니다. */
         void advanceStatusTimers();
         /** @brief `step` 2 단계입니다. 스텝 규칙을 지금 상태만 보고 `_listPending` 에 모읍니다. 규칙 순서가 먼저이고 그다음이 행 우선입니다. */

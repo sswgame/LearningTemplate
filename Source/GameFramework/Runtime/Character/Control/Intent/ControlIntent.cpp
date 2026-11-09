@@ -82,11 +82,11 @@ namespace sw
 
 namespace sw
 {
-    void ControlIntent::setButton( int32 buttonIndex, bool bDown, bool bTriggered )
+    void ControlIntent::setButton( optional<int32> buttonIndex, bool bDown, bool bTriggered )
     {
-        if ( buttonIndex < 0 || kButtonCount <= buttonIndex )
+        if ( isInRange( buttonIndex ) == false )
             return;
-        const uint32 bit = 1u << buttonIndex;
+        const uint32 bit = 1u << *buttonIndex;
         _buttonDown      = bDown ? ( _buttonDown | bit ) : ( _buttonDown & ~bit );
         _buttonTriggered = bTriggered ? ( _buttonTriggered | bit ) : ( _buttonTriggered & ~bit );
     }

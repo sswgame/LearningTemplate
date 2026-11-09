@@ -178,20 +178,20 @@ namespace sw
 {
     /**
      * @brief 자극 규칙 하나입니다. 조건(재질, 플래그, 있어야 하는 상태, 없어야 하는 상태, 비어 있으면 아무 셀)과 동작(재질 바꾸기, 상태 붙이기와 제거, 연결된 셀로 퍼뜨리기)을 담습니다.
-     * @details 자극(불, 얼음, 전기)마다 규칙을 위에서부터 보고 **처음 맞는 규칙 하나만** 적용한다. 번호는 테이블 안의 인덱스이고 -1 은 "없음" 이다.
+     * @details 자극(불, 얼음, 전기)마다 규칙을 위에서부터 보고 **처음 맞는 규칙 하나만** 적용한다. 번호는 테이블 안의 인덱스이고 비어 있으면 그 조건 · 동작이 없다.
      */
     struct ElementStimulusRule
     {
-        hashed_string _event{};                                         ///< 바뀐 셀마다 내는 알림 이름
-        int32         _material{ constant::invalid_index::kInt32 };     ///< 조건: 이 재질
-        int32         _flag{ constant::invalid_index::kInt32 };         ///< 조건: 이 플래그가 있는 재질
-        int32         _status{ constant::invalid_index::kInt32 };       ///< 조건: 이 상태가 있어야 함
-        int32         _without{ constant::invalid_index::kInt32 };      ///< 조건: 이 상태가 없어야 함
-        int32         _setMaterial{ constant::invalid_index::kInt32 };  ///< 동작: 재질을 바꾼다
-        int32         _addStatus{ constant::invalid_index::kInt32 };    ///< 동작: 상태를 붙인다
-        int32         _removeStatus{ constant::invalid_index::kInt32 }; ///< 동작: 상태를 제거한다
-        int32         _floodStatus{ constant::invalid_index::kInt32 };  ///< 동작: 이 셀에서 `_floodThrough` 플래그 재질로 이어진(네 이웃) 셀 모두에 상태를 붙인다
-        int32         _floodThrough{ constant::invalid_index::kInt32 };
+        hashed_string   _event{};        ///< 바뀐 셀마다 내는 알림 이름
+        optional<int32> _material{};     ///< 조건: 이 재질
+        optional<int32> _flag{};         ///< 조건: 이 플래그가 있는 재질
+        optional<int32> _status{};       ///< 조건: 이 상태가 있어야 함
+        optional<int32> _without{};      ///< 조건: 이 상태가 없어야 함
+        optional<int32> _setMaterial{};  ///< 동작: 재질을 바꾼다
+        optional<int32> _addStatus{};    ///< 동작: 상태를 붙인다
+        optional<int32> _removeStatus{}; ///< 동작: 상태를 제거한다
+        optional<int32> _floodStatus{};  ///< 동작: 이 셀에서 `_floodThrough` 플래그 재질로 이어진(네 이웃) 셀 모두에 상태를 붙인다
+        optional<int32> _floodThrough{}; ///< `_floodStatus` 가 있으면 반드시 있다(읽을 때 본다)
     };
 } // namespace sw
 
@@ -211,12 +211,12 @@ namespace sw
     struct ElementStepRule
     {
         hashed_string        _event{};
-        hashed_string        _stepsParam{}; ///< Expire 에서 쓰는 재질 수치 이름
-        int32                _status{ constant::invalid_index::kInt32 };
-        int32                _material{ constant::invalid_index::kInt32 };    ///< Convert 에서 쓰는, 이웃의 재질
-        int32                _setMaterial{ constant::invalid_index::kInt32 }; ///< Expire, Convert 에서 쓰는, 바뀔 재질
-        int32                _toFlag{ constant::invalid_index::kInt32 };      ///< Spread 에서 쓰는, 옮겨 붙는 재질의 플래그
-        int32                _after{ 1 };                                     ///< Spread 에서 쓰는 값. 상태가 이만큼 오래돼야 옮긴다
+        hashed_string        _stepsParam{};  ///< Expire 에서 쓰는 재질 수치 이름
+        optional<int32>      _status{};      ///< 모든 종류가 쓴다(읽을 때 반드시 있게 본다)
+        optional<int32>      _material{};    ///< Convert 에서 쓰는, 이웃의 재질
+        optional<int32>      _setMaterial{}; ///< Expire, Convert 에서 쓰는, 바뀔 재질(비어 있으면 0 번 재질)
+        optional<int32>      _toFlag{};      ///< Spread 에서 쓰는, 옮겨 붙는 재질의 플래그
+        int32                _after{ 1 };    ///< Spread 에서 쓰는 값. 상태가 이만큼 오래돼야 옮긴다
         ElementStepRuleKind  _kind{ ElementStepRuleKind::Spread };
         ElementSpreadPattern _pattern{ ElementSpreadPattern::Neighbors4 };
         uint8                _bCrosswind{ SW_FALSE };
@@ -243,21 +243,23 @@ namespace sw
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
         void               clear();
 
-        /** @brief 플래그를 추가합니다. 이미 있으면 그 번호를 반환하고, 개수가 넘치면 -1 입니다. */
-        int32 addFlag( const hashed_string& id );
-        /** @brief 재질을 추가하고 재질 번호를 반환합니다. 플래그 이름은 이미 추가한 것이어야 하며, 없으면 -1 입니다. */
-        int32 addMaterial( const hashed_string& id, const vector<hashed_string>& listFlag );
+        /** @brief 플래그를 추가합니다. 이미 있으면 그 번호를 반환하고, 개수가 넘치면 비어 있습니다. */
+        optional<int32> addFlag( const hashed_string& id );
+        /** @brief 재질을 추가하고 재질 번호를 반환합니다. 겹치는 이름 · 넘치는 개수 · 추가하지 않은 플래그 이름이면 비어 있습니다. */
+        optional<int32> addMaterial( const hashed_string& id, const vector<hashed_string>& listFlag );
         /** @brief 재질 수치를 정합니다. 다 타는 스텝 수 등이 해당합니다. */
-        void  setMaterialParam( int32 material, const hashed_string& name, int32 value );
-        int32 addStatus( const hashed_string& id, ElementStatusKind kind, int32 steps = 1 );
-        int32 addStimulus( const hashed_string& id );
-        void  addStimulusRule( int32 stimulus, const ElementStimulusRule& rule );
-        void  addStepRule( const ElementStepRule& rule );
+        void setMaterialParam( int32 material, const hashed_string& name, int32 value );
+        /** @brief 상태를 추가하고 번호를 반환합니다. 겹치는 이름이거나 개수가 넘치면 비어 있습니다. */
+        optional<int32> addStatus( const hashed_string& id, ElementStatusKind kind, int32 steps = 1 );
+        int32           addStimulus( const hashed_string& id );
+        void            addStimulusRule( int32 stimulus, const ElementStimulusRule& rule );
+        void            addStepRule( const ElementStepRule& rule );
 
-        int32 findFlag( const hashed_string& id ) const;
-        int32 findMaterial( const hashed_string& id ) const;
-        int32 findStatus( const hashed_string& id ) const;
-        int32 findStimulus( const hashed_string& id ) const;
+        /** @brief 이름의 번호입니다. 없으면 비어 있습니다. */
+        optional<int32> findFlag( const hashed_string& id ) const;
+        optional<int32> findMaterial( const hashed_string& id ) const;
+        optional<int32> findStatus( const hashed_string& id ) const;
+        optional<int32> findStimulus( const hashed_string& id ) const;
 
         bool                              hasFlag( int32 material, int32 flag ) const;
         const vector<ElementMaterialDef>& getMaterials() const { return _listMaterial; }
@@ -276,9 +278,10 @@ namespace sw
         [[nodiscard]] bool loadStep( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool readStimulusRule( const XMLNode& node, ElementStimulusRule& outRule, string_view sourceName ) const;
         [[nodiscard]] bool readStepRule( const XMLNode& node, ElementStepRule& outRule, string_view sourceName ) const;
-        /** @brief 이름 속성을 테이블의 번호로 읽습니다. 속성이 없으면 -1 로 두고 true 를 반환하고, 알 수 없는 이름이면 경고를 남기고 false 를 반환합니다. */
-        [[nodiscard]] bool readIndex( const hashed_string& name, const XMLNode& node, const utf8* pAttribute, int32 ( ElementRuleCatalog::*pFind )( const hashed_string& ) const, int32& outIndex,
-                                      string_view sourceName ) const;
+        /** @brief 이름 속성을 테이블의 번호로 읽습니다. 속성이 없으면 비워 두고 true 를 반환하고, 알 수 없는 이름이면 경고를 남기고 false 를 반환합니다. */
+        [[nodiscard]] bool readIndex( const hashed_string& name, const XMLNode& node, const utf8* pAttribute, optional<int32> ( ElementRuleCatalog::*pFind )( const hashed_string& ) const,
+                                      optional<int32>& outIndex,
+                                      string_view      sourceName ) const;
 
     private:
         vector<hashed_string>      _listFlag{};

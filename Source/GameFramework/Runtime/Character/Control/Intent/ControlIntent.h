@@ -3,6 +3,7 @@
  * @brief 행동 레이어입니다. 조종 대상(폰)이 받는, 장치와 무관한 한 틱의 명령입니다. 플레이어, AI, 네트워크, 기록이 모두 이것을 냅니다.
  */
 #pragma once
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -43,13 +44,14 @@ namespace sw
         float32 _triggerYaw{ 0.0f };        ///< 폰이 지정한 발동 버튼(`PawnComponent::getTriggerLookButton`)이 눌린 순간의 조종 요. `_bTriggerLook` 이 거짓이면 0
         float32 _triggerPitch{ 0.0f };      ///< 같은 순간의 조종 피치. `_bTriggerLook` 이 거짓이면 0
 
-        bool isDown( int32 buttonIndex ) const { return 0 <= buttonIndex && buttonIndex < kButtonCount && ( _buttonDown & ( 1u << buttonIndex ) ) != 0; }
-        bool wasTriggered( int32 buttonIndex ) const
-        {
-            return 0 <= buttonIndex && buttonIndex < kButtonCount && ( _buttonTriggered & ( 1u << buttonIndex ) ) != 0;
-        }
-        /** @brief 버튼 @p buttonIndex 의 두 비트를 씁니다. 범위 밖이면 할 일이 없습니다. */
-        void setButton( int32 buttonIndex, bool bDown, bool bTriggered );
+        /** @brief 버튼을 누르고 있는지입니다. 폰에 없는 버튼(비어 있음)이나 범위 밖이면 false 입니다. */
+        bool isDown( optional<int32> buttonIndex ) const { return isInRange( buttonIndex ) && ( _buttonDown & ( 1u << *buttonIndex ) ) != 0; }
+        /** @brief 버튼이 이번 틱에 발동했는지입니다. 폰에 없는 버튼(비어 있음)이나 범위 밖이면 false 입니다. */
+        bool wasTriggered( optional<int32> buttonIndex ) const { return isInRange( buttonIndex ) && ( _buttonTriggered & ( 1u << *buttonIndex ) ) != 0; }
+        /** @brief 버튼 @p buttonIndex 의 두 비트를 씁니다. 비었거나 범위 밖이면 할 일이 없습니다. */
+        void setButton( optional<int32> buttonIndex, bool bDown, bool bTriggered );
+        /** @brief 버튼 번호가 있고 비트 범위 안인지입니다. */
+        static bool isInRange( optional<int32> buttonIndex ) { return buttonIndex.has_value() && 0 <= *buttonIndex && *buttonIndex < kButtonCount; }
         /** @brief 이동을 월드 방향으로 바꿉니다. 조종 요로 XZ 를 돌리고 Y 에 위아래를 넣으며, 길이는 그대로입니다. */
         float3 computeWorldMove() const;
         /**

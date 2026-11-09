@@ -656,12 +656,13 @@ namespace sw
                 nextWeapon = weaponIndex;
         }
         // SwitchWeapon 은 축(Q는 -1, E는 +1)이라 버튼으로는 "발동"만 온다. 방향은 같은 이름의 아날로그 부호가 정한다.
-        const hashed_string switchName( Internal::kSwitchWeaponButton );
-        const int32         analogIndex            = pawn.findAnalog( switchName );
-        const bool          bWeaponSwitchRequested = pawn.wasButtonTriggered( pawn.findButton( switchName ) ) && 0 <= analogIndex && analogIndex < ControlIntent::kAnalogCount;
+        const hashed_string   switchName( Internal::kSwitchWeaponButton );
+        const optional<int32> analogIndex            = pawn.findAnalog( switchName );
+        const bool            bWeaponSwitchRequested = pawn.wasButtonTriggered( pawn.findButton( switchName ) ) && analogIndex.has_value() && 0 <= *analogIndex &&
+                                          *analogIndex < ControlIntent::kAnalogCount;
         if ( bWeaponSwitchRequested )
         {
-            const float32 direction = pawn.getIntent()._arrAnalog[analogIndex];
+            const float32 direction = pawn.getIntent()._arrAnalog[*analogIndex];
             if ( direction > 0.0f )
                 nextWeapon = ( _weaponIndex + 1 ) % kWeaponCount;
             else if ( direction < 0.0f )

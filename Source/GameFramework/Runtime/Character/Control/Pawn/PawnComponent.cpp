@@ -23,14 +23,14 @@ namespace sw
             /** @brief 조종 회전 오프셋 고정소수점의 한 라디안입니다(0.00001 rad 간격 — 프레임 사이에 쌓이는 반동은 수 라디안을 넘지 않는다). */
             static constexpr float32 kRotationOffsetUnitsPerRadian = 100000.0f;
 
-            static int32 findName( const vector<hashed_string>& listName, const hashed_string& name )
+            static optional<int32> findName( const vector<hashed_string>& listName, const hashed_string& name )
             {
                 for ( size_t nameIndex = 0; nameIndex < listName.size(); ++nameIndex )
                 {
                     if ( listName[nameIndex] == name )
                         return static_cast<int32>( nameIndex );
                 }
-                return constant::invalid_index::kInt32;
+                return nullopt;
             }
         };
     } // namespace
@@ -91,12 +91,12 @@ namespace sw
         Component::onUnregister( manager );
     }
 
-    int32 PawnComponent::findButton( const hashed_string& name ) const
+    optional<int32> PawnComponent::findButton( const hashed_string& name ) const
     {
         return PawnComponentInternal::findName( _listButton, name );
     }
 
-    int32 PawnComponent::findAnalog( const hashed_string& name ) const
+    optional<int32> PawnComponent::findAnalog( const hashed_string& name ) const
     {
         return PawnComponentInternal::findName( _listAnalog, name );
     }

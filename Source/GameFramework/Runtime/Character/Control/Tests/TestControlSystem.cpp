@@ -425,9 +425,10 @@ SW_TEST_CASE( ControlSystemTest, ButtonSchemaNamesFindTheirIndex )
     ControlRig rig;
     rig._pPawn->setButtonNames( { hashed_string( "Jump" ), hashed_string( "Fire" ) } );
     rig._pPawn->setAnalogNames( { hashed_string( "Throttle" ) } );
-    SW_EXPECT_EQUAL( 1, rig._pPawn->findButton( hashed_string( "Fire" ) ) );
-    SW_EXPECT_EQUAL( -1, rig._pPawn->findButton( hashed_string( "Nope" ) ) );
-    SW_EXPECT_EQUAL( 0, rig._pPawn->findAnalog( hashed_string( "Throttle" ) ) );
+    SW_EXPECT_TRUE( rig._pPawn->findButton( hashed_string( "Fire" ) ) == 1 );
+    SW_EXPECT_FALSE( rig._pPawn->findButton( hashed_string( "Nope" ) ).has_value() );
+    SW_EXPECT_TRUE( rig._pPawn->findAnalog( hashed_string( "Throttle" ) ) == 0 );
+    SW_EXPECT_FALSE( rig._pPawn->isButtonDown( nullopt ) );
     SW_EXPECT_FALSE( rig._pPawn->isButtonDown( -1 ) );
 }
 

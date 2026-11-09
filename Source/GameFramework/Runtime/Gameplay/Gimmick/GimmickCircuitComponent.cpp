@@ -552,7 +552,7 @@ namespace sw
         if ( bMismatch )
         {
             // 같은 id 인데 종류나 상태 뜻이 바뀐 노드다. 슬롯의 뜻을 메울 수 없으므로 처음 상태로 바꾸지 않고 멈춘다.
-            const utf8* pNode = loaded._changedNode >= 0 ? _circuit.getNodeID( loaded._changedNode ).c_str() : "(duplicate node id in the saved state)";
+            const utf8* pNode = loaded._changedNode.has_value() ? _circuit.getNodeID( *loaded._changedNode ).c_str() : "(duplicate node id in the saved state)";
             utf8        arrBuffer[constant::buffer::kMax512]{};
             formatstring( arrBuffer, constant::buffer::kMax512,
                           "Saved gimmick state of '%#' does not fit node '%#' (its kind or state version changed) - the circuit does not run until the saved state is cleared",

@@ -145,7 +145,7 @@ namespace sw
             const GimmickNodeKind& kind = *node._pKind;
             for ( const GimmickParamDef& param : nodeDef._listParam )
             {
-                if ( kind.findParam( param._name ) < 0 )
+                if ( kind.findParam( param._name ).has_value() == false )
                 {
                     vector<hashed_string> listParamName;
                     for ( const GimmickParamSpec& spec : kind._listParam )
@@ -181,29 +181,29 @@ namespace sw
         {
             const string where = def.describeSource() + ": wire " + wire._fromNode.c_str() + "." + wire._fromPort.c_str() + " -> " + wire._toNode.c_str() +
                                  "." + wire._toPort.c_str();
-            const int32 fromNode = findNode( wire._fromNode );
-            const int32 toNode   = findNode( wire._toNode );
-            if ( fromNode < 0 )
+            const optional<int32> fromNode = findNode( wire._fromNode );
+            const optional<int32> toNode   = findNode( wire._toNode );
+            if ( fromNode.has_value() == false )
                 outListError.push_back( where + ": unknown source node '" + wire._fromNode.c_str() + "'" );
-            if ( toNode < 0 )
+            if ( toNode.has_value() == false )
                 outListError.push_back( where + ": unknown target node '" + wire._toNode.c_str() + "'" );
-            const GimmickNodeKind* pFromKind = fromNode >= 0 ? _listNode[static_cast<size_t>( fromNode )]._pKind : nullptr;
-            const GimmickNodeKind* pToKind   = toNode >= 0 ? _listNode[static_cast<size_t>( toNode )]._pKind : nullptr;
-            const int32            fromPort  = pFromKind != nullptr ? pFromKind->findOutput( wire._fromPort ) : constant::invalid_index::kInt32;
-            const int32            toPort    = pToKind != nullptr ? pToKind->findInput( wire._toPort ) : constant::invalid_index::kInt32;
-            if ( pFromKind != nullptr && fromPort < 0 )
+            const GimmickNodeKind* pFromKind = fromNode.has_value() ? _listNode[static_cast<size_t>( *fromNode )]._pKind : nullptr;
+            const GimmickNodeKind* pToKind   = toNode.has_value() ? _listNode[static_cast<size_t>( *toNode )]._pKind : nullptr;
+            const optional<uint32> fromPort  = pFromKind != nullptr ? pFromKind->findOutput( wire._fromPort ) : nullopt;
+            const optional<uint32> toPort    = pToKind != nullptr ? pToKind->findInput( wire._toPort ) : nullopt;
+            if ( pFromKind != nullptr && fromPort.has_value() == false )
                 outListError.push_back( where + ": unknown output '" + wire._fromPort.c_str() + "' (outputs: " + Internal::joinNames( pFromKind->_listOutput ) + ")" );
-            if ( pToKind != nullptr && toPort < 0 )
+            if ( pToKind != nullptr && toPort.has_value() == false )
                 outListError.push_back( where + ": unknown input '" + wire._toPort.c_str() + "' (inputs: " + Internal::joinNames( pToKind->_listInput ) + ")" );
-            if ( fromPort < 0 || toPort < 0 )
+            if ( fromPort.has_value() == false || toPort.has_value() == false )
                 continue;
             InputWire input;
-            input._sourceNode = static_cast<uint32>( fromNode );
-            input._sourcePort = static_cast<uint8>( fromPort );
-            input._targetPort = static_cast<uint8>( toPort );
+            input._sourceNode = static_cast<uint32>( *fromNode );
+            input._sourcePort = static_cast<uint8>( *fromPort );
+            input._targetPort = static_cast<uint8>( *toPort );
             input._bInvert    = wire._bInvert;
-            listWirePerNode[static_cast<size_t>( toNode )].push_back( input );
-            _listNode[static_cast<size_t>( toNode )]._connectedInputBits |= 1u << static_cast<uint32>( toPort );
+            listWirePerNode[static_cast<size_t>( *toNode )].push_back( input );
+            _listNode[static_cast<size_t>( *toNode )]._connectedInputBits |= 1u << *toPort;
         }
         for ( size_t nodeIndex = 0; nodeIndex < _listNode.size(); ++nodeIndex )
         {
@@ -431,14 +431,14 @@ namespace sw
             _listNode[static_cast<size_t>( node )]._pathLength = length;
     }
 
-    int32 GimmickCircuit::findNode( const hashed_string& id ) const
+    optional<int32> GimmickCircuit::findNode( const hashed_string& id ) const
     {
         for ( size_t nodeIndex = 0; nodeIndex < _listNode.size(); ++nodeIndex )
         {
             if ( _listNode[nodeIndex]._id == id )
                 return static_cast<int32>( nodeIndex );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     float32 GimmickCircuit::getActuatorValue( int32 node ) const
@@ -464,9 +464,9 @@ namespace sw
 
     const GimmickParamValue* GimmickCircuit::findParam( int32 node, const hashed_string& name ) const
     {
-        const NodeRuntime& runtime    = _listNode[static_cast<size_t>( node )];
-        const int32        paramIndex = runtime._pKind->findParam( name );
-        return paramIndex >= 0 ? &_listParam[runtime._paramStart + static_cast<uint32>( paramIndex )] : nullptr;
+        const NodeRuntime&     runtime    = _listNode[static_cast<size_t>( node )];
+        const optional<uint32> paramIndex = runtime._pKind->findParam( name );
+        return paramIndex.has_value() ? &_listParam[runtime._paramStart + *paramIndex] : nullptr;
     }
 
     string GimmickCircuitDef::describeSource() const
@@ -544,13 +544,13 @@ namespace sw
     GimmickStateLoad GimmickCircuit::loadState( const GimmickCircuitState& state, GimmickStateMatch weakestAccepted )
     {
         // 1) 짝짓기: 저장 노드마다 같은 id 의 회로 노드를 찾는다. 노드 순서가 그대로인 흔한 경우는 같은 번호를 먼저 본다.
-        GimmickStateLoad result;
-        vector<int32>    listSavedIndex( _listNode.size(), constant::invalid_index::kInt32 ); // 회로 노드마다 짝인 저장 노드 번호
-        uint32           droppedCount = 0;
+        GimmickStateLoad         result;
+        vector<optional<uint32>> listSavedIndex( _listNode.size() ); // 회로 노드마다 짝인 저장 노드 번호(짝이 없으면 비어 있다)
+        uint32                   droppedCount = 0;
         for ( size_t savedIndex = 0; savedIndex < state._listNode.size(); ++savedIndex )
         {
-            const GimmickNodeState& saved     = state._listNode[savedIndex];
-            int32                   nodeIndex = constant::invalid_index::kInt32;
+            const GimmickNodeState& saved = state._listNode[savedIndex];
+            optional<int32>         nodeIndex;
             const bool              bSameSlot = savedIndex < _listNode.size() && _listNode[savedIndex]._id.getHash() == saved._id;
             if ( bSameSlot )
             {
@@ -567,12 +567,12 @@ namespace sw
                     }
                 }
             }
-            if ( nodeIndex < 0 )
+            if ( nodeIndex.has_value() == false )
             {
                 ++droppedCount; // 회로에서 지운 노드
                 continue;
             }
-            const size_t           node     = static_cast<size_t>( nodeIndex );
+            const size_t           node     = static_cast<size_t>( *nodeIndex );
             const GimmickNodeKind& kind     = *_listNode[node]._pKind;
             const bool             bChanged = saved._kind != kind._name.getHash() || saved._stateVersion != kind._stateVersion ||
                                   saved._listFloatState.size() != kind._floatStateCount || saved._listIntState.size() != kind._intStateCount;
@@ -581,16 +581,16 @@ namespace sw
                 result._changedNode = nodeIndex;
                 return result; // Mismatch
             }
-            if ( listSavedIndex[node] >= 0 )
+            if ( listSavedIndex[node].has_value() )
                 return result; // 같은 id 가 둘인 저장 상태 — Mismatch, 바뀐 노드 없음
-            listSavedIndex[node] = static_cast<int32>( savedIndex );
+            listSavedIndex[node] = static_cast<uint32>( savedIndex );
         }
 
         // 2) 맞는 정도와 받아들이는 한계
         bool bEveryNodeSaved = droppedCount == 0;
-        for ( const int32 savedIndex : listSavedIndex )
+        for ( const optional<uint32>& savedIndex : listSavedIndex )
         {
-            bEveryNodeSaved = bEveryNodeSaved && savedIndex >= 0;
+            bEveryNodeSaved = bEveryNodeSaved && savedIndex.has_value();
         }
         result._match = bEveryNodeSaved ? GimmickStateMatch::Exact : GimmickStateMatch::NodeSetChanged;
         if ( static_cast<uint8>( result._match ) > static_cast<uint8>( weakestAccepted ) )
@@ -603,8 +603,8 @@ namespace sw
         _timer._accumulator = state._accumulator;
         for ( size_t nodeIndex = 0; nodeIndex < _listNode.size(); ++nodeIndex )
         {
-            if ( listSavedIndex[nodeIndex] >= 0 )
-                writeNode( nodeIndex, state._listNode[static_cast<size_t>( listSavedIndex[nodeIndex] )] );
+            if ( listSavedIndex[nodeIndex].has_value() )
+                writeNode( nodeIndex, state._listNode[*listSavedIndex[nodeIndex]] );
         }
         result._bApplied = true;
         return result;

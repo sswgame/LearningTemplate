@@ -51,7 +51,7 @@ namespace sw
         , _inertia{}
         , _forwardSpeed{ 0.0f }
         , _facingYaw{ 0.0f }
-        , _sprintIndex{ constant::invalid_index::kInt32 }
+        , _sprintIndex{}
         , _gait{ MountGait::Idle }
         , _maxGait{ MountGait::Gallop }
         , _bGallopAllowed{ SW_TRUE }
@@ -68,7 +68,7 @@ namespace sw
         setTickGroup( TickGroup::PrePhysics );
         const GameObject*    pOwner = getOwner();
         const PawnComponent* pPawn  = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
-        _sprintIndex                = pPawn != nullptr && _sprintButton.empty() == false ? pPawn->findButton( _sprintButton ) : constant::invalid_index::kInt32;
+        _sprintIndex                = pPawn != nullptr && _sprintButton.empty() == false ? pPawn->findButton( _sprintButton ) : nullopt;
         const SceneComponent* pRoot = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         if ( pRoot != nullptr )
             _facingYaw = pRoot->getLocalRotation()._y;

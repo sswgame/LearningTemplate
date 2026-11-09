@@ -661,34 +661,34 @@ namespace sw
             _outputBits &= ~( 1u << port );
     }
 
-    int32 GimmickNodeKind::findInput( const hashed_string& name ) const
+    optional<uint32> GimmickNodeKind::findInput( const hashed_string& name ) const
     {
         for ( size_t index = 0; index < _listInput.size(); ++index )
         {
             if ( _listInput[index] == name )
-                return static_cast<int32>( index );
+                return static_cast<uint32>( index );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
-    int32 GimmickNodeKind::findOutput( const hashed_string& name ) const
+    optional<uint32> GimmickNodeKind::findOutput( const hashed_string& name ) const
     {
         for ( size_t index = 0; index < _listOutput.size(); ++index )
         {
             if ( _listOutput[index] == name )
-                return static_cast<int32>( index );
+                return static_cast<uint32>( index );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
-    int32 GimmickNodeKind::findParam( const hashed_string& name ) const
+    optional<uint32> GimmickNodeKind::findParam( const hashed_string& name ) const
     {
         for ( size_t index = 0; index < _listParam.size(); ++index )
         {
             if ( _listParam[index]._name == name )
-                return static_cast<int32>( index );
+                return static_cast<uint32>( index );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     SubsystemInitResult GimmickNodeRegistrySubsystem::initializeSubsystem()

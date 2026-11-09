@@ -15,7 +15,7 @@ namespace sw
 {
     VehicleExitComponent::VehicleExitComponent()
         : _exitButton{ "Exit" }
-        , _exitIndex{ constant::invalid_index::kInt32 }
+        , _exitIndex{}
     {
         setCanEverTick( true );
     }
@@ -26,7 +26,7 @@ namespace sw
         setTickGroup( TickGroup::PrePhysics );
         const GameObject*    pOwner = getOwner();
         const PawnComponent* pPawn  = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
-        _exitIndex                  = pPawn != nullptr ? pPawn->findButton( _exitButton ) : constant::invalid_index::kInt32;
+        _exitIndex                  = pPawn != nullptr ? pPawn->findButton( _exitButton ) : nullopt;
     }
 
     void VehicleExitComponent::onTick( float32 deltaTime )

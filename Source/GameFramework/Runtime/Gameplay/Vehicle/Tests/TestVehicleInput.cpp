@@ -30,7 +30,7 @@ namespace
 /** @brief [VehicleInputTest] 물리 차: 앞은 페달, 옆은 조향이다 */
 SW_TEST_CASE( VehicleInputTest, PhysicsCarTurnsWorldMoveIntoPedalAndSteering )
 {
-    const PhysicsCarInput input = PhysicsCarComponent::toCarInput( Util::makeMove( 0.6f, 0.8f ), float3{ 0.0f, 0.0f, 1.0f }, 0.0f, 0.5f, -1 );
+    const PhysicsCarInput input = PhysicsCarComponent::toCarInput( Util::makeMove( 0.6f, 0.8f ), float3{ 0.0f, 0.0f, 1.0f }, 0.0f, 0.5f, sw::nullopt );
     SW_EXPECT_TRUE( MathUtil::abs( input._forward - 0.8f ) < 1.0e-4f );
     SW_EXPECT_TRUE( MathUtil::abs( input._right - 0.6f ) < 1.0e-4f );
     SW_EXPECT_EQUAL( 0.0f, input._brake );
@@ -40,8 +40,8 @@ SW_TEST_CASE( VehicleInputTest, PhysicsCarTurnsWorldMoveIntoPedalAndSteering )
 SW_TEST_CASE( VehicleInputTest, PhysicsCarBrakesBeforeReversing )
 {
     const ControlIntent   back    = Util::makeMove( 0.0f, -1.0f );
-    const PhysicsCarInput moving  = PhysicsCarComponent::toCarInput( back, float3{ 0.0f, 0.0f, 1.0f }, 5.0f, 0.5f, -1 );
-    const PhysicsCarInput stopped = PhysicsCarComponent::toCarInput( back, float3{ 0.0f, 0.0f, 1.0f }, 0.1f, 0.5f, -1 );
+    const PhysicsCarInput moving  = PhysicsCarComponent::toCarInput( back, float3{ 0.0f, 0.0f, 1.0f }, 5.0f, 0.5f, sw::nullopt );
+    const PhysicsCarInput stopped = PhysicsCarComponent::toCarInput( back, float3{ 0.0f, 0.0f, 1.0f }, 0.1f, 0.5f, sw::nullopt );
     SW_EXPECT_EQUAL( 1.0f, moving._brake );
     SW_EXPECT_EQUAL( 0.0f, moving._forward );
     SW_EXPECT_EQUAL( 0.0f, stopped._brake );
@@ -51,7 +51,7 @@ SW_TEST_CASE( VehicleInputTest, PhysicsCarBrakesBeforeReversing )
 /** @brief [VehicleInputTest] 물리 차: 차가 옆을 보면 같은 월드 방향이 조향이 된다 */
 SW_TEST_CASE( VehicleInputTest, PhysicsCarProjectsOnTheCarHeading )
 {
-    const PhysicsCarInput input = PhysicsCarComponent::toCarInput( Util::makeMove( 0.0f, 1.0f ), float3{ 1.0f, 0.0f, 0.0f }, 0.0f, 0.5f, -1 );
+    const PhysicsCarInput input = PhysicsCarComponent::toCarInput( Util::makeMove( 0.0f, 1.0f ), float3{ 1.0f, 0.0f, 0.0f }, 0.0f, 0.5f, sw::nullopt );
     SW_EXPECT_TRUE( MathUtil::abs( input._forward ) < 1.0e-4f );
     SW_EXPECT_TRUE( MathUtil::abs( input._right + 1.0f ) < 1.0e-4f ); // +X 를 보는 차에 +Z 는 왼쪽이다
 }
@@ -62,14 +62,14 @@ SW_TEST_CASE( VehicleInputTest, KinematicCarProjectsOnYawAndCarriesButtons )
     ControlIntent intent = Util::makeMove( 0.0f, 1.0f );
     intent.setButton( 0, true, false );
     intent.setButton( 1, true, true );
-    const KinematicVehicleInput straight = KinematicVehicleComponent::toVehicleInput( intent, 0.0f, 0, 1, -1 );
+    const KinematicVehicleInput straight = KinematicVehicleComponent::toVehicleInput( intent, 0.0f, 0, 1, sw::nullopt );
     SW_EXPECT_TRUE( MathUtil::abs( straight._throttle - 1.0f ) < 1.0e-4f );
     SW_EXPECT_TRUE( MathUtil::abs( straight._steer ) < 1.0e-4f );
     SW_EXPECT_EQUAL( SW_TRUE, static_cast<uint8>( straight._bDriftHeld ) );
     SW_EXPECT_EQUAL( SW_TRUE, static_cast<uint8>( straight._bBoostPressed ) );
     SW_EXPECT_EQUAL( SW_FALSE, static_cast<uint8>( straight._bJumpPressed ) );
 
-    const KinematicVehicleInput turned = KinematicVehicleComponent::toVehicleInput( intent, MathUtil::kPi * 0.5f, 0, 1, -1 );
+    const KinematicVehicleInput turned = KinematicVehicleComponent::toVehicleInput( intent, MathUtil::kPi * 0.5f, 0, 1, sw::nullopt );
     SW_EXPECT_TRUE( MathUtil::abs( turned._throttle ) < 1.0e-4f );
     SW_EXPECT_TRUE( MathUtil::abs( turned._steer + 1.0f ) < 1.0e-4f );
 }

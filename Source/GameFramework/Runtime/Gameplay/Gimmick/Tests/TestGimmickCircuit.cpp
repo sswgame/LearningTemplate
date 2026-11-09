@@ -125,9 +125,9 @@ namespace
         {
             vector<string> listError;
             SW_REQUIRE_TRUE( _circuit.populate( _def, _registry, listError ) );
-            _sensor = _circuit.findNode( hashed_string( "s" ) );
-            _gate   = _circuit.findNode( hashed_string( "g" ) );
-            _count  = _circuit.findNode( hashed_string( "c" ) );
+            _sensor = _circuit.findNode( hashed_string( "s" ) ).value();
+            _gate   = _circuit.findNode( hashed_string( "g" ) ).value();
+            _count  = _circuit.findNode( hashed_string( "c" ) ).value();
         }
 
         /** @brief 정의가 거절되는지와 오류 글에 @p pExpected 가 있는지 봅니다. */
@@ -216,9 +216,9 @@ SW_TEST_CASE( GimmickCircuitTest, DefinitionOrderDoesNotMatter )
     GimmickCircuit circuit;
     vector<string> listError;
     SW_REQUIRE_TRUE( circuit.populate( def, registry, listError ) );
-    circuit.setSensorValue( circuit.findNode( hashed_string( "s" ) ), 1.0f );
+    circuit.setSensorValue( circuit.findNode( hashed_string( "s" ) ).value(), 1.0f );
     circuit.step();
-    SW_EXPECT_EQUAL( 1, circuit.getIntState( circuit.findNode( hashed_string( "c" ) ), 0 ) );
+    SW_EXPECT_EQUAL( 1, circuit.getIntState( circuit.findNode( hashed_string( "c" ) ).value(), 0 ) );
 }
 
 SW_TEST_CASE( GimmickCircuitTest, InvertedWireFlipsTheSignal )
@@ -301,7 +301,7 @@ SW_TEST_CASE( GimmickCircuitTest, ParameterValuesAreRead )
     GimmickNodeDef& node = rig._def.addNode( hashed_string( "r" ), hashed_string( "Ranged" ) );
     node.setParam( hashed_string( "Amount" ), "2.5" );
     rig.build();
-    const int32                 ranged = rig._circuit.findNode( hashed_string( "r" ) );
+    const int32                 ranged = rig._circuit.findNode( hashed_string( "r" ) ).value();
     const sw::optional<float32> amount = rig._circuit.readParamNumber( ranged, "Amount" );
     SW_REQUIRE_TRUE( amount.has_value() );
     SW_EXPECT_NEAR( 2.5f, *amount, 1e-5f );
@@ -382,7 +382,7 @@ SW_TEST_CASE( GimmickCircuitTest, UnbuiltCircuitDoesNothing )
     circuit.setSensorValue( 0, 1.0f );
     circuit.addSensorImpulse( 0, 1.0f );
     circuit.setPathLength( 5, 1.0f );
-    SW_EXPECT_EQUAL( -1, circuit.findNode( hashed_string( "x" ) ) );
+    SW_EXPECT_FALSE( circuit.findNode( hashed_string( "x" ) ).has_value() );
 }
 
 SW_TEST_CASE( GimmickCircuitTest, ResetReturnsToTheInitialState )
@@ -460,7 +460,7 @@ SW_TEST_CASE( GimmickCircuitTest, AddedNodeNeedsPermissionToLoad )
     const GimmickStateLoad applied = newer._circuit.loadState( saved, GimmickStateMatch::NodeSetChanged );
     SW_EXPECT_TRUE( applied._bApplied );
     SW_EXPECT_EQUAL( 1, newer._circuit.getIntState( newer._count, 0 ) );
-    SW_EXPECT_EQUAL( 0, newer._circuit.getIntState( newer._circuit.findNode( hashed_string( "extra" ) ), 0 ) );
+    SW_EXPECT_EQUAL( 0, newer._circuit.getIntState( newer._circuit.findNode( hashed_string( "extra" ) ).value(), 0 ) );
 }
 
 // 같은 id 인데 종류가 다르면 어떤 허락으로도 옮기지 않고 그 노드를 알려 준다.
@@ -483,7 +483,7 @@ SW_TEST_CASE( GimmickCircuitTest, ChangedNodeKindIsAMismatch )
     const GimmickStateLoad result = circuit.loadState( saved, GimmickStateMatch::NodeSetChanged );
     SW_EXPECT_TRUE( result._match == GimmickStateMatch::Mismatch );
     SW_EXPECT_FALSE( result._bApplied );
-    SW_EXPECT_EQUAL( circuit.findNode( hashed_string( "g" ) ), result._changedNode );
+    SW_EXPECT_TRUE( result._changedNode == circuit.findNode( hashed_string( "g" ) ) );
 }
 
 SW_TEST_CASE( GimmickCircuitTest, DuplicateSavedIDIsAMismatch )
@@ -495,7 +495,7 @@ SW_TEST_CASE( GimmickCircuitTest, DuplicateSavedIDIsAMismatch )
     saved._listNode.push_back( saved._listNode[0] );
     const GimmickStateLoad result = rig._circuit.loadState( saved, GimmickStateMatch::NodeSetChanged );
     SW_EXPECT_TRUE( result._match == GimmickStateMatch::Mismatch );
-    SW_EXPECT_EQUAL( -1, result._changedNode );
+    SW_EXPECT_FALSE( result._changedNode.has_value() );
     SW_EXPECT_FALSE( result._bApplied );
 }
 

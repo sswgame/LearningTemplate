@@ -16,7 +16,7 @@ namespace sw
     PhysicsCarComponent::PhysicsCarComponent()
         : _handBrakeButton{ "HandBrake" }
         , _reverseSpeed{ 0.5f }
-        , _handBrakeIndex{ constant::invalid_index::kInt32 }
+        , _handBrakeIndex{}
     {
         setCanEverTick( true );
     }
@@ -27,11 +27,11 @@ namespace sw
         setTickGroup( TickGroup::PrePhysics );
         const GameObject*    pOwner = getOwner();
         const PawnComponent* pPawn  = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
-        _handBrakeIndex             = pPawn != nullptr ? pPawn->findButton( _handBrakeButton ) : constant::invalid_index::kInt32;
+        _handBrakeIndex             = pPawn != nullptr ? pPawn->findButton( _handBrakeButton ) : nullopt;
     }
 
     PhysicsCarInput PhysicsCarComponent::toCarInput( const ControlIntent& intent, const float3& carForward, float32 forwardSpeed, float32 reverseSpeed,
-                                                     int32 handBrakeIndex )
+                                                     optional<int32> handBrakeIndex )
     {
         const float2    localMove = intent.computeLocalMove( carForward );
         const float32   pedal     = localMove._y;
