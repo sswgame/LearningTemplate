@@ -17,10 +17,10 @@
 
 ### Core tiers
 
-Core folders are tiers (table: `Config/Rules/Layers/CoreLayers.toml`; below `Log` the build enforces it, above it the `CoreTiers` lint): `Foundation` → `Concurrency` · `Math` → `Memory` → `Container` → … → `Diagnostics` → `Log/Sink` (the sink sub-folder implements the `ILogSink` port that `Log` declares, so it sits on top). A file includes only its own folder or a lower tier.
+Core folders are tiers (table: `Config/Rules/Layers/CoreLayers.toml`; the build enforces every tier — each tier is its own object part whose include path starts with `#error` stubs for every higher-tier header): `Foundation` → `Concurrency` · `Math` → `Memory` → `Container` → … → `Diagnostics` → `Log/Sink` (the sink sub-folder implements the `ILogSink` port that `Log` declares, so it sits on top). A file includes only its own folder or a lower tier.
 
 - A lower tier that must reach up takes an interface or a function pointer (`ILockObserver`, `IAllocationTracker`).
-- Tiers below `Log` get **no `Logger.h`**: their `.cpp` files build with `Core/pchLow.h`, so `SW_LOG_*`, `StringBuilder` and `FileUtil` fail to compile. Report with `SW_LOW_LEVEL_*`.
+- Each tier's pch holds only the `CoreMinimal.h` headers at or below it, so tiers below `Log` get **no `Logger.h`**: `SW_LOG_*`, `StringBuilder` and `FileUtil` fail to compile there. Report with `SW_LOW_LEVEL_*`.
 
 ### Target gates
 

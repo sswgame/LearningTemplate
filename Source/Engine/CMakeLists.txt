@@ -159,7 +159,7 @@ target_sources(Engine PRIVATE
 	"${CMAKE_CURRENT_SOURCE_DIR}/../sw.natvis"
 )
 
-# Core 의 OBJECT 들(높은 티어 `Core_objects` · 낮은 티어 `Core_low_objects`) — 목록은 Core 의 `SW_CORE_OBJECTS` 속성이다(Source/Core/CMakeLists.txt).
+# Core 의 OBJECT 들(티어 부분 `Core_tier<N>_objects`) — 목록은 Core 의 `SW_CORE_OBJECTS` 속성이다(Source/Core/CMakeLists.txt).
 get_target_property(listCoreObjects Core SW_CORE_OBJECTS)
 if(NOT listCoreObjects)
 	message(FATAL_ERROR "[Engine] Core 의 SW_CORE_OBJECTS 속성이 비었다 — Source/Core 를 먼저 add_subdirectory 해야 한다")
@@ -308,7 +308,7 @@ sw_addReflectionStep(Engine
 sw_addReflectBuiltinsGen(Engine)
 
 # ------------------------------------------------------------------------------
-# 9) Jolt 백엔드 소스 — 자기 PCH 를 가진 OBJECT 라이브러리(목적 파일은 Core_objects 처럼 Engine 에 들어간다)
+# 9) Jolt 백엔드 소스 — 자기 PCH 를 가진 OBJECT 라이브러리(목적 파일은 Core 티어 부분처럼 Engine 에 들어간다)
 #
 # Jolt 백엔드 소스는 Jolt 의 대상 기능(-mavx2 ...)으로 컴파일되므로 Engine PCH 를 쓸 수 없다(대상 기능이 다른 PCH 는 clang 이 거부한다).
 # PCH 없이 지으면 TU 마다 엔진 `pch.h` 를 다시 파싱한다 — 그 파싱이 TU 시간의 절반이다. 그래서 이 소스만 따로 묶어 `pch.h` + Jolt

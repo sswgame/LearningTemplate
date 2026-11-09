@@ -1,9 +1,10 @@
-# Core 폴더 티어 표 — `Source/Core/CMakeLists.txt`(Log 아래 · 위를 빌드로 가른다)와 커밋 린트 `Scripts/lint/CoreTiers.py`(모든 티어의 역류 — 하위 폴더 티어 `[subtier]` 포함)가 읽는다.
+# Core 폴더 티어 표 — `Source/Core/CMakeLists.txt` 가 읽어 티어마다 OBJECT 부분(`Core_tier<N>_objects`)을 짓고, 부분 N 의 include 자리 맨 앞에 N 보다 위 티어
+# 헤더의 `#error` 껍데기를 둔다(Engine 층 부분과 같은 틀). 하위 폴더 티어 `[subtier]` 도 같이 읽는다 — 파일의 티어는 가장 긴 키가 정한다.
 
 # 폴더 → 티어. 숫자가 큰 쪽이 위다.
 # 새 폴더는 티어를 정해 여기에 넣는다(표에 없는 폴더는 구성이 선다).
-# 이 표는 빌드도 읽는다 — `Source/Core/CMakeLists.txt` 가 `Log` 보다 낮은 폴더의 `.cpp` 를 `Core_low_objects` 로 따로 지어 `Logger.h` 없는 `pchLow.h` 를 쓴다.
-# 그러니 줄 모양(`폴더 = 숫자`)을 바꾸지 않는다.
+# 부분마다 pch 는 `CoreMinimal.h` 의 include 가운데 그 티어 이하만 담는다 — `Log` 보다 낮은 티어 코드는 `Logger.h` 없이 컴파일된다.
+# CMake 가 줄 단위로 읽으니 줄 모양(`폴더 = 숫자` · `"폴더/하위" = 숫자`)을 바꾸지 않는다.
 [tier]
 Foundation = 0     # 언어 · 플랫폼 바닥(형식 · 매크로 · 정의 · OS 헤더 · enum 플래그 · ASCII · 16진 글자)
 Hash = 0           # 해시 · 씨앗 상수와 비밀 비교(언리얼 Core/Hash) — 컨테이너가 기본 해시로 쓴다
@@ -38,12 +39,7 @@ Diagnostics = 10    # 호출 스택 · 크래시 보고 · 메모리 프로파�
 Event = 10
 Testing = 10        # 엔진 안 단위 테스트 틀(등록 · 단언 · 실행기) — 파일 · 로그 · 프로세스를 쓴다. 배포 구성은 짓지 않는다
 
-# 하위 폴더 티어 — 바깥 폴더와 다른 티어에 서는 하위 폴더. 린트(`CoreTiers.py`)만 읽는다(빌드의 Log 아래 · 위 가르기는 바깥 폴더 티어를 따른다 — 둘 다 같은 쪽이어야 한다).
-# 키를 따옴표로 감싸 CMake 의 `폴더 = 숫자` 줄 읽기에 걸리지 않게 한다.
+# 하위 폴더 티어 — 바깥 폴더와 다른 티어에 서는 하위 폴더. 키는 `/` 가 들어 있어 따옴표로 감싼다(TOML).
 [subtier]
 "Concurrency/Queue" = 3   # 스레드 사이에서 나눠 쓰는 자료 구조(ConcurrentQueue · WorkStealingDeque · SpscQueue · LockedSwapQueue · SharedVectorPool) — vector 를 써서 Container 위
 "Log/Sink" = 11           # 기본 싱크 AsyncLogSink 와 출력 장치 — 파일 · 프로세스 · 진단을 써서 맨 위(포트는 아래, 구현은 위)
-
-# Log 보다 아래 티어에서 pch 로 로그 매크로를 쓰는 파일 → 이유. 지금은 없다 — 아래 티어는 `SW_LOW_LEVEL_REPORT` · `SW_LOW_LEVEL_ASSERT`
-# (`Core/Foundation/Macros.h`, 로그가 기동 때 보고자를 건다)로 보고한다. 새로 늘리지 않는다.
-[exemption]
