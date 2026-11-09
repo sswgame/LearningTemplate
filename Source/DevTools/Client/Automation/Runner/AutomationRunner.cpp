@@ -636,7 +636,7 @@ namespace sw
         return static_cast<float64>( seconds ) * static_cast<float64>( gv_scenarioWallScale );
     }
 
-    float64 AutomationRunner::readCountedElapsedSeconds() const
+    float64 AutomationRunner::readElapsedSecondsWithoutCompile() const
     {
         const float64 elapsedSeconds = AutomationRunnerInternal::readNowSeconds() - _run._wallStartSeconds;
         if ( _run._pCompileBusy == nullptr )
@@ -650,7 +650,7 @@ namespace sw
         const bool bWatches = _result == AutomationResult::Running && _scenario.getTestOptions()._load._bDeclared == false;
         if ( bWatches == false )
             return;
-        const float64 elapsedSeconds = readCountedElapsedSeconds();
+        const float64 elapsedSeconds = readElapsedSecondsWithoutCompile();
         if ( elapsedSeconds <= static_cast<float64>( _wallLimitSeconds ) )
             return;
         StringBuilder<constant::buffer::kMax256> reasonBuilder;

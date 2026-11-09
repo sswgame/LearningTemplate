@@ -288,7 +288,7 @@ namespace sw
          */
         void finishIfWallClockExceeded();
         /** @brief 시작부터 지난 벽시계 초에서 셰이더 컴파일로 바빴던 초를 뺀 값입니다 — 벽시계 감시가 재는 시간(행 감시 스레드도 같은 규칙). */
-        [[nodiscard]] float64 readCountedElapsedSeconds() const;
+        [[nodiscard]] float64 readElapsedSecondsWithoutCompile() const;
         /** @brief 시나리오의 `wallTimeoutSeconds` 에 단계마다 그 종류의 벽시계 예산(`AutomationStepRegistration::_wallSeconds`)을 더한 상한입니다. 읽은 직후 한 번 구한다. */
         [[nodiscard]] float32 computeWallLimitSeconds() const;
         /** @brief 지금 자리 한 줄(`시나리오 · 백엔드 · step N 단계 · f프레임` — 창 제목과 같은 글)입니다. */
