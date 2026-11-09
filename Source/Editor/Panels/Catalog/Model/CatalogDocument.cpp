@@ -381,15 +381,20 @@ namespace sw::editor
                 setError( draftParsed.error() );
                 return false;
             }
-            const vector<int32>& listRow   = draft.getRowIndices();
-            int32                copyIndex = -1;
+            const vector<int32>& listRow = draft.getRowIndices();
+            optional<int32>      copyIndex;
             for ( size_t rowPosition = 0; rowPosition + 1 < listRow.size(); ++rowPosition )
             {
                 if ( listRow[rowPosition] == elementIndex )
                     copyIndex = listRow[rowPosition + 1];
             }
+            if ( copyIndex.has_value() == false )
+            {
+                _error = "the duplicated row was not found after the original";
+                return false;
+            }
             const string     copiedValue = Internal::makeUniqueValue( *this, *pGroup, attribute._name, attribute._value + "_copy" );
-            expected<string> editedAgain = CatalogXMLText::setAttributeValue( edited, draft.getElement( copyIndex ), attribute._name, copiedValue );
+            expected<string> editedAgain = CatalogXMLText::setAttributeValue( edited, draft.getElement( *copyIndex ), attribute._name, copiedValue );
             if ( editedAgain.has_value() == false )
             {
                 setError( editedAgain.error() );

@@ -33,36 +33,35 @@ namespace sw::editor
             const string&            getText() const { return _text; }
             const CatalogXMLElement& get( int32 index ) const { return _parsed.getElement( index ); }
 
-            /** @brief 경로의 원소입니다. 빈 경로는 행 자신이고, 없으면 -1 입니다. */
-            [[nodiscard]] int32 find( const CatalogChildPath& path ) const
+            /** @brief 경로의 원소입니다. 빈 경로는 행 자신이고, 적지 않았으면 비어 있습니다. */
+            [[nodiscard]] optional<int32> find( const CatalogChildPath& path ) const
             {
-                int32 index = _rowIndex;
+                optional<int32> index = _rowIndex;
                 for ( const CatalogChildStep& step : path )
                 {
                     index = CatalogInheritanceView::findWrittenChild( _parsed, index, step );
-                    if ( index < 0 )
-                        return -1;
                 }
                 return index;
             }
 
-            /** @brief 경로의 원소를 없으면 위부터 열쇠만 적어 만듭니다. 실패하면 -1 입니다. */
-            [[nodiscard]] int32 ensure( const CatalogChildPath& path )
+            /** @brief 경로의 원소를 없으면 위부터 열쇠만 적어 만듭니다. 실패하면 비어 있고 이유는 문서의 상태 글에 있습니다. */
+            [[nodiscard]] optional<int32> ensure( const CatalogChildPath& path )
             {
                 int32 index = _rowIndex;
                 for ( const CatalogChildStep& step : path )
                 {
-                    int32 child = CatalogInheritanceView::findWrittenChild( _parsed, index, step );
-                    if ( child < 0 )
+                    const optional<int32> written = CatalogInheritanceView::findWrittenChild( _parsed, index, step );
+                    if ( written.has_value() )
                     {
-                        vector<CatalogXMLNewAttribute> listAttribute;
-                        if ( step._keyAttribute.empty() == false )
-                            listAttribute.push_back( CatalogXMLNewAttribute{ step._keyAttribute, step._key } );
-                        if ( appendChild( index, step._name, listAttribute ) == false )
-                            return -1;
-                        child = get( index )._listChild.back();
+                        index = *written;
+                        continue;
                     }
-                    index = child;
+                    vector<CatalogXMLNewAttribute> listAttribute;
+                    if ( step._keyAttribute.empty() == false )
+                        listAttribute.push_back( CatalogXMLNewAttribute{ step._keyAttribute, step._key } );
+                    if ( appendChild( index, step._name, listAttribute ) == false )
+                        return nullopt;
+                    index = get( index )._listChild.back();
                 }
                 return index;
             }
@@ -76,7 +75,7 @@ namespace sw::editor
             [[nodiscard]] bool moveToEnd( int32 elementIndex )
             {
                 const CatalogXMLElement& element    = get( elementIndex );
-                const int32              ownerIndex = element._parent;
+                const int32              ownerIndex = element._parent.value(); // 자식 경로의 원소라 루트가 아니다
                 if ( get( ownerIndex )._listChild.back() == elementIndex )
                     return true;
                 const string raw{ string_view( _text ).substr( element._begin, element._end - element._begin ) };
@@ -98,10 +97,10 @@ namespace sw::editor
             /** @brief 원소를 지웁니다. 담던 원소에 글이 남지 않으면 자기 닫힘으로 되돌립니다 — 더했다 지우면 원문이 처음과 같아야 한다. */
             [[nodiscard]] bool removeElement( int32 elementIndex )
             {
-                const int32 ownerIndex = get( elementIndex )._parent;
+                const optional<int32> ownerIndex = get( elementIndex )._parent;
                 if ( accept( CatalogXMLText::removeElement( _text, get( elementIndex ) ) ) == false )
                     return false;
-                const CatalogXMLElement& owner = get( ownerIndex );
+                const CatalogXMLElement& owner = get( *ownerIndex ); // 지웠으니 루트가 아니었다
                 if ( owner._bSelfClosing || owner._listChild.empty() == false )
                     return true;
                 const string_view text  = _text;
@@ -120,15 +119,15 @@ namespace sw::editor
             {
                 for ( ;; )
                 {
-                    int32 found = -1;
+                    optional<int32> found;
                     for ( const int32 childIndex : get( ownerIndex )._listChild )
                     {
                         if ( string_view( get( childIndex )._name ) == name )
                             found = childIndex;
                     }
-                    if ( found < 0 )
+                    if ( found.has_value() == false )
                         return true;
-                    if ( removeElement( found ) == false )
+                    if ( removeElement( *found ) == false )
                         return false;
                 }
             }
@@ -220,12 +219,12 @@ namespace sw::editor
                 CatalogChildPath prefix = path;
                 while ( prefix.empty() == false )
                 {
-                    const int32 index = inoutDraft.find( prefix );
-                    if ( index >= 0 )
+                    const optional<int32> index = inoutDraft.find( prefix );
+                    if ( index.has_value() )
                     {
-                        if ( isEmptyWritten( inoutDraft.get( index ), prefix.back()._keyAttribute ) == false || parentEntry.isValid() == false || CatalogInheritanceView::walkPath( parentEntry, prefix ).isValid() == false )
+                        if ( isEmptyWritten( inoutDraft.get( *index ), prefix.back()._keyAttribute ) == false || parentEntry.isValid() == false || CatalogInheritanceView::walkPath( parentEntry, prefix ).isValid() == false )
                             return true;
-                        if ( inoutDraft.removeElement( index ) == false )
+                        if ( inoutDraft.removeElement( *index ) == false )
                             return false;
                     }
                     prefix.pop_back();
@@ -294,20 +293,20 @@ namespace sw::editor
         const XMLNode            parentEntry = _inheritance.findParentEntry( row );
         CatalogChildDraft        draft{ _text, rowIndex, *this };
         const CatalogChildStep&  leaf    = path.back();
-        const int32              written = draft.find( path );
+        const optional<int32>    written = draft.find( path );
 
         if ( _inheritance.findChildSchema( row, path ) == nullptr )
         {
             // 규칙에 없는 칸은 그 이름 전체가 한 값이다 — 부모와 같아지면 전체를 지운다.
-            if ( written < 0 )
+            if ( written.has_value() == false )
             {
                 _error = "override the inherited elements before editing them";
                 return false;
             }
-            if ( draft.setAttribute( written, column, value ) == false )
+            if ( draft.setAttribute( *written, column, value ) == false )
                 return false;
             const CatalogChildPath ownerPath  = Internal::makeOwnerPath( path );
-            const int32            ownerIndex = draft.find( ownerPath );
+            const int32            ownerIndex = draft.find( ownerPath ).value(); // 적은 원소의 담는 원소다
             if ( Internal::isGroupSameAsParent( draft, ownerIndex, parentEntry.isValid() ? CatalogInheritanceView::walkPath( parentEntry, ownerPath ) : XMLNode{}, leaf._name ) )
             {
                 if ( draft.removeGroup( ownerIndex, leaf._name ) == false || Internal::pruneEmpty( draft, parentEntry, ownerPath ) == false )
@@ -323,20 +322,20 @@ namespace sw::editor
             _error = "the key of an inherited element cannot be changed";
             return false;
         }
-        const optional<uint32> opIndex   = written >= 0 ? draft.get( written ).findAttribute( DataInheritance::kOpAttribute ) : nullopt;
-        const bool             bReplaced = opIndex.has_value() && draft.get( written )._listAttribute[*opIndex]._value == DataInheritance::kOpReplace;
+        const optional<uint32> opIndex   = written.has_value() ? draft.get( *written ).findAttribute( DataInheritance::kOpAttribute ) : nullopt;
+        const bool             bReplaced = opIndex.has_value() && draft.get( *written )._listAttribute[*opIndex]._value == DataInheritance::kOpReplace;
         const string           columnName{ column };
         const utf8*            pInherited = parentNode.isValid() && bReplaced == false && bKey == false ? parentNode.findAttribute( columnName.c_str() ) : nullptr;
         if ( pInherited != nullptr && value == string_view( pInherited ) )
         {
-            if ( written < 0 || draft.get( written ).findAttribute( column ).has_value() == false )
+            if ( written.has_value() == false || draft.get( *written ).findAttribute( column ).has_value() == false )
                 return true;
-            if ( draft.removeAttribute( written, column ) == false || Internal::pruneEmpty( draft, parentEntry, path ) == false )
+            if ( draft.removeAttribute( *written, column ) == false || Internal::pruneEmpty( draft, parentEntry, path ) == false )
                 return false;
             return commitChildEdit( draft.getText() );
         }
-        const int32 target = draft.ensure( path );
-        if ( target < 0 || draft.setAttribute( target, column, value ) == false )
+        const optional<int32> target = draft.ensure( path );
+        if ( target.has_value() == false || draft.setAttribute( *target, column, value ) == false )
             return false;
         return commitChildEdit( draft.getText() );
     }
@@ -345,14 +344,14 @@ namespace sw::editor
     {
         if ( checkChildRow( rowIndex ) == false || path.empty() )
             return false;
-        CatalogChildDraft draft{ _text, rowIndex, *this };
-        const int32       written = draft.find( path );
-        if ( written < 0 || draft.get( written ).findAttribute( column ).has_value() == false )
+        CatalogChildDraft     draft{ _text, rowIndex, *this };
+        const optional<int32> written = draft.find( path );
+        if ( written.has_value() == false || draft.get( *written ).findAttribute( column ).has_value() == false )
         {
             _error = "the element has no such attribute";
             return false;
         }
-        if ( draft.removeAttribute( written, column ) == false || CatalogDocumentChildEditInternal::pruneEmpty( draft, _inheritance.findParentEntry( _parsed.getElement( rowIndex ) ), path ) == false )
+        if ( draft.removeAttribute( *written, column ) == false || CatalogDocumentChildEditInternal::pruneEmpty( draft, _inheritance.findParentEntry( _parsed.getElement( rowIndex ) ), path ) == false )
             return false;
         return commitChildEdit( draft.getText() );
     }
@@ -382,20 +381,21 @@ namespace sw::editor
             {
                 key = "new_" + to_string( suffix );
             }
-            const int32 ownerIndex = draft.ensure( ownerPath );
-            if ( ownerIndex < 0 || draft.appendChild( ownerIndex, name, {
-                                                                            CatalogXMLNewAttribute{ keyName, key }
+            const optional<int32> ownerIndex = draft.ensure( ownerPath );
+            if ( ownerIndex.has_value() == false || draft.appendChild( *ownerIndex, name, {
+                                                                                              CatalogXMLNewAttribute{ keyName, key }
             } ) == false )
                 return false;
             return commitChildEdit( draft.getText() );
         }
 
         // 규칙에 없는 칸: 적으면 그 이름 전체가 바뀌므로 물려받은 원소를 먼저 옮기고 더한다.
-        const XMLNode parentEntry = _inheritance.findParentEntry( row );
-        const XMLNode parentOwner = parentEntry.isValid() ? CatalogInheritanceView::walkPath( parentEntry, ownerPath ) : XMLNode{};
-        const int32   ownerIndex  = draft.ensure( ownerPath );
-        if ( ownerIndex < 0 )
+        const XMLNode         parentEntry  = _inheritance.findParentEntry( row );
+        const XMLNode         parentOwner  = parentEntry.isValid() ? CatalogInheritanceView::walkPath( parentEntry, ownerPath ) : XMLNode{};
+        const optional<int32> ensuredOwner = draft.ensure( ownerPath );
+        if ( ensuredOwner.has_value() == false )
             return false;
+        const int32                    ownerIndex = *ensuredOwner;
         vector<CatalogXMLNewAttribute> listAttribute;
         bool                           bWrote   = false;
         bool                           bCleared = false;
@@ -445,19 +445,19 @@ namespace sw::editor
         const XMLNode            parentEntry = _inheritance.findParentEntry( row );
         CatalogChildDraft        draft{ _text, rowIndex, *this };
         const CatalogChildPath   ownerPath = Internal::makeOwnerPath( path );
-        const int32              written   = draft.find( path );
+        const optional<int32>    written   = draft.find( path );
 
         if ( _inheritance.findChildSchema( row, path ) == nullptr )
         {
-            if ( written < 0 )
+            if ( written.has_value() == false )
             {
                 _error = "override the inherited elements before removing one";
                 return false;
             }
-            if ( draft.removeElement( written ) == false )
+            if ( draft.removeElement( *written ) == false )
                 return false;
             // 마지막 원소를 지우면 다시 물려받게 된다 - 지운 뜻대로 비운다.
-            const int32   ownerIndex  = draft.find( ownerPath );
+            const int32   ownerIndex  = draft.find( ownerPath ).value(); // 지운 원소를 담던 원소다
             const XMLNode parentOwner = parentEntry.isValid() ? CatalogInheritanceView::walkPath( parentEntry, ownerPath ) : XMLNode{};
             const bool    bAnyLeft    = VectorUtil::containsIf( draft.get( ownerIndex )._listChild, [&]( int32 childIndex )
                   { return draft.get( childIndex )._name == path.back()._name; } );
@@ -470,12 +470,12 @@ namespace sw::editor
         }
 
         const bool bInherited = parentEntry.isValid() && CatalogInheritanceView::walkPath( parentEntry, path ).isValid();
-        if ( written >= 0 && draft.removeElement( written ) == false )
+        if ( written.has_value() && draft.removeElement( *written ) == false )
             return false;
         if ( bInherited )
         {
-            const int32 target = draft.ensure( path );
-            if ( target < 0 || draft.setAttribute( target, DataInheritance::kOpAttribute, DataInheritance::kOpRemove ) == false )
+            const optional<int32> target = draft.ensure( path );
+            if ( target.has_value() == false || draft.setAttribute( *target, DataInheritance::kOpAttribute, DataInheritance::kOpRemove ) == false )
                 return false;
         }
         else if ( Internal::pruneEmpty( draft, parentEntry, ownerPath ) == false )
@@ -489,9 +489,9 @@ namespace sw::editor
     {
         if ( checkChildRow( rowIndex ) == false || path.empty() )
             return false;
-        CatalogChildDraft draft{ _text, rowIndex, *this };
-        const int32       written = draft.find( path );
-        if ( written < 0 || draft.removeElement( written ) == false )
+        CatalogChildDraft     draft{ _text, rowIndex, *this };
+        const optional<int32> written = draft.find( path );
+        if ( written.has_value() == false || draft.removeElement( *written ) == false )
             return false;
         if ( CatalogDocumentChildEditInternal::pruneEmpty( draft, _inheritance.findParentEntry( _parsed.getElement( rowIndex ) ), CatalogDocumentChildEditInternal::makeOwnerPath( path ) ) == false )
             return false;
@@ -523,14 +523,15 @@ namespace sw::editor
             return true;
 
         CatalogChildDraft draft{ _text, rowIndex, *this };
-        int32             target = draft.ensure( path );
-        if ( target < 0 || draft.removeAttribute( target, DataInheritance::kBeforeAttribute ) == false || draft.removeAttribute( draft.find( path ), DataInheritance::kAfterAttribute ) == false )
+        // 아래 `find( path ).value()` 는 방금 만든(있는) 원소를 고칠 때마다 다시 짚는다.
+        const optional<int32> ensured = draft.ensure( path );
+        if ( ensured.has_value() == false || draft.removeAttribute( *ensured, DataInheritance::kBeforeAttribute ) == false || draft.removeAttribute( draft.find( path ).value(), DataInheritance::kAfterAttribute ) == false )
             return false;
         // 위에서 아래로 차례로 얹으므로 맨 뒤로 옮겨 적어야 기준 열쇠가 그때 이미 있다(이 항목이 더한 원소여도).
-        if ( draft.moveToEnd( draft.find( path ) ) == false )
+        if ( draft.moveToEnd( draft.find( path ).value() ) == false )
             return false;
-        target          = draft.find( path );
-        const bool bSet = bEarlier ? draft.setAttribute( target, DataInheritance::kBeforeAttribute, listKey[position - 1] ) : draft.setAttribute( target, DataInheritance::kAfterAttribute, listKey[position + 1] );
+        const int32 target = draft.find( path ).value();
+        const bool  bSet   = bEarlier ? draft.setAttribute( target, DataInheritance::kBeforeAttribute, listKey[position - 1] ) : draft.setAttribute( target, DataInheritance::kAfterAttribute, listKey[position + 1] );
         return bSet && commitChildEdit( draft.getText() );
     }
 
@@ -538,11 +539,11 @@ namespace sw::editor
     {
         if ( checkChildRow( rowIndex ) == false || path.empty() )
             return false;
-        CatalogChildDraft draft{ _text, rowIndex, *this };
-        const int32       written = draft.find( path );
-        if ( written < 0 )
+        CatalogChildDraft     draft{ _text, rowIndex, *this };
+        const optional<int32> written = draft.find( path );
+        if ( written.has_value() == false )
             return true;
-        if ( draft.removeAttribute( written, DataInheritance::kBeforeAttribute ) == false || draft.removeAttribute( draft.find( path ), DataInheritance::kAfterAttribute ) == false )
+        if ( draft.removeAttribute( *written, DataInheritance::kBeforeAttribute ) == false || draft.removeAttribute( draft.find( path ).value(), DataInheritance::kAfterAttribute ) == false )
             return false;
         if ( CatalogDocumentChildEditInternal::pruneEmpty( draft, _inheritance.findParentEntry( _parsed.getElement( rowIndex ) ), path ) == false )
             return false;
@@ -553,12 +554,12 @@ namespace sw::editor
     {
         if ( checkChildRow( rowIndex ) == false )
             return false;
-        CatalogChildDraft draft{ _text, rowIndex, *this };
-        const int32       ownerIndex = draft.ensure( ownerPath );
-        if ( ownerIndex < 0 || draft.removeGroup( ownerIndex, name ) == false )
+        CatalogChildDraft     draft{ _text, rowIndex, *this };
+        const optional<int32> ownerIndex = draft.ensure( ownerPath );
+        if ( ownerIndex.has_value() == false || draft.removeGroup( *ownerIndex, name ) == false )
             return false;
-        if ( draft.appendChild( ownerIndex, name, {
-                                                      CatalogXMLNewAttribute{ DataInheritance::kOpAttribute, DataCatalogInheritance::kOpClear }
+        if ( draft.appendChild( *ownerIndex, name, {
+                                                       CatalogXMLNewAttribute{ DataInheritance::kOpAttribute, DataCatalogInheritance::kOpClear }
         } ) == false )
             return false;
         return commitChildEdit( draft.getText() );
@@ -568,11 +569,11 @@ namespace sw::editor
     {
         if ( checkChildRow( rowIndex ) == false )
             return false;
-        CatalogChildDraft draft{ _text, rowIndex, *this };
-        const int32       ownerIndex = draft.find( ownerPath );
-        if ( ownerIndex < 0 )
+        CatalogChildDraft     draft{ _text, rowIndex, *this };
+        const optional<int32> ownerIndex = draft.find( ownerPath );
+        if ( ownerIndex.has_value() == false )
             return true;
-        if ( draft.removeGroup( ownerIndex, name ) == false || CatalogDocumentChildEditInternal::pruneEmpty( draft, _inheritance.findParentEntry( _parsed.getElement( rowIndex ) ), ownerPath ) == false )
+        if ( draft.removeGroup( *ownerIndex, name ) == false || CatalogDocumentChildEditInternal::pruneEmpty( draft, _inheritance.findParentEntry( _parsed.getElement( rowIndex ) ), ownerPath ) == false )
             return false;
         return commitChildEdit( draft.getText() );
     }
@@ -589,13 +590,13 @@ namespace sw::editor
             _error = "there is nothing to override";
             return false;
         }
-        CatalogChildDraft draft{ _text, rowIndex, *this };
-        const int32       ownerIndex = draft.ensure( ownerPath );
-        if ( ownerIndex < 0 || draft.removeGroup( ownerIndex, name ) == false )
+        CatalogChildDraft     draft{ _text, rowIndex, *this };
+        const optional<int32> ownerIndex = draft.ensure( ownerPath );
+        if ( ownerIndex.has_value() == false || draft.removeGroup( *ownerIndex, name ) == false )
             return false;
         for ( XMLNode child = parentOwner.findChild( nameText.c_str() ); child.isValid(); child = child.findNextSibling( nameText.c_str() ) )
         {
-            if ( draft.copyNode( ownerIndex, child ) == false )
+            if ( draft.copyNode( *ownerIndex, child ) == false )
                 return false;
         }
         return commitChildEdit( draft.getText() );

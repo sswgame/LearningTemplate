@@ -35,7 +35,7 @@ namespace sw::editor
         string                      _name{};
         vector<CatalogXMLAttribute> _listAttribute{};
         vector<int32>               _listChild{};           ///< 자식 원소의 인덱스(문서 순서)
-        int32                       _parent{ -1 };          ///< 루트는 -1
+        optional<int32>             _parent{};              ///< 루트는 비어 있다
         uint32                      _begin{ 0 };            ///< 여는 `<`
         uint32                      _startTagEnd{ 0 };      ///< 여는 태그의 `>` 바로 뒤
         uint32                      _closeBegin{ 0 };       ///< 닫는 태그의 `<`. 자기 닫힘이면 `_startTagEnd` 와 같다
@@ -69,12 +69,13 @@ namespace sw::editor
         /** @brief 원문을 훑습니다. 형식이 깨졌거나 루트가 없으면 그 이유입니다(문장은 무엇이 틀렸는지, 대상은 `line N`). */
         [[nodiscard]] expected<void> parse( string_view text );
 
-        bool                             isParsed() const { return _rootIndex >= 0; }
-        int32                            getRootIndex() const { return _rootIndex; }
+        bool isParsed() const { return _rootIndex.has_value(); }
+        /** @brief 루트 원소 번호입니다. `isParsed()` 일 때만 부릅니다(아니면 멈춘다). */
+        int32                            getRootIndex() const { return _rootIndex.value(); }
         const vector<CatalogXMLElement>& getElements() const { return _listElement; }
         const CatalogXMLElement&         getElement( int32 index ) const { return _listElement[static_cast<size_t>( index )]; }
         /** @brief 루트의 자식(테이블의 행)을 문서 순서로 반환합니다. */
-        const vector<int32>& getRowIndices() const { return _listElement[static_cast<size_t>( _rootIndex )]._listChild; }
+        const vector<int32>& getRowIndices() const { return _listElement[static_cast<size_t>( getRootIndex() )]._listChild; }
 
         // ------------------------------------------------------------------------------
         // 원문 편집 — 위치는 `parse` 가 낸 것을 넘깁니다. 고친 뒤에는 새 원문을 다시 `parse` 합니다.
@@ -99,6 +100,6 @@ namespace sw::editor
 
     private:
         vector<CatalogXMLElement> _listElement{};
-        int32                     _rootIndex{ -1 };
+        optional<int32>           _rootIndex{};
     };
 } // namespace sw::editor

@@ -49,10 +49,10 @@ namespace sw::editor
                 }
             }
 
-            static const CatalogXMLElement* findWritten( const CatalogXMLText& parsed, int32 ownerIndex, const CatalogChildStep& step )
+            static const CatalogXMLElement* findWritten( const CatalogXMLText& parsed, optional<int32> ownerIndex, const CatalogChildStep& step )
             {
-                const int32 index = ownerIndex >= 0 ? CatalogInheritanceView::findWrittenChild( parsed, ownerIndex, step ) : -1;
-                return index >= 0 ? &parsed.getElement( index ) : nullptr;
+                const optional<int32> index = CatalogInheritanceView::findWrittenChild( parsed, ownerIndex, step );
+                return index.has_value() ? &parsed.getElement( *index ) : nullptr;
             }
 
             static string_view readWrittenAttribute( const CatalogXMLElement* pWritten, string_view name )
@@ -87,7 +87,7 @@ namespace sw::editor
             }
 
             /** @brief 칸 이름을 모읍니다. 규칙의 칸이 먼저라 원소가 없어도 구역이 선다. */
-            static void collectNames( const DataInheritanceSchema& schema, const CatalogXMLText& parsed, int32 ownerIndex, const XMLNode& flat, const XMLNode& parent, vector<string>& outListName )
+            static void collectNames( const DataInheritanceSchema& schema, const CatalogXMLText& parsed, optional<int32> ownerIndex, const XMLNode& flat, const XMLNode& parent, vector<string>& outListName )
             {
                 for ( const DataInheritanceSchema& field : schema._listField )
                 {
@@ -103,15 +103,15 @@ namespace sw::editor
                             addUnique( outListName, child.getName() );
                     }
                 }
-                if ( ownerIndex < 0 )
+                if ( ownerIndex.has_value() == false )
                     return;
-                for ( const int32 childIndex : parsed.getElement( ownerIndex )._listChild )
+                for ( const int32 childIndex : parsed.getElement( *ownerIndex )._listChild )
                 {
                     addUnique( outListName, parsed.getElement( childIndex )._name );
                 }
             }
 
-            static void appendList( const DataInheritanceSchema& field, const CatalogXMLText& parsed, int32 ownerIndex, const XMLNode& flat, const XMLNode& parent, CatalogChildSection&& section, vector<CatalogChildSection>& outListSection )
+            static void appendList( const DataInheritanceSchema& field, const CatalogXMLText& parsed, optional<int32> ownerIndex, const XMLNode& flat, const XMLNode& parent, CatalogChildSection&& section, vector<CatalogChildSection>& outListSection )
             {
                 const utf8* pKey      = field._keyAttribute.c_str();
                 section._kind         = CatalogChildSectionKind::List;
@@ -140,9 +140,9 @@ namespace sw::editor
                 }
                 // 합친 결과에 없는 원소는 뺀 원소다 — 되돌릴 수 있게 끝에 보인다.
                 vector<Row> listRemoved;
-                if ( ownerIndex >= 0 )
+                if ( ownerIndex.has_value() )
                 {
-                    for ( const int32 childIndex : parsed.getElement( ownerIndex )._listChild )
+                    for ( const int32 childIndex : parsed.getElement( *ownerIndex )._listChild )
                     {
                         const CatalogXMLElement& written = parsed.getElement( childIndex );
                         if ( written._name != section._name || readWrittenAttribute( &written, DataInheritance::kOpAttribute ) != DataInheritance::kOpRemove )
@@ -189,12 +189,11 @@ namespace sw::editor
                 {
                     CatalogChildPath path = outListSection[sectionIndex]._ownerPath;
                     path.push_back( row._step );
-                    const int32 writtenIndex = ownerIndex >= 0 ? CatalogInheritanceView::findWrittenChild( parsed, ownerIndex, row._step ) : -1;
-                    appendSections( field, parsed, writtenIndex, row._flat, row._parent, path, ownerTitle + " " + row._step._key, outListSection );
+                    appendSections( field, parsed, CatalogInheritanceView::findWrittenChild( parsed, ownerIndex, row._step ), row._flat, row._parent, path, ownerTitle + " " + row._step._key, outListSection );
                 }
             }
 
-            static void appendField( const DataInheritanceSchema& field, const CatalogXMLText& parsed, int32 ownerIndex, const XMLNode& flat, const XMLNode& parent, CatalogChildSection&& section, vector<CatalogChildSection>& outListSection )
+            static void appendField( const DataInheritanceSchema& field, const CatalogXMLText& parsed, optional<int32> ownerIndex, const XMLNode& flat, const XMLNode& parent, CatalogChildSection&& section, vector<CatalogChildSection>& outListSection )
             {
                 section._kind = CatalogChildSectionKind::Field;
                 const CatalogChildStep   step{ section._name, string(), string(), 0 };
@@ -214,16 +213,15 @@ namespace sw::editor
                 const string     title = section._title;
                 section._listNode.push_back( std::move( node ) );
                 outListSection.push_back( std::move( section ) );
-                const int32 writtenIndex = ownerIndex >= 0 ? CatalogInheritanceView::findWrittenChild( parsed, ownerIndex, step ) : -1;
-                appendSections( field, parsed, writtenIndex, flatChild, parentChild, path, title, outListSection );
+                appendSections( field, parsed, CatalogInheritanceView::findWrittenChild( parsed, ownerIndex, step ), flatChild, parentChild, path, title, outListSection );
             }
 
-            static void appendWhole( const CatalogXMLText& parsed, int32 ownerIndex, const XMLNode& flat, CatalogChildSection&& section, vector<CatalogChildSection>& outListSection )
+            static void appendWhole( const CatalogXMLText& parsed, optional<int32> ownerIndex, const XMLNode& flat, CatalogChildSection&& section, vector<CatalogChildSection>& outListSection )
             {
                 section._kind = CatalogChildSectionKind::Whole;
-                if ( ownerIndex >= 0 )
+                if ( ownerIndex.has_value() )
                 {
-                    for ( const int32 childIndex : parsed.getElement( ownerIndex )._listChild )
+                    for ( const int32 childIndex : parsed.getElement( *ownerIndex )._listChild )
                     {
                         const CatalogXMLElement& written = parsed.getElement( childIndex );
                         if ( written._name != section._name )
@@ -254,7 +252,7 @@ namespace sw::editor
                 outListSection.push_back( std::move( section ) );
             }
 
-            static void appendSections( const DataInheritanceSchema& schema, const CatalogXMLText& parsed, int32 ownerIndex, const XMLNode& flat, const XMLNode& parent, const CatalogChildPath& ownerPath, const string& ownerTitle,
+            static void appendSections( const DataInheritanceSchema& schema, const CatalogXMLText& parsed, optional<int32> ownerIndex, const XMLNode& flat, const XMLNode& parent, const CatalogChildPath& ownerPath, const string& ownerTitle,
                                         vector<CatalogChildSection>& outListSection )
             {
                 vector<string> listName;
@@ -424,10 +422,12 @@ namespace sw::editor
         return pField;
     }
 
-    int32 CatalogInheritanceView::findWrittenChild( const CatalogXMLText& parsed, int32 ownerIndex, const CatalogChildStep& step )
+    optional<int32> CatalogInheritanceView::findWrittenChild( const CatalogXMLText& parsed, optional<int32> ownerIndex, const CatalogChildStep& step )
     {
+        if ( ownerIndex.has_value() == false )
+            return nullopt;
         int32 occurrence = 0;
-        for ( const int32 childIndex : parsed.getElement( ownerIndex )._listChild )
+        for ( const int32 childIndex : parsed.getElement( *ownerIndex )._listChild )
         {
             const CatalogXMLElement& child = parsed.getElement( childIndex );
             if ( child._name != step._name )
@@ -443,7 +443,7 @@ namespace sw::editor
             if ( keyIndex.has_value() && child._listAttribute[*keyIndex]._value == step._key )
                 return childIndex;
         }
-        return -1;
+        return nullopt;
     }
 
     XMLNode CatalogInheritanceView::walkPath( const XMLNode& start, const CatalogChildPath& path )
