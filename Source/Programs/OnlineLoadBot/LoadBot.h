@@ -23,7 +23,7 @@
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Runtime/ServerDirectoryClient.h"
 #include "GameFramework/Kits/Feature/Online/Social/Runtime/SocialClient.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
-#include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/AccountIdentity.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServiceClient.h"
 
 #include "Programs/OnlineLoadBot/LoadBotGameSession.h"

@@ -2,9 +2,7 @@
 
 #include "Games/Shooter3D/ShooterOnlineFlow.h"
 
-#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Time/WallClock.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DevCommandRegistry.h"
@@ -14,10 +12,7 @@
 #include "GameFramework/Kits/Feature/Online/Mailbox/Runtime/MailboxClient.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingClient.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
-#include "GameFramework/Runtime/Online/Mail/ServiceMail.h"
 #include "GameFramework/Runtime/Online/Service/OnlineSession.h"
-#include "GameFramework/Runtime/Online/Store/ServiceStore.h"
 
 namespace sw
 {
@@ -53,23 +48,6 @@ namespace sw
                 }
                 pFlow->requestLogin( *pSession, kDevLoginName, kDevPassword );
                 outReply = "shooter.online: login sent";
-                return true;
-            }
-
-            static bool runSendMail( const vector<string>& listArgument, string& outReply )
-            {
-                int32 amount = 0;
-                if ( listArgument.size() != 1 || StringUtil::parseInt( listArgument[0], amount ) == false || amount <= 0 )
-                    return false;
-                OnlineSession*     pSession = nullptr;
-                ShooterOnlineFlow* pFlow    = nullptr;
-                if ( findParts( pSession, pFlow ) == false )
-                {
-                    outReply = kNoGameReply;
-                    return true;
-                }
-                const bool bSent = pFlow->sendSelfMailOnLocalServer( *pSession, amount, WallClock::nowUnixMilliseconds().count() );
-                outReply         = bSent ? "shooter.online: mail queued" : "shooter.online: needs the in-process server and a login";
                 return true;
             }
 
@@ -375,48 +353,11 @@ namespace sw
             return;
         }
     }
-
-    bool ShooterOnlineFlow::sendSelfMailOnLocalServer( OnlineSession& session, int64 amount, int64 nowMs )
-    {
-        IServiceStore* const pStore    = session.findLocalServerStore();
-        const AccountClient& account   = session.get<AccountClient>();
-        const AccountID      accountID = account.getIdentity()._accountID;
-        if ( pStore == nullptr || account.isLoggedIn() == false )
-            return false;
-        ServiceMailMessage message;
-        message._listAttachment.push_back( ServiceMailAttachment{ kAssetGold, amount } );
-        message._titleKey = "mail.reward";
-        StringBuilder<constant::buffer::kMax256> idempotencyKeyBuilder;
-        idempotencyKeyBuilder.appendFormat( "shooter.selfmail.%#", nowMs );
-        message._idempotencyKey     = string( idempotencyKeyBuilder.view() );
-        message._fundingHolder      = LedgerHolder::makeMint();
-        message._recipientAccountID = accountID;
-        message._createdMs          = nowMs;
-        message._expiryAction       = ServiceMail::getDefaultExpiryAction( message._fundingHolder );
-        // 서버 키트 없이 기반의 우편 표만 써서 금화 우편 하나를 넣는다
-        _localStore.bindStore( pStore );
-        _localStore.submit( [message = std::move( message )]( IServiceStoreConnection& connection )
-        {
-            ServiceTransaction transaction;
-            string             mailKey;
-            bool               bReplayed = false;
-            const bool         bStaged   = ServiceMail::stageSend( connection, message, transaction, mailKey, bReplayed ) == LedgerResult::Ok;
-            return bStaged && connection.commit( transaction ) == ServiceStoreResult::Ok;
-        }, [this]( bool bSent )
-        {
-            if ( bSent )
-                recordSelfMailSent();
-            else
-                SW_LOG_ERROR_ID( "Shooter.OnlineSelfMailFailed", "[Shooter] the self mail could not be written to the local server store" );
-        } );
-        return true;
-    }
 } // namespace sw
 
 namespace sw
 {
     SW_DEV_COMMAND( ShooterOnlineLogin, "shooter.online.login", "shooter.online.login", "Log the online session in with the development account of Config/Server/Online/Shooter3D.online.json", &ShooterOnlineFlowInternal::runLogin );
-    SW_DEV_COMMAND( ShooterOnlineSendMail, "shooter.online.sendmail", "shooter.online.sendmail <amount>", "Write a gold mail for the logged-in account into the in-process server's store", &ShooterOnlineFlowInternal::runSendMail );
     SW_DEV_COMMAND( ShooterOnlineListMail, "shooter.online.listmail", "shooter.online.listmail", "Ask the mailbox kit for the first mail page", &ShooterOnlineFlowInternal::runListMail );
     SW_DEV_COMMAND( ShooterOnlineClaimAll, "shooter.online.claimall", "shooter.online.claimall", "Claim all mail and hand the balances to the economy client", &ShooterOnlineFlowInternal::runClaimAll );
     SW_DEV_COMMAND( ShooterOnlineMatch, "shooter.online.match", "shooter.online.match", "Join the matchmaking queue of the solo arena mode (shooter3d.matchmodes.xml)", &ShooterOnlineFlowInternal::runMatch );

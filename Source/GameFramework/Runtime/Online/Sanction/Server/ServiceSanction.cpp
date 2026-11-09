@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Online/Sanction/ServiceSanction.h"
+#include "GameFramework/Runtime/Online/Sanction/Server/ServiceSanction.h"
 
 #include "Core/Serialization/BitStream.h"
 

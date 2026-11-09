@@ -25,7 +25,7 @@
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Directory/ServerDirectoryControl.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Directory/ServerRegistryReader.h"
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Runtime/ServerDirectoryTypes.h"
-#include "GameFramework/Runtime/Online/Audit/ServiceAuditLog.h"
+#include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Runtime/Online/Schedule/Server/Server/ServicePeriodicJob.h"
 #include "GameFramework/Runtime/Online/Store/ServiceStoreTracker.h"

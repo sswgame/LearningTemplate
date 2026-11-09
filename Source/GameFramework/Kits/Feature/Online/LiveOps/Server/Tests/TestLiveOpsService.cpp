@@ -6,7 +6,7 @@
 
 #include "GameFramework/Kits/Feature/Online/LiveOps/Runtime/LiveOpsClient.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveOpsService.h"
-#include "GameFramework/Runtime/Online/Audit/ServiceAuditLog.h"
+#include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Config/Server/RemoteConfig.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 

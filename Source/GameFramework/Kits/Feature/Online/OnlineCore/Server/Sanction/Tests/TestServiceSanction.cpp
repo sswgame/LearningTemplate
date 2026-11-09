@@ -2,7 +2,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "GameFramework/Runtime/Online/Sanction/ServiceSanction.h"
+#include "GameFramework/Runtime/Online/Sanction/Server/ServiceSanction.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 
 // ServiceSanctionTest — 제재 레코드의 왕복과 로그인 차단(정지 · 영구 정지는 막고 채팅 금지는 막지 않는다)(nogpu).

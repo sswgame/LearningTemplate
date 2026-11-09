@@ -11,7 +11,7 @@
 #include "GameFramework/Runtime/Online/Cache/EphemeralStore.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
 #include "GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.h"
-#include "GameFramework/Runtime/Online/Sanction/ServiceSanction.h"
+#include "GameFramework/Runtime/Online/Sanction/Server/ServiceSanction.h"
 
 // ServerBusTest — 서버 간 버스: 주제 규칙, 프로세스 안 허브(LocalServerBus)의 구독 · 배달 · 순번, 주제 정의(ServerBusTopic · ServerBusTopicFamily)의
 // 쓰기 · 읽기와 거절(다른 주제 · 의미 버전 · 깨진 바이트), 캐시 발행/구독 위 버스(EphemeralServerBus)의 봉투와 라우터 묶기.

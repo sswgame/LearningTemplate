@@ -1,6 +1,6 @@
 /**
  * @file ServiceMail.h
- * @brief 우편 넣기와 우편 레코드 형식을 정의합니다.
+ * @brief 우편 넣기와 우편 레코드 형식을 정의합니다(서버). 프로토콜이 싣는 값(첨부 · 상태 · 상한)은 공유 `Mail/ServiceMailTypes.h` 에 있습니다.
  * @details 우편 레코드, 보낸 기록(멱등), 만료 색인, 첨부 맡김 이동(재원이 발행이 아닐 때)을 부르는 쪽 트랜잭션에 붙인다.
  *          테이블은 세 개다.
  *          `mail_item` 의 키는 `<받는 계정 16 진>/<만든 시각 16 진>.<멱등 키 해시 16 진>` 이다.
@@ -16,30 +16,14 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
-#include "Engine/Reflection/ReflectionMacros.h"
-
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
+#include "GameFramework/Runtime/Online/Mail/ServiceMailTypes.h"
 #include "GameFramework/Runtime/Online/Store/ServiceStore.h"
-
-namespace sw
-{
-    /** @brief 첨부 하나입니다. 온라인 메시지(관리자 요청, 우편함 응답)에 고정 배치형으로 실립니다. `MaxCount` 는 `LedgerConstant::kMaxAssetIDSize` 와 같은 값입니다. */
-    REFLECT()
-    struct ServiceMailAttachment
-    {
-        REFLECT_BODY();
-        PROPERTY( MaxCount = LedgerConstant::kMaxAssetIDSize )
-        string _assetID{};
-        PROPERTY()
-        int64 _amount{ 0 };
-    };
-} // namespace sw
 
 namespace sw
 {
@@ -49,30 +33,6 @@ namespace sw
         Discard = 0,    ///< 버린다(운영, 보상 우편). 발행한 것은 아무것도 움직이지 않고, 에스크로에 맡긴 것은 소각으로 보낸다
         ReturnToSender, ///< 에스크로에서 보낸 계정으로 돌려준다(플레이어 우편이며 재원이 계정일 때만)
         Count
-    };
-
-    /** @brief 우편 상태입니다. 저장 값이라 순서를 바꾸면 안 됩니다. */
-    ENUM( Count = Count )
-    enum class ServiceMailState : uint8
-    {
-        Unread = 0,
-        Read,
-        Claimed, ///< 첨부를 받았다(첨부가 없는 우편은 읽음과 같다)
-        Count
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 우편의 상한 값들입니다. */
-    struct ServiceMailConstant
-    {
-        static constexpr int32 kMaxAttachmentCount    = 8;
-        static constexpr int32 kMaxTitleSize          = 128;
-        static constexpr int32 kMaxBodySize           = 2048;
-        static constexpr int32 kMaxSenderNameSize     = 64;
-        static constexpr int32 kMaxIdempotencyKeySize = 64;                                                                           ///< `[0-9a-z_.-]`
-        static constexpr int64 kDefaultRetentionMs    = 30 * constant::time::kSecondsPerDay * constant::time::kMillisecondsPerSecond; ///< 기본 보관 30 일
     };
 } // namespace sw
 

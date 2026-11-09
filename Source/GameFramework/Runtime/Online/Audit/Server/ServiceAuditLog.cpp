@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Online/Audit/ServiceAuditLog.h"
+#include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
 
 #include "Core/Serialization/BitStream.h"
 

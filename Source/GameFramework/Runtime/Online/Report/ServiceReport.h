@@ -6,7 +6,7 @@
  *            키 순서가 시간 순서라 GM 도구는 `open/` 을 최근 것부터 읽습니다. 처리하면 같은 트랜잭션에서 `open/` 키를 지우고 `closed/` 키로 옮깁니다.
  *          - 값은 버전 헤더가 붙은 자기 기술형(A, `ServiceRecordUtil`)입니다. 문맥 줄은 신고할 때의 사본이라 원본 기록이 보존 기간으로 지워져도 남습니다.
  *          - 닫힌 신고의 보존 기간 정리는 서버 런타임의 예약 작업(`ServiceRetentionJob`)만 합니다. 게임 코드에는 신고를 지우는 함수가 없습니다.
- *          Nakama 의 신고 기능은 없고, PlayFab 의 `ReportPlayer` 와 국내 게임사 GM 툴의 신고 큐에 해당합니다.
+ *          쓰기 · 읽기 · 처리(`ServiceReportStore`)는 서버만 돌아 `Report/Server/ServiceReportStore.h` 에 있다. Nakama 의 신고 기능은 없고, PlayFab 의 `ReportPlayer` 와 국내 게임사 GM 툴의 신고 큐에 해당합니다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -17,10 +17,9 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/AccountIdentity.h"
 #include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
 #include "GameFramework/Runtime/Online/Store/ServiceRecordUnknownFields.h"
-#include "GameFramework/Runtime/Online/Store/ServiceStore.h"
 
 namespace sw
 {
@@ -104,40 +103,5 @@ namespace sw
         static constexpr int32  kMaxMemoSize      = 1024;
         static constexpr int32  kMaxReportKeySize = 96;
         static constexpr uint32 kRecordVersion    = 1;
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 신고 쓰기와 읽기입니다. 쓰기는 트랜잭션에 넣기만 하고, 읽기와 처리는 저장소 스레드(`IServiceStoreJob::run`)에서 부릅니다. */
-    struct SW_GF_API ServiceReportStore
-    {
-        static const hashed_string& getTable(); ///< "service_report"
-        /** @brief 닫힌 신고(`closed/<만든 시각 16 진>/…`)의 만든 시각을 읽습니다(보존 기간 쓸기 `ServiceRetentionRule` 용). 열린 신고와 틀린 키는 false 입니다. */
-        [[nodiscard]] static bool readClosedTimeMs( const ServiceRecord& record, int64& outTimeMs );
-        /** @brief 열린 신고의 키를 만듭니다. @p uniqueID 는 같은 신고자가 같은 밀리초에 낸 신고를 가릅니다. */
-        static string makeOpenKey( int64 createdMs, AccountID reporterID, uint64 uniqueID );
-        /** @brief 비어 있지 않고 @p maxSize 바이트 이하이며 `[0-9a-z_.]` 만 있으면 true 입니다. 종류와 사유 코드의 규칙입니다. */
-        static bool isValidCode( string_view text, int32 maxSize );
-        /** @brief 종류, 사유, 문맥, 줄 수, 신고자가 규칙에 맞으면 true 입니다. */
-        static bool isValidReport( const ServiceReport& report );
-        /**
-         * @brief 열린 신고를 @p inoutTransaction 에 넣습니다("없어야 한다" 조건). `_reportKey` 와 `_status` 는 이 함수가 채웁니다.
-         * @return 쓸 수 없는 신고(규칙 위반, 레코드 쓰기 실패)면 false 이며 트랜잭션은 그대로입니다. 부르는 쪽은 요청을 Invalid 로 끝냅니다.
-         */
-        [[nodiscard]] static bool stageOpen( ServiceTransaction& inoutTransaction, ServiceReport& inoutReport, uint64 uniqueID );
-        /**
-         * @brief 열린(@p bOpen) 또는 닫힌 신고를 최근 것부터 읽습니다. 손상된 레코드가 있으면 Invalid 이며 건너뛰지 않습니다.
-         * @param cursor 앞 호출의 @p outNextCursor(처음은 빈 글)
-         */
-        [[nodiscard]] static ServiceStoreResult listReports( IServiceStoreConnection& connection, bool bOpen, string_view cursor, int32 maxCount,
-                                                             vector<ServiceReport>& outListReport, string& outNextCursor );
-        /**
-         * @brief 열린 신고 @p reportKey 를 처리해 닫힌 쪽으로 옮기는 쓰기를 @p inoutTransaction 에 넣습니다. 열린 키를 읽은 버전으로 지우고 닫힌 키를 씁니다.
-         * @details 커밋은 부르는 쪽이 감사 기록, 멱등 기록과 함께 합니다. 그사이 다른 GM 이 처리했으면 커밋이 Conflict 입니다.
-         * @return 열린 신고가 없으면 NotFound, @p status 가 Open 이거나 메모가 상한을 넘거나 레코드가 손상됐으면 Invalid 입니다.
-         */
-        [[nodiscard]] static ServiceStoreResult stageResolve( IServiceStoreConnection& connection, string_view reportKey, ServiceReportStatus status, AccountID resolverID,
-                                                              string_view memo, int64 nowMs, ServiceTransaction& inoutTransaction, ServiceReport& outReport );
     };
 } // namespace sw

@@ -1,6 +1,6 @@
 /**
  * @file AccountDirectory.h
- * @brief 신원 기본 타입입니다. 계정 id, 공개 신원, 계정 디렉터리 인터페이스(이 프로세스에 접속한 계정)를 둡니다.
+ * @brief 서버의 계정 포트입니다. 계정 디렉터리 인터페이스(이 프로세스에 접속한 계정)를 둡니다. 값 형식(계정 id · 공개 신원)은 공유 `Identity/AccountIdentity.h` 에 있습니다.
  *        계정을 다루는 다른 포트(차단 목록 `IAccountBlockList`, 세션 끊기 `IAccountSessionControl`, 이름 색인 `IAccountNameIndex`, 외부 로그인 연동 `IAccountExternalLinks`, 오프라인 푸시 `IOfflinePushSender`)도 여기 둔다.
  * @details 발급은 계정 키트(GF_Account, GF_Server_Account)가 한다. 다른 키트(Trade, Economy, Mailbox, Admin)는 이 인터페이스만 보고 계정 키트를 include 하지 않는다
  *          (키트끼리는 include 하지 않는다). 서버가 여럿이면 다른 서버에 붙은 계정은 캐시 층의 접속 상태(`IEphemeralStore`)로 본다.
@@ -13,40 +13,14 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
-#include "Engine/Reflection/ReflectionMacros.h"
-
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
+#include "GameFramework/Runtime/Online/Identity/AccountIdentity.h"
 
 namespace sw
 {
     class IServiceStoreConnection;
 
     enum class ServiceStoreResult : uint8;
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 계정 id 입니다. 0 = 없음. 저장소 키로는 `ServiceKeyUtil::makeHex64`. */
-    using AccountID = uint64;
-
-    inline constexpr AccountID kInvalidAccountID = 0;
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 계정 하나의 공개 정보입니다. 온라인 메시지(계정 발급 응답, 관리자 조회 응답)에 고정 배치형으로 실립니다. 이름 상한은 `OnlineLimit::kMaxDisplayNameSize` 와 같은 값입니다. */
-    REFLECT()
-    struct AccountIdentity
-    {
-        REFLECT_BODY();
-        PROPERTY( MaxCount = OnlineLimit::kMaxDisplayNameSize )
-        string _displayName{};
-        PROPERTY()
-        AccountID _accountID{ kInvalidAccountID };
-        PROPERTY( Min = 0, Max = 1 )
-        uint8 _bGuest{ SW_FALSE }; ///< 게스트 계정(연동 전)
-    };
 } // namespace sw
 
 namespace sw
