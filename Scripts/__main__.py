@@ -69,6 +69,7 @@ _kSubcommand: tuple[Subcommand, ...] = (
     Subcommand("editor-view-includes", "lint.EditorViewIncludes", "MVVM 으로 옮긴 에디터 패널 View 가 모델 · 씬 헤더를 include 하는지 본다(--self-check)"),
     Subcommand("common-shapes", "lint.CommonShapes", "공통 기반을 두고 손으로 적은 모양 검사(--self-check)"),
     Subcommand("shader-kill-order", "lint.ShaderKillOrder", "픽셀 버리기(clip · discard) 뒤의 미분 읽기 검사(--self-check)"),
+    Subcommand("shader-branch-shape", "lint.ShaderBranchShape", "`if ( a && b ) … else if ( a )` 분기 사슬 검사 — NVIDIA GL SPIR-V 함정(--self-check)"),
     Subcommand("thread-owners", "lint.ThreadOwners", "TaskManager 밖에서 스레드를 만드는 파일을 허용 목록(Config/Dev/ThreadOwners.json)과 맞춘다(--self-check)"),
     Subcommand("frame-intern", "lint.FrameIntern", "틱 · 갱신 · 칠하기 함수 안의 리터럴 hashed_string 을 찾는다(--self-check)"),
     Subcommand("tick-scene-walk", "lint.TickSceneWalk", "컴포넌트 틱에서 닿는 씬 전체 순회를 찾는다(--self-check)"),

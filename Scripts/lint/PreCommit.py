@@ -29,6 +29,7 @@ from lint.ByteReadShape import checkByteReadShape  # noqa: E402
 from lint.CatalogRootShape import checkCatalogRootShape  # noqa: E402
 from lint.CommonShapes import checkCommonShapes  # noqa: E402
 from lint.ShaderKillOrder import checkShaderKillOrder  # noqa: E402
+from lint.ShaderBranchShape import checkShaderBranchShape  # noqa: E402
 from lint.CMakePathCase import checkCMakePathCase  # noqa: E402
 from lint.CoreTiers import checkCoreTiers  # noqa: E402
 from lint.CppShape import checkCppShape  # noqa: E402
@@ -282,6 +283,14 @@ def main(argv: list[str] | None = None) -> int:
         hasErrors = True
         print(f"[ShaderKillOrder] FAIL — 픽셀을 버린 뒤 미분을 쓰는 읽기 {len(listKillOrderProblem)}건")
         for line in listKillOrderProblem:
+            print(f"  - {line}")
+
+    # --- `if ( a && b ) … else if ( a )` 분기 사슬(NVIDIA GL 이 이 SPIR-V 모양을 잘못 컴파일한다 — ShaderBranchShape.py 머리말) ---------------
+    listBranchShapeProblem = checkShaderBranchShape(projectRoot)
+    if listBranchShapeProblem:
+        hasErrors = True
+        print(f"[ShaderBranchShape] FAIL — 앞 갈래의 && 항을 다시 묻는 else if {len(listBranchShapeProblem)}건")
+        for line in listBranchShapeProblem:
             print(f"  - {line}")
     # --- clang-format(셰이더도 같은 설정, Content/.clang-format) -------------------
     if stagedCppFiles or stagedShaderFiles:
