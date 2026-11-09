@@ -9,16 +9,17 @@
 절차는 스킬이 정본이다: 묶음 끝 검증 · push `bundle-verify`, Linux `linux-verify`, 시나리오 실패 `scenario-debug`. 시나리오 체계 · 시간 기록은 `Test/README.md`. 사람이 보는 실행: `py -3 Scripts/dev/WatchScenarios.py [--preset] [--backend] [--stages a,b] [체인…]`.
 병렬 작업자 워크트리는 main 에서 fast-forward 한 뒤 시작한다(옛 기준에서 시작한 갈래는 통합 때 수십 파일이 충돌했다).
 
-## 상태 (2026-11-09)
+## 상태 (2026-11-10)
 
-- 작업자 W20 ~ W28 을 모두 main 에 합쳤다(App · 서버 전용 단위 테스트 통과, 빌드 경고 0). 전체 묶음 검증(VerifyBundle — 시나리오 · 골든 · Linux)은 아직 돌리지 않았다 — 아래 1 번이 첫 일이다.
+- 작업자 다섯(누수 창 · None 이름 · GL 분기 린트 · 결과 형식 0 · Multiplayer MVVM)과 Scripts 정리(린트 표 한 장 `Scripts/lint/Rules.py`, 규칙 데이터 `Config/Rules/`)를 main 에 합쳤다. Debug 빌드 경고 0, App 단위 3645/3645.
 - Android(Android-Shipping)는 대상 전체가 컴파일 · 링크되고 Vulkan 셰이더 쿠킹이 지난다. 웹(Web-Shipping)은 App.wasm 까지 지어진다.
 
 ## 남은 일
 
-### 1. 묶음 검증 (먼저)
+### 1. 묶음 검증
 
-- `bash Scripts/dev/VerifyBundle.sh` 한 번. 작업자들이 알린 골든 변경을 기록한다: 외형 머티리얼 디퍼드 · 털 Marschner · 흙 색(materiallibrary · surfacelibrary · materiallineup · hairshading), 새 시나리오(ppmat_before/after/replace · decals_on · game.empty.decals · postprocess_material · saveroundtrip 셋), bodydynamics(Dancer 를 IK 가 들어 올림), charactereditor 몸 탭 캡처, 피부 층이 있는 캐릭터(구운 알베도).
+- 98fa5929ce 의 `VerifyBundle.sh` 가 돌고 있다 — 결과를 분류하고 Windows 통과 sha 를 push 한다.
+- 흔들리는 단위 테스트 `AudioDataVariantTest.GraphVariantSavesOnlyItsDifference`: 전체 실행 한 번에 "base 'testproject/base.audiograph.xml' could not be read" 로 졌다. 같은 씨앗 · 단독 1800 회로는 재현되지 않았다 — 다시 지면 그 로그의 앞 케이스와 스크래치 도메인 마운트 상태를 본다.
 - 통합 때 확인하지 못한 동작: 셋이 시나리오에서 본다 — Vulkan AMD 브레드크럼 · 128 타임스탬프 슬롯(실장치), DX12 placed 텍스처(`D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES` 가 RT+SRV 를 받는지), 배포 서버(shipping-check — 서버가 `Window/Linux` · `Input/Linux` 를 짓지 않는다).
 
 ### 2. 플랫폼 ([PlatformTargets](PlatformTargets.md) "남은 일")
@@ -28,8 +29,6 @@
 - dzn SPIR-V→DXIL 충돌.
 
 ### 3. 통합 담당이 직접 (실행 · 측정이 필요)
-
-- **GL kaykitcombat 쐐기 그늘(골든과 10.08%):** GL 에서만 바닥 왼쪽 아래가 직선 경계로 어둡다(LightingOnly 에서도 보인다, 다른 백엔드 통과). 아닌 것: 라이트 그리드(None 도 같다) · 그림자 맵 내용(gpu.show ShadowMap 이 같다) · 그림자 해상도 · 그림자 거리 · 노멀(Normals 같다) · 캐스케이드 상수 · `sampleCascade` 의 out bool · 중첩 삼항 · 값 선택(넷 다 고쳐도 10.08% 그대로). `Shadow::sampleCascade` 안의 `lit` 이 GL 에서만 어둡지만 탐침 변형마다 결과가 엇갈린다 — 다음은 앰비언트(라이트 프로브 SH · 하늘)와 GL 셰이더 번역(SPIR-V→GLSL) 결과를 직접 보기. 골든은 2026-10-29 판이다.
 
 - **에디터 첫 패널의 느린 프레임:** 새 패널이 처음 열리는 프레임이 약 1 초. `-gv_traceSlowTickMs` 트레이스로 그 프레임의 동기 일을 찾아 비동기로.
 - **시나리오 대기:** boat · clothshowcase(골든 앞 구간이 물리 이력), waterplay(강체 속도 · 잠듦 감시 값으로 조건 대기).
@@ -42,13 +41,14 @@
 
 ### 5. 작업자 · 설계 문서가 남긴 일
 
-- **에디터 MVVM 남은 View 28 개:** Multiplayer 탭 7(탭 문맥을 세션 ViewModel 로), 인스펙터 코어(프로퍼티 그리드에 편집 모델 층 먼저), 큰 패널(Hierarchy · Profiler · MapCheck · PrefabEditor · ContentBrowser · Sequencer · AnimationRewind · RigDebug · BoneHierarchyPopup · StreamingCells · VolumetricFog), RenderTarget, 감시 값 4. 다 옮기면 `_migratedViews` 표와 린트를 지운다([EditorUI](agents/EditorUI.md)).
+- **린트를 빌드 구조로(린트 표에서 지우기):** `core-tiers`(Core 도 엔진 · 에디터처럼 층별 부분과 위 층 헤더 `#error` 껍데기 — pch 비용을 측정해 정한다), `server-ui`(게임 모듈 `Client/` 를 타깃 게이트의 모듈별 껍데기로), `dev-only-variables`(테스트 변수 매크로 헤더를 개발 단위로 옮겨 런타임 include 가 컴파일에서 멈추게), `editor-view-includes`(MVVM 이 끝나면 View 부분의 껍데기로).
+- **에디터 MVVM 남은 View 21 개:** 인스펙터 코어(프로퍼티 그리드에 편집 모델 층 먼저), 큰 패널(Hierarchy · Profiler · MapCheck · PrefabEditor · ContentBrowser · Sequencer · AnimationRewind · RigDebug · BoneHierarchyPopup · StreamingCells · VolumetricFog), RenderTarget, 감시 값 4. 다 옮기면 `_migratedViews` 표와 린트를 지운다([EditorUI](agents/EditorUI.md)).
 - **저장 왕복 시나리오:** Catalog · InputMap + 재생 · BehaviorTree · Rig · Terrain · AudioEvent/Graph. 틀(`panel.saveDocument` · `panel.reloadDocument` · `asset.snapshotScratch` · `asset.expectScratchUnchanged`, 예 `saveroundtripmaterial.scenario.xml`)은 있다 — 이 패널들은 경로로 열리지 않거나(자체 저장 패널 · 리그) 고정 파일을 써서 `scratch` 사본을 가리킬 문서 경로 입구가 먼저다.
 - **렌더링:** Vulkan placed 텍스처(해제 큐에 메모리 참조 세기), TransientLeasePool 을 뷰 풀에 잇기, 비동기 컴퓨트 큐 패스 타임스탬프 · Tracy 프레임 패스 내보내기, 같은 자리 후처리 머티리얼이 앞 결과를 이어 읽기, 박막 · 털 · 스타킹 · 비단 외형의 디퍼드(G버퍼 칸 부족 — 포워드 전용으로 남김), 몸 머티리얼이 피부 층 표면 덮어쓰기(`_skinLayerSurfaceMap`)를 읽기, 텍스처 전이 · VFX · 프로브 디스패치의 버퍼별 전이를 묶음 API 로.
 - **캐릭터:** 문신 집기를 바인드 자세가 아닌 지금 포즈로, 부품 오브젝트도 집기, 몸 탭 동작 시나리오.
 - **결과 형식:** `ReflectedValueUtil::findBuiltinIndex` 를 None 이 있는 열거형으로, int32 본 · 버스 표와 Core 찾기 함수의 -1 감시값([Errors](agents/Errors.md)).
 - **표면 변형:** 지형(`terrain.hlsl`)은 머티리얼을 픽셀에서만 읽어(GL 은 구조버퍼를 두 단계에서 못 읽는다) 정점 변위를 받지 못한다 — 엔진 텍스처 칸 `SurfaceDeform`(`shaderslot::emulated::kEngineTextureNames` 13 번째 — `SW_ENGINE_TEXTURE_COUNT` · DX11 `t44` · GL 유닛 12 · binding.hlsli 의 칸 줄)과 패스 상수 `g_SurfaceDeformParams`(창)를 더해 지형 정점 셰이더가 읽게 한다(언리얼 RVT · 유니티 `SetGlobalTexture` 자리, 그림자 패스도 같은 오프셋). 네 백엔드 셰이더 · 바인딩을 함께 바꾸므로 빌드 · 시나리오를 돌릴 수 있는 작업자가 한 묶음으로 한다.
-- **폴더 자리(막는 구조부터):** 엔진 쪽 `Dev/` 예외(`Config/Dev/FolderLayout.json` `_devFolderAllowed` — ModuleManager/Dev · Host/Dev · App/Dev · GF GameData/Dev · Graphics/Material/Dev)를 DevTools 로 — ModuleManager 를 공유 라이브러리로(언리얼 HotReload 처럼), DevTools 에 리플렉션 단계를 더하면 핫 리로드 · 머티리얼 그래프가 옮겨 간다.
+- **폴더 자리(막는 구조부터):** 엔진 쪽 `Dev/` 예외(`Config/Rules/Lint/FolderLayout.json` `_devFolderAllowed` — ModuleManager/Dev · Host/Dev · App/Dev · GF GameData/Dev · Graphics/Material/Dev)를 DevTools 로 — ModuleManager 를 공유 라이브러리로(언리얼 HotReload 처럼), DevTools 에 리플렉션 단계를 더하면 핫 리로드 · 머티리얼 그래프가 옮겨 간다.
 
 ### 6. 리소스
 
