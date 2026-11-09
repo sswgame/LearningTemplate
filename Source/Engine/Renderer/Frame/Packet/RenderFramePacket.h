@@ -84,8 +84,8 @@ namespace sw
         /** @brief 이 패킷이 그리는 씬의 키입니다. 0(`kInvalidSceneKey`)이면 활성 씬(주 패킷), 아니면 미리보기 씬입니다. */
         uint32           _sceneKey;
         RHITextureHandle _outputRenderTarget; ///< 주 출력의 오프스크린 RT(에디터 게임 뷰, 씬 뷰만 보일 때는 씬 뷰). 0 = 백버퍼 경로
-        uint32           _viewportWidth;
-        uint32           _viewportHeight;
+        uint32           _viewportWidth;      ///< 주 출력의 픽셀 너비 — 백버퍼 경로도 스왑체인 크기로 풀어 싣는다(0 은 정말 빈 화면, 최소화)
+        uint32           _viewportHeight;     ///< 주 출력의 픽셀 높이(너비와 같은 규칙)
         uint64           _frameIndex;
         /** @brief `_viewProj` · `_cameraPos` 가 카메라에서 온 주 시점이면 1 입니다. 0 인 패킷은 그리지 않습니다(`FrameRenderer::executePacket` — 기본 카메라로 대신 그리지 않는다). `setMainView` 로만 켭니다. */
         uint8 _bHasViewProj : 1;

@@ -2,7 +2,7 @@
 <!--
   디퍼드 데칼(DecalComponent, RenderPassType::Decal, decal.hlsl) — 레이어 Decals 를 켜면 바닥에 길(알베도 · 노멀) · 흙 자국(알베도, 길 위 차례), 상자 옆면에 손상(색 · 거칠기만)이 덮인다.
   켠 그림은 끈 그림과 달라야 하고(패스가 그리지 않거나 상자 밖만 덮으면 같다), 끄면 처음 그림으로 돌아와야 한다(데칼이 없는 프레임은 패스가 기록하지 않는다 — G버퍼 그대로).
-  상자 옆면 손상은 위 절반 영역의 차이로 따로 본다(투영 축을 눕힌 데칼이 벽에 닿는지).
+  상자 옆면 손상은 그 옆면 둘레(화면 x 0.57~0.65, y 0.1~0.36 — 길 · 흙은 이 칸에 들지 않는다)의 차이로 따로 본다(투영 축을 눕힌 데칼이 벽에 닿는지).
   포워드 파이프라인은 덮을 G버퍼가 없어 데칼을 그리지 않는다(렌더러가 한 번 경고 — FrameRenderer.DecalsWithoutDecalPass).
   결정적: 애니메이션 없는 무대(maps/decals), 고정 프레임 시간.
   실행: ctest -R Scenario.game.empty.decals
@@ -28,7 +28,7 @@
 
 	<Wait frames="5"/>
 	<ExpectImagesDiffer first="decals_off.ppm" second="decals_on.ppm" region="0,0.4,1,1" minDiffering="0.1"/>
-	<ExpectImagesDiffer first="decals_off.ppm" second="decals_on.ppm" region="0.55,0.2,0.85,0.6" minDiffering="0.05"/>
+	<ExpectImagesDiffer first="decals_off.ppm" second="decals_on.ppm" region="0.57,0.1,0.65,0.36" minDiffering="0.08"/>
 	<ExpectImagesDiffer first="decals_off.ppm" second="decals_back.ppm" region="0,0,1,1" minDiffering="0" maxDiffering="0.001"/>
 	<ExpectImage file="decals_on.ppm" golden="decals_on"/>
 	<Pass/>

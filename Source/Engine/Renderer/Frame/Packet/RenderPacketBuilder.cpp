@@ -2,6 +2,8 @@
 
 #include "Engine/Renderer/Frame/Packet/RenderPacketBuilder.h"
 
+#include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/Upload/GPUUploadQueue.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
@@ -74,8 +76,10 @@ namespace sw
     {
         const ViewportTarget& mainOutput = views.getMainOutput();
         packet._outputRenderTarget       = mainOutput._renderTarget;
-        packet._viewportWidth            = mainOutput._width;
-        packet._viewportHeight           = mainOutput._height;
+        // 크기는 여기서 한 번 푼다 — 대상의 0 은 "백버퍼(스왑체인) 크기" 라는 뜻이고, 패킷은 늘 실제 픽셀 수를 싣는다(읽는 쪽이 0 을 저마다 풀다가 렌즈 플레어는 0 을 "빈 화면" 으로 읽어 그리지 않았다).
+        const bool bBackBufferSize = mainOutput._width == 0 || mainOutput._height == 0;
+        packet._viewportWidth      = bBackBufferSize ? rhi.getDevice().getBackBufferWidth() : mainOutput._width;
+        packet._viewportHeight     = bBackBufferSize ? rhi.getDevice().getBackBufferHeight() : mainOutput._height;
 
         if ( pActiveScene == nullptr )
         {

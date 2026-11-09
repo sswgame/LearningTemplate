@@ -1830,10 +1830,12 @@ namespace sw
         setIdentityWorld( context );
         commitBindlessTextureBindings( context );
         context._pCmd->setPipelineState( pso );
-        bindForDraw( context, pso, kInvalidDescriptorIndex );
-        if ( bVolume )
-            context._pCmd->bindStructuredBuffer( _fog.getFogVolumeBuffer()._srv, shaderslot::kPassBuffer );
-        context._pCmd->draw( 3, 0 );
+        if ( bindForDraw( context, pso, kInvalidDescriptorIndex ) )
+        {
+            if ( bVolume )
+                context._pCmd->bindStructuredBuffer( _fog.getFogVolumeBuffer()._srv, shaderslot::kPassBuffer );
+            context._pCmd->draw( 3, 0 );
+        }
         context._pCmd->endRenderPass();
     }
 
@@ -1855,8 +1857,8 @@ namespace sw
         setIdentityWorld( context );
         commitBindlessTextureBindings( context );
         context._pCmd->setPipelineState( pso );
-        bindForDraw( context, pso, kInvalidDescriptorIndex );
-        context._pCmd->draw( 3, 0 );
+        if ( bindForDraw( context, pso, kInvalidDescriptorIndex ) )
+            context._pCmd->draw( 3, 0 );
         context._pCmd->endRenderPass();
     }
 
@@ -1903,8 +1905,8 @@ namespace sw
             context._drawMaterialCount = 1u;
             commitBindlessTextureBindings( context );
             context._pCmd->setPipelineState( draw._pso );
-            bindForDraw( context, draw._pso, kInvalidDescriptorIndex, draw._pTextureSRV );
-            context._pCmd->draw( 3, 0 );
+            if ( bindForDraw( context, draw._pso, kInvalidDescriptorIndex, draw._pTextureSRV ) )
+                context._pCmd->draw( 3, 0 );
         }
         context._pCmd->endRenderPass();
     }
@@ -1946,8 +1948,8 @@ namespace sw
             context._passValues.setUint( passConstantNames()._decalNormalTexture, decal._normalTexture );
             commitBindlessTextureBindings( context );
             context._pCmd->setPipelineState( pso );
-            bindForDraw( context, pso, kInvalidDescriptorIndex, decal._arrTextureSRV );
-            context._pCmd->draw( 3, 0 );
+            if ( bindForDraw( context, pso, kInvalidDescriptorIndex, decal._arrTextureSRV ) )
+                context._pCmd->draw( 3, 0 );
         }
         context._pCmd->endRenderPass();
         setIdentityWorld( context );
@@ -1972,10 +1974,12 @@ namespace sw
         setIdentityWorld( context );
         commitBindlessTextureBindings( context );
         context._pCmd->setPipelineState( pso );
-        bindForDraw( context, pso, kInvalidDescriptorIndex );
-        context._pCmd->bindStructuredBuffer( sprites.getBuffer()._srv, shaderslot::kPassBuffer );
-        // 스프라이트 하나 = 모서리 여섯(정점 버퍼 없이 SV_VertexID 로 만든다 — lens_flare.hlsl).
-        context._pCmd->draw( sprites.getSpriteCount() * 6u, 0 );
+        if ( bindForDraw( context, pso, kInvalidDescriptorIndex ) )
+        {
+            context._pCmd->bindStructuredBuffer( sprites.getBuffer()._srv, shaderslot::kPassBuffer );
+            // 스프라이트 하나 = 모서리 여섯(정점 버퍼 없이 SV_VertexID 로 만든다 — lens_flare.hlsl).
+            context._pCmd->draw( sprites.getSpriteCount() * 6u, 0 );
+        }
         context._pCmd->endRenderPass();
     }
 
@@ -2607,11 +2611,11 @@ namespace sw
         context._drawMaterialCount = binding._materialCount;
     }
 
-    void FramePassExecutor::bindForDraw( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex materialCb,
+    bool FramePassExecutor::bindForDraw( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex materialCb,
                                          const RHIDescriptorIndex* pMaterialTexSRV )
     {
         if ( _pDevice == nullptr || context._pCmd == nullptr )
-            return;
+            return false;
 
         context._passValues.setMatrix( passConstantNames()._world, context._world );
 
@@ -2624,7 +2628,7 @@ namespace sw
         }
         const ShaderBindingLayout* pLayout = context._pLastLayout;
         if ( pLayout == nullptr || pLayout->isEmpty() )
-            return; // 레이아웃을 못 얻었다(컴파일 실패 등). 조용히 건너뛴다
+            return true; // 걸 것이 없다(바인딩 없는 셰이더) — 그대로 그린다
 
         // 배치마다 바뀌는 값은 **루트/푸시 상수**로 싣는다. 커맨드 리스트에 값이 그대로 들어가므로 드로우끼리
         // 덮어쓸 수 없다. 그래서 PassCB 는 패스당 하나면 충분하다(PassCB 에 넣으면 드로우마다 버퍼를 새로 잡아야
@@ -2633,6 +2637,12 @@ namespace sw
         context._pCmd->setGraphicsRootConstants( 0, static_cast<uint32>( sizeof( arrDrawRootConstant ) / sizeof( arrDrawRootConstant[0] ) ),
                                                  arrDrawRootConstant );
 
+        // 앞 드로우가 이미 올린 슬롯에 다른 값을 다시 쓰지 않는다 — GPU 가 나중에 읽는 DX12 · Vulkan 에서는 그 패스의 모든 드로우가 마지막 값을 본다
+        // (데칼 여럿이 마지막 데칼의 상자로 그려졌다). 그리기마다 값이 바뀌는 반복(데칼 · 후처리 머티리얼 · 그림자 타일)은 여기서 새 슬롯을 받는다.
+        const bool bSlotAlreadyDrawn = context._lastCbBuffer == context._passCb && context._passCb != 0;
+        const bool bValuesChanged    = context._lastCbValuesVersion != context._passValues.getVersion() || context._lastCbRegistryVersion != context._resourceRegistry.getVersion();
+        if ( bSlotAlreadyDrawn && bValuesChanged && acquirePassCb( context ) == false )
+            return false; // 링 고갈 — 이 드로우는 그리지 않는다(앞 드로우의 슬롯을 덮지 않는다, 링이 이유를 남겼다)
         const RHIConstantBuffer engineCb{ context._passCb, context._passCbIndex };
 
         // 엔진 상수버퍼를 이 드로우에서 다시 만들 필요가 있나. 값 · 레지스트리 버전과 버퍼가 모두 그대로면 없다.
@@ -2656,6 +2666,7 @@ namespace sw
         // 셰이더 메시지 변형 패스(표의 kGPUMessageTarget — Present 의 fullscreen_blit)는 드로우마다 링을 u4 에 건다. 링이 없으면(-gv_gpuMessages 꺼짐) 아무것도 하지 않는다.
         if ( getRenderPassTypeInfo( context._passType ).hasFlag( RenderPassTraitFlag::kGPUMessageTarget ) )
             _state._gpuMessages.bindGraphics( *context._pCmd );
+        return true;
     }
 
     void FramePassExecutor::drawSceneMeshes( FramePassContext& context, RHIPipelineStateHandle pso, bool bTransparentPass )
@@ -2894,7 +2905,8 @@ namespace sw
 
         // 루트 상수 = { 머티리얼 원소 수 }. 그룹 안에서 같다.
         registerMaterialBuffer( context, headBinding, batchPSO );
-        bindForDraw( context, batchPSO, headBinding._materialCb, headBinding._arrMaterialTexSRV );
+        if ( bindForDraw( context, batchPSO, headBinding._materialCb, headBinding._arrMaterialTexSRV ) == false )
+            return false;
         context._pCmd->drawIndexedIndirect( inoutState._argsBuffer, argIndex * static_cast<uint32>( sizeof( RHIDrawIndexedIndirectCommand ) ), groupCount );
         return true;
     }
@@ -2928,7 +2940,8 @@ namespace sw
         context._pCmd->setPipelineState( pso );
         setIdentityWorld( context );
         // PassCB(g_ViewProj · g_InvViewProj)를 건다. 입자 버퍼 · 텍스처 · 루트 상수는 그 뒤에 입자 렌더러가 건다.
-        bindForDraw( context, pso, kInvalidDescriptorIndex );
+        if ( bindForDraw( context, pso, kInvalidDescriptorIndex ) == false )
+            return false;
         (void)_state._particleRenderer.drawBatches( *context._pCmd, listBatch, listSlot, _pDevice->supportsNativeBindlessSampling() );
         return true;
     }
@@ -3121,8 +3134,8 @@ namespace sw
         setIdentityWorld( context );
         commitBindlessTextureBindings( context );
         context._pCmd->setPipelineState( pso );
-        bindForDraw( context, pso, kInvalidDescriptorIndex );
-        context._pCmd->draw( 3, 0 );
+        if ( bindForDraw( context, pso, kInvalidDescriptorIndex ) )
+            context._pCmd->draw( 3, 0 );
     }
 
     bool ExtensionPassContext::drawFullscreen( vector_reference<const ExtensionConstant> constants )
@@ -3234,8 +3247,8 @@ namespace sw
             RHIMeshVertexStreams::bind( *context._pCmd, mesh.getVertexBuffer(), mesh.getAttributeStreamOffset(), mesh.getVertexFormat() );
             context._pCmd->setIndexBuffer( mesh.getIndexBuffer(), sizeof( uint32 ), 0 );
             commitBindlessTextureBindings( context );
-            bindForDraw( context, pass._pso, kInvalidDescriptorIndex );
-            context._pCmd->drawIndexedInstanced( indexCount, element._instanceCount );
+            if ( bindForDraw( context, pass._pso, kInvalidDescriptorIndex ) )
+                context._pCmd->drawIndexedInstanced( indexCount, element._instanceCount );
         }
         setIdentityWorld( context );
         context._pCmd->endRenderPass();

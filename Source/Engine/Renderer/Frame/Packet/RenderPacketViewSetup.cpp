@@ -112,9 +112,9 @@ namespace sw
         CameraComponent* pCam = bSceneMain ? pSceneViewCamera : nullptr;
         if ( pCam == nullptr || pCam->isActive() == false )
             pCam = activeScene.getActiveGameCamera();
-        // 주 출력의 크기 — 게임 뷰 RT 면 그 크기, 백버퍼 경로면 스왑체인 크기다(화면 사각형 뷰 · 주 시점 사각형의 비율이 이것을 본다).
-        const uint32 outputWidth  = packet._viewportWidth > 0 ? packet._viewportWidth : rhi.getDevice().getBackBufferWidth();
-        const uint32 outputHeight = packet._viewportHeight > 0 ? packet._viewportHeight : rhi.getDevice().getBackBufferHeight();
+        // 주 출력의 크기 — 게임 뷰 RT 면 그 크기, 백버퍼 경로면 스왑체인 크기다(`RenderPacketBuilder::populateScene` 이 풀어 두었다). 화면 사각형 뷰 · 주 시점 사각형의 비율이 이것을 본다.
+        const uint32 outputWidth  = packet._viewportWidth;
+        const uint32 outputHeight = packet._viewportHeight;
         // 화면에 나가는 뷰(주 시점 · 화면 사각형)가 같은 값을 쓴다. 주 시점이 없는 프레임에도 화면 사각형 뷰는 실리므로 카메라와 상관없이 프레임마다 한 번 갱신한다.
         const float32 autoRenderScale = updateAutoRenderScale( deltaTime );
         if ( pCam != nullptr )

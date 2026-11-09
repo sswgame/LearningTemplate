@@ -1,5 +1,5 @@
 <Scene formatVersion="2" name="Distortion">
-	<!-- 화면 왜곡 시나리오(automation/distortion)의 무대 — 카메라 앞에 세운 무늬 벽(prototypegrid)과, 그 앞의 보이지 않는 왜곡 렌즈(구, distortion_lens — 표면 알파 0).
+	<!-- 화면 왜곡 시나리오(automation/distortion)의 무대 — 카메라 앞에 세운 벽돌 벽(background_brick — 줄눈이 또렷해야 줄여 견주는 그림에서도 비낌이 보인다, 옅은 prototypegrid 는 0% 였다)과, 그 앞의 보이지 않는 왜곡 렌즈(구, distortion_lens — 표면 알파 0).
 	     렌즈가 있으면 벽의 격자가 구의 가장자리 쪽으로 휘어 보이고, 시나리오가 렌즈를 시야 밖으로 순간이동하면 벽이 곧게 보인다. 애니메이션이 없어 같은 프레임이 실행마다 같은 그림이다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
@@ -50,7 +50,7 @@
 					               _attachOwner="None"
 					               _attachComponent="None"
 					               _meshID="Plane"
-					               _materialPath="engine/materials/prototypegrid_light.material"
+					               _materialPath="engine/materials/surfacelibrary/background_brick.material"
 					               _boundsRadius="9"
 					               _blendMode="Opaque" />
 				</_listComponent>

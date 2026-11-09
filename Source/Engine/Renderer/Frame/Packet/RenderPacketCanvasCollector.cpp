@@ -68,8 +68,8 @@ namespace sw
         const bool bPaintOverlays = bSceneMain == false && CanvasOverlays::getCount() > 0 && pRHI != nullptr && pRHI->hasDevice();
         if ( bPaintOverlays )
         {
-            const uint32         canvasWidth  = packet._viewportWidth > 0 ? packet._viewportWidth : pRHI->getDevice().getBackBufferWidth();
-            const uint32         canvasHeight = packet._viewportHeight > 0 ? packet._viewportHeight : pRHI->getDevice().getBackBufferHeight();
+            const uint32         canvasWidth  = packet._viewportWidth; // 씬 채우기가 백버퍼 크기까지 풀어 두었다(`RenderPacketBuilder::populateScene`)
+            const uint32         canvasHeight = packet._viewportHeight;
             CanvasOverlayContext context{};
             context._pViewProj       = packet._bHasViewProj == SW_TRUE ? &packet._viewProj : nullptr;
             context._targetSize      = float2{ static_cast<float32>( canvasWidth ), static_cast<float32>( canvasHeight ) };

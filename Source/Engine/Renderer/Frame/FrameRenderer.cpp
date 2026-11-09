@@ -811,7 +811,9 @@ namespace sw
         const uint32 shadowTileCount = MathUtil::max( _passExecutor.computeShadowTileCountPerView(), 1u );
         // 모듈 프록시의 요소는 요소마다 슬롯을 하나씩 쓴다(`drawExtensionElements`) — 그리는 패스 · 뷰 수를 모르므로 넉넉히 네 배로 어림한다(모자라면 링이 알리고 다음 프레임이 키운다).
         const uint32 moduleElementCount = static_cast<uint32>( _extensionHost.getDrawElements().size() ) * 4u;
-        const uint32 estimate           = batchCount * ( _s_kDrawCbPassEstimate - 1u + shadowTileCount ) + PassConstantRing::kInitialSlotCount + moduleElementCount;
+        // 데칼은 데칼마다 상수가 달라 슬롯을 하나씩 쓴다(`bindForDraw` 가 바뀐 값마다 새 슬롯을 받는다) — 데칼 패스를 그리는 뷰 수를 모르므로 두 배로 어림한다.
+        const uint32 decalCount = static_cast<uint32>( _state._listFrameDecalDraw.size() ) * 2u;
+        const uint32 estimate   = batchCount * ( _s_kDrawCbPassEstimate - 1u + shadowTileCount ) + PassConstantRing::kInitialSlotCount + moduleElementCount + decalCount;
         _state._passCbRing.ensureCapacity( _pDevice, MathUtil::max( estimate, _state._passCbRing.getHighWater() + PassConstantRing::kInitialSlotCount ) );
     }
 
