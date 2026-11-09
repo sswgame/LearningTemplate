@@ -57,6 +57,7 @@
         "Source/Editor/Panels/Inspector/SceneComponentInspector",
         "Source/Editor/Panels/Inspector/SpriteComponentInspector",
         "Source/Editor/Panels/Inspector/TagComponentInspector",
+        "Source/Editor/Panels/MapCheck/MapCheckPanel",
         "Source/Editor/Panels/Material/MaterialPanel",
         "Source/Editor/Panels/MaterialGraph/MaterialGraphPanel",
         "Source/Editor/Panels/Mesh/MeshPreviewPanel",

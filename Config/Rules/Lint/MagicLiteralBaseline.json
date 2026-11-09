@@ -280,7 +280,7 @@
     "Source/Editor/Panels/Inspector/InspectorPropertyUndo.cpp": {"integer": 1},
     "Source/Editor/Panels/Inspector/Model/InspectorPropertyLayout.cpp": {"float": 1},
     "Source/Editor/Panels/Inspector/SceneComponentInspector.cpp": {"float": 5},
-    "Source/Editor/Panels/MapCheck/MapCheckPanel.cpp": {"float": 5, "integer": 2},
+    "Source/Editor/Panels/MapCheck/MapCheckPanel.cpp": {"float": 4, "integer": 2},
     "Source/Editor/Panels/Material/MaterialPanel.cpp": {"float": 6, "integer": 1},
     "Source/Editor/Panels/Material/Model/MaterialPreviewInputs.cpp": {"float": 23},
     "Source/Editor/Panels/MaterialGraph/MaterialGraphPanel.cpp": {"float": 4, "integer": 1},
