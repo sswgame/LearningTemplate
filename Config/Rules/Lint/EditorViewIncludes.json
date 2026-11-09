@@ -36,6 +36,7 @@
         "Source/Editor/Panels/Animation/AnimationRewindPanel",
         "Source/Editor/Panels/Animation/AnimationWatches",
         "Source/Editor/Panels/Animation/BoneHierarchyPopup",
+        "Source/Editor/Panels/Animation/RigDebugPanel",
         "Source/Editor/Panels/Animation/SequenceDebuggerPanel",
         "Source/Editor/Panels/Animation/SpriteClipPanel",
         "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel",

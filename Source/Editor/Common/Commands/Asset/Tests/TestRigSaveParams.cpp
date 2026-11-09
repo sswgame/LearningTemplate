@@ -6,7 +6,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Editor/Panels/Animation/Model/RigSaveParams.h"
+#include "Editor/Common/Commands/Asset/RigSaveParams.h"
 
 #include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"

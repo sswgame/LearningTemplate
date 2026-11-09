@@ -1,6 +1,6 @@
 /**
  * @file RigSaveParams.h
- * @brief 리그 파일(`*.rig.xml`)의 노드 무게 · 켬과 대상 오프셋만 바꿔 되쓰는 편집기 도구입니다(리그 디버그 창의 "Save to rig" · 대상 오프셋 기즈모).
+ * @brief 리그 파일(`*.rig.xml`)의 노드 무게 · 켬과 대상 오프셋만 바꿔 되쓰는 편집기 도구입니다(리그 디버그 창의 "Save to rig" · 대상 오프셋 기즈모 RigTargetGizmoVisualizer 가 함께 쓴다 — 그래서 커맨드 층에 있다).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -9,6 +9,12 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Name/hashed_string.h"
+
+namespace sw
+{
+    class PoseModifierComponent;
+    class RigInstance;
+} // namespace sw
 
 namespace sw::editor
 {
@@ -49,5 +55,16 @@ namespace sw::editor
          *          이름의 노드 · 대상이 없거나 결과가 리그 규칙에 맞지 않으면(다시 읽어 본다) 오류를 남기고 false 이며 @p outXMLText 는 그대로다.
          */
         [[nodiscard]] static bool rewriteSettings( string_view xmlText, string_view sourceLabel, const RigSaveParams& params, string& outXMLText );
+        /** @brief 리그 인스턴스 @p instance 의 모든 노드 가중치 · 켜짐을 되쓰기 값으로 만듭니다("Save to rig"). */
+        static RigSaveParams makeFromNodes( const RigInstance& instance );
+        /**
+         * @brief @p modifier 의 리그 파일에 @p params 를 되써 넣고 상태 줄 글을 돌려줍니다(성공하면 `kSavedStatus`). 다른 키는 그대로 둡니다(`rewriteSettings`).
+         * @details 파일 감시가 쓴 파일을 다시 읽으면 같은 리그를 쓰는 모든 인스턴스가 새 값으로 다시 바인딩된다. @p pUndoLabel 이 있으면 파일 글 전후를
+         *          되돌리기로 기록한다(대상 오프셋 — 인스턴스 값이 아니라 파일이 바뀐다).
+         */
+        static string writeToRigFile( const PoseModifierComponent& modifier, const RigSaveParams& params, const utf8* pUndoLabel );
+
+        /** @brief `writeToRigFile` 이 성공했을 때의 상태 줄 글입니다. */
+        static constexpr const utf8* kSavedStatus = "Saved";
     };
 } // namespace sw::editor

@@ -4602,12 +4602,12 @@ msgctxt "EdVisualizer.PhysicsShapesTip"
 msgid "Shows RigidBody and RigidBody2D collision shapes as wireframe (static grey, kinematic blue, dynamic green, trigger yellow)"
 msgstr "RigidBody · RigidBody2D 의 충돌 셰이프를 와이어프레임으로 표시합니다(정적 회색 · 키네마틱 파랑 · 동적 초록 · 트리거 노랑)"
 
-#: Source/Editor/Panels/Animation/RigDebugPanel.cpp
+#: Source/Editor/Viewport/Visualizers/RigTargetGizmoVisualizer.cpp
 msgctxt "EdVisualizer.RigTargetGizmoLabel"
 msgid "Rig Target"
 msgstr "리그 대상"
 
-#: Source/Editor/Panels/Animation/RigDebugPanel.cpp
+#: Source/Editor/Viewport/Visualizers/RigTargetGizmoVisualizer.cpp
 msgctxt "EdVisualizer.RigTargetGizmoTip"
 msgid "Gizmo on the rig target picked in the Rig Debug window; releasing a drag writes the target offset into the rig asset"
 msgstr "리그 디버그 창에서 고른 리그 대상의 기즈모입니다. 끌기를 놓으면 대상 오프셋을 리그 에셋에 씁니다"

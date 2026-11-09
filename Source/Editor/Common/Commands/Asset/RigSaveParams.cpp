@@ -1,12 +1,20 @@
 #include "pch.h"
 
-#include "Editor/Panels/Animation/Model/RigSaveParams.h"
+#include "Editor/Common/Commands/Asset/RigSaveParams.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
+#include "Editor/Common/Config/EditorPaths.h"
+#include "Editor/Common/Workspace/EditorTransaction.h"
+
+#include "Engine/Animation/Component/PoseModifierComponent.h"
 #include "Engine/Animation/Rig/RigAsset.h"
+#include "Engine/Animation/Rig/RigInstance.h"
+#include "Engine/Animation/Rig/RigNode.h"
+#include "Engine/Content/AssetPaths.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
@@ -17,6 +25,13 @@ namespace sw::editor
     {
         struct RigFileRewriteInternal
         {
+            /** @brief 디스크의 글을 쓰는 되돌리기 절차 하나입니다(되돌리기 · 다시 하기가 그 글을 다시 쓴다 — 파일 감시가 리그를 다시 읽는다). */
+            static void writeRigText( const string& writePath, const string& text )
+            {
+                if ( FileUtil::writeTextFile( writePath, text ) == false )
+                    SW_LOG_ERROR_ID( "RigDebugPanel.RigFileCouldNot", "Rig file '%#' could not be written", writePath.c_str() );
+            }
+
             /** @brief @p list 에 `name` 이 @p name 인 줄이 있으면 true 입니다. */
             static bool hasNamedItem( const XMLNode& list, const hashed_string& name )
             {
@@ -110,5 +125,41 @@ namespace sw::editor
             return false; // 다시 읽기가 이유를 남겼다
         outXMLText = text;
         return true;
+    }
+
+    RigSaveParams RigSaveParams::makeFromNodes( const RigInstance& instance )
+    {
+        RigSaveParams params;
+        for ( uint32 nodeIndex = 0; nodeIndex < instance.getNodeCount(); ++nodeIndex )
+        {
+            const RigNode& node = instance.getNode( nodeIndex );
+            params._listNode.push_back( RigNodeSaveParams{ node.getName(), node.getWeight(), node.isEnabled() } );
+        }
+        return params;
+    }
+
+    string RigSaveParams::writeToRigFile( const PoseModifierComponent& modifier, const RigSaveParams& params, const utf8* pUndoLabel )
+    {
+        const string_view            rigPath  = modifier.getRigPath();
+        const optional<AbsolutePath> readPath = EditorPaths::getAssetPaths().findLooseFile( rigPath );
+        string                       text;
+        if ( readPath.has_value() == false || FileUtil::readTextFile( readPath->str(), text ) == false )
+            return string( "The rig file could not be read" );
+        string rewritten;
+        if ( rewriteSettings( text, rigPath, params, rewritten ) == false )
+            return string( "The rig was not saved - see the log" );
+        const optional<AbsolutePath> rigFile = EditorPaths::getAssetPaths().toDiskPath( rigPath );
+        if ( rigFile.has_value() == false )
+            return string( "The rig file could not be written" );
+        const string& writePath = rigFile->str();
+        if ( FileUtil::writeTextFile( writePath, rewritten ) == false )
+            return string( "The rig file could not be written" );
+        if ( pUndoLabel != nullptr )
+        {
+            EditorTransaction::push( SW_UNDO_STEP( RigFileRewriteInternal::writeRigText, writePath, text ),
+                                     SW_UNDO_STEP( RigFileRewriteInternal::writeRigText, writePath, rewritten ), pUndoLabel );
+        }
+        SW_LOG_INFO_ID( "RigDebugPanel.RigSettingsSaved", "Rig settings saved to %#", writePath.c_str() );
+        return string( kSavedStatus );
     }
 } // namespace sw::editor
