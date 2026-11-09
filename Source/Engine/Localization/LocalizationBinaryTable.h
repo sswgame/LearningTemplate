@@ -17,6 +17,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Encoding/FourCCUtil.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -48,8 +49,8 @@ namespace sw
 
         /** @brief 바이트로 굳힙니다(해시 오름차순이라 같은 내용이면 같은 바이트입니다). */
         void toBytes( vector<uint8>& outBytes ) const;
-        /** @brief 바이트를 읽습니다. 머리 · 범위 · 검사합이 틀리면 @p pOutError 에 이유를 적고 false 이며, 이 객체는 비워집니다. */
-        [[nodiscard]] bool parse( const uint8* pData, size_t size, string* pOutError = nullptr );
+        /** @brief 바이트를 읽습니다. 머리 · 범위 · 검사합이 틀리면 그 까닭이고, 이 객체는 비워집니다. */
+        [[nodiscard]] expected<void> parse( const uint8* pData, size_t size );
 
         const string&              getCulture() const { return _culture; }
         void                       setCulture( string_view culture );

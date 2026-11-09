@@ -31,9 +31,7 @@ SW_TEST_CASE( PortableObjectFileTest, RoundTripsEntries )
     original._listEntry.push_back( untranslated );
 
     sw::PortableObjectFile reread;
-    sw::string             error;
-    SW_REQUIRE_TRUE( reread.parse( original.toText(), &error ) );
-    SW_EXPECT_TRUE( error.empty() );
+    SW_REQUIRE_TRUE( reread.parse( original.toText() ) );
     SW_REQUIRE_EQUAL( size_t( 2 ), reread._listEntry.size() );
     const sw::PortableObjectEntry& read = reread._listEntry[0];
     SW_EXPECT_EQUAL( entry._context, read._context );
@@ -54,15 +52,15 @@ SW_TEST_CASE( PortableObjectFileTest, ReadsContinuationsAndRejectsBrokenLines )
 {
     const utf8*            pWrapped = "msgid \"\"\nmsgstr \"\"\n\"Language: ko\\n\"\n\nmsgctxt \"Key.A\"\nmsgid \"\"\n\"first \"\n\"second\"\nmsgstr \"\"\n\"하나 \"\n\"둘\"\n";
     sw::PortableObjectFile wrapped;
-    sw::string             error;
-    SW_REQUIRE_TRUE( wrapped.parse( pWrapped, &error ) );
+    SW_REQUIRE_TRUE( wrapped.parse( pWrapped ) );
     SW_REQUIRE_EQUAL( size_t( 1 ), wrapped._listEntry.size() );
     SW_EXPECT_EQUAL( sw::string( "first second" ), wrapped._listEntry[0]._source );
     SW_EXPECT_EQUAL( sw::string( "하나 둘" ), wrapped._listEntry[0]._translation );
 
-    sw::PortableObjectFile broken;
-    SW_EXPECT_FALSE( broken.parse( "msgctxt \"Key.A\"\nmsgid \"unterminated\nmsgstr \"x\"\n", &error ) );
-    SW_EXPECT_FALSE( error.empty() );
+    sw::PortableObjectFile   broken;
+    const sw::expected<void> brokenRead = broken.parse( "msgctxt \"Key.A\"\nmsgid \"unterminated\nmsgstr \"x\"\n" );
+    SW_EXPECT_FALSE( brokenRead );
+    SW_EXPECT_TRUE( brokenRead.has_value() == false && brokenRead.error().detail().find( "line" ) != sw::string_view::npos );
     sw::PortableObjectFile unknown;
-    SW_EXPECT_FALSE( unknown.parse( "msgctxt \"Key.A\"\nmsgid \"a\"\nbogus \"b\"\n", &error ) );
+    SW_EXPECT_FALSE( unknown.parse( "msgctxt \"Key.A\"\nmsgid \"a\"\nbogus \"b\"\n" ) );
 }

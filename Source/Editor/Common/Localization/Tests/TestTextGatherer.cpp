@@ -106,7 +106,6 @@ SW_TEST_CASE( TextGathererTest, ConflictingOrBrokenSourceIsAnError )
 SW_TEST_CASE( TextGathererTest, MergeReportsAddedChangedRemovedAndKeepsManualRows )
 {
     sw::SourceStringTable gatherTable;
-    sw::string            error;
     SW_REQUIRE_TRUE( gatherTable.loadFromXMLText( R"(<SourceStringTable culture="en">
 	<entries>
 		<entry key="Menu.Start" source="Start" comment="Main menu" maxLength="12">
@@ -122,9 +121,9 @@ SW_TEST_CASE( TextGathererTest, MergeReportsAddedChangedRemovedAndKeepsManualRow
 		<entry key="Manual.Only" source="Hand written" />
 	</entries>
 </SourceStringTable>)",
-                                                  "gather", &error ) );
+                                                  "gather" ) );
     sw::SourceStringTable otherTable;
-    SW_REQUIRE_TRUE( otherTable.loadFromXMLText( R"(<SourceStringTable culture="en"><entries><entry key="settings.title" source="Settings" /></entries></SourceStringTable>)", "other", &error ) );
+    SW_REQUIRE_TRUE( otherTable.loadFromXMLText( R"(<SourceStringTable culture="en"><entries><entry key="settings.title" source="Settings" /></entries></SourceStringTable>)", "other" ) );
 
     sw::TextGatherer gatherer;
     gatherer.addKeyedText( "Menu.Start", "Start Game", {}, "Menu.cpp" );
@@ -182,14 +181,13 @@ SW_TEST_CASE( TextGathererTest, KeyOnlyMacrosGatherReferencesAndNeverWriteSource
     SW_EXPECT_TRUE( TextGathererTestInternal::findText( gatherer, "EditorTip.Counted" ) != nullptr );
 
     sw::SourceStringTable table;
-    sw::string            error;
     SW_REQUIRE_TRUE( table.loadFromXMLText( R"(<SourceStringTable culture="en">
 	<entries>
 		<entry key="EditorTip.Known" source="Hand written text" />
 		<entry key="EditorTip.Counted" source="{n} items" />
 	</entries>
 </SourceStringTable>)",
-                                            "gather", &error ) );
+                                            "gather" ) );
     const sw::TextGatherReport report = gatherer.mergeInto( table, {} );
     SW_EXPECT_TRUE( report._listAdded.empty() );
     SW_EXPECT_TRUE( report._listChanged.empty() );

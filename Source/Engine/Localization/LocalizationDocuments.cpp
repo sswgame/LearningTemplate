@@ -24,26 +24,20 @@ namespace sw
             static constexpr string_view kEntriesTag = "entries";
             static constexpr string_view kEntryTag   = "entry";
 
-            /** @brief 요소의 속성 · 자식 이름이 모두 알려진 것인지 봅니다. 알려지지 않은 첫 이름을 @p outUnknown 에 적고 false 를 반환합니다. */
-            static bool hasOnlyKnownNames( const XMLNode& node, std::initializer_list<string_view> listAttribute, std::initializer_list<string_view> listChild, string& outUnknown )
+            /** @brief 요소의 속성 · 자식 이름 가운데 알려지지 않은 첫 이름입니다(문서가 살아 있는 동안 유효). 모두 알려졌으면 없음입니다. */
+            [[nodiscard]] static optional<string_view> findUnknownName( const XMLNode& node, std::initializer_list<string_view> listAttribute, std::initializer_list<string_view> listChild )
             {
                 for ( XMLAttribute attribute = node.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
                 {
                     if ( VectorUtil::contains( listAttribute, string_view{ attribute.getName() } ) == false )
-                    {
-                        outUnknown = attribute.getName();
-                        return false;
-                    }
+                        return string_view{ attribute.getName() };
                 }
                 for ( XMLNode child = node.findChild(); child.isValid(); child = child.findNextSibling() )
                 {
                     if ( VectorUtil::contains( listChild, string_view{ child.getName() } ) == false )
-                    {
-                        outUnknown = child.getName();
-                        return false;
-                    }
+                        return string_view{ child.getName() };
                 }
-                return true;
+                return nullopt;
             }
 
             /** @brief 목록 요소(`<origins><item>…</item></origins>`)를 읽습니다. 요소가 없으면 빈 목록입니다. 원소가 `<item>` 이 아니면 false 입니다. */
@@ -70,10 +64,17 @@ namespace sw
                 }
             }
 
-            /** @brief 문서 @p sourceName 의 읽기 오류 @p error 를 `원본: 문장 '대상'` 글로 짓습니다(문서 읽기의 `pOutError` 글). */
-            [[nodiscard]] static string describe( string_view sourceName, const Error& error )
+            /** @brief 문서 @p sourceName 의 읽기 오류 @p error 의 대상 앞에 원본 이름을 붙입니다(`원본: 대상`). */
+            [[nodiscard]] static Error atSource( Error error, string_view sourceName )
             {
-                return string( sourceName ) + ": " + string( error.message().data(), error.message().size() ) + " '" + string( error.detail().data(), error.detail().size() ) + "'";
+                error.prependDetail( ": " ).prependDetail( sourceName );
+                return error;
+            }
+
+            /** @brief 문서 @p sourceName 의 항목 @p key 가 틀렸다는 오류입니다(대상 `원본: 키`). */
+            [[nodiscard]] static Error atEntry( string_view sourceName, string_view key, const utf8* pMessage )
+            {
+                return atSource( Error{ ErrorKind::InvalidArgument, pMessage, key }, sourceName );
             }
 
             /** @brief 문서 머리(루트의 `culture` 속성, `entries` 자식)를 읽습니다. 틀리면 그 까닭입니다. */
@@ -86,9 +87,8 @@ namespace sw
                         return unexpected( Error{ ErrorKind::InvalidArgument, "the document is not well-formed XML", document.getLastError() } );
                     return unexpected( Error{ ErrorKind::InvalidArgument, "the root element is wrong", pRootName } );
                 }
-                string unknown;
-                if ( hasOnlyKnownNames( root, { "culture" }, { kEntriesTag }, unknown ) == false )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "unknown field", unknown } );
+                if ( const optional<string_view> unknown = findUnknownName( root, { "culture" }, { kEntriesTag } ); unknown.has_value() )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "unknown field", *unknown } );
                 outCulture = CultureTable::normalizeCode( root.getAttributeText( "culture" ) );
                 outEntries = root.findChild( "entries" );
                 if ( outCulture.empty() )
@@ -99,24 +99,21 @@ namespace sw
             /** @brief 항목 요소 하나의 이름 · 키를 확인합니다. 키는 비지 않아야 한다. 틀리면 그 까닭입니다. */
             [[nodiscard]] static expected<void> readEntryKey( const XMLNode& entryNode, std::initializer_list<string_view> listAttribute, std::initializer_list<string_view> listChild, string& outKey )
             {
-                string unknown;
                 if ( string_view{ entryNode.getName() } != kEntryTag )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "<entries> holds only <entry> elements", entryNode.getName() } );
-                if ( hasOnlyKnownNames( entryNode, listAttribute, listChild, unknown ) == false )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "entry has an unknown field", unknown } );
+                if ( const optional<string_view> unknown = findUnknownName( entryNode, listAttribute, listChild ); unknown.has_value() )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "entry has an unknown field", *unknown } );
                 outKey = string{ entryNode.getAttributeText( "key" ) };
                 if ( outKey.empty() )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "entry needs a \"key\" attribute" } );
                 return {};
             }
 
-            [[nodiscard]] static bool readTextFile( string_view absolutePath, string& outText, string* pOutError )
+            [[nodiscard]] static expected<void> readTextFile( string_view absolutePath, string& outText )
             {
                 if ( FileUtil::readTextFile( absolutePath, outText ) )
-                    return true;
-                if ( pOutError != nullptr )
-                    *pOutError = "cannot read '" + string( absolutePath ) + "'";
-                return false;
+                    return {};
+                return unexpected( Error{ ErrorKind::NotFound, "cannot read the file", absolutePath } );
             }
 
             [[nodiscard]] static bool writeTextFile( string_view absolutePath, const string& text )
@@ -170,38 +167,24 @@ namespace sw
     // ------------------------------------------------------------------------------
     // SourceStringTable
     // ------------------------------------------------------------------------------
-    bool SourceStringTable::loadFromXMLText( string_view xmlText, string_view sourceName, string* pOutError )
+    expected<void> SourceStringTable::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
         using Internal = LocalizationDocumentsInternal;
-        string      error;
         XMLDocument document;
         string      culture;
         XMLNode     entries;
-        if ( const expected<void> header = Internal::readHeader( document, xmlText, sourceName, "SourceStringTable", culture, entries ); header.has_value() == false )
-        {
-            if ( pOutError != nullptr )
-                *pOutError = Internal::describe( sourceName, header.error() );
-            return false;
-        }
+        if ( expected<void> header = Internal::readHeader( document, xmlText, sourceName, "SourceStringTable", culture, entries ); header.has_value() == false )
+            return unexpected( Internal::atSource( std::move( header ).error(), sourceName ) );
         map<string, SourceTextEntry> mapEntry;
         for ( XMLNode entryNode = entries.findChild(); entryNode.isValid(); entryNode = entryNode.findNextSibling() )
         {
             string key;
-            if ( const expected<void> keyRead = Internal::readEntryKey( entryNode, { "key", "source", "context", "comment", "maxLength" }, { "origins" }, key ); keyRead.has_value() == false )
-            {
-                error = Internal::describe( sourceName, keyRead.error() );
-                break;
-            }
+            if ( expected<void> keyRead = Internal::readEntryKey( entryNode, { "key", "source", "context", "comment", "maxLength" }, { "origins" }, key ); keyRead.has_value() == false )
+                return unexpected( Internal::atSource( std::move( keyRead ).error(), sourceName ) );
             if ( mapEntry.find( key ) != mapEntry.end() )
-            {
-                error = string( sourceName ) + ": entry '" + key + "' is written twice";
-                break;
-            }
+                return unexpected( Internal::atEntry( sourceName, key, "an entry is written twice" ) );
             if ( entryNode.findAttribute( "source" ) == nullptr )
-            {
-                error = string( sourceName ) + ": entry '" + key + "' needs a \"source\" attribute";
-                break;
-            }
+                return unexpected( Internal::atEntry( sourceName, key, "an entry needs a \"source\" attribute" ) );
             SourceTextEntry entry;
             entry._source  = string{ entryNode.getAttributeText( "source" ) };
             entry._context = string{ entryNode.getAttributeText( "context" ) };
@@ -209,34 +192,23 @@ namespace sw
             // 최대 길이는 없으면 항목의 초기값(제한 없음 0)이다.
             optional<uint32> maxLength;
             if ( entryNode.readOptionalAttribute( "maxLength", maxLength ) == false )
-            {
-                error = string( sourceName ) + ": entry '" + key + "' maxLength must be a non-negative integer";
-                break;
-            }
+                return unexpected( Internal::atEntry( sourceName, key, "maxLength must be a non-negative integer" ) );
             if ( maxLength.has_value() )
                 entry._maxLength = *maxLength;
             if ( Internal::readStringList( entryNode.findChild( "origins" ), entry._listOrigin ) == false )
-            {
-                error = string( sourceName ) + ": entry '" + key + "' origins must be <item> elements";
-                break;
-            }
+                return unexpected( Internal::atEntry( sourceName, key, "origins must be <item> elements" ) );
             mapEntry[key] = std::move( entry );
-        }
-        if ( error.empty() == false )
-        {
-            if ( pOutError != nullptr )
-                *pOutError = error;
-            return false;
         }
         _culture  = culture;
         _mapEntry = std::move( mapEntry );
-        return true;
+        return {};
     }
 
-    bool SourceStringTable::loadFromFile( string_view absolutePath, string* pOutError )
+    expected<void> SourceStringTable::loadFromFile( string_view absolutePath )
     {
         string text;
-        return LocalizationDocumentsInternal::readTextFile( absolutePath, text, pOutError ) && loadFromXMLText( text, absolutePath, pOutError );
+        return LocalizationDocumentsInternal::readTextFile( absolutePath, text ).and_then( [&]()
+        { return loadFromXMLText( text, absolutePath ); } );
     }
 
     string SourceStringTable::saveToXMLText() const
@@ -291,70 +263,45 @@ namespace sw
     // ------------------------------------------------------------------------------
     // TranslationTable
     // ------------------------------------------------------------------------------
-    bool TranslationTable::loadFromXMLText( string_view xmlText, string_view sourceName, string* pOutError )
+    expected<void> TranslationTable::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
         using Internal = LocalizationDocumentsInternal;
-        string      error;
         XMLDocument document;
         string      culture;
         XMLNode     entries;
-        if ( const expected<void> header = Internal::readHeader( document, xmlText, sourceName, "TranslationTable", culture, entries ); header.has_value() == false )
-        {
-            if ( pOutError != nullptr )
-                *pOutError = Internal::describe( sourceName, header.error() );
-            return false;
-        }
+        if ( expected<void> header = Internal::readHeader( document, xmlText, sourceName, "TranslationTable", culture, entries ); header.has_value() == false )
+            return unexpected( Internal::atSource( std::move( header ).error(), sourceName ) );
         map<string, TranslationEntry> mapEntry;
         for ( XMLNode entryNode = entries.findChild(); entryNode.isValid(); entryNode = entryNode.findNextSibling() )
         {
             string key;
-            if ( const expected<void> keyRead = Internal::readEntryKey( entryNode, { "key", "text", "sourceHash", "review", "translatorComment" }, {}, key ); keyRead.has_value() == false )
-            {
-                error = Internal::describe( sourceName, keyRead.error() );
-                break;
-            }
+            if ( expected<void> keyRead = Internal::readEntryKey( entryNode, { "key", "text", "sourceHash", "review", "translatorComment" }, {}, key ); keyRead.has_value() == false )
+                return unexpected( Internal::atSource( std::move( keyRead ).error(), sourceName ) );
             if ( mapEntry.find( key ) != mapEntry.end() )
-            {
-                error = string( sourceName ) + ": entry '" + key + "' is written twice";
-                break;
-            }
+                return unexpected( Internal::atEntry( sourceName, key, "an entry is written twice" ) );
             if ( entryNode.findAttribute( "text" ) == nullptr )
-            {
-                error = string( sourceName ) + ": entry '" + key + "' needs a \"text\" attribute";
-                break;
-            }
+                return unexpected( Internal::atEntry( sourceName, key, "an entry needs a \"text\" attribute" ) );
             TranslationEntry entry;
             entry._text              = string{ entryNode.getAttributeText( "text" ) };
             entry._translatorComment = string{ entryNode.getAttributeText( "translatorComment" ) };
             optional<bool> review;
             if ( entryNode.readOptionalAttribute( "review", review ) == false )
-            {
-                error = string( sourceName ) + ": entry '" + key + "' review must be true or false";
-                break;
-            }
+                return unexpected( Internal::atEntry( sourceName, key, "review must be true or false" ) );
             entry._bReview = review.value_or( false );
             if ( entryNode.findAttribute( "sourceHash" ) != nullptr && SourceTextEntry::tryParseSourceHash( entryNode.getAttributeText( "sourceHash" ), entry._sourceHash ) == false )
-            {
-                error = string( sourceName ) + ": entry '" + key + "' sourceHash must be 16 hex digits";
-                break;
-            }
+                return unexpected( Internal::atEntry( sourceName, key, "sourceHash must be 16 hex digits" ) );
             mapEntry[key] = std::move( entry );
-        }
-        if ( error.empty() == false )
-        {
-            if ( pOutError != nullptr )
-                *pOutError = error;
-            return false;
         }
         _culture  = culture;
         _mapEntry = std::move( mapEntry );
-        return true;
+        return {};
     }
 
-    bool TranslationTable::loadFromFile( string_view absolutePath, string* pOutError )
+    expected<void> TranslationTable::loadFromFile( string_view absolutePath )
     {
         string text;
-        return LocalizationDocumentsInternal::readTextFile( absolutePath, text, pOutError ) && loadFromXMLText( text, absolutePath, pOutError );
+        return LocalizationDocumentsInternal::readTextFile( absolutePath, text ).and_then( [&]()
+        { return loadFromXMLText( text, absolutePath ); } );
     }
 
     string TranslationTable::saveToXMLText() const
@@ -420,83 +367,74 @@ namespace sw
     // ------------------------------------------------------------------------------
     // LocalizationProject
     // ------------------------------------------------------------------------------
-    bool LocalizationProject::loadFromXMLText( string_view xmlText, string_view sourceName, string* pOutError )
+    expected<void> LocalizationProject::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
         using Internal = LocalizationDocumentsInternal;
         XMLDocument document;
-        string      error;
         XMLNode     root;
         if ( XMLReadUtil::parseRoot( document, FileUtil::skipUTF8Bom( xmlText ), sourceName, "LocalizationProject", root ) != XMLRootStatus::Found )
         {
-            error = document.getLastError();
-            if ( error.empty() )
-                error = string( sourceName ) + ": root must be <LocalizationProject>";
+            if ( document.getLastError().empty() == false )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "the document is not well-formed XML", document.getLastError() } );
+            return unexpected( Internal::atSource( Error{ ErrorKind::InvalidArgument, "root must be <LocalizationProject>" }, sourceName ) );
         }
-        string unknown;
-        if ( error.empty() &&
-             Internal::hasOnlyKnownNames( root, { "name", "sourceCulture" }, { "cultures", "stagedCultures", "stringTables", "codeRoots", "assetRoots", "assetRules" }, unknown ) == false )
-            error = string( sourceName ) + ": unknown field '" + unknown + "'";
+        if ( const optional<string_view> unknown = Internal::findUnknownName( root, { "name", "sourceCulture" }, { "cultures", "stagedCultures", "stringTables", "codeRoots", "assetRoots", "assetRules" } );
+             unknown.has_value() )
+            return unexpected( Internal::atSource( Error{ ErrorKind::InvalidArgument, "unknown field", *unknown }, sourceName ) );
 
         LocalizationProject loaded;
-        if ( error.empty() )
+        loaded._name          = string{ root.getAttributeText( "name" ) };
+        loaded._sourceCulture = CultureTable::normalizeCode( root.getAttributeText( "sourceCulture" ) );
+        const bool bListsRead = Internal::readStringList( root.findChild( "cultures" ), loaded._listCulture ) &&
+                                Internal::readStringList( root.findChild( "stagedCultures" ), loaded._listStagedCulture ) &&
+                                Internal::readStringList( root.findChild( "stringTables" ), loaded._listStringTable ) &&
+                                Internal::readStringList( root.findChild( "codeRoots" ), loaded._listCodeRoot ) &&
+                                Internal::readStringList( root.findChild( "assetRoots" ), loaded._listAssetRoot );
+        size_t ruleIndex{ 0 };
+        for ( XMLNode ruleNode = root.findChild( "assetRules" ).findChild(); ruleNode.isValid(); ruleNode = ruleNode.findNextSibling(), ++ruleIndex )
         {
-            loaded._name          = string{ root.getAttributeText( "name" ) };
-            loaded._sourceCulture = CultureTable::normalizeCode( root.getAttributeText( "sourceCulture" ) );
-            const bool bListsRead = Internal::readStringList( root.findChild( "cultures" ), loaded._listCulture ) &&
-                                    Internal::readStringList( root.findChild( "stagedCultures" ), loaded._listStagedCulture ) &&
-                                    Internal::readStringList( root.findChild( "stringTables" ), loaded._listStringTable ) &&
-                                    Internal::readStringList( root.findChild( "codeRoots" ), loaded._listCodeRoot ) &&
-                                    Internal::readStringList( root.findChild( "assetRoots" ), loaded._listAssetRoot );
-            size_t ruleIndex{ 0 };
-            for ( XMLNode ruleNode = root.findChild( "assetRules" ).findChild(); error.empty() && ruleNode.isValid(); ruleNode = ruleNode.findNextSibling(), ++ruleIndex )
+            LocalizationAssetRule       rule;
+            const optional<string_view> unknown = Internal::findUnknownName( ruleNode, { "files", "attribute", "kind", "context" }, { "elements" } );
+            const bool                  bShape  = string_view{ ruleNode.getName() } == "rule" && unknown.has_value() == false && Internal::readStringList( ruleNode.findChild( "elements" ), rule._listElement );
+            rule._fileSuffix                    = string{ ruleNode.getAttributeText( "files" ) };
+            rule._attribute                     = string{ ruleNode.getAttributeText( "attribute" ) };
+            rule._context                       = string{ ruleNode.getAttributeText( "context" ) };
+            const string kind{ ruleNode.getAttributeText( "kind" ) };
+            rule._bKeyReference          = kind == "key";
+            const bool bKnownKind        = kind == "key" || kind == "text";
+            const bool bInvalidAssetRule = bShape == false || bKnownKind == false || rule._fileSuffix.empty() || rule._attribute.empty() || rule._listElement.empty();
+            if ( bInvalidAssetRule )
             {
-                LocalizationAssetRule rule;
-                const bool            bShape = string_view{ ruleNode.getName() } == "rule" && Internal::hasOnlyKnownNames( ruleNode, { "files", "attribute", "kind", "context" }, { "elements" }, unknown ) &&
-                                    Internal::readStringList( ruleNode.findChild( "elements" ), rule._listElement );
-                rule._fileSuffix = string{ ruleNode.getAttributeText( "files" ) };
-                rule._attribute  = string{ ruleNode.getAttributeText( "attribute" ) };
-                rule._context    = string{ ruleNode.getAttributeText( "context" ) };
-                const string kind{ ruleNode.getAttributeText( "kind" ) };
-                rule._bKeyReference          = kind == "key";
-                const bool bKnownKind        = kind == "key" || kind == "text";
-                const bool bInvalidAssetRule = bShape == false || bKnownKind == false || rule._fileSuffix.empty() || rule._attribute.empty() || rule._listElement.empty();
-                if ( bInvalidAssetRule )
-                {
-                    error = string( sourceName ) + ": assetRules[" + to_string( static_cast<uint64>( ruleIndex ) ) + "] needs files, elements, attribute and kind (text | key)" +
-                            ( unknown.empty() ? string{} : " - unknown field '" + unknown + "'" );
-                    break;
-                }
-                loaded._listAssetRule.push_back( std::move( rule ) );
+                Error error{ ErrorKind::InvalidArgument, "an asset rule needs files, elements, attribute and kind (text | key)", "assetRules[" };
+                error.appendDetail( to_string( static_cast<uint64>( ruleIndex ) ) ).appendDetail( "]" );
+                if ( unknown.has_value() )
+                    error.appendDetail( " - unknown field " ).appendDetail( *unknown );
+                return unexpected( Internal::atSource( error, sourceName ) );
             }
-            const bool bMissingField = loaded._name.empty() || loaded._sourceCulture.empty() || loaded._listStringTable.empty() || bListsRead == false;
-            if ( error.empty() && bMissingField )
-                error = string( sourceName ) + ": needs \"name\", \"sourceCulture\", \"stringTables\" and string lists";
-            for ( string& culture : loaded._listCulture )
-            {
-                culture = CultureTable::normalizeCode( culture );
-            }
-            for ( string& culture : loaded._listStagedCulture )
-            {
-                culture            = CultureTable::normalizeCode( culture );
-                const bool bListed = VectorUtil::contains( loaded._listCulture, culture );
-                if ( error.empty() && bListed == false )
-                    error = string( sourceName ) + ": stagedCultures '" + culture + "' is not in cultures";
-            }
+            loaded._listAssetRule.push_back( std::move( rule ) );
         }
-        if ( error.empty() == false )
+        const bool bMissingField = loaded._name.empty() || loaded._sourceCulture.empty() || loaded._listStringTable.empty() || bListsRead == false;
+        if ( bMissingField )
+            return unexpected( Internal::atSource( Error{ ErrorKind::InvalidArgument, "needs \"name\", \"sourceCulture\", \"stringTables\" and string lists" }, sourceName ) );
+        for ( string& culture : loaded._listCulture )
         {
-            if ( pOutError != nullptr )
-                *pOutError = error;
-            return false;
+            culture = CultureTable::normalizeCode( culture );
+        }
+        for ( string& culture : loaded._listStagedCulture )
+        {
+            culture = CultureTable::normalizeCode( culture );
+            if ( VectorUtil::contains( loaded._listCulture, culture ) == false )
+                return unexpected( Internal::atSource( Error{ ErrorKind::InvalidArgument, "a staged culture is not in cultures", culture }, sourceName ) );
         }
         *this = std::move( loaded );
-        return true;
+        return {};
     }
 
-    bool LocalizationProject::loadFromFile( string_view absolutePath, string* pOutError )
+    expected<void> LocalizationProject::loadFromFile( string_view absolutePath )
     {
         string text;
-        return LocalizationDocumentsInternal::readTextFile( absolutePath, text, pOutError ) && loadFromXMLText( text, absolutePath, pOutError );
+        return LocalizationDocumentsInternal::readTextFile( absolutePath, text ).and_then( [&]()
+        { return loadFromXMLText( text, absolutePath ); } );
     }
 
     string LocalizationProject::makeSiblingPath( string_view projectPath, string_view fileName )
@@ -520,9 +458,8 @@ namespace sw
             if ( StringUtil::endsWith( projectPath, kExtension, true ) == false )
                 continue;
             LocalizationProject project;
-            string              reason;
-            if ( project.loadFromFile( projectPath, &reason ) == false )
-                return unexpected( Error{ ErrorKind::InvalidArgument, "a localization project could not be read", reason } );
+            if ( expected<void> read = project.loadFromFile( projectPath ); read.has_value() == false )
+                return unexpected( std::move( read ).error() );
             const string projectFolder = FileUtil::getDirectoryPart( projectPath );
             for ( const string& tablePath : listXML )
             {

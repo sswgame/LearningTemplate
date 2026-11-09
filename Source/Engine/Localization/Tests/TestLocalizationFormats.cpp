@@ -42,10 +42,10 @@ namespace
             const sw::CultureTable cultures = loadCultures();
             const sw::CultureInfo* pCulture = cultures.resolveCulture( culture );
             SW_EXPECT_TRUE( pCulture != nullptr );
-            sw::string text;
-            sw::string error;
-            if ( sw::TextFormatter::format( pattern, arguments, pCulture != nullptr ? *pCulture : empty, text, &error ) == false )
-                text = "<error: " + error + ">";
+            sw::string               text;
+            const sw::expected<void> formatted = sw::TextFormatter::format( pattern, arguments, pCulture != nullptr ? *pCulture : empty, text );
+            if ( formatted.has_value() == false )
+                text = "<error: " + sw::string( formatted.error().detail() ) + ">";
             return text;
         }
 
@@ -119,12 +119,12 @@ SW_TEST_CASE( SelectOrdinalTest, OrdinalRuleIsSeparateFromPlural )
  */
 SW_TEST_CASE( SelectOrdinalTest, SyntaxIsChecked )
 {
-    sw::string error;
-    SW_EXPECT_FALSE( sw::TextFormatter::validatePattern( "{n, selectordinal, one {#st}}", &error ) );
-    SW_EXPECT_TRUE( error.find( "other" ) != sw::string::npos );
-    SW_EXPECT_FALSE( sw::TextFormatter::validatePattern( "{n, selectordinal, tenth {#} other {#}}", &error ) );
-    SW_EXPECT_TRUE( sw::TextFormatter::validatePattern( "{n, selectordinal, one {#st} other {#th}}", &error ) );
-    SW_EXPECT_FALSE( sw::TextFormatter::validatePattern( "{n, selectordinal, offset:1 other {#th}}", &error ) );
+    const sw::expected<void> missingOther = sw::TextFormatter::validatePattern( "{n, selectordinal, one {#st}}" );
+    SW_EXPECT_FALSE( missingOther );
+    SW_EXPECT_TRUE( missingOther.has_value() == false && missingOther.error().detail().find( "other" ) != sw::string_view::npos );
+    SW_EXPECT_FALSE( sw::TextFormatter::validatePattern( "{n, selectordinal, tenth {#} other {#}}" ) );
+    SW_EXPECT_TRUE( sw::TextFormatter::validatePattern( "{n, selectordinal, one {#st} other {#th}}" ) );
+    SW_EXPECT_FALSE( sw::TextFormatter::validatePattern( "{n, selectordinal, offset:1 other {#th}}" ) );
 
     sw::vector<sw::string> listName;
     sw::TextFormatter::collectArgumentNames( "{rank, selectordinal, one {#st} other {#th}} of {total}", listName );
@@ -232,17 +232,16 @@ SW_TEST_CASE( CultureDataTest, PluralSampleTextKeepsVisibleDigits )
  */
 SW_TEST_CASE( CultureDataTest, NewLanguageIsOneDataSheet )
 {
-    sw::CultureTable table;
-    sw::string       error;
-    SW_REQUIRE_TRUE_MSG( table.loadFromXMLText( R"XML(<CultureTable>
+    sw::CultureTable         table;
+    const sw::expected<void> loaded = table.loadFromXMLText( R"XML(<CultureTable>
   <numberingSystems><numberingSystem id="deva" digits="०१२३४५६७८९" /></numberingSystems>
   <currencies><currency code="INR" symbol="₹" digits="2" /></currencies>
   <cultures>
     <culture code="hi" digits="deva" nativeName="हिन्दी" currencyCode="INR" currencyPattern="¤#"><pluralRules one="i = 0 or n = 1 @integer 0, 1 @decimal 0.0~1.0, 0.00~0.04" other="@integer 2~17, 100, 1000, 10000, 100000, 1000000, … @decimal 1.1~2.6, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …" /></culture>
   </cultures>
 </CultureTable>)XML",
-                                                "hi.cultures.xml", &error ),
-                         error.c_str() );
+                                                             "hi.cultures.xml" );
+    SW_REQUIRE_TRUE_MSG( loaded.has_value(), loaded.has_value() ? sw::string{} : sw::string( loaded.error().message() ) + " (" + sw::string( loaded.error().detail() ) + ")" );
     const sw::CultureInfo* pHindi = table.findCulture( "hi" );
     SW_REQUIRE_NOT_NULL( pHindi );
     SW_EXPECT_EQUAL( sw::string( "१,२३४" ), pHindi->formatInteger( 1234 ) );
@@ -257,10 +256,10 @@ SW_TEST_CASE( CultureDataTest, MalformedDataIsALoadError )
 {
     const auto rejects = []( sw::string_view xml, sw::string_view expectedWord )
     {
-        sw::CultureTable table;
-        sw::string       error;
-        const bool       bLoaded = table.loadFromXMLText( xml, "bad.cultures.xml", &error );
-        SW_EXPECT_FALSE( bLoaded );
+        sw::CultureTable         table;
+        const sw::expected<void> loaded = table.loadFromXMLText( xml, "bad.cultures.xml" );
+        SW_EXPECT_FALSE( loaded );
+        const sw::string error = loaded.has_value() ? sw::string{} : sw::string( loaded.error().message() ) + " (" + sw::string( loaded.error().detail() ) + ")";
         SW_EXPECT_TRUE_MSG( error.find( sw::string( expectedWord ) ) != sw::string::npos, error.c_str() );
         SW_EXPECT_EQUAL( size_t( 0 ), table.getCultureCount() );
     };
@@ -446,8 +445,7 @@ SW_TEST_CASE( LocalizationBinaryTableTest, RoundTripAndCorruption )
     SW_EXPECT_TRUE( bytes == again );
 
     sw::LocalizationBinaryTable loaded;
-    sw::string                  error;
-    SW_REQUIRE_TRUE( loaded.parse( bytes.data(), bytes.size(), &error ) );
+    SW_REQUIRE_TRUE( loaded.parse( bytes.data(), bytes.size() ) );
     SW_EXPECT_EQUAL( sw::string( "ko" ), loaded.getCulture() );
     SW_REQUIRE_EQUAL( size_t( 3 ), loaded.getTexts().size() );
     const auto startIt = loaded.getTexts().find( sw::hashed_string::computeHash( "Menu.Start" ) );
@@ -459,22 +457,23 @@ SW_TEST_CASE( LocalizationBinaryTableTest, RoundTripAndCorruption )
     // 글 한 바이트를 바꾸면 검사합이 거절한다 — 일부만 적용되지 않는다
     sw::vector<uint8> flipped = bytes;
     flipped[flipped.size() / 2] ^= 0x01u;
-    SW_EXPECT_FALSE( loaded.parse( flipped.data(), flipped.size(), &error ) );
+    SW_EXPECT_FALSE( loaded.parse( flipped.data(), flipped.size() ) );
     SW_EXPECT_TRUE( loaded.getTexts().empty() );
 
     sw::vector<uint8> truncated( bytes.begin(), bytes.begin() + static_cast<std::ptrdiff_t>( bytes.size() - 3 ) );
-    SW_EXPECT_FALSE( loaded.parse( truncated.data(), truncated.size(), &error ) );
-    SW_EXPECT_FALSE( loaded.parse( bytes.data(), 5, &error ) );
+    SW_EXPECT_FALSE( loaded.parse( truncated.data(), truncated.size() ) );
+    SW_EXPECT_FALSE( loaded.parse( bytes.data(), 5 ) );
 
-    sw::vector<uint8> wrongMagic = bytes;
-    wrongMagic[0]                = 'X';
-    SW_EXPECT_FALSE( loaded.parse( wrongMagic.data(), wrongMagic.size(), &error ) );
-    SW_EXPECT_TRUE( error.find( "magic" ) != sw::string::npos );
+    sw::vector<uint8> wrongMagic            = bytes;
+    wrongMagic[0]                           = 'X';
+    const sw::expected<void> wrongMagicRead = loaded.parse( wrongMagic.data(), wrongMagic.size() );
+    SW_EXPECT_FALSE( wrongMagicRead );
+    SW_EXPECT_TRUE( wrongMagicRead.has_value() == false && wrongMagicRead.error().message().find( "magic" ) != sw::string_view::npos );
 
     // 어느 길이로 잘려도 거절한다(끝의 검사합이 먼저 지지만 길이가 머리보다 짧으면 거기서 진다).
     for ( size_t length = 0; length < bytes.size(); ++length )
     {
-        SW_EXPECT_FALSE( loaded.parse( bytes.data(), length, &error ) );
+        SW_EXPECT_FALSE( loaded.parse( bytes.data(), length ) );
         SW_EXPECT_TRUE( loaded.getTexts().empty() );
     }
 }

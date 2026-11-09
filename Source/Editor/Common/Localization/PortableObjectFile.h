@@ -19,6 +19,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -56,8 +57,8 @@ namespace sw
         string                      _projectName;
         vector<PortableObjectEntry> _listEntry;
 
-        /** @brief PO 글을 읽습니다. 틀린 줄이면 @p pOutError 에 `줄: 이유` 를 적고 false 입니다. */
-        [[nodiscard]] bool parse( string_view text, string* pOutError = nullptr );
+        /** @brief PO 글을 읽습니다. 틀린 줄이면 그 까닭(대상 `line N`)입니다. */
+        [[nodiscard]] expected<void> parse( string_view text );
         /** @brief PO 글을 만듭니다(머리 항목 포함). */
         string toText() const;
 

@@ -619,7 +619,7 @@ namespace sw
         return VectorUtil::findBy<&TextArgument::_name>( _listArgument, name );
     }
 
-    bool TextFormatter::format( string_view pattern, const TextArgumentList& arguments, const CultureInfo& culture, string& outText, string* pOutError )
+    expected<void> TextFormatter::format( string_view pattern, const TextArgumentList& arguments, const CultureInfo& culture, string& outText )
     {
         outText.clear();
         TextFormatterWalker walker( pattern, TextWalkMode::Format );
@@ -627,19 +627,18 @@ namespace sw
         const bool bParsed = walker.walk( outText );
         if ( bParsed == false )
             outText = string( pattern ); // 구문이 틀린 번역은 원문 그대로 쓴다. 반쯤 해석된 텍스트보다 낫다
-        if ( pOutError != nullptr )
-            *pOutError = walker.getError();
-        return bParsed && walker.getError().empty();
+        if ( bParsed && walker.getError().empty() )
+            return {};
+        return unexpected( Error{ ErrorKind::InvalidArgument, "the text pattern cannot be formatted", walker.getError() } );
     }
 
-    bool TextFormatter::validatePattern( string_view pattern, string* pOutError )
+    expected<void> TextFormatter::validatePattern( string_view pattern )
     {
         string              ignored;
         TextFormatterWalker walker( pattern, TextWalkMode::Validate );
-        const bool          bParsed = walker.walk( ignored );
-        if ( pOutError != nullptr )
-            *pOutError = walker.getError();
-        return bParsed;
+        if ( walker.walk( ignored ) )
+            return {};
+        return unexpected( Error{ ErrorKind::InvalidArgument, "the text pattern is not valid", walker.getError() } );
     }
 
     void TextFormatter::collectArgumentNames( string_view pattern, vector<string>& outListName )

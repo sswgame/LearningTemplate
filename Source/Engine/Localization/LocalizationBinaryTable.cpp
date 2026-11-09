@@ -23,13 +23,6 @@ namespace sw
             {
                 return HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( pData ), size, false );
             }
-
-            static bool fail( string* pOutError, string_view reason )
-            {
-                if ( pOutError != nullptr )
-                    *pOutError = string( reason );
-                return false;
-            }
         };
     } // namespace
 } // namespace sw
@@ -81,38 +74,38 @@ namespace sw
         LittleEndianUtil::appendUint64( outBytes, checksum );
     }
 
-    bool LocalizationBinaryTable::parse( const uint8* pData, size_t size, string* pOutError )
+    expected<void> LocalizationBinaryTable::parse( const uint8* pData, size_t size )
     {
         using Internal = LocalizationBinaryTableInternal;
         _culture.clear();
         _mapText.clear();
         if ( pData == nullptr || size < Internal::kHeaderFixedBytes + Internal::kCountBytes + Internal::kChecksumBytes )
-            return Internal::fail( pOutError, "locres is too small" );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "locres is too small" } );
         // 끝의 체크섬을 뺀 앞부분만 읽는다 — 표가 체크섬 자리를 읽지 못한다.
         const size_t checksumPos = size - Internal::kChecksumBytes;
         ByteReader   reader{ pData, checksumPos };
         ByteReader   checksumReader{ pData + checksumPos, Internal::kChecksumBytes };
         if ( reader.readUint32() != kMagic )
-            return Internal::fail( pOutError, "locres magic mismatch" );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "locres magic mismatch" } );
         if ( reader.readUint32() != kVersion )
-            return Internal::fail( pOutError, "locres version is not supported" );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "locres version is not supported" } );
 
         if ( checksumReader.readUint64() != Internal::computeChecksum( pData, checksumPos ) )
-            return Internal::fail( pOutError, "locres checksum mismatch" );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "locres checksum mismatch" } );
 
         string_view cultureView;
         if ( reader.readStringView( cultureView ) == false )
-            return Internal::fail( pOutError, "locres culture is out of range" );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "locres culture is out of range" } );
         string culture( cultureView );
 
         const uint32 entryCount = reader.readUint32();
         const uint32 blobBytes  = reader.readUint32();
         if ( reader.hasOverflowed() )
-            return Internal::fail( pOutError, "locres header is truncated" );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "locres header is truncated" } );
 
         const uint64 tableBytes = static_cast<uint64>( entryCount ) * Internal::kEntryBytes;
         if ( tableBytes + blobBytes != reader.getRemainingByteCount() )
-            return Internal::fail( pOutError, "locres sizes do not match the file" );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "locres sizes do not match the file" } );
         ByteReader   table{ pData + reader.getOffset(), static_cast<size_t>( tableBytes ) };
         const uint8* pBlob = pData + reader.getOffset() + tableBytes;
 
@@ -123,12 +116,12 @@ namespace sw
             const uint32 offset = table.readUint32();
             const uint32 length = table.readUint32();
             if ( static_cast<uint64>( offset ) + length > blobBytes )
-                return Internal::fail( pOutError, "locres text is out of range" );
+                return unexpected( Error{ ErrorKind::InvalidArgument, "locres text is out of range" } );
             mapText[hash] = string( reinterpret_cast<const utf8*>( pBlob + offset ), length );
         }
         _culture = std::move( culture );
         _mapText = std::move( mapText );
-        return true;
+        return {};
     }
 } // namespace sw
 

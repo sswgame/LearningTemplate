@@ -25,8 +25,7 @@ namespace
         const sw::CultureInfo* pCulture = cultures.findCulture( code );
         SW_EXPECT_TRUE( pCulture != nullptr );
         sw::string text;
-        sw::string error;
-        SW_EXPECT_TRUE( pCulture != nullptr && sw::TextFormatter::format( pattern, arguments, *pCulture, text, &error ) );
+        SW_EXPECT_TRUE( pCulture != nullptr && sw::TextFormatter::format( pattern, arguments, *pCulture, text ) );
         return text;
     }
 
@@ -99,11 +98,11 @@ SW_TEST_CASE( TextFormatterTest, ReportsBrokenPatterns )
     const sw::CultureTable cultures = loadCultures();
     const sw::CultureInfo* pEnglish = cultures.findCulture( "en" );
     SW_REQUIRE_TRUE( pEnglish != nullptr );
-    sw::string text;
-    sw::string error;
-    SW_EXPECT_FALSE( sw::TextFormatter::format( "Hello {name}", sw::TextArgumentList(), *pEnglish, text, &error ) );
+    sw::string               text;
+    const sw::expected<void> formatted = sw::TextFormatter::format( "Hello {name}", sw::TextArgumentList(), *pEnglish, text );
+    SW_EXPECT_FALSE( formatted );
     SW_EXPECT_EQUAL( sw::string( "Hello {name}" ), text );
-    SW_EXPECT_FALSE( error.empty() );
+    SW_EXPECT_TRUE( formatted.has_value() == false && formatted.error().detail().empty() == false );
 
     SW_EXPECT_FALSE( sw::TextFormatter::validatePattern( "{n, plural, one {x}}" ) );
     SW_EXPECT_FALSE( sw::TextFormatter::validatePattern( "{n, plural, other {x}" ) );

@@ -9,6 +9,7 @@
 #pragma once
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -47,10 +48,12 @@ namespace sw
         static constexpr const utf8*  kFolderName     = "tm";
         static constexpr float32      kFuzzyThreshold = 0.75f;
 
-        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName, string* pOutError = nullptr );
-        [[nodiscard]] bool loadFromFile( string_view absolutePath, string* pOutError = nullptr );
-        string             saveToXMLText() const;
-        [[nodiscard]] bool saveToFile( string_view absolutePath ) const;
+        /** @brief 글을 읽습니다. 틀리면 그 까닭이고 내용은 그대로입니다. */
+        [[nodiscard]] expected<void> loadFromXMLText( string_view xmlText, string_view sourceName );
+        /** @brief 파일을 읽습니다. 못 읽거나 틀리면 그 까닭입니다. */
+        [[nodiscard]] expected<void> loadFromFile( string_view absolutePath );
+        string                       saveToXMLText() const;
+        [[nodiscard]] bool           saveToFile( string_view absolutePath ) const;
 
         /** @brief 쌍을 넣습니다(같은 원문이면 번역을 바꿉니다). 바뀌었으면 true 입니다. */
         bool addPair( string_view source, string_view text );
