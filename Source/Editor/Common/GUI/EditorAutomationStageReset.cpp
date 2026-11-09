@@ -14,6 +14,7 @@
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/NetPlay/EditorNetPlaySession.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
@@ -77,6 +78,8 @@ namespace sw::editor
                             ImGui::ClearWindowSettings( pWindow->Name );
                     }
                 }
+                // 문서 포커스도 새 프로세스처럼 비운다 — 앞 단계(abilitycatalog)가 포커스한 abilities.xml 을 다음 단계가 연 카탈로그 패널이 받아 열었다(문서 패널은 열 때 지금 포커스를 받는다).
+                pContext->getSubsystem<EditorWorkspace>().setFocusedAssetPath( "" );
                 pContext->getSubsystem<EditorStateStore>().resetAll(); // 패널 밖 그리기 상태(테마 대화상자 · 툴바 · 메뉴) — 열린 테마 대화상자가 다음 단계의 클릭을 삼켰다
                 (void)pContext->getSubsystem<EditorPanelManager>().resetAllPanels();
                 EditorDockLayout* pDock = pContext->findSubsystem<EditorDockLayout>(); // 선택: 셸이 도킹 배치를 알리기 전과 셸 없는 테스트 호스트에는 없다

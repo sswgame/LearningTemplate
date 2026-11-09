@@ -304,7 +304,7 @@ namespace sw::editor
                          &CharacterEditorPanelInternal::readPenetrationMarkCount );
     SW_AUTOMATION_WATCH( editorCharacterEditorPreviewPickVertices, "Editor.CharacterEditorPreviewPickVertices",
                          "Mesh vertices of the Character Editor preview body and its part objects (published while the Preview tab draws)", &CharacterEditorPanelInternal::readPreviewPickVertexCount );
-    SW_AUTOMATION_WATCH( editorCharacterEditorBodyPickCount, "Editor.CharacterEditorBodyPickCount", "Sections the Character Editor picked on the posed body or a part in the preview viewport",
+    SW_AUTOMATION_WATCH( editorCharacterEditorBodyPickCount, "Editor.CharacterEditorBodyPickCount", "Surface picks (skin layer placement or section) the Character Editor hit on the posed body or a part in the preview viewport",
                          &CharacterEditorPanelInternal::readBodyPickCount );
     SW_AUTOMATION_WATCH( editorCharacterEditorBoneGizmoPlaced, "Editor.CharacterEditorBoneGizmoPlaced", "1 while the Character Editor preview holds a gizmo marker on the selected bone",
                          &CharacterEditorPanelInternal::readBoneGizmoPlaced );
@@ -1777,6 +1777,7 @@ namespace sw::editor
             return;
         _bodyPickMarker = hit._position;
         _bBodyPickShown = SW_TRUE;
+        ++_published._bodyPickCount; // 층 배치 · 구간 고르기 모두 같은 집기다
         if ( bPlacingLayer )
         {
             // 배치 — 끄는 동안 같은 층의 가운데를 맞은 UV 로 옮긴다(한 되돌리기 단계).
@@ -1784,7 +1785,6 @@ namespace sw::editor
             _bBodyPickDrag = SW_TRUE;
             return;
         }
-        ++_published._bodyPickCount;
         const BodyPickSurface& surface = listSurface[hit._surface];
         if ( hit._section < surface._listSection.size() )
             _bodySelectedSection = BodyCustomizationViewModel::findSectionRow( _bodyState, surface._listSection[hit._section]._name );
@@ -1797,6 +1797,7 @@ namespace sw::editor
         ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "SkinLayers" ) );
         if ( EditorWidgets::beginCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPlugin", "AddSkinLayer" ), "AddSkinLayer" ), "" ) )
         {
+            bool bPlaceableMarked = false;
             for ( size_t index = 0; index < state._listAvailableLayer.size(); ++index )
             {
                 const hashed_string& layer = state._listAvailableLayer[index];
@@ -1804,6 +1805,12 @@ namespace sw::editor
                     (void)BodyCustomizationViewModel::addSkinLayer( appearance, database, layer );
                 if ( index == 0 )
                     EditorSelfTestMarks::record( "charactereditor.body.addLayer.first" );
+                const SkinLayerDef* pDef = database.getSkinLayers().findLayer( layer );
+                if ( bPlaceableMarked == false && pDef != nullptr && pDef->_bPlaceable )
+                {
+                    EditorSelfTestMarks::record( "charactereditor.body.addLayer.placeable" ); // 배치 집기를 켤 수 있는 첫 층(문신 · 흉터)
+                    bPlaceableMarked = true;
+                }
             }
             ImGui::EndCombo();
         }

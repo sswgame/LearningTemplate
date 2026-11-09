@@ -15,7 +15,7 @@
 	<EditorWaitSettled/>
 	<DevCommand line="asset.openScratch scratch/saveroundtripdatatable/default.surfacekinds.xml"/>
 	<EditorWaitSettled/>
-	<WaitUntil watch="Editor.DataTableGameDataRowCount" atLeast="1" timeoutFrames="120"/>
+	<WaitUntil watch="Editor.DataTableGameDataRowCount" atLeast="1" timeoutWallSeconds="10"/>
 	<Remember watch="Editor.DataTableGameDataRowCount" as="rows"/>
 	<DevCommand line="panel.saveDocument data_table"/>
 	<DevCommand line="asset.snapshotScratch scratch/saveroundtripdatatable/default.surfacekinds.xml"/>

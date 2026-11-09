@@ -57,7 +57,7 @@ namespace sw::editor
             uint32  _clipPlaying{ 0 };            ///< 미리보기 몸이 고른 클립을 재생 중이면 1(미리보기 탭을 그릴 때 게시)
             uint32  _penetrationMarkCount{ 0 };   ///< 지난 그리기에 뷰포트에 찍은 관통 점 수
             uint32  _previewPickVertexCount{ 0 }; ///< 집기 오브젝트(몸 + 부품) 메시의 정점 수 합(미리보기 탭을 그릴 때 게시 — 부품이 빠지거나 몸이 다시 구워지면 바뀐다)
-            uint32  _bodyPickCount{ 0 };          ///< 뷰포트에서 몸 · 부품 표면을 집어 구간을 고른 수
+            uint32  _bodyPickCount{ 0 };          ///< 뷰포트에서 몸 · 부품 표면을 맞힌 집기 수(층 배치 · 구간 고르기)
             uint32  _boneGizmoPlaced{ 0 };        ///< 고른 본에 기즈모 표식을 놓았으면 1
             uint32  _socketGizmoPlaced{ 0 };      ///< 고른 소켓에 기즈모 표식을 놓았으면 1
             float32 _selectedSocketX{ 0.0f };     ///< 고른 소켓의 로컬 위치 x(m) — 시나리오가 기즈모 끌기 · 되돌리기를 본다

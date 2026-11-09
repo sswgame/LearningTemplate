@@ -3,7 +3,7 @@
   에디터 시나리오 — 캐릭터 편집 창의 몸 탭 동작: 몸 탭에서 바꾼 것이 미리보기 몸의 메시에 닿는지, 뷰포트 표면 집기가 지금 포즈의 몸 · 부품을 맞히는지 본다.
   ① 외형 탭에서 데이터 · 기준 프리셋 · 세트를 입혀 미리보기 몸을 조립한다(감시 값 Editor.CharacterEditorPreviewPickVertices — 몸 + 부품 오브젝트 메시 정점 수).
   ② 몸 탭에서 입은 칸 하나를 숨기면(장비는 두고 외형 · 몸 채널만 뺀다) 다시 조립되어 정점 수가 바뀐다 — 숨기기 앞뒤 그림을 찍는다.
-  ③ 몸 탭에서 구간 집기를 켜고 미리보기 뷰포트 가운데를 누르면 지금 포즈로 스키닝한 몸 · 부품 표면이 맞아 구간이 골라진다(Editor.CharacterEditorBodyPickCount).
+  ③ 몸 탭에서 피부 층 배치 집기를 켜고 미리보기 뷰포트 가운데를 누르면 지금 포즈로 스키닝한 몸 · 부품 표면이 맞아 구간이 골라진다(Editor.CharacterEditorBodyPickCount).
   ④ 칸 숨김을 되돌리면 숨긴 칸이 0 이다. 몸 데이터 파일은 고치지 않았다(미저장 없음).
   실행: App -EnableEditor -scenario=engine/automation/editor/characterbodyedit.scenario.xml -unattended
 -->
@@ -60,12 +60,18 @@
 	<EditorWaitSettled/>
 	<CaptureEditorUI file="charactereditor/bodyedit_hidden.png"/>
 
-	<!-- ③ 구간 집기 — 몸 탭에서 켜고 미리보기 뷰포트 가운데(몸통)를 누른다 -->
+	<!-- ③ 표면 집기 — 몸 탭에서 피부 층(문신)을 하나 더해 배치 집기를 켜고, 미리보기 뷰포트 가운데(몸통)를 누른다.
+	     구간 집기(체크박스 charactereditor.body.pickSection)는 염색 구간이 있는 외형에만 그려지는데 지금 데이터에는 구간 정의가 없다 — 같은 집기 입구를 층 배치로 본다. -->
 	<EditorClick mark="charactereditor.tab.body" state="Down"/>
 	<Wait frames="1"/>
 	<EditorClick mark="charactereditor.tab.body" state="Up"/>
 	<EditorWaitSettled/>
-	<EditorClick mark="charactereditor.body.pickSection"/>
+	<EditorClick mark="charactereditor.body.addLayer"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="charactereditor.body.addLayer.placeable"/>
+	<WaitUntil watch="Editor.CharacterEditorBodyLayerCount" equals="1" timeoutFrames="30"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="charactereditor.body.placeLayer"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="charactereditor.tab.preview" state="Down"/>
 	<Wait frames="1"/>
