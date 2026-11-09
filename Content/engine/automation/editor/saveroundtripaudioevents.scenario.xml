@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 오디오 이벤트 창(audioevents) 저장 왕복: Empty 의 이벤트 라이브러리(game/empty/audio/empty.audioevents.xml)의 실행마다 새 사본(scratch/saveroundtripaudioevents — <Scratch>)을 연다.
+  창은 문서 기반(EditorDocumentPanel)이라 asset.openScratch 가 "고치기" · 콘텐츠 브라우저와 같은 길(워크스페이스 포커스)로 사본을 고치기 시작한다(Editor.AudioEventEditCount).
+  고치지 않고 저장 → 글 붙잡기 → 디스크에서 다시 읽기(이벤트 수가 같다) → 다시 저장 → 같은 바이트. 엔진이 올린 라이브러리가 아니어도 된다 — 파일을 사본으로 읽는다.
+  원본은 건드리지 않는다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/saveroundtripaudioevents.scenario.xml -unattended
+-->
+<Scenario name="editor.saveroundtripaudioevents" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
+	<Scratch from="game/empty/audio" as="scratch/saveroundtripaudioevents"/>
+	<Variable name="gv_editorWatchPanel" value="audioevents"/>
+	<EditorWaitSettled/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.focus audioevents"/>
+	<EditorWaitSettled/>
+	<DevCommand line="asset.openScratch scratch/saveroundtripaudioevents/empty.audioevents.xml"/>
+	<EditorWaitSettled/>
+	<WaitUntil watch="Editor.AudioEventEditCount" equals="1" timeoutFrames="60"/>
+	<Expect watch="Editor.PanelDirty" equals="0"/>
+	<DevCommand line="panel.saveDocument audioevents"/>
+	<DevCommand line="asset.snapshotScratch scratch/saveroundtripaudioevents/empty.audioevents.xml"/>
+	<DevCommand line="panel.reloadDocument audioevents"/>
+	<EditorWaitSettled/>
+	<Expect watch="Editor.AudioEventEditCount" equals="1"/>
+	<DevCommand line="panel.saveDocument audioevents"/>
+	<DevCommand line="asset.expectScratchUnchanged scratch/saveroundtripaudioevents/empty.audioevents.xml"/>
+	<Expect watch="Editor.PanelDirty" equals="0"/>
+	<EditorWaitSettled/>
+	<Pass/>
+</Scenario>

@@ -188,6 +188,34 @@ SW_TEST_CASE( InputReplayTest, FileRoundTrips )
     SW_EXPECT_EQUAL( 3, loaded.getFrames()[0]._listRawEvent[1]._payload._mouseData._x );
 }
 
+/**
+ * @brief [InputReplayTest] 저장 → 읽기 → 저장이 같은 바이트다 - Input Map Editor 의 녹화 Save · Load 왕복(편집기 저장 왕복 시나리오의 녹화 몫)
+ * @details 녹화 파일은 패널 상태가 없는 형식이라 시나리오가 아니라 여기서 본다. 읽기가 값을 잃거나 바꾸면 둘째 저장이 달라진다.
+ */
+SW_TEST_CASE( InputReplayTest, SaveLoadSaveKeepsBytes )
+{
+    const string firstPath  = test::makeScratchPath( "first.swreplay" );
+    const string secondPath = test::makeScratchPath( "second.swreplay" );
+    InputReplay  replay;
+    replay.startRecording( "roundtrip" );
+    replay.recordFrame( 0.016f, { RawInputEvent::makeKeyDown( Key::Space ), RawInputEvent::makeMouseMove( -7, 12 ) } );
+    replay.recordFrame( 0.033f, {} );
+    replay.recordFrame( 0.5f, { RawInputEvent::makeKeyDown( Key::A ) } );
+    replay.stopRecording();
+    SW_REQUIRE_TRUE( replay.saveToFile( *AbsolutePath::tryMake( firstPath ) ) );
+
+    InputReplay loaded;
+    SW_REQUIRE_TRUE( loaded.loadFromFile( firstPath ) );
+    SW_REQUIRE_TRUE( loaded.saveToFile( *AbsolutePath::tryMake( secondPath ) ) );
+
+    vector<uint8> firstBytes;
+    vector<uint8> secondBytes;
+    SW_REQUIRE_TRUE( FileUtil::readFile( firstPath, firstBytes ) );
+    SW_REQUIRE_TRUE( FileUtil::readFile( secondPath, secondBytes ) );
+    SW_EXPECT_TRUE( firstBytes.empty() == false );
+    SW_EXPECT_TRUE( firstBytes == secondBytes );
+}
+
 /** @brief [InputReplayTest] 망가진 파일은 거절하고 있던 녹화를 지킨다 - 없는 파일 · 매직 · 버전 · 잘린 이름과 프레임 · 터무니없는 프레임 수(큰 할당을 하지 않는다) */
 SW_TEST_CASE( InputReplayTest, BrokenFilesAreRefused )
 {
