@@ -426,8 +426,8 @@ SW_TEST_CASE( MemoryProfilerTest, LeakWindowTagTotalsIgnoreFreesOfOlderBlocks )
     const AllocationRecord oldBlock = profiler.recordAllocation( pOld, 100, MemoryTag::Scene ); // 창 밖에서 태어난 블록
     SW_EXPECT_EQUAL( 0u, oldBlock._windowStamp );
 
-    profiler.beginLeakWindow( LeakWindowDetail::TagTotals );
-    SW_EXPECT_TRUE( profiler.isLeakWindowOpen() );
+    profiler.getLeakWindow().open( LeakWindowDetail::TagTotals );
+    SW_EXPECT_TRUE( profiler.getLeakWindow().isOpen() );
 
     void* const            pSmall     = reinterpret_cast<void*>( 0x7000 );
     void* const            pLarge     = reinterpret_cast<void*>( 0x8000 );
@@ -441,8 +441,8 @@ SW_TEST_CASE( MemoryProfilerTest, LeakWindowTagTotalsIgnoreFreesOfOlderBlocks )
     profiler.recordFree( pTemporary, 32, MemoryTag::UI, tempBlock ); // 창 안에서 태어나 창 안에서 풀린 블록은 남지 않는다
     profiler.recordFree( pOld, 100, MemoryTag::Scene, oldBlock );    // 창 밖에서 태어난 블록의 해제는 창의 값을 줄이지 않는다
 
-    const LeakWindowReport report = profiler.endLeakWindow();
-    SW_EXPECT_FALSE( profiler.isLeakWindowOpen() );
+    const LeakWindowReport report = profiler.getLeakWindow().close();
+    SW_EXPECT_FALSE( profiler.getLeakWindow().isOpen() );
     SW_REQUIRE_TRUE( report._bValid );
     SW_EXPECT_TRUE( report._detail == LeakWindowDetail::TagTotals );
     SW_EXPECT_EQUAL( 1u, report._roundCount );
@@ -466,8 +466,8 @@ SW_TEST_CASE( MemoryProfilerTest, LeakWindowTagTotalsIgnoreFreesOfOlderBlocks )
     SW_EXPECT_EQUAL( uint64{ 0 }, profiler.getStats( MemoryTag::Script )._currentAllocatedBytes );
 
     // 다음 창은 빈 합계에서 시작한다.
-    profiler.beginLeakWindow( LeakWindowDetail::TagTotals );
-    const LeakWindowReport empty = profiler.endLeakWindow();
+    profiler.getLeakWindow().open( LeakWindowDetail::TagTotals );
+    const LeakWindowReport empty = profiler.getLeakWindow().close();
     SW_EXPECT_TRUE( findLeakEntry( empty, MemoryTag::Script, 1 ) == nullptr );
     profiler.shutdown();
 }
@@ -484,10 +484,10 @@ SW_TEST_CASE( MemoryProfilerTest, LeakWindowFullStacksGroupByStackAndRound )
     void* const            pOld     = reinterpret_cast<void*>( 0xB000 );
     const AllocationRecord oldBlock = profiler.recordAllocation( pOld, 100, MemoryTag::Scene );
 
-    profiler.beginLeakWindow( LeakWindowDetail::FullStacks );
+    profiler.getLeakWindow().open( LeakWindowDetail::FullStacks );
     void* const            pFirstRound = reinterpret_cast<void*>( 0xC000 );
     const AllocationRecord firstBlock  = profiler.recordAllocation( pFirstRound, 128, MemoryTag::Scene );
-    profiler.beginLeakRound();
+    profiler.getLeakWindow().beginRound();
     void* const            pSecondRound = reinterpret_cast<void*>( 0xD000 );
     void* const            pTemporary   = reinterpret_cast<void*>( 0xE000 );
     const AllocationRecord secondBlock  = profiler.recordAllocation( pSecondRound, 256, MemoryTag::Scene );
@@ -496,7 +496,7 @@ SW_TEST_CASE( MemoryProfilerTest, LeakWindowFullStacksGroupByStackAndRound )
     profiler.recordFree( pTemporary, 64, MemoryTag::Scene, tempBlock );
     profiler.recordFree( pOld, 100, MemoryTag::Scene, oldBlock ); // 창 밖 블록의 해제는 상쇄하지 않는다
 
-    const LeakWindowReport report = profiler.endLeakWindow();
+    const LeakWindowReport report = profiler.getLeakWindow().close();
     SW_REQUIRE_TRUE( report._bValid );
     SW_EXPECT_TRUE( report._detail == LeakWindowDetail::FullStacks );
     SW_EXPECT_EQUAL( 2u, report._roundCount );
@@ -527,7 +527,7 @@ SW_TEST_CASE( MemoryProfilerTest, LeakWindowReportsAllocationsFromOtherThreads )
     MemoryProfiler profiler;
     profiler.initialize();
     profiler.setTrackingEnabled( true );
-    profiler.beginLeakWindow( LeakWindowDetail::FullStacks );
+    profiler.getLeakWindow().open( LeakWindowDetail::FullStacks );
 
     void* const            pOwn     = reinterpret_cast<void*>( 0xF000 );
     const AllocationRecord ownBlock = profiler.recordAllocation( pOwn, 128, MemoryTag::Physics );
@@ -540,7 +540,7 @@ SW_TEST_CASE( MemoryProfilerTest, LeakWindowReportsAllocationsFromOtherThreads )
     } );
     worker.join();
 
-    const LeakWindowReport report = profiler.endLeakWindow();
+    const LeakWindowReport report = profiler.getLeakWindow().close();
     SW_REQUIRE_TRUE( report._bValid );
     SW_EXPECT_EQUAL( uint64{ 640 }, report._totalBytes ); // 두 스레드의 블록이 한 창에 섞여 있다
     SW_EXPECT_EQUAL( uint64{ 1 }, report._foreignThreadBlockCount );
@@ -562,22 +562,22 @@ SW_TEST_CASE( MemoryProfilerTest, LeakWindowMisuseIsAnError )
 
     {
         test::ScopedAssertCapture assertCapture;
-        const LeakWindowReport    withoutWindow = profiler.endLeakWindow();
+        const LeakWindowReport    withoutWindow = profiler.getLeakWindow().close();
         SW_EXPECT_FALSE( withoutWindow._bValid );
         SW_EXPECT_TRUE( withoutWindow._listEntry.empty() );
         if constexpr ( test::ScopedAssertCapture::kAssertsAreActive )
             SW_EXPECT_EQUAL( 1u, assertCapture.getCount() );
     }
 
-    profiler.beginLeakWindow( LeakWindowDetail::TagTotals );
+    profiler.getLeakWindow().open( LeakWindowDetail::TagTotals );
     {
         test::ScopedAssertCapture assertCapture;
-        profiler.beginLeakWindow( LeakWindowDetail::FullStacks ); // 이미 열려 있다
-        SW_EXPECT_TRUE( profiler.isLeakWindowOpen() );
+        profiler.getLeakWindow().open( LeakWindowDetail::FullStacks ); // 이미 열려 있다
+        SW_EXPECT_TRUE( profiler.getLeakWindow().isOpen() );
         if constexpr ( test::ScopedAssertCapture::kAssertsAreActive )
             SW_EXPECT_EQUAL( 1u, assertCapture.getCount() );
     }
-    const LeakWindowReport report = profiler.endLeakWindow();
+    const LeakWindowReport report = profiler.getLeakWindow().close();
     SW_EXPECT_TRUE( report._detail == LeakWindowDetail::TagTotals ); // 기존 창이 그대로다
     profiler.shutdown();
 }
@@ -597,7 +597,7 @@ SW_TEST_CASE( MemoryProfilerTest, JudgeLeakCurveSeparatesFlatFromGrowing )
     {
         listFlat.push_back( LeakCurvePoint{ 1000, 4 } );
     }
-    const LeakCurveResult flat = MemoryProfiler::judgeLeakCurve( listFlat, criteria );
+    const LeakCurveResult flat = criteria.judge( listFlat );
     SW_REQUIRE_TRUE( flat._bValid );
     SW_EXPECT_EQUAL( 8u, flat._sampleCount );
     SW_EXPECT_NEAR( 0.0, flat._slopeBytesPerRound, 1.0e-6 );
@@ -611,7 +611,7 @@ SW_TEST_CASE( MemoryProfilerTest, JudgeLeakCurveSeparatesFlatFromGrowing )
     {
         listGrowing.push_back( LeakCurvePoint{ 1000 + uint64{ 4096 } * round, 4 + uint64{ 1 } * round } );
     }
-    const LeakCurveResult growing = MemoryProfiler::judgeLeakCurve( listGrowing, criteria );
+    const LeakCurveResult growing = criteria.judge( listGrowing );
     SW_REQUIRE_TRUE( growing._bValid );
     SW_EXPECT_NEAR( 4096.0, growing._slopeBytesPerRound, 1.0e-6 );
     SW_EXPECT_NEAR( 1.0, growing._slopeBlocksPerRound, 1.0e-6 );
@@ -626,24 +626,23 @@ SW_TEST_CASE( MemoryProfilerTest, JudgeLeakCurveSeparatesFlatFromGrowing )
         {1080, 4},
         {1000, 4}
     };
-    SW_EXPECT_TRUE( MemoryProfiler::judgeLeakCurve( listNoisy, criteria )._bFlat );
+    SW_EXPECT_TRUE( criteria.judge( listNoisy )._bFlat );
     const vector<LeakCurvePoint> listShrinking{
         {5000, 9},
         {4000, 8},
         {3000, 7},
         {2000, 6}
     };
-    SW_EXPECT_TRUE( MemoryProfiler::judgeLeakCurve( listShrinking, criteria )._bFlat );
+    SW_EXPECT_TRUE( criteria.judge( listShrinking )._bFlat );
 
     // 점이 모자라면 판정할 수 없다 — 평평하다고 말하지 않는다.
-    const LeakCurveResult tooShort = MemoryProfiler::judgeLeakCurve( vector<LeakCurvePoint>{
-                                                                         {1, 1},
-                                                                         {2, 1}
-    },
-                                                                     criteria );
+    const LeakCurveResult tooShort = criteria.judge( vector<LeakCurvePoint>{
+        {1, 1},
+        {2, 1}
+    } );
     SW_EXPECT_FALSE( tooShort._bValid );
     SW_EXPECT_FALSE( tooShort._bFlat );
-    SW_EXPECT_FALSE( MemoryProfiler::judgeLeakCurve( vector<LeakCurvePoint>{}, criteria )._bFlat );
+    SW_EXPECT_FALSE( criteria.judge( vector<LeakCurvePoint>{} )._bFlat );
 }
 
 /**

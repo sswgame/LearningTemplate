@@ -25,8 +25,9 @@ namespace sw
             return;
 #if defined( SW_DEBUG )
         // 기준선(열린 창)이 없으면 닫지 않고 빈 보고서를 찍어 "창이 없다" 는 오류 줄을 남긴다(CRT 보고와 같다). 보고만 한다 — 종료 경로는 늘린 태그 수로 멈추지 않는다.
-        const LeakWindowReport leakReport = _memoryProfiler->isLeakWindowOpen() ? _memoryProfiler->endLeakWindow() : LeakWindowReport{};
-        (void)MemoryProfiler::printLeakWindowReport( leakReport, "shutdown" );
+        MemoryLeakWindow&      leakWindow = _memoryProfiler->getLeakWindow();
+        const LeakWindowReport leakReport = leakWindow.isOpen() ? leakWindow.close() : LeakWindowReport{};
+        (void)leakReport.print( "shutdown" );
 #endif
         _memoryProfiler->shutdown();
         _memoryProfiler.reset();

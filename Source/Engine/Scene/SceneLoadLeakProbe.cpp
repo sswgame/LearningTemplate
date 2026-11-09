@@ -60,9 +60,9 @@ namespace sw
             return false;
         }
         // 기준선 창이 열려 있으면 닫는다(창은 하나다). 끝나면 `finish` 가 `TagTotals` 창을 다시 연다.
-        if ( pProfiler->isLeakWindowOpen() )
+        if ( pProfiler->getLeakWindow().isOpen() )
         {
-            const LeakWindowReport startup = pProfiler->endLeakWindow();
+            const LeakWindowReport startup = pProfiler->getLeakWindow().close();
             SW_LOG_INFO_ID( "SceneLoadLeakProbe.SceneLeakProbeClosed", "Scene leak probe closed the startup leak window: %# B in %# blocks", startup._totalBytes, startup._totalBlockCount );
         }
         _scenePath     = string{ scenePath };
@@ -116,7 +116,7 @@ namespace sw
                     _phase = Phase::Idle;
                     break;
                 }
-                if ( pProfiler->isLeakWindowOpen() )
+                if ( pProfiler->getLeakWindow().isOpen() )
                     endRound();
                 else
                     beginRound( manager );
@@ -128,7 +128,7 @@ namespace sw
     void SceneLoadLeakProbe::beginRound( SceneManager& manager )
     {
         MemoryProfiler* pProfiler = engine::findSubsystem<MemoryProfiler>();
-        pProfiler->beginLeakWindow( LeakWindowDetail::TagTotals );
+        pProfiler->getLeakWindow().open( LeakWindowDetail::TagTotals );
         _settleFrames = 0;
         if ( _round == 0 )
         {
@@ -151,7 +151,7 @@ namespace sw
     {
         // 다음 회차를 여는 일은 `update` 가 다음 프레임에 한다(창이 닫힌 뒤 한 프레임을 두어 닫는 일의 할당이 다음 창에 섞이지 않게 한다).
         MemoryProfiler*        pProfiler = engine::findSubsystem<MemoryProfiler>();
-        const LeakWindowReport report    = pProfiler->endLeakWindow();
+        const LeakWindowReport report    = pProfiler->getLeakWindow().close();
         if ( report._bValid == false )
         {
             SW_LOG_ERROR_ID( "SceneLoadLeakProbe.SceneLeakProbeLeak", "Scene leak probe: the leak window was closed by someone else - stopping" );
@@ -186,14 +186,14 @@ namespace sw
         MemoryProfiler* pProfiler = engine::findSubsystem<MemoryProfiler>();
         if ( pProfiler != nullptr )
         {
-            if ( pProfiler->isLeakWindowOpen() )
+            if ( pProfiler->getLeakWindow().isOpen() )
             {
-                const LeakWindowReport partial = pProfiler->endLeakWindow(); // 중간에 멈췄다 — 열린 회차의 창을 닫고 버린다
+                const LeakWindowReport partial = pProfiler->getLeakWindow().close(); // 중간에 멈췄다 — 열린 회차의 창을 닫고 버린다
                 SW_LOG_INFO_ID( "SceneLoadLeakProbe.SceneLeakProbeDropped", "Scene leak probe dropped an open round window: %# B in %# blocks", partial._totalBytes, partial._totalBlockCount );
             }
-            pProfiler->beginLeakWindow( LeakWindowDetail::TagTotals ); // 종료 보고가 창을 기대한다
+            pProfiler->getLeakWindow().open( LeakWindowDetail::TagTotals ); // 종료 보고가 창을 기대한다
         }
-        _result = MemoryProfiler::judgeLeakCurve( _listPoint, LeakCurveCriteria{} );
+        _result = LeakCurveCriteria{}.judge( _listPoint );
         if ( _result._bValid == false )
             SW_LOG_ERROR_ID( "SceneLoadLeakProbe.SceneLeakProbeToo", "Scene leak probe: too few rounds finished for a verdict (%# points)", _listPoint.size() );
         else if ( _result._bFlat )
