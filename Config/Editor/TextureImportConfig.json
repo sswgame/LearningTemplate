@@ -40,7 +40,7 @@
     {
       "name": "Pixel_Art",
       "inherits": "Base_Uncompressed",
-      "filter": { "includePatterns": ["*/textures_raw/pixel/**"] },
+      "filter": { "includePatterns": ["**/textures_raw/pixel/**"] },
       "generateMips": false
     },
     {
@@ -54,7 +54,7 @@
     {
       "name": "Color_Grading_Luts",
       "inherits": "Base_Uncompressed",
-      "filter": { "includePatterns": ["*/textures_raw/postprocess/lut_*"] },
+      "filter": { "includePatterns": ["**/textures_raw/postprocess/lut_*"] },
       "generateMips": false,
       "sRGB": false
     },
@@ -79,14 +79,14 @@
     {
       "name": "Quaternius_Roughness",
       "inherits": "Base_Default",
-      "filter": { "includePatterns": ["*/textures_raw/quaternius/**/*_roughness.*"] },
+      "filter": { "includePatterns": ["**/textures_raw/quaternius/**/*_roughness.*"] },
       "sRGB": false,
       "quickCompress": true
     },
     {
       "name": "Quaternius_Color",
       "inherits": "Base_Default",
-      "filter": { "includePatterns": ["*/textures_raw/quaternius/**"], "excludePatterns": ["*_normal.*", "*_orm.*", "*_roughness.*"] },
+      "filter": { "includePatterns": ["**/textures_raw/quaternius/**"], "excludePatterns": ["*_normal.*", "*_orm.*", "*_roughness.*"] },
       "quickCompress": true
     },
     {
@@ -109,7 +109,7 @@
     {
       "name": "Terrain_Detail",
       "inherits": "Base_Uncompressed",
-      "filter": { "includePatterns": ["*/textures_raw/terrain/*_detail.*"] },
+      "filter": { "includePatterns": ["**/textures_raw/terrain/*_detail.*"] },
       "sRGB": false
     },
     {

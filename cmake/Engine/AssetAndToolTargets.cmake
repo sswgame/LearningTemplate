@@ -39,7 +39,7 @@ set(swCookArgs --cook-all "--cooked-dir=${CMAKE_BINARY_DIR}/Cooked" "--pack-dir=
 # Shipping 은 활성 게임(SW_ACTIVE_GAME)의 팩만 굽는다 — 쓰지 않는 게임 팩에 쿠킹 시간을 들이지 않는다(`Pack` 도 그 게임의 팩만 고른다).
 # Dev 프리셋은 실행할 때 `-game=` 으로 게임을 고르므로 어느 팩이 필요할지 몰라 모두 굽는다.
 if(SW_SHIPPING_BUILD)
-	list(APPEND swCookArgs "--game=${SW_ACTIVE_GAME}")
+	list(APPEND swCookArgs "--game=${SW_ACTIVE_GAME}" --pack-for-shipping) # 시나리오를 담지 않는다 — 교차 빌드는 실행기가 있는 호스트 개발 App 이 굽는다
 endif()
 
 if(CMAKE_CROSSCOMPILING)

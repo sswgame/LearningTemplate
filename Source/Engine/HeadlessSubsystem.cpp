@@ -170,7 +170,10 @@ namespace sw
                 params._shaderFolder = shaderFolder;
                 params._buildTarget  = bDedicatedServer ? "Server" : "Client";
                 // 실행기가 없는 구성(Shipping · 전용 서버)은 실행기가 스스로 등록하지 않는다 — 그 구성이 굽는 팩에는 시나리오를 담지 않는다.
-                params._automationContent = engine::findSubsystem<IAutomationRuntime>() != nullptr ? PackAutomationContent::Included : PackAutomationContent::Excluded;
+                // 배포 대상의 팩(`-pack-for-shipping`)도 담지 않는다 — 교차 빌드(Android · 웹)는 호스트 개발 App(실행기가 있다)이 굽는다.
+                const bool bShippingPack  = commandLine.isArgumentProvided( CommandLineArgument::PACK_FOR_SHIPPING );
+                const bool bHasAutomation = engine::findSubsystem<IAutomationRuntime>() != nullptr;
+                params._automationContent = bHasAutomation && bShippingPack == false ? PackAutomationContent::Included : PackAutomationContent::Excluded;
                 // 출시 문화권(`stagedCultures`) 밖의 번역 테이블은 팩에 넣지 않는다 — 규칙은 로컬라이제이션 층이 갖고 쿠커는 목록만 받는다.
                 if ( const expected<void> staged = LocalizationProject::collectUnstagedTranslationTables( params._resourceRoot, params._listExcludedSourceFile ); staged.has_value() == false )
                 {

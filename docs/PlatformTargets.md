@@ -57,7 +57,8 @@
 
 ## 남은 일(코드를 붙여 보지 못한 것)
 
-- 웹 빌드: Emscripten 으로 아직 컴파일하지 않았다(Android 는 대상 전체가 컴파일 · 링크된다). Core · Engine 의 `#error "Unsupported platform"` 사슬 중 웹 갈래가 없는 곳 — 전송(WebSocket), 프로세스 · 호출 스택 · 크래시 핸들러 — 이 컴파일에서 드러난다(설계대로). wasm32 에서 64 비트 크기를 가정한 `static_assert` 도 드러난다.
+- 웹 실행: `Web-Shipping` 은 App(App.wasm · App.js)까지 지어진다. 아직 브라우저에 띄우지 않았다 — 쿠킹한 팩을 가상 파일 시스템에 얹는 패키징(--preload-file), COOP · COEP 헤더를 주는 로컬 서버, 브라우저 MCP 로 기동 · WebGPU 장치 · 입력 · 클립보드(paste 이벤트) · IDBFS 영속을 본다.
+- 웹 온라인: 브라우저에는 원시 TCP 가 없어 스트림 전송이 nullptr 다(`StreamTransportFactory`). WebSocket 전송(클라이언트 connect)과 서버의 WebSocket 수락을 함께 넣어야 웹에서 접속한다.
 - Android 실기기: APK 기동 · 회전(pre-rotation 방향) · APK 팩 읽기(`AAssetDir_getNextFileName` 이 폴더 앞머리를 붙이는지) · 터치를 확인한다. 클립보드는 아직 OS 를 잇지 않는다(`AndroidClipboard.cpp` 의 `isAvailable` false — JNI `ClipboardManager` 는 Looper 스레드 제약을 실기기와 함께 본다).
 
 ## 입력(웹 · Android)

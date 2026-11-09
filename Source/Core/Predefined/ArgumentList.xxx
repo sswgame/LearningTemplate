@@ -73,6 +73,9 @@ SW_REGISTER_ARGUMENT( COOKED_DIR, CommandLineDiskPath{}, false, "cooked-dir" )
 // `-cook-packs` · `-cook-all` 이 팩을 쓸 폴더
 SW_REGISTER_ARGUMENT( PACK_DIR, CommandLineDiskPath{}, false, "pack-dir" )
 
+// `-cook-packs` · `-cook-all` 이 배포 빌드의 팩을 굽는다 — 자동화 시나리오를 담지 않는다. 쿠킹하는 App 이 개발 구성이어도(교차 빌드는 호스트 개발 App 이 굽는다) 팩은 대상 구성을 따른다
+SW_REGISTER_ARGUMENT( PACK_FOR_SHIPPING, false, false, "pack-for-shipping" )
+
 // 개발 구성에서도 배포처럼 쿠킹한 팩만 읽는다(낱개 파일 · 씬 XML · 라이브 셰이더 컴파일 없이) — 배포 읽기 경로를 배포 빌드 없이 확인한다. 팩이 먼저 있어야 한다(`-cook-all`)
 SW_REGISTER_ARGUMENT( COOKED_CONTENT, false, false, "cooked-content" )
 

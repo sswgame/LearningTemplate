@@ -12,7 +12,7 @@
 ## 상태 (2026-11-09)
 
 - 작업자 W20 ~ W28 을 모두 main 에 합쳤다(App · 서버 전용 단위 테스트 통과, 빌드 경고 0). 전체 묶음 검증(VerifyBundle — 시나리오 · 골든 · Linux)은 아직 돌리지 않았다 — 아래 1 번이 첫 일이다.
-- Android(Android-Shipping)는 대상 전체가 컴파일 · 링크된다(libApp.so). 웹(Web-Shipping)은 구성까지 된다.
+- Android(Android-Shipping)는 대상 전체가 컴파일 · 링크되고 Vulkan 셰이더 쿠킹이 지난다. 웹(Web-Shipping)은 App.wasm 까지 지어진다.
 
 ## 남은 일
 
@@ -24,7 +24,7 @@
 ### 2. 플랫폼 ([PlatformTargets](PlatformTargets.md) "남은 일")
 
 - **Android:** `CookAssets`(호스트 빌드로 굽기) 통과 → `py -3 -m Scripts android-apk --game <게임>` → 실기기에서 기동 · 회전(pre-rotation 방향) · APK 팩 읽기 · 터치. JNI 클립보드(`AndroidClipboard.cpp` 는 지금 `isAvailable` false).
-- **웹:** 첫 컴파일. Android 와 같은 갈래가 남았다(WebSocket 전송 — `StreamTransportFactory` 에 웹 갈래가 없다, 프로세스 · 호출 스택 · 크래시 핸들러의 웹 구현, 스레드 · JSPI 동작). wasm32 라 64 비트 크기를 가정한 `static_assert`(94 곳)가 드러난다 — 포인터 크기에 기댄 것은 형식으로 고친다.
+- **웹:** 브라우저에 띄우기(팩 패키징 · COOP/COEP 로컬 서버 · 브라우저 MCP 로 기동 · WebGPU · 입력 · IDBFS), WebSocket 전송(클라이언트)과 서버 WebSocket 수락.
 - dzn SPIR-V→DXIL 충돌.
 
 ### 3. 통합 담당이 직접 (실행 · 측정이 필요)
