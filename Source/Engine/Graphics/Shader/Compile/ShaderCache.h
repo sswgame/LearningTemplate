@@ -12,6 +12,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Time/BusyClock.h"
 
 #include "Engine/Asset/AssetHandle.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
@@ -144,6 +145,12 @@ namespace sw
         [[nodiscard]] uint64 getMemoryHitCount() const { return _memoryHitCount.load(); }
         /** @brief 공급자(팩 · 컴파일)까지 간 로드 수입니다(초기화마다 0 부터). */
         [[nodiscard]] uint64 getProviderLoadCount() const { return _providerLoadCount.load(); }
+        /**
+         * @brief 공급자 로드(팩 읽기 · 컴파일)가 하나라도 진행 중이던 벽시계 시간입니다(겹친 로드는 한 번). 초기화와 상관없이 프로세스 동안 쌓인다.
+         * @details 자동화의 시나리오 시한이 이만큼을 뺀다 — 빈 셰이더 캐시의 첫 실행이 컴파일하는 동안 시한에 지지 않게(일하는 프로세스를 행으로 보지 않는다).
+         *          행 감시 스레드도 읽는다(시계가 스스로 잠근다).
+         */
+        [[nodiscard]] const BusyClock& getProviderBusyClock() const { return _providerBusy; }
 
         /** @brief 읽은 리플렉션 매니페스트입니다. `ShaderReflectionLibrary` 의 조회 · 비우기가 서비스 칸으로 찾아 씁니다. */
         ShaderReflectionManifestCache& getReflectionManifests() { return _reflectionManifests; }
@@ -172,6 +179,7 @@ namespace sw
         mutable mutex                                                    _mutexCache;
         atomic<uint64>                                                   _memoryHitCount;    ///< `getMemoryHitCount` — 로드 워커가 함께 센다
         atomic<uint64>                                                   _providerLoadCount; ///< `getProviderLoadCount` — 로드 워커가 함께 센다
+        BusyClock                                                        _providerBusy;      ///< `getProviderBusyClock` — 로드 워커가 함께 센다
     };
 
     SW_SERVICE_SLOT( ShaderCache, Required );

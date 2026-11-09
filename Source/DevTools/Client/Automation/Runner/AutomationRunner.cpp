@@ -11,6 +11,7 @@
 #include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/Time/BusyClock.h"
 #include "Core/Time/MonotonicClock.h"
 #include "Core/Time/WallClock.h"
 
@@ -29,6 +30,7 @@
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/RHI.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/View/ScreenshotRequestQueue.h"
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/InputManager.h"
@@ -56,6 +58,8 @@ namespace sw
         , _exitDeadlineSeconds{ 0.0 }
         , _loadDeadlineSeconds{ 0.0 }
         , _wallStartSeconds{ 0.0 }
+        , _pCompileBusy{ nullptr }
+        , _compileBusyAtStartNanoseconds{ 0 }
         , _wallEndSeconds{ 0.0 }
         , _lastFrameEndSeconds{ 0.0 }
         , _clockHoldStartSeconds{ 0.0 }
@@ -546,7 +550,11 @@ namespace sw
     {
         _run._wallStartSeconds    = AutomationRunnerInternal::readNowSeconds();
         _run._lastFrameEndSeconds = _run._wallStartSeconds;
-        _startedUnixMs            = WallClock::nowUnixMilliseconds().count();
+        // 셰이더 컴파일(빈 캐시의 첫 실행)은 일하는 시간이다 — 시한에 세지 않는다(언리얼 자동화도 셰이더 컴파일을 기다린다). 행 감시도 같은 값을 뺀다.
+        const ShaderCache* const pShaderCache = engine::findSubsystem<ShaderCache>();
+        _run._pCompileBusy                    = pShaderCache != nullptr ? &pShaderCache->getProviderBusyClock() : nullptr;
+        _run._compileBusyAtStartNanoseconds   = _run._pCompileBusy != nullptr ? _run._pCompileBusy->getBusyNanoseconds( MonotonicClock::nowNanoseconds() ) : 0;
+        _startedUnixMs                        = WallClock::nowUnixMilliseconds().count();
         LocalCalendarTime calendar{};
         if ( WallClock::toLocalCalendar( _startedUnixMs / 1000, calendar ) == false )
             return; // 달력으로 못 바꾸는 플랫폼이면 지역 시각 글은 비운다(유닉스 밀리초는 남는다)
@@ -628,13 +636,21 @@ namespace sw
         return static_cast<float64>( seconds ) * static_cast<float64>( gv_scenarioWallScale );
     }
 
+    float64 AutomationRunner::readCountedElapsedSeconds() const
+    {
+        const float64 elapsedSeconds = AutomationRunnerInternal::readNowSeconds() - _run._wallStartSeconds;
+        if ( _run._pCompileBusy == nullptr )
+            return elapsedSeconds;
+        return elapsedSeconds - _run._pCompileBusy->getBusySecondsSince( _run._compileBusyAtStartNanoseconds, MonotonicClock::nowNanoseconds() );
+    }
+
     void AutomationRunner::finishIfWallClockExceeded()
     {
         // 부하 시나리오는 측정 창을 닫는 그물(`_run._loadDeadlineSeconds`)이 따로 있어 길이가 `durationSeconds` 에 매인다.
         const bool bWatches = _result == AutomationResult::Running && _scenario.getTestOptions()._load._bDeclared == false;
         if ( bWatches == false )
             return;
-        const float64 elapsedSeconds = AutomationRunnerInternal::readNowSeconds() - _run._wallStartSeconds;
+        const float64 elapsedSeconds = readCountedElapsedSeconds();
         if ( elapsedSeconds <= static_cast<float64>( _wallLimitSeconds ) )
             return;
         StringBuilder<constant::buffer::kMax256> reasonBuilder;
@@ -737,11 +753,13 @@ namespace sw
             (void)FileUtil::ensureDirectoryExists( reportDirectory ); // 못 만들면 행 보고만 못 쓴다 — 정상 종료의 보고는 자기 쓰기가 알린다
         _hangWatchdog.publish( _hangPayload );                        // 감시가 뜨기 전에 한 번 채운다
         AutomationHangWatchdog::Settings settings;
-        settings._startSeconds  = _run._wallStartSeconds;
-        settings._limitSeconds  = _wallLimitSeconds;
-        settings._graceSeconds  = AutomationTimeLimits::kHangGraceSeconds;
-        settings._exitCode      = getAutomationExitStatus( AutomationResult::TimedOut );
-        settings._pCrashHandler = &engine::getSubsystem<CrashHandler>();
+        settings._startSeconds                   = _run._wallStartSeconds;
+        settings._pExcludedBusy                  = _run._pCompileBusy;
+        settings._excludedBusyAtStartNanoseconds = _run._compileBusyAtStartNanoseconds;
+        settings._limitSeconds                   = _wallLimitSeconds;
+        settings._graceSeconds                   = AutomationTimeLimits::kHangGraceSeconds;
+        settings._exitCode                       = getAutomationExitStatus( AutomationResult::TimedOut );
+        settings._pCrashHandler                  = &engine::getSubsystem<CrashHandler>();
         _hangWatchdog.start( settings );
     }
 

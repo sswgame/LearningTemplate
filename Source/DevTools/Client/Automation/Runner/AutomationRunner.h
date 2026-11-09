@@ -26,6 +26,7 @@
 
 namespace sw
 {
+    class BusyClock;
     /**
      * @class AutomationStepTimeline
      * @brief 실행기가 "지금 몇 번째 프레임 · 단계이고 무엇을 기다리는가" 를 적어 두는 칸입니다. 판정(`AutomationJudge`)은 이 값을 직접 읽지 않고 단계 문맥으로만 받는다.
@@ -36,20 +37,22 @@ namespace sw
     class SW_DEVTOOLS_API AutomationStepTimeline
     {
     public:
-        vector<string>                   _listPendingScreenshot; ///< 아직 렌더 패킷에 싣지 않은 스크린샷 경로입니다.
-        string                           _currentStepKind;       ///< 마지막으로 시작한 실행 단계(입력 단계는 제외)
-        string                           _clockHolderName;       ///< 시계를 붙잡은 조건의 이름(로그)
-        string                           _waitingFor;            ///< 지금 붙잡은 단계가 기다리는 것(`holdUntilReady` 의 까닭). 놓이면 비운다
-        float64                          _exitDeadlineSeconds;   ///< `ExpectExitWithin` 이 정한 벽시계 시한입니다(단조 시계 초). 0 이면 기다리지 않습니다.
-        float64                          _loadDeadlineSeconds;   ///< 부하 시나리오(`<Load>`)의 멈춤 그물 — 측정 창이 이때까지 끝내지 못하면 시간 초과다(단조 시계 초). 0 이면 부하 시나리오가 아니다.
-        float64                          _wallStartSeconds;      ///< 시나리오를 읽기 시작한 단조 시계 초(벽시계 감시의 기준)
-        float64                          _wallEndSeconds;        ///< 끝맺은 단조 시계 초(끝나기 전에는 0)
-        float64                          _lastFrameEndSeconds;   ///< 앞 프레임의 `onFrameEnd` 가 닿은 단조 시계 초(프레임 시간을 더하는 기준 — 처음엔 `_wallStartSeconds`)
-        float64                          _clockHoldStartSeconds; ///< 시계 잡기가 시작된 단조 시계 초
-        size_t                           _nextStepIndex;         ///< 다음에 돌 단계의 순번
-        uint32                           _frameIndex;            ///< 지금 시나리오 프레임(시작 전이면 0) — 단계 시점과 시한(`timeoutFrames`)의 축. 단계가 시계를 붙잡는 동안은 서 있다
-        uint32                           _currentStepNumber;     ///< `_currentStepKind` 의 파일 순번
-        uint32                           _waitFrameCount;        ///< 시작 조건을 기다린 프레임 수입니다.
+        vector<string>                   _listPendingScreenshot;         ///< 아직 렌더 패킷에 싣지 않은 스크린샷 경로입니다.
+        string                           _currentStepKind;               ///< 마지막으로 시작한 실행 단계(입력 단계는 제외)
+        string                           _clockHolderName;               ///< 시계를 붙잡은 조건의 이름(로그)
+        string                           _waitingFor;                    ///< 지금 붙잡은 단계가 기다리는 것(`holdUntilReady` 의 까닭). 놓이면 비운다
+        float64                          _exitDeadlineSeconds;           ///< `ExpectExitWithin` 이 정한 벽시계 시한입니다(단조 시계 초). 0 이면 기다리지 않습니다.
+        float64                          _loadDeadlineSeconds;           ///< 부하 시나리오(`<Load>`)의 멈춤 그물 — 측정 창이 이때까지 끝내지 못하면 시간 초과다(단조 시계 초). 0 이면 부하 시나리오가 아니다.
+        float64                          _wallStartSeconds;              ///< 시나리오를 읽기 시작한 단조 시계 초(벽시계 감시의 기준)
+        const BusyClock*                 _pCompileBusy;                  ///< 셰이더 공급자의 바쁜 시계(`ShaderCache::getProviderBusyClock`) — 그 시간은 벽시계 감시에 세지 않는다. 셰이더 캐시가 없는 호스트는 nullptr
+        int64                            _compileBusyAtStartNanoseconds; ///< 시작 때 `_pCompileBusy` 의 값
+        float64                          _wallEndSeconds;                ///< 끝맺은 단조 시계 초(끝나기 전에는 0)
+        float64                          _lastFrameEndSeconds;           ///< 앞 프레임의 `onFrameEnd` 가 닿은 단조 시계 초(프레임 시간을 더하는 기준 — 처음엔 `_wallStartSeconds`)
+        float64                          _clockHoldStartSeconds;         ///< 시계 잡기가 시작된 단조 시계 초
+        size_t                           _nextStepIndex;                 ///< 다음에 돌 단계의 순번
+        uint32                           _frameIndex;                    ///< 지금 시나리오 프레임(시작 전이면 0) — 단계 시점과 시한(`timeoutFrames`)의 축. 단계가 시계를 붙잡는 동안은 서 있다
+        uint32                           _currentStepNumber;             ///< `_currentStepKind` 의 파일 순번
+        uint32                           _waitFrameCount;                ///< 시작 조건을 기다린 프레임 수입니다.
         uint32                           _screenshotRequestedCount;
         uint32                           _screenshotCompletedCount;
         uint8                            _bFinishWaiting : 1; ///< 이 프레임에 `<Pass/>` 가 뒤의 일을 기다린다 - 시나리오 시한에 세지 않는다(그 대기는 `kMaxFinishWaitFrames` 가 따로 묶는다)
@@ -284,6 +287,8 @@ namespace sw
          *          이 감시는 프레임이 도는 동안만 본다 — 프레임 자체가 멈춘 행은 행 감시 스레드(`AutomationHangWatchdog`)가 상한 + 유예 뒤에 잡는다.
          */
         void finishIfWallClockExceeded();
+        /** @brief 시작부터 지난 벽시계 초에서 셰이더 컴파일로 바빴던 초를 뺀 값입니다 — 벽시계 감시가 재는 시간(행 감시 스레드도 같은 규칙). */
+        [[nodiscard]] float64 readCountedElapsedSeconds() const;
         /** @brief 시나리오의 `wallTimeoutSeconds` 에 단계마다 그 종류의 벽시계 예산(`AutomationStepRegistration::_wallSeconds`)을 더한 상한입니다. 읽은 직후 한 번 구한다. */
         [[nodiscard]] float32 computeWallLimitSeconds() const;
         /** @brief 지금 자리 한 줄(`시나리오 · 백엔드 · step N 단계 · f프레임` — 창 제목과 같은 글)입니다. */

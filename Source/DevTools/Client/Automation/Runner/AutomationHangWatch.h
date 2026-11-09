@@ -18,6 +18,7 @@
 
 namespace sw
 {
+    class BusyClock;
     class CrashHandler;
 
     /**
@@ -109,12 +110,14 @@ namespace sw
         /** @struct Settings @brief 감시 한 번의 조건입니다. */
         struct Settings
         {
-            float64           _startSeconds{ 0.0 };      ///< 단조 시계 초 — 실행기가 시작한 때
-            float32           _limitSeconds{ 0.0f };     ///< 시나리오의 벽시계 상한
-            float32           _graceSeconds{ 0.0f };     ///< 상한 뒤 더 기다리는 유예
-            int32             _exitCode{ 0 };            ///< 행으로 끝낼 때의 종료 코드
-            TerminateFunction _pTerminate{ nullptr };    ///< nullptr 이면 `Process::exitImmediately`
-            CrashHandler*     _pCrashHandler{ nullptr }; ///< 행을 문맥 · 빵부스러기 · 덤프로 남길 처리기(감시를 띄울 때 받아 둔다 — 행에서는 서비스 표를 찾지 않는다). nullptr 이면 남기지 않는다
+            float64           _startSeconds{ 0.0 };                 ///< 단조 시계 초 — 실행기가 시작한 때
+            const BusyClock*  _pExcludedBusy{ nullptr };            ///< 이 시계가 바빴던 시간은 세지 않는다(셰이더 컴파일 — 실행기의 벽시계 감시와 같은 규칙). nullptr 이면 빼지 않는다
+            int64             _excludedBusyAtStartNanoseconds{ 0 }; ///< 시작 때 `_pExcludedBusy` 의 값
+            float32           _limitSeconds{ 0.0f };                ///< 시나리오의 벽시계 상한
+            float32           _graceSeconds{ 0.0f };                ///< 상한 뒤 더 기다리는 유예
+            int32             _exitCode{ 0 };                       ///< 행으로 끝낼 때의 종료 코드
+            TerminateFunction _pTerminate{ nullptr };               ///< nullptr 이면 `Process::exitImmediately`
+            CrashHandler*     _pCrashHandler{ nullptr };            ///< 행을 문맥 · 빵부스러기 · 덤프로 남길 처리기(감시를 띄울 때 받아 둔다 — 행에서는 서비스 표를 찾지 않는다). nullptr 이면 남기지 않는다
         };
 
         AutomationHangWatchdog();

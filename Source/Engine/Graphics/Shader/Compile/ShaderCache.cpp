@@ -9,6 +9,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Content/AssetIO.h"
@@ -65,6 +66,7 @@ namespace sw
         , _mutexCache{}
         , _memoryHitCount{ 0 }
         , _providerLoadCount{ 0 }
+        , _providerBusy{}
     {
     }
 
@@ -224,7 +226,9 @@ namespace sw
 
         // 1) 공급자 — 쿠킹본 정책은 팩의 쿠킹본, 소스 정책은 실행 중 컴파일(셰이더 DDC 를 먼저 본다).
         ++_providerLoadCount;
+        _providerBusy.begin( MonotonicClock::nowNanoseconds() );
         ShaderCompileResult result = provider.load( desc );
+        _providerBusy.end( MonotonicClock::nowNanoseconds() );
         if ( result._bSuccess )
             storeEntry( std::move( cacheKey ), desc, result );
         return result;
