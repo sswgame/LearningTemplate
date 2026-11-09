@@ -83,6 +83,7 @@
         "Source/Editor/Panels/Scene/DataLayersPanel",
         "Source/Editor/Panels/Scene/EditorSceneViewUtil",
         "Source/Editor/Panels/Scene/GameViewPanel",
+        "Source/Editor/Panels/Scene/HierarchyPanel",
         "Source/Editor/Panels/Scene/HierarchyWatches",
         "Source/Editor/Panels/Scene/HistoryPanel",
         "Source/Editor/Panels/Scene/PrefabPanel",

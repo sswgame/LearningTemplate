@@ -1,20 +1,13 @@
 /**
  * @file HierarchyPanel.h
- * @brief 씬 GameObject / Component 계층 창입니다.
+ * @brief 씬 GameObject / Component 계층 창입니다(View — 값은 `HierarchyViewModel` 이 모은다, `docs/agents/EditorUI.md` MVVM).
  */
 #pragma once
-#include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
-
-namespace sw
-{
-    class GameObject;
-    class GameObjectManager;
-    class Scene;
-} // namespace sw
+#include "Editor/Panels/Scene/Model/HierarchyViewModel.h"
 
 namespace sw::editor
 {
@@ -39,39 +32,44 @@ namespace sw::editor
         /** @brief Hierarchy UI를 그립니다. */
         void drawContent() override;
 
-        /** @brief 복제·이름 변경·삭제 단축키를 처리합니다. */
-        void handleHierarchyShortcuts( GameObjectManager* pManager );
-
         /** @brief 검색 필드의 글을 바꿉니다. 다음 프레임의 트리가 이 필터로 그려집니다(에디터 자체 테스트가 사람 대신 칩니다). */
         void setFilterText( string_view filterText ) { _filterBuffer = filterText; }
         /** @brief 마지막으로 그린 프레임에 필터를 지난 루트 오브젝트 수입니다(서브트리 중 하나라도 맞으면 그 루트가 보인다). */
-        uint32 getVisibleRootCount() const { return _visibleRootCount; }
+        uint32 getVisibleRootCount() const { return _state._visibleRootCount; }
         /** @brief 검색 필드의 지금 글입니다(에디터 자체 테스트가 타이핑이 닿았는지 본다). */
         string_view getFilterText() const { return _filterBuffer.view(); }
-        /** @brief 마지막 프레임에 실제로 그린 루트 수입니다(화면 밖의 접힌 루트는 빈 공간만 두고 세지 않는다). */
+        /** @brief 마지막 프레임에 실제로 그린 루트 수입니다(화면 밖의 행은 빈 공간만 두고 세지 않는다). */
         uint32 getDrawnRootCount() const { return _drawnRootCount; }
         /** @brief 마지막 프레임에 그린 마지막 루트의 오브젝트 id 입니다(없으면 0). */
         uint64 getLastDrawnRootID() const { return _lastDrawnRootID; }
-        /** @brief 화면 밖의 접힌 루트를 빈 공간으로 둘지 정합니다(기본 켬). 에디터 자체 테스트가 껐다 켜며 위치가 같은지 본다. */
+        /** @brief 화면 밖의 행을 빈 공간으로 둘지 정합니다(기본 켬). 에디터 자체 테스트가 껐다 켜며 위치가 같은지 본다. */
         void setOffscreenRowSkipEnabled( bool bEnabled ) { _bSkipOffscreenRows = bEnabled; }
 
     private:
         /** @brief 생성 버튼과 검색창이 있는 위쪽 막대를 그립니다. */
-        void drawToolbar( GameObjectManager* pManager );
-        /** @brief 루트 오브젝트 행을 그립니다. 화면 밖의 접힌 루트는 같은 높이의 빈 공간으로 합칩니다. */
-        void drawRootRows( Scene* pScene, GameObjectManager* pManager );
+        void drawToolbar();
+        /** @brief 모은 행을 그립니다. 화면 밖의 행은 같은 높이의 빈 공간으로 합치고, 펼친 행은 트리 깊이를 엽니다. */
+        void drawRows( const HierarchyRowMetrics& stride );
+        /** @brief 오브젝트 행 하나(눈 · 자물쇠 토글, 트리 노드, 배지, 이름 바꾸기, 맥락 메뉴, 끌어 놓기)를 그립니다. 트리 노드가 열려 깊이를 넣었으면 true 입니다. */
+        bool drawObjectRow( const HierarchyRowEntry& entry );
+        /** @brief 씬 컴포넌트 행 하나를 그립니다. 트리 노드가 열려 깊이를 넣었으면 true 입니다. */
+        bool drawSceneComponentRow( const HierarchyRowEntry& entry );
+        /** @brief 씬 컴포넌트가 아닌 컴포넌트 행 하나를 그립니다. */
+        void drawComponentRow( const HierarchyRowEntry& entry );
+        /** @brief 이 행에서 이름을 바꾸는 입력 칸입니다. 엔터나 포커스를 잃으면 확정하고 Esc 는 취소합니다. */
+        void drawInlineRename( const HierarchyRowEntry& entry );
         /** @brief 트리 아래 빈 영역의 드래그 앤 드롭 대상, 단축키, 우클릭 메뉴를 처리합니다. */
-        void drawTreeEmptyArea( GameObjectManager* pManager );
+        void drawTreeEmptyArea();
+        /** @brief 모두 선택 · 위아래 이동 단축키를 처리합니다(행 목록을 아는 이 창만의 액션). */
+        void handleHierarchyShortcuts();
 
     private:
-        // 루트 순서 · 필터 결과 · 그린 행 순서 · 선택 명령은 `HierarchyRowModel`(Model/, ImGui 없음)이 들고, 구조 세대가 바뀔 때만 다시 짓는다(`HierarchyRowModel::refresh`).
-        uint64                                  _renamingObjectID;
+        HierarchyViewState                      _state;           ///< 이번 프레임의 값(`HierarchyViewModel::gather` — 벡터 저장소를 재사용한다)
         uint64                                  _lastDrawnRootID; ///< 마지막 프레임에 그린 마지막 루트(`getLastDrawnRootID`)
         fixed_string<constant::buffer::kMax128> _filterBuffer;
         fixed_string<constant::buffer::kMax256> _renameBuffer;
-        uint32                                  _visibleRootCount;       ///< 마지막 프레임에 보인 루트 수(`getVisibleRootCount`)
         uint32                                  _drawnRootCount;         ///< 마지막 프레임에 실제로 그린 루트 수(`getDrawnRootCount`)
-        bool                                    _bFocusRenameInput;      ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
-        uint8                                   _bSkipOffscreenRows : 1; ///< 화면 밖의 접힌 루트를 빈 공간으로 둔다(`setOffscreenRowSkipEnabled`)
+        uint8                                   _bFocusRenameInput  : 1; ///< 이름 바꾸기 칸에 다음 그리기에서 초점을 둔다(한 번)
+        uint8                                   _bSkipOffscreenRows : 1; ///< 화면 밖의 행을 빈 공간으로 둔다(`setOffscreenRowSkipEnabled`)
     };
 } // namespace sw::editor
