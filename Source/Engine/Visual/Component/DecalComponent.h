@@ -49,6 +49,10 @@ namespace sw
      * @details 디퍼드 파이프라인의 `Decal` 패스(G버퍼 뒤 · 조명 앞)가 그린다 — 알베도 · 노멀 · 머티리얼 칸을 데칼 불투명도 × 텍스처 덮임 × 각도 · 끝 페이드로 섞는다.
      *          포워드 파이프라인은 그리지 않는다 — 덮을 G버퍼가 없다(언리얼처럼 DBuffer 를 두면 모든 포워드 머티리얼 셰이더가 데칼 버퍼 셋을 읽어야 한다. 렌더러가 한 번 경고한다).
      *          움직이는 메시 위에서는 미끄러진다(데칼은 투영이다 — 언리얼 Receives Decals 를 끄는 자리는 아직 없다).
+     *          수명: 데칼마다 데이터가 밝힌다 — 시간(`_lifetimeSeconds` · `_fadeOutSeconds`)과 비 씻김(`_rainWashPerSecond`, 0 이면 비가 씻지 않는다: 칠한 선 · 그을음).
+     *          모든 데칼을 한꺼번에 지우지 않는다. 다 사라지면 스스로 정리한다 — 데칼이 주 컴포넌트인 오브젝트(데칼 액터)는 오브젝트째, 아니면 컴포넌트만(언리얼 DecalActor LifeSpan).
+     *          비는 날씨를 가진 GameFramework 가 넣는다(`DecalRainWashSystem` — 날씨 값 × 지붕 판정, 캐릭터 젖음과 같은 길). 나이 · 씻김은 저장하지 않는다(씬을 다시 읽으면 처음부터).
+     *          UV 표면 마스크(캐릭터 피 · 흙 — `CharacterSurfaceState`)와는 저장 · 머티리얼 · 수명 경로가 달라 섞지 않는다.
      */
     REFLECT( Category = "Rendering 3D", DisplayName = "Decal", Tooltip = "Projects albedo, normal and roughness onto the G-buffer inside its box (deferred pipeline)", Meta = "Icon=Cube" )
     class SW_API DecalComponent : public SceneComponent
@@ -62,8 +66,20 @@ namespace sw
         void onRegister( GameObjectManager& manager ) override;
         void onUnregister( GameObjectManager& manager ) override;
 
-        /** @brief 그리기 값을 채웁니다(게임 스레드 — 패킷 수집). 노멀 텍스처가 없으면 노멀 칸을 끈다. */
+        void onTick( float32 deltaTime ) override;
+
+        /** @brief 그리기 값을 채웁니다(게임 스레드 — 패킷 수집). 노멀 텍스처가 없으면 노멀 칸을 끈다. 불투명도에 수명 · 씻김을 곱한다. */
         void writeDrawData( DecalDrawData& outData ) const;
+        /** @brief 시간 수명을 정합니다(런타임에 뿌리는 피 · 흙 · 탄흔). @p lifetimeSeconds 0 은 남는다. 끝 @p fadeOutSeconds 동안 흐려진다. 틱을 그에 맞춰 켜고 끈다. */
+        void setLifetime( float32 lifetimeSeconds, float32 fadeOutSeconds );
+        /** @brief 비가 씻는 빠르기를 정합니다(0 이면 비가 씻지 않는다). */
+        void setRainWashPerSecond( float32 washPerSecond ) { _rainWashPerSecond = washPerSecond > 0.0f ? washPerSecond : 0.0f; }
+        /** @brief 비가 씻는 빠르기(완전한 비에서 초당 잃는 불투명도 비율)입니다. 0 이면 비가 씻지 않는다. */
+        float32 getRainWashPerSecond() const { return _rainWashPerSecond; }
+        /** @brief 비 세기 @p rainStrength(0..1, 지붕 아래면 0)로 @p seconds 동안 씻습니다. 다 씻기면 정리한다(게임 스레드, 틱 밖). */
+        void applyRainWash( float32 rainStrength, float32 seconds );
+        /** @brief 수명 · 씻김이 남긴 불투명도 배율(0..1)입니다. */
+        float32 computeOpacityScale() const;
 
     private:
         PROPERTY( Tooltip = "Albedo texture (rgb colour, a coverage); empty is white" )
@@ -84,5 +100,17 @@ namespace sw
         int32 _sortOrder;
         PROPERTY( Tooltip = "G-buffer channels the decal covers" )
         DecalChannels _channels;
+        PROPERTY( Min = 0.0, Units = s, Tooltip = "Seconds the decal lives before it is removed; 0 keeps it" )
+        float32 _lifetimeSeconds;
+        PROPERTY( Min = 0.0, Units = s, Tooltip = "Seconds at the end of the lifetime over which the decal fades out" )
+        float32 _fadeOutSeconds;
+        PROPERTY( Min = 0.0, Tooltip = "Opacity fraction rain washes away per second at full rain (blood, mud); 0 = rain leaves it (paint, scorch)" )
+        float32 _rainWashPerSecond;
+
+        float32 _ageSeconds;  ///< 등록 뒤 흐른 플레이 시간(저장하지 않는다)
+        float32 _washedRatio; ///< 비가 씻은 몫(0..1, 저장하지 않는다)
+
+        /** @brief 다 사라졌으면 정리합니다 — 데칼이 주 컴포넌트면 오브젝트째, 아니면 이 컴포넌트만. */
+        void removeWhenGone();
     };
 } // namespace sw

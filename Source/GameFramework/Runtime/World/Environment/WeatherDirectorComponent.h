@@ -33,8 +33,10 @@ namespace sw
         WeatherDirectorComponent();
         virtual ~WeatherDirectorComponent() override;
 
-        /** @brief 카탈로그를 받아 판 상태를 엽니다. 카탈로그를 읽지 못하거나 판 상태가 없으면 오류를 남기고 열지 않습니다. */
+        /** @brief 카탈로그를 받아 판 상태를 엽니다. 카탈로그를 읽지 못하거나 판 상태가 없으면 오류를 남기고 열지 않습니다. 날씨가 열리면 비가 데칼을 씻는다(`DecalRainWashSystem`). */
         void onBeginPlay() override;
+        /** @brief 데칼 비 씻김을 뗍니다. */
+        void onEndPlay() override;
 
     private:
         PROPERTY( Category = "Weather", DisplayName = "Weather Data", Tooltip = "Weather catalog (*.weather.xml)" )

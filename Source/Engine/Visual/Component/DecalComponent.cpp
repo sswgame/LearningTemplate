@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 
@@ -29,6 +30,11 @@ namespace sw
         , _fadeStartCosine{ DecalComponentInternal::kDefaultFadeStartCosine }
         , _sortOrder{ 0 }
         , _channels{ DecalChannels::All }
+        , _lifetimeSeconds{ 0.0f }
+        , _fadeOutSeconds{ 0.0f }
+        , _rainWashPerSecond{ 0.0f }
+        , _ageSeconds{ 0.0f }
+        , _washedRatio{ 0.0f }
     {
     }
 
@@ -36,6 +42,7 @@ namespace sw
     {
         SceneComponent::onRegister( manager );
         manager.getComponentRegistry().add<DecalComponent>( this );
+        setCanEverTick( _lifetimeSeconds > 0.0f ); // 시간 수명이 있을 때만 틱이 나이를 센다 — 비 씻김은 날씨 시스템이 넣는다
     }
 
     void DecalComponent::onUnregister( GameObjectManager& manager )
@@ -44,11 +51,67 @@ namespace sw
         SceneComponent::onUnregister( manager );
     }
 
+    void DecalComponent::onTick( float32 deltaTime )
+    {
+        SceneComponent::onTick( deltaTime );
+        if ( deltaTime <= 0.0f || _lifetimeSeconds <= 0.0f )
+            return;
+        _ageSeconds += deltaTime;
+        if ( _ageSeconds >= _lifetimeSeconds )
+        {
+            // 틱(워커) 안에서 오브젝트를 지우지 않는다 — 틱 뒤 게임 스레드에서 핸들로 다시 찾아 정리한다(그 사이 지워졌으면 부르지 않는다).
+            GameObject* const        pOwner   = getOwner();
+            GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+            if ( pManager != nullptr )
+                pManager->deferPostTickOnComponent( *this, []( DecalComponent& decal )
+                { decal.removeWhenGone(); } );
+        }
+    }
+
+    void DecalComponent::setLifetime( float32 lifetimeSeconds, float32 fadeOutSeconds )
+    {
+        _lifetimeSeconds = lifetimeSeconds > 0.0f ? lifetimeSeconds : 0.0f;
+        _fadeOutSeconds  = fadeOutSeconds > 0.0f ? fadeOutSeconds : 0.0f;
+        setCanEverTick( _lifetimeSeconds > 0.0f );
+    }
+
+    void DecalComponent::applyRainWash( float32 rainStrength, float32 seconds )
+    {
+        if ( _rainWashPerSecond <= 0.0f || rainStrength <= 0.0f || seconds <= 0.0f )
+            return;
+        _washedRatio = MathUtil::saturate( _washedRatio + MathUtil::saturate( rainStrength ) * _rainWashPerSecond * seconds );
+        if ( _washedRatio >= 1.0f )
+            removeWhenGone();
+    }
+
+    float32 DecalComponent::computeOpacityScale() const
+    {
+        float32 life = 1.0f;
+        if ( _lifetimeSeconds > 0.0f )
+        {
+            const float32 remaining = _lifetimeSeconds - _ageSeconds;
+            life                    = _fadeOutSeconds > 0.0f ? MathUtil::saturate( remaining / _fadeOutSeconds ) : ( remaining > 0.0f ? 1.0f : 0.0f );
+        }
+        return life * ( 1.0f - _washedRatio );
+    }
+
+    void DecalComponent::removeWhenGone()
+    {
+        GameObject* const pOwner = getOwner();
+        if ( pOwner == nullptr )
+            return;
+        if ( pOwner->getPrimarySceneComponent() == this )
+            pOwner->destroy(); // 데칼 액터 — 오브젝트째(언리얼 DecalActor LifeSpan)
+        else if ( GameObjectManager* const pManager = pOwner->getManager(); pManager != nullptr )
+            pManager->destroyComponent( this );
+    }
+
     void DecalComponent::writeDrawData( DecalDrawData& outData ) const
     {
-        outData._world         = getWorldMatrix();
-        outData._worldToLocal  = outData._world.invert();
-        outData._color         = _color;
+        outData._world        = getWorldMatrix();
+        outData._worldToLocal = outData._world.invert();
+        outData._color        = _color;
+        outData._color._w *= computeOpacityScale();
         outData._surface       = float4{ MathUtil::saturate( _roughness ), MathUtil::saturate( _metallic ), _normalStrength, MathUtil::clamp( _fadeStartCosine, -1.0f, DecalComponentInternal::kMaxFadeStartCosine ) };
         outData._albedoTexture = _albedoTexture;
         outData._normalTexture = _normalTexture;
