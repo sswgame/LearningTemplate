@@ -9,15 +9,13 @@
 #include "Editor/Common/Widgets/EditorCurveEditorState.h"
 #include "Editor/Panels/Animation/Model/SequenceClipTiming.h"
 #include "Editor/Panels/Animation/Model/SequenceModel.h"
+#include "Editor/Panels/Animation/Model/SequencerViewModel.h"
 
-#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Sequencer/SequenceAsset.h"
-#include "Engine/Sequencer/SequenceTimelineUtil.h"
 
 namespace sw
 {
     class SequencePlayer;
-    class SequencePlayerComponent;
 } // namespace sw
 
 namespace sw::editor
@@ -28,6 +26,7 @@ namespace sw::editor
      * @brief 바인딩 · 카메라 컷 차선 · 키 트랙(트랜스폼 · 프로퍼티 · 리그 슬롯 · 렌즈) · 구간 항목 타임라인을 편집하는 시퀀서입니다. SequenceAsset XML 을 읽고 씁니다.
      * @details **바인딩 문맥**: 미리보기와 "선택을 묶기" 는 지금 씬에서 이 시퀀스를 트는 `SequencePlayerComponent` 하나의 바인딩 표를 쓴다(언리얼 Sequencer 가 레벨의 Level Sequence Actor 로 여는 것과 같다).
      *          그런 플레이어가 없으면 바인딩을 묶을 곳이 없다고 알리고, 시퀀스 편집은 그대로 된다. 묶기는 그 플레이어 오브젝트의 수정으로 되돌리기에 남는다.
+     *          MVVM View — 씬 쪽(문맥 · 선택 · 바인딩 대상 · 미리보기 · 파일)은 `SequencerViewModel` 이 맡고 값은 `SequencerSceneViewState` 로 읽는다. 시퀀스 문서는 창 문서라 이 창이 든다.
      *          시간 막대를 옮기면(끄는 동안에도) 그 프레임을 씬에 바로 적용합니다(뷰포트 미리보기 — 구간 동작 포함). 키 트랙 채널 값을 고치면 지금 프레임에
      *          그 채널의 키가 생기고(언리얼 Sequencer 의 자동 키), Key 단추는 대상의 지금 상태를 모든 채널의 키로 찍습니다. 키 띠의 마름모는 눌러 고르고(Ctrl 은 더하기 · 빼기) 끌어 옮긴다(정수 프레임 스냅).
      *          이름: 시간 막대 `sequencer.scrub`, 트랙 줄 `sequencer.track.<n>`, 키 띠 `sequencer.keyStrip.<n>`, `sequencer.addKey`, 채널 값 `sequencer.channel.<n>`,
@@ -77,10 +76,6 @@ namespace sw::editor
         void releasePreview();
 
         // 바인딩
-        /** @brief 이 시퀀스를 트는 지금 씬의 플레이어입니다(고른 것이 사라졌으면 첫 것). 없으면 nullptr 입니다. */
-        SequencePlayerComponent* findBindingContext() const;
-        /** @brief 바인딩 문맥의 표를 쓰는 창입니다(문맥이 없으면 빈 표). @p asset 은 호출 동안 살아 있어야 한다. */
-        SequenceBindingView makePreviewBindingView( const SequenceAsset& asset ) const;
         /** @brief 바인딩 목록 · 문맥 고르기 · 선택 묶기 · 이름 칸을 그립니다. */
         void drawBindings();
         /** @brief 바인딩 @p bindingID 를 에디터에서 고른 오브젝트에 묶습니다(문맥 플레이어의 수정 — 되돌리기). */
@@ -134,10 +129,9 @@ namespace sw::editor
         vector<SequenceClipTiming>     _listTimingBefore; ///< 타임라인 위젯을 부르기 전 배치(멤버라 프레임마다 할당하지 않는다)
         vector<float32>                _listKeyFrame;     ///< 키 띠가 쓰는 키 프레임(멤버라 프레임마다 할당하지 않는다)
         vector<int32>                  _listCutItem;      ///< 컷 차선이 그리는 컷 항목 번호(멤버라 프레임마다 할당하지 않는다)
-        vector<SequenceSpanState>      _listPreviewSpan;  ///< 미리보기가 들어간 구간 동작(소리 · 애니메이션)
-        vector<SequenceSpawnedObject>  _listPreviewSpawn; ///< 미리보기는 스폰하지 않는다 — 바인딩 창이 비어 있는 목록을 가리킨다
+        SequencerViewModel             _viewModel;        ///< 바인딩 문맥 · 선택 · 미리보기 · 파일(씬 쪽)
+        SequencerSceneViewState        _sceneState;       ///< 바인딩 줄이 그리는 씬 쪽 값(`drawBindings` 앞에서 모은다)
         EditorCurveEditorState         _curveState;       ///< 커브 단추로 연 채널의 편집기 상태
-        GameObjectHandle               _contextPlayer;    ///< 바인딩 문맥으로 고른 플레이어의 오브젝트
         int32                          _currentFrame;
         int32                          _firstFrame;
         int32                          _keyDragTrack; ///< 키를 끄는 중인 트랙(-1 이면 끌지 않는다)

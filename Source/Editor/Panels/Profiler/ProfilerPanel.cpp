@@ -9,41 +9,25 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/fixed_string.h"
-#include "Core/Task/TaskManager.h"
 
 #include "DevTools/Profiling/Tracy/TracyProfilerBackend.h"
 #include "DevTools/RenderDoc/RenderDocCapture.h"
 
-#include "Editor/Common/Commands/Diagnostics/EditorTracyLauncher.h"
-#include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorFrameStep.h"
-#include "Editor/Common/Workspace/EditorRenderViews.h"
-#include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Common/Workspace/NetPlay/EditorNetPlaySession.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
-#include "Engine/Object/Component/CameraComponent.h"
-#include "Engine/Object/Component/SceneComponent.h"
-#include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Physics/Component/BoxCollider2DComponent.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/ProfilerBackend.h"
-#include "Engine/Scene/Scene.h"
-#include "Engine/Scene/SceneManager.h"
-#include "Engine/Visual/2D/SpriteComponent.h"
-#include "Engine/Visual/Component/MeshComponent.h"
 
 #include <imgui.h>
 
@@ -107,11 +91,11 @@ namespace sw::editor
              * @brief 프레임 단계 — 멀티 프로세스 재생이 Stop 뒤에 합친 트레이스를 Profiler 창 Timeline 탭에 한 번 엽니다.
              * @details 멈추는 길(툴바 · Session 탭 · `netplay.stop`)이 셋이고 툴바(GUI 층)는 이 창(Panels 층)을 include 하지 못하므로, 창이 닫혀 있어도 도는 단계에서 묻는다.
              */
-            static void openMergedNetPlayTrace( EditorContext& context )
+            static void openMergedNetPlayTrace( EditorContext& /*context*/ )
             {
-                const string mergedTracePath = context.getSubsystem<EditorNetPlaySession>().takeUnopenedMergedTrace();
+                const string mergedTracePath = ProfilerViewModel::takeMergedNetPlayTrace();
                 if ( mergedTracePath.empty() == false )
-                    (void)ProfilerPanel::openTraceInTimeline( context.getSubsystem<EditorPanelManager>(), mergedTracePath ); // 실패 이유는 그 함수가 로그에 남긴다
+                    (void)ProfilerPanel::openTraceInTimeline( EditorPanelManager::getInEditorContext(), mergedTracePath ); // 실패 이유는 그 함수가 로그에 남긴다
             }
 #endif
 
@@ -277,15 +261,15 @@ namespace sw::editor
         , _listScratchRow{}
         , _listScratchSeries{}
         , _arrFilter{}
-        , _lastTracyResult{ EditorTracyLaunchResult::Launched }
+        , _viewModel{}
+        , _sceneState{}
         , _leakReport{}
-        , _bTracyTried{ SW_FALSE }
     {
     }
 
     void ProfilerPanel::drawContent()
     {
-        _capture.tick( editor::getSubsystem<FrameProfiler>() );
+        _capture.tick( ProfilerViewModel::getFrameProfiler() );
 
         if ( ImGui::BeginTabBar( "ProfilerTabs" ) )
         {
@@ -360,7 +344,7 @@ namespace sw::editor
     {
         bool bCollect = _capture.isCollecting();
         if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Collect" ), &bCollect ) )
-            _capture.setCollect( editor::getSubsystem<FrameProfiler>(), bCollect );
+            _capture.setCollect( ProfilerViewModel::getFrameProfiler(), bCollect );
         // 창 크기 · 모은 프레임 수는 도구줄에 늘 펼치지 않고 Collect 툴팁에 둔다 — 도구줄이 두 줄로 넘쳤다(유니티 Profiler 도 프레임 수는 호버로 본다).
         const ProfilerScopeHistory& history        = _capture.getHistory();
         const uint64                capturedFrames = MathUtil::min( history.getCapturedFrameCount(), static_cast<uint64>( UINT32_MAX ) );
@@ -419,12 +403,11 @@ namespace sw::editor
         ImGui::BeginDisabled( TracyProfilerBackend::isCompiled() == false );
         if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "OpenTracy" ) ) )
         {
-            _lastTracyResult = EditorTracyLauncher::openViewer();
-            _bTracyTried     = SW_TRUE;
+            _viewModel.openTracyViewer();
         }
         ImGui::EndDisabled();
-        if ( _bTracyTried == SW_TRUE && _lastTracyResult != EditorTracyLaunchResult::Launched )
-            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Error" ) ), "%s", EditorTracyLauncher::describeResult( _lastTracyResult ) );
+        if ( _viewModel.getTracyError().empty() == false )
+            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Error" ) ), "%s", _viewModel.getTracyError().c_str() );
 
         // RenderDoc 으로 GPU 프레임을 캡처한다(네 백엔드 모두). 붙어 있지 않으면 버튼이 회색이고 이유를 툴팁으로 보여 준다.
         EditorWidgets::drawToolbarSeparator();
@@ -483,7 +466,7 @@ namespace sw::editor
 
     void ProfilerPanel::drawTimelineTab()
     {
-        FrameProfiler&    profiler   = editor::getSubsystem<FrameProfiler>();
+        FrameProfiler&    profiler   = ProfilerViewModel::getFrameProfiler();
         ProfilerTimeline& timeline   = profiler.getTimeline();
         const bool        bRecording = timeline.isRecording();
         drawTimelineToolbar( profiler, bRecording );
@@ -606,7 +589,7 @@ namespace sw::editor
     const ProfilerTimelineRect* ProfilerPanel::drawTimelineEvents( const vector<ProfilerTimelineThread>& listThread, const TimelineGeometry& geometry, const vector<float32>& listRowTop,
                                                                    const vector<string>* pLoadedSlotName, bool bHovered )
     {
-        const FrameProfiler* pProfiler = &editor::getSubsystem<FrameProfiler>(); // 필수 서비스: 없으면 버그
+        const FrameProfiler* pProfiler = &ProfilerViewModel::getFrameProfiler(); // 필수 서비스: 없으면 버그
         const ImVec2         mouse     = ImGui::GetMousePos();
         ImDrawList*          pDrawList = ImGui::GetWindowDrawList();
         pDrawList->PushClipRect( ImVec2{ geometry._trackLeft, geometry._origin.y }, ImVec2{ geometry._origin.x + geometry._totalWidth, geometry._origin.y + geometry._totalHeight }, true );
@@ -654,7 +637,7 @@ namespace sw::editor
 
     void ProfilerPanel::drawTimelineTooltip( const vector<ProfilerTimelineThread>& listThread, const ProfilerTimelineRect& hoveredRect, const vector<string>* pLoadedSlotName )
     {
-        const FrameProfiler*         pProfiler = &editor::getSubsystem<FrameProfiler>(); // 필수 서비스: 없으면 버그
+        const FrameProfiler*         pProfiler = &ProfilerViewModel::getFrameProfiler(); // 필수 서비스: 없으면 버그
         const ProfilerTimelineEvent& event     = listThread[hoveredRect._threadIndex]._listEvent[hoveredRect._eventIndex];
         const utf8*                  pName     = ProfilerTimelineModel::findSlotName( pProfiler, pLoadedSlotName, event._slot );
         ImGui::BeginTooltip();
@@ -844,7 +827,7 @@ namespace sw::editor
 
         if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdSection", "TaskManagerConcurrency" ), ImGuiTreeNodeFlags_DefaultOpen ) )
         {
-            ImGui::BulletText( "%s", SW_LOCKEYFORMAT( "EdFormat", "WorkerThreads", TextArgumentList().addInteger( "workerCount", static_cast<int64>( editor::getSubsystem<TaskManager>().getWorkerCount() ) ) ).c_str() );
+            ImGui::BulletText( "%s", SW_LOCKEYFORMAT( "EdFormat", "WorkerThreads", TextArgumentList().addInteger( "workerCount", static_cast<int64>( ProfilerViewModel::getWorkerCount() ) ) ).c_str() );
             ImGui::BulletText( "Task System: Active" );
         }
     }
@@ -853,18 +836,15 @@ namespace sw::editor
     {
         if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdSection", "ActiveSceneComponentDistribution" ), ImGuiTreeNodeFlags_DefaultOpen ) )
         {
-            Scene* pScene = editor::getActiveScene();
-            if ( pScene != nullptr && pScene->getObjectManager() != nullptr )
+            _viewModel.gatherScene( _sceneState ); // 접힌 섹션은 씬을 훑지 않는다 — 펼쳤을 때만 모은다
+            const ProfilerSceneViewState& stats = _sceneState;
+            if ( stats._bHasScene != SW_FALSE )
             {
-                // 집계는 ImGui 에 의존하지 않는 EditorSceneCommands 가 한다. 테스트가 있다.
-                // 이 패널은 그리기만 하며 타입 이름을 알 필요가 없다.
-                const EditorSceneCommands::SceneStatistics stats =
-                    EditorSceneCommands::collectSceneStatistics( pScene->getObjectManager() );
 
                 ImGui::BulletText( "%s", SW_LOCKEYFORMAT( "EdFormat", "TotalGameObjectsRoots", TextArgumentList().addInteger( "objectCount", static_cast<int64>( stats._objectCount ) ).addInteger( "rootCount", static_cast<int64>( stats._rootCount ) ) ).c_str() );
                 ImGui::BulletText( "%s", SW_LOCKEYFORMAT( "EdFormat", "TotalAttachedComponents", TextArgumentList().addInteger( "componentCount", static_cast<int64>( stats._componentCount ) ) ).c_str() );
 
-                if ( stats._listDistribution.empty() )
+                if ( stats._listRow.empty() )
                     EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorProfiler", "NoComponents" ) );
                 else if ( ImGui::BeginTable( "CompDistributionTable", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg ) )
                 {
@@ -872,7 +852,7 @@ namespace sw::editor
                     ImGui::TableSetupColumn( "Active Instances" );
                     ImGui::TableHeadersRow();
 
-                    for ( const EditorSceneCommands::ComponentDistributionRow& row : stats._listDistribution )
+                    for ( const ProfilerComponentRow& row : stats._listRow )
                     {
                         ImGui::TableNextRow();
                         ImGui::TableNextColumn();
@@ -895,8 +875,7 @@ namespace sw::editor
 
     void ProfilerPanel::drawGPUMemoryTab()
     {
-        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-        IRHIDevice*    pDevice       = editorContext.getSubsystem<EditorRenderViews>().getRHIDevice();
+        IRHIDevice* pDevice = ProfilerViewModel::findRHIDevice();
         if ( pDevice == nullptr )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorProfiler", "NoRHIDevice" ) );
@@ -973,7 +952,7 @@ namespace sw::editor
     void ProfilerPanel::drawMemoryTab()
     {
         // 없을 수 있다: Shipping 은 진단을 켠 때만 메모리 프로파일러를 만든다(DiagnosticsSubsystem) — 안내 문구가 맞다.
-        MemoryProfiler* pProfiler = editor::findSubsystem<MemoryProfiler>();
+        MemoryProfiler* pProfiler = ProfilerViewModel::findMemoryProfiler();
         if ( pProfiler == nullptr )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorProfiler", "MemoryProfilerInactive" ) );
@@ -1008,7 +987,7 @@ namespace sw::editor
     }
     void ProfilerPanel::drawCallTreeTab()
     {
-        FrameProfiler&    profiler   = editor::getSubsystem<FrameProfiler>();
+        FrameProfiler&    profiler   = ProfilerViewModel::getFrameProfiler();
         ProfilerTimeline& timeline   = profiler.getTimeline();
         const bool        bRecording = timeline.isRecording();
         if ( ImGui::Button( bRecording ? "Stop Recording" : "Record" ) )
@@ -1069,7 +1048,7 @@ namespace sw::editor
 
     void ProfilerPanel::drawCallTreeNode( uint32 nodeIndex )
     {
-        const FrameProfiler*            pProfiler = &editor::getSubsystem<FrameProfiler>(); // 필수 서비스: 없으면 버그
+        const FrameProfiler*            pProfiler = &ProfilerViewModel::getFrameProfiler(); // 필수 서비스: 없으면 버그
         const ProfilerCallTreeWindow&   callTree  = _timeline.getCallTree();
         const vector<ProfilerCallNode>& listNode  = callTree.getNodes();
         const ProfilerCallNode&         node      = listNode[nodeIndex];
