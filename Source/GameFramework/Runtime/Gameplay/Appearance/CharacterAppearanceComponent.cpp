@@ -353,9 +353,10 @@ namespace sw
             _surface.update( deltaTime ); // 감쇠한다. 바뀐 프레임에만 머티리얼로 올라간다
             applySurface( *pManager, false );
         }
-        applySkinLayers();
         if ( _bMeshAssemblyPending == SW_TRUE || _bMeshApplyQueued == SW_TRUE )
             return; // 베이크한 메시를 기다리거나(`waitMeshAssembly`) 걸기가 틱 뒤로 예약됐다 — 걸기 전의 원본 내용 id 는 0 이라 낡음으로 보이면 조립을 끝없이 다시 한다
+        // 피부 층은 몸 메시를 건 뒤에 굽는다 — 걸기 전의 몸은 자리 머티리얼(알베도 없음)이라 굽기가 바탕이 없다고 멈췄다.
+        applySkinLayers();
         // 소켓 파일을 고치면 공유 캐시가 제자리에서 다시 읽는다 — 몸 소켓은 조립 때 덮어쓰기와 합쳐 사본으로 들었으므로 다시 조립해야 바뀐다.
         // 베이크한 메시도 원본 메시 · 피팅 표 · 피팅 데이터의 사본이라 같다.
         const bool bSocketsStale = _socketCache.isStale();

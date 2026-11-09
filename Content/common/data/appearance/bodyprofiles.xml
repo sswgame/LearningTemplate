@@ -7,19 +7,22 @@
      Fluid: 눈물 · 침 줄기 — trigger 는 애니메이터 커브(또는 body.fluid), path 는 얼굴 UV 위 흐름 길("u v; u v; …"), 채널은 표면 채널 표의 이름이다.
      effect · socket: 표면 밖으로 떨어지는 효과 — 눈물은 줄기가 경로 끝(턱)에 닿으면 dripSeconds 동안 방울, strand="true"(침)는 방아쇠가 켜진 동안 가닥. -->
 <BodyProfileCatalog>
-  <BodyProfile id="HumanoidBase" wrinkleIntensity="1">
+  <BodyProfile id="HumanoidBase">
     <Jiggle group="Torso" stiffness="0.35" damping="0.25" gravityScale="0.2" maxSwingDegrees="8" impulseScale="1"/>
     <ActionScale tag="State.Locomotion.Run" scale="1.4"/>
     <ActionScale tag="State.Combat.Attack" scale="1.8"/>
     <ActionScale tag="State.Rest" scale="0.6"/>
-    <Wrinkle region="Forehead" mask="0"><Source expression="BrowUp" weight="1"/><Source expression="Surprise" weight="0.6"/></Wrinkle>
-    <Wrinkle region="Brow" mask="1"><Source expression="Angry" weight="1"/></Wrinkle>
-    <Wrinkle region="EyeCorner" mask="2"><Source expression="Happy" weight="0.8"/></Wrinkle>
-    <Wrinkle region="Smile" mask="4"><Source expression="Happy" weight="1"/></Wrinkle>
     <Pupil parameter="_pupilDilation" emotionCurve="Pupil.Emotion" minSize="0.15" maxSize="0.85" constrictSeconds="0.3" dilateSeconds="3" darkLuminance="0.05" brightLuminance="2" emotionScale="0.25"/>
     <Fluid name="TearL" channel="Teardrop" residueChannel="TearSalt" trigger="Cry" path="0.43 0.38; 0.42 0.45; 0.41 0.53; 0.42 0.62" ratePerSecond="0.8" speed="0.06" radius="0.008" effect="common/vfx/tear_drip.vfx.xml" socket="Chin" dripSeconds="0.6"/>
     <Fluid name="TearR" channel="Teardrop" residueChannel="TearSalt" trigger="Cry" path="0.57 0.38; 0.58 0.45; 0.59 0.53; 0.58 0.62" ratePerSecond="0.8" speed="0.06" radius="0.008" effect="common/vfx/tear_drip.vfx.xml" socket="Chin" dripSeconds="0.6"/>
     <Fluid name="Drool" channel="Saliva" trigger="Drool" path="0.52 0.70; 0.52 0.76; 0.53 0.82" ratePerSecond="0.4" speed="0.03" radius="0.006" residueValue="0" effect="common/vfx/saliva_strand.vfx.xml" socket="Mouth" strand="true"/>
+  </BodyProfile>
+  <!-- 얼굴(FacialAnimationComponent)이 있는 사람 몸 — 표정이 주름 마스크를 움직인다. 얼굴이 없는 몸(해골)은 HumanoidBase 를 쓴다(주름을 실으면 얼굴 없음 오류다). -->
+  <BodyProfile id="HumanoidFace" _base="HumanoidBase" wrinkleIntensity="1">
+    <Wrinkle region="Forehead" mask="0"><Source expression="BrowUp" weight="1"/><Source expression="Surprise" weight="0.6"/></Wrinkle>
+    <Wrinkle region="Brow" mask="1"><Source expression="Angry" weight="1"/></Wrinkle>
+    <Wrinkle region="EyeCorner" mask="2"><Source expression="Happy" weight="0.8"/></Wrinkle>
+    <Wrinkle region="Smile" mask="4"><Source expression="Happy" weight="1"/></Wrinkle>
   </BodyProfile>
   <!-- 몸 동작 무대(maps/bodycustomization)의 해골 — 굽 높이 0.08 m(몸 채널 층), 몸통은 조금 더 출렁인다. -->
   <BodyProfile id="BodyDemoWarrior" _base="HumanoidBase">
