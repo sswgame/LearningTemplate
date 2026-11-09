@@ -15,7 +15,7 @@ Scripts/lint/FeatureReferences.py
 
 예외는 데이터 한 곳(`Config/Dev/FeatureReferenceExceptions.json`)에 까닭과 함께 둔다. 까닭이 비었거나, 이제 참조가 생겼거나, 정의가 사라진 예외도 위반이다 — 표가 낡지 않게.
 
-`py -3 -m Scripts feature-refs [--self-check]` 로 돌리고, 커밋 훅(`PreCommit.py`)이 돌린다.
+`py -3 -m Scripts lint feature-refs [--self-check]` 로 돌리고, 커밋 훅(`Rules.py` 표)이 돌린다.
 """
 
 from __future__ import annotations

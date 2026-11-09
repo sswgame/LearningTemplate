@@ -10,7 +10,7 @@ Scripts/lint/StateShape.py
 - 머리의 인라인 정의는 `StateIO` 입구로 넘길 때만 된다(읽기에 카탈로그가 더 필요한 형식, 가상 본문을 쓰는 기반).
 - 까닭이 있는 파일은 `Config/Dev/StateShapeExceptions.json` 에 이유와 함께 적는다.
 
-`py -3 -m Scripts state-shape [--files …|--all|--self-check]` 로 돌리고, 커밋 훅(`PreCommit.py`)이 staged 파일에 돌린다.
+`py -3 -m Scripts lint state-shape [--files …|--all|--self-check]` 로 돌리고, 커밋 훅(`Rules.py` 표)이 staged 파일에 돌린다.
 """
 
 from __future__ import annotations

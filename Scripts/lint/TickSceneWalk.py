@@ -17,7 +17,7 @@ Scripts/lint/TickSceneWalk.py
 (`pOwner->forEachComponentOfType`)는 잡지 않는다 — 받는 쪽 이름에 `anager` 가 든 것과 `getManager()->` 만 본다.
 예외는 `Config/Dev/TickSceneWalkExceptions.json` 에 `경로::클래스::함수` 와 까닭을 적는다.
 
-`py -3 -m Scripts tick-scene-walk [--self-check]` 로 돌리고, 커밋 훅(`PreCommit.py`)이 돌린다.
+`py -3 -m Scripts lint tick-scene-walk [--self-check]` 로 돌리고, 커밋 훅(`Rules.py` 표)이 돌린다.
 """
 
 from __future__ import annotations

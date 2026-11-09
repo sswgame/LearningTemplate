@@ -57,7 +57,7 @@ def checkFolderLayout(projectRoot: Path, listPath: list[str] | None = None) -> l
     return listProblem
 
 
-def main(listArgument: list[str] | None = None) -> int:  # noqa: ARG001 — `py -3 -m Scripts folder-layout` 가 인자 목록을 넘긴다
+def main(listArgument: list[str] | None = None) -> int:  # noqa: ARG001 — `py -3 -m Scripts lint folder-layout` 가 인자 목록을 넘긴다
     listProblem = checkFolderLayout(getProjectRoot())
     for problem in listProblem:
         print(f"  - {problem}")

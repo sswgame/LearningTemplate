@@ -11,7 +11,7 @@ NVIDIA GL(ARB_gl_spirv)은 DXC 가 낸 이 모양의 SPIR-V 를 잘못 컴파일
 - 사슬: `if ( … )` 뒤에 `else if ( … )` 가 이어진 갈래들. 조건은 맨 바깥 `&&` 로 나눈 항(공백 · 바깥 괄호를 뺀 글)으로 본다.
 - 위반: 뒤 갈래의 항 하나가 앞 갈래 중 항이 둘 이상인 조건의 항과 같다. 전처리 줄은 지운다(보수적).
 
-`py -3 -m Scripts shader-branch-shape [--self-check]` 로 돌리고, 커밋 훅(`PreCommit.py`)이 돌린다.
+`py -3 -m Scripts lint shader-branch-shape [--self-check]` 로 돌리고, 커밋 훅(`Rules.py` 표)이 돌린다.
 """
 
 from __future__ import annotations

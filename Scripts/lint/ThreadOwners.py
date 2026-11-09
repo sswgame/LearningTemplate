@@ -15,7 +15,7 @@ Scripts/lint/ThreadOwners.py
 - 목록 항목 `_path` 는 확장자 없는 경로(`.h` · `.cpp` 둘 다 맞는다)다. 더는 스레드를 만들지 않는 항목은 낡은 예외로 멈춘다(목록이 사실과 어긋나지 않게).
 - 테스트(`/Tests/`)는 경합을 일부러 만들므로 보지 않는다.
 
-`py -3 -m Scripts thread-owners [--self-check]` 로 돌리고, 커밋 훅(`PreCommit.py`)이 돌린다.
+`py -3 -m Scripts lint thread-owners [--self-check]` 로 돌리고, 커밋 훅(`Rules.py` 표)이 돌린다.
 """
 
 from __future__ import annotations

@@ -14,7 +14,7 @@ MVVM 으로 옮긴 에디터 패널의 View(`Source/Editor/Panels/**` 의 `Model
 ViewModel 헤더가 모델 헤더를 끌고 오면 껍데기를 건 날 View 가 멈추므로 지금 잡는다. 금지 폴더 안의 값 · 창구 헤더는 표의 `_allowedHeaders` 가 까닭과 함께 허용한다.
 목록의 View 가 사라졌으면(이름을 바꿨으면) 낡은 줄로 알린다.
 
-`py -3 -m Scripts editor-view-includes [--self-check]` 로 돌리고, 커밋 훅(`PreCommit.py`)이 돌린다.
+`py -3 -m Scripts lint editor-view-includes [--self-check]` 로 돌리고, 커밋 훅(`Rules.py` 표)이 돌린다.
 """
 
 from __future__ import annotations

@@ -9,7 +9,7 @@ CMake 의 `include()` · `add_subdirectory()` 경로가 저장소의 실제 이�
 보지 않고, Windows 는 대소문자를 가리지 않아 Linux 구성에서야 "없는 파일" 로 선다(`RhiBackends.cmake` 를 `RHIBackends.cmake` 로 부르던 결함). 형식으로 막을 수 없는 틈이다.
 CMake 파일만이 아니라 이름 바꾸기도 참조를 깨므로 커밋마다 CMake 파일 전부를 본다(수백 개라 빠르다).
 
-  python Scripts/lint/CMakePathCase.py    (= `py -3 -m Scripts cmake-path-case`)
+  python Scripts/lint/CMakePathCase.py    (= `py -3 -m Scripts lint cmake-path-case`)
 
 종료 코드: 0 통과, 1 위반.
 """

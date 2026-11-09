@@ -55,7 +55,7 @@
         {
             "label": "Lint: PreCommit",
             "type": "shell",
-            "command": "py -3 Scripts/lint/PreCommit.py"
+            "command": "py -3 -m Scripts lint"
         },
 
         // ==========================================

@@ -34,7 +34,7 @@ C++ 모양 규칙 중 컴파일러가 보지 않는 열을 본다. 규칙 문서
    문법 오류로 멈췄다(2026-11-09 — IDBFS 마운트 · URL 열기). 기능 옆 `Web/*.js` Emscripten 라이브러리(addToLibrary)에 두고 C++ 는 `extern "C"` 로 선언한다
    (Platform/Web.cmake 가 모두 링크에 넘긴다). 예외는 없다.
 
-`py -3 -m Scripts cpp-shape [--files …|--all]` 로 돌리고, 커밋 훅(`PreCommit.py`)이 staged 파일에 돌린다.
+`py -3 -m Scripts lint cpp-shape [--files …|--all]` 로 돌리고, 커밋 훅(`Rules.py` 표)이 staged 파일에 돌린다.
 """
 
 from __future__ import annotations

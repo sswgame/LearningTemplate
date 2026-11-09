@@ -70,9 +70,9 @@ A `-1` says one of several things; each has one form (Unreal: `INDEX_NONE` · `T
 | The count | Then |
 | --- | --- |
 | Grew | The commit stops. Name the value (`XxxInternal::k…`, the owning type, a `constant::` contract) or move it into data (a field of a settings / catalog struct, a `PROPERTY` defaulted in the constructor) |
-| Shrank | The commit stops until the baseline is lowered with it: `py -3 -m Scripts magic-literals --ratchet` (lowers only, drops deleted files) |
+| Shrank | The commit stops until the baseline is lowered with it: `py -3 -m Scripts lint magic-literals --ratchet` (lowers only, drops deleted files) |
 | A moved file | Keeps the old path's baseline through the staged rename |
 
-Not counted, by place: tests, generated files, reflection metadata, format numbers (`kVersion` · `kMagic` · `kTag`), named definitions (`constexpr … kName = …`), rows of an initializer table, and field defaults (`float32 _speed{ 3.5f };`, `, _speed{ 3.5f }` in a constructor — the home of tuning values; a `-1` there is still counted as a sentinel). Not counted, by value: `0` · `1` · `2` · `0.5` floats, all-bits hex masks, shift widths (`<< 16`), sign and direction `-1`, OS-contract `-1`. `py -3 -m Scripts magic-literals --self-check` pins every one of these; a new false-positive shape gets a case there, not a baseline bump.
+Not counted, by place: tests, generated files, reflection metadata, format numbers (`kVersion` · `kMagic` · `kTag`), named definitions (`constexpr … kName = …`), rows of an initializer table, and field defaults (`float32 _speed{ 3.5f };`, `, _speed{ 3.5f }` in a constructor — the home of tuning values; a `-1` there is still counted as a sentinel). Not counted, by value: `0` · `1` · `2` · `0.5` floats, all-bits hex masks, shift widths (`<< 16`), sign and direction `-1`, OS-contract `-1`. `py -3 -m Scripts lint magic-literals --self-check` pins every one of these; a new false-positive shape gets a case there, not a baseline bump.
 
-Raising a baseline is `--accept <file…>` and nothing else — for an integrator merging code written before the rule; the JSON diff shows it. `py -3 -m Scripts magic-literals` prints the totals and the `-1` meanings; `--meaning <m>` lists those lines.
+Raising a baseline is `--accept <file…>` and nothing else — for an integrator merging code written before the rule; the JSON diff shows it. `py -3 -m Scripts lint magic-literals` prints the totals and the `-1` meanings; `--meaning <m>` lists those lines.

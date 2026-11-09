@@ -23,7 +23,7 @@ POSIX 계열은 `UNIX` · `CMAKE_HOST_UNIX` 로 이름을 적는다. 다른 변�
 스크립트(`Scripts/**.py`)는 호스트 OS 를 `common/HostPlatform.py` 의 표에서만 읽는다 — `sys.platform` · `os.name` · `platform.system()` 을
 다른 곳에서 물으면 `else` 가 "Windows 아니면 Linux" 가 된다. 표는 모르는 호스트에서 들여올 때 멈춘다.
 
-`py -3 -m Scripts platform-chains [--self-check]` 로 돌리고, 커밋 훅(`PreCommit.py`)이 돌린다.
+`py -3 -m Scripts lint platform-chains [--self-check]` 로 돌리고, 커밋 훅(`Rules.py` 표)이 돌린다.
 """
 
 from __future__ import annotations

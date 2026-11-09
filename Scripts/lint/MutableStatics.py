@@ -16,7 +16,7 @@ Scripts/lint/MutableStatics.py
 예외 표는 까닭(`_why`)이 필수다 — 침입형 정적 등록 머리(리플렉션처럼 할당 · 엔진보다 먼저 도는 경로)와 정말 프로세스 수명인 바닥(크래시 처리기 버퍼 ·
 퓨텍스 버킷 · 플랫폼 진입점의 앱 자리)만 적는다. 항목은 `파일` + `이름`(변수 이름)이고, 이름이 소스에서 사라진 항목도 오류다(표가 썩지 않게).
 
-`py -3 -m Scripts mutable-statics [--self-check]` 로 돌리고, 커밋 훅(`PreCommit.py`)이 돌린다.
+`py -3 -m Scripts lint mutable-statics [--self-check]` 로 돌리고, 커밋 훅(`Rules.py` 표)이 돌린다.
 """
 
 from __future__ import annotations

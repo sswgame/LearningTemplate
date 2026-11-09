@@ -12,7 +12,7 @@ Scripts/lint/DevOnlyVariables.py
 배포 바이너리에 이름이 남는지는 `shipping-check` 의 NoTestVariables 가 본다 — 이 검사는 커밋 때 자리를 먼저 잡는다.
 
 예외 표는 없다 — 개발 기능을 개발 자리로 옮긴다.
-`py -3 -m Scripts dev-only-variables [--self-check]` 로 돌리고, 커밋 훅(`PreCommit.py`)이 돌린다.
+`py -3 -m Scripts lint dev-only-variables [--self-check]` 로 돌리고, 커밋 훅(`Rules.py` 표)이 돌린다.
 """
 
 from __future__ import annotations

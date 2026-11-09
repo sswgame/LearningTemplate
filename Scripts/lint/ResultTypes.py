@@ -17,11 +17,11 @@ Scripts/lint/ResultTypes.py
 - 그 밖은 파일마다 종류별 수를 기준선(`Config/Dev/ResultTypeBaseline.json`)에 두고, **늘면** 커밋이 멈추고 **줄면** `--ratchet` 으로 함께 낮춘다
   (`MagicLiterals.py` 와 같은 모양). 올리는 길은 `--accept <파일…>` 하나(통합에서 규칙 전 코드를 합칠 때).
 
-    py -3 -m Scripts result-types                    # 폴더별 남은 수
-    py -3 -m Scripts result-types --check [--all]    # 래칫 검사(커밋 훅은 staged 파일)
-    py -3 -m Scripts result-types --ratchet          # 줄어든 파일의 기준선을 낮춘다(올리지 않는다)
-    py -3 -m Scripts result-types --accept <파일…>   # 그 파일의 기준선을 지금 수로(올리는 유일한 길)
-    py -3 -m Scripts result-types --self-check
+    py -3 -m Scripts lint result-types                    # 폴더별 남은 수
+    py -3 -m Scripts lint result-types --check [--all]    # 래칫 검사(커밋 훅은 staged 파일)
+    py -3 -m Scripts lint result-types --ratchet          # 줄어든 파일의 기준선을 낮춘다(올리지 않는다)
+    py -3 -m Scripts lint result-types --accept <파일…>   # 그 파일의 기준선을 지금 수로(올리는 유일한 길)
+    py -3 -m Scripts lint result-types --self-check
 """
 
 from __future__ import annotations
@@ -117,7 +117,7 @@ def readCoreExemptions(projectRoot: Path) -> dict[str, dict[str, str]]:
 
 def writeBaseline(projectRoot: Path, baseline: dict[str, dict[str, int]]) -> None:
     comment = ("결과 형식 래칫 기준선(Scripts/lint/ResultTypes.py). Core 밖 파일마다 std::optional · string& outError · string* pOutError · 실패 때만 쓰는 글 출력 인자의 수 — "
-               "늘면 커밋이 멈추고, 줄면 `py -3 -m Scripts result-types --ratchet` 로 낮춘다. 손으로 올리지 않는다(올리는 길은 --accept 하나, docs/agents/Errors.md). "
+               "늘면 커밋이 멈추고, 줄면 `py -3 -m Scripts lint result-types --ratchet` 로 낮춘다. 손으로 올리지 않는다(올리는 길은 --accept 하나, docs/agents/Errors.md). "
                "_coreExemptions 는 Core 0 규칙의 예외(경로 → 종류 → 까닭)다.")
     exemptions = readCoreExemptions(projectRoot)
     listExemption = [f"    {json.dumps(path)}: {json.dumps(exemptions[path], ensure_ascii=False)}" for path in sorted(exemptions)]
@@ -144,12 +144,13 @@ def findProblems(actual: dict[str, dict[str, int]], baseline: dict[str, dict[str
             if count > limit:
                 listProblem.append(f"{path}: {kind} {limit} -> {count} — 늘었다: {kAdvice[kind]}")
             elif count < limit:
-                listProblem.append(f"{path}: {kind} {limit} -> {count} — 줄었다: `py -3 -m Scripts result-types --ratchet` 로 기준선을 낮추고 함께 커밋한다")
+                listProblem.append(f"{path}: {kind} {limit} -> {count} — 줄었다: `py -3 -m Scripts lint result-types --ratchet` 로 기준선을 낮추고 함께 커밋한다")
     return listProblem
 
 
-def checkResultTypes(projectRoot: Path, listFile: Sequence[Path]) -> list[str]:
+def checkResultTypes(projectRoot: Path, listFileArgument: Sequence[str]) -> list[str]:
     """커밋 훅: staged C++ 파일의 래칫 검사입니다."""
+    listFile = [Path(path) for path in listFileArgument]
     listSource = [path for path in listFile if isSourceFile(path.relative_to(projectRoot).as_posix())]
     if not listSource:
         return []

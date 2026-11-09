@@ -9,7 +9,7 @@ Scripts/lint/FrameIntern.py
 글자 → FNV → 샤드 뮤텍스를 지나고, 틱은 워커라 경합한다. 함수 안 `static const hashed_string` 이나 데이터 칸으로 옮기면 한 번이다.
 예외는 `Config/Dev/FrameInternExceptions.json` 에 `경로::함수` 와 까닭을 적는다.
 
-`py -3 -m Scripts frame-intern [--self-check]` 로 돌리고, 커밋 훅(`PreCommit.py`)이 돌린다.
+`py -3 -m Scripts lint frame-intern [--self-check]` 로 돌리고, 커밋 훅(`Rules.py` 표)이 돌린다.
 """
 
 from __future__ import annotations

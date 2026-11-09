@@ -10,7 +10,7 @@ Scripts/lint/NamingWords.py
 `_banned` 는 쓰지 않기로 한 낱말과 대신 쓸 말이고, `_keep` 은 그 낱말을 쓰는 까닭이 있는 이름 하나씩이다.
 `_bannedNames` 는 전수 개명한 옛 식별자(통째 이름)와 새 이름이다 — 개명 뒤 다른 작업자 브랜치 · 붙여 넣은 코드가 옛 이름을 되살리지 못하게 한다(주석 · 문자열 밖 코드만 본다).
 
-`py -3 -m Scripts naming-words [--self-check]` 로 돌리고, 커밋 훅(`PreCommit.py`)이 돌린다.
+`py -3 -m Scripts lint naming-words [--self-check]` 로 돌리고, 커밋 훅(`Rules.py` 표)이 돌린다.
 """
 
 from __future__ import annotations

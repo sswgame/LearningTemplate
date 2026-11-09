@@ -49,7 +49,7 @@ def checkEditorWidgetLabels(projectRoot: Path, listFile: list[str]) -> list[str]
     return listViolation
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:  # noqa: ARG001 — `lint editor-widget-labels` 가 인자 목록을 넘긴다
     projectRoot = Path(__file__).resolve().parents[2]
     listFile = [str(path) for root in ("Source/Editor", "Source/GameFramework") for path in (projectRoot / root).rglob("*.cpp")]
     listViolation = checkEditorWidgetLabels(projectRoot, listFile)

@@ -12,7 +12,7 @@ Scripts/lint/ByteReadShape.py
    다른 까닭으로 안전하면 그 줄에 `NOLINT(sw-unchecked-count): <이유>` 를 적는다.
 2. 직접 읽기: `LittleEndianUtil::read*` 로 제 커서를 굴리지 않는다 — 새 형식은 `ByteReader` 로 읽는다. 바깥 형식 · 패킷처럼 까닭이 있는 파일은 `Config/Dev/ByteReadRawFiles.json` 에 이유와 함께 적는다.
 
-`py -3 -m Scripts byte-read [--files …|--all|--self-check]` 로 돌리고, 커밋 훅(`PreCommit.py`)이 staged 파일에 돌린다.
+`py -3 -m Scripts lint byte-read [--files …|--all|--self-check]` 로 돌리고, 커밋 훅(`Rules.py` 표)이 staged 파일에 돌린다.
 """
 
 from __future__ import annotations

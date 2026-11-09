@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Scripts/lint/NewNames.py
+Scripts/dev/NewNames.py
 
 묶음이 새로 들인 함수 이름(헤더 선언)을 모아 사람이 검토할 목록으로 낸다 — 통합 때 `code-review-and-quality` 와 함께 본다.
 

@@ -9,7 +9,7 @@ Scripts/lint/Acronyms.py
 **왜 린트인가.** 약어 일괄 변경(1dafbae0c9) 뒤 도구를 지워 새 어긋남(`FourCcUtil` · `HpackDecoder` · `kDxgiFormat…`)이 다시 쌓였다(FolderMoves 11 절) — 이름은 형식이 막지 못한다.
 바깥 이름(서드파티 · OS API 를 그대로 쓰는 자리)과 데이터 철자(직렬화 키)는 `_keep` 에 이름 하나씩 까닭과 함께 둔다.
 
-`py -3 -m Scripts acronyms [--self-check]` 로 돌리고, 커밋 훅(`PreCommit.py`)이 돌린다(저장소 전체 — 수 초).
+`py -3 -m Scripts lint acronyms [--self-check]` 로 돌리고, 커밋 훅(`Rules.py` 표)이 돌린다(저장소 전체 — 수 초).
 """
 
 from __future__ import annotations
