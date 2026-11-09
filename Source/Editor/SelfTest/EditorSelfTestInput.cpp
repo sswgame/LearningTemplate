@@ -160,6 +160,13 @@ namespace sw::editor
              */
             static void record( State& state, const utf8* pKey, EditorSelfTestMark mark )
             {
+                // 목록이 항목마다 같은 이름을 적으면 그 프레임의 첫 항목이 남는다. 뒤 항목이 덮으면 표식이 프레임 안에서 자리를 옮겨
+                // 자리 잡기가 영영 시작되지 않고(isSamePlace 가 늘 거짓) 스크롤도 마지막 항목을 쫓았다(editor.catalogcurvegraph 의 곡선 미리보기).
+                for ( const NamedMark& named : state._listMark )
+                {
+                    if ( named._key == pKey && named._mark._frame == mark._frame )
+                        return;
+                }
                 // 입력 단계가 기다리는 레이블이 잘려 있으면 그린 창(지금 창)을 스크롤한다 — 사람처럼 보이게 한 뒤 누른다. 다음 프레임에 자리가 바뀌어 자리 잡기를 다시 센다.
                 if ( mark._bClipped && state._scrollIntoViewKey == pKey )
                 {

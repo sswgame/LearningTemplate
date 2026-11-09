@@ -202,10 +202,10 @@ namespace sw::editor
             _status = model.getError();
     }
 
-    void CharacterEditorModel::openBodyData( string_view bodyShapesAsset )
+    void CharacterEditorModel::openBodyData( const hashed_string& bodyShapesAsset )
     {
         const string folder( _paths._appearanceFolder.c_str() );
-        openBodyDataFile( _bodyShapes, bodyShapesAsset );
+        openBodyDataFile( _bodyShapes, bodyShapesAsset.empty() ? string_view{} : bodyShapesAsset.view() );
         openBodyDataFile( _bodyProfiles, folder.empty() ? string_view{} : string_view( FileUtil::joinPath( folder, "bodyprofiles.xml" ) ) );
         openBodyDataFile( _visuals, folder.empty() ? string_view{} : string_view( FileUtil::joinPath( folder, "itemvisuals.xml" ) ) );
     }

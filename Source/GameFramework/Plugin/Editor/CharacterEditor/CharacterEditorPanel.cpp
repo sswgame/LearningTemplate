@@ -1244,7 +1244,7 @@ namespace sw::editor
         GameObject*               pBody      = pManager != nullptr ? pManager->resolveGameObject( _previewBody ) : nullptr;
         BodyCustomizationViewModel::gather( appearance, database, pBody, _bodyHighlightDrive, _bodyState );
         const BodyCustomizationViewState& state = _bodyState;
-        _document.openBodyData( state._bodyShapes.c_str() ); // 고친 파일은 다시 읽지 않는다
+        _document.openBodyData( state._bodyShapes ); // 고친 파일은 다시 읽지 않는다
         _published._bodyDataDirty       = _document.isBodyDataDirty() ? 1u : 0u;
         _published._bodyLayerCount      = static_cast<uint32>( state._listLayer.size() );
         _published._bodyHiddenSlotCount = static_cast<uint32>( std::count_if( state._listSlot.begin(), state._listSlot.end(), []( const BodyCustomizationViewState::SlotRow& row )
