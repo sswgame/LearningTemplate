@@ -26,7 +26,8 @@ namespace sw::editor
      *          `revertDocument` 로 편집을 버린다(기본은 `reloadDocument`).
      *          파일 하나를 문서로 고치는 패널은 모두 이 기반으로 연다(언리얼 `FAssetEditorToolkit` 의 자리) — 콘텐츠 브라우저 · 패널 안 목록 · 경로 칸 · 시나리오(`asset.openScratch`)가
      *          같은 길(워크스페이스 포커스 → `acceptsDocumentPath` → `loadDocument`)로 열고, 저장 왕복 시나리오(`panel.saveDocument` · `panel.reloadDocument`)가 사본 문서를 다룬다.
-     *          자체 열기 길을 둔 패널(카탈로그 · 입력 맵 · 오디오 이벤트)은 시나리오가 사본을 가리킬 수 없어 이 기반으로 옮겼다.
+     *          자체 열기 길을 둔 패널(카탈로그 · 입력 맵 · 오디오 이벤트 · UI Preview · 어빌리티 카탈로그 · 데이터 테이블)은 시나리오가 사본을 가리킬 수 없어 이 기반으로 옮겼다.
+     *          연 문서 경로가 없는 문서 패널(전역 변수 · 프로젝트 설정 · 메시 모디파이어)은 `EditorStateDocumentPanel` 이고, `IEditorDocumentPanel` 은 이 둘만 상속할 수 있다.
      */
     class SW_EDITOR_API EditorDocumentPanel : public IEditorDocumentPanel
     {

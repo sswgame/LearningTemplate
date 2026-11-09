@@ -9,7 +9,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/GUI/Panel/IEditorDocumentPanel.h"
+#include "Editor/Common/GUI/Panel/EditorStateDocumentPanel.h"
 #include "Editor/Panels/Settings/Model/GlobalVariablesModel.h"
 
 namespace sw
@@ -22,7 +22,7 @@ namespace sw
 namespace sw::editor
 {
     /** @brief 등록된 모든 전역 변수를 나열하고 실시간으로 편집하는 에디터 도구 창입니다. */
-    class GlobalVariablesPanel : public IEditorDocumentPanel
+    class GlobalVariablesPanel : public EditorStateDocumentPanel
     {
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */

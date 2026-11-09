@@ -9,7 +9,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
-#include "Editor/Common/GUI/Panel/IEditorDocumentPanel.h"
+#include "Editor/Common/GUI/Panel/EditorStateDocumentPanel.h"
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsEntry.h"
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsPage.h"
@@ -28,7 +28,7 @@ namespace sw::editor
      *          저장하면 엔진의 `ConfigReloadSubsystem::reloadChangedFile` 이 호스트 설정을 제자리에서 다시 읽는다(`ConfigManager::reloadConfigFile`).
      *          창 시작 값만 쓰는 필드(창 크기 · 백엔드)는 다음 실행부터 반영된다.
      */
-    class ProjectSettingsPanel final : public IEditorDocumentPanel
+    class ProjectSettingsPanel final : public EditorStateDocumentPanel
     {
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */

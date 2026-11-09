@@ -12,7 +12,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
-#include "Editor/Common/GUI/Panel/IEditorDocumentPanel.h"
+#include "Editor/Common/GUI/Panel/EditorStateDocumentPanel.h"
 #include "Editor/Common/Widgets/EditorCurveEditorState.h"
 
 #include "GameFramework/Plugin/Editor/MeshModifiers/Model/MeshModifiersPanelModel.h"
@@ -32,7 +32,7 @@ namespace sw::editor
      * @class MeshModifiersPanel
      * @brief 메시 모디파이어 확장의 도구 패널입니다.
      */
-    class MeshModifiersPanel final : public IEditorDocumentPanel
+    class MeshModifiersPanel final : public EditorStateDocumentPanel
     {
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 열기(`EditorPanelManager::setPanelOpen<…>`)가 모두 이 상수에서 온다. */

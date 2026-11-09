@@ -75,16 +75,19 @@ namespace sw::editor
 
     private:
         friend class IEditorPanel; // 셸(`draw` · `requestClose`)이 문서 상태를 묻고 확인을 띄운다
+        // 문서 패널의 기반은 이 둘뿐이다 — 생성자를 둘에만 연다. 에셋 파일 하나를 고치는 패널이 직접 상속해 자체 열기 길과 문서 경로를 따로 들던 모양을 형식으로 막는다.
+        friend class EditorDocumentPanel;      // 에셋 파일 하나(워크스페이스 포커스로 연다)
+        friend class EditorStateDocumentPanel; // 연 문서 경로가 없는 상태 · 설정 묶음
 
-    protected:
-        /** @brief 기본 열림 상태로 문서 패널을 만듭니다. */
-        explicit IEditorDocumentPanel( bool bOpenByDefault = true )
+        /** @brief 기본 열림 상태로 문서 패널을 만듭니다. 두 기반(`EditorDocumentPanel` · `EditorStateDocumentPanel`)만 부른다. */
+        explicit IEditorDocumentPanel( bool bOpenByDefault )
             : IEditorPanel{ bOpenByDefault }
             , _bDocumentDirty{ SW_FALSE }
             , _bConfirmClose{ SW_FALSE }
         {
         }
 
+    protected:
         /**
          * @brief 닫을 때 미저장 편집을 확인해야 하면 true 입니다. 기본은 true 입니다.
          * @details 편집이 패널 밖(전역 변수 관리자처럼 바로 적용되는 곳)에 살아 있어서 패널을 닫아도 아무것도 잃지 않는 패널만 false 로 재정의한다.
