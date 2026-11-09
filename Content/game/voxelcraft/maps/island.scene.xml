@@ -137,7 +137,6 @@
 					               _meshID="Cube"
 					               _materialPath="engine/materials/glassmaterial.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="false" />
 					<VoxelHighlightComponent _componentName="VoxelHighlightComponent" _bActive="true" _player="3" />

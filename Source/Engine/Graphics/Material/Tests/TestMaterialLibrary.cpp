@@ -83,31 +83,6 @@ SW_TEST_CASE( MaterialLibraryTest, EveryPresetLoadsWithTheRootLayout )
     }
 }
 
-/**
- * @brief [MaterialLibraryTest] 정렬 · 블렌드 규칙 — 굴절(장면 사본을 읽는다)은 반투명 목록에서 얇은 반투명보다 먼저 그린다
- * @details 사본은 반투명 전체 앞에 떠 둔 것이라 굴절 면보다 먼저 그려진 반투명은 그 픽셀에서 지워진다(scene_refraction.hlsli). 그래서 굴절의 renderQueue 가 더 작아야 한다.
- */
-SW_TEST_CASE( MaterialLibraryTest, RefractionDrawsBeforeOtherTranslucency )
-{
-    int32 maxRefractionQueue = std::numeric_limits<int32>::min();
-    int32 minOtherQueue      = std::numeric_limits<int32>::max();
-    for ( const MaterialLibraryTestUtil::LoadedMaterial& loaded : MaterialLibraryTestUtil::loadAll() )
-    {
-        const Material& material     = *loaded._material;
-        const bool      bRefraction  = MaterialLibraryTestUtil::hasDefine( material, "MATERIAL_REFRACTION" );
-        const bool      bTranslucent = MaterialLibraryTestUtil::hasDefine( material, "MATERIAL_BLEND_TRANSLUCENT" );
-        // 블렌드 define 과 반투명 목록은 함께 움직인다 — 하나만 있으면 알파가 새거나 불투명 목록에서 섞인다.
-        SW_EXPECT_TRUE_MSG( bTranslucent == ( material.getAlphaMode() == MaterialAlphaMode::Blend ), loaded._id.c_str() );
-        if ( bRefraction )
-            maxRefractionQueue = std::max( maxRefractionQueue, material.getRenderQueue() );
-        else if ( bTranslucent )
-            minOtherQueue = std::min( minOtherQueue, material.getRenderQueue() );
-        SW_EXPECT_TRUE_MSG( bRefraction == false || bTranslucent, loaded._id.c_str() );
-    }
-    SW_REQUIRE_TRUE( maxRefractionQueue != std::numeric_limits<int32>::min() && minOtherQueue != std::numeric_limits<int32>::max() );
-    SW_EXPECT_TRUE( maxRefractionQueue < minOtherQueue );
-}
-
 /** @brief [MaterialLibraryTest] 엽 · 기능 조합 — 털 껍질은 정점 이동 + 알파 컷, 오려 내는 그물은 알파 컷 · 양면, 피부 위 그물은 불투명 */
 SW_TEST_CASE( MaterialLibraryTest, FeatureCombinationsMatchTheirRenderState )
 {

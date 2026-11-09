@@ -31,7 +31,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="25" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="25" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -46,7 +46,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,-0.15,0" _localRotation="0,0,0" _localScale="1.2,0.1,1.2" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.9" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,-0.15,0" _localRotation="0,0,0" _localScale="1.2,0.1,1.2" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.9" />
 					<GimmickSensorComponent _defaultWeight="1" _bCountTriggers="false">
 						<_requiredTags>
 							<_listTag />
@@ -67,7 +67,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.5,0.5,0.5" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="game/empty/materials/renderstate/plain_red.material" _boundsRadius="0.45" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.5,0.5,0.5" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="game/empty/materials/renderstate/plain_red.material" _boundsRadius="0.45" />
 					<GimmickWeightComponent _weight="40" />
 				</_listComponent>
 			</GameObject>

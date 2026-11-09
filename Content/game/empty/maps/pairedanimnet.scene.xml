@@ -58,7 +58,6 @@
 					               _meshID="Plane"
 					               _materialPath="engine/materials/defaultmaterial.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -78,7 +77,6 @@
 					                       _meshID="common/models/kaykit/knight.mesh"
 					                       _materialPath="common/materials/kaykit_knight.material"
 					                       _boundsRadius="2"
-					                       _blendMode="Opaque"
 					                       _gpuSpinSeed="0"
 					                       _bVisible="true"
 					                       _skeletonPath="common/models/kaykit/knight/knight.skeleton.xml"
@@ -123,7 +121,6 @@
 					                       _meshID="common/models/kaykit/knight.mesh"
 					                       _materialPath="common/materials/kaykit_knight.material"
 					                       _boundsRadius="2"
-					                       _blendMode="Opaque"
 					                       _gpuSpinSeed="0"
 					                       _bVisible="true"
 					                       _skeletonPath="common/models/kaykit/knight/knight.skeleton.xml"

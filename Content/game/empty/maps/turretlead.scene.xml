@@ -37,7 +37,6 @@
 					               _meshID="Cube"
 					               _materialPath="engine/materials/defaultmaterial.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<TurretComponent _range="40"
@@ -74,7 +73,6 @@
 					               _meshID="Cube"
 					               _materialPath="engine/materials/defaultmaterial.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<TagComponent>

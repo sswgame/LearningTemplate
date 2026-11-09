@@ -17,7 +17,6 @@
 					               _meshID="Plane"
 					               _materialPath="game/shooter3d/materials/floor.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<RigidBodyComponent _componentName="RigidBodyComponent"
@@ -69,7 +68,6 @@
 					               _meshID="Cube"
 					               _materialPath="game/shooter3d/materials/wall.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="21,2,0.5" />
@@ -90,7 +88,6 @@
 					               _meshID="Cube"
 					               _materialPath="game/shooter3d/materials/wall.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="21,2,0.5" />
@@ -111,7 +108,6 @@
 					               _meshID="Cube"
 					               _materialPath="game/shooter3d/materials/wall.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.5,2,20" />
@@ -132,7 +128,6 @@
 					               _meshID="Cube"
 					               _materialPath="game/shooter3d/materials/wall.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.5,2,20" />
@@ -153,7 +148,6 @@
 					               _meshID="Cube"
 					               _materialPath="game/shooter3d/materials/cover.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="1.2,1,1.2" />
@@ -174,7 +168,6 @@
 					               _meshID="Cube"
 					               _materialPath="game/shooter3d/materials/cover.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="1.5,1,1" />
@@ -195,7 +188,6 @@
 					               _meshID="Cube"
 					               _materialPath="game/shooter3d/materials/cover.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="3,1.5,0.6" />
@@ -216,7 +208,6 @@
 					               _meshID="Cube"
 					               _materialPath="game/shooter3d/materials/cover.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="1,0.75,1" />
@@ -237,7 +228,6 @@
 					               _meshID="Cube"
 					               _materialPath="game/shooter3d/materials/cover.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="1,1,2" />
@@ -258,7 +248,6 @@
 					               _meshID="Cube"
 					               _materialPath="game/shooter3d/materials/cover.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.6,0.6,0.6" />
@@ -279,7 +268,6 @@
 					               _meshID="Cube"
 					               _materialPath="game/shooter3d/materials/cover.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.8,1,2.5" />
@@ -300,7 +288,6 @@
 					               _meshID="Cube"
 					               _materialPath="game/shooter3d/materials/cover.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="1.2,1.25,1.2" />
@@ -321,7 +308,6 @@
 					               _meshID="Cube"
 					               _materialPath="game/shooter3d/materials/cover.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="1.5,1,1.5" />
@@ -342,7 +328,6 @@
 					               _meshID="Cube"
 					               _materialPath="game/shooter3d/materials/cover.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="4,1,0.5" />
@@ -521,7 +506,6 @@
 					               _meshID="common/models/quaternius/scifi/gun_rifle.mesh"
 					               _materialPath="common/models/quaternius/scifi/gun_rifle/materials/mi_guns_batch1.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<NavMeshModifierComponent _componentName="NavMeshModifierComponent"
@@ -762,7 +746,6 @@
 					               _meshID="Cube"
 					               _materialPath="game/shooter3d/materials/cctvmonitor.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -797,7 +780,6 @@
 					               _meshID="game/shooter3d/models/kaykit_dungeon/barrel_large.mesh"
 					               _materialPath="game/shooter3d/materials/kaykit_dungeon.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -817,7 +799,6 @@
 					               _meshID="game/shooter3d/models/kaykit_dungeon/barrel_small.mesh"
 					               _materialPath="game/shooter3d/materials/kaykit_dungeon.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -837,7 +818,6 @@
 					               _meshID="game/shooter3d/models/kaykit_dungeon/barrier.mesh"
 					               _materialPath="game/shooter3d/materials/kaykit_dungeon.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -857,7 +837,6 @@
 					               _meshID="game/shooter3d/models/kaykit_dungeon/barrier_column.mesh"
 					               _materialPath="game/shooter3d/materials/kaykit_dungeon.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -877,7 +856,6 @@
 					               _meshID="game/shooter3d/models/kaykit_dungeon/barrier_corner.mesh"
 					               _materialPath="game/shooter3d/materials/kaykit_dungeon.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -897,7 +875,6 @@
 					               _meshID="game/shooter3d/models/kaykit_dungeon/barrier_half.mesh"
 					               _materialPath="game/shooter3d/materials/kaykit_dungeon.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -917,7 +894,6 @@
 					               _meshID="game/shooter3d/models/kaykit_dungeon/box_large.mesh"
 					               _materialPath="game/shooter3d/materials/kaykit_dungeon.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -937,7 +913,6 @@
 					               _meshID="game/shooter3d/models/kaykit_dungeon/box_small.mesh"
 					               _materialPath="game/shooter3d/materials/kaykit_dungeon.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -957,7 +932,6 @@
 					               _meshID="game/shooter3d/models/kaykit_dungeon/column.mesh"
 					               _materialPath="game/shooter3d/materials/kaykit_dungeon.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -977,7 +951,6 @@
 					               _meshID="game/shooter3d/models/kaykit_dungeon/crates_stacked.mesh"
 					               _materialPath="game/shooter3d/materials/kaykit_dungeon.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -997,7 +970,6 @@
 					               _meshID="game/shooter3d/models/kaykit_dungeon/floor_tile_large.mesh"
 					               _materialPath="game/shooter3d/materials/kaykit_dungeon.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -1017,7 +989,6 @@
 					               _meshID="game/shooter3d/models/kaykit_dungeon/floor_tile_small.mesh"
 					               _materialPath="game/shooter3d/materials/kaykit_dungeon.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -1037,7 +1008,6 @@
 					               _meshID="game/shooter3d/models/kaykit_dungeon/keg.mesh"
 					               _materialPath="game/shooter3d/materials/kaykit_dungeon.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -1057,7 +1027,6 @@
 					               _meshID="game/shooter3d/models/kaykit_dungeon/pillar.mesh"
 					               _materialPath="game/shooter3d/materials/kaykit_dungeon.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -1077,7 +1046,6 @@
 					               _meshID="game/shooter3d/models/kaykit_dungeon/wall.mesh"
 					               _materialPath="game/shooter3d/materials/kaykit_dungeon.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -1097,7 +1065,6 @@
 					               _meshID="game/shooter3d/models/kaykit_dungeon/wall_broken.mesh"
 					               _materialPath="game/shooter3d/materials/kaykit_dungeon.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -1117,7 +1084,6 @@
 					               _meshID="game/shooter3d/models/kaykit_dungeon/wall_corner.mesh"
 					               _materialPath="game/shooter3d/materials/kaykit_dungeon.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -1137,7 +1103,6 @@
 					               _meshID="game/shooter3d/models/kaykit_dungeon/wall_doorway.mesh"
 					               _materialPath="game/shooter3d/materials/kaykit_dungeon.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -1157,7 +1122,6 @@
 					               _meshID="game/shooter3d/models/kaykit_dungeon/wall_half.mesh"
 					               _materialPath="game/shooter3d/materials/kaykit_dungeon.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -1177,7 +1141,6 @@
 					               _meshID="common/models/polyhaven/concrete_road_barrier.mesh"
 					               _materialPath="common/models/polyhaven/concrete_road_barrier/materials/concrete_road_barrier.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.78,0.83,0.34" />
@@ -1198,7 +1161,6 @@
 					               _meshID="common/models/polyhaven/concrete_road_barrier.mesh"
 					               _materialPath="common/models/polyhaven/concrete_road_barrier/materials/concrete_road_barrier.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.78,0.83,0.34" />
@@ -1219,7 +1181,6 @@
 					               _meshID="common/models/polyhaven/concrete_road_barrier.mesh"
 					               _materialPath="common/models/polyhaven/concrete_road_barrier/materials/concrete_road_barrier.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.34,0.83,0.78" />
@@ -1240,7 +1201,6 @@
 					               _meshID="common/models/polyhaven/concrete_road_barrier.mesh"
 					               _materialPath="common/models/polyhaven/concrete_road_barrier/materials/concrete_road_barrier.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.34,0.83,0.78" />
@@ -1261,7 +1221,6 @@
 					               _meshID="common/models/polyhaven/barrel_03.mesh"
 					               _materialPath="common/models/polyhaven/barrel_03/materials/barrel_03.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.33,0.93,0.33" />
@@ -1282,7 +1241,6 @@
 					               _meshID="common/models/polyhaven/barrel_03.mesh"
 					               _materialPath="common/models/polyhaven/barrel_03/materials/barrel_03.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.33,0.93,0.33" />
@@ -1303,7 +1261,6 @@
 					               _meshID="common/models/polyhaven/barrel_03.mesh"
 					               _materialPath="common/models/polyhaven/barrel_03/materials/barrel_03.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.33,0.93,0.33" />
@@ -1324,7 +1281,6 @@
 					               _meshID="common/models/polyhaven/barrel_03.mesh"
 					               _materialPath="common/models/polyhaven/barrel_03/materials/barrel_03.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.33,0.93,0.33" />
@@ -1345,7 +1301,6 @@
 					               _meshID="common/models/polyhaven/barrel_03.mesh"
 					               _materialPath="common/models/polyhaven/barrel_03/materials/barrel_03.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.33,0.93,0.33" />
@@ -1366,7 +1321,6 @@
 					               _meshID="common/models/polyhaven/barrel_03.mesh"
 					               _materialPath="common/models/polyhaven/barrel_03/materials/barrel_03.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.33,0.93,0.33" />
@@ -1387,7 +1341,6 @@
 					               _meshID="common/models/polyhaven/barrel_03.mesh"
 					               _materialPath="common/models/polyhaven/barrel_03/materials/barrel_03.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.33,0.93,0.33" />
@@ -1408,7 +1361,6 @@
 					               _meshID="common/models/polyhaven/wooden_crate_01.mesh"
 					               _materialPath="common/models/polyhaven/wooden_crate_01/materials/wooden_crate_01.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.42,0.35,0.22" />
@@ -1429,7 +1381,6 @@
 					               _meshID="common/models/polyhaven/wooden_crate_01.mesh"
 					               _materialPath="common/models/polyhaven/wooden_crate_01/materials/wooden_crate_01.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.42,0.35,0.22" />
@@ -1450,7 +1401,6 @@
 					               _meshID="common/models/polyhaven/wooden_crate_01.mesh"
 					               _materialPath="common/models/polyhaven/wooden_crate_01/materials/wooden_crate_01.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.22,0.35,0.42" />
@@ -1471,7 +1421,6 @@
 					               _meshID="common/models/polyhaven/propane_tank.mesh"
 					               _materialPath="common/models/polyhaven/propane_tank/materials/propane_tank.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.18,0.55,0.18" />
@@ -1492,7 +1441,6 @@
 					               _meshID="common/models/polyhaven/propane_tank.mesh"
 					               _materialPath="common/models/polyhaven/propane_tank/materials/propane_tank.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.18,0.55,0.18" />
@@ -1513,7 +1461,6 @@
 					               _meshID="common/models/polyhaven/metal_jerrycan.mesh"
 					               _materialPath="common/models/polyhaven/metal_jerrycan/materials/metal_jerrycan.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.18,0.46,0.1" />
@@ -1534,7 +1481,6 @@
 					               _meshID="common/models/polyhaven/metal_jerrycan.mesh"
 					               _materialPath="common/models/polyhaven/metal_jerrycan/materials/metal_jerrycan.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.18,0.46,0.1" />
@@ -1555,7 +1501,6 @@
 					               _meshID="common/models/polyhaven/industrial_pastic_container.mesh"
 					               _materialPath="common/models/polyhaven/industrial_pastic_container/materials/industrial_pastic_container.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.24,0.42,0.33" />
@@ -1576,7 +1521,6 @@
 					               _meshID="common/models/polyhaven/industrial_pastic_container.mesh"
 					               _materialPath="common/models/polyhaven/industrial_pastic_container/materials/industrial_pastic_container.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.33,0.42,0.24" />
@@ -1597,7 +1541,6 @@
 					               _meshID="common/models/polyhaven/power_box_01.mesh"
 					               _materialPath="common/models/polyhaven/power_box_01/materials/power_box_01.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -1617,7 +1560,6 @@
 					               _meshID="common/models/polyhaven/power_box_01.mesh"
 					               _materialPath="common/models/polyhaven/power_box_01/materials/power_box_01.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>

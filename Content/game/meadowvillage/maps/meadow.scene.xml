@@ -88,7 +88,6 @@
 					               _meshID="game/meadowvillage/models/crops_dirt_single.mesh"
 					               _materialPath="game/meadowvillage/materials/nature.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -108,7 +107,6 @@
 					               _meshID="game/meadowvillage/models/ground_grass.mesh"
 					               _materialPath="game/meadowvillage/materials/nature.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -128,7 +126,6 @@
 					               _meshID="game/meadowvillage/models/ground_path_tile.mesh"
 					               _materialPath="game/meadowvillage/materials/nature.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -148,7 +145,6 @@
 					               _meshID="game/meadowvillage/models/ground_river_tile.mesh"
 					               _materialPath="game/meadowvillage/materials/nature.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>

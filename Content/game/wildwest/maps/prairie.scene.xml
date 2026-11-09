@@ -61,7 +61,6 @@
 					               _meshID="Cube"
 					               _materialPath="game/wildwest/materials/wood.material"
 					               _boundsRadius="0.45"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<TagComponent>
@@ -176,7 +175,6 @@
 					               _meshID="Plane"
 					               _materialPath="game/wildwest/materials/sand.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -211,7 +209,6 @@
 					               _meshID="Capsule"
 					               _materialPath="game/wildwest/materials/rider.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<MeshComponent _componentName="MeshComponent"
@@ -225,7 +222,6 @@
 					               _meshID="Cube"
 					               _materialPath="game/wildwest/materials/hat.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<MeshComponent _componentName="MeshComponent"
@@ -239,7 +235,6 @@
 					               _meshID="Cube"
 					               _materialPath="game/wildwest/materials/hat.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<PawnComponent _componentName="PawnComponent"
@@ -311,7 +306,6 @@
 					                       _meshID="game/wildwest/models/horse.mesh"
 					                       _materialPath="game/wildwest/materials/morgan.material"
 					                       _boundsRadius="2.4"
-					                       _blendMode="Opaque"
 					                       _gpuSpinSeed="0"
 					                       _bVisible="true"
 					                       _skeletonPath="game/wildwest/models/horse/horse.skeleton.xml"
@@ -342,7 +336,6 @@
 					               _meshID="Cube"
 					               _materialPath="game/wildwest/materials/hat.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<PawnComponent _componentName="PawnComponent"
@@ -422,7 +415,6 @@
 					                       _meshID="game/wildwest/models/horse.mesh"
 					                       _materialPath="game/wildwest/materials/mustang.material"
 					                       _boundsRadius="2.4"
-					                       _blendMode="Opaque"
 					                       _gpuSpinSeed="0"
 					                       _bVisible="true"
 					                       _skeletonPath="game/wildwest/models/horse/horse.skeleton.xml"
@@ -453,7 +445,6 @@
 					               _meshID="Cube"
 					               _materialPath="game/wildwest/materials/hat.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<PawnComponent _componentName="PawnComponent"
@@ -576,7 +567,6 @@
 					               _meshID="game/wildwest/models/cactus_tall.mesh"
 					               _materialPath="game/wildwest/materials/cactus.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -596,7 +586,6 @@
 					               _meshID="game/wildwest/models/cactus_short.mesh"
 					               _materialPath="game/wildwest/materials/cactus.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -616,7 +605,6 @@
 					               _meshID="game/wildwest/models/cactus_tall.mesh"
 					               _materialPath="game/wildwest/materials/cactus.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -636,7 +624,6 @@
 					               _meshID="game/wildwest/models/cactus_short.mesh"
 					               _materialPath="game/wildwest/materials/cactus.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -656,7 +643,6 @@
 					               _meshID="game/wildwest/models/cactus_tall.mesh"
 					               _materialPath="game/wildwest/materials/cactus.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -676,7 +662,6 @@
 					               _meshID="game/wildwest/models/cactus_short.mesh"
 					               _materialPath="game/wildwest/materials/cactus.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -696,7 +681,6 @@
 					               _meshID="game/wildwest/models/cactus_tall.mesh"
 					               _materialPath="game/wildwest/materials/cactus.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -716,7 +700,6 @@
 					               _meshID="game/wildwest/models/cactus_short.mesh"
 					               _materialPath="game/wildwest/materials/cactus.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -736,7 +719,6 @@
 					               _meshID="common/models/quaternius/nature/rock_medium_1.mesh"
 					               _materialPath="common/models/quaternius/nature/rock_medium_1/materials/rocks.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -756,7 +738,6 @@
 					               _meshID="common/models/quaternius/nature/rock_medium_2.mesh"
 					               _materialPath="common/models/quaternius/nature/rock_medium_2/materials/rocks.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -776,7 +757,6 @@
 					               _meshID="common/models/quaternius/nature/rock_medium_3.mesh"
 					               _materialPath="common/models/quaternius/nature/rock_medium_3/materials/rocks.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -796,7 +776,6 @@
 					               _meshID="common/models/quaternius/nature/rock_medium_3.mesh"
 					               _materialPath="common/models/quaternius/nature/rock_medium_3/materials/rocks.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -816,7 +795,6 @@
 					               _meshID="common/models/quaternius/nature/rock_medium_1.mesh"
 					               _materialPath="common/models/quaternius/nature/rock_medium_1/materials/rocks.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -836,7 +814,6 @@
 					               _meshID="common/models/quaternius/village/prop_woodenfence_single.mesh"
 					               _materialPath="common/models/quaternius/village/prop_woodenfence_single/materials/mi_woodtrim.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -856,7 +833,6 @@
 					               _meshID="common/models/quaternius/village/prop_woodenfence_extension1.mesh"
 					               _materialPath="common/models/quaternius/village/prop_woodenfence_extension1/materials/mi_woodtrim.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -876,7 +852,6 @@
 					               _meshID="game/wildwest/models/fence_corner.mesh"
 					               _materialPath="game/wildwest/materials/wood.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -896,7 +871,6 @@
 					               _meshID="game/wildwest/models/fence_gate.mesh"
 					               _materialPath="game/wildwest/materials/wood.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -916,7 +890,6 @@
 					               _meshID="common/models/quaternius/village/prop_woodenfence_single.mesh"
 					               _materialPath="common/models/quaternius/village/prop_woodenfence_single/materials/mi_woodtrim.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -936,7 +909,6 @@
 					               _meshID="common/models/quaternius/village/prop_woodenfence_extension1.mesh"
 					               _materialPath="common/models/quaternius/village/prop_woodenfence_extension1/materials/mi_woodtrim.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -956,7 +928,6 @@
 					               _meshID="game/wildwest/models/fence_corner.mesh"
 					               _materialPath="game/wildwest/materials/wood.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -985,7 +956,6 @@
 					               _meshID="Cube"
 					               _materialPath="game/wildwest/materials/wood.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<WesternDeedComponent _componentName="WesternDeedComponent"
@@ -1017,7 +987,6 @@
 					               _meshID="Capsule"
 					               _materialPath="game/wildwest/materials/rider.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<WesternWitnessComponent _componentName="WesternWitnessComponent" _bActive="true" _bLawman="false" />
@@ -1046,7 +1015,6 @@
 					               _meshID="Capsule"
 					               _materialPath="game/wildwest/materials/rider.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<WesternWitnessComponent _componentName="WesternWitnessComponent" _bActive="true" _bLawman="true" />
@@ -1079,7 +1047,6 @@
 					               _meshID="Capsule"
 					               _materialPath="game/wildwest/materials/rider.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<WesternDeedComponent _componentName="WesternDeedComponent"
@@ -1111,7 +1078,6 @@
 					               _meshID="Cube"
 					               _materialPath="game/wildwest/materials/mustang.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<WesternDeedComponent _componentName="WesternDeedComponent"
@@ -1143,7 +1109,6 @@
 					               _meshID="Cube"
 					               _materialPath="game/wildwest/materials/wood.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<WesternDeedComponent _componentName="WesternDeedComponent"
@@ -1175,7 +1140,6 @@
 					               _meshID="Cube"
 					               _materialPath="game/wildwest/materials/wood.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<WesternDeedComponent _componentName="WesternDeedComponent"
@@ -1207,7 +1171,6 @@
 					               _meshID="Cube"
 					               _materialPath="game/wildwest/materials/sand.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<WesternDeedComponent _componentName="WesternDeedComponent"
@@ -1239,7 +1202,6 @@
 					               _meshID="Cube"
 					               _materialPath="game/wildwest/materials/hat.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<WesternDeedComponent _componentName="WesternDeedComponent"

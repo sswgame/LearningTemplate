@@ -19,12 +19,25 @@ namespace sw
      * @brief 투명 정렬 키(머티리얼의 그리기 순서, 정렬 레이어 키, 깊이, 후보 인덱스)입니다. 정렬 전에 한 번 계산해 둡니다.
      * @details 깊이는 정렬 축이 영벡터면 카메라까지의 거리², 아니면 그 축 위의 깊이(카메라 기준)입니다. 둘 다 클수록 먼저 그립니다.
      */
+    /**
+     * @enum TransparentDrawBand
+     * @brief 반투명 그리기의 띠입니다 — 장면 색 사본을 읽는 굴절(`Material::readsSceneColorCopy`)이 먼저다. 차례 · 레이어 · 깊이는 띠 안의 순서다.
+     * @details 사본은 반투명 전체 앞에 떠 둔 것이라 굴절 면보다 먼저 그려진 반투명은 굴절 너머로 사라진다. 차례(renderQueue)를 손으로 적던 규칙을 띠가 대신한다
+     *          (유니티 HDRP 의 굴절 앞 · 뒤 반투명, 언리얼은 굴절을 반투명 뒤의 왜곡 패스로 미룬다).
+     */
+    enum class TransparentDrawBand : uint8
+    {
+        ReadsSceneCopy, ///< 굴절(물 · 유리) — 사본 위에 먼저 그린다
+        Ordinary,       ///< 그 밖의 반투명 · 입자
+    };
+
     struct GPUTransparentSortKey
     {
-        uint32  _sortKey{ 0 };
-        float32 _depth{ 0.0f };
-        uint32  _candidateIndex{ 0 };
-        int32   _renderQueue{ 0 }; ///< `Material::getRenderQueue`. 입자는 0 이다
+        uint32              _sortKey{ 0 };
+        float32             _depth{ 0.0f };
+        uint32              _candidateIndex{ 0 };
+        int32               _renderQueue{ 0 };                          ///< `Material::getRenderQueue`. 입자는 0 이다
+        TransparentDrawBand _drawBand{ TransparentDrawBand::Ordinary }; ///< 차례보다 앞선 첫 키. 입자는 Ordinary 다
     };
 } // namespace sw
 
@@ -51,6 +64,8 @@ namespace sw
          */
         static bool isDrawnBefore( const GPUTransparentSortKey& keyA, const GPUTransparentSortKey& keyB )
         {
+            if ( keyA._drawBand != keyB._drawBand )
+                return keyA._drawBand < keyB._drawBand;
             if ( keyA._renderQueue != keyB._renderQueue )
                 return keyA._renderQueue < keyB._renderQueue;
             if ( keyA._sortKey != keyB._sortKey )
@@ -65,6 +80,8 @@ namespace sw
          */
         static bool isBatchDrawnBeforeParticle( const GPUTransparentSortKey& batchKey, const GPUTransparentSortKey& particleKey )
         {
+            if ( batchKey._drawBand != particleKey._drawBand )
+                return batchKey._drawBand < particleKey._drawBand;
             if ( batchKey._renderQueue != particleKey._renderQueue )
                 return batchKey._renderQueue < particleKey._renderQueue;
             if ( batchKey._sortKey != particleKey._sortKey )

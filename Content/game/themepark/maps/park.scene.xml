@@ -69,7 +69,6 @@
 					               _meshID="Plane"
 					               _materialPath="game/themepark/materials/grass.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -89,7 +88,6 @@
 					               _meshID="game/themepark/models/park_entrance.mesh"
 					               _materialPath="game/themepark/materials/palette.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -109,7 +107,6 @@
 					               _meshID="game/themepark/models/stall_food.mesh"
 					               _materialPath="game/themepark/materials/palette.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -129,7 +126,6 @@
 					               _meshID="common/models/quaternius/props/bench.mesh"
 					               _materialPath="common/models/quaternius/props/bench/materials/mi_trim_furniture.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true"
 					               _sectionName="mi_trim_furniture" />
@@ -155,7 +151,6 @@
 					               _meshID="game/themepark/models/trash.mesh"
 					               _materialPath="game/themepark/materials/palette.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -175,7 +170,6 @@
 					               _meshID="game/themepark/models/stall_drinks.mesh"
 					               _materialPath="game/themepark/materials/palette.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -195,7 +189,6 @@
 					               _meshID="common/models/quaternius/props/bench.mesh"
 					               _materialPath="common/models/quaternius/props/bench/materials/mi_trim_furniture.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true"
 					               _sectionName="mi_trim_furniture" />
@@ -221,7 +214,6 @@
 					               _meshID="game/themepark/models/trash.mesh"
 					               _materialPath="game/themepark/materials/palette.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -241,7 +233,6 @@
 					               _meshID="game/themepark/models/stall_information.mesh"
 					               _materialPath="game/themepark/materials/palette.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -261,7 +252,6 @@
 					               _meshID="common/models/quaternius/props/bench.mesh"
 					               _materialPath="common/models/quaternius/props/bench/materials/mi_trim_furniture.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true"
 					               _sectionName="mi_trim_furniture" />
@@ -287,7 +277,6 @@
 					               _meshID="game/themepark/models/trash.mesh"
 					               _materialPath="game/themepark/materials/palette.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -307,7 +296,6 @@
 					               _meshID="game/themepark/models/stall_toilets.mesh"
 					               _materialPath="game/themepark/materials/palette.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -327,7 +315,6 @@
 					               _meshID="common/models/quaternius/props/bench.mesh"
 					               _materialPath="common/models/quaternius/props/bench/materials/mi_trim_furniture.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true"
 					               _sectionName="mi_trim_furniture" />
@@ -353,7 +340,6 @@
 					               _meshID="game/themepark/models/trash.mesh"
 					               _materialPath="game/themepark/materials/palette.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>

@@ -69,7 +69,6 @@
 					               _meshID="Cube"
 					               _materialPath="game/nilecity/materials/cursor.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="false" />
 					<NileCursorComponent _componentName="NileCursorComponent"
@@ -113,7 +112,6 @@
 					               _meshID="game/nilecity/models/building_type_a.mesh"
 					               _materialPath="game/nilecity/materials/palette.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -133,7 +131,6 @@
 					               _meshID="game/nilecity/models/building_type_b.mesh"
 					               _materialPath="game/nilecity/materials/palette.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -153,7 +150,6 @@
 					               _meshID="game/nilecity/models/building_type_c.mesh"
 					               _materialPath="game/nilecity/materials/palette.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -173,7 +169,6 @@
 					               _meshID="game/nilecity/models/building_type_d.mesh"
 					               _materialPath="game/nilecity/materials/palette.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -193,7 +188,6 @@
 					               _meshID="game/nilecity/models/building_type_e.mesh"
 					               _materialPath="game/nilecity/materials/palette.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -213,7 +207,6 @@
 					               _meshID="game/nilecity/models/building_type_f.mesh"
 					               _materialPath="game/nilecity/materials/palette.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -233,7 +226,6 @@
 					               _meshID="game/nilecity/models/building_type_g.mesh"
 					               _materialPath="game/nilecity/materials/palette.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -253,7 +245,6 @@
 					               _meshID="game/nilecity/models/crops_dirt_row.mesh"
 					               _materialPath="game/nilecity/materials/nature.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -273,7 +264,6 @@
 					               _meshID="game/nilecity/models/crops_wheat_stage_a.mesh"
 					               _materialPath="game/nilecity/materials/nature.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -293,7 +283,6 @@
 					               _meshID="game/nilecity/models/crops_wheat_stage_b.mesh"
 					               _materialPath="game/nilecity/materials/nature.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -313,7 +302,6 @@
 					               _meshID="game/nilecity/models/fence_low.mesh"
 					               _materialPath="game/nilecity/materials/nature.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -333,7 +321,6 @@
 					               _meshID="game/nilecity/models/planter.mesh"
 					               _materialPath="game/nilecity/materials/nature.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -353,7 +340,6 @@
 					               _meshID="game/nilecity/models/statue_block.mesh"
 					               _materialPath="game/nilecity/materials/nature.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -373,7 +359,6 @@
 					               _meshID="game/nilecity/models/statue_column.mesh"
 					               _materialPath="game/nilecity/materials/nature.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -393,7 +378,6 @@
 					               _meshID="game/nilecity/models/statue_head.mesh"
 					               _materialPath="game/nilecity/materials/nature.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -413,7 +397,6 @@
 					               _meshID="game/nilecity/models/statue_obelisk.mesh"
 					               _materialPath="game/nilecity/materials/nature.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -433,7 +416,6 @@
 					               _meshID="common/models/quaternius/nature/commontree_5.mesh"
 					               _materialPath="common/models/quaternius/nature/commontree_5/materials/bark_normaltree.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true"
 					               _sectionName="bark_normaltree" />

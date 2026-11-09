@@ -14,14 +14,14 @@
 		<entity id="2" name="Ground">
 			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="0,0,6" _localRotation="0,0,0" _localScale="20,1,20" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="15" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,6" _localRotation="0,0,0" _localScale="20,1,20" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="15" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="3" name="Occluder">
 			<GameObject _schemaVersion="0" _name="Occluder" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="-1.6,1.2,4" _localRotation="0,0,0" _localScale="1.2,2.4,0.4" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.5" _blendMode="Opaque" />
+					<MeshComponent _localPosition="-1.6,1.2,4" _localRotation="0,0,0" _localScale="1.2,2.4,0.4" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>

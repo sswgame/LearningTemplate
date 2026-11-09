@@ -39,7 +39,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="80,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="60" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="80,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="60" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -61,7 +61,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4.5" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -84,7 +84,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="6,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="4.5" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="6,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="4.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -107,7 +107,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="6,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="4.5" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="6,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="4.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -139,7 +139,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4.5" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -161,7 +161,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="5,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4.5" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="5,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -183,7 +183,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="4.5" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="4.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -206,7 +206,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="4.5" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="4.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -229,7 +229,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="4.5" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="4.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -252,7 +252,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4.5" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -275,7 +275,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="4.5" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="4.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -298,7 +298,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="4.5" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="4.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -313,7 +313,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4.5" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -328,7 +328,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="4.5" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="4.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -343,7 +343,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="16,0.5,10" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="12" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="16,0.5,10" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="12" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -358,7 +358,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="2,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="4.5" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="2,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="4.5" />
 					<NavMeshModifierComponent _areaName="Lava" _bIgnoreFromBuild="false" />
 				</_listComponent>
 			</GameObject>
@@ -398,8 +398,8 @@
 			<GameObject _schemaVersion="0" _name="Walker" _bActive="true">
 				<_listComponent>
 					<CharacterControllerComponent _localPosition="0,0.05,-6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="0.7853982" _gravityScale="1" _mass="70" _layer="Character" />
-					<MeshComponent _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,1.8,0.6" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.2" _blendMode="Opaque" />
-					<MeshComponent _localPosition="0,1.95,0" _localRotation="0,0,0" _localScale="0.5,0.2,0.5" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.4" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,1.8,0.6" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.2" />
+					<MeshComponent _localPosition="0,1.95,0" _localRotation="0,0,0" _localScale="0.5,0.2,0.5" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.4" />
 					<AbilityComponent _abilitySetID="ZoneWalker" _healthAttribute="Health" _maxHealthAttribute="MaxHealth" _damageNumberOffset="0,2,0" _bShowDamageNumbers="false" />
 					<GroundSurfaceComponent _probeLength="0.6" />
 					<ZoneContactComponent _probeLength="0.6" _bodyHeight="1.8" _touchDistance="0.15" />
@@ -422,8 +422,8 @@
 			<GameObject _schemaVersion="0" _name="Villager" _bActive="true">
 				<_listComponent>
 					<CharacterControllerComponent _localPosition="4,0.05,-6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="0.7853982" _gravityScale="1" _mass="70" _layer="Character" />
-					<MeshComponent _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,1.8,0.6" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.2" _blendMode="Opaque" />
-					<MeshComponent _localPosition="0,1.95,0" _localRotation="0,0,0" _localScale="0.5,0.2,0.5" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.4" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,1.8,0.6" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.2" />
+					<MeshComponent _localPosition="0,1.95,0" _localRotation="0,0,0" _localScale="0.5,0.2,0.5" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.4" />
 					<AbilityComponent _abilitySetID="ZoneWalker" _healthAttribute="Health" _maxHealthAttribute="MaxHealth" _damageNumberOffset="0,2,0" _bShowDamageNumbers="false" />
 					<GroundSurfaceComponent _probeLength="0.6" />
 					<ZoneContactComponent _probeLength="0.6" _bodyHeight="1.8" _touchDistance="0.15" />
@@ -442,8 +442,8 @@
 			<GameObject _schemaVersion="0" _name="Victim" _bActive="true">
 				<_listComponent>
 					<CharacterControllerComponent _localPosition="8,0.05,-6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="0.7853982" _gravityScale="1" _mass="70" _layer="Character" />
-					<MeshComponent _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,1.8,0.6" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.2" _blendMode="Opaque" />
-					<MeshComponent _localPosition="0,1.95,0" _localRotation="0,0,0" _localScale="0.5,0.2,0.5" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.4" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,1.8,0.6" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.2" />
+					<MeshComponent _localPosition="0,1.95,0" _localRotation="0,0,0" _localScale="0.5,0.2,0.5" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.4" />
 					<AbilityComponent _abilitySetID="ZoneWalker" _healthAttribute="Health" _maxHealthAttribute="MaxHealth" _damageNumberOffset="0,2,0" _bShowDamageNumbers="false" />
 					<GroundSurfaceComponent _probeLength="0.6" />
 					<ZoneContactComponent _probeLength="0.6" _bodyHeight="1.8" _touchDistance="0.15" />
@@ -461,8 +461,8 @@
 			<GameObject _schemaVersion="0" _name="Spirit" _bActive="true">
 				<_listComponent>
 					<CharacterControllerComponent _localPosition="12,0.05,-6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="0.7853982" _gravityScale="1" _mass="70" _layer="Character" />
-					<MeshComponent _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,1.8,0.6" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.2" _blendMode="Opaque" />
-					<MeshComponent _localPosition="0,1.95,0" _localRotation="0,0,0" _localScale="0.5,0.2,0.5" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.4" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,1.8,0.6" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.2" />
+					<MeshComponent _localPosition="0,1.95,0" _localRotation="0,0,0" _localScale="0.5,0.2,0.5" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.4" />
 					<AbilityComponent _abilitySetID="FireSpirit" _healthAttribute="Health" _maxHealthAttribute="MaxHealth" _damageNumberOffset="0,2,0" _bShowDamageNumbers="false" />
 					<GroundSurfaceComponent _probeLength="0.6" />
 					<ZoneContactComponent _probeLength="0.6" _bodyHeight="1.8" _touchDistance="0.15" />
@@ -487,7 +487,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.3,0.2,0.6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.45" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.3,0.2,0.6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.45" />
 					<ZoneContactComponent _probeLength="0.6" _bodyHeight="0.2" _touchDistance="0.15" />
 					<TagComponent>
 						<_tags>
@@ -510,7 +510,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.6,0.6,0.6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.45" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.6,0.6,0.6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.45" />
 					<ZoneContactComponent _probeLength="0.6" _bodyHeight="0.6" _touchDistance="0.15" />
 					<TagComponent>
 						<_tags>
@@ -533,7 +533,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.6,0.6,0.6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.45" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.6,0.6,0.6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.45" />
 					<ZoneContactComponent _probeLength="0.6" _bodyHeight="0.6" _touchDistance="0.15" />
 				</_listComponent>
 			</GameObject>
@@ -549,7 +549,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1.2,0.3,1.2" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.9" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1.2,0.3,1.2" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.9" />
 					<ZoneContactComponent _probeLength="0.6" _bodyHeight="0.3" _touchDistance="0.15" />
 					<VehicleSeatComponent />
 				</_listComponent>
@@ -566,7 +566,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.6,0.6,0.6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.45" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.6,0.6,0.6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.45" />
 					<ZoneContactComponent _probeLength="0.6" _bodyHeight="0.6" _touchDistance="0.15" />
 				</_listComponent>
 			</GameObject>
@@ -582,7 +582,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.4,0.6,0.4" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.45" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.4,0.6,0.4" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.45" />
 					<ZoneContactComponent _probeLength="0.6" _bodyHeight="0.6" _touchDistance="0.15" />
 					<TagComponent>
 						<_tags>

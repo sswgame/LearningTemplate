@@ -44,7 +44,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -59,7 +59,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,-0.04,0" _localRotation="0,0,0" _localScale="4,0.42,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="4" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,-0.04,0" _localRotation="0,0,0" _localScale="4,0.42,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="4" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -74,7 +74,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="2,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="2,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -89,7 +89,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="2,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="2,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -104,7 +104,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,-0.08,0" _localRotation="0,0,0" _localScale="4,0.34,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="4" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,-0.08,0" _localRotation="0,0,0" _localScale="4,0.34,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="4" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -119,7 +119,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="2,0.2,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="2,0.2,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -155,7 +155,7 @@
 			<GameObject _schemaVersion="0" _name="Walker" _bActive="true">
 				<_listComponent>
 					<CharacterControllerComponent _localPosition="-3,0.05,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="0.7853982" _gravityScale="1" _mass="70" _layer="Character" />
-					<SkeletalMeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="" _materialPath="" _boundsRadius="2" _blendMode="Opaque" />
+					<SkeletalMeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="" _materialPath="" _boundsRadius="2" />
 					<SkeletalAnimatorComponent _animationSetPath="common/models/kaykit/skeleton_warrior/skeleton_warrior.animset.xml" _initialState="Walking_A" _bPlayOnBegin="true" />
 					<CharacterAppearanceComponent _presetID="SkeletonWarrior" _seed="0" _bMergeParts="true" _surfaceChannelsPath="engine/character/default.surfacechannels.xml" />
 					<AnimationNotifyComponent _notifyTablePath="common/characters/skeleton_warrior/skeleton_warrior.notifies.xml" />
@@ -171,7 +171,7 @@
 		<entity id="13" name="SnowGround">
 			<GameObject _schemaVersion="0" _name="SnowGround" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,1,6" _attachOwner="None" _attachComponent="None" _meshID="PlaneDense" _materialPath="engine/materials/surfacedeform_snow.material" _boundsRadius="4" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,1,6" _attachOwner="None" _attachComponent="None" _meshID="PlaneDense" _materialPath="engine/materials/surfacedeform_snow.material" _boundsRadius="4" />
 					<SurfaceDeformMeshComponent />
 				</_listComponent>
 			</GameObject>
@@ -179,7 +179,7 @@
 		<entity id="14" name="SandGround">
 			<GameObject _schemaVersion="0" _name="SandGround" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="8,0,0" _localRotation="0,0,0" _localScale="4,1,6" _attachOwner="None" _attachComponent="None" _meshID="PlaneDense" _materialPath="engine/materials/surfacedeform_sand.material" _boundsRadius="4" _blendMode="Opaque" />
+					<MeshComponent _localPosition="8,0,0" _localRotation="0,0,0" _localScale="4,1,6" _attachOwner="None" _attachComponent="None" _meshID="PlaneDense" _materialPath="engine/materials/surfacedeform_sand.material" _boundsRadius="4" />
 					<SurfaceDeformMeshComponent />
 				</_listComponent>
 			</GameObject>

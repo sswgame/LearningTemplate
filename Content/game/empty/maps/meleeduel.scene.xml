@@ -22,7 +22,7 @@
 							</PhysicsShapeDesc2D>
 						</_listShape>
 					</RigidBody2DComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.5,1,0.5" _attachOwner="None" _attachComponent="RigidBody2DComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.5,1,0.5" _attachOwner="None" _attachComponent="RigidBody2DComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1" />
 					<MeleeHitboxComponent _bladeStart="0.3,0,0" _bladeEnd="1.4,0,0" _bladeRadius="0.1" _damage="10" _duration="0.2" _currentDuration="0" _bIsAttacking="false">
 						<_listHitTarget />
 					</MeleeHitboxComponent>
@@ -40,7 +40,7 @@
 							</PhysicsShapeDesc2D>
 						</_listShape>
 					</RigidBody2DComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.5,1,0.5" _attachOwner="None" _attachComponent="RigidBody2DComponent#0" _meshID="Cube" _materialPath="game/empty/materials/renderstate/plain_red.material" _boundsRadius="1" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.5,1,0.5" _attachOwner="None" _attachComponent="RigidBody2DComponent#0" _meshID="Cube" _materialPath="game/empty/materials/renderstate/plain_red.material" _boundsRadius="1" />
 					<UnitStatsComponent _hp="30" _maxHP="30" _attack="5" _defense="0" _moveSpeed="2" _maxInvincibilityTime="0" _bIsDead="false" _bShowDamageNumbers="false" _damageNumberOffset="0,0.6,0" />
 				</_listComponent>
 			</GameObject>

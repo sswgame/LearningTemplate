@@ -31,7 +31,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0.5,0" _localRotation="0,0,0" _localScale="400,1,400" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Plane" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.866" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0.5,0" _localRotation="0,0,0" _localScale="400,1,400" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Plane" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.866" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -46,7 +46,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="5,1,60" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="31" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="5,1,60" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="31" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -54,7 +54,7 @@
 			<GameObject _schemaVersion="0" _name="HorseFlat" _bActive="true">
 				<_listComponent>
 					<CharacterControllerComponent _localPosition="8,0.05,-24" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.5" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="0.7853982" _gravityScale="1" _mass="500" _layer="Character" />
-					<MeshComponent _localPosition="0,1.1,0" _localRotation="0,0,0" _localScale="0.8,1.2,2" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="1.4" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,1.1,0" _localRotation="0,0,0" _localScale="0.8,1.2,2" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="1.4" />
 					<PawnComponent _maxPitch="1.4" _bLockMouse="false">
 						<_listButton />
 						<_listAnalog />
@@ -69,7 +69,7 @@
 			<GameObject _schemaVersion="0" _name="HorseHill" _bActive="true">
 				<_listComponent>
 					<CharacterControllerComponent _localPosition="-8,1.3,-24" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.5" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="0.7853982" _gravityScale="1" _mass="500" _layer="Character" />
-					<MeshComponent _localPosition="0,1.1,0" _localRotation="0,0,0" _localScale="0.8,1.2,2" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="1.4" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,1.1,0" _localRotation="0,0,0" _localScale="0.8,1.2,2" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="1.4" />
 					<PawnComponent _maxPitch="1.4" _bLockMouse="false">
 						<_listButton />
 						<_listAnalog />

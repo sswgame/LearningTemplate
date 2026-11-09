@@ -411,7 +411,7 @@ namespace sw
             candidate._mesh = pMeshComp->getMesh();
         if ( candidate._instance.get() != pMeshComp->getRawMaterialInstance() )
             candidate._instance = pMeshComp->getMaterialInstance();
-        if ( fillCandidateMaterial( candidate, pMeshComp->getMaterial(), pScene, static_cast<uint32>( pMeshComp->getBlendMode() ) ) == false )
+        if ( fillCandidateMaterial( candidate, pMeshComp->getMaterial(), pScene ) == false )
             return false;
         applyGPULODGroup( candidate );
         // 퍼뮤테이션 해시는 **여기서 구하지 않는다**. 호출하는 쪽이 게임 스레드에서 기록한다(`stampPermutationHash`).
@@ -474,7 +474,7 @@ namespace sw
             candidate._mesh = pBatch->getMesh();
         if ( candidate._instance.get() != pBatch->getRawMaterialInstance() )
             candidate._instance = pBatch->getMaterialInstance();
-        if ( fillCandidateMaterial( candidate, pBatch->getMaterial(), pScene, static_cast<uint32>( RHIBlendMode::Opaque ) ) == false )
+        if ( fillCandidateMaterial( candidate, pBatch->getMaterial(), pScene ) == false )
             return false;
         applyGPULODGroup( candidate ); // LOD 를 가진 메시의 인스턴스 배치(식생)도 그룹이다 — 항목마다 컬링이 단계를 고른다
         return true;
@@ -519,7 +519,7 @@ namespace sw
         invalidateBuildCache(); // 그룹 여부가 배치 키(`_lodContentID`)를 바꾼다
     }
 
-    bool GPUSceneBuilder::fillCandidateMaterial( DrawCandidate& candidate, Material* pMaterial, Scene* pScene, uint32 fallbackBlendMode )
+    bool GPUSceneBuilder::fillCandidateMaterial( DrawCandidate& candidate, Material* pMaterial, Scene* pScene )
     {
         // 머티리얼이 없으면 인스턴스의 부모가 먼저고, 씬 기본 머티리얼은 그다음이다. 순서가 뒤집히면 인스턴스만 붙은 메시의
         // 배치가 머티리얼, 그룹, 텍스처, stride 는 기본 머티리얼 것이고 원소 바이트와 퍼뮤테이션은 인스턴스 것인 섞인 상태가 된다
@@ -538,8 +538,10 @@ namespace sw
         if ( candidate._material.get() != pMaterial )
             candidate._material = GPUSceneBuilderInternal::shareMaterial( pMaterial );
 
-        const Material* pBlendSource = candidate._material.get();
-        candidate._blendMode         = ( pBlendSource != nullptr ) ? static_cast<uint32>( pBlendSource->getBlendMode() ) : fallbackBlendMode;
+        // 그리기 목록(불투명 · 반투명)은 머티리얼만 정한다 — 컴포넌트에 따로 두면 두 값이 어긋난다(언리얼 · 유니티도 블렌드 모드는 머티리얼의 것이다). 머티리얼이 없으면 그리지 않는다.
+        if ( candidate._material == nullptr )
+            return false;
+        candidate._blendMode = static_cast<uint32>( candidate._material->getBlendMode() );
         return true;
     }
 
@@ -1158,7 +1160,7 @@ namespace sw
             const uint32 sortLayer      = ( sortKey == Render2DSettings::kDefaultSortKeyPlaceholder ) ? defaultSortKey : sortKey;
             listSortKey[sortIndex] =
                 GPUTransparentSorter::makeTransparentSortKey( sortLayer, _listScratchRaw[candidateIndex]._boundsCenter, cameraPos, sortAxis, candidateIndex );
-            listSortKey[sortIndex]._renderQueue = getCandidateRenderQueue( _listScratchCandidate[candidateIndex] );
+            writeCandidateDrawOrder( _listScratchCandidate[candidateIndex], listSortKey[sortIndex] );
         }
         _transparentSorter.sortKeys( _listScratchTransparentIdx );
     }
@@ -1290,17 +1292,25 @@ namespace sw
                 outListKey[batchIndex]._sortKey = GPUTransparentSorter::kNoBatchHeadLayer;
                 continue;
             }
-            const uint32 tailIndex              = batch._instanceBase - tailBase;
-            outListKey[batchIndex]              = GPUTransparentSorter::makeTransparentSortKey( resolveTailSortLayer( tailIndex, defaultSortKey ), ( *pInstance )[batch._instanceBase]._boundsCenter,
-                                                                                                cameraPos, _transparentSorter.getAxis(), batchIndex );
-            outListKey[batchIndex]._renderQueue = resolveTailRenderQueue( tailIndex );
+            const uint32 tailIndex = batch._instanceBase - tailBase;
+            outListKey[batchIndex] = GPUTransparentSorter::makeTransparentSortKey( resolveTailSortLayer( tailIndex, defaultSortKey ), ( *pInstance )[batch._instanceBase]._boundsCenter,
+                                                                                   cameraPos, _transparentSorter.getAxis(), batchIndex );
+            writeTailDrawOrder( tailIndex, outListKey[batchIndex] );
         }
     }
 
-    int32 GPUSceneBuilder::resolveTailRenderQueue( uint32 tailIndex ) const
+    void GPUSceneBuilder::writeTailDrawOrder( uint32 tailIndex, GPUTransparentSortKey& inoutKey ) const
     {
         const uint32 candidateIndex = _listBuiltTransparentIdx[tailIndex];
-        return candidateIndex < _listBuiltCandidate.size() ? getCandidateRenderQueue( _listBuiltCandidate[candidateIndex] ) : 0;
+        if ( candidateIndex < _listBuiltCandidate.size() )
+            writeCandidateDrawOrder( _listBuiltCandidate[candidateIndex], inoutKey );
+    }
+
+    void GPUSceneBuilder::writeCandidateDrawOrder( const DrawCandidate& candidate, GPUTransparentSortKey& inoutKey )
+    {
+        const bool bRefracts  = candidate._material != nullptr && candidate._material->readsSceneColorCopy();
+        inoutKey._renderQueue = getCandidateRenderQueue( candidate );
+        inoutKey._drawBand    = bRefracts ? TransparentDrawBand::ReadsSceneCopy : TransparentDrawBand::Ordinary;
     }
 
     int32 GPUSceneBuilder::getCandidateRenderQueue( const DrawCandidate& candidate )
@@ -1360,7 +1370,7 @@ namespace sw
             {
                 listViewSortKey[tailIndex] = GPUTransparentSorter::makeTransparentSortKey(
                     resolveTailSortLayer( tailIndex, defaultSortKey ), ( *pInstance )[tailBase + tailIndex]._boundsCenter, view._position, view._transparentSortAxis, tailIndex );
-                listViewSortKey[tailIndex]._renderQueue = resolveTailRenderQueue( tailIndex );
+                writeTailDrawOrder( tailIndex, listViewSortKey[tailIndex] );
             }
             _snapshot._listViewTransparentOrder.push_back( _transparentSorter.computeViewOrder( view._viewID, tailBase, listBatch, listParticleKey ) );
         }

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 외형 라이브러리 갈래 바탕: 유리 — 장면 색 사본을 굴절해 읽는다(scene_refraction.hlsli, 물과 같은 한 벌). renderQueue -100: 사본은 반투명 앞에 뜬 것이라 굴절 면이 얇은 반투명보다 먼저 그려져야 그 위에 얹힌다. -->
-<MaterialDef formatVersion="0" name="AppearanceGlass" _base="engine/materials/library/appearance.material" alphaMode="Blend" renderQueue="-100">
+<!-- 외형 라이브러리 갈래 바탕: 유리 — 장면 색 사본을 굴절해 읽는다(scene_refraction.hlsli, 물과 같은 한 벌). MATERIAL_REFRACTION 이 반투명 정렬의 첫 띠(굴절 먼저)로 보낸다 — 차례를 적지 않는다. -->
+<MaterialDef formatVersion="0" name="AppearanceGlass" _base="engine/materials/library/appearance.material" alphaMode="Blend">
 	<_properties>
 		<item name="_color" defaultValue="0.95 0.97 0.97 0" />
 		<item name="_roughness" defaultValue="0.02" />

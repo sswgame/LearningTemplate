@@ -7,6 +7,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Graphics/Material/Material.h"
+#include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Visual/Component/MeshComponent.h"
@@ -21,7 +22,13 @@ namespace sw
             static bool isOccluder( const MeshComponent& mesh )
             {
                 const Mesh* pRawMesh = mesh.getRawMesh();
-                return pRawMesh != nullptr && mesh.isActive() && mesh.isVisible() && mesh.getBlendMode() == RHIBlendMode::Opaque && pRawMesh->hasSkin() == false;
+                // 반투명은 머티리얼이 정한다(렌더러의 그리기 목록과 같은 근거). 머티리얼이 비어 있으면 렌더러가 인스턴스 부모 · 씬 기본으로 그린다 — 인스턴스 부모까지 본다.
+                // shortcut: 씬 기본 머티리얼은 보지 않는다(복셀러가 씬을 받지 않는다) — 기본 머티리얼은 불투명이다(engine/materials/defaultmaterial), 반투명 기본을 허락하면 씬을 넘긴다.
+                const Material* pMaterial = mesh.getMaterial();
+                if ( pMaterial == nullptr && mesh.getRawMaterialInstance() != nullptr )
+                    pMaterial = mesh.getRawMaterialInstance()->getParent();
+                const bool bTransparent = pMaterial != nullptr && pMaterial->getBlendMode() == RHIBlendMode::Transparent;
+                return pRawMesh != nullptr && mesh.isActive() && mesh.isVisible() && bTransparent == false && pRawMesh->hasSkin() == false;
             }
 
             /**

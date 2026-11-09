@@ -72,7 +72,6 @@
 					               _meshID="Plane"
 					               _materialPath="engine/materials/defaultmaterial.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -118,7 +117,6 @@
 					               _meshID="Cube"
 					               _materialPath="engine/materials/defaultmaterial.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<WheeledVehicleComponent _wheelRadius="0.35"
@@ -163,7 +161,6 @@
 					               _meshID="Cube"
 					               _materialPath="engine/materials/defaultmaterial.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<PawnComponent _maxPitch="1.4" _bLockMouse="false">

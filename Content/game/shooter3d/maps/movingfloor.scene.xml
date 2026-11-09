@@ -56,7 +56,6 @@
 					               _meshID="Cube"
 					               _materialPath="engine/materials/defaultmaterial.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<TickedPathMoverComponent _segmentSeconds="2" _tickSeconds="0.0166667" _bPingPong="true">

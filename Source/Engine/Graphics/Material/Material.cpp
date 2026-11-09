@@ -57,6 +57,12 @@ namespace sw
     {
     }
 
+    bool MaterialPermutationDef::hasAlwaysDefine( string_view define ) const
+    {
+        return VectorUtil::containsIf( _listAlwaysDefine, [define]( const string& item )
+        { return string_view( item ) == define; } );
+    }
+
     shared_ptr<Material> Material::create()
     {
         return sw::make_shared<Material>( CreateKey{} );
@@ -1254,6 +1260,16 @@ namespace sw
             return false;
         if ( MaterialXML::parseRenderFields( root, rootParams, sourceName, _desc ) == false )
             return false;
+        // 그리기 목록과 셰이더가 어긋난 머티리얼은 읽지 않는다 — 불투명 목록의 굴절은 사본이 없는 패스에서 빈 색을 읽고(언리얼: 불투명의 SceneColor 는 컴파일 오류),
+        // 블렌드 define 과 알파 모드가 다르면 알파가 새거나 불투명 목록에서 섞인다.
+        const bool bBlend       = _desc._alphaMode == MaterialAlphaMode::Blend;
+        const bool bTranslucent = _desc._permutations.hasAlwaysDefine( kTranslucentDefine );
+        if ( bTranslucent != bBlend || ( readsSceneColorCopy() && bBlend == false ) )
+        {
+            SW_LOG_ERROR_ID( "Material.DrawListMismatch", "Material '%#' (%#): alphaMode Blend %#, %# %#, %# %# - refraction needs Blend, and %# goes with Blend only", _desc._name, sourceLabel,
+                             bBlend ? "yes" : "no", kTranslucentDefine, bTranslucent ? "yes" : "no", kRefractionDefine, readsSceneColorCopy() ? "yes" : "no", kTranslucentDefine );
+            return false;
+        }
 
         // 적은 문턱값은 셰이더가 읽는 프로퍼티로 간다. 프로퍼티가 없는 셰이더(문턱이 코드에 있다)에는 기본값 밖의 값을 받아 줄 곳이 없다.
         if ( root.findAttribute( "alphaCutoff" ) != nullptr )

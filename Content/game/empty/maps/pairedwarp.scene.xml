@@ -23,14 +23,14 @@
 		<entity id="3" name="Floor">
 			<GameObject _schemaVersion="0" _name="Floor" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="20,1,20" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="15" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="20,1,20" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="15" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="4" name="Lead">
 			<GameObject _schemaVersion="0" _name="Lead" _bActive="true">
 				<_listComponent>
-					<SkeletalMeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="common/models/kaykit/knight.mesh" _materialPath="common/materials/kaykit_knight.material" _boundsRadius="2" _blendMode="Opaque" _skeletonPath="common/models/kaykit/knight/knight.skeleton.xml" />
+					<SkeletalMeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="common/models/kaykit/knight.mesh" _materialPath="common/materials/kaykit_knight.material" _boundsRadius="2" _skeletonPath="common/models/kaykit/knight/knight.skeleton.xml" />
 					<SkeletalAnimatorComponent _animationGraphPath="common/data/anim/adventurer.animgraph.xml" _animationSetPath="common/models/kaykit/knight/knight.animset.xml" _initialState="Idle" _playRate="1" _blendSeconds="0.2" _bExtractRootMotion="false" _bPlayOnBegin="true" />
 					<PairedAnimationComponent _pairedAnimationPath="game/empty/data/anim/cheer_warp.pairedanim.xml" _role="Lead" _bStartOnPlay="true" />
 				</_listComponent>
@@ -39,7 +39,7 @@
 		<entity id="5" name="Partner">
 			<GameObject _schemaVersion="0" _name="Partner" _bActive="true">
 				<_listComponent>
-					<SkeletalMeshComponent _localPosition="0.8,0,2.6" _localRotation="0,3.1415927,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="common/models/kaykit/knight.mesh" _materialPath="common/materials/kaykit_knight.material" _boundsRadius="2" _blendMode="Opaque" _skeletonPath="common/models/kaykit/knight/knight.skeleton.xml" />
+					<SkeletalMeshComponent _localPosition="0.8,0,2.6" _localRotation="0,3.1415927,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="common/models/kaykit/knight.mesh" _materialPath="common/materials/kaykit_knight.material" _boundsRadius="2" _skeletonPath="common/models/kaykit/knight/knight.skeleton.xml" />
 					<SkeletalAnimatorComponent _animationGraphPath="common/data/anim/adventurer.animgraph.xml" _animationSetPath="common/models/kaykit/knight/knight.animset.xml" _initialState="Idle" _playRate="1" _blendSeconds="0.2" _bExtractRootMotion="true" _bPlayOnBegin="true" />
 					<PairedAnimationComponent _pairedAnimationPath="game/empty/data/anim/cheer_warp.pairedanim.xml" _role="Partner" _bStartOnPlay="false" />
 					<MotionWarpingComponent />
@@ -59,7 +59,7 @@
 		<entity id="7" name="Mimic">
 			<GameObject _schemaVersion="0" _name="Mimic" _bActive="true">
 				<_listComponent>
-					<SkeletalMeshComponent _localPosition="-1.5,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="Lead" _attachOwnerID="4" _attachComponent="SkeletalMeshComponent#0" _meshID="" _materialPath="" _boundsRadius="2" _blendMode="Opaque" _skeletonPath="" _bFollowParentPose="false" />
+					<SkeletalMeshComponent _localPosition="-1.5,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="Lead" _attachOwnerID="4" _attachComponent="SkeletalMeshComponent#0" _meshID="" _materialPath="" _boundsRadius="2" _skeletonPath="" _bFollowParentPose="false" />
 					<CharacterAppearanceComponent _presetID="SkeletonMinion" _seed="0" _bMergeParts="true" />
 					<PoseRetargetComponent _profilePath="common/rigs/knight_to_minion.retarget.xml" _bSourceFromParent="true" />
 				</_listComponent>

@@ -13,7 +13,6 @@
 			                       _meshID=""
 			                       _materialPath=""
 			                       _boundsRadius="2"
-			                       _blendMode="Opaque"
 			                       _gpuSpinSeed="0"
 			                       _bVisible="true"
 			                       _skeletonPath=""

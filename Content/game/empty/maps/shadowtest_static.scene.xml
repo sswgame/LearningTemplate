@@ -13,7 +13,6 @@
 					               _meshID="Plane"
 					               _materialPath="engine/materials/prototypegrid_dark.material"
 					               _boundsRadius="12"
-					               _blendMode="Opaque"
 					               _bStatic="true" />
 				</_listComponent>
 			</GameObject>
@@ -29,7 +28,6 @@
 					               _meshID="Cube"
 					               _materialPath="engine/materials/prototypegrid_orange.material"
 					               _boundsRadius="1.6"
-					               _blendMode="Opaque"
 					               _bStatic="true" />
 				</_listComponent>
 			</GameObject>

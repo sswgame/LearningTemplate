@@ -101,7 +101,6 @@
 					               _meshID="Cube"
 					               _materialPath="engine/materials/defaultmaterial.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -153,7 +152,6 @@
 					               _meshID="game/empty/models/brick_wall.mesh"
 					               _materialPath="engine/materials/defaultmaterial.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<FractureComponent _componentName="FractureComponent"
@@ -225,7 +223,6 @@
 					               _meshID="game/empty/models/crate_medium.mesh"
 					               _materialPath="engine/materials/defaultmaterial.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<FractureComponent _componentName="FractureComponent"
@@ -297,7 +294,6 @@
 					               _meshID="game/empty/models/crate_medium.mesh"
 					               _materialPath="engine/materials/defaultmaterial.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<FractureComponent _componentName="FractureComponent"
@@ -369,7 +365,6 @@
 					               _meshID="game/empty/models/crate_medium.mesh"
 					               _materialPath="engine/materials/defaultmaterial.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<FractureComponent _componentName="FractureComponent"
@@ -441,7 +436,6 @@
 					               _meshID="game/empty/models/barrel.mesh"
 					               _materialPath="engine/materials/defaultmaterial.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<FractureComponent _componentName="FractureComponent"
@@ -530,7 +524,6 @@
 					               _meshID="game/empty/models/barrel.mesh"
 					               _materialPath="engine/materials/defaultmaterial.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<FractureComponent _componentName="FractureComponent"

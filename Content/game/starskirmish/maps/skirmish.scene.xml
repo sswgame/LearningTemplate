@@ -69,7 +69,6 @@
 					               _meshID="Cube"
 					               _materialPath="game/starskirmish/materials/ground.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -89,7 +88,6 @@
 					               _meshID="Cube"
 					               _materialPath="game/starskirmish/materials/drag.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="false" />
 					<SkirmishDragComponent _componentName="SkirmishDragComponent" _bActive="true" _gameMode="5" />
@@ -189,7 +187,6 @@
 					               _meshID="game/starskirmish/models/kaykit_space/rock_a.mesh"
 					               _materialPath="game/starskirmish/materials/kaykit_space.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -209,7 +206,6 @@
 					               _meshID="game/starskirmish/models/kaykit_space/rock_b.mesh"
 					               _materialPath="game/starskirmish/materials/kaykit_space.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -229,7 +225,6 @@
 					               _meshID="game/starskirmish/models/kaykit_space/rocks_a.mesh"
 					               _materialPath="game/starskirmish/materials/kaykit_space.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -249,7 +244,6 @@
 					               _meshID="game/starskirmish/models/kaykit_space/rocks_b.mesh"
 					               _materialPath="game/starskirmish/materials/kaykit_space.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -269,7 +263,6 @@
 					               _meshID="game/starskirmish/models/kaykit_space/terrain_low.mesh"
 					               _materialPath="game/starskirmish/materials/kaykit_space.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -289,7 +282,6 @@
 					               _meshID="game/starskirmish/models/kaykit_space/terrain_slope.mesh"
 					               _materialPath="game/starskirmish/materials/kaykit_space.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -309,7 +301,6 @@
 					               _meshID="game/starskirmish/models/kaykit_space/terrain_slope_inner_corner.mesh"
 					               _materialPath="game/starskirmish/materials/kaykit_space.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -329,7 +320,6 @@
 					               _meshID="game/starskirmish/models/kaykit_space/terrain_slope_outer_corner.mesh"
 					               _materialPath="game/starskirmish/materials/kaykit_space.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -349,7 +339,6 @@
 					               _meshID="game/starskirmish/models/kaykit_space/terrain_tall.mesh"
 					               _materialPath="game/starskirmish/materials/kaykit_space.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -369,7 +358,6 @@
 					               _meshID="game/starskirmish/models/craft_cargo_a.mesh"
 					               _materialPath="game/starskirmish/materials/kenney_space.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -389,7 +377,6 @@
 					               _meshID="game/starskirmish/models/craft_racer.mesh"
 					               _materialPath="game/starskirmish/materials/kenney_space.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -409,7 +396,6 @@
 					               _meshID="game/starskirmish/models/craft_speeder_a.mesh"
 					               _materialPath="game/starskirmish/materials/kenney_space.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -429,7 +415,6 @@
 					               _meshID="game/starskirmish/models/craft_speeder_b.mesh"
 					               _materialPath="game/starskirmish/materials/kenney_space.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -449,7 +434,6 @@
 					               _meshID="game/starskirmish/models/crater.mesh"
 					               _materialPath="game/starskirmish/materials/kenney_space.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -469,7 +453,6 @@
 					               _meshID="game/starskirmish/models/hangar_large_a.mesh"
 					               _materialPath="game/starskirmish/materials/kenney_space.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -489,7 +472,6 @@
 					               _meshID="game/starskirmish/models/hangar_round_a.mesh"
 					               _materialPath="game/starskirmish/materials/kenney_space.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -509,7 +491,6 @@
 					               _meshID="game/starskirmish/models/hangar_small_a.mesh"
 					               _materialPath="game/starskirmish/materials/kenney_space.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -529,7 +510,6 @@
 					               _meshID="game/starskirmish/models/machine_generator.mesh"
 					               _materialPath="game/starskirmish/materials/kenney_space.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -549,7 +529,6 @@
 					               _meshID="game/starskirmish/models/machine_wireless.mesh"
 					               _materialPath="game/starskirmish/materials/kenney_space.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -569,7 +548,6 @@
 					               _meshID="game/starskirmish/models/platform_large.mesh"
 					               _materialPath="game/starskirmish/materials/kenney_space.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -589,7 +567,6 @@
 					               _meshID="game/starskirmish/models/rock_crystals.mesh"
 					               _materialPath="game/starskirmish/materials/kenney_space.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -609,7 +586,6 @@
 					               _meshID="game/starskirmish/models/structure.mesh"
 					               _materialPath="game/starskirmish/materials/kenney_space.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -629,7 +605,6 @@
 					               _meshID="game/starskirmish/models/turret_double.mesh"
 					               _materialPath="game/starskirmish/materials/kenney_space.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -649,7 +624,6 @@
 					               _meshID="game/starskirmish/models/turret_single.mesh"
 					               _materialPath="game/starskirmish/materials/kenney_space.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>

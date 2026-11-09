@@ -174,7 +174,6 @@
 					               _meshID="Capsule"
 					               _materialPath="engine/materials/defaultmaterial.material"
 					               _boundsRadius="1"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<PawnComponent _maxPitch="1.4" _bLockMouse="false">
@@ -207,7 +206,6 @@
 					               _meshID="Capsule"
 					               _materialPath="engine/materials/prototypegrid_light.material"
 					               _boundsRadius="1"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 					<PawnComponent _maxPitch="1.4" _bLockMouse="false">

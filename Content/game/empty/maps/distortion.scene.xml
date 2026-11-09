@@ -51,8 +51,7 @@
 					               _attachComponent="None"
 					               _meshID="Plane"
 					               _materialPath="engine/materials/surfacelibrary/background_brick.material"
-					               _boundsRadius="9"
-					               _blendMode="Opaque" />
+					               _boundsRadius="9" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -67,8 +66,7 @@
 					               _attachComponent="None"
 					               _meshID="Sphere"
 					               _materialPath="game/empty/materials/distortion_lens.material"
-					               _boundsRadius="1"
-					               _blendMode="Transparent" />
+					               _boundsRadius="1" />
 				</_listComponent>
 			</GameObject>
 		</entity>

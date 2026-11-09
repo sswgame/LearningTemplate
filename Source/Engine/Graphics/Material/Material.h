@@ -302,6 +302,12 @@ namespace sw
         int32 getRenderQueue() const { return _desc._renderQueue; }
         /** @brief 불투명 그리기 띠입니다 — 덮은 렌더 상태가 정한다(`RHIRenderStateOverride::classifyOpaqueDrawBand`). 정렬의 첫 키이고 차례(`getRenderQueue`)는 띠 안의 순서다. */
         RHIOpaqueDrawBand getOpaqueDrawBand() const { return _desc._renderStateOverride.classifyOpaqueDrawBand(); }
+        /**
+         * @brief 반투명 앞에 떠 둔 장면 색 사본을 읽는 굴절 머티리얼이면 true 입니다(`MATERIAL_REFRACTION` — 물 · 유리, scene_refraction.hlsli).
+         * @details 반투명 정렬의 첫 띠다 — 사본 뒤에 그린 반투명은 사본에 없어 굴절 면이 먼저 그려져야 그 위에 얹힌다(유니티 HDRP 의 굴절 앞 · 뒤 반투명 자리).
+         *          반투명(`Blend`) 밖에서는 로드 오류다 — 언리얼이 불투명의 SceneColor · Refraction 을 컴파일 오류로 막는 자리.
+         */
+        bool readsSceneColorCopy() const { return _desc._permutations.hasAlwaysDefine( kRefractionDefine ); }
         /** @brief 패스의 렌더 상태 위에 덮는 칸입니다. */
         const RHIRenderStateOverride& getRenderStateOverride() const { return _desc._renderStateOverride; }
         /** @brief float32 파라미터를 읽습니다. */
@@ -313,6 +319,10 @@ namespace sw
 
         /** @brief `alphaCutoff` 칸이 값을 넣는 프로퍼티 이름입니다(셰이더의 `MaterialSurface._alphaCutoff` 를 채운다). */
         static constexpr const utf8* kAlphaCutoffProperty = "_alphaCutoff";
+        /// 장면 색 사본을 굴절해 읽는 머티리얼의 define 입니다(scene_refraction.hlsli 를 쓰는 셰이더 — 물 · 외형 유리).
+        static constexpr const utf8* kRefractionDefine = "MATERIAL_REFRACTION";
+        /// 반투명 블렌드 define 입니다 — `alphaMode="Blend"` 와 함께 움직인다(하나만 있으면 알파가 새거나 불투명 목록에서 섞인다).
+        static constexpr const utf8* kTranslucentDefine = "MATERIAL_BLEND_TRANSLUCENT";
 
         /** @brief 부모와 상관없이 모든 칸을 적은 XML 입니다 — `saveToString` 이 이것과 부모의 같은 글을 맞대 차이만 남긴다. */
         string saveFullToString() const;

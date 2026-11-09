@@ -33,7 +33,6 @@ namespace sw
         , _requestedMaterialPath{}
         , _resolvedMeshID{}
         , _boundsRadius{ 0.866f }
-        , _blendMode{ RHIBlendMode::Opaque }
         , _gpuSpinSeed{ 0 }
         , _sectionName{}
         , _spriteFrame{}
@@ -552,12 +551,6 @@ namespace sw
         // 정적 집합이 바뀌었다 — 빌더가 정적 그림자 세대를 다시 잰다(움직이는 쪽으로 바뀐 메시는 더티 슬롯만으로는 보이지 않는다).
         if ( _pPrimitiveRegistry != nullptr )
             _pPrimitiveRegistry->markSetDirty();
-    }
-
-    void MeshComponent::setBlendMode( RHIBlendMode mode )
-    {
-        _blendMode = mode;
-        markRenderStateDirty();
     }
 
     bool MeshComponent::getWorldBounds( float3& outCenter, float32& outRadius ) const

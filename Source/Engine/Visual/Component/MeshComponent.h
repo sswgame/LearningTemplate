@@ -109,11 +109,6 @@ namespace sw
         /** @brief 원시 머티리얼 인스턴스 포인터를 반환합니다. */
         MaterialInstance* getRawMaterialInstance() const { return _materialInstance.get(); }
 
-        /** @brief 블렌드 모드를 설정합니다. */
-        void setBlendMode( RHIBlendMode mode );
-        /** @brief 블렌드 모드를 반환합니다. */
-        RHIBlendMode getBlendMode() const { return _blendMode; }
-
         /**
          * @brief GPU 회전 애니메이션 시드를 설정합니다(0 이면 애니메이션 없음).
          * @details 0 이 아니면 GPUScene 인스턴스에 실려 `instance_animation.hlsl` 이 이 값을 해시해
@@ -340,8 +335,6 @@ namespace sw
         hashed_string      _resolvedMeshID;        ///< `_mesh` 가 어느 메시 id 의 것인지 나타낸다(저장하지 않는다). 현재 id 와 다르면 다시 잡는다
         PROPERTY( Category = "Rendering", DisplayName = "Bounds Radius", Tooltip = "Bounding sphere radius", Min = 0.0, Units = m )
         float32 _boundsRadius;
-        PROPERTY( Category = "Rendering", DisplayName = "Blend Mode", Tooltip = "RHI blend mode for rasterization" )
-        RHIBlendMode _blendMode;
         PROPERTY( Category = "Rendering", DisplayName = "GPU Spin Seed", Tooltip = "Non-zero makes the GPU spin this instance; the seed picks its speed" )
         uint32 _gpuSpinSeed;
         PROPERTY( Category = "Rendering", DisplayName = "Section", Tooltip = "Mesh section to draw (material section of an imported model); empty draws the whole mesh" )

@@ -180,6 +180,9 @@ namespace sw
         vector<string>               _listAlwaysDefine;
         vector<MaterialStaticSwitch> _listStaticSwitch;
         vector<MaterialMultiCompile> _listMultiCompile;
+
+        /** @brief 늘 켜는 define 에 @p define 이 있으면 true 입니다. */
+        [[nodiscard]] bool hasAlwaysDefine( string_view define ) const;
     };
 } // namespace sw
 

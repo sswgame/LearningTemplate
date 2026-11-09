@@ -50,8 +50,7 @@
 					               _attachComponent="None"
 					               _meshID="Plane"
 					               _materialPath="engine/materials/prototypegrid_dark.material"
-					               _boundsRadius="150"
-					               _blendMode="Opaque" />
+					               _boundsRadius="150" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -65,8 +64,7 @@
 					               _attachComponent="None"
 					               _meshID="Cube"
 					               _materialPath="engine/materials/prototypegrid_orange.material"
-					               _boundsRadius="1.3"
-					               _blendMode="Opaque" />
+					               _boundsRadius="1.3" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -80,8 +78,7 @@
 					               _attachComponent="None"
 					               _meshID="Cube"
 					               _materialPath="engine/materials/prototypegrid_orange.material"
-					               _boundsRadius="6"
-					               _blendMode="Opaque" />
+					               _boundsRadius="6" />
 				</_listComponent>
 			</GameObject>
 		</entity>

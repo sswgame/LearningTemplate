@@ -50,8 +50,7 @@
 					               _attachComponent="None"
 					               _meshID="Plane"
 					               _materialPath="engine/materials/prototypegrid_dark.material"
-					               _boundsRadius="12"
-					               _blendMode="Opaque" />
+					               _boundsRadius="12" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -69,7 +68,6 @@
 					                       _meshID="common/models/kaykit/knight.mesh"
 					                       _materialPath="common/materials/kaykit_knight.material"
 					                       _boundsRadius="2"
-					                       _blendMode="Opaque"
 					                       _gpuSpinSeed="0"
 					                       _bVisible="true"
 					                       _skeletonPath="common/models/kaykit/knight/knight.skeleton.xml"

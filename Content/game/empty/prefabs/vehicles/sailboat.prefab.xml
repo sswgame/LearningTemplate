@@ -41,7 +41,6 @@
 			               _meshID="Cube"
 			               _materialPath="engine/materials/prototypegrid_orange.material"
 			               _boundsRadius="0.866"
-			               _blendMode="Opaque"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
 			<MeshComponent _localPosition="0,2.35,0.8"
@@ -52,7 +51,6 @@
 			               _meshID="Cube"
 			               _materialPath="engine/materials/prototypegrid_dark.material"
 			               _boundsRadius="0.866"
-			               _blendMode="Opaque"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
 			<MeshComponent _localPosition="0,2.5,-0.3"
@@ -63,7 +61,6 @@
 			               _meshID="Cube"
 			               _materialPath="engine/materials/prototypegrid_light.material"
 			               _boundsRadius="0.866"
-			               _blendMode="Opaque"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
 			<MeshComponent _localPosition="0,0.75,-2.3"
@@ -74,7 +71,6 @@
 			               _meshID="Cube"
 			               _materialPath="engine/materials/prototypegrid_dark.material"
 			               _boundsRadius="0.866"
-			               _blendMode="Opaque"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
 			<BuoyancyComponent _waterDensity="1000" _linearDrag="120">

@@ -21,56 +21,56 @@
 		<entity id="3" name="Ground">
 			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="16,1,16" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="12" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="16,1,16" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="12" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="4" name="TwoSided">
 			<GameObject _schemaVersion="0" _name="TwoSided" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="-4,1,0" _localRotation="3.14159,0,0" _localScale="1.5,1,1.5" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="game/empty/materials/renderstate/plain_red.material" _boundsRadius="1.5" _blendMode="Opaque" />
+					<MeshComponent _localPosition="-4,1,0" _localRotation="3.14159,0,0" _localScale="1.5,1,1.5" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="game/empty/materials/renderstate/plain_red.material" _boundsRadius="1.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="5" name="Glass">
 			<GameObject _schemaVersion="0" _name="Glass" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="-2,0.75,0" _localRotation="0,0.4,0" _localScale="1.3,1.3,1.3" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="game/empty/materials/renderstate/glass.material" _boundsRadius="1.2" _blendMode="Transparent" />
+					<MeshComponent _localPosition="-2,0.75,0" _localRotation="0,0.4,0" _localScale="1.3,1.3,1.3" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="game/empty/materials/renderstate/glass.material" _boundsRadius="1.2" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="6" name="StencilMask">
 			<GameObject _schemaVersion="0" _name="StencilMask" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="0,0.9,-0.5" _localRotation="0,0,0" _localScale="0.6,0.6,0.6" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="game/empty/materials/renderstate/stencil_mask.material" _boundsRadius="0.6" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0.9,-0.5" _localRotation="0,0,0" _localScale="0.6,0.6,0.6" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="game/empty/materials/renderstate/stencil_mask.material" _boundsRadius="0.6" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="7" name="StencilReceiver">
 			<GameObject _schemaVersion="0" _name="StencilReceiver" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="0,0.75,0.8" _localRotation="0,0,0" _localScale="1.6,1.5,1" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="game/empty/materials/renderstate/stencil_receiver_always.material" _boundsRadius="1.3" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0.75,0.8" _localRotation="0,0,0" _localScale="1.6,1.5,1" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="game/empty/materials/renderstate/stencil_receiver_always.material" _boundsRadius="1.3" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="8" name="Occluder">
 			<GameObject _schemaVersion="0" _name="Occluder" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="2,0.8,-0.8" _localRotation="0,0,0" _localScale="1.4,1.6,0.3" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.2" _blendMode="Opaque" />
+					<MeshComponent _localPosition="2,0.8,-0.8" _localRotation="0,0,0" _localScale="1.4,1.6,0.3" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.2" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="9" name="Behind">
 			<GameObject _schemaVersion="0" _name="Behind" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="2,0.6,0.6" _localRotation="0,0,0" _localScale="0.9,1.2,0.9" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="game/empty/materials/renderstate/plain_green.material" _boundsRadius="0.9" _blendMode="Opaque" />
+					<MeshComponent _localPosition="2,0.6,0.6" _localRotation="0,0,0" _localScale="0.9,1.2,0.9" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="game/empty/materials/renderstate/plain_green.material" _boundsRadius="0.9" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="10" name="WriteMask">
 			<GameObject _schemaVersion="0" _name="WriteMask" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="4,0.75,0" _localRotation="0,0.4,0" _localScale="1.3,1.3,1.3" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="game/empty/materials/renderstate/writemask_white.material" _boundsRadius="1.2" _blendMode="Opaque" />
+					<MeshComponent _localPosition="4,0.75,0" _localRotation="0,0.4,0" _localScale="1.3,1.3,1.3" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="game/empty/materials/renderstate/writemask_white.material" _boundsRadius="1.2" />
 				</_listComponent>
 			</GameObject>
 		</entity>

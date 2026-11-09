@@ -14,7 +14,6 @@
 			               _meshID="Cube"
 			               _materialPath="game/empty/materials/housing/wood.material"
 			               _boundsRadius="0.866"
-			               _blendMode="Opaque"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
 			<MeshComponent _localPosition="0,0.5,0.15"
@@ -25,7 +24,6 @@
 			               _meshID="Cube"
 			               _materialPath="game/empty/materials/housing/cloth.material"
 			               _boundsRadius="0.866"
-			               _blendMode="Opaque"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
 			<MeshComponent _localPosition="0,0.7,-0.8"
@@ -36,7 +34,6 @@
 			               _meshID="Cube"
 			               _materialPath="game/empty/materials/housing/wood.material"
 			               _boundsRadius="0.866"
-			               _blendMode="Opaque"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
 		</_listComponent>

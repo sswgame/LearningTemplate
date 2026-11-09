@@ -10,6 +10,13 @@
 #ifndef SW_ENGINE_SCENEREFRACTION_HLSLI
 #define SW_ENGINE_SCENEREFRACTION_HLSLI
 
+// 사본을 읽는 셰이더는 머티리얼에 MATERIAL_REFRACTION 을 단다 — 그 define 이 반투명 정렬의 첫 띠(굴절 먼저, Material::readsSceneColorCopy)와 반투명 목록 검사를 켠다.
+// define 없이 사본을 읽으면 정렬이 그 머티리얼을 보통 반투명으로 다뤄 굴절 너머의 반투명이 사라진다.
+// 머티리얼 define 없이 도는 리플렉션 컴파일(스키마 읽기)은 지나간다 — 어긋난 조합만 멈춘다(appearance_lit 의 기능 검사와 같은 모양).
+#if defined( MATERIAL_BLEND_TRANSLUCENT ) != defined( MATERIAL_REFRACTION )
+    #error "scene_refraction.hlsli reads the scene colour copy: a translucent material that includes it needs MATERIAL_REFRACTION, and MATERIAL_REFRACTION needs alphaMode=\"Blend\" (MATERIAL_BLEND_TRANSLUCENT)"
+#endif
+
 // 깊이 비교의 여유(장치 깊이) — 굴절 면과 같은 깊이의 장면(물가에 닿은 바닥)을 면 앞으로 오판하지 않는다.
 static const float kSceneRefractionDepthBias = 1e-5f;
 // 흐린 굴절(간유리)의 탭 수 — 보겔 원판. 거칠기 0 이면 가운데 한 탭만 읽는다.

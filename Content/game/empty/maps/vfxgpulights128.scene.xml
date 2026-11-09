@@ -50,8 +50,7 @@
 					               _attachComponent="None"
 					               _meshID="Plane"
 					               _materialPath="engine/materials/prototypegrid_light.material"
-					               _boundsRadius="12"
-					               _blendMode="Opaque" />
+					               _boundsRadius="12" />
 				</_listComponent>
 			</GameObject>
 		</entity>

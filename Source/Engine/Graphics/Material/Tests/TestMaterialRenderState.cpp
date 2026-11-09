@@ -201,7 +201,7 @@ SW_TEST_CASE( MaterialRenderStateTest, FieldsReachBatchAndDefines )
     SW_EXPECT_TRUE( plain->getRenderFieldsHash() == 0 );
 
     shared_ptr<Material> blended = Material::create();
-    SW_REQUIRE_TRUE( RenderStateTestUtil::load( *blended, "alphaMode=\"Blend\" blendPreset=\"Additive\" renderQueue=\"5\" enableDepthWrite=\"false\"" ) );
+    SW_REQUIRE_TRUE( RenderStateTestUtil::load( *blended, "alphaMode=\"Blend\" blendPreset=\"Additive\" renderQueue=\"5\" enableDepthWrite=\"false\"", "<_permutations><_alwaysDefines><item>MATERIAL_BLEND_TRANSLUCENT</item></_alwaysDefines></_permutations>" ) );
     SW_EXPECT_TRUE( blended->getBlendMode() == RHIBlendMode::Transparent );
     SW_EXPECT_EQUAL( 5, blended->getRenderQueue() );
     SW_EXPECT_EQUAL( 1, static_cast<int32>( blended->getRenderStateOverride()._blendTargetCount ) );
@@ -224,7 +224,7 @@ SW_TEST_CASE( MaterialRenderStateTest, FieldsReachBatchAndDefines )
 SW_TEST_CASE( MaterialRenderStateTest, FieldsSurviveSaving )
 {
     shared_ptr<Material> material = Material::create();
-    SW_REQUIRE_TRUE( RenderStateTestUtil::load( *material, "alphaMode=\"Blend\" blendPreset=\"Multiply\" depthCompare=\"Greater\" stencilRef=\"9\" enableStencil=\"true\" renderQueue=\"-2\"" ) );
+    SW_REQUIRE_TRUE( RenderStateTestUtil::load( *material, "alphaMode=\"Blend\" blendPreset=\"Multiply\" depthCompare=\"Greater\" stencilRef=\"9\" enableStencil=\"true\" renderQueue=\"-2\"", "<_permutations><_alwaysDefines><item>MATERIAL_BLEND_TRANSLUCENT</item></_alwaysDefines></_permutations>" ) );
     const string saved = material->saveToString();
     SW_EXPECT_TRUE( saved.find( "cullMode" ) == string::npos ); // 적지 않은 칸
     SW_EXPECT_TRUE( saved.find( "stencilRef=\"9\"" ) != string::npos );
@@ -298,4 +298,19 @@ SW_TEST_CASE( MaterialRenderStateTest, OrderDependentStatesDrawInALaterBand )
         SW_REQUIRE_TRUE( RenderStateTestUtil::load( *material, bandCase._pAttributes, bandCase._pChildren ) );
         SW_EXPECT_EQUAL( static_cast<int32>( bandCase._expected ), static_cast<int32>( material->getOpaqueDrawBand() ) );
     }
+}
+
+/** @brief [MaterialRenderStateTest] 그리기 목록과 셰이더가 어긋난 머티리얼은 로드 오류다 — 불투명의 굴절(사본이 없는 패스), 블렌드 define 과 알파 모드의 어긋남 */
+SW_TEST_CASE( MaterialRenderStateTest, DrawListMustMatchTheShader )
+{
+    SW_EXPECT_LOG( "Material.DrawListMismatch" );
+    const utf8* const kRefraction  = "<_permutations><_alwaysDefines><item>MATERIAL_REFRACTION</item></_alwaysDefines></_permutations>";
+    const utf8* const kTranslucent = "<_permutations><_alwaysDefines><item>MATERIAL_BLEND_TRANSLUCENT</item></_alwaysDefines></_permutations>";
+    const utf8* const kGlass       = "<_permutations><_alwaysDefines><item>MATERIAL_BLEND_TRANSLUCENT</item><item>MATERIAL_REFRACTION</item></_alwaysDefines></_permutations>";
+    SW_EXPECT_FALSE( RenderStateTestUtil::load( *Material::create(), "", kRefraction ) );       // 불투명 목록의 굴절
+    SW_EXPECT_FALSE( RenderStateTestUtil::load( *Material::create(), "", kTranslucent ) );      // 블렌드 define 인데 불투명
+    SW_EXPECT_FALSE( RenderStateTestUtil::load( *Material::create(), "alphaMode=\"Blend\"" ) ); // 블렌드인데 define 이 없다
+    shared_ptr<Material> glass = Material::create();
+    SW_REQUIRE_TRUE( RenderStateTestUtil::load( *glass, "alphaMode=\"Blend\"", kGlass ) );
+    SW_EXPECT_TRUE( glass->readsSceneColorCopy() );
 }

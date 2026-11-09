@@ -11,8 +11,7 @@
 			               _attachComponent="None"
 			               _meshID="Cube"
 			               _materialPath="engine/materials/prototypegrid_dark.material"
-			               _boundsRadius="0.5"
-			               _blendMode="Opaque" />
+			               _boundsRadius="0.5" />
 		</_listComponent>
 	</GameObject>
 </Prefab>

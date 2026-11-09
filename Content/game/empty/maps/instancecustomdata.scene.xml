@@ -14,14 +14,14 @@
 		<entity id="2" name="Left">
 			<GameObject _schemaVersion="0" _name="Left" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="-1.3,0,0" _localRotation="0,0.4,0" _localScale="1.5,1.5,1.5" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/instancecustomcolor.material" _boundsRadius="1.5" _blendMode="Transparent" _customData0="0.9,0.5,0.1,1" />
+					<MeshComponent _localPosition="-1.3,0,0" _localRotation="0,0.4,0" _localScale="1.5,1.5,1.5" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/instancecustomcolor.material" _boundsRadius="1.5" _customData0="0.9,0.5,0.1,1" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="3" name="Right">
 			<GameObject _schemaVersion="0" _name="Right" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="1.3,0,0" _localRotation="0,-0.4,0" _localScale="1.5,1.5,1.5" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/instancecustomcolor.material" _boundsRadius="1.5" _blendMode="Transparent" _customData0="0.1,0.5,0.9,1" />
+					<MeshComponent _localPosition="1.3,0,0" _localRotation="0,-0.4,0" _localScale="1.5,1.5,1.5" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/instancecustomcolor.material" _boundsRadius="1.5" _customData0="0.1,0.5,0.9,1" />
 				</_listComponent>
 			</GameObject>
 		</entity>

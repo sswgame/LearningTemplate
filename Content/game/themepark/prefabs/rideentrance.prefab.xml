@@ -12,7 +12,6 @@
 			               _meshID="game/themepark/models/ride_entrance.mesh"
 			               _materialPath="game/themepark/materials/palette.material"
 			               _boundsRadius="0.866"
-			               _blendMode="Opaque"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
 		</_listComponent>

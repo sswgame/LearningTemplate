@@ -570,8 +570,10 @@ namespace sw
         void fillMainBatchHeadKeys( const float3& cameraPos, vector<GPUTransparentSortKey>& outListKey ) const;
         /** @brief 투명 꼬리 원소 @p tailIndex(꼬리 시작 기준)의 정렬 레이어 키입니다. 기본 키 표시는 @p defaultSortKey 로 풉니다. */
         uint32 resolveTailSortLayer( uint32 tailIndex, uint32 defaultSortKey ) const;
-        /** @brief 투명 꼬리 원소 @p tailIndex 의 그리기 순서입니다. */
-        int32 resolveTailRenderQueue( uint32 tailIndex ) const;
+        /** @brief 투명 꼬리 원소 @p tailIndex 의 그리기 순서(띠 · 차례)를 @p inoutKey 에 씁니다. */
+        void writeTailDrawOrder( uint32 tailIndex, GPUTransparentSortKey& inoutKey ) const;
+        /** @brief 후보 머티리얼의 반투명 그리기 순서(띠 · 차례)를 @p inoutKey 에 씁니다(머티리얼이 없으면 보통 띠 · 차례 0). */
+        static void writeCandidateDrawOrder( const DrawCandidate& candidate, GPUTransparentSortKey& inoutKey );
         /** @brief 후보 머티리얼의 그리기 순서입니다(머티리얼이 없으면 0). 후보에 칸을 두지 않는다 — 퍼뮤테이션 해시에 섞여 있어 바뀌면 후보가 달라진다. */
         [[nodiscard]] static int32 getCandidateRenderQueue( const DrawCandidate& candidate );
         /**
@@ -616,11 +618,10 @@ namespace sw
          *          것이어야 한다(씬 기본이 먼저면 인스턴스만 붙은 메시가 두 머티리얼이 섞인 배치가 된다).
          *          **블렌드 모드는 머티리얼의 속성이다.** 언리얼도 블렌드 모드가 머티리얼 에셋에 있고, 그 값이 셰이더
          *          퍼뮤테이션(불투명, 반투명)을 가른다. 메시가 값을 뒤집을 수 있게 두면 불투명으로 컴파일된 머티리얼을 블렌딩으로
-         *          그리는 어긋난 상태가 만들어진다. 블렌드 모드는 후보의 머티리얼에서 읽고, 머티리얼이 없으면 `fallbackBlendMode`
-         *          (메시 쪽 값)를 쓴다. 머티리얼이 없는 디버그 메시와 픽스처 메시가 그 경우다.
+         *          그리는 어긋난 상태가 만들어진다. 그래서 메시 컴포넌트에는 블렌드 칸이 없고, 머티리얼(자기 · 인스턴스 부모 · 씬 기본)이 없는 후보는 싣지 않는다.
          */
         /** @return 후보의 머티리얼이 초기화되지 않았으면(`MaterialInitState` 가 `Ready` 가 아님) 세고 false 입니다 — 그 후보는 싣지 않습니다. 워커에서 불립니다. */
-        [[nodiscard]] bool fillCandidateMaterial( DrawCandidate& candidate, Material* pMaterial, Scene* pScene, uint32 fallbackBlendMode );
+        [[nodiscard]] bool fillCandidateMaterial( DrawCandidate& candidate, Material* pMaterial, Scene* pScene );
         /** @brief 후보를 GPU 인스턴스 LOD 그룹으로 그릴 수 있으면 그 단계 구간을 LOD 0 으로 되돌리고 `_lodContentID` 를 기록합니다(아니면 빈 토큰). 블렌드가 정해진 뒤에 부른다. */
         void applyGPULODGroup( DrawCandidate& candidate ) const;
         /** @brief 후보의 퍼뮤테이션 해시를 기록합니다. 게임 스레드 전용입니다(머티리얼의 지연 캐시를 건드립니다). */

@@ -50,7 +50,6 @@
 					               _meshID="Cube"
 					               _materialPath="game/shooter3d/materials/wall.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -102,7 +101,6 @@
 					               _meshID="Cube"
 					               _materialPath="game/shooter3d/materials/wall.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>

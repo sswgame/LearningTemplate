@@ -22,14 +22,14 @@
 		<entity id="3" name="Ground">
 			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="30,1,30" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="25" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="30,1,30" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="25" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="4" name="Actor">
 			<GameObject _schemaVersion="0" _name="Actor" _bActive="true">
 				<_listComponent>
-					<SkeletalMeshComponent _localPosition="0,0,0" _localRotation="0,3.1415927,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="" _materialPath="" _boundsRadius="2" _blendMode="Opaque" />
+					<SkeletalMeshComponent _localPosition="0,0,0" _localRotation="0,3.1415927,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="" _materialPath="" _boundsRadius="2" />
 					<SkeletalAnimatorComponent _animationGraphPath="common/data/anim/skeleton.animgraph.xml" _animationSetPath="common/models/kaykit/skeleton_warrior/skeleton_warrior.animset.xml" _initialState="Idle_Combat" _bPlayOnBegin="true" />
 					<CharacterAppearanceComponent _presetID="SkeletonMinion" _seed="0" _bMergeParts="true" />
 					<PoseAfterimageComponent _materialPath="engine/materials/instancecustomcolor.material" _color="0.4,0.8,1,0.6" _capturePeriod="0.1" _lifetime="0.6" _maxGhosts="6" _bCaptureOnBeginPlay="true">

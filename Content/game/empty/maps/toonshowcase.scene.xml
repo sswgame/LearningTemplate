@@ -58,7 +58,6 @@
 					               _meshID="Plane"
 					               _materialPath="game/empty/materials/toonshowcase_ground.material"
 					               _boundsRadius="6"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -78,7 +77,6 @@
 					               _meshID="Sphere"
 					               _materialPath="game/empty/materials/toonshowcase_lit.material"
 					               _boundsRadius="0.5"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -98,7 +96,6 @@
 					               _meshID="Sphere"
 					               _materialPath="game/empty/materials/toonshowcase_toon.material"
 					               _boundsRadius="0.5"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>

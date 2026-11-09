@@ -7,6 +7,7 @@
 
 #include "Engine/Environment/Sky/SkyGradient.h"
 #include "Engine/Graphics/Lighting/SceneVoxelGrid.h"
+#include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -51,8 +52,17 @@ namespace
                                          1.0f );
     }
 
+    /** @brief 반투명 머티리얼입니다 — 반투명은 머티리얼이 정한다(메시 컴포넌트에는 블렌드 칸이 없다). */
+    sw::shared_ptr<sw::Material> makeTranslucentMaterial()
+    {
+        sw::shared_ptr<sw::Material> material = sw::Material::create();
+        SW_EXPECT_TRUE( material->loadFromXML( "<MaterialDef formatVersion=\"0\" name=\"ProbeGlass\" shaderPath=\"engine/shaders/forward_lit.hlsl\" alphaMode=\"Blend\">"
+                                               "<_permutations><_alwaysDefines><item>MATERIAL_BLEND_TRANSLUCENT</item></_alwaysDefines></_permutations></MaterialDef>" ) );
+        return material;
+    }
+
     /** @brief 단위 큐브 메시를 든 오브젝트를 씬에 올립니다. */
-    sw::MeshComponent* addCube( sw::GameObjectManager* pObjects, const utf8* pName, const sw::float3& position, sw::RHIBlendMode blend, bool bVisible )
+    sw::MeshComponent* addCube( sw::GameObjectManager* pObjects, const utf8* pName, const sw::float3& position, sw::Material* pMaterial, bool bVisible )
     {
         sw::GameObject* pObject = pObjects->createGameObject( sw::hashed_string( pName ) );
         if ( pObject == nullptr )
@@ -62,7 +72,7 @@ namespace
             return nullptr;
         pMesh->setMesh( sw::MeshUtil::createUnitCube() );
         pMesh->setLocalPosition( position );
-        pMesh->setBlendMode( blend );
+        pMesh->setMaterial( pMaterial ); // nullptr 이면 씬 기본(불투명)
         pMesh->setVisible( bVisible );
         return pMesh;
     }
@@ -185,21 +195,22 @@ SW_TEST_CASE( SceneVoxelGridTest, TraceRayHitsWallAndInsideStart )
  */
 SW_TEST_CASE( SceneVoxelizerTest, VoxelizesOpaqueVisibleMeshesOnly )
 {
-    sw::Scene              scene( "SceneVoxelizerOpaque" );
-    sw::GameObjectManager* pObjects = scene.getObjectManager();
+    const sw::shared_ptr<sw::Material> glass = makeTranslucentMaterial(); // 씬보다 먼저 만든다 — 메시가 원시 포인터로 든다
+    sw::Scene                          scene( "SceneVoxelizerOpaque" );
+    sw::GameObjectManager*             pObjects = scene.getObjectManager();
     SW_REQUIRE_NOT_NULL( pObjects );
     const sw::AABB bounds{
         sw::float3{-2.0f, -2.0f, -2.0f},
         sw::float3{ 2.0f,  2.0f,  2.0f}
     };
 
-    SW_REQUIRE_NOT_NULL( addCube( pObjects, "Glass", sw::float3{ 0.0f, 0.0f, 0.0f }, sw::RHIBlendMode::Transparent, true ) );
-    SW_REQUIRE_NOT_NULL( addCube( pObjects, "Hidden", sw::float3{ 0.0f, 0.0f, 0.0f }, sw::RHIBlendMode::Opaque, false ) );
+    SW_REQUIRE_NOT_NULL( addCube( pObjects, "Glass", sw::float3{ 0.0f, 0.0f, 0.0f }, glass.get(), true ) );
+    SW_REQUIRE_NOT_NULL( addCube( pObjects, "Hidden", sw::float3{ 0.0f, 0.0f, 0.0f }, nullptr, false ) );
     const sw::SceneVoxelGrid empty = sw::SceneVoxelizer::makeGrid( pObjects->getPrimitiveRegistry(), bounds, 0.25f );
     SW_REQUIRE_FALSE( empty.isEmpty() );
     SW_EXPECT_EQUAL( 0u, empty.countOccupied() );
 
-    SW_REQUIRE_NOT_NULL( addCube( pObjects, "Wall", sw::float3{ 0.0f, 0.0f, 0.0f }, sw::RHIBlendMode::Opaque, true ) );
+    SW_REQUIRE_NOT_NULL( addCube( pObjects, "Wall", sw::float3{ 0.0f, 0.0f, 0.0f }, nullptr, true ) );
     const sw::SceneVoxelGrid solid = sw::SceneVoxelizer::makeGrid( pObjects->getPrimitiveRegistry(), bounds, 0.25f );
     SW_EXPECT_TRUE( solid.countOccupied() > 0u );
     SW_EXPECT_TRUE( solid.isOccupied( 6, 8, 8 ) );  // x = -0.5 면 근처
@@ -383,7 +394,7 @@ SW_TEST_CASE( RealtimeProbeTest, GIExtrasDefaultToOff )
     pVolume->setExtent( sw::float3{ 4.0f, 2.0f, 4.0f } );
     pVolume->setSpacing( 2.0f );
     pVolume->setRealtime( true );
-    SW_REQUIRE_NOT_NULL( addCube( pObjects, "Wall", sw::float3{ 0.0f, 0.0f, 0.0f }, sw::RHIBlendMode::Opaque, true ) );
+    SW_REQUIRE_NOT_NULL( addCube( pObjects, "Wall", sw::float3{ 0.0f, 0.0f, 0.0f }, nullptr, true ) );
 
     sw::vector<sw::GPULight>             listLight;
     sw::LightProbeElementBuilder         probeElement;
@@ -411,7 +422,7 @@ SW_TEST_CASE( RealtimeProbeTest, CollectsRealtimeVolumeWithPlaceholderAndRequest
     pVolume->setExtent( sw::float3{ 4.0f, 2.0f, 4.0f } );
     pVolume->setSpacing( 2.0f );
     pVolume->setRealtime( true );
-    SW_REQUIRE_NOT_NULL( addCube( pObjects, "Wall", sw::float3{ 0.0f, 0.0f, 0.0f }, sw::RHIBlendMode::Opaque, true ) );
+    SW_REQUIRE_NOT_NULL( addCube( pObjects, "Wall", sw::float3{ 0.0f, 0.0f, 0.0f }, nullptr, true ) );
 
     sw::vector<sw::GPULight>             listLight;
     sw::LightProbeElementBuilder         probeElement;
@@ -442,7 +453,7 @@ SW_TEST_CASE( RealtimeProbeTest, CollectsRealtimeVolumeWithPlaceholderAndRequest
     SW_REQUIRE_EQUAL( size_t( 1 ), again.size() );
     SW_EXPECT_TRUE( again[0]._pVoxelGrid == request._pVoxelGrid );
     SW_EXPECT_TRUE( probeElement.getElements() == pProbe );
-    SW_REQUIRE_NOT_NULL( addCube( pObjects, "Second", sw::float3{ 1.0f, 0.0f, 0.0f }, sw::RHIBlendMode::Opaque, true ) );
+    SW_REQUIRE_NOT_NULL( addCube( pObjects, "Second", sw::float3{ 1.0f, 0.0f, 0.0f }, nullptr, true ) );
     collectSceneLights( &scene, listLight, nullptr, &probeElement, nullptr, &again );
     SW_REQUIRE_EQUAL( size_t( 1 ), again.size() );
     SW_EXPECT_TRUE( again[0]._pVoxelGrid != request._pVoxelGrid );

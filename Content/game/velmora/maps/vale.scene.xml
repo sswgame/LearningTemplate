@@ -65,7 +65,6 @@
 					               _meshID="Plane"
 					               _materialPath="game/velmora/materials/hearth.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -85,7 +84,6 @@
 					               _meshID="Plane"
 					               _materialPath="game/velmora/materials/fernwood.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -105,7 +103,6 @@
 					               _meshID="Plane"
 					               _materialPath="game/velmora/materials/cinderhold.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>

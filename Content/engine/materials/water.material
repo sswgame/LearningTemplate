@@ -17,6 +17,7 @@
 		<_alwaysDefines>
 			<item>MATERIAL_DOMAIN_SURFACE</item>
 			<item>MATERIAL_BLEND_TRANSLUCENT</item>
+			<item>MATERIAL_REFRACTION</item>
 			<item>MATERIAL_VERTEX_DEFORM</item>
 			<item>MATERIAL_SHADOW_CAST_OFF</item>
 		</_alwaysDefines>

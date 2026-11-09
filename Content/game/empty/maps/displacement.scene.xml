@@ -21,7 +21,7 @@
 		<entity id="3" name="Plate">
 			<GameObject _schemaVersion="0" _name="Plate" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="5,1,5" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="game/empty/materials/displacement/displacement_checker.material" _boundsRadius="4" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="5,1,5" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="game/empty/materials/displacement/displacement_checker.material" _boundsRadius="4" />
 				</_listComponent>
 			</GameObject>
 		</entity>

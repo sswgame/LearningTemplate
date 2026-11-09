@@ -32,7 +32,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0.5,0" _localRotation="0,0,0" _localScale="400,1,400" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Plane" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.866" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0.5,0" _localRotation="0,0,0" _localScale="400,1,400" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Plane" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.866" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -47,7 +47,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="5,1,60" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="31" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="5,1,60" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="31" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -62,7 +62,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="5,1,60" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="31" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="5,1,60" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="31" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -77,7 +77,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="5,1,60" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="31" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="5,1,60" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="31" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -85,7 +85,7 @@
 			<GameObject _schemaVersion="0" _name="SledSnow" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localPosition="-6,11.15,-25" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<MeshComponent _localPosition="0,0.15,0" _localRotation="0,0,0" _localScale="1,0.3,2" _attachOwner="None" _attachComponent="SceneComponent#0" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="1.5" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0.15,0" _localRotation="0,0,0" _localScale="1,0.3,2" _attachOwner="None" _attachComponent="SceneComponent#0" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="1.5" />
 					<KinematicVehicleComponent _tuning="common/data/vehicles/sled.vehicle.xml" _bUsePhysicsGround="true" />
 					<VehicleSeatComponent _seatOffset="0,0.6,0" _exitOffset="-1.5,0,0" _enterDistance="4" _bDriverSeat="false" />
 				</_listComponent>
@@ -95,7 +95,7 @@
 			<GameObject _schemaVersion="0" _name="SledIce" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localPosition="0,11.15,-25" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<MeshComponent _localPosition="0,0.15,0" _localRotation="0,0,0" _localScale="1,0.3,2" _attachOwner="None" _attachComponent="SceneComponent#0" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="1.5" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0.15,0" _localRotation="0,0,0" _localScale="1,0.3,2" _attachOwner="None" _attachComponent="SceneComponent#0" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="1.5" />
 					<KinematicVehicleComponent _tuning="common/data/vehicles/sled.vehicle.xml" _bUsePhysicsGround="true" />
 				</_listComponent>
 			</GameObject>
@@ -104,7 +104,7 @@
 			<GameObject _schemaVersion="0" _name="SledRider" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localPosition="-5,11.2,-25" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<MeshComponent _localPosition="0,0.6,0" _localRotation="0,0,0" _localScale="0.45,1.2,0.35" _attachOwner="None" _attachComponent="SceneComponent#0" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.7" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0.6,0" _localRotation="0,0,0" _localScale="0.45,1.2,0.35" _attachOwner="None" _attachComponent="SceneComponent#0" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.7" />
 					<PawnComponent _maxPitch="1.4" _bLockMouse="false">
 						<_listButton />
 						<_listAnalog />
@@ -116,7 +116,7 @@
 			<GameObject _schemaVersion="0" _name="KartFlat" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localPosition="8,0,-20" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<MeshComponent _localPosition="0,0.3,0" _localRotation="0,0,0" _localScale="1.2,0.6,2" _attachOwner="None" _attachComponent="SceneComponent#0" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="1.5" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0.3,0" _localRotation="0,0,0" _localScale="1.2,0.6,2" _attachOwner="None" _attachComponent="SceneComponent#0" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="1.5" />
 					<PawnComponent _maxPitch="1.4" _bLockMouse="false">
 						<_listButton />
 						<_listAnalog />
@@ -129,7 +129,7 @@
 			<GameObject _schemaVersion="0" _name="KartHill" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localPosition="-12,0.97,25" _localRotation="0,3.14159265,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<MeshComponent _localPosition="0,0.3,0" _localRotation="0,0,0" _localScale="1.2,0.6,2" _attachOwner="None" _attachComponent="SceneComponent#0" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="1.5" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0.3,0" _localRotation="0,0,0" _localScale="1.2,0.6,2" _attachOwner="None" _attachComponent="SceneComponent#0" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="1.5" />
 					<PawnComponent _maxPitch="1.4" _bLockMouse="false">
 						<_listButton />
 						<_listAnalog />
@@ -142,7 +142,7 @@
 			<GameObject _schemaVersion="0" _name="LeanKart" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localPosition="16,0,-20" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<MeshComponent _localPosition="0,0.3,0" _localRotation="0,0,0" _localScale="1.2,0.6,2" _attachOwner="None" _attachComponent="SceneComponent#0" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="1.5" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0.3,0" _localRotation="0,0,0" _localScale="1.2,0.6,2" _attachOwner="None" _attachComponent="SceneComponent#0" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="1.5" />
 					<PawnComponent _maxPitch="1.4" _bLockMouse="false">
 						<_listButton />
 						<_listAnalog />
@@ -156,7 +156,7 @@
 			<GameObject _schemaVersion="0" _name="Rider" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localPosition="17,0,-20" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<MeshComponent _localPosition="0,0.6,0" _localRotation="0,0,0" _localScale="0.45,1.2,0.35" _attachOwner="None" _attachComponent="SceneComponent#0" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.7" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0.6,0" _localRotation="0,0,0" _localScale="0.45,1.2,0.35" _attachOwner="None" _attachComponent="SceneComponent#0" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.7" />
 					<PawnComponent _maxPitch="1.4" _bLockMouse="false">
 						<_listButton />
 						<_listAnalog />
@@ -168,7 +168,7 @@
 			<GameObject _schemaVersion="0" _name="Rail" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localPosition="-20,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<MeshComponent _localPosition="0,4.15,0" _localRotation="0.155,0,0" _localScale="0.3,0.1,50.6" _attachOwner="None" _attachComponent="SceneComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="26" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,4.15,0" _localRotation="0.155,0,0" _localScale="0.3,0.1,50.6" _attachOwner="None" _attachComponent="SceneComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="26" />
 					<SplineComponent _samplesPerSegment="16" _type="Linear" _bClosed="false">
 						<_listControlPoint>
 							<item>0,8,-25</item>
@@ -182,7 +182,7 @@
 			<GameObject _schemaVersion="0" _name="Minecart" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localPosition="-20,8,-25" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<MeshComponent _localPosition="0,0.4,0" _localRotation="0,0,0" _localScale="1,0.8,1.4" _attachOwner="None" _attachComponent="SceneComponent#0" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="1.5" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0.4,0" _localRotation="0,0,0" _localScale="1,0.8,1.4" _attachOwner="None" _attachComponent="SceneComponent#0" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="1.5" />
 					<KinematicVehicleComponent _tuning="common/data/vehicles/minecart.vehicle.xml" _rail="14" _bUsePhysicsGround="true" />
 				</_listComponent>
 			</GameObject>

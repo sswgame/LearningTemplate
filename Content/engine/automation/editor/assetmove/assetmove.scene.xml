@@ -17,7 +17,6 @@
 					               _meshID="Cube"
 					               _materialPath="engine/automation/editor/assetmove/pack/probe.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
@@ -37,7 +36,6 @@
 					               _meshID="Cube"
 					               _materialPath="engine/automation/editor/assetmove/pack/detail/probe_detail.material"
 					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>

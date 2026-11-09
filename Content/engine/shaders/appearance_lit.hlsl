@@ -97,9 +97,6 @@ SW_MATERIAL_END
 #if defined( MATERIAL_VERTEX_DEFORM ) && !defined( MATERIAL_FUR_SHELL )
     #error "appearance_lit.hlsl moves vertices only for fur shells: MATERIAL_VERTEX_DEFORM needs MATERIAL_FUR_SHELL"
 #endif
-#if defined( MATERIAL_REFRACTION ) && !defined( MATERIAL_BLEND_TRANSLUCENT )
-    #error "MATERIAL_REFRACTION draws in the translucent list: the material needs alphaMode=\"Blend\" and MATERIAL_BLEND_TRANSLUCENT"
-#endif
 // 엽이 겹치는 갈래는 G버퍼 칸 넷에 들지 않는다(머리말의 포워드 전용 표) — define 을 빠뜨린 머티리얼이 G버퍼에서 조용히 엽을 잃지 않게 쿠킹에서 멈춘다.
 #if defined( SW_PASS_GBUFFER ) && ( defined( MATERIAL_LOBE_THIN_FILM ) || defined( MATERIAL_LOBE_STRAND ) || defined( MATERIAL_NET_UNDERLAYER ) || ( defined( MATERIAL_LOBE_SHEEN ) && ( defined( MATERIAL_LOBE_ANISOTROPY ) || defined( MATERIAL_LOBE_SUBSURFACE ) ) ) )
     #error "appearance_lit.hlsl: layered lobes (thin film, fur strand, net underlayer, sheen with anisotropy or subsurface) do not fit the G-buffer: list MATERIAL_FORWARD_ONLY"
@@ -145,7 +142,9 @@ struct MaterialVaryings
 };
 #include "material_shader.hlsli"
 #include "normal_map.hlsli"
-#include "scene_refraction.hlsli"
+#if defined( MATERIAL_REFRACTION )
+    #include "scene_refraction.hlsli"
+#endif
 
 #if defined( MATERIAL_EYE )
 MaterialVaryings computeMaterialVaryings( VertexContext context )
@@ -433,7 +432,9 @@ MaterialSurface computeMaterialSurface( PixelContext context )
 /** @brief 유리 — 반사(겹 BRDF 의 반사 · 환경)는 그대로 두고, 투과는 굴절한 장면 사본 × 투과 색 × (1 - 프레넬)로 덮는다. */
 struct AppearanceRefraction
 {
-    static float4 compose( PixelContext context, AppearanceSurface appearance, float3 reflected );
+    static float computeBody( PixelContext context, AppearanceSurface appearance ); // 몸통(빛을 가로막는 정도) — 굴절이 아니면 1
+    static float computeDiffuseScale( float body );                                 // 알베도 확산에 곱할 값 — 사본이 있는 굴절만 몸통, 나머지는 1
+    static float4 compose( PixelContext context, AppearanceSurface appearance, float3 reflected, float body );
 };
 
 #if defined( MATERIAL_REFRACTION )
@@ -441,12 +442,22 @@ struct AppearanceRefraction
  * @details 몸통(창유리의 먼지 · 간유리의 흐린 몸)은 알베도 알파와 먼지 잡음(`_patternAmount` × fbm)으로 정하고 그만큼 장면이 덜 비친다.
  *          사본이 없는 파이프라인(2D 등)은 굴절 없이 알파 블렌드다(물과 같은 규칙 — 필수 값이 아니라 파이프라인의 능력이다).
  */
-static float4 AppearanceRefraction::compose( PixelContext context, AppearanceSurface appearance, float3 reflected )
+static float AppearanceRefraction::computeBody( PixelContext context, AppearanceSurface appearance )
+{
+    const float dirt = saturate( AppearanceNoise::computeFractal( context._uv * max( appearance._patternScale, 1e-3f ) ) * appearance._patternAmount );
+    return saturate( max( appearance._albedo.a, dirt ) );
+}
+
+static float AppearanceRefraction::computeDiffuseScale( float body )
+{
+    // 사본이 없는 파이프라인은 알파 블렌드라 블렌드가 이미 몸통을 곱한다 — 그때는 줄이지 않는다.
+    return SceneRefraction::isAvailable() ? body : 1.0f;
+}
+
+static float4 AppearanceRefraction::compose( PixelContext context, AppearanceSurface appearance, float3 reflected, float body )
 {
     const float3 toView  = View::computeToView( context._worldPosition );
     const float  fresnel = ShadingMath::computeFresnelSchlick( ShadingMath::computeDielectricF0( max( appearance._ior, 1.0f ) ), saturate( dot( appearance._normal, toView ) ) );
-    const float  dirt    = saturate( AppearanceNoise::computeFractal( context._uv * max( appearance._patternScale, 1e-3f ) ) * appearance._patternAmount );
-    const float  body    = saturate( max( appearance._albedo.a, dirt ) );
     float4       result  = float4( reflected, max( body, fresnel ) );
     SW_BRANCH if ( SceneRefraction::isAvailable() )
     {
@@ -454,13 +465,23 @@ static float4 AppearanceRefraction::compose( PixelContext context, AppearanceSur
         const float3 refracted  = refract( -toView, appearance._normal, 1.0f / max( appearance._ior, 1.0f ) );
         const float  blurRadius = saturate( context._material._refractionBlur ) * 0.03f;
         const float3 behind     = SceneRefraction::computeRefractedColor( context._worldPosition, refracted, context._material._thickness, context._position.z, screenUv, blurRadius );
-        // 투과 색은 머티리얼 색(알베도 rgb) — 몸통 확산은 reflected 에 이미 있다.
+        // 투과 색은 머티리얼 색(알베도 rgb) — 몸통 확산은 reflected 에 이미 있다(확산은 몸통만큼만 — computeMaterialLighting 이 알베도에 곱했다).
         result = float4( behind * context._material._color.rgb * ( 1.0f - fresnel ) * ( 1.0f - body ) + reflected, 1.0f );
     }
     return result;
 }
 #else
-static float4 AppearanceRefraction::compose( PixelContext context, AppearanceSurface appearance, float3 reflected )
+static float AppearanceRefraction::computeBody( PixelContext context, AppearanceSurface appearance )
+{
+    return 1.0f;
+}
+
+static float AppearanceRefraction::computeDiffuseScale( float body )
+{
+    return 1.0f;
+}
+
+static float4 AppearanceRefraction::compose( PixelContext context, AppearanceSurface appearance, float3 reflected, float body )
 {
     return float4( reflected, appearance._albedo.a );
 }
@@ -475,10 +496,13 @@ float4 computeMaterialLighting( PixelContext context, MaterialSurface surface )
 float4 computeMaterialLighting( PixelContext context, MaterialSurface surface )
 {
     AppearanceSurface appearance = AppearanceSurface::make( context );
-    const SurfaceBRDF brdf       = appearance.makeBRDF( context._worldPosition );
-    const float       shadow     = Shadow::sampleAtWorld( context._worldPosition, appearance._normal );
-    const float3      lit        = brdf.shadeLights( context._worldPosition, shadow ) + appearance._emissive;
-    return AppearanceRefraction::compose( context, appearance, lit );
+    // 굴절 유리의 확산은 몸통(먼지 · 간유리)만큼이다 — 맑은 유리가 알베도 확산을 다 내면 뒤가 비치지 않고 우윳빛이 된다(언리얼 반투명 조명도 불투명도로 곱한다).
+    const float body = AppearanceRefraction::computeBody( context, appearance );
+    appearance._albedo.rgb *= AppearanceRefraction::computeDiffuseScale( body );
+    const SurfaceBRDF brdf   = appearance.makeBRDF( context._worldPosition );
+    const float       shadow = Shadow::sampleAtWorld( context._worldPosition, appearance._normal );
+    const float3      lit    = brdf.shadeLights( context._worldPosition, shadow ) + appearance._emissive;
+    return AppearanceRefraction::compose( context, appearance, lit, body );
 }
 #endif
 

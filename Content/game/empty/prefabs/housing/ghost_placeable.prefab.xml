@@ -14,7 +14,6 @@
 			               _meshID="Cube"
 			               _materialPath="game/empty/materials/housing/ghost_placeable.material"
 			               _boundsRadius="0.866"
-			               _blendMode="Transparent"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
 		</_listComponent>

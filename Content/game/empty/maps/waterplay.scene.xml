@@ -94,7 +94,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1" />
 					<BuoyancyComponent _waterDensity="1000" _linearDrag="200">
 						<_listPontoon>
 							<BuoyancyPontoon _localPosition="0.4,-0.3,0.4" _radius="0.35" />
@@ -110,7 +110,7 @@
 			<GameObject _schemaVersion="0" _name="WaterTank" _bActive="true">
 				<_listComponent>
 					<BuoyancyVolumeComponent _localPosition="-60,50,60" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _halfExtents="3,2,3" _buoyancy="2" _linearDrag="1" _angularDrag="1" _flowVelocity="0.3,0,0" _layerMask="4294967295" />
-					<MeshComponent _localPosition="-60,50,60" _localRotation="0,0,0" _localScale="6,4,6" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/water.material" _boundsRadius="5" _blendMode="Opaque" />
+					<MeshComponent _localPosition="-60,50,60" _localRotation="0,0,0" _localScale="6,4,6" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/water.material" _boundsRadius="5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -125,7 +125,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -140,7 +140,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1" />
 					<FoliageInfluencerComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _radius="1.5" />
 				</_listComponent>
 			</GameObject>
@@ -163,7 +163,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1.2,0.8,0.1" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="game/empty/materials/renderstate/plain_red.material" _boundsRadius="1" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1.2,0.8,0.1" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="game/empty/materials/renderstate/plain_red.material" _boundsRadius="1" />
 					<JointComponent _localPosition="0,1,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _jointType="Hinge" _axis="1,0,0" _normalAxis="0,1,0" _minLimit="0" _maxLimit="0" _swingLimitNormal="0" _swingLimitPlane="0" _motorMode="Off" _motorTarget="0" _motorMaxForce="0" _bLimitsEnabled="false" _bCollideConnectedBodies="false" _bConnectToWorld="true" />
 				</_listComponent>
 			</GameObject>

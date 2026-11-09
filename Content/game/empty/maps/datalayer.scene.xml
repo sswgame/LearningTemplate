@@ -24,7 +24,7 @@
 		<entity id="3" name="Ground">
 			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="16,1,16" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="12" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="16,1,16" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="12" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -54,7 +54,7 @@
 		<entity id="6" name="Snow" layers="Winter">
 			<GameObject _schemaVersion="0" _name="Snow" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="0,1.25,0" _localRotation="0,0,0" _localScale="2.5,2.5,2.5" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="game/empty/materials/renderstate/plain_red.material" _boundsRadius="2.2" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,1.25,0" _localRotation="0,0,0" _localScale="2.5,2.5,2.5" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="game/empty/materials/renderstate/plain_red.material" _boundsRadius="2.2" />
 				</_listComponent>
 			</GameObject>
 		</entity>

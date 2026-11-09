@@ -21,14 +21,14 @@
 		<entity id="3" name="Ground">
 			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="16,1,16" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="12" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="16,1,16" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="12" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="4" name="GraphSphere">
 			<GameObject _schemaVersion="0" _name="GraphSphere" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="0,1,0" _localRotation="0,0,0" _localScale="1.6,1.6,1.6" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="game/empty/materials/matgraph/rim_glow.gen.material" _boundsRadius="1.5" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,1,0" _localRotation="0,0,0" _localScale="1.6,1.6,1.6" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="game/empty/materials/matgraph/rim_glow.gen.material" _boundsRadius="1.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>

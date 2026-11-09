@@ -13,7 +13,6 @@
 			               _meshID="common/models/quaternius/scifi/gun_pistol.mesh"
 			               _materialPath="common/models/quaternius/scifi/gun_pistol/materials/mi_guns_batch1.material"
 			               _boundsRadius="0.25"
-			               _blendMode="Opaque"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
 		</_listComponent>

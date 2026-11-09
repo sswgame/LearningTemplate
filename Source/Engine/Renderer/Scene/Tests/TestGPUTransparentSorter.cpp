@@ -216,3 +216,20 @@ SW_TEST_CASE( GPUTransparentSorterTest, ParticlePlacementFollowsLayerAndDepth )
         SW_EXPECT_EQUAL( slot._drawPosition, 0u );
     }
 }
+
+/**
+ * @brief [GPUTransparentSorterTest] 장면 색 사본을 읽는 굴절은 차례 · 레이어 · 깊이와 상관없이 다른 반투명 · 입자보다 먼저 그린다(사본 뒤의 반투명이 굴절 너머로 사라지지 않게)
+ */
+SW_TEST_CASE( GPUTransparentSorterTest, RefractionBandDrawsFirst )
+{
+    sw::GPUTransparentSortKey glass{ 9u, 1.0f, 4u };
+    glass._renderQueue = 50; // 차례를 크게 적어도 띠가 앞선다
+    glass._drawBand    = sw::TransparentDrawBand::ReadsSceneCopy;
+    sw::GPUTransparentSortKey smoke{ 0u, 100.0f, 0u };
+    smoke._renderQueue = -50;
+    SW_EXPECT_TRUE( sw::GPUTransparentSorter::isDrawnBefore( glass, smoke ) );
+    SW_EXPECT_FALSE( sw::GPUTransparentSorter::isDrawnBefore( smoke, glass ) );
+    // 입자(보통 띠)도 굴절 배치 뒤에 선다.
+    const sw::GPUTransparentSortKey particle{ 0u, 100.0f, 0u };
+    SW_EXPECT_TRUE( sw::GPUTransparentSorter::isBatchDrawnBeforeParticle( glass, particle ) );
+}

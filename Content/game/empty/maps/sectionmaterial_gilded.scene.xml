@@ -21,7 +21,7 @@
 		<entity id="3" name="Parts">
 			<GameObject _schemaVersion="0" _name="Parts" _bActive="true">
 				<_listComponent>
-					<SkeletalMeshComponent _componentName="SkeletalMeshComponent" _bActive="true" _localPosition="-1,0,0" _localRotation="0,3.1415927,0" _localScale="1,1,1" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _meshID="" _materialPath="" _boundsRadius="2" _blendMode="Opaque" _gpuSpinSeed="0" _bVisible="true" _skeletonPath="" _updateRateDivisor="1" _bFollowParentPose="false" _bAnimateWhenOffscreen="false" />
+					<SkeletalMeshComponent _componentName="SkeletalMeshComponent" _bActive="true" _localPosition="-1,0,0" _localRotation="0,3.1415927,0" _localScale="1,1,1" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _meshID="" _materialPath="" _boundsRadius="2" _gpuSpinSeed="0" _bVisible="true" _skeletonPath="" _updateRateDivisor="1" _bFollowParentPose="false" _bAnimateWhenOffscreen="false" />
 					<CharacterAppearanceComponent _componentName="CharacterAppearanceComponent" _bActive="true" _presetID="SectionShowcaseGilded" _seed="0" _bMergeParts="false" />
 				</_listComponent>
 			</GameObject>
@@ -29,7 +29,7 @@
 		<entity id="4" name="Merged">
 			<GameObject _schemaVersion="0" _name="Merged" _bActive="true">
 				<_listComponent>
-					<SkeletalMeshComponent _componentName="SkeletalMeshComponent" _bActive="true" _localPosition="1,0,0" _localRotation="0,3.1415927,0" _localScale="1,1,1" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _meshID="" _materialPath="" _boundsRadius="2" _blendMode="Opaque" _gpuSpinSeed="0" _bVisible="true" _skeletonPath="" _updateRateDivisor="1" _bFollowParentPose="false" _bAnimateWhenOffscreen="false" />
+					<SkeletalMeshComponent _componentName="SkeletalMeshComponent" _bActive="true" _localPosition="1,0,0" _localRotation="0,3.1415927,0" _localScale="1,1,1" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _meshID="" _materialPath="" _boundsRadius="2" _gpuSpinSeed="0" _bVisible="true" _skeletonPath="" _updateRateDivisor="1" _bFollowParentPose="false" _bAnimateWhenOffscreen="false" />
 					<CharacterAppearanceComponent _componentName="CharacterAppearanceComponent" _bActive="true" _presetID="SectionShowcaseGilded" _seed="0" _bMergeParts="true" />
 				</_listComponent>
 			</GameObject>

@@ -12,7 +12,6 @@
 			                       _meshID="common/models/props/bow.mesh"
 			                       _materialPath="common/materials/blaster_palette.material"
 			                       _boundsRadius="0.8"
-			                       _blendMode="Opaque"
 			                       _gpuSpinSeed="0"
 			                       _bVisible="true"
 			                       _skeletonPath="common/models/props/bow/bow.skeleton.xml"
