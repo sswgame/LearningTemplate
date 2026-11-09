@@ -50,7 +50,7 @@
 - **지역 효과:** 인스펙터가 배치 덮어쓰기의 물려받은 값과 바꾼 값을 가르고 되돌리는 화면(프리팹 덮어쓰기 화면과 같은 길 — 지금은 덮어쓰기 목록을 그대로 편집한다, [DesignBacklog](DesignBacklog.md) 지역 효과).
 - **관성 이동:** 플랫포머 모터(`PlatformerMotor2D`)에 경사 땅을 들이고 `computeAlongAcceleration` 을 부른다([DesignBacklog](DesignBacklog.md) 관성 이동).
 - **데칼 수명:** 투영 데칼(`DecalComponent`)이 들어왔다 — 씻김 여부와 물 · 시간에 따른 수명을 데칼 데이터가 밝히게 하고(모든 데칼을 일괄 지우지 않는다), UV 표면 마스크와 월드 공간 데칼은 저장 · 머티리얼 · 수명 경로를 섞지 않는다.
-- **폴더 자리(막는 구조부터):** 엔진 쪽 `Dev/` 예외(`Config/Dev/FolderLayout.json` `_devFolderAllowed` — ModuleManager/Dev · Host/Dev · App/Dev · GF GameData/Dev · Graphics/Material/Dev)를 DevTools 로 — ModuleManager 를 공유 라이브러리로(언리얼 HotReload 처럼), DevTools 에 리플렉션 단계를 더하면 핫 리로드 · 머티리얼 그래프가 옮겨 간다. 약어 `OK` 를 약어 목록에 넣고 `_bOk` 103 곳을 같은 커밋에 전수로. 목표 자리 `Reflection/InstancedStruct`([FolderLayout](agents/FolderLayout.md) 굵은 칸).
+- **폴더 자리(막는 구조부터):** 엔진 쪽 `Dev/` 예외(`Config/Dev/FolderLayout.json` `_devFolderAllowed` — ModuleManager/Dev · Host/Dev · App/Dev · GF GameData/Dev · Graphics/Material/Dev)를 DevTools 로 — ModuleManager 를 공유 라이브러리로(언리얼 HotReload 처럼), DevTools 에 리플렉션 단계를 더하면 핫 리로드 · 머티리얼 그래프가 옮겨 간다.
 - **창 바둑판 배치:** 시나리오 창 배치가 모니터 작업 영역을 보지 않는다 — 모니터가 2.6K×1.5K 보다 작으면 겹친다. 플랫폼 작업 영역 API 로(`Test/README.md` 창 배치).
 
 ### 6. 리소스

@@ -107,7 +107,7 @@ A reader who knows one of these names must be able to guess the rest. Use a bann
 
 #### Acronyms
 
-- An acronym is written in capitals, everywhere. A shortening (`Nav`, `Anim`, `Info`) is not an acronym.
+- An acronym is written in capitals, everywhere. A shortening (`Nav`, `Anim`, `Info`) is not an acronym. `Ok` is a word (okay), not an acronym — `bOk` · `isOk` · `ErrorKind::Ok` stay (Unreal `EAppReturnType::Ok` · `IsOk()`, Abseil `Status::ok()`; decided 2026-11-09 over ~3000 uses).
 - Types, files, namespaces, enums, folders, modules, test executables: `UISystem`, `GPUScene`, `UISystem.h`.
 - Functions, variables, members: capitals in the middle or at the end (`updateUI`, `entityID`, `pUISystem`), all lower case as the first word (`uiSystem`, `_gpuScene`).
 - Two capital acronyms never touch (`RHIUI…`): spell one out or put a word between.
