@@ -241,10 +241,10 @@ namespace sw
         const LeakBaselineDetailQuery query  = MemoryProfilerInternal::s_leakBaselineDetailQuery.load( std::memory_order_acquire );
         const LeakWindowDetail        detail = query != nullptr ? query() : LeakWindowDetail::TagTotals;
         // 태그별 기준선은 플랫폼 검사와 따로 잡는다 — 기동 뒤부터 종료까지 하나의 누수 창을 열어 두고,
-        // 종료 끝에 어느 용도가 늘었는지(`endLeakWindow` → `printLeakWindowReport`) 본다.
+        // 종료 끝에 어느 용도가 늘었는지(`MemoryLeakWindow::close` → `LeakWindowReport::print`) 본다.
         MemoryProfiler* pActive = getActive();
         if ( pActive != nullptr )
-            pActive->beginLeakWindow( detail );
+            pActive->_leakWindow.open( detail );
         // 이 뒤로 레지스트리가 저장소를 키우면 기준선 때 블록을 보관했다가, 그 뒤 오른 항목이 다 빠지면 그리로 돌아간다 — 키운 블록이 창에 남지 않는다.
         (void)RegistrationListBase::setStorageKeptOnGrowth( true );
 #if defined( SW_HAS_CRT_LEAK_CHECK )
@@ -319,12 +319,7 @@ namespace sw
         , _bDetailedTrackingEnabled{ false }
         , _shard{}
         , _arrTagSummary{}
-        , _leakStampCounter{ 0 }
-        , _leakFirstStamp{ 0 }
-        , _leakCurrentStamp{ 0 }
-        , _bLeakWindowStacks{ false }
-        , _leakOwnerThreadKey{ 0 }
-        , _leakShard{}
+        , _leakWindow{ _shard }
     {
     }
 
@@ -394,8 +389,8 @@ namespace sw
         counter._totalAllocationCount.fetch_add( 1, std::memory_order_relaxed );
 
         // 열린 창이면 이 블록에 회차 스탬프를 찍는다. 스탬프는 헤더에 남아 해제 때 돌아온다(`recordFree` 의 `born`).
-        const uint32 windowStamp   = _leakCurrentStamp.load( std::memory_order_acquire );
-        const bool   bWindowStacks = windowStamp != 0 && _bLeakWindowStacks.load( std::memory_order_relaxed );
+        const uint32 windowStamp   = _leakWindow.getAllocationStamp();
+        const bool   bWindowStacks = windowStamp != 0 && _leakWindow.isRecordingStacks();
         if ( windowStamp != 0 && bWindowStacks == false )
         {
             counter._windowLiveBytes.fetch_add( static_cast<int64>( size ), std::memory_order_relaxed );
@@ -430,7 +425,7 @@ namespace sw
             }
 
             if ( bWindowStacks )
-                addLeakWindowBlock( pPtr, size, tag, windowStamp, stack );
+                _leakWindow.addBlock( pPtr, size, tag, windowStamp, stack );
         }
 
         return AllocationRecord{ outHash, true, windowStamp };
@@ -452,7 +447,7 @@ namespace sw
 
         // 창 안에서 태어난 블록이면 창의 값에서 뺀다. 창 밖에서 태어난 블록(스탬프 0)은 창의 값과 무관하다.
         if ( born._windowStamp != 0 )
-            releaseLeakWindowBlock( pPtr, size, counter, born._windowStamp );
+            _leakWindow.releaseBlock( pPtr, size, counter, born._windowStamp );
 
         // 프로파일러 안(해시 맵을 고치는 중)에서는 콜 스택 테이블을 건드리지 않는다 — 재귀로 같은 잠금을 다시 잡는다.
         if ( MemoryProfilerInternal::t_bIsInsideProfiler )
@@ -617,307 +612,6 @@ namespace sw
         return newlyExceededCount;
     }
 
-    void MemoryProfiler::beginLeakWindow( LeakWindowDetail detail )
-    {
-        const bool bAlreadyOpen = isLeakWindowOpen();
-        SW_ASSERT( bAlreadyOpen == false && "beginLeakWindow called while a leak window is already open" );
-        if ( bAlreadyOpen )
-            return;
-
-        clearLeakWindowData();
-        _bLeakWindowStacks.store( detail == LeakWindowDetail::FullStacks, std::memory_order_relaxed );
-        _leakOwnerThreadKey.store( MemoryProfilerInternal::getCurrentThreadKey(), std::memory_order_relaxed );
-
-        // 스탬프 0 은 "창 밖" 이라 1 부터 나눈다. 첫 스탬프를 먼저 내보내고 지금 스탬프를 내보낸다(할당이 지금 스탬프를 보면 첫 스탬프도 보인다).
-        const uint32 firstStamp = _leakStampCounter.fetch_add( 1, std::memory_order_relaxed ) + 1;
-        _leakFirstStamp.store( firstStamp, std::memory_order_release );
-        _leakCurrentStamp.store( firstStamp, std::memory_order_release );
-    }
-
-    void MemoryProfiler::beginLeakRound()
-    {
-        const bool bOpen   = isLeakWindowOpen();
-        const bool bStacks = _bLeakWindowStacks.load( std::memory_order_relaxed );
-        SW_ASSERT( bOpen && "beginLeakRound called without an open leak window" );
-        SW_ASSERT( ( bOpen == false || bStacks ) && "a TagTotals leak window has a single round (use FullStacks to split rounds)" );
-        if ( bOpen == false || bStacks == false )
-            return;
-
-        const uint32 stamp = _leakStampCounter.fetch_add( 1, std::memory_order_relaxed ) + 1;
-        _leakCurrentStamp.store( stamp, std::memory_order_release );
-    }
-
-    LeakWindowReport MemoryProfiler::endLeakWindow()
-    {
-        LeakWindowReport report;
-        const uint32     firstStamp = _leakFirstStamp.load( std::memory_order_acquire );
-        SW_ASSERT( firstStamp != 0 && "endLeakWindow called without an open leak window" );
-        if ( firstStamp == 0 )
-            return report;
-
-        // 먼저 닫는다 — 이 뒤의 할당에는 스탬프가 찍히지 않고, 이 뒤의 해제는 창의 값을 건드리지 않는다. 지금 스탬프를 먼저 0 으로 두어야
-        // 해제 쪽이 첫 스탬프만 보고 닫히지 않은 창으로 착각하지 않는다(`releaseLeakWindowBlock`).
-        const uint32 lastStamp = _leakCurrentStamp.exchange( 0, std::memory_order_acq_rel );
-        _leakFirstStamp.store( 0, std::memory_order_release );
-
-        report._bValid     = true;
-        report._roundCount = lastStamp - firstStamp + 1;
-        if ( _bLeakWindowStacks.load( std::memory_order_relaxed ) )
-        {
-            report._detail = LeakWindowDetail::FullStacks;
-            collectLeakWindowStacks( firstStamp, report );
-        }
-        else
-        {
-            report._detail = LeakWindowDetail::TagTotals;
-            collectLeakWindowTagTotals( report );
-        }
-
-        VectorUtil::sort( report._listEntry, Descending<&LeakWindowEntry::_bytes>{} );
-        for ( const LeakWindowEntry& entry : report._listEntry )
-        {
-            report._totalBytes += entry._bytes;
-            report._totalBlockCount += entry._blockCount;
-        }
-        return report;
-    }
-
-    void MemoryProfiler::addLeakWindowBlock( void* pPtr, size_t size, MemoryTag tag, uint32 stamp, const CallStack& stack )
-    {
-        LeakWindowShard& shard = _leakShard.getShard( MemoryProfilerInternal::getPointerShardIndex( pPtr ) );
-
-        // 테이블이 할당할 때(노드 · 버킷)의 재귀를 막는다. 세지 않으므로 그 해제도 오지 않는다.
-        MemoryProfilerInternal::t_bIsInsideProfiler = true;
-        {
-            ScopedLock<mutex> lock{ shard._mutex };
-            shard._mapBlock[pPtr] = LeakWindowBlock{ size, stack._hash, MemoryProfilerInternal::getCurrentThreadKey(), stamp, tag };
-            if ( shard._mapStack.contains( stack._hash ) == false )
-                shard._mapStack.emplace( stack._hash, stack );
-        }
-        MemoryProfilerInternal::t_bIsInsideProfiler = false;
-    }
-
-    void MemoryProfiler::releaseLeakWindowBlock( void* pPtr, size_t size, MemoryTagShardCounter& counter, uint32 stamp )
-    {
-        // 열린 창 안에서 태어난 블록만 뺀다. 창 밖의 오래된 블록 · 이미 닫힌 창의 블록은 지금 창의 값과 무관하다.
-        const uint32 firstStamp        = _leakFirstStamp.load( std::memory_order_acquire );
-        const uint32 currentStamp      = _leakCurrentStamp.load( std::memory_order_relaxed );
-        const bool   bBornInOpenWindow = firstStamp != 0 && firstStamp <= stamp && stamp <= currentStamp;
-        if ( bBornInOpenWindow == false )
-            return;
-
-        if ( _bLeakWindowStacks.load( std::memory_order_relaxed ) == false )
-        {
-            counter._windowLiveBytes.fetch_sub( static_cast<int64>( size ), std::memory_order_relaxed );
-            counter._windowLiveCount.fetch_sub( 1, std::memory_order_relaxed );
-            return;
-        }
-
-        // 이미 프로파일러 안이면(테이블을 고치는 중에 센 블록이 풀리는 경우) 바깥 가드를 지우지 않도록 이전 값을 되돌린다.
-        LeakWindowShard& shard                      = _leakShard.getShard( MemoryProfilerInternal::getPointerShardIndex( pPtr ) );
-        const bool       bWasInside                 = MemoryProfilerInternal::t_bIsInsideProfiler;
-        MemoryProfilerInternal::t_bIsInsideProfiler = true;
-        {
-            ScopedLock<mutex> lock{ shard._mutex };
-            auto              it = shard._mapBlock.find( pPtr );
-            // 같은 주소를 다른 회차 · 다른 창이 다시 받았을 수 있다 — 스탬프가 같은 블록만 지운다.
-            if ( it != shard._mapBlock.end() && it->second._stamp == stamp )
-                shard._mapBlock.erase( it );
-        }
-        MemoryProfilerInternal::t_bIsInsideProfiler = bWasInside;
-    }
-
-    void MemoryProfiler::clearLeakWindowData()
-    {
-        for ( uint32 shardIndex = 0; shardIndex < ShardedCounterUtil::kShardCount; ++shardIndex )
-        {
-            LeakWindowShard& shard = _leakShard.getShard( shardIndex );
-            {
-                ScopedLock<mutex> lock{ shard._mutex };
-                shard._mapBlock.clear();
-                shard._mapStack.clear();
-            }
-            for ( MemoryTagShardCounter& counter : _shard.getShard( shardIndex )._arrTag )
-            {
-                counter._windowLiveBytes.store( 0, std::memory_order_relaxed );
-                counter._windowLiveCount.store( 0, std::memory_order_relaxed );
-            }
-        }
-    }
-
-    void MemoryProfiler::collectLeakWindowTagTotals( LeakWindowReport& outReport )
-    {
-        for ( uint32 tagIndex = 0; tagIndex < kMemoryTagCount; ++tagIndex )
-        {
-            // 읽으면서 0 으로 되돌린다 — 다음 창은 빈 합계에서 시작한다.
-            int64 sumBytes = 0;
-            int64 sumCount = 0;
-            for ( uint32 shardIndex = 0; shardIndex < ShardedCounterUtil::kShardCount; ++shardIndex )
-            {
-                MemoryTagShardCounter& counter = _shard.getShard( shardIndex )._arrTag[tagIndex];
-                sumBytes += counter._windowLiveBytes.exchange( 0, std::memory_order_relaxed );
-                sumCount += counter._windowLiveCount.exchange( 0, std::memory_order_relaxed );
-            }
-            const uint64 bytes = MemoryProfilerInternal::clampLiveSum( sumBytes );
-            const uint64 count = MemoryProfilerInternal::clampLiveSum( sumCount );
-            if ( bytes == 0 && count == 0 )
-                continue;
-
-            LeakWindowEntry entry;
-            entry._tag        = static_cast<MemoryTag>( tagIndex );
-            entry._bornRound  = 1;
-            entry._bytes      = bytes;
-            entry._blockCount = count;
-            outReport._listEntry.push_back( std::move( entry ) );
-        }
-    }
-
-    void MemoryProfiler::collectLeakWindowStacks( uint32 firstStamp, LeakWindowReport& outReport )
-    {
-        const uint32 lastStamp = firstStamp + outReport._roundCount - 1;
-        const uint64 ownerKey  = _leakOwnerThreadKey.load( std::memory_order_relaxed );
-
-        // 테이블을 도는 동안 모으는 임시 그릇은 세지 않는다(가드). 슬롯마다 잠금을 짧게 잡고 비운다.
-        vector<LeakBlockSample>          listSample;
-        unordered_map<uint64, CallStack> mapStack;
-        MemoryProfilerInternal::t_bIsInsideProfiler = true;
-        for ( uint32 shardIndex = 0; shardIndex < ShardedCounterUtil::kShardCount; ++shardIndex )
-        {
-            LeakWindowShard&  shard = _leakShard.getShard( shardIndex );
-            ScopedLock<mutex> lock{ shard._mutex };
-            for ( const auto& blockPair : shard._mapBlock )
-            {
-                const LeakWindowBlock& block = blockPair.second;
-                // 닫히기 전에 늦게 들어온 낡은 스탬프는 이 창의 블록이 아니다.
-                if ( block._stamp < firstStamp || lastStamp < block._stamp )
-                    continue;
-                listSample.push_back( LeakBlockSample{ block._stackHash, block._size, block._stamp - firstStamp + 1, block._tag } );
-                if ( block._threadKey != ownerKey )
-                {
-                    ++outReport._foreignThreadBlockCount;
-                    outReport._foreignThreadBytes += block._size;
-                }
-            }
-            for ( const auto& stackPair : shard._mapStack )
-            {
-                if ( mapStack.contains( stackPair.first ) == false )
-                    mapStack.emplace( stackPair.first, stackPair.second );
-            }
-            shard._mapBlock.clear();
-            shard._mapStack.clear();
-        }
-        MemoryProfilerInternal::t_bIsInsideProfiler = false;
-
-        VectorUtil::sort( listSample, Ascending<&LeakBlockSample::_tag, &LeakBlockSample::_stackHash, &LeakBlockSample::_round>{} );
-
-        // 같은 (태그, 스택, 회차) 가 이웃해 있으니 한 줄로 합친다. 첫 프레임은 스택마다 한 번만 심볼로 바꾼다(전역 잠금을 잡는 느린 길).
-        unordered_map<uint64, string> mapFirstFrame;
-        for ( const LeakBlockSample& sample : listSample )
-        {
-            const bool bSameGroup = outReport._listEntry.empty() == false && outReport._listEntry.back()._tag == sample._tag &&
-                                    outReport._listEntry.back()._stackHash == sample._stackHash && outReport._listEntry.back()._bornRound == sample._round;
-            if ( bSameGroup == false )
-            {
-                if ( mapFirstFrame.contains( sample._stackHash ) == false )
-                {
-                    const auto itStack = mapStack.find( sample._stackHash );
-                    mapFirstFrame.emplace( sample._stackHash, MemoryProfilerInternal::describeFirstCallerFrame( itStack != mapStack.end() ? itStack->second : CallStack{} ) );
-                }
-                LeakWindowEntry entry;
-                entry._tag        = sample._tag;
-                entry._bornRound  = sample._round;
-                entry._stackHash  = sample._stackHash;
-                entry._firstFrame = mapFirstFrame.find( sample._stackHash )->second;
-                outReport._listEntry.push_back( std::move( entry ) );
-            }
-            LeakWindowEntry& group = outReport._listEntry.back();
-            group._bytes += sample._size;
-            ++group._blockCount;
-        }
-    }
-
-    LeakCurveResult MemoryProfiler::judgeLeakCurve( const vector<LeakCurvePoint>& listPoint, const LeakCurveCriteria& criteria )
-    {
-        LeakCurveResult result;
-        const size_t    warmup = criteria._warmupRounds;
-        if ( listPoint.size() < warmup + 2 )
-            return result; // 기울기에 점이 둘은 있어야 한다 — 모자라면 평평하다고 말하지 않는다
-
-        // x 는 워밍업 뒤 첫 점을 0 으로 둔 회차 번호입니다. 최소제곱 기울기 = (n·Σxy − Σx·Σy) / (n·Σxx − (Σx)²)
-        const size_t  count = listPoint.size() - warmup;
-        const float64 n     = static_cast<float64>( count );
-        float64       sumX{ 0 };
-        float64       sumXX{ 0 };
-        float64       sumBytes{ 0 };
-        float64       sumBytesX{ 0 };
-        float64       sumBlocks{ 0 };
-        float64       sumBlocksX{ 0 };
-        for ( size_t index = 0; index < count; ++index )
-        {
-            const float64 x      = static_cast<float64>( index );
-            const float64 bytes  = static_cast<float64>( listPoint[warmup + index]._bytes );
-            const float64 blocks = static_cast<float64>( listPoint[warmup + index]._blockCount );
-            sumX += x;
-            sumXX += x * x;
-            sumBytes += bytes;
-            sumBytesX += bytes * x;
-            sumBlocks += blocks;
-            sumBlocksX += blocks * x;
-        }
-        const float64 denominator   = n * sumXX - sumX * sumX; // 점이 둘 이상이고 x 가 서로 달라 0 보다 크다
-        result._bValid              = true;
-        result._sampleCount         = static_cast<uint32>( count );
-        result._slopeBytesPerRound  = ( n * sumBytesX - sumX * sumBytes ) / denominator;
-        result._slopeBlocksPerRound = ( n * sumBlocksX - sumX * sumBlocks ) / denominator;
-        result._bFlat               = result._slopeBytesPerRound <= criteria._maxSlopeBytesPerRound &&
-                        result._slopeBlocksPerRound <= criteria._maxSlopeBlocksPerRound;
-        return result;
-    }
-
-    uint32 MemoryProfiler::printLeakWindowReport( const LeakWindowReport& report, const utf8* pPhaseTag, uint32 maxPrintedEntry )
-    {
-        const utf8* pPhase = StringUtil::isNullOrEmpty( pPhaseTag ) ? "shutdown" : pPhaseTag;
-        if ( report._bValid == false )
-        {
-            // 창 없이는 살아 있는 기동 블록(기동이 할당한 블록)과 누수를 가를 수 없다 — 조용히 넘기지 않고 오류로 알린다.
-            MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] %# - ERROR: no leak window was open, so leaks cannot be told from live startup blocks", pPhase );
-            return 0;
-        }
-        if ( report._listEntry.empty() )
-        {
-            MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] %# - nothing born in the leak window is still alive (%# rounds).", pPhase, report._roundCount );
-            return 0;
-        }
-
-        uint32 printedCount{ 0 };
-        for ( const LeakWindowEntry& entry : report._listEntry )
-        {
-            if ( printedCount == maxPrintedEntry )
-            {
-                MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] %# - ... %# more lines not shown.", pPhase,
-                                                          static_cast<uint32>( report._listEntry.size() ) - printedCount );
-                break;
-            }
-            ++printedCount;
-            if ( report._detail == LeakWindowDetail::FullStacks )
-            {
-                MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] %# - tag %# round %# kept %# bytes in %# blocks at %#", pPhase, getMemoryTagName( entry._tag ),
-                                                          entry._bornRound, entry._bytes, entry._blockCount, entry._firstFrame.c_str() );
-            }
-            else
-            {
-                MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] %# - tag %# grew by %# bytes in %# blocks since the post-init baseline.", pPhase,
-                                                          getMemoryTagName( entry._tag ), entry._bytes, entry._blockCount );
-            }
-        }
-        if ( report._foreignThreadBlockCount != 0 )
-        {
-            MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] %# - %# of these blocks (%# bytes) were allocated by threads other than the one that opened the window.", pPhase,
-                                                      report._foreignThreadBlockCount, report._foreignThreadBytes );
-        }
-        return static_cast<uint32>( report._listEntry.size() );
-    }
-
     uint64 MemoryProfiler::getTotalAllocatedBytes() const
     {
         uint64 totalBytes{ 0 };
@@ -989,5 +683,316 @@ namespace sw
             VectorUtil::sort( listResult, Descending<&CallStackAllocInfo::_totalCount>{} );
         }
         return listResult;
+    }
+
+    MemoryLeakWindow::MemoryLeakWindow( ShardArray<MemoryProfilerShard>& tagShard )
+        : _tagShard{ tagShard }
+        , _stampCounter{ 0 }
+        , _firstStamp{ 0 }
+        , _currentStamp{ 0 }
+        , _bRecordStacks{ false }
+        , _ownerThreadKey{ 0 }
+        , _blockShard{}
+    {
+    }
+
+    void MemoryLeakWindow::open( LeakWindowDetail detail )
+    {
+        const bool bAlreadyOpen = isOpen();
+        SW_ASSERT( bAlreadyOpen == false && "MemoryLeakWindow::open called while the window is already open" );
+        if ( bAlreadyOpen )
+            return;
+
+        clearData();
+        _bRecordStacks.store( detail == LeakWindowDetail::FullStacks, std::memory_order_relaxed );
+        _ownerThreadKey.store( MemoryProfilerInternal::getCurrentThreadKey(), std::memory_order_relaxed );
+
+        // 스탬프 0 은 "창 밖" 이라 1 부터 나눈다. 첫 스탬프를 먼저 내보내고 지금 스탬프를 내보낸다(할당이 지금 스탬프를 보면 첫 스탬프도 보인다).
+        const uint32 firstStamp = _stampCounter.fetch_add( 1, std::memory_order_relaxed ) + 1;
+        _firstStamp.store( firstStamp, std::memory_order_release );
+        _currentStamp.store( firstStamp, std::memory_order_release );
+    }
+
+    void MemoryLeakWindow::beginRound()
+    {
+        const bool bOpen   = isOpen();
+        const bool bStacks = _bRecordStacks.load( std::memory_order_relaxed );
+        SW_ASSERT( bOpen && "MemoryLeakWindow::beginRound called without an open window" );
+        SW_ASSERT( ( bOpen == false || bStacks ) && "a TagTotals leak window has a single round (use FullStacks to split rounds)" );
+        if ( bOpen == false || bStacks == false )
+            return;
+
+        const uint32 stamp = _stampCounter.fetch_add( 1, std::memory_order_relaxed ) + 1;
+        _currentStamp.store( stamp, std::memory_order_release );
+    }
+
+    LeakWindowReport MemoryLeakWindow::close()
+    {
+        LeakWindowReport report;
+        const uint32     firstStamp = _firstStamp.load( std::memory_order_acquire );
+        SW_ASSERT( firstStamp != 0 && "MemoryLeakWindow::close called without an open window" );
+        if ( firstStamp == 0 )
+            return report;
+
+        // 먼저 닫는다 — 이 뒤의 할당에는 스탬프가 찍히지 않고, 이 뒤의 해제는 창의 값을 건드리지 않는다. 지금 스탬프를 먼저 0 으로 두어야
+        // 해제 쪽이 첫 스탬프만 보고 닫히지 않은 창으로 착각하지 않는다(`releaseBlock`).
+        const uint32 lastStamp = _currentStamp.exchange( 0, std::memory_order_acq_rel );
+        _firstStamp.store( 0, std::memory_order_release );
+
+        report._bValid     = true;
+        report._roundCount = lastStamp - firstStamp + 1;
+        if ( _bRecordStacks.load( std::memory_order_relaxed ) )
+        {
+            report._detail = LeakWindowDetail::FullStacks;
+            collectStacks( firstStamp, report );
+        }
+        else
+        {
+            report._detail = LeakWindowDetail::TagTotals;
+            collectTagTotals( report );
+        }
+
+        VectorUtil::sort( report._listEntry, Descending<&LeakWindowEntry::_bytes>{} );
+        for ( const LeakWindowEntry& entry : report._listEntry )
+        {
+            report._totalBytes += entry._bytes;
+            report._totalBlockCount += entry._blockCount;
+        }
+        return report;
+    }
+
+    void MemoryLeakWindow::addBlock( void* pPtr, size_t size, MemoryTag tag, uint32 stamp, const CallStack& stack )
+    {
+        LeakWindowShard& shard = _blockShard.getShard( MemoryProfilerInternal::getPointerShardIndex( pPtr ) );
+
+        // 테이블이 할당할 때(노드 · 버킷)의 재귀를 막는다. 세지 않으므로 그 해제도 오지 않는다.
+        MemoryProfilerInternal::t_bIsInsideProfiler = true;
+        {
+            ScopedLock<mutex> lock{ shard._mutex };
+            shard._mapBlock[pPtr] = LeakWindowBlock{ size, stack._hash, MemoryProfilerInternal::getCurrentThreadKey(), stamp, tag };
+            if ( shard._mapStack.contains( stack._hash ) == false )
+                shard._mapStack.emplace( stack._hash, stack );
+        }
+        MemoryProfilerInternal::t_bIsInsideProfiler = false;
+    }
+
+    void MemoryLeakWindow::releaseBlock( void* pPtr, size_t size, MemoryTagShardCounter& counter, uint32 stamp )
+    {
+        // 열린 창 안에서 태어난 블록만 뺀다. 창 밖의 오래된 블록 · 이미 닫힌 창의 블록은 지금 창의 값과 무관하다.
+        const uint32 firstStamp        = _firstStamp.load( std::memory_order_acquire );
+        const uint32 currentStamp      = _currentStamp.load( std::memory_order_relaxed );
+        const bool   bBornInOpenWindow = firstStamp != 0 && firstStamp <= stamp && stamp <= currentStamp;
+        if ( bBornInOpenWindow == false )
+            return;
+
+        if ( _bRecordStacks.load( std::memory_order_relaxed ) == false )
+        {
+            counter._windowLiveBytes.fetch_sub( static_cast<int64>( size ), std::memory_order_relaxed );
+            counter._windowLiveCount.fetch_sub( 1, std::memory_order_relaxed );
+            return;
+        }
+
+        // 이미 프로파일러 안이면(테이블을 고치는 중에 센 블록이 풀리는 경우) 바깥 가드를 지우지 않도록 이전 값을 되돌린다.
+        LeakWindowShard& shard                      = _blockShard.getShard( MemoryProfilerInternal::getPointerShardIndex( pPtr ) );
+        const bool       bWasInside                 = MemoryProfilerInternal::t_bIsInsideProfiler;
+        MemoryProfilerInternal::t_bIsInsideProfiler = true;
+        {
+            ScopedLock<mutex> lock{ shard._mutex };
+            auto              it = shard._mapBlock.find( pPtr );
+            // 같은 주소를 다른 회차 · 다른 창이 다시 받았을 수 있다 — 스탬프가 같은 블록만 지운다.
+            if ( it != shard._mapBlock.end() && it->second._stamp == stamp )
+                shard._mapBlock.erase( it );
+        }
+        MemoryProfilerInternal::t_bIsInsideProfiler = bWasInside;
+    }
+
+    void MemoryLeakWindow::clearData()
+    {
+        for ( uint32 shardIndex = 0; shardIndex < ShardedCounterUtil::kShardCount; ++shardIndex )
+        {
+            LeakWindowShard& shard = _blockShard.getShard( shardIndex );
+            {
+                ScopedLock<mutex> lock{ shard._mutex };
+                shard._mapBlock.clear();
+                shard._mapStack.clear();
+            }
+            for ( MemoryTagShardCounter& counter : _tagShard.getShard( shardIndex )._arrTag )
+            {
+                counter._windowLiveBytes.store( 0, std::memory_order_relaxed );
+                counter._windowLiveCount.store( 0, std::memory_order_relaxed );
+            }
+        }
+    }
+
+    void MemoryLeakWindow::collectTagTotals( LeakWindowReport& outReport )
+    {
+        for ( uint32 tagIndex = 0; tagIndex < kMemoryTagCount; ++tagIndex )
+        {
+            // 읽으면서 0 으로 되돌린다 — 다음 창은 빈 합계에서 시작한다.
+            int64 sumBytes = 0;
+            int64 sumCount = 0;
+            for ( uint32 shardIndex = 0; shardIndex < ShardedCounterUtil::kShardCount; ++shardIndex )
+            {
+                MemoryTagShardCounter& counter = _tagShard.getShard( shardIndex )._arrTag[tagIndex];
+                sumBytes += counter._windowLiveBytes.exchange( 0, std::memory_order_relaxed );
+                sumCount += counter._windowLiveCount.exchange( 0, std::memory_order_relaxed );
+            }
+            const uint64 bytes = MemoryProfilerInternal::clampLiveSum( sumBytes );
+            const uint64 count = MemoryProfilerInternal::clampLiveSum( sumCount );
+            if ( bytes == 0 && count == 0 )
+                continue;
+
+            LeakWindowEntry entry;
+            entry._tag        = static_cast<MemoryTag>( tagIndex );
+            entry._bornRound  = 1;
+            entry._bytes      = bytes;
+            entry._blockCount = count;
+            outReport._listEntry.push_back( std::move( entry ) );
+        }
+    }
+
+    void MemoryLeakWindow::collectStacks( uint32 firstStamp, LeakWindowReport& outReport )
+    {
+        const uint32 lastStamp = firstStamp + outReport._roundCount - 1;
+        const uint64 ownerKey  = _ownerThreadKey.load( std::memory_order_relaxed );
+
+        // 테이블을 도는 동안 모으는 임시 그릇은 세지 않는다(가드). 슬롯마다 잠금을 짧게 잡고 비운다.
+        vector<LeakBlockSample>          listSample;
+        unordered_map<uint64, CallStack> mapStack;
+        MemoryProfilerInternal::t_bIsInsideProfiler = true;
+        for ( uint32 shardIndex = 0; shardIndex < ShardedCounterUtil::kShardCount; ++shardIndex )
+        {
+            LeakWindowShard&  shard = _blockShard.getShard( shardIndex );
+            ScopedLock<mutex> lock{ shard._mutex };
+            for ( const auto& blockPair : shard._mapBlock )
+            {
+                const LeakWindowBlock& block = blockPair.second;
+                // 닫히기 전에 늦게 들어온 낡은 스탬프는 이 창의 블록이 아니다.
+                if ( block._stamp < firstStamp || lastStamp < block._stamp )
+                    continue;
+                listSample.push_back( LeakBlockSample{ block._stackHash, block._size, block._stamp - firstStamp + 1, block._tag } );
+                if ( block._threadKey != ownerKey )
+                {
+                    ++outReport._foreignThreadBlockCount;
+                    outReport._foreignThreadBytes += block._size;
+                }
+            }
+            for ( const auto& stackPair : shard._mapStack )
+            {
+                if ( mapStack.contains( stackPair.first ) == false )
+                    mapStack.emplace( stackPair.first, stackPair.second );
+            }
+            shard._mapBlock.clear();
+            shard._mapStack.clear();
+        }
+        MemoryProfilerInternal::t_bIsInsideProfiler = false;
+
+        VectorUtil::sort( listSample, Ascending<&LeakBlockSample::_tag, &LeakBlockSample::_stackHash, &LeakBlockSample::_round>{} );
+
+        // 같은 (태그, 스택, 회차) 가 이웃해 있으니 한 줄로 합친다. 첫 프레임은 스택마다 한 번만 심볼로 바꾼다(전역 잠금을 잡는 느린 길).
+        unordered_map<uint64, string> mapFirstFrame;
+        for ( const LeakBlockSample& sample : listSample )
+        {
+            const bool bSameGroup = outReport._listEntry.empty() == false && outReport._listEntry.back()._tag == sample._tag &&
+                                    outReport._listEntry.back()._stackHash == sample._stackHash && outReport._listEntry.back()._bornRound == sample._round;
+            if ( bSameGroup == false )
+            {
+                if ( mapFirstFrame.contains( sample._stackHash ) == false )
+                {
+                    const auto itStack = mapStack.find( sample._stackHash );
+                    mapFirstFrame.emplace( sample._stackHash, MemoryProfilerInternal::describeFirstCallerFrame( itStack != mapStack.end() ? itStack->second : CallStack{} ) );
+                }
+                LeakWindowEntry entry;
+                entry._tag        = sample._tag;
+                entry._bornRound  = sample._round;
+                entry._stackHash  = sample._stackHash;
+                entry._firstFrame = mapFirstFrame.find( sample._stackHash )->second;
+                outReport._listEntry.push_back( std::move( entry ) );
+            }
+            LeakWindowEntry& group = outReport._listEntry.back();
+            group._bytes += sample._size;
+            ++group._blockCount;
+        }
+    }
+
+    LeakCurveResult LeakCurveCriteria::judge( const vector<LeakCurvePoint>& listPoint ) const
+    {
+        LeakCurveResult result;
+        const size_t    warmup = _warmupRounds;
+        if ( listPoint.size() < warmup + 2 )
+            return result; // 기울기에 점이 둘은 있어야 한다 — 모자라면 평평하다고 말하지 않는다
+
+        // x 는 워밍업 뒤 첫 점을 0 으로 둔 회차 번호입니다. 최소제곱 기울기 = (n·Σxy − Σx·Σy) / (n·Σxx − (Σx)²)
+        const size_t  count = listPoint.size() - warmup;
+        const float64 n     = static_cast<float64>( count );
+        float64       sumX{ 0 };
+        float64       sumXX{ 0 };
+        float64       sumBytes{ 0 };
+        float64       sumBytesX{ 0 };
+        float64       sumBlocks{ 0 };
+        float64       sumBlocksX{ 0 };
+        for ( size_t index = 0; index < count; ++index )
+        {
+            const float64 x      = static_cast<float64>( index );
+            const float64 bytes  = static_cast<float64>( listPoint[warmup + index]._bytes );
+            const float64 blocks = static_cast<float64>( listPoint[warmup + index]._blockCount );
+            sumX += x;
+            sumXX += x * x;
+            sumBytes += bytes;
+            sumBytesX += bytes * x;
+            sumBlocks += blocks;
+            sumBlocksX += blocks * x;
+        }
+        const float64 denominator   = n * sumXX - sumX * sumX; // 점이 둘 이상이고 x 가 서로 달라 0 보다 크다
+        result._bValid              = true;
+        result._sampleCount         = static_cast<uint32>( count );
+        result._slopeBytesPerRound  = ( n * sumBytesX - sumX * sumBytes ) / denominator;
+        result._slopeBlocksPerRound = ( n * sumBlocksX - sumX * sumBlocks ) / denominator;
+        result._bFlat               = result._slopeBytesPerRound <= _maxSlopeBytesPerRound && result._slopeBlocksPerRound <= _maxSlopeBlocksPerRound;
+        return result;
+    }
+
+    uint32 LeakWindowReport::print( const utf8* pPhaseTag, uint32 maxPrintedEntry ) const
+    {
+        const utf8* pPhase = StringUtil::isNullOrEmpty( pPhaseTag ) ? "shutdown" : pPhaseTag;
+        if ( _bValid == false )
+        {
+            // 창 없이는 살아 있는 기동 블록(기동이 할당한 블록)과 누수를 가를 수 없다 — 조용히 넘기지 않고 오류로 알린다.
+            MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] %# - ERROR: no leak window was open, so leaks cannot be told from live startup blocks", pPhase );
+            return 0;
+        }
+        if ( _listEntry.empty() )
+        {
+            MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] %# - nothing born in the leak window is still alive (%# rounds).", pPhase, _roundCount );
+            return 0;
+        }
+
+        uint32 printedCount{ 0 };
+        for ( const LeakWindowEntry& entry : _listEntry )
+        {
+            if ( printedCount == maxPrintedEntry )
+            {
+                MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] %# - ... %# more lines not shown.", pPhase,
+                                                          static_cast<uint32>( _listEntry.size() ) - printedCount );
+                break;
+            }
+            ++printedCount;
+            if ( _detail == LeakWindowDetail::FullStacks )
+            {
+                MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] %# - tag %# round %# kept %# bytes in %# blocks at %#", pPhase, MemoryProfiler::getMemoryTagName( entry._tag ),
+                                                          entry._bornRound, entry._bytes, entry._blockCount, entry._firstFrame.c_str() );
+            }
+            else
+            {
+                MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] %# - tag %# grew by %# bytes in %# blocks since the post-init baseline.", pPhase,
+                                                          MemoryProfiler::getMemoryTagName( entry._tag ), entry._bytes, entry._blockCount );
+            }
+        }
+        if ( _foreignThreadBlockCount != 0 )
+        {
+            MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] %# - %# of these blocks (%# bytes) were allocated by threads other than the one that opened the window.", pPhase,
+                                                      _foreignThreadBlockCount, _foreignThreadBytes );
+        }
+        return static_cast<uint32>( _listEntry.size() );
     }
 } // namespace sw

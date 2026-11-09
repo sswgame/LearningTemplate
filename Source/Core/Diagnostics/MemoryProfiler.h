@@ -101,7 +101,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 누수 측정 창이 블록을 얼마나 자세히 기록하는지입니다(`MemoryProfiler::beginLeakWindow`).
+     * @brief 누수 측정 창이 블록을 얼마나 자세히 기록하는지입니다(`MemoryLeakWindow::open`).
      * @details 스택 캡처는 할당 하나에 수 마이크로초라 창이 길수록 비쌉니다. 그래서 창을 연 쪽이 값을 고릅니다 — 기본값은 없습니다.
      */
     enum class LeakWindowDetail : uint8
@@ -123,7 +123,7 @@ namespace sw
         uint64    _blockCount{ 0 }; ///< 늘어난 블록 수
         uint64    _stackHash{ 0 };  ///< 할당 스택의 해시. `TagTotals` 창은 0
         string    _firstFrame;      ///< 스택의 첫 프레임(Core/Memory · Core/Container 프레임은 거른다). `TagTotals` 창은 비어 있다
-        uint32    _bornRound{ 0 };  ///< 태어난 회차(1부터, `beginLeakRound` 로 넘어간다). `TagTotals` 창은 늘 1
+        uint32    _bornRound{ 0 };  ///< 태어난 회차(1부터, `MemoryLeakWindow::beginRound` 로 넘어간다). `TagTotals` 창은 늘 1
         MemoryTag _tag{ MemoryTag::Unknown };
     };
 } // namespace sw
@@ -131,21 +131,31 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief `MemoryProfiler::endLeakWindow` 가 돌려주는 보고서입니다. 줄은 늘어난 바이트가 큰 순서입니다.
+     * @brief `MemoryLeakWindow::close` 가 돌려주는 보고서입니다. 줄은 늘어난 바이트가 큰 순서입니다.
      * @details 창 안에서 태어난 블록 가운데 창이 닫힐 때 살아 있는 것만 들어 있습니다. 창 밖에서 태어난 블록의 해제는 뺄 대상이 아니므로
      *          어떤 줄도 줄이지 않습니다. 반대로 **창을 연 스레드가 아닌 스레드의 할당도 섞여 듭니다** — `_foreignThreadBlockCount` 가 그 개수라
      *          0 이 아니면 줄의 일부는 측정 대상 밖의 일(로더 · 로그 워커)일 수 있다.
      */
-    struct LeakWindowReport
+    struct SW_API LeakWindowReport
     {
-        bool                    _bValid{ false }; ///< 창이 열려 있었으면 true. 창 없이 `endLeakWindow` 를 부른 보고서는 false 이고 아래 값이 모두 비어 있다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        /** @brief `print` 가 남기는 줄 수의 잠정 상한입니다(에디터 패널의 표도 같은 상한을 쓴다). */
+        static constexpr uint32 kDefaultMaxPrintedEntry = 64;
+
+        bool                    _bValid{ false }; ///< 창이 열려 있었으면 true. 창 없이 `MemoryLeakWindow::close` 를 부른 보고서는 false 이고 아래 값이 모두 비어 있다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         LeakWindowDetail        _detail{ LeakWindowDetail::TagTotals };
-        uint32                  _roundCount{ 0 };              ///< 창 안에서 지난 회차 수(`beginLeakWindow` 가 첫 회차)
+        uint32                  _roundCount{ 0 };              ///< 창 안에서 지난 회차 수(`MemoryLeakWindow::open` 이 첫 회차)
         uint64                  _totalBytes{ 0 };              ///< 모든 줄의 바이트 합
         uint64                  _totalBlockCount{ 0 };         ///< 모든 줄의 블록 수 합
         uint64                  _foreignThreadBlockCount{ 0 }; ///< 창을 연 스레드가 아닌 스레드가 낳은 블록 수(`FullStacks` 창만 안다, `TagTotals` 는 0)
         uint64                  _foreignThreadBytes{ 0 };      ///< 같은 블록의 바이트
         vector<LeakWindowEntry> _listEntry;
+
+        /**
+         * @brief 보고서를 stderr 로 한 줄씩 남깁니다(로거가 종료된 뒤에도 보이게 — CRT 누수 보고와 같은 경로). 엔진 종료 끝에 Debug 에서 부릅니다.
+         * @param maxPrintedEntry 남길 줄 수의 상한입니다(넘으면 줄인 수만 한 줄로 적는다). 잠정 값이고 L2 측정 뒤에 확정합니다.
+         * @return 보고서의 줄 수입니다(상한으로 줄인 줄도 센다). 보고서가 `_bValid` 가 아니면 오류 한 줄을 남기고 0 입니다.
+         */
+        uint32 print( const utf8* pPhaseTag, uint32 maxPrintedEntry = kDefaultMaxPrintedEntry ) const;
     };
 } // namespace sw
 
@@ -161,12 +171,25 @@ namespace sw
 
 namespace sw
 {
+    /** @brief `LeakCurveCriteria::judge` 의 판정입니다. */
+    struct LeakCurveResult
+    {
+        bool    _bValid{ false };          ///< 워밍업을 뺀 점이 둘 이상이어야 기울기를 낼 수 있다. false 이면 아래 값은 0 이고 평평하다고 말하지 않는다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool    _bFlat{ false };           ///< 두 기울기가 모두 허용치 이하이면 true NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        uint32  _sampleCount{ 0 };         ///< 기울기에 쓴 점 수(워밍업 제외)
+        float64 _slopeBytesPerRound{ 0 };  ///< 회차에 대한 바이트의 최소제곱 기울기
+        float64 _slopeBlocksPerRound{ 0 }; ///< 회차에 대한 블록 수의 최소제곱 기울기
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
-     * @brief 반복 로드 곡선이 평평한지 가르는 기준입니다(`MemoryProfiler::judgeLeakCurve`).
+     * @brief 반복 로드 곡선이 평평한지 가르는 기준입니다(`judge`).
      * @details 기본값은 L2 측정 전의 잠정 값이고 L2 뒤에 확정합니다. 로더 · 로그 워커가 섞이는 잡음을 견디도록
      *          0 이 아니라 작은 허용치를 둡니다 — 진짜 누수는 회차마다 같은 양이 남아 이 허용치보다 훨씬 가파르다.
      */
-    struct LeakCurveCriteria
+    struct SW_API LeakCurveCriteria
     {
         static constexpr uint32  kDefaultWarmupRounds           = 1;     ///< 캐시 · 풀이 차는 첫 회라 버리는 회차 수
         static constexpr float64 kDefaultMaxSlopeBytesPerRound  = 256.0; ///< 이보다 가파르면 바이트가 회차마다 는다고 본다
@@ -175,19 +198,12 @@ namespace sw
         uint32  _warmupRounds{ kDefaultWarmupRounds };
         float64 _maxSlopeBytesPerRound{ kDefaultMaxSlopeBytesPerRound };
         float64 _maxSlopeBlocksPerRound{ kDefaultMaxSlopeBlocksPerRound };
-    };
-} // namespace sw
 
-namespace sw
-{
-    /** @brief `MemoryProfiler::judgeLeakCurve` 의 판정입니다. */
-    struct LeakCurveResult
-    {
-        bool    _bValid{ false };          ///< 워밍업을 뺀 점이 둘 이상이어야 기울기를 낼 수 있다. false 이면 아래 값은 0 이고 평평하다고 말하지 않는다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool    _bFlat{ false };           ///< 두 기울기가 모두 허용치 이하이면 true NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        uint32  _sampleCount{ 0 };         ///< 기울기에 쓴 점 수(워밍업 제외)
-        float64 _slopeBytesPerRound{ 0 };  ///< 회차에 대한 바이트의 최소제곱 기울기
-        float64 _slopeBlocksPerRound{ 0 }; ///< 회차에 대한 블록 수의 최소제곱 기울기
+        /**
+         * @brief 반복 로드의 회차별 점이 이 기준으로 평평한지 가릅니다 — 점마다 닫힌 창의 합(`_totalBytes` · `_totalBlockCount`)이고, 처음 `_warmupRounds` 개는 버립니다.
+         * @details 남은 점에 최소제곱 직선을 맞춰 기울기가 기준 이하이면 평평합니다. 순수 계산이라 창이나 프로파일러 상태와 무관합니다.
+         */
+        [[nodiscard]] LeakCurveResult judge( const vector<LeakCurvePoint>& listPoint ) const;
     };
 } // namespace sw
 
@@ -221,6 +237,75 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief 누수 측정 창 —open → (beginRound → …) → close. 창 안에서 태어나 닫힐 때 아직 살아 있는 블록만 셉니다.
+     * @details 프로파일러가 하나를 들고(`MemoryProfiler::getLeakWindow`), 그 할당 · 해제 경로가 스탬프를 찍고 블록을 올리고 내린다(`MemoryProfiler` 만 부르는 비공개 창구).
+     *          "기준선 뒤로 태그가 늘어난 양" 도 이 창의 한 인스턴스다(`captureMemoryLeakBaseline` = `TagTotals` 창을 열고, 종료 끝에 `close` 로 닫는다).
+     *          스탬프는 1 부터 오르는 회차 번호이고 0 은 "창 밖" 이다. 32비트라 회차를 수십억 번 넘기면 돌아가지만 창 하나가 쓰는 회차는 수십 개다.
+     *          `TagTotals` 합계는 프로파일러의 스레드 슬롯 칸(`MemoryTagShardCounter::_windowLiveBytes`)에 둔다 — 할당 경로가 이미 고치는 캐시 줄이라 줄을 더 건드리지 않는다.
+     *          언리얼 `FMallocLeakDetection` 의 측정 맥락(Start/Stop)과 같은 역할을 프로파일러 본체에서 떼어 둔 것이다.
+     */
+    class SW_API MemoryLeakWindow final
+    {
+    public:
+        /** @brief 태그 합계를 담을 프로파일러의 스레드 슬롯을 받습니다. 창은 닫혀 있습니다. */
+        explicit MemoryLeakWindow( ShardArray<MemoryProfilerShard>& tagShard );
+
+        /** @brief 복사를 금지합니다. */
+        MemoryLeakWindow( const MemoryLeakWindow& ) = delete;
+        /** @brief 복사 대입을 금지합니다. */
+        MemoryLeakWindow& operator=( const MemoryLeakWindow& ) = delete;
+
+        /**
+         * @brief 창을 엽니다. 이 호출이 첫 회차를 시작합니다.
+         * @details 창 안의 할당에는 스탬프(`AllocationRecord::_windowStamp`)가 찍힙니다. 창 밖에서 태어난 블록의 해제는 창의 값을 줄이지 않습니다 —
+         *          "기준선 뒤의 살아 있는 양 차이" 로 재면 오래된 블록을 풀 때 새 누수가 상쇄됩니다. 창은 하나만 열립니다(열린 채 다시 열면 단언).
+         *          열고 닫는 스레드는 하나여야 합니다(제어 스레드). 다른 스레드의 할당도 창에 섞여 들고, 보고서가 그 개수를 따로 알려 줍니다.
+         * @param detail 기본값이 없습니다 — 스택 전수 캡처는 비싸서 창마다 고릅니다(`LeakWindowDetail`).
+         */
+        void open( LeakWindowDetail detail );
+        /** @brief 열린 창 안에서 다음 회차를 시작합니다. 이 뒤에 태어난 블록은 새 회차로 보고됩니다. `FullStacks` 창만 회차를 가른다(`TagTotals` 에서는 단언). */
+        void beginRound();
+        /**
+         * @brief 창을 닫고 창 안에서 태어나 아직 살아 있는 블록을 보고합니다. 닫은 뒤의 할당에는 스탬프가 찍히지 않습니다.
+         * @details **열린 창이 없으면 오류**입니다 — 단언하고 `_bValid` 가 false 인 빈 보고서를 돌려줍니다(받는 쪽이 `_bValid` 를 봐야 한다).
+         */
+        [[nodiscard]] LeakWindowReport close();
+
+        /** @brief 창이 열려 있으면 true 입니다. */
+        bool isOpen() const { return _firstStamp.load( std::memory_order_acquire ) != 0; }
+
+    private:
+        friend class MemoryProfiler; // 아래 할당 경로 창구는 프로파일러의 `recordAllocation` · `recordFree` 만 부른다
+
+        /** @brief 지금 회차의 스탬프입니다(새 할당이 찍는다). 0 이면 창이 닫혀 있어 찍지 않는다. */
+        uint32 getAllocationStamp() const { return _currentStamp.load( std::memory_order_acquire ); }
+        /** @brief 열린 창이 `FullStacks` 이면 true 입니다. */
+        bool isRecordingStacks() const { return _bRecordStacks.load( std::memory_order_relaxed ); }
+        /** @brief `FullStacks` 창의 블록 테이블에 @p pPtr 를 넣습니다(스택 테이블에도 없으면 넣는다). 테이블 안의 할당은 세지 않는다. */
+        void addBlock( void* pPtr, size_t size, MemoryTag tag, uint32 stamp, const CallStack& stack );
+        /** @brief 창 안에서 태어난 블록(@p stamp)이 풀릴 때 창의 값에서 뺍니다. 창 밖 · 닫힌 창의 스탬프이면 아무것도 하지 않는다. */
+        void releaseBlock( void* pPtr, size_t size, MemoryTagShardCounter& counter, uint32 stamp );
+        /** @brief 블록 테이블 · 스택 테이블 · 태그 합계를 비웁니다(창을 열 때). */
+        void clearData();
+        /** @brief `FullStacks` 창을 닫을 때 테이블을 모아 줄로 만듭니다(테이블은 비운다). */
+        void collectStacks( uint32 firstStamp, LeakWindowReport& outReport );
+        /** @brief `TagTotals` 창을 닫을 때 태그 합계를 줄로 만듭니다(합계는 비운다). */
+        void collectTagTotals( LeakWindowReport& outReport );
+
+    private:
+        ShardArray<MemoryProfilerShard>& _tagShard;       ///< 프로파일러의 스레드 슬롯(태그 합계 칸 `_windowLiveBytes` · `_windowLiveCount`)
+        atomic<uint32>                   _stampCounter;   ///< 마지막으로 나눠 준 스탬프
+        atomic<uint32>                   _firstStamp;     ///< 열린 창의 첫 스탬프. 0 이면 창이 닫혀 있다
+        atomic<uint32>                   _currentStamp;   ///< 지금 회차의 스탬프. 새 할당이 찍는다. 0 이면 찍지 않는다
+        atomic<bool>                     _bRecordStacks;  ///< 열린 창이 `FullStacks` 이면 true
+        atomic<uint64>                   _ownerThreadKey; ///< 창을 연 스레드의 식별 값
+        ShardArray<LeakWindowShard>      _blockShard;     ///< `FullStacks` 창의 블록 · 스택 테이블(블록 주소로 슬롯을 고른다)
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 콜 스택별 현재 할당량입니다. */
     struct CallStackAllocInfo
     {
@@ -248,8 +333,6 @@ namespace sw
     class SW_API MemoryProfiler final : public IAllocationTracker
     {
     public:
-        /** @brief `printLeakWindowReport` 가 남기는 줄 수의 잠정 상한입니다. */
-        static constexpr uint32 kDefaultMaxPrintedLeakEntry = 64;
         /** @brief 태그 표시 이름을 반환합니다. */
         static const utf8* getMemoryTagName( MemoryTag tag );
         /** @brief 표시 이름(대소문자 무시)으로 태그를 찾습니다. 데이터(예산 표)가 태그를 이름으로 적습니다. 모르는 이름이면 false 입니다. */
@@ -270,12 +353,12 @@ namespace sw
         [[nodiscard]] static bool getPlatformHeapTotals( uint64& outTotalBytes, uint64& outRequestCount );
         // ------------------------------------------------------------------------------
         // 2) 플랫폼 누수 검사 — CRT(Windows) / LSan(그 밖)
-        //    enable → (수명 할당) → captureMemoryLeakBaseline(= 태그 합계 누수 창 열기, 아래 3-1) → shutdown 뒤 report
+        //    enable → (수명 할당) → captureMemoryLeakBaseline(= 태그 합계 누수 창 열기, `MemoryLeakWindow`) → shutdown 뒤 report
         // ------------------------------------------------------------------------------
         /** @brief 프로세스 시작 직후에 플랫폼 누수 추적을 켭니다. */
         static void enableMemoryLeakChecks();
         /**
-         * @brief 의도적인 수명 할당을 마친 뒤 힙 스냅샷을 저장하고, 활성 프로파일러의 누수 창을 엽니다(`beginLeakWindow`).
+         * @brief 의도적인 수명 할당을 마친 뒤 힙 스냅샷을 저장하고, 활성 프로파일러의 누수 창을 엽니다(`MemoryLeakWindow::open`).
          * @details 기록 수준은 여기 한 곳이 정한다 — 걸린 질의(`setLeakBaselineDetailQuery`, 개발 도구의 `-gv_leakWindowFullStacks`)가 답하고, 없으면 `TagTotals` 다
          *          (켜면 `FullStacks` — 종료 보고가 줄마다 첫 프레임을 적는다). 예전에는 수준을 부르는 쪽이 골라 헤드리스 작업(`--test` 등)이 그 옵션을 무시했다.
          */
@@ -367,39 +450,8 @@ namespace sw
          */
         uint32 reportExceededBudgets( vector<MemoryTag>* pOutListNewlyExceeded = nullptr );
 
-        // ------------------------------------------------------------------------------
-        // 3-1) 누수 측정 창 — beginLeakWindow → (beginLeakRound → …) → endLeakWindow
-        //    창 안에서 태어나 닫힐 때 아직 살아 있는 블록만 센다. 지금까지 쓰던 "기준선 뒤로 태그가 늘어난 양" 도 이 창의 한 인스턴스다
-        //    (`captureMemoryLeakBaseline` = `TagTotals` 창을 열고, 종료 끝에 `endLeakWindow` 로 닫는다)
-        // ------------------------------------------------------------------------------
-        /**
-         * @brief 누수 측정 창을 엽니다. 이 호출이 첫 회차를 시작합니다.
-         * @details 창 안의 할당에는 스탬프(`AllocationRecord::_windowStamp`)이 찍힙니다. 창 밖에서 태어난 블록의 해제는 창의 값을 줄이지 않습니다 —
-         *          "기준선 뒤의 살아 있는 양 차이" 로 재면 오래된 블록을 풀 때 새 누수가 상쇄됩니다. 창은 하나만 열립니다(열린 채 다시 열면 단언).
-         *          열고 닫는 스레드는 하나여야 합니다(제어 스레드). 다른 스레드의 할당도 창에 섞여 들고, 보고서가 그 개수를 따로 알려 줍니다.
-         * @param detail 기본값이 없습니다 — 스택 전수 캡처는 비싸서 창마다 고릅니다(`LeakWindowDetail`).
-         */
-        void beginLeakWindow( LeakWindowDetail detail );
-        /** @brief 열린 창 안에서 다음 회차를 시작합니다. 이 뒤에 태어난 블록은 새 회차로 보고됩니다. `FullStacks` 창만 회차를 가른다(`TagTotals` 에서는 단언). */
-        void beginLeakRound();
-        /** @brief 창이 열려 있으면 true 입니다. */
-        bool isLeakWindowOpen() const { return _leakFirstStamp.load( std::memory_order_acquire ) != 0; }
-        /**
-         * @brief 창을 닫고 창 안에서 태어나 아직 살아 있는 블록을 보고합니다. 닫은 뒤의 할당에는 스탬프가 찍히지 않습니다.
-         * @details **열린 창이 없으면 오류**입니다 — 단언하고 `_bValid` 가 false 인 빈 보고서를 돌려줍니다(받는 쪽이 `_bValid` 를 봐야 한다).
-         */
-        [[nodiscard]] LeakWindowReport endLeakWindow();
-        /**
-         * @brief 보고서를 stderr 로 한 줄씩 남깁니다(로거가 종료된 뒤에도 보이게 — CRT 누수 보고와 같은 경로). 엔진 종료 끝에 Debug 에서 부릅니다.
-         * @param maxPrintedEntry 남길 줄 수의 상한입니다(넘으면 줄인 수만 한 줄로 적는다). 잠정 값이고 L2 측정 뒤에 확정합니다.
-         * @return 보고서의 줄 수입니다(상한으로 줄인 줄도 센다). 보고서가 `_bValid` 가 아니면 오류 한 줄을 남기고 0 입니다.
-         */
-        static uint32 printLeakWindowReport( const LeakWindowReport& report, const utf8* pPhaseTag, uint32 maxPrintedEntry = kDefaultMaxPrintedLeakEntry );
-        /**
-         * @brief 반복 로드의 회차별 점이 평평한지 가릅니다 — 점마다 닫힌 창의 합(`_totalBytes` · `_totalBlockCount`)이고, 처음 `_warmupRounds` 개는 버립니다.
-         * @details 남은 점에 최소제곱 직선을 맞춰 기울기가 기준 이하이면 평평합니다. 순수 계산이라 창이나 프로파일러 상태와 무관합니다.
-         */
-        [[nodiscard]] static LeakCurveResult judgeLeakCurve( const vector<LeakCurvePoint>& listPoint, const LeakCurveCriteria& criteria );
+        /** @brief 누수 측정 창입니다(`MemoryLeakWindow` — 할당 · 해제 경로가 이 창에 스탬프를 찍는다). */
+        MemoryLeakWindow& getLeakWindow() { return _leakWindow; }
 
         /** @brief 콜 스택별 집계를 @p order 기준 내림차순으로 정렬해 반환합니다(세부 추적이 켜져 있을 때만 채워집니다). */
         vector<CallStackAllocInfo> getTopCallStacks( TopCallStackOrder order = TopCallStackOrder::LiveBytes ) const;
@@ -411,17 +463,6 @@ namespace sw
          */
         void computeTagLive( uint32 tagIndex, uint64& outLiveBytes, uint64& outLiveCount ) const;
 
-        /** @brief `FullStacks` 창의 블록 테이블에 @p pPtr 를 넣습니다(스택 테이블에도 없으면 넣는다). 테이블 안의 할당은 세지 않는다. */
-        void addLeakWindowBlock( void* pPtr, size_t size, MemoryTag tag, uint32 stamp, const CallStack& stack );
-        /** @brief 창 안에서 태어난 블록(@p stamp)이 풀릴 때 창의 값에서 뺍니다. 창 밖 · 닫힌 창의 스탬프이면 아무것도 하지 않는다. */
-        void releaseLeakWindowBlock( void* pPtr, size_t size, MemoryTagShardCounter& counter, uint32 stamp );
-        /** @brief 창의 블록 테이블 · 스택 테이블 · 태그 합계를 비웁니다(창을 열 때). */
-        void clearLeakWindowData();
-        /** @brief `FullStacks` 창을 닫을 때 테이블을 모아 줄로 만듭니다(테이블은 비운다). */
-        void collectLeakWindowStacks( uint32 firstStamp, LeakWindowReport& outReport );
-        /** @brief `TagTotals` 창을 닫을 때 태그 합계를 줄로 만듭니다(합계는 비운다). */
-        void collectLeakWindowTagTotals( LeakWindowReport& outReport );
-
     private:
         atomic<bool> _bInitialized;
         atomic<bool> _bTrackingEnabled;
@@ -430,13 +471,7 @@ namespace sw
         ShardArray<MemoryProfilerShard> _shard;                          ///< 스레드 슬롯마다 모든 태그의 값. 할당 · 해제는 지금 스레드 슬롯만 고친다
         mutable MemoryTagSummary        _arrTagSummary[kMemoryTagCount]; ///< 태그마다 최고치 · 예산. 합을 읽는 const 함수도 최고치를 올리므로 mutable
 
-        // 누수 측정 창. 스탬프는 1 부터 오르는 회차 번호이고 0 은 "창 밖" 이다. 32비트라 회차를 수십억 번 넘기면 돌아가지만 창 하나가 쓰는 회차는 수십 개다
-        atomic<uint32>              _leakStampCounter;   ///< 마지막으로 나눠 준 스탬프
-        atomic<uint32>              _leakFirstStamp;     ///< 열린 창의 첫 스탬프. 0 이면 창이 닫혀 있다
-        atomic<uint32>              _leakCurrentStamp;   ///< 지금 회차의 스탬프. 새 할당이 찍는다. 0 이면 찍지 않는다
-        atomic<bool>                _bLeakWindowStacks;  ///< 열린 창이 `FullStacks` 이면 true
-        atomic<uint64>              _leakOwnerThreadKey; ///< 창을 연 스레드의 식별 값
-        ShardArray<LeakWindowShard> _leakShard;          ///< `FullStacks` 창의 블록 · 스택 테이블(블록 주소로 슬롯을 고른다)
+        MemoryLeakWindow _leakWindow; ///< 누수 측정 창. 태그 합계는 위 `_shard` 칸에 둔다(그래서 `_shard` 뒤에 선언한다)
 
         // 콜 스택 세부 추적용 — 할당 때 `_bDetailedTrackingEnabled` 가 true 였던 블록만 올라간다(해제는 블록 헤더의 해시로 내린다)
         mutable mutex                                                    _stackMapMutex;

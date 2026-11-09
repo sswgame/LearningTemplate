@@ -160,20 +160,20 @@ namespace sw::editor
             }
 
             /**
-             * @brief 누수 측정 창(`MemoryProfiler::beginLeakWindow`)을 열고 닫아 `FullStacks` 보고서를 보입니다.
+             * @brief 누수 측정 창(`MemoryLeakWindow`)을 열고 닫아 `FullStacks` 보고서를 보입니다.
              * @details 기동 뒤 기준선 창은 보통 열려 있어(`TagTotals`) 두 번째 창을 열 수 없다. 그래서 단추 하나가 "열려 있으면 닫아 보고서를 받고, 곧바로 `FullStacks` 로 다시 연다"를
              *          한다 — 종료 보고(`DiagnosticsSubsystem`)가 늘 열린 창을 닫으므로 창이 없는 채로 남지 않는다. `FullStacks` 는 할당마다 스택을 잡아 느려진다(켠 뒤부터 새로 태어난 블록만 잰다).
              */
-            static void drawLeakWindow( MemoryProfiler& profiler, LeakWindowReport& inoutReport )
+            static void drawLeakWindow( MemoryLeakWindow& leakWindow, LeakWindowReport& inoutReport )
             {
-                const bool bOpen = profiler.isLeakWindowOpen();
+                const bool bOpen = leakWindow.isOpen();
                 ImGui::TextUnformatted( bOpen ? "Leak window: open" : "Leak window: closed" );
                 ImGui::SameLine();
                 if ( ImGui::Button( bOpen ? "Report And Restart As FullStacks" : "Open FullStacks Window" ) )
                 {
                     if ( bOpen )
-                        inoutReport = profiler.endLeakWindow();
-                    profiler.beginLeakWindow( LeakWindowDetail::FullStacks );
+                        inoutReport = leakWindow.close();
+                    leakWindow.open( LeakWindowDetail::FullStacks );
                 }
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "FullStacksRecordsTheCallStackOfEvery" ) );
                 if ( inoutReport._bValid == false )
@@ -196,7 +196,7 @@ namespace sw::editor
                 uint32 displayCount = 0;
                 for ( const LeakWindowEntry& entry : inoutReport._listEntry )
                 {
-                    if ( displayCount++ >= MemoryProfiler::kDefaultMaxPrintedLeakEntry )
+                    if ( displayCount++ >= LeakWindowReport::kDefaultMaxPrintedEntry )
                         break;
                     ImGui::TableNextRow();
                     ImGui::TableNextColumn();
@@ -1004,7 +1004,7 @@ namespace sw::editor
         ImGui::Separator();
 
         if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdSection", "LeakWindowBlocksBornInTheWindow" ) ) )
-            ProfilerPanelInternal::drawLeakWindow( profiler, _leakReport );
+            ProfilerPanelInternal::drawLeakWindow( profiler.getLeakWindow(), _leakReport );
     }
     void ProfilerPanel::drawCallTreeTab()
     {
