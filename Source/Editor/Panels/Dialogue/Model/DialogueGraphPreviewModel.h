@@ -49,8 +49,8 @@ namespace sw::editor
         int32 getNodeID() const { return _nodeID; }
 
     private:
-        /** @brief 그 노드로 옮깁니다. 대사나 선택지 노드이면 뷰포트에 보이고, 끝 노드나 없는 노드이면 멈춥니다. */
-        void enterNode( const DialogueGraphAsset& graph, int32 nodeID );
+        /** @brief 그 노드로 옮깁니다. 대사나 선택지 노드이면 뷰포트에 보이고, 끝 노드나 없는 노드(비어 있음)이면 멈춥니다. */
+        void enterNode( const DialogueGraphAsset& graph, optional<int32> nodeID );
 
     private:
         string  _graphPath;   ///< 미리보는 문서의 리소스 경로

@@ -6,17 +6,17 @@
 
 namespace sw
 {
-    int32 DialogueCursor::step( const DialogueGraphAsset& asset, const DialogueAssetNode& node, const DialogueStepInput& input )
+    optional<int32> DialogueCursor::step( const DialogueGraphAsset& asset, const DialogueAssetNode& node, const DialogueStepInput& input )
     {
         const DialogueNodeInfo* pInfo = DialogueGraphAsset::findNodeInfo( node._type );
         if ( pInfo == nullptr )
-            return 0;
+            return nullopt;
 
         switch ( pInfo->_output )
         {
             case DialogueNodeOutput::None:
             {
-                return 0;
+                return nullopt;
             }
             case DialogueNodeOutput::Next:
             {
@@ -24,15 +24,15 @@ namespace sw
             }
             case DialogueNodeOutput::Branch:
             {
-                const int32 branchNextID = asset.findBranchNextNodeID( node._id, input._bConditionMet );
-                return branchNextID > 0 ? branchNextID : asset.findDefaultNextNodeID( node._id );
+                const optional<int32> branchNextID = asset.findBranchNextNodeID( node._id, input._bConditionMet );
+                return branchNextID.has_value() ? branchNextID : asset.findDefaultNextNodeID( node._id );
             }
             case DialogueNodeOutput::Choice:
             {
                 return asset.findChoiceNextNodeID( node._id, input._choiceIndex );
             }
         }
-        return 0;
+        return nullopt;
     }
 
     DialogueAssetNode DialogueCursor::makeNode( DialogueAssetNodeKind type, int32 nodeID )

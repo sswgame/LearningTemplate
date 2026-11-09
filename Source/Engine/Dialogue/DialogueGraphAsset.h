@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
@@ -255,14 +256,14 @@ namespace sw
         static int32 decodePinNodeID( int32 pin );
         /** @brief 핀 값에서 오프셋을 꺼냅니다. */
         static int32 decodePinOffset( int32 pin );
-        /** @brief from 노드의 그 핀 오프셋이 가리키는 노드 id 입니다. 없으면 0 입니다. */
-        int32 findLinkedNodeID( int32 fromNodeID, int32 pinOffset ) const;
+        /** @brief from 노드의 그 핀 오프셋이 가리키는 노드 id 입니다. 연결이 없으면 비어 있습니다. */
+        optional<int32> findLinkedNodeID( int32 fromNodeID, int32 pinOffset ) const;
         /** @brief 기본 Out 핀의 다음 노드 id 입니다. */
-        int32 findDefaultNextNodeID( int32 fromNodeID ) const;
-        /** @brief 선택지 핀의 다음 노드 id 입니다. */
-        int32 findChoiceNextNodeID( int32 fromNodeID, int32 choiceIndex ) const;
+        optional<int32> findDefaultNextNodeID( int32 fromNodeID ) const;
+        /** @brief 선택지 핀의 다음 노드 id 입니다. 연결되지 않은 선택지는 기본 Out 핀으로 갑니다. */
+        optional<int32> findChoiceNextNodeID( int32 fromNodeID, int32 choiceIndex ) const;
         /** @brief Branch True/False 핀의 다음 노드 id 입니다. */
-        int32 findBranchNextNodeID( int32 fromNodeID, bool bTrue ) const;
+        optional<int32> findBranchNextNodeID( int32 fromNodeID, bool bTrue ) const;
         /** @brief text 필드를 로컬라이즈 키로 해석합니다. 키가 없으면 원문을 반환합니다. */
         static string resolveLocalizedText( string_view textOrKey );
 

@@ -21,7 +21,7 @@ namespace sw::editor
     {
         const DialogueAssetNode* pStart = graph.findStartNode();
         _bPlaying                       = SW_TRUE;
-        enterNode( graph, pStart != nullptr ? pStart->_id : 0 );
+        enterNode( graph, pStart != nullptr ? optional<int32>( pStart->_id ) : nullopt );
     }
 
     void DialogueGraphPreviewModel::step( const DialogueGraphAsset& graph, const DialogueStepInput& input )
@@ -29,11 +29,11 @@ namespace sw::editor
         if ( _nodeID <= 0 )
         {
             const DialogueAssetNode* pStart = graph.findStartNode();
-            enterNode( graph, pStart != nullptr ? pStart->_id : 0 );
+            enterNode( graph, pStart != nullptr ? optional<int32>( pStart->_id ) : nullopt );
             return;
         }
         const DialogueAssetNode* pNode = graph.findNode( _nodeID );
-        enterNode( graph, pNode != nullptr ? DialogueCursor::step( graph, *pNode, input ) : 0 );
+        enterNode( graph, pNode != nullptr ? DialogueCursor::step( graph, *pNode, input ) : nullopt );
     }
 
     void DialogueGraphPreviewModel::stop()
@@ -83,10 +83,10 @@ namespace sw::editor
         }
     }
 
-    void DialogueGraphPreviewModel::enterNode( const DialogueGraphAsset& graph, int32 nodeID )
+    void DialogueGraphPreviewModel::enterNode( const DialogueGraphAsset& graph, optional<int32> nextNodeID )
     {
         _holdSeconds                   = 0.0f;
-        const DialogueAssetNode* pNode = graph.findNode( nodeID );
+        const DialogueAssetNode* pNode = nextNodeID.has_value() ? graph.findNode( *nextNodeID ) : nullptr;
         const DialogueNodeInfo*  pInfo = pNode != nullptr ? DialogueGraphAsset::findNodeInfo( pNode->_type ) : nullptr;
         if ( pInfo == nullptr )
         {
@@ -94,7 +94,7 @@ namespace sw::editor
             return;
         }
 
-        _nodeID = nodeID;
+        _nodeID = *nextNodeID;
         // 러너가 알리는 노드(대사, 선택지)만 뷰포트에 보인다.
         if ( pInfo->_flow == DialogueNodeFlow::WaitAdvance || pInfo->_flow == DialogueNodeFlow::WaitChoice )
             EditorViewportPreview::applyDialogueLine( _graphPath, pNode->_speaker, pNode->_text );
