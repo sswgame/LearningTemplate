@@ -5,8 +5,8 @@
 #   MODE=broken-templates   템플릿 폴더에서 템플릿 하나가 빠졌다.
 #   MODE=broken-spelling    철자 표의 첫 줄이 [scope] 절 밖의 바인딩이다.
 #   깨진 입력은 0 이 아닌 종료여야 한다 — 기본값으로 이어 가면 빌드가 틀린 생성 코드로 지나간다(폴백 없음).
-# 입력: MODE · PARSER · FIXTURE · WORK_DIR · SOURCE_ROOT · GENERATED_DIR · BUILTINS · ANNOTATION_META · TEMPLATES · CONFIG · GEN_CPP_SUFFIX
-foreach(swRequired MODE PARSER FIXTURE WORK_DIR SOURCE_ROOT GENERATED_DIR BUILTINS ANNOTATION_META TEMPLATES CONFIG GEN_CPP_SUFFIX)
+# 입력: MODE · TARGET_ARGS · PARSER · FIXTURE · WORK_DIR · SOURCE_ROOT · GENERATED_DIR · BUILTINS · ANNOTATION_META · TEMPLATES · CONFIG · GEN_CPP_SUFFIX
+foreach(swRequired MODE TARGET_ARGS PARSER FIXTURE WORK_DIR SOURCE_ROOT GENERATED_DIR BUILTINS ANNOTATION_META TEMPLATES CONFIG GEN_CPP_SUFFIX)
 	if(NOT DEFINED ${swRequired})
 		message(FATAL_ERROR "RunParserToolInputs: ${swRequired} is not given")
 	endif()
@@ -17,6 +17,13 @@ file(MAKE_DIRECTORY "${WORK_DIR}/out")
 set(swAnnotationMeta "${ANNOTATION_META}")
 set(swTemplates "${TEMPLATES}")
 set(swConfig "${CONFIG}")
+
+# 빌드와 같은 대상 인자 — Test/CMakeLists.txt 가 '|' 로 이어 넘긴다(sw_collectReflectionTargetArgs).
+string(REPLACE "|" ";" listTargetArgValue "${TARGET_ARGS}")
+set(listTargetArg "")
+foreach(swTargetArg IN LISTS listTargetArgValue)
+	list(APPEND listTargetArg --target-arg "${swTargetArg}")
+endforeach()
 
 # 빌드의 인자(`sw_makeReflectionParserArgs`)와 같은 모양이다(RunParserFixture.cmake 와 같다).
 macro(swRunParser outExitCode outText)
@@ -33,6 +40,7 @@ macro(swRunParser outExitCode outText)
 			--include "${GENERATED_DIR}"
 			--include "${SOURCE_ROOT}/Content/engine/shaders"
 			--include "${SOURCE_ROOT}/Source"
+			${listTargetArg}
 		WORKING_DIRECTORY "${WORK_DIR}"
 		RESULT_VARIABLE ${outExitCode}
 		OUTPUT_VARIABLE ${outText}

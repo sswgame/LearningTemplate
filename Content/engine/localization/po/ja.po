@@ -604,6 +604,11 @@ msgctxt "EdPlugin.ASceneSCharacterAppearanceComponentNamesThis"
 msgid "A scene's Character Appearance component names this id."
 msgstr "シーンのキャラクター外見コンポーネントがこの id を指します。"
 
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.ActionTagTest"
+msgid "Test tags:"
+msgstr "タグのテスト:"
+
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
 msgctxt "EdPlugin.AddBoneTurn"
 msgid "Add bone turn"
@@ -630,6 +635,11 @@ msgid "Add pair"
 msgstr "ペアを追加"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.AddSkinLayer"
+msgid "Add layer"
+msgstr "レイヤーを追加"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPlugin.AddSlot"
 msgid "Add slot"
 msgstr "スロットを追加"
@@ -649,10 +659,90 @@ msgctxt "EdPlugin.AutoLayout"
 msgid "Auto layout"
 msgstr "自動レイアウト"
 
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.BodyChannelMapped"
+msgid "mapped"
+msgstr "マップ済み"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.BodyChannelMissing"
+msgid "no mapping"
+msgstr "マッピングなし"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.BodyChannelUnsupported"
+msgid "unsupported"
+msgstr "非対応"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.BodyChannels"
+msgid "Body channels"
+msgstr "ボディチャンネル"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.BodyChannelsEmpty"
+msgid "No body channels. Sliders, body profiles and equipment set them."
+msgstr "ボディチャンネルがありません。スライダー・ボディプロファイル・装備が設定します。"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.BodyDataRedo"
+msgid "Redo body edit"
+msgstr "ボディ編集をやり直す"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.BodyDataSave"
+msgid "Save body data"
+msgstr "ボディデータを保存"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.BodyDataUndo"
+msgid "Undo body edit"
+msgstr "ボディ編集を元に戻す"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.BodyDataUnsaved"
+msgid "Body data has unsaved edits"
+msgstr "ボディデータに未保存の編集があります"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.BodyDynamics"
+msgid "Body dynamics preview"
+msgstr "ボディダイナミクスのプレビュー"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.BodyDynamicsNoProfile"
+msgid "The preview body has no body profile. Pick a preset with bodyProfile."
+msgstr "プレビューのボディにボディプロファイルがありません。bodyProfile のあるプリセットを選んでください。"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.BodySlotVisibility"
+msgid "Slot visibility"
+msgstr "スロットの表示"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.BodyTab"
+msgid "Body"
+msgstr "ボディ"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.ChannelMap"
+msgid "Map"
+msgstr "軸を追加"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.ChannelUnsupported"
+msgid "Unsupported"
+msgstr "非対応"
+
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
 msgctxt "EdPlugin.Check"
 msgid "Check"
 msgstr "チェック"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.ClearSmears"
+msgid "Clear smears"
+msgstr "にじみを消す"
 
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
 msgctxt "EdPlugin.ClearTarget"
@@ -668,6 +758,31 @@ msgstr "ノードをクリックして編集"
 msgctxt "EdPlugin.ClosedReports"
 msgid "Closed reports"
 msgstr "閉じた通報"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.ColumnAlias"
+msgid "Alias"
+msgstr "エイリアス"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.ColumnDyeChannels"
+msgid "Dye channels"
+msgstr "染色チャンネル"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.ColumnDyeable"
+msgid "Dyeable"
+msgstr "染色可"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.ColumnGroups"
+msgid "Groups"
+msgstr "グループ"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.ColumnSection"
+msgid "Section"
+msgstr "セクション"
 
 #: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
@@ -720,6 +835,16 @@ msgctxt "EdPlugin.Duplicate"
 msgid "Duplicate"
 msgstr "複製"
 
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.DyeSections"
+msgid "Dye sections"
+msgstr "染色セクション"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.DyeSectionsEmpty"
+msgid "No mesh sections. List sections with aliases in the item visual."
+msgstr "メッシュセクションがありません。アイテム外観にエイリアス付きでセクションを記述してください。"
+
 #: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
 msgctxt "EdPlugin.Edit"
 msgid "Edit"
@@ -736,14 +861,54 @@ msgid "Export data preset"
 msgstr "データプリセットを書き出す"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.EyeLight"
+msgid "Light at the eye"
+msgstr "目に届く光"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPlugin.FitCheckViewOnly"
 msgid "Fit check (view only)"
 msgstr "フィットチェック(表示のみ)"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.FluidAddPoint"
+msgid "Add point"
+msgstr "点を追加"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.FluidPaths"
+msgid "Fluid paths"
+msgstr "体液の経路"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.FluidRemovePoint"
+msgid "Remove point"
+msgstr "点を削除"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.FluidWetness"
+msgid "Tears and saliva"
+msgstr "涙・唾液"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.FootLift"
+msgid "Foot lift (m)"
+msgstr "足の持ち上げ(m)"
 
 #: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
 msgctxt "EdPlugin.Grant"
 msgid "Grant"
 msgstr "付与"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.HighlightDrive"
+msgid "Highlight drive"
+msgstr "ハイライトするドライブ"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.HighlightNone"
+msgid "(none)"
+msgstr "(なし)"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
 msgctxt "EdPlugin.IKGoal"
@@ -754,6 +919,61 @@ msgstr "IK ゴール"
 msgctxt "EdPlugin.Invert"
 msgid "Invert"
 msgstr "反転"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.JiggleDisplacement"
+msgid "Jiggle (m)"
+msgstr "揺れ(m)"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.JiggleGroups"
+msgid "Jiggle"
+msgstr "揺れ"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.LayerMirror"
+msgid "Mirror"
+msgstr "左右対称"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.LayerOffset"
+msgid "Offset"
+msgstr "位置"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.LayerOffsetTooltip"
+msgid "Skin UV of the layer centre"
+msgstr "レイヤー中心の肌UV"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.LayerOpacity"
+msgid "Opacity"
+msgstr "不透明度"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.LayerOpacityTooltip"
+msgid "How strongly the layer covers the skin"
+msgstr "レイヤーが肌を覆う強さ"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.LayerRotation"
+msgid "Rotation"
+msgstr "回転"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.LayerRotationTooltip"
+msgid "Rotation of the layer in degrees"
+msgstr "レイヤーの回転(度)"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.LayerScale"
+msgid "Scale"
+msgstr "サイズ"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.LayerScaleTooltip"
+msgid "Skin UV size one layer covers"
+msgstr "レイヤーが覆う肌UVのサイズ"
 
 #: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
 msgctxt "EdPlugin.LiftSanction"
@@ -840,6 +1060,16 @@ msgctxt "EdPlugin.MirrorBone"
 msgid "Mirror bone"
 msgstr "ボーンをミラー"
 
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.MoveDown"
+msgid "Down"
+msgstr "下へ"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.MoveUp"
+msgid "Up"
+msgstr "上へ"
+
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
 #: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
 msgctxt "EdPlugin.Name"
@@ -917,6 +1147,26 @@ msgctxt "EdPlugin.PickABasePresetToSeeWhichRules"
 msgid "Pick a base preset to see which rules hid or changed what."
 msgstr "基準プリセットを選ぶと、どのルールが何を隠した・変えたかが見えます。"
 
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.PickActiveHint"
+msgid "Click the body in the viewport (Esc cancels)"
+msgstr "ビューポートでボディをクリックしてください(Esc で取り消し)"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.PickCancel"
+msgid "Stop picking"
+msgstr "選択をやめる"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.PickPlaceLayer"
+msgid "Place in Preview"
+msgstr "プレビューで配置"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.PickSection"
+msgid "Pick section in Preview"
+msgstr "プレビューで区間を選ぶ"
+
 #: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
 msgctxt "EdPlugin.PostNotice"
 msgid "Post notice"
@@ -936,6 +1186,16 @@ msgstr "プレビュー"
 msgctxt "EdPlugin.PreviewConstraintRig"
 msgid "Preview constraint rig"
 msgstr "拘束リグをプレビュー"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.PreviewHit"
+msgid "Hit"
+msgstr "被弾"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.PupilSize"
+msgid "Pupil size"
+msgstr "瞳孔サイズ"
 
 #: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
 msgctxt "EdPlugin.PutLiveEvent"
@@ -996,6 +1256,11 @@ msgstr "ライブイベントを削除"
 msgctxt "EdPlugin.RemoveNotice"
 msgid "Remove notice"
 msgstr "お知らせを削除"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.RemoveSkinLayer"
+msgid "Remove"
+msgstr "削除"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPlugin.Rename"
@@ -1079,6 +1344,16 @@ msgid "Skeleton"
 msgstr "スケルトン"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.SkinLayers"
+msgid "Skin layers"
+msgstr "スキンレイヤー"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.SkinLayersEmpty"
+msgid "No skin layers. Add makeup or a tattoo from the list above."
+msgstr "スキンレイヤーがありません。上のリストからメイクやタトゥーを追加してください。"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPlugin.SlidersColoursAndChoicesOfTheSchemaAre"
 msgid "Sliders, colours and choices of the schema are in the Preview tab (the body updates when you release a slider)."
 msgstr "スキーマのスライダー・色・選択はプレビュータブにあります(スライダーを離すと体が更新されます)。"
@@ -1087,6 +1362,11 @@ msgstr "スキーマのスライダー・色・選択はプレビュータブに
 msgctxt "EdPlugin.Slots"
 msgid "Slots"
 msgstr "スロット"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.SmearDilution"
+msgid "Makeup smear"
+msgstr "メイクのにじみ"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPlugin.Sockets"
@@ -1159,6 +1439,16 @@ msgstr "ビューポートギズモ編集にはプレビューシーン(EditorMu
 msgctxt "EdPlugin.WhyDoesItLookLikeThisRules"
 msgid "Why does it look like this? (rules)"
 msgstr "なぜこう見えるか(ルール)"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.WrinkleIntensity"
+msgid "Wrinkle intensity"
+msgstr "しわの強さ"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.Wrinkles"
+msgid "Wrinkles"
+msgstr "しわ"
 
 #: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
 msgctxt "EdPluginButton.Reload"
@@ -1330,6 +1620,11 @@ msgstr "バインド: ターゲットボーン {targetBoneCount} 個中 {mappedT
 msgctxt "EdPluginFormat.BonesOverridden"
 msgid "{boneCount, plural, one {# bone} other {# bones}}, {overridesCount} overridden{dirty}"
 msgstr "ボーン {boneCount} 個、上書き {overridesCount} 個{dirty}"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPluginFormat.Clamped"
+msgid "Clamped to range: {clamped}"
+msgstr "範囲に収めた: {clamped}"
 
 #: Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp
 msgctxt "EdPluginFormat.Client"
@@ -1863,9 +2158,19 @@ msgid "Zone modules"
 msgstr "ゾーンモジュール"
 
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
+msgctxt "EdUndo.ZoneOverrideParam"
+msgid "Override zone parameter"
+msgstr "ゾーンパラメーターを上書き"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
 msgctxt "EdUndo.ZoneRevertModule"
 msgid "Revert zone module"
 msgstr "ゾーンモジュールを元に戻す"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
+msgctxt "EdUndo.ZoneRevertParam"
+msgid "Revert zone parameter"
+msgstr "ゾーンパラメーターを元に戻す"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EditorCharacterEditor.AddSocketButton"
@@ -1896,6 +2201,11 @@ msgstr "上書きがこのプロファイルに合いません - モジュール
 msgctxt "EditorTip.ZoneRevert"
 msgid "Drop this placement override and use the preset again."
 msgstr "この配置の上書きを削除してプリセットを再び使います。"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
+msgctxt "EditorTip.ZoneRevertParam"
+msgid "Use the preset's value for this parameter again."
+msgstr "このパラメーターにプリセットの値を再び使います。"
 
 #. Context: TextWidget._text
 #: engine/ui/confirm_countdown.ui.xml
@@ -2476,6 +2786,27 @@ msgstr "最高"
 msgctxt "settings.graphics.renderScale"
 msgid "Render Scale"
 msgstr "レンダースケール"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.graphics.shadowFilter"
+msgid "Shadow Filter"
+msgstr "影フィルター"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.graphics.shadowFilter.pcf"
+msgid "Sharp"
+msgstr "くっきり"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.graphics.shadowFilter.pcss"
+msgid "Soft"
+msgstr "ソフト"
 
 #. Context: Options menu label
 #. Max length: 32

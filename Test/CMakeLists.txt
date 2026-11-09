@@ -223,6 +223,12 @@ set_tests_properties(ShaderCache.RebuildFromEmpty PROPERTIES LABELS nogpu TIMEOU
 
 # 리플렉션 파서 — Engine 을 링크하지 못해 단위 테스트 틀에 들어가지 못한다. 사례 헤더 하나마다 실제 실행 파일을 돌려 산출물 · 오류를 대조한다(`ReflectionParser/RunParserFixture.cmake`, 왜 이 모양인지 거기 적었다).
 if(TARGET ReflectionParser)
+	# 빌드와 같은 대상 인자(`--target-arg`)를 넘긴다 — 파서는 대상 매크로를 추측하지 않는다(교차 빌드). 목록 구분자 ';' 는 -D 에서 갈라지므로 '|' 로 잇는다.
+	sw_collectReflectionTargetArgs(listParserTestTargetArg)
+	if(NOT listParserTestTargetArg)
+		message(FATAL_ERROR "[ReflectionParser tests] no target macros found on sw_global_options / sw_flag_libraries")
+	endif()
+	string(JOIN "|" swParserTestTargetArgs ${listParserTestTargetArg})
 	file(GLOB listParserFixture CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/ReflectionParser/Fixtures/*.h")
 	foreach(swParserFixture IN LISTS listParserFixture)
 		get_filename_component(swParserFixtureName "${swParserFixture}" NAME_WE)
@@ -241,6 +247,7 @@ if(TARGET ReflectionParser)
 				"-DASSET_FIELDS_LIST_NAME=${SW_FILE_ASSET_REFERENCE_FIELDS_LIST}"
 				"-DGEN_CPP_SUFFIX=${SW_EXT_REFLECTION_GEN_CPP}"
 				"-DGEN_META_CPP_SUFFIX=${SW_EXT_REFLECTION_GEN_META_CPP}"
+				"-DTARGET_ARGS=${swParserTestTargetArgs}"
 				-P "${CMAKE_CURRENT_SOURCE_DIR}/ReflectionParser/RunParserFixture.cmake")
 		set_tests_properties(ReflectionParser.${swParserFixtureName} PROPERTIES LABELS nogpu TIMEOUT 120)
 	endforeach()
@@ -259,6 +266,7 @@ if(TARGET ReflectionParser)
 				"-DTEMPLATES=${CMAKE_SOURCE_DIR}/${SW_DIR_TOOLS_REFLECTION_TEMPLATES}"
 				"-DCONFIG=${CMAKE_SOURCE_DIR}/${SW_DIR_CONFIG_ENV}/${SW_FILE_PARSER_DEFAULTS}"
 				"-DGEN_CPP_SUFFIX=${SW_EXT_REFLECTION_GEN_CPP}"
+				"-DTARGET_ARGS=${swParserTestTargetArgs}"
 				-P "${CMAKE_CURRENT_SOURCE_DIR}/ReflectionParser/RunParserToolInputs.cmake")
 		set_tests_properties(ReflectionParser.ToolInputs.${swParserToolMode} PROPERTIES LABELS nogpu TIMEOUT 120)
 	endforeach()

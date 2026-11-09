@@ -749,6 +749,9 @@
 		<entry key="settings.graphics.quality.medium" text="中" sourceHash="ac6bdc71f750ac96" />
 		<entry key="settings.graphics.quality.ultra" text="最高" sourceHash="311b3da2e76753d5" />
 		<entry key="settings.graphics.renderScale" text="レンダースケール" sourceHash="c17a07578d87a8f7" />
+		<entry key="settings.graphics.shadowFilter" text="影フィルター" sourceHash="018a267930a56f1d" />
+		<entry key="settings.graphics.shadowFilter.pcf" text="くっきり" sourceHash="2df08aaface0fe67" />
+		<entry key="settings.graphics.shadowFilter.pcss" text="ソフト" sourceHash="8aa4de24f21199d5" />
 		<entry key="settings.graphics.shadowQuality" text="影の品質" sourceHash="d055b83933ce0048" />
 		<entry key="settings.graphics.textureQuality" text="テクスチャ品質" sourceHash="8dec707fb7d9325d" />
 		<entry key="settings.graphics.upscaler" text="アップスケーラー" sourceHash="523e5f717170c790" />

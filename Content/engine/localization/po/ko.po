@@ -604,6 +604,11 @@ msgctxt "EdPlugin.ASceneSCharacterAppearanceComponentNamesThis"
 msgid "A scene's Character Appearance component names this id."
 msgstr "씬의 캐릭터 외형 컴포넌트가 이 id 를 가리킵니다."
 
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.ActionTagTest"
+msgid "Test tags:"
+msgstr "태그 시험:"
+
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
 msgctxt "EdPlugin.AddBoneTurn"
 msgid "Add bone turn"
@@ -630,6 +635,11 @@ msgid "Add pair"
 msgstr "짝 추가"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.AddSkinLayer"
+msgid "Add layer"
+msgstr "층 더하기"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPlugin.AddSlot"
 msgid "Add slot"
 msgstr "칸 추가"
@@ -649,10 +659,90 @@ msgctxt "EdPlugin.AutoLayout"
 msgid "Auto layout"
 msgstr "자동 배치"
 
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.BodyChannelMapped"
+msgid "mapped"
+msgstr "매핑됨"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.BodyChannelMissing"
+msgid "no mapping"
+msgstr "매핑 없음"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.BodyChannelUnsupported"
+msgid "unsupported"
+msgstr "받지 않음"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.BodyChannels"
+msgid "Body channels"
+msgstr "몸 채널"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.BodyChannelsEmpty"
+msgid "No body channels. Sliders, body profiles and equipment set them."
+msgstr "몸 채널이 없습니다. 슬라이더 · 몸 프로필 · 장비가 정합니다."
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.BodyDataRedo"
+msgid "Redo body edit"
+msgstr "몸 편집 다시 하기"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.BodyDataSave"
+msgid "Save body data"
+msgstr "몸 데이터 저장"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.BodyDataUndo"
+msgid "Undo body edit"
+msgstr "몸 편집 되돌리기"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.BodyDataUnsaved"
+msgid "Body data has unsaved edits"
+msgstr "몸 데이터에 저장하지 않은 편집이 있습니다"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.BodyDynamics"
+msgid "Body dynamics preview"
+msgstr "몸 동작 미리보기"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.BodyDynamicsNoProfile"
+msgid "The preview body has no body profile. Pick a preset with bodyProfile."
+msgstr "미리보기 몸에 몸 프로필이 없습니다. bodyProfile 이 있는 프리셋을 고르세요."
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.BodySlotVisibility"
+msgid "Slot visibility"
+msgstr "슬롯 보이기"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.BodyTab"
+msgid "Body"
+msgstr "몸"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.ChannelMap"
+msgid "Map"
+msgstr "축 더하기"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.ChannelUnsupported"
+msgid "Unsupported"
+msgstr "받지 않음"
+
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
 msgctxt "EdPlugin.Check"
 msgid "Check"
 msgstr "검사"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.ClearSmears"
+msgid "Clear smears"
+msgstr "번짐 지우기"
 
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
 msgctxt "EdPlugin.ClearTarget"
@@ -668,6 +758,31 @@ msgstr "노드를 누르면 편집합니다"
 msgctxt "EdPlugin.ClosedReports"
 msgid "Closed reports"
 msgstr "닫은 신고"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.ColumnAlias"
+msgid "Alias"
+msgstr "별칭"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.ColumnDyeChannels"
+msgid "Dye channels"
+msgstr "염색 채널"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.ColumnDyeable"
+msgid "Dyeable"
+msgstr "염색"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.ColumnGroups"
+msgid "Groups"
+msgstr "묶음"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.ColumnSection"
+msgid "Section"
+msgstr "구간"
 
 #: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
@@ -720,6 +835,16 @@ msgctxt "EdPlugin.Duplicate"
 msgid "Duplicate"
 msgstr "복제"
 
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.DyeSections"
+msgid "Dye sections"
+msgstr "염색 구간"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.DyeSectionsEmpty"
+msgid "No mesh sections. List sections with aliases in the item visual."
+msgstr "메시 구간이 없습니다. 아이템 외형에 별칭과 함께 구간을 적으세요."
+
 #: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
 msgctxt "EdPlugin.Edit"
 msgid "Edit"
@@ -736,14 +861,54 @@ msgid "Export data preset"
 msgstr "데이터 프리셋 내보내기"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.EyeLight"
+msgid "Light at the eye"
+msgstr "눈에 닿는 빛"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPlugin.FitCheckViewOnly"
 msgid "Fit check (view only)"
 msgstr "맞춤 검사(보기만)"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.FluidAddPoint"
+msgid "Add point"
+msgstr "점 더하기"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.FluidPaths"
+msgid "Fluid paths"
+msgstr "체액 경로"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.FluidRemovePoint"
+msgid "Remove point"
+msgstr "점 빼기"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.FluidWetness"
+msgid "Tears and saliva"
+msgstr "눈물 · 침"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.FootLift"
+msgid "Foot lift (m)"
+msgstr "발 들림(m)"
 
 #: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
 msgctxt "EdPlugin.Grant"
 msgid "Grant"
 msgstr "지급"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.HighlightDrive"
+msgid "Highlight drive"
+msgstr "강조할 드라이브"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.HighlightNone"
+msgid "(none)"
+msgstr "(없음)"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
 msgctxt "EdPlugin.IKGoal"
@@ -754,6 +919,61 @@ msgstr "IK 목표"
 msgctxt "EdPlugin.Invert"
 msgid "Invert"
 msgstr "반전"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.JiggleDisplacement"
+msgid "Jiggle (m)"
+msgstr "흔들림(m)"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.JiggleGroups"
+msgid "Jiggle"
+msgstr "지글"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.LayerMirror"
+msgid "Mirror"
+msgstr "좌우 대칭"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.LayerOffset"
+msgid "Offset"
+msgstr "위치"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.LayerOffsetTooltip"
+msgid "Skin UV of the layer centre"
+msgstr "층 가운데의 피부 UV"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.LayerOpacity"
+msgid "Opacity"
+msgstr "불투명도"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.LayerOpacityTooltip"
+msgid "How strongly the layer covers the skin"
+msgstr "층이 피부를 덮는 정도"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.LayerRotation"
+msgid "Rotation"
+msgstr "회전"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.LayerRotationTooltip"
+msgid "Rotation of the layer in degrees"
+msgstr "층의 회전(도)"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.LayerScale"
+msgid "Scale"
+msgstr "크기"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.LayerScaleTooltip"
+msgid "Skin UV size one layer covers"
+msgstr "층 하나가 덮는 피부 UV 크기"
 
 #: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
 msgctxt "EdPlugin.LiftSanction"
@@ -840,6 +1060,16 @@ msgctxt "EdPlugin.MirrorBone"
 msgid "Mirror bone"
 msgstr "뼈 대칭"
 
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.MoveDown"
+msgid "Down"
+msgstr "아래로"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.MoveUp"
+msgid "Up"
+msgstr "위로"
+
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
 #: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
 msgctxt "EdPlugin.Name"
@@ -917,6 +1147,26 @@ msgctxt "EdPlugin.PickABasePresetToSeeWhichRules"
 msgid "Pick a base preset to see which rules hid or changed what."
 msgstr "기준 프리셋을 고르면 어떤 규칙이 무엇을 감추거나 바꿨는지 보입니다."
 
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.PickActiveHint"
+msgid "Click the body in the viewport (Esc cancels)"
+msgstr "뷰포트에서 몸을 누르세요(Esc 로 끕니다)"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.PickCancel"
+msgid "Stop picking"
+msgstr "집기 끄기"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.PickPlaceLayer"
+msgid "Place in Preview"
+msgstr "미리보기에서 배치"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.PickSection"
+msgid "Pick section in Preview"
+msgstr "미리보기에서 구간 집기"
+
 #: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
 msgctxt "EdPlugin.PostNotice"
 msgid "Post notice"
@@ -936,6 +1186,16 @@ msgstr "미리보기"
 msgctxt "EdPlugin.PreviewConstraintRig"
 msgid "Preview constraint rig"
 msgstr "제약 리그 미리보기"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.PreviewHit"
+msgid "Hit"
+msgstr "맞기"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.PupilSize"
+msgid "Pupil size"
+msgstr "동공 크기"
 
 #: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
 msgctxt "EdPlugin.PutLiveEvent"
@@ -996,6 +1256,11 @@ msgstr "라이브 이벤트 지우기"
 msgctxt "EdPlugin.RemoveNotice"
 msgid "Remove notice"
 msgstr "공지 지우기"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.RemoveSkinLayer"
+msgid "Remove"
+msgstr "지우기"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPlugin.Rename"
@@ -1079,6 +1344,16 @@ msgid "Skeleton"
 msgstr "스켈레톤"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.SkinLayers"
+msgid "Skin layers"
+msgstr "피부 층"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.SkinLayersEmpty"
+msgid "No skin layers. Add makeup or a tattoo from the list above."
+msgstr "피부 층이 없습니다. 위 목록에서 화장이나 문신을 더하세요."
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPlugin.SlidersColoursAndChoicesOfTheSchemaAre"
 msgid "Sliders, colours and choices of the schema are in the Preview tab (the body updates when you release a slider)."
 msgstr "스키마의 슬라이더 · 색 · 선택은 미리보기 탭에 있습니다(슬라이더를 놓으면 몸이 바뀝니다)."
@@ -1087,6 +1362,11 @@ msgstr "스키마의 슬라이더 · 색 · 선택은 미리보기 탭에 있습
 msgctxt "EdPlugin.Slots"
 msgid "Slots"
 msgstr "칸"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.SmearDilution"
+msgid "Makeup smear"
+msgstr "화장 번짐"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPlugin.Sockets"
@@ -1159,6 +1439,16 @@ msgstr "뷰포트 기즈모 편집은 미리보기 씬(EditorMultiWorld)이 필�
 msgctxt "EdPlugin.WhyDoesItLookLikeThisRules"
 msgid "Why does it look like this? (rules)"
 msgstr "왜 이렇게 보이나(규칙)"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.WrinkleIntensity"
+msgid "Wrinkle intensity"
+msgstr "주름 세기"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.Wrinkles"
+msgid "Wrinkles"
+msgstr "주름"
 
 #: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
 msgctxt "EdPluginButton.Reload"
@@ -1330,6 +1620,11 @@ msgstr "묶음: 대상 본 {targetBoneCount}개 중 {mappedTargetBoneCount}개�
 msgctxt "EdPluginFormat.BonesOverridden"
 msgid "{boneCount, plural, one {# bone} other {# bones}}, {overridesCount} overridden{dirty}"
 msgstr "본 {boneCount}개, 덮어씀 {overridesCount}개{dirty}"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPluginFormat.Clamped"
+msgid "Clamped to range: {clamped}"
+msgstr "범위로 자름: {clamped}"
 
 #: Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp
 msgctxt "EdPluginFormat.Client"
@@ -1863,9 +2158,19 @@ msgid "Zone modules"
 msgstr "지역 모듈"
 
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
+msgctxt "EdUndo.ZoneOverrideParam"
+msgid "Override zone parameter"
+msgstr "지역 매개변수 덮어쓰기"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
 msgctxt "EdUndo.ZoneRevertModule"
 msgid "Revert zone module"
 msgstr "지역 모듈 되돌리기"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
+msgctxt "EdUndo.ZoneRevertParam"
+msgid "Revert zone parameter"
+msgstr "지역 매개변수 되돌리기"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EditorCharacterEditor.AddSocketButton"
@@ -1896,6 +2201,11 @@ msgstr "덮어쓰기가 이 프로필에 맞지 않습니다 - 모듈 이름은 
 msgctxt "EditorTip.ZoneRevert"
 msgid "Drop this placement override and use the preset again."
 msgstr "이 배치 덮어쓰기를 지우고 프리셋을 다시 씁니다."
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
+msgctxt "EditorTip.ZoneRevertParam"
+msgid "Use the preset's value for this parameter again."
+msgstr "이 매개변수에 프리셋 값을 다시 씁니다."
 
 #. Context: TextWidget._text
 #: engine/ui/confirm_countdown.ui.xml
@@ -2476,6 +2786,27 @@ msgstr "최고"
 msgctxt "settings.graphics.renderScale"
 msgid "Render Scale"
 msgstr "렌더 배율"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.graphics.shadowFilter"
+msgid "Shadow Filter"
+msgstr "그림자 필터"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.graphics.shadowFilter.pcf"
+msgid "Sharp"
+msgstr "선명하게"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.graphics.shadowFilter.pcss"
+msgid "Soft"
+msgstr "부드럽게"
 
 #. Context: Options menu label
 #. Max length: 32

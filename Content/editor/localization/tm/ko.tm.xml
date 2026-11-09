@@ -91,6 +91,8 @@
 		       text="고른 오브젝트의 이동 · 회전 · 크기를 키로 모는 트랙을 더합니다" />
 		<entry source="Add a transition between the two selected nodes, from the first selected to the second. Click one node, then Ctrl+click the other."
 		       text="선택한 두 노드 사이에 첫 번째에서 두 번째로 가는 전이를 추가합니다. 노드 하나를 클릭한 뒤 다른 노드를 Ctrl+클릭합니다." />
+		<entry source="Add a {kind} track for the selected binding."
+		       text="고른 바인딩에 {kind} 트랙을 더합니다." />
 		<entry source="Add an Attack state node. Its name is the clip it plays; rename it in the inspector."
 		       text="Attack 상태 노드를 추가합니다. 노드 이름이 재생할 클립이며, 인스펙터에서 바꿀 수 있습니다." />
 		<entry source="Add an Idle state node. Its name is the clip it plays; rename it in the inspector."
@@ -319,6 +321,7 @@
 		<entry source="Center Right" text="오른쪽 가운데" />
 		<entry source="Changes" text="변경 사항" />
 		<entry source="Character Editor" text="캐릭터 편집기" />
+		<entry source="Character target" text="캐릭터 대상" />
 		<entry source="Characters cannot walk through this tile."
 		       text="캐릭터가 이 타일을 지나가지 못합니다." />
 		<entry source="Check Map" text="맵 검사" />
@@ -349,6 +352,8 @@
 		       text="칸을 클릭하면 선택한 프레임의 사각형이 그 칸이 됩니다. Shift+클릭하면 새 프레임을 추가합니다." />
 		<entry source="Click a cell to use it. Shift-click adds it as an animation frame."
 		       text="셀을 누르면 그 셀을 씁니다. Shift 를 누르고 누르면 애니메이션 프레임으로 더합니다." />
+		<entry source="Click a curve preview below to edit its keys in the graph."
+		       text="아래 곡선 미리보기를 누르면 그래프에서 키를 고칩니다." />
 		<entry source="Click a key to edit it. Right-click to add a key. F fits the view."
 		       text="키를 클릭하면 편집합니다. 오른쪽 클릭으로 키를 더합니다. F 를 누르면 뷰를 곡선에 맞춥니다." />
 		<entry source="Click a key to select it, Ctrl+click to add or remove, drag to move the selected keys by whole frames. Click empty space to go to that frame."
@@ -442,7 +447,13 @@
 		<entry source="Copy Visible Lines" text="보이는 줄 복사" />
 		<entry source="Copy every filtered console log to the clipboard"
 		       text="필터링된 모든 콘솔 로그를 클립보드에 복사합니다" />
+		<entry source="Copy item" text="항목 복사" />
+		<entry source="Copy keys" text="키 복사" />
 		<entry source="Copy the absolute folder path" text="폴더의 절대 경로를 복사합니다" />
+		<entry source="Copy the selected keys with their values, tangents and interpolation."
+		       text="고른 키를 값 · 접선 · 보간과 함께 복사합니다." />
+		<entry source="Copy the selected span item. Paste puts it at the current frame."
+		       text="고른 구간 항목을 복사합니다. 붙여 넣으면 현재 프레임에 놓입니다." />
 		<entry source="Corner" text="모서리" />
 		<entry source="Corner rounding of buttons, input fields and control frames, in pixels (0 to 8)."
 		       text="버튼, 입력 필드 및 컨트롤 프레임의 모서리 둥글기(px, 0 ~ 8)" />
@@ -504,12 +515,15 @@
 		<entry source="Delete Key" text="키 지우기" />
 		<entry source="Delete Track" text="트랙 삭제" />
 		<entry source="Delete binding" text="바인딩 지우기" />
+		<entry source="Delete cut" text="컷 지우기" />
 		<entry source="Delete every copy of this scene" text="이 씬의 사본을 모두 지웁니다" />
 		<entry source="Delete key" text="키 지우기" />
 		<entry source="Delete preset" text="프리셋 삭제" />
 		<entry source="Delete selected keys" text="선택한 키 지우기" />
 		<entry source="Delete the selected binding. Remove the items and tracks that use it first."
 		       text="선택한 바인딩을 지웁니다. 그것을 쓰는 항목과 트랙을 먼저 지우세요." />
+		<entry source="Delete the selected camera cut. The cut just before it grows to fill the gap."
+		       text="고른 카메라 컷을 지웁니다. 바로 앞 컷이 늘어나 빈자리를 채웁니다." />
 		<entry source="Delete the selected data layer and its values."
 		       text="고른 데이터 레이어와 그 값을 지웁니다." />
 		<entry source="Delete the selected preset from your preset file"
@@ -623,6 +637,7 @@
 		<entry source="Enable Memory Tracking" text="메모리 추적" />
 		<entry source="Enable Viewport On-Screen HUD Overlay" text="뷰포트 화면 HUD 겹치기" />
 		<entry source="Enable or disable this component." text="컴포넌트 활성화/비활성화" />
+		<entry source="End" text="끝" />
 		<entry source="End the partial ragdoll and blend back to the animation pose"
 		       text="부분 래그돌을 끝내고 애니메이션 자세로 섞어 돌아갑니다" />
 		<entry source="End the preview." text="미리보기를 끝냅니다." />
@@ -698,8 +713,10 @@
 		<entry source="Find and open an asset of this type (the same as Quick Open or double-clicking it in the Content Browser)."
 		       text="이 종류의 에셋을 찾아 엽니다(Quick Open · 콘텐츠 브라우저 더블클릭과 같다)" />
 		<entry source="Find scope..." text="스코프 찾기..." />
+		<entry source="Find selected" text="선택 항목 찾기" />
 		<entry source="Find the earliest tick both histories hold with different state hashes (scene transforms: name, active, world position)"
 		       text="두 기록이 모두 가진 틱 가운데 상태 해시가 다른 가장 이른 틱을 찾습니다(씬 트랜스폼: 이름, 활성, 월드 위치)" />
+		<entry source="First frame %d" text="첫 프레임 %d" />
 		<entry source="Fit" text="맞춤" />
 		<entry source="Fit View" text="화면에 맞추기" />
 		<entry source="Fit every node in view; with nodes selected, go to them (F)"
@@ -772,6 +789,8 @@
 		<entry source="Go back one recorded frame." text="기록된 프레임 하나만큼 뒤로 갑니다." />
 		<entry source="Go ragdoll and push the picked body (the table row; the first body when none) with the impulse below"
 		       text="래그돌이 되어 고른 바디(표의 줄, 없으면 첫 바디)를 아래 충격으로 밉니다" />
+		<entry source="Go to the asset of the object selected in the main scene and select it here. Selections in preview windows are not followed."
+		       text="메인 씬에서 고른 오브젝트의 에셋으로 가서 여기서 고릅니다. 미리보기 창의 선택은 따라가지 않습니다." />
 		<entry source="Go to the next folder (Mouse Forward button / Alt+Right)"
 		       text="다음 폴더로 이동 (마우스 앞으로가기 버튼 / Alt+Right)" />
 		<entry source="Go to the next key" text="다음 키로" />
@@ -984,6 +1003,8 @@
 		       text="컬렉션을 만들고 선택한 에셋을 넣습니다. 에셋을 컬렉션 위에 놓으면 더해집니다" />
 		<entry source="Make the paint tools clear cells instead of painting them."
 		       text="칠하기 도구가 칸을 칠하는 대신 지우게 합니다." />
+		<entry source="Make the selected camera cut look through the selected binding."
+		       text="고른 카메라 컷이 고른 바인딩을 통해 보게 합니다." />
 		<entry source="Make this map use the tile set on the left and load its brushes."
 		       text="이 맵이 왼쪽의 타일셋을 쓰게 하고 그 브러시를 읽습니다." />
 		<entry source="Map Check" text="맵 검사" />
@@ -1040,6 +1061,7 @@
 		<entry source="Move Up" text="위로 옮기기" />
 		<entry source="Move Up in Hierarchy" text="계층에서 위로" />
 		<entry source="Move cost" text="이동 비용" />
+		<entry source="Move down" text="아래로 옮기기" />
 		<entry source="Move the preview focus in this direction (like the keyboard or pad). The first press focuses the first focusable widget."
 		       text="미리보기 초점을 이 방향으로 옮깁니다(키보드 · 패드처럼). 처음 누르면 초점을 받는 첫 위젯에 갑니다." />
 		<entry source="Move the preview to the next node without waiting."
@@ -1048,6 +1070,9 @@
 		       text="고른 프레임을 재생 순서에서 한 칸 앞으로 옮깁니다." />
 		<entry source="Move the selected frame one place later in the play order."
 		       text="고른 프레임을 재생 순서에서 한 칸 뒤로 옮깁니다." />
+		<entry source="Move the selected key track one row down."
+		       text="고른 키 트랙을 한 줄 아래로 옮깁니다." />
+		<entry source="Move the selected key track one row up." text="고른 키 트랙을 한 줄 위로 옮깁니다." />
 		<entry source="Move the selected layer up or down. Order changes the result: later layers are applied on top."
 		       text="고른 레이어를 위나 아래로 옮깁니다. 순서가 결과를 바꿉니다. 뒤의 레이어가 위에 얹힙니다." />
 		<entry source="Move the selected object down among its siblings"
@@ -1058,6 +1083,7 @@
 		       text="고른 위젯을 형제 사이에서 한 칸 앞으로 옮깁니다" />
 		<entry source="Move the selected widget one place later among its siblings"
 		       text="고른 위젯을 형제 사이에서 한 칸 뒤로 옮깁니다" />
+		<entry source="Move up" text="위로 옮기기" />
 		<entry source="Move {assetCount} file(s) to {destination}"
 		       text="파일 {assetCount}개를 {destination}(으)로 옮기기" />
 		<entry source="Moves the selected object down one place among its siblings"
@@ -1206,6 +1232,8 @@
 		<entry source="No surface under the cursor - {asset} will not be placed. Aim at an object, a collider or the ground"
 		       text="커서 아래에 표면이 없어 {asset} 을(를) 놓지 않습니다. 오브젝트 · 콜라이더 · 지면을 겨누세요" />
 		<entry source="No target matches the filter." text="필터에 맞는 타깃이 없습니다." />
+		<entry source="No target path. Playback drives nothing; enter the property or rig slot."
+		       text="대상 경로가 없습니다. 재생해도 아무것도 움직이지 않습니다 — 프로퍼티나 리그 칸을 적으세요." />
 		<entry source="No text asset names it." text="이 이름을 쓰는 글 에셋이 없습니다." />
 		<entry source="No text asset names this asset." text="이 에셋을 참조하는 텍스트 에셋이 없습니다." />
 		<entry source="No tile set loaded" text="읽어 들인 타일셋 없음" />
@@ -1322,6 +1350,8 @@
 		<entry source="Open the theme settings dialog" text="테마 설정 창을 엽니다" />
 		<entry source="Open this channel in the curve editor to shape the interpolation between keys."
 		       text="이 채널을 커브 편집기에서 열어 키 사이의 보간을 다듬습니다." />
+		<entry source="Open this curve in the graph above to drag its keys."
+		       text="위 그래프에서 이 곡선을 열어 키를 끌어 옮깁니다." />
 		<entry source="Open this folder in the file explorer" text="이 폴더를 파일 탐색기에서 엽니다" />
 		<entry source="Open this nested prefab in isolation mode" text="이 중첩 프리팹을 격리 모드로 엽니다" />
 		<entry source="Open..." text="열기..." />
@@ -1400,6 +1430,12 @@
 		<entry source="Paste Component Values" text="컴포넌트 값 붙여넣기" />
 		<entry source="Paste Value" text="값 붙여넣기" />
 		<entry source="Paste as New Component" text="새 컴포넌트로 붙여넣기" />
+		<entry source="Paste item" text="항목 붙여 넣기" />
+		<entry source="Paste keys" text="키 붙여 넣기" />
+		<entry source="Paste the copied item so it starts at the current frame. Spawn items cannot be pasted: each spawned object needs its own binding."
+		       text="복사한 항목을 현재 프레임에서 시작하게 붙여 넣습니다. 생성 항목은 붙여 넣을 수 없습니다 — 생성한 오브젝트마다 바인딩이 따로 있어야 합니다." />
+		<entry source="Paste the copied keys at the current frame, starting at the selected track. Tracks with a different channel count are skipped."
+		       text="복사한 키를 고른 트랙부터 현재 프레임에 붙여 넣습니다. 채널 수가 다른 트랙은 건너뜁니다." />
 		<entry source="Path" text="경로" />
 		<entry source="Path finding cost from 1 to 255. 255 blocks the cell."
 		       text="길 찾기 비용입니다(1 ~ 255). 255 는 막힘입니다." />
@@ -1447,6 +1483,8 @@
 		       text="미리보기 씬에 몸을 놓고 물리 에셋을 히트박스 래그돌로 겁니다" />
 		<entry source="Place the body in the preview scene and play the clip on it"
 		       text="미리보기 씬에 몸을 놓고 그 위에서 클립을 재생합니다" />
+		<entry source="Place the character target in the preview scene. With an empty field the target is removed and the effect stands at the origin."
+		       text="미리보기 씬에 캐릭터 대상을 놓습니다. 칸을 비우면 대상을 치우고 효과가 원점에 섭니다." />
 		<entry source="Place the client windows side by side (window size and position per App process) instead of letting them overlap"
 		       text="클라이언트 창을 겹치지 않게 나란히 놓습니다(App 프로세스마다 창 크기와 위치를 줍니다)" />
 		<entry source="Place {asset} on the {surface}" text="{asset} 을(를) {surface} 위에 놓기" />
@@ -1457,6 +1495,8 @@
 		<entry source="Play in New Window" text="새 창에서 플레이" />
 		<entry source="Play mode is running (scene edits are restricted)"
 		       text="플레이 모드 실행 중 (씬 편집 제한)" />
+		<entry source="Play only this emitter in the preview. The effect file does not change. Click again to play every emitter."
+		       text="미리보기에서 이 방출기만 재생합니다. 효과 파일은 바뀌지 않습니다. 다시 누르면 모든 방출기를 재생합니다." />
 		<entry source="Play or pause the preview scene (animation, effects and physics together)"
 		       text="미리보기 씬을 재생하거나 멈춥니다(애니메이션 · 효과 · 물리가 함께)" />
 		<entry source="Play the chosen animation from the start. The widget values stay where it leaves them; Reload restores the document."
@@ -1487,6 +1527,8 @@
 		<entry source="Prefab Overrides" text="프리팹 덮어쓰기" />
 		<entry source="Prefab Window" text="프리팹 창" />
 		<entry source="Prefab Window: {prefabPath}" text="프리팹 창: {prefabPath}" />
+		<entry source="Prefab of an animated character. The effect rides on it at chest height while it walks a circle, so trails and afterimages show their motion."
+		       text="움직이는 캐릭터의 프리팹입니다. 효과가 가슴 높이에 붙어 원을 따라 걸어, 꼬리 · 잔상이 움직임을 보입니다." />
 		<entry source="Prefab spawned for this span. Type its resource id or drop it from the content browser."
 		       text="이 구간 동안 스폰할 프리팹입니다. 리소스 id 를 치거나 콘텐츠 브라우저에서 끌어다 놓습니다." />
 		<entry source="Preferences" text="환경설정" />
@@ -1910,6 +1952,8 @@
 		       text="문서를 배치할 화면 크기입니다. 출시 전에 여러 화면비에서 레이아웃을 확인합니다." />
 		<entry source="Screenshot" text="스크린샷" />
 		<entry source="Screenshot saved" text="스크린샷을 저장했습니다" />
+		<entry source="Scroll the zoomed view. Shift+wheel over the key strips scrolls too."
+		       text="확대한 보기를 굴립니다. 키 띠 위에서 Shift+휠로도 굴립니다." />
 		<entry source="Search" text="검색" />
 		<entry source="Search (t:Mesh, tag:Player)..." text="검색 (t:Mesh, tag:Player)..." />
 		<entry source="Search Content" text="콘텐츠 검색" />
@@ -2023,8 +2067,11 @@
 		<entry source="Show assets as square thumbnail cards (tiles)"
 		       text="에셋을 사각형 썸네일 카드(타일) 형태로 표시합니다" />
 		<entry source="Show error rows" text="오류 줄을 보입니다" />
+		<entry source="Show fewer frames around the current frame. Ctrl+wheel over the key strips zooms at the pointer."
+		       text="현재 프레임 둘레의 프레임을 더 적게 봅니다. 키 띠 위에서 Ctrl+휠은 포인터 자리에서 확대합니다." />
 		<entry source="Show in Explorer" text="탐색기에서 보기" />
 		<entry source="Show in the Content Browser" text="콘텐츠 브라우저에서 보여 줍니다" />
+		<entry source="Show more frames." text="프레임을 더 많이 봅니다." />
 		<entry source="Show only keys with a missing, stale or review-marked translation."
 		       text="번역이 없거나 낡았거나 검토 표시가 있는 키만 보여 줍니다." />
 		<entry source="Show only objects with a component type (same as typing t:Type in the search)"
@@ -2058,6 +2105,7 @@
 		       text="한 프로세스 또는 모든 프로세스의 로그를 보입니다" />
 		<entry source="Show the message kinds the process queued to send instead of the ones it received (one process shows both directions)"
 		       text="받은 메시지 종류 대신 프로세스가 보내려고 쌓은 종류를 보입니다(한 프로세스가 두 방향을 모두 보입니다)" />
+		<entry source="Show the whole timeline." text="타임라인 전체를 봅니다." />
 		<entry source="Show warning rows" text="경고 줄을 보입니다" />
 		<entry source="Shown in the editor and given to spawned objects; objects are found by binding id, not by this name."
 		       text="에디터에 보이고 스폰한 오브젝트가 받는 이름입니다. 오브젝트는 이 이름이 아니라 바인딩 id 로 찾습니다." />
@@ -2101,8 +2149,11 @@
 		       text="선택한 오브젝트를 바닥 평면에 붙입니다" />
 		<entry source="Snap to Ground (Y=0)" text="바닥에 붙이기(Y=0)" />
 		<entry source="Solid" text="단단함" />
+		<entry source="Solo" text="솔로" />
 		<entry source="Solo - only this bus, its ancestors and its descendants are heard"
 		       text="단독 — 이 버스와 그 위 · 아래 버스만 들립니다" />
+		<entry source="Some keys are outside the timeline and never play. Move them inside or widen the timeline."
+		       text="타임라인 밖의 키가 있어 재생되지 않습니다. 안으로 옮기거나 타임라인을 넓히세요." />
 		<entry source="Sound" text="소리" />
 		<entry source="Sources" text="소스" />
 		<entry source="Spawn" text="만들기" />
@@ -2121,11 +2172,15 @@
 		       text="대사가 id 로 가리키는 화자입니다. 이름을 바꿔도 대사가 끊기지 않습니다." />
 		<entry source="Speed" text="속도" />
 		<entry source="Spike" text="튐" />
+		<entry source="Split cut" text="컷 나누기" />
+		<entry source="Split the camera cut under the current frame into two shots with the same camera."
+		       text="현재 프레임 아래의 카메라 컷을 같은 카메라의 두 샷으로 나눕니다." />
 		<entry source="Split the scene into cells exactly as the scene cook does, and list the cells or the references that would fail the cook. Same as 'world.cells'."
 		       text="씬 쿠킹과 똑같이 씬을 셀로 나눠 셀 목록이나 쿠킹을 실패시킬 참조를 보입니다. 'world.cells' 와 같습니다." />
 		<entry source="Sprite Clip" text="스프라이트 클립" />
 		<entry source="Sprite frame: {spriteFrame}" text="스프라이트 프레임: {spriteFrame}" />
 		<entry source="Standalone" text="단독" />
+		<entry source="Start" text="시작" />
 		<entry source="Start Play at the editor camera position (moves the object tagged 'Player', or else the object holding the game camera)."
 		       text="Play 를 에디터 카메라 위치에서 시작합니다 ('Player' 태그 오브젝트, 없으면 게임 카메라를 든 오브젝트를 옮깁니다)" />
 		<entry source="Start a camera cut at the current frame through the selected binding's camera; the cut it splits ends just before."
@@ -2287,6 +2342,8 @@
 		       text="상태의 클립 이름입니다. 플레이어는 이 이름의 클립을 재생합니다." />
 		<entry source="The threshold the parameter is compared against."
 		       text="파라미터와 비교할 임곗값입니다." />
+		<entry source="The track's binding is not in this sequence. The file will not load; delete the track."
+		       text="트랙의 바인딩이 이 시퀀스에 없습니다. 파일이 읽히지 않습니다 — 트랙을 지우세요." />
 		<entry source="Theme" text="테마" />
 		<entry source="Theme &amp; Look and Feel" text="테마 · 모양" />
 		<entry source="Theme &amp; Look and Feel..." text="테마 · 모양..." />
@@ -2380,6 +2437,7 @@
 		       text="씬을 열 때 이 레이어를 켭니다. 씬과 함께 저장됩니다." />
 		<entry source="Turn this module on or off (the affected modules are shown before it applies)"
 		       text="이 모듈을 켜거나 끕니다(적용하기 전에 영향받는 모듈을 보여 줍니다)" />
+		<entry source="Turned {degrees}°" text="{degrees}° 돌림" />
 		<entry source="Type" text="종류" />
 		<entry source="Type a command or search objects... (Esc to close)"
 		       text="명령을 입력하거나 오브젝트를 검색합니다... (Esc 로 닫기)" />
@@ -2401,6 +2459,8 @@
 		       text="게임오브젝트의 고유 이름 (Enter 키로 적용)" />
 		<entry source="Unit Tests" text="단위 테스트" />
 		<entry source="Unknown pin" text="알 수 없는 핀" />
+		<entry source="Unknown track kind. The file will not load; delete the track."
+		       text="모르는 트랙 종류입니다. 파일이 읽히지 않습니다 — 트랙을 지우세요." />
 		<entry source="Unlink" text="연결 풀기" />
 		<entry source="Unlit" text="조명 없음" />
 		<entry source="Unload" text="내리기" />
@@ -2423,6 +2483,7 @@
 		<entry source="Use a parallel (non-perspective) projection, as for 2D or isometric views. FOV is ignored while on."
 		       text="원근 없는 평행 투영을 씁니다(2D · 아이소메트릭 시점). 켜져 있는 동안 FOV 는 무시됩니다." />
 		<entry source="Use inherited" text="물려받기" />
+		<entry source="Use selected camera" text="고른 카메라 쓰기" />
 		<entry source="Used by layer ''{layer}''" text="레이어 ''{layer}'' 가 씁니다" />
 		<entry source="Used from pass {firstPass} to pass {lastPass} (pipeline order)"
 		       text="패스 {firstPass} 부터 {lastPass} 까지 쓰입니다(파이프라인 순서)" />
@@ -2562,12 +2623,16 @@
 		<entry source="Writes the library file; an invalid library is not written and the error is logged"
 		       text="라이브러리 파일에 씁니다. 검사에 실패한 라이브러리는 쓰지 않고 오류를 로그에 남깁니다" />
 		<entry source="Written by: {passes}" text="쓰는 패스: {passes}" />
+		<entry source="Wrong channel count for the kind. The file will not load; delete and add the track again."
+		       text="종류에 맞지 않는 채널 수입니다. 파일이 읽히지 않습니다 — 트랙을 지우고 다시 더하세요." />
 		<entry source="XML Data Files" text="XML 데이터 파일" />
 		<entry source="Z Order" text="Z 순서" />
 		<entry source="Zoom" text="확대" />
 		<entry source="Zoom Fit" text="맞춰 보기" />
 		<entry source="Zoom and pan the canvas so every node is visible."
 		       text="모든 노드가 보이도록 캔버스를 확대 · 이동합니다." />
+		<entry source="Zoom in" text="확대" />
+		<entry source="Zoom out" text="축소" />
 		<entry source="[Nested] {prefabIndex}" text="[중첩] {prefabIndex}" />
 		<entry source="[Unknown {type}]" text="[알 수 없음 {type}]" />
 		<entry source="cell {cellSize} m, radius {loadingRadius} m, margin {unloadMargin} m, {maxCellLoadsPerFrame} per frame"

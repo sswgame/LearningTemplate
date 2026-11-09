@@ -90,7 +90,7 @@ namespace sw
 
         // 순서가 계약이다: 빛 · 하늘 → 주 시점(카메라 · 안개 · 투명 정렬 축) → 주 시점 그림자 → 추가 뷰 → 추가 뷰 그림자 → LOD 뷰 → 스냅샷.
         const RenderPacketKeyLights lights   = _scene.collectLights( packet, *pActiveScene );
-        const RenderPacketMainView  mainView = _views.setupMainView( packet, views, sceneViewCameraProvider, *pActiveScene, deltaTime, rhi, pFrameRenderer );
+        const RenderPacketMainView  mainView = _views.setupMainView( packet, views, sceneViewCameraProvider, *pActiveScene, deltaTime, pFrameRenderer );
         if ( mainView._pCamera != nullptr )
             _scene.applyMainCamera( packet, *pActiveScene, *mainView._pCamera );
         // 그림자 배치는 카메라가 정해진 **뒤에** 만든다 — 볼륨을 카메라가 보는 곳에 맞추는 빛이 있다.

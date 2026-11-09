@@ -442,11 +442,13 @@
 		<entry source="Shade the target mesh with the stack result. Runs on a compute shader when every enabled modifier supports it, otherwise the CPU result is uploaded as vertices. Off leaves the original mesh and the wire preview."
 		       text="スタックの結果で対象メッシュをシェーディングします。有効なモディファイアがすべて対応していればコンピュートシェーダーで実行し、そうでなければ CPU の結果を頂点としてアップロードします。オフにすると元のメッシュとワイヤープレビューのままです。" />
 		<entry source="Shaded Preview" text="シェーディングプレビュー" />
+		<entry source="Shadow Filter" text="影フィルター" />
 		<entry source="Shadow Quality" text="影の品質" />
 		<entry source="Share Usage Data" text="使用状況データを共有" />
 		<entry source="Shared notifies" text="共有通知" />
 		<entry source="Shared timeline time - every role follows the anchor clock"
 		       text="共有タイムラインの時間 — すべての役割がアンカーの時計に従います" />
+		<entry source="Sharp" text="くっきり" />
 		<entry source="Show HUD (Ctrl+F3)" text="HUD を表示 (Ctrl+F3)" />
 		<entry source="Show Tutorials" text="チュートリアルを表示" />
 		<entry source="Skeleton" text="スケルトン" />
@@ -461,6 +463,7 @@
 		       text="スロット {slot}: {requestedItem} -> {fallbackItem}({reason})" />
 		<entry source="Slots" text="スロット" />
 		<entry source="Sockets" text="ソケット" />
+		<entry source="Soft" text="ソフト" />
 		<entry source="Solve the end onto the source end position (feet that plant without sliding)"
 		       text="末端をソースの末端位置へ解きます(滑らずに接地する足)" />
 		<entry source="Some changes take effect after a restart."

@@ -2134,6 +2134,11 @@ msgctxt "EdFormat.PlacementOpensInstead"
 msgid "{asset} opens on release - this type cannot be placed in the scene"
 msgstr "{asset} 은(는) 놓으면 열립니다 — 이 종류는 씬에 배치할 수 없습니다"
 
+#: Source/Editor/Viewport/EditorViewportAssetPlacement.cpp
+msgctxt "EdFormat.PlacementRotation"
+msgid "Turned {degrees}°"
+msgstr "{degrees}° 돌림"
+
 #: Source/Editor/Panels/InputMap/InputMapPanel.cpp
 msgctxt "EdFormat.PlaybackControlsTotalFrames"
 msgid "Playback Controls (Total Frames: {frameCount}, Duration: {totalDuration} s):"
@@ -3311,6 +3316,11 @@ msgid "Create Layer"
 msgstr "레이어 만들기"
 
 #: Source/Editor/Panels/Catalog/CatalogTableEditor.cpp
+msgctxt "EdText.CurvePreviewOpensGraphTip"
+msgid "Open this curve in the graph above to drag its keys."
+msgstr "위 그래프에서 이 곡선을 열어 키를 끌어 옮깁니다."
+
+#: Source/Editor/Panels/Catalog/CatalogTableEditor.cpp
 msgctxt "EdText.Curves"
 msgid "Curves"
 msgstr "커브"
@@ -3659,6 +3669,11 @@ msgctxt "EdText.Pause"
 msgid "Pause"
 msgstr "일시 정지"
 
+#: Source/Editor/Panels/Catalog/CatalogTableEditor.cpp
+msgctxt "EdText.PickACurvePreviewToEditItInTheGraph"
+msgid "Click a curve preview below to edit its keys in the graph."
+msgstr "아래 곡선 미리보기를 누르면 그래프에서 키를 고칩니다."
+
 #: Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp
 msgctxt "EdText.PickAnObjectOnTheLeft"
 msgid "Pick an object on the left"
@@ -3951,6 +3966,7 @@ msgstr "탐색기에서 보기"
 
 #: Source/Editor/Panels/Animation/AnimationClipPreviewPanel.cpp
 #: Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp
+#: Source/Editor/Panels/VFX/VFXPreviewPanel.cpp
 msgctxt "EdText.Spawn"
 msgid "Spawn"
 msgstr "만들기"
@@ -4266,6 +4282,31 @@ msgstr "사용자 음량(옵션 메뉴 값) — Ctrl+누르면 숫자를 칩니�
 msgctxt "EdTip.WriteTheWeightsAndOnOffOf"
 msgid "Write the weights and on/off of this instance's nodes into the rig asset (*.rig.xml); other keys stay as they are"
 msgstr "이 인스턴스 노드의 가중치 · 켜짐을 리그 에셋(*.rig.xml)에 씁니다. 다른 키는 그대로입니다"
+
+#: Source/Editor/Panels/VFX/VFXPreviewPanel.cpp
+msgctxt "EdVFX.Solo"
+msgid "Solo"
+msgstr "솔로"
+
+#: Source/Editor/Panels/VFX/VFXPreviewPanel.cpp
+msgctxt "EdVFX.SoloTip"
+msgid "Play only this emitter in the preview. The effect file does not change. Click again to play every emitter."
+msgstr "미리보기에서 이 방출기만 재생합니다. 효과 파일은 바뀌지 않습니다. 다시 누르면 모든 방출기를 재생합니다."
+
+#: Source/Editor/Panels/VFX/VFXPreviewPanel.cpp
+msgctxt "EdVFX.TargetLabel"
+msgid "Character target"
+msgstr "캐릭터 대상"
+
+#: Source/Editor/Panels/VFX/VFXPreviewPanel.cpp
+msgctxt "EdVFX.TargetSpawnTip"
+msgid "Place the character target in the preview scene. With an empty field the target is removed and the effect stands at the origin."
+msgstr "미리보기 씬에 캐릭터 대상을 놓습니다. 칸을 비우면 대상을 치우고 효과가 원점에 섭니다."
+
+#: Source/Editor/Panels/VFX/VFXPreviewPanel.cpp
+msgctxt "EdVFX.TargetTip"
+msgid "Prefab of an animated character. The effect rides on it at chest height while it walks a circle, so trails and afterimages show their motion."
+msgstr "움직이는 캐릭터의 프리팹입니다. 효과가 가슴 높이에 붙어 원을 따라 걸어, 꼬리 · 잔상이 움직임을 보입니다."
 
 #: Source/Editor/Panels/Settings/ModulesPanel.cpp
 #: Source/Editor/Panels/Settings/UserSettingsPanel.cpp
@@ -5701,6 +5742,16 @@ msgstr "이 컬렉션을 지웁니다. 에셋은 제자리에 남습니다"
 msgctxt "EditorContentBrowser.EmptyCollection"
 msgid "This collection is empty. Drop assets on its name to add them."
 msgstr "이 컬렉션은 비었습니다. 에셋을 이름 위에 놓으면 더해집니다."
+
+#: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
+msgctxt "EditorContentBrowser.FindSelected"
+msgid "Find selected"
+msgstr "선택 항목 찾기"
+
+#: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
+msgctxt "EditorContentBrowser.FindSelectedTip"
+msgid "Go to the asset of the object selected in the main scene and select it here. Selections in preview windows are not followed."
+msgstr "메인 씬에서 고른 오브젝트의 에셋으로 가서 여기서 고릅니다. 미리보기 창의 선택은 따라가지 않습니다."
 
 #: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
 msgctxt "EditorContentBrowser.Import"
@@ -7576,24 +7627,9 @@ msgid "Key the target's current values on every channel at this frame."
 msgstr "대상의 지금 값을 이 프레임의 키로 모든 채널에 찍습니다"
 
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
-msgctxt "EditorSequencer.AddLensTrackTip"
-msgid "Add a lens track (field of view, focus, aperture, lens shift) for the selected binding's camera."
-msgstr "선택한 바인딩의 카메라에 렌즈 트랙(시야각 · 초점 · 조리개 · 렌즈 시프트)을 더합니다."
-
-#: Source/Editor/Panels/Animation/SequencerPanel.cpp
-msgctxt "EditorSequencer.AddPropertyTrackTip"
-msgid "Add a track that keys one numeric property of a component on the selected object."
-msgstr "고른 오브젝트 컴포넌트의 숫자 프로퍼티 하나를 키로 모는 트랙을 더합니다"
-
-#: Source/Editor/Panels/Animation/SequencerPanel.cpp
-msgctxt "EditorSequencer.AddRigSlotTrackTip"
-msgid "Add a track that keys a rig slot weight (PoseModifierComponent)"
-msgstr "리그 슬롯 가중치(PoseModifierComponent)에 키를 찍는 트랙을 추가합니다"
-
-#: Source/Editor/Panels/Animation/SequencerPanel.cpp
-msgctxt "EditorSequencer.AddTransformTrackTip"
-msgid "Add a track that keys the selected object's position, rotation and scale."
-msgstr "고른 오브젝트의 이동 · 회전 · 크기를 키로 모는 트랙을 더합니다"
+msgctxt "EditorSequencer.AddTrackTipFormat"
+msgid "Add a {kind} track for the selected binding."
+msgstr "고른 바인딩에 {kind} 트랙을 더합니다."
 
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
 msgctxt "EditorSequencer.BindSelection"
@@ -7661,6 +7697,26 @@ msgid "Animation clip blended over the bound object's animation during the span.
 msgstr "구간 동안 바인딩된 오브젝트의 애니메이션 위에 섞을 애니메이션 클립입니다. 리소스 id 를 치거나 콘텐츠 브라우저에서 끌어다 놓습니다."
 
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.CopyItem"
+msgid "Copy item"
+msgstr "항목 복사"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.CopyItemTip"
+msgid "Copy the selected span item. Paste puts it at the current frame."
+msgstr "고른 구간 항목을 복사합니다. 붙여 넣으면 현재 프레임에 놓입니다."
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.CopyKeys"
+msgid "Copy keys"
+msgstr "키 복사"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.CopyKeysTip"
+msgid "Copy the selected keys with their values, tangents and interpolation."
+msgstr "고른 키를 값 · 접선 · 보간과 함께 복사합니다."
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
 msgctxt "EditorSequencer.CreateItemButton"
 msgid "Create item"
 msgstr "항목 만들기"
@@ -7676,6 +7732,16 @@ msgid "Curve"
 msgstr "커브"
 
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.CutCamera"
+msgid "Use selected camera"
+msgstr "고른 카메라 쓰기"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.CutCameraTip"
+msgid "Make the selected camera cut look through the selected binding."
+msgstr "고른 카메라 컷이 고른 바인딩을 통해 보게 합니다."
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
 msgctxt "EditorSequencer.CutLaneTip"
 msgid "Camera cuts by camera. Click a cut to select it and move to that frame."
 msgstr "카메라별 카메라 컷입니다. 컷을 누르면 선택하고 그 프레임으로 옮깁니다."
@@ -7689,6 +7755,16 @@ msgstr "바인딩 지우기"
 msgctxt "EditorSequencer.DeleteBindingTip"
 msgid "Delete the selected binding. Remove the items and tracks that use it first."
 msgstr "선택한 바인딩을 지웁니다. 그것을 쓰는 항목과 트랙을 먼저 지우세요."
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.DeleteCut"
+msgid "Delete cut"
+msgstr "컷 지우기"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.DeleteCutTip"
+msgid "Delete the selected camera cut. The cut just before it grows to fill the gap."
+msgstr "고른 카메라 컷을 지웁니다. 바로 앞 컷이 늘어나 빈자리를 채웁니다."
 
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
 msgctxt "EditorSequencer.DeleteKeyButton"
@@ -7746,6 +7822,26 @@ msgid "Reload the focused .seq file from disk, discarding unsaved edits."
 msgstr "저장하지 않은 편집을 버리고 포커스된 .seq 파일을 디스크에서 다시 읽습니다."
 
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.MoveTrackDown"
+msgid "Move down"
+msgstr "아래로 옮기기"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.MoveTrackDownTip"
+msgid "Move the selected key track one row down."
+msgstr "고른 키 트랙을 한 줄 아래로 옮깁니다."
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.MoveTrackUp"
+msgid "Move up"
+msgstr "위로 옮기기"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.MoveTrackUpTip"
+msgid "Move the selected key track one row up."
+msgstr "고른 키 트랙을 한 줄 위로 옮깁니다."
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
 msgctxt "EditorSequencer.NextKeyTip"
 msgid "Go to the next key"
 msgstr "다음 키로"
@@ -7779,6 +7875,26 @@ msgstr "키 트랙이 없습니다. 오브젝트를 선택하고 트랜스폼 �
 msgctxt "EditorSequencer.OpenCurveTip"
 msgid "Open this channel in the curve editor to shape the interpolation between keys."
 msgstr "이 채널을 커브 편집기에서 열어 키 사이의 보간을 다듬습니다."
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.PasteItem"
+msgid "Paste item"
+msgstr "항목 붙여 넣기"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.PasteItemTip"
+msgid "Paste the copied item so it starts at the current frame. Spawn items cannot be pasted: each spawned object needs its own binding."
+msgstr "복사한 항목을 현재 프레임에서 시작하게 붙여 넣습니다. 생성 항목은 붙여 넣을 수 없습니다 — 생성한 오브젝트마다 바인딩이 따로 있어야 합니다."
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.PasteKeys"
+msgid "Paste keys"
+msgstr "키 붙여 넣기"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.PasteKeysTip"
+msgid "Paste the copied keys at the current frame, starting at the selected track. Tracks with a different channel count are skipped."
+msgstr "복사한 키를 고른 트랙부터 현재 프레임에 붙여 넣습니다. 채널 수가 다른 트랙은 건너뜁니다."
 
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
 msgctxt "EditorSequencer.PauseTip"
@@ -7866,6 +7982,26 @@ msgid "Select an item on the timeline to edit it."
 msgstr "편집하려면 타임라인에서 항목을 선택합니다."
 
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.ShotCameraColumn"
+msgid "Camera"
+msgstr "카메라"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.ShotEndColumn"
+msgid "End"
+msgstr "끝"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.ShotLengthColumn"
+msgid "Frames"
+msgstr "프레임"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.ShotStartColumn"
+msgid "Start"
+msgstr "시작"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
 msgctxt "EditorSequencer.SoundLabel"
 msgid "Sound"
 msgstr "소리"
@@ -7884,6 +8020,16 @@ msgstr "스폰한 오브젝트가 채울 바인딩입니다. 오브젝트 이름
 msgctxt "EditorSequencer.SpawnedBinding"
 msgid "Spawned by the sequence"
 msgstr "시퀀스가 스폰함"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.SplitCut"
+msgid "Split cut"
+msgstr "컷 나누기"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.SplitCutTip"
+msgid "Split the camera cut under the current frame into two shots with the same camera."
+msgstr "현재 프레임 아래의 카메라 컷을 같은 카메라의 두 샷으로 나눕니다."
 
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
 msgctxt "EditorSequencer.StopTip"
@@ -7906,6 +8052,31 @@ msgid "Localization key (Namespace.Key) of the subtitle line shown for the span.
 msgstr "구간 동안 보일 자막 줄의 현지화 키(Namespace.Key)입니다."
 
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.TrackIssueChannelCount"
+msgid "Wrong channel count for the kind. The file will not load; delete and add the track again."
+msgstr "종류에 맞지 않는 채널 수입니다. 파일이 읽히지 않습니다 — 트랙을 지우고 다시 더하세요."
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.TrackIssueKeysOutsideTimeline"
+msgid "Some keys are outside the timeline and never play. Move them inside or widen the timeline."
+msgstr "타임라인 밖의 키가 있어 재생되지 않습니다. 안으로 옮기거나 타임라인을 넓히세요."
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.TrackIssueMissingBinding"
+msgid "The track's binding is not in this sequence. The file will not load; delete the track."
+msgstr "트랙의 바인딩이 이 시퀀스에 없습니다. 파일이 읽히지 않습니다 — 트랙을 지우세요."
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.TrackIssueMissingPropertyPath"
+msgid "No target path. Playback drives nothing; enter the property or rig slot."
+msgstr "대상 경로가 없습니다. 재생해도 아무것도 움직이지 않습니다 — 프로퍼티나 리그 칸을 적으세요."
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.TrackIssueUnknownKind"
+msgid "Unknown track kind. The file will not load; delete the track."
+msgstr "모르는 트랙 종류입니다. 파일이 읽히지 않습니다 — 트랙을 지우세요."
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
 msgctxt "EditorSequencer.TrackNameLabel"
 msgid "Name"
 msgstr "이름"
@@ -7919,6 +8090,46 @@ msgstr "대상"
 msgctxt "EditorSequencer.UnboundBinding"
 msgid "Unbound"
 msgstr "바인딩 안 됨"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.ViewRangeFormat"
+msgid "First frame %d"
+msgstr "첫 프레임 %d"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.ViewScrollTip"
+msgid "Scroll the zoomed view. Shift+wheel over the key strips scrolls too."
+msgstr "확대한 보기를 굴립니다. 키 띠 위에서 Shift+휠로도 굴립니다."
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.ZoomFit"
+msgid "Fit"
+msgstr "맞춤"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.ZoomFitTip"
+msgid "Show the whole timeline."
+msgstr "타임라인 전체를 봅니다."
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.ZoomIn"
+msgid "Zoom in"
+msgstr "확대"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.ZoomInTip"
+msgid "Show fewer frames around the current frame. Ctrl+wheel over the key strips zooms at the pointer."
+msgstr "현재 프레임 둘레의 프레임을 더 적게 봅니다. 키 띠 위에서 Ctrl+휠은 포인터 자리에서 확대합니다."
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.ZoomOut"
+msgid "Zoom out"
+msgstr "축소"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.ZoomOutTip"
+msgid "Show more frames."
+msgstr "프레임을 더 많이 봅니다."
 
 #: Source/Editor/Panels/Settings/ModulesPanel.cpp
 msgctxt "EditorSettings.BuildModules"

@@ -6,8 +6,6 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
@@ -99,7 +97,7 @@ namespace sw
     }
 
     RenderPacketMainView RenderPacketViewSetup::setupMainView( RenderFramePacket& packet, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider,
-                                                               Scene& activeScene, float32 deltaTime, const RHI& rhi, const FrameRenderer* pFrameRenderer )
+                                                               Scene& activeScene, float32 deltaTime, const FrameRenderer* pFrameRenderer )
     {
         const bool           bSceneMain = views.isSceneViewMain();
         RenderPacketMainView mainView;

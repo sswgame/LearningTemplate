@@ -447,11 +447,13 @@
 		<entry source="Shade the target mesh with the stack result. Runs on a compute shader when every enabled modifier supports it, otherwise the CPU result is uploaded as vertices. Off leaves the original mesh and the wire preview."
 		       text="대상 메시를 스택 결과로 셰이딩해 보입니다. 켜진 모디파이어가 모두 지원하면 컴퓨트 셰이더로, 아니면 CPU 결과를 정점으로 올립니다. 끄면 원래 메시와 와이어 미리보기만 남습니다." />
 		<entry source="Shaded Preview" text="셰이딩 미리보기" />
+		<entry source="Shadow Filter" text="그림자 필터" />
 		<entry source="Shadow Quality" text="그림자 품질" />
 		<entry source="Share Usage Data" text="사용 데이터 공유" />
 		<entry source="Shared notifies" text="공유 알림" />
 		<entry source="Shared timeline time - every role follows the anchor clock"
 		       text="공유 타임라인 시간 — 모든 역할이 기준 시계를 따릅니다" />
+		<entry source="Sharp" text="선명하게" />
 		<entry source="Show HUD (Ctrl+F3)" text="HUD 표시 (Ctrl+F3)" />
 		<entry source="Show Tutorials" text="튜토리얼 표시" />
 		<entry source="Show or hide this section of the in-game Debug HUD. The grey text is the section's registration name."
@@ -468,6 +470,7 @@
 		       text="칸 {slot}: {requestedItem} -> {fallbackItem}({reason})" />
 		<entry source="Slots" text="칸" />
 		<entry source="Sockets" text="소켓" />
+		<entry source="Soft" text="부드럽게" />
 		<entry source="Solve the end onto the source end position (feet that plant without sliding)"
 		       text="끝을 원본 끝 위치로 풉니다(미끄러지지 않고 딛는 발)" />
 		<entry source="Some changes take effect after a restart."

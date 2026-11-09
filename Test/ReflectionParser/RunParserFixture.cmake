@@ -8,8 +8,8 @@
 #   // EXPECT-META: <글>       <이름>.gen.meta.cpp(개발 전용 에디터 메타데이터 단위)에 이 글이 있다.
 #   // EXPECT-TYPE: <FQN>      ReflectedTypes.list 에 `<FQN>\t<모듈>` 줄이 있다.
 #   // EXPECT-ASSET-FIELD: <이름> <대상>  AssetReferenceFields.list 에 `<이름>\t<대상>` 줄이 있다.
-# 입력: PARSER · FIXTURE · WORK_DIR · SOURCE_ROOT · GENERATED_DIR · BUILTINS · ANNOTATION_META · TEMPLATES · CONFIG · TYPES_LIST_NAME · ASSET_FIELDS_LIST_NAME · GEN_CPP_SUFFIX · GEN_META_CPP_SUFFIX
-foreach(swRequired PARSER FIXTURE WORK_DIR SOURCE_ROOT GENERATED_DIR BUILTINS ANNOTATION_META TEMPLATES CONFIG TYPES_LIST_NAME ASSET_FIELDS_LIST_NAME GEN_CPP_SUFFIX GEN_META_CPP_SUFFIX)
+# 입력: TARGET_ARGS · PARSER · FIXTURE · WORK_DIR · SOURCE_ROOT · GENERATED_DIR · BUILTINS · ANNOTATION_META · TEMPLATES · CONFIG · TYPES_LIST_NAME · ASSET_FIELDS_LIST_NAME · GEN_CPP_SUFFIX · GEN_META_CPP_SUFFIX
+foreach(swRequired TARGET_ARGS PARSER FIXTURE WORK_DIR SOURCE_ROOT GENERATED_DIR BUILTINS ANNOTATION_META TEMPLATES CONFIG TYPES_LIST_NAME ASSET_FIELDS_LIST_NAME GEN_CPP_SUFFIX GEN_META_CPP_SUFFIX)
 	if(NOT DEFINED ${swRequired})
 		message(FATAL_ERROR "RunParserFixture: ${swRequired} is not given")
 	endif()
@@ -51,6 +51,13 @@ if(NOT listExpectError AND NOT listExpectGen AND NOT listExpectType)
 	message(FATAL_ERROR "${FIXTURE}: no expectation - a fixture must say what it checks")
 endif()
 
+# 빌드와 같은 대상 인자 — Test/CMakeLists.txt 가 '|' 로 이어 넘긴다(sw_collectReflectionTargetArgs).
+string(REPLACE "|" ";" listTargetArgValue "${TARGET_ARGS}")
+set(listTargetArg "")
+foreach(swTargetArg IN LISTS listTargetArgValue)
+	list(APPEND listTargetArg --target-arg "${swTargetArg}")
+endforeach()
+
 # 빌드의 인자(`sw_makeReflectionParserArgs`)와 같은 모양이다. 파서 로그 파일이 소스 트리에 남지 않게 작업 폴더를 옮긴다.
 execute_process(
 	COMMAND "${PARSER}"
@@ -65,6 +72,7 @@ execute_process(
 		--include "${GENERATED_DIR}"
 		--include "${SOURCE_ROOT}/Content/engine/shaders"
 		--include "${SOURCE_ROOT}/Source"
+		${listTargetArg}
 	WORKING_DIRECTORY "${WORK_DIR}"
 	RESULT_VARIABLE exitCode
 	OUTPUT_VARIABLE outputText
