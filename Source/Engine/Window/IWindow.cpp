@@ -3,6 +3,7 @@
 #include "Engine/Window/IWindow.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Window/NativeWindowEvent.h"
 #include "Engine/Window/WindowMonitor.h"
@@ -138,13 +139,22 @@ namespace sw
             (void)setDisplayMode( WindowDisplayMode::Windowed, _width < width ? width : _width, _height < height ? height : _height );
     }
 
-    void IWindow::computeTilePosition( const WindowTileSlot& slot, uint32 clientWidth, uint32 clientHeight, const WindowFrameExtents& extents, int32& outX, int32& outY )
+    void IWindow::computeTilePosition( const WindowTileSlot& slot, uint32 clientWidth, uint32 clientHeight, const WindowFrameExtents& extents, const WindowMonitorRect& workArea, int32& outX,
+                                       int32& outY )
     {
         SW_ASSERT( slot._columnCount > 0 && slot._index >= 0 ); // `createMainWindow` 가 막는다
-        const int32 column = slot._index % slot._columnCount;
-        const int32 row    = slot._index / slot._columnCount;
-        outX               = column * ( static_cast<int32>( clientWidth ) + extents._left + extents._right );
-        outY               = row * ( static_cast<int32>( clientHeight ) + extents._top + extents._bottom );
+        const int32 column      = slot._index % slot._columnCount;
+        const int32 row         = slot._index / slot._columnCount;
+        const int32 frameWidth  = static_cast<int32>( clientWidth ) + extents._left + extents._right;
+        const int32 frameHeight = static_cast<int32>( clientHeight ) + extents._top + extents._bottom;
+        // 가로: 열이 작업 영역 너비에 다 들어가게 간격을 좁힌다(겹침을 고르게 나눈다). 한 열이거나 넉넉하면 틀 간격 그대로다.
+        int32 strideX = frameWidth;
+        if ( slot._columnCount > 1 && slot._columnCount * frameWidth > workArea._size._x )
+            strideX = MathUtil::max( 0, ( workArea._size._x - frameWidth ) / ( slot._columnCount - 1 ) );
+        outX = workArea._position._x + column * strideX;
+        // 세로: 행 수는 이 창이 모른다 — 틀 간격으로 쌓고 아래로 넘치면 작업 영역 아래끝에 붙인다(작업 표시줄에 가리지 않는다).
+        const int32 bottomY = workArea._position._y + MathUtil::max( 0, workArea._size._y - frameHeight );
+        outY                = MathUtil::min( workArea._position._y + row * frameHeight, bottomY );
     }
 
     unique_ptr<IWindow> IWindow::createMainWindow( const utf8* pTitle, uint32 width, uint32 height, const CommandLineManager& commandLine )
@@ -193,7 +203,15 @@ namespace sw
         WindowFrameExtents extents;
         if ( pWindow->tryGetFrameExtents( extents ) == false )
             return nullptr; // 오류는 플랫폼이 남겼다
-        computeTilePosition( slot, pWindow->getWidth(), pWindow->getHeight(), extents, x, y );
+        // 원점은 주 모니터의 작업 영역이다 — 화면 (0, 0) 에서 쌓으면 작은 모니터에서 작업 표시줄 아래 · 화면 밖으로 나갔다.
+        vector<WindowMonitor> listMonitor;
+        if ( pWindow->tryGetMonitors( listMonitor ) == false || listMonitor.empty() )
+        {
+            SW_LOG_ERROR_ID( "Window.WindowTileNoMonitor", "Window tile %# needs the primary monitor's work area but the window system reported no monitor - the window is not created", slot._index );
+            return nullptr;
+        }
+        const WindowMonitor* pPrimary = &listMonitor[0]; // 주 모니터가 0 번(`tryGetMonitors` 약속)
+        computeTilePosition( slot, pWindow->getWidth(), pWindow->getHeight(), extents, pPrimary->_workArea, x, y );
         if ( pWindow->setFramePosition( x, y ) == false )
         {
             SW_LOG_ERROR_ID( "Window.WindowTileMoveFailed", "Window tile %# could not move the window to (%#, %#)", slot._index, x, y );

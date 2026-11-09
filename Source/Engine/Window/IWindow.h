@@ -16,6 +16,7 @@ namespace sw
 {
     struct NativeWindowEvent;
     struct WindowMonitor;
+    struct WindowMonitorRect;
 
     class CommandLineManager;
 
@@ -208,9 +209,12 @@ namespace sw
          */
         [[nodiscard]] virtual bool setFramePosition( int32 x, int32 y ) = 0;
         /**
-         * @brief 바둑판 칸 @p slot 에 놓을 틀 왼쪽 위 좌표입니다. 칸 간격은 클라이언트 크기 + 틀 양쪽 두께라 이웃 창의 틀이 겹치지 않는다. 원점은 화면 (0, 0) 이다.
+         * @brief 바둑판 칸 @p slot 에 놓을 틀 왼쪽 위 좌표입니다. 원점은 주 모니터의 작업 영역 @p workArea 왼쪽 위다(작업 표시줄 · 패널 밖).
+         * @details 칸 간격은 클라이언트 크기 + 틀 양쪽 두께라 이웃 창의 틀이 겹치지 않는다. 작업 영역이 모자라면 창 크기를 줄이지 않고(시나리오 그림 해상도다)
+         *          가로 간격을 열 수에 맞게 좁혀 겹침을 고르게 나누고, 아래로 넘치는 행은 작업 영역 아래끝에 붙인다 — 모든 창이 작업 영역 안에 보인다.
          */
-        static void computeTilePosition( const WindowTileSlot& slot, uint32 clientWidth, uint32 clientHeight, const WindowFrameExtents& extents, int32& outX, int32& outY );
+        static void computeTilePosition( const WindowTileSlot& slot, uint32 clientWidth, uint32 clientHeight, const WindowFrameExtents& extents, const WindowMonitorRect& workArea, int32& outX,
+                                         int32& outY );
         /**
          * @brief 명령줄로 주 창을 만듭니다 — 플랫폼 창을 고르고(`createPlatformWindow`), 위치(`-WinX` · `-WinY`)를 건 뒤 만들고(`initializeWindow`), 바둑판 칸(`-WinTile`)이면
          *        자기 틀 두께(`tryGetFrameExtents`)로 자리를 정해 옮깁니다. 띄우지는 않는다(`showWindow`).
