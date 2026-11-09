@@ -3,6 +3,8 @@
 #include "Editor/Panels/Inspector/Model/InspectorComponentPicker.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
+#include "Core/String/fixed_string.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/ComponentStableKey.h"
@@ -58,5 +60,31 @@ namespace sw::editor
         if ( pType == nullptr || pType->isDerivedFrom( &targetType ) == false )
             return InspectorHandleState::WrongType;
         return InspectorHandleState::Valid;
+    }
+
+    string InspectorComponentChoice::makePreview( const GameObjectManager& manager, ComponentHandle value, InspectorHandleState state )
+    {
+        fixed_string<constant::buffer::kMax512> preview;
+        switch ( state )
+        {
+            case InspectorHandleState::Empty:
+            {
+                return string( "(none)" );
+            }
+            case InspectorHandleState::Missing:
+            {
+                formatstring( preview.data(), preview.capacity(), "(missing) object %# / component %#", value.objectID(), value.componentID() );
+                return string( preview.c_str() );
+            }
+            case InspectorHandleState::Valid:
+            case InspectorHandleState::WrongType:
+            {
+                break;
+            }
+        }
+        const Component* pComp = manager.resolveComponent( value );
+        const string     label = pComp != nullptr ? makeLabel( *pComp ) : string();
+        formatstring( preview.data(), preview.capacity(), "%#%#", state == InspectorHandleState::WrongType ? "(wrong type) " : "", label );
+        return string( preview.c_str() );
     }
 } // namespace sw::editor

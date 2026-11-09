@@ -9,8 +9,8 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Panels/Inspector/EditorPropertyGrid.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
+#include "Editor/Panels/Inspector/Model/PropertyGridModel.h"
 
 #include "Engine/Localization/LocText.h"
 #include "Engine/Reflection/ReflectionTypes.h"
@@ -31,7 +31,7 @@ namespace sw::editor
         class DataPathPropertyDrawer final : public IInspectorProperty
         {
         public:
-            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, EditorPropertyGrid& grid ) override
+            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, PropertyGridModel& model ) override
             {
                 const DataPath* pPath = prop.getValuePtr<DataPath>( instance.get() );
                 if ( pPath == nullptr )
@@ -44,7 +44,7 @@ namespace sw::editor
                     EditorWidgets::drawAssetPathField( "##path", _buffer, SW_LOCKEY( "EdCommon", "DataPathHint" ), nullptr, nullptr );
                 ImGui::PopID();
                 if ( result._bDeactivatedAfterEdit && ( *pPath != string_view( _buffer.c_str() ) ) )
-                    grid.applyPropertyTextAsEdit( instance, prop, _buffer.c_str(), "Edit Path" );
+                    model.setPropertyText( instance, prop, _buffer.c_str(), "Edit Path" );
                 return true;
             }
 

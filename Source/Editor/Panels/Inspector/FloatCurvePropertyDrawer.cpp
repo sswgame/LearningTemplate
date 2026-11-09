@@ -10,8 +10,8 @@
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorCurveEditorState.h"
-#include "Editor/Panels/Inspector/EditorPropertyGrid.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
+#include "Editor/Panels/Inspector/Model/PropertyGridModel.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Curve/FloatCurve.h"
@@ -33,7 +33,7 @@ namespace sw::editor
         class FloatCurvePropertyDrawer final : public IInspectorProperty
         {
         public:
-            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, EditorPropertyGrid& grid ) override
+            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, PropertyGridModel& model ) override
             {
                 FloatCurve* pCurve = prop.getValuePtr<FloatCurve>( instance.get() );
                 if ( pCurve == nullptr )
@@ -69,7 +69,7 @@ namespace sw::editor
                 if ( EditorCurveEditorState::drawEditor( _state, "inspector.curveEditor" ) )
                 {
                     const string text = SerializerUtil::formatValueText( ValueAddress{ &_state._working }, prop._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
-                    grid.applyPropertyTextAsEdit( instance, prop, text, "Edit Curve" );
+                    model.setPropertyText( instance, prop, text, "Edit Curve" );
                 }
                 ImGui::EndPopup();
                 return true;

@@ -36,6 +36,8 @@ namespace sw
 
 namespace sw::editor
 {
+    struct EditorAssetIndexEntry;
+
     class EditorListFilter;
     class InspectorFavorites;
     class InspectorPropertyManager;
@@ -199,6 +201,8 @@ namespace sw::editor
         static InspectorPropertyManager& getPropertyManager();
         /** @brief 리플렉션 타입 레지스트리입니다. */
         static const TypeRegistry& getTypeRegistry();
+        /** @brief 에셋 선택 팝업이 고를 수 있는 리소스를 모아 @p outListEntry 를 채웁니다(팝업을 열 때 한 번 — 파일 목록을 프레임마다 훑지 않는다). */
+        static void collectAssetEntries( vector<EditorAssetIndexEntry>& outListEntry );
 
     private:
         Component*                              _pComponent;       ///< 묶은 컴포넌트 대상. `onPropertyChanged` 를 받는다

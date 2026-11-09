@@ -18,7 +18,7 @@ namespace sw
 
 namespace sw::editor
 {
-    class EditorPropertyGrid;
+    class PropertyGridModel;
 } // namespace sw::editor
 
 namespace sw::editor
@@ -37,12 +37,13 @@ namespace sw::editor
          * @return 이 구현이 프로퍼티를 **처리했으면** true (값이 바뀌었는지가 아닙니다). false 면 부르는 쪽이
          *         enum · 컨테이너 · 중첩 구조체 같은 일반 경로로 넘어갑니다.
          * @param instance @p prop 을 가진 객체입니다. 값 주소가 아니다 — 값은 `prop.getValuePtr<T>( instance.get() )` 로 찾는다.
-         * @param grid 그리는 그리드입니다. ImGui 위젯 하나로 끝나지 않는 편집(팝업 편집기 · 끌기를 놓을 때 한 번)은
-         *             `grid.applyPropertyTextAsEdit` 로 값을 입혀 통지 · 되돌리기를 그리드에 맡깁니다(언리얼 IPropertyHandle 에 해당).
+         * @param model 그리는 그리드의 편집 모델입니다(명령 한 길). ImGui 위젯 하나로 끝나지 않는 편집(팝업 편집기 · 선택기 · 끌기를 놓을 때 한 번)은
+         *              `model.setPropertyText` 로 값을 입혀 통지 · 되돌리기를 모델에 맡기고, 표시 단위 · 편집 대상의 씬도 모델에서 읽습니다(언리얼 IPropertyHandle 에 해당).
+         *              씬 · 모델 헤더는 보지 않습니다 — 씬을 읽어야 하는 값은 Model 폴더의 값 모음(`SceneObjectReferencePickerState` · `InspectorComponentChoice`)이 만든다.
          * @note ImGui 위젯으로 고친 값의 변경 통지는 구현이 하지 않습니다. `EditorPropertyGrid::drawPropertyWidget` 이
          *       ImGui 편집 플래그로 한곳에서 판정합니다.
          */
-        virtual bool draw( MutableObjectAddress instance, const PropertyInfo& prop, EditorPropertyGrid& grid ) = 0;
+        virtual bool draw( MutableObjectAddress instance, const PropertyInfo& prop, PropertyGridModel& model ) = 0;
     };
 } // namespace sw::editor
 

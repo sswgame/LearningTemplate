@@ -141,6 +141,7 @@ namespace sw::editor
         : _propertyFilter{}
         , _mapMethodArgSlot{}
         , _mapContainerAddText{}
+        , _listMethodArgChoice{}
         , _model{}
         , _propertyDrawDepth{ 0 }
         , _openAllRequest{ 0 }
@@ -428,7 +429,7 @@ namespace sw::editor
         IInspectorProperty* pProperty = PropertyGridModel::getPropertyManager().find( prop._typeName.c_str() );
         if ( pProperty != nullptr )
         {
-            if ( pProperty->draw( instance, prop, *this ) )
+            if ( pProperty->draw( instance, prop, _model ) )
                 return;
         }
 
@@ -843,7 +844,7 @@ namespace sw::editor
                 formatstring( label.data(), label.capacity(), "arg%# (%#)", paramIndex, parameter._typeName.c_str() );
             else
                 formatstring( label.data(), label.capacity(), "%# (%#)", parameter._name.c_str(), parameter._typeName.c_str() );
-            InspectorPropertyManager::drawMethodArg( label.c_str(), inoutListSlot[paramIndex], parameter, _model.findEditOwnerManager() );
+            InspectorPropertyManager::drawMethodArg( label.c_str(), inoutListSlot[paramIndex], parameter, _model.findEditOwnerManager(), _listMethodArgChoice );
             if ( EditorSelfTestMarks::isEnabled() )
             {
                 // 시나리오가 인자 입력란을 누른다(핸들 선택기의 콤보가 마지막 항목이다). 인자 레이블 글("mesh (ComponentHandle)")이 오른쪽에 붙어

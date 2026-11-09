@@ -7,6 +7,8 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/Task/TaskTypes.h"
 
+#include "Editor/Common/Commands/Asset/EditorAssetIndex.h"
+#include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorDefaultObjects.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
@@ -400,5 +402,11 @@ namespace sw::editor
     const TypeRegistry& PropertyGridModel::getTypeRegistry()
     {
         return editor::getSubsystem<TypeRegistry>();
+    }
+
+    void PropertyGridModel::collectAssetEntries( vector<EditorAssetIndexEntry>& outListEntry )
+    {
+        outListEntry.clear();
+        EditorAssetIndex::collectEntries( EditorPaths::getAssetPaths(), outListEntry );
     }
 } // namespace sw::editor

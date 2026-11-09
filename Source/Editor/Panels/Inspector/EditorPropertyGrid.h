@@ -14,6 +14,7 @@
 
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Panels/Inspector/Model/InspectorBuiltinValue.h"
+#include "Editor/Panels/Inspector/Model/InspectorComponentPicker.h"
 #include "Editor/Panels/Inspector/Model/PropertyGridModel.h"
 
 #include "Engine/Reflection/TextAddress.h"
@@ -68,11 +69,6 @@ namespace sw::editor
         /** @brief 대상 타입의 메서드(FUNCTION)를 그립니다. @p bEvents 가 true 이면 이벤트도 그립니다. 인스펙터의 Methods 영역입니다. */
         void drawMethodsAndEvents( const EditorPropertyGridTarget& target, bool bEvents );
         /**
-         * @brief 프로퍼티 하나에 텍스트 값(`SerializerUtil::formatPropertyText` 형식)을 적용하고 편집으로 기록합니다. 변경을 알리고, 주인 오브젝트에 되돌리기 항목을 하나 남깁니다.
-         * @details 편집 모델의 한 길(`PropertyGridModel::setPropertyText`)로 간다. 대상이 묶인 그리는 동안에만 호출한다.
-         */
-        void applyPropertyTextAsEdit( MutableObjectAddress instance, const PropertyInfo& prop, string_view text, const utf8* pUndoLabel ) { _model.setPropertyText( instance, prop, text, pUndoLabel ); }
-        /**
          * @brief 즐겨찾기 집합을 연결합니다. 연결하면 프로퍼티 행의 우클릭 메뉴에 즐겨찾기 토글이 생기고 즐겨찾기 행 이름 앞에 별을 그립니다. nullptr 이면 끕니다.
          * @details 집합의 주인은 인스펙터 패널이다. 환경설정 창처럼 즐겨찾기가 없는 그리드는 연결하지 않는다. 토글하면 저장 파일에 바로 쓴다.
          */
@@ -83,14 +79,6 @@ namespace sw::editor
          */
         void drawFavoriteProperties( const EditorPropertyGridTarget& target );
 
-        /** @brief 이 그리드의 편집 모델입니다(대상 · 배치 캐시 · 명령). 그리기 확장이 값을 바꾸거나 표시 단위를 읽는 길입니다. */
-        PropertyGridModel& getModel() { return _model; }
-        /** @brief 묶은 대상의 주인 오브젝트가 사는 씬의 오브젝트 관리자입니다(`PropertyGridModel::findEditOwnerManager`). */
-        const GameObjectManager* findEditOwnerManager() const { return _model.findEditOwnerManager(); }
-        /** @brief @p prop 의 표시 단위입니다(`PropertyGridModel::getDisplayUnit`). */
-        const InspectorDisplayUnit& getDisplayUnit( const PropertyInfo& prop ) { return _model.getDisplayUnit( prop ); }
-        /** @brief @p pNumberFormat 에 @p prop 의 단위를 붙인 printf 서식입니다(`PropertyGridModel::getUnitNumberFormat`). */
-        const utf8* getUnitNumberFormat( const PropertyInfo& prop, const utf8* pNumberFormat ) { return _model.getUnitNumberFormat( prop, pNumberFormat ); }
         /** @brief 배치 묶음을 새로 지은 횟수입니다(프로브 `Editor.InspectorLayoutRebuildCount` — 선택 · 검색 글이 그대로면 늘지 않는다). */
         uint32 getLayoutRebuildCount() const { return _model.getLayoutRebuildCount(); }
         /** @brief 마지막으로 그린 프레임의 메서드 행 수입니다(프로브 `Editor.InspectorMethodRows`). */
@@ -147,6 +135,7 @@ namespace sw::editor
         fixed_string<constant::buffer::kMax64>                         _propertyFilter;      ///< 프로퍼티 검색 필터
         unordered_map<string, vector<InspectorMethodArgSlot>>          _mapMethodArgSlot;    ///< FUNCTION() 인자 슬롯. 키는 타입과 메서드 이름 원문
         unordered_map<uint32, fixed_string<constant::buffer::kMax256>> _mapContainerAddText; ///< 컨테이너 "추가" 입력란의 텍스트. 키는 그 입력란의 ImGui id
+        vector<InspectorComponentChoice>                               _listMethodArgChoice; ///< 메서드 인자 핸들 선택기의 선택지 — 콤보가 열린 프레임에만 채운다
         PropertyGridModel                                              _model;               ///< 편집 모델 — 대상 · 배치 캐시 · 즐겨찾기 · 명령
         uint32                                                         _propertyDrawDepth;   ///< 중첩과 컨테이너의 재귀 깊이. 알림은 가장 바깥에서 한 번만 보낸다
         int32                                                          _openAllRequest;      ///< 이번 프레임의 모두 펼치기(1) · 접기(-1) 요청. 0 이면 없다
