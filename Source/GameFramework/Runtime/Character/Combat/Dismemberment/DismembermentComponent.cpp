@@ -485,7 +485,7 @@ namespace sw
             pBody->addImpulse( impulse );
             pDraw->setMesh( std::move( pieceMesh ) );
             if ( pUnit->getMaterialPath().empty() == false )
-                pDraw->setMaterialPath( pUnit->getMaterialPath().c_str() );
+                pDraw->setMaterialPath( pUnit->getMaterialPath().viewOrEmpty() );
             else
                 pDraw->setMaterial( pUnit->getMaterial() );
             _listPiece.push_back( pPiece->getHandle() );

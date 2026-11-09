@@ -1142,7 +1142,7 @@ namespace sw
         if ( pPartMesh == nullptr || pView == nullptr || pPartMesh->getMeshID().empty() )
             return; // 아직 조립 전이다 — 다음 틱에 다시 본다
         pView->setMeshID( pPartMesh->getMeshID() );
-        pView->setMaterialPath( pPartMesh->getMaterialPath().c_str() );
+        pView->setMaterialPath( pPartMesh->getMaterialPath().viewOrEmpty() );
         // 시점 총은 카메라를 따라 피치로 움직이고 몸은 요만 돈다 — 손을 몸의 숨은 무기에 두면 아래를 볼 때 보이는 총과 떨어진다. 몸의 리그가 보이는 총의 소켓을 잡게 한다(언리얼 True First Person 의 손 IK).
         const AppearanceDatabase* pDatabase = game::findSubsystem<AppearanceDatabase>();
         const hashed_string       socketSet = pDatabase != nullptr ? Internal::findItemSocketSet( *pDatabase, getWeaponItem( _weaponIndex ) ) : hashed_string{};

@@ -68,6 +68,7 @@ kRules: tuple[Rule, ...] = (
     Rule("mutable-statics", "모양", "주인 객체 밖의 가변 정적 저장소(감춘 싱글턴)", "함수 정적 · 이름공간 범위 변수는 합법 C++ 이다", kCpp, "lint.MutableStatics:checkMutableStatics", exceptions="Config/Rules/Lint/MutableStaticExceptions.json"),
     Rule("frame-intern", "모양", "틱 · 갱신 · 칠하기 함수 안의 리터럴 hashed_string", "프레임 밖에서는 정상 코드다", kCpp, "lint.FrameIntern:checkFrameIntern", exceptions="Config/Rules/Lint/FrameInternExceptions.json"),
     Rule("tick-scene-walk", "모양", "컴포넌트 틱에서 닿는 씬 전체 순회", "순회는 틱 밖에서는 정상 코드다", kCpp, "lint.TickSceneWalk:checkTickSceneWalk", exceptions="Config/Rules/Lint/TickSceneWalkExceptions.json"),
+    Rule("name-path-arguments", "모양", "경로 · 리소스 id 를 받는 함수에 hashed_string 의 c_str() · view() 를 그대로 넘김(빈 이름은 \"None\" 이다 — viewOrEmpty)", "받는 쪽이 string_view 라 어떤 글이든 들어간다", kCpp, "lint.NamePathArguments:checkNamePathArguments", exceptions="Config/Rules/Lint/NamePathArguments.json"),
     Rule("editor-widget-labels", "모양", "칸 오른쪽에 붙는 ImGui 입력 위젯 이름표", "이름표는 문자열 내용이다", kCpp, "lint.EditorWidgetLabels:checkEditorWidgetLabels", perFile=True),
     # --- 이름 -------------------------------------------------------------------------------------------------------------
     Rule("naming-words", "이름", "표에 없는 함수 앞 단어 · 형식 끝 단어 · 금지 이름", "업계 용어인지는 형식이 말하지 못한다", kCpp, "lint.NamingWords:checkNamingWords", exceptions="Config/Rules/Lint/NamingWords.json"),

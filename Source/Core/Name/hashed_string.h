@@ -169,6 +169,20 @@ namespace sw
         std::basic_string_view<value_type> view() const noexcept { return { c_str(), size() }; }
 
         /**
+         * @brief 이름의 글이되, 빈 이름이면 빈 글입니다. 경로 · 리소스 id · 키처럼 **값으로 쓰는 글**은 이것으로 꺼냅니다.
+         * @details `c_str()` · `view()` 는 FName 의 `ToString()` 처럼 빈 이름을 "None" 으로 보인다(로그 · 직렬화가 그 글을 쓰고, 읽기는 "None" 을 빈 이름으로 되돌린다).
+         *          그 글이 경로 자리로 가면 'None' 파일을 찾는다. 빈 이름 → 빈 글은 Godot `StringName` → `String` 과 같다.
+         *          경로를 받는 함수에 `c_str()` · `view()` 를 넘기는 곳은 린트(`Scripts/lint/NamePathArguments.py`)가 막는다.
+         */
+        std::basic_string_view<value_type> viewOrEmpty() const noexcept
+        {
+            static constexpr value_type kEmptyText[1] = {}; // data() 를 C 글로 읽는 쪽도 빈 글을 보게(널 · "None" 포인터가 아니게)
+            if ( empty() )
+                return { kEmptyText, 0 };
+            return view();
+        }
+
+        /**
          * @brief intern 키의 FNV 해시입니다. 락 없이 O(1) 로 조회합니다.
          */
         hash_type getHash() const noexcept;

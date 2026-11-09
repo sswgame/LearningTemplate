@@ -83,7 +83,7 @@ namespace sw
             // 렌더 스레드가 디스크를 기다리지 않게 워커가 읽는다 — 다 읽기 전 프레임은 그 방출기를 그리지 않는다(`drawBatches` 는 텍스처 없는 방출기를 건너뛴다).
             PathTexture& added = _listTexture.emplace_back();
             added._path        = batch._texturePath;
-            added._load        = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().request( batch._texturePath.view(), AssetLoadStart::Async );
+            added._load        = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().request( batch._texturePath.viewOrEmpty(), AssetLoadStart::Async );
         }
 
         // 2) 입자 — CPU 방출기들을 이어 한 버퍼에 담는다(같은 프레임에 버퍼를 두 번 갱신하지 않는다). GPU 방출기는 자기 렌더 입력 버퍼를 읽는다.

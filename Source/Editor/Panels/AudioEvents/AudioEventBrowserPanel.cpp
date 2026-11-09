@@ -273,7 +273,7 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioEvents", "OpenDataFile" ) ) )
         {
             // 데이터 파일을 직접 연다(고치기 창 밖의 편집 — 예: 새 클립 경로를 여러 개 붙여 넣기). 여는 도구가 없으면 경로를 클립보드에 둔다.
-            if ( AudioEventBrowserUtil::openDataFile( _selectedLibrary.view() ) == false )
+            if ( AudioEventBrowserUtil::openDataFile( _selectedLibrary.viewOrEmpty() ) == false )
                 ImGui::SetClipboardText( _selectedLibrary.c_str() );
         }
         EditorSelfTestMarks::record( "audioevents.openDataFile" );

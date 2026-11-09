@@ -37,7 +37,7 @@ namespace sw::editor
                     if ( part._owner.empty() && part._bodyShapes.empty() == false )
                         pBody = &part;
                 }
-                const shared_ptr<const BodyShapeSet> shapes = pBody != nullptr ? SharedAssetCache<BodyShapeSet>::acquire( pBody->_bodyShapes.c_str() ) : nullptr;
+                const shared_ptr<const BodyShapeSet> shapes = pBody != nullptr ? SharedAssetCache<BodyShapeSet>::acquire( pBody->_bodyShapes.viewOrEmpty() ) : nullptr;
                 for ( const ResolvedBoneProportion& proportion : resolved._listBoneProportion )
                 {
                     if ( proportion._owner.empty() == false )
