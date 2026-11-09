@@ -39,8 +39,8 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBus.h"
-#include "GameFramework/Runtime/Online/Cache/EphemeralStoreRouter.h"
-#include "GameFramework/Runtime/Online/Guard/TokenBucketMap.h"
+#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
+#include "GameFramework/Runtime/Online/Guard/Server/TokenBucketMap.h"
 #include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocolRegistry.h"
 

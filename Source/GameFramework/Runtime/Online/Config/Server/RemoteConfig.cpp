@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Online/Config/RemoteConfig.h"
+#include "GameFramework/Runtime/Online/Config/Server/RemoteConfig.h"
 
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/BitUtil.h"

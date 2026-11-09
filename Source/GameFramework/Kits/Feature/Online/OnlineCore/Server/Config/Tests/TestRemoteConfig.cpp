@@ -6,7 +6,7 @@
 #include "Engine/Observability/MetricRegistry.h"
 
 #include "GameFramework/Runtime/Online/Audit/ServiceAuditLog.h"
-#include "GameFramework/Runtime/Online/Config/RemoteConfig.h"
+#include "GameFramework/Runtime/Online/Config/Server/RemoteConfig.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 
 // RemoteConfigTest — 원격 설정: 다시 읽기 뒤 값 · 해시, 출시 비율(0 · 10000 · 5000)과 계정마다 늘 같은 쪽, 클라이언트 묶음에 숨은 키 없음 · 잘린 묶음은 바꾸지 않음,

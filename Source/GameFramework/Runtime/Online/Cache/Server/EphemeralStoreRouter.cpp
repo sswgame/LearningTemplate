@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Online/Cache/EphemeralStoreRouter.h"
+#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
 
 #include "Core/Algorithm/VectorUtil.h"
 

@@ -1,9 +1,9 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Online/Directory/ServerRegistration.h"
+#include "GameFramework/Runtime/Online/Directory/Server/ServerRegistration.h"
 
 #include "GameFramework/Runtime/Online/Cache/EphemeralStore.h"
-#include "GameFramework/Runtime/Online/Cache/EphemeralStoreRouter.h"
+#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
 
 namespace sw
 {

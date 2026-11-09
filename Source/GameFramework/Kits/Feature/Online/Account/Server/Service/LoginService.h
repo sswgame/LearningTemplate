@@ -30,9 +30,9 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/LoginTypes.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProvider.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginTicketAuthority.h"
-#include "GameFramework/Runtime/Online/Guard/TokenBucketMap.h"
+#include "GameFramework/Runtime/Online/Guard/Server/TokenBucketMap.h"
 #include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
-#include "GameFramework/Runtime/Online/Schedule/ServicePeriodicJob.h"
+#include "GameFramework/Runtime/Online/Schedule/Server/Server/ServicePeriodicJob.h"
 #include "GameFramework/Runtime/Online/Service/PendingRequestTable.h"
 #include "GameFramework/Runtime/Online/Store/ServiceStoreTracker.h"
 

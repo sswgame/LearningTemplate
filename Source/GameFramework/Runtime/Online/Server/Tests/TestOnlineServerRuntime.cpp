@@ -7,7 +7,7 @@
 #include "Engine/Config/ServerConfig.h"
 #include "Engine/Server/ServiceHealthRegistry.h"
 
-#include "GameFramework/Runtime/Online/Cache/EphemeralStoreRouter.h"
+#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
 #include "GameFramework/Runtime/Online/Directory/ServerRecord.h"
 #include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Server/IOnlineStoreDriver.h"

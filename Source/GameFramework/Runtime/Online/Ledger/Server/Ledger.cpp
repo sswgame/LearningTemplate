@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Online/Ledger/Ledger.h"
+#include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 
 #include "Core/Algorithm/CompareUtil.h"
 #include "Core/Algorithm/VectorUtil.h"
@@ -9,7 +9,7 @@
 #include "Core/Serialization/BitStream.h"
 #include "Core/String/StringUtil.h"
 
-#include "GameFramework/Runtime/Online/Ledger/LedgerItemInstance.h"
+#include "GameFramework/Runtime/Online/Ledger/Server/LedgerItemInstance.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 #include <algorithm>

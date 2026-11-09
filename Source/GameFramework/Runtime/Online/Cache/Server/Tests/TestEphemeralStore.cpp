@@ -4,7 +4,7 @@
 #include "Core/Time/Clock.h"
 
 #include "GameFramework/Runtime/Online/Cache/EphemeralStore.h"
-#include "GameFramework/Runtime/Online/Cache/EphemeralStoreRouter.h"
+#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
 #include "GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.h"
 
 // EphemeralStoreTest — 휘발성 저장의 메모리 구현과 라우터: 키 · 크기 · 점수 형식 검사, 조건 쓰기 · 비교 후 쓰기(임대), 게으른 만료, 정수 증감,

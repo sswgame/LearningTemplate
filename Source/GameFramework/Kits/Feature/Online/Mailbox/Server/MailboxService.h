@@ -21,8 +21,8 @@
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresenceTracker.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Mail/ServiceMailCampaign.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Service/OnlineProtocolService.h"
-#include "GameFramework/Runtime/Online/Schedule/ServicePeriodicJob.h"
-#include "GameFramework/Runtime/Online/Schedule/ServiceScheduler.h"
+#include "GameFramework/Runtime/Online/Schedule/Server/Server/ServicePeriodicJob.h"
+#include "GameFramework/Runtime/Online/Schedule/Server/Server/ServiceScheduler.h"
 #include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
 #include "GameFramework/Runtime/Online/Store/ServiceStore.h"
 

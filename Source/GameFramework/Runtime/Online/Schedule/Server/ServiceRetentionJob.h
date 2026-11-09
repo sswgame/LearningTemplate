@@ -12,8 +12,8 @@
 #include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Online/Schedule/ServicePeriodicJob.h"
-#include "GameFramework/Runtime/Online/Schedule/ServiceScheduler.h"
+#include "GameFramework/Runtime/Online/Schedule/Server/Server/ServicePeriodicJob.h"
+#include "GameFramework/Runtime/Online/Schedule/Server/Server/ServiceScheduler.h"
 #include "GameFramework/Runtime/Online/Store/ServiceRetentionRule.h"
 #include "GameFramework/Runtime/Online/Store/ServiceStoreTracker.h"
 

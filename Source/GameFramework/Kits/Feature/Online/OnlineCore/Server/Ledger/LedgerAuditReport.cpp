@@ -6,8 +6,8 @@
 #include "Core/Container/map.h"
 #include "Core/String/StringUtil.h"
 
-#include "GameFramework/Runtime/Online/Ledger/Ledger.h"
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
+#include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 
 namespace sw
 {

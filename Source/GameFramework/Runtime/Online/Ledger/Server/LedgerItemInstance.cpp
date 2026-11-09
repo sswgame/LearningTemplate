@@ -1,10 +1,10 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Online/Ledger/LedgerItemInstance.h"
+#include "GameFramework/Runtime/Online/Ledger/Server/LedgerItemInstance.h"
 
 #include "Core/String/StringUtil.h"
 
-#include "GameFramework/Runtime/Online/Ledger/Ledger.h"
+#include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Runtime/Online/Store/ServiceRecordUtil.h"
 

@@ -8,7 +8,7 @@
 #include "Core/Serialization/LittleEndianUtil.h"
 #include "Core/String/StringUtil.h"
 
-#include "GameFramework/Runtime/Online/Config/RemoteConfig.h"
+#include "GameFramework/Runtime/Online/Config/Server/RemoteConfig.h"
 #include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Runtime/Online/Store/ServiceStore.h"

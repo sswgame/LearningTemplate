@@ -7,10 +7,10 @@
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Directory/ServerRegistryReader.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Directory/ServerSelectionQuery.h"
 #include "GameFramework/Runtime/Online/Cache/EphemeralStore.h"
-#include "GameFramework/Runtime/Online/Cache/EphemeralStoreRouter.h"
+#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
 #include "GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.h"
+#include "GameFramework/Runtime/Online/Directory/Server/ServerRegistration.h"
 #include "GameFramework/Runtime/Online/Directory/ServerRecord.h"
-#include "GameFramework/Runtime/Online/Directory/ServerRegistration.h"
 
 // ServerDirectoryTest — 서버 디렉터리의 기반: 기록의 키 · 이름 규칙 · 와이어 형식(판 · 포트 수 · 상태 거절), 포트 샤딩, 접속 분배(후보 조건 · 지역 우선 ·
 // 찬 비율 · 서버 id 동률), 등록의 하트비트 · 즉시 쓰기, 읽는 쪽의 스냅숏 · 고른 인원 더하기 · 죽은 멤버 정리. 캐시는 메모리 구현이다(nogpu).

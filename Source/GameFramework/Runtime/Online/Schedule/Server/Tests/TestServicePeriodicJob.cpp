@@ -2,7 +2,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "GameFramework/Runtime/Online/Schedule/ServicePeriodicJob.h"
+#include "GameFramework/Runtime/Online/Schedule/Server/Server/ServicePeriodicJob.h"
 
 /**
  * @brief [ServicePeriodicJobTest] 주기가 있으면 첫 틱에 한 번, 도는 중에는 다시 시작하지 않고, 주기가 지나거나 요청되면 다시 돈다
