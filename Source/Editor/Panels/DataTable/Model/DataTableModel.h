@@ -31,7 +31,8 @@ namespace sw::editor
     /**
      * @class DataTableModel
      * @brief 데이터 테이블 창의 상태와 명령입니다. 파일 머리말 참고.
-     * @details 두 문서(로컬라이즈 · 게임 데이터)를 한 창이 들기 때문에 dirty 비트가 둘이다 — 저장 · 되돌리기는 dirty 한 쪽만 한다.
+     * @details 두 문서(로컬라이즈 · 게임 데이터)를 한 창이 들기 때문에 dirty 비트가 둘이다. 어느 게임 데이터 파일을 여는지는 패널의 문서 기반(`EditorDocumentPanel`)이 정하고,
+     *          모델은 받은 디스크 경로의 글만 든다(`openGameDataFile`) — 예전에는 목록 번호로 고른 파일을 모델이 따로 들어 콘텐츠 브라우저 · 시나리오가 표를 열 수 없었다.
      */
     class DataTableModel
     {
@@ -41,10 +42,13 @@ namespace sw::editor
         /** @brief 백그라운드 읽기 잡의 결과를 받고, 아직 읽지 않은 문서는 읽기를 겁니다. 패널이 그리기마다 부릅니다. */
         void pollBackgroundJobs();
 
-        /** @brief dirty 한 문서만 저장합니다. 둘 다 깨끗해졌으면 true 입니다. */
+        /**
+         * @brief 고친 현지화 표와 열린 게임 데이터 파일을 저장합니다. 둘 다 깨끗해졌으면 true 입니다.
+         * @details 현지화 표는 고친 것이 있을 때만 쓴다(실행 중인 게임이 다시 읽는다). 열린 게임 데이터 파일은 dirty 와 무관하게 쓴다 — 언제 저장할지는 문서 패널이 정한다(저장 왕복).
+         */
         [[nodiscard]] bool saveDocument();
-        /** @brief dirty 한 문서만 디스크의 내용으로 되돌립니다. */
-        void revert();
+        /** @brief 고친 현지화 표를 디스크의 내용으로 되돌립니다. 게임 데이터 파일은 패널이 다시 엽니다(`openGameDataFile`). */
+        void revertLocalization();
         bool isLocalizationDirty() const { return _bLocalizationDirty; }
         bool isGameDataDirty() const { return _bGameDataDirty; }
         bool isAnyDirty() const { return _bLocalizationDirty || _bGameDataDirty; }
@@ -93,20 +97,24 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         // 게임 데이터 XML
         // ------------------------------------------------------------------------------
+        /** @brief 게임 데이터 폴더의 XML 파일 목록입니다(패널 목록). 열린 파일과 상관없다 — 어느 파일을 여는지는 패널의 문서 기반이 정한다. */
         const vector<GameDataFileEntry>& getGameDataFiles() const { return _listGameDataFile; }
-        int32                            getSelectedGameDataIndex() const { return _selectedGameDataIndex; }
-        /** @brief 고른 파일 항목입니다. 고르지 않았으면 nullptr 입니다. */
-        const GameDataFileEntry* findSelectedGameDataFile() const;
-        /** @brief 파일 @p fileIndex 를 골라 읽습니다. 다른 파일의 고친 것이 남았으면(잃지 않게) 바꾸지 않습니다(같은 파일은 다시 읽는다). */
-        void selectGameDataFile( size_t fileIndex );
-        /** @brief 파일 목록을 바꿉니다. 고른 파일은 경로로 다시 찾고, 목록에서 사라졌으면 고르지 않은 상태가 됩니다(고친 글은 남아 저장 확인이 묻습니다). */
+        /** @brief 파일 목록을 바꿉니다. 열린 파일과 고친 글은 그대로입니다(경로로 연 파일이라 목록 순서와 무관하다). */
         void setGameDataFiles( vector<GameDataFileEntry> listFile );
-        /** @brief 고른 파일을 디스크에서 다시 읽습니다(Revert 단추). 읽지 못하면 고름을 풉니다. */
-        void loadSelectedGameDataFile();
         /**
-         * @brief 고른 파일에 원문을 씁니다(Save File 단추). XML 로 읽히지 않는 원문은 쓰지 않습니다 — 게임이 다음에 읽지 못하는 파일을 만들지 않는다. dirty 가 남아 저장 확인이 다시 묻습니다.
+         * @brief 디스크 파일 @p absolutePath 를 읽어 엽니다(고친 글은 버린다 — 바꾸기 전 확인은 문서 패널이 한다). 다시 읽기도 이 길입니다.
+         * @return 읽었으면 true 입니다. 못 읽으면 아무 파일도 열지 않습니다 — 앞 파일의 글을 든 채 열면 저장이 앞 파일의 내용을 이 파일에 쓴다.
          */
-        void saveSelectedGameDataFile();
+        [[nodiscard]] bool openGameDataFile( string_view absolutePath );
+        /** @brief 목록 항목의 디스크 경로 @p absolutePath 를 문서 열기(워크스페이스 포커스)가 받는 리소스 id 로 바꿉니다. 리소스 트리 밖이면 빈 문자열입니다. */
+        static string makeGameDataAssetID( string_view absolutePath );
+        /** @brief 열린 게임 데이터 파일의 디스크 경로입니다. 비면 열린 파일이 없다. */
+        const string& getGameDataPath() const { return _gameDataPath; }
+        /**
+         * @brief 열린 파일에 원문을 씁니다(Save File 단추 · `saveDocument`). XML 로 읽히지 않는 원문은 쓰지 않습니다 — 게임이 다음에 읽지 못하는 파일을 만들지 않는다. dirty 가 남아 저장 확인이 다시 묻습니다.
+         * @return 썼으면 true 입니다. 열린 파일이 없으면 false 입니다.
+         */
+        [[nodiscard]] bool saveGameDataFile();
         /** @brief 다음 `pollBackgroundJobs` 가 파일 목록을 다시 읽게 합니다(Refresh Files 단추). */
         void          reloadGameDataFiles();
         const string& getGameDataRawText() const { return _selectedGameDataRawText; }
@@ -125,19 +133,19 @@ namespace sw::editor
         uint32 getGameDataLoadCount() const { return _gameDataLoadCount; }
 
     private:
-        /** @brief 원문 @p text 를 고른 파일의 저장된 내용으로 두고 문서를 다시 엽니다(깨진 원문도 글 상자로 고치게 열린다). */
+        /** @brief 원문 @p text 를 열린 파일의 저장된 내용으로 두고 문서를 다시 엽니다(깨진 원문도 글 상자로 고치게 열린다). */
         void openGameDataText( string&& text );
 
     private:
         LocalizationSheet         _localizationSheet;
         vector<string>            _listLocalizationProject;
         vector<GameDataFileEntry> _listGameDataFile;
+        string                    _gameDataPath; ///< 열린 게임 데이터 파일의 디스크 경로(문서 패널이 정한 문서를 푼 자리)
         string                    _selectedGameDataRawText;
         string                    _savedGameDataRawText;
         CatalogDocument           _gameDataDocument;
         EditorLocalizationLoadJob _localizationJob;
         EditorGameDataScanJob     _gameDataJob;
-        int32                     _selectedGameDataIndex;
         int32                     _selectedProjectIndex;
         int32                     _requestedProjectIndex; ///< 돌고 있는 읽기를 건 때의 프로젝트 번호(`acceptLoadedSheet`)
         uint32                    _gameDataLoadCount;

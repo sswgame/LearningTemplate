@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 데이터 테이블 창 저장 왕복: 표면 종류 표(engine/environment/default.surfacekinds.xml)의 실행마다 새 사본(scratch/saveroundtripdatatable — <Scratch>)을 게임 데이터 표로 연다.
+  데이터 테이블 창의 게임 데이터 표는 문서 기반(EditorDocumentPanel, Data 종류 가운데 .xml)이라 asset.openScratch 가 목록 클릭 · 콘텐츠 브라우저와 같은 길(워크스페이스 포커스)로 사본을 연다.
+  고치지 않고 저장(panel.saveDocument — 열린 표는 dirty 와 무관하게 쓴다) → 글 붙잡기(asset.snapshotScratch) → 디스크에서 다시 읽기(panel.reloadDocument — 행 수가 같다)
+  → 다시 저장 → 같은 바이트(asset.expectScratchUnchanged). 현지화 표는 고치지 않아 쓰지 않는다. 원본은 건드리지 않는다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/saveroundtripdatatable.scenario.xml -unattended
+-->
+<Scenario name="editor.saveroundtripdatatable" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+	<Scratch from="engine/environment" as="scratch/saveroundtripdatatable"/>
+	<EditorWaitSettled/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.focus data_table"/>
+	<EditorWaitSettled/>
+	<DevCommand line="asset.openScratch scratch/saveroundtripdatatable/default.surfacekinds.xml"/>
+	<EditorWaitSettled/>
+	<WaitUntil watch="Editor.DataTableGameDataRowCount" atLeast="1" timeoutFrames="120"/>
+	<Remember watch="Editor.DataTableGameDataRowCount" as="rows"/>
+	<DevCommand line="panel.saveDocument data_table"/>
+	<DevCommand line="asset.snapshotScratch scratch/saveroundtripdatatable/default.surfacekinds.xml"/>
+	<DevCommand line="panel.reloadDocument data_table"/>
+	<EditorWaitSettled/>
+	<Expect watch="Editor.DataTableGameDataRowCount" sameAs="rows"/>
+	<DevCommand line="panel.saveDocument data_table"/>
+	<DevCommand line="asset.expectScratchUnchanged scratch/saveroundtripdatatable/default.surfacekinds.xml"/>
+	<Expect watch="Editor.DirtyDocumentCount" equals="0"/>
+	<EditorWaitSettled/>
+	<Pass/>
+</Scenario>

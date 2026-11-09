@@ -94,12 +94,13 @@ namespace sw::editor
         void setTargetReleaseListener( const Delegate<void()>& listener ) { _onTargetReleasing = listener; }
 
         // --- 문서 · 화면 ---------------------------------------------------------------
-        /** @brief 미리보는 문서 경로입니다. 뷰가 경로 칸을 그리고, 확정하면 `onDocumentPathCommitted` 를 부릅니다. */
+        /** @brief 미리보는 문서 경로입니다. 뷰가 경로 칸을 그리고, 확정한 글은 문서 열기(패널의 워크스페이스 포커스)로 넘깁니다 — 미리볼 문서를 바꾸는 곳은 `openDocument` 하나다. */
         EditableAssetPath& getDocumentPath() { return _documentPath; }
-        /** @brief 경로 칸이 새 경로로 확정됐습니다. 고친 값이 있었으면(@p bDirty) 버린다고 알리고 지난 오류를 지웁니다. */
-        void onDocumentPathCommitted( const string& previous, bool bDirty );
-        /** @brief 콘텐츠 브라우저에서 연 문서(작업공간의 포커스)가 바뀌었으면 그것을 미리볼 문서로 정합니다. */
-        void syncFocusedDocument( bool bDirty );
+        /**
+         * @brief @p assetPath(리소스 id)를 미리볼 문서로 정하고 미리보기를 닫습니다(고친 값을 버린다). 다음 `syncPreview` 가 디스크에서 다시 짓습니다.
+         * @details 빈 경로는 지금 문서(처음에는 에디터 도구 기본 문서)를 다시 짓는다 — 패널이 문서 기반(`EditorDocumentPanel::loadDocument`)으로 부른다.
+         */
+        void openDocument( string_view assetPath );
         /** @brief 문서 · 뷰포트가 바뀌었으면 오프스크린 화면을 다시 열고(크기가 바뀌면 렌더 텍스처 경로도), 이번 프레임의 보기를 겁니다. 렌더 텍스처를 바꾸기 전에 `setTargetReleaseListener` 의 함수를 부릅니다. */
         void syncPreview( const UISystem& ui, UIOffscreenScreens& offscreen );
         /** @brief 고른 언어에 맞는 문화권 관리자 사본을 만들고(게임 텍스트가 바뀌면 다시) 화면에 겁니다. */
@@ -130,8 +131,6 @@ namespace sw::editor
         bool canSaveDocument() const;
         /** @brief 미리보기 트리를 `UIDocumentWriter` 로 문서 파일에 씁니다. 핫 리로드가 다시 읽기를 기다립니다. */
         [[nodiscard]] bool saveDocument();
-        /** @brief 디스크 문서로 미리보기를 다시 만들고 고친 값을 버립니다. */
-        void revertDocument();
 
         // --- 보기 설정 ---------------------------------------------------------------
         /** @brief 고른 해상도 견본입니다. 테이블을 처음 쓸 때 읽고, 읽지 못했으면 nullptr 입니다. */
@@ -282,7 +281,6 @@ namespace sw::editor
         string                          _openedDocument;    ///< 지금 미리보기 화면의 문서
         string                          _targetPath;        ///< 지금 렌더 텍스처 경로
         string                          _error;             ///< 마지막으로 열지 못한 까닭
-        string                          _lastFocusKey;      ///< 작업공간 포커스 확인 키(`consumeWorkspaceFocusKey`)
         string                          _language;          ///< 고른 언어 코드. 빈 값 = 게임 언어 그대로
         hashed_string                   _theme;             ///< 빈 이름 = 게임의 지금 테마
         hashed_string                   _animation;         ///< 고른 애니메이션(빈 이름 = 없음)

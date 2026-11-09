@@ -16,7 +16,6 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Content/AssetPaths.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 
@@ -30,7 +29,8 @@ namespace sw::editor
     {
         struct AbilityCatalogPanelInternal
         {
-            static constexpr float32 kListLines = 18.0f; ///< 항목 목록이 보이는 줄 수
+            static constexpr float32     kListLines = 18.0f;           ///< 항목 목록이 보이는 줄 수
+            static constexpr string_view kFileName  = "abilities.xml"; ///< 런타임 카탈로그의 파일 이름(`AbilityCatalog` 의 경로 규칙 `game/<게임>/data/abilities.xml` 끝)
 
             [[nodiscard]] static const AbilityCatalogPanel* findPanel()
             {
@@ -111,11 +111,10 @@ namespace sw::editor
                          &AbilityCatalogPanelInternal::readValidation );
 
     AbilityCatalogPanel::AbilityCatalogPanel()
-        : IEditorDocumentPanel( false )
+        : EditorDocumentPanel( EditorAssetType{ EditorAssetTypeIDs::kData }, false )
         , _model{}
         , _inheritanceSource{}
-        , _path{}
-        , _openPath{}
+        , _pathInput{}
         , _filter{}
         , _status{}
         , _listScratchReference{}
@@ -125,12 +124,20 @@ namespace sw::editor
     {
     }
 
-    void AbilityCatalogPanel::drawContent()
+    void AbilityCatalogPanel::drawDocumentContent()
     {
+        updateFocusedDocument();
+        ensureDocumentLoaded();
         drawFileRow();
-        if ( _openPath.empty() )
+        if ( getLoadedAssetPath().empty() )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdAbilityCatalog", "NoFileHint" ) );
+            return;
+        }
+        if ( isDocumentLoadFailed() )
+        {
+            // 모델은 앞 파일의 것이다 — 이 경로의 항목처럼 보이지 않게 까닭만 보인다(저장도 기반이 막았다).
+            AbilityCatalogPanelInternal::drawErrorText( _status );
             return;
         }
         if ( _model.getDocument().isParsed() == false )
@@ -158,9 +165,9 @@ namespace sw::editor
     void AbilityCatalogPanel::drawFileRow()
     {
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdAbilityCatalog", "File" ), SW_LOCKEY( "EdAbilityCatalog", "FileTip" ) );
-        if ( EditorWidgets::drawAssetPathField( "##AbilityCatalogPath", _path, "game/<game>/data/abilities.xml", ".xml", "abilityCatalog.path" )._bDeactivatedAfterEdit )
-            openFile();
-        const bool bOpen = _openPath.empty() == false;
+        if ( EditorWidgets::drawAssetPathField( "##AbilityCatalogPath", _pathInput, "game/<game>/data/abilities.xml", ".xml", "abilityCatalog.path" )._bDeactivatedAfterEdit )
+            requestOpenDocument( _pathInput.c_str() ); // 콘텐츠 브라우저와 같은 길 — 다음 그리기의 `updateFocusedDocument` 가 미저장을 묻고 연다
+        const bool bOpen = getLoadedAssetPath().empty() == false;
         ImGui::BeginDisabled( bOpen == false );
         if ( ImGui::Button( SW_LOCKEY( "EdAbilityCatalog", "Save" ) ) )
             (void)saveDocumentAndClearDirty(); // 실패하면 dirty 가 남고 이유는 상태 줄에 있다
@@ -186,7 +193,7 @@ namespace sw::editor
         ImGui::EndDisabled();
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdAbilityCatalog", "Revert" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdAbilityCatalog", "Revert" ) ) )
-            revertDocument();
+            revertToSavedText();
         ImGui::EndDisabled();
         // 검증 결과는 상태다 — 통과는 Success, 실패는 Error 이고 문장으로 말한다(자세한 이유는 로그).
         if ( _validation == ValidationState::Passed )
@@ -195,18 +202,28 @@ namespace sw::editor
             AbilityCatalogPanelInternal::drawErrorText( SW_LOCKEY( "EdAbilityCatalog", "ValidationFailed" ) );
     }
 
-    void AbilityCatalogPanel::openFile()
+    bool AbilityCatalogPanel::acceptsDocumentPath( string_view assetPath ) const
     {
-        const string_view            path         = _path.c_str();
-        const optional<AbsolutePath> absolutePath = path.empty() ? nullopt : editor::getSubsystem<AssetPaths>().findLooseFile( path );
+        string_view fileName;
+        FileUtil::getFileNamePart( assetPath, fileName );
+        return fileName == AbilityCatalogPanelInternal::kFileName;
+    }
+
+    ToolAssetLoadResult AbilityCatalogPanel::loadDocument()
+    {
+        const string path = acceptDocumentToLoad();
+        if ( path.empty() )
+            return ToolAssetLoadResult::Missing; // 아직 연 파일이 없다 — 모델도 비어 있어 저장할 것이 없다
+        _pathInput                                = path.c_str();
+        const optional<AbsolutePath> absolutePath = getDocumentDiskPath();
         string                       text;
-        // 읽지 못하면 앞 파일을 그대로 둔다 — 앞 파일의 글을 이 경로에 저장하지 않는다.
+        // 읽지 못하면 저장을 막는다(`Malformed`) — 앞 파일의 글을 이 경로에 저장하지 않는다.
         if ( absolutePath.has_value() == false || FileUtil::readTextFile( absolutePath->str(), text ) == false )
         {
             StringBuilder<constant::buffer::kMax256> statusBuilder;
             statusBuilder.appendFormat( "Could not read '%#'", path );
             _status = string( statusBuilder.view() );
-            return;
+            return ToolAssetLoadResult::Malformed;
         }
         if ( _model.load( text, &_inheritanceSource ) == false )
         {
@@ -220,17 +237,18 @@ namespace sw::editor
             statusBuilder.appendFormat( "Opened %#", path );
             _status = string( statusBuilder.view() );
         }
-        _openPath      = string( path );
         _selectedEntry = _model.getEntries().empty() ? -1 : 0;
         _validation    = ValidationState::NotRun;
-        syncDirty();
-        SW_LOG_INFO_ID( "AbilityCatalogPanel.Opened", "Ability catalog opened %#", _openPath.c_str() );
+        SW_LOG_INFO_ID( "AbilityCatalogPanel.Opened", "Ability catalog opened %#", path.c_str() );
+        // 잘 짜이지 않은 글도 열린 문서다 — 원문 오류를 보이고 저장은 `saveDocument` 가 막는다(미저장 표시는 읽은 뒤 기반이 지운다).
+        return ToolAssetLoadResult::Loaded;
     }
 
     bool AbilityCatalogPanel::saveDocument()
     {
-        const auto absolutePath = editor::getSubsystem<AssetPaths>().toDiskPath( _openPath );
-        if ( _openPath.empty() || absolutePath.has_value() == false || _model.getDocument().isParsed() == false )
+        const string&                openPath     = getLoadedAssetPath();
+        const optional<AbsolutePath> absolutePath = getDocumentDiskPath();
+        if ( openPath.empty() || absolutePath.has_value() == false || _model.getDocument().isParsed() == false )
         {
             _status = "Nothing to save - open a well-formed file first";
             return false;
@@ -238,19 +256,19 @@ namespace sw::editor
         if ( FileUtil::writeTextFile( absolutePath->str(), _model.getDocument().getText() ) == false )
         {
             StringBuilder<constant::buffer::kMax256> statusBuilder;
-            statusBuilder.appendFormat( "Could not write '%#'", _openPath );
+            statusBuilder.appendFormat( "Could not write '%#'", openPath );
             _status = string( statusBuilder.view() );
             return false;
         }
         _model.editDocument().markSaved();
         StringBuilder<constant::buffer::kMax256> statusBuilder;
-        statusBuilder.appendFormat( "Saved %#", _openPath );
+        statusBuilder.appendFormat( "Saved %#", openPath );
         _status = string( statusBuilder.view() );
         validateText();
         return true;
     }
 
-    void AbilityCatalogPanel::revertDocument()
+    void AbilityCatalogPanel::revertToSavedText()
     {
         _model.editDocument().revert();
         _model.rebuild();
@@ -262,7 +280,7 @@ namespace sw::editor
     {
         // 런타임 로더 그대로 읽어 본다 — 클래스 이름 · 참조 · 칸의 판정은 로더의 것이고 이 창이 따로 적지 않는다(이유는 로그에 남는다).
         AbilityCatalog catalog;
-        _validation = catalog.loadFromXMLText( _model.getDocument().getText(), _openPath ) ? ValidationState::Passed : ValidationState::Failed;
+        _validation = catalog.loadFromXMLText( _model.getDocument().getText(), getLoadedAssetPath() ) ? ValidationState::Passed : ValidationState::Failed;
     }
 
     void AbilityCatalogPanel::reportEdit( bool bEdited )

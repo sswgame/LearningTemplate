@@ -182,7 +182,7 @@ namespace sw::editor
     SW_EDITOR_PANEL( GlobalVariablesPanel, GlobalVariablesPanel::kPanelID, EditorPanelCategory::Tool, 800 );
 
     GlobalVariablesPanel::GlobalVariablesPanel()
-        : IEditorDocumentPanel( false )
+        : EditorStateDocumentPanel()
         , _model{}
         , _searchFilter{}
         , _presetNameBuf{}

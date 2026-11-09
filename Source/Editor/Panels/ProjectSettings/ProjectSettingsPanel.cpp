@@ -62,7 +62,7 @@ namespace sw::editor
 namespace sw::editor
 {
     ProjectSettingsPanel::ProjectSettingsPanel()
-        : IEditorDocumentPanel( false )
+        : EditorStateDocumentPanel()
         , _listPage{}
         , _grid{}
         , _pSelected{ nullptr }
