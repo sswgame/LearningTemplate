@@ -654,7 +654,7 @@ namespace sw::editor
         ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Condition" ) );
         bool bEdited = false;
         if ( ImGui::IsAnyItemActive() == false )
-            _parameterEditBuffer = pLink->_parameter.empty() ? "" : pLink->_parameter.c_str(); // 빈 hashed_string 의 c_str 는 "None" 이다
+            _parameterEditBuffer = pLink->_parameter.viewOrEmpty(); // 빈 이름은 빈 칸이다("None" 이 아니다)
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Param" ) );
         ImGui::SameLine();
         ImGui::SetNextItemWidth( -FLT_MIN );

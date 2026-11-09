@@ -140,7 +140,7 @@ namespace sw::editor
             _bDirty = SW_FALSE;
             return true;
         }
-        const optional<AbsolutePath> inputMapFile = editor::getSubsystem<AssetPaths>().toDiskPath( _inputMapPath.c_str() );
+        const optional<AbsolutePath> inputMapFile = editor::getSubsystem<AssetPaths>().toDiskPath( _inputMapPath.get() );
         if ( inputMapFile.has_value() == false || _inputMap.saveToAsset( *inputMapFile ) == false )
         {
             SW_LOG_WARNING_ID( "InputMapModel.FailedSaveInputMap", "Failed to save InputMap to %#", _inputMapPath.c_str() );
@@ -161,7 +161,7 @@ namespace sw::editor
         // 파일마다 원래 몫을 돌려보낸다. 편집이 건드리지 않은 파일은 쓰지 않는다 — 다른 게임과 함께 쓰는 공통 파일의 주석과 차례를 지키고, 함께 쓰는 파일을 말없이 바꾸지 않는다.
         vector<AssetID> listAsset;
         InputMap        onDisk;
-        const bool      bHasDisk = InputMapBundle::collectAssets( AssetID{ _inputMapPath.c_str() }, listAsset ) && onDisk.loadBundle( listAsset ) && onDisk.getSourceCount() == _inputMap.getSourceCount();
+        const bool      bHasDisk = InputMapBundle::collectAssets( AssetID{ _inputMapPath.get() }, listAsset ) && onDisk.loadBundle( listAsset ) && onDisk.getSourceCount() == _inputMap.getSourceCount();
         for ( uint32 sourceIndex = 0; sourceIndex < _inputMap.getSourceCount(); ++sourceIndex )
         {
             string editedText;
@@ -171,7 +171,7 @@ namespace sw::editor
             if ( bHasDisk && onDisk.writeSourceText( sourceIndex, diskText ) && editedText == diskText )
                 continue;
             const string&                assetPath = _inputMap.getSourceAssetPath( sourceIndex );
-            const optional<AbsolutePath> filePath  = editor::getSubsystem<AssetPaths>().toDiskPath( assetPath.c_str() );
+            const optional<AbsolutePath> filePath  = editor::getSubsystem<AssetPaths>().toDiskPath( assetPath );
             if ( filePath.has_value() == false || _inputMap.saveSourceToAsset( sourceIndex, *filePath ) == false )
                 return false;
             SW_LOG_INFO_ID( "InputMapModel.SavedInputMap", "Saved InputMap to %#", assetPath.c_str() );

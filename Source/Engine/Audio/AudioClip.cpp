@@ -220,7 +220,7 @@ namespace sw
         }
 
         // 이 호스트(전용 서버)의 패키지에 없는 종류다 — 디코드 작업을 띄우지 않고 없는 것으로 친다(경고 없음, AssetPaths::setHostTarget).
-        if ( engine::getSubsystem<AssetPaths>().isExcludedForHost( path.view() ) )
+        if ( engine::getSubsystem<AssetPaths>().isExcludedForHost( path.viewOrEmpty() ) )
         {
             storeResult( path, nullptr );
             return;
@@ -231,7 +231,7 @@ namespace sw
             return;
         }
         TaskManager& taskManager = engine::getSubsystem<TaskManager>();
-        TaskHandle   handle      = taskManager.emplaceTask( "AudioClipDecode", SW_DELEGATE_METHOD( TaskArgsDelegate, &AudioClipCache::decodeClipTask, this ), MakeTaskArgs( string( path.view() ) ) );
+        TaskHandle   handle      = taskManager.emplaceTask( "AudioClipDecode", SW_DELEGATE_METHOD( TaskArgsDelegate, &AudioClipCache::decodeClipTask, this ), MakeTaskArgs( string( path.viewOrEmpty() ) ) );
         // 에셋 로드 단계에 넣는다(제출 전) — 프레임 경계의 에셋 대기(`finishPendingAssetWork`)가 오디오 디코드도 기다리고, 소멸자도 같은 단계를 기다린다.
         // 예전에는 자기 단계를 따로 써서 결정적 실행에서 소리 도착이 디스크 · 워커 속도에 달렸다.
         engine::getSubsystem<AssetManager>().addLoadTask( handle );
@@ -271,7 +271,7 @@ namespace sw
 
     shared_ptr<const AudioClipData> AudioClipCache::decodeClip( const hashed_string& path ) const
     {
-        const string_view pathView = path.view();
+        const string_view pathView = path.viewOrEmpty();
         const AssetID     assetID{ pathView }; // 캐시 키(클립 리소스 id)를 로더 id 로 바꾸는 한 곳
         if ( engine::getSubsystem<AssetPaths>().isExcludedForHost( pathView ) )
             return nullptr; // 이 호스트의 패키지에 없는 종류 — 없는 것으로 친다(위 requestClip 과 같다)
@@ -323,7 +323,7 @@ namespace sw
 
     shared_ptr<const AudioClipData> AudioClipCache::decodeGraph( const hashed_string& path ) const
     {
-        const string_view pathView = path.view();
+        const string_view pathView = path.viewOrEmpty();
         const AssetID     assetID{ pathView }; // 캐시 키(그래프 리소스 id)를 로더 id 로 바꾸는 한 곳
         AudioGraphDef     def;
         if ( def.loadFromAsset( assetID ) == false )

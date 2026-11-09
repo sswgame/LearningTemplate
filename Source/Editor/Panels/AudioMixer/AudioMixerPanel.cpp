@@ -137,7 +137,7 @@ namespace sw::editor
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Play" ), SW_LOCKEY( "EdButton", "PlayClip" ), "Play Clip" ) ) );
         ImGui::BeginDisabled( _clipPath.empty() );
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Play" ), SW_LOCKEY( "EdButton", "PlayClip" ), "Play Clip" ) ) )
-            (void)audio.play( AssetID{ _clipPath.c_str() } ); // 파일이 없으면 false 이고 엔진이 로그를 남긴다
+            (void)audio.play( AssetID{ _clipPath } ); // 파일이 없으면 false 이고 엔진이 로그를 남긴다
         EditorSelfTestMarks::record( "audiomixer.playClip" );
         ImGui::EndDisabled();
     }

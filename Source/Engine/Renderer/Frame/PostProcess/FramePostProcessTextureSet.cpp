@@ -31,7 +31,7 @@ namespace sw
         {
             Entry entry{};
             entry._path = key;
-            entry._load = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().request( key.view(), AssetLoadStart::Async );
+            entry._load = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().request( key.viewOrEmpty(), AssetLoadStart::Async );
             _listEntry.push_back( std::move( entry ) );
             pEntry = &_listEntry.back();
         }

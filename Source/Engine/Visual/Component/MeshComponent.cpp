@@ -90,7 +90,7 @@ namespace sw
         if ( path.empty() == false )
         {
             // 디바이스 없이 잡는 acquire 는 파일을 읽지 않아 늘 성공한다 — 없는 파일은 여기서 가린다.
-            pMaterial    = AssetIO::hasAsset( AssetID{ path.c_str() } ) ? cache.acquire( path.c_str() ) : nullptr;
+            pMaterial    = AssetIO::hasAsset( AssetID{ path.viewOrEmpty() } ) ? cache.acquire( path.viewOrEmpty() ) : nullptr;
             borrowedPath = path;
             if ( pMaterial == nullptr )
             {
@@ -99,17 +99,17 @@ namespace sw
                 const string& missingPath = engine::getSubsystem<EngineDefaultAssets>()._missingMaterial.get();
                 SW_LOG_ERROR_ID( "MeshComponent.MaterialCouldNotAcquired", "Material '%#' could not be acquired - the mesh uses the missing-material checker '%#'", path.c_str(), missingPath.c_str() );
                 borrowedPath = hashed_string( missingPath.c_str() );
-                pMaterial    = cache.acquire( borrowedPath.c_str() );
+                pMaterial    = cache.acquire( borrowedPath.viewOrEmpty() );
             }
             if ( pMaterial != nullptr )
-                cache.requestInitialize( borrowedPath.c_str() );
+                cache.requestInitialize( borrowedPath.viewOrEmpty() );
         }
 
         const hashed_string previousPath = _acquiredMaterialPath;
         _acquiredMaterialPath            = ( pMaterial != nullptr ) ? borrowedPath : hashed_string{};
         setMaterial( pMaterial );
         if ( previousPath.empty() == false )
-            cache.release( previousPath.c_str() );
+            cache.release( previousPath.viewOrEmpty() );
     }
 
     void MeshComponent::resolveRuntimeMesh()
@@ -406,7 +406,7 @@ namespace sw
         {
             _pMaterial = nullptr;
             if ( engine::areEngineServicesBound() )
-                engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().release( _acquiredMaterialPath.c_str() );
+                engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().release( _acquiredMaterialPath.viewOrEmpty() );
             _acquiredMaterialPath = hashed_string{};
         }
         _requestedMaterialPath = hashed_string{};

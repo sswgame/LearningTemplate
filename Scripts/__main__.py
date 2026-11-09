@@ -71,6 +71,7 @@ _kSubcommand: tuple[Subcommand, ...] = (
     Subcommand("shader-kill-order", "lint.ShaderKillOrder", "픽셀 버리기(clip · discard) 뒤의 미분 읽기 검사(--self-check)"),
     Subcommand("thread-owners", "lint.ThreadOwners", "TaskManager 밖에서 스레드를 만드는 파일을 허용 목록(Config/Dev/ThreadOwners.json)과 맞춘다(--self-check)"),
     Subcommand("frame-intern", "lint.FrameIntern", "틱 · 갱신 · 칠하기 함수 안의 리터럴 hashed_string 을 찾는다(--self-check)"),
+    Subcommand("name-path-arguments", "lint.NamePathArguments", "경로 · 리소스 id 를 받는 함수에 c_str() · view() 를 그대로 넘기는 곳을 찾는다 — 빈 이름은 \"None\" 이다(--self-check)"),
     Subcommand("tick-scene-walk", "lint.TickSceneWalk", "컴포넌트 틱에서 닿는 씬 전체 순회를 찾는다(--self-check)"),
     Subcommand("feature-refs", "lint.FeatureReferences", "컴포넌트 · 감시 값 · 개발 명령의 참조 0 검사(--self-check)"),
     Subcommand("cmake-path-case", "lint.CMakePathCase", "CMake include · add_subdirectory 경로의 대소문자 검사"),

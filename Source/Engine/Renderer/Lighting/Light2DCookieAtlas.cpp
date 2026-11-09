@@ -114,7 +114,7 @@ namespace sw
                 // 렌더 스레드는 디스크를 기다리지 않는다 — 요청만 내고, 업로드는 이 스레드의 펌프(`TextureCache::completePendingLoads`)가 한다.
                 Entry entry{};
                 entry._path = cookie._texturePath;
-                entry._load = pCache->request( cookie._texturePath.c_str(), AssetLoadStart::Async );
+                entry._load = pCache->request( cookie._texturePath.viewOrEmpty(), AssetLoadStart::Async );
                 entry._cell = cell;
                 _listEntry.push_back( std::move( entry ) );
                 pEntry = &_listEntry.back();

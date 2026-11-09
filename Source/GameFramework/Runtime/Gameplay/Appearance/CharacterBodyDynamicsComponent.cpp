@@ -427,7 +427,7 @@ namespace sw
             pEffect = pOwner->addComponent<VFXComponent>();
             if ( pEffect == nullptr )
                 return;
-            pEffect->setEffectPath( def._effect.c_str() );
+            pEffect->setEffectPath( def._effect.viewOrEmpty() );
             pEffect->play(); // 방출기는 되풀이다 — 켜고 끄기는 방출기 단위로(꺼도 떨어지던 방울은 끝까지 떨어진다)
             stream._effect    = TComponentHandle<VFXComponent>{ pEffect };
             stream._bEffectOn = SW_TRUE;

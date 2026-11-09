@@ -205,7 +205,7 @@ namespace sw::editor
     void CharacterEditorModel::openBodyData( const hashed_string& bodyShapesAsset )
     {
         const string folder( _paths._appearanceFolder.c_str() );
-        openBodyDataFile( _bodyShapes, bodyShapesAsset.empty() ? string_view{} : bodyShapesAsset.view() );
+        openBodyDataFile( _bodyShapes, bodyShapesAsset.viewOrEmpty() );
         openBodyDataFile( _bodyProfiles, folder.empty() ? string_view{} : string_view( FileUtil::joinPath( folder, "bodyprofiles.xml" ) ) );
         openBodyDataFile( _visuals, folder.empty() ? string_view{} : string_view( FileUtil::joinPath( folder, "itemvisuals.xml" ) ) );
     }

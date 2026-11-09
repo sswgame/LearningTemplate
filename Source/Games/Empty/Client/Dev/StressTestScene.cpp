@@ -126,7 +126,7 @@ namespace sw
                 SkeletalMeshComponent* pUnit = object.addComponent<SkeletalMeshComponent>();
                 if ( pUnit == nullptr )
                     return nullptr;
-                pUnit->setMeshID( meshID.c_str() );
+                pUnit->setMeshID( meshID );
                 pUnit->setMaterialPath( materialPath );
                 pUnit->resolveRenderAssets();
                 return pUnit;
@@ -572,7 +572,7 @@ namespace sw
         {
             // 머티리얼은 컴포넌트가 경로로 캐시에서 확보해야 GPU 자원이 만들어진다(`MaterialCache::requestInitialize`) — 직접 읽은 Material 은 그려지지 않는다.
             MeshVariant variant{ MeshCache::acquire( prop._mesh ), prop._material.path() };
-            if ( variant._mesh == nullptr || AssetIO::hasAsset( AssetID{ prop._material.c_str() } ) == false )
+            if ( variant._mesh == nullptr || AssetIO::hasAsset( prop._material.id() ) == false )
             {
                 SW_LOG_ERROR_ID( "StressTestScene.FailedReadScanProp", "[Bench] Failed to read scan prop %# (material %#) - run App --import-models.", prop._mesh.c_str(), prop._material.c_str() );
                 _listMeshVariant.clear();
@@ -597,7 +597,7 @@ namespace sw
         if ( _glassMaterial == nullptr )
         {
             _glassMaterial = Material::create();
-            if ( _glassMaterial->loadFromAsset( AssetID{ _settings._glassMaterial.c_str() } ) == false )
+            if ( _glassMaterial->loadFromAsset( _settings._glassMaterial.id() ) == false )
             {
                 SW_LOG_WARNING_ID( "StressTestScene.FailedReadTransparentMaterial", "[Bench] Failed to read the transparent material - skipping the transparent cubes." );
                 _glassMaterial.reset();
@@ -811,9 +811,9 @@ namespace sw
             if ( pMesh == nullptr || pAnimator == nullptr )
                 continue;
             pMesh->setShareCrowdPose( gv_stressTestCrowdShare != 0 );
-            pMesh->setMeshID( _settings._knightMesh.c_str() );
+            pMesh->setMeshID( _settings._knightMesh );
             pMesh->setMaterialPath( _settings._knightMaterial );
-            pMesh->setSkeletonPath( _settings._knightSkeleton.c_str() );
+            pMesh->setSkeletonPath( _settings._knightSkeleton );
             pMesh->resolveRenderAssets();
             pMesh->setLocalPosition( position );
             pMesh->setLocalRotation( float3{ 0.0f, MathUtil::kPi, 0.0f } );
@@ -834,7 +834,7 @@ namespace sw
         spawnGround( pScene, halfExtent );
         applyFraming( pScene, FramingMode::Character );
         SW_LOG_INFO_ID( "StressTestScene.ScenePlacedSkinnedCharacters", "[Bench] In scene '%#', placed %# skinned characters (%#).", pScene->getName(), characterCount,
-                        prefabPath.empty() ? string_view( _settings._knightMesh.c_str() ) : prefabPath );
+                        prefabPath.empty() ? string_view( _settings._knightMesh ) : prefabPath );
     }
 
     void StressTestScene::spawnCharacterParts( GameObjectManager& objects, uint32 characterIndex, SkeletalMeshComponent* pBody )
@@ -852,7 +852,7 @@ namespace sw
             SkeletalMeshComponent* pFollower = ( pPart != nullptr ) ? pPart->addComponent<SkeletalMeshComponent>() : nullptr;
             if ( pFollower == nullptr )
                 continue;
-            pFollower->setSkeletonPath( _settings._knightSkeleton.c_str() );
+            pFollower->setSkeletonPath( _settings._knightSkeleton );
             pFollower->setLeaderPose( pBody );
             _listBenchExtra.push_back( pFollower->getHandle() );
             pDeepest = pFollower;
@@ -867,7 +867,7 @@ namespace sw
         if ( pWeaponUnit == nullptr || pWeaponRig == nullptr )
             return;
         pWeaponUnit->setSkeleton( createSingleBoneSkeleton() ); // 리그는 데이터 스켈레톤을 받은 유닛에만 묶인다
-        pWeaponRig->setRigPath( _settings._rigWeaponRig.c_str() );
+        pWeaponRig->setRigPath( _settings._rigWeaponRig );
         pWeaponRig->bindUnit( "Body", pDeepest );
         _listBenchExtra.push_back( pWeaponUnit->getHandle() );
     }
@@ -1012,8 +1012,8 @@ namespace sw
             SkeletalMeshComponent* pMesh = pObject->addComponent<SkeletalMeshComponent>();
             if ( pMesh == nullptr )
                 continue;
-            pMesh->setMeshID( _settings._faceMesh.c_str() );
-            pMesh->setSkeletonPath( _settings._faceSkeleton.c_str() );
+            pMesh->setMeshID( _settings._faceMesh );
+            pMesh->setSkeletonPath( _settings._faceSkeleton );
             pMesh->resolveRenderAssets();
             pMesh->setLocalPosition( float3{ origin + static_cast<float32>( index ) * _settings._faceSpacing, 0.0f, 0.0f } );
             pMesh->setLocalRotation( float3{ 0.0f, MathUtil::kPi, 0.0f } );
@@ -1035,7 +1035,7 @@ namespace sw
             if ( bTalkClip )
                 (void)pFace->setExpressionWeight( hashed_string( _settings._faceExpression.c_str() ), _settings._faceExpressionWeight );
             else
-                (void)pFace->speak( AssetID{ _settings._faceVoice.c_str() } );
+                (void)pFace->speak( _settings._faceVoice.id() );
             _listBenchExtra.push_back( pMesh->getHandle() );
         }
 
@@ -1827,7 +1827,7 @@ namespace sw
         PoseModifierComponent* pWeaponRig = pWeapon->addComponent<PoseModifierComponent>();
         if ( pWeaponRig != nullptr )
         {
-            pWeaponRig->setRigPath( _settings._rigWeaponRig.c_str() );
+            pWeaponRig->setRigPath( _settings._rigWeaponRig );
             pWeaponRig->bindUnit( "Body", pBody );
             pWeaponRig->setRigEnabled( bRig );
         }
@@ -1844,13 +1844,13 @@ namespace sw
         if ( pCapeUnit == nullptr || capeSource == nullptr )
             return;
         (void)pCape->attachToParent( pKnight ); // 방금 만든 오브젝트끼리라 순환이 없어 실패하지 않는다
-        pCapeUnit->setSkeletonPath( _settings._rigCapeSkeleton.c_str() );
+        pCapeUnit->setSkeletonPath( _settings._rigCapeSkeleton );
         pCapeUnit->setMesh( StressTestSceneInternal::createCapeSkinnedCopy( *capeSource, pCapeUnit->getSkeleton() ) );
         pCapeUnit->resolveRenderAssets();
         PoseModifierComponent* pCapeRig = pCape->addComponent<PoseModifierComponent>();
         if ( pCapeRig != nullptr )
         {
-            pCapeRig->setRigPath( _settings._rigCapeRig.c_str() );
+            pCapeRig->setRigPath( _settings._rigCapeRig );
             pCapeRig->bindUnit( "Body", pBody );
             pCapeRig->setRigEnabled( bRig );
         }
@@ -1868,7 +1868,7 @@ namespace sw
         SkeletalAnimatorComponent* pAnimator = pKnight->addComponent<SkeletalAnimatorComponent>();
         if ( pBody == nullptr || pAnimator == nullptr )
             return;
-        pBody->setSkeletonPath( _settings._knightSkeleton.c_str() );
+        pBody->setSkeletonPath( _settings._knightSkeleton );
         // 기사는 +Z 방향을 봅니다. 카메라(-Z 쪽)를 보도록 돌립니다. 기사는 X 축을 따라 한 줄로 서고, 바닥이 기울어 있어서 사람마다 땅 높이가 다릅니다.
         const float32 x = origin + static_cast<float32>( index ) * _settings._rigSpacing;
         pBody->setLocalPosition( float3{ x, MathUtil::tan( _settings._rigSlopeAngle ) * x, 0.0f } );
@@ -1884,7 +1884,7 @@ namespace sw
         PoseModifierComponent* pBodyRig = pKnight->addComponent<PoseModifierComponent>();
         if ( pBodyRig != nullptr )
         {
-            pBodyRig->setRigPath( _settings._rigKnightRig.c_str() );
+            pBodyRig->setRigPath( _settings._rigKnightRig );
             pBodyRig->bindUnit( "Weapon", pWeaponUnit, weaponSockets );
             pBodyRig->setRigEnabled( bRig );
         }
@@ -1911,7 +1911,7 @@ namespace sw
         shared_ptr<SocketSet> weaponSockets = make_shared<SocketSet>();
         if ( kinds.loadDefault() == false )
             SW_LOG_ERROR_ID( "StressTestScene.FailedReadDefaultSocket", "[Bench] Failed to read the default socket kind table the crossbow sockets need." );
-        else if ( weaponSockets->loadFromAsset( AssetID{ _settings._rigWeaponSockets.c_str() }, kinds ) == false )
+        else if ( weaponSockets->loadFromAsset( _settings._rigWeaponSockets.id(), kinds ) == false )
             SW_LOG_ERROR_ID( "StressTestScene.FailedReadCrossbowSockets", "[Bench] Failed to read the crossbow sockets '%#'.", _settings._rigWeaponSockets.c_str() );
 
         const float32 origin = -0.5f * static_cast<float32>( characterCount - 1 ) * _settings._rigSpacing;

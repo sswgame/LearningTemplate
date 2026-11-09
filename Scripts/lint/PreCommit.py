@@ -36,6 +36,7 @@ from lint.EditorViewIncludes import checkEditorViewIncludes  # noqa: E402
 from lint.EditorWidgetLabels import checkEditorWidgetLabels  # noqa: E402
 from lint.FeatureReferences import checkFeatureReferences  # noqa: E402
 from lint.FrameIntern import checkFrameIntern  # noqa: E402
+from lint.NamePathArguments import checkNamePathArguments  # noqa: E402
 from lint.TickSceneWalk import checkTickSceneWalk  # noqa: E402
 from lint.NamingWords import checkNamingWords  # noqa: E402
 from lint.Acronyms import checkAcronyms  # noqa: E402
@@ -235,6 +236,13 @@ def main(argv: list[str] | None = None) -> int:
         hasErrors = True
         print(f"[FrameIntern] FAIL — 프레임 함수 안의 리터럴 이름 {len(listFrameIntern)}건")
         for problem in listFrameIntern:
+            print(f"  - {problem}")
+    # --- 경로 자리의 c_str() · view()(빈 이름이 "None" 파일을 찾는다 — string_view 는 무엇이든 받아 형식으로 막지 못한다, NamePathArguments.py 머리말)
+    listNamePath = checkNamePathArguments(projectRoot)
+    if listNamePath:
+        hasErrors = True
+        print(f"[NamePathArguments] FAIL — 경로 인자에 c_str() · view() 를 그대로 넘긴 곳 {len(listNamePath)}건")
+        for problem in listNamePath:
             print(f"  - {problem}")
     # --- 틱에서 닿는 씬 전체 순회(순회는 틱 밖에서는 정상 코드라 형식으로 막지 못한다 — TickSceneWalk.py 머리말)
     listTickSceneWalk = checkTickSceneWalk(projectRoot)

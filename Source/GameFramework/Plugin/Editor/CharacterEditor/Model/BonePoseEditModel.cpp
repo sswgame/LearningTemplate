@@ -39,7 +39,7 @@ namespace sw::editor
     bool BonePoseEditModel::loadSkeleton( const AssetID& assetID )
     {
         // 런타임과 같은 공유 캐시의 한 벌을 읽고 편집 문맥의 사본으로 받는다.
-        const shared_ptr<const Skeleton> pLoaded = SharedAssetCache<Skeleton>::acquire( assetID.view() );
+        const shared_ptr<const Skeleton> pLoaded = SharedAssetCache<Skeleton>::acquire( assetID.str() );
         if ( pLoaded == nullptr )
             return false;
         _skeleton = *pLoaded;

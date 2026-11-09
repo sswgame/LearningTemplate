@@ -117,6 +117,12 @@ SW_TEST_CASE( StringTest, HashedString )
     SW_EXPECT_EQUAL( str1.getIndex(), str2.getIndex() );
     SW_EXPECT_EQUAL( str1.getIndex(), str3.getIndex() );
     SW_EXPECT_TRUE( str1 != str4 );
+
+    // 빈 이름의 표시 글은 "None"(FName), 값으로 쓰는 글은 빈 글이다 — 경로 자리로 "None" 이 가면 'None' 파일을 찾는다
+    SW_EXPECT_EQUAL( sw::string_view( "None" ), defaultStr.view() );
+    SW_EXPECT_TRUE( defaultStr.viewOrEmpty().empty() );
+    SW_EXPECT_EQUAL( '\0', defaultStr.viewOrEmpty().data()[0] );
+    SW_EXPECT_EQUAL( sw::string_view( "TestKey" ), str1.viewOrEmpty() );
 }
 
 /**
