@@ -20,7 +20,7 @@
 - Descriptive names. No opaque abbreviations, no loop counters `i` / `j` / `k` (use at least `index`).
 - **Global variables** (`Core/GlobalVariable/GlobalVariableManager.h`), every macro takes the type first:
   - `SW_GLOBAL_VARIABLE( type, name, default, desc )`: runtime settings someone changes in the editor.
-  - `SW_TEST_GLOBAL_VARIABLE`: bench, automation and diagnostic switches. Settable with `-gv_*`, hidden from the editor panel, **absent from Shipping** (folded to a constant), and declared only in dev-only places (`Dev/` · `Tests/` · DevTools · Editor · automation runner — lint `dev-only-variables`). A value the shipped game must change is a product setting: `SW_GLOBAL_VARIABLE`.
+  - `SW_TEST_GLOBAL_VARIABLE`: bench, automation and diagnostic switches. Settable with `-gv_*`, hidden from the editor panel, **absent from Shipping** (folded to a constant), and declared only in dev-only places (`Dev/` · `Tests/` · DevTools · Editor · automation runner — the macro's `static_assert` checks `__FILE__`, `GlobalVariableRegistrar::isTestVariablePath`). A value the shipped game must change is a product setting: `SW_GLOBAL_VARIABLE`.
   - `SW_EXTERN_GLOBAL_VARIABLE( type, name )`: the `extern` for every kind.
 
 #### Pointers and containers

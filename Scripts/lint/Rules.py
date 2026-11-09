@@ -54,7 +54,6 @@ kRules: tuple[Rule, ...] = (
     Rule("core-tiers", "경계", "Core 낮은 티어 폴더가 높은 티어 헤더를 include", "Core 는 Log 경계만 빌드가 가른다 — 티어마다 부분을 지으면 pch 가 늘어 빌드가 느려진다", kCpp, "lint.CoreTiers:checkCoreTiers", perFile=True),
     Rule("server-ui", "경계", "서버도 짓는 게임 코드가 클라이언트 전용(UI · 오디오 · 렌더러 · Client/)을 include", "한 DLL 안의 폴더라 타깃 게이트가 가르지 못한다", kCpp, "lint.ServerUIIncludes:checkServerUIIncludes", exceptions="Config/Rules/Lint/ClientCodeGuards.json"),
     Rule("editor-view-includes", "경계", "MVVM 으로 옮긴 에디터 View 가 모델 · 씬 헤더를 include", "옮기는 동안의 목록 — 다 옮기면 View 부분의 #error 껍데기로 바꾼다", kCpp, "lint.EditorViewIncludes:checkEditorViewIncludes", exceptions="Config/Rules/Lint/EditorViewIncludes.json"),
-    Rule("dev-only-variables", "경계", "런타임 코드의 테스트용 전역 변수 선언", "매크로는 합법 C++ 이라 자리를 형식으로 막지 못한다", kCpp, "lint.DevOnlyVariables:checkDevOnlyVariables"),
     Rule("thread-owners", "경계", "TaskManager 밖에서 스레드를 만드는 파일", "스레드 형식은 합법이라 만드는 자리를 형식으로 막지 못한다", kCpp, "lint.ThreadOwners:checkThreadOwners", exceptions="Config/Rules/Lint/ThreadOwners.json"),
     Rule("cmake-path-case", "경계", "대소문자만 다른 CMake include · add_subdirectory 경로", "CMake 경로는 컴파일러가 보지 않는다(Linux 구성만 선다)", kCMake, "lint.CMakePathCase:checkCMakePathCase"),
     Rule("folder-layout", "경계", "잡동사니 폴더 · 엔진 쪽 Dev/ · Component 폴더", "파일 자리는 형식이 아니다", kAny, "lint.FolderLayout:checkFolderLayout", exceptions="Config/Rules/Lint/FolderLayout.json"),
