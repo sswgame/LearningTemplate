@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Name/hashed_string.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/EditorExports.h"
@@ -31,5 +32,11 @@ namespace sw::editor
          * @return 컴포넌트를 더했으면 true 입니다(되돌리기에 남는다 — `EditorSceneCommands::addComponent`).
          */
         static bool drawAddComponentList( GameObject* pObj, fixed_string<constant::buffer::kMax64>& search, const utf8* pMarkPrefix, bool bFocusSearch, bool& outbFailed );
+        /**
+         * @brief 검색 칸과 컴포넌트 종류 목록을 그리고 고른 종류 이름을 돌려줍니다(id 판 — 오브젝트를 받지 않는다). 더하기는 부르는 쪽 명령이 한다(MVVM View 가 ViewModel 명령에 id 와 함께 넘긴다).
+         * @param search · @p pMarkPrefix · @p bFocusSearch 는 `drawAddComponentList` 와 같다.
+         * @return 고른 종류 이름입니다. 고르지 않았으면 빈 이름입니다.
+         */
+        [[nodiscard]] static hashed_string drawComponentTypeList( fixed_string<constant::buffer::kMax64>& search, const utf8* pMarkPrefix, bool bFocusSearch );
     };
 } // namespace sw::editor

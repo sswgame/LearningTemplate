@@ -16,7 +16,6 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
-#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -28,13 +27,22 @@ namespace sw::editor
     bool EditorComponentMenu::drawAddComponentList( GameObject* pObj, fixed_string<constant::buffer::kMax64>& search, const utf8* pMarkPrefix, bool bFocusSearch,
                                                     bool& outbFailed )
     {
-        vector<hashed_string> listType;
-        if ( pObj != nullptr && pObj->getManager() != nullptr )
-            listType = pObj->getManager()->getRegisteredComponentTypeNames();
+        const hashed_string typeName = drawComponentTypeList( search, pMarkPrefix, bFocusSearch );
+        if ( typeName.empty() )
+            return false;
+        if ( EditorSceneCommands::addComponent( pObj, typeName ) != nullptr )
+            return true;
+        outbFailed = true;
+        return false;
+    }
+
+    hashed_string EditorComponentMenu::drawComponentTypeList( fixed_string<constant::buffer::kMax64>& search, const utf8* pMarkPrefix, bool bFocusSearch )
+    {
+        const vector<hashed_string> listType = GameObjectManager::getRegisteredComponentTypeNames();
         if ( listType.empty() )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdCommon", "NoComponentTypes" ) );
-            return false;
+            return {};
         }
 
         if ( bFocusSearch )
@@ -46,20 +54,13 @@ namespace sw::editor
         const bool             bHasFilter = compFilter.isActive();
 
         const TypeRegistry& registry = editor::getSubsystem<TypeRegistry>();
-        bool                bAdded{ false };
+        hashed_string       picked{};
         hashed_string       firstMatch{};
-        auto                addType = [&]( const hashed_string& typeName )
-        {
-            if ( EditorSceneCommands::addComponent( pObj, typeName ) == nullptr )
-                outbFailed = true;
-            else
-                bAdded = true;
-        };
-        auto drawItem = [&]( const hashed_string& typeName, const TypeInfo* pTypeInfo )
+        auto                drawItem = [&]( const hashed_string& typeName, const TypeInfo* pTypeInfo )
         {
             const utf8* pDisplayName = ( pTypeInfo != nullptr ) ? pTypeInfo->getDisplayName() : typeName.c_str();
             if ( ImGui::MenuItem( pDisplayName ) )
-                addType( typeName );
+                picked = typeName;
             // 자동화 시나리오가 타입 이름으로 누른다(EditorClick mark="<머리>.<타입>")
             if ( EditorSelfTestMarks::isEnabled() )
                 EditorSelfTestMarks::record( ( markPrefix + "." + typeName.c_str() ).c_str() );
@@ -87,10 +88,10 @@ namespace sw::editor
             if ( matchCount == 0 )
                 EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdCommon", "NoMatchingComponents" ) );
             // Enter 는 맨 위 줄을 고른다(유니티 Add Component 검색 창과 같다).
-            const bool bPickFirstMatch = bEnter && matchCount > 0 && bAdded == false;
+            const bool bPickFirstMatch = bEnter && matchCount > 0 && picked.empty();
             if ( bPickFirstMatch )
-                addType( firstMatch );
-            return bAdded;
+                picked = firstMatch;
+            return picked;
         }
 
         map<string, vector<pair<hashed_string, const TypeInfo*>>> mapCategorized;
@@ -121,6 +122,6 @@ namespace sw::editor
                 ImGui::EndMenu();
             }
         }
-        return bAdded;
+        return picked;
     }
 } // namespace sw::editor
