@@ -69,6 +69,7 @@
         "Source/Editor/Panels/Multiplayer/MultiplayerTab",
         "Source/Editor/Panels/Packaging/PackagingPanel",
         "Source/Editor/Panels/Physics/RagdollPreviewPanel",
+        "Source/Editor/Panels/Prefab/PrefabEditorPanel",
         "Source/Editor/Panels/Profiler/ProfilerWatches",
         "Source/Editor/Panels/ProjectSettings/ProjectSettingsPanel",
         "Source/Editor/Panels/RenderTarget/RenderTargetWatches",

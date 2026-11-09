@@ -1,20 +1,14 @@
 /**
  * @file PrefabEditorPanel.h
  * @brief 프리팹을 자기 미리보기 씬에서 편집하는 창입니다 — 메인 씬을 더럽히지 않고, 창마다 Undo 스택 · 선택을 가집니다.
- * @details 격리 스택 · 문서 루트 스폰 · 중첩 들어가기 · 나가기 · 저장은 `PrefabModel`(Model/, ImGui 없음)이 들고, 이 창은 그리기와 미리보기 씬 · 기즈모 · 문서 dirty · 창 닫기만 맡는다.
+ * @details 격리 스택 · 문서 루트 스폰 · 중첩 들어가기 · 나가기 · 저장 · 그릴 값은 `PrefabEditorViewModel`(Model/, ImGui 없음)이 들고, 이 창은 그리기와 미리보기 씬 · 기즈모 · 문서 dirty · 창 닫기만 맡는다(MVVM View).
  */
 #pragma once
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
-#include "Editor/Panels/Prefab/Model/PrefabModel.h"
+#include "Editor/Panels/Prefab/Model/PrefabEditorViewModel.h"
 #include "Editor/Viewport/EditorPreviewGizmo.h"
-
-namespace sw
-{
-    class GameObject;
-    class GameObjectManager;
-} // namespace sw
 
 namespace sw::editor
 {
@@ -51,12 +45,12 @@ namespace sw::editor
         /** @brief 저장하지 않고 닫을 때 쓴다 — 디스크의 프리팹으로 문서 루트를 다시 만들어 편집을 버린다. */
         void revertDocument() override;
 
-        /** @brief 격리 스택입니다(읽기). */
-        const EditorPrefabIsolation& getIsolation() const { return _model.getIsolation(); }
+        /** @brief 지금 격리 단계의 프리팹 경로입니다. 격리 중이 아니면 빈 글입니다. */
+        string_view getIsolatedPrefabPath() const { return _viewModel.getPrefabPath(); }
         /** @brief 이 창이 프리팹을 격리 중이면(문서가 열려 루트가 있으면) true 입니다. */
-        bool isIsolating() const { return _model.getIsolation().isActive(); }
+        bool isIsolating() const { return _viewModel.isIsolating(); }
         /** @brief 문서 프리팹 안의 @p prefabPath 중첩 프리팹을 격리하라고 요청합니다. 씬이 없을 수도 있어 다음 그리기에서 쌓습니다. */
-        void requestNestedIsolation( string_view prefabPath ) { _model.requestNested( prefabPath ); }
+        void requestNestedIsolation( string_view prefabPath ) { _viewModel.requestNested( prefabPath ); }
 
         /**
          * @brief 지금 단계를 나갑니다. @p bSaveToPrefab 이면 먼저 지금 단계의 루트를 프리팹 파일에 씁니다. 쓰지 못하면 나가지 않고 false 입니다.
@@ -73,15 +67,14 @@ namespace sw::editor
         ToolAssetLoadResult loadDocument() override;
         void                populatePreviewScene( Scene& scene ) override;
 
-        /** @brief 미리보기 씬의 매니저입니다. 씬이 아직 없으면 nullptr 입니다. */
-        GameObjectManager* findPreviewManager() const;
         /** @brief 문서가 바뀌었으면 문서 루트를 다시 세웁니다. */
         void syncDocumentRoot();
         void drawIsolationBar();
-        void drawChildTree( GameObject& object, int32 depth );
+        void drawChildRows();
 
     private:
-        PrefabModel        _model;
-        EditorPreviewGizmo _gizmo;
+        PrefabEditorViewModel _viewModel;
+        PrefabEditorViewState _viewState;
+        EditorPreviewGizmo    _gizmo;
     };
 } // namespace sw::editor

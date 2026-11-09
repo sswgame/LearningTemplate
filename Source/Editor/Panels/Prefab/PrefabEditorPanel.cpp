@@ -8,20 +8,9 @@
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorNotificationManager.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
-#include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Common/Workspace/Play/EditorPlaySession.h"
-#include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
-#include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/Prefab/PrefabAsset.h"
-#include "Engine/Scene/Scene.h"
 
 #include <imgui.h>
 
@@ -37,14 +26,6 @@ namespace sw::editor
             static constexpr float32 kMinViewportSide = 160.0f;
             /// @brief 자식 목록의 들여쓰기 한 단계(픽셀)입니다.
             static constexpr float32 kChildIndent = 12.0f;
-
-            /** @brief 격리 단계를 나갔다고 알립니다. */
-            static void notifyExited()
-            {
-                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-                editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyPrefabTitle" ), SW_LOCKEY( "EdCommon", "NotifyPrefabIsolationExited" ),
-                                                                              NotificationKind::Info );
-            }
         };
     } // namespace
 } // namespace sw::editor
@@ -54,8 +35,9 @@ namespace sw::editor
     SW_EDITOR_PANEL( PrefabEditorPanel, PrefabEditorPanel::kPanelID, EditorPanelCategory::Tool, 1410 );
 
     PrefabEditorPanel::PrefabEditorPanel()
-        : EditorPreviewPanel{ EditorAssetType{ PrefabAsset::kAssetType }, false }
-        , _model{}
+        : EditorPreviewPanel{ PrefabEditorViewModel::getDocumentType(), false }
+        , _viewModel{}
+        , _viewState{}
         , _gizmo{}
     {
     }
@@ -73,30 +55,13 @@ namespace sw::editor
 
     bool PrefabEditorPanel::openWindow( string_view prefabPath )
     {
-        EditorContext&     editorContext = editor::getSubsystem<EditorContext>();
-        PrefabEditorPanel* pWindow       = findWindow();
-        const bool         bCannotOpen   = prefabPath.empty() || pWindow == nullptr || EditorPlaySession::isStopped() == false;
-        if ( bCannotOpen )
-            return false;
-
-        EditorWorkspace& workspace = editorContext.getSubsystem<EditorWorkspace>();
-        workspace.setFocusedAssetPath( string{ prefabPath }.c_str() ); // 문서 패널이 다음 그리기에서 문서를 바꾼다
-        workspace.requestOpenPanel<PrefabEditorPanel>();
-        editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyPrefabTitle" ), SW_LOCKEY( "EdCommon", "NotifyPrefabIsolated" ),
-                                                                      NotificationKind::Info );
-        return true;
-    }
-
-    GameObjectManager* PrefabEditorPanel::findPreviewManager() const
-    {
-        Scene* pScene = getPreviewScene();
-        return pScene != nullptr ? pScene->getObjectManager() : nullptr;
+        return findWindow() != nullptr && PrefabEditorViewModel::requestOpenWindow( prefabPath, kPanelID );
     }
 
     void PrefabEditorPanel::populatePreviewScene( Scene& /*scene*/ )
     {
         getPreviewViewport().frameSphere( float3{ 0.0f, 0.0f, 0.0f }, PrefabEditorPanelInternal::kFrameRadius );
-        _model.resetForNewScene();
+        _viewModel.resetForNewScene();
     }
 
     ToolAssetLoadResult PrefabEditorPanel::loadDocument()
@@ -104,17 +69,16 @@ namespace sw::editor
         const string path = acceptDocumentToLoad();
         if ( path.empty() )
             return ToolAssetLoadResult::Missing;
-        _model.requestRebuild(); // 다시 읽으면 루트도 다시 스폰한다(`syncDocumentRoot`)
+        _viewModel.requestRebuild(); // 다시 읽으면 루트도 다시 스폰한다(`syncDocumentRoot`)
         return ToolAssetLoadResult::Loaded;
     }
 
     bool PrefabEditorPanel::rebuildDocumentRoot()
     {
-        GameObjectManager* pManager = findPreviewManager();
-        if ( pManager == nullptr || getLoadedAssetPath().empty() )
+        if ( getPreviewScene() == nullptr || getLoadedAssetPath().empty() )
             return false;
 
-        const bool bSpawned = _model.rebuildRoot( *pManager, getPreviewSelection(), getLoadedAssetPath() );
+        const bool bSpawned = _viewModel.rebuildRoot( getPreviewScene(), getPreviewSelection(), getLoadedAssetPath() );
         resetPreviewEdits(); // 옛 문서의 편집 기록은 새 루트와 맞지 않는다
         if ( bSpawned )
             getPreviewViewport().frameSphere( float3{ 0.0f, 0.0f, 0.0f }, PrefabEditorPanelInternal::kFrameRadius );
@@ -124,19 +88,19 @@ namespace sw::editor
     void PrefabEditorPanel::syncDocumentRoot()
     {
         const bool bDocumentReady = getLoadedAssetPath().empty() == false && isDocumentLoadFailed() == false && isDocumentLoaded();
-        if ( bDocumentReady == false || _model.needsRebuild( getLoadedAssetPath() ) == false )
+        if ( bDocumentReady == false || _viewModel.needsRebuild( getLoadedAssetPath() ) == false )
             return;
         (void)rebuildDocumentRoot(); // 실패는 상태 줄에 남는다 — 같은 경로로 프레임마다 다시 스폰하지 않게 모델이 스폰한 경로를 이미 채웠다
     }
 
     bool PrefabEditorPanel::enterNestedIsolation( string_view prefabPath )
     {
-        return _model.enterNested( findPreviewManager(), getPreviewSelection(), prefabPath );
+        return _viewModel.enterNested( getPreviewScene(), getPreviewSelection(), prefabPath );
     }
 
     bool PrefabEditorPanel::exitIsolation( bool bSaveToPrefab )
     {
-        const PrefabFrameExit result = _model.exitFrame( findPreviewManager(), getPreviewSelection(), bSaveToPrefab );
+        const PrefabFrameExit result = _viewModel.exitFrame( getPreviewScene(), getPreviewSelection(), bSaveToPrefab );
         if ( result == PrefabFrameExit::Failed )
             return false;
         if ( bSaveToPrefab )
@@ -148,16 +112,16 @@ namespace sw::editor
         {
             setOpen( false ); // 문서 단계 — 창을 닫는다(편집이 남았으면 확인을 거친다). 문서 루트는 씬에 남는다
             if ( isOpen() == false )
-                PrefabEditorPanelInternal::notifyExited(); // 확인을 기다리는 중이면 아직 나가지 않았다
+                PrefabEditorViewModel::notifyExited(); // 확인을 기다리는 중이면 아직 나가지 않았다
             return true;
         }
-        PrefabEditorPanelInternal::notifyExited();
+        PrefabEditorViewModel::notifyExited();
         return true;
     }
 
     bool PrefabEditorPanel::saveDocument()
     {
-        if ( _model.saveFrame( findPreviewManager() ) == false )
+        if ( _viewModel.saveFrame( getPreviewScene() ) == false )
             return false;
         acknowledgePreviewEdits();
         return true;
@@ -168,27 +132,24 @@ namespace sw::editor
         (void)rebuildDocumentRoot(); // 씬이 없으면 버릴 편집도 없다
     }
 
-    void PrefabEditorPanel::drawChildTree( GameObject& object, int32 depth )
+    void PrefabEditorPanel::drawChildRows()
     {
-        ImGui::PushID( static_cast<int32>( object.getObjectID() ) );
-        ImGui::Indent( PrefabEditorPanelInternal::kChildIndent * static_cast<float32>( depth ) );
-        if ( ImGui::Selectable( object.getName().c_str(), getPreviewSelection().hasObject( &object ) ) )
-            getPreviewSelection().selectObject( &object );
-        EditorSelfTestMarks::record( ( "prefabwindow.child." + string{ object.getName().c_str() } ).c_str() );
-        ImGui::Unindent( PrefabEditorPanelInternal::kChildIndent * static_cast<float32>( depth ) );
-        ImGui::PopID();
-        vector<GameObject*> listChild;
-        object.getChildren( listChild );
-        for ( GameObject* pChild : listChild )
+        for ( const PrefabEditorChildRow& row : _viewState._listChildRow )
         {
-            if ( pChild != nullptr && pChild->isPendingDestroy() == false )
-                drawChildTree( *pChild, depth + 1 );
+            const float32 indent = PrefabEditorPanelInternal::kChildIndent * static_cast<float32>( row._depth );
+            ImGui::PushID( static_cast<int32>( row._objectID ) );
+            ImGui::Indent( indent );
+            if ( ImGui::Selectable( row._name.c_str(), row._bSelected != SW_FALSE ) )
+                _viewModel.selectObject( getPreviewScene(), getPreviewSelection(), row._objectID );
+            EditorSelfTestMarks::record( ( "prefabwindow.child." + row._name ).c_str() );
+            ImGui::Unindent( indent );
+            ImGui::PopID();
         }
     }
 
     void PrefabEditorPanel::drawIsolationBar()
     {
-        const bool bNested = _model.getIsolation().getDepth() > 1;
+        const bool bNested = _viewState._bNested != SW_FALSE;
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) ) )
             (void)saveDocumentAndClearDirty(); // 저장 경로는 모두 이것을 거친다 — 실패는 상태 줄에 남는다
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( bNested ? "Save & Back" : "Save & Close" ) );
@@ -209,17 +170,17 @@ namespace sw::editor
         beginPreviewFrame();
         drawDocumentOpenBar( "prefabwindow" );
         syncDocumentRoot();
-        _model.enterPendingNested( findPreviewManager(), getPreviewSelection() );
+        _viewModel.enterPendingNested( getPreviewScene(), getPreviewSelection() );
+        _viewModel.gather( getPreviewScene(), getPreviewSelection(), _viewState );
 
-        const EditorPrefabIsolation& isolation = _model.getIsolation();
-        if ( getLoadedAssetPath().empty() || isolation.isActive() == false )
+        if ( getLoadedAssetPath().empty() || _viewState._bIsolating == SW_FALSE )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdLabel", "OpenAPrefabWithOpenAbove" ) );
-            EditorWidgets::drawPanelStatus( _model.getStatus().c_str() );
+            EditorWidgets::drawPanelStatus( _viewState._status.c_str() );
             return;
         }
 
-        ImGui::TextDisabled( "%s%s", isolation.getPrefabPath().data(), isDocumentDirty() ? " *" : "" );
+        ImGui::TextDisabled( "%s%s", _viewState._prefabPath.c_str(), isDocumentDirty() ? " *" : "" );
         drawIsolationBar();
 
         const float32 side   = PrefabEditorPanelInternal::kMinViewportSide;
@@ -229,15 +190,13 @@ namespace sw::editor
         drawPreviewViewport( float2{ width, height }, _gizmo.hasMouse() );
         _gizmo.draw( *this );
 
-        GameObjectManager* pManager = findPreviewManager();
-        GameObject*        pTop     = pManager != nullptr ? pManager->findGameObjectByID( isolation.getRootObjectID() ) : nullptr;
-        if ( pTop != nullptr )
+        if ( _viewState._listChildRow.empty() == false )
         {
             ImGui::Separator();
             ImGui::BeginChild( "##PrefabChildren", ImVec2( 0.0f, 0.0f ), ImGuiChildFlags_None );
-            drawChildTree( *pTop, 0 );
+            drawChildRows();
             ImGui::EndChild();
         }
-        EditorWidgets::drawPanelStatus( _model.getStatus().c_str() );
+        EditorWidgets::drawPanelStatus( _viewModel.getStatus().c_str() );
     }
 } // namespace sw::editor

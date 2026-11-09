@@ -58,7 +58,7 @@ namespace sw::editor
 
         if ( pWindow != nullptr )
         {
-            ImGui::TextColored( EditorColorUtil::toImVec4( PrefabPanelInternal::kIsolationText ), "%s", SW_LOCKEYFORMAT( "EdFormat", "PrefabWindow", TextArgumentList().addText( "prefabPath", string{ pWindow->getIsolation().getPrefabPath() }.c_str() ) ).c_str() );
+            ImGui::TextColored( EditorColorUtil::toImVec4( PrefabPanelInternal::kIsolationText ), "%s", SW_LOCKEYFORMAT( "EdFormat", "PrefabWindow", TextArgumentList().addText( "prefabPath", string{ pWindow->getIsolatedPrefabPath() }.c_str() ) ).c_str() );
             if ( ImGui::Button( SW_LOCKEY( "EdText", "SavePrefabExitIsolation" ) ) )
                 (void)pWindow->exitIsolation( true ); // 실패는 창이 로그와 상태 줄로 알린다
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "SavePrefabExitIsolation" ) );
@@ -116,7 +116,7 @@ namespace sw::editor
                 {
                     // 창이 이 프리팹을 열고 있으면 그 안에서 중첩 부분만 보이게 하고, 아니면 중첩 프리팹을 창의 문서로 연다.
                     PrefabEditorPanel* pNestedWindow          = PrefabEditorPanel::findIsolatingWindow();
-                    const bool         bWindowShowsThisPrefab = pNestedWindow != nullptr && FileUtil::pathsEqualNormalized( pNestedWindow->getIsolation().getPrefabPath(), _model.getPrefabPath() );
+                    const bool         bWindowShowsThisPrefab = pNestedWindow != nullptr && FileUtil::pathsEqualNormalized( pNestedWindow->getIsolatedPrefabPath(), _model.getPrefabPath() );
                     if ( bWindowShowsThisPrefab )
                         pNestedWindow->requestNestedIsolation( listNestedPrefab[prefabIndex] );
                     else
