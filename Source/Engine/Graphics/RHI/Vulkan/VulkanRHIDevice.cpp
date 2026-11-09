@@ -1880,7 +1880,7 @@ namespace sw
             return 0;
         if ( _breadcrumbMode == VulkanBreadcrumbMode::AMDBufferMarker )
         {
-            // [0] 시작 표지 · [1] 끝 표지 — 0 인 칸(아직 쓰지 않음)은 싣지 않는다(DX12 와 같은 모양, 푸는 일은 GPUBreadcrumbs::parse).
+            // 큐마다 [시작 · 끝] — 그래픽스 다음 컴퓨트. 0 인 칸(아직 쓰지 않음)은 싣지 않는다(DX12 와 같은 모양, 푸는 일은 GPUBreadcrumbs::parse).
             uint32 filledMarker = 0;
             for ( uint32 slot = 0; slot < kBreadcrumbSlotCount && filledMarker < capacity && _pBreadcrumbMapped != nullptr; ++slot )
             {
@@ -2629,8 +2629,10 @@ namespace sw
     {
         if ( _asyncComputeQueue == VK_NULL_HANDLE )
             return IRHIDevice::createAsyncComputeCommandList(); // 능력이 거짓인 길 — 오류를 남기고 nullptr
-        // 같은 패밀리라 일반 리스트(같은 패밀리의 풀 · 같은 바인딩)를 그대로 두 번째 큐에 낸다.
-        return make_unique<VulkanRHICommandList>( this );
+        // 같은 패밀리라 일반 리스트(같은 패밀리의 풀 · 같은 바인딩)를 그대로 두 번째 큐에 낸다. 브레드크럼만 제 칸에 쓴다(큐 사이 쓰기 경합이 없게).
+        unique_ptr<VulkanRHICommandList> list = make_unique<VulkanRHICommandList>( this );
+        list->setBreadcrumbSlotBase( kComputeBreadcrumbSlotBase );
+        return list;
     }
 
     RHIQueueSyncPoint VulkanRHIDevice::submitAsyncCompute( IRHICommandList* pCmdList )

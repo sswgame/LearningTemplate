@@ -245,7 +245,7 @@ namespace sw
         {
             RHICapabilities caps  = RHIAvailability::query( RHIBackend::DirectX12 );
             caps._bNativeBindless = _bBindlessRootSignature != SW_FALSE ? 1u : 0u;
-            caps._bGPUBreadcrumbs = _breadcrumbAddress != 0 ? SW_TRUE : SW_FALSE;
+            caps._bGPUBreadcrumbs = _arrBreadcrumb[0]._address != 0 ? SW_TRUE : SW_FALSE;
             caps._bAsyncCompute   = _computeQueue != nullptr ? SW_TRUE : SW_FALSE;
             caps._bPlacedTextures = SW_TRUE; // RT · DS 전용 힙은 모든 리소스 힙 등급이 받는다
             return caps;
@@ -713,6 +713,8 @@ namespace sw
         void resizeSwapChainBuffers( D3D12RHISwapChain& swapChain, uint32 width, uint32 height );
         /// @brief 브레드크럼 버퍼를 만들어 매핑합니다. 못 만들면 능력을 켜지 않을 뿐 초기화는 이어진다(진단 기능이다).
         void createBreadcrumbBuffer();
+        /** @brief 큐의 브레드크럼 버퍼 GPU 주소입니다(@p bComputeQueue — 비동기 컴퓨트 리스트). 버퍼가 없으면 0 입니다. */
+        D3D12_GPU_VIRTUAL_ADDRESS getBreadcrumbAddress( bool bComputeQueue ) const;
 
     private:
         /// @brief 구조 버퍼 복사 리스트(`StructuredUploadSlot`)의 기록과, 프레임 리스트 제출 · 프레임 펜스 Signal 과 값 올리기를 지킵니다. 열어 두는 동안 잠급니다.
@@ -815,11 +817,20 @@ namespace sw
         atomic<uint8> _bDeviceRemovedLogged;
         /// @brief 브레드크럼 버퍼의 칸 수입니다 — [0] 시작 표지(MARKER_IN) · [1] 끝 표지(MARKER_OUT, `GPUBreadcrumbs::kEndMarkerBit`).
         static constexpr uint32 kBreadcrumbSlotCount = 2;
-        /// @brief GPU 브레드크럼 버퍼입니다(`IRHICommandList::writeBreadcrumb`) - 읽기 힙의 uint32 두 칸 버퍼를 영속 매핑해 두고 `WriteBufferImmediate` 가 패스 id 를 쓴다(시작 MARKER_IN · 끝 MARKER_OUT).
-        ///        디바이스를 잃은 뒤에도 CPU 가 이 매핑으로 마지막으로 닿은 패스를 읽는다(`readLastBreadcrumbs`). 만들지 못했거나 `-gv_gpuBreadcrumbs` 가 꺼졌으면 주소가 0 이다.
-        Microsoft::WRL::ComPtr<ID3D12Resource> _breadcrumbBuffer;
-        D3D12_GPU_VIRTUAL_ADDRESS              _breadcrumbAddress;
-        const volatile uint32*                 _pBreadcrumbMapped;
+        /// @brief 브레드크럼 버퍼를 따로 두는 큐 수입니다 — [0] 그래픽스(DIRECT) · [1] 비동기 컴퓨트(COMPUTE).
+        static constexpr uint32 kBreadcrumbQueueCount = 2;
+        /**
+         * @brief 큐 하나의 GPU 브레드크럼 버퍼입니다(`IRHICommandList::writeBreadcrumb`) - 읽기 힙의 uint32 두 칸 버퍼를 영속 매핑해 두고 `WriteBufferImmediate` 가 패스 id 를 쓴다(시작 MARKER_IN · 끝 MARKER_OUT).
+         * @details 디바이스를 잃은 뒤에도 CPU 가 이 매핑으로 마지막으로 닿은 패스를 읽는다(`readLastBreadcrumbs`). 만들지 못했거나 `-gv_gpuBreadcrumbs` 가 꺼졌으면 주소가 0 이다.
+         *          **큐마다 따로다** — 한 버퍼를 두 큐가 쓰면 서로 기다리지 않는 쓰기라 디버그 레이어가 큐 사이 경합(id 1047)으로 막았다(같은 버퍼의 다른 칸이어도 자원 단위로 본다).
+         */
+        struct BreadcrumbTrack
+        {
+            Microsoft::WRL::ComPtr<ID3D12Resource> _buffer;
+            D3D12_GPU_VIRTUAL_ADDRESS              _address{ 0 };
+            const volatile uint32*                 _pMapped{ nullptr };
+        };
+        BreadcrumbTrack _arrBreadcrumb[kBreadcrumbQueueCount];
         /// @brief blitTexture 포맷이나 크기 불일치 경고를 한 번만 남기기 위한 래치입니다. 병렬 기록 워커가 함께 쓰므로 atomic 입니다.
         atomic<uint8>                     _bBlitMismatchLogged;
         uint8 _bOnlineHeapExhaustedLogged SW_GUARDED_BY( _onlineBlockMutex ); ///< 온라인 힙이 바닥났다는 경고를 한 번만 남기기 위한 래치입니다.

@@ -79,9 +79,7 @@ namespace sw
         , _bBindlessRootSignature{ SW_FALSE }
         , _reservedPassFlags{ 0 }
         , _bDeviceRemovedLogged{ SW_FALSE }
-        , _breadcrumbBuffer{}
-        , _breadcrumbAddress{ 0 }
-        , _pBreadcrumbMapped{ nullptr }
+        , _arrBreadcrumb{}
         , _bBlitMismatchLogged{ SW_FALSE }
         , _bOnlineHeapExhaustedLogged{ SW_FALSE }
         , _bTimestampEnabled{ SW_FALSE }
@@ -793,52 +791,66 @@ namespace sw
     {
         if ( GPUBreadcrumbs::isEnabled() == false || _device == nullptr )
             return;
-        // 읽기 힙(CPU 가 읽는 시스템 메모리) uint32 둘 — [0] 시작 표지 · [1] 끝 표지. GPU 가 소실 중에 쓴 값이 소실 뒤에도 CPU 에서 읽힌다. 읽기 힙 버퍼의 상태는 COPY_DEST 로 고정이다.
+        // 큐마다 읽기 힙(CPU 가 읽는 시스템 메모리) uint32 둘 — [0] 시작 표지 · [1] 끝 표지. GPU 가 소실 중에 쓴 값이 소실 뒤에도 CPU 에서 읽힌다. 읽기 힙 버퍼의 상태는 COPY_DEST 로 고정이다.
         const D3D12_HEAP_PROPERTIES heapProperties = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_READBACK );
         const D3D12_RESOURCE_DESC   bufferDesc     = D3D12RHIResourcePreset::bufferDesc( sizeof( uint32 ) * kBreadcrumbSlotCount );
-        if ( isHrSuccess( _device->CreateCommittedResource( &heapProperties, D3D12_HEAP_FLAG_NONE, &bufferDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
-                                                            IID_PPV_ARGS( _breadcrumbBuffer.GetAddressOf() ) ),
-                          "CreateCommittedResource(breadcrumb)" ) == false )
+        for ( BreadcrumbTrack& track : _arrBreadcrumb )
         {
-            SW_LOG_WARNING_ID( "D3D12.D3D12GPUBreadcrumbBuffer", "The D3D12 GPU breadcrumb buffer could not be created - device lost reports only the CPU-recorded last pass" );
-            return;
+            if ( isHrSuccess( _device->CreateCommittedResource( &heapProperties, D3D12_HEAP_FLAG_NONE, &bufferDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
+                                                                IID_PPV_ARGS( track._buffer.GetAddressOf() ) ),
+                              "CreateCommittedResource(breadcrumb)" ) == false )
+            {
+                SW_LOG_WARNING_ID( "D3D12.D3D12GPUBreadcrumbBuffer", "The D3D12 GPU breadcrumb buffer could not be created - device lost reports only the CPU-recorded last pass" );
+                return;
+            }
+            void*       pMapped = nullptr;
+            D3D12_RANGE noRead{ 0, 0 };
+            if ( isHrSuccess( track._buffer->Map( 0, &noRead, &pMapped ), "Map(breadcrumb)" ) == false || pMapped == nullptr )
+            {
+                track._buffer.Reset();
+                return;
+            }
+            static_cast<uint32*>( pMapped )[0] = 0;
+            static_cast<uint32*>( pMapped )[1] = 0;
+            track._pMapped                     = static_cast<const volatile uint32*>( pMapped );
+            track._address                     = track._buffer->GetGPUVirtualAddress();
         }
-        void*       pMapped = nullptr;
-        D3D12_RANGE noRead{ 0, 0 };
-        if ( isHrSuccess( _breadcrumbBuffer->Map( 0, &noRead, &pMapped ), "Map(breadcrumb)" ) == false || pMapped == nullptr )
-        {
-            _breadcrumbBuffer.Reset();
-            return;
-        }
-        static_cast<uint32*>( pMapped )[0] = 0;
-        static_cast<uint32*>( pMapped )[1] = 0;
-        _pBreadcrumbMapped                 = static_cast<const volatile uint32*>( pMapped );
-        _breadcrumbAddress                 = _breadcrumbBuffer->GetGPUVirtualAddress();
-        SW_LOG_INFO_ID( "D3D12.D3D12GPUBreadcrumbsEnabled", "D3D12 GPU breadcrumbs enabled (WriteBufferImmediate markers)" );
+        SW_LOG_INFO_ID( "D3D12.D3D12GPUBreadcrumbsEnabled", "D3D12 GPU breadcrumbs enabled (WriteBufferImmediate markers, one buffer per queue)" );
+    }
+
+    D3D12_GPU_VIRTUAL_ADDRESS D3D12RHIDevice::getBreadcrumbAddress( bool bComputeQueue ) const
+    {
+        return _arrBreadcrumb[bComputeQueue ? 1 : 0]._address;
     }
 
     uint32 D3D12RHIDevice::readLastBreadcrumbs( uint32* pOutID, uint32 capacity )
     {
-        if ( _pBreadcrumbMapped == nullptr || pOutID == nullptr || capacity == 0 )
+        if ( pOutID == nullptr || capacity == 0 )
             return 0;
-        // [0] 시작 표지 · [1] 끝 표지 — 0 인 칸(아직 쓰지 않음)은 싣지 않는다. 푸는 일은 GPUBreadcrumbs::parse 가 한다.
+        // 큐마다 [0] 시작 표지 · [1] 끝 표지 — 그래픽스 다음 컴퓨트. 0 인 칸(아직 쓰지 않음)은 싣지 않는다. 푸는 일은 GPUBreadcrumbs::parse 가 한다.
         uint32 filled = 0;
-        for ( uint32 slot = 0; slot < kBreadcrumbSlotCount && filled < capacity; ++slot )
+        for ( const BreadcrumbTrack& track : _arrBreadcrumb )
         {
-            const uint32 marker = _pBreadcrumbMapped[slot];
-            if ( marker != 0 )
-                pOutID[filled++] = marker;
+            if ( track._pMapped == nullptr )
+                continue;
+            for ( uint32 slot = 0; slot < kBreadcrumbSlotCount && filled < capacity; ++slot )
+            {
+                const uint32 marker = track._pMapped[slot];
+                if ( marker != 0 )
+                    pOutID[filled++] = marker;
+            }
         }
         return filled;
     }
 
     void D3D12RHIDevice::shutdownInternal()
     {
-        if ( _breadcrumbBuffer != nullptr && _pBreadcrumbMapped != nullptr )
-            _breadcrumbBuffer->Unmap( 0, nullptr );
-        _pBreadcrumbMapped = nullptr;
-        _breadcrumbAddress = 0;
-        _breadcrumbBuffer.Reset();
+        for ( BreadcrumbTrack& track : _arrBreadcrumb )
+        {
+            if ( track._buffer != nullptr && track._pMapped != nullptr )
+                track._buffer->Unmap( 0, nullptr );
+            track = BreadcrumbTrack{};
+        }
         _mapOffscreenTexture.clear();
         _pipelineStates.clear();
         _renderPassRegistry.clear();

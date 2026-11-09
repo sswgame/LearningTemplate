@@ -28,6 +28,8 @@ namespace sw
          */
         VulkanRHICommandContext( VulkanRHIDevice* pDevice, VkCommandBuffer targetBuffer, VulkanRecordingState* pState,
                                  VulkanDescriptorPoolSet* pDescriptorPoolSet );
+        /** @brief 이 컨텍스트가 브레드크럼을 쓰는 칸의 시작입니다(비동기 컴퓨트 리스트는 제 칸 — `VulkanRHIDevice::kComputeBreadcrumbSlotBase`). */
+        void setBreadcrumbSlotBase( uint32 slotBase ) { _breadcrumbSlotBase = slotBase; }
         ~VulkanRHICommandContext() override = default;
 
         void blitTextureNative( RHITextureHandle src, RHITextureHandle dst ) override;
@@ -122,5 +124,7 @@ namespace sw
         VulkanDescriptorPoolSet* _pDescriptorPoolSet;
         /// @brief 마지막으로 연 이벤트 마커(패스 이름)입니다. 디바이스를 잃었을 때 "마지막으로 제출한 패스" 를 로그에 적는 데 씁니다.
         fixed_string<constant::buffer::kMax64> _lastEventMarker;
+        /// @brief AMD 표지 버퍼에서 이 컨텍스트의 칸 시작입니다 — 그래픽스 0, 비동기 컴퓨트 2(큐마다 제 칸이라 두 큐의 쓰기가 겹치지 않는다).
+        uint32 _breadcrumbSlotBase;
     };
 } // namespace sw

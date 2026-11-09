@@ -30,6 +30,8 @@ namespace sw
     public:
         /** @brief 디바이스 풀에서 커맨드 풀과 버퍼 쌍을 빌립니다. */
         explicit VulkanRHICommandList( VulkanRHIDevice* pDevice );
+        /** @brief 브레드크럼 칸 시작을 정합니다(비동기 컴퓨트 리스트 — `VulkanRHIDevice::createAsyncComputeCommandList`). */
+        void setBreadcrumbSlotBase( uint32 slotBase ) { _context.setBreadcrumbSlotBase( slotBase ); }
         /** @brief 빌린 쌍을 GPU 펜스 통과 후 풀로 돌려보냅니다. */
         ~VulkanRHICommandList() override;
 

@@ -539,7 +539,8 @@ namespace sw
         /** @brief AMD 표지 버퍼를 풀고 지웁니다. 여러 번 불러도 된다. */
         void destroyBreadcrumbBuffer();
         /** @brief 브레드크럼 칸 수입니다 — [0] 시작 표지 · [1] 끝 표지(DX12 와 같다). */
-        static constexpr uint32 kBreadcrumbSlotCount = 2;
+        static constexpr uint32 kBreadcrumbSlotCount       = 4; ///< 큐마다 둘([시작 · 끝]) — 그래픽스 [0,1] · 비동기 컴퓨트 [2,3]. 두 큐가 같은 칸을 쓰면 서로 기다리지 않는 쓰기다
+        static constexpr uint32 kComputeBreadcrumbSlotBase = 2; ///< 비동기 컴퓨트 리스트의 칸 시작
         /**
          * @brief 그래픽스 커맨드 풀을 만듭니다.
          */

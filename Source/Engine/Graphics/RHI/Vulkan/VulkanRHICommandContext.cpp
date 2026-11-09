@@ -107,6 +107,8 @@ namespace sw
         , _targetBuffer{ nullptr }
         , _pState{ pDevice != nullptr ? &pDevice->_recordingState : nullptr }
         , _pDescriptorPoolSet{ nullptr }
+        , _lastEventMarker{}
+        , _breadcrumbSlotBase{ 0 }
     {
     }
 
@@ -116,6 +118,8 @@ namespace sw
         , _targetBuffer{ targetBuffer }
         , _pState{ pState }
         , _pDescriptorPoolSet{ pDescriptorPoolSet }
+        , _lastEventMarker{}
+        , _breadcrumbSlotBase{ 0 }
     {
     }
 
@@ -1108,7 +1112,8 @@ namespace sw
                 // 렌더 패스 안팎 어디서나 기록할 수 있다(명세의 Render Pass Scope: Both).
                 const bool                    bEnd  = ( markerID & GPUBreadcrumbs::kEndMarkerBit ) != 0;
                 const VkPipelineStageFlagBits stage = bEnd ? VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT : VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-                reinterpret_cast<PFN_vkCmdWriteBufferMarkerAMD>( _pDevice->_pCmdWriteBufferMarker )( cmd, stage, _pDevice->_breadcrumbBuffer, bEnd ? sizeof( uint32 ) : 0u, markerID );
+                reinterpret_cast<PFN_vkCmdWriteBufferMarkerAMD>( _pDevice->_pCmdWriteBufferMarker )( cmd, stage, _pDevice->_breadcrumbBuffer,
+                                                                                                     ( _breadcrumbSlotBase + ( bEnd ? 1u : 0u ) ) * sizeof( uint32 ), markerID );
                 return;
             }
         }

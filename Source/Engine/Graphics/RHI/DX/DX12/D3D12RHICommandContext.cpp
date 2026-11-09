@@ -790,7 +790,8 @@ namespace sw
 
     void D3D12RHICommandContext::writeBreadcrumb( uint32 markerID )
     {
-        if ( _pCmdList == nullptr || _pDevice->_breadcrumbAddress == 0 )
+        const D3D12_GPU_VIRTUAL_ADDRESS address = _pDevice->getBreadcrumbAddress( _bComputeQueueList != SW_FALSE ); // 큐마다 제 버퍼 — 큐 사이 경합이 없다
+        if ( _pCmdList == nullptr || address == 0 )
             return;
         // WriteBufferImmediate 는 ID3D12GraphicsCommandList2 다 - 없는 런타임은 표지를 쓰지 않는다.
         Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> list2;
@@ -800,7 +801,7 @@ namespace sw
         // 소실 뒤 [0] 은 GPU 가 시작한 마지막 패스, [1] 은 끝낸 마지막 패스다.
         // https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_writebufferimmediate_mode
         const bool                                 bEnd = ( markerID & GPUBreadcrumbs::kEndMarkerBit ) != 0;
-        const D3D12_WRITEBUFFERIMMEDIATE_PARAMETER param{ _pDevice->_breadcrumbAddress + ( bEnd ? sizeof( uint32 ) : 0u ), markerID };
+        const D3D12_WRITEBUFFERIMMEDIATE_PARAMETER param{ address + ( bEnd ? sizeof( uint32 ) : 0u ), markerID };
         const D3D12_WRITEBUFFERIMMEDIATE_MODE      mode = bEnd ? D3D12_WRITEBUFFERIMMEDIATE_MODE_MARKER_OUT : D3D12_WRITEBUFFERIMMEDIATE_MODE_MARKER_IN;
         list2->WriteBufferImmediate( 1, &param, &mode );
     }
