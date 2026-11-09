@@ -85,6 +85,47 @@ namespace sw::editor
             static constexpr float32 kMaxFluidValue            = 10.0f;   ///< 체액 흐름 값(초당 줄기 · 빠르기 · 반지름) 끌기 끝
             static constexpr float32 kFillWidth                = -1.0f;   ///< ImGui 다음 칸 폭 "남은 폭 모두"
 
+            /** @brief 오브젝트가 그리는 메시입니다(메시 컴포넌트 — 스켈레탈이면 그 사본). 없으면 nullptr 입니다. */
+            static const Mesh* findPickMesh( const GameObject& object )
+            {
+                const MeshComponent* pMesh = object.getComponent<MeshComponent>();
+                return pMesh != nullptr ? pMesh->getRawMesh() : nullptr;
+            }
+            /** @brief 집기 오브젝트들의 메시 정점 수 합입니다(감시 값 — 부품이 빠지거나 몸이 다시 구워지면 바뀐다). */
+            static uint32 countPickVertices( const vector<const GameObject*>& listObject )
+            {
+                uint32 count = 0;
+                for ( const GameObject* pObject : listObject )
+                {
+                    const Mesh* pMesh = findPickMesh( *pObject );
+                    count += pMesh != nullptr ? static_cast<uint32>( pMesh->getVertices().size() ) : 0u;
+                }
+                return count;
+            }
+            /**
+             * @brief 집기 오브젝트(첫 것이 몸)의 메시를 지금 포즈로 월드에 옮긴 표면을 짓습니다(`BodyPickSurface`). 스켈레탈 유닛이면 그 스킨 팔레트로 스키닝한다.
+             * @details 몸 메시가 없으면(조립 전) 첫 표면이 몸이 아니다 — 쓰는 쪽이 `_bSkin` 을 본다.
+             */
+            static void buildPickSurfaces( const vector<const GameObject*>& listObject, vector<BodyPickSurface>& outListSurface )
+            {
+                outListSurface.clear();
+                const vector<float4x4> listNoPalette{}; // 단단한 부품 — 스키닝하지 않는다
+                for ( size_t index = 0; index < listObject.size(); ++index )
+                {
+                    const GameObject&            object = *listObject[index];
+                    const Mesh*                  pMesh  = findPickMesh( object );
+                    const SkeletalMeshComponent* pUnit  = object.getComponent<SkeletalMeshComponent>();
+                    const SceneComponent*        pScene = object.getPrimarySceneComponent();
+                    if ( pMesh == nullptr || pScene == nullptr || pMesh->getVertices().empty() )
+                        continue;
+                    BodyPickSurface& surface = outListSurface.emplace_back();
+                    BodyPickSurface::build( pMesh->getVertices(), pMesh->getSkinVertices(), pUnit != nullptr ? pUnit->getSkinPalette() : listNoPalette, pScene->getWorldMatrix(), surface );
+                    surface._listIndex   = pMesh->getIndices();
+                    surface._listSection = pMesh->getSections();
+                    surface._bSkin       = index == 0 ? SW_TRUE : SW_FALSE;
+                }
+            }
+
             /** @brief 입력칸 글 버퍼입니다(별칭 · 묶음 — 그리기마다 데이터 값으로 채우고 놓을 때 쓴다). */
             using TextBuffer = fixed_string<constant::buffer::kMax128>;
 
@@ -168,6 +209,14 @@ namespace sw::editor
                     return false;
                 outValue = static_cast<float64>( pPanel->getPublished()._selectedSocketX );
                 return true;
+            }
+            [[nodiscard]] static bool readPreviewPickVertexCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                return readPublished( &CharacterEditorPanel::Published::_previewPickVertexCount, outValue );
+            }
+            [[nodiscard]] static bool readBodyPickCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                return readPublished( &CharacterEditorPanel::Published::_bodyPickCount, outValue );
             }
             [[nodiscard]] static bool readPenetrationMarkCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -253,6 +302,10 @@ namespace sw::editor
                          "Times the Character Editor preview body was assembled (published while the Preview tab draws)", &CharacterEditorPanelInternal::readPreviewAssembleCount );
     SW_AUTOMATION_WATCH( editorCharacterEditorPenetrationMarks, "Editor.CharacterEditorPenetrationMarks", "Penetration points the Character Editor preview drew last frame (red crosses on the body)",
                          &CharacterEditorPanelInternal::readPenetrationMarkCount );
+    SW_AUTOMATION_WATCH( editorCharacterEditorPreviewPickVertices, "Editor.CharacterEditorPreviewPickVertices",
+                         "Mesh vertices of the Character Editor preview body and its part objects (published while the Preview tab draws)", &CharacterEditorPanelInternal::readPreviewPickVertexCount );
+    SW_AUTOMATION_WATCH( editorCharacterEditorBodyPickCount, "Editor.CharacterEditorBodyPickCount", "Sections the Character Editor picked on the posed body or a part in the preview viewport",
+                         &CharacterEditorPanelInternal::readBodyPickCount );
     SW_AUTOMATION_WATCH( editorCharacterEditorBoneGizmoPlaced, "Editor.CharacterEditorBoneGizmoPlaced", "1 while the Character Editor preview holds a gizmo marker on the selected bone",
                          &CharacterEditorPanelInternal::readBoneGizmoPlaced );
     SW_AUTOMATION_WATCH( editorCharacterEditorSocketGizmoPlaced, "Editor.CharacterEditorSocketGizmoPlaced", "1 while the Character Editor preview holds the gizmo on the selected socket",
@@ -1264,6 +1317,8 @@ namespace sw::editor
             ImGui::PushID( row._slot.c_str() );
             if ( ImGui::Checkbox( "##hidden", &bHidden ) )
                 (void)BodyCustomizationViewModel::setSlotHidden( appearance, row._slot, bHidden );
+            if ( row._item.empty() == false )
+                EditorSelfTestMarks::record( "charactereditor.body.slot.equipped" ); // 입은 칸의 숨김 — 자동화가 누를 자리(같은 프레임의 첫 것이 남는다)
             ImGui::SameLine();
             ImGui::TextUnformatted( row._slot.c_str() );
             ImGui::SameLine();
@@ -1606,25 +1661,10 @@ namespace sw::editor
         ImGui::EndDisabled();
     }
 
-    void CharacterEditorPanel::collectPickSurfaces( GameObject& body, vector<BodyPickSurface>& outListSurface ) const
+    void CharacterEditorPanel::collectPickObjects( const GameObject& body, vector<const GameObject*>& outListObject ) const
     {
-        outListSurface.clear();
-        const vector<float4x4> listNoPalette{}; // 단단한 부품 — 스키닝하지 않는다
-        const auto             appendSurface = [&outListSurface, &listNoPalette]( const GameObject& object, bool bSkin )
-        {
-            const MeshComponent*         pMesh  = object.getComponent<MeshComponent>();
-            const SkeletalMeshComponent* pUnit  = object.getComponent<SkeletalMeshComponent>();
-            const SceneComponent*        pScene = object.getPrimarySceneComponent();
-            const Mesh*                  pData  = pMesh != nullptr ? pMesh->getRawMesh() : nullptr;
-            if ( pData == nullptr || pScene == nullptr || pData->getVertices().empty() )
-                return;
-            BodyPickSurface& surface = outListSurface.emplace_back();
-            BodyPickSurface::build( pData->getVertices(), pData->getSkinVertices(), pUnit != nullptr ? pUnit->getSkinPalette() : listNoPalette, pScene->getWorldMatrix(), surface );
-            surface._listIndex   = pData->getIndices();
-            surface._listSection = pData->getSections();
-            surface._bSkin       = bSkin ? SW_TRUE : SW_FALSE;
-        };
-        appendSurface( body, true ); // 몸이 첫 표면이다 — 피부 층 배치는 이것만 본다
+        outListObject.clear();
+        outListObject.push_back( &body ); // 몸이 첫 오브젝트다 — 피부 층 배치는 이것만 본다
         const CharacterAppearanceComponent* pAppearance = body.getComponent<CharacterAppearanceComponent>();
         const GameObjectManager*            pManager    = findPreviewManager();
         if ( pAppearance == nullptr || pManager == nullptr )
@@ -1635,7 +1675,7 @@ namespace sw::editor
         {
             const GameObject* pPart = pManager->resolveGameObject( handle );
             if ( pPart != nullptr )
-                appendSurface( *pPart, false );
+                outListObject.push_back( pPart );
         }
     }
 
@@ -1645,6 +1685,7 @@ namespace sw::editor
         const EditorPreviewViewport& viewport = getPreviewViewport();
         const float2                 position = viewport.getImagePosition();
         const float2                 size     = viewport.getImageSize();
+        _published._previewPickVertexCount    = 0;
         if ( size._x <= 0.0f || size._y <= 0.0f || pBody == nullptr )
             return;
         float4x4 viewProjection{};
@@ -1652,13 +1693,16 @@ namespace sw::editor
         viewport.computeViewProjection( size._x / size._y, viewProjection, eye );
         EditorProjectedLineRenderer renderer{ ImGui::GetWindowDrawList(), viewProjection, position, size };
 
+        vector<const GameObject*> listObject;
+        collectPickObjects( *pBody, listObject );
+        _published._previewPickVertexCount = Internal::countPickVertices( listObject );
         // 표면(몸 + 부품)은 지금 포즈로 스키닝해 짓는다 — 윤곽을 긋거나 누른 프레임에만(CPU 스키닝이 공짜가 아니다).
         vector<BodyPickSurface> listSurface;
         bool                    bOutline = _bodySelectedSection < _bodyState._listSection.size();
         for ( const BodyCustomizationViewState::SectionRow& row : _bodyState._listSection )
             bOutline = bOutline || row._bHighlighted == SW_TRUE;
         if ( bOutline )
-            collectPickSurfaces( *pBody, listSurface );
+            Internal::buildPickSurfaces( listObject, listSurface );
 
         // 드라이브가 고른 구간 · 고른 구간을 윤곽으로 긋는다(지금 포즈 — 집기와 같다). 큰 메시는 삼각형을 고르게 건너뛴다.
         const float4 highlight = SW_THEME_COLOR( "Viewport", "SelectionOutline" ).toFloat4();
@@ -1723,7 +1767,7 @@ namespace sw::editor
         if ( EditorViewportProjectionUtil::makeMouseRay( viewProjection.invert(), position, size, ray ) == false )
             return;
         if ( listSurface.empty() )
-            collectPickSurfaces( *pBody, listSurface );
+            Internal::buildPickSurfaces( listObject, listSurface );
         if ( listSurface.empty() || listSurface[0]._bSkin == SW_FALSE )
             return; // 몸 메시가 아직 없다(조립 전)
         // 층 배치는 피부(몸 표면)만 본다 — 옷 아래 피부에도 놓는다(층 UV 는 몸 UV 다). 구간 고르기는 부품까지 가장 가까운 것.
@@ -1740,6 +1784,7 @@ namespace sw::editor
             _bBodyPickDrag = SW_TRUE;
             return;
         }
+        ++_published._bodyPickCount;
         const BodyPickSurface& surface = listSurface[hit._surface];
         if ( hit._section < surface._listSection.size() )
             _bodySelectedSection = BodyCustomizationViewModel::findSectionRow( _bodyState, surface._listSection[hit._section]._name );

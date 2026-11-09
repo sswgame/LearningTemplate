@@ -35,8 +35,6 @@ namespace sw
 
 namespace sw::editor
 {
-    struct BodyPickSurface;
-
     /**
      * @class CharacterEditorPanel
      * @brief 캐릭터 편집 확장의 도구 패널입니다.
@@ -54,17 +52,19 @@ namespace sw::editor
             uint32  _socketCount{ 0 };
             uint32  _equippedSlotCount{ 0 };
             uint32  _presetCount{ 0 };
-            uint32  _exportCount{ 0 };          ///< 이 패널이 데이터 프리셋으로 내보낸 수
-            uint32  _previewAssembleCount{ 0 }; ///< 미리보기 몸을 조립한 수(미리보기 탭을 그릴 때 게시)
-            uint32  _clipPlaying{ 0 };          ///< 미리보기 몸이 고른 클립을 재생 중이면 1(미리보기 탭을 그릴 때 게시)
-            uint32  _penetrationMarkCount{ 0 }; ///< 지난 그리기에 뷰포트에 찍은 관통 점 수
-            uint32  _boneGizmoPlaced{ 0 };      ///< 고른 본에 기즈모 표식을 놓았으면 1
-            uint32  _socketGizmoPlaced{ 0 };    ///< 고른 소켓에 기즈모 표식을 놓았으면 1
-            float32 _selectedSocketX{ 0.0f };   ///< 고른 소켓의 로컬 위치 x(m) — 시나리오가 기즈모 끌기 · 되돌리기를 본다
-            uint32  _statusSet{ 0 };            ///< 상태 줄에 글(오류 · 진행)이 있으면 1 — 시나리오가 편집 오류가 남지 않았는지 본다
-            uint32  _bodyLayerCount{ 0 };       ///< 외형 선택의 피부 층 수(몸 탭을 그릴 때 게시)
-            uint32  _bodyHiddenSlotCount{ 0 };  ///< 플레이어가 숨긴 슬롯 수(몸 탭을 그릴 때 게시)
-            uint32  _bodyDataDirty{ 0 };        ///< 몸 데이터 파일(채널 매핑 · 프로필 · 구간)에 저장하지 않은 편집이 있으면 1
+            uint32  _exportCount{ 0 };            ///< 이 패널이 데이터 프리셋으로 내보낸 수
+            uint32  _previewAssembleCount{ 0 };   ///< 미리보기 몸을 조립한 수(미리보기 탭을 그릴 때 게시)
+            uint32  _clipPlaying{ 0 };            ///< 미리보기 몸이 고른 클립을 재생 중이면 1(미리보기 탭을 그릴 때 게시)
+            uint32  _penetrationMarkCount{ 0 };   ///< 지난 그리기에 뷰포트에 찍은 관통 점 수
+            uint32  _previewPickVertexCount{ 0 }; ///< 집기 오브젝트(몸 + 부품) 메시의 정점 수 합(미리보기 탭을 그릴 때 게시 — 부품이 빠지거나 몸이 다시 구워지면 바뀐다)
+            uint32  _bodyPickCount{ 0 };          ///< 뷰포트에서 몸 · 부품 표면을 집어 구간을 고른 수
+            uint32  _boneGizmoPlaced{ 0 };        ///< 고른 본에 기즈모 표식을 놓았으면 1
+            uint32  _socketGizmoPlaced{ 0 };      ///< 고른 소켓에 기즈모 표식을 놓았으면 1
+            float32 _selectedSocketX{ 0.0f };     ///< 고른 소켓의 로컬 위치 x(m) — 시나리오가 기즈모 끌기 · 되돌리기를 본다
+            uint32  _statusSet{ 0 };              ///< 상태 줄에 글(오류 · 진행)이 있으면 1 — 시나리오가 편집 오류가 남지 않았는지 본다
+            uint32  _bodyLayerCount{ 0 };         ///< 외형 선택의 피부 층 수(몸 탭을 그릴 때 게시)
+            uint32  _bodyHiddenSlotCount{ 0 };    ///< 플레이어가 숨긴 슬롯 수(몸 탭을 그릴 때 게시)
+            uint32  _bodyDataDirty{ 0 };          ///< 몸 데이터 파일(채널 매핑 · 프로필 · 구간)에 저장하지 않은 편집이 있으면 1
         };
 
         CharacterEditorPanel();
@@ -165,11 +165,11 @@ namespace sw::editor
         /**
          * @brief 미리보기 탭의 뷰포트에서 몸 표면 집기를 받습니다 — 구간 고르기(별칭 대응)와 배치 층 옮기기(끄는 동안 한 되돌리기 단계), 강조 구간 · 집은 자리 표시.
          * @details 몸 탭에서 집기를 켜고 미리보기 탭에서 누른다(뷰포트는 한 탭이다). 기즈모가 마우스를 쥐었으면 받지 않는다. Esc 가 끈다.
-         *          집기 · 윤곽은 지금 포즈(`collectPickSurfaces`)로 한다. 구간 고르기는 부품까지, 층 배치는 몸 피부만 본다.
+         *          집기 · 윤곽은 몸과 부품 오브젝트(`collectPickObjects`)를 지금 포즈로 스키닝한 표면(`BodyPickSurface`)으로 한다. 구간 고르기는 부품까지, 층 배치는 몸 피부만 본다.
          */
         void drawBodyPickOverlay( GameObject* pBody );
-        /** @brief 몸(첫 표면)과 스폰한 부품 오브젝트의 메시를 지금 포즈로 월드에 옮긴 집기 표면을 모읍니다(`BodyPickSurface`). 몸 메시가 없으면 몸 표면이 빠진다. */
-        void collectPickSurfaces( GameObject& body, vector<BodyPickSurface>& outListSurface ) const;
+        /** @brief 집기 오브젝트 — 몸(첫 것)과 외형 조립이 스폰한 부품 오브젝트(옷 · 머리카락 · 소켓 부품)입니다. */
+        void collectPickObjects( const GameObject& body, vector<const GameObject*>& outListObject ) const;
         void drawAppearanceDataRow();
         void drawSelectionHeader( const AppearanceSelection& selection );
         void drawSlotRows( const AppearanceSelection& selection );
