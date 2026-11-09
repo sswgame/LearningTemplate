@@ -126,7 +126,7 @@
       ],
       "cacheVariables": {
         "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/Tools/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
-        "VCPKG_TARGET_TRIPLET": "wasm32-emscripten",
+        "VCPKG_TARGET_TRIPLET": "wasm32-emscripten-pthread",
         "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed_${presetName}",
         "SW_SHIPPING_RHI_BACKEND": "WebGPU"
       },

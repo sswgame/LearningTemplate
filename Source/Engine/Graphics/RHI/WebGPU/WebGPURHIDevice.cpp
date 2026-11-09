@@ -212,6 +212,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     WebGPURHISwapChain::WebGPURHISwapChain()
         : _surface{ nullptr }
+        , _adapter{ nullptr }
         , _currentTexture{ nullptr }
         , _currentView{ nullptr }
         , _format{ WGPUTextureFormat_Undefined }
@@ -230,8 +231,9 @@ namespace sw
     }
 
     // 길이 유지(긴 함수 정리 기준): 플랫폼마다 표면 출처 구조체 하나라 사슬을 나누면 같은 생성을 다섯 번 쓴다.
-    bool WebGPURHISwapChain::createSurface( WGPUInstance instance, const RHISwapChainDesc& desc )
+    bool WebGPURHISwapChain::createSurface( WGPUInstance instance, WGPUAdapter adapter, const RHISwapChainDesc& desc )
     {
+        _adapter = adapter;
         WGPUSurfaceDescriptor surfaceDesc{};
         surfaceDesc.label = WebGPURHIUtil::toStringView( "SW Surface" );
 #if defined( SW_PLATFORM_WEB )
@@ -293,11 +295,9 @@ namespace sw
         if ( _surface == nullptr || width == 0 || height == 0 )
             return width == 0 || height == 0; // 최소화는 실패가 아니다 — 다음 크기 변경이 구성한다
         WGPUSurfaceCapabilities capabilities{};
-        WGPUAdapter             adapter = wgpuDeviceGetAdapter( device );
-        if ( wgpuSurfaceGetCapabilities( _surface, adapter, &capabilities ) != WGPUStatus_Success || capabilities.formatCount == 0 )
+        if ( wgpuSurfaceGetCapabilities( _surface, _adapter, &capabilities ) != WGPUStatus_Success || capabilities.formatCount == 0 )
         {
             SW_LOG_ERROR_ID( "WebGPU.SurfaceCapabilities", "WebGPU: surface capabilities are unavailable" );
-            wgpuAdapterRelease( adapter );
             return false;
         }
         // 첫 형식이 표면이 권하는 형식이다(브라우저의 getPreferredCanvasFormat — 대개 BGRA8). 엔진이 쓰는 두 형식 중 처음 나오는 것을 쓴다.
@@ -316,7 +316,6 @@ namespace sw
         const WGPUTextureUsage wantedUsage = WGPUTextureUsage_RenderAttachment | WGPUTextureUsage_CopySrc | WGPUTextureUsage_CopyDst; // 블릿 · 캡처가 백버퍼를 복사한다
         const WGPUTextureUsage usage       = wantedUsage & capabilities.usages;
         wgpuSurfaceCapabilitiesFreeMembers( capabilities );
-        wgpuAdapterRelease( adapter );
         if ( _format == WGPUTextureFormat_Undefined )
         {
             SW_LOG_ERROR_ID( "WebGPU.SurfaceFormat", "WebGPU: the surface offers neither RGBA8Unorm nor BGRA8Unorm" );
@@ -909,7 +908,7 @@ namespace sw
         if ( createDeviceInternal( desc ) == false )
             return false;
         markInitPhase( "device" );
-        if ( _swapChain.createSurface( _instance, desc ) == false || _swapChain.configure( _device, desc._width, desc._height, desc._bVSync ) == false )
+        if ( _swapChain.createSurface( _instance, _adapter, desc ) == false || _swapChain.configure( _device, desc._width, desc._height, desc._bVSync ) == false )
             return false;
         markInitPhase( "swapchain" );
         if ( createDefaultResources() == false )
@@ -1382,7 +1381,7 @@ namespace sw
     IRHISwapChain* WebGPURHIDevice::createSwapChainInternal( const RHISwapChainDesc& desc )
     {
         unique_ptr<WebGPURHISwapChain> swapChain = make_unique<WebGPURHISwapChain>();
-        if ( swapChain->createSurface( _instance, desc ) == false || swapChain->configure( _device, desc._width, desc._height, isVSyncEnabled() ) == false )
+        if ( swapChain->createSurface( _instance, _adapter, desc ) == false || swapChain->configure( _device, desc._width, desc._height, isVSyncEnabled() ) == false )
             return nullptr;
         _listExtraSwapChain.push_back( std::move( swapChain ) );
         return _listExtraSwapChain.back().get();

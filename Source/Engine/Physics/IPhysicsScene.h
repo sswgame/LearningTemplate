@@ -53,19 +53,24 @@ namespace sw
     class CollisionLayers;
     class IPhysicsDebugRenderer;
 
+    /** @brief 물리 장면 구현이 요구하는 정렬(Jolt 장면의 SIMD 수학 칸 — 16 바이트)입니다. 기반 `IPhysicsScene` 이 선언한다(아래 주석). */
+    inline constexpr size_t kPhysicsSceneAlignment = 16;
+
     /**
      * @brief 물리 씬 하나입니다. 차원 트레이트(`PhysicsDimension3D`, `PhysicsDimension2D`)만 다르고 함수는 같습니다.
      * @details 바퀴 차 · 소프트 바디는 차원 트레이트의 `kSupportsVehicle` · `kSupportsSoftBody` 가 참일 때만 상속한다(2D 는 빈 `PhysicsNoVehicleScene` · `PhysicsNoSoftBodyScene`).
      *          역할 인터페이스의 타입 이름(`Vector`, `CastHit` …)은 여러 바탕 클래스에 있어 그대로면 모호하므로 여기서 다시 선언해 가린다.
+     *          `alignas( 16 )`: 구현(Jolt 장면 — SIMD 수학 칸)이 16 바이트 정렬이다. 기반 포인터(`unique_ptr<IPhysicsScene3D>`)로 지우므로 기반이 같은 정렬을 선언해야
+     *          할당 · 해제가 같은 기준(`kUsesAlignedAllocation`)을 본다 — wasm32 는 기본 new 정렬이 16 보다 작아 그렇지 않으면 정렬 할당 블록을 일반 해제로 풀었다.
      */
     template <typename TDimension>
-    class IPhysicsScene : public IPhysicsBodyScene<TDimension>,
-                          public IPhysicsJointScene<TDimension>,
-                          public IPhysicsCharacterScene<TDimension>,
-                          public IPhysicsQueryScene<TDimension>,
-                          public std::conditional_t<TDimension::kSupportsVehicle, IPhysicsVehicleScene, PhysicsNoVehicleScene>,
-                          public std::conditional_t<TDimension::kSupportsSoftBody, IPhysicsSoftBodyScene, PhysicsNoSoftBodyScene>,
-                          public std::conditional_t<TDimension::kSupportsBuoyancy, IPhysicsBuoyancyScene, PhysicsNoBuoyancyScene>
+    class alignas( kPhysicsSceneAlignment ) IPhysicsScene : public IPhysicsBodyScene<TDimension>,
+                                                            public IPhysicsJointScene<TDimension>,
+                                                            public IPhysicsCharacterScene<TDimension>,
+                                                            public IPhysicsQueryScene<TDimension>,
+                                                            public std::conditional_t<TDimension::kSupportsVehicle, IPhysicsVehicleScene, PhysicsNoVehicleScene>,
+                                                            public std::conditional_t<TDimension::kSupportsSoftBody, IPhysicsSoftBodyScene, PhysicsNoSoftBodyScene>,
+                                                            public std::conditional_t<TDimension::kSupportsBuoyancy, IPhysicsBuoyancyScene, PhysicsNoBuoyancyScene>
     {
     public:
         using Vector         = typename TDimension::Vector;

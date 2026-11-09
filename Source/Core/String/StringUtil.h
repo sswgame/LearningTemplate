@@ -28,6 +28,20 @@ namespace sw
     SW_API string to_string( int64 value );
     /** @brief uint64 를 십진 문자열로 바꿉니다. */
     SW_API string to_string( uint64 value );
+    /**
+     * @brief `long` · `unsigned long` 이 고정 폭 형식과 다른 형식인 대상(wasm32 — size_t 가 32 비트 unsigned long 인데 uint32 는 unsigned int)에서 size_t · ptrdiff_t 를 받습니다.
+     * @details 같은 형식인 대상(Windows · Linux x64)에서는 조건이 거짓이라 생기지 않는다 — 위 고정 폭 오버로드가 받는다.
+     */
+    template <typename T,
+              typename = std::enable_if_t<(std::is_same_v<T, unsigned long> && !std::is_same_v<unsigned long, uint32> && !std::is_same_v<unsigned long, uint64>) ||
+                                          ( std::is_same_v<T, long> && !std::is_same_v<long, int32> && !std::is_same_v<long, int64> )>>
+    string to_string( T value )
+    {
+        if constexpr ( std::is_signed_v<T> )
+            return to_string( static_cast<int64>( value ) );
+        else
+            return to_string( static_cast<uint64>( value ) );
+    }
     /** @brief float32 를 십진 문자열로 바꿉니다. */
     SW_API string to_string( float32 value );
     /** @brief float64 를 십진 문자열로 바꿉니다. */

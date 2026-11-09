@@ -323,7 +323,7 @@ if(NOT DEFINED VCPKG_TARGET_TRIPLET OR VCPKG_TARGET_TRIPLET STREQUAL "")
     elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux" OR (CMAKE_SYSTEM_NAME STREQUAL "" AND CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux"))
         set(sw_vcpkg_triplet "${sw_vcpkg_arch}-linux")
     else()
-        message(FATAL_ERROR "[vcpkg] no default triplet for target '${CMAKE_SYSTEM_NAME}' (host '${CMAKE_HOST_SYSTEM_NAME}') - set VCPKG_TARGET_TRIPLET in the preset (arm64-android, wasm32-emscripten)")
+        message(FATAL_ERROR "[vcpkg] no default triplet for target '${CMAKE_SYSTEM_NAME}' (host '${CMAKE_HOST_SYSTEM_NAME}') - set VCPKG_TARGET_TRIPLET in the preset (arm64-android, wasm32-emscripten-pthread)")
     endif()
 
     set(VCPKG_TARGET_TRIPLET "${sw_vcpkg_triplet}" CACHE STRING "" FORCE)
@@ -339,6 +339,25 @@ endif()
 if(NOT DEFINED VCPKG_INSTALLED_DIR OR VCPKG_INSTALLED_DIR STREQUAL "")
     set(VCPKG_INSTALLED_DIR "${swSrcDir}/build/vcpkg_installed" CACHE PATH "vcpkg 설치 디렉터리" FORCE)
 endif()
+
+# 패키지 트리(설치 폴더/triplet)가 지난 구성과 다르면 옛 트리를 가리키는 캐시 항목(find_package · find_path 결과 — ZLIB_INCLUDE_DIR · PNG_LIBRARY · *_DIR …)을
+# 지운다. 남겨 두면 find 가 캐시 값을 믿고 다시 찾지 않아, 지워진 옛 폴더를 가리키는 IMPORTED 타깃으로 생성이 멈췄다(Android 설치 폴더 분리 · 웹 pthread triplet 때 두 번).
+set(swVcpkgTreeNow "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}")
+if(DEFINED SW_VCPKG_LAST_TREE AND NOT SW_VCPKG_LAST_TREE STREQUAL swVcpkgTreeNow)
+    set(swVcpkgTreeOld "${SW_VCPKG_LAST_TREE}") # 기록 변수도 옛 트리 값이라 아래에서 함께 지워진다 — 먼저 받아 둔다
+    get_cmake_property(swCacheNames CACHE_VARIABLES)
+    set(swClearedCount 0)
+    foreach(swCacheName IN LISTS swCacheNames)
+        get_property(swCacheValue CACHE "${swCacheName}" PROPERTY VALUE)
+        string(FIND "${swCacheValue}" "${swVcpkgTreeOld}/" swOldTreeAt)
+        if(NOT swOldTreeAt EQUAL -1 OR swCacheValue STREQUAL swVcpkgTreeOld)
+            unset("${swCacheName}" CACHE)
+            math(EXPR swClearedCount "${swClearedCount} + 1")
+        endif()
+    endforeach()
+    message(STATUS "[vcpkg] package tree changed (${swVcpkgTreeOld} -> ${swVcpkgTreeNow}) - cleared ${swClearedCount} cached paths into the old tree")
+endif()
+set(SW_VCPKG_LAST_TREE "${swVcpkgTreeNow}" CACHE INTERNAL "지난 구성의 vcpkg 패키지 트리 — 바뀌면 옛 트리를 가리키는 캐시를 지운다")
 
 # 바이너리 캐시는 환경 변수로만 전달된다. CMakePresets.json 의 `environment` 는 `cmake --preset` 으로 구성할 때만 걸리고,
 # ninja 가 부르는 재구성(`cmake --regenerate-during-build`)과 `cmake -S -B` 에는 없다 — 그러면 vcpkg 가 기본 캐시(%LOCALAPPDATA%)를 보고

@@ -64,6 +64,8 @@ if(CMAKE_CROSSCOMPILING)
 	set(swCrossBackendFlag "-${SW_RHI_BACKEND_${SW_SHIPPING_RHI_BACKEND}_COMMAND_LINE_NAME}")
 	add_custom_target(CookAssets
 		COMMAND "${CMAKE_COMMAND}" --build "${SW_HOST_BUILD_DIR}"
+		# 원본(`textures_raw/`)을 `textures/*.dds` 로 먼저 임포트한다(바뀐 것만 — 내용 해시). 임포트 산출물은 저장소에 없어(.gitignore) 깨끗한 트리에서는 팩이 참조를 못 찾고 멈춘다.
+		COMMAND "${swHostCookApp}" --import-textures
 		COMMAND "${swHostCookApp}" --cook-texture-variants
 		COMMAND "${swHostCookApp}" ${swCookArgs} ${swCrossBackendFlag}
 		WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"

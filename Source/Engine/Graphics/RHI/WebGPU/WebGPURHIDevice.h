@@ -208,8 +208,8 @@ namespace sw
         uint32 getWidth() const override { return _width; }
         uint32 getHeight() const override { return _height; }
 
-        /** @brief 창 핸들로 표면을 만듭니다. 표면 종류가 이 빌드에 없으면 이유를 남기고 false 입니다. */
-        [[nodiscard]] bool createSurface( WGPUInstance instance, const RHISwapChainDesc& desc );
+        /** @brief 창 핸들로 표면을 만듭니다. @p adapter 는 표면 능력을 물을 어댑터다(장치가 들고 있다 — 웹 헤더에는 장치에서 어댑터를 꺼내는 함수가 없다). 표면 종류가 이 빌드에 없으면 이유를 남기고 false 입니다. */
+        [[nodiscard]] bool createSurface( WGPUInstance instance, WGPUAdapter adapter, const RHISwapChainDesc& desc );
         /** @brief 표면을 이 크기로 구성합니다. 0 크기(최소화)는 구성을 미룬다. */
         [[nodiscard]] bool configure( WGPUDevice device, uint32 width, uint32 height, bool bVSync );
         /** @brief 이번 프레임의 텍스처를 받습니다. 낡았으면 다시 구성하고 이번 프레임은 false 입니다(그 창의 그리기를 건너뛴다). */
@@ -228,6 +228,7 @@ namespace sw
 
     private:
         WGPUSurface            _surface;
+        WGPUAdapter            _adapter; ///< 표면 능력을 묻는 어댑터 — 장치 소유, 여기서 놓지 않는다
         WGPUTexture            _currentTexture;
         WGPUTextureView        _currentView;
         WGPUTextureFormat      _format;

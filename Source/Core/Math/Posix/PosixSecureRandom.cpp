@@ -6,24 +6,25 @@
     #include <cerrno>
     #include <cstdlib>
     #include <cstring>
-    #include <sys/random.h>
+    #include <unistd.h>
 
 namespace sw
 {
     void SecureRandom::fill( uint8* pOutBytes, size_t byteCount )
     {
+        // getentropy 하나로 세 대상을 덮는다 — glibc 2.25+ · bionic API 28+(대상 29) · Emscripten(crypto.getRandomValues). getrandom 은 Emscripten 이 링크하지 않는다.
+        static constexpr size_t kMaxChunk = 256; // getentropy 의 한 번 상한(POSIX)
         while ( byteCount > 0 )
         {
-            // 256 바이트를 넘는 요청은 신호에 끊겨 일부만 채울 수 있다 — 채운 만큼 넘기고 이어 읽는다.
-            const ssize_t written = getrandom( pOutBytes, byteCount, 0 );
-            if ( written < 0 )
+            const size_t chunk = byteCount < kMaxChunk ? byteCount : kMaxChunk;
+            if ( getentropy( pOutBytes, chunk ) != 0 )
             {
                 if ( errno == EINTR )
                     continue;
-                SW_LOW_LEVEL_FATAL( "getrandom failed (%s) - no OS randomness, refusing a predictable value", std::strerror( errno ) );
+                SW_LOW_LEVEL_FATAL( "getentropy failed (%s) - no OS randomness, refusing a predictable value", std::strerror( errno ) );
             }
-            pOutBytes += written;
-            byteCount -= static_cast<size_t>( written );
+            pOutBytes += chunk;
+            byteCount -= chunk;
         }
     }
 

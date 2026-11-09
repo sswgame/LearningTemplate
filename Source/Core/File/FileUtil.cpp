@@ -701,7 +701,15 @@ namespace sw
     {
         if ( size == 0 || pData == nullptr )
             return false;
-        static_assert( sizeof( size_t ) == sizeof( uint64 ), "64 비트 대상만 지원한다 — size_t 로 줄여도 잘리지 않는다" );
+        // 32 비트 대상(wasm32)은 size_t 가 uint64 보다 좁다 — 메모리에 있는 버퍼라 넘을 수 없지만, 넘는 값이 오면 잘라 쓰지 않고 거절한다.
+        if constexpr ( sizeof( size_t ) < sizeof( uint64 ) )
+        {
+            if ( size > static_cast<uint64>( std::numeric_limits<size_t>::max() ) )
+            {
+                SW_LOG_ERROR_ID( "File.WriteTooLarge", "Writing %# refused: %# bytes do not fit this target's address space", fileName, size );
+                return false;
+            }
+        }
         return FileUtilInternal::writeAtomically( fileName, pData, static_cast<size_t>( size ) );
     }
 

@@ -162,7 +162,7 @@ namespace sw
     int32 PlatformSocketUtil::sendBatch( uint64 socketHandle, const NetDatagramView* pViews, int32 count )
     {
         const int32 batchCount = count < kMaxBatch ? count : kMaxBatch;
-#if defined( SW_PLATFORM_WINDOWS )
+#if defined( SW_PLATFORM_WINDOWS ) || defined( SW_PLATFORM_WEB ) // 묶음 시스템 호출(sendmmsg · recvmmsg)이 없다 — 하나씩
         int32 sentCount = 0;
         for ( ; sentCount < batchCount; ++sentCount )
         {
@@ -201,7 +201,7 @@ namespace sw
     int32 PlatformSocketUtil::receiveBatch( uint64 socketHandle, SocketReceiveEntry* pEntries, int32 count )
     {
         const int32 batchCount = count < kMaxBatch ? count : kMaxBatch;
-#if defined( SW_PLATFORM_WINDOWS )
+#if defined( SW_PLATFORM_WINDOWS ) || defined( SW_PLATFORM_WEB ) // 묶음 시스템 호출(sendmmsg · recvmmsg)이 없다 — 하나씩
         int32 receivedCount = 0;
         for ( int32 attempt = 0; receivedCount < batchCount && attempt < batchCount + kMaxBatch; ++attempt ) // 오류가 이어져도 끝난다(단건 받기의 시도 한도와 같다)
         {
