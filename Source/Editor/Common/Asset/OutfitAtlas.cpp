@@ -172,6 +172,6 @@ namespace sw
                 }
             }
         }
-        return true;
+        return {};
     }
 } // namespace sw
