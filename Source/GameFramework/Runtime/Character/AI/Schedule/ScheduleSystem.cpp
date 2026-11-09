@@ -34,21 +34,21 @@ namespace sw
             static int32 toDay( int32 absoluteMinute ) { return absoluteMinute / kScheduleMinutesPerDay; }
 
             /** @brief 마지막으로 나선 칸 — 나선 시각이 @p minuteOfDay 이하인 마지막 칸입니다(출발 시각은 순서대로 늘어난다). */
-            static int32 findActiveSegment( const vector<ScheduleSegment>& listSegment, float32 minuteOfDay )
+            static optional<int32> findActiveSegment( const vector<ScheduleSegment>& listSegment, float32 minuteOfDay )
             {
-                int32 activeIndex = -1;
-                int32 firstIndex  = -1;
+                optional<int32> activeIndex;
+                optional<int32> firstIndex;
                 for ( int32 segmentIndex = 0; segmentIndex < static_cast<int32>( listSegment.size() ); ++segmentIndex )
                 {
                     const ScheduleSegment& segment = listSegment[static_cast<size_t>( segmentIndex )];
                     if ( segment._bPast != SW_FALSE )
                         continue;
-                    if ( firstIndex < 0 )
+                    if ( firstIndex.has_value() == false )
                         firstIndex = segmentIndex;
                     if ( static_cast<float32>( segment._departMinute ) <= minuteOfDay )
                         activeIndex = segmentIndex;
                 }
-                return activeIndex >= 0 ? activeIndex : firstIndex;
+                return activeIndex.has_value() ? activeIndex : firstIndex;
             }
             static int32 toMinuteOfDay( int32 absoluteMinute ) { return absoluteMinute % kScheduleMinutesPerDay; }
 
@@ -524,17 +524,17 @@ namespace sw
         view._segmentIndex            = ScheduleSystemInternal::findActiveSegment( npc._listSegment, minuteOfDay );
         if ( npc._listInterruption.empty() == false )
             view._interruption = npc._listInterruption.back()._id;
-        if ( view._segmentIndex < 0 )
+        if ( view._segmentIndex.has_value() == false )
         {
             view._location = npc._origin;
             view._target   = npc._origin;
             return view;
         }
-        const ScheduleSegment& segment = npc._listSegment[static_cast<size_t>( view._segmentIndex )];
+        const ScheduleSegment& segment = npc._listSegment[static_cast<size_t>( *view._segmentIndex )];
         view._target                   = segment._target;
         view._activity                 = segment._activity;
         view._animation                = segment._animation;
-        view._phase                    = computePhase( npc, view._segmentIndex, minuteOfDay, view._travelFraction );
+        view._phase                    = computePhase( npc, *view._segmentIndex, minuteOfDay, view._travelFraction );
         switch ( view._phase )
         {
             case ScheduleNPCPhase::Interrupted:
@@ -549,7 +549,7 @@ namespace sw
             }
             case ScheduleNPCPhase::Traveling:
             {
-                view._location               = computePlanningLocationOnRoute( npc, view._segmentIndex, view._travelFraction );
+                view._location               = computePlanningLocationOnRoute( npc, *view._segmentIndex, view._travelFraction );
                 const bool bNearRouteCurrent = npc._lod == ScheduleLOD::Near && npc._routeKey == ScheduleHash::computeSegmentKey( segment );
                 if ( bNearRouteCurrent )
                     view._location._position = ISchedulePathing::computePointAlong( npc._listRoutePoint, view._travelFraction );
@@ -623,9 +623,9 @@ namespace sw
         Internal::appendClock( text, now );
         text.appendFormat( " - %# %# at (%#, %#, %#) area '%#' [%#]\n", getEnumName( view._phase ), view._activity.c_str(), view._location._position._x,
                            view._location._position._y, view._location._position._z, view._location._area.c_str(), getEnumName( view._lod ) );
-        if ( view._segmentIndex >= 0 )
+        if ( view._segmentIndex.has_value() )
         {
-            const ScheduleSegment& segment = npc._listSegment[static_cast<size_t>( view._segmentIndex )];
+            const ScheduleSegment& segment = npc._listSegment[static_cast<size_t>( *view._segmentIndex )];
             text.appendFormat( "  active: %# '%#' block #%# ", toString( segment._source ), segment._sourceID.c_str(), segment._blockIndex );
             Internal::appendClock( text, segment._startMinute );
             text.append( "-" );
@@ -794,11 +794,11 @@ namespace sw
             // 같은 출발점으로 다시 세워 지금 칸까지 같으면 그대로 쓴다 — 바뀐 조건이 앞날만 바꾸면 지금 가는 길을 끊지 않는다.
             vector<ScheduleSegment> listTrial;
             makePlan( npcIndex, npc._planDay, Internal::toMinuteOfDay( npc._originMinute ), npc._origin, listTrial );
-            const float32 minuteOfDay = static_cast<float32>( Internal::toMinuteOfDay( minute ) );
-            const int32   oldActive   = Internal::findActiveSegment( npc._listSegment, minuteOfDay );
-            const int32   newActive   = Internal::findActiveSegment( listTrial, minuteOfDay );
-            bool          bSame       = oldActive == newActive && oldActive >= 0;
-            for ( int32 segmentIndex = 0; bSame && segmentIndex <= oldActive; ++segmentIndex )
+            const float32         minuteOfDay = static_cast<float32>( Internal::toMinuteOfDay( minute ) );
+            const optional<int32> oldActive   = Internal::findActiveSegment( npc._listSegment, minuteOfDay );
+            const optional<int32> newActive   = Internal::findActiveSegment( listTrial, minuteOfDay );
+            bool                  bSame       = oldActive.has_value() && oldActive == newActive;
+            for ( int32 segmentIndex = 0; bSame && segmentIndex <= *oldActive; ++segmentIndex )
             {
                 const uint64 oldKey = ScheduleHash::computeSegmentKey( npc._listSegment[static_cast<size_t>( segmentIndex )] );
                 bSame               = oldKey == ScheduleHash::computeSegmentKey( listTrial[static_cast<size_t>( segmentIndex )] );
@@ -1159,16 +1159,16 @@ namespace sw
         const NPCRuntime& npc = _listNPC[static_cast<size_t>( npcIndex )];
         if ( npc._listInterruption.empty() == false )
             return npc._held;
-        const float32 minuteOfDay = static_cast<float32>( absoluteMinute - npc._planDay * kScheduleMinutesPerDay );
-        const int32   active      = ScheduleSystemInternal::findActiveSegment( npc._listSegment, minuteOfDay );
-        if ( active < 0 )
+        const float32         minuteOfDay = static_cast<float32>( absoluteMinute - npc._planDay * kScheduleMinutesPerDay );
+        const optional<int32> active      = ScheduleSystemInternal::findActiveSegment( npc._listSegment, minuteOfDay );
+        if ( active.has_value() == false )
             return npc._origin;
         float32                fraction = 1.0f;
-        const ScheduleNPCPhase phase    = computePhase( npc, active, minuteOfDay, fraction );
-        const ScheduleSegment& segment  = npc._listSegment[static_cast<size_t>( active )];
+        const ScheduleNPCPhase phase    = computePhase( npc, *active, minuteOfDay, fraction );
+        const ScheduleSegment& segment  = npc._listSegment[static_cast<size_t>( *active )];
         if ( phase != ScheduleNPCPhase::Traveling )
             return segment._target;
-        return computePlanningLocationOnRoute( npc, active, fraction );
+        return computePlanningLocationOnRoute( npc, *active, fraction );
     }
 
     ScheduleNPCPhase ScheduleSystem::computePhase( const NPCRuntime& npc, int32 segmentIndex, float32 minuteOfDay, float32& outFraction ) const
@@ -1214,14 +1214,14 @@ namespace sw
         const NPCRuntime& npc = _listNPC[static_cast<size_t>( npcIndex )];
         if ( npc._listInterruption.empty() == false )
             return false;
-        const float32 minuteOfDay = static_cast<float32>( _minute - npc._planDay * kScheduleMinutesPerDay );
-        const int32   active      = ScheduleSystemInternal::findActiveSegment( npc._listSegment, minuteOfDay );
-        if ( active < 0 )
+        const float32         minuteOfDay = static_cast<float32>( _minute - npc._planDay * kScheduleMinutesPerDay );
+        const optional<int32> active      = ScheduleSystemInternal::findActiveSegment( npc._listSegment, minuteOfDay );
+        if ( active.has_value() == false )
             return false;
-        const ScheduleSegment& segment  = npc._listSegment[static_cast<size_t>( active )];
+        const ScheduleSegment& segment  = npc._listSegment[static_cast<size_t>( *active )];
         float32                fraction = 1.0f;
         const bool             bThere   = segment._source == ScheduleSegmentSource::Appointment && segment._ownerIndex == appointmentIndex;
-        return bThere && computePhase( npc, active, minuteOfDay, fraction ) == ScheduleNPCPhase::Performing;
+        return bThere && computePhase( npc, *active, minuteOfDay, fraction ) == ScheduleNPCPhase::Performing;
     }
 
     void ScheduleSystem::processMinute( int32 minute )
@@ -1288,13 +1288,13 @@ namespace sw
             npc._wakeMinute = computeWakeMinute( npcIndex );
             return;
         }
-        const float32 minuteOfDay = static_cast<float32>( _minute - npc._planDay * kScheduleMinutesPerDay );
-        const int32   active      = Internal::findActiveSegment( npc._listSegment, minuteOfDay );
-        if ( active >= 0 )
+        const float32         minuteOfDay = static_cast<float32>( _minute - npc._planDay * kScheduleMinutesPerDay );
+        const optional<int32> active      = Internal::findActiveSegment( npc._listSegment, minuteOfDay );
+        if ( active.has_value() )
         {
-            const ScheduleSegment& segment  = npc._listSegment[static_cast<size_t>( active )];
+            const ScheduleSegment& segment  = npc._listSegment[static_cast<size_t>( *active )];
             float32                fraction = 1.0f;
-            const ScheduleNPCPhase phase    = computePhase( npc, active, minuteOfDay, fraction );
+            const ScheduleNPCPhase phase    = computePhase( npc, *active, minuteOfDay, fraction );
             const uint64           key      = ScheduleHash::computeSegmentKey( segment );
             const bool             bChanged = npc._bEmitted == SW_FALSE || ScheduleHash::computeSegmentKey( npc._emittedSegment ) != key;
             if ( bChanged )
@@ -1419,10 +1419,10 @@ namespace sw
     {
         const ScheduleNPCView view = getNPCView( npcIndex );
         emitEvent( ScheduleEvent::Kind::Snapped, npcIndex, nullptr, view._interruption );
-        if ( view._phase != ScheduleNPCPhase::Performing || view._segmentIndex < 0 )
+        if ( view._phase != ScheduleNPCPhase::Performing || view._segmentIndex.has_value() == false )
             return;
         const NPCRuntime& npc = _listNPC[static_cast<size_t>( npcIndex )];
-        emitEvent( ScheduleEvent::Kind::ActivityStarted, npcIndex, &npc._listSegment[static_cast<size_t>( view._segmentIndex )], npc._listSegment[static_cast<size_t>( view._segmentIndex )]._sourceID );
+        emitEvent( ScheduleEvent::Kind::ActivityStarted, npcIndex, &npc._listSegment[static_cast<size_t>( *view._segmentIndex )], npc._listSegment[static_cast<size_t>( *view._segmentIndex )]._sourceID );
     }
 
     void ScheduleSystem::applyConditionChanges()
@@ -1453,14 +1453,14 @@ namespace sw
             NPCRuntime& npc = _listNPC[static_cast<size_t>( npcIndex )];
             if ( npc._lod != ScheduleLOD::Near || npc._listInterruption.empty() == false )
                 continue;
-            const int32 active = Internal::findActiveSegment( npc._listSegment, static_cast<float32>( _minute - npc._planDay * kScheduleMinutesPerDay ) );
-            if ( active < 0 )
+            const optional<int32> active = Internal::findActiveSegment( npc._listSegment, static_cast<float32>( _minute - npc._planDay * kScheduleMinutesPerDay ) );
+            if ( active.has_value() == false )
                 continue;
-            const ScheduleSegment& segment = npc._listSegment[static_cast<size_t>( active )];
+            const ScheduleSegment& segment = npc._listSegment[static_cast<size_t>( *active )];
             const uint64           key     = ScheduleHash::computeSegmentKey( segment );
             if ( key == npc._routeKey || segment._travelMinutes <= 0 )
                 continue;
-            _services._pFine->makeRoute( getStartLocation( npc, active ), segment._target, npc._listRoutePoint );
+            _services._pFine->makeRoute( getStartLocation( npc, *active ), segment._target, npc._listRoutePoint );
             npc._routeKey = key;
         }
     }
@@ -1605,18 +1605,18 @@ namespace sw
         {
             const NPCRuntime&      npc         = _listNPC[static_cast<size_t>( npcIndex )];
             const float32          minuteOfDay = static_cast<float32>( _minute - npc._planDay * kScheduleMinutesPerDay );
-            const int32            active      = ScheduleSystemInternal::findActiveSegment( npc._listSegment, minuteOfDay );
+            const optional<int32>  active      = ScheduleSystemInternal::findActiveSegment( npc._listSegment, minuteOfDay );
             float32                fraction    = 1.0f;
             const ScheduleLocation location    = computeLogicLocation( npcIndex, _minute );
             ScheduleNetSummary     summary;
             summary._position          = location._position;
             summary._areaHash          = ScheduleHash::computeNameKey( location._area );
             summary._npcIndex          = static_cast<uint16>( npcIndex );
-            summary._segmentIndex      = static_cast<int16>( active );
-            summary._phase             = static_cast<uint8>( active >= 0 ? computePhase( npc, active, minuteOfDay, fraction ) : ScheduleNPCPhase::Performing );
+            summary._segmentIndex      = static_cast<int16>( active.value_or( ScheduleNetSummary::kNoSegment ) );
+            summary._phase             = static_cast<uint8>( active.has_value() ? computePhase( npc, *active, minuteOfDay, fraction ) : ScheduleNPCPhase::Performing );
             summary._interruptionDepth = static_cast<uint8>( MathUtil::min( npc._listInterruption.size(), static_cast<size_t>( 255 ) ) );
-            if ( active >= 0 )
-                summary._activityHash = ScheduleHash::computeNameKey( npc._listSegment[static_cast<size_t>( active )]._activity );
+            if ( active.has_value() )
+                summary._activityHash = ScheduleHash::computeNameKey( npc._listSegment[static_cast<size_t>( *active )]._activity );
             outListSummary.push_back( summary );
         }
     }

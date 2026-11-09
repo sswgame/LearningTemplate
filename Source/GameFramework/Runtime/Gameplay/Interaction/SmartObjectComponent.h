@@ -8,6 +8,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
@@ -39,13 +40,14 @@ namespace sw
         [[nodiscard]] bool claim( int32 slot, uint64 claimantID );
         /** @brief 그 쪽이 차지한 슬롯을 비웁니다. 차지한 슬롯이 없으면 false 입니다. */
         bool release( uint64 claimantID );
-        /** @brief @p requiredTags 를 모두 가진 빈 슬롯 중 앞의 것입니다. 없으면 -1 입니다. */
-        int32  findFreeSlot( const TagContainer& requiredTags ) const;
-        int32  findSlotOf( uint64 claimantID ) const;
-        uint64 getClaimant( int32 slot ) const;
-        bool   isFree( int32 slot ) const { return getClaimant( slot ) == 0; }
-        int32  getSlotCount() const { return static_cast<int32>( _listClaimant.size() ); }
-        int32  countFree() const;
+        /** @brief @p requiredTags 를 모두 가진 빈 슬롯 중 앞의 것입니다. 없으면 비어 있습니다. */
+        optional<int32> findFreeSlot( const TagContainer& requiredTags ) const;
+        /** @brief 그 쪽이 차지한 슬롯입니다. 없으면 비어 있습니다. */
+        optional<int32> findSlotOf( uint64 claimantID ) const;
+        uint64          getClaimant( int32 slot ) const;
+        bool            isFree( int32 slot ) const { return getClaimant( slot ) == 0; }
+        int32           getSlotCount() const { return static_cast<int32>( _listClaimant.size() ); }
+        int32           countFree() const;
 
         /** @brief 슬롯 정의입니다. 태그와 오프셋을 담습니다. */
         const SmartObjectSlotDef* findSlotDef( int32 slot ) const;
@@ -92,13 +94,13 @@ namespace sw
         void setCatalogPath( string_view path );
         /** @brief 슬롯을 차지합니다. */
         [[nodiscard]] bool claimSlot( const GameObject& claimant, int32 slot );
-        /** @brief 태그에 맞는 빈 슬롯을 찾아 차지합니다. 차지한 슬롯의 번호를 반환하고, 없으면 -1 입니다. */
-        int32 claimFreeSlot( const GameObject& claimant, const TagContainer& requiredTags );
+        /** @brief 태그에 맞는 빈 슬롯을 찾아 차지합니다. 차지한 슬롯의 번호를 반환하고, 없으면 비어 있습니다. */
+        optional<int32> claimFreeSlot( const GameObject& claimant, const TagContainer& requiredTags );
         /** @brief 그 쪽이 차지한 슬롯을 비웁니다. */
-        bool  releaseSlot( const GameObject& claimant );
-        int32 findSlotOf( const GameObject& claimant ) const;
-        int32 countFreeSlots() const;
-        int32 getSlotCount() const;
+        bool            releaseSlot( const GameObject& claimant );
+        optional<int32> findSlotOf( const GameObject& claimant ) const;
+        int32           countFreeSlots() const;
+        int32           getSlotCount() const;
         /** @brief 슬롯의 월드 위치와 방향(요, 라디안)입니다. 앉거나 숨을 위치로 걸어가서 맞출 때 씁니다. */
         bool computeSlotTransform( int32 slot, float3& outPosition, float32& outYaw ) const;
 

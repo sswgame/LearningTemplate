@@ -342,17 +342,17 @@ namespace sw
             listCandidate.push_back( candidate );
         }
         const WorldLineOfSightQuery lineOfSight{ *pManager };
-        const int32                 pick = InteractionView::selectBest( viewer, listCandidate, &lineOfSight );
-        _target                          = pick >= 0 ? GameObjectHandle::make( listCandidate[static_cast<size_t>( pick )]._objectID ) : GameObjectHandle{};
+        const optional<int32>       pick = InteractionView::selectBest( viewer, listCandidate, &lineOfSight );
+        _target                          = pick.has_value() ? GameObjectHandle::make( listCandidate[static_cast<size_t>( *pick )]._objectID ) : GameObjectHandle{};
         stepProjectiles( *pOwner ); // 대상을 놓쳐도 이미 쏜 탄은 날아간다
-        if ( pick < 0 )
+        if ( pick.has_value() == false )
         {
             _previousTarget = GameObjectHandle{};
             return;
         }
 
         // 조준: 요를 겨눌 곳 쪽으로 돌린다. 날아가는 탄은 대상이 움직인 만큼 앞을 겨눈다 — 처음 본 스텝은 속도를 모르므로 멈춘 것으로 본다.
-        const float3 targetPosition = listCandidate[static_cast<size_t>( pick )]._position;
+        const float3 targetPosition = listCandidate[static_cast<size_t>( *pick )]._position;
         const float3 targetVelocity = _previousTarget == _target ? ( targetPosition - _previousTargetPosition ) * ( 1.0f / constant::time::kDefaultFixedStepSeconds ) : float3{};
         _previousTarget             = _target;
         _previousTargetPosition     = targetPosition;

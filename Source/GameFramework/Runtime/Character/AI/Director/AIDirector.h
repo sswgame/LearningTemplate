@@ -191,22 +191,24 @@ namespace sw
             float32                _timer{ 0.0f };
             float32                _budget{ 0.0f };
             float32                _lastPickTime{ -1.0f };
-            int32                  _pendingIndex{ -1 }; ///< 예산 풀이 미리 골라 둔 항목
+            static constexpr int32 kNoPending = -1;             ///< 저장 상태의 "고른 것 없음"(`serializeState` 가 한 정수 칸에 싣는다)
+            int32                  _pendingIndex{ kNoPending }; ///< 예산 풀이 미리 골라 둔 항목
         };
 
         IAIDirectorIntensityModel& getModel();
         bool                       isPoolActive( const AIDirectorPoolDef& pool ) const;
         bool                       isPoolCooledDown( const AIDirectorPoolDef& pool, const PoolState& state ) const;
-        int32                      findSatisfiedExit() const;
+        optional<int32>            findSatisfiedExit() const;
         void                       enterPhase( int32 phaseIndex, int32 exitIndex );
         void                       updateSpawns( float32 deltaTime );
         void                       updatePools( float32 deltaTime );
         void                       updateBudgetPool( int32 poolIndex, float32 deltaTime );
-        int32                      pickEncounter( int32 poolIndex );
-        void                       emitPick( int32 poolIndex, int32 encounterIndex );
-        void                       pollSpawnEvents();
-        void                       pushEvent( const AIDirectorEvent& event );
-        uint32                     computeChanceKey( int32 poolIndex, int32 encounterIndex ) const;
+        /** @brief 풀에서 막히지 않은 항목 하나를 가중치로 고릅니다. 고를 것이 없으면 비어 있습니다. */
+        optional<int32> pickEncounter( int32 poolIndex );
+        void            emitPick( int32 poolIndex, int32 encounterIndex );
+        void            pollSpawnEvents();
+        void            pushEvent( const AIDirectorEvent& event );
+        uint32          computeChanceKey( int32 poolIndex, int32 encounterIndex ) const;
 
     private:
         AIDirectorContext                           _context;

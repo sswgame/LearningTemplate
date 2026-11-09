@@ -96,14 +96,14 @@ namespace sw
             listCandidate.push_back( candidate );
         }
         InteractionView viewer;
-        viewer._position = position;
-        const int32 pick = InteractionView::selectBest( viewer, listCandidate, nullptr );
-        if ( pick < 0 )
+        viewer._position           = position;
+        const optional<int32> pick = InteractionView::selectBest( viewer, listCandidate, nullptr );
+        if ( pick.has_value() == false )
             return nullptr;
-        WesternDeedComponent*  pPicked = listDeed[static_cast<size_t>( pick )];
+        WesternDeedComponent*  pPicked = listDeed[static_cast<size_t>( *pick )];
         vector<WesternWitness> listWitness;
         WesternWitnessComponent::collect( manager, listWitness );
-        if ( outlaw.perform( pPicked->makeDeed( listCandidate[static_cast<size_t>( pick )]._position ), listWitness ) == false )
+        if ( outlaw.perform( pPicked->makeDeed( listCandidate[static_cast<size_t>( *pick )]._position ), listWitness ) == false )
             return nullptr;
         pPicked->markUsed();
         return pPicked;

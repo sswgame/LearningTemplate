@@ -165,17 +165,17 @@ namespace sw
 
         for ( int32 transition = 0; transition < kMaxTransitionsPerUpdate; ++transition )
         {
-            const int32 exitIndex = findSatisfiedExit();
-            if ( exitIndex < 0 )
+            const optional<int32> exitIndex = findSatisfiedExit();
+            if ( exitIndex.has_value() == false )
                 break;
             const AIDirectorPhaseDef& phase = _pProfile->getPhases()[static_cast<size_t>( _phaseIndex )];
-            enterPhase( *phase._listExit[static_cast<size_t>( exitIndex )]._toIndex, exitIndex ); // 만족한 길은 대상이 있다(`bTarget`)
+            enterPhase( *phase._listExit[static_cast<size_t>( *exitIndex )]._toIndex, *exitIndex ); // 만족한 길은 대상이 있다(`bTarget`)
         }
         updateSpawns( deltaTime );
         updatePools( deltaTime );
     }
 
-    int32 AIDirector::findSatisfiedExit() const
+    optional<int32> AIDirector::findSatisfiedExit() const
     {
         const AIDirectorPhaseDef&        phase       = _pProfile->getPhases()[static_cast<size_t>( _phaseIndex )];
         const float32                    calmSeconds = getIntensityModel().getCalmSeconds();
@@ -192,7 +192,7 @@ namespace sw
             if ( bExitConditionsMet )
                 return static_cast<int32>( exitIndex );
         }
-        return -1;
+        return nullopt;
     }
 
     bool AIDirector::forcePhase( const hashed_string& phaseID )
@@ -237,10 +237,10 @@ namespace sw
             {
                 if ( isPoolCooledDown( pool, _listPoolState[poolIndex] ) == false )
                     break;
-                const int32 encounterIndex = pickEncounter( static_cast<int32>( poolIndex ) );
-                if ( encounterIndex < 0 )
+                const optional<int32> encounterIndex = pickEncounter( static_cast<int32>( poolIndex ) );
+                if ( encounterIndex.has_value() == false )
                     break;
-                emitPick( static_cast<int32>( poolIndex ), encounterIndex );
+                emitPick( static_cast<int32>( poolIndex ), *encounterIndex );
             }
         }
     }
@@ -314,9 +314,9 @@ namespace sw
                 state._timer -= pool._interval;
                 if ( isPoolCooledDown( pool, state ) == false || _random.nextChance( pool._chance ) == false )
                     continue;
-                const int32 encounterIndex = pickEncounter( static_cast<int32>( poolIndex ) );
-                if ( encounterIndex >= 0 )
-                    emitPick( static_cast<int32>( poolIndex ), encounterIndex );
+                const optional<int32> encounterIndex = pickEncounter( static_cast<int32>( poolIndex ) );
+                if ( encounterIndex.has_value() )
+                    emitPick( static_cast<int32>( poolIndex ), *encounterIndex );
             }
             state._timer = MathUtil::min( state._timer, pool._interval ); // 긴 멈춤 뒤 밀린 틱을 쌓아 두지 않는다
         }
@@ -340,7 +340,7 @@ namespace sw
             if ( state._pendingIndex >= 0 && computeBlockMask( poolIndex, state._pendingIndex ) != 0 )
                 state._pendingIndex = -1;
             if ( state._pendingIndex < 0 )
-                state._pendingIndex = pickEncounter( poolIndex );
+                state._pendingIndex = pickEncounter( poolIndex ).value_or( PoolState::kNoPending );
             if ( state._pendingIndex < 0 )
                 break;
             const AIDirectorEncounterDef& encounter = pool._listEncounter[static_cast<size_t>( state._pendingIndex )];
@@ -402,7 +402,7 @@ namespace sw
         return mask;
     }
 
-    int32 AIDirector::pickEncounter( int32 poolIndex )
+    optional<int32> AIDirector::pickEncounter( int32 poolIndex )
     {
         const AIDirectorPoolDef& pool = _pProfile->getPools()[static_cast<size_t>( poolIndex )];
         _listScratchWeight.clear();

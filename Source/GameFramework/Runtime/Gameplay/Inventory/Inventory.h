@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Encoding/FourCCUtil.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -85,8 +86,9 @@ namespace sw
         bool  hasItem( const hashed_string& itemID, int32 count = 1 ) const { return getItemCount( itemID ) >= count; }
         bool  hasItems( const ItemStackList& items ) const;
         /** @brief @p count 개가 모두 들어갈 공간(슬롯과 무게)이 있는지 판정합니다. */
-        bool                 hasRoomFor( const hashed_string& itemID, int32 count ) const;
-        int32                findFirstSlot( const hashed_string& itemID ) const;
+        bool hasRoomFor( const hashed_string& itemID, int32 count ) const;
+        /** @brief 그 아이템이 든 첫 슬롯입니다. 없으면 비어 있습니다. */
+        optional<int32>      findFirstSlot( const hashed_string& itemID ) const;
         int32                countEmptySlots() const;
         float32              computeWeight() const;
         float32              getMaxWeight() const { return _maxWeight; }

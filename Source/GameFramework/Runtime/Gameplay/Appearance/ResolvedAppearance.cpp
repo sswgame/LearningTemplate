@@ -208,7 +208,8 @@ namespace sw
                 { return uniqueSetSeen.insert( region ).second == false; } );
             }
 
-            static int32 findEntry( const vector<Entry>& listEntry, const hashed_string& owner, bool bVisibleOnly )
+            /** @brief 주인 @p owner 의 항목입니다. 없으면 비어 있습니다. */
+            static optional<int32> findEntry( const vector<Entry>& listEntry, const hashed_string& owner, bool bVisibleOnly )
             {
                 for ( size_t index = 0; index < listEntry.size(); ++index )
                 {
@@ -217,15 +218,16 @@ namespace sw
                     if ( entry._owner == owner && bUsable )
                         return static_cast<int32>( index );
                 }
-                return constant::invalid_index::kInt32;
+                return nullopt;
             }
 
             static hashed_string getDefaultState( const ItemVisualDef& visual ) { return visual._defaultState; }
 
-            /** @brief 주인 항목 @p ownerIndex 의 외형입니다. 항목이 없으면 nullptr 입니다. */
-            static const ItemVisualDef* findOwnerVisual( const vector<Entry>& listEntry, int32 ownerIndex )
+            /** @brief 주인 항목 @p ownerIndex 의 외형입니다. 항목이 없으면(비었거나 범위 밖) nullptr 입니다. */
+            static const ItemVisualDef* findOwnerVisual( const vector<Entry>& listEntry, optional<int32> ownerIndex )
             {
-                return ownerIndex >= 0 && static_cast<size_t>( ownerIndex ) < listEntry.size() ? listEntry[static_cast<size_t>( ownerIndex )]._pVisual : nullptr;
+                const bool bInRange = ownerIndex.has_value() && *ownerIndex >= 0 && static_cast<size_t>( *ownerIndex ) < listEntry.size();
+                return bInRange ? listEntry[static_cast<size_t>( *ownerIndex )]._pVisual : nullptr;
             }
 
             /** @brief 외형에 염색하지 않는 구간이 있으면 true 입니다 — 그런 외형의 염색은 구간마다 나눠 건다. */
@@ -250,12 +252,12 @@ namespace sw
                                                const CustomizationDriveDef& drive, const float4& value, ResolvedMaterialTarget target, ResolvedMaterialShape shape )
             {
                 // 드라이브가 주인을 적으면(`owner="Hair"`) 몸 스키마의 고르기가 낸 항목이 받는다. 구간 고르기는 그 항목의 외형으로 한다 — 아직 없으면(뒤에 선언한 고르기) 주인 전체다.
-                const bool           bDriveOwner     = drive._owner.empty() == false;
-                const hashed_string& owner           = bDriveOwner ? drive._owner : schemaOwner;
-                const int32          ownerEntry      = bDriveOwner ? findEntry( listEntry, drive._owner, false ) : constant::invalid_index::kInt32;
-                const ItemVisualDef* pVisual         = bDriveOwner ? findOwnerVisual( listEntry, ownerEntry ) : pSchemaVisual;
-                const int32          channel         = target == ResolvedMaterialTarget::DyeChannel ? drive._channel : 0;
-                const bool           bSplitBySection = pVisual != nullptr && ( drive.isSectionTargeted() || ( drive._kind == CustomizationDriveKind::DyeChannel && hasUndyeableSection( *pVisual ) ) );
+                const bool            bDriveOwner     = drive._owner.empty() == false;
+                const hashed_string&  owner           = bDriveOwner ? drive._owner : schemaOwner;
+                const optional<int32> ownerEntry      = bDriveOwner ? findEntry( listEntry, drive._owner, false ) : nullopt;
+                const ItemVisualDef*  pVisual         = bDriveOwner ? findOwnerVisual( listEntry, ownerEntry ) : pSchemaVisual;
+                const int32           channel         = target == ResolvedMaterialTarget::DyeChannel ? drive._channel : 0;
+                const bool            bSplitBySection = pVisual != nullptr && ( drive.isSectionTargeted() || ( drive._kind == CustomizationDriveKind::DyeChannel && hasUndyeableSection( *pVisual ) ) );
                 if ( bSplitBySection == false )
                 {
                     addMaterialValue( out, owner, hashed_string{}, hashed_string{}, drive._target, value, target, channel, shape );
@@ -356,7 +358,7 @@ namespace sw
              * @brief 꾸미기 값을 적용합니다. 슬라이더와 색은 모프, 본 비율, 머티리얼에 적용하고, 고르기는 변형과 외형에, 부착은 소켓 부착물에 적용합니다. @p ownerIndex 는 그 주인의 항목입니다.
              * @details 몸(주인이 빔)의 고르기 외형은 매개변수 이름을 주인으로 하는 새 항목이 된다. 아이템의 고르기 외형은 같은 주인으로 @p outListExtraVisual 에 담겨 나온다.
              */
-            static void applyCustomization( const CustomizationSchemaDef& schema, const CustomizationValueSet& normalized, const hashed_string& owner, int32 ownerIndex,
+            static void applyCustomization( const CustomizationSchemaDef& schema, const CustomizationValueSet& normalized, const hashed_string& owner, optional<int32> ownerIndex,
                                             const AppearanceDatabase& database, vector<Entry>& inoutListEntry, vector<const ItemVisualDef*>& outListExtraVisual,
                                             ResolvedAppearance& out )
             {
@@ -420,10 +422,10 @@ namespace sw
                             const CustomizationOptionDef* pOption = param.findOption( pValue->_option );
                             if ( pOption == nullptr )
                                 break;
-                            if ( ownerIndex >= 0 && pOption->_variant.empty() == false )
-                                inoutListEntry[static_cast<size_t>( ownerIndex )]._customVariant = pOption->_variant;
-                            if ( ownerIndex >= 0 && pOption->_materialVariant.empty() == false )
-                                inoutListEntry[static_cast<size_t>( ownerIndex )]._customMaterialVariant = pOption->_materialVariant;
+                            if ( ownerIndex.has_value() && pOption->_variant.empty() == false )
+                                inoutListEntry[static_cast<size_t>( *ownerIndex )]._customVariant = pOption->_variant;
+                            if ( ownerIndex.has_value() && pOption->_materialVariant.empty() == false )
+                                inoutListEntry[static_cast<size_t>( *ownerIndex )]._customMaterialVariant = pOption->_materialVariant;
                             const ItemVisualDef* pOptionVisual = pOption->_visual.empty() ? nullptr : database.getVisuals().findVisual( pOption->_visual );
                             if ( pOptionVisual == nullptr )
                                 break;
@@ -488,7 +490,7 @@ namespace sw
             static bool readOccupied( const GameplayContext& context, const ConditionNameArg& args )
             {
                 const vector<Entry>* pListEntry = context.find<AppearanceEntriesSlot>();
-                return pListEntry != nullptr && findEntry( *pListEntry, args._name, true ) >= 0;
+                return pListEntry != nullptr && findEntry( *pListEntry, args._name, true ).has_value();
             }
 
             /** @brief 규칙의 숨김이 아닌 동작을 대상별 판정에 넣습니다. 우선순위가 높은 쪽이 이기고, 같으면 먼저 온 규칙이 이깁니다. 로드 단계에서 우선순위가 같은 충돌 짝을 막습니다. */
@@ -793,8 +795,8 @@ namespace sw
             /** @brief 1 단계입니다. 몸 항목을 넣고 캐릭터 꾸미기를 적용합니다. */
             static void addBodyEntries( const AppearanceDatabase& database, const CharacterAppearanceSpec& spec, vector<Entry>& inoutListEntry, ResolvedAppearance& out )
             {
-                int32                bodyIndex = constant::invalid_index::kInt32;
-                const ItemVisualDef* pBody     = database.getVisuals().findVisual( spec._bodyVisual );
+                optional<int32>      bodyIndex;
+                const ItemVisualDef* pBody = database.getVisuals().findVisual( spec._bodyVisual );
                 if ( pBody != nullptr )
                 {
                     Entry body;
@@ -869,12 +871,12 @@ namespace sw
                         continue;
                     for ( const hashed_string& slot : pOccupancy->_listSlot )
                     {
-                        const int32 otherIndex = slot == occupier._owner ? constant::invalid_index::kInt32 : findEntry( inoutListEntry, slot, true );
-                        if ( otherIndex < 0 )
+                        const optional<int32> otherIndex = slot == occupier._owner ? nullopt : findEntry( inoutListEntry, slot, true );
+                        if ( otherIndex.has_value() == false )
                             continue;
-                        inoutListEntry[static_cast<size_t>( otherIndex )]._bHidden = SW_TRUE;
+                        inoutListEntry[static_cast<size_t>( *otherIndex )]._bHidden = SW_TRUE;
                         addTrace( out, AppearanceTraceStep::Occupancy, occupier._owner, "'%#' occupies slot '%#' - '%#' hidden", occupier._itemID.c_str(), slot.c_str(),
-                                  inoutListEntry[static_cast<size_t>( otherIndex )]._itemID.c_str() );
+                                  inoutListEntry[static_cast<size_t>( *otherIndex )]._itemID.c_str() );
                     }
                 }
             }
@@ -896,9 +898,9 @@ namespace sw
                         continue;
                     for ( const hashed_string& slot : set._listCompleteSlot )
                     {
-                        const int32 replacedIndex = findEntry( inoutListEntry, slot, true );
-                        if ( replacedIndex >= 0 )
-                            inoutListEntry[static_cast<size_t>( replacedIndex )]._bHidden = SW_TRUE;
+                        const optional<int32> replacedIndex = findEntry( inoutListEntry, slot, true );
+                        if ( replacedIndex.has_value() )
+                            inoutListEntry[static_cast<size_t>( *replacedIndex )]._bHidden = SW_TRUE;
                     }
                     Entry complete;
                     complete._pVisual = pCompleteVisual;

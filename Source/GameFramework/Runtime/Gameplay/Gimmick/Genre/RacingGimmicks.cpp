@@ -78,12 +78,12 @@ namespace sw
         if ( bCannotOpen )
             return hashed_string{};
         // 시드와 연 횟수로 뽑는다. 같은 순서로 열면 같은 것이 나온다.
-        GameRandom  random( HashUtil::hashCoord( _openCount, 0, _seed ) );
-        const int32 index = random.pickWeightedIndex( _listChoice, RacingGimmicksInternal::ChoiceWeight{} );
+        GameRandom            random( HashUtil::hashCoord( _openCount, 0, _seed ) );
+        const optional<int32> index = random.pickWeightedIndex( _listChoice, RacingGimmicksInternal::ChoiceWeight{} );
         ++_openCount;
-        if ( index < 0 )
+        if ( index.has_value() == false )
             return hashed_string{};
-        const GimmickItemChoice& choice = _listChoice[static_cast<size_t>( index )];
+        const GimmickItemChoice& choice = _listChoice[static_cast<size_t>( *index )];
         GimmickItemEvent         event;
         event._target = target.getHandle();
         event._source = pOwner->getHandle();

@@ -35,12 +35,12 @@ namespace sw
         if ( _counter.roll( rule, &_random ) == false )
             return nullptr;
 
-        const int32 groupIndex = _random.pickWeightedIndexInt( pArea->_listGroup, []( const JRPGEncounterGroup& group )
+        const optional<int32> groupIndex = _random.pickWeightedIndexInt( pArea->_listGroup, []( const JRPGEncounterGroup& group )
         { return group._weight; } );
-        if ( groupIndex < 0 )
+        if ( groupIndex.has_value() == false )
             return nullptr;
         _counter.markEncounter();
-        return pArea->_listGroup.data() + groupIndex;
+        return pArea->_listGroup.data() + *groupIndex;
     }
 
     void JRPGEncounterWalker::serializeState( StateIO& io )

@@ -8,6 +8,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Encoding/FourCCUtil.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -88,8 +89,8 @@ namespace sw
         int32 getTrackCount() const { return static_cast<int32>( _listTrack.size() ); }
         /** @brief 트랙 하나를 반환합니다. @p trackIndex 는 0 부터 `getTrackCount` 미만입니다. */
         const ControlIntentTrack& getTrack( int32 trackIndex ) const { return _listTrack[static_cast<size_t>( trackIndex )]; }
-        /** @brief 폰 이름의 트랙 인덱스를 반환합니다. 없으면 -1 입니다. */
-        int32 findTrack( const hashed_string& pawnName ) const;
+        /** @brief 폰 이름의 트랙 인덱스를 반환합니다. 없으면 비어 있습니다. */
+        optional<int32> findTrack( const hashed_string& pawnName ) const;
         /** @brief 그 틱의 의도를 반환합니다. 범위 밖이거나 고리가 덮었으면 nullptr 입니다. */
         const ControlIntent* findIntent( int32 trackIndex, uint32 tick ) const;
         /** @brief 트랙의 남은 틱을 처음부터 순서대로 @p outListIntent 에 담습니다. 먼저 비우며, 빈 틱이 있으면 false 입니다. */

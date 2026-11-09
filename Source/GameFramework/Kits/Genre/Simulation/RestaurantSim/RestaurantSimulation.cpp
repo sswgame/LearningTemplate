@@ -687,13 +687,13 @@ namespace sw
         _arrival.add( computeArrivalRate() * kStepMinutes / RestaurantSimulationInternal::kMinutesPerHour );
         while ( _arrival.takeOne() )
         {
-            const int32 typeIndex = _random.pickWeightedIndex( listType, getWeight );
-            if ( typeIndex < 0 )
+            const optional<int32> typeIndex = _random.pickWeightedIndex( listType, getWeight );
+            if ( typeIndex.has_value() == false )
             {
                 _arrival.reset(); // 올 수 있는 성향이 없다 — 쌓아 두지 않는다(누적은 1 아래라는 규칙을 지킨다)
                 return;
             }
-            (void)admitCustomer( listType[static_cast<size_t>( typeIndex )]._id );
+            (void)admitCustomer( listType[static_cast<size_t>( *typeIndex )]._id );
         }
     }
 
@@ -813,10 +813,10 @@ namespace sw
                 continue; // 고를 가중치가 없는 요리는 후보가 아니다. 모두 0 이면 시킬 것이 없어 나간다
             listChoice.push_back( RestaurantSimulationInternal::DishChoice{ pDish, weight } );
         }
-        const int32 pickIndex = _random.pickWeightedIndex( listChoice, &RestaurantSimulationInternal::getChoiceWeight );
-        if ( pickIndex < 0 )
+        const optional<int32> pickIndex = _random.pickWeightedIndex( listChoice, &RestaurantSimulationInternal::getChoiceWeight );
+        if ( pickIndex.has_value() == false )
             return false;
-        const DishDef*   pDish   = listChoice[static_cast<size_t>( pickIndex )]._pDish;
+        const DishDef*   pDish   = listChoice[static_cast<size_t>( *pickIndex )]._pDish;
         const RecipeDef* pRecipe = findRecipe( *pDish );
         int64            cost    = 0;
         if ( pRecipe == nullptr || _stock.consumeItems( pRecipe->_inputs, 1, cost ) == false )

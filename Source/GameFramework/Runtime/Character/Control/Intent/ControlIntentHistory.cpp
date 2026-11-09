@@ -36,15 +36,10 @@ namespace sw
 
     void ControlIntentHistory::record( uint32 tick, const TComponentHandle<PawnComponent>& pawn, const hashed_string& pawnName, const ControlIntent& intent )
     {
-        int32                                              trackIndex = constant::invalid_index::kInt32;
         const unordered_map<uint64, int32>::const_iterator found      = _mapComponentIDToTrack.find( pawn.componentID() );
-        if ( found != _mapComponentIDToTrack.end() )
+        const int32                                        trackIndex = found != _mapComponentIDToTrack.end() ? found->second : static_cast<int32>( _listTrack.size() );
+        if ( found == _mapComponentIDToTrack.end() )
         {
-            trackIndex = found->second;
-        }
-        else
-        {
-            trackIndex = static_cast<int32>( _listTrack.size() );
             _listTrack.emplace_back();
             ControlIntentTrack& created = _listTrack.back();
             created._ring.initialize( _capacityTicks );
@@ -193,14 +188,14 @@ namespace sw
         return unexpected( error );
     }
 
-    int32 ControlIntentHistory::findTrack( const hashed_string& pawnName ) const
+    optional<int32> ControlIntentHistory::findTrack( const hashed_string& pawnName ) const
     {
         for ( size_t trackIndex = 0; trackIndex < _listTrack.size(); ++trackIndex )
         {
             if ( _listTrack[trackIndex]._pawnName == pawnName )
                 return static_cast<int32>( trackIndex );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     const ControlIntent* ControlIntentHistory::findIntent( int32 trackIndex, uint32 tick ) const

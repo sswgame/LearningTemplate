@@ -3,6 +3,7 @@
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceSocketRig.h"
 
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Character/CharacterDataCache.h"
@@ -17,16 +18,16 @@ namespace sw
         {
             static constexpr const utf8* kRigidRootBone = "root";
 
-            /** @brief 몸 부품입니다. 주인이 비어 있는 첫 휘는 스킨드 부품이며, 없으면 -1 입니다. */
-            static int32 findBodyPart( const ResolvedAppearance& resolved )
+            /** @brief 몸 부품입니다. 주인이 비어 있는 첫 휘는 스킨드 부품이며, 없으면 비어 있습니다. */
+            static optional<uint32> findBodyPart( const ResolvedAppearance& resolved )
             {
                 for ( size_t partIndex = 0; partIndex < resolved._listPart.size(); ++partIndex )
                 {
                     const ResolvedPart& part = resolved._listPart[partIndex];
                     if ( part._owner.empty() && part.isSkinnedFollower() )
-                        return static_cast<int32>( partIndex );
+                        return static_cast<uint32>( partIndex );
                 }
-                return constant::invalid_index::kInt32;
+                return nullopt;
             }
         };
     } // namespace
@@ -94,11 +95,11 @@ namespace sw
         bool bSucceeded = true;
 
         // 유닛 0 은 몸이다. 소켓 에셋이 없어도 유닛을 만든다. 덮어쓰기만으로 소켓이 생길 수 있기 때문이다.
-        const int32 bodyPart = AppearanceSocketRigInternal::findBodyPart( resolved );
-        SocketSet   bodySockets;
-        if ( bodyPart >= 0 )
+        const optional<uint32> bodyPart = AppearanceSocketRigInternal::findBodyPart( resolved );
+        SocketSet              bodySockets;
+        if ( bodyPart.has_value() )
         {
-            const hashed_string& bodySocketPath = resolved._listPart[static_cast<size_t>( bodyPart )]._socketSet;
+            const hashed_string& bodySocketPath = resolved._listPart[*bodyPart]._socketSet;
             const SocketSet*     pBodySockets   = bodySocketPath.empty() ? nullptr : source.findSocketSet( bodySocketPath );
             if ( pBodySockets != nullptr )
                 bodySockets = *pBodySockets;
@@ -106,9 +107,9 @@ namespace sw
                 bSucceeded = false;
         }
         applySocketOverrides( resolved, bodyBindBones, bodySockets );
-        _listUnitPart.push_back( bodyPart >= 0 ? static_cast<uint32>( bodyPart ) : kNoUnit );
-        if ( bodyPart >= 0 )
-            _listPartUnit[static_cast<size_t>( bodyPart )] = kBodyUnit;
+        _listUnitPart.push_back( bodyPart.value_or( kNoUnit ) );
+        if ( bodyPart.has_value() )
+            _listPartUnit[*bodyPart] = kBodyUnit;
         if ( _table.addUnit( hashed_string{}, kBodyUnit, bodySockets, bodyBindBones, nullptr, outIssues ) == false )
             bSucceeded = false;
 
@@ -116,7 +117,7 @@ namespace sw
         for ( size_t partIndex = 0; partIndex < resolved._listPart.size(); ++partIndex )
         {
             const ResolvedPart& part = resolved._listPart[partIndex];
-            if ( static_cast<int32>( partIndex ) == bodyPart || part._socketSet.empty() )
+            if ( bodyPart == static_cast<uint32>( partIndex ) || part._socketSet.empty() )
                 continue;
             const SocketSet* pSockets = source.findSocketSet( part._socketSet );
             if ( pSockets == nullptr )

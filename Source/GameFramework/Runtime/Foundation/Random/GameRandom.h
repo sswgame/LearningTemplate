@@ -5,6 +5,7 @@
  */
 #pragma once
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/DeterministicRandom.h"
@@ -23,13 +24,13 @@ namespace sw
         GameRandom() = default;
 
         /**
-         * @brief 가중치로 하나를 고릅니다. `nextFloat` 를 한 번 씁니다. @p getWeight( 원소 ) 가 가중치이고 음수는 0 으로 칩니다. 합이 0 이하이면 -1 입니다.
+         * @brief 가중치로 하나를 고릅니다. `nextFloat` 를 한 번 씁니다. @p getWeight( 원소 ) 가 가중치이고 음수는 0 으로 칩니다. 합이 0 이하이면 비어 있습니다.
          * @code
-         *     const int32 index = random.pickWeightedIndex( listItem, []( const ItemDef& def ) { return def._weight; } );
+         *     const optional<int32> index = random.pickWeightedIndex( listItem, []( const ItemDef& def ) { return def._weight; } );
          * @endcode
          */
         template <typename TList, typename TGetWeight>
-        int32 pickWeightedIndex( const TList& list, TGetWeight&& getWeight )
+        optional<int32> pickWeightedIndex( const TList& list, TGetWeight&& getWeight )
         {
             float32 total = 0.0f;
             for ( const auto& element : list )
@@ -38,10 +39,10 @@ namespace sw
                 total += weight > 0.0f ? weight : 0.0f;
             }
             if ( total <= 0.0f )
-                return constant::invalid_index::kInt32;
-            float32 roll  = nextFloat() * total;
-            int32   index = 0;
-            int32   last  = constant::invalid_index::kInt32;
+                return nullopt;
+            float32         roll  = nextFloat() * total;
+            int32           index = 0;
+            optional<int32> last;
             for ( const auto& element : list )
             {
                 const float32 weight = static_cast<float32>( getWeight( element ) );
@@ -58,13 +59,13 @@ namespace sw
         }
 
         /**
-         * @brief 정수 가중치로 하나를 고릅니다. `nextInt( 0, 합 - 1 )` 를 한 번 씁니다. 음수는 0 으로 치고, 합이 0 이하이면 -1 입니다.
+         * @brief 정수 가중치로 하나를 고릅니다. `nextInt( 0, 합 - 1 )` 를 한 번 씁니다. 음수는 0 으로 치고, 합이 0 이하이면 비어 있습니다.
          * @details 정수 가중치(조우표, 드롭표)는 이것을 쓴다.
          *          정수 합과 정수 비교로 고르므로 부동소수 누적 오차가 없고, 가중치 합이 커도 비율이 정확하다.
          *          손으로 고르던 조우표와 난수 흐름도 같다.
          */
         template <typename TList, typename TGetWeight>
-        int32 pickWeightedIndexInt( const TList& list, TGetWeight&& getWeight )
+        optional<int32> pickWeightedIndexInt( const TList& list, TGetWeight&& getWeight )
         {
             int32 total = 0;
             for ( const auto& element : list )
@@ -73,7 +74,7 @@ namespace sw
                 total += weight > 0 ? weight : 0;
             }
             if ( total <= 0 )
-                return constant::invalid_index::kInt32;
+                return nullopt;
             int32 roll  = nextInt( 0, total - 1 );
             int32 index = 0;
             for ( const auto& element : list )
@@ -87,7 +88,7 @@ namespace sw
                 }
                 ++index;
             }
-            return constant::invalid_index::kInt32;
+            return nullopt;
         }
 
         /** @brief Fisher-Yates 로 섞습니다. 뒤에서부터 [0, i] 의 한 위치와 바꾸며, `nextInt` 를 원소 수 - 1 번 부릅니다. */
