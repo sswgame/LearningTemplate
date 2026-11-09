@@ -1,6 +1,6 @@
 /**
  * @file InspectorPropertyUndo.h
- * @brief 인스펙터 프로퍼티 편집 Undo (ImGui 활성화/해제 기준)
+ * @brief 인스펙터 프로퍼티 편집 Undo(ImGui 위젯 활성화 · 해제 기준). 위젯 상태만 읽어 넘기고, 스냅샷 · 기록은 Model 의 `InspectorEditRecorder` 가 한다(MVVM 계약).
  */
 #pragma once
 #include "Core/Container/string.h"

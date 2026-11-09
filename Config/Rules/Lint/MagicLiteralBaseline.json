@@ -277,7 +277,6 @@
     "Source/Editor/Panels/Inspector/FloatCurvePropertyDrawer.cpp": {"float": 2},
     "Source/Editor/Panels/Inspector/InspectorPanel.cpp": {"float": 2, "integer": 1},
     "Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp": {"float": 16},
-    "Source/Editor/Panels/Inspector/InspectorPropertyUndo.cpp": {"integer": 1},
     "Source/Editor/Panels/Inspector/Model/InspectorPropertyLayout.cpp": {"float": 1},
     "Source/Editor/Panels/Inspector/SceneComponentInspector.cpp": {"float": 5},
     "Source/Editor/Panels/MapCheck/MapCheckPanel.cpp": {"float": 5, "integer": 2},
