@@ -110,7 +110,7 @@ namespace sw
                            GPUMessageArg::None, "mesh_modifier.hlsli" );
     SW_GPU_MESSAGE_FORMAT( modifierUVTableRange, SW_GPU_ASSERT_ID_MODIFIER_UV_TABLE_RANGE, GPUMessageSeverity::Error, "modifier vertex UV table read %# is outside the program table", GPUMessageArg::Uint, GPUMessageArg::None, GPUMessageArg::None,
                            GPUMessageArg::None, "mesh_modifier.hlsli" );
-    SW_GPU_MESSAGE_FORMAT( presentPixel, SW_GPU_MESSAGE_ID_PRESENT_PIXEL, GPUMessageSeverity::Info, "present pixel color %# %# %#", GPUMessageArg::Float, GPUMessageArg::Float, GPUMessageArg::Float, GPUMessageArg::None, "fullscreen_blit.hlsl" );
+    SW_GPU_MESSAGE_FORMAT( presentPixel, SW_GPU_MESSAGE_ID_PRESENT_PIXEL, GPUMessageSeverity::Info, "present pixel color %# %# %#", GPUMessageArg::Float, GPUMessageArg::Float, GPUMessageArg::Float, GPUMessageArg::None, "present_output.hlsli" );
 
     bool GPUMessageFormat::isConsistent() const
     {

@@ -322,6 +322,11 @@ namespace sw
             return false;
         }
 
+        // 셰이더 메시지 요구(진단 정책 — 실행 중에 바뀐다: 시나리오 <Launch> · 콘솔)와 링이 어긋나면 패스 자원을 다시 짓는다 — 링과 메시지 변형 PSO 는 패스 자원과 함께 선다.
+        // 기동 때 한 번만 만들면 뒤에 켠 요구는 링 없이 조용히 무시됐다(gpumessages 시나리오가 RingReady 를 못 봤다). 파이프라인을 바꿀 때와 같은 길이다.
+        if ( GPUMessageChannel::isRequested() != _state._gpuMessages.isActive() )
+            releasePassResources();
+
         // 게임 스레드가 맡긴 텍스처 구간(지형 스플랫 칠하기)을 기록 전에 올린다. 업로드는 뒤이은 드로우보다 먼저 실행된다(IRHIResourceFactory 계약).
         if ( engine::areEngineServicesBound() )
         {

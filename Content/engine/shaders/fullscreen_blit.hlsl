@@ -2,11 +2,10 @@
 // 여기서 한 번 더 톤맵을 걸면 화면이 c/(c+1) 로 눌린다. 톤맵이 필요한 Present 는 `tonemap.hlsl` · `post_chain.hlsl` 을 지정한다.
 #include "binding.hlsli"
 #include "fullscreen.hlsli"
-#include "gpu_message.hlsli"
+#include "present_output.hlsli"
 
 float4 PSMain( PSInput input ) : SV_TARGET
 {
-    SW_GPU_MESSAGE_PIXEL( input._position );
     // 정수 업스케일(픽셀 퍼펙트) 뷰는 점 샘플이다 — 선형이면 원본 픽셀 경계가 섞여 번진다. 그 밖은 해상도 배율로 키울 때 부드럽게 선형이다.
     // 플래그는 패스 상수라 분기가 고르다 — 한 번만 읽는다. early-return 이 아니라 값을 채우는 분기다(post_chain 과 같은 이유).
     const bool bPointUpscale = ( g_Flags & SW_PASS_FLAG_POINT_UPSCALE ) != 0u;
@@ -19,7 +18,5 @@ float4 PSMain( PSInput input ) : SV_TARGET
     {
         color = PassTexture::sampleSource( input._uv ).rgb;
     }
-    // `gpu.inspect x y` 가 고른 픽셀 하나만 화면 색을 적는다(-gv_gpuMessages 변형에서만 — 아니면 매크로가 비어 있다).
-    SW_GPU_PRINT( SW_GPU_MESSAGE_ID_PRESENT_PIXEL, color.r, color.g, color.b, 0u );
-    return float4( color, 1.0f );
+    return PresentOutput::write( input._position, color ); // `gpu.inspect` 가 고른 픽셀이면 화면 색을 적는다
 }

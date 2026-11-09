@@ -13,6 +13,7 @@
  */
 #include "binding.hlsli"
 #include "fullscreen.hlsli"
+#include "present_output.hlsli"
 
 #if defined( SW_POST_BLOOM )
     #include "post_bloom.hlsli"
@@ -91,5 +92,5 @@ float4 PSMain( PSInput input ) : SV_TARGET
     // 후처리를 끈 뷰(CCTV · 미니맵)는 원본을 낸다 — 뷰마다 달라서 퍼뮤테이션이 아니라 패스 플래그다. 고르기는 early-return 이 아니라
     // 값 선택이다(GL 드라이버가 early-return 모양을 잘못 컴파일한 적이 있다 — binding.hlsli MorphPool::computeElement).
     const bool bSkipPost = ( g_Flags & SW_PASS_FLAG_SKIP_POST ) != 0u;
-    return float4( bSkipPost ? source : color, 1.0f );
+    return PresentOutput::write( input._position, bSkipPost ? source : color ); // `gpu.inspect` 가 고른 픽셀이면 화면 색을 적는다
 }

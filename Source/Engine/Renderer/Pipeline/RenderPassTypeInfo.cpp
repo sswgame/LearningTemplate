@@ -177,7 +177,7 @@ namespace sw
                         // 후처리 체인(post_chain.hlsl)을 겸하면 깊이 · AO 를 읽는다.
                         info._pDefaultShader = &EngineDefaultAssets::_shaderFullscreenBlit;
                         info._inputContract  = makeContract( { Role::SourceColor }, { Role::SceneDepth, Role::AmbientOcclusion } );
-                        info._flags          = Flag::kHasInputContract | Flag::kOutputPass | Flag::kGPUMessageTarget; // fullscreen_blit 의 SW_GPU_PRINT(고른 픽셀의 화면 색)
+                        info._flags          = Flag::kHasInputContract | Flag::kOutputPass | Flag::kGPUMessageTarget; // PresentOutput::write 의 SW_GPU_PRINT(고른 픽셀의 화면 색 — 어느 Present 셰이더든)
                         break;
                     }
                     case RenderPassType::MeshOutline:

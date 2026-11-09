@@ -184,7 +184,7 @@ namespace sw
 /**
  * @brief 메시지 id 하나의 서식을 표에 올립니다(.cpp 의 파일 범위, `namespace sw` 안). @p tag 는 정적 이름을 만드는 식별자입니다.
  * @details 예: `SW_GPU_MESSAGE_FORMAT( presentPixel, SW_GPU_MESSAGE_ID_PRESENT_PIXEL, GPUMessageSeverity::Info, "present pixel color %# %# %#",
- *          GPUMessageArg::Float, GPUMessageArg::Float, GPUMessageArg::Float, GPUMessageArg::None, "fullscreen_blit.hlsl" );`
+ *          GPUMessageArg::Float, GPUMessageArg::Float, GPUMessageArg::Float, GPUMessageArg::None, "present_output.hlsli" );`
  */
 #define SW_GPU_MESSAGE_FORMAT( tag, id, severity, pFormat, arg0, arg1, arg2, arg3, pSource ) \
     SW_STATIC_REGISTRATION( gpuMessageFormat, ::sw::GPUMessageFormat, ::sw::GPUMessageFormatRegistrar, tag, id, severity, pFormat, { arg0, arg1, arg2, arg3 }, pSource )

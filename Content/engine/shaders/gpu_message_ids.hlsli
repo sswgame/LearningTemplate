@@ -84,6 +84,6 @@
 // ------------------------------------------------------------------------------
 // 출력 메시지(SW_GPU_PRINT — 고른 픽셀 · 스레드만, SW_GPU_LOG — id 당 프레임 예산까지)
 // ------------------------------------------------------------------------------
-#define SW_GPU_MESSAGE_ID_PRESENT_PIXEL 1000u // fullscreen_blit.hlsl — 고른 픽셀이 화면에 내는 색(인자 = r · g · b, 넷째 없음). `gpu.inspect x y` 가 고른다
+#define SW_GPU_MESSAGE_ID_PRESENT_PIXEL 1000u // present_output.hlsli(Present 셰이더 모두) — 고른 픽셀이 화면에 내는 색(인자 = r · g · b, 넷째 없음). `gpu.inspect x y` 가 고른다
 
 #endif // SW_ENGINE_GPUMESSAGEIDS_HLSLI
