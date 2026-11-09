@@ -14,7 +14,7 @@ Scripts/lint/ResultTypes.py
 
 **왜 래칫인가.** 형식(`sw::expected`)은 새 함수가 옛 모양을 쓰지 못하게 막지 못한다 — `std::optional` 도 `string&` 도 언어가 준다. 그래서:
 - `Source/Core/` 는 **0** 이어야 한다(옮김이 끝났다). 예외는 기준선 파일의 `_coreExemptions`(`경로` → `종류` → 까닭)에만 둔다.
-- 그 밖은 파일마다 종류별 수를 기준선(`Config/Dev/ResultTypeBaseline.json`)에 두고, **늘면** 커밋이 멈추고 **줄면** `--ratchet` 으로 함께 낮춘다
+- 그 밖은 파일마다 종류별 수를 기준선(`Config/Rules/Lint/ResultTypeBaseline.json`)에 두고, **늘면** 커밋이 멈추고 **줄면** `--ratchet` 으로 함께 낮춘다
   (`MagicLiterals.py` 와 같은 모양). 올리는 길은 `--accept <파일…>` 하나(통합에서 규칙 전 코드를 합칠 때).
 
     py -3 -m Scripts lint result-types                    # 폴더별 남은 수
@@ -42,7 +42,7 @@ from lint.Format import getModifiedCppFiles  # noqa: E402
 from lint.MagicLiterals import isSourceFile, listSourceFiles, readStagedRenames  # noqa: E402
 
 
-kBaselinePath = "Config/Dev/ResultTypeBaseline.json"
+kBaselinePath = "Config/Rules/Lint/ResultTypeBaseline.json"
 kKinds = ("std-optional", "out-error", "out-error-pointer", "out-text-on-failure")
 kPattern = {
     "std-optional": re.compile(r"\bstd\s*::\s*(?:optional\b|nullopt\b|nullopt_t\b)"),

@@ -2,7 +2,7 @@
 <!--
   자동화가 부르지 않던 개발 명령을 한 번씩 부른다 — 손 도구라도 깨지면 알 수 있게. 값이 있는 것은 답(DevCommand.Reply)이나 변수로 판정한다.
   시각 로그: 켜기 → 상태 → 끄기 → 저장 → 재생 → 비우기. 타임스케일: 0 이면 멈춤으로 답하고 1 로 돌아온다. 애니메이션 되감기 창, 개체 덤프, 디버그 그리기 범주, 설정 확인, 넷 세션 없는 답.
-  환경 의존(renderdoc · xtest · 장치 제거 · 멈춤 감시 · 누수 곡선)은 여기 없다 — 까닭은 Config/Dev/FeatureReferenceExceptions.json.
+  환경 의존(renderdoc · xtest · 장치 제거 · 멈춤 감시 · 누수 곡선)은 여기 없다 — 까닭은 Config/Rules/Lint/FeatureReferenceExceptions.json.
   실행: App -scenario=game/empty/automation/devcommands.scenario.xml -unattended (체인: ctest -R Scenario.empty)
 -->
 <Scenario name="game.empty.devcommands" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">

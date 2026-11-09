@@ -65,7 +65,7 @@ A `-1` says one of several things; each has one form (Unreal: `INDEX_NONE` · `T
 
 ### The ratchet — literals cannot grow
 
-`Scripts/lint/MagicLiterals.py` runs in the commit hook. For every staged C++ file it counts the **unnamed** `-1`, float, two-digit-or-longer integer and hex literals in ordinary code and compares each count with `Config/Dev/MagicLiteralBaseline.json` (one line per file).
+`Scripts/lint/MagicLiterals.py` runs in the commit hook. For every staged C++ file it counts the **unnamed** `-1`, float, two-digit-or-longer integer and hex literals in ordinary code and compares each count with `Config/Rules/Lint/MagicLiteralBaseline.json` (one line per file).
 
 | The count | Then |
 | --- | --- |

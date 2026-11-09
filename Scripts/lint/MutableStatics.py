@@ -4,7 +4,7 @@
 Scripts/lint/MutableStatics.py
 
 가변 정적 저장소 — 함수 정적 변수, 이름공간 범위(익명 이름공간 · `static` · 이름 있는 이름공간)의 변수, 클래스의 `static` 데이터 멤버 — 를 두지 않는다.
-정적 등록 공통 틀(`SW_DEFINE_REGISTRATION_LIST` · `SW_DEFINE_LOCKED_REGISTRATION_LIST` · `SW_DEFINE_REGISTRATION_SLOT`)과 예외 표 `Config/Dev/MutableStaticExceptions.json` 의 자리만 허용한다.
+정적 등록 공통 틀(`SW_DEFINE_REGISTRATION_LIST` · `SW_DEFINE_LOCKED_REGISTRATION_LIST` · `SW_DEFINE_REGISTRATION_SLOT`)과 예외 표 `Config/Rules/Lint/MutableStaticExceptions.json` 의 자리만 허용한다.
 
 **왜 린트인가.** 가변 정적은 합법 C++ 이라 형식으로 막지 못한다. 그런데 함수 정적이든 파일 범위든 가변 정적은 싱글턴이다(사용자 지적 2026-11-08 —
 함수 정적을 익명 이름공간 · atomic 전역으로 옮기는 것은 자리만 바꾼 같은 싱글턴이다): 런타임 상태 · 정책 · 신호 · 번호 발급기가 엔진 · 에디터 범위 밖에
@@ -36,7 +36,7 @@ from common.Paths import getProjectRoot  # noqa: E402
 kExtensions = (".h", ".cpp", ".inl")
 # 함수 정적을 매크로 본문에 둘 수 있는 곳(두 틀의 정의 매크로)
 kMacroHomes = ("Source/Core/Registry/RegistrationList.h", "Source/Core/Registry/RegistrationSlot.h")
-kExceptionFile = "Config/Dev/MutableStaticExceptions.json"
+kExceptionFile = "Config/Rules/Lint/MutableStaticExceptions.json"
 kNamespaceHead = re.compile(r"(?:\bnamespace\b[^;{}()]*|extern\s+\"C\"\s*)$")
 kClassHead = re.compile(r"\b(?:class|struct|union)\b[^;{}()]*$")
 kEnumHead = re.compile(r"\benum\b[^;{}()]*$")

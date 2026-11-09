@@ -10,7 +10,7 @@ Scripts/lint/ByteReadShape.py
 1. 개수 할당: 함수 안에서 읽은 변수(`archive >> count` · `count = reader.readUint32()` · `reader.readPod( count )`)를 거르지 않고 `resize` · `reserve` · `assign` · 벡터 생성자에 넘긴다.
    거른 것으로 보는 것: 같은 함수에서 `readCount` · `canHold` · `canHoldCount` · `tryMultiplyCounts` · `hasBytesAvailable` 에 넘겼거나, 0 이 아닌 값과 비교했다.
    다른 까닭으로 안전하면 그 줄에 `NOLINT(sw-unchecked-count): <이유>` 를 적는다.
-2. 직접 읽기: `LittleEndianUtil::read*` 로 제 커서를 굴리지 않는다 — 새 형식은 `ByteReader` 로 읽는다. 바깥 형식 · 패킷처럼 까닭이 있는 파일은 `Config/Dev/ByteReadRawFiles.json` 에 이유와 함께 적는다.
+2. 직접 읽기: `LittleEndianUtil::read*` 로 제 커서를 굴리지 않는다 — 새 형식은 `ByteReader` 로 읽는다. 바깥 형식 · 패킷처럼 까닭이 있는 파일은 `Config/Rules/Lint/ByteReadRawFiles.json` 에 이유와 함께 적는다.
 
 `py -3 -m Scripts lint byte-read [--files …|--all|--self-check]` 로 돌리고, 커밋 훅(`Rules.py` 표)이 staged 파일에 돌린다.
 """
@@ -32,7 +32,7 @@ from lint.Parallel import flatMapInProcesses  # noqa: E402
 
 
 kExempt = "NOLINT(sw-unchecked-count)"
-kRawListFile = "Config/Dev/ByteReadRawFiles.json"
+kRawListFile = "Config/Rules/Lint/ByteReadRawFiles.json"
 kAllocation = re.compile(r"(?:\.|->)(?:resize|reserve|assign)\(\s*(?:static_cast<\w+>\(\s*)?([A-Za-z_]\w*(?:(?:\.|->)[A-Za-z_]\w*)*)\s*\)*\s*[,)]")
 kVectorConstructor = re.compile(r"\bvector<[^;()]*>\s+\w+\(\s*([A-Za-z_]\w*)\s*\)")
 kBlockKeyword = re.compile(r"^(if|for|while|switch|else|do|case|try|catch|namespace|struct|class|enum|union)\b")

@@ -54,7 +54,7 @@
 
 ### 데이터 기반 값 · 매직 리터럴 전수 점검 (요청 2026-11-07)
 
-**남은 일(9 차 W5 뒤):** 늘지 않게 하는 구조(파일 단위 래칫 `Scripts/lint/MagicLiterals.py`, 기준선 `Config/Dev/MagicLiteralBaseline.json`, 규칙은 [Constants.md](agents/Constants.md) "The ratchet" · "Sentinels")는 섰다. 기준선이 큰 파일(데모 UI 화면 · 게임 모드 컴포넌트)의 튜닝 실수를 PROPERTY · 카탈로그로, 다른 작업자가 맡은 AI · 내비 · 에디터 패널의 `-1`, 반환형을 `sw::optional` 로 바꿀 `find*Index` 무리(약 92 곳 — `sw::expected` Core 밖 이전과 함께, [Errors](agents/Errors.md)).
+**남은 일(9 차 W5 뒤):** 늘지 않게 하는 구조(파일 단위 래칫 `Scripts/lint/MagicLiterals.py`, 기준선 `Config/Rules/Lint/MagicLiteralBaseline.json`, 규칙은 [Constants.md](agents/Constants.md) "The ratchet" · "Sentinels")는 섰다. 기준선이 큰 파일(데모 UI 화면 · 게임 모드 컴포넌트)의 튜닝 실수를 PROPERTY · 카탈로그로, 다른 작업자가 맡은 AI · 내비 · 에디터 패널의 `-1`, 반환형을 `sw::optional` 로 바꿀 `find*Index` 무리(약 92 곳 — `sw::expected` Core 밖 이전과 함께, [Errors](agents/Errors.md)).
 
 | 우선순위 | 코드에서 확인한 내용 | 다음 작업과 완료 조건 |
 |---|---|---|

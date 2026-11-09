@@ -70,11 +70,11 @@ endif()
 # 개발 · 배포 차이가 값뿐인 곳은 `build::kShipping`(Core/Foundation/BuildInfo.h)을 읽는다 — 규칙은 docs/agents/BuildConfigSwitch.md.
 
 # ------------------------------------------------------------------------------
-# 1-1) 층 — 파일마다 층(Scripts/generate/rules/EngineLayers.toml → configure 가 EngineLayers.cmake 로)을 정하고, 층의 .cpp 는 아래 11) 의
+# 1-1) 층 — 파일마다 층(Config/Rules/Layers/EngineLayers.toml → configure 가 EngineLayers.cmake 로)을 정하고, 층의 .cpp 는 아래 11) 의
 #      층 부분(`EngineLayer<N>`)이 짓는다. Engine 타깃 자신은 헤더 · 리플렉션 산출물 · Core/Jolt 오브젝트만 든다.
 # ------------------------------------------------------------------------------
 include("${CMAKE_BINARY_DIR}/generated/sw/config/EngineLayers.cmake")
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/Scripts/generate/rules/EngineLayers.toml")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/Config/Rules/Layers/EngineLayers.toml")
 set(listEngineLayerSource "")
 foreach(tier IN LISTS SW_ENGINE_TIER_LIST)
 	# 이 구성이 짓는 것(ENGINE_SOURCES — 짓지 않는 폴더 · RHI 백엔드 · Jolt 를 뺀 것)만 남긴다.
@@ -359,7 +359,7 @@ function(sw_addEngineLayerStubs PART TIER)
 		if(NOT upperTier GREATER TIER)
 			continue()
 		endif()
-		set(stubContent "#error \"Engine layer ${upperTier} header cannot be included from layer ${TIER} code (Scripts/generate/rules/EngineLayers.toml). A lower layer must not see an upper layer: move what you need down, or invert the dependency.\"
+		set(stubContent "#error \"Engine layer ${upperTier} header cannot be included from layer ${TIER} code (Config/Rules/Layers/EngineLayers.toml). A lower layer must not see an upper layer: move what you need down, or invert the dependency.\"
 ")
 		foreach(header IN LISTS SW_ENGINE_TIER_${upperTier}_HEADERS)
 			sw_writeLayerStub(listNewStub "${stubRoot}/${header}" "${stubContent}")

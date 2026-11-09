@@ -3,7 +3,7 @@
 """
 Scripts/lint/Acronyms.py
 
-약어 표기 검사 — 식별자 · 파일 · 폴더 이름의 낱말이 약어 목록(`Config/Dev/Acronyms.json` `_acronyms`)의 약어를 첫 글자만 대문자로 쓰면(`Json` · `Id` · `FourCc`) 막는다.
+약어 표기 검사 — 식별자 · 파일 · 폴더 이름의 낱말이 약어 목록(`Config/Rules/Lint/Acronyms.json` `_acronyms`)의 약어를 첫 글자만 대문자로 쓰면(`Json` · `Id` · `FourCc`) 막는다.
 규칙은 `docs/agents/NamingCpp.md` Acronyms: 약어는 어디서나 모두 대문자, 소문자로 시작하는 첫 낱말일 때만 모두 소문자(`jsonText`). `gv_` 이름 · 주석 · 문자열은 보지 않는다.
 
 **왜 린트인가.** 약어 일괄 변경(1dafbae0c9) 뒤 도구를 지워 새 어긋남(`FourCcUtil` · `HpackDecoder` · `kDxgiFormat…`)이 다시 쌓였다(FolderMoves 11 절) — 이름은 형식이 막지 못한다.
@@ -27,7 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 
-kConfigPath = "Config/Dev/Acronyms.json"
+kConfigPath = "Config/Rules/Lint/Acronyms.json"
 kExtensions = (".h", ".cpp", ".inl")
 kLiteralOrComment = re.compile(r'//[^\n]*|/\*.*?\*/|(?:u8|[uUL])?R"(?P<delim>[^()\\\s]{0,16})\(.*?\)(?P=delim)"|(?:u8|[uUL])?"(?:\\.|[^"\\\n])*"|\'(?:\\.|[^\'\\\n])+\'', re.S)
 kIdentifier = re.compile(r"\b[A-Za-z_][A-Za-z0-9_]*\b")
@@ -101,7 +101,7 @@ def runSelfCheck() -> int:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="약어 표기 검사(식별자 · 파일 · 폴더 — Config/Dev/Acronyms.json)")
+    parser = argparse.ArgumentParser(description="약어 표기 검사(식별자 · 파일 · 폴더 — Config/Rules/Lint/Acronyms.json)")
     parser.add_argument("--self-check", action="store_true")
     args = parser.parse_args(argv)
     if args.self_check:

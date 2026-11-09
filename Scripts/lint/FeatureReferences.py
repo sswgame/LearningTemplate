@@ -13,7 +13,7 @@ Scripts/lint/FeatureReferences.py
 - 등록 없는 명령 함수: 명령 모양(`static bool f( const vector<string>&, string& )`)의 함수가 그 파일에서 정의 말고 한 번도 불리지 않으면 위반이다 —
   `*DevCommands.cpp` 를 기능 파일로 합칠 때(165e16647c) `SW_DEV_COMMAND` 줄만 빠져 치트 명령 아홉이 함수만 남았는데, 익명 구조체의 static 멤버는 컴파일러가 경고하지 않는다.
 
-예외는 데이터 한 곳(`Config/Dev/FeatureReferenceExceptions.json`)에 까닭과 함께 둔다. 까닭이 비었거나, 이제 참조가 생겼거나, 정의가 사라진 예외도 위반이다 — 표가 낡지 않게.
+예외는 데이터 한 곳(`Config/Rules/Lint/FeatureReferenceExceptions.json`)에 까닭과 함께 둔다. 까닭이 비었거나, 이제 참조가 생겼거나, 정의가 사라진 예외도 위반이다 — 표가 낡지 않게.
 
 `py -3 -m Scripts lint feature-refs [--self-check]` 로 돌리고, 커밋 훅(`Rules.py` 표)이 돌린다.
 """
@@ -35,7 +35,7 @@ from common.ExitCode import ExitCode  # noqa: E402
 from common.Git import runGit  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 
-kConfigPath = "Config/Dev/FeatureReferenceExceptions.json"
+kConfigPath = "Config/Rules/Lint/FeatureReferenceExceptions.json"
 kCppExtensions = (".h", ".cpp", ".inl", ".xxx")
 kContentExtensions = (".xml", ".json")
 kScriptExtensions = (".py", ".cmake", ".sh", ".txt")
@@ -65,7 +65,7 @@ class Sources:
 
 @dataclass(frozen=True)
 class Exceptions:
-    """`Config/Dev/FeatureReferenceExceptions.json` 의 내용."""
+    """`Config/Rules/Lint/FeatureReferenceExceptions.json` 의 내용."""
 
     dictFolder: dict[str, str]        # 폴더 → 까닭(그 안의 컴포넌트 모두)
     dictComponent: dict[str, str]

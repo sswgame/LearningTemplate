@@ -353,7 +353,7 @@ namespace sw
 
         /**
          * @brief `optional<T>` 만: Core 밖에 남은 `std::optional<T>` 자리(인자 · 반환 · 멤버)로 넘깁니다.
-         * @note shortcut: 이전 동안만 두는 변환이다 — Core 밖 정의가 `sw::optional` 로 옮겨 기준선(`Config/Dev/ResultTypeBaseline.json`)이 0 이 되면 지운다.
+         * @note shortcut: 이전 동안만 두는 변환이다 — Core 밖 정의가 `sw::optional` 로 옮겨 기준선(`Config/Rules/Lint/ResultTypeBaseline.json`)이 0 이 되면 지운다.
          */
         template <typename G = E, std::enable_if_t<std::is_same_v<G, Absent>, int32> = 0>
         operator std::optional<T>() const&

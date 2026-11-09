@@ -17,11 +17,11 @@ endif()
 # ------------------------------------------------------------------------------
 # 2) 소스를 티어로 가른다 — 낮은 티어(티어 표에서 `Log` 보다 아래인 폴더)는 따로 짓는다.
 #    낮은 티어의 `.cpp` 는 `Logger.h` 가 없는 전용 pch(`pchLow.h`)로 컴파일되어 pch 가 몰래 넣어 주던 위 티어 선언(`SW_LOG_*` · `StringBuilder` ·
-#    `FileUtil` …)을 쓰면 컴파일이 실패한다. 폴더 목록을 CMake 에 또 적지 않고 `Scripts/generate/rules/CoreLayers.toml` 의 티어 표(`[tier]`)를 그대로 읽는다 —
+#    `FileUtil` …)을 쓰면 컴파일이 실패한다. 폴더 목록을 CMake 에 또 적지 않고 `Config/Rules/Layers/CoreLayers.toml` 의 티어 표(`[tier]`)를 그대로 읽는다 —
 #    표에 없는 폴더는 구성이 선다. 린트 규칙 4(`SW_LOG_*` 금지)는 이 구성이 못 막는 곳(낮은 티어 **헤더** — 위 티어 pch 로
 #    컴파일되는 TU 가 포함한다 — 와 pch 를 끈 구성의 방어)과 빠른 피드백을 맡는다.
 # ------------------------------------------------------------------------------
-set(swCoreTierTable "${CMAKE_SOURCE_DIR}/Scripts/generate/rules/CoreLayers.toml")
+set(swCoreTierTable "${CMAKE_SOURCE_DIR}/Config/Rules/Layers/CoreLayers.toml")
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${swCoreTierTable}")
 file(STRINGS "${swCoreTierTable}" listCoreTierLine REGEX "^[A-Za-z0-9_]+[ \t]*=[ \t]*[0-9]+")
 foreach(tierLine IN LISTS listCoreTierLine)
@@ -43,7 +43,7 @@ foreach(source IN LISTS listCoreSource)
 	endif()
 	string(SUBSTRING "${relativeSource}" 0 ${slashPosition} sourceFolder)
 	if(NOT DEFINED swCoreTier_${sourceFolder})
-		message(FATAL_ERROR "[Core] Core/${sourceFolder}/ 는 티어 표(Scripts/generate/rules/CoreLayers.toml 의 [tier])에 없는 폴더다 — 티어를 정해 넣는다")
+		message(FATAL_ERROR "[Core] Core/${sourceFolder}/ 는 티어 표(Config/Rules/Layers/CoreLayers.toml 의 [tier])에 없는 폴더다 — 티어를 정해 넣는다")
 	endif()
 	# 낮은 티어 폴더의 테스트(`<폴더>/Tests/`)는 테스트 틀(Testing, 맨 위 티어)을 쓰므로 높은 쪽으로 짓는다 — 낮은 부분의 `#error` 껍데기(아래 4)가 막는다.
 	if(swCoreTier_${sourceFolder} LESS swCoreTier_Log AND NOT relativeSource MATCHES "/Tests/")
@@ -104,7 +104,7 @@ sw_addCoreObjects(Core_low_objects corelow pchLow.h ${listCoreLowSource})
 #    include 하면(전이 include 도) 컴파일이 멈춘다(Engine 층 부분 `sw_addEngineLayerStubs` 와 같은 방식). 낮은 티어 헤더를 높은 쪽 TU 가 포함하는 것은 정상이다.
 #    높은 티어 사이(Log · String · File …)의 역류는 아직 이 게이트가 보지 않는다 — 티어마다 부분을 지으면 pch 가 티어 수만큼 늘어난다.
 set(swCoreLowStubRoot "${CMAKE_BINARY_DIR}/generated/sw/CoreLayerStubs/low")
-set(swCoreLowStubContent "#error \"Core high-tier header (tier >= Log) cannot be included from low-tier Core code (Scripts/generate/rules/CoreLayers.toml). Move what you need down, or report through SW_LOW_LEVEL_REPORT.\"
+set(swCoreLowStubContent "#error \"Core high-tier header (tier >= Log) cannot be included from low-tier Core code (Config/Rules/Layers/CoreLayers.toml). Move what you need down, or report through SW_LOW_LEVEL_REPORT.\"
 ")
 file(GLOB_RECURSE listCoreHeader RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/*.h")
 set(listCoreLowStub "")

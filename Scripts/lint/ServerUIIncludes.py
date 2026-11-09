@@ -62,7 +62,7 @@ def findProblems(listSource: Iterable[tuple[str, str]]) -> list[str]:
 # 클라이언트 구성은 그 헤더를 읽을 수 있어 서버를 짓기 전에는 드러나지 않는다 — 커밋에서 잡는다. `SW_WITH_CLIENT_CODE` 구역도 같은 까닭으로 막고,
 # 클라이언트 일은 창구(`IEngineUIDriver` · `IEngineRenderDriver` · `IEngineAudioDriver` · `ISoundPlayer` · `IVoiceDecoder` · `IShaderCookService` · `IDevToolsClientPart`)로 부른다.
 kEngineScanRoots = ("Source/Engine/", "Source/DevTools/", "Source/ModuleManager/", "Source/Server/")
-kEngineConfigPath = "Config/Dev/ClientCodeGuards.json"
+kEngineConfigPath = "Config/Rules/Lint/ClientCodeGuards.json"
 kUnbuiltFolderLine = re.compile(r'list\(APPEND SW_UNBUILT_ENGINE_FOLDERS ([^)]*)\)')
 
 

@@ -4,7 +4,7 @@
 Scripts/lint/EditorViewIncludes.py
 
 MVVM 으로 옮긴 에디터 패널의 View(`Source/Editor/Panels/**` 의 `Model` 밖 .h · .cpp)가 모델 · 씬 헤더를 include 하는지 본다
-(계약: `docs/agents/EditorUI.md` 'MVVM' 절, 표: `Config/Dev/EditorViewIncludes.json`).
+(계약: `docs/agents/EditorUI.md` 'MVVM' 절, 표: `Config/Rules/Lint/EditorViewIncludes.json`).
 
 **왜 린트인가(임시).** 끝 모양은 형식이다 — View 부분(`Source/Editor/CMakeLists.txt` 의 `EditorTier<N>View`)에 모델 · 씬 헤더 자리마다 `#error` 껍데기를 두어
 컴파일이 막는다(모델 층의 ImGui 금지와 같은 장치). 그 장치는 부분 전체에 한 번에 걸리므로 패널을 하나씩 옮기는 동안에는 걸 수 없다. 그래서 옮긴 View 목록(데이터)만 이
@@ -31,7 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 
-kConfigPath = "Config/Dev/EditorViewIncludes.json"
+kConfigPath = "Config/Rules/Lint/EditorViewIncludes.json"
 kViewExtensions = (".h", ".cpp")
 kInclude = re.compile(r'^\s*#\s*include\s+"([^"]+)"', re.M)
 kPanelModelHeader = re.compile(r'^Editor/Panels/(?:[^/]+/)+Model/[^/]+\.h$')

@@ -8,7 +8,7 @@ Scripts/lint/StateShape.py
 
 - `writeState( Archive& …` · `readState( Archive& …` 의 선언과 .cpp 정의는 위반이다. 형식은 `SW_DECLARE_STATE_IO()` 로 받고 본문은 `serializeState( StateIO& io )` 하나에 적는다.
 - 머리의 인라인 정의는 `StateIO` 입구로 넘길 때만 된다(읽기에 카탈로그가 더 필요한 형식, 가상 본문을 쓰는 기반).
-- 까닭이 있는 파일은 `Config/Dev/StateShapeExceptions.json` 에 이유와 함께 적는다.
+- 까닭이 있는 파일은 `Config/Rules/Lint/StateShapeExceptions.json` 에 이유와 함께 적는다.
 
 `py -3 -m Scripts lint state-shape [--files …|--all|--self-check]` 로 돌리고, 커밋 훅(`Rules.py` 표)이 staged 파일에 돌린다.
 """
@@ -26,7 +26,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from lint.CppShape import isTarget, stripCode  # noqa: E402
 
-kExceptionFile = "Config/Dev/StateShapeExceptions.json"
+kExceptionFile = "Config/Rules/Lint/StateShapeExceptions.json"
 kEntryFile = "Source/Engine/Serialization/Format/StateIO.h"
 kSignature = re.compile(r"\b(?:(\w+)\s*::\s*)?(writeState|readState)\s*\(\s*(?:sw::|::sw::)?Archive\s*&[^)]*\)\s*(?:const\s*)?(?:override\s*)?(?:=\s*0\s*)?([;{])")
 kEntryCall = re.compile(r"\bStateIO\s+\w+\s*\(|\bStateIO::(?:writeObject|readAtomic|readInPlace)\s*\(")
