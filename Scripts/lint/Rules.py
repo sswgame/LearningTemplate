@@ -52,7 +52,7 @@ kRules: tuple[Rule, ...] = (
     Rule("include-order", "형식", "include 순서 · 묶음", "include 줄의 순서는 컴파일러가 보지 않는다", kCpp, "lint.IncludeOrder:checkStaged", perFile=True),
     # --- 경계(빌드 게이트가 닿지 않는 자리) ------------------------------------------------------------------------------------
     Rule("core-tiers", "경계", "Core 낮은 티어 폴더가 높은 티어 헤더를 include", "Core 는 Log 경계만 빌드가 가른다 — 티어마다 부분을 지으면 pch 가 늘어 빌드가 느려진다", kCpp, "lint.CoreTiers:checkCoreTiers", perFile=True),
-    Rule("server-ui", "경계", "서버도 짓는 게임 코드가 클라이언트 전용(UI · 오디오 · 렌더러 · Client/)을 include", "한 DLL 안의 폴더라 타깃 게이트가 가르지 못한다", kCpp, "lint.ServerUIIncludes:checkServerUIIncludes", exceptions="Config/Rules/Lint/ClientCodeGuards.json"),
+    Rule("game-gpu-includes", "경계", "게임 코드가 GPU 칸 배치 헤더(Engine/Graphics/RHI · Shader)를 직접 include", "게이트는 전이 include 도 막는데 게임이 쓰는 엔진 공개 헤더가 RHI 헤더를 include 한다 — 직접 include 만 가르지 못한다", kCpp, "lint.GameGPUIncludes:checkGameGPUIncludes"),
     Rule("editor-view-includes", "경계", "MVVM 으로 옮긴 에디터 View 가 모델 · 씬 헤더를 include", "옮기는 동안의 목록 — 다 옮기면 View 부분의 #error 껍데기로 바꾼다", kCpp, "lint.EditorViewIncludes:checkEditorViewIncludes", exceptions="Config/Rules/Lint/EditorViewIncludes.json"),
     Rule("thread-owners", "경계", "TaskManager 밖에서 스레드를 만드는 파일", "스레드 형식은 합법이라 만드는 자리를 형식으로 막지 못한다", kCpp, "lint.ThreadOwners:checkThreadOwners", exceptions="Config/Rules/Lint/ThreadOwners.json"),
     Rule("cmake-path-case", "경계", "대소문자만 다른 CMake include · add_subdirectory 경로", "CMake 경로는 컴파일러가 보지 않는다(Linux 구성만 선다)", kCMake, "lint.CMakePathCase:checkCMakePathCase"),

@@ -12,9 +12,9 @@
 #include "GameFramework/Runtime/Online/Server/OnlineServerRuntime.h"
 
 // 전용 서버의 서버 서비스로 온라인 서비스 조립(`OnlineServerRuntime`)을 띄운다. 서버 설정 옆 `<이름>.online.json` 이 있을 때만 띄운다.
-// 서버 코드가 없는 빌드(클라이언트 배포본)에는 이 파일이 비어 있다.
+// 등록은 모든 구성에 있지만 서버 서비스는 전용 서버 호스트(`ServerServiceManager`)만 띄운다 — 구성 매크로 갈래는 없다(`Core/Foundation/BuildInfo.h`).
+// 같은 런타임(`OnlineServerRuntime`)이 이미 모든 구성에서 지어진다. 클라이언트 배포본에서 빼려면 서버 전용 폴더 · 모듈(`GF_Server_<X>`)로 옮긴다.
 
-#if defined( SW_WITH_SERVER_CODE )
 namespace sw
 {
     namespace
@@ -96,4 +96,3 @@ namespace sw
     /** @brief 서버 서비스 중 앞쪽에 둔다. 게임과 키트가 올린 서버 서비스가 온라인 서비스를 볼 수 있게 한다. */
     SW_REGISTER_SERVER_SERVICE( OnlineServerService, "online_services", 100 );
 } // namespace sw
-#endif

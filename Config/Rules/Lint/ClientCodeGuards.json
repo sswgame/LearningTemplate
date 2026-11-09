@@ -1,8 +1,0 @@
-{
-    "_comment": "서버도 짓는 엔진 층의 SW_WITH_CLIENT_CODE 구역 예외(Scripts/lint/ServerUIIncludes.py). 빌드가 무엇을 담는지 말하는 파일뿐이다 — 플랫폼 구현(창 · 입력 · 오디오 · 접근성)은 서버가 폴더째 짓지 않고(cmake/Engine/BuildLayout.cmake 의 SW_UNBUILT_ENGINE_FOLDERS) 서버 대체는 Headless 폴더가 정의한다.",
-    "_exemptPaths": {
-        "Source/Core/Foundation/BuildInfo.h": "구성이 담는 대상을 상수(build::kWithClientCode)로 바꾸는 자리다",
-        "Source/Core/Foundation/TargetMacroCheck.h": "구성 매크로 자체를 검사한다",
-        "Source/Engine/Module/ModuleCatalog.cpp": "이 빌드가 담는 대상 마스크(Client · Server)를 만든다 — 모듈 매니페스트 해석의 입력이다"
-    }
-}

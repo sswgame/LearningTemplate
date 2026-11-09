@@ -20,7 +20,7 @@ set(SW_UNBUILT_SOURCE_LIST "${CMAKE_BINARY_DIR}/generated/sw/config/UnbuiltSourc
 set(SW_DEV_ONLY_SOURCE_PATTERNS "/Tests/" "/Dev/")
 
 # 전용 서버가 짓지 않는 클라이언트 전용 소스 — GameFramework · 게임 모듈 안의 `Client/` 폴더(HUD · 마커 · 로딩 화면 · UI 시연). 키트의 `Client/` 는
-# 따로 짓는 모듈(`GF_Client_<X>`, 대상 Client)이라 여기 걸리지 않는다. 공유 코드는 그 헤더를 include 하지 않는다(린트 `server-ui`, 서버 구성 게이트 `serverbuild`).
+# 따로 짓는 모듈(`GF_Client_<X>`, 대상 Client)이라 여기 걸리지 않는다. 공유 코드는 그 헤더를 include 하지 않는다 — 서버 구성 게이트 `serverbuild` 가 이름이 `Client` 인 모든 폴더의 헤더를 막는다(`TargetLayers.toml` 의 `[gatefolder]`).
 # 서버가 그 컴포넌트를 씬에서 만나면 MissingComponent 가 아니라 조용히 건너뛴다(`Config/Engine/ClientOnlyTypes.generated.json` — 생성기 `client-only-types`).
 set(SW_CLIENT_ONLY_SOURCE_PATTERNS "/Client/")
 

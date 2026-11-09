@@ -541,12 +541,14 @@ namespace sw
     uint8 ModuleCatalog::getBuildTargetMask()
     {
         uint8 mask = 0;
-#if defined( SW_WITH_CLIENT_CODE )
-        mask |= static_cast<uint8>( ModuleTarget::Client );
-#endif
-#if defined( SW_WITH_SERVER_CODE )
-        mask |= static_cast<uint8>( ModuleTarget::Server );
-#endif
+        if constexpr ( build::kWithClientCode )
+        {
+            mask |= static_cast<uint8>( ModuleTarget::Client );
+        }
+        if constexpr ( build::kWithServerCode )
+        {
+            mask |= static_cast<uint8>( ModuleTarget::Server );
+        }
         return mask;
     }
 } // namespace sw

@@ -1,7 +1,7 @@
 /**
  * @file TargetMacroCheck.h
  * @brief CMake 가 정한 타깃 매크로(플랫폼 · 아키텍처 · 컴파일러)가 이 TU 를 컴파일하는 컴파일러와 맞는지 검사합니다.
- * @details 코드는 `SW_PLATFORM_*` · `SW_X64` / `SW_ARM64` · `SW_COMPILER_*` 만 읽습니다. 빌드 타깃 종류는 `SW_WITH_CLIENT_CODE` · `SW_WITH_SERVER_CODE` 입니다. 컴파일러 내장 매크로(`_WIN32` · `_MSC_VER` ·
+ * @details 코드는 `SW_PLATFORM_*` · `SW_X64` / `SW_ARM64` · `SW_COMPILER_*` 만 읽습니다. 빌드 타깃 종류는 매크로가 아니라 상수(`sw::build::kWithClientCode` · `kWithServerCode`, `BuildInfo.h`)입니다. 컴파일러 내장 매크로(`_WIN32` · `_MSC_VER` ·
  *          `__clang__` · `__x86_64__` …)를 읽는 곳은 **이 파일 하나뿐**입니다. 판정은
  *          `cmake/Modules/{Platform,Architecture,Compiler}/` 가 하고, 여기서는 그 판정이 실제 컴파일러와 어긋나거나 빠지면 빌드를 세웁니다.
  *
@@ -85,8 +85,10 @@
 #endif
 
 // ------------------------------------------------------------------------------
-// 4) 빌드 타깃 종류 — 클라이언트 · 서버 코드 중 하나 이상(Game 은 둘 다)
+// 4) 빌드 타깃 종류 — 전처리 갈래가 없다. 값은 `BuildInfo.h` 의 상수(`kWithClientCode` · `kWithServerCode`)이고 그 판정도 거기서 static_assert 한다.
+//    옛 매크로 이름은 어디에도 정의되지 않아 `#if defined( … )` 가 모든 구성에서 조용히 거짓이 된다 — GCC · Clang 은 이름을 독으로 막아 쓰면 컴파일이 멈춘다
+//    (MSVC 는 독이 없어 Linux · Android · 웹 빌드가 잡는다). 클라이언트 일은 `Client/` 폴더 · 짓지 않는 엔진 폴더 · 모듈 `_listTarget` 으로 가른다.
 // ------------------------------------------------------------------------------
-#if !defined( SW_WITH_CLIENT_CODE ) && !defined( SW_WITH_SERVER_CODE )
-    #error "At least one of SW_WITH_CLIENT_CODE / SW_WITH_SERVER_CODE must be defined (SW_TARGET_TYPE via sw_global_options)."
+#if defined( __GNUC__ ) || defined( __clang__ )
+    #pragma GCC poison SW_WITH_CLIENT_CODE SW_WITH_SERVER_CODE
 #endif

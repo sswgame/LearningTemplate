@@ -74,7 +74,7 @@ SW_EXTERN_TEST_GLOBAL_VARIABLE( int32, gv_stressTestMeshes );         // 테스�
 | :--- | :--- |
 | `#ifdef _WIN32` · `#if defined( __linux__ )` | `#if defined( SW_PLATFORM_WINDOWS )` · `#elif defined( SW_PLATFORM_LINUX )` |
 | `SW_COMPILER_MSVC` 로 `__forceinline` 가르기 | `SW_PLATFORM_WINDOWS`(clang-cl 도 MS 확장을 쓴다) |
-| 헤더 클래스 구조를 `SW_WITH_SERVER_CODE` 로 가르기 | `.cpp` 본문에서만 가르고, 나뉘는 기능은 모듈 `GF_<X>` · `GF_Server_<X>` · `GF_Client_<X>` 로 |
+| 헤더 클래스 구조를 `build::kWithServerCode` 로 가르기 | `.cpp` 본문에서만 가르고, 나뉘는 기능은 모듈 `GF_<X>` · `GF_Server_<X>` · `GF_Client_<X>` 로 |
 
 ```cpp
 const Stopwatch stopwatch;                                  // std::chrono::steady_clock 대신

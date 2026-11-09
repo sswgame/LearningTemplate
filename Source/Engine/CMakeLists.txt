@@ -57,7 +57,7 @@ foreach(swUnbuiltFolder IN LISTS SW_UNBUILT_ENGINE_FOLDERS)
 endforeach()
 
 # 창 없는 서버의 창 · 입력 · 클립보드(`Window/Headless` · `Input/Headless`)는 서버만 짓는다 — 클라이언트는 플랫폼 폴더(`Window/Linux` …)가 같은 함수를 정의한다.
-# 구성 매크로(`SW_WITH_CLIENT_CODE`)로 파일 안을 가르지 않고 폴더째 고른다(언리얼 `UE_SERVER` 대신 모듈 · 폴더를 빼는 쪽과 같다).
+# 구성으로 파일 안을 가르지 않고(그런 매크로는 없다 — `BuildInfo.h`) 폴더째 고른다(언리얼 `UE_SERVER` 대신 모듈 · 폴더를 빼는 쪽과 같다).
 if(NOT SW_TARGET_TYPE STREQUAL "Server")
 	sw_excludeUnbuiltSources(ENGINE_SOURCES "/Source/Engine/(Window|Input)/Headless/.*\\.(c|cpp)$")
 endif()
