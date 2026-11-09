@@ -133,6 +133,7 @@ namespace
             {                                "Config/Environment/",                                         "Scripts/setup/Environment.py - machine-local",                          nullptr},
             {                                     "Config/Editor/",                                             "editor types are not in the Engine image",                          nullptr},
             {                                        "Config/Dev/",          "DevTools types are not in the Engine image (DevTools reads them at startup)",                          nullptr},
+            {                                      "Config/Rules/",      "code rule tables: the build (layers) and Scripts/lint read them, not the engine",                          nullptr},
         };
 
         static const ConfigKind* findKind( sw::string_view relativePath )
