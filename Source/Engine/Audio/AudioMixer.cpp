@@ -49,15 +49,14 @@ namespace sw
         _listBusState.resize( desc._listBus.size() );
         for ( size_t busIndex = 0; busIndex < desc._listBus.size(); ++busIndex )
         {
-            const AudioBusDef& busDesc         = desc._listBus[busIndex];
-            Bus&               bus             = _listBusState[busIndex];
-            bus._name                          = busDesc._name;
-            const optional<uint32> parentIndex = desc.findBusIndex( busDesc._parent ); // 부모 없는 버스는 master 하나다(위 validate)
-            bus._parentIndex                   = parentIndex.has_value() ? static_cast<int32>( *parentIndex ) : constant::invalid_index::kInt32;
-            bus._volumeDb                      = busDesc._volumeDb;
-            bus._bMuted                        = busDesc._bMuted ? SW_TRUE : SW_FALSE;
-            bus._bSolo                         = busDesc._bSolo ? SW_TRUE : SW_FALSE;
-            bus._layout                        = resolveAudioMixerBusLayout( busDesc._channels, layout );
+            const AudioBusDef& busDesc = desc._listBus[busIndex];
+            Bus&               bus     = _listBusState[busIndex];
+            bus._name                  = busDesc._name;
+            bus._parentIndex           = desc.findBusIndex( busDesc._parent ); // 부모 없는 버스는 master 하나다(위 validate)
+            bus._volumeDb              = busDesc._volumeDb;
+            bus._bMuted                = busDesc._bMuted ? SW_TRUE : SW_FALSE;
+            bus._bSolo                 = busDesc._bSolo ? SW_TRUE : SW_FALSE;
+            bus._layout                = resolveAudioMixerBusLayout( busDesc._channels, layout );
             bus._input.allocate( bus._layout );
             // 넓은 버스가 두 채널 버스(부모 · 센드)로 갈 때 쓰는 BS.775 행렬이다. 레이아웃의 마스크는 늘 아는 스피커라 실패하지 않는다.
             const uint32 busChannelCount = AudioChannelLayoutUtil::getChannelCount( bus._layout );
@@ -100,7 +99,7 @@ namespace sw
                 bus._listEffect.push_back( std::move( pEffect ) );
                 bus._listEffectName.push_back( effectDesc.getEffectName() );
             }
-            if ( bus._parentIndex < 0 )
+            if ( bus._parentIndex.has_value() == false )
                 _masterIndex = static_cast<uint32>( busIndex );
         }
         refreshSoloPaths();
@@ -176,15 +175,15 @@ namespace sw
         {
             if ( _listBusState[busIndex]._bSolo == SW_FALSE )
                 continue;
-            for ( int32 ancestor = static_cast<int32>( busIndex ); ancestor >= 0; ancestor = _listBusState[static_cast<size_t>( ancestor )]._parentIndex )
+            for ( optional<uint32> ancestor = static_cast<uint32>( busIndex ); ancestor.has_value(); ancestor = _listBusState[*ancestor]._parentIndex )
             {
-                _listBusState[static_cast<size_t>( ancestor )]._bAudible = SW_TRUE;
+                _listBusState[*ancestor]._bAudible = SW_TRUE;
             }
             for ( size_t candidate = 0; candidate < _listBusState.size(); ++candidate )
             {
-                for ( int32 walk = _listBusState[candidate]._parentIndex; walk >= 0; walk = _listBusState[static_cast<size_t>( walk )]._parentIndex )
+                for ( optional<uint32> walk = _listBusState[candidate]._parentIndex; walk.has_value(); walk = _listBusState[*walk]._parentIndex )
                 {
-                    if ( walk == static_cast<int32>( busIndex ) )
+                    if ( *walk == static_cast<uint32>( busIndex ) )
                     {
                         _listBusState[candidate]._bAudible = SW_TRUE;
                         break;
@@ -289,8 +288,8 @@ namespace sw
                 send._gain = sendTarget;
             }
 
-            if ( bus._parentIndex >= 0 )
-                accumulateBus( busIndex, input, static_cast<uint32>( bus._parentIndex ), 1.0f, 1.0f );
+            if ( bus._parentIndex.has_value() )
+                accumulateBus( busIndex, input, *bus._parentIndex, 1.0f, 1.0f );
         }
 
         // master 는 출력 레이아웃이다(데이터 검사가 막는다). 그래서 채널 수가 출력과 같다.

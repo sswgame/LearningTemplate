@@ -114,10 +114,11 @@ namespace sw
         }
     }
 
-    int32 BVHTree3D::insert( SlotHandle handle, const AABB& bounds )
+    void BVHTree3D::insert( SlotHandle handle, const AABB& bounds )
     {
+        SW_ASSERT( handle.isValid() && "BVHTree3D::insert with an invalid handle" );
         if ( handle.isValid() == false )
-            return constant::invalid_index::kInt32;
+            return;
 
         if ( _mapHandleToNode.find( handle ) != _mapHandleToNode.end() )
             remove( handle );
@@ -130,7 +131,6 @@ namespace sw
 
         insertLeaf( leafIndex );
         _mapHandleToNode[handle] = leafIndex;
-        return leafIndex;
     }
 
     void BVHTree3D::update( SlotHandle handle, const AABB& bounds )

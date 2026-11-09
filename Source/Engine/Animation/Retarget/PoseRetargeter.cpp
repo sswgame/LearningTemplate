@@ -320,7 +320,7 @@ namespace sw
         }
         raw._listSample.reserve( static_cast<size_t>( sampleCount ) * targetSkeleton.getBoneCount() );
 
-        vector<int32> listTrackToBone;
+        vector<optional<uint32>> listTrackToBone;
         if ( sourceClip.makeTrackToBoneMap( sourceSkeleton, listTrackToBone ) == false )
             return false; // 틀린 원본으로 파일을 굽지 않는다 — 까닭은 함수가 남겼다
         Pose trackPose;
@@ -359,7 +359,7 @@ namespace sw
         // 루트 모션 트랙은 원본 루트를 가리켰으면 대상 루트로 옮긴다.
         const int32 sourceRootMotion        = sourceClip.getRootMotionTrack();
         const bool  bRootMotionOnSourceRoot = 0 <= sourceRootMotion && static_cast<size_t>( sourceRootMotion ) < listTrackToBone.size() &&
-                                             listTrackToBone[static_cast<size_t>( sourceRootMotion )] == static_cast<int32>( retargeter.getSourceRootBone() );
+                                             listTrackToBone[static_cast<size_t>( sourceRootMotion )] == retargeter.getSourceRootBone();
         if ( bRootMotionOnSourceRoot )
             outClip.setRootMotionTrack( static_cast<int32>( retargeter.getTargetRootBone() ) );
         return true;

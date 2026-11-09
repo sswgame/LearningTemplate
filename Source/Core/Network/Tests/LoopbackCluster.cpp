@@ -19,14 +19,14 @@ namespace sw::test
         stopThreads();
     }
 
-    int32 LoopbackCluster::addEndpoint( uint16 port, const NetEndpointConfig& settings )
+    optional<int32> LoopbackCluster::addEndpoint( uint16 port, const NetEndpointConfig& settings )
     {
         SW_ASSERT( _listThread.empty() && "LoopbackCluster::addEndpoint called while endpoint threads run" );
         LoopbackTransport* pTransport = _network.createEndpoint( port );
         if ( pTransport == nullptr )
         {
             SW_LOG_ERROR_ID( "LoopbackCluster.PortTaken", "LoopbackCluster: port %# is taken", port );
-            return -1;
+            return nullopt;
         }
         const int32 endpointIndex = getEndpointCount();
         _listEmulation.emplace_back( pTransport, _seed + static_cast<uint32>( endpointIndex ) );

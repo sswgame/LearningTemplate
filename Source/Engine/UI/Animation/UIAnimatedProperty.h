@@ -10,6 +10,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Animation/Graph/BlendCurve.h"
+#include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/UI/Binding/UIBindingValue.h"
 
 namespace sw
@@ -53,8 +54,8 @@ namespace sw
     {
         UIPropertyPath      _path{}; ///< 루트 필드부터 잎 필드까지의 연쇄입니다.
         UIAnimatedValueKind _kind{ UIAnimatedValueKind::None };
-        uint8               _componentCount{ 0 }; ///< Float 의 성분 수입니다(1 ~ 4).
-        uint8               _builtinIndex{ 0 };   ///< 잎 타입의 내장 타입 인덱스입니다(Float 만 해당하며 float32, float64, float2, float3, float4).
+        uint8               _componentCount{ 0 };                        ///< Float 의 성분 수입니다(1 ~ 4).
+        ReflectBuiltinIndex _builtinIndex{ ReflectBuiltinIndex::kNone }; ///< 잎 타입의 내장 타입 자리입니다(Float 만 해당하며 float32, float64, float2, float3, float4).
 
         bool isValid() const { return _kind != UIAnimatedValueKind::None; }
 

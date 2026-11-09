@@ -101,7 +101,7 @@ namespace sw
                 const float32 value = *track._listChannel[0].evaluate( frame );
                 // 그 타입이 담지 못하는 값(정수 범위 밖 · unorm 범위 밖)은 쓰지 않고 지금 값을 둔다.
                 // findTrackProperty 가 숫자 갈래(내장 타입)를 확인했다.
-                (void)ReflectedValueUtil::writeNumber( ReflectedValueUtil::findBuiltinIndex( pProperty->_typeName ).value(), pProperty->getRawPtr( static_cast<void*>( pComponent ) ),
+                (void)ReflectedValueUtil::writeNumber( ReflectedValueUtil::findBuiltinIndex( pProperty->_typeName ), pProperty->getRawPtr( static_cast<void*>( pComponent ) ),
                                                        static_cast<float64>( value ) );
             }
 
@@ -541,7 +541,7 @@ namespace sw
                 if ( findTrackProperty( pTarget, track, pComponent, pProperty ) == false )
                     return false;
                 float64 number{ 0.0 };
-                if ( ReflectedValueUtil::readNumber( ReflectedValueUtil::findBuiltinIndex( pProperty->_typeName ).value(), pProperty->getRawPtr( static_cast<const void*>( pComponent ) ), number ) == false ) // findTrackProperty 가 숫자 갈래를 확인했다
+                if ( ReflectedValueUtil::readNumber( ReflectedValueUtil::findBuiltinIndex( pProperty->_typeName ), pProperty->getRawPtr( static_cast<const void*>( pComponent ) ), number ) == false ) // findTrackProperty 가 숫자 갈래를 확인했다
                     return false;
                 pOutArrValue[0] = static_cast<float32>( number );
                 return true;
@@ -589,7 +589,7 @@ namespace sw
                 Component*          pComponent{ nullptr };
                 const PropertyInfo* pProperty{ nullptr };
                 if ( findTrackProperty( pTarget, track, pComponent, pProperty ) )
-                    (void)ReflectedValueUtil::writeNumber( ReflectedValueUtil::findBuiltinIndex( pProperty->_typeName ).value(), pProperty->getRawPtr( static_cast<void*>( pComponent ) ),
+                    (void)ReflectedValueUtil::writeNumber( ReflectedValueUtil::findBuiltinIndex( pProperty->_typeName ), pProperty->getRawPtr( static_cast<void*>( pComponent ) ),
                                                            static_cast<float64>( pArrValue[0] ) ); // findTrackProperty 가 숫자 갈래를 확인했다
                 return;
             }

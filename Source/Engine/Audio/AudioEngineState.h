@@ -9,6 +9,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -76,14 +77,14 @@ namespace sw
     /** @brief 믹서 버스 하나의 마지막 블록 상태입니다. 에디터의 오디오 믹서 창이 읽습니다. */
     struct AudioBusStatus
     {
-        hashed_string _name{};
-        int32         _parentIndex{ constant::invalid_index::kInt32 }; ///< 부모 버스의 번호(`AudioEngine::getBusStatuses` 목록 안). master 는 -1
-        float32       _volumeDb{ 0.0f };                               ///< 데이터 볼륨(dB)
-        float32       _userVolume{ 1.0f };                             ///< 사용자 볼륨(선형, [0, 1])
-        float32       _gain{ 0.0f };                                   ///< 페이더 게인(선형) — 데이터 × 사용자 × 스냅샷 × 음소거 · 솔로
-        float32       _peak{ 0.0f };                                   ///< 마지막 블록 출력 피크(절댓값 최대)
-        bool          _bMuted{ SW_FALSE };                             ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool          _bSolo{ false };                                 ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        hashed_string    _name{};
+        optional<uint32> _parentIndex{};      ///< 부모 버스의 번호(`AudioEngine::getBusStatuses` 목록 안). master 는 비어 있다
+        float32          _volumeDb{ 0.0f };   ///< 데이터 볼륨(dB)
+        float32          _userVolume{ 1.0f }; ///< 사용자 볼륨(선형, [0, 1])
+        float32          _gain{ 0.0f };       ///< 페이더 게인(선형) — 데이터 × 사용자 × 스냅샷 × 음소거 · 솔로
+        float32          _peak{ 0.0f };       ///< 마지막 블록 출력 피크(절댓값 최대)
+        bool             _bMuted{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool             _bSolo{ false };     ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 

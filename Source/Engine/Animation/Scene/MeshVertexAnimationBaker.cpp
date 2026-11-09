@@ -69,7 +69,7 @@ namespace sw
         // 반복 클립은 표 한 바퀴가 클립 길이와 꼭 같아야 CPU 시각과 어긋나지 않는다 — 프레임율을 프레임 수 / 길이로 맞춘다.
         const float32 effectiveRate = ( bLoop && duration > 0.0f ) ? static_cast<float32>( frameCount ) / duration : framesPerSecond;
 
-        vector<int32> listTrackToBone;
+        vector<optional<uint32>> listTrackToBone;
         if ( clip.makeTrackToBoneMap( skeleton, listTrackToBone ) == false )
             return false; // 틀린 스켈레톤으로 표를 굽지 않는다 — 까닭은 함수가 남겼다
         Pose             pose;

@@ -29,7 +29,7 @@ namespace sw
         if ( bInvalidFootSampling )
             return 0.0f;
 
-        vector<int32> listTrackToBone;
+        vector<optional<uint32>> listTrackToBone;
         (void)clip.makeTrackToBoneMap( skeleton, listTrackToBone ); // 오류는 함수가 남겼고 있는 본은 쓴다
         Pose             pose;
         Pose             scratchTrackPose;

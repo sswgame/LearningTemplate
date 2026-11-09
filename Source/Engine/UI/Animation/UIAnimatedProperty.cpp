@@ -18,7 +18,7 @@ namespace sw
         struct UIAnimatedPropertyInternal
         {
             /** @brief 실수 필드의 성분 수입니다. 실수 필드가 아니면 0 입니다. */
-            static uint8 findComponentCount( int32 builtinIndex )
+            static uint8 findComponentCount( ReflectBuiltinIndex builtinIndex )
             {
                 if ( builtinIndex == ReflectBuiltinIndex::kfloat32 || builtinIndex == ReflectBuiltinIndex::kfloat64 )
                     return 1;
@@ -32,7 +32,7 @@ namespace sw
             }
 
             /** @brief 내장 실수 타입 값 @p pValue 를 성분으로 읽습니다. */
-            static void readComponents( int32 builtinIndex, const void* pValue, float32 ( &outArrComponent )[4] )
+            static void readComponents( ReflectBuiltinIndex builtinIndex, const void* pValue, float32 ( &outArrComponent )[4] )
             {
                 if ( builtinIndex == ReflectBuiltinIndex::kfloat32 )
                 {
@@ -66,7 +66,7 @@ namespace sw
             }
 
             /** @brief 성분을 내장 실수 타입 값 @p pValue 에 씁니다. 바뀌었으면 true 입니다. */
-            [[nodiscard]] static bool writeComponents( int32 builtinIndex, void* pValue, const float32 ( &arrComponent )[4] )
+            [[nodiscard]] static bool writeComponents( ReflectBuiltinIndex builtinIndex, void* pValue, const float32 ( &arrComponent )[4] )
             {
                 float32 arrCurrent[4]{ 0.0f, 0.0f, 0.0f, 0.0f };
                 readComponents( builtinIndex, pValue, arrCurrent );
@@ -117,12 +117,12 @@ namespace sw
             outProperty = UIAnimatedProperty{};
             return unexpected( Error{ ErrorKind::Unsupported, "an animated property cannot be a container", path } );
         }
-        const PropertyInfo&   leaf         = outProperty._path.getLeafProperty();
-        const optional<int32> builtinIndex = ReflectedValueUtil::findBuiltinIndex( leaf._typeName );
-        const uint8           count        = leaf._bIsBitField == SW_TRUE || builtinIndex.has_value() == false ? 0 : UIAnimatedPropertyInternal::findComponentCount( *builtinIndex );
-        outProperty._kind                  = count > 0 ? UIAnimatedValueKind::Float : UIAnimatedValueKind::Discrete;
-        outProperty._componentCount        = count;
-        outProperty._builtinIndex          = count > 0 ? static_cast<uint8>( *builtinIndex ) : 0;
+        const PropertyInfo&       leaf         = outProperty._path.getLeafProperty();
+        const ReflectBuiltinIndex builtinIndex = ReflectedValueUtil::findBuiltinIndex( leaf._typeName );
+        const uint8               count        = leaf._bIsBitField == SW_TRUE ? 0 : UIAnimatedPropertyInternal::findComponentCount( builtinIndex );
+        outProperty._kind                      = count > 0 ? UIAnimatedValueKind::Float : UIAnimatedValueKind::Discrete;
+        outProperty._componentCount            = count;
+        outProperty._builtinIndex              = count > 0 ? builtinIndex : ReflectBuiltinIndex::kNone;
         return {};
     }
 

@@ -126,16 +126,16 @@ namespace sw
         return pCodec->sample( getCodecData(), _codecByteCount, MathUtil::clamp( time, 0.0f, _duration ), outTrackPose, pTrackMask );
     }
 
-    bool AnimationClip::makeTrackToBoneMap( const Skeleton& skeleton, vector<int32>& outListBone ) const
+    bool AnimationClip::makeTrackToBoneMap( const Skeleton& skeleton, vector<optional<uint32>>& outListBone ) const
     {
         outListBone.resize( _listTrackName.size() );
         uint32               missingCount  = 0;
         const hashed_string* pFirstMissing = nullptr;
         for ( size_t trackIndex = 0; trackIndex < _listTrackName.size(); ++trackIndex )
         {
-            // 표는 샘플링 안쪽 고리가 읽는 int32 칸이다(-1 = 이 스켈레톤에 없는 트랙, 아래에서 알린다).
+            // 비어 있으면 이 스켈레톤에 없는 트랙이다(아래에서 알린다).
             const optional<uint32> boneIndex = skeleton.findBoneIndex( _listTrackName[trackIndex] );
-            outListBone[trackIndex]          = boneIndex.has_value() ? static_cast<int32>( *boneIndex ) : constant::invalid_index::kInt32;
+            outListBone[trackIndex]          = boneIndex;
             if ( boneIndex.has_value() )
                 continue;
             ++missingCount;
@@ -148,7 +148,7 @@ namespace sw
         return false;
     }
 
-    bool AnimationClip::samplePose( const Skeleton& skeleton, float32 time, const vector<int32>& listTrackToBone, Pose& inoutPose, Pose& scratchTrackPose, bool bAnchorRootMotion,
+    bool AnimationClip::samplePose( const Skeleton& skeleton, float32 time, const vector<optional<uint32>>& listTrackToBone, Pose& inoutPose, Pose& scratchTrackPose, bool bAnchorRootMotion,
                                     const uint8* pTrackMask ) const
     {
         if ( sampleTracks( time, scratchTrackPose, pTrackMask ) == false )
@@ -156,12 +156,12 @@ namespace sw
         copyTracksToPose( skeleton, scratchTrackPose, listTrackToBone, inoutPose, pTrackMask );
         // 루트 모션을 추출하면 그 본은 클립 시작 위치에 고정한다. 움직임은 오브젝트가 맡는다.
         const int32 rootTrack              = _rootMotionTrack;
-        const bool  bRootMotionNotAnchored = bAnchorRootMotion == false || rootTrack < 0 || static_cast<size_t>( rootTrack ) >= listTrackToBone.size() || listTrackToBone[static_cast<size_t>( rootTrack )] < 0;
+        const bool  bRootMotionNotAnchored = bAnchorRootMotion == false || rootTrack < 0 || static_cast<size_t>( rootTrack ) >= listTrackToBone.size() || listTrackToBone[static_cast<size_t>( rootTrack )].has_value() == false;
         if ( bRootMotionNotAnchored )
             return true;
         if ( pTrackMask != nullptr && pTrackMask[rootTrack] == 0 )
             return true;
-        const uint32        rootBone = static_cast<uint32>( listTrackToBone[static_cast<size_t>( rootTrack )] );
+        const uint32        rootBone = *listTrackToBone[static_cast<size_t>( rootTrack )];
         BoneTransform       anchored = inoutPose.getBoneTransform( rootBone );
         const BoneTransform anchor   = skeleton.applyClipRule( rootBone, getRootMotionAnchor() );
         anchored._translation        = anchor._translation;
@@ -170,17 +170,17 @@ namespace sw
         return true;
     }
 
-    void AnimationClip::copyTracksToPose( const Skeleton& skeleton, const Pose& trackPose, const vector<int32>& listTrackToBone, Pose& inoutPose, const uint8* pTrackMask )
+    void AnimationClip::copyTracksToPose( const Skeleton& skeleton, const Pose& trackPose, const vector<optional<uint32>>& listTrackToBone, Pose& inoutPose, const uint8* pTrackMask )
     {
         const uint32 trackCount = MathUtil::min( trackPose.getBoneCount(), static_cast<uint32>( listTrackToBone.size() ) );
         const bool   bClipRules = skeleton.hasClipRules(); // 대부분의 스켈레톤은 규칙이 없다 — 트랙마다 규칙 표를 보지 않는다
         for ( uint32 trackIndex = 0; trackIndex < trackCount; ++trackIndex )
         {
-            const int32 boneIndex = listTrackToBone[trackIndex];
-            if ( boneIndex < 0 || ( pTrackMask != nullptr && pTrackMask[trackIndex] == 0 ) )
+            const optional<uint32>& boneIndex = listTrackToBone[trackIndex];
+            if ( boneIndex.has_value() == false || ( pTrackMask != nullptr && pTrackMask[trackIndex] == 0 ) )
                 continue;
             const BoneTransform sampled = trackPose.getBoneTransform( trackIndex );
-            inoutPose.setBoneTransform( static_cast<uint32>( boneIndex ), bClipRules ? skeleton.applyClipRule( static_cast<uint32>( boneIndex ), sampled ) : sampled );
+            inoutPose.setBoneTransform( *boneIndex, bClipRules ? skeleton.applyClipRule( *boneIndex, sampled ) : sampled );
         }
     }
 

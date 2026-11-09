@@ -48,11 +48,11 @@ namespace
         /** @brief 서버(포트 4000, listen) + 클라이언트 @p clientCount(포트 5000 부터 — 연결은 케이스가)를 세우고 모두 자기 네트워크 스레드에서 돌립니다. */
         static bool startThreadedCluster( test::LoopbackCluster& cluster, int32 clientCount, const NetEndpointConfig& settings )
         {
-            if ( cluster.addEndpoint( 4000, settings ) < 0 || cluster.getServer().listen() == false )
+            if ( cluster.addEndpoint( 4000, settings ).has_value() == false || cluster.getServer().listen() == false )
                 return false;
             for ( int32 index = 0; index < clientCount; ++index )
             {
-                if ( cluster.addEndpoint( static_cast<uint16>( 5000 + index ), settings ) < 0 )
+                if ( cluster.addEndpoint( static_cast<uint16>( 5000 + index ), settings ).has_value() == false )
                     return false;
             }
             return cluster.startThreads();

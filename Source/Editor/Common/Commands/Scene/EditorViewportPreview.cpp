@@ -59,7 +59,7 @@ namespace sw::editor
             static bool takesDialogueLineArgs( const FunctionInfo& method )
             {
                 // 인자 타입은 넘길 C++ 타입의 내장 자리(`ReflectBuiltinOf<T>`)로 묻는다 — 이름 리터럴을 두지 않는다.
-                const auto isParameterOf = []( const FunctionParameterInfo& parameter, int32 builtinIndex )
+                const auto isParameterOf = []( const FunctionParameterInfo& parameter, ReflectBuiltinIndex builtinIndex )
                 { return ReflectedValueUtil::findBuiltinIndex( hashed_string( parameter._typeName.c_str() ) ) == builtinIndex; };
                 const bool bSignature = method._listParameter.size() == 3 && isParameterOf( method._listParameter[0], ReflectBuiltinOf<string>::kIndex ) &&
                                         isParameterOf( method._listParameter[1], ReflectBuiltinOf<uint32>::kIndex ) && isParameterOf( method._listParameter[2], ReflectBuiltinOf<string>::kIndex );

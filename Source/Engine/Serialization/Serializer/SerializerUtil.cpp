@@ -56,8 +56,7 @@ namespace sw
              */
             [[nodiscard]] static bool readRangeNumber( const hashed_string& typeName, const ValueAddress value, float64& outValue )
             {
-                const optional<int32> builtinIndex = ReflectedValueUtil::findBuiltinIndex( typeName );
-                return builtinIndex.has_value() && ReflectedValueUtil::readNumber( *builtinIndex, value.get(), outValue );
+                return ReflectedValueUtil::readNumber( ReflectedValueUtil::findBuiltinIndex( typeName ), value.get(), outValue ); // kNone 이면 false
             }
 
             /** @brief @p value 가 @p range 밖이면 "경로 = 값 is outside [아래, 위]" 한 줄을 더합니다. */

@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
@@ -870,9 +871,9 @@ namespace sw
                 absoluteValue = static_cast<uint64>( value );
             }
 
-            const uint32 len = tryFastIntConversion( pPtr, absoluteValue, format.getBase() );
-            if ( len != constant::invalid_index::kUint32 )
-                return static_cast<uint32>( pPtr - pBuf ) + len;
+            const optional<uint32> len = tryFastIntConversion( pPtr, absoluteValue, format.getBase() );
+            if ( len.has_value() )
+                return static_cast<uint32>( pPtr - pBuf ) + *len;
 
             return static_cast<uint32>( pPtr - pBuf ) + fallbackIntegerToString( pPtr, absoluteValue, format.getBase() );
         }
@@ -902,12 +903,12 @@ namespace sw
             return static_cast<uint32>( pBuf - pStart );
         }
 
-        /** @brief to_chars 로 변환합니다(2진수 제외). 실패하면 invalid_index 입니다. */
+        /** @brief to_chars 로 변환합니다(2진수 제외). 2진수이거나 실패하면 비어 있습니다. */
         template <typename IntType>
-        static uint32 tryFastIntConversion( utf8* pBuf, IntType value, Format::Base base )
+        [[nodiscard]] static optional<uint32> tryFastIntConversion( utf8* pBuf, IntType value, Format::Base base )
         {
             if ( base == Format::Base::Binary )
-                return constant::invalid_index::kUint32;
+                return nullopt;
 
             int32 baseValue = ( base == Format::Base::HexUpper ) ? 16 : static_cast<int32>( base );
             auto [pPtr, ec] = std::to_chars( pBuf, pBuf + kIntegerBufferSize, value, baseValue );
@@ -925,7 +926,7 @@ namespace sw
                 *pPtr = '\0';
                 return static_cast<uint32>( pPtr - pBuf );
             }
-            return constant::invalid_index::kUint32;
+            return nullopt;
         }
 
         /** @brief 실수를 문자열로 바꿉니다. */

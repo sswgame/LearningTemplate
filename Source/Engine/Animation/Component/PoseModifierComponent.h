@@ -9,6 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
@@ -185,14 +186,14 @@ namespace sw
         /** @brief 바깥 대상 하나의 런타임 상태입니다. */
         struct ExternalTarget
         {
-            float4x4                                _skeletalMeshToModel{};  ///< 대상 유닛 모델에서 내 유닛 모델로 가는 변환이다(프레임 시작에 기록한다).
-            BoneTransform                           _socketLocal{};          ///< 대상 본 기준 오프셋이다(소켓 로컬 × 데이터 오프셋).
-            const SkeletalMeshComponent*            _pFrameUnit{ nullptr };  ///< 이번 프레임에 찾은 대상 유닛이다(프레임 시작부터 평가가 끝날 때까지만 참조한다).
-            TComponentHandle<SkeletalMeshComponent> _skeletalMesh{};         ///< 다른 유닛(본이나 소켓 대상)이다.
-            GameObjectHandle                        _object{};               ///< 오브젝트를 대상으로 삼는다.
-            TComponentHandle<SceneComponent>        _frame{};                ///< 컴포넌트를 대상으로 삼는다(`bindRigidComponentUnit`).
-            int32                                   _skeletalMeshBone{ -1 }; ///< 대상 유닛의 본이다.
-            int32                                   _spaceBone{ -1 };        ///< `space` 에 지정한 내 유닛의 본이다.
+            float4x4                                _skeletalMeshToModel{}; ///< 대상 유닛 모델에서 내 유닛 모델로 가는 변환이다(프레임 시작에 기록한다).
+            BoneTransform                           _socketLocal{};         ///< 대상 본 기준 오프셋이다(소켓 로컬 × 데이터 오프셋).
+            const SkeletalMeshComponent*            _pFrameUnit{ nullptr }; ///< 이번 프레임에 찾은 대상 유닛이다(프레임 시작부터 평가가 끝날 때까지만 참조한다).
+            TComponentHandle<SkeletalMeshComponent> _skeletalMesh{};        ///< 다른 유닛(본이나 소켓 대상)이다.
+            GameObjectHandle                        _object{};              ///< 오브젝트를 대상으로 삼는다.
+            TComponentHandle<SceneComponent>        _frame{};               ///< 컴포넌트를 대상으로 삼는다(`bindRigidComponentUnit`).
+            optional<uint32>                        _skeletalMeshBone{};    ///< 대상 유닛의 본이다(없으면 유닛 원점).
+            optional<uint32>                        _spaceBone{};           ///< `space` 에 지정한 내 유닛의 본이다.
             uint8                                   _bBound{ SW_FALSE };
             uint8                                   _bLive{ SW_FALSE }; ///< 평가 중(워커)에 대상 유닛의 이번 프레임 포즈를 읽는다(의존을 건 대상)
         };

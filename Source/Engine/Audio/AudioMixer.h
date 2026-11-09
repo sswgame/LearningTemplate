@@ -57,8 +57,8 @@ namespace sw
         [[nodiscard]] optional<uint32> findBusIndex( const hashed_string& name ) const;
         /** @brief 버스 이름입니다. */
         const hashed_string& getBusName( uint32 busIndex ) const { return _listBusState[busIndex]._name; }
-        /** @brief 부모 버스의 번호입니다. master 는 -1 입니다. */
-        int32 getBusParentIndex( uint32 busIndex ) const { return _listBusState[busIndex]._parentIndex; }
+        /** @brief 부모 버스의 번호입니다. master 는 비어 있습니다. */
+        optional<uint32> getBusParentIndex( uint32 busIndex ) const { return _listBusState[busIndex]._parentIndex; }
         /** @brief 데이터 볼륨(dB)입니다. 사용자 볼륨 · 스냅샷 오프셋은 들어 있지 않습니다. */
         float32 getBusVolumeDb( uint32 busIndex ) const { return _listBusState[busIndex]._volumeDb; }
         /** @brief 버스의 입력 블록(평면, 이번 블록 길이, 채널 수는 `getBusLayout`)을 반환합니다. 보이스가 여기에 더합니다. */
@@ -140,8 +140,8 @@ namespace sw
             vector<unique_ptr<IAudioEffect>> _listEffect{};
             vector<hashed_string>            _listEffectName{};
             hashed_string                    _name{};
-            AudioDownmix                     _downmix{}; ///< 3 채널 이상인 버스가 두 채널 버스로 갈 때의 행렬이다(두 채널 버스는 비어 있다).
-            int32                            _parentIndex{ constant::invalid_index::kInt32 };
+            AudioDownmix                     _downmix{};     ///< 3 채널 이상인 버스가 두 채널 버스로 갈 때의 행렬이다(두 채널 버스는 비어 있다).
+            optional<uint32>                 _parentIndex{}; ///< 부모 버스(master 는 비어 있다)
             float32                          _volumeDb{ 0.0f };
             float32                          _volumeOffsetDb{ 0.0f };
             float32                          _duckDb{ 0.0f }; ///< 덕들 가운데 가장 깊은 눌림(dB, 0 이하)

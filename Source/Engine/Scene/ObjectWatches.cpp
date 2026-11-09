@@ -108,18 +108,18 @@ namespace sw
             }
             // 갈래는 내장 타입 표 한 곳(`ReflectedValueUtil`)이 정한다 — 숫자 · bool 은 수, 글 갈래는 글로 읽는다.
             // Other 가 아닌 갈래는 내장 타입에서만 나오므로 아래 갈래 안에서는 자리가 있다.
-            const optional<int32>     builtinIndex = ReflectedValueUtil::findBuiltinIndex( pProperty->_typeName );
+            const ReflectBuiltinIndex builtinIndex = ReflectedValueUtil::findBuiltinIndex( pProperty->_typeName );
             const ReflectBuiltinClass builtinClass = ReflectedValueUtil::getBuiltinClass( pProperty->_typeName );
             const void* const         pValue       = pProperty->getRawPtr( static_cast<const void*>( pComponent ) );
             float64                   number{ 0.0 };
             int64                     integer{ 0 };
             // 비트필드는 주소가 없어(pValue == nullptr) 읽는 함수가 모두 false 다.
-            if ( builtinClass == ReflectBuiltinClass::Number && ReflectedValueUtil::readNumber( *builtinIndex, pValue, number ) )
+            if ( builtinClass == ReflectBuiltinClass::Number && ReflectedValueUtil::readNumber( builtinIndex, pValue, number ) )
                 outValue.setNumber( number );
-            else if ( builtinClass == ReflectBuiltinClass::Bool && ReflectedValueUtil::readInteger( *builtinIndex, pValue, integer ) )
+            else if ( builtinClass == ReflectBuiltinClass::Bool && ReflectedValueUtil::readInteger( builtinIndex, pValue, integer ) )
                 outValue.setNumber( static_cast<float64>( integer ) );
             else if ( builtinClass == ReflectBuiltinClass::Text && pValue != nullptr )
-                outValue.setText( ReflectedValueUtil::formatBuiltin( *builtinIndex, pValue ) );
+                outValue.setText( ReflectedValueUtil::formatBuiltin( builtinIndex, pValue ) );
             else
             {
                 outValue.setText( "property type " + string( pProperty->_typeName.c_str() ) + " is not readable here" );

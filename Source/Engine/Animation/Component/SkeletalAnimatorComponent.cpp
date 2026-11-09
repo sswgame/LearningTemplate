@@ -1187,7 +1187,7 @@ namespace sw
         }
     }
 
-    const vector<int32>& SkeletalAnimatorComponent::getTrackMap( const AnimationClip& clip, const Skeleton& skeleton )
+    const vector<optional<uint32>>& SkeletalAnimatorComponent::getTrackMap( const AnimationClip& clip, const Skeleton& skeleton )
     {
         if ( _pTrackMapSkeleton != &skeleton )
         {
@@ -1202,7 +1202,7 @@ namespace sw
                 layer._pMaskSkeleton = nullptr;
             }
         }
-        vector<int32>& listBone = _mapTrackToBone[&clip];
+        vector<optional<uint32>>& listBone = _mapTrackToBone[&clip];
         if ( listBone.size() != clip.getTrackCount() )
             (void)clip.makeTrackToBoneMap( skeleton, listBone ); // 오류는 함수가 남겼고(짝마다 한 번) 있는 본은 재생한다
         return listBone;
@@ -1210,7 +1210,7 @@ namespace sw
 
     void SkeletalAnimatorComponent::sampleClipIntoPose( const AnimationClip& clip, float32 time, const Skeleton& skeleton, Pose& inoutPose, const uint8* pBoneMask )
     {
-        const vector<int32>& listTrackToBone = getTrackMap( clip, skeleton );
+        const vector<optional<uint32>>& listTrackToBone = getTrackMap( clip, skeleton );
         // 본 LOD — 빠진 본의 트랙은 코덱이 풀지 않고(ACL 트랙 건너뛰기) 포즈에도 옮기지 않는다(레퍼런스로 부모를 따른다).
         const uint8* pTrackMask = nullptr;
         if ( pBoneMask != nullptr )
@@ -1218,8 +1218,8 @@ namespace sw
             _listScratchTrackMask.resize( listTrackToBone.size() );
             for ( size_t trackIndex = 0; trackIndex < listTrackToBone.size(); ++trackIndex )
             {
-                const int32 boneIndex             = listTrackToBone[trackIndex];
-                _listScratchTrackMask[trackIndex] = ( boneIndex >= 0 && pBoneMask[static_cast<uint32>( boneIndex )] != 0 ) ? SW_TRUE : SW_FALSE;
+                const optional<uint32>& boneIndex = listTrackToBone[trackIndex];
+                _listScratchTrackMask[trackIndex] = ( boneIndex.has_value() && pBoneMask[*boneIndex] != 0 ) ? SW_TRUE : SW_FALSE;
             }
             pTrackMask = _listScratchTrackMask.data();
         }

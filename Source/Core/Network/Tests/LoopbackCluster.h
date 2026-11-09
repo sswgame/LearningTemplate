@@ -6,6 +6,7 @@
  */
 #pragma once
 #include "Core/Container/deque.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/Connection/NetEndpointThread.h"
@@ -34,8 +35,8 @@ namespace sw::test
         LoopbackCluster( const LoopbackCluster& )            = delete;
         LoopbackCluster& operator=( const LoopbackCluster& ) = delete;
 
-        /** @brief 루프백 엔드포인트(`127.0.0.1:port`) · 흉내 · `NetEndpoint` 를 하나 더합니다. 번호(더한 순서)이고, 포트가 겹치면 -1 입니다. */
-        int32 addEndpoint( uint16 port, const NetEndpointConfig& settings );
+        /** @brief 루프백 엔드포인트(`127.0.0.1:port`) · 흉내 · `NetEndpoint` 를 하나 더합니다. 번호(더한 순서)이고, 포트가 겹치면 비어 있습니다. */
+        [[nodiscard]] optional<int32> addEndpoint( uint16 port, const NetEndpointConfig& settings );
         /**
          * @brief 엔드포인트 0 이 listen 하고 나머지가 0 에 connect 한 뒤 @p stepCount 번 `step` 합니다.
          * @return listen · connect 를 모두 시작했고 클라이언트가 모두 연결됐으면 true 입니다.

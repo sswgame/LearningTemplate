@@ -759,7 +759,7 @@ namespace sw
             ++_rejectedPacketCount;
             return;
         }
-        const int32 slotIndex = _slotTable.findByAddress( from );
+        const optional<int32> slotIndex = _slotTable.findByAddress( from );
         if ( isEncrypted() && ( type == PacketType::Payload || type == PacketType::Disconnect ) )
         {
             handleSealedPacket( nowSeconds, type, slotIndex, pData + NetEndpointInternal::kHeaderSize, size - NetEndpointInternal::kHeaderSize );
@@ -784,10 +784,10 @@ namespace sw
         handleControlPacket( type, packet, reader );
     }
 
-    void NetEndpoint::handlePayloadPacket( float64 nowSeconds, int32 slotIndex, BitReader& reader )
+    void NetEndpoint::handlePayloadPacket( float64 nowSeconds, const optional<int32> slotIndex, BitReader& reader )
     {
         const uint32     token = reader.readBits( 32 );
-        NetEndpointSlot* pSlot = _slotTable.isValid( slotIndex ) ? &_slotTable.get( slotIndex ) : nullptr;
+        NetEndpointSlot* pSlot = slotIndex.has_value() ? &_slotTable.get( *slotIndex ) : nullptr;
         if ( pSlot == nullptr || pSlot->_state != NetConnectionState::Connected )
         {
             // 서버는 수락했지만 클라이언트가 Accepted 를 받지 못한 경우다. 수락에만 서버가 지정한 번호가 있으므로, 데이터 패킷으로는 연결로 인정하지 않는다.
@@ -816,12 +816,12 @@ namespace sw
             slot._bRemoteDebugHold = bRemoteDebugHold;
         }
         if ( slot._connection.hasReceiveOverflowed() )
-            closeSlot( slotIndex, NetDisconnectReason::ReceiveOverflow, true );
+            closeSlot( *slotIndex, NetDisconnectReason::ReceiveOverflow, true );
     }
 
     void NetEndpoint::handleControlPacket( PacketType type, const ControlPacket& packet, BitReader& reader )
     {
-        const int32 slotIndex = packet._slotIndex;
+        const optional<int32> slotIndex = packet._slotIndex;
         switch ( type )
         {
             case PacketType::ConnectRequest:
@@ -831,9 +831,9 @@ namespace sw
             }
             case PacketType::Challenge:
             {
-                if ( _bServer || _slotTable.isValid( slotIndex ) == false )
+                if ( _bServer || slotIndex.has_value() == false )
                     return;
-                NetEndpointSlot& slot = _slotTable.get( slotIndex );
+                NetEndpointSlot& slot = _slotTable.get( *slotIndex );
                 if ( slot._state != NetConnectionState::Connecting || packet._valueA != slot._clientSalt )
                     return;
                 slot._serverSalt = packet._valueB;
@@ -848,12 +848,12 @@ namespace sw
             }
             case PacketType::Accepted:
             {
-                if ( _bServer || _slotTable.isValid( slotIndex ) == false )
+                if ( _bServer || slotIndex.has_value() == false )
                     return;
-                NetEndpointSlot& slot = _slotTable.get( slotIndex );
+                NetEndpointSlot& slot = _slotTable.get( *slotIndex );
                 if ( slot._state != NetConnectionState::Connecting || packet._valueB != slot._serverSalt )
                     return;
-                if ( slot._security != nullptr && acceptSecureAccepted( reader, slot, slotIndex, static_cast<uint32>( packet._valueA ) ) == false )
+                if ( slot._security != nullptr && acceptSecureAccepted( reader, slot, *slotIndex, static_cast<uint32>( packet._valueA ) ) == false )
                     return; // 키 확인이 틀렸다. 연결은 그 함수 안에서 닫았다.
                 slot._state           = NetConnectionState::Connected;
                 slot._lastReceiveTime = packet._nowSeconds;
@@ -866,9 +866,9 @@ namespace sw
             }
             case PacketType::Denied:
             {
-                if ( _bServer || _slotTable.isValid( slotIndex ) == false )
+                if ( _bServer || slotIndex.has_value() == false )
                     return;
-                const NetEndpointSlot& slot = _slotTable.get( slotIndex );
+                const NetEndpointSlot& slot = _slotTable.get( *slotIndex );
                 if ( slot._state != NetConnectionState::Connecting || packet._valueB != slot._clientSalt )
                     return; // 이 요청에 대한 거절이 아니다(옛 요청이나 위조).
                 const NetDisconnectReason reason = NetEndpointInternal::readDeniedReason( packet._valueA );
@@ -879,13 +879,13 @@ namespace sw
                                        packet._from.toString().c_str(), toString( reason ), static_cast<uint32>( packet._valueA >> 32 ), _protocolID, _settings._gameID );
                     _listDeferredWarning.push_back( DeferredWarning{ DeferredWarningKind::ServerRefused, string( text.c_str() ) } ); // 엔드포인트 잠금 안이다 — 로그는 `update` 가 잠금을 놓은 뒤에 쓴다
                 }
-                closeSlot( slotIndex, reason, false );
+                closeSlot( *slotIndex, reason, false );
                 return;
             }
             case PacketType::Disconnect:
             {
-                if ( _slotTable.isValid( slotIndex ) && packet._valueA == _slotTable.get( slotIndex ).getConnectionToken() )
-                    closeSlot( slotIndex, NetDisconnectReason::Remote, false );
+                if ( slotIndex.has_value() && packet._valueA == _slotTable.get( *slotIndex ).getConnectionToken() )
+                    closeSlot( *slotIndex, NetDisconnectReason::Remote, false );
                 return;
             }
             case PacketType::Payload:
@@ -922,14 +922,14 @@ namespace sw
             sendDenied( packet._from, reason, packet._valueA );
             return;
         }
-        if ( _slotTable.isValid( packet._slotIndex ) )
+        if ( packet._slotIndex.has_value() )
         {
             // 이 주소는 이미 연결돼 있다. 같은 요청의 늦은 재전송이면 수락을 다시 보내고, 솔트가 다르면(새로 시작한 클라이언트) 옛 연결이 끝날 때까지 답하지 않는다.
-            if ( _slotTable.get( packet._slotIndex )._clientSalt == packet._valueA )
-                sendAccepted( packet._slotIndex );
+            if ( _slotTable.get( *packet._slotIndex )._clientSalt == packet._valueA )
+                sendAccepted( *packet._slotIndex );
             return;
         }
-        if ( _slotTable.findFreeSlot() < 0 )
+        if ( _slotTable.findFreeSlot().has_value() == false )
         {
             sendDenied( packet._from, NetDisconnectReason::ServerFull, packet._valueA );
             return;
@@ -942,15 +942,15 @@ namespace sw
     {
         if ( _bServer == SW_FALSE )
             return;
-        if ( _slotTable.isValid( packet._slotIndex ) )
+        if ( packet._slotIndex.has_value() )
         {
             // 이미 연결됐다. 수락을 받지 못한 클라이언트가 요청을 반복한 경우다.
-            NetEndpointSlot& slot = _slotTable.get( packet._slotIndex );
+            NetEndpointSlot& slot = _slotTable.get( *packet._slotIndex );
             if ( slot._clientSalt == packet._valueA && slot._serverSalt == packet._valueB )
             {
                 // 확장 바이트(공개 키와 토큰)는 다시 읽지 않고, 보관해 둔 키 확인 태그로 같은 수락을 보낸다.
                 slot._lastReceiveTime = packet._nowSeconds;
-                sendAccepted( packet._slotIndex );
+                sendAccepted( *packet._slotIndex );
             }
             return;
         }
@@ -960,12 +960,13 @@ namespace sw
             ++_rejectedPacketCount; // 위조되었거나 만료된 응답.
             return;
         }
-        const int32 freeIndex = _slotTable.findFreeSlot();
-        if ( freeIndex < 0 )
+        const optional<int32> freeSlot = _slotTable.findFreeSlot();
+        if ( freeSlot.has_value() == false )
         {
             sendDenied( packet._from, NetDisconnectReason::ServerFull, packet._valueA );
             return;
         }
+        const int32 freeIndex = *freeSlot;
         // 암호화 방식에서는 주소가 확인된(챌린지를 통과한) 응답에만 X25519 를 계산한다. 토큰 결속이면 증명이 맞아야 슬롯을 할당한다.
         unique_ptr<NetSlotSecurity> security;
         if ( isEncrypted() && acceptSecureResponse( reader, packet._from, packet._valueA, packet._valueB, security ) == false )
@@ -988,11 +989,11 @@ namespace sw
         sendAccepted( freeIndex );
     }
 
-    void NetEndpoint::handleSealedPacket( float64 nowSeconds, PacketType type, int32 slotIndex, const uint8* pBody, int32 bodySize )
+    void NetEndpoint::handleSealedPacket( float64 nowSeconds, PacketType type, const optional<int32> slotIndex, const uint8* pBody, int32 bodySize )
     {
         // 본문 형식은 [종류와 0][연결 값 4바이트][패킷 번호 8바이트][AEAD + 태그]다. 바이트 정렬이므로 BitReader 를 거치지 않는다.
         const uint32     token  = bodySize >= 5 ? LittleEndianUtil::readUint32( pBody + 1 ) : 0u;
-        NetEndpointSlot* pSlot  = _slotTable.isValid( slotIndex ) ? &_slotTable.get( slotIndex ) : nullptr;
+        NetEndpointSlot* pSlot  = slotIndex.has_value() ? &_slotTable.get( *slotIndex ) : nullptr;
         const bool       bReady = pSlot != nullptr && pSlot->_state == NetConnectionState::Connected && pSlot->_security != nullptr &&
                             pSlot->_security->_bKeysReady == SW_TRUE && token == static_cast<uint32>( pSlot->getConnectionToken() );
         if ( bReady == false )
@@ -1035,7 +1036,7 @@ namespace sw
         if ( type == PacketType::Disconnect )
         {
             if ( listPlain.empty() )
-                closeSlot( slotIndex, NetDisconnectReason::Remote, false );
+                closeSlot( *slotIndex, NetDisconnectReason::Remote, false );
             return;
         }
         BitReader   plainReader( listPlain.data(), static_cast<int32>( listPlain.size() ) );
@@ -1046,7 +1047,7 @@ namespace sw
             pSlot->_bRemoteDebugHold = bRemoteDebugHold;
         }
         if ( pSlot->_connection.hasReceiveOverflowed() )
-            closeSlot( slotIndex, NetDisconnectReason::ReceiveOverflow, true );
+            closeSlot( *slotIndex, NetDisconnectReason::ReceiveOverflow, true );
     }
 
     void NetEndpoint::closeSlot( int32 slotIndex, NetDisconnectReason reason, bool bNotifyRemote )

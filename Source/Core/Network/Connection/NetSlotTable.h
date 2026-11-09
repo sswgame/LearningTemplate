@@ -9,6 +9,7 @@
 #pragma once
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -69,15 +70,15 @@ namespace sw
         const NetEndpointSlot* begin() const { return _listSlot.data(); }
         const NetEndpointSlot* end() const { return _listSlot.data() + _listSlot.size(); }
 
-        /** @brief 이 주소에 묶인 슬롯 번호입니다. 없으면 -1 입니다. */
-        int32 findByAddress( const NetAddress& address ) const;
+        /** @brief 이 주소에 묶인 슬롯 번호입니다. 없으면 비어 있습니다. */
+        [[nodiscard]] optional<int32> findByAddress( const NetAddress& address ) const;
         /** @brief 슬롯의 주소를 정하고 주소 맵에 묶습니다. */
         void bindAddress( int32 slotIndex, const NetAddress& address );
         /** @brief 슬롯의 주소를 주소 맵에서 풉니다. 같은 주소가 다른 슬롯에 묶여 있으면 그대로 둡니다. */
         void unbindAddress( int32 slotIndex );
-        /** @brief 첫 빈(Disconnected) 슬롯 번호입니다. 없으면 -1 입니다. */
-        int32 findFreeSlot() const;
-        int32 countConnected() const;
+        /** @brief 첫 빈(Disconnected) 슬롯 번호입니다. 없으면(가득 참) 비어 있습니다. */
+        [[nodiscard]] optional<int32> findFreeSlot() const;
+        int32                         countConnected() const;
         /** @brief 연결된 슬롯 번호를 @p outListConnection 에 비운 뒤 담습니다. */
         void collectConnected( vector<int32>& outListConnection ) const;
 

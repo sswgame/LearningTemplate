@@ -17,15 +17,15 @@ SW_TEST_CASE( NetSlotTableTest, ResetMakesEmptySlotsAndClearsAddresses )
     SW_EXPECT_TRUE( table.isValid( 2 ) );
     SW_EXPECT_FALSE( table.isValid( 3 ) );
     SW_EXPECT_FALSE( table.isValid( -1 ) );
-    SW_EXPECT_EQUAL( 0, table.findFreeSlot() );
+    SW_EXPECT_TRUE( table.findFreeSlot() == 0 );
 
     const NetAddress address = NetAddress::makeLoopback( 5000 );
     table.bindAddress( 1, address );
-    SW_EXPECT_EQUAL( 1, table.findByAddress( address ) );
+    SW_EXPECT_TRUE( table.findByAddress( address ) == 1 );
     SW_EXPECT_TRUE( table.get( 1 )._address == address );
 
     table.reset( 2 );
-    SW_EXPECT_EQUAL( -1, table.findByAddress( address ) );
+    SW_EXPECT_FALSE( table.findByAddress( address ).has_value() );
     SW_EXPECT_EQUAL( 2, table.getCount() );
 }
 
@@ -37,9 +37,9 @@ SW_TEST_CASE( NetSlotTableTest, UnbindLeavesAnAddressReboundToAnotherSlot )
     table.bindAddress( 0, address );
     table.bindAddress( 1, address ); // 같은 주소의 새 연결이 다른 슬롯을 잡았다
     table.unbindAddress( 0 );        // 옛 슬롯을 닫아도 새 슬롯의 묶음은 남는다
-    SW_EXPECT_EQUAL( 1, table.findByAddress( address ) );
+    SW_EXPECT_TRUE( table.findByAddress( address ) == 1 );
     table.unbindAddress( 1 );
-    SW_EXPECT_EQUAL( -1, table.findByAddress( address ) );
+    SW_EXPECT_FALSE( table.findByAddress( address ).has_value() );
 }
 
 SW_TEST_CASE( NetSlotTableTest, ConnectedQueriesFollowSlotState )
@@ -50,7 +50,7 @@ SW_TEST_CASE( NetSlotTableTest, ConnectedQueriesFollowSlotState )
     table.get( 2 )._state      = NetConnectionState::Connected;
     table.get( 2 )._clientSalt = 0xF0u;
     table.get( 2 )._serverSalt = 0x0Fu;
-    SW_EXPECT_EQUAL( 1, table.findFreeSlot() );
+    SW_EXPECT_TRUE( table.findFreeSlot() == 1 );
     SW_EXPECT_EQUAL( 2, table.countConnected() );
     SW_EXPECT_TRUE( table.findConnected( 1 ) == nullptr );
     SW_EXPECT_TRUE( table.findConnected( 7 ) == nullptr );
@@ -71,5 +71,5 @@ SW_TEST_CASE( NetSlotTableTest, ConnectedQueriesFollowSlotState )
     SW_EXPECT_EQUAL( 2, visited );
 
     table.get( 0 )._state = NetConnectionState::Disconnected;
-    SW_EXPECT_EQUAL( 0, table.findFreeSlot() );
+    SW_EXPECT_TRUE( table.findFreeSlot() == 0 );
 }
