@@ -8,7 +8,7 @@
 #include "Core/Name/hashed_string.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/GUI/Panel/IEditorDocumentPanel.h"
+#include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
 #include "Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.h"
 #include "Editor/Panels/AudioEvents/Model/AudioEventEditModel.h"
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
@@ -34,8 +34,10 @@ namespace sw::editor
      *          "저장" 은 검사를 통과할 때만 파일에 쓴다(`AudioEventLibrary::saveToAsset`). 엔진에 올라간 라이브러리는 저장한 파일을 에셋 핫 리로드
      *          (`IAudioService` 의 라이브러리 다시 읽기)가 바꾼다 — 창은 엔진 사본을 직접 고치지 않는다(오디오 스레드가 설명자를 참조한다).
      *          재생 중 인스턴스와 보이스 수는 오디오 스레드가 블록마다 게시한 사본이다.
+     *          고치는 라이브러리 파일이 이 창의 문서다(`EditorDocumentPanel`, Data 종류 가운데 `*.audioevents.xml`) — "고치기" · 콘텐츠 브라우저 · `asset.openScratch` 가 모두 워크스페이스 포커스로 연다.
+     *          예전에는 "고치기" 만 여는 자체 길이라 시나리오가 사본(`scratch/…`)을 가리킬 수 없었다.
      */
-    class AudioEventBrowserPanel final : public IEditorDocumentPanel
+    class AudioEventBrowserPanel final : public EditorDocumentPanel
     {
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */
@@ -44,11 +46,12 @@ namespace sw::editor
         AudioEventBrowserPanel();
 
         const utf8*      getPanelTitle() const override { return "Audio Events"; }
-        void             drawContent() override;
+        void             drawDocumentContent() override;
         EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 109.0f, 27.0f ); }
         /** @brief 고치는 라이브러리 사본을 파일에 씁니다(닫기 · 종료 확인의 Save). 검사를 통과하지 못하면 쓰지 않고 false 입니다. */
         [[nodiscard]] bool saveDocument() override;
-        bool               canSaveDocument() const override { return _edit.isDirty(); }
+        /** @brief 읽은 라이브러리를 고치는 중일 때만 저장합니다("고치기 그만" 뒤에는 쓸 사본이 없다). */
+        bool canSaveDocument() const override { return EditorDocumentPanel::canSaveDocument() && _edit.isEditingAny(); }
         /** @brief 엔진에서 모은 이벤트 이름 수입니다(감시 값 `Editor.AudioEventCount`). */
         uint32 getEventCount() const { return static_cast<uint32>( _listEventName.size() ); }
         /** @brief 목록에서 이벤트를 골랐습니다(감시 값 `Editor.AudioEventSelected`). */
@@ -56,11 +59,15 @@ namespace sw::editor
         /** @brief 고치는 라이브러리 사본의 이벤트 수입니다. 고치는 중이 아니면 0 입니다(감시 값 `Editor.AudioEventEditCount`). */
         uint32 getEditEventCount() const { return _edit.isEditingAny() ? static_cast<uint32>( _edit.getLibrary()._listEvent.size() ) : 0u; }
 
+    protected:
+        /** @brief 이벤트 라이브러리 파일(`*.audioevents.xml`)만 받습니다. */
+        bool acceptsDocumentPath( string_view assetPath ) const override;
+        /** @brief 받아들인 라이브러리 파일을 사본으로 읽어 고치기를 시작합니다. 같은 라이브러리를 다시 읽으면 고치던 이벤트를 그대로 고릅니다. 읽지 못하면 `Malformed` 입니다. */
+        ToolAssetLoadResult loadDocument() override;
+
     private:
         /** @brief 사본의 미저장(`AudioEventEditModel::isDirty`)을 패널 dirty 로 옮깁니다(닫기 · 종료 확인 · 제목 표시가 이 값을 본다). */
         void syncDocumentDirty() override;
-        /** @brief "Don't Save" — 고치기를 끝내고 사본을 버립니다(파일과 엔진 사본은 그대로다). */
-        void revertDocument() override { _edit.end(); }
         void drawEventList();
         void drawEventDetail( IAudioService& audio );
         /**

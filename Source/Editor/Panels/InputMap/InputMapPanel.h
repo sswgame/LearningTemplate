@@ -7,7 +7,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 
-#include "Editor/Common/GUI/Panel/IEditorDocumentPanel.h"
+#include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
 #include "Editor/Panels/InputMap/Model/InputMapModel.h"
 
 namespace sw
@@ -21,8 +21,10 @@ namespace sw::editor
      * @class InputMapPanel
      * @brief 액션, 레이어, 바인딩, 트리거, 모디파이어를 시각적으로 편집하고, 입력 장치 상태를 실시간으로 보여 주는 에디터 패널입니다.
      * @details 상태와 명령은 `InputMapModel`(Model/, ImGui 없음)가 들고, 이 패널은 그리기 · 입력칸 · 문서 dirty 만 든다.
+     *          여는 길은 문서 기반(`EditorDocumentPanel`, Data 종류 가운데 입력 맵 · 입력 맵 묶음)이다 — 경로 칸 · 콘텐츠 브라우저 · `asset.openScratch` 가 모두 워크스페이스 포커스로 연다.
+     *          예전에는 경로 칸만 여는 자체 길이라 시나리오가 사본(`scratch/…`)을 가리킬 수 없었다. 포커스가 없으면 처음 문서는 데이터의 디버그 키 맵이다.
      */
-    class InputMapPanel : public IEditorDocumentPanel
+    class InputMapPanel : public EditorDocumentPanel
     {
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */
@@ -32,7 +34,7 @@ namespace sw::editor
         virtual ~InputMapPanel() override = default;
 
         const utf8*      getPanelTitle() const override { return "Input Map Editor"; }
-        void             drawContent() override;
+        void             drawDocumentContent() override;
         EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 128.0f, 34.0f ); }
 
         /**
@@ -40,7 +42,6 @@ namespace sw::editor
          * @details dirty 비트는 기반 클래스가 보관한다. 그래서 Ctrl+S(`saveFocusedOrScene`)와 종료 확인이 이 패널의 편집을 본다.
          */
         [[nodiscard]] bool saveDocument() override;
-        void               revertDocument() override;
 
         /** @brief 프로브용입니다. 선택한 액션의 바인딩 수를 반환합니다. 선택한 액션이 없으면 false 입니다. */
         [[nodiscard]] bool readSelectedBindingCount( uint32& outCount ) const { return _document.readSelectedBindingCount( outCount ); }
@@ -53,6 +54,10 @@ namespace sw::editor
         void shutdown() override { _document.releaseInput(); }
 
     protected:
+        /** @brief 입력 맵 파일(`*.input.xml`)과 입력 맵 묶음(게임 설정 파일)만 받습니다(`InputMapModel::isDocumentPath`). */
+        bool acceptsDocumentPath( string_view assetPath ) const override;
+        /** @brief 받아들인 문서 경로(없으면 데이터의 처음 경로)를 다시 읽습니다. 읽지 못하면 `Malformed` 라 저장이 막힌다. */
+        ToolAssetLoadResult loadDocument() override;
         /** @brief 탭이 가려져도 녹화 · 재생은 이어진다 — 게임 뷰를 앞에 두고 녹화한다. 그래서 문서는 가려진 프레임에도 돈다. */
         void onPanelCollapsed() override;
         /** @brief 닫으면 녹화를 끝내고 재생 중인 리플레이를 뗍니다. 닫힌 패널은 `tick` 이 돌지 않아 끝난 재생을 뗄 사람이 없다. */
@@ -105,11 +110,8 @@ namespace sw::editor
         void drawCaptureModal();
         void drawGamepadStickVisualizer( const utf8* pLabel, float32 stickX, float32 stickY, float32 deadzone );
 
-        /** @brief 맵 파일을 다시 읽고, 읽었으면 dirty 를 내립니다. */
+        /** @brief 문서의 미저장(`InputMapModel::isDirty`)을 패널 dirty 로 옮깁니다. */
         void syncDocumentDirty() override;
-        void reloadFromFile();
-        /** @brief 맵 파일에 쓰고, 썼으면 dirty 를 내립니다. */
-        [[nodiscard]] bool saveToFile();
 
     private:
         InputMapModel                _document; ///< 편집하는 InputMap · 리플레이와 명령

@@ -3,6 +3,7 @@
 #include "Editor/Panels/AudioEvents/AudioEventBrowserPanel.h"
 
 #include "Core/Log/LogOnce.h"
+#include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
@@ -105,7 +106,7 @@ namespace sw::editor
 namespace sw::editor
 {
     AudioEventBrowserPanel::AudioEventBrowserPanel()
-        : IEditorDocumentPanel( false )
+        : EditorDocumentPanel( EditorAssetType{ EditorAssetTypeIDs::kData }, false )
         , _edit{}
         , _grid{}
         , _libraryGrid{}
@@ -128,6 +129,21 @@ namespace sw::editor
     void AudioEventBrowserPanel::onEventEdited( const PropertyInfo& /*prop*/ )
     {
         _edit.markEdited();
+    }
+
+    bool AudioEventBrowserPanel::acceptsDocumentPath( string_view assetPath ) const
+    {
+        return StringUtil::endsWith( assetPath, AudioEventLibrary::kExtension, true );
+    }
+
+    ToolAssetLoadResult AudioEventBrowserPanel::loadDocument()
+    {
+        const string libraryPath = acceptDocumentToLoad();
+        if ( libraryPath.empty() )
+            return ToolAssetLoadResult::Missing; // 아직 고치는 라이브러리가 없다
+        const hashed_string library{ libraryPath.c_str() };
+        const hashed_string eventName = _edit.isEditing( library ) ? _edit.getEventName() : _selectedEvent; // 다시 읽기는 고치던 이벤트를, 새로 열기는 목록에서 고른 이벤트를 고친다
+        return _edit.begin( library, eventName ) ? ToolAssetLoadResult::Loaded : ToolAssetLoadResult::Malformed;
     }
 
     bool AudioEventBrowserPanel::saveDocument()
@@ -288,7 +304,13 @@ namespace sw::editor
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorAudioEvents", "EditEvent" ) ) );
         ImGui::BeginDisabled( _edit.isDirty() ); // 다른 파일을 고치는 중에 저장하지 않은 것이 있으면 바꾸지 않는다
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioEvents", "EditEvent" ) ) )
-            (void)_edit.begin( _selectedLibrary, _selectedEvent );
+        {
+            // 콘텐츠 브라우저와 같은 문서 열기 길이다. "고치기 그만" 뒤의 같은 라이브러리는 이미 열린 문서라 포커스가 바뀌지 않으므로 다시 읽는다.
+            if ( getLoadedAssetPath() == _selectedLibrary.viewOrEmpty() )
+                reloadDocument();
+            else
+                requestOpenDocument( _selectedLibrary.viewOrEmpty() );
+        }
         ImGui::EndDisabled();
         EditorSelfTestMarks::record( "audioevents.edit" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAudioEvents", "EditEventTip" ) );
@@ -378,8 +400,10 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAudioEvents", "PublishCostTip" ) );
     }
 
-    void AudioEventBrowserPanel::drawContent()
+    void AudioEventBrowserPanel::drawDocumentContent()
     {
+        updateFocusedDocument();
+        ensureDocumentLoaded();
         IAudioService& audio = AudioEventBrowserUtil::getAudioService();
         if ( audio.isInitialized() == false )
         {

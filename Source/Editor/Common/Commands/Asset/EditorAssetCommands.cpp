@@ -41,10 +41,12 @@ namespace sw::editor
             return true;
         }
 
+        // 동작이 열지 않으면(썸네일만 둔 오디오 — `IEditorAssetTypeActions::open` 기본) 아래 포커스 길로 간다. 예전에는 그 false 를 그대로 돌려줘 오디오 그래프(`*.audiograph.xml`)가
+        // 콘텐츠 브라우저 · `asset.openScratch` 로 열리지 않았다 — 문서 패널은 종류의 동작이 아니라 포커스로 문서를 받는다.
         const IEditorAssetTypeActions* pActions = EditorAssetTypeRegistry::findActionsForPath( relativePath );
-        if ( pActions != nullptr )
-            return pActions->open( relativePath );
-        // 전용 패널도 동작도 없는 종류(Data 의 `*.vfx.xml` 등)는 그 종류의 문서 패널이 포커스 경로로 연다(`EditorDocumentPanel::getMatchingFocusedPath` —
+        if ( pActions != nullptr && pActions->open( relativePath ) )
+            return true;
+        // 전용 패널도 여는 동작도 없는 종류(Data 의 `*.vfx.xml` 등)는 그 종류의 문서 패널이 포커스 경로로 연다(`EditorDocumentPanel::getMatchingFocusedPath` —
         // 콘텐츠 브라우저 더블클릭이 고르는 것과 같은 길). 예전에는 포커스를 세우지 않아 시나리오 명령(asset.openScratch)이 "열 곳 없음" 으로 졌다.
         // 이 층(명령)은 패널 관리자를 볼 수 없다 — 아는 종류면 포커스를 세우고, 받는 문서 패널이 그 경로를 연다(없으면 선택만 남는다 — 브라우저와 같다).
         if ( EditorAssetTypeRegistry::findKind( relativePath ).isUnknown() )

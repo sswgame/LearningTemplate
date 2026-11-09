@@ -4,6 +4,7 @@
 
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
@@ -32,7 +33,6 @@ namespace sw::editor
         , _recordedBeginFrameCount{ 0 }
         , _capturingBindIndex{ 0 }
         , _pendingCaptureModifier{ Key::Unknown }
-        , _bLoaded{ SW_FALSE }
         , _bCapturingKey{ SW_FALSE }
         , _bCaptureNewBinding{ SW_FALSE }
         , _bPlotPaused{ SW_FALSE }
@@ -99,9 +99,13 @@ namespace sw::editor
         _plot._offset = ( offset + 1 ) % InputMapPlotSamples::kSampleCount;
     }
 
+    bool InputMapModel::isDocumentPath( string_view assetPath )
+    {
+        return StringUtil::endsWith( assetPath, kMapSuffix, true ) || InputMapBundle::isSettingsFile( assetPath );
+    }
+
     bool InputMapModel::reload()
     {
-        _bLoaded = SW_TRUE;
         // 읽지 못하면 편집 중인 바인딩과 dirty 를 그대로 둔다. dirty 를 지우고 "다시 읽었다" 고 표시하지 않는다.
         // 묶음은 읽기 실패가 맵을 비우므로(`InputMap::loadBundle`) 맵에 넣기 전에 묶음만 먼저 검사한다.
         const AssetID assetID{ _inputMapPath.c_str() };
