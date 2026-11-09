@@ -28,7 +28,9 @@
         "Editor/Common/Workspace/NetPlay/EditorNetPlaySettings.h": "멀티 프로세스 재생 구성 · 프리셋 파일 값(리플렉션 집합체) — Core 와 리플렉션 매크로만 include 한다. Multiplayer 세션 ViewState 가 구성 사본을 들고 Net Mode 위젯이 고친다",
         "Editor/Common/Commands/Play/EditorNetConditions.h": "회선 조절 패널 값(ms · % · KB/s)과 명령 글을 만드는 순수 함수 — Core 만 include 한다. Conditions ViewState 가 대상의 패널 값을 든다",
         "Editor/Common/Workspace/NetPlay/EditorNetProfilerSample.h": "Profiler 표본 값 형식(채널 열거 · 종류별 비중 · 복제 셈)과 그 계산 — Core 와 리플렉션 매크로만 include 한다. Profiler ViewState 가 그대로 든다",
-        "Editor/Common/Workspace/EditorFrameStep.h": "UI 프레임 단계 등록 줄(SW_EDITOR_FRAME_STEP)과 순서 값 — EditorExtensionRegistry 만 include 하고 EditorContext 는 앞 선언이다. 창이 닫혀도 도는 단계를 그 창 View 가 등록한다(Profiler 의 합친 트레이스 열기)"
+        "Editor/Common/Workspace/EditorFrameStep.h": "UI 프레임 단계 등록 줄(SW_EDITOR_FRAME_STEP)과 순서 값 — EditorExtensionRegistry 만 include 하고 EditorContext 는 앞 선언이다. 창이 닫혀도 도는 단계를 그 창 View 가 등록한다(Profiler 의 합친 트레이스 열기)",
+        "Editor/Common/Workspace/Asset/EditorAssetTypeActions.h": "종류별 썸네일 · 열기 · 뷰포트 배치 확장 인터페이스 — Core 와 내보내기만 include 하고 씬 형식은 앞 선언이다. 콘텐츠 브라우저 View 가 카드 썸네일을 그 종류의 동작으로 그린다",
+        "Editor/Common/Commands/Asset/EditorAssetMove.h": "에셋 옮기기 · 옮기기 계획 값(EditorAssetFileCommands 에서 떼어 낸 값) — Core 만 include 한다. 콘텐츠 브라우저 확인 대화상자가 계획을 그린다"
     },
     "_migratedViews": [
         "Source/Editor/Panels/Animation/AnimationClipPreviewPanel",
@@ -46,6 +48,7 @@
         "Source/Editor/Panels/Catalog/CatalogPanel",
         "Source/Editor/Panels/Catalog/CatalogTableEditor",
         "Source/Editor/Panels/Console/ConsolePanel",
+        "Source/Editor/Panels/ContentBrowser/ContentBrowserPanel",
         "Source/Editor/Panels/DataTable/DataTablePanel",
         "Source/Editor/Panels/Dialogue/DialogueGraphPanel",
         "Source/Editor/Panels/InputMap/InputMapPanel",

@@ -9,7 +9,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/Asset/Reference/EditorReferenceIndex.h"
-#include "Editor/Common/Commands/Asset/EditorFolderListing.h"
+#include "Editor/Common/Commands/Asset/EditorFolderListingEntry.h"
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserCrumb.h"
@@ -86,6 +86,8 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    class EditorSourceControl;
+
     struct EditorNewAssetTemplate;
 
     /** @brief 이름이 있는 콘텐츠 루트입니다. 표시 이름과 절대 경로를 가집니다. */
@@ -107,6 +109,22 @@ namespace sw::editor
         using AssetEntry = EditorFolderListingEntry;
 
         ContentBrowserModel() noexcept;
+
+        // ------------------------------------------------------------------------------
+        // 0) 에디터 창구 — MVVM View(`ContentBrowserPanel`)가 작업 공간 · 명령 헤더를 보지 않게 서비스 접근을 여기 모은다(`docs/agents/EditorUI.md`)
+        // ------------------------------------------------------------------------------
+        /** @brief 에셋 @p assetPath(리소스 id 또는 디스크 경로)를 그 종류의 도구로 엽니다. 열지 못하면 false 이고 이유는 알림 · 로그에 남는다. */
+        static bool openAsset( string_view assetPath );
+        /** @brief OS 파일 탐색기에서 @p absolutePath 를 보입니다. */
+        static void showInFileExplorer( string_view absolutePath );
+        /** @brief 버전 관리 창구입니다(잠금 배지 · 체크아웃 메뉴). */
+        [[nodiscard]] static EditorSourceControl& getSourceControl();
+        /** @brief 메인 씬 선택이 가리키는 에셋의 리소스 id 입니다(선택 동기화 — 미리보기 창의 선택은 따르지 않는다). 없으면 빈 글입니다. */
+        [[nodiscard]] static string findMainSelectionAssetID();
+        /** @brief 게임 팩 루트(`GameConfig::_packRoot`)입니다(즐겨찾기 폴더). */
+        [[nodiscard]] static string getGamePackRoot();
+        /** @brief 참조 역색인이 마지막 `Content/` 변경을 반영했으면 @p outCurrent 가 true 입니다. 에디터 컨텍스트가 없으면 false 를 돌려줍니다(감시 값). */
+        [[nodiscard]] static bool readReferenceIndexCurrent( bool& outCurrent );
 
         // ------------------------------------------------------------------------------
         // 1) 프레임 — 창이 내용을 그리기 전에 한 번 부른다

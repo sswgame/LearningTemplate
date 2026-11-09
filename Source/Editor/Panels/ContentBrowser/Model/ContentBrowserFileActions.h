@@ -8,7 +8,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 
-#include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
+#include "Editor/Common/Commands/Asset/EditorAssetMove.h"
 
 namespace sw::editor
 {

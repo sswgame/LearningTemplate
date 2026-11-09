@@ -11,6 +11,7 @@
 #include "Editor/Common/Backend/FileDialog.h"
 #include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
+#include "Editor/Common/Commands/Asset/EditorFolderListing.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Config/EditorPreferences.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
@@ -642,5 +643,42 @@ namespace sw::editor
     bool ContentBrowserModel::isLocked( const AssetEntry& entry )
     {
         return ContentBrowserModelInternal::getSourceControl().findLock( entry._absolutePath ) != nullptr;
+    }
+
+    bool ContentBrowserModel::openAsset( string_view assetPath )
+    {
+        return EditorAssetCommands::openPath( assetPath ); // 실패는 openPath 가 알린다
+    }
+
+    void ContentBrowserModel::showInFileExplorer( string_view absolutePath )
+    {
+        (void)EditorAssetFileCommands::showInFileExplorer( absolutePath ); // 실패는 그 함수가 로그에 남긴다
+    }
+
+    EditorSourceControl& ContentBrowserModel::getSourceControl()
+    {
+        return ContentBrowserModelInternal::getSourceControl();
+    }
+
+    string ContentBrowserModel::findMainSelectionAssetID()
+    {
+        // 선택 동기화: 메인 씬 칸만 따른다 — 미리보기 창(프리팹 창)에서 고른 부품은 콘텐츠 브라우저를 움직이지 않는다(`EditorSelectionSync`).
+        const EditorSelectionSync*      pSync = editor::findSubsystem<EditorSelectionSync>();
+        const EditorSelectionSyncEntry* pMain = pSync != nullptr ? pSync->findLatest( makeSelectionContextBit( EditorSelectionContext::MainScene ) ) : nullptr;
+        return pMain != nullptr ? pMain->_assetPath : string{};
+    }
+
+    string ContentBrowserModel::getGamePackRoot()
+    {
+        return editor::getSubsystem<const GameConfig>()._packRoot.get();
+    }
+
+    bool ContentBrowserModel::readReferenceIndexCurrent( bool& outCurrent )
+    {
+        const EditorContext* pContext = editor::findSubsystem<EditorContext>();
+        if ( pContext == nullptr )
+            return false;
+        outCurrent = pContext->getSubsystem<AssetHotReload>().isReferenceIndexCurrent();
+        return true;
     }
 } // namespace sw::editor

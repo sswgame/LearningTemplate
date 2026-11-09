@@ -8,8 +8,6 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
-#include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Config/EditorPaths.h"
@@ -23,16 +21,10 @@
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetTypeActions.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorRenderViews.h"
-#include "Editor/Common/Workspace/EditorSelectionSync.h"
-#include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Config/GameConfig.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineDefines.h"
@@ -103,10 +95,8 @@ namespace sw::editor
             /** @brief 콘텐츠 브라우저 패널을 반환합니다. 없으면 nullptr 입니다. */
             static const ContentBrowserPanel* findPanel()
             {
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                if ( pContext == nullptr )
-                    return nullptr;
-                return pContext->getSubsystem<EditorPanelManager>().findPanel<ContentBrowserPanel>();
+                EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
+                return pPanels != nullptr ? pPanels->findPanel<ContentBrowserPanel>() : nullptr;
             }
 
             [[nodiscard]] static bool readGameRootCount( const GameObjectManager* /*pManager*/, float64& outValue )
@@ -121,10 +111,10 @@ namespace sw::editor
             /** @brief 감시 값 `Editor.ReferenceIndexReady` — 색인은 에디터 전역(`AssetHotReload`)이라 패널이 닫혀 있어도 값을 낸다. 에디터 컨텍스트가 없으면 값이 없다. */
             [[nodiscard]] static bool readReferenceIndexReady( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                if ( pContext == nullptr )
+                bool bCurrent = false;
+                if ( ContentBrowserModel::readReferenceIndexCurrent( bCurrent ) == false )
                     return false;
-                outValue = pContext->getSubsystem<AssetHotReload>().isReferenceIndexCurrent() ? 1.0 : 0.0;
+                outValue = bCurrent ? 1.0 : 0.0;
                 return true;
             }
 
@@ -142,14 +132,14 @@ namespace sw::editor
             /** @brief `content.open <리소스 폴더>` 명령입니다. 콘텐츠 브라우저를 열고 그 폴더로 이동합니다. 언리얼의 Sync to Content Browser 와 같습니다. */
             static bool runContentOpen( const vector<string>& listArgument, string& outReply )
             {
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                if ( listArgument.size() != 1 || pContext == nullptr )
+                EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
+                if ( listArgument.size() != 1 || pPanels == nullptr )
                     return false;
                 const optional<AbsolutePath> folderPath = EditorPaths::getAssetPaths().findLooseFile( FileUtil::normalizePath( listArgument[0] ) );
                 const string                 folderAbs  = folderPath.has_value() ? folderPath->str() : string{};
-                if ( FileUtil::isDirectory( folderAbs ) == false || pContext->getSubsystem<EditorPanelManager>().setPanelOpen<ContentBrowserPanel>( true ) == false )
+                if ( FileUtil::isDirectory( folderAbs ) == false || pPanels->setPanelOpen<ContentBrowserPanel>( true ) == false )
                     return false;
-                ContentBrowserPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<ContentBrowserPanel>();
+                ContentBrowserPanel* pPanel = pPanels->findPanel<ContentBrowserPanel>();
                 if ( pPanel == nullptr )
                     return false;
                 pPanel->openFolder( folderAbs );
@@ -235,7 +225,7 @@ namespace sw::editor
                 return path.empty() == false && EditorReferenceIndex::isTextAsset( path );
             }
 
-            static void showInExplorer( const EditorCommandTarget& target ) { EditorAssetFileCommands::showInFileExplorer( findTargetPath( target ) ); }
+            static void showInExplorer( const EditorCommandTarget& target ) { ContentBrowserModel::showInFileExplorer( findTargetPath( target ) ); }
 
             static void copyRelativePath( const EditorCommandTarget& target ) { ImGui::SetClipboardText( EditorPaths::getAssetPaths().toAssetID( findTargetPath( target ) ).c_str() ); }
 
@@ -255,7 +245,7 @@ namespace sw::editor
                     pPanel->showReferences( findTargetPath( target ), true );
             }
 
-            static EditorSourceControl& getSourceControl() { return editor::getSubsystem<EditorContext>().getSubsystem<EditorSourceControl>(); }
+            static EditorSourceControl& getSourceControl() { return ContentBrowserModel::getSourceControl(); }
 
             static bool canLock( const EditorCommandTarget& target )
             {
@@ -716,7 +706,7 @@ namespace sw::editor
             {
                 ImGui::Selectable( assetID.c_str(), false, ImGuiSelectableFlags_AllowDoubleClick );
                 if ( EditorInputGUI::wasItemDoubleClicked() )
-                    (void)EditorAssetCommands::openPath( assetID ); // 실패는 openPath 가 알린다
+                    (void)ContentBrowserModel::openAsset( assetID ); // 실패는 openPath 가 알린다
                 EditorWidgets::drawAssetDragSource( assetID.c_str() );
             }
             else
@@ -1009,7 +999,7 @@ namespace sw::editor
         }
         ImGui::EndPopup();
         if ( openPath.empty() == false )
-            (void)EditorAssetCommands::openPath( openPath ); // 실패는 openPath 가 알린다
+            (void)ContentBrowserModel::openAsset( openPath ); // 실패는 openPath 가 알린다
     }
 
     void ContentBrowserPanel::drawContent()
@@ -1087,11 +1077,8 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "AddAsset" ) );
         drawAddMenu();
 
-        // 선택 동기화: 메인 씬 칸만 따른다 — 미리보기 창(프리팹 창)에서 고른 부품은 콘텐츠 브라우저를 움직이지 않는다(`EditorSelectionSync`).
-        const EditorSelectionSync*      pSync = editor::findSubsystem<EditorSelectionSync>();
-        const EditorSelectionSyncEntry* pMain = pSync != nullptr ? pSync->findLatest( makeSelectionContextBit( EditorSelectionContext::MainScene ) ) : nullptr;
-        _syncedAssetID                        = pMain != nullptr ? pMain->_assetPath : string{};
-        const utf8* const pFindSelected       = SW_LOCKEY( "EditorContentBrowser", "FindSelected" );
+        _syncedAssetID                  = ContentBrowserModel::findMainSelectionAssetID(); // 메인 씬 칸만 따른다(미리보기 창의 선택은 아니다)
+        const utf8* const pFindSelected = SW_LOCKEY( "EditorContentBrowser", "FindSelected" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( pFindSelected ) );
         ImGui::BeginDisabled( _syncedAssetID.empty() );
         if ( ImGui::Button( pFindSelected ) && _model.revealAsset( _syncedAssetID ) == false )
@@ -1207,7 +1194,7 @@ namespace sw::editor
         {
             const string fullFavPath = kArrFavorites[favIdx]._bEngine
                                          ? EditorPaths::findContentFolder( FileUtil::joinPath( constant::path::kEnginePack, kArrFavorites[favIdx]._pRelPath ) )
-                                         : EditorPaths::findContentFolder( FileUtil::joinPath( editor::getSubsystem<const GameConfig>()._packRoot.get(), kArrFavorites[favIdx]._pRelPath ) );
+                                         : EditorPaths::findContentFolder( FileUtil::joinPath( ContentBrowserModel::getGamePackRoot(), kArrFavorites[favIdx]._pRelPath ) );
             const bool   bSelected   = FileUtil::pathsEqualNormalized( fullFavPath, _model.getSelectedFolderPath() );
 
             if ( ImGui::Selectable( kArrFavorites[favIdx]._pLabel, bSelected ) )
