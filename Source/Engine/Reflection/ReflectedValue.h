@@ -53,35 +53,37 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 내장 타입의 표 안 자리입니다. 순서는 `ReflectBuiltins.xxx` 의 줄 순서입니다. */
-    struct ReflectBuiltinIndex
+    /**
+     * @brief 내장 타입의 표 안 자리입니다. 순서는 `ReflectBuiltins.xxx` 의 줄 순서입니다.
+     * @details 범위 있는 열거형이라 정수 · -1 감시값과 섞이지 않는다 — "내장 타입이 아님" 은 `kNone`(표 밖, `kCount` 뒤)이다.
+     *          줄 이름(`kint8` · `kbool` …)이 정규 이름에 `k` 를 붙인 것이라(`bool` 은 키워드) 없음도 같은 모양 `kNone` 으로 둔다.
+     */
+    enum class ReflectBuiltinIndex : uint8
     {
-        enum Value : uint8
-        {
 #define SW_REFLECT_BUILTIN_TYPE( Canon, ... ) k##Canon,
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
 #include "Engine/Reflection/ReflectBuiltins.xxx"
 #undef SW_REFLECT_BUILTIN_TYPE
 #undef SW_REFLECT_BUILTIN_CONTAINER
-            kCount
-        };
+        kCount,
+        kNone ///< 내장 타입이 아니다(열거형 · 구조체)
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief C++ 타입 T 의 내장 타입 자리입니다. 내장 타입이 아니면 -1 입니다. */
+    /** @brief C++ 타입 T 의 내장 타입 자리입니다. 내장 타입이 아니면 `ReflectBuiltinIndex::kNone` 입니다. */
     template <typename T>
     struct ReflectBuiltinOf
     {
-        static constexpr int32 kIndex = -1;
+        static constexpr ReflectBuiltinIndex kIndex = ReflectBuiltinIndex::kNone;
     };
 
-#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, ... )                 \
-    template <>                                                        \
-    struct ReflectBuiltinOf<ReflectBuiltinCppTypeT<CppType>>           \
-    {                                                                  \
-        static constexpr int32 kIndex = ReflectBuiltinIndex::k##Canon; \
+#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, ... )                               \
+    template <>                                                                      \
+    struct ReflectBuiltinOf<ReflectBuiltinCppTypeT<CppType>>                         \
+    {                                                                                \
+        static constexpr ReflectBuiltinIndex kIndex = ReflectBuiltinIndex::k##Canon; \
     };
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
 #include "Engine/Reflection/ReflectBuiltins.xxx"
@@ -108,41 +110,41 @@ namespace sw
     /** @brief 리플렉션 값 · 내장 타입 표를 다루는 도우미입니다. 템플릿이 아닌 몸통은 `ReflectedValue.cpp` 에 있습니다. */
     struct SW_API ReflectedValueUtil
     {
-        /** @brief 내장 타입 자리의 갈래입니다(`ReflectBuiltinClass`). 범위 밖 자리는 Other 입니다. */
-        static ReflectBuiltinClass getBuiltinClass( int32 builtinIndex );
+        /** @brief 내장 타입 자리의 갈래입니다(`ReflectBuiltinClass`). 표 밖 자리(`kNone`)는 Other 입니다. */
+        static ReflectBuiltinClass getBuiltinClass( ReflectBuiltinIndex builtinIndex );
         /** @brief 타입 이름의 갈래입니다. 내장 타입이 아니면(열거형 · 구조체) Other 입니다 — Other 는 "그 밖" 갈래라 폴백이 아니다. */
         static ReflectBuiltinClass getBuiltinClass( const hashed_string& typeName );
         /** @brief 내장 타입 자리의 정규 이름(`int32` · `string` · `float3` …)입니다. */
-        static const hashed_string& getBuiltinTypeName( int32 builtinIndex );
+        static const hashed_string& getBuiltinTypeName( ReflectBuiltinIndex builtinIndex );
         /**
-         * @brief 정규 이름의 내장 타입 자리입니다. 내장 타입이 아니면 비어 있습니다(별칭은 `TypeRegistry` 로 정규 이름으로 바꿔 찾습니다).
-         * @details 자리 형식은 `ReflectBuiltinIndex` · `ReflectBuiltinOf<T>::kIndex` 와 같은 int32 라 `findBuiltinIndex( name ) == ReflectBuiltinOf<string>::kIndex` 로 바로 견준다(비어 있으면 false).
+         * @brief 정규 이름의 내장 타입 자리입니다. 내장 타입이 아니면 `ReflectBuiltinIndex::kNone` 입니다(별칭은 `TypeRegistry` 로 정규 이름으로 바꿔 찾습니다).
+         * @details `ReflectBuiltinOf<T>::kIndex` 와 같은 형식이라 `findBuiltinIndex( name ) == ReflectBuiltinOf<string>::kIndex` 로 바로 견준다.
          */
-        [[nodiscard]] static optional<int32> findBuiltinIndex( const hashed_string& typeName );
+        [[nodiscard]] static ReflectBuiltinIndex findBuiltinIndex( const hashed_string& typeName );
         /**
          * @brief 갈래가 Number 인 내장 타입 값 하나(@p pValue)를 float64 로 읽습니다 — 정수 · 실수 · 성분이 하나인 압축 타입.
          * @details 타입 이름 목록을 따로 두지 않는다 — 읽는 길은 `ReflectBuiltins.xxx` 줄마다 하나씩 만들어지고, 표에 줄을 더하면 따라온다.
          *          무한대 · NaN 도 그대로 돌려준다(범위 검사가 밖이라고 판정하게).
          * @return 범위 밖 자리이거나 Number 갈래가 아니면 false(@p outValue 는 그대로)
          */
-        [[nodiscard]] static bool readNumber( int32 builtinIndex, const void* pValue, float64& outValue );
+        [[nodiscard]] static bool readNumber( ReflectBuiltinIndex builtinIndex, const void* pValue, float64& outValue );
         /**
          * @brief 정수 · bool 내장 타입 값 하나(@p pValue)를 int64 로 읽습니다. uint64 는 비트 그대로 int64 로 바꿉니다(2^63 이상은 음수).
          * @return 범위 밖 자리이거나 정수 · bool 이 아니면(실수 · 압축 타입 포함) false(@p outValue 는 그대로)
          */
-        [[nodiscard]] static bool readInteger( int32 builtinIndex, const void* pValue, int64& outValue );
+        [[nodiscard]] static bool readInteger( ReflectBuiltinIndex builtinIndex, const void* pValue, int64& outValue );
         /**
          * @brief 갈래가 Number 인 내장 타입 값 하나(@p pValue)에 @p value 를 씁니다. 정수 타입은 가장 가까운 정수로 반올림합니다.
          * @return 범위 밖 자리 · Number 갈래가 아님 · 그 타입이 담지 못하는 값(정수 · 압축 타입 범위 밖, float32 를 넘는 유한값)이면 false(@p pValue 는 그대로)
          */
-        [[nodiscard]] static bool writeNumber( int32 builtinIndex, void* pValue, float64 value );
+        [[nodiscard]] static bool writeNumber( ReflectBuiltinIndex builtinIndex, void* pValue, float64 value );
         /** @brief 내장 타입 값 하나(@p pValue)를 사람이 읽는 글로 씁니다(`formatText` 와 같은 서식). 범위 밖 자리는 빈 글입니다. */
-        static string formatBuiltin( int32 builtinIndex, const void* pValue );
+        static string formatBuiltin( ReflectBuiltinIndex builtinIndex, const void* pValue );
         /**
          * @brief @p in 을 @p builtinIndex 내장 타입의 값으로 바꿉니다 — 숫자끼리 형 변환, 글은 읽기, 숫자는 글로.
          * @return 바꿀 수 없으면 false(@p outValue 는 그대로)
          */
-        [[nodiscard]] static bool convertToBuiltin( const ReflectedValue& in, int32 builtinIndex, TaskValue& outValue );
+        [[nodiscard]] static bool convertToBuiltin( const ReflectedValue& in, ReflectBuiltinIndex builtinIndex, TaskValue& outValue );
         /**
          * @brief @p in 을 열거형 @p enumTypeName 의 값으로 읽습니다 — 같은 열거형 · 정수(알려진 값만) · 이름 글.
          * @return 읽지 못하면 false
@@ -168,7 +170,7 @@ namespace sw
     template <typename T>
     hashed_string getReflectTypeName()
     {
-        if constexpr ( ReflectBuiltinOf<T>::kIndex >= 0 )
+        if constexpr ( ReflectBuiltinOf<T>::kIndex != ReflectBuiltinIndex::kNone )
             return ReflectedValueUtil::getBuiltinTypeName( ReflectBuiltinOf<T>::kIndex );
         else
             return typeFqn<T>();
@@ -257,7 +259,7 @@ namespace sw
                 outValue = in._value;
                 return true;
             }
-            if constexpr ( ReflectBuiltinOf<T>::kIndex >= 0 )
+            if constexpr ( ReflectBuiltinOf<T>::kIndex != ReflectBuiltinIndex::kNone )
                 return ReflectedValueUtil::convertToBuiltin( in, ReflectBuiltinOf<T>::kIndex, outValue );
             else if constexpr ( std::is_enum_v<T> )
             {

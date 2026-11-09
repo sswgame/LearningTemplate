@@ -32,8 +32,7 @@ namespace sw
                 return true;
             }
             // 정수 · bool 판정은 내장 타입 표 한 곳(`ReflectedValueUtil::readInteger`)이 한다 — 이름 목록을 여기 두지 않는다.
-            const optional<int32> builtinIndex = ReflectedValueUtil::findBuiltinIndex( subject._typeName );
-            return builtinIndex.has_value() && ReflectedValueUtil::readInteger( *builtinIndex, pValue, outValue );
+            return ReflectedValueUtil::readInteger( ReflectedValueUtil::findBuiltinIndex( subject._typeName ), pValue, outValue ); // kNone 이면 false
         }
     } // namespace
 } // namespace sw

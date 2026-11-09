@@ -394,7 +394,7 @@ SW_TEST_CASE( PackedValueSerializationTest, BuiltinClassFollowsTheTable )
     SW_EXPECT_TRUE( classOf( "bool" ) == ReflectBuiltinClass::Bool );
     SW_EXPECT_TRUE( classOf( "string" ) == ReflectBuiltinClass::Text );
     SW_EXPECT_TRUE( classOf( "hashed_string" ) == ReflectBuiltinClass::Text );
-    SW_EXPECT_TRUE( ReflectedValueUtil::getBuiltinClass( -1 ) == ReflectBuiltinClass::Other );
+    SW_EXPECT_TRUE( ReflectedValueUtil::getBuiltinClass( ReflectBuiltinIndex::kNone ) == ReflectBuiltinClass::Other );
 }
 
 /**
@@ -404,7 +404,11 @@ SW_TEST_CASE( PackedValueSerializationTest, BuiltinClassFollowsTheTable )
 SW_TEST_CASE( PackedValueSerializationTest, ReadNumberFollowsTheBuiltinTable )
 {
     const auto indexOf = []( const utf8* pName )
-    { return ReflectedValueUtil::findBuiltinIndex( hashed_string( pName ) ).value(); };
+    {
+        const ReflectBuiltinIndex builtinIndex = ReflectedValueUtil::findBuiltinIndex( hashed_string( pName ) );
+        SW_ASSERT( builtinIndex != ReflectBuiltinIndex::kNone );
+        return builtinIndex;
+    };
     float64 number{ 0.0 };
     int64   integer{ 0 };
 
@@ -432,7 +436,7 @@ SW_TEST_CASE( PackedValueSerializationTest, ReadNumberFollowsTheBuiltinTable )
     SW_EXPECT_FALSE( ReflectedValueUtil::readNumber( indexOf( "bool" ), &flag, number ) );
     SW_EXPECT_FALSE( ReflectedValueUtil::readNumber( indexOf( "string" ), &text, number ) );
     SW_EXPECT_FALSE( ReflectedValueUtil::readNumber( indexOf( "half2" ), &halfPair, number ) );
-    SW_EXPECT_FALSE( ReflectedValueUtil::readNumber( -1, &floatValue, number ) );
+    SW_EXPECT_FALSE( ReflectedValueUtil::readNumber( ReflectBuiltinIndex::kNone, &floatValue, number ) );
     SW_EXPECT_FALSE( ReflectedValueUtil::readNumber( indexOf( "float32" ), nullptr, number ) );
     SW_EXPECT_EQUAL( -1.0, number );
 
@@ -447,7 +451,7 @@ SW_TEST_CASE( PackedValueSerializationTest, ReadNumberFollowsTheBuiltinTable )
 
     // 글 갈래는 표의 서식으로 보인다(탐침 `Object.Property` 의 글).
     SW_EXPECT_EQUAL( string( "3" ), ReflectedValueUtil::formatBuiltin( indexOf( "string" ), &text ) );
-    SW_EXPECT_TRUE( ReflectedValueUtil::formatBuiltin( -1, &text ).empty() );
+    SW_EXPECT_TRUE( ReflectedValueUtil::formatBuiltin( ReflectBuiltinIndex::kNone, &text ).empty() );
 }
 
 /**
@@ -457,7 +461,11 @@ SW_TEST_CASE( PackedValueSerializationTest, ReadNumberFollowsTheBuiltinTable )
 SW_TEST_CASE( PackedValueSerializationTest, WriteNumberRoundsAndRejectsWhatTheTypeCannotHold )
 {
     const auto indexOf = []( const utf8* pName )
-    { return ReflectedValueUtil::findBuiltinIndex( hashed_string( pName ) ).value(); };
+    {
+        const ReflectBuiltinIndex builtinIndex = ReflectedValueUtil::findBuiltinIndex( hashed_string( pName ) );
+        SW_ASSERT( builtinIndex != ReflectBuiltinIndex::kNone );
+        return builtinIndex;
+    };
 
     // 정수는 가장 가까운 정수로, 범위 밖은 거절하고 값을 그대로 둔다.
     int16 smallValue = 0;

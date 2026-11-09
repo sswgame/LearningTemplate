@@ -15,7 +15,7 @@ namespace sw
         struct ReflectionInvokeInternal
         {
             /** @brief 숫자 · bool 로 서로 바꿀 수 있는 내장 타입인지 봅니다. */
-            static bool isNumericBuiltin( const int32 builtinIndex ) noexcept
+            static bool isNumericBuiltin( const ReflectBuiltinIndex builtinIndex ) noexcept
             {
                 switch ( builtinIndex )
                 {
@@ -46,13 +46,13 @@ namespace sw
                 const hashed_string toName   = to._pType->_pGetTypeName();
                 if ( fromName == toName )
                     return true;
-                const optional<int32> fromBuiltin = ReflectedValueUtil::findBuiltinIndex( fromName );
-                const optional<int32> toBuiltin   = ReflectedValueUtil::findBuiltinIndex( toName );
-                if ( fromBuiltin.has_value() == false || toBuiltin.has_value() == false )
+                const ReflectBuiltinIndex fromBuiltin = ReflectedValueUtil::findBuiltinIndex( fromName );
+                const ReflectBuiltinIndex toBuiltin   = ReflectedValueUtil::findBuiltinIndex( toName );
+                if ( fromBuiltin == ReflectBuiltinIndex::kNone || toBuiltin == ReflectBuiltinIndex::kNone )
                     return false; // 이름이 다른 열거형 · 구조체끼리는 넘기지 않는다
-                if ( *toBuiltin == ReflectBuiltinIndex::kstring )
+                if ( toBuiltin == ReflectBuiltinIndex::kstring )
                     return true;
-                return isNumericBuiltin( *fromBuiltin ) && isNumericBuiltin( *toBuiltin );
+                return isNumericBuiltin( fromBuiltin ) && isNumericBuiltin( toBuiltin );
             }
 
             /** @brief 빠진 인자를 기본 인자로 채웁니다. 기본 인자가 없거나 읽지 못하면 false 입니다. */

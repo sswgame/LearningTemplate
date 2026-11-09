@@ -47,10 +47,10 @@ namespace sw
             {
                 if ( parameter._pType == nullptr )
                     return false;
-                const hashed_string   typeName     = parameter._pType->_pGetTypeName();
-                const optional<int32> builtinIndex = ReflectedValueUtil::findBuiltinIndex( typeName );
-                if ( builtinIndex.has_value() )
-                    return ReflectedValueUtil::getBuiltinClass( *builtinIndex ) != ReflectBuiltinClass::Other;
+                const hashed_string       typeName     = parameter._pType->_pGetTypeName();
+                const ReflectBuiltinIndex builtinIndex = ReflectedValueUtil::findBuiltinIndex( typeName );
+                if ( builtinIndex != ReflectBuiltinIndex::kNone )
+                    return ReflectedValueUtil::getBuiltinClass( builtinIndex ) != ReflectBuiltinClass::Other;
                 return game::getSubsystem<TypeRegistry>().findEnum( typeName ) != nullptr;
             }
 
