@@ -218,8 +218,9 @@ void storeDisplacedVaryings( inout MaterialInterpolants output, MaterialControlP
     const float  offset        = Displacement::computeOffset( height, material._displacementScale, material._displacementMidLevel );
     const float4 worldPosition = float4( controlPoint._worldPosition + normalize( controlPoint._normal ) * offset, 1.0f );
 
-    MaterialInterpolants output;
-    output._position = Transform::computeClipPosition( worldPosition, View::getViewProjection() );
+    // 0 으로 시작한다 — 칸 채우기(storeDisplaced*)가 inout 으로 받아 일부만 쓰므로 FXC(DX11)는 덜 채운 구조체를 넘긴다고 거절한다(X3508).
+    MaterialInterpolants output = (MaterialInterpolants)0;
+    output._position            = Transform::computeClipPosition( worldPosition, View::getViewProjection() );
     storeDisplacedVaryings( output, controlPoint, worldPosition.xyz );
 #if SW_WRITES_VELOCITY && !defined( SW_MATERIAL_DEPTH_ONLY )
     // 화면 속도 — 지난 위치에도 같은 변위를 더한다(높이 맵은 시간에 따라 바뀌지 않는다). 픽셀 단계가 두 클립 위치로 속도를 만든다.

@@ -81,10 +81,11 @@ namespace sw
         {
             RenderFramePacket   _packet;
             SceneCaptureRequest _request;
-            SceneCaptureResult* _pResult{ nullptr };  ///< 마지막 장이면 읽어 담을 곳, 아니면 nullptr
-            bool                _bSucceeded{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            bool                _bReadNow{ false };   ///< 이 장을 다 그렸으면 읽는다(씬 쪽 남은 일이 0 이다 — 렌더 쪽은 렌더 스레드가 그린 뒤 본다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            bool                _bRead{ false };      ///< 읽었다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            SceneCaptureResult* _pResult{ nullptr };     ///< 마지막 장이면 읽어 담을 곳, 아니면 nullptr
+            bool                _bSucceeded{ false };    ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                _bReadNow{ false };      ///< 이 장을 다 그렸으면 읽는다(씬 쪽 남은 일이 0 이다 — 렌더 쪽은 렌더 스레드가 그린 뒤 본다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            uint32              _pendingPSOBatches{ 0 }; ///< (렌더 스레드가 적는다) 이 장에서 PSO 를 만드는 중이라 건너뛴 묶음 수 — 0 보다 크면 셰이더가 컴파일되는 중이다
+            bool                _bRead{ false };         ///< 읽었다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         /** @brief (렌더 스레드) 일감의 패킷을 출력 타깃에 한 장 그리고, 읽을 곳이 있으면 읽습니다. */

@@ -408,14 +408,19 @@ namespace sw
                 inoutState.enterHeadless();
                 string cookedDir;
                 commandLine.getArgument( CommandLineArgument::COOKED_DIR, cookedDir );
+                // 굽기와 같은 규칙 — 명령줄 백엔드(`-dx12` …)를 주면 그 형식만, 주지 않으면 네 형식 모두를 본다(그 형식만 구운 폴더를 다른 형식으로 판정하지 않는다).
+                RHIBackend                commandLineBackend{};
+                const bool                bOneBackend = RHI::findCommandLineBackend( commandLine, commandLineBackend );
                 IShaderCookService* const pService    = requireShaderCookService( "--verify-shaders" );
                 bool                      bAllCurrent = pService != nullptr;
                 for ( const RHIBackendInfo& info : RHIBackendInfoTable::kArrInfo )
                 {
+                    if ( bOneBackend && info._shaderTarget != RHI::getShaderTargetFormat( commandLineBackend ) )
+                        continue;
                     bAllCurrent = pService != nullptr && pService->verifyCookedShaders( cookedDir, info._shaderTarget ) && bAllCurrent;
                 }
                 if ( bAllCurrent )
-                    SW_LOG_INFO_ID( "Headless.CookedShaderBinariesMatch", "Cooked shader binaries in '%#' match their sources for every backend", cookedDir );
+                    SW_LOG_INFO_ID( "Headless.CookedShaderBinariesMatch", "Cooked shader binaries in '%#' match their sources for %#", cookedDir, bOneBackend ? "the command-line backend" : "every backend" );
                 inoutState._bFailed = bAllCurrent == false;
                 return true;
             }

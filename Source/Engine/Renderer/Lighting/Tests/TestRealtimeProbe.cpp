@@ -424,8 +424,10 @@ SW_TEST_CASE( RealtimeProbeTest, GIExtrasDefaultToOff )
  */
 SW_TEST_CASE( RealtimeProbeTest, CollectsRealtimeVolumeWithPlaceholderAndRequest )
 {
-    sw::Scene              scene( "RealtimeProbeCollect" );
-    sw::GameObjectManager* pObjects = scene.getObjectManager();
+    // 벽 머티리얼은 씬보다 먼저 만든다(메시가 원시 포인터로 든다) — 이 씬에는 기본 머티리얼이 없어 머티리얼을 비운 메시는 그려지지도 가리지도 않는다(`Material::resolveDrawMaterial`).
+    const sw::shared_ptr<sw::Material> wall = makeOpaqueMaterial();
+    sw::Scene                          scene( "RealtimeProbeCollect" );
+    sw::GameObjectManager*             pObjects = scene.getObjectManager();
     SW_REQUIRE_NOT_NULL( pObjects );
     sw::GameObject* pVolumeObject = pObjects->createGameObject( sw::hashed_string( "Volume" ) );
     SW_REQUIRE_NOT_NULL( pVolumeObject );
@@ -434,7 +436,7 @@ SW_TEST_CASE( RealtimeProbeTest, CollectsRealtimeVolumeWithPlaceholderAndRequest
     pVolume->setExtent( sw::float3{ 4.0f, 2.0f, 4.0f } );
     pVolume->setSpacing( 2.0f );
     pVolume->setRealtime( true );
-    SW_REQUIRE_NOT_NULL( addCube( pObjects, "Wall", sw::float3{ 0.0f, 0.0f, 0.0f }, nullptr, true ) );
+    SW_REQUIRE_NOT_NULL( addCube( pObjects, "Wall", sw::float3{ 0.0f, 0.0f, 0.0f }, wall.get(), true ) );
 
     sw::vector<sw::GPULight>             listLight;
     sw::LightProbeElementBuilder         probeElement;
@@ -465,7 +467,7 @@ SW_TEST_CASE( RealtimeProbeTest, CollectsRealtimeVolumeWithPlaceholderAndRequest
     SW_REQUIRE_EQUAL( size_t( 1 ), again.size() );
     SW_EXPECT_TRUE( again[0]._pVoxelGrid == request._pVoxelGrid );
     SW_EXPECT_TRUE( probeElement.getElements() == pProbe );
-    SW_REQUIRE_NOT_NULL( addCube( pObjects, "Second", sw::float3{ 1.0f, 0.0f, 0.0f }, nullptr, true ) );
+    SW_REQUIRE_NOT_NULL( addCube( pObjects, "Second", sw::float3{ 1.0f, 0.0f, 0.0f }, wall.get(), true ) );
     collectSceneLights( &scene, listLight, nullptr, &probeElement, nullptr, &again );
     SW_REQUIRE_EQUAL( size_t( 1 ), again.size() );
     SW_EXPECT_TRUE( again[0]._pVoxelGrid != request._pVoxelGrid );

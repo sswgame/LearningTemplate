@@ -44,6 +44,8 @@
 	<EditorClick mark="contentBrowser.findSelected"/>
 	<EditorWaitSettled/>
 	<Remember watch="Editor.SelectionSyncMainSequence" as="mainSequence"/>
+	<!-- 미리보기 칸 번호는 프리팹 창을 열기 전에 적는다 — 창은 열며 루트를 고른다(유니티 프리팹 모드와 같다). 연 뒤에 적으면 같은 부품을 다시 눌러도 번호가 그대로다. -->
+	<Remember watch="Editor.SelectionSyncPreviewSequence" as="previewSequence"/>
 	<!-- ② 미리보기 창: 프리팹 창의 부품을 골라도 메인 씬 칸 · 메인 선택은 그대로다 -->
 	<DevCommand line="content.open game/empty/prefabs"/>
 	<EditorWaitSettled/>
@@ -57,7 +59,6 @@
 	<EditorClick mark="contentBrowser.asset.testprop.prefab.xml"/>
 	<WaitUntil watch="Editor.PanelOpen" equals="1" timeoutFrames="300"/>
 	<EditorWaitSettled/>
-	<Remember watch="Editor.SelectionSyncPreviewSequence" as="previewSequence"/>
 	<EditorClick mark="prefabwindow.child.TestProp"/>
 	<WaitUntil watch="Editor.SelectionSyncPreviewSequence" differsFrom="previewSequence" timeoutFrames="60"/>
 	<Expect watch="Editor.SelectionSyncMainSequence" sameAs="mainSequence"/>

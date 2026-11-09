@@ -49,7 +49,9 @@
 	<DevCommand line="matparam engine/materials/weather.matparams.xml Weather 0 0 0 0"/>
 	<Wait frames="2"/>
 	<ExpectImagesDiffer first="surfacelibrary_terrain_clear.ppm" second="surfacelibrary_terrain_rain.ppm" region="0,0.4,1,1" minDiffering="0.1"/>
-	<ExpectImagesDiffer first="surfacelibrary_terrain_clear.ppm" second="surfacelibrary_terrain_snow.ppm" region="0,0.2,1,1" minDiffering="0.1"/>
+	<!-- 설선(Weather.w 18 m) 위만 눈이 덮인다 — 높은 산(화면 왼쪽 위)은 바뀌고, 설선 아래 들판(화면 아래 절반)은 그대로여야 한다. -->
+	<ExpectImagesDiffer first="surfacelibrary_terrain_clear.ppm" second="surfacelibrary_terrain_snow.ppm" region="0,0.15,0.4,0.35" minDiffering="0.2"/>
+	<ExpectImagesDiffer first="surfacelibrary_terrain_clear.ppm" second="surfacelibrary_terrain_snow.ppm" region="0,0.5,1,1" minDiffering="0" maxDiffering="0.01"/>
 	<ExpectImage file="surfacelibrary_terrain_clear.ppm" golden="terrain_clear"/>
 	<ExpectImage file="surfacelibrary_terrain_rain.ppm" golden="terrain_rain"/>
 	<ExpectImage file="surfacelibrary_terrain_snow.ppm" golden="terrain_snow"/>

@@ -213,9 +213,10 @@ if(TARGET OnlineLoadBot)
 	endif()
 endif()
 
-# 셰이더 캐시 — DDC 와 쿠킹 스테이징을 모두 지운 뒤 굽고 판정한다(`Shader/RunShaderCacheRebuild.cmake`). DDC 는 빌드 폴더가 함께 쓰는 자리라 다른 테스트와 나란히 돌지 않는다.
+# 셰이더 캐시 — 제 DDC(`-shader-ddc-dir`)와 쿠킹 스테이징을 지운 뒤 굽고 판정한다(`Shader/RunShaderCacheRebuild.cmake`). 빌드 폴더가 함께 쓰는 DDC 는 건드리지 않는다 —
+# 지우면 뒤에 도는 시나리오 체인이 모두 빈 캐시로 돌아 백엔드마다 실행 시한에 걸렸다.
 add_test(NAME ShaderCache.RebuildFromEmpty
-	COMMAND ${CMAKE_COMMAND} -DAPP=$<TARGET_FILE:App> "-DDDC_DIR=${CMAKE_BINARY_DIR}/Bin/Saved/ShaderCompileCache"
+	COMMAND ${CMAKE_COMMAND} -DAPP=$<TARGET_FILE:App> "-DDDC_DIR=${CMAKE_BINARY_DIR}/Testing/ShaderCache/DDC"
 		"-DCOOKED_DIR=${CMAKE_BINARY_DIR}/Testing/ShaderCache/Cooked" "-DLOG_DIR=${CMAKE_BINARY_DIR}/Testing/Logs"
 		-P "${CMAKE_CURRENT_SOURCE_DIR}/Shader/RunShaderCacheRebuild.cmake"
 	WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")

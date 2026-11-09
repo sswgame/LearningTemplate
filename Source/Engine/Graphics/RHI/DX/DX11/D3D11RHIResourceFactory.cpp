@@ -13,6 +13,7 @@
 #include "Engine/Graphics/RHI/DX/DXGIFormat.h"
 #include "Engine/Graphics/RHI/DX/RHIDxRenderState.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
+#include "Engine/Graphics/RHI/RHIFormatInfo.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 
@@ -609,6 +610,12 @@ namespace sw
         {
             SW_LOG_ERROR_ID( "D3D11.CreateTexture2DDimensionSlicesX", "createTexture2D: dimension %# with %# slices (%#x%#) is not a valid texture shape", static_cast<uint32>( desc._dimension ),
                              desc._arraySize, desc._width, desc._height );
+            return 0;
+        }
+        // 이 장치가 샘플링하지 못하는 압축 형식(데스크톱의 ASTC · ETC2)은 드라이버에 넘기지 않는다 — 넘기면 D3D12 는 실패, Vulkan 드라이버는 0 나누기로 죽었다.
+        if ( isRHIFormatBlockCompressed( desc._format ) && _pDevice->supportsTextureFormat( desc._format ) == false )
+        {
+            SW_LOG_ERROR_ID( "D3D11.CreateTexture2DFormatUnsupported", "createTexture2D: this device cannot sample format %# (%#x%#) - the texture is not created", static_cast<uint32>( desc._format ), desc._width, desc._height );
             return 0;
         }
 

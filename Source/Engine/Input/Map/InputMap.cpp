@@ -1578,9 +1578,27 @@ namespace sw
         const bool bIsModifierKey = ( key == Key::LeftControl || key == Key::RightControl || key == Key::LeftShift || key == Key::RightShift || key == Key::LeftAlt || key == Key::RightAlt || key == Key::LeftSuper || key == Key::RightSuper );
         if ( bIsModifierKey )
             return false;
-        const bool bCtrlHeld = isKeyboardKeyDown( Key::LeftControl, read ) || isKeyboardKeyDown( Key::RightControl, read );
-        const bool bAltHeld  = isKeyboardKeyDown( Key::LeftAlt, read ) || isKeyboardKeyDown( Key::RightAlt, read );
-        return bCtrlHeld || bAltHeld;
+        const bool bCtrlHeld  = isKeyboardKeyDown( Key::LeftControl, read ) || isKeyboardKeyDown( Key::RightControl, read );
+        const bool bAltHeld   = isKeyboardKeyDown( Key::LeftAlt, read ) || isKeyboardKeyDown( Key::RightAlt, read );
+        const bool bShiftHeld = isKeyboardKeyDown( Key::LeftShift, read ) || isKeyboardKeyDown( Key::RightShift, read );
+        const bool bSuperHeld = isKeyboardKeyDown( Key::LeftSuper, read ) || isKeyboardKeyDown( Key::RightSuper, read );
+        if ( bCtrlHeld || bAltHeld )
+            return true;
+        if ( ( bShiftHeld == false && bSuperHeld == false ) || binding._modifierMask != 0 )
+            return false; // 조합 바인딩 자신은 정확 일치(`areShortcutModifiersExact`)가 맡는다
+        // Shift · Super 는 혼자서는 맨 키를 막지 않는다(Shift 달리기 + WASD). 다만 같은 키에 지금 눌린 수정 키와 꼭 맞는 조합 바인딩이 있으면 그것이 이긴다 —
+        // 맨 Z 와 Shift+Z 가 함께 발화해 서로 지웠다(배치 회전). 언리얼 Enhanced Input 의 코드 막기(Chord Blocker)와 같은 자리다.
+        const uint8 heldMask = static_cast<uint8>( ( bShiftHeld ? ModifierKey::Shift : 0 ) | ( bSuperHeld ? ModifierKey::Super : 0 ) );
+        for ( const ActionEntry& entry : _listActionEntry )
+        {
+            for ( const ActionBinding& other : entry._listBinding )
+            {
+                const bool bSameKey = other._arrSlot[0]._deviceKind == InputDeviceKind::Keyboard && other._arrSlot[0]._controlIndex == binding._arrSlot[0]._controlIndex;
+                if ( bSameKey && other._modifierMask == heldMask )
+                    return true;
+            }
+        }
+        return false;
     }
 
     bool InputMap::evaluateGamepadStick( const ActionBinding& binding, float2& outValue ) const

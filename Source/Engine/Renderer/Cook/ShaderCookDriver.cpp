@@ -471,6 +471,9 @@ namespace sw
         {
             Internal::planRequest( request, listTargetFormat, state, listTask );
         }
+        // 굽기 전에 할 일의 수를 알린다 — 빈 캐시에서는 한 시간 남짓 걸리는데 전체를 모르면 얼마나 남았는지 알 수 없었다(줄마다의 `CookedShader` 와 견준다).
+        SW_LOG_INFO_ID( "ShaderCooker.PlannedTasks", "Planned %# shader cook tasks from %# requests across %# format(s)", static_cast<uint32>( listTask.size() ), static_cast<uint32>( listRequest.size() ),
+                        static_cast<uint32>( listTargetFormat.size() ) );
         vector<Internal::FormatResult> listResult;
         Internal::cookTasks( listTask, bForceAll, state, listResult );
         Internal::mergeResults( listTask, listResult, state );

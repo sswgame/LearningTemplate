@@ -70,6 +70,9 @@ SW_REGISTER_ARGUMENT( COOK_ALL, false, false, "cook-all" )
 // `-cook-scenes` · `-cook-packs` · `-cook-all` 이 쿠킹 결과를 쓸 스테이징 폴더
 SW_REGISTER_ARGUMENT( COOKED_DIR, CommandLineDiskPath{}, false, "cooked-dir" )
 
+// 셰이더 DDC 폴더(기본은 실행 파일 폴더의 `Saved/ShaderCompileCache`) — 빈 캐시에서 굽기를 보는 테스트가 빌드 폴더가 함께 쓰는 DDC 를 지우지 않게 제 폴더를 준다
+SW_REGISTER_ARGUMENT( SHADER_DDC_DIR, CommandLineDiskPath{}, false, "shader-ddc-dir" )
+
 // `-cook-packs` · `-cook-all` 이 팩을 쓸 폴더
 SW_REGISTER_ARGUMENT( PACK_DIR, CommandLineDiskPath{}, false, "pack-dir" )
 

@@ -518,7 +518,7 @@ namespace sw
         const ActionEntry* getActionFromHandle( ActionHandle handle ) const;
 
         bool evaluateBindingDown( const ActionBinding& binding, float2& outValue, SlotRead read = SlotRead::Game ) const;
-        /** @brief 단일 키 바인딩이 수정 키(Ctrl · Alt)가 눌린 동안 물러나야 하는지 봅니다(`_bSuppressBaseActionOnChord`). */
+        /** @brief 단일 키 바인딩이 수정 키(Ctrl · Alt — 또는 같은 키의 Shift · Super 조합 바인딩이 지금 맞을 때)가 눌린 동안 물러나야 하는지 봅니다(`_bSuppressBaseActionOnChord`). */
         bool isBaseKeySuppressedByModifier( const ActionBinding& binding, SlotRead read ) const;
         /** @brief 게임패드 스틱 바인딩의 값을 데드존 · 응답 곡선 · 감도를 적용해 읽습니다. 연결이 없으면 false 입니다. */
         bool evaluateGamepadStick( const ActionBinding& binding, float2& outValue ) const;

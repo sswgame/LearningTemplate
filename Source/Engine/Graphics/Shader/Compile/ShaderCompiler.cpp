@@ -3,6 +3,7 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/File/FileUtil.h"
@@ -165,6 +166,10 @@ namespace sw
              */
             static string getShaderCacheDirectory()
             {
+                // `-shader-ddc-dir=<폴더>` 가 있으면 그 폴더다 — 빈 캐시 굽기 테스트(ShaderCache.RebuildFromEmpty)가 함께 쓰는 DDC 를 지우면 그 뒤의 시나리오가 모두 빈 캐시로 돌았다.
+                string ddcDir;
+                if ( engine::areEngineServicesBound() && engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::SHADER_DDC_DIR, ddcDir ) && ddcDir.empty() == false )
+                    return FileUtil::normalizeSeparators( ddcDir );
                 return FileUtil::normalizeSeparators( FileUtil::joinPath( ProcessRoots::get()._saved.str(), "ShaderCompileCache" ) );
             }
 

@@ -21,7 +21,11 @@ namespace sw
     {
         struct SceneCaptureInternal
         {
-            /** @brief 다 그려진 장을 기다리는 시한(초)입니다. 첫 실행의 셰이더 캐시 없는 빌드(DX11 머티리얼 변형 하나에 수백 ms)와 텍스처 읽기보다 넉넉하다. */
+            /**
+             * @brief 진척 없이 다 그려진 장을 기다리는 시한(초)입니다 — 머티리얼 PSO 를 만드는 중인 장(셰이더 컴파일 중)마다 다시 센다.
+             * @details 벽시계로만 재면 빈 셰이더 캐시의 첫 실행(GL · DX11 은 변형마다 수 초)이 일하는 중에 실패했다. 언리얼 썸네일 · 초상화도 셰이더 컴파일을 끝까지 기다린 뒤 찍는다.
+             *          컴파일은 끝나거나 실패로 끝난다(실패한 변형은 '만드는 중' 이 아니다) — 이 시한은 씬 쪽 일(에셋)이 멈춘 경우를 잡는다.
+             */
             static constexpr int64 kReadyWaitSeconds = 30;
         };
     } // namespace
@@ -75,11 +79,12 @@ namespace sw
         outResult = SceneCaptureResult{};
         if ( _pRenderThread == nullptr )
             return false;
-        _job._request             = request;
-        _job._bSucceeded          = true;
-        _job._bRead               = false;
-        _job._pResult             = &outResult;
-        const int64 deadlineMicro = MonotonicClock::nowMicroseconds() + SceneCaptureInternal::kReadyWaitSeconds * constant::time::kMicrosecondsPerSecond;
+        _job._request           = request;
+        _job._bSucceeded        = true;
+        _job._bRead             = false;
+        _job._pendingPSOBatches = 0;
+        _job._pResult           = &outResult;
+        int64 deadlineMicro     = MonotonicClock::nowMicroseconds() + SceneCaptureInternal::kReadyWaitSeconds * constant::time::kMicrosecondsPerSecond;
         while ( _job._bSucceeded && _job._bRead == false )
         {
             if ( MonotonicClock::nowMicroseconds() > deadlineMicro )
@@ -95,6 +100,8 @@ namespace sw
             _job._bReadNow         = CaptureReadiness::countPendingSceneWork( scene.getObjectManager() ) == 0;
             const bool bRan        = _pRenderThread->executeAndWait( SW_DELEGATE_METHOD( RenderCommandDelegate, &SceneCapture::renderFrameOnRenderThread, this ) );
             _job._bSucceeded       = bRan && _job._bSucceeded;
+            if ( _job._pendingPSOBatches > 0 ) // 셰이더를 컴파일하는 중이다 — 진척이 있으니 시한을 다시 센다
+                deadlineMicro = MonotonicClock::nowMicroseconds() + SceneCaptureInternal::kReadyWaitSeconds * constant::time::kMicrosecondsPerSecond;
         }
         _job._pResult = nullptr;
         _scene.shutdown(); // 씬의 소유(메시 · 머티리얼)를 여기서 놓는다 — 씬보다 먼저 사라지는 쪽이 놓아야 한다
@@ -128,6 +135,7 @@ namespace sw
             _job._bSucceeded = false;
             return;
         }
+        _job._pendingPSOBatches = pRenderer->getLastPendingPSOBatchCount();
         // 다 그려진 장만 읽는다 — 씬 쪽 남은 일(게임 스레드가 보고 넘겼다)과 이 렌더러가 빠뜨린 배치(`CaptureReadiness`). 아니면 다음 장을 그린다(`capture`).
         if ( _job._bReadNow == false || CaptureReadiness::isFrameComplete( *pRenderer ) == false )
             return;

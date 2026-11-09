@@ -2,11 +2,13 @@
 
 #include "Editor/Common/Commands/Asset/EditorFolderListing.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/File/FileUtil.h"
 
 #include "Editor/Common/Workspace/EditorStateStore.h"
 
+#include "Engine/Asset/Cook/AssetCompanion.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineDefines.h"
 
@@ -78,6 +80,20 @@ namespace sw::editor
                 return;
             EditorFolderListingInternal::appendFolderListingEntry( outList, file, false, rootNorm );
         }
+        // 곁 파일(텍스처 형식 변형 · 파생 데이터 — `SW_ASSET_COMPANION`)은 원본 에셋의 일부다 — 따로 보이지 않는다. 보이면 썸네일 · 열기가 이 플랫폼이 못 읽는
+        // 형식(ASTC · ETC2 를 데스크톱 D3D12)을 텍스처로 만들다 실패했다(언리얼 콘텐츠 브라우저도 플랫폼 파생 데이터를 에셋으로 보이지 않는다).
+        vector<string> listCompanion;
+        for ( const EditorFolderListingEntry& entry : outList )
+        {
+            if ( entry._bIsDirectory == false )
+                AssetCompanionRegistry::appendCompanionPaths( entry._relativePath, listCompanion );
+        }
+        for ( string& companion : listCompanion )
+        {
+            companion = FileUtil::normalizePath( companion );
+        }
+        (void)VectorUtil::removeIf( outList, [&listCompanion]( const EditorFolderListingEntry& entry )
+        { return entry._bIsDirectory == false && VectorUtil::contains( listCompanion, FileUtil::normalizePath( entry._relativePath ) ); } );
     }
 
     void EditorFolderListing::collectChildFolders( string_view folderAbs, vector<string>& outList )

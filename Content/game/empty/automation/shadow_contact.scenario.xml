@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  접촉 그림자 — 같은 무대를 접촉 그림자 없이(maps/shadowtest — 패스가 돌지 않는다)와 해 · 점광의 접촉 그림자를 켜고(maps/shadowtest_contact) 찍어 둘이 다른지 보고, 두 장을 골든으로 지킨다.
+  접촉 그림자 — 같은 무대를 접촉 그림자 없이(maps/shadowtest — 패스가 돌지 않는다)와 해 · 점광의 접촉 그림자를 켜고(maps/shadowtest_contact) 찍고 켠 무대의 접촉 그림자 마스크(gpu.show ContactShadowMask)를 골든으로 지키고, 두 장을 골든으로 지킨다.
   디퍼드(G버퍼 뒤 ContactShadow 패스)를 찍는다 — 포워드 깊이 프리패스 파이프라인(forwardprepasspipeline.xml)도 같은 패스 · 같은 마스크를 읽는다. 그림자 필터는 PCF 다.
   실행: ctest -R Scenario.game.empty.shadow_contact
 -->
@@ -22,8 +22,14 @@
 	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
 	<Wait frames="20"/>
 	<Screenshot file="contact_on.ppm"/>
+	<DevCommand line="gpu.show ContactShadowMask"/>
+	<Wait frames="3"/>
+	<Screenshot file="contact_mask_on.ppm"/>
+	<DevCommand line="gpu.show off"/>
 	<Wait frames="2"/>
-	<ExpectImagesDiffer first="contact_off.ppm" second="contact_on.ppm" region="0.05,0.3,0.95,0.95" minDiffering="0.002"/>
+	<!-- 마스크를 골든으로 지킨다 — 이 무대는 그림자 맵이 발치까지 덮어 최종 그림에는 접촉 그림자가 거의 보이지 않는다(그림자 맵이 못 잡는 곳을 메우는 기능이다).
+	     끈 무대는 패스가 돌지 않아 마스크 첨부도 없다(견줄 짝이 없다). 패스가 그리지 않으면 마스크가 모두 1(흰색)이 되어 골든과 다르다. -->
+	<ExpectImage file="contact_mask_on.ppm" golden="contact_mask"/>
 	<ExpectImage file="contact_off.ppm" golden="contact_off"/>
 	<ExpectImage file="contact_on.ppm" golden="contact_on"/>
 	<Pass/>
