@@ -12,7 +12,7 @@
 #include "Core/Name/hashed_string.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/GUI/Panel/IEditorDocumentPanel.h"
+#include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
 #include "Editor/Panels/UIPreview/Model/UIPreviewModel.h"
 
@@ -46,10 +46,12 @@ namespace sw::editor
      *          위젯에는 슬롯 손잡이(가운데 옮기기 · 네 변)가 떠서 끌면 `_slot` 의 오프셋이 바뀐다. 구조를 고치면 문서 순서 번호가 밀리므로 되돌리기 항목은 부모의 번호와 자식 번호로 위치를 가리키고,
      *          지운 위젯은 되돌리기 항목이 쥔다. 구조 편집은 입력 흉내 · 애니메이션과 달리 문서를 바꾸는 편집이라 저장을 막지 않는다.
      *          판단(뷰포트 · 맞춤 · 점 옮기기 · 트리 줄 · 언어 목록 · 속성 텍스트 · 끼우기 · 분리하기 · 슬롯 끌기)은 `UIPreviewLogic`(ImGui 없음 — EditorTest).
+     *          여는 길은 문서 기반(`EditorDocumentPanel`, UIDocument 종류)이다 — 경로 칸 · 콘텐츠 브라우저 · Quick Open · `asset.openScratch` 가 모두 워크스페이스 포커스로 열고,
+     *          미저장 편집이 있으면 바꾸기 전에 묻는다. 예전에는 포커스 확인을 모델이 따로 들고(`consumeWorkspaceFocusKey`) 다른 문서를 열면 편집을 경고만 남기고 버렸다.
      *          상태 · 명령(문서 · 화면 · 보기 설정 · 고름 · 입력 흉내 · 애니메이션 · 되돌리기 · 저장)은 모델(`UIPreviewModel`, ImGui 없음)이 갖고, 이 패널은 ImGui 로 그리고
      *          입력을 모델 명령으로 옮기며 ImGui 텍스처 등록만 직접 든다(뷰).
      */
-    class UIPreviewPanel : public IEditorDocumentPanel
+    class UIPreviewPanel : public EditorDocumentPanel
     {
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */
@@ -58,11 +60,7 @@ namespace sw::editor
         UIPreviewPanel();
         ~UIPreviewPanel() override;
 
-        /** @brief 제목은 애셋 종류 등록의 UIDocument 패널 제목입니다(경로로 여는 요청과 Assets 메뉴가 같은 등록을 봅니다). */
-        const utf8*      getPanelTitle() const override;
-        EditorDockSlot   getDefaultDockSlot() const override { return EditorDockSlot::Center; }
-        EditorAssetType  getDocumentKind() const override;
-        void             drawContent() override;
+        void             drawDocumentContent() override;
         EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 147.0f, 36.0f ); }
         /** @brief 미리보기 화면을 닫고 ImGui 텍스처를 놓습니다. */
         void shutdown() override;
@@ -73,9 +71,10 @@ namespace sw::editor
     protected:
         /** @brief 고친 문서를 `UIDocumentWriter` 로 파일에 씁니다. 입력 흉내나 애니메이션으로 트리 값이 바뀐 상태면 `canSaveDocument` 가 막습니다. */
         [[nodiscard]] bool saveDocument() override;
+        /** @brief 문서를 읽었고(기반) 미리보기 트리가 문서 값 그대로일 때만(모델) 저장합니다. */
         [[nodiscard]] bool canSaveDocument() const override;
-        /** @brief 디스크 문서로 미리보기를 다시 만들고 고친 값을 버립니다. */
-        void revertDocument() override;
+        /** @brief 받아들인 문서(없으면 처음 문서)를 미리볼 문서로 정하고 미리보기를 닫습니다 — 다음 그리기의 `syncPreview` 가 디스크에서 다시 짓는다. 고친 값은 버린다. */
+        ToolAssetLoadResult loadDocument() override;
 
     private:
         /** @brief Slot 필드 한 번 그리기의 상태(슬롯 사본 · 필터 · 직전 컨트롤을 그렸는지)와 컨트롤 그룹별 그리기입니다. */

@@ -7,7 +7,6 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/uipreviewdesigner.scenario.xml -unattended
 -->
 <Scenario name="editor.uipreviewdesigner" fixedDelta="0.0166667" timeoutFrames="3000" startAfter="Immediately" input="exclusive">
-	<AllowLog id="UIPreview.UnsavedEditsDiscarded" reason="체인에서는 앞 시나리오(uipreview)가 고친 채 둔 문서를 이 시나리오가 다른 문서를 열며 버린다 — 그 경고는 체인에서만 난다"/>
 	<Scratch from="engine/automation/editor/uipreview" as="scratch/uipreviewdesigner"/>
 	<EditorWaitSettled/>
 	<ResizeWindow width="1920" height="1080"/>
@@ -50,11 +49,12 @@
 	<!-- 2) 팔레트 · 끌어 놓기 · 지우기 -->
 	<EditorWaitSettled/>
 	<DevCommand line="asset.openScratch scratch/uipreviewdesigner/save_probe.ui.xml"/>
+	<!-- 1) 에서 고치고 되돌린 문서는 되돌려도 고친 표시(dirty)가 남는다 — 문서 기반(EditorDocumentPanel)이 다른 문서로 바꾸기 전에 묻고, 저장하지 않고 바꾼다 -->
+	<EditorWaitSettled/>
+	<EditorClick mark="unsaved.discard"/>
 	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" equals="1" timeoutFrames="900"/>
-	<!-- 1) 에서 고치고 되돌린 문서는 되돌려도 고친 표시(dirty)가 남는다 — 다른 문서를 열면 버린다고 알리는 경고가 의도한 출력이다 -->
-	<EditorWaitSettled/>
-	<ExpectLog id="UIPreview.UnsavedEditsDiscarded" atLeast="1"/>
+	<Expect watch="Editor.UIPreviewDirty" equals="0"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="uipreview.palette.filter"/>
 	<EditorWaitSettled/>

@@ -7,7 +7,6 @@
 #include "Core/String/formatString.h"
 
 #include "Editor/Common/Config/EditorToolDefaults.h"
-#include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/Undo/UndoStep.h"
@@ -103,7 +102,6 @@ namespace sw::editor
         , _openedDocument{}
         , _targetPath{}
         , _error{}
-        , _lastFocusKey{}
         , _language{}
         , _theme{}
         , _animation{}
@@ -161,26 +159,12 @@ namespace sw::editor
             _onTargetReleasing();
     }
 
-    void UIPreviewModel::onDocumentPathCommitted( const string& previous, bool bDirty )
+    void UIPreviewModel::openDocument( string_view assetPath )
     {
-        if ( bDirty )
-            SW_LOG_WARNING_ID( "UIPreview.UnsavedEditsDiscarded", "UI Preview: unsaved edits of '%#' are discarded because the path changed", previous.c_str() );
-        _error.clear();
-    }
-
-    void UIPreviewModel::syncFocusedDocument( bool bDirty )
-    {
-        // 콘텐츠 브라우저에서 `*.ui.xml` 을 두 번 누르면(`EditorAssetCommands::openPath`) 작업공간 포커스가 그 경로가 되고 이 패널이 열린다.
-        if ( EditorAssetTypeRegistry::consumeWorkspaceFocusKey( _lastFocusKey, 0 ) == false )
-            return;
-        const string_view focused = EditorAssetTypeRegistry::matchingFocusedPath( EditorAssetType{ UIDocumentAsset::kAssetType } );
-        if ( focused.empty() || _documentPath == focused )
-            return;
-        const string previous = _documentPath.get();
-        if ( _documentPath.commit( focused ) == false )
-            return; // 리소스 id 가 아니면 commit 이 알렸다 — 지금 문서를 그대로 둔다
-        if ( bDirty )
-            SW_LOG_WARNING_ID( "UIPreview.UnsavedEditsDiscarded", "UI Preview: unsaved edits of '%#' are discarded because '%#' was opened", previous.c_str(), _documentPath.c_str() );
+        // 리소스 id 가 아니면 commit 이 알리고 지금 문서를 그대로 둔다. 같은 경로면 commit 이 false 지만 다시 짓는다(다시 읽기).
+        if ( assetPath.empty() == false )
+            (void)_documentPath.commit( assetPath );
+        closePreview();
         _error.clear();
     }
 
@@ -413,12 +397,6 @@ namespace sw::editor
         _bAwaitReload       = SW_TRUE;
         _bReloadedAfterSave = false;
         return true;
-    }
-
-    void UIPreviewModel::revertDocument()
-    {
-        closePreview();
-        _error.clear();
     }
 
     void UIPreviewModel::select( WidgetID widget, uint32 ordinal )

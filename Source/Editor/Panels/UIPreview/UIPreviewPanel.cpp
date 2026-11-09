@@ -282,7 +282,7 @@ namespace sw::editor
                          &UIPreviewPanelInternal::readLanguageIndex );
 
     UIPreviewPanel::UIPreviewPanel()
-        : IEditorDocumentPanel( false )
+        : EditorDocumentPanel( EditorAssetType{ UIDocumentAsset::kAssetType }, true ) // 열면 포커스가 없어도 처음 문서(에디터 도구 기본값)를 짓는다
         , _model{ UIPreviewModel::getDefaultDocument() }
         , _grid{}
         , _paletteFilter{}
@@ -303,16 +303,6 @@ namespace sw::editor
     }
 
     UIPreviewPanel::~UIPreviewPanel() = default;
-
-    const utf8* UIPreviewPanel::getPanelTitle() const
-    {
-        return EditorAssetTypeRegistry::getPanelTitle( EditorAssetType{ UIDocumentAsset::kAssetType } );
-    }
-
-    EditorAssetType UIPreviewPanel::getDocumentKind() const
-    {
-        return EditorAssetType{ UIDocumentAsset::kAssetType };
-    }
 
     void UIPreviewPanel::setDocumentDirty( bool bDirty )
     {
@@ -349,7 +339,7 @@ namespace sw::editor
 
     bool UIPreviewPanel::canSaveDocument() const
     {
-        return _model.canSaveDocument();
+        return EditorDocumentPanel::canSaveDocument() && _model.canSaveDocument();
     }
 
     bool UIPreviewPanel::saveDocument()
@@ -357,9 +347,11 @@ namespace sw::editor
         return _model.saveDocument();
     }
 
-    void UIPreviewPanel::revertDocument()
+    ToolAssetLoadResult UIPreviewPanel::loadDocument()
     {
-        _model.revertDocument();
+        // 짓기는 다음 그리기의 `syncPreview` 가 한다 — 짓지 못하면 미리보기가 오류를 보이고 저장은 모델이 막는다(`UIPreviewModel::canSaveDocument`).
+        _model.openDocument( acceptDocumentToLoad() );
+        return ToolAssetLoadResult::Loaded;
     }
 
     void UIPreviewPanel::onPropertyEdited( const PropertyInfo& prop )
@@ -393,14 +385,20 @@ namespace sw::editor
 
     void UIPreviewPanel::drawToolbar( const UIThemeController& themes )
     {
-        const string previous = _model.getDocumentPath().get();
-        if ( _model.getDocumentPath().drawField( "##uipreviewdoc", 320.0f * EditorThemeUtil::getDPIScale() ) )
-            _model.onDocumentPathCommitted( previous, isDocumentDirty() );
+        EditableAssetPath& documentPath = _model.getDocumentPath();
+        const string       openPath     = documentPath.get();
+        if ( documentPath.drawField( "##uipreviewdoc", 320.0f * EditorThemeUtil::getDPIScale() ) )
+        {
+            // 칸의 경로는 문서 열기(포커스)로 넘기고, 받아들여 읽을 때(`loadDocument`) 미리볼 문서가 된다 — 미저장 확인에서 취소하면 칸이 열린 문서로 남는다.
+            const string chosenPath = documentPath.get();
+            (void)documentPath.commit( openPath );
+            requestOpenDocument( chosenPath );
+        }
         UIPreviewPanelInternal::recordMark( "uipreview", "path" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "DocumentPathTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Reload" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Reload" ) ) )
-            revertDocument();
+            reloadDocument(); // 고친 값을 버리고 디스크 문서로 다시 짓는다 — 읽음 표시와 미저장은 문서 기반이 맞춘다
         UIPreviewPanelInternal::recordMark( "uipreview", "reload" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "ReloadTip" ) );
         ImGui::SameLine();
@@ -1081,17 +1079,18 @@ namespace sw::editor
         ImGui::EndChild();
     }
 
-    void UIPreviewPanel::drawContent()
+    void UIPreviewPanel::drawDocumentContent()
     {
         using Internal = UIPreviewPanelInternal;
-        UISystem* pUI  = UIPreviewModel::findUISystem();
+        updateFocusedDocument();
+        ensureDocumentLoaded();
+        UISystem* pUI = UIPreviewModel::findUISystem();
         if ( pUI == nullptr || pUI->isInitialized() == false )
         {
             _model.resetProbe();
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorUIPreview", "UINotRunning" ) );
             return;
         }
-        _model.syncFocusedDocument( isDocumentDirty() );
         drawToolbar( UIPreviewModel::getThemeController() );
         UIOffscreenScreens& offscreen = UIPreviewModel::getOffscreenScreens();
         _model.syncPreview( *pUI, offscreen ); // 렌더 텍스처를 바꾸면 그 전에 releaseTexture 를 부른다

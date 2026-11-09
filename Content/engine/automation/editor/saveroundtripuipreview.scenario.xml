@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — UI Preview 저장 왕복: 작은 문서(uipreview/save_probe.ui.xml — 위젯 하나)의 실행마다 새 사본(scratch/saveroundtripuipreview — <Scratch>)을 연다.
+  UI Preview 는 문서 기반(EditorDocumentPanel, UIDocument 종류)이라 asset.openScratch 가 경로 칸 · 콘텐츠 브라우저와 같은 길(워크스페이스 포커스)로 사본을 연다.
+  고치지 않고 저장(panel.saveDocument — UIDocumentWriter 가 트리를 정규 꼴로 쓴다) → 핫 리로드가 다시 짓기를 기다림 → 글 붙잡기(asset.snapshotScratch)
+  → 디스크에서 다시 읽기(panel.reloadDocument — 위젯 수가 같다) → 다시 저장 → 같은 바이트(asset.expectScratchUnchanged). 원본은 건드리지 않는다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/saveroundtripuipreview.scenario.xml -unattended
+-->
+<Scenario name="editor.saveroundtripuipreview" fixedDelta="0.0166667" timeoutFrames="1800" startAfter="Immediately" input="exclusive">
+	<Scratch from="engine/automation/editor/uipreview" as="scratch/saveroundtripuipreview"/>
+	<EditorWaitSettled/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.focus ui_preview"/>
+	<EditorWaitSettled/>
+	<DevCommand line="asset.openScratch scratch/saveroundtripuipreview/save_probe.ui.xml"/>
+	<EditorWaitSettled/>
+	<WaitUntil watch="Editor.UIPreviewWidgetCount" equals="1" timeoutFrames="900"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.saveDocument ui_preview"/>
+	<WaitUntil watch="Editor.UIPreviewReloadedAfterSave" equals="1" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Editor.UIPreviewWidgetCount" equals="1" timeoutFrames="300"/>
+	<EditorWaitSettled/>
+	<DevCommand line="asset.snapshotScratch scratch/saveroundtripuipreview/save_probe.ui.xml"/>
+	<DevCommand line="panel.reloadDocument ui_preview"/>
+	<EditorWaitSettled/>
+	<WaitUntil watch="Editor.UIPreviewWidgetCount" equals="1" timeoutFrames="300"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.saveDocument ui_preview"/>
+	<DevCommand line="asset.expectScratchUnchanged scratch/saveroundtripuipreview/save_probe.ui.xml"/>
+	<WaitUntil watch="Editor.UIPreviewReloadedAfterSave" equals="1" timeoutWallSeconds="60"/>
+	<Expect watch="Editor.DirtyDocumentCount" equals="0"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.close ui_preview"/>
+	<EditorWaitSettled/>
+	<Pass/>
+</Scenario>
