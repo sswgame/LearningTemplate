@@ -44,7 +44,7 @@ namespace sw::editor
         /** @brief 세션 클라이언트 @p processIndex 에 이력을 묻습니다. 답이 오면 `poll` 이 칸에 담습니다. */
         void requestClientHistory( int32 sourceIndex, int32 processIndex );
         /** @brief @p address(`127.0.0.1:<포트>` 만) · @p token 으로 붙은 다른 서버의 이력을 칸에 담습니다. */
-        void readServer( int32 sourceIndex, string_view address, string_view token );
+        void loadFromChannel( int32 sourceIndex, string_view address, string_view token );
         /** @brief 사람이 친 경로 @p typedPath(상대면 이 실행의 산출물 폴더 아래)의 이력 파일을 칸에 담습니다. */
         void loadFile( int32 sourceIndex, string_view typedPath );
         /** @brief 칸의 이력을 @p typedPath 에 씁니다. */

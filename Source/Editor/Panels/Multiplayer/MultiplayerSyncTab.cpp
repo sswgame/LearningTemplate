@@ -125,7 +125,7 @@ namespace sw::editor
         ImGui::InputTextWithHint( "##SyncToken", "token", _arrToken[sourceIndex].data(), _arrToken[sourceIndex].capacity(), ImGuiInputTextFlags_Password );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "ReadServer" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdText", "ReadServer" ) ) )
-            _viewModel.readServer( sourceIndex, _arrAddress[sourceIndex].c_str(), _arrToken[sourceIndex].c_str() );
+            _viewModel.loadFromChannel( sourceIndex, _arrAddress[sourceIndex].c_str(), _arrToken[sourceIndex].c_str() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "SyncReadServer" ) );
 
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldPathEm" ) );

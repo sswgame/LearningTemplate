@@ -309,7 +309,7 @@ namespace sw::editor
                                              processIndex ); // 실패는 모델이 알린다
     }
 
-    void MultiplayerSyncViewModel::readServer( int32 sourceIndex, string_view address, string_view token )
+    void MultiplayerSyncViewModel::loadFromChannel( int32 sourceIndex, string_view address, string_view token )
     {
         EditorStateHashCompare& compare = MultiplayerSyncViewModelInternal::getCompare();
         NetAddress              remote;

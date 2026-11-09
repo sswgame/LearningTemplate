@@ -160,7 +160,7 @@ namespace sw
         return pObject;
     }
 
-    AutomationTargetLookup AutomationTarget::toLookup( const Error& error )
+    AutomationTargetLookup AutomationTarget::classifyLookupError( const Error& error )
     {
         return error.kind() == ErrorKind::NotFound ? AutomationTargetLookup::Missing : AutomationTargetLookup::Rejected;
     }
@@ -193,7 +193,7 @@ namespace sw
         }
         else
         {
-            query._targetLookup  = AutomationTarget::toLookup( found.error() );
+            query._targetLookup  = AutomationTarget::classifyLookupError( found.error() );
             query._targetProblem = AutomationTarget::describe( found.error() );
         }
         return query;

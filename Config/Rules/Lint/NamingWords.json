@@ -12,6 +12,13 @@
     "Work": "Job"
   },
   "_bannedNames": {
+    "readServer": "loadFromChannel — 무엇을 어디서 읽는지 말하지 않았다(짝 loadFile, 2026-11-10)",
+    "toLookup": "classifyLookupError — 오류를 조회 결과 종류로 가른다(2026-11-10)",
+    "getProviderBusyClock": "getCompileBusyClock — 셰이더 공급자 로드만이 아니라 PSO 생성까지 센다(2026-11-10)",
+    "beginLeakWindow": "MemoryLeakWindow::open — 누수 창은 프로파일러가 든 형식이다(2026-11-10)",
+    "endLeakWindow": "MemoryLeakWindow::close(2026-11-10)",
+    "judgeLeakCurve": "LeakCurveCriteria::judge — 기준의 멤버(2026-11-10)",
+    "printLeakWindowReport": "LeakWindowReport::print — 보고서의 멤버(2026-11-10)",
     "readCountedElapsedSeconds": "readElapsedSecondsWithoutCompile — 무엇을 세는지 이름이 말하지 않았다(2026-11-10)",
     "formatToString": "formatstring + fixed_string(한 번 쓰는 글) · StringBuilder::appendFormat(남기는 글) — 할당을 숨기던 도우미, 사용자 2026-11-08",
     "DataLayersModel": "DataLayersViewModel(창의 ViewModel — gather · ViewState · 명령, docs/agents/EditorUI.md MVVM)",

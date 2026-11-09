@@ -104,7 +104,7 @@ namespace sw
          */
         [[nodiscard]] static expected<GameObject*> find( const GameObjectManager* pManager, string_view target );
         /** @brief `find` 의 까닭을 질의의 결과 종류로 옮깁니다. */
-        [[nodiscard]] static AutomationTargetLookup toLookup( const Error& error );
+        [[nodiscard]] static AutomationTargetLookup classifyLookupError( const Error& error );
         /** @brief `find` 의 까닭을 실패 줄 글(`문장: 대상`)로 짓습니다. */
         [[nodiscard]] static string describe( const Error& error );
     };
