@@ -115,7 +115,7 @@ namespace sw
             SW_LOG_WARNING_ID( "SRPGBattlefield.CannotPlaceUnitPilot", "cannot place unit '%#' with pilot '%#' - unknown id", unitID.c_str(), pilotID.c_str() );
             return constant::invalid_index::kInt32;
         }
-        const bool bCannotPlaceUnit = isInside( cell ) == false || findUnitAt( cell ) >= 0 || computeTerrainCost( unit, cell ) < 0;
+        const bool bCannotPlaceUnit = isInside( cell ) == false || findUnitAt( cell ).has_value() || computeTerrainCost( unit, cell ) < 0;
         if ( bCannotPlaceUnit )
             return constant::invalid_index::kInt32;
         unit._cell = cell;
@@ -373,8 +373,8 @@ namespace sw
             _topology._width, _topology._height, start, unit._pDef->_move,
             [&]( const int2& fromCell, const int2& toCell )
         {
-            const int32 occupant = findUnitAt( toCell );
-            if ( occupant >= 0 && isHostile( _listUnit[static_cast<size_t>( occupant )]._team, unit._team ) )
+            const optional<int32> occupant = findUnitAt( toCell );
+            if ( occupant.has_value() && isHostile( _listUnit[static_cast<size_t>( *occupant )]._team, unit._team ) )
                 return -1; // 적이 선 셀은 막는다
             const bool bZocStop = bZoc && fromCell != start && isInEnemyZone( unit, fromCell );
             if ( bZocStop )
@@ -383,8 +383,8 @@ namespace sw
         },
             [&]( const int2& cell )
         {
-            const int32 occupant = findUnitAt( cell );
-            return occupant < 0 || occupant == unitIndex; // 아군이 선 셀은 지나가기만 한다
+            const optional<int32> occupant = findUnitAt( cell );
+            return occupant.has_value() == false || occupant == unitIndex; // 아군이 선 셀은 지나가기만 한다
         } );
     }
 
@@ -669,14 +669,14 @@ namespace sw
         return isInside( cell ) ? _listTerrain[static_cast<size_t>( _topology.toIndex( cell ) )] : nullptr;
     }
 
-    int32 SRPGBattlefield::findUnitAt( const int2& cell ) const
+    optional<int32> SRPGBattlefield::findUnitAt( const int2& cell ) const
     {
         for ( size_t index = 0; index < _listUnit.size(); ++index )
         {
             if ( _listUnit[index]._bAlive == SW_TRUE && _listUnit[index]._cell == cell )
                 return static_cast<int32>( index );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     int32 SRPGBattlefield::computeAptitude( const SRPGUnit& unit, const int2& cell ) const

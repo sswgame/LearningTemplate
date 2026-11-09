@@ -168,13 +168,13 @@ namespace sw
 
     void TacticsSRPGDemoComponent::confirmAtCursor()
     {
-        const int32 cursorUnit = _field.findUnitAt( _cursor );
+        const optional<int32> cursorUnit = _field.findUnitAt( _cursor );
         if ( _selectedUnit < 0 )
         {
-            const SRPGUnit* pUnit       = cursorUnit >= 0 ? _field.findUnit( cursorUnit ) : nullptr;
-            const bool      bSelectable = pUnit != nullptr && pUnit->_team == SRPGTeam::Player && _field.canAct( cursorUnit );
+            const SRPGUnit* pUnit       = cursorUnit.has_value() ? _field.findUnit( *cursorUnit ) : nullptr;
+            const bool      bSelectable = pUnit != nullptr && pUnit->_team == SRPGTeam::Player && _field.canAct( *cursorUnit );
             if ( bSelectable )
-                _selectedUnit = cursorUnit;
+                _selectedUnit = *cursorUnit;
             return;
         }
         const SRPGUnit* pSelected = _field.findUnit( _selectedUnit );
@@ -185,14 +185,14 @@ namespace sw
             _selectedUnit = -1;
             return;
         }
-        const SRPGUnit* pTarget = cursorUnit >= 0 ? _field.findUnit( cursorUnit ) : nullptr;
+        const SRPGUnit* pTarget = cursorUnit.has_value() ? _field.findUnit( *cursorUnit ) : nullptr;
         if ( pTarget != nullptr && SRPGBattlefield::isHostile( pSelected->_team, pTarget->_team ) )
         {
-            if ( attackAtCursor( cursorUnit ) == false )
+            if ( attackAtCursor( *cursorUnit ) == false )
                 SW_LOG_INFO_ID( "KitDemo.TacticsCannotAttack", "[KitDemo] tactics: no weapon reaches (%#, %#) from (%#, %#)", _cursor._x, _cursor._y, pSelected->_cell._x, pSelected->_cell._y );
             return;
         }
-        if ( cursorUnit < 0 && _field.moveUnit( _selectedUnit, _cursor ) == false )
+        if ( cursorUnit.has_value() == false && _field.moveUnit( _selectedUnit, _cursor ) == false )
             SW_LOG_INFO_ID( "KitDemo.TacticsCannotMove", "[KitDemo] tactics: the unit cannot move to (%#, %#)", _cursor._x, _cursor._y );
     }
 

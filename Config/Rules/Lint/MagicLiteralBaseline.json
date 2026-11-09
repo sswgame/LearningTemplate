@@ -776,7 +776,7 @@
     "Source/GameFramework/Kits/Genre/Action/BattleRoyale/Rule/BattleRoyaleLoot.cpp": {"hex": 1},
     "Source/GameFramework/Kits/Genre/Action/BattleRoyale/Rule/BattleRoyaleMatch.cpp": {"minus-one": 2, "integer": 3, "hex": 1},
     "Source/GameFramework/Kits/Genre/Action/Fighting/FightingMatch.cpp": {"minus-one": 2, "float": 6},
-    "Source/GameFramework/Kits/Genre/Action/MechArena/MechArenaWorld.cpp": {"minus-one": 4, "float": 3, "integer": 2, "hex": 1},
+    "Source/GameFramework/Kits/Genre/Action/MechArena/MechArenaWorld.cpp": {"minus-one": 2, "float": 3, "integer": 2, "hex": 1},
     "Source/GameFramework/Kits/Genre/Action/Metroidvania/Rule/MetroidvaniaDeathRestState.cpp": {"hex": 1},
     "Source/GameFramework/Kits/Genre/Action/Metroidvania/Rule/MetroidvaniaMapState.cpp": {"float": 2},
     "Source/GameFramework/Kits/Genre/Casual/CardGame/Klondike/KlondikeGame.cpp": {"integer": 1},

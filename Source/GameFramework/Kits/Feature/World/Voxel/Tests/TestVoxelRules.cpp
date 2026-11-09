@@ -116,11 +116,11 @@ SW_TEST_CASE( VoxelWorldTest, OutsideReadsAirAndRefusesWrites )
     SW_EXPECT_TRUE( rig._world.isSolid( 5, -1, 5 ) );   // 월드 아래는 막혔다
     SW_EXPECT_FALSE( rig._world.isSolid( -1, 5, 5 ) );  // 옆은 비었다
     SW_EXPECT_FALSE( rig._world.isSolid( 5, 100, 5 ) ); // 위도 비었다
-    SW_EXPECT_EQUAL( -1, rig._world.findTopSolidY( 5, 5 ) );
+    SW_EXPECT_FALSE( rig._world.findTopSolidY( 5, 5 ).has_value() );
 
     SW_REQUIRE_TRUE( rig._world.setBlock( 5, 3, 5, rig._stone ) );
     SW_REQUIRE_TRUE( rig._world.setBlock( 5, 7, 5, rig._water ) ); // 물은 단단하지 않다
-    SW_EXPECT_EQUAL( 3, rig._world.findTopSolidY( 5, 5 ) );
+    SW_EXPECT_TRUE( rig._world.findTopSolidY( 5, 5 ) == 3 );
     SW_EXPECT_EQUAL( uint32( 1 ), rig._world.countBlocks( rig._water ) );
 }
 
@@ -465,7 +465,7 @@ SW_TEST_CASE( VoxelTerrainTest, SameSeedSameWorldAndColumnsAreLayered )
 
     const int32 surface = VoxelTerrainSettings::computeSurfaceHeight( 3, 3, settings );
     SW_EXPECT_TRUE( report._minHeight <= surface && surface <= report._maxHeight );
-    SW_EXPECT_EQUAL( surface, rig._world.findTopSolidY( 3, 3 ) ); // 나무가 없으면 맨 위 단단한 블록이 지면이다
+    SW_EXPECT_TRUE( rig._world.findTopSolidY( 3, 3 ) == surface ); // 나무가 없으면 맨 위 단단한 블록이 지면이다
 
     VoxelFixture again;
     (void)again.addBlock( "grass", true, true );

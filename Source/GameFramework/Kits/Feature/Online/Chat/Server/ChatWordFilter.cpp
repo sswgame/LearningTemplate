@@ -46,11 +46,11 @@ namespace sw
         _listNode.emplace_back(); // 루트이다. 낱말이 없어도 `apply` 가 0번 노드를 본다
     }
 
-    int32 ChatWordFilter::findChild( int32 nodeIndex, uint32 codepoint ) const
+    optional<int32> ChatWordFilter::findChild( int32 nodeIndex, uint32 codepoint ) const
     {
         const unordered_map<uint32, int32>& mapChild = _listNode[static_cast<size_t>( nodeIndex )]._mapChild;
         const auto                          childIt  = mapChild.find( codepoint );
-        return childIt != mapChild.end() ? childIt->second : constant::invalid_index::kInt32;
+        return childIt != mapChild.end() ? optional<int32>( childIt->second ) : nullopt;
     }
 
     int32 ChatWordFilter::initialize( const vector<string>& listWord, ChatFilterMode mode, const ChatTextNormalizer& normalizer )
@@ -73,10 +73,10 @@ namespace sw
                 const uint32 codepoint = _normalizer.normalize( rawCodepoint );
                 if ( codepoint == 0 )
                     continue;
-                int32 childIndex = findChild( nodeIndex, codepoint );
-                if ( childIndex < 0 )
+                const optional<int32> foundChild = findChild( nodeIndex, codepoint );
+                const int32           childIndex = foundChild.value_or( static_cast<int32>( _listNode.size() ) );
+                if ( foundChild.has_value() == false )
                 {
-                    childIndex = static_cast<int32>( _listNode.size() );
                     _listNode.emplace_back();
                     _listNode[static_cast<size_t>( nodeIndex )]._mapChild.emplace( codepoint, childIndex );
                 }
@@ -108,13 +108,12 @@ namespace sw
             for ( const auto& [codepoint, childIndex] : _listNode[static_cast<size_t>( nodeIndex )]._mapChild )
             {
                 int32 failIndex = _listNode[static_cast<size_t>( nodeIndex )]._fail;
-                while ( failIndex != 0 && findChild( failIndex, codepoint ) < 0 )
+                while ( failIndex != 0 && findChild( failIndex, codepoint ).has_value() == false )
                 {
                     failIndex = _listNode[static_cast<size_t>( failIndex )]._fail;
                 }
-                const int32 failChild = findChild( failIndex, codepoint );
-                Node&       child     = _listNode[static_cast<size_t>( childIndex )];
-                child._fail           = failChild >= 0 ? failChild : 0;
+                Node& child = _listNode[static_cast<size_t>( childIndex )];
+                child._fail = findChild( failIndex, codepoint ).value_or( 0 ); // 맞는 자식이 없으면 루트로 실패한다
                 // 긴 낱말의 경로 위에 있는 짧은 낱말(abcd 안의 bc)은 실패 링크로만 보인다. 물려받아야 잡을 수 있다.
                 child._matchLength = MathUtil::max( child._matchLength, _listNode[static_cast<size_t>( child._fail )]._matchLength );
                 listQueue.push_back( childIndex );
@@ -159,12 +158,11 @@ namespace sw
             if ( codepoint == 0 )
                 continue;
             listOriginalIndex.push_back( index );
-            while ( nodeIndex != 0 && findChild( nodeIndex, codepoint ) < 0 )
+            while ( nodeIndex != 0 && findChild( nodeIndex, codepoint ).has_value() == false )
             {
                 nodeIndex = _listNode[static_cast<size_t>( nodeIndex )]._fail;
             }
-            const int32 childIndex  = findChild( nodeIndex, codepoint );
-            nodeIndex               = childIndex >= 0 ? childIndex : 0;
+            nodeIndex               = findChild( nodeIndex, codepoint ).value_or( 0 ); // 맞는 자식이 없으면 루트로 돌아간다
             const int32 matchLength = _listNode[static_cast<size_t>( nodeIndex )]._matchLength;
             if ( matchLength == 0 )
                 continue;

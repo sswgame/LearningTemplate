@@ -687,7 +687,7 @@ namespace sw
         }
     }
 
-    int32 MechArenaWorld::findLockTarget( int32 pilotIndex )
+    optional<int32> MechArenaWorld::findLockTarget( int32 pilotIndex )
     {
         MechPilot& pilot = _listPilot[static_cast<size_t>( pilotIndex )];
         if ( pilot._lockOn.hasTarget() == false )
@@ -697,12 +697,12 @@ namespace sw
             (void)pilot._lockOn.pickBest( computeCenter( pilot ), pilot._forward, _listCandidateScratch );
         }
         if ( pilot._lockOn.hasTarget() == false )
-            return -1;
+            return nullopt;
         const int32 target = static_cast<int32>( pilot._lockOn.getTarget() ) - 1;
         if ( isTargetable( target ) == false )
         {
             pilot._lockOn.release();
-            return -1;
+            return nullopt;
         }
         return target;
     }
@@ -713,18 +713,18 @@ namespace sw
         return pMech != nullptr ? MathUtil::min( static_cast<int32>( pilot._listSkill.size() ), pMech->_skillSlots ) : 0;
     }
 
-    int32 MechArenaWorld::findSlot( const MechPilot& pilot, MechWeaponKind kind ) const
+    optional<int32> MechArenaWorld::findSlot( const MechPilot& pilot, MechWeaponKind kind ) const
     {
         const MechModeDef* pMode = pilot.getMode();
         if ( pMode == nullptr )
-            return constant::invalid_index::kInt32;
+            return nullopt;
         const int32 offset = pilot.getMech()->computeSlotOffset( pilot._mode );
         for ( size_t index = 0; index < pMode->_listWeapon.size(); ++index )
         {
             if ( pMode->_listWeapon[index]._kind == kind )
                 return offset + static_cast<int32>( index );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     bool MechArenaWorld::isTargetable( int32 pilot ) const
@@ -765,11 +765,13 @@ namespace sw
         WeaponState& weapon = pilot._listWeaponState[static_cast<size_t>( slotIndex )];
         if ( weapon.getDef()._id.empty() )
             return;
-        const int32  target    = findLockTarget( pilotIndex );
-        const float3 origin    = computeCenter( pilot );
-        const float3 direction = target >= 0 ? ( computeCenter( _listPilot[static_cast<size_t>( target )] ) - origin ).normalizeOr( pilot._forward, MechArenaWorldInternal::kTiny )
+        const optional<int32> lockTarget = findLockTarget( pilotIndex );
+        const int32           target     = lockTarget.value_or( constant::invalid_index::kInt32 ); // 알림 · 탄 상태 칸의 "대상 없음"(저장 형식)
+        const float3          origin     = computeCenter( pilot );
+        const float3          direction  = lockTarget.has_value()
+                                             ? ( computeCenter( _listPilot[static_cast<size_t>( *lockTarget )] ) - origin ).normalizeOr( pilot._forward, MechArenaWorldInternal::kTiny )
                                              : pilot._forward;
-        WeaponShot   shot;
+        WeaponShot            shot;
         if ( weapon.pullTrigger( Ray{ origin, direction }, bPressed, shot ) != WeaponFireResult::Fired )
             return;
         pushEvent( MechArenaEvent::Kind::Fired, pilotIndex, target, 0.0f, slot._id );
@@ -792,9 +794,11 @@ namespace sw
         if ( cooldown.isActive() )
             return;
         cooldown.start( slot._cooldown );
-        const int32  target    = findLockTarget( pilotIndex );
-        const float3 origin    = computeCenter( pilot );
-        const float3 direction = target >= 0 ? ( computeCenter( _listPilot[static_cast<size_t>( target )] ) - origin ).normalizeOr( pilot._forward, MechArenaWorldInternal::kTiny )
+        const optional<int32> lockTarget = findLockTarget( pilotIndex );
+        const int32           target     = lockTarget.value_or( constant::invalid_index::kInt32 ); // 알림 · 탄 상태 칸의 "대상 없음"(저장 형식)
+        const float3          origin     = computeCenter( pilot );
+        const float3          direction  = lockTarget.has_value()
+                                             ? ( computeCenter( _listPilot[static_cast<size_t>( *lockTarget )] ) - origin ).normalizeOr( pilot._forward, MechArenaWorldInternal::kTiny )
                                              : pilot._forward;
         pushEvent( MechArenaEvent::Kind::Fired, pilotIndex, target, 0.0f, slot._id );
         // 탄 값은 슬롯이 가리키는 탄 정의다(주무기와 같은 탄 표). 탄이 있는지는 `isMechDataComplete` 가 장착 때 봤다.
@@ -1000,23 +1004,23 @@ namespace sw
             const MechPilot&  pilot = _listPilot[static_cast<size_t>( index )];
             const MechDef*    pMech = pilot.getMech();
             MechPilotSnapshot entry;
-            entry._position      = pilot._position;
-            entry._health        = pilot._healthMachine.getHealth();
-            entry._boostHeat     = pilot._boost.getRatio();
-            entry._downRatio     = pMech->_downMax > 0.0f ? MathUtil::saturate( 1.0f - pilot._healthMachine.getPoise() / pMech->_downMax ) : 0.0f;
-            entry._team          = pilot._team;
-            entry._mechIndex     = _pMechCatalog != nullptr ? _pMechCatalog->findMechIndex( pMech->_id ).value() : constant::invalid_index::kInt32; // 조종사의 기체는 카탈로그에서 왔다
-            entry._mode          = pilot._mode;
-            entry._lockTarget    = pilot._lockOn.hasTarget() ? static_cast<int32>( pilot._lockOn.getTarget() ) - 1 : constant::invalid_index::kInt32;
-            entry._comboStage    = pilot._comboStage;
-            entry._state         = pilot._state;
-            entry._bOverheated   = pilot._boost.isOverheated() ? SW_TRUE : SW_FALSE;
-            entry._bInvulnerable = pilot._healthMachine.isInvulnerable() ? SW_TRUE : SW_FALSE;
-            const int32 shot     = findSlot( pilot, MechWeaponKind::Shot );
-            if ( shot >= 0 )
+            entry._position            = pilot._position;
+            entry._health              = pilot._healthMachine.getHealth();
+            entry._boostHeat           = pilot._boost.getRatio();
+            entry._downRatio           = pMech->_downMax > 0.0f ? MathUtil::saturate( 1.0f - pilot._healthMachine.getPoise() / pMech->_downMax ) : 0.0f;
+            entry._team                = pilot._team;
+            entry._mechIndex           = _pMechCatalog != nullptr ? _pMechCatalog->findMechIndex( pMech->_id ).value() : constant::invalid_index::kInt32; // 조종사의 기체는 카탈로그에서 왔다
+            entry._mode                = pilot._mode;
+            entry._lockTarget          = pilot._lockOn.hasTarget() ? static_cast<int32>( pilot._lockOn.getTarget() ) - 1 : constant::invalid_index::kInt32;
+            entry._comboStage          = pilot._comboStage;
+            entry._state               = pilot._state;
+            entry._bOverheated         = pilot._boost.isOverheated() ? SW_TRUE : SW_FALSE;
+            entry._bInvulnerable       = pilot._healthMachine.isInvulnerable() ? SW_TRUE : SW_FALSE;
+            const optional<int32> shot = findSlot( pilot, MechWeaponKind::Shot );
+            if ( shot.has_value() )
             {
-                entry._magazineAmmo = pilot._listWeaponState[static_cast<size_t>( shot )].getMagazineAmmo();
-                entry._bReloading   = pilot._listWeaponState[static_cast<size_t>( shot )].isReloading() ? SW_TRUE : SW_FALSE;
+                entry._magazineAmmo = pilot._listWeaponState[static_cast<size_t>( *shot )].getMagazineAmmo();
+                entry._bReloading   = pilot._listWeaponState[static_cast<size_t>( *shot )].isReloading() ? SW_TRUE : SW_FALSE;
             }
             const int32 skillCount = MathUtil::min( countActiveSkills( pilot ), 32 );
             for ( int32 skill = 0; skill < skillCount; ++skill )
@@ -1355,16 +1359,16 @@ namespace sw
     void MechArenaWorld::stepWeapons( int32 pilotIndex, float32 deltaTime )
     {
         (void)deltaTime;
-        MechPilot&         pilot   = _listPilot[static_cast<size_t>( pilotIndex )];
-        const MechModeDef* pMode   = pilot.getMode();
-        const int32        offset  = pilot.getMech()->computeSlotOffset( pilot._mode );
-        const int32        shot    = findSlot( pilot, MechWeaponKind::Shot );
-        const int32        special = findSlot( pilot, MechWeaponKind::Special );
-        if ( shot >= 0 && pilot._input._bFire == SW_TRUE )
-            fireShot( pilotIndex, shot, pMode->_listWeapon[static_cast<size_t>( shot - offset )],
+        MechPilot&            pilot   = _listPilot[static_cast<size_t>( pilotIndex )];
+        const MechModeDef*    pMode   = pilot.getMode();
+        const int32           offset  = pilot.getMech()->computeSlotOffset( pilot._mode );
+        const optional<int32> shot    = findSlot( pilot, MechWeaponKind::Shot );
+        const optional<int32> special = findSlot( pilot, MechWeaponKind::Special );
+        if ( shot.has_value() && pilot._input._bFire == SW_TRUE )
+            fireShot( pilotIndex, *shot, pMode->_listWeapon[static_cast<size_t>( *shot - offset )],
                       MechArenaWorldInternal::isPressed( pilot._input._bFire, pilot._previousInput._bFire ) );
-        if ( special >= 0 && MechArenaWorldInternal::isPressed( pilot._input._bSpecial, pilot._previousInput._bSpecial ) )
-            fireSpecial( pilotIndex, special, pMode->_listWeapon[static_cast<size_t>( special - offset )] );
+        if ( special.has_value() && MechArenaWorldInternal::isPressed( pilot._input._bSpecial, pilot._previousInput._bSpecial ) )
+            fireSpecial( pilotIndex, *special, pMode->_listWeapon[static_cast<size_t>( *special - offset )] );
     }
 
     void MechArenaWorld::stepMelee( int32 pilotIndex, bool bPressedMelee )
@@ -1374,11 +1378,12 @@ namespace sw
             return;
         if ( pilot._comboStage < 0 )
         {
-            const int32 slotIndex = findSlot( pilot, MechWeaponKind::Melee );
-            if ( bPressedMelee == false || slotIndex < 0 )
+            const optional<int32> foundSlot = findSlot( pilot, MechWeaponKind::Melee );
+            if ( bPressedMelee == false || foundSlot.has_value() == false )
                 return;
-            const MechWeaponSlotDef& slot  = pilot.getMode()->_listWeapon[static_cast<size_t>( slotIndex - pilot.getMech()->computeSlotOffset( pilot._mode ) )];
-            const MoveFrameData*     pMove = slot._listMoveID.empty() ? nullptr : _pMoveCatalog->find( slot._listMoveID.front() );
+            const int32              slotIndex = *foundSlot;
+            const MechWeaponSlotDef& slot      = pilot.getMode()->_listWeapon[static_cast<size_t>( slotIndex - pilot.getMech()->computeSlotOffset( pilot._mode ) )];
+            const MoveFrameData*     pMove     = slot._listMoveID.empty() ? nullptr : _pMoveCatalog->find( slot._listMoveID.front() );
             if ( pMove == nullptr )
                 return;
             (void)findLockTarget( pilotIndex ); // 고르는 부수 효과만 쓴다 — 대상이 없으면 앞으로 친다

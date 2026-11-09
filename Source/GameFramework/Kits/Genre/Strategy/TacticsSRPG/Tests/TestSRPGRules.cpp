@@ -304,7 +304,7 @@ SW_TEST_CASE_F( SRPGRulesTest, CritAndKill )
     SW_EXPECT_EQUAL( 107, unit( attacker )._morale ); // 2 + 5
     SW_EXPECT_EQUAL( 1, countEvents( sw::SRPGEvent::Kind::Destroyed ) );
     SW_EXPECT_EQUAL( int64( 40 ), unit( attacker )._pilotLevel.getTotalXP() ); // 10 + 30
-    SW_EXPECT_EQUAL( -1, _field.findUnitAt( sw::int2{ 1, 0 } ) );
+    SW_EXPECT_FALSE( _field.findUnitAt( sw::int2{ 1, 0 } ).has_value() );
     SW_EXPECT_EQUAL( 0, _field.countAlive( sw::SRPGTeam::Enemy ) );
 
     SW_EXPECT_FALSE( _field.applyDamage( tough, 100, attacker ) ); // 이미 죽었다
@@ -361,10 +361,10 @@ SW_TEST_CASE_F( SRPGRulesTest, CounterAttack )
     const int32 distant  = place( "weak", sw::SRPGTeam::Enemy, sw::int2{ 5, 0 } );
     const int32 unarmed  = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 0, 2 } );
     _field.beginBattle();
-    SW_EXPECT_EQUAL( 1, sw::SRPGCombat::findCounterWeapon( _field, fighter, attacker, unit( attacker )._cell ) ); // pea 보다 sure
-    SW_EXPECT_EQUAL( -1, sw::SRPGCombat::findCounterWeapon( _field, distant, attacker, unit( attacker )._cell ) );
-    SW_EXPECT_EQUAL( -1, sw::SRPGCombat::findCounterWeapon( _field, unarmed, attacker, unit( attacker )._cell ) );
-    SW_EXPECT_EQUAL( -1, sw::SRPGCombat::findCounterWeapon( _field, 99, attacker, unit( attacker )._cell ) );
+    SW_EXPECT_TRUE( sw::SRPGCombat::findCounterWeapon( _field, fighter, attacker, unit( attacker )._cell ) == 1 ); // pea 보다 sure
+    SW_EXPECT_FALSE( sw::SRPGCombat::findCounterWeapon( _field, distant, attacker, unit( attacker )._cell ).has_value() );
+    SW_EXPECT_FALSE( sw::SRPGCombat::findCounterWeapon( _field, unarmed, attacker, unit( attacker )._cell ).has_value() );
+    SW_EXPECT_FALSE( sw::SRPGCombat::findCounterWeapon( _field, 99, attacker, unit( attacker )._cell ).has_value() );
 
     sw::SRPGCombatResult result;
     SW_REQUIRE_EQUAL( sw::SRPGWeaponStatus::Ok, sw::SRPGCombat::executeAttack( _field, attacker, 0, fighter, result ) );
@@ -395,7 +395,7 @@ SW_TEST_CASE_F( SRPGRulesTest, SupportDefense )
 
     sw::SRPGForecast forecast;
     SW_REQUIRE_EQUAL( sw::SRPGWeaponStatus::Ok, sw::SRPGCombat::computeForecast( _field, first, 0, target, forecast ) );
-    SW_EXPECT_EQUAL( guard, forecast._supportDefender );
+    SW_EXPECT_TRUE( forecast._supportDefender == guard );
     SW_EXPECT_EQUAL( guard, forecast._attack._defender );
     SW_EXPECT_EQUAL( 750, forecast._attack._damage );
 

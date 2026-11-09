@@ -148,12 +148,12 @@ namespace sw
                 {
                     if ( MathUtil::max( MathUtil::abs( dx ), MathUtil::abs( dz ) ) != radius )
                         continue;
-                    const int32 x            = centerX + dx;
-                    const int32 z            = centerZ + dz;
-                    const int32 topY         = _world.findTopSolidY( x, z );
-                    const bool  bOpenAirSpot = topY >= 0 && _world.getBlock( x, topY + 1, z ) != water && _world.getBlock( x, topY + 1, z ) == kVoxelAirBlock;
+                    const int32           x            = centerX + dx;
+                    const int32           z            = centerZ + dz;
+                    const optional<int32> topY         = _world.findTopSolidY( x, z );
+                    const bool            bOpenAirSpot = topY.has_value() && _world.getBlock( x, *topY + 1, z ) != water && _world.getBlock( x, *topY + 1, z ) == kVoxelAirBlock;
                     if ( bOpenAirSpot )
-                        return float3{ static_cast<float32>( x ) + 0.5f, static_cast<float32>( topY + 1 ) + 0.01f, static_cast<float32>( z ) + 0.5f };
+                        return float3{ static_cast<float32>( x ) + 0.5f, static_cast<float32>( *topY + 1 ) + 0.01f, static_cast<float32>( z ) + 0.5f };
                 }
             }
         }
@@ -222,7 +222,10 @@ namespace sw
         {
             for ( int32 x = 0; x < _world.getSizeX(); ++x )
             {
-                const int32 topY           = _world.findTopSolidY( x, z );
+                const optional<int32> foundTop = _world.findTopSolidY( x, z );
+                if ( foundTop.has_value() == false )
+                    continue; // 빈 기둥에는 눈도 광석도 없다
+                const int32 topY           = *foundTop;
                 const bool  bShouldSnowCap = topY >= 34 && _world.getBlock( x, topY, z ) == grass && snow != kVoxelAirBlock;
                 if ( bShouldSnowCap )
                     (void)_world.setBlock( x, topY, z, snow );

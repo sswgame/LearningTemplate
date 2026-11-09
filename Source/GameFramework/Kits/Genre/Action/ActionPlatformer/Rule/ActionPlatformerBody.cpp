@@ -101,16 +101,16 @@ namespace sw
         return isDirt( computeTileX( worldPosition._x ), computeTileY( worldPosition._y ) );
     }
 
-    int32 ActionTerrainGrid::findGrapplePoint( const float2& position, float32 minDistance, float32 maxDistance ) const
+    optional<int32> ActionTerrainGrid::findGrapplePoint( const float2& position, float32 minDistance, float32 maxDistance ) const
     {
-        int32   bestIndex    = constant::invalid_index::kInt32;
-        float32 bestDistance = 0.0f;
+        optional<int32> bestIndex;
+        float32         bestDistance = 0.0f;
         for ( size_t index = 0; index < _listGrapplePoint.size(); ++index )
         {
             const float32 distance = float2::getDistance( position, _listGrapplePoint[index] );
             if ( distance < minDistance || distance > maxDistance )
                 continue;
-            if ( bestIndex < 0 || distance < bestDistance )
+            if ( bestIndex.has_value() == false || distance < bestDistance )
             {
                 bestIndex    = static_cast<int32>( index );
                 bestDistance = distance;
@@ -244,13 +244,13 @@ namespace sw
 
     bool ActionPlatformerBody::tryAttachGrapple( const ActionTerrainGrid& terrain )
     {
-        const float2 position = _motor.getPosition();
-        const int32  index    = terrain.findGrapplePoint( position, _settings._grappleMinLength, _settings._grappleRange );
-        if ( index < 0 )
+        const float2          position = _motor.getPosition();
+        const optional<int32> index    = terrain.findGrapplePoint( position, _settings._grappleMinLength, _settings._grappleRange );
+        if ( index.has_value() == false )
             return false;
         if ( _mode == ActionMoveMode::Glide )
             setGlide( false );
-        _anchor     = terrain.getGrapplePoints()[static_cast<size_t>( index )];
+        _anchor     = terrain.getGrapplePoints()[static_cast<size_t>( *index )];
         _ropeLength = float2::getDistance( position, _anchor );
         _position   = position;
         _velocity   = _motor.getVelocity();

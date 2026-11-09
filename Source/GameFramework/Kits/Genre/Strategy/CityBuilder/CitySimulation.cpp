@@ -658,13 +658,14 @@ namespace sw
         const auto&   items    = building._stock.getItems();
         if ( items.empty() )
             return;
-        const hashed_string goodID    = items.front()._itemID;
-        const int32         amount    = items.front()._count;
-        const int32         component = getRoadComponent( building._accessTile );
-        const int32         storage   = findStorageFor( goodID, component, building._accessTile, 1 );
-        if ( storage < 0 )
+        const hashed_string   goodID       = items.front()._itemID;
+        const int32           amount       = items.front()._count;
+        const int32           component    = getRoadComponent( building._accessTile );
+        const optional<int32> foundStorage = findStorageFor( goodID, component, building._accessTile, 1 );
+        if ( foundStorage.has_value() == false )
             return;
-        CityWalker walker;
+        const int32 storage = *foundStorage;
+        CityWalker  walker;
         if ( findRoadPath( building._accessTile, _listBuilding[static_cast<size_t>( storage )]._accessTile, walker._listPath ) == false )
             return;
         const int32 load = MathUtil::min( amount, computeStorageFree( _listBuilding[static_cast<size_t>( storage )] ) );
@@ -694,10 +695,10 @@ namespace sw
         return storage._pDef->_capacity - storage._stock.getTotalCount() - incoming;
     }
 
-    int32 CitySimulation::findStorageFor( const hashed_string& goodID, int32 roadComponent, const int2& from, int32 amount ) const
+    optional<int32> CitySimulation::findStorageFor( const hashed_string& goodID, int32 roadComponent, const int2& from, int32 amount ) const
     {
-        int32 best         = constant::invalid_index::kInt32;
-        int32 bestDistance = 1 << 30;
+        optional<int32> best;
+        int32           bestDistance = 1 << 30;
         for ( int32 buildingIndex = 0; buildingIndex < static_cast<int32>( _listBuilding.size() ); ++buildingIndex )
         {
             const CityBuilding& storage          = _listBuilding[static_cast<size_t>( buildingIndex )];

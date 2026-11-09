@@ -11,6 +11,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -351,12 +352,13 @@ namespace sw
         void updateRoundRules();
 
         /** @brief 지금 낼 수 있는지 반환합니다. @p bAsIfFree 가 true 면 움직일 수 있다고 가정하고(선입력 후보) 자세와 조건만 봅니다. */
-        bool  isMoveAllowed( int32 player, int32 moveIndex, bool bAsIfFree = false ) const;
-        bool  isUpcomingCancelTarget( int32 player, int32 moveIndex ) const;
-        int32 findCompletedMove( int32 player, bool bBufferCandidates ) const;
-        void  startMove( int32 player, int32 moveIndex );
-        void  finishMove( int32 player );
-        bool  testHit( int32 attacker );
+        bool isMoveAllowed( int32 player, int32 moveIndex, bool bAsIfFree = false ) const;
+        bool isUpcomingCancelTarget( int32 player, int32 moveIndex ) const;
+        /** @brief 입력이 완성한 기술 중 우선도가 가장 높은 것입니다. 없으면 비어 있습니다. */
+        optional<int32> findCompletedMove( int32 player, bool bBufferCandidates ) const;
+        void            startMove( int32 player, int32 moveIndex );
+        void            finishMove( int32 player );
+        bool            testHit( int32 attacker );
         /** @brief 판정 때 잡아 둔 기술 @p move 를 적용합니다. 상쇄에서는 앞쪽 적용이 공격 쪽의 기술을 이미 끊었을 수 있어 지금 기술을 다시 찾지 않습니다. */
         void applyHit( int32 attacker, const FighterMove& move );
         /** @brief 잡기가 들어갔습니다. 상대에게 풀기 입력 창을 열고 잡은 쪽은 `Throwing` 으로 둡니다(피해는 `landThrow`). */
