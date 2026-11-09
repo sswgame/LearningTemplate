@@ -42,7 +42,9 @@
 ### 5. 작업자 · 설계 문서가 남긴 일
 
 - **린트를 빌드 구조로(린트 표에서 지우기):** `core-tiers`(Core 도 엔진 · 에디터처럼 층별 부분과 위 층 헤더 `#error` 껍데기 — pch 비용을 측정해 정한다), `server-ui`(게임 모듈 `Client/` 를 타깃 게이트의 모듈별 껍데기로), `dev-only-variables`(테스트 변수 매크로 헤더를 개발 단위로 옮겨 런타임 include 가 컴파일에서 멈추게), `editor-view-includes`(MVVM 이 끝나면 View 부분의 껍데기로).
-- **에디터 MVVM 남은 View 21 개:** 인스펙터 코어(프로퍼티 그리드에 편집 모델 층 먼저), 큰 패널(Hierarchy · Profiler · MapCheck · PrefabEditor · ContentBrowser · Sequencer · AnimationRewind · RigDebug · BoneHierarchyPopup · StreamingCells · VolumetricFog), RenderTarget, 감시 값 4. 다 옮기면 `_migratedViews` 표와 린트를 지운다([EditorUI](agents/EditorUI.md)).
+- **에디터 MVVM 남은 View 16 개:** 인스펙터 코어(프로퍼티 그리드에 편집 모델 층 먼저), 큰 패널(Hierarchy · AnimationRewind · RigDebug · BoneHierarchyPopup · StreamingCells · VolumetricFog), RenderTarget, 감시 값 4. 다 옮기면 `_migratedViews` 표와 린트를 지운다([EditorUI](agents/EditorUI.md)).
+  - Hierarchy 의 길: 펼침 상태를 ImGui 저장소가 아니라 ViewModel 이 들고(`SetNextItemOpen` 으로 넘기고 `TreeNodeEx` 결과로 받는다 — 언리얼 아웃라이너의 `ExpansionState`), `gather` 가 보이는 줄(오브젝트 · 씬 컴포넌트 · 컴포넌트, 깊이)을 값으로 편다. 끌어 놓기 · 이름 바꾸기 · 눈 · 자물쇠 · 클릭은 id 명령. 큐브 8000 루트 씬에서 화면 밖 접힌 루트를 건너뛰는 지금의 비용(이름 · 배지를 그리는 줄만 만든다)을 지키려면 줄 세부를 지난 프레임의 보이는 범위로만 채운다 — 그 프레임 시간을 측정해 옛 것과 대조한 뒤 넣는다. "Add Component" 하위 메뉴는 공용 위젯이 `GameObject*` 를 받으므로(인스펙터와 같다) 위젯에 id 판을 먼저 둔다.
+  - 옮긴 다섯(Profiler · MapCheck · PrefabEditor · ContentBrowser · Sequencer)은 컴파일 · 시나리오(맵 검사 고침 · 프리팹 창 · 시퀀서 바인딩 · 콘텐츠 브라우저)를 다음 묶음 검증에서 본다. ViewModel 데이터 명령의 단위 테스트(맵 검사 고침 · 시퀀서 묶기)가 아직 없다.
 - **저장 왕복 시나리오:** Catalog · InputMap + 재생 · BehaviorTree · Rig · Terrain · AudioEvent/Graph. 틀(`panel.saveDocument` · `panel.reloadDocument` · `asset.snapshotScratch` · `asset.expectScratchUnchanged`, 예 `saveroundtripmaterial.scenario.xml`)은 있다 — 이 패널들은 경로로 열리지 않거나(자체 저장 패널 · 리그) 고정 파일을 써서 `scratch` 사본을 가리킬 문서 경로 입구가 먼저다.
 - **렌더링:** Vulkan placed 텍스처(해제 큐에 메모리 참조 세기), TransientLeasePool 을 뷰 풀에 잇기, 비동기 컴퓨트 큐 패스 타임스탬프 · Tracy 프레임 패스 내보내기, 같은 자리 후처리 머티리얼이 앞 결과를 이어 읽기, 박막 · 털 · 스타킹 · 비단 외형의 디퍼드(G버퍼 칸 부족 — 포워드 전용으로 남김), 몸 머티리얼이 피부 층 표면 덮어쓰기(`_skinLayerSurfaceMap`)를 읽기, 텍스처 전이 · VFX · 프로브 디스패치의 버퍼별 전이를 묶음 API 로.
 - **캐릭터:** 문신 집기를 바인드 자세가 아닌 지금 포즈로, 부품 오브젝트도 집기, 몸 탭 동작 시나리오.
