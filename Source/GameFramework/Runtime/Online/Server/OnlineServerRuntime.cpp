@@ -9,8 +9,8 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Time/Clock.h"
 
-#include "Engine/Config/Server/ServerConfig.h"
 #include "Engine/Config/Server/ServerSecret.h"
+#include "Engine/Config/ServerConfig.h"
 #include "Engine/DedicatedServer/ServiceHealthRegistry.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"

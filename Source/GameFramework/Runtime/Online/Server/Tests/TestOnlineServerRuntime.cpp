@@ -4,7 +4,7 @@
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/Clock.h"
 
-#include "Engine/Config/Server/ServerConfig.h"
+#include "Engine/Config/ServerConfig.h"
 #include "Engine/DedicatedServer/ServiceHealthRegistry.h"
 
 #include "GameFramework/Runtime/Online/Cache/EphemeralStoreRouter.h"

@@ -303,7 +303,9 @@ set_property(DIRECTORY "${CMAKE_SOURCE_DIR}" APPEND PROPERTY CMAKE_CONFIGURE_DEP
 function(sw_applyTargetLayerGate TARGET_NAME)
 	set(listGate ${ARGN})
 	if(SW_TARGET_TYPE STREQUAL "Server")
-		list(APPEND listGate serverbuild) # 전용 서버 구성은 렌더러 헤더를 읽지 않는다
+		list(APPEND listGate serverbuild) # 전용 서버 구성은 렌더러 · `Client/` 헤더를 읽지 않는다
+	elseif(SW_TARGET_TYPE STREQUAL "Client")
+		list(APPEND listGate clientbuild) # 클라이언트 구성은 `Server/` 헤더를 읽지 않는다
 	endif()
 	foreach(gate IN LISTS listGate)
 		if(NOT gate IN_LIST SW_TARGET_LAYER_GATES)

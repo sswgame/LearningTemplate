@@ -24,6 +24,12 @@ set(SW_DEV_ONLY_SOURCE_PATTERNS "/Tests/" "/Dev/")
 # 서버가 그 컴포넌트를 씬에서 만나면 MissingComponent 가 아니라 조용히 건너뛴다(`Config/Engine/ClientOnlyTypes.generated.json` — 생성기 `client-only-types`).
 set(SW_CLIENT_ONLY_SOURCE_PATTERNS "/Client/")
 
+# 클라이언트 구성이 짓지 않는 서버 전용 소스 — 위의 반대쪽. Engine · GameFramework · DevTools · 게임 모듈 안의 `Server/` 폴더(서버 비밀 `Engine/Config/Server` ·
+# 온라인 서버 조립 `GameFramework/Runtime/Online/Server`). 키트의 `Server/` 는 따로 짓는 모듈(`GF_Server_<X>`, 대상 Server)이고 전용 서버 실행 파일 `Source/Server` 는
+# 제 CMake 가 Client 에서 빼므로 여기 걸리지 않는다. 공유 코드는 그 헤더를 include 하지 않는다 — 클라이언트 구성 게이트 `clientbuild` 가 이름이 `Server` 인 모든 폴더의
+# 헤더를 막는다(`TargetLayers.toml` 의 `[gatefolder]`). 세션이 서버를 띄우는 일은 창구(`IOnlineLocalServerFactory`)로 부른다. 언리얼 `WITH_SERVER_CODE` 와 서버 전용 모듈 자리다(기억).
+set(SW_SERVER_ONLY_SOURCE_PATTERNS "/Server/")
+
 # 이 구성이 짓지 않는 소스를 적는다(절대 경로). 헤더도 받아 두지만 목록에는 `.c` · `.cpp` 만 쓴다.
 function(sw_declareUnbuiltSources)
 	set_property(GLOBAL APPEND PROPERTY SW_UNBUILT_SOURCES ${ARGN})

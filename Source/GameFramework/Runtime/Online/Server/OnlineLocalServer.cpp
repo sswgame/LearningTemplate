@@ -10,7 +10,7 @@
 #include "Core/Network/NetTypes.h"
 
 #include "Engine/Config/ConfigManager.h"
-#include "Engine/Config/Server/ServerConfig.h"
+#include "Engine/Config/ServerConfig.h"
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
 
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"

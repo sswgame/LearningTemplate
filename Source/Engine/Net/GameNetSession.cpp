@@ -19,7 +19,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
-#include "Engine/Config/Server/ServerConfig.h"
+#include "Engine/Config/ServerConfig.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/DedicatedServer/ServerServiceRegistry.h"
 #include "Engine/EngineFrameHooks.h"

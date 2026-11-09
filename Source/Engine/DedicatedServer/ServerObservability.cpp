@@ -11,7 +11,7 @@
 #include "Core/Time/MonotonicClock.h"
 #include "Core/Time/WallClock.h"
 
-#include "Engine/Config/Server/ServerConfig.h"
+#include "Engine/Config/ServerConfig.h"
 #include "Engine/DedicatedServer/OpsHTTPEndpoint.h"
 #include "Engine/DedicatedServer/ServerFrameHistory.h"
 #include "Engine/DedicatedServer/ServiceHealthRegistry.h"

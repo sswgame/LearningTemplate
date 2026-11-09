@@ -1,4 +1,4 @@
-// ServerConfig — 저장소의 서버 설정이 모두 엄격하게 읽히고, 저장소 · 캐시 항목 배열이 값 구조체 본문으로 읽히며, 비밀은 환경 변수에서만 온다(nogpu).
+// ServerConfig — 저장소의 서버 설정이 모두 엄격하게 읽히고, 저장소 · 캐시 항목 배열이 값 구조체 본문으로 읽힌다(nogpu). 비밀(`ServerSecret`)은 서버 코드라 `Config/Server/Tests` 가 본다.
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
@@ -6,8 +6,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Config/ConfigManager.h"
-#include "Engine/Config/Server/ServerConfig.h"
-#include "Engine/Config/Server/ServerSecret.h"
+#include "Engine/Config/ServerConfig.h"
 
 /**
  * @brief [ServerConfigTest] 저장소의 서버 설정이 모두 읽히고, 저장소 · 캐시 항목 배열이 값 구조체 본문으로 읽힌다
@@ -41,17 +40,4 @@ SW_TEST_CASE( ServerConfigTest, RepositoryServerConfigsLoad )
     SW_EXPECT_EQUAL( sw::string( "sqlite" ), pConfig->_listStore[0]._driver );
     SW_REQUIRE_EQUAL( size_t{ 1 }, pConfig->_listCache.size() );
     SW_EXPECT_EQUAL( sw::string( "SW_CACHE_AUTH" ), pConfig->_listCache[0]._secretEnvironment );
-}
-
-/**
- * @brief [ServerConfigTest] 비밀은 환경 변수에서만 — 이름이 비면 비밀 없음, 이름이 있는데 변수가 없으면 실패(로그에는 이름만)
- */
-SW_TEST_CASE( ServerConfigTest, SecretComesFromTheEnvironmentOnly )
-{
-    sw::string secret;
-    SW_EXPECT_TRUE( sw::ServerSecret::read( "", secret ) );
-    SW_EXPECT_TRUE( secret.empty() );
-
-    SW_EXPECT_LOG( "Server.SecretNotSet" );
-    SW_EXPECT_FALSE( sw::ServerSecret::read( "SW_TEST_SECRET_THAT_IS_NOT_SET_7F3A", secret ) );
 }

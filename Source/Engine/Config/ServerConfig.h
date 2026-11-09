@@ -5,7 +5,8 @@
  *          접속 문자열을 고치는 파일이라서입니다. **비밀번호 · 토큰은 이 파일에 쓰지 않습니다** — 항목의 `_secretEnvironment` 가 가리키는 환경 변수에서
  *          드라이버가 읽습니다(`ServerSecret::read`). 저장소 · 캐시 항목의 드라이버 이름(`postgres` · `sqlite` · `memory` · `resp`)을 해석하는 것은
  *          서버 전용 모듈입니다 — 엔진은 항목을 운반만 합니다.
- *          클라이언트 빌드에도 이 타입은 있습니다(리플렉션 등록 한 줄) — 서버 로직이 아니라 설정의 모양이라서입니다.
+ *          클라이언트 빌드에도 이 타입은 있습니다(리플렉션 등록 한 줄) — 서버 로직이 아니라 설정의 모양이라서입니다(게임 세션의 리슨 값 `GameNetSession` 도 읽는다).
+ *          그래서 `Config/Server/` 가 아니라 여기 둡니다 — 이름이 `Server` 인 폴더는 클라이언트 구성이 짓지도 읽지도 않습니다(`SW_SERVER_ONLY_SOURCE_PATTERNS` · 게이트 `clientbuild`).
  */
 #pragma once
 #include "Core/Container/string.h"

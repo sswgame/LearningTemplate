@@ -358,8 +358,11 @@ function(sw_addGameModule MODULE_NAME)
 	# 게임의 에디터 확장(Editor/)은 따로 짓는 모듈이다(SWGameEditor).
 	list(FILTER listGameSource EXCLUDE REGEX "/Editor/")
 	# 게임의 클라이언트 전용 소스(Client/ — 그리는 벤치 · UI 시연)는 전용 서버가 짓지 않는다(cmake/Engine/UnbuiltSources.cmake).
+	# 게임의 서버 전용 소스(Server/)는 클라이언트 구성이 짓지 않는다.
 	if(SW_TARGET_TYPE STREQUAL "Server")
 		sw_excludeUnbuiltSources(listGameSource ${SW_CLIENT_ONLY_SOURCE_PATTERNS})
+	elseif(SW_TARGET_TYPE STREQUAL "Client")
+		sw_excludeUnbuiltSources(listGameSource ${SW_SERVER_ONLY_SOURCE_PATTERNS})
 	endif()
 	sw_addModuleLibrary(${targetName}
 		KIND game

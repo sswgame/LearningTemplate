@@ -16,8 +16,11 @@ list(FILTER listGameFrameworkSource EXCLUDE REGEX "Kits/")
 # 에디터 확장(Plugin/Editor/)은 따로 짓는 모듈이다(GF_EditorPlugin_<이름>) - GameFramework DLL(배포본 포함)에 섞지 않는다.
 list(FILTER listGameFrameworkSource EXCLUDE REGEX "Plugin/")
 # 클라이언트 전용 소스(Client/ — HUD · 마커 · 로딩 화면)는 전용 서버가 짓지 않는다(cmake/Engine/UnbuiltSources.cmake).
+# 서버 전용 소스(Server/ — 온라인 서버 조립)는 클라이언트 구성이 짓지 않는다.
 if(SW_TARGET_TYPE STREQUAL "Server")
 	sw_excludeUnbuiltSources(listGameFrameworkSource ${SW_CLIENT_ONLY_SOURCE_PATTERNS})
+elseif(SW_TARGET_TYPE STREQUAL "Client")
+	sw_excludeUnbuiltSources(listGameFrameworkSource ${SW_SERVER_ONLY_SOURCE_PATTERNS})
 endif()
 
 # 리플렉션 대상 헤더는 소스와 **같은 목록**에서 고른다. 주의: 폴더를 이름으로 적어 모으면 최상위 폴더를 하나 더 만들 때 그 안의 REFLECT() 타입이

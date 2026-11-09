@@ -2,7 +2,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Config/Server/ServerConfig.h"
+#include "Engine/Config/ServerConfig.h"
 #include "Engine/Serialization/Diff/ObjectDiffSerializer.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 

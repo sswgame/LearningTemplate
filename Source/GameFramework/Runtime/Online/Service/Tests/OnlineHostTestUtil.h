@@ -22,7 +22,6 @@
 #include "GameFramework/Runtime/Online/Bus/LocalServerBus.h"
 #include "GameFramework/Runtime/Online/Cache/MemoryEphemeralStore.h"
 #include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
-#include "GameFramework/Runtime/Online/Server/OnlineServerRuntime.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocolRegistry.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServiceClient.h"
@@ -290,34 +289,6 @@ namespace sw::test
         {
             if ( bStart )
                 _server.start();
-        }
-    };
-
-    /**
-     * @brief 설정 글로 서는 실제 서버 조립(`OnlineServerRuntime`) + 클라이언트 묶음입니다. 키트 · 저장소 · 캐시 · 제공자를 전용 서버와 같은 설정 파일 모양으로 고릅니다(전송만 루프백 · 평문이다).
-     * @details `OnlineTestFixture` 는 서비스를 손으로 올리는 호스트 묶음이고, 이것은 조립(키트 의존 정렬 · 기동 · 종료)까지 지납니다. 로그인 없이 계정을 붙이려면 설정에 `testLogin` 키트를 적습니다.
-     *          선언 순서가 수명이다(전송이 조립보다, 조립이 클라이언트보다 오래 산다).
-     */
-    struct OnlineRuntimeFixture
-    {
-        static constexpr uint16 kPort = 7600;
-
-        LoopbackStreamNetwork        _network{ 5u };
-        SystemMonotonicClock         _clock{};
-        unique_ptr<IStreamTransport> _serverTransport{ _network.createTransport() };
-        OnlineServerRuntime          _runtime{};
-        OnlineTestClients            _clients{ _network };
-
-        /** @brief @p serverJSON(`ServerConfig`)과 @p onlineJSON(`OnlineServerConfig`)으로 조립을 세웁니다. 실패하면 false 와 @p outError 입니다. */
-        [[nodiscard]] SW_GF_API expected<void> fromConfig( string_view serverJSON, string_view onlineJSON, int64 nowMs );
-
-        void updateAll( int64 nowMs, int32 roundCount = 6 )
-        {
-            for ( int32 round = 0; round < roundCount; ++round )
-            {
-                _clients.update( nowMs );
-                _runtime.update( UnixMilliseconds{ nowMs } );
-            }
         }
     };
 

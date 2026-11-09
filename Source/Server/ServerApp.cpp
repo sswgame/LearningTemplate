@@ -19,7 +19,7 @@
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/GameSelection.h"
-#include "Engine/Config/Server/ServerConfig.h"
+#include "Engine/Config/ServerConfig.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/DedicatedServer/ServerServiceManager.h"
 #include "Engine/DedicatedServer/ServiceHealthRegistry.h"

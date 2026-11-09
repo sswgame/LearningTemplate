@@ -9,7 +9,7 @@
 #include "Core/Process/ShutdownSignal.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Config/Server/ServerConfig.h"
+#include "Engine/Config/ServerConfig.h"
 #include "Engine/DedicatedServer/ServiceHealthRegistry.h"
 #include "Engine/Observability/DebugChannel.h"
 
