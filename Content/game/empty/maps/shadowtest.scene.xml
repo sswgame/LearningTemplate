@@ -57,7 +57,7 @@
 					                     _intensity="3"
 					                     _radius="7"
 					                     _bCastShadow="true">
-						<_shadowSettings _sourceSize="0.15" />
+						<_shadowSettings _sourceSize="0.5" />
 					</PointLightComponent>
 				</_listComponent>
 			</GameObject>

@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   그림자 필터 — 같은 무대를 3x3 PCF(gv_shadowFilter 0)와 PCSS(1)로 찍어 둘이 다른지(반그림자가 원천 크기만큼 넓어진다) 보고, 두 장을 골든으로 지킨다.
-  무대(maps/shadowtest)는 해(시직경 3°, 캐스케이드 둘)와 그림자 점광(반지름 0.15 m)이 기둥 · 상자 그림자를 바닥에 드리운다. PCF 사진은 이 기능 전의 그림과 같아야 한다.
+  무대(maps/shadowtest)는 해(시직경 3°, 캐스케이드 둘)와 그림자 점광(반지름 0.5 m)이 기둥 · 상자 그림자를 바닥에 드리운다. PCF 사진은 이 기능 전의 그림과 같아야 한다.
+  다름 판정은 상자 그림자 둘레만 본다 — 주변광이 밝아 그림자 대비가 약하므로(화소 차 최대 8/255) 넓은 영역이면 바뀐 반그림자가 영역 비율로 묻힌다(0.15 m 일 때 0.02%).
   실행: ctest -R Scenario.game.empty.shadow_pcss
 -->
 <Scenario name="game.empty.shadow_pcss" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
@@ -21,7 +22,7 @@
 	<Wait frames="10"/>
 	<Screenshot file="shadow_pcss.ppm"/>
 	<Wait frames="2"/>
-	<ExpectImagesDiffer first="shadow_pcf.ppm" second="shadow_pcss.ppm" region="0.05,0.3,0.95,0.95" minDiffering="0.005"/>
+	<ExpectImagesDiffer first="shadow_pcf.ppm" second="shadow_pcss.ppm" region="0.43,0.34,0.63,0.48" minDiffering="0.005"/>
 	<ExpectImage file="shadow_pcf.ppm" golden="shadow_pcf"/>
 	<ExpectImage file="shadow_pcss.ppm" golden="shadow_pcss"/>
 	<Variable name="gv_shadowFilter" value="0"/>

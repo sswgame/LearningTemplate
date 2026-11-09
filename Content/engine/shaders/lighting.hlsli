@@ -414,9 +414,12 @@ float4 LightData::sampleProbeVolume( float3 worldPosition, float3 normal, out fl
     const float3 lastCell  = float3( max( count, 1u ) - 1u );
     const float3 local     = ( worldPosition - origin ) / spacing;
     // 프로브가 하나뿐인 축은 그 축의 두께가 0 이다 — 간격 반 안을 안으로 본다.
-    const float3 multiAxis     = float3( count > 1u ); // 1 이면 그 축에 프로브가 둘 이상
-    const float3 lowBound      = multiAxis * 0.5f - 0.5f;
-    const float3 highBound     = lerp( float3( 0.5f, 0.5f, 0.5f ), lastCell, multiAxis );
+    const float3 multiAxis = float3( count > 1u ); // 1 이면 그 축에 프로브가 둘 이상
+    // 상자 면에 놓인 표면(볼륨 바닥을 바닥에 맞춘 무대)은 안이다 — 디퍼드는 깊이에서 위치를 되살려 면 위의 점이 칸의 1/10000 쯤 밖으로 흔들린다(포워드는 정확히 면 위).
+    // 여유는 칸의 1% 다. 이것이 없으면 디퍼드의 바닥만 볼륨 밖으로 판정돼 간접광을 잃었다(screenspacegi 시나리오).
+    const float  kFaceSlack    = 0.01f;
+    const float3 lowBound      = multiAxis * 0.5f - 0.5f - kFaceSlack;
+    const float3 highBound     = lerp( float3( 0.5f, 0.5f, 0.5f ), lastCell, multiAxis ) + kFaceSlack;
     const bool   bInside       = all( local >= lowBound ) && all( local <= highBound ) && g_SwLightProbesIndex != kInvalidIndex;
     const float3 clamped       = clamp( local, 0.0f, lastCell );
     const uint3  cell          = min( uint3( clamped ), uint3( max( lastCell - 1.0f, 0.0f ) ) );
