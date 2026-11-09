@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  라이트 그리드 생산자 셋(gv_lightCulling — None 목록 전체 · CPU 클러스터 · GPU 클러스터)이 같은 그림을 낸다. 그리드는 비용만 줄이고 빛을 빼거나 더하지 않아야 한다.
+  메시 벤치(정육면체 64)에 점광 · 스폿 32 를 흩뿌리고, 같은 실행에서 생산자를 바꿔 찍는다(정책은 프레임마다 읽힌다 — 첫 CPU 프레임도 그린다).
+  지킨 결함: CPU 생산자가 올린 뒤 바꾼 사본(지난 프레임, 첫 프레임은 빈 배열)을 읽어 첫 프레임에 렌더 스레드가 죽었다(GPULightBuffer::updateCPUGrid).
+  실행: App -scenario=game/empty/automation/lightculling.scenario.xml -unattended (체인: ctest -R Scenario.empty)
+-->
+<Scenario name="game.empty.lightculling" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_stressTestMeshes" value="64"/>
+	<Launch variable="gv_stressTestLights" value="32"/>
+	<Launch variable="gv_stressTestAnimate" value="0"/>
+	<Launch variable="gv_stressTestTransparent" value="0"/>
+	<Wait frames="60"/>
+	<Screenshot file="lightculling_gpu.ppm"/>
+	<Variable name="gv_lightCulling" value="None"/>
+	<Wait frames="5"/>
+	<Screenshot file="lightculling_none.ppm"/>
+	<Variable name="gv_lightCulling" value="CPU"/>
+	<Wait frames="5"/>
+	<Screenshot file="lightculling_cpu.ppm"/>
+	<Variable name="gv_lightCulling" value="GPU"/>
+	<Wait frames="5"/>
+	<ExpectImagesDiffer first="lightculling_none.ppm" second="lightculling_cpu.ppm" region="0,0,1,1" minDiffering="0" maxDiffering="0.002"/>
+	<ExpectImagesDiffer first="lightculling_none.ppm" second="lightculling_gpu.ppm" region="0,0,1,1" minDiffering="0" maxDiffering="0.002"/>
+	<ExpectImage file="lightculling_none.ppm" golden="lightculling"/>
+	<Pass/>
+</Scenario>

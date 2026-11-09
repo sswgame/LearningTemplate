@@ -516,7 +516,9 @@ namespace sw
         for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( listGridViewProj.size() ); ++viewIndex )
         {
             LightGrid& grid = _listGrid[viewIndex];
-            if ( grid.populate( listGridViewProj[viewIndex], _listUploadScratch.data(), _cpuCount ) == false )
+            // 이번 프레임 라이트는 올린 뒤 _listUploadedLight 에 있다(uploadChangedLights 가 _listUploadScratch 와 바꾼다) — 사본을 읽으면 지난 프레임(첫 프레임은 빈 배열)이었다.
+            SW_ASSERT( _listUploadedLight.size() >= _cpuCount );
+            if ( grid.populate( listGridViewProj[viewIndex], _listUploadedLight.data(), _cpuCount ) == false )
             {
                 reportGridFailure( "has no usable projection (near/far plane)", viewIndex );
                 continue;
