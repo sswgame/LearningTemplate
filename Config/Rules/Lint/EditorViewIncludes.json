@@ -71,6 +71,7 @@
         "Source/Editor/Panels/Physics/RagdollPreviewPanel",
         "Source/Editor/Panels/Profiler/ProfilerWatches",
         "Source/Editor/Panels/ProjectSettings/ProjectSettingsPanel",
+        "Source/Editor/Panels/RenderTarget/RenderTargetPanel",
         "Source/Editor/Panels/RenderTarget/RenderTargetWatches",
         "Source/Editor/Panels/Scene/DataLayersPanel",
         "Source/Editor/Panels/Scene/EditorSceneViewUtil",
