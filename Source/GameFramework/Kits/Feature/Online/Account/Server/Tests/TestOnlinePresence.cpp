@@ -6,7 +6,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/OnlinePresence.h"
-#include "GameFramework/Runtime/Online/Service/Tests/OnlineHostTestUtil.h"
+#include "GameFramework/Runtime/Online/Service/Server/Tests/OnlineHostTestUtil.h"
 
 using namespace sw;
 

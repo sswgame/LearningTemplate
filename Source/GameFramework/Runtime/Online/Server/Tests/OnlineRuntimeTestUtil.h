@@ -11,7 +11,7 @@
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Runtime/Online/Server/OnlineServerRuntime.h"
-#include "GameFramework/Runtime/Online/Service/Tests/OnlineHostTestUtil.h"
+#include "GameFramework/Runtime/Online/Service/Server/Tests/OnlineHostTestUtil.h"
 
 namespace sw::test
 {

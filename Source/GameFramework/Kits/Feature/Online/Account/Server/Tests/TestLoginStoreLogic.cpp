@@ -6,7 +6,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Rule/LoginStoreLogic.h"
-#include "GameFramework/Runtime/Online/Store/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 
 using namespace sw;
 

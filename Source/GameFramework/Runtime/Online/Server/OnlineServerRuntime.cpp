@@ -15,8 +15,8 @@
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Online/Audit/ServiceAuditLog.h"
-#include "GameFramework/Runtime/Online/Bus/EphemeralServerBus.h"
-#include "GameFramework/Runtime/Online/Cache/MemoryEphemeralStore.h"
+#include "GameFramework/Runtime/Online/Bus/Server/EphemeralServerBus.h"
+#include "GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.h"
 #include "GameFramework/Runtime/Online/Config/RemoteConfig.h"
 #include "GameFramework/Runtime/Online/Directory/ServerRegistration.h"
 #include "GameFramework/Runtime/Online/Ledger/Ledger.h"
@@ -26,8 +26,8 @@
 #include "GameFramework/Runtime/Online/Security/NetSecurity.h"
 #include "GameFramework/Runtime/Online/Server/IOnlineStoreDriver.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
-#include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
-#include "GameFramework/Runtime/Online/Store/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
+#include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 
 namespace sw
 {

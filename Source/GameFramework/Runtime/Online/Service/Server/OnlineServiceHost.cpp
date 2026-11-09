@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
+#include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/LogContext.h"

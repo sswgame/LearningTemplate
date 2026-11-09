@@ -5,7 +5,7 @@
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Ledger/LedgerAuditReport.h"
 #include "GameFramework/Runtime/Online/Ledger/Ledger.h"
 #include "GameFramework/Runtime/Online/Mail/ServiceMail.h"
-#include "GameFramework/Runtime/Online/Store/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 
 // ServiceMailTest — 우편 넣기(보상 · 플레이어 첨부 맡김), 멱등 키 재전송, 새 우편 알림이 한 번만 나가는지. (nogpu)
 

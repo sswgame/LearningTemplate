@@ -8,7 +8,7 @@
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Directory/ServerSelectionQuery.h"
 #include "GameFramework/Runtime/Online/Cache/EphemeralStore.h"
 #include "GameFramework/Runtime/Online/Cache/EphemeralStoreRouter.h"
-#include "GameFramework/Runtime/Online/Cache/MemoryEphemeralStore.h"
+#include "GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.h"
 #include "GameFramework/Runtime/Online/Directory/ServerRecord.h"
 #include "GameFramework/Runtime/Online/Directory/ServerRegistration.h"
 

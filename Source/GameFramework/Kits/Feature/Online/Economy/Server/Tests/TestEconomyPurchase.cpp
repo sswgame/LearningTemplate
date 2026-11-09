@@ -8,7 +8,7 @@
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/Catalog/OfferCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyStoreLogic.h"
 #include "GameFramework/Runtime/Online/Ledger/Ledger.h"
-#include "GameFramework/Runtime/Online/Store/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 
 using namespace sw;
 

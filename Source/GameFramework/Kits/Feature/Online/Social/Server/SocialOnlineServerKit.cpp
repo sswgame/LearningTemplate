@@ -8,7 +8,7 @@
 #include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
-#include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
+#include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
 
 // 친구 키트의 서버 조립 — 친구 · 길드 서비스와 바인딩을 만들고, 차단 목록을 기반 인터페이스(`IAccountBlockList`)로 문맥에 내놓는다(채팅이 차단을 지킨다).
 // 설정은 `SocialKitConfig` 이다.

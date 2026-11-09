@@ -28,7 +28,7 @@
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Service/ServiceServerCallTableBase.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocolRegistry.h"
-#include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
+#include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
 #include "GameFramework/Runtime/Online/Store/ServiceStoreTracker.h"
 
 namespace sw

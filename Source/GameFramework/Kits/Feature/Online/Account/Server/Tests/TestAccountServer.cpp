@@ -13,8 +13,8 @@
 #include "GameFramework/Runtime/Online/Audit/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Config/RemoteConfig.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServiceClient.h"
-#include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
-#include "GameFramework/Runtime/Online/Service/Tests/OnlineHostTestUtil.h"
+#include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
+#include "GameFramework/Runtime/Online/Service/Server/Tests/OnlineHostTestUtil.h"
 
 using namespace sw;
 

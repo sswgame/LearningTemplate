@@ -4,7 +4,7 @@
 
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Ledger/LedgerAuditReport.h"
 #include "GameFramework/Runtime/Online/Ledger/Ledger.h"
-#include "GameFramework/Runtime/Online/Store/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 
 // LedgerTest — 복식 원장의 돈 이동: 발행 · 계정 사이 이동, 잔액 부족 · 상한, 분개 키 멱등, 저장소 실패(커밋 거절 · 응답 유실)에서도 정확히 한 번.
 // 매 케이스 끝에 감사(자산마다 보유 = 발행 - 소각)를 본다. 저장소는 메모리 구현이다(nogpu).

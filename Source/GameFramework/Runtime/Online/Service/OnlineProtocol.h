@@ -269,5 +269,6 @@ namespace sw
         static constexpr uint32 kBaseVersion      = 2; ///< 이 테이블, Hello 본문, 알림 프레임 형식의 버전. 온라인 스키마 해시에 섞인다(2: Hello 첫 필드가 스키마 해시). 키트 메시지의 배치는 타입 해시가, 메서드 번호는 메서드 테이블의 이름 순서가 잡으므로, 둘 다 그대로이고 뜻만 바뀐 변경일 때 이 버전을 올린다
         static constexpr int32  kSchemaHashSize   = 8; ///< Hello 첫 필드와 `kVersionMismatch` 자세한 몸의 바이트 수(해시 u64 리틀 엔디언)
         static constexpr int32  kMaxBuildTextSize = 64;
+        static constexpr uint16 kDefaultPort      = 7100; ///< 온라인 서비스의 기본 리슨 포트 — 서버 호스트 · 세션(주소에 포트가 없을 때) · 부하 봇이 함께 쓴다
     };
 } // namespace sw

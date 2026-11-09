@@ -7,7 +7,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/PartyLobbyService.h"
 #include "GameFramework/Runtime/Online/Cache/EphemeralStoreRouter.h"
-#include "GameFramework/Runtime/Online/Cache/MemoryEphemeralStore.h"
+#include "GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.h"
 
 using namespace sw;
 

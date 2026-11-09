@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Online/Bus/LocalServerBus.h"
+#include "GameFramework/Runtime/Online/Bus/Server/LocalServerBus.h"
 
 #include "Core/Algorithm/VectorUtil.h"
 

@@ -8,14 +8,14 @@
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/Clock.h"
 
-#include "GameFramework/Runtime/Online/Bus/LocalServerBus.h"
-#include "GameFramework/Runtime/Online/Cache/MemoryEphemeralStore.h"
+#include "GameFramework/Runtime/Online/Bus/Server/LocalServerBus.h"
+#include "GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.h"
 #include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocolRegistry.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServiceClient.h"
-#include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
-#include "GameFramework/Runtime/Online/Service/Tests/OnlineHostTestUtil.h"
+#include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
+#include "GameFramework/Runtime/Online/Service/Server/Tests/OnlineHostTestUtil.h"
 
 // OnlineServiceHostTest — 서비스 틀: 루프백 스트림 위 호스트 + 클라이언트(한 스레드, 결정적). Hello 전 요청 거절 · 스키마 해시 불일치 · 로그인 확인(익명 메서드는 통과) ·
 // 몸 상한 · 주소 도배 제한 · 늦은 답(토큰) · 닫힌 뒤 답은 버림 · 계정 떼기 → 모든 서비스에 떠남 · 알림은 그 계정에만 · 모두에게 알림 · 멱등 재시도 ·

@@ -286,7 +286,7 @@ namespace sw
 
 #include "GameFramework/Kits/Feature/Online/{name}/Server/{name}Service.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
-#include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
+#include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
 
 // {name} 키트의 서버 조립 — 서비스를 호스트에 걸고 시작 때 저장소를 잇는다.
 

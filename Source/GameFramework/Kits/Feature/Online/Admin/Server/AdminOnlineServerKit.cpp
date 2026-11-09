@@ -4,7 +4,7 @@
 #include "GameFramework/Kits/Feature/Online/Admin/Server/AdminService.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
-#include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
+#include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
 
 // GM 키트의 서버 조립 — GM 서비스를 만든다. 표시 이름 · 접속 여부와 세션 끊기는 계정 키트, 지급 상한은 경제 키트의 원장 정책, 제재 알림은 버스를 쓴다.
 // GM 포트는 플레이어 포트와 따로 사설망에 둔다 — 서버 설정 `_adminServicePort` · `_adminListenAddress` 를 주면 GM 서비스는 그 리슨의 연결만 받는다(`AdminService::getExposure`).

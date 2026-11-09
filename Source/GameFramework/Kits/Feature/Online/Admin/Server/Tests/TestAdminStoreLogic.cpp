@@ -6,7 +6,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Admin/Server/AdminStoreLogic.h"
 #include "GameFramework/Runtime/Online/Ledger/Ledger.h"
-#include "GameFramework/Runtime/Online/Store/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 
 using namespace sw;
 

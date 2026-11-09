@@ -3,14 +3,14 @@
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/Clock.h"
 
-#include "GameFramework/Runtime/Online/Bus/EphemeralServerBus.h"
-#include "GameFramework/Runtime/Online/Bus/LocalServerBus.h"
 #include "GameFramework/Runtime/Online/Bus/MixedBuildCodec.h"
+#include "GameFramework/Runtime/Online/Bus/Server/EphemeralServerBus.h"
+#include "GameFramework/Runtime/Online/Bus/Server/LocalServerBus.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBus.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Runtime/Online/Cache/EphemeralStore.h"
 #include "GameFramework/Runtime/Online/Cache/EphemeralStoreRouter.h"
-#include "GameFramework/Runtime/Online/Cache/MemoryEphemeralStore.h"
+#include "GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.h"
 #include "GameFramework/Runtime/Online/Sanction/ServiceSanction.h"
 
 // ServerBusTest — 서버 간 버스: 주제 규칙, 프로세스 안 허브(LocalServerBus)의 구독 · 배달 · 순번, 주제 정의(ServerBusTopic · ServerBusTopicFamily)의

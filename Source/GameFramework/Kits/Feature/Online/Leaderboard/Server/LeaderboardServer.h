@@ -16,7 +16,7 @@
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Runtime/LeaderboardProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardService.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Service/OnlineProtocolService.h"
-#include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
+#include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
 
 namespace sw
 {

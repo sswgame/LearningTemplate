@@ -11,8 +11,8 @@
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Directory/ServerDirectoryControl.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Ledger/IBalanceChangedListener.h"
 #include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
-#include "GameFramework/Runtime/Online/Service/Tests/OnlineHostTestUtil.h"
-#include "GameFramework/Runtime/Online/Store/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Service/Server/Tests/OnlineHostTestUtil.h"
+#include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 
 using namespace sw;
 

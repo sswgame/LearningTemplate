@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Online/Bus/EphemeralServerBus.h"
+#include "GameFramework/Runtime/Online/Bus/Server/EphemeralServerBus.h"
 
 #include "Core/Serialization/LittleEndianUtil.h"
 #include "Core/String/StringUtil.h"

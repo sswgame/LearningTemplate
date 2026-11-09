@@ -19,14 +19,14 @@
 #include "Core/Time/Clock.h"
 #include "Core/Time/TimePoint.h"
 
-#include "GameFramework/Runtime/Online/Bus/LocalServerBus.h"
-#include "GameFramework/Runtime/Online/Cache/MemoryEphemeralStore.h"
+#include "GameFramework/Runtime/Online/Bus/Server/LocalServerBus.h"
+#include "GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.h"
 #include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocolRegistry.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServiceClient.h"
-#include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
-#include "GameFramework/Runtime/Online/Store/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
+#include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 
 #include <initializer_list>
 

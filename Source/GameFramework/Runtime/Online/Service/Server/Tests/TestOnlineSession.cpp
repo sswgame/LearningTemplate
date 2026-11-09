@@ -5,7 +5,7 @@
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
 #include "GameFramework/Runtime/Online/Service/OnlineClientRegistry.h"
 #include "GameFramework/Runtime/Online/Service/OnlineSession.h"
-#include "GameFramework/Runtime/Online/Service/Tests/OnlineHostTestUtil.h"
+#include "GameFramework/Runtime/Online/Service/Server/Tests/OnlineHostTestUtil.h"
 
 // OnlineSessionTest — 게임의 온라인 세션: 등록된 키트 클라이언트를 만들어 형식으로 찾고, 설정이 빠지면 조용히 넘어가지 않으며, 루프백 서버에 붙어 Hello 를 마치고 끊는다(nogpu).
 

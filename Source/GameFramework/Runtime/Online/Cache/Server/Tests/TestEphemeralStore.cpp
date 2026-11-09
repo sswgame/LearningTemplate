@@ -5,7 +5,7 @@
 
 #include "GameFramework/Runtime/Online/Cache/EphemeralStore.h"
 #include "GameFramework/Runtime/Online/Cache/EphemeralStoreRouter.h"
-#include "GameFramework/Runtime/Online/Cache/MemoryEphemeralStore.h"
+#include "GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.h"
 
 // EphemeralStoreTest — 휘발성 저장의 메모리 구현과 라우터: 키 · 크기 · 점수 형식 검사, 조건 쓰기 · 비교 후 쓰기(임대), 게으른 만료, 정수 증감,
 // 정렬 집합의 순서(큰 점수 · 같은 점수는 멤버 바이트 역순) · 순위 · 범위, 값과 정렬 집합의 종류 충돌, 발행/구독, 내린 뒤의 Unavailable,

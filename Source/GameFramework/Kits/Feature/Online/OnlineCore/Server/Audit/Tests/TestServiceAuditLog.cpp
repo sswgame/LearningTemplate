@@ -3,7 +3,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Runtime/Online/Audit/ServiceAuditLog.h"
-#include "GameFramework/Runtime/Online/Store/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 
 // ServiceAuditLogTest — 감사 로그: 효과와 같은 트랜잭션(효과가 지면 줄도 없다), 같은 고유 값은 한 줄, 최근 것부터 · 커서, 상한을 넘는 줄은 효과까지 Invalid,
 // 키의 시각 읽기(형식이 틀리면 거절)(nogpu).

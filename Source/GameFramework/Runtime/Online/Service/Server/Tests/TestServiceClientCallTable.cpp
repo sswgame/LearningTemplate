@@ -6,8 +6,8 @@
 
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServiceClient.h"
+#include "GameFramework/Runtime/Online/Service/Server/Tests/OnlineHostTestUtil.h"
 #include "GameFramework/Runtime/Online/Service/ServiceClientCallTable.h"
-#include "GameFramework/Runtime/Online/Service/Tests/OnlineHostTestUtil.h"
 
 // ServiceClientCallTableTest — 클라이언트 호출 표와 서비스 클라이언트의 수명: 응답이 사용자 델리게이트를 한 번 찾는다. sendRequest 가 그 자리에서 실패를 알려도
 // (초기화 전 · 끊김 · 쓰지 못한 메시지) 델리게이트를 잃지 않는다. 키트와 서비스 클라이언트는 어느 순서로 파괴돼도 되고, 콜백 안에서 키트가 사라져도 순회가 깨지지 않는다(nogpu).

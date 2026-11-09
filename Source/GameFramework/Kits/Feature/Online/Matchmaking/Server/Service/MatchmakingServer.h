@@ -24,7 +24,7 @@
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/PartyLobbyService.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresenceTracker.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Service/OnlineProtocolService.h"
-#include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
+#include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
 
 namespace sw
 {

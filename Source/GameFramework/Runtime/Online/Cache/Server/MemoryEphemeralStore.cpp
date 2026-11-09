@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Online/Cache/MemoryEphemeralStore.h"
+#include "GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.h"
 
 #include "Core/Algorithm/CompareUtil.h"
 #include "Core/Algorithm/VectorUtil.h"

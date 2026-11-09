@@ -17,7 +17,7 @@
 #include "GameFramework/Runtime/Online/Security/NetSecurity.h"
 #include "GameFramework/Runtime/Online/Service/IOnlineLocalServer.h"
 #include "GameFramework/Runtime/Online/Service/OnlineClientRegistry.h"
-#include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
+#include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
 
 namespace sw
 {
@@ -205,7 +205,7 @@ namespace sw
         if ( _settings._onlineGameBuild.empty() )
             return unexpected( Error{ ErrorKind::InvalidArgument, "no game build text (onlineGameBuild in gamesettings)" } );
         NetAddress serverAddress;
-        if ( PlatformSocketUtil::resolveAddress( address, OnlineServiceHostConfig::kDefaultPort, serverAddress ) == false )
+        if ( PlatformSocketUtil::resolveAddress( address, OnlineProtocolConstant::kDefaultPort, serverAddress ) == false )
             return unexpected( Error{ ErrorKind::NotFound, "the server address did not resolve", address } );
         disconnect();
         _transport = StreamTransportFactory::createPlatformTransport();
