@@ -835,7 +835,6 @@
     "Source/GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/SRPGCombat.cpp": {"minus-one": 1, "integer": 16},
     "Source/GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/SRPGCombat.h": {"integer": 1},
     "Source/GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/SRPGCommanderAI.cpp": {"integer": 7},
-    "Source/GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/SRPGCommanderAI.h": {"minus-one": 2},
     "Source/GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/SRPGProgress.cpp": {"integer": 1, "hex": 1},
     "Source/GameFramework/Plugin/Editor/CameraPresets/CameraPresetPanel.cpp": {"float": 2, "integer": 1},
     "Source/GameFramework/Plugin/Editor/CameraPresets/Model/CameraPresetModel.cpp": {"minus-one": 2},

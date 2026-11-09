@@ -31,7 +31,7 @@ namespace sw
 
     ZoneTracker::ZoneTracker()
         : _listZone{}
-        , _activeIndex{ constant::invalid_index::kInt32 }
+        , _activeIndex{}
     {
     }
 
@@ -50,7 +50,7 @@ namespace sw
     void ZoneTracker::clear()
     {
         _listZone.clear();
-        _activeIndex = constant::invalid_index::kInt32;
+        _activeIndex.reset();
     }
 
     void ZoneTracker::setFromMap( string_view mapPath, string_view mapName, int32 width, int32 height, string_view tagText )
@@ -69,7 +69,7 @@ namespace sw
         zone._bClearGateLocked = zone.hasTag( hashed_string( kClearGateTag ) ) ? SW_TRUE : SW_FALSE;
 
         _listZone.push_back( std::move( zone ) );
-        _activeIndex = 0;
+        _activeIndex = 0u;
     }
 
     void ZoneTracker::activate( string_view zoneID )
@@ -78,7 +78,7 @@ namespace sw
         {
             if ( _listZone[zoneIndex]._id == zoneID )
             {
-                _activeIndex = static_cast<int32>( zoneIndex );
+                _activeIndex = static_cast<uint32>( zoneIndex );
                 return;
             }
         }
@@ -86,9 +86,9 @@ namespace sw
 
     void ZoneTracker::setClearGateLocked( bool bLocked )
     {
-        if ( _activeIndex < 0 || _activeIndex >= static_cast<int32>( _listZone.size() ) )
+        if ( _activeIndex.has_value() == false || *_activeIndex >= _listZone.size() )
             return;
-        _listZone[static_cast<size_t>( _activeIndex )]._bClearGateLocked = bLocked ? SW_TRUE : SW_FALSE;
+        _listZone[*_activeIndex]._bClearGateLocked = bLocked ? SW_TRUE : SW_FALSE;
     }
 
     bool ZoneTracker::isClearGateLocked() const
@@ -105,9 +105,9 @@ namespace sw
 
     const ZoneDef* ZoneTracker::getActiveZone() const
     {
-        if ( _activeIndex < 0 || _activeIndex >= static_cast<int32>( _listZone.size() ) )
+        if ( _activeIndex.has_value() == false || *_activeIndex >= _listZone.size() )
             return nullptr;
-        return &_listZone[static_cast<size_t>( _activeIndex )];
+        return &_listZone[*_activeIndex];
     }
 
     string ZoneTracker::getActiveZoneID() const

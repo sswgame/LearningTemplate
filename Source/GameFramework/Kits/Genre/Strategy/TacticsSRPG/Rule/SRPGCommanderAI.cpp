@@ -93,14 +93,12 @@ namespace sw
                     bestScore         = score;
                     bestCost          = cost;
                     outPlan._moveCell = stand;
-                    outPlan._weapon   = weaponIndex;
-                    outPlan._target   = targetIndex;
+                    outPlan._attack   = SRPGCommanderAITarget{ weaponIndex, targetIndex };
                     outPlan._score    = score;
-                    outPlan._bAttack  = SW_TRUE;
                 }
             }
         }
-        if ( outPlan._bAttack == SW_TRUE )
+        if ( outPlan._attack.has_value() )
             return true;
 
         // 공격할 대상이 없으면 가장 가까운 적에게 다가간다(거리가 같으면 덜 걷는 셀을 고른다).
@@ -127,10 +125,10 @@ namespace sw
             return false;
         // 이미 움직인 유닛의 계획은 제자리다. `moveUnit` 은 그 유닛을 거절하므로 제자리면 부르지 않는다(거절을 공격 포기로 읽었다).
         const bool bInPlace = plan._moveCell == field.findUnit( unitIndex )->_cell;
-        if ( ( bInPlace || field.moveUnit( unitIndex, plan._moveCell ) ) && plan._bAttack == SW_TRUE )
+        if ( ( bInPlace || field.moveUnit( unitIndex, plan._moveCell ) ) && plan._attack.has_value() )
         {
             SRPGCombatResult result;
-            (void)SRPGCombat::executeAttack( field, unitIndex, plan._weapon, plan._target, result ); // 결과는 result 로 넘긴다
+            (void)SRPGCombat::executeAttack( field, unitIndex, plan._attack->_weapon, plan._attack->_target, result ); // 결과는 result 로 넘긴다
             if ( pOutResult != nullptr )
                 *pOutResult = result;
         }

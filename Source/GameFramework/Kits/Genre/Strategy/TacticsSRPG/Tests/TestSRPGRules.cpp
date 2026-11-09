@@ -1415,20 +1415,20 @@ SW_TEST_CASE_F( SRPGRulesTest, CommanderPlansTargets )
     SW_EXPECT_FALSE( ai.makePlan( _field, 99, plan ) );
 
     SW_REQUIRE_TRUE( ai.makePlan( _field, unitIndex, plan ) );
-    SW_EXPECT_TRUE( plan._bAttack == SW_TRUE );
+    SW_REQUIRE_TRUE( plan._attack.has_value() );
     SW_EXPECT_TRUE( plan._moveCell == ( sw::int2{ 3, 3 } ) );
-    SW_EXPECT_EQUAL( plainFoe, plan._target ); // 점수가 같으면 앞 번호
+    SW_EXPECT_EQUAL( plainFoe, plan._attack.value()._target ); // 점수가 같으면 앞 번호
     SW_EXPECT_EQUAL( 1500, plan._score );
 
     unit( killable )._hp = 1400; // 1400 + 격파 1000 > 1500
     SW_REQUIRE_TRUE( ai.makePlan( _field, unitIndex, plan ) );
-    SW_EXPECT_EQUAL( killable, plan._target );
+    SW_EXPECT_EQUAL( killable, plan._attack.value()._target );
     SW_EXPECT_EQUAL( 2400, plan._score );
 
     unit( killable )._hp = 3000;
     _field.setCommander( killable, true ); // 1500 + 500
     SW_REQUIRE_TRUE( ai.makePlan( _field, unitIndex, plan ) );
-    SW_EXPECT_EQUAL( killable, plan._target );
+    SW_EXPECT_EQUAL( killable, plan._attack.value()._target );
     SW_EXPECT_EQUAL( 2000, plan._score );
     _field.setCommander( killable, false );
 
@@ -1439,7 +1439,7 @@ SW_TEST_CASE_F( SRPGRulesTest, CommanderPlansTargets )
     const int32 harmless = risky.addUnit( "dummy", "rookie", sw::SRPGTeam::Enemy, sw::int2{ 2, 3 } );
     risky.beginBattle();
     SW_REQUIRE_TRUE( ai.makePlan( risky, hunter, plan ) );
-    SW_EXPECT_EQUAL( harmless, plan._target );
+    SW_EXPECT_EQUAL( harmless, plan._attack.value()._target );
 }
 
 /**
@@ -1454,7 +1454,7 @@ SW_TEST_CASE_F( SRPGRulesTest, CommanderMovesTowardEnemy )
     sw::SRPGCommanderAI     ai;
     sw::SRPGCommanderAIPlan plan;
     SW_REQUIRE_TRUE( ai.makePlan( _field, unitIndex, plan ) );
-    SW_EXPECT_TRUE( plan._bAttack == SW_TRUE );
+    SW_REQUIRE_TRUE( plan._attack.has_value() );
     SW_EXPECT_TRUE( plan._moveCell == ( sw::int2{ 2, 0 } ) ); // 사거리 3 까지만 걷는다
 
     sw::SRPGCombatResult result;
@@ -1470,12 +1470,12 @@ SW_TEST_CASE_F( SRPGRulesTest, CommanderMovesTowardEnemy )
     (void)distant.addUnit( "dummy", "rookie", sw::SRPGTeam::Enemy, sw::int2{ 7, 0 } );
     distant.beginBattle();
     SW_REQUIRE_TRUE( ai.makePlan( distant, walker, plan ) );
-    SW_EXPECT_TRUE( plan._bAttack == SW_FALSE );
+    SW_EXPECT_FALSE( plan._attack.has_value() );
     SW_EXPECT_TRUE( plan._moveCell == ( sw::int2{ 3, 0 } ) );
 
     distant.findUnit( walker )->_bAttacked = SW_TRUE;
     SW_REQUIRE_TRUE( ai.makePlan( distant, walker, plan ) );
-    SW_EXPECT_TRUE( plan._bAttack == SW_FALSE );
+    SW_EXPECT_FALSE( plan._attack.has_value() );
     SW_EXPECT_TRUE( plan._moveCell == ( sw::int2{ 0, 0 } ) );
 
     sw::SRPGBattlefield alone;
@@ -1484,7 +1484,7 @@ SW_TEST_CASE_F( SRPGRulesTest, CommanderMovesTowardEnemy )
     alone.beginBattle();
     SW_REQUIRE_TRUE( ai.makePlan( alone, lonely, plan ) );
     SW_EXPECT_TRUE( plan._moveCell == ( sw::int2{ 4, 4 } ) );
-    SW_EXPECT_TRUE( plan._bAttack == SW_FALSE );
+    SW_EXPECT_FALSE( plan._attack.has_value() );
 }
 
 /**

@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
@@ -86,7 +87,7 @@ namespace sw
         const ZoneBounds& getCameraBounds() const;
 
     private:
-        vector<ZoneDef> _listZone;
-        int32           _activeIndex;
+        vector<ZoneDef>  _listZone;
+        optional<uint32> _activeIndex; ///< 지금 존(비어 있으면 없다)
     };
 } // namespace sw
