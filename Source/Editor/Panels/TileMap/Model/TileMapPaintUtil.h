@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
@@ -89,7 +90,7 @@ namespace sw::editor
     {
         /** @brief 셀 번호(행 우선, 0 = 왼쪽 위)의 UV 사각형 (u, v, 폭, 높이) 입니다. 열 · 행이 1 보다 작으면 1 로 봅니다. */
         static float4 computeCellUVRect( int32 cell, int32 columnCount, int32 rowCount );
-        /** @brief 이미지 안의 0..1 위치(@p u, @p v)가 놓인 셀 번호입니다. 이미지 밖이면 -1 입니다. */
-        static int32 findCellAtUV( float32 u, float32 v, int32 columnCount, int32 rowCount );
+        /** @brief 이미지 안의 0..1 위치(@p u, @p v)가 놓인 셀 번호입니다. 이미지 밖이면 비어 있습니다. */
+        static optional<int32> findCellAtUV( float32 u, float32 v, int32 columnCount, int32 rowCount );
     };
 } // namespace sw::editor

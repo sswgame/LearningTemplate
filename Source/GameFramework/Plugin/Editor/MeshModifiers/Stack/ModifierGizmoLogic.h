@@ -51,9 +51,9 @@ namespace sw::editor
         [[nodiscard]] static bool tryComputePlaneDragDelta( const float3& startRayOrigin, const float3& startRayDirection, const float3& rayOrigin,
                                                             const float3& rayDirection, const float3& planePoint, const float3& planeNormal, float3& outDelta );
         /**
-         * @brief 레이가 반경 @p radius 의 구로 맞히는 점 중 레이 원점에 가장 가까운 점의 번호를 찾습니다. 없으면 -1 입니다.
+         * @brief 레이가 반경 @p radius 의 구로 맞히는 점 중 레이 원점에 가장 가까운 점의 번호를 찾습니다. 없으면 비어 있습니다.
          */
-        static int32 findPointOnRay( const float3& rayOrigin, const float3& rayDirection, const vector<float3>& listPoint, float32 radius );
+        static optional<int32> findPointOnRay( const float3& rayOrigin, const float3& rayDirection, const vector<float3>& listPoint, float32 radius );
         /** @brief @p axis 둘레로 @p from 에서 @p to 까지 돈 각도(도, -180 ~ 180, 오른손 방향이 양)입니다. 축에 수직인 성분만 봅니다. */
         static float32 computeSignedAngleDegree( const float3& from, const float3& to, const float3& axis );
         /**

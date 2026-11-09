@@ -41,7 +41,7 @@ namespace sw::editor
         , _targetID{}
         , _from{ -1 }
         , _element{ -1 }
-        , _target{ -1 }
+        , _target{}
         , _targetKind{ AbilityEntryKind::Effect }
         , _bRequired{ SW_FALSE }
         , _bInherited{ SW_FALSE }
@@ -166,7 +166,7 @@ namespace sw::editor
                     // 클래스가 이름으로 읽는 값이다 — 이펙트 id 와 같을 때만 연결로 둔다(문제로 세지 않는다).
                     const string* pText = Internal::findAttribute( childElement, "text" );
                     const string* pName = Internal::findAttribute( childElement, "name" );
-                    if ( pText != nullptr && findEntry( AbilityEntryKind::Effect, *pText ) >= 0 )
+                    if ( pText != nullptr && findEntry( AbilityEntryKind::Effect, *pText ).has_value() )
                     {
                         StringBuilder<constant::buffer::kMax256> textBuilder;
                         textBuilder.appendFormat( "param %#", pName != nullptr ? *pName : string{} );
@@ -201,7 +201,7 @@ namespace sw::editor
     {
         for ( const AbilityCatalogReference& reference : _listReference )
         {
-            if ( reference._bRequired == SW_FALSE || reference._target >= 0 )
+            if ( reference._bRequired == SW_FALSE || reference._target.has_value() )
                 continue;
             const AbilityCatalogEntry&               from = _listEntry[static_cast<size_t>( reference._from )];
             StringBuilder<constant::buffer::kMax256> textBuilder;
@@ -230,7 +230,7 @@ namespace sw::editor
         }
     }
 
-    int32 AbilityCatalogEditModel::findEntry( AbilityEntryKind kind, string_view id ) const
+    optional<int32> AbilityCatalogEditModel::findEntry( AbilityEntryKind kind, string_view id ) const
     {
         for ( int32 entryIndex = 0; entryIndex < static_cast<int32>( _listEntry.size() ); ++entryIndex )
         {
@@ -238,7 +238,7 @@ namespace sw::editor
             if ( entry._kind == kind && string_view( entry._id ) == id )
                 return entryIndex;
         }
-        return -1;
+        return nullopt;
     }
 
     void AbilityCatalogEditModel::collectReferencesFrom( int32 entry, vector<int32>& outListReference ) const

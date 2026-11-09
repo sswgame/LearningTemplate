@@ -78,7 +78,7 @@ SW_TEST_CASE( EditorNodeGraphRulesTest, MinimapFitsContentAndRoundTrips )
     const float2 back     = EditorNodeGraphRules::minimapToCanvas( transform, mapPoint );
     SW_EXPECT_NEAR( 150.0f, back._x, TestEditorNodeGraphRulesInternal::kTolerance );
     SW_EXPECT_NEAR( 200.0f, back._y, TestEditorNodeGraphRulesInternal::kTolerance );
-    SW_EXPECT_EQUAL( 3, EditorNodeGraphRules::findNearestNode( listRect, float2{ 170.0f, 240.0f } ) );
+    SW_EXPECT_TRUE( EditorNodeGraphRules::findNearestNode( listRect, float2{ 170.0f, 240.0f } ) == 3 );
     SW_EXPECT_FALSE( EditorNodeGraphRules::fitMinimap( listRect, float2{}, float2{}, float2{ 0.0f, 120.0f }, transform ) );
 }
 

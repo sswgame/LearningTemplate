@@ -7,6 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/fixed_string.h"
@@ -275,7 +276,7 @@ namespace sw::editor
         float2                                 _viewBarSize;        ///< 앞 프레임 보기 막대 크기 — 오른쪽 끝에 붙인다
         EditorGraphAlign                       _pendingAlign;       ///< 다음 프레임에 할 정렬(`Count` 면 없다)
         int32                                  _currentNodeID;      ///< 지금 연 노드(beginNode ~ endNode)
-        int32                                  _pendingFocusNodeID; ///< 다음 프레임에 화면 가운데로 옮길 노드(미니맵). 0 이면 없다
+        optional<int32>                        _pendingFocusNodeID; ///< 다음 프레임에 화면 가운데로 옮길 노드(미니맵). 비어 있으면 없다
         int32                                  _pinDragSource;      ///< 빈 곳에 놓은 끌기의 시작 핀. 노드 검색 팝업이 열려 있는 동안 남는다
         int32                                  _autoLinkPin;        ///< 새 노드에 이을 핀. 0 이면 없다
         uint32                                 _autoLinkFramesLeft; ///< 새 노드를 기다릴 남은 프레임 — 노드를 넣지 못했으면 요청을 버린다

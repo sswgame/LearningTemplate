@@ -68,7 +68,7 @@ namespace sw::editor
                     if ( pChild != nullptr )
                         bSupported = bSupported && canMakeStack( *pChild, nullptr ); // 묶음은 기록을 싣지 않는다 - 하위가 모두 옮겨지면 된다
                     else
-                        bSupported = bSupported && MeshModifierGPUProgram::findKind( pModifier->getTypeID() ) >= 0;
+                        bSupported = bSupported && MeshModifierGPUProgram::findKind( pModifier->getTypeID() ).has_value();
                     if ( bSupported == false )
                     {
                         if ( pOutBlockingIndex != nullptr )
@@ -115,7 +115,7 @@ namespace sw::editor
                     const float4x4 modifierToLocalNormal = localToModifier.transpose();
 
                     const size_t recordStart = program.size();
-                    program.push_back( float4{ static_cast<float32>( MeshModifierGPUProgram::findKind( pModifier->getTypeID() ) ), 0.0f,
+                    program.push_back( float4{ static_cast<float32>( MeshModifierGPUProgram::findKind( pModifier->getTypeID() ).value() ), 0.0f,
                                                static_cast<float32>( MathUtil::min( pModifier->getGizmo()._axisIndex, 2u ) ), MeshModifierUtil::computeJacobianStep( bounds ) } );
                     program.push_back( float4{ bounds._min._x, bounds._min._y, bounds._min._z, bounds.isValid() ? 1.0f : 0.0f } );
                     program.push_back( float4{ bounds._max._x, bounds._max._y, bounds._max._z, 0.0f } );
@@ -167,14 +167,14 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    int32 MeshModifierGPUProgram::findKind( string_view typeID )
+    optional<uint32> MeshModifierGPUProgram::findKind( string_view typeID )
     {
         for ( uint32 kind = 0; kind < getKindCount(); ++kind )
         {
             if ( typeID == string_view( MeshModifierGPUProgramInternal::kArrKindTypeID[kind] ) )
-                return static_cast<int32>( kind );
+                return kind;
         }
-        return -1;
+        return nullopt;
     }
 
     uint32 MeshModifierGPUProgram::getKindCount()

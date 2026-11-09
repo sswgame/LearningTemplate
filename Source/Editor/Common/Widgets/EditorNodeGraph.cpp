@@ -89,7 +89,7 @@ namespace sw::editor
         , _viewBarSize{}
         , _pendingAlign{ EditorGraphAlign::Count }
         , _currentNodeID{ 0 }
-        , _pendingFocusNodeID{ 0 }
+        , _pendingFocusNodeID{}
         , _pinDragSource{ 0 }
         , _autoLinkPin{ 0 }
         , _autoLinkFramesLeft{ 0 }
@@ -317,12 +317,12 @@ namespace sw::editor
                 ed::NavigateToContent( EditorNodeGraphInternal::kNavigateSeconds, 1.0f );
             _bPendingNavigate = SW_FALSE;
         }
-        if ( _pendingFocusNodeID != 0 )
+        if ( _pendingFocusNodeID.has_value() )
         {
-            const ImVec2 position = ed::GetNodePosition( toNodeID( _pendingFocusNodeID ) );
-            const ImVec2 size     = ed::GetNodeSize( toNodeID( _pendingFocusNodeID ) );
+            const ImVec2 position = ed::GetNodePosition( toNodeID( *_pendingFocusNodeID ) );
+            const ImVec2 size     = ed::GetNodeSize( toNodeID( *_pendingFocusNodeID ) );
             ed::NavigateToRect( position, ImVec2{ position.x + size.x, position.y + size.y }, false, EditorNodeGraphInternal::kNavigateSeconds );
-            _pendingFocusNodeID = 0;
+            _pendingFocusNodeID.reset();
         }
         if ( _pendingAlign == EditorGraphAlign::Count )
             return;

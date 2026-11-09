@@ -144,16 +144,16 @@ namespace sw::editor
         return true;
     }
 
-    int32 ModifierGizmoLogic::findPointOnRay( const float3& rayOrigin, const float3& rayDirection, const vector<float3>& listPoint, float32 radius )
+    optional<int32> ModifierGizmoLogic::findPointOnRay( const float3& rayOrigin, const float3& rayDirection, const vector<float3>& listPoint, float32 radius )
     {
-        int32   found     = -1;
-        float32 bestAlong = 0.0f;
+        optional<int32> found;
+        float32         bestAlong = 0.0f;
         for ( size_t index = 0; index < listPoint.size(); ++index )
         {
             const float32 along = ( listPoint[index] - rayOrigin ).dot( rayDirection );
             if ( along < 0.0f || computeRayPointDistance( rayOrigin, rayDirection, listPoint[index] ) > radius )
                 continue;
-            if ( found < 0 || along < bestAlong )
+            if ( found.has_value() == false || along < bestAlong )
             {
                 found     = static_cast<int32>( index );
                 bestAlong = along;

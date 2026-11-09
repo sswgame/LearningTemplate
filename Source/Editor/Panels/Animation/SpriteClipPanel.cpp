@@ -109,7 +109,7 @@ namespace sw::editor
         , _model{}
         , _atlasThumbnail{}
         , _dragStartUV{}
-        , _dragEdge{ -1 }
+        , _dragEdge{}
         , _bAtlasPress{ SW_FALSE }
         , _bEdgeMoved{ SW_FALSE }
     {
@@ -373,11 +373,11 @@ namespace sw::editor
         handleAtlasPointer( float2{ imageMin.x, imageMin.y }, side, bHovered );
     }
 
-    int32 SpriteClipPanel::findFrameEdgeNear( const float2& imageMin, float32 side, const float2& mouse ) const
+    optional<SpriteFrameEdge> SpriteClipPanel::findFrameEdgeNear( const float2& imageMin, float32 side, const float2& mouse ) const
     {
         float4 bounds{};
         if ( _model.findSelectedFrameBounds( bounds ) == false )
-            return -1;
+            return nullopt;
         const float32 left    = imageMin._x + bounds._x * side;
         const float32 top     = imageMin._y + bounds._y * side;
         const float32 right   = imageMin._x + bounds._z * side;
@@ -401,22 +401,22 @@ namespace sw::editor
         const bool bInsideY = top - reach <= mouse._y && mouse._y <= bottom + reach;
         const bool bInsideX = left - reach <= mouse._x && mouse._x <= right + reach;
         if ( bInsideY && MathUtil::abs( mouse._x - left ) <= reach )
-            return static_cast<int32>( SpriteFrameEdge::Left );
+            return SpriteFrameEdge::Left;
         if ( bInsideY && MathUtil::abs( mouse._x - right ) <= reach )
-            return static_cast<int32>( SpriteFrameEdge::Right );
+            return SpriteFrameEdge::Right;
         if ( bInsideX && MathUtil::abs( mouse._y - top ) <= reach )
-            return static_cast<int32>( SpriteFrameEdge::Top );
+            return SpriteFrameEdge::Top;
         if ( bInsideX && MathUtil::abs( mouse._y - bottom ) <= reach )
-            return static_cast<int32>( SpriteFrameEdge::Bottom );
-        return -1;
+            return SpriteFrameEdge::Bottom;
+        return nullopt;
     }
 
     void SpriteClipPanel::handleAtlasPointer( const float2& imageMin, float32 side, bool bHovered )
     {
-        const EditorPointerState& pointer = EditorInputGUI::readPointer();
-        const float2              mouse   = pointer._position;
-        const float2              uv{ ( mouse._x - imageMin._x ) / side, ( mouse._y - imageMin._y ) / side };
-        const int32               nearEdge = findFrameEdgeNear( imageMin, side, mouse );
+        const EditorPointerState&       pointer = EditorInputGUI::readPointer();
+        const float2                    mouse   = pointer._position;
+        const float2                    uv{ ( mouse._x - imageMin._x ) / side, ( mouse._y - imageMin._y ) / side };
+        const optional<SpriteFrameEdge> nearEdge = findFrameEdgeNear( imageMin, side, mouse );
         if ( bHovered && pointer.wasPressed( EditorMouseButton::Left ) )
         {
             _bAtlasPress = SW_TRUE;
@@ -427,10 +427,10 @@ namespace sw::editor
         if ( _bAtlasPress == SW_FALSE )
             return;
         const bool bDragging = pointer.isDragging( EditorMouseButton::Left );
-        if ( bDragging && _dragEdge >= 0 )
+        if ( bDragging && _dragEdge.has_value() )
         {
-            const bool bHorizontal = _dragEdge == static_cast<int32>( SpriteFrameEdge::Left ) || _dragEdge == static_cast<int32>( SpriteFrameEdge::Right );
-            if ( _model.moveSelectedFrameEdge( static_cast<SpriteFrameEdge>( _dragEdge ), bHorizontal ? uv._x : uv._y ) )
+            const bool bHorizontal = *_dragEdge == SpriteFrameEdge::Left || *_dragEdge == SpriteFrameEdge::Right;
+            if ( _model.moveSelectedFrameEdge( *_dragEdge, bHorizontal ? uv._x : uv._y ) )
                 _bEdgeMoved = SW_TRUE;
         }
         else if ( bDragging )
@@ -447,7 +447,7 @@ namespace sw::editor
             return;
         _bAtlasPress    = SW_FALSE;
         const bool bAdd = pointer.hasModifier( ModifierKey::Shift );
-        if ( _dragEdge >= 0 && _bEdgeMoved == SW_TRUE )
+        if ( _dragEdge.has_value() && _bEdgeMoved == SW_TRUE )
         {
             notifyDocumentEdited( "Edit Sprite Frame" ); // 끄는 동안의 가장자리 이동은 되돌리기 하나다
         }
@@ -459,7 +459,7 @@ namespace sw::editor
             else if ( result == SpriteClipModel::AtlasPickResult::EditedFrame )
                 notifyDocumentEdited( "Edit Sprite Frame" );
         }
-        else if ( _dragEdge < 0 )
+        else if ( _dragEdge.has_value() == false )
         {
             const SpriteClipModel::AtlasPickResult result = _model.setFrameRegion( _dragStartUV, uv, bAdd );
             if ( result == SpriteClipModel::AtlasPickResult::AddedFrame )
@@ -467,7 +467,7 @@ namespace sw::editor
             else if ( result == SpriteClipModel::AtlasPickResult::EditedFrame )
                 notifyDocumentEdited( "Edit Sprite Frame" );
         }
-        _dragEdge = -1;
+        _dragEdge.reset();
     }
 
     void SpriteClipPanel::shutdown()
