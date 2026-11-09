@@ -123,14 +123,14 @@ namespace sw
         VectorUtil::removeIf( _listBatch, IngredientStockInternal::isEmptyBatch );
     }
 
-    int32 IngredientStock::findEarliestExpiry( const hashed_string& itemID ) const
+    optional<int32> IngredientStock::findEarliestExpiry( const hashed_string& itemID ) const
     {
         for ( const IngredientBatch& batch : _listBatch )
         {
             if ( batch._itemID == itemID && batch._daysLeft >= 0 )
                 return batch._daysLeft;
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     int32 IngredientStock::getBatchCount( const hashed_string& itemID ) const

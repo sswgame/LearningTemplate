@@ -21,7 +21,7 @@ namespace sw
         {
             for ( const MonsterLearnEntry& learn : species._listLearn )
             {
-                if ( learn._level != level || inoutMonster.findMoveSlot( learn._moveID ) >= 0 )
+                if ( learn._level != level || inoutMonster.findMoveSlot( learn._moveID ).has_value() )
                     continue;
                 MonsterGrowthEvent event;
                 event._id    = learn._moveID;
@@ -48,16 +48,16 @@ namespace sw
         return count;
     }
 
-    int32 MonsterInstance::findMoveSlot( const hashed_string& moveID ) const
+    optional<int32> MonsterInstance::findMoveSlot( const hashed_string& moveID ) const
     {
         if ( moveID.empty() )
-            return constant::invalid_index::kInt32;
+            return nullopt;
         for ( int32 slot = 0; slot < kMoveSlotCount; ++slot )
         {
             if ( _arrMove[slot]._moveID == moveID )
                 return slot;
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     void MonsterInstance::serializeState( StateIO& io )
@@ -172,7 +172,7 @@ namespace sw
         {
             if ( learn._level > monster._level )
                 break;
-            if ( monster.findMoveSlot( learn._moveID ) >= 0 )
+            if ( monster.findMoveSlot( learn._moveID ).has_value() )
                 continue;
             const MonsterMoveDef* pMove = catalog.findMove( learn._moveID );
             if ( pMove == nullptr )
@@ -251,7 +251,7 @@ namespace sw
     bool MonsterInstance::learnMove( const MonsterCollectorCatalog& catalog, MonsterInstance& inoutMonster, const hashed_string& moveID, int32 replaceSlot )
     {
         const MonsterMoveDef* pMove = catalog.findMove( moveID );
-        if ( pMove == nullptr || inoutMonster.findMoveSlot( moveID ) >= 0 )
+        if ( pMove == nullptr || inoutMonster.findMoveSlot( moveID ).has_value() )
             return false;
         int32 targetSlot = constant::invalid_index::kInt32;
         for ( int32 slot = 0; slot < MonsterInstance::kMoveSlotCount; ++slot )

@@ -631,15 +631,15 @@ SW_TEST_CASE_F( JRPGRulesTest, ManualTechniques )
 {
     _settings._bWuxia = true;
     SW_REQUIRE_EQUAL( 0, _party.addMember( "hero", "Hero", "hero" ) );
-    SW_EXPECT_EQUAL( -1, _party.getMember( 0 ).findProficiency( "pine" ) );
+    SW_EXPECT_FALSE( _party.getMember( 0 ).findProficiency( "pine" ).has_value() );
     SW_EXPECT_FALSE( _party.canUseSpell( 0, "pine_cut" ) );
 
     _party.learnManual( 0, "nope" );
     _party.addProficiency( 0, "pine", 10 ); // 익히지 않았다
-    SW_EXPECT_EQUAL( -1, _party.getMember( 0 ).findProficiency( "pine" ) );
+    SW_EXPECT_FALSE( _party.getMember( 0 ).findProficiency( "pine" ).has_value() );
 
     _party.learnManual( 0, "pine" );
-    SW_EXPECT_EQUAL( 0, _party.getMember( 0 ).findProficiency( "pine" ) );
+    SW_EXPECT_TRUE( _party.getMember( 0 ).findProficiency( "pine" ) == 0 );
     SW_EXPECT_EQUAL( 2, countPartyEvents( sw::JRPGPartyEvent::Kind::TechniqueUnlocked ) ); // 0 단계 둘
     SW_EXPECT_TRUE( _party.canUseSpell( 0, "pine_cut" ) );
     SW_EXPECT_FALSE( _party.canUseSpell( 0, "pine_storm" ) );
@@ -654,12 +654,12 @@ SW_TEST_CASE_F( JRPGRulesTest, ManualTechniques )
     SW_EXPECT_TRUE( _battle.setCommand( 0, sw::JRPGCommand::makeSpell( "pine_cut", 0 ) ) );
     _battle.resolveRound();
     SW_EXPECT_EQUAL( 5, _party.getMember( 0 )._inner ); // 20 을 쓰고 맞아서 5
-    SW_EXPECT_EQUAL( 10, _party.getMember( 0 ).findProficiency( "pine" ) );
+    SW_EXPECT_TRUE( _party.getMember( 0 ).findProficiency( "pine" ) == 10 );
     SW_EXPECT_EQUAL( 1, countBattleEvents( sw::JRPGBattleEvent::Kind::ProficiencyGained ) );
 
     SW_EXPECT_TRUE( _battle.setCommand( 0, sw::JRPGCommand::makeSpell( "pine_mend", 0 ) ) );
     _battle.resolveRound();
-    SW_EXPECT_EQUAL( 40, _party.getMember( 0 ).findProficiency( "pine" ) );
+    SW_EXPECT_TRUE( _party.getMember( 0 ).findProficiency( "pine" ) == 40 );
     SW_EXPECT_TRUE( _party.canUseSpell( 0, "pine_storm" ) );
     SW_EXPECT_EQUAL( 3, countPartyEvents( sw::JRPGPartyEvent::Kind::TechniqueUnlocked ) );
 }
@@ -850,7 +850,7 @@ SW_TEST_CASE_F( JRPGRulesTest, PartyStateRoundTrip )
     initializeParty( restored );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_TRUE( JRPGTestUtil::isSameState( _party, restored ) );
-    SW_EXPECT_EQUAL( 35, restored.getMember( 0 ).findProficiency( "pine" ) );
+    SW_EXPECT_TRUE( restored.getMember( 0 ).findProficiency( "pine" ) == 35 );
     SW_EXPECT_EQUAL( 33, restored.getMember( 0 )._hp );
     SW_EXPECT_EQUAL( 50, restored.getMember( 0 )._level.getXP() );
 

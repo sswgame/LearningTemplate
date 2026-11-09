@@ -8,6 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -250,7 +251,7 @@ namespace sw
         void               applyEndOfRound();
         int32              computeStatWithStage( int32 side, const MonsterInstance& monster, MonsterStat stat, bool bCritical, bool bAttacker ) const;
         float32            computeWeatherMultiplier( const hashed_string& moveType ) const;
-        int32              findFirstUsable( int32 side ) const;
+        optional<int32>    findFirstUsable( int32 side ) const;
         void               setResult( MonsterBattleResult result );
 
     private:

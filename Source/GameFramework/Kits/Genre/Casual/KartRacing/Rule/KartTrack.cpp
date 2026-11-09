@@ -306,10 +306,10 @@ namespace sw
         return moveX * gate._forward._x + moveZ * gate._forward._z >= 0.0f ? 1 : -1;
     }
 
-    int32 KartTrack::findBoostPadAt( const float3& position ) const
+    optional<int32> KartTrack::findBoostPadAt( const float3& position ) const
     {
         if ( _listBoostPad.empty() )
-            return constant::invalid_index::kInt32;
+            return nullopt;
         const KartTrackProjection projection = project( position );
         for ( size_t padIndex = 0; padIndex < _listBoostPad.size(); ++padIndex )
         {
@@ -319,18 +319,18 @@ namespace sw
             if ( along <= pad._def._length * 0.5f && side <= pad._def._width * 0.5f )
                 return static_cast<int32>( padIndex );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     bool KartTrack::applyBoostPad( KinematicVehicleMotor& motor, int32& inoutLastPad ) const
     {
-        const int32 pad  = motor.isAirborne() ? constant::invalid_index::kInt32 : findBoostPadAt( motor.getPosition() );
-        const bool  bNew = pad >= 0 && pad != inoutLastPad;
+        const optional<int32> pad  = motor.isAirborne() ? nullopt : findBoostPadAt( motor.getPosition() );
+        const bool            bNew = pad.has_value() && *pad != inoutLastPad;
         if ( motor.isAirborne() == false )
-            inoutLastPad = pad;
+            inoutLastPad = pad.value_or( constant::invalid_index::kInt32 ); // 저장 상태 칸(`KartRacer::_lastBoostPad`)의 "패드 밖"
         if ( bNew == false )
             return false;
-        motor.startBoost( _listBoostPad[static_cast<size_t>( pad )]._def._duration, -1 );
+        motor.startBoost( _listBoostPad[static_cast<size_t>( *pad )]._def._duration, -1 );
         return true;
     }
 

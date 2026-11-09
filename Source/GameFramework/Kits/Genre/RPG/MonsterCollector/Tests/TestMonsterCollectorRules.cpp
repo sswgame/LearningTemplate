@@ -335,7 +335,7 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, GainExp )
     SW_EXPECT_EQUAL( 16, monster.getMaxHP() );
     SW_EXPECT_EQUAL( 16, monster._hp );
     SW_EXPECT_EQUAL( 75, monster._friendship );
-    SW_EXPECT_TRUE( monster.findMoveSlot( "growl" ) >= 0 );
+    SW_EXPECT_TRUE( monster.findMoveSlot( "growl" ).has_value() );
     SW_EXPECT_EQUAL( 1, countGrowth( sw::MonsterGrowthEvent::Kind::LevelUp ) );
     SW_EXPECT_EQUAL( 1, countGrowth( sw::MonsterGrowthEvent::Kind::LearnedMove ) );
     SW_EXPECT_EQUAL( 1, countGrowth( sw::MonsterGrowthEvent::Kind::CanEvolve ) );
@@ -349,7 +349,7 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, GainExp )
     SW_EXPECT_EQUAL( 1, sw::MonsterInstance::gainExp( _catalog, full, 19, _listGrowth ) );
     SW_EXPECT_EQUAL( 0, full._hp );
     SW_EXPECT_EQUAL( 1, countGrowth( sw::MonsterGrowthEvent::Kind::MoveLearnBlocked ) );
-    SW_EXPECT_EQUAL( -1, full.findMoveSlot( "growl" ) );
+    SW_EXPECT_FALSE( full.findMoveSlot( "growl" ).has_value() );
 
     _listGrowth.clear();
     sw::MonsterInstance veteran = make( "normie", 99 );
@@ -373,15 +373,15 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, LearnMove )
     SW_EXPECT_FALSE( sw::MonsterInstance::learnMove( _catalog, monster, "strike" ) );
     SW_EXPECT_FALSE( sw::MonsterInstance::learnMove( _catalog, monster, "nope" ) );
     SW_EXPECT_TRUE( sw::MonsterInstance::learnMove( _catalog, monster, "growl", 3 ) ); // 빈 슬롯이 있으면 교체 번호는 보지 않는다
-    SW_EXPECT_EQUAL( 2, monster.findMoveSlot( "growl" ) );
+    SW_EXPECT_TRUE( monster.findMoveSlot( "growl" ) == 2 );
     SW_EXPECT_TRUE( sw::MonsterInstance::learnMove( _catalog, monster, "swords" ) );
 
     SW_EXPECT_FALSE( sw::MonsterInstance::learnMove( _catalog, monster, "quick" ) );
     SW_EXPECT_FALSE( sw::MonsterInstance::learnMove( _catalog, monster, "quick", 4 ) );
     SW_EXPECT_TRUE( sw::MonsterInstance::learnMove( _catalog, monster, "quick", 1 ) );
-    SW_EXPECT_EQUAL( -1, monster.findMoveSlot( "ember" ) );
+    SW_EXPECT_FALSE( monster.findMoveSlot( "ember" ).has_value() );
     SW_EXPECT_EQUAL( 30, monster._arrMove[1]._pp );
-    SW_EXPECT_EQUAL( -1, monster.findMoveSlot( sw::hashed_string{} ) );
+    SW_EXPECT_FALSE( monster.findMoveSlot( sw::hashed_string{} ).has_value() );
 }
 
 /**

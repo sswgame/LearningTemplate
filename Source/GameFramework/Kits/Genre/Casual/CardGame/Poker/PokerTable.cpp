@@ -207,7 +207,7 @@ namespace sw
         return canAct( seat ) && ( pokerSeat._bActed == SW_FALSE || pokerSeat._committed < _currentBet );
     }
 
-    int32 PokerTable::findNextSeat( int32 fromSeat, bool bCanActOnly ) const
+    optional<int32> PokerTable::findNextSeat( int32 fromSeat, bool bCanActOnly ) const
     {
         const int32 seatCount = getSeatCount();
         for ( int32 offset = 1; offset <= seatCount; ++offset )
@@ -219,7 +219,7 @@ namespace sw
             if ( bCanActOnly == false || canAct( seat ) )
                 return seat;
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     void PokerTable::commitChips( int32 seat, int32 amount )
@@ -257,9 +257,10 @@ namespace sw
         }
         _board.clear();
         _listLastPot.clear();
-        _button                    = findNextSeat( _button, false );
-        const int32 smallBlindSeat = playerCount == 2 ? _button : findNextSeat( _button, false );
-        const int32 bigBlindSeat   = findNextSeat( smallBlindSeat, false );
+        // 아래 다음 자리 찾기는 핸드에 둘 이상이 있을 때다(위에서 셌다) — 비면 결함이라 value 가 단언한다.
+        _button                    = findNextSeat( _button, false ).value();
+        const int32 smallBlindSeat = playerCount == 2 ? _button : findNextSeat( _button, false ).value();
+        const int32 bigBlindSeat   = findNextSeat( smallBlindSeat, false ).value();
         commitChips( smallBlindSeat, _settings._smallBlind );
         _eventBuffer.push( PokerEvent{ smallBlindSeat, _listSeat[static_cast<size_t>( smallBlindSeat )]._committed, PokerEvent::Kind::Blind } );
         commitChips( bigBlindSeat, _settings._bigBlind );
@@ -277,7 +278,7 @@ namespace sw
                 if ( _deck.draw( card ) == false )
                     return false;
                 _listSeat[static_cast<size_t>( seat )]._arrHole[holeIndex] = card;
-                seat                                                       = findNextSeat( seat, false );
+                seat                                                       = findNextSeat( seat, false ).value();
             }
         }
         _street      = PokerStreet::Preflop;
@@ -408,7 +409,7 @@ namespace sw
             }
             if ( canActCount >= 2 )
             {
-                _currentSeat = findNextSeat( _button, true );
+                _currentSeat = findNextSeat( _button, true ).value(); // 행동할 수 있는 자리가 둘 이상이다(위에서 셌다)
                 return;
             }
         }
@@ -477,7 +478,7 @@ namespace sw
         }
         PokerPot::makePots( listContribution, listFolded, _listLastPot );
         vector<int32> listWon;
-        PokerPot::distributePots( _listLastPot, listScore, findNextSeat( _button, false ), listWon );
+        PokerPot::distributePots( _listLastPot, listScore, findNextSeat( _button, false ).value(), listWon ); // 쇼다운에는 핸드에 남은 자리가 있다
         for ( int32 seat = 0; seat < getSeatCount(); ++seat )
         {
             PokerSeat& pokerSeat = _listSeat[static_cast<size_t>( seat )];

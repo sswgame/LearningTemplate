@@ -9,6 +9,7 @@
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -233,13 +234,14 @@ namespace sw
         void               executeCombo( int32 memberIndex, const JRPGCommand& command );
         void               executeEnemy( int32 enemyIndex );
         /** @brief 적에게 피해를 주고 잠금을 깹니다. 유형이 약점이면 배율을 곱합니다. */
-        void  hitEnemy( int32 memberIndex, int32 enemyIndex, int32 damage, const vector<hashed_string>& listDamageType );
-        void  hitMember( int32 enemyIndex, int32 memberIndex, int32 damage );
-        void  addComboPoints( int32 amount );
-        void  addInner( int32 memberIndex, int32 amount );
-        bool  isTimed( JRPGTimingKind kind, int32 memberIndex ) const;
-        int32 findLivingEnemy( int32 preferred ) const;
-        void  finishIfDecided();
+        void hitEnemy( int32 memberIndex, int32 enemyIndex, int32 damage, const vector<hashed_string>& listDamageType );
+        void hitMember( int32 enemyIndex, int32 memberIndex, int32 damage );
+        void addComboPoints( int32 amount );
+        void addInner( int32 memberIndex, int32 amount );
+        bool isTimed( JRPGTimingKind kind, int32 memberIndex ) const;
+        /** @brief @p preferred 가 살아 있으면 그것, 아니면 살아 있는 첫 적입니다. 모두 쓰러졌으면 비어 있습니다. */
+        optional<int32> findLivingEnemy( int32 preferred ) const;
+        void            finishIfDecided();
 
     private:
         vector<JRPGEnemyState>       _listEnemy;

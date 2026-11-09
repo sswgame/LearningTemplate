@@ -277,9 +277,9 @@ SW_TEST_CASE( KartTrackTest, BoostPadOncePerEntry )
     SW_REQUIRE_TRUE( track.initialize( def ) );
     const float32 padDistance = track.getLength() * 0.25f;
 
-    SW_EXPECT_EQUAL( 0, track.findBoostPadAt( track.sample( padDistance )._position ) );
-    SW_EXPECT_EQUAL( -1, track.findBoostPadAt( track.sample( padDistance + 10.0f )._position ) );
-    SW_EXPECT_EQUAL( -1, track.findBoostPadAt( KartTestUtil::makeOffsetPoint( track, padDistance, 3.0f ) ) );
+    SW_EXPECT_TRUE( track.findBoostPadAt( track.sample( padDistance )._position ) == 0 );
+    SW_EXPECT_FALSE( track.findBoostPadAt( track.sample( padDistance + 10.0f )._position ).has_value() );
+    SW_EXPECT_FALSE( track.findBoostPadAt( KartTestUtil::makeOffsetPoint( track, padDistance, 3.0f ) ).has_value() );
 
     sw::KinematicVehicleMotor motor;
     motor.setGround( &track );
@@ -850,7 +850,7 @@ SW_TEST_CASE_F( KartRaceTest, PhasesAndCountdown )
     SW_EXPECT_TRUE( noTrack.initialize( _settings, nullptr, nullptr, nullptr ) );
     SW_EXPECT_EQUAL( -1, noTrack.addRacer( sw::KinematicVehicleSettings{}, false ) );
     SW_EXPECT_TRUE( noTrack.findRacer( 0 ) == nullptr );
-    SW_EXPECT_EQUAL( -1, noTrack.findRacerAtPlace( 1 ) );
+    SW_EXPECT_FALSE( noTrack.findRacerAtPlace( 1 ).has_value() );
 }
 
 /**
@@ -961,10 +961,10 @@ SW_TEST_CASE_F( KartRaceTest, PlacesAndFinishTimeout )
     open( KartTestUtil::makeRingDef( 1, {} ), 3 );
     _race.placeRacer( 2, _track.sample( -2.0f )._position, KartTestUtil::computeTrackYaw( _track, -2.0f ) ); // 격자 앞으로
     _race.step();
-    SW_EXPECT_EQUAL( 2, _race.findRacerAtPlace( 1 ) );
+    SW_EXPECT_TRUE( _race.findRacerAtPlace( 1 ) == 2 );
     SW_EXPECT_EQUAL( 1, racer( 2 )._place );
-    SW_EXPECT_EQUAL( -1, _race.findRacerAtPlace( 0 ) );
-    SW_EXPECT_EQUAL( -1, _race.findRacerAtPlace( 4 ) );
+    SW_EXPECT_FALSE( _race.findRacerAtPlace( 0 ).has_value() );
+    SW_EXPECT_FALSE( _race.findRacerAtPlace( 4 ).has_value() );
     SW_EXPECT_TRUE( countEvents( sw::KartRaceEvent::Kind::PlaceChanged ) >= 1 );
 
     _race.placeRacer( 1, _track.sample( -3.0f )._position, KartTestUtil::computeTrackYaw( _track, -3.0f ) );
@@ -1226,7 +1226,7 @@ SW_TEST_CASE_F( KartRaceTest, RedShellTargetsCarAhead )
     _race.placeRacer( 1, pointAhead( 0, 5.0f ), 0.0f );
     _race.placeRacer( 2, pointAhead( 0, 2.0f ), 0.0f );
     _race.step();
-    const int32 ahead = _race.findRacerAtPlace( racer( 0 )._place - 1 );
+    const int32 ahead = _race.findRacerAtPlace( racer( 0 )._place - 1 ).value();
     SW_REQUIRE_EQUAL( 2, ahead ); // 차 2 가 차 0 바로 앞이다
     _race.giveItem( 0, "red" );
     SW_REQUIRE_TRUE( _race.useItem( 0 ) );
@@ -1252,7 +1252,7 @@ SW_TEST_CASE_F( KartRaceTest, LeaderShellChasesLeaderStillRacing )
 
     _race.placeRacer( 1, pointAhead( 0, 4.0f ), 0.0f ); // 경기 중인 차의 맨 앞으로 세운다
     _race.step();
-    SW_REQUIRE_EQUAL( 1, _race.findRacerAtPlace( 2 ) );
+    SW_REQUIRE_TRUE( _race.findRacerAtPlace( 2 ) == 1 );
 
     _race.giveItem( 0, "blue" );
     SW_REQUIRE_TRUE( _race.useItem( 0 ) );

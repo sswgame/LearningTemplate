@@ -18,6 +18,7 @@
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -221,8 +222,8 @@ namespace sw
         float32          getBestLapTime() const { return _bestLapTime; }
         int32            getRacerCount() const { return static_cast<int32>( _listRacer.size() ); }
         const KartRacer* findRacer( int32 racer ) const;
-        /** @brief @p place 등(1부터)인 차의 번호를 반환합니다. 없으면 -1 입니다. */
-        int32 findRacerAtPlace( int32 place ) const;
+        /** @brief @p place 등(1부터)인 차의 번호를 반환합니다. 없으면 비어 있습니다. */
+        optional<int32> findRacerAtPlace( int32 place ) const;
         /** @brief 날아가거나 놓인 아이템입니다(공통 발사체. 운동 값은 아이템의 탄 정의이고, 정의 id 는 반응을 찾는 아이템 id 다). 평면(XZ)에서 돌고 높이는 트랙을 따른다. */
         const vector<ProjectileState>& getProjectiles() const { return _projectiles.getProjectiles(); }
         bool                           isItemBoxActive( int32 boxIndex ) const;
@@ -242,14 +243,15 @@ namespace sw
         void                  updateItemBoxes( float32 deltaTime );
         void                  updateProjectiles( float32 deltaTime );
         /** @brief 1등 공격이 터집니다. 범위는 탄의 폭발 반지름(`ProjectileState::_blastRadius`)이고 맞은 차의 반응은 @p def 입니다. */
-        void  explode( const ProjectileState& projectile, const KartItemDef& def );
-        int32 pickRedShellTarget( int32 owner ) const;
-        /** @brief 아직 들어오지 않은 차 중 가장 앞선 차의 번호를 반환합니다. 없으면 -1 입니다. */
-        int32 findLeaderInRace() const;
-        void  updatePlaces();
-        void  updateRubberBand( int32 racer );
-        void  resolveRaceEnd();
-        void  pushEvent( KartRaceEvent::Kind kind, int32 racer, int32 other, int32 value, float32 time );
+        void explode( const ProjectileState& projectile, const KartItemDef& def );
+        /** @brief 빨간 등껍질이 쫓을 차입니다. 원뿔 안에 없으면 비어 있습니다(곧게 나간다). */
+        optional<int32> pickRedShellTarget( int32 owner ) const;
+        /** @brief 아직 들어오지 않은 차 중 가장 앞선 차의 번호를 반환합니다. 없으면 비어 있습니다. */
+        optional<int32> findLeaderInRace() const;
+        void            updatePlaces();
+        void            updateRubberBand( int32 racer );
+        void            resolveRaceEnd();
+        void            pushEvent( KartRaceEvent::Kind kind, int32 racer, int32 other, int32 value, float32 time );
 
     private:
         vector<KartRacer>          _listRacer;

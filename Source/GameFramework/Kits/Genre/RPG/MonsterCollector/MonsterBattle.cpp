@@ -97,13 +97,13 @@ namespace sw
         _turnOrder.addActor( kFoeSide, 1.0f );
         for ( int32 side = 0; side < kSideCount; ++side )
         {
-            const int32 first = findFirstUsable( side );
-            if ( first < 0 )
+            const optional<int32> first = findFirstUsable( side );
+            if ( first.has_value() == false )
             {
                 setResult( side == kPlayerSide ? MonsterBattleResult::Lost : MonsterBattleResult::Won );
                 return;
             }
-            _arrSide[side]._activeIndex = first;
+            _arrSide[side]._activeIndex = *first;
         }
     }
 
@@ -203,7 +203,7 @@ namespace sw
         // 진행 중에는 나선 개체가 살아 있거나, 쓰러졌으면 대신 나설 개체가 있어 교체를 기다린다.
         if ( entry._bNeedsSwitch == false )
             return getActive( side ).isFainted() == false;
-        return findFirstUsable( side ) >= 0;
+        return findFirstUsable( side ).has_value();
     }
 
     void MonsterBattle::resolveRound()
@@ -730,7 +730,7 @@ namespace sw
         return 1.0f;
     }
 
-    int32 MonsterBattle::findFirstUsable( int32 side ) const
+    optional<int32> MonsterBattle::findFirstUsable( int32 side ) const
     {
         const vector<MonsterInstance>& listMonster = _arrSide[side]._listMonster;
         for ( int32 index = 0; index < static_cast<int32>( listMonster.size() ); ++index )
@@ -738,7 +738,7 @@ namespace sw
             if ( listMonster[static_cast<size_t>( index )].isFainted() == false )
                 return index;
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     void MonsterBattle::setResult( MonsterBattleResult outcome )

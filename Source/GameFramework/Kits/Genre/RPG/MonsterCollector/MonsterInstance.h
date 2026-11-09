@@ -8,6 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -61,8 +62,8 @@ namespace sw
         int32 getStat( MonsterStat stat ) const { return _arrStat[static_cast<size_t>( stat )]; }
         bool  isFainted() const { return _hp <= 0; }
         int32 countMoves() const;
-        /** @brief 이 기술을 가진 슬롯을 반환합니다. 없으면 −1 입니다. */
-        int32 findMoveSlot( const hashed_string& moveID ) const;
+        /** @brief 이 기술을 가진 슬롯을 반환합니다. 없으면 비어 있습니다. */
+        optional<int32> findMoveSlot( const hashed_string& moveID ) const;
         /**
          * @brief 개체 하나(종, 성격, 별명, 기술 슬롯, 개체값, 노력치, 능력치, 경험치, 레벨, HP, 친밀도, 상태이상)를 씁니다. 보관함과 전투가 함께 씁니다.
          *        `writeState` 가 쓴 바이트로 상태를 바꿉니다. 바이트가 깨졌거나 값이 범위 밖이면 상태를 바꾸지 않고 false 를 반환합니다(id 가 카탈로그에 있는지는 `isKnownTo` 입니다).

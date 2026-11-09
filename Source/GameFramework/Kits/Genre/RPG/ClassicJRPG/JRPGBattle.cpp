@@ -321,9 +321,10 @@ namespace sw
 
     void JRPGBattle::executeAttack( int32 memberIndex, int32 enemyIndex )
     {
-        const int32 target = findLivingEnemy( enemyIndex );
-        if ( target < 0 )
+        const optional<int32> foundTarget = findLivingEnemy( enemyIndex );
+        if ( foundTarget.has_value() == false )
             return;
+        const int32           target  = *foundTarget;
         const JRPGMember&     member  = _pParty->getMember( memberIndex );
         const JRPGClassDef*   pClass  = _pCatalog->findClass( member._classID );
         const JRPGEnemyDef*   pEnemy  = _pCatalog->findEnemy( _listEnemy[static_cast<size_t>( target )]._enemyID );
@@ -392,9 +393,9 @@ namespace sw
             }
             else
             {
-                const int32 target = findLivingEnemy( command._target );
-                if ( target >= 0 )
-                    hitEnemy( memberIndex, target, JRPGBattleInternal::applyVariance( base, 900, 1100, _random ), listType );
+                const optional<int32> target = findLivingEnemy( command._target );
+                if ( target.has_value() )
+                    hitEnemy( memberIndex, *target, JRPGBattleInternal::applyVariance( base, 900, 1100, _random ), listType );
             }
         }
         else
@@ -460,9 +461,9 @@ namespace sw
             }
             return;
         }
-        const int32 target = findLivingEnemy( command._target );
-        if ( target >= 0 )
-            hitEnemy( memberIndex, target, JRPGBattleInternal::applyVariance( base, 900, 1100, _random ), pCombo->_listDamageType );
+        const optional<int32> target = findLivingEnemy( command._target );
+        if ( target.has_value() )
+            hitEnemy( memberIndex, *target, JRPGBattleInternal::applyVariance( base, 900, 1100, _random ), pCombo->_listDamageType );
     }
 
     void JRPGBattle::executeEnemy( int32 enemyIndex )
@@ -615,7 +616,7 @@ namespace sw
         return _pJudge->judge( 0.0f, offset ).isHit();
     }
 
-    int32 JRPGBattle::findLivingEnemy( int32 preferred ) const
+    optional<int32> JRPGBattle::findLivingEnemy( int32 preferred ) const
     {
         const bool bPreferredEnemyAlive = preferred >= 0 && preferred < static_cast<int32>( _listEnemy.size() ) && _listEnemy[static_cast<size_t>( preferred )].isAlive();
         if ( bPreferredEnemyAlive )
@@ -625,7 +626,7 @@ namespace sw
             if ( _listEnemy[static_cast<size_t>( enemyIndex )].isAlive() )
                 return enemyIndex;
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     void JRPGBattle::finishIfDecided()
@@ -638,7 +639,7 @@ namespace sw
             pushEvent( JRPGBattleEvent::Kind::Defeat, false, constant::invalid_index::kInt32, constant::invalid_index::kInt32 );
             return;
         }
-        if ( findLivingEnemy( 0 ) >= 0 )
+        if ( findLivingEnemy( 0 ).has_value() )
             return;
         for ( const JRPGEnemyState& enemy : _listEnemy )
         {
