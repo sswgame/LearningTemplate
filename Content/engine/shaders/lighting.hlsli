@@ -168,19 +168,24 @@ static float Shadow::sampleCascade( uint cascadeIndex, float3 worldPosition, flo
     const float2 clampMax = tileOrigin + tileScale - 0.5f * texelUv;
     const float  depth    = ndc.z - g_ShadowParams.x / scale;
     float        lit      = 1.0f;
-    if ( outInside && Shadow::usesSoftFilter() )
+    // 분기는 "칸 안 → 그 안에서 품질" 으로 겹친다. `outInside && 품질` / `else if ( outInside )` 로 두면 NVIDIA GL(ARB_gl_spirv)이 칸 밖 점도 안으로 컴파일해
+    // 잘린 탭이 그늘을 읽었다 — 캐스케이드 상자 옆면 밖 바닥이 직선 경계로 어두웠다(kaykitcombat GL 10%, 같은 SPIR-V 의 Vulkan 은 맞다).
+    SW_BRANCH if ( outInside )
     {
-        // PCSS — 반그림자 폭은 NDC 깊이 차 × g_ShadowFilter.y(기준 볼륨 텍셀) × 캐스케이드 배율이다(C++ ShadowFilter::computeDirectionalKernelRadius 와 같은 식).
-        // 가리개 찾기 반지름은 이 점이 가질 수 있는 가장 넓은 반그림자(가리개가 깊이 0)다.
-        const float searchTexels = clamp( 0.5f * depth * g_ShadowFilter.y * scale, g_ShadowFilter.w, g_ShadowFilter.z );
-        bool        bBlocked     = false;
-        const float blocker      = Shadow::findBlockerDepth( uv, depth, texelUv, clampMin, clampMax, searchTexels, bBlocked );
-        const float radius       = clamp( 0.5f * max( depth - blocker, 0.0f ) * g_ShadowFilter.y * scale, g_ShadowFilter.w, g_ShadowFilter.z );
-        lit                      = bBlocked ? Shadow::filterDisk( uv, depth, texelUv, clampMin, clampMax, radius ) : 1.0f;
-    }
-    else if ( outInside )
-    {
-        lit = Shadow::filterAtlas( uv, depth, texelUv, bClamp, clampMin, clampMax );
+        SW_BRANCH if ( Shadow::usesSoftFilter() )
+        {
+            // PCSS — 반그림자 폭은 NDC 깊이 차 × g_ShadowFilter.y(기준 볼륨 텍셀) × 캐스케이드 배율이다(C++ ShadowFilter::computeDirectionalKernelRadius 와 같은 식).
+            // 가리개 찾기 반지름은 이 점이 가질 수 있는 가장 넓은 반그림자(가리개가 깊이 0)다.
+            const float searchTexels = clamp( 0.5f * depth * g_ShadowFilter.y * scale, g_ShadowFilter.w, g_ShadowFilter.z );
+            bool        bBlocked     = false;
+            const float blocker      = Shadow::findBlockerDepth( uv, depth, texelUv, clampMin, clampMax, searchTexels, bBlocked );
+            const float radius       = clamp( 0.5f * max( depth - blocker, 0.0f ) * g_ShadowFilter.y * scale, g_ShadowFilter.w, g_ShadowFilter.z );
+            lit                      = bBlocked ? Shadow::filterDisk( uv, depth, texelUv, clampMin, clampMax, radius ) : 1.0f;
+        }
+        else
+        {
+            lit = Shadow::filterAtlas( uv, depth, texelUv, bClamp, clampMin, clampMax );
+        }
     }
     // 세기는 g_ShadowParams.y — 완전한 검정이 아니라 "얼마나 어두워지는가" 다.
     return lerp( 1.0f - g_ShadowParams.y, 1.0f, saturate( lit ) );
@@ -275,22 +280,26 @@ float LightData::sampleLocalShadow( float3 worldPosition, float3 worldNormal )
                          uv.y >= info._positionRadius.y && uv.y <= info._positionRadius.w;
     const float texelUv = info._colorIntensity.z;
     float       lit     = 1.0f;
-    if ( bInside && Shadow::usesSoftFilter() )
+    // 분기는 "칸 안 → 그 안에서 품질" 으로 겹친다(Shadow::sampleCascade 와 같은 까닭 — `a && b` / `else if ( a )` 모양을 NVIDIA GL 이 잘못 컴파일했다).
+    SW_BRANCH if ( bInside )
     {
-        // PCSS — info._directionType 은 (가까운 면, 먼 면, 거리 1 m 의 텍셀 길이, 원천 반지름)이다(C++ FrameShadowData::populateLocalShadows).
-        // 반그림자 반지름(텍셀) = 원천 반지름 × (받는 깊이 − 가리개 깊이) / 가리개 깊이 ÷ (텍셀 길이 × 받는 깊이) — C++ ShadowFilter::computeLocalKernelRadius 와 같은 식.
-        const float4 soft          = info._directionType;
-        const float  receiverDepth = Shadow::linearizePerspectiveDepth( ndc.z, soft.x, soft.y );
-        bool         bBlocked      = false;
-        const float  blockerNdc    = Shadow::findBlockerDepth( uv, ndc.z, texelUv, info._positionRadius.xy, info._positionRadius.zw, g_ShadowFilter.z, bBlocked );
-        const float  blockerDepth  = max( Shadow::linearizePerspectiveDepth( blockerNdc, soft.x, soft.y ), 1e-4f );
-        const float  penumbra      = soft.w * max( receiverDepth - blockerDepth, 0.0f ) / blockerDepth / max( soft.z * receiverDepth, 1e-6f );
-        const float  radius        = clamp( penumbra, g_ShadowFilter.w, g_ShadowFilter.z );
-        lit                        = bBlocked ? Shadow::filterDisk( uv, ndc.z, texelUv, info._positionRadius.xy, info._positionRadius.zw, radius ) : 1.0f;
-    }
-    else if ( bInside )
-    {
-        lit = Shadow::filterAtlas( uv, ndc.z, texelUv, true, info._positionRadius.xy, info._positionRadius.zw );
+        SW_BRANCH if ( Shadow::usesSoftFilter() )
+        {
+            // PCSS — info._directionType 은 (가까운 면, 먼 면, 거리 1 m 의 텍셀 길이, 원천 반지름)이다(C++ FrameShadowData::populateLocalShadows).
+            // 반그림자 반지름(텍셀) = 원천 반지름 × (받는 깊이 − 가리개 깊이) / 가리개 깊이 ÷ (텍셀 길이 × 받는 깊이) — C++ ShadowFilter::computeLocalKernelRadius 와 같은 식.
+            const float4 soft          = info._directionType;
+            const float  receiverDepth = Shadow::linearizePerspectiveDepth( ndc.z, soft.x, soft.y );
+            bool         bBlocked      = false;
+            const float  blockerNdc    = Shadow::findBlockerDepth( uv, ndc.z, texelUv, info._positionRadius.xy, info._positionRadius.zw, g_ShadowFilter.z, bBlocked );
+            const float  blockerDepth  = max( Shadow::linearizePerspectiveDepth( blockerNdc, soft.x, soft.y ), 1e-4f );
+            const float  penumbra      = soft.w * max( receiverDepth - blockerDepth, 0.0f ) / blockerDepth / max( soft.z * receiverDepth, 1e-6f );
+            const float  radius        = clamp( penumbra, g_ShadowFilter.w, g_ShadowFilter.z );
+            lit                        = bBlocked ? Shadow::filterDisk( uv, ndc.z, texelUv, info._positionRadius.xy, info._positionRadius.zw, radius ) : 1.0f;
+        }
+        else
+        {
+            lit = Shadow::filterAtlas( uv, ndc.z, texelUv, true, info._positionRadius.xy, info._positionRadius.zw );
+        }
     }
     return lerp( 1.0f - info._colorIntensity.w, 1.0f, saturate( lit ) );
 }
