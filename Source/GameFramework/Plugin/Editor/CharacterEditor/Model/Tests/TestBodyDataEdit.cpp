@@ -1,5 +1,5 @@
 // BodyDataEditTest — 캐릭터 편집 창 몸 탭의 데이터 파일 편집(채널 매핑 · 지글 · 체액 경로 · 구간 별칭)이 원소 열쇠 경로로 고치고 되돌리기 한 단계씩이며 주석을 지킨다,
-// 몸 표면 집기가 맞은 구간 · UV 를 고른다, 배치 층이 집은 UV 로 옮겨진다(nogpu).
+// 몸 표면 집기가 지금 포즈 · 부품 표면까지 보고 맞은 구간 · UV 를 고른다, 배치 층이 집은 UV 로 옮겨진다(nogpu).
 #include "pch.h"
 
 #include "Core/String/StringUtil.h"
@@ -155,14 +155,63 @@ SW_TEST_CASE( BodyDataEditTest, SurfacePickFindsNearestSectionAndUV )
         MeshSection{ hashed_string( "back" ), 6, 6, MeshPersonVisibility::Both}
     };
 
+    vector<BodyPickSurface> listSurface( 1 );
+    BodyPickSurface::build( listVertex, {}, {}, float4x4::Identity, listSurface[0] );
+    listSurface[0]._listIndex   = listIndex;
+    listSurface[0]._listSection = listSection;
+
     BodySurfaceHit hit{};
-    SW_REQUIRE_TRUE( BodySurfaceHit::pick( listVertex, listIndex, listSection, float4x4::Identity, float3{ 0.25f, 0.75f, 5.0f }, float3{ 0.0f, 0.0f, -1.0f }, hit ) );
+    SW_REQUIRE_TRUE( BodySurfaceHit::pick( listSurface, float3{ 0.25f, 0.75f, 5.0f }, float3{ 0.0f, 0.0f, -1.0f }, hit ) );
+    SW_EXPECT_EQUAL( 0u, hit._surface );
     SW_EXPECT_EQUAL( 1u, hit._section );
     SW_EXPECT_NEAR( 4.0f, hit._distance, 1e-4f );
     SW_EXPECT_NEAR( 0.25f, hit._uv._x, 1e-4f );
     SW_EXPECT_NEAR( 0.75f, hit._uv._y, 1e-4f );
-    SW_EXPECT_FALSE( BodySurfaceHit::pick( listVertex, listIndex, listSection, float4x4::Identity, float3{ 3.0f, 3.0f, 5.0f }, float3{ 0.0f, 0.0f, -1.0f }, hit ) );
+    SW_EXPECT_FALSE( BodySurfaceHit::pick( listSurface, float3{ 3.0f, 3.0f, 5.0f }, float3{ 0.0f, 0.0f, -1.0f }, hit ) );
     SW_EXPECT_EQUAL( constant::invalid_index::kUint32, BodySurfaceHit::findSection( listSection, 9 ) );
+}
+
+/**
+ * @brief [BodyDataEditTest] 표면 집기는 지금 포즈(스킨 팔레트로 CPU 스키닝한 자리)로 맞추고, 여러 표면(몸 · 부품) 중 가장 가까운 것을 고른다
+ * @details 본 0 에 묶인 사각형을 팔레트가 x 로 2 옮기면 바인드 자리(x 0.25)는 비껴가고 옮긴 자리(x 2.25)를 맞힌다. 앞에 둔 둘째 표면(부품)이 몸을 가린다.
+ */
+SW_TEST_CASE( BodyDataEditTest, SurfacePickFollowsPoseAndParts )
+{
+    vector<RHIVertex> listVertex( 4 );
+    const float32     arrCorner[4][2] = {
+        {0.0f, 0.0f},
+        {1.0f, 0.0f},
+        {1.0f, 1.0f},
+        {0.0f, 1.0f}
+    };
+    for ( uint32 corner = 0; corner < 4; ++corner )
+    {
+        listVertex[corner]._arrPosition[0] = arrCorner[corner][0];
+        listVertex[corner]._arrPosition[1] = arrCorner[corner][1];
+        listVertex[corner]._arrUV[0]       = arrCorner[corner][0];
+        listVertex[corner]._arrUV[1]       = arrCorner[corner][1];
+    }
+    const vector<uint32>         listIndex{ 0, 1, 2, 0, 2, 3 };
+    const vector<MeshSkinVertex> listSkin( 4 ); // 기본 영향 — 본 0 에 가중치 1
+    const vector<float4x4>       listPalette{ float4x4::makeTranslation( 2.0f, 0.0f, 0.0f ) };
+
+    vector<BodyPickSurface> listSurface( 1 );
+    BodyPickSurface::build( listVertex, listSkin, listPalette, float4x4::Identity, listSurface[0] );
+    listSurface[0]._listIndex = listIndex;
+
+    BodySurfaceHit hit{};
+    SW_EXPECT_FALSE( BodySurfaceHit::pick( listSurface, float3{ 0.25f, 0.5f, 5.0f }, float3{ 0.0f, 0.0f, -1.0f }, hit ) );
+    SW_REQUIRE_TRUE( BodySurfaceHit::pick( listSurface, float3{ 2.25f, 0.5f, 5.0f }, float3{ 0.0f, 0.0f, -1.0f }, hit ) );
+    SW_EXPECT_NEAR( 2.25f, hit._position._x, 1e-4f );
+    SW_EXPECT_NEAR( 0.25f, hit._uv._x, 1e-4f );
+
+    // 부품 표면 — 같은 사각형을 몸 앞(z = 1)에 단단하게 둔다.
+    listSurface.emplace_back();
+    BodyPickSurface::build( listVertex, {}, {}, float4x4::makeTranslation( 2.0f, 0.0f, 1.0f ), listSurface[1] );
+    listSurface[1]._listIndex = listIndex;
+    SW_REQUIRE_TRUE( BodySurfaceHit::pick( listSurface, float3{ 2.25f, 0.5f, 5.0f }, float3{ 0.0f, 0.0f, -1.0f }, hit ) );
+    SW_EXPECT_EQUAL( 1u, hit._surface );
+    SW_EXPECT_NEAR( 4.0f, hit._distance, 1e-4f );
 }
 
 /**

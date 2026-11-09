@@ -70,31 +70,6 @@ namespace sw
                 }
             }
 
-            /** @brief 정점 하나를 현재 포즈(스킨 팔레트)로 옮깁니다. 바인드 공간에서 유닛 모델 공간으로 바꾸며, 노멀도 돌립니다. */
-            static void skinVertex( RHIVertex& inoutVertex, const MeshSkinVertex& skin, const vector<float4x4>& listPalette )
-            {
-                const float3 position{ inoutVertex._arrPosition[0], inoutVertex._arrPosition[1], inoutVertex._arrPosition[2] };
-                const float3 normal{ inoutVertex._arrNormal[0], inoutVertex._arrNormal[1], inoutVertex._arrNormal[2] };
-                float3       skinnedPosition{};
-                float3       skinnedNormal{};
-                for ( uint32 slot = 0; slot < 4; ++slot )
-                {
-                    const float32 weight = skin._arrWeight[slot];
-                    if ( weight <= 0.0f || skin._arrJoint[slot] >= listPalette.size() )
-                        continue;
-                    const float4x4& palette = listPalette[skin._arrJoint[slot]];
-                    skinnedPosition += float3::transform( position, palette ) * weight;
-                    skinnedNormal += float3::transformVector( normal, palette ) * weight;
-                }
-                skinnedNormal               = CharacterGeometryUtil::makeUnitOr( skinnedNormal, normal );
-                inoutVertex._arrPosition[0] = skinnedPosition._x;
-                inoutVertex._arrPosition[1] = skinnedPosition._y;
-                inoutVertex._arrPosition[2] = skinnedPosition._z;
-                inoutVertex._arrNormal[0]   = skinnedNormal._x;
-                inoutVertex._arrNormal[1]   = skinnedNormal._y;
-                inoutVertex._arrNormal[2]   = skinnedNormal._z;
-            }
-
             /**
              * @brief 1 단계입니다. 위치로 이은 형상(`CharacterMeshUtil::makeWeldedGeometry` — 위상: 경계 고리, 캡)과 정점마다의 영역을 구하고, @p regionIndex 영역을 잘라
              *        삼각형마다 잘렸는지와 두 캡을 냅니다. 삼각형 i 는 메시의 삼각형 i 이고, 남은 메시는 원래 정점을 쓴다.
@@ -207,7 +182,7 @@ namespace sw
                 float3 center{};
                 for ( size_t vertexIndex = 0; vertexIndex < inoutListPieceVertex.size(); ++vertexIndex )
                 {
-                    skinVertex( inoutListPieceVertex[vertexIndex], listPieceSkin[vertexIndex], listPalette );
+                    MeshSkinBinding::skinVertex( listPalette, listPieceSkin[vertexIndex], inoutListPieceVertex[vertexIndex] );
                     RHIVertex&   vertex    = inoutListPieceVertex[vertexIndex];
                     const float3 world     = float3::transform( float3{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] }, unitWorld );
                     const float3 normal    = float3::transformVector( float3{ vertex._arrNormal[0], vertex._arrNormal[1], vertex._arrNormal[2] }, unitWorld ).normalize();

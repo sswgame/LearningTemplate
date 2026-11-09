@@ -584,7 +584,7 @@ namespace sw
                             continue;
                         listSkin[newIndex] = mesh.getSkinVertices()[vertex];
                         if ( bRebind )
-                            MeshSkinBinding::rebindVertex( listRebind, listSkin[newIndex], listVertex[newIndex] );
+                            MeshSkinBinding::skinVertex( listRebind, listSkin[newIndex], listVertex[newIndex] );
                     }
                 }
                 Internal::mergeMorphTargets( mesh, listNewIndex, listTarget );

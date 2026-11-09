@@ -11,6 +11,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
@@ -34,6 +35,8 @@ namespace sw
 
 namespace sw::editor
 {
+    struct BodyPickSurface;
+
     /**
      * @class CharacterEditorPanel
      * @brief 캐릭터 편집 확장의 도구 패널입니다.
@@ -162,8 +165,11 @@ namespace sw::editor
         /**
          * @brief 미리보기 탭의 뷰포트에서 몸 표면 집기를 받습니다 — 구간 고르기(별칭 대응)와 배치 층 옮기기(끄는 동안 한 되돌리기 단계), 강조 구간 · 집은 자리 표시.
          * @details 몸 탭에서 집기를 켜고 미리보기 탭에서 누른다(뷰포트는 한 탭이다). 기즈모가 마우스를 쥐었으면 받지 않는다. Esc 가 끈다.
+         *          집기 · 윤곽은 지금 포즈(`collectPickSurfaces`)로 한다. 구간 고르기는 부품까지, 층 배치는 몸 피부만 본다.
          */
         void drawBodyPickOverlay( GameObject* pBody );
+        /** @brief 몸(첫 표면)과 스폰한 부품 오브젝트의 메시를 지금 포즈로 월드에 옮긴 집기 표면을 모읍니다(`BodyPickSurface`). 몸 메시가 없으면 몸 표면이 빠진다. */
+        void collectPickSurfaces( GameObject& body, vector<BodyPickSurface>& outListSurface ) const;
         void drawAppearanceDataRow();
         void drawSelectionHeader( const AppearanceSelection& selection );
         void drawSlotRows( const AppearanceSelection& selection );

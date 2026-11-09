@@ -1606,58 +1606,93 @@ namespace sw::editor
         ImGui::EndDisabled();
     }
 
+    void CharacterEditorPanel::collectPickSurfaces( GameObject& body, vector<BodyPickSurface>& outListSurface ) const
+    {
+        outListSurface.clear();
+        const vector<float4x4> listNoPalette{}; // 단단한 부품 — 스키닝하지 않는다
+        const auto             appendSurface = [&outListSurface, &listNoPalette]( const GameObject& object, bool bSkin )
+        {
+            const MeshComponent*         pMesh  = object.getComponent<MeshComponent>();
+            const SkeletalMeshComponent* pUnit  = object.getComponent<SkeletalMeshComponent>();
+            const SceneComponent*        pScene = object.getPrimarySceneComponent();
+            const Mesh*                  pData  = pMesh != nullptr ? pMesh->getRawMesh() : nullptr;
+            if ( pData == nullptr || pScene == nullptr || pData->getVertices().empty() )
+                return;
+            BodyPickSurface& surface = outListSurface.emplace_back();
+            BodyPickSurface::build( pData->getVertices(), pData->getSkinVertices(), pUnit != nullptr ? pUnit->getSkinPalette() : listNoPalette, pScene->getWorldMatrix(), surface );
+            surface._listIndex   = pData->getIndices();
+            surface._listSection = pData->getSections();
+            surface._bSkin       = bSkin ? SW_TRUE : SW_FALSE;
+        };
+        appendSurface( body, true ); // 몸이 첫 표면이다 — 피부 층 배치는 이것만 본다
+        const CharacterAppearanceComponent* pAppearance = body.getComponent<CharacterAppearanceComponent>();
+        const GameObjectManager*            pManager    = findPreviewManager();
+        if ( pAppearance == nullptr || pManager == nullptr )
+            return;
+        vector<GameObjectHandle> listPart;
+        pAppearance->collectPartObjects( listPart );
+        for ( const GameObjectHandle& handle : listPart )
+        {
+            const GameObject* pPart = pManager->resolveGameObject( handle );
+            if ( pPart != nullptr )
+                appendSurface( *pPart, false );
+        }
+    }
+
     void CharacterEditorPanel::drawBodyPickOverlay( GameObject* pBody )
     {
         using Internal                        = CharacterEditorPanelInternal;
         const EditorPreviewViewport& viewport = getPreviewViewport();
         const float2                 position = viewport.getImagePosition();
         const float2                 size     = viewport.getImageSize();
-        SkeletalMeshComponent*       pUnit    = pBody != nullptr ? pBody->getComponent<SkeletalMeshComponent>() : nullptr;
-        const SceneComponent*        pScene   = pBody != nullptr ? pBody->getPrimarySceneComponent() : nullptr;
-        const shared_ptr<Mesh>       mesh     = pUnit != nullptr ? pUnit->getMesh() : shared_ptr<Mesh>{};
-        if ( size._x <= 0.0f || size._y <= 0.0f || mesh == nullptr || pScene == nullptr )
+        if ( size._x <= 0.0f || size._y <= 0.0f || pBody == nullptr )
             return;
         float4x4 viewProjection{};
         float3   eye{};
         viewport.computeViewProjection( size._x / size._y, viewProjection, eye );
-        const float4x4              bodyWorld = pScene->getWorldMatrix();
         EditorProjectedLineRenderer renderer{ ImGui::GetWindowDrawList(), viewProjection, position, size };
 
-        // 드라이브가 고른 구간을 윤곽으로 긋는다(바인드 자세 — 집기와 같다). 큰 몸은 삼각형을 고르게 건너뛴다.
-        const vector<MeshSection>& listSection = mesh->getSections();
-        const vector<RHIVertex>&   listVertex  = mesh->getVertices();
-        const vector<uint32>&      listIndex   = mesh->getIndices();
-        const float4               highlight   = SW_THEME_COLOR( "Viewport", "SelectionOutline" ).toFloat4();
-        for ( const MeshSection& section : listSection )
+        // 표면(몸 + 부품)은 지금 포즈로 스키닝해 짓는다 — 윤곽을 긋거나 누른 프레임에만(CPU 스키닝이 공짜가 아니다).
+        vector<BodyPickSurface> listSurface;
+        bool                    bOutline = _bodySelectedSection < _bodyState._listSection.size();
+        for ( const BodyCustomizationViewState::SectionRow& row : _bodyState._listSection )
+            bOutline = bOutline || row._bHighlighted == SW_TRUE;
+        if ( bOutline )
+            collectPickSurfaces( *pBody, listSurface );
+
+        // 드라이브가 고른 구간 · 고른 구간을 윤곽으로 긋는다(지금 포즈 — 집기와 같다). 큰 메시는 삼각형을 고르게 건너뛴다.
+        const float4 highlight = SW_THEME_COLOR( "Viewport", "SelectionOutline" ).toFloat4();
+        for ( const BodyPickSurface& surface : listSurface )
         {
-            const uint32 row = BodyCustomizationViewModel::findSectionRow( _bodyState, section._name );
-            if ( row >= _bodyState._listSection.size() || ( _bodyState._listSection[row]._bHighlighted == SW_FALSE && row != _bodySelectedSection ) )
-                continue;
-            const uint32 triangleCount = section._indexCount / 3u;
-            const uint32 stride        = triangleCount > Internal::kHighlightTriangleBudget ? triangleCount / Internal::kHighlightTriangleBudget + 1u : 1u;
-            for ( uint32 triangle = 0; triangle < triangleCount; triangle += stride )
+            for ( const MeshSection& section : surface._listSection )
             {
-                const uint32 first = section._firstIndex + triangle * 3u;
-                float3       arrCorner[3]{};
-                for ( uint32 corner = 0; corner < 3u; ++corner )
+                const uint32 row = BodyCustomizationViewModel::findSectionRow( _bodyState, section._name );
+                if ( row >= _bodyState._listSection.size() || ( _bodyState._listSection[row]._bHighlighted == SW_FALSE && row != _bodySelectedSection ) )
+                    continue;
+                const uint32 triangleCount = section._indexCount / 3u;
+                const uint32 stride        = triangleCount > Internal::kHighlightTriangleBudget ? triangleCount / Internal::kHighlightTriangleBudget + 1u : 1u;
+                for ( uint32 triangle = 0; triangle < triangleCount; triangle += stride )
                 {
-                    const RHIVertex& vertex = listVertex[listIndex[first + corner]];
-                    arrCorner[corner]       = float3::transform( float3{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] }, bodyWorld );
+                    const uint32 first = section._firstIndex + triangle * 3u;
+                    if ( first + 2u >= surface._listIndex.size() )
+                        break;
+                    const float3& a = surface._listPosition[surface._listIndex[first]];
+                    const float3& b = surface._listPosition[surface._listIndex[first + 1u]];
+                    const float3& c = surface._listPosition[surface._listIndex[first + 2u]];
+                    renderer.drawLine( a, b, highlight );
+                    renderer.drawLine( b, c, highlight );
+                    renderer.drawLine( c, a, highlight );
                 }
-                renderer.drawLine( arrCorner[0], arrCorner[1], highlight );
-                renderer.drawLine( arrCorner[1], arrCorner[2], highlight );
-                renderer.drawLine( arrCorner[2], arrCorner[0], highlight );
             }
         }
         if ( _bBodyPickShown == SW_TRUE )
         {
-            const float4 mark = SW_THEME_COLOR( "Viewport", "SelectionOutline" ).toFloat4();
             for ( const float3& axis : {
                       float3{1.0f, 0.0f, 0.0f},
                       float3{0.0f, 1.0f, 0.0f},
                       float3{0.0f, 0.0f, 1.0f}
             } )
-                renderer.drawLine( _bodyPickMarker - axis * Internal::kPickMarkLength, _bodyPickMarker + axis * Internal::kPickMarkLength, mark );
+                renderer.drawLine( _bodyPickMarker - axis * Internal::kPickMarkLength, _bodyPickMarker + axis * Internal::kPickMarkLength, highlight );
         }
         if ( _bBodyPicking == SW_FALSE )
             return;
@@ -1687,8 +1722,14 @@ namespace sw::editor
         Ray ray{};
         if ( EditorViewportProjectionUtil::makeMouseRay( viewProjection.invert(), position, size, ray ) == false )
             return;
-        BodySurfaceHit hit{};
-        if ( BodySurfaceHit::pick( listVertex, listIndex, listSection, bodyWorld, ray._origin, ray._direction, hit ) == false )
+        if ( listSurface.empty() )
+            collectPickSurfaces( *pBody, listSurface );
+        if ( listSurface.empty() || listSurface[0]._bSkin == SW_FALSE )
+            return; // 몸 메시가 아직 없다(조립 전)
+        // 층 배치는 피부(몸 표면)만 본다 — 옷 아래 피부에도 놓는다(층 UV 는 몸 UV 다). 구간 고르기는 부품까지 가장 가까운 것.
+        const vector_reference<const BodyPickSurface> listCandidate = bPlacingLayer ? vector_reference<const BodyPickSurface>{ listSurface.data(), 1 } : vector_reference<const BodyPickSurface>{ listSurface };
+        BodySurfaceHit                                hit{};
+        if ( BodySurfaceHit::pick( listCandidate, ray._origin, ray._direction, hit ) == false )
             return;
         _bodyPickMarker = hit._position;
         _bBodyPickShown = SW_TRUE;
@@ -1699,8 +1740,9 @@ namespace sw::editor
             _bBodyPickDrag = SW_TRUE;
             return;
         }
-        if ( hit._section < listSection.size() )
-            _bodySelectedSection = BodyCustomizationViewModel::findSectionRow( _bodyState, listSection[hit._section]._name );
+        const BodyPickSurface& surface = listSurface[hit._surface];
+        if ( hit._section < surface._listSection.size() )
+            _bodySelectedSection = BodyCustomizationViewModel::findSectionRow( _bodyState, surface._listSection[hit._section]._name );
     }
 
     void CharacterEditorPanel::drawSkinLayerRows( const BodyCustomizationViewState& state )

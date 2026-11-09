@@ -513,7 +513,7 @@ namespace sw
         return listRebind;
     }
 
-    void MeshSkinBinding::rebindVertex( const vector<float4x4>& listRebind, const MeshSkinVertex& skin, RHIVertex& inoutVertex )
+    void MeshSkinBinding::skinVertex( const vector<float4x4>& listMatrix, const MeshSkinVertex& skin, RHIVertex& inoutVertex )
     {
         const float3 position{ inoutVertex._arrPosition[0], inoutVertex._arrPosition[1], inoutVertex._arrPosition[2] };
         const float3 normal{ inoutVertex._arrNormal[0], inoutVertex._arrNormal[1], inoutVertex._arrNormal[2] };
@@ -523,11 +523,11 @@ namespace sw
         for ( uint32 influence = 0; influence < 4; ++influence )
         {
             const float32 weight = skin._arrWeight[influence];
-            if ( weight <= 0.0f || skin._arrJoint[influence] >= listRebind.size() )
+            if ( weight <= 0.0f || skin._arrJoint[influence] >= listMatrix.size() )
                 continue;
-            const float4x4& rebind = listRebind[skin._arrJoint[influence]];
-            movedPosition += float3::transform( position, rebind ) * weight;
-            movedNormal += float3::transformVector( normal, rebind ) * weight;
+            const float4x4& matrix = listMatrix[skin._arrJoint[influence]];
+            movedPosition += float3::transform( position, matrix ) * weight;
+            movedNormal += float3::transformVector( normal, matrix ) * weight;
             weightSum += weight;
         }
         if ( weightSum <= 0.0f )
