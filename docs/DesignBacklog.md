@@ -391,8 +391,6 @@ GameFramework의 모듈·수명주기·서비스·테스트 경계를 현재 코
 
 ### 날씨·캐릭터·지면 표면 상호작용 (코드 대조 2026-11-07)
 
-**남은 판단:** 투영 데칼은 아직 없다 — 생기면 모든 데칼을 일괄 지우지 말고 씻김 여부와 물/시간에 따른 수명을 데칼 데이터가 밝히게 하고, UV 표면 마스크와 월드 공간 데칼은 저장 · 머티리얼 · 수명 경로가 달라 같은 구현으로 섞지 않는다. 전신/부위별 침수와 의복 방수 차이는 표현 · 게임플레이 요구가 생길 때 확장한다.
-
 ## 통합 담당 판단(2026-11-08)
 
 위 감사를 코드 규칙(구조로 푼다 · 폴백 없음 · 미사용은 쓰게 · 대기를 쌓지 않음)에 맞춰 정했다. "요구가 확인될 때만" 으로 적힌 항목 중 상용 엔진과 비교해 지금 정할 수 있는 것은 정했고, 측정이 필요한 것은 측정을 일감으로 넣었다(재지 않고 미루지 않는다).
@@ -425,16 +423,11 @@ GameFramework의 모듈·수명주기·서비스·테스트 경계를 현재 코
 
 **정한 것(들어감).** 지역 효과는 입력 → 모듈 → 반응이다. 입력은 셋(그린 볼륨 `ZoneVolumeComponent`, 표면 종류 · 물리 재질 `surface:<종류>` — 접촉 `ZoneContactComponent`, 런타임 영역 = 볼륨 + 수명 · 퍼짐 프리팹)이고 접촉 방식 넷(겹침 · 디딤 · 부딪힘 · 잠김)이 같은 처리기(`ZoneTracker`)를 지난다. 프로필은 `*.zone.xml` — 이름 붙은 모듈 목록이고 `_base` 는 하나, 재사용 모듈은 `*.zonemodule.xml`, 세 층(프리셋 · 변형 · 배치 덮어쓰기 `_listModuleOverride`)을 데이터 상속이 합치며 로드 때 합친 결과를 검사한다(모르는 종류 · 매개변수 · 식 · 동작 · 카탈로그 참조는 로드 실패). 수치 칸은 조건식 문법의 식(위치 값 `zoneDepth01` · `distanceToCenter` · `immersion` · `timeInside` · `impactSpeed`, 대상 속성 · 태그), 사건은 진입 · 체류 · 이탈 · 조건 전환(`Became` · `Lost`, `delay`), 경우 목록은 처음 맞는 하나, 저항 · 면역은 이펙트 계산 단계가 깎는다. 모듈 종류(처리기는 서로를 모른다 — 새 효과는 `SW_ZONE_MODULE` 한 줄): `Action`(이펙트 · 스킬 · 즉사 · 이동 · 규칙 신호 — 주기 피해 · 둔화 · 중독 · 가라앉음 스택), `PhysicsField`(중력 배율 · 균일/중심/회전/흐름 방향 × 세기 식 · 유체 저항 · 부력 · 마찰 — 캐릭터와 강체 모두), `Blackboard`(NPC 질의), `NavArea`(행위자 종류별 비용 · 금지), `SurfaceChannel`(젖음 · 진흙 · 그을음), `SurfaceStamp`(변형 층 도장 — 아래 표면 변형 층). 반응은 태그 · 속성만 읽는 컴포넌트다: 외형 내리기(`VisualSinkReactionComponent`), 점프 탈출(`JumpEscapeReactionComponent`), 시야(`ScreenReactionComponent` — 태그를 가진 동안 따라가는 카메라 디렉터에 후처리 덧칠 `CameraDirector::setPostProcessOverlay` 를 페이드로). 프레임 일은 `ZoneSystem` 하나가 틱 뒤에 돈다. 데이터: `Content/game/empty/zones/`(용암 · 깊은 용암 · 바다 · 늪 · 독 늪 · 유황 · 분출구 · 독가스 살포 · 모래 · 느린 사구 · 사구 · 소용돌이 · 무중력 · 빙판 · 가시덩굴 · 버프 샘 · 스킬 영역 · 즉사 구덩이), 값 시나리오 `game.empty.zone*` · `sinkingsand`. 비교: 언리얼 GAS 이펙트 Component 목록 · PhysicsVolume, 유니티 Volume Override · Effector, Godot `Area3D`(중력 덮어쓰기 · 감쇠 — 영역이 필드를 주고 바디가 받는 같은 자리)를 한 프로필의 모듈로 합쳤다(영역마다 컴포넌트를 늘리지 않는다).
 
-**남은 것.** 인스펙터가 배치 덮어쓰기의 물려받은 값과 바꾼 값을 가르고 되돌리는 화면(프리팹 덮어쓰기 화면과 같은 길 — 지금은 덮어쓰기 목록을 그대로 편집한다).
-
 ### 표면 변형 층(사용자 2026-11-08 — 지나온 길 · 파묻힘 · 빨려드는 구멍)
 
 **정한 것(들어감).** 씬 서비스 `SurfaceDeformSystem` 하나가 카메라 앞 창의 CPU 높이 격자에 도장(`SurfaceStampDef` — Print · Trail · Funnel, 깊이 · 테두리 · 메워지는 속도 · 회전)을 찍고 바뀐 칸만 텍스처로 보낸다. 지면 머티리얼(`surface_deform.hlsl`)이 정점을 내리고 법선을 기울인다 — 충돌 · 내비 · 높이장은 그대로다. 도장을 내는 길은 셋이고 모두 데이터다: 표면 종류의 발자국(`SurfaceKindDef::_footprint` — 눈 전용 고리는 없앴다), 오브젝트 도장(`SurfaceStampComponent` Hold · Trail — 끌린 자국 · 바퀴 자국), 지역 프로필 모듈 `SurfaceStamp`(대상 발 · 당김 중심에 매 프레임 다시 찍어 머무는 동안 메워지지 않는다, 수치 칸은 위치 값의 식 — 파묻힘 테두리 · 안쪽일수록 깊은 깔때기). 렌더 타깃에 GPU 로 그리지 않고 CPU 격자인 것은 도장이 프레임에 몇 개뿐이고 값 시나리오가 깊이를 그대로 읽으며 백엔드 코드가 늘지 않아서다(언리얼 RVT · 유니티 CustomRenderTexture 와 다른 점 — 도장이 수백 개로 늘면 컴퓨트로 옮긴다). 시나리오: `game.empty.surfacedeform` · `surfacefootprint` · `sinkingsand`(지역 도장 rim).
-
-**남은 것.** 지형(`terrain.hlsl`)은 머티리얼을 픽셀에서만 읽어(GL 은 구조버퍼를 두 단계에서 못 읽는다) 정점 변위를 받지 못한다 — 엔진 텍스처 칸 `SurfaceDeform`(`shaderslot::emulated::kEngineTextureNames` 13 번째 — `SW_ENGINE_TEXTURE_COUNT` · DX11 `t44` · GL 유닛 12 · binding.hlsli 의 칸 줄)과 패스 상수 `g_SurfaceDeformParams`(창)를 더해 지형 정점 셰이더가 읽게 한다(언리얼 RVT · 유니티 `SetGlobalTexture` 자리, 그림자 패스도 같은 오프셋). 네 백엔드 셰이더 · 바인딩을 함께 바꾸므로 빌드 · 시나리오를 돌릴 수 있는 작업자가 한 묶음으로 한다.
 
 ### 관성 이동과 탑승 가속감(사용자 2026-11-08 — 썰매처럼 경사에서 빨라지고 느려지고, 타면 가속이 느껴지게)
 
 **정한 것(들어감).** 탈것 이동은 둘이다 — Jolt 강체 · 바퀴(`WheeledVehicleComponent`, 시뮬레이션 레이싱)와 바디 없이 힘을 적분하는 `KinematicVehicleComponent` · `KinematicVehicleMotor`(아케이드 · 썰매 · 수레 · 호버 · 레일, 옛 `Arcade…` 이름은 막았다). 바깥 힘은 `InertiaSettings::computeAlongAcceleration` 한 벌(경사 중력 − 디딘 표면의 구름 저항 − 공기 저항 v², 질량으로)을 키네마틱 탈것 · 말(`MountMovementComponent`) · 롤러코스터가 함께 쓰고, 구동은 출력 한계(`_maxPower`, `limitDriveAcceleration` — P / (m·v))로 자른다: 다리 가속 한계가 경사 당김보다 커도 출력이 모자라면 오르막에서 P / (m·g·sin) 에 선다(언리얼 Chaos Vehicle 토크 곡선 · 유니티 motorTorque 자리를 바디 없는 모델에서는 일률 한 칸으로). 조작감은 모듈(`Grip` · `Drift` · `Boost` · `AirControl` · `Hover` · `Rail`), 튜닝은 `*.vehicle.xml`(`_base` 상속 — 무거운 썰매 = 질량 한 칸, 배치는 변형 파일을 가리킨다). 탑승 가속감은 좌석(`VehicleSeatComponent::_rideFeel`)이 탈것 가속도를 재어 탑승자 기울임 · 시야각 킥 · 충격 흔들림 · 소리 매개변수를 낸다. 배는 선체 강체 + 폰툰 부력 · 키 · 돛 · 방향별 저항의 조합(`BoatComponent` · `BoatHelmComponent` · `WeatherWaveComponent`). 시나리오: `game.empty.inertia`(카트 오르막 감속 · 썰매 내리막 가속 · 빙판이 눈보다 멀리 · 탑승자 기울임 · 레일, 골든 `inertia_sled`), `game.empty.mountslope`(평지 말 구보 속도, 0.2 rad 비탈 말 ≈ 4.1 m/s), `game.empty.boat`. 카트 트랙 전용 시나리오는 두지 않는다 — 트랙의 내리막 · 오프로드 · 빙판은 같은 모터 · 같은 표면 종류라 `inertia` 의 판정과 겹친다. 비행(양력 · 자세)은 범위 밖이다.
 
-**남은 것.** 플랫포머 모터(`PlatformerMotor2D`)는 경사 땅이 없어 이 식을 부르지 않는다 — 경사 땅을 들이는 일에서 `computeAlongAcceleration` 을 부른다.

@@ -2,7 +2,7 @@
 
 > 질문: 새 파일 · 옮길 파일을 어느 폴더에 두는가?
 > 독자: 이 저장소에서 파일을 만들거나 옮기는 에이전트.
-> 결론: 이름 낱말(Util · Registry · Component)이나 처음 쓰는 쪽이 아니라 **하는 일**로 자리를 정한다. 아래 표가 정본이다. 굵게 쓴 폴더는 아직 없는 목표 자리이고, 남은 이동은 [FolderMoves](../FolderMoves.md) 에 있다.
+> 결론: 이름 낱말(Util · Registry · Component)이나 처음 쓰는 쪽이 아니라 **하는 일**로 자리를 정한다. 아래 표가 정본이다. 굵게 쓴 폴더는 아직 없는 목표 자리이고, 남은 이동은 [NEXT](../NEXT.md) 에 있다.
 
 - 잡동사니 폴더(`Util` · `Utility` · `Helpers` · `Misc`)를 새로 만들지 않는다 — 하는 일(Encoding · Algorithm · Hash …)로 묶는다. 린트 `folder-layout`(표 `Config/Dev/FolderLayout.json`)가 막는다.
 - 층(티어) 규칙이 먼저다: 하위 층이 상위 층을 include 하지 않는다(cmake 층 표 · `docs/agents/Includes.md`).
@@ -74,5 +74,10 @@
 | 엔진 쪽 `Dev/` 금지(린트 `folder-layout`) — 개발 기능은 `DevTools`, 예외는 표의 `_devFolderAllowed` 만 | DevTools 는 Engine 을 보지만 GF · 게임 · ModuleManager · App 은 못 본다 — 그 안에 붙어야 하는 것만 예외 |
 | 실행 중 바꾸기 · 핫스왑은 개발, 기동 때 고르기는 제품 | 언리얼도 RHI · 모듈 교체는 재시작(10 절) |
 
----
+## 판정해 그대로 두는 것(다시 보지 않는다)
 
+- `Core/Foundation/BitFlagTrait.h` — 생성 헤더(`*.gen.h` · 강제 include `FlagOps.gen.h`)가 include 하는 잎이라 `<type_traits>` 밖을 끌어오면 모든 TU 의 include 누락을 가린다(헤더 머리말). EnumUtil 에 합치지 않는다.
+- `Engine/UI/Screen/UIScreenSwitch` — 개발 화면 스위치의 **등록 틀(확장점)** 자체다. DevTools(`OptionsMenuSwitch`) · 게임(Empty Client/Dev)이 여기에 붙는다.
+- `Core/Diagnostics/SubsystemTimingReport` — DevTools 가 아니라 Core 진단이다: 시계 걸기(개발 구성만)와 한 줄 요약뿐이고 Core 형식만 쓴다. 엔진 루프 · 에디터 기동 로그가 부른다(언리얼 `FScopedBootTiming` 도 Core).
+- `Engine/Profiling/FrameProfileReport` — `FrameProfiler`(런타임 계측)가 내는 보고 값 형식. 보고를 쓰는 쪽(FrameProfileSession)은 DevTools 다.
+- 그 밖의 판정(Process/ThreadCrashStack · Math/SecureRandom · Container/DependencyGraph · Container/string.h · Config/NetEmulationPresetTable · Foundation/AnimationNotifyPhase · Observability ↔ Telemetry · Compression 둘 · 쿠킹 셋 · Online 이름 겹침)은 FolderLayout 정본과 같다.

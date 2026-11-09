@@ -38,15 +38,20 @@
 - **소총 자세:** 권총 조준 클립으로 소총이 머리 옆에 들린다. 브랜치 `rifle-pose-wip`(5073ea9105)에 기반이 있다. 다음: Quaternius **Toon Shooter Game Kit**(묶음 페이지가 CC0 인지 먼저 확인)의 `Character_Soldier` 클립을 UBC 로 리타깃 → 몸 전체 사진 → 손 소켓 `Gun` 회전을 사진으로 맞춤 → 골든 다시.
 - **걸을 때 총이 떨린다:** 원인 미확인. `-gv_shooterMotionTrace` 기록에 총 위치를 더해 손 · 카메라와 프레임별로 대조한다.
 
-### 5. 작업자가 남긴 일
+### 5. 작업자 · 설계 문서가 남긴 일
 
 - **에디터 MVVM 남은 View 28 개:** Multiplayer 탭 7(탭 문맥을 세션 ViewModel 로), 인스펙터 코어(프로퍼티 그리드에 편집 모델 층 먼저), 큰 패널(Hierarchy · Profiler · MapCheck · PrefabEditor · ContentBrowser · Sequencer · AnimationRewind · RigDebug · BoneHierarchyPopup · StreamingCells · VolumetricFog), RenderTarget, 감시 값 4. 다 옮기면 `_migratedViews` 표와 린트를 지운다([EditorUI](agents/EditorUI.md)).
-- **저장 왕복 시나리오:** Catalog · InputMap · BehaviorTree · Rig · Terrain · AudioEvent/Graph — 그 전에 패널이 `scratch` 사본을 가리킬 문서 경로 입구([StructureRefactor](StructureRefactor.md) §5).
+- **저장 왕복 시나리오:** Catalog · InputMap + 재생 · BehaviorTree · Rig · Terrain · AudioEvent/Graph. 틀(`panel.saveDocument` · `panel.reloadDocument` · `asset.snapshotScratch` · `asset.expectScratchUnchanged`, 예 `saveroundtripmaterial.scenario.xml`)은 있다 — 이 패널들은 경로로 열리지 않거나(자체 저장 패널 · 리그) 고정 파일을 써서 `scratch` 사본을 가리킬 문서 경로 입구가 먼저다.
 - **렌더링:** Vulkan placed 텍스처(해제 큐에 메모리 참조 세기), TransientLeasePool 을 뷰 풀에 잇기, 비동기 컴퓨트 큐 패스 타임스탬프 · Tracy 프레임 패스 내보내기, 같은 자리 후처리 머티리얼이 앞 결과를 이어 읽기, 박막 · 털 · 스타킹 · 비단 외형의 디퍼드(G버퍼 칸 부족 — 포워드 전용으로 남김), 몸 머티리얼이 피부 층 표면 덮어쓰기(`_skinLayerSurfaceMap`)를 읽기, 텍스처 전이 · VFX · 프로브 디스패치의 버퍼별 전이를 묶음 API 로.
 - **캐릭터:** 문신 집기를 바인드 자세가 아닌 지금 포즈로, 부품 오브젝트도 집기, 몸 탭 동작 시나리오.
 - **결과 형식:** Core 밖 기준선 줄이기 → 0 이 되면 `Expected.h` 두 방향 변환 삭제([Errors](agents/Errors.md)). `ReflectedValueUtil::findBuiltinIndex` 를 None 이 있는 열거형으로, int32 본 · 버스 표와 Core 찾기 함수의 -1 감시값.
 - **SOLID #14:** MemoryProfiler 누수 창을 `MemoryLeakWindow` 로, `judgeLeakCurve` · `printLeakWindowReport` 를 멤버로([StructureRefactor](StructureRefactor.md) §7).
-- **표면 변형:** 지형 정점 셰이더가 `SurfaceDeform` 텍스처와 `g_SurfaceDeformParams` 를 읽기(네 백엔드 — [DesignBacklog](DesignBacklog.md)).
+- **표면 변형:** 지형(`terrain.hlsl`)은 머티리얼을 픽셀에서만 읽어(GL 은 구조버퍼를 두 단계에서 못 읽는다) 정점 변위를 받지 못한다 — 엔진 텍스처 칸 `SurfaceDeform`(`shaderslot::emulated::kEngineTextureNames` 13 번째 — `SW_ENGINE_TEXTURE_COUNT` · DX11 `t44` · GL 유닛 12 · binding.hlsli 의 칸 줄)과 패스 상수 `g_SurfaceDeformParams`(창)를 더해 지형 정점 셰이더가 읽게 한다(언리얼 RVT · 유니티 `SetGlobalTexture` 자리, 그림자 패스도 같은 오프셋). 네 백엔드 셰이더 · 바인딩을 함께 바꾸므로 빌드 · 시나리오를 돌릴 수 있는 작업자가 한 묶음으로 한다.
+- **지역 효과:** 인스펙터가 배치 덮어쓰기의 물려받은 값과 바꾼 값을 가르고 되돌리는 화면(프리팹 덮어쓰기 화면과 같은 길 — 지금은 덮어쓰기 목록을 그대로 편집한다, [DesignBacklog](DesignBacklog.md) 지역 효과).
+- **관성 이동:** 플랫포머 모터(`PlatformerMotor2D`)에 경사 땅을 들이고 `computeAlongAcceleration` 을 부른다([DesignBacklog](DesignBacklog.md) 관성 이동).
+- **데칼 수명:** 투영 데칼(`DecalComponent`)이 들어왔다 — 씻김 여부와 물 · 시간에 따른 수명을 데칼 데이터가 밝히게 하고(모든 데칼을 일괄 지우지 않는다), UV 표면 마스크와 월드 공간 데칼은 저장 · 머티리얼 · 수명 경로를 섞지 않는다.
+- **폴더 자리(막는 구조부터):** 엔진 쪽 `Dev/` 예외(`Config/Dev/FolderLayout.json` `_devFolderAllowed` — ModuleManager/Dev · Host/Dev · App/Dev · GF GameData/Dev · Graphics/Material/Dev)를 DevTools 로 — ModuleManager 를 공유 라이브러리로(언리얼 HotReload 처럼), DevTools 에 리플렉션 단계를 더하면 핫 리로드 · 머티리얼 그래프가 옮겨 간다. 약어 `OK` 를 약어 목록에 넣고 `_bOk` 103 곳을 같은 커밋에 전수로. 목표 자리 `Reflection/InstancedStruct`([FolderLayout](agents/FolderLayout.md) 굵은 칸).
+- **창 바둑판 배치:** 시나리오 창 배치가 모니터 작업 영역을 보지 않는다 — 모니터가 2.6K×1.5K 보다 작으면 겹친다. 플랫폼 작업 영역 API 로(`Test/README.md` 창 배치).
 
 ### 6. 리소스
 
