@@ -168,6 +168,11 @@ add_test(NAME Scripts.AndroidApk
 	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/package/Tests/TestAndroidApk.py")
 set_tests_properties(Scripts.AndroidApk PROPERTIES LABELS nogpu TIMEOUT 60)
 
+# 웹 패키징 — 빌드 산출물이 없으면 멈추고, 페이지가 캔버스 → 로더 → App.js 순서이고, 로컬 서버가 교차 출처 격리 헤더를 준다(Scripts/package/WebPackage.py, file_packager 는 부르지 않는다).
+add_test(NAME Scripts.WebPackage
+	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/package/Tests/TestWebPackage.py")
+set_tests_properties(Scripts.WebPackage PROPERTIES LABELS nogpu TIMEOUT 60)
+
 # 온라인 부하 봇의 짧은 시나리오 — 같은 프로세스 서버(`--local-server=0`, OS 가 고른 포트라 나란히 돌아도 다투지 않는다)에 봇 여덟이 붙어
 # 로그인 · 채팅 · 순위를 한 번씩 돈다. 오류율 · 보고서 쓰기 실패가 종료 코드다(엔진 · 모듈이 서지 못하면 3). 봇 로그는 `-log-file` 로 같은 폴더에 남는다.
 if(TARGET OnlineLoadBot)

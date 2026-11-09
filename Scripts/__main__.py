@@ -86,6 +86,7 @@ _kSubcommand: tuple[Subcommand, ...] = (
     Subcommand("asset-refs", "lint.AssetReferences", "작업 트리의 에셋 참조가 모두 있는지 본다(커밋 전 검사 · App --check-asset-refs 와 같은 칸 목록)"),
     Subcommand("rename-symbol", "dev.MoveSource:mainRename", "C++ 이름을 낱말 경계로 바꾼다(Old=New, 새 이름이 이미 쓰이면 멈춘다)"),
     Subcommand("android-apk", "package.AndroidApk", "Android-Shipping 빌드(lib<이름>.so + 쿠킹한 팩)를 서명한 디버그 APK 로 묶는다(--game, aapt2 · zipalign · apksigner — Tools/Android)"),
+    Subcommand("web-package", "package.WebPackage", "Web-Shipping 빌드(App.js · App.wasm + 쿠킹한 팩)를 브라우저 폴더로 묶는다(--game, file_packager — Tools/emsdk), --serve 로 교차 출처 격리 헤더를 주는 로컬 서버까지"),
     Subcommand("shipping-check", "dev.ShippingCheck", "배포 프리셋 셋(클라이언트 · 서버 · 자동화 없음)을 빌드하고 산출물의 기동 · 종료를 본다(통합에서 한 번)"),
     Subcommand("magic-literals", "lint.MagicLiterals", "숫자 리터럴 래칫(일반 코드의 이름 없는 리터럴이 파일마다 늘지 않게 — 커밋 훅)과 집계: 장소 × 종류, `-1` 의 뜻(--check · --ratchet · --accept · --meaning · --out · --self-check)"),
     Subcommand("result-types", "lint.ResultTypes", "결과 형식 래칫(std::optional · string& outError · string* pOutError · 실패 때만 쓰는 글 출력 인자 모양이 Core 에 없고 그 밖에서 늘지 않게 — 커밋 훅, --check · --ratchet · --accept · --self-check)"),
