@@ -51,15 +51,15 @@ namespace sw
                 return best;
             }
 
-            /** @brief 방어자와 이웃한 아군 중, 대신 맞아도 쓰러지지 않고 HP 가 가장 많은 유닛을 반환합니다. */
-            static int32 findSupportDefender( const SRPGBattlefield& field, int32 attackerIndex, const int2& attackerCell, int32 weaponIndex, int32 defenderIndex )
+            /** @brief 방어자와 이웃한 아군 중, 대신 맞아도 쓰러지지 않고 HP 가 가장 많은 유닛을 반환합니다. 없으면 비어 있습니다. */
+            static optional<int32> findSupportDefender( const SRPGBattlefield& field, int32 attackerIndex, const int2& attackerCell, int32 weaponIndex, int32 defenderIndex )
             {
                 const SRPGSettings& settings  = field.getSettings();
                 const SRPGUnit*     pDefender = field.findUnit( defenderIndex );
                 if ( settings._bSupportDefense == SW_FALSE || pDefender == nullptr )
-                    return constant::invalid_index::kInt32;
-                int32 bestIndex = constant::invalid_index::kInt32;
-                int32 bestHP    = 0;
+                    return nullopt;
+                optional<int32> bestIndex;
+                int32           bestHP = 0;
                 for ( int32 index = 0; index < static_cast<int32>( field.getUnits().size() ); ++index )
                 {
                     const SRPGUnit& ally       = field.getUnits()[static_cast<size_t>( index )];
@@ -71,7 +71,7 @@ namespace sw
                                                                                  100 - settings._supportDefenseReduction );
                     if ( preview._critDamage >= ally._hp )
                         continue; // 대신 맞다가 쓰러질 수 있으면 나서지 않는다
-                    if ( bestIndex < 0 || ally._hp > bestHP )
+                    if ( bestIndex.has_value() == false || ally._hp > bestHP )
                     {
                         bestIndex = index;
                         bestHP    = ally._hp;
@@ -239,11 +239,11 @@ namespace sw
         if ( SRPGBattlefield::isInWeaponRange( weapon, attackerCell, pDefender->_cell ) == false )
             return outForecast._status = SRPGWeaponStatus::OutOfRange;
 
-        const int32 supportDefender  = SRPGCombatInternal::findSupportDefender( field, attackerIndex, attackerCell, weaponIndex, defenderIndex );
-        outForecast._supportDefender = supportDefender;
-        if ( supportDefender >= 0 )
+        const optional<int32> supportDefender = SRPGCombatInternal::findSupportDefender( field, attackerIndex, attackerCell, weaponIndex, defenderIndex );
+        outForecast._supportDefender          = supportDefender;
+        if ( supportDefender.has_value() )
         {
-            outForecast._attack = computeStrike( field, attackerIndex, attackerCell, weaponIndex, supportDefender, field.findUnit( supportDefender )->_cell,
+            outForecast._attack = computeStrike( field, attackerIndex, attackerCell, weaponIndex, *supportDefender, field.findUnit( *supportDefender )->_cell,
                                                  100 - field.getSettings()._supportDefenseReduction );
         }
         else
@@ -252,19 +252,19 @@ namespace sw
         }
         outForecast._supportAttack = SRPGCombatInternal::findSupportAttack( field, attackerIndex, attackerCell, defenderIndex );
         SRPGCombatInternal::collectSyncStrikes( field, attackerIndex, outForecast._supportAttack._attacker, defenderIndex, outForecast._listSync );
-        const int32 counterWeapon = findCounterWeapon( field, defenderIndex, attackerIndex, attackerCell );
-        if ( counterWeapon >= 0 )
-            outForecast._counter = computeStrike( field, defenderIndex, pDefender->_cell, counterWeapon, attackerIndex, attackerCell );
+        const optional<int32> counterWeapon = findCounterWeapon( field, defenderIndex, attackerIndex, attackerCell );
+        if ( counterWeapon.has_value() )
+            outForecast._counter = computeStrike( field, defenderIndex, pDefender->_cell, *counterWeapon, attackerIndex, attackerCell );
         return outForecast._status;
     }
 
-    int32 SRPGCombat::findCounterWeapon( const SRPGBattlefield& field, int32 defenderIndex, int32 attackerIndex, const int2& attackerCell )
+    optional<int32> SRPGCombat::findCounterWeapon( const SRPGBattlefield& field, int32 defenderIndex, int32 attackerIndex, const int2& attackerCell )
     {
         const SRPGUnit* pDefender = field.findUnit( defenderIndex );
         if ( pDefender == nullptr || pDefender->_bAlive == SW_FALSE )
-            return constant::invalid_index::kInt32;
-        int32 bestWeapon   = constant::invalid_index::kInt32;
-        int32 bestExpected = -1;
+            return nullopt;
+        optional<int32> bestWeapon;
+        int32           bestExpected = -1;
         for ( int32 weaponIndex = 0; weaponIndex < static_cast<int32>( pDefender->_listWeapon.size() ); ++weaponIndex )
         {
             const SRPGWeaponDef& weapon  = *pDefender->_listWeapon[static_cast<size_t>( weaponIndex )];
@@ -299,8 +299,8 @@ namespace sw
         SRPGUnit* pMutableAttacker   = field.findUnit( attackerIndex );
         pMutableAttacker->_bAttacked = SW_TRUE;
         pMutableAttacker->_bMoved    = SW_TRUE; // 공격한 뒤에는 움직이지 않는다
-        if ( forecast._supportDefender >= 0 )
-            field.findUnit( forecast._supportDefender )->_bSupportUsed = SW_TRUE;
+        if ( forecast._supportDefender.has_value() )
+            field.findUnit( *forecast._supportDefender )->_bSupportUsed = SW_TRUE;
 
         SRPGCombatInternal::resolveStrike( field, forecast._attack, SRPGStrikeRole::Main, outResult );
         for ( const SRPGStrikePreview& sync : forecast._listSync )
@@ -340,12 +340,12 @@ namespace sw
         vector<SRPGStrikePreview> listStrike;
         for ( const int2& cell : listCell )
         {
-            const int32 targetIndex = field.findUnitAt( cell );
-            if ( targetIndex < 0 || targetIndex == attackerIndex )
+            const optional<int32> targetIndex = field.findUnitAt( cell );
+            if ( targetIndex.has_value() == false || targetIndex == attackerIndex )
                 continue;
-            if ( bFriendlyFire == false && SRPGBattlefield::isHostile( pAttacker->_team, field.findUnit( targetIndex )->_team ) == false )
+            if ( bFriendlyFire == false && SRPGBattlefield::isHostile( pAttacker->_team, field.findUnit( *targetIndex )->_team ) == false )
                 continue;
-            listStrike.push_back( computeStrike( field, attackerIndex, pAttacker->_cell, weaponIndex, targetIndex, cell ) );
+            listStrike.push_back( computeStrike( field, attackerIndex, pAttacker->_cell, weaponIndex, *targetIndex, cell ) );
         }
         if ( listStrike.empty() )
             return outResult._status = SRPGWeaponStatus::InvalidTarget;

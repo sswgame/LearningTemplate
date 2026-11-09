@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Path/AbsolutePath.h"
@@ -238,8 +239,8 @@ namespace sw
         /** @brief 이름 붙은 정수 데이터 레이어들입니다(`DataLayer`). 순서는 파일에 적힌 순서이고 에디터 목록도 이 순서입니다. */
         vector<DataLayer> _listDataLayer{};
 
-        /** @brief 이름으로 데이터 레이어 번호를 찾습니다. 없으면 -1 입니다. */
-        SW_API int32 findDataLayer( string_view name ) const;
+        /** @brief 이름으로 데이터 레이어 번호를 찾습니다. 없으면 비어 있습니다. */
+        SW_API optional<uint32> findDataLayer( string_view name ) const;
         /**
          * @brief 데이터 레이어를 더하고 모든 셀을 @p defaultValue 로 채웁니다.
          * @return 이름이 비었거나 이미 있으면 아무것도 바꾸지 않고 false 입니다.

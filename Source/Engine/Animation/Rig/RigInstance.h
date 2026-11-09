@@ -84,15 +84,15 @@ namespace sw
         /** @brief 이름의 대상 번호입니다. 없으면 없음입니다. */
         optional<uint32> findTargetIndex( const hashed_string& name ) const;
         /** @brief 호스트가 값을 넣어야 하는 대상인지 반환합니다(다른 유닛, 오브젝트, 다른 유닛의 해석된 소켓). */
-        bool isTargetExternal( uint32 targetIndex ) const { return _listTargetBone[targetIndex] == kExternalBone; }
+        bool isTargetExternal( uint32 targetIndex ) const { return _listTargetAnchor[targetIndex]._kind == TargetAnchorKind::External; }
         /** @brief 바깥 대상의 이번 프레임 값을 넣습니다(평가 전). */
         void setExternalTarget( uint32 targetIndex, const RigTargetValue& value );
         /**
          * @brief 자기 유닛 대상(본 · 소켓)이 붙은 본과 그 본 기준의 합친 오프셋(데이터 오프셋 × 소켓 로컬)입니다. 에디터의 대상 오프셋 기즈모가 부모 공간을 되짚는 데 씁니다.
-         * @param outBone 대상의 본 번호입니다. 부모가 빈 소켓(유닛 루트 기준)이면 -1 입니다.
+         * @param outBone 대상의 본 번호입니다. 부모가 빈 소켓(유닛 루트 기준)이면 비어 있습니다.
          * @return 바깥 대상(다른 유닛 · 오브젝트)이거나 번호가 범위 밖이면 false 입니다.
          */
-        [[nodiscard]] bool tryGetOwnTargetBinding( uint32 targetIndex, int32& outBone, BoneTransform& outCombinedOffset ) const;
+        [[nodiscard]] bool tryGetOwnTargetBinding( uint32 targetIndex, optional<uint32>& outBone, BoneTransform& outCombinedOffset ) const;
         /**
          * @brief 대상의 지금 모델 공간 변환입니다(워커). 값이 없으면 false 입니다.
          * @details 접촉 대상(`RigTargetKind::Trace`)은 닿은 면 + 법선 × `surface_offset` 이고, 회전은 모델 +Y 를 면 법선으로 돌린 것 × 데이터 회전이다. 가중치가 0 이면 false 다.
@@ -166,8 +166,20 @@ namespace sw
         uint32 getEvaluationCount() const { return _evaluationCount; }
 
     private:
-        static constexpr int32 kExternalBone    = -1; ///< `_listTargetBone` 에 해당하며, 호스트가 값을 넣는 대상이다.
-        static constexpr int32 kModelOriginBone = -2; ///< `_listTargetBone` 에 해당하며, 유닛 루트(모델 원점) 기준 소켓이다.
+        /** @brief 대상이 무엇에 붙는지입니다. 본 번호는 `Bone` 일 때만 뜻이 있다(예전에는 한 int 칸에 -1 · -2 를 섞었다). */
+        enum class TargetAnchorKind : uint8
+        {
+            External = 0, ///< 호스트가 값을 넣는 대상(다른 유닛, 오브젝트, 다른 유닛의 해석된 소켓)
+            ModelOrigin,  ///< 유닛 루트(모델 원점) 기준 소켓
+            Bone,         ///< 자기 유닛의 본
+        };
+
+        /** @brief 자기 유닛 대상의 붙는 곳입니다. */
+        struct TargetAnchor
+        {
+            TargetAnchorKind _kind{ TargetAnchorKind::External };
+            uint32           _bone{ 0 }; ///< `_kind` 가 `Bone` 일 때만 쓴다
+        };
 
         struct SlotWeight
         {
@@ -194,7 +206,7 @@ namespace sw
         shared_ptr<const RigAsset>  _asset;
         vector<RigTargetDef>        _listTargetDef;
         vector<RigTargetValue>      _listTargetValue;
-        vector<int32>               _listTargetBone;   ///< 자기 유닛 대상의 본이다(`kExternalBone` 과 `kModelOriginBone` 도 있다).
+        vector<TargetAnchor>        _listTargetAnchor; ///< 대상마다 붙는 곳(바깥 · 모델 원점 · 자기 유닛 본)이다.
         vector<BoneTransform>       _listTargetOffset; ///< 자기 유닛 대상의 본 기준 오프셋이다(소켓 로컬이나 데이터 오프셋).
         vector<ContactState>        _listContact;      ///< 대상마다 접촉 상태다(`RigTargetKind::Trace` 인 칸만 쓴다).
         vector<unique_ptr<RigNode>> _listNode;

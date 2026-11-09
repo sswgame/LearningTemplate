@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Encoding/FourCCUtil.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -42,8 +43,8 @@ namespace sw
 
         bool isDirt( int32 x, int32 y ) const;
         bool isDirtAt( const float2& worldPosition ) const;
-        /** @brief @p position 에서 가장 가까운 갈고리 지점(거리 [@p minDistance, @p maxDistance])의 인덱스를 반환합니다. 거리가 같으면 앞쪽 인덱스를 고르고, 없으면 −1 을 반환합니다. */
-        int32 findGrapplePoint( const float2& position, float32 minDistance, float32 maxDistance ) const;
+        /** @brief @p position 에서 가장 가까운 갈고리 지점(거리 [@p minDistance, @p maxDistance])의 인덱스를 반환합니다. 거리가 같으면 앞쪽 인덱스를 고르고, 없으면 비어 있습니다. */
+        optional<int32> findGrapplePoint( const float2& position, float32 minDistance, float32 maxDistance ) const;
 
         const vector<float2>& getGrapplePoints() const { return _listGrapplePoint; }
         int32                 getWidth() const { return _topology._width; }

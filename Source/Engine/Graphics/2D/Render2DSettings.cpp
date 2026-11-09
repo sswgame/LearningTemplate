@@ -106,13 +106,13 @@ namespace sw
             SW_LOG_ERROR_ID( "Render2DSettings.SortingLayersExceedLimit", "%#: %# sorting layers exceed the limit %#", sourceName, loaded._listSortingLayer.size(), kMaxSortingLayerCount );
             return false;
         }
-        const int32 defaultIndex = loaded.findSortingLayer( hashed_string( Internal::kDefaultLayerName ) );
-        if ( defaultIndex < 0 )
+        const optional<uint32> defaultIndex = loaded.findSortingLayer( hashed_string( Internal::kDefaultLayerName ) );
+        if ( defaultIndex.has_value() == false )
         {
             SW_LOG_ERROR_ID( "Render2DSettings.SortingLayerListMust", "%#: the sorting layer list must contain 'Default' (renderers without a layer use it)", sourceName );
             return false;
         }
-        loaded._defaultLayerIndex = static_cast<uint32>( defaultIndex );
+        loaded._defaultLayerIndex = *defaultIndex;
         *this                     = loaded;
         return true;
     }
@@ -146,7 +146,7 @@ namespace sw
             if ( XMLFields::readFields( layerNode, params, sourceName ) == false || params._name.empty() )
                 return false;
             const hashed_string& layerName = params._name;
-            if ( findSortingLayer( layerName ) >= 0 )
+            if ( findSortingLayer( layerName ).has_value() )
             {
                 SW_LOG_ERROR_ID( "Render2DSettings.SortingLayerListedTwice", "%#: sorting layer '%#' is listed twice", sourceName, layerName.c_str() );
                 return false;
@@ -156,14 +156,14 @@ namespace sw
         return true;
     }
 
-    int32 Render2DSettings::findSortingLayer( const hashed_string& layerName ) const
+    optional<uint32> Render2DSettings::findSortingLayer( const hashed_string& layerName ) const
     {
         for ( size_t layerIndex = 0; layerIndex < _listSortingLayer.size(); ++layerIndex )
         {
             if ( _listSortingLayer[layerIndex] == layerName )
-                return static_cast<int32>( layerIndex );
+                return static_cast<uint32>( layerIndex );
         }
-        return -1;
+        return nullopt;
     }
 
     uint32 Render2DSettings::makeSortKey( uint32 layerIndex, int32 orderInLayer )
@@ -181,13 +181,13 @@ namespace sw
             outSortKey = makeSortKey( _defaultLayerIndex, orderInLayer );
             return true;
         }
-        const int32 layerIndex = findSortingLayer( layerName );
-        if ( layerIndex < 0 )
+        const optional<uint32> layerIndex = findSortingLayer( layerName );
+        if ( layerIndex.has_value() == false )
         {
             outSortKey = makeSortKey( _defaultLayerIndex, orderInLayer );
             return false;
         }
-        outSortKey = makeSortKey( static_cast<uint32>( layerIndex ), orderInLayer );
+        outSortKey = makeSortKey( *layerIndex, orderInLayer );
         return true;
     }
 

@@ -213,11 +213,12 @@ namespace sw
         return moveItem( instanceID, pItem->_x, pItem->_y, pItem->_bRotated == SW_FALSE );
     }
 
-    int32 GridInventory::findInstanceAt( int32 x, int32 y ) const
+    optional<int32> GridInventory::findInstanceAt( int32 x, int32 y ) const
     {
         if ( _topology.isInside( x, y ) == false )
-            return constant::invalid_index::kInt32;
-        return _listCell[static_cast<size_t>( _topology.toIndex( x, y ) )];
+            return nullopt;
+        const int32 occupant = _listCell[static_cast<size_t>( _topology.toIndex( x, y ) )];
+        return occupant >= 0 ? optional<int32>( occupant ) : nullopt;
     }
 
     const GridItem* GridInventory::findInstance( int32 instanceID ) const

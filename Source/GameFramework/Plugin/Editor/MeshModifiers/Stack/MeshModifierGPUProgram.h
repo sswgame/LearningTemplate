@@ -17,6 +17,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
@@ -34,8 +35,8 @@ namespace sw::editor
         /** @brief 모디파이어 기록 하나의 고정 float4 수입니다(`SW_MODIFIER_RECORD_FLOAT4`). 그 뒤에 매개변수가 붙습니다. */
         static constexpr uint32 kRecordFloat4Count = 17;
 
-        /** @brief 종류 id 의 셰이더 종류 번호입니다. GPU 표에 없으면 -1 입니다. */
-        static int32 findKind( string_view typeID );
+        /** @brief 종류 id 의 셰이더 종류 번호입니다. GPU 표에 없으면 비어 있습니다. */
+        static optional<uint32> findKind( string_view typeID );
         /** @brief GPU 표의 종류 id 수입니다. */
         static uint32 getKindCount();
         /** @brief 종류 번호의 id 입니다. 범위 밖이면 빈 글입니다. */

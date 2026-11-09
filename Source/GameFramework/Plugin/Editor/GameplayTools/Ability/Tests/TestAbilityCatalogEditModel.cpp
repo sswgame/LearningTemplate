@@ -52,8 +52,7 @@ SW_TEST_CASE( AbilityCatalogEditModelTest, ReferencesFollowTheLoader )
     AbilityCatalogEditModel model;
     SW_REQUIRE_TRUE( model.load( kCatalogXML, nullptr ) );
     SW_REQUIRE_EQUAL( 7u, static_cast<uint32>( model.getEntries().size() ) );
-    const int32 bolt = model.findEntry( AbilityEntryKind::Ability, "GA_Bolt" );
-    SW_REQUIRE_TRUE( bolt >= 0 );
+    const int32 bolt = model.findEntry( AbilityEntryKind::Ability, "GA_Bolt" ).value();
 
     vector<int32> listFrom;
     model.collectReferencesFrom( bolt, listFrom );
@@ -63,16 +62,16 @@ SW_TEST_CASE( AbilityCatalogEditModelTest, ReferencesFollowTheLoader )
     SW_EXPECT_TRUE( model.getReferences()[static_cast<size_t>( param )]._bRequired == SW_FALSE );
 
     // GA_Free 의 cost="" 는 "없음" 을 적은 것이다.
-    model.collectReferencesFrom( model.findEntry( AbilityEntryKind::Ability, "GA_Free" ), listFrom );
+    model.collectReferencesFrom( model.findEntry( AbilityEntryKind::Ability, "GA_Free" ).value(), listFrom );
     SW_EXPECT_TRUE( listFrom.empty() );
 
     const int32 cue = Util::findReference( model, "cue", "AbilityPresentation.Hit.Fire" );
     SW_REQUIRE_TRUE( cue >= 0 );
-    SW_EXPECT_EQUAL( model.findEntry( AbilityEntryKind::Presentation, "AbilityPresentation.Hit" ), model.getReferences()[static_cast<size_t>( cue )]._target );
+    SW_EXPECT_TRUE( model.getReferences()[static_cast<size_t>( cue )]._target == model.findEntry( AbilityEntryKind::Presentation, "AbilityPresentation.Hit" ) );
 
     // 쓰이는 곳: GE_Cost 는 GA_Bolt 하나가 쓴다.
     vector<int32> listTo;
-    model.collectReferencesTo( model.findEntry( AbilityEntryKind::Effect, "GE_Cost" ), listTo );
+    model.collectReferencesTo( model.findEntry( AbilityEntryKind::Effect, "GE_Cost" ).value(), listTo );
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( listTo.size() ) );
     SW_EXPECT_EQUAL( bolt, model.getReferences()[static_cast<size_t>( listTo[0] )]._from );
 }
@@ -83,7 +82,7 @@ SW_TEST_CASE( AbilityCatalogEditModelTest, UnresolvedReferenceIsAnIssueUntilFixe
     AbilityCatalogEditModel model;
     SW_REQUIRE_TRUE( model.load( kCatalogXML, nullptr ) );
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( model.getIssues().size() ) );
-    SW_EXPECT_EQUAL( model.findEntry( AbilityEntryKind::AbilitySet, "Player" ), model.getIssues()[0]._entry );
+    SW_EXPECT_TRUE( model.findEntry( AbilityEntryKind::AbilitySet, "Player" ) == model.getIssues()[0]._entry );
 
     const int32 missing = Util::findReference( model, "set ability", "GA_Missing" );
     SW_REQUIRE_TRUE( missing >= 0 );
@@ -102,18 +101,18 @@ SW_TEST_CASE( AbilityCatalogEditModelTest, UsedEntriesStayAndNewEntriesAreUnique
 {
     AbilityCatalogEditModel model;
     SW_REQUIRE_TRUE( model.load( kCatalogXML, nullptr ) );
-    SW_EXPECT_FALSE( model.removeEntry( model.findEntry( AbilityEntryKind::Effect, "GE_Cost" ) ) );
+    SW_EXPECT_FALSE( model.removeEntry( model.findEntry( AbilityEntryKind::Effect, "GE_Cost" ).value() ) );
     SW_EXPECT_FALSE( model.getDocument().getError().empty() );
 
     const int32 added = model.addEntry( AbilityEntryKind::Effect );
     SW_REQUIRE_TRUE( added >= 0 );
     SW_EXPECT_TRUE( model.getEntries()[static_cast<size_t>( added )]._kind == AbilityEntryKind::Effect );
-    SW_EXPECT_EQUAL( -1, model.findEntry( AbilityEntryKind::Effect, "" ) );
+    SW_EXPECT_FALSE( model.findEntry( AbilityEntryKind::Effect, "" ).has_value() );
     SW_EXPECT_TRUE( model.removeEntry( added ) );
 
-    const int32 player = model.findEntry( AbilityEntryKind::AbilitySet, "Player" );
+    const int32 player = model.findEntry( AbilityEntryKind::AbilitySet, "Player" ).value();
     SW_REQUIRE_TRUE( model.addSetMember( player, AbilityEntryKind::Ability, "GA_Free" ) );
     vector<int32> listFrom;
-    model.collectReferencesFrom( model.findEntry( AbilityEntryKind::AbilitySet, "Player" ), listFrom );
+    model.collectReferencesFrom( model.findEntry( AbilityEntryKind::AbilitySet, "Player" ).value(), listFrom );
     SW_EXPECT_EQUAL( 3u, static_cast<uint32>( listFrom.size() ) );
 }

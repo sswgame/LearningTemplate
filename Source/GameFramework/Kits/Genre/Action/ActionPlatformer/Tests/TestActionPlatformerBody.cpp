@@ -154,15 +154,15 @@ SW_TEST_CASE( ActionTerrainGridTest, RejectsNonPositiveTileSize )
 SW_TEST_CASE( ActionTerrainGridTest, FindGrapplePointHonorsRangeBoundsAndTies )
 {
     sw::ActionTerrainGrid grid;
-    SW_EXPECT_EQUAL( -1, grid.findGrapplePoint( sw::float2{}, 0.0f, 100.0f ) );
+    SW_EXPECT_FALSE( grid.findGrapplePoint( sw::float2{}, 0.0f, 100.0f ).has_value() );
     grid.addGrapplePoint( sw::float2{ 0.5f, 0.0f } );
     grid.addGrapplePoint( sw::float2{ 3.0f, 0.0f } );
     grid.addGrapplePoint( sw::float2{ -3.0f, 0.0f } );
 
-    SW_EXPECT_EQUAL( 0, grid.findGrapplePoint( sw::float2{}, 0.5f, 5.0f ) ); // 최소 거리 포함
-    SW_EXPECT_EQUAL( 1, grid.findGrapplePoint( sw::float2{}, 1.0f, 3.0f ) ); // 최대 거리 포함, 동률은 앞 번호
-    SW_EXPECT_EQUAL( -1, grid.findGrapplePoint( sw::float2{}, 1.0f, 2.99f ) );
-    SW_EXPECT_EQUAL( -1, grid.findGrapplePoint( sw::float2{}, 3.01f, 100.0f ) );
+    SW_EXPECT_TRUE( grid.findGrapplePoint( sw::float2{}, 0.5f, 5.0f ) == 0 ); // 최소 거리 포함
+    SW_EXPECT_TRUE( grid.findGrapplePoint( sw::float2{}, 1.0f, 3.0f ) == 1 ); // 최대 거리 포함, 동률은 앞 번호
+    SW_EXPECT_FALSE( grid.findGrapplePoint( sw::float2{}, 1.0f, 2.99f ).has_value() );
+    SW_EXPECT_FALSE( grid.findGrapplePoint( sw::float2{}, 3.01f, 100.0f ).has_value() );
 }
 
 /**

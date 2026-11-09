@@ -56,8 +56,8 @@ namespace sw
         vector<PhysicsBodyHandle>  _listBody;       ///< 에셋 바디 순서다.
         vector<PhysicsJointHandle> _listJoint;      ///< 에셋 바디 순서(루트 바디는 무효)
         vector<int32>              _listBoneIndex;  ///< 에셋 바디에서 스켈레톤 뼈 번호로 가는 매핑이다.
-        vector<int32>              _listParentBody; ///< 에셋 바디 → 부모 쪽 에셋 바디(루트는 -1)
-        vector<int32>              _listBodyOfBone; ///< 스켈레톤 뼈 → 에셋 바디(없으면 -1)
+        vector<optional<uint32>>   _listParentBody; ///< 에셋 바디 → 부모 쪽 에셋 바디(루트는 비어 있다)
+        vector<optional<uint32>>   _listBodyOfBone; ///< 스켈레톤 뼈 → 에셋 바디(바디 없는 뼈는 비어 있다)
 
         /** @brief 바디 핸들의 에셋 바디 번호입니다(히트 존을 고를 때). 이 래그돌의 바디가 아니면 없음입니다. */
         optional<uint32> findBodyIndex( PhysicsBodyHandle body ) const;

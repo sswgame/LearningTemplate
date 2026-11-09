@@ -42,7 +42,7 @@ namespace sw
         _tile._y = y;
     }
 
-    void OverworldTileMover::update( float32 deltaTime, const ControlIntent& intent, int32 interactButton )
+    void OverworldTileMover::update( float32 deltaTime, const ControlIntent& intent, optional<int32> interactButton )
     {
         // 걸음과 상호작용이 끝났는지는 **로코모션 한 곳에서만 판정한다.** 여기에 쿨다운을 따로 두거나
         // 걸음을 시작하자마자 `notifyStepFinished()` 로 끝내면 `Walk` 상태가 관측되지 않는다.

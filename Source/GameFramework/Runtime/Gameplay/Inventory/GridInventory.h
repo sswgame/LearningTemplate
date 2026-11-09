@@ -83,8 +83,8 @@ namespace sw
         /** @brief 왼쪽 위 셀을 고정한 채 제자리에서 회전합니다. 막히면 false 입니다. */
         [[nodiscard]] bool rotateItem( int32 instanceID );
 
-        /** @brief 셀을 차지한 아이템 번호입니다. 비어 있거나 격자 밖이면 -1 입니다. */
-        int32                   findInstanceAt( int32 x, int32 y ) const;
+        /** @brief 셀을 차지한 아이템 번호입니다. 셀이 비었거나 격자 밖이면 비어 있습니다. */
+        optional<int32>         findInstanceAt( int32 x, int32 y ) const;
         const GridItem*         findInstance( int32 instanceID ) const;
         int32                   getItemCount( const hashed_string& itemID ) const;
         bool                    hasItem( const hashed_string& itemID, int32 count = 1 ) const { return getItemCount( itemID ) >= count; }

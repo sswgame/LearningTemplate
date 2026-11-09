@@ -257,22 +257,22 @@ namespace sw
         return bodyIndex < _listAppliedDynamic.size() && _listAppliedDynamic[bodyIndex] == SW_TRUE;
     }
 
-    void RagdollComponent::markSubtree( int32 bodyIndex, vector<uint8>& inoutListMask ) const
+    void RagdollComponent::markSubtree( uint32 bodyIndex, vector<uint8>& inoutListMask ) const
     {
         const size_t bodyCount = _ragdoll._listBody.size();
         inoutListMask.resize( bodyCount, SW_FALSE );
-        if ( bodyIndex < 0 || static_cast<size_t>( bodyIndex ) >= bodyCount )
+        if ( bodyIndex >= bodyCount )
             return;
         // 부모가 뒤에 올 수도 있다(에셋 순서). 바뀌지 않을 때까지 내려간다.
-        inoutListMask[static_cast<size_t>( bodyIndex )] = SW_TRUE;
-        bool bChanged                                   = true;
+        inoutListMask[bodyIndex] = SW_TRUE;
+        bool bChanged            = true;
         while ( bChanged )
         {
             bChanged = false;
             for ( size_t body = 0; body < bodyCount; ++body )
             {
-                const int32 parent                = _ragdoll._listParentBody[body];
-                const bool  bPropagateToChildBody = inoutListMask[body] == SW_FALSE && parent >= 0 && inoutListMask[static_cast<size_t>( parent )] == SW_TRUE;
+                const optional<uint32>& parent                = _ragdoll._listParentBody[body];
+                const bool              bPropagateToChildBody = inoutListMask[body] == SW_FALSE && parent.has_value() && inoutListMask[*parent] == SW_TRUE;
                 if ( bPropagateToChildBody )
                 {
                     inoutListMask[body] = SW_TRUE;
@@ -298,8 +298,8 @@ namespace sw
         // 관절을 먼저 지운다. 빠진 바디를 잇는 관절이 남으면 솔버가 넓은 단계 밖의 바디를 만진다.
         for ( size_t body = 0; body < bodyCount; ++body )
         {
-            const int32 parent           = _ragdoll._listParentBody[body];
-            const bool  bTouchesDetached = listDetached[body] == SW_TRUE || ( parent >= 0 && listDetached[static_cast<size_t>( parent )] == SW_TRUE );
+            const optional<uint32>& parent           = _ragdoll._listParentBody[body];
+            const bool              bTouchesDetached = listDetached[body] == SW_TRUE || ( parent.has_value() && listDetached[*parent] == SW_TRUE );
             if ( bTouchesDetached && _ragdoll._listJoint[body].isValid() )
             {
                 pScene->destroyJoint( _ragdoll._listJoint[body] );
@@ -315,8 +315,8 @@ namespace sw
 
     optional<uint32> RagdollComponent::findHitBodyIndex( const HitInfo& hit ) const
     {
-        if ( hit._bodyIndex >= 0 )
-            return static_cast<uint32>( hit._bodyIndex );
+        if ( hit._bodyIndex.has_value() )
+            return hit._bodyIndex;
         return _ragdoll.findBodyIndex( hit._body );
     }
 
@@ -336,14 +336,14 @@ namespace sw
             pController->setActive( bActive );
     }
 
-    void RagdollComponent::startRagdoll( const float3& impulse, int32 bodyIndex )
+    void RagdollComponent::startRagdoll( const float3& impulse, optional<uint32> bodyIndex )
     {
         _state         = RagdollState::Ragdoll;
         _settleElapsed = 0.0f;
         _bSettled      = false;
         _bGettingUp    = false;
-        if ( bodyIndex >= 0 && impulse.getLengthSquared() > 0.0f )
-            _listPendingImpulse.push_back( PendingImpulse{ impulse, float3{}, bodyIndex } );
+        if ( bodyIndex.has_value() && impulse.getLengthSquared() > 0.0f )
+            _listPendingImpulse.push_back( PendingImpulse{ impulse, float3{}, *bodyIndex } );
         setControllerActive( false );
         if ( _pUnit != nullptr )
             _pUnit->markPoseDirty();
@@ -354,15 +354,15 @@ namespace sw
         if ( _state == RagdollState::Ragdoll || _pUnit == nullptr )
             return;
         const optional<uint32> boneIndex = _pUnit->getSkeleton().findBoneIndex( _partialRootBone );
-        const int32            bodyIndex = ( boneIndex.has_value() && *boneIndex < _ragdoll._listBodyOfBone.size() ) ? _ragdoll._listBodyOfBone[*boneIndex] : constant::invalid_index::kInt32;
-        if ( bodyIndex < 0 )
+        const optional<uint32> bodyIndex = ( boneIndex.has_value() && *boneIndex < _ragdoll._listBodyOfBone.size() ) ? _ragdoll._listBodyOfBone[*boneIndex] : nullopt;
+        if ( bodyIndex.has_value() == false )
         {
             SW_LOG_WARNING_ID( "Ragdoll.PartialRagdollRootBone", "'%#': partial ragdoll root bone '%#' has no body", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)",
                                _partialRootBone.c_str() );
             return;
         }
         _listPartialMask.clear();
-        markSubtree( bodyIndex, _listPartialMask );
+        markSubtree( *bodyIndex, _listPartialMask );
         _partialWeight = MathUtil::saturate( weight );
         _state         = RagdollState::Partial;
         _pUnit->markPoseDirty();
@@ -377,9 +377,9 @@ namespace sw
         _state                = RagdollState::BlendingBack;
     }
 
-    void RagdollComponent::applyHitReaction( int32 bodyIndex, const float3& impulse, const float3& point )
+    void RagdollComponent::applyHitReaction( uint32 bodyIndex, const float3& impulse, const float3& point )
     {
-        if ( bodyIndex < 0 || static_cast<size_t>( bodyIndex ) >= _ragdoll._listBody.size() )
+        if ( bodyIndex >= _ragdoll._listBody.size() )
             return;
         if ( impulse.getLengthSquared() > 0.0f )
             _listPendingImpulse.push_back( PendingImpulse{ impulse, point, bodyIndex } );
@@ -400,16 +400,16 @@ namespace sw
     void RagdollComponent::onHitReceived( const HitInfo& hit )
     {
         PhysicsComponent::onHitReceived( hit );
-        // 맞은 바디를 모르면 아래 두 함수의 "바디 없음"(-1, 부분 반응 · 충격 없이) 규약으로 넘긴다 — 그 int32 규약은 `HitInfo::_bodyIndex` 와 함께 옮길 몫이다.
-        const optional<uint32> hitBody   = findHitBodyIndex( hit );
-        const int32            bodyIndex = hitBody.has_value() ? static_cast<int32>( *hitBody ) : constant::invalid_index::kInt32;
-        const float3           impulse   = hit._direction * hit._impulse;
+        // 맞은 바디를 모르면 충격 없이 쓰러지고, 부분 반응은 하지 않는다(움찔은 한다).
+        const optional<uint32> hitBody = findHitBodyIndex( hit );
+        const float3           impulse = hit._direction * hit._impulse;
         if ( hit._bFatal && _bRagdollOnFatalHit )
         {
-            startRagdoll( impulse, bodyIndex );
+            startRagdoll( impulse, hitBody );
             return;
         }
-        applyHitReaction( bodyIndex, impulse, hit._point );
+        if ( hitBody.has_value() )
+            applyHitReaction( *hitBody, impulse, hit._point );
         // 가산 움찔: 한 번 도는 레이어를 처음부터 다시 시작하고, 가중치는 `_flinchSeconds` 동안 1 에서 0 으로 줄인다.
         GameObject*                pOwner        = getOwner();
         SkeletalAnimatorComponent* pAnimator     = pOwner != nullptr ? pOwner->getComponent<SkeletalAnimatorComponent>() : nullptr;
@@ -512,10 +512,10 @@ namespace sw
         _listBoneWeight.assign( skeleton.getBoneCount(), 0.0f );
         for ( uint32 boneIndex = 0; boneIndex < skeleton.getBoneCount() && boneIndex < _ragdoll._listBodyOfBone.size(); ++boneIndex )
         {
-            const int32 body   = _ragdoll._listBodyOfBone[boneIndex];
-            const int32 parent = listParent[boneIndex];
-            if ( body >= 0 )
-                _listBoneWeight[boneIndex] = _listBodyWeight[static_cast<size_t>( body )];
+            const optional<uint32>& body   = _ragdoll._listBodyOfBone[boneIndex];
+            const int32             parent = listParent[boneIndex];
+            if ( body.has_value() )
+                _listBoneWeight[boneIndex] = _listBodyWeight[*body];
             else if ( parent >= 0 )
                 _listBoneWeight[boneIndex] = _listBoneWeight[static_cast<size_t>( parent )];
         }
@@ -574,7 +574,7 @@ namespace sw
         int32 pelvisBone = -1;
         for ( size_t body = 0; body < _ragdoll._listParentBody.size() && pelvisBone < 0; ++body )
         {
-            if ( _ragdoll._listParentBody[body] < 0 )
+            if ( _ragdoll._listParentBody[body].has_value() == false )
                 pelvisBone = _ragdoll._listBoneIndex[body];
         }
         const optional<uint32> upperBone = skeleton.findBoneIndex( _partialRootBone );
@@ -691,9 +691,9 @@ namespace sw
         }
         for ( const PendingImpulse& impulse : _listPendingImpulse )
         {
-            if ( impulse._bodyIndex < 0 || static_cast<size_t>( impulse._bodyIndex ) >= _ragdoll._listBody.size() )
+            if ( impulse._bodyIndex >= _ragdoll._listBody.size() )
                 continue;
-            const PhysicsBodyHandle body = _ragdoll._listBody[static_cast<size_t>( impulse._bodyIndex )];
+            const PhysicsBodyHandle body = _ragdoll._listBody[impulse._bodyIndex];
             if ( pScene->isBodyEnabled( body ) == false )
                 continue;
             if ( impulse._point.getLengthSquared() > 0.0f )

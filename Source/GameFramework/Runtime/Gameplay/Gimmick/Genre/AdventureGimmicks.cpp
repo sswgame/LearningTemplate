@@ -125,14 +125,14 @@ namespace sw
         }
         if ( _grid.initialize( 1, 1, pTable.get() ) == false )
             return; // 이유는 ElementGrid 가 남겼다
-        _pTable              = std::move( pTable );
-        const int32 material = _pTable->findMaterial( _material );
-        if ( material < 0 )
+        _pTable                        = std::move( pTable );
+        const optional<int32> material = _pTable->findMaterial( _material );
+        if ( material.has_value() == false )
         {
             SW_LOG_ERROR_ID( "AdventureGimmicks.ElementMaterialNotRule", "Element material '%#' is not in the rule table", _material.c_str() );
             return; // 0 번 재질로 대신 서지 않는다
         }
-        _grid.setMaterial( int2{ 0, 0 }, material );
+        _grid.setMaterial( int2{ 0, 0 }, *material );
     }
 
     void ElementStatusComponent::onPostLoad()
@@ -165,7 +165,8 @@ namespace sw
         const ElementRuleCatalog* pTable = _grid.getTable();
         if ( pTable == nullptr )
             return false;
-        const bool bChanged = _grid.applyStimulus( int2{ 0, 0 }, pTable->findStimulus( stimulus ) ) > 0;
+        const optional<int32> found    = pTable->findStimulus( stimulus );
+        const bool            bChanged = found.has_value() && _grid.applyStimulus( int2{ 0, 0 }, *found ) > 0;
         publishSignal();
         return bChanged;
     }
@@ -173,7 +174,10 @@ namespace sw
     bool ElementStatusComponent::hasStatus( const hashed_string& status ) const
     {
         const ElementRuleCatalog* pTable = _grid.getTable();
-        return pTable != nullptr && _grid.hasStatus( int2{ 0, 0 }, pTable->findStatus( status ) );
+        if ( pTable == nullptr )
+            return false;
+        const optional<int32> found = pTable->findStatus( status );
+        return found.has_value() && _grid.hasStatus( int2{ 0, 0 }, *found );
     }
 
     void ElementStatusComponent::setMaterial( const hashed_string& material )

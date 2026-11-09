@@ -344,12 +344,12 @@ namespace sw
             const KartItemDef* pItem = _pItemCatalog != nullptr && kart._itemID.empty() == false ? _pItemCatalog->find( kart._itemID ) : nullptr;
             if ( pItem != nullptr )
                 context._itemKind = pItem->_kind;
-            const int32 ahead  = findRacerAtPlace( kart._place - 1 );
-            const int32 behind = findRacerAtPlace( kart._place + 1 );
-            if ( ahead >= 0 )
-                context._gapAhead = _listRacer[static_cast<size_t>( ahead )]._progress - kart._progress;
-            if ( behind >= 0 )
-                context._gapBehind = kart._progress - _listRacer[static_cast<size_t>( behind )]._progress;
+            const optional<int32> ahead  = findRacerAtPlace( kart._place - 1 );
+            const optional<int32> behind = findRacerAtPlace( kart._place + 1 );
+            if ( ahead.has_value() )
+                context._gapAhead = _listRacer[static_cast<size_t>( *ahead )]._progress - kart._progress;
+            if ( behind.has_value() )
+                context._gapBehind = kart._progress - _listRacer[static_cast<size_t>( *behind )]._progress;
             outUseItem = kart._ai.shouldUseItem( context );
             return kart._ai.computeInput( *_pTrack, kart._motor, kart._distance );
         }
@@ -589,13 +589,13 @@ namespace sw
             }
             case KartItemKind::RedShell:
             {
-                projectile._target = pickRedShellTarget( racer );
+                projectile._target = pickRedShellTarget( racer ).value_or( constant::invalid_index::kInt32 ); // 탄 상태 칸의 "대상 없음"(저장 형식)
                 (void)_projectiles.spawn( projectile );
                 break;
             }
             case KartItemKind::LeaderShell:
             {
-                projectile._target = findLeaderInRace();
+                projectile._target = findLeaderInRace().value_or( constant::invalid_index::kInt32 );
                 (void)_projectiles.spawn( projectile );
                 break;
             }
@@ -613,7 +613,7 @@ namespace sw
         return true;
     }
 
-    int32 KartRace::findLeaderInRace() const
+    optional<int32> KartRace::findLeaderInRace() const
     {
         // 들어온 차는 맞지 않는다(`applyHit`). 1 등을 그대로 쫓으면 첫 결승 뒤의 공격은 아무도 맞히지 못하고 떠돈다.
         for ( const int32 racer : _listPlaceOrder )
@@ -621,14 +621,14 @@ namespace sw
             if ( _listRacer[static_cast<size_t>( racer )]._bFinished == SW_FALSE )
                 return racer;
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
-    int32 KartRace::pickRedShellTarget( int32 owner ) const
+    optional<int32> KartRace::pickRedShellTarget( int32 owner ) const
     {
         // 기반 록온: 앞쪽 원뿔 안의 차를 고르되, 바로 앞 순위의 차에 큰 우선도를 준다(없으면 원뿔 안에서 가장 좋은 차, 그것도 없으면 곧게 나간다).
         const KartRacer&        shooter = _listRacer[static_cast<size_t>( owner )];
-        const int32             ahead   = findRacerAtPlace( shooter._place - 1 );
+        const optional<int32>   ahead   = findRacerAtPlace( shooter._place - 1 );
         vector<LockOnCandidate> listCandidate;
         for ( size_t racerIndex = 0; racerIndex < _listRacer.size(); ++racerIndex )
         {
@@ -637,7 +637,7 @@ namespace sw
             LockOnCandidate candidate;
             candidate._position = _listRacer[racerIndex]._motor.getPosition();
             candidate._id       = static_cast<uint64>( racerIndex ) + 1;
-            candidate._priority = static_cast<int32>( racerIndex ) == ahead ? KartRaceInternal::kAheadPriority : 0.0f;
+            candidate._priority = ahead == static_cast<int32>( racerIndex ) ? KartRaceInternal::kAheadPriority : 0.0f;
             listCandidate.push_back( candidate );
         }
         LockOnSettings lockSettings;
@@ -647,7 +647,7 @@ namespace sw
         LockOnSelector selector;
         selector.setSettings( lockSettings );
         const uint64 picked = selector.pickBest( shooter._motor.getPosition(), shooter._motor.computeForward(), listCandidate );
-        return picked == 0 ? constant::invalid_index::kInt32 : static_cast<int32>( picked - 1 );
+        return picked == 0 ? nullopt : optional<int32>( static_cast<int32>( picked - 1 ) );
     }
 
     void KartRace::updateProjectiles( float32 deltaTime )
@@ -661,7 +661,7 @@ namespace sw
             if ( pItem == nullptr )
                 projectile._bAlive = SW_FALSE;
             else if ( pItem->_kind == KartItemKind::LeaderShell )
-                projectile._target = findLeaderInRace();
+                projectile._target = findLeaderInRace().value_or( constant::invalid_index::kInt32 );
         }
         _projectiles.removeDead();
 
@@ -817,7 +817,7 @@ namespace sw
         }
         _phase = MatchPhase::Ended;
         updatePlaces();
-        pushEvent( KartRaceEvent::Kind::RaceEnded, findRacerAtPlace( 1 ), constant::invalid_index::kInt32, 0, _raceTime );
+        pushEvent( KartRaceEvent::Kind::RaceEnded, findRacerAtPlace( 1 ).value_or( constant::invalid_index::kInt32 ), constant::invalid_index::kInt32, 0, _raceTime );
     }
 
     const KartRacer* KartRace::findRacer( int32 racer ) const
@@ -825,10 +825,10 @@ namespace sw
         return isValidRacer( racer ) ? &_listRacer[static_cast<size_t>( racer )] : nullptr;
     }
 
-    int32 KartRace::findRacerAtPlace( int32 place ) const
+    optional<int32> KartRace::findRacerAtPlace( int32 place ) const
     {
         if ( place < 1 || place > static_cast<int32>( _listPlaceOrder.size() ) )
-            return constant::invalid_index::kInt32;
+            return nullopt;
         return _listPlaceOrder[static_cast<size_t>( place - 1 )];
     }
 

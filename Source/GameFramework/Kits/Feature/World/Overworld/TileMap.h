@@ -106,10 +106,10 @@ namespace sw
         /** @brief 타일 비주얼을 반환합니다. */
         OverworldTileVisual getTileVisual( int32 x, int32 y ) const;
         /**
-         * @brief 맵 데이터가 정한 정수 데이터 레이어(지형 비용 · 발소리 …)의 번호를 이름으로 찾습니다. 없으면 -1 입니다.
+         * @brief 맵 데이터가 정한 정수 데이터 레이어(지형 비용 · 발소리 …)의 번호를 이름으로 찾습니다. 없으면 비어 있습니다.
          * @details 번호는 맵을 다시 읽을 때까지 그대로다. 틱마다 이름으로 찾지 말고 맵을 읽은 뒤 한 번 찾아 둔다.
          */
-        int32 findDataLayer( string_view name ) const { return _data.findDataLayer( name ); }
+        optional<uint32> findDataLayer( string_view name ) const { return _data.findDataLayer( name ); }
         /** @brief 칸의 데이터 값을 읽습니다. 레이어 번호나 좌표가 밖이면 false 입니다(기본값을 대신 돌려주지 않는다). */
         [[nodiscard]] bool getCellData( int32 layerIndex, int32 x, int32 y, int32& outValue ) const { return _data.getCellData( layerIndex, x, y, outValue ); }
 

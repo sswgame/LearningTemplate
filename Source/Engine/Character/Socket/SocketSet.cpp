@@ -424,8 +424,8 @@ namespace sw
         bool bValid = true;
         for ( const VirtualBoneDef& virtualBone : _listVirtualBone )
         {
-            const bool bFromKnown = bones.findBone( virtualBone._from ) >= 0;
-            const bool bToKnown   = bones.findBone( virtualBone._to ) >= 0;
+            const bool bFromKnown = bones.findBone( virtualBone._from ).has_value();
+            const bool bToKnown   = bones.findBone( virtualBone._to ).has_value();
             if ( bFromKnown && bToKnown )
                 continue;
             bValid = false;
@@ -437,7 +437,7 @@ namespace sw
         }
         for ( const SocketDef& socket : _listSocket )
         {
-            const bool bParentEmptyOrResolved = socket._parent.empty() || bones.findBone( socket._parent ) >= 0 || findVirtualBone( socket._parent ) != nullptr;
+            const bool bParentEmptyOrResolved = socket._parent.empty() || bones.findBone( socket._parent ).has_value() || findVirtualBone( socket._parent ) != nullptr;
             if ( bParentEmptyOrResolved )
                 continue;
             bValid = false;
@@ -463,10 +463,10 @@ namespace sw
             outUnitTransform = float4x4::Identity;
             return true;
         }
-        const int32 boneIndex = bones.findBone( socket._parent );
-        if ( boneIndex >= 0 )
+        const optional<uint32> boneIndex = bones.findBone( socket._parent );
+        if ( boneIndex.has_value() )
         {
-            outUnitTransform = bones._listModel[static_cast<size_t>( boneIndex )];
+            outUnitTransform = bones._listModel[*boneIndex];
             return true;
         }
         const VirtualBoneDef* pVirtualBone = findVirtualBone( socket._parent );
@@ -475,12 +475,11 @@ namespace sw
 
     bool SocketSet::computeVirtualBoneTransform( const VirtualBoneDef& virtualBone, const CharacterBoneArray& bones, float4x4& outUnitTransform )
     {
-        const int32 fromIndex = bones.findBone( virtualBone._from );
-        const int32 toIndex   = bones.findBone( virtualBone._to );
-        if ( fromIndex < 0 || toIndex < 0 )
+        const optional<uint32> fromIndex = bones.findBone( virtualBone._from );
+        const optional<uint32> toIndex   = bones.findBone( virtualBone._to );
+        if ( fromIndex.has_value() == false || toIndex.has_value() == false )
             return false;
-        outUnitTransform = CharacterGeometryUtil::blendTransforms( bones._listModel[static_cast<size_t>( fromIndex )],
-                                                                   bones._listModel[static_cast<size_t>( toIndex )], virtualBone._weight );
+        outUnitTransform = CharacterGeometryUtil::blendTransforms( bones._listModel[*fromIndex], bones._listModel[*toIndex], virtualBone._weight );
         return true;
     }
 

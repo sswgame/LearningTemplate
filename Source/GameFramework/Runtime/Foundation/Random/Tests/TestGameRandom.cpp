@@ -31,19 +31,19 @@ SW_TEST_CASE( GameRandomTest, IntWeightsSkipNonPositiveAndFollowRatio )
     constexpr int32                kDrawCount = 4000;
     for ( int32 draw = 0; draw < kDrawCount; ++draw )
     {
-        const int32 index = random.pickWeightedIndexInt( listItem, getWeight );
+        const sw::optional<int32> index = random.pickWeightedIndexInt( listItem, getWeight );
         SW_REQUIRE_TRUE( index == 0 || index == 3 );
-        ++arrHit[index];
+        ++arrHit[*index];
     }
     SW_EXPECT_EQUAL( 0, arrHit[1] );
     SW_EXPECT_EQUAL( 0, arrHit[2] );
     SW_EXPECT_NEAR( 0.25, static_cast<float64>( arrHit[0] ) / kDrawCount, 0.03 );
 
     const sw::vector<WeightedItem> listZero = { { 0 }, { -1 } };
-    SW_EXPECT_EQUAL( -1, random.pickWeightedIndexInt( listZero, getWeight ) );
-    SW_EXPECT_EQUAL( -1, random.pickWeightedIndexInt( sw::vector<WeightedItem>{}, getWeight ) );
+    SW_EXPECT_FALSE( random.pickWeightedIndexInt( listZero, getWeight ).has_value() );
+    SW_EXPECT_FALSE( random.pickWeightedIndexInt( sw::vector<WeightedItem>{}, getWeight ).has_value() );
     const sw::vector<WeightedItem> listOne = { { 0 }, { 7 }, { 0 } };
-    SW_EXPECT_EQUAL( 1, random.pickWeightedIndexInt( listOne, getWeight ) );
+    SW_EXPECT_TRUE( random.pickWeightedIndexInt( listOne, getWeight ) == 1 );
 }
 
 /**
@@ -65,8 +65,8 @@ SW_TEST_CASE( GameRandomTest, WeightedPickConsumesExactlyOneDraw )
 
     const uint32                   stateBefore = picked.getState();
     const sw::vector<WeightedItem> listZero    = { { 0 } };
-    SW_EXPECT_EQUAL( -1, picked.pickWeightedIndex( listZero, getWeight ) );
-    SW_EXPECT_EQUAL( -1, picked.pickWeightedIndexInt( listZero, getWeight ) );
+    SW_EXPECT_FALSE( picked.pickWeightedIndex( listZero, getWeight ).has_value() );
+    SW_EXPECT_FALSE( picked.pickWeightedIndexInt( listZero, getWeight ).has_value() );
     SW_EXPECT_EQUAL( stateBefore, picked.getState() );
 }
 
@@ -80,9 +80,9 @@ SW_TEST_CASE( GameRandomTest, FloatWeightsNeverPickNonPositive )
     int32                          arrHit[4] = {};
     for ( int32 draw = 0; draw < 2000; ++draw )
     {
-        const int32 index = random.pickWeightedIndex( listItem, getWeight );
-        SW_REQUIRE_TRUE( 0 <= index && index < 4 );
-        ++arrHit[index];
+        const sw::optional<int32> index = random.pickWeightedIndex( listItem, getWeight );
+        SW_REQUIRE_TRUE( index.has_value() && 0 <= *index && *index < 4 );
+        ++arrHit[*index];
     }
     SW_EXPECT_EQUAL( 0, arrHit[0] );
     SW_EXPECT_EQUAL( 0, arrHit[2] );
@@ -91,7 +91,7 @@ SW_TEST_CASE( GameRandomTest, FloatWeightsNeverPickNonPositive )
     const sw::vector<WeightedItem> listLast = { { 0 }, { 0 }, { 3 } };
     for ( int32 draw = 0; draw < 50; ++draw )
     {
-        SW_EXPECT_EQUAL( 2, random.pickWeightedIndex( listLast, getWeight ) );
+        SW_EXPECT_TRUE( random.pickWeightedIndex( listLast, getWeight ) == 2 );
     }
 }
 

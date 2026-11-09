@@ -46,8 +46,8 @@ SW_TEST_CASE( TileSetTest, RuleTilesResolveByNeighborsAndFollowPainting )
     sw::TileSetAsset tileSet;
     SW_REQUIRE_TRUE( tileSet.loadFromXMLText( kTileSetXML, "<test>" ) );
     SW_REQUIRE_EQUAL( 3u, static_cast<uint32>( tileSet.getBrushes().size() ) );
-    const uint16 ground = static_cast<uint16>( tileSet.findBrush( sw::hashed_string( "ground" ) ) + 1 );
-    const uint16 water  = static_cast<uint16>( tileSet.findBrush( sw::hashed_string( "water" ) ) + 1 );
+    const uint16 ground = static_cast<uint16>( tileSet.findBrush( sw::hashed_string( "ground" ) ).value() + 1u );
+    const uint16 water  = static_cast<uint16>( tileSet.findBrush( sw::hashed_string( "water" ) ).value() + 1u );
     SW_REQUIRE_TRUE( ground > 0 && water > 0 );
 
     constexpr int32    kWidth  = 4;
@@ -108,7 +108,7 @@ SW_TEST_CASE( TileSetTest, TileLayerRoundTripsByBrushName )
     sw::vector<uint16> listBrushIndex;
     SW_EXPECT_TRUE( reread.mapTileCells( tileSet, listBrushIndex ) );
     SW_REQUIRE_EQUAL( 6u, static_cast<uint32>( listBrushIndex.size() ) );
-    SW_EXPECT_EQUAL( static_cast<uint16>( tileSet.findBrush( sw::hashed_string( "water" ) ) + 1 ), listBrushIndex[5] );
+    SW_EXPECT_EQUAL( static_cast<uint16>( tileSet.findBrush( sw::hashed_string( "water" ) ).value() + 1u ), listBrushIndex[5] );
 
     // 타일셋에 없는 이름은 데이터 오류다(그 칸은 빈다).
     SW_EXPECT_TRUE( reread.setTileBrush( 0, 0, "lava" ) );

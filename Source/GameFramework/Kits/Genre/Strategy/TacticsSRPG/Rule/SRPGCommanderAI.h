@@ -3,6 +3,7 @@
  * @brief 택틱스 SRPG 의 적 AI 를 구현합니다. 갈 수 있는 셀, 무기, 표적의 조합마다 "기대 피해 - 반격 위험" 점수를 매겨 가장 좋은 것을 고릅니다(결정적).
  */
 #pragma once
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -25,14 +26,19 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 한 유닛의 계획입니다. */
+    /** @brief 계획한 공격 하나입니다. */
+    struct SRPGCommanderAITarget
+    {
+        int32 _weapon{ 0 };
+        int32 _target{ 0 };
+    };
+
+    /** @brief 한 유닛의 계획입니다. 공격이 비어 있으면 다가가기만 한다(예전에는 깃발과 -1 무기 · 대상 칸을 따로 들었다). */
     struct SRPGCommanderAIPlan
     {
-        int2  _moveCell{};
-        int32 _weapon{ -1 };
-        int32 _target{ -1 };
-        int32 _score{ 0 }; ///< 기대 피해 단위이다(명중률 %를 곱한 뒤 100 으로 나눈 값)
-        uint8 _bAttack{ SW_FALSE };
+        int2                            _moveCell{};
+        optional<SRPGCommanderAITarget> _attack{};
+        int32                           _score{ 0 }; ///< 기대 피해 단위이다(명중률 %를 곱한 뒤 100 으로 나눈 값)
     };
 } // namespace sw
 

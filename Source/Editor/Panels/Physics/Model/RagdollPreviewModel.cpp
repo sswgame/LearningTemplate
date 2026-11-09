@@ -32,8 +32,6 @@ namespace sw::editor
             static constexpr float3 kImpulseDirection{ 0.8f, 0.3f, 0.52f };
             /// @brief 바닥 바디의 반 크기(미터)입니다. 위 면이 y = 0 이다.
             static constexpr float3 kFloorHalfExtents{ 3.0f, 0.5f, 3.0f };
-            /// @brief 바디 번호 "없음"(충격 바디 없음 · 루트 바디의 부모)입니다.
-            static constexpr int32 kNoBody = -1;
         };
     } // namespace
 } // namespace sw::editor
@@ -121,7 +119,7 @@ namespace sw::editor
 
     void RagdollPreviewModel::applyImpulse( RagdollComponent& ragdoll ) const
     {
-        const int32 impulseBody = _selectedBody >= 0 ? _selectedBody : 0;
+        const uint32 impulseBody = _selectedBody >= 0 ? static_cast<uint32>( _selectedBody ) : 0u;
         ragdoll.startRagdoll( RagdollPreviewModelInternal::kImpulseDirection * _impulse, impulseBody );
     }
 
@@ -193,7 +191,7 @@ namespace sw::editor
     {
         RagdollComponent* const pRagdoll = findRagdoll( pScene );
         if ( pRagdoll != nullptr )
-            pRagdoll->startRagdoll( float3{}, RagdollPreviewModelInternal::kNoBody );
+            pRagdoll->startRagdoll( float3{}, nullopt );
     }
 
     void RagdollPreviewModel::applyImpulse( Scene* pScene ) const
@@ -260,12 +258,12 @@ namespace sw::editor
             renderer.drawLine( position - float3{ kJointMarkRadius, 0.0f, 0.0f }, position + float3{ kJointMarkRadius, 0.0f, 0.0f }, color );
             renderer.drawLine( position - float3{ 0.0f, kJointMarkRadius, 0.0f }, position + float3{ 0.0f, kJointMarkRadius, 0.0f }, color );
             renderer.drawLine( position - float3{ 0.0f, 0.0f, kJointMarkRadius }, position + float3{ 0.0f, 0.0f, kJointMarkRadius }, color );
-            const int32 parentBody = bodyIndex < ragdoll._listParentBody.size() ? ragdoll._listParentBody[bodyIndex] : RagdollPreviewModelInternal::kNoBody;
-            if ( parentBody < 0 || static_cast<size_t>( parentBody ) >= ragdoll._listBody.size() )
+            const optional<uint32> parentBody = bodyIndex < ragdoll._listParentBody.size() ? ragdoll._listParentBody[bodyIndex] : nullopt;
+            if ( parentBody.has_value() == false || *parentBody >= ragdoll._listBody.size() )
                 continue;
             float3     parentPosition{};
             quaternion parentRotation{};
-            if ( pPhysicsScene->getBodyTransform( ragdoll._listBody[static_cast<size_t>( parentBody )], parentPosition, parentRotation ) )
+            if ( pPhysicsScene->getBodyTransform( ragdoll._listBody[*parentBody], parentPosition, parentRotation ) )
                 renderer.drawLine( parentPosition, position, color );
         }
     }

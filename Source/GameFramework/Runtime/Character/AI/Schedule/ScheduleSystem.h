@@ -110,7 +110,7 @@ namespace sw
         hashed_string    _activity{};
         hashed_string    _animation{};
         hashed_string    _interruption{}; ///< 맨 위 끼어들기(없으면 빈 이름)
-        int32            _segmentIndex{ -1 };
+        optional<int32>  _segmentIndex{}; ///< 지금 칸(남은 칸이 없으면 비어 있다)
         float32          _travelFraction{ 1.0f };
         ScheduleNPCPhase _phase{ ScheduleNPCPhase::Performing };
         ScheduleLOD      _lod{ ScheduleLOD::Far };
@@ -186,13 +186,14 @@ namespace sw
     /** @brief 네트워크로 보내는 NPC 한 명의 요약입니다. 바이트로는 26 바이트 고정이며, 같은 데이터를 가진 클라이언트가 보간과 표시에 씁니다. */
     struct ScheduleNetSummary
     {
-        float3 _position{};
-        uint32 _areaHash{ 0 };
-        uint32 _activityHash{ 0 };
-        uint16 _npcIndex{ 0 };
-        int16  _segmentIndex{ -1 };
-        uint8  _phase{ 0 };
-        uint8  _interruptionDepth{ 0 };
+        float3                 _position{};
+        uint32                 _areaHash{ 0 };
+        uint32                 _activityHash{ 0 };
+        uint16                 _npcIndex{ 0 };
+        static constexpr int16 kNoSegment = -1; ///< 선 형식의 "칸 없음"(16 비트 한 칸에 싣는다)
+        int16                  _segmentIndex{ kNoSegment };
+        uint8                  _phase{ 0 };
+        uint8                  _interruptionDepth{ 0 };
     };
 } // namespace sw
 

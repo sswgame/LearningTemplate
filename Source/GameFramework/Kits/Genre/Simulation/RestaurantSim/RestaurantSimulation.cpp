@@ -687,13 +687,13 @@ namespace sw
         _arrival.add( computeArrivalRate() * kStepMinutes / RestaurantSimulationInternal::kMinutesPerHour );
         while ( _arrival.takeOne() )
         {
-            const int32 typeIndex = _random.pickWeightedIndex( listType, getWeight );
-            if ( typeIndex < 0 )
+            const optional<int32> typeIndex = _random.pickWeightedIndex( listType, getWeight );
+            if ( typeIndex.has_value() == false )
             {
                 _arrival.reset(); // 올 수 있는 성향이 없다 — 쌓아 두지 않는다(누적은 1 아래라는 규칙을 지킨다)
                 return;
             }
-            (void)admitCustomer( listType[static_cast<size_t>( typeIndex )]._id );
+            (void)admitCustomer( listType[static_cast<size_t>( *typeIndex )]._id );
         }
     }
 
@@ -734,14 +734,15 @@ namespace sw
                 continue;
             if ( order._station.empty() == false && countCookingAt( order._station ) >= countStations( order._station ) )
                 continue; // 그 스테이션이 다 찼으므로, 다른 스테이션의 주문은 먼저 시작해도 된다
-            const int32 cookIndex = findIdleStaff( StaffRole::Cook );
-            if ( cookIndex < 0 )
+            const optional<int32> foundCook = findIdleStaff( StaffRole::Cook );
+            if ( foundCook.has_value() == false )
                 return;
-            StaffMember&   cook  = _listStaff[static_cast<size_t>( cookIndex )];
-            const DishDef* pDish = _pCatalog->findDish( order._dishID );
-            const int32    level = cook._level.getLevel();
-            order._cook          = cookIndex;
-            order._quality       = pDish != nullptr ? pDish->computeQuality( level ) : 1;
+            const int32    cookIndex = *foundCook;
+            StaffMember&   cook      = _listStaff[static_cast<size_t>( cookIndex )];
+            const DishDef* pDish     = _pCatalog->findDish( order._dishID );
+            const int32    level     = cook._level.getLevel();
+            order._cook              = cookIndex;
+            order._quality           = pDish != nullptr ? pDish->computeQuality( level ) : 1;
             if ( order._remaining <= 0.0f )
             {
                 const RecipeDef* pRecipe   = pDish != nullptr ? findRecipe( *pDish ) : nullptr;
@@ -763,11 +764,11 @@ namespace sw
             const optional<int32> foundCustomer = findCustomerIndex( order._customerID );
             if ( foundCustomer.has_value() == false || _listCustomer[static_cast<size_t>( *foundCustomer )]._bServing != SW_FALSE )
                 continue;
-            const int32 customerIndex = *foundCustomer;
-            const int32 serverIndex   = findIdleStaff( StaffRole::Server );
-            if ( serverIndex < 0 )
+            const int32           customerIndex = *foundCustomer;
+            const optional<int32> serverIndex   = findIdleStaff( StaffRole::Server );
+            if ( serverIndex.has_value() == false )
                 return;
-            StaffMember& server                                           = _listStaff[static_cast<size_t>( serverIndex )];
+            StaffMember& server                                           = _listStaff[static_cast<size_t>( *serverIndex )];
             server._taskCustomer                                          = order._customerID;
             server._busyMinutes                                           = _settings._serveMinutes;
             _listCustomer[static_cast<size_t>( customerIndex )]._bServing = SW_TRUE;
@@ -780,12 +781,12 @@ namespace sw
         {
             if ( customer._state != CustomerState::WaitingCheckout || customer._bCheckingOut != SW_FALSE )
                 continue;
-            int32 staffIndex = findIdleStaff( StaffRole::Cashier );
-            if ( staffIndex < 0 )
+            optional<int32> staffIndex = findIdleStaff( StaffRole::Cashier );
+            if ( staffIndex.has_value() == false )
                 staffIndex = findIdleStaff( StaffRole::Server );
-            if ( staffIndex < 0 )
+            if ( staffIndex.has_value() == false )
                 return;
-            StaffMember& staff     = _listStaff[static_cast<size_t>( staffIndex )];
+            StaffMember& staff     = _listStaff[static_cast<size_t>( *staffIndex )];
             staff._taskCustomer    = customer._id;
             staff._busyMinutes     = _settings._checkoutMinutes;
             customer._bCheckingOut = SW_TRUE;
@@ -813,10 +814,10 @@ namespace sw
                 continue; // 고를 가중치가 없는 요리는 후보가 아니다. 모두 0 이면 시킬 것이 없어 나간다
             listChoice.push_back( RestaurantSimulationInternal::DishChoice{ pDish, weight } );
         }
-        const int32 pickIndex = _random.pickWeightedIndex( listChoice, &RestaurantSimulationInternal::getChoiceWeight );
-        if ( pickIndex < 0 )
+        const optional<int32> pickIndex = _random.pickWeightedIndex( listChoice, &RestaurantSimulationInternal::getChoiceWeight );
+        if ( pickIndex.has_value() == false )
             return false;
-        const DishDef*   pDish   = listChoice[static_cast<size_t>( pickIndex )]._pDish;
+        const DishDef*   pDish   = listChoice[static_cast<size_t>( *pickIndex )]._pDish;
         const RecipeDef* pRecipe = findRecipe( *pDish );
         int64            cost    = 0;
         if ( pRecipe == nullptr || _stock.consumeItems( pRecipe->_inputs, 1, cost ) == false )
@@ -932,7 +933,7 @@ namespace sw
         return nullopt;
     }
 
-    int32 RestaurantSimulation::findIdleStaff( StaffRole role ) const
+    optional<int32> RestaurantSimulation::findIdleStaff( StaffRole role ) const
     {
         for ( int32 staffIndex = 0; staffIndex < static_cast<int32>( _listStaff.size() ); ++staffIndex )
         {
@@ -941,7 +942,7 @@ namespace sw
             if ( bStaffAvailable )
                 return staffIndex;
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     int32 RestaurantSimulation::findBestCookLevel() const

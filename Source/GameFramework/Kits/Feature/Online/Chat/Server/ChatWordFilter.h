@@ -9,6 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -67,9 +68,9 @@ namespace sw
             int32                        _matchLength{ 0 }; ///< 여기서 끝나는 가장 긴 낱말의 길이이다. 정규화한 코드 포인트 수이며 실패 링크에서도 물려받는다
         };
 
-        /** @brief @p nodeIndex 노드의 @p codepoint 자식 번호를 반환합니다. 없으면 -1 입니다. */
-        int32 findChild( int32 nodeIndex, uint32 codepoint ) const;
-        void  computeFailLinks();
+        /** @brief @p nodeIndex 노드의 @p codepoint 자식 번호를 반환합니다. 없으면 비어 있습니다. */
+        optional<int32> findChild( int32 nodeIndex, uint32 codepoint ) const;
+        void            computeFailLinks();
 
     private:
         vector<Node>       _listNode;

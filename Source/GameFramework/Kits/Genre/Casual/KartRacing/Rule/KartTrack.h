@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -231,8 +232,8 @@ namespace sw
         float32 computeHeadingChange( float32 distance, float32 ahead ) const;
         /** @brief 이동 @p from 에서 @p to 가 문 @p gateIndex 를 지났으면 방향(1 은 앞, -1 은 뒤)을 반환하고, 아니면 0 을 반환합니다. 수평으로만 봅니다. */
         int32 computeGateCrossing( int32 gateIndex, const float3& from, const float3& to ) const;
-        /** @brief 그 위치의 부스트 패드 번호를 반환합니다. 없으면 -1 입니다. */
-        int32 findBoostPadAt( const float3& position ) const;
+        /** @brief 그 위치의 부스트 패드 번호를 반환합니다. 없으면 비어 있습니다. */
+        optional<int32> findBoostPadAt( const float3& position ) const;
         /**
          * @brief 부스트 패드 규칙입니다. 땅에 붙은 차가 패드에 **새로 올라서면** 부스트를 겁니다(같은 패드 위에 있는 동안은 한 번만 겁니다).
          * @details 경기와 고스트 재생이 이 함수를 같은 순서(차 걸음 다음)로 호출하므로 경로가 같아진다. 부스트를 걸었으면 true 를 반환한다.

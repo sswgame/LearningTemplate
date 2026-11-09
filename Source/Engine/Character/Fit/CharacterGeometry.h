@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Container/span.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
@@ -32,8 +33,8 @@ namespace sw
         uint16  _arrJoint[CharacterGeometryConstant::kMaxSkinInfluence]{ 0, 0, 0, 0 };
         float32 _arrWeight[CharacterGeometryConstant::kMaxSkinInfluence]{ 0.0f, 0.0f, 0.0f, 0.0f };
 
-        /** @brief 가중치가 가장 큰 본입니다. 가중치가 모두 0 이면 -1 입니다. */
-        int32 findDominantJoint() const;
+        /** @brief 가중치가 가장 큰 본입니다. 가중치가 모두 0 이면 비어 있습니다. */
+        optional<uint32> findDominantJoint() const;
     };
 } // namespace sw
 
@@ -136,8 +137,8 @@ namespace sw
 
         /** @brief 본을 끝에 붙이고 번호를 돌려줍니다. 부모가 이미 있는 본이 아니면(루트는 -1) 붙이지 않고 -1 입니다. */
         int32 addBone( const hashed_string& name, int32 parentIndex, const float4x4& localTransform );
-        /** @brief 이름의 본 번호입니다. 없으면 -1 입니다. */
-        int32 findBone( const hashed_string& name ) const;
+        /** @brief 이름의 본 번호입니다. 없으면 비어 있습니다. */
+        optional<uint32> findBone( const hashed_string& name ) const;
         /** @brief 본 수입니다. */
         uint32 getBoneCount() const { return static_cast<uint32>( _listName.size() ); }
         /** @brief 로컬 변환에서 모델 변환을 다시 계산합니다. */

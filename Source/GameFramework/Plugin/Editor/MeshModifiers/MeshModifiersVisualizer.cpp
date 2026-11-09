@@ -431,7 +431,7 @@ namespace sw::editor
             }
 
             /** @brief 격자 선과 제어점을 그립니다(고른 점 · 호버 점은 강조). */
-            void draw( const EditorViewportVisualizerArgs& args, int32 selectedPoint, int32 hoveredPoint ) const
+            void draw( const EditorViewportVisualizerArgs& args, int32 selectedPoint, optional<int32> hoveredPoint ) const
             {
                 for ( int32 indexZ = 0; indexZ < _countZ; ++indexZ )
                 {
@@ -459,7 +459,7 @@ namespace sw::editor
                             }
                             else
                             {
-                                args._pDrawList->AddCircleFilled( screen, index == hoveredPoint ? 5.0f : 3.5f, index == hoveredPoint ? MeshModifiersVisualizerInternal::themeColor( SW_THEME_COLOR( "Viewport", "ModifierHover" ) ) : MeshModifiersVisualizerInternal::themeColor( SW_THEME_COLOR( "Viewport", "LatticePoint" ) ) );
+                                args._pDrawList->AddCircleFilled( screen, hoveredPoint == index ? 5.0f : 3.5f, hoveredPoint == index ? MeshModifiersVisualizerInternal::themeColor( SW_THEME_COLOR( "Viewport", "ModifierHover" ) ) : MeshModifiersVisualizerInternal::themeColor( SW_THEME_COLOR( "Viewport", "LatticePoint" ) ) );
                             }
                         }
                     }
@@ -808,9 +808,9 @@ namespace sw::editor
                     }
                 }
 
-                int32      hoveredHandle = -1;
-                int32      hoveredPoint  = -1;
-                const bool bCanHover     = _drag.isDragging() == false && bMouseInside && bHasRay && args._bGizmoDragging == false;
+                optional<int32> hoveredHandle;
+                optional<int32> hoveredPoint;
+                const bool      bCanHover = _drag.isDragging() == false && bMouseInside && bHasRay && args._bGizmoDragging == false;
                 if ( bCanHover )
                 {
                     float32 bestDistance = 1e30f;
@@ -825,24 +825,24 @@ namespace sw::editor
                             hoveredHandle = static_cast<int32>( index );
                         }
                     }
-                    if ( hoveredHandle < 0 && set.isValid() )
+                    if ( hoveredHandle.has_value() == false && set.isValid() )
                         hoveredPoint = ModifierGizmoLogic::findPointOnRay( ray._origin, ray._direction, set.getWorldPoints(), frame._worldSize * MeshModifiersVisualizerInternal::kPointPickRatio );
                     if ( EditorInputGUI::readPointer().wasPressed( EditorMouseButton::Left ) )
                     {
-                        if ( hoveredHandle >= 0 )
+                        if ( hoveredHandle.has_value() )
                         {
-                            _drag.begin( listHandle[static_cast<size_t>( hoveredHandle )], frame, modifierIndex, selectedPoint, ray );
+                            _drag.begin( listHandle[static_cast<size_t>( *hoveredHandle )], frame, modifierIndex, selectedPoint, ray );
                         }
-                        else if ( hoveredPoint >= 0 )
+                        else if ( hoveredPoint.has_value() )
                         {
                             // 점을 누르면 고르고, 그대로 끌면 카메라를 마주 보는 평면에서 옮긴다
-                            session.setSelectedControlPoint( hoveredPoint );
-                            selectedPoint = hoveredPoint;
+                            session.setSelectedControlPoint( *hoveredPoint );
+                            selectedPoint = *hoveredPoint;
                             const ModifierViewHandle freeHandle{
-                                MeshModifiersVisualizerInternal::DragKind::PointFree, 0, set.getWorldPoints()[static_cast<size_t>( hoveredPoint )], float3{ 0.0f, 0.0f, 0.0f },
+                                MeshModifiersVisualizerInternal::DragKind::PointFree, 0, set.getWorldPoints()[static_cast<size_t>( *hoveredPoint )], float3{ 0.0f, 0.0f, 0.0f },
                                 0.0f
                             };
-                            _drag.begin( freeHandle, frame, modifierIndex, hoveredPoint, ray );
+                            _drag.begin( freeHandle, frame, modifierIndex, *hoveredPoint, ray );
                         }
                     }
                 }

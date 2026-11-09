@@ -89,8 +89,8 @@ namespace sw
     bool IntentTrackControllerComponent::loadTrack( const ControlIntentHistory& history, const hashed_string& pawnName )
     {
         vector<ControlIntent> listIntent;
-        const int32           trackIndex = history.findTrack( pawnName );
-        const bool            bLoaded    = trackIndex >= 0 && history.copyTrack( trackIndex, listIntent );
+        const optional<int32> trackIndex = history.findTrack( pawnName );
+        const bool            bLoaded    = trackIndex.has_value() && history.copyTrack( *trackIndex, listIntent );
         setTrack( listIntent );
         return bLoaded;
     }

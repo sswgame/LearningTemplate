@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -66,8 +67,8 @@ namespace sw
         /** @brief 하루를 넘깁니다. 남은 날을 줄이고 0 이 된 배치를 인벤토리에서 버립니다. */
         void advanceDay( vector<IngredientSpoilage>& outListSpoilage );
 
-        /** @brief 그 재료의 가장 가까운 남은 날을 반환합니다(상하는 배치가 없으면 -1). */
-        int32                          findEarliestExpiry( const hashed_string& itemID ) const;
+        /** @brief 그 재료의 가장 가까운 남은 날을 반환합니다. 상하는 배치가 없으면 비어 있습니다. */
+        optional<int32>                findEarliestExpiry( const hashed_string& itemID ) const;
         int32                          getBatchCount( const hashed_string& itemID ) const;
         const vector<IngredientBatch>& getBatches() const { return _listBatch; }
 

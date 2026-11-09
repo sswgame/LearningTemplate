@@ -160,7 +160,8 @@ namespace sw
         if ( bFatal == false )
         {
             if ( CharacterRayHit::traceWeaponHit( manager, muzzle, float3{ 0.0f, 0.0f, 1.0f }, 10.0f, 0xFFFFFFFFu, getOwner(), 20.0f, 40.0f, false, hit ) )
-                SW_LOG_INFO_ID( "StressTestCombat.THitZoneX", "[StressTestCombat] t=%# hit '%#' zone '%#' x%# (body %#)", _elapsed, pBone, hit._zone.c_str(), hit._damageMultiplier, hit._bodyIndex );
+                SW_LOG_INFO_ID( "StressTestCombat.THitZoneX", "[StressTestCombat] t=%# hit '%#' zone '%#' x%# (body %#)", _elapsed, pBone, hit._zone.c_str(), hit._damageMultiplier,
+                                hit._bodyIndex.has_value() ? to_string( *hit._bodyIndex ).c_str() : "none" );
             return;
         }
         CharacterRayHit rayHit;

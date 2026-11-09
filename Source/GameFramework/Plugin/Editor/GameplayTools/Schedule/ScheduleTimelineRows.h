@@ -6,6 +6,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 
 namespace sw
@@ -39,8 +40,8 @@ namespace sw::editor
     {
         /** @brief 그날의 분을 "HH:MM" 으로 씁니다. 하루를 넘는 값은 하루로 접습니다. */
         static string formatClock( int32 minuteOfDay );
-        /** @brief @p minuteOfDay 를 덮는 칸의 번호입니다(시작 포함, 끝 제외). 없으면 -1 입니다. */
-        static int32 findSegmentAt( const vector<ScheduleSegment>& listSegment, int32 minuteOfDay );
+        /** @brief @p minuteOfDay 를 덮는 칸의 번호입니다(시작 포함, 끝 제외). 없으면 비어 있습니다. */
+        static optional<int32> findSegmentAt( const vector<ScheduleSegment>& listSegment, int32 minuteOfDay );
         /** @brief @p listSegment 를 행으로 바꿉니다. @p previewMinute 를 덮는 칸이 `_bActive` 입니다. */
         static void populate( const vector<ScheduleSegment>& listSegment, int32 previewMinute, vector<ScheduleTimelineRow>& outListRow );
     };

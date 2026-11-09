@@ -545,7 +545,7 @@ namespace sw
         movePlayer( float3{ move._x, 0.0f, move._z }, deltaTime );
 
         // 버튼은 도구를 먼저 바꾸고 쓴다(같은 틱에 둘 다 누를 수 있다).
-        int32 arrButtonIndex[kButtonCount];
+        optional<int32> arrButtonIndex[kButtonCount];
         for ( int32 button = 0; button < kButtonCount; ++button )
         {
             arrButtonIndex[button] = pawn.findButton( hashed_string( Internal::kArrButtonName[button] ) );

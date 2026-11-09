@@ -147,7 +147,7 @@ namespace sw
             return false;
         TagContainer hide;
         hide.addTag( HorrorStealthGimmicksInternal::getHideActivityTag() );
-        if ( pSmart->claimFreeSlot( who, hide ) < 0 )
+        if ( pSmart->claimFreeSlot( who, hide ).has_value() == false )
             return false;
         who.addTag( HorrorStealthGimmicksInternal::getHiddenTag() );
         return true;

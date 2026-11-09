@@ -205,7 +205,7 @@ namespace sw
     void CharacterRayHit::resolveHitZone( const GameObject& target, PhysicsBodyHandle body, HitInfo& inoutHit )
     {
         CharacterHitInternal::applyHitZone( PhysicsHitZoneDef{}, inoutHit );
-        inoutHit._bodyIndex = -1;
+        inoutHit._bodyIndex.reset();
         if ( body.isValid() == false )
             return;
         // 래그돌과 히트박스에서는 물리 에셋 바디의 히트 존을 먼저 본다.
@@ -215,7 +215,7 @@ namespace sw
             const optional<uint32> bodyIndex = pRagdoll->findBodyIndex( body );
             if ( bodyIndex.has_value() )
             {
-                inoutHit._bodyIndex            = static_cast<int32>( *bodyIndex );
+                inoutHit._bodyIndex            = bodyIndex;
                 const PhysicsHitZoneDef* pZone = pRagdoll->findHitZone( *bodyIndex );
                 if ( pZone != nullptr )
                     CharacterHitInternal::applyHitZone( *pZone, inoutHit );
@@ -311,7 +311,7 @@ namespace sw
                     if ( pAsset->_listBody[bodyIndex]._bone != bone )
                         continue;
                     HitInfo hit;
-                    hit._bodyIndex = static_cast<int32>( bodyIndex );
+                    hit._bodyIndex = static_cast<uint32>( bodyIndex );
                     hit._direction = float3{ 0.0f, 0.0f, 1.0f };
                     hit._damage    = damage;
                     hit._impulse   = 40.0f;

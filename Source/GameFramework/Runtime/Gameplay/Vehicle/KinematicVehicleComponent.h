@@ -5,6 +5,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -49,10 +50,10 @@ namespace sw
         /**
          * @brief 의도를 모터 입력으로 바꿉니다. 의도의 월드 이동을 차 방향(@p vehicleYaw)으로 투영해서, 앞 성분은 가속(음수이면 브레이크나 후진), 옆 성분은 조향으로 씁니다.
          * @param driftIndex 폰 스키마의 드리프트 버튼 인덱스입니다. 없으면 -1입니다.
-         * @param boostIndex 폰 스키마의 부스트 버튼 인덱스입니다. 없으면 -1입니다.
-         * @param jumpIndex 폰 스키마의 점프 버튼 인덱스입니다. 없으면 -1입니다.
+         * @param boostIndex 폰 스키마의 부스트 버튼 인덱스입니다. 없으면 비어 있습니다.
+         * @param jumpIndex 폰 스키마의 점프 버튼 인덱스입니다. 없으면 비어 있습니다.
          */
-        static KinematicVehicleInput toVehicleInput( const ControlIntent& intent, float32 vehicleYaw, int32 driftIndex, int32 boostIndex, int32 jumpIndex );
+        static KinematicVehicleInput toVehicleInput( const ControlIntent& intent, float32 vehicleYaw, optional<int32> driftIndex, optional<int32> boostIndex, optional<int32> jumpIndex );
 
         const KinematicVehicleMotor&         getMotor() const { return _motor; }
         KinematicVehicleMotor&               getMotor() { return _motor; }
@@ -96,9 +97,9 @@ namespace sw
         KinematicVehicleMotor         _motor;
         PhysicsGround                 _ground;
         vector<KinematicVehicleEvent> _listFrameEvent; ///< 이번 틱에 모터가 낸 일
-        int32                         _driftIndex;
-        int32                         _boostIndex;
-        int32                         _jumpIndex;
+        optional<int32>               _driftIndex;
+        optional<int32>               _boostIndex;
+        optional<int32>               _jumpIndex;
         bool                          _bReady;
     };
 } // namespace sw

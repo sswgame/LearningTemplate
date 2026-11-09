@@ -75,31 +75,40 @@ namespace sw
                 }
             };
 
-            /** @brief 노드 @p index 의 자식 중 첫째(@p bFirst)나 마지막입니다. 없으면 -1. 루트 아래는 @p index 가 -1 입니다. */
-            static int32 findChild( const UIAccessibilitySnapshot& snapshot, int32 parent, bool bFirst )
+            /** @brief 노드 @p parent 의 자식 중 첫째(@p bFirst)나 마지막입니다. 없으면 비어 있다. 루트 아래는 @p parent 가 비어 있습니다. */
+            static optional<uint32> findChild( const UIAccessibilitySnapshot& snapshot, optional<uint32> parent, bool bFirst )
             {
-                int32 found = constant::invalid_index::kInt32;
+                optional<uint32> found;
                 for ( size_t index = 0; index < snapshot._listNode.size(); ++index )
                 {
                     if ( snapshot._listNode[index]._parent != parent )
                         continue;
-                    found = static_cast<int32>( index );
+                    found = static_cast<uint32>( index );
                     if ( bFirst )
                         break;
                 }
                 return found;
             }
 
-            /** @brief 같은 부모의 이웃 노드입니다(@p step 이 1 이면 다음, −1 이면 앞). 없으면 -1. */
-            static int32 findSibling( const UIAccessibilitySnapshot& snapshot, int32 node, int32 step )
+            /** @brief 같은 부모의 이웃 노드입니다(@p bForward 면 다음, 아니면 앞). 없으면 비어 있다. */
+            static optional<uint32> findSibling( const UIAccessibilitySnapshot& snapshot, uint32 node, bool bForward )
             {
-                const int32 parent = snapshot._listNode[static_cast<size_t>( node )]._parent;
-                for ( int32 index = node + step; 0 <= index && index < static_cast<int32>( snapshot._listNode.size() ); index += step )
+                const optional<uint32>& parent = snapshot._listNode[node]._parent;
+                if ( bForward )
                 {
-                    if ( snapshot._listNode[static_cast<size_t>( index )]._parent == parent )
-                        return index;
+                    for ( size_t index = size_t{ node } + 1; index < snapshot._listNode.size(); ++index )
+                    {
+                        if ( snapshot._listNode[index]._parent == parent )
+                            return static_cast<uint32>( index );
+                    }
+                    return nullopt;
                 }
-                return constant::invalid_index::kInt32;
+                for ( uint32 index = node; index > 0; --index )
+                {
+                    if ( snapshot._listNode[index - 1u]._parent == parent )
+                        return index - 1u;
+                }
+                return nullopt;
             }
 
             class Element;
@@ -300,27 +309,28 @@ namespace sw
                     const UIAccessibilitySnapshot* pSnapshot = _pCore->findSnapshot();
                     if ( pSnapshot == nullptr )
                         return makeElementNotAvailable();
-                    int32 target = constant::invalid_index::kInt32;
+                    optional<uint32> target;
                     if ( _bRoot )
                     {
                         if ( direction == NavigateDirection_FirstChild )
-                            target = findChild( *pSnapshot, constant::invalid_index::kInt32, true );
+                            target = findChild( *pSnapshot, nullopt, true );
                         else if ( direction == NavigateDirection_LastChild )
-                            target = findChild( *pSnapshot, constant::invalid_index::kInt32, false );
+                            target = findChild( *pSnapshot, nullopt, false );
                         else
                             return S_OK; // 루트의 부모와 이웃은 호스트(창)가 답한다
                     }
                     else
                     {
-                        const int32 self = pSnapshot->findNode( _screen, _widget );
-                        if ( self < 0 )
+                        const optional<uint32> found = pSnapshot->findNode( _screen, _widget );
+                        if ( found.has_value() == false )
                             return makeElementNotAvailable();
+                        const uint32 self = *found;
                         switch ( direction )
                         {
                             case NavigateDirection_Parent:
                             {
-                                const int32 parent = pSnapshot->_listNode[static_cast<size_t>( self )]._parent;
-                                if ( parent < 0 )
+                                const optional<uint32>& parent = pSnapshot->_listNode[self]._parent;
+                                if ( parent.has_value() == false )
                                 {
                                     *ppOutFragment = createElement( *_pCore, 0, kInvalidWidgetID, true );
                                     return S_OK;
@@ -330,12 +340,12 @@ namespace sw
                             }
                             case NavigateDirection_NextSibling:
                             {
-                                target = findSibling( *pSnapshot, self, 1 );
+                                target = findSibling( *pSnapshot, self, true );
                                 break;
                             }
                             case NavigateDirection_PreviousSibling:
                             {
-                                target = findSibling( *pSnapshot, self, constant::invalid_index::kInt32 );
+                                target = findSibling( *pSnapshot, self, false );
                                 break;
                             }
                             case NavigateDirection_FirstChild:
@@ -350,9 +360,9 @@ namespace sw
                             }
                         }
                     }
-                    if ( target < 0 )
+                    if ( target.has_value() == false )
                         return S_OK;
-                    const AccessibleNode& node = pSnapshot->_listNode[static_cast<size_t>( target )];
+                    const AccessibleNode& node = pSnapshot->_listNode[*target];
                     *ppOutFragment             = createElement( *_pCore, node._screen, node._widget, false );
                     return S_OK;
                 }
@@ -392,10 +402,10 @@ namespace sw
                         return S_OK;
                     }
                     const UIAccessibilitySnapshot* pSnapshot = _pCore->findSnapshot();
-                    const int32                    node      = pSnapshot != nullptr ? pSnapshot->findNode( _screen, _widget ) : constant::invalid_index::kInt32;
-                    if ( node < 0 || hwnd == nullptr )
+                    const optional<uint32>         node      = pSnapshot != nullptr ? pSnapshot->findNode( _screen, _widget ) : nullopt;
+                    if ( node.has_value() == false || hwnd == nullptr )
                         return makeElementNotAvailable();
-                    const float4&     bounds   = pSnapshot->_listNode[static_cast<size_t>( node )]._bounds;
+                    const float4&     bounds   = pSnapshot->_listNode[*node]._bounds;
                     const UIViewport& viewport = _pCore->_pUI->getViewport();
                     const float64     scale    = viewport._uiScale > 0.0f ? static_cast<float64>( viewport._uiScale ) : 1.0;
                     POINT             topLeft{ static_cast<LONG>( static_cast<float64>( bounds._x ) * scale ) + viewport._pointerOrigin._x,
@@ -459,9 +469,9 @@ namespace sw
                 {
                     *ppOutFragment                           = nullptr;
                     const UIAccessibilitySnapshot* pSnapshot = _pCore->findSnapshot();
-                    if ( pSnapshot == nullptr || pSnapshot->_focusedNode < 0 )
+                    if ( pSnapshot == nullptr || pSnapshot->_focusedNode.has_value() == false )
                         return S_OK;
-                    const AccessibleNode& node = pSnapshot->_listNode[static_cast<size_t>( pSnapshot->_focusedNode )];
+                    const AccessibleNode& node = pSnapshot->_listNode[*pSnapshot->_focusedNode];
                     *ppOutFragment             = createElement( *_pCore, node._screen, node._widget, false );
                     return S_OK;
                 }
@@ -524,10 +534,10 @@ namespace sw
                 [[nodiscard]] bool copyInfo( AccessibleInfo& outInfo )
                 {
                     const UIAccessibilitySnapshot* pSnapshot = _pCore->findSnapshot();
-                    const int32                    node      = pSnapshot != nullptr ? pSnapshot->findNode( _screen, _widget ) : constant::invalid_index::kInt32;
-                    if ( node < 0 )
+                    const optional<uint32>         node      = pSnapshot != nullptr ? pSnapshot->findNode( _screen, _widget ) : nullopt;
+                    if ( node.has_value() == false )
                         return false;
-                    outInfo = pSnapshot->_listNode[static_cast<size_t>( node )]._info;
+                    outInfo = pSnapshot->_listNode[*node]._info;
                     return true;
                 }
 

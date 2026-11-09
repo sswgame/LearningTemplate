@@ -209,14 +209,14 @@ SW_TEST_CASE( DialogueGraphTest, FollowsChoiceAndDefaultPins )
     SW_EXPECT_NOT_NULL( pStart );
     SW_EXPECT_EQUAL( 1, pStart->_id );
 
-    SW_EXPECT_EQUAL( 2, asset.findDefaultNextNodeID( 1 ) );
-    SW_EXPECT_EQUAL( 3, asset.findChoiceNextNodeID( 2, 0 ) );
-    SW_EXPECT_EQUAL( 4, asset.findChoiceNextNodeID( 2, 1 ) );
+    SW_EXPECT_TRUE( asset.findDefaultNextNodeID( 1 ) == 2 );
+    SW_EXPECT_TRUE( asset.findChoiceNextNodeID( 2, 0 ) == 3 );
+    SW_EXPECT_TRUE( asset.findChoiceNextNodeID( 2, 1 ) == 4 );
 
-    // 연결되지 않은 선택지는 기본 출력으로 떨어진다 — 여기서는 그것도 없으므로 0 이다.
-    SW_EXPECT_EQUAL( 0, asset.findChoiceNextNodeID( 2, 5 ) );
+    // 연결되지 않은 선택지는 기본 출력으로 떨어진다 — 여기서는 그것도 없으므로 비어 있다.
+    SW_EXPECT_FALSE( asset.findChoiceNextNodeID( 2, 5 ).has_value() );
     // 범위를 벗어난 선택지 번호도 기본 출력을 볼 뿐, 엉뚱한 노드로 가지 않는다.
-    SW_EXPECT_EQUAL( 0, asset.findChoiceNextNodeID( 2, DialogueGraphAsset::getMaxChoiceCount() + 10 ) );
+    SW_EXPECT_FALSE( asset.findChoiceNextNodeID( 2, DialogueGraphAsset::getMaxChoiceCount() + 10 ).has_value() );
 }
 
 /**
@@ -233,7 +233,7 @@ SW_TEST_CASE( DialogueGraphTest, XMLRoundTripAndLoadFromFileAgree )
     SW_EXPECT_EQUAL( 3u, static_cast<uint32>( parsed._listLink.size() ) );
     SW_EXPECT_TRUE( parsed._listNode[1]._type == DialogueAssetNodeKind::Choice );
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( parsed._listNode[1]._listChoice.size() ) );
-    SW_EXPECT_EQUAL( 3, parsed.findChoiceNextNodeID( 2, 0 ) );
+    SW_EXPECT_TRUE( parsed.findChoiceNextNodeID( 2, 0 ) == 3 );
 
     const optional<AbsolutePath> filePath = AbsolutePath::tryMake( test::makeScratchPath( "graph.dialogue.xml" ) );
     SW_REQUIRE_TRUE( filePath.has_value() );
@@ -244,7 +244,7 @@ SW_TEST_CASE( DialogueGraphTest, XMLRoundTripAndLoadFromFileAgree )
     SW_EXPECT_EQUAL( static_cast<uint32>( parsed._listNode.size() ), static_cast<uint32>( loaded._listNode.size() ) );
     SW_EXPECT_EQUAL( static_cast<uint32>( parsed._listLink.size() ), static_cast<uint32>( loaded._listLink.size() ) );
     SW_EXPECT_EQUAL( parsed._listNode[1]._text, loaded._listNode[1]._text );
-    SW_EXPECT_EQUAL( 4, loaded.findChoiceNextNodeID( 2, 1 ) );
+    SW_EXPECT_TRUE( loaded.findChoiceNextNodeID( 2, 1 ) == 4 );
 }
 
 /**
@@ -292,13 +292,13 @@ SW_TEST_CASE( DialogueGraphTest, UnlinkedChoiceAndBranchPinsFallBackToOut )
         asset._listLink.resize( 1 ); // Out(→10) 만 남긴다
         const DialogueAssetNode* pProbe = asset.findNode( 2 );
         SW_REQUIRE_NOT_NULL( pProbe );
-        SW_EXPECT_EQUAL( 10, DialogueCursor::step( asset, *pProbe, makeProbeInput() ) );
-        SW_EXPECT_EQUAL( 10, DialogueCursor::step( asset, *pProbe, DialogueStepInput{} ) );
+        SW_EXPECT_TRUE( DialogueCursor::step( asset, *pProbe, makeProbeInput() ) == 10 );
+        SW_EXPECT_TRUE( DialogueCursor::step( asset, *pProbe, DialogueStepInput{} ) == 10 );
     }
 }
 
 /**
- * @brief [DialogueGraphTest] 표에 없는 노드 타입을 만나면 커서가 끝(0)으로 가는지 검증
+ * @brief [DialogueGraphTest] 표에 없는 노드 타입을 만나면 커서가 끝(빈 값)으로 가는지 검증
  * @details 모르는 타입에서 아무 분기도 타지 않으면 상태가 그대로 남고 끝 알림도 없이 대화가 멈춰 있다.
  */
 SW_TEST_CASE( DialogueGraphTest, UnknownNodeTypeEndsTheCursor )
@@ -309,7 +309,7 @@ SW_TEST_CASE( DialogueGraphTest, UnknownNodeTypeEndsTheCursor )
         const DialogueGraphAsset asset  = makeProbeGraph( unknownType );
         const DialogueAssetNode* pProbe = asset.findNode( 2 );
         SW_REQUIRE_NOT_NULL( pProbe );
-        SW_EXPECT_EQUAL( 0, DialogueCursor::step( asset, *pProbe, makeProbeInput() ) );
+        SW_EXPECT_FALSE( DialogueCursor::step( asset, *pProbe, makeProbeInput() ).has_value() );
     }
 }
 

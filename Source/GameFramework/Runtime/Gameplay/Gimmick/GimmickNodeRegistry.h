@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -125,10 +126,13 @@ namespace sw
         uint16              _stateVersion{ 1 };
         GimmickNodeCategory _category{ GimmickNodeCategory::Operator };
 
-        int32 findInput( const hashed_string& name ) const;
-        int32 findOutput( const hashed_string& name ) const;
-        int32 findParam( const hashed_string& name ) const;
-        bool  breaksCycle() const { return _pCommit != nullptr; }
+        /** @brief 이름의 입력 포트 번호입니다. 없으면 비어 있습니다. */
+        optional<uint32> findInput( const hashed_string& name ) const;
+        /** @brief 이름의 출력 포트 번호입니다. 없으면 비어 있습니다. */
+        optional<uint32> findOutput( const hashed_string& name ) const;
+        /** @brief 이름의 매개변수 번호입니다. 없으면 비어 있습니다. */
+        optional<uint32> findParam( const hashed_string& name ) const;
+        bool             breaksCycle() const { return _pCommit != nullptr; }
     };
 } // namespace sw
 

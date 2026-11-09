@@ -401,7 +401,7 @@ namespace sw::editor
         ImGui::PushID( reference );
         EditorWidgets::drawPropertyRowLabel( ref._label.c_str(), ref._bInherited == SW_TRUE ? SW_LOCKEY( "EdAbilityCatalog", "InheritedTip" ) : nullptr );
         string     picked;
-        const bool bUnresolved = ref._target < 0 && ref._bRequired == SW_TRUE;
+        const bool bUnresolved = ref._target.has_value() == false && ref._bRequired == SW_TRUE;
         if ( bUnresolved )
             ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Error" ) ) );
         StringBuilder<constant::buffer::kMax256> comboIDBuilder;
@@ -414,12 +414,12 @@ namespace sw::editor
         if ( bPicked )
             reportEdit( _model.setReference( reference, picked ) );
         // 가리키는 항목으로 간다(Reference Viewer 처럼 따라간다).
-        const int32 target = ref._target;
-        if ( target >= 0 )
+        const optional<int32> target = ref._target;
+        if ( target.has_value() )
         {
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdAbilityCatalog", "Go" ) ) );
             if ( ImGui::SmallButton( SW_LOCKEY( "EdAbilityCatalog", "Go" ) ) )
-                _selectedEntry = target;
+                _selectedEntry = *target;
         }
         ImGui::PopID();
     }

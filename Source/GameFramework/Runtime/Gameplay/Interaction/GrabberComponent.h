@@ -7,6 +7,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
@@ -122,7 +123,7 @@ namespace sw
         float32 _throwSpeed;
 
         RigidBodyGrabPhysics _fallback;
-        int32                _grabIndex;  ///< `_grabButton` 의 폰 버튼 번호(-1: 없음)
+        optional<int32>      _grabIndex;  ///< `_grabButton` 의 폰 버튼 번호(없으면 비어 있다)
         vector<GameObject*>  _listTagged; ///< 후보 버퍼(태그 색인 결과)
     };
 } // namespace sw

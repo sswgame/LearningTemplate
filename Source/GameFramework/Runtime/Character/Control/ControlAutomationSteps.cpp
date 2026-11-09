@@ -100,8 +100,8 @@ namespace sw
                     rest                         = comma == string_view::npos ? string_view{} : rest.substr( comma + 1 );
                     if ( buttonName.empty() )
                         continue;
-                    const int32 buttonIndex = pPawn->findButton( hashed_string( buttonName ) );
-                    if ( buttonIndex < 0 )
+                    const optional<int32> buttonIndex = pPawn->findButton( hashed_string( buttonName ) );
+                    if ( buttonIndex.has_value() == false )
                         runner.recordFailure( step, "pawn '" + params._pawn + "' has no button '" + string( buttonName ) + "'" );
                     else
                         intent.setButton( buttonIndex, true, false );

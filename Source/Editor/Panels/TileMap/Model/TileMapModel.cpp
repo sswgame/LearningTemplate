@@ -322,11 +322,11 @@ namespace sw::editor
             }
             case PaintLayer::Tile:
             {
-                const string_view brushName = _map.getTileBrushName( x, y );
-                const int32       found     = brushName.empty() ? -1 : _tileSet.findBrush( hashed_string( string( brushName ).c_str() ) );
-                _bErase                     = found < 0;
-                if ( found >= 0 )
-                    _brushIndex = found;
+                const string_view      brushName = _map.getTileBrushName( x, y );
+                const optional<uint32> found     = brushName.empty() ? nullopt : _tileSet.findBrush( hashed_string( string( brushName ).c_str() ) );
+                _bErase                          = found.has_value() == false;
+                if ( found.has_value() )
+                    _brushIndex = static_cast<int32>( *found );
                 break;
             }
             case PaintLayer::Flag:

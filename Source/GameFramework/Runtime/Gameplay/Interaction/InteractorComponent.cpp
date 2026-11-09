@@ -381,10 +381,10 @@ namespace sw
     void InteractorComponent::updateFocusAndBegin( GameObjectManager& manager, GameObject& owner, const InteractionView& viewer, bool bPressed )
     {
         const WorldLineOfSightQuery lineOfSight{ manager };
-        const int32                 best = InteractionView::selectBest( viewer, _listCandidate, _bUseLineOfSight ? &lineOfSight : nullptr );
-        if ( best >= 0 )
+        const optional<int32>       best = InteractionView::selectBest( viewer, _listCandidate, _bUseLineOfSight ? &lineOfSight : nullptr );
+        if ( best.has_value() )
         {
-            const size_t index = static_cast<size_t>( best );
+            const size_t index = static_cast<size_t>( *best );
             setFocus( manager, GameObjectHandle::make( _listCandidate[index]._objectID ), _listCandidateComponent[index] );
         }
         else

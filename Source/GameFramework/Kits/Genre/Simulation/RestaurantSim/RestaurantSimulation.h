@@ -298,7 +298,7 @@ namespace sw
         [[nodiscard]] bool areLinksValid() const;
 
         [[nodiscard]] optional<int32> findCustomerIndex( int32 customerID ) const;
-        int32                         findIdleStaff( StaffRole role ) const;
+        optional<int32>               findIdleStaff( StaffRole role ) const;
         int32                         findBestCookLevel() const;
         int32                         countStations( const hashed_string& station ) const;
         int32                         countCookingAt( const hashed_string& station ) const;

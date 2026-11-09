@@ -106,18 +106,19 @@ namespace sw
         using Internal = AdventureElementGridInternal;
         _table.clear();
         _table.setStepTime( _settings._stepTime );
-        const int32 flammable  = _table.addFlag( "Flammable" );
-        const int32 conductive = _table.addFlag( "Conductive" );
-        _updraftFlag           = _table.addFlag( "Updraft" );
-        _burningStatus         = _table.addStatus( "Burning", ElementStatusKind::Age );
-        _chargedStatus         = _table.addStatus( "Charged", ElementStatusKind::Countdown, _settings._chargeSteps );
+        // 이 표는 코드가 정한 것이라 더하기는 실패하지 않는다(실패하면 결함 — value 가 단언한다).
+        const int32 flammable  = _table.addFlag( "Flammable" ).value();
+        const int32 conductive = _table.addFlag( "Conductive" ).value();
+        _updraftFlag           = _table.addFlag( "Updraft" ).value();
+        _burningStatus         = _table.addStatus( "Burning", ElementStatusKind::Age ).value();
+        _chargedStatus         = _table.addStatus( "Charged", ElementStatusKind::Countdown, _settings._chargeSteps ).value();
         // 재질 번호는 `AdventureMaterial` 의 순서와 같다
-        const int32 empty = _table.addMaterial( "Empty", {} );
-        const int32 grass = _table.addMaterial( "Grass", { hashed_string( "Flammable" ), hashed_string( "Updraft" ) } );
-        const int32 wood  = _table.addMaterial( "Wood", { hashed_string( "Flammable" ) } );
-        (void)_table.addMaterial( "Metal", { hashed_string( "Conductive" ) } );
-        const int32 water = _table.addMaterial( "Water", { hashed_string( "Conductive" ) } );
-        const int32 ice   = _table.addMaterial( "Ice", {} );
+        const int32 empty = _table.addMaterial( "Empty", {} ).value();
+        const int32 grass = _table.addMaterial( "Grass", { hashed_string( "Flammable" ), hashed_string( "Updraft" ) } ).value();
+        const int32 wood  = _table.addMaterial( "Wood", { hashed_string( "Flammable" ) } ).value();
+        (void)_table.addMaterial( "Metal", { hashed_string( "Conductive" ) } ).value();
+        const int32 water = _table.addMaterial( "Water", { hashed_string( "Conductive" ) } ).value();
+        const int32 ice   = _table.addMaterial( "Ice", {} ).value();
         _table.setMaterialParam( grass, "burnSteps", _settings._grassBurnSteps );
         _table.setMaterialParam( wood, "burnSteps", _settings._woodBurnSteps );
 

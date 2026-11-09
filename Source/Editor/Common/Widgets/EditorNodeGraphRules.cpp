@@ -172,15 +172,15 @@ namespace sw::editor
         return ( mapPoint - transform._mapOffset ) * ( 1.0f / transform._scale ) + transform._canvasOrigin;
     }
 
-    int32 EditorNodeGraphRules::findNearestNode( const vector<EditorGraphNodeRect>& listRect, const float2& canvasPoint )
+    optional<int32> EditorNodeGraphRules::findNearestNode( const vector<EditorGraphNodeRect>& listRect, const float2& canvasPoint )
     {
-        int32   nearestID   = 0;
-        float32 nearestDist = 0.0f;
+        optional<int32> nearestID;
+        float32         nearestDist = 0.0f;
         for ( const EditorGraphNodeRect& rect : listRect )
         {
             const float2  delta = rect._position + rect._size * 0.5f - canvasPoint;
             const float32 dist  = delta._x * delta._x + delta._y * delta._y;
-            if ( nearestID != 0 && dist >= nearestDist )
+            if ( nearestID.has_value() && dist >= nearestDist )
                 continue;
             nearestID   = rect._nodeID;
             nearestDist = dist;

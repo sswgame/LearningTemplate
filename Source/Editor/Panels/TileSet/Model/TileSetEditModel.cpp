@@ -134,7 +134,7 @@ namespace sw::editor
     {
         const utf8* const pStem = bRuleTile ? "rule" : "tile";
         string            name  = pStem;
-        for ( uint32 suffix = 2; _content.findBrush( hashed_string( string_view( name ) ) ) >= 0; ++suffix )
+        for ( uint32 suffix = 2; _content.findBrush( hashed_string( string_view( name ) ) ).has_value(); ++suffix )
         {
             StringBuilder<constant::buffer::kMax256> nameBuilder;
             nameBuilder.appendFormat( "%#%#", pStem, suffix );
@@ -170,7 +170,7 @@ namespace sw::editor
         if ( pBrush == nullptr )
             return false;
         const hashed_string newName( name );
-        if ( name.empty() || ( newName != pBrush->_name && _content.findBrush( newName ) >= 0 ) )
+        if ( name.empty() || ( newName != pBrush->_name && _content.findBrush( newName ).has_value() ) )
         {
             StringBuilder<constant::buffer::kMax256> statusBuilder;
             statusBuilder.appendFormat( "Brush name '%#' is empty or already used - the name stays '%#'", name, pBrush->_name.view() );

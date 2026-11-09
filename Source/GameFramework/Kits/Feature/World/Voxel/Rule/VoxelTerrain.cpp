@@ -113,8 +113,11 @@ namespace sw
             {
                 for ( int32 x = 2; x < world.getSizeX() - 2; ++x )
                 {
-                    const int32 groundY     = world.findTopSolidY( x, z );
-                    const bool  bNoTreeSite = groundY < 0 || world.getBlock( x, groundY, z ) != grassBlock || groundY + 8 >= kVoxelChunkHeight;
+                    const optional<int32> foundGround = world.findTopSolidY( x, z );
+                    if ( foundGround.has_value() == false )
+                        continue;
+                    const int32 groundY     = *foundGround;
+                    const bool  bNoTreeSite = world.getBlock( x, groundY, z ) != grassBlock || groundY + 8 >= kVoxelChunkHeight;
                     if ( bNoTreeSite )
                         continue;
                     const uint32  treeHash = HashUtil::hashCoord( x, z, settings._seed ^ 0x5bd1e995u );

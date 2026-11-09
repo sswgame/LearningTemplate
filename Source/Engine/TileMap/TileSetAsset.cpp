@@ -165,14 +165,14 @@ namespace sw
 
 namespace sw
 {
-    int32 TileSetContent::findBrush( const hashed_string& name ) const
+    optional<uint32> TileSetContent::findBrush( const hashed_string& name ) const
     {
         for ( size_t brushIndex = 0; brushIndex < _listBrush.size(); ++brushIndex )
         {
             if ( _listBrush[brushIndex]._name == name )
-                return static_cast<int32>( brushIndex );
+                return static_cast<uint32>( brushIndex );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     void TileSetContent::collectIssues( vector<TileSetIssue>& outListIssue ) const
@@ -200,7 +200,7 @@ namespace sw
                 textBuilder.appendFormat( "brush %# has no name", index );
                 outListIssue.push_back( TileSetIssue{ string( textBuilder.view() ), index, constant::invalid_index::kInt32 } );
             }
-            else if ( findBrush( brush._name ) != index )
+            else if ( findBrush( brush._name ) != static_cast<uint32>( brushIndex ) )
             {
                 StringBuilder<constant::buffer::kMax256> textBuilder;
                 textBuilder.appendFormat( "brush '%#' is listed twice", brush._name.view() );

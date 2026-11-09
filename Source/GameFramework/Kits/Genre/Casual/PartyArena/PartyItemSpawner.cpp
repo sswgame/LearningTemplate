@@ -121,9 +121,9 @@ namespace sw
     const PartyItemDef* PartyItemSpawner::pickWeighted()
     {
         const vector<PartyItemDef>& listDef = _catalog.getAll();
-        const int32                 index   = _random.pickWeightedIndex( listDef, []( const PartyItemDef& def )
-                          { return def._weight; } );
-        return index >= 0 ? &listDef[static_cast<size_t>( index )] : nullptr;
+        const optional<int32>       index   = _random.pickWeightedIndex( listDef, []( const PartyItemDef& def )
+                { return def._weight; } );
+        return index.has_value() ? &listDef[static_cast<size_t>( *index )] : nullptr;
     }
 
     void PartyItemSpawner::spawnOne()

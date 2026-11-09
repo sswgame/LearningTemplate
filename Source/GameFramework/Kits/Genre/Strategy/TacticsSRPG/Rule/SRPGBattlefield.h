@@ -8,6 +8,7 @@
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -248,8 +249,8 @@ namespace sw
         static int32          computeDistance( const int2& lhs, const int2& rhs );
         bool                  isInside( const int2& cell ) const { return _topology.isInside( cell ); }
         const SRPGTerrainDef* findTerrainAt( const int2& cell ) const;
-        /** @brief 그 셀에 선 살아 있는 유닛을 반환합니다. 없으면 -1 입니다. */
-        int32 findUnitAt( const int2& cell ) const;
+        /** @brief 그 셀에 선 살아 있는 유닛을 반환합니다. 없으면 비어 있습니다. */
+        optional<int32> findUnitAt( const int2& cell ) const;
         /** @brief 유닛이 그 셀에서 쓰는 적성(%)을 반환합니다. */
         int32 computeAptitude( const SRPGUnit& unit, const int2& cell ) const;
         /** @brief 그 팀의 살아 있는 유닛 수를 반환합니다. */

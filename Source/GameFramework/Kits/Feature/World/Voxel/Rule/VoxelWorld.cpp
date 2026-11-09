@@ -109,14 +109,14 @@ namespace sw
         return _pCatalog != nullptr && _pCatalog->isOpaque( getBlock( x, y, z ) );
     }
 
-    int32 VoxelWorld::findTopSolidY( int32 x, int32 z ) const
+    optional<int32> VoxelWorld::findTopSolidY( int32 x, int32 z ) const
     {
         for ( int32 y = kVoxelChunkHeight - 1; y >= 0; --y )
         {
             if ( isSolid( x, y, z ) )
                 return y;
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     bool VoxelWorld::isChunkDirty( int32 chunkX, int32 chunkZ ) const

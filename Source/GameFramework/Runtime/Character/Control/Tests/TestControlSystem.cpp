@@ -198,8 +198,8 @@ SW_TEST_CASE( ControlIntentHistoryTest, TicksAccumulatePerPawn )
     history.record( 10, pawn, hashed_string( "Hero" ), ControlRig::makeMove( 0.5f ) );
     history.record( 11, pawn, hashed_string( "Hero" ), ControlRig::makeMove( 1.0f ) );
     SW_REQUIRE_EQUAL( 1, history.getTrackCount() );
-    SW_EXPECT_EQUAL( 0, history.findTrack( hashed_string( "Hero" ) ) );
-    SW_EXPECT_EQUAL( -1, history.findTrack( hashed_string( "Other" ) ) );
+    SW_EXPECT_TRUE( history.findTrack( hashed_string( "Hero" ) ) == 0 );
+    SW_EXPECT_FALSE( history.findTrack( hashed_string( "Other" ) ).has_value() );
 
     vector<ControlIntent> listIntent;
     SW_REQUIRE_TRUE( history.copyTrack( 0, listIntent ) );
@@ -425,9 +425,10 @@ SW_TEST_CASE( ControlSystemTest, ButtonSchemaNamesFindTheirIndex )
     ControlRig rig;
     rig._pPawn->setButtonNames( { hashed_string( "Jump" ), hashed_string( "Fire" ) } );
     rig._pPawn->setAnalogNames( { hashed_string( "Throttle" ) } );
-    SW_EXPECT_EQUAL( 1, rig._pPawn->findButton( hashed_string( "Fire" ) ) );
-    SW_EXPECT_EQUAL( -1, rig._pPawn->findButton( hashed_string( "Nope" ) ) );
-    SW_EXPECT_EQUAL( 0, rig._pPawn->findAnalog( hashed_string( "Throttle" ) ) );
+    SW_EXPECT_TRUE( rig._pPawn->findButton( hashed_string( "Fire" ) ) == 1 );
+    SW_EXPECT_FALSE( rig._pPawn->findButton( hashed_string( "Nope" ) ).has_value() );
+    SW_EXPECT_TRUE( rig._pPawn->findAnalog( hashed_string( "Throttle" ) ) == 0 );
+    SW_EXPECT_FALSE( rig._pPawn->isButtonDown( nullopt ) );
     SW_EXPECT_FALSE( rig._pPawn->isButtonDown( -1 ) );
 }
 
@@ -479,10 +480,10 @@ SW_TEST_CASE( ControlSystemTest, RecordingCapturesEachTick )
     rig.tick();
     system.setRecording( false );
     rig.tick();
-    const int32 track = system.getHistory().findTrack( hashed_string( "Hero" ) );
-    SW_REQUIRE_TRUE( track >= 0 );
+    const optional<int32> track = system.getHistory().findTrack( hashed_string( "Hero" ) );
+    SW_REQUIRE_TRUE( track.has_value() );
     vector<ControlIntent> listIntent;
-    SW_REQUIRE_TRUE( system.getHistory().copyTrack( track, listIntent ) );
+    SW_REQUIRE_TRUE( system.getHistory().copyTrack( *track, listIntent ) );
     SW_REQUIRE_EQUAL( size_t{ 2 }, listIntent.size() );
     SW_EXPECT_EQUAL( 1.0f, listIntent[0]._move._y );
     SW_EXPECT_EQUAL( 16, system.getHistory().getCapacityTicks() );

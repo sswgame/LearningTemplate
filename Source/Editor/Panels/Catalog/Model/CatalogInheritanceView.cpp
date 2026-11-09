@@ -57,8 +57,8 @@ namespace sw::editor
 
             static string_view readWrittenAttribute( const CatalogXMLElement* pWritten, string_view name )
             {
-                const int32 index = pWritten != nullptr ? pWritten->findAttribute( name ) : -1;
-                return index >= 0 ? string_view( pWritten->_listAttribute[static_cast<size_t>( index )]._value ) : string_view{};
+                const optional<uint32> index = pWritten != nullptr ? pWritten->findAttribute( name ) : nullopt;
+                return index.has_value() ? string_view( pWritten->_listAttribute[*index]._value ) : string_view{};
             }
 
             /** @brief 줄의 칸을 구역의 열 순서로 채웁니다. 합친 값이 없는 칸(뺀 원소)은 적은 값 · 빈 글입니다. */
@@ -68,12 +68,12 @@ namespace sw::editor
                 for ( const string& column : section._listColumn )
                 {
                     CatalogChildCell cell;
-                    cell._column                 = column;
-                    cell._bKey                   = column == section._keyAttribute;
-                    const int32 writtenAttribute = pWritten != nullptr ? pWritten->findAttribute( column ) : -1;
-                    if ( writtenAttribute >= 0 )
+                    cell._column                            = column;
+                    cell._bKey                              = column == section._keyAttribute;
+                    const optional<uint32> writtenAttribute = pWritten != nullptr ? pWritten->findAttribute( column ) : nullopt;
+                    if ( writtenAttribute.has_value() )
                     {
-                        cell._value    = pWritten->_listAttribute[static_cast<size_t>( writtenAttribute )]._value;
+                        cell._value    = pWritten->_listAttribute[*writtenAttribute]._value;
                         cell._bWritten = true;
                     }
                     else
@@ -309,19 +309,19 @@ namespace sw::editor
             _error = "The inheritance could not be flattened - see the log";
             return;
         }
-        const int32 rootBaseIndex = root.findAttribute( DataInheritance::kBaseAttribute );
-        if ( rootBaseIndex >= 0 )
+        const optional<uint32> rootBaseIndex = root.findAttribute( DataInheritance::kBaseAttribute );
+        if ( rootBaseIndex.has_value() )
         {
-            _rootBase = root._listAttribute[static_cast<size_t>( rootBaseIndex )]._value;
+            _rootBase = root._listAttribute[*rootBaseIndex]._value;
             addParentFile( _rootBase );
         }
         for ( const int32 rowIndex : parsed.getRowIndices() )
         {
             const CatalogXMLElement& row       = parsed.getElement( rowIndex );
-            const int32              baseIndex = row.findAttribute( DataInheritance::kBaseAttribute );
-            if ( baseIndex < 0 )
+            const optional<uint32>   baseIndex = row.findAttribute( DataInheritance::kBaseAttribute );
+            if ( baseIndex.has_value() == false )
                 continue;
-            const string_view base      = row._listAttribute[static_cast<size_t>( baseIndex )]._value;
+            const string_view base      = row._listAttribute[*baseIndex]._value;
             const size_t      separator = base.find( DataCatalogInheritance::kFileSeparator );
             if ( separator != string_view::npos )
                 addParentFile( base.substr( 0, separator ) );
@@ -357,12 +357,12 @@ namespace sw::editor
         const string* pKey = findKeyAttribute( row._name );
         if ( pKey == nullptr )
             return {};
-        const int32 baseIndex = row.findAttribute( DataInheritance::kBaseAttribute );
-        string_view filePart;
-        string_view entryPart;
-        if ( baseIndex >= 0 )
+        const optional<uint32> baseIndex = row.findAttribute( DataInheritance::kBaseAttribute );
+        string_view            filePart;
+        string_view            entryPart;
+        if ( baseIndex.has_value() )
         {
-            const string_view base      = row._listAttribute[static_cast<size_t>( baseIndex )]._value;
+            const string_view base      = row._listAttribute[*baseIndex]._value;
             const size_t      separator = base.find( DataCatalogInheritance::kFileSeparator );
             filePart                    = separator != string_view::npos ? base.substr( 0, separator ) : string_view{};
             entryPart                   = separator != string_view::npos ? base.substr( separator + 1 ) : base;
@@ -370,11 +370,11 @@ namespace sw::editor
         else
         {
             // 항목이 `_base` 를 적지 않았으면 파일 상속의 같은 id 가 부모다.
-            const int32 keyIndex = row.findAttribute( *pKey );
-            if ( _rootBase.empty() || keyIndex < 0 )
+            const optional<uint32> keyIndex = row.findAttribute( *pKey );
+            if ( _rootBase.empty() || keyIndex.has_value() == false )
                 return {};
             filePart  = _rootBase;
-            entryPart = row._listAttribute[static_cast<size_t>( keyIndex )]._value;
+            entryPart = row._listAttribute[*keyIndex]._value;
         }
         XMLNode root;
         if ( filePart.empty() )
@@ -399,11 +399,11 @@ namespace sw::editor
 
     XMLNode CatalogInheritanceView::findFlatEntry( const CatalogXMLElement& row ) const
     {
-        const string* pKey     = findKeyAttribute( row._name );
-        const int32   keyIndex = pKey != nullptr ? row.findAttribute( *pKey ) : -1;
-        if ( keyIndex < 0 || _flatDoc.getRoot().isValid() == false )
+        const string*          pKey     = findKeyAttribute( row._name );
+        const optional<uint32> keyIndex = pKey != nullptr ? row.findAttribute( *pKey ) : nullopt;
+        if ( keyIndex.has_value() == false || _flatDoc.getRoot().isValid() == false )
             return {};
-        const string_view id = row._listAttribute[static_cast<size_t>( keyIndex )]._value;
+        const string_view id = row._listAttribute[*keyIndex]._value;
         for ( XMLNode entry = _flatDoc.getRoot().findChild( row._name.c_str() ); entry.isValid(); entry = entry.findNextSibling( row._name.c_str() ) )
         {
             if ( entry.getAttributeText( pKey->c_str() ) == id )
@@ -439,8 +439,8 @@ namespace sw::editor
                 ++occurrence;
                 continue;
             }
-            const int32 keyIndex = child.findAttribute( step._keyAttribute );
-            if ( keyIndex >= 0 && child._listAttribute[static_cast<size_t>( keyIndex )]._value == step._key )
+            const optional<uint32> keyIndex = child.findAttribute( step._keyAttribute );
+            if ( keyIndex.has_value() && child._listAttribute[*keyIndex]._value == step._key )
                 return childIndex;
         }
         return -1;

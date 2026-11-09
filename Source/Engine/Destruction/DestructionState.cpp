@@ -6,6 +6,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/BitUtil.h"
 #include "Core/Math/MathUtil.h"
@@ -97,13 +98,13 @@ namespace sw
                 return hash;
             }
 
-            /** @brief 오름차순 목록에서 값의 인덱스를 반환합니다. 없으면 -1 입니다. */
-            static int32 findSorted( const vector<uint32>& listSorted, uint32 value )
+            /** @brief 오름차순 목록에서 값의 인덱스를 반환합니다. 없으면 비어 있습니다. */
+            static optional<uint32> findSorted( const vector<uint32>& listSorted, uint32 value )
             {
                 const auto iter = std::lower_bound( listSorted.begin(), listSorted.end(), value );
                 if ( iter == listSorted.end() || *iter != value )
-                    return -1;
-                return static_cast<int32>( iter - listSorted.begin() );
+                    return nullopt;
+                return static_cast<uint32>( iter - listSorted.begin() );
             }
 
             static void addUnique( vector<uint32>& inoutList, uint32 value )
@@ -353,11 +354,11 @@ namespace sw
                 {
                     if ( _listLinkBroken[link] != SW_FALSE )
                         continue;
-                    const FractureLink& linkData = graph._listLink[link];
-                    const uint32        other    = linkData._leafA == leaf ? linkData._leafB : linkData._leafA;
-                    const int32         otherAt  = DestructionStateInternal::findSorted( listNode, _listLeafActive[other] );
-                    if ( otherAt >= 0 && static_cast<uint32>( otherAt ) != index )
-                        UnionFindUtil::unite( listParent, index, static_cast<uint32>( otherAt ) );
+                    const FractureLink&    linkData = graph._listLink[link];
+                    const uint32           other    = linkData._leafA == leaf ? linkData._leafB : linkData._leafA;
+                    const optional<uint32> otherAt  = DestructionStateInternal::findSorted( listNode, _listLeafActive[other] );
+                    if ( otherAt.has_value() && *otherAt != index )
+                        UnionFindUtil::unite( listParent, index, *otherAt );
                 }
             }
         }
@@ -392,10 +393,10 @@ namespace sw
                     const FractureLink& linkData = graph._listLink[link];
                     if ( _listLinkBroken[link] != SW_FALSE || linkData._leafA != leaf )
                         continue;
-                    const int32 otherAt = DestructionStateInternal::findSorted( listNode, _listLeafActive[linkData._leafB] );
-                    if ( otherAt < 0 || static_cast<uint32>( otherAt ) == index )
+                    const optional<uint32> otherAt = DestructionStateInternal::findSorted( listNode, _listLeafActive[linkData._leafB] );
+                    if ( otherAt.has_value() == false || *otherAt == index )
                         continue;
-                    const uint32 other = static_cast<uint32>( otherAt );
+                    const uint32 other = *otherAt;
                     uint32       pair  = 0xFFFFFFFFu;
                     for ( const OverloadNeighbor& neighbor : outGraph._listNeighbor[index] )
                     {

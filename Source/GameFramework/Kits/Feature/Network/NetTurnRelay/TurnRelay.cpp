@@ -4,6 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Hash/SecureUtil.h"
 #include "Core/Math/MathUtil.h"
@@ -30,10 +31,10 @@ namespace sw
                 return SipHashKey{ LittleEndianUtil::readUint64( uuid._arrBytes ), LittleEndianUtil::readUint64( uuid._arrBytes + 8 ) };
             }
 
-            /** @brief @p token 이 맞는 차지된 자리를 반환합니다. 토큰이 0 이거나 맞는 자리가 없으면 -1 입니다. */
-            static int32 findReturningSeat( const TurnRoom& room, uint32 token )
+            /** @brief @p token 이 맞는 차지된 자리를 반환합니다. 토큰이 0 이거나 맞는 자리가 없으면 비어 있습니다. */
+            static optional<int32> findReturningSeat( const TurnRoom& room, uint32 token )
             {
-                int32 seatIndex = constant::invalid_index::kInt32;
+                optional<int32> seatIndex;
                 for ( size_t index = 0; index < room._listSeat.size() && token != 0; ++index )
                 {
                     if ( room._listSeat[index]._bTaken && room._listSeat[index]._token == token )
@@ -42,8 +43,8 @@ namespace sw
                 return seatIndex;
             }
 
-            /** @brief 비었으면 원하는 자리(@p wantedSeat), 아니면 앞에서부터 첫 빈 자리를 반환합니다. 다 찼으면 -1 입니다. */
-            static int32 findFreeSeat( const TurnRoom& room, int64 wantedSeat )
+            /** @brief 비었으면 원하는 자리(@p wantedSeat), 아니면 앞에서부터 첫 빈 자리를 반환합니다. 다 찼으면 비어 있습니다. */
+            static optional<int32> findFreeSeat( const TurnRoom& room, int64 wantedSeat )
             {
                 const bool bWantedFree = 0 <= wantedSeat && wantedSeat < static_cast<int64>( room._listSeat.size() ) &&
                                          room._listSeat[static_cast<size_t>( wantedSeat )]._bTaken == SW_FALSE;
@@ -54,7 +55,7 @@ namespace sw
                     if ( room._listSeat[index]._bTaken == SW_FALSE )
                         return static_cast<int32>( index );
                 }
-                return constant::invalid_index::kInt32;
+                return nullopt;
             }
         };
     } // namespace
@@ -277,32 +278,32 @@ namespace sw
             pRoom = &_listRoom.back();
         }
         // 토큰이 맞는 자리는 돌아온 것으로 본다. 그 자리의 연결이 아직 살아 있으면 빼앗지 않는다. 토큰이 없으면 빈 자리를 준다.
-        int32      seatIndex  = TurnRelayInternal::findReturningSeat( *pRoom, token );
-        const bool bReturning = seatIndex >= 0;
-        if ( bReturning && pRoom->_listSeat[static_cast<size_t>( seatIndex )]._connectionID >= 0 )
+        optional<int32> seatIndex  = TurnRelayInternal::findReturningSeat( *pRoom, token );
+        const bool      bReturning = seatIndex.has_value();
+        if ( bReturning && pRoom->_listSeat[static_cast<size_t>( *seatIndex )]._connectionID >= 0 )
         {
             sendDenied( connectionID, roomID, TurnRejectReason::SeatInUse );
             return true;
         }
-        if ( seatIndex < 0 )
+        if ( seatIndex.has_value() == false )
             seatIndex = TurnRelayInternal::findFreeSeat( *pRoom, wantedSeat );
-        if ( seatIndex < 0 )
+        if ( seatIndex.has_value() == false )
         {
             sendDenied( connectionID, roomID, TurnRejectReason::RoomFull );
             return true;
         }
-        TurnSeat& seat        = pRoom->_listSeat[static_cast<size_t>( seatIndex )];
+        TurnSeat& seat        = pRoom->_listSeat[static_cast<size_t>( *seatIndex )];
         seat._bTaken          = SW_TRUE;
         seat._connectionID    = connectionID;
         seat._sentActionCount = static_cast<int32>( MathUtil::min<uint64>( knownCount, pRoom->_listAction.size() ) );
         if ( bReturning == false )
             seat._token = nextToken();
-        sendJoined( connectionID, roomID, seatIndex, seat._token );
+        sendJoined( connectionID, roomID, *seatIndex, seat._token );
 
         TurnRelayEvent event;
         event._kind   = bReturning ? TurnRelayEvent::Kind::SeatReturned : TurnRelayEvent::Kind::Joined;
         event._roomID = roomID;
-        event._seat   = seatIndex;
+        event._seat   = *seatIndex;
         _eventBuffer.push( event );
         announceStart( *pRoom, seat, connectionID );
         return true;

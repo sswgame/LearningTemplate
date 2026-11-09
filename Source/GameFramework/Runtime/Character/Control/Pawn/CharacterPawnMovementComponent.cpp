@@ -54,8 +54,8 @@ namespace sw
         , _facingMode{ PawnFacingMode::MoveDirection }
         , _velocity{}
         , _facingYaw{ 0.0f }
-        , _sprintIndex{ constant::invalid_index::kInt32 }
-        , _jumpIndex{ constant::invalid_index::kInt32 }
+        , _sprintIndex{}
+        , _jumpIndex{}
         , _bSuspended{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -68,8 +68,8 @@ namespace sw
         setTickGroup( TickGroup::PrePhysics );
         GameObject*          pOwner  = getOwner();
         const PawnComponent* pPawn   = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
-        _sprintIndex                 = pPawn != nullptr && _sprintButton.empty() == false ? pPawn->findButton( _sprintButton ) : constant::invalid_index::kInt32;
-        _jumpIndex                   = pPawn != nullptr && _jumpButton.empty() == false ? pPawn->findButton( _jumpButton ) : constant::invalid_index::kInt32;
+        _sprintIndex                 = pPawn != nullptr && _sprintButton.empty() == false ? pPawn->findButton( _sprintButton ) : nullopt;
+        _jumpIndex                   = pPawn != nullptr && _jumpButton.empty() == false ? pPawn->findButton( _jumpButton ) : nullopt;
         const SceneComponent* pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         if ( pScene != nullptr )
             _facingYaw = pScene->getLocalRotation()._y;

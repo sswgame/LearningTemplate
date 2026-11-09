@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
@@ -124,7 +125,7 @@ namespace sw::editor
         static float2 canvasToMinimap( const EditorGraphMinimapTransform& transform, const float2& canvasPoint );
         /** @brief 미니맵 점 @p mapPoint 를 캔버스 점으로 되돌립니다. */
         static float2 minimapToCanvas( const EditorGraphMinimapTransform& transform, const float2& mapPoint );
-        /** @brief 캔버스 점 @p canvasPoint 에 가운데가 가장 가까운 노드의 id 입니다. 노드가 없으면 0 입니다. */
-        static int32 findNearestNode( const vector<EditorGraphNodeRect>& listRect, const float2& canvasPoint );
+        /** @brief 캔버스 점 @p canvasPoint 에 가운데가 가장 가까운 노드의 id 입니다. 노드가 없으면 비어 있습니다. */
+        static optional<int32> findNearestNode( const vector<EditorGraphNodeRect>& listRect, const float2& canvasPoint );
     };
 } // namespace sw::editor

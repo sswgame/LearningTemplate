@@ -108,10 +108,10 @@ SW_TEST_CASE( AtlasGridUtilTest, CellAndUVRoundTrip )
     SW_EXPECT_NEAR( 0.5f, rect._y, 1e-5f );
     SW_EXPECT_NEAR( 0.25f, rect._z, 1e-5f );
     SW_EXPECT_NEAR( 0.5f, rect._w, 1e-5f );
-    SW_EXPECT_EQUAL( 5, AtlasGridUtil::findCellAtUV( rect._x + 0.01f, rect._y + 0.01f, 4, 2 ) );
-    SW_EXPECT_EQUAL( -1, AtlasGridUtil::findCellAtUV( 1.0f, 0.5f, 4, 2 ) );
-    SW_EXPECT_EQUAL( -1, AtlasGridUtil::findCellAtUV( 0.5f, -0.1f, 4, 2 ) );
-    SW_EXPECT_EQUAL( 0, AtlasGridUtil::findCellAtUV( 0.9f, 0.9f, 0, 0 ) ); // 틀린 격자는 한 칸으로 본다
+    SW_EXPECT_TRUE( AtlasGridUtil::findCellAtUV( rect._x + 0.01f, rect._y + 0.01f, 4, 2 ) == 5 );
+    SW_EXPECT_FALSE( AtlasGridUtil::findCellAtUV( 1.0f, 0.5f, 4, 2 ).has_value() );
+    SW_EXPECT_FALSE( AtlasGridUtil::findCellAtUV( 0.5f, -0.1f, 4, 2 ).has_value() );
+    SW_EXPECT_TRUE( AtlasGridUtil::findCellAtUV( 0.9f, 0.9f, 0, 0 ) == 0 ); // 틀린 격자는 한 칸으로 본다
 }
 
 // ---------------------------------------------------------------------- 문서: 값이 바뀌었을 때만 고쳤다고 한다

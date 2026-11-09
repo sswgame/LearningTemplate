@@ -55,29 +55,29 @@ namespace sw
         _stepTime = kDefaultStepTime;
     }
 
-    int32 ElementRuleCatalog::addFlag( const hashed_string& id )
+    optional<int32> ElementRuleCatalog::addFlag( const hashed_string& id )
     {
-        const int32 existing = findFlag( id );
-        if ( existing >= 0 )
+        const optional<int32> existing = findFlag( id );
+        if ( existing.has_value() )
             return existing;
         if ( static_cast<int32>( _listFlag.size() ) >= kMaxFlagCount )
-            return constant::invalid_index::kInt32;
+            return nullopt;
         _listFlag.push_back( id );
         return static_cast<int32>( _listFlag.size() ) - 1;
     }
 
-    int32 ElementRuleCatalog::addMaterial( const hashed_string& id, const vector<hashed_string>& listFlag )
+    optional<int32> ElementRuleCatalog::addMaterial( const hashed_string& id, const vector<hashed_string>& listFlag )
     {
-        if ( findMaterial( id ) >= 0 || static_cast<int32>( _listMaterial.size() ) >= kMaxMaterialCount )
-            return constant::invalid_index::kInt32;
+        if ( findMaterial( id ).has_value() || static_cast<int32>( _listMaterial.size() ) >= kMaxMaterialCount )
+            return nullopt;
         ElementMaterialDef material;
         material._id = id;
         for ( const hashed_string& flagName : listFlag )
         {
-            const int32 flag = findFlag( flagName );
-            if ( flag < 0 )
-                return constant::invalid_index::kInt32;
-            material._flags |= 1u << static_cast<uint32>( flag );
+            const optional<int32> flag = findFlag( flagName );
+            if ( flag.has_value() == false )
+                return nullopt;
+            material._flags |= 1u << static_cast<uint32>( *flag );
         }
         _listMaterial.push_back( material );
         return static_cast<int32>( _listMaterial.size() ) - 1;
@@ -100,10 +100,10 @@ namespace sw
         def._listParamValue.push_back( value );
     }
 
-    int32 ElementRuleCatalog::addStatus( const hashed_string& id, ElementStatusKind kind, int32 steps )
+    optional<int32> ElementRuleCatalog::addStatus( const hashed_string& id, ElementStatusKind kind, int32 steps )
     {
-        if ( findStatus( id ) >= 0 || static_cast<int32>( _listStatus.size() ) >= kMaxStatusCount )
-            return constant::invalid_index::kInt32;
+        if ( findStatus( id ).has_value() || static_cast<int32>( _listStatus.size() ) >= kMaxStatusCount )
+            return nullopt;
         ElementStatusDef status;
         status._id    = id;
         status._kind  = kind;
@@ -114,9 +114,9 @@ namespace sw
 
     int32 ElementRuleCatalog::addStimulus( const hashed_string& id )
     {
-        const int32 existing = findStimulus( id );
-        if ( existing >= 0 )
-            return existing;
+        const optional<int32> existing = findStimulus( id );
+        if ( existing.has_value() )
+            return *existing;
         ElementStimulusDef stimulus;
         stimulus._id = id;
         _listStimulus.push_back( stimulus );
@@ -134,44 +134,44 @@ namespace sw
         _listStepRule.push_back( rule );
     }
 
-    int32 ElementRuleCatalog::findFlag( const hashed_string& id ) const
+    optional<int32> ElementRuleCatalog::findFlag( const hashed_string& id ) const
     {
         for ( size_t index = 0; index < _listFlag.size(); ++index )
         {
             if ( _listFlag[index] == id )
                 return static_cast<int32>( index );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
-    int32 ElementRuleCatalog::findMaterial( const hashed_string& id ) const
+    optional<int32> ElementRuleCatalog::findMaterial( const hashed_string& id ) const
     {
         for ( size_t index = 0; index < _listMaterial.size(); ++index )
         {
             if ( _listMaterial[index]._id == id )
                 return static_cast<int32>( index );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
-    int32 ElementRuleCatalog::findStatus( const hashed_string& id ) const
+    optional<int32> ElementRuleCatalog::findStatus( const hashed_string& id ) const
     {
         for ( size_t index = 0; index < _listStatus.size(); ++index )
         {
             if ( _listStatus[index]._id == id )
                 return static_cast<int32>( index );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
-    int32 ElementRuleCatalog::findStimulus( const hashed_string& id ) const
+    optional<int32> ElementRuleCatalog::findStimulus( const hashed_string& id ) const
     {
         for ( size_t index = 0; index < _listStimulus.size(); ++index )
         {
             if ( _listStimulus[index]._id == id )
                 return static_cast<int32>( index );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     bool ElementRuleCatalog::hasFlag( int32 material, int32 flag ) const
@@ -201,14 +201,14 @@ namespace sw
         return loadRoot( root, sourceName );
     }
 
-    bool ElementRuleCatalog::readIndex( const hashed_string& name, const XMLNode& node, const utf8* pAttribute, int32 ( ElementRuleCatalog::*pFind )( const hashed_string& ) const,
-                                        int32& outIndex, string_view sourceName ) const
+    bool ElementRuleCatalog::readIndex( const hashed_string& name, const XMLNode& node, const utf8* pAttribute, optional<int32> ( ElementRuleCatalog::*pFind )( const hashed_string& ) const,
+                                        optional<int32>& outIndex, string_view sourceName ) const
     {
-        outIndex = constant::invalid_index::kInt32;
-        if ( name.empty() ) // 적지 않으면 "없음"(-1)
+        outIndex.reset();
+        if ( name.empty() ) // 적지 않으면 "없음"(빈 값)
             return true;
         outIndex = ( this->*pFind )( name );
-        if ( outIndex >= 0 )
+        if ( outIndex.has_value() )
             return true;
         SW_LOG_WARNING_ID( "ElementRuleCatalog.NamesNothingDeclaredTable", "%#: <%#> %#=\"%#\" names nothing declared in this table", sourceName, node.getName(), pAttribute, name.c_str() );
         return false;
@@ -228,7 +228,7 @@ namespace sw
         bValid                           = readIndex( params._floodStatus, node, "floodStatus", &ElementRuleCatalog::findStatus, outRule._floodStatus, sourceName ) && bValid;
         bValid                           = readIndex( params._through, node, "through", &ElementRuleCatalog::findFlag, outRule._floodThrough, sourceName ) && bValid;
         outRule._event                   = params._event;
-        if ( outRule._floodStatus >= 0 && outRule._floodThrough < 0 )
+        if ( outRule._floodStatus.has_value() && outRule._floodThrough.has_value() == false )
         {
             SW_LOG_WARNING_ID( "ElementRuleCatalog.FloodStatusNeedsThroughFlag", "%#: <On floodStatus> needs through=\"<flag>\"", sourceName );
             bValid = false;
@@ -260,7 +260,7 @@ namespace sw
         outRule._stepsParam          = params._stepsParam;
         outRule._event               = params._event;
         outRule._pattern             = params._pattern;
-        if ( bValid && outRule._status < 0 )
+        if ( bValid && outRule._status.has_value() == false )
         {
             SW_LOG_WARNING_ID( "ElementRuleCatalog.NeedsStatus", "%#: <%#> needs a status", sourceName, node.getName() );
             bValid = false;
@@ -291,7 +291,7 @@ namespace sw
     {
         ElementNameParams flag;
         const bool        bRead = XMLFields::readFields( node, flag, sourceName );
-        if ( addFlag( flag._id ) < 0 )
+        if ( addFlag( flag._id ).has_value() == false )
         {
             SW_LOG_WARNING_ID( "ElementRuleCatalog.MoreFlags", "%#: more than %# flags", sourceName, kMaxFlagCount );
             return false;
@@ -303,7 +303,7 @@ namespace sw
     {
         ElementStatusDef status; // 종류는 ENUM() 이름 · steps >= 1
         const bool       bRead = XMLFields::readFields( node, status, sourceName );
-        if ( addStatus( status._id, status._kind, status._steps ) < 0 )
+        if ( addStatus( status._id, status._kind, status._steps ).has_value() == false )
         {
             SW_LOG_WARNING_ID( "ElementRuleCatalog.DuplicateStatusMoreStatuses", "%#: duplicate status or more than %# statuses", sourceName, kMaxStatusCount );
             return false;
@@ -318,8 +318,8 @@ namespace sw
         vector<hashed_string> listFlag;
         StringUtil::forEachToken( child.getAttributeText( "flags" ), ", ;", [&listFlag]( string_view token )
         { listFlag.push_back( hashed_string( string( token ).c_str() ) ); } );
-        const int32 material = addMaterial( hashed_string( string( child.getAttributeText( "id" ) ).c_str() ), listFlag );
-        if ( material < 0 )
+        const optional<int32> material = addMaterial( hashed_string( string( child.getAttributeText( "id" ) ).c_str() ), listFlag );
+        if ( material.has_value() == false )
         {
             SW_LOG_WARNING_ID( "ElementRuleCatalog.MaterialIdDuplicateNames", "%#: <Material id=\"%#\"> is a duplicate or names an undeclared flag", sourceName, child.getAttributeText( "id" ) );
             bValid = false;
@@ -337,7 +337,7 @@ namespace sw
                 bValid = false;
                 continue;
             }
-            setMaterialParam( material, hashed_string( attribute.getName() ), value );
+            setMaterialParam( *material, hashed_string( attribute.getName() ), value );
         }
         return bValid;
     }

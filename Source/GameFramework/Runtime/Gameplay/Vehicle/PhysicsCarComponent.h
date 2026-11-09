@@ -3,6 +3,7 @@
  * @brief 물리 차 폰의 이동입니다. 의도를 같은 오브젝트의 `WheeledVehicleComponent` 운전 입력(페달, 조향, 브레이크, 핸드브레이크)으로 바꿉니다.
  */
 #pragma once
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -51,7 +52,7 @@ namespace sw
          * @brief 의도를 운전 입력으로 바꿉니다. @p carForward 는 차체의 월드 앞 방향(XZ)이고, @p forwardSpeed 는 앞 방향 속도입니다.
          * @param reverseSpeed 이 값보다 빠르게 앞으로 가는 중이면 뒤쪽 의도를 브레이크로 처리합니다(m/s).
          */
-        static PhysicsCarInput toCarInput( const ControlIntent& intent, const float3& carForward, float32 forwardSpeed, float32 reverseSpeed, int32 handBrakeIndex );
+        static PhysicsCarInput toCarInput( const ControlIntent& intent, const float3& carForward, float32 forwardSpeed, float32 reverseSpeed, optional<int32> handBrakeIndex );
 
     private:
         PROPERTY( Category = "Vehicle", DisplayName = "Hand Brake Button", Tooltip = "Intent button held for the hand brake" )
@@ -59,6 +60,6 @@ namespace sw
         PROPERTY( Category = "Vehicle", DisplayName = "Reverse Speed", Min = 0.0, Tooltip = "Backward intent brakes above this forward speed and reverses below it", Units = "m/s" )
         float32 _reverseSpeed;
 
-        int32 _handBrakeIndex;
+        optional<int32> _handBrakeIndex;
     };
 } // namespace sw

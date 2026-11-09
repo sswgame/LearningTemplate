@@ -88,7 +88,7 @@ namespace sw
         , _reach{ 1.5f }
         , _throwSpeed{ 0.0f }
         , _fallback{}
-        , _grabIndex{ constant::invalid_index::kInt32 }
+        , _grabIndex{}
         , _listTagged{}
     {
         setCanEverTick( true );
@@ -100,8 +100,8 @@ namespace sw
         setTickGroup( TickGroup::PrePhysics );
         const GameObject*    pOwner = getOwner();
         const PawnComponent* pPawn  = pOwner != nullptr && _grabButton.empty() == false ? pOwner->getComponent<PawnComponent>() : nullptr;
-        _grabIndex                  = pPawn != nullptr ? pPawn->findButton( _grabButton ) : constant::invalid_index::kInt32;
-        if ( _grabButton.empty() == false && _grabIndex < 0 )
+        _grabIndex                  = pPawn != nullptr ? pPawn->findButton( _grabButton ) : nullopt;
+        if ( _grabButton.empty() == false && _grabIndex.has_value() == false )
             SW_LOG_ERROR_ID( "GrabberComponent.GrabButtonNotOnPawn", "Grabber on '%#' listens to button '%#' but its object has no pawn with that button - the button does nothing",
                              pOwner != nullptr ? pOwner->getName().c_str() : "?", _grabButton.c_str() );
     }
@@ -109,7 +109,7 @@ namespace sw
     void GrabberComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );
-        if ( _grabIndex < 0 )
+        if ( _grabIndex.has_value() == false )
             return;
         GameObject*          pOwner   = getOwner();
         const PawnComponent* pPawn    = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;

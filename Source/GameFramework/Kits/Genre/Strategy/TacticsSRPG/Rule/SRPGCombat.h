@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -49,7 +50,7 @@ namespace sw
         SRPGStrikePreview         _supportAttack{};
         SRPGStrikePreview         _counter{}; ///< 방어자가 살아남을 때의 반격이다
         int32                     _defender{ constant::invalid_index::kInt32 };
-        int32                     _supportDefender{ constant::invalid_index::kInt32 }; ///< 대신 맞는 아군이다(없으면 -1)
+        optional<int32>           _supportDefender{}; ///< 대신 맞는 아군이다(없으면 비어 있다)
         SRPGWeaponStatus          _status{ SRPGWeaponStatus::InvalidTarget };
     };
 } // namespace sw
@@ -100,8 +101,8 @@ namespace sw
         /** @brief @p attackerCell 로 옮겼다고 가정하고 예측합니다(AI 와 이동 전 미리 보기용). */
         static SRPGWeaponStatus computeForecastFrom( const SRPGBattlefield& field, int32 attackerIndex, const int2& attackerCell, int32 weaponIndex, int32 defenderIndex,
                                                      bool bAfterMove, SRPGForecast& outForecast );
-        /** @brief 방어자가 @p attackerCell 의 공격자에게 반격할 무기(기대 피해가 가장 큰 것)를 반환합니다. 없으면 -1 입니다. */
-        static int32 findCounterWeapon( const SRPGBattlefield& field, int32 defenderIndex, int32 attackerIndex, const int2& attackerCell );
+        /** @brief 방어자가 @p attackerCell 의 공격자에게 반격할 무기(기대 피해가 가장 큰 것)를 반환합니다. 없으면 비어 있습니다. */
+        static optional<int32> findCounterWeapon( const SRPGBattlefield& field, int32 defenderIndex, int32 attackerIndex, const int2& attackerCell );
 
         /** @brief 공격합니다. 실패하면 상태만 담고 아무것도 바꾸지 않습니다. 행동 끝내기(`endUnitAction`)는 호출하는 쪽이 합니다. */
         static SRPGWeaponStatus executeAttack( SRPGBattlefield& field, int32 attackerIndex, int32 weaponIndex, int32 defenderIndex, SRPGCombatResult& outResult );

@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -66,8 +67,8 @@ namespace sw
         bool isSolid( int32 x, int32 y, int32 z ) const;
         bool isOpaque( int32 x, int32 y, int32 z ) const;
         bool isInside( int32 x, int32 y, int32 z ) const;
-        /** @brief 그 기둥에서 가장 높은 단단한 블록의 y 를 반환합니다. 없으면 -1 입니다. */
-        int32 findTopSolidY( int32 x, int32 z ) const;
+        /** @brief 그 기둥에서 가장 높은 단단한 블록의 y 를 반환합니다. 없으면 비어 있습니다. */
+        optional<int32> findTopSolidY( int32 x, int32 z ) const;
 
         /** @brief 다시 메싱할 청크이면 true 입니다. */
         bool isChunkDirty( int32 chunkX, int32 chunkZ ) const;

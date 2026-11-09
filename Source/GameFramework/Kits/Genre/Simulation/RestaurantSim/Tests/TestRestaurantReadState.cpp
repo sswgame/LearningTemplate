@@ -444,7 +444,7 @@ SW_TEST_CASE_F( RestaurantReadStateTest, RefusesBrokenBatches )
     RestaurantForged neverSpoils;
     neverSpoils._listBatch[0]._daysLeft = -1;
     SW_REQUIRE_TRUE( read( neverSpoils ) );
-    SW_EXPECT_EQUAL( -1, _simulation.getStock().findEarliestExpiry( "noodle" ) );
+    SW_EXPECT_FALSE( _simulation.getStock().findEarliestExpiry( "noodle" ).has_value() );
 }
 
 /**

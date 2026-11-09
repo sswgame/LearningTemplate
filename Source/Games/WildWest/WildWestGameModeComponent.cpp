@@ -100,12 +100,12 @@ namespace sw
             SW_LOG_ERROR_ID( "WildWestGameMode.PlayerDoesNotPoint", "[WildWest] Player does not point at an object with a pawn - the prairie cannot open" );
             return false;
         }
-        if ( pPlayerPawn->findButton( _whistleButton ) < 0 )
+        if ( pPlayerPawn->findButton( _whistleButton ).has_value() == false )
         {
             SW_LOG_ERROR_ID( "WildWestGameMode.RiderPawnNoWhistle", "[WildWest] the rider pawn has no whistle button '%#' - the prairie cannot open", _whistleButton.c_str() );
             return false;
         }
-        if ( pPlayerPawn->findButton( _useButton ) < 0 )
+        if ( pPlayerPawn->findButton( _useButton ).has_value() == false )
         {
             SW_LOG_ERROR_ID( "WildWestGameMode.RiderPawnNoUse", "[WildWest] the rider pawn has no use button '%#' - the prairie cannot open", _useButton.c_str() );
             return false;

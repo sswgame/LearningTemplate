@@ -3,6 +3,7 @@
  * @brief 2D 폰 이동입니다. 의도를 같은 오브젝트의 2D 캐릭터 컨트롤러(좌우 걷기, 점프, 가감속)로 옮깁니다.
  */
 #pragma once
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -50,7 +51,7 @@ namespace sw
         PROPERTY( Category = "Movement", DisplayName = "Jump Speed", Min = 0.0, Units = "m/s" )
         float32 _jumpSpeed;
 
-        float32 _velocity; ///< 지금 수평 속도
-        int32   _jumpIndex;
+        float32         _velocity; ///< 지금 수평 속도
+        optional<int32> _jumpIndex;
     };
 } // namespace sw

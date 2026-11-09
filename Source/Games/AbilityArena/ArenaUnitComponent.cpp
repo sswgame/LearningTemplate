@@ -25,7 +25,7 @@ namespace sw
         , _facing{ 0.0f, 0.0f, 1.0f }
         , _deathScale{ 1.0f, 1.0f, 1.0f }
         , _deathTimer{ -1.0f }
-        , _arrButtonIndex{ -1, -1, -1, -1 }
+        , _arrButtonIndex{}
         , _previousButtonDown{ 0 }
         , _bButtonsResolved{ SW_FALSE }
         , _reserved{ 0 }
@@ -119,11 +119,11 @@ namespace sw
         const ControlIntent& intent = pawn.getIntent();
         for ( int32 buttonIndex = 0; buttonIndex < kAbilityButtonCount; ++buttonIndex )
         {
-            const int32 slot    = _arrButtonIndex[buttonIndex];
-            const int32 inputID = kArrAbilityButton[buttonIndex]._inputID;
-            if ( slot < 0 )
+            const optional<int32> slot    = _arrButtonIndex[buttonIndex];
+            const int32           inputID = kArrAbilityButton[buttonIndex]._inputID;
+            if ( ControlIntent::isInRange( slot ) == false )
                 continue;
-            const bool bWasDown = ( _previousButtonDown & ( 1u << slot ) ) != 0;
+            const bool bWasDown = ( _previousButtonDown & ( 1u << *slot ) ) != 0;
             if ( intent.wasTriggered( slot ) )
                 abilitySystem.abilityInputPressed( inputID );
             if ( bWasDown && intent.isDown( slot ) == false )

@@ -191,9 +191,9 @@ namespace sw
 
         const DialogueAssetNode* pNode = _graph.findNode( _currentNodeID );
         DialogueStepInput        input{};
-        input._choiceIndex = choiceIndex;
-        const int32 nextID = ( pNode != nullptr ) ? DialogueCursor::step( _graph, *pNode, input ) : 0;
-        if ( nextID > 0 )
+        input._choiceIndex           = choiceIndex;
+        const optional<int32> nextID = ( pNode != nullptr ) ? DialogueCursor::step( _graph, *pNode, input ) : nullopt;
+        if ( nextID.has_value() )
         {
             executeNode( nextID );
             return true;
@@ -363,34 +363,35 @@ namespace sw
         }
     }
 
-    int32 DialogueRunnerComponent::findNextNode( int32 nodeID, const DialogueStepInput& input ) const
+    optional<int32> DialogueRunnerComponent::findNextNode( int32 nodeID, const DialogueStepInput& input ) const
     {
         // 노드를 다시 찾는다 — Action 핸들러가 그래프를 갈았으면 앞서 찾은 노드 참조는 죽은 메모리다.
         const DialogueAssetNode* pNode = _graph.findNode( nodeID );
-        return pNode != nullptr ? DialogueCursor::step( _graph, *pNode, input ) : 0;
+        return pNode != nullptr ? DialogueCursor::step( _graph, *pNode, input ) : nullopt;
     }
 
-    void DialogueRunnerComponent::executeNode( int32 startNodeID )
+    void DialogueRunnerComponent::executeNode( optional<int32> startNodeID )
     {
         // 재귀로 따라가면 깊이 제한에 닿기 전에 스택이 넘친다(Debug 에서 프레임이 크다) — 지나가는 노드는 반복으로 돈다.
-        int32 nodeID = startNodeID;
+        optional<int32> nodeID = startNodeID;
         for ( int32 chainedCount = 0; chainedCount <= kMaxChainedNodes; ++chainedCount )
         {
             if ( runNode( nodeID, nodeID ) == false )
                 return;
         }
-        SW_LOG_WARNING_ID( "DialogueRunnerComponent.DialogueRunnerCyclicNodeTransition", "DialogueRunner: Cyclic node transition detected at node %#; breaking loop.", nodeID );
+        SW_LOG_WARNING_ID( "DialogueRunnerComponent.DialogueRunnerCyclicNodeTransition", "DialogueRunner: Cyclic node transition detected at node %#; breaking loop.", nodeID.value_or( 0 ) );
         finishDialogue();
     }
 
-    bool DialogueRunnerComponent::runNode( int32 nodeID, int32& outNextNodeID )
+    bool DialogueRunnerComponent::runNode( optional<int32> nextNodeID, optional<int32>& outNextNodeID )
     {
         ++_transitionSerial;
-        if ( nodeID <= 0 )
+        if ( nextNodeID.has_value() == false )
         {
             finishDialogue();
             return false;
         }
+        const int32 nodeID = *nextNodeID;
 
         const DialogueAssetNode* pNode = _graph.findNode( nodeID );
         if ( pNode == nullptr )

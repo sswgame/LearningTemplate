@@ -520,10 +520,10 @@ namespace sw
         return true;
     }
 
-    int32 FightingMatch::findCompletedMove( int32 player, bool bBufferCandidates ) const
+    optional<int32> FightingMatch::findCompletedMove( int32 player, bool bBufferCandidates ) const
     {
-        const FighterRuntime& fighter   = _arrFighter[player];
-        int32                 bestIndex = constant::invalid_index::kInt32;
+        const FighterRuntime& fighter = _arrFighter[player];
+        optional<int32>       bestIndex;
         for ( size_t index = 0; index < fighter._pDef->_listMove.size(); ++index )
         {
             const int32        moveIndex = static_cast<int32>( index );
@@ -532,13 +532,13 @@ namespace sw
                 isMoveAllowed( player, moveIndex, bBufferCandidates );
             if ( bCandidate == false || fighter._inputBuffer.isCompleted( move._command, fighter._side ) == false )
                 continue;
-            if ( bestIndex < 0 )
+            if ( bestIndex.has_value() == false )
             {
                 bestIndex = moveIndex;
                 continue;
             }
             // 기반 `InputCommandBuffer::findCompleted` 와 같은 규칙이다. 우선도가 높은 것을 고르고, 같으면 단계가 많은 것을 고른다.
-            const InputCommand& best = fighter._pDef->_listMove[static_cast<size_t>( bestIndex )]._command;
+            const InputCommand& best = fighter._pDef->_listMove[static_cast<size_t>( *bestIndex )]._command;
             if ( move._command._priority > best._priority ||
                  ( move._command._priority == best._priority && move._command._listStep.size() > best._listStep.size() ) )
                 bestIndex = moveIndex;
@@ -586,13 +586,13 @@ namespace sw
             return;
 
         // 1) 지금 낼 수 있는 기술을 실행한다. 없으면 움직일 수 없는 동안 입력한 커맨드를 선입력 버퍼에 담는다.
-        int32 moveIndex = findCompletedMove( player, false );
-        if ( moveIndex < 0 )
+        optional<int32> moveIndex = findCompletedMove( player, false );
+        if ( moveIndex.has_value() == false )
         {
-            const int32 bufferIndex = findCompletedMove( player, true );
-            if ( bufferIndex >= 0 )
+            const optional<int32> bufferIndex = findCompletedMove( player, true );
+            if ( bufferIndex.has_value() )
             {
-                fighter._bufferedMove = bufferIndex;
+                fighter._bufferedMove = *bufferIndex;
                 fighter._bufferedAge  = 0;
             }
             else if ( fighter._bufferedMove >= 0 )
@@ -604,9 +604,9 @@ namespace sw
                     moveIndex = fighter._bufferedMove;
             }
         }
-        if ( moveIndex >= 0 )
+        if ( moveIndex.has_value() )
         {
-            startMove( player, moveIndex );
+            startMove( player, *moveIndex );
             return;
         }
         if ( fighter._state != FighterState::Neutral )

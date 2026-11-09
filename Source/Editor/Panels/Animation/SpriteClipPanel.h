@@ -1,5 +1,6 @@
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/GUI/EditorThumbnailCache.h"
@@ -66,18 +67,18 @@ namespace sw::editor
          * @details 끄는 동안 가장자리는 바로 따라오고(미리보기 · 런타임과 같은 uv), 되돌리기는 뗄 때 한 번 남긴다. 사각형은 뗄 때 프레임이 된다(Shift 는 새 프레임).
          */
         void handleAtlasPointer( const float2& imageMin, float32 side, bool bHovered );
-        /** @brief 고른 프레임 가장자리의 화면 자리(자동화 표시 `spriteClip.frameEdge.<left|top|right|bottom>`)를 적고, @p mouse 가 가까운 가장자리를 돌려줍니다. 없으면 -1 입니다. */
-        int32 findFrameEdgeNear( const float2& imageMin, float32 side, const float2& mouse ) const;
+        /** @brief 고른 프레임 가장자리의 화면 자리(자동화 표시 `spriteClip.frameEdge.<left|top|right|bottom>`)를 적고, @p mouse 가 가까운 가장자리를 돌려줍니다. 없으면 비어 있습니다. */
+        optional<SpriteFrameEdge> findFrameEdgeNear( const float2& imageMin, float32 side, const float2& mouse ) const;
 
         /** @brief 문서를 읽어 내용을 채웁니다. 읽음 표시는 기반이 결과로 합니다(`EditorDocumentPanel::reloadDocument`). */
         ToolAssetLoadResult loadDocument() override;
 
     private:
-        SpriteClipModel      _model;
-        EditorThumbnailCache _atlasThumbnail;
-        float2               _dragStartUV;     ///< 아틀라스 끌기를 시작한 uv
-        int32                _dragEdge;        ///< 끄는 가장자리(`SpriteFrameEdge`). -1 이면 사각형 끌기거나 끌지 않는다
-        uint8                _bAtlasPress : 1; ///< 아틀라스 위에서 눌러 아직 떼지 않았다
-        uint8                _bEdgeMoved  : 1; ///< 이번 끌기에서 가장자리가 옮겨졌다(뗄 때 되돌리기 하나)
+        SpriteClipModel           _model;
+        EditorThumbnailCache      _atlasThumbnail;
+        float2                    _dragStartUV;     ///< 아틀라스 끌기를 시작한 uv
+        optional<SpriteFrameEdge> _dragEdge;        ///< 끄는 가장자리. 비어 있으면 사각형 끌기거나 끌지 않는다
+        uint8                     _bAtlasPress : 1; ///< 아틀라스 위에서 눌러 아직 떼지 않았다
+        uint8                     _bEdgeMoved  : 1; ///< 이번 끌기에서 가장자리가 옮겨졌다(뗄 때 되돌리기 하나)
     };
 } // namespace sw::editor

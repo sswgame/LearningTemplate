@@ -354,14 +354,14 @@ namespace sw
         return room >= count;
     }
 
-    int32 Inventory::findFirstSlot( const hashed_string& itemID ) const
+    optional<int32> Inventory::findFirstSlot( const hashed_string& itemID ) const
     {
         for ( size_t index = 0; index < _listSlot.size(); ++index )
         {
             if ( _listSlot[index].isEmpty() == false && _listSlot[index]._itemID == itemID )
                 return static_cast<int32>( index );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     int32 Inventory::countEmptySlots() const

@@ -3,6 +3,7 @@
  * @brief 아레나 유닛 하나의 폰 쪽 — 의도(`ControlIntent`)로 움직이고 어빌리티 입력 번호를 누르며, 쓰러지면 납작해집니다. 조종자(플레이어 · AI)는 따로 산다.
  */
 #pragma once
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -97,7 +98,7 @@ namespace sw
         float3                 _facing;                              ///< XZ 단위 벡터
         float3                 _deathScale;                          ///< 쓰러질 때의 크기(납작해지기 시작점)
         float32                _deathTimer;                          ///< 0 이상이면 쓰러진 뒤 걷기까지 남은 시간
-        int32                  _arrButtonIndex[kAbilityButtonCount]; ///< `kArrAbilityButton` 마다 폰 버튼의 인덱스(없으면 −1)
+        optional<int32>        _arrButtonIndex[kAbilityButtonCount]; ///< `kArrAbilityButton` 마다 폰 버튼의 인덱스(없으면 비어 있다)
         uint32                 _previousButtonDown;                  ///< 지난 틱에 누르고 있던 폰 버튼(뗌을 알아챈다)
         uint8                  _bButtonsResolved : 1;
         [[maybe_unused]] uint8 _reserved         : 7;

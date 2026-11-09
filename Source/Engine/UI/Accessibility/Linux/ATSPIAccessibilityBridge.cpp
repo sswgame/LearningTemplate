@@ -53,8 +53,8 @@ namespace sw
             /** @brief 객체 경로 → 대상. 루트는 `bRoot`, 그 밖은 접근성 트리 노드입니다. */
             struct Target
             {
-                bool  _bRoot{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-                int32 _node{ constant::invalid_index::kInt32 };
+                bool   _bRoot{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                uint32 _node{ 0 };         ///< `_bRoot` 가 아닐 때만 뜻이 있다
             };
 
             string makeNodePath( const AccessibleNode& node )
@@ -250,9 +250,9 @@ namespace sw
                 const UIAccessibilitySnapshot* pSnapshot = findSnapshot();
                 if ( pSnapshot != nullptr && widget != kInvalidWidgetID )
                 {
-                    const int32 index = pSnapshot->findNode( screen, widget );
-                    if ( index >= 0 )
-                        pNode = &pSnapshot->_listNode[static_cast<size_t>( index )];
+                    const optional<uint32> index = pSnapshot->findNode( screen, widget );
+                    if ( index.has_value() )
+                        pNode = &pSnapshot->_listNode[*index];
                 }
                 const string path = pNode != nullptr ? ATSPIInternal::makeNodePath( *pNode ) : string( ATSPIInternal::kRootPath );
                 emitObjectEvent( path.c_str(), "StateChanged", "focused", 1 );
@@ -440,30 +440,30 @@ namespace sw
                 if ( ATSPIInternal::parseNodePath( pPath, screen, widgetKey ) == false )
                     return false;
                 const UIAccessibilitySnapshot* pSnapshot = findSnapshot();
-                const int32                    index     = pSnapshot->findNodeByWidgetKey( screen, widgetKey );
-                if ( index < 0 )
+                const optional<uint32>         index     = pSnapshot->findNodeByWidgetKey( screen, widgetKey );
+                if ( index.has_value() == false )
                     return false;
                 outTarget._bRoot = SW_FALSE;
-                outTarget._node  = index;
+                outTarget._node  = *index;
                 return true;
             }
 
-            vector<int32> listChildren( const ATSPIInternal::Target& target )
+            vector<uint32> listChildren( const ATSPIInternal::Target& target )
             {
-                vector<int32>                  list;
+                vector<uint32>                 list;
                 const UIAccessibilitySnapshot* pSnapshot = findSnapshot();
-                const int32                    parent    = target._bRoot ? constant::invalid_index::kInt32 : target._node;
+                const optional<uint32>         parent    = target._bRoot ? nullopt : optional<uint32>( target._node );
                 for ( size_t index = 0; index < pSnapshot->_listNode.size(); ++index )
                 {
                     if ( pSnapshot->_listNode[index]._parent == parent )
-                        list.push_back( static_cast<int32>( index ) );
+                        list.push_back( static_cast<uint32>( index ) );
                 }
                 return list;
             }
 
-            void appendNodeRef( DBusMessageIter* pIter, int32 node )
+            void appendNodeRef( DBusMessageIter* pIter, uint32 node )
             {
-                const string path = ATSPIInternal::makeNodePath( findSnapshot()->_listNode[static_cast<size_t>( node )] );
+                const string path = ATSPIInternal::makeNodePath( findSnapshot()->_listNode[node] );
                 ATSPIInternal::appendRef( pIter, _busName, path.c_str() );
             }
 
@@ -474,14 +474,14 @@ namespace sw
                     ATSPIInternal::appendRef( pIter, string{}, ATSPIInternal::kNullPath );
                     return;
                 }
-                const int32 parent = findSnapshot()->_listNode[static_cast<size_t>( target._node )]._parent;
-                if ( parent < 0 )
+                const optional<uint32>& parent = findSnapshot()->_listNode[target._node]._parent;
+                if ( parent.has_value() == false )
                     ATSPIInternal::appendRef( pIter, _busName, ATSPIInternal::kRootPath );
                 else
-                    appendNodeRef( pIter, parent );
+                    appendNodeRef( pIter, *parent );
             }
 
-            const AccessibleNode& nodeOf( const ATSPIInternal::Target& target ) { return findSnapshot()->_listNode[static_cast<size_t>( target._node )]; }
+            const AccessibleNode& nodeOf( const ATSPIInternal::Target& target ) { return findSnapshot()->_listNode[target._node]; }
 
             /** @brief 속성 @p pName 의 값을 변이로 덧붙입니다. 모르는 속성이면 false. */
             bool appendProperty( DBusMessageIter* pIter, const utf8* pIface, const utf8* pName, const ATSPIInternal::Target& target )
@@ -627,12 +627,12 @@ namespace sw
                 }
                 else if ( member == "GetChildren" || member == "GetChildAtIndex" )
                 {
-                    const vector<int32> children = ( target._bRoot || nodeOf( target )._info._bLeaf == false ) ? listChildren( target ) : vector<int32>{};
+                    const vector<uint32> children = ( target._bRoot || nodeOf( target )._info._bLeaf == false ) ? listChildren( target ) : vector<uint32>{};
                     if ( member == "GetChildren" )
                     {
                         DBusMessageIter array;
                         dbus_message_iter_open_container( &iter, DBUS_TYPE_ARRAY, "(so)", &array );
-                        for ( const int32 child : children )
+                        for ( const uint32 child : children )
                         {
                             appendNodeRef( &array, child );
                         }
@@ -650,15 +650,15 @@ namespace sw
                 }
                 else if ( member == "GetIndexInParent" )
                 {
-                    int32 position = constant::invalid_index::kInt32;
+                    int32 position = constant::invalid_index::kInt32; // AT-SPI 규약: 부모가 없으면 -1
                     if ( target._bRoot == false )
                     {
-                        const int32                    parent    = nodeOf( target )._parent;
+                        const optional<uint32>&        parent    = nodeOf( target )._parent;
                         int32                          count     = 0;
                         const UIAccessibilitySnapshot* pSnapshot = findSnapshot();
-                        for ( int32 index = 0; index < target._node; ++index )
+                        for ( uint32 index = 0; index < target._node; ++index )
                         {
-                            count += pSnapshot->_listNode[static_cast<size_t>( index )]._parent == parent ? 1 : 0;
+                            count += pSnapshot->_listNode[index]._parent == parent ? 1 : 0;
                         }
                         position = count;
                     }

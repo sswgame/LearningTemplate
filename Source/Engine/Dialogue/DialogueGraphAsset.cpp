@@ -230,7 +230,7 @@ namespace sw
         return pin % kPinScale;
     }
 
-    int32 DialogueGraphAsset::findLinkedNodeID( int32 fromNodeID, int32 pinOffset ) const
+    optional<int32> DialogueGraphAsset::findLinkedNodeID( int32 fromNodeID, int32 pinOffset ) const
     {
         for ( const DialogueAssetLink& link : _listLink )
         {
@@ -238,28 +238,29 @@ namespace sw
                 continue;
             if ( decodePinOffset( link._fromPin ) != pinOffset )
                 continue;
-            return decodePinNodeID( link._toPin );
+            const int32 toNodeID = decodePinNodeID( link._toPin );
+            return toNodeID > 0 ? optional<int32>( toNodeID ) : nullopt;
         }
-        return 0;
+        return nullopt;
     }
 
-    int32 DialogueGraphAsset::findDefaultNextNodeID( int32 fromNodeID ) const
+    optional<int32> DialogueGraphAsset::findDefaultNextNodeID( int32 fromNodeID ) const
     {
         return findLinkedNodeID( fromNodeID, kPinOffsetOut );
     }
 
-    int32 DialogueGraphAsset::findChoiceNextNodeID( int32 fromNodeID, int32 choiceIndex ) const
+    optional<int32> DialogueGraphAsset::findChoiceNextNodeID( int32 fromNodeID, int32 choiceIndex ) const
     {
         if ( 0 <= choiceIndex && choiceIndex < getMaxChoiceCount() )
         {
-            const int32 nextID = findLinkedNodeID( fromNodeID, kPinOffsetChoiceBase + choiceIndex );
-            if ( nextID > 0 )
+            const optional<int32> nextID = findLinkedNodeID( fromNodeID, kPinOffsetChoiceBase + choiceIndex );
+            if ( nextID.has_value() )
                 return nextID;
         }
         return findDefaultNextNodeID( fromNodeID );
     }
 
-    int32 DialogueGraphAsset::findBranchNextNodeID( int32 fromNodeID, bool bTrue ) const
+    optional<int32> DialogueGraphAsset::findBranchNextNodeID( int32 fromNodeID, bool bTrue ) const
     {
         return findLinkedNodeID( fromNodeID, bTrue ? kPinOffsetTrue : kPinOffsetFalse );
     }

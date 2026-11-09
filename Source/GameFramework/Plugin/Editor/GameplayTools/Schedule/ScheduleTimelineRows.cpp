@@ -21,7 +21,7 @@ namespace sw::editor
         return string( text.c_str() );
     }
 
-    int32 ScheduleTimelineRows::findSegmentAt( const vector<ScheduleSegment>& listSegment, int32 minuteOfDay )
+    optional<int32> ScheduleTimelineRows::findSegmentAt( const vector<ScheduleSegment>& listSegment, int32 minuteOfDay )
     {
         for ( int32 segmentIndex = 0; segmentIndex < static_cast<int32>( listSegment.size() ); ++segmentIndex )
         {
@@ -29,14 +29,14 @@ namespace sw::editor
             if ( segment._startMinute <= minuteOfDay && minuteOfDay < segment._endMinute )
                 return segmentIndex;
         }
-        return -1;
+        return nullopt;
     }
 
     void ScheduleTimelineRows::populate( const vector<ScheduleSegment>& listSegment, int32 previewMinute, vector<ScheduleTimelineRow>& outListRow )
     {
         outListRow.clear();
         outListRow.reserve( listSegment.size() );
-        const int32 activeIndex = findSegmentAt( listSegment, previewMinute );
+        const optional<int32> activeIndex = findSegmentAt( listSegment, previewMinute );
         for ( int32 segmentIndex = 0; segmentIndex < static_cast<int32>( listSegment.size() ); ++segmentIndex )
         {
             const ScheduleSegment& segment = listSegment[static_cast<size_t>( segmentIndex )];
@@ -68,7 +68,7 @@ namespace sw::editor
                 source.appendFormat( "%# '%#'", toString( segment._source ), segment._sourceID.c_str() );
             row._source       = string( source.c_str() );
             row._segmentIndex = segmentIndex;
-            row._bActive      = segmentIndex == activeIndex;
+            row._bActive      = activeIndex == segmentIndex;
             row._bPast        = segment._bPast != SW_FALSE;
             outListRow.push_back( std::move( row ) );
         }

@@ -42,8 +42,8 @@ namespace sw::editor
         uint32                      _end{ 0 };              ///< 원소 전체 바로 뒤
         bool                        _bSelfClosing{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
-        /** @brief 이름으로 속성의 인덱스를 찾습니다(대소문자 구분). 없으면 -1 입니다. */
-        int32 findAttribute( string_view name ) const;
+        /** @brief 이름으로 속성의 인덱스를 찾습니다(대소문자 구분). 없으면 비어 있습니다. */
+        optional<uint32> findAttribute( string_view name ) const;
     };
 } // namespace sw::editor
 

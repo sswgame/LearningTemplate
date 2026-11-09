@@ -30,10 +30,10 @@ namespace sw
     {
     public:
         /**
-         * @brief `node` 를 지난 뒤의 다음 노드 id 를 반환합니다. 다음 노드가 없으면 0(대화 끝)입니다.
-         * @details 연결되지 않은 선택지와 분기 핀은 기본 출력 핀으로 간다. 특성 테이블에 없는 타입은 0 을 반환한다.
+         * @brief `node` 를 지난 뒤의 다음 노드 id 를 반환합니다. 다음 노드가 없으면(대화 끝) 비어 있습니다.
+         * @details 연결되지 않은 선택지와 분기 핀은 기본 출력 핀으로 간다. 특성 테이블에 없는 타입은 비어 있다.
          */
-        static int32 step( const DialogueGraphAsset& asset, const DialogueAssetNode& node, const DialogueStepInput& input );
+        static optional<int32> step( const DialogueGraphAsset& asset, const DialogueAssetNode& node, const DialogueStepInput& input );
         /** @brief 특성 테이블의 기본값(화자, 본문, 선택지)으로 채운 새 노드를 만듭니다. */
         static DialogueAssetNode makeNode( DialogueAssetNodeKind type, int32 nodeID );
     };

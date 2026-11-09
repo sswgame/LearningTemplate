@@ -9,16 +9,16 @@
 
 namespace sw
 {
-    int32 SkinInfluence::findDominantJoint() const
+    optional<uint32> SkinInfluence::findDominantJoint() const
     {
-        int32   bestJoint  = -1;
-        float32 bestWeight = 0.0f;
+        optional<uint32> bestJoint;
+        float32          bestWeight = 0.0f;
         for ( uint32 slot = 0; slot < CharacterGeometryConstant::kMaxSkinInfluence; ++slot )
         {
             if ( _arrWeight[slot] > bestWeight )
             {
                 bestWeight = _arrWeight[slot];
-                bestJoint  = static_cast<int32>( _arrJoint[slot] );
+                bestJoint  = static_cast<uint32>( _arrJoint[slot] );
             }
         }
         return bestJoint;
@@ -102,14 +102,14 @@ namespace sw
         return boneCount;
     }
 
-    int32 CharacterBoneArray::findBone( const hashed_string& name ) const
+    optional<uint32> CharacterBoneArray::findBone( const hashed_string& name ) const
     {
         for ( size_t boneIndex = 0; boneIndex < _listName.size(); ++boneIndex )
         {
             if ( _listName[boneIndex] == name )
-                return static_cast<int32>( boneIndex );
+                return static_cast<uint32>( boneIndex );
         }
-        return -1;
+        return nullopt;
     }
 
     void CharacterBoneArray::computeModelTransforms()

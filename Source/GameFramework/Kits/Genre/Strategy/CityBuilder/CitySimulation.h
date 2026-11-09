@@ -7,6 +7,7 @@
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -272,11 +273,12 @@ namespace sw
         void removeWalker( CityWalker& walker );
         /** @brief 도로 타일 사이의 가장 짧은 경로(너비 우선)를 구합니다. 갈 수 없으면 false 를 반환합니다. */
         [[nodiscard]] bool findRoadPath( const int2& from, const int2& to, vector<int2>& outListPath ) const;
-        int32              findStorageFor( const hashed_string& goodID, int32 roadComponent, const int2& from, int32 amount ) const;
-        int32              computeStorageFree( const CityBuilding& storage ) const;
-        bool               meetsHouseLevel( const CityBuilding& house, int32 level ) const;
-        bool               isRoad( int32 x, int32 y ) const;
-        int32              getRoadComponent( const int2& tile ) const;
+        /** @brief 그 물건을 @p amount 만큼 받을 수 있고 같은 도로망에 있는 가장 가까운 창고입니다. 없으면 비어 있습니다. */
+        optional<int32> findStorageFor( const hashed_string& goodID, int32 roadComponent, const int2& from, int32 amount ) const;
+        int32           computeStorageFree( const CityBuilding& storage ) const;
+        bool            meetsHouseLevel( const CityBuilding& house, int32 level ) const;
+        bool            isRoad( int32 x, int32 y ) const;
+        int32           getRoadComponent( const int2& tile ) const;
 
     private:
         vector<CityTile>          _listTile;

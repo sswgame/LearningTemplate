@@ -115,10 +115,10 @@ namespace sw
     {
         for ( const BoneProportionEntry& entry : _listEntry )
         {
-            const int32 boneIndex = inoutBones.findBone( entry._bone );
-            if ( boneIndex < 0 )
+            const optional<uint32> boneIndex = inoutBones.findBone( entry._bone );
+            if ( boneIndex.has_value() == false )
                 continue;
-            float4x4&  local = inoutBones._listLocal[static_cast<size_t>( boneIndex )];
+            float4x4&  local = inoutBones._listLocal[*boneIndex];
             float3     scale;
             quaternion rotation;
             float3     translation;

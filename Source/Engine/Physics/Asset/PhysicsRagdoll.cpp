@@ -81,7 +81,7 @@ namespace sw
 
         const size_t boneCount = skeleton._listBoneName.size();
         const size_t bodyCount = asset._listBody.size();
-        outRagdoll._listBodyOfBone.assign( boneCount, -1 );
+        outRagdoll._listBodyOfBone.assign( boneCount, nullopt );
         outRagdoll._listBoneIndex.assign( bodyCount, -1 );
         for ( size_t bodyIndex = 0; bodyIndex < bodyCount; ++bodyIndex )
         {
@@ -90,7 +90,7 @@ namespace sw
                 if ( skeleton._listBoneName[boneIndex] == asset._listBody[bodyIndex]._bone )
                 {
                     outRagdoll._listBoneIndex[bodyIndex]  = static_cast<int32>( boneIndex );
-                    outRagdoll._listBodyOfBone[boneIndex] = static_cast<int32>( bodyIndex );
+                    outRagdoll._listBodyOfBone[boneIndex] = static_cast<uint32>( bodyIndex );
                     break;
                 }
             }
@@ -124,19 +124,18 @@ namespace sw
         }
 
         // 관절은 부모 체인에서 가장 가까운 바디가 있는 뼈와 연결한다. 위치는 이 뼈의 원점이고, 축은 뼈 로컬 축을 월드로 돌린 것이다.
-        outRagdoll._listParentBody.assign( bodyCount, -1 );
+        outRagdoll._listParentBody.assign( bodyCount, nullopt );
         outRagdoll._listJoint.assign( bodyCount, PhysicsJointHandle{} );
         for ( size_t bodyIndex = 0; bodyIndex < bodyCount; ++bodyIndex )
         {
             int32 parentBone = skeleton._listParentIndex[static_cast<size_t>( outRagdoll._listBoneIndex[bodyIndex] )];
-            while ( parentBone >= 0 && outRagdoll._listBodyOfBone[static_cast<size_t>( parentBone )] < 0 )
+            while ( parentBone >= 0 && outRagdoll._listBodyOfBone[static_cast<size_t>( parentBone )].has_value() == false )
             {
                 parentBone = skeleton._listParentIndex[static_cast<size_t>( parentBone )];
             }
             if ( parentBone < 0 )
-                continue;
-            const int32 parentBody                = outRagdoll._listBodyOfBone[static_cast<size_t>( parentBone )];
-            outRagdoll._listParentBody[bodyIndex] = parentBody;
+                continue; // 스켈레톤 부모 번호는 저장 데이터의 -1(루트)이다
+            outRagdoll._listParentBody[bodyIndex] = outRagdoll._listBodyOfBone[static_cast<size_t>( parentBone )];
 
             const PhysicsAssetJointDef& joint = asset._listBody[bodyIndex]._joint;
             float3                      position{};
@@ -228,12 +227,12 @@ namespace sw
         }
         for ( size_t bodyIndex = 0; bodyIndex < ragdoll._listBody.size(); ++bodyIndex )
         {
-            const int32 parentBody = ragdoll._listParentBody[bodyIndex];
-            const bool  bDriven    = parentBody >= 0 && ragdoll._listJoint[bodyIndex].isValid() && asset._listBody[bodyIndex]._joint._type == PhysicsJointType::Cone;
+            const optional<uint32>& parentBody = ragdoll._listParentBody[bodyIndex];
+            const bool              bDriven    = parentBody.has_value() && ragdoll._listJoint[bodyIndex].isValid() && asset._listBody[bodyIndex]._joint._type == PhysicsJointType::Cone;
             if ( bDriven == false )
                 continue; // 루트 · Cone 이 아닌 관절은 모터가 없다(파일 머리말)
             const size_t boneIndex       = static_cast<size_t>( ragdoll._listBoneIndex[bodyIndex] );
-            const size_t parentBoneIndex = static_cast<size_t>( ragdoll._listBoneIndex[static_cast<size_t>( parentBody )] );
+            const size_t parentBoneIndex = static_cast<size_t>( ragdoll._listBoneIndex[*parentBody] );
             if ( boneIndex >= skeleton._listModelSpaceBone.size() || parentBoneIndex >= skeleton._listModelSpaceBone.size() )
                 continue;
             // 바디의 좌표계가 곧 뼈의 좌표계다(`create`) — 두 뼈의 월드 자세가 두 바디의 목표 자세다.
@@ -260,12 +259,12 @@ namespace sw
         const float4x4 modelFromWorld = worldFromModel.invert();
         for ( size_t boneIndex = 0; boneIndex < boneCount; ++boneIndex )
         {
-            const float4x4& inputModel = skeleton._listModelSpaceBone[boneIndex];
-            const int32     parent     = skeleton._listParentIndex[boneIndex];
-            const int32     bodyIndex  = ragdoll._listBodyOfBone[boneIndex];
-            float3          position{};
-            quaternion      rotation{};
-            if ( bodyIndex >= 0 && scene.getBodyTransform( ragdoll._listBody[static_cast<size_t>( bodyIndex )], position, rotation ) )
+            const float4x4&         inputModel = skeleton._listModelSpaceBone[boneIndex];
+            const int32             parent     = skeleton._listParentIndex[boneIndex];
+            const optional<uint32>& bodyIndex  = ragdoll._listBodyOfBone[boneIndex];
+            float3                  position{};
+            quaternion              rotation{};
+            if ( bodyIndex.has_value() && scene.getBodyTransform( ragdoll._listBody[*bodyIndex], position, rotation ) )
             {
                 float3     inputScale{};
                 quaternion inputRotation{};

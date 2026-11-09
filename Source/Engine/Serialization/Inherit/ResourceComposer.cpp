@@ -4,6 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
@@ -247,16 +248,16 @@ namespace sw
                 return true;
             }
 
-            /** @brief 칸 @p name 을 정한 조건(참인 것 중 마지막)의 차례입니다. 없으면 -1 입니다. */
-            [[nodiscard]] static int32 findWinner( const vector<When>& listWhen, string_view name )
+            /** @brief 칸 @p name 을 정한 조건(참인 것 중 마지막)의 차례입니다. 없으면 비어 있습니다. */
+            [[nodiscard]] static optional<uint32> findWinner( const vector<When>& listWhen, string_view name )
             {
-                for ( int32 index = static_cast<int32>( listWhen.size() ) - 1; index >= 0; --index )
+                for ( size_t index = listWhen.size(); index > 0; --index )
                 {
-                    const When& when = listWhen[static_cast<size_t>( index )];
+                    const When& when = listWhen[index - 1];
                     if ( when._bTrue == SW_TRUE && when._node.findAttribute( string( name ).c_str() ) != nullptr )
-                        return index;
+                        return static_cast<uint32>( index - 1 );
                 }
-                return -1;
+                return nullopt;
             }
 
             /** @brief 아래 어디든 조건이 있으면 true 입니다. */
@@ -386,12 +387,12 @@ namespace sw
                 // 1. 칸: 참인 조건이 정한 칸은 원본의 값으로 되돌린다.
                 for ( XMLAttribute attribute = target.getFirstAttribute(); attribute; attribute = attribute.getNext() )
                 {
-                    if ( findWinner( listWhen, attribute.getName() ) < 0 )
+                    if ( findWinner( listWhen, attribute.getName() ).has_value() == false )
                         out.setAttribute( attribute.getName(), attribute.getValue() );
                 }
                 for ( XMLAttribute attribute = source.getFirstAttribute(); attribute; attribute = attribute.getNext() )
                 {
-                    if ( findWinner( listWhen, attribute.getName() ) >= 0 )
+                    if ( findWinner( listWhen, attribute.getName() ).has_value() )
                         out.setAttribute( attribute.getName(), attribute.getValue() );
                 }
                 if ( StringUtil::isNullOrEmpty( target.getText() ) == false )
@@ -402,7 +403,7 @@ namespace sw
                     const XMLNode clone = out.appendClone( listWhen[index]._node );
                     for ( XMLAttribute attribute = listWhen[index]._node.getFirstAttribute(); attribute; attribute = attribute.getNext() )
                     {
-                        if ( isConditionName( attribute.getName() ) || findWinner( listWhen, attribute.getName() ) != static_cast<int32>( index ) )
+                        if ( isConditionName( attribute.getName() ) || findWinner( listWhen, attribute.getName() ) != static_cast<uint32>( index ) )
                             continue;
                         const utf8* pEdited = target.findAttribute( attribute.getName() );
                         if ( pEdited != nullptr )

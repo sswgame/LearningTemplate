@@ -9,6 +9,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Panels/Catalog/Model/CatalogDocument.h"
@@ -41,7 +42,7 @@ namespace sw::editor
         string           _targetID;       ///< 가리키는 id(물려받은 값 포함)
         int32            _from;           ///< 쓰는 항목 번호
         int32            _element;        ///< 값이 적힌(또는 적을) 원소 번호
-        int32            _target;         ///< 가리키는 항목 번호. 풀리지 않으면 -1
+        optional<int32>  _target;         ///< 가리키는 항목 번호. 풀리지 않으면 비어 있다
         AbilityEntryKind _targetKind;     ///< 가리켜야 할 종류
         uint8            _bRequired  : 1; ///< 풀리지 않으면 로더가 경고 · 실패하는 참조
         uint8            _bInherited : 1; ///< 이 항목이 적지 않고 `_base` 에서 물려받은 값
@@ -77,8 +78,8 @@ namespace sw::editor
         const vector<AbilityCatalogIssue>&     getIssues() const { return _listIssue; }
         /** @brief 종류의 원소 이름입니다(`AbilityEffect` …). */
         static const utf8* getElementName( AbilityEntryKind kind );
-        /** @brief 종류와 id 의 항목 번호입니다. 없으면 -1 입니다. */
-        int32 findEntry( AbilityEntryKind kind, string_view id ) const;
+        /** @brief 종류와 id 의 항목 번호입니다. 없으면 비어 있습니다. */
+        optional<int32> findEntry( AbilityEntryKind kind, string_view id ) const;
         /** @brief @p entry 가 쓰는 참조 번호들입니다(먼저 비운다). */
         void collectReferencesFrom( int32 entry, vector<int32>& outListReference ) const;
         /** @brief @p entry 를 가리키는 참조 번호들입니다(쓰이는 곳, 먼저 비운다). */

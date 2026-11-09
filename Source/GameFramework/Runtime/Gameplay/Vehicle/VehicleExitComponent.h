@@ -3,6 +3,7 @@
  * @brief 탈것 쪽 내리기 버튼입니다. 탈것 폰의 의도 버튼(`Exit`)이 발동하면 운전석 탑승자가 내립니다. 빙의가 탈것에 있으므로 탈것이 버튼을 받습니다.
  */
 #pragma once
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -39,6 +40,6 @@ namespace sw
         PROPERTY( Category = "Vehicle", DisplayName = "Exit Button", Tooltip = "Intent button of the vehicle pawn that gets the driver off" )
         hashed_string _exitButton;
 
-        int32 _exitIndex;
+        optional<int32> _exitIndex;
     };
 } // namespace sw

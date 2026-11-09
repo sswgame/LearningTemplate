@@ -40,14 +40,14 @@ namespace sw
         return VectorUtil::contains( _listSpell, spellID );
     }
 
-    int32 JRPGMember::findProficiency( const hashed_string& manualID ) const
+    optional<int32> JRPGMember::findProficiency( const hashed_string& manualID ) const
     {
         for ( const JRPGManualProgress& progress : _listManual )
         {
             if ( progress._manualID == manualID )
                 return progress._proficiency;
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     bool JRPGMember::isStateValid( const JRPGCatalog& catalog ) const
@@ -237,7 +237,7 @@ namespace sw
         if ( bCannotLearnManual )
             return;
         JRPGMember& member = _listMember[static_cast<size_t>( memberIndex )];
-        if ( member.findProficiency( manualID ) >= 0 )
+        if ( member.findProficiency( manualID ).has_value() )
             return;
         member._listManual.push_back( JRPGManualProgress{ manualID, 0 } );
         pushUnlockedTechniques( memberIndex, *_pCatalog->findManual( manualID ), -1, 0 );
@@ -350,14 +350,14 @@ namespace sw
         const JRPGSpellDef* pSpell = _pCatalog->findSpell( techniqueID );
         if ( pSpell == nullptr || pSpell->_manualID.empty() )
             return false;
-        const JRPGManualDef* pManual     = _pCatalog->findManual( pSpell->_manualID );
-        const int32          proficiency = _listMember[static_cast<size_t>( memberIndex )].findProficiency( pSpell->_manualID );
-        if ( pManual == nullptr || proficiency < 0 )
+        const JRPGManualDef*  pManual     = _pCatalog->findManual( pSpell->_manualID );
+        const optional<int32> proficiency = _listMember[static_cast<size_t>( memberIndex )].findProficiency( pSpell->_manualID );
+        if ( pManual == nullptr || proficiency.has_value() == false )
             return false;
         for ( const JRPGManualStage& stage : pManual->_listStage )
         {
             if ( stage._techniqueID == techniqueID )
-                return proficiency >= stage._proficiency;
+                return *proficiency >= stage._proficiency;
         }
         return false;
     }

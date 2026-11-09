@@ -397,10 +397,12 @@ SW_TEST_CASE( TileMapXMLTest, DataLayersRoundTripAndRejectBrokenLayers )
     SW_REQUIRE_TRUE( data.addDataLayer( "footstep", 0 ) );
     SW_EXPECT_FALSE( data.addDataLayer( "cost", 5 ) ); // 겹치는 이름
     SW_EXPECT_FALSE( data.addDataLayer( "", 5 ) );
-    const int32 costLayer = data.findDataLayer( "cost" );
-    SW_REQUIRE_EQUAL( 0, costLayer );
+    SW_REQUIRE_TRUE( data.findDataLayer( "cost" ) == 0u );
+    SW_REQUIRE_TRUE( data.findDataLayer( "footstep" ) == 1u );
+    const int32 costLayer     = 0;
+    const int32 footstepLayer = 1;
     SW_EXPECT_TRUE( data.setCellData( costLayer, 2, 1, -3 ) );
-    SW_EXPECT_TRUE( data.setCellData( data.findDataLayer( "footstep" ), 0, 0, 7 ) );
+    SW_EXPECT_TRUE( data.setCellData( footstepLayer, 0, 0, 7 ) );
     SW_EXPECT_FALSE( data.setCellData( costLayer, 3, 0, 9 ) ); // 맵 밖
     SW_EXPECT_FALSE( data.setCellData( 5, 0, 0, 9 ) );         // 없는 레이어
 
@@ -408,13 +410,15 @@ SW_TEST_CASE( TileMapXMLTest, DataLayersRoundTripAndRejectBrokenLayers )
     SW_REQUIRE_TRUE( restored.loadFromXML( data.toXML() ) );
     SW_REQUIRE_EQUAL( size_t( 2 ), restored._listDataLayer.size() );
     int32 value = 0;
-    SW_EXPECT_TRUE( restored.getCellData( restored.findDataLayer( "cost" ), 2, 1, value ) && value == -3 );
-    SW_EXPECT_TRUE( restored.getCellData( restored.findDataLayer( "cost" ), 0, 0, value ) && value == 1 );
-    SW_EXPECT_TRUE( restored.getCellData( restored.findDataLayer( "footstep" ), 0, 0, value ) && value == 7 );
+    SW_EXPECT_TRUE( restored.findDataLayer( "cost" ) == 0u );
+    SW_EXPECT_TRUE( restored.findDataLayer( "footstep" ) == 1u );
+    SW_EXPECT_TRUE( restored.getCellData( costLayer, 2, 1, value ) && value == -3 );
+    SW_EXPECT_TRUE( restored.getCellData( costLayer, 0, 0, value ) && value == 1 );
+    SW_EXPECT_TRUE( restored.getCellData( footstepLayer, 0, 0, value ) && value == 7 );
     SW_EXPECT_TRUE( restored.toXML() == data.toXML() );
 
     SW_REQUIRE_TRUE( restored.resetTiles( 4, 4 ) );
-    SW_EXPECT_TRUE( restored.getCellData( restored.findDataLayer( "cost" ), 3, 3, value ) && value == 1 );
+    SW_EXPECT_TRUE( restored.getCellData( costLayer, 3, 3, value ) && value == 1 );
 
     const sw::string_view kHead       = "<TileMap name=\"Bad\" width=\"2\" height=\"1\"><tiles><t>1</t><t>1</t></tiles><dataLayers>";
     const sw::string_view arrBroken[] = {

@@ -93,17 +93,17 @@ namespace sw
                 if ( moon._listScrap.empty() )
                 {
                     const vector<ScavengerScrapDef>& listScrap = catalog.getScraps();
-                    const int32                      index     = random.pickWeightedIndex( listScrap, []( const ScavengerScrapDef& def )
-                                             { return def._spawnWeight; } );
-                    return index >= 0 ? listScrap.data() + index : nullptr;
+                    const optional<int32>            index     = random.pickWeightedIndex( listScrap, []( const ScavengerScrapDef& def )
+                                   { return def._spawnWeight; } );
+                    return index.has_value() ? listScrap.data() + *index : nullptr;
                 }
                 // 목록의 모르는 이름은 카탈로그가 읽을 때 오류로 알렸다 — 뽑히지 않게 무게 0 으로 친다(내리는 순간 빈 포인터를 읽지 않는다).
-                const int32 index = random.pickWeightedIndex( moon._listScrap, [&catalog]( const hashed_string& scrapID )
+                const optional<int32> index = random.pickWeightedIndex( moon._listScrap, [&catalog]( const hashed_string& scrapID )
                 {
                     const ScavengerScrapDef* pDef = catalog.findScrap( scrapID );
                     return pDef != nullptr ? pDef->_spawnWeight : 0.0f;
                 } );
-                return index >= 0 ? catalog.findScrap( moon._listScrap[static_cast<size_t>( index )] ) : nullptr;
+                return index.has_value() ? catalog.findScrap( moon._listScrap[static_cast<size_t>( *index )] ) : nullptr;
             }
         };
     } // namespace

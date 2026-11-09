@@ -21,14 +21,15 @@ namespace sw::editor
             static constexpr float32 kNewKeyTimeStep   = 0.1f;
             static constexpr float32 kNewKeyFirstValue = 1.0f;
 
-            static int32 findChildNamed( const CatalogXMLText& parsed, const CatalogXMLElement& element, string_view name )
+            /** @brief 이름이 @p name 인 첫 자식 원소입니다. 없으면 비어 있습니다. */
+            static optional<int32> findChildNamed( const CatalogXMLText& parsed, const CatalogXMLElement& element, string_view name )
             {
                 for ( const int32 childIndex : element._listChild )
                 {
                     if ( string_view{ parsed.getElement( childIndex )._name } == name )
                         return childIndex;
                 }
-                return -1;
+                return nullopt;
             }
 
             /** @brief 보간의 파일 이름입니다(`makeFloatCurve` 가 읽는 철자 — 리플렉션 열거자 이름). */
@@ -45,20 +46,20 @@ namespace sw::editor
             /** @brief 속성 값을 실수로 읽습니다. 없거나 숫자가 아니면 false 입니다. */
             [[nodiscard]] static bool readFloat( const CatalogXMLElement& element, string_view name, float32& outValue )
             {
-                const int32 attributeIndex = element.findAttribute( name );
-                if ( attributeIndex < 0 )
+                const optional<uint32> attributeIndex = element.findAttribute( name );
+                if ( attributeIndex.has_value() == false )
                     return false;
-                return StringUtil::parseFloat( element._listAttribute[static_cast<size_t>( attributeIndex )]._value, outValue );
+                return StringUtil::parseFloat( element._listAttribute[*attributeIndex]._value, outValue );
             }
 
             static string makeSegment( const CatalogXMLElement& element )
             {
-                string      segment   = element._name;
-                const int32 nameIndex = element.findAttribute( "_name" );
-                if ( nameIndex >= 0 )
+                string                 segment   = element._name;
+                const optional<uint32> nameIndex = element.findAttribute( "_name" );
+                if ( nameIndex.has_value() )
                 {
                     segment += "(";
-                    segment += element._listAttribute[static_cast<size_t>( nameIndex )]._value;
+                    segment += element._listAttribute[*nameIndex]._value;
                     segment += ")";
                 }
                 return segment;
@@ -72,13 +73,13 @@ namespace sw::editor
                     if ( string_view{ keyElement._name } != CatalogCurve::kKeyElementName )
                         continue;
                     CatalogCurveKey key;
-                    key._elementIndex              = keyIndex;
-                    const bool bTime               = readFloat( keyElement, "_time", key._time );
-                    const bool bValue              = readFloat( keyElement, "_value", key._value );
-                    key._bValid                    = bTime && bValue;
-                    const int32 interpolationIndex = keyElement.findAttribute( "_interpolation" );
-                    if ( interpolationIndex >= 0 )
-                        key._interpolation = keyElement._listAttribute[static_cast<size_t>( interpolationIndex )]._value;
+                    key._elementIndex                         = keyIndex;
+                    const bool bTime                          = readFloat( keyElement, "_time", key._time );
+                    const bool bValue                         = readFloat( keyElement, "_value", key._value );
+                    key._bValid                               = bTime && bValue;
+                    const optional<uint32> interpolationIndex = keyElement.findAttribute( "_interpolation" );
+                    if ( interpolationIndex.has_value() )
+                        key._interpolation = keyElement._listAttribute[*interpolationIndex]._value;
                     outListKey.push_back( std::move( key ) );
                 }
             }
@@ -89,26 +90,26 @@ namespace sw::editor
                 bool                     bHasCurveChild = false;
                 for ( const int32 childIndex : element._listChild )
                 {
-                    bHasCurveChild = bHasCurveChild || findChildNamed( parsed, parsed.getElement( childIndex ), CatalogCurve::kKeyListName ) >= 0;
+                    bHasCurveChild = bHasCurveChild || findChildNamed( parsed, parsed.getElement( childIndex ), CatalogCurve::kKeyListName ).has_value();
                 }
                 for ( const int32 childIndex : element._listChild )
                 {
                     const CatalogXMLElement& child = parsed.getElement( childIndex );
                     if ( string_view{ child._name } == CatalogCurve::kKeyListName )
                         continue;
-                    const string label        = prefix.empty() ? makeSegment( child ) : prefix + "/" + makeSegment( child );
-                    const int32  listKeyIndex = findChildNamed( parsed, child, CatalogCurve::kKeyListName );
+                    const string          label        = prefix.empty() ? makeSegment( child ) : prefix + "/" + makeSegment( child );
+                    const optional<int32> listKeyIndex = findChildNamed( parsed, child, CatalogCurve::kKeyListName );
                     // 키가 없는 채널(`<_red/>`)은 모양만으로는 곡선인지 알 수 없다 - 형제에 곡선이 있는 색 채널 이름일 때만 빈 곡선으로 본다.
                     const bool bEmptyChannel = child._listChild.empty() && bHasCurveChild && isGradientChannel( child._name );
-                    if ( listKeyIndex >= 0 || bEmptyChannel )
+                    if ( listKeyIndex.has_value() || bEmptyChannel )
                     {
                         CatalogCurve curve;
                         curve._label        = label;
                         curve._channel      = child._name;
                         curve._elementIndex = childIndex;
                         curve._parentIndex  = elementIndex;
-                        if ( listKeyIndex >= 0 )
-                            readKeys( parsed, parsed.getElement( listKeyIndex ), curve._listKey );
+                        if ( listKeyIndex.has_value() )
+                            readKeys( parsed, parsed.getElement( *listKeyIndex ), curve._listKey );
                         outListCurve.push_back( std::move( curve ) );
                         continue;
                     }
@@ -243,8 +244,8 @@ namespace sw::editor
         }
         CatalogDocument draft;
         (void)draft.load( inoutDocument.getText() ); // 위에서 훑어진 글이다
-        int32 listKeyIndex = Internal::findChildNamed( draft.getParsed(), draft.getParsed().getElement( curveElementIndex ), kKeyListName );
-        if ( listKeyIndex < 0 )
+        optional<int32> listKeyIndex = Internal::findChildNamed( draft.getParsed(), draft.getParsed().getElement( curveElementIndex ), kKeyListName );
+        if ( listKeyIndex.has_value() == false )
         {
             if ( draft.addChild( curveElementIndex, kKeyListName, {} ) == false )
             {
@@ -258,7 +259,7 @@ namespace sw::editor
         // 새 키의 시각과 값: 마지막 키 뒤 한 걸음에 같은 값, 키가 없으면 시각 0 값 1.
         float32                  time    = 0.0f;
         float32                  value   = Internal::kNewKeyFirstValue;
-        const CatalogXMLElement& listKey = draft.getParsed().getElement( listKeyIndex );
+        const CatalogXMLElement& listKey = draft.getParsed().getElement( listKeyIndex.value() ); // 위에서 더했으면 반드시 있다
         for ( const int32 keyIndex : listKey._listChild )
         {
             const CatalogXMLElement& keyElement = draft.getParsed().getElement( keyIndex );
@@ -346,10 +347,10 @@ namespace sw::editor
         }
         if ( edited._listKey.size() > listReadKey.size() )
         {
-            int32 listKeyIndex = Internal::findChildNamed( draft.getParsed(), draft.getParsed().getElement( curve._elementIndex ), kKeyListName );
-            if ( listKeyIndex < 0 && draft.addChild( curve._elementIndex, kKeyListName, {} ) )
+            optional<int32> listKeyIndex = Internal::findChildNamed( draft.getParsed(), draft.getParsed().getElement( curve._elementIndex ), kKeyListName );
+            if ( listKeyIndex.has_value() == false && draft.addChild( curve._elementIndex, kKeyListName, {} ) )
                 listKeyIndex = Internal::findChildNamed( draft.getParsed(), draft.getParsed().getElement( curve._elementIndex ), kKeyListName );
-            for ( size_t keyIndex = sharedCount; keyIndex < edited._listKey.size() && listKeyIndex >= 0; ++keyIndex )
+            for ( size_t keyIndex = sharedCount; keyIndex < edited._listKey.size() && listKeyIndex.has_value(); ++keyIndex )
             {
                 const FloatCurveKey&           key = edited._listKey[keyIndex];
                 vector<CatalogXMLNewAttribute> listAttribute;
@@ -357,7 +358,7 @@ namespace sw::editor
                 listAttribute.push_back( CatalogXMLNewAttribute{ "_value", writeNumber( key._value ) } );
                 listAttribute.push_back( CatalogXMLNewAttribute{ "_interpolation", Internal::getInterpolationName( key._interpolation ) } );
                 // 더한 키는 목록 끝이다 — 곡선 · 목록 원소는 그보다 앞이라 번호가 그대로다.
-                if ( draft.addChild( listKeyIndex, kKeyElementName, listAttribute ) == false )
+                if ( draft.addChild( *listKeyIndex, kKeyElementName, listAttribute ) == false )
                 {
                     inoutDocument.setError( draft.getError() );
                     return false;

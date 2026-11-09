@@ -16,6 +16,7 @@
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -324,10 +325,12 @@ namespace sw
         void   serializePilot( StateIO& io, int32 pilotIndex, MechPilot& pilot );
         void   collectCandidates( int32 pilot, vector<LockOnCandidate>& outListCandidate ) const;
         float3 computeCenter( const MechPilot& pilot ) const;
-        int32  findLockTarget( int32 pilot );
-        int32  countActiveSkills( const MechPilot& pilot ) const;
-        int32  findSlot( const MechPilot& pilot, MechWeaponKind kind ) const;
-        bool   isTargetable( int32 pilot ) const;
+        /** @brief 록온 대상(없으면 앞쪽의 가장 좋은 대상을 잡는다)입니다. 맞힐 대상이 없으면 비어 있습니다. */
+        optional<int32> findLockTarget( int32 pilot );
+        int32           countActiveSkills( const MechPilot& pilot ) const;
+        /** @brief 지금 모드에서 그 종류의 무기 슬롯 번호(메카 전체 번호)입니다. 없으면 비어 있습니다. */
+        optional<int32> findSlot( const MechPilot& pilot, MechWeaponKind kind ) const;
+        bool            isTargetable( int32 pilot ) const;
         /** @brief @p other 가 @p team 의 적이고 지금 맞힐 수 있는지 반환합니다(근접, 광선, 탄, 록온 후보가 같은 판정을 씁니다). */
         bool isEnemyTarget( int32 team, int32 other ) const;
         void pushEvent( MechArenaEvent::Kind kind, int32 pilot, int32 other, float32 value, const hashed_string& id );

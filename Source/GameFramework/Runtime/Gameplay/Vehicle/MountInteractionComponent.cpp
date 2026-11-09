@@ -14,7 +14,7 @@ namespace sw
 {
     MountInteractionComponent::MountInteractionComponent()
         : _interactButton{ "Interact" }
-        , _interactIndex{ constant::invalid_index::kInt32 }
+        , _interactIndex{}
     {
         setCanEverTick( true );
     }
@@ -25,7 +25,7 @@ namespace sw
         setTickGroup( TickGroup::PrePhysics );
         const GameObject*    pOwner = getOwner();
         const PawnComponent* pPawn  = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
-        _interactIndex              = pPawn != nullptr ? pPawn->findButton( _interactButton ) : constant::invalid_index::kInt32;
+        _interactIndex              = pPawn != nullptr ? pPawn->findButton( _interactButton ) : nullopt;
     }
 
     void MountInteractionComponent::onTick( float32 deltaTime )

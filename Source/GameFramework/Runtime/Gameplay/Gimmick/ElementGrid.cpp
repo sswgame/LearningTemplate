@@ -117,31 +117,33 @@ namespace sw
         return count;
     }
 
-    void ElementGrid::addStatus( Cell& cell, int32 status ) const
+    void ElementGrid::addStatus( Cell& cell, optional<int32> foundStatus ) const
     {
-        if ( status < 0 || status >= static_cast<int32>( _pTable->getStatuses().size() ) )
+        if ( foundStatus.has_value() == false || *foundStatus < 0 || *foundStatus >= static_cast<int32>( _pTable->getStatuses().size() ) )
             return;
-        const ElementStatusDef& def = _pTable->getStatuses()[static_cast<size_t>( status )];
+        const int32             status = *foundStatus;
+        const ElementStatusDef& def    = _pTable->getStatuses()[static_cast<size_t>( status )];
         cell._statusBits |= static_cast<uint8>( 1u << static_cast<uint32>( status ) );
         cell._arrStatusValue[status] = def._kind == ElementStatusKind::Countdown
                                          ? static_cast<uint8>( MathUtil::clamp( def._steps, 1, ElementGridInternal::kMaxStatusValue ) )
                                          : static_cast<uint8>( 0 );
     }
 
-    void ElementGrid::removeStatus( Cell& cell, int32 status ) const
+    void ElementGrid::removeStatus( Cell& cell, optional<int32> foundStatus ) const
     {
-        if ( status < 0 || status >= ElementRuleCatalog::kMaxStatusCount )
+        if ( foundStatus.has_value() == false || *foundStatus < 0 || *foundStatus >= ElementRuleCatalog::kMaxStatusCount )
             return;
+        const int32 status = *foundStatus;
         cell._statusBits &= static_cast<uint8>( ~( 1u << static_cast<uint32>( status ) ) );
         cell._arrStatusValue[status] = 0;
     }
 
     bool ElementGrid::matchesRule( const Cell& cell, const ElementStimulusRule& rule ) const
     {
-        const bool bMaterial = rule._material < 0 || cell._material == rule._material;
-        const bool bFlag     = rule._flag < 0 || _pTable->hasFlag( cell._material, rule._flag );
-        const bool bStatus   = rule._status < 0 || ( cell._statusBits & ( 1u << static_cast<uint32>( rule._status ) ) ) != 0;
-        const bool bWithout  = rule._without < 0 || ( cell._statusBits & ( 1u << static_cast<uint32>( rule._without ) ) ) == 0;
+        const bool bMaterial = rule._material.has_value() == false || cell._material == *rule._material;
+        const bool bFlag     = rule._flag.has_value() == false || _pTable->hasFlag( cell._material, *rule._flag );
+        const bool bStatus   = rule._status.has_value() == false || ( cell._statusBits & ( 1u << static_cast<uint32>( *rule._status ) ) ) != 0;
+        const bool bWithout  = rule._without.has_value() == false || ( cell._statusBits & ( 1u << static_cast<uint32>( *rule._without ) ) ) == 0;
         return bMaterial && bFlag && bStatus && bWithout;
     }
 
@@ -165,10 +167,10 @@ namespace sw
         {
             if ( matchesRule( target, rule ) == false )
                 continue;
-            if ( rule._floodStatus < 0 )
+            if ( rule._floodStatus.has_value() == false )
             {
-                if ( rule._setMaterial >= 0 )
-                    target._material = static_cast<uint8>( rule._setMaterial );
+                if ( rule._setMaterial.has_value() )
+                    target._material = static_cast<uint8>( *rule._setMaterial );
                 removeStatus( target, rule._removeStatus );
                 addStatus( target, rule._addStatus );
                 pushEvent( rule._event, cell );
@@ -189,7 +191,7 @@ namespace sw
                     if ( isInside( next ) == false )
                         continue;
                     const int32 nextIndex = toIndex( next );
-                    if ( _floodSearch.isVisited( nextIndex ) || _pTable->hasFlag( _listCell[static_cast<size_t>( nextIndex )]._material, rule._floodThrough ) == false )
+                    if ( _floodSearch.isVisited( nextIndex ) || _pTable->hasFlag( _listCell[static_cast<size_t>( nextIndex )]._material, *rule._floodThrough ) == false )
                         continue;
                     _floodSearch.visit( nextIndex, index );
                 }
@@ -267,9 +269,9 @@ namespace sw
                 for ( int32 x = 0; x < _topology._width; ++x )
                 {
                     const int2 position{ x, y };
-                    if ( hasStatus( position, rule._status ) == false )
+                    if ( hasStatus( position, *rule._status ) == false )
                         continue;
-                    const int32 value = getStatusValue( position, rule._status );
+                    const int32 value = getStatusValue( position, *rule._status );
                     switch ( rule._kind )
                     {
                         case ElementStepRuleKind::Expire:
@@ -286,7 +288,7 @@ namespace sw
                             for ( int32 neighbor = 0; neighbor < GridTopology::kOrthogonalCount; ++neighbor )
                             {
                                 const int2 next = GridTopology::getNeighbor( position, neighbor );
-                                if ( isInside( next ) && getMaterial( next ) == rule._material )
+                                if ( isInside( next ) && rule._material == static_cast<int32>( getMaterial( next ) ) )
                                     _listPending.push_back( PendingChange{ next, static_cast<int32>( ruleIndex ) } );
                             }
                             break;
@@ -317,22 +319,22 @@ namespace sw
                 case ElementStepRuleKind::Expire:
                 {
                     cell           = Cell{};
-                    cell._material = static_cast<uint8>( MathUtil::max( 0, rule._setMaterial ) );
+                    cell._material = static_cast<uint8>( rule._setMaterial.value_or( 0 ) );
                     pushEvent( rule._event, change._cell );
                     break;
                 }
                 case ElementStepRuleKind::Convert:
                 {
-                    if ( cell._material != rule._material )
+                    if ( rule._material != static_cast<int32>( cell._material ) )
                         break;
-                    cell._material = static_cast<uint8>( MathUtil::max( 0, rule._setMaterial ) );
+                    cell._material = static_cast<uint8>( rule._setMaterial.value_or( 0 ) );
                     pushEvent( rule._event, change._cell );
                     break;
                 }
                 case ElementStepRuleKind::Spread:
                 {
-                    const bool bAlready = ( cell._statusBits & ( 1u << static_cast<uint32>( rule._status ) ) ) != 0;
-                    if ( bAlready || _pTable->hasFlag( cell._material, rule._toFlag ) == false )
+                    const bool bAlready = ( cell._statusBits & ( 1u << static_cast<uint32>( *rule._status ) ) ) != 0;
+                    if ( bAlready || rule._toFlag.has_value() == false || _pTable->hasFlag( cell._material, *rule._toFlag ) == false )
                         break;
                     addStatus( cell, rule._status );
                     pushEvent( rule._event, change._cell );

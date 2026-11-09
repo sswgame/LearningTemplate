@@ -65,7 +65,7 @@ namespace sw
         return cosine >= MathUtil::cos( candidate._maxAngle );
     }
 
-    int32 InteractionView::selectBest( const InteractionView& viewer, const vector<InteractionCandidate>& listCandidate, const ILineOfSightQuery* pLineOfSight )
+    optional<int32> InteractionView::selectBest( const InteractionView& viewer, const vector<InteractionCandidate>& listCandidate, const ILineOfSightQuery* pLineOfSight )
     {
         using Internal = InteractionSelectorInternal;
         vector<Internal::ReachableCandidate> listReachable;
@@ -91,6 +91,6 @@ namespace sw
             if ( bVisible )
                 return reachable._index;
         }
-        return -1;
+        return nullopt;
     }
 } // namespace sw

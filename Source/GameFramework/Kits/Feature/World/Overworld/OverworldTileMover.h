@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Encoding/FourCCUtil.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
@@ -74,7 +75,7 @@ namespace sw
          * @param intent 이번 틱의 의도입니다. 이동 축(`_move`, y 가 위쪽 타일)을 데드존으로 걸러 네 방향 한 칸으로 읽습니다.
          * @param interactButton 상호작용 버튼의 슬롯(`PawnComponent::findButton`)입니다. 그 버튼이 발동하면 상호작용합니다. -1이면 버튼이 없습니다.
          */
-        void update( float32 deltaTime, const ControlIntent& intent, int32 interactButton );
+        void update( float32 deltaTime, const ControlIntent& intent, optional<int32> interactButton );
 
         /** @brief 현재 타일 X 를 반환합니다. */
         int32 getTileX() const { return _tile._x; }

@@ -9,6 +9,7 @@
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -172,15 +173,16 @@ namespace sw
 
     private:
         [[nodiscard]] bool openHand();
-        int32              findNextSeat( int32 fromSeat, bool bCanActOnly ) const;
-        bool               canAct( int32 seat ) const;
-        bool               needsAction( int32 seat ) const;
-        void               commitChips( int32 seat, int32 amount );
-        void               afterAction( int32 seat );
-        void               beginStreet( PokerStreet street );
-        void               dealBoard( int32 count );
-        void               finishShowdown();
-        void               finishUncontested( int32 winnerSeat );
+        /** @brief @p fromSeat 다음(시계 방향)의 핸드에 남은 자리입니다(@p bCanActOnly 면 행동할 수 있는 자리만). 없으면 비어 있습니다. */
+        optional<int32> findNextSeat( int32 fromSeat, bool bCanActOnly ) const;
+        bool            canAct( int32 seat ) const;
+        bool            needsAction( int32 seat ) const;
+        void            commitChips( int32 seat, int32 amount );
+        void            afterAction( int32 seat );
+        void            beginStreet( PokerStreet street );
+        void            dealBoard( int32 count );
+        void            finishShowdown();
+        void            finishUncontested( int32 winnerSeat );
 
     private:
         vector<PokerSeat>       _listSeat;

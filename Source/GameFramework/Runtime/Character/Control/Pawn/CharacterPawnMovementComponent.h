@@ -3,6 +3,7 @@
  * @brief 폰 이동입니다. 의도를 같은 오브젝트의 캐릭터 컨트롤러(걷기, 달리기, 점프, 가감속, 몸 방향)로 옮깁니다. 플레이어, NPC, 자동 플레이, 재생이 모두 이것으로 걷습니다.
  */
 #pragma once
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -86,8 +87,8 @@ namespace sw
 
         float3                 _velocity;  ///< 지금 수평 속도
         float32                _facingYaw; ///< 몸의 요
-        int32                  _sprintIndex;
-        int32                  _jumpIndex;
+        optional<int32>        _sprintIndex;
+        optional<int32>        _jumpIndex;
         uint8                  _bSuspended : 1;
         [[maybe_unused]] uint8 _reserved   : 7;
     };
