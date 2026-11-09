@@ -207,14 +207,12 @@ namespace sw
 
             static bool runFeedHorse( AutomationStepContext& context, const AutomationStep& step )
             {
-                const string&          horseName = *step.findAttribute( "horse" );
-                const string&          foodID    = *step.findAttribute( "food" );
-                AutomationTargetLookup lookup    = AutomationTargetLookup::NotGiven;
-                string                 problem;
-                GameObject*            pObject = AutomationTarget::find( context.findActiveObjectManager(), horseName, lookup, problem );
-                WesternHorseComponent* pHorse  = pObject != nullptr ? pObject->getComponent<WesternHorseComponent>() : nullptr;
-                if ( pObject == nullptr )
-                    context.recordFailure( step, problem );
+                const string&               horseName = *step.findAttribute( "horse" );
+                const string&               foodID    = *step.findAttribute( "food" );
+                const expected<GameObject*> found     = AutomationTarget::find( context.findActiveObjectManager(), horseName );
+                WesternHorseComponent*      pHorse    = found.has_value() ? ( *found )->getComponent<WesternHorseComponent>() : nullptr;
+                if ( found.has_value() == false )
+                    context.recordFailure( step, AutomationTarget::describe( found.error() ) );
                 else if ( pHorse == nullptr )
                     context.recordFailure( step, "object '" + horseName + "' has no Western Horse" );
                 else if ( pHorse->feed( hashed_string{ foodID.c_str() } ) == false )

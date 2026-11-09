@@ -90,16 +90,15 @@ namespace sw
         {
 
             /** @brief 이력을 남기고 있는 상태 해시 이력입니다. 서비스가 없거나 꺼져 있으면 nullptr 이고 @p outReply 에 까닭을 씁니다. */
-            static const StateHashHistory* findRecordingHistory( string& outReply )
+            /** @brief 기록 중인 이력 서비스입니다. 없거나 꺼져 있으면 그 까닭(명령 답이 문장 그대로다)입니다. */
+            [[nodiscard]] static expected<const StateHashHistory*> findRecordingHistory()
             {
                 const StateHashHistory* pHistory = engine::findSubsystem<StateHashHistory>();
                 if ( pHistory == nullptr )
-                    outReply = "state hash history service is not running in this host";
-                else if ( pHistory->isRecording() == false )
-                    outReply = "state hash history is off - start with -gv_stateHashHistory=<ticks>";
-                else
-                    return pHistory;
-                return nullptr;
+                    return unexpected( Error{ ErrorKind::NotFound, "state hash history service is not running in this host" } );
+                if ( pHistory->isRecording() == false )
+                    return unexpected( Error{ ErrorKind::Unsupported, "state hash history is off - start with -gv_stateHashHistory=<ticks>" } );
+                return pHistory;
             }
 
             static bool runStateHash( const vector<string>& listArgument, string& outReply )
@@ -124,11 +123,14 @@ namespace sw
             {
                 if ( listArgument.empty() == false )
                     return false;
-                uint64                  tick = 0;
                 vector<SceneObjectHash> listObject;
-                if ( collectTickedObjects( outReply, tick, listObject ) == false )
+                const expected<uint64>  tick = collectTickedObjects( listObject );
+                if ( tick.has_value() == false )
+                {
+                    outReply = string( tick.error().message() );
                     return false;
-                SceneObjectHash::writeTickedObjectReport( tick, listObject, outReply );
+                }
+                SceneObjectHash::writeTickedObjectReport( *tick, listObject, outReply );
                 return true;
             }
 
@@ -137,11 +139,14 @@ namespace sw
             {
                 if ( listArgument.empty() == false )
                     return false;
-                uint64                  tick = 0;
                 vector<SceneObjectHash> listObject;
-                if ( collectTickedObjects( outReply, tick, listObject ) == false )
+                const expected<uint64>  tick = collectTickedObjects( listObject );
+                if ( tick.has_value() == false )
+                {
+                    outReply = string( tick.error().message() );
                     return false;
-                if ( SceneObjectHash::writeObjectReportLine( tick, listObject, outReply ) == false )
+                }
+                if ( SceneObjectHash::writeObjectReportLine( *tick, listObject, outReply ) == false )
                 {
                     outReply = "the object report does not fit one line (" + to_string( listObject.size() ) + " objects, limit " + to_string( DebugReplyLine::kMaxBytes ) +
                                " bytes) - use state.objects";
@@ -150,38 +155,35 @@ namespace sw
                 return true;
             }
 
-            /** @brief 두 `state.objects*` 명령이 같이 쓰는 값입니다. 첫 값의 틱은 이력의 가장 최근 틱이다 — 이력이 없으면 어느 틱의 해시인지 말할 수 없어 답하지 않는다(이유는 @p outReply). */
-            [[nodiscard]] static bool collectTickedObjects( string& outReply, uint64& outTick, vector<SceneObjectHash>& outListObject )
+            /**
+             * @brief 두 `state.objects*` 명령이 같이 쓰는 값입니다. 돌려주는 틱은 이력의 가장 최근 틱이다 — 이력이 없으면 어느 틱의 해시인지 말할 수 없어
+             *        답하지 않는다(그 까닭 — 문장이 명령 답이다).
+             */
+            [[nodiscard]] static expected<uint64> collectTickedObjects( vector<SceneObjectHash>& outListObject )
             {
-                const StateHashHistory* pHistory = findRecordingHistory( outReply );
-                if ( pHistory == nullptr )
-                    return false;
+                const expected<const StateHashHistory*> history = findRecordingHistory();
+                if ( history.has_value() == false )
+                    return unexpected( history.error() );
                 StateHashSample latest;
-                if ( pHistory->tryGetLatest( latest ) == false )
-                {
-                    outReply = "state hash history has no tick yet";
-                    return false;
-                }
+                if ( ( *history )->tryGetLatest( latest ) == false )
+                    return unexpected( Error{ ErrorKind::NotFound, "state hash history has no tick yet" } );
                 GameObjectManager* pManager = engine::findActiveObjectManager();
                 if ( pManager == nullptr )
-                {
-                    outReply = "no active scene";
-                    return false;
-                }
-                outTick = latest._tick;
+                    return unexpected( Error{ ErrorKind::NotFound, "no active scene" } );
                 SceneObjectHash::collectObjects( *pManager, outListObject );
-                return true;
+                return latest._tick;
             }
 
-            /** @brief 이력의 줄 이름 인자(생략하면 씬 줄)를 @p outChannelName 에 읽습니다. 그 이름의 줄이 없으면 false 이고 까닭을 @p outReply 에 씁니다. */
-            [[nodiscard]] static bool findChannelArgument( const StateHashHistory& history, const vector<string>& listArgument, size_t nameIndex, string_view& outChannelName,
-                                                           string& outReply )
+            /** @brief 이력의 줄 이름 인자입니다(생략하면 씬 줄). 그 줄이 있는지는 부르는 쪽이 `StateHashHistory::hasChannel` 로 본다. */
+            [[nodiscard]] static string_view readChannelName( const vector<string>& listArgument, size_t nameIndex )
             {
-                outChannelName = listArgument.size() > nameIndex ? string_view{ listArgument[nameIndex] } : string_view{ StateHashHistory::kSceneChannelName };
-                if ( history.hasChannel( outChannelName ) )
-                    return true;
-                outReply = "no state hash channel '" + string( outChannelName ) + "' - state.hashnames lists them";
-                return false;
+                return listArgument.size() > nameIndex ? string_view{ listArgument[nameIndex] } : string_view{ StateHashHistory::kSceneChannelName };
+            }
+
+            /** @brief 그 이름의 줄이 없을 때의 답입니다. */
+            [[nodiscard]] static string makeNoChannelReply( string_view channelName )
+            {
+                return "no state hash channel '" + string( channelName ) + "' - state.hashnames lists them";
             }
 
             static bool runStateHashes( const vector<string>& listArgument, string& outReply )
@@ -193,12 +195,19 @@ namespace sw
                 const bool bHasCount = bHasFrom && StringUtil::parseUint64( listArgument[1], count );
                 if ( bHasCount == false )
                     return false;
-                const StateHashHistory* pHistory = findRecordingHistory( outReply );
-                if ( pHistory == nullptr )
+                const expected<const StateHashHistory*> history = findRecordingHistory();
+                if ( history.has_value() == false )
+                {
+                    outReply = string( history.error().message() );
                     return false;
-                string_view channelName;
-                if ( findChannelArgument( *pHistory, listArgument, 2, channelName, outReply ) == false )
+                }
+                const StateHashHistory* pHistory    = *history;
+                const string_view       channelName = readChannelName( listArgument, 2 );
+                if ( pHistory->hasChannel( channelName ) == false )
+                {
+                    outReply = makeNoChannelReply( channelName );
                     return false;
+                }
                 vector<StateHashSample> listSample;
                 pHistory->collectChannel( channelName, fromTick, static_cast<uint32>( count ), listSample );
                 outReply.clear();
@@ -211,10 +220,14 @@ namespace sw
             {
                 if ( listArgument.empty() == false )
                     return false;
-                const StateHashHistory* pHistory = findRecordingHistory( outReply );
-                if ( pHistory == nullptr )
+                const expected<const StateHashHistory*> history = findRecordingHistory();
+                if ( history.has_value() == false )
+                {
+                    outReply = string( history.error().message() );
                     return false;
-                vector<string> listName;
+                }
+                const StateHashHistory* pHistory = *history;
+                vector<string>          listName;
                 pHistory->collectChannelNames( listName );
                 outReply = StateHashHistory::kSceneChannelName;
                 outReply += '\n';
@@ -240,12 +253,19 @@ namespace sw
                     outReply = string( replyBuilder.view() );
                     return false;
                 }
-                const StateHashHistory* pHistory = findRecordingHistory( outReply );
-                if ( pHistory == nullptr )
+                const expected<const StateHashHistory*> history = findRecordingHistory();
+                if ( history.has_value() == false )
+                {
+                    outReply = string( history.error().message() );
                     return false;
-                string_view channelName;
-                if ( findChannelArgument( *pHistory, listArgument, 1, channelName, outReply ) == false )
+                }
+                const StateHashHistory* pHistory    = *history;
+                const string_view       channelName = readChannelName( listArgument, 1 );
+                if ( pHistory->hasChannel( channelName ) == false )
+                {
+                    outReply = makeNoChannelReply( channelName );
                     return false;
+                }
                 vector<StateHashSample> listSample;
                 StateHashSample         latest;
                 if ( pHistory->tryGetLatestChannel( channelName, latest ) )

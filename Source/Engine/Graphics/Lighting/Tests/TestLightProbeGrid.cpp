@@ -38,7 +38,7 @@ namespace sw
 SW_TEST_CASE( LightProbeGridTest, BytesRoundTrip )
 {
     const sw::LightProbeGrid source = sw::makeLightProbeGridForTest();
-    SW_REQUIRE_TRUE( source.isValid() );
+    SW_REQUIRE_TRUE( source.validate() );
     sw::vector<uint8> bytes;
     source.makeBytes( bytes );
 
@@ -65,10 +65,8 @@ SW_TEST_CASE( LightProbeGridTest, RejectsBrokenFiles )
     source.makeBytes( bytes );
 
     sw::LightProbeGrid loaded{};
-    sw::string         error;
-    SW_EXPECT_FALSE( loaded.readFromBytes( bytes.data(), bytes.size() - 4, &error ) );
+    SW_EXPECT_FALSE( loaded.readFromBytes( bytes.data(), bytes.size() - 4 ) );
     SW_EXPECT_TRUE( loaded._listProbe.empty() );
-    SW_EXPECT_FALSE( error.empty() );
 
     sw::vector<uint8> wrongMagic = bytes;
     wrongMagic[0]                = 'X';
@@ -91,20 +89,16 @@ SW_TEST_CASE( LightProbeGridTest, TruncationForgedCountsAndNonFiniteAreRefused )
     for ( size_t length = 0; length < bytes.size(); ++length )
     {
         sw::LightProbeGrid loaded{};
-        sw::string         error;
-        SW_EXPECT_FALSE( loaded.readFromBytes( bytes.data(), length, &error ) );
+        SW_EXPECT_FALSE( loaded.readFromBytes( bytes.data(), length ) );
         SW_EXPECT_TRUE( loaded._listProbe.empty() );
-        SW_EXPECT_FALSE( error.empty() );
     }
 
     // 바이트 자리: 매직(0) · 버전(4) · 원점(8) · 간격(20) · 축마다 수(32 · 36 · 40) · 계수(44).
     const auto refused = []( sw::vector<uint8> forged )
     {
         sw::LightProbeGrid loaded{};
-        sw::string         error;
-        SW_EXPECT_FALSE( loaded.readFromBytes( forged.data(), forged.size(), &error ) );
+        SW_EXPECT_FALSE( loaded.readFromBytes( forged.data(), forged.size() ) );
         SW_EXPECT_TRUE( loaded._listProbe.empty() );
-        SW_EXPECT_FALSE( error.empty() );
     };
     const auto patched = [&]( size_t offset, uint32 value )
     {

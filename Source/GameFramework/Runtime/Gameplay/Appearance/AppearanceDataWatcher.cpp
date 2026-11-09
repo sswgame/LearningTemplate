@@ -51,11 +51,11 @@ namespace sw
     {
         if ( _bChanged == false )
             return;
-        _bChanged = SW_FALSE;
-        string report;
-        if ( database.reloadFromFolder( string_view( _folder ), pItemCatalog, report ) )
+        _bChanged                                           = SW_FALSE;
+        const expected<void, AppearanceLoadReport> reloaded = database.reloadFromFolder( string_view( _folder ), pItemCatalog );
+        if ( reloaded.has_value() )
             SW_LOG_INFO_ID( "AppearanceDataWatcher.AppearanceDataReloaded", "Appearance data reloaded from '%#'", _folder.c_str() );
         else
-            SW_LOG_ERROR_ID( "AppearanceDataWatcher.AppearanceDataDidNot", "Appearance data in '%#' did not pass validation - kept the running data: %#", _folder.c_str(), report.c_str() );
+            SW_LOG_ERROR_ID( "AppearanceDataWatcher.AppearanceDataDidNot", "Appearance data in '%#' did not pass validation - kept the running data: %#", _folder.c_str(), reloaded.error().joined().c_str() );
     }
 } // namespace sw

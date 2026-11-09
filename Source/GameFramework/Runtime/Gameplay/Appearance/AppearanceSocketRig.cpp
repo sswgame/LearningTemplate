@@ -86,7 +86,7 @@ namespace sw
         (void)_rigidBones.addBone( hashed_string( AppearanceSocketRigInternal::kRigidRootBone ), constant::invalid_index::kInt32, float4x4::Identity );
     }
 
-    bool AppearanceSocketRig::rebuild( const ResolvedAppearance& resolved, const CharacterBoneArray& bodyBindBones, IAppearanceSocketSource& source, string* pOutError )
+    bool AppearanceSocketRig::rebuild( const ResolvedAppearance& resolved, const CharacterBoneArray& bodyBindBones, IAppearanceSocketSource& source, CharacterIssueList& outIssues )
     {
         _table.beginResolve();
         _listUnitPart.clear();
@@ -109,7 +109,7 @@ namespace sw
         _listUnitPart.push_back( bodyPart >= 0 ? static_cast<uint32>( bodyPart ) : kNoUnit );
         if ( bodyPart >= 0 )
             _listPartUnit[static_cast<size_t>( bodyPart )] = kBodyUnit;
-        if ( _table.addUnit( hashed_string{}, kBodyUnit, bodySockets, bodyBindBones, nullptr, pOutError ) == false )
+        if ( _table.addUnit( hashed_string{}, kBodyUnit, bodySockets, bodyBindBones, nullptr, outIssues ) == false )
             bSucceeded = false;
 
         // 부품 유닛은 소켓 에셋을 가진 부품마다 하나이다(강체이며 본 "root" 하나). 이름 앞에는 주인 이름이 붙는다.
@@ -125,7 +125,7 @@ namespace sw
                 continue;
             }
             const uint32 unitIndex = static_cast<uint32>( _listUnitPart.size() );
-            if ( _table.addUnit( part._owner, unitIndex, *pSockets, _rigidBones, nullptr, pOutError ) == false )
+            if ( _table.addUnit( part._owner, unitIndex, *pSockets, _rigidBones, nullptr, outIssues ) == false )
             {
                 bSucceeded = false;
                 continue;

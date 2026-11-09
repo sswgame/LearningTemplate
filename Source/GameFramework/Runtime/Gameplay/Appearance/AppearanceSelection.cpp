@@ -730,16 +730,12 @@ namespace sw
         return Base64Util::encodeURL( bytes.data(), bytes.size() );
     }
 
-    bool AppearanceSelection::decode( string_view code, const AppearanceDatabase& database, AppearanceSelection& outSelection, string* pOutReason )
+    expected<void> AppearanceSelection::decode( string_view code, const AppearanceDatabase& database, AppearanceSelection& outSelection )
     {
         using Internal = AppearanceSelectionInternal;
         vector<uint8> bytes;
         if ( Base64Util::decodeURL( StringUtil::trim( code ), bytes ) == false || bytes.size() <= Internal::kChecksumBytes )
-        {
-            if ( pOutReason != nullptr )
-                *pOutReason = "not a share code";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "not a share code" } );
         const size_t payloadSize = bytes.size() - Internal::kChecksumBytes;
         uint32       storedCRC   = 0;
         for ( uint32 byteIndex = 0; byteIndex < Internal::kChecksumBytes; ++byteIndex )
@@ -747,25 +743,13 @@ namespace sw
             storedCRC |= static_cast<uint32>( bytes[payloadSize + byteIndex] ) << ( byteIndex * 8 );
         }
         if ( HashUtil::computeCRC32( bytes.data(), payloadSize ) != storedCRC )
-        {
-            if ( pOutReason != nullptr )
-                *pOutReason = "checksum mismatch";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "checksum mismatch" } );
         BitReader    reader( bytes.data(), static_cast<int32>( payloadSize ) );
         const uint32 version = reader.readBits( Internal::kVersionBits );
         if ( version < kOldestShareCodeVersion || version > kShareCodeVersion ) // 옛 판은 읽는다(저장된 프리셋이 공유 코드다) — 판을 올리는 커밋은 옛 판 읽기를 남긴다
-        {
-            if ( pOutReason != nullptr )
-                *pOutReason = "unsupported share code version";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::Unsupported, "unsupported share code version" } );
         if ( AppearanceSelection::readSelection( reader, database, outSelection, version ) == false )
-        {
-            if ( pOutReason != nullptr )
-                *pOutReason = "truncated share code";
-            return false;
-        }
-        return true;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "truncated share code" } );
+        return {};
     }
 } // namespace sw

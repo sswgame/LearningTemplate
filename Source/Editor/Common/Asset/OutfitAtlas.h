@@ -9,6 +9,7 @@
 #include "Core/Container/span.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
@@ -53,10 +54,9 @@ namespace sw
         /**
          * @brief 텍스처들을 정사각 아틀라스 @p atlasSize 안에 선반 방식으로 앉힙니다 — 키가 큰 것부터 줄을 채우고 줄이 차면 다음 줄입니다. 결과는 결정적이고(같은 입력은 같은 배치) 입력 순서입니다.
          * @param padding 텍스처 사방에 비워 두는 번짐 폭(픽셀)입니다. 이웃 텍스처 사이에는 두 배가 든다.
-         * @return 크기가 0 이거나, 이름이 겹치거나, 아틀라스(`kMaxAtlasSize` 이하)에 다 앉지 않으면 까닭을 @p pOutError 에 남기고 false 입니다.
+         * @return 크기가 0 이거나, 이름이 겹치거나, 아틀라스(`kMaxAtlasSize` 이하)에 다 앉지 않으면 그 까닭입니다.
          */
-        [[nodiscard]] static bool pack( vector_reference<const OutfitAtlasSource> listSource, uint32 atlasSize, uint32 padding, vector<OutfitAtlasRect>& outListRect,
-                                        string* pOutError );
+        [[nodiscard]] static expected<void> pack( vector_reference<const OutfitAtlasSource> listSource, uint32 atlasSize, uint32 padding, vector<OutfitAtlasRect>& outListRect );
     };
 } // namespace sw
 
@@ -98,9 +98,9 @@ namespace sw
         static void initialize( uint32 atlasSize, vector<uint8>& outListPixel );
         /**
          * @brief 텍스처(RGBA8, 빈틈없는 행)를 @p rect 에 복사하고, 사방 @p padding 픽셀을 가장자리 픽셀로 채웁니다(밉 · 필터링이 이웃 텍스처 색을 끌어오지 않게).
-         * @return 텍스처 크기가 사각형과 다르거나 사각형이 아틀라스를 벗어나면 까닭을 @p pOutError 에 남기고 false 입니다.
+         * @return 텍스처 크기가 사각형과 다르거나 사각형이 아틀라스를 벗어나면 그 까닭입니다.
          */
-        [[nodiscard]] static bool blit( uint32 atlasSize, const OutfitAtlasRect& rect, uint32 padding, const vector<uint8>& textureRGBA, uint32 textureWidth, uint32 textureHeight,
-                                        vector<uint8>& inoutAtlas, string* pOutError );
+        [[nodiscard]] static expected<void> blit( uint32 atlasSize, const OutfitAtlasRect& rect, uint32 padding, const vector<uint8>& textureRGBA, uint32 textureWidth,
+                                                  uint32 textureHeight, vector<uint8>& inoutAtlas );
     };
 } // namespace sw

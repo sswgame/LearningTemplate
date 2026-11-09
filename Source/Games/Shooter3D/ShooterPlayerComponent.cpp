@@ -147,24 +147,19 @@ namespace sw
 
         struct ShooterDevCommandsInternal
         {
-            /** @brief 활성 씬의 슈터 플레이어를 모읍니다. 씬이 없거나 하나도 없으면 답을 채우고 false 입니다. */
-            [[nodiscard]] static bool collectPlayers( vector<ShooterPlayerComponent*>& outListPlayer, string& outReply )
+            /** @brief 활성 씬의 슈터 플레이어를 모읍니다. 씬이 없거나 하나도 없으면 그 까닭(문장이 명령 답이다)입니다. */
+            [[nodiscard]] static expected<vector<ShooterPlayerComponent*>> collectPlayers()
             {
                 SceneManager* const pSceneManager = game::findSubsystem<SceneManager>();
                 GameObjectManager*  pManager      = pSceneManager != nullptr ? pSceneManager->findActiveObjectManager() : nullptr;
                 if ( pManager == nullptr )
-                {
-                    outReply = "cheat: no active scene";
-                    return false;
-                }
-                pManager->forEachComponentOfType<ShooterPlayerComponent>( [&outListPlayer]( ShooterPlayerComponent* pPlayer )
-                { outListPlayer.push_back( pPlayer ); } );
-                if ( outListPlayer.empty() )
-                {
-                    outReply = "cheat: no ShooterPlayerComponent in the active scene";
-                    return false;
-                }
-                return true;
+                    return unexpected( Error{ ErrorKind::NotFound, "cheat: no active scene" } );
+                vector<ShooterPlayerComponent*> listPlayer;
+                pManager->forEachComponentOfType<ShooterPlayerComponent>( [&listPlayer]( ShooterPlayerComponent* pPlayer )
+                { listPlayer.push_back( pPlayer ); } );
+                if ( listPlayer.empty() )
+                    return unexpected( Error{ ErrorKind::NotFound, "cheat: no ShooterPlayerComponent in the active scene" } );
+                return listPlayer;
             }
 
             /** @brief `cheat.ammo` — 탄 보상과 같이 무기마다 탄창 두 개를 예비 탄에 더합니다. */
@@ -172,9 +167,13 @@ namespace sw
             {
                 if ( listArgument.empty() == false )
                     return false;
-                vector<ShooterPlayerComponent*> listPlayer;
-                if ( collectPlayers( listPlayer, outReply ) == false )
+                expected<vector<ShooterPlayerComponent*>> collected = collectPlayers();
+                if ( collected.has_value() == false )
+                {
+                    outReply = string( collected.error().message() );
                     return true;
+                }
+                const vector<ShooterPlayerComponent*> listPlayer = std::move( *collected );
                 for ( ShooterPlayerComponent* pPlayer : listPlayer )
                 {
                     pPlayer->addWaveAmmo();
@@ -190,10 +189,14 @@ namespace sw
             {
                 if ( listArgument.empty() == false )
                     return false;
-                vector<ShooterPlayerComponent*> listPlayer;
-                if ( collectPlayers( listPlayer, outReply ) == false )
+                expected<vector<ShooterPlayerComponent*>> collected = collectPlayers();
+                if ( collected.has_value() == false )
+                {
+                    outReply = string( collected.error().message() );
                     return true;
-                int32 healedCount = 0;
+                }
+                const vector<ShooterPlayerComponent*> listPlayer  = std::move( *collected );
+                int32                                 healedCount = 0;
                 for ( ShooterPlayerComponent* pPlayer : listPlayer )
                 {
                     if ( pPlayer->isAlive() == false )
@@ -215,10 +218,14 @@ namespace sw
             {
                 if ( listArgument.empty() == false )
                     return false;
-                vector<ShooterPlayerComponent*> listPlayer;
-                if ( collectPlayers( listPlayer, outReply ) == false )
+                expected<vector<ShooterPlayerComponent*>> collected = collectPlayers();
+                if ( collected.has_value() == false )
+                {
+                    outReply = string( collected.error().message() );
                     return true;
-                const bool bImmune = listPlayer.front()->isDamageImmune() == false;
+                }
+                const vector<ShooterPlayerComponent*> listPlayer = std::move( *collected );
+                const bool                            bImmune    = listPlayer.front()->isDamageImmune() == false;
                 for ( ShooterPlayerComponent* pPlayer : listPlayer )
                 {
                     pPlayer->setDamageImmune( bImmune );
@@ -234,11 +241,15 @@ namespace sw
             {
                 if ( listArgument.size() > 1 )
                     return false;
-                vector<ShooterPlayerComponent*> listPlayer;
-                if ( collectPlayers( listPlayer, outReply ) == false )
+                expected<vector<ShooterPlayerComponent*>> collected = collectPlayers();
+                if ( collected.has_value() == false )
+                {
+                    outReply = string( collected.error().message() );
                     return true;
-                const hashed_string projectileID = listArgument.empty() ? hashed_string{} : hashed_string( listArgument.front() );
-                int32               loadedCount  = 0;
+                }
+                const vector<ShooterPlayerComponent*> listPlayer   = std::move( *collected );
+                const hashed_string                   projectileID = listArgument.empty() ? hashed_string{} : hashed_string( listArgument.front() );
+                int32                                 loadedCount  = 0;
                 for ( ShooterPlayerComponent* pPlayer : listPlayer )
                 {
                     loadedCount += pPlayer->loadProjectile( projectileID ) ? 1 : 0; // 거절한 까닭은 장전이 남겼다

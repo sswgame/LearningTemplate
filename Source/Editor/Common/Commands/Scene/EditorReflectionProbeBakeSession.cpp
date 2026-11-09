@@ -147,9 +147,12 @@ namespace sw::editor
             if ( readInput( pState, generation, input ) == false )
                 return;
             EditorReflectionProbeFilterResult result;
-            result._assetPath  = input._assetPath;
-            result._objectID   = input._objectID;
-            result._bSucceeded = ReflectionProbeBaker::makeProbeData( *input._pCapture, result._data, &result._error );
+            result._assetPath         = input._assetPath;
+            result._objectID          = input._objectID;
+            const expected<void> made = ReflectionProbeBaker::makeProbeData( *input._pCapture, result._data );
+            result._bSucceeded        = made.has_value();
+            if ( made.has_value() == false )
+                result._error = string( made.error().message() );
             if ( result._bSucceeded && result._data._listTexel.empty() )
             {
                 result._bSucceeded = false;
@@ -326,11 +329,10 @@ namespace sw::editor
         vector<ReflectionProbeComponent*> listProbe;
         listProbe.push_back( pProbe );
         vector<ReflectionProbeCapture> listCapture;
-        string                         error;
-        const bool                     bCaptured = ReflectionProbeBaker::captureProbes( *pRenderThread, scene, listProbe, listCapture, &error );
-        if ( bCaptured == false || listCapture.empty() )
+        const expected<void>           captured = ReflectionProbeBaker::captureProbes( *pRenderThread, scene, listProbe, listCapture );
+        if ( captured.has_value() == false || listCapture.empty() )
         {
-            reportFailure( bCaptured ? string( "the baker captured nothing" ) : error );
+            reportFailure( captured.has_value() ? string( "the baker captured nothing" ) : string( captured.error().message() ) );
             return;
         }
         EditorReflectionProbeFilterInput input;

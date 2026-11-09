@@ -32,7 +32,8 @@ SW_TEST_CASE( BodyShapeChannelsTest, HeelChannelRotatesAndLifts )
     };
     sw::vector<sw::BodyMorphWeight> listMorph;
     sw::BoneProportion              proportion;
-    SW_REQUIRE_TRUE( shapes.evaluate( sw::vector_reference<const sw::BodyShapeValue>( arrValue, 1 ), listMorph, proportion, nullptr ) );
+    sw::CharacterIssueList          issues;
+    SW_REQUIRE_TRUE( shapes.evaluate( sw::vector_reference<const sw::BodyShapeValue>( arrValue, 1 ), listMorph, proportion, issues ) );
     const sw::BoneProportionEntry* pFoot   = proportion.findBone( sw::hashed_string( "foot_l" ) );
     const sw::BoneProportionEntry* pPelvis = proportion.findBone( sw::hashed_string( "pelvis" ) );
     SW_REQUIRE_TRUE( pFoot != nullptr && pPelvis != nullptr );
@@ -53,7 +54,8 @@ SW_TEST_CASE( BodyShapeChannelsTest, ResponseCurveShapesWeight )
     };
     sw::vector<sw::BodyMorphWeight> listMorph;
     sw::BoneProportion              proportion;
-    SW_REQUIRE_TRUE( shapes.evaluate( sw::vector_reference<const sw::BodyShapeValue>( arrValue, 1 ), listMorph, proportion, nullptr ) );
+    sw::CharacterIssueList          issues;
+    SW_REQUIRE_TRUE( shapes.evaluate( sw::vector_reference<const sw::BodyShapeValue>( arrValue, 1 ), listMorph, proportion, issues ) );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listMorph.size() );
     SW_EXPECT_NEAR( 0.25f, listMorph[0]._weight, 1e-5f );
     const sw::BoneProportionEntry* pBreast = proportion.findBone( sw::hashed_string( "breast_l" ) );
@@ -73,13 +75,14 @@ SW_TEST_CASE( BodyShapeChannelsTest, UnsupportedChannelIsSilentUnknownIsError )
     const sw::BodyShapeValue        arrDeclared[] = {
         { sw::hashed_string( "Tail.Length" ), 1.0f }
     };
-    SW_EXPECT_TRUE( shapes.evaluate( sw::vector_reference<const sw::BodyShapeValue>( arrDeclared, 1 ), listMorph, proportion, nullptr ) );
+    sw::CharacterIssueList declaredIssues;
+    SW_EXPECT_TRUE( shapes.evaluate( sw::vector_reference<const sw::BodyShapeValue>( arrDeclared, 1 ), listMorph, proportion, declaredIssues ) );
     const sw::BodyShapeValue arrUnknown[] = {
         { sw::hashed_string( "Wing.Span" ), 1.0f }
     };
-    sw::string error;
-    SW_EXPECT_FALSE( shapes.evaluate( sw::vector_reference<const sw::BodyShapeValue>( arrUnknown, 1 ), listMorph, proportion, &error ) );
-    SW_EXPECT_FALSE( error.empty() );
+    sw::CharacterIssueList unknownIssues;
+    SW_EXPECT_FALSE( shapes.evaluate( sw::vector_reference<const sw::BodyShapeValue>( arrUnknown, 1 ), listMorph, proportion, unknownIssues ) );
+    SW_EXPECT_FALSE( unknownIssues.empty() );
 }
 
 /**

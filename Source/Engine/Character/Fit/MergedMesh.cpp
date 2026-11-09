@@ -76,27 +76,19 @@ namespace sw
 
 namespace sw
 {
-    bool MergedMesh::merge( vector_reference<const MeshMergeSource> listSource, const IMeshMergeHooks* pHooks, MergedMesh& outMerged, string* pOutError )
+    expected<void> MergedMesh::merge( vector_reference<const MeshMergeSource> listSource, const IMeshMergeHooks* pHooks, MergedMesh& outMerged )
     {
         outMerged = MergedMesh{};
         if ( listSource.empty() )
-            return true;
+            return {};
         const uint32 skeletonID = listSource[0]._skeletonID;
         for ( const MeshMergeSource& source : listSource )
         {
             if ( source._pGeometry == nullptr || source._pGeometry->isValid() == false )
-            {
-                if ( pOutError != nullptr )
-                    *pOutError = string( "merge part '" ) + source._name.c_str() + "' has no valid geometry";
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::InvalidArgument, "a merge part has no valid geometry", source._name.c_str() } );
+            // 애니메이션 단위가 다르면 포즈 버퍼가 다르므로 한 형상으로 그릴 수 없다.
             if ( source._skeletonID != skeletonID )
-            {
-                // 애니메이션 단위가 다르면 포즈 버퍼가 다르므로 한 형상으로 그릴 수 없다.
-                if ( pOutError != nullptr )
-                    *pOutError = string( "merge part '" ) + source._name.c_str() + "' belongs to another skeleton (animation unit); parts merge within one unit only";
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::InvalidArgument, "a merge part belongs to another skeleton (animation unit); parts merge within one unit only", source._name.c_str() } );
         }
         outMerged._skeletonID = skeletonID;
 
@@ -134,7 +126,7 @@ namespace sw
             section._indexCount = static_cast<uint32>( outMerged._geometry._listIndex.size() ) - section._indexStart;
             outMerged._listSection.push_back( section );
         }
-        return true;
+        return {};
     }
 
     bool MergedMesh::extractPart( const MergedMesh& merged, const hashed_string& partName, AppearanceGeometry& outGeometry )

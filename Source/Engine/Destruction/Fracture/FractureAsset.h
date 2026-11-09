@@ -81,8 +81,8 @@ namespace sw
         vector_reference<const float3> getPieceHull( uint32 piece ) const;
         /** @brief 슬롯 하나의 삼각형 수를 반환합니다. 그 슬롯의 메시를 만들 때 씁니다. */
         uint32 countTriangles( FractureSurfaceSlot slot ) const;
-        /** @brief 구조가 맞는지(그래프, 구간, 슬롯 길이) 검사합니다. */
-        bool isValid( string* pOutError = nullptr ) const;
+        /** @brief 구조가 맞는지(그래프, 구간, 슬롯 길이) 검사합니다. 틀리면 그 까닭입니다. */
+        [[nodiscard]] expected<void> validate() const;
         /** @brief 비웁니다. */
         void clear();
 

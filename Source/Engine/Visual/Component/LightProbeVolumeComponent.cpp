@@ -134,12 +134,12 @@ namespace sw
 
     bool LightProbeVolumeComponent::applyProbeData( LightProbeGrid&& grid, string_view path )
     {
-        string     error;
-        const bool bValid   = grid.isValid( &error );
-        const bool bMatches = bValid && grid._layout.matches( computeLayout(), LightProbeVolumeComponentInternal::kLayoutTolerance );
+        const expected<void> valid    = grid.validate();
+        const bool           bMatches = valid.has_value() && grid._layout.matches( computeLayout(), LightProbeVolumeComponentInternal::kLayoutTolerance );
         if ( bMatches == false )
         {
-            SW_LOG_ERROR_ID( "LightProbeVolume.LightProbeDataDoes", "Light probe data for '%#' does not fit this volume (%#)", string( path ).c_str(), bValid ? "grid layout differs" : error.c_str() );
+            SW_LOG_ERROR_ID( "LightProbeVolume.LightProbeDataDoes", "Light probe data for '%#' does not fit this volume (%#)", string( path ).c_str(),
+                             valid.has_value() ? string_view{ "grid layout differs" } : valid.error().message() );
             return false;
         }
         _probeData     = std::move( grid );
@@ -180,10 +180,10 @@ namespace sw
         _probeData.clear();
         if ( _probeDataPath.empty() )
             return;
-        string error;
-        if ( _probeData.loadFromAsset( AssetID{ _probeDataPath }, &error ) == false )
+        if ( const expected<void> loaded = _probeData.loadFromAsset( AssetID{ _probeDataPath } ); loaded.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "LightProbeVolume.LightProbeDataCould", "Light probe data '%#' could not be loaded (%#) - the volume gives no indirect light until it is baked again", _probeDataPath.c_str(), error.c_str() );
+            SW_LOG_ERROR_ID( "LightProbeVolume.LightProbeDataCould", "Light probe data '%#' could not be loaded (%#) - the volume gives no indirect light until it is baked again", _probeDataPath.c_str(),
+                             loaded.error().message() );
             return;
         }
         if ( _probeData._layout.matches( computeLayout(), LightProbeVolumeComponentInternal::kLayoutTolerance ) == false )

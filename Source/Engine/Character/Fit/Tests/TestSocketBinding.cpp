@@ -299,7 +299,8 @@ SW_TEST_CASE( Socket2DTest, SocketOnSpriteBoneBindsInPlane )
                                               &bones2D ) );
     ResolvedSocketTable table;
     table.beginResolve();
-    SW_REQUIRE_TRUE( table.addUnit( hashed_string(), 0, sockets, bones2D, nullptr, nullptr ) );
+    CharacterIssueList issues;
+    SW_REQUIRE_TRUE( table.addUnit( hashed_string(), 0, sockets, bones2D, nullptr, issues ) );
     table.endResolve();
     float4x4 tipInUnit;
     SW_REQUIRE_TRUE( table.computeUnitTransform( table.findSocket( hashed_string( "Tip" ) ), bones2D, tipInUnit ) );

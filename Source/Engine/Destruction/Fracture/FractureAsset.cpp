@@ -139,32 +139,32 @@ namespace sw
         return count;
     }
 
-    bool FractureAsset::isValid( string* pOutError ) const
+    expected<void> FractureAsset::validate() const
     {
-        if ( _graph.isValid( pOutError ) == false )
-            return false;
+        if ( expected<void> graph = _graph.validate(); graph.has_value() == false )
+            return graph;
         if ( _listPiece.size() != _graph._leafCount )
-            return FractureGraph::reportInvalid( pOutError, "piece count differs from leaf count" );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "piece count differs from leaf count" } );
         if ( _listVertex.size() % 3 != 0 || _listTriangleSlot.size() * 3 != _listVertex.size() )
-            return FractureGraph::reportInvalid( pOutError, "triangle slots do not match the vertex list" );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "triangle slots do not match the vertex list" } );
         uint32 expectedVertex = 0;
         for ( const FracturePiece& piece : _listPiece )
         {
             const bool bInvalidPieceVertexRange = piece._firstVertex != expectedVertex || piece._vertexCount % 3 != 0 || piece._vertexCount == 0;
             if ( bInvalidPieceVertexRange )
-                return FractureGraph::reportInvalid( pOutError, "piece vertex ranges must be contiguous triangle lists" );
+                return unexpected( Error{ ErrorKind::InvalidArgument, "piece vertex ranges must be contiguous triangle lists" } );
             expectedVertex += piece._vertexCount;
             if ( static_cast<size_t>( piece._firstHullPoint ) + piece._hullPointCount > _listHullPoint.size() || piece._hullPointCount < 3 )
-                return FractureGraph::reportInvalid( pOutError, "piece hull out of range or too small" );
+                return unexpected( Error{ ErrorKind::InvalidArgument, "piece hull out of range or too small" } );
         }
         if ( expectedVertex != _listVertex.size() )
-            return FractureGraph::reportInvalid( pOutError, "vertex list longer than the pieces" );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "vertex list longer than the pieces" } );
         for ( const uint8 slot : _listTriangleSlot )
         {
             if ( slot >= static_cast<uint8>( FractureSurfaceSlot::Count ) )
-                return FractureGraph::reportInvalid( pOutError, "unknown surface slot" );
+                return unexpected( Error{ ErrorKind::InvalidArgument, "unknown surface slot" } );
         }
-        return true;
+        return {};
     }
 
     void FractureAsset::clear()
@@ -292,11 +292,10 @@ namespace sw
         const bool bLengthsFit = FractureAssetInternal::readGraph( reader, leafCount, nodeCount, childCount, linkCount, _graph ) && FractureAssetInternal::readPieces( reader, leafCount, _listPiece ) &&
                                  FractureAssetInternal::readMesh( reader, vertexCount, hullCount, *this ) && reader.isFullyRead();
 
-        string     error;
-        const bool bMalformedFractureAsset = bLengthsFit == false || isValid( &error ) == false;
-        if ( bMalformedFractureAsset )
+        const expected<void> valid = bLengthsFit ? validate() : expected<void>{ unexpected( Error{ ErrorKind::InvalidArgument, "length mismatch or a non-finite value" } ) };
+        if ( valid.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "FractureAsset.FractureAssetMalformed", "Fracture asset is malformed: %#", bLengthsFit ? error.c_str() : "length mismatch or a non-finite value" );
+            SW_LOG_ERROR_ID( "FractureAsset.FractureAssetMalformed", "Fracture asset is malformed: %#", valid.error().message() );
             clear();
             return false;
         }

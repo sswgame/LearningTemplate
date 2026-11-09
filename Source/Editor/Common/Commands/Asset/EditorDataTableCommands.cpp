@@ -29,10 +29,10 @@ namespace sw::editor
                 for ( const string& tablePath : sheet._listTablePath )
                 {
                     SourceStringTable& table = outListTable.emplace_back();
-                    string             error;
-                    if ( table.loadFromFile( tablePath, &error ) == false )
+                    if ( const expected<void> read = table.loadFromFile( tablePath ); read.has_value() == false )
                     {
-                        SW_LOG_WARNING_ID( "EditorDataTableCommands.StringTableCannotRead", "String table '%#' cannot be read - it is not shown and saving will not overwrite it: %#", tablePath.c_str(), error.c_str() );
+                        SW_LOG_WARNING_ID( "EditorDataTableCommands.StringTableCannotRead", "String table '%#' cannot be read - it is not shown and saving will not overwrite it: %# (%#)", tablePath.c_str(),
+                                           read.error().message(), read.error().detail() );
                         bAllRead = false;
                     }
                 }
@@ -46,10 +46,11 @@ namespace sw::editor
                 outTable.setCulture( culture );
                 if ( FileUtil::exists( path ) == false )
                     return true;
-                string error;
-                if ( outTable.loadFromFile( path, &error ) )
+                const expected<void> read = outTable.loadFromFile( path );
+                if ( read.has_value() )
                     return true;
-                SW_LOG_WARNING_ID( "EditorDataTableCommands.TranslationTableCannotRead", "Translation table '%#' cannot be read - its strings are not shown and saving will not overwrite it: %#", path.c_str(), error.c_str() );
+                SW_LOG_WARNING_ID( "EditorDataTableCommands.TranslationTableCannotRead", "Translation table '%#' cannot be read - its strings are not shown and saving will not overwrite it: %# (%#)", path.c_str(),
+                                   read.error().message(), read.error().detail() );
                 return false;
             }
 
@@ -177,10 +178,9 @@ namespace sw::editor
         const string projectPath( projectPathView ); // @p outSheet 의 경로를 넘겨받았을 수 있으므로 비우기 전에 복사한다
         outSheet = LocalizationSheet{};
         LocalizationProject project;
-        string              error;
-        if ( project.loadFromFile( projectPath, &error ) == false )
+        if ( const expected<void> read = project.loadFromFile( projectPath ); read.has_value() == false )
         {
-            SW_LOG_WARNING_ID( "EditorDataTableCommands.LocalizationProjectCannotRead", "Localization project cannot be read: %#", error.c_str() );
+            SW_LOG_WARNING_ID( "EditorDataTableCommands.LocalizationProjectCannotRead", "Localization project cannot be read: %# (%#)", read.error().message(), read.error().detail() );
             return false;
         }
         outSheet._projectPath   = string( projectPath );

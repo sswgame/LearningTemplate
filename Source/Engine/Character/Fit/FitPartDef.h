@@ -23,6 +23,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Character/CharacterIssue.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -131,14 +132,14 @@ namespace sw
          * @brief 겹 · 프로필 · 숨김 영역 이름이 @p tables 에 있는지 봅니다.
          * @details 부품 피팅 데이터는 표와 따로 읽는 에셋이다(같은 장비를 표가 다른 캐릭터가 입는다, 공유 캐시가 경로만으로 나눠 준다). 그래서 대조는 읽을 때가 아니라
          *          둘이 만나는 조립(외형 메시 조립)과 데이터 검사에서 한다.
-         * @return 없는 이름이 있으면 오류 글을 더하고 false 입니다.
+         * @return 없는 이름이 있으면 @p outIssues 에 문제를 더하고 false 입니다.
          */
-        bool validateNames( const FitTables& tables, string* pOutError ) const;
+        bool validateNames( const FitTables& tables, CharacterIssueList& outIssues ) const;
         /**
          * @brief 고리의 본이 @p bones 에, 보정 정점이 @p geometry 안에 있는지 봅니다(널이면 그쪽은 건너뜀).
-         * @return 아니면 오류 글을 더하고 false 입니다.
+         * @return 아니면 @p outIssues 에 문제를 더하고 false 입니다.
          */
-        bool validate( const CharacterBoneArray* pBones, const AppearanceGeometry* pGeometry, string* pOutError ) const;
+        bool validate( const CharacterBoneArray* pBones, const AppearanceGeometry* pGeometry, CharacterIssueList& outIssues ) const;
 
         /** @brief 겹 이름입니다. */
         const hashed_string& getLayer() const { return _layer; }

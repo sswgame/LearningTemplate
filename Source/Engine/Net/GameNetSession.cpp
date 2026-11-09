@@ -92,25 +92,26 @@ namespace sw
             /** @brief `net.traffic` 이 한 번에 보낼 수 있는 메시지 상한(신뢰 창 `NetConnection::kReliableWindow` 를 넘으면 보내기가 거절된다). */
             static constexpr int32 kMaxTrafficMessageCount = 200;
 
-            /** @brief 명령을 받을 세션 — 없으면 답을 채우고 nullptr 입니다. */
-            static GameNetSession* findCommandSession( string& outReply )
+            /** @brief 명령을 받을 세션이 없을 때의 답입니다. */
+            static constexpr const utf8* kNoSessionReply = "net session: none (start with -gv_netListenPort=<port> or -gv_netConnectAddress=<host:port>)";
+
+            /** @brief 명령을 받을 세션입니다 — 없거나 꺼져 있으면 nullptr 이고 부르는 쪽이 `kNoSessionReply` 로 답한다. */
+            static GameNetSession* findCommandSession()
             {
                 GameNetSession* pSession = engine::findSubsystem<GameNetSession>();
-                if ( pSession == nullptr || pSession->isActive() == false )
-                {
-                    outReply = "net session: none (start with -gv_netListenPort=<port> or -gv_netConnectAddress=<host:port>)";
-                    return nullptr;
-                }
-                return pSession;
+                return pSession != nullptr && pSession->isActive() ? pSession : nullptr;
             }
 
             /** @brief `net.disconnect` — 이 프로세스의 모든 연결을 끊습니다(서버는 모든 클라이언트를, 클라이언트는 서버를). */
             static bool runDisconnect( const vector<string>& listArgument, string& outReply )
             {
                 (void)listArgument;
-                GameNetSession* pSession = findCommandSession( outReply );
+                GameNetSession* pSession = findCommandSession();
                 if ( pSession == nullptr )
+                {
+                    outReply = kNoSessionReply;
                     return true;
+                }
                 pSession->disconnectPeers();
                 outReply = "net session disconnected";
                 return true;
@@ -120,9 +121,12 @@ namespace sw
             static bool runReconnect( const vector<string>& listArgument, string& outReply )
             {
                 (void)listArgument;
-                GameNetSession* pSession = findCommandSession( outReply );
+                GameNetSession* pSession = findCommandSession();
                 if ( pSession == nullptr )
+                {
+                    outReply = kNoSessionReply;
                     return true;
+                }
                 outReply = pSession->reconnect() ? "net session reconnecting" : "net session: only a disconnected client reconnects";
                 return true;
             }
@@ -139,9 +143,12 @@ namespace sw
                                     ( listArgument.size() == 1 || StringUtil::parseInt( listArgument[1], messageBytes ) );
                 if ( bValid == false || messageBytes < 1 )
                     return false;
-                GameNetSession* pSession = findCommandSession( outReply );
+                GameNetSession* pSession = findCommandSession();
                 if ( pSession == nullptr )
+                {
+                    outReply = kNoSessionReply;
                     return true;
+                }
                 messageCount = MathUtil::min( messageCount, kMaxTrafficMessageCount );
                 vector<uint8> payloadBytes( static_cast<size_t>( MathUtil::min( messageBytes, NetConnection::kMaxSingleMessageSize ) ), uint8{ 0 } );
                 payloadBytes[0] = GameNetSessionMessage::kTraffic;
@@ -166,9 +173,12 @@ namespace sw
             static bool runStats( const vector<string>& listArgument, string& outReply )
             {
                 (void)listArgument;
-                GameNetSession* pSession = findCommandSession( outReply );
+                GameNetSession* pSession = findCommandSession();
                 if ( pSession == nullptr )
+                {
+                    outReply = kNoSessionReply;
                     return true;
+                }
                 outReply = pSession->makeStatsReport().makeLine();
                 return true;
             }

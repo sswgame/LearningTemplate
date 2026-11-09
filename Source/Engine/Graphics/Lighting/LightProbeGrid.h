@@ -12,6 +12,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Encoding/FourCCUtil.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/SphericalHarmonics.h"
@@ -65,17 +66,17 @@ namespace sw
         vector<SH9Color>     _listProbe; ///< 프로브마다 하나, 번호 순서(`LightProbeGridLayout::computeProbeIndex`)
 
         /** @brief 모양과 프로브 수가 맞는지(간격이 양수, 프로브가 모양만큼 있는지) 봅니다. */
-        [[nodiscard]] bool isValid( string* pOutError = nullptr ) const;
+        [[nodiscard]] expected<void> validate() const;
         /** @brief 비웁니다. */
         void clear();
 
         /** @brief 바이트로 만듭니다(리틀 엔디언). */
         void makeBytes( vector<uint8>& outBytes ) const;
-        /** @brief 바이트를 읽습니다. 매직, 버전, 길이, 구조가 틀리면 false 이고 내용을 비웁니다. */
-        [[nodiscard]] bool readFromBytes( const uint8* pData, size_t size, string* pOutError = nullptr );
+        /** @brief 바이트를 읽습니다. 매직, 버전, 길이, 구조가 틀리면 그 까닭이고 내용을 비웁니다. */
+        [[nodiscard]] expected<void> readFromBytes( const uint8* pData, size_t size );
         /** @brief 파일로 씁니다. 부모 폴더가 없으면 만듭니다. */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
-        /** @brief 리소스 경로(또는 절대 경로)에서 읽습니다. */
-        [[nodiscard]] bool loadFromAsset( const AssetID& assetID, string* pOutError = nullptr );
+        /** @brief 리소스 경로(또는 절대 경로)에서 읽습니다. 못 읽거나 틀리면 그 까닭입니다. */
+        [[nodiscard]] expected<void> loadFromAsset( const AssetID& assetID );
     };
 } // namespace sw

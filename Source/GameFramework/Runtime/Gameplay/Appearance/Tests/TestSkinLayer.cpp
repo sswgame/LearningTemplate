@@ -186,8 +186,7 @@ SW_TEST_CASE_F( SkinLayerSelectionTest, ShareCodeV2RoundTripsLayersAndHiddenSlot
     const AppearanceSelection selection = makeSelection();
     const string              code      = AppearanceSelection::encode( selection, _database );
     AppearanceSelection       decoded;
-    string                    reason;
-    SW_REQUIRE_TRUE( AppearanceSelection::decode( code, _database, decoded, &reason ) );
+    SW_REQUIRE_TRUE( AppearanceSelection::decode( code, _database, decoded ) );
     SW_REQUIRE_EQUAL( size_t{ 2 }, decoded._listSkinLayer.size() );
     SW_EXPECT_TRUE( decoded._listSkinLayer[0]._layer == hashed_string( "lipstick" ) );
     SW_EXPECT_TRUE( decoded._listSkinLayer[1]._layer == hashed_string( "rose_tattoo" ) );
@@ -223,14 +222,14 @@ SW_TEST_CASE_F( SkinLayerSelectionTest, ShareCodeV1StillDecodes )
 {
     const string        oldCode = encodeWithVersion( makeSelection(), AppearanceSelection::kOldestShareCodeVersion );
     AppearanceSelection decoded;
-    string              reason;
-    SW_REQUIRE_TRUE( AppearanceSelection::decode( oldCode, _database, decoded, &reason ) );
+    SW_REQUIRE_TRUE( AppearanceSelection::decode( oldCode, _database, decoded ) );
     SW_EXPECT_TRUE( decoded._basePresetID == hashed_string( "Base" ) );
     SW_REQUIRE_EQUAL( size_t{ 1 }, decoded._listSlot.size() );
     SW_EXPECT_EQUAL( SW_FALSE, decoded._listSlot[0]._bHiddenByPlayer );
     SW_EXPECT_TRUE( decoded._listSkinLayer.empty() );
 
-    const string futureCode = encodeWithVersion( makeSelection(), AppearanceSelection::kShareCodeVersion + 1 );
-    SW_EXPECT_FALSE( AppearanceSelection::decode( futureCode, _database, decoded, &reason ) );
-    SW_EXPECT_EQUAL( string( "unsupported share code version" ), reason );
+    const string         futureCode = encodeWithVersion( makeSelection(), AppearanceSelection::kShareCodeVersion + 1 );
+    const expected<void> future     = AppearanceSelection::decode( futureCode, _database, decoded );
+    SW_EXPECT_FALSE( future );
+    SW_EXPECT_EQUAL( string( "unsupported share code version" ), future.has_value() ? string{} : string( future.error().message() ) );
 }

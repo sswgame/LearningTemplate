@@ -50,9 +50,7 @@ namespace
         static void expectRejected( const vector<uint8>& listByte )
         {
             ReflectionProbeAsset asset = makeAsset();
-            string               error;
-            SW_EXPECT_FALSE( asset.readFromBytes( listByte.data(), listByte.size(), &error ) );
-            SW_EXPECT_FALSE( error.empty() );
+            SW_EXPECT_FALSE( asset.readFromBytes( listByte.data(), listByte.size() ) );
             SW_EXPECT_EQUAL( 0u, asset._resolution );
             SW_EXPECT_EQUAL( 0u, asset._levelCount );
             SW_EXPECT_TRUE( asset._listTexel.empty() );
@@ -96,10 +94,8 @@ SW_TEST_CASE( ReflectionProbeAssetTest, BytesRoundTrip )
     SW_EXPECT_EQUAL( static_cast<uint32>( 'P' ), static_cast<uint32>( listByte[3] ) );
 
     ReflectionProbeAsset asset;
-    string               error;
-    SW_REQUIRE_TRUE( asset.readFromBytes( listByte.data(), listByte.size(), &error ) );
-    SW_EXPECT_TRUE( error.empty() );
-    SW_EXPECT_TRUE( asset.isValid() );
+    SW_REQUIRE_TRUE( asset.readFromBytes( listByte.data(), listByte.size() ) );
+    SW_EXPECT_TRUE( asset.validate() );
     SW_EXPECT_NEAR( 2.0f, asset._capturePosition._y, 0.0f );
     SW_EXPECT_EQUAL( source._resolution, asset._resolution );
     SW_EXPECT_EQUAL( source._levelCount, asset._levelCount );
@@ -189,30 +185,24 @@ SW_TEST_CASE( ReflectionProbeAssetTest, HeaderSizeMustMatchTheLength )
 SW_TEST_CASE( ReflectionProbeAssetTest, IsValidBoundaries )
 {
     ReflectionProbeAsset asset = Util::makeAsset();
-    SW_EXPECT_TRUE( asset.isValid() );
+    SW_EXPECT_TRUE( asset.validate() );
 
-    string error;
     asset._listTexel.pop_back();
-    SW_EXPECT_FALSE( asset.isValid( &error ) );
-    SW_EXPECT_FALSE( error.empty() );
+    SW_EXPECT_FALSE( asset.validate() );
 
     ReflectionProbeAsset big;
     big._resolution = ReflectionProbeAsset::kMaxResolution;
     big._levelCount = ReflectionProbeAsset::kMaxLevelCount;
     big._listTexel.resize( static_cast<size_t>( big._resolution ) * big._resolution * big._levelCount );
-    SW_EXPECT_TRUE( big.isValid() );
+    SW_EXPECT_TRUE( big.validate() );
     big._resolution = ReflectionProbeAsset::kMaxResolution + 1u;
-    error.clear();
-    SW_EXPECT_FALSE( big.isValid( &error ) );
-    SW_EXPECT_FALSE( error.empty() );
+    SW_EXPECT_FALSE( big.validate() );
     big._resolution = ReflectionProbeAsset::kMaxResolution;
     big._levelCount = ReflectionProbeAsset::kMaxLevelCount + 1u;
-    error.clear();
-    SW_EXPECT_FALSE( big.isValid( &error ) );
-    SW_EXPECT_FALSE( error.empty() );
+    SW_EXPECT_FALSE( big.validate() );
 
     asset.clear();
-    SW_EXPECT_FALSE( asset.isValid() );
+    SW_EXPECT_FALSE( asset.validate() );
 }
 
 /** @brief [ReflectionProbeAssetTest] 단계의 거칠기는 l / (n − 1) 이다. 단계 0 은 거르지 않은 빛이다 */
@@ -330,42 +320,30 @@ SW_TEST_CASE( ReflectionProbeAssetTest, FilterRejectsBadInput )
 
     const float3         position{};
     ReflectionProbeAsset data = Util::makeAsset();
-    string               error;
-    SW_EXPECT_FALSE( ReflectionProbeAsset::makeFromFaces( position, nullptr, 4, 2, 8, data, &error ) );
-    SW_EXPECT_FALSE( error.empty() );
+    SW_EXPECT_FALSE( ReflectionProbeAsset::makeFromFaces( position, nullptr, 4, 2, 8, data ) );
     SW_EXPECT_TRUE( data._listTexel.empty() );
 
-    error.clear();
-    SW_EXPECT_FALSE( ReflectionProbeAsset::makeFromFaces( position, arrFace, 4, 2, 0, data, &error ) );
-    SW_EXPECT_FALSE( error.empty() );
+    SW_EXPECT_FALSE( ReflectionProbeAsset::makeFromFaces( position, arrFace, 4, 2, 0, data ) );
 
     const uint32 arrBadResolution[] = { ReflectionProbeAsset::kMinResolution - 1u, ReflectionProbeAsset::kMaxResolution + 1u, 0xFFFFFFFFu };
     for ( const uint32 resolution : arrBadResolution )
     {
-        error.clear();
-        SW_EXPECT_FALSE( ReflectionProbeAsset::makeFromFaces( position, arrFace, resolution, 2, 8, data, &error ) );
-        SW_EXPECT_FALSE( error.empty() );
+        SW_EXPECT_FALSE( ReflectionProbeAsset::makeFromFaces( position, arrFace, resolution, 2, 8, data ) );
         SW_EXPECT_EQUAL( 0u, data._resolution );
     }
     const uint32 arrBadLevel[] = { ReflectionProbeAsset::kMinLevelCount - 1u, ReflectionProbeAsset::kMaxLevelCount + 1u, 0xFFFFFFFFu };
     for ( const uint32 levelCount : arrBadLevel )
     {
-        error.clear();
-        SW_EXPECT_FALSE( ReflectionProbeAsset::makeFromFaces( position, arrFace, 4, levelCount, 8, data, &error ) );
-        SW_EXPECT_FALSE( error.empty() );
+        SW_EXPECT_FALSE( ReflectionProbeAsset::makeFromFaces( position, arrFace, 4, levelCount, 8, data ) );
         SW_EXPECT_EQUAL( 0u, data._levelCount );
     }
 
     arrFace[3]._listPixel.pop_back();
-    error.clear();
-    SW_EXPECT_FALSE( ReflectionProbeAsset::makeFromFaces( position, arrFace, 4, 2, 8, data, &error ) );
-    SW_EXPECT_FALSE( error.empty() );
+    SW_EXPECT_FALSE( ReflectionProbeAsset::makeFromFaces( position, arrFace, 4, 2, 8, data ) );
 
     arrFace[3]._listPixel.clear();
     arrFace[3]._size = 0;
-    error.clear();
-    SW_EXPECT_FALSE( ReflectionProbeAsset::makeFromFaces( position, arrFace, 4, 2, 8, data, &error ) );
-    SW_EXPECT_FALSE( error.empty() );
+    SW_EXPECT_FALSE( ReflectionProbeAsset::makeFromFaces( position, arrFace, 4, 2, 8, data ) );
 }
 
 /** @brief [ReflectionProbeAssetTest] 둘레가 한 색이면 어느 단계 어느 방향이나 그 색이다 — 거르기는 빛을 더하거나 잃지 않는다 */
@@ -379,7 +357,7 @@ SW_TEST_CASE( ReflectionProbeAssetTest, FilterKeepsAUniformEnvironment )
     ReflectionProbeAsset data;
     const float3         position{ 4.0f, 5.0f, 6.0f };
     SW_REQUIRE_TRUE( ReflectionProbeAsset::makeFromFaces( position, arrFace, 8, 3, 16, data ) );
-    SW_EXPECT_TRUE( data.isValid() );
+    SW_EXPECT_TRUE( data.validate() );
     SW_EXPECT_TRUE( Util::isNear( position, data._capturePosition, 0.0f ) );
     uint32 wrongTexelCount = 0;
     for ( const float3& texel : data._listTexel )

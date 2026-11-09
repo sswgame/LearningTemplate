@@ -63,22 +63,16 @@ namespace sw
     {
     }
 
-    bool AppearanceDatabase::reloadFromFolder( string_view folder, const ItemCatalog* pItemCatalog, string& outReport )
+    expected<void, AppearanceLoadReport> AppearanceDatabase::reloadFromFolder( string_view folder, const ItemCatalog* pItemCatalog )
     {
         // 깨진 파일이 돌고 있는 외형을 지우지 않도록 임시로 먼저 읽어 검사한다(작은 파일이라 두 번 읽는다).
         AppearanceDatabase probe;
         if ( probe.loadFromFolder( folder, pItemCatalog ) == false )
-        {
-            outReport = probe.getReport().joined();
-            return false;
-        }
+            return unexpected( probe.getReport() );
         if ( loadFromFolder( folder, pItemCatalog ) == false )
-        {
-            outReport = _report.joined(); // 두 읽기 사이에 파일이 또 바뀌었다 — 다음 변경 알림이 다시 읽는다
-            return false;
-        }
+            return unexpected( _report ); // 두 읽기 사이에 파일이 또 바뀌었다 — 다음 변경 알림이 다시 읽는다
         _reloadedMulticast.broadcast();
-        return true;
+        return {};
     }
 
     Subscription AppearanceDatabase::registerReloaded( const Delegate<void()>& delegate )

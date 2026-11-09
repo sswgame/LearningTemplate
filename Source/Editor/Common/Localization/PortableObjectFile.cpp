@@ -212,14 +212,14 @@ namespace sw
         return escaped;
     }
 
-    bool PortableObjectFile::parse( string_view text, string* pOutError )
+    expected<void> PortableObjectFile::parse( string_view text )
     {
         PortableObjectParseState state;
-        string                   error;
+        const utf8*              pError{ nullptr };
         uint32                   lineNumber{ 0 };
 
         size_t lineStart = 0;
-        while ( lineStart <= text.size() && error.empty() )
+        while ( lineStart <= text.size() && pError == nullptr )
         {
             size_t lineEnd = text.find( '\n', lineStart );
             if ( lineEnd == string_view::npos )
@@ -240,27 +240,21 @@ namespace sw
                 continue;
             }
 
-            const utf8* pLineError = state.consumeLine( line );
-            if ( pLineError != nullptr )
-                error = pLineError;
+            pError = state.consumeLine( line ); // 고정 글(리터럴)이다
 
             if ( lineEnd == text.size() )
                 break;
         }
-        const bool bMissingTranslation = error.empty() && state._bHasSource && state._bHasTranslation == false;
+        const bool bMissingTranslation = pError == nullptr && state._bHasSource && state._bHasTranslation == false;
         if ( bMissingTranslation )
-            error = "msgid without msgstr";
-        if ( error.empty() == false )
-        {
-            if ( pOutError != nullptr )
-                *pOutError = to_string( lineNumber ) + ": " + error;
-            return false;
-        }
+            pError = "msgid without msgstr";
+        if ( pError != nullptr )
+            return unexpected( Error{ ErrorKind::InvalidArgument, pError, "line " }.appendDetail( to_string( lineNumber ) ) );
         state.flush();
         _language    = state._language;
         _projectName = state._projectName;
         _listEntry   = std::move( state._listEntry );
-        return true;
+        return {};
     }
 
     string PortableObjectFile::toText() const

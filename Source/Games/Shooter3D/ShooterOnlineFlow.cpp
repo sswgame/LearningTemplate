@@ -29,14 +29,15 @@ namespace sw
             static constexpr const utf8* kDevLoginName = "shooter_dev"; ///< `Config/Server/Online/Shooter3D.online.json` 의 시드 계정
             static constexpr const utf8* kDevPassword  = "shooter_dev_pw";
 
-            [[nodiscard]] static bool findParts( OnlineSession*& outSession, ShooterOnlineFlow*& outFlow, string& outReply )
+            /** @brief 세션 · 흐름이 없을 때의 명령 답입니다. */
+            static constexpr const utf8* kNoGameReply = "shooter.online: no Shooter3D game instance";
+
+            /** @brief 게임 범위의 세션과 흐름입니다. 하나라도 없으면 false 이고 부르는 쪽이 `kNoGameReply` 로 답한다. */
+            [[nodiscard]] static bool findParts( OnlineSession*& outSession, ShooterOnlineFlow*& outFlow )
             {
                 outSession = game::findSubsystem<OnlineSession>();
                 outFlow    = game::findSubsystem<ShooterOnlineFlow>();
-                if ( outSession != nullptr && outFlow != nullptr )
-                    return true;
-                outReply = "shooter.online: no Shooter3D game instance";
-                return false;
+                return outSession != nullptr && outFlow != nullptr;
             }
 
             static bool runLogin( const vector<string>& listArgument, string& outReply )
@@ -45,8 +46,11 @@ namespace sw
                     return false;
                 OnlineSession*     pSession = nullptr;
                 ShooterOnlineFlow* pFlow    = nullptr;
-                if ( findParts( pSession, pFlow, outReply ) == false )
+                if ( findParts( pSession, pFlow ) == false )
+                {
+                    outReply = kNoGameReply;
                     return true;
+                }
                 pFlow->requestLogin( *pSession, kDevLoginName, kDevPassword );
                 outReply = "shooter.online: login sent";
                 return true;
@@ -59,8 +63,11 @@ namespace sw
                     return false;
                 OnlineSession*     pSession = nullptr;
                 ShooterOnlineFlow* pFlow    = nullptr;
-                if ( findParts( pSession, pFlow, outReply ) == false )
+                if ( findParts( pSession, pFlow ) == false )
+                {
+                    outReply = kNoGameReply;
                     return true;
+                }
                 const bool bSent = pFlow->sendSelfMailOnLocalServer( *pSession, amount, WallClock::nowUnixMilliseconds().count() );
                 outReply         = bSent ? "shooter.online: mail queued" : "shooter.online: needs the in-process server and a login";
                 return true;
@@ -72,8 +79,11 @@ namespace sw
                     return false;
                 OnlineSession*     pSession = nullptr;
                 ShooterOnlineFlow* pFlow    = nullptr;
-                if ( findParts( pSession, pFlow, outReply ) == false )
+                if ( findParts( pSession, pFlow ) == false )
+                {
+                    outReply = kNoGameReply;
                     return true;
+                }
                 pFlow->requestMailList( *pSession );
                 outReply = "shooter.online: mail list sent";
                 return true;
@@ -85,8 +95,11 @@ namespace sw
                     return false;
                 OnlineSession*     pSession = nullptr;
                 ShooterOnlineFlow* pFlow    = nullptr;
-                if ( findParts( pSession, pFlow, outReply ) == false )
+                if ( findParts( pSession, pFlow ) == false )
+                {
+                    outReply = kNoGameReply;
                     return true;
+                }
                 pFlow->requestClaimAll( *pSession );
                 outReply = "shooter.online: claim sent";
                 return true;
@@ -98,8 +111,11 @@ namespace sw
                     return false;
                 OnlineSession*     pSession = nullptr;
                 ShooterOnlineFlow* pFlow    = nullptr;
-                if ( findParts( pSession, pFlow, outReply ) == false )
+                if ( findParts( pSession, pFlow ) == false )
+                {
+                    outReply = kNoGameReply;
                     return true;
+                }
                 pFlow->requestMatch( *pSession );
                 outReply = "shooter.online: queue join sent";
                 return true;
@@ -112,8 +128,11 @@ namespace sw
                     return false;
                 OnlineSession*     pSession = nullptr;
                 ShooterOnlineFlow* pFlow    = nullptr;
-                if ( findParts( pSession, pFlow, outReply ) == false )
+                if ( findParts( pSession, pFlow ) == false )
+                {
+                    outReply = kNoGameReply;
                     return true;
+                }
                 pFlow->requestSubmitKills( *pSession, kills );
                 outReply = "shooter.online: score sent";
                 return true;
@@ -125,8 +144,11 @@ namespace sw
                     return false;
                 OnlineSession*     pSession = nullptr;
                 ShooterOnlineFlow* pFlow    = nullptr;
-                if ( findParts( pSession, pFlow, outReply ) == false )
+                if ( findParts( pSession, pFlow ) == false )
+                {
+                    outReply = kNoGameReply;
                     return true;
+                }
                 pFlow->requestTopKills( *pSession );
                 outReply = "shooter.online: top scores sent";
                 return true;

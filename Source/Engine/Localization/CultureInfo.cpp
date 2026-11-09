@@ -767,19 +767,15 @@ namespace sw
         return string( normalizedCode.substr( 0, separatorPos ) );
     }
 
-    bool CultureTable::loadFromXMLText( string_view xmlText, string_view sourceName, string* pOutError )
+    expected<void> CultureTable::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
         XMLDocument document;
         XMLNode     root;
         if ( XMLReadUtil::parseRoot( document, FileUtil::skipUTF8Bom( xmlText ), sourceName, "CultureTable", root ) != XMLRootStatus::Found )
         {
-            if ( pOutError != nullptr )
-            {
-                *pOutError = document.getLastError();
-                if ( pOutError->empty() )
-                    *pOutError = string( sourceName ) + ": root must be <CultureTable>";
-            }
-            return false;
+            if ( document.getLastError().empty() == false )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "the document is not well-formed XML", document.getLastError() } );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "root must be <CultureTable>", sourceName } );
         }
         const XMLNode cultures = root.findChild( "cultures" );
         string        unknownPart;
@@ -791,10 +787,10 @@ namespace sw
         const bool bBadRoot = cultures.isValid() == false || root.getFirstAttribute().isValid() || cultures.getFirstAttribute().isValid() || unknownPart.empty() == false;
         if ( bBadRoot )
         {
-            if ( pOutError != nullptr )
-                *pOutError = string( sourceName ) + ": root must be <CultureTable>[<numberingSystems>][<currencies>]<cultures><culture code=\"…\" …/>…</cultures></CultureTable>" +
-                             ( unknownPart.empty() ? string{} : " (unknown <" + unknownPart + ">)" );
-            return false;
+            Error error{ ErrorKind::InvalidArgument, "root must be <CultureTable>[<numberingSystems>][<currencies>]<cultures><culture code=\"…\" …/>…</cultures></CultureTable>", sourceName };
+            if ( unknownPart.empty() == false )
+                error.appendDetail( ": unknown <" ).appendDetail( unknownPart ).appendDetail( ">" );
+            return unexpected( error );
         }
 
         // 숫자 체계 · 통화를 먼저 사본에 얹는다 — 문화권이 id 로 가리키고, 어느 하나라도 틀리면 표를 바꾸지 않는다.
@@ -808,10 +804,8 @@ namespace sw
             read = CultureInfoInternal::resolveAll( cultures, _mapCulture, mapNumberingSystem, mapResolved );
         if ( read.has_value() == false )
         {
-            if ( pOutError != nullptr )
-                *pOutError = string( sourceName ) + ": " + string( read.error().message().data(), read.error().message().size() ) + " (" +
-                             string( read.error().detail().data(), read.error().detail().size() ) + ")";
-            return false;
+            read.error().prependDetail( ": " ).prependDetail( sourceName );
+            return read;
         }
         _mapNumberingSystem = std::move( mapNumberingSystem );
         _pCurrencyList      = make_shared<const vector<CurrencyInfo>>( std::move( listCurrency ) );
@@ -823,7 +817,7 @@ namespace sw
         {
             info._pCurrencyList = _pCurrencyList; // 앞서 읽은 문화권도 새 통화를 본다
         }
-        return true;
+        return {};
     }
 
     bool CultureTable::loadFromAsset( const AssetID& assetID )
@@ -835,10 +829,9 @@ namespace sw
             SW_LOG_ERROR_ID( "CultureInfo.CultureTableCannotRead", "Culture table '%#' cannot be read", assetPath );
             return false;
         }
-        string error;
-        if ( loadFromXMLText( text, assetPath, &error ) == false )
+        if ( const expected<void> loaded = loadFromXMLText( text, assetPath ); loaded.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "CultureInfo.CultureTableNotLoaded", "Culture table is not loaded: %#", error.c_str() );
+            SW_LOG_ERROR_ID( "CultureInfo.CultureTableNotLoaded", "Culture table is not loaded: %# (%#)", loaded.error().message(), loaded.error().detail() );
             return false;
         }
         return true;

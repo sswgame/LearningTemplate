@@ -74,12 +74,13 @@ namespace sw
             /** @brief 대상 고르기 규칙(`AutomationTarget` — `Name` · `Name[N]`)으로 찾은 오브젝트입니다. 없으면 실패를 적고 nullptr 입니다. */
             static GameObject* findObject( AutomationStepContext& runner, const AutomationStep& step, const string& objectName )
             {
-                AutomationTargetLookup lookup = AutomationTargetLookup::NotGiven;
-                string                 problem;
-                GameObject*            pObject = AutomationTarget::find( runner.findActiveObjectManager(), objectName, lookup, problem );
-                if ( pObject == nullptr )
-                    runner.recordFailure( step, problem );
-                return pObject;
+                const expected<GameObject*> found = AutomationTarget::find( runner.findActiveObjectManager(), objectName );
+                if ( found.has_value() == false )
+                {
+                    runner.recordFailure( step, AutomationTarget::describe( found.error() ) );
+                    return nullptr;
+                }
+                return *found;
             }
 
             /** @brief 이름의 오브젝트의 폰입니다. 없으면 실패를 적고 nullptr 입니다. */

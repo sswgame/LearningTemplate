@@ -14,6 +14,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -97,12 +98,12 @@ namespace sw
     {
         /**
          * @brief @p pattern 을 @p arguments 로 해석해 @p outText 에 씁니다.
-         * @return 구문 오류, 없는 인자, 맞지 않는 인자 종류가 있으면 false 이고 이유를 @p pOutError 에 적습니다.
+         * @return 구문 오류, 없는 인자, 맞지 않는 인자 종류가 있으면 그 까닭(대상에 위치를 담은 글)입니다.
          *         그래도 @p outText 는 채웁니다(없는 인자는 `{name}` 그대로). 화면이 비지 않게 하기 위해서입니다.
          */
-        static bool format( string_view pattern, const TextArgumentList& arguments, const CultureInfo& culture, string& outText, string* pOutError = nullptr );
-        /** @brief 구문만 검사합니다(인자 없이). */
-        [[nodiscard]] static bool validatePattern( string_view pattern, string* pOutError = nullptr );
+        static expected<void> format( string_view pattern, const TextArgumentList& arguments, const CultureInfo& culture, string& outText );
+        /** @brief 구문만 검사합니다(인자 없이). 틀리면 그 까닭입니다. */
+        [[nodiscard]] static expected<void> validatePattern( string_view pattern );
         /** @brief 패턴이 쓰는 인자 이름입니다(사전 순이며 중복 없음). 구문 오류면 읽은 데까지입니다. 원문과 번역의 플레이스홀더가 같은지 확인할 때 씁니다. */
         static void collectArgumentNames( string_view pattern, vector<string>& outListName );
         /** @brief 구문은 그대로 두고 텍스트 조각만 @p pfnMap 으로 바꾼 패턴입니다(plural 과 select 의 모든 분기 포함). 구문 오류면 원문 그대로입니다. */

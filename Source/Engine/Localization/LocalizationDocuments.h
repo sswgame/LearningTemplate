@@ -58,10 +58,12 @@ namespace sw
         /** @brief 이 에셋 종류입니다(등록은 `LocalizationDocuments.cpp` 의 `SW_ASSET_TYPE`). */
         static constexpr AssetTypeDef kAssetType{ "SourceStringTable", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
-        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName, string* pOutError = nullptr );
-        [[nodiscard]] bool loadFromFile( string_view absolutePath, string* pOutError = nullptr );
-        string             saveToXMLText() const;
-        [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
+        /** @brief 글을 읽습니다. 틀리면 그 까닭(대상 앞에 원본 이름)이고 내용은 그대로입니다. */
+        [[nodiscard]] expected<void> loadFromXMLText( string_view xmlText, string_view sourceName );
+        /** @brief 파일을 읽습니다. 못 읽거나 틀리면 그 까닭입니다. */
+        [[nodiscard]] expected<void> loadFromFile( string_view absolutePath );
+        string                       saveToXMLText() const;
+        [[nodiscard]] bool           saveToFile( const AbsolutePath& absPath ) const;
 
         const SourceTextEntry* findEntry( string_view key ) const;
         SourceTextEntry&       getOrAddEntry( string_view key );
@@ -121,10 +123,12 @@ namespace sw
         /** @brief 이 에셋 종류입니다(등록은 `LocalizationDocuments.cpp` 의 `SW_ASSET_TYPE`). */
         static constexpr AssetTypeDef kAssetType{ "TranslationTable", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
-        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName, string* pOutError = nullptr );
-        [[nodiscard]] bool loadFromFile( string_view absolutePath, string* pOutError = nullptr );
-        string             saveToXMLText() const;
-        [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
+        /** @brief 글을 읽습니다. 틀리면 그 까닭(대상 앞에 원본 이름)이고 내용은 그대로입니다. */
+        [[nodiscard]] expected<void> loadFromXMLText( string_view xmlText, string_view sourceName );
+        /** @brief 파일을 읽습니다. 못 읽거나 틀리면 그 까닭입니다. */
+        [[nodiscard]] expected<void> loadFromFile( string_view absolutePath );
+        string                       saveToXMLText() const;
+        [[nodiscard]] bool           saveToFile( const AbsolutePath& absPath ) const;
 
         const TranslationEntry* findEntry( string_view key ) const;
         TranslationEntry&       getOrAddEntry( string_view key );
@@ -199,8 +203,10 @@ namespace sw
         /** @brief 이 에셋 종류입니다(등록은 `LocalizationDocuments.cpp` 의 `SW_ASSET_TYPE`). */
         static constexpr AssetTypeDef kAssetType{ "LocalizationProject", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
-        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName, string* pOutError = nullptr );
-        [[nodiscard]] bool loadFromFile( string_view absolutePath, string* pOutError = nullptr );
+        /** @brief 글을 읽습니다. 틀리면 그 까닭(대상 앞에 원본 이름)이고 내용은 그대로입니다. */
+        [[nodiscard]] expected<void> loadFromXMLText( string_view xmlText, string_view sourceName );
+        /** @brief 파일을 읽습니다. 못 읽거나 틀리면 그 까닭입니다. */
+        [[nodiscard]] expected<void> loadFromFile( string_view absolutePath );
 
         /** @brief 프로젝트 파일 옆 @p fileName 의 경로입니다. */
         static string makeSiblingPath( string_view projectPath, string_view fileName );

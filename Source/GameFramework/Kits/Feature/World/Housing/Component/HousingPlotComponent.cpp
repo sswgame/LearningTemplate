@@ -31,17 +31,18 @@ namespace sw
             /** @brief 부지 둘이 칸 경계에서 맞닿는 것은 겹침이 아니다(m). */
             static constexpr float32 kTouchEpsilon = 1.0e-3f;
 
-            /** @brief 활성 씬에서 이름 @p objectName 의 열린 부지입니다. 없으면 까닭을 @p outReply 에 적고 nullptr 입니다. */
-            static HousingPlotComponent* findPlot( const string& objectName, string& outReply )
+            /** @brief 활성 씬에서 이름 @p objectName 의 열린 부지입니다. 없으면 nullptr 이고 부르는 쪽이 `makeNoPlotReply` 로 답한다. */
+            static HousingPlotComponent* findPlot( const string& objectName )
             {
                 GameObject*           pObject = engine::findActiveObject( hashed_string( objectName ) );
                 HousingPlotComponent* pPlot   = pObject != nullptr ? pObject->getComponent<HousingPlotComponent>() : nullptr;
-                if ( pPlot == nullptr || pPlot->isStarted() == false )
-                {
-                    outReply = "no open housing plot named '" + objectName + "' in the active scene";
-                    return nullptr;
-                }
-                return pPlot;
+                return pPlot != nullptr && pPlot->isStarted() ? pPlot : nullptr;
+            }
+
+            /** @brief 그 이름의 열린 부지가 없을 때의 답입니다. */
+            static string makeNoPlotReply( const string& objectName )
+            {
+                return "no open housing plot named '" + objectName + "' in the active scene";
             }
 
             /** @brief `<x> <z> <level> <yawDegrees> [free]` 를 @p first 자리부터 읽습니다. 날 변환(부지 기준)과 모드입니다. */
@@ -91,9 +92,12 @@ namespace sw
                 HousingCandidate candidate;
                 if ( listArgument.size() < 2 || readTransform( listArgument, 2, candidate._transform, candidate._mode ) == false )
                     return false;
-                HousingPlotComponent* pPlot = findPlot( listArgument[0], outReply );
+                HousingPlotComponent* pPlot = findPlot( listArgument[0] );
                 if ( pPlot == nullptr )
+                {
+                    outReply = makeNoPlotReply( listArgument[0] );
                     return true;
+                }
                 candidate._partID                              = hashed_string( listArgument[1] );
                 const HousingPlaceCheck                  check = pPlot->previewPlacement( candidate );
                 StringBuilder<constant::buffer::kMax256> replyBuilder;
@@ -108,9 +112,12 @@ namespace sw
                 HousingCandidate candidate;
                 if ( listArgument.size() < 2 || readTransform( listArgument, 2, candidate._transform, candidate._mode ) == false )
                     return false;
-                HousingPlotComponent* pPlot = findPlot( listArgument[0], outReply );
+                HousingPlotComponent* pPlot = findPlot( listArgument[0] );
                 if ( pPlot == nullptr )
+                {
+                    outReply = makeNoPlotReply( listArgument[0] );
                     return true;
+                }
                 candidate._partID                               = hashed_string( listArgument[1] );
                 uint32                                   newID  = 0;
                 const HousingPlaceResult                 result = pPlot->place( candidate, newID );
@@ -129,9 +136,12 @@ namespace sw
                 int32 level = 0;
                 if ( listArgument.size() != 3 || StringUtil::parseInt( listArgument[2], level ) == false || level < 0 )
                     return false;
-                HousingPlotComponent* pPlot = findPlot( listArgument[0], outReply );
+                HousingPlotComponent* pPlot = findPlot( listArgument[0] );
                 if ( pPlot == nullptr )
+                {
+                    outReply = makeNoPlotReply( listArgument[0] );
                     return true;
+                }
                 const HousingPlotSettings& settings = pPlot->getLayout().getSettings();
                 const HousingPartCatalog&  catalog  = *pPlot->getLayout().getCatalog(); // 열린 부지는 카탈로그가 있다(findPlot 이 본다)
                 const HousingPartDef*      pPart    = catalog.findPart( hashed_string( listArgument[1] ) );
@@ -171,9 +181,8 @@ namespace sw
                 uint32 placementID = 0;
                 if ( listArgument.size() != 2 || readPlacementID( listArgument[1], placementID ) == false )
                     return false;
-                HousingPlotComponent* pPlot = findPlot( listArgument[0], outReply );
-                if ( pPlot != nullptr )
-                    outReply = describe( *pPlot, pPlot->remove( placementID ) );
+                HousingPlotComponent* pPlot = findPlot( listArgument[0] );
+                outReply                    = pPlot != nullptr ? string( describe( *pPlot, pPlot->remove( placementID ) ) ) : makeNoPlotReply( listArgument[0] );
                 return true;
             }
 
@@ -185,9 +194,8 @@ namespace sw
                 HousingPlacementMode mode = HousingPlacementMode::Grid;
                 if ( listArgument.size() < 2 || readPlacementID( listArgument[1], placementID ) == false || readTransform( listArgument, 2, transform, mode ) == false )
                     return false;
-                HousingPlotComponent* pPlot = findPlot( listArgument[0], outReply );
-                if ( pPlot != nullptr )
-                    outReply = describe( *pPlot, pPlot->move( placementID, transform, mode ) );
+                HousingPlotComponent* pPlot = findPlot( listArgument[0] );
+                outReply                    = pPlot != nullptr ? string( describe( *pPlot, pPlot->move( placementID, transform, mode ) ) ) : makeNoPlotReply( listArgument[0] );
                 return true;
             }
 
@@ -196,9 +204,8 @@ namespace sw
             {
                 if ( listArgument.size() != 1 )
                     return false;
-                HousingPlotComponent* pPlot = findPlot( listArgument[0], outReply );
-                if ( pPlot != nullptr )
-                    outReply = describe( *pPlot, pPlot->undo() );
+                HousingPlotComponent* pPlot = findPlot( listArgument[0] );
+                outReply                    = pPlot != nullptr ? string( describe( *pPlot, pPlot->undo() ) ) : makeNoPlotReply( listArgument[0] );
                 return true;
             }
 
@@ -207,9 +214,8 @@ namespace sw
             {
                 if ( listArgument.size() != 1 )
                     return false;
-                HousingPlotComponent* pPlot = findPlot( listArgument[0], outReply );
-                if ( pPlot != nullptr )
-                    outReply = describe( *pPlot, pPlot->redo() );
+                HousingPlotComponent* pPlot = findPlot( listArgument[0] );
+                outReply                    = pPlot != nullptr ? string( describe( *pPlot, pPlot->redo() ) ) : makeNoPlotReply( listArgument[0] );
                 return true;
             }
 
@@ -219,9 +225,8 @@ namespace sw
                 string path;
                 if ( listArgument.size() != 2 || DevCommandRegistry::readDiskPathArgument( listArgument[1], path, outReply ) == false )
                     return false;
-                HousingPlotComponent* pPlot = findPlot( listArgument[0], outReply );
-                if ( pPlot != nullptr )
-                    outReply = pPlot->saveToFile( path ) ? "housing: saved " + path : "housing: save failed (see the log)";
+                HousingPlotComponent* pPlot = findPlot( listArgument[0] );
+                outReply                    = pPlot != nullptr ? string( pPlot->saveToFile( path ) ? "housing: saved " + path : "housing: save failed (see the log)" ) : makeNoPlotReply( listArgument[0] );
                 return true;
             }
 
@@ -231,9 +236,8 @@ namespace sw
                 string path;
                 if ( listArgument.size() != 2 || DevCommandRegistry::readDiskPathArgument( listArgument[1], path, outReply ) == false )
                     return false;
-                HousingPlotComponent* pPlot = findPlot( listArgument[0], outReply );
-                if ( pPlot != nullptr )
-                    outReply = pPlot->loadFromFile( path ) ? "housing: loaded " + path : "housing: load failed (see the log)";
+                HousingPlotComponent* pPlot = findPlot( listArgument[0] );
+                outReply                    = pPlot != nullptr ? string( pPlot->loadFromFile( path ) ? "housing: loaded " + path : "housing: load failed (see the log)" ) : makeNoPlotReply( listArgument[0] );
                 return true;
             }
 

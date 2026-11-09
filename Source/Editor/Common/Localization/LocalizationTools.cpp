@@ -35,6 +35,12 @@ namespace sw
         {
             static constexpr const utf8* kArrCodeExtension[] = { ".h", ".cpp", ".inl" };
 
+            /** @brief 읽기 오류를 보고서 · 로그의 글(`문장: 대상`)로 짓습니다. */
+            [[nodiscard]] static string describe( const Error& error )
+            {
+                return string( error.message() ) + ": " + string( error.detail() );
+            }
+
             /**
              * @brief 리소스 id(파일 · 폴더) 또는 절대 경로를 디스크의 절대 경로로 바꿉니다. 둘 중 무엇인지는 글의 모양이 정한다(엄격한 절대 경로인지). 못 풀면 빈 글이다.
              * @details 예전에는 작업 폴더에 그 이름이 있는지 먼저 보고, 리소스로 찾아보고, 그래도 없으면 받은 글을 그대로 돌려줬다(작업 폴더 상대 경로로 읽혔다).
@@ -88,10 +94,9 @@ namespace sw
                                              TextGatherReport& inoutReport )
             {
                 const string location = culture + ":" + key;
-                string       error;
-                if ( TextFormatter::validatePattern( translation._text, &error ) == false )
+                if ( const expected<void> valid = TextFormatter::validatePattern( translation._text ); valid.has_value() == false )
                 {
-                    inoutReport._listIssue.push_back( { location, "translation is not a valid message pattern: " + error, true } );
+                    inoutReport._listIssue.push_back( { location, "translation is not a valid message pattern: " + string( valid.error().detail() ), true } );
                     return;
                 }
                 vector<string> listSourceName;
@@ -123,10 +128,11 @@ namespace sw
             {
                 outMemory = TranslationMemory{};
                 outMemory.setCulture( culture );
-                string error;
-                if ( FileUtil::exists( path ) && outMemory.loadFromFile( path, &error ) == false )
+                if ( FileUtil::exists( path ) == false )
+                    return true;
+                if ( const expected<void> read = outMemory.loadFromFile( path ); read.has_value() == false )
                 {
-                    inoutReport._listIssue.push_back( { path, error, true } );
+                    inoutReport._listIssue.push_back( { path, describe( read.error() ), true } );
                     return false;
                 }
                 return true;
@@ -239,10 +245,9 @@ namespace sw
                 const string     memoryPath              = makeMemoryPath( projectPath, culture );
                 TranslationTable translation;
                 translation.setCulture( culture );
-                string error;
-                if ( FileUtil::exists( path ) && translation.loadFromFile( path, &error ) == false )
+                if ( const expected<void> read = FileUtil::exists( path ) ? translation.loadFromFile( path ) : expected<void>{}; read.has_value() == false )
                 {
-                    inoutResult._report._listIssue.push_back( { path, error, true } );
+                    inoutResult._report._listIssue.push_back( { path, describe( read.error() ), true } );
                     return;
                 }
                 TranslationMemory memory;
@@ -322,19 +327,18 @@ namespace sw
                                                           map<string, const SourceTextEntry*>& outMapSource, string& outAbsolutePath )
             {
                 outAbsolutePath = resolveAbsolutePath( projectPath );
-                string error;
-                if ( outProject.loadFromFile( outAbsolutePath, &error ) == false )
+                if ( const expected<void> read = outProject.loadFromFile( outAbsolutePath ); read.has_value() == false )
                 {
-                    SW_LOG_ERROR_ID( "LocalizationTools.LocalizationProjectNotLoaded", "Localization project is not loaded: %#", error.c_str() );
+                    SW_LOG_ERROR_ID( "LocalizationTools.LocalizationProjectNotLoaded", "Localization project is not loaded: %# (%#)", read.error().message(), read.error().detail() );
                     return false;
                 }
                 outListTable.assign( outProject._listStringTable.size(), SourceStringTable{} );
                 for ( size_t tableIndex = 0; tableIndex < outListTable.size(); ++tableIndex )
                 {
                     const string tablePath = LocalizationProject::makeSiblingPath( outAbsolutePath, outProject._listStringTable[tableIndex] );
-                    if ( outListTable[tableIndex].loadFromFile( tablePath, &error ) == false )
+                    if ( const expected<void> read = outListTable[tableIndex].loadFromFile( tablePath ); read.has_value() == false )
                     {
-                        SW_LOG_ERROR_ID( "LocalizationTools.StringTableNotLoaded", "String table is not loaded: %#", error.c_str() );
+                        SW_LOG_ERROR_ID( "LocalizationTools.StringTableNotLoaded", "String table is not loaded: %# (%#)", read.error().message(), read.error().detail() );
                         return false;
                     }
                 }
@@ -359,7 +363,6 @@ namespace sw
             [[nodiscard]] static bool loadGatherTables( const string& absoluteProjectPath, const LocalizationProject& project, vector<SourceStringTable>& outListTable )
             {
                 outListTable.assign( project._listStringTable.size(), SourceStringTable{} );
-                string error;
                 for ( size_t tableIndex = 0; tableIndex < outListTable.size(); ++tableIndex )
                 {
                     const string tablePath = LocalizationProject::makeSiblingPath( absoluteProjectPath, project._listStringTable[tableIndex] );
@@ -368,9 +371,9 @@ namespace sw
                         outListTable[tableIndex].setCulture( project._sourceCulture );
                         continue;
                     }
-                    if ( outListTable[tableIndex].loadFromFile( tablePath, &error ) == false )
+                    if ( const expected<void> read = outListTable[tableIndex].loadFromFile( tablePath ); read.has_value() == false )
                     {
-                        SW_LOG_ERROR_ID( "LocalizationTools.StringTableNotLoaded", "String table is not loaded: %#", error.c_str() );
+                        SW_LOG_ERROR_ID( "LocalizationTools.StringTableNotLoaded", "String table is not loaded: %# (%#)", read.error().message(), read.error().detail() );
                         return false;
                     }
                 }
@@ -533,10 +536,9 @@ namespace sw
         outResult                    = LocalizationGatherResult{};
         const string        absolute = Internal::resolveAbsolutePath( projectPath );
         LocalizationProject project;
-        string              error;
-        if ( project.loadFromFile( absolute, &error ) == false )
+        if ( const expected<void> read = project.loadFromFile( absolute ); read.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "LocalizationTools.LocalizationProjectNotLoaded", "Localization project is not loaded: %#", error.c_str() );
+            SW_LOG_ERROR_ID( "LocalizationTools.LocalizationProjectNotLoaded", "Localization project is not loaded: %# (%#)", read.error().message(), read.error().detail() );
             return false;
         }
         outResult._projectName = project._name;
@@ -696,10 +698,9 @@ namespace sw
             const string     translationPath   = LocalizationProject::makeTranslationPath( absolute, culture );
             TranslationTable translation;
             translation.setCulture( culture );
-            string error;
-            if ( FileUtil::exists( translationPath ) && translation.loadFromFile( translationPath, &error ) == false )
+            if ( const expected<void> read = FileUtil::exists( translationPath ) ? translation.loadFromFile( translationPath ) : expected<void>{}; read.has_value() == false )
             {
-                SW_LOG_ERROR_ID( "LocalizationTools.ExportPoFailed", "[ExportPo] %#", error.c_str() );
+                SW_LOG_ERROR_ID( "LocalizationTools.ExportPoFailed", "[ExportPo] %# (%#)", read.error().message(), read.error().detail() );
                 bAllWritten = false;
                 continue;
             }
@@ -740,16 +741,15 @@ namespace sw
             return false;
 
         string             text;
-        string             error;
         PortableObjectFile file;
         if ( FileUtil::readTextFile( poPath, text ) == false )
         {
             SW_LOG_ERROR_ID( "LocalizationTools.CannotReadFileCould", "[ImportPo] '%#' cannot be read: the file could not be opened", poPath );
             return false;
         }
-        if ( file.parse( text, &error ) == false )
+        if ( const expected<void> parsed = file.parse( text ); parsed.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "LocalizationTools.CannotRead", "[ImportPo] '%#' cannot be read: %#", poPath, error.c_str() );
+            SW_LOG_ERROR_ID( "LocalizationTools.CannotRead", "[ImportPo] '%#' cannot be read: %# (%#)", poPath, parsed.error().message(), parsed.error().detail() );
             return false;
         }
         const string culture = CultureTable::normalizeCode( file._language );
@@ -773,9 +773,9 @@ namespace sw
         const string     translationPath = LocalizationProject::makeTranslationPath( absolute, culture );
         TranslationTable translation;
         translation.setCulture( culture );
-        if ( FileUtil::exists( translationPath ) && translation.loadFromFile( translationPath, &error ) == false )
+        if ( const expected<void> read = FileUtil::exists( translationPath ) ? translation.loadFromFile( translationPath ) : expected<void>{}; read.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "LocalizationTools.ImportPoFailed", "[ImportPo] %#", error.c_str() );
+            SW_LOG_ERROR_ID( "LocalizationTools.ImportPoFailed", "[ImportPo] %# (%#)", read.error().message(), read.error().detail() );
             return false;
         }
         TextGatherReport  memoryReport;
@@ -855,15 +855,14 @@ namespace sw
             // PO 헤더의 프로젝트 이름으로 기본 대상 중에서 고른다.
             string             text;
             PortableObjectFile file;
-            string             parseError;
             if ( FileUtil::readTextFile( poPath, text ) == false )
             {
                 SW_LOG_ERROR_ID( "LocalizationTools.CannotReadFileCould", "[ImportPo] '%#' cannot be read: the file could not be opened", poPath );
                 return false;
             }
-            if ( file.parse( text, &parseError ) == false )
+            if ( const expected<void> parsed = file.parse( text ); parsed.has_value() == false )
             {
-                SW_LOG_ERROR_ID( "LocalizationTools.CannotRead", "[ImportPo] '%#' cannot be read: %#", poPath, parseError.c_str() );
+                SW_LOG_ERROR_ID( "LocalizationTools.CannotRead", "[ImportPo] '%#' cannot be read: %# (%#)", poPath, parsed.error().message(), parsed.error().detail() );
                 return false;
             }
             vector<string> listProjectPath;
@@ -871,7 +870,7 @@ namespace sw
             for ( const string& candidate : listProjectPath )
             {
                 LocalizationProject project;
-                if ( project.loadFromFile( candidate ) && project._name == file._projectName )
+                if ( project.loadFromFile( candidate ).has_value() && project._name == file._projectName )
                     projectPath = candidate;
             }
             if ( projectPath.empty() )

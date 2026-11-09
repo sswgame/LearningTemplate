@@ -67,27 +67,27 @@ namespace sw
         void               shutdown();
 
         /**
-         * @brief 프로브 하나를 면 여섯으로 찍어 @p outCapture 에 담습니다(GPU 일만 - 접기는 `makeProbeData`). 실패하면 이유를 @p pOutError 에 적고 false 입니다.
+         * @brief 프로브 하나를 면 여섯으로 찍어 @p outCapture 에 담습니다(GPU 일만 - 접기는 `makeProbeData`). 실패하면 그 까닭입니다.
          * @details 면 크기 · 옥타헤드럴 크기 · 표본 수는 프로브의 칸이다(`ReflectionProbeComponent`). 찍은 위치는 프로브의 월드 위치다.
          */
-        [[nodiscard]] bool captureProbe( Scene& scene, const ReflectionProbeComponent& probe, ReflectionProbeCapture& outCapture, string* pOutError );
+        [[nodiscard]] expected<void> captureProbe( Scene& scene, const ReflectionProbeComponent& probe, ReflectionProbeCapture& outCapture );
 
         /**
          * @brief @p renderThread 로 찍기 렌더러를 만들고 프로브마다 `captureProbe` 합니다. @p outListCapture 는 @p listProbe 와 같은 순서이고,
-         *        실패한 프로브의 자리는 빈 결과입니다. 하나라도 실패하면 false 이고 마지막 이유를 @p pOutError 에 적습니다.
+         *        실패한 프로브의 자리는 빈 결과입니다. 처음 실패한 프로브에서 멈추고 그 까닭을 돌려줍니다.
          */
-        [[nodiscard]] static bool captureProbes( RenderThread& renderThread, Scene& scene, const vector<ReflectionProbeComponent*>& listProbe,
-                                                 vector<ReflectionProbeCapture>& outListCapture, string* pOutError );
+        [[nodiscard]] static expected<void> captureProbes( RenderThread& renderThread, Scene& scene, const vector<ReflectionProbeComponent*>& listProbe,
+                                                           vector<ReflectionProbeCapture>& outListCapture );
 
         /**
          * @brief 찍은 면을 선형 RGB 로 풀고(half → float) 접고 거칠기 단계마다 걸러 @p outData 에 담습니다. GPU · 씬 · 서비스를 쓰지 않아 아무 스레드에서 불러도 된다(워커).
-         * @return 거르기가 거절하면 false 이고 이유를 @p pOutError 에 적습니다.
+         * @return 거르기가 거절하면 그 까닭입니다.
          */
-        [[nodiscard]] static bool makeProbeData( const ReflectionProbeCapture& capture, ReflectionProbeAsset& outData, string* pOutError );
+        [[nodiscard]] static expected<void> makeProbeData( const ReflectionProbeCapture& capture, ReflectionProbeAsset& outData );
 
     private:
         /** @brief @p camera 로 몇 장 그린 뒤 `LitColor` 를 읽어 @p outFace 의 바이트 · 행 간격에 담습니다(풀지 않는다). */
-        [[nodiscard]] bool captureFace( Scene& scene, CameraComponent& camera, uint32 size, ReflectionProbeFaceCapture& outFace, string* pOutError );
+        [[nodiscard]] expected<void> captureFace( Scene& scene, CameraComponent& camera, uint32 size, ReflectionProbeFaceCapture& outFace );
 
     private:
         SceneCapture _capture; ///< 그리기 · 읽기(렌더 스레드 명령)

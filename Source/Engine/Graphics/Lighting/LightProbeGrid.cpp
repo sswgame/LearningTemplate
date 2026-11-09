@@ -19,12 +19,6 @@ namespace sw
             static constexpr size_t kProbeBytes = sizeof( float32 ) * SH9Color::kCoefficientCount;
             /// @brief 한 파일의 프로브 수 상한 — 깨진 머리말이 큰 할당을 일으키지 않게 막는다(256 × 64 × 256).
             static constexpr uint64 kMaxProbeCount = 4194304;
-
-            static void setError( string* pOutError, const utf8* pMessage )
-            {
-                if ( pOutError != nullptr )
-                    *pOutError = pMessage;
-            }
         };
     } // namespace
 } // namespace sw
@@ -51,28 +45,18 @@ namespace sw
 
 namespace sw
 {
-    bool LightProbeGrid::isValid( string* pOutError ) const
+    expected<void> LightProbeGrid::validate() const
     {
-        using Internal                = LightProbeGridInternal;
         const bool bPositiveSpacing   = _layout._spacing._x > 0.0f && _layout._spacing._y > 0.0f && _layout._spacing._z > 0.0f;
         const bool bHasProbe          = _layout._countX > 0 && _layout._countY > 0 && _layout._countZ > 0;
         const bool bMatchesProbeCount = _listProbe.size() == static_cast<size_t>( _layout.getProbeCount() );
         if ( bPositiveSpacing == false )
-        {
-            Internal::setError( pOutError, "probe spacing must be positive on every axis" );
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "probe spacing must be positive on every axis" } );
         if ( bHasProbe == false )
-        {
-            Internal::setError( pOutError, "probe grid has no probe on some axis" );
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "probe grid has no probe on some axis" } );
         if ( bMatchesProbeCount == false )
-        {
-            Internal::setError( pOutError, "probe list does not match the grid size" );
-            return false;
-        }
-        return true;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "probe list does not match the grid size" } );
+        return {};
     }
 
     void LightProbeGrid::clear()
@@ -107,26 +91,17 @@ namespace sw
         }
     }
 
-    bool LightProbeGrid::readFromBytes( const uint8* pData, size_t size, string* pOutError )
+    expected<void> LightProbeGrid::readFromBytes( const uint8* pData, size_t size )
     {
         using Internal = LightProbeGridInternal;
         clear();
         if ( pData == nullptr || size < Internal::kHeaderBytes )
-        {
-            Internal::setError( pOutError, "probe file is shorter than its header" );
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "probe file is shorter than its header" } );
         ByteReader reader{ pData, size };
         if ( reader.readUint32() != kMagic )
-        {
-            Internal::setError( pOutError, "probe file magic is not SWLP" );
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "probe file magic is not SWLP" } );
         if ( reader.readUint32() != kVersion )
-        {
-            Internal::setError( pOutError, "probe file version differs - bake the volume again" );
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "probe file version differs - bake the volume again" } );
         LightProbeGridLayout layout{};
         layout._origin._x  = reader.readFloat32();
         layout._origin._y  = reader.readFloat32();
@@ -149,17 +124,16 @@ namespace sw
         } );
         if ( bRead == false || reader.isFullyRead() == false )
         {
-            Internal::setError( pOutError, "probe file length does not match its grid size, or it holds a non-finite value" );
             clear();
-            return false;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "probe file length does not match its grid size, or it holds a non-finite value" } );
         }
         _layout = layout;
-        if ( isValid( pOutError ) == false )
+        if ( expected<void> valid = validate(); valid.has_value() == false )
         {
             clear();
-            return false;
+            return valid;
         }
-        return true;
+        return {};
     }
 
     bool LightProbeGrid::saveToFile( const AbsolutePath& absPath ) const
@@ -171,16 +145,13 @@ namespace sw
         return FileUtil::writeFile( absPath.str(), bytes.data(), bytes.size() );
     }
 
-    bool LightProbeGrid::loadFromAsset( const AssetID& assetID, string* pOutError )
+    expected<void> LightProbeGrid::loadFromAsset( const AssetID& assetID )
     {
         clear();
         vector<uint8> bytes;
         if ( AssetIO::readBinaryAsset( assetID, bytes ) == false )
-        {
-            LightProbeGridInternal::setError( pOutError, "probe file could not be read" );
-            return false;
-        }
-        return readFromBytes( bytes.data(), bytes.size(), pOutError );
+            return unexpected( Error{ ErrorKind::NotFound, "probe file could not be read", assetID.view() } );
+        return readFromBytes( bytes.data(), bytes.size() );
     }
 } // namespace sw
 

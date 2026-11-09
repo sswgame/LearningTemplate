@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -92,8 +93,8 @@ namespace sw
         static constexpr uint32 kOldestShareCodeVersion = 1;
 
         static string encode( const AppearanceSelection& selection, const AppearanceDatabase& database );
-        /** @brief 공유 코드를 해석합니다. 코드가 망가졌거나(base64 오류, 체크섬 불일치) 이 빌드가 모르는 버전이면 false 를 반환하고, @p pOutReason 에 이유를 씁니다. */
-        [[nodiscard]] static bool decode( string_view code, const AppearanceDatabase& database, AppearanceSelection& outSelection, string* pOutReason = nullptr );
+        /** @brief 공유 코드를 해석합니다. 코드가 망가졌거나(base64 오류, 체크섬 불일치) 이 빌드가 모르는 버전이면 그 까닭입니다. */
+        [[nodiscard]] static expected<void> decode( string_view code, const AppearanceDatabase& database, AppearanceSelection& outSelection );
     };
 } // namespace sw
 

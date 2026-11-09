@@ -168,18 +168,18 @@ SW_TEST_CASE( LocalizationManagerTest, MissingKeysAreReportedOnce )
  */
 SW_TEST_CASE( LocalizationManagerTest, UnknownFieldsInTablesAreLoadErrors )
 {
-    sw::SourceStringTable source;
-    sw::string            error;
-    SW_EXPECT_FALSE( source.loadFromXMLText( R"(<SourceStringTable culture="en"><entries><entry key="a" source="A" maxLenght="3" /></entries></SourceStringTable>)", "test", &error ) );
-    SW_EXPECT_TRUE( error.find( "maxLenght" ) != sw::string::npos );
+    sw::SourceStringTable    source;
+    const sw::expected<void> sourceRead = source.loadFromXMLText( R"(<SourceStringTable culture="en"><entries><entry key="a" source="A" maxLenght="3" /></entries></SourceStringTable>)", "test" );
+    SW_EXPECT_FALSE( sourceRead );
+    SW_EXPECT_TRUE( sourceRead.has_value() == false && sourceRead.error().detail().find( "maxLenght" ) != sw::string_view::npos );
 
     sw::TranslationTable translation;
-    SW_EXPECT_FALSE( translation.loadFromXMLText( R"(<TranslationTable culture="ko"><entries><entry key="a" txt="가" /></entries></TranslationTable>)", "test", &error ) );
-    SW_EXPECT_FALSE( translation.loadFromXMLText( R"(<TranslationTable culture="ko"><entries><entry key="a" text="가" sourceHash="zz" /></entries></TranslationTable>)", "test", &error ) );
+    SW_EXPECT_FALSE( translation.loadFromXMLText( R"(<TranslationTable culture="ko"><entries><entry key="a" txt="가" /></entries></TranslationTable>)", "test" ) );
+    SW_EXPECT_FALSE( translation.loadFromXMLText( R"(<TranslationTable culture="ko"><entries><entry key="a" text="가" sourceHash="zz" /></entries></TranslationTable>)", "test" ) );
 
     sw::LocalizationProject project;
-    SW_EXPECT_FALSE( project.loadFromXMLText( R"(<LocalizationProject name="p" sourceCulture="en"><stringTables><item>a.strings.xml</item></stringTables><culture /></LocalizationProject>)", "test", &error ) );
-    SW_EXPECT_TRUE( project.loadFromXMLText( R"(<LocalizationProject name="p" sourceCulture="en-US"><stringTables><item>a.strings.xml</item></stringTables></LocalizationProject>)", "test", &error ) );
+    SW_EXPECT_FALSE( project.loadFromXMLText( R"(<LocalizationProject name="p" sourceCulture="en"><stringTables><item>a.strings.xml</item></stringTables><culture /></LocalizationProject>)", "test" ) );
+    SW_EXPECT_TRUE( project.loadFromXMLText( R"(<LocalizationProject name="p" sourceCulture="en-US"><stringTables><item>a.strings.xml</item></stringTables></LocalizationProject>)", "test" ) );
     SW_EXPECT_EQUAL( sw::string( "en_us" ), project._sourceCulture );
 }
 

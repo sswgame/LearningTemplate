@@ -49,12 +49,6 @@ namespace sw
 
             /** @brief IEEE 반정밀도 하나를 float32 로 폅니다(RGBA16F 첨부 읽기). 무한대 · NaN 은 가장 큰 값으로 — 거르기가 NaN 을 퍼뜨리지 않게(`half::toFiniteFloat`). */
             static float32 decodeHalf( uint16 bits ) { return half::fromBits( bits ).toFiniteFloat(); }
-
-            static void setError( string* pOutError, const utf8* pMessage )
-            {
-                if ( pOutError != nullptr )
-                    *pOutError = pMessage;
-            }
         };
     } // namespace
 } // namespace sw
@@ -81,7 +75,7 @@ namespace sw
         _capture.shutdown();
     }
 
-    bool ReflectionProbeBaker::captureFace( Scene& scene, CameraComponent& camera, uint32 size, ReflectionProbeFaceCapture& outFace, string* pOutError )
+    expected<void> ReflectionProbeBaker::captureFace( Scene& scene, CameraComponent& camera, uint32 size, ReflectionProbeFaceCapture& outFace )
     {
         using Internal = ReflectionProbeBakerInternal;
         outFace._bytes.clear();
@@ -95,24 +89,18 @@ namespace sw
         request._attachmentName  = string( Internal::kCaptureAttachment );
         SceneCaptureResult result;
         if ( _capture.capture( scene, request, result ) == false )
-        {
-            Internal::setError( pOutError, "the capture renderer could not draw or read LitColor" );
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the capture renderer could not draw or read LitColor" } );
         const bool bExpectedLayout = result._format == RHIFormat::R16G16B16A16_FLOAT && result._layout._width == size && result._layout._height == size;
         if ( bExpectedLayout == false )
-        {
-            Internal::setError( pOutError, "LitColor is not an RGBA16F target of the capture size - the deferred pipeline changed" );
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "LitColor is not an RGBA16F target of the capture size - the deferred pipeline changed" } );
         // 풀기(half → float)는 여기서 하지 않는다 - GPU 가 없어도 되는 CPU 일이라 워커가 접기 · 거르기와 함께 한다(`makeProbeData`).
         outFace._bytes    = std::move( result._bytes );
         outFace._rowBytes = result._layout._rowBytes;
         outFace._size     = size;
-        return true;
+        return {};
     }
 
-    bool ReflectionProbeBaker::makeProbeData( const ReflectionProbeCapture& capture, ReflectionProbeAsset& outData, string* pOutError )
+    expected<void> ReflectionProbeBaker::makeProbeData( const ReflectionProbeCapture& capture, ReflectionProbeAsset& outData )
     {
         using Internal = ReflectionProbeBakerInternal;
         outData.clear();
@@ -126,10 +114,7 @@ namespace sw
             face._viewProj                           = source._viewProj;
             face._forward                            = source._forward;
             if ( source._bytes.size() < size * source._rowBytes )
-            {
-                Internal::setError( pOutError, "a captured face is shorter than its layout" );
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::InvalidArgument, "a captured face is shorter than its layout" } );
             face._listPixel.resize( size * size );
             for ( size_t row = 0; row < size; ++row )
             {
@@ -141,19 +126,16 @@ namespace sw
                 }
             }
         }
-        return ReflectionProbeAsset::makeFromFaces( capture._capturePosition, arrFace, capture._resolution, Internal::kLevelCount, capture._sampleCount, outData, pOutError );
+        return ReflectionProbeAsset::makeFromFaces( capture._capturePosition, arrFace, capture._resolution, Internal::kLevelCount, capture._sampleCount, outData );
     }
 
-    bool ReflectionProbeBaker::captureProbe( Scene& scene, const ReflectionProbeComponent& probe, ReflectionProbeCapture& outCapture, string* pOutError )
+    expected<void> ReflectionProbeBaker::captureProbe( Scene& scene, const ReflectionProbeComponent& probe, ReflectionProbeCapture& outCapture )
     {
         using Internal         = ReflectionProbeBakerInternal;
         outCapture             = ReflectionProbeCapture{};
         const bool bCannotBake = _capture.getDevice() == nullptr || scene.getObjectManager() == nullptr;
         if ( bCannotBake )
-        {
-            Internal::setError( pOutError, "the reflection probe baker is not initialized" );
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the reflection probe baker is not initialized" } );
         // 찍는 카메라는 찍는 동안만 씬에 둔다. 씬의 경로로 얻은 머티리얼은 게임 루프가 틱마다 올리지만 베이크는 루프 밖이다 — 여기서 올린다.
         editor::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().initializePending( _capture.getDevice() );
         GameObjectManager& manager       = *scene.getObjectManager();
@@ -163,8 +145,7 @@ namespace sw
         {
             if ( pCameraObject != nullptr )
                 manager.destroyGameObject( pCameraObject );
-            Internal::setError( pOutError, "the capture camera could not be created" );
-            return false;
+            return unexpected( Error{ ErrorKind::ExternalFailure, "the capture camera could not be created" } );
         }
         const float3 capturePosition = probe.getWorldPosition();
         const uint32 faceSize        = probe.getCaptureResolution();
@@ -176,8 +157,8 @@ namespace sw
         outCapture._capturePosition = capturePosition;
         outCapture._resolution      = probe.getResolution();
         outCapture._sampleCount     = probe.getBakeSampleCount();
-        bool bCaptured              = true;
-        for ( uint32 faceIndex = 0; faceIndex < ReflectionProbeAsset::kFaceCount && bCaptured; ++faceIndex )
+        expected<void> captured{};
+        for ( uint32 faceIndex = 0; faceIndex < ReflectionProbeAsset::kFaceCount && captured.has_value(); ++faceIndex )
         {
             const Internal::FaceBasis& basis = Internal::kArrFaceBasis[faceIndex];
             pCamera->setLocalPosition( capturePosition );
@@ -186,30 +167,27 @@ namespace sw
             ReflectionProbeFaceCapture& face = outCapture._arrFace[faceIndex];
             face._viewProj                   = pCamera->getViewProjectionMatrix( 1.0f );
             face._forward                    = pCamera->getCameraForward();
-            bCaptured                        = captureFace( scene, *pCamera, faceSize, face, pOutError );
+            captured                         = captureFace( scene, *pCamera, faceSize, face );
         }
         // 카메라를 지우면 직접 고른 카메라가 풀린다(클래스 설명).
         manager.destroyGameObject( pCameraObject );
-        return bCaptured;
+        return captured;
     }
 
-    bool ReflectionProbeBaker::captureProbes( RenderThread& renderThread, Scene& scene, const vector<ReflectionProbeComponent*>& listProbe, vector<ReflectionProbeCapture>& outListCapture,
-                                              string* pOutError )
+    expected<void> ReflectionProbeBaker::captureProbes( RenderThread& renderThread, Scene& scene, const vector<ReflectionProbeComponent*>& listProbe,
+                                                        vector<ReflectionProbeCapture>& outListCapture )
     {
-        using Internal = ReflectionProbeBakerInternal;
         outListCapture.clear();
         outListCapture.resize( listProbe.size() );
         ReflectionProbeBaker baker;
-        bool                 bAllBaked = baker.initialize( renderThread );
-        if ( bAllBaked == false )
-            Internal::setError( pOutError, "the capture renderer (deferred pipeline) could not be created" );
-        for ( size_t probeIndex = 0; probeIndex < listProbe.size() && bAllBaked; ++probeIndex )
+        expected<void>       baked = baker.initialize( renderThread ) ? expected<void>{}
+                                                                      : expected<void>{ unexpected( Error{ ErrorKind::ExternalFailure, "the capture renderer (deferred pipeline) could not be created" } ) };
+        for ( size_t probeIndex = 0; probeIndex < listProbe.size() && baked.has_value(); ++probeIndex )
         {
             const ReflectionProbeComponent* pProbe = listProbe[probeIndex];
-            if ( pProbe == nullptr || baker.captureProbe( scene, *pProbe, outListCapture[probeIndex], pOutError ) == false )
-                bAllBaked = false;
+            baked                                  = pProbe != nullptr ? baker.captureProbe( scene, *pProbe, outListCapture[probeIndex] ) : expected<void>{ unexpected( Error{ ErrorKind::InvalidArgument, "a reflection probe in the list is null" } ) };
         }
         baker.shutdown();
-        return bAllBaked;
+        return baked;
     }
 } // namespace sw

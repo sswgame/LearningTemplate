@@ -49,8 +49,8 @@ SW_TEST_CASE( OutfitAtlasTest, PackPlacesEveryTextureWithoutOverlap )
     constexpr uint32        kAtlasSize = 256;
     constexpr uint32        kPadding   = 4;
     vector<OutfitAtlasRect> listRect;
-    string                  error;
-    SW_REQUIRE_TRUE_MSG( OutfitAtlasLayout::pack( arrSource, kAtlasSize, kPadding, listRect, &error ), error );
+    const expected<void>    packed = OutfitAtlasLayout::pack( arrSource, kAtlasSize, kPadding, listRect );
+    SW_REQUIRE_TRUE_MSG( packed.has_value(), packed.has_value() ? string{} : string( packed.error().message() ) );
     SW_REQUIRE_EQUAL( size_t( 4 ), listRect.size() );
     for ( size_t index = 0; index < listRect.size(); ++index )
     {
@@ -65,7 +65,7 @@ SW_TEST_CASE( OutfitAtlasTest, PackPlacesEveryTextureWithoutOverlap )
         }
     }
     vector<OutfitAtlasRect> listAgain;
-    SW_REQUIRE_TRUE( OutfitAtlasLayout::pack( arrSource, kAtlasSize, kPadding, listAgain, nullptr ) );
+    SW_REQUIRE_TRUE( OutfitAtlasLayout::pack( arrSource, kAtlasSize, kPadding, listAgain ) );
     SW_REQUIRE_EQUAL( listRect.size(), listAgain.size() );
     for ( size_t index = 0; index < listRect.size(); ++index )
     {
@@ -78,19 +78,18 @@ SW_TEST_CASE( OutfitAtlasTest, PackPlacesEveryTextureWithoutOverlap )
  */
 SW_TEST_CASE( OutfitAtlasTest, PackRefusesWhatDoesNotFit )
 {
-    string                  error;
+    const auto messageOf = []( const expected<void>& result )
+    { return result.has_value() ? string{} : string( result.error().message() ); };
     vector<OutfitAtlasRect> listRect;
     const OutfitAtlasSource arrTooBig[] = { makeSource( "A", 100, 100 ), makeSource( "B", 100, 100 ) };
-    SW_EXPECT_FALSE( OutfitAtlasLayout::pack( arrTooBig, 128, 0, listRect, &error ) );
-    SW_EXPECT_TRUE( error.find( "does not fit" ) != string::npos );
+    SW_EXPECT_TRUE( messageOf( OutfitAtlasLayout::pack( arrTooBig, 128, 0, listRect ) ).find( "does not fit" ) != string::npos );
     const OutfitAtlasSource arrWide[] = { makeSource( "Wide", 300, 10 ) };
-    SW_EXPECT_FALSE( OutfitAtlasLayout::pack( arrWide, 256, 0, listRect, &error ) );
+    SW_EXPECT_FALSE( OutfitAtlasLayout::pack( arrWide, 256, 0, listRect ) );
     const OutfitAtlasSource arrTwice[] = { makeSource( "A", 8, 8 ), makeSource( "A", 8, 8 ) };
-    SW_EXPECT_FALSE( OutfitAtlasLayout::pack( arrTwice, 64, 0, listRect, &error ) );
-    SW_EXPECT_TRUE( error.find( "twice" ) != string::npos );
+    SW_EXPECT_TRUE( messageOf( OutfitAtlasLayout::pack( arrTwice, 64, 0, listRect ) ).find( "twice" ) != string::npos );
     const OutfitAtlasSource arrEmpty[] = { makeSource( "A", 0, 8 ) };
-    SW_EXPECT_FALSE( OutfitAtlasLayout::pack( arrEmpty, 64, 0, listRect, &error ) );
-    SW_EXPECT_FALSE( OutfitAtlasLayout::pack( arrEmpty, 0, 0, listRect, &error ) );
+    SW_EXPECT_FALSE( OutfitAtlasLayout::pack( arrEmpty, 64, 0, listRect ) );
+    SW_EXPECT_FALSE( OutfitAtlasLayout::pack( arrEmpty, 0, 0, listRect ) );
 }
 
 /**
@@ -153,8 +152,8 @@ SW_TEST_CASE( OutfitAtlasTest, BlitCopiesPixelsAndBleedsTheEdges )
     vector<uint8> atlas;
     OutfitAtlasComposer::initialize( kAtlasSize, atlas );
     SW_REQUIRE_EQUAL( size_t( kAtlasSize * kAtlasSize * 4 ), atlas.size() );
-    string error;
-    SW_REQUIRE_TRUE_MSG( OutfitAtlasComposer::blit( kAtlasSize, rect, kPadding, texture, 2, 2, atlas, &error ), error );
+    const expected<void> blitted = OutfitAtlasComposer::blit( kAtlasSize, rect, kPadding, texture, 2, 2, atlas );
+    SW_REQUIRE_TRUE_MSG( blitted.has_value(), blitted.has_value() ? string{} : string( blitted.error().message() ) );
 
     const auto pixelAt = [&atlas]( uint32 x, uint32 y, uint32 channel )
     { return static_cast<int32>( atlas[( static_cast<size_t>( y ) * kAtlasSize + x ) * 4 + channel] ); };
@@ -174,8 +173,8 @@ SW_TEST_CASE( OutfitAtlasTest, BlitCopiesPixelsAndBleedsTheEdges )
     SW_EXPECT_EQUAL( 0, pixelAt( 8, 9, 3 ) );
 
     // 거절은 오류 글로만 알린다(로그 없음).
-    SW_EXPECT_FALSE( OutfitAtlasComposer::blit( kAtlasSize, rect, kPadding, texture, 4, 1, atlas, &error ) );
+    SW_EXPECT_FALSE( OutfitAtlasComposer::blit( kAtlasSize, rect, kPadding, texture, 4, 1, atlas ) );
     OutfitAtlasRect edge = rect;
     edge._x              = 1; // 번짐 띠가 아틀라스 밖으로 나간다
-    SW_EXPECT_FALSE( OutfitAtlasComposer::blit( kAtlasSize, edge, kPadding, texture, 2, 2, atlas, &error ) );
+    SW_EXPECT_FALSE( OutfitAtlasComposer::blit( kAtlasSize, edge, kPadding, texture, 2, 2, atlas ) );
 }

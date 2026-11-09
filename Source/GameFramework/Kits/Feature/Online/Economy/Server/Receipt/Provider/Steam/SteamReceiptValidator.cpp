@@ -174,15 +174,12 @@ namespace sw
                string( textBuilder.view() );
     }
 
-    bool SteamReceiptValidator::readPayload( string_view payload, ReceiptAsk& outAsk, string& outFailureText ) const
+    expected<void> SteamReceiptValidator::readPayload( string_view payload, ReceiptAsk& outAsk ) const
     {
         if ( isOrderID( payload ) == false )
-        {
-            outFailureText = "steam receipt must be the numeric order id";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "steam receipt must be the numeric order id" } );
         outAsk._transactionID = string( payload );
-        return true;
+        return {};
     }
 
     HTTPClientRequest SteamReceiptValidator::makeHTTPRequest( const ReceiptCall& call, UnixMilliseconds /*now*/ )

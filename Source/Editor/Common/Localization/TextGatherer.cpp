@@ -364,9 +364,8 @@ namespace sw
                     _pGatherer->addKeyReference( SourceTextEntry::makeFullKey( arrArgument[0], arrArgument[1] ), _originName );
                     return;
                 }
-                string error;
-                if ( TextFormatter::validatePattern( arrArgument[2], &error ) == false )
-                    _pGatherer->addIssue( makeLocation( callLine ), "source text is not a valid message pattern: " + error, true );
+                if ( const expected<void> valid = TextFormatter::validatePattern( arrArgument[2] ); valid.has_value() == false )
+                    _pGatherer->addIssue( makeLocation( callLine ), "source text is not a valid message pattern: " + string( valid.error().detail() ), true );
                 _pGatherer->addKeyedText( SourceTextEntry::makeFullKey( arrArgument[0], arrArgument[1] ), arrArgument[2], {}, _originName );
             }
 
@@ -571,9 +570,10 @@ namespace sw
         }
         if ( maxLength != 0 && ( text._maxLength == 0 || maxLength < text._maxLength ) )
             text._maxLength = maxLength;
-        string error;
-        if ( bAdded && TextFormatter::validatePattern( textOrKey, &error ) == false )
-            addIssue( origin, "text '" + string( textOrKey ) + "' is not a valid message pattern: " + error, true );
+        if ( bAdded == false )
+            return;
+        if ( const expected<void> valid = TextFormatter::validatePattern( textOrKey ); valid.has_value() == false )
+            addIssue( origin, "text '" + string( textOrKey ) + "' is not a valid message pattern: " + string( valid.error().detail() ), true );
     }
 
     void TextGatherer::addKeyReference( string_view key, string_view origin )

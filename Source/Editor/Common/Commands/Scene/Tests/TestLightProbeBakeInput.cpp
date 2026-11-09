@@ -142,10 +142,8 @@ SW_TEST_CASE( LightProbeBakerTest, RefusesToBakeWithoutPhysics )
     layout._countY  = 2;
     layout._countZ  = 2;
     sw::LightProbeGrid grid{};
-    sw::string         error;
-    SW_EXPECT_FALSE( sw::LightProbeBakeInput::bakeGrid( layout, input, grid, &error ) );
+    SW_EXPECT_FALSE( sw::LightProbeBakeInput::bakeGrid( layout, input, grid ) );
     SW_EXPECT_TRUE( grid._listProbe.empty() );
-    SW_EXPECT_FALSE( error.empty() );
 }
 
 /**
@@ -160,8 +158,7 @@ SW_TEST_CASE( LightProbeBakerTest, BakesSkyAboveAndFloorBounceBelow )
     fixture._input._sky._groundColor  = sw::float3{ 0.0f, 0.0f, 1.0f };
     fixture._input._sky._intensity    = 1.0f;
     sw::LightProbeGrid grid{};
-    sw::string         error;
-    SW_REQUIRE_TRUE( sw::LightProbeBakeInput::bakeGrid( fixture._layout, fixture._input, grid, &error ) );
+    SW_REQUIRE_TRUE( sw::LightProbeBakeInput::bakeGrid( fixture._layout, fixture._input, grid ) );
     SW_REQUIRE_EQUAL( size_t( 4 ), grid._listProbe.size() );
     const sw::float3 up   = grid._listProbe[0].evaluateRadiance( sw::float3{ 0.0f, 1.0f, 0.0f } );
     const sw::float3 down = grid._listProbe[0].evaluateRadiance( sw::float3{ 0.0f, -1.0f, 0.0f } );
@@ -175,7 +172,7 @@ SW_TEST_CASE( LightProbeBakerTest, BakesSkyAboveAndFloorBounceBelow )
     // 스카이가 없으면(세기 0) 하늘 채널의 계수는 모두 0 이다 — 대신 채울 기본 하늘이 없다.
     sw::FloorBakeFixture noSky;
     sw::LightProbeGrid   darkGrid{};
-    SW_REQUIRE_TRUE( sw::LightProbeBakeInput::bakeGrid( noSky._layout, noSky._input, darkGrid, &error ) );
+    SW_REQUIRE_TRUE( sw::LightProbeBakeInput::bakeGrid( noSky._layout, noSky._input, darkGrid ) );
     for ( uint32 basis = 0; basis < sw::SH9Color::kBasisCount; ++basis )
     {
         SW_EXPECT_EQUAL( 0.0f, darkGrid._listProbe[0]._arrCoefficient[basis * sw::SH9Color::kChannelCount + 2] );
@@ -268,8 +265,7 @@ SW_TEST_CASE( LightProbeBakerTest, StaticCollidersOccludeTheEnclosedProbeBeforeP
     layout._countY  = 1;
     layout._countZ  = 1;
     sw::LightProbeGrid grid{};
-    sw::string         error;
-    SW_REQUIRE_TRUE( sw::LightProbeBakeInput::bakeGrid( layout, input, grid, &error ) );
+    SW_REQUIRE_TRUE( sw::LightProbeBakeInput::bakeGrid( layout, input, grid ) );
     SW_REQUIRE_EQUAL( size_t( 2 ), grid._listProbe.size() );
 
     const sw::float3 openUp   = grid._listProbe[0].evaluateRadiance( sw::float3{ 0.0f, 1.0f, 0.0f } );

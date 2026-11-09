@@ -32,6 +32,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Character/CharacterIssue.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -201,15 +202,15 @@ namespace sw
         float32 computeFootLift( vector_reference<const BodyShapeValue> listValue ) const;
         /**
          * @brief 축이 적은 모프 이름과 본 이름이 몸 형상(@p pBody)과 본 배열(@p pBones)에 있는지 검사합니다(널이면 그쪽은 건너뜁니다).
-         * @return 없는 이름이 있으면 오류 문장을 추가하고 false 를 반환합니다.
+         * @return 없는 이름이 있으면 @p outIssues 에 문제를 더하고 false 를 반환합니다.
          */
-        bool validate( const AppearanceGeometry* pBody, const CharacterBoneArray* pBones, string* pOutError ) const;
+        bool validate( const AppearanceGeometry* pBody, const CharacterBoneArray* pBones, CharacterIssueList& outIssues ) const;
         /**
          * @brief 축 값들을 모프 가중치와 본 비율로 풉니다. 적지 않은 축은 기본값, 범위 밖은 범위로 묶습니다.
-         * @return 모르는 축 이름이 있으면 오류 글을 더하고 false 입니다(아는 축은 그래도 풉니다).
+         * @return 모르는 축 이름이 있으면 @p outIssues 에 문제를 더하고 false 입니다(아는 축은 그래도 풉니다).
          */
         bool evaluate( vector_reference<const BodyShapeValue> listValue, vector<BodyMorphWeight>& outListMorphWeight, BoneProportion& outProportion,
-                       string* pOutError ) const;
+                       CharacterIssueList& outIssues ) const;
 
     private:
         /** @brief 리소스 경로의 파일을 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<BodyShapeSet>::acquire` 로 한 벌을 쥔다. */

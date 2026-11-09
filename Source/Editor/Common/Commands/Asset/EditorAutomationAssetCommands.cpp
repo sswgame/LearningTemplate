@@ -186,32 +186,30 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief `scratch/` 아래 id 하나를 받아 그 사본 파일의 글을 읽습니다. id 가 틀렸거나 파일이 없으면 이유를 적고 false 입니다. */
-            [[nodiscard]] static bool readScratchText( const vector<string>& listArgument, const utf8* pCommand, string& outText, string& outReply )
+            /** @brief `scratch/` 아래 id 하나를 받아 그 사본 파일의 글을 읽습니다. id 가 틀렸거나 파일이 없으면 그 까닭입니다. */
+            [[nodiscard]] static expected<string> readScratchText( const vector<string>& listArgument, const utf8* pCommand )
             {
                 const string scratchPrefix = string( AutomationScratch::kScratchDomain ) + "/";
                 const bool   bBadID        = listArgument.size() != 1 || StringUtil::startsWith( listArgument[0], scratchPrefix ) == false || AssetPaths::hasParentDirectoryComponent( listArgument[0] );
                 if ( bBadID )
-                {
-                    outReply = string( pCommand ) + " takes one resource id under " + scratchPrefix;
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the command takes one resource id under the scratch folder", pCommand }.appendDetail( " " ).appendDetail( scratchPrefix ) );
                 const optional<AbsolutePath> scratchPath = editor::getSubsystem<AssetPaths>().findLooseFile( FileUtil::normalizePath( listArgument[0] ) );
-                if ( scratchPath.has_value() == false || FileUtil::readTextFile( scratchPath->str(), outText ) == false )
-                {
-                    outReply = "no scratch asset '" + listArgument[0] + "' (does the scenario declare <Scratch>?)";
-                    return false;
-                }
-                return true;
+                string                       text;
+                if ( scratchPath.has_value() == false || FileUtil::readTextFile( scratchPath->str(), text ) == false )
+                    return unexpected( Error{ ErrorKind::NotFound, "no scratch asset (does the scenario declare <Scratch>?)", listArgument[0] } );
+                return text;
             }
 
             /** @brief 사본 파일 하나의 지금 글을 붙잡습니다 — 저장 왕복의 첫 저장 뒤에 부르고, 다시 읽고 저장한 뒤 `asset.expectScratchUnchanged` 로 견준다. */
             static bool runSnapshotScratchAsset( const vector<string>& listArgument, string& outReply )
             {
-                string text;
-                if ( readScratchText( listArgument, "asset.snapshotScratch", text, outReply ) == false )
+                expected<string> text = readScratchText( listArgument, "asset.snapshotScratch" );
+                if ( text.has_value() == false )
+                {
+                    outReply = AutomationStep::describeReason( text.error() );
                     return false;
-                getEditorState<ScratchSnapshotState>()._mapTextByID.insert_or_assign( listArgument[0], std::move( text ) );
+                }
+                getEditorState<ScratchSnapshotState>()._mapTextByID.insert_or_assign( listArgument[0], std::move( *text ) );
                 outReply = "snapshot of " + listArgument[0];
                 return true;
             }
@@ -222,9 +220,12 @@ namespace sw::editor
              */
             static bool runExpectScratchUnchanged( const vector<string>& listArgument, string& outReply )
             {
-                string text;
-                if ( readScratchText( listArgument, "asset.expectScratchUnchanged", text, outReply ) == false )
+                const expected<string> text = readScratchText( listArgument, "asset.expectScratchUnchanged" );
+                if ( text.has_value() == false )
+                {
+                    outReply = AutomationStep::describeReason( text.error() );
                     return false;
+                }
                 const unordered_map<string, string>& mapSnapshot = getEditorState<ScratchSnapshotState>()._mapTextByID;
                 const auto                           iter        = mapSnapshot.find( listArgument[0] );
                 if ( iter == mapSnapshot.end() )
@@ -232,7 +233,7 @@ namespace sw::editor
                     outReply = "no snapshot of '" + listArgument[0] + "' - run asset.snapshotScratch first";
                     return false;
                 }
-                if ( iter->second != text )
+                if ( iter->second != *text )
                 {
                     outReply = "'" + listArgument[0] + "' changed after save, reload and save again - loading drops or alters what saving wrote";
                     return false;
@@ -279,18 +280,14 @@ namespace sw::editor
              * @details 임포트한 에셋은 리소스 id 가 있어야 씬이 쓸 수 있는데, `Saved/Automation` 에는 id 가 없다. 그래서 리소스 트리 안의 한 폴더만 받는다.
              *          그 폴더는 `.gitignore` 가 무시하고 시나리오가 처음과 끝에 지운다(`asset.removeImportFolder`). 이 검사가 저장소 리소스를 지킨다.
              */
-            [[nodiscard]] static bool resolveImportFolder( const string& folderID, string& outAbsolutePath, string& outReply )
+            [[nodiscard]] static expected<string> resolveImportFolder( const string& folderID )
             {
                 const string  normalized       = FileUtil::normalizePath( folderID );
                 const string& resourceRoot     = editor::getSubsystem<AssetPaths>().getRootFolderPath();
                 const bool    bOutsideTempArea = isUnderFolder( normalized, kImportTempFolder ) == false || normalized.find( ".." ) != string::npos;
                 if ( bOutsideTempArea || resourceRoot.empty() )
-                {
-                    outReply = string( "imports go under the resource folder " ) + kImportTempFolder + "/: '" + folderID + "'";
-                    return false;
-                }
-                outAbsolutePath = FileUtil::joinPath( resourceRoot, folderID );
-                return true;
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "imports go under the temporary resource folder", kImportTempFolder }.appendDetail( "/: " ).appendDetail( folderID ) );
+                return FileUtil::joinPath( resourceRoot, folderID );
             }
 
             /**
@@ -300,13 +297,16 @@ namespace sw::editor
              */
             static bool runImportAsset( const vector<string>& listArgument, string& outReply )
             {
-                string     sourcePath;
-                string     folderPath;
-                const bool bInvalidArguments = listArgument.size() != 2 || EditorAssetFileCommands::readSourceFileArgument( listArgument[0], sourcePath, outReply ) == false ||
-                                               resolveImportFolder( listArgument[1], folderPath, outReply ) == false;
-                if ( bInvalidArguments )
+                string sourcePath;
+                if ( listArgument.size() != 2 || EditorAssetFileCommands::readSourceFileArgument( listArgument[0], sourcePath, outReply ) == false )
                     return false; // 원본이 없으면 readSourceFileArgument 가 이유를 적었다
-                if ( EditorAssetFileCommands::importFiles( folderPath, { sourcePath } ) != 1 )
+                const expected<string> folderPath = resolveImportFolder( listArgument[1] );
+                if ( folderPath.has_value() == false )
+                {
+                    outReply = AutomationStep::describeReason( folderPath.error() );
+                    return false;
+                }
+                if ( EditorAssetFileCommands::importFiles( *folderPath, { sourcePath } ) != 1 )
                 {
                     outReply = "could not import '" + sourcePath + "' into '" + listArgument[1] + "'";
                     return false;
@@ -318,12 +318,17 @@ namespace sw::editor
             /** @brief 시나리오의 처음과 끝에 임시 리소스 폴더 하나를 통째로 지웁니다. 폴더가 없으면 할 일이 없으므로 성공입니다. */
             static bool runRemoveImportFolder( const vector<string>& listArgument, string& outReply )
             {
-                string folderPath;
-                if ( listArgument.size() != 1 || resolveImportFolder( listArgument[0], folderPath, outReply ) == false )
+                if ( listArgument.size() != 1 )
                     return false;
-                if ( FileUtil::removeDirectory( folderPath ) == false )
+                const expected<string> folderPath = resolveImportFolder( listArgument[0] );
+                if ( folderPath.has_value() == false )
                 {
-                    outReply = "could not remove '" + folderPath + "'";
+                    outReply = AutomationStep::describeReason( folderPath.error() );
+                    return false;
+                }
+                if ( FileUtil::removeDirectory( *folderPath ) == false )
+                {
+                    outReply = "could not remove '" + *folderPath + "'";
                     return false;
                 }
                 outReply = "removed " + listArgument[0];

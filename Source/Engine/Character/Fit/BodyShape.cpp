@@ -32,15 +32,6 @@ namespace sw
                 return linear > 0.0f ? MathUtil::pow( linear, axis._response ) : 0.0f;
             }
 
-            static void appendError( string* pOutError, const string& message )
-            {
-                if ( pOutError == nullptr )
-                    return;
-                if ( pOutError->empty() == false )
-                    *pOutError += "\n";
-                *pOutError += message;
-            }
-
             static void addMorphWeight( vector<BodyMorphWeight>& inoutListMorphWeight, const hashed_string& morph, float32 weight )
             {
                 if ( morph.empty() || weight <= 0.0f )
@@ -57,14 +48,14 @@ namespace sw
             }
 
             static bool validateSide( const BodyShapeAxis& axis, const BodyShapeAxisSide& side, const AppearanceGeometry* pBody, const CharacterBoneArray* pBones,
-                                      string* pOutError )
+                                      CharacterIssueList& outIssues )
             {
                 bool       bValid            = true;
                 const bool bUnknownMorphName = pBody != nullptr && side._morph.empty() == false && pBody->findMorph( side._morph ) == nullptr;
                 if ( bUnknownMorphName )
                 {
                     bValid = false;
-                    appendError( pOutError, string( "body shape axis '" ) + axis._name.c_str() + "' names unknown morph '" + side._morph.c_str() + "'" );
+                    outIssues.add( "BodyShape.AxisMorphUnknown", string( "body shape axis '" ) + axis._name.c_str() + "' names unknown morph '" + side._morph.c_str() + "'" );
                 }
                 if ( pBones == nullptr )
                     return bValid;
@@ -73,7 +64,7 @@ namespace sw
                     if ( pBones->findBone( entry._bone ) >= 0 )
                         continue;
                     bValid = false;
-                    appendError( pOutError, string( "body shape axis '" ) + axis._name.c_str() + "' names unknown bone '" + entry._bone.c_str() + "'" );
+                    outIssues.add( "BodyShape.AxisBoneUnknown", string( "body shape axis '" ) + axis._name.c_str() + "' names unknown bone '" + entry._bone.c_str() + "'" );
                 }
                 return bValid;
             }
@@ -273,19 +264,19 @@ namespace sw
         return VectorUtil::findBy<&BodyShapeAxis::_name>( _listAxis, name );
     }
 
-    bool BodyShapeSet::validate( const AppearanceGeometry* pBody, const CharacterBoneArray* pBones, string* pOutError ) const
+    bool BodyShapeSet::validate( const AppearanceGeometry* pBody, const CharacterBoneArray* pBones, CharacterIssueList& outIssues ) const
     {
         bool bValid = true;
         for ( const BodyShapeAxis& axis : _listAxis )
         {
-            bValid = BodyShapeInternal::validateSide( axis, axis._positive, pBody, pBones, pOutError ) && bValid;
-            bValid = BodyShapeInternal::validateSide( axis, axis._negative, pBody, pBones, pOutError ) && bValid;
+            bValid = BodyShapeInternal::validateSide( axis, axis._positive, pBody, pBones, outIssues ) && bValid;
+            bValid = BodyShapeInternal::validateSide( axis, axis._negative, pBody, pBones, outIssues ) && bValid;
         }
         return bValid;
     }
 
     bool BodyShapeSet::evaluate( vector_reference<const BodyShapeValue> listValue, vector<BodyMorphWeight>& outListMorphWeight, BoneProportion& outProportion,
-                                 string* pOutError ) const
+                                 CharacterIssueList& outIssues ) const
     {
         outListMorphWeight.clear();
         outProportion.clear();
@@ -295,7 +286,7 @@ namespace sw
             if ( findAxis( value._axis ) != nullptr || isUnsupported( value._axis ) )
                 continue;
             bValid = false;
-            BodyShapeInternal::appendError( pOutError, string( "unknown body shape axis '" ) + value._axis.c_str() + "'" );
+            outIssues.add( "BodyShape.AxisUnknown", string( "unknown body shape axis '" ) + value._axis.c_str() + "'" );
         }
         for ( const BodyShapeAxis& axis : _listAxis )
         {

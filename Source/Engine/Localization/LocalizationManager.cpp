@@ -127,10 +127,9 @@ namespace sw
     bool LocalizationManager::loadCultureTableXML( string_view xmlText )
     {
         CultureTable loaded;
-        string       error;
-        if ( loaded.loadFromXMLText( xmlText, "<cultures>", &error ) == false )
+        if ( const expected<void> read = loaded.loadFromXMLText( xmlText, "<cultures>" ); read.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "LocalizationManager.CultureTableNotLoaded", "Culture table is not loaded: %#", error.c_str() );
+            SW_LOG_ERROR_ID( "LocalizationManager.CultureTableNotLoaded", "Culture table is not loaded: %# (%#)", read.error().message(), read.error().detail() );
             return false;
         }
         {
@@ -176,15 +175,14 @@ namespace sw
     {
         const string_view projectPath = assetID.view();
         string            text;
-        string            error;
         if ( LocalizationManagerInternal::readLocalizationFile( assetID, text ) == false )
         {
             SW_LOG_ERROR_ID( "LocalizationManager.LocalizationProjectCannotRead", "Localization project '%#' cannot be read", projectPath );
             return false;
         }
-        if ( outProject._project.loadFromXMLText( text, projectPath, &error ) == false )
+        if ( const expected<void> read = outProject._project.loadFromXMLText( text, projectPath ); read.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "LocalizationManager.LocalizationProjectNotLoaded", "Localization project is not loaded: %#", error.c_str() );
+            SW_LOG_ERROR_ID( "LocalizationManager.LocalizationProjectNotLoaded", "Localization project is not loaded: %# (%#)", read.error().message(), read.error().detail() );
             return false;
         }
         outProject._projectPath = string( projectPath );
@@ -198,11 +196,13 @@ namespace sw
         {
             const string tablePath = LocalizationProject::makeSiblingPath( projectPath, tableName );
             outProject._listFilePath.push_back( tablePath );
-            SourceStringTable table;
-            const bool        bRead = LocalizationManagerInternal::readLocalizationFile( AssetID{ tablePath }, text ) && table.loadFromXMLText( text, tablePath, &error );
-            if ( bRead == false )
+            SourceStringTable    table;
+            const expected<void> read = LocalizationManagerInternal::readLocalizationFile( AssetID{ tablePath }, text )
+                                          ? table.loadFromXMLText( text, tablePath )
+                                          : expected<void>{ unexpected( Error{ ErrorKind::NotFound, "cannot read the file", tablePath } ) };
+            if ( read.has_value() == false )
             {
-                SW_LOG_ERROR_ID( "LocalizationManager.StringTableNotLoaded", "String table '%#' is not loaded: %#", tablePath.c_str(), error.c_str() );
+                SW_LOG_ERROR_ID( "LocalizationManager.StringTableNotLoaded", "String table '%#' is not loaded: %# (%#)", tablePath.c_str(), read.error().message(), read.error().detail() );
                 bAllRead = false;
                 continue;
             }
@@ -231,9 +231,9 @@ namespace sw
                 continue;
             }
             TranslationTable translation;
-            if ( translation.loadFromXMLText( text, translationPath, &error ) == false )
+            if ( const expected<void> read = translation.loadFromXMLText( text, translationPath ); read.has_value() == false )
             {
-                SW_LOG_ERROR_ID( "Localization.TranslationNotLoaded", "Translation table is not loaded: %#", error.c_str() );
+                SW_LOG_ERROR_ID( "Localization.TranslationNotLoaded", "Translation table is not loaded: %# (%#)", read.error().message(), read.error().detail() );
                 bAllRead = false;
                 continue;
             }
@@ -354,11 +354,11 @@ namespace sw
 
     bool LocalizationManager::loadLanguageXML( string_view languageCode, string_view xmlText )
     {
-        TranslationTable table;
-        string           error;
-        if ( languageCode.empty() || table.loadFromXMLText( xmlText, "<memory>", &error ) == false )
+        TranslationTable     table;
+        const expected<void> read = languageCode.empty() ? expected<void>{ unexpected( Error{ ErrorKind::InvalidArgument, "the language code is empty" } ) } : table.loadFromXMLText( xmlText, "<memory>" );
+        if ( read.has_value() == false )
         {
-            SW_LOG_WARNING_ID( "LocalizationManager.TranslationXMLNotLoaded", "Translation XML for '%#' is not loaded: %#", languageCode, error.c_str() );
+            SW_LOG_WARNING_ID( "LocalizationManager.TranslationXMLNotLoaded", "Translation XML for '%#' is not loaded: %# (%#)", languageCode, read.error().message(), read.error().detail() );
             return false;
         }
         string oldLanguage;
@@ -418,10 +418,9 @@ namespace sw
     bool LocalizationManager::loadBinaryTable( const uint8* pData, size_t size )
     {
         LocalizationBinaryTable table;
-        string                  error;
-        if ( table.parse( pData, size, &error ) == false )
+        if ( const expected<void> parsed = table.parse( pData, size ); parsed.has_value() == false )
         {
-            SW_LOG_WARNING_ID( "Localization.BinaryTableRejected", "Binary localization table is not loaded: %#", error.c_str() );
+            SW_LOG_WARNING_ID( "Localization.BinaryTableRejected", "Binary localization table is not loaded: %#", parsed.error().message() );
             return false;
         }
         // 문화권 검사와 경고는 잠금 밖에서 한다(잠금은 잎 잠금, 결정 5-3).
@@ -853,9 +852,8 @@ namespace sw
             culture = _currentCulture;
         }
         string text;
-        string error;
-        if ( TextFormatter::format( pattern, arguments, culture, text, &error ) == false )
-            SW_LOG_WARNING_ID( "LocalizationManager.TextFormatCulture", "Text format '%#' (culture '%#'): %#", pattern, culture._code.c_str(), error.c_str() );
+        if ( const expected<void> formatted = TextFormatter::format( pattern, arguments, culture, text ); formatted.has_value() == false )
+            SW_LOG_WARNING_ID( "LocalizationManager.TextFormatCulture", "Text format '%#' (culture '%#'): %#", pattern, culture._code.c_str(), formatted.error().detail() );
         return text;
     }
 

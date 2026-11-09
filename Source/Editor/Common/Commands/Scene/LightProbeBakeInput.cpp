@@ -55,50 +55,44 @@ namespace sw
 
 namespace sw
 {
-    bool LightProbeBakeInput::collectInput( const Scene& scene, const LightProbeVolumeComponent& volume, unique_ptr<IPhysicsScene3D>& outOccluders,
-                                            LightProbeBakeInput& outInput, string* pOutError )
+    expected<void> LightProbeBakeInput::collectInput( const Scene& scene, const LightProbeVolumeComponent& volume, unique_ptr<IPhysicsScene3D>& outOccluders,
+                                                      LightProbeBakeInput& outInput )
     {
         outInput                          = LightProbeBakeInput{};
         const GameObjectManager* pObjects = scene.getObjectManager();
         // 플레이 씬이 아니라 정적 콜라이더만의 새 씬에 쏜다 — 편집 중에는 바디가 없고, 플레이 중이어도 움직이는 바디는 베이크에 들지 않는다.
         outOccluders = ( pObjects != nullptr ) ? pObjects->getSubsystem<ScenePhysics>().createStaticScene3D() : nullptr;
         if ( outOccluders == nullptr )
-        {
-            if ( pOutError != nullptr )
-                *pOutError = "the physics service is not running - light probes are not baked without occlusion";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::Unsupported, "the physics service is not running - light probes are not baked without occlusion" } );
         outInput._pPhysics = outOccluders.get();
         // 하늘이 없으면 findSky 가 세기 0 으로 비운다 — 빈 방향은 0 이다(폴백 없음).
         (void)SkyComponent::findSky( *pObjects, outInput._sky );
         outInput._sampleCount  = volume.getBakeSampleCount();
         outInput._bounceAlbedo = volume.getBounceAlbedo();
         collectSceneLights( &scene, outInput._listLight );
-        return true;
+        return {};
     }
 
-    bool LightProbeBakeInput::bakeGrid( const LightProbeGridLayout& layout, const LightProbeBakeInput& input, LightProbeGrid& outGrid, string* pOutError )
+    expected<void> LightProbeBakeInput::bakeGrid( const LightProbeGridLayout& layout, const LightProbeBakeInput& input, LightProbeGrid& outGrid )
     {
         // 한 번에 베이크도 나눠 베이크와 같은 길이다 — 결과가 같다(`LightProbeBakeJob`).
         outGrid.clear();
         LightProbeBakeJob job;
-        if ( job.begin( layout, input, pOutError ) == false )
-            return false;
+        if ( expected<void> begun = job.begin( layout, input ); begun.has_value() == false )
+            return begun;
         (void)job.step( job.getProbeCount() );
-        return job.takeGrid( outGrid );
+        if ( job.takeGrid( outGrid ) == false )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the light probe bake did not finish" } );
+        return {};
     }
 
-    bool LightProbeBakeJob::begin( const LightProbeGridLayout& layout, const LightProbeBakeInput& input, string* pOutError )
+    expected<void> LightProbeBakeJob::begin( const LightProbeGridLayout& layout, const LightProbeBakeInput& input )
     {
         using Internal           = LightProbeBakerInternal;
         *this                    = LightProbeBakeJob{};
         const bool bMissingInput = input._pPhysics == nullptr || input._sampleCount == 0 || layout.getProbeCount() == 0;
         if ( bMissingInput )
-        {
-            if ( pOutError != nullptr )
-                *pOutError = "light probe bake needs a physics scene, at least one sample and at least one probe";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "light probe bake needs a physics scene, at least one sample and at least one probe" } );
         _input = input;
         // 방향은 한 번만 만든다 — 모든 프로브가 같은 수열을 쓴다.
         _listDirection.reserve( input._sampleCount );
@@ -112,7 +106,7 @@ namespace sw
         _grid._listProbe.assign( layout.getProbeCount(), SH9Color{} );
         _nextProbeIndex = 0;
         _bBegun         = SW_TRUE;
-        return true;
+        return {};
     }
 
     bool LightProbeBakeJob::step( uint32 maxProbeCount )

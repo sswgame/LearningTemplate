@@ -1521,10 +1521,9 @@ namespace sw::editor
         asset._seed  = settings._seed;
         MeshFractureInternal::collectBounds( listWelded, asset._boundsMin, asset._boundsMax );
         cut.fillPieces( pieces, listLeafOrder, settings, bProxy, asset );
-        string validation;
-        if ( asset.isValid( &validation ) == false )
+        if ( const expected<void> valid = asset.validate(); valid.has_value() == false )
         {
-            return unexpected( Error{ ErrorKind::InvalidArgument, "fracture produced an invalid asset", validation } );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "fracture produced an invalid asset", valid.error().message() } );
         }
         return asset;
     }

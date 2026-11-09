@@ -36,58 +36,45 @@ namespace sw
 
 namespace sw
 {
-    bool TranslationMemory::loadFromXMLText( string_view xmlText, string_view sourceName, string* pOutError )
+    expected<void> TranslationMemory::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
         XMLDocument document;
-        string      error;
         XMLNode     root;
         if ( XMLReadUtil::parseRoot( document, FileUtil::skipUTF8Bom( xmlText ), sourceName, "TranslationMemory", root ) != XMLRootStatus::Found )
         {
-            error = document.getLastError();
-            if ( error.empty() )
-                error = string( sourceName ) + ": root must be <TranslationMemory>";
+            if ( document.getLastError().empty() == false )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "the document is not well-formed XML", document.getLastError() } );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "root must be <TranslationMemory>", sourceName } );
         }
         const XMLNode entries = root.findChild( "entries" );
-        if ( error.empty() && ( XMLReadUtil::hasOnlyKnownNames( root, { "culture" }, { "entries" }, sourceName ) == false || entries.isValid() == false ||
-                                root.findAttribute( "culture" ) == nullptr ) )
-            error = string( sourceName ) + ": needs <TranslationMemory culture=\"…\"><entries>…</entries></TranslationMemory> and nothing else";
+        if ( XMLReadUtil::hasOnlyKnownNames( root, { "culture" }, { "entries" }, sourceName ) == false || entries.isValid() == false || root.findAttribute( "culture" ) == nullptr )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "needs <TranslationMemory culture=\"…\"><entries>…</entries></TranslationMemory> and nothing else", sourceName } );
 
         map<string, string> mapPair;
         size_t              index{ 0 };
-        for ( XMLNode entry = entries.findChild(); error.empty() && entry.isValid(); entry = entry.findNextSibling(), ++index )
+        for ( XMLNode entry = entries.findChild(); entry.isValid(); entry = entry.findNextSibling(), ++index )
         {
             const bool bMalformedEntry = string_view{ entry.getName() } != "entry" || XMLReadUtil::hasOnlyKnownNames( entry, { "source", "text" }, {}, sourceName ) == false ||
                                          entry.findAttribute( "source" ) == nullptr || entry.findAttribute( "text" ) == nullptr;
             if ( bMalformedEntry )
             {
-                StringBuilder<constant::buffer::kMax256> errorBuilder;
-                errorBuilder.appendFormat( "%#: entries[%#] needs exactly \"source\" and \"text\"", string( sourceName ), static_cast<uint64>( index ) );
-                error = string( errorBuilder.view() );
-                break;
+                StringBuilder<constant::buffer::kMax256> detail;
+                detail.appendFormat( "%#: entries[%#]", sourceName, static_cast<uint64>( index ) );
+                return unexpected( Error{ ErrorKind::InvalidArgument, "an entry needs exactly \"source\" and \"text\"", detail.view() } );
             }
             mapPair[string{ entry.getAttributeText( "source" ) }] = string{ entry.getAttributeText( "text" ) };
         }
-        if ( error.empty() == false )
-        {
-            if ( pOutError != nullptr )
-                *pOutError = error;
-            return false;
-        }
         _culture         = CultureTable::normalizeCode( root.getAttributeText( "culture" ) );
         _mapSourceToText = std::move( mapPair );
-        return true;
+        return {};
     }
 
-    bool TranslationMemory::loadFromFile( string_view absolutePath, string* pOutError )
+    expected<void> TranslationMemory::loadFromFile( string_view absolutePath )
     {
         string text;
         if ( FileUtil::readTextFile( absolutePath, text ) == false )
-        {
-            if ( pOutError != nullptr )
-                *pOutError = "cannot read '" + string( absolutePath ) + "'";
-            return false;
-        }
-        return loadFromXMLText( text, absolutePath, pOutError );
+            return unexpected( Error{ ErrorKind::NotFound, "cannot read the file", absolutePath } );
+        return loadFromXMLText( text, absolutePath );
     }
 
     string TranslationMemory::saveToXMLText() const

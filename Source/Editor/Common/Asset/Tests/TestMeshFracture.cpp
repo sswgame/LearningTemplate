@@ -203,7 +203,7 @@ SW_TEST_CASE( MeshFractureTest, UniformPiecesPartitionTheVolume )
 
     SW_REQUIRE_TRUE( asset.getPieceCount() > 1 );
     SW_EXPECT_TRUE( asset.getPieceCount() <= 12 );
-    SW_EXPECT_TRUE( asset.isValid() );
+    SW_EXPECT_TRUE( asset.validate() );
     SW_EXPECT_EQUAL( asset._seed, uint64{ 7 } );
     SW_EXPECT_NEAR( Util::sumPieceVolume( asset ), 8.0f, 1.0e-2f );
     SW_EXPECT_NEAR( asset._boundsMax._x, 1.0f, 1.0e-5f );
@@ -295,7 +295,7 @@ SW_TEST_CASE( MeshFractureTest, HierarchyKeepsPiecesPaired )
     settings._pieceCount      = 16;
     settings._listLevelCount  = { 2, 4 };
     const FractureAsset asset = Util::fractureBox( settings );
-    SW_EXPECT_TRUE( asset.isValid() );
+    SW_EXPECT_TRUE( asset.validate() );
     SW_EXPECT_TRUE( asset._graph.getDepthCount() >= 2 );
     for ( uint32 piece = 0; piece < asset.getPieceCount(); ++piece )
     {

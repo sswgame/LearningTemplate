@@ -221,15 +221,14 @@ namespace sw
         ReceiptCall call;
         call._kind    = ReceiptCall::Kind::Validate;
         call._request = request;
-        string failureText;
-        if ( readPayload( request._payload, call._ask, failureText ) == false )
+        if ( const expected<void> read = readPayload( request._payload, call._ask ); read.has_value() == false )
         {
             // 요청에 실을 수 없는 영수증은 스토어에 묻지 않고 거절한다(다른 인자를 끼워 넣는 길을 막는다).
             ReceiptValidationResult result = makeResult( call );
             result._transactionID.clear();
             result._productID.clear();
             result._status      = ReceiptStatus::Invalid;
-            result._failureText = std::move( failureText );
+            result._failureText = string( read.error().message() );
             _listDone.push_back( std::move( result ) );
             return;
         }
@@ -372,10 +371,10 @@ namespace sw
         call._recordKey          = task._recordKey;
         call._request._storeName = task._storeName;
         call._request._payload   = task._deliveryKey;
-        string failureText;
-        if ( readPayload( task._deliveryKey, call._ask, failureText ) == false )
+        if ( const expected<void> read = readPayload( task._deliveryKey, call._ask ); read.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "StoreReceiptValidator.DeliveryKeyUnreadable", "A %# delivery record has an unreadable key (%#) - it is dropped, the store refunds that purchase when its deadline passes", getStoreName(), failureText.c_str() );
+            SW_LOG_ERROR_ID( "StoreReceiptValidator.DeliveryKeyUnreadable", "A %# delivery record has an unreadable key (%#) - it is dropped, the store refunds that purchase when its deadline passes", getStoreName(),
+                             read.error().message() );
             completeDelivery( call, ReceiptDeliveryStatus::Refused );
             return;
         }

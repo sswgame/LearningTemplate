@@ -159,10 +159,14 @@ namespace sw
             preset._name          = record._name;
             preset._thumbnailSlot = record._thumbnailSlot;
             preset._bFavorite     = record._bFavorite ? SW_TRUE : SW_FALSE;
-            string reason;
-            if ( _pDatabase == nullptr || AppearanceSelection::decode( string_view( record._code ), *_pDatabase, preset._selection, &reason ) == false )
+            if ( _pDatabase == nullptr )
             {
-                SW_LOG_WARNING_ID( "UserAppearancePresetStore.AppearancePresetCannotRead", "Appearance preset '%#' cannot be read (%#) - skipped", preset._name, _pDatabase == nullptr ? "no appearance data" : reason.c_str() );
+                SW_LOG_WARNING_ID( "UserAppearancePresetStore.AppearancePresetCannotRead", "Appearance preset '%#' cannot be read (%#) - skipped", preset._name, "no appearance data" );
+                continue;
+            }
+            if ( const expected<void> decoded = AppearanceSelection::decode( string_view( record._code ), *_pDatabase, preset._selection ); decoded.has_value() == false )
+            {
+                SW_LOG_WARNING_ID( "UserAppearancePresetStore.AppearancePresetCannotRead", "Appearance preset '%#' cannot be read (%#) - skipped", preset._name, decoded.error().message() );
                 continue;
             }
             _listPreset.push_back( preset );
