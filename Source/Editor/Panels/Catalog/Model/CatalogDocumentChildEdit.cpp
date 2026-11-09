@@ -90,7 +90,7 @@ namespace sw::editor
             /** @brief 칸이 없으면 할 일이 없습니다. */
             [[nodiscard]] bool removeAttribute( int32 elementIndex, string_view name )
             {
-                if ( get( elementIndex ).findAttribute( name ) < 0 )
+                if ( get( elementIndex ).findAttribute( name ).has_value() == false )
                     return true;
                 return accept( CatalogXMLText::removeAttribute( _text, get( elementIndex ), name ) );
             }
@@ -250,8 +250,8 @@ namespace sw::editor
                     for ( XMLAttribute attribute = parentChild.getFirstAttribute(); attribute; attribute = attribute.getNext() )
                     {
                         ++parentCount;
-                        const int32 writtenAttribute = written.findAttribute( attribute.getName() );
-                        if ( writtenAttribute < 0 || string_view( written._listAttribute[static_cast<size_t>( writtenAttribute )]._value ) != string_view( attribute.getValue() ) )
+                        const optional<uint32> writtenAttribute = written.findAttribute( attribute.getName() );
+                        if ( writtenAttribute.has_value() == false || string_view( written._listAttribute[*writtenAttribute]._value ) != string_view( attribute.getValue() ) )
                             return false;
                     }
                     if ( parentCount != written._listAttribute.size() )
@@ -323,13 +323,13 @@ namespace sw::editor
             _error = "the key of an inherited element cannot be changed";
             return false;
         }
-        const int32  opIndex   = written >= 0 ? draft.get( written ).findAttribute( DataInheritance::kOpAttribute ) : -1;
-        const bool   bReplaced = opIndex >= 0 && draft.get( written )._listAttribute[static_cast<size_t>( opIndex )]._value == DataInheritance::kOpReplace;
-        const string columnName{ column };
-        const utf8*  pInherited = parentNode.isValid() && bReplaced == false && bKey == false ? parentNode.findAttribute( columnName.c_str() ) : nullptr;
+        const optional<uint32> opIndex   = written >= 0 ? draft.get( written ).findAttribute( DataInheritance::kOpAttribute ) : nullopt;
+        const bool             bReplaced = opIndex.has_value() && draft.get( written )._listAttribute[*opIndex]._value == DataInheritance::kOpReplace;
+        const string           columnName{ column };
+        const utf8*            pInherited = parentNode.isValid() && bReplaced == false && bKey == false ? parentNode.findAttribute( columnName.c_str() ) : nullptr;
         if ( pInherited != nullptr && value == string_view( pInherited ) )
         {
-            if ( written < 0 || draft.get( written ).findAttribute( column ) < 0 )
+            if ( written < 0 || draft.get( written ).findAttribute( column ).has_value() == false )
                 return true;
             if ( draft.removeAttribute( written, column ) == false || Internal::pruneEmpty( draft, parentEntry, path ) == false )
                 return false;
@@ -347,7 +347,7 @@ namespace sw::editor
             return false;
         CatalogChildDraft draft{ _text, rowIndex, *this };
         const int32       written = draft.find( path );
-        if ( written < 0 || draft.get( written ).findAttribute( column ) < 0 )
+        if ( written < 0 || draft.get( written ).findAttribute( column ).has_value() == false )
         {
             _error = "the element has no such attribute";
             return false;
@@ -404,7 +404,7 @@ namespace sw::editor
             const CatalogXMLElement& child = draft.get( childIndex );
             if ( child._name != nameText )
                 continue;
-            if ( child.findAttribute( DataInheritance::kOpAttribute ) >= 0 )
+            if ( child.findAttribute( DataInheritance::kOpAttribute ).has_value() )
             {
                 bCleared = true;
                 continue;

@@ -20,8 +20,8 @@ namespace sw::editor
             /** @brief 원소의 속성 값입니다. 없으면 nullptr 입니다. */
             static const string* findAttribute( const CatalogXMLElement& element, string_view name )
             {
-                const int32 index = element.findAttribute( name );
-                return index >= 0 ? &element._listAttribute[static_cast<size_t>( index )]._value : nullptr;
+                const optional<uint32> index = element.findAttribute( name );
+                return index.has_value() ? &element._listAttribute[*index]._value : nullptr;
             }
 
             /** @brief @p tag 가 @p presentationTag 이거나 그 자손이면(`A.B` 는 `A` 의 자손) true 입니다. 큐는 가장 가까운 조상 태그의 연출로 간다. */

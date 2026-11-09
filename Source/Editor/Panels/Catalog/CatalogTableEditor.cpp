@@ -206,7 +206,7 @@ namespace sw::editor
             if ( rowPosition == 0 && bFirstGroup )
                 EditorSelfTestMarks::record( "catalog.children.open" );
             // 시나리오가 "물려받는 첫 행" 을 고를 수 있게 한다.
-            if ( inoutbFirstVariantButton && document.getParsed().getElement( elementIndex ).findAttribute( DataInheritance::kBaseAttribute ) >= 0 )
+            if ( inoutbFirstVariantButton && document.getParsed().getElement( elementIndex ).findAttribute( DataInheritance::kBaseAttribute ).has_value() )
             {
                 EditorSelfTestMarks::record( "catalog.children.open.variant" );
                 inoutbFirstVariantButton = false;

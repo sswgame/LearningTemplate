@@ -224,14 +224,14 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    int32 CatalogXMLElement::findAttribute( string_view name ) const
+    optional<uint32> CatalogXMLElement::findAttribute( string_view name ) const
     {
         for ( size_t index = 0; index < _listAttribute.size(); ++index )
         {
             if ( string_view( _listAttribute[index]._name ) == name )
-                return static_cast<int32>( index );
+                return static_cast<uint32>( index );
         }
-        return -1;
+        return nullopt;
     }
 } // namespace sw::editor
 
@@ -315,10 +315,10 @@ namespace sw::editor
 
     expected<string> CatalogXMLText::setAttributeValue( string_view text, const CatalogXMLElement& element, string_view name, string_view value )
     {
-        const int32 attributeIndex = element.findAttribute( name );
-        if ( attributeIndex >= 0 )
+        const optional<uint32> attributeIndex = element.findAttribute( name );
+        if ( attributeIndex.has_value() )
         {
-            const CatalogXMLAttribute& attribute = element._listAttribute[static_cast<size_t>( attributeIndex )];
+            const CatalogXMLAttribute& attribute = element._listAttribute[*attributeIndex];
             string                     escaped;
             XMLWriter::appendEscaped( escaped, value, true );
             return CatalogXMLTextInternal::joinPieces( text.substr( 0, attribute._valueBegin ), escaped, text.substr( attribute._valueEnd ) );
@@ -333,10 +333,10 @@ namespace sw::editor
 
     expected<string> CatalogXMLText::removeAttribute( string_view text, const CatalogXMLElement& element, string_view name )
     {
-        const int32 attributeIndex = element.findAttribute( name );
-        if ( attributeIndex < 0 )
+        const optional<uint32> attributeIndex = element.findAttribute( name );
+        if ( attributeIndex.has_value() == false )
             return unexpected( Error{ ErrorKind::NotFound, "the element has no such attribute", name } );
-        const CatalogXMLAttribute& attribute = element._listAttribute[static_cast<size_t>( attributeIndex )];
+        const CatalogXMLAttribute& attribute = element._listAttribute[*attributeIndex];
         size_t                     begin     = attribute._nameBegin;
         while ( begin > 0 && CatalogXMLTextInternal::isSpace( text[begin - 1] ) )
         {

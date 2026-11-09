@@ -98,7 +98,7 @@ SW_TEST_CASE( CatalogXMLTextTest, ParsesElementsAttributesAndNesting )
     const CatalogXMLElement& tag = parsed.getElement( second._listChild[0] );
     SW_EXPECT_TRUE( tag._bSelfClosing );
     SW_EXPECT_TRUE( tag._listAttribute[0]._value == "q" ); // 작은따옴표
-    SW_EXPECT_EQUAL( -1, second.findAttribute( "nope" ) );
+    SW_EXPECT_FALSE( second.findAttribute( "nope" ).has_value() );
 }
 
 SW_TEST_CASE( CatalogXMLTextTest, BrokenDocumentsAreRefusedWithAReason )

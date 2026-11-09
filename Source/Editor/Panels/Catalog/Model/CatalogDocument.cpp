@@ -142,8 +142,8 @@ namespace sw::editor
         if ( bInvalidElementIndex )
             return nullptr;
         const CatalogXMLElement& element        = _parsed.getElement( elementIndex );
-        const int32              attributeIndex = element.findAttribute( column );
-        return attributeIndex >= 0 ? &element._listAttribute[static_cast<size_t>( attributeIndex )]._value : nullptr;
+        const optional<uint32>   attributeIndex = element.findAttribute( column );
+        return attributeIndex.has_value() ? &element._listAttribute[*attributeIndex]._value : nullptr;
     }
 
     const utf8* CatalogDocument::findInheritedValue( int32 elementIndex, string_view column ) const
@@ -168,7 +168,7 @@ namespace sw::editor
             return false;
         const CatalogXMLElement& row  = _parsed.getElement( elementIndex );
         const string*            pKey = _inheritance.findKeyAttribute( row._name );
-        return pKey != nullptr && row.findAttribute( *pKey ) >= 0;
+        return pKey != nullptr && row.findAttribute( *pKey ).has_value();
     }
 
     void CatalogDocument::collectVisibleRows( const Group& group, string_view filter, vector<int32>& outListRow ) const
@@ -283,7 +283,7 @@ namespace sw::editor
         const bool               bOwnColumn = column == DataInheritance::kBaseAttribute || ( pKey != nullptr && column == string_view( *pKey ) );
         const utf8*              pInherited = bOwnColumn ? nullptr : findInheritedValue( elementIndex, column );
         if ( pInherited != nullptr && value == string_view( pInherited ) )
-            return target.findAttribute( column ) >= 0 ? unsetCell( elementIndex, column ) : true;
+            return target.findAttribute( column ).has_value() ? unsetCell( elementIndex, column ) : true;
         return applyEdit( CatalogXMLText::setAttributeValue( _text, _parsed.getElement( elementIndex ), column, value ) );
     }
 
@@ -409,7 +409,7 @@ namespace sw::editor
         }
         const CatalogXMLElement& row    = _parsed.getElement( elementIndex );
         const string&            key    = *_inheritance.findKeyAttribute( row._name );
-        const string&            id     = row._listAttribute[static_cast<size_t>( row.findAttribute( key ) )]._value;
+        const string&            id     = row._listAttribute[row.findAttribute( key ).value()]._value; // 변형을 만들 수 있는 행은 열쇠 속성이 있다(canCreateVariant)
         const Group*             pGroup = CatalogDocumentInternal::findGroup( _listGroup, row._name );
         if ( pGroup == nullptr )
         {
