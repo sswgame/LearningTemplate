@@ -36,6 +36,7 @@
         "Source/Editor/Panels/Animation/AnimationGraphPanel",
         "Source/Editor/Panels/Animation/AnimationWatches",
         "Source/Editor/Panels/Animation/SequenceDebuggerPanel",
+        "Source/Editor/Panels/Animation/SequencerPanel",
         "Source/Editor/Panels/Animation/SpriteClipPanel",
         "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel",
         "Source/Editor/Panels/AudioGraph/AudioGraphPanel",

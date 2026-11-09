@@ -8,30 +8,21 @@
 #include "Core/String/StringUtil.h"
 #include "Core/String/formatString.h"
 
-#include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
-#include "Editor/Common/Commands/Scene/EditorViewportPreview.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
-#include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Panels/Inspector/Model/InspectorPropertyLayout.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
-#include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Reflection/ReflectionTypes.h"
-#include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/Sequencer/SequencePlayer.h"
-#include "Engine/Sequencer/SequencePlayerComponent.h"
 #include "Engine/Sequencer/SequenceTimelineUtil.h"
 
 #include <imgui.h>
@@ -79,8 +70,7 @@ namespace sw::editor
         }
         const utf8* GetItemTypeName( int32 typeIndex ) const override
         {
-            const utf8* pName = editor::getSubsystem<TypeRegistry>().enumToString( static_cast<SequenceItemKind>( typeIndex ) );
-            return pName != nullptr ? pName : "?"; // 라이브러리가 const utf8* 를 요구해 사유 문자열을 줄 수 없다
+            return getEnumName( static_cast<SequenceItemKind>( typeIndex ) ); // 라이브러리가 const utf8* 를 요구한다 — 등록되지 않았으면 "Unknown"
         }
         const utf8* GetItemLabel( int32 itemIndex ) const override
         {
@@ -153,12 +143,6 @@ namespace sw::editor
             static constexpr float32 kKeyMarkerRadius = 4.0f;
             /** @brief 컷 차선의 높이(글자 줄 수)입니다. */
             static constexpr float32 kCutLaneLines = 1.5f;
-
-            /** @brief 에디터에서 고른 오브젝트입니다. 고른 것이 없으면 nullptr 입니다(메인 씬의 선택 — 언리얼 시퀀서도 레벨 선택의 액터를 바인딩에 더한다). */
-            static GameObject* findSelectedObject()
-            {
-                return editor::getMainSceneSelection().getPrimaryObject();
-            }
 
             /**
              * @brief 항목의 글 칸 하나입니다. 칸을 떠나며 고쳤거나 애셋을 끌어 놓았으면 true 입니다.
@@ -276,7 +260,7 @@ namespace sw::editor
     } // namespace
 
     SequencerPanel::SequencerPanel()
-        : EditorDocumentPanel{ EditorAssetType{ SequenceAsset::kAssetType }, false }
+        : EditorDocumentPanel{ SequencerViewModel::getDocumentType(), false }
         , _cinematicNote{ "Cinematic notes (not a clip track)." }
         , _document{}
         , _sequence{ make_unique<ClipSequence>( _document ) }
@@ -284,10 +268,9 @@ namespace sw::editor
         , _listTimingBefore{}
         , _listKeyFrame{}
         , _listCutItem{}
-        , _listPreviewSpan{}
-        , _listPreviewSpawn{}
+        , _viewModel{}
+        , _sceneState{}
         , _curveState{}
-        , _contextPlayer{}
         , _currentFrame{ 0 }
         , _firstFrame{ 0 }
         , _keyDragTrack{ -1 }
@@ -411,37 +394,6 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "CinematicNoteTip" ) );
     }
 
-    SequencePlayerComponent* SequencerPanel::findBindingContext() const
-    {
-        GameObjectManager* pManager = editor::getActiveObjectManager();
-        if ( pManager == nullptr || getLoadedAssetPath().empty() )
-            return nullptr;
-        SequencePlayerComponent* pFirst = nullptr;
-        for ( GameObject* pObject : pManager->getAllGameObjects() )
-        {
-            SequencePlayerComponent* pPlayer = pObject != nullptr ? pObject->getComponent<SequencePlayerComponent>() : nullptr;
-            // 리소스 id 는 대소문자를 가리지 않는다.
-            if ( pPlayer == nullptr || StringUtil::equals( pPlayer->getSequencePath(), getLoadedAssetPath(), true ) == false )
-                continue;
-            if ( pObject->getHandle() == _contextPlayer )
-                return pPlayer;
-            if ( pFirst == nullptr )
-                pFirst = pPlayer;
-        }
-        return pFirst;
-    }
-
-    SequenceBindingView SequencerPanel::makePreviewBindingView( const SequenceAsset& asset ) const
-    {
-        static const vector<SequenceBindingSlot> s_listNoSlot{}; // 문맥이 없을 때 가리킬 빈 표(읽기만 한다)
-        const SequencePlayerComponent*           pContext = findBindingContext();
-        SequenceBindingView                      view;
-        view._pAsset       = &asset;
-        view._pListSlot    = pContext != nullptr ? &pContext->getBindings() : &s_listNoSlot;
-        view._pListSpawned = &_listPreviewSpawn;
-        return view;
-    }
-
     const utf8* SequencerPanel::findBindingName( uint32 bindingID ) const
     {
         const SequenceBinding* pBinding = _document._asset.findBinding( bindingID );
@@ -450,45 +402,28 @@ namespace sw::editor
 
     uint32 SequencerPanel::countUnboundBindings() const
     {
-        const SequenceBindingView view     = makePreviewBindingView( _document._asset );
-        GameObjectManager*        pManager = editor::getActiveObjectManager();
-        uint32                    unbound  = 0;
-        for ( const SequenceBinding& binding : _document._asset._listBinding )
-        {
-            const bool bSpawned = _document._asset.findSpawnItem( binding._id ) != nullptr;
-            if ( bSpawned == false && SequenceTimelineUtil::findTarget( pManager, view, binding._id ) == nullptr )
-                ++unbound;
-        }
-        return unbound;
+        return _viewModel.countUnboundBindings( _document._asset, getLoadedAssetPath() );
     }
 
     void SequencerPanel::bindSelectionTo( uint32 bindingID )
     {
-        SequencePlayerComponent* pContext = findBindingContext();
-        GameObject*              pTarget  = SequencerPanelInternal::findSelectedObject();
-        GameObject*              pOwner   = pContext != nullptr ? pContext->getOwner() : nullptr;
-        if ( pOwner == nullptr || pTarget == nullptr )
-            return;
-        // 묶음은 씬의 데이터(플레이어의 바인딩 표)다 — 오브젝트 수정으로 되돌리기에 남긴다.
-        const ObjectSnapshot before = EditorTransaction::captureSnapshot( pOwner );
-        pContext->setBinding( bindingID, pTarget->getHandle() );
-        EditorTransaction::recordModify( pOwner, before, EditorTransaction::captureSnapshot( pOwner ), "Bind Sequence Object" );
-        previewCurrentFrame();
+        if ( _viewModel.bindSelection( getLoadedAssetPath(), bindingID ) )
+            previewCurrentFrame();
     }
 
     void SequencerPanel::drawBindings()
     {
         ImGui::SeparatorText( SW_LOCKEY( "EditorSequencer", "BindingsSection" ) );
-        SequencePlayerComponent* pContext  = findBindingContext();
-        GameObject*              pSelected = SequencerPanelInternal::findSelectedObject();
-        if ( pContext == nullptr )
+        // 바인딩 줄 바로 앞에서 모은다 — 위 도구줄 · 타임라인이 같은 프레임에 문서를 다시 읽거나 바꿀 수 있다
+        _viewModel.gather( _document._asset, getLoadedAssetPath(), _sceneState );
+        const bool bHasContext   = _sceneState._bHasContext != SW_FALSE;
+        const bool bHasSelection = _sceneState._bHasSelection != SW_FALSE;
+        if ( bHasContext == false )
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorSequencer", "NoBindingContextHint" ) );
         else
-            ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EditorSequencer", "BindingContextFormat", TextArgumentList().addText( "player", pContext->getOwner()->getName().c_str() ) ).c_str() );
+            ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EditorSequencer", "BindingContextFormat", TextArgumentList().addText( "player", _sceneState._contextName.c_str() ) ).c_str() );
 
-        const SequenceBindingView view       = makePreviewBindingView( _document._asset );
-        GameObjectManager*        pManager   = editor::getActiveObjectManager();
-        const float32             labelWidth = SequencerPanelInternal::kTrackLabelWidth * EditorThemeUtil::getDPIScale();
+        const float32 labelWidth = SequencerPanelInternal::kTrackLabelWidth * EditorThemeUtil::getDPIScale();
         for ( size_t bindingIndex = 0; bindingIndex < _document._asset._listBinding.size(); ++bindingIndex )
         {
             const SequenceBinding& binding = _document._asset._listBinding[bindingIndex];
@@ -500,12 +435,12 @@ namespace sw::editor
             EditorSelfTestMarks::record( mark.c_str() );
             ImGui::SameLine();
             // 묶인 오브젝트 · 스폰 · 묶이지 않음(오류 색 하나 — 고칠 일이 있는 줄)입니다.
-            const GameObject* pBound   = SequenceTimelineUtil::findTarget( pManager, view, binding._id );
-            const bool        bSpawned = _document._asset.findSpawnItem( binding._id ) != nullptr;
+            const string* pBoundName = bindingIndex < _sceneState._listBoundName.size() ? &_sceneState._listBoundName[bindingIndex] : nullptr;
+            const bool    bSpawned   = _document._asset.findSpawnItem( binding._id ) != nullptr;
             if ( bSpawned )
                 ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorSequencer", "SpawnedBinding" ) );
-            else if ( pBound != nullptr )
-                ImGui::TextUnformatted( pBound->getName().c_str() );
+            else if ( pBoundName != nullptr && pBoundName->empty() == false )
+                ImGui::TextUnformatted( pBoundName->c_str() );
             else
                 ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Error" ) ), "%s", SW_LOCKEY( "EditorSequencer", "UnboundBinding" ) );
             ImGui::SameLine();
@@ -516,10 +451,10 @@ namespace sw::editor
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorSequencer", "NoBindingsHint" ) );
 
         const utf8* const pAdd = SW_LOCKEY( "EditorSequencer", "AddBindingFromSelection" );
-        ImGui::BeginDisabled( pSelected == nullptr );
-        if ( ImGui::Button( pAdd ) && pSelected != nullptr )
+        ImGui::BeginDisabled( bHasSelection == false );
+        if ( ImGui::Button( pAdd ) && bHasSelection )
         {
-            const uint32 bindingID = _document.addBinding( pSelected->getName().c_str() );
+            const uint32 bindingID = _document.addBinding( _sceneState._selectionName.c_str() );
             notifyDocumentEdited( "Add Sequence Binding" );
             bindSelectionTo( bindingID );
         }
@@ -529,7 +464,7 @@ namespace sw::editor
 
         const utf8* const pBind = SW_LOCKEY( "EditorSequencer", "BindSelection" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( pBind ) );
-        ImGui::BeginDisabled( pContext == nullptr || pSelected == nullptr || _document._asset.findBinding( _document._selectedBinding ) == nullptr );
+        ImGui::BeginDisabled( bHasContext == false || bHasSelection == false || _document._asset.findBinding( _document._selectedBinding ) == nullptr );
         if ( ImGui::Button( pBind ) )
             bindSelectionTo( _document._selectedBinding );
         ImGui::EndDisabled();
@@ -880,9 +815,8 @@ namespace sw::editor
                 EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( label.c_str() ) );
             if ( ImGui::Button( label.c_str() ) )
                 addKeyTrack( kind );
-            const utf8*                            pKindName = editor::getSubsystem<TypeRegistry>().enumToString( kind );
             fixed_string<constant::buffer::kMax64> mark;
-            formatstring( mark.data(), mark.capacity(), "sequencer.addTrack.%#", pKindName != nullptr ? pKindName : "?" );
+            formatstring( mark.data(), mark.capacity(), "sequencer.addTrack.%#", getEnumName( kind ) );
             EditorSelfTestMarks::record( mark.c_str() );
             EditorWidgets::drawTooltip( SW_LOCKEYFORMAT( "EditorSequencer", "AddTrackTipFormat", TextArgumentList().addText( "kind", pInfo->_pNamePrefix ) ).c_str() );
         }
@@ -1078,12 +1012,9 @@ namespace sw::editor
         else if ( track._kind == SequenceTrackKind::RigSlot )
             drawTrackTextField( SW_LOCKEY( "EditorSequencer", "RigSlotLabel" ), track._propertyPath, SW_LOCKEY( "EditorSequencer", "RigSlotTip" ), true );
 
-        GameObjectManager*   pManager = editor::getActiveObjectManager();
-        const float32        frame    = static_cast<float32>( _currentFrame );
-        const SequenceAsset& asset    = _document._asset;
-        GameObject*          pTarget  = SequenceTimelineUtil::findTarget( pManager, makePreviewBindingView( asset ), track._binding );
-        float32              arrCurrent[kSequenceMaxChannelCount]{};
-        const bool           bTargetFound = SequenceTimelineUtil::readTrackValues( pTarget, track, arrCurrent, kSequenceMaxChannelCount );
+        const float32 frame = static_cast<float32>( _currentFrame );
+        float32       arrCurrent[kSequenceMaxChannelCount]{};
+        const bool    bTargetFound = _viewModel.readTrackValues( _document._asset, getLoadedAssetPath(), track, arrCurrent, kSequenceMaxChannelCount );
 
         drawKeyButtons( track, frame, arrCurrent, bTargetFound );
         drawChannelRows( track, frame, arrCurrent );
@@ -1249,17 +1180,12 @@ namespace sw::editor
 
     void SequencerPanel::applyPreviewFrame( const SequenceAsset& asset, int32 frame )
     {
-        const SequencePlayerComponent* pContext = findBindingContext();
-        const float32                  fps      = pContext != nullptr ? pContext->getFramesPerSecond() : 30.0f;
-        EditorViewportPreview::applySequenceFrame( asset, makePreviewBindingView( asset ), frame, fps, _listPreviewSpan );
+        _viewModel.applyPreviewFrame( asset, getLoadedAssetPath(), frame );
     }
 
     void SequencerPanel::releasePreview()
     {
-        const SequenceAsset asset    = captureAsset();
-        GameObjectManager*  pManager = editor::getActiveObjectManager();
-        SequenceTimelineUtil::releaseSpans( pManager, asset, makePreviewBindingView( asset ), 30.0f, _listPreviewSpan );
-        SequenceTimelineUtil::releaseCameraCut( pManager, asset );
+        _viewModel.releasePreview( captureAsset(), getLoadedAssetPath() );
     }
 
     ToolAssetLoadResult SequencerPanel::loadDocument()
@@ -1270,7 +1196,7 @@ namespace sw::editor
 
         // 읽지 못하면 그대로 둔다 — 결과를 돌려주므로 기반이 표시하고 저장을 막는다(표시 없이 돌아가면 프레임마다 다시 읽는다).
         SequenceAsset             asset;
-        const ToolAssetLoadResult result = EditorToolAssetCommands::loadSequence( asset, path );
+        const ToolAssetLoadResult result = SequencerViewModel::loadSequence( asset, path );
         if ( getLoadedAssetPath().empty() )
             acceptFocusedDocument();
         if ( result == ToolAssetLoadResult::Loaded )
@@ -1278,11 +1204,8 @@ namespace sw::editor
             releasePreview(); // 앞 문서의 구간 번호를 새 문서에 쓰지 않는다
             applyAsset( asset );
             _document.resetSelection();
-            _currentFrame                           = asset._frameMin;
-            _contextPlayer                          = GameObjectHandle{};
-            const SequencePlayerComponent* pContext = findBindingContext();
-            if ( pContext != nullptr && pContext->getOwner() != nullptr )
-                _contextPlayer = pContext->getOwner()->getHandle();
+            _currentFrame = asset._frameMin;
+            _viewModel.resetContext( getLoadedAssetPath() );
         }
         return result;
     }
@@ -1291,7 +1214,7 @@ namespace sw::editor
     {
         if ( getLoadedAssetPath().empty() )
             return;
-        if ( EditorToolAssetCommands::saveSequence( captureAsset(), getLoadedAssetPath() ) == false )
+        if ( SequencerViewModel::saveSequence( captureAsset(), getLoadedAssetPath() ) == false )
             return;
         clearDocumentDirty();
         syncDocumentUndoBaseline();
