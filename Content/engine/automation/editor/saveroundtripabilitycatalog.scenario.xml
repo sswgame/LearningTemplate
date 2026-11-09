@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 어빌리티 카탈로그 저장 왕복: 테스트 카탈로그(abilitycatalog/abilities.xml — 항목 여섯)의 실행마다 새 사본(scratch/saveroundtripabilitycatalog — <Scratch>)을 연다.
+  어빌리티 카탈로그 창은 문서 기반(EditorDocumentPanel, Data 종류 가운데 abilities.xml)이라 asset.openScratch 가 경로 칸 · 콘텐츠 브라우저와 같은 길(워크스페이스 포커스)로 사본을 연다.
+  고치지 않고 저장(panel.saveDocument — 풀리지 않은 참조 하나가 있어도 원문 그대로 쓴다) → 글 붙잡기(asset.snapshotScratch) → 디스크에서 다시 읽기(panel.reloadDocument — 항목 수가 같다)
+  → 다시 저장 → 같은 바이트(asset.expectScratchUnchanged). 원본은 건드리지 않는다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/saveroundtripabilitycatalog.scenario.xml -unattended
+-->
+<Scenario name="editor.saveroundtripabilitycatalog" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+	<Scratch from="engine/automation/editor/abilitycatalog" as="scratch/saveroundtripabilitycatalog"/>
+	<EditorWaitSettled/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.focus ability_catalog"/>
+	<EditorWaitSettled/>
+	<DevCommand line="asset.openScratch scratch/saveroundtripabilitycatalog/abilities.xml"/>
+	<EditorWaitSettled/>
+	<WaitUntil watch="Editor.AbilityCatalogEntryCount" equals="6" timeoutFrames="120"/>
+	<DevCommand line="panel.saveDocument ability_catalog"/>
+	<DevCommand line="asset.snapshotScratch scratch/saveroundtripabilitycatalog/abilities.xml"/>
+	<DevCommand line="panel.reloadDocument ability_catalog"/>
+	<EditorWaitSettled/>
+	<Expect watch="Editor.AbilityCatalogEntryCount" equals="6"/>
+	<Expect watch="Editor.AbilityCatalogIssueCount" equals="1"/>
+	<DevCommand line="panel.saveDocument ability_catalog"/>
+	<DevCommand line="asset.expectScratchUnchanged scratch/saveroundtripabilitycatalog/abilities.xml"/>
+	<Expect watch="Editor.DirtyDocumentCount" equals="0"/>
+	<EditorWaitSettled/>
+	<Pass/>
+</Scenario>
