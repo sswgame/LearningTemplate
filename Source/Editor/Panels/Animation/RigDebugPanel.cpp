@@ -174,13 +174,13 @@ namespace sw::editor
             static bool computeTargetParentWorld( const PoseModifierComponent& modifier, const SkeletalMeshComponent& unit, uint32 targetIndex, float4x4& outParentWorld )
             {
                 const RigInstance& instance = modifier.getRigInstance();
-                int32              bone     = -1;
+                optional<uint32>   bone;
                 BoneTransform      combined{};
                 if ( instance.tryGetOwnTargetBinding( targetIndex, bone, combined ) == false )
                     return false;
                 const vector<float4x4>& listModel = unit.getModelSpaceTransforms();
-                const bool              bOnBone   = 0 <= bone && static_cast<size_t>( bone ) < listModel.size();
-                const float4x4          boneWorld = bOnBone ? listModel[static_cast<size_t>( bone )] * unit.getWorldMatrix() : unit.getWorldMatrix();
+                const bool              bOnBone   = bone.has_value() && *bone < listModel.size();
+                const float4x4          boneWorld = bOnBone ? listModel[*bone] * unit.getWorldMatrix() : unit.getWorldMatrix();
                 const RigTargetDef&     def       = instance.getTargetDef( targetIndex );
                 outParentWorld                    = def._offset.toMatrix().invert() * combined.toMatrix() * boneWorld;
                 return true;
@@ -444,8 +444,8 @@ namespace sw::editor
             ImGui::TableHeadersRow();
             for ( uint32 targetIndex = 0; targetIndex < targetCount; ++targetIndex )
             {
-                const RigTargetDef&  def  = instance.getTargetDef( targetIndex );
-                int32                bone = -1;
+                const RigTargetDef&  def = instance.getTargetDef( targetIndex );
+                optional<uint32>     bone;
                 BoneTransform        combined{};
                 const bool           bOwnUnit     = instance.tryGetOwnTargetBinding( targetIndex, bone, combined );
                 const bool           bEditingThis = targetEdit._objectID == objectID && targetEdit._targetIndex == static_cast<int32>( targetIndex );

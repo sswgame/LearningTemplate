@@ -148,8 +148,8 @@ namespace
             _ragdoll._listBody.push_back( _scene.addBody( float3{}, type ) );
             _ragdoll._listBody.push_back( _scene.addBody( float3{}, type ) );
             _ragdoll._listBoneIndex  = { 0, 2 };
-            _ragdoll._listParentBody = { -1, 0 };
-            _ragdoll._listBodyOfBone = { 0, -1, 1, -1 };
+            _ragdoll._listParentBody = { sw::nullopt, 0u };
+            _ragdoll._listBodyOfBone = { 0u, sw::nullopt, 1u, sw::nullopt };
         }
 
         PhysicsSkeletonView makeView() const

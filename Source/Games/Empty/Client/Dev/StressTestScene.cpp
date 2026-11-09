@@ -978,7 +978,7 @@ namespace sw
                 continue;
             // 서 있으면 쓰러뜨리고, 쓰러져 있으면 일으킨다(물리 자세를 읽기 전이라 실패하면 다음 주기에 다시). 일어나는 중이면 끝날 때까지 둔다.
             if ( pRagdoll->getState() == RagdollState::Animated )
-                pRagdoll->startRagdoll( float3{}, constant::invalid_index::kInt32 ); // 충격량 없이 쓰러진다
+                pRagdoll->startRagdoll( float3{}, nullopt ); // 충격량 없이 쓰러진다
             else if ( pRagdoll->getState() == RagdollState::Ragdoll )
                 (void)pRagdoll->getUp();
         }

@@ -37,7 +37,7 @@ namespace sw
         : _asset{}
         , _listTargetDef{}
         , _listTargetValue{}
-        , _listTargetBone{}
+        , _listTargetAnchor{}
         , _listTargetOffset{}
         , _listContact{}
         , _listNode{}
@@ -67,7 +67,7 @@ namespace sw
 
         _listTargetDef = asset->getTargets();
         _listTargetValue.assign( _listTargetDef.size(), RigTargetValue{} );
-        _listTargetBone.assign( _listTargetDef.size(), kExternalBone );
+        _listTargetAnchor.assign( _listTargetDef.size(), TargetAnchor{} );
         _listTargetOffset.assign( _listTargetDef.size(), BoneTransform{} );
         _listContact.assign( _listTargetDef.size(), ContactState{} );
         vector<float4x4> listReferenceModel;
@@ -108,7 +108,7 @@ namespace sw
             if ( boneName.empty() && target._kind == RigTargetKind::Socket )
             {
                 // 부모가 빈 소켓은 유닛 루트(모델 원점) 기준이다.
-                _listTargetBone[targetIndex]   = kModelOriginBone;
+                _listTargetAnchor[targetIndex] = TargetAnchor{ TargetAnchorKind::ModelOrigin, 0 };
                 _listTargetOffset[targetIndex] = offset;
                 continue;
             }
@@ -119,7 +119,7 @@ namespace sw
                 bOk = false;
                 continue;
             }
-            _listTargetBone[targetIndex]   = static_cast<int32>( *boneIndex );
+            _listTargetAnchor[targetIndex] = TargetAnchor{ TargetAnchorKind::Bone, *boneIndex };
             _listTargetOffset[targetIndex] = offset;
             // 첫 평가 전의 광선 원점은 레퍼런스 포즈다.
             _listContact[targetIndex]._originModel = listReferenceModel[*boneIndex].getTranslation();
@@ -159,7 +159,7 @@ namespace sw
         _asset.reset();
         _listTargetDef.clear();
         _listTargetValue.clear();
-        _listTargetBone.clear();
+        _listTargetAnchor.clear();
         _listTargetOffset.clear();
         _listContact.clear();
         _listNode.clear();
@@ -171,10 +171,10 @@ namespace sw
 
     void RigInstance::collectBoundBones( vector<uint32>& inoutListBone ) const
     {
-        for ( const int32 bone : _listTargetBone )
+        for ( const TargetAnchor& anchor : _listTargetAnchor )
         {
-            if ( bone >= 0 )
-                inoutListBone.push_back( static_cast<uint32>( bone ) );
+            if ( anchor._kind == TargetAnchorKind::Bone )
+                inoutListBone.push_back( anchor._bone );
         }
         for ( const vector<uint32>& listWritten : _listNodeWrittenBone )
         {
@@ -198,14 +198,14 @@ namespace sw
             _listTargetValue[targetIndex] = value;
     }
 
-    bool RigInstance::tryGetOwnTargetBinding( uint32 targetIndex, int32& outBone, BoneTransform& outCombinedOffset ) const
+    bool RigInstance::tryGetOwnTargetBinding( uint32 targetIndex, optional<uint32>& outBone, BoneTransform& outCombinedOffset ) const
     {
         if ( targetIndex >= _listTargetDef.size() )
             return false;
-        const int32 bone = _listTargetBone[targetIndex];
-        if ( bone == kExternalBone )
+        const TargetAnchor& anchor = _listTargetAnchor[targetIndex];
+        if ( anchor._kind == TargetAnchorKind::External )
             return false;
-        outBone           = bone == kModelOriginBone ? constant::invalid_index::kInt32 : bone;
+        outBone           = anchor._kind == TargetAnchorKind::Bone ? optional<uint32>( anchor._bone ) : nullopt;
         outCombinedOffset = _listTargetOffset[targetIndex];
         return true;
     }
@@ -214,8 +214,8 @@ namespace sw
     {
         if ( targetIndex >= _listTargetDef.size() )
             return false;
-        const int32 bone = _listTargetBone[targetIndex];
-        if ( bone == kModelOriginBone )
+        const TargetAnchor& anchor = _listTargetAnchor[targetIndex];
+        if ( anchor._kind == TargetAnchorKind::ModelOrigin )
         {
             outPosition = _listTargetOffset[targetIndex]._translation;
             outRotation = _listTargetOffset[targetIndex]._rotation;
@@ -230,10 +230,10 @@ namespace sw
             outRotation = ( RigIKSolver::makeFromToRotation( float3::UnitY, contact._normalModel ) * _listTargetOffset[targetIndex]._rotation ).normalize();
             return true;
         }
-        if ( bone >= 0 )
+        if ( anchor._kind == TargetAnchorKind::Bone )
         {
             const BoneTransform& offset = _listTargetOffset[targetIndex];
-            composeOnBone( pose, static_cast<uint32>( bone ), offset._translation, offset._rotation, true, outPosition, outRotation );
+            composeOnBone( pose, anchor._bone, offset._translation, offset._rotation, true, outPosition, outRotation );
             return true;
         }
         const RigTargetValue& value = _listTargetValue[targetIndex];
@@ -430,8 +430,8 @@ namespace sw
         // 접촉 광선은 다음 준비 단계에서 이 애니메이션 포즈(노드 앞)의 본 자리에서 쏜다.
         for ( size_t targetIndex = 0; targetIndex < _listTargetDef.size(); ++targetIndex )
         {
-            if ( _listTargetDef[targetIndex]._kind == RigTargetKind::Trace )
-                _listContact[targetIndex]._originModel = _pose.getModelPosition( static_cast<uint32>( _listTargetBone[targetIndex] ) );
+            if ( _listTargetDef[targetIndex]._kind == RigTargetKind::Trace && _listTargetAnchor[targetIndex]._kind == TargetAnchorKind::Bone )
+                _listContact[targetIndex]._originModel = _pose.getModelPosition( _listTargetAnchor[targetIndex]._bone );
         }
 
         RigEvaluateContext context{};

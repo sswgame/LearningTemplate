@@ -108,8 +108,8 @@ namespace sw
         /** @brief 바디가 지금 동적인지입니다. */
         bool isBodyDynamic( uint32 bodyIndex ) const;
 
-        /** @brief 죽음입니다. 모든 바디를 동적으로 넘깁니다(속도는 애니메이션이 끌던 값을 이어받습니다). @p bodyIndex 의 바디에 @p impulse 를 줍니다(-1 이면 주지 않습니다). */
-        void startRagdoll( const float3& impulse, int32 bodyIndex );
+        /** @brief 죽음입니다. 모든 바디를 동적으로 넘깁니다(속도는 애니메이션이 끌던 값을 이어받습니다). @p bodyIndex 의 바디에 @p impulse 를 줍니다(비어 있으면 주지 않습니다). */
+        void startRagdoll( const float3& impulse, optional<uint32> bodyIndex );
         /** @brief 부분 래그돌입니다. `_partialRootBone` 아래 바디를 @p weight 만큼 섞는 동적 바디로 바꿉니다(상체가 축 늘어집니다). */
         void startPartialRagdoll( float32 weight );
         /** @brief 부분 래그돌을 끝내고 `_blendBackSeconds` 동안 애니메이션으로 섞어 돌아갑니다. */
@@ -124,7 +124,7 @@ namespace sw
          */
         bool getUp();
         /** @brief 맞음 반응입니다. @p bodyIndex 바디 아래를 `_hitReactionSeconds` 동안 동적으로 바꾸고(가중치는 줄어듭니다), 충격량은 그 바디의 @p point 에 줍니다. */
-        void applyHitReaction( int32 bodyIndex, const float3& impulse, const float3& point );
+        void applyHitReaction( uint32 bodyIndex, const float3& impulse, const float3& point );
         /**
          * @brief 이 뼈들의 바디를 래그돌에서 분리합니다. 시뮬레이션에서 빼고, 그 바디에 걸린 관절(부모와 자식 쪽)을 지웁니다.
          *        잘려 나간 영역에서 보이지 않는 바디가 부딪히거나, 빠진 바디를 잇는 관절이 남지 않게 하려는 것입니다. 되돌리지 않으며, 다시 만들려면 물리 에셋을 다시 읽어야 합니다.
@@ -149,7 +149,7 @@ namespace sw
         {
             float3 _impulse{};
             float3 _point{};
-            int32  _bodyIndex{ -1 };
+            uint32 _bodyIndex{ 0 };
         };
 
         void bindToUnit();
@@ -163,7 +163,7 @@ namespace sw
         /** @brief 유닛의 현재 포즈 뷰입니다(이름, 부모, 모델 공간). */
         PhysicsSkeletonView makeSkeletonView( const SkeletalMeshComponent& unit ) const;
         /** @brief 바디 @p bodyIndex 와 그 아래 바디들에 @p value 를 표시합니다(@p inoutListMask). */
-        void markSubtree( int32 bodyIndex, vector<uint8>& inoutListMask ) const;
+        void markSubtree( uint32 bodyIndex, vector<uint8>& inoutListMask ) const;
         /** @brief 게임 스레드에서 타이머를 흘리고, 바디 가중치, 동적 여부, 뼈 가중치를 다시 정합니다. */
         void updateWeights( SkeletalMeshComponent& unit, float32 deltaSeconds );
         /** @brief 후처리 단계에서 애니메이션 포즈와 물리 자세를 뼈 가중치로 섞습니다(워커). */
