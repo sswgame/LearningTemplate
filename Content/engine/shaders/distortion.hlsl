@@ -16,6 +16,9 @@ SW_MATERIAL_BEGIN
 {
     float4 _tint;
     float  _strength;
+    uint   _swPad0;
+    uint   _swPad1;
+    uint   _swPad2;
 }
 SW_MATERIAL_END
 

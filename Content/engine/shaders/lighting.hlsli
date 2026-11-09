@@ -610,20 +610,6 @@ static SurfacePBR SurfacePBR::make( float3 baseColor, float roughness, float met
     return surface;
 }
 
-/**
- * @brief 이 월드 위치에서 카메라로 가는 단위 방향입니다. 원근 · 직교 둘 다 맞다 — 이 위치를 지나는 시선의 가까운 면 점과 먼 면 점을 잇는다.
- * @details PassCB 에 카메라 위치 칸을 두지 않고 뷰-투영(g_ViewProj · g_InvViewProj)에서 구한다 — 직교 카메라는 위치가 시선 방향을 정하지 않는다.
- */
-static float3 View::computeToView( float3 worldPosition )
-{
-    const float4 clip  = mul( float4( worldPosition, 1.0f ), g_ViewProj );
-    const float2 ndcXy = clip.xy / max( abs( clip.w ), 1e-6f ) * sign( clip.w ); // 카메라 뒤의 점(w < 0)도 시선이 맞는다(툰 외곽선 · 물의 정점)
-    // 깊이 0 과 1 의 두 점은 역행렬의 셋째 행(깊이)만큼 다르다 — 행렬 곱 둘 대신 공통 합 하나로 구한다.
-    const float4 nearPoint = ndcXy.x * g_InvViewProj[0] + ndcXy.y * g_InvViewProj[1] + g_InvViewProj[3];
-    const float4 farPoint  = nearPoint + g_InvViewProj[2];
-    return normalize( nearPoint.xyz / nearPoint.w - farPoint.xyz / farPoint.w );
-}
-
 /** @brief 빛 하나의 반사 BRDF × π(엔진 단위) × N·L 입니다. 언리얼 `SpecularGGX` 의 D_GGX · Vis_SmithJointApprox · F_Schlick 과 같다. */
 float3 SurfacePBR::evaluateSpecular( float3 normal, float3 toView, float3 toLight, float normalDotLight, float normalDotView )
 {

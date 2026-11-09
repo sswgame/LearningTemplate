@@ -49,10 +49,13 @@ float4 PSMain( PSInput input ) : SV_TARGET
     const float2 uv        = input._uv;
     const float2 depthSize = float2( Bindless::getEngineTextureSize( g_SceneDepthIndex, SW_EMU_SLOT_SceneDepth ) );
     const float  depth     = loadSceneDepth( uv, depthSize );
-    float        roughness = 1.0f;
-    float        metallic  = 0.0f;
-    bool         bDrawn    = false;
-    PassTexture::loadGbufferMaterial( uv, roughness, metallic, bDrawn );
+    float        roughness;
+    float        metallic;
+    float        specular;
+    float        occlusion;
+    PassTexture::loadGbufferMaterial( uv, roughness, metallic, specular, occlusion );
+    // 그려졌다 = 알베도 알파의 셰이딩 모델 번호가 NONE 이 아니다(G버퍼 판 3 — 옛 그려짐 표시를 대신한다).
+    const bool bDrawn = SurfaceOutput::decodeShadingModel( PassTexture::sampleAlbedo( uv ).a ) != SW_SHADING_MODEL_ID_NONE;
 
     float4 result = float4( 0.0f, 0.0f, 0.0f, 0.0f );
     SW_BRANCH if ( bDrawn && depth < 1.0f && roughness < g_SSRParams.w )

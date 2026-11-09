@@ -388,6 +388,20 @@ static float4x4 View::getViewProjection()
 }
 #endif
 
+/**
+ * @brief 이 월드 위치에서 카메라로 가는 단위 방향입니다. 원근 · 직교 둘 다 맞다 — 이 위치를 지나는 시선의 가까운 면 점과 먼 면 점을 잇는다.
+ * @details PassCB 에 카메라 위치 칸을 두지 않고 뷰-투영(g_ViewProj · g_InvViewProj)에서 구한다 — 직교 카메라는 위치가 시선 방향을 정하지 않는다.
+ */
+static float3 View::computeToView( float3 worldPosition )
+{
+    const float4 clip  = mul( float4( worldPosition, 1.0f ), g_ViewProj );
+    const float2 ndcXy = clip.xy / max( abs( clip.w ), 1e-6f ) * sign( clip.w ); // 카메라 뒤의 점(w < 0)도 시선이 맞는다(툰 외곽선 · 물의 정점)
+    // 깊이 0 과 1 의 두 점은 역행렬의 셋째 행(깊이)만큼 다르다 — 행렬 곱 둘 대신 공통 합 하나로 구한다.
+    const float4 nearPoint = ndcXy.x * g_InvViewProj[0] + ndcXy.y * g_InvViewProj[1] + g_InvViewProj[3];
+    const float4 farPoint  = nearPoint + g_InvViewProj[2];
+    return normalize( nearPoint.xyz / nearPoint.w - farPoint.xyz / farPoint.w );
+}
+
 // ------------------------------------------------------------------------------
 // 3) GPUScene 인스턴스 버퍼 (per-instance world/material/스프라이트 프레임 · 색). 원소 정의는 instance_data.hlsli 하나다(컴퓨트도 그것을 쓴다).
 //    네 백엔드 공통 — 엔진이 리플렉션 슬롯 t4 에 인스턴스 버퍼를 바인딩한다 (레지스트리 이름 "SwInstances"). 읽는 함수는 8 절.

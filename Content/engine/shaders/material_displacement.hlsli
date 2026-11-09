@@ -142,72 +142,72 @@ DisplacementPatchConstants DisplacementPatchConstantMain( InputPatch<MaterialCon
 /** @brief 세 제어점을 무게 중심으로 섞는다. 나누는 값은 첫 제어점의 것이다. */
 MaterialControlPoint interpolateControlPoint( MaterialControlPoint point0, MaterialControlPoint point1, MaterialControlPoint point2, float3 barycentric )
 {
-    MaterialControlPoint point;
-    point._worldPosition = point0._worldPosition * barycentric.x + point1._worldPosition * barycentric.y + point2._worldPosition * barycentric.z;
-    point._normal        = point0._normal * barycentric.x + point1._normal * barycentric.y + point2._normal * barycentric.z;
-    point._uv            = point0._uv * barycentric.x + point1._uv * barycentric.y + point2._uv * barycentric.z;
-    point._color         = point0._color * barycentric.x + point1._color * barycentric.y + point2._color * barycentric.z;
-    point._tangent       = float4( point0._tangent.xyz * barycentric.x + point1._tangent.xyz * barycentric.y + point2._tangent.xyz * barycentric.z, point0._tangent.w );
-    point._viewDepth     = point0._viewDepth * barycentric.x + point1._viewDepth * barycentric.y + point2._viewDepth * barycentric.z;
-    point._materialIndex = point0._materialIndex;
-    point._instanceSlot  = point0._instanceSlot;
-    point._appearance    = point0._appearance;
-    return point;
+    MaterialControlPoint controlPoint;
+    controlPoint._worldPosition = point0._worldPosition * barycentric.x + point1._worldPosition * barycentric.y + point2._worldPosition * barycentric.z;
+    controlPoint._normal        = point0._normal * barycentric.x + point1._normal * barycentric.y + point2._normal * barycentric.z;
+    controlPoint._uv            = point0._uv * barycentric.x + point1._uv * barycentric.y + point2._uv * barycentric.z;
+    controlPoint._color         = point0._color * barycentric.x + point1._color * barycentric.y + point2._color * barycentric.z;
+    controlPoint._tangent       = float4( point0._tangent.xyz * barycentric.x + point1._tangent.xyz * barycentric.y + point2._tangent.xyz * barycentric.z, point0._tangent.w );
+    controlPoint._viewDepth     = point0._viewDepth * barycentric.x + point1._viewDepth * barycentric.y + point2._viewDepth * barycentric.z;
+    controlPoint._materialIndex = point0._materialIndex;
+    controlPoint._instanceSlot  = point0._instanceSlot;
+    controlPoint._appearance    = point0._appearance;
+    return controlPoint;
 }
 
 #if defined( SW_MATERIAL_DEPTH_ONLY )
-void storeDisplacedVaryings( inout MaterialInterpolants output, MaterialControlPoint point, float3 worldPosition )
+void storeDisplacedVaryings( inout MaterialInterpolants output, MaterialControlPoint controlPoint, float3 worldPosition )
 {
     // 깊이만 쓴다 — 위치 말고 넘길 칸이 없다.
 }
 #else
     #if defined( SW_MATERIAL_USES_TANGENT )
-void storeDisplacedTangent( inout MaterialInterpolants output, MaterialControlPoint point )
+void storeDisplacedTangent( inout MaterialInterpolants output, MaterialControlPoint controlPoint )
 {
-    output._tangent = point._tangent;
+    output._tangent = controlPoint._tangent;
 }
     #else
-void storeDisplacedTangent( inout MaterialInterpolants output, MaterialControlPoint point )
+void storeDisplacedTangent( inout MaterialInterpolants output, MaterialControlPoint controlPoint )
 {
 }
     #endif
 
     #if !defined( SW_MATERIAL_READ_IN_VERTEX )
-void storeDisplacedMaterialIndex( inout MaterialInterpolants output, MaterialControlPoint point )
+void storeDisplacedMaterialIndex( inout MaterialInterpolants output, MaterialControlPoint controlPoint )
 {
-    output._materialIndex = point._materialIndex;
+    output._materialIndex = controlPoint._materialIndex;
 }
     #else
-void storeDisplacedMaterialIndex( inout MaterialInterpolants output, MaterialControlPoint point )
+void storeDisplacedMaterialIndex( inout MaterialInterpolants output, MaterialControlPoint controlPoint )
 {
 }
     #endif
 
-void storeDisplacedVaryings( inout MaterialInterpolants output, MaterialControlPoint point, float3 worldPosition )
+void storeDisplacedVaryings( inout MaterialInterpolants output, MaterialControlPoint controlPoint, float3 worldPosition )
 {
     output._worldPosition = worldPosition;
-    output._color         = point._color;
-    output._uv            = point._uv;
-    output._normal        = point._normal;
-    storeDisplacedTangent( output, point );
-    storeDisplacedMaterialIndex( output, point );
+    output._color         = controlPoint._color;
+    output._uv            = controlPoint._uv;
+    output._normal        = controlPoint._normal;
+    storeDisplacedTangent( output, controlPoint );
+    storeDisplacedMaterialIndex( output, controlPoint );
 }
 #endif // SW_MATERIAL_DEPTH_ONLY
 
 [domain( "tri" )] MaterialInterpolants DSMain( DisplacementPatchConstants constants, float3 barycentric : SV_DomainLocation, const OutputPatch<MaterialControlPoint, 3> patch )
 {
-    const MaterialControlPoint point    = interpolateControlPoint( patch[0], patch[1], patch[2], barycentric );
-    const MaterialData         material = SW_MATERIAL( point._materialIndex );
+    const MaterialControlPoint controlPoint = interpolateControlPoint( patch[0], patch[1], patch[2], barycentric );
+    const MaterialData         material     = SW_MATERIAL( controlPoint._materialIndex );
     // 밉 0 을 읽는다 — 도메인 스테이지에는 화면 미분이 없다. shortcut: 먼 표면도 밉 0 이라 높이 맵이 크면 읽기가 흩어진다. 뷰 깊이로 밉을 고르면 그때 고친다.
-    const float  height        = MaterialTexture::sampleLevelZero( material._displacementMap, point._uv ).r;
+    const float  height        = MaterialTexture::sampleLevelZero( material._displacementMap, controlPoint._uv ).r;
     const float  offset        = Displacement::computeOffset( height, material._displacementScale, material._displacementMidLevel );
-    const float4 worldPosition = float4( point._worldPosition + normalize( point._normal ) * offset, 1.0f );
+    const float4 worldPosition = float4( controlPoint._worldPosition + normalize( controlPoint._normal ) * offset, 1.0f );
 
     MaterialInterpolants output;
     output._position = Transform::computeClipPosition( worldPosition, View::getViewProjection() );
-    storeDisplacedVaryings( output, point, worldPosition.xyz );
-    SW_APPEARANCE_WRITE( output, point )
-    SW_LODDEBUG_WRITE( output, point._instanceSlot )
+    storeDisplacedVaryings( output, controlPoint, worldPosition.xyz );
+    SW_APPEARANCE_WRITE( output, controlPoint )
+    SW_LODDEBUG_WRITE( output, controlPoint._instanceSlot )
     return output;
 }
 

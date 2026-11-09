@@ -21,8 +21,11 @@ namespace sw
     public:
         virtual ~IShaderCookService() = default;
 
-        /** @brief 셰이더를 @p cookedDir 에 굽습니다(바뀐 것만). 모두 깨끗하면 true 입니다. 비면 쿠커가 오류로 멈춘다. */
-        [[nodiscard]] virtual bool cookAllShaders( string_view cookedDir ) = 0;
+        /**
+         * @brief 셰이더를 @p cookedDir 에 @p format 바이너리로만 굽습니다(바뀐 것만). 모두 깨끗하면 true 입니다. 비면 쿠커가 오류로 멈춘다.
+         * @details 팩은 형식 하나만 담는다(`cookPackStage`) — 네 형식을 다 구우면 팩에 들지 않는 셋에 쿠킹 시간을 쓴다(교차 쿠킹이 3 시간 걸렸다). 스탬프는 형식 폴더마다 따로다.
+         */
+        [[nodiscard]] virtual bool cookAllShaders( string_view cookedDir, ShaderTargetFormat format ) = 0;
         /** @brief @p cookedDir 의 @p format 셰이더 바이너리가 소스와 맞는지 보고 문제를 오류로 남깁니다. 맞으면 true 입니다. */
         [[nodiscard]] virtual bool verifyCookedShaders( string_view cookedDir, ShaderTargetFormat format ) = 0;
 

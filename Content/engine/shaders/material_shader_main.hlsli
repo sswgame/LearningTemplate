@@ -421,7 +421,8 @@ SurfaceOutput PixelContext::storeSurface( MaterialSurface surface )
 SurfaceOutput PixelContext::storeSurface( MaterialSurface surface )
 {
     g_SurfaceDistortion = computeMaterialDistortion( this, surface );
-    return SurfaceOutput::pack( float4( 0.0f, 0.0f, 0.0f, 0.0f ), surface._albedo, surface._normal, surface._roughness, surface._metallic );
+    return SurfaceOutput::pack( float4( 0.0f, 0.0f, 0.0f, 0.0f ), surface._albedo, surface._normal, surface._roughness, surface._metallic,
+                                SurfaceShading::make( PixelContext::getShadingModel() ) );
 }
     #elif defined( MATERIAL_BLEND_TRANSLUCENT )
 SurfaceOutput PixelContext::storeSurface( MaterialSurface surface )

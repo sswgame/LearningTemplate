@@ -63,7 +63,7 @@ float3 applyTonemap( float2 uv, float2 pixelPosition, float3 color )
     // 뷰의 후처리 값은 톤맵과 함께 간다 — 노출 · 컬러 그레이딩은 톤맵 앞, LUT · 색 보정 · 비네트 · 레터박스는 뒤(post_grade.hlsli). 후처리를 끈 뷰는 PSMain 에서 원본을 고른다.
     color = CameraGrade::applyColorGrading( CameraGrade::applyExposure( color ) );
     color = color / ( color + 1.0f );
-    return CameraGrade::apply( uv, CameraGrade::applyFilmGrain( pixelPosition, CameraGrade::applyLut( color ) ) );
+    return CameraGrade::apply( uv, CameraGrade::applyFilmGrain( pixelPosition, CameraGrade::applyLUT( color ) ) );
 }
 #else
 float3 applyLensSource( float2 uv, float2 sourceTexel, float3 source )

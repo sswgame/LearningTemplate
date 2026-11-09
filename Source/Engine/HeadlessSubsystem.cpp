@@ -137,7 +137,7 @@ namespace sw
                 if ( pService == nullptr )
                     return true;
                 const ShaderTargetFormat shaderTarget = resolveShaderTarget( commandLine );
-                if ( pService->cookAllShaders( cookedDir ) == false || pService->verifyCookedShaders( cookedDir, shaderTarget ) == false )
+                if ( pService->cookAllShaders( cookedDir, shaderTarget ) == false || pService->verifyCookedShaders( cookedDir, shaderTarget ) == false )
                 {
                     SW_LOG_ERROR_ID( "Headless.CookedShadersDoNot", "Cooked shaders do not match their sources - a Shipping build has no runtime compiler, so packing stops" );
                     return false;
@@ -345,8 +345,13 @@ namespace sw
                 string cookedDir;
                 commandLine.getArgument( CommandLineArgument::COOKED_DIR, cookedDir );
                 SW_LOG_INFO_ID( "Headless.StartingHeadlessCookShaders", "Starting Headless (CookShaders) -> '%#'...", cookedDir );
+                // 명령줄 백엔드(`-vulkan` …)를 주면 그 형식만, 주지 않으면 네 형식을 모두 굽는다(`ShaderTargetFormat::Count`).
+                ShaderTargetFormat shaderTarget = ShaderTargetFormat::Count;
+                RHIBackend         commandLineBackend{};
+                if ( RHI::findCommandLineBackend( commandLine, commandLineBackend ) )
+                    shaderTarget = RHI::getShaderTargetFormat( commandLineBackend );
                 IShaderCookService* const pService = requireShaderCookService( "--cook-shaders" );
-                inoutState._bFailed                = pService == nullptr || pService->cookAllShaders( cookedDir ) == false; // 비면 쿠커가 오류로 멈춘다
+                inoutState._bFailed                = pService == nullptr || pService->cookAllShaders( cookedDir, shaderTarget ) == false; // 비면 쿠커가 오류로 멈춘다
                 return true;
             }
 
