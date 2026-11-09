@@ -13,8 +13,8 @@
 
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
-#include "Editor/Panels/Inspector/InspectorObjectEdit.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
+#include "Editor/Panels/Inspector/Model/InspectorObjectEdit.h"
 
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"
