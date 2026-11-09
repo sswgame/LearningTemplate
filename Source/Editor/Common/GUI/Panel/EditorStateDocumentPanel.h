@@ -8,7 +8,6 @@
  *          에셋 파일 하나를 고치는 새 패널이 이 기반을 고르면 안 된다 — 열기 길과 저장 왕복을 잃는다.
  */
 #pragma once
-#include "Editor/Common/EditorExports.h"
 #include "Editor/Common/GUI/Panel/IEditorDocumentPanel.h"
 
 namespace sw::editor
@@ -16,8 +15,9 @@ namespace sw::editor
     /**
      * @class EditorStateDocumentPanel
      * @brief 연 문서 경로가 없는 문서 패널입니다. 파일 머리말 참고. 필요할 때 여는 도구라 닫힌 채 시작합니다.
+     * @details 헤더만의 형식이라 내보내지 않는다(내보낸 기반 `IEditorDocumentPanel` 을 상속할 뿐이고 확장 DLL 의 패널도 이것을 그대로 짓는다).
      */
-    class SW_EDITOR_API EditorStateDocumentPanel : public IEditorDocumentPanel
+    class EditorStateDocumentPanel : public IEditorDocumentPanel
     {
     protected:
         EditorStateDocumentPanel()
