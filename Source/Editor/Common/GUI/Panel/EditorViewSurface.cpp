@@ -46,6 +46,20 @@ namespace sw::editor
             pViews->markViewDrawn( kind, imageClientPos );
     }
 
+    bool EditorViewSurface::wasViewDrawn( EditorViewKind kind )
+    {
+        const EditorRenderViews* const pViews = EditorViewSurfaceInternal::findRenderViews();
+        return pViews != nullptr && pViews->wasViewDrawn( kind );
+    }
+
+    bool EditorViewSurface::isViewRequested( EditorViewKind kind )
+    {
+        const EditorRenderViews* const pViews = EditorViewSurfaceInternal::findRenderViews();
+        if ( pViews == nullptr )
+            return false;
+        return pViews->isViewRequested( kind ) && pViews->getViewTarget( kind )._renderTarget != 0;
+    }
+
     void EditorViewSurface::setGameViewInput( bool bFocused, bool bHovered )
     {
         EditorRenderViews* const pViews = EditorViewSurfaceInternal::findRenderViews();

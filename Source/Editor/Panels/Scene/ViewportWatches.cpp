@@ -9,11 +9,9 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/Workspace/EditorCamera.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorRenderViews.h"
-#include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Common/GUI/Panel/EditorViewSurface.h"
+#include "Editor/Panels/Scene/Model/GameViewModel.h"
+#include "Editor/Panels/Scene/Model/SceneViewModel.h"
 #include "Editor/Panels/Scene/SceneViewPanel.h"
 #include "Editor/SelfTest/EditorWatchSupport.h"
 #include "Editor/Viewport/EditorViewportBillboardItem.h"
@@ -24,11 +22,6 @@
 #include "Editor/Viewport/Visualizers/SelectionBoundsVisualizer.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Object/Component/CameraComponent.h"
-#include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Renderer/Frame/FrameRenderer.h"
-#include "Engine/Scene/Scene.h"
 
 #include <imgui.h>
 
@@ -39,8 +32,8 @@ namespace sw::editor
         /** @brief 씬 뷰 클라이언트를 반환합니다. 씬 뷰 패널이 없으면 nullptr 입니다. */
         const EditorViewportClient* findSceneViewClient()
         {
-            EditorContext*        pContext = getWatchContext( __func__ );
-            const SceneViewPanel* pPanel   = pContext != nullptr ? pContext->getSubsystem<EditorPanelManager>().findPanel<SceneViewPanel>() : nullptr;
+            const EditorPanelManager* pPanels = getWatchPanelManager( __func__ );
+            const SceneViewPanel*     pPanel  = pPanels != nullptr ? pPanels->findPanel<SceneViewPanel>() : nullptr;
             return pPanel != nullptr ? &pPanel->getViewportClient() : nullptr;
         }
 
@@ -140,11 +133,10 @@ namespace sw::editor
         /** @brief 메인 씬에서 고른 첫 오브젝트의 로컬 요 회전(도)입니다 — 놓기 전 회전이 실제 오브젝트에 들어갔는지 본다. 고른 것이 없으면 값을 내지 않습니다. */
         [[nodiscard]] bool readSelectedYaw( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            const GameObject*     pObject = editor::getMainSceneSelection().getPrimaryObject();
-            const SceneComponent* pScene  = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
-            if ( pScene == nullptr )
+            float3 rotation{};
+            if ( readSelectedObjectLocalRotation( rotation ) == false )
                 return false;
-            outValue = static_cast<float64>( MathUtil::round( MathUtil::toDegree( pScene->getLocalRotation()._y ) ) );
+            outValue = static_cast<float64>( MathUtil::round( MathUtil::toDegree( rotation._y ) ) );
             return true;
         }
 
@@ -185,27 +177,6 @@ namespace sw::editor
             return true;
         }
 
-        /** @brief 씬 뷰 카메라(에디터 카메라)의 월드 위치입니다. Play 중에도 에디터 카메라입니다. */
-        [[nodiscard]] bool findSceneViewCameraPosition( float3& outPosition )
-        {
-            const CameraComponent* pCamera = EditorCamera::find( editor::getActiveScene() );
-            if ( pCamera == nullptr )
-                return false;
-            outPosition = pCamera->getWorldPosition();
-            return true;
-        }
-
-        /** @brief 게임 뷰가 그리는 카메라(활성 씬의 게임 카메라)의 월드 위치입니다. */
-        [[nodiscard]] bool findGameViewCameraPosition( float3& outPosition )
-        {
-            const Scene*           pScene  = editor::getActiveScene();
-            const CameraComponent* pCamera = pScene != nullptr ? pScene->getActiveGameCamera() : nullptr;
-            if ( pCamera == nullptr )
-                return false;
-            outPosition = pCamera->getWorldPosition();
-            return true;
-        }
-
         /** @brief 씬 뷰 카메라가 오빗 중심에서 떨어진 거리(m)입니다. 휠 돌리가 줄인다. */
         [[nodiscard]] bool readSceneViewOrbitDistance( const GameObjectManager* /*pManager*/, float64& outValue )
         {
@@ -219,7 +190,7 @@ namespace sw::editor
         [[nodiscard]] bool readSceneViewCameraX( const GameObjectManager* /*pManager*/, float64& outValue )
         {
             float3 position{};
-            if ( findSceneViewCameraPosition( position ) == false )
+            if ( SceneViewModel::findCameraPosition( position ) == false )
                 return false;
             outValue = static_cast<float64>( position._x );
             return true;
@@ -228,7 +199,7 @@ namespace sw::editor
         [[nodiscard]] bool readSceneViewCameraY( const GameObjectManager* /*pManager*/, float64& outValue )
         {
             float3 position{};
-            if ( findSceneViewCameraPosition( position ) == false )
+            if ( SceneViewModel::findCameraPosition( position ) == false )
                 return false;
             outValue = static_cast<float64>( position._y );
             return true;
@@ -237,7 +208,7 @@ namespace sw::editor
         [[nodiscard]] bool readGameViewCameraX( const GameObjectManager* /*pManager*/, float64& outValue )
         {
             float3 position{};
-            if ( findGameViewCameraPosition( position ) == false )
+            if ( GameViewModel::findCameraPosition( position ) == false )
                 return false;
             outValue = static_cast<float64>( position._x );
             return true;
@@ -246,7 +217,7 @@ namespace sw::editor
         [[nodiscard]] bool readGameViewCameraY( const GameObjectManager* /*pManager*/, float64& outValue )
         {
             float3 position{};
-            if ( findGameViewCameraPosition( position ) == false )
+            if ( GameViewModel::findCameraPosition( position ) == false )
                 return false;
             outValue = static_cast<float64>( position._y );
             return true;
@@ -255,14 +226,9 @@ namespace sw::editor
         /** @brief 이번 UI 프레임에 셸이 호스트에 그 뷰의 렌더 타깃을 알렸는지 확인합니다. `ImGuiEditor::getSceneViewport` 와 `getGameViewport` 가 쓰는 판정과 같습니다. */
         [[nodiscard]] bool readViewRequested( EditorViewKind kind, float64& outValue )
         {
-            const EditorContext* pContext = getWatchContext( __func__ );
-            if ( pContext == nullptr )
+            if ( getWatchPanelManager( __func__ ) == nullptr )
                 return false;
-            const bool bSceneDrawn = pContext->getSubsystem<EditorRenderViews>().wasViewDrawn( EditorViewKind::Scene );
-            const bool bGameDrawn  = pContext->getSubsystem<EditorRenderViews>().wasViewDrawn( EditorViewKind::Game );
-            const bool bRequested  = kind == EditorViewKind::Scene ? EditorViewTargetUtil::shouldRequestSceneView( bSceneDrawn, bGameDrawn )
-                                                                   : EditorViewTargetUtil::shouldRequestGameView( bGameDrawn );
-            outValue               = ( bRequested && pContext->getSubsystem<EditorRenderViews>().getViewTarget( kind )._renderTarget != 0 ) ? 1.0 : 0.0;
+            outValue = EditorViewSurface::isViewRequested( kind ) ? 1.0 : 0.0;
             return true;
         }
 
@@ -279,20 +245,19 @@ namespace sw::editor
         /** @brief 이번 UI 프레임에 Scene 패널이 씬 뷰를 그렸는지 확인합니다. 앞 탭으로 보이는 경우입니다. 두 뷰가 모두 가려져도 `Editor.SceneViewRequested` 는 1 입니다. */
         [[nodiscard]] bool readSceneViewDrawn( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            const EditorContext* pContext = getWatchContext( __func__ );
-            if ( pContext == nullptr )
+            if ( getWatchPanelManager( __func__ ) == nullptr )
                 return false;
-            outValue = pContext->getSubsystem<EditorRenderViews>().wasViewDrawn( EditorViewKind::Scene ) ? 1.0 : 0.0;
+            outValue = EditorViewSurface::wasViewDrawn( EditorViewKind::Scene ) ? 1.0 : 0.0;
             return true;
         }
 
         /** @brief 씬 뷰가 `-gv_editorWatchVisualizer` 의 시각화를 켜 두었으면 1 입니다. 패널이나 그 id 의 시각화가 없으면 값을 내지 않습니다. */
         [[nodiscard]] bool readVisualizerOn( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            EditorContext* pContext = getWatchContext( __func__ );
-            if ( pContext == nullptr )
+            const EditorPanelManager* pPanels = getWatchPanelManager( __func__ );
+            if ( pPanels == nullptr )
                 return false;
-            const SceneViewPanel*               pPanel        = pContext->getSubsystem<EditorPanelManager>().findPanel<SceneViewPanel>();
+            const SceneViewPanel*               pPanel        = pPanels->findPanel<SceneViewPanel>();
             const EditorVisualizerRegistration* pRegistration = EditorExtensionRegistry<EditorVisualizerRegistration>::find( gv_editorWatchVisualizer );
             if ( pPanel == nullptr || pRegistration == nullptr )
                 return false;
@@ -303,8 +268,7 @@ namespace sw::editor
         /** @brief `-gv_editorWatchObject` 이름의 오브젝트에 씬 뷰가 지난 그리기에서 넘긴 빌보드 글리프의 코드 포인트입니다. 쓰레기 문자열이면 0 입니다. */
         [[nodiscard]] bool readBillboardIcon( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            const GameObjectManager* pManager = editor::getActiveObjectManager();
-            const GameObject*        pObject  = pManager != nullptr ? pManager->findGameObjectByName( hashed_string( gv_editorWatchObject.c_str() ) ) : nullptr;
+            const GameObject* pObject = findWatchedObject();
             if ( pObject == nullptr )
                 return false;
             outValue = static_cast<float64>( EditorViewportBillboardItem::findDrawnGlyph( *pObject ) );
@@ -361,8 +325,7 @@ namespace sw::editor
                 outValue = 0.0;
                 return true;
             }
-            const GameObject* pWatch = findWatchedObject();
-            outValue                 = pWatch != nullptr && pWatch->getObjectID() == hoveredID ? 1.0 : -1.0;
+            outValue = findWatchedObjectID() == hoveredID ? 1.0 : -1.0;
             return true;
         }
 
@@ -442,23 +405,20 @@ namespace sw::editor
         /** @brief 기즈모 조작 모드입니다. 0 은 이동, 1 은 회전, 2 는 크기입니다. */
         [[nodiscard]] bool readGizmoOperation( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            EditorContext* pContext = getWatchContext( __func__ );
-            if ( pContext == nullptr )
+            if ( getWatchPanelManager( __func__ ) == nullptr )
                 return false;
-            outValue = static_cast<float64>( pContext->getSubsystem<EditorWorkspace>().getGizmoOperation() );
+            outValue = static_cast<float64>( SceneViewModel::getGizmoOperation() );
             return true;
         }
 
         /** @brief 씬 뷰(툴바)나 주 출력(게임 뷰)의 보기 모드 번호(`RenderViewMode`)를 읽습니다. 렌더러가 없으면 false 입니다. */
         [[nodiscard]] bool readViewMode( bool bSceneView, float64& outValue )
         {
-            const FrameRenderer* pRenderer = editor::findSubsystem<FrameRenderer>();
-            if ( pRenderer == nullptr ) // 필수 서비스: 없으면 버그
-            {
-                SW_LOG_ERROR_ID( "ViewportWatches.ViewModeWatchFrameRenderer", "[Scenario] view mode watch: FrameRenderer is missing" );
+            uint32     mode   = 0;
+            const bool bFound = bSceneView ? SceneViewModel::findViewMode( mode ) : GameViewModel::findViewMode( mode );
+            if ( bFound == false )
                 return false;
-            }
-            outValue = static_cast<float64>( bSceneView ? pRenderer->getSceneViewMode() : pRenderer->getViewMode() );
+            outValue = static_cast<float64>( mode );
             return true;
         }
 

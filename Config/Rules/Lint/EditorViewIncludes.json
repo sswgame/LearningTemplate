@@ -85,6 +85,7 @@
         "Source/Editor/Panels/Scene/PrefabPanel",
         "Source/Editor/Panels/Scene/SceneViewPanel",
         "Source/Editor/Panels/Scene/StreamingCellsPanel",
+        "Source/Editor/Panels/Scene/ViewportWatches",
         "Source/Editor/Panels/Settings/GlobalVariablesPanel",
         "Source/Editor/Panels/Settings/GlobalVariablesPanelWatches",
         "Source/Editor/Panels/Settings/ModulesPanel",

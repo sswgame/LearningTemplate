@@ -10,6 +10,7 @@
 
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
@@ -54,6 +55,22 @@ namespace sw::editor
         if ( pScene == nullptr )
             return false;
         outPosition = pScene->getLocalPosition();
+        return true;
+    }
+
+    uint64 findWatchedObjectID()
+    {
+        const GameObject* pObject = findWatchedObject();
+        return pObject != nullptr ? pObject->getObjectID() : 0;
+    }
+
+    bool readSelectedObjectLocalRotation( float3& outRotation )
+    {
+        const GameObject*     pObject = editor::getMainSceneSelection().getPrimaryObject();
+        const SceneComponent* pScene  = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
+        if ( pScene == nullptr )
+            return false;
+        outRotation = pScene->getLocalRotation();
         return true;
     }
 } // namespace sw::editor

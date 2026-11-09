@@ -13,6 +13,13 @@
 
 namespace sw::editor
 {
+    bool EditorRenderViews::isViewRequested( EditorViewKind kind ) const
+    {
+        const bool bSceneDrawn = wasViewDrawn( EditorViewKind::Scene );
+        const bool bGameDrawn  = wasViewDrawn( EditorViewKind::Game );
+        return kind == EditorViewKind::Scene ? EditorViewTargetUtil::shouldRequestSceneView( bSceneDrawn, bGameDrawn ) : EditorViewTargetUtil::shouldRequestGameView( bGameDrawn );
+    }
+
     void EditorRenderViews::shutdownSubsystem()
     {
         destroyViewTargets();

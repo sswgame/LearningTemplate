@@ -26,6 +26,10 @@ namespace sw::editor
         static void fitTargetSize( EditorViewKind kind, uint32 width, uint32 height );
         /** @brief 이번 프레임에 뷰 @p kind 를 그렸고 이미지 왼쪽 위가 주 창 클라이언트 픽셀 @p imageClientPos 에 놓였다고 알립니다(호스트가 포인터를 뷰 픽셀로 옮긴다). */
         static void markDrawn( EditorViewKind kind, const float2& imageClientPos );
+        /** @brief 이번 UI 프레임에 뷰 @p kind 를 그렸으면 true 입니다(그 패널 탭이 앞에 있다). */
+        static bool wasViewDrawn( EditorViewKind kind );
+        /** @brief 이번 UI 프레임에 셸이 호스트에 뷰 @p kind 의 렌더 타깃을 알렸으면 true 입니다(`ImGuiEditor::getSceneViewport` · `getGameViewport` 와 같은 판정, 타깃이 있어야 한다). */
+        static bool isViewRequested( EditorViewKind kind );
         /** @brief 게임 뷰 패널의 초점 · 마우스 올림을 알립니다(게임 입력이 이 값을 본다). */
         static void setGameViewInput( bool bFocused, bool bHovered );
         /** @brief 게임 뷰 패널에 초점이 있으면 true 입니다. */

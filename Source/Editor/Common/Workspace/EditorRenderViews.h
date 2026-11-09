@@ -131,6 +131,8 @@ namespace sw::editor
         void markViewDrawn( EditorViewKind kind, const float2& imageClientPos );
         /** @brief 이번 프레임에 그 뷰를 그렸으면 true 입니다. */
         bool wasViewDrawn( EditorViewKind kind ) const { return getViewTarget( kind )._bDrawn == SW_TRUE; }
+        /** @brief 이번 프레임에 호스트에 그 뷰의 렌더 타깃을 알릴지입니다(`EditorViewTargetUtil::shouldRequestSceneView` · `shouldRequestGameView` — 셸과 감시 값이 같은 판정을 쓴다). */
+        bool isViewRequested( EditorViewKind kind ) const;
         /** @brief UI 프레임을 시작할 때 그린 뷰 표시를 지웁니다(미리보기 타깃 포함). */
         void clearViewDrawnMarks();
 

@@ -968,14 +968,13 @@ namespace sw::editor
 
     void ImGuiEditor::getGameViewport( ViewportTarget* pOutTarget ) const
     {
-        const bool bRequest = _editorContext != nullptr && EditorViewTargetUtil::shouldRequestGameView( _editorContext->getSubsystem<EditorRenderViews>().wasViewDrawn( EditorViewKind::Game ) );
+        const bool bRequest = _editorContext != nullptr && _editorContext->getSubsystem<EditorRenderViews>().isViewRequested( EditorViewKind::Game );
         ImGuiEditorInternal::writeViewport( bRequest ? &_editorContext->getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Game ) : nullptr, pOutTarget );
     }
 
     void ImGuiEditor::getSceneViewport( ViewportTarget* pOutTarget ) const
     {
-        const bool bRequest = _editorContext != nullptr && EditorViewTargetUtil::shouldRequestSceneView( _editorContext->getSubsystem<EditorRenderViews>().wasViewDrawn( EditorViewKind::Scene ),
-                                                                                                         _editorContext->getSubsystem<EditorRenderViews>().wasViewDrawn( EditorViewKind::Game ) );
+        const bool bRequest = _editorContext != nullptr && _editorContext->getSubsystem<EditorRenderViews>().isViewRequested( EditorViewKind::Scene );
         ImGuiEditorInternal::writeViewport( bRequest ? &_editorContext->getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Scene ) : nullptr, pOutTarget );
     }
 
