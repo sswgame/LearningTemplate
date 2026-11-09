@@ -4,7 +4,7 @@
 Scripts/generate/TargetLayers.py
 
 타깃 경계 껍데기를 만든다. `Source/` 가 모든 타깃의 include 루트라 Core 가 `Engine/...` 을, 키트가 매니페스트에 적지 않은 키트를 include 해도 헤더만 쓰면
-컴파일 · 링크가 된다. 표(`Scripts/generate/rules/TargetLayers.toml`)의 게이트마다, 그리고 모듈(키트 · 에디터 확장 · 게임)마다 보면 안 되는 헤더와 같은 경로의 `#error`
+컴파일 · 링크가 된다. 표(`Config/Rules/Layers/TargetLayers.toml`)의 게이트마다, 그리고 모듈(키트 · 에디터 확장 · 게임)마다 보면 안 되는 헤더와 같은 경로의 `#error`
 파일을 `<빌드>/generated/sw/TargetLayerStubs/<게이트>/` 에 놓고, CMake(`sw_applyTargetLayerGate`)가 그 폴더를 타깃의 include 자리 맨 앞에 둔다.
 위반하면(헤더를 거쳐 닿는 전이 include 도) 컴파일이 멈춘다 — `EngineLayers.py` · `EditorLayers.py` 와 같은 틀이고, 그쪽이 폴더 층을 보면 이쪽은 타깃 경계를 본다.
 
@@ -30,7 +30,7 @@ from common.Paths import getProjectRoot  # noqa: E402
 from generate.GeneratorOutput import GeneratorError, runGenerator, writeGeneratedFile  # noqa: E402
 
 kTag = "TargetLayers"
-kRuleFile = Path(__file__).resolve().parent / "rules" / "TargetLayers.toml"
+kRuleFile = Path(__file__).resolve().parents[2] / "Config" / "Rules" / "Layers" / "TargetLayers.toml"
 kHeaderSuffix = {".h", ".hpp", ".inl", ".xxx"}
 kModuleKinds = {"Kit", "EditorExtension", "Game"}   # 모듈별 게이트를 받는 종류
 kStubFolderName = "TargetLayerStubs"
@@ -160,7 +160,7 @@ def collectGates(sourceDir: Path, mapRule: dict[str, list[str]], mapAllow: dict[
         listDenied = [header for header in listHeader if any(header.startswith(prefix + "/") for prefix in listPrefix) and header not in setAllowed]
         if setAllowed:
             checkAllowClosure(sourceDir, gateName, sorted(setAllowed), set(listDenied))
-        mapGate[gateName] = (listDenied, f"Target gate '{gateName}' forbids this header (Scripts/generate/rules/TargetLayers.toml): a lower target must not see an upper one. Move what you need down, or invert the dependency.")
+        mapGate[gateName] = (listDenied, f"Target gate '{gateName}' forbids this header (Config/Rules/Layers/TargetLayers.toml): a lower target must not see an upper one. Move what you need down, or invert the dependency.")
 
     listModule = readModules(sourceDir)
     mapByName = {module.name: module for module in listModule if module.kind != "Game"}

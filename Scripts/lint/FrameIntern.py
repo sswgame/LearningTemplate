@@ -7,9 +7,9 @@ Scripts/lint/FrameIntern.py
 
 **왜 린트인가.** 리터럴에서 이름을 만드는 일은 형식이 막지 못한다(암시적 변환까지 허용되는 정상 코드다). 그런데 프레임마다 돌면
 글자 → FNV → 샤드 뮤텍스를 지나고, 틱은 워커라 경합한다. 함수 안 `static const hashed_string` 이나 데이터 칸으로 옮기면 한 번이다.
-예외는 `Config/Dev/FrameInternExceptions.json` 에 `경로::함수` 와 까닭을 적는다.
+예외는 `Config/Rules/Lint/FrameInternExceptions.json` 에 `경로::함수` 와 까닭을 적는다.
 
-`py -3 -m Scripts frame-intern [--self-check]` 로 돌리고, 커밋 훅(`PreCommit.py`)이 돌린다.
+`py -3 -m Scripts lint frame-intern [--self-check]` 로 돌리고, 커밋 훅(`Rules.py` 표)이 돌린다.
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 
-kConfigPath = "Config/Dev/FrameInternExceptions.json"
+kConfigPath = "Config/Rules/Lint/FrameInternExceptions.json"
 kComment = re.compile(r"//[^\n]*|/\*.*?\*/", re.S)
 kDefinition = re.compile(r"^[ \t]*[\w:<>,&\*\s]*?\b\w+::(onTick|tick\w*|update\w*|paint\w*)\s*\([^;{]*\)\s*(?:const\s*)?(?:noexcept\s*)?(?:override\s*)?\{", re.M)
 kLiteralName = re.compile(r"hashed_string\s*[({]\s*\"")

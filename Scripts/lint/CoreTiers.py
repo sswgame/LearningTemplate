@@ -3,7 +3,7 @@
 """
 Scripts/lint/CoreTiers.py
 
-Core 폴더 티어 표(`Scripts/generate/rules/CoreLayers.toml`)의 역류 — 낮은 티어 폴더가 높은 티어 폴더 헤더를 include — 를 **모든 티어에서** 막는다.
+Core 폴더 티어 표(`Config/Rules/Layers/CoreLayers.toml`)의 역류 — 낮은 티어 폴더가 높은 티어 폴더 헤더를 include — 를 **모든 티어에서** 막는다.
 **왜 빌드가 아니라 린트인가.** Log 아래 · 위는 빌드가 가른다(`Source/Core/CMakeLists.txt` 의 낮은 부분 `#error` 껍데기). 티어마다 같은 방식으로 가르면
 OBJECT 부분과 pch 가 늘어 빌드가 느려진다 — 형식으로 싸게 막을 수 없는 틈이라 include 줄을 본다. 직접 include 만 본다(전이는 그 헤더가 걸린다).
 처음엔 Log 위만 봤는데 아래 티어 역류(Concurrency → Container/vector.h)를 놓쳤다(FolderMoves 13 절) — 그래서 모든 티어를 본다.
@@ -23,7 +23,7 @@ def readTiers(projectRoot: Path) -> dict[str, int]:
     """폴더(또는 `폴더/하위` — `[subtier]` 절) → 티어."""
     tiers: dict[str, int] = {}
     section = ""
-    for line in (projectRoot / "Scripts/generate/rules/CoreLayers.toml").read_text(encoding="utf-8").splitlines():
+    for line in (projectRoot / "Config/Rules/Layers/CoreLayers.toml").read_text(encoding="utf-8").splitlines():
         if line.startswith("["):
             section = line.strip()
             continue

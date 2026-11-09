@@ -292,13 +292,13 @@ endfunction()
 
 # ------------------------------------------------------------------------------
 # 타깃 경계 게이트 — 위 층 껍데기와 같은 틀을 타깃 단위로 넓힌다. `Source/` 가 모든 타깃의 include 루트라 층 표 밖(Core → Engine, Engine → GameFramework, 키트 → 매니페스트 밖 키트)은
-# 헤더만 쓰면 컴파일 · 링크가 되었다. 껍데기는 configure 의 `Scripts/generate/TargetLayers.py` 가 표(`Scripts/generate/rules/TargetLayers.toml`)와 매니페스트로 쓴다.
+# 헤더만 쓰면 컴파일 · 링크가 되었다. 껍데기는 configure 의 `Scripts/generate/TargetLayers.py` 가 표(`Config/Rules/Layers/TargetLayers.toml`)와 매니페스트로 쓴다.
 #
 # sw_applyTargetLayerGate: 타깃의 include 자리 맨 앞에 게이트 폴더들을 둔다. 부분(`sw_addModulePart`)은 소유 타깃의 include 자리를 복사하므로 부분을 만들기 전에 부른다.
 # sw_applyModuleLayerGate: 모듈 종류의 공통 게이트와 모듈별 게이트(`module/<이름>` — 매니페스트 전이 폐쇄 밖 모듈의 헤더)를 건다.
 # ------------------------------------------------------------------------------
 include("${CMAKE_BINARY_DIR}/generated/sw/config/TargetLayers.cmake")
-set_property(DIRECTORY "${CMAKE_SOURCE_DIR}" APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/Scripts/generate/rules/TargetLayers.toml")
+set_property(DIRECTORY "${CMAKE_SOURCE_DIR}" APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/Config/Rules/Layers/TargetLayers.toml")
 
 function(sw_applyTargetLayerGate TARGET_NAME)
 	set(listGate ${ARGN})
@@ -307,7 +307,7 @@ function(sw_applyTargetLayerGate TARGET_NAME)
 	endif()
 	foreach(gate IN LISTS listGate)
 		if(NOT gate IN_LIST SW_TARGET_LAYER_GATES)
-			message(FATAL_ERROR "sw_applyTargetLayerGate(${TARGET_NAME}): unknown gate '${gate}' (Scripts/generate/rules/TargetLayers.toml, or a module without a manifest)")
+			message(FATAL_ERROR "sw_applyTargetLayerGate(${TARGET_NAME}): unknown gate '${gate}' (Config/Rules/Layers/TargetLayers.toml, or a module without a manifest)")
 		endif()
 		target_include_directories(${TARGET_NAME} BEFORE PRIVATE "${SW_TARGET_LAYER_STUB_DIR}/${gate}")
 	endforeach()

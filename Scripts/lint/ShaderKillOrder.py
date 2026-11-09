@@ -11,7 +11,7 @@ Vulkan 1.2 타깃의 `clip` 은 OpKill 이라 버린 픽셀이 쿼드 이웃의 
 - 버리는 함수: 본문에 버리기가 있거나 그런 함수를 부르는 함수(`Appearance::clipDither`). `SW_APPEARANCE_CLIP(` 는 그 자체로 버리기다.
 - 위반: 한 함수 본문에서 첫 버리기 뒤에 미분을 쓰는 읽기 · 호출이 있다. 전처리 갈래는 보지 않는다(보수적).
 
-`py -3 -m Scripts shader-kill-order [--self-check]` 로 돌리고, 커밋 훅(`PreCommit.py`)이 돌린다.
+`py -3 -m Scripts lint shader-kill-order [--self-check]` 로 돌리고, 커밋 훅(`Rules.py` 표)이 돌린다.
 """
 
 from __future__ import annotations

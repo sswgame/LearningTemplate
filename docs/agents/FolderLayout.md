@@ -4,10 +4,10 @@
 > 독자: 이 저장소에서 파일을 만들거나 옮기는 에이전트.
 > 결론: 이름 낱말(Util · Registry · Component)이나 처음 쓰는 쪽이 아니라 **하는 일**로 자리를 정한다. 아래 표가 정본이다. 남은 이동은 [NEXT](../NEXT.md) 에 있다.
 
-- 잡동사니 폴더(`Util` · `Utility` · `Helpers` · `Misc`)를 새로 만들지 않는다 — 하는 일(Encoding · Algorithm · Hash …)로 묶는다. 린트 `folder-layout`(표 `Config/Dev/FolderLayout.json`)가 막는다.
+- 잡동사니 폴더(`Util` · `Utility` · `Helpers` · `Misc`)를 새로 만들지 않는다 — 하는 일(Encoding · Algorithm · Hash …)로 묶는다. 린트 `folder-layout`(표 `Config/Rules/Lint/FolderLayout.json`)가 막는다.
 - 층(티어) 규칙이 먼저다: 하위 층이 상위 층을 include 하지 않는다(cmake 층 표 · `docs/agents/Includes.md`).
-- 개발 기능은 `Source/DevTools/`(언리얼 Developer 모듈 자리)로. 엔진 쪽 `Dev/` 폴더는 린트가 막고, DevTools 가 볼 수 없는 모듈 안(게임 · App · ModuleManager · GF 내부 · 리플렉션 에셋)만 `Config/Dev/FolderLayout.json` `_devFolderAllowed` 에 까닭과 함께 둔다. 엔진 내부를 봐야 하면 엔진이 확장점(등록 목록 · 인터페이스 · 프레임 훅)을 내고 DevTools 가 붙는다.
-- 약어는 파일 · 폴더 · 식별자 모두 대문자(`FourCCUtil` · `HPACKDecoder`) — 린트 `acronyms`(표 `Config/Dev/Acronyms.json`).
+- 개발 기능은 `Source/DevTools/`(언리얼 Developer 모듈 자리)로. 엔진 쪽 `Dev/` 폴더는 린트가 막고, DevTools 가 볼 수 없는 모듈 안(게임 · App · ModuleManager · GF 내부 · 리플렉션 에셋)만 `Config/Rules/Lint/FolderLayout.json` `_devFolderAllowed` 에 까닭과 함께 둔다. 엔진 내부를 봐야 하면 엔진이 확장점(등록 목록 · 인터페이스 · 프레임 훅)을 내고 DevTools 가 붙는다.
+- 약어는 파일 · 폴더 · 식별자 모두 대문자(`FourCCUtil` · `HPACKDecoder`) — 린트 `acronyms`(표 `Config/Rules/Lint/Acronyms.json`).
 - Core 티어 역류는 모든 티어에서 린트(`CoreTiers.py`, 하위 폴더 티어 `[subtier]`)가 막는다.
 
 ## 폴더마다 무엇을 두는가

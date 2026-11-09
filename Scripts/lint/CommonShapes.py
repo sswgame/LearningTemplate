@@ -17,8 +17,8 @@ Scripts/lint/CommonShapes.py
    `XMLDocument::parseResourceText` · `XMLReadUtil::parseResourceRoot` · `loadResource…`)을 지나거나, 읽은 id 변수를 그대로 다음 함수에 넘겨야 한다.
    예전에는 이름 둘(`loadFromAsset` · `loadFromFile( const AssetID& )`)만 보아 다른 이름의 입구(타일맵 `load`)가 빠졌다 — 입구는 이름이 아니라 "load 로 시작하고 리소스 글을 읽는다" 로 고른다.
 
-예외는 `Config/Dev/CommonShapeExceptions.json` 에 까닭과 함께 적는다. 낡은 예외(더는 없는 자리)도 위반이다.
-`py -3 -m Scripts common-shapes [--self-check]` 로 돌리고, 커밋 훅(`PreCommit.py`)이 돌린다.
+예외는 `Config/Rules/Lint/CommonShapeExceptions.json` 에 까닭과 함께 적는다. 낡은 예외(더는 없는 자리)도 위반이다.
+`py -3 -m Scripts lint common-shapes [--self-check]` 로 돌리고, 커밋 훅(`Rules.py` 표)이 돌린다.
 """
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 
-kConfigPath = "Config/Dev/CommonShapeExceptions.json"
+kConfigPath = "Config/Rules/Lint/CommonShapeExceptions.json"
 kExtensions = (".h", ".cpp", ".inl")
 kSkipParts = ("ThirdParty", "Tests")
 kCommentPattern = re.compile(r"//[^\n]*|/\*.*?\*/", re.S)

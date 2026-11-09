@@ -12,7 +12,7 @@ include 순서 규칙과 그 검사. 규칙은 `inspectText`(판정 + 고친 글
 
 헤더 조회표는 훑기 전에 한 번 만들어 자식 프로세스로 같이 보낸다.
 
-  python Scripts/lint/IncludeOrder.py [--root <repo>] [--files <path> ...]    (= `py -3 -m Scripts include-order`)
+  python Scripts/lint/IncludeOrder.py [--root <repo>] [--files <path> ...]    (= `py -3 -m Scripts lint include-order`)
 
 종료 코드: 0 통과(또는 `--files` 로 좁혀 볼 파일 없음), 1 위반, 2 읽을 수 없는 파일.
 """
@@ -363,7 +363,12 @@ def checkIncludeOrder(repositoryRoot: Path, listFileArgument: Sequence[str] | No
     return flatMapInProcesses(worker, listPath), len(listPath)
 
 
-def mainCheck(argv: Sequence[str] | None = None) -> int:
+def checkStaged(repositoryRoot: Path, listFile: Sequence[str]) -> list[str]:
+    """커밋 훅(`Rules.py`): 스테이지된 파일의 위반 줄 — 읽지 못한 파일(`!`)도 위반이다."""
+    return [line.lstrip("!") for line in checkIncludeOrder(repositoryRoot, listFile)[0]]
+
+
+def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Include 순서 검사")
     parser.add_argument("--root", type=Path, default=None, help="저장소 루트(기본: 이 스크립트의 저장소)")
     parser.add_argument("--files", nargs="*", default=None, help="검사할 파일 (생략 시 전체)")
@@ -389,4 +394,4 @@ def mainCheck(argv: Sequence[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(mainCheck())
+    sys.exit(main())

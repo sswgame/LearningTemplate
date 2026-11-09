@@ -7,9 +7,9 @@ Scripts/lint/CatalogRootShape.py
 **왜 형식이 아니라 린트인가.** 길은 형식으로 냈다(`XMLCatalogElement` · `XMLCatalogReadResult`). `XMLNode::findChild` 는 어디서든 부를 수 있어 다른 길을 형식으로 막지 못한다.
 
 1. `XMLReadUtil::isElement` 를 부르지 않는다 — 대소문자를 무시해 표의 철자 판정과 갈린다.
-2. `for ( XMLNode x = root.findChild(...` 로 루트 자식을 돌지 않는다 — `XMLCatalogReadResult` 를 지난다. 까닭이 있는 파일은 `Config/Dev/CatalogRootLoopFiles.json` 에 이유와 함께 적는다.
+2. `for ( XMLNode x = root.findChild(...` 로 루트 자식을 돌지 않는다 — `XMLCatalogReadResult` 를 지난다. 까닭이 있는 파일은 `Config/Rules/Lint/CatalogRootLoopFiles.json` 에 이유와 함께 적는다.
 
-`py -3 -m Scripts catalog-root [--files …|--all|--self-check]` 로 돌리고, 커밋 훅(`PreCommit.py`)이 staged 파일에 돌린다.
+`py -3 -m Scripts lint catalog-root [--files …|--all|--self-check]` 로 돌리고, 커밋 훅(`Rules.py` 표)이 staged 파일에 돌린다.
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ from lint.CppShape import isTarget, stripCode  # noqa: E402
 from lint.Parallel import flatMapInProcesses  # noqa: E402
 
 
-kExceptionFile = "Config/Dev/CatalogRootLoopFiles.json"
+kExceptionFile = "Config/Rules/Lint/CatalogRootLoopFiles.json"
 kScope = ("Source/GameFramework/", "Source/Games/")
 kRootLoop = re.compile(r"\bfor\s*\(\s*XMLNode\s+\w+\s*=\s*root\.findChild\(")
 kIsElement = re.compile(r"\bXMLReadUtil::isElement\(")

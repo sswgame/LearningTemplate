@@ -13,7 +13,7 @@ Scripts/lint/PlatformChains.py
 2. `!defined( SW_PLATFORM_* )` 를 쓰지 않는다. 부정은 새 플랫폼까지 삼킨다. Windows 가 아닌 곳은 `SW_PLATFORM_POSIX` 다.
 
 첫 조건에 다른 매크로가 섞인 사슬(`SW_PLATFORM_LINUX && SW_WITH_CLIENT_CODE`, 내장 함수 고르기)은 기능 검사라 보지 않는다.
-예외는 `Config/Dev/PlatformChains.json` 에 이유와 함께 적는다(데스크톱 전용 폴더 · 플랫폼 폴더 · 매크로 검사 파일).
+예외는 `Config/Rules/Lint/PlatformChains.json` 에 이유와 함께 적는다(데스크톱 전용 폴더 · 플랫폼 폴더 · 매크로 검사 파일).
 
 CMake(`*.cmake` · `CMakeLists.txt`, ThirdParty 제외)도 같은 규칙이다 — `if(WIN32) … else()` 의 `else()` 가 몸을 가지면 Android · Emscripten 이 Linux 가지를
 조용히 탄다. 플랫폼 검사(`WIN32` · `UNIX` · `CMAKE_SYSTEM_NAME STREQUAL` · `sw_platform_name STREQUAL` · 호스트 `CMAKE_HOST_*`)만으로 된 첫 조건의
@@ -23,7 +23,7 @@ POSIX 계열은 `UNIX` · `CMAKE_HOST_UNIX` 로 이름을 적는다. 다른 변�
 스크립트(`Scripts/**.py`)는 호스트 OS 를 `common/HostPlatform.py` 의 표에서만 읽는다 — `sys.platform` · `os.name` · `platform.system()` 을
 다른 곳에서 물으면 `else` 가 "Windows 아니면 Linux" 가 된다. 표는 모르는 호스트에서 들여올 때 멈춘다.
 
-`py -3 -m Scripts platform-chains [--self-check]` 로 돌리고, 커밋 훅(`PreCommit.py`)이 돌린다.
+`py -3 -m Scripts lint platform-chains [--self-check]` 로 돌리고, 커밋 훅(`Rules.py` 표)이 돌린다.
 """
 
 from __future__ import annotations
@@ -40,7 +40,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 
-kConfigPath = "Config/Dev/PlatformChains.json"
+kConfigPath = "Config/Rules/Lint/PlatformChains.json"
 kExtensions = (".h", ".cpp", ".inl")
 kDirective = re.compile(r"^\s*#\s*(if|ifdef|ifndef|elif|else|endif)\b(.*)$")
 kPlatformOnly = re.compile(r"^!?defined\( SW_PLATFORM_\w+ \)(?: \|\| !?defined\( SW_PLATFORM_\w+ \))*$")

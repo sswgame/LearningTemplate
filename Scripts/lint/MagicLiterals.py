@@ -8,7 +8,7 @@ Scripts/lint/MagicLiterals.py
 방향 · 이름 붙은 표지)를 이름과 문맥으로 첫 분류한다. 정본 규칙은 `docs/agents/Constants.md`, 판단은 `docs/DesignBacklog.md` "데이터 기반 값 · 매직 리터럴".
 
 **왜 래칫인가.** 리터럴 하나가 매직인지는 형식이 가르지 못한다(`0.5f` 는 절반이고 `0.35f` 는 튜닝이다). 그래서 모든 줄을 막지 않고, **일반 코드**
-(`code` 장소)에서 흔한 수학 값이 아닌 리터럴의 **파일마다 종류별 수**를 기준선(`Config/Dev/MagicLiteralBaseline.json`)에 두고:
+(`code` 장소)에서 흔한 수학 값이 아닌 리터럴의 **파일마다 종류별 수**를 기준선(`Config/Rules/Lint/MagicLiteralBaseline.json`)에 두고:
 - 수가 기준선보다 **늘면** 커밋이 멈춘다 — 새 값에 이름을 붙이거나(`XxxInternal::k…`) 데이터(PROPERTY · 카탈로그)로 옮긴다.
 - 수가 **줄면** 기준선도 같이 낮춰야 커밋이 선다(`--ratchet` 이 낮추기만 한다) — 옮긴 자리에 다시 리터럴이 들어오지 못한다.
 - 기준선을 **올리는** 길은 `--accept <파일…>` 하나다(통합에서 합친 브랜치가 규칙 전 코드를 가져올 때). diff 에 그대로 보인다.
@@ -16,13 +16,13 @@ Scripts/lint/MagicLiterals.py
 세지 않는 것(오탐 유형은 `--self-check` 가 고정한다): 테스트 · 생성물 · 리플렉션 메타 · 표 줄 · 이름 붙은 정의 · 형식 번호 장소, 흔한 수학 값
 (`kCommonFloat` — 0 · 1 · 2 · 0.5), 모든 비트 마스크(`0xFF…`), 비트 이동 폭(`<< 16`), 뜻이 산술 · 운영체제 계약인 `-1`(방향 · 파일 기술자).
 
-    py -3 -m Scripts magic-literals                    # 장소 × 종류 수, `-1` 뜻별 수, 기준선 합
-    py -3 -m Scripts magic-literals --check [--all]    # 래칫 검사(커밋 훅은 staged 파일)
-    py -3 -m Scripts magic-literals --ratchet          # 줄어든 파일의 기준선을 낮춘다(올리지 않는다)
-    py -3 -m Scripts magic-literals --accept <파일…>   # 그 파일의 기준선을 지금 수로(올리는 유일한 길)
-    py -3 -m Scripts magic-literals --meaning unclassified --limit 50   # 그 뜻의 줄(파일:줄: 값 | 문맥)
-    py -3 -m Scripts magic-literals --out <scratch>/literals.tsv        # 모든 줄(검토 목록)
-    py -3 -m Scripts magic-literals --self-check
+    py -3 -m Scripts lint magic-literals                    # 장소 × 종류 수, `-1` 뜻별 수, 기준선 합
+    py -3 -m Scripts lint magic-literals --check [--all]    # 래칫 검사(커밋 훅은 staged 파일)
+    py -3 -m Scripts lint magic-literals --ratchet          # 줄어든 파일의 기준선을 낮춘다(올리지 않는다)
+    py -3 -m Scripts lint magic-literals --accept <파일…>   # 그 파일의 기준선을 지금 수로(올리는 유일한 길)
+    py -3 -m Scripts lint magic-literals --meaning unclassified --limit 50   # 그 뜻의 줄(파일:줄: 값 | 문맥)
+    py -3 -m Scripts lint magic-literals --out <scratch>/literals.tsv        # 모든 줄(검토 목록)
+    py -3 -m Scripts lint magic-literals --self-check
 """
 
 from __future__ import annotations
@@ -46,7 +46,7 @@ from lint.Format import getModifiedCppFiles  # noqa: E402
 from lint.Parallel import flatMapInProcesses  # noqa: E402
 
 
-kBaselinePath = "Config/Dev/MagicLiteralBaseline.json"
+kBaselinePath = "Config/Rules/Lint/MagicLiteralBaseline.json"
 kSourceExtensions = (".h", ".cpp", ".inl")
 kKinds = ("minus-one", "float", "integer", "hex")
 
@@ -235,7 +235,7 @@ def readBaseline(projectRoot: Path) -> dict[str, dict[str, int]]:
 
 def writeBaseline(projectRoot: Path, baseline: dict[str, dict[str, int]]) -> None:
     comment = ("매직 리터럴 래칫 기준선(Scripts/lint/MagicLiterals.py). 파일마다 일반 코드의 이름 없는 리터럴 수 — 늘면 커밋이 멈추고, 줄면 "
-               "`py -3 -m Scripts magic-literals --ratchet` 로 낮춘다. 손으로 올리지 않는다(올리는 길은 --accept 하나, docs/agents/Constants.md).")
+               "`py -3 -m Scripts lint magic-literals --ratchet` 로 낮춘다. 손으로 올리지 않는다(올리는 길은 --accept 하나, docs/agents/Constants.md).")
     # 파일 하나가 한 줄이고 합계 줄은 두지 않는다 — 병렬 브랜치가 다른 파일을 낮출 때 병합이 부딪히지 않는다(합계는 보고가 찍는다).
     listLine = [f"    {json.dumps(path)}: {json.dumps(baseline[path])}" for path in sorted(baseline) if baseline[path]]
     text = (f"{{\n  \"_comment\": {json.dumps(comment, ensure_ascii=False)},\n"
@@ -276,12 +276,13 @@ def findRatchetProblems(actual: dict[str, dict[str, int]], baseline: dict[str, d
         allowed = baseline.get(path, baseline.get(mapOld.get(path, ""), {}))
         listGrown, listShrunk = compareCounts(path, actual.get(path, {}), allowed)
         listProblem += [f"{line} — 늘었다: 이름 붙은 상수(XxxInternal · 소유 타입)나 데이터(PROPERTY · 카탈로그)로 옮긴다" for line in listGrown]
-        listProblem += [f"{line} — 줄었다: `py -3 -m Scripts magic-literals --ratchet` 로 기준선을 낮추고 함께 커밋한다" for line in listShrunk]
+        listProblem += [f"{line} — 줄었다: `py -3 -m Scripts lint magic-literals --ratchet` 로 기준선을 낮추고 함께 커밋한다" for line in listShrunk]
     return listProblem
 
 
-def checkMagicLiterals(projectRoot: Path, listFile: Sequence[Path]) -> list[str]:
+def checkMagicLiterals(projectRoot: Path, listFileArgument: Sequence[str]) -> list[str]:
     """커밋 훅: staged C++ 파일의 래칫 검사입니다."""
+    listFile = [Path(path) for path in listFileArgument]
     listRelative = [path.relative_to(projectRoot).as_posix() for path in listFile]
     listSource = [projectRoot / relative for relative in listRelative if isSourceFile(relative)]
     if not listSource:

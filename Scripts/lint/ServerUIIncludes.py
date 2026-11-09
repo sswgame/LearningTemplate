@@ -16,7 +16,7 @@ Scripts/lint/ServerUIIncludes.py
 볼 곳: `Source/GameFramework/**`(에디터 플러그인 · `Client/` 폴더 제외), `Source/Games/**`. 클라이언트 전용 소스(`…/Client/…`)의 헤더도 같은 까닭으로 막는다 — 서버는 그 소스를 짓지 않는다.
 예외 표는 없다 — 클라이언트에서만 도는 줄은 `Client/` 폴더로 옮긴다.
 
-`py -3 -m Scripts server-ui [--self-check]` 로 돌리고, 커밋 훅(`PreCommit.py`)이 돌린다.
+`py -3 -m Scripts lint server-ui [--self-check]` 로 돌리고, 커밋 훅(`Rules.py` 표)이 돌린다.
 """
 
 from __future__ import annotations
@@ -62,7 +62,7 @@ def findProblems(listSource: Iterable[tuple[str, str]]) -> list[str]:
 # 클라이언트 구성은 그 헤더를 읽을 수 있어 서버를 짓기 전에는 드러나지 않는다 — 커밋에서 잡는다. `SW_WITH_CLIENT_CODE` 구역도 같은 까닭으로 막고,
 # 클라이언트 일은 창구(`IEngineUIDriver` · `IEngineRenderDriver` · `IEngineAudioDriver` · `ISoundPlayer` · `IVoiceDecoder` · `IShaderCookService` · `IDevToolsClientPart`)로 부른다.
 kEngineScanRoots = ("Source/Engine/", "Source/DevTools/", "Source/ModuleManager/", "Source/Server/")
-kEngineConfigPath = "Config/Dev/ClientCodeGuards.json"
+kEngineConfigPath = "Config/Rules/Lint/ClientCodeGuards.json"
 kUnbuiltFolderLine = re.compile(r'list\(APPEND SW_UNBUILT_ENGINE_FOLDERS ([^)]*)\)')
 
 

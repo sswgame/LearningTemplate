@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Scripts/lint/NewNames.py
+Scripts/dev/NewNames.py
 
 묶음이 새로 들인 함수 이름(헤더 선언)을 모아 사람이 검토할 목록으로 낸다 — 통합 때 `code-review-and-quality` 와 함께 본다.
 
 **왜 게이트가 아니라 목록인가.** `naming-words` 는 함수의 앞 단어(동사)만 표와 대조한다. `allowsOneMore` · `finishGraceFind` 처럼 동사는 흔하고
 이름 전체가 무엇을 하는지 말하지 않는 것은 낱말 표로 가릴 수 없다(`Peak` · `Extra` 는 업계에서도 쓰는 말이라 낱말을 막으면 맞는 이름까지 막힌다,
 2026-11-08). 그래서 기계는 새 이름만 빠짐없이 모으고, 판정(언리얼 · 유니티 · Godot 의 같은 일 이름과 대조)은 통합 담당이 한다. 바꾼 옛 이름은
-`Config/Dev/NamingWords.json` 의 `_bannedNames` 에 올려 다른 브랜치가 되살리지 못하게 한다.
+`Config/Rules/Lint/NamingWords.json` 의 `_bannedNames` 에 올려 다른 브랜치가 되살리지 못하게 한다.
 
 `py -3 -m Scripts new-names --base <묶음 시작 커밋> [브랜치 …]` — 브랜치가 없으면 지금 작업 트리를 본다. 묶음 시작 전에도 있던 이름은 뺀다.
 """

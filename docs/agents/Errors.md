@@ -44,6 +44,6 @@ Godot returns `Error` codes plus out parameters; Unity (C#) uses exceptions or `
 
 ### Migration state
 
-- `Source/Core` is migrated: no `std::optional`, no `string& outError` (enforced as 0 by `py -3 -m Scripts result-types`, run by the commit hook). Exemptions are data, per file and kind, in the baseline's `_coreExemptions` with a reason (`Expected.h`'s bridge, one pre-rule failure-only text output).
-- Outside Core the remaining count per file is in `Config/Dev/ResultTypeBaseline.json`: it may only go down. When a file drops, run `py -3 -m Scripts result-types --ratchet` and commit the baseline with it.
+- `Source/Core` is migrated: no `std::optional`, no `string& outError` (enforced as 0 by `py -3 -m Scripts lint result-types`, run by the commit hook). Exemptions are data, per file and kind, in the baseline's `_coreExemptions` with a reason (`Expected.h`'s bridge, one pre-rule failure-only text output).
+- Outside Core the remaining count per file is in `Config/Rules/Lint/ResultTypeBaseline.json`: it may only go down. When a file drops, run `py -3 -m Scripts lint result-types --ratchet` and commit the baseline with it.
 - Until the baseline is empty, `sw::optional<T>` and `std::optional<T>` convert implicitly both ways, so a migrated caller can receive a not-yet-migrated `std::optional` result and the other way round (folders migrate on separate branches). Because both ways convert, a conditional that mixes the two is ambiguous — wrap one side (`cond ? optional<T>{ f() } : nullopt`). Delete both conversions (marked `shortcut:` in `Expected.h`) with the last baseline entry.

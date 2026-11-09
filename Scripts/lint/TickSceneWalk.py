@@ -15,9 +15,9 @@ Scripts/lint/TickSceneWalk.py
 모아 "씬을 도는 함수" 집합을 부르는 쪽으로 넓힌다. 한정 이름 호출(`SessionStateComponent::findFirstOpen(`)은 파일을 넘어 따라가고, 맨 이름 호출은
 같은 파일의 같은 클래스 · 클래스 밖 도우미로만 푼다(`pX->method(` 의 형식은 글로 알 수 없어 따라가지 않는다). 자기 오브젝트 순회
 (`pOwner->forEachComponentOfType`)는 잡지 않는다 — 받는 쪽 이름에 `anager` 가 든 것과 `getManager()->` 만 본다.
-예외는 `Config/Dev/TickSceneWalkExceptions.json` 에 `경로::클래스::함수` 와 까닭을 적는다.
+예외는 `Config/Rules/Lint/TickSceneWalkExceptions.json` 에 `경로::클래스::함수` 와 까닭을 적는다.
 
-`py -3 -m Scripts tick-scene-walk [--self-check]` 로 돌리고, 커밋 훅(`PreCommit.py`)이 돌린다.
+`py -3 -m Scripts lint tick-scene-walk [--self-check]` 로 돌리고, 커밋 훅(`Rules.py` 표)이 돌린다.
 """
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 
-kConfigPath = "Config/Dev/TickSceneWalkExceptions.json"
+kConfigPath = "Config/Rules/Lint/TickSceneWalkExceptions.json"
 kComment = re.compile(r"//[^\n]*|/\*.*?\*/", re.S)
 kString = re.compile(r'"(?:\\.|[^"\\\n])*"')
 kDefinition = re.compile(r"\b(?:(\w+)::)?(\w+)\s*\((?:[^;{}()]|\([^()]*\))*\)\s*(?:const\s*)?(?:noexcept\s*)?(?:override\s*)?(?:->\s*[\w:<>]+\s*)?\{")

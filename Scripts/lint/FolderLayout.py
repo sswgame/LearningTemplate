@@ -3,7 +3,7 @@
 """
 Scripts/lint/FolderLayout.py
 
-파일 자리 규칙(`docs/agents/FolderLayout.md` 4 절)을 경로로 막는다 — 표는 `Config/Dev/FolderLayout.json`.
+파일 자리 규칙(`docs/agents/FolderLayout.md` 4 절)을 경로로 막는다 — 표는 `Config/Rules/Lint/FolderLayout.json`.
   1. 잡동사니 폴더 이름(`Util` · `Utility` · `Helpers` · `Misc` …) 금지 — 하는 일(Encoding · Algorithm · Hash …)로 묶는다.
   2. `Dev/` 폴더는 엔진 쪽 금지 — 개발 기능은 `Source/DevTools/`(언리얼 Developer 모듈 자리). DevTools 가 볼 수 없는 모듈 안(게임 · 호스트 · 정적 라이브러리 내부)만
      `_devFolderAllowed` 에 까닭과 함께 둔다.
@@ -25,7 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 
-kConfigPath = "Config/Dev/FolderLayout.json"
+kConfigPath = "Config/Rules/Lint/FolderLayout.json"
 
 
 def checkFolderLayout(projectRoot: Path, listPath: list[str] | None = None) -> list[str]:
@@ -57,7 +57,7 @@ def checkFolderLayout(projectRoot: Path, listPath: list[str] | None = None) -> l
     return listProblem
 
 
-def main(listArgument: list[str] | None = None) -> int:  # noqa: ARG001 — `py -3 -m Scripts folder-layout` 가 인자 목록을 넘긴다
+def main(listArgument: list[str] | None = None) -> int:  # noqa: ARG001 — `py -3 -m Scripts lint folder-layout` 가 인자 목록을 넘긴다
     listProblem = checkFolderLayout(getProjectRoot())
     for problem in listProblem:
         print(f"  - {problem}")

@@ -4,7 +4,7 @@
 Scripts/lint/EditorViewIncludes.py
 
 MVVM 으로 옮긴 에디터 패널의 View(`Source/Editor/Panels/**` 의 `Model` 밖 .h · .cpp)가 모델 · 씬 헤더를 include 하는지 본다
-(계약: `docs/agents/EditorUI.md` 'MVVM' 절, 표: `Config/Dev/EditorViewIncludes.json`).
+(계약: `docs/agents/EditorUI.md` 'MVVM' 절, 표: `Config/Rules/Lint/EditorViewIncludes.json`).
 
 **왜 린트인가(임시).** 끝 모양은 형식이다 — View 부분(`Source/Editor/CMakeLists.txt` 의 `EditorTier<N>View`)에 모델 · 씬 헤더 자리마다 `#error` 껍데기를 두어
 컴파일이 막는다(모델 층의 ImGui 금지와 같은 장치). 그 장치는 부분 전체에 한 번에 걸리므로 패널을 하나씩 옮기는 동안에는 걸 수 없다. 그래서 옮긴 View 목록(데이터)만 이
@@ -14,7 +14,7 @@ MVVM 으로 옮긴 에디터 패널의 View(`Source/Editor/Panels/**` 의 `Model
 ViewModel 헤더가 모델 헤더를 끌고 오면 껍데기를 건 날 View 가 멈추므로 지금 잡는다. 금지 폴더 안의 값 · 창구 헤더는 표의 `_allowedHeaders` 가 까닭과 함께 허용한다.
 목록의 View 가 사라졌으면(이름을 바꿨으면) 낡은 줄로 알린다.
 
-`py -3 -m Scripts editor-view-includes [--self-check]` 로 돌리고, 커밋 훅(`PreCommit.py`)이 돌린다.
+`py -3 -m Scripts lint editor-view-includes [--self-check]` 로 돌리고, 커밋 훅(`Rules.py` 표)이 돌린다.
 """
 
 from __future__ import annotations
@@ -31,7 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 
-kConfigPath = "Config/Dev/EditorViewIncludes.json"
+kConfigPath = "Config/Rules/Lint/EditorViewIncludes.json"
 kViewExtensions = (".h", ".cpp")
 kInclude = re.compile(r'^\s*#\s*include\s+"([^"]+)"', re.M)
 kPanelModelHeader = re.compile(r'^Editor/Panels/(?:[^/]+/)+Model/[^/]+\.h$')

@@ -6,11 +6,11 @@ Scripts/lint/NamingWords.py
 함수 이름의 앞 단어와 형식 이름의 끝 단어를 허용 표와 대조한다.
 
 **왜 린트인가.** 이름이 업계 용어인지는 형식이 말할 수 없다. 표 없이 눈에 띈 이름만 고치면 `drain` · `Since` 처럼 같은 일에 새 낱말이
-계속 들어온다(2026-11-07). 새 낱말은 언리얼 · 유니티 · Godot 과 대조한 뒤 `Config/Dev/NamingWords.json` 에 올린다.
+계속 들어온다(2026-11-07). 새 낱말은 언리얼 · 유니티 · Godot 과 대조한 뒤 `Config/Rules/Lint/NamingWords.json` 에 올린다.
 `_banned` 는 쓰지 않기로 한 낱말과 대신 쓸 말이고, `_keep` 은 그 낱말을 쓰는 까닭이 있는 이름 하나씩이다.
 `_bannedNames` 는 전수 개명한 옛 식별자(통째 이름)와 새 이름이다 — 개명 뒤 다른 작업자 브랜치 · 붙여 넣은 코드가 옛 이름을 되살리지 못하게 한다(주석 · 문자열 밖 코드만 본다).
 
-`py -3 -m Scripts naming-words [--self-check]` 로 돌리고, 커밋 훅(`PreCommit.py`)이 돌린다.
+`py -3 -m Scripts lint naming-words [--self-check]` 로 돌리고, 커밋 훅(`Rules.py` 표)이 돌린다.
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 
-kConfigPath = "Config/Dev/NamingWords.json"
+kConfigPath = "Config/Rules/Lint/NamingWords.json"
 kExtensions = (".h", ".cpp", ".inl")
 kComment = re.compile(r"//[^\n]*|/\*.*?\*/", re.S)
 kString = re.compile(r'R"\((?:.|\n)*?\)"|"(?:[^"\\\n]|\\.)*"')

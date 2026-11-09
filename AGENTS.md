@@ -36,7 +36,7 @@ Korean examples for these rules are in [docs/04_CodingGuidelines.md](docs/04_Cod
 | Folder | Role |
 | --- | --- |
 | `Source/Core` | Foundational utility static library, shared with Engine through object compilation |
-| `Source/Engine` | Objects, RHI/graphics, physics, scenes; a shared DLL in Dev. Folders are layered (`Scripts/generate/rules/EngineLayers.toml`; each layer builds as its own part and an upper-layer include fails to compile); a feature folder owns its components (`Physics/Component`) |
+| `Source/Engine` | Objects, RHI/graphics, physics, scenes; a shared DLL in Dev. Folders are layered (`Config/Rules/Layers/EngineLayers.toml`; each layer builds as its own part and an upper-layer include fails to compile); a feature folder owns its components (`Physics/Component`) |
 | `Source/ModuleAPI` | Header-only `INTERFACE` library: the pure C-ABI contract between App and Editor/Game modules. No implementations |
 | `Source/App` | Thin launcher. Dev links Engine + ModuleAPI; Shipping also links `SWGame`. `Engine` runs the main loop, `GameModuleManager` (`Source/ModuleManager`, shared with Server) manages game-module loading, hot reload and async-task fencing |
 | `Source/Editor` | Dev only. **Every editor feature lives here or under a kit's `Editor/`** — Engine and Core hold no function only the editor calls (no `WITH_EDITOR` regions). Engine offers read APIs, read/write-paired serialization and extension points; the editor edits a data copy, writes it with the engine serializer and the runtime reloads. Editor state that must survive a module reload or backend swap is handed over as bytes through the host's `IModuleStateStore` (`ModuleAPI/Service`); undo steps are data (`SW_UNDO_STEP`) |

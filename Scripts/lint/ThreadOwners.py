@@ -3,7 +3,7 @@
 """
 Scripts/lint/ThreadOwners.py
 
-작업 시스템(`TaskManager`) 밖에서 스레드를 만드는 파일을 허용 목록(`Config/Dev/ThreadOwners.json`)과 맞춘다.
+작업 시스템(`TaskManager`) 밖에서 스레드를 만드는 파일을 허용 목록(`Config/Rules/Lint/ThreadOwners.json`)과 맞춘다.
 
 **왜 린트인가.** 자체 스레드는 워커 수가 TaskManager 와 따로 놀아 코어를 과포화하고, 잠들며 결과를 묻는 폴링을 부른다(2026-11-08 병렬 · 비동기 전수 조사).
 그런데 `sw::thread` 는 OS 를 막고 기다려야 하는 곳(소켓 · 파일 감시 · 프로세스 · 크래시 · 렌더 스레드)에 꼭 필요한 정상 형식이라 형식으로 막을 수 없다.
@@ -15,7 +15,7 @@ Scripts/lint/ThreadOwners.py
 - 목록 항목 `_path` 는 확장자 없는 경로(`.h` · `.cpp` 둘 다 맞는다)다. 더는 스레드를 만들지 않는 항목은 낡은 예외로 멈춘다(목록이 사실과 어긋나지 않게).
 - 테스트(`/Tests/`)는 경합을 일부러 만들므로 보지 않는다.
 
-`py -3 -m Scripts thread-owners [--self-check]` 로 돌리고, 커밋 훅(`PreCommit.py`)이 돌린다.
+`py -3 -m Scripts lint thread-owners [--self-check]` 로 돌리고, 커밋 훅(`Rules.py` 표)이 돌린다.
 """
 
 from __future__ import annotations
@@ -33,7 +33,7 @@ from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from lint.CppShape import stripCode  # noqa: E402
 
-kConfigPath = "Config/Dev/ThreadOwners.json"
+kConfigPath = "Config/Rules/Lint/ThreadOwners.json"
 kThreadShape = re.compile(r"\b(?:sw|std)::thread\b(?!\s*::)|\bstd::jthread\b|\bstd::async\s*\(|\bDedicatedWorker\s*<|\bCreateThread\s*\(|\b_beginthreadex\s*\(|\bpthread_create\s*\(")
 kPrefilter = ("thread", "DedicatedWorker", "async", "CreateThread")
 
