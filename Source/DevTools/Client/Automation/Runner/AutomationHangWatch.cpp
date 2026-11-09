@@ -59,7 +59,7 @@ namespace sw
         {
             /**
              * @brief 한 번에 멈출 수 있는 가장 긴 시간(초)입니다. 행 감시가 먼저 프로세스를 끝내므로 정상 실행에서는 닿지 않는다 — 감시 없이 손으로 부른 실행이
-             *        영영 멈추지 않게 하는 상한이고, 프로세스 시한(`AutomationTimeLimits::kProcessKillSeconds` 180)보다 짧다.
+             *        영영 멈추지 않게 하는 상한이고, 정지 시한(`AutomationTimeLimits::kProcessStallSeconds` 180)보다 짧다.
              */
             static constexpr int32 kMaxHangSeconds = 60;
 

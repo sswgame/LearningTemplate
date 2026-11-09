@@ -61,6 +61,14 @@ namespace
         return material;
     }
 
+    /** @brief 씬 기본 자리의 불투명 머티리얼입니다 — 머티리얼을 비운 메시는 렌더러처럼 이것으로 그려진다(`Material::resolveDrawMaterial`). */
+    sw::shared_ptr<sw::Material> makeOpaqueMaterial()
+    {
+        sw::shared_ptr<sw::Material> material = sw::Material::create();
+        SW_EXPECT_TRUE( material->loadFromXML( "<MaterialDef formatVersion=\"0\" name=\"ProbeWall\" shaderPath=\"engine/shaders/forward_lit.hlsl\"/>" ) );
+        return material;
+    }
+
     /** @brief 단위 큐브 메시를 든 오브젝트를 씬에 올립니다. */
     sw::MeshComponent* addCube( sw::GameObjectManager* pObjects, const utf8* pName, const sw::float3& position, sw::Material* pMaterial, bool bVisible )
     {
@@ -195,7 +203,8 @@ SW_TEST_CASE( SceneVoxelGridTest, TraceRayHitsWallAndInsideStart )
  */
 SW_TEST_CASE( SceneVoxelizerTest, VoxelizesOpaqueVisibleMeshesOnly )
 {
-    const sw::shared_ptr<sw::Material> glass = makeTranslucentMaterial(); // 씬보다 먼저 만든다 — 메시가 원시 포인터로 든다
+    const sw::shared_ptr<sw::Material> glass       = makeTranslucentMaterial(); // 씬보다 먼저 만든다 — 메시가 원시 포인터로 든다
+    const sw::shared_ptr<sw::Material> sceneOpaque = makeOpaqueMaterial();
     sw::Scene                          scene( "SceneVoxelizerOpaque" );
     sw::GameObjectManager*             pObjects = scene.getObjectManager();
     SW_REQUIRE_NOT_NULL( pObjects );
@@ -206,12 +215,15 @@ SW_TEST_CASE( SceneVoxelizerTest, VoxelizesOpaqueVisibleMeshesOnly )
 
     SW_REQUIRE_NOT_NULL( addCube( pObjects, "Glass", sw::float3{ 0.0f, 0.0f, 0.0f }, glass.get(), true ) );
     SW_REQUIRE_NOT_NULL( addCube( pObjects, "Hidden", sw::float3{ 0.0f, 0.0f, 0.0f }, nullptr, false ) );
-    const sw::SceneVoxelGrid empty = sw::SceneVoxelizer::makeGrid( pObjects->getPrimitiveRegistry(), bounds, 0.25f );
+    const sw::SceneVoxelGrid empty = sw::SceneVoxelizer::makeGrid( pObjects->getPrimitiveRegistry(), sceneOpaque.get(), bounds, 0.25f );
     SW_REQUIRE_FALSE( empty.isEmpty() );
     SW_EXPECT_EQUAL( 0u, empty.countOccupied() );
 
     SW_REQUIRE_NOT_NULL( addCube( pObjects, "Wall", sw::float3{ 0.0f, 0.0f, 0.0f }, nullptr, true ) );
-    const sw::SceneVoxelGrid solid = sw::SceneVoxelizer::makeGrid( pObjects->getPrimitiveRegistry(), bounds, 0.25f );
+    const sw::SceneVoxelGrid solid = sw::SceneVoxelizer::makeGrid( pObjects->getPrimitiveRegistry(), sceneOpaque.get(), bounds, 0.25f );
+    // 머티리얼을 비운 메시는 씬 기본으로 그려진다 — 기본이 반투명이면 렌더러처럼 가리개가 아니다(복셀러가 따로 짐작하지 않는다).
+    const sw::SceneVoxelGrid seeThrough = sw::SceneVoxelizer::makeGrid( pObjects->getPrimitiveRegistry(), glass.get(), bounds, 0.25f );
+    SW_EXPECT_EQUAL( 0u, seeThrough.countOccupied() );
     SW_EXPECT_TRUE( solid.countOccupied() > 0u );
     SW_EXPECT_TRUE( solid.isOccupied( 6, 8, 8 ) );  // x = -0.5 면 근처
     SW_EXPECT_FALSE( solid.isOccupied( 8, 8, 8 ) ); // 속은 비었다

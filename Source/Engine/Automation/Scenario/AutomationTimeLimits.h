@@ -14,14 +14,17 @@ namespace sw
      *          - 감시(`kDefaultWallTimeoutSeconds`): 실행기가 프레임 앞뒤에서 보는 시나리오 한 편의 벽시계 상한(시나리오가 `wallTimeoutSeconds` 로 바꿀 수 있다).
      *          - 유예(`kHangGraceSeconds`): 감시 시한이 지났는데도 게임 스레드가 끝맺지 못하면(프레임이 멈춘 행) 감시 스레드가 이만큼 더 기다린 뒤 보고를 대신 쓴다.
      *          - 시계 보류(`kClockHoldTimeoutSeconds`): 시계 잡기 조건 하나가 이어서 시계를 붙잡을 수 있는 시간.
-     *          - 프로세스 시한(`kProcessKillSeconds`): 백엔드마다 실행(`AutomationPerBackend`)이 끝나지 않은 자식 App 을 죽이는 시한. CTest 시한(600)은 그보다 길다.
+     *          - 정지 시한(`kProcessStallSeconds`): 백엔드마다 실행(`AutomationPerBackend`)이 자식 App 의 로그가 이만큼 자라지 않으면 멈춘 것으로 보고 죽인다.
+     *            빈 셰이더 캐시의 첫 실행처럼 오래 일하는 자식은 로그(`ShaderCompiler.CompiledOnCacheMiss`)가 자라 죽지 않는다 — 벽시계로만 재면 일하는 자식을 죽였다.
+     *          - 프로세스 시한(`kProcessKillSeconds`): 로그를 끝없이 내며 끝나지 않는 자식의 단계당 상한. CTest 시한은 그보다 길다.
      */
     struct AutomationTimeLimits
     {
         static constexpr float32 kDefaultWallTimeoutSeconds = 150.0f;
         static constexpr float32 kHangGraceSeconds          = 5.0f;
         static constexpr float64 kClockHoldTimeoutSeconds   = 170.0;
-        static constexpr uint32  kProcessKillSeconds        = 180;
+        static constexpr uint32  kProcessStallSeconds       = 180;
+        static constexpr uint32  kProcessKillSeconds        = 540;
         /**
          * @brief 단계 · 시계 잡기 조건이 이만큼(초) 넘게 기다리면 무엇을 기다리는지 로그에 찍고, 그 뒤로 `kWaitReportIntervalSeconds` 마다 다시 찍습니다.
          * @details 끝날 때만 까닭을 찍으면 끝나지 않는 대기는 창이 멈춘 듯 아무것도 남기지 않는다(사용자 지적 2026-11-08). 짧은 대기(에셋 한 프레임)는 찍지 않는다.
@@ -55,6 +58,8 @@ namespace sw
         static_assert( static_cast<float64>( kDefaultWallTimeoutSeconds ) + static_cast<float64>( kHangGraceSeconds ) < kClockHoldTimeoutSeconds,
                        "wall watch + hang grace must come before the clock-hold timeout" );
         static_assert( kClockHoldTimeoutSeconds < static_cast<float64>( kProcessKillSeconds ), "the clock-hold timeout must come before the process kill" );
+        static_assert( kClockHoldTimeoutSeconds < static_cast<float64>( kProcessStallSeconds ), "the clock-hold timeout (which logs while it waits) must come before the stall kill" );
+        static_assert( kProcessStallSeconds < kProcessKillSeconds, "the stall kill catches a stopped child before the process limit" );
     };
 
     // 멤버 함수는 클래스 안에서 상수식에 쓸 수 없어 아래에서 묶는다.

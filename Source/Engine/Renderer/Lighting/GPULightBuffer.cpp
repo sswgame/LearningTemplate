@@ -70,7 +70,7 @@ namespace sw
             /**
              * @brief 실시간 볼륨 하나를 라이트 목록 · 프로브 자리 · 갱신 요청 목록에 넣습니다. 복셀 격자 캐시가 낡았으면(상자 · 칸 크기 · 프리미티브 집합이 바뀜) 여기서 다시 만든다.
              */
-            static void appendRealtimeVolume( const GameObjectManager& manager, const LightProbeVolumeComponent& volume, vector<GPULight>& inoutList, LightProbeElementBuilder& inoutProbeElement,
+            static void appendRealtimeVolume( const Scene& scene, const GameObjectManager& manager, const LightProbeVolumeComponent& volume, vector<GPULight>& inoutList, LightProbeElementBuilder& inoutProbeElement,
                                               vector<RealtimeProbeRequest>& inoutListRequest )
             {
                 const PrimitiveRegistry&         primitives = manager.getPrimitiveRegistry();
@@ -78,7 +78,7 @@ namespace sw
                 shared_ptr<const SceneVoxelGrid> pGrid      = volume.findRealtimeVoxelGrid( generation );
                 if ( pGrid == nullptr )
                 {
-                    pGrid = make_shared<SceneVoxelGrid>( SceneVoxelizer::makeGrid( primitives, volume.computeRealtimeVoxelBounds(), volume.getVoxelSize() ) );
+                    pGrid = make_shared<SceneVoxelGrid>( SceneVoxelizer::makeGrid( primitives, scene.getMaterial(), volume.computeRealtimeVoxelBounds(), volume.getVoxelSize() ) );
                     volume.setRealtimeVoxelGrid( pGrid, generation );
                 }
                 if ( pGrid->isEmpty() )
@@ -283,7 +283,7 @@ namespace sw
                 {
                     // 실시간 볼륨은 베이크를 보지 않는다. 요청 목록을 받지 않는 경로(미리보기)는 갱신을 돌리지 못하므로 넣지 않는다 — 그곳은 볼륨이 없는 곳과 같다.
                     if ( pOutListRealtimeProbe != nullptr )
-                        GPULightBufferInternal::appendRealtimeVolume( *pScene->getObjectManager(), *pVolume, outList, *pOutProbeElement, *pOutListRealtimeProbe );
+                        GPULightBufferInternal::appendRealtimeVolume( *pScene, *pScene->getObjectManager(), *pVolume, outList, *pOutProbeElement, *pOutListRealtimeProbe );
                     continue;
                 }
                 const LightProbeGrid* pGrid = pVolume->findProbeData();

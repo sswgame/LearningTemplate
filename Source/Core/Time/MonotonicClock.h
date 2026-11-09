@@ -88,6 +88,8 @@ namespace sw
     public:
         /** @brief 지금부터 @p milliseconds 뒤가 기한입니다. */
         static Deadline afterMilliseconds( int64 milliseconds ) noexcept { return Deadline{ MonotonicClock::nowNanoseconds() + milliseconds * constant::time::kNanosecondsPerMillisecond }; }
+        /** @brief 지금부터 @p seconds 초 뒤입니다. */
+        static Deadline afterSeconds( int64 seconds ) noexcept { return Deadline{ MonotonicClock::nowNanoseconds() + seconds * constant::time::kNanosecondsPerSecond }; }
 
         /** @brief 기한이 지났으면 true 입니다. */
         bool isExpired() const noexcept { return MonotonicClock::nowNanoseconds() >= _deadlineNanoseconds; }

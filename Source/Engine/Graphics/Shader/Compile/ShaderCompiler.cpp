@@ -13,6 +13,7 @@
 #include "Core/Process/Process.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/ContentHash.h"
@@ -819,6 +820,15 @@ namespace sw
         }
 
         const string profile = Internal::getTargetProfile( desc._stage, desc._targetFormat );
+        // 캐시에 없어 실제로 컴파일하는 것만 알린다 — 빈 캐시의 첫 실행은 수 분 동안 이 줄만 나온다. 이 줄이 "멈춘 것이 아니라 일하는 중" 의 증거다
+        // (백엔드마다 실행의 정지 감시가 자식 로그가 자라는지로 본다 — AutomationPerBackend). 캐시가 찬 실행은 한 줄도 내지 않는다(언리얼 셰이더 컴파일 진행 줄과 같은 자리).
+        const int64                 compileStartNanos = MonotonicClock::nowNanoseconds();
+        [[maybe_unused]] const auto reportCompiled    = [&desc, &profile, compileStartNanos]( const ShaderCompileResult& compiled )
+        {
+            if ( compiled._bSuccess )
+                SW_LOG_INFO_ID( "ShaderCompiler.CompiledOnCacheMiss", "Compiled %# %# (%#) in %# ms", desc._source.c_str(), desc._entryPoint.c_str(), profile.c_str(),
+                                ( MonotonicClock::nowNanoseconds() - compileStartNanos ) / constant::time::kNanosecondsPerMillisecond );
+        };
 
         const ShaderTargetFormatInfo* const pTargetInfo = ShaderTargetFormatTable::find( desc._targetFormat );
         const bool                          bFxcTarget  = pTargetInfo != nullptr && pTargetInfo->_tool == ShaderCompilerTool::Fxc;
@@ -827,6 +837,7 @@ namespace sw
         {
             if ( Internal::compileDxbc( desc, resolver->getIncludeResolver(), *input, profile, result ) )
                 Internal::saveToCacheIfEnabled( cachePath, result );
+            reportCompiled( result );
             return result;
         }
 #elif defined( SW_PLATFORM_POSIX )
@@ -849,6 +860,7 @@ namespace sw
         if ( outcome == Internal::DxcResult::Compiled )
         {
             Internal::saveToCacheIfEnabled( cachePath, result );
+            reportCompiled( result );
             return result;
         }
         if ( outcome == Internal::DxcResult::Rejected )

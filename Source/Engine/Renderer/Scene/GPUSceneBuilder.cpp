@@ -521,13 +521,7 @@ namespace sw
 
     bool GPUSceneBuilder::fillCandidateMaterial( DrawCandidate& candidate, Material* pMaterial, Scene* pScene )
     {
-        // 머티리얼이 없으면 인스턴스의 부모가 먼저고, 씬 기본 머티리얼은 그다음이다. 순서가 뒤집히면 인스턴스만 붙은 메시의
-        // 배치가 머티리얼, 그룹, 텍스처, stride 는 기본 머티리얼 것이고 원소 바이트와 퍼뮤테이션은 인스턴스 것인 섞인 상태가 된다
-        // (부모가 기본 머티리얼과 같은 벤치에서는 드러나지 않는다).
-        if ( pMaterial == nullptr && candidate._instance != nullptr )
-            pMaterial = candidate._instance->getParent();
-        if ( pMaterial == nullptr )
-            pMaterial = pScene->getMaterial();
+        pMaterial = Material::resolveDrawMaterial( pMaterial, candidate._instance.get(), pScene->getMaterial() ); // 복셀러와 같은 한 벌
         // 초기화가 끝나지 않은 머티리얼(줄에 있음 · 실패)은 그리지 않는다. `Failed` 의 오류는 초기화한 쪽(`MaterialCache::initializePending`)이 한 번 남겼다.
         if ( pMaterial != nullptr && pMaterial->getInitState() != MaterialInitState::Ready )
         {

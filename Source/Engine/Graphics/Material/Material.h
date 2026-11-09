@@ -44,6 +44,7 @@ namespace sw
     };
 
     class IRHIDevice;
+    class MaterialInstance;
     class MaterialParameterCollection;
 
     /// @brief 셰이더 퍼뮤테이션과 패킹한 머티리얼 바이트를 가진 머티리얼 에셋입니다. 게임 스레드 객체입니다.
@@ -319,6 +320,12 @@ namespace sw
 
         /** @brief `alphaCutoff` 칸이 값을 넣는 프로퍼티 이름입니다(셰이더의 `MaterialSurface._alphaCutoff` 를 채운다). */
         static constexpr const utf8* kAlphaCutoffProperty = "_alphaCutoff";
+
+        /**
+         * @brief 메시가 그려질 머티리얼입니다 — 자기 머티리얼, 없으면 인스턴스의 부모, 그래도 없으면 씬 기본. 렌더러와 복셀러가 이 한 벌로 고른다.
+         * @details 인스턴스 부모가 씬 기본보다 먼저다 — 뒤집히면 인스턴스만 붙은 메시의 배치가 두 머티리얼이 섞인 상태(원소 바이트는 인스턴스, 레이아웃은 기본)가 된다.
+         */
+        [[nodiscard]] static Material* resolveDrawMaterial( Material* pOwn, const MaterialInstance* pInstance, Material* pSceneDefault );
         /// 장면 색 사본을 굴절해 읽는 머티리얼의 define 입니다(scene_refraction.hlsli 를 쓰는 셰이더 — 물 · 외형 유리).
         static constexpr const utf8* kRefractionDefine = "MATERIAL_REFRACTION";
         /// 반투명 블렌드 define 입니다 — `alphaMode="Blend"` 와 함께 움직인다(하나만 있으면 알파가 새거나 불투명 목록에서 섞인다).

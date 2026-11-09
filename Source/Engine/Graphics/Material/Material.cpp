@@ -11,6 +11,7 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Material/MaterialPacking.h"
 #include "Engine/Graphics/Material/MaterialParameterCollection.h"
 #include "Engine/Graphics/Material/MaterialPermutation.h"
@@ -61,6 +62,16 @@ namespace sw
     {
         return VectorUtil::containsIf( _listAlwaysDefine, [define]( const string& item )
         { return string_view( item ) == define; } );
+    }
+
+    Material* Material::resolveDrawMaterial( Material* pOwn, const MaterialInstance* pInstance, Material* pSceneDefault )
+    {
+        Material* pMaterial = pOwn;
+        if ( pMaterial == nullptr && pInstance != nullptr )
+            pMaterial = pInstance->getParent();
+        if ( pMaterial == nullptr )
+            pMaterial = pSceneDefault;
+        return pMaterial;
     }
 
     shared_ptr<Material> Material::create()

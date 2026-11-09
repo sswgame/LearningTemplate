@@ -18,17 +18,19 @@ namespace sw
     {
         struct SceneVoxelizerInternal
         {
-            /** @brief 이 메시 컴포넌트가 복셀에 들어가는지입니다 — 불투명 · 보이는 · 스킨 없는 메시. */
-            static bool isOccluder( const MeshComponent& mesh )
+            /** @brief 메시가 그려질 머티리얼입니다 — 렌더러와 같은 한 벌(`Material::resolveDrawMaterial`: 자기 · 인스턴스 부모 · 씬 기본). */
+            static const Material* resolveMaterial( const MeshComponent& mesh, Material* pSceneDefault )
             {
-                const Mesh* pRawMesh = mesh.getRawMesh();
-                // 반투명은 머티리얼이 정한다(렌더러의 그리기 목록과 같은 근거). 머티리얼이 비어 있으면 렌더러가 인스턴스 부모 · 씬 기본으로 그린다 — 인스턴스 부모까지 본다.
-                // shortcut: 씬 기본 머티리얼은 보지 않는다(복셀러가 씬을 받지 않는다) — 기본 머티리얼은 불투명이다(engine/materials/defaultmaterial), 반투명 기본을 허락하면 씬을 넘긴다.
-                const Material* pMaterial = mesh.getMaterial();
-                if ( pMaterial == nullptr && mesh.getRawMaterialInstance() != nullptr )
-                    pMaterial = mesh.getRawMaterialInstance()->getParent();
-                const bool bTransparent = pMaterial != nullptr && pMaterial->getBlendMode() == RHIBlendMode::Transparent;
-                return pRawMesh != nullptr && mesh.isActive() && mesh.isVisible() && bTransparent == false && pRawMesh->hasSkin() == false;
+                return Material::resolveDrawMaterial( mesh.getMaterial(), mesh.getRawMaterialInstance(), pSceneDefault );
+            }
+
+            /** @brief 이 메시 컴포넌트가 복셀에 들어가는지입니다 — 불투명(머티리얼이 정한다 — 렌더러의 그리기 목록과 같은 근거) · 보이는 · 스킨 없는 메시. 그릴 머티리얼이 없으면 렌더러도 그리지 않는다. */
+            static bool isOccluder( const MeshComponent& mesh, Material* pSceneDefault )
+            {
+                const Mesh*     pRawMesh  = mesh.getRawMesh();
+                const Material* pMaterial = resolveMaterial( mesh, pSceneDefault );
+                return pRawMesh != nullptr && pMaterial != nullptr && mesh.isActive() && mesh.isVisible() && pMaterial->getBlendMode() == RHIBlendMode::Opaque &&
+                       pRawMesh->hasSkin() == false;
             }
 
             /**
@@ -36,9 +38,9 @@ namespace sw
              * @details 머티리얼 셰이더의 발광 훅(`computeMaterialEmissive`)은 GPU 코드라 CPU 가 돌릴 수 없다 — 같은 이름의 프로퍼티를 읽는다(텍스처 발광은 색 값만 본다).
              *          값을 읽지 못하면(글이 수 넷이 아님) 오류를 남기고 0 이다 — 다른 값으로 짐작하지 않는다.
              */
-            static float3 findEmission( const MeshComponent& component )
+            static float3 findEmission( const MeshComponent& component, Material* pSceneDefault )
             {
-                const Material* pMaterial = component.getMaterial();
+                const Material* pMaterial = resolveMaterial( component, pSceneDefault );
                 if ( pMaterial == nullptr )
                     return float3{};
                 const MaterialProperty* pColor = pMaterial->findProperty( hashed_string( "_emissiveColor" ) );
@@ -61,7 +63,7 @@ namespace sw
             }
 
             /** @brief 메시 컴포넌트의 삼각형을 월드로 옮겨 격자에 칠합니다. 발광 머티리얼이면 칸의 발광도 둡니다. */
-            static void voxelizeMesh( const MeshComponent& component, SceneVoxelGrid& inoutGrid )
+            static void voxelizeMesh( const MeshComponent& component, Material* pSceneDefault, SceneVoxelGrid& inoutGrid )
             {
                 const Mesh&              mesh     = *component.getRawMesh();
                 const vector<RHIVertex>& vertices = mesh.getVertices();
@@ -76,7 +78,7 @@ namespace sw
                 if ( end > indices.size() )
                     return; // LOD 인덱스 흐름의 범위 — CPU 는 LOD 0 만 안다
                 const float4x4 world     = component.getWorldMatrix();
-                const float3   emission  = findEmission( component );
+                const float3   emission  = findEmission( component, pSceneDefault );
                 const bool     bEmissive = emission._x > 0.0f || emission._y > 0.0f || emission._z > 0.0f;
                 for ( uint32 cornerIndex = first; cornerIndex + 2u < end; cornerIndex += 3u )
                 {
@@ -95,7 +97,7 @@ namespace sw
         };
     } // namespace
 
-    SceneVoxelGrid SceneVoxelizer::makeGrid( const PrimitiveRegistry& primitives, const AABB& bounds, float32 cellSize )
+    SceneVoxelGrid SceneVoxelizer::makeGrid( const PrimitiveRegistry& primitives, Material* pSceneDefault, const AABB& bounds, float32 cellSize )
     {
         using Internal      = SceneVoxelizerInternal;
         SceneVoxelGrid grid = SceneVoxelGrid::make( bounds, cellSize );
@@ -106,12 +108,12 @@ namespace sw
         {
             // 레지스트리의 실제 타입은 메시 컴포넌트 계열뿐이다(ScenePrimitive.h 의 불변식).
             const MeshComponent* pMesh = static_cast<const MeshComponent*>( pPrimitive );
-            if ( pMesh == nullptr || Internal::isOccluder( *pMesh ) == false )
+            if ( pMesh == nullptr || Internal::isOccluder( *pMesh, pSceneDefault ) == false )
                 continue;
             AABB worldBox{};
             if ( pMesh->getWorldBox( worldBox ) == false || worldBox.intersects( gridBounds ) == false )
                 continue;
-            Internal::voxelizeMesh( *pMesh, grid );
+            Internal::voxelizeMesh( *pMesh, pSceneDefault, grid );
         }
         return grid;
     }

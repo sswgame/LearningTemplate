@@ -14,6 +14,7 @@
 
 namespace sw
 {
+    class Material;
     class PrimitiveRegistry;
 
     /** @brief 씬의 메시를 복셀 격자로 만드는 도구입니다(전부 static). */
@@ -22,9 +23,10 @@ namespace sw
     public:
         /**
          * @brief 상자 @p bounds 를 덮는 격자를 만들고 레지스트리의 메시를 칠합니다.
+         * @param pSceneDefault 씬 기본 머티리얼 — 머티리얼이 비어 있는 메시는 렌더러처럼 이것으로 그려진다(`Material::resolveDrawMaterial`)
          * @param cellSize 목표 칸 크기(m) — 상자가 크면 `SceneVoxelGrid::make` 가 키운다
          * @return 칠한 격자. 상자가 유효하지 않으면 빈 격자다.
          */
-        [[nodiscard]] static SceneVoxelGrid makeGrid( const PrimitiveRegistry& primitives, const AABB& bounds, float32 cellSize );
+        [[nodiscard]] static SceneVoxelGrid makeGrid( const PrimitiveRegistry& primitives, Material* pSceneDefault, const AABB& bounds, float32 cellSize );
     };
 } // namespace sw

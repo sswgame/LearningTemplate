@@ -78,11 +78,23 @@ namespace sw
                 ProcessCommand _command{}; ///< 띄울 명령(슬롯이 비면 띄운다)
                 Process        _process{};
                 thread         _flushThread{};
-                Deadline       _killDeadline = Deadline::afterMilliseconds( 0 ); ///< 띄운 때부터 센 프로세스 시한(띄울 때 다시 정한다)
+                Deadline       _killDeadline  = Deadline::afterMilliseconds( 0 ); ///< 띄운 때부터 센 프로세스 시한(띄울 때 다시 정한다)
+                Deadline       _stallDeadline = Deadline::afterMilliseconds( 0 ); ///< 로그가 마지막으로 자란 때부터 센 정지 시한(로그가 자랄 때마다 다시 정한다)
+                uint64         _observedLogBytes{ 0 };                            ///< 정지 감시가 마지막으로 본 자식 로그 크기
                 int32          _exitCode{ -1 };
                 bool           _bLaunched{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
                 bool           _bPending{ false };  ///< 아직 띄우지 않았다(맡은 시나리오가 있다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
+
+            /** @brief 자식 로그가 자랐으면 정지 시한을 다시 정합니다 — 일하는 자식(빈 셰이더 캐시의 컴파일)은 죽이지 않고, 아무것도 남기지 않는 자식만 멈춘 것으로 본다. */
+            static void observeProgress( Child& inoutChild )
+            {
+                uint64 logBytes = 0;
+                if ( FileUtil::tryGetFileSize( inoutChild._logPath, logBytes ) == false || logBytes == inoutChild._observedLogBytes )
+                    return;
+                inoutChild._observedLogBytes = logBytes;
+                inoutChild._stallDeadline    = Deadline::afterSeconds( AutomationTimeLimits::kProcessStallSeconds );
+            }
 
             /** @brief 인자 한 줄의 키(앞 하이픈 · `=` 뒤를 뗀 것)입니다. */
             static string_view getArgumentKey( string_view argument )
@@ -411,9 +423,11 @@ namespace sw
         const size_t slotCount   = options._slotCount > 0 ? static_cast<size_t>( options._slotCount ) : listChild.size();
         const auto   launchChild = [&]( Internal::Child& child )
         {
-            child._bPending     = false;
-            child._killDeadline = Deadline::afterMilliseconds( killSeconds * 1000 );
-            child._bLaunched    = child._process.launch( child._command );
+            child._bPending         = false;
+            child._killDeadline     = Deadline::afterSeconds( killSeconds );
+            child._stallDeadline    = Deadline::afterSeconds( AutomationTimeLimits::kProcessStallSeconds );
+            child._observedLogBytes = 0;
+            child._bLaunched        = child._process.launch( child._command );
             if ( child._bLaunched == false )
             {
                 SW_LOG_ERROR_ID( "ScenarioPerBackend.PerBackendCouldNot2", "[Scenario] per-backend: could not launch %#", child._command.toCommandLine().c_str() );
@@ -433,7 +447,8 @@ namespace sw
         {
             const bool bKilled = child._process.isRunning() && child._process.terminate( getAutomationExitStatus( AutomationResult::TimedOut ) );
             if ( bKilled )
-                SW_LOG_ERROR_ID( "ScenarioPerBackend.PerBackendDidNot", "[Scenario] per-backend: %# did not finish within %# s - killed", child._backend.c_str(), killSeconds );
+                SW_LOG_ERROR_ID( "ScenarioPerBackend.PerBackendDidNot", "[Scenario] per-backend: %# %# - killed", child._backend.c_str(),
+                                 child._killDeadline.isExpired() ? "did not finish within the process limit" : "logged nothing for the stall limit (stopped)" );
             child._exitCode = child._process.waitForExit();
             if ( bKilled )
                 child._exitCode = getAutomationExitStatus( AutomationResult::TimedOut ); // POSIX 는 종료 코드를 줄 수 없다(128 + SIGKILL) — 결과는 시간 초과다
@@ -446,7 +461,9 @@ namespace sw
             size_t runningCount = 0;
             for ( unique_ptr<Internal::Child>& pChild : listChild )
             {
-                if ( pChild->_bLaunched && ( pChild->_process.isRunning() == false || pChild->_killDeadline.isExpired() ) )
+                if ( pChild->_bLaunched )
+                    Internal::observeProgress( *pChild );
+                if ( pChild->_bLaunched && ( pChild->_process.isRunning() == false || pChild->_killDeadline.isExpired() || pChild->_stallDeadline.isExpired() ) )
                     finishChild( *pChild );
                 runningCount += pChild->_bLaunched ? 1 : 0;
             }

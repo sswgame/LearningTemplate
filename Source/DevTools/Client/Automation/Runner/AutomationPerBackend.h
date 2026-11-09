@@ -7,7 +7,7 @@
  *          보고(`-scenario-report=R.json`)를 받았으면 자식은 `R.<백엔드>.json`, 부모는 `R.json` 에 백엔드별 결과를 쓴다. 받지 않아도 자식은 기본 폴더의 `<백엔드>.json` 에 쓴다 —
  *          부모가 그 보고의 `records[]`(`<Record>`)를 시나리오마다 백엔드 사이에 견주고(`findRecordMismatches`), 하나라도 다르면 실행이 실패(10)다. 언리얼 자동화의 결정성 대조 자리다.
  *          자식 창은 2 열 바둑판으로 놓는다(`-WinTile` · `-WinTileColumns` — 칸 간격은 자식 창이 제 틀 두께로 정한다, 넘겨받은 인자에 `-WinX` · `-WinTile` 이 있으면 두지 않는다) — 백엔드마다 화면이 겹치지 않고 한 번에 보인다.
- *          자식은 프로세스 시한(`AutomationTimeLimits::kProcessKillSeconds` × 체인의 단계 수) 안에 끝나야 한다 — 넘기면 죽이고 시간 초과(12)로 센다.
+ *          자식은 로그가 정지 시한(`AutomationTimeLimits::kProcessStallSeconds`) 넘게 자라지 않거나 프로세스 시한(`kProcessKillSeconds` × 체인의 단계 수)을 넘기면 죽이고 시간 초과(12)로 센다.
  *          종료 코드: 하나라도 실패면 표 순서로 첫 실패 백엔드의 코드, 아니면 하나라도 통과면 0, 모두 건너뜀이면 13. 이 기계에서 못 도는 백엔드(77)는 건너뜀으로 센다.
  */
 #pragma once
