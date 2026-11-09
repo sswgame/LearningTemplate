@@ -229,7 +229,7 @@
     "Source/Editor/Panels/Animation/AnimationClipPreviewPanel.cpp": {"integer": 1},
     "Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp": {"minus-one": 9, "float": 5},
     "Source/Editor/Panels/Animation/AnimationGraphPanel.cpp": {"float": 15, "integer": 2},
-    "Source/Editor/Panels/Animation/AnimationRewindPanel.cpp": {"float": 7, "integer": 1},
+    "Source/Editor/Panels/Animation/AnimationRewindPanel.cpp": {"float": 6, "integer": 1},
     "Source/Editor/Panels/Animation/BoneHierarchyPopup.cpp": {"integer": 1},
     "Source/Editor/Panels/Animation/Model/BoneMaskHierarchy.h": {"minus-one": 1},
     "Source/Editor/Panels/Animation/Model/SequenceModel.cpp": {"minus-one": 16},

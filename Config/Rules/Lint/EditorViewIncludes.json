@@ -33,6 +33,7 @@
         "Source/Editor/Panels/Animation/AnimationClipPreviewPanel",
         "Source/Editor/Panels/Animation/AnimationGraphLayerEditor",
         "Source/Editor/Panels/Animation/AnimationGraphPanel",
+        "Source/Editor/Panels/Animation/AnimationRewindPanel",
         "Source/Editor/Panels/Animation/AnimationWatches",
         "Source/Editor/Panels/Animation/BoneHierarchyPopup",
         "Source/Editor/Panels/Animation/SequenceDebuggerPanel",
