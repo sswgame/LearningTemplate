@@ -1,3 +1,3 @@
 <?xml version="1.0" encoding="utf-8"?>
-<MaterialDef formatVersion="0" name="depthalways_green" _base="game/empty/materials/renderstate/plain_green.material" depthCompare="Always" renderQueue="10">
+<MaterialDef formatVersion="0" name="depthalways_green" _base="game/empty/materials/renderstate/plain_green.material" depthCompare="Always">
 </MaterialDef>

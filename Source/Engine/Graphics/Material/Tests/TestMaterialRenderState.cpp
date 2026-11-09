@@ -271,3 +271,31 @@ SW_TEST_CASE( MaterialRenderStateTest, ImpossibleCombinationsAreLoadErrors )
     shared_ptr<Material> writeMask = Material::create();
     SW_EXPECT_TRUE( RenderStateTestUtil::load( *writeMask, "alphaMode=\"Opaque\"", "<_listBlendTarget><RHIBlendTargetState colorWriteMask=\"RGB\"/></_listBlendTarget>" ) );
 }
+
+/** @brief [MaterialRenderStateTest] 불투명 그리기 띠는 덮은 렌더 상태가 정한다 — 그려진 것에 기대는 머티리얼은 차례를 적지 않아도 뒤 띠, 스텐실 마스크는 그 앞이다 */
+SW_TEST_CASE( MaterialRenderStateTest, OrderDependentStatesDrawInALaterBand )
+{
+    struct BandCase
+    {
+        const utf8*       _pAttributes;
+        const utf8*       _pChildren;
+        RHIOpaqueDrawBand _expected;
+    };
+    const BandCase arrCase[] = {
+        {                                                                                                                           "","",     RHIOpaqueDrawBand::Ordinary                                                                                                                                       },
+        {                                                                                                          "cullMode=\"None\"",                                                                                   "",     RHIOpaqueDrawBand::Ordinary},
+        {                                                                                                                           "", "<_listBlendTarget><RHIBlendTargetState colorWriteMask=\"RGB\"/></_listBlendTarget>",     RHIOpaqueDrawBand::Ordinary}, // 알파만 빼는 것은 덮어쓰기다
+        {                                                                                                                           "",   "<_listBlendTarget><RHIBlendTargetState colorWriteMask=\"R\"/></_listBlendTarget>",  RHIOpaqueDrawBand::ReadsTarget}, // 초록 · 파랑은 뒤의 색이 남는다
+        {                                                                                                    "depthCompare=\"Always\"",                                                                                   "",  RHIOpaqueDrawBand::ReadsTarget},
+        {                                                                                                 "enableDepthWrite=\"false\"",                                                                                   "",  RHIOpaqueDrawBand::ReadsTarget},
+        {"enableDepthWrite=\"false\" enableStencil=\"true\" stencilRef=\"1\" stencilFrontPass=\"Replace\" stencilBackPass=\"Replace\"",
+         "<_listBlendTarget><RHIBlendTargetState colorWriteMask=\"None\"/></_listBlendTarget>", RHIOpaqueDrawBand::StencilWrite                                                                                                                              },
+        {                         "enableStencil=\"true\" stencilRef=\"1\" stencilFrontCompare=\"Equal\" stencilBackCompare=\"Equal\"",                                                                                   "",  RHIOpaqueDrawBand::ReadsTarget},
+    };
+    for ( const BandCase& bandCase : arrCase )
+    {
+        shared_ptr<Material> material = Material::create();
+        SW_REQUIRE_TRUE( RenderStateTestUtil::load( *material, bandCase._pAttributes, bandCase._pChildren ) );
+        SW_EXPECT_EQUAL( static_cast<int32>( bandCase._expected ), static_cast<int32>( material->getOpaqueDrawBand() ) );
+    }
+}

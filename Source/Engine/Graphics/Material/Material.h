@@ -300,6 +300,8 @@ namespace sw
         MaterialAlphaMode getAlphaMode() const { return _desc._alphaMode; }
         /** @brief 그리기 순서입니다(작은 것부터). 배치 나누기와 반투명 정렬의 첫 키입니다. */
         int32 getRenderQueue() const { return _desc._renderQueue; }
+        /** @brief 불투명 그리기 띠입니다 — 덮은 렌더 상태가 정한다(`RHIRenderStateOverride::classifyOpaqueDrawBand`). 정렬의 첫 키이고 차례(`getRenderQueue`)는 띠 안의 순서다. */
+        RHIOpaqueDrawBand getOpaqueDrawBand() const { return _desc._renderStateOverride.classifyOpaqueDrawBand(); }
         /** @brief 패스의 렌더 상태 위에 덮는 칸입니다. */
         const RHIRenderStateOverride& getRenderStateOverride() const { return _desc._renderStateOverride; }
         /** @brief float32 파라미터를 읽습니다. */

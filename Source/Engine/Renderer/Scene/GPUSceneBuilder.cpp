@@ -278,7 +278,8 @@ namespace sw
             SortKey key{ candidate._mesh.get(), candidate._sectionFirstIndex, candidate._sectionIndexCount,
                          batchKeyMaterial( candidate._material.get(), candidate._permutationHash ),
                          _bMergeAcrossMaterials != SW_FALSE ? nullptr : candidate._instance.get(), candidate._permutationHash,
-                         candidate._bReverseCulling, candidate._bStaticShadowCaster, getCandidateRenderQueue( candidate ) };
+                         candidate._bReverseCulling, candidate._bStaticShadowCaster, getCandidateRenderQueue( candidate ),
+                         candidate._material != nullptr ? candidate._material->getOpaqueDrawBand() : RHIOpaqueDrawBand::Ordinary };
             _listScratchOpaqueEntry.push_back( SortEntry{ key, instanceIndex } );
         }
 
@@ -288,9 +289,12 @@ namespace sw
             // 연속 배치를 한 번의 drawIndirect(멀티 드로우)로 내므로, 그것들이 앞 키여야 그룹이 길다. 메시는 정점 풀 하나라 키가 아니어도
             // 되지만 풀 밖 메시(예산 초과)끼리 모이도록 뒤에 둔다. 이 순서의 이득은 상태 변경이 아니라 호출 수다
             // (상태 변경만 줄이는 순서는 측정 잡음 범위였다).
-            // 그리기 순서가 맨 앞이다 — 머티리얼이 정한 순서는 호출 수보다 앞선다(값을 적지 않은 머티리얼은 모두 0 이라 이득을 잃지 않는다).
+            // 그리기 띠 → 차례가 맨 앞이다 — 렌더 상태가 정한 띠(그려진 것에 기대는 머티리얼은 뒤)와 머티리얼이 정한 순서는 호출 수보다 앞선다
+            // (보통 머티리얼은 모두 띠 0 · 차례 0 이라 이득을 잃지 않는다).
             VectorUtil::sort( _listScratchOpaqueEntry, []( const SortEntry& entryA, const SortEntry& entryB )
             {
+                if ( entryA._key._drawBand != entryB._key._drawBand )
+                    return entryA._key._drawBand < entryB._key._drawBand;
                 if ( entryA._key._renderQueue != entryB._key._renderQueue )
                     return entryA._key._renderQueue < entryB._key._renderQueue;
                 if ( entryA._key._permutationHash != entryB._key._permutationHash )

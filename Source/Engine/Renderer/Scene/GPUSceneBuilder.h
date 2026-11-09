@@ -414,6 +414,8 @@ namespace sw
             uint8 _bStaticShadowCaster{ SW_FALSE };
             /** @brief 그리기 순서입니다. 불투명 정렬의 첫 키이고(스텐실 마스크는 받는 쪽보다 먼저 그려야 한다), 값이 같은 퍼뮤테이션 안에서 하나라 비교에는 넣지 않는다. */
             int32 _renderQueue{ 0 };
+            /** @brief 불투명 그리기 띠입니다(`Material::getOpaqueDrawBand`). 차례보다 앞선 첫 키이고, 차례와 같이 머티리얼마다 하나라 비교에는 넣지 않는다. */
+            RHIOpaqueDrawBand _drawBand{ RHIOpaqueDrawBand::Ordinary };
             /** @brief 메시, 머티리얼, 인스턴스, 퍼뮤테이션, 컬 반전이 같은지 비교합니다. */
             bool operator==( const SortKey& other ) const
             {

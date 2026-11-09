@@ -181,6 +181,36 @@ namespace sw
         return _blendTargetCount != 0 || _mask != makeFilledState( 0 );
     }
 
+    RHIOpaqueDrawBand RHIRenderStateOverride::classifyOpaqueDrawBand() const noexcept
+    {
+        // 보통 불투명 패스(기본 상태 — 깊이 테스트 · 쓰기, LessEqual, 블렌드 끔) 위에 덮은 결과로 본다 — 덮지 않은 칸은 보통 값이라 띠를 바꾸지 않는다.
+        const RHIRenderState state = applyTo( RHIRenderState{}, Scope::FixedAndBlend );
+        // 색: 모든 타깃이 RGB 를 다 덮어쓰면(알파만 빼는 것은 덮어쓰기다) 순서와 상관없다. 아무 채널도 쓰지 않는 타깃은 깊이 · 스텐실만 남기는 가리개다.
+        bool bReadsTarget = false;
+        for ( const RHIBlendTargetState& target : state._arrBlendTarget )
+        {
+            const uint8 rgbBits  = static_cast<uint8>( target._colorWriteMask ) & static_cast<uint8>( RHIColorWriteMask::RGB );
+            const bool  bPartial = target._colorWriteMask != RHIColorWriteMask::None && rgbBits != static_cast<uint8>( RHIColorWriteMask::RGB );
+            bReadsTarget         = bReadsTarget || target._bEnableBlend != 0 || bPartial;
+        }
+        // 깊이: Less · LessEqual 밖의 비교(Equal · Greater · Always …)는 앞에 그려진 깊이에 기댄다. 깊이를 쓰지 않는 불투명은 뒤에 그려진 것이 덮는다(스텐실 마스크는 아래 띠).
+        const bool bOrderedDepth = state._depthCompare == RHICompareFunc::Less || state._depthCompare == RHICompareFunc::LessEqual;
+        const bool bStencil      = state._bEnableStencil != 0;
+        bReadsTarget             = bReadsTarget || bOrderedDepth == false || ( state._bEnableDepthWrite == 0 && bStencil == false );
+        // 스텐실: 비교하면 읽는다(뒤 띠), 비교 없이 바꾸기만 하면 마스크다(읽는 띠 앞).
+        const bool bStencilReads = bStencil && ( state._stencilFrontCompare != RHICompareFunc::Always || state._stencilBackCompare != RHICompareFunc::Always );
+        const bool bStencilWrites =
+            bStencil && state._stencilWriteMask != 0 &&
+            ( state._stencilFrontPass != RHIStencilOp::Keep || state._stencilBackPass != RHIStencilOp::Keep || state._stencilFrontFail != RHIStencilOp::Keep ||
+              state._stencilBackFail != RHIStencilOp::Keep || state._stencilFrontDepthFail != RHIStencilOp::Keep || state._stencilBackDepthFail != RHIStencilOp::Keep );
+        RHIOpaqueDrawBand band = RHIOpaqueDrawBand::Ordinary;
+        if ( bReadsTarget || bStencilReads )
+            band = RHIOpaqueDrawBand::ReadsTarget;
+        else if ( bStencilWrites )
+            band = RHIOpaqueDrawBand::StencilWrite;
+        return band;
+    }
+
     RHIRenderState RHIRenderStateOverride::applyTo( const RHIRenderState& passState, Scope scope ) const noexcept
     {
         // 먼저 범위와 상관없이 바이트를 덮은 뒤, 표가 패스의 것으로 정한 칸을 되돌린다 — 칸을 더해도 덮는 일이 따라오고, 되돌릴 칸만 여기 적는다.

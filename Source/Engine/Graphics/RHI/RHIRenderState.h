@@ -160,6 +160,19 @@ namespace sw
     static_assert( sizeof( RHIRenderState ) == sizeof( RHIFixedRenderState ) + sizeof( RHIBlendTargetState ) * kMaxColorAttachments, "RHIRenderState is hashed as bytes - it must have no padding" );
 
     /**
+     * @enum RHIOpaqueDrawBand
+     * @brief 불투명 그리기의 띠입니다 — 이미 그려진 것에 기대는 렌더 상태는 뒤 띠로 간다(유니티 Geometry 큐 뒤의 큐 · 언리얼 커스텀 깊이 · 스텐실 패스 자리).
+     * @details 띠는 머티리얼이 덮은 렌더 상태에서 나온다(`RHIRenderStateOverride::classifyOpaqueDrawBand`) — 차례(`renderQueue`)를 적지 않아도 바닥 뒤에 그려진다.
+     *          같은 띠 안의 순서만 차례 → 퍼뮤테이션 해시가 정한다. 띠가 없으면 순서에 기대는 머티리얼이 해시 순서로 먼저 그려져 지운 색 · 빈 스텐실 위에 그렸다.
+     */
+    enum class RHIOpaqueDrawBand : uint8
+    {
+        Ordinary,     ///< 모든 색 채널을 덮어쓰고 보통 깊이 비교(Less · LessEqual)로 그린다 — 순서와 상관없다
+        StencilWrite, ///< 스텐실을 쓰기만 한다(마스크) — 그것을 읽는 띠보다 먼저다
+        ReadsTarget,  ///< 그려진 것을 읽거나 일부만 덮는다(채널 일부 쓰기 · 블렌드 · 스텐실 비교 · 깊이 Always 등 · 깊이 쓰기 끔) — 맨 뒤다
+    };
+
+    /**
      * @struct RHIRenderStateOverride
      * @brief 패스의 렌더 상태 위에 머티리얼이 적은 칸만 덮는 값입니다. 적지 않은 칸은 패스의 것이 남습니다.
      * @details 어느 칸을 적었는지는 칸마다 "적지 않음" 값을 두는 대신 비트 마스크로 든다. 같은 XML 을 0 으로 채운 값과 1 로 채운 값 위에 읽어 두 값이 같은 비트가 곧 적은 칸이다
@@ -204,6 +217,8 @@ namespace sw
          *          깊이 첨부가 없는 패스(`_bEnableDepthTest` 꺼짐)는 깊이 · 스텐실 칸을 받지 않는다 — 붙일 첨부가 없다. 깊이 테스트 칸 자체는 언제나 패스의 것이다(첨부와 함께 움직인다).
          */
         [[nodiscard]] RHIRenderState applyTo( const RHIRenderState& passState, Scope scope ) const noexcept;
+        /** @brief 덮은 칸으로 불투명 그리기 띠를 정합니다(`RHIOpaqueDrawBand`). 덮지 않은 칸은 패스의 보통 값이라 띠를 바꾸지 않는다. */
+        [[nodiscard]] RHIOpaqueDrawBand classifyOpaqueDrawBand() const noexcept;
         /** @brief 덮는 칸 · 값의 해시입니다. 머티리얼의 배치 키와 PSO 변형 키에 들어갑니다. */
         [[nodiscard]] uint64 computeHash() const noexcept;
     };
