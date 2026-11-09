@@ -33,10 +33,12 @@ namespace sw
         return isValid( slotIndex ) && _listSlot[static_cast<size_t>( slotIndex )]._state == NetConnectionState::Connected ? &_listSlot[static_cast<size_t>( slotIndex )] : nullptr;
     }
 
-    int32 NetSlotTable::findByAddress( const NetAddress& address ) const
+    optional<int32> NetSlotTable::findByAddress( const NetAddress& address ) const
     {
         const auto iter = _mapSlotByAddress.find( makeAddressKey( address ) );
-        return iter != _mapSlotByAddress.end() ? iter->second : constant::invalid_index::kInt32;
+        if ( iter == _mapSlotByAddress.end() )
+            return nullopt;
+        return iter->second;
     }
 
     void NetSlotTable::bindAddress( int32 slotIndex, const NetAddress& address )
@@ -52,14 +54,14 @@ namespace sw
             _mapSlotByAddress.erase( iter );
     }
 
-    int32 NetSlotTable::findFreeSlot() const
+    optional<int32> NetSlotTable::findFreeSlot() const
     {
         for ( size_t index = 0; index < _listSlot.size(); ++index )
         {
             if ( _listSlot[index]._state == NetConnectionState::Disconnected )
                 return static_cast<int32>( index );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     int32 NetSlotTable::countConnected() const

@@ -41,10 +41,11 @@ namespace sw
         BVHTree3D( BVHTree3D&& ) noexcept            = default;
         BVHTree3D& operator=( BVHTree3D&& ) noexcept = default;
 
-        int32 insert( SlotHandle handle, const AABB& bounds );
-        void  update( SlotHandle handle, const AABB& bounds );
-        void  remove( SlotHandle handle );
-        void  clear();
+        /** @brief @p handle 의 잎을 넣습니다(있으면 옮깁니다). 무효 핸들은 부르는 쪽의 잘못이다. */
+        void insert( SlotHandle handle, const AABB& bounds );
+        void update( SlotHandle handle, const AABB& bounds );
+        void remove( SlotHandle handle );
+        void clear();
 
         /**
          * @brief 상자에 겹치는 핸들을 찾습니다.

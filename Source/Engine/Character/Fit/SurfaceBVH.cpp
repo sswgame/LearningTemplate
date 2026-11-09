@@ -84,7 +84,7 @@ namespace sw
                 const uint32 globalTriangle = static_cast<uint32>( _listTriangleSurface.size() );
                 _listTriangleSurface.push_back( surfaceIndex );
                 _listTriangleLocal.push_back( triangle );
-                (void)_tree.insert( SlotHandle::make( globalTriangle, 1 ), bounds );
+                _tree.insert( SlotHandle::make( globalTriangle, 1 ), bounds );
             }
         }
     }

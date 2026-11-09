@@ -396,11 +396,11 @@ namespace sw
         /** @brief 데이터 패킷이 아닌 제어 패킷 하나에서 읽은 값입니다(값 둘의 뜻은 종류마다 다르다). */
         struct ControlPacket
         {
-            NetAddress _from{};
-            float64    _nowSeconds{ 0.0 };
-            int32      _slotIndex{ constant::invalid_index::kInt32 }; ///< 보낸 주소의 슬롯(없으면 무효)
-            uint64     _valueA{ 0 };
-            uint64     _valueB{ 0 };
+            NetAddress      _from{};
+            float64         _nowSeconds{ 0.0 };
+            optional<int32> _slotIndex; ///< 보낸 주소의 슬롯(없으면 비어 있다)
+            uint64          _valueA{ 0 };
+            uint64          _valueB{ 0 };
         };
         /** @brief 버전과 상관없는 고정 헤더(`NetProtocol::kHandshakeID`)로 싸는 패킷입니다. 요청과 거절뿐이며, 두 패킷의 배치는 버전이 바뀌어도 그대로 둡니다. */
         static bool isHandshakeFramed( PacketType type ) { return type == PacketType::ConnectRequest || type == PacketType::Denied; }
@@ -409,7 +409,7 @@ namespace sw
         /** @brief 받은 데이터그램 하나의 헤더와 종류를 검사하고 종류별 처리로 넘깁니다. 틀린 패킷은 `_rejectedPacketCount` 로만 셉니다. */
         void handlePacket( float64 nowSeconds, const NetAddress& from, const uint8* pData, int32 size ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 암호화하지 않은 데이터 패킷의 연결 값을 확인하고 본문을 연결에 넘깁니다. */
-        void handlePayloadPacket( float64 nowSeconds, int32 slotIndex, BitReader& reader ) SW_REQUIRES_LOCK( _mutex );
+        void handlePayloadPacket( float64 nowSeconds, optional<int32> slotIndex, BitReader& reader ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 제어 패킷을 종류별로 처리합니다(핸드셰이크 · 거절 · 끊기). */
         void handleControlPacket( PacketType type, const ControlPacket& packet, BitReader& reader ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 서버가 연결 요청에 답합니다. 프로토콜이 다르면 거절, 빈 슬롯이 없으면 가득 참, 아니면 챌린지를 보냅니다. */
@@ -431,7 +431,7 @@ namespace sw
         /** @brief 암호화된 데이터 패킷과 끊기 패킷을 만듭니다(@p pPlain 을 봉인). 보낸 데이터그램의 바이트 수를 반환하며, 실패하면 0 입니다. */
         int32 sendSealed( NetEndpointSlot& slot, PacketType type, const uint8* pPlain, int32 plainSize ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 암호화 방식의 데이터 패킷과 끊기 패킷(헤더 8바이트 뒤의 본문)을 처리합니다. */
-        void handleSealedPacket( float64 nowSeconds, PacketType type, int32 slotIndex, const uint8* pBody, int32 bodySize ) SW_REQUIRES_LOCK( _mutex );
+        void handleSealedPacket( float64 nowSeconds, PacketType type, optional<int32> slotIndex, const uint8* pBody, int32 bodySize ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 이 엔드포인트의 기능 마스크(`NetProtocolFeature`)입니다. 역할과 자격이 정해진 뒤(listen, connect) 프로토콜 ID에 섞습니다. */
         uint32 computeFeatureMask() const SW_REQUIRES_LOCK( _mutex );
         bool   isEncrypted() const SW_REQUIRES_LOCK( _mutex ) { return _settings._security._mode == NetSecurityMode::Encrypted; }

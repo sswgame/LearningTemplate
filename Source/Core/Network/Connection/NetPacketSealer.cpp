@@ -2,6 +2,7 @@
 
 #include "Core/Network/Connection/NetPacketSealer.h"
 
+#include "Core/Foundation/Expected.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/Serialization/LittleEndianUtil.h"
@@ -29,13 +30,13 @@ namespace sw
             }
 
             /**
-             * @brief 증명 태그의 AAD를 @p pOutAad(`kMaxProofAadSize` 바이트)에 만들고 길이를 반환합니다. 토큰 길이가 범위 밖이면 -1 입니다.
+             * @brief 증명 태그의 AAD를 @p pOutAad(`kMaxProofAadSize` 바이트)에 만들고 길이를 반환합니다. 토큰 길이가 범위 밖이면 비어 있습니다.
              * @details 클라이언트 솔트, 서버 솔트(챌린지 값), 클라이언트 공개 키, 토큰을 이어 붙인다. 스택 버퍼이므로 핸드셰이크마다 할당하지 않는다.
              */
-            static int32 makeProofAad( uint64 clientSalt, uint64 serverSalt, const uint8* pPublicKey, const uint8* pToken, int32 tokenSize, uint8* pOutAad )
+            [[nodiscard]] static optional<int32> makeProofAad( uint64 clientSalt, uint64 serverSalt, const uint8* pPublicKey, const uint8* pToken, int32 tokenSize, uint8* pOutAad )
             {
                 if ( tokenSize < 0 || NetSecurityConstant::kMaxTokenSize < tokenSize )
-                    return -1;
+                    return nullopt;
                 LittleEndianUtil::writeUint64( pOutAad, clientSalt );
                 LittleEndianUtil::writeUint64( pOutAad + 8, serverSalt );
                 std::memcpy( pOutAad + 16, pPublicKey, NetSecurityConstant::kX25519KeySize );
@@ -168,26 +169,26 @@ namespace sw
     bool NetPacketSealer::computeProofTag( INetSecurityProvider& provider, NetAEADAlgorithm algorithm, const NetSessionSecret& secret, uint64 clientSalt, uint64 serverSalt,
                                            const uint8* pPublicKey, const uint8* pToken, int32 tokenSize, uint8* pOutTag )
     {
-        uint8       arrAad[kMaxProofAadSize]{};
-        const int32 aadSize = NetPacketSealerInternal::makeProofAad( clientSalt, serverSalt, pPublicKey, pToken, tokenSize, arrAad );
-        if ( aadSize < 0 )
+        uint8                 arrAad[kMaxProofAadSize]{};
+        const optional<int32> aadSize = NetPacketSealerInternal::makeProofAad( clientSalt, serverSalt, pPublicKey, pToken, tokenSize, arrAad );
+        if ( aadSize.has_value() == false )
             return false;
         const unique_ptr<INetAEAD> proof = NetPacketSealerInternal::createProofAEAD( provider, algorithm, secret );
         if ( proof == nullptr )
             return false;
         const uint8 arrZeroNonce[NetSecurityConstant::kAEADNonceSize]{};
-        return proof->seal( arrZeroNonce, arrAad, aadSize, nullptr, 0, pOutTag );
+        return proof->seal( arrZeroNonce, arrAad, *aadSize, nullptr, 0, pOutTag );
     }
 
     bool NetPacketSealer::isProofTagValid( INetSecurityProvider& provider, NetAEADAlgorithm algorithm, const NetSessionSecret& secret, uint64 clientSalt, uint64 serverSalt,
                                            const uint8* pPublicKey, const uint8* pToken, int32 tokenSize, const uint8* pTag )
     {
-        uint8       arrAad[kMaxProofAadSize]{};
-        const int32 aadSize = NetPacketSealerInternal::makeProofAad( clientSalt, serverSalt, pPublicKey, pToken, tokenSize, arrAad );
-        if ( aadSize < 0 )
+        uint8                 arrAad[kMaxProofAadSize]{};
+        const optional<int32> aadSize = NetPacketSealerInternal::makeProofAad( clientSalt, serverSalt, pPublicKey, pToken, tokenSize, arrAad );
+        if ( aadSize.has_value() == false )
             return false;
         const unique_ptr<INetAEAD> proof = NetPacketSealerInternal::createProofAEAD( provider, algorithm, secret );
         const uint8                arrZeroNonce[NetSecurityConstant::kAEADNonceSize]{};
-        return proof != nullptr && proof->open( arrZeroNonce, arrAad, aadSize, pTag, NetSecurityConstant::kAEADTagSize, nullptr );
+        return proof != nullptr && proof->open( arrZeroNonce, arrAad, *aadSize, pTag, NetSecurityConstant::kAEADTagSize, nullptr );
     }
 } // namespace sw

@@ -4,7 +4,6 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/DependencyGraph.h"
-#include "Core/Foundation/Constants.h"
 
 namespace sw
 {
@@ -12,16 +11,15 @@ namespace sw
     {
         struct SubsystemCollectionInternal
         {
-            static constexpr uint32 kNotFound = constant::invalid_index::kUint32;
-
-            static uint32 findNodeIndex( const vector<SubsystemNode>& listNode, string_view name )
+            /** @brief 이름의 노드 자리입니다. 없으면 비어 있습니다. */
+            [[nodiscard]] static optional<uint32> findNodeIndex( const vector<SubsystemNode>& listNode, string_view name )
             {
                 for ( uint32 nodeIndex = 0; nodeIndex < static_cast<uint32>( listNode.size() ); ++nodeIndex )
                 {
                     if ( string_view{ listNode[nodeIndex]._pName } == name )
                         return nodeIndex;
                 }
-                return kNotFound;
+                return nullopt;
             }
 
             /** @brief 의존 이름을 노드 자리로 풉니다. 모르는 이름이면 `ErrorKind::NotFound`(대상 `A -> B`)입니다. */
@@ -29,14 +27,14 @@ namespace sw
             {
                 for ( const utf8* const pDependencyName : listNode[nodeIndex]._listDependency )
                 {
-                    const uint32 dependencyIndex = findNodeIndex( listNode, pDependencyName );
-                    if ( dependencyIndex == kNotFound )
+                    const optional<uint32> dependencyIndex = findNodeIndex( listNode, pDependencyName );
+                    if ( dependencyIndex.has_value() == false )
                     {
                         Error error{ ErrorKind::NotFound, "Subsystem depends on an unknown subsystem", listNode[nodeIndex]._pName };
                         error.appendDetail( " -> " ).appendDetail( pDependencyName );
                         return unexpected( error );
                     }
-                    outListDependency.push_back( dependencyIndex );
+                    outListDependency.push_back( *dependencyIndex );
                 }
                 return {};
             }
@@ -312,10 +310,10 @@ namespace sw
         {
             for ( const utf8* const pDependentName : listNode[nodeIndex]._listDependent )
             {
-                const uint32 dependentIndex = SubsystemCollectionInternal::findNodeIndex( listNode, pDependentName );
-                if ( dependentIndex == SubsystemCollectionInternal::kNotFound )
+                const optional<uint32> dependentIndex = SubsystemCollectionInternal::findNodeIndex( listNode, pDependentName );
+                if ( dependentIndex.has_value() == false )
                     continue;
-                vector<uint32>& listDependency = subsystemGraph._listDependency[dependentIndex];
+                vector<uint32>& listDependency = subsystemGraph._listDependency[*dependentIndex];
                 if ( VectorUtil::contains( listDependency, nodeIndex ) == false )
                     listDependency.push_back( nodeIndex );
             }

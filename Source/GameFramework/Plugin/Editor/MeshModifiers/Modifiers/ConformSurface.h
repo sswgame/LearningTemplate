@@ -52,7 +52,7 @@ namespace sw::editor
                 AABB          bounds;
                 bounds._min = float3::min( float3::min( a, b ), c ) - padding;
                 bounds._max = float3::max( float3::max( a, b ), c ) + padding;
-                (void)_tree.insert( SlotHandle::make( triangle, 1 ), bounds );
+                _tree.insert( SlotHandle::make( triangle, 1 ), bounds );
             }
             ++_buildCount;
             return true;
