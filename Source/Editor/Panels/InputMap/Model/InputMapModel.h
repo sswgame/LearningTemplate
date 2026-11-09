@@ -78,8 +78,10 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         // 1) 파일 — 성공하면 true(저장하지 않은 표시가 내려간다). 실패는 로그로 알린다
         // ------------------------------------------------------------------------------
-        /** @brief 아직 한 번도 읽지 않았으면 true 입니다. 패널은 첫 그리기에서 `reload` 를 부릅니다. */
-        bool needsFirstLoad() const { return _bLoaded == SW_FALSE; }
+        /** @brief 입력 맵 파일 하나(`*.input.xml`)의 접미사입니다. */
+        static constexpr string_view kMapSuffix = ".input.xml";
+        /** @brief @p assetPath 가 이 편집기의 문서(입력 맵 파일 하나 또는 게임의 입력 맵 묶음 — 게임 설정 파일)이면 true 입니다. */
+        [[nodiscard]] static bool isDocumentPath( string_view assetPath );
         /** @brief 확정한 맵 경로에서 다시 읽습니다. 읽지 못하면 편집 중인 바인딩을 그대로 둡니다. */
         [[nodiscard]] bool reload();
         /**
@@ -230,11 +232,10 @@ namespace sw::editor
         uint32                   _recordedBeginFrameCount; ///< 마지막으로 녹화한 입력 프레임(`InputManager::getBeginFrameCount`)이다. 같은 프레임을 두 번 기록하지 않는다
         uint32                   _capturingBindIndex;      ///< 키 잡기 중인 바인딩 번호. `_bCapturingKey` 이고 새 바인딩이 아닐 때만 의미가 있다
         Key                      _pendingCaptureModifier;  ///< 키 잡기 중 혼자 눌린 수식 키. 없으면 `Key::Unknown`
-        uint8                    _bLoaded            : 1;
         uint8                    _bCapturingKey      : 1;
         uint8                    _bCaptureNewBinding : 1; ///< 키 잡기가 있는 바인딩을 바꾸지 않고 새 바인딩을 더한다
         uint8                    _bPlotPaused        : 1;
         uint8                    _bDirty             : 1;
-        [[maybe_unused]] uint8   _reserved           : 3;
+        [[maybe_unused]] uint8   _reserved           : 4;
     };
 } // namespace sw::editor

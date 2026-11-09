@@ -125,7 +125,7 @@ namespace sw::editor
     } // namespace
 
     InputMapPanel::InputMapPanel()
-        : IEditorDocumentPanel( false ) // 필요할 때 여는 도구이므로 닫힌 채 시작한다. 열린 채 시작하면 떠 있는 창이 화면 가운데를 덮는다
+        : EditorDocumentPanel( EditorAssetType{ EditorAssetTypeIDs::kData }, true ) // 닫힌 채 시작하고(기반이 닫힌 채 만든다 — 열린 채면 떠 있는 창이 화면 가운데를 덮는다), 열면 포커스가 없어도 처음 문서를 읽는다
         , _document{}
         , _newActionName{ "" }
         , _newLayerName{ "" }
@@ -144,10 +144,10 @@ namespace sw::editor
     {
     }
 
-    void InputMapPanel::drawContent()
+    void InputMapPanel::drawDocumentContent()
     {
-        if ( _document.needsFirstLoad() )
-            reloadFromFile();
+        updateFocusedDocument();
+        ensureDocumentLoaded();
         _document.tick( InputMapModel::getInputManager(), ImGui::GetIO().DeltaTime );
 
         // 탭은 셋이다. 편집(Mappings), 들여다보기(Debug), 녹화와 주입(Replay & Inject)이다. 언리얼의 Enhanced Input 은 액션, 매핑, 트리거를 한 화면에서 편집한다.
@@ -188,16 +188,25 @@ namespace sw::editor
     {
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "InputMap" ) );
         ImGui::SameLine();
-        (void)_document.editInputMapPath().drawField( "##InputMapPath", 260.0f ); // 확정한 경로는 Reload · Save 가 쓴다 — 바꾸기만 해서는 다시 읽지 않는다
+        EditableAssetPath& mapPath  = _document.editInputMapPath();
+        const string       openPath = mapPath.get();
+        if ( mapPath.drawField( "##InputMapPath", 260.0f ) )
+        {
+            // 확정 경로는 열린 문서를 따른다 — 칸의 경로는 문서 열기(포커스)로 넘기고, 받아들여 읽을 때(`loadDocument`) 확정 경로가 된다.
+            // 칸에서 바로 확정하면 미저장 확인에서 취소했을 때 옛 문서가 새 경로로 저장된다.
+            const string chosenPath = mapPath.get();
+            (void)mapPath.commit( openPath );
+            requestOpenDocument( chosenPath );
+        }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "MapPathTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Reload" ) ) ); // 경로 칸이 고정 폭이라 좁은 패널에서는 단추가 창 밖에 놓이므로 줄을 바꾼다
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Reload" ) ) )
-            reloadFromFile();
+            reloadDocument(); // 읽음 · 못 읽음 표시와 미저장 기준은 문서 기반이 맞춘다
         EditorSelfTestMarks::record( "inputMap.reload" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "ReloadTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Save" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) ) )
-            (void)saveToFile(); // 실패는 saveToFile 이 알리고 dirty 가 남는다
+            (void)saveDocumentAndClearDirty(); // 저장 길은 하나다 — 실패는 문서가 알리고 dirty 가 남는다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "SaveTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "RevertAllToDefault" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdText", "RevertAllToDefault" ) ) )
@@ -1086,14 +1095,18 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "OverlayHistoryTip" ) );
     }
 
-    void InputMapPanel::reloadFromFile()
+    bool InputMapPanel::acceptsDocumentPath( string_view assetPath ) const
     {
-        (void)_document.reload(); // 실패는 문서가 알리고 편집 중인 바인딩 · 표시는 그대로다
+        return InputMapModel::isDocumentPath( assetPath );
     }
 
-    bool InputMapPanel::saveToFile()
+    ToolAssetLoadResult InputMapPanel::loadDocument()
     {
-        return _document.saveDocument();
+        const string assetPath = acceptDocumentToLoad();
+        if ( assetPath.empty() == false )
+            (void)_document.editInputMapPath().commit( assetPath ); // 같은 경로면 false — 확정 경로는 이미 그것이다
+        // 실패는 문서가 알리고 편집 중인 바인딩은 그대로다 — 저장을 막아 읽지 못한 파일을 그 바인딩으로 덮어쓰지 않는다.
+        return _document.reload() ? ToolAssetLoadResult::Loaded : ToolAssetLoadResult::Malformed;
     }
 
     void InputMapPanel::syncDocumentDirty()
@@ -1106,11 +1119,6 @@ namespace sw::editor
 
     bool InputMapPanel::saveDocument()
     {
-        return saveToFile();
-    }
-
-    void InputMapPanel::revertDocument()
-    {
-        reloadFromFile();
+        return _document.saveDocument();
     }
 } // namespace sw::editor

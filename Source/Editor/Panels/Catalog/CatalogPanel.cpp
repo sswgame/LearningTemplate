@@ -135,7 +135,7 @@ namespace sw::editor
 namespace sw::editor
 {
     CatalogPanel::CatalogPanel()
-        : IEditorDocumentPanel( false )
+        : EditorDocumentPanel( EditorAssetType{ EditorAssetTypeIDs::kData }, false )
         , _filter{}
         , _fileList{}
         , _listFileGroup{}
@@ -148,8 +148,10 @@ namespace sw::editor
     {
     }
 
-    void CatalogPanel::drawContent()
+    void CatalogPanel::drawDocumentContent()
     {
+        updateFocusedDocument();
+        ensureDocumentLoaded();
         pollIndexJob();
         drawToolbar();
         ImGui::Separator();
@@ -211,7 +213,7 @@ namespace sw::editor
         EditorSelfTestMarks::record( "catalog.save" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Revert" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Revert" ) ) )
-            revertDocument();
+            revertToSavedText();
         EditorSelfTestMarks::record( "catalog.revert" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Undo" ) ) );
         ImGui::BeginDisabled( document.canUndo() == false );
@@ -284,7 +286,7 @@ namespace sw::editor
                     if ( _session.getDocument().isDirty() )
                         _session.setStatus( SW_LOCKEY( "EditorCatalog", "SaveOrRevertFirst" ) );
                     else
-                        openFile( file._assetID );
+                        requestOpenDocument( file._assetID ); // 콘텐츠 브라우저와 같은 길 — 다음 그리기의 `updateFocusedDocument` 가 연다
                 }
                 if ( bFirstFile )
                 {
@@ -371,8 +373,21 @@ namespace sw::editor
         }
     }
 
-    void CatalogPanel::openFile( const string& assetID )
+    bool CatalogPanel::acceptsDocumentPath( string_view assetPath ) const
     {
+        vector<const AssetTypeDef*> listKind;
+        AssetTypeRegistry::collectPathMatches( assetPath, listKind );
+        return listKind.size() == 1;
+    }
+
+    ToolAssetLoadResult CatalogPanel::loadDocument()
+    {
+        const string assetID = acceptDocumentToLoad();
+        if ( assetID.empty() )
+        {
+            // 아직 고른 파일이 없다 — 세션도 비어 있어 저장할 것이 없다
+            return ToolAssetLoadResult::Missing;
+        }
         const optional<AbsolutePath> absolutePath = EditorPaths::getAssetPaths().findLooseFile( assetID ); // 붙인 도메인과 게임 폴더를 거치므로 루트에 직접 붙이지 않는다
         string                       text;
         // 읽지 못하면 고르지 않는다 — 앞 파일의 글을 가진 채 고르면 저장할 때 앞 파일의 내용을 이 파일에 쓴다.
@@ -380,7 +395,7 @@ namespace sw::editor
         {
             SW_LOG_ERROR_ID( "CatalogPanel.CouldNotReadCatalog", "Could not read catalog file '%#'", assetID.c_str() );
             _session.setStatus( "Could not read the file" );
-            return;
+            return ToolAssetLoadResult::Malformed;
         }
         vector<const AssetTypeDef*> listKind;
         AssetTypeRegistry::collectPathMatches( assetID, listKind );
@@ -388,6 +403,7 @@ namespace sw::editor
         _tableEditor.reset();
         syncDirty();
         SW_LOG_INFO_ID( "Catalog.Opened", "Catalog opened %#", assetID.c_str() );
+        return ToolAssetLoadResult::Loaded;
     }
 
     bool CatalogPanel::writeCurrentFile()
@@ -431,7 +447,7 @@ namespace sw::editor
         return true;
     }
 
-    void CatalogPanel::revertDocument()
+    void CatalogPanel::revertToSavedText()
     {
         _session.editDocument().revert();
         _tableEditor.reset();

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 카탈로그 편집기 저장 왕복: 표면 종류 카탈로그(engine/environment/default.surfacekinds.xml)의 실행마다 새 사본(scratch/saveroundtripcatalog — <Scratch>)을 연다.
+  카탈로그 편집기는 문서 기반(EditorDocumentPanel)이라 asset.openScratch 가 목록 클릭 · 콘텐츠 브라우저와 같은 길(워크스페이스 포커스)로 사본을 연다.
+  고치지 않고 저장(panel.saveDocument) → 글 붙잡기(asset.snapshotScratch) → 디스크에서 다시 읽기(panel.reloadDocument — 행 수가 같다) → 다시 저장 → 같은 바이트(asset.expectScratchUnchanged).
+  저장 왕복 틀은 패널마다 같다(saveroundtripmaterial · saveroundtripsequencer · saveroundtripspriteclip). 원본은 건드리지 않는다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/saveroundtripcatalog.scenario.xml -unattended
+-->
+<Scenario name="editor.saveroundtripcatalog" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+	<Scratch from="engine/environment" as="scratch/saveroundtripcatalog"/>
+	<EditorWaitSettled/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.focus catalog_editor"/>
+	<EditorWaitSettled/>
+	<DevCommand line="asset.openScratch scratch/saveroundtripcatalog/default.surfacekinds.xml"/>
+	<EditorWaitSettled/>
+	<WaitUntil watch="Editor.CatalogRowCount" atLeast="1" timeoutFrames="120"/>
+	<Remember watch="Editor.CatalogRowCount" as="rows"/>
+	<DevCommand line="panel.saveDocument catalog_editor"/>
+	<DevCommand line="asset.snapshotScratch scratch/saveroundtripcatalog/default.surfacekinds.xml"/>
+	<DevCommand line="panel.reloadDocument catalog_editor"/>
+	<EditorWaitSettled/>
+	<Expect watch="Editor.CatalogRowCount" sameAs="rows"/>
+	<DevCommand line="panel.saveDocument catalog_editor"/>
+	<DevCommand line="asset.expectScratchUnchanged scratch/saveroundtripcatalog/default.surfacekinds.xml"/>
+	<Expect watch="Editor.DirtyDocumentCount" equals="0"/>
+	<EditorWaitSettled/>
+	<Pass/>
+</Scenario>

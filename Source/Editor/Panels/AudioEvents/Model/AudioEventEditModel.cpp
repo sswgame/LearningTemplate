@@ -43,8 +43,9 @@ namespace sw::editor
     bool AudioEventEditModel::saveDocument()
     {
         // 검사를 통과하지 못하면 쓰지 않고 오류를 남긴다(고친 사본은 그대로 남아 계속 고칠 수 있다).
+        // 고치지 않았어도 쓴다 — 언제 저장할지는 문서 패널이 정한다(Ctrl+S 는 dirty 일 때만, 저장 왕복 시나리오는 고치지 않고 저장해 정규 꼴을 만든다).
         const optional<AbsolutePath> libraryFile = getSubsystem<AssetPaths>().toDiskPath( _libraryName.viewOrEmpty() );
-        if ( libraryFile.has_value() == false || _bDirty == SW_FALSE || _library.saveToAsset( *libraryFile ) == false )
+        if ( libraryFile.has_value() == false || _library.saveToAsset( *libraryFile ) == false )
             return false;
         _bDirty = SW_FALSE;
         return true;

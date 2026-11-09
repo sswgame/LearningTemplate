@@ -5,6 +5,8 @@
  *          새 카탈로그를 더하면 이 창에도 자동으로 나타납니다. 저장하면 파일을 쓰고 로더로 다시 읽어, 모르는 키 · 열거자 · 참조가 있으면 경고를 창에 보입니다.
  *          검증이 실패해도 파일은 쓴 대로 남고 "이전 파일로 되돌리기" 가 저장 직전 글을 되쓴다(저장이 실행 중 게임의 핫 리로드를 부르기 때문에 틀린 파일을 오래 두지 않게 한다).
  *          이 창은 디스크 · 로더 · 그리기만 한다. 파일 목록은 `CatalogFileList`, 열린 파일의 상태는 `CatalogFileSession` 이 맡는다(화면 없이 테스트한다).
+ *          여는 길은 문서 기반(`EditorDocumentPanel`, Data 종류 가운데 카탈로그 종류 하나에 맞는 파일)이다 — 목록 클릭 · 콘텐츠 브라우저 · `asset.openScratch` 가 모두 워크스페이스 포커스로 연다.
+ *          예전에는 목록 클릭만 여는 자체 길이라 시나리오가 사본(`scratch/…`)을 가리킬 수 없었고, 다른 파일을 고르면 미저장 편집을 확인 없이 버릴 수 있었다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -13,7 +15,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
-#include "Editor/Common/GUI/Panel/IEditorDocumentPanel.h"
+#include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
 #include "Editor/Panels/Catalog/CatalogTableEditor.h"
 #include "Editor/Panels/Catalog/Model/CatalogFileList.h"
 #include "Editor/Panels/Catalog/Model/CatalogFileSession.h"
@@ -26,7 +28,7 @@ namespace sw::editor
      * @class CatalogPanel
      * @brief 카탈로그 파일 목록과 테이블 편집, 저장 · 검증을 한 창에 모은 에디터 창입니다.
      */
-    class CatalogPanel final : public IEditorDocumentPanel
+    class CatalogPanel final : public EditorDocumentPanel
     {
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */
@@ -36,9 +38,8 @@ namespace sw::editor
 
         const utf8*        getPanelTitle() const override { return "Catalog Editor"; }
         EditorTextExtent   getInitialPanelSize() const override { return EditorTextExtent::ofText( 133.0f, 36.0f ); }
-        void               drawContent() override;
+        void               drawDocumentContent() override;
         [[nodiscard]] bool saveDocument() override;
-        void               revertDocument() override;
 
         /** @brief 목록의 파일 수입니다. 찾기가 끝나기 전에는 0 입니다(감시 값). */
         uint32 getFileCount() const { return static_cast<uint32>( _fileList.getRows().size() ); }
@@ -49,6 +50,12 @@ namespace sw::editor
         /** @brief 마지막 검증의 결과입니다(감시 값). */
         CatalogFileSession::ValidationState getValidationState() const { return _session.getValidationState(); }
 
+    protected:
+        /** @brief 카탈로그 종류 하나에 맞는 파일만 받습니다(목록에 서는 파일과 같은 규칙 — 종류가 겹치는 파일은 스키마 테스트가 잡는다). */
+        bool acceptsDocumentPath( string_view assetPath ) const override;
+        /** @brief 받아들인 문서 경로의 글을 읽어 세션을 엽니다. 읽지 못하면 `Malformed` 라 저장이 막힌다(앞 파일의 글을 이 파일에 쓰지 않는다). */
+        ToolAssetLoadResult loadDocument() override;
+
     private:
         void               pollIndexJob();
         void               rebuildFileList( const vector<EditorAssetIndexEntry>& listEntry );
@@ -56,11 +63,12 @@ namespace sw::editor
         void               drawDocumentArea();
         void               drawToolbar();
         void               drawValidation();
-        void               openFile( const string& assetID );
         [[nodiscard]] bool writeCurrentFile();
         void               validateCurrentFile();
-        void               restorePreviousFile();
-        void               syncDirty();
+        /** @brief 툴바 Revert — 마지막으로 저장한 글로 되돌립니다. 되돌리기 기록은 남아 Undo 가 편집을 되살린다(디스크를 다시 읽는 문서 되돌리기와 다르다). */
+        void revertToSavedText();
+        void restorePreviousFile();
+        void syncDirty();
 
     private:
         fixed_string<constant::buffer::kMax128> _filter;

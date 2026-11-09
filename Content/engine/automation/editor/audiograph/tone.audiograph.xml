@@ -1,0 +1,14 @@
+<!--
+	오디오 그래프 패널 저장 왕복의 시험 그래프(saveroundtripaudiograph). 사인 오실레이터 → 엔벨로프 두 노드이고 노드 위치가 없다 —
+	처음 읽을 때 패널이 처리 깊이로 놓고(AudioGraphEditUtil::layoutIfUnplaced) 첫 저장이 그 위치를 적는다. 다시 읽고 저장하면 같은 바이트여야 한다.
+-->
+<AudioGraphDef _output="Amp" _durationSeconds="1">
+	<_listNode>
+		<AudioGraphNodeDef _name="Osc" _type="Sine" />
+		<AudioGraphNodeDef _name="Amp" _type="Envelope">
+			<_listInput>
+				<item>Osc</item>
+			</_listInput>
+		</AudioGraphNodeDef>
+	</_listNode>
+</AudioGraphDef>
