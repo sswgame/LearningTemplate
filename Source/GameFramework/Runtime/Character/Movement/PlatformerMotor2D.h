@@ -2,7 +2,7 @@
  * @file PlatformerMotor2D.h
  * @brief 2D 플랫포머 캐릭터 몸입니다. 타일 지형(벽, 한쪽 발판, 사다리) 위의 이동을 다룹니다.
  * @details 달리기, 점프(높이와 정점 시간으로 정의), 짧은 점프, 코요테 시간, 점프 미리 누르기, 다단 점프, 벽 미끄러짐, 벽 점프, 대시, 사다리,
- *          발판 아래로 내려가기를 지원합니다.
+ *          발판 아래로 내려가기, 45° 경사 땅을 지원합니다.
  *          메트로배니아, 액션 플랫포머, 2D 소울라이크가 같은 몸을 씁니다. 셀레스테와 할로우 나이트의 조작감을 내는 규칙들입니다. 좌표는 +X 오른쪽, +Y 위, 단위는 타일이 아니라 월드 단위입니다.
  */
 #pragma once
@@ -15,6 +15,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Character/Movement/InertiaSettings.h"
 #include "GameFramework/Runtime/Foundation/Grid/GridTopology.h"
 
 namespace sw
@@ -28,7 +29,9 @@ namespace sw
         Solid,
         OneWay, ///< 위에서만 밟힌다
         Ladder,
-        Hazard ///< 닿으면 알린다(가시, 용암). 피해는 게임이 준다
+        Hazard,    ///< 닿으면 알린다(가시, 용암). 피해는 게임이 준다
+        SlopeUp,   ///< 오른쪽으로 오르는 45° 땅(빗변 아래가 땅) — 상자 충돌에서는 비어 있고 발이 빗변에 붙는다
+        SlopeDown, ///< 왼쪽으로 오르는 45° 땅
     };
 
     /** @brief 타일 지형입니다. (0,0) 타일의 왼쪽 아래가 `_origin` 입니다. */
@@ -39,7 +42,7 @@ namespace sw
         [[nodiscard]] bool initialize( int32 width, int32 height, float32 tileSize, const float2& origin );
         void               setTile( int32 x, int32 y, PlatformTile tile );
         void               fillTiles( int32 minX, int32 minY, int32 maxX, int32 maxY, PlatformTile tile );
-        /** @brief 글자로 칠합니다. 줄마다 한 행(첫 줄이 맨 위)이고, '#' 는 벽, '-' 는 한쪽 발판, 'H' 는 사다리, '^' 는 위험, 나머지는 빈 타일입니다. */
+        /** @brief 글자로 칠합니다. 줄마다 한 행(첫 줄이 맨 위)이고, '#' 는 벽, '-' 는 한쪽 발판, 'H' 는 사다리, '^' 는 위험, '/' · '\' 는 오르막 · 내리막 경사, 나머지는 빈 타일입니다. */
         [[nodiscard]] bool loadFromXMLText( string_view text, float32 tileSize, const float2& origin );
 
         /** @brief 맵 밖은 벽으로 봐서 떨어져 나가지 않게 합니다. 아래쪽 밖만 빈 타일(구덩이)입니다. */
@@ -88,6 +91,19 @@ namespace sw
         int32   _extraJumpCount{ 0 }; ///< 공중 점프 수(2단 점프 = 1)
         int32   _airDashCount{ 1 };
         uint8   _bWallJump{ SW_TRUE };
+        /**
+         * @brief 경사 땅의 관성(탈것 · 썰매와 같은 식 `InertiaSettings::computeAlongAcceleration`)입니다. 기본은 경사가 당기지 않는다(`_slopeScale` 0 —
+         *        메가맨 · 메트로이드처럼 경사에서 미끄러지지 않는다). 썰매 같은 미끄럼은 `_slopeScale` 을 올리고 `_groundAcceleration` 을 낮춘다.
+         */
+        InertiaSettings _slopeInertia{ makeNoSlopePull() };
+
+        /** @brief 경사가 당기지 않는 관성 수치입니다(나머지 칸은 `InertiaSettings` 기본). */
+        static InertiaSettings makeNoSlopePull()
+        {
+            InertiaSettings inertia;
+            inertia._slopeScale = 0.0f;
+            return inertia;
+        }
     };
 } // namespace sw
 
@@ -161,6 +177,11 @@ namespace sw
     private:
         bool isBlocked( const PlatformTileMap& map, const float2& center, bool bFromAbove, float32 previousBottom ) const;
         bool isTouching( const PlatformTileMap& map, PlatformTile tile ) const;
+        /**
+         * @brief 몸 아래(왼쪽 끝 · 가운데 · 오른쪽 끝)의 가장 높은 경사 빗변을 찾습니다. 발이 빗변보다 @p snapUp 아래 · @p snapDown 위 사이면 빗변 높이와 오르는 쪽(+1 오른쪽, -1 왼쪽)을 냅니다.
+         * @details 경사 칸은 상자 충돌(`isBlocked`)에서 비어 있다 — 걸으며 빗변에 파고든 만큼 올리고(오르막), 서 있던 몸은 빗변을 따라 내린다(내리막에서 뜨지 않게).
+         */
+        bool findSlopeSurface( const PlatformTileMap& map, float32 snapUp, float32 snapDown, float32& outSurfaceY, int32& outRise ) const;
         void moveAxis( const PlatformTileMap& map, float32 delta, bool bVertical );
         void startJump( float32 speed, uint32 event );
         /** @brief 대시를 누르고 쓸 수 있으면 입력 방향으로 대시를 시작합니다. 입력이 없으면 바라보는 쪽입니다. 대시는 중력 없이 곧게 갑니다. */

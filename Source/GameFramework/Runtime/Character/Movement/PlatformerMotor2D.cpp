@@ -14,7 +14,17 @@ namespace sw
     {
         struct PlatformerMotor2DInternal
         {
-            static constexpr float32 kSkin = 1.0e-3f; ///< 벽에 붙일 때 남기는 틈
+            static constexpr float32 kSkin           = 1.0e-3f;     ///< 벽에 붙일 때 남기는 틈
+            static constexpr float32 kSlopeSin       = 0.70710678f; ///< 45° 경사의 사인
+            static constexpr float32 kSlopeStepSlack = 0.02f;       ///< 경사 끝에서 넘는 높이(몸 반폭)에 더하는 여유(칸 비율) — 빗변에 붙인 발 높이의 부동소수 오차
+            static constexpr float32 kSlopeSnapTile  = 0.5f;        ///< 경사 빗변에 붙이는 범위(칸 비율) — 한 걸음(칸의 0.45 이하)보다 넓다
+
+            /** @brief 경사 칸 안 가로 위치 @p localX(0..1)의 빗변 높이(0..1)입니다. 오르막은 오른쪽이 높다. */
+            static float32 computeSlopeHeight( PlatformTile tile, float32 localX )
+            {
+                const float32 clampedX = MathUtil::clamp( localX, 0.0f, 1.0f );
+                return tile == PlatformTile::SlopeUp ? clampedX : 1.0f - clampedX;
+            }
         };
     } // namespace
 } // namespace sw
@@ -87,6 +97,10 @@ namespace sw
                     tile = PlatformTile::Ladder;
                 else if ( symbol == '^' )
                     tile = PlatformTile::Hazard;
+                else if ( symbol == '/' )
+                    tile = PlatformTile::SlopeUp;
+                else if ( symbol == '\\' )
+                    tile = PlatformTile::SlopeDown;
                 setTile( static_cast<int32>( column ), y, tile );
             }
         }
@@ -213,6 +227,39 @@ namespace sw
         return false;
     }
 
+    bool PlatformerMotor2D::findSlopeSurface( const PlatformTileMap& map, float32 snapUp, float32 snapDown, float32& outSurfaceY, int32& outRise ) const
+    {
+        // 상자 몸은 모서리로 빗변에 닿는다 — 왼쪽 끝 · 가운데 · 오른쪽 끝에서 빗변을 찾아 가장 높은 것에 붙인다. 가운데 한 점만 보면 경사 꼭대기에서 앞 모서리가
+        // 끝 바닥 칸에 걸리고, 경사 바닥 · 칸 경계에서 몸이 빗변 위에 떠 공중 판정이 났다.
+        const float32 bottom       = _position._y - _settings._halfExtents._y;
+        const float32 edgeOffset   = _settings._halfExtents._x - PlatformerMotor2DInternal::kSkin;
+        const float32 arrSampleX[] = { _position._x - edgeOffset, _position._x, _position._x + edgeOffset };
+        bool          bFound       = false;
+        for ( const float32 sampleX : arrSampleX )
+        {
+            const int32   tileX  = map.computeTileX( sampleX );
+            const float32 localX = ( sampleX - map.getTileLeft( tileX ) ) / map.getTileSize();
+            // 위 칸부터 내려가며 본다 — 빗변이 칸 경계를 넘는 자리(오르막 꼭대기 · 내리막 시작)에서 높은 쪽을 먼저 잡는다.
+            for ( int32 tileY = map.computeTileY( bottom + snapUp ); tileY >= map.computeTileY( bottom - snapDown ); --tileY )
+            {
+                const PlatformTile tile = map.getTile( tileX, tileY );
+                if ( tile != PlatformTile::SlopeUp && tile != PlatformTile::SlopeDown )
+                    continue;
+                const float32 surfaceY = map.getTileBottom( tileY ) + PlatformerMotor2DInternal::computeSlopeHeight( tile, localX ) * map.getTileSize();
+                if ( surfaceY > bottom + snapUp || surfaceY < bottom - snapDown )
+                    continue;
+                if ( bFound == false || surfaceY > outSurfaceY )
+                {
+                    outSurfaceY = surfaceY;
+                    outRise     = tile == PlatformTile::SlopeUp ? 1 : -1;
+                    bFound      = true;
+                }
+                break;
+            }
+        }
+        return bFound;
+    }
+
     void PlatformerMotor2D::moveAxis( const PlatformTileMap& map, float32 delta, bool bVertical )
     {
         if ( delta == 0.0f )
@@ -233,6 +280,26 @@ namespace sw
             {
                 _position = next;
                 continue;
+            }
+            // 경사 위의 앞 모서리가 경사 끝 바닥 칸에 걸렸다 — 발은 몸 가운데의 빗변에 붙어 앞 모서리가 몸 반폭만큼 낮다. 그 칸 윗면까지(반폭 이내) 올려 넘는다.
+            // 경사 위에서만 — 평지에서 같은 들어 올림을 허락하면 벽을 오른다.
+            float32 slopeSurfaceY = 0.0f;
+            int32   slopeRise     = 0;
+            if ( bVertical == false && findSlopeSurface( map, PlatformerMotor2DInternal::kSlopeSnapTile * map.getTileSize(), PlatformerMotor2DInternal::kSkin, slopeSurfaceY, slopeRise ) )
+            {
+                const float32 leadX     = step > 0.0f ? next._x + _settings._halfExtents._x - PlatformerMotor2DInternal::kSkin : next._x - _settings._halfExtents._x + PlatformerMotor2DInternal::kSkin;
+                const float32 bottom    = next._y - _settings._halfExtents._y;
+                const int32   blockY    = map.computeTileY( bottom + PlatformerMotor2DInternal::kSkin );
+                const float32 lift      = map.getTileBottom( blockY + 1 ) - bottom;
+                const bool    bLeadWall = map.getTile( map.computeTileX( leadX ), blockY ) == PlatformTile::Solid;
+                float2        lifted    = next;
+                lifted._y += lift + PlatformerMotor2DInternal::kSkin;
+                const bool bStepOver = bLeadWall && lift > 0.0f && lift <= _settings._halfExtents._x + PlatformerMotor2DInternal::kSlopeStepSlack * map.getTileSize() && isBlocked( map, lifted, false, 0.0f ) == false;
+                if ( bStepOver )
+                {
+                    _position = lifted;
+                    continue;
+                }
             }
             // 칸 가장자리에 붙인다.
             if ( bVertical )
@@ -399,6 +466,11 @@ namespace sw
 
         tryStartDash( input, moveX, moveY, bWasGrounded );
 
+        // 지난 틱 경사 위에 서 있었는가 — 경사 관성과, 경사 끝에서 평지로 내려설 때의 발 붙이기가 본다.
+        float32    startSurfaceY = 0.0f;
+        int32      startRise     = 0;
+        const bool bWasOnSlope   = bWasGrounded && findSlopeSurface( map, PlatformerMotor2DInternal::kSkin, PlatformerMotor2DInternal::kSkin, startSurfaceY, startRise );
+
         // 사다리는 위아래를 누르면 잡고, 점프로 놓는다.
         const bool bOnLadder = isTouching( map, PlatformTile::Ladder );
         if ( bOnLadder == false )
@@ -428,11 +500,41 @@ namespace sw
         else
         {
             updateRunAndJump( map, input, moveX, bWasGrounded, deltaTime );
+            // 경사 땅의 관성 — 탈것 · 썰매와 같은 식이다(가로 속도를 진행 방향 속도로, 오르는 쪽이 +x 면 사인이 +).
+            float32 slopeSurfaceY = 0.0f;
+            int32   slopeRise     = 0;
+            if ( bWasOnSlope && _velocity._y <= 0.0f && findSlopeSurface( map, PlatformerMotor2DInternal::kSkin, PlatformerMotor2DInternal::kSkin, slopeSurfaceY, slopeRise ) )
+                _velocity._x += _settings._slopeInertia.computeAlongAcceleration( _velocity._x, static_cast<float32>( slopeRise ) * PlatformerMotor2DInternal::kSlopeSin, 0.0f, deltaTime ) * deltaTime;
         }
 
         _bGrounded = SW_FALSE;
         moveAxis( map, _velocity._x * deltaTime, false );
         moveAxis( map, _velocity._y * deltaTime, true );
+        // 경사 빗변에 발을 붙인다 — 파고든 만큼 올리고(오르막 · 떨어져 닿음), 서 있던 몸은 빗변을 따라 내린다(내리막에서 뜨지 않게). 오르는 중 · 사다리는 붙이지 않는다.
+        if ( _velocity._y <= 0.0f && _bClimbing == SW_FALSE )
+        {
+            const float32 snapRange     = map.getTileSize() * PlatformerMotor2DInternal::kSlopeSnapTile;
+            float32       slopeSurfaceY = 0.0f;
+            int32         slopeRise     = 0;
+            // 빗변 자리가 막혔으면(몸 한쪽이 아직 경사 끝 바닥 칸 위다) 붙이지 않는다 — 내리면 몸이 바닥 칸에 파묻혀 다음 걸음의 벽 밀어내기가 되돌린다.
+            const bool bOnSlope = findSlopeSurface( map, snapRange, bWasGrounded ? snapRange : 0.0f, slopeSurfaceY, slopeRise ) &&
+                                  isBlocked( map, float2{ _position._x, slopeSurfaceY + _settings._halfExtents._y + PlatformerMotor2DInternal::kSkin }, false, 0.0f ) == false;
+            if ( bOnSlope )
+            {
+                _position._y = slopeSurfaceY + _settings._halfExtents._y;
+                _velocity._y = 0.0f;
+                _bGrounded   = SW_TRUE;
+            }
+        }
+        // 경사 끝에서 평지로 내려서는 걸음 — 지난 틱 경사 위였으면 평지 바닥도 경사와 같은 범위로 붙인다(빗변을 따라 내려온 몸이 평지 위에 떠 한 틱 공중이 되지 않게).
+        // 평지에서 낭떠러지를 달려 나가는 몸은 붙이지 않는다(그대로 떨어진다).
+        if ( _bGrounded == SW_FALSE && bWasOnSlope && _velocity._y <= 0.0f && _bClimbing == SW_FALSE )
+        {
+            const float2 beforeSnap = _position;
+            moveAxis( map, -map.getTileSize() * PlatformerMotor2DInternal::kSlopeSnapTile, true );
+            if ( _bGrounded == SW_FALSE )
+                _position = beforeSnap; // 범위 안에 바닥이 없다 — 붙이지 않는다
+        }
         // 위로 움직이지 않는 틱에는 발밑을 한 번 더 보고 서 있는지 정한다.
         const bool bSnapToGround = _bGrounded == SW_FALSE && _velocity._y <= 0.0f && _bClimbing == SW_FALSE &&
                                    isBlocked( map, float2{ _position._x, _position._y - 0.02f }, true, _position._y - _settings._halfExtents._y );

@@ -48,7 +48,6 @@
 - **SOLID #14:** MemoryProfiler 누수 창을 `MemoryLeakWindow` 로, `judgeLeakCurve` · `printLeakWindowReport` 를 멤버로([StructureRefactor](StructureRefactor.md) §7).
 - **표면 변형:** 지형(`terrain.hlsl`)은 머티리얼을 픽셀에서만 읽어(GL 은 구조버퍼를 두 단계에서 못 읽는다) 정점 변위를 받지 못한다 — 엔진 텍스처 칸 `SurfaceDeform`(`shaderslot::emulated::kEngineTextureNames` 13 번째 — `SW_ENGINE_TEXTURE_COUNT` · DX11 `t44` · GL 유닛 12 · binding.hlsli 의 칸 줄)과 패스 상수 `g_SurfaceDeformParams`(창)를 더해 지형 정점 셰이더가 읽게 한다(언리얼 RVT · 유니티 `SetGlobalTexture` 자리, 그림자 패스도 같은 오프셋). 네 백엔드 셰이더 · 바인딩을 함께 바꾸므로 빌드 · 시나리오를 돌릴 수 있는 작업자가 한 묶음으로 한다.
 - **지역 효과:** 인스펙터가 배치 덮어쓰기의 물려받은 값과 바꾼 값을 가르고 되돌리는 화면(프리팹 덮어쓰기 화면과 같은 길 — 지금은 덮어쓰기 목록을 그대로 편집한다, [DesignBacklog](DesignBacklog.md) 지역 효과).
-- **관성 이동:** 플랫포머 모터(`PlatformerMotor2D`)에 경사 땅을 들이고 `computeAlongAcceleration` 을 부른다([DesignBacklog](DesignBacklog.md) 관성 이동).
 - **데칼 수명:** 투영 데칼(`DecalComponent`)이 들어왔다 — 씻김 여부와 물 · 시간에 따른 수명을 데칼 데이터가 밝히게 하고(모든 데칼을 일괄 지우지 않는다), UV 표면 마스크와 월드 공간 데칼은 저장 · 머티리얼 · 수명 경로를 섞지 않는다.
 - **폴더 자리(막는 구조부터):** 엔진 쪽 `Dev/` 예외(`Config/Dev/FolderLayout.json` `_devFolderAllowed` — ModuleManager/Dev · Host/Dev · App/Dev · GF GameData/Dev · Graphics/Material/Dev)를 DevTools 로 — ModuleManager 를 공유 라이브러리로(언리얼 HotReload 처럼), DevTools 에 리플렉션 단계를 더하면 핫 리로드 · 머티리얼 그래프가 옮겨 간다.
 - **창 바둑판 배치:** 시나리오 창 배치가 모니터 작업 영역을 보지 않는다 — 모니터가 2.6K×1.5K 보다 작으면 겹친다. 플랫폼 작업 영역 API 로(`Test/README.md` 창 배치).
