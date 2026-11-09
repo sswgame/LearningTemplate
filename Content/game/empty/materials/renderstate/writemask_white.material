@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<MaterialDef formatVersion="0" name="writemask_white" _base="game/empty/materials/renderstate/plain_white.material">
+<!-- 빨강만 쓰는 상자 — 초록 · 파랑은 뒤에 이미 그려진 것(바닥 · 하늘)이 남아야 하므로 바닥 뒤에 그린다(renderQueue 10). 차례가 없으면 같은 차례 안의 정렬(퍼뮤테이션 해시)에 따라 바닥보다 먼저 그려져 지운 색이 남았다. -->
+<MaterialDef formatVersion="0" name="writemask_white" _base="game/empty/materials/renderstate/plain_white.material" renderQueue="10">
 	<_listBlendTarget>
 		<RHIBlendTargetState colorWriteMask="R"/>
 	</_listBlendTarget>
