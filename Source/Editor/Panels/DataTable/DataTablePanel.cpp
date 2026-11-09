@@ -47,6 +47,17 @@ namespace sw::editor
                 return true;
             }
 
+            [[nodiscard]] static bool readGameDataRowCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
+                const DataTablePanel*     pPanel  = pPanels != nullptr ? pPanels->findPanel<DataTablePanel>() : nullptr;
+                uint32                    rowCount{ 0 };
+                if ( pPanel == nullptr || pPanel->isOpen() == false || pPanel->findGameDataRowCount( rowCount ) == false )
+                    return false;
+                outValue = static_cast<float64>( rowCount );
+                return true;
+            }
+
             [[nodiscard]] static bool readVisibleRecordCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 uint32 recordCount{ 0 };
@@ -67,9 +78,12 @@ namespace sw::editor
                               &DataTablePanelInternal::readRecordCount );
     SW_AUTOMATION_WALL_WATCH( editorDataTableVisibleRecordCount, "Editor.DataTableVisibleRecordCount", "Localization rows the Data Table window drew after its search in the last frame",
                               &DataTablePanelInternal::readVisibleRecordCount );
+    SW_AUTOMATION_WALL_WATCH( editorDataTableGameDataRowCount, "Editor.DataTableGameDataRowCount",
+                              "Rows (elements under the root) of the game data table open in the Data Table window (fails while it is closed or no table is open)",
+                              &DataTablePanelInternal::readGameDataRowCount );
 
     DataTablePanel::DataTablePanel()
-        : IEditorDocumentPanel{ false }
+        : EditorDocumentPanel{ EditorAssetType{ EditorAssetTypeIDs::kData }, false }
         , _model{}
         , _localizationFilter{}
         , _newKeyBuffer{}
@@ -81,7 +95,6 @@ namespace sw::editor
     {
     }
 
-    /** @brief 두 문서(로컬라이즈 · 게임 데이터)를 한 패널이 들기 때문에 모델이 dirty 한 쪽만 저장합니다. */
     bool DataTablePanel::saveDocument()
     {
         const bool bSaved = _model.saveDocument();
@@ -89,9 +102,26 @@ namespace sw::editor
         return bSaved;
     }
 
+    bool DataTablePanel::acceptsDocumentPath( string_view assetPath ) const
+    {
+        return FileUtil::hasExtension( assetPath, ".xml" );
+    }
+
+    ToolAssetLoadResult DataTablePanel::loadDocument()
+    {
+        if ( acceptDocumentToLoad().empty() )
+            return ToolAssetLoadResult::Missing; // 아직 연 표가 없다 — 저장은 현지화 표만 본다
+        const optional<AbsolutePath> diskPath = getDocumentDiskPath();
+        // 읽지 못하면 모델이 아무 표도 열지 않고 저장을 막는다 — 앞 표의 글을 이 파일에 쓰지 않는다.
+        if ( diskPath.has_value() == false || _model.openGameDataFile( diskPath->str() ) == false )
+            return ToolAssetLoadResult::Malformed;
+        return ToolAssetLoadResult::Loaded;
+    }
+
     void DataTablePanel::revertDocument()
     {
-        _model.revert();
+        _model.revertLocalization();
+        EditorDocumentPanel::revertDocument(); // 게임 데이터 표는 디스크에서 다시 읽는다
         syncDocumentDirty();
     }
 
@@ -104,6 +134,14 @@ namespace sw::editor
         return true;
     }
 
+    bool DataTablePanel::findGameDataRowCount( uint32& outRowCount ) const
+    {
+        if ( _model.getGameDataPath().empty() || _model.getGameDataDocument().isParsed() == false )
+            return false;
+        outRowCount = _model.getGameDataDocument().countRows();
+        return true;
+    }
+
     void DataTablePanel::syncDocumentDirty()
     {
         // 기반 클래스의 dirty 비트는 "무언가 바뀌었다" 만 알려 주므로, 어느 쪽인지는 모델의 두 비트가 안다.
@@ -113,8 +151,10 @@ namespace sw::editor
             clearDocumentDirty();
     }
 
-    void DataTablePanel::drawContent()
+    void DataTablePanel::drawDocumentContent()
     {
+        updateFocusedDocument();
+        ensureDocumentLoaded();
         _model.pollBackgroundJobs();
 
         if ( ImGui::BeginTabBar( "##DataTableTabs" ) )
@@ -385,14 +425,18 @@ namespace sw::editor
         if ( EditorChrome::beginSection( listDesc ) )
         {
             const vector<GameDataFileEntry>& listGameDataFile = _model.getGameDataFiles();
-            for ( size_t fileIndex = 0; fileIndex < listGameDataFile.size(); ++fileIndex )
+            for ( const GameDataFileEntry& entry : listGameDataFile )
             {
-                const GameDataFileEntry& entry     = listGameDataFile[fileIndex];
-                const bool               bSelected = ( _model.getSelectedGameDataIndex() == static_cast<int32>( fileIndex ) );
-                const bool               bBlocked  = _model.isGameDataDirty() && bSelected == false; // 모델이 바꾸지 않는다 — 눌러도 아무 일이 없는 줄로 두지 않는다
+                const bool bSelected = FileUtil::pathsEqualNormalized( entry._absolutePath, _model.getGameDataPath() ); // 연 자리는 문서 id 를 푼 디스크 경로라 표기가 목록과 다를 수 있다
+                const bool bBlocked  = _model.isGameDataDirty() && bSelected == false;                                  // 고친 표를 두고 다른 표로 가지 않는다 — 저장하거나 되돌린 뒤 고른다
                 ImGui::BeginDisabled( bBlocked );
-                if ( ImGui::Selectable( entry._fileName.c_str(), bSelected ) )
-                    _model.selectGameDataFile( fileIndex );
+                if ( ImGui::Selectable( entry._fileName.c_str(), bSelected ) && bSelected == false )
+                {
+                    // 콘텐츠 브라우저와 같은 길 — 리소스 id 로 바꿔 문서 열기(포커스)로 넘기고, 다음 그리기의 `updateFocusedDocument` 가 연다.
+                    const string assetID = DataTableModel::makeGameDataAssetID( entry._absolutePath );
+                    if ( assetID.empty() == false )
+                        requestOpenDocument( assetID );
+                }
                 ImGui::EndDisabled();
                 if ( bBlocked )
                     EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "SaveBeforeSwitchingTip" ) );
@@ -410,17 +454,20 @@ namespace sw::editor
             _gameDataTable.reset(); // 새로 읽은(되돌린) 문서다 — 앞 문서의 고른 칸을 들지 않는다
             _seenGameDataLoadCount = _model.getGameDataLoadCount();
         }
-        const GameDataFileEntry* pEntry = _model.findSelectedGameDataFile();
-        if ( pEntry != nullptr )
+        if ( _model.getGameDataPath().empty() == false )
         {
-            ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "File", TextArgumentList().addText( "file", pEntry->_fileName ) ).c_str() );
+            const string fileName = FileUtil::getFileNamePart( _model.getGameDataPath() );
+            ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "File", TextArgumentList().addText( "file", fileName ) ).c_str() );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "SaveFile" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdText", "SaveFile" ) ) )
-                _model.saveSelectedGameDataFile();
+            {
+                (void)_model.saveGameDataFile(); // 이 표만 쓴다 — 실패는 모델이 알리고 dirty 가 남는다
+                syncDocumentDirty();
+            }
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "SaveFileTip" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Revert" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Revert" ) ) )
-                _model.loadSelectedGameDataFile();
+                EditorDocumentPanel::reloadDocument(); // 이 표만 디스크에서 다시 읽는다 — 현지화 표는 그대로다
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "RevertTip" ) );
 
             EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdLabel", "RawXML" ) ) );

@@ -65,83 +65,45 @@ namespace
 
 // ---------------------------------------------------------------------- 게임 데이터 파일
 
-SW_TEST_CASE( DataTableModelTest, SelectingLoadsTheFile )
+SW_TEST_CASE( DataTableModelTest, OpeningLoadsTheFile )
 {
     const DataTableTestFiles files;
     DataTableModel           model;
-    SW_EXPECT_TRUE( model.findSelectedGameDataFile() == nullptr );
-    model.setGameDataFiles( { files._first, files._second } );
-    model.selectGameDataFile( 1 );
-    SW_EXPECT_EQUAL( 1, model.getSelectedGameDataIndex() );
+    SW_EXPECT_TRUE( model.getGameDataPath().empty() );
+    SW_REQUIRE_TRUE( model.openGameDataFile( files._second._absolutePath ) );
+    SW_EXPECT_TRUE( model.getGameDataPath() == files._second._absolutePath );
     SW_EXPECT_TRUE( model.getGameDataRawText() == "<Second b=\"2\"/>" );
     SW_EXPECT_TRUE( model.getGameDataDocument().isParsed() );
     SW_EXPECT_FALSE( model.isGameDataDirty() );
-    model.selectGameDataFile( 5 ); // 범위 밖은 그대로 둔다
-    SW_EXPECT_EQUAL( 1, model.getSelectedGameDataIndex() );
 }
 
-// 고친 글은 어떤 선택으로도 말없이 사라지지 않는다.
-SW_TEST_CASE( DataTableModelTest, SelectionNeverDiscardsAnEdit )
+// 연 파일은 경로로 연 그 파일이다 — 목록이 늘거나 줄거나 순서가 바뀌어도 저장은 그 파일에 쓴다(옛 번호를 들면 다른 파일을 덮어썼다).
+SW_TEST_CASE( DataTableModelTest, ReloadedListKeepsTheOpenFile )
 {
     const DataTableTestFiles files;
     DataTableModel           model;
     model.setGameDataFiles( { files._first, files._second } );
-    model.selectGameDataFile( 0 );
-    model.replaceGameDataRawText( "<First a=\"9\"/>" );
-    SW_EXPECT_TRUE( model.isGameDataDirty() );
-
-    model.selectGameDataFile( 1 );
-    SW_EXPECT_EQUAL( 0, model.getSelectedGameDataIndex() );
-    SW_EXPECT_TRUE( model.getGameDataRawText() == "<First a=\"9\"/>" );
-
-    model.selectGameDataFile( 0 ); // 같은 파일을 다시 눌러도 디스크 내용으로 덮지 않는다
-    SW_EXPECT_TRUE( model.isGameDataDirty() );
-    SW_EXPECT_TRUE( model.getGameDataRawText() == "<First a=\"9\"/>" );
-}
-
-// 파일이 늘거나 줄어도 고른 파일은 그 파일이다. 옛 번호를 들면 저장이 다른 파일을 덮어쓴다.
-SW_TEST_CASE( DataTableModelTest, ReloadedListKeepsTheSelectionByPath )
-{
-    const DataTableTestFiles files;
-    DataTableModel           model;
-    model.setGameDataFiles( { files._first, files._second } );
-    model.selectGameDataFile( 1 );
+    SW_REQUIRE_TRUE( model.openGameDataFile( files._second._absolutePath ) );
     model.replaceGameDataRawText( "<Second b=\"9\"/>" );
 
-    model.setGameDataFiles( { files._second, files._first } ); // 순서가 바뀌었다
-    SW_EXPECT_EQUAL( 0, model.getSelectedGameDataIndex() );
+    model.setGameDataFiles( { files._first } ); // 연 파일이 목록에서 빠졌다
+    SW_EXPECT_TRUE( model.getGameDataPath() == files._second._absolutePath );
     SW_EXPECT_TRUE( model.isGameDataDirty() );
     SW_EXPECT_TRUE( model.saveDocument() );
     SW_EXPECT_TRUE( DataTableTestFiles::read( files._second ) == "<Second b=\"9\"/>" );
     SW_EXPECT_TRUE( DataTableTestFiles::read( files._first ) == "<First a=\"1\"/>" );
 }
 
-SW_TEST_CASE( DataTableModelTest, VanishedFileLeavesNothingSelectedAndKeepsTheEdit )
+// 다시 열기(문서 패널의 다시 읽기 · "저장 안 함")는 디스크의 글로 간다. 저장은 dirty 와 무관하게 연 파일을 쓴다(저장 왕복).
+SW_TEST_CASE( DataTableModelTest, SaveWritesAndReopenRestores )
 {
     const DataTableTestFiles files;
     DataTableModel           model;
-    model.setGameDataFiles( { files._first, files._second } );
-    model.selectGameDataFile( 1 );
-    model.replaceGameDataRawText( "<Second b=\"9\"/>" );
-
-    model.setGameDataFiles( { files._first } );
-    SW_EXPECT_EQUAL( -1, model.getSelectedGameDataIndex() );
-    SW_EXPECT_TRUE( model.findSelectedGameDataFile() == nullptr );
-    SW_EXPECT_FALSE( model.saveDocument() ); // 쓸 곳이 없다 — 표시가 남아 저장 확인이 다시 묻는다
-    SW_EXPECT_TRUE( model.isGameDataDirty() );
-    SW_EXPECT_TRUE( DataTableTestFiles::read( files._first ) == "<First a=\"1\"/>" );
-}
-
-SW_TEST_CASE( DataTableModelTest, SaveWritesAndRevertRestores )
-{
-    const DataTableTestFiles files;
-    DataTableModel           model;
-    model.setGameDataFiles( { files._first } );
-    model.selectGameDataFile( 0 );
+    SW_REQUIRE_TRUE( model.openGameDataFile( files._first._absolutePath ) );
     const uint32 loadCount = model.getGameDataLoadCount();
 
     model.replaceGameDataRawText( "<First a=\"5\"/>" );
-    model.revert();
+    SW_REQUIRE_TRUE( model.openGameDataFile( files._first._absolutePath ) );
     SW_EXPECT_FALSE( model.isGameDataDirty() );
     SW_EXPECT_TRUE( model.getGameDataRawText() == "<First a=\"1\"/>" );
     SW_EXPECT_TRUE( *model.getGameDataDocument().findCellValue( 0, "a" ) == "1" );
@@ -153,39 +115,36 @@ SW_TEST_CASE( DataTableModelTest, SaveWritesAndRevertRestores )
     SW_EXPECT_FALSE( model.getGameDataDocument().isDirty() );
     SW_EXPECT_TRUE( DataTableTestFiles::read( files._first ) == "<First a=\"6\"/>" );
 
-    model.replaceGameDataRawText( "<First a=\"7\"/>" );
-    model.revert();
-    SW_EXPECT_TRUE( model.getGameDataRawText() == "<First a=\"6\"/>" ); // 되돌리기는 저장한 글로 간다
+    SW_EXPECT_TRUE( model.saveDocument() ); // 고친 것이 없어도 쓴다 — 같은 글이다
+    SW_EXPECT_TRUE( DataTableTestFiles::read( files._first ) == "<First a=\"6\"/>" );
 }
 
 SW_TEST_CASE( DataTableModelTest, TableEditUpdatesTheRawText )
 {
     const DataTableTestFiles files;
     DataTableModel           model;
-    model.setGameDataFiles( { files._first } );
-    model.selectGameDataFile( 0 );
+    SW_REQUIRE_TRUE( model.openGameDataFile( files._first._absolutePath ) );
     SW_REQUIRE_TRUE( model.editGameDataDocument().setCell( 0, "a", "3" ) );
     model.commitGameDataTableEdit();
     SW_EXPECT_TRUE( model.isGameDataDirty() );
     SW_EXPECT_TRUE( model.getGameDataRawText() == "<First a=\"3\"/>" );
 }
 
-// 읽지 못한 파일은 고르지 않는다. 앞 파일의 글을 든 채 고르면 저장이 앞 파일의 내용을 이 파일에 쓴다.
-SW_TEST_CASE( DataTableModelTest, UnreadableFileIsNotSelected )
+// 읽지 못한 파일은 열지 않는다. 앞 파일의 글을 든 채 열면 저장이 앞 파일의 내용을 이 파일에 쓴다.
+SW_TEST_CASE( DataTableModelTest, UnreadableFileIsNotOpened )
 {
     SW_EXPECT_LOG( "File.NotFound" );
     SW_EXPECT_LOG( "DataTablePanel.CouldNotReadGame" );
     const DataTableTestFiles files;
-    GameDataFileEntry        missing;
-    missing._fileName     = "SwDataTableMissing.xml";
-    missing._absolutePath = test::makeScratchPath( missing._fileName );
-    DataTableModel model;
-    model.setGameDataFiles( { files._first, missing } );
-    model.selectGameDataFile( 0 );
-    model.selectGameDataFile( 1 );
-    SW_EXPECT_EQUAL( -1, model.getSelectedGameDataIndex() );
+    const string             missingPath = test::makeScratchPath( "SwDataTableMissing.xml" );
+    DataTableModel           model;
+    SW_REQUIRE_TRUE( model.openGameDataFile( files._first._absolutePath ) );
+    SW_EXPECT_FALSE( model.openGameDataFile( missingPath ) );
+    SW_EXPECT_TRUE( model.getGameDataPath().empty() );
     SW_EXPECT_TRUE( model.getGameDataRawText().empty() );
-    SW_EXPECT_FALSE( FileUtil::exists( missing._absolutePath ) );
+    SW_EXPECT_FALSE( model.saveGameDataFile() ); // 쓸 곳이 없다
+    SW_EXPECT_FALSE( FileUtil::exists( missingPath ) );
+    SW_EXPECT_TRUE( DataTableTestFiles::read( files._first ) == "<First a=\"1\"/>" );
 }
 
 // ---------------------------------------------------------------------- 현지화 표
@@ -256,8 +215,7 @@ SW_TEST_CASE( DataTableModelTest, BrokenXMLIsNotSaved )
     SW_EXPECT_LOG( "DataTablePanel.GameDataNotValidXML" );
     const DataTableTestFiles files;
     DataTableModel           model;
-    model.setGameDataFiles( { files._first } );
-    model.selectGameDataFile( 0 );
+    SW_REQUIRE_TRUE( model.openGameDataFile( files._first._absolutePath ) );
     model.replaceGameDataRawText( "<First a=" );
     SW_EXPECT_FALSE( model.getGameDataDocument().isParsed() );
     SW_EXPECT_FALSE( model.saveDocument() );
@@ -273,8 +231,7 @@ SW_TEST_CASE( DataTableModelTest, RawEditInPlaceUpdatesTheDocument )
 {
     const DataTableTestFiles files;
     DataTableModel           model;
-    model.setGameDataFiles( { files._first } );
-    model.selectGameDataFile( 0 );
+    SW_REQUIRE_TRUE( model.openGameDataFile( files._first._absolutePath ) );
     model.editGameDataRawText() = "<First a=\"8\"/>";
     model.commitGameDataRawEdit();
     SW_EXPECT_TRUE( model.isGameDataDirty() );

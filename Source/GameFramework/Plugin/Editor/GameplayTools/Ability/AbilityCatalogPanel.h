@@ -42,8 +42,10 @@ namespace sw::editor
 
         AbilityCatalogPanel();
 
-        const utf8*        getPanelTitle() const override { return "Ability Catalog"; }
-        EditorTextExtent   getInitialPanelSize() const override { return EditorTextExtent::ofText( 110.0f, 36.0f ); }
+        const utf8*      getPanelTitle() const override { return "Ability Catalog"; }
+        EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 110.0f, 36.0f ); }
+        /** @brief 떠 있는 도구 창입니다(문서 기반의 기본인 가운데 탭이 아니다 — 옮기기 전 자리를 지킨다). */
+        EditorDockSlot     getDefaultDockSlot() const override { return EditorDockSlot::Floating; }
         void               drawDocumentContent() override;
         [[nodiscard]] bool saveDocument() override;
 

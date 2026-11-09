@@ -265,7 +265,6 @@
     "Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp": {"minus-one": 1, "float": 29, "integer": 19},
     "Source/Editor/Panels/ContentBrowser/Model/ContentBrowserCrumb.cpp": {"minus-one": 1},
     "Source/Editor/Panels/DataTable/DataTablePanel.cpp": {"minus-one": 1, "float": 9, "integer": 1},
-    "Source/Editor/Panels/DataTable/Model/DataTableModel.cpp": {"minus-one": 3},
     "Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp": {"minus-one": 1, "float": 1, "integer": 4},
     "Source/Editor/Panels/Dialogue/Model/DialogueGraphEdit.cpp": {"float": 12, "integer": 2},
     "Source/Editor/Panels/Fog/VolumetricFogPanel.cpp": {"integer": 1},
