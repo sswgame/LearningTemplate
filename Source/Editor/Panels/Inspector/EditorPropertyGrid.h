@@ -51,9 +51,9 @@ namespace sw::editor
          */
         void drawSearchBarWithOptions( const utf8* pFieldTooltip = nullptr );
         /** @brief 이번 프레임의 펼치기(1) · 접기(-1) 요청을 반환합니다. 0 이면 요청이 없습니다. 컴포넌트 카드처럼 그리드 밖 머리에도 적용할 때 씁니다. */
-        int32 getOpenAllRequest() const { return _openAllRequest; }
+        OpenAllRequest getOpenAllRequest() const { return _openAllRequest; }
         /** @brief 프레임 끝에 부릅니다. 펼치기 · 접기 요청을 지웁니다. */
-        void endFrame() { _openAllRequest = 0; }
+        void endFrame() { _openAllRequest = OpenAllRequest::None; }
         /** @brief 현재 검색어를 반환합니다. 비어 있으면 빈 문자열입니다. 환경설정 창이 섹션을 거를 때 씁니다. */
         const utf8* getFilterText() const { return _propertyFilter.c_str(); }
         /**
@@ -173,7 +173,7 @@ namespace sw::editor
         uint32                                                         _pendingEditIndex;    ///< 미룬 편집의 원소 · 항목 자리
         uint32                                                         _measureRowID;        ///< 높이를 재는 중인 깊이 0 행. `constant::invalid_index::kUint32` 면 없다
         float32                                                        _measureStartY;       ///< 그 행이 시작한 높이(칸 여백 안)
-        int32                                                          _openAllRequest;      ///< 이번 프레임의 모두 펼치기(1) · 접기(-1) 요청. 0 이면 없다
+        OpenAllRequest                                                 _openAllRequest;      ///< 이번 프레임의 모두 펼치기 · 접기 요청
         uint8                                                          _bFavoritesOnly  : 1; ///< 다음 `drawTargetProperties` 한 번만 즐겨찾기 프로퍼티로 거른다
         uint8                                                          _bShowAllMethods : 1; ///< 진단 보기: `CallInEditor` 가 없는 메서드도 그린다(보기 옵션). 기본은 꺼져 있다
         uint8                                                          _bTableOpen      : 1; ///< 카테고리 표가 열려 있다

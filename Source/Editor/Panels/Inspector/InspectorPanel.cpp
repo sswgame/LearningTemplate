@@ -198,8 +198,8 @@ namespace sw::editor
         {
             const InspectorComponentCard& card = _state._listComponent[index];
             ImGui::PushID( card._typeName.c_str() );
-            if ( _propertyGrid.getOpenAllRequest() != 0 )
-                ImGui::SetNextItemOpen( _propertyGrid.getOpenAllRequest() > 0 );
+            if ( _propertyGrid.getOpenAllRequest() != OpenAllRequest::None )
+                ImGui::SetNextItemOpen( _propertyGrid.getOpenAllRequest() == OpenAllRequest::ExpandAll );
             if ( ImGui::CollapsingHeader( card._typeDisplayName.c_str(), ImGuiTreeNodeFlags_DefaultOpen ) )
             {
                 _viewModel.setCurrentMultiComponent( index );
@@ -354,9 +354,9 @@ namespace sw::editor
                 ImGui::SetNextItemOpen( true );
                 _viewModel.consumeScrollTo();
             }
-            else if ( _propertyGrid.getOpenAllRequest() != 0 )
+            else if ( _propertyGrid.getOpenAllRequest() != OpenAllRequest::None )
             {
-                ImGui::SetNextItemOpen( _propertyGrid.getOpenAllRequest() > 0 ); // 보기 옵션의 모두 펼치기 · 접기는 컴포넌트 카드에도 적용한다
+                ImGui::SetNextItemOpen( _propertyGrid.getOpenAllRequest() == OpenAllRequest::ExpandAll ); // 보기 옵션의 모두 펼치기 · 접기는 컴포넌트 카드에도 적용한다
             }
 
             if ( EditorWidgets::beginComponentCard( cardTitle.c_str(), card._componentID, &bActive, &bRemove, card._bAccent == SW_TRUE ) )

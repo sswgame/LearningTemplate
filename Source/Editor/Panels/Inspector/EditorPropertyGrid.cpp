@@ -147,7 +147,7 @@ namespace sw::editor
         , _pendingEditIndex{ 0 }
         , _measureRowID{ constant::invalid_index::kUint32 }
         , _measureStartY{ 0.0f }
-        , _openAllRequest{ 0 }
+        , _openAllRequest{ OpenAllRequest::None }
         , _bFavoritesOnly{ SW_FALSE }
         , _bShowAllMethods{ SW_FALSE }
         , _bTableOpen{ SW_FALSE }
@@ -178,10 +178,10 @@ namespace sw::editor
             EditorSelfTestMarks::record( "inspector.viewOptions.modifiedOnly" );
             ImGui::Separator();
             if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "ExpandAll" ) ) )
-                _openAllRequest = 1;
+                _openAllRequest = OpenAllRequest::ExpandAll;
             EditorSelfTestMarks::record( "inspector.viewOptions.expandAll" );
             if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "CollapseAll" ) ) )
-                _openAllRequest = -1;
+                _openAllRequest = OpenAllRequest::CollapseAll;
             EditorSelfTestMarks::record( "inspector.viewOptions.collapseAll" );
             ImGui::Separator();
             // 진단 보기 — CallInEditor 가 없는 FUNCTION 도 호출할 수 있게 한다. 실행 안전성을 선언하지 않은 함수라 기본 목록에서 뺀다.

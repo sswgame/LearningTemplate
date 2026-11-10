@@ -123,15 +123,23 @@ namespace sw::editor
         PropertyGridRowWindow();
     };
 
+    /** @brief 이번 프레임의 모두 펼치기 · 접기 요청입니다(보기 옵션 메뉴). */
+    enum class OpenAllRequest : uint8
+    {
+        None,
+        ExpandAll,
+        CollapseAll,
+    };
+
     /** @brief gather 한 번의 입력입니다. */
     struct PropertyGridGatherParams
     {
         PropertyGridRowWindow        _window{};
-        string_view                  _filterText{};              ///< 검색 글
-        const vector<hashed_string>* _pListDrawnName{ nullptr }; ///< 인스펙터 확장이 이미 그린 이름(다시 그리지 않는다). nullptr 이면 없다
-        int32                        _openAllRequest{ 0 };       ///< 모두 펼치기(1) · 접기(-1). 0 이면 없다
-        uint8                        _bFavoritesOnly : 1;        ///< 즐겨찾기한 프로퍼티만 타입 이름 머리 하나로
-        uint8                        _bModifiedOnly  : 1;        ///< 기본값과 다른 프로퍼티만
+        string_view                  _filterText{};                           ///< 검색 글
+        const vector<hashed_string>* _pListDrawnName{ nullptr };              ///< 인스펙터 확장이 이미 그린 이름(다시 그리지 않는다). nullptr 이면 없다
+        OpenAllRequest               _openAllRequest{ OpenAllRequest::None }; ///< 모두 펼치기 · 접기 요청
+        uint8                        _bFavoritesOnly : 1;                     ///< 즐겨찾기한 프로퍼티만 타입 이름 머리 하나로
+        uint8                        _bModifiedOnly  : 1;                     ///< 기본값과 다른 프로퍼티만
 
         PropertyGridGatherParams();
     };

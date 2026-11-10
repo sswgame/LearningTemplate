@@ -329,8 +329,8 @@ namespace sw::editor
             const uint64      categoryKey     = HashUtil::combine( salt, HashUtil::computeStringHash64( group._category, false ) );
             PropertyValueRow& category        = appendRow( outState, PropertyRowKind::Category, 0, categoryKey );
             _listBinding.back()._bDefaultOpen = 1; // 카테고리는 처음에 펼쳐져 있다(언리얼 Details 와 같다)
-            if ( params._openAllRequest != 0 )
-                storeExpanded( categoryKey, true, params._openAllRequest > 0 );
+            if ( params._openAllRequest != OpenAllRequest::None )
+                storeExpanded( categoryKey, true, params._openAllRequest == OpenAllRequest::ExpandAll );
             const bool bCategoryOpen = isExpanded( categoryKey, true );
             category._label          = group._category;
             category._bExpanded      = bCategoryOpen ? SW_TRUE : SW_FALSE;
