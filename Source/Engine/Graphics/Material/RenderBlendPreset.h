@@ -14,7 +14,7 @@ namespace sw
 {
     /** @brief 이름 붙은 블렌드 타깃 값 하나입니다. */
     REFLECT()
-    struct SW_API RenderBlendPreset : public RHIBlendTargetState
+    struct SW_API RenderBlendPreset : public BlendTargetState
     {
         REFLECT_BODY();
 

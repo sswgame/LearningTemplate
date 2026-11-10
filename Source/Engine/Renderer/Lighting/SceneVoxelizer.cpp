@@ -29,7 +29,7 @@ namespace sw
             {
                 const Mesh*     pRawMesh  = mesh.getRawMesh();
                 const Material* pMaterial = resolveMaterial( mesh, pSceneDefault );
-                return pRawMesh != nullptr && pMaterial != nullptr && mesh.isActive() && mesh.isVisible() && pMaterial->getBlendMode() == RHIBlendMode::Opaque &&
+                return pRawMesh != nullptr && pMaterial != nullptr && mesh.isActive() && mesh.isVisible() && pMaterial->getBlendMode() == BlendMode::Opaque &&
                        pRawMesh->hasSkin() == false;
             }
 

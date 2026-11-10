@@ -10,6 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Foundation/EnginePlatformHeaders.h"
@@ -20,6 +21,7 @@
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Backend/RHISwapChainSet.h"
 #include "Engine/Graphics/RHI/Backend/RHITimestampRing.h"
+#include "Engine/Graphics/RHI/Backend/RHITrackedState.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHISwapChain.h"
 #include "Engine/Graphics/RHI/DX/DXGIFormat.h"
 #include "Engine/Graphics/RHI/DX/RHIDxResultCheck.h"
@@ -273,6 +275,8 @@ namespace sw
         [[nodiscard]] bool readTimestamps( RHITimestampFrame& outFrame );
         [[nodiscard]] bool readGPUClockNanos( int64& outGPUNanos );
         bool               isGPUClockReadCheap() const { return true; }
+        /** @brief 컴퓨트 큐 타임스탬프가 직접 큐와 같은 시계인지입니다(`compareComputeQueueClock` 이 힙을 만들 때 정한다). */
+        bool isComputeQueueTimestampComparable() const { return _bComputeTimestampComparable.load( std::memory_order_relaxed ) != SW_FALSE; }
 
         /** @brief 타임스탬프 쿼리 힙을 반환합니다. 준비되지 않았으면 nullptr 입니다. */
         ID3D12QueryHeap* getTimestampHeap() const { return _timestampHeap.Get(); }
@@ -328,6 +332,7 @@ namespace sw
             [[nodiscard]] bool readTimestamps( RHITimestampFrame& outFrame ) override { return _owner.readTimestamps( outFrame ); }
             [[nodiscard]] bool readGPUClockNanos( int64& outGPUNanos ) override { return _owner.readGPUClockNanos( outGPUNanos ); }
             bool               isGPUClockReadCheap() const override { return _owner.isGPUClockReadCheap(); }
+            bool               isComputeQueueTimestampComparable() const override { return _owner.isComputeQueueTimestampComparable(); }
 
         private:
             D3D12RHIDevice& _owner;
@@ -351,14 +356,13 @@ namespace sw
         /// @brief 슬롯 테이블 하나의 최대 원소 수입니다(t 테이블과 u 테이블 중 큰 쪽).
         static constexpr uint32 kMaxSlotTableSize = shaderslot::kSRVSlotCount > shaderslot::kComputeUAVSlotCount ? shaderslot::kSRVSlotCount : shaderslot::kComputeUAVSlotCount;
 
-        /// @brief 오프스크린 텍스처와 RTV, SRV 핸들입니다.
+        /// @brief 오프스크린 텍스처와 RTV, SRV 핸들입니다. 만든 뒤에는 바뀌지 않는다(상태는 `D3D12TextureRecord::_state`).
         struct OffscreenTextureRecord
         {
             D3D12_CPU_DESCRIPTOR_HANDLE _rtvHandle{};
             D3D12_CPU_DESCRIPTOR_HANDLE _dsvHandle{};
             uint32                      _rtvIndex{ 0 };
             uint32                      _dsvIndex{ 0 };
-            D3D12_RESOURCE_STATES       _state  = D3D12_RESOURCE_STATE_COMMON;
             DXGI_FORMAT                 _format = DXGI_FORMAT_UNKNOWN;
             uint32                      _width{ 0 };
             uint32                      _height{ 0 };
@@ -372,12 +376,32 @@ namespace sw
             uint8               _reserved : 6;
         };
 
-        /// @brief 기록 경로가 오프스크린 레코드에서 읽는 항목입니다. `findOffscreenTargetView` 가 잠근 채 복사해 줍니다.
+        /// @brief 텍스처 · 버퍼 레코드의 추적 상태입니다(`RHITrackedState` — Vulkan 이미지 레이아웃과 같은 형식).
+        using TrackedState = RHITrackedState<D3D12_RESOURCE_STATES>;
+
+        /// @brief 텍스처 핸들 테이블의 칸입니다. 오프스크린(RTV · DSV 를 가진) 텍스처만 상태를 추적한다 — 나머지는 COMMON 에서 암묵 승격된다.
+        struct TextureRecord
+        {
+            Microsoft::WRL::ComPtr<ID3D12Resource> _resource;
+            OffscreenTextureRecord                 _offscreen{}; ///< `_bOffscreen` 일 때만 뜻이 있다
+            TrackedState                           _state;
+            uint8                                  _bOffscreen{ SW_FALSE };
+        };
+
+        /// @brief 버퍼 핸들 테이블의 칸입니다. 구조 버퍼(`createStructuredBuffer`)만 상태를 추적한다.
+        struct BufferRecord
+        {
+            Microsoft::WRL::ComPtr<ID3D12Resource> _resource;
+            TrackedState                           _state;
+            uint8                                  _bTrackedState{ SW_FALSE };
+        };
+
+        /// @brief 기록 경로가 오프스크린 레코드에서 읽는 항목입니다. `findOffscreenTargetView` 가 복사해 줍니다.
         struct OffscreenTargetView
         {
             D3D12_CPU_DESCRIPTOR_HANDLE _rtvHandle{};                          ///< 고른 면의 RTV(없으면 0)
             D3D12_CPU_DESCRIPTOR_HANDLE _dsvHandle{};                          ///< 고른 면의 DSV(없으면 0)
-            D3D12_RESOURCE_STATES       _state  = D3D12_RESOURCE_STATE_COMMON; ///< 복사한 순간의 상태(전이는 `transitionTexture` 가 다시 잠그고 처리한다)
+            D3D12_RESOURCE_STATES       _state  = D3D12_RESOURCE_STATE_COMMON; ///< 복사한 순간의 상태(전이는 `transitionTexture` 가 비교 교환으로 다시 한다)
             DXGI_FORMAT                 _format = DXGI_FORMAT_UNKNOWN;
             uint8                       _bHasRTV{ SW_FALSE };
             uint8                       _bHasDSV{ SW_FALSE };
@@ -423,6 +447,29 @@ namespace sw
             {
                 return _resource.Get() == other._resource.Get() && _buffer == other._buffer && _texture == other._texture;
             }
+        };
+
+        /** @brief bindless 번호 한 칸이 어느 등록표에 살아 있는가입니다(`BindlessReadSlot::_registry`). SRV · UAV 표가 번호 공간 하나를 나눈다. */
+        enum class BindlessReadRegistry : uint8
+        {
+            Empty,
+            ShaderResource,
+            UnorderedAccess
+        };
+
+        /**
+         * @brief 기록 경로가 bindless 번호로 읽는 값입니다(`D3D12RHICommandContext::resolveBufferAddress` · `resolveOfflineView`). 번호마다 한 칸이고 표 크기가 고정이다.
+         * @details 바인딩마다 `_bindlessMutex` 읽기 락과 등록표 · 상수 버퍼 크기 해시 맵을 거치던 것을 걷어 낸 자리다. 쓰기(등록 · 해제)는 여전히 배타 락 아래에서 하고,
+         *          읽기는 락 없이 `_registry` 를 acquire 로 본 뒤 값을 읽는다. 해제는 `_registry` 만 비운다 — 주소 · 뷰는 번호가 펜스 뒤 다시 나갈 때까지 그대로라,
+         *          해제와 겹친 읽기가 옛 값을 받아도 그 자원과 디스크립터는 GPU 펜스까지 살아 있다(`releaseTrackedResourceDeferred` · `deferFreeBindlessIndex`).
+         *          표가 늘지 않으므로 게임 스레드의 등록이 기록과 겹쳐도 읽는 쪽 참조가 매달리지 않는다(언리얼 `FD3D12BindlessDescriptorAllocator` 도 고정 힙 번호를 락 없이 쓴다 — 기억에 의존한 비교).
+         */
+        struct BindlessReadSlot
+        {
+            atomic<uint64> _gpuAddress{ 0 };    ///< 버퍼의 GPU 주소(텍스처는 0)
+            atomic<uint64> _offlineView{ 0 };   ///< 오프라인 힙 뷰(`D3D12_CPU_DESCRIPTOR_HANDLE::ptr`)
+            atomic<uint32> _cbAlignedSize{ 0 }; ///< 링 상수 버퍼면 프레임 슬롯 크기, 아니면 0
+            atomic<uint8>  _registry{ static_cast<uint8>( BindlessReadRegistry::Empty ) };
         };
 
         // 구조 버퍼 갱신(updateStructuredBufferRegions) 전용 프레임 링 슬롯. 매 호출마다 업로드 힙과 커맨드 리스트를
@@ -523,6 +570,12 @@ namespace sw
     private:
         /** @brief 쿼리 힙과 읽기 버퍼를 한 번만 만듭니다. */
         void ensureTimestampResources();
+        /**
+         * @brief 컴퓨트 큐의 타임스탬프를 직접 큐의 것과 같은 축으로 읽을 수 있는지 대조합니다(주파수 같음 + 두 큐 시계 표본의 GPU 증가분이 CPU 증가분과 맞음).
+         * @details 타임스탬프 주파수와 `GetClockCalibration` 은 큐마다 묻는다(https://learn.microsoft.com/en-us/windows/win32/direct3d12/timing). 같은 카운터면 두 큐의 표본 사이
+         *          GPU 증가분과 QPC 증가분이 같다 — 어긋남이 `kComputeClockSkewToleranceMicros` 안이면 true 다. 결과는 정보 로그로 남긴다(실장치 대조 기록).
+         */
+        [[nodiscard]] bool compareComputeQueueClock( uint64 directFrequency ) const;
         /** @brief 방금 펜스를 통과한 링 슬롯의 결과를 마이크로초로 변환합니다. */
         void collectTimestampsForSlot();
         /**
@@ -549,17 +602,23 @@ namespace sw
         ID3D12Resource* resolveBuffer( RHIBufferHandle handle ) const;
         /** @brief 불투명 텍스처 핸들로 GPU 리소스를 찾습니다. */
         ID3D12Resource* resolveTexture( RHITextureHandle handle ) const;
+        /** @brief 버퍼 레코드입니다. 핸들이 무효면 nullptr 입니다(락 없음). */
+        BufferRecord* findBufferRecord( RHIBufferHandle handle ) { return _gpuBuffers.get( handle ); }
+        /** @brief 텍스처 레코드입니다. 핸들이 무효면 nullptr 입니다(락 없음). */
+        TextureRecord* findTextureRecord( RHITextureHandle handle ) { return _gpuTextures.get( handle ); }
         /**
          * @brief 텍스처의 추적 상태입니다. 상태를 추적하는 것은 오프스크린 렌더 타깃뿐이라 그 밖의 텍스처는 COMMON 입니다.
-         * @details `_resourceStateMutex` 를 잡고 읽는다. 복사 전이는 이 상태에서 출발해 같은 상태로 돌아와야 SRV 바인딩
-         *          경로(COMMON 암묵 승격)가 그대로 맞는다.
+         * @details 복사 전이는 이 상태에서 출발해 같은 상태로 돌아와야 SRV 바인딩 경로(COMMON 암묵 승격)가 그대로 맞는다.
          */
         D3D12_RESOURCE_STATES getTrackedTextureState( RHITextureHandle texture );
-        /**
-         * @brief 오프스크린 레코드를 `_resourceStateMutex` 안에서 찾아 @p slice 면의 뷰와 함께 복사합니다. 오프스크린 레코드가 없으면 false 입니다.
-         * @details 텍스처 생성(`createTexture2D`)이 다른 스레드에서 이 테이블을 재해시하는 동안 기록 워커가 읽으면 안 된다. 테이블의 이터레이터를 기록 경로에 가지고 다니지 않는다.
-         */
+        /** @brief 오프스크린 레코드를 찾아 @p slice 면의 뷰와 함께 복사합니다. 오프스크린 레코드가 없으면 false 입니다(락 없음 — 레코드는 만든 뒤 바뀌지 않는다). */
         [[nodiscard]] bool findOffscreenTargetView( RHITextureHandle texture, uint32 slice, OffscreenTargetView& outView );
+        /** @brief bindless 번호 @p index 의 기록 경로 값을 쓰고 마지막에 등록표를 공개합니다. `_bindlessMutex` 배타 락 아래에서 부릅니다. */
+        void publishBindlessReadSlot( RHIDescriptorIndex index, BindlessReadRegistry registry, const BindlessResourceRecord& record );
+        /** @brief 번호 @p index 가 고른 등록표(@p bUAV)에 살아 있으면 그 읽기 칸을, 아니면 nullptr 를 줍니다(락 없음 — 기록 경로의 바인딩이 부른다). */
+        const BindlessReadSlot* findBindlessReadSlot( RHIDescriptorIndex index, bool bUAV ) const;
+        /** @brief bindless 번호 @p index 를 기록 경로에서 비웁니다(값은 번호가 다시 나갈 때까지 남긴다). `_bindlessMutex` 배타 락 아래에서 부릅니다. */
+        void retireBindlessReadSlot( RHIDescriptorIndex index );
         /** @brief RTV 힙의 `rtvIndex` 번 디스크립터입니다(스왑체인 버퍼 수를 포함한 절대 번호). */
         D3D12_CPU_DESCRIPTOR_HANDLE getOffscreenRTVHandle( uint32 rtvIndex ) const;
         /** @brief DSV 힙의 `dsvIndex` 번 디스크립터입니다. */
@@ -784,27 +843,28 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D12QueryHeap> _timestampHeap;
         Microsoft::WRL::ComPtr<ID3D12Resource>  _timestampReadback;
         uint64                                  _timestampFrequency;
+        /// @brief 컴퓨트 큐 타임스탬프가 직접 큐와 같은 시계인가입니다(`isComputeQueueTimestampComparable`). 힙을 만들 때 한 번 정하고, 병렬 기록 워커가 읽어 atomic 이다.
+        atomic<uint8> _bComputeTimestampComparable;
         /// @brief 이번 프레임 · 링 슬롯별로 기록된 슬롯 비트입니다. 쿼리 힙은 리셋하지 않아 안 적은 칸에 지난 사이클 값이 남으므로 이 비트로 가린다.
         RHITimestampRing     _timestampRing;
         RHITimestampFrame    _timestampFrame; ///< 마지막으로 읽은 프레임(`readTimestamps`)
         StructuredUploadSlot _arrStructuredUploadSlot[constant::render::kMaxFrameCountInFlight];
 
-        RHIHandleTable<Microsoft::WRL::ComPtr<ID3D12Resource>> _gpuBuffers;
-        RHIHandleTable<Microsoft::WRL::ComPtr<ID3D12Resource>> _gpuTextures;
-        /// @brief 리소스 상태 전이 맵을 보호합니다. 여러 커맨드 리스트가 동시에 같은 자원을 전이할 수 있기 때문입니다.
-        mutex                                                 _resourceStateMutex;
-        unordered_map<RHIBufferHandle, D3D12_RESOURCE_STATES> _mapStructuredBufferState;
+        /// @brief 버퍼 · 텍스처 레코드입니다. 칸 찾기는 락이 없고(`SlotHandleTable::get`), 추적 상태도 칸 안의 원자값이라 배리어가 락을 잡지 않는다.
+        RHIHandleTable<BufferRecord>  _gpuBuffers;
+        RHIHandleTable<TextureRecord> _gpuTextures;
         /// @brief 구조 버퍼 핸들에서 원소 stride 를 찾는 맵입니다(bindless StructuredBuffer SRV, UAV 생성용). `_bindlessMutex` 가 보호합니다(등록이 그 배타 락 안에서 읽습니다).
         unordered_map<RHIBufferHandle, uint32> _mapStructuredStride;
 
-        unordered_map<RHITextureHandle, OffscreenTextureRecord> _mapOffscreenTexture;
-        uint32                                                  _nextOffscreenRTVIndex;
-        uint32                                                  _nextOffscreenDSVIndex;
-        IndexFreeList                                           _freeOffscreenRTV;
-        IndexFreeList                                           _freeOffscreenDSV;
-        unordered_map<RHIBufferHandle, uint32>                  _mapCbAlignedSize;
-        unordered_map<RHIBufferHandle, void*>                   _mapCbMapped;
-        RHIConstantBufferMirror _constantBufferMirror           SW_GUARDED_BY( _bindlessMutex ); ///< 한 번 쓴 상수 버퍼를 나머지 링 슬롯에도 채운다.
+        /// @brief 오프스크린 RTV · DSV 힙 칸의 발급기를 지킵니다(텍스처 생성 · 파괴만 잡는다 — 기록 경로는 잡지 않는다).
+        mutex                                         _offscreenViewMutex;
+        uint32 _nextOffscreenRTVIndex                 SW_GUARDED_BY( _offscreenViewMutex );
+        uint32 _nextOffscreenDSVIndex                 SW_GUARDED_BY( _offscreenViewMutex );
+        IndexFreeList _freeOffscreenRTV               SW_GUARDED_BY( _offscreenViewMutex );
+        IndexFreeList _freeOffscreenDSV               SW_GUARDED_BY( _offscreenViewMutex );
+        unordered_map<RHIBufferHandle, uint32>        _mapCbAlignedSize;
+        unordered_map<RHIBufferHandle, void*>         _mapCbMapped;
+        RHIConstantBufferMirror _constantBufferMirror SW_GUARDED_BY( _bindlessMutex ); ///< 한 번 쓴 상수 버퍼를 나머지 링 슬롯에도 채운다.
 
         RHIHandleTable<D3D12PipelineStateRecord> _pipelineStates;
         RHIRenderPassRegistry                    _renderPassRegistry; ///< 렌더 패스 핸들 등록부. 자기 뮤텍스로 직렬화해 어느 스레드에서나 부른다.
@@ -849,17 +909,17 @@ namespace sw
         ///          D3D12RHICommandList 와는 다른 스트림이라는 뜻일 뿐입니다.
         D3D12RecordingState _frameStreamState;
 
-        /// @brief bindless 레지스트리, 프리리스트, 디스크립터 카운터를 보호합니다. 구조를 바꾸는 register/unregister 와
-        /// 파괴만 배타 잠금을 잡습니다. 기록 중의 읽기(컨텍스트의 resolveBufferAddress, resolveOfflineView)는 잠그지 않습니다.
-        /// 기록 중에는 레지스트리가 바뀌지 않는다는 규칙(IRHIDevice::setParallelRecording, requireRegistryMutableNow)이
-        /// 그것을 보장합니다. 주의: 기록 중에 레지스트리를 락 없이 순회하는 동안 재할당이 일어나면 GPU 가 쓰레기 디스크립터를
-        /// 읽어 PageFault(VA=0)가 나고 DEVICE_HUNG 으로 이어집니다.
+        /// @brief bindless 레지스트리, 프리리스트, 디스크립터 카운터, 상수 버퍼 맵을 보호합니다. 구조를 바꾸는 register/unregister 와
+        /// 파괴만 배타 잠금을 잡습니다. 기록 중의 읽기(컨텍스트의 resolveBufferAddress, resolveOfflineView)는 이 락도 등록표도 보지 않고
+        /// 고정 크기 표 `_arrBindlessReadSlot` 를 읽습니다. 병렬 기록 중의 등록 · 해제는 `requireRegistryMutableNow` 가 멈춥니다.
         mutable shared_mutex _bindlessMutex;
         /// @brief 셰이더 가시 힙의 번호 발급기입니다. SRV/CBV 와 UAV 가 **같은 힙 인덱스 공간**을 나눈다 — 셰이더가 RWStructuredBuffer<T> name[] 을
         ///        그 번호로 고르므로 힙 슬롯 번호와 같아야 한다. 0 번은 null 텍스처 자리라 초기화가 그 다음부터 내게 한다.
         RHIBindlessIndexAllocator                   _bindlessIndexAllocator;
         RHIBindlessRegistry<BindlessResourceRecord> _srvRegistry; ///< SRV/CBV 표(`_bindlessIndexAllocator` 를 나눈다)
         RHIBindlessRegistry<BindlessResourceRecord> _uavRegistry; ///< UAV 표(`_bindlessIndexAllocator` 를 나눈다)
+        /// @brief 기록 경로가 락 없이 읽는 번호별 값입니다(`BindlessReadSlot`). 쓰기는 `_bindlessMutex` 배타 락 아래 `publishBindlessReadSlot` · `retireBindlessReadSlot` 만 한다.
+        FixedCountArray<BindlessReadSlot, kBindlessDescriptorCapacity> _arrBindlessReadSlot;
 
         UINT _rtvDescriptorSize;
         UINT _cbvDescriptorSize;

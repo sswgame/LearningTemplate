@@ -113,6 +113,17 @@ namespace sw
     };
 
     /**
+     * @enum RHITextureState
+     * @brief `IRHICommandList::transitionTextures` 가 텍스처를 옮길 논리 상태입니다. 뜻은 같은 이름의 단일 함수(`prepareTextureFor*`)와 같다.
+     */
+    enum class RHITextureState : uint8
+    {
+        ShaderResource  = 0, ///< 샘플링(`prepareTextureForShaderRead`) — 깊이면 깊이 읽기 전용
+        RenderTarget    = 1, ///< 컬러 또는 깊이 첨부(`prepareTextureForRenderTarget`) — 핸들 0 은 스왑체인
+        UnorderedAccess = 2, ///< 컴퓨트 RW 텍스처(`prepareTextureForUnorderedAccess`)
+    };
+
+    /**
      * @enum RHIPrimitiveTopology
      * @brief 프리미티브 토폴로지입니다.
      */

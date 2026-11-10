@@ -52,6 +52,8 @@ namespace sw
         /** @brief 앨리어싱 배리어(앞 리소스를 특정하지 않는다)를 기록합니다 — 힙에 겹쳐 놓은 텍스처의 프레임 첫 쓰기 앞. */
         void beginTextureAlias( RHITextureHandle texture ) override;
         void prepareTextureForUnorderedAccessNative( RHITextureHandle texture ) override;
+        /** @brief 텍스처 전이를 `ResourceBarrier` 한 번으로 냅니다(배열 크기만큼씩). 단일 `prepareTextureFor*Native` 도 원소 하나로 이 길을 지난다. */
+        void transitionTexturesNative( const RHITextureTransition* pTransition, uint32 count ) override;
         void bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override;
         void bindGraphicsUAV( RHIDescriptorIndex index, uint32 slot ) override;
         void setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset = 0 ) override;
@@ -100,20 +102,19 @@ namespace sw
 
         /**
          * @brief 등록된 bindless 인덱스의 버퍼 GPU 주소입니다. 루트 CBV 에 그대로 바인딩합니다(t 와 u 는 슬롯 테이블이라 이 경로를 쓰지 않습니다).
-         * @details 레지스트리는 기록 중 불변이라 락 없이 읽습니다(IRHIDevice::setParallelRecording 참고).
+         * @details 락 없이 고정 크기 읽기 표를 봅니다(`D3D12RHIDevice::BindlessReadSlot`).
          * @param bUAV true 면 UAV 레지스트리, false 면 SRV/CBV 레지스트리입니다.
          * @param bConstantBuffer true 면 링 상수버퍼의 이번 프레임 슬롯 오프셋을 더합니다.
          * @return 인덱스가 범위 밖이거나 슬롯이 비어 있으면 0 입니다.
          */
         D3D12_GPU_VIRTUAL_ADDRESS resolveBufferAddress( RHIDescriptorIndex index, bool bUAV, bool bConstantBuffer ) const;
         /** @brief 등록된 bindless 인덱스의 오프라인 뷰 핸들입니다(슬롯 테이블 복사 원본). 없으면 ptr 0 입니다. */
-        D3D12_CPU_DESCRIPTOR_HANDLE resolveOfflineView( RHIDescriptorIndex index, bool bUAV ) const;
-        /**
-         * @brief 바뀐 t/u 슬롯 테이블을 온라인 블록에 확정해 루트 테이블로 바인딩합니다. 드로우와 디스패치 직전에 부릅니다(Vulkan 의 flushSlotSet 에 해당합니다).
-         * @param bCompute true 면 컴퓨트 바인드 포인트(t 와 u), false 면 그래픽스(t 만).
-         * @return 바뀐 테이블을 모두 바인딩했으면 true 입니다. 온라인 블록을 빌리지 못해 바인딩하지 못했으면 false 이고, 부르는 쪽은 그 드로우나 디스패치를 건너뜁니다.
-         *         주의: 실패를 삼키고 그리면 이전 드로우의 테이블, 이 리스트에서 처음이면 **바인딩된 적 없는 테이블**을 읽어 장치 제거로 이어집니다.
-         */
+        D3D12_CPU_DESCRIPTOR_HANDLE resolveOfflineView( RHIDescriptorIndex index, bool bUAV ) const; /**
+                                                                                                      * @brief 바뀐 t/u 슬롯 테이블을 온라인 블록에 확정해 루트 테이블로 바인딩합니다. 드로우와 디스패치 직전에 부릅니다(Vulkan 의 flushSlotSet 에 해당합니다).
+                                                                                                      * @param bCompute true 면 컴퓨트 바인드 포인트(t 와 u), false 면 그래픽스(t 만).
+                                                                                                      * @return 바뀐 테이블을 모두 바인딩했으면 true 입니다. 온라인 블록을 빌리지 못해 바인딩하지 못했으면 false 이고, 부르는 쪽은 그 드로우나 디스패치를 건너뜁니다.
+                                                                                                      *         주의: 실패를 삼키고 그리면 이전 드로우의 테이블, 이 리스트에서 처음이면 **바인딩된 적 없는 테이블**을 읽어 장치 제거로 이어집니다.
+                                                                                                      */
         bool flushSlotTables( bool bCompute );
         /** @brief 슬롯 배열을 온라인 블록에 복사하고 테이블 GPU 핸들을 반환합니다. 바인딩되지 않은 슬롯은 nullView 로 채웁니다. */
         [[nodiscard]] bool writeSlotTable( const D3D12_CPU_DESCRIPTOR_HANDLE* pSlots, uint32 count, D3D12_CPU_DESCRIPTOR_HANDLE nullView, D3D12_GPU_DESCRIPTOR_HANDLE& outTable );
@@ -128,6 +129,13 @@ namespace sw
         /** @brief 건 인덱스 버퍼를 겁니다. 걸지 않았거나 부서졌으면 알리고 false 이며 부르는 쪽은 드로우를 버립니다(네 백엔드가 같다 — `RHIBufferBinding::bindForDraw`). */
         [[nodiscard]] bool bindIndexBufferForDraw();
         void               transitionTexture( RHITextureHandle texture, D3D12_RESOURCE_STATES newState );
+        /**
+         * @brief @p texture 를 @p requestedState 로 옮길 배리어를 @p outBarrier 에 채웁니다. 추적 상태의 비교 교환에서 이겼을 때만 true 다 — 그 배리어는 부르는 쪽이 낸다.
+         * @details 오프스크린 텍스처(RTV · DSV 를 가진)만 상태를 추적한다. 나머지는 COMMON 에서 암묵 승격되므로 false 다.
+         */
+        [[nodiscard]] bool makeTextureBarrier( RHITextureHandle texture, D3D12_RESOURCE_STATES requestedState, D3D12_RESOURCE_BARRIER& outBarrier );
+        /** @brief 묶음 원소 하나가 옮길 D3D12 상태입니다. 그 상태로 옮길 텍스처가 아니면(추적하지 않거나 첨부가 없으면) false 다. */
+        [[nodiscard]] bool findTextureTransitionState( const RHITextureTransition& transition, D3D12_RESOURCE_STATES& outState ) const;
         /**
          * @brief 컴퓨트 큐 리스트면 그래픽스 전용 상태(PIXEL_SHADER_RESOURCE)를 빼고 NON_PIXEL 로 둡니다. 그래픽스 리스트면 그대로입니다.
          * @details D3D12 COMPUTE 리스트의 배리어는 픽셀 셰이더 · 렌더 타깃 · 깊이 상태를 쓸 수 없다. 나중에 그래픽스가 픽셀 셰이더로 읽는 버퍼는 큐 경계에서 COMMON 으로 감쇠하고

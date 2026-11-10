@@ -37,6 +37,8 @@ namespace sw
         void prepareTextureForShaderReadNative( RHITextureHandle texture ) override;
         void prepareTextureForRenderTargetNative( RHITextureHandle texture ) override;
         void prepareTextureForUnorderedAccessNative( RHITextureHandle texture ) override;
+        /** @brief 텍스처 전이를 `vkCmdPipelineBarrier` 한 번으로 냅니다(`VulkanRHIDevice::transitionTextureLayouts`). 단일 `prepareTextureFor*Native` 도 원소 하나로 이 길을 지난다. */
+        void transitionTexturesNative( const RHITextureTransition* pTransition, uint32 count ) override;
         void bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override;
         void bindGraphicsUAV( RHIDescriptorIndex index, uint32 slot ) override;
         void setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset = 0 ) override;
@@ -72,6 +74,7 @@ namespace sw
         void                     transitionBuffersNative( const RHIBufferTransition* pTransition, uint32 count ) override;
         void                     copyBufferToReadbackNative( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes ) override;
         void                     uavBarrierNative( RHIBufferHandle buffer ) override;
+        void                     beginTextureAlias( RHITextureHandle texture ) override;
         /** @brief 마지막으로 연 이벤트 마커입니다(없으면 빈 문자열). 기록이 끝난 뒤 제출하는 스레드가 읽습니다. */
         const utf8* getLastEventMarker() const { return _lastEventMarker.c_str(); }
 

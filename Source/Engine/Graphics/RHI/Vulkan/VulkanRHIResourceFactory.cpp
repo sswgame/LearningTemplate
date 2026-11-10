@@ -89,16 +89,10 @@ namespace sw
 
     RHIBufferHandle VulkanRHIResourceFactory::createConstantBuffer( uint32 size )
     {
-        const uint32          aligned = MathUtil::align( size, constant::render::kConstantBufferAlignment );
-        const uint32          total   = aligned * constant::render::kMaxFrameCountInFlight;
-        const RHIBufferHandle handle  = _pDevice->createVulkanBuffer( total, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, nullptr );
-        if ( handle != 0 )
-        {
-            // 렌더 스레드가 드로우마다 이 표를 읽는다. 게임 스레드의 삽입(재배치)이 그와 겹치지 않게 배타 락으로 넣는다.
-            UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
-            _pDevice->_mapCbSlotSize[handle] = aligned;
-        }
-        return handle;
+        const uint32 aligned = MathUtil::align( size, constant::render::kConstantBufferAlignment );
+        const uint32 total   = aligned * constant::render::kMaxFrameCountInFlight;
+        // 칸 크기는 레코드가 표에 오르기 전에 적힌다 — 렌더 스레드가 드로우마다 락 없이 읽는다.
+        return _pDevice->createVulkanBuffer( total, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, nullptr, aligned );
     }
 
     void VulkanRHIResourceFactory::updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
@@ -110,11 +104,10 @@ namespace sw
         // 이번 프레임 칸에 쓰고, 나머지 칸은 링이 그 칸으로 돌아올 때 채운다(`RHIConstantBufferMirror` — 값이 바뀔 때만 쓰는 머티리얼 버퍼가
         // 세 프레임 중 두 프레임을 옛 값으로 그리던 것). 링 상수버퍼가 아니면(칸 크기가 없다) 버퍼 앞에 그대로 쓴다.
         // 디스크립터는 여기서 손대지 않는다. 드로우 직전 슬롯 세트를 쓸 때(flushSlotSet) 이번 프레임 칸의 오프셋을 넣는다.
-        ScopedSharedLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
-        if ( _pDevice->_mapCbSlotSize.contains( buffer ) == false )
+        VulkanRHIDevice::VulkanBufferRecord* const pRecord = _pDevice->resolveAllocatedBuffer( buffer );
+        if ( pRecord == nullptr || pRecord->_cbSlotSize == 0 )
         {
-            VulkanRHIDevice::VulkanBufferRecord* pRecord = _pDevice->resolveAllocatedBuffer( buffer );
-            void*                                pMapped{ nullptr };
+            void* pMapped{ nullptr };
             // Map 실패는 오류로 남긴다(isVkSuccess) — 조용히 건너뛰면 옛 상수로 그린다.
             const bool bCanMapBufferMemory = pRecord != nullptr && pRecord->_memory != VK_NULL_HANDLE &&
                                              isVkSuccess( vkMapMemory( _pDevice->_device, pRecord->_memory, 0, size, 0, &pMapped ), "vkMapMemory (constant buffer)" ) &&
@@ -144,7 +137,7 @@ namespace sw
         // TRANSFER_SRC: 어느 구조 버퍼든 비동기 되읽기(`copyBufferToReadback`)의 원본이 될 수 있다 — IRHICommandList 계약이 원본을 가리지 않는다(다른 백엔드는 복사 원본 제한이 없다).
         constexpr uint32 usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
                                  VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-        return _pDevice->createVulkanBuffer( static_cast<uint32>( totalBytes ), usage, nullptr );
+        return _pDevice->createVulkanBuffer( static_cast<uint32>( totalBytes ), usage, nullptr, 0 );
     }
 
     bool VulkanRHIResourceFactory::acquireStructuredUploadStaging( uint64 sizeBytes, uint64& outOffset, VkBuffer& outBuffer )
@@ -364,7 +357,7 @@ namespace sw
         // vkCmdBindIndexBuffer 에 거는 것이 용도 위반이므로 인덱스 용도로 따로 만든다.
         if ( pData == nullptr )
             return 0;
-        return _pDevice->createVulkanBuffer( sizeBytes, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, pData );
+        return _pDevice->createVulkanBuffer( sizeBytes, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, pData, 0 );
     }
 
     RHIBufferHandle VulkanRHIResourceFactory::createVertexBuffer( const void* pData, uint32 sizeBytes )
@@ -372,7 +365,7 @@ namespace sw
         // 인덱스 버퍼와 같은 경로다(디바이스의 `createVulkanBuffer` 가 용도 `_usage` 까지 기록에 남긴다).
         if ( pData == nullptr )
             return 0;
-        return _pDevice->createVulkanBuffer( sizeBytes, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, pData );
+        return _pDevice->createVulkanBuffer( sizeBytes, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, pData, 0 );
     }
 
     void VulkanRHIResourceFactory::updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
@@ -419,11 +412,7 @@ namespace sw
         // 렌더 스레드의 기록 상태(`_recordingState` 의 묶인 정점 · 인덱스 버퍼)는 여기서 지우지 않는다. 이 함수는 게임 스레드에서도 불리는데 그 값은
         // 렌더 스레드만 쓴다(여기서 쓰면 경쟁이다). 핸들은 세대가 있어 다시 쓰이지 않으므로 지운 핸들은 드로우에서 풀리지 않고,
         // 그 드로우는 버리고 알린다(`bindMeshVertexBufferForDraw` · `RHIDrawDiagnostics`).
-        {
-            UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
-            _pDevice->_mapCbSlotSize.erase( buffer );
-            _pDevice->_constantBufferMirror.remove( buffer );
-        }
+        _pDevice->_constantBufferMirror.remove( buffer );
 
         VulkanRHIDevice::VulkanBufferRecord owned;
         if ( _pDevice->_gpuBuffers.take( buffer, owned ) == false )
@@ -480,25 +469,23 @@ namespace sw
     }
 
     // 길이 유지(긴 함수 정리 기준): 서술 채우기 · 이미지 생성 · 메모리 · 뷰 · 초기 데이터 업로드의 순서가 곧 의미라 나누지 않는다.
-    RHITextureHandle VulkanRHIResourceFactory::createTexture2D( const RHITextureDesc& desc )
+    bool VulkanRHIResourceFactory::buildImageCreateInfo( const RHITextureDesc& desc, VkImageCreateInfo& outInfo )
     {
         const bool bInvalidTextureRequest = _pDevice->_device == nullptr || desc._width == 0 || desc._height == 0;
         if ( bInvalidTextureRequest )
-            return 0;
+            return false;
         if ( isRHITextureShapeValid( desc ) == false )
         {
             SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.CreateTexture2DDimensionSlicesX", "createTexture2D: dimension %# with %# slices (%#x%#) is not a valid texture shape", static_cast<uint32>( desc._dimension ),
                              desc._arraySize, desc._width, desc._height );
-            return 0;
+            return false;
         }
         // 이 장치가 샘플링하지 못하는 압축 형식(데스크톱의 ASTC · ETC2)은 드라이버에 넘기지 않는다 — 넘기면 D3D12 는 실패, Vulkan 드라이버는 0 나누기로 죽었다.
         if ( isRHIFormatBlockCompressed( desc._format ) && _pDevice->supportsTextureFormat( desc._format ) == false )
         {
             SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.CreateTexture2DFormatUnsupported", "createTexture2D: this device cannot sample format %# (%#x%#) - the texture is not created", static_cast<uint32>( desc._format ), desc._width, desc._height );
-            return 0;
+            return false;
         }
-        const bool bSliced = desc._dimension != RHITextureDimension::Texture2D;
-
         VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
         if ( desc._bIsRenderTarget )
             usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
@@ -514,36 +501,128 @@ namespace sw
             if ( _pDevice->_depthFormat == 0 )
             {
                 SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.CreateTexture2DDepthFormatNot", "createTexture2D: depth format not selected." );
-                return 0;
+                return false;
             }
             format = static_cast<VkFormat>( _pDevice->_depthFormat );
         }
 
+        VkImageCreateInfo& imageInfo = outInfo;
+        imageInfo                    = VkImageCreateInfo{};
+        imageInfo.sType              = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        imageInfo.imageType          = VK_IMAGE_TYPE_2D;
+        imageInfo.extent.width       = desc._width;
+        imageInfo.extent.height      = desc._height;
+        imageInfo.extent.depth       = 1;
+        imageInfo.mipLevels          = desc._mipLevels > 0 ? desc._mipLevels : 1;
+        imageInfo.arrayLayers        = desc._arraySize;
+        imageInfo.flags              = ( desc._dimension == RHITextureDimension::TextureCube ) ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0u;
+        imageInfo.format             = format;
+        imageInfo.tiling             = VK_IMAGE_TILING_OPTIMAL;
+        imageInfo.initialLayout      = VK_IMAGE_LAYOUT_UNDEFINED;
+        imageInfo.usage              = usage;
+        imageInfo.samples            = VK_SAMPLE_COUNT_1_BIT;
+        imageInfo.sharingMode        = VK_SHARING_MODE_EXCLUSIVE;
+        return true;
+    }
+
+    RHITextureAllocationInfo VulkanRHIResourceFactory::getTextureAllocationInfo( const RHITextureDesc& desc )
+    {
+        // 1.2 에는 서술만으로 요구를 묻는 함수(vkGetDeviceImageMemoryRequirements, 1.3 · maintenance4)가 없다 — 임시 이미지를 만들어 묻고 지운다(셋업 단계에서 첨부마다 한 번).
         VkImageCreateInfo imageInfo{};
-        imageInfo.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-        imageInfo.imageType     = VK_IMAGE_TYPE_2D;
-        imageInfo.extent.width  = desc._width;
-        imageInfo.extent.height = desc._height;
-        imageInfo.extent.depth  = 1;
-        imageInfo.mipLevels     = desc._mipLevels > 0 ? desc._mipLevels : 1;
-        imageInfo.arrayLayers   = desc._arraySize;
-        imageInfo.flags         = ( desc._dimension == RHITextureDimension::TextureCube ) ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0u;
-        imageInfo.format        = format;
-        imageInfo.tiling        = VK_IMAGE_TILING_OPTIMAL;
-        imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        imageInfo.usage         = usage;
-        imageInfo.samples       = VK_SAMPLE_COUNT_1_BIT;
-        imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
+        if ( buildImageCreateInfo( desc, imageInfo ) == false )
+            return {};
+        VkImage probe{ VK_NULL_HANDLE };
+        if ( isVkSuccess( vkCreateImage( _pDevice->_device, &imageInfo, nullptr, &probe ), "vkCreateImage (allocation probe)" ) == false )
+            return {};
+        VkMemoryRequirements requirements{};
+        vkGetImageMemoryRequirements( _pDevice->_device, probe, &requirements );
+        vkDestroyImage( _pDevice->_device, probe, nullptr );
+        return RHITextureAllocationInfo{ requirements.size, requirements.alignment };
+    }
+
+    RHITransientHeapHandle VulkanRHIResourceFactory::createTransientHeap( uint64 sizeBytes )
+    {
+        if ( sizeBytes == 0 || _pDevice->_device == VK_NULL_HANDLE )
+            return 0;
+        // 메모리 종류는 힙에 놓일 첨부(렌더 타깃 · 샘플 — `TransientAttachmentPool::allocatePlaced`)의 이미지가 받는 종류에서 고른다. 놓을 때 그 이미지의 memoryTypeBits 가
+        // 이 종류를 받는지 다시 본다(VUID-VkBindImageMemoryInfo-memory-01612) — 받지 않으면 그 첨부는 만들지 않는다.
+        constexpr uint32 kProbeExtent = 64; // 메모리 종류만 묻는 이미지다 — 크기는 종류에 상관없다
+        RHITextureDesc   probeDesc{};
+        probeDesc._width             = kProbeExtent;
+        probeDesc._height            = kProbeExtent;
+        probeDesc._format            = RHIFormat::R8G8B8A8_UNORM;
+        probeDesc._bIsRenderTarget   = SW_TRUE;
+        probeDesc._bIsShaderResource = SW_TRUE;
+        VkImageCreateInfo imageInfo{};
+        if ( buildImageCreateInfo( probeDesc, imageInfo ) == false )
+            return 0;
+        VkImage probe{ VK_NULL_HANDLE };
+        if ( isVkSuccess( vkCreateImage( _pDevice->_device, &imageInfo, nullptr, &probe ), "vkCreateImage (transient heap probe)" ) == false )
+            return 0;
+        VkMemoryRequirements requirements{};
+        vkGetImageMemoryRequirements( _pDevice->_device, probe, &requirements );
+        vkDestroyImage( _pDevice->_device, probe, nullptr );
+
+        uint32 memoryTypeIndex{ 0 };
+        if ( _pDevice->findMemoryType( requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memoryTypeIndex ) == false )
+        {
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.TransientHeapNoMemoryType", "createTransientHeap: no device local memory type for render target images" );
+            return 0;
+        }
+        VkMemoryAllocateInfo allocInfo{};
+        allocInfo.sType                                     = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        allocInfo.allocationSize                            = sizeBytes;
+        allocInfo.memoryTypeIndex                           = memoryTypeIndex;
+        shared_ptr<VulkanRHIDevice::VulkanHeapMemory> pHeap = make_shared<VulkanRHIDevice::VulkanHeapMemory>();
+        if ( isVkSuccess( vkAllocateMemory( _pDevice->_device, &allocInfo, nullptr, &pHeap->_memory ), "vkAllocateMemory (transient heap)" ) == false )
+            return 0;
+        pHeap->_device                      = _pDevice->_device;
+        pHeap->_sizeBytes                   = sizeBytes;
+        pHeap->_memoryTypeIndex             = memoryTypeIndex;
+        const RHITransientHeapHandle handle = _pDevice->_nextTransientHeap++;
+        _pDevice->_mapTransientHeap.emplace( handle, std::move( pHeap ) );
+        return handle;
+    }
+
+    void VulkanRHIResourceFactory::destroyTransientHeap( RHITransientHeapHandle heap )
+    {
+        // 그 위의 placed 텍스처가 각자 힙 참조를 든다 — 핸들 표에서만 지운다. 마지막 텍스처의 해제 대리자가 (펜스 뒤) 놓일 때 메모리가 풀린다.
+        _pDevice->_mapTransientHeap.erase( heap );
+    }
+
+    RHITextureHandle VulkanRHIResourceFactory::createPlacedTexture2D( const RHITextureDesc& desc, RHITransientHeapHandle heap, uint64 offsetBytes )
+    {
+        const auto it = _pDevice->_mapTransientHeap.find( heap );
+        if ( it == _pDevice->_mapTransientHeap.end() )
+        {
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.PlacedTextureNoHeap", "createPlacedTexture2D: transient heap %# does not exist", heap );
+            return 0;
+        }
+        return createTextureResource( desc, it->second, offsetBytes );
+    }
+
+    RHITextureHandle VulkanRHIResourceFactory::createTexture2D( const RHITextureDesc& desc )
+    {
+        return createTextureResource( desc, nullptr, 0 );
+    }
+
+    RHITextureHandle VulkanRHIResourceFactory::createTextureResource( const RHITextureDesc& desc, const shared_ptr<VulkanRHIDevice::VulkanHeapMemory>& pHeap, uint64 offsetBytes )
+    {
+        VkImageCreateInfo imageInfo{};
+        if ( buildImageCreateInfo( desc, imageInfo ) == false )
+            return 0;
+        const bool     bSliced = desc._dimension != RHITextureDimension::Texture2D;
+        const VkFormat format  = imageInfo.format;
 
         VulkanRHIDevice::VulkanTextureRecord record{};
-        record._width         = desc._width;
-        record._height        = desc._height;
-        record._format        = static_cast<uint32>( format );
-        record._rhiFormat     = static_cast<uint32>( desc._format );
-        record._mipLevels     = imageInfo.mipLevels;
-        record._arrayLayers   = desc._arraySize;
-        record._dimension     = desc._dimension;
-        record._layout        = static_cast<uint32>( VK_IMAGE_LAYOUT_UNDEFINED );
+        record._width       = desc._width;
+        record._height      = desc._height;
+        record._format      = static_cast<uint32>( format );
+        record._rhiFormat   = static_cast<uint32>( desc._format );
+        record._mipLevels   = imageInfo.mipLevels;
+        record._arrayLayers = desc._arraySize;
+        record._dimension   = desc._dimension;
+        record._layout.store( static_cast<uint32>( VK_IMAGE_LAYOUT_UNDEFINED ) );
         record._bRenderTarget = desc._bIsRenderTarget ? 1 : 0;
         record._bDepthStencil = desc._bIsDepthStencil ? 1 : 0;
         record._listBindlessIndex.clear();
@@ -557,31 +636,55 @@ namespace sw
         VkMemoryRequirements memRequirements;
         vkGetImageMemoryRequirements( _pDevice->_device, record._image, &memRequirements );
 
-        uint32 memoryTypeIndex{ 0 };
-        if ( _pDevice->findMemoryType( memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memoryTypeIndex ) == false )
+        if ( pHeap != nullptr )
         {
-            vkDestroyImage( _pDevice->_device, record._image, nullptr );
-            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.FailedFindDeviceLocal", "Failed to find a device local memory type for Texture2D." );
-            return 0;
+            // placed — 힙 메모리의 오프셋에 묶는다. 종류 · 정렬 · 크기는 vkBindImageMemory 의 유효 사용(VUID-VkBindImageMemoryInfo-memory-01612 · memoryOffset-01613 · memory-01614)이다.
+            // https://raw.githubusercontent.com/KhronosGroup/Vulkan-Docs/main/chapters/resources.adoc (Memory Aliasing · VkBindImageMemoryInfo)
+            const bool bTypeAccepted = ( memRequirements.memoryTypeBits & ( 1u << pHeap->_memoryTypeIndex ) ) != 0;
+            const bool bAligned      = memRequirements.alignment == 0 || offsetBytes % memRequirements.alignment == 0;
+            const bool bFits         = offsetBytes <= pHeap->_sizeBytes && pHeap->_sizeBytes - offsetBytes >= memRequirements.size;
+            if ( bTypeAccepted == false || bAligned == false || bFits == false )
+            {
+                vkDestroyImage( _pDevice->_device, record._image, nullptr );
+                SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.PlacedTextureRejected", "createPlacedTexture2D: %#x%# does not fit the heap (type accepted %#, offset %# aligned %#, size %# + %# of %#)", desc._width, desc._height,
+                                 bTypeAccepted, offsetBytes, bAligned, memRequirements.size, offsetBytes, pHeap->_sizeBytes );
+                return 0;
+            }
+            if ( isVkSuccess( vkBindImageMemory( _pDevice->_device, record._image, pHeap->_memory, offsetBytes ), "vkBindImageMemory (placed Texture2D)" ) == false )
+            {
+                vkDestroyImage( _pDevice->_device, record._image, nullptr );
+                return 0;
+            }
+            record._heapMemory = pHeap;
         }
-
-        VkMemoryAllocateInfo allocInfo{};
-        allocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        allocInfo.allocationSize  = memRequirements.size;
-        allocInfo.memoryTypeIndex = memoryTypeIndex;
-
-        if ( vkAllocateMemory( _pDevice->_device, &allocInfo, nullptr, &record._memory ) != VK_SUCCESS )
+        else
         {
-            vkDestroyImage( _pDevice->_device, record._image, nullptr );
-            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.FailedAllocateMemoryTexture2D", "Failed to allocate memory for Texture2D." );
-            return 0;
-        }
+            uint32 memoryTypeIndex{ 0 };
+            if ( _pDevice->findMemoryType( memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memoryTypeIndex ) == false )
+            {
+                vkDestroyImage( _pDevice->_device, record._image, nullptr );
+                SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.FailedFindDeviceLocal", "Failed to find a device local memory type for Texture2D." );
+                return 0;
+            }
 
-        if ( isVkSuccess( vkBindImageMemory( _pDevice->_device, record._image, record._memory, 0 ), "vkBindImageMemory (Texture2D)" ) == false )
-        {
-            vkDestroyImage( _pDevice->_device, record._image, nullptr );
-            vkFreeMemory( _pDevice->_device, record._memory, nullptr );
-            return 0;
+            VkMemoryAllocateInfo allocInfo{};
+            allocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+            allocInfo.allocationSize  = memRequirements.size;
+            allocInfo.memoryTypeIndex = memoryTypeIndex;
+
+            if ( vkAllocateMemory( _pDevice->_device, &allocInfo, nullptr, &record._memory ) != VK_SUCCESS )
+            {
+                vkDestroyImage( _pDevice->_device, record._image, nullptr );
+                SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.FailedAllocateMemoryTexture2D", "Failed to allocate memory for Texture2D." );
+                return 0;
+            }
+
+            if ( isVkSuccess( vkBindImageMemory( _pDevice->_device, record._image, record._memory, 0 ), "vkBindImageMemory (Texture2D)" ) == false )
+            {
+                vkDestroyImage( _pDevice->_device, record._image, nullptr );
+                vkFreeMemory( _pDevice->_device, record._memory, nullptr );
+                return 0;
+            }
         }
 
         VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -647,7 +750,7 @@ namespace sw
 
         // GPU 메모리 추적기에 올리는 유일한 자리다. 크기는 드라이버가 요구한 할당 크기(정렬 포함)다.
         const RHITextureHandle handle = _pDevice->_gpuTextures.insert( record );
-        _pDevice->getMemoryTracker().recordAllocation( RHIMemoryKey::makeTexture( handle ), RHIMemoryTracker::classifyTexture( desc ), allocInfo.allocationSize );
+        _pDevice->getMemoryTracker().recordAllocation( RHIMemoryKey::makeTexture( handle ), RHIMemoryTracker::classifyTexture( desc ), memRequirements.size );
         return handle;
     }
 
@@ -725,11 +828,7 @@ namespace sw
         { return _pDevice->beginTransferJob( job ); },
             [&]( VulkanRHIDevice::VulkanTransferJob& job )
         {
-            uint32 layoutBefore{ 0 };
-            {
-                ScopedLock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
-                layoutBefore = pRecord->_layout;
-            }
+            const uint32 layoutBefore = pRecord->_layout.load();
 
             // 앞선 모든 큐 작업(이미 낸 프레임 · 전송)의 접근 뒤에 쓴다. transitionImageLayout 은 밉 하나만 다루므로 전체 밉 체인 배리어를 직접 쓴다.
             VkImageMemoryBarrier barrier = makeWholeImageBarrier( pRecord->_image, pRecord->_mipLevels, pRecord->_arrayLayers );
@@ -755,10 +854,7 @@ namespace sw
             [&]( uint64 serial )
         {
             // 레이아웃 기록은 제출 순서를 따른다 — 뒤에 기록 · 제출하는 명령은 이 전송 뒤에 실행되므로 지금 바꿔 둔다.
-            {
-                ScopedLock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
-                pRecord->_layout = static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
-            }
+            pRecord->_layout.store( static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ) );
             pRecord->_uploadSerials.recordWrite( serial );
         } );
     }
@@ -797,11 +893,7 @@ namespace sw
         { return _pDevice->beginTransferJob( job ); },
             [&]( VulkanRHIDevice::VulkanTransferJob& job )
         {
-            uint32 layoutBefore{ 0 };
-            {
-                ScopedLock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
-                layoutBefore = pRecord->_layout;
-            }
+            const uint32 layoutBefore = pRecord->_layout.load();
 
             // 레코드가 이미지 레이아웃 하나만 들므로 배리어도 이미지 전체다. 구간 밖 픽셀은 지금 레이아웃에서 보존된다(UNDEFINED 였다면 원래 정의되지 않았다).
             VkImageMemoryBarrier barrier = makeWholeImageBarrier( pRecord->_image, pRecord->_mipLevels, pRecord->_arrayLayers );
@@ -835,10 +927,7 @@ namespace sw
         { return _pDevice->submitTransferJob( job, "submitTextureRegionUpload: vkQueueSubmit" ); },
             [&]( uint64 serial )
         {
-            {
-                ScopedLock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
-                pRecord->_layout = static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
-            }
+            pRecord->_layout.store( static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ) );
             pRecord->_uploadSerials.recordWrite( serial );
         } );
     }
@@ -901,7 +990,7 @@ namespace sw
         if ( bInvalidReadbackRequest )
             return 0;
         // 모든 Vulkan 버퍼가 HOST_VISIBLE | HOST_COHERENT 메모리다(createVulkanBuffer) — 복사 도착지 용도로 만들면 맵해 읽을 수 있다.
-        return _pDevice->createVulkanBuffer( totalBytes, VK_BUFFER_USAGE_TRANSFER_DST_BIT, nullptr );
+        return _pDevice->createVulkanBuffer( totalBytes, VK_BUFFER_USAGE_TRANSFER_DST_BIT, nullptr, 0 );
     }
 
     bool VulkanRHIResourceFactory::readReadbackBuffer( RHIBufferHandle readback, uint32 sizeBytes, void* pDestination )
@@ -974,11 +1063,7 @@ namespace sw
         { return _pDevice->beginTransferJob( job ); },
             [&]( VulkanRHIDevice::VulkanTransferJob& job )
         {
-            uint32 layoutBeforeValue{ 0 };
-            {
-                ScopedLock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
-                layoutBeforeValue = pRecord->_layout;
-            }
+            const uint32 layoutBeforeValue = pRecord->_layout.load();
 
             // 읽기는 요청 시점까지 낸 프레임의 쓰기를 본다(ALL_COMMANDS 배리어 — 계약 3).
             const VkImageLayout  layoutBefore = static_cast<VkImageLayout>( layoutBeforeValue );
@@ -1027,10 +1112,7 @@ namespace sw
         { return _pDevice->submitTransferJob( job, "submitTextureReadback: vkQueueSubmit" ); },
             [&]( uint64 serial )
         {
-            {
-                ScopedLock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
-                pRecord->_layout = static_cast<uint32>( layoutAfter );
-            }
+            pRecord->_layout.store( static_cast<uint32>( layoutAfter ) );
             pRecord->_lastReadbackSerial.store( serial );
 
             VulkanRHIDevice::VulkanPendingReadback pending{};
@@ -1059,16 +1141,18 @@ namespace sw
         VulkanRHIDevice::VulkanTextureRecord owned;
         if ( _pDevice->_gpuTextures.take( texture, owned ) == false )
             return;
-        VkDevice                         dev        = _pDevice->_device;
-        VkImageView                      view       = owned._imageView;
-        VkImageView                      sampleView = owned._sampleView;
-        VkImage                          image      = owned._image;
-        VkDeviceMemory                   mem        = owned._memory;
-        vector<VkImageView>              listSliceView{ owned._listSliceView };
-        RHIMemoryTracker*                pTracker = &_pDevice->getMemoryTracker();
+        VkDevice            dev        = _pDevice->_device;
+        VkImageView         view       = owned._imageView;
+        VkImageView         sampleView = owned._sampleView;
+        VkImage             image      = owned._image;
+        VkDeviceMemory      mem        = owned._memory;
+        vector<VkImageView> listSliceView{ owned._listSliceView };
+        RHIMemoryTracker*   pTracker = &_pDevice->getMemoryTracker();
+        // placed 텍스처는 힙 메모리 참조를 대리자가 펜스까지 든다 — 대리자가 놓이면서 마지막 참조면 메모리가 풀린다(`VulkanHeapMemory`).
         const RHIResourceReleaseDelegate releaseDelegate =
-            SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, view, sampleView, image, mem, listSliceView, pTracker, texture]()
+            SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, view, sampleView, image, mem, listSliceView, pTracker, texture, heapMemory = owned._heapMemory]()
         {
+            (void)heapMemory;
             for ( VkImageView sliceView : listSliceView )
             {
                 vkDestroyImageView( dev, sliceView, nullptr );
@@ -1169,7 +1253,14 @@ namespace sw
         // 버퍼는 인덱스 → 핸들 표에만 올린다. 실제 VkBuffer · 오프셋은 슬롯 세트를 쓰는 순간(flushSlotSet)에 푼다.
         // 링 상수버퍼의 프레임 오프셋도 그때 더한다.
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
-        return _pDevice->_bufferRegistry.allocate( buffer );
+        const RHIDescriptorIndex index = _pDevice->_bufferRegistry.allocate( buffer );
+        if ( index == kInvalidDescriptorIndex )
+        {
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.BindlessBufferTableFull", "The bindless buffer table (%#) is full.", VulkanRHIDevice::kBindlessBufferCapacity );
+            return kInvalidDescriptorIndex;
+        }
+        _pDevice->publishBufferReadSlot( index, false, buffer );
+        return index;
     }
 
     void VulkanRHIResourceFactory::unregisterBindlessResource( RHIDescriptorIndex index )
@@ -1189,8 +1280,9 @@ namespace sw
 
     void VulkanRHIResourceFactory::deferFreeBufferIndex( RHIDescriptorIndex index, bool bUAV )
     {
-        // 인덱스는 이 프레임의 커맨드가 끝난 뒤에 재사용한다. 같은 프레임에 등록된 새 버퍼가 아직 실행 중인
-        // 세트가 가리키던 자리를 받지 않도록 한다(언리얼의 지연 해제와 같다).
+        // 기록 경로의 읽기 표는 바로 비운다(부르는 쪽이 배타 락을 쥐고 있다). 번호 재사용은 이 프레임의 커맨드가 끝난 뒤다 —
+        // 같은 프레임에 등록된 새 버퍼가 아직 실행 중인 세트가 가리키던 자리를 받지 않도록 한다(언리얼의 지연 해제와 같다).
+        _pDevice->publishBufferReadSlot( index, bUAV, 0 );
         VulkanRHIDevice* pDevice = _pDevice;
         _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pDevice, index, bUAV]()
         {
@@ -1265,8 +1357,15 @@ namespace sw
             return kInvalidDescriptorIndex;
         UniqueLock<shared_mutex>  registryLock{ _pDevice->_bindlessMutex };
         VulkanRHIDevice::UAVEntry entry{};
-        entry._buffer = buffer;
-        return _pDevice->_uavRegistry.allocate( entry );
+        entry._buffer                  = buffer;
+        const RHIDescriptorIndex index = _pDevice->_uavRegistry.allocate( entry );
+        if ( index == kInvalidDescriptorIndex )
+        {
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.BindlessUAVTableFull", "The bindless UAV table (%#) is full.", VulkanRHIDevice::kBindlessBufferCapacity );
+            return kInvalidDescriptorIndex;
+        }
+        _pDevice->publishBufferReadSlot( index, true, buffer );
+        return index;
     }
 
     RHIDescriptorIndex VulkanRHIResourceFactory::registerBindlessTextureUAV( RHITextureHandle texture )
@@ -1287,7 +1386,7 @@ namespace sw
         const VkImageView        view    = pResolved->_imageView;
         const RHIDescriptorIndex index   = _pDevice->_uavRegistry.allocate( entry, [pDevice, view]( RHIDescriptorIndex slot )
           {
-            // 버퍼 UAV 와 같은 번호 공간이라 표 상한은 두지 않고, RW 텍스처 배열(set 1 binding 3) 크기는 여기서 본다.
+            // 버퍼 UAV 와 같은 번호 공간이라 표 상한은 버퍼 표(`kBindlessBufferCapacity`)이고, RW 텍스처 배열(set 1 binding 3) 크기는 여기서 본다. 읽기 표 칸은 0(버퍼 아님) 그대로다.
             if ( slot >= VulkanRHIDevice::kBindlessStorageImageCount )
                 return false;
             pDevice->writeBindlessStorageImageSlot( slot, view );
@@ -1310,8 +1409,8 @@ namespace sw
     RHIPipelineStateHandle VulkanRHIResourceFactory::createPipelineStateNative( const RHIPipelineStateDesc& desc )
     {
         // 와이어프레임 채우기는 디바이스 기능 fillModeNonSolid 가 있어야 한다. 없으면 솔리드로 바꾸지 않고 셰이더 모듈을 만들기 전에 거절한다(아래 래스터 상태 주석).
-        const RHIRenderState& renderState = desc._renderState;
-        if ( renderState._fillMode == RHIFillMode::Wireframe && _pDevice->_bFillModeNonSolid == 0 )
+        const RenderState& renderState = desc._renderState;
+        if ( renderState._fillMode == FillMode::Wireframe && _pDevice->_bFillModeNonSolid == 0 )
         {
             SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.CreatePipelineStateWireframeFillNeeds", "createPipelineState: wireframe fill needs the fillModeNonSolid device feature ('%#')", desc._vertexShaderPath );
             return 0;
@@ -1491,12 +1590,12 @@ namespace sw
         rasterizer.rasterizerDiscardEnable = VK_FALSE;
         // 기능을 못 켠 디바이스에서 LINE 을 요청하면 솔리드로 바꾸지 않고 거절한다 — 다른 그림이 와이어프레임으로 통과하면 안 된다.
         // 렌더러는 능력(RHICapabilities::_bWireframeFill)을 보고 와이어프레임 보기 모드를 받지 않으므로 여기 닿으면 결함이다.
-        const bool bUseWireframe = renderState._fillMode == RHIFillMode::Wireframe;
+        const bool bUseWireframe = renderState._fillMode == FillMode::Wireframe;
         rasterizer.polygonMode   = bUseWireframe ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
         rasterizer.lineWidth     = 1.0f;
-        rasterizer.cullMode      = ( renderState._cullMode == RHICullMode::Front ) ? VK_CULL_MODE_FRONT_BIT : ( ( renderState._cullMode == RHICullMode::Back ) ? VK_CULL_MODE_BACK_BIT : VK_CULL_MODE_NONE );
-        rasterizer.frontFace     = renderState._frontFace == RHIFrontFace::CounterClockwise ? VK_FRONT_FACE_COUNTER_CLOCKWISE : VK_FRONT_FACE_CLOCKWISE;
-        // 깊이 바이어스 — 다른 백엔드와 같은 상수 · 기울기 두 칸이다(RHIFixedRenderState::_depthBias). LINE 다각형 모드에도 걸린다.
+        rasterizer.cullMode      = ( renderState._cullMode == CullMode::Front ) ? VK_CULL_MODE_FRONT_BIT : ( ( renderState._cullMode == CullMode::Back ) ? VK_CULL_MODE_BACK_BIT : VK_CULL_MODE_NONE );
+        rasterizer.frontFace     = renderState._frontFace == FrontFace::CounterClockwise ? VK_FRONT_FACE_COUNTER_CLOCKWISE : VK_FRONT_FACE_CLOCKWISE;
+        // 깊이 바이어스 — 다른 백엔드와 같은 상수 · 기울기 두 칸이다(FixedRenderState::_depthBias). LINE 다각형 모드에도 걸린다.
         rasterizer.depthBiasEnable         = ( renderState._depthBias != 0 || renderState._slopeScaledDepthBias != 0.0f ) ? VK_TRUE : VK_FALSE;
         rasterizer.depthBiasConstantFactor = static_cast<float32>( renderState._depthBias );
         rasterizer.depthBiasSlopeFactor    = renderState._slopeScaledDepthBias;
@@ -1512,8 +1611,8 @@ namespace sw
         VkPipelineColorBlendAttachmentState arrColorBlendAttachment[kMaxColorAttachments]{};
         for ( uint32 blendIndex = 0; blendIndex < blendCount; ++blendIndex )
         {
-            const RHIBlendTargetState& source                  = renderState._arrBlendTarget[blendIndex];
-            arrColorBlendAttachment[blendIndex].colorWriteMask = static_cast<VkColorComponentFlags>( source._colorWriteMask ); // 비트가 같다(RHIColorWriteMask)
+            const BlendTargetState& source                     = renderState._arrBlendTarget[blendIndex];
+            arrColorBlendAttachment[blendIndex].colorWriteMask = static_cast<VkColorComponentFlags>( source._colorWriteMask ); // 비트가 같다(ColorWriteMask)
             // 블렌드 지원은 형식마다 선택이다(R16G16_SNORM 등, lavapipe 는 없다). 못 섞는 첨부는 덮어쓴다 - 겹침 보기가 G버퍼 전체에 블렌드를 켜도 값을 보는 것은 알베도 칸이다.
             // 형식이 없으면 ensurePipelineRenderPass 가 R8G8B8A8_UNORM 으로 두며 그 형식은 블렌드가 필수다.
             const VkFormat     attachmentFormat = VulkanRHIUtil::toVulkanTextureFormat( desc._arrRTVFormat[blendIndex] );

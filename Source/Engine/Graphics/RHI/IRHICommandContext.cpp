@@ -104,6 +104,34 @@ namespace sw
         prepareTextureForUnorderedAccessNative( texture );
     }
 
+    void IRHICommandContext::transitionTextures( const RHITextureTransition* pTransition, uint32 count )
+    {
+        if ( pTransition == nullptr || count == 0 )
+            return;
+        endRenderPass();
+        transitionTexturesNative( pTransition, count );
+    }
+
+    void IRHICommandContext::transitionTexturesNative( const RHITextureTransition* pTransition, uint32 count )
+    {
+        for ( uint32 index = 0; index < count; ++index )
+        {
+            const RHITextureTransition& transition = pTransition[index];
+            switch ( transition._state )
+            {
+                case RHITextureState::ShaderResource:
+                    prepareTextureForShaderReadNative( transition._texture );
+                    break;
+                case RHITextureState::RenderTarget:
+                    prepareTextureForRenderTargetNative( transition._texture );
+                    break;
+                case RHITextureState::UnorderedAccess:
+                    prepareTextureForUnorderedAccessNative( transition._texture );
+                    break;
+            }
+        }
+    }
+
     void IRHICommandContext::blitTexture( RHITextureHandle src, RHITextureHandle dst )
     {
         endRenderPass();

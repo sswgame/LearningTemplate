@@ -338,12 +338,12 @@ namespace sw
         }
 
         /** @brief 이 패스 종류가 머티리얼에게 내주는 렌더 상태의 범위입니다(표: `docs/agents/RenderPipelineXml.md`). 그리는 쪽과 테스트가 같은 답을 본다. */
-        static RHIRenderStateOverride::Scope getMaterialStateScope( RenderPassType passType )
+        static RenderStateOverride::Scope getMaterialStateScope( RenderPassType passType )
         {
             const RenderPassTypeInfo& info = getRenderPassTypeInfo( passType );
             if ( info.hasFlag( RenderPassTraitFlag::kMaterialBlend ) )
-                return RHIRenderStateOverride::Scope::FixedAndBlend;
-            return info.hasFlag( RenderPassTraitFlag::kMaterialFixedState ) ? RHIRenderStateOverride::Scope::FixedState : RHIRenderStateOverride::Scope::CullOnly;
+                return RenderStateOverride::Scope::FixedAndBlend;
+            return info.hasFlag( RenderPassTraitFlag::kMaterialFixedState ) ? RenderStateOverride::Scope::FixedState : RenderStateOverride::Scope::CullOnly;
         }
 
         /**

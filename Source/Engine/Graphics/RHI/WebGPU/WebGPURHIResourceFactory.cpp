@@ -147,7 +147,7 @@ namespace sw
         }
         record._vertexLayout._format = desc._meshVertexFormat;
 
-        const RHIRenderState&        state = desc._renderState;
+        const RenderState&           state = desc._renderState;
         WGPURenderPipelineDescriptor pipelineDesc{};
         pipelineDesc.label               = WebGPURHIUtil::toStringView( desc._vertexShaderPath.c_str() );
         pipelineDesc.layout              = nullptr; // 자동 레이아웃 — 셰이더가 쓰는 바인딩만 그룹 0 에 든다(`WebGPUShaderContainer::collectBindings`)
@@ -174,7 +174,7 @@ namespace sw
             depthStencil.depthCompare        = WebGPURHIUtil::toCompareFunction( state._depthCompare );
             depthStencil.depthBias           = state._depthBias;
             depthStencil.depthBiasSlopeScale = state._slopeScaledDepthBias;
-            const auto makeFace              = [&state]( RHIStencilOp fail, RHIStencilOp depthFail, RHIStencilOp pass, RHICompareFunc compare )
+            const auto makeFace              = [&state]( StencilOp fail, StencilOp depthFail, StencilOp pass, CompareFunc compare )
             {
                 WGPUStencilFaceState face{};
                 const bool           bStencil = state._bEnableStencil != SW_FALSE;
@@ -199,10 +199,10 @@ namespace sw
             const uint32 targetCount = MathUtil::min( request._numRenderTargets, kMaxColorAttachments );
             for ( uint32 targetIndex = 0; targetIndex < targetCount; ++targetIndex )
             {
-                const RHIBlendTargetState& blend  = state._arrBlendTarget[targetIndex];
-                WGPUColorTargetState&      target = arrTarget[targetIndex];
-                target.format                     = _pDevice->toTextureFormat( desc._arrRTVFormat[targetIndex] );
-                target.writeMask                  = static_cast<WGPUColorWriteMask>( blend._colorWriteMask ); // 비트가 같다(R 1 · G 2 · B 4 · A 8)
+                const BlendTargetState& blend  = state._arrBlendTarget[targetIndex];
+                WGPUColorTargetState&   target = arrTarget[targetIndex];
+                target.format                  = _pDevice->toTextureFormat( desc._arrRTVFormat[targetIndex] );
+                target.writeMask               = static_cast<WGPUColorWriteMask>( blend._colorWriteMask ); // 비트가 같다(R 1 · G 2 · B 4 · A 8)
                 if ( blend._bEnableBlend != SW_FALSE && Internal::isBlendable( target.format ) )
                 {
                     arrBlend[targetIndex].color = WGPUBlendComponent{ WebGPURHIUtil::toBlendOperation( blend._colorOp ), WebGPURHIUtil::toBlendFactor( blend._srcColor ),

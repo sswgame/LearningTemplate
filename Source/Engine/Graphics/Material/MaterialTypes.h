@@ -198,17 +198,17 @@ namespace sw
     struct MaterialDef
     {
         /** @brief .material 리소스에서 채웁니다(팩별 C++ 기본값 없음). */
-        string                      _name;
-        string                      _shaderPath;
-        MaterialAlphaMode           _alphaMode{ MaterialAlphaMode::Opaque }; ///< 어느 배치 목록으로 가고 알파를 어떻게 쓰는지입니다
-        float32                     _alphaCutoff{ 0.5f };                    ///< `Mask` 의 문턱값입니다. 셰이더의 `_alphaCutoff` 프로퍼티로 간다
-        int32                       _renderQueue{ 0 };                       ///< 그리기 순서입니다. 작은 것부터 그립니다(유니티 renderQueue · 언리얼 Translucency Sort Priority 자리). 0 이 기본입니다
-        uint8                       _bTwoSidedLighting{ SW_FALSE };          ///< 뒷면에서 노멀을 뒤집습니다(`MATERIAL_TWO_SIDED`). `cullMode="None"` 과 함께 적습니다
-        string                      _blendPreset;                            ///< 블렌드 프리셋 이름입니다. 저장용 — 값은 `_renderStateOverride` 에 풀려 있다
-        vector<RHIBlendTargetState> _listBlendTarget;                        ///< 렌더 타깃마다의 블렌드입니다. 저장용 — 값은 `_renderStateOverride` 에 풀려 있다
-        RHIRenderStateOverride      _renderStateOverride;                    ///< 패스의 렌더 상태 위에 덮는 칸입니다(표: `docs/agents/RenderPipelineXml.md`)
-        vector<MaterialProperty>    _listProperty;
-        MaterialPermutationDef      _permutations;
+        string                   _name;
+        string                   _shaderPath;
+        MaterialAlphaMode        _alphaMode{ MaterialAlphaMode::Opaque }; ///< 어느 배치 목록으로 가고 알파를 어떻게 쓰는지입니다
+        float32                  _alphaCutoff{ 0.5f };                    ///< `Mask` 의 문턱값입니다. 셰이더의 `_alphaCutoff` 프로퍼티로 간다
+        int32                    _renderQueue{ 0 };                       ///< 그리기 순서입니다. 작은 것부터 그립니다(유니티 renderQueue · 언리얼 Translucency Sort Priority 자리). 0 이 기본입니다
+        uint8                    _bTwoSidedLighting{ SW_FALSE };          ///< 뒷면에서 노멀을 뒤집습니다(`MATERIAL_TWO_SIDED`). `cullMode="None"` 과 함께 적습니다
+        string                   _blendPreset;                            ///< 블렌드 프리셋 이름입니다. 저장용 — 값은 `_renderStateOverride` 에 풀려 있다
+        vector<BlendTargetState> _listBlendTarget;                        ///< 렌더 타깃마다의 블렌드입니다. 저장용 — 값은 `_renderStateOverride` 에 풀려 있다
+        RenderStateOverride      _renderStateOverride;                    ///< 패스의 렌더 상태 위에 덮는 칸입니다(표: `docs/agents/RenderPipelineXml.md`)
+        vector<MaterialProperty> _listProperty;
+        MaterialPermutationDef   _permutations;
         /** @brief 부모 머티리얼(`.material` 루트의 `_base`)입니다. 비어 있지 않으면 위 칸은 부모를 펼친 값이고, 저장은 부모와 다른 칸만 적는다(`MaterialXML::makeParentDelta`). */
         string _parentPath;
     };

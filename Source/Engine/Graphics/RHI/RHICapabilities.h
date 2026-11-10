@@ -35,7 +35,7 @@ namespace sw
          */
         uint8 _bThreadSafeResourceCreation{ SW_FALSE };
         /**
-         * @brief 삼각형을 선으로 채우는 래스터(`RHIFillMode::Wireframe`)를 쓸 수 있는지입니다.
+         * @brief 삼각형을 선으로 채우는 래스터(`FillMode::Wireframe`)를 쓸 수 있는지입니다.
          * @details Vulkan 은 디바이스 기능 `fillModeNonSolid` 가 있어야 한다. 없는 디바이스에서 와이어프레임 PSO 를 만들면 백엔드가 거절하고(솔리드로 바꾸지 않는다),
          *          렌더러는 와이어프레임 보기 모드를 받지 않는다(`FrameRenderer::setViewMode`).
          */
@@ -69,8 +69,8 @@ namespace sw
         uint8 _bGraphicsShaderWrites{ SW_FALSE };
         /**
          * @brief 서술이 다른 렌더 타깃 텍스처를 힙 하나에 겹쳐 놓을 수 있는지입니다(`IRHIResourceFactory::createTransientHeap` · `createPlacedTexture2D`, 첫 쓰기 앞 `IRHICommandList::beginTextureAlias`).
-         * @details DX12 는 placed resource(D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES 힙 — 모든 리소스 힙 등급이 받는다)와 앨리어싱 배리어로 참이다. Vulkan 은 아직 거짓이다 — 메모리 하나에 여러 이미지를
-         *          묶는 것은 되지만, 미뤄 지우는 이미지들이 다 사라진 뒤에 메모리를 놓으려면 해제 큐에 참조 세기가 들어야 한다. DX11 · GL · WebGPU 는 API 에 없어 거짓이다.
+         * @details DX12 는 placed resource(D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES 힙 — 모든 리소스 힙 등급이 받는다)와 앨리어싱 배리어로 참이다. Vulkan 도 참이다 — 메모리 하나에 이미지를
+         *          겹쳐 묶고(`vkBindImageMemory` 오프셋), 해제 큐의 대리자가 힙 메모리 참조를 펜스까지 들어 마지막 이미지가 사라진 뒤에 메모리를 놓는다. DX11 · GL · WebGPU 는 API 에 없어 거짓이다.
          *          거짓이면 트랜지언트 풀은 같은 서술끼리만 텍스처를 나눈다(`RenderGraphAliasPlan`) — 능력 표가 정한 길이다(언리얼 `GRHISupportsPlacedResources` 와 같은 자리).
          */
         uint8 _bPlacedTextures{ SW_FALSE };

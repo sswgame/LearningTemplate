@@ -904,12 +904,13 @@ namespace sw
             return;
         const RenderGraphPassDesc& passDesc = listFramePass[iter->second];
         // 프레임 패스마다 GPU 시간(`GPU.<프레임 패스>` — gpu.timings · 감시 값 GPU.PassMs)을 고정 칸 쌍에 쓴다. 게이트는 뷰 패스와 같다(계측 스위치 · 칸 수).
-        // shortcut: 비동기 컴퓨트 큐 리스트(pCmd != _pCmd)는 재지 않는다 — 큐 사이의 쿼리 해석 순서 · 시계를 아직 대조하지 않았다. 컴퓨트 큐 패스를 재야 할 때 백엔드별로 확인하고 연다.
+        // 비동기 컴퓨트 큐 리스트(pCmd != _pCmd)는 백엔드가 큐 사이의 리셋 · 해석 순서와 시계를 대조했을 때만 잰다(`IRHITimestampProvider::isComputeQueueTimestampComparable`).
         uint32 timestampBeginSlot = GPUPassScope::kNoTimestamp;
 #if SW_PROFILE_COMPILED
-        const IRHITimestampProvider* pTimestamps   = _pDevice != nullptr ? _pDevice->findTimestampProvider() : nullptr;
-        const uint32                 frameSlot     = FrameRendererUtil::findFramePassTimestampSlot( iter->second );
-        const bool                   bWriteGPUTime = pTimestamps != nullptr && pCmd == _pCmd && _state._gpuPassTimeline.isRecording() && frameSlot != constant::invalid_index::kUint32 &&
+        const IRHITimestampProvider* pTimestamps      = _pDevice != nullptr ? _pDevice->findTimestampProvider() : nullptr;
+        const uint32                 frameSlot        = FrameRendererUtil::findFramePassTimestampSlot( iter->second );
+        const bool                   bQueueComparable = pCmd == _pCmd || ( pTimestamps != nullptr && pTimestamps->isComputeQueueTimestampComparable() );
+        const bool                   bWriteGPUTime    = pTimestamps != nullptr && bQueueComparable && _state._gpuPassTimeline.isRecording() && frameSlot != constant::invalid_index::kUint32 &&
                                    ( frameSlot + 1u ) < pTimestamps->getTimestampSlotCount();
         if ( bWriteGPUTime )
             timestampBeginSlot = frameSlot;
@@ -927,10 +928,12 @@ namespace sw
         if ( levelContext._pListBarrier == nullptr )
             return;
 
-        // 그래프가 **실제로 바뀌는 전이만** 추려서 준다. 여기서는 이름으로 텍스처를 찾아 그대로 바인딩한다.
-        // 같은 자원을 여러 패스가 읽어도, 이미 맞는 상태여도 다시 바인딩하지 않는다.
+        // 그래프가 **실제로 바뀌는 전이만** 추려서 준다. 여기서는 이름으로 텍스처를 찾아 레벨의 전이를 한 묶음으로 낸다(`IRHICommandList::transitionTextures` —
+        // DX12 ResourceBarrier · Vulkan vkCmdPipelineBarrier 한 번, 언리얼 RDG 의 패스 앞 전이 배치와 같은 자리). 같은 자원을 여러 패스가 읽어도, 이미 맞는 상태여도 다시 내지 않는다.
         // 꺼진 효과의 출력 이름은 원본을 가리키지만(`TransientAttachmentPool::forward`) 전이는 그 이름으로 만든 텍스처에만 낸다 — 따라가면 꺼진 패스의 "쓰기" 가
         // 같은 레벨에서 원본을 읽는 패스와 부딪힌다. 원본의 읽기 상태는 원본을 입력으로 선언한 그 효과 패스의 레벨이 이미 냈고, 뒤에서 원본을 쓰는 패스는 로드 검증이 막는다.
+        frame_vector<RHITextureTransition> listTransition{ FrameAllocator<RHITextureTransition>{ _frameArena } };
+        listTransition.reserve( levelContext._pListBarrier->size() );
         for ( const RenderGraphBarrier& barrier : *levelContext._pListBarrier )
         {
             if ( barrier._after == RenderGraphResourceState::Write )
@@ -938,23 +941,27 @@ namespace sw
                 // 스왑체인은 전용 경로가 있다(핸들 0). 이름으로는 트랜지언트에서 찾을 수 없다.
                 if ( barrier._resource == attachmentNames()._swapchain )
                 {
-                    levelContext._pCmdList->prepareTextureForRenderTarget( 0 );
+                    listTransition.push_back( RHITextureTransition{ 0, RHITextureState::RenderTarget } );
                     continue;
                 }
                 const RHITextureHandle texture = activePool().findOwnTexture( barrier._resource );
-                // 힙에 겹쳐 놓은 텍스처는 같은 바이트의 앞 텍스처 일이 끝난 뒤에 쓴다(앨리어싱 배리어). 쓰기 전이마다 내도 맞다 — 첫 쓰기만 골라내는 표를 두지 않는다.
-                if ( texture != 0 && activePool().isPlaced( barrier._resource ) )
+                if ( texture == 0 )
+                    continue;
+                // 힙에 겹쳐 놓은 텍스처는 같은 바이트의 앞 텍스처 일이 끝난 뒤에 쓴다(앨리어싱 배리어). 묶음보다 먼저 낸다 — 앨리어싱 시작이 내용을 버린 뒤에 첫 쓰기 전이가 온다.
+                // 쓰기 전이마다 내도 맞다 — 첫 쓰기만 골라내는 표를 두지 않는다.
+                if ( activePool().isPlaced( barrier._resource ) )
                     levelContext._pCmdList->beginTextureAlias( texture );
-                if ( texture != 0 )
-                    levelContext._pCmdList->prepareTextureForRenderTarget( texture );
+                listTransition.push_back( RHITextureTransition{ texture, RHITextureState::RenderTarget } );
             }
             else if ( barrier._after == RenderGraphResourceState::Read )
             {
                 const RHITextureHandle texture = activePool().findOwnTexture( barrier._resource );
                 if ( texture != 0 )
-                    levelContext._pCmdList->prepareTextureForShaderRead( texture );
+                    listTransition.push_back( RHITextureTransition{ texture, RHITextureState::ShaderResource } );
             }
         }
+        if ( listTransition.empty() == false )
+            levelContext._pCmdList->transitionTextures( listTransition.data(), static_cast<uint32>( listTransition.size() ) );
     }
 
     void FramePassExecutor::onGraphPassExecute( const RenderGraphPassContext& graphContext )

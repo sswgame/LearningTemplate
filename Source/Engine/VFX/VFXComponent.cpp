@@ -95,7 +95,7 @@ namespace sw
              */
             [[nodiscard]] static bool isGPUMeshBlendSupported( const Material* pMaterial )
             {
-                return pMaterial == nullptr || pMaterial->getBlendMode() == RHIBlendMode::Opaque;
+                return pMaterial == nullptr || pMaterial->getBlendMode() == BlendMode::Opaque;
             }
 
             /** @brief 메시 id 의 로드입니다(`.mesh` 경로는 메시 캐시가 워커에서 읽고, 내장 도형은 메모리에서 바로 만들므로 빈 핸들이다 — `MeshComponent` 와 같은 규칙). */

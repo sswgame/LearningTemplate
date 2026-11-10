@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <MaterialDef formatVersion="0" name="stencil_mask" _base="game/empty/materials/renderstate/plain_white.material" enableDepthWrite="false" enableStencil="true" stencilRef="1" stencilFrontPass="Replace" stencilBackPass="Replace">
 	<_listBlendTarget>
-		<RHIBlendTargetState colorWriteMask="None"/>
+		<BlendTargetState colorWriteMask="None"/>
 	</_listBlendTarget>
 </MaterialDef>

@@ -76,7 +76,7 @@ namespace sw
     /**
      * @brief 머티리얼 루트(`<MaterialDef …>`)의 칸입니다. `formatVersion` 은 에셋 형식이, `_base` 는 부모 펼치기(`DataInheritance`)가 읽는다.
      * @details 쓸 때는 기본값도 모두 쓴다(`XMLFields::writeEveryField`) — 부모와 다른 칸만 남기는 차이(`DataInheritance::makeDelta`)가 적지 않은 칸을 부모 값으로 읽는다.
-     *          렌더 상태 칸(`RHIFixedRenderState`)은 같은 원소에 적지만 이 구조체에 들지 않는다 — "적지 않음" 이 "패스의 값" 이라 적은 칸만 쓴다(`MaterialXML::parseRenderFields`).
+     *          렌더 상태 칸(`FixedRenderState`)은 같은 원소에 적지만 이 구조체에 들지 않는다 — "적지 않음" 이 "패스의 값" 이라 적은 칸만 쓴다(`MaterialXML::parseRenderFields`).
      */
     REFLECT()
     struct SW_API MaterialRootParams
@@ -194,7 +194,7 @@ namespace sw
 
         static void appendBoolAttribute( XMLNode parent, const utf8* pName, bool value );
 
-        /** @brief 루트 속성 @p pName 이 렌더 상태 칸(`RHIFixedRenderState`)이면 true 입니다. 칸 표는 리플렉션 하나다. */
+        /** @brief 루트 속성 @p pName 이 렌더 상태 칸(`FixedRenderState`)이면 true 입니다. 칸 표는 리플렉션 하나다. */
         [[nodiscard]] static bool isRenderStateAttribute( const utf8* pName );
         /**
          * @brief 루트의 렌더 칸(@p rootParams 와 렌더 상태 · `_listBlendTarget`)을 읽어 @p inoutDesc 에 담습니다. 받아 줄 수 없는 조합은 오류를 남기고 false 입니다.

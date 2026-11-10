@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/EngineMinimal.h"
@@ -14,6 +15,7 @@
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Backend/RHISwapChainSet.h"
 #include "Engine/Graphics/RHI/Backend/RHITimestampRing.h"
+#include "Engine/Graphics/RHI/Backend/RHITrackedState.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHITimestampFrame.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
@@ -228,6 +230,11 @@ namespace sw
         [[nodiscard]] bool readTimestamps( RHITimestampFrame& outFrame );
         [[nodiscard]] bool readGPUClockNanos( int64& outGPUNanos );
         bool               isGPUClockReadCheap() const { return false; }
+        /**
+         * @brief 컴퓨트 큐 타임스탬프가 그래픽스 큐와 같은 시계인지입니다. 비동기 컴퓨트 큐가 그래픽스 큐와 같은 큐 가족이라(`createAsyncComputeCommandList`)
+         *        `timestampValidBits` · `timestampPeriod` 를 함께 쓰고, 그 가족의 유효 비트는 풀을 만들 때 봤다(`ensureTimestampPool`). 리셋 순서는 `submitAsyncCompute` 주석.
+         */
+        bool isComputeQueueTimestampComparable() const;
 
         /** @brief 타임스탬프 쿼리 풀입니다. 준비되지 않았으면 VK_NULL_HANDLE 입니다. */
         VkQueryPool getTimestampPool() const
@@ -262,6 +269,7 @@ namespace sw
             caps._bGPUBreadcrumbs       = _breadcrumbMode != VulkanBreadcrumbMode::None ? SW_TRUE : SW_FALSE;
             caps._bAsyncCompute         = _asyncComputeQueue != nullptr ? SW_TRUE : SW_FALSE;
             caps._bGraphicsShaderWrites = _bFragmentStores;
+            caps._bPlacedTextures       = SW_TRUE; // 메모리 하나에 이미지를 겹쳐 묶고 해제 큐가 힙 참조를 펜스까지 든다(`VulkanHeapMemory`)
 #if defined( SW_PLATFORM_ANDROID )
             caps._bSurfacePreRotation = SW_TRUE; // 휴대 기기 화면만 회전한다 — 데스크톱 서피스의 currentTransform 은 늘 IDENTITY 다
 #endif
@@ -325,6 +333,7 @@ namespace sw
             [[nodiscard]] bool readTimestamps( RHITimestampFrame& outFrame ) override { return _owner.readTimestamps( outFrame ); }
             [[nodiscard]] bool readGPUClockNanos( int64& outGPUNanos ) override { return _owner.readGPUClockNanos( outGPUNanos ); }
             bool               isGPUClockReadCheap() const override { return _owner.isGPUClockReadCheap(); }
+            bool               isComputeQueueTimestampComparable() const override { return _owner.isComputeQueueTimestampComparable(); }
 
         private:
             VulkanRHIDevice& _owner;
@@ -336,6 +345,12 @@ namespace sw
         static constexpr uint32 kBindlessTextureCount = shaderslot::bindless::kVkTextureCount;
         /** @brief RW 텍스처 배열(set 1 binding 3)의 원소 수입니다. UAV 인덱스가 이 값 미만이어야 등록됩니다. */
         static constexpr uint32 kBindlessStorageImageCount = shaderslot::bindless::kVkStorageImageCount;
+        /**
+         * @brief SRV/CB · UAV 버퍼 번호 공간 하나의 크기입니다(기록 경로의 고정 읽기 표 `_arrBufferReadSlot` · `_arrUAVBufferReadSlot`).
+         * @details 버퍼는 그리는 순간 슬롯 세트에 쓰므로 디스크립터 배열 크기 상한이 없지만, 표가 늘면 락 없는 읽기가 매달린다. DX12 의 bindless 힙 용량
+         *          (`D3D12RHIDevice::kBindlessDescriptorCapacity`)과 같은 값이라 DX12 에서 들어가는 콘텐츠는 여기서도 들어간다. 차면 등록이 실패하고 오류를 남긴다.
+         */
+        static constexpr uint32 kBindlessBufferCapacity = 32768;
         /** @brief 슬롯 세트(set 0) 풀 하나의 세트 수입니다. 바인딩 상태가 바뀔 때마다 하나씩 쓰며(배치, 패스 단위), 차면 풀을 하나 더 만듭니다. */
         static constexpr uint32 kSlotSetsPerPool = 4096;
 
@@ -345,27 +360,49 @@ namespace sw
             VkBuffer       _buffer{ nullptr };
             VkDeviceMemory _memory{ nullptr };
             uint32         _sizeBytes{ 0 };
-            uint32         _usage{ 0 }; ///< VkBufferUsageFlags
+            uint32         _usage{ 0 };      ///< VkBufferUsageFlags
+            uint32         _cbSlotSize{ 0 }; ///< 링 상수 버퍼(`createConstantBuffer`)의 프레임 칸 크기, 아니면 0. 표에 넣기 전에 정하고 바뀌지 않아 기록 경로가 락 없이 읽는다
             RHIBufferState _state = RHIBufferState::Common;
+        };
+
+        /**
+         * @brief 트랜지언트 힙(`IRHIResourceFactory::createTransientHeap`)의 메모리입니다. 힙 핸들 표와 그 위의 placed 텍스처 레코드 · 해제 대리자가 `shared_ptr` 로 함께 붙든다.
+         * @details 마지막 참조가 사라질 때 메모리를 놓는다(소멸자). placed 텍스처는 해제 큐의 펜스 뒤에 참조를 놓으므로, 힙 핸들을 먼저 놓아도 그 텍스처를 그린 프레임이 끝나기 전에는
+         *          메모리가 남는다 — 해제 큐에 넣은 메모리 참조 세기다. DX12 는 placed 리소스가 힙을 COM 참조로 붙든다(`SetPrivateDataInterface`), 언리얼 `FRHITransientHeap` 도 같은 자리다.
+         */
+        struct VulkanHeapMemory
+        {
+            VkDevice       _device{ nullptr }; // 헤더는 vulkan.h 를 보지 않는다(VulkanRHIHandle.h) — VK_NULL_HANDLE 대신 nullptr
+            VkDeviceMemory _memory{ nullptr };
+            uint64         _sizeBytes{ 0 };
+            uint32         _memoryTypeIndex{ 0 };
+
+            VulkanHeapMemory()                                     = default;
+            VulkanHeapMemory( const VulkanHeapMemory& )            = delete;
+            VulkanHeapMemory& operator=( const VulkanHeapMemory& ) = delete;
+            ~VulkanHeapMemory();
         };
 
         /// @brief VkImage 와 뷰, 현재 레이아웃입니다.
         struct VulkanTextureRecord
         {
-            VkImage             _image{ nullptr };
-            VkImageView         _imageView{ nullptr };
-            VkImageView         _sampleView{ nullptr }; ///< 깊이 텍스처 샘플링용 DEPTH 단일 aspect 뷰입니다. 컬러는 nullptr 이며 `_imageView` 를 그대로 씁니다.
-            VkDeviceMemory      _memory{ nullptr };
-            VkFramebuffer       _framebuffer{ nullptr };
-            VkRenderPass        _renderPass{ nullptr };
-            uint32              _format{ 0 };    ///< VkFormat
-            uint32              _rhiFormat{ 0 }; ///< RHIFormat. 업로드 때 픽셀 크기를 계산하는 데 쓴다(VkFormat 은 깊이 선택에 따라 달라질 수 있다).
-            uint32              _layout{ 0 };    ///< VkImageLayout (UNDEFINED=0)
-            uint32              _width{ 0 };
-            uint32              _height{ 0 };
-            uint32              _mipLevels{ 1 };
-            uint32              _arrayLayers{ 1 }; ///< 면 수(배열 원소 · 큐브 면)
-            RHITextureDimension _dimension{ RHITextureDimension::Texture2D };
+            VkImage        _image{ nullptr };
+            VkImageView    _imageView{ nullptr };
+            VkImageView    _sampleView{ nullptr }; ///< 깊이 텍스처 샘플링용 DEPTH 단일 aspect 뷰입니다. 컬러는 nullptr 이며 `_imageView` 를 그대로 씁니다.
+            VkDeviceMemory _memory{ nullptr };     ///< 자기 메모리입니다. placed 텍스처는 비어 있고 `_heapMemory` 가 메모리를 붙든다.
+            /// @brief placed 텍스처(`createPlacedTexture2D`)가 놓인 힙입니다. 파괴의 해제 대리자가 이 참조를 펜스 뒤까지 들고 간다.
+            shared_ptr<VulkanHeapMemory> _heapMemory;
+            VkFramebuffer                _framebuffer{ nullptr };
+            VkRenderPass                 _renderPass{ nullptr };
+            uint32                       _format{ 0 };    ///< VkFormat
+            uint32                       _rhiFormat{ 0 }; ///< RHIFormat. 업로드 때 픽셀 크기를 계산하는 데 쓴다(VkFormat 은 깊이 선택에 따라 달라질 수 있다).
+            /// @brief VkImageLayout(UNDEFINED=0)입니다. 병렬 기록 워커가 락 없이 비교 교환으로 바꾼다(`transitionTextureLayout` — DX12 `TextureRecord::_state` 와 같은 형식).
+            RHITrackedState<uint32> _layout;
+            uint32                  _width{ 0 };
+            uint32                  _height{ 0 };
+            uint32                  _mipLevels{ 1 };
+            uint32                  _arrayLayers{ 1 }; ///< 면 수(배열 원소 · 큐브 면)
+            RHITextureDimension     _dimension{ RHITextureDimension::Texture2D };
             /// 이 텍스처에 마지막으로 제출한 쓰기 전송(업로드)의 시리얼입니다. 0 이면 전송한 적이 없습니다. bindless 등록이 이 전송이 끝났는지 확인합니다(`RHITransferSerials::isTextureReadyToRegister`).
             RHITextureUploadSerials _uploadSerials;
             /// 이 텍스처에서 마지막으로 읽은 전송(되읽기)의 시리얼입니다. bindless 등록은 보지 않고, 파괴가 이 복사가 끝날 때까지 이미지를 남길 때 씁니다(전송 계약 6).
@@ -400,6 +437,13 @@ namespace sw
         {
             VkPipeline      _pipeline{ nullptr };
             RHIVertexLayout _vertexLayout; ///< 셰이더가 읽는 정점 버퍼 슬롯과 입력을 지은 메시 정점 형식(드로우가 `RHIGeometryBindings::bindVertexBuffersForDraw` 에 넘긴다)
+        };
+        /// @brief 텍스처 하나를 옮길 레이아웃 요청입니다(`transitionTextureLayouts` 의 한 원소).
+        struct VulkanLayoutRequest
+        {
+            VulkanTextureRecord* _pRecord{ nullptr };
+            uint32               _targetLayout{ 0 }; ///< VkImageLayout
+            uint32               _aspect{ 0 };       ///< VkImageAspectFlags
         };
         /// @brief 프레임 밖에서 기록된 리스트가 바꾼 레이아웃의 원래 값입니다.
         struct VulkanPendingLayout
@@ -623,7 +667,7 @@ namespace sw
         VulkanBufferRecord*       resolveAllocatedBuffer( RHIBufferHandle handle );
         const VulkanBufferRecord* resolveAllocatedBuffer( RHIBufferHandle handle ) const;
         /**
-         * @brief 링 상수 버퍼의 `slot` 슬롯에 씁니다. `_bindlessMutex` 를 (읽기로라도) 잡고 부릅니다.
+         * @brief 링 상수 버퍼의 `slot` 슬롯에 씁니다. 칸 크기는 레코드(`VulkanBufferRecord::_cbSlotSize`)에서 읽는다 — 링 상수 버퍼가 아니면 아무것도 하지 않는다.
          * @details 만들 때 크기를 넘는 쓰기는 자른다. 자르지 않으면 다음 슬롯(다음 프레임의 값)까지 덮어쓴다.
          */
         void writeConstantBufferSlot( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size );
@@ -660,10 +704,12 @@ namespace sw
         void destroyDescriptorPoolSet( VulkanDescriptorPoolSet& poolSet );
         /** @brief 디바이스 프레임 스트림이 이번 링 슬롯에서 쓰는 풀 묶음입니다. */
         VulkanDescriptorPoolSet& currentFrameDescriptorPoolSet() { return _arrFrameDescriptorPoolSet[getFrameSlot() % constant::render::kMaxFrameCountInFlight]; }
-        /** @brief SRV/CB 레지스트리 인덱스에서 버퍼 핸들을 찾습니다(없으면 0). */
+        /** @brief SRV/CB 번호의 원본 버퍼입니다(없으면 0). 락 없이 고정 읽기 표를 본다(`_arrBufferReadSlot`). */
         RHIBufferHandle bindlessSourceBufferAt( RHIDescriptorIndex index ) const;
-        /** @brief UAV 레지스트리 인덱스에서 버퍼 핸들을 찾습니다(없으면 0). */
+        /** @brief UAV 번호의 원본 버퍼입니다(없거나 RW 텍스처면 0). 락 없이 고정 읽기 표를 본다(`_arrUAVBufferReadSlot`). */
         RHIBufferHandle uavSourceBufferAt( RHIDescriptorIndex index ) const;
+        /** @brief 번호 @p index 의 읽기 표 칸에 @p buffer 를 공개합니다(0 이면 비운다). `_bindlessMutex` 를 배타로 쥔 등록 · 해제가 부른다. */
+        void publishBufferReadSlot( RHIDescriptorIndex index, bool bUAV, RHIBufferHandle buffer );
         /** @brief 지금 열려 있는 프레임 세그먼트 버퍼입니다. 프레임 밖이면 VK_NULL_HANDLE 입니다. */
         VkCommandBuffer currentCommandBuffer() const;
         /** @brief 리스트 전용 (풀, 버퍼) 쌍을 빌립니다. 풀이 비어 있으면 새로 만듭니다. */
@@ -692,6 +738,11 @@ namespace sw
 
         /** @brief 이미지 레이아웃을 배리어로 전환합니다. */
         bool transitionImageLayout( VkCommandBuffer cmd, VkImage image, uint32 oldLayout, uint32 newLayout, uint32 aspect );
+        /** @brief 레이아웃 전이 하나의 이미지 배리어(모든 밉 · 면)와 그 앞뒤 단계를 채웁니다. `transitionImageLayout` 과 묶음(`transitionTextureLayouts`)이 같은 표를 쓴다. */
+        static void fillImageLayoutBarrier( VkImage image, uint32 oldLayoutU32, uint32 newLayoutU32, uint32 aspectU32, VkImageMemoryBarrier& barrier, VkPipelineStageFlags& srcStage,
+                                            VkPipelineStageFlags& dstStage );
+        /** @brief 프레임 밖 기록이면 @p cmd 가 처음 바꾼 @p image 의 옛 레이아웃을 버린 프레임 기록에 적습니다(다음 `beginFrame` 이 되돌린다). 프레임 안이면 아무것도 하지 않는다. */
+        void rememberDroppedFrameLayout( VkCommandBuffer cmd, VkImage image, uint32 layoutBefore );
 
         /**
          * @brief 텍스처를 `targetLayout` 으로 전이합니다. **확인, 배리어, 기록이 한 덩어리입니다.**
@@ -700,9 +751,23 @@ namespace sw
          *          "이전 레이아웃" 을 보고 각자 배리어를 쏘거나, 한쪽이 이미 바꿔 놓은 뒤라 실제
          *          레이아웃과 기록이 어긋난다. `vkQueueSubmit` 이 "이 이미지가 X 레이아웃일 것으로
          *          기대했는데 아니다" 라며 거부한다.
+         *          세 동작은 `RHITrackedState::transitionTo` 의 비교 교환 하나다 — 이긴 워커만 배리어를 쏜다(락 없음).
          * @note 이미 그 레이아웃이면 아무것도 하지 않습니다.
          */
         void transitionTextureLayout( VkCommandBuffer cmd, VulkanTextureRecord& record, uint32 targetLayout, uint32 aspect );
+        /**
+         * @brief 여러 텍스처를 `vkCmdPipelineBarrier` 한 번으로 옮깁니다(`transitionTextureLayout` 의 묶음 — 단일도 이 길이다).
+         * @details 원소마다 레코드 레이아웃을 비교 교환으로 옮기고, 이긴 것의 이미지 배리어만 모은다. 단계 마스크는 호출 하나에 하나라(명세 vkCmdPipelineBarrier — srcStageMask ·
+         *          dstStageMask 가 모든 배리어의 범위) 원소별 단계의 합을 쓴다. 넓어질 뿐 좁아지지 않는다. 이미 그 레이아웃이면 건너뛴다.
+         */
+        void transitionTextureLayouts( VkCommandBuffer cmd, const VulkanLayoutRequest* pRequest, uint32 count );
+        /**
+         * @brief 힙에 겹쳐 놓은 @p record 를 이제부터 쓴다고 기록합니다(`IRHICommandList::beginTextureAlias`). 같은 바이트를 쓴 앞 이미지의 일이 끝난 뒤에 이 이미지를 쓰고, 내용은 버린다.
+         * @details 앨리어스 사이의 쓰기는 메모리 의존으로 갈라야 하고, 다른 앨리어스가 쓴 이미지는 UNDEFINED 에서 옮겨야 한다(Vulkan 명세 Memory Aliasing —
+         *          https://raw.githubusercontent.com/KhronosGroup/Vulkan-Docs/main/chapters/resources.adoc). 추적 레이아웃은 그대로 두고 UNDEFINED → 추적 레이아웃 전이로 내용을 버린다
+         *          (추적이 UNDEFINED 면 다음 전이가 이미 UNDEFINED 에서 출발한다). DX12 는 앞 리소스를 특정하지 않는 앨리어싱 배리어다.
+         */
+        void beginImageAlias( VkCommandBuffer cmd, VulkanTextureRecord& record, uint32 aspect );
         /** @brief 오프스크린 VkRenderPass 를 확보합니다. */
         [[nodiscard]] bool ensureOffscreenRenderPass( uint32 vkFormat );
         /** @brief 오프스크린 텍스처용 프레임버퍼를 만듭니다. */
@@ -717,8 +782,8 @@ namespace sw
         [[nodiscard]] bool ensureCompositeFramebuffer( const VulkanRHIRenderPassCache::CompositeKey& key, VulkanRHIRenderPassCache::CompositeRecord& outRecord );
         /** @brief 이 텍스처를 쓰는 합성 프레임버퍼를 캐시에서 빼서 GPU 펜스 뒤에 파괴합니다. */
         void destroyCompositeFramebuffersUsing( RHITextureHandle texture );
-        /** @brief usageFlags 로 VkBuffer 를 만들고 초기 데이터를 올립니다. */
-        RHIBufferHandle createVulkanBuffer( uint32 sizeBytes, uint32 usageFlags, const void* pInitialData );
+        /** @brief usageFlags 로 VkBuffer 를 만들고 초기 데이터를 올립니다. @p cbSlotSize 는 링 상수 버퍼의 프레임 칸 크기(아니면 0)로, 레코드를 표에 넣기 전에 적는다. */
+        RHIBufferHandle createVulkanBuffer( uint32 sizeBytes, uint32 usageFlags, const void* pInitialData, uint32 cbSlotSize );
         /** @brief `_listDroppedFrameLayout` 의 기록을 텍스처 레코드에 되돌리고 비웁니다. 새 프레임의 기록이 시작되기 전에만 부릅니다. */
         void restoreDroppedFrameLayouts();
 
@@ -804,12 +869,12 @@ namespace sw
          */
         mutable mutex _queueMutex;
 
-        /// @brief 텍스처 레이아웃 확인과 전이를 보호합니다(transitionTextureLayout 참고).
-        mutable mutex _imageLayoutMutex;
+        /// @brief 버린 프레임의 레이아웃 기록(`_listDroppedFrameLayout`)만 지킵니다. 레이아웃 자체는 레코드의 원자값이라 기록 경로가 잡지 않는다 — 프레임 밖 기록(드물다)만 잡는다.
+        mutable mutex _droppedLayoutMutex;
         /**
          * @brief 시작되지 못한 프레임(최소화, 스왑체인 재생성 중)에 기록되다 버려진 리스트가 바꾼 레이아웃의 원래 값입니다.
          * @details 리스트가 제출되지 않으므로 `VulkanTextureRecord::_layout` 만 앞서 나간다. 다음 `beginFrame` 이 되돌린다.
-         *          프레임 밖 일회성 제출(`executeCommandListImmediate`)은 제출한 리스트의 기록을 지운다. `_imageLayoutMutex` 가 보호한다.
+         *          프레임 밖 일회성 제출(`executeCommandListImmediate`)은 제출한 리스트의 기록을 지운다. `_droppedLayoutMutex` 가 보호한다.
          */
         vector<VulkanPendingLayout> _listDroppedFrameLayout;
         /// @brief 리스트에 빌려주는 (풀, 버퍼) 쌍의 재사용 풀입니다. 펜스를 통과한 것만 들어 있습니다.
@@ -909,9 +974,7 @@ namespace sw
         VkSampler        _arrStaticSampler[shaderslot::kStaticSamplerCount]; ///< binding_slots.hlsli 4 의 정적 샘플러 세트(set 1 immutable)
 
         RHIHandleTable<VulkanBufferRecord> _gpuBuffers;
-        /// @brief 링 상수 버퍼에서 슬롯 하나의 크기입니다. 게임 스레드가 만들고 부수는 동안 렌더 스레드가 드로우마다 읽으므로 `_bindlessMutex` 로 보호합니다.
-        unordered_map<RHIBufferHandle, uint32> _mapCbSlotSize;
-        RHIConstantBufferMirror                _constantBufferMirror; ///< 한 번 쓴 상수 버퍼를 나머지 링 슬롯에도 채운다.
+        RHIConstantBufferMirror            _constantBufferMirror; ///< 한 번 쓴 상수 버퍼를 나머지 링 슬롯에도 채운다.
         /// @brief 프레임 스트림 컨텍스트(백버퍼 패스, Present, 프레임 세그먼트)가 쓰는 기록 상태입니다. 리스트는
         /// 각자 자기 것을 가지므로, 여기 있는 것은 "디바이스가 직접 여는 버퍼" 전용입니다.
         VulkanRecordingState _recordingState;
@@ -933,9 +996,20 @@ namespace sw
         RHIBindlessRegistry<RHIBufferHandle> _bufferRegistry;
         /// @brief UAV 번호(버퍼 UAV 와 RW 텍스처가 같은 공간) → 원본(`_bindlessMutex` 아래).
         RHIBindlessRegistry<UAVEntry> _uavRegistry;
+        /**
+         * @brief 기록 경로가 버퍼 번호로 읽는 원본 버퍼 핸들입니다(SRV/CB 와 UAV 각각, 번호마다 한 칸 · 크기 고정).
+         * @details 바인딩마다 `_bindlessMutex` 읽기 락과 등록표 · 상수 버퍼 크기 해시 맵을 거치던 것을 걷어 낸 자리다(DX12 `BindlessReadSlot` 과 같은 모양).
+         *          쓰기(등록 · 해제)는 배타 락 아래에서 하고 읽기는 락 없이 acquire 로 본다. 해제와 겹친 읽기가 옛 핸들을 받아도 핸들 표의 세대가 지운 버퍼를 가리고,
+         *          버퍼 메모리는 GPU 펜스 뒤에 놓인다. 표가 늘지 않으므로 게임 스레드의 등록이 기록과 겹쳐도 읽는 쪽 참조가 매달리지 않는다.
+         */
+        FixedCountArray<atomic<uint64>, kBindlessBufferCapacity> _arrBufferReadSlot;
+        FixedCountArray<atomic<uint64>, kBindlessBufferCapacity> _arrUAVBufferReadSlot;
 
         RHIHandleTable<VulkanTextureRecord> _gpuTextures;
-        RHIReleaseQueue                     _releaseQueue;
+        /// @brief 트랜지언트 힙 핸들 표입니다. 생성 · 파괴는 셋업 스레드다(DX12 와 같다). 종료가 텍스처 표보다 먼저 비워 마지막 참조가 장치가 살아 있을 때 놓이게 한다.
+        unordered_map<RHITransientHeapHandle, shared_ptr<VulkanHeapMemory>> _mapTransientHeap;
+        RHITransientHeapHandle                                              _nextTransientHeap{ 1 };
+        RHIReleaseQueue                                                     _releaseQueue;
         /// @brief PSO 호환 렌더 패스, 합성 프레임버퍼, desc 렌더 패스 캐시입니다. Vulkan 만 가지고 있습니다(스왑체인 RP 는 위 `_renderPass`).
         VulkanRHIRenderPassCache _renderPassCache;
 
@@ -971,7 +1045,7 @@ namespace sw
         VulkanStagingRing _readbackRing; ///< 되읽기 스테이징(`gv_rhiReadbackRingMegabytes`)
         /**
          * @brief 텍스처 전송의 기록과 제출을 직렬화합니다. 전송 커맨드 풀, 전송이 바꾸는 레이아웃 기록의 순서를 지킨다.
-         * @details 잡는 순서는 `_transferMutex` → `_imageLayoutMutex`(짧게) · `_queueMutex` → `_transferFenceQueue` 이다. 링 할당과 소스 복사는 이 락 밖에서 한다.
+         * @details 잡는 순서는 `_transferMutex` → `_queueMutex` → `_transferFenceQueue` 이다(레이아웃 기록은 레코드의 원자값이라 락이 없다). 링 할당과 소스 복사는 이 락 밖에서 한다.
          */
         mutex                                          _transferMutex;
         VkCommandPool                                  _transferCommandPool; ///< 텍스처 전송 전용 풀(RESET_COMMAND_BUFFER). `_transferMutex` 가 지킨다

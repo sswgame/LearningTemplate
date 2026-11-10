@@ -165,7 +165,7 @@ namespace sw::editor
         desc._arrRTVFormat[0]                = pRHIDevice->getBackBufferFormat();
         desc._depthStencilFormat             = RHIFormat::Unknown;
         desc._renderState._bEnableDepthWrite = SW_FALSE;
-        desc._renderState.setAllBlendTargets( RHIBlendTargetState::makeStraightAlpha() );
+        desc._renderState.setAllBlendTargets( BlendTargetState::makeStraightAlpha() );
         _pso = pRHIDevice->getResourceFactory()->createPipelineState( desc );
         if ( _pso == 0 )
         {

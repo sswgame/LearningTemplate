@@ -269,7 +269,7 @@ namespace sw
         for ( uint32 instanceIndex = 0; instanceIndex < count; ++instanceIndex )
         {
             const DrawCandidate& candidate = _listScratchCandidate[instanceIndex];
-            if ( static_cast<RHIBlendMode>( candidate._blendMode ) == RHIBlendMode::Transparent )
+            if ( static_cast<BlendMode>( candidate._blendMode ) == BlendMode::Transparent )
             {
                 _listScratchTransparentIdx.push_back( instanceIndex );
                 continue;
@@ -279,7 +279,7 @@ namespace sw
                          batchKeyMaterial( candidate._material.get(), candidate._permutationHash ),
                          _bMergeAcrossMaterials != SW_FALSE ? nullptr : candidate._instance.get(), candidate._permutationHash,
                          candidate._bReverseCulling, candidate._bStaticShadowCaster, getCandidateRenderQueue( candidate ),
-                         candidate._material != nullptr ? candidate._material->getOpaqueDrawBand() : RHIOpaqueDrawBand::Ordinary };
+                         candidate._material != nullptr ? candidate._material->getOpaqueDrawBand() : OpaqueDrawBand::Ordinary };
             _listScratchOpaqueEntry.push_back( SortEntry{ key, instanceIndex } );
         }
 
@@ -492,7 +492,7 @@ namespace sw
         // 스킨 칸 · 구간 메시는 컴포넌트가 고른 단계를 그린다(`MeshLODSystem::isGPUSelectable` — CPU 선택과 같은 규칙). LOD 를 가진 메시에 VAT 는 없다(`Mesh::setLODs` 가 거절한다).
         const uint32 levelCount     = pMesh->getLODCount();
         const bool   bGroupableMesh = levelCount > 1 && levelCount <= kGPULODMaxLevels && MeshLODSystem::isGPUSelectable( *pMesh, candidate._skinSlot );
-        const bool   bOpaque        = static_cast<RHIBlendMode>( candidate._blendMode ) != RHIBlendMode::Transparent;
+        const bool   bOpaque        = static_cast<BlendMode>( candidate._blendMode ) != BlendMode::Transparent;
         if ( bGroupableMesh == false || bOpaque == false )
             return;
         candidate._lodContentID      = pMesh->getContentID();
@@ -841,7 +841,7 @@ namespace sw
             {
                 // 메시만 바뀐 불투명 후보는 배치의 메시만 바꿔 볼 수 있다(`swapSingleInstanceBatchMeshes`). 그 밖의 키 변경은 다시 나눈다.
                 const bool bMeshOnlyOpaque = candidate.hasSameBatchKeyExceptMesh( _candidateProbe ) &&
-                                             static_cast<RHIBlendMode>( _candidateProbe._blendMode ) != RHIBlendMode::Transparent;
+                                             static_cast<BlendMode>( _candidateProbe._blendMode ) != BlendMode::Transparent;
                 if ( bMeshOnlyOpaque )
                     _listMeshSwapCandidate.push_back( candidateIndex );
                 else
@@ -1702,7 +1702,7 @@ namespace sw
                 {
                     // 키의 머티리얼(합치기 대표)이 그룹을 정한다. 상수 버퍼와 텍스처 슬롯은 배치 머리 원소의 것이다(원소 테이블이 인스턴스마다 소유를 가진다).
                     const SortKey& key = _listScratchOpaqueEntry[batchStart]._key;
-                    emitBatch( _listScratchOpaqueIdx.data(), batchStart, entryIndex, RHIBlendMode::Opaque, key._pMaterial );
+                    emitBatch( _listScratchOpaqueIdx.data(), batchStart, entryIndex, BlendMode::Opaque, key._pMaterial );
                     batchStart = entryIndex;
                 }
             }
@@ -1746,7 +1746,7 @@ namespace sw
                 if ( bEnd || bKeyChange )
                 {
                     // 투명은 머리 후보의 머티리얼과 인스턴스를 그대로 싣는다. 정렬이 깊이순이라 합치기 대표를 쓰지 않는다.
-                    emitBatch( _listScratchTransparentIdx.data(), batchStart, entryIndex, RHIBlendMode::Transparent, pBatchHead->_material.get() );
+                    emitBatch( _listScratchTransparentIdx.data(), batchStart, entryIndex, BlendMode::Transparent, pBatchHead->_material.get() );
                     batchStart = entryIndex;
                     if ( bEnd == false )
                         pBatchHead = &_listScratchCandidate[_listScratchTransparentIdx[batchStart]];
@@ -1772,7 +1772,7 @@ namespace sw
         _listBuiltTransparentIdx = _listScratchTransparentIdx;
     }
 
-    void GPUSceneBuilder::emitBatch( const uint32* pSrcIdx, uint32 begin, uint32 end, RHIBlendMode blendMode, const Material* pGroupMaterial )
+    void GPUSceneBuilder::emitBatch( const uint32* pSrcIdx, uint32 begin, uint32 end, BlendMode blendMode, const Material* pGroupMaterial )
     {
         const DrawCandidate& headCandidate = _listScratchCandidate[pSrcIdx[begin]];
 
@@ -1827,7 +1827,7 @@ namespace sw
         }
 
         // LOD 그룹은 불투명 배치뿐이다(`applyGPULODGroup`). 머리 배치가 단계 수를 들고, 낮은 단계 배치가 바로 뒤에 붙는다.
-        const bool bLODGroup = headCandidate._lodContentID.isValid() && blendMode != RHIBlendMode::Transparent;
+        const bool bLODGroup = headCandidate._lodContentID.isValid() && blendMode != BlendMode::Transparent;
         if ( bLODGroup )
             batch._lodLevelCount = batch._mesh->getLODCount();
         // 배치 목록은 한 벌이다. 불투명 · 투명은 스냅샷이 내주는 구간 뷰다.

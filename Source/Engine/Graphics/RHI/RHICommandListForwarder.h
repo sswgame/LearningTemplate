@@ -77,6 +77,7 @@ namespace sw
         void prepareTextureForRenderTarget( RHITextureHandle texture ) override { _pContext->prepareTextureForRenderTarget( texture ); }
         void prepareTextureForUnorderedAccess( RHITextureHandle texture ) override { _pContext->prepareTextureForUnorderedAccess( texture ); }
         void beginTextureAlias( RHITextureHandle texture ) override { _pContext->beginTextureAlias( texture ); }
+        void transitionTextures( const RHITextureTransition* pTransition, uint32 count ) override { _pContext->transitionTextures( pTransition, count ); }
         void blitTexture( RHITextureHandle src, RHITextureHandle dst ) override { _pContext->blitTexture( src, dst ); }
         void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1,
                            RHIBufferHandle countBuffer = 0, uint32 countBufferOffset = 0 ) override

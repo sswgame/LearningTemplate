@@ -132,10 +132,11 @@ namespace sw
         , _descriptorPool{ nullptr }
         , _arrStaticSampler{}
         , _gpuBuffers{}
-        , _mapCbSlotSize{}
         , _constantBufferMirror{}
-        , _bufferRegistry{}
-        , _uavRegistry{}
+        , _bufferRegistry{ kBindlessBufferCapacity }
+        , _uavRegistry{ kBindlessBufferCapacity }
+        , _arrBufferReadSlot{ makeFixedCountArray<atomic<uint64>, kBindlessBufferCapacity>() }
+        , _arrUAVBufferReadSlot{ makeFixedCountArray<atomic<uint64>, kBindlessBufferCapacity>() }
         , _gpuTextures{}
         , _releaseQueue{}
         , _renderPassCache{}
@@ -175,6 +176,12 @@ namespace sw
     VulkanRHIDevice::~VulkanRHIDevice()
     {
         shutdown();
+    }
+
+    VulkanRHIDevice::VulkanHeapMemory::~VulkanHeapMemory()
+    {
+        if ( _device != VK_NULL_HANDLE && _memory != VK_NULL_HANDLE )
+            vkFreeMemory( _device, _memory, nullptr );
     }
 
     IRHIResourceFactory* VulkanRHIDevice::getResourceFactory()
@@ -332,12 +339,11 @@ namespace sw
 
     void VulkanRHIDevice::writeConstantBufferSlot( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size )
     {
-        const auto          slotIt                      = _mapCbSlotSize.find( buffer );
         VulkanBufferRecord* pRecord                     = resolveAllocatedBuffer( buffer );
-        const bool          bCannotUpdateConstantBuffer = slotIt == _mapCbSlotSize.end() || pRecord == nullptr || pRecord->_memory == VK_NULL_HANDLE || pData == nullptr || size == 0;
+        const bool          bCannotUpdateConstantBuffer = pRecord == nullptr || pRecord->_cbSlotSize == 0 || pRecord->_memory == VK_NULL_HANDLE || pData == nullptr || size == 0;
         if ( bCannotUpdateConstantBuffer )
             return;
-        const uint32 slotSize  = slotIt->second;
+        const uint32 slotSize  = pRecord->_cbSlotSize;
         const uint32 copyBytes = MathUtil::min( size, slotSize );
         void*        pMapped{ nullptr };
         // Map 실패는 오류로 남긴다 — 조용히 건너뛰면 옛 상수로 그려 원인이 화면에서만 보인다.
@@ -349,8 +355,7 @@ namespace sw
 
     void VulkanRHIDevice::fillConstantBufferSlot()
     {
-        // 표 조회가 게임 스레드의 만들기 · 부수기와 겹치지 않게 읽기 락을 쥔다(락 순서: 레지스트리 → 그림자).
-        ScopedSharedLock<shared_mutex> registryLock{ _bindlessMutex };
+        // 칸 크기는 버퍼 레코드에서 락 없이 읽는다(`VulkanBufferRecord::_cbSlotSize`). 그림자 표는 제 뮤텍스가 지킨다.
         _constantBufferMirror.fillSlot( getFrameSlot() % constant::render::kMaxFrameCountInFlight,
                                         [this]( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size )
         { writeConstantBufferSlot( buffer, slot, pData, size ); } );
@@ -431,12 +436,19 @@ namespace sw
                 if ( record._memory != VK_NULL_HANDLE )
                     vkFreeMemory( _device, record._memory, nullptr );
             } );
+            // 힙 핸들 표를 텍스처 표보다 먼저 비운다 — 이미지는 위에서 모두 지웠고, 남은 참조(레코드 · 해제 대리자)가 놓일 때 장치가 아직 살아 있다.
+            _mapTransientHeap.clear();
             _gpuTextures.clear();
             // 오프스크린 프레임버퍼는 해제 큐로 놓인다(`enqueueFramebufferRelease`). GPU 는 2 단계에서 이미 쉬고 있으니 디바이스가 살아 있는 지금 부른다 —
             // 남기면 해제 큐의 소멸자가 부순 VkDevice 로 vkDestroyFramebuffer 를 부른다(`IRHIDevice::shutdown` 이 단언한다).
             _releaseQueue.flushAll();
             _bufferRegistry.clear(); // 빈 목록도 함께 — 남기면 다음 장치가 표 밖 번호를 낸다
             _uavRegistry.clear();
+            for ( uint32 index = 0; index < kBindlessBufferCapacity; ++index )
+            {
+                publishBufferReadSlot( index, false, 0 );
+                publishBufferReadSlot( index, true, 0 );
+            }
             // 합성 프레임버퍼 · PSO 호환 RP · desc RP 는 캐시가 한 번에 놓는다. 스왑체인 RP(_renderPass)는 아래에서 따로.
             _renderPassCache.destroyAll( _device, _renderPass );
             _textureRegistry.clear();
@@ -656,7 +668,7 @@ namespace sw
         return true;
     }
 
-    RHIBufferHandle VulkanRHIDevice::createVulkanBuffer( uint32 sizeBytes, uint32 usageFlags, const void* pInitialData )
+    RHIBufferHandle VulkanRHIDevice::createVulkanBuffer( uint32 sizeBytes, uint32 usageFlags, const void* pInitialData, uint32 cbSlotSize )
     {
         if ( _device == nullptr || sizeBytes == 0 )
             return 0;
@@ -720,11 +732,12 @@ namespace sw
         }
 
         VulkanBufferRecord record{};
-        record._buffer    = buffer;
-        record._memory    = memory;
-        record._sizeBytes = sizeBytes;
-        record._usage     = usageFlags;
-        record._state     = RHIBufferState::Common;
+        record._buffer     = buffer;
+        record._memory     = memory;
+        record._sizeBytes  = sizeBytes;
+        record._usage      = usageFlags;
+        record._cbSlotSize = cbSlotSize;
+        record._state      = RHIBufferState::Common;
 
         // GPU 메모리 추적기의 Buffer 줄에 올리는 유일한 자리다. 크기는 드라이버가 요구한 할당 크기(정렬 포함)다.
         const RHIBufferHandle handle = _gpuBuffers.insert( record );
@@ -1225,7 +1238,7 @@ namespace sw
         deviceFeatures.fillModeNonSolid = availableFeatures.fillModeNonSolid;
         // 깊이 클립을 끄는 렌더 상태(depthClampEnable)도 마찬가지다.
         deviceFeatures.depthClamp = availableFeatures.depthClamp;
-        // 렌더 타깃마다 다른 블렌드 · 쓰기 마스크(RHIRenderState::_arrBlendTarget). 켜지 않으면 첨부 상태가 모두 같아야 한다.
+        // 렌더 타깃마다 다른 블렌드 · 쓰기 마스크(RenderState::_arrBlendTarget). 켜지 않으면 첨부 상태가 모두 같아야 한다.
         deviceFeatures.independentBlend = availableFeatures.independentBlend;
         // 프래그먼트 셰이더의 스토리지 버퍼 쓰기 · 원자 연산 — 셰이더 메시지 채널(`SW_GPU_PRINT`)이 픽셀 셰이더에서 쓴다. 없으면 능력이 거짓이고 메시지를 요구한 실행이 멈춘다.
         // https://docs.vulkan.org/refpages/latest/refpages/source/VkPhysicalDeviceFeatures.html — 꺼져 있으면 프래그먼트 단계의 스토리지 자원은 읽기 전용이어야 한다.
@@ -2030,6 +2043,12 @@ namespace sw
                  : 0u;
     }
 
+    bool VulkanRHIDevice::isComputeQueueTimestampComparable() const
+    {
+        _renderThread.assumeHeldByJoinedTask(); // 패스 실행(병렬 기록 태스크 포함)이 부른다 — 렌더 스레드가 합류를 기다린다
+        return _asyncComputeQueue != VK_NULL_HANDLE && _timestampPool != VK_NULL_HANDLE;
+    }
+
     bool VulkanRHIDevice::readTimestamps( RHITimestampFrame& outFrame )
     {
         outFrame = _timestampFrame;
@@ -2098,6 +2117,18 @@ namespace sw
         // 주기가 0 이면 이 디바이스는 타임스탬프를 세지 않는다. 큐가 유효 비트를 안 주는 경우도 같다.
         if ( properties.limits.timestampPeriod <= 0.0f || properties.limits.timestampComputeAndGraphics == VK_FALSE )
             return;
+        // 쓰는 큐 가족(그래픽스 · 같은 가족의 비동기 컴퓨트 큐)의 유효 비트가 0 이면 그 큐에서 타임스탬프를 쓸 수 없다
+        // (https://docs.vulkan.org/refpages/latest/refpages/source/VkQueueFamilyProperties.html — "a value of 0, indicating no support for timestamps",
+        // vkCmdWriteTimestamp VUID-00829). 유효 범위 밖 비트는 0 이 보장되므로 값을 가릴 필요는 없다.
+        uint32 familyCount{ 0 };
+        vkGetPhysicalDeviceQueueFamilyProperties( _physicalDevice, &familyCount, nullptr );
+        vector<VkQueueFamilyProperties> listFamily( familyCount );
+        vkGetPhysicalDeviceQueueFamilyProperties( _physicalDevice, &familyCount, listFamily.data() );
+        if ( _graphicsQueueFamilyIndex >= familyCount || listFamily[_graphicsQueueFamilyIndex].timestampValidBits == 0 )
+        {
+            SW_LOG_INFO_ID( "Vulkan.TimestampValidBitsZero", "GPU pass timings are off: queue family %# has no timestamp valid bits", _graphicsQueueFamilyIndex );
+            return;
+        }
 
         VkQueryPoolCreateInfo poolInfo{};
         poolInfo.sType      = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
@@ -2555,7 +2586,7 @@ namespace sw
         reportQueueResult( static_cast<int32>( queueResult ), "executeCommandListImmediate" );
 
         // 제출한 리스트가 바꾼 레이아웃은 실제로 일어났으므로 되돌릴 기록에서 뺀다.
-        ScopedLock<mutex> layoutLock{ _imageLayoutMutex };
+        ScopedLock<mutex> layoutLock{ _droppedLayoutMutex };
         for ( size_t index = _listDroppedFrameLayout.size(); index > 0; --index )
         {
             if ( _listDroppedFrameLayout[index - 1]._cmd == listBuffer )
@@ -2663,6 +2694,8 @@ namespace sw
         if ( pList == nullptr || pList->nativeCommandBuffer() == VK_NULL_HANDLE || _bFrameStarted == SW_FALSE )
             return RHIQueueSyncPoint{};
         // 포크: 지금까지의 그래픽스 일을 내며 신호하고, 두 번째 큐가 그 신호를 기다린 뒤 이 리스트를 실행하고 다른 세마포어를 신호한다.
+        // 이 신호는 프레임 첫 버퍼의 타임스탬프 리셋(`vkCmdResetQueryPool`, beginFrame)까지 덮는다 — 컴퓨트 리스트의 `vkCmdWriteTimestamp` 는 리셋된(미가용) 쿼리에만 쓴다
+        // (VUID-vkCmdWriteTimestamp-None-00830). 제출 순서는 큐마다라 큐 사이 순서는 이 세마포어가 준다. 읽기는 프레임 펜스 뒤다 — 마지막 그래픽스 제출이 남은 컴퓨트 신호를 기다린다.
         const VkSemaphore graphicsDone = acquireAsyncSemaphore();
         const VkSemaphore computeDone  = acquireAsyncSemaphore();
         submitFrameWorkNow( graphicsDone );
@@ -3008,8 +3041,15 @@ namespace sw
 
     RHIBufferHandle VulkanRHIDevice::bindlessSourceBufferAt( RHIDescriptorIndex index ) const
     {
-        ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
-        return _bufferRegistry.get( index );
+        // 락이 없다 — 표는 크기가 고정이고 등록 · 해제가 배타 락 아래에서 release 로 쓴다(`_arrBufferReadSlot`).
+        return index < kBindlessBufferCapacity ? _arrBufferReadSlot.get()[index].load( std::memory_order_acquire ) : 0;
+    }
+
+    void VulkanRHIDevice::publishBufferReadSlot( RHIDescriptorIndex index, bool bUAV, RHIBufferHandle buffer )
+    {
+        if ( index >= kBindlessBufferCapacity )
+            SW_FATAL( "Vulkan: bindless buffer index %# is outside the read table (%#)", index, kBindlessBufferCapacity );
+        ( bUAV ? _arrUAVBufferReadSlot : _arrBufferReadSlot ).get()[index].store( buffer, std::memory_order_release );
     }
 
     bool VulkanRHIDevice::isBindlessIndexLive( RHIBindlessIndexSpace space, RHIDescriptorIndex index ) const
@@ -3023,8 +3063,7 @@ namespace sw
 
     RHIBufferHandle VulkanRHIDevice::uavSourceBufferAt( RHIDescriptorIndex index ) const
     {
-        ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
-        return _uavRegistry.get( index )._buffer;
+        return index < kBindlessBufferCapacity ? _arrUAVBufferReadSlot.get()[index].load( std::memory_order_acquire ) : 0;
     }
 
     uint32 VulkanRHIDevice::getAllShaderStages() const
@@ -3456,33 +3495,105 @@ namespace sw
     void VulkanRHIDevice::transitionTextureLayout( VkCommandBuffer cmd, VulkanTextureRecord& record,
                                                    uint32 targetLayout, uint32 aspect )
     {
+        const VulkanLayoutRequest request{ &record, targetLayout, aspect };
+        transitionTextureLayouts( cmd, &request, 1 );
+    }
+
+    void VulkanRHIDevice::transitionTextureLayouts( VkCommandBuffer cmd, const VulkanLayoutRequest* pRequest, uint32 count )
+    {
+        if ( cmd == VK_NULL_HANDLE || pRequest == nullptr )
+            return;
+
+        constexpr uint32     kBarrierChunk = 32;
+        VkImageMemoryBarrier arrBarrier[kBarrierChunk]{};
+        VkPipelineStageFlags srcStage{ 0 };
+        VkPipelineStageFlags dstStage{ 0 };
+        uint32               barrierCount{ 0 };
+        bool                 bReported{ false };
+        const auto           flushBarriers = [&]()
+        {
+            vkCmdPipelineBarrier( cmd, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, barrierCount, arrBarrier );
+            srcStage     = 0;
+            dstStage     = 0;
+            barrierCount = 0;
+        };
+        for ( uint32 index = 0; index < count; ++index )
+        {
+            const VulkanLayoutRequest& request = pRequest[index];
+            VulkanTextureRecord* const pRecord = request._pRecord;
+            if ( pRecord == nullptr || pRecord->_image == VK_NULL_HANDLE )
+                continue;
+            // 확인과 기록이 비교 교환 하나다 — 같은 레벨의 두 워커가 같은 이미지를 옮기면 이긴 쪽 하나만 배리어를 쏜다(`RHITrackedState`).
+            uint32 layoutBefore{ 0 };
+            if ( pRecord->_layout.transitionTo( request._targetLayout, layoutBefore ) == false )
+                continue;
+            if ( bReported == false )
+            {
+                reportBarrierDuringRecording( "transitionTextureLayouts" );
+                bReported = true;
+            }
+            VkPipelineStageFlags barrierSrcStage{ 0 };
+            VkPipelineStageFlags barrierDstStage{ 0 };
+            fillImageLayoutBarrier( pRecord->_image, layoutBefore, request._targetLayout, request._aspect, arrBarrier[barrierCount], barrierSrcStage, barrierDstStage );
+            srcStage |= barrierSrcStage;
+            dstStage |= barrierDstStage;
+            rememberDroppedFrameLayout( cmd, pRecord->_image, layoutBefore );
+            if ( ++barrierCount == kBarrierChunk )
+                flushBarriers();
+        }
+        if ( barrierCount > 0 )
+            flushBarriers();
+    }
+
+    void VulkanRHIDevice::rememberDroppedFrameLayout( VkCommandBuffer cmd, VkImage image, uint32 layoutBefore )
+    {
+        // 프레임 밖에서 기록한 리스트는 제출되지 않을 수 있다(시작되지 못한 프레임). 리스트마다 처음 바꾸는 이미지의 옛 레이아웃을 적어 두어 다음 프레임이 되돌린다.
+        if ( _bFrameStarted != SW_FALSE )
+            return;
+        ScopedLock<mutex> lock{ _droppedLayoutMutex };
+        bool              bKnown{ false };
+        for ( const VulkanPendingLayout& entry : _listDroppedFrameLayout )
+        {
+            bKnown = bKnown || ( entry._cmd == cmd && entry._image == image );
+        }
+        if ( bKnown == false )
+            _listDroppedFrameLayout.push_back( VulkanPendingLayout{ cmd, image, layoutBefore } );
+    }
+
+    void VulkanRHIDevice::beginImageAlias( VkCommandBuffer cmd, VulkanTextureRecord& record, uint32 aspect )
+    {
         if ( cmd == VK_NULL_HANDLE || record._image == VK_NULL_HANDLE )
             return;
+        // 앞 앨리어스가 어느 단계에서 썼는지 이 자리는 모른다 — 모든 단계의 쓰기를 기다린다(첨부를 바꾸는 패스 경계에서 프레임에 몇 번뿐이다).
+        VkMemoryBarrier memoryBarrier{};
+        memoryBarrier.sType         = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+        memoryBarrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
+        memoryBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
 
-        ScopedLock<mutex> lock{ _imageLayoutMutex };
-        if ( record._layout == targetLayout )
-            return;
-
-        reportBarrierDuringRecording( "transitionTextureLayout" );
-
-        transitionImageLayout( cmd, record._image, record._layout, targetLayout, aspect );
-        // 프레임 밖에서 기록한 리스트는 제출되지 않을 수 있다(시작되지 못한 프레임). 리스트마다 처음 바꾸는 이미지의 옛 레이아웃을 적어 두어 다음 프레임이 되돌린다.
-        if ( _bFrameStarted == SW_FALSE )
+        const uint32         layout = record._layout.load();
+        VkImageMemoryBarrier imageBarrier{};
+        uint32               imageBarrierCount{ 0 };
+        if ( layout != static_cast<uint32>( VK_IMAGE_LAYOUT_UNDEFINED ) )
         {
-            bool bKnown{ false };
-            for ( const VulkanPendingLayout& entry : _listDroppedFrameLayout )
-            {
-                bKnown = bKnown || ( entry._cmd == cmd && entry._image == record._image );
-            }
-            if ( bKnown == false )
-                _listDroppedFrameLayout.push_back( VulkanPendingLayout{ cmd, record._image, record._layout } );
+            imageBarrier.sType                       = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            imageBarrier.srcAccessMask               = VK_ACCESS_MEMORY_WRITE_BIT;
+            imageBarrier.dstAccessMask               = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+            imageBarrier.oldLayout                   = VK_IMAGE_LAYOUT_UNDEFINED;
+            imageBarrier.newLayout                   = static_cast<VkImageLayout>( layout );
+            imageBarrier.srcQueueFamilyIndex         = VK_QUEUE_FAMILY_IGNORED;
+            imageBarrier.dstQueueFamilyIndex         = VK_QUEUE_FAMILY_IGNORED;
+            imageBarrier.image                       = record._image;
+            imageBarrier.subresourceRange.aspectMask = aspect;
+            imageBarrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+            imageBarrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+            imageBarrierCount                        = 1;
         }
-        record._layout = targetLayout;
+        vkCmdPipelineBarrier( cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 1, &memoryBarrier, 0, nullptr, imageBarrierCount, &imageBarrier );
     }
 
     void VulkanRHIDevice::restoreDroppedFrameLayouts()
     {
-        ScopedLock<mutex> lock{ _imageLayoutMutex };
+        ScopedLock<mutex> lock{ _droppedLayoutMutex };
         if ( _listDroppedFrameLayout.empty() )
             return;
         // 그 사이 지워진 텍스처는 찾지 못하고 넘어간다.
@@ -3493,7 +3604,7 @@ namespace sw
             {
                 if ( entry._image == record._image )
                 {
-                    record._layout = entry._oldLayout;
+                    record._layout.store( entry._oldLayout );
                     break;
                 }
             }
@@ -3503,14 +3614,25 @@ namespace sw
 
     bool VulkanRHIDevice::transitionImageLayout( VkCommandBuffer cmd, VkImage image, uint32 oldLayoutU32, uint32 newLayoutU32, uint32 aspectU32 )
     {
-        const VkImageLayout      oldLayout           = static_cast<VkImageLayout>( oldLayoutU32 );
-        const VkImageLayout      newLayout           = static_cast<VkImageLayout>( newLayoutU32 );
-        const VkImageAspectFlags aspect              = aspectU32;
-        const bool               bNoLayoutTransition = cmd == VK_NULL_HANDLE || image == VK_NULL_HANDLE || oldLayout == newLayout;
+        const bool bNoLayoutTransition = cmd == VK_NULL_HANDLE || image == VK_NULL_HANDLE || oldLayoutU32 == newLayoutU32;
         if ( bNoLayoutTransition )
             return true;
-
         VkImageMemoryBarrier barrier{};
+        VkPipelineStageFlags srcStage{ 0 };
+        VkPipelineStageFlags dstStage{ 0 };
+        fillImageLayoutBarrier( image, oldLayoutU32, newLayoutU32, aspectU32, barrier, srcStage, dstStage );
+        vkCmdPipelineBarrier( cmd, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier );
+        return true;
+    }
+
+    void VulkanRHIDevice::fillImageLayoutBarrier( VkImage image, uint32 oldLayoutU32, uint32 newLayoutU32, uint32 aspectU32, VkImageMemoryBarrier& barrier, VkPipelineStageFlags& srcStage,
+                                                  VkPipelineStageFlags& dstStage )
+    {
+        const VkImageLayout      oldLayout = static_cast<VkImageLayout>( oldLayoutU32 );
+        const VkImageLayout      newLayout = static_cast<VkImageLayout>( newLayoutU32 );
+        const VkImageAspectFlags aspect    = aspectU32;
+
+        barrier                             = VkImageMemoryBarrier{};
         barrier.sType                       = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
         barrier.oldLayout                   = oldLayout;
         barrier.newLayout                   = newLayout;
@@ -3522,8 +3644,8 @@ namespace sw
         barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
         barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
 
-        VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+        srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
 
         if ( oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL )
         {
@@ -3575,9 +3697,6 @@ namespace sw
             srcStage              = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
             dstStage              = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
         }
-
-        vkCmdPipelineBarrier( cmd, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier );
-        return true;
     }
 
     VkRenderPass VulkanRHIDevice::createRenderPassFromSpec( const VulkanRHIRenderPassCache::RenderPassSpec& spec ) const

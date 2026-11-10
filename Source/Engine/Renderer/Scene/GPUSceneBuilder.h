@@ -298,7 +298,7 @@ namespace sw
             float32 _vertexAnimationPhase{ 0.0f };
 
             /** @brief 등장 디더 변형으로 그리는지 반환합니다 — 등장 중(1 미만)이고 불투명일 때입니다. 투명은 정렬 · 블렌드가 있어 디더하지 않는다. */
-            bool usesAppearanceDither() const { return ( _appearance < 1.0f || _bLODDither != SW_FALSE ) && _blendMode != static_cast<uint32>( RHIBlendMode::Transparent ); }
+            bool usesAppearanceDither() const { return ( _appearance < 1.0f || _bLODDither != SW_FALSE ) && _blendMode != static_cast<uint32>( BlendMode::Transparent ); }
 
             /**
              * @brief 재구축이 필요한지 판단하기 위한 필드 단위 비교입니다.
@@ -416,7 +416,7 @@ namespace sw
             /** @brief 그리기 순서입니다. 불투명 정렬의 첫 키이고(스텐실 마스크는 받는 쪽보다 먼저 그려야 한다), 값이 같은 퍼뮤테이션 안에서 하나라 비교에는 넣지 않는다. */
             int32 _renderQueue{ 0 };
             /** @brief 불투명 그리기 띠입니다(`Material::getOpaqueDrawBand`). 차례보다 앞선 첫 키이고, 차례와 같이 머티리얼마다 하나라 비교에는 넣지 않는다. */
-            RHIOpaqueDrawBand _drawBand{ RHIOpaqueDrawBand::Ordinary };
+            OpaqueDrawBand _drawBand{ OpaqueDrawBand::Ordinary };
             /** @brief 메시, 머티리얼, 인스턴스, 퍼뮤테이션, 컬 반전이 같은지 비교합니다. */
             bool operator==( const SortKey& other ) const
             {
@@ -652,7 +652,7 @@ namespace sw
          *          다른 쪽에 반영되지 않는다. 다른 점은 인자로 받는다.
          *          머티리얼 그룹을 정할 머티리얼(불투명은 합치기 대표, 투명은 머리 후보의 것)과 블렌드 모드가 그것이다.
          */
-        void emitBatch( const uint32* pSrcIdx, uint32 begin, uint32 end, RHIBlendMode blendMode, const Material* pGroupMaterial );
+        void emitBatch( const uint32* pSrcIdx, uint32 begin, uint32 end, BlendMode blendMode, const Material* pGroupMaterial );
         /**
          * @brief LOD 그룹의 낮은 단계 배치를 머리 배치(@p head) 바로 뒤에 붙입니다(`emitBatch` 가 머리를 붙인 직후에 부른다).
          * @details 단계 배치는 머리와 같은 머티리얼 · 메시이고 정점 구간만 단계의 것이다. 인스턴스 구간은 비고(`_instanceCount` 0, 시작은 지금의 인스턴스 끝) 가시 구간은

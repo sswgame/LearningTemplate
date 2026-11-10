@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <MaterialDef formatVersion="0" name="writemask_white" _base="game/empty/materials/renderstate/plain_white.material">
 	<_listBlendTarget>
-		<RHIBlendTargetState colorWriteMask="R"/>
+		<BlendTargetState colorWriteMask="R"/>
 	</_listBlendTarget>
 </MaterialDef>

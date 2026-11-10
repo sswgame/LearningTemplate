@@ -67,6 +67,7 @@ namespace sw
         void prepareTextureForShaderRead( RHITextureHandle texture ) final;
         void prepareTextureForRenderTarget( RHITextureHandle texture ) final;
         void prepareTextureForUnorderedAccess( RHITextureHandle texture ) final;
+        void transitionTextures( const RHITextureTransition* pTransition, uint32 count ) final;
         void blitTexture( RHITextureHandle src, RHITextureHandle dst ) final;
         void transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState ) final;
         void transitionBuffers( const RHIBufferTransition* pTransition, uint32 count ) final;
@@ -92,8 +93,10 @@ namespace sw
         virtual void prepareTextureForShaderReadNative( RHITextureHandle texture )                                                                                              = 0;
         virtual void prepareTextureForRenderTargetNative( RHITextureHandle texture )                                                                                            = 0;
         virtual void prepareTextureForUnorderedAccessNative( RHITextureHandle texture )                                                                                         = 0;
-        virtual void blitTextureNative( RHITextureHandle src, RHITextureHandle dst )                                                                                            = 0;
-        virtual void transitionBufferNative( RHIBufferHandle buffer, RHIBufferState newState )                                                                                  = 0;
+        /** @brief 여러 텍스처 전이를 냅니다. 기본은 텍스처마다 `prepareTextureFor*Native` 다 — 네이티브 배리어를 묶을 수 있는 백엔드(DX12 · Vulkan)가 덮어 한 번에 낸다. */
+        virtual void transitionTexturesNative( const RHITextureTransition* pTransition, uint32 count );
+        virtual void blitTextureNative( RHITextureHandle src, RHITextureHandle dst )           = 0;
+        virtual void transitionBufferNative( RHIBufferHandle buffer, RHIBufferState newState ) = 0;
         /** @brief 여러 전이를 냅니다. 기본은 버퍼마다 `transitionBufferNative` 다 — 네이티브 배리어를 묶을 수 있는 백엔드(DX12 · Vulkan)가 덮어 한 번에 낸다. */
         virtual void transitionBuffersNative( const RHIBufferTransition* pTransition, uint32 count );
         virtual void copyBufferToReadbackNative( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes ) = 0;

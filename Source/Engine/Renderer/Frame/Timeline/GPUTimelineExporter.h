@@ -52,12 +52,14 @@ namespace sw
         /**
          * @brief 이미 읽힌 한 프레임을 GPU 구간 트리(프레임 ⊃ 프레임 그래프, 패스들)로 냅니다.
          * @param listPassSite 패스 번호 → 지점(없으면 nullptr이며 그 패스는 건너뜁니다). 슬롯 배치는 `FrameRendererUtil` 의 타임스탬프 슬롯 배치입니다.
+         * @param listFramePassSite 프레임 패스 번호 → 지점(`FrameRendererUtil::findFramePassTimestampSlot`). 프레임 패스는 프레임 그래프(`computeSite`) 안이라 그 구간의 자식으로 낸다.
          * @return 낸 구간 수(프레임 구간 포함)입니다. 컨텍스트가 없거나 기록된 슬롯이 없으면 0 입니다.
          * @details 형제 구간이 겹치거나(같은 큐라 실제로는 순서대로이며, 슬롯 해상도 차이로 겹칩니다) 부모 밖으로 나가면 뷰어의 트리가 깨지므로 시작 순으로
          *          정렬하고 앞 형제의 끝과 부모의 범위로 자릅니다.
          */
         uint32 exportFrame( IProfilerGPUTimeline& backend, const RHITimestampFrame& frame, const ProfileZoneSite& frameSite,
-                            const ProfileZoneSite& computeSite, const vector<const ProfileZoneSite*>& listPassSite );
+                            const ProfileZoneSite& computeSite, const vector<const ProfileZoneSite*>& listPassSite,
+                            const vector<const ProfileZoneSite*>& listFramePassSite );
 
     private:
         /** @brief 내보낼 구간 하나(나노초, GPU 시계 영역)입니다. */
@@ -69,10 +71,11 @@ namespace sw
         };
 
     private:
-        vector<Span>                _listScratchSpan; ///< 프레임마다 다시 쓴다(할당을 되풀이하지 않게 보관한다)
-        const void*                 _pDeviceIdentity; ///< 컨텍스트를 연 디바이스(비교만 한다)
-        const IProfilerGPUTimeline* _pBackend;        ///< 컨텍스트를 연 출력(비교만 한다)
-        uint32                      _gpuContext;      ///< 출력의 컨텍스트 번호
-        uint32                      _framesSinceSync; ///< 마지막 시계 맞추기 뒤 프레임 수
+        vector<Span>                _listScratchSpan;      ///< 프레임마다 다시 쓴다(할당을 되풀이하지 않게 보관한다)
+        vector<Span>                _listScratchChildSpan; ///< 프레임 그래프 구간의 자식(프레임 패스)이다. 프레임마다 다시 쓴다
+        const void*                 _pDeviceIdentity;      ///< 컨텍스트를 연 디바이스(비교만 한다)
+        const IProfilerGPUTimeline* _pBackend;             ///< 컨텍스트를 연 출력(비교만 한다)
+        uint32                      _gpuContext;           ///< 출력의 컨텍스트 번호
+        uint32                      _framesSinceSync;      ///< 마지막 시계 맞추기 뒤 프레임 수
     };
 } // namespace sw

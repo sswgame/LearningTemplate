@@ -28,12 +28,12 @@ namespace sw
      */
     struct MaterialPSOWarmEntry
     {
-        string                 _shaderPath;
-        vector<string>         _listDefine;
-        uint64                 _shaderPathHash{ 0 };   ///< `Material::getShaderPathHash`
-        uint64                 _permutationHash{ 0 };  ///< `Material::getPermutationHash`(define · 렌더 칸 해시)
-        RHIRenderStateOverride _renderStateOverride{}; ///< `Material::getRenderStateOverride`
-        bool                   _bTransparent{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        string              _shaderPath;
+        vector<string>      _listDefine;
+        uint64              _shaderPathHash{ 0 };   ///< `Material::getShaderPathHash`
+        uint64              _permutationHash{ 0 };  ///< `Material::getPermutationHash`(define · 렌더 칸 해시)
+        RenderStateOverride _renderStateOverride{}; ///< `Material::getRenderStateOverride`
+        bool                _bTransparent{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 
     /**

@@ -19,6 +19,7 @@ namespace sw
         , _listFramePassScope{}
         , _exporter{}
         , _listPassSite{}
+        , _listFramePassSite{}
         , _pProfiler{ nullptr }
         , _pFailedDevice{ nullptr }
         , _computeScopeSlot{ FrameProfiler::kInvalidSlot }
@@ -82,6 +83,11 @@ namespace sw
         const hashed_string scopeName{ string_view( scopeText ) };
         scope._passName     = passName;
         scope._profilerSlot = _pProfiler->registerScope( scopeName.c_str() );
+#if SW_PROFILER_BACKEND_COMPILED
+        // Tracy 에서는 프레임 그래프 구간의 자식으로 보인다(`GPUTimelineExporter::exportFrame`). 줄 번호는 뷰 패스 칸 뒤의 프레임 패스 번호다.
+        scope._pZoneSite = ProfilerBackend::registerZoneSite( passName.c_str(), "GPU frame pass", "Engine/Renderer",
+                                                              FrameRendererUtil::kGPUTimedPassCapacity + static_cast<uint32>( framePassIndex ) );
+#endif
         return scope._profilerSlot;
     }
 
@@ -212,7 +218,12 @@ namespace sw
         {
             _listPassSite.push_back( scope._pZoneSite );
         }
-        std::ignore = _exporter.exportFrame( *pBackend, _frame, *s_pFrameSite, *s_pComputeSite, _listPassSite );
+        _listFramePassSite.clear();
+        for ( const PassScope& scope : _listFramePassScope )
+        {
+            _listFramePassSite.push_back( scope._pZoneSite );
+        }
+        std::ignore = _exporter.exportFrame( *pBackend, _frame, *s_pFrameSite, *s_pComputeSite, _listPassSite, _listFramePassSite );
 #endif
     }
 

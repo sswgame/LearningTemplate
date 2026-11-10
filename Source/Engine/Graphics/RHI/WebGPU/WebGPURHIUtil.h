@@ -75,118 +75,118 @@ namespace sw
             return view.length == WGPU_STRLEN ? string_view( view.data ) : string_view( view.data, view.length );
         }
 
-        static WGPUBlendFactor toBlendFactor( RHIBlendFactor factor )
+        static WGPUBlendFactor toBlendFactor( BlendFactor factor )
         {
             switch ( factor )
             {
-                case RHIBlendFactor::Zero:
+                case BlendFactor::Zero:
                     return WGPUBlendFactor_Zero;
-                case RHIBlendFactor::One:
+                case BlendFactor::One:
                     return WGPUBlendFactor_One;
-                case RHIBlendFactor::SrcColor:
+                case BlendFactor::SrcColor:
                     return WGPUBlendFactor_Src;
-                case RHIBlendFactor::InvSrcColor:
+                case BlendFactor::InvSrcColor:
                     return WGPUBlendFactor_OneMinusSrc;
-                case RHIBlendFactor::SrcAlpha:
+                case BlendFactor::SrcAlpha:
                     return WGPUBlendFactor_SrcAlpha;
-                case RHIBlendFactor::InvSrcAlpha:
+                case BlendFactor::InvSrcAlpha:
                     return WGPUBlendFactor_OneMinusSrcAlpha;
-                case RHIBlendFactor::DstColor:
+                case BlendFactor::DstColor:
                     return WGPUBlendFactor_Dst;
-                case RHIBlendFactor::InvDstColor:
+                case BlendFactor::InvDstColor:
                     return WGPUBlendFactor_OneMinusDst;
-                case RHIBlendFactor::DstAlpha:
+                case BlendFactor::DstAlpha:
                     return WGPUBlendFactor_DstAlpha;
-                case RHIBlendFactor::InvDstAlpha:
+                case BlendFactor::InvDstAlpha:
                     return WGPUBlendFactor_OneMinusDstAlpha;
-                case RHIBlendFactor::SrcAlphaSaturate:
+                case BlendFactor::SrcAlphaSaturate:
                     return WGPUBlendFactor_SrcAlphaSaturated;
             }
             return WGPUBlendFactor_One;
         }
 
-        static WGPUBlendOperation toBlendOperation( RHIBlendOp op )
+        static WGPUBlendOperation toBlendOperation( BlendOp op )
         {
             switch ( op )
             {
-                case RHIBlendOp::Add:
+                case BlendOp::Add:
                     return WGPUBlendOperation_Add;
-                case RHIBlendOp::Subtract:
+                case BlendOp::Subtract:
                     return WGPUBlendOperation_Subtract;
-                case RHIBlendOp::ReverseSubtract:
+                case BlendOp::ReverseSubtract:
                     return WGPUBlendOperation_ReverseSubtract;
-                case RHIBlendOp::Min:
+                case BlendOp::Min:
                     return WGPUBlendOperation_Min;
-                case RHIBlendOp::Max:
+                case BlendOp::Max:
                     return WGPUBlendOperation_Max;
             }
             return WGPUBlendOperation_Add;
         }
 
-        static WGPUCompareFunction toCompareFunction( RHICompareFunc func )
+        static WGPUCompareFunction toCompareFunction( CompareFunc func )
         {
             switch ( func )
             {
-                case RHICompareFunc::Never:
+                case CompareFunc::Never:
                     return WGPUCompareFunction_Never;
-                case RHICompareFunc::Less:
+                case CompareFunc::Less:
                     return WGPUCompareFunction_Less;
-                case RHICompareFunc::Equal:
+                case CompareFunc::Equal:
                     return WGPUCompareFunction_Equal;
-                case RHICompareFunc::LessEqual:
+                case CompareFunc::LessEqual:
                     return WGPUCompareFunction_LessEqual;
-                case RHICompareFunc::Greater:
+                case CompareFunc::Greater:
                     return WGPUCompareFunction_Greater;
-                case RHICompareFunc::NotEqual:
+                case CompareFunc::NotEqual:
                     return WGPUCompareFunction_NotEqual;
-                case RHICompareFunc::GreaterEqual:
+                case CompareFunc::GreaterEqual:
                     return WGPUCompareFunction_GreaterEqual;
-                case RHICompareFunc::Always:
+                case CompareFunc::Always:
                     return WGPUCompareFunction_Always;
             }
             return WGPUCompareFunction_Always;
         }
 
-        static WGPUStencilOperation toStencilOperation( RHIStencilOp op )
+        static WGPUStencilOperation toStencilOperation( StencilOp op )
         {
             switch ( op )
             {
-                case RHIStencilOp::Keep:
+                case StencilOp::Keep:
                     return WGPUStencilOperation_Keep;
-                case RHIStencilOp::Zero:
+                case StencilOp::Zero:
                     return WGPUStencilOperation_Zero;
-                case RHIStencilOp::Replace:
+                case StencilOp::Replace:
                     return WGPUStencilOperation_Replace;
-                case RHIStencilOp::IncrementClamp:
+                case StencilOp::IncrementClamp:
                     return WGPUStencilOperation_IncrementClamp;
-                case RHIStencilOp::DecrementClamp:
+                case StencilOp::DecrementClamp:
                     return WGPUStencilOperation_DecrementClamp;
-                case RHIStencilOp::Invert:
+                case StencilOp::Invert:
                     return WGPUStencilOperation_Invert;
-                case RHIStencilOp::IncrementWrap:
+                case StencilOp::IncrementWrap:
                     return WGPUStencilOperation_IncrementWrap;
-                case RHIStencilOp::DecrementWrap:
+                case StencilOp::DecrementWrap:
                     return WGPUStencilOperation_DecrementWrap;
             }
             return WGPUStencilOperation_Keep;
         }
 
-        static WGPUCullMode toCullMode( RHICullMode mode )
+        static WGPUCullMode toCullMode( CullMode mode )
         {
             switch ( mode )
             {
-                case RHICullMode::None:
+                case CullMode::None:
                     return WGPUCullMode_None;
-                case RHICullMode::Front:
+                case CullMode::Front:
                     return WGPUCullMode_Front;
-                case RHICullMode::Back:
+                case CullMode::Back:
                     return WGPUCullMode_Back;
             }
             return WGPUCullMode_Back;
         }
 
         /** @brief 앞면 감기입니다. WebGPU 의 NDC · 프레임버퍼는 D3D 와 같은 방향이라 그대로 옮긴다(GL 처럼 뒤집지 않는다). */
-        static WGPUFrontFace toFrontFace( RHIFrontFace face ) { return face == RHIFrontFace::Clockwise ? WGPUFrontFace_CW : WGPUFrontFace_CCW; }
+        static WGPUFrontFace toFrontFace( FrontFace face ) { return face == FrontFace::Clockwise ? WGPUFrontFace_CW : WGPUFrontFace_CCW; }
 
         /** @brief 위상입니다. 패치 리스트는 WebGPU 에 없다 — 테셀레이션 PSO 는 만들기 전에 거른다(`WebGPURHIResourceFactory::createPipelineState`). */
         static WGPUPrimitiveTopology toTopology( RHIPrimitiveTopology topology )

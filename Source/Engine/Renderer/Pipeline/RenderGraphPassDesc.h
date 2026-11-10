@@ -374,12 +374,12 @@ namespace sw
 
     /**
      * @brief 렌더 파이프라인 그래프 안의 패스 노드 하나입니다.
-     * @details 그래프 연결(입력과 출력)과 PSO 설정(셰이더, 진입점, 렌더 상태, 퍼뮤테이션)을 담는다. 렌더 상태의 칸은 기반 `RHIFixedRenderState` 이고 머티리얼과 같은 형식이다.
+     * @details 그래프 연결(입력과 출력)과 PSO 설정(셰이더, 진입점, 렌더 상태, 퍼뮤테이션)을 담는다. 렌더 상태의 칸은 기반 `FixedRenderState` 이고 머티리얼과 같은 형식이다.
      *          **여기 적힌 값이 곧 실행되는 값이다**(`FramePSOManager::applyPassRenderState`) —
      *          코드를 고치지 않고 데이터로 패스를 바꾼다. 패스 실행이 받아 줄 수 없는 조합(깊이를 붙이지 않는 패스의 깊이 테스트 등)은 무시하지 않고 읽기 오류다(`RenderPipelineAsset::validate`).
      */
     REFLECT()
-    struct RenderGraphPassDesc : public RHIFixedRenderState
+    struct RenderGraphPassDesc : public FixedRenderState
     {
         REFLECT_BODY();
         PROPERTY( Required, InheritKey )
@@ -490,10 +490,10 @@ namespace sw
 
         /** @brief 렌더 타깃마다 따로 적는 블렌드입니다. 하나면 모든 타깃에 같은 값이고, 둘 이상이면 컬러 출력 수와 같아야 합니다(검증). */
         PROPERTY( SkipIfEmpty )
-        vector<RHIBlendTargetState> _listBlendTarget;
+        vector<BlendTargetState> _listBlendTarget;
 
-        /** @brief `RHIFixedRenderState` 칸과 블렌드를 합친 PSO 값입니다. XML 로드 시 RenderPipelineAsset 가 채웁니다(직렬화 대상이 아니다). */
-        RHIRenderState _resolvedRenderState;
+        /** @brief `FixedRenderState` 칸과 블렌드를 합친 PSO 값입니다. XML 로드 시 RenderPipelineAsset 가 채웁니다(직렬화 대상이 아니다). */
+        RenderState _resolvedRenderState;
 
         /**
          * @brief 이 패스가 도는 최소 후처리 품질(`gv_postQuality`, 사용자 설정 graphics.postQuality 의 선택지 순번 0 낮음 ~ 3 최고)입니다. 0 이면 늘 돕니다.

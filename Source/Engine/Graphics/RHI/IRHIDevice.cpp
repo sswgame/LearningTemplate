@@ -121,13 +121,13 @@ namespace sw
 
         // 진단이지 오류가 아니다. 레벨 프롤로그가 대부분을 미리 발행하지만 **전부는 아니다.**
         // 파이프라인 XML 이 선언하지 않은 첨부(패스 콜백이 직접 거는 텍스처)는 프롤로그가 알 수 없다. 그런 것이
-        // 남아 있어도 배리어 자체는 락이 보호하므로 안전하다. 여기 뜨는 이름이 곧 "선언이 비어
+        // 남아 있어도 상태 전이는 레코드의 비교 교환(RHITrackedState)이라 안전하다. 여기 뜨는 이름이 곧 "선언이 비어
         // 있는 자원" 이므로, 파이프라인 선언을 채우면 이 줄이 사라진다.
         if ( _parallelBarrierReportCount.fetch_add( 1, std::memory_order_relaxed ) >= 8 )
             return;
         SW_LOG_TRACE_ID( "RHI.IssuedBarrierDuringParallel", "%# issued a barrier during parallel recording - the level prologue did not "
                                                             "transition this resource beforehand (a pipeline declaration may be missing). "
-                                                            "Behavior is safe: state transitions are protected by a lock.",
+                                                            "Behavior is safe: state transitions are an atomic compare-exchange on the resource record.",
                          pWhat );
 #endif
     }

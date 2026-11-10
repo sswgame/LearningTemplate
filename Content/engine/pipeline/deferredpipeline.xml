@@ -87,9 +87,9 @@
 				<item>GBufferMaterial</item>
 			</_listOutput>
 			<_listBlendTarget>
-				<RHIBlendTargetState _srcColor="SrcAlpha" _dstColor="InvSrcAlpha" _colorOp="Add" _srcAlpha="Zero" _dstAlpha="One" _alphaOp="Add" _colorWriteMask="RGB" _bEnableBlend="true" />
-				<RHIBlendTargetState _srcColor="SrcAlpha" _dstColor="InvSrcAlpha" _colorOp="Add" _srcAlpha="Zero" _dstAlpha="One" _alphaOp="Add" _colorWriteMask="RG" _bEnableBlend="true" />
-				<RHIBlendTargetState _srcColor="SrcAlpha" _dstColor="InvSrcAlpha" _colorOp="Add" _srcAlpha="Zero" _dstAlpha="One" _alphaOp="Add" _colorWriteMask="RG" _bEnableBlend="true" />
+				<BlendTargetState _srcColor="SrcAlpha" _dstColor="InvSrcAlpha" _colorOp="Add" _srcAlpha="Zero" _dstAlpha="One" _alphaOp="Add" _colorWriteMask="RGB" _bEnableBlend="true" />
+				<BlendTargetState _srcColor="SrcAlpha" _dstColor="InvSrcAlpha" _colorOp="Add" _srcAlpha="Zero" _dstAlpha="One" _alphaOp="Add" _colorWriteMask="RG" _bEnableBlend="true" />
+				<BlendTargetState _srcColor="SrcAlpha" _dstColor="InvSrcAlpha" _colorOp="Add" _srcAlpha="Zero" _dstAlpha="One" _alphaOp="Add" _colorWriteMask="RG" _bEnableBlend="true" />
 			</_listBlendTarget>
 			<_listPermutation />
 		</RenderGraphPassDesc>

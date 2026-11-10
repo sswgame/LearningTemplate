@@ -22,6 +22,23 @@ namespace sw
             outNanos = frame._originNanos + static_cast<int64>( static_cast<float64>( micro ) * constant::time::kNanosecondsPerMicrosecond + 0.5 );
             return true;
         }
+
+        /** @brief 구간을 시작 순으로 정렬합니다(패스 번호 순이 곧 시간 순은 아니다. 프레임 그래프가 앞에 선다). 패스는 열몇 개라 삽입 정렬이면 된다. */
+        template <typename TSpan>
+        void sortSpanByBegin( vector<TSpan>& listSpan )
+        {
+            for ( size_t index = 1; index < listSpan.size(); ++index )
+            {
+                const TSpan moving = listSpan[index];
+                size_t      cursor = index;
+                while ( cursor > 0 && listSpan[cursor - 1]._beginNanos > moving._beginNanos )
+                {
+                    listSpan[cursor] = listSpan[cursor - 1];
+                    --cursor;
+                }
+                listSpan[cursor] = moving;
+            }
+        }
     } // namespace
 } // namespace sw
 
@@ -29,6 +46,7 @@ namespace sw
 {
     GPUTimelineExporter::GPUTimelineExporter()
         : _listScratchSpan{}
+        , _listScratchChildSpan{}
         , _pDeviceIdentity{ nullptr }
         , _pBackend{ nullptr }
         , _gpuContext{ IProfilerGPUTimeline::kInvalidGPUContext }
@@ -74,7 +92,8 @@ namespace sw
     }
 
     uint32 GPUTimelineExporter::exportFrame( IProfilerGPUTimeline& backend, const RHITimestampFrame& frame, const ProfileZoneSite& frameSite,
-                                             const ProfileZoneSite& computeSite, const vector<const ProfileZoneSite*>& listPassSite )
+                                             const ProfileZoneSite& computeSite, const vector<const ProfileZoneSite*>& listPassSite,
+                                             const vector<const ProfileZoneSite*>& listFramePassSite )
     {
         if ( _gpuContext == IProfilerGPUTimeline::kInvalidGPUContext || frame._listMicro.empty() )
             return 0;
@@ -103,19 +122,25 @@ namespace sw
         }
         if ( _listScratchSpan.empty() )
             return 0;
-
-        // 2) 시작 순으로 정렬한다(패스 번호 순이 곧 시간 순은 아니다. 프레임 그래프가 앞에 선다). 패스는 열몇 개라 삽입 정렬이면 된다.
-        for ( size_t index = 1; index < _listScratchSpan.size(); ++index )
+        // 프레임 패스(컬링 · 그리드 · 스킨 …)는 프레임 그래프 구간 안의 조각이다 — 형제가 아니라 그 구간의 자식으로 낸다(형제로 내면 겹쳐 잘린다).
+        // 비동기 컴퓨트 큐의 프레임 패스는 아직 칸을 쓰지 않으므로(FramePassExecutor::onFrameGraphPassExecute) 여기 오지 않는다.
+        _listScratchChildSpan.clear();
+        for ( size_t framePassIndex = 0; framePassIndex < listFramePassSite.size(); ++framePassIndex )
         {
-            const Span moving = _listScratchSpan[index];
-            size_t     cursor = index;
-            while ( cursor > 0 && _listScratchSpan[cursor - 1]._beginNanos > moving._beginNanos )
-            {
-                _listScratchSpan[cursor] = _listScratchSpan[cursor - 1];
-                --cursor;
-            }
-            _listScratchSpan[cursor] = moving;
+            const uint32 beginSlot = FrameRendererUtil::findFramePassTimestampSlot( framePassIndex );
+            if ( beginSlot == constant::invalid_index::kUint32 )
+                break;
+            int64      beginNanos{ 0 };
+            int64      endNanos{ 0 };
+            const bool bWritten = listFramePassSite[framePassIndex] != nullptr && findSlotNanos( frame, beginSlot, beginNanos ) &&
+                                  findSlotNanos( frame, beginSlot + 1u, endNanos ) && endNanos >= beginNanos;
+            if ( bWritten )
+                _listScratchChildSpan.push_back( Span{ beginNanos, endNanos, listFramePassSite[framePassIndex] } );
         }
+
+        // 2) 시작 순으로 정렬한다.
+        sortSpanByBegin( _listScratchSpan );
+        sortSpanByBegin( _listScratchChildSpan );
 
         // 3) 프레임 구간 = 프레임 첫 명령 ~ 가장 늦은 끝. 첫 명령 슬롯이 없으면 가장 이른 시작으로 둔다.
         int64 frameBegin{ 0 };
@@ -130,16 +155,33 @@ namespace sw
 
         // 4) 트리로 낸다. 형제는 앞 형제의 끝보다 앞서 시작하지 않게 자른다(겹치면 뷰어가 중첩으로 읽는다).
         backend.beginGPUZone( _gpuContext, frameSite, frameBegin );
-        int64 previousEnd = frameBegin;
+        int64  previousEnd = frameBegin;
+        uint32 exportedCount{ 0 };
         for ( const Span& span : _listScratchSpan )
         {
             const int64 beginNanos = MathUtil::max( span._beginNanos, previousEnd );
             const int64 endNanos   = MathUtil::max( span._endNanos, beginNanos );
             backend.beginGPUZone( _gpuContext, *span._pSite, beginNanos );
+            uint32 childCount{ 0 };
+            if ( span._pSite == &computeSite )
+            {
+                // 자식도 같은 규칙이다 — 앞 형제의 끝과 부모(프레임 그래프) 범위로 자른다.
+                int64 previousChildEnd = beginNanos;
+                for ( const Span& child : _listScratchChildSpan )
+                {
+                    const int64 childBegin = MathUtil::min( MathUtil::max( child._beginNanos, previousChildEnd ), endNanos );
+                    const int64 childEnd   = MathUtil::min( MathUtil::max( child._endNanos, childBegin ), endNanos );
+                    backend.beginGPUZone( _gpuContext, *child._pSite, childBegin );
+                    backend.endGPUZone( _gpuContext, childEnd );
+                    previousChildEnd = childEnd;
+                    ++childCount;
+                }
+            }
             backend.endGPUZone( _gpuContext, endNanos );
             previousEnd = endNanos;
+            exportedCount += 1u + childCount;
         }
         backend.endGPUZone( _gpuContext, frameEnd );
-        return static_cast<uint32>( _listScratchSpan.size() ) + 1u;
+        return exportedCount + 1u;
     }
 } // namespace sw

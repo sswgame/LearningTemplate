@@ -362,7 +362,7 @@ namespace sw
             uint32               _program{ 0 };
             uint32               _vao{ 0 };
             RHIPrimitiveTopology _topology = RHIPrimitiveTopology::TriangleList;
-            RHIRenderState       _renderState;  ///< 블렌드 · 깊이 · 래스터 · 스텐실(`setPipelineState` 가 GL 상태로 건다)
+            RenderState          _renderState;  ///< 블렌드 · 깊이 · 래스터 · 스텐실(`setPipelineState` 가 GL 상태로 건다)
             RHIVertexLayout      _vertexLayout; ///< 셰이더가 읽는 정점 버퍼 슬롯과 입력을 지은 메시 정점 형식(드로우가 `RHIGeometryBindings::bindVertexBuffersForDraw` 에 넘긴다)
         };
 

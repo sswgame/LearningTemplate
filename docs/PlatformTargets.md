@@ -30,7 +30,7 @@
 | 깊이 샘플 | 셰이더가 깊이를 실수 텍스처(`Texture2D<float>`)로 읽는다 | 된다 | 깊이는 `texture_depth_*` 로만 읽힌다(자동 레이아웃이 실수로 보면 검증 오류) | WebGPU: 셰이더가 읽는 깊이 텍스처는 R32 실수 사본을 두고 샘플 뷰가 사본이다 — `prepareTextureForShaderRead` 가 내장 WGSL(`textureLoad`) 패스로 채운다(언리얼 모바일의 SceneDepthAux 자리, 기억). 그 프레임에 채우지 않은 사본을 읽으면 오류 로그 |
 | 멀티 드로우 · count 버퍼 | `_bMultiDrawIndirect`, `drawIndirectCount` | 선택(장치 값으로 덮는다) | 없음(`multi-draw-indirect` 는 실험, 기억) | 능력 깃발 거짓 — 엔진이 배치마다 간접 드로우를 낸다(DX11 길). 배치 번호는 루트 상수(DX11 과 같다) |
 | 간접 첫 인스턴스 | 간접 인자의 `firstInstance` | 1.2 코어 기능 `drawIndirectFirstInstance` | `indirect-first-instance` 기능 | WebGPU: 기능이 있으면 켜고 없으면 장치 생성이 멈춘다(GPUScene 이 인자에 첫 인스턴스를 적는다) |
-| 와이어프레임 | `RHIFillMode::Wireframe` | `fillModeNonSolid` 선택(장치 값) | 폴리곤 모드 없음 | `_bWireframeFill` 거짓 — 보기 모드를 받지 않는다 |
+| 와이어프레임 | `FillMode::Wireframe` | `fillModeNonSolid` 선택(장치 값) | 폴리곤 모드 없음 | `_bWireframeFill` 거짓 — 보기 모드를 받지 않는다 |
 | 지오메트리 · 테셀레이션 | 파이프라인 XML 이 고르는 선택 스테이지 | 선택(장치 값) | 없음 | 그런 PSO 는 오류로 만들지 않는다(Vulkan 과 같은 규칙) |
 | 스레드 | 렌더 스레드 · 병렬 기록 · 워커 생성 | 모두 된다 | 장치는 만든 스레드에서만(Emscripten 에서 JS 객체는 워커를 넘지 못한다) | `_bParallelCommandRecording` · `_bThreadSafeResourceCreation` 거짓, 웹은 렌더 스레드를 띄우지 않는다(`gv_useRenderThread` 기본값을 플랫폼 사슬로) |
 | GPU 대기 | `waitIdle`(종료 · 백엔드 교체 · 크기 변경 · 셰이더 핫 리로드 · 파이프라인 바꿈) | 된다 | 브라우저는 GPU 를 동기로 기다릴 수 없다 | 씬 활성화 · 에셋 핫 리로드 · 캡처는 `flushRenderThread` + 펜스 지연 해제다. 남은 `waitIdle` 은 이유가 붙은 도구 · 수명 길(`RHIWaitIdleReason`)이고, 시나리오 `empty/noidlewait` · `editor/assetcascade` 가 `RHI.GPUIdleWaits` 를 본다. WebGPU 의 `waitIdleInternal` 은 기다리지 않고 해제 큐를 비운다 — WebGPU 는 GPU 가 쓰는 객체를 놓아도 구현이 끝날 때까지 살린다(명세). 되읽기는 늘 `mapAsync` 콜백이다 |

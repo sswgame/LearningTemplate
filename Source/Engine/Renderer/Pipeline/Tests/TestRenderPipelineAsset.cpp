@@ -71,9 +71,9 @@ SW_TEST_CASE( RenderPipelineAssetTest, XMLStateReachesThePSO )
     RHIPipelineStateDesc desc{};
     FramePSOManager::applyPassRenderState( desc, RenderPassType::ForwardOpaque, &asset.getGraphPass()[0] );
     SW_EXPECT_EQUAL( 1, static_cast<int32>( desc._renderState._bEnableDepthTest ) );
-    SW_EXPECT_EQUAL( 0, static_cast<int32>( desc._renderState._bEnableDepthWrite ) );                   // 표는 깊이를 쓴다
-    SW_EXPECT_TRUE( desc._renderState._arrBlendTarget[0] == RHIBlendTargetState::makeStraightAlpha() ); // 표는 섞지 않는다
-    SW_EXPECT_TRUE( desc._renderState._cullMode == RHICullMode::None );                                 // 표는 뒷면 컬링이다
+    SW_EXPECT_EQUAL( 0, static_cast<int32>( desc._renderState._bEnableDepthWrite ) );                // 표는 깊이를 쓴다
+    SW_EXPECT_TRUE( desc._renderState._arrBlendTarget[0] == BlendTargetState::makeStraightAlpha() ); // 표는 섞지 않는다
+    SW_EXPECT_TRUE( desc._renderState._cullMode == CullMode::None );                                 // 표는 뒷면 컬링이다
     SW_EXPECT_TRUE( desc._depthStencilFormat != RHIFormat::Unknown );
 
     RenderPipelineAsset noDepth;
@@ -81,7 +81,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, XMLStateReachesThePSO )
     FramePSOManager::applyPassRenderState( desc, RenderPassType::ForwardOpaque, &noDepth.getGraphPass()[0] );
     SW_EXPECT_EQUAL( 0, static_cast<int32>( desc._renderState._bEnableDepthTest ) );
     SW_EXPECT_TRUE( desc._depthStencilFormat == RHIFormat::Unknown );
-    SW_EXPECT_TRUE( desc._renderState._cullMode == RHICullMode::Front );
+    SW_EXPECT_TRUE( desc._renderState._cullMode == CullMode::Front );
 }
 
 /** @brief [RenderPipelineAssetTest] XML 이 없는 내부 슬롯은 표의 값이다 */
@@ -91,12 +91,12 @@ SW_TEST_CASE( RenderPipelineAssetTest, InternalSlotsUseTheTable )
     FramePSOManager::applyPassRenderState( desc, RenderPassType::ForwardOpaqueNoDepthWrite, nullptr );
     SW_EXPECT_EQUAL( 1, static_cast<int32>( desc._renderState._bEnableDepthTest ) );
     SW_EXPECT_EQUAL( 0, static_cast<int32>( desc._renderState._bEnableDepthWrite ) );
-    SW_EXPECT_TRUE( desc._renderState._cullMode == RHICullMode::Back );
+    SW_EXPECT_TRUE( desc._renderState._cullMode == CullMode::Back );
 
     FramePSOManager::applyPassRenderState( desc, RenderPassType::Canvas, nullptr );
     SW_EXPECT_EQUAL( 0, static_cast<int32>( desc._renderState._bEnableDepthTest ) );
-    SW_EXPECT_TRUE( desc._renderState._arrBlendTarget[0] == RHIBlendTargetState::makePremultipliedAlpha() );
-    SW_EXPECT_TRUE( desc._renderState._cullMode == RHICullMode::None );
+    SW_EXPECT_TRUE( desc._renderState._arrBlendTarget[0] == BlendTargetState::makePremultipliedAlpha() );
+    SW_EXPECT_TRUE( desc._renderState._cullMode == CullMode::None );
 }
 
 /** @brief [RenderPipelineAssetTest] 실행이 받아 줄 수 없는 조합은 무시하지 않고 읽기 오류다 */
@@ -356,7 +356,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, SavedChildRoundTrips )
     const TypeInfo&    typeInfo = *RenderPipelineDesc::StaticType();
     RenderPipelineDesc source;
     SW_REQUIRE_TRUE( ReflectedXMLFile::loadDesc( AssetID{ "engine/pipeline/forwardtoonpipeline.xml" }, source ) );
-    source._listPass[0]._cullMode = RHICullMode::Front;
+    source._listPass[0]._cullMode = CullMode::Front;
 
     const string                 childPath = test::makeScratchPath( "child.xml" );
     const optional<AbsolutePath> childFile = FileUtil::requireAbsolutePath( childPath );
@@ -403,8 +403,8 @@ SW_TEST_CASE( RenderPipelineAssetTest, BlendDeclarationsFollowTheRules )
     SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
     RenderPipelineAsset asset;
     SW_REQUIRE_TRUE( RenderPipelineTestUtil::loadMeshState( asset, "_bEnableDepthWrite=\"false\" _blendPreset=\"Additive\"" ) );
-    const RHIBlendTargetState& additive = asset.getGraphPass()[0]._resolvedRenderState._arrBlendTarget[3];
-    SW_EXPECT_TRUE( additive._dstColor == RHIBlendFactor::One );
+    const BlendTargetState& additive = asset.getGraphPass()[0]._resolvedRenderState._arrBlendTarget[3];
+    SW_EXPECT_TRUE( additive._dstColor == BlendFactor::One );
     SW_EXPECT_TRUE( additive._bEnableBlend == SW_TRUE );
     SW_EXPECT_FALSE( RenderPipelineTestUtil::loadMeshState( asset, "_blendPreset=\"Plasma\"" ) );
 
@@ -415,12 +415,12 @@ SW_TEST_CASE( RenderPipelineAssetTest, BlendDeclarationsFollowTheRules )
         xml.insert( xml.find( pMarker ), string( "<_listBlendTarget>" ) + string( targets ) + "</_listBlendTarget>" );
         return xml;
     };
-    constexpr string_view kTarget = "<RHIBlendTargetState _bEnableBlend=\"true\" _srcColor=\"One\" _dstColor=\"One\" _colorWriteMask=\"RGB\"/>";
+    constexpr string_view kTarget = "<BlendTargetState _bEnableBlend=\"true\" _srcColor=\"One\" _dstColor=\"One\" _colorWriteMask=\"RGB\"/>";
     SW_REQUIRE_TRUE( RenderPipelineTestUtil::load( asset, makeWithTargets( "", kTarget ) ) );
-    SW_EXPECT_TRUE( asset.getGraphPass()[0]._resolvedRenderState._arrBlendTarget[2]._colorWriteMask == RHIColorWriteMask::RGB ); // 하나면 모든 타깃이다
+    SW_EXPECT_TRUE( asset.getGraphPass()[0]._resolvedRenderState._arrBlendTarget[2]._colorWriteMask == ColorWriteMask::RGB ); // 하나면 모든 타깃이다
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, makeWithTargets( "_blendPreset=\"Opaque\"", kTarget ) ) );
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, makeWithTargets( "", string( kTarget ) + string( kTarget ) ) ) ); // 컬러 출력은 하나다
-    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, makeWithTargets( "", "<RHIBlendTargetState _bEnableBlend=\"true\" _srcAlpha=\"SrcColor\"/>" ) ) );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, makeWithTargets( "", "<BlendTargetState _bEnableBlend=\"true\" _srcAlpha=\"SrcColor\"/>" ) ) );
 }
 
 /** @brief [RenderPipelineAssetTest] 스텐실은 깊이 첨부가 있어야 하고, 스텐실 칸은 PSO 값까지 간다 */
@@ -434,8 +434,8 @@ SW_TEST_CASE( RenderPipelineAssetTest, StencilNeedsTheDepthAttachment )
     RHIPipelineStateDesc desc{};
     FramePSOManager::applyPassRenderState( desc, RenderPassType::ForwardOpaque, &asset.getGraphPass()[0] );
     SW_EXPECT_EQUAL( 7, static_cast<int32>( desc._renderState._stencilRef ) );
-    SW_EXPECT_TRUE( desc._renderState._stencilFrontCompare == RHICompareFunc::Equal );
-    SW_EXPECT_TRUE( desc._renderState._stencilFrontPass == RHIStencilOp::Replace );
+    SW_EXPECT_TRUE( desc._renderState._stencilFrontCompare == CompareFunc::Equal );
+    SW_EXPECT_TRUE( desc._renderState._stencilFrontPass == StencilOp::Replace );
     SW_EXPECT_FALSE( RenderPipelineTestUtil::loadMeshState( asset, "_bEnableDepthTest=\"false\" _bEnableDepthWrite=\"false\" _bEnableStencil=\"true\"", "ForwardOpaque", false ) );
 }
 

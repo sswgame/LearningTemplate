@@ -130,6 +130,9 @@ namespace sw
         , _listBatchDrawSource{}
         , _listParamWord{}
         , _listScratchStaleRunID{}
+        , _listTransitionBeforeSimulate{}
+        , _listTransitionAfterSimulate{}
+        , _listTransitionBeforeMesh{}
         , _listLightRange{}
         , _frameInput{}
         , _paramBuffer{}
@@ -203,6 +206,7 @@ namespace sw
         releaseStaleEmitters( device );
 
         uploadParamBuffer( device, listBatch );
+        buildTransitionLists(); // 디스패치 목록이 정해진 뒤(올리기 실패가 목록을 비운다)
     }
 
     void VFXGPUSimulation::reportMissingSimulationPipeline( bool bAnyGPUBatch )
@@ -318,6 +322,42 @@ namespace sw
             return;
         }
         _paramBuffer.upload( &device, _listParamWord.data(), static_cast<uint32>( _listParamWord.size() * sizeof( uint32 ) ) );
+    }
+
+    void VFXGPUSimulation::buildTransitionLists()
+    {
+        // 방출기마다 자기 버퍼만 쓰고 다른 방출기의 버퍼를 읽지 않는다 — 디스패치 앞뒤의 전이를 단계마다 한 번에 낸다(`IRHICommandList::transitionBuffers`).
+        // 예전에는 방출기마다 다섯 번 따로 냈다(DX12 `ResourceBarrier( 1 )` · Vulkan `vkCmdPipelineBarrier` 가 그 수만큼).
+        _listTransitionBeforeSimulate.clear();
+        _listTransitionAfterSimulate.clear();
+        _listTransitionBeforeMesh.clear();
+        const bool bLightBufferReady = _frameInput._lightUAV != kInvalidDescriptorIndex && _frameInput._lightBuffer != 0;
+        bool       bAnyLights        = false;
+        for ( const Dispatch& dispatch : _listDispatch )
+        {
+            const EmitterState& state = *dispatch._pState;
+            bAnyLights                = bAnyLights || ( dispatch._bLights && bLightBufferReady );
+            // 쓰기 전에 UAV 로 — 렌더 입력과 인자는 지난 프레임에 정점 셰이더 · 간접 드로우 · 메시 쓰기가 읽던 상태다(빠지면 DX12 · Vulkan 에서 쓰기가 무효다).
+            _listTransitionBeforeSimulate.push_back( RHIBufferTransition{ state._stateBuffer._buffer, RHIBufferState::UnorderedAccess } );
+            _listTransitionBeforeSimulate.push_back( RHIBufferTransition{ state._particleBuffer._buffer, RHIBufferState::UnorderedAccess } );
+            _listTransitionBeforeSimulate.push_back( RHIBufferTransition{ state._argsBuffer._buffer, RHIBufferState::UnorderedAccess } );
+            // 투명 패스가 t11 로 읽고 간접 인자로 그린다. 상태 버퍼는 다음 디스패치만 읽으므로 UAV 로 둔다.
+            _listTransitionAfterSimulate.push_back( RHIBufferTransition{ state._particleBuffer._buffer, RHIBufferState::ShaderResource } );
+            _listTransitionAfterSimulate.push_back( RHIBufferTransition{ state._argsBuffer._buffer, RHIBufferState::IndirectArgument } );
+        }
+        // 파티클 라이트는 라이트 버퍼의 GPU 구간에 쓴다(u3). 쓰기 전에 UAV 로 옮기고, 끝나면 그리드 생산자(light_grid.hlsl)와 조명 패스가 읽도록 SRV 로 되돌린다.
+        if ( bAnyLights )
+        {
+            _listTransitionBeforeSimulate.push_back( RHIBufferTransition{ _frameInput._lightBuffer, RHIBufferState::UnorderedAccess } );
+            _listTransitionAfterSimulate.push_back( RHIBufferTransition{ _frameInput._lightBuffer, RHIBufferState::ShaderResource } );
+        }
+        // 메시 입자 — 인스턴스 칸에 쓰기 전에 UAV 로, 살아 있는 수는 인자 버퍼(SRV)에서 읽는다(이번 프레임에 시뮬레이션을 건너뛴 방출기도 지난 값이 그대로 맞다).
+        if ( _listMeshDispatch.empty() == false && _frameInput._instanceBuffer != 0 )
+            _listTransitionBeforeMesh.push_back( RHIBufferTransition{ _frameInput._instanceBuffer, RHIBufferState::UnorderedAccess } );
+        for ( const MeshDispatch& dispatch : _listMeshDispatch )
+        {
+            _listTransitionBeforeMesh.push_back( RHIBufferTransition{ dispatch._pState->_argsBuffer._buffer, RHIBufferState::ShaderResource } );
+        }
     }
 
     VFXGPUSimulation::EmitterState* VFXGPUSimulation::prepareEmitterState( IRHIDevice& device, const VFXGPUEmitterRequest& request )
@@ -556,22 +596,12 @@ namespace sw
         const bool bBindDepth = depth._texture != 0 && depth._uav != kInvalidDescriptorIndex;
         if ( bBindDepth )
             cmd.prepareTextureForUnorderedAccess( depth._texture );
-        // 파티클 라이트는 라이트 버퍼의 GPU 구간에 쓴다(u3). 쓰기 전에 UAV 로 옮기고, 끝나면 그리드 생산자(light_grid.hlsl)와 조명 패스가 읽도록 SRV 로 되돌린다.
+        // 전이 목록은 디스패치 목록과 함께 `prepareFrame` 이 지었다(`buildTransitionLists`).
         const bool bLightBufferReady = _frameInput._lightUAV != kInvalidDescriptorIndex && _frameInput._lightBuffer != 0;
-        bool       bAnyLights        = false;
-        for ( const Dispatch& dispatch : _listDispatch )
-        {
-            bAnyLights = bAnyLights || ( dispatch._bLights && bLightBufferReady );
-        }
-        if ( bAnyLights )
-            cmd.transitionBuffer( _frameInput._lightBuffer, RHIBufferState::UnorderedAccess );
+        cmd.transitionBuffers( _listTransitionBeforeSimulate.data(), static_cast<uint32>( _listTransitionBeforeSimulate.size() ) );
         for ( const Dispatch& dispatch : _listDispatch )
         {
             const EmitterState& state = *dispatch._pState;
-            // 쓰기 전에 UAV 로 — 렌더 입력과 인자는 지난 프레임에 정점 셰이더 · 간접 드로우 · 메시 쓰기가 읽던 상태다(빠지면 DX12 · Vulkan 에서 쓰기가 무효다).
-            cmd.transitionBuffer( state._stateBuffer._buffer, RHIBufferState::UnorderedAccess );
-            cmd.transitionBuffer( state._particleBuffer._buffer, RHIBufferState::UnorderedAccess );
-            cmd.transitionBuffer( state._argsBuffer._buffer, RHIBufferState::UnorderedAccess );
             // g_VFXParams(t0) / g_VFXStateRW(u0) / g_VFXParticlesRW(u1) / g_VFXArgsRW(u2) / 깊이 히스토리(RW 텍스처 슬롯 0) / 루트 상수 g_VFXParamBase.
             // vfx_simulate.hlsl 레지스터와 1:1 이다.
             cmd.bindComputeShaderResource( _paramBuffer._srv, 0 );
@@ -587,24 +617,18 @@ namespace sw
             recordEmitterPasses( cmd, dispatch );
             if ( bWritesLights )
                 cmd.uavBarrier( _frameInput._lightBuffer ); // 다음 방출기가 같은 버퍼의 다른 슬롯 범위를 쓴다 — 범위가 겹치지 않아도 상태 추적을 맞춘다
-            // 투명 패스가 t11 로 읽고 간접 인자로 그린다. 상태 버퍼는 다음 디스패치만 읽으므로 UAV 로 둔다.
-            cmd.transitionBuffer( state._particleBuffer._buffer, RHIBufferState::ShaderResource );
-            cmd.transitionBuffer( state._argsBuffer._buffer, RHIBufferState::IndirectArgument );
         }
-        if ( bAnyLights )
-            cmd.transitionBuffer( _frameInput._lightBuffer, RHIBufferState::ShaderResource );
+        cmd.transitionBuffers( _listTransitionAfterSimulate.data(), static_cast<uint32>( _listTransitionAfterSimulate.size() ) );
 
         // 메시 입자 — 렌더 입력을 인스턴스 칸으로 옮긴다. 인스턴스 애니메이션 · 컬링이 이어서 이 버퍼를 읽는다.
         const bool bMeshWrites = _listMeshDispatch.empty() == false && meshInstancePSO != 0 && _frameInput._instanceUAV != kInvalidDescriptorIndex;
         if ( bMeshWrites == false )
             return;
-        cmd.transitionBuffer( _frameInput._instanceBuffer, RHIBufferState::UnorderedAccess );
+        cmd.transitionBuffers( _listTransitionBeforeMesh.data(), static_cast<uint32>( _listTransitionBeforeMesh.size() ) );
         cmd.setComputePipelineState( meshInstancePSO );
         for ( const MeshDispatch& dispatch : _listMeshDispatch )
         {
             const EmitterState& state = *dispatch._pState;
-            // 살아 있는 수는 인자 버퍼(SRV)에서 읽는다 — 이번 프레임에 시뮬레이션을 건너뛴 방출기도 지난 값이 그대로 맞다.
-            cmd.transitionBuffer( state._argsBuffer._buffer, RHIBufferState::ShaderResource );
             // g_VFXParams(t0) / g_VFXParticles(t1) / g_VFXArgs(t2) / g_VFXInstancesRW(u0) / 루트 상수 g_VFXMeshParamBase. vfx_mesh_instance.hlsl 과 1:1 이다.
             cmd.bindComputeShaderResource( _paramBuffer._srv, 0 );
             cmd.bindComputeShaderResource( state._particleBuffer._srv, 1 );
@@ -637,6 +661,9 @@ namespace sw
         _listMeshDispatch.clear();
         _listBatchDrawSource.clear();
         _listParamWord.clear();
+        _listTransitionBeforeSimulate.clear();
+        _listTransitionAfterSimulate.clear();
+        _listTransitionBeforeMesh.clear();
         _frameInput = VFXSimulationFrameInput{};
     }
 } // namespace sw

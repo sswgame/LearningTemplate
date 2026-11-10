@@ -36,100 +36,100 @@ namespace sw
     struct RHIDxRenderState
     {
         template <typename TDxEnum>
-        static TDxEnum toBlend( RHIBlendFactor factor )
+        static TDxEnum toBlend( BlendFactor factor )
         {
             switch ( factor )
             {
-                case RHIBlendFactor::Zero:
+                case BlendFactor::Zero:
                     return static_cast<TDxEnum>( D3D12_BLEND_ZERO );
-                case RHIBlendFactor::One:
+                case BlendFactor::One:
                     return static_cast<TDxEnum>( D3D12_BLEND_ONE );
-                case RHIBlendFactor::SrcColor:
+                case BlendFactor::SrcColor:
                     return static_cast<TDxEnum>( D3D12_BLEND_SRC_COLOR );
-                case RHIBlendFactor::InvSrcColor:
+                case BlendFactor::InvSrcColor:
                     return static_cast<TDxEnum>( D3D12_BLEND_INV_SRC_COLOR );
-                case RHIBlendFactor::SrcAlpha:
+                case BlendFactor::SrcAlpha:
                     return static_cast<TDxEnum>( D3D12_BLEND_SRC_ALPHA );
-                case RHIBlendFactor::InvSrcAlpha:
+                case BlendFactor::InvSrcAlpha:
                     return static_cast<TDxEnum>( D3D12_BLEND_INV_SRC_ALPHA );
-                case RHIBlendFactor::DstColor:
+                case BlendFactor::DstColor:
                     return static_cast<TDxEnum>( D3D12_BLEND_DEST_COLOR );
-                case RHIBlendFactor::InvDstColor:
+                case BlendFactor::InvDstColor:
                     return static_cast<TDxEnum>( D3D12_BLEND_INV_DEST_COLOR );
-                case RHIBlendFactor::DstAlpha:
+                case BlendFactor::DstAlpha:
                     return static_cast<TDxEnum>( D3D12_BLEND_DEST_ALPHA );
-                case RHIBlendFactor::InvDstAlpha:
+                case BlendFactor::InvDstAlpha:
                     return static_cast<TDxEnum>( D3D12_BLEND_INV_DEST_ALPHA );
-                case RHIBlendFactor::SrcAlphaSaturate:
+                case BlendFactor::SrcAlphaSaturate:
                     return static_cast<TDxEnum>( D3D12_BLEND_SRC_ALPHA_SAT );
             }
             return static_cast<TDxEnum>( D3D12_BLEND_ONE );
         }
 
         template <typename TDxEnum>
-        static TDxEnum toBlendOp( RHIBlendOp op )
+        static TDxEnum toBlendOp( BlendOp op )
         {
             switch ( op )
             {
-                case RHIBlendOp::Add:
+                case BlendOp::Add:
                     return static_cast<TDxEnum>( D3D12_BLEND_OP_ADD );
-                case RHIBlendOp::Subtract:
+                case BlendOp::Subtract:
                     return static_cast<TDxEnum>( D3D12_BLEND_OP_SUBTRACT );
-                case RHIBlendOp::ReverseSubtract:
+                case BlendOp::ReverseSubtract:
                     return static_cast<TDxEnum>( D3D12_BLEND_OP_REV_SUBTRACT );
-                case RHIBlendOp::Min:
+                case BlendOp::Min:
                     return static_cast<TDxEnum>( D3D12_BLEND_OP_MIN );
-                case RHIBlendOp::Max:
+                case BlendOp::Max:
                     return static_cast<TDxEnum>( D3D12_BLEND_OP_MAX );
             }
             return static_cast<TDxEnum>( D3D12_BLEND_OP_ADD );
         }
 
         template <typename TDxEnum>
-        static TDxEnum toCompare( RHICompareFunc func )
+        static TDxEnum toCompare( CompareFunc func )
         {
             switch ( func )
             {
-                case RHICompareFunc::Never:
+                case CompareFunc::Never:
                     return static_cast<TDxEnum>( D3D12_COMPARISON_FUNC_NEVER );
-                case RHICompareFunc::Less:
+                case CompareFunc::Less:
                     return static_cast<TDxEnum>( D3D12_COMPARISON_FUNC_LESS );
-                case RHICompareFunc::Equal:
+                case CompareFunc::Equal:
                     return static_cast<TDxEnum>( D3D12_COMPARISON_FUNC_EQUAL );
-                case RHICompareFunc::LessEqual:
+                case CompareFunc::LessEqual:
                     return static_cast<TDxEnum>( D3D12_COMPARISON_FUNC_LESS_EQUAL );
-                case RHICompareFunc::Greater:
+                case CompareFunc::Greater:
                     return static_cast<TDxEnum>( D3D12_COMPARISON_FUNC_GREATER );
-                case RHICompareFunc::NotEqual:
+                case CompareFunc::NotEqual:
                     return static_cast<TDxEnum>( D3D12_COMPARISON_FUNC_NOT_EQUAL );
-                case RHICompareFunc::GreaterEqual:
+                case CompareFunc::GreaterEqual:
                     return static_cast<TDxEnum>( D3D12_COMPARISON_FUNC_GREATER_EQUAL );
-                case RHICompareFunc::Always:
+                case CompareFunc::Always:
                     return static_cast<TDxEnum>( D3D12_COMPARISON_FUNC_ALWAYS );
             }
             return static_cast<TDxEnum>( D3D12_COMPARISON_FUNC_LESS_EQUAL );
         }
 
         template <typename TDxEnum>
-        static TDxEnum toStencilOp( RHIStencilOp op )
+        static TDxEnum toStencilOp( StencilOp op )
         {
             switch ( op )
             {
-                case RHIStencilOp::Keep:
+                case StencilOp::Keep:
                     return static_cast<TDxEnum>( D3D12_STENCIL_OP_KEEP );
-                case RHIStencilOp::Zero:
+                case StencilOp::Zero:
                     return static_cast<TDxEnum>( D3D12_STENCIL_OP_ZERO );
-                case RHIStencilOp::Replace:
+                case StencilOp::Replace:
                     return static_cast<TDxEnum>( D3D12_STENCIL_OP_REPLACE );
-                case RHIStencilOp::IncrementClamp:
+                case StencilOp::IncrementClamp:
                     return static_cast<TDxEnum>( D3D12_STENCIL_OP_INCR_SAT );
-                case RHIStencilOp::DecrementClamp:
+                case StencilOp::DecrementClamp:
                     return static_cast<TDxEnum>( D3D12_STENCIL_OP_DECR_SAT );
-                case RHIStencilOp::Invert:
+                case StencilOp::Invert:
                     return static_cast<TDxEnum>( D3D12_STENCIL_OP_INVERT );
-                case RHIStencilOp::IncrementWrap:
+                case StencilOp::IncrementWrap:
                     return static_cast<TDxEnum>( D3D12_STENCIL_OP_INCR );
-                case RHIStencilOp::DecrementWrap:
+                case StencilOp::DecrementWrap:
                     return static_cast<TDxEnum>( D3D12_STENCIL_OP_DECR );
             }
             return static_cast<TDxEnum>( D3D12_STENCIL_OP_KEEP );

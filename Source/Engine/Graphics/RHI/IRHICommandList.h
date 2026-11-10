@@ -219,6 +219,16 @@ namespace sw
         virtual void beginTextureAlias( RHITextureHandle texture ) { (void)texture; }
 
         /**
+         * @brief 여러 텍스처의 전이를 한 번에 냅니다. 상태마다 같은 이름의 단일 함수(`prepareTextureFor*`)와 같은 일이고, 이미 그 상태인 텍스처는 건너뛴다.
+         * @details DX12 는 `ResourceBarrier` 한 번, Vulkan 은 `vkCmdPipelineBarrier` 한 번(단계는 모든 전이의 합)으로 낸다 — 둘 다 배리어 배열 하나로 여러 자원을
+         *          옮길 수 있다(https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12graphicscommandlist-resourcebarrier ·
+         *          https://docs.vulkan.org/refpages/latest/refpages/source/vkCmdPipelineBarrier.html). DX11 · GL · WebGPU 는 텍스처마다 단일 함수의 일을 한다.
+         *          렌더 타깃 상태의 핸들 0 은 스왑체인이다. 같은 텍스처가 둘 들면 안 된다. 앨리어싱 시작(`beginTextureAlias`)은 이 묶음 앞에 따로 낸다.
+         *          그래프 레벨 프롤로그(`FramePassExecutor::onGraphLevelPrologue`)가 레벨마다 한 번 부른다(언리얼 RDG 가 패스 앞 전이를 한 배치로 내는 자리).
+         */
+        virtual void transitionTextures( const RHITextureTransition* pTransition, uint32 count ) = 0;
+
+        /**
          * @brief 텍스처 전체를 다른 텍스처로 복사합니다. **0 은 백버퍼다.** dst 가 0 이면 화면으로 내보내고, src 가 0 이면 화면에 나갈 이미지를 읽는다(테스트와 진단용).
          * @details 둘 다 0 이면 아무것도 하지 않는다. 백버퍼에서 텍스처로 복사할 때는 크기가 백버퍼와 같아야 하고, D3D 는 포맷도 같아야 한다(`getBackBufferFormat` 으로 만든다.
          *          Vulkan 은 블릿이라 변환한다). GL 은 창의 0행이 아래쪽이라 읽을 때 뒤집으므로, 결과 텍스처의 0행은 항상 화면 위쪽이다.
