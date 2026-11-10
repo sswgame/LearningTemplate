@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/GUI/EditorThumbnailCache.h"
@@ -57,7 +58,7 @@ namespace sw::editor
         /** @brief 셀 하나의 아틀라스 그림입니다(@p side 픽셀 정사각형). 아틀라스가 없으면 셀 번호 글입니다. */
         void drawCellImage( int32 cell, float32 side );
         /** @brief 고른 브러시 · 규칙의 위반을 그 자리에서 보입니다. @p ruleIndex 가 `kDefaultVisual` 이면 브러시 자체의 위반입니다. */
-        void drawIssuesFor( int32 brushIndex, int32 ruleIndex );
+        void drawIssuesFor( optional<int32> brushIndex, optional<int32> ruleIndex );
 
     private:
         TileSetEditModel     _model;

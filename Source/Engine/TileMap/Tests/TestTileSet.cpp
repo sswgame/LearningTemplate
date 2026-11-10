@@ -26,12 +26,12 @@ namespace
                                         "  <Tile name=\"grass\" cell=\"3\" navCost=\"5\"/>"
                                         "</TileSet>";
 
-    /** @brief 칸 하나의 모습이 보이는 아틀라스 칸입니다(빈 칸은 -1). */
-    int32 displayedCell( const sw::TileSetAsset& tileSet, const sw::vector<uint16>& listBrushIndex, int32 width, int32 height, int32 x, int32 y,
-                         float32 seconds )
+    /** @brief 칸 하나의 모습이 보이는 아틀라스 칸입니다(빈 칸은 비어 있다). */
+    sw::optional<int32> displayedCell( const sw::TileSetAsset& tileSet, const sw::vector<uint16>& listBrushIndex, int32 width, int32 height, int32 x, int32 y,
+                                       float32 seconds )
     {
         const sw::TileVisual* pVisual = tileSet.resolveVisual( listBrushIndex, width, height, x, y );
-        return ( pVisual != nullptr ) ? pVisual->computeCellAt( seconds ) : -1;
+        return ( pVisual != nullptr ) ? pVisual->computeCellAt( seconds ) : sw::nullopt;
     }
 } // namespace
 
@@ -53,7 +53,7 @@ SW_TEST_CASE( TileSetTest, RuleTilesResolveByNeighborsAndFollowPainting )
     constexpr int32    kWidth  = 4;
     constexpr int32    kHeight = 3;
     sw::vector<uint16> cells   = { 0, 0, 0, 0, ground, ground, ground, 0, ground, ground, ground, water };
-    SW_EXPECT_EQUAL( -1, displayedCell( tileSet, cells, kWidth, kHeight, 0, 0, 0.0f ) );
+    SW_EXPECT_FALSE( displayedCell( tileSet, cells, kWidth, kHeight, 0, 0, 0.0f ).has_value() );
     SW_EXPECT_EQUAL( 1, displayedCell( tileSet, cells, kWidth, kHeight, 1, 1, 0.0f ) );
     SW_EXPECT_EQUAL( 5, displayedCell( tileSet, cells, kWidth, kHeight, 1, 2, 0.0f ) );
 
@@ -250,10 +250,10 @@ SW_TEST_CASE( TileSetTest, IssuesPointAtTheBrushAndRule )
     content._listBrush[2]._name                                  = content._listBrush[1]._name;
     content.collectIssues( listIssue );
     SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( listIssue.size() ) );
-    SW_EXPECT_EQUAL( 0, listIssue[0]._brushIndex );
-    SW_EXPECT_EQUAL( 1, listIssue[0]._ruleIndex );
-    SW_EXPECT_EQUAL( 2, listIssue[1]._brushIndex );
-    SW_EXPECT_EQUAL( -1, listIssue[1]._ruleIndex );
+    SW_EXPECT_TRUE( listIssue[0]._brushIndex == 0 );
+    SW_EXPECT_TRUE( listIssue[0]._ruleIndex == 1 );
+    SW_EXPECT_TRUE( listIssue[1]._brushIndex == 2 );
+    SW_EXPECT_FALSE( listIssue[1]._ruleIndex.has_value() );
 
     SW_EXPECT_LOG( "TileSet.Invalid" );
     sw::TileSetAsset rejected;

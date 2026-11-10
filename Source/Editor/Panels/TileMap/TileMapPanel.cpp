@@ -589,12 +589,13 @@ namespace sw::editor
         const TileSetAsset&   tileSet        = _document.getTileSet();
         const vector<uint16>& listBrushIndex = _document.getBrushIndices();
         const TileVisual*     pVisual        = tileSet.resolveVisual( listBrushIndex, map._width, map._height, x, y );
-        if ( pVisual == nullptr )
-            return;
+        const optional<int32> cell           = pVisual != nullptr ? pVisual->computeCellAt( 0.0f ) : nullopt;
+        if ( cell.has_value() == false )
+            return; // 셀이 없는 모습은 타일셋 창이 문제로 보인다
         if ( pAtlasTexture != nullptr )
         {
             // 규칙이 고른 셀의 이미지 — 이웃을 칠하면 이미지가 따라 바뀌는 것이 규칙 타일이 일하는 모습이다.
-            const float4 uvRect = tileSet.computeCellUVRect( pVisual->computeCellAt( 0.0f ) );
+            const float4 uvRect = tileSet.computeCellUVRect( *cell );
             pDrawList->AddImage( reinterpret_cast<ImTextureID>( pAtlasTexture ), cellMin, cellMax, ImVec2( uvRect._x, uvRect._y ),
                                  ImVec2( uvRect._x + uvRect._z, uvRect._y + uvRect._w ) );
             return;
@@ -604,7 +605,7 @@ namespace sw::editor
         const uint32 hash       = static_cast<uint32>( tileSet.getBrushes()[brushValue - 1u]._name.getHash() );
         const ImU32  color      = EditorColorUtil::toImU32( Color::fromBytes( static_cast<uint8>( 80 + ( hash & 0x7Fu ) ), static_cast<uint8>( 80 + ( ( hash >> 8 ) & 0x7Fu ) ), static_cast<uint8>( 80 + ( ( hash >> 16 ) & 0x7Fu ) ) ) );
         pDrawList->AddRectFilled( cellMin, cellMax, color );
-        const string number = to_string( pVisual->computeCellAt( 0.0f ) );
+        const string number = to_string( *cell );
         pDrawList->AddText( ImVec2( cellMin.x + 2.0f, cellMin.y + 1.0f ), EditorColorUtil::toImU32( SW_THEME_COLOR( "Base", "Text" ) ), number.c_str() );
     }
 } // namespace sw::editor

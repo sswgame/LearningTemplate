@@ -53,14 +53,14 @@ namespace sw
         return true;
     }
 
-    uint16 AppearanceGeometry::findGroup( const hashed_string& name ) const
+    optional<uint16> AppearanceGeometry::findGroup( const hashed_string& name ) const
     {
         for ( size_t groupIndex = 0; groupIndex < _listGroupName.size(); ++groupIndex )
         {
             if ( _listGroupName[groupIndex] == name )
                 return static_cast<uint16>( groupIndex );
         }
-        return CharacterGeometryConstant::kNoGroup;
+        return nullopt;
     }
 
     const GeometryMorphTarget* AppearanceGeometry::findMorph( const hashed_string& name ) const

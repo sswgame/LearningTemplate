@@ -331,7 +331,7 @@
     "Source/Editor/Panels/TileMap/TileMapPanel.cpp": {"float": 6, "integer": 4, "hex": 3},
     "Source/Editor/Panels/TileMap/TileMapPanel.h": {"float": 2},
     "Source/Editor/Panels/TileSet/Model/TileSetEditModel.cpp": {"minus-one": 1},
-    "Source/Editor/Panels/TileSet/TileSetPanel.cpp": {"minus-one": 7, "float": 2, "integer": 3},
+    "Source/Editor/Panels/TileSet/TileSetPanel.cpp": {"minus-one": 6, "float": 2, "integer": 3},
     "Source/Editor/Panels/UIPreview/Model/UIPreviewModel.h": {"minus-one": 2},
     "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp": {"minus-one": 1, "float": 28, "integer": 1},
     "Source/Editor/Panels/UIPreview/UIPreviewPanel.h": {"float": 2},

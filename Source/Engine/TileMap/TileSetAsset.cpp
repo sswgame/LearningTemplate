@@ -116,7 +116,7 @@ namespace sw
             }
 
             /** @brief 모습 하나의 규칙 위반을 덧붙입니다(셀 없음 · 아틀라스 밖 셀 · fps 없는 애니메이션). */
-            static void collectVisualIssues( const TileSetContent& content, const TileVisual& visual, int32 brushIndex, int32 ruleIndex, vector<TileSetIssue>& outListIssue )
+            static void collectVisualIssues( const TileSetContent& content, const TileVisual& visual, int32 brushIndex, optional<int32> ruleIndex, vector<TileSetIssue>& outListIssue )
             {
                 const string_view                        brushName = content._listBrush[static_cast<size_t>( brushIndex )]._name.view();
                 StringBuilder<constant::buffer::kMax256> ownerBuilder;
@@ -151,10 +151,10 @@ namespace sw
         };
     } // namespace
 
-    int32 TileVisual::computeCellAt( float32 seconds ) const
+    optional<int32> TileVisual::computeCellAt( float32 seconds ) const
     {
         if ( _listFrameCell.empty() )
-            return constant::invalid_index::kInt32;
+            return nullopt;
         if ( isAnimated() == false )
             return _listFrameCell[0];
         const float32 frame = MathUtil::floor( MathUtil::max( seconds, 0.0f ) * _framesPerSecond );
@@ -182,13 +182,13 @@ namespace sw
         {
             StringBuilder<constant::buffer::kMax256> textBuilder;
             textBuilder.appendFormat( "the atlas grid %#x%# needs at least one column and one row", _columnCount, _rowCount );
-            outListIssue.push_back( TileSetIssue{ string( textBuilder.view() ), constant::invalid_index::kInt32, constant::invalid_index::kInt32 } );
+            outListIssue.push_back( TileSetIssue{ string( textBuilder.view() ), nullopt, nullopt } );
         }
         if ( _tileSize <= 0.0f )
         {
             StringBuilder<constant::buffer::kMax256> textBuilder;
             textBuilder.appendFormat( "tileSize %# must be positive", _tileSize );
-            outListIssue.push_back( TileSetIssue{ string( textBuilder.view() ), constant::invalid_index::kInt32, constant::invalid_index::kInt32 } );
+            outListIssue.push_back( TileSetIssue{ string( textBuilder.view() ), nullopt, nullopt } );
         }
         for ( size_t brushIndex = 0; brushIndex < _listBrush.size(); ++brushIndex )
         {
@@ -198,21 +198,21 @@ namespace sw
             {
                 StringBuilder<constant::buffer::kMax256> textBuilder;
                 textBuilder.appendFormat( "brush %# has no name", index );
-                outListIssue.push_back( TileSetIssue{ string( textBuilder.view() ), index, constant::invalid_index::kInt32 } );
+                outListIssue.push_back( TileSetIssue{ string( textBuilder.view() ), index, nullopt } );
             }
             else if ( findBrush( brush._name ) != static_cast<uint32>( brushIndex ) )
             {
                 StringBuilder<constant::buffer::kMax256> textBuilder;
                 textBuilder.appendFormat( "brush '%#' is listed twice", brush._name.view() );
-                outListIssue.push_back( TileSetIssue{ string( textBuilder.view() ), index, constant::invalid_index::kInt32 } );
+                outListIssue.push_back( TileSetIssue{ string( textBuilder.view() ), index, nullopt } );
             }
             if ( brush._navCost < 1 )
             {
                 StringBuilder<constant::buffer::kMax256> textBuilder;
                 textBuilder.appendFormat( "brush '%#' navCost must be 1 to 255", brush._name.view() );
-                outListIssue.push_back( TileSetIssue{ string( textBuilder.view() ), index, constant::invalid_index::kInt32 } );
+                outListIssue.push_back( TileSetIssue{ string( textBuilder.view() ), index, nullopt } );
             }
-            Internal::collectVisualIssues( *this, brush._defaultVisual, index, constant::invalid_index::kInt32, outListIssue );
+            Internal::collectVisualIssues( *this, brush._defaultVisual, index, nullopt, outListIssue );
             for ( size_t ruleIndex = 0; ruleIndex < brush._listRule.size(); ++ruleIndex )
             {
                 Internal::collectVisualIssues( *this, brush._listRule[ruleIndex]._visual, index, static_cast<int32>( ruleIndex ), outListIssue );

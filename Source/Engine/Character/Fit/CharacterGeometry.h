@@ -79,8 +79,8 @@ namespace sw
         bool isSkinned() const { return _listSkin.empty() == false && _listSkin.size() == _listPosition.size(); }
         /** @brief 배열 길이가 서로 맞고 인덱스가 정점 안을 가리키면 true 를 반환합니다. */
         bool isValid() const;
-        /** @brief 이름의 정점 그룹 번호입니다. 없으면 `kNoGroup` 입니다. */
-        uint16 findGroup( const hashed_string& name ) const;
+        /** @brief 이름의 정점 그룹 번호입니다. 없으면 비어 있습니다(`kNoGroup` 은 정점마다 적는 표의 칸 값이다). */
+        optional<uint16> findGroup( const hashed_string& name ) const;
         /** @brief 이름의 모프 대상입니다. 없으면 nullptr 입니다. */
         const GeometryMorphTarget* findMorph( const hashed_string& name ) const;
         /** @brief 위치에서 면적 가중 정점 법선을 다시 계산합니다. */
