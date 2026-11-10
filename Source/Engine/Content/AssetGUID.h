@@ -1,0 +1,82 @@
+/**
+ * @file AssetGUID.h
+ * @brief 에셋의 정체성(무작위 128비트 GUID)과 그 글 표기 · 파일 속 자리 규칙입니다.
+ * @details 경로는 옮기면 바뀐다 — 경로를 id 로 쓰면 옮길 때마다 리다이렉트 줄이 영구히 쌓인다(`AssetRedirect`). GUID 는 에셋이 처음 생길 때 한 번 만들고
+ *          내용이 바뀌어도 · 옮겨도 그대로다. 내용이 바뀌었는지는 따로 내용 해시(`ContentHash`)가 말한다. 유니티 `.meta` 의 guid, Godot 4 의 `uid://` 와 같은 자리다.
+ *          - **빈 값이 없다.** 기본 생성자가 없고 만드는 길은 `create`(새 정체성)와 `tryParse`(적힌 정체성) 둘뿐이다 — 없음은 `optional<AssetGUID>` 로 적는다.
+ *          - **글 표기는 하나다.** 소문자 16진 32 자(하이픈 없음, 유니티 표기). 대문자 · 하이픈 · 모두 0 은 받지 않는다 — 같은 GUID 를 두 철자로 적으면 글로 대조하는 린트 · 색인이 갈린다.
+ *          - **자리.** 우리 형식 XML 에셋은 파일 머리의 처리 지시 `<?asset guid="…"?>`(XML 선언 바로 뒤)에, 원본(png · ogg · glb …)은 곁의 `.meta` 서술(`AssetMeta`)에 둔다.
+ *            루트 속성으로 두지 않는 까닭: 종류마다 로더가 받는 루트 속성을 따로 적고(70 여 종류를 모두 고쳐야 한다), 데이터 상속(`_base` 합치기)이 부모의 루트 속성을 자식에게 베껴
+ *            두 에셋이 한 정체성을 갖게 된다. 처리 지시는 파서가 문서에 올리지 않으므로 로더 · 합치기가 보지 않는다(Godot 4 도 uid 를 리소스 칸이 아니라 파일 머리 줄에 둔다).
+ */
+#pragma once
+#include "Core/Container/string.h"
+#include "Core/Foundation/Expected.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
+
+namespace sw
+{
+    /**
+     * @class AssetGUID
+     * @brief 에셋 하나의 정체성입니다. 파일 머리말 참고.
+     */
+    class SW_API AssetGUID
+    {
+    public:
+        /** @brief 글 표기의 길이(소문자 16진 32 자)입니다. */
+        static constexpr size_t kTextLength = 32;
+
+        /** @brief 새 정체성을 만듭니다(운영체제 난수 128 비트). 만드는 길은 이것 하나다. */
+        [[nodiscard]] static AssetGUID create();
+        /** @brief 글 표기 @p text 를 읽습니다. 소문자 16진 32 자가 아니거나 모두 0 이면 없음입니다(대소문자 · 하이픈을 고쳐 읽지 않는다). */
+        [[nodiscard]] static optional<AssetGUID> tryParse( string_view text );
+
+        /** @brief 글 표기(소문자 16진 32 자)입니다. */
+        [[nodiscard]] string toString() const;
+        /** @brief 해시 키(`DefaultHash`)입니다. 무작위 값이라 두 반쪽을 섞기만 한다. */
+        [[nodiscard]] uint64 computeHash() const { return _high ^ _low; }
+
+        [[nodiscard]] bool operator==( const AssetGUID& other ) const { return _high == other._high && _low == other._low; }
+        [[nodiscard]] bool operator!=( const AssetGUID& other ) const { return ( *this == other ) == false; }
+        /** @brief 정렬 순서(앞 64 비트 먼저)입니다 — 색인을 늘 같은 순서로 쓴다. */
+        [[nodiscard]] bool operator<( const AssetGUID& other ) const { return _high != other._high ? _high < other._high : _low < other._low; }
+
+    private:
+        AssetGUID( uint64 high, uint64 low )
+            : _high{ high }
+            , _low{ low }
+        {
+        }
+
+    private:
+        uint64 _high;
+        uint64 _low;
+    };
+
+    /** @brief 우리 형식 XML 글에서 GUID 머리를 찾은 결과입니다. */
+    enum class [[nodiscard]] AssetGUIDHeaderState : uint8
+    {
+        Found,   ///< 머리가 있고 GUID 를 읽었다
+        Missing, ///< 머리가 없다(아직 정체성을 받지 않은 파일)
+        Invalid, ///< 머리가 있는데 읽지 못했다 · 자리가 틀렸다 · 둘이다
+    };
+
+    /**
+     * @struct AssetGUIDHeader
+     * @brief 우리 형식 XML 글의 GUID 머리(`<?asset guid="…"?>`)를 찾은 결과와, 그 머리의 읽기 · 쓰기입니다. 글만 다루고 파일을 열지 않는다.
+     * @details 자리는 하나다 — 맨 앞(BOM · XML 선언 · 공백 뒤)의 첫 처리 지시. 그 밖의 자리에 있거나 둘이면 `Invalid` 다(두 곳에 적힌 정체성을 고르지 않는다).
+     *          파이썬 도구(`Scripts/dev/AssetIdentity.py`)가 같은 규칙으로 읽고 쓴다.
+     */
+    struct SW_API AssetGUIDHeader
+    {
+        AssetGUIDHeaderState _state{ AssetGUIDHeaderState::Missing };
+        optional<AssetGUID>  _guid; ///< `Found` 일 때만 찬다
+
+        /** @brief @p xmlText 의 GUID 머리를 찾습니다. */
+        static AssetGUIDHeader read( string_view xmlText );
+        /** @brief @p xmlText 에 @p guid 머리를 쓴 글입니다. 이미 머리가 있으면 그 자리를 바꾸고, 없으면 XML 선언 뒤(없으면 맨 앞)에 한 줄 넣는다. 줄 끝은 글의 것(CRLF · LF)을 따른다. */
+        static string write( string_view xmlText, const AssetGUID& guid );
+    };
+} // namespace sw
