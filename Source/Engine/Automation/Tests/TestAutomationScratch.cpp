@@ -30,7 +30,7 @@ SW_TEST_CASE( AutomationScratchTest, TellsOtherProcessInstancesApart )
  */
 SW_TEST_CASE( AutomationScratchTest, RemovesOtherProcessInstancesFromScans )
 {
-    const sw::string contentRoot   = "/work/Content";
+    const sw::string contentRoot   = sw::test::makeScratchPath( "Content" ); // 디스크 경로 판정은 OS 의 절대 경로만 받는다(`/work` 는 Windows 에서 상대)
     const sw::string ownInstance   = sw::AutomationScratch::makeInstanceID( "scratch/sequencerkeys" );
     const sw::string otherInstance = "scratch/sequencerkeys_p" + sw::to_string( sw::Process::getCurrentProcessID() + 1 );
 

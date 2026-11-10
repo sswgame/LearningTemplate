@@ -35,4 +35,10 @@ SW_TEST_CASE( FileTest, LongPathBeyondMaxPathIsWrittenAndRead )
 
     SW_EXPECT_TRUE( sw::PlatformFileUtil::toWindowsFilePath( filePath ).compare( 0, 4, L"\\\\?\\" ) == 0 );
     SW_EXPECT_TRUE( sw::PlatformFileUtil::toWindowsFilePath( "C:/short/x.txt" ) == sw::wstring( L"C:\\short\\x.txt" ) );
+
+    // 접두는 들어가는 쪽 표기다 — 나오는 경로에는 없어 짧은 폴더 아래의 긴 파일도 그 폴더 안으로 판정된다.
+    const sw::string shortRoot = sw::test::makeScratchPath( "SwLongPathRoot" );
+    sw::string       relativePath;
+    SW_REQUIRE_TRUE( sw::FileUtil::makeRelativePath( shortRoot, filePath, relativePath ) );
+    SW_EXPECT_EQUAL( filePath.substr( shortRoot.size() + 1 ), sw::FileUtil::normalizeSeparators( relativePath ) );
 }

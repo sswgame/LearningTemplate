@@ -44,10 +44,22 @@ namespace sw
                 return StringUtil::utf8ToUTF16( separated.c_str() );
             }
 
-            /** @brief 넓은 문자 경로를 `/` 구분 UTF-8 로 바꿉니다. */
+            /**
+             * @brief 넓은 문자 경로를 `/` 구분 UTF-8 로 바꿉니다. 확장 경로 접두는 뗀다(`\\?\C:\x` → `C:/x`, `\\?\UNC\server\share` → `//server/share`).
+             * @details 접두는 OS 경계에서 들어가는 쪽에만 붙이는 표기다(`toWindowsFilePath`). 나가는 경로에 남으면 같은 폴더의 248 자 미만 경로와 이상 경로가
+             *          첫 성분부터 달라 `makeRelativePath` 가 긴 파일을 그 폴더 밖으로 판정했다.
+             */
             static string toUTF8( const wchar_t* pWidePath )
             {
-                string result = StringUtil::utf16ToUTF8( pWidePath );
+                const std::wstring_view wide{ pWidePath };
+                wstring                 plain;
+                if ( wide.substr( 0, 8 ) == L"\\\\?\\UNC\\" )
+                    plain = L"\\\\" + wstring( wide.substr( 8 ) );
+                else if ( wide.substr( 0, 4 ) == L"\\\\?\\" )
+                    plain = wstring( wide.substr( 4 ) );
+                else
+                    plain = wstring( wide );
+                string result = StringUtil::utf16ToUTF8( plain.c_str() );
                 StringUtil::replaceChar( result, '\\', '/' );
                 return result;
             }
@@ -201,22 +213,7 @@ namespace sw
         if ( WindowsFileSystemInternal::fits( written, constant::buffer::kMax4096 ) == false )
             return false;
 
-        // `\\?\C:\x` → `C:\x`, `\\?\UNC\server\share` → `\\server\share`
-        const wstring finalPath{ arrFinal };
-        if ( finalPath.compare( 0, 8, L"\\\\?\\UNC\\" ) == 0 )
-        {
-            wstring unc{ L"\\\\" };
-            unc.append( finalPath, 8, wstring::npos );
-            outResult = WindowsFileSystemInternal::toUTF8( unc.c_str() );
-        }
-        else if ( finalPath.compare( 0, 4, L"\\\\?\\" ) == 0 )
-        {
-            outResult = WindowsFileSystemInternal::toUTF8( arrFinal + 4 );
-        }
-        else
-        {
-            outResult = WindowsFileSystemInternal::toUTF8( arrFinal );
-        }
+        outResult = WindowsFileSystemInternal::toUTF8( arrFinal ); // 확장 경로 접두는 toUTF8 이 뗀다
         return true;
     }
 
