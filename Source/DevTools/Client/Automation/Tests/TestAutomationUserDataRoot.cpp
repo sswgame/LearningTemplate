@@ -2,6 +2,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/File/UserDataPath.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Process/ProcessEnvironment.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -17,7 +18,7 @@ namespace
     {
     public:
         ScopedUserDataRoot()
-            : _bHadValue{ sw::ProcessEnvironment::tryRead( sw::kUserDataRootVariable, _previous ) ? SW_TRUE : SW_FALSE }
+            : _bHadValue{ static_cast<uint8>( sw::ProcessEnvironment::tryRead( sw::kUserDataRootVariable, _previous ) ? SW_TRUE : SW_FALSE ) }
         {
         }
         ~ScopedUserDataRoot()
@@ -32,7 +33,7 @@ namespace
 
     private:
         sw::string _previous;
-        sw::uint8  _bHadValue : 1;
+        uint8      _bHadValue : 1;
     };
 } // namespace
 
@@ -100,7 +101,7 @@ SW_TEST_CASE( AutomationUserDataRootTest, SessionRejectsRootOutsideTheAutomation
 {
     ScopedUserDataRoot restore;
     const sw::string   platformFolder = sw::UserDataPath::findPlatformDataDirectory( "" );
-    const sw::string   outside        = platformFolder.empty() ? sw::FileUtil::getDirectoryPart( sw::AutomationUserDataRoot::getBaseFolder() ) + "/Other" : platformFolder;
+    const sw::string   outside        = platformFolder.empty() ? sw::string( sw::FileUtil::getDirectoryPart( sw::AutomationUserDataRoot::getBaseFolder() ) + "/Other" ) : platformFolder;
 
     SW_REQUIRE_TRUE( sw::ProcessEnvironment::trySet( sw::kUserDataRootVariable, outside ) );
     SW_EXPECT_FALSE( sw::AutomationUserDataRoot::resolve( false ).has_value() );
@@ -111,7 +112,7 @@ SW_TEST_CASE( AutomationUserDataRootTest, SessionRejectsRootOutsideTheAutomation
     SW_REQUIRE_TRUE( sw::ProcessEnvironment::trySet( sw::kUserDataRootVariable, inside ) );
     const sw::expected<sw::string> accepted = sw::AutomationUserDataRoot::resolve( false );
     SW_EXPECT_TRUE( accepted.has_value() && *accepted == inside );
-    SW_EXPECT_TRUE( sw::AutomationUserDataRoot::makeChildRoot( inside, "vk" ) == inside + "/vk" );
+    SW_EXPECT_TRUE( sw::AutomationUserDataRoot::makeChildRoot( inside, "vk" ) == sw::string( inside + "/vk" ) );
 }
 
 /**

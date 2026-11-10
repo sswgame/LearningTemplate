@@ -17,7 +17,6 @@
 #include "Engine/Graphics/RHI/GL/Platform/IOpenGLPlatformContext.h"
 #include "Engine/Graphics/RHI/Transfer/RHIStagingRingUtil.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
-#include "Engine/Graphics/Shader/Binding/ShaderBindingValidatorIssue.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
 namespace sw
@@ -457,32 +456,24 @@ namespace sw
                 SW_LOG_WARNING_ID( "OpenGL.VertexStageSSBOLimit", "The vertex stage SSBO limit (%#) is smaller than the SRV slot count (%#) - reads of high-numbered slots may be wrong.",
                                    static_cast<int32>( maxVertexSsbo ), shaderslot::kSRVSlotCount );
             }
-            // 쿠킹은 셰이더 단계마다 텍스처 단위를 이 백엔드의 단계 한도(CookContract.json stage_texture_unit_limit) 안으로 막는다. 드라이버가 그보다 작으면
-            // 쿠킹을 지난 셰이더도 링크가 깨지므로(Mesa "Too many fragment shader texture samplers") 이 백엔드를 쓰지 않는다. 한도가 표에 없으면 쿠킹 검사도 없으니 멈춘다.
-            const optional<uint32> stageTextureUnitLimit = ShaderBindingValidatorIssue::findStageTextureUnitLimit( ShaderTargetFormat::SPIRV_OpenGL );
-            if ( stageTextureUnitLimit.has_value() == false )
-            {
-                SW_LOG_ERROR_ID( "OpenGL.StageTextureUnitLimitMissing", "The OpenGL backend has no stage_texture_unit_limit in Config/Engine/CookContract.json - the cook cannot keep shaders inside the driver's texture units." );
-                _initResult = RHIInitResult::DriverUnsupported;
-                return false;
-            }
-            GLint       maxFragmentTextureUnit{ 0 };
-            const GLint requiredTextureUnit = static_cast<GLint>( *stageTextureUnitLimit );
+            // 결합 유닛은 엔진 칸 끝(머티리얼 t16..t31 위 엔진 t32..)까지, 프래그먼트 유닛은 한 셰이더의 샘플러 예산(머티리얼 + 쓰는 엔진 칸)만큼 있어야 한다.
+            // 유닛이 모자라면 큰 번호의 텍스처가 조용히 흰색이 되거나 링크가 지므로 이 백엔드를 쓰지 않는다(판정은 shaderslot::gl::checkTextureUnits 하나).
+            GLint maxFragmentTextureUnit{ 0 };
+            GLint maxCombinedTextureUnit{ 0 };
             glGetIntegerv( GL_MAX_TEXTURE_IMAGE_UNITS, &maxFragmentTextureUnit );
-            GLint       maxCombinedTextureUnit{ 0 };
-            const GLint requiredCombinedUnit = static_cast<GLint>( shaderslot::kEngineTexture0 + shaderslot::kEngineTextureCount );
             glGetIntegerv( GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &maxCombinedTextureUnit );
-            if ( maxCombinedTextureUnit < requiredCombinedUnit )
+            const shaderslot::gl::TextureUnitCheck unitCheck = shaderslot::gl::checkTextureUnits( maxFragmentTextureUnit, maxCombinedTextureUnit );
+            if ( unitCheck == shaderslot::gl::TextureUnitCheck::Combined )
             {
                 SW_LOG_WARNING_ID( "OpenGL.OpenGLBackendUnusableCombined", "The OpenGL backend is unusable - %# combined texture units, but engine texture slots need %#.",
-                                   static_cast<int32>( maxCombinedTextureUnit ), static_cast<int32>( requiredCombinedUnit ) );
+                                   static_cast<int32>( maxCombinedTextureUnit ), shaderslot::gl::kCombinedTextureUnitCount );
                 _initResult = RHIInitResult::DriverUnsupported;
                 return false;
             }
-            if ( maxFragmentTextureUnit < requiredTextureUnit )
+            if ( unitCheck == shaderslot::gl::TextureUnitCheck::Fragment )
             {
-                SW_LOG_WARNING_ID( "OpenGL.OpenGLBackendUnusableFragment", "The OpenGL backend is unusable - %# fragment texture units, but cooked shaders may use %# per stage (stage_texture_unit_limit).",
-                                   static_cast<int32>( maxFragmentTextureUnit ), static_cast<int32>( requiredTextureUnit ) );
+                SW_LOG_WARNING_ID( "OpenGL.OpenGLBackendUnusableFragment", "The OpenGL backend is unusable - %# fragment texture units, but a fragment shader may use %# (material + engine texture slots).",
+                                   static_cast<int32>( maxFragmentTextureUnit ), shaderslot::gl::kFragmentTextureUnitBudget );
                 _initResult = RHIInitResult::DriverUnsupported;
                 return false;
             }

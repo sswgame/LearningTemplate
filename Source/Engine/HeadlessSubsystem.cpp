@@ -178,7 +178,8 @@ namespace sw
                         SW_LOG_ERROR_ID( "Headless.PackCookShaderRequests", "Pack cook: the shader cook requests could not be collected - cannot tell which dropped shader binaries the runtime needs" );
                         return false;
                     }
-                    params._setRequestedShaderBinary.insert( listRequestedBinary.begin(), listRequestedBinary.end() );
+                    for ( string& binary : listRequestedBinary )
+                        params._setRequestedShaderBinary.insert( std::move( binary ) );
                 }
                 // 실행기가 없는 구성(Shipping · 전용 서버)은 실행기가 스스로 등록하지 않는다 — 그 구성이 굽는 팩에는 시나리오를 담지 않는다.
                 // 배포 대상의 팩(`-pack-for-shipping`)도 담지 않는다 — 교차 빌드(Android · 웹)는 호스트 개발 App(실행기가 있다)이 굽는다.

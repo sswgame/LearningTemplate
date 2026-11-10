@@ -126,7 +126,7 @@ namespace sw
      * @details 층 이름만 필수다. 적지 않은 칸은 읽기 전에 채운 값(`SkinLayerValue` 의 현재 값)이 남는다. 범위는 `SkinLayerValue` 의 상수와 같다(불투명도 0..1, 회전 ±180).
      */
     REFLECT()
-    struct SkinLayerValueDef
+    struct SkinLayerValueParams
     {
         REFLECT_BODY();
 
@@ -140,7 +140,7 @@ namespace sw
         float2 _offset{};
         PROPERTY()
         float2 _scale{};
-        PROPERTY( Name = "rotation", Min = -180.0, Max = 180.0 )
+        PROPERTY( Name = "rotation", Min = -180.0, Max = 180.0, Units = deg ) // 파일 스키마라 글 그대로 도다 — 읽은 뒤 라디안으로 옮기지 않고 _rotationDegrees 로 둔다
         float32 _rotationDegrees{ 0.0f };
         PROPERTY( Name = "mirror" )
         bool _bMirror{ false }; ///< NOLINT(sw-bool-flag): 스키마 집합체다(XMLFields 가 칸마다 쓴다)

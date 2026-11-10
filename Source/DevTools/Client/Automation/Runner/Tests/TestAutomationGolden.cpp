@@ -156,7 +156,7 @@ SW_TEST_CASE( AutomationGoldenTest, NamesAndMeta )
 /** @brief [AutomationGoldenTest] 기록 커밋을 못 구하면 골든을 쓰지 않고 까닭을 말한다 — git 을 못 띄움(PATH) · 저장소 아님 · 빈 출력이 서로 다른 문장이다 */
 SW_TEST_CASE( AutomationGoldenTest, RecordingCommitNeedsGit )
 {
-    const expected<int32>  launchFailed = unexpected( Error{ ErrorKind::ExternalFailure, "could not launch the command", "git describe" } );
+    const expected<int32>  launchFailed = sw::unexpected( Error{ ErrorKind::ExternalFailure, "could not launch the command", "git describe" } );
     const expected<string> notStarted   = AutomationGoldenUtil::readRecordingCommit( launchFailed, "" );
     SW_REQUIRE_FALSE( notStarted.has_value() );
     SW_EXPECT_TRUE( notStarted.error().message().find( "not on PATH" ) != string_view::npos );

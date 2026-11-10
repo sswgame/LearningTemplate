@@ -623,6 +623,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, StageTextureUnitLimit )
     SW_REQUIRE_TRUE( glLimit.has_value() );
     // 한 단계가 머티리얼 칸 전부와 엔진 칸 몇(그림자 · 접촉 그림자)을 함께 읽을 수 있어야 한다 — 장치 초기화는 이 한도보다 작은 드라이버를 거절한다.
     SW_EXPECT_TRUE( *glLimit > shaderslot::kMaterialTextureCount );
+    SW_EXPECT_EQUAL( shaderslot::gl::kFragmentTextureUnitBudget, *glLimit ); // 장치 검사(checkTextureUnits)와 쿠킹 검사가 같은 Config 값이다
 
     const ShaderTargetFormat format = ShaderTargetFormat::SPIRV_OpenGL;
     ShaderReflectionData     atLimit;
