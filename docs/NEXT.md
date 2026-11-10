@@ -143,7 +143,7 @@ GameObject/Component API 는 저작 · 수명 · 직렬화 층으로 두고, 프
 - **T3 테스트 이력 · 격리 · 파이프라인(T1 뒤):**
   - 이력 · 격리 표는 들어왔다(`Scripts/dev/TestHistory.py` ingest · report · quarantine, `Config/Rules/Test/Quarantine.json` — 사유 · 만료 필수). 남은 일: 묶음 끝 스크립트가 보고 폴더를 `ingest` 하고 ctest 에 `quarantine --ctest-exclude` 를 `-E` 로 넘긴다(bundle-verify 스킬의 절차와 함께 고친다).
   - 샤드를 시간 균형으로 나누고, 묶음 끝 셸 스크립트를 단계 · 산출물 · 재시도가 적힌 파이프라인 정의로 옮긴다.
-  - `ScenarioCulprit.py` 는 로그 문구 대신 JSON 을 읽는다. 외부 CI 러너는 비용이 드는 연동이라 사용자 결정이다.
+  - 외부 CI 러너는 비용이 드는 연동이라 사용자 결정이다. 범인 찾기(`ScenarioCulprit.py` · `LinuxScenarios.py culprit`)는 실행마다 보고 폴더의 JSON 으로 판정한다 — 처음 한 번 돌려 확인한다.
 - **D1 데이터 필수 칸 린트:** 발 뼈 결함의 모양이다. `PROPERTY` 의 문자열 · `hashed_string` · `AssetID` 칸이 비어 있지 않은 C++ 기본값을 갖고 `Required` 가 아니면 오류로 낸다. 빠진 칸은 로드 오류 id(`Reflection.RequiredMissing`)로 드러낸다.
 - **N2 서버 배포 — 통합 검증만 남음:** Linux 서버 패키지로 `py -3 -m Scripts server-image --package … --config … --game …`(묶기 전 `Server -check-config` 를 WSL 로 돈다) 한 번, 쿠버네티스 예시는 비밀 `ops-token` 을 더해야 뜬다(운영 포트 0.0.0.0 은 토큰 필수 — 스크레이퍼도 Bearer).
 - **U1 햅틱 · UI 포커스 내비:** 진동 · 트리거 출력 API 가 없다(grep 0). `IInputFeedbackDevice` 와 `*.haptic.xml` 을 둔다. 패드 전용 메뉴 탐색(방향 포커스)을 확인하고 없으면 더한다.

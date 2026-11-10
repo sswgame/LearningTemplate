@@ -2,8 +2,8 @@
 
 체인을 처음부터 다시 돌리지 않고, 진 단계 앞의 단계들 중 뒤쪽 구간만 붙여 부분 체인을 돌려 가며 "어느 단계부터 붙이면 지는가" 를 찾는다.
 단계 목록 · 나머지 인자(게임 체인의 <Launch> 값 등)는 `Scenario.<체인>` 의 ctest 명령에서 그대로 가져오고(`common/AppArguments`) `-scenario=` 만 바꾼다 —
-예전 Linux 판은 `engine/automation/editor/` 경로를 고정해 에디터 체인만 됐다. 단계 이름은 마지막 체인 로그(`chain stage i/n … (<이름>)`)의 순번으로
-ctest 목록의 경로와 짝짓는다(이름 속성은 경로에서 알 수 없다).
+단계 이름은 시나리오 파일의 `name` 속성이고, 판정은 로그 문구가 아니라 실행마다 비운 보고 폴더(`build/<프리셋>/Saved/Culprit/run<N>` 에
+`-scenario-report=<폴더>/report.json` — 체인 단계마다 `report[.<백엔드>].<단계>.json`)의 JSON `result` 다. 보고가 없는 단계(크래시 · 행)는 짐이다.
 
   py -3 Scripts/dev/ScenarioCulprit.py empty surfacefootprint                      # Ninja-Debug, dx12, 무인
   py -3 Scripts/dev/ScenarioCulprit.py editor focusloss --preset Ninja-Release --show
@@ -25,27 +25,16 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))   # Scripts
 from common import AppArguments  # noqa: E402
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-kStagePattern = re.compile(r'chain stage (\d+)/\d+ \w+ \(([^)]+)\)')
 
-
-def readStageNames(logText: str) -> dict[int, str]:
-    """체인 로그의 순번(0 부터) → 단계 이름. 백엔드 교체로 같은 단계가 또 찍히면 처음 것을 쓴다."""
-    names: dict[int, str] = {}
-    for match in kStagePattern.finditer(logText):
-        names.setdefault(int(match.group(1)) - 1, match.group(2))
-    return names
 
 
 def resolveTarget(names: dict[int, str], target: str) -> tuple[int, str]:
     """@p target 은 전체 이름(`game.empty.surfacefootprint`)이나 끝 조각(`surfacefootprint`)."""
     matches = sorted({(index, name) for index, name in names.items() if name == target or name.endswith('.' + target)})
     if len(matches) != 1:
-        sys.exit(f'단계 {target!r} 를 체인 로그에서 {"찾지 못했다" if not matches else "하나로 정하지 못했다: " + ", ".join(n for _, n in matches)}')
+        sys.exit(f'단계 {target!r} 를 체인 목록에서 {"찾지 못했다" if not matches else "하나로 정하지 못했다: " + ", ".join(n for _, n in matches)}')
     return matches[0]
 
-
-def stageFailed(logText: str, stageName: str) -> bool:
-    return re.search(rf'chain stage \d+/\d+ Failed \({re.escape(stageName)}\)', logText) is not None
 
 
 def findCulprit(before: Sequence[str], fails: Callable[[list[str]], bool]) -> int | None:
@@ -63,6 +52,47 @@ def findCulprit(before: Sequence[str], fails: Callable[[list[str]], bool]) -> in
         else:
             high = middle
     return low
+
+
+kScenarioName = re.compile(r'<Scenario\b[^>]*\bname="([^"]+)"')
+kPassedResults = frozenset({'Passed', 'Skipped'})
+
+
+def readScenarioName(path: str) -> str:
+    """시나리오 리소스 id(`game/x/automation/y.scenario.xml`)의 `name` 속성. 없으면 멈춘다(체인 목록이 지금 Content 와 다르다)."""
+    match = kScenarioName.search((REPO / 'Content' / path).read_text(encoding='utf-8'))
+    if match is None:
+        sys.exit(f'{path}: <Scenario name="…"> 이 없다')
+    return match.group(1)
+
+
+def makeRunReportFolder(buildDir: pathlib.Path, runNumber: int) -> pathlib.Path:
+    """부분 체인 실행 하나의 보고 폴더(`build/<프리셋>/Saved/Culprit/run<N>`) — 실행마다 새로 비워, 앞 실행의 보고를 다음 판정이 읽지 않는다."""
+    import shutil
+    runDir = buildDir / 'Saved' / 'Culprit' / f'run{runNumber}'
+    shutil.rmtree(runDir, ignore_errors=True)
+    runDir.mkdir(parents=True)
+    return runDir
+
+
+def readRunReports(runDir: pathlib.Path) -> list[dict]:
+    """실행 폴더 아래 단계 보고(`report[.<백엔드>].<단계>.json` — name · result 가 있는 것)를 모은다."""
+    import json
+    listReport = []
+    for path in sorted(runDir.rglob('*.json')):
+        try:
+            document = json.loads(path.read_text(encoding='utf-8'))
+        except (OSError, ValueError):
+            continue
+        if isinstance(document, dict) and 'name' in document and 'result' in document:
+            listReport.append(document)
+    return listReport
+
+
+def stageFailedInReports(listReport: Sequence[dict], stageName: str) -> bool:
+    """그 단계의 보고가 통과 · 건너뜀이 아니면 짐. 보고가 없으면(크래시 · 행으로 못 씀) 짐이다 — 통과로 치지 않는다."""
+    listResult = [report['result'] for report in listReport if report['name'] == stageName]
+    return not listResult or any(result not in kPassedResults for result in listResult)
 
 
 kGoldenAxes = (('differingFraction', 'maxDifferingFraction'), ('meanDistance', 'maxMeanDistance'), ('largestDeepRegionPixels', 'maxDeepRegionPixels'))
@@ -134,6 +164,9 @@ def selfCheck() -> int:
         assert findCulprit(stages, fails) == culprit, culprit
         assert len(calls) <= 1 + 4, len(calls)   # log2(10) 올림 + 처음 한 번
     assert findCulprit(stages, lambda prefix: False) is None
+    assert stageFailedInReports([{'name': 'a', 'result': 'Passed'}], 'a') is False
+    assert stageFailedInReports([{'name': 'a', 'result': 'Failed'}], 'a') is True
+    assert stageFailedInReports([{'name': 'b', 'result': 'Passed'}], 'a') is True, '보고 없는 단계는 짐'
     print('self-check ok')
     return 0
 
@@ -158,26 +191,24 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     buildDir = REPO / 'build' / options.preset
     logDir = buildDir / 'Testing' / 'Logs'
-    chainLog = logDir / f'Scenario.{options.chain}.{options.backend}.log'
-    if not chainLog.is_file():
-        sys.exit(f'{chainLog} 이 없다 — 그 백엔드로 체인을 먼저 돌린다')
     command = AppArguments.findChainCommand(buildDir, options.chain)
     paths = AppArguments.readChainStages(command)
-    targetIndex, targetName = resolveTarget(readStageNames(chainLog.read_text(encoding='utf-8', errors='replace')), options.stage)
-    if targetIndex >= len(paths):
-        sys.exit(f'로그의 순번 {targetIndex + 1} 이 ctest 목록({len(paths)} 단계)을 넘는다 — 체인 로그가 지금 빌드와 다르다')
+    # 단계 이름은 시나리오 파일의 name 속성이 정본이다(로그 문구를 읽지 않는다 — 체인을 먼저 돌려 둘 필요도 없다).
+    targetIndex, targetName = resolveTarget({index: readScenarioName(path) for index, path in enumerate(paths)}, options.stage)
     dropped = ('unattended',) if options.show else ()
-    base = AppArguments.without(command, 'scenario-backend-split', 'scenario-keep-going', 'scenario-backends', 'log-file', 'scenario', *dropped)
+    base = AppArguments.without(command, 'scenario-backend-split', 'scenario-keep-going', 'scenario-backends', 'log-file', 'scenario', 'scenario-report', *dropped)
     runLog = logDir / 'Culprit.log'
+    runCounter = [0]
 
     def fails(prefix: list[str]) -> bool:
         listed = ','.join(prefix + [paths[targetIndex]])
+        runCounter[0] += 1
+        runDir = makeRunReportFolder(buildDir, runCounter[0])
         subprocess.run(base + [AppArguments.option('scenario', listed), AppArguments.flag('scenario-keep-going'), AppArguments.option('scenario-backends', options.backend),
-                               AppArguments.option('log-file', runLog)], cwd=buildDir / 'Bin',
+                               AppArguments.option('scenario-report', runDir / 'report.json'), AppArguments.option('log-file', runLog)], cwd=buildDir / 'Bin',
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        text = (logDir / f'Culprit.{options.backend}.log').read_text(encoding='utf-8', errors='replace')
-        bad = stageFailed(text, targetName)
-        print(f'앞 {len(prefix):3d} 단계 (첫 {prefix[0] if prefix else "-"}) → {"짐" if bad else "통과"}', flush=True)
+        bad = stageFailedInReports(readRunReports(runDir), targetName)
+        print(f'앞 {len(prefix):3d} 단계 (첫 {prefix[0] if prefix else "-"}) → {"짐" if bad else "통과"}  ({runDir})', flush=True)
         return bad
 
     before = paths[:targetIndex]
