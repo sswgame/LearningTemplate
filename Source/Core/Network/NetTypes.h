@@ -174,6 +174,21 @@ namespace sw
         bool   isValid() const { return _port != 0; }
         /** @brief 이 기계의 루프백(127.0.0.1)이면 true 입니다(포트는 보지 않는다). 루프백에만 묶인 채널 · 세션이 받는 주소를 가린다. */
         constexpr bool isLoopback() const { return _ipv4 == makeLoopback( 0 )._ipv4; }
+        /**
+         * @brief RFC 1918 사설 주소(10/8 · 172.16/12 · 192.168/16)면 true 입니다. 모든 인터페이스(0.0.0.0)는 사설이 아니다 — 공용 인터페이스도 포함한다.
+         * @details 인증 없는 운영 포트처럼 "이 기계 · 사설망에만 연다" 를 형식으로 가르는 자리가 쓴다(`OpsHTTPEndpoint`).
+         */
+        constexpr bool isPrivate() const
+        {
+            return ( _ipv4 & kPrivateMask8 ) == kPrivateBlock10 || ( _ipv4 & kPrivateMask12 ) == kPrivateBlock172 || ( _ipv4 & kPrivateMask16 ) == kPrivateBlock192;
+        }
+
+        static constexpr uint32 kPrivateBlock10  = 0x0A000000u; ///< 10.0.0.0/8
+        static constexpr uint32 kPrivateBlock172 = 0xAC100000u; ///< 172.16.0.0/12
+        static constexpr uint32 kPrivateBlock192 = 0xC0A80000u; ///< 192.168.0.0/16
+        static constexpr uint32 kPrivateMask8    = 0xFF000000u;
+        static constexpr uint32 kPrivateMask12   = 0xFFF00000u;
+        static constexpr uint32 kPrivateMask16   = 0xFFFF0000u;
 
         constexpr bool operator==( const NetAddress& other ) const { return _ipv4 == other._ipv4 && _port == other._port; }
         constexpr bool operator!=( const NetAddress& other ) const { return ( *this == other ) == false; }

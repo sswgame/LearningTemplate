@@ -3,6 +3,7 @@
 #include "Engine/Server/OpsHTTPEndpoint.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Hash/SecureUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
@@ -16,9 +17,10 @@ namespace sw
     {
         struct OpsHTTPEndpointInternal
         {
-            static constexpr const utf8* kHeadEnd           = "\r\n\r\n";
-            static constexpr string_view kMetricContentType = "text/plain; version=0.0.4; charset=utf-8";
-            static constexpr string_view kTextContentType   = "text/plain; charset=utf-8";
+            static constexpr int32       kStatusUnauthorized = 401; ///< 지표 · 준비 보고를 토큰 없이 물었다
+            static constexpr const utf8* kHeadEnd            = "\r\n\r\n";
+            static constexpr string_view kMetricContentType  = "text/plain; version=0.0.4; charset=utf-8";
+            static constexpr string_view kTextContentType    = "text/plain; charset=utf-8";
 
             static const utf8* findReason( int32 status )
             {
@@ -28,6 +30,8 @@ namespace sw
                         return "OK";
                     case 400:
                         return "Bad Request";
+                    case kStatusUnauthorized:
+                        return "Unauthorized";
                     case 404:
                         return "Not Found";
                     case 405:
@@ -57,6 +61,28 @@ namespace sw
                 return status;
             }
 
+            /** @brief 요청 머리의 `Authorization: Bearer <토큰>` 이 @p bearerToken 과 같으면 true 입니다(머리 이름은 대소문자를 가리지 않는다, 값 비교는 길이에만 시간이 든다). */
+            static bool hasBearerToken( string_view requestHead, string_view bearerToken )
+            {
+                constexpr string_view kHeader   = "authorization:";
+                constexpr string_view kScheme   = "Bearer ";
+                size_t                lineStart = requestHead.find( "\r\n" );
+                while ( lineStart != string_view::npos )
+                {
+                    lineStart += 2;
+                    const size_t      lineEnd = requestHead.find( "\r\n", lineStart );
+                    const string_view line    = requestHead.substr( lineStart, lineEnd == string_view::npos ? string_view::npos : lineEnd - lineStart );
+                    if ( StringUtil::startsWith( line, kHeader, true ) )
+                    {
+                        const string_view value = StringUtil::trim( line.substr( kHeader.size() ) );
+                        return value.size() > kScheme.size() && StringUtil::startsWith( value, kScheme, true ) &&
+                               SecureUtil::equalsConstantTime( value.substr( kScheme.size() ), bearerToken );
+                    }
+                    lineStart = lineEnd;
+                }
+                return false;
+            }
+
             static int64 nowMonotonicMs() { return MonotonicClock::nowNanoseconds() / constant::time::kNanosecondsPerMillisecond; }
         };
     } // namespace
@@ -84,6 +110,11 @@ namespace sw
     {
         if ( pTransport == nullptr )
             return false;
+        if ( settings._bearerToken.empty() && isBindAllowedWithoutToken( settings._bindAddress ) == false )
+        {
+            SW_LOG_ERROR_ID( "OpsHTTPEndpoint.PublicBindNeedsToken", "Ops HTTP endpoint refuses to listen on %# without a bearer token - bind to loopback or a private address, or set the token", settings._bindAddress.toString().c_str() );
+            return false;
+        }
         _settings.set( settings );
         _pMetricRegistry.set( pMetricRegistry );
         _pHealthRegistry.set( pHealthRegistry );
@@ -125,8 +156,10 @@ namespace sw
     }
 
     int32 OpsHTTPEndpoint::makeResponse( string_view requestHead, const MetricRegistry* pMetricRegistry, const ServiceHealthRegistry* pHealthRegistry, int64 monotonicMs,
-                                         string& outResponse )
+                                         string_view bearerToken, string& outResponse )
     {
+        // 탐침(쿠버네티스 kubelet 은 비밀 머리를 실을 수 없다)은 상태 코드만 받는다 — 지표와 준비 보고 본문은 토큰이 있어야 한다.
+        const bool        bAuthorized = bearerToken.empty() || OpsHTTPEndpointInternal::hasBearerToken( requestHead, bearerToken );
         const string_view requestLine = requestHead.substr( 0, requestHead.find( "\r\n" ) );
         const size_t      firstSpace  = requestLine.find( ' ' );
         const size_t      secondSpace = firstSpace == string_view::npos ? string_view::npos : requestLine.find( ' ', firstSpace + 1 );
@@ -138,6 +171,8 @@ namespace sw
         if ( method != "GET" )
             return OpsHTTPEndpointInternal::writeResponse( 405, OpsHTTPEndpointInternal::kTextContentType, "only GET\n", outResponse );
 
+        if ( bAuthorized == false && target != "/healthz" && target != "/readyz" )
+            return OpsHTTPEndpointInternal::writeResponse( OpsHTTPEndpointInternal::kStatusUnauthorized, OpsHTTPEndpointInternal::kTextContentType, "unauthorized\n", outResponse );
         if ( target == "/metrics" && pMetricRegistry != nullptr )
         {
             string body;
@@ -151,9 +186,13 @@ namespace sw
         }
         if ( target == "/readyz" && pHealthRegistry != nullptr )
         {
-            string body;
-            pHealthRegistry->writeReport( body, monotonicMs );
             const bool bReady = pHealthRegistry->isReady( monotonicMs );
+            string     body   = bReady ? "ready\n" : "not ready\n";
+            if ( bAuthorized )
+            {
+                body.clear();
+                pHealthRegistry->writeReport( body, monotonicMs ); // 서비스별 상태는 토큰이 있을 때만 보인다
+            }
             return OpsHTTPEndpointInternal::writeResponse( bReady ? 200 : 503, OpsHTTPEndpointInternal::kTextContentType, body, outResponse );
         }
         return OpsHTTPEndpointInternal::writeResponse( 404, OpsHTTPEndpointInternal::kTextContentType, "not found\n", outResponse );
@@ -182,7 +221,7 @@ namespace sw
             if ( headEnd != string::npos )
             {
                 (void)makeResponse( string_view( pConnection->_buffer ).substr( 0, headEnd ), _pMetricRegistry.get(), _pHealthRegistry.get(),
-                                    OpsHTTPEndpointInternal::nowMonotonicMs(), response );
+                                    OpsHTTPEndpointInternal::nowMonotonicMs(), _settings->_bearerToken, response );
             }
             else if ( static_cast<int32>( pConnection->_buffer.size() ) > _settings->_maxRequestBytes )
             {

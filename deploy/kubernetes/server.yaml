@@ -65,6 +65,11 @@ spec:
             - name: SW_CACHE_SESSIONS_PASSWORD
               valueFrom:
                 secretKeyRef: { name: game-server-secrets, key: cache-sessions-password }
+            # 운영 포트를 0.0.0.0 에 열므로 Bearer 토큰이 있어야 서버가 뜬다(`_opsTokenEnvironment`). 스크레이퍼는 같은 토큰을 `authorization.credentials_file` 로 싣는다.
+            # 탐침(`/healthz` · `/readyz`)은 토큰 없이 상태 코드만 받는다.
+            - name: SW_OPS_TOKEN
+              valueFrom:
+                secretKeyRef: { name: game-server-secrets, key: ops-token }
           readinessProbe:
             # 비우는 중이면 503 — 서비스(Service · 부하 분산기)가 새 접속을 끊는다. 종료 신호를 받으면 곧바로 이 검사가 실패한다.
             httpGet: { path: /readyz, port: ops }
@@ -104,4 +109,4 @@ spec:
   ports:
     - { name: game, port: 7777, protocol: UDP }
     - { name: service, port: 7780, protocol: TCP }
-# 운영 HTTP 는 평문이고 인증이 없다 — 클러스터 안(스크레이퍼)에서만 닿게 하고 바깥으로 내보내지 않는다(Service 에 넣지 않았다).
+# 운영 HTTP 는 평문이다(지표는 Bearer 토큰) — 클러스터 안(스크레이퍼)에서만 닿게 하고 바깥으로 내보내지 않는다(Service 에 넣지 않았다).

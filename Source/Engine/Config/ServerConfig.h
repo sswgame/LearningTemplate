@@ -121,6 +121,12 @@ namespace sw
         PROPERTY()
         string _opsListenAddress{ "127.0.0.1" };
         /**
+         * @brief 운영 엔드포인트의 Bearer 토큰을 담은 환경 변수 이름입니다(토큰 자체는 설정 파일에 쓰지 않는다).
+         * @details 변수가 있으면 요청마다 `Authorization: Bearer` 를 요구한다. 루프백 · 사설 주소가 아닌 바인드(0.0.0.0 · 공용 주소)는 변수가 없으면 서버가 기동하지 못한다.
+         */
+        PROPERTY()
+        string _opsTokenEnvironment{ "SW_OPS_TOKEN" };
+        /**
          * @brief 관리 채널(서버 운영 O4 — 점검 모드 · 상태 · 정상 종료를 재시작 없이 부르는 텍스트 TCP 채널) 포트입니다. 0 이면 끔(기본 — Shipping 도 같다).
          * @details 켜려면 `_adminChannelTokenEnvironment` 의 환경 변수에 비밀 토큰이 있어야 한다 — 없거나 비면 서버가 기동하지 못한다(토큰 없는 관리 채널로 뜨지 않는다).
          *          루프백에만 묶고(쿠버네티스 `port-forward` · 사이드카 · SSH 터널로 닿는다), 요청 줄마다 토큰을 요구하며 틀리면 끊는다. Dev 의 디버그 채널과 같은 채널 코드(`DebugChannel`)이지만

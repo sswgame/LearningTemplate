@@ -10,6 +10,7 @@
 #include "Core/Log/Sink/ConsoleLogOutput.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/NetTypes.h"
+#include "Core/Process/ProcessEnvironment.h"
 #include "Core/Process/ProcessSession.h"
 #include "Core/Process/ShutdownSignal.h"
 #include "Core/String/fixed_string.h"
@@ -33,6 +34,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneObjectHash.h"
+#include "Engine/Server/OpsHTTPEndpoint.h"
 #include "Engine/Server/ServerServiceManager.h"
 #include "Engine/Server/ServiceHealthRegistry.h"
 #include "Engine/Telemetry/CrashReportService.h"
@@ -42,6 +44,7 @@
 #include "ModuleManager/ModuleLoaderSubsystem.h"
 
 #include "sw/config/ConfigConstants.h"
+#include "sw/config/ProcessExitCodes.gen.h"
 
 namespace sw
 {
@@ -109,6 +112,7 @@ namespace sw
         , _bReady{ SW_FALSE }
         , _bRestartServerServices{ SW_FALSE }
         , _bDraining{ SW_FALSE }
+        , _bConfigCheckOnly{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -120,10 +124,13 @@ namespace sw
         // 줄마다 내보낸다. 테스트, journald, docker logs 가 "ready" 줄을 바로 볼 수 있다. 엔진(로거)을 시작하기 전에 켠다.
         ConsoleLogOutput::setFlushEveryLine( true );
         ServerApp  server{};
-        const bool bStarted = server.initialize( argc, pArgv );
-        if ( bStarted )
+        const bool bStarted   = server.initialize( argc, pArgv );
+        const bool bCheckOnly = server._bConfigCheckOnly == SW_TRUE;
+        if ( bStarted && bCheckOnly == false )
             server.run();
         server.shutdown();
+        if ( bCheckOnly ) // 설정 검사만: 잘못된 설정은 로드 오류 코드(종료 코드 표 `LoadError`) — 스크립트가 크래시 · 기동 실패와 가른다
+            return static_cast<int32>( bStarted ? ProcessExitCode::Passed : ProcessExitCode::LoadError );
         return bStarted ? 0 : 1;
     }
 
@@ -150,6 +157,9 @@ namespace sw
 
         if ( loadServerConfig() == false )
             return false;
+        const bool bConfigValid = checkServerConfig( *_pServerConfig );
+        if ( bConfigValid == false || _bConfigCheckOnly == SW_TRUE )
+            return bConfigValid; // 검사만이면 여기서 끝난다(서비스 · 포트를 열지 않는다)
         _tickNanoseconds = constant::time::kNanosecondsPerSecond / static_cast<int64>( _pServerConfig->_tickRateHz );
         // 호스트 서비스(관측 · 크래시 묶음 · 서버 문맥 · 게임 · 개발 콘솔 · 디버그 채널 · 표준 입력)을 의존 순서로 세운다. App 과 같은 표(`HostService`)이고,
         // 내리는 것은 `shutdown` 의 역순 한 줄이다.
@@ -200,6 +210,9 @@ namespace sw
             string overridePath;
             if ( pCommandLine->getArgument( CommandLineArgument::SERVER_CONFIG, overridePath ) && overridePath.empty() == false )
                 path = overridePath;
+            bool bCheckOnly = false;
+            (void)pCommandLine->getArgument( CommandLineArgument::CHECK_CONFIG, bCheckOnly ); // 없으면 기본값(false) 그대로다
+            _bConfigCheckOnly = bCheckOnly ? SW_TRUE : SW_FALSE;
         }
         if ( pConfigManager == nullptr )
             return false;
@@ -224,6 +237,43 @@ namespace sw
         }
         SW_LOG_INFO_ID( "Server.ServerConfig", "Server config: %#", path.c_str() );
         return true;
+    }
+
+    bool ServerApp::checkServerConfig( const ServerConfig& config )
+    {
+        bool bValid = true;
+        if ( config._opsPort > 0 )
+        {
+            NetAddress opsAddress;
+            string     opsToken;
+            (void)ProcessEnvironment::tryReadNonEmpty( config._opsTokenEnvironment, opsToken ); // 없으면 인증 없이 — 그때는 루프백 · 사설 바인드만
+            if ( NetAddress::parse( config._opsListenAddress, static_cast<uint16>( config._opsPort ), opsAddress ) == false )
+            {
+                SW_LOG_ERROR_ID( "Server.CheckOpsListenAddress", "Server config _opsListenAddress '%#' is not an IPv4 address", config._opsListenAddress.c_str() );
+                bValid = false;
+            }
+            else if ( opsToken.empty() && OpsHTTPEndpoint::isBindAllowedWithoutToken( opsAddress ) == false )
+            {
+                SW_LOG_ERROR_ID( "Server.CheckOpsBindNeedsToken", "Server config opens the ops endpoint on '%#' (not loopback or private) but the token environment variable '%#' is not set",
+                                 config._opsListenAddress.c_str(), config._opsTokenEnvironment.c_str() );
+                bValid = false;
+            }
+        }
+        string adminToken;
+        if ( config._adminChannelPort > 0 && ProcessEnvironment::tryReadNonEmpty( config._adminChannelTokenEnvironment, adminToken ) == false )
+        {
+            SW_LOG_ERROR_ID( "Server.CheckAdminChannelToken", "Server config enables the admin channel (_adminChannelPort=%#) but the token environment variable '%#' is not set",
+                             config._adminChannelPort, config._adminChannelTokenEnvironment.c_str() );
+            bValid = false;
+        }
+        CrashReportConsent consent = CrashReportConsent::Local;
+        if ( parseCrashReportConsent( config._crashReportConsent, consent ) == false || consent == CrashReportConsent::Ask )
+        {
+            SW_LOG_ERROR_ID( "Server.CheckCrashReportConsent", "Server config _crashReportConsent '%#' must be 'local' or 'send'", config._crashReportConsent.c_str() );
+            bValid = false;
+        }
+        SW_LOG_INFO_ID( "Server.CheckConfigResult", "Server config check: %#", bValid ? "ok" : "invalid" );
+        return bValid;
     }
 
     bool ServerApp::startHostService( HostServiceID id )
