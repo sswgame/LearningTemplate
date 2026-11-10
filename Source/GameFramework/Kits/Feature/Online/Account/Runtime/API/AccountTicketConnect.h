@@ -10,8 +10,10 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Network/NetTypes.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/API/AccountClient.h"
@@ -33,6 +35,13 @@ namespace sw
         string _platform{};                   ///< 로그인에 싣는 플랫폼 글(`[a-z0-9_]`)
         string _tlsTrustFile{};               ///< 로그인 서버의 TLS 인증서를 믿을 CA 번들 PEM(프로젝트 루트 기준). 비면 Dev 만 `Saved/Certificates/` 의 개발용 인증서를 못 박아 믿는다(서버 서비스 스트림은 늘 TLS 이다)
         int64  _timeoutMilliseconds{ 10000 }; ///< 연결부터 티켓까지 통틀어 기다리는 시한
+    };
+
+    /** @brief 막지 않는 티켓 받기(`AccountTicketConnector::poll`)의 한 걸음 결과입니다. 실패는 `expected` 의 오류입니다. */
+    enum class AccountTicketStep : uint8
+    {
+        Pending,  ///< 아직 연결 · 로그인 · 티켓을 기다린다 — 다음 틱에 다시 부른다
+        Received, ///< 티켓을 받았다(연결은 열린 채로 남는다)
     };
 
     /**
@@ -63,14 +72,38 @@ namespace sw
          * @details 이미 연결이 있으면 먼저 닫는다. 성공하면 연결은 열린 채로 남는다(`shutdown` 으로 닫는다).
          */
         [[nodiscard]] expected<void> acquire( AccountTicketRequest request, NetConnectCredentials& outCredentials );
+        /**
+         * @brief 막지 않는 길의 시작 — @p transport(빌린다, 객체보다 오래 산다)와 @p security 로 로그인 서버에 붙기 시작합니다. 시한은 @p nowMs 부터 셉니다.
+         * @details `acquire` 가 플랫폼 전송 · TLS 로 이 길을 막고 돌린다. 테스트는 루프백 전송 · 평문과 수동 시각으로 돌린다(시한 · 재접속을 실제 시간 없이 잰다).
+         *          요청 검사는 `acquire` 와 같다. 이미 연결이 있으면 먼저 닫는다.
+         */
+        [[nodiscard]] expected<void> begin( AccountTicketRequest request, IStreamTransport& transport, OnlineClientSecurity security, MonotonicMilliseconds nowMs );
+        /**
+         * @brief 연결을 한 번 돌리고 진행을 봅니다. 받았으면 @p outCredentials 를 채우고 `Received` 입니다.
+         * @details 시한이 지났거나 서버가 거절했거나 시작하지 않았으면 오류이고, 실패하면 연결을 닫는다(같은 요청을 다시 하려면 `begin` 부터).
+         */
+        [[nodiscard]] expected<AccountTicketStep> poll( MonotonicMilliseconds nowMs, NetConnectCredentials& outCredentials );
         /** @brief 로그인 연결을 닫습니다. 두 번 불러도 됩니다. */
         void shutdown();
+
+    private:
+        /** @brief 요청의 필수 칸 · 로그인 주소를 봅니다. 연결을 열기 전에 거절한다. */
+        static expected<NetAddress> checkRequest( const AccountTicketRequest& request );
+        /** @brief 연결을 닫고 @p error 를 돌려줍니다(실패 길 한 곳). */
+        unexpected<Error> fail( Error error );
 
     private:
         unique_ptr<ITLSContext>      _tlsContext; ///< 로그인 연결의 TLS(클라이언트 `_client` 가 빌린다 — 먼저 선언해 나중에 지운다)
         unique_ptr<IStreamTransport> _pTransport;
         OnlineServiceClient          _client;
         AccountClient                _account;
+        string                       _loginName; ///< 진행 중인 요청(`begin` 이 채운다)
+        string                       _password;  ///< 로그인을 보낸 뒤 지운다
+        string                       _serverID;
+        MonotonicMilliseconds        _deadline;
         uint8                        _bServiceRegistered : 1;
+        uint8                        _bPending           : 1; ///< `begin` 뒤 끝나지 않았다
+        uint8                        _bLoginSent         : 1;
+        uint8                        _bTicketSent        : 1;
     };
 } // namespace sw
