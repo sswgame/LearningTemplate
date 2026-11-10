@@ -21,6 +21,8 @@
 
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"
+#include "Engine/Animation/Skeletal/AnimationPoseNode.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Reflection/EnumName.h"
@@ -46,6 +48,14 @@ namespace sw::editor
             /** @brief 조건이 있는 전이 · 조건 없는 전이 링크 색입니다. */
             static constexpr Color kConditionedLink{ 1.0f, 0.75f, 0.3f, 1.0f };
             static constexpr Color kPlainLink{ 1.0f, 1.0f, 1.0f, 1.0f };
+
+            /** @brief 노드 더하기 메뉴의 클립 상태 이름입니다(이름 = 클립). 포즈 노드 종류는 이 뒤에 등록 순서로 붙는다. */
+            static constexpr const utf8* kArrClipStateName[] = { "Idle", "Walk", "Attack" };
+            /** @brief 몽타주 섹션 시작 칸의 끌기 속도(초 / 픽셀)와 상한(초)입니다. */
+            static constexpr float32 kSectionStartDragSpeed = 0.01f;
+            static constexpr float32 kSectionStartMax       = 600.0f;
+            /** @brief 새 섹션이 마지막 섹션 뒤에서 시작하는 간격(초)입니다(시작 차례 계약). */
+            static constexpr float32 kNewSectionGap = 0.1f;
 
             /** @brief 핀 번호의 자릿수 기준입니다. 한 노드가 가질 수 있는 핀 오프셋 개수이기도 합니다. */
             static constexpr int32 kPinScale = 10;
@@ -98,6 +108,10 @@ namespace sw::editor
         , _layerEditor{}
         , _nameEditBuffer{}
         , _parameterEditBuffer{}
+        , _nameFieldBuffer{}
+        , _nameFieldShown{}
+        , _listPoseTypeName{}
+        , _nameFieldID{ 0 }
         , _listSelectionOrder{}
         , _selectedNodeID{ 0 }
         , _selectedLinkID{ 0 }
@@ -177,26 +191,20 @@ namespace sw::editor
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "GraphAddNodeTip" ) );
             if ( ImGui::BeginPopup( "##animationAddNode" ) )
             {
-                struct AddItem
+                // 클립 상태 뒤에 등록된 포즈 노드 종류 — 캔버스의 더하기 메뉴와 같은 목록(`collectAddKinds`)이다.
+                const utf8* const           arrClipTip[] = { SW_LOCKEY( "EditorAnimationGraph", "AddIdleTip" ), SW_LOCKEY( "EditorAnimationGraph", "AddWalkTip" ),
+                                                             SW_LOCKEY( "EditorAnimationGraph", "AddAttackTip" ) };
+                vector<EditorGraphNodeKind> listKind;
+                collectAddKinds( listKind );
+                for ( const EditorGraphNodeKind& kind : listKind )
                 {
-                    const utf8* _pName;
-                    const utf8* _pMark;
-                    const utf8* _pTip;
-                };
-                const AddItem arrItem[] = {
-                    {  "Idle",   "animationGraph.add.Idle", SW_LOCKEY( "EditorAnimationGraph",   "AddIdleTip" )},
-                    {  "Walk",   "animationGraph.add.Walk", SW_LOCKEY( "EditorAnimationGraph",   "AddWalkTip" )},
-                    {"Attack", "animationGraph.add.Attack", SW_LOCKEY( "EditorAnimationGraph", "AddAttackTip" )},
-                };
-                for ( const AddItem& item : arrItem )
-                {
-                    if ( ImGui::MenuItem( item._pName ) )
-                    {
-                        addNamedNode( item._pName );
+                    const bool bClipState = kind._kindID < SW_COUNT_OF( AnimationGraphPanelInternal::kArrClipStateName );
+                    if ( bClipState == false && kind._kindID == SW_COUNT_OF( AnimationGraphPanelInternal::kArrClipStateName ) )
+                        ImGui::SeparatorText( SW_LOCKEY( "EditorAnimationGraph", "AddPoseNodeSection" ) );
+                    if ( ImGui::MenuItem( kind._pName ) && addNodeOfKind( kind._kindID ) != 0 )
                         notifyDocumentEdited( "Add Animation Graph Node" );
-                    }
-                    EditorSelfTestMarks::record( item._pMark );
-                    EditorWidgets::drawTooltip( item._pTip );
+                    EditorSelfTestMarks::record( ( string( "animationGraph.add." ) + kind._pName ).c_str() );
+                    EditorWidgets::drawTooltip( bClipState ? arrClipTip[kind._kindID] : SW_LOCKEY( "EditorAnimationGraph", "AddPoseNodeTip" ) );
                 }
                 ImGui::EndPopup();
             }
@@ -374,17 +382,18 @@ namespace sw::editor
             notifyDocumentEdited( "Link Animation Graph Nodes" );
         }
 
-        const vector<EditorGraphNodeKind> listKind{
-            EditorGraphNodeKind{  "Idle", "State", 0},
-            EditorGraphNodeKind{  "Walk", "State", 1},
-            EditorGraphNodeKind{"Attack", "State", 2}
-        };
+        vector<EditorGraphNodeKind> listKind;
+        collectAddKinds( listKind );
         uint32 kindID{ 0 };
         float2 canvasPosition{};
         if ( _nodeGraph.drawAddNodePopup( listKind, kindID, canvasPosition ) && kindID < listKind.size() )
         {
-            placeNodeOnNextDraw( addNamedNode( listKind[kindID]._pName ), canvasPosition );
-            notifyDocumentEdited( "Add Animation Graph Node" );
+            const int32 nodeID = addNodeOfKind( kindID );
+            if ( nodeID != 0 )
+            {
+                placeNodeOnNextDraw( nodeID, canvasPosition );
+                notifyDocumentEdited( "Add Animation Graph Node" );
+            }
         }
 
         // 복사 · 잘라내기 · 붙여 넣기 · 복제(Ctrl+C · X · V · D). 잘라내기는 지우기 요청을 내므로 지우기 처리보다 먼저다.
@@ -467,6 +476,41 @@ namespace sw::editor
         const int32 nodeID = n._id;
         _graph._listNode.push_back( std::move( n ) );
         return nodeID;
+    }
+
+    int32 AnimationGraphPanel::addPoseNode( const hashed_string& typeName )
+    {
+        AnimationGraphPoseNodeDef def;
+        if ( engine::getSubsystem<AnimationPoseNodeRegistry>().makeDefaultDef( typeName, def ) == false )
+            return 0; // 오류는 표가 남겼다
+        const int32 nodeID                = addNamedNode( typeName.c_str() );
+        _graph._listNode.back()._poseNode = std::move( def );
+        return nodeID;
+    }
+
+    void AnimationGraphPanel::collectAddKinds( vector<EditorGraphNodeKind>& outListKind )
+    {
+        // 표는 게임 · 플러그인이 종류를 더할 수 있어 메뉴를 열 때마다 다시 읽는다. 이름 포인터는 이 목록(`_listPoseTypeName`)이 다음 호출까지 든다.
+        _listPoseTypeName = engine::getSubsystem<AnimationPoseNodeRegistry>().getTypeNames();
+        outListKind.clear();
+        uint32 kindID = 0;
+        for ( const utf8* pName : AnimationGraphPanelInternal::kArrClipStateName )
+        {
+            outListKind.push_back( EditorGraphNodeKind{ pName, "State", kindID++ } );
+        }
+        for ( const hashed_string& typeName : _listPoseTypeName )
+        {
+            outListKind.push_back( EditorGraphNodeKind{ typeName.c_str(), "Pose", kindID++ } );
+        }
+    }
+
+    int32 AnimationGraphPanel::addNodeOfKind( uint32 kindID )
+    {
+        constexpr uint32 clipStateCount = SW_COUNT_OF( AnimationGraphPanelInternal::kArrClipStateName );
+        if ( kindID < clipStateCount )
+            return addNamedNode( AnimationGraphPanelInternal::kArrClipStateName[kindID] );
+        const uint32 poseIndex = kindID - clipStateCount;
+        return poseIndex < _listPoseTypeName.size() ? addPoseNode( _listPoseTypeName[poseIndex] ) : 0;
     }
 
     bool AnimationGraphPanel::findGraphPin( int32 pinID, EditorGraphPinInfo& outInfo ) const
@@ -609,6 +653,126 @@ namespace sw::editor
             notifyDocumentEdited( "Edit Animation State" );
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "StateLoopTip" ) );
+        if ( pNode->hasPoseNode() )
+            drawPoseNodeInspector( *pNode );
+    }
+
+    bool AnimationGraphPanel::drawNameField( const utf8* pID, hashed_string& inoutName )
+    {
+        // 칸마다 버퍼를 두지 않는다 — 한 번에 하나만 친다. 치는 칸은 패널 버퍼, 나머지는 값을 그대로 보인다.
+        const uint32 fieldID  = ImGui::GetID( pID );
+        const bool   bEditing = _nameFieldID == fieldID;
+        if ( bEditing == false )
+            _nameFieldShown = string( inoutName.viewOrEmpty() );
+        string& text = bEditing ? _nameFieldBuffer : _nameFieldShown;
+        (void)EditorWidgets::drawTextField( pID, text, -FLT_MIN );
+        if ( ImGui::IsItemActivated() )
+        {
+            _nameFieldID     = fieldID;
+            _nameFieldBuffer = text;
+        }
+        if ( ImGui::IsItemDeactivated() == false )
+            return false;
+        _nameFieldID          = 0;
+        const bool bCommitted = ImGui::IsItemDeactivatedAfterEdit() && text != inoutName.viewOrEmpty();
+        if ( bCommitted )
+            inoutName = hashed_string( text.c_str() );
+        return bCommitted;
+    }
+
+    void AnimationGraphPanel::drawPoseNodeInspector( GraphNode& node )
+    {
+        const AnimationPoseNodeType* pType = engine::getSubsystem<AnimationPoseNodeRegistry>().findType( node._poseNode._type );
+        ImGui::SeparatorText( SW_LOCKEY( "EditorAnimationGraph", "PoseNodeSection" ) );
+        ImGui::TextDisabled( "%s", node._poseNode._type.c_str() );
+        if ( pType == nullptr )
+            return; // 로드가 모르는 종류를 받지 않는다 — 코드가 지운 종류다
+        AnimationGraphPoseNodeDef edited  = node._poseNode;
+        bool                      bEdited = false;
+
+        EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorAnimationGraph", "PoseNodeInputs" ), SW_LOCKEY( "EditorAnimationGraph", "PoseNodeInputsTip" ) );
+        for ( size_t inputIndex = 0; inputIndex < edited._listInput.size(); ++inputIndex )
+        {
+            ImGui::PushID( static_cast<int32>( inputIndex ) );
+            bEdited = drawNameField( "##poseInput", edited._listInput[inputIndex] ) || bEdited;
+            ImGui::PopID();
+        }
+        EditorSelfTestMarks::record( "animationGraph.pose.input" );
+
+        if ( edited._weightParameter.empty() == false )
+        {
+            EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorAnimationGraph", "PoseNodeWeight" ), SW_LOCKEY( "EditorAnimationGraph", "PoseNodeWeightTip" ) );
+            bEdited = drawNameField( "##poseWeight", edited._weightParameter ) || bEdited;
+        }
+
+        if ( edited._mirrorAxis != AnimationMirrorAxis::None )
+        {
+            EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorAnimationGraph", "PoseNodeMirrorAxis" ), SW_LOCKEY( "EditorAnimationGraph", "PoseNodeMirrorAxisTip" ) );
+            ImGui::SetNextItemWidth( -FLT_MIN );
+            if ( ImGui::BeginCombo( "##poseMirrorAxis", getEnumName( edited._mirrorAxis ) ) )
+            {
+                for ( const AnimationMirrorAxis axis : { AnimationMirrorAxis::X, AnimationMirrorAxis::Y, AnimationMirrorAxis::Z } )
+                {
+                    if ( ImGui::Selectable( getEnumName( axis ), axis == edited._mirrorAxis ) && axis != edited._mirrorAxis )
+                    {
+                        edited._mirrorAxis = axis;
+                        bEdited            = true;
+                    }
+                }
+                ImGui::EndCombo();
+            }
+            EditorSelfTestMarks::record( "animationGraph.pose.mirrorAxis" );
+        }
+
+        if ( edited._listSection.empty() == false )
+        {
+            // 몽타주 섹션 — 이름 · 시작 · 다음 · 분기 파라미터 · 분기(언리얼 AnimMontage 의 섹션 · 링크 자리). 끝은 다음 섹션의 시작이다.
+            EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorAnimationGraph", "PoseNodeSections" ), SW_LOCKEY( "EditorAnimationGraph", "PoseNodeSectionsTip" ) );
+            size_t removeIndex = edited._listSection.size();
+            for ( size_t sectionIndex = 0; sectionIndex < edited._listSection.size(); ++sectionIndex )
+            {
+                AnimationMontageSection& section = edited._listSection[sectionIndex];
+                ImGui::PushID( static_cast<int32>( sectionIndex ) );
+                ImGui::SeparatorText( section._name.viewOrEmpty().empty() ? "?" : section._name.c_str() );
+                EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorAnimationGraph", "SectionName" ) );
+                bEdited = drawNameField( "##sectionName", section._name ) || bEdited;
+                EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorAnimationGraph", "SectionStart" ), SW_LOCKEY( "EditorAnimationGraph", "SectionStartTip" ) );
+                ImGui::SetNextItemWidth( -FLT_MIN );
+                ImGui::DragFloat( "##sectionStart", &section._startSeconds, AnimationGraphPanelInternal::kSectionStartDragSpeed, 0.0f, AnimationGraphPanelInternal::kSectionStartMax, "%.2f s" );
+                bEdited = ImGui::IsItemDeactivatedAfterEdit() || bEdited;
+                EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorAnimationGraph", "SectionNext" ), SW_LOCKEY( "EditorAnimationGraph", "SectionNextTip" ) );
+                bEdited = drawNameField( "##sectionNext", section._next ) || bEdited;
+                EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorAnimationGraph", "SectionBranchParam" ), SW_LOCKEY( "EditorAnimationGraph", "SectionBranchParamTip" ) );
+                bEdited = drawNameField( "##sectionBranchParam", section._branchParameter ) || bEdited;
+                EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorAnimationGraph", "SectionBranch" ) );
+                bEdited = drawNameField( "##sectionBranch", section._branch ) || bEdited;
+                if ( edited._listSection.size() > 1u && ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Delete" ) ) )
+                    removeIndex = sectionIndex;
+                ImGui::PopID();
+            }
+            if ( removeIndex < edited._listSection.size() )
+            {
+                edited._listSection.erase( edited._listSection.begin() + static_cast<ptrdiff_t>( removeIndex ) );
+                bEdited = true;
+            }
+            if ( ImGui::SmallButton( SW_LOCKEY( "EditorAnimationGraph", "PoseNodeAddSection" ) ) )
+            {
+                // 새 섹션은 마지막 섹션 뒤 시작이다(차례 계약). 이름은 번호로 유일하게.
+                AnimationMontageSection added{};
+                added._name         = hashed_string( ( string( "Section" ) + to_string( edited._listSection.size() + 1u ).c_str() ).c_str() );
+                added._startSeconds = edited._listSection.back()._startSeconds + AnimationGraphPanelInternal::kNewSectionGap;
+                edited._listSection.push_back( added );
+                bEdited = true;
+            }
+            EditorSelfTestMarks::record( "animationGraph.pose.addSection" );
+        }
+
+        // 계약을 어기는 편집(빈 입력 · 섹션 차례 · 없는 링크)은 들이지 않는다 — 까닭은 표가 오류로 남겼다.
+        if ( bEdited && AnimationPoseNodeRegistry::isSatisfiedBy( *pType, edited, node._name ) )
+        {
+            node._poseNode = std::move( edited );
+            notifyDocumentEdited( "Edit Animation Pose Node" );
+        }
     }
 
     void AnimationGraphPanel::drawTransitionList()
