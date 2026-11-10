@@ -943,7 +943,6 @@
     "Source/GameFramework/Runtime/Foundation/GameData/StatBlock.cpp": {"float": 1},
     "Source/GameFramework/Runtime/Foundation/Grid/GridTopology.h": {"minus-one": 6},
     "Source/GameFramework/Runtime/Gameplay/Ability/Ability.cpp": {"minus-one": 1},
-    "Source/GameFramework/Runtime/Gameplay/Ability/AbilityComponent.cpp": {"minus-one": 3},
     "Source/GameFramework/Runtime/Gameplay/Ability/AbilityDebugSections.cpp": {"integer": 1},
     "Source/GameFramework/Runtime/Gameplay/Ability/AbilityEffect.cpp": {"float": 2},
     "Source/GameFramework/Runtime/Gameplay/Ability/CombatAttributeSet.cpp": {"float": 6},

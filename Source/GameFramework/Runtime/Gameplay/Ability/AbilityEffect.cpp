@@ -9,6 +9,31 @@
 
 namespace sw
 {
+    float32 EvaluatedModifier::applyToBase( float32 baseValue, float32 stackScale ) const
+    {
+        switch ( _op )
+        {
+            case AttributeModOp::Add:
+            {
+                return baseValue + _magnitude * stackScale;
+            }
+            case AttributeModOp::Multiply:
+            {
+                return baseValue * ( 1.0f + ( _magnitude - 1.0f ) * stackScale );
+            }
+            case AttributeModOp::Divide:
+            {
+                const float32 denominator = 1.0f + ( _magnitude - 1.0f ) * stackScale;
+                return MathUtil::abs( denominator ) > kMinDenominator ? baseValue / denominator : baseValue;
+            }
+            case AttributeModOp::Override:
+            {
+                return _magnitude;
+            }
+        }
+        return baseValue;
+    }
+
     float32 AbilityEffectSpec::computeDuration() const
     {
         if ( _pDef == nullptr || _pDef->_durationPolicy != EffectDurationPolicy::HasDuration )
