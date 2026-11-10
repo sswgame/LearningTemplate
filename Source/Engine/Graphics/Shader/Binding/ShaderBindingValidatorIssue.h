@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayout.h"
@@ -33,6 +34,12 @@ namespace sw
          */
         static uint32 validate( const ShaderReflectionData& reflection, ShaderTargetFormat targetFormat, string_view shaderLabel,
                                 vector<ShaderBindingValidatorIssue>* pOutIssue = nullptr );
+
+        /**
+         * @brief 형식 @p targetFormat 의 셰이더 단계 하나가 쓸 수 있는 텍스처 단위 수입니다(`Config/Engine/CookContract.json` 의 stage_texture_unit_limit).
+         * @return 텍스처가 고정 칸이 아닌 백엔드(bindless 배열 · 기기마다 다른 한도)면 없음입니다.
+         */
+        static optional<uint32> findStageTextureUnitLimit( ShaderTargetFormat targetFormat );
 
         /// @brief 계약 테이블입니다. 예약 리소스 모두를 담습니다(테스트와 문서용).
         static const vector<ShaderReservedBinding>& getReservedBindings();
