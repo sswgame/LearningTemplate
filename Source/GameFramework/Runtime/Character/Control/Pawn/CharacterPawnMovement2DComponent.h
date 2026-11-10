@@ -32,7 +32,7 @@ namespace sw
 
         /** @brief 점프 버튼의 인덱스를 미리 찾아 둡니다. */
         void onBeginPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         /** @brief 수평 속도 @p current 를 의도 @p moveRight(−1..1) 쪽으로 이번 틱만큼 옮긴 값입니다. 의도가 있으면 @p acceleration, 없으면 @p deceleration 으로 다가갑니다. */
         static float32 computeVelocity( float32 current, float32 moveRight, float32 walkSpeed, float32 acceleration, float32 deceleration, float32 deltaTime );

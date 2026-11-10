@@ -66,7 +66,7 @@ namespace sw
         void onUnregister( GameObjectManager& manager ) override;
         void onBeginPlay() override;
         void onEndPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         /** @brief 뷰 타깃을 @p blend 로 바꿉니다. 같은 타깃이면 아무것도 하지 않습니다. */
         void setViewTarget( const GameObjectHandle& target, const BlendCurveDef& blend );

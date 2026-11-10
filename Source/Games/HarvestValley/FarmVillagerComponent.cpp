@@ -35,9 +35,9 @@ namespace sw
         _bPlaced  = false;
     }
 
-    void FarmVillagerComponent::onTick( float32 deltaTime )
+    void FarmVillagerComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
@@ -61,7 +61,7 @@ namespace sw
             _listGoal[0] = goal;
             _agent.followPath( _listGoal );
             pGameMode->collectNeighborPositions( _npcIndex, _listNeighbor );
-            _agent.update( pGameMode->getNavGrid(), _listNeighbor, deltaTime );
+            _agent.update( pGameMode->getNavGrid(), _listNeighbor, context.getDeltaTime() );
         }
         pMesh->setLocalPosition( _agent.getPosition() + float3{ 0.0f, _heightOffset, 0.0f } );
     }

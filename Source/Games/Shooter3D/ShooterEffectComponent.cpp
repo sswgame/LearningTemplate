@@ -21,12 +21,12 @@ namespace sw
         _bShowing  = SW_TRUE;
     }
 
-    void ShooterEffectComponent::onTick( float32 deltaTime )
+    void ShooterEffectComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         if ( _bShowing == SW_FALSE )
             return;
-        _remaining -= deltaTime;
+        _remaining -= context.getDeltaTime();
         if ( _remaining > 0.0f )
             return;
         _bShowing             = SW_FALSE;

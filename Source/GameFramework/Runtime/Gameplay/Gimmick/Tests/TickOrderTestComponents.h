@@ -29,9 +29,9 @@ namespace sw
             ControlSystem::ensureFor( *getOwner()->getManager() ).setServerTickSource( getTickHandle() );
         }
 
-        void onTick( float32 deltaTime ) override
+        void onTick( TickContext& context ) override
         {
-            Component::onTick( deltaTime );
+            Component::onTick( context );
             ControlSystem* pControl = ControlSystem::find( *getOwner()->getManager() );
             if ( pControl == nullptr )
                 return;

@@ -109,10 +109,10 @@ namespace sw
         Component::onEndPlay();
     }
 
-    void AbilityComponent::onTick( float32 deltaTime )
+    void AbilityComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
-        advanceTime( deltaTime );
+        Component::onTick( context );
+        advanceTime( context.getDeltaTime() );
     }
 
     void AbilityComponent::compactPendingRemovals()

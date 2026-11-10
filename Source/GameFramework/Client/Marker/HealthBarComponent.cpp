@@ -71,19 +71,19 @@ namespace sw
         refreshWidgets();
     }
 
-    void HealthBarComponent::onTick( float32 deltaTime )
+    void HealthBarComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
 
         // 채움: 줄 때는 맞은 순간 줄고, 늘 때는 차오른다. 흔적: 채움보다 길면 채움까지 줄고, 짧아질 일은 없다(채움을 따라간다).
         if ( _targetRatio < _hpRatio )
             _hpRatio = _targetRatio;
         else
-            _hpRatio = approach( _hpRatio, _targetRatio, _lerpSpeed, deltaTime );
+            _hpRatio = approach( _hpRatio, _targetRatio, _lerpSpeed, context.getDeltaTime() );
         if ( _remainRatio < _hpRatio )
             _remainRatio = _hpRatio;
         else
-            _remainRatio = approach( _remainRatio, _hpRatio, _lerpSpeed, deltaTime );
+            _remainRatio = approach( _remainRatio, _hpRatio, _lerpSpeed, context.getDeltaTime() );
 
         scheduleRefresh();
     }

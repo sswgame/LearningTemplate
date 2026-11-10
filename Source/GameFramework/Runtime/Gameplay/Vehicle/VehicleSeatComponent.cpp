@@ -112,14 +112,14 @@ namespace sw
         setTickGroup( TickGroup::PostPhysics );
     }
 
-    void VehicleSeatComponent::onTick( float32 deltaTime )
+    void VehicleSeatComponent::onTick( TickContext& context )
     {
         using Internal = VehicleSeatComponentInternal;
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         GameObject*           pVehicle = getOwner();
         const SceneComponent* pRoot    = pVehicle != nullptr ? pVehicle->getPrimarySceneComponent() : nullptr;
         GameObjectManager*    pManager = pVehicle != nullptr ? pVehicle->getManager() : nullptr;
-        if ( isFree() || pRoot == nullptr || pManager == nullptr || deltaTime <= 0.0f )
+        if ( isFree() || pRoot == nullptr || pManager == nullptr || context.getDeltaTime() <= 0.0f )
         {
             _rideSampleCount  = 0;
             _rideAcceleration = float3{};
@@ -131,13 +131,13 @@ namespace sw
         // 좌석 월드 위치의 2 차 차분 — 탈것이 바디로 움직이든(바퀴 차 · 배) 직접 옮기든(바디 없는 탈것 · 말) 같은 값이다.
         const float4x4 world    = pRoot->getWorldMatrix();
         const float3   position = float3::transform( _seatInVehicle.getTranslation(), world );
-        const float3   velocity = _rideSampleCount >= 1 ? ( position - _lastSeatPosition ) * ( 1.0f / deltaTime ) : float3{};
+        const float3   velocity = _rideSampleCount >= 1 ? ( position - _lastSeatPosition ) * ( 1.0f / context.getDeltaTime() ) : float3{};
         float3         rawLocal{};
         if ( _rideSampleCount >= 2 )
         {
-            const float3 acceleration = ( velocity - _lastSeatVelocity ) * ( 1.0f / deltaTime );
+            const float3 acceleration = ( velocity - _lastSeatVelocity ) * ( 1.0f / context.getDeltaTime() );
             rawLocal                  = float3{ acceleration.dot( Internal::makeAxis( world, 0 ) ), acceleration.dot( Internal::makeAxis( world, 1 ) ), acceleration.dot( Internal::makeAxis( world, 2 ) ) };
-            const float32 blend       = _rideFeel._smoothingTime > 0.0f ? deltaTime / ( _rideFeel._smoothingTime + deltaTime ) : 1.0f;
+            const float32 blend       = _rideFeel._smoothingTime > 0.0f ? context.getDeltaTime() / ( _rideFeel._smoothingTime + context.getDeltaTime() ) : 1.0f;
             _rideAcceleration         = _rideAcceleration + ( rawLocal - _rideAcceleration ) * blend;
         }
         _lastSeatPosition = position;

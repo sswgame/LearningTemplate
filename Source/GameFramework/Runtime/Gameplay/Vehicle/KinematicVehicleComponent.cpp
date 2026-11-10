@@ -163,10 +163,10 @@ namespace sw
         return input;
     }
 
-    void KinematicVehicleComponent::onTick( float32 deltaTime )
+    void KinematicVehicleComponent::onTick( TickContext& context )
     {
         using Internal = KinematicVehicleComponentInternal;
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         _listFrameEvent.clear();
         GameObject*          pOwner = getOwner();
         const PawnComponent* pPawn  = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
@@ -176,7 +176,7 @@ namespace sw
         const ControlIntent         intent = pPawn != nullptr ? pPawn->getIntent() : ControlIntent{};
         const KinematicVehicleInput input  = toVehicleInput( intent, _motor.getYaw(), _driftIndex, _boostIndex, _jumpIndex );
         _ground._probeTop                  = _motor.getPosition()._y + Internal::kProbeAbove;
-        (void)_motor.advance( input, deltaTime );
+        (void)_motor.advance( input, context.getDeltaTime() );
         _motor.pollEvents( _listFrameEvent );
 
         pRoot->setWorldPosition( _motor.getPosition() );

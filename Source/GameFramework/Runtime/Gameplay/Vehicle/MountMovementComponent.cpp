@@ -122,10 +122,10 @@ namespace sw
         return 0.0f;
     }
 
-    void MountMovementComponent::onTick( float32 deltaTime )
+    void MountMovementComponent::onTick( TickContext& context )
     {
         using Internal = MountMovementComponentInternal;
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         GameObject*          pOwner = getOwner();
         const PawnComponent* pPawn  = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
         if ( pPawn == nullptr )
@@ -147,7 +147,7 @@ namespace sw
         if ( moveAmount > Internal::kMoveDeadzone )
         {
             const float32 wantYaw = MathUtil::atan2( worldMove._x, worldMove._z );
-            const float32 newYaw  = OrientationUtil::turnTowardAngle( _facingYaw, wantYaw, computeGaitTurnRate( gait ) * deltaTime );
+            const float32 newYaw  = OrientationUtil::turnTowardAngle( _facingYaw, wantYaw, computeGaitTurnRate( gait ) * context.getDeltaTime() );
             turn                  = MathUtil::clamp( MathUtil::wrapAngle( wantYaw - _facingYaw ), -1.0f, 1.0f );
             _facingYaw            = MathUtil::wrapAngle( newYaw );
         }
@@ -157,11 +157,11 @@ namespace sw
         CharacterControllerComponent* pController = pOwner->getComponent<CharacterControllerComponent>();
         const bool                    bGrounded   = pController != nullptr && pController->isGrounded();
         const float32                 slopeSin    = bGrounded ? -pController->getGroundNormal().dot( facing ) : 0.0f;
-        _forwardSpeed += _inertia.computeAlongAcceleration( _forwardSpeed, slopeSin, 0.0f, deltaTime ) * deltaTime;
+        _forwardSpeed += _inertia.computeAlongAcceleration( _forwardSpeed, slopeSin, 0.0f, context.getDeltaTime() ) * context.getDeltaTime();
         const float32 targetSpeed = computeGaitSpeed( gait );
         // 다리가 미는 가속은 출력 한계(일률)로 자른다 — 출력이 모자라면 가파른 오르막에서 걸음새 속도를 잃는다.
         const float32 rate = targetSpeed > _forwardSpeed ? _inertia.limitDriveAcceleration( _acceleration, _forwardSpeed ) : _deceleration;
-        _forwardSpeed      = MathUtil::moveToward( _forwardSpeed, targetSpeed, rate * deltaTime );
+        _forwardSpeed      = MathUtil::moveToward( _forwardSpeed, targetSpeed, rate * context.getDeltaTime() );
 
         // 자기 요 방향으로 간다. 요가 0 이면 +Z 쪽이고 +X 쪽으로 돈다. 루트 모션이면 애니메이션이 옮긴다.
         const float3    velocity          = facing * _forwardSpeed;
@@ -170,7 +170,7 @@ namespace sw
         if ( pController != nullptr )
             pController->setMoveVelocity( _bUseRootMotion ? float3{} : velocity );
         else if ( bMoveRootDirectly )
-            pRoot->setWorldPosition( pRoot->getWorldPosition() + velocity * deltaTime );
+            pRoot->setWorldPosition( pRoot->getWorldPosition() + velocity * context.getDeltaTime() );
         SkeletalAnimatorComponent* pAnimator = pOwner->getComponent<SkeletalAnimatorComponent>();
         if ( pAnimator != nullptr )
         {

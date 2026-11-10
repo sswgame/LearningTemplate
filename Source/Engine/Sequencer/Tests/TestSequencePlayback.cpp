@@ -72,7 +72,10 @@ SW_TEST_CASE( SequencePlaybackTest, StopRestoresTheStateBeforePlay )
 
     pPlayer->play();
     SW_REQUIRE_TRUE( pPlayer->isPlaying() );
-    pPlayer->onTick( 0.1f );
+    {
+        TickContext context{ *pPlayer->getOwner(), 0.1f };
+        pPlayer->onTick( context );
+    }
     SW_EXPECT_NEAR( 5.0f, Util::readX( *pHero ), 1e-4f );
     SW_EXPECT_TRUE( pHero->isActive() );
 
@@ -98,7 +101,10 @@ SW_TEST_CASE( SequencePlaybackTest, KeepStateLeavesTheLastFrame )
     pPlayer->play();
     for ( int32 tickIndex = 0; tickIndex < 20 && pPlayer->isPlaying(); ++tickIndex )
     {
-        pPlayer->onTick( 0.05f );
+        {
+            TickContext context{ *pPlayer->getOwner(), 0.05f };
+            pPlayer->onTick( context );
+        }
     }
     SW_EXPECT_FALSE( pPlayer->isPlaying() );
     SW_EXPECT_NEAR( 5.0f, Util::readX( *pHero ), 1e-4f );
@@ -118,12 +124,18 @@ SW_TEST_CASE( SequencePlaybackTest, FinishAndReplayRestore )
     pPlayer->setBinding( 1, pHero->getHandle() );
 
     pPlayer->play();
-    pPlayer->onTick( 0.1f );
+    {
+        TickContext context{ *pPlayer->getOwner(), 0.1f };
+        pPlayer->onTick( context );
+    }
     pPlayer->play(); // 다시 틀기 — 앞 재생을 끝내고(되돌림) 다시 시작한다
     SW_EXPECT_EQUAL( 1u, pPlayer->getHistory().countKind( SequenceHistoryKind::Stopped ) );
     for ( int32 tickIndex = 0; tickIndex < 20 && pPlayer->isPlaying(); ++tickIndex )
     {
-        pPlayer->onTick( 0.05f );
+        {
+            TickContext context{ *pPlayer->getOwner(), 0.05f };
+            pPlayer->onTick( context );
+        }
     }
     SW_EXPECT_NEAR( 1.0f, Util::readX( *pHero ), 1e-4f );
     SW_EXPECT_FALSE( pHero->isActive() );
@@ -167,7 +179,10 @@ SW_TEST_CASE( SequencePlaybackTest, SameSequenceDrivesAnotherBinding )
     pOther->setBinding( 1, pDouble->getHandle() );
 
     pOther->play();
-    pOther->onTick( 0.1f );
+    {
+        TickContext context{ *pOther->getOwner(), 0.1f };
+        pOther->onTick( context );
+    }
     SW_EXPECT_NEAR( 5.0f, Util::readX( *pDouble ), 1e-4f );
     SW_EXPECT_NEAR( 1.0f, Util::readX( *pHero ), 1e-4f );
 }

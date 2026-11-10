@@ -40,7 +40,7 @@ namespace sw
         ExplosiveBarrelComponent();
         virtual ~ExplosiveBarrelComponent() override = default;
 
-        void    onTick( float32 deltaTime ) override;
+        void    onTick( TickContext& context ) override;
         void    stepOnce();
         bool    hasExploded() const { return _bExploded; }
         float32 getDamageTaken() const { return _damageTaken; }
@@ -127,7 +127,7 @@ namespace sw
         TurretComponent();
         virtual ~TurretComponent() override = default;
 
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
         void stepOnce();
 
         /**
@@ -206,7 +206,7 @@ namespace sw
         DestructibleComponent();
         virtual ~DestructibleComponent() override = default;
 
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
         void stepOnce();
 
         int32 getStage() const { return _stage; }

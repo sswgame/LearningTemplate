@@ -68,7 +68,7 @@ namespace sw
 
         /** @brief 폰 버튼 이름의 인덱스를 다시 찾게 합니다(폰 스키마는 시작 전에 정해진다). */
         void onBeginPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         /** @brief 따를 디렉터와 처음 바라볼 쪽을 정합니다(디렉터가 스폰한 뒤 부른다). */
         void          assignGameMode( GameObjectHandle gameMode, const float3& facing );

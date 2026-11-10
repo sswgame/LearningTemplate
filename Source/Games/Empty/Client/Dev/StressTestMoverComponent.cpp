@@ -27,10 +27,10 @@ namespace sw
         _bWritesTransform = bWritesTransform ? SW_TRUE : SW_FALSE;
     }
 
-    void StressTestMoverComponent::onTick( float32 deltaTime )
+    void StressTestMoverComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
-        _elapsed += deltaTime;
+        Component::onTick( context );
+        _elapsed += context.getDeltaTime();
         if ( _bWritesTransform == SW_FALSE || _pTarget == nullptr )
             return;
 

@@ -35,7 +35,7 @@ namespace sw
         VoxelChunkComponent();
         virtual ~VoxelChunkComponent() override;
 
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         /** @brief 디렉터와 청크 번호를 정합니다. 디렉터가 청크를 스폰한 뒤에 부릅니다. */
         void assignChunk( GameObjectHandle gameMode, int32 chunkX, int32 chunkZ );

@@ -56,7 +56,7 @@ namespace sw
         ShooterEnemyComponent();
         virtual ~ShooterEnemyComponent() override = default;
 
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
         /** @brief 무기 판정이 맞혔습니다(틱 밖 · 게임 스레드). 기본 피해 × 히트 존 배율을 깎고, 쓰러지면 맞은 바디에 충격량을 주며 래그돌로 넘깁니다. */
         void onHitReceived( const HitInfo& hit ) override;
         /** @brief 휘두름 클립의 맞는 알림(`_attackHitEvent`)을 받습니다(게임 스레드, 애니메이션 평가 뒤). 휘두르는 중이면 다음 틱이 맞힘을 처리합니다. */

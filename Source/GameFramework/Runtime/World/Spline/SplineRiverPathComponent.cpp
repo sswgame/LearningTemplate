@@ -48,9 +48,9 @@ namespace sw
         Component::onUnregister( manager );
     }
 
-    void SplineRiverPathComponent::onTick( float32 deltaTime )
+    void SplineRiverPathComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         (void)refreshRiverPath( false ); // 실패는 refreshRiverPath 가 오류로 남겼다
     }
 

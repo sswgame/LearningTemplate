@@ -172,9 +172,9 @@ namespace sw
             play();
     }
 
-    void VFXComponent::onTick( float32 deltaTime )
+    void VFXComponent::onTick( TickContext& context )
     {
-        SceneComponent::onTick( deltaTime );
+        SceneComponent::onTick( context );
         if ( _bPlaying == false )
             return;
 
@@ -203,12 +203,12 @@ namespace sw
             VFXGPUEmitter*     pGPUEmitter    = std::get_if<VFXGPUEmitter>( &simulation );
             if ( pCPUSimulation != nullptr )
             {
-                pCPUSimulation->update( deltaTime, pCollision.get() );
+                pCPUSimulation->update( context.getDeltaTime(), pCollision.get() );
                 bAllFinished = bAllFinished && pCPUSimulation->isFinished();
             }
             else
             {
-                pGPUEmitter->update( deltaTime );
+                pGPUEmitter->update( context.getDeltaTime() );
                 bAllFinished = bAllFinished && pGPUEmitter->isFinished();
             }
         }

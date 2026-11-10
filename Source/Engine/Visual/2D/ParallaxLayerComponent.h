@@ -39,7 +39,7 @@ namespace sw
         /** @brief 저작한 자리로 되돌립니다. */
         void onEndPlay() override;
         /** @brief 게임 카메라를 따라 자리를 맞춥니다. */
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         /**
          * @brief 레이어의 X · Y 를 구합니다(순수 함수 — 테스트가 직접 부릅니다).

@@ -37,7 +37,7 @@ namespace sw
 
         void onBeginPlay() override;
         void onEndPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         /** @brief 잔상 남기기를 켜고 끕니다(능력 · 대시가 부른다). 끄면 남은 사본은 수명대로 사라진다. 켜는 순간 바로 하나를 남긴다. */
         FUNCTION( Category = "Afterimage", CallInEditor )

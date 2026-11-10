@@ -51,12 +51,12 @@ namespace sw
         SceneComponent::onUnregister( manager );
     }
 
-    void DecalComponent::onTick( float32 deltaTime )
+    void DecalComponent::onTick( TickContext& context )
     {
-        SceneComponent::onTick( deltaTime );
-        if ( deltaTime <= 0.0f || _lifetimeSeconds <= 0.0f )
+        SceneComponent::onTick( context );
+        if ( context.getDeltaTime() <= 0.0f || _lifetimeSeconds <= 0.0f )
             return;
-        _ageSeconds += deltaTime;
+        _ageSeconds += context.getDeltaTime();
         if ( _ageSeconds >= _lifetimeSeconds )
         {
             // 틱(워커) 안에서 오브젝트를 지우지 않는다 — 틱 뒤 게임 스레드에서 핸들로 다시 찾아 정리한다(그 사이 지워졌으면 부르지 않는다).

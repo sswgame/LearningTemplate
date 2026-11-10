@@ -46,7 +46,7 @@ namespace sw
         /** @brief 이 컴포넌트가 사라지면 물의 경로를 다시 손으로 고칠 수 있게 합니다(`WaterBodyComponent::clearRiverPathSource`). */
         void onUnregister( GameObjectManager& manager ) override;
         /** @brief 스플라인 곡선 번호나 물 위치가 바뀌었으면 다시 샘플해 넘깁니다. */
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         /**
          * @brief 스플라인에서 점을 뽑아 물에 넘깁니다.

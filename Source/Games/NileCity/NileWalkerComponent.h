@@ -28,7 +28,7 @@ namespace sw
         virtual ~NileWalkerComponent() override = default;
 
         void onBeginPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         /** @brief 따라갈 디렉터와 일꾼 자리를 정합니다(디렉터가 스폰한 뒤 부른다). */
         void assignWalker( GameObjectHandle gameMode, int32 walkerIndex );

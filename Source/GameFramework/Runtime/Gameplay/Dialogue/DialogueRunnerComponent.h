@@ -102,7 +102,7 @@ namespace sw
 
         void onBeginPlay() override;
         void onEndPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
         /** @brief 읽어 들인 `_graphPath` 로 그래프를 다시 엽니다. 플레이 전(에디터)에도 Start Dialogue 가 그 그래프를 돌립니다. */
         void onPostLoad() override;
         /** @brief `_graphPath` 가 바뀌면 그 그래프를 다시 엽니다. */

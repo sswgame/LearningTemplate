@@ -69,7 +69,7 @@ namespace sw
         void onBeginPlay() override;
         /** @brief 스냅 단위 · 눈 오프셋 · 띠를 거둡니다. */
         void onEndPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
         /** @brief 켜고 끄면(`_bActive`) 띠 배치를 더티로 — 빌더가 다시 본다. */
         void onPropertyChanged( hashed_string propertyName ) override;
         /** @brief 소유 오브젝트를 켜고 끄면 띠 배치를 더티로 — 빌더가 다시 본다. */

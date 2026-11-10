@@ -41,9 +41,9 @@ namespace sw
             (void)registerSubTick( TickGroup::DuringPhysics, kLateSubTick, TickPhase::Late, 3 );
         }
 
-        void onTick( float32 deltaTime ) override
+        void onTick( TickContext& context ) override
         {
-            _value += deltaTime * _speed;
+            _value += context.getDeltaTime() * _speed;
             writeOwnPosition( float3{ _value, 0.0f, 0.0f } );
             if ( _pShared != nullptr )
                 _pShared->setLocalPosition( float3{ 0.0f, 0.0f, _value } );
@@ -169,9 +169,8 @@ namespace sw
         std::thread::id _tickThread{};
         uint32          _tickCount = 0;
 
-        void onTick( float32 deltaTime ) override
+        void onTick( TickContext& /*context*/ ) override
         {
-            (void)deltaTime;
             _tickThread = std::this_thread::get_id();
             ++_tickCount;
         }

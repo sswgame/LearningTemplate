@@ -75,9 +75,9 @@ namespace sw
         (void)pNetSession->setWorldReplicaStats( *this, "paired_animation", updateCount, 0 ); // 다른 월드(하니스 · 에디터의 가상 서버)면 올리지 않는다
     }
 
-    void PairedAnimationNetSessionComponent::onTick( float32 deltaTime )
+    void PairedAnimationNetSessionComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         const bool bSends = _routerSubscription.isActive() && _bServer == SW_TRUE;
         if ( bSends )
             _server.update();

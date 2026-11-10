@@ -70,11 +70,11 @@ namespace sw
         Component::onEndPlay();
     }
 
-    void GameModeComponent::onTick( float32 deltaTime )
+    void GameModeComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         if ( _bRuleOnSubTick == SW_FALSE )
-            runRules( deltaTime );
+            runRules( context.getDeltaTime() );
     }
 
     void GameModeComponent::onSubTick( uint32 subTickID, float32 deltaTime )

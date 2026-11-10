@@ -29,9 +29,9 @@ namespace sw
         _exitIndex                  = pPawn != nullptr ? pPawn->findButton( _exitButton ) : nullopt;
     }
 
-    void VehicleExitComponent::onTick( float32 deltaTime )
+    void VehicleExitComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         GameObject*          pOwner       = getOwner();
         const PawnComponent* pPawn        = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
         GameObjectManager*   pManager     = pOwner != nullptr ? pOwner->getManager() : nullptr;

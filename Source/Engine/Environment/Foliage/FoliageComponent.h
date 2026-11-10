@@ -136,7 +136,7 @@ namespace sw
         void onPropertyChanged( hashed_string propertyName ) override;
         /** @brief 소유 오브젝트를 켜고 끄면 셀 배치를 더티로 표시합니다. 빌더가 다시 확인합니다. */
         void onOwnerActiveInHierarchyChanged() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         /**
          * @brief 배치를 다시 계산하고 셀 배치를 다시 만듭니다. 등록 전이면 아무것도 하지 않습니다.

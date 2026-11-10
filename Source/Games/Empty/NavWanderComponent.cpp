@@ -97,9 +97,9 @@ namespace sw
         Component::onEndPlay();
     }
 
-    void NavWanderComponent::onTick( float32 deltaTime )
+    void NavWanderComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         NavMeshAgentComponent* pAgent = getOwner()->getComponent<NavMeshAgentComponent>();
         if ( pAgent == nullptr || _pSceneNavigation == nullptr )
             return;

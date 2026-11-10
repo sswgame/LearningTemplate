@@ -55,7 +55,7 @@ namespace sw
 
         /** @brief 질주 버튼 인덱스를 찾고 PrePhysics 에서 틱합니다. */
         void onBeginPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         MountGait getGait() const { return _gait; }
         /** @brief 몸이 향한 방향의 속도입니다(m/s). */

@@ -27,9 +27,9 @@ namespace sw
         setTickGroup( TickGroup::PostPhysics );
     }
 
-    void WesternHorseMountComponent::onTick( float32 deltaTime )
+    void WesternHorseMountComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         GameObject*             pOwner    = getOwner();
         MountMovementComponent* pMovement = pOwner != nullptr ? pOwner->getComponent<MountMovementComponent>() : nullptr;
         if ( _pHorse == nullptr || pMovement == nullptr )
@@ -40,7 +40,7 @@ namespace sw
         pMovement->setMaxGait( bCanGallop ? MountGait::Gallop : MountGait::Canter );
         if ( pMovement->getGait() == MountGait::Gallop )
         {
-            if ( _pHorse->gallop( deltaTime ) == false )
+            if ( _pHorse->gallop( context.getDeltaTime() ) == false )
                 pMovement->setGallopAllowed( false );
         }
         else if ( pMovement->isGallopAllowed() == false && _pHorse->getStamina().getRatio() >= _resumeGallopRatio )

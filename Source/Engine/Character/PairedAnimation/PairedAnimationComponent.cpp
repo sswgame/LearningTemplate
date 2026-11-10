@@ -64,9 +64,9 @@ namespace sw
         _bStartPending = _bStartOnPlay;
     }
 
-    void PairedAnimationComponent::onTick( float32 deltaTime )
+    void PairedAnimationComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         if ( _bStartPending == SW_FALSE )
             return;
         _bStartPending              = SW_FALSE;

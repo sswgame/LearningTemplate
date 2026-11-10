@@ -64,10 +64,10 @@ namespace sw
         return true;
     }
 
-    void PushBlockComponent::onTick( float32 deltaTime )
+    void PushBlockComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
-        const int32 stepCount = _clock.consume( deltaTime );
+        Component::onTick( context );
+        const int32 stepCount = _clock.consume( context.getDeltaTime() );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             stepOnce();
@@ -151,12 +151,12 @@ namespace sw
         publishSignal();
     }
 
-    void ElementStatusComponent::onTick( float32 deltaTime )
+    void ElementStatusComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         if ( _tableReload.isStale() )
             rebuild(); // 규칙 테이블 파일이 바뀌었으므로 새 테이블로 다시 만든다. 상태는 처음부터 시작한다
-        if ( _grid.update( deltaTime ) > 0 )
+        if ( _grid.update( context.getDeltaTime() ) > 0 )
             publishSignal();
     }
 

@@ -26,9 +26,9 @@ namespace sw
         return 1.0f + ( stormScale - 1.0f ) * MathUtil::max( weatherValue, 0.0f );
     }
 
-    void WeatherWaveComponent::onTick( float32 deltaTime )
+    void WeatherWaveComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         GameObject*         pOwner = getOwner();
         WaterBodyComponent* pWater = pOwner != nullptr ? pOwner->getComponent<WaterBodyComponent>() : nullptr;
         if ( pWater == nullptr )

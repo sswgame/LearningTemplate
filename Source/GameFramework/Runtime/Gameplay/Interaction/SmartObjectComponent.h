@@ -80,7 +80,7 @@ namespace sw
         void onPostLoad() override;
         void onBeginPlay() override;
         /** @brief 상호작용 테이블을 다시 읽었으면(핫 리로드) 새 테이블에서 슬롯 정의를 다시 찾습니다. */
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
         /** @brief 정의 id, 테이블 경로, 차지 목록을 고치면 다시 찾습니다. */
         void onPropertyChanged( hashed_string propertyName ) override;
 

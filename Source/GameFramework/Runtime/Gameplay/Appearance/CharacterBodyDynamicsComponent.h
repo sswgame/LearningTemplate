@@ -40,7 +40,7 @@ namespace sw
         CharacterBodyDynamicsComponent();
         virtual ~CharacterBodyDynamicsComponent() override = default;
 
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
         /** @brief 맞음(전투 맞음 이벤트)이 지글에 충격을 줍니다 — 때린 방향 × 충격량 × `_hitImpulseScale`. */
         void onHitReceived( const HitInfo& hit ) override;
         /** @brief 알림 이벤트 `_wipeEvent`(손으로 닦기)가 화장 층을 아래로 끕니다. */

@@ -245,20 +245,20 @@ namespace sw
         }
     }
 
-    void VoxelPlayerComponent::onTick( float32 deltaTime )
+    void VoxelPlayerComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         GameObject*                   pOwner          = getOwner();
         FirstPersonCameraComponent*   pCamera         = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;
         const PawnComponent*          pPawn           = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
         const VoxelGameModeComponent* pGameMode       = findGameMode<VoxelGameModeComponent>();
         const VoxelBlockCatalog*      pCatalog        = game::findSubsystem<const VoxelBlockCatalog>();
-        const bool                    bNotReadyToTick = pCamera == nullptr || pPawn == nullptr || pGameMode == nullptr || pCatalog == nullptr || pGameMode->isStarted() == false || deltaTime <= 0.0f;
+        const bool                    bNotReadyToTick = pCamera == nullptr || pPawn == nullptr || pGameMode == nullptr || pCatalog == nullptr || pGameMode->isStarted() == false || context.getDeltaTime() <= 0.0f;
         if ( bNotReadyToTick )
             return;
         if ( _bBodyPlaced == SW_FALSE )
             initializeBody( *pGameMode );
-        const float32 step = MathUtil::min( deltaTime, 0.1f );
+        const float32 step = MathUtil::min( context.getDeltaTime(), 0.1f );
 
         float3 wish{ 0.0f, 0.0f, 0.0f };
         bool   bJump   = false;

@@ -28,9 +28,9 @@ namespace sw
         _interactIndex              = pPawn != nullptr ? pPawn->findButton( _interactButton ) : nullopt;
     }
 
-    void MountInteractionComponent::onTick( float32 deltaTime )
+    void MountInteractionComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         GameObject*          pOwner        = getOwner();
         const PawnComponent* pPawn         = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
         GameObjectManager*   pManager      = pOwner != nullptr ? pOwner->getManager() : nullptr;

@@ -45,7 +45,7 @@ namespace sw
 
         /** @brief 튜닝을 읽고 모터를 지금 루트의 위치와 요에서 시작하며, 버튼 인덱스와 레일을 찾습니다. PrePhysics 에서 틱합니다. */
         void onBeginPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         /**
          * @brief 의도를 모터 입력으로 바꿉니다. 의도의 월드 이동을 차 방향(@p vehicleYaw)으로 투영해서, 앞 성분은 가속(음수이면 브레이크나 후진), 옆 성분은 조향으로 씁니다.

@@ -61,9 +61,9 @@ namespace sw
         setCanEverTick( false );
     }
 
-    void SocketBindingComponent::onTick( float32 deltaTime )
+    void SocketBindingComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         SceneComponent* pScene = findOwnerScene();
         if ( pScene == nullptr )
             return;
@@ -84,7 +84,7 @@ namespace sw
             enterState( SocketBindingState::ReleasedAnimated );
             return;
         }
-        _returnElapsed += MathUtil::max( 0.0f, deltaTime );
+        _returnElapsed += MathUtil::max( 0.0f, context.getDeltaTime() );
         const float32 progress = getReturnProgress();
         if ( progress >= 1.0f )
         {

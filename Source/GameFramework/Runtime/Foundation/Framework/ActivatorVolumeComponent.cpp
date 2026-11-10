@@ -19,9 +19,9 @@ namespace sw
         setCanEverTick( true );
     }
 
-    void ActivatorVolumeComponent::onTick( float32 deltaTime )
+    void ActivatorVolumeComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         const bool bNothingToMeasure = _radius <= 0.0f || ( _bOnce && _fireCount > 0 );
         if ( bNothingToMeasure )
             return;

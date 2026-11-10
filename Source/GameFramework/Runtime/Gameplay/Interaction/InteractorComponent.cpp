@@ -483,9 +483,9 @@ namespace sw
         }
     }
 
-    void InteractorComponent::onTick( float32 deltaTime )
+    void InteractorComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr )
@@ -498,7 +498,7 @@ namespace sw
         makeView( viewer );
         gatherCandidates( *pManager, *pOwner, viewer );
         if ( _session.isActive() )
-            updateActiveSession( *pManager, viewer, deltaTime, bHeld, bPressed );
+            updateActiveSession( *pManager, viewer, context.getDeltaTime(), bHeld, bPressed );
         else
             updateFocusAndBegin( *pManager, *pOwner, viewer, bPressed );
         handleSessionEvents( *pManager, *pOwner );

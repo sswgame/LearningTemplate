@@ -14,6 +14,7 @@
 #include "Engine/Foundation/AnimationNotifyPhase.h"
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/PhysicsHandle.h"
+#include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Reflection/TypeCastHeader.h"
 
@@ -365,8 +366,11 @@ namespace sw
         void dispatchEndPlay();
         /** @brief `onBeginPlay` 가 불렸고 아직 `onEndPlay` 가 불리지 않았으면 true 입니다. */
         bool hasBegunPlay() const { return _bHasBegunPlay == SW_TRUE; }
-        /** @brief 프레임마다 불리는 주 업데이트 콜백입니다. */
-        virtual void onTick( float32 deltaTime );
+        /**
+         * @brief 프레임마다 불리는 주 업데이트 콜백입니다. @p context 가 시간 · 읽기 전용 씬(`getManager`) · 자기 오브젝트(`getSelf`) · 틱 뒤 큐(`deferPostTick`)를 엽니다.
+         * @details 남의 오브젝트 쓰기 · 구조 변경은 `context.deferPostTick` 로 보낸다(`TickContext.h`, `docs/agents/TickPlacement.md`).
+         */
+        virtual void onTick( TickContext& context );
         /** @brief 프레임마다 서브틱별로 불리는 보조 업데이트 콜백입니다. */
         virtual void onSubTick( uint32 subTickID, float32 deltaTime );
         /**
@@ -670,7 +674,7 @@ namespace sw
 
     template <typename T>
     struct HasOnTickOverride<T, std::void_t<decltype( &T::onTick )>>
-        : std::bool_constant<std::is_same_v<decltype( &T::onTick ), void ( Component::* )( float32 )> == false>
+        : std::bool_constant<std::is_same_v<decltype( &T::onTick ), void ( Component::* )( TickContext& )> == false>
     {
     };
 

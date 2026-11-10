@@ -151,9 +151,9 @@ namespace sw
             resolveDefinition();
     }
 
-    void SmartObjectComponent::onTick( float32 deltaTime )
+    void SmartObjectComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         // 상호작용 테이블 파일이 바뀌었으므로 새 테이블에서 슬롯을 다시 찾는다. 차지 상태는 슬롯 번호로 이어지고, 줄어든 슬롯의 차지는 해제된다.
         if ( _bHasOverride == SW_FALSE && _catalogReload.isStale() )
             resolveDefinition();

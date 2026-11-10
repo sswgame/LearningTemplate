@@ -31,7 +31,7 @@ namespace sw
         ArenaProjectileComponent();
         virtual ~ArenaProjectileComponent() override = default;
 
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         /** @brief 디렉터 @p gameMode 의 탄 @p projectileID 를 보여 줍니다. @p position 은 쏜 자리(발 높이)이고 모습은 `_visualLift` 만큼 위에 그린다. */
         void bind( GameObjectHandle gameMode, uint32 projectileID, const float3& position );

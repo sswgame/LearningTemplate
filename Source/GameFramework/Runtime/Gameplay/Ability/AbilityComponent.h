@@ -103,7 +103,7 @@ namespace sw
          * @details 모듈을 다시 올리면 `_abilitySetID` 가 어빌리티를 다시 준다. 게임이 건 델리게이트는 게임이 든 구독이 게임과 함께 푼다.
          */
         void onModuleUnloading( string_view moduleName ) override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         // --------------------------------------------------------------------------
         // 1) 시간, 카탈로그, 세트

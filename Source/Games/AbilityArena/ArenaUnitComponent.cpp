@@ -55,15 +55,15 @@ namespace sw
         return float3{ flat._x / length, 0.0f, flat._z / length };
     }
 
-    void ArenaUnitComponent::onTick( float32 deltaTime )
+    void ArenaUnitComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         GameObject*          pOwner             = getOwner();
         GameObjectManager*   pManager           = pOwner != nullptr ? pOwner->getManager() : nullptr;
         MeshComponent*       pMesh              = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         AbilityComponent*    pAbilitySystem     = pOwner != nullptr ? pOwner->getComponent<AbilityComponent>() : nullptr;
         const PawnComponent* pPawn              = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
-        const bool           bMissingComponents = pManager == nullptr || pMesh == nullptr || pAbilitySystem == nullptr || pPawn == nullptr || deltaTime <= 0.0f;
+        const bool           bMissingComponents = pManager == nullptr || pMesh == nullptr || pAbilitySystem == nullptr || pPawn == nullptr || context.getDeltaTime() <= 0.0f;
         if ( bMissingComponents )
             return;
         const ArenaGameModeComponent* pGameMode = findGameMode<ArenaGameModeComponent>();
@@ -71,7 +71,7 @@ namespace sw
             return;
         if ( _deathTimer >= 0.0f || pAbilitySystem->getOwnedTagCounts().hasMatchingTag( CombatAttributeSet::getDeadTag() ) )
         {
-            updateDeath( deltaTime, *pMesh, pGameMode->getDeathLinger() );
+            updateDeath( context.getDeltaTime(), *pMesh, pGameMode->getDeathLinger() );
             return;
         }
 
@@ -94,7 +94,7 @@ namespace sw
         // 속박 · 기절 · 둔화 배율은 공용 이동기와 같은 계약으로 읽는다(`MovementConstraint`).
         const MovementConstraint constraint = MovementConstraint::read( *pOwner );
         if ( direction.getLengthSquared() > 0.0f && speed.has_value() && constraint._bMoveBlocked == SW_FALSE )
-            position = position + direction * ( *speed * constraint._speedScale * deltaTime );
+            position = position + direction * ( *speed * constraint._speedScale * context.getDeltaTime() );
         if ( _kind != ArenaUnitKind::Player )
             separateFromEnemies( *pGameMode, position );
         const float32 halfSize = pGameMode->getArenaHalfSize();

@@ -32,9 +32,9 @@ namespace sw
         _soilState = -1;
     }
 
-    void FarmSoilComponent::onTick( float32 deltaTime )
+    void FarmSoilComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         GameObject*        pOwner       = getOwner();
         GameObjectManager* pManager     = pOwner != nullptr ? pOwner->getManager() : nullptr;
         MeshComponent*     pMesh        = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;

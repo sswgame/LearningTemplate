@@ -116,13 +116,13 @@ namespace sw
         notifyHealthChanged( true );
     }
 
-    void UnitStatsComponent::onTick( float32 deltaTime )
+    void UnitStatsComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
 
         if ( _invincibilityTime > 0.0f )
         {
-            _invincibilityTime -= deltaTime;
+            _invincibilityTime -= context.getDeltaTime();
             if ( _invincibilityTime < 0.0f )
                 _invincibilityTime = 0.0f;
         }

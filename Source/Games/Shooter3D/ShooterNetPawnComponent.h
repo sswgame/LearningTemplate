@@ -74,7 +74,7 @@ namespace sw
 
         void onBeginPlay() override;
         void onEndPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         bool   isActive() const { return _role != Role::None; }
         bool   isServer() const { return _role == Role::Server; }

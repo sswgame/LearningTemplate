@@ -150,7 +150,7 @@ namespace sw
         /**
          * @brief 베이크한 메시의 재료가 다 읽혔으면 틱 뒤에 겁니다. 조립에 쓴 에셋(소켓 · 원본 메시 · 피팅 표 · 피팅 데이터)을 에셋 매니저가 다시 읽었으면 다시 조립을 예약합니다(에셋 핫 리로드).
          */
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         /** @brief 프리셋과 시드를 바꾸고 다시 조립합니다. 슬롯 덮어쓰기는 그대로 둡니다. */
         void setPreset( const hashed_string& presetID, uint32 seed );

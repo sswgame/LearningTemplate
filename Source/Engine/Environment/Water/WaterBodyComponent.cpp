@@ -257,11 +257,11 @@ namespace sw
             _bOriginDirty.store( true, std::memory_order_relaxed );
     }
 
-    void WaterBodyComponent::onTick( float32 deltaTime )
+    void WaterBodyComponent::onTick( TickContext& context )
     {
-        SceneComponent::onTick( deltaTime );
+        SceneComponent::onTick( context );
         if ( engine::getSubsystem<DeterministicRun>().getPolicy()._bFreezeEnvironmentTime == SW_FALSE ) // 결정적 사진은 바람 · 파도 시간을 0 에 멈춘다
-            _waveTime += deltaTime;
+            _waveTime += context.getDeltaTime();
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager != nullptr && _bOriginDirty.exchange( false, std::memory_order_relaxed ) )

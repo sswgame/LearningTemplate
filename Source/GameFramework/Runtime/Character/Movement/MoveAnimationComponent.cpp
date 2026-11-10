@@ -32,9 +32,9 @@ namespace sw
         _speed    = 0.0f;
     }
 
-    void MoveAnimationComponent::onTick( float32 deltaTime )
+    void MoveAnimationComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         GameObject*    pOwner = getOwner();
         MeshComponent* pBody  = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         if ( pBody == nullptr )
@@ -47,16 +47,16 @@ namespace sw
         _bHasLast                  = SW_TRUE;
         if ( bCounts == false )
             return;
-        _speed = smoothSpeed( _speed, stepDistance, deltaTime, _smoothingSeconds );
+        _speed = smoothSpeed( _speed, stepDistance, context.getDeltaTime(), _smoothingSeconds );
 
         SkeletalAnimatorComponent* pAnimator = pOwner->getComponent<SkeletalAnimatorComponent>();
         if ( pAnimator != nullptr )
             pAnimator->getParameters().setFloat( _speedParameter, _speed );
-        if ( deltaTime > 0.0f && stepDistance / deltaTime > _faceMinSpeed )
+        if ( context.getDeltaTime() > 0.0f && stepDistance / context.getDeltaTime() > _faceMinSpeed )
         {
             const float3  rotation  = pBody->getLocalRotation();
             const float32 targetYaw = MathUtil::atan2( step._x, step._z );
-            const float32 maxStep   = _turnRateDegrees * MathUtil::kDegreeToRadian * deltaTime;
+            const float32 maxStep   = _turnRateDegrees * MathUtil::kDegreeToRadian * context.getDeltaTime();
             pBody->setLocalRotation( float3{ rotation._x, turnTowards( rotation._y, targetYaw, maxStep ), rotation._z } );
         }
     }

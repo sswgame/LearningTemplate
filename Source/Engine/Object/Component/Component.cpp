@@ -89,9 +89,8 @@ namespace sw
         onEndPlay();
     }
 
-    void Component::onTick( float32 deltaTime )
+    void Component::onTick( TickContext& /*context*/ )
     {
-        (void)deltaTime;
     }
 
     void Component::onSubTick( uint32 subTickID, float32 deltaTime )

@@ -27,7 +27,7 @@ namespace sw
         virtual ~FlatRideComponent() override = default;
 
         void onBeginPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         /** @brief 따라갈 디렉터 · 놀이기구 번호 · 도는 빠르기(rad/s)를 정합니다. */
         void assignRide( GameObjectHandle gameMode, int32 rideIndex, float32 spin );

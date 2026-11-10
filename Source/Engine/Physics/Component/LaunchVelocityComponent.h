@@ -31,7 +31,7 @@ namespace sw
 
         void onBeginPlay() override;
         /** @brief 첫 틱에 한 번 선속도를 겁니다. 그 뒤로는 할 일이 없습니다. */
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         /** @brief 이미 날렸으면 true 입니다(테스트와 진단). */
         bool hasLaunched() const { return _bLaunched == SW_TRUE; }

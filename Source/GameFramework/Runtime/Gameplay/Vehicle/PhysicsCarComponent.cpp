@@ -45,9 +45,9 @@ namespace sw
         return input;
     }
 
-    void PhysicsCarComponent::onTick( float32 deltaTime )
+    void PhysicsCarComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         GameObject*              pOwner           = getOwner();
         const PawnComponent*     pPawn            = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
         WheeledVehicleComponent* pVehicle         = pOwner != nullptr ? pOwner->getComponent<WheeledVehicleComponent>() : nullptr;

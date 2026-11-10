@@ -71,7 +71,10 @@ namespace sw
             if ( shouldRunTickElement( *pComp, subTickID ) == false )
                 continue;
             if ( subTickID == 0 )
-                pComp->onTick( deltaTime );
+            {
+                TickContext context{ *element._pObject, deltaTime };
+                pComp->onTick( context );
+            }
             else
                 pComp->onSubTick( subTickID, deltaTime );
             ++tickCount;

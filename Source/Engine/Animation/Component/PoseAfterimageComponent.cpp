@@ -80,14 +80,14 @@ namespace sw
         Component::onEndPlay();
     }
 
-    void PoseAfterimageComponent::onTick( float32 deltaTime )
+    void PoseAfterimageComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr )
             return;
-        const float32 step = MathUtil::max( deltaTime, 0.0f );
+        const float32 step = MathUtil::max( context.getDeltaTime(), 0.0f );
         for ( Ghost& ghost : _listGhost )
         {
             if ( ghost._bVisible == false )

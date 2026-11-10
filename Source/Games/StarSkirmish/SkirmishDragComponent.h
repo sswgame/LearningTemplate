@@ -27,7 +27,7 @@ namespace sw
         virtual ~SkirmishDragComponent() override = default;
 
         void onBeginPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
     private:
     };

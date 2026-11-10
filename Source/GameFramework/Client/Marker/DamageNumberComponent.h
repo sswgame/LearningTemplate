@@ -46,7 +46,7 @@ namespace sw
          */
         void onBeginPlay() override;
         /** @brief 떠오르고 흐려지며, 수명이 다하면 오브젝트를 지웁니다. 틱 뒤에 글 위젯 값을 넣게 합니다. */
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
         /** @brief 값이나 색 필드를 고치면 글 위젯을 다시 채웁니다. */
         void onPropertyChanged( hashed_string propertyName ) override;
         /** @brief 소유 오브젝트가 꺼지면 숫자를 숨깁니다. */

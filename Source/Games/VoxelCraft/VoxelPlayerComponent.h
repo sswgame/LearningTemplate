@@ -51,7 +51,7 @@ namespace sw
         virtual ~VoxelPlayerComponent() override;
 
         void onBeginPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         // ---- 다른 컴포넌트가 읽는 값입니다(이 컴포넌트가 쓰지 않는 그룹에서 읽습니다) ----
         const VoxelBody&   getBody() const { return _body; }

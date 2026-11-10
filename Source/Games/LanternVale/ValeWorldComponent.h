@@ -35,7 +35,7 @@ namespace sw
 
         void onBeginPlay() override;
         void onEndPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         /** @brief 규칙 데이터가 골짜기를 세울 수 있으면 1 입니다(세션과 상관없이 시작할 때 본다). */
         int32 getRulesValid() const { return _bRulesValid != SW_FALSE ? 1 : 0; }

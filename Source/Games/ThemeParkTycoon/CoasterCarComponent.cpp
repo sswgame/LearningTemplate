@@ -34,9 +34,9 @@ namespace sw
         _carIndex     = carIndex;
     }
 
-    void CoasterCarComponent::onTick( float32 deltaTime )
+    void CoasterCarComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         GameObject*        pOwner             = getOwner();
         GameObjectManager* pManager           = pOwner != nullptr ? pOwner->getManager() : nullptr;
         MeshComponent*     pMesh              = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;

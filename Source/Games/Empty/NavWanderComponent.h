@@ -36,7 +36,7 @@ namespace sw
         void onUnregister( GameObjectManager& manager ) override;
         void onBeginPlay() override;
         void onEndPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         /** @brief 집 상자(가운데 · 반폭), 한 번에 떠도는 반경, 씨앗, 질의 간격(목적지 몇 번에 한 번 — 0 은 묻지 않는다)을 정합니다. 플레이 전에 부릅니다. */
         void setWander( const float3& homeCenter, float32 homeHalfExtent, float32 wanderRadius, uint32 seed, uint32 probeInterval );

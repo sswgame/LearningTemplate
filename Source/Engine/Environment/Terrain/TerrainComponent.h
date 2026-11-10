@@ -103,7 +103,7 @@ namespace sw
         void onPropertyChanged( hashed_string propertyName ) override;
         /** @brief 소유 오브젝트를 켜고 끄면 청크 배치를 더티로 표시합니다. 빌더가 다시 확인합니다. */
         void onOwnerActiveInHierarchyChanged() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
         /** @brief 오너가 움직였다고 표시만 합니다(여러 스레드에서 불린다). 다음 틱이 틱 뒤로 다시 읽기를 미룹니다. */
         void onWorldTransformUpdated() override;
 

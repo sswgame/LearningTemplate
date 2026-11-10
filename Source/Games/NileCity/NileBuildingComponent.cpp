@@ -133,10 +133,10 @@ namespace sw
         return string( "game/nilecity/models/" ) + pName + string( MeshAssetFormat::kExtension );
     }
 
-    void NileBuildingComponent::onTick( float32 deltaTime )
+    void NileBuildingComponent::onTick( TickContext& context )
     {
         using Internal = NileBuildingComponentInternal;
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;

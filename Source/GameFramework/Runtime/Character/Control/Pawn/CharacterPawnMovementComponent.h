@@ -46,7 +46,7 @@ namespace sw
 
         /** @brief 버튼 이름의 인덱스를 미리 찾아 둡니다. */
         void onBeginPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         /** @brief 멈춰 둡니다(탑승 · 연출). 멈추는 순간 수평 속도를 0 으로 둡니다. */
         void setSuspended( bool bSuspended );

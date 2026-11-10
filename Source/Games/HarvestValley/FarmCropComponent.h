@@ -32,7 +32,7 @@ namespace sw
         virtual ~FarmCropComponent() override = default;
 
         void onBeginPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         /** @brief 따라갈 디렉터와 칸 번호(행 우선)를 정합니다(디렉터가 스폰한 뒤 부른다). */
         void assignTile( GameObjectHandle gameMode, int32 tileIndex );

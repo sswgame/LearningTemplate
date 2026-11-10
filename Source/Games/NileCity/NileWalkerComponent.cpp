@@ -33,9 +33,9 @@ namespace sw
         _pShownLook  = nullptr;
     }
 
-    void NileWalkerComponent::onTick( float32 deltaTime )
+    void NileWalkerComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;

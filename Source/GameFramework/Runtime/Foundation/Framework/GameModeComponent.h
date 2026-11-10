@@ -68,7 +68,7 @@ namespace sw
         /** @brief 스폰한 오브젝트를 정리하고 판을 끝냅니다. */
         void onEndPlay() override;
         /** @brief 규칙이 주 틱에서 돌면 `runRules` 를 부릅니다. `_tickAfter` 를 걸었으면 서브틱이 부릅니다. */
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
         /** @brief 규칙 서브틱(`kRuleSubTick`)이면 `runRules` 를 부릅니다. */
         void onSubTick( uint32 subTickID, float32 deltaTime ) override;
         /** @brief 다른 오브젝트의 디렉터 뒤에 규칙을 돌게 합니다. 플레이를 시작하기 전에 불러야 하며, 씬 데이터는 PROPERTY `_tickAfter` 로 적습니다. */

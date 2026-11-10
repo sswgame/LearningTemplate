@@ -17,16 +17,13 @@
  * - 서브틱 · 여러 항목 오브젝트도 파도로 일괄합니다(`TickRegistry` 머리말). 선행 조건을 건 항목만 레인과 무관하게 스테이지로 갑니다.
  * - 오브젝트 사이의 순서는 정하지 않습니다(병렬). 같은 입력이면 같은 목록이 지어집니다(목록은 등록 · 해제 순서로만 바뀐다).
  *
- * [다음 단계 — 컴포넌트 틱의 잡 컨텍스트(NEXT 5-3 2(a), 생성기와 함께 옮긴다)]
- * - 서명: Batch 레인 타입의 틱은 `onTick( TickJobContext& context )` 를 받는다. 컨텍스트는 `SceneJobContext`(매니저 읽기 전용 · 시간 · 틱 뒤 큐)에
- *   **자기 오브젝트의 쓰기 권한**(`GameObject& getSelf()`)을 더한 것이다 — 자기 것만 쓰고, 남의 컴포넌트 쓰기 · 구조 변경(`setCanEverTick` 비트필드 포함)은
- *   `deferPostTick` 로만 간다. 남의 오브젝트는 `const` 로만 닿으므로 경쟁하는 쓰기가 컴파일되지 않는다(유니티 `IJobEntity` + `EntityCommandBuffer`,
- *   언리얼 `FMassExecutionContext::Defer()` 와 같은 자리). 지금 `isStructuralMutationFrozen` 이 런타임에 미루는 것을 형식이 먼저 막는다.
- * - 옮기는 순서: (1) 생성기가 `TickBatchOf<타입>` 의 호출을 새 서명으로 내되, 옛 서명(`onTick( float32 )`)만 있는 타입은 그대로 부른다(두 서명 중
- *   있는 쪽 — `if constexpr` 로 고른다, 둘 다 있으면 컴파일 오류). (2) 타입을 옮길 때마다 옛 서명을 지운다(102 개). (3) 다 옮기면 옛 서명 분기와
- *   `Component::onTick( float32 )` 가상을 지운다 — Task · Main 레인은 같은 컨텍스트를 받되 Main 은 매니저 쓰기 권한(게임 스레드)을 연다.
- * - 런타임 쪽 준비: 디스패치(`SceneTickScheduler`)는 구간마다 잡 컨텍스트 하나를 스택에 세우고 스레드 슬롯의 틱 뒤 큐를 물린다 — 큐는 이미 스레드
- *   슬롯별 버퍼 + (디스패치, 쓴 오브젝트, 순번) 병합이라(5-3 8) 컨텍스트의 `deferPostTick` 은 지금 `executeOrDeferPostTick` 과 같은 길이다.
+ * [컴포넌트 틱의 잡 컨텍스트(NEXT 5-3)]
+ * - 서명: 주 틱은 `onTick( TickContext& context )` 하나다(옛 `onTick( float32 )` 는 지웠다 — 두 서명을 함께 두는 단계 없이 한 번에 옮겼다).
+ *   컨텍스트는 `SceneJobContext`(매니저 읽기 전용 · 시간 · 틱 뒤 큐)에 자기 오브젝트(`getSelf`)를 더한 것이다(`TickContext.h`).
+ *   디스패치(`TickBatchOf` · `tickBatchVirtual` · `runTickItem`)가 원소마다 스택에 세운다. 유니티 `IJobEntity` + `EntityCommandBuffer`,
+ *   언리얼 `FMassExecutionContext::Defer()` 와 같은 자리다.
+ * - 남은 틈: 본문이 `getOwner()->getManager()` 로 쓰기 가능한 매니저를 아직 꺼낼 수 있다. 그 읽기를 `context.getManager()`(const)로, 쓰기를
+ *   `context.deferPostTick` 로 옮긴 뒤 틱에서 쓰기 가능한 매니저 길을 닫는다(NEXT 5-3). 서브틱(`onSubTick`)도 같은 컨텍스트로 옮긴다.
  *
  * @note 등록 · 해제는 모듈을 올리고 내리는 길에서 일어납니다 — 정적 등록 객체는 만들 때 링크 때 목록(`ModuleObjectRegistrar`, E1 사전 등록 사슬)에만 달리고,
  *       `engine::registerModuleTypes` 가 걷어 서비스 범위의 레지스트리에 붙이며(`attach`), `unregisterModuleTypes` 가 그 모듈의 컴포넌트를 지우기 전에 뗍니다(`detach`).
@@ -45,6 +42,7 @@
 
 #include "Engine/Module/ModuleEntryRegistrar.h"
 #include "Engine/Object/GameObject/Tick/StructuralChangeBuffer.h"
+#include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Object/GameObject/Tick/TickRegistry.h"
 #include "Engine/Profiling/FrameProfiler.h"
 
@@ -148,7 +146,10 @@ namespace sw
                 if ( shouldRunTickElement( *pComp, subTickID ) == false )
                     continue;
                 if ( subTickID == 0 )
-                    pComp->TComponent::onTick( deltaTime );
+                {
+                    TickContext context{ *element._pObject, deltaTime };
+                    pComp->TComponent::onTick( context );
+                }
                 else
                     pComp->TComponent::onSubTick( subTickID, deltaTime );
             }

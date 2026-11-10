@@ -78,7 +78,7 @@ namespace sw
         Component::onEndPlay();
     }
 
-    void DialogueRunnerComponent::onTick( [[maybe_unused]] float32 deltaTime )
+    void DialogueRunnerComponent::onTick( TickContext& /*context*/ )
     {
     }
 

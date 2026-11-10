@@ -39,7 +39,10 @@ namespace sw
                 if ( item._subTickID == 0 )
                 {
                     if ( pComp->canEverTick() )
-                        pComp->onTick( deltaTime );
+                    {
+                        TickContext context{ *pComp->getOwner(), deltaTime };
+                        pComp->onTick( context );
+                    }
                 }
                 else
                 {

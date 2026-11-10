@@ -73,25 +73,25 @@ namespace sw
         Component::onEndPlay();
     }
 
-    void DestructionNetSessionComponent::onTick( float32 deltaTime )
+    void DestructionNetSessionComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         if ( _session.isActive() == false )
             return;
         // 서버의 첫 틱(델타가 있는)에서 틱 빈도를 한 번 비교한다.
-        const bool bCheckServerTick = _session.getSide() == DestructionNetSide::Server && _bTickChecked == SW_FALSE && deltaTime > 0.0f;
+        const bool bCheckServerTick = _session.getSide() == DestructionNetSide::Server && _bTickChecked == SW_FALSE && context.getDeltaTime() > 0.0f;
         if ( bCheckServerTick )
         {
             _bTickChecked = SW_TRUE;
-            if ( computeDestructionNetTickRateHz( deltaTime ) != computeDestructionNetTickRateHz( _tickInterval ) )
+            if ( computeDestructionNetTickRateHz( context.getDeltaTime() ) != computeDestructionNetTickRateHz( _tickInterval ) )
             {
                 SW_LOG_ERROR_ID( "DestructionNetSessionComponent.DestructionNetSessionStopped", "Destruction net session stopped: the server ticks every %# s but Tick Interval is %# s - pose times would drift; set Tick Interval to the server fixed step",
-                                 deltaTime, _tickInterval );
+                                 context.getDeltaTime(), _tickInterval );
                 _session.shutdown();
                 return;
             }
         }
-        _session.update( deltaTime );
+        _session.update( context.getDeltaTime() );
         reportReplicaStats();
     }
 

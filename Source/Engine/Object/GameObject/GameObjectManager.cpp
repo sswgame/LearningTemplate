@@ -25,6 +25,7 @@
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Object/GameObject/Tick/ISceneFrameSystem.h"
 #include "Engine/Object/GameObject/Tick/SceneTickScheduler.h"
+#include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -180,6 +181,12 @@ namespace sw
     {
         // 늘 큐로 간다 — 레인은 워커에서 돌 수 있어, 얼지 않았다고 바로 실행하면(`executeOrDeferPostTick`) 워커가 씬을 바꾼다.
         _pCommandBuffer->deferPostTick( std::move( func ) );
+    }
+
+    TickContext::TickContext( GameObject& self, float32 deltaTime )
+        : SceneJobContext{ *self.getManager(), self.getManager()->_structuralChangeBuffer, deltaTime }
+        , _pSelf{ &self }
+    {
     }
 
     void ISceneLaneFrameSystem::runMain( GameObjectManager& manager, float32 deltaTime )

@@ -35,7 +35,7 @@ namespace sw
         PushBlockComponent();
         virtual ~PushBlockComponent() override = default;
 
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
         /** @brief 한 스텝(60 Hz)입니다. */
         void stepOnce();
         /** @brief @p direction 에서 가장 가까운 축으로 한 셀 밉니다. 움직이는 중이거나 막혀 있으면 false 입니다. */
@@ -81,7 +81,7 @@ namespace sw
 
         void onPostLoad() override;
         void onBeginPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         /** @brief 자극을 이름으로 가합니다(Fire, Water, Ice, Electric). 바뀌었으면 true 입니다. 알 수 없는 이름이거나 테이블이 없으면 false 입니다. */
         [[nodiscard]] bool applyStimulus( const hashed_string& stimulus );

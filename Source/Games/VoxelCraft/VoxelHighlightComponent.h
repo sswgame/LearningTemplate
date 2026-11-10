@@ -34,7 +34,7 @@ namespace sw
         virtual ~VoxelHighlightComponent() override;
 
         void onBeginPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
     private:
         /** @brief 겨눈 블록의 테두리(디버그 선)를 틱이 끝난 뒤 게임 스레드에서 그립니다. */

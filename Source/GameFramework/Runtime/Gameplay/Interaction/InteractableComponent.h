@@ -70,7 +70,7 @@ namespace sw
         void onUnregister( GameObjectManager& manager ) override;
         void onPostLoad() override;
         void onBeginPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
         void onPropertyChanged( hashed_string propertyName ) override;
 
         /** @brief 정의를 코드로 넣습니다. 테이블보다 우선합니다. */

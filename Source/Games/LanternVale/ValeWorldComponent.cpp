@@ -320,11 +320,11 @@ namespace sw
         Component::onEndPlay();
     }
 
-    void ValeWorldComponent::onTick( float32 deltaTime )
+    void ValeWorldComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         tryStartLink();
-        _server.update( deltaTime );
+        _server.update( context.getDeltaTime() );
         _client.update();
     }
 } // namespace sw

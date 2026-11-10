@@ -31,7 +31,7 @@ namespace sw
         virtual ~DaylightComponent() override = default;
 
         void onBeginPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
     private:
         PROPERTY( Category = "Sun", DisplayName = "Game Mode", Tooltip = "Object with the game mode that answers the time of day" )

@@ -88,9 +88,9 @@ namespace sw
         Component::onEndPlay();
     }
 
-    void WesternHorseComponent::onTick( float32 deltaTime )
+    void WesternHorseComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         if ( _bFailed == SW_TRUE )
             return;
         if ( _bOpened == SW_FALSE )
@@ -102,7 +102,7 @@ namespace sw
             }
             applyPendingState();
         }
-        _horse.update( deltaTime, deltaTime * _gameHoursPerSecond );
+        _horse.update( context.getDeltaTime(), context.getDeltaTime() * _gameHoursPerSecond );
         vector<WesternHorseEvent> listEvent;
         _horse.pollEvents( listEvent );
         const GameObject* pOwner = getOwner();

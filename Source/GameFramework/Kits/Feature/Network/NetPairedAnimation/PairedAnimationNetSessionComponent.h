@@ -39,7 +39,7 @@ namespace sw
 
         void onBeginPlay() override;
         void onEndPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         const PairedAnimationReplicationServer& getServer() const { return _server; }
         const PairedAnimationReplicationClient& getClient() const { return _client; }

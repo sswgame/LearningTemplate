@@ -31,7 +31,7 @@ namespace sw
         virtual ~AbilityGateComponent() override = default;
 
         void onBeginPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
         void stepOnce();
         bool isOpen() const { return _bOpen; }
 
@@ -68,7 +68,7 @@ namespace sw
         GatheringNodeComponent();
         virtual ~GatheringNodeComponent() override = default;
 
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
         void stepOnce();
         /** @brief @p who 가 한 번 채집합니다. 상호작용이 부르는 것과 같은 동작입니다. 다 써서 없으면 false 입니다. */
         bool gather( GameObject& who );

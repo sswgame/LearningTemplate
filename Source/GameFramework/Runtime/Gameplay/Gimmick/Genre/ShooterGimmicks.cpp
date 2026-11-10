@@ -70,10 +70,10 @@ namespace sw
     {
     }
 
-    void ExplosiveBarrelComponent::onTick( float32 deltaTime )
+    void ExplosiveBarrelComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
-        const int32 stepCount = _clock.consume( deltaTime );
+        Component::onTick( context );
+        const int32 stepCount = _clock.consume( context.getDeltaTime() );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             stepOnce();
@@ -300,10 +300,10 @@ namespace sw
         (void)_projectiles.spawn( ProjectileState::launch( shot, origin, direction, PhysicsSystem::getConfiguredGravityMagnitude() ) );
     }
 
-    void TurretComponent::onTick( float32 deltaTime )
+    void TurretComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
-        const int32 stepCount = _clock.consume( deltaTime );
+        Component::onTick( context );
+        const int32 stepCount = _clock.consume( context.getDeltaTime() );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             stepOnce();
@@ -388,10 +388,10 @@ namespace sw
     {
     }
 
-    void DestructibleComponent::onTick( float32 deltaTime )
+    void DestructibleComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
-        const int32 stepCount = _clock.consume( deltaTime );
+        Component::onTick( context );
+        const int32 stepCount = _clock.consume( context.getDeltaTime() );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             stepOnce();

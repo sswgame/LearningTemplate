@@ -217,12 +217,12 @@ namespace sw
         Component::onEndPlay();
     }
 
-    void ShooterNetPawnComponent::onTick( float32 deltaTime )
+    void ShooterNetPawnComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         ShooterBodyMovementComponent*  pMovement = findMovement();
         const vector<ShooterArenaBox>* pListBox  = findArenaBoxes();
-        const bool                     bIdle     = _role == Role::None || pMovement == nullptr || pListBox == nullptr || deltaTime <= 0.0f;
+        const bool                     bIdle     = _role == Role::None || pMovement == nullptr || pListBox == nullptr || context.getDeltaTime() <= 0.0f;
         if ( bIdle )
             return;
         // 발동은 한 프레임만 참이다 — 입력 틱(30 Hz)이 없던 프레임의 발동이 사라지지 않게 매 프레임 모은다.
@@ -234,7 +234,7 @@ namespace sw
             getOwner()->getManager()->executeOrDeferPostTickOnComponent( *this, []( ShooterNetPawnComponent& netPawn )
             { netPawn.possessRemote(); } );
         }
-        _accumulator += deltaTime;
+        _accumulator += context.getDeltaTime();
         int32 tickCount = 0;
         while ( _accumulator >= _tickInterval && tickCount < ShooterNetPawnComponentInternal::kMaxTicksPerFrame )
         {
@@ -255,8 +255,8 @@ namespace sw
         }
         if ( _role == Role::Client )
         {
-            _client.update( deltaTime );
-            _smoother.update( deltaTime );
+            _client.update( context.getDeltaTime() );
+            _smoother.update( context.getDeltaTime() );
             pMovement->setDisplayOffset( _smoother.getOffset() );
         }
     }

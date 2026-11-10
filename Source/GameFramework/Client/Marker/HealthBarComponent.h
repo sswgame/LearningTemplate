@@ -49,7 +49,7 @@ namespace sw
         /** @brief 막대 위젯을 같은 오브젝트의 `WidgetComponent` 에 넣고, 비율을 같은 오브젝트의 체력 원천(`HealthSourceComponent`)에 맞춥니다. 원천이 없으면 저장된 `_hpRatio` 를 쓰며 흔적은 없습니다. */
         void onBeginPlay() override;
         /** @brief 채움과 흔적을 참 비율 쪽으로 옮기고, 틱 뒤에 막대 값을 넣게 합니다. */
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
         /** @brief 보임, 색, 비율 필드를 고치면 막대를 다시 채웁니다. 켜고 끄기도 포함합니다. */
         void onPropertyChanged( hashed_string propertyName ) override;
         /** @brief 소유 오브젝트가 꺼지면 막대를 숨깁니다(꺼진 오브젝트는 틱이 돌지 않습니다). */

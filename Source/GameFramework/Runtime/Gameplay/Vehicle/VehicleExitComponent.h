@@ -30,7 +30,7 @@ namespace sw
 
         /** @brief 버튼 이름의 인덱스를 찾고 PrePhysics 에서 틱합니다. */
         void onBeginPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
     private:
         /** @brief 틱 뒤에 실행합니다. 운전석 탑승자를 내립니다. */

@@ -38,7 +38,7 @@ namespace sw
         void onBeginPlay() override;
         void onEndPlay() override;
         /** @brief 쌓인 패킷을 읽어 마지막 것을 표정 값으로 옮깁니다. */
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         void setMappingPath( string_view path ) { _mappingPath = path; }
         /** @brief 받을 포트입니다(0 이면 운영체제가 고른다 — 테스트). 시작 전에 정합니다. */
