@@ -3,6 +3,7 @@
 #include "Engine/Environment/Fog/FogComponent.h"
 
 #include "Engine/Environment/Water/WaterBodyComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 

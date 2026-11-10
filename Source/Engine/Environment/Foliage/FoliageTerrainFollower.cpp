@@ -5,7 +5,7 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Environment/Foliage/FoliageComponent.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 
 namespace sw
 {

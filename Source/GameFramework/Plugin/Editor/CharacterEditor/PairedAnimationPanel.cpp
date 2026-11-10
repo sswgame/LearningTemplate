@@ -25,7 +25,7 @@
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Scene/Scene.h"
 

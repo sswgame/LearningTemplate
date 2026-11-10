@@ -24,7 +24,7 @@
 
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Physics/Scene/ScenePhysics.h"
 #include "Engine/Scene/Scene.h"
 

@@ -5,7 +5,7 @@
 #include "Core/Foundation/Constants.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleSystem.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractionCatalog.h"

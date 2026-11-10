@@ -6,6 +6,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
+#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Visual/Component/DirectionalLightComponent.h"

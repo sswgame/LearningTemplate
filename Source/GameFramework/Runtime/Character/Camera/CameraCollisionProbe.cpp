@@ -5,7 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Character/Hit/CharacterHit.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Physics/Collision/SweepHit.h"
 #include "Engine/Physics/PhysicsSettings.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"

@@ -18,7 +18,7 @@
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Registry/TagIndex.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Scene/SceneManager.h"

@@ -6,7 +6,7 @@
 #include "Engine/Audio/Component/AudioReverbZoneComponent.h"
 #include "Engine/Audio/Scene/SceneAudio.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 
 using namespace sw;
 

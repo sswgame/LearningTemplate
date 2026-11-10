@@ -10,7 +10,7 @@
 
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Object/Component/Component.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 
 namespace sw
 {

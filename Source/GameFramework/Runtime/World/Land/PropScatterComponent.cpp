@@ -10,7 +10,7 @@
 
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Visual/Component/MeshComponent.h"
 #include "Engine/Visual/Component/MeshSectionComponent.h"
 

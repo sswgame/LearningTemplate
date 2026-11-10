@@ -1,28 +1,21 @@
 /**
  * @file GameObjectManager.h
  * @brief 씬 하나의 오브젝트 수명(생성 · 파괴 · 플레이 시작)을 관리합니다. 오브젝트 저장소 · 틱 디스패치 · 틱 중 규칙 · 레지스트리 · 물리를 소유하고, 게임이 부르는 API 를 전달합니다.
+ * @details 템플릿(순회 · 타입 핸들 찾기 · `getSubsystem<T>` · 틱 뒤 컴포넌트 작업)의 몸체는 `GameObjectManager.inl` 에 있고 부르는 파일만 포함합니다.
  */
 #pragma once
-#include "Core/Concurrency/atomic.h"
-#include "Core/Concurrency/mutex.h"
 #include "Core/Container/span.h"
-#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
-#include "Core/Delegate/DelegateSlot.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/GameObjectHandle.h"
-#include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectStore.h"
-#include "Engine/Object/GameObject/ObjectIDAllocator.h"
-#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
-#include "Engine/Object/GameObject/Service/ISceneService.h"
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Object/GameObject/Tick/SceneFrameAccess.h"
 #include "Engine/Object/GameObject/Tick/SceneFrameStep.h"
@@ -31,6 +24,8 @@
 
 namespace sw
 {
+    class ISceneLaneFrameSystem;
+
     /**
      * @brief 앞 시스템(@p earlier, 붙은 순서가 앞)과 뒤 시스템(@p later)이 같이 돌 수 없는지 돌려줍니다.
      * @details 한쪽이 쓰는 종류를 다른 쪽이 읽거나(`_reads` · `_readsPrevious`) 쓰면 겹칩니다. 둘 다 읽기만 하는 종류는 겹치지 않습니다.
@@ -71,15 +66,29 @@ namespace sw
     class CameraComponent;
     class CameraRegistry;
     class Component;
+    class ComponentRegistry;
+    class DebugDrawQueue;
+    class GameObject;
     class GameObjectManager;
+    class GameObjectStore;
     class ISceneFrameSystem;
-    class ISceneLaneFrameSystem;
+    class ISceneParticleSink;
+    class ObjectIDAllocator;
     class PrimitiveRegistry;
     class SceneComponent;
     class SceneTickScheduler;
     class SceneTransformHierarchy;
+    class SubsystemScope;
     class TagIndex;
+    class TickRegistry;
+    struct ComponentPoolEntry;
+    struct FogSettings;
+    struct GPULight;
+    struct ScenePreviewPolicy;
     struct SceneTransformWrite;
+    struct SkyGradient;
+    struct TypeInfo;
+    enum class SceneLightPhase : uint8; ///< 정의는 `Service/ISceneService.h`(바탕 형식이 같아야 한다)
 
     /** @brief `GameObjectManager::makeTypedHandle` 의 결과입니다. */
     enum class TypedHandleResult : uint8
@@ -109,8 +118,10 @@ namespace sw
         /** @brief 등록된 오브젝트를 모두 파괴합니다. */
         ~GameObjectManager();
 
-        /** @brief 새 GameObject 를 만들고 등록합니다. */
-        GameObject* createGameObject( hashed_string name = hashed_string( GameObject::kDefaultName ) ) { return _store.createGameObject( name ); }
+        /** @brief 새 GameObject 를 기본 이름(`GameObject::kDefaultName`)으로 만들고 등록합니다. 기본 인자 대신 오버로드라 이 헤더가 GameObject 의 정의를 보지 않는다. */
+        GameObject* createGameObject();
+        /** @brief 새 GameObject 를 @p name 으로 만들고 등록합니다. */
+        GameObject* createGameObject( hashed_string name );
 
         /**
          * @brief 앞서 발급한 objectID 를 그대로 써서 오브젝트를 다시 만듭니다. 되돌리기 · 플레이 세션 복원 · 핫 리로드가 씁니다.
@@ -120,27 +131,25 @@ namespace sw
          *          않게 하기 위해서입니다. 발급 카운터는 그 id 뒤로 밀어 앞으로의 발급과 겹치지 않게 합니다.
          * @return 만든 오브젝트입니다. 실제로 받은 id 는 `getObjectID()` 로 확인합니다.
          */
-        GameObject* createGameObjectWithID( hashed_string name, uint64 objectID ) { return _store.createGameObjectWithID( name, objectID ); }
+        GameObject* createGameObjectWithID( hashed_string name, uint64 objectID );
 
         /**
          * @brief 등록된 GameObject 의 이름이 바뀐 것을 이름 맵에 반영합니다.
          * @details GameObject::setName 이 부릅니다.
          */
-        void notifyNameChanged( GameObject* pObj, hashed_string oldName, hashed_string newName ) { _store.notifyNameChanged( pObj, oldName, newName ); }
+        void notifyNameChanged( GameObject* pObj, hashed_string oldName, hashed_string newName );
 
         /** @brief 이름으로 GameObject 를 찾습니다. */
-        GameObject* findGameObjectByName( hashed_string name ) const { return _store.findGameObjectByName( name ); }
+        GameObject* findGameObjectByName( hashed_string name ) const;
 
         /** @brief 오브젝트 ID 로 GameObject 를 찾습니다. 락이 없습니다(칸이 그 id 를 들고 있으면). */
-        GameObject* findGameObjectByID( uint64 objectID ) const { return _store.findGameObjectByID( objectID ); }
+        GameObject* findGameObjectByID( uint64 objectID ) const;
 
         /**
-         * @brief 락 없는 id 표의 칸 수입니다. 칸은 id 의 아래 비트(`id % kObjectSlotCount`)입니다.
-         * @details 이만큼 떨어진 id 둘이 함께 살아 있을 때만 뒤에 온 것이 맵(잠금 + 해시)으로 갑니다 — `getOverflowObjectCount`.
+         * @brief 락 없는 id 표의 칸(`GameObjectStore::kObjectSlotCount`)을 다른 오브젝트가 써서 맵에 든 오브젝트 수입니다. 진단 · 회귀 테스트용입니다(보통 0).
+         * @details 칸 수만큼 떨어진 id 둘이 함께 살아 있을 때만 뒤에 온 것이 맵(잠금 + 해시)으로 갑니다.
          */
-        static constexpr uint64 kObjectSlotCount = GameObjectStore::kObjectSlotCount;
-        /** @brief 표의 칸을 다른 오브젝트가 써서 맵에 든 오브젝트 수입니다. 진단 · 회귀 테스트용입니다(보통 0). */
-        uint32 getOverflowObjectCount() const { return _store.getOverflowObjectCount(); }
+        uint32 getOverflowObjectCount() const;
 
         /**
          * @brief 살아 있는 오브젝트를 outList 에 채웁니다(부르는 쪽 버퍼 재사용).
@@ -148,39 +157,22 @@ namespace sw
          *          전체를 새로 할당 · 복사하므로, 매 프레임 도는 곳이나 두 번 이상 쓰는 곳은 이쪽을
          *          씁니다. 순회만 하면 되는 곳은 forEachGameObject 가 복사조차 하지 않습니다.
          */
-        void getAllGameObjects( vector<GameObject*>& outListGameObject ) const { _store.getAllGameObjects( outListGameObject ); }
+        void getAllGameObjects( vector<GameObject*>& outListGameObject ) const;
 
         /** @brief 살아 있는 오브젝트 목록을 새 벡터로 반환합니다(한 번만 쓰는 곳 전용). */
-        vector<GameObject*> getAllGameObjects() const
-        {
-            vector<GameObject*> listAllGameObject;
-            _store.getAllGameObjects( listAllGameObject );
-            return listAllGameObject;
-        }
-
-        /** @brief `forEachGameObject` 가 공유 잠금을 쥔 동안의 표시입니다(`GameObjectStore::WalkScope`). */
-        using WalkScope = GameObjectStore::WalkScope;
+        vector<GameObject*> getAllGameObjects() const;
 
         /**
          * @brief 힙 할당 없이 등록된 모든 유효한 GameObject 를 순회합니다.
-         * @note 공유 잠금을 쥔 채 콜백을 부릅니다. 콜백 안에서 오브젝트를 만들거나 지우거나 컴포넌트를 붙이면 안 됩니다(`WalkScope`) —
+         * @note 공유 잠금을 쥔 채 콜백을 부릅니다. 콜백 안에서 오브젝트를 만들거나 지우거나 컴포넌트를 붙이면 안 됩니다(`GameObjectStore::WalkScope`) —
          *       그런 일을 하는 순회는 `getAllGameObjects( out )` 로 목록을 받아 잠금 없이 돕니다(`beginPlay` 처럼).
          */
         template <typename Func>
-        void forEachGameObject( Func&& func ) const
-        {
-            _store.forEachGameObject( std::forward<Func>( func ) );
-        }
+        void forEachGameObject( Func&& func ) const;
 
         /** @brief 힙 할당 없이 씬의 모든 유효한 Component 를 순회합니다. */
         template <typename Func>
-        void forEachComponent( Func&& func ) const
-        {
-            forEachGameObject( [&func]( GameObject* pObj )
-            {
-                pObj->forEachComponent( func );
-            } );
-        }
+        void forEachComponent( Func&& func ) const;
 
         /**
          * @brief 힙 할당 없이 씬에서 TComponent 와 그 파생 컴포넌트를 순회합니다. 오브젝트를 훑지 않고 타입별 버킷을 돕니다(`GameObjectStore::forEachComponentOfType`).
@@ -189,24 +181,14 @@ namespace sw
          * @note 공유 잠금 안에서 콜백을 부릅니다. 콜백 안에서 오브젝트를 만들거나 지우거나 컴포넌트를 붙이면 안 됩니다(`WalkScope`).
          */
         template <typename TComponent, typename Func>
-        void forEachComponentOfType( Func&& func ) const
-        {
-            static_assert( std::is_base_of_v<Component, TComponent>, "TComponent must derive from sw::Component" );
-            _store.forEachComponentOfType( findStaticType<TComponent>(), [&func]( Component* pComp )
-            {
-                func( static_cast<TComponent*>( pComp ) );
-            } );
-        }
+        void forEachComponentOfType( Func&& func ) const;
 
         /** @brief 런타임 타입 @p pToType 이나 그 파생 컴포넌트를 순회합니다. 콜백은 `Component*` 를 받습니다. 타입을 템플릿으로 모르는 곳(인스펙터 선택기)이 씁니다. */
         template <typename Func>
-        void forEachComponentOfType( const TypeInfo* pToType, Func&& func ) const
-        {
-            _store.forEachComponentOfType( pToType, std::forward<Func>( func ) );
-        }
+        void forEachComponentOfType( const TypeInfo* pToType, Func&& func ) const;
 
         /** @brief 비어 있지 않은 타입별 버킷 수입니다. 진단과 회귀 테스트(모듈 언로드 뒤 묘비)용입니다. */
-        uint32 getTypedComponentBucketCount() const { return _store.getTypedComponentBucketCount(); }
+        uint32 getTypedComponentBucketCount() const;
 
         /**
          * @brief 태그 → 오브젝트 색인입니다. 태그로 오브젝트를 찾는 곳은 씬을 훑지 않고 `getTagIndex().findObjectsWithTags( required, 버퍼 )` 를 씁니다.
@@ -222,21 +204,21 @@ namespace sw
          *          값은 같은 엔진(번호 공간 `ObjectIDAllocator`)의 매니저끼리 겹치지 않는다(`GameObjectStore::getStructureGeneration`). 그래서 지운 매니저와 같은 주소에 새 매니저가 생겨도 캐시가 틀리지 않는다.
          *          읽기는 잠금이 없고 어느 스레드에서나 됩니다. 트랜스폼 · 활성 · 태그는 넣지 않습니다(트랜스폼은 `getTransformGeneration`, 태그는 `TagIndex::getGeneration`).
          */
-        uint64 getStructureGeneration() const { return _store.getStructureGeneration(); }
+        uint64 getStructureGeneration() const;
         /**
          * @brief 구조 세대를 올립니다. 구조를 바꾸는 세터(오브젝트 생성 · 파괴 · `GameObject::setName` · `setSiblingIndex` · 부착과 떼기 · 컴포넌트 붙이기와 떼기)만 부릅니다.
          * @details 편집 명령 쪽에서 부르지 않는다. 세터 한 곳에서 올려야 되돌리기 · 스크립트 · 게임 코드의 같은 변경을 빠뜨리지 않는다.
          */
-        void notifyStructureChanged() { _store.notifyStructureChanged(); }
+        void notifyStructureChanged();
 
         /**
          * @brief 플레이를 시작합니다 — 살아 있는 오브젝트의 컴포넌트마다 onBeginPlay 를 한 번 부르고, 이후 붙는 컴포넌트는 다음 틱 단계에서 시작합니다.
          * @details 보통은 직접 부르지 않고 `SceneManager::setWorldPlaying` · 활성 씬 교체가 부릅니다. 두 번 불러도 컴포넌트마다 한 번입니다.
          */
-        void beginPlay() { _store.beginPlay(); }
+        void beginPlay();
 
         /** @brief 플레이를 끝냅니다 — 시작했던 컴포넌트마다 onEndPlay 를 한 번 부르고, 시작을 기다리던 줄을 비웁니다. */
-        void endPlay() { _store.endPlay(); }
+        void endPlay();
 
         /**
          * @brief `update` 를 시작한 횟수입니다(게임 스레드의 씬 프레임 번호). 한 프레임의 틱 · 틱 뒤 큐 · 그 뒤 패킷 만들기가 같은 값을 봅니다.
@@ -264,7 +246,7 @@ namespace sw
         void postLoadComponent( Component& comp );
 
         /** @brief 플레이 중(`beginPlay` 뒤, `endPlay` 전)이면 true 입니다. 이때 붙는 컴포넌트는 다음 틱 단계에서 onBeginPlay 를 받습니다. */
-        bool hasBegunPlay() const { return _store.hasBegunPlay(); }
+        bool hasBegunPlay() const;
         /**
          * @brief `Physics` 단계를 켜거나 끕니다(기본 켬). 끄면 물리 서비스가 진행하지 않습니다 — 틱만 도는 미리보기 씬이 씁니다(`ScenePreviewPolicy::_bPhysics`).
          */
@@ -372,10 +354,7 @@ namespace sw
          *          `func( TComponent&, GameObjectManager& )` 로 부릅니다.
          */
         template <typename TComponent, typename TFunc>
-        void executeOrDeferPostTickOnComponent( const TComponent& self, TFunc func )
-        {
-            executeOrDeferPostTick( makeComponentPostTickTask( self, func ) );
-        }
+        void executeOrDeferPostTickOnComponent( const TComponent& self, TFunc func );
 
         /**
          * @brief `executeOrDeferPostTickOnComponent` 와 같되 늘 틱 뒤(게임 스레드의 씬 프레임)로 미룹니다 - 바로 실행하지 않는다.
@@ -383,31 +362,12 @@ namespace sw
          *          구조 변경 버퍼는 씬 프레임마다 비워지므로 편집 모드(플레이 전)에서도 돈다 - `onBeginPlay` 로 넘기면 편집 모드에서는 오지 않는다.
          */
         template <typename TComponent, typename TFunc>
-        void deferPostTickOnComponent( const TComponent& self, TFunc func )
-        {
-            deferPostTick( makeComponentPostTickTask( self, func ) );
-        }
+        void deferPostTickOnComponent( const TComponent& self, TFunc func );
 
     private:
         /** @brief 컴포넌트 일을 핸들로 다시 찾아 부르는 틱 뒤 작업입니다(위 두 함수가 함께 쓴다). 사라졌거나 삭제 대기면 부르지 않는다. */
         template <typename TComponent, typename TFunc>
-        PostTickDelegate makeComponentPostTickTask( const TComponent& self, TFunc func )
-        {
-            static_assert( std::is_empty_v<TFunc>, "post-tick component callable must not capture" );
-            const TComponentHandle<TComponent> handle{ &self };
-            GameObjectManager*                 pManager = this;
-            return PostTickDelegate( [pManager, handle, func]()
-            {
-                TComponent* pComponent = pManager->resolveComponent( handle );
-                // 삭제 대기 컴포넌트는 핸들로 아직 찾히지만 일을 받지 않는다(틱 · 이벤트와 같은 규칙).
-                if ( pComponent == nullptr || pComponent->isPendingDestroy() )
-                    return;
-                if constexpr ( std::is_invocable_v<const TFunc&, TComponent&, GameObjectManager&> )
-                    func( *pComponent, *pManager );
-                else
-                    func( *pComponent );
-            } );
-        }
+        PostTickDelegate makeComponentPostTickTask( const TComponent& self, TFunc func );
 
     public:
         /** @brief SceneComponent 가 루트가 됐음을 트랜스폼 계층에 알립니다(더티면 플러시 목록에 오릅니다). */
@@ -431,9 +391,9 @@ namespace sw
          *          `forEachComponentOfType` 은 타입별 버킷을 돌지만 공유 잠금을 잡고 순서를 약속하지 않으므로, 등록 순서 · 채널 · 잠금 없는 읽기가 필요한
          *          프레임 경로는 이 레지스트리를 씁니다. 자세한 사연은 ComponentRegistry.h 에 있습니다.
          */
-        ComponentRegistry& getComponentRegistry() { return _componentRegistry; }
+        ComponentRegistry& getComponentRegistry();
         /** @brief 타입별 컴포넌트 레지스트리입니다. */
-        const ComponentRegistry& getComponentRegistry() const { return _componentRegistry; }
+        const ComponentRegistry& getComponentRegistry() const;
 
         /**
          * @brief 카메라 컴포넌트의 레지스트리입니다. 역할 · 우선순위로 고르는 규칙(`selectCamera`)도 여기 하나입니다.
@@ -453,7 +413,7 @@ namespace sw
         const TickRegistry& getTickRegistry() const;
 
         /** @brief 핸들이 가리키는 컴포넌트를 찾습니다. 삭제 예정이면 nullptr 입니다. 타입을 아는 곳은 타입 핸들(`TComponentHandle<T>`)의 찾기를 씁니다. */
-        Component* resolveComponent( ComponentHandle handle ) const { return _store.resolveComponent( handle ); }
+        Component* resolveComponent( ComponentHandle handle ) const;
 
         /**
          * @brief 컴포넌트 레지스트리에 타입 T 로 오른 것 중 켜진 것(`Component::isActive`, 삭제 대기 아님)마다 @p func( T& ) 를 등록 순서로 부릅니다.
@@ -462,22 +422,7 @@ namespace sw
          *          @p func 가 구조를 바꿔도(만들기 · 지우기 · 등록) 된다. 게임 스레드, 틱 밖에서 부른다.
          */
         template <typename T, typename TFunc>
-        void forEachActiveRegistered( vector<ComponentHandle>& inoutScratch, TFunc&& func )
-        {
-            inoutScratch.clear();
-            const ComponentRegistry::View<T> view = _componentRegistry.getAll<T>();
-            for ( size_t index = 0; index < view.size(); ++index )
-            {
-                inoutScratch.push_back( view.getHandle( index ) );
-            }
-            for ( const ComponentHandle handle : inoutScratch )
-            {
-                Component* pComponent = resolveComponent( handle );
-                if ( pComponent == nullptr || pComponent->isPendingDestroy() || pComponent->isActive() == false )
-                    continue;
-                func( *static_cast<T*>( pComponent ) ); // 레지스트리는 정확히 T 로 오른 것만 담는다(`ComponentRegistry::add<T>`)
-            }
-        }
+        void forEachActiveRegistered( vector<ComponentHandle>& inoutScratch, TFunc&& func );
 
         /**
          * @brief 타입 핸들이 가리키는 컴포넌트를 `T*` 로 찾습니다. 삭제 예정이면 nullptr 입니다.
@@ -486,20 +431,7 @@ namespace sw
          *          캐스트가 다른 타입의 칸을 읽습니다. 어긋나면 오류 로그와 Debug 단언을 남기고 nullptr 을 반환합니다. 그런 길이 없는 Shipping 만 확인을 뺍니다.
          */
         template <typename T>
-        T* resolveComponent( TComponentHandle<T> handle ) const
-        {
-            static_assert( std::is_base_of_v<Component, T>, "T must derive from sw::Component" );
-            static_assert( HasOwnReflectBody_v<T> || HasReflectStaticType_v<T>, "T must declare its own REFLECT_BODY() (cannot slice to a base class StaticType)" );
-            Component* pComponent = _store.resolveComponent( handle.untyped() );
-#if !defined( SW_SHIPPING )
-            if ( pComponent != nullptr && isComponentOfType( *pComponent, findStaticType<T>() ) == false )
-            {
-                reportTypedResolveMismatch( handle.untyped(), *pComponent, findStaticType<T>() );
-                return nullptr;
-            }
-#endif
-            return static_cast<T*>( pComponent );
-        }
+        T* resolveComponent( TComponentHandle<T> handle ) const;
 
         /**
          * @brief 타입 없는 핸들 @p handle 에서 타입 핸들을 만듭니다. 대상의 타입을 확인하는 유일한 길입니다(다운캐스트도 `untyped()` 로 여기를 지납니다).
@@ -512,18 +444,10 @@ namespace sw
          *          대상 없음을 정상으로 보는 쪽은 그 결과를 직접 처리합니다.
          */
         template <typename T>
-        [[nodiscard]] TypedHandleResult makeTypedHandle( ComponentHandle handle, TComponentHandle<T>& outHandle ) const
-        {
-            static_assert( std::is_base_of_v<Component, T>, "T must derive from sw::Component" );
-            static_assert( HasOwnReflectBody_v<T> || HasReflectStaticType_v<T>, "T must declare its own REFLECT_BODY() (cannot slice to a base class StaticType)" );
-            const TypedHandleResult result = resolveTypedHandleResult( handle, findStaticType<T>() );
-            if ( result == TypedHandleResult::Success )
-                outHandle = TComponentHandle<T>( ComponentHandleCastKey{}, handle );
-            return result;
-        }
+        [[nodiscard]] TypedHandleResult makeTypedHandle( ComponentHandle handle, TComponentHandle<T>& outHandle ) const;
 
         /** @brief 핸들이 가리키는 오브젝트를 찾습니다. 파괴됐거나 삭제 대기면 nullptr 입니다. 락을 잡지 않습니다(`findGameObjectByID`). */
-        GameObject* resolveGameObject( GameObjectHandle handle ) const { return _store.resolveGameObject( handle ); }
+        GameObject* resolveGameObject( GameObjectHandle handle ) const;
 
         /** @brief 생성자로 받은 엔진 서비스 묶음입니다(빌린 포인터들). 씬 서비스가 만들어질 때 자기 칸을 읽습니다. */
         const SceneEngineServices& getSceneEngineServices() const { return _services; }
@@ -538,23 +462,17 @@ namespace sw
          * @brief 이 씬의 범위입니다 — 씬 서비스를 소유하고, 부모가 엔진 범위라 엔진 서비스도 타입으로 찾는다(`locateSubsystem<T>( &scope )`).
          * @details 언리얼 `UWorld` 의 서브시스템 컬렉션과 같은 자리입니다.
          */
-        const SubsystemScope& getSceneScope() const { return _sceneScope; }
+        const SubsystemScope& getSceneScope() const;
         /**
          * @brief 이 씬의 서비스 @p TService 입니다(`ISceneService.h`). 레지스트리의 서비스는 매니저마다 하나씩 늘 있습니다.
          * @details 언리얼 `UWorld::GetSubsystem<T>()` 와 같은 자리입니다. 코어는 서비스 타입을 모르고, 부르는 쪽이 그 타입의 헤더를 듭니다
          *          (`manager.getSubsystem<sw::ScenePhysics>()` · `getSubsystem<sw::SceneAudio>()` · `getSubsystem<SceneNavigation>()` · `getSubsystem<AnimationSystem>()`).
          */
         template <typename TService>
-        TService& getSubsystem()
-        {
-            return _sceneScope.get<TService>();
-        }
+        TService& getSubsystem();
         /** @brief 이 씬의 서비스 @p TService 입니다. */
         template <typename TService>
-        const TService& getSubsystem() const
-        {
-            return _sceneScope.get<TService>();
-        }
+        const TService& getSubsystem() const;
         /** @brief 이번 프레임의 게임 카메라를 정합니다(씬이 `update` 전에 부른다). 시야를 따라가는 서비스(오디오 리스너)가 씬을 몰라도 읽는다. */
         void setFrameCamera( const CameraComponent* pCamera ) { _pFrameCamera = pCamera; }
         /** @brief 이번 프레임의 게임 카메라입니다. 없으면 nullptr 입니다. */
@@ -579,25 +497,25 @@ namespace sw
          * @param pObj 삭제할 게임 오브젝트
          * @param bDestroyChildren 자식 오브젝트도 함께 지울지 여부
          */
-        void destroyGameObject( GameObject* pObj, bool bDestroyChildren = true ) { _store.destroyGameObject( pObj, bDestroyChildren ); }
+        void destroyGameObject( GameObject* pObj, bool bDestroyChildren = true );
 
         /** @brief Component 를 지연 삭제 큐에 넣습니다. 처리 때 핸들로 다시 찾으므로, 그 사이 다른 경로가 먼저 해제해도 안전합니다. */
-        void destroyComponent( Component* pComp ) { _store.destroyComponent( pComp ); }
+        void destroyComponent( Component* pComp );
 
         /**
          * @brief 목록에서 이미 뺀 컴포넌트를 해체합니다: `onUnregister`(정확히 한 번) → `onDestroy` → 소유자 끊기 → 소멸 → 풀 · 힙 반납.
          * @details 컴포넌트 해체는 이 함수 하나를 지납니다. 목록에서 빼는 일은 `GameObject::removeComponent` · `clearComponents` 가 합니다.
          */
-        void destroyComponentInstance( Component* pComp ) { _store.destroyComponentInstance( pComp ); }
+        void destroyComponentInstance( Component* pComp );
 
         /** @brief 지연 삭제 큐의 오브젝트 · 컴포넌트를 실제로 해제합니다. */
-        void processDeferredDestruction() { _store.processDeferredDestruction(); }
+        void processDeferredDestruction();
 
         /** @brief 등록·대기 목록을 모두 비웁니다. */
         void clear();
 
         /** @brief 이번 프레임에 추가된 GameObject 를 활성 목록에 합칩니다. */
-        void mergePendingAdds() { _store.mergePendingAdds(); }
+        void mergePendingAdds();
 
         /**
          * @brief 모듈이 내려가기 전에, 그 모듈이 정의한 컴포넌트 타입의 **살아 있는 인스턴스**를 모두 지웁니다.
@@ -608,12 +526,7 @@ namespace sw
          *          먼저 비웁니다(다음 프레임 끝에 돌 일을 앞당겨 돌린다 — 버리면 게임 쪽 일이 조용히 사라진다). 비우는 중에 다시 미룬 일도 빌 때까지 비웁니다(`flushUntilEmpty`).
          * @return 지운 컴포넌트 수입니다.
          */
-        uint32 destroyComponentsOfModule( string_view moduleName )
-        {
-            if ( _structuralChangeBuffer.isFrozen() == false )
-                _structuralChangeBuffer.flushUntilEmpty( *this );
-            return _store.destroyComponentsOfModule( moduleName );
-        }
+        uint32 destroyComponentsOfModule( string_view moduleName );
 
         /**
          * @brief 타입 이름(짧은 이름 · FQN · 옛 이름 별칭, `이름#번호` 꼬리는 무시)으로 컴포넌트를 만들어 붙입니다. 에디터 · 직렬화 전용이고, 게임은 addComponent<T> 를 씁니다.
@@ -642,23 +555,20 @@ namespace sw
 
     private:
         /** @brief @p component 의 타입이 @p pToType 이거나 그 파생이면 true 입니다. 타입 정보가 없으면(모듈이 내려감) false 입니다. */
-        static bool isComponentOfType( const Component& component, const TypeInfo* pToType )
-        {
-            return isTypeDerivedFrom( component.findCachedTypeInfo(), pToType );
-        }
+        static bool isComponentOfType( const Component& component, const TypeInfo* pToType );
         /** @brief `makeTypedHandle` 의 확인입니다(템플릿 밖에서 찾고 로그를 남깁니다). */
         [[nodiscard]] TypedHandleResult resolveTypedHandleResult( ComponentHandle handle, const TypeInfo* pToType ) const;
         /** @brief `resolveComponent<T>` 가 다른 타입의 칸을 찾았을 때 오류 로그와 Debug 단언을 남깁니다. */
         void reportTypedResolveMismatch( ComponentHandle handle, const Component& found, const TypeInfo* pToType ) const;
 
         /** @brief 플레이 중에 붙어 줄을 선 컴포넌트의 onBeginPlay 를 부릅니다(게임 스레드, 틱 밖). 도는 중에 선 것은 다음 번에 돕니다. */
-        void dispatchPendingBeginPlay() { _store.dispatchPendingBeginPlay(); }
+        void dispatchPendingBeginPlay();
         /** @brief 플레이 중에 붙은 컴포넌트를 시작 줄에 세웁니다(`GameObject::attachCreatedComponent`). 핸들로 들어 그새 해체돼도 안전합니다. */
-        void queueBeginPlay( ComponentHandle handle ) { _store.queueBeginPlay( handle ); }
+        void queueBeginPlay( ComponentHandle handle );
         /** @brief 타입별 컴포넌트 항목(풀과 버킷)을 얻거나 만듭니다(`GameObjectStore::getOrCreateComponentPoolEntry`). */
-        ComponentPoolEntry* getOrCreateComponentPoolEntry( const TypeInfo* pTypeInfo, size_t typeSize ) { return _store.getOrCreateComponentPoolEntry( pTypeInfo, typeSize ); }
+        ComponentPoolEntry* getOrCreateComponentPoolEntry( const TypeInfo* pTypeInfo, size_t typeSize );
         /** @brief 막 붙인 컴포넌트를 타입별 버킷에 넣습니다(`GameObject::attachCreatedComponent`). */
-        void registerTypedComponent( Component* pComp ) { _store.registerTypedComponent( pComp ); }
+        void registerTypedComponent( Component* pComp );
 
         /** @brief 등록 줄의 단계가 @p step 인 서비스를 씬 범위의 초기화 순서(의존 순서)로 갱신합니다. `update` 가 모든 단계 끝에 부른다 — 본문은 부르지 않는다. */
         void updateSceneServices( SceneFrameStep step, float32 deltaTime );
@@ -670,14 +580,10 @@ namespace sw
          */
         void validateSceneServiceJobs() const;
 
-        /** @brief 이 매니저가 만든 씬 서비스 하나입니다(소유는 씬 범위 — 갱신 단계를 알려고 등록 줄과 짝지어 든다). */
-        struct SceneServiceEntry
-        {
-            const SceneServiceRegistration* _pRegistration;
-            ISceneService*                  _pService;
-            ProfileScopeID                  _updateScopeID;   ///< `update` 구간(`GT.Scene.service.<이름>`) — 서비스 이름으로 만들 때 한 번 받는다
-            ProfileScopeID                  _completeScopeID; ///< `completeFrameJob` 구간(`GT.Scene.serviceJob.<이름>`)
-        };
+        /** @brief 이 매니저가 만든 씬 서비스 하나입니다(정의는 .cpp — `State` 가 든다). */
+        struct SceneServiceEntry;
+        /** @brief 오브젝트 저장소입니다(`GameObjectManager.inl` 의 순회가 지난다). */
+        const GameObjectStore& getObjectStore() const;
 
         /** @brief 붙은 프레임 시스템 하나입니다. */
         struct FrameSystemEntry
@@ -719,23 +625,16 @@ namespace sw
         /** @brief 틱 중 규칙(동결 플래그 · 구조 변경 큐 · 틱 뒤 큐 · 비우는 순서)입니다. 게임이 부르는 API 는 위의 전달 함수입니다. */
         StructuralChangeBuffer _structuralChangeBuffer;
         /**
-         * @brief 이 매니저만 쓰는 씬 부품(트랜스폼 계층 · 프리미티브 · 카메라 레지스트리 · 태그 색인 · 틱 스케줄러)입니다 — .cpp 에만 형식이 보인다(W-S4 허브 해체).
+         * @brief 씬 부품(트랜스폼 계층 · 프리미티브 · 카메라 · 컴포넌트 레지스트리 · 태그 색인 · 틱 스케줄러 · 오브젝트 저장소 · 씬 범위와 서비스 목록)입니다 — .cpp 에만 형식이 보인다(W-S4 허브 해체).
          * @details 매니저 헤더를 포함하는 TU 400 여 개가 이 부품의 헤더를 다시 컴파일하지 않게 한다(언리얼 `UWorld` 가 서브시스템을 앞 선언 포인터로 드는 자리).
-         *          `_store` 가 틱 스케줄러를 참조로 받으므로 `_store` 보다 먼저 선언한다.
+         *          템플릿이 부품을 보는 곳은 `GameObjectManager.inl` 이고 접근자(`getObjectStore` · `getComponentRegistry` · `getSceneScope`)를 지난다.
+         *          프리미티브 · 카메라 레지스트리는 2026-10-21 판정(레지스트리 헤더가 Core 만 포함해 빼도 이득이 없다)과 달리 여기로 옮겼다 — 카메라 쪽이 흔들림 채널 · 구독 ·
+         *          등록 목록을 끌어와 포함 TU 마다 다시 읽혔고, 접근은 패스마다 참조 한 번이라 간접 참조 비용이 프레임 경로에 없다. 저장소의 찾기(`findGameObjectByID` ·
+         *          `resolveComponent`)는 호출 하나가 더 붙는다 — 언리얼 `UWorld` 의 찾기도 .cpp 몸체다.
+         *          소멸은 선언의 역순이라 씬 범위(서비스) → 저장소 → 레지스트리 → 틱 스케줄러 순서가 옮기기 전과 같다.
          */
         struct State;
         unique_ptr<State> _pState;
-        // 컴포넌트 레지스트리는 값 멤버로 둔다 — 헤더의 템플릿(`forEachActiveRegistered` 의 `View<T>`)이 형식을 본다. 프리미티브 · 카메라 레지스트리는
-        // 2026-10-21 판정(레지스트리 헤더가 Core 만 포함해 빼도 이득이 없다)과 달리 `State` 로 옮겼다 — 카메라 쪽이 흔들림 채널 · 구독 · 등록 목록을
-        // 끌어와 포함 TU 마다 다시 읽혔고, 접근은 패스마다 참조 한 번이라 간접 참조 비용이 프레임 경로에 없다(W-S4).
-        /** @brief 타입별 컴포넌트 레지스트리입니다(빛 포함). */
-        ComponentRegistry _componentRegistry;
-        /** @brief 오브젝트 저장소(생성 · 이름 · id 표 · 조회 · 지연 파괴 · 컴포넌트 풀 · 시작 줄)입니다. 게임이 부르는 API 는 위의 전달 함수입니다. */
-        GameObjectStore _store;
-        /** @brief 씬 범위입니다 — 레지스트리(`SceneServiceRegistry`)에서 만든 기능 서비스(물리 · 오디오 · 내비게이션 …)를 소유한다. 부모는 엔진 범위. */
-        SubsystemScope _sceneScope;
-        /** @brief 씬 서비스를 범위의 초기화 순서로 든 목록입니다. 코어는 타입을 모르고 단계마다 `update` 만 부른다. */
-        vector<SceneServiceEntry> _listSceneService;
         /** @brief 이번 프레임의 게임 카메라입니다(`setFrameCamera`, 빌림). 씬이 갱신 전에 채운다. */
         const CameraComponent* _pFrameCamera;
         /** @brief `FrameSystems` 단계가 붙인 순서대로 부르는 시스템입니다. 오브젝트보다 먼저 비웁니다(시스템이 컴포넌트를 가리킬 수 있다). */

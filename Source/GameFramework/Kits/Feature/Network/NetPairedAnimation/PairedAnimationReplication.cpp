@@ -12,7 +12,7 @@
 #include "Engine/Character/PairedAnimation/PairedAnimationDef.h"
 #include "Engine/Character/PairedAnimation/PairedAnimationSystem.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Service/NetObjectTable.h"
 
 #include <algorithm>

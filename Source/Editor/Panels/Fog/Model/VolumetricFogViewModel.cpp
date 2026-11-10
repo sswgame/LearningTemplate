@@ -12,7 +12,7 @@
 
 #include "Engine/Environment/Fog/FogComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Reflection/EnumName.h"
 
 namespace sw::editor

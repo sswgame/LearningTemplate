@@ -7,7 +7,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Reflection/Reflection.h"
 
 namespace sw

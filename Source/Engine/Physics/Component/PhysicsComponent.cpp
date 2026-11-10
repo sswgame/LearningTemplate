@@ -5,7 +5,7 @@
 #include "Core/Foundation/EnumUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Service/SceneSpatialGrid.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"

@@ -9,7 +9,7 @@
 #include "Core/Serialization/BitStream.h"
 
 #include "Engine/Destruction/Fracture/FractureComponentBase.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Reflection/ReflectionCast.h"
 
 namespace sw

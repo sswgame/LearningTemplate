@@ -16,7 +16,7 @@
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 
 namespace sw::editor
 {

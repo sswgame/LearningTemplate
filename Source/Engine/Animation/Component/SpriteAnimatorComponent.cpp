@@ -10,7 +10,7 @@
 #include "Engine/Animation/Notify/AnimationNotifyListener.h"
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Visual/2D/SpriteComponent.h"
 
 namespace sw
