@@ -31,7 +31,7 @@ namespace sw
 
     SceneSpatialGrid::~SceneSpatialGrid()
     {
-        waitJob();
+        waitBackBufferRebuild();
     }
 
     void SceneSpatialGrid::projectToPlane( const SpatialGridLayerDesc& layer, const float3& position, float32& outPlaneX, float32& outPlaneY )
@@ -71,7 +71,7 @@ namespace sw
         return found._generation == entry.generation() && found._pKey != nullptr ? &found : nullptr;
     }
 
-    SceneSpatialGrid::Change SceneSpatialGrid::makeInsert( uint32 entryIndex, uint32& outVersion ) const
+    SceneSpatialGrid::Change SceneSpatialGrid::makeInsertChange( uint32 entryIndex, uint32& outVersion ) const
     {
         const Entry& entry = _listEntry[entryIndex];
         // 게임 스레드에서 읽는다 — 더티면 여기서 합성한다(`getWorldTransformVersion` · `getWorldPosition`).
@@ -91,7 +91,7 @@ namespace sw
 
     SlotHandle SceneSpatialGrid::add( const SpatialGridLayerDesc& layer, Component& key, const SceneComponent& source, float32 extent )
     {
-        waitJob();
+        waitBackBufferRebuild();
         SW_ASSERT( extent >= 0.0f );
         const uint32 layerIndex = findOrAddLayer( layer );
         uint32       entryIndex{ 0 };
@@ -126,7 +126,7 @@ namespace sw
         else if ( addedLayer._arrBuiltCell[_frontIndex] > 0.0f )
         {
             uint32       version{ 0 };
-            const Change change = makeInsert( entryIndex, version );
+            const Change change = makeInsertChange( entryIndex, version );
             addedLayer._arrGrid[_frontIndex].update( change._handle, change._minX, change._minY, change._maxX, change._maxY );
             entry._arrSeenVersion[_frontIndex] = version;
         }
@@ -135,7 +135,7 @@ namespace sw
 
     void SceneSpatialGrid::remove( SlotHandle& inoutEntry )
     {
-        waitJob();
+        waitBackBufferRebuild();
         Entry* pEntry = resolve( inoutEntry );
         inoutEntry    = SlotHandle{};
         if ( pEntry == nullptr )
@@ -156,7 +156,7 @@ namespace sw
 
     void SceneSpatialGrid::setExtent( SlotHandle entry, float32 extent )
     {
-        waitJob();
+        waitBackBufferRebuild();
         SW_ASSERT( extent >= 0.0f );
         Entry* pEntry = resolve( entry );
         SW_ASSERT( pEntry != nullptr );
@@ -177,23 +177,23 @@ namespace sw
         if ( layer._arrBuiltCell[_frontIndex] > 0.0f )
         {
             uint32       version{ 0 };
-            const Change change = makeInsert( entry.index(), version );
+            const Change change = makeInsertChange( entry.index(), version );
             layer._arrGrid[_frontIndex].update( change._handle, change._minX, change._minY, change._maxX, change._maxY );
             pEntry->_arrSeenVersion[_frontIndex] = version;
         }
     }
 
-    void SceneSpatialGrid::addUser( const SpatialGridLayerDesc& layer )
+    void SceneSpatialGrid::addLayerReader( const SpatialGridLayerDesc& layer )
     {
-        waitJob();
+        waitBackBufferRebuild();
         const uint32 layerIndex = findOrAddLayer( layer );
         ++_listLayer[layerIndex]._userCount;
         refreshLayer( layerIndex );
     }
 
-    void SceneSpatialGrid::removeUser( const SpatialGridLayerDesc& layer )
+    void SceneSpatialGrid::removeLayerReader( const SpatialGridLayerDesc& layer )
     {
-        waitJob();
+        waitBackBufferRebuild();
         const uint32 layerIndex = findOrAddLayer( layer );
         SW_ASSERT( _listLayer[layerIndex]._userCount > 0 );
         if ( _listLayer[layerIndex]._userCount == 0 )
@@ -204,7 +204,7 @@ namespace sw
 
     void SceneSpatialGrid::requireCellSize( const SpatialGridLayerDesc& layer, float32 cellSize )
     {
-        waitJob();
+        waitBackBufferRebuild();
         const uint32 layerIndex = findOrAddLayer( layer );
         if ( cellSize <= _listLayer[layerIndex]._cellSize )
             return;
@@ -236,7 +236,7 @@ namespace sw
         for ( const uint32 entryIndex : layer._listEntryIndex )
         {
             uint32       version{ 0 };
-            const Change change = makeInsert( entryIndex, version );
+            const Change change = makeInsertChange( entryIndex, version );
             layer._arrGrid[front].insert( change._handle, change._minX, change._minY, change._maxX, change._maxY );
             _listEntry[entryIndex]._arrSeenVersion[front] = version;
         }
@@ -272,7 +272,7 @@ namespace sw
     void SceneSpatialGrid::update( float32 deltaTime )
     {
         (void)deltaTime;
-        waitJob();
+        waitBackBufferRebuild();
         const uint8 back = static_cast<uint8>( 1u - _frontIndex );
         _listChange.clear();
         for ( const uint32 entryIndex : _listRemovedEntry )
@@ -299,7 +299,7 @@ namespace sw
                 if ( bRebuild == false && entry._arrSeenVersion[back] == version )
                     continue;
                 uint32 seenVersion{ 0 };
-                _listChange.push_back( makeInsert( entryIndex, seenVersion ) );
+                _listChange.push_back( makeInsertChange( entryIndex, seenVersion ) );
                 entry._arrSeenVersion[back] = seenVersion;
             }
             layer._arrBuiltCell[back] = layer._cellSize;
@@ -307,17 +307,17 @@ namespace sw
         _bJobLaunched = SW_TRUE;
         if ( engine::areEngineServicesBound() == false )
         {
-            runBackJob(); // 워커가 없으면(테스트 · 도구) 지금 맞춘다 — 앞뒤를 바꾸는 것은 그래도 `completeFrameJob` 이다
+            rebuildBackBuffer(); // 워커가 없으면(테스트 · 도구) 지금 맞춘다 — 앞뒤를 바꾸는 것은 그래도 `completeFrameJob` 이다
             return;
         }
         TaskManager& taskManager = engine::getSubsystem<TaskManager>();
-        TaskHandle   task        = taskManager.emplaceTask( "SceneSpatialGrid", SW_DELEGATE_METHOD( TaskDelegate, &SceneSpatialGrid::runBackJob, this ) );
+        TaskHandle   task        = taskManager.emplaceTask( "SceneSpatialGrid", SW_DELEGATE_METHOD( TaskDelegate, &SceneSpatialGrid::rebuildBackBuffer, this ) );
         taskManager.addToStage( _jobStage, task, "SceneSpatialGrid" );
         task.submit();
         _bJobOnWorkers = SW_TRUE;
     }
 
-    void SceneSpatialGrid::runBackJob()
+    void SceneSpatialGrid::rebuildBackBuffer()
     {
         const uint8 back = static_cast<uint8>( 1u - _frontIndex );
         for ( Layer& layer : _listLayer )
@@ -335,7 +335,7 @@ namespace sw
         }
     }
 
-    void SceneSpatialGrid::waitJob()
+    void SceneSpatialGrid::waitBackBufferRebuild()
     {
         if ( _bJobLaunched == SW_FALSE )
             return;
@@ -357,11 +357,11 @@ namespace sw
 
     void SceneSpatialGrid::completeFrameJob()
     {
-        waitJob();
+        waitBackBufferRebuild();
     }
 
     void SceneSpatialGrid::onSceneCleared()
     {
-        waitJob();
+        waitBackBufferRebuild();
     }
 } // namespace sw

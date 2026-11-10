@@ -12,6 +12,12 @@
     "Work": "Job"
   },
   "_bannedNames": {
+    "receiveBeforeMode": "detectProtocol — 첫 바이트로 WebSocket · 원시 TCP 를 가른다. '모드 전에 받기' 는 무엇을 하는지 말하지 않았다(2026-11-11)",
+    "addUser": "addLayerReader — 공간 격자 층을 읽는 쪽을 센다. '사용자' 는 무엇의 사용자인지 말하지 않았다(2026-11-11)",
+    "removeUser": "removeLayerReader — addLayerReader 의 짝(2026-11-11)",
+    "runBackJob": "rebuildBackBuffer — 워커가 뒤 버퍼를 다시 짓는다. '뒤 일' 은 무엇을 하는지 말하지 않았다(2026-11-11)",
+    "waitJob": "waitBackBufferRebuild — rebuildBackBuffer 를 기다린다(2026-11-11)",
+    "makeInsert": "makeInsertChange — 넣기 변경 하나를 만든다(2026-11-11)",
     "RHIBlendTargetState": "BlendTargetState — 렌더 상태는 RHI 밖의 저작 어휘라 RHI 머리를 떼었다(유니티 `CullMode` · `BlendOp` 같은 엔진 어휘, 2026-11-11)",
     "RHIFixedRenderState": "FixedRenderState — 렌더 상태는 RHI 밖의 저작 어휘라 RHI 머리를 떼었다(유니티 `CullMode` · `BlendOp` 같은 엔진 어휘, 2026-11-11)",
     "RHIRenderStateOverride": "RenderStateOverride — 렌더 상태는 RHI 밖의 저작 어휘라 RHI 머리를 떼었다(유니티 `CullMode` · `BlendOp` 같은 엔진 어휘, 2026-11-11)",

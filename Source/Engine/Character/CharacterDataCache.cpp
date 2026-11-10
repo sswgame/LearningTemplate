@@ -12,7 +12,6 @@
 #include "Engine/Character/Fit/FitTables.h"
 #include "Engine/Character/PairedAnimation/PairedAnimationDef.h"
 #include "Engine/Character/Socket/SocketSet.h"
-#include "Engine/Physics/Asset/PhysicsAsset.h"
 
 namespace sw
 {
@@ -52,7 +51,6 @@ namespace sw
     /** 돌고 있는 세션이 옛 에셋의 역할 인덱스를 읽으므로 제자리에서 바꾸지 않고 떼어 낸다. */
     SW_SHARED_ASSET_CACHE( PairedAnimationDef, PairedAnimationDef,
                            PairedAnimationDef::kAssetType.withLoader( AssetTypeLoader::of<PairedAnimationDef>( MemoryTag::Animation, SharedAssetReloadMode::Detach ) ) );
-    SW_SHARED_ASSET_CACHE( PhysicsAsset, PhysicsAsset, PhysicsAsset::kAssetType.withLoader( AssetTypeLoader::of<PhysicsAsset>( MemoryTag::Physics ) ) );
     SW_SHARED_ASSET_CACHE( FitTables, FitTables, FitTables::kAssetType.withLoader( AssetTypeLoader::with<FitTables, &CharacterDataCacheInternal::loadFitTables>( MemoryTag::Animation ) ) );
     SW_SHARED_ASSET_CACHE( FitPartDef, FitPartDef, FitPartDef::kAssetType.withLoader( AssetTypeLoader::of<FitPartDef>( MemoryTag::Animation ) ) );
 } // namespace sw

@@ -42,9 +42,9 @@ namespace sw
         ZoneOccupantIndex() = delete;
 
         /** @brief 볼륨 하나를 두 층의 사용자로 셉니다(게임 스레드, 틱 밖). */
-        static void addUser( GameObjectManager& manager );
+        static void addLayerReader( GameObjectManager& manager );
         /** @brief 볼륨 하나를 뺍니다. */
-        static void removeUser( GameObjectManager& manager );
+        static void removeLayerReader( GameObjectManager& manager );
 
         /**
          * @brief 수평(XZ) 사각형 [@p minX, @p maxX] × [@p minZ, @p maxZ] 에 걸린 후보를 후보 순서로 @p outListCandidate 에 담습니다(먼저 비운다).

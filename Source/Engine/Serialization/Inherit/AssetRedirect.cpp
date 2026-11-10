@@ -210,15 +210,12 @@ namespace sw
             listKept.push_back( Internal::Entry{ from, to } );
             listEntry = std::move( listKept );
         }
-        string text = string( "<" ) + kRootElement + ">
-                                                     ";
-                      for ( const Internal::Entry& entry : listEntry ) text += string( "	<" ) + Internal::kRedirectElement + " from=\"" + entry._from + "\" to=\"" + entry._to + "\" />
-                                                                                                                                                                                    ";
-                                                                               text += string( "</" ) + kRootElement + ">
-                                                                                                                       ";
-                                                                                       // 쓸 글을 런타임과 같은 규칙으로 다시 읽는다 — 맞춤 꼴이 아닌 id · 자기 자신으로 · 순환이면 쓰지 않는다.
-                                                                                       unordered_map<string, string>
-                                                                                           mapResult;
+        string text = string( "<" ) + kRootElement + ">\n";
+        for ( const Internal::Entry& entry : listEntry )
+            text += string( "\t<" ) + Internal::kRedirectElement + " from=\"" + entry._from + "\" to=\"" + entry._to + "\" />\n";
+        text += string( "</" ) + kRootElement + ">\n";
+        // 쓸 글을 런타임과 같은 규칙으로 다시 읽는다 — 맞춤 꼴이 아닌 id · 자기 자신으로 · 순환이면 쓰지 않는다.
+        unordered_map<string, string> mapResult;
         if ( Internal::parseInto( text, sourceName, mapResult ) == false || Internal::collapseChains( mapResult ) == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "the asset redirect table would not load after the move", sourceName } );
         return text;

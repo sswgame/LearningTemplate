@@ -77,9 +77,9 @@ namespace sw
         /** @brief 항목의 반 크기를 바꿉니다(정의가 바뀐 대상). */
         void setExtent( SlotHandle entry, float32 extent );
         /** @brief @p layer 의 사용자를 하나 더합니다. 최소 사용자 수에 닿으면 격자를 짓습니다. */
-        void addUser( const SpatialGridLayerDesc& layer );
+        void addLayerReader( const SpatialGridLayerDesc& layer );
         /** @brief @p layer 의 사용자를 하나 뺍니다. 최소 사용자 수 아래로 내려가면 격자를 놓습니다. */
-        void removeUser( const SpatialGridLayerDesc& layer );
+        void removeLayerReader( const SpatialGridLayerDesc& layer );
         /** @brief @p layer 의 셀을 적어도 @p cellSize 로 키웁니다. 이미 크거나 같으면 할 일이 없습니다. */
         void requireCellSize( const SpatialGridLayerDesc& layer, float32 cellSize );
 
@@ -145,12 +145,12 @@ namespace sw
         uint32       findOrAddLayer( const SpatialGridLayerDesc& layer );
         const Layer* findLayer( const SpatialGridLayerDesc& layer ) const;
         Entry*       resolve( SlotHandle entry );
-        Change       makeInsert( uint32 entryIndex, uint32& outVersion ) const;
+        Change       makeInsertChange( uint32 entryIndex, uint32& outVersion ) const;
         /** @brief 층의 셀 · 사용자가 바뀐 뒤 앞 버퍼를 맞춥니다 — 맞출 때면 지금 셀로 다시 짓고, 아니면 두 버퍼를 놓습니다. */
         void refreshLayer( uint32 layerIndex );
         /** @brief 넘긴 일입니다(워커). 뒤 버퍼에만 쓴다. */
-        void runBackJob();
-        void waitJob();
+        void rebuildBackBuffer();
+        void waitBackBufferRebuild();
 
     private:
         vector<Entry>   _listEntry;

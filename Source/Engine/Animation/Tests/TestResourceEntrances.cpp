@@ -9,6 +9,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Animation/AnimationAssetCache.h"
 #include "Engine/Animation/Facial/LipSync.h"
 #include "Engine/Animation/Facial/LiveLinkFace.h"
 #include "Engine/Animation/Retarget/RetargetProfile.h"

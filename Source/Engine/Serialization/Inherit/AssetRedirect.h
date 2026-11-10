@@ -27,13 +27,10 @@ namespace sw
         /** @brief 도메인 뿌리 아래 표 파일 이름입니다(`engine/redirects.xml` · `game/<팩>/redirects.xml`). */
         static constexpr const utf8* kFileName = "redirects.xml";
         /** @brief 줄이 없는 표 글입니다 — 도메인에 아직 표 파일이 없을 때 `addToXMLText` 에 넘긴다. */
-        static constexpr const utf8* kEmptyTableText = "<Redirects>
-                                                     < / Redirects >
-                                                       ";
+        static constexpr const utf8* kEmptyTableText = "<Redirects>\n</Redirects>\n";
 
-                                                       /** @brief 리소스 id @p assetID 가 속한 도메인의 표 id(`<도메인>/redirects.xml`)입니다. 도메인은 첫 마디이고 `game/<팩>` · `dlc/<묶음>` 은 두 마디다. */
-                                                       static string
-                                                       makeTableID( string_view assetID );
+        /** @brief 리소스 id @p assetID 가 속한 도메인의 표 id(`<도메인>/redirects.xml`)입니다. 도메인은 첫 마디이고 `game/<팩>` · `dlc/<묶음>` 은 두 마디다. */
+        static string makeTableID( string_view assetID );
         /** @brief @p assetID 가 표 파일이면 true 입니다 — 표는 옛 id 를 적는 글이라 참조 검사 · 옮기기의 참조 고침이 훑지 않는다. */
         static bool isTable( string_view assetID );
         /**

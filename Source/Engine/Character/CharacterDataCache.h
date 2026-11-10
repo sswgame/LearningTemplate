@@ -14,7 +14,6 @@
 
 namespace sw
 {
-    struct PhysicsAsset;
 
     class BodyShapeSet;
     class FitPartDef;
@@ -30,8 +29,6 @@ namespace sw
      *          옛 객체를 쥔다. 쓰는 쪽(`PairedAnimationComponent`)은 다시 읽은 횟수가 바뀌면 다음 시작 전에 다시 `acquire` 한다.
      */
     extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<PairedAnimationDef>;
-    /** @brief 물리 에셋을 나눠 줍니다("PhysicsAsset"). 제자리에서 다시 읽고, 래그돌은 다시 읽은 횟수가 바뀌면 다시 짓습니다. */
-    extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<PhysicsAsset>;
     /**
      * @brief 피팅 표(`*.fit.xml`)를 엔진 기본 연산 레지스트리로 읽어 나눠 줍니다("FitTables"). 제자리에서 다시 읽고, 외형 컴포넌트는 다시 읽은 횟수가 바뀌면 다시 조립합니다.
      * @details 사용자 연산을 등록한 풀이기의 표는 이 캐시가 아니라 그 풀이기의 레지스트리로 직접 읽는다(캐시는 경로만으로 나눠 주므로 레지스트리를 고를 수 없다).

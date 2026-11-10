@@ -11,18 +11,18 @@
 
 namespace sw
 {
-    void ZoneOccupantIndex::addUser( GameObjectManager& manager )
+    void ZoneOccupantIndex::addLayerReader( GameObjectManager& manager )
     {
         SceneSpatialGrid& grid = manager.getSubsystem<SceneSpatialGrid>();
-        grid.addUser( PhysicsComponent::getCharacterSpatialLayer() );
-        grid.addUser( PhysicsComponent::getBodySpatialLayer() );
+        grid.addLayerReader( PhysicsComponent::getCharacterSpatialLayer() );
+        grid.addLayerReader( PhysicsComponent::getBodySpatialLayer() );
     }
 
-    void ZoneOccupantIndex::removeUser( GameObjectManager& manager )
+    void ZoneOccupantIndex::removeLayerReader( GameObjectManager& manager )
     {
         SceneSpatialGrid& grid = manager.getSubsystem<SceneSpatialGrid>();
-        grid.removeUser( PhysicsComponent::getCharacterSpatialLayer() );
-        grid.removeUser( PhysicsComponent::getBodySpatialLayer() );
+        grid.removeLayerReader( PhysicsComponent::getCharacterSpatialLayer() );
+        grid.removeLayerReader( PhysicsComponent::getBodySpatialLayer() );
     }
 
     void ZoneOccupantIndex::queryCandidates( GameObjectManager& manager, float32 cellSize, float32 minX, float32 minZ, float32 maxX, float32 maxZ, vector<Component*>& inoutListKey,

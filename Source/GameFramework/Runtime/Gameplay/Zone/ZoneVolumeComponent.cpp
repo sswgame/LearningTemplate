@@ -59,14 +59,14 @@ namespace sw
     {
         Component::onRegister( manager );
         manager.getComponentRegistry().add<ZoneVolumeComponent>( this );
-        ZoneOccupantIndex::addUser( manager );
+        ZoneOccupantIndex::addLayerReader( manager );
         (void)ZoneSystem::ensureFor( manager );
     }
 
     void ZoneVolumeComponent::onUnregister( GameObjectManager& manager )
     {
         manager.getComponentRegistry().remove<ZoneVolumeComponent>( this );
-        ZoneOccupantIndex::removeUser( manager );
+        ZoneOccupantIndex::removeLayerReader( manager );
         ZoneSystem::releaseIfUnused( manager );
         Component::onUnregister( manager );
     }

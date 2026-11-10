@@ -54,7 +54,7 @@ SW_TEST_CASE( SceneSpatialGridTest, IncrementalUpdateTouchesOnlyMovedEntries )
     (void)grid.add( kTestLayer, *pB, *pB, 0.5f );
     (void)grid.add( kTestLayer, *pC, *pC, 0.5f );
     SW_EXPECT_FALSE( grid.isActive( kTestLayer ) ); // 사용자가 없다
-    grid.addUser( kTestLayer );
+    grid.addLayerReader( kTestLayer );
     grid.requireCellSize( kTestLayer, 4.0f );
     SW_REQUIRE_TRUE( grid.isActive( kTestLayer ) ); // 앞 버퍼는 바로 짓는다
 
@@ -85,7 +85,7 @@ SW_TEST_CASE( SceneSpatialGridTest, QueriesReadFrontBufferUntilJobCompletes )
     SceneSpatialGrid  grid{ manager };
     SceneComponent*   pMover = makePoint( manager, "Mover", float3{ 0.0f, 0.0f, 0.0f } );
     (void)grid.add( kTestLayer, *pMover, *pMover, 0.0f );
-    grid.addUser( kTestLayer );
+    grid.addLayerReader( kTestLayer );
     grid.requireCellSize( kTestLayer, 2.0f );
     (void)runGridFrame( grid );
 
@@ -111,7 +111,7 @@ SW_TEST_CASE( SceneSpatialGridTest, AddAndRemoveAreVisibleImmediately )
     SceneSpatialGrid  grid{ manager };
     SceneComponent*   pFirst  = makePoint( manager, "First", float3{ 0.0f, 0.0f, 0.0f } );
     SceneComponent*   pSecond = makePoint( manager, "Second", float3{ 0.0f, 0.0f, 0.0f } );
-    grid.addUser( kTestLayer );
+    grid.addLayerReader( kTestLayer );
     grid.requireCellSize( kTestLayer, 2.0f );
     SlotHandle         first = grid.add( kTestLayer, *pFirst, *pFirst, 0.0f );
     vector<Component*> listKey;

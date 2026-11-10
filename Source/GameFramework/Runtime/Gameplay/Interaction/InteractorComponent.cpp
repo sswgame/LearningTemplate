@@ -145,7 +145,7 @@ namespace sw
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager != nullptr )
         {
-            pManager->getSubsystem<SceneSpatialGrid>().addUser( InteractableComponent::getSpatialLayer( _space ) );
+            pManager->getSubsystem<SceneSpatialGrid>().addLayerReader( InteractableComponent::getSpatialLayer( _space ) );
             _bSpatialIndexUser = SW_TRUE;
         }
     }
@@ -157,7 +157,7 @@ namespace sw
         if ( pManager != nullptr )
             setFocus( *pManager, GameObjectHandle{}, TComponentHandle<InteractableComponent>{} );
         if ( pManager != nullptr && _bSpatialIndexUser == SW_TRUE )
-            pManager->getSubsystem<SceneSpatialGrid>().removeUser( InteractableComponent::getSpatialLayer( _space ) );
+            pManager->getSubsystem<SceneSpatialGrid>().removeLayerReader( InteractableComponent::getSpatialLayer( _space ) );
         _bSpatialIndexUser = SW_FALSE;
         Component::onEndPlay();
     }
@@ -172,8 +172,8 @@ namespace sw
         if ( pManager != nullptr && _bSpatialIndexUser == SW_TRUE )
         {
             SceneSpatialGrid& grid = pManager->getSubsystem<SceneSpatialGrid>();
-            grid.addUser( InteractableComponent::getSpatialLayer( space ) );
-            grid.removeUser( InteractableComponent::getSpatialLayer( _space ) );
+            grid.addLayerReader( InteractableComponent::getSpatialLayer( space ) );
+            grid.removeLayerReader( InteractableComponent::getSpatialLayer( _space ) );
         }
         _space = space;
     }

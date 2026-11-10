@@ -114,7 +114,7 @@ namespace
         {
             const uint8   arrMask[4] = { 0x37, 0xFA, 0x21, 0x3D };
             vector<uint8> frame;
-            frame.push_back( static_cast<uint8>( ( bFinal ? 0x80u : 0u ) | static_cast<uint8>( opcode ) ) );
+            frame.push_back( static_cast<uint8>( ( bFinal ? 0x80u : 0u ) | static_cast<uint8>( kind ) ) );
             SW_ASSERT( payload.size() < 126 );
             frame.push_back( static_cast<uint8>( 0x80u | payload.size() ) );
             frame.insert( frame.end(), arrMask, arrMask + 4 );

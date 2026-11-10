@@ -2,6 +2,9 @@
 
 #include "Engine/Physics/Asset/PhysicsAsset.h"
 
+#include "Core/Memory/Memory.h"
+
+#include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Serialization/Format/ReflectedXMLFile.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
@@ -126,4 +129,6 @@ namespace sw
         }
         return nullopt;
     }
+
+    SW_SHARED_ASSET_CACHE( PhysicsAsset, PhysicsAsset, PhysicsAsset::kAssetType.withLoader( AssetTypeLoader::of<PhysicsAsset>( MemoryTag::Physics ) ) );
 } // namespace sw

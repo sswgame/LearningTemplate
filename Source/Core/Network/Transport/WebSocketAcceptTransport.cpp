@@ -122,12 +122,12 @@ namespace sw
             case ConnectionMode::Sniff:
             case ConnectionMode::Handshake:
                 connection->_handshake.insert( connection->_handshake.end(), pData, pData + size );
-                receiveBeforeMode( handle, *connection );
+                detectProtocol( handle, *connection );
                 return;
         }
     }
 
-    void WebSocketAcceptTransport::receiveBeforeMode( StreamConnectionHandle handle, Connection& connection )
+    void WebSocketAcceptTransport::detectProtocol( StreamConnectionHandle handle, Connection& connection )
     {
         const string_view received{ reinterpret_cast<const utf8*>( connection._handshake.data() ), connection._handshake.size() };
         const string_view prefix{ WebSocketProtocol::kRequestPrefix };

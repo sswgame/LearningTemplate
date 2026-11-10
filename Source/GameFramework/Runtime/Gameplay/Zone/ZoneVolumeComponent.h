@@ -52,7 +52,7 @@ namespace sw
         ZoneVolumeComponent();
         ~ZoneVolumeComponent() override = default;
 
-        /** @brief 씬의 컴포넌트 레지스트리에 오르고 씬 공간 색인의 물리 층 사용자로 세며(`ZoneOccupantIndex::addUser`) 지역 프레임 시스템(`ZoneSystem`)을 붙입니다. */
+        /** @brief 씬의 컴포넌트 레지스트리에 오르고 씬 공간 색인의 물리 층 사용자로 세며(`ZoneOccupantIndex::addLayerReader`) 지역 프레임 시스템(`ZoneSystem`)을 붙입니다. */
         void onRegister( GameObjectManager& manager ) override;
         /** @brief 레지스트리에서 내리고, 마지막 볼륨이면 격자를, 마지막 지역 컴포넌트면 시스템을 뗍니다. */
         void onUnregister( GameObjectManager& manager ) override;

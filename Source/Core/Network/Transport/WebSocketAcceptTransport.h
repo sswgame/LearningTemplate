@@ -82,7 +82,7 @@ namespace sw
 
         shared_ptr<Connection> findConnection( StreamConnectionHandle handle ) const;
         /** @brief 첫 바이트를 모아 갈래를 정합니다. 업그레이드가 끝나면 머리 뒤에 붙어 온 바이트를 프레임 해독기에 넘깁니다. */
-        void receiveBeforeMode( StreamConnectionHandle handle, Connection& connection );
+        void detectProtocol( StreamConnectionHandle handle, Connection& connection );
         void receiveFrames( StreamConnectionHandle handle, Connection& connection, const uint8* pData, int32 size );
         /** @brief 프레임 하나를 싸서 보냅니다 — `_sendMutex` 를 쥔 채 부른다. */
         StreamSendResult sendFrameLocked( StreamConnectionHandle handle, WebSocketFrameKind kind, const uint8* pData, int32 size );

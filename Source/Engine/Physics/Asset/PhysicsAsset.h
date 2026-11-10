@@ -30,6 +30,7 @@
 #include "Core/Name/hashed_string.h"
 #include "Core/Path/AbsolutePath.h"
 
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
@@ -175,4 +176,10 @@ namespace sw
         /** @brief 리소스 경로의 파일을 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<PhysicsAsset>::acquire` 로 한 벌을 쥔다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
     };
+
+    /**
+     * @brief 물리 에셋을 나눠 줍니다("PhysicsAsset"). 제자리에서 다시 읽고, 래그돌은 다시 읽은 횟수가 바뀌면 다시 짓습니다.
+     * @details 캐시는 에셋과 같은 물리 층에 둔다 — 캐릭터 층(`CharacterDataCache`)에 두면 물리 · 애니메이션 층 코드가 이 선언을 볼 수 없다.
+     */
+    extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<PhysicsAsset>;
 } // namespace sw
