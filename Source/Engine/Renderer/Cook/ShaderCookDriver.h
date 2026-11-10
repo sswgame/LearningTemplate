@@ -63,6 +63,11 @@ namespace sw
          * @details 굽는 것(`collectAllRequests`)과 판정하는 것이 같은 목록을 본다 — 설정의 도메인을 따로 훑으면 굽지 않는 폴더(에디터가 실행 때 컴파일하는 `editor/shaders`)를 "쿠킹되지 않음" 으로 잡는다.
          */
         static void verifyCookedShaders( string_view cookedDir, ShaderTargetFormat targetFormat, vector<string>& outListProblem );
+        /**
+         * @brief 이 리소스 트리의 요청이 @p targetFormat 으로 만드는 바이너리의 스테이징 기준 id(`engine/shaders/bin/dx12/<파일>`, `FileUtil::normalizePath`)를 모읍니다.
+         * @details 팩 쿠커가 "요청했는데 팩에서 버리는" 바이너리를 경고로 가른다(`PackCookParams::_setRequestedShaderBinary`). 요청을 모으지 못하면 false 입니다.
+         */
+        [[nodiscard]] static bool collectRequestedBinaries( ShaderTargetFormat targetFormat, vector<string>& outListBinaryID );
 
         /**
          * @brief 요청 목록을 모두 쿠킹하고, 리플렉션 매니페스트를 쓰고, 매니페스트에 없는 옛 바이너리를 지우고, 쿠킹 스탬프를 씁니다(`cookAllShaders` 의 본체).

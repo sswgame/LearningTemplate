@@ -69,6 +69,21 @@ class SmokeResult:
     listExpectedError: list[str] = field(default_factory=list)
 
 
+# 빌드의 쿠킹 단계(CookAssets — cmake/Engine/AssetAndToolTargets.cmake 의 `-log-file`)가 남기는 로그 이름이다. 두 곳이 같은 이름을 쓴다.
+kCookLogName = "Cook.log"
+
+
+def findCookLogPath(projectRoot: Path, preset: str) -> Path:
+    return projectRoot / "build" / preset / "Testing" / "Logs" / kCookLogName
+
+
+def reportCookLog(projectRoot: Path, preset: str) -> None:
+    """실패했을 때 그 프리셋의 쿠킹 로그 [Error] · [Warning] 줄을 함께 찍는다 — 팩에 빠진 것(셰이더 바이너리)이 굽기에서 왔는지 본다."""
+    cookLog = findCookLogPath(projectRoot, preset)
+    print(f"[shipping-check] cook log of {preset}: {cookLog}", flush=True)
+    reportLogLines(SmokeResult(f"Cook ({preset})", cookLog, True, ""))
+
+
 def findBinDir(projectRoot: Path, preset: str) -> Path:
     return projectRoot / "build" / preset / "Bin"
 
@@ -225,18 +240,24 @@ def main(argv: list[str] | None = None) -> int:
         listFailedBuild = [preset for preset in dict.fromkeys(preset for _, preset in listRun) if buildPreset(projectRoot, preset) is False]
         if listFailedBuild:
             print(f"[shipping-check] FAILED build: {', '.join(listFailedBuild)}", flush=True)
+            for preset in listFailedBuild:
+                reportCookLog(projectRoot, preset)
             return ExitCode.Violation
 
     bAllPassed = True
     variableCheck = checkNoTestVariables(projectRoot)
     print(f"[shipping-check] {variableCheck.name}: {'PASS' if variableCheck.bPassed else 'FAIL'} - {variableCheck.reason}", flush=True)
     bAllPassed = variableCheck.bPassed
-    for run, _ in listRun:
+    listFailedPreset: list[str] = []
+    for run, preset in listRun:
         result = run(projectRoot)
         print(f"[shipping-check] {result.name}: {'PASS' if result.bPassed else 'FAIL'} - {result.reason} ({result.logPath})", flush=True)
         unexpectedErrorCount = reportLogLines(result)
         if result.bPassed is False or unexpectedErrorCount > 0:
             bAllPassed = False
+            listFailedPreset.append(preset)
+    for preset in dict.fromkeys(listFailedPreset):
+        reportCookLog(projectRoot, preset)  # 실행이 진 까닭이 팩(빠진 셰이더 · 데이터)이면 굽기 로그에 그 줄이 있다
     return ExitCode.Passed if bAllPassed else ExitCode.Violation
 
 

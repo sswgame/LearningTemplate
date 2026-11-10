@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Asset/Cook/PackCooker.h"
@@ -48,6 +49,22 @@ SW_TEST_CASE( PackCookerTest, PackFileNameFlattensTheDomain )
     SW_EXPECT_EQUAL( string( "engine.pack" ), PackCooker::makePackFileName( "engine" ) );
     SW_EXPECT_EQUAL( string( "game_empty.pack" ), PackCooker::makePackFileName( "game/empty" ) );
     SW_EXPECT_EQUAL( string( "game_empty.pack" ), PackCooker::makePackFileName( "Game\\Empty/" ) );
+}
+
+/**
+ * @brief [PackCookerTest] 팩 쿠킹 기록 id 는 스테이징 폴더(`--cooked-dir`)마다 다르다 — 프리셋이 나눠 쓰는 기록 자리에서 다른 프리셋의 스테이징을 입력으로 적은 기록을 되살리지 않는다
+ * @details 같은 폴더는 표기(구분자 · 대소문자)가 달라도 같은 id 다. 타깃 · 팩 이름도 id 를 가른다.
+ */
+SW_TEST_CASE( PackCookerTest, RecordIDSeparatesStagingFolders )
+{
+    const string release  = PackCooker::makeRecordID( "Client-dx12", "D:/Repo/build/Ninja-Release/Cooked", "engine.pack" );
+    const string shipping = PackCooker::makeRecordID( "Client-dx12", "D:/Repo/build/Ninja-Shipping/Cooked", "engine.pack" );
+    SW_EXPECT_NOT_EQUAL( release, shipping );
+    SW_EXPECT_EQUAL( release, PackCooker::makeRecordID( "Client-dx12", "D:\\Repo\\build\\Ninja-Release\\Cooked", "engine.pack" ) );
+    SW_EXPECT_NOT_EQUAL( release, PackCooker::makeRecordID( "Server-dx12", "D:/Repo/build/Ninja-Release/Cooked", "engine.pack" ) );
+    SW_EXPECT_NOT_EQUAL( release, PackCooker::makeRecordID( "Client-dx12", "D:/Repo/build/Ninja-Release/Cooked", "common.pack" ) );
+    SW_EXPECT_TRUE( StringUtil::startsWith( release, "packs" ) );
+    SW_EXPECT_TRUE( StringUtil::endsWith( release, "engine.pack" ) );
 }
 
 /**
