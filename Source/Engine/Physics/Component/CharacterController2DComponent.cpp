@@ -32,12 +32,12 @@ namespace sw
         , _verticalSpeed{ 0.0f }
         , _airVelocity{ 0.0f }
     {
-        _commandSlot = engine::getSubsystem<PhysicsPoseStore>().getCharacterStore<CharacterCommand2D>().allocateSlot( this, _pCommandPage );
+        _commandSlot = engine::getSubsystem<PhysicsPoseStore>().getCommandStore<CharacterCommand2D>().allocateSlot( this, _pCommandPage );
     }
 
     CharacterController2DComponent::~CharacterController2DComponent()
     {
-        engine::getSubsystem<PhysicsPoseStore>().getCharacterStore<CharacterCommand2D>().freeSlot( _commandSlot );
+        engine::getSubsystem<PhysicsPoseStore>().getCommandStore<CharacterCommand2D>().freeSlot( _commandSlot );
     }
 
     template <typename TFunction>

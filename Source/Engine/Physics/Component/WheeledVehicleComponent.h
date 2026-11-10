@@ -3,7 +3,6 @@
  * @brief 바퀴 넷 차 — 같은 오브젝트의 동적 강체(차체)에 바퀴 · 서스펜션 · 엔진 · 변속을 붙입니다(Jolt `VehicleConstraint`). 운전 입력은 틱 어디서든 넣습니다.
  */
 #pragma once
-#include "Core/Concurrency/SpinLock.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -14,6 +13,10 @@
 
 namespace sw
 {
+    struct VehicleDriverInput;
+    template <typename TCommand>
+    struct PhysicsCommandPage;
+
     /** @brief 어느 바퀴가 엔진 힘을 받는가입니다. */
     ENUM()
     enum class WheelDrive : uint8
@@ -32,7 +35,7 @@ namespace sw
      *        차축 앞뒤(`_frontAxle` · `_rearAxle`) · 반 폭(`_halfTrack`) · 붙는 높이(`_wheelMountHeight`)로 정합니다(차체 기준, 앞 +Z). 앞바퀴만 조향하고
      *        핸드브레이크는 뒷바퀴에 겁니다.
      * @details 차체 바디가 생긴 뒤 첫 물리 프레임에 차를 만들고, 바디가 다시 지어지면 차도 다시 짓습니다. 운전 입력(`setDriverInput`)은 어느 틱에서든
-     *          불러도 되고(잠금 아래 적어 둔다) 물리 프레임 시작에 백엔드로 넘어갑니다. 2D 물리에는 없습니다. 바퀴 메시를 바퀴 자세로 옮기는 쪽은 `getVehicleWheelPose` 를 읽어 직접 옮긴다.
+     *          불러도 되고(`PhysicsPoseStore` 의 입력 칸에 잠금 아래 적어 둔다) 물리 프레임 시작에 백엔드로 넘어갑니다. 2D 물리에는 없습니다. 바퀴 메시를 바퀴 자세로 옮기는 쪽은 `getVehicleWheelPose` 를 읽어 직접 옮긴다.
      */
     REFLECT( Category = "Physics", DisplayName = "Wheeled Vehicle", Tooltip = "Four wheels, suspension, engine and gearbox on this object's dynamic rigid body", Meta = "Icon=Vehicle" )
     class SW_API WheeledVehicleComponent : public PhysicsComponent
@@ -40,8 +43,10 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        /** @brief 입력 칸(`PhysicsPoseStore` 의 차 입력 저장소)을 받습니다. */
         WheeledVehicleComponent();
-        ~WheeledVehicleComponent() override = default;
+        /** @brief 입력 칸을 놓습니다. */
+        ~WheeledVehicleComponent() override;
 
         /** @brief 운전 입력입니다 — 앞 −1..1(음수 후진) · 오른쪽 −1..1 · 브레이크 0..1 · 핸드브레이크 0..1. 다시 부를 때까지 유지합니다. 아무 스레드에서 불러도 됩니다. */
         void setDriverInput( float32 forward, float32 right, float32 brake, float32 handBrake );
@@ -65,6 +70,10 @@ namespace sw
         void releasePhysics( ScenePhysics& physics ) override;
 
     private:
+        /** @brief 입력 칸을 잠그고 @p function( VehicleDriverInput& ) 을 부릅니다. */
+        template <typename TFunction>
+        void editInput( TFunction&& function ) const;
+
         PROPERTY( Category = "Wheels", DisplayName = "Wheel Radius", Min = 0.05, Units = m )
         float32 _wheelRadius;
         PROPERTY( Category = "Wheels", DisplayName = "Wheel Width", Min = 0.01, Units = m )
@@ -98,13 +107,10 @@ namespace sw
         PROPERTY( Category = "Engine", DisplayName = "Drive", Tooltip = "Which wheels the engine drives" )
         WheelDrive _drive;
 
-        mutable SpinLock        _inputLock;
-        float32 _inputForward   SW_GUARDED_BY( _inputLock ); ///< `_inputLock`
-        float32 _inputRight     SW_GUARDED_BY( _inputLock ); ///< `_inputLock`
-        float32 _inputBrake     SW_GUARDED_BY( _inputLock ); ///< `_inputLock`
-        float32 _inputHandBrake SW_GUARDED_BY( _inputLock ); ///< `_inputLock`
-        PhysicsVehicleState     _state;                      ///< 마지막 물리 프레임의 끝(게임 스레드가 쓴다)
-        PhysicsVehicleHandle    _vehicle;
-        PhysicsBodyHandle       _vehicleChassis; ///< 차를 지은 차체 바디(다시 지어졌는지 본다)
+        PhysicsCommandPage<VehicleDriverInput>* _pInputPage; ///< 입력 칸이 든 페이지(`PhysicsPoseStore::getCommandStore`)
+        uint32                                  _inputSlot;  ///< 입력 칸 번호(컴포넌트 수명 동안 그대로)
+        PhysicsVehicleState                     _state;      ///< 마지막 물리 프레임의 끝(게임 스레드가 쓴다)
+        PhysicsVehicleHandle                    _vehicle;
+        PhysicsBodyHandle                       _vehicleChassis; ///< 차를 지은 차체 바디(다시 지어졌는지 본다)
     };
 } // namespace sw

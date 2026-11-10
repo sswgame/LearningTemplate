@@ -16,7 +16,7 @@ namespace sw
 {
     struct CharacterCommand2D;
     template <typename TCommand>
-    struct CharacterCommandPage;
+    struct PhysicsCommandPage;
 
     class ValidationContext;
 } // namespace sw
@@ -95,15 +95,15 @@ namespace sw
         PROPERTY( Category = "Character", Tooltip = "Collision layer name from the physics settings", Validate = validateLayer )
         hashed_string _layer;
 
-        PhysicsCharacterHandle                    _character;
-        PhysicsCharacterState2D                   _state;
-        CharacterCommandPage<CharacterCommand2D>* _pCommandPage; ///< 입력 칸이 든 페이지 — 이동 요청 · 점프 대기(`PhysicsPoseStore::getCharacterStore`)
-        uint32                                    _commandSlot;  ///< 입력 칸 번호(컴포넌트 수명 동안 그대로)
-        float2                                    _previousPosition;
-        float3                                    _worldPosition; ///< 트랜스폼에서 마지막으로 읽은 월드 자리(Z 를 쓴다). 변경 번호가 같으면 그대로다
-        quaternion                                _worldRotation; ///< 마지막으로 읽은 월드 회전(캐릭터는 회전을 바꾸지 않는다)
-        float3                                    _worldScale;    ///< 마지막으로 읽은 월드 배율
-        float32                                   _verticalSpeed;
-        float32                                   _airVelocity; ///< 떠난 바닥이 실어 나르던 수평 속도 — 땅에 다시 닿으면 0
+        PhysicsCharacterHandle                  _character;
+        PhysicsCharacterState2D                 _state;
+        PhysicsCommandPage<CharacterCommand2D>* _pCommandPage; ///< 입력 칸이 든 페이지 — 이동 요청 · 점프 대기(`PhysicsPoseStore::getCommandStore`)
+        uint32                                  _commandSlot;  ///< 입력 칸 번호(컴포넌트 수명 동안 그대로)
+        float2                                  _previousPosition;
+        float3                                  _worldPosition; ///< 트랜스폼에서 마지막으로 읽은 월드 자리(Z 를 쓴다). 변경 번호가 같으면 그대로다
+        quaternion                              _worldRotation; ///< 마지막으로 읽은 월드 회전(캐릭터는 회전을 바꾸지 않는다)
+        float3                                  _worldScale;    ///< 마지막으로 읽은 월드 배율
+        float32                                 _verticalSpeed;
+        float32                                 _airVelocity; ///< 떠난 바닥이 실어 나르던 수평 속도 — 땅에 다시 닿으면 0
     };
 } // namespace sw

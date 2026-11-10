@@ -82,12 +82,12 @@ namespace sw
         , _listStepHistory{}
         , _stepHistoryCount{ 0 }
     {
-        _commandSlot = engine::getSubsystem<PhysicsPoseStore>().getCharacterStore<CharacterCommand3D>().allocateSlot( this, _pCommandPage );
+        _commandSlot = engine::getSubsystem<PhysicsPoseStore>().getCommandStore<CharacterCommand3D>().allocateSlot( this, _pCommandPage );
     }
 
     CharacterControllerComponent::~CharacterControllerComponent()
     {
-        engine::getSubsystem<PhysicsPoseStore>().getCharacterStore<CharacterCommand3D>().freeSlot( _commandSlot );
+        engine::getSubsystem<PhysicsPoseStore>().getCommandStore<CharacterCommand3D>().freeSlot( _commandSlot );
     }
 
     template <typename TFunction>
