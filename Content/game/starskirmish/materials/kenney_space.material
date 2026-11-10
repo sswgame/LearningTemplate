@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="49fef4096bbf36734a85cfd125e604f6"?>
 <!-- Kenney Space Kit 모델의 머티리얼 — 색은 모델 정점 색이다(텍스처 없음). 화면 확인 전 추정. -->
 <MaterialDef formatVersion="0" name="StarSkirmishKenneySpace" _base="engine/materials/defaultmaterial.material">
 	<_properties>

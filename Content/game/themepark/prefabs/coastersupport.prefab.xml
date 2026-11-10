@@ -1,3 +1,4 @@
+<?asset guid="bbf52b5ce424637af68dca4617e3c6d2"?>
 <Prefab formatVersion="0" _base="game/themepark/prefabs/coasterrail.prefab.xml" name="CoasterSupport">
 	<PrefabOverrides>
 		<Override key="MeshComponent#0">

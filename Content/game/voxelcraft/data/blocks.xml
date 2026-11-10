@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="307cdc82cf7c6e90fa03cff885fc5e9b"?>
 <!-- VoxelCraft 의 블록. 블록 번호는 이 순서로 1 부터 붙는다(0 은 공기) — 순서를 바꾸면 저장된 월드의 블록이 바뀐다.
      tile(여섯 면) 또는 top · bottom · side(셋 모두)는 textures/blocks.dds 아틀라스(4 x 4 칸, 칸 128 텍셀)의 칸 번호다 — 왼쪽 위부터 줄마다 0, 1, 2 …
      (원본은 textures_raw/blocks.png, Kenney Voxel Pack 타일을 이 순서로 모은 것 — credits.md).

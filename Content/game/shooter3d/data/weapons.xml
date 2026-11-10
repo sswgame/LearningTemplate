@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="72f8317370557bb03bf4e6c52e0590c3"?>
 <!-- Shooter3D 의 무기 — 쏘는 법만 적는다. 속성 이름은 WeaponDef 의 필드 이름이다(빠진 것은 기본값). 각도는 도, 시간은 초.
      날아가는 것(피해 · 사거리 · 궤적)은 탄 표(projectiles.xml)다. projectile 은 기본으로 장전하는 탄이고, accepts 는 받는 탄의 태그 조건이다(그냥 이름은 태그).
      item 은 무기를 나타내는 장비 아이템(items.xml)의 id 다. 표시 이름과 외형은 그 아이템이 정하므로 여기에는 name 을 적지 않는다(원본이 하나다).

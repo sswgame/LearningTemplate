@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="d20e508ea488a43b090c11908f14b7be"?>
 <!--
   VoxelCraft 자동 플레이 AI — 빙의(Pawn.Controller)와 판단 상태(AI.State)를 단언한다. 자동 플레이를 켜면 디렉터가 VoxelAutoPlay 조종자를 세워 플레이어 폰(Player)에
   빙의시키고, 조종자는 한 주기(12 초) 동안 걷다가(Walk) 3 ~ 6.5 초에 부수고(Break) 9 초에 한 번 놓는다(Place, 한 틱). 끄면 플레이어 조종자가 되찾고 AI 는 걷힌다.

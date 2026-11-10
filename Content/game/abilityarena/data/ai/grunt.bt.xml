@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="bab08d3fe3440470a8f69fa901617ad9"?>
 <!--
   AbilityArena 근접 적(Grunt)의 판단 — 닿는 거리(1.4 m) 밖이면 다가오고, 안이면 때린다. 감각은 ArenaEnemyAIComponent(SelfPosition · TargetPosition · TargetDistance, 대상이 없으면 지운다).
   잎은 모두 그 자리에서 끝나므로 매 판단 루트부터 다시 고른다. 상태 이름(ai.state)은 시나리오 automation/ai.scenario.xml 의 데이터다(Chase, Strike).

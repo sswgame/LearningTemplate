@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="1e3a9a5333bfa0d8936bcffb57b5c02b"?>
 <!-- 난롯마을 땅 — 기본 머티리얼에 색을 기본값으로 둔 것이다. -->
 <MaterialDef formatVersion="0" name="VelmoraHearth" _base="engine/materials/defaultmaterial.material">
 	<_properties>

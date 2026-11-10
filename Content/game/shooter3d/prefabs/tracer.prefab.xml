@@ -1,3 +1,4 @@
+<?asset guid="30703977e33786c7530db23759979f13"?>
 <Prefab formatVersion="0" _base="game/shooter3d/prefabs/effect.prefab.xml" name="Tracer">
 	<PrefabOverrides>
 		<Override key="MeshComponent#0">

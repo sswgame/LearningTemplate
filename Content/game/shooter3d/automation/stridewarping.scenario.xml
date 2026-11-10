@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="74ff44aed35d3169dfd35cabe6d01629"?>
 <!--
   Shooter3D 보폭 워핑 — 몸 프리팹의 리그(rigs/player_body.rig.xml 의 노드 Stride)가 몸 메시에 묶인 뒤에만 값이 들어가고(감시 값 StrideAppliedCount 가 오르는 때가 isRigReady 이후다),
   서 있으면 배율 1(포즈가 바뀌지 않는다)이다. 이동 중 배율(이동 속도 / 재생한 발 속도)은 노드가 min_scale 0.6 ~ max_scale 1.6 으로 자르므로 감시 값은 그 범위 밖일 수 있다 —

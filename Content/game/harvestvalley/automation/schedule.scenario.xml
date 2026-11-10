@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="595e8b8c89f1237c579a6c038a537fda"?>
 <!--
   HarvestValley 마을 사람 일정 — 판 상태의 시계를 감고(AdvanceGameTime) 그 시각에 NPC 가 있어야 할 위치와 활동을 단언한다.
   일정은 data/villagers.schedules.xml(ScheduleSystem), 몸은 Villager.<id>(FarmVillagerComponent 가 일정상 위치를 따라간다). 0 일은 월요일이고 6:00 에 시작한다.

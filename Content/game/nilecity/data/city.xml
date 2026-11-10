@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="b9b78a37f924b6b00dd1d7c53dc18678"?>
 <!-- NileCity 의 도시 데이터(파라오 장르, GF_CityBuilder 의 CityCatalog 형식).
      Good: 물자. 집이 먹는 물자는 HouseLevel 의 goods 가 이름으로 적는다. Building: kind = House · Service · Producer · Storage · Market · Decoration.
        service + delivery(Walker = 도로를 도는 일꾼 · Radius = 반경 안 집에 늘) · range(걸음 수 · 반경 칸) · walkerInterval(초).

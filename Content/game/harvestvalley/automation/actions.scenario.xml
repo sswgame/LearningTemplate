@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="2f4de4f836b70f94d4e70f6551ecc331"?>
 <!--
   HarvestValley 액션 단계 — 키 대신 입력 맵 액션 이름(공통 묶음 · data/farm.input.xml)으로 조작한다: Move 축으로 걷고, Farm.Tool1 로 괭이를 들고,
   위로 걸어 밭 앞에 서서 Farm.Use 로 간다. 키 배치를 바꿔도 이 시나리오는 그대로다. 농부는 X 6, Z -1.2 에서 시작하고 걷는 빠르기는 4 m/s 이다.

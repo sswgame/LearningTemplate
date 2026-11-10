@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="5e95d70f45a75c5239ea93aefc95f474"?>
 <!--
   HarvestValley 마을 사람 일정의 하루 — 시계를 감지 않고(AdvanceGameTime 없음) 게임 시간 16 배(gv_timeScale)로 0 일 6:00 부터 1 일 0:00 까지 흘려,
   일정 시스템이 블록 경계를 차례로 지나고 날이 바뀌는지 본다(schedule.scenario.xml 은 시각을 건너뛰어 그 시각의 상태만 본다).

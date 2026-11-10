@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="bd455f2ef238e7e1154f21fa919d8903"?>
 <!-- 끌어 고르기 상자 — 반투명 유리 머티리얼에 초록을 기본값으로 둔 것이다. -->
 <MaterialDef formatVersion="0" name="StarSkirmishDrag" _base="engine/materials/glassmaterial.material">
 	<_properties>

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="3e98f6ad756e37640b228e29b3cedc2b"?>
 <!-- Shooter3D 의 탄 — 날아가는 것과 탄착. 속성 이름은 ProjectileDef · ProjectileImpactDef 의 필드 이름이다(빠진 것은 기본값). 거리는 m, 시간은 초.
      speed 0 은 광선(히트스캔)이다. 무기(weapons.xml)는 tags 에 대한 accepts 조건으로 받는 탄을 고른다 — 무기 N 종과 탄 M 종이 N + M 줄로 조합된다.
      탄은 _base 로 다른 탄을 물려받고 다른 칸만 적는다. tracerColor · tracerWidth 는 탄도선(1 을 넘는 색은 빛난다)이다.

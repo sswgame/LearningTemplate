@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="797e631fd4a498bb772426c6b7dd206f"?>
 <!--
   NileCity 패드 가상 커서 시나리오 — 입력 맵의 virtualCursor="LeftStick"(nile.input.xml)이 켠 가상 커서를 시나리오의 패드 스크립트가 움직인다
   (InputManager 는 배타 가상 입력일 때도 가상 커서를 돌린다). 왼쪽 스틱 X 를 끝까지 밀면 커서가 오른쪽으로 가고(Input.MouseX 가 늘어난다), 놓으면 선다.

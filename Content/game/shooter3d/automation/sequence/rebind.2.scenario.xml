@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="50f58b8aef8f9c8d7702c9e29ebd2fae"?>
 <!--
   Shooter3D 키 다시 잡기 두 번 기동 ② — rebind.1 이 남긴 사용자 설정 파일로 새로 기동했을 때 점프 키가 J 로 남아 있다: J 는 점프하고 Space 는 점프하지 않으며 패드 A 는 그대로다.
   설정은 바꾸지 않는다(첫 단언이 파일에서 읽은 값을 본다). 끝에서 Space 로 되돌린다. 혼자 돌면 ① 이 없어 진다 — CTest 항목 Scenario.shooter3d.sequence.rebind 로만 돈다.

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="48766c9ec15ed0d52c1c17547ef58206"?>
 <!--
   WildWest 의 입력 차이 — 공통 묶음(gamesettings.xml 의 <inputMap> 줄) 위에 얹힌다.
   기수 폰과 말 폰이 같은 액션 이름을 의도 버튼으로 쓴다 — 걸을 때는 Interact 가 타기, 탔을 때는 내리기다. Sprint 는 말의 질주다. 점프는 없다.

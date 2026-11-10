@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="b42531b0b48fe4ed9d68723accf5feb9"?>
 <!-- 농부 — 기본 머티리얼에 파란 옷 색을 기본값으로 둔 것이다. -->
 <MaterialDef formatVersion="0" name="HarvestValleyFarmer" _base="engine/materials/defaultmaterial.material">
 	<_properties>

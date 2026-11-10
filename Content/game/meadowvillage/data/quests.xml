@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="cbb1257bfaa9e0989b4266fd483082de"?>
 <!-- MeadowVillage 의 부탁 — 과수원 서식지 하나를 지으면 끝난다(공유 퀘스트 일지). -->
 <QuestCatalog>
   <Quest id="meadow_request">

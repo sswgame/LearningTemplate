@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="ec7c607cd5ed921cb6aaddd150907da5"?>
 <!--
   Shooter3D 스켈레톤 적(ShooterEnemyAIControllerComponent)의 판단. 감각은 PlayerFeet · PlayerDistance · Reach · StopDistance · PlayerAlive 와 몸의 단계(Rising · Chasing · Attacking · Staggered · Dying 중 하나만 참).
   - 손이 닿는 거리 안이고 플레이어가 살아 있으면 Attack 버튼을 누르고 있는다(휘두르기 간격 · 맞는 시각은 폰의 규칙).

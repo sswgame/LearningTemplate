@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="c7aacaaf6f0667e806f5b5a99a0969bf"?>
 <!-- AbilityArena 팩의 설정 — 시작 맵은 아레나 씬이다(게임마다 팩의 data/gamesettings.xml 하나다). -->
 <GameSettings>
   <!-- 엔진이 읽는 칸(PackEngineSettings) — 창 제목 · 렌더 파이프라인 · 사용자 설정과 텔레메트리 스키마 · UI 규칙 -->

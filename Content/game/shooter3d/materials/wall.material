@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="9e327da44de61e7e84ec2aba599d4825"?>
 <!-- 아레나 벽 — Poly Haven "Concrete Block Wall"(CC0, 2 m 타일 = 기준의 기본값) 스캔 텍스처를 월드 좌표로 타일링한다. -->
 <MaterialDef formatVersion="0" name="ShooterWall" _base="engine/materials/pbrworldtile.material">
 	<_properties>

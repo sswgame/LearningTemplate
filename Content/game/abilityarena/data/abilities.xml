@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="d2dbf1c9c0780b4999985a0fb5702b84"?>
 <!--
   AbilityArena 의 어빌리티 카탈로그 — 이펙트 · 어빌리티 · 어빌리티 세트.
   형식은 Source/GameFramework/Runtime/Gameplay/Ability/README.md 에 있다. 클래스 이름(class="...")은 게임이 등록한다(ArenaAbilities::registerClasses).

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="57a8c8abbc13d7bfbd9bc01246e5dd51"?>
 <!--
   MeadowVillage 자동 플레이 — gv_meadowAutoPlay 를 켜면 밭 디렉터가 공유 시계를 8 배로 흘려 날이 스스로 넘어간다(MeadowFarmGameModeComponent).
   하루는 실제 120 초이고 시계는 아침 6 시에 시작하므로 8 배속이면 첫 날 넘김이 11 초 즈음이다. 1 배속이면 90 초라 시한(40 초)에서 진다 — 스위치가 안 먹은 것을 잡는다.

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="b7e7e825506bd42e47ac03c725717ebe"?>
 <!-- 마을 사람 — 기본 머티리얼에 보라 옷 색을 기본값으로 둔 것이다. -->
 <MaterialDef formatVersion="0" name="HarvestValleyVillager" _base="engine/materials/defaultmaterial.material">
 	<_properties>

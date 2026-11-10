@@ -1,3 +1,4 @@
+<?asset guid="ad9f422cccd3bc25755b331cc4dafa34"?>
 <!--
 	PixelTown 소품 타일셋 — ArMM1998 "Zelda-like" 지상 아틀라스(engine/textures/pixel/zelda_like/overworld.dds, 40 x 36 칸, 16 px). 타일 한 변 = 월드 1.
 	소품은 땅 위 둘째 레이어(townprops.tilemap.xml)에 칠한다 — 칸 바탕이 투명이라 아래 땅이 비친다. 모두 단단하다(걸어 들어갈 수 없다).

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="35a96724b302fdec07899de72055b030"?>
 <!--
   Shooter3D 의 입력 차이 — 공통 묶음(gamesettings.xml 의 <inputMap> 줄) 위에 얹힌다. 게임 코드는 키를 직접 묻지 않고 액션 이름만 묻는다.
   CycleCamera 는 시점 카메라 디렉터의 _cycleAction 이다. 포토 모드 조작은 이 묶음이 아니라 엔진 맵(engine/input/photomode.input.xml)이다.

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="11a9dfd64741bceee39915916a8913d5"?>
 <!-- 평원 모래 — 기본 머티리얼에 색을 기본값으로 둔 것이다. -->
 <MaterialDef formatVersion="0" name="WildWestSand" _base="engine/materials/defaultmaterial.material">
 	<_properties>

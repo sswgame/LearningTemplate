@@ -1,3 +1,4 @@
+<?asset guid="000ee3be79c92795056cbaf23be1298c"?>
 <TileMap name="Pixel Town" width="20" height="12">
 	<spawn x="7" y="7" />
 	<tiles />
