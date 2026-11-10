@@ -125,6 +125,14 @@ namespace sw
     {
         return false;
     }
+} // namespace sw
+
+#endif
+
+// 칸 · 등록 · 명령은 두 갈래가 함께 쓴다 — 칸 특수화는 아래 첫 사용(findSubsystem) 앞에 있어야 한다("specialization after instantiation").
+namespace sw
+{
+    SW_SERVICE_SLOT( XTestInputInjector, Optional );
 
     namespace
     {
@@ -219,11 +227,8 @@ namespace sw
         }
     } // namespace
 
-    SW_SERVICE_SLOT( XTestInputInjector, Optional );
     SW_ENGINE_SERVICE_SUBSYSTEM( XTestInputInjector, HostOnly, Services, (), SW_ENGINE_DEFAULT_FACTORY( XTestInputInjector ) ); // 엔진 범위 서비스(아래 층이라 모듈 부분 `SW_MODULE_PART` 를 쓸 수 없다)
 
     SW_DEV_COMMAND( XTestInput, "input.xtest", "input.xtest move <x> <y> | button <1-9> <down|up|click> | key <keysym> <down|up|tap>",
                     "Inject mouse / key input into the X server through XTest (screen coordinates; X11 window input checks)", &runXTest );
 } // namespace sw
-
-#endif
