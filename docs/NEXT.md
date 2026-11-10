@@ -77,6 +77,15 @@ GameObject/Component API 는 저작 · 수명 · 직렬화 층으로 두고, 프
 
 0. **측정 기반(W-P0 뒤):** `-workers=N` 인자, Debug 카운터(`getComponentLookups` · `virtualTicks`), `load/*` 4 시나리오 × 워커 1 · 2 · 4 · 8 기준선을 S8 표에.
 1. **일괄 틱이 기본:** 리플렉션 생성기가 `onTick` 을 재정의한 타입(102 개)에 `TickBatchOf` 등록을 자동으로 낸다. 지금 수동 등록은 `StressTestMover` 하나뿐이다. 완료: `batchElements/objectEntries ≥ 0.9`.
+   - **서브틱 · 선행 조건은 그대로 돌아야 한다(사용자 요구).** 지금 규칙(`TickRegistry::findBatchFunction`, `TickRegistry.cpp:814`)을 유지한다.
+     - 일괄 경로는 그 그룹의 틱 항목이 주 틱 하나뿐이고 선행 조건이 없는 오브젝트만 탄다.
+     - 서브틱(`registerSubTick`)이 있거나, 항목이 둘 이상이거나, 선행 조건이 걸리면 오브젝트 칸 경로나 선행 조건 스테이지로 간다.
+     - 오브젝트 안 순서(그룹 · 단계 · 우선순위 · 붙은 순서), "한 오브젝트는 한 스레드", 선행 조건 스테이지가 앞 경로의 쓰기를 먼저 적용하는 것(`_bApplyBefore`)이 일괄 경로에도 그대로다.
+   - **틱 중 바뀌는 상태:**
+     - 서브틱 등록 · 해제 · 선행 조건 · 활성 변경은 지금처럼 틱 뒤로 미루고, 다음 `refresh` 가 일괄 소속을 다시 정한다.
+     - 실행 여부(원자 마스크 · `_bRunnable`)는 일괄 함수도 항목마다 본다.
+   - `onSubTick` 재정의 타입(GameModeComponent · TickedPathMover)의 서브틱은 오브젝트 경로에 남긴다(서브틱 일괄은 하지 않는다 — 2 타입뿐).
+   - **테스트:** 같은 씬을 일괄 경로 켬 · 끔으로 N 프레임 돌려 상태 해시(`TestSceneStateHash`)가 같다. 서브틱 · 선행 조건 · 틱 중 서브틱 등록 · 해제를 섞은 케이스(`TickedPathMover` 테스트, 래그돌 `TickPhase::Late` 순서)가 두 경로에서 같다. 2 단계(잡 컨텍스트)도 이 동등성 테스트를 그대로 통과해야 한다.
 2. **잡 컨텍스트 형식:** `_bLaneSafe` 를 서명 분리(`runLane(SceneJobContext&)` / `runMain`)로 바꾸고, `SW_SCENE_SERVICE` 의 접근 선언을 필수로, `SceneDataKind` 를 64 비트로. 컨텍스트는 명령 버퍼만 노출한다(틱 안 구조 변경을 형식으로 막는다).
 3. **물리 Export · 지연 이벤트:** `PhysicsPoseStore` 이중 버퍼를 병렬로 읽고 `applyTransformBatch` 로 일괄 쓴다(지금은 바디마다 백엔드 3 호출 + 세터). 충돌 배달은 `Physics` 단계 안 동기 가상 호출 대신 `FlushPostPhysics` 서비스로.
 4. **Jolt 조임 · 물리 훅 배치:** `JoltJobSystem.cpp:103` 의 인라인 실행 폴백을 지우고, `WaitForJobs` 가 `yield` 대신 돕기로 기다린다. 물리 훅 4 종을 배치 함수 + 명령 저장소로.
