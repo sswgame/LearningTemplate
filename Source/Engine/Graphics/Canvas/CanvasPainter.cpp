@@ -335,8 +335,8 @@ namespace sw
             quad._borderColor._w *= _listOpacity.back();
         }
 
-        RHIScissorRect scissor{};
-        bool           bHasScissor{ false };
+        CanvasScissorRect scissor{};
+        bool              bHasScissor{ false };
         if ( _listClip.empty() == false )
         {
             if ( computeScissor( scissor, bHasScissor ) == false )
@@ -357,7 +357,7 @@ namespace sw
         // 가위가 바뀌면 일괄이 끊긴다 — 지금 일괄과 같은 가위인지 본다.
         const bool bSameScissor = _pDrawList->_listBatch.empty() == false &&
                                   ( _pDrawList->_listBatch.back()._bScissor == SW_TRUE ) == bHasScissor &&
-                                  ( bHasScissor == false || Memory::compare( &_pDrawList->_listBatch.back()._scissor, &scissor, sizeof( RHIScissorRect ) ) == 0 );
+                                  ( bHasScissor == false || Memory::compare( &_pDrawList->_listBatch.back()._scissor, &scissor, sizeof( CanvasScissorRect ) ) == 0 );
         if ( bSameScissor == false )
         {
             CanvasBatch& batch = _pDrawList->_listBatch.emplace_back();
@@ -382,7 +382,7 @@ namespace sw
             if ( current._arrTexture[slot].isEqual( *pTexture ) )
                 return slot;
         }
-        if ( current._textureCount < shaderslot::kCanvasTextureCount )
+        if ( current._textureCount < CanvasBatch::kMaxTextureCount )
         {
             current._arrTexture[current._textureCount] = *pTexture;
             return current._textureCount++;
@@ -399,7 +399,7 @@ namespace sw
         return 0;
     }
 
-    bool CanvasPainter::computeScissor( RHIScissorRect& outScissor, bool& outHasScissor ) const
+    bool CanvasPainter::computeScissor( CanvasScissorRect& outScissor, bool& outHasScissor ) const
     {
         outHasScissor = false;
         if ( _listClip.empty() || _listClip.back()._bClipped == SW_FALSE )
