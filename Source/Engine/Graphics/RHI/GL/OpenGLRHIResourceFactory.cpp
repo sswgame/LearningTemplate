@@ -397,7 +397,7 @@ namespace sw
             glDeleteBuffers( 1, &name );
             pTracker->recordFree( RHIMemoryKey::makeBuffer( buffer ) );
         };
-        _pDevice->_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ) );
+        _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ), _pDevice->_frameFenceRing.getRecordingSerial() );
     }
 
     RHIBufferHandle OpenGLRHIResourceFactory::createReadbackBuffer( uint32 elementSize, uint32 elementCount )
@@ -879,7 +879,7 @@ namespace sw
             // 추적기는 이름을 실제로 지울 때 줄인다(해제 요청 시점이 아니라).
             pTracker->recordFree( RHIMemoryKey::makeTexture( texture ) );
         };
-        _pDevice->_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ) );
+        _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ), _pDevice->_frameFenceRing.getRecordingSerial() );
     }
 
     bool OpenGLRHIResourceFactory::isTextureReadyToSample( RHITextureHandle texture )
@@ -1183,7 +1183,7 @@ namespace sw
                 glDeleteVertexArrays( 1, &name );
             }
         };
-        _pDevice->_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ) );
+        _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ), _pDevice->_frameFenceRing.getRecordingSerial() );
     }
 
     RHIRenderPassHandle OpenGLRHIResourceFactory::createRenderPass( const RHIRenderPassDesc& desc )

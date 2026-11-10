@@ -281,7 +281,7 @@ namespace sw
         }
 
         // 추적기는 자원을 실제로 놓을 때 줄인다(해제 요청 시점이 아니라). SRV 도 버퍼와 함께 그때 놓인다.
-        _pDevice->_releaseQueue.enqueueTrackedRelease<RHIMemoryKeySpace::Buffer>( owned, _pDevice->getMemoryTracker(), buffer );
+        _pDevice->_releaseQueue.enqueueGPUTrackedRelease<RHIMemoryKeySpace::Buffer>( owned, _pDevice->getMemoryTracker(), buffer, _pDevice->_frameFenceRing.getRecordingSerial() );
     }
 
     RHIBufferHandle D3D11RHIResourceFactory::createReadbackBuffer( uint32 elementSize, uint32 elementCount )
@@ -775,7 +775,7 @@ namespace sw
             return;
 
         // 추적기는 자원을 실제로 놓을 때 줄인다(해제 요청 시점이 아니라).
-        _pDevice->_releaseQueue.enqueueTrackedRelease<RHIMemoryKeySpace::Texture>( owned, _pDevice->getMemoryTracker(), texture );
+        _pDevice->_releaseQueue.enqueueGPUTrackedRelease<RHIMemoryKeySpace::Texture>( owned, _pDevice->getMemoryTracker(), texture, _pDevice->_frameFenceRing.getRecordingSerial() );
     }
 
     bool D3D11RHIResourceFactory::isTextureReadyToSample( RHITextureHandle texture )

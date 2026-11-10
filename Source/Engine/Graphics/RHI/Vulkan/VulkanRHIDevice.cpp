@@ -138,7 +138,7 @@ namespace sw
         , _listUAVSourceTexture{}
         , _freeUAV{}
         , _gpuTextures{}
-        , _releaseQueue{ constant::render::kGPUReleaseFrameLatency }
+        , _releaseQueue{}
         , _renderPassCache{}
         , _listTextureUsed{}
         , _freeTexture{}
@@ -2382,14 +2382,12 @@ namespace sw
             }
         }
         _listFrameSwapChain.clear();
-        // 해제 콜백(아래 tickFrame)을 큐 락 안에서 부르지 않는다.
         queueLock.unlock();
 
         _listPendingSubmit.clear();
         _activeFrameBuffer = VK_NULL_HANDLE;
         (void)_frameFenceRing.markSubmitted(); // 칸 · 해제 키가 다음 프레임으로 넘어간다
         _bFrameStarted = SW_FALSE;
-        _releaseQueue.tickFrame();
     }
 
     VkCommandBuffer VulkanRHIDevice::currentCommandBuffer() const

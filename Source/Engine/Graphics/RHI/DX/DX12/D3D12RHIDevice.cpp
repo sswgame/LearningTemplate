@@ -106,7 +106,7 @@ namespace sw
         , _textureTransferMutex{}
         , _mapTextureTransferMarks{}
         , _readbackTable{}
-        , _releaseQueue{ constant::render::kGPUReleaseFrameLatency }
+        , _releaseQueue{}
         , _transferReleaseQueue{}
         , _frameStreamContext{ nullptr }
         , _resourceImpl{ nullptr }

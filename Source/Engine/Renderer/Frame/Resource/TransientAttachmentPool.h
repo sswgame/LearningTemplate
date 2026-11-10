@@ -49,7 +49,7 @@ namespace sw
         /**
          * @brief 쓰는 패스가 이만큼 이어서 돌지 않은 첨부(꺼진 효과의 타깃)는 놓습니다. 다시 켜지면 셋업이 다시 만듭니다.
          * @details 모션 블러는 카메라가 서고 움직일 때마다 켜지고 꺼진다. 바로 놓으면 그때마다 만들고 놓기를 되풀이하므로 60 Hz 에서 약 2 초를 둔다.
-         *          놓은 GPU 자원은 백엔드의 해제 큐가 앞 프레임들이 끝난 뒤에 지운다(`destroyTexture` → `RHIReleaseQueue`, `kGPUReleaseFrameLatency`).
+         *          놓은 GPU 자원은 백엔드의 해제 큐가 앞 프레임들이 끝난 뒤에 지운다(`destroyTexture` → `RHIReleaseQueue` 의 프레임 펜스).
          */
         static constexpr uint32 kIdleFramesBeforeRelease = 120;
 

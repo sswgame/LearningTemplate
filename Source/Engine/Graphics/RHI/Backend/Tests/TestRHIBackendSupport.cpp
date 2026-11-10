@@ -21,42 +21,17 @@
 using namespace sw;
 
 /**
- * @brief [RHIReleaseQueueTest] 지연 해제는 정한 프레임 수가 지난 뒤에만 부른다
- */
-SW_TEST_CASE( RHIReleaseQueueTest, LatencyRelease )
-{
-    RHIReleaseQueue queue( 3 );
-    SW_EXPECT_EQUAL( 0u, queue.getPendingReleaseCount() );
-
-    bool                       bDestroyed{ false };
-    RHIResourceReleaseDelegate releaseDel = SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [&bDestroyed]()
-    { bDestroyed = true; } );
-
-    queue.enqueueRelease( releaseDel );
-    SW_EXPECT_EQUAL( 1u, queue.getPendingReleaseCount() );
-    SW_EXPECT_FALSE( bDestroyed );
-
-    queue.tickFrame();
-    SW_EXPECT_FALSE( bDestroyed );
-    queue.tickFrame();
-    SW_EXPECT_FALSE( bDestroyed );
-    queue.tickFrame();
-    SW_EXPECT_TRUE( bDestroyed );
-    SW_EXPECT_EQUAL( 0u, queue.getPendingReleaseCount() );
-}
-
-/**
- * @brief [RHIReleaseQueueTest] `flushAll` 은 기한과 무관하게 남은 해제를 모두 부른다
+ * @brief [RHIReleaseQueueTest] `flushAll` 은 펜스와 무관하게 남은 해제를 모두 부른다
  */
 SW_TEST_CASE( RHIReleaseQueueTest, FlushAll )
 {
-    RHIReleaseQueue            queue( 5 );
+    RHIReleaseQueue            queue;
     int32                      releaseCount{ 0 };
     RHIResourceReleaseDelegate releaseDel = SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [&releaseCount]()
     { ++releaseCount; } );
 
-    queue.enqueueRelease( releaseDel );
-    queue.enqueueRelease( releaseDel );
+    queue.enqueueGPURelease( releaseDel, 7 );
+    queue.enqueueGPURelease( releaseDel, 9 );
     SW_EXPECT_EQUAL( 2u, queue.getPendingReleaseCount() );
 
     queue.flushAll();
@@ -65,11 +40,11 @@ SW_TEST_CASE( RHIReleaseQueueTest, FlushAll )
 }
 
 /**
- * @brief [RHIReleaseQueueTest] GPU 펜스가 그 값에 닿기 전에는 해제하지 않는다(프레임이 지나도)
+ * @brief [RHIReleaseQueueTest] GPU 펜스가 그 값에 닿기 전에는 해제하지 않는다
  */
 SW_TEST_CASE( RHIReleaseQueueTest, GPUFenceRelease )
 {
-    RHIReleaseQueue            queue( 3 );
+    RHIReleaseQueue            queue;
     bool                       bDestroyed{ false };
     RHIResourceReleaseDelegate releaseDel = SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [&bDestroyed]()
     { bDestroyed = true; } );
@@ -78,44 +53,39 @@ SW_TEST_CASE( RHIReleaseQueueTest, GPUFenceRelease )
     SW_EXPECT_EQUAL( 1u, queue.getPendingReleaseCount() );
     queue.tickCompleted( 3 );
     SW_EXPECT_FALSE( bDestroyed );
-    queue.tickFrame();
-    SW_EXPECT_FALSE( bDestroyed );
     queue.tickCompleted( 4 );
     SW_EXPECT_TRUE( bDestroyed );
     SW_EXPECT_EQUAL( 0u, queue.getPendingReleaseCount() );
 }
 
 /**
- * @brief [RHIReleaseQueueTest] 두 스레드가 tickFrame · tickCompleted 를 동시에 불러도 콜백이 한 번씩만 돈다
+ * @brief [RHIReleaseQueueTest] 두 스레드가 tickCompleted 를 동시에 불러도 콜백이 한 번씩만 돈다
  * @details DX12 는 렌더 스레드의 endFrame 과 리소스를 만드는 스레드의 업로드 펜스 대기가 둘 다 tickCompleted 를 부른다.
  *          스크래치 목록을 잠금 없이 바꾸던 때는 두 tick 이 같은 벡터를 동시에 만졌다.
  */
 SW_TEST_CASE( RHIReleaseQueueTest, ConcurrentTicksRunEachCallbackOnce )
 {
     constexpr uint32 kCount = 2000;
-    RHIReleaseQueue  queue( 1 );
+    RHIReleaseQueue  queue;
     atomic<uint32>   calledCount{ 0 };
     for ( uint32 index = 0; index < kCount; ++index )
     {
         RHIResourceReleaseDelegate releaseDel = SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [&calledCount]()
         { calledCount.fetch_add( 1u, std::memory_order_relaxed ); } );
-        if ( ( index & 1u ) == 0 )
-            queue.enqueueRelease( releaseDel );
-        else
-            queue.enqueueGPURelease( releaseDel, index );
+        queue.enqueueGPURelease( releaseDel, index );
     }
-    std::thread frameThread( [&queue]()
+    std::thread otherThread( [&queue]()
     {
         for ( uint32 index = 0; index < kCount; ++index )
         {
-            queue.tickFrame();
+            queue.tickCompleted( index );
         }
     } );
     for ( uint32 index = 0; index < kCount; ++index )
     {
         queue.tickCompleted( index );
     }
-    frameThread.join();
+    otherThread.join();
     SW_EXPECT_EQUAL( kCount, calledCount.load() );
     SW_EXPECT_EQUAL( 0u, queue.getPendingReleaseCount() );
 }
