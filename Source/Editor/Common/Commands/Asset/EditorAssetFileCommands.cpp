@@ -223,7 +223,7 @@ namespace sw::editor
              *          리다이렉터를 남기는 것과 같다. 규칙(되돌린 옮기기 · 사슬)은 `AssetRedirect::addToXMLText` 한 곳이고 `move-asset` 도 같은 규칙으로 쓴다.
              * @return 표를 읽지 못했거나 더한 표가 런타임에서 읽히지 않으면 false 입니다(`_failure` 에 이유 — 아무것도 옮기지 않는다).
              */
-            [[nodiscard]] static bool prepareRedirectTables( EditorAssetMovePlan& inoutPlan, vector<PreparedRewrite>& inoutListRewrite )
+            [[nodiscard]] static bool prepareRedirectTables( const AssetReferenceFields& params, EditorAssetMovePlan& inoutPlan, vector<PreparedRewrite>& inoutListRewrite )
             {
                 vector<string>         listTableID;
                 vector<string>         listTableAbs;
@@ -234,6 +234,9 @@ namespace sw::editor
                     const string& oldID = inoutPlan._listOldID[moveIndex];
                     if ( AssetRedirect::isTable( oldID ) )
                         continue; // 표 자신을 옮기는 일은 리다이렉트할 것이 아니다
+                    // 참조 검사 밖 도메인(임시 사본 scratch — `listUncheckedDomain`)은 배포되지 않아 옛 id 가 밖에 남지 않는다. 쓰면 실행마다 줄이 쌓였다.
+                    if ( params.isChecked( oldID ) == false )
+                        continue;
                     const string tableID = AssetRedirect::makeTableID( oldID );
                     // 표 자리는 옮기는 파일의 디스크 경로에서 잰다 — 옛 id 에서 도메인 뒤 꼬리를 떼면 도메인 폴더다(붙인 디스크 도메인 · 사본 도메인도 같다).
                     const size_t  domainLength = tableID.size() - string_view{ AssetRedirect::kFileName }.size() - 1;
@@ -500,7 +503,7 @@ namespace sw::editor
         }
         // 리다이렉트 표도 같은 트랜잭션으로 쓴다(참조 글 뒤에 붙인다 — 고친 참조 파일 수에는 세지 않는다).
         const size_t referrerRewriteCount = listRewrite.size();
-        if ( EditorAssetFileCommandsInternal::prepareRedirectTables( outPlan, listRewrite ) == false )
+        if ( EditorAssetFileCommandsInternal::prepareRedirectTables( params, outPlan, listRewrite ) == false )
         {
             SW_LOG_WARNING_ID( "EditorAssetFileCommands.NothingMoved", "Nothing was moved - %#", outPlan._failure );
             return false;

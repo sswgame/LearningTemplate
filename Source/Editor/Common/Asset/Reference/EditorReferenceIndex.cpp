@@ -12,6 +12,7 @@
 #include "Editor/Common/Asset/EditorContentScan.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
+#include "Engine/Serialization/Inherit/AssetRedirect.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 
 namespace sw::editor
@@ -174,6 +175,9 @@ namespace sw::editor
     {
         const string lowerPath = FileUtil::normalizePath( path );
         if ( StringUtil::endsWith( lowerPath, EditorReferenceIndexInternal::kScenarioSuffix ) )
+            return false;
+        // 리다이렉트 표는 옛 id 와 새 id 를 적는 글이라 참조자가 아니다 — 세면 옮긴 에셋의 참조가 하나 더 보였다(엔진 규칙 `AssetReferenceFields::isReferrer` 와 같다).
+        if ( AssetRedirect::isTable( lowerPath ) )
             return false;
         for ( const utf8* pExtension : EditorReferenceIndexInternal::kArrTextExtension )
         {
