@@ -52,7 +52,7 @@ namespace sw
         ZoneVolumeComponent();
         ~ZoneVolumeComponent() override = default;
 
-        /** @brief 씬의 컴포넌트 레지스트리에 오르고 지역 후보 격자(`ZoneOccupantIndex`)와 지역 프레임 시스템(`ZoneSystem`)을 붙입니다. */
+        /** @brief 씬의 컴포넌트 레지스트리에 오르고 씬 공간 색인의 물리 층 사용자로 세며(`ZoneOccupantIndex::addUser`) 지역 프레임 시스템(`ZoneSystem`)을 붙입니다. */
         void onRegister( GameObjectManager& manager ) override;
         /** @brief 레지스트리에서 내리고, 마지막 볼륨이면 격자를, 마지막 지역 컴포넌트면 시스템을 뗍니다. */
         void onUnregister( GameObjectManager& manager ) override;
@@ -83,7 +83,7 @@ namespace sw
         void configure( string_view profilePath, ZoneVolumeShape shape, const float3& halfExtents );
         /**
          * @brief 이번 프레임을 처리합니다 — 안에 든 대상을 고르고 위치 값을 내 `ZoneTracker` 에 넘깁니다(`ZoneSystem` 이 틱 뒤 게임 스레드에서 부른다). 준비되지 않았으면 할 일이 없다.
-         * @details 후보는 씬을 돌지 않고 지역 후보 격자(`ZoneOccupantIndex`)에서 자기 수평 사각형에 든 것만 받는다 — 볼륨이 많아도 개체를 프레임에 한 번 모은다.
+         * @details 후보는 씬을 돌지 않고 씬 공간 색인(`ZoneOccupantIndex` → `SceneSpatialGrid`)에서 자기 수평 사각형에 든 것만 받는다 — 움직인 개체만 색인에서 옮긴다.
          */
         void updateZone( GameObjectManager& manager, float32 deltaTime );
         /** @brief 월드 점 @p position(발)이 안이면 위치 값을 채우고 true 입니다. @p bodyHeight 는 잠긴 비율의 분모입니다. */
@@ -118,6 +118,7 @@ namespace sw
         ZoneCompiledProfile           _compiled;
         ZoneTracker                   _tracker;
         vector<ZoneOccupantCandidate> _listCandidateScratch; ///< 격자 질의 결과 재사용 버퍼
+        vector<Component*>            _listKeyScratch;       ///< 색인 질의의 열쇠 버퍼(재사용)
         float32                       _age;
         float32                       _growth;
         uint8                         _bReady   : 1;

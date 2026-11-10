@@ -129,11 +129,11 @@ namespace sw
             };
 
             /**
-             * @brief 파도 하나의 일괄 목록을 이은 번호 [start, end) 를 도는 잡 본문입니다. 워커는 포인터만 받습니다.
+             * @brief 파도 · 선행 조건 스테이지 하나의 일괄 목록을 이은 번호 [start, end) 를 도는 잡 본문입니다. 워커는 포인터만 받습니다.
              * @details 번호 공간은 파도의 일괄 목록을 차례로 이어 붙인 것이다(`_pBatchStart`). 한 원소는 한 오브젝트의 항목 하나라 나눠지지 않는다.
              *          겹치는 목록마다 그 (타입 함수, 서브틱 id) 를 한 번 부른다.
              */
-            struct WaveTick
+            struct BatchListTick
             {
                 const TickBatchList*     _pBatchList{ nullptr };
                 const uint32*            _pBatchStart{ nullptr }; ///< 일괄 목록마다 시작 번호, 끝에 전체 수(`_batchListCount + 1` 개)
@@ -156,40 +156,6 @@ namespace sw
                             batchList._pFunction( scope._threadState, batchList._listElement.data() + ( cursor - _pBatchStart[listIndex] ), rangeEnd - cursor,
                                                   batchList._subTickID, _deltaTime );
                         cursor = MathUtil::max( cursor, rangeEnd );
-                    }
-                }
-            };
-
-            /**
-             * @brief 선행 조건 스테이지 하나의 항목 [start, end) 를 도는 잡 본문입니다. 항목마다 오브젝트가 다르므로 소유자도 봅니다(항목이 적다).
-             * @details 한 스테이지에 한 오브젝트의 항목은 하나뿐이라 자기 오브젝트 쓰기는 보통 길처럼 대기 칸으로 간다.
-             */
-            struct StageTick
-            {
-                const TickItem*          _pItem{ nullptr };
-                const TickBatchFunction* _pFunction{ nullptr }; ///< 항목마다 그 타입의 일괄 함수(`TickStage::_listItemFunction`)
-                SceneTransformHierarchy* _pHierarchy{ nullptr };
-                uint32                   _dispatchOrdinal{ 0 };
-                float32                  _deltaTime{ 0.0f };
-
-                void tickRange( uint32 start, uint32 end )
-                {
-                    const TickThreadScope scope{ *_pHierarchy, _dispatchOrdinal };
-                    TickThreadState&      threadState = scope._threadState;
-                    for ( uint32 index = start; index < end; ++index )
-                    {
-                        const TickItem& item               = _pItem[index];
-                        Component*      pComp              = item._pComponent;
-                        const bool      bInactiveComponent = pComp == nullptr || pComp->isPendingDestroy() || pComp->isActive() == false;
-                        if ( bInactiveComponent )
-                            continue;
-                        // 소유 오브젝트의 삭제 대기는 다시 보지 않는다. 그 오브젝트의 컴포넌트는 항상 삭제 대기다(`GameObject::isPendingDestroy`).
-                        GameObject* pOwner = pComp->getOwner();
-                        if ( pOwner == nullptr )
-                            continue;
-                        // 레인의 일괄 함수로 부른다(가상 호출 대신 — 등록한 타입은 한정 이름 호출). 함수가 틱 주인을 이 오브젝트로 둔다.
-                        const TickBatchElement element{ pComp, pOwner };
-                        _pFunction[index]( threadState, &element, 1, item._subTickID, _deltaTime );
                     }
                 }
             };
@@ -281,14 +247,9 @@ namespace sw
                 // 앞에서 돈 선행 조건(앞 스테이지 · 레인)이 쓴 트랜스폼을 이 스테이지가 같은 프레임에 읽게 한다. 기다리는 스테이지 앞에서만.
                 if ( stage._bApplyBefore == SW_TRUE )
                     applyStageTransforms();
-                SceneTickSchedulerInternal::StageTick job{};
-                job._pItem           = stage._listItem.data();
-                job._pFunction       = stage._listItemFunction.data();
-                job._pHierarchy      = _pHierarchy;
-                job._dispatchOrdinal = ++_dispatchOrdinal;
-                job._deltaTime       = deltaTime;
-                SceneTickSchedulerInternal::dispatch( static_cast<uint32>( stage._listItem.size() ),
-                                                      SW_DELEGATE_METHOD( ParallelBlockDelegate, &SceneTickSchedulerInternal::StageTick::tickRange, &job ) );
+                // 파도와 같은 잡이다 — 이웃한 같은 (타입 함수, 서브틱 id) 항목은 함수 한 번에 넘어간다(`TickRegistry::refreshStageBatches`).
+                SW_PROFILE_COUNT( "GT.Scene.tick.stageLists", static_cast<uint32>( stage._listBatch.size() ) ); // 스테이지의 함수 호출 단위 수 — 항목 수보다 작을수록 잘 묶였다
+                (void)dispatchBatchLists( stage._listBatch, deltaTime );
             }
         }
     }
@@ -342,26 +303,11 @@ namespace sw
         uint32 elementCount = 0;
         for ( const TickWave& wave : listWave )
         {
-            uint32 totalCount = 0;
-            _listBatchStart.clear();
-            for ( const TickBatchList& batchList : wave._listBatch )
-            {
-                _listBatchStart.push_back( totalCount );
-                totalCount += static_cast<uint32>( batchList._listElement.size() );
-            }
-            _listBatchStart.push_back( totalCount );
-            if ( totalCount == 0 )
+            const uint32 waveCount = dispatchBatchLists( wave._listBatch, deltaTime );
+            if ( waveCount == 0 )
                 continue;
-            elementCount += totalCount;
+            elementCount += waveCount;
             SW_PROFILE_COUNT( "GT.Scene.tick.waves", 1 ); // 프레임당 장벽 수 — 규모와 무관한 구조 지표
-            SceneTickSchedulerInternal::WaveTick job{};
-            job._pBatchList      = wave._listBatch.data();
-            job._pBatchStart     = _listBatchStart.data();
-            job._pHierarchy      = _pHierarchy;
-            job._batchListCount  = static_cast<uint32>( wave._listBatch.size() );
-            job._dispatchOrdinal = ++_dispatchOrdinal;
-            job._deltaTime       = deltaTime;
-            SceneTickSchedulerInternal::dispatch( totalCount, SW_DELEGATE_METHOD( ParallelBlockDelegate, &SceneTickSchedulerInternal::WaveTick::tickRange, &job ) );
         }
         SW_PROFILE_COUNT( "GT.Scene.tick.batchElements", elementCount );
 
@@ -392,6 +338,29 @@ namespace sw
             job._deltaTime       = deltaTime;
             job.tickRange( 0, mainCount );
         }
+    }
+
+    uint32 SceneTickScheduler::dispatchBatchLists( const vector<TickBatchList>& listBatch, float32 deltaTime )
+    {
+        uint32 totalCount = 0;
+        _listBatchStart.clear();
+        for ( const TickBatchList& batchList : listBatch )
+        {
+            _listBatchStart.push_back( totalCount );
+            totalCount += static_cast<uint32>( batchList._listElement.size() );
+        }
+        _listBatchStart.push_back( totalCount );
+        if ( totalCount == 0 )
+            return 0;
+        SceneTickSchedulerInternal::BatchListTick job{};
+        job._pBatchList      = listBatch.data();
+        job._pBatchStart     = _listBatchStart.data();
+        job._pHierarchy      = _pHierarchy;
+        job._batchListCount  = static_cast<uint32>( listBatch.size() );
+        job._dispatchOrdinal = ++_dispatchOrdinal;
+        job._deltaTime       = deltaTime;
+        SceneTickSchedulerInternal::dispatch( totalCount, SW_DELEGATE_METHOD( ParallelBlockDelegate, &SceneTickSchedulerInternal::BatchListTick::tickRange, &job ) );
+        return totalCount;
     }
 
     void SceneTickScheduler::applyStageTransforms()

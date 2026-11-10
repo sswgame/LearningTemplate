@@ -8,7 +8,8 @@
  *          서비스는 서브시스템(`ISubsystem`)이고 매니저의 **씬 범위**(`SubsystemScope`)가 소유한다 — 엔진 범위가 부모라 씬 범위에서 엔진 서비스도 찾는다.
  *          - **순서**: 서비스가 선언한 의존(`getSubsystemDependencies`)으로 위상 정렬한 순서로 세우고(초기화), 같은 단계의 갱신도 그 순서로 돈다.
  *            매니저가 소멸하면 역순으로 내리고 지운다.
- *          - **갱신**: 매니저가 등록 줄의 단계(`SceneFrameStepList.xxx` 의 한 줄)에서 `update` 를 부릅니다(게임 스레드).
+ *          - **갱신**: 매니저가 등록 줄의 단계(`SceneFrameStepList.xxx` 의 한 줄)에서 `update` 를 부릅니다(게임 스레드). 등록 줄은 `update` 가 읽고 쓰는 씬 데이터
+ *            (`SceneFrameAccess`)를 반드시 적는다 — 매니저는 그 선언을 다른 서비스의 넘긴 일(아래)과 견주어, 일이 도는 사이에 겹치는 데이터를 고치는 갱신을 만들 때 오류로 알린다.
  *          - **프레임 일**: `update` 가 워커에 넘긴 일(`SW_SCENE_SERVICE_WITH_FRAME_JOB`)은 등록 줄의 마치는 단계 **본문 앞**에서 `completeFrameJob` 이 기다리고 결과를 씁니다.
  *            그 사이 단계들(`update` 단계 끝 ~ 마치는 단계 앞)은 일과 겹쳐 돕니다. 일이 그 사이에 읽고 쓰는 씬 데이터는 등록 줄의 접근(`SceneFrameAccess`)이 말하고,
  *            매니저는 사이가 겹치는 두 서비스의 일이 겹치는 접근을 선언했거나 마치는 단계가 넘기는 단계 뒤가 아니면 만들 때 오류로 알립니다.
@@ -126,6 +127,7 @@ namespace sw
     {
         CreateSceneServiceFunction _pCreate;                               ///< 서비스를 만드는 함수
         SceneFrameStep             _frameStep;                             ///< `update` 를 부를 프레임 단계
+        SceneFrameAccess           _updateAccess;                          ///< `update`(게임 스레드)가 읽고 쓰는 씬 데이터 — 다른 서비스의 넘긴 일과 겹치는지 매니저가 본다
         SceneFrameStep             _completeStep{ SceneFrameStep::Count }; ///< `update` 가 넘긴 워커 일을 마치는(`completeFrameJob`) 단계 — 그 단계 본문 앞. `Count` 면 넘기는 일이 없다
         SceneFrameAccess           _jobAccess{};                           ///< 넘긴 일이 `_frameStep` 끝 ~ `_completeStep` 앞 사이에 읽고 쓰는 씬 데이터(일이 없으면 빈 선언)
 
@@ -170,18 +172,19 @@ namespace sw
 
 /**
  * @brief 서비스 @p Type 을 씬 서비스로 등록하고 `Type::getSceneServiceRegistration()` 을 정의합니다(서비스의 .cpp, 파일 범위, `namespace sw` 안).
- *        @p frameStep 은 `update` 를 부를 `SceneFrameStep` 의 값 이름입니다.
+ *        @p frameStep 은 `update` 를 부를 `SceneFrameStep` 의 값 이름, @p updateAccess 는 `update` 가 읽고 쓰는 씬 데이터입니다(필수 — 없으면 전처리 오류).
+ *        접근은 `SceneFrameAccess{}`(씬 데이터를 건드리지 않음) 또는 `makeSceneFrameAccess( 쓰기, 읽기, 지난 값 읽기 )` 로 적습니다(괄호 밖 쉼표는 인자를 가른다).
  */
-#define SW_SCENE_SERVICE( Type, frameStep ) SW_SCENE_SERVICE_WITH_FRAME_JOB( Type, frameStep, Count, ::sw::SceneFrameAccess{} )
+#define SW_SCENE_SERVICE( Type, frameStep, updateAccess ) SW_SCENE_SERVICE_WITH_FRAME_JOB( Type, frameStep, updateAccess, Count, ::sw::SceneFrameAccess{} )
 
 /**
  * @brief `SW_SCENE_SERVICE` 와 같되 `update` 가 워커에 일을 넘기고 @p completeStep 단계 본문 앞에서 `completeFrameJob` 으로 마칩니다(파일 머리말의 "프레임 일").
- *        마지막 인자들은 그 일이 사이에 읽고 쓰는 씬 데이터(`SceneFrameAccess` 식 — 쉼표가 들어가도 된다)입니다.
+ *        @p jobAccess 는 그 일이 사이에 읽고 쓰는 씬 데이터입니다.
  */
-#define SW_SCENE_SERVICE_WITH_FRAME_JOB( Type, frameStep, completeStep, ... )                                                                                                                \
-    static const ::sw::SceneServiceRegistration sw_sceneService_##Type{ &::sw::createSceneService<Type>, ::sw::SceneFrameStep::frameStep, ::sw::SceneFrameStep::completeStep, __VA_ARGS__ }; \
-    static const ::sw::SceneServiceRegistrar    sw_sceneServiceRegistrar_##Type{ &sw_sceneService_##Type };                                                                                  \
-    const ::sw::SceneServiceRegistration&       Type::getSceneServiceRegistration()                                                                                                          \
-    {                                                                                                                                                                                        \
-        return sw_sceneService_##Type;                                                                                                                                                       \
+#define SW_SCENE_SERVICE_WITH_FRAME_JOB( Type, frameStep, updateAccess, completeStep, jobAccess )                                                                                                        \
+    static const ::sw::SceneServiceRegistration sw_sceneService_##Type{ &::sw::createSceneService<Type>, ::sw::SceneFrameStep::frameStep, updateAccess, ::sw::SceneFrameStep::completeStep, jobAccess }; \
+    static const ::sw::SceneServiceRegistrar    sw_sceneServiceRegistrar_##Type{ &sw_sceneService_##Type };                                                                                              \
+    const ::sw::SceneServiceRegistration&       Type::getSceneServiceRegistration()                                                                                                                      \
+    {                                                                                                                                                                                                    \
+        return sw_sceneService_##Type;                                                                                                                                                                   \
     }

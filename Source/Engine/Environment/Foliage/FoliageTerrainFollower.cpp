@@ -9,7 +9,7 @@
 
 namespace sw
 {
-    SW_SCENE_SERVICE( FoliageTerrainFollower, FlushEnd )
+    SW_SCENE_SERVICE( FoliageTerrainFollower, FlushEnd, makeSceneFrameAccess( SceneDataKindSet{}, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure, SceneDataKind::Transform } ) )
 
     FoliageTerrainFollower::FoliageTerrainFollower( GameObjectManager& manager )
         : _manager{ manager }

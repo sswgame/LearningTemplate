@@ -970,7 +970,6 @@
     "Source/GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.cpp": {"float": 1, "integer": 3},
     "Source/GameFramework/Runtime/Gameplay/Vehicle/MountMovementComponent.cpp": {"float": 1},
     "Source/GameFramework/Runtime/Gameplay/Vehicle/VehicleSeatComponent.cpp": {"float": 1},
-    "Source/GameFramework/Runtime/Gameplay/Zone/ZoneOccupantIndex.cpp": {"float": 1},
     "Source/GameFramework/Runtime/Gameplay/Zone/ZoneWatches.cpp": {"integer": 1},
     "Source/GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.cpp": {"integer": 2},
     "Source/GameFramework/Runtime/Online/Directory/ServerRecord.cpp": {"integer": 2},

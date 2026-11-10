@@ -23,6 +23,9 @@
  * 스테이지를 뒤에 실행합니다. 그래서 선행 조건이 기본 경로의 항목(다른 오브젝트의 주 틱이나 서브틱)이어도 순서가 맞습니다. 스테이지는 **이 레지스트리가
  * 만들고 보관합니다**(`rebuildStages`). 선행 조건을 가진 오브젝트와 그것이 가리키는 오브젝트가 바뀔 때만 다시 만듭니다. 체인 밖 오브젝트의 스폰과
  * 파괴는 스테이지를 건드리지 않습니다. 언리얼이 선행 조건 없는 틱 함수를 그룹 안에서 바로 실행하고 선행 조건이 있는 것만 기다리게 하는 것과 같습니다.
+ * 스테이지 안은 자리 키(`TickStageOrder` — 순서 키, 타입, 서브틱, 오브젝트)로 같은 타입 · 서브틱의 이웃을 붙여 두고 파도와 같은 일괄 목록(`TickStage::_listBatch`)으로
+ * 돕니다(1b). 레벨 장벽은 남깁니다 — 틱 중 트랜스폼 쓰기는 대기 칸에 쌓였다가 게임 스레드가 적용하므로(`_bApplyBefore`), 간선만 기다리는 태스크로는
+ * 기다리는 쪽이 같은 프레임의 선행 쓰기를 보지 못합니다(언리얼은 쓰기가 즉시라 간선만으로 됩니다 — NEXT 5-3 1 의 판단).
  *
  * **레인은 타입이 선언한 성격(`TickMode`)으로 가릅니다(5-3 1c — 상용 엔진처럼 측정한 비용이 아니라 선언).** 그룹마다 오브젝트는 셋 중 한 레인에 듭니다.
  * - **Batch(기본) — 파도:** 항목마다 파도 키(순서 키, 같은 키끼리의 오브젝트 안 순번)의 파도(`TickWave`)에 들고, 파도 안에서는 (정확한 타입, 서브틱 id)
@@ -120,23 +123,6 @@ namespace sw
      *          (Release, 큐브 8000 개, 번갈아 2회 측정). 오브젝트가 세 라인에 머무는 쪽이 더 이득입니다.
      */
     using TickItemList = vector<TickItem>;
-
-    /**
-     * @struct TickStage
-     * @brief 선행 조건 경로의 스테이지 하나입니다. 같은 오브젝트의 항목이 한 스테이지에 둘 이상 오지 않으며, 스테이지 안은 병렬로 처리합니다.
-     * @details `_bApplyBefore` 가 켜져 있으면 매니저가 이 스테이지를 실행하기 **전에** 그때까지 쌓인 틱 중 트랜스폼 쓰기를 적용한다
-     *          (`SceneTickScheduler`). 앞에서 실행된 선행 조건이 옮긴 위치를 이 스테이지가 같은 프레임에 읽게 하려는 것이다.
-     *          기다리는 항목이 없는 스테이지(레벨 0, 같은 레벨을 오브젝트별로 나눈 둘째 이후)에는 켜지 않는다.
-     */
-    struct TickStage
-    {
-        vector<TickItem>          _listItem;
-        vector<uint64>            _listItemObjectID;         ///< `_listItem` 과 같은 순서로, 항목마다 그 오브젝트의 id 다(증분 갱신이 오브젝트의 항목을 찾는다)
-        vector<TickBatchFunction> _listItemFunction;         ///< `_listItem` 과 같은 순서로, 항목마다 그 타입의 일괄 함수다(`refresh` 끝이 채운다 — 가상 호출 대신)
-        uint32                    _level{ 0 };               ///< 이 스테이지가 속한 선행 조건 레벨이다(0 = 후보 사이에 기다릴 것이 없는 레벨, 순환의 남은 항목은 최댓값)
-        uint8                     _group{ 0 };               ///< 이 스테이지 항목의 그룹이다(한 스테이지는 한 그룹)
-        uint8                     _bApplyBefore{ SW_FALSE }; ///< 실행하기 전에 틱 중 트랜스폼 쓰기를 적용할지 나타낸다
-    };
 } // namespace sw
 
 namespace sw
@@ -178,6 +164,41 @@ namespace sw
         uint8                 _orderKey{ 0 }; ///< `TickPhase` + 우선순위
         uint8                 _ordinal{ 0 };  ///< 같은 순서 키끼리의 오브젝트 안 순번
         vector<TickBatchList> _listBatch;     ///< 이 파도의 (함수, 서브틱 id) 별 목록 — 한 오브젝트의 원소는 파도마다 하나뿐이다
+    };
+
+    /**
+     * @struct TickStageOrder
+     * @brief 스테이지 안 항목의 자리 키입니다 — (순서 키, 타입 키, 서브틱 id, 오브젝트 id) 순. 같은 타입 · 같은 서브틱의 이웃이 붙어 일괄 목록 하나로 묶인다.
+     * @details 전체 재구축(정렬)과 증분 끼움(`flushStageEdits`)이 이 키와 한 비교 함수만 쓰므로 두 길의 순서가 어긋날 수 없다. 타입 키는 타입 등록 번호
+     *          (`TypeInfo::_typeID`)라 포인터 주소와 달리 같은 빌드의 실행마다 순서가 같다. 한 스테이지 안은 병렬이라(같은 오브젝트의 항목은 한 스테이지에
+     *          하나) 자리를 바꿔도 결과가 같다 — 남의 오브젝트 쓰기 · 미룬 일은 (디스패치, 쓴 오브젝트, 순번) 키로 합쳐져 자리와 무관하다.
+     *          일괄 경로를 끈 기준 길은 타입 키 · 서브틱 id 를 0 으로 둬 옛 순서(순서 키, 오브젝트 id)로 짓는다 — 동등성 테스트가 두 순서를 맞댄다.
+     */
+    struct TickStageOrder
+    {
+        uint64 _objectID{ 0 };
+        uint32 _typeKey{ 0 };
+        uint32 _subTickID{ 0 };
+        uint8  _orderKey{ 0 };
+    };
+
+    /**
+     * @struct TickStage
+     * @brief 선행 조건 경로의 스테이지 하나입니다. 같은 오브젝트의 항목이 한 스테이지에 둘 이상 오지 않으며, 스테이지 안은 병렬로 처리합니다.
+     * @details `_bApplyBefore` 가 켜져 있으면 매니저가 이 스테이지를 실행하기 **전에** 그때까지 쌓인 틱 중 트랜스폼 쓰기를 적용한다
+     *          (`SceneTickScheduler`). 앞에서 실행된 선행 조건이 옮긴 위치를 이 스테이지가 같은 프레임에 읽게 하려는 것이다.
+     *          기다리는 항목이 없는 스테이지(레벨 0, 같은 레벨을 오브젝트별로 나눈 둘째 이후)에는 켜지 않는다.
+     *          항목(`_listItem` · `_listItemOrder`)이 편집의 정본이고, 디스패치는 `refresh` 끝이 거기서 지은 일괄 목록(`_listBatch`)만 읽는다 — 파도와 같은
+     *          모양이라 같은 잡이 돈다.
+     */
+    struct TickStage
+    {
+        vector<TickItem>       _listItem;                 ///< `TickStageOrder` 순의 항목이다
+        vector<TickStageOrder> _listItemOrder;            ///< `_listItem` 과 같은 순서로, 항목마다 그 자리 키다(증분 갱신이 오브젝트 id 로 항목을 찾고 끼울 자리를 고른다)
+        vector<TickBatchList>  _listBatch;                ///< 이웃한 같은 (타입 함수, 서브틱 id) 항목의 일괄 목록이다(`refresh` 끝이 `_listItem` 에서 짓는다)
+        uint32                 _level{ 0 };               ///< 이 스테이지가 속한 선행 조건 레벨이다(0 = 후보 사이에 기다릴 것이 없는 레벨, 순환의 남은 항목은 최댓값)
+        uint8                  _group{ 0 };               ///< 이 스테이지 항목의 그룹이다(한 스테이지는 한 그룹)
+        uint8                  _bApplyBefore{ SW_FALSE }; ///< 실행하기 전에 틱 중 트랜스폼 쓰기를 적용할지 나타낸다
     };
 } // namespace sw
 
@@ -232,7 +253,7 @@ namespace sw
         const vector<TickWave>& getWaves( uint32 group ) const { return _arrListWave[group]; }
         /**
          * @brief 일괄 경로(파도 · 레인)를 켜고 끕니다. 끄면 모든 오브젝트가 오브젝트 칸(한 오브젝트 = 한 스레드)으로 갑니다 — 동등성 테스트의 기준 길입니다.
-         * @details 바뀌면 다음 `refresh` 가 모두 다시 훑는다. 게임 코드는 부르지 않는다(측정 · 테스트).
+         * @details 바뀌면 다음 `refresh` 가 모두 다시 훑고 스테이지도 다시 짓는다(자리 키가 바뀐다 — `TickStageOrder`). 게임 코드는 부르지 않는다(측정 · 테스트).
          */
         void setBatchPathEnabled( bool bEnabled );
         /** @brief 일괄 경로가 켜져 있으면 true 입니다(기본). */
@@ -247,9 +268,6 @@ namespace sw
         const vector<TickStage>& getStages() const { return _listStage; }
         /** @brief 스테이지가 처리하는 항목 수입니다(선행 조건을 가진 켜진 항목). 나머지는 모두 기본 경로입니다. */
         uint32 getStageItemCount() const { return _stageItemCount; }
-        /** @brief 스테이지를 다시 만든 횟수(누적)입니다. 체인 밖 오브젝트의 스폰과 파괴로는 오르지 않습니다. 진단과 회귀 테스트용입니다. */
-        /** @brief 스테이지를 다시 만들지 않고 말단 오브젝트의 항목만 끼우거나 뺀 횟수(누적)입니다. 진단과 회귀 테스트용입니다. */
-        /** @brief 스테이지를 훑어 파괴 · 변경된 오브젝트의 항목을 걷어 낸 횟수(누적)입니다. 한 `refresh` 에 오브젝트가 몇 개 빠져도 한 번만 오른다. 진단과 회귀 테스트용입니다. */
 
     private:
         /** @brief 스테이지에서 한 오브젝트의 항목을 빼 달라는 대기 요청입니다. */
@@ -261,11 +279,11 @@ namespace sw
         /** @brief 레벨 0 스테이지에 끼울 대기 항목입니다. 어느 스테이지인지는 (그룹, 오브젝트 안의 순번)으로 적용할 때 정합니다. */
         struct StageInsertion
         {
-            TickItem _item{};
-            uint64   _objectID{ 0 };
-            uint64   _order{ 0 };                   ///< `_stageEditOrder` 순번
-            uint32   _slot{ 0 };                    ///< 같은 오브젝트의 같은 그룹 안에서 몇 번째 항목인가(레벨 0 의 몇 번째 스테이지인가)
-            uint8    _bMarkApplyBefore{ SW_FALSE }; ///< 이 그룹의 오브젝트 항목이 끝났고 기다리는 항목이 있었다 — 그룹 레벨 0 의 첫 스테이지에 적용 먼저를 켠다
+            TickItem       _item{};
+            TickStageOrder _stageOrder{};                 ///< 스테이지 안 자리 키(오브젝트 id 를 든다)
+            uint64         _order{ 0 };                   ///< `_stageEditOrder` 순번
+            uint32         _slot{ 0 };                    ///< 같은 오브젝트의 같은 그룹 안에서 몇 번째 항목인가(레벨 0 의 몇 번째 스테이지인가)
+            uint8          _bMarkApplyBefore{ SW_FALSE }; ///< 이 그룹의 오브젝트 항목이 끝났고 기다리는 항목이 있었다 — 그룹 레벨 0 의 첫 스테이지에 적용 먼저를 켠다
         };
 
         /**
@@ -309,8 +327,13 @@ namespace sw
         void removeWaveElement( GameObject* pObj, TickItem& item );
         /** @brief 이 그룹의 파도 키 (@p orderKey, @p ordinal) 파도입니다. 없으면 키 순 자리에 만듭니다. */
         TickWave& getOrCreateWave( uint32 group, uint8 orderKey, uint8 ordinal );
-        /** @brief 스테이지 항목마다 그 타입의 일괄 함수를 채웁니다(스테이지가 다시 지어지거나 편집된 `refresh` 끝). */
-        void refreshStageFunctions( TickBatchRegistry* pBatchRegistry );
+        /**
+         * @brief 스테이지마다 항목에서 일괄 목록을 다시 짓습니다(스테이지가 다시 지어지거나 편집된 `refresh` 끝). 이웃한 같은 (타입 함수, 서브틱 id) 항목이 한 목록이다.
+         * @details 자리 키가 같은 타입 · 서브틱을 붙여 두므로 목록은 대개 (순서 키, 타입) 마다 하나다. 원소의 오브젝트는 이때의 주인이다(틱 중 구조 변경은 미뤄진다).
+         */
+        void refreshStageBatches( TickBatchRegistry* pBatchRegistry );
+        /** @brief 항목의 스테이지 자리 키입니다. 일괄 경로를 끈 기준 길은 타입 키 · 서브틱 id 를 0 으로 둔다(옛 순서 — `TickStageOrder`). */
+        TickStageOrder makeStageOrder( const TickItem& item, uint64 objectID ) const;
         /** @brief 빈 일괄 목록 · 빈 파도를 걷습니다(모듈이 내려간 타입의 함수를 들고 있지 않게). 목록 안의 위치는 바뀌지 않는다. */
         void removeEmptyBatchLists();
         /** @brief 컴포넌트 타입의 레인 · 일괄 함수입니다. 타입마다 한 번 표에 묻고 기억합니다(표 세대가 바뀌면 `refresh` 가 비운다). */

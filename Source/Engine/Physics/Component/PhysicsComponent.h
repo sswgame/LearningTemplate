@@ -15,6 +15,7 @@
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/SlotHandle.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
@@ -28,6 +29,7 @@
 
 namespace sw
 {
+    struct SpatialGridLayerDesc;
     class GameObjectManager;
     class ScenePhysics;
 
@@ -86,6 +88,13 @@ namespace sw
 
         explicit PhysicsComponent( PhysicsComponentPhase phase );
         ~PhysicsComponent() override = default;
+
+        /**
+         * @brief 3D 캐릭터 컨트롤러 · 3D 강체가 등록 동안 올리는 씬 공간 색인 층입니다(`SceneSpatialGrid`, XZ, 자리는 이 컴포넌트의 월드 자리).
+         * @details 거르기(움직이는 강체인지, 캐릭터와 한 오브젝트인지)는 읽는 쪽이 지금 상태로 한다 — 바디 종류가 바뀌어도 항목을 옮기지 않는다. 사용자(지역 볼륨)가 하나라도 있으면 맞춘다.
+         */
+        static const SpatialGridLayerDesc& getCharacterSpatialLayer();
+        static const SpatialGridLayerDesc& getBodySpatialLayer();
 
         /** @brief 씬의 물리에 등록합니다(바디는 시작한 뒤 첫 물리 프레임에 생긴다). */
         void onRegister( GameObjectManager& manager ) override;
@@ -165,6 +174,7 @@ namespace sw
         PhysicsFrameHook      _unusedFrameHooks; ///< 기본 구현이 불린(재정의하지 않은) 스텝 훅(`ScenePhysics` 가 그 훅 목록에서 뺀다)
         bool                  _bRebuildPending;  ///< 게임 스레드에서만 읽고 쓴다(속성 변경 → 다음 물리 프레임)
         atomic<bool>          _bTeleportPending; ///< 틱 중 다른 워커가 세울 수 있어 원자값이다
+        SlotHandle            _spatialEntry;     ///< 씬 공간 색인 항목(3D 캐릭터 · 강체만, 등록 ~ 해제)
     };
 } // namespace sw
 

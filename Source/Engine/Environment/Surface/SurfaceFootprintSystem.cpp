@@ -56,7 +56,7 @@ namespace sw
 
 namespace sw
 {
-    SW_SCENE_SERVICE( SurfaceFootprintSystem, FlushEnd )
+    SW_SCENE_SERVICE( SurfaceFootprintSystem, FlushEnd, makeSceneFrameAccess( SceneDataKindSet{}, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure, SceneDataKind::Transform } ) )
 
     SurfaceFootprintSystem::SurfaceFootprintSystem( GameObjectManager& manager )
         : _pManager{ &manager }

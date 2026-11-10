@@ -10,6 +10,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Object/GameObject/Service/SceneSpatialGrid.h"
 #include "Engine/Presentation/InstanceHighlight.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
@@ -38,10 +39,56 @@ namespace sw
         , _completedCount{ 0 }
         , _bHighlightRequested{ SW_FALSE }
         , _bHasOverride{ SW_FALSE }
+        , _arrSpatialEntry{}
     {
     }
 
+    namespace
+    {
+        // 3D 는 XZ(위 = Y), 2D 는 XY 다(Z 는 그리기 순서). 평면에 내린 거리는 그 공간의 거리보다 길지 않아 반 크기 = 도달 거리 상자가 닿는 하는 쪽을 빠뜨리지 않는다.
+        const SpatialGridLayerDesc kSpatialLayer3D{ "Interactable3D", SpatialGridPlane::XZ, InteractableComponent::kMinInteractorCountForGrid };
+        const SpatialGridLayerDesc kSpatialLayer2D{ "Interactable2D", SpatialGridPlane::XY, InteractableComponent::kMinInteractorCountForGrid };
+    } // namespace
+
+    const SpatialGridLayerDesc& InteractableComponent::getSpatialLayer( InteractionSpace space )
+    {
+        return space == InteractionSpace::Space2D ? kSpatialLayer2D : kSpatialLayer3D;
+    }
+
+    float32 InteractableComponent::getSpatialExtent() const
+    {
+        const InteractionDef* pDef = getDefinition();
+        return pDef != nullptr ? MathUtil::max( pDef->_maxDistance, 0.0f ) : 0.0f;
+    }
+
+    void InteractableComponent::syncSpatialExtent()
+    {
+        GameObject*        pOwner   = getOwner();
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        if ( pManager == nullptr || _arrSpatialEntry[0].isValid() == false )
+            return;
+        // 테이블을 다시 읽은 틱(워커)에서도 불린다 — 색인은 게임 스레드에서만 고친다.
+        pManager->executeOrDeferPostTickOnComponent( *this, []( InteractableComponent& component )
+        {
+            GameObjectManager* pTarget = component.getOwner() != nullptr ? component.getOwner()->getManager() : nullptr;
+            if ( pTarget == nullptr )
+                return;
+            SceneSpatialGrid& grid = pTarget->getSubsystem<SceneSpatialGrid>();
+            for ( const SlotHandle entry : component._arrSpatialEntry )
+            {
+                if ( entry.isValid() )
+                    grid.setExtent( entry, component.getSpatialExtent() );
+            }
+        } );
+    }
+
     void InteractableComponent::resolveDefinition()
+    {
+        findDefinition();
+        syncSpatialExtent();
+    }
+
+    void InteractableComponent::findDefinition()
     {
         if ( _bHasOverride == SW_TRUE )
         {
@@ -68,11 +115,23 @@ namespace sw
     {
         Component::onRegister( manager );
         manager.getComponentRegistry().add<InteractableComponent>( this );
+        // 위치가 없는 대상(씬 컴포넌트 없음)은 격자에 오르지 않는다 — 하는 쪽도 그런 대상은 고르지 않는다.
+        const SceneComponent* pScene = getOwner() != nullptr ? getOwner()->getPrimarySceneComponent() : nullptr;
+        if ( pScene == nullptr )
+            return;
+        SceneSpatialGrid& grid = manager.getSubsystem<SceneSpatialGrid>();
+        _arrSpatialEntry[0]    = grid.add( kSpatialLayer3D, *this, *pScene, getSpatialExtent() );
+        _arrSpatialEntry[1]    = grid.add( kSpatialLayer2D, *this, *pScene, getSpatialExtent() );
     }
 
     void InteractableComponent::onUnregister( GameObjectManager& manager )
     {
         manager.getComponentRegistry().remove<InteractableComponent>( this );
+        SceneSpatialGrid& grid = manager.getSubsystem<SceneSpatialGrid>();
+        for ( SlotHandle& entry : _arrSpatialEntry )
+        {
+            grid.remove( entry );
+        }
         Component::onUnregister( manager );
     }
 
@@ -130,6 +189,7 @@ namespace sw
         _overrideDef  = def;
         _bHasOverride = SW_TRUE;
         _pDef         = &_overrideDef;
+        syncSpatialExtent();
     }
 
     shared_ptr<const InteractionDef> InteractableComponent::shareDefinition() const

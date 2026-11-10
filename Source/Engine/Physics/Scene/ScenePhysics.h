@@ -8,9 +8,11 @@
  *
  *          프레임 하나: 누적기가 스텝 수 n 을 정한다 → 컴포넌트 `beginPhysicsFrame` → 연속 콜라이더 쓸기(`sweepContinuousColliders2D` — 모든 콜라이더가
  *          이번 자리로 옮겨진 뒤라 상대의 이동을 안다) → n 번(`prePhysicsStep` → 3D · 2D 씬 step → 그 스텝에 깨어 있던 바디의 주인 강체만
- *          자세를 읽는다(`getMovedBodies` · `bindBodyOwner`) → `postPhysicsStep`,
- *          이벤트를 모은다) → `endPhysicsFrame( alpha )`(보간한 자세를 트랜스폼에 쓴다) → 모은 이벤트를 두 오브젝트의 켜진 컴포넌트에
- *          나눠 준다(막는 접촉은 `onCollision*`, 트리거나 겹침 전용 바디가 낀 겹침은 `onOverlap*` — `PhysicsContactEvent::isOverlap`). 이벤트의 사용자 값은 오브젝트 id 입니다 — 컴포넌트가 아닌 코드(래그돌 빌더)가
+ *          자세를 읽는다(`getMovedBodies` · `bindBodyOwner` — 백엔드 일괄 읽기 `readBodyStates` 를 워커 구간으로 나눠 부른다) → `postPhysicsStep`,
+ *          이벤트를 모은다) → `endPhysicsFrame( alpha )`(보간한 자세 — 루트 바디는 `queuePoseWrite` 로 모아 `applyTransformBatch` 한 번에 쓴다).
+ *          모은 이벤트는 이 단계에서 나눠 주지 않는다 — `FlushPostPhysics` 단계의 `ScenePhysicsEvents` 가 트랜스폼을 펼친 뒤 두 오브젝트의 켜진 컴포넌트에
+ *          나눠 준다(막는 접촉은 `onCollision*`, 트리거나 겹침 전용 바디가 낀 겹침은 `onOverlap*` — `PhysicsContactEvent::isOverlap`; 언리얼 Chaos 의
+ *          지연 충돌 알림 `DispatchPendingCollisionNotifies` · 유니티 `OnCollision*` 이 시뮬레이션 뒤 한 자리에서 도는 것과 같다). 이벤트의 사용자 값은 오브젝트 id 입니다 — 컴포넌트가 아닌 코드(래그돌 빌더)가
  *          만든 바디도 사용자 값에 오브젝트 id 를 실으면 그 오브젝트가 이벤트를 받습니다.
  */
 #pragma once
@@ -20,6 +22,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Time/FixedStepTimer.h"
 
+#include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/Service/ISceneService.h"
 #include "Engine/Physics/Collision/PhysicsContact.h"
 #include "Engine/Physics/IPhysicsScene.h"
@@ -105,10 +108,9 @@ namespace sw
         void drawDebug( DebugDrawQueue& queue ) override;
 
         /**
-         * @brief 프레임 시간만큼 물리를 진행하고 이벤트를 나눠 줍니다. 파일 머리말의 순서입니다.
-         * @param manager 이벤트의 오브젝트 id 를 풀 매니저
+         * @brief 프레임 시간만큼 물리를 진행하고 이벤트를 모읍니다(나눠 주기는 `deliverFrameEvents`). 파일 머리말의 순서입니다.
          */
-        void step( GameObjectManager& manager, float32 deltaTime );
+        void step( float32 deltaTime );
         /** @brief 3D · 2D 씬의 바디 · 캐릭터를 선으로 냅니다. */
         void drawDebug( IPhysicsDebugRenderer& renderer ) const;
 
@@ -186,6 +188,20 @@ namespace sw
         void unbindBodyOwner( const RigidBody2DComponent& owner );
 
         /**
+         * @brief 물리 컴포넌트 @p writer 가 이번 프레임 끝 월드 자세를 트랜스폼에 쓰겠다고 넣습니다(`endPhysicsFrame` 안에서만).
+         * @details 프레임 훅이 끝나면 부모 없는 쓰기를 `GameObjectManager::applyTransformBatch` 한 번으로 적용하고 펼친 뒤, 부모 있는 쓰기를 펼친 부모 위에
+         *          풀어 쓰고(`PhysicsComponent::writeWorldPose`), 쓴 컴포넌트마다 변경 번호를 맞춘다(`markTransformSynced`) — 바디마다 세터 셋 · 월드 합성
+         *          하나를 부르지 않고, 부모 바디가 목록에서 뒤에 있어도 자식이 지난 자리의 부모로 풀지 않는다(유니티 `TransformAccessArray` · 언리얼 Chaos 의 결과 일괄 반영).
+         */
+        void queuePoseWrite( PhysicsComponent& writer, const float3& position, const quaternion& rotation, const float3& scale );
+
+        /**
+         * @brief 마지막 `step` 이 모은 접촉 이벤트를 나눠 줍니다(`ScenePhysicsEvents::update`, `FlushPostPhysics` 단계). 나눠 줄 것이 없거나 이미 나눠 줬으면 아무것도 하지 않습니다.
+         * @details 처리가 트랜스폼을 옮기면 PostPhysics 틱 전에 펼친다 — 병렬 틱은 더티 월드를 합성하지 않고 캐시만 읽는다.
+         */
+        void deliverFrameEvents();
+
+        /**
          * @brief 이 씬의 파괴 오브젝트들이 든 떨어진 덩어리 바디 수입니다(`gv_destructionMaxDebrisBodies` 예산).
          * @details 씬마다 따로 센다 — 한 프로세스에 월드가 여럿이면(가상 서버 하니스) 한 월드의 파편이 다른 월드의 예산을 먹지 않게.
          */
@@ -208,9 +224,31 @@ namespace sw
         void sweepContinuousColliders2D();
         /** @brief 설정 표의 스텝 크기 · 상한을 누적기에 한 번 맞춥니다. */
         void configureOnce();
-        /** @brief 씬 @p scene 이 마지막 스텝에 움직였다고 한 바디마다 주인(@p listOwner)의 `readSteppedPose` 를 부릅니다(.cpp 에서만 쓴다). */
-        template <typename TOwner, typename TScene>
-        void readMovedBodies( const vector<TOwner*>& listOwner, const TScene& scene );
+        /** @brief 움직인 바디의 자세를 읽는 프레임 버퍼입니다(용량을 프레임마다 재사용한다). 세 목록은 같은 자리끼리 짝이다. */
+        template <typename TOwner, typename TDimension>
+        struct PoseReadBuffer
+        {
+            vector<PhysicsBodyHandle>            _listBody;
+            vector<TOwner*>                      _listOwner;
+            vector<PhysicsBodyState<TDimension>> _listState;
+        };
+        /**
+         * @brief 씬 @p scene 이 마지막 스텝에 움직였다고 한 바디 가운데 주인(@p listOwner)이 확인된 것을 모아, 워커 구간마다 백엔드 일괄 읽기(`readBodyStates`)와
+         *        주인의 `applySteppedPose` 를 부릅니다(.cpp 에서만 쓴다). 주인은 자기 멤버만 쓴다 — 구간끼리 겹치지 않는다.
+         */
+        template <typename TOwner, typename TDimension>
+        void readMovedBodies( const vector<TOwner*>& listOwner, const IPhysicsBodyScene<TDimension>& scene, PoseReadBuffer<TOwner, TDimension>& buffer );
+        /** @brief `queuePoseWrite` 로 모은 쓰기를 적용합니다(그 머리말의 순서). */
+        void applyPoseWrites();
+
+        /** @brief 프레임 끝 월드 자세 쓰기 하나입니다(`queuePoseWrite`). */
+        struct PoseWrite
+        {
+            PhysicsComponent* _pWriter{ nullptr };
+            float3            _position{};
+            quaternion        _rotation{};
+            float3            _scale{ 1.0f, 1.0f, 1.0f };
+        };
         /** @brief 받은 물리 서비스가 있고 올라와 있으면 그것, 아니면 nullptr 입니다. */
         PhysicsSystem* findInitializedPhysicsSystem() const;
         /**
@@ -234,20 +272,47 @@ namespace sw
         FixedStepTimer                  _stepTimer;
         vector<PhysicsComponent*>       _arrListComponent[3]; ///< 단계(`PhysicsComponentPhase`)마다 하나. 컴포넌트가 자기 자리(`_physicsIndex`)를 든다
         /// @brief 프레임 훅(`PhysicsFrameHook` 의 BeginFrame · PreStep · PostStep · EndFrame 차례)마다, 단계마다 그 훅을 부를 컴포넌트입니다(`refreshFrameHookLists`).
-        vector<PhysicsComponent*>     _arrListFrameHook[4][3];
-        vector<RigidBodyComponent*>   _listBodyOwner3D; ///< 3D 바디 핸들의 칸 번호 → 주인 강체(없으면 nullptr, `bindBodyOwner`)
-        vector<RigidBody2DComponent*> _listBodyOwner2D; ///< 2D 바디 핸들의 칸 번호 → 주인 강체
-        vector<PhysicsContactEvent3D> _listFrameEvent3D;
-        vector<PhysicsContactEvent2D> _listFrameEvent2D;
-        vector<PhysicsContactEvent3D> _listDispatchEvent3D;                ///< `dispatchEvents` 가 처리하는 동안의 사본(재사용)
-        vector<PhysicsContactEvent2D> _listDispatchEvent2D;                ///< 위와 같다
-        vector<SweptOverlap2D>        _listDispatchSwept;                  ///< 위와 같다
-        PhysicsContactLogEntry        _arrContactLog[kContactLogCapacity]; ///< 시작 · 끝 접촉 고리(진단 — `collectContactLog`)
-        uint64                        _contactLogCount;                    ///< 기록한 누계(다음 칸은 `% kContactLogCapacity`)
-        uint64                        _stepCount;
-        uint32                        _debrisBodyCount;
-        float32                       _fixedStepOverride; ///< 0 이면 엔진 설정의 고정 스텝(`setFixedStepOverride`)
-        uint8                         _bConfigured         : 1;
-        uint8                         _bFrameHookListStale : 1; ///< 스텝 훅 목록을 다시 걸러야 한다(등록 · 해제 · 기본 구현 호출)
+        vector<PhysicsComponent*>                                _arrListFrameHook[4][3];
+        vector<RigidBodyComponent*>                              _listBodyOwner3D; ///< 3D 바디 핸들의 칸 번호 → 주인 강체(없으면 nullptr, `bindBodyOwner`)
+        vector<RigidBody2DComponent*>                            _listBodyOwner2D; ///< 2D 바디 핸들의 칸 번호 → 주인 강체
+        vector<PhysicsContactEvent3D>                            _listFrameEvent3D;
+        vector<PhysicsContactEvent2D>                            _listFrameEvent2D;
+        PoseReadBuffer<RigidBodyComponent, PhysicsDimension3D>   _poseRead3D;                         ///< 스텝마다 움직인 3D 바디의 자세 읽기
+        PoseReadBuffer<RigidBody2DComponent, PhysicsDimension2D> _poseRead2D;                         ///< 위와 같다(2D)
+        vector<PoseWrite>                                        _listPoseWrite;                      ///< 이번 프레임 끝 자세 쓰기(`queuePoseWrite`)
+        vector<SceneTransformWrite>                              _listTransformWrite;                 ///< 그 가운데 부모 없는 것의 일괄 쓰기(`applyPoseWrites` 가 채운다, 재사용)
+        vector<PhysicsContactEvent3D>                            _listDispatchEvent3D;                ///< `dispatchEvents` 가 처리하는 동안의 사본(재사용)
+        vector<PhysicsContactEvent2D>                            _listDispatchEvent2D;                ///< 위와 같다
+        vector<SweptOverlap2D>                                   _listDispatchSwept;                  ///< 위와 같다
+        PhysicsContactLogEntry                                   _arrContactLog[kContactLogCapacity]; ///< 시작 · 끝 접촉 고리(진단 — `collectContactLog`)
+        uint64                                                   _contactLogCount;                    ///< 기록한 누계(다음 칸은 `% kContactLogCapacity`)
+        uint64                                                   _stepCount;
+        uint32                                                   _debrisBodyCount;
+        float32                                                  _fixedStepOverride; ///< 0 이면 엔진 설정의 고정 스텝(`setFixedStepOverride`)
+        uint8                                                    _bConfigured         : 1;
+        uint8                                                    _bFrameHookListStale : 1; ///< 스텝 훅 목록을 다시 걸러야 한다(등록 · 해제 · 기본 구현 호출)
+        uint8                                                    _bFrameEventsPending : 1; ///< 마지막 `step` 의 이벤트를 아직 나눠 주지 않았다(`deliverFrameEvents`)
+    };
+
+    /**
+     * @class ScenePhysicsEvents
+     * @brief 물리 접촉 이벤트를 `FlushPostPhysics` 단계(물리가 쓴 트랜스폼을 펼친 뒤)에서 나눠 주는 씬 서비스입니다(`ScenePhysics::deliverFrameEvents`).
+     * @details 물리 단계 안의 동기 가상 호출을 시뮬레이션 밖 한 자리로 뺀다 — 처리는 이번 프레임의 펼친 자리를 보고, 그 뒤 PostPhysics 틱이 처리 결과를 본다.
+     */
+    class SW_API ScenePhysicsEvents final : public ISceneService
+    {
+    public:
+        static constexpr const utf8*           kSubsystemName = "ScenePhysicsEvents";
+        static const SceneServiceRegistration& getSceneServiceRegistration();
+        const utf8*                            getSubsystemName() const override { return kSubsystemName; }
+        /** @brief 물리 서비스(`ScenePhysics`)가 먼저 선다. */
+        span<const utf8* const> getSubsystemDependencies() const override;
+
+        explicit ScenePhysicsEvents( GameObjectManager& manager );
+        /** @brief 마지막 물리 프레임의 이벤트를 나눠 줍니다. */
+        void update( float32 deltaTime ) override;
+
+    private:
+        GameObjectManager& _manager;
     };
 } // namespace sw

@@ -334,13 +334,14 @@ namespace sw
             pScene->addTorque( _body, torque );
     }
 
-    void RigidBody2DComponent::readSteppedPose( const IPhysicsBodyScene2D& scene, uint64 stepCount )
+    void RigidBody2DComponent::applySteppedPose( const PhysicsBodyState2D& state, uint64 stepCount )
     {
-        _previousPosition = _currentPosition;
-        _previousAngle    = _currentAngle;
-        (void)scene.getBodyTransform( _body, _currentPosition, _currentAngle );
-        _lastLinearVelocity  = scene.getLinearVelocity( _body );
-        _lastAngularVelocity = scene.getAngularVelocity( _body );
+        _previousPosition    = _currentPosition;
+        _previousAngle       = _currentAngle;
+        _currentPosition     = state._position;
+        _currentAngle        = state._rotation;
+        _lastLinearVelocity  = state._linearVelocity;
+        _lastAngularVelocity = state._angularVelocity;
         _movedStep           = stepCount;
     }
 
@@ -366,10 +367,11 @@ namespace sw
         const float2  position = float2::lerp( _previousPosition, _currentPosition, weight );
         const float32 angle    = MathUtil::lerpAngle( _previousAngle, _currentAngle, weight );
         // Z 와 Z 둘레 밖의 회전은 트랜스폼의 것이다 — 변경 번호가 같으면 지난번에 읽은 값 그대로다.
-        PhysicsComponent::writeWorldPose( *this, float3{ position._x, position._y, _worldPosition._z },
-                                          replaceRigidBody2DAngle( _worldRotation, angle ), _worldScale );
-        markTransformSynced();
-        _bRestPoseWritten = bMovedLastStep == false;
+        const float3     worldPosition{ position._x, position._y, _worldPosition._z };
+        const quaternion worldRotation = replaceRigidBody2DAngle( _worldRotation, angle );
+        _bRestPoseWritten              = bMovedLastStep == false;
+        // 모아 한 번에 쓴다(3D 강체와 같다) — 적용 · 변경 번호 맞추기는 `ScenePhysics::queuePoseWrite` 가 한다.
+        physics.queuePoseWrite( *this, worldPosition, worldRotation, _worldScale );
     }
 
     void RigidBody2DComponent::releasePhysics( ScenePhysics& physics )

@@ -56,7 +56,7 @@ namespace sw
 {
     // 군중 진행(⑤)은 `Navigation` 단계 끝에 워커로 가고 `FlushPostAnimation` 본문 앞에서 마친다(⑥) — 그 사이 `Animation` 단계와 겹친다.
     // 그 일이 만지는 씬 데이터는 내비게이션(군중 · 에이전트 이동 상태)뿐이다. 오브젝트 자리 · 컨트롤러 속도는 ⑥ 이 게임 스레드에서 쓴다.
-    SW_SCENE_SERVICE_WITH_FRAME_JOB( SceneNavigation, Navigation, FlushPostAnimation, SceneFrameAccess{ SceneDataKindSet{ SceneDataKind::Navigation }, SceneDataKindSet{}, SceneDataKindSet{}, true } )
+    SW_SCENE_SERVICE_WITH_FRAME_JOB( SceneNavigation, Navigation, makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::Navigation, SceneDataKind::Transform }, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure } ), FlushPostAnimation, makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::Navigation }, SceneDataKindSet{}, SceneDataKindSet{} ) )
 
     SW_GLOBAL_VARIABLE( int32, gv_navDebugDraw, 0, "내비메시 디버그 — 선(편집기 뷰포트): 1 폴리곤 테두리 · 2 에이전트 경로 · 4 에이전트 속도 · 8 장애물, 16 걷는 면 · 경로를 게임 화면의 메시로 (31 = 모두, 0 = 끔)" );
 

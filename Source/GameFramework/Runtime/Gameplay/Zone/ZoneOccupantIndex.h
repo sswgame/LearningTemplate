@@ -1,28 +1,25 @@
 /**
  * @file ZoneOccupantIndex.h
- * @brief 지역 볼륨(`ZoneVolumeComponent`)들이 함께 쓰는 "안에 들 수 있는 물리 개체" 의 프레임 격자입니다.
- * @details 예전에는 볼륨마다 틱 뒤에 씬의 캐릭터 컨트롤러 · 강체를 모두 돌았다 — 볼륨 Z 개 × 개체 N 개(지역 수백이면 N² 모양). 이제 이번 프레임 처음 묻는 볼륨이
- *          개체를 한 번 모아 수평(XZ) 격자에 넣고, 볼륨은 자기 사각형에 든 후보만 받는다(언리얼 Mass 프로세서가 한 번 모은 청크를 여러 질의가 나눠 읽는 것과 같은 자리).
+ * @brief 지역 볼륨(`ZoneVolumeComponent`)이 "안에 들 수 있는 물리 개체" 를 씬 공간 색인(`SceneSpatialGrid`)에서 고르는 읽기 창구입니다.
+ * @details 예전에는 이 색인이 프레임마다 씬의 캐릭터 컨트롤러 · 강체를 모두 돌아 자기 격자를 지었다. 이제 3D 캐릭터 · 강체가 등록 동안 엔진 색인의 층
+ *          (`PhysicsComponent::getCharacterSpatialLayer` · `getBodySpatialLayer`)에 오르고, 여기는 그 층을 읽기만 한다(언리얼 Mass 가 엔진이 맞춘 청크를 여러 질의가 나눠 읽는 자리).
  *
- *          - 자리: 짓기는 틱 뒤 게임 스레드(볼륨의 `updateZone` — 예전과 같은 자리라 볼륨이 보는 위치는 그대로다). `FrameSystems` 단계(`runLane`)는 낡았다고만 적는다.
- *          - 순서: 후보는 예전 순회 순서(캐릭터 컨트롤러 전부, 그다음 움직이는 강체)이고, 질의 결과도 그 순서다 — 볼륨이 대상을 넣는 순서(진입 이벤트 순서)가 같다.
- *          - 판정: 격자는 고르기만 하고, 안인지는 볼륨이 지금 자리로 잰다(`sampleAt`). 같은 프레임의 앞 볼륨 동작이 옮긴(순간 이동) 개체는 지은 자리로 걸러져 다음 프레임에 든다.
- *          - 셀: 볼륨들의 가장 큰 수평 반 크기의 두 배 — 볼륨 사각형이 셀 2×2 안팎에 든다(`InteractionSpatialIndex` 의 최대 도달 거리 셀과 같은 규칙).
- *          - 붙고 떼기: 볼륨의 `onRegister` 가 붙이고(`ensureFor`), 마지막 볼륨의 `onUnregister` 가 뗀다(`releaseIfUnused`).
+ *          - 순서: 후보는 캐릭터 전부, 그다음 움직이는 강체이고, 층 안은 오른 순서다 — 볼륨이 대상을 넣는 순서(진입 이벤트 순서)가 실행마다 같다.
+ *          - 판정: 격자는 고르기만 하고, 안인지는 볼륨이 지금 자리로 잰다(`sampleAt`). 격자의 자리는 지난 `SpatialIndex` 단계의 것이라 그 뒤 옮긴(순간 이동 · 이번 틱) 개체는 다음 프레임에 든다.
+ *          - 거르기: 움직이는 강체인지 · 캐릭터와 한 오브젝트인지는 질의할 때 지금 상태로 본다(바디 종류가 바뀌어도 항목은 그대로다).
+ *          - 셀: 볼륨의 수평 반 크기(퍼짐 제외)의 두 배 이상 — 볼륨 사각형이 셀 2×2 안팎에 든다. 셀은 커지기만 한다(`SceneSpatialGrid::requireCellSize`).
+ *          - 사용자: 볼륨의 `onRegister` · `onUnregister` 가 두 층의 사용자를 센다. 볼륨이 없으면 층을 맞추지 않는다.
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Spatial/SpatialHashGrid2D.h"
-
-#include "Engine/Object/GameObject/Tick/ISceneFrameSystem.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
     class CharacterControllerComponent;
+    class Component;
     class GameObject;
     class GameObjectManager;
     class RigidBodyComponent;
@@ -37,45 +34,25 @@ namespace sw
 
     /**
      * @class ZoneOccupantIndex
-     * @brief 매니저 하나에 하나씩 붙는 지역 후보 격자입니다. 파일 머리말 참고.
+     * @brief 지역 후보를 씬 공간 색인에서 고르는 함수 모음입니다. 상태가 없습니다(파일 머리말 참고).
      */
-    class SW_GF_API ZoneOccupantIndex final : public ISceneLaneFrameSystem
+    class SW_GF_API ZoneOccupantIndex final
     {
     public:
-        /** @brief 매니저의 프레임 시스템 키입니다. */
-        static constexpr const utf8* kFrameSystemKey = "ZoneOccupantIndex";
+        ZoneOccupantIndex() = delete;
 
-        ZoneOccupantIndex();
-
-        /** @brief 매니저에 붙은 격자입니다. 없으면 nullptr 입니다. */
-        static ZoneOccupantIndex* find( const GameObjectManager& manager );
-        /** @brief 매니저의 격자를 반환합니다. 없으면 붙입니다(게임 스레드, 틱 밖). */
-        static ZoneOccupantIndex& ensureFor( GameObjectManager& manager );
-        /** @brief 지역 볼륨이 하나도 등록되어 있지 않으면 격자를 뗍니다. */
-        static void releaseIfUnused( GameObjectManager& manager );
-
-        /** @brief 이번 프레임 격자를 낡았다고 적습니다. 다음 질의가 다시 짓는다. */
-        void runLane( SceneJobContext& context ) override;
-        /** @brief 자기 깃발 하나만 바꾼다 — 씬 데이터를 읽거나 쓰지 않는다(짓기는 틱 뒤 질의에서 한다). */
-        SceneFrameAccess getFrameAccess() const override;
+        /** @brief 볼륨 하나를 두 층의 사용자로 셉니다(게임 스레드, 틱 밖). */
+        static void addUser( GameObjectManager& manager );
+        /** @brief 볼륨 하나를 뺍니다. */
+        static void removeUser( GameObjectManager& manager );
 
         /**
-         * @brief 이번 프레임 후보 중 수평(XZ) 사각형 [@p minX, @p maxX] × [@p minZ, @p maxZ] 에 든 것을 후보 순서로 @p outListCandidate 에 담습니다(먼저 비운다).
-         * @details 이번 프레임 처음 부르면 짓는다. 게임 스레드, 틱 밖에서만 부른다(짓기가 씬의 물리 컴포넌트를 한 번 돈다).
+         * @brief 수평(XZ) 사각형 [@p minX, @p maxX] × [@p minZ, @p maxZ] 에 걸린 후보를 후보 순서로 @p outListCandidate 에 담습니다(먼저 비운다).
+         * @param cellSize 이 볼륨이 바라는 셀 크기(수평 반 크기의 두 배). 층의 셀이 이보다 작으면 키운다
+         * @param inoutListKey 색인 질의 결과를 받는 버퍼(부르는 쪽이 들고 재사용한다)
+         * @details 게임 스레드, 틱 밖에서만 부른다(셀을 키우면 색인을 고친다).
          */
-        void queryCandidates( GameObjectManager& manager, float32 minX, float32 minZ, float32 maxX, float32 maxZ, vector<ZoneOccupantCandidate>& outListCandidate );
-        /** @brief 지금까지 지은 횟수입니다 — 볼륨이 여럿이어도 프레임에 한 번인지 보는 테스트용입니다. */
-        uint32 getBuildCount() const { return _buildCount; }
-
-    private:
-        /** @brief 후보를 모으고 격자에 넣습니다. */
-        void rebuild( GameObjectManager& manager );
-
-    private:
-        vector<ZoneOccupantCandidate> _listCandidate;     ///< 이번 프레임 후보(예전 순회 순서)
-        SpatialHashGrid2D             _grid;              ///< 후보 번호(`SlotHandle` 의 인덱스) → 지은 때의 수평 자리
-        vector<SlotHandle>            _listHandleScratch; ///< 질의 결과 재사용 버퍼
-        uint32                        _buildCount;
-        uint8                         _bBuilt : 1; ///< 이번 프레임에 지었다
+        static void queryCandidates( GameObjectManager& manager, float32 cellSize, float32 minX, float32 minZ, float32 maxX, float32 maxZ, vector<Component*>& inoutListKey,
+                                     vector<ZoneOccupantCandidate>& outListCandidate );
     };
 } // namespace sw

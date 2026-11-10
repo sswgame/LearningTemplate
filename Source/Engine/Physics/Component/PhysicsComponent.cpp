@@ -6,7 +6,11 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Service/SceneSpatialGrid.h"
+#include "Engine/Physics/Component/CharacterControllerComponent.h"
+#include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
+#include "Engine/Reflection/ReflectionCast.h"
 
 namespace sw
 {
@@ -18,7 +22,20 @@ namespace sw
         , _unusedFrameHooks{ PhysicsFrameHook::None }
         , _bRebuildPending{ false }
         , _bTeleportPending{ false }
+        , _spatialEntry{}
     {
+    }
+
+    const SpatialGridLayerDesc& PhysicsComponent::getCharacterSpatialLayer()
+    {
+        static const SpatialGridLayerDesc kLayer{ "PhysicsCharacter3D", SpatialGridPlane::XZ, 1 };
+        return kLayer;
+    }
+
+    const SpatialGridLayerDesc& PhysicsComponent::getBodySpatialLayer()
+    {
+        static const SpatialGridLayerDesc kLayer{ "PhysicsBody3D", SpatialGridPlane::XZ, 1 };
+        return kLayer;
     }
 
     void PhysicsComponent::beginPhysicsFrame( ScenePhysics& physics )
@@ -54,6 +71,12 @@ namespace sw
         SceneComponent::onRegister( manager );
         _pScenePhysics = &manager.getSubsystem<sw::ScenePhysics>();
         _pScenePhysics->registerComponent( this );
+        // 3D 캐릭터 · 강체는 지역 같은 공간 질의의 후보다 — 씬을 훑지 않게 등록 동안 공간 색인에 올린다(점, 반 크기 0).
+        const SpatialGridLayerDesc* pLayer = castTo<CharacterControllerComponent>( this ) != nullptr ? &getCharacterSpatialLayer()
+                                           : castTo<RigidBodyComponent>( this ) != nullptr           ? &getBodySpatialLayer()
+                                                                                                     : nullptr;
+        if ( pLayer != nullptr )
+            _spatialEntry = manager.getSubsystem<SceneSpatialGrid>().add( *pLayer, *this, *this, 0.0f );
     }
 
     void PhysicsComponent::onUnregister( GameObjectManager& manager )
@@ -64,6 +87,7 @@ namespace sw
             _pScenePhysics->unregisterComponent( this );
         }
         _pScenePhysics = nullptr;
+        manager.getSubsystem<SceneSpatialGrid>().remove( _spatialEntry );
         SceneComponent::onUnregister( manager );
     }
 

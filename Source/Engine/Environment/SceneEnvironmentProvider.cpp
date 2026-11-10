@@ -7,7 +7,7 @@
 
 namespace sw
 {
-    SW_SCENE_SERVICE( SceneEnvironmentProvider, FlushEnd )
+    SW_SCENE_SERVICE( SceneEnvironmentProvider, FlushEnd, makeSceneFrameAccess( SceneDataKindSet{}, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure } ) )
 
     SceneEnvironmentProvider::SceneEnvironmentProvider( GameObjectManager& manager )
         : _manager{ manager }

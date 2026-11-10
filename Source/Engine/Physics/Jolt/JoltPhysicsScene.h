@@ -183,6 +183,7 @@ namespace sw
         const vector<PhysicsBodyHandle>& getMovedBodies() const override { return _listMovedBody; }
 
         bool getBodyTransform( PhysicsBodyHandle body, float3& outPosition, quaternion& outRotation ) const override;
+        void readBodyStates( span<const PhysicsBodyHandle> listBody, span<PhysicsBodyState3D> outListState ) const override;
         void setBodyTransform( PhysicsBodyHandle body, const float3& position, const quaternion& rotation ) override;
         void moveKinematic( PhysicsBodyHandle body, const float3& targetPosition, const quaternion& targetRotation, float32 deltaTime ) override;
 

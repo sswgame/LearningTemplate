@@ -12,7 +12,7 @@
 
 namespace sw
 {
-    SW_SCENE_SERVICE( NetObjectTable, FlushEnd )
+    SW_SCENE_SERVICE( NetObjectTable, FlushEnd, makeSceneFrameAccess( SceneDataKindSet{}, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure } ) )
 
     NetObjectTable::NetObjectTable( GameObjectManager& manager )
         : _pManager{ &manager }

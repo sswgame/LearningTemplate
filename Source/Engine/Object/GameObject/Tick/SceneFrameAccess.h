@@ -100,4 +100,10 @@ namespace sw
         SceneDataKindSet _reads{};
         SceneDataKindSet _readsPrevious{};
     };
+
+    /** @brief 세 집합으로 접근 선언을 만듭니다. 등록 매크로의 인자처럼 쉼표가 괄호 밖에 나오면 안 되는 자리에서 씁니다(`SW_SCENE_SERVICE`). */
+    constexpr SceneFrameAccess makeSceneFrameAccess( SceneDataKindSet writes, SceneDataKindSet reads, SceneDataKindSet readsPrevious )
+    {
+        return SceneFrameAccess{ writes, reads, readsPrevious };
+    }
 } // namespace sw

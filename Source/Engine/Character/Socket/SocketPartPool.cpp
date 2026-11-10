@@ -8,7 +8,7 @@
 
 namespace sw
 {
-    SW_SCENE_SERVICE( SocketPartPool, DestroyPost )
+    SW_SCENE_SERVICE( SocketPartPool, DestroyPost, makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::Structure }, SceneDataKindSet{}, SceneDataKindSet{} ) )
 
     SocketPartPool::SocketPartPool( GameObjectManager& manager )
         : _pManager{ &manager }

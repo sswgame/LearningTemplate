@@ -10,7 +10,7 @@
 namespace sw
 {
     // 예전 틱 뒤 큐와 같은 자리다 — PrePhysics 틱이 남긴 것을 적용한 뒤(구조 변경 · 트랜스폼 쓰기 · 틱 뒤 큐), 물리 앞.
-    SW_SCENE_SERVICE( SurfaceComponentSystem, ApplyPrePhysics )
+    SW_SCENE_SERVICE( SurfaceComponentSystem, ApplyPrePhysics, makeSceneFrameAccess( SceneDataKindSet{}, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure, SceneDataKind::Transform } ) )
 
     SurfaceComponentSystem::SurfaceComponentSystem( GameObjectManager& manager )
         : _pManager{ &manager }

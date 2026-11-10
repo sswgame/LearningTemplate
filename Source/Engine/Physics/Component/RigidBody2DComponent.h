@@ -115,10 +115,10 @@ namespace sw
         void validateMaterial( ValidationContext& context ) const;
 
     private:
-        friend class ScenePhysics; ///< 스텝 뒤 움직인 바디의 주인만 `readSteppedPose` 로 부른다
+        friend class ScenePhysics; ///< 스텝 뒤 움직인 바디의 주인만 `applySteppedPose` 로 부른다
 
-        /** @brief 이 스텝에 깨어 있던 바디의 자세 · 속도를 읽습니다. `ScenePhysics` 가 백엔드의 움직인 바디 목록(`getMovedBodies`)을 돌며 부릅니다. */
-        void readSteppedPose( const IPhysicsBodyScene2D& scene, uint64 stepCount );
+        /** @brief 이 스텝에 깨어 있던 바디의 자세 · 속도 @p state 를 받습니다. `ScenePhysics` 가 백엔드 일괄 읽기(`readBodyStates`) 뒤 워커 구간에서 부릅니다 — 자기 멤버만 쓴다. */
+        void applySteppedPose( const PhysicsBodyState2D& state, uint64 stepCount );
         /** @brief 트랜스폼에서 월드 자세를 읽어 `_world*` 에 두고, 2D 자리 · 각을 돌려줍니다. */
         void readWorldPose2D( float2& outPosition, float32& outAngle );
         /** @brief 지금 속성 · 자세로 바디를 만듭니다. */
@@ -154,7 +154,7 @@ namespace sw
         PhysicsBodyHandle                               _body;
         mutable SpinLock                                _commandLock; ///< 아무 스레드의 입력 → 물리 스텝의 꺼내기를 지킨다(`RigidBodyComponent` 와 같다)
         PhysicsBodyCommand<PhysicsDimension2D> _command SW_GUARDED_BY( _commandLock );
-        uint64                                          _movedStep; ///< 바디가 마지막으로 깨어 있던 스텝 번호(`ScenePhysics::getStepCount`, `readSteppedPose`)
+        uint64                                          _movedStep; ///< 바디가 마지막으로 깨어 있던 스텝 번호(`ScenePhysics::getStepCount`, `applySteppedPose`)
         float2                                          _previousPosition;
         float2                                          _currentPosition;
         float2                                          _kinematicStartPosition;

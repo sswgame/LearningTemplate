@@ -8,7 +8,7 @@
 
 namespace sw
 {
-    SW_SCENE_SERVICE( SceneNetLink, FlushEnd )
+    SW_SCENE_SERVICE( SceneNetLink, FlushEnd, SceneFrameAccess{} )
 
     SceneNetLink::SceneNetLink( GameObjectManager& manager )
         : _value{}

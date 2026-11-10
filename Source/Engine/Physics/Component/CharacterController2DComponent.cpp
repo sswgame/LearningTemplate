@@ -163,15 +163,14 @@ namespace sw
 
     void CharacterController2DComponent::endPhysicsFrame( ScenePhysics& physics, float32 alpha )
     {
-        (void)physics;
         if ( _character.isValid() == false )
             return;
         const float2 position = float2::lerp( _previousPosition, _state._position, alpha );
         // Z · 회전 · 배율은 트랜스폼의 것이다. 이 프레임 시작 뒤에 누가 옮겼을 때만 다시 읽는다.
         if ( consumeTransformChange() )
             PhysicsComponent::readWorldPose( *this, _worldPosition, _worldRotation, _worldScale );
-        PhysicsComponent::writeWorldPose( *this, float3{ position._x, position._y, _worldPosition._z }, _worldRotation, _worldScale );
-        markTransformSynced();
+        // 강체와 같이 모아 한 번에 쓴다 — 적용 · 변경 번호 맞추기는 `ScenePhysics::queuePoseWrite` 가 한다.
+        physics.queuePoseWrite( *this, float3{ position._x, position._y, _worldPosition._z }, _worldRotation, _worldScale );
     }
 
     void CharacterController2DComponent::releasePhysics( ScenePhysics& physics )

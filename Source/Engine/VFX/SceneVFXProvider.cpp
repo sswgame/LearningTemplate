@@ -9,7 +9,7 @@
 
 namespace sw
 {
-    SW_SCENE_SERVICE( SceneVFXProvider, FlushEnd )
+    SW_SCENE_SERVICE( SceneVFXProvider, FlushEnd, makeSceneFrameAccess( SceneDataKindSet{}, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure, SceneDataKind::Transform } ) )
 
     SceneVFXProvider::SceneVFXProvider( GameObjectManager& manager )
         : _manager{ manager }

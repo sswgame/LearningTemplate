@@ -912,6 +912,25 @@ namespace sw
         return true;
     }
 
+    void JoltPhysicsScene::readBodyStates( span<const PhysicsBodyHandle> listBody, span<PhysicsBodyState3D> outListState ) const
+    {
+        SW_ASSERT( listBody.size() == outListState.size() );
+        // 스텝 밖이고 이 구간에 씬을 고치는 호출이 없다(계약) — 바디마다 잠그는 `GetBodyInterface` 대신 잠그지 않는 표에서 바디를 바로 읽는다.
+        const JPH::BodyLockInterfaceNoLock& bodies = _system.GetBodyLockInterfaceNoLock();
+        for ( size_t index = 0; index < listBody.size(); ++index )
+        {
+            const BodyRecord* pRecord = findBody( listBody[index] );
+            const JPH::Body*  pBody   = pRecord != nullptr ? bodies.TryGetBody( pRecord->_bodyID ) : nullptr;
+            if ( pBody == nullptr )
+                SW_FATAL( "JoltPhysicsScene::readBodyStates: the body handle is not live (pass only moved bodies whose owner matched)" );
+            PhysicsBodyState3D& state = outListState[index];
+            state._position           = JoltUtil::toEngine( pBody->GetPosition() );
+            state._rotation           = JoltUtil::toEngine( pBody->GetRotation() );
+            state._linearVelocity     = JoltUtil::toEngine( pBody->GetLinearVelocity() );
+            state._angularVelocity    = JoltUtil::toEngine( pBody->GetAngularVelocity() );
+        }
+    }
+
     void JoltPhysicsScene::setBodyTransform( PhysicsBodyHandle body, const float3& position, const quaternion& rotation )
     {
         const BodyRecord* pRecord = findBody( body );

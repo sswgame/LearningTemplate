@@ -22,7 +22,8 @@ namespace sw
     {
         struct ZoneVolumeComponentInternal
         {
-            static constexpr float32 kRigidBodyHeight = 1.0f; ///< 강체의 잠긴 비율 분모(m) — 상자 · 통 · 파편 크기. 부피 정밀도는 바디의 부력 계산(밀도)이 맡는다
+            static constexpr float32 kMinCellHalfSize = 0.01f; ///< 셀을 정하는 반 크기 하한(m) — 속성 하한(Half Extents Min)과 같고, 코드로 0 을 넣어도 셀이 0 이 되지 않게 한다
+            static constexpr float32 kRigidBodyHeight = 1.0f;  ///< 강체의 잠긴 비율 분모(m) — 상자 · 통 · 파편 크기. 부피 정밀도는 바디의 부력 계산(밀도)이 맡는다
 
             /** @brief 캐릭터 키(m)입니다 — 캡슐의 전체 높이. */
             static float32 computeCharacterHeight( const CharacterControllerComponent& controller )
@@ -45,6 +46,7 @@ namespace sw
         , _compiled{}
         , _tracker{}
         , _listCandidateScratch{}
+        , _listKeyScratch{}
         , _age{ 0.0f }
         , _growth{ 0.0f }
         , _bReady{ SW_FALSE }
@@ -57,14 +59,14 @@ namespace sw
     {
         Component::onRegister( manager );
         manager.getComponentRegistry().add<ZoneVolumeComponent>( this );
-        (void)ZoneOccupantIndex::ensureFor( manager );
+        ZoneOccupantIndex::addUser( manager );
         (void)ZoneSystem::ensureFor( manager );
     }
 
     void ZoneVolumeComponent::onUnregister( GameObjectManager& manager )
     {
         manager.getComponentRegistry().remove<ZoneVolumeComponent>( this );
-        ZoneOccupantIndex::releaseIfUnused( manager );
+        ZoneOccupantIndex::removeUser( manager );
         ZoneSystem::releaseIfUnused( manager );
         Component::onUnregister( manager );
     }
@@ -235,17 +237,18 @@ namespace sw
         if ( _growthRate > 0.0f )
             _growth = MathUtil::min( _maxGrowth, _growth + _growthRate * deltaTime );
 
-        // 안에 든 물리 개체를 고른다 — 캐릭터는 발, 움직이는 강체는 중심. 한 오브젝트에 둘이 있으면 캐릭터 쪽 하나다(거르기는 격자가 지을 때 한다).
+        // 안에 든 물리 개체를 고른다 — 캐릭터는 발, 움직이는 강체는 중심. 한 오브젝트에 둘이 있으면 캐릭터 쪽 하나다(거르기는 질의가 한다).
         _tracker.beginFrame();
         const SceneComponent* const pScene = pOwner->getPrimarySceneComponent();
-        ZoneOccupantIndex* const    pIndex = ZoneOccupantIndex::find( manager );
-        SW_ASSERT( pIndex != nullptr ); // 등록한 볼륨이 있는 동안 붙어 있다(`onRegister`)
-        if ( pScene != nullptr && pIndex != nullptr )
+        if ( pScene != nullptr )
         {
             const float3  center = pScene->getWorldPosition();
+            const float32 halfZ  = _shape == ZoneVolumeShape::Box ? _halfExtents._z : _halfExtents._x;
             const float32 reachX = _halfExtents._x + _growth;
-            const float32 reachZ = ( _shape == ZoneVolumeShape::Box ? _halfExtents._z : _halfExtents._x ) + _growth;
-            pIndex->queryCandidates( manager, center._x - reachX, center._z - reachZ, center._x + reachX, center._z + reachZ, _listCandidateScratch );
+            const float32 reachZ = halfZ + _growth;
+            // 셀은 퍼짐을 뺀 반 크기의 두 배다 — 퍼지는 볼륨이 셀을 프레임마다 키워 색인을 다시 짓지 않게(셀은 성능만 바꾼다).
+            const float32 cellSize = MathUtil::max( MathUtil::max( _halfExtents._x, halfZ ), ZoneVolumeComponentInternal::kMinCellHalfSize ) * 2.0f;
+            ZoneOccupantIndex::queryCandidates( manager, cellSize, center._x - reachX, center._z - reachZ, center._x + reachX, center._z + reachZ, _listKeyScratch, _listCandidateScratch );
         }
         else
         {

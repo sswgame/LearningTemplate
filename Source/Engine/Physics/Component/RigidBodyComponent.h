@@ -149,10 +149,10 @@ namespace sw
         void validateMaterial( ValidationContext& context ) const;
 
     private:
-        friend class ScenePhysics; ///< 스텝 뒤 움직인 바디의 주인만 `readSteppedPose` 로 부른다
+        friend class ScenePhysics; ///< 스텝 뒤 움직인 바디의 주인만 `applySteppedPose` 로 부른다
 
-        /** @brief 이 스텝에 깨어 있던 바디의 자세 · 속도를 읽습니다. `ScenePhysics` 가 백엔드의 움직인 바디 목록(`getMovedBodies`)을 돌며 부릅니다. */
-        void readSteppedPose( const IPhysicsBodyScene3D& scene, uint64 stepCount );
+        /** @brief 이 스텝에 깨어 있던 바디의 자세 · 속도 @p state 를 받습니다. `ScenePhysics` 가 백엔드 일괄 읽기(`readBodyStates`) 뒤 워커 구간에서 부릅니다 — 자기 멤버만 쓴다. */
+        void applySteppedPose( const PhysicsBodyState3D& state, uint64 stepCount );
         /** @brief 지금 속성과 자세 @p position · @p rotation · @p scale 의 바디 서술자입니다. */
         PhysicsBodyDesc3D makeBodyDesc( const ScenePhysics& physics, const float3& position, const quaternion& rotation, const float3& scale ) const;
         /** @brief 이번 물리 프레임의 필드가 이 스텝에 바디에 줄 힘입니다(중력 배율의 차이 · 가속 · 부력 · 흐름 쪽 저항). */
@@ -193,7 +193,7 @@ namespace sw
         PhysicsBodyCommand<PhysicsDimension3D> _command SW_GUARDED_BY( _commandLock );
         PhysicsFieldSample _pendingField                SW_GUARDED_BY( _commandLock ); ///< 이번 게임 프레임에 모인 물리 필드
         PhysicsFieldSample                              _frameField;                   ///< 이번 물리 프레임의 필드(`beginPhysicsFrame` 이 옮긴다)
-        uint64                                          _movedStep;                    ///< 바디가 마지막으로 깨어 있던 스텝 번호(`ScenePhysics::getStepCount`, `readSteppedPose`)
+        uint64                                          _movedStep;                    ///< 바디가 마지막으로 깨어 있던 스텝 번호(`ScenePhysics::getStepCount`, `applySteppedPose`)
         float3                                          _previousPosition;
         float3                                          _currentPosition;
         float3                                          _worldScale; ///< 트랜스폼에서 마지막으로 읽은 월드 배율(변경 번호가 같으면 그대로다)

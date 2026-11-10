@@ -93,14 +93,15 @@ namespace sw
 
         SceneComponent*             _pLeaderRoot{ nullptr };
         TickLaneMoverTestComponent* _pLeader{ nullptr };
-        float32                     _value = 0.0f;
+        float32                     _value           = 0.0f;
+        uint32                      _followSubTickID = kFollowSubTick; ///< 이 팔로워의 서브틱 id(파생 타입이 바꿔 스테이지의 이웃 묶음을 가른다)
 
         void onBeginPlay() override
         {
             Component::onBeginPlay();
-            (void)registerSubTick( TickGroup::DuringPhysics, kFollowSubTick );
+            (void)registerSubTick( TickGroup::DuringPhysics, _followSubTickID );
             if ( _pLeader != nullptr )
-                (void)addSubTickPrerequisite( kFollowSubTick, _pLeader->getTickHandle() );
+                (void)addSubTickPrerequisite( _followSubTickID, _pLeader->getTickHandle() );
         }
 
         void onSubTick( uint32 subTickID, float32 deltaTime ) override
@@ -114,6 +115,17 @@ namespace sw
             if ( pRoot != nullptr )
                 pRoot->setLocalPosition( float3{ _value, 0.0f, 0.0f } );
         }
+    };
+
+    /** @brief 다른 타입 · 다른 서브틱 id 의 팔로워입니다 — 스테이지에서 팔로워와 섞여 들어, 자리 키가 같은 타입 · 서브틱의 이웃을 붙이는지 본다. */
+    REFLECT( HideInMenu )
+    struct TickLaneFollowerAltTestComponent : public TickLaneFollowerTestComponent
+    {
+        REFLECT_BODY();
+
+        static constexpr uint32 kAltFollowSubTick = 8;
+
+        TickLaneFollowerAltTestComponent() { _followSubTickID = kAltFollowSubTick; }
     };
 
     /** @brief 메인 레인으로 등록하는(테스트의 지역 줄) 컴포넌트입니다 — 틱한 스레드를 적는다. */

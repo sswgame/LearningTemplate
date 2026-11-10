@@ -26,6 +26,7 @@ namespace
 
         GameObjectManager                      _manager;
         vector<TickLaneMoverTestComponent*>    _listMover;
+        vector<SceneComponent*>                _listMoverRoot;
         vector<TickLaneFollowerTestComponent*> _listFollower;
 
         TickLaneRig( const SceneEngineServices& services, bool bBatchPath )
@@ -41,16 +42,24 @@ namespace
                 pMover->_speed                           = 1.0f + static_cast<float32>( index ) * 0.125f;
                 pMover->_pShared                         = ( index % 4 == 0 ) ? pShared : nullptr;
                 _listMover.push_back( pMover );
+                _listMoverRoot.push_back( pMoverRoot );
                 if ( index % 5 != 0 )
                     continue;
-                GameObject* pFollowerObject = _manager.createGameObject( hashed_string( "Follower" ) );
-                (void)pFollowerObject->addComponent<SceneComponent>();
-                TickLaneFollowerTestComponent* pFollower = pFollowerObject->addComponent<TickLaneFollowerTestComponent>();
-                pFollower->_pLeader                      = pMover;
-                pFollower->_pLeaderRoot                  = pMoverRoot;
-                _listFollower.push_back( pFollower );
+                addFollower( index, ( index / 5 ) % 2 == 1 );
             }
             _manager.beginPlay();
+        }
+
+        /** @brief 무버 @p leaderIndex 를 기다리는 팔로워를 답니다. @p bAlt 면 다른 타입 · 다른 서브틱 id 다(스테이지에서 두 타입이 섞인다). 플레이 중이면 다음 틱이 beginPlay 한다. */
+        void addFollower( uint32 leaderIndex, bool bAlt )
+        {
+            GameObject* pFollowerObject = _manager.createGameObject( hashed_string( "Follower" ) );
+            (void)pFollowerObject->addComponent<SceneComponent>();
+            TickLaneFollowerTestComponent* pFollower = bAlt ? pFollowerObject->addComponent<TickLaneFollowerAltTestComponent>()
+                                                            : pFollowerObject->addComponent<TickLaneFollowerTestComponent>();
+            pFollower->_pLeader                      = _listMover[leaderIndex];
+            pFollower->_pLeaderRoot                  = _listMoverRoot[leaderIndex];
+            _listFollower.push_back( pFollower );
         }
 
         void run( uint32 frameCount )
@@ -78,6 +87,17 @@ namespace
             return builder.getHash();
         }
     };
+
+    /** @brief 그룹의 스테이지 중 항목이 있는 첫 스테이지입니다(테스트 씬은 팔로워가 모두 한 레벨 · 한 스테이지에 든다). 없으면 nullptr. */
+    const TickStage* findFirstStage( const TickRegistry& registry, uint32 group )
+    {
+        for ( const TickStage& stage : registry.getStages() )
+        {
+            if ( stage._group == group && stage._listItem.empty() == false )
+                return &stage;
+        }
+        return nullptr;
+    }
 
     /** @brief 그룹의 파도 원소 수입니다. */
     uint32 countWaveElements( const TickRegistry& registry, uint32 group )
@@ -241,4 +261,41 @@ SW_TEST_CASE( TickLanesTest, LaneFrameSystemRunsThroughJobContext )
     SW_REQUIRE_TRUE( pProbe != nullptr );
     SW_EXPECT_EQUAL( uint32{ 1 }, pProbe->_runCount );
     SW_EXPECT_EQUAL( uint32{ 1 }, pProbe->_deferredCount ); // 같은 프레임의 `ApplyPrePhysics` 가 돌렸다
+}
+
+/**
+ * @brief [TickLanesTest] 선행 조건 스테이지는 같은 (타입, 서브틱) 이웃을 한 일괄 목록으로 묶고 옛 순서(순서 키, 오브젝트 id — 기준 길)와 같은 상태를 낸다 —
+ *        전체 재구축 뒤에도, 플레이 중 스폰한 팔로워를 증분으로 끼운 뒤(`flushStageEdits`)에도 같은 규칙이다(NEXT 5-3 1b)
+ */
+SW_TEST_CASE( TickLanesTest, StageNeighborBatchesMatchOldOrder )
+{
+    const SceneEngineServices services = SceneEngineServices::makeFromBoundEngine();
+    TickLaneRig               batched{ services, true };
+    TickLaneRig               reference{ services, false };
+    batched.run( 4 );
+    reference.run( 4 );
+    SW_EXPECT_EQUAL( reference.computeHash(), batched.computeHash() );
+
+    // 팔로워 두 타입이 오브젝트 id 순으로 번갈아 든다 — 새 자리 키는 두 목록, 옛 순서는 번갈아 끊긴다.
+    const uint32     group           = static_cast<uint32>( TickGroup::DuringPhysics );
+    const TickStage* pBatchedStage   = findFirstStage( batched._manager.getTickRegistry(), group );
+    const TickStage* pReferenceStage = findFirstStage( reference._manager.getTickRegistry(), group );
+    SW_REQUIRE_TRUE( pBatchedStage != nullptr && pReferenceStage != nullptr );
+    SW_EXPECT_EQUAL( pReferenceStage->_listItem.size(), pBatchedStage->_listItem.size() );
+    SW_EXPECT_EQUAL( size_t{ 2 }, pBatchedStage->_listBatch.size() );
+    SW_EXPECT_TRUE( pReferenceStage->_listBatch.size() > 2 );
+
+    // 플레이 중 스폰한 팔로워는 말단이라 스테이지를 다시 짓지 않고 끼운다 — 끼운 자리도 같은 규칙이라 목록이 늘지 않는다.
+    for ( const uint32 leaderIndex : { 1u, 2u, 3u, 4u } )
+    {
+        batched.addFollower( leaderIndex, leaderIndex % 2 == 0 );
+        reference.addFollower( leaderIndex, leaderIndex % 2 == 0 );
+    }
+    batched.run( 4 );
+    reference.run( 4 );
+    SW_EXPECT_EQUAL( reference.computeHash(), batched.computeHash() );
+    pBatchedStage = findFirstStage( batched._manager.getTickRegistry(), group );
+    SW_REQUIRE_TRUE( pBatchedStage != nullptr );
+    SW_EXPECT_EQUAL( batched._listFollower.size(), pBatchedStage->_listItem.size() );
+    SW_EXPECT_EQUAL( size_t{ 2 }, pBatchedStage->_listBatch.size() );
 }
