@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="8fea94df0816fd9fb307e7f486658d4c"?>
 <!--
   Editor InputMap — editor command shortcuts (EditorInputActions owns this map; Config/Editor/editortooldefaults.json _editorInputMap points here).
   Action names are editor command ids (EditorCommandDesc::_inputAction). A command without an action has no shortcut.

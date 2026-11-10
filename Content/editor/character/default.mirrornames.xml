@@ -1,3 +1,4 @@
+<?asset guid="b52766c81d5d56105e019c59716a315c"?>
 <!-- 좌우 이름 표 — MirrorNameRules 가 읽는다. 쌍 하나가 철자 하나다(앞의 쌍이 먼저 맞춰 본다). 토큰은 대소문자를 구분하고, 이름의 앞 · 뒤나 구분자(_ . - 공백), CamelCase 경계에 놓일 때만 짝으로 인정한다. -->
 <MirrorNames>
     <Pair first="_L" second="_R"/>
