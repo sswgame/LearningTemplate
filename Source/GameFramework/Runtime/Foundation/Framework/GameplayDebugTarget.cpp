@@ -6,7 +6,6 @@
 
 #include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Console/DevCommandRegistry.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Scene/SceneManager.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
@@ -56,13 +55,13 @@ namespace sw
 
     GameObjectHandle GameplayDebugTarget::getTarget()
     {
-        const DebugHUDRegistry* const pRegistry = engine::findSubsystem<DebugHUDRegistry>();
+        const DebugHUDRegistry* const pRegistry = game::findSubsystem<DebugHUDRegistry>();
         return pRegistry != nullptr ? pRegistry->getTarget() : GameObjectHandle{}; // 엔진 서비스가 없는 실행(테스트)은 대상이 없다
     }
 
     void GameplayDebugTarget::setTarget( GameObjectHandle target )
     {
-        if ( DebugHUDRegistry* const pRegistry = engine::findSubsystem<DebugHUDRegistry>() )
+        if ( DebugHUDRegistry* const pRegistry = game::findSubsystem<DebugHUDRegistry>() )
             pRegistry->setTarget( target );
     }
 

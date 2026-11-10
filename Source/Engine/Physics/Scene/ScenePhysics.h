@@ -311,6 +311,8 @@ namespace sw
         explicit ScenePhysicsEvents( GameObjectManager& manager );
         /** @brief 마지막 물리 프레임의 이벤트를 나눠 줍니다. */
         void update( float32 deltaTime ) override;
+        /** @brief 들고 있는 것이 없다 — 남은 이벤트는 `ScenePhysics` 가 든다. */
+        void onSceneCleared() override {}
 
     private:
         GameObjectManager& _manager;

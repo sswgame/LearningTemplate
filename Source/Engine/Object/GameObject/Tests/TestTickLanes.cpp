@@ -222,7 +222,7 @@ namespace
         uint32 _deferredCount = 0;
 
         explicit LaneProbeSystem( bool bWritesStructure )
-            : _bWritesStructure{ bWritesStructure ? SW_TRUE : SW_FALSE }
+            : _bWritesStructure{ bWritesStructure }
         {
         }
 

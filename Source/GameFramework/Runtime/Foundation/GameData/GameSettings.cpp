@@ -120,7 +120,7 @@ namespace sw
             const string      elementName{ makeElementName( prop ) };
             const XMLNode     element = root.findChild( elementName.c_str() );
             const string_view text    = element.isValid() && element.getText() != nullptr ? string_view( element.getText() ) : string_view{};
-            if ( SerializerUtil::isRequiredValueMissing( prop, element.isValid(), element.isValid() ? &text : nullptr ) == false )
+            if ( SerializerUtil::isRequiredValueMissing( prop, element.isValid(), element.isValid() ? &text : nullptr, RequiredScope::Root ) == false )
                 continue;
             SW_LOG_ERROR_ID( "GameSettings.GameSettingsRequiredResourceId", "GameSettings %#: <%#> is required (PROPERTY( Required ) - the initial value is not a default)", sourceName, elementName.c_str() );
             bOk = false;

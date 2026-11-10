@@ -311,15 +311,15 @@ namespace sw
                                  pName, _pState->_listSceneService[otherIndex]._pService->getSubsystemName() );
             }
             // 일이 도는 사이(넘긴 단계의 뒤 서비스 ~ 마치는 단계 앞)에 다른 서비스의 갱신이 겹치는 데이터를 고치거나 일이 쓰는 데이터를 읽으면 경합이다 — 갱신의 접근 선언을 읽는 자리.
-            for ( size_t otherIndex = 0; otherIndex < _listSceneService.size(); ++otherIndex )
+            for ( size_t otherIndex = 0; otherIndex < _pState->_listSceneService.size(); ++otherIndex )
             {
-                const SceneServiceRegistration& other         = *_listSceneService[otherIndex]._pRegistration;
+                const SceneServiceRegistration& other         = *_pState->_listSceneService[otherIndex]._pRegistration;
                 const bool                      bAfterLaunch  = other._frameStep == registration._frameStep && otherIndex > serviceIndex;
                 const bool                      bInsideWindow = other._frameStep > registration._frameStep && other._frameStep < registration._completeStep;
                 if ( otherIndex == serviceIndex || ( bAfterLaunch == false && bInsideWindow == false ) || hasFrameAccessConflict( other._updateAccess, registration._jobAccess ) == false )
                     continue;
                 SW_LOG_ERROR_ID( "GameObjectManager.ServiceUpdateDuringFrameJob", "Scene service '%#' updates at step %# while the frame job of '%#' runs with conflicting scene data access - move the update or the job's completion step",
-                                 _listSceneService[otherIndex]._pService->getSubsystemName(), getSceneFrameStepName( other._frameStep ), pName );
+                                 _pState->_listSceneService[otherIndex]._pService->getSubsystemName(), getSceneFrameStepName( other._frameStep ), pName );
             }
         }
     }
@@ -804,7 +804,7 @@ namespace sw
     {
         SW_PROFILE_SCOPE( "GT.Scene.tick.destroy" );
         processDeferredDestruction();
-        _tagIndex.releaseRetiredSnapshots(); // 틱이 없는 자리 — 옛 태그 스냅샷을 읽는 질의가 없다
+        _pState->_tagIndex.releaseRetiredSnapshots(); // 틱이 없는 자리 — 옛 태그 스냅샷을 읽는 질의가 없다
     }
 
     void GameObjectManager::runFrameStepMerge( float32 /*deltaTime*/ )

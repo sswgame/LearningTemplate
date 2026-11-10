@@ -353,7 +353,8 @@ namespace sw::editor
                     if ( stepIndex == 0 )
                     {
                         // 카메라 앞 6 m 에 놓는다. 만들면 선택된다.
-                        GameObject* pObj = EditorSceneCommands::create( transaction, pManager, nullptr );
+                        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
+                        GameObject*       pObj = EditorSceneCommands::create( transaction, pManager, nullptr );
                         if ( context.expect( pObj != nullptr && pObj->getPrimarySceneComponent() != nullptr, "could not create the probe object" ) == false )
                             return EditorSelfTestStep::Done;
                         probe._objectID = pObj->getObjectID();

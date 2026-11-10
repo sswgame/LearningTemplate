@@ -9,6 +9,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Reflection/ReflectionTypes.h"
 
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/IDamageNumberSink.h"
 #include "GameFramework/Runtime/Gameplay/Ability/Ability.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
