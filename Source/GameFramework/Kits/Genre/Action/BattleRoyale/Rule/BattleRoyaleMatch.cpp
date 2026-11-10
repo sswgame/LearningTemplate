@@ -419,8 +419,8 @@ namespace sw
         event._other  = other;
         event._team   = team;
         event._value  = value;
-        if ( isValidPlayer( player ) )
-            event._position = _listPlayer[static_cast<size_t>( player )]._position;
+        if ( player.has_value() && isValidPlayer( *player ) )
+            event._position = _listPlayer[static_cast<size_t>( *player )]._position;
         _eventBuffer.push( event );
     }
 
