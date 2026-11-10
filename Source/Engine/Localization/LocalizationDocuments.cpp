@@ -9,6 +9,7 @@
 
 #include "Engine/Localization/CultureInfo.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
@@ -109,6 +110,26 @@ namespace sw
                 return {};
             }
 
+            /**
+             * @brief 항목 속성을 리플렉션 스키마 @p outDef 로 읽습니다(`XMLFields::readFields` — 필수 칸 · 값 꼴 · 모르는 속성). 틀리면 첫 문제를 담은 오류입니다.
+             * @details 표 읽기는 오류를 돌려주는 API 라 XMLFields 의 문제 보고를 받아(첫 줄) 오류의 자세한 글로 옮긴다.
+             */
+            template <typename TDef>
+            [[nodiscard]] static expected<void> readEntryFields( const XMLNode& entryNode, string_view sourceName, string_view key, TDef& outDef )
+            {
+                string                   firstIssue;
+                const XMLFieldsIssueSink sink{ []( void* pContext, const utf8* /*pID*/, string_view text )
+                {
+                    string& first = *static_cast<string*>( pContext );
+                    if ( first.empty() )
+                        first = string( text );
+                },
+                                               &firstIssue };
+                if ( XMLFields::readFields( entryNode, &outDef, *TDef::StaticType(), sourceName, {}, nullptr, sink ) )
+                    return {};
+                return unexpected( atSource( Error{ ErrorKind::InvalidArgument, "an entry field is missing or unreadable", key }.appendDetail( ": " ).appendDetail( firstIssue ), sourceName ) );
+            }
+
             [[nodiscard]] static expected<void> readTextFile( string_view absolutePath, string& outText )
             {
                 if ( FileUtil::readTextFile( absolutePath, outText ) )
@@ -183,18 +204,15 @@ namespace sw
                 return unexpected( Internal::atSource( std::move( keyRead ).error(), sourceName ) );
             if ( mapEntry.find( key ) != mapEntry.end() )
                 return unexpected( Internal::atEntry( sourceName, key, "an entry is written twice" ) );
-            if ( entryNode.findAttribute( "source" ) == nullptr )
-                return unexpected( Internal::atEntry( sourceName, key, "an entry needs a \"source\" attribute" ) );
+            // 값은 리플렉션 칸이다 — 빠진 source · 숫자가 아닌 maxLength 는 XMLFields 가 이름과 함께 알린다.
+            SourceTextEntryDef def;
+            if ( expected<void> fieldsRead = Internal::readEntryFields( entryNode, sourceName, key, def ); fieldsRead.has_value() == false )
+                return unexpected( std::move( fieldsRead ).error() );
             SourceTextEntry entry;
-            entry._source  = string{ entryNode.getAttributeText( "source" ) };
-            entry._context = string{ entryNode.getAttributeText( "context" ) };
-            entry._comment = string{ entryNode.getAttributeText( "comment" ) };
-            // 최대 길이는 없으면 항목의 초기값(제한 없음 0)이다.
-            optional<uint32> maxLength;
-            if ( entryNode.readOptionalAttribute( "maxLength", maxLength ) == false )
-                return unexpected( Internal::atEntry( sourceName, key, "maxLength must be a non-negative integer" ) );
-            if ( maxLength.has_value() )
-                entry._maxLength = *maxLength;
+            entry._source    = std::move( def._source );
+            entry._context   = std::move( def._context );
+            entry._comment   = std::move( def._comment );
+            entry._maxLength = def._maxLength;
             if ( Internal::readStringList( entryNode.findChild( "origins" ), entry._listOrigin ) == false )
                 return unexpected( Internal::atEntry( sourceName, key, "origins must be <item> elements" ) );
             mapEntry[key] = std::move( entry );
@@ -279,16 +297,15 @@ namespace sw
                 return unexpected( Internal::atSource( std::move( keyRead ).error(), sourceName ) );
             if ( mapEntry.find( key ) != mapEntry.end() )
                 return unexpected( Internal::atEntry( sourceName, key, "an entry is written twice" ) );
-            if ( entryNode.findAttribute( "text" ) == nullptr )
-                return unexpected( Internal::atEntry( sourceName, key, "an entry needs a \"text\" attribute" ) );
+            // 값은 리플렉션 칸이다 — 빠진 text · true/false 가 아닌 review 는 XMLFields 가 이름과 함께 알린다.
+            TranslationEntryDef def;
+            if ( expected<void> fieldsRead = Internal::readEntryFields( entryNode, sourceName, key, def ); fieldsRead.has_value() == false )
+                return unexpected( std::move( fieldsRead ).error() );
             TranslationEntry entry;
-            entry._text              = string{ entryNode.getAttributeText( "text" ) };
-            entry._translatorComment = string{ entryNode.getAttributeText( "translatorComment" ) };
-            optional<bool> review;
-            if ( entryNode.readOptionalAttribute( "review", review ) == false )
-                return unexpected( Internal::atEntry( sourceName, key, "review must be true or false" ) );
-            entry._bReview = review.value_or( false );
-            if ( entryNode.findAttribute( "sourceHash" ) != nullptr && SourceTextEntry::tryParseSourceHash( entryNode.getAttributeText( "sourceHash" ), entry._sourceHash ) == false )
+            entry._text              = std::move( def._text );
+            entry._translatorComment = std::move( def._translatorComment );
+            entry._bReview           = def._bReview;
+            if ( def._sourceHash.empty() == false && SourceTextEntry::tryParseSourceHash( def._sourceHash, entry._sourceHash ) == false )
                 return unexpected( Internal::atEntry( sourceName, key, "sourceHash must be 16 hex digits" ) );
             mapEntry[key] = std::move( entry );
         }
