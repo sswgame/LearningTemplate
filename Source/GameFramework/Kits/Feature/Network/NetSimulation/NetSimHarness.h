@@ -28,6 +28,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -337,9 +338,9 @@ namespace sw
      * @code
      *     NetSimHarness harness;
      *     harness.initialize( services, settings, &game );                // 서버 월드를 만든다
-     *     const int32 clientA = harness.addClient( NetSimLinkConditions::makeSymmetric( lossy ) );
+     *     const expected<int32> clientA = harness.addClient( NetSimLinkConditions::makeSymmetric( lossy ) );
      *     harness.stepTicks( 600 );
-     *     const int32 lateClient = harness.addClient( {} );               // 늦은 참가
+     *     const expected<int32> lateClient = harness.addClient( {} );     // 늦은 참가
      *     harness.stepUntil( &isConverged, 300 );
      *     harness.removeClient( clientA );
      * @endcode
@@ -363,13 +364,16 @@ namespace sw
         void step();
         void stepTicks( uint32 tickCount );
         /**
-         * @brief @p pPredicate 가 true 를 반환할 때까지 최대 @p maxTicks 틱을 진행합니다. 진행한 틱 수를 반환하고, 끝내 조건이 맞지 않으면 -1 을 반환합니다.
-         * @param pPredicate 틱마다 부른다. @p pContext 를 그대로 넘긴다. 처음부터 true 이면 0을 반환한다.
+         * @brief @p pPredicate 가 true 를 반환할 때까지 최대 @p maxTicks 틱을 진행합니다. 진행한 틱 수를 반환하고, 끝내 조건이 맞지 않으면 없음입니다.
+         * @param pPredicate 틱마다 부른다. @p pContext 를 그대로 넘긴다. 처음부터 true 이면 0을 반환한다. nullptr 은 부른 쪽의 잘못이다(단언).
          */
-        int32 stepUntil( bool ( *pPredicate )( const NetSimHarness&, void* ), void* pContext, uint32 maxTicks );
+        [[nodiscard]] optional<uint32> stepUntil( bool ( *pPredicate )( const NetSimHarness&, void* ), void* pContext, uint32 maxTicks );
 
-        /** @brief 클라이언트 월드를 만들고 서버에 연결을 시작합니다. 월드 번호(1부터)를 반환하고, 실패하면 -1 을 반환합니다. */
-        int32 addClient( const NetSimLinkConditions& conditions );
+        /**
+         * @brief 클라이언트 월드를 만들고 서버에 연결을 시작합니다. 월드 번호(1부터)를 반환합니다.
+         * @details 실패는 까닭이 있는 오류다 — 서버가 없음 · 회선을 못 만듦 · 씬을 빌리지 못함 · 연결을 시작하지 못함(예전에는 -1 과 무효 번호가 섞였다).
+         */
+        [[nodiscard]] expected<int32> addClient( const NetSimLinkConditions& conditions );
         /** @brief 클라이언트를 내보냅니다. 끊김 알림을 보내고 월드를 종료하며, 없는 번호면 아무것도 하지 않습니다. */
         void removeClient( int32 worldIndex );
         /** @brief 클라이언트 회선의 조건을 바꿉니다. 다음 송신부터 적용됩니다. */

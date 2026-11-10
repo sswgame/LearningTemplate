@@ -49,8 +49,8 @@ namespace
     {
         NetSimSampleGame _game;
         NetSimHarness    _harness{};
-        int32            _firstClient{ -1 };
-        int32            _secondClient{ -1 };
+        int32            _firstClient{ 0 }; ///< 월드 번호(1 부터) — 0 은 만들지 못했다(위 단언이 진다)
+        int32            _secondClient{ 0 };
 
         SampleHarnessFixture()
             : _game{
@@ -60,10 +60,12 @@ namespace
             SceneManager& sceneManager = game::getSubsystem<SceneManager>();
             const bool    bStarted     = _harness.initialize( sceneManager.getEngineServices(), NetSimConfig{}, &_game );
             SW_EXPECT_TRUE( bStarted );
-            _firstClient  = _harness.addClient( NetSimLinkConditions{} );
-            _secondClient = _harness.addClient( NetSimLinkConditions{} );
-            SW_EXPECT_TRUE( _firstClient > 0 && _secondClient > 0 );
-            SW_EXPECT_TRUE( _harness.stepUntil( &NetSimSampleGameTestUtil::areClientsConnected, nullptr, kConnectTickLimit ) >= 0 );
+            const expected<int32> firstClient  = _harness.addClient( NetSimLinkConditions{} );
+            const expected<int32> secondClient = _harness.addClient( NetSimLinkConditions{} );
+            SW_EXPECT_TRUE( firstClient.has_value() && secondClient.has_value() );
+            _firstClient  = firstClient.value_or( 0 );
+            _secondClient = secondClient.value_or( 0 );
+            SW_EXPECT_TRUE( _harness.stepUntil( &NetSimSampleGameTestUtil::areClientsConnected, nullptr, kConnectTickLimit ).has_value() );
             _harness.stepTicks( 10 );
         }
     };

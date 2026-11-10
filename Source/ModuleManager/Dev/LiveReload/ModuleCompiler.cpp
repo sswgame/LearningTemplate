@@ -112,7 +112,7 @@ namespace sw
     void ModuleCompiler::failBeforeBuild( const string& targetName )
     {
         _buildState.store( BuildState::Failed, std::memory_order_relaxed );
-        _lastExitCode.store( -1, std::memory_order_relaxed );
+        _lastExitCode.store( kNoExitCode, std::memory_order_relaxed );
         notifyBuildFinished( false, targetName );
         _bIsCompiling.store( false, std::memory_order_relaxed );
     }
@@ -158,8 +158,8 @@ namespace sw
         if ( waited.has_value() == false )
             SW_LOG_ERROR_ID( "ModuleCompiler.BuildWaitFailed", "Could not wait for the build process (target: %#): %# %#", targetDisplayName.c_str(), string( waited.error().message() ),
                              string( waited.error().detail() ) );
-        // `IModuleCompiler::getLastExitCode` 는 C-ABI 계약이라 정수다 — 기다리지 못한 빌드는 0 이 아닌 값(-1)으로 실패를 알린다(로그가 까닭을 남겼다).
-        const int32 exitCode = waited.value_or( -1 );
+        // `IModuleCompiler::getLastExitCode` 는 C-ABI 계약이라 정수다 — 기다리지 못한 빌드는 `kNoExitCode` 로 알린다(로그가 까닭을 남겼다).
+        const int32 exitCode = waited.has_value() ? *waited : kNoExitCode;
         _lastDurationSec.store( durationSec, std::memory_order_relaxed );
         _lastExitCode.store( exitCode, std::memory_order_relaxed );
 

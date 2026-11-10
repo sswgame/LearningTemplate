@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 
 namespace sw::editor
@@ -40,8 +41,8 @@ namespace sw::editor
         [[nodiscard]] static bool parseLine( string_view line, PackagingProgress& inoutProgress );
         /**
          * @brief 끝난 실행의 출력 전부를 읽습니다.
-         * @details 끝 줄 없이 끝났으면(파이썬을 못 띄움 · 예외) 종료 코드로 실패를 정하고 이유에 마지막 줄을 둔다.
+         * @details 끝 줄 없이 끝났으면(파이썬을 못 띄움 · 예외) 종료 코드로 실패를 정하고 이유에 마지막 줄을 둔다. @p exitCode 가 없으면(띄우지 못함 · 기다리지 못함) 0 이 아닌 것과 같다.
          */
-        static PackagingProgress parseOutput( const vector<string>& listLine, int32 exitCode );
+        static PackagingProgress parseOutput( const vector<string>& listLine, const optional<int32>& exitCode );
     };
 } // namespace sw::editor

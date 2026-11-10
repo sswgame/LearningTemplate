@@ -689,7 +689,8 @@ namespace sw::editor
         status._processID             = child._processID;
         status._bRunning              = child._exited.load() == 0;
         status._bConnected            = child._bConnected;
-        status._exitCode              = status._bRunning ? 0 : child._exitCode.load();
+        if ( child._exited.load() == 1 )
+            status._exitCode = child._exitCode.load(); // 2(기다리지 못함) · 0(돈다)은 종료 코드가 없다
         return status;
     }
 

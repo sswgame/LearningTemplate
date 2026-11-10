@@ -63,12 +63,13 @@ namespace sw::editor
         }
         for ( int32 index = 0; index < settings._clientCount; ++index )
         {
-            if ( _pHarness->addClient( settings._conditions ) < 0 )
+            const expected<int32> client = _pHarness->addClient( settings._conditions );
+            if ( client.has_value() == false )
             {
-                StringBuilder<constant::buffer::kMax128> detailBuilder;
-                detailBuilder.appendFormat( "client %#", index + 1 );
+                StringBuilder<constant::buffer::kMax256> detailBuilder;
+                detailBuilder.appendFormat( "client %#: %#", index + 1, client.error().message() );
                 stop();
-                return unexpected( Error{ ErrorKind::ExternalFailure, "a client did not start (see the log)", detailBuilder.view() } );
+                return unexpected( Error{ ErrorKind::ExternalFailure, "a client did not start", detailBuilder.view() } );
             }
         }
         SW_LOG_INFO_ID( "NetSim.PlayStarted", "In-process play started: %# with %# client(s)", settings._gameName, settings._clientCount );

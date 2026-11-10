@@ -6,6 +6,7 @@
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -28,9 +29,9 @@ namespace sw::editor
     /** @brief 외부 도구 한 번의 결과입니다(표준 에러는 표준 출력에 합쳐져 들어옵니다). */
     struct EditorExternalToolResult
     {
-        vector<string> _listLine;
-        int32          _exitCode{ -1 };
-        bool           _bLaunched{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        vector<string>  _listLine;
+        optional<int32> _exitCode{};         ///< 띄우고 거뒀을 때만 종료 코드다. 띄우지 못했으면(`_bLaunched`) · 기다리지 못했으면(까닭은 `_listLine` 끝 줄) 없다
+        bool            _bLaunched{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw::editor
 

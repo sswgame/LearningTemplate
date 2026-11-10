@@ -153,7 +153,7 @@ namespace sw::editor
         if ( _pJob->take( result ) != EditorTaskPoll::Ready )
             return;
         _listLine             = std::move( result._listLine );
-        _progress             = PackagingProgress::parseOutput( _listLine, result._bLaunched ? result._exitCode : -1 );
+        _progress             = PackagingProgress::parseOutput( _listLine, result._exitCode );
         const bool bSucceeded = _progress._state == PackagingState::Succeeded;
         if ( bSucceeded )
             SW_LOG_INFO_ID( "Packaging.Done", "Packaging done: %# (%# bytes)", _progress._outputFolder, _progress._byteCount );

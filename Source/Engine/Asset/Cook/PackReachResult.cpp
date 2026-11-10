@@ -267,11 +267,11 @@ namespace sw
                     vector<Span> listSpan;
                     for ( XMLNode child = root.findChild(); child.isValid(); child = child.findNextSibling() )
                     {
-                        const int64 offset = child.getSourceOffset();
-                        if ( offset < 0 || string_view( child.getName() ).empty() )
+                        const optional<size_t> offset = child.getSourceOffset();
+                        if ( offset.has_value() == false || string_view( child.getName() ).empty() )
                             continue; // 글 노드
                         // 위치는 요소 이름을 가리킨다 — 태그의 `<` 부터 잘라야 뽑기가 태그로 읽는다.
-                        const size_t start = allText.rfind( '<', static_cast<size_t>( offset ) );
+                        const size_t start = allText.rfind( '<', *offset );
                         listSpan.push_back( Span{ child, start == string_view::npos ? 0 : start } );
                     }
                     if ( listSpan.empty() == false )

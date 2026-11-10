@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
@@ -131,7 +132,7 @@ namespace sw::editor
             string                 _repositoryPath;
         };
 
-        void applyResult( const PendingOperation& operation, int32 exitCode, bool bLaunched, const vector<string>& listLine );
+        void applyResult( const PendingOperation& operation, const optional<int32>& exitCode, bool bLaunched, const vector<string>& listLine );
         void enqueue( SourceControlOperation operation, string_view repositoryPath );
 
     private:

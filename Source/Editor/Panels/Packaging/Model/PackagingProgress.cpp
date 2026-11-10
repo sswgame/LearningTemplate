@@ -107,7 +107,7 @@ namespace sw::editor
         return false;
     }
 
-    PackagingProgress PackagingProgress::parseOutput( const vector<string>& listLine, int32 exitCode )
+    PackagingProgress PackagingProgress::parseOutput( const vector<string>& listLine, const optional<int32>& exitCode )
     {
         PackagingProgress progress{};
         for ( const string& line : listLine )

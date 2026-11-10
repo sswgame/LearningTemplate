@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Transport/NetEmulation.h"
@@ -27,7 +28,7 @@ namespace sw::editor
         NetEmulationReport _emulationReport{};         ///< 마지막으로 받은 `net.emulation stats` 의 답
         uint32             _emulationReportCount{ 0 }; ///< 받은 보고 수 — 0 이면 아직 답이 없다
         int32              _processID{ 0 };
-        int32              _exitCode{ 0 };
+        optional<int32>    _exitCode{}; ///< 거둔 프로세스의 종료 코드 — 돌고 있거나 기다리지 못했으면 없다
         uint8              _bRunning{ SW_FALSE };
         uint8              _bConnected{ SW_FALSE }; ///< 클라이언트가 서버에 붙어 있다
     };

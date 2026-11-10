@@ -71,7 +71,7 @@ namespace sw::editor
         , _listExternalLine{}
         , _externalTitle{}
         , _arrFilter{}
-        , _externalExitCode{ 0 }
+        , _externalExitCode{}
         , _externalErrorCount{ 0 }
         , _selfTestGeneration{ 0 }
         , _externalRunKind{ ExternalRunKind::None }
@@ -322,8 +322,14 @@ namespace sw::editor
             ImGui::TextColored( TestRunnerPanelInternal::kFailColor, "%s", SW_LOCKEYFORMAT( "EdFormat", "CouldNotBeLaunched", TextArgumentList().addText( "externalTitle", _externalTitle.c_str() ) ).c_str() );
             return;
         }
-        const bool bPassed = _externalExitCode == 0;
-        ImGui::TextColored( bPassed ? TestRunnerPanelInternal::kPassColor : TestRunnerPanelInternal::kFailColor, "%s", SW_LOCKEYFORMAT( "EdFormat", "ExitCodeErrorLines", TextArgumentList().addText( "externalTitle", _externalTitle.c_str() ).addInteger( "externalExitCode", static_cast<int64>( _externalExitCode ) ).addInteger( "externalErrorCount", static_cast<int64>( _externalErrorCount ) ) ).c_str() );
+        if ( _externalExitCode.has_value() == false )
+        {
+            // 기다리지 못한 실행은 종료 코드가 없다 — 숫자를 꾸미지 않고 까닭(도구 작업이 남긴 출력 끝 줄)을 실패 색으로 보인다
+            ImGui::TextColored( TestRunnerPanelInternal::kFailColor, "%s", _listExternalLine.empty() ? "" : _listExternalLine.back().c_str() );
+            return;
+        }
+        const bool bPassed = *_externalExitCode == 0;
+        ImGui::TextColored( bPassed ? TestRunnerPanelInternal::kPassColor : TestRunnerPanelInternal::kFailColor, "%s", SW_LOCKEYFORMAT( "EdFormat", "ExitCodeErrorLines", TextArgumentList().addText( "externalTitle", _externalTitle.c_str() ).addInteger( "externalExitCode", static_cast<int64>( *_externalExitCode ) ).addInteger( "externalErrorCount", static_cast<int64>( _externalErrorCount ) ) ).c_str() );
         if ( ImGui::BeginChild( "##ExternalOutput", ImVec2{ 0.0f, 0.0f }, ImGuiChildFlags_Borders, ImGuiWindowFlags_HorizontalScrollbar ) )
         {
             const size_t first = _listExternalLine.size() > TestRunnerPanelInternal::kVisibleTailLineCount
