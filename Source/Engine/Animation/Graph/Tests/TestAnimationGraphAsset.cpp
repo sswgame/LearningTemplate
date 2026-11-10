@@ -58,7 +58,7 @@ SW_TEST_CASE( AnimationGraphAssetTest, ReadsElementsThroughSchemas )
     SW_EXPECT_TRUE( graph._listNode[1]._position == sw::float2( 40.0f, 40.0f ) ); // 적지 않은 자리는 스키마 기본값
     SW_EXPECT_TRUE( graph._listNode[1]._blendSpace._notifyMode == sw::AnimationBlendSpaceNotifyMode::HighestWeight );
     SW_EXPECT_EQUAL( uint32{ 2 }, graph._listNode[1]._blendSpace._space.getSampleCount() );
-    SW_EXPECT_TRUE( graph._listNode[2]._poseNode._type == sw::AnimationPoseNodeKind::BlendPoses );
+    SW_EXPECT_TRUE( graph._listNode[2]._poseNode._type == sw::hashed_string( "BlendPoses" ) );
     SW_REQUIRE_EQUAL( size_t{ 2 }, graph._listLink.size() );
     SW_EXPECT_TRUE( graph._listLink[0]._op == sw::AnimationConditionOp::GreaterEqual );
     SW_EXPECT_EQUAL( -1.0f, graph._listLink[1]._blendSeconds );
@@ -243,5 +243,18 @@ SW_TEST_CASE( AnimationGraphAssetTest, RejectsMaxLODOnClipState )
     SW_EXPECT_LOG( "AnimationGraphAsset.AnimationGraphNodeMaxLOD" );
     sw::AnimationGraphAsset graph;
     SW_EXPECT_FALSE( graph.loadFromXMLText( "<AnimationGraphAsset><nodes><node id=\"1\" name=\"Idle\" max_lod=\"1\"/></nodes></AnimationGraphAsset>" ) );
+    SW_EXPECT_TRUE( graph._listNode.empty() );
+}
+
+/**
+ * @brief [AnimationGraphAssetTest] 포즈 노드 종류는 표(`AnimationPoseNodeRegistry`)의 이름이다 — 모르는 이름과 종류의 계약(입력 수 · weight)을 어긴 정의는 로드 오류다
+ */
+SW_TEST_CASE( AnimationGraphAssetTest, PoseNodeTypeComesFromRegistry )
+{
+    sw::AnimationGraphAsset graph;
+    SW_EXPECT_LOG( "AnimationGraphAsset.AnimationGraphNodeUnknown" );
+    SW_EXPECT_FALSE( graph.loadFromXMLText( "<AnimationGraphAsset><nodes><node id=\"1\" name=\"W\"><pose_node type=\"Mystery\" weight=\"W\"><inputs><item>A</item><item>B</item></inputs></pose_node></node></nodes></AnimationGraphAsset>" ) );
+    SW_EXPECT_LOG( "AnimationGraphAsset.AnimationGraphNodeBlend7" );
+    SW_EXPECT_FALSE( graph.loadFromXMLText( "<AnimationGraphAsset><nodes><node id=\"1\" name=\"W\"><pose_node type=\"BlendPoses\" weight=\"W\"><inputs><item>A</item></inputs></pose_node></node></nodes></AnimationGraphAsset>" ) );
     SW_EXPECT_TRUE( graph._listNode.empty() );
 }
