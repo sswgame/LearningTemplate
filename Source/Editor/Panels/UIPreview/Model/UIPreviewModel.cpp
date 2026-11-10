@@ -488,21 +488,22 @@ namespace sw::editor
 
     void UIPreviewModel::pushPropertyEdit( uint32 ordinal, const string& propertyName, const string& oldText, const string& newText, const string& coalesceKey )
     {
+        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
         if ( propertyName == "_slot" )
             ++_slotEditCount;
         const uint32                  generation = _generation;
         const shared_ptr<EditSession> pSession   = _pSession;
-        EditorTransaction::push( UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, ordinal, propertyName, oldText]()
+        transaction.push( UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, ordinal, propertyName, oldText]()
         {
             pSession->apply( generation, ordinal, propertyName, oldText );
         } ),
-                                                          *_pUndoOwner ),
-                                 UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, ordinal, propertyName, newText]()
+                                                   *_pUndoOwner ),
+                          UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, ordinal, propertyName, newText]()
         {
             pSession->apply( generation, ordinal, propertyName, newText );
         } ),
-                                                          *_pUndoOwner ),
-                                 "Edit UI Widget", coalesceKey );
+                                                   *_pUndoOwner ),
+                          "Edit UI Widget", coalesceKey );
     }
 
     void UIPreviewModel::afterStructureEdit( UIScreen& screen, optional<uint32> selectedOrdinal )
@@ -530,11 +531,12 @@ namespace sw::editor
 
     bool UIPreviewModel::addWidget( UIScreen& screen, const hashed_string& typeName, Widget* pTarget )
     {
-        TypeRegistry*   pRegistry = editor::findSubsystem<TypeRegistry>();
-        const TypeInfo* pType     = pRegistry != nullptr ? pRegistry->findType( typeName ) : nullptr;
-        WidgetTree&     tree      = screen.getTree();
-        uint32          index{ 0 };
-        PanelWidget*    pParent = UIPreviewLogic::findDropContainer( tree, pTarget, index );
+        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
+        TypeRegistry*     pRegistry = editor::findSubsystem<TypeRegistry>();
+        const TypeInfo*   pType     = pRegistry != nullptr ? pRegistry->findType( typeName ) : nullptr;
+        WidgetTree&       tree      = screen.getTree();
+        uint32            index{ 0 };
+        PanelWidget*      pParent = UIPreviewLogic::findDropContainer( tree, pTarget, index );
         if ( pType == nullptr || pParent == nullptr )
             return false;
         const uint32 parentOrdinal = UIPreviewLogic::findWidgetOrdinal( tree, pParent->getID() ).value(); // 트리에서 찾은 패널이라 늘 있다
@@ -548,17 +550,17 @@ namespace sw::editor
         afterStructureEdit( screen, UIPreviewLogic::findWidgetOrdinal( tree, pAdded->getID() ) );
         const uint32                  generation = _generation;
         const shared_ptr<EditSession> pSession   = _pSession;
-        EditorTransaction::push( UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, parentOrdinal, index]()
+        transaction.push( UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, parentOrdinal, index]()
         {
             pSession->detach( generation, parentOrdinal, index, shared_ptr<RemovedWidget>{} );
         } ),
-                                                          *_pUndoOwner ),
-                                 UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, typeName, parentOrdinal, index]()
+                                                   *_pUndoOwner ),
+                          UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, typeName, parentOrdinal, index]()
         {
             pSession->insert( generation, typeName, parentOrdinal, index );
         } ),
-                                                          *_pUndoOwner ),
-                                 "Add UI Widget" );
+                                                   *_pUndoOwner ),
+                          "Add UI Widget" );
         return true;
     }
 
@@ -570,8 +572,9 @@ namespace sw::editor
 
     bool UIPreviewModel::deleteSelected( UIScreen& screen )
     {
-        WidgetTree& tree    = screen.getTree();
-        Widget*     pWidget = tree.findWidgetByID( _selected );
+        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
+        WidgetTree&       tree    = screen.getTree();
+        Widget*           pWidget = tree.findWidgetByID( _selected );
         if ( pWidget == nullptr || pWidget->getParent() == nullptr )
             return false; // 루트는 지우지 않는다(문서에는 루트가 있어야 한다)
         PanelWidget* pParent       = pWidget->getParent();
@@ -585,38 +588,39 @@ namespace sw::editor
         afterStructureEdit( screen, parentOrdinal );
         const uint32                  generation = _generation;
         const shared_ptr<EditSession> pSession   = _pSession;
-        EditorTransaction::push( UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, parentOrdinal, index, pHolder]()
+        transaction.push( UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, parentOrdinal, index, pHolder]()
         {
             pSession->reattach( generation, parentOrdinal, index, pHolder );
         } ),
-                                                          *_pUndoOwner ),
-                                 UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, parentOrdinal, index, pHolder]()
+                                                   *_pUndoOwner ),
+                          UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, parentOrdinal, index, pHolder]()
         {
             pSession->detach( generation, parentOrdinal, index, pHolder );
         } ),
-                                                          *_pUndoOwner ),
-                                 "Delete UI Widget" );
+                                                   *_pUndoOwner ),
+                          "Delete UI Widget" );
         return true;
     }
 
     void UIPreviewModel::reorderChild( uint32 parentOrdinal, uint32 fromIndex, uint32 toIndex )
     {
+        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
         if ( applyMove( _generation, parentOrdinal, fromIndex, toIndex ) == false )
             return; // 옮기지 못했으면 되돌릴 것도 없다 — 항목을 남기면 Undo 가 빈 일을 하고 dirty 가 어긋난다
         ++_slotEditCount;
         const uint32                  generation = _generation;
         const shared_ptr<EditSession> pSession   = _pSession;
-        EditorTransaction::push( UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, parentOrdinal, fromIndex, toIndex]()
+        transaction.push( UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, parentOrdinal, fromIndex, toIndex]()
         {
             pSession->move( generation, parentOrdinal, toIndex, fromIndex );
         } ),
-                                                          *_pUndoOwner ),
-                                 UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, parentOrdinal, fromIndex, toIndex]()
+                                                   *_pUndoOwner ),
+                          UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, parentOrdinal, fromIndex, toIndex]()
         {
             pSession->move( generation, parentOrdinal, fromIndex, toIndex );
         } ),
-                                                          *_pUndoOwner ),
-                                 "Reorder UI Widget" );
+                                                   *_pUndoOwner ),
+                          "Reorder UI Widget" );
     }
 
     bool UIPreviewModel::canMoveSelected( const WidgetTree& tree, int32 delta ) const

@@ -69,7 +69,7 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_EDITOR_COMMAND( NavigationBake, "navigation.bake", &EditorNavigationBakeCommandInternal::runBake, &EditorNavigationBakeCommandInternal::isEnabled, Scene );
+    SW_EDITOR_COMMAND( NavigationBake, "navigation.bake", &EditorNavigationBakeCommandInternal::runBake, &EditorNavigationBakeCommandInternal::isEnabled, SceneUnrecorded ); // 굽기 작업을 시작한다 — 씬 기록이 아니다
 
     SW_AUTOMATION_WATCH( editorNavigationBakeCount, "Editor.NavigationBakeCount", "Times the navigation.bake command ran in this editor session",
                          &EditorNavigationBakeCommandInternal::readBakeRunCount );

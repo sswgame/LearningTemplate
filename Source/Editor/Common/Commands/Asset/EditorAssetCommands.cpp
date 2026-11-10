@@ -23,6 +23,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Visual/2D/SpriteComponent.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
@@ -64,6 +65,7 @@ namespace sw::editor
     GameObject* EditorAssetCommands::spawnPrefab( GameObjectManager* pManager, const utf8* pPath, GameObject* pParent,
                                                   const utf8* pUndoLabel )
     {
+        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
         if ( EditorPlaySession::refuseSceneEdit( "Spawn prefab" ) )
             return nullptr;
         GameObject* pSpawned = spawnPrefabWithoutUndo( pManager, pPath, pParent );
@@ -71,7 +73,7 @@ namespace sw::editor
             return nullptr;
 
         const utf8* pLabel = ( pUndoLabel != nullptr ) ? pUndoLabel : "Spawn Prefab";
-        EditorTransaction::recordCreation( pSpawned, pLabel );
+        transaction.recordCreation( pSpawned, pLabel );
         EditorSceneCommands::select( pSpawned, SelectionMode::Replace );
         return pSpawned;
     }
@@ -106,6 +108,7 @@ namespace sw::editor
 
     GameObject* EditorAssetCommands::spawnSprite( GameObjectManager* pManager, const utf8* pPath, const EditorPlacementPose& pose )
     {
+        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
         if ( EditorPlaySession::refuseSceneEdit( "Spawn sprite" ) )
             return nullptr;
         if ( pManager == nullptr || StringUtil::isNullOrEmpty( pPath ) )
@@ -138,13 +141,14 @@ namespace sw::editor
             pSprite->resolveRenderAssets();
         }
 
-        EditorTransaction::recordCreation( pSpawned, "Spawn Sprite in Viewport" );
+        transaction.recordCreation( pSpawned, "Spawn Sprite in Viewport" );
         EditorSceneCommands::select( pSpawned, SelectionMode::Replace );
         return pSpawned;
     }
 
     GameObject* EditorAssetCommands::spawnMesh( GameObjectManager* pManager, const utf8* pPath, const EditorPlacementPose& pose )
     {
+        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
         if ( EditorPlaySession::refuseSceneEdit( "Spawn mesh" ) )
             return nullptr;
         if ( pManager == nullptr || StringUtil::isNullOrEmpty( pPath ) )
@@ -167,13 +171,14 @@ namespace sw::editor
             pMesh->setLocalRotation( pMesh->getLocalRotation() + pose.makeRotationOffset() );
             pMesh->setMeshID( meshID );
         }
-        EditorTransaction::recordCreation( pSpawned, "Spawn Mesh in Viewport" );
+        transaction.recordCreation( pSpawned, "Spawn Mesh in Viewport" );
         EditorSceneCommands::select( pSpawned, SelectionMode::Replace );
         return pSpawned;
     }
 
     GameObject* EditorAssetCommands::spawnPrefabAt( GameObjectManager* pManager, const utf8* pPath, const EditorPlacementPose& pose )
     {
+        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
         if ( EditorPlaySession::refuseSceneEdit( "Spawn prefab" ) )
             return nullptr;
         GameObject* pSpawned = spawnPrefabWithoutUndo( pManager, pPath, nullptr );
@@ -185,7 +190,7 @@ namespace sw::editor
             pSceneComponent->setLocalPosition( pose._position );
             pSceneComponent->setLocalRotation( pSceneComponent->getLocalRotation() + pose.makeRotationOffset() ); // 프리팹의 회전에 더한다
         }
-        EditorTransaction::recordCreation( pSpawned, "Spawn Prefab in Viewport" );
+        transaction.recordCreation( pSpawned, "Spawn Prefab in Viewport" );
         EditorSceneCommands::select( pSpawned, SelectionMode::Replace );
         return pSpawned;
     }

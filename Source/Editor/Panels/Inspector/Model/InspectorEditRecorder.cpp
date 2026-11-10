@@ -95,6 +95,7 @@ namespace sw::editor
 
     void InspectorEditRecorder::commitFinishedEdits()
     {
+        EditorTransaction                                   transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
         vector<InspectorEditRecorderInternal::PendingEdit>& listFinished = InspectorEditRecorderInternal::getState()._listFinished;
         // 플레이 중 편집은 기록하지 않는다 — 편집 내역은 맡겨 두었고(`CommandStack::parkHistory`) Stop 이 스냅샷으로 되돌린다.
         if ( EditorPlaySession::areSceneEditsAllowed() == false )
@@ -125,7 +126,7 @@ namespace sw::editor
             {
                 GameObject*          pTarget       = editor::findGameObject( edit._listTarget[index] );
                 const ObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pTarget );
-                EditorTransaction::recordModify( pTarget, edit._listBefore[index], afterSnapshot, label );
+                transaction.recordModify( pTarget, edit._listBefore[index], afterSnapshot, label );
             }
             if ( bCompound )
                 EditorTransaction::endTransaction();

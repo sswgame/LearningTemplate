@@ -21,6 +21,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
@@ -680,6 +681,7 @@ namespace sw::editor
 
     void GimmickGraphPanel::commitEdit( GimmickCircuitComponent& circuit, const ObjectSnapshot& before, const utf8* pLabel )
     {
+        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
         if ( GimmickGraphBridge::apply( circuit, _model ) == false )
         {
             _statusText = "Could not write the circuit properties";
@@ -687,7 +689,7 @@ namespace sw::editor
         }
         GameObject* pOwner = circuit.getOwner();
         if ( pOwner != nullptr )
-            EditorTransaction::recordModify( pOwner, before, EditorTransaction::captureSnapshot( pOwner ), pLabel );
+            transaction.recordModify( pOwner, before, EditorTransaction::captureSnapshot( pOwner ), pLabel );
         _signature  = _model.computeSignature();
         _statusText = pLabel;
         refreshIssues();

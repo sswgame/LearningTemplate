@@ -14,6 +14,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
@@ -309,37 +310,41 @@ namespace sw::editor
 
     void InspectorViewModel::renameObject( uint64 objectID, string_view name )
     {
-        GameObject* pObj = InspectorViewModelInternal::findMainObject( objectID );
+        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
+        GameObject*       pObj = InspectorViewModelInternal::findMainObject( objectID );
         if ( pObj == nullptr || name.empty() )
             return;
         const hashed_string newName{ name };
         if ( pObj->getName().isEqual( newName, NameCase::CaseSensitive ) )
             return;
-        InspectorObjectEdit::applyObjectEdit( pObj, "Rename GameObject", [pObj, newName]()
+        InspectorObjectEdit::applyObjectEdit( transaction, pObj, "Rename GameObject", [pObj, newName]()
         { pObj->setName( newName ); } );
     }
 
     void InspectorViewModel::setObjectActive( uint64 objectID, bool bActive )
     {
-        GameObject* pObj = InspectorViewModelInternal::findMainObject( objectID );
+        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
+        GameObject*       pObj = InspectorViewModelInternal::findMainObject( objectID );
         if ( pObj != nullptr )
-            EditorSceneCommands::setActive( pObj, bActive );
+            EditorSceneCommands::setActive( transaction, pObj, bActive );
     }
 
     void InspectorViewModel::detachObjectFromParent( uint64 objectID )
     {
-        GameObject* pObj = InspectorViewModelInternal::findMainObject( objectID );
+        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
+        GameObject*       pObj = InspectorViewModelInternal::findMainObject( objectID );
         if ( pObj != nullptr )
-            InspectorObjectEdit::applyObjectEdit( pObj, "Unparent GameObject", [pObj]()
+            InspectorObjectEdit::applyObjectEdit( transaction, pObj, "Unparent GameObject", [pObj]()
             { pObj->detachFromParent(); } );
     }
 
     void InspectorViewModel::setComponentActive( uint64 objectID, uint64 componentID, bool bActive )
     {
-        GameObject* pObj  = PropertyGridModel::findSceneObject( _shownScope, objectID );
-        Component*  pComp = pObj != nullptr ? pObj->findComponentByID( componentID ) : nullptr;
+        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
+        GameObject*       pObj  = PropertyGridModel::findSceneObject( _shownScope, objectID );
+        Component*        pComp = pObj != nullptr ? pObj->findComponentByID( componentID ) : nullptr;
         if ( pComp != nullptr )
-            InspectorObjectEdit::applyObjectEdit( pObj, "Toggle Component Active", [pComp, bActive]()
+            InspectorObjectEdit::applyObjectEdit( transaction, pObj, "Toggle Component Active", [pComp, bActive]()
             { pComp->setActive( bActive ); } );
     }
 
@@ -465,8 +470,9 @@ namespace sw::editor
 
     void InspectorViewModel::loadComponentPreset( const EditorCommandTarget& target, string_view presetFile )
     {
-        Component* pComp = InspectorViewModelInternal::findTargetComponent( target );
-        if ( pComp == nullptr || EditorTransformCommands::loadComponentPreset( pComp, string( presetFile ) ) == false )
+        Component*        pComp = InspectorViewModelInternal::findTargetComponent( target );
+        EditorTransaction transaction; // 하위 메뉴(`inspector.component.presets`)가 고른 끝 — 씬을 바꾸는 여기서 거래를 연다
+        if ( pComp == nullptr || EditorTransformCommands::loadComponentPreset( transaction, pComp, string( presetFile ) ) == false )
             SW_LOG_ERROR_ID( "InspectorPanel.CouldNotApplyComponent", "Could not apply component preset '%#'", presetFile );
     }
 

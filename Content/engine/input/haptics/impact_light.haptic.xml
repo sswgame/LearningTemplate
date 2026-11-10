@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 가벼운 맞음 — 짧게 세게 시작해 0.18 초에 걷힌다(저주파가 먼저 빠지고 고주파가 끝을 남긴다). GamepadDevice::playHaptic 으로 재생한다. -->
+<HapticEffectDef>
+	<_listKey>
+		<HapticKeyDef _time="0" _low="0.8" _high="0.6" />
+		<HapticKeyDef _time="0.06" _low="0.4" _high="0.5" />
+		<HapticKeyDef _time="0.18" _low="0" _high="0" />
+	</_listKey>
+</HapticEffectDef>

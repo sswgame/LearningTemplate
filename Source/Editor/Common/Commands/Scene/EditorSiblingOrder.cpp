@@ -38,6 +38,7 @@ namespace sw::editor
             /** @brief 목록의 순서대로 형제 번호를 0 부터 다시 매깁니다. 바뀐 오브젝트마다 되돌리기를 남깁니다(호출하는 쪽의 트랜잭션 안). */
             static void renumber( const vector<GameObject*>& listSibling )
             {
+                EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
                 for ( size_t position = 0; position < listSibling.size(); ++position )
                 {
                     GameObject*  pSibling = listSibling[position];
@@ -46,7 +47,7 @@ namespace sw::editor
                         continue;
                     const ObjectSnapshot before = EditorTransaction::captureSnapshot( pSibling );
                     pSibling->setSiblingIndex( static_cast<uint16>( desired ) );
-                    EditorSceneCommands::commitModify( pSibling, before, getUndoLabel() );
+                    EditorSceneCommands::commitModify( transaction, pSibling, before, getUndoLabel() );
                 }
             }
 
@@ -84,6 +85,7 @@ namespace sw::editor
 
     bool EditorSiblingOrder::moveBeside( GameObjectManager& manager, GameObject* pDragged, GameObject* pTarget, bool bAfter, const GameObject* pSkip )
     {
+        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
         using Internal = EditorSiblingOrderInternal;
         if ( EditorPlaySession::refuseSceneEdit( "Move beside" ) )
             return false;
@@ -97,8 +99,8 @@ namespace sw::editor
         EditorTransaction::beginTransaction( Internal::getUndoLabel() );
         if ( pDragged->getParent() != pNewParent )
         {
-            const bool bMoved = pNewParent != nullptr ? EditorSceneCommands::reparent( pDragged, pNewParent, Internal::getUndoLabel() )
-                                                      : EditorSceneCommands::unparent( pDragged, Internal::getUndoLabel() );
+            const bool bMoved = pNewParent != nullptr ? EditorSceneCommands::reparent( transaction, pDragged, pNewParent, Internal::getUndoLabel() )
+                                                      : EditorSceneCommands::unparent( transaction, pDragged, Internal::getUndoLabel() );
             if ( bMoved == false )
             {
                 EditorTransaction::cancelTransaction();
@@ -157,18 +159,17 @@ namespace sw::editor
     {
         if ( EditorPlaySession::refuseSceneEdit( "Create folder" ) )
             return nullptr;
-        EditorTransaction::beginTransaction( "Create Folder" );
-        GameObject* pFolder = EditorSceneCommands::create( &manager, pParent );
+        EditorTransaction transaction{ "Create Folder" };
+        GameObject*       pFolder = EditorSceneCommands::create( transaction, &manager, pParent );
         if ( pFolder == nullptr )
         {
-            EditorTransaction::cancelTransaction();
+            EditorTransaction::cancelTransaction(); // 구간 전체를 버린다 — 닫기(소멸자)는 깊이 0 이라 아무것도 하지 않는다
             return nullptr;
         }
-        (void)EditorSceneCommands::rename( pFolder, "Folder" ); // 이름이 겹치면 매니저가 번호를 붙인다
+        (void)EditorSceneCommands::rename( transaction, pFolder, "Folder" ); // 이름이 겹치면 매니저가 번호를 붙인다
         const ObjectSnapshot before = EditorTransaction::captureSnapshot( pFolder );
         pFolder->addTag( TagID::request( kFolderTagName ) );
-        EditorSceneCommands::commitModify( pFolder, before, "Create Folder" );
-        EditorTransaction::endTransaction();
+        EditorSceneCommands::commitModify( transaction, pFolder, before, "Create Folder" );
         return pFolder;
     }
 } // namespace sw::editor

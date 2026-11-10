@@ -45,7 +45,7 @@
 #include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Module/ModuleLoadStageSubsystem.h"
 #include "Engine/Navigation/SceneNavigationCooker.h"
-#include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Reflection/ReflectionDocWriter.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/SceneCooker.h"

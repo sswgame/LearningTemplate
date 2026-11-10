@@ -16,6 +16,7 @@
 #include "Editor/Common/Workspace/EditorDefaultObjects.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
 #include "Editor/Panels/Inspector/InspectorPropertyManager.h"
 #include "Editor/Panels/Inspector/Model/InspectorBuiltinValue.h"
@@ -74,10 +75,11 @@ namespace sw::editor
             template <typename EditFunc>
             static void applyEdit( GameObject* pOwner, string_view undoLabel, EditFunc&& edit )
             {
+                EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
                 if ( pOwner == nullptr )
                     edit();
                 else
-                    InspectorObjectEdit::applyObjectEdit( pOwner, undoLabel, std::forward<EditFunc>( edit ) );
+                    InspectorObjectEdit::applyObjectEdit( transaction, pOwner, undoLabel, std::forward<EditFunc>( edit ) );
             }
 
             /** @brief 열거형 값의 미리보기 글입니다. 비트 플래그는 켜진 이름을 ` | ` 로 잇고, 하나도 없으면 `None`(0) · `<Unknown>` 입니다. */

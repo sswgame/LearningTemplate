@@ -56,7 +56,6 @@
 - **W-R1 남은 것(통합):** 세 TU 분할 · `frame_vector`(프레임 아레나 `FramePassExecutor::_frameArena`)는 들어왔다 — 빌드 뒤 RT 프레임 힙 할당을 재서 남은 지역 목록을 옮긴다(`drawTextureLayerBakes` 의 `TextureCache::takeLayerBakes( vector& )` 는 API 가 `vector` 라 남았다).
 - **W-R2 PSO 배치 색인(측정 먼저):** 계측 `RT.PSO.batchLookups`(묶음마다 · 병합 판정의 CB 차이마다 PSO 조회 수)이 들어왔다. 그 수와 `RT.PSO.ensureMaterial` · `RT.Draw.gpuBatches` 를 재고, 이득이 있으면 배치를 만들 때 PSO 핸들을 한 번 풀어 두고 흔들림 안이면 하지 않는다.
 - **W-E1 남은 것:** 훅 `IEditorPanel::onPanelOpened`(첫 사용처 카탈로그 창)이 들어왔다 — 3절 "첫 패널 느린 프레임" 측정(`-gv_editorPanelTimes`)이 고른 패널의 동기 준비를 이 훅의 비동기 잡으로 옮긴다(`ModulesModel::ensureLoaded` 가 후보).
-- **W-G1 분할:** `InputMap`(데이터 · 평가기 · 상태 — Enhanced Input 자리), `PrefabAsset`(포맷 셋 + 스폰), `AbilityComponent`(어트리뷰트 · 이펙트 · 스펙 컨테이너).
 
 ### 5-2. RHI 진단(2026-11-10 — 결함 먼저, 폴더가 겹치는 단위는 순서대로)
 
@@ -149,7 +148,7 @@ GameObject/Component API 는 저작 · 수명 · 직렬화 층으로 두고, 프
   - `Scripts/package/ServerImage.py` 를 둔다(Linux 서버 + 팩 + 설정 → tar + systemd unit, 컨테이너는 선택).
   - `ServerApp --check-config` 를 둔다(잘못된 설정은 종료 11).
   - `OpsHTTPEndpoint` 는 인증 없는 GET 이다. 바인드 주소를 루프백 · 사설로 형식에서 제한하고, 외부 바인드는 토큰 필수로 한다.
-- **U1 햅틱 · UI 포커스 내비:** 진동 · 트리거 출력 API 가 없다(grep 0). `IInputFeedbackDevice` 와 `*.haptic.xml` 을 둔다. 패드 전용 메뉴 탐색(방향 포커스)을 확인하고 없으면 더한다.
+- **U1 햅틱 남은 것:** 출력 `IInputFeedbackDevice` · 데이터 `*.haptic.xml`(`HapticEffectDef`, 공유 캐시) · 재생 `HapticPlayback`(게임패드가 든다, XInput · evdev 백엔드 그대로)은 들어갔다 — 통합에서 `HapticEffectTest` 를 돌린다. 방아쇠 진동(DualSense · GameInput)과 터치 기기 진동(Android Vibrator)은 그 백엔드가 생길 때 같은 출력으로 건다. 패드 메뉴 방향 포커스는 이미 있다(`UINavigationSolver` · `UIInputRouter`).
 - **A1 애니메이션 포즈 노드 등록식(평가 경로는 5-3 뒤):**
   - 포즈 노드가 `None · BlendPoses` 둘뿐이라(`AnimationGraphAsset.h:106`) 새 블렌드마다 enum · 로더 · 플레이어를 고친다. 리그 노드처럼 등록표로 바꾼다.
   - 그 위에 Mirror · Montage(섹션 · 분기)를 더한다.
@@ -158,7 +157,7 @@ GameObject/Component API 는 저작 · 수명 · 직렬화 층으로 두고, 프
   - 엔티티 상태 바이트를 게임이 손으로 양자화한다. 그래서 칸 하나를 더하면 서버 · 클라 두 곳을 고쳐야 한다.
   - `PROPERTY( Replicated, Quantize = … )` 로 작성기를 생성하고, 스키마 해시를 와이어 버전에 합친다.
   - `kMaxEntityBytes` 초과는 첫 경고만 남기고 엔티티가 사라진다 — `registerEntity` 의 오류로 바꾼다.
-- **E1 되돌리기를 형식으로:** 씬 변이 명령이 `EditorTransaction&` 를 요구하게 한다. 시나리오 `editor/undocoverage` 는 등록 명령 전수를 실행 → undo 한 뒤 씬 해시가 같은지 본다.
+- **E1 되돌리기 남은 것(통합에서):** 씬 명령 · 완료 함수(이름 확정 · 컴포넌트 더하기 · 프리셋 · Keep Simulation Changes)는 `EditorTransaction&` 를 받는다. 시나리오 `editor/undocoverage` 를 돌려 실패 줄의 명령을 고친다 — 컴포넌트 대상 명령(`SceneDuringPlay`)은 선택만으로는 꺼져 건너뛰므로 컴포넌트 대상을 주는 줄을 더한다. 굽기는 파생 데이터라 기록하지 않는다(결정, `EditorCommandEdit`).
 - **G1 장르 수직 슬라이스(T1 · T2 뒤):** 완결 루프가 없는 게임마다 `slice.scenario.xml` 을 둔다(시작 → 목표 → 결과 → 저장 · 복원 해시 동일).
 
 ### 6. 리소스

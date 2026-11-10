@@ -7,6 +7,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
@@ -223,11 +224,12 @@ namespace sw::editor
 
     void EditorViewportGizmo::commitDrag( GameObject& obj, const ObjectSnapshot& before ) const
     {
+        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
         // 메인 선택은 씬 명령(되돌리기 + 씬 dirty), 미리보기 선택은 그 창의 스택이다.
         if ( _pTarget != nullptr && _pTarget->isPreviewScope() )
             _pTarget->recordModify( obj, before, EditorTransaction::captureSnapshot( &obj ), "Gizmo Transform" );
         else
-            EditorSceneCommands::commitModify( &obj, before, "Gizmo Transform" );
+            EditorSceneCommands::commitModify( transaction, &obj, before, "Gizmo Transform" );
     }
 
     void EditorViewportGizmo::manipulateGroup( const float32* pView, const float32* pProj, uint32 operation, uint32 gizmoMode, const vector<GameObject*>& listGizmo,

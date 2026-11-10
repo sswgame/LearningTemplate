@@ -467,7 +467,7 @@ namespace sw
                 member._fileID ^= scope;
                 member._idScope ^= scope;
                 member._name             = anchor._name + SceneDocumentInternal::kInstanceNameSeparator + member._name;
-                member._instancePartPath = sw::to_string( anchor._fileID ) + "/" + partPath;
+                member._instancePartPath = PrefabPartOverride::joinPath( sw::to_string( anchor._fileID ), partPath );
                 member._instanceTopOverrideXML.clear();
                 for ( size_t partIndex = 0; partIndex < listPart.size(); ++partIndex )
                 {

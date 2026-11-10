@@ -45,24 +45,24 @@ namespace sw::editor
                 return pEditorCamera != nullptr ? pEditorCamera->getOwner() : nullptr;
             }
 
-            static void runCreate( const EditorCommandTarget& /*target*/ )
+            static void runCreate( const EditorCommandTarget& /*target*/, EditorTransaction& transaction )
             {
-                (void)EditorSceneCommands::create( editor::getActiveObjectManager(), nullptr ); // 만든 것을 선택한다 — 실패는 편집이 막힌 것이다
+                (void)EditorSceneCommands::create( transaction, editor::getActiveObjectManager(), nullptr ); // 만든 것을 선택한다 — 실패는 편집이 막힌 것이다
             }
 
-            static void runCreateChild( const EditorCommandTarget& target )
+            static void runCreateChild( const EditorCommandTarget& target, EditorTransaction& transaction )
             {
-                (void)EditorSceneCommands::create( editor::getActiveObjectManager(), EditorSceneObjectCommands::findTargetObject( target ) ); // 위와 같다
+                (void)EditorSceneCommands::create( transaction, editor::getActiveObjectManager(), EditorSceneObjectCommands::findTargetObject( target ) ); // 위와 같다
             }
 
-            static void runCreateFolder( const EditorCommandTarget& /*target*/ )
+            static void runCreateFolder( const EditorCommandTarget& /*target*/, EditorTransaction& /*transaction*/ )
             {
                 GameObjectManager* pManager = editor::getActiveObjectManager();
                 if ( pManager != nullptr )
                     (void)EditorSiblingOrder::createFolder( *pManager, nullptr ); // 편집이 막혔으면 nullptr 이고 아무것도 바뀌지 않는다
             }
 
-            static void runCreateFolderInside( const EditorCommandTarget& target )
+            static void runCreateFolderInside( const EditorCommandTarget& target, EditorTransaction& /*transaction*/ )
             {
                 GameObjectManager* pManager = editor::getActiveObjectManager();
                 if ( pManager != nullptr )
@@ -77,15 +77,15 @@ namespace sw::editor
                     (void)EditorSiblingOrder::moveStep( *pManager, pObject, bDown, findEditorCameraObject() ); // 끝이면 아무것도 하지 않는다
             }
 
-            static void runMoveUp( const EditorCommandTarget& target ) { runMoveStep( target, false ); }
-            static void runMoveDown( const EditorCommandTarget& target ) { runMoveStep( target, true ); }
+            static void runMoveUp( const EditorCommandTarget& target, EditorTransaction& /*transaction*/ ) { runMoveStep( target, false ); }
+            static void runMoveDown( const EditorCommandTarget& target, EditorTransaction& /*transaction*/ ) { runMoveStep( target, true ); }
 
-            static void runDuplicate( const EditorCommandTarget& target )
+            static void runDuplicate( const EditorCommandTarget& target, EditorTransaction& transaction )
             {
                 vector<GameObject*> listObject;
                 EditorSceneObjectCommands::collectTargetObjects( target, listObject );
                 vector<GameObject*> listCreated;
-                EditorSceneCommands::duplicateObjects( editor::getActiveObjectManager(), listObject, listCreated ); // 되돌리기 한 단계
+                EditorSceneCommands::duplicateObjects( transaction, editor::getActiveObjectManager(), listObject, listCreated ); // 되돌리기 한 단계
                 if ( listCreated.empty() == false )
                     editor::getMainSceneSelection().selectObjects( listCreated, SelectionMode::Replace );
             }
@@ -97,22 +97,22 @@ namespace sw::editor
                 (void)EditorSceneCommands::copyObjects( listObject ); // 복사한 수는 붙여 넣을 때 확인할 수 있다
             }
 
-            static void runPaste( const EditorCommandTarget& /*target*/ )
+            static void runPaste( const EditorCommandTarget& /*target*/, EditorTransaction& transaction )
             {
                 vector<GameObject*> listPasted;
-                EditorSceneCommands::pasteObjects( editor::getActiveObjectManager(), listPasted ); // 되돌리기 한 단계이고, 붙여 넣은 것을 선택한다
+                EditorSceneCommands::pasteObjects( transaction, editor::getActiveObjectManager(), listPasted ); // 되돌리기 한 단계이고, 붙여 넣은 것을 선택한다
             }
 
             static bool canPaste( const EditorCommandTarget& /*target*/ ) { return EditorSceneCommands::hasCopiedObjects(); }
 
-            static void runUnparent( const EditorCommandTarget& target )
+            static void runUnparent( const EditorCommandTarget& target, EditorTransaction& transaction )
             {
                 vector<GameObject*> listObject;
                 EditorSceneObjectCommands::collectTargetObjects( target, listObject );
                 for ( GameObject* pObject : listObject )
                 {
                     if ( pObject->getParent() != nullptr )
-                        (void)EditorSceneCommands::unparent( pObject ); // 부모가 없으면 아무것도 하지 않는다
+                        (void)EditorSceneCommands::unparent( transaction, pObject ); // 부모가 없으면 아무것도 하지 않는다
                 }
             }
 
@@ -128,19 +128,19 @@ namespace sw::editor
                 return false;
             }
 
-            static void runDestroy( const EditorCommandTarget& target )
+            static void runDestroy( const EditorCommandTarget& target, EditorTransaction& transaction )
             {
                 vector<GameObject*> listObject;
                 EditorSceneObjectCommands::collectTargetObjects( target, listObject );
-                (void)EditorSceneCommands::destroyObjects( editor::getActiveObjectManager(), listObject ); // 되돌리기 한 단계
+                (void)EditorSceneCommands::destroyObjects( transaction, editor::getActiveObjectManager(), listObject ); // 되돌리기 한 단계
                 editor::getMainSceneSelection().clearObjectSelection();
             }
 
             static bool hasSingleTargetObject( const EditorCommandTarget& target ) { return EditorSceneObjectCommands::findTargetObject( target ) != nullptr; }
 
-            static void runCreateHere( const EditorCommandTarget& target )
+            static void runCreateHere( const EditorCommandTarget& target, EditorTransaction& transaction )
             {
-                GameObject* pCreated = EditorSceneCommands::create( editor::getActiveObjectManager(), nullptr );
+                GameObject* pCreated = EditorSceneCommands::create( transaction, editor::getActiveObjectManager(), nullptr );
                 if ( pCreated != nullptr && target._bHasWorldPosition )
                     EditorSceneCommands::applyLocalTransform( pCreated, target._worldPosition, float3{}, float3{ 1.0f, 1.0f, 1.0f } );
             }
@@ -152,7 +152,7 @@ namespace sw::editor
                     editor::getMainSceneSelection().selectObject( pOwner, SelectionMode::Replace );
             }
 
-            static void runRemoveComponent( const EditorCommandTarget& target )
+            static void runRemoveComponent( const EditorCommandTarget& target, EditorTransaction& /*transaction*/ )
             {
                 GameObject* pOwner     = nullptr;
                 Component*  pComponent = EditorSceneObjectCommands::findTargetComponent( target, pOwner );
@@ -187,7 +187,7 @@ namespace sw::editor
                 return workspace.getCopiedComponentTypeName() == pComponent->getTypeName().c_str();
             }
 
-            static void runPasteComponentValues( const EditorCommandTarget& target )
+            static void runPasteComponentValues( const EditorCommandTarget& target, EditorTransaction& /*transaction*/ )
             {
                 GameObject* pOwner     = nullptr;
                 Component*  pComponent = EditorSceneObjectCommands::findTargetComponent( target, pOwner );
@@ -197,7 +197,7 @@ namespace sw::editor
 
             static bool canPasteComponentAsNew( const EditorCommandTarget& target ) { return hasTargetComponent( target ) && getWorkspace().hasCopiedComponent(); }
 
-            static void runPasteComponentAsNew( const EditorCommandTarget& target )
+            static void runPasteComponentAsNew( const EditorCommandTarget& target, EditorTransaction& /*transaction*/ )
             {
                 GameObject* pOwner = nullptr;
                 if ( EditorSceneObjectCommands::findTargetComponent( target, pOwner ) != nullptr )
@@ -227,8 +227,9 @@ namespace sw::editor
 
             static void runMoveComponent( const EditorCommandTarget& target, int32 direction )
             {
-                GameObject* pOwner     = nullptr;
-                Component*  pComponent = EditorSceneObjectCommands::findTargetComponent( target, pOwner );
+                EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
+                GameObject*       pOwner     = nullptr;
+                Component*        pComponent = EditorSceneObjectCommands::findTargetComponent( target, pOwner );
                 if ( pComponent == nullptr )
                     return;
                 // 인스펙터 편집과 같은 규칙(`InspectorObjectEdit`) — 정지 상태면 되돌리기 기록과 dirty, 플레이 중이면 사본을 바로 바꾼다.
@@ -236,13 +237,13 @@ namespace sw::editor
                 const ObjectSnapshot beforeSnapshot = bRecord ? EditorTransaction::captureSnapshot( pOwner ) : ObjectSnapshot{};
                 (void)pOwner->moveComponent( pComponent, direction ); // 끝 · 주 씬 컴포넌트면 그대로 — 켜짐 조건이 이미 막는다
                 if ( bRecord )
-                    EditorSceneCommands::commitModify( pOwner, beforeSnapshot, direction < 0 ? "Move Component Up" : "Move Component Down" );
+                    EditorSceneCommands::commitModify( transaction, pOwner, beforeSnapshot, direction < 0 ? "Move Component Up" : "Move Component Down" );
             }
 
             static bool canMoveComponentUp( const EditorCommandTarget& target ) { return canMoveComponent( target, -1 ); }
             static bool canMoveComponentDown( const EditorCommandTarget& target ) { return canMoveComponent( target, 1 ); }
-            static void runMoveComponentUp( const EditorCommandTarget& target ) { runMoveComponent( target, -1 ); }
-            static void runMoveComponentDown( const EditorCommandTarget& target ) { runMoveComponent( target, 1 ); }
+            static void runMoveComponentUp( const EditorCommandTarget& target, EditorTransaction& /*transaction*/ ) { runMoveComponent( target, -1 ); }
+            static void runMoveComponentDown( const EditorCommandTarget& target, EditorTransaction& /*transaction*/ ) { runMoveComponent( target, 1 ); }
         };
     } // namespace
 } // namespace sw::editor
@@ -306,11 +307,12 @@ namespace sw::editor
 
     void EditorSceneObjectCommands::removeComponent( GameObject* pOwner, Component* pComponent )
     {
+        EditorTransaction  transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
         GameObjectManager* pManager = pOwner->getManager();
         if ( pManager == nullptr )
             (void)pOwner->removeComponent( pComponent ); // 실패는 removeComponent 가 알리고 카드가 남는다
         else if ( EditorPlaySession::areSceneEditsAllowed() )
-            (void)EditorSceneCommands::destroyComponent( pManager, pOwner, pComponent ); // 기록과 dirty 를 남긴다. 지울 수 없으면 그대로다
+            (void)EditorSceneCommands::destroyComponent( transaction, pManager, pOwner, pComponent ); // 기록과 dirty 를 남긴다. 지울 수 없으면 그대로다
         else
             pManager->destroyComponent( pComponent ); // 플레이 사본이므로 Stop 이 되돌린다
     }
@@ -340,14 +342,14 @@ namespace sw::editor
     SW_EDITOR_CONTEXT_COMMAND( ViewportPaste, "scene.viewport.paste", &EditorSceneObjectCommandsInternal::runPaste, &EditorSceneObjectCommandsInternal::canPaste, Scene, nullptr );
 
     // 컴포넌트 메뉴 — 계층 창의 컴포넌트 행 · 인스펙터의 메인 카드 · 미리보기 카드가 같은 메뉴다. 프리셋 하위 메뉴(400)는 인스펙터 파일에 있다.
-    // 지우기 · 옮기기는 플레이 중에도 된다(사본을 바로 바꾸고 Stop 이 되돌린다 — 인스펙터 편집 규칙). 그래서 편집 칸이 NoScene 이다.
+    // 지우기 · 옮기기 · 붙여넣기는 플레이 중에도 된다(사본을 바로 바꾸고 Stop 이 되돌린다 — 인스펙터 편집 규칙). 그래서 편집 칸이 SceneDuringPlay 다(거래는 받는다).
     SW_EDITOR_CONTEXT_COMMAND( ComponentSelectOwner, "scene.component.selectOwner", &EditorSceneObjectCommandsInternal::runSelectOwner, &EditorSceneObjectCommandsInternal::hasTargetComponent, NoScene, nullptr );
     SW_EDITOR_CONTEXT_COMMAND( ComponentCopy, "scene.component.copy", &EditorSceneObjectCommandsInternal::runCopyComponent, &EditorSceneObjectCommandsInternal::hasTargetComponent, NoScene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( ComponentPasteValues, "scene.component.pasteValues", &EditorSceneObjectCommandsInternal::runPasteComponentValues, &EditorSceneObjectCommandsInternal::canPasteComponentValues, NoScene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( ComponentPasteAsNew, "scene.component.pasteAsNew", &EditorSceneObjectCommandsInternal::runPasteComponentAsNew, &EditorSceneObjectCommandsInternal::canPasteComponentAsNew, NoScene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( ComponentMoveUp, "scene.component.moveUp", &EditorSceneObjectCommandsInternal::runMoveComponentUp, &EditorSceneObjectCommandsInternal::canMoveComponentUp, NoScene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( ComponentMoveDown, "scene.component.moveDown", &EditorSceneObjectCommandsInternal::runMoveComponentDown, &EditorSceneObjectCommandsInternal::canMoveComponentDown, NoScene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( ComponentRemove, "scene.component.remove", &EditorSceneObjectCommandsInternal::runRemoveComponent, &EditorSceneObjectCommandsInternal::hasTargetComponent, NoScene, nullptr );
+    SW_EDITOR_CONTEXT_COMMAND( ComponentPasteValues, "scene.component.pasteValues", &EditorSceneObjectCommandsInternal::runPasteComponentValues, &EditorSceneObjectCommandsInternal::canPasteComponentValues, SceneDuringPlay, nullptr );
+    SW_EDITOR_CONTEXT_COMMAND( ComponentPasteAsNew, "scene.component.pasteAsNew", &EditorSceneObjectCommandsInternal::runPasteComponentAsNew, &EditorSceneObjectCommandsInternal::canPasteComponentAsNew, SceneDuringPlay, nullptr );
+    SW_EDITOR_CONTEXT_COMMAND( ComponentMoveUp, "scene.component.moveUp", &EditorSceneObjectCommandsInternal::runMoveComponentUp, &EditorSceneObjectCommandsInternal::canMoveComponentUp, SceneDuringPlay, nullptr );
+    SW_EDITOR_CONTEXT_COMMAND( ComponentMoveDown, "scene.component.moveDown", &EditorSceneObjectCommandsInternal::runMoveComponentDown, &EditorSceneObjectCommandsInternal::canMoveComponentDown, SceneDuringPlay, nullptr );
+    SW_EDITOR_CONTEXT_COMMAND( ComponentRemove, "scene.component.remove", &EditorSceneObjectCommandsInternal::runRemoveComponent, &EditorSceneObjectCommandsInternal::hasTargetComponent, SceneDuringPlay, nullptr );
 } // namespace sw::editor
 
 namespace sw::editor
@@ -386,10 +388,11 @@ namespace sw::editor
                     return false;
                 vector<GameObject*> listSelected;
                 pSelection->getSelectedObjects( listSelected );
-                uint32 addedCount{ 0 };
+                uint32            addedCount{ 0 };
+                EditorTransaction transaction; // 선택 모두에 더한 것이 되돌리기 한 단계다(이름은 더하기 기록의 것)
                 for ( GameObject* pObject : listSelected )
                 {
-                    if ( EditorSceneCommands::addComponent( pObject, hashed_string( listArgument[0] ) ) != nullptr )
+                    if ( EditorSceneCommands::addComponent( transaction, pObject, hashed_string( listArgument[0] ) ) != nullptr )
                         ++addedCount;
                 }
                 StringBuilder<constant::buffer::kMax256> replyBuilder;

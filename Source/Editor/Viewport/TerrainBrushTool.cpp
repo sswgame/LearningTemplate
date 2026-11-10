@@ -491,6 +491,7 @@ namespace sw::editor
             /** @brief 지형 @p terrain 을 해상도 @p resolution 으로 다시 표본화하고 되돌리기 하나(`Resize Terrain`)를 남깁니다. */
             bool resizeTerrain( TerrainComponent& terrain, uint32 resolution )
             {
+                EditorTransaction                                  transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
                 const TerrainHeightfield&                          heightfield = terrain.getHeightfield();
                 shared_ptr<TerrainBrushToolInternal::ResizeRecord> record      = make_shared<TerrainBrushToolInternal::ResizeRecord>();
                 record->_object                                                = terrain.getOwner()->getHandle();
@@ -502,8 +503,8 @@ namespace sw::editor
                 record->_resolutionAfter = heightfield.getResolution();
                 record->_listHeightAfter = heightfield.getHeightSamples();
                 record->_listHoleAfter   = heightfield.getHoleCells();
-                EditorTransaction::push( SW_UNDO_STEP( TerrainBrushToolState::applyResizeRecord, *record, false ),
-                                         SW_UNDO_STEP( TerrainBrushToolState::applyResizeRecord, *record, true ), "Resize Terrain" );
+                transaction.push( SW_UNDO_STEP( TerrainBrushToolState::applyResizeRecord, *record, false ),
+                                  SW_UNDO_STEP( TerrainBrushToolState::applyResizeRecord, *record, true ), "Resize Terrain" );
                 _lastEdited = record->_object;
                 _bUnsaved   = SW_TRUE;
                 return true;
@@ -593,6 +594,7 @@ namespace sw::editor
             /** @brief 드래그를 마칩니다. 바뀐 것이 있으면 닿은 사각형의 전 · 후 값으로 되돌리기 하나를 남깁니다. */
             void endStroke()
             {
+                EditorTransaction                 transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
                 TerrainBrushToolInternal::Stroke& stroke  = _stroke;
                 const bool                        bRecord = stroke._rect.isEmpty() == false && TerrainBrushToolInternal::findTerrain( stroke._object ) != nullptr;
                 if ( bRecord )
@@ -626,8 +628,8 @@ namespace sw::editor
                             break;
                         }
                     }
-                    EditorTransaction::push( SW_UNDO_STEP( TerrainBrushToolState::applyRecord, *record, false ),
-                                             SW_UNDO_STEP( TerrainBrushToolState::applyRecord, *record, true ), pName );
+                    transaction.push( SW_UNDO_STEP( TerrainBrushToolState::applyRecord, *record, false ),
+                                      SW_UNDO_STEP( TerrainBrushToolState::applyRecord, *record, true ), pName );
                     ++_strokeCount;
                 }
                 stroke     = TerrainBrushToolInternal::Stroke{};

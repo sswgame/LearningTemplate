@@ -7,7 +7,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Object/Prefab/PrefabCache.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"

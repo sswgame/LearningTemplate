@@ -68,6 +68,7 @@ namespace sw::editor
 
     uint32 MapCheckFixCommands::applyFixes( GameObjectManager* pManager, const vector<ValidationIssue>& listIssue, const utf8* pUndoLabel )
     {
+        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
         if ( pManager == nullptr || EditorPlaySession::refuseSceneEdit( "Map Check fix" ) )
             return 0;
         uint32 fixedCount = 0;
@@ -82,7 +83,7 @@ namespace sw::editor
             const ObjectSnapshot before = EditorTransaction::captureSnapshot( pObject );
             if ( MapCheckFixCommandsInternal::applyOne( *pObject, issue ) == false )
                 continue;
-            EditorSceneCommands::commitModify( pObject, before, pUndoLabel );
+            EditorSceneCommands::commitModify( transaction, pObject, before, pUndoLabel );
             (void)ObjectValidation::reportGameObject( *pObject, false ); // 고친 결과가 표에서 빠진다(같은 출처를 다시 검증)
             ++fixedCount;
         }

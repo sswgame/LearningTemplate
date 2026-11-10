@@ -406,7 +406,7 @@ namespace sw
             SW_LOG_ERROR_ID( "InputMapXML.ActionMissing", "Action '%#' is not in the map - not saved", action.c_str() );
             return false;
         }
-        return writeActionElement( parent, "action", action, pEntry->_valueType, pEntry->_listBinding );
+        return writeActionElement( parent, "action", action, pEntry->_definition._valueType, pEntry->_definition._listBinding );
     }
 
     bool InputMapXML::writeActionElement( const XMLNode& parent, const utf8* pElementName, const hashed_string& action, InputActionValueType valueType, const vector<ActionBinding>& listBinding )

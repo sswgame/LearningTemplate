@@ -171,13 +171,14 @@ namespace sw::editor
             /** @brief 끌기를 정리합니다. 셰이프가 바뀌었고 오브젝트가 아직 있으면 끌기 전 상태로 되돌리기를 남깁니다. */
             void endDrag( bool bCommit )
             {
-                const bool bCommitDrag = bCommit && _bChanged && EditorPlaySession::areSceneEditsAllowed();
+                EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
+                const bool        bCommitDrag = bCommit && _bChanged && EditorPlaySession::areSceneEditsAllowed();
                 if ( bCommitDrag )
                 {
                     GameObject* pObject = editor::findGameObject( _object );
                     if ( pObject != nullptr && _undoBefore._xml.empty() == false )
                     {
-                        EditorSceneCommands::commitModify( pObject, _undoBefore, "Resize Collider" );
+                        EditorSceneCommands::commitModify( transaction, pObject, _undoBefore, "Resize Collider" );
                         ++_commitCount;
                     }
                 }

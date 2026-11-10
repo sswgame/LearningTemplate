@@ -25,6 +25,11 @@ namespace sw
     public:
         using TagChangedDelegate = Delegate<void( TagID, int32 )>;
 
+        /** @brief 태그를 하나 더 주는 개수 변화입니다(어빌리티 발동 · 이펙트 적용). */
+        static constexpr int32 kGrantDelta = 1;
+        /** @brief 준 태그를 하나 거두는 개수 변화입니다(어빌리티 끝 · 이펙트 제거). */
+        static constexpr int32 kRevokeDelta = -1;
+
         TagCountTable();
         ~TagCountTable();
 

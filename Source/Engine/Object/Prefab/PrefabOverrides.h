@@ -23,6 +23,9 @@ namespace sw
     {
         string _partPath;    ///< 인스턴스 루트에서 부품까지의 경로
         string _overrideXML; ///< 그 부품의 `<PrefabOverrides>`(부품의 스폰 상태에 얹는다)
+
+        /** @brief 부품 경로 @p parentPath 아래 토막 @p key 를 이은 경로입니다(`2` + `0` → `2/0`, 부모가 비면 토막 그대로). */
+        static string joinPath( string_view parentPath, string_view key );
     };
 } // namespace sw
 

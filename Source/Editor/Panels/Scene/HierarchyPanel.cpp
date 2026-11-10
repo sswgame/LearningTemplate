@@ -38,14 +38,20 @@ namespace sw::editor
             static constexpr string_view kActionSelectPrevious = "hierarchy.selectPrevious";
             static constexpr string_view kActionSelectNext     = "hierarchy.selectNext";
 
-            static void runMoveUp()
+            // 씬 명령은 레지스트리가 연 거래 구간을 받는다(`EditorSceneCommandActionFn`) — 형만 앞으로 선언된 채 넘긴다(View 는 거래 헤더를 보지 않는다).
+            static void runMoveUp( EditorTransaction& /*transaction*/ )
             {
                 HierarchyCommands::moveSelectionStep( false );
             }
 
-            static void runMoveDown()
+            static void runMoveDown( EditorTransaction& /*transaction*/ )
             {
                 HierarchyCommands::moveSelectionStep( true );
+            }
+
+            static void runCreateFolder( EditorTransaction& /*transaction*/ )
+            {
+                HierarchyCommands::createFolder();
             }
 
             /** @brief 끌어 놓을 위치를 행 위에 그립니다 — 앞 · 뒤는 선, 자식으로 넣기는 행 테두리입니다. */
@@ -192,10 +198,10 @@ namespace sw::editor
     SW_EDITOR_PANEL( HierarchyPanel, HierarchyPanel::kPanelID, EditorPanelCategory::Core, 100 );
     SW_EDITOR_COMMAND( SceneMoveSiblingUp, "scene.moveSiblingUp", &HierarchyPanelInternal::runMoveUp, nullptr, Scene );
     SW_EDITOR_COMMAND( SceneMoveSiblingDown, "scene.moveSiblingDown", &HierarchyPanelInternal::runMoveDown, nullptr, Scene );
-    SW_EDITOR_COMMAND( SceneCreateFolder, "scene.createFolder", &HierarchyCommands::createFolder, nullptr, Scene );
+    SW_EDITOR_COMMAND( SceneCreateFolder, "scene.createFolder", &HierarchyPanelInternal::runCreateFolder, nullptr, Scene );
     // 계층 창이 그리는 오브젝트 메뉴 항목(하위 메뉴 · 이름 바꾸기) — 같은 종류(GameObject)의 메뉴라 씬 뷰에서 열어도 나온다(R5).
-    SW_EDITOR_CONTEXT_COMMAND( ObjectRename, "scene.object.rename", &HierarchyCommands::requestRename, &HierarchyCommands::hasSingleTargetObject, Scene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( ObjectAddComponent, "scene.object.addComponent", nullptr, &HierarchyCommands::hasSingleTargetObject, Scene, &HierarchyPanelInternal::drawAddComponentSubmenu );
+    SW_EDITOR_CONTEXT_COMMAND( ObjectRename, "scene.object.rename", &HierarchyCommands::requestRename, &HierarchyCommands::hasSingleTargetObject, SceneUnrecorded, nullptr );                            // 이름 칸을 연다 — 확정할 때 기록한다
+    SW_EDITOR_CONTEXT_COMMAND( ObjectAddComponent, "scene.object.addComponent", nullptr, &HierarchyCommands::hasSingleTargetObject, SceneUnrecorded, &HierarchyPanelInternal::drawAddComponentSubmenu ); // 하위 메뉴 — 고른 항목이 기록한다
     SW_EDITOR_CONTEXT_COMMAND( ObjectSelectAllWith, "scene.object.selectAllWith", nullptr, &HierarchyCommands::hasSingleTargetObject, NoScene, &HierarchyPanelInternal::drawSelectSameSubmenu );
 
     HierarchyPanel::HierarchyPanel()

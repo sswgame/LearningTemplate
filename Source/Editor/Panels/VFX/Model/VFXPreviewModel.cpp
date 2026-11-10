@@ -20,7 +20,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Service/ScenePreviewPolicy.h"
-#include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/VFX/VFXComponent.h"

@@ -72,7 +72,8 @@ namespace sw::editor
              */
             static void moveAlongWorldAxis( GameObject* pGo, AlignAxis axis, float32 targetValue, string_view actionName )
             {
-                SceneComponent* pSc = pGo->getPrimarySceneComponent();
+                EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
+                SceneComponent*   pSc = pGo->getPrimarySceneComponent();
                 if ( pSc == nullptr )
                     return;
 
@@ -82,7 +83,7 @@ namespace sw::editor
                 pSc->setWorldPosition( worldPosition );
 
                 const ObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pGo );
-                EditorTransaction::recordModify( pGo, beforeSnapshot, afterSnapshot, actionName );
+                transaction.recordModify( pGo, beforeSnapshot, afterSnapshot, actionName );
             }
 
             /**
@@ -92,7 +93,8 @@ namespace sw::editor
              */
             [[nodiscard]] static bool applyComponentXML( Component* pComp, string_view xml, string_view actionName )
             {
-                const bool bNothingToApply = pComp == nullptr || pComp->getTypeInfo() == nullptr || xml.empty();
+                EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
+                const bool        bNothingToApply = pComp == nullptr || pComp->getTypeInfo() == nullptr || xml.empty();
                 if ( bNothingToApply )
                     return false;
                 GameObject* const    pOwner         = pComp->getOwner();
@@ -108,7 +110,7 @@ namespace sw::editor
                 if ( pOwner != nullptr )
                 {
                     const ObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pOwner );
-                    EditorTransaction::recordModify( pOwner, beforeSnapshot, afterSnapshot, actionName );
+                    transaction.recordModify( pOwner, beforeSnapshot, afterSnapshot, actionName );
                 }
                 return true;
             }
@@ -130,6 +132,7 @@ namespace sw::editor
 
     Component* EditorTransformCommands::pasteComponentAsNew( GameObject* pTargetObj, string_view typeName, string_view xml )
     {
+        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
         if ( pTargetObj == nullptr || typeName.empty() )
             return nullptr;
 
@@ -157,7 +160,7 @@ namespace sw::editor
             }
 
             const ObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pTargetObj );
-            EditorTransaction::recordModify( pTargetObj, beforeSnapshot, afterSnapshot, "Paste Component as New" );
+            transaction.recordModify( pTargetObj, beforeSnapshot, afterSnapshot, "Paste Component as New" );
             return pNewComp;
         }
         return nullptr;
@@ -216,7 +219,7 @@ namespace sw::editor
         return XMLSerializer::saveToFile( fullPath, pComp, *pComp->getTypeInfo() );
     }
 
-    bool EditorTransformCommands::loadComponentPreset( Component* pComp, string_view presetFilePath )
+    bool EditorTransformCommands::loadComponentPreset( EditorTransaction& /*transaction*/, Component* pComp, string_view presetFilePath )
     {
         const bool bInvalidPresetLoadArguments = pComp == nullptr || pComp->getTypeInfo() == nullptr || presetFilePath.empty();
         if ( bInvalidPresetLoadArguments )
@@ -243,6 +246,7 @@ namespace sw::editor
 
     void EditorTransformCommands::snapObjectsToGround( const vector<GameObject*>& listObject )
     {
+        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
         if ( listObject.empty() )
             return;
 
@@ -268,7 +272,7 @@ namespace sw::editor
             pSc->setWorldPosition( pos );
 
             const ObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pGo );
-            EditorTransaction::recordModify( pGo, beforeSnapshot, afterSnapshot, "Snap to Ground" );
+            transaction.recordModify( pGo, beforeSnapshot, afterSnapshot, "Snap to Ground" );
         }
 
         EditorTransaction::endTransaction();

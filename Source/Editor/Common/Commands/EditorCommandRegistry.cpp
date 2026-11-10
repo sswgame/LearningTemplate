@@ -12,6 +12,7 @@
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
 #include "Engine/Console/DevCommandRegistry.h"
@@ -155,7 +156,7 @@ namespace sw::editor
     bool EditorCommandRegistry::isEnabled( const EditorCommandDesc& desc, const EditorCommandTarget& target )
     {
         // 씬을 바꾸는 커맨드는 편집 허용 답을 먼저 묻는다 — 플레이 중 · 편집을 막는 작업(베이크) 중이면 꺼진다.
-        if ( desc._edit == EditorCommandEdit::Scene && EditorPlaySession::areSceneEditsAllowed() == false )
+        if ( EditorCommandTargetUtil::isGatedByEditLock( desc._edit ) && EditorPlaySession::areSceneEditsAllowed() == false )
             return false;
         if ( desc._enabledPredicate.isBound() == false )
             return true;
@@ -172,9 +173,18 @@ namespace sw::editor
 
     bool EditorCommandRegistry::executeDesc( const EditorCommandDesc& desc, const EditorCommandTarget& target )
     {
-        if ( desc._action.isBound() == false || isEnabled( desc, target ) == false )
+        const bool bSceneEdit = EditorCommandTargetUtil::isTransacted( desc._edit );
+        const bool bBound     = bSceneEdit ? desc._sceneAction.isBound() : desc._action.isBound();
+        if ( bBound == false || isEnabled( desc, target ) == false )
             return false;
 
+        if ( bSceneEdit )
+        {
+            // 한 번 실행이 되돌리기 한 단계다. 이름은 비운다 — 명령이 안에서 연 거래의 이름, 없으면 첫 기록의 이름이 남는다.
+            EditorTransaction transaction;
+            desc._sceneAction( target, transaction );
+            return true;
+        }
         desc._action( target );
         return true;
     }
@@ -303,6 +313,8 @@ namespace sw::editor
                 continue;
             if ( row._pfnAction != nullptr )
                 desc._action = row._pfnAction;
+            if ( row._pfnSceneAction != nullptr )
+                desc._sceneAction = row._pfnSceneAction;
             if ( row._pfnEnabled != nullptr )
                 desc._enabledPredicate = row._pfnEnabled;
             desc._edit = row._edit;

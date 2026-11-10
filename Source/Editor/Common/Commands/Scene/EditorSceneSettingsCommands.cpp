@@ -17,8 +17,9 @@ namespace sw::editor
 {
     bool EditorSceneSettingsCommands::apply( Scene& scene, const SceneSettings& settings, const string_view undoLabel )
     {
-        const string beforeXML = writeSettingsXML( scene.getSceneSettings() );
-        const string afterXML  = writeSettingsXML( settings );
+        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
+        const string      beforeXML = writeSettingsXML( scene.getSceneSettings() );
+        const string      afterXML  = writeSettingsXML( settings );
         if ( beforeXML == afterXML )
             return false;
         if ( EditorPlaySession::refuseSceneEdit( "Scene settings" ) )
@@ -26,8 +27,8 @@ namespace sw::editor
         if ( settings.validate( scene.getName() ) == false )
             return false;
         scene.setSceneSettings( settings );
-        EditorTransaction::push( SW_UNDO_STEP( EditorSceneSettingsCommands::restoreActiveSceneSettings, beforeXML ),
-                                 SW_UNDO_STEP( EditorSceneSettingsCommands::restoreActiveSceneSettings, afterXML ), undoLabel );
+        transaction.push( SW_UNDO_STEP( EditorSceneSettingsCommands::restoreActiveSceneSettings, beforeXML ),
+                          SW_UNDO_STEP( EditorSceneSettingsCommands::restoreActiveSceneSettings, afterXML ), undoLabel );
         EditorTransaction::markActiveSceneDirty();
         return true;
     }

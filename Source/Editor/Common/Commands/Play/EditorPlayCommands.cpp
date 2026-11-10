@@ -41,7 +41,8 @@ namespace sw::editor
 
             static void runToggleEject() { EditorPlayCommands::toggleEject(); }
 
-            static void runKeepChanges()
+            // 씬은 Stop 이 남긴 상태를 적용할 때 바뀐다(`applyKeptStates` 도 거래를 받는다). 이 호출은 상태를 모을 뿐이지만 같은 형식을 따른다.
+            static void runKeepChanges( EditorTransaction& /*transaction*/ )
             {
                 const uint32   keptCount     = EditorPlayCommands::keepSelectedChanges();
                 EditorContext& editorContext = editor::getSubsystem<EditorContext>();
@@ -57,7 +58,7 @@ namespace sw::editor
 namespace sw::editor
 {
     SW_EDITOR_COMMAND( PlayEject, "play.eject", &EditorPlayCommandsInternal::runToggleEject, &EditorPlayCommandsInternal::isSessionRunning, NoScene );
-    SW_EDITOR_COMMAND( PlayKeepChanges, "play.keepChanges", &EditorPlayCommandsInternal::runKeepChanges, &EditorPlayCommandsInternal::canKeepChanges, NoScene );
+    SW_EDITOR_COMMAND( PlayKeepChanges, "play.keepChanges", &EditorPlayCommandsInternal::runKeepChanges, &EditorPlayCommandsInternal::canKeepChanges, SceneDuringPlay );
     SW_EDITOR_COMMAND( PlayStandalone, "play.standalone", &EditorPlayCommandsInternal::runLaunchStandalone, nullptr, NoScene );
 
     void EditorPlayCommands::update()

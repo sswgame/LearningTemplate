@@ -6,12 +6,17 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
 
+#include "Engine/Input/Feedback/HapticPlayback.h"
+#include "Engine/Input/Feedback/IInputFeedbackDevice.h"
 #include "Engine/Input/GamepadButtonUtil.h"
 #include "Engine/Input/IInputDevice.h"
 
 namespace sw
 {
+    struct HapticEffectDef;
+
     enum class GamepadBatteryType : uint8
     {
         Disconnected = 0,
@@ -38,9 +43,32 @@ namespace sw
 
 namespace sw
 {
+    class GamepadDevice;
+
+    /**
+     * @class GamepadFeedbackOutput
+     * @brief 게임패드의 진동 출력 창구(`IInputFeedbackDevice`)입니다. 장치의 `setVibration` · `stopVibration`(플랫폼 백엔드 XInput · evdev 가 덮어쓴다)으로 넘깁니다.
+     * @details 장치의 기반은 하나(`IInputDevice`)라 출력 인터페이스는 이 창구를 멤버로 들어 건다(`SubsystemScope::exposeMember` 와 같은 모양).
+     */
+    class SW_API GamepadFeedbackOutput final : public IInputFeedbackDevice
+    {
+    public:
+        explicit GamepadFeedbackOutput( GamepadDevice& owner );
+
+        bool setVibration( float32 lowFrequency, float32 highFrequency ) override;
+        void stopVibration() override;
+
+    private:
+        GamepadDevice& _owner;
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class GamepadDevice
      * @brief 게임패드 버튼, 아날로그 스틱, 트리거 압력, 럼블 진동의 인터페이스를 정의하는 추상 기반 클래스입니다.
+     * @details 진동 출력은 `getFeedbackOutput`(`IInputFeedbackDevice`) 이고 플랫폼 백엔드가 `setVibration` 을 덮어쓴다.
      */
     class SW_API GamepadDevice : public IInputDevice
     {
@@ -88,34 +116,30 @@ namespace sw
         float32 getLeftMotorVibration() const { return _leftMotorSpeed; }
         float32 getRightMotorVibration() const { return _rightMotorSpeed; }
 
+        /** @brief 두 모터(왼쪽 저주파 · 오른쪽 고주파)의 세기를 지금 값으로 둡니다. 플랫폼 백엔드가 장치에 보냅니다. */
         virtual bool setVibration( float32 leftMotor, float32 rightMotor )
         {
             _leftMotorSpeed  = leftMotor;
             _rightMotorSpeed = rightMotor;
             return true;
         }
+        /** @brief 진동과 재생 중인 효과를 멈춥니다. */
         virtual void stopVibration()
         {
-            _bTimedVibrationActive  = SW_FALSE;
-            _vibrationDurationTimer = 0.0f;
+            _hapticPlayback.clear();
             setVibration( 0.0f, 0.0f );
         }
 
-        bool playVibration( float32 leftMotor, float32 rightMotor, float32 durationSeconds )
-        {
-            if ( durationSeconds <= 0.0f )
-            {
-                stopVibration();
-                return true;
-            }
-            const bool bOk = setVibration( leftMotor, rightMotor );
-            if ( bOk )
-            {
-                _vibrationDurationTimer = durationSeconds;
-                _bTimedVibrationActive  = SW_TRUE;
-            }
-            return bOk;
-        }
+        /** @brief @p durationSeconds 동안 고정 세기로 진동합니다(고정 효과 `HapticEffectDef::makeConstant` 를 재생한다). 0 이하면 멈춥니다. */
+        bool playVibration( float32 leftMotor, float32 rightMotor, float32 durationSeconds );
+        /**
+         * @brief 진동 효과(`*.haptic.xml` — `AssetRef<HapticEffectDef>` 가 준다)를 @p scale 배로 처음부터 재생합니다. 앞 재생은 멈춥니다.
+         * @return 효과가 없거나 장치가 진동을 거절하면 false 입니다.
+         */
+        bool playHaptic( shared_ptr<const HapticEffectDef> pEffect, float32 scale = 1.0f );
+        bool isHapticPlaying() const { return _hapticPlayback.isPlaying(); }
+        /** @brief 이 장치의 진동 출력입니다(`IInputFeedbackDevice` — 재생 · 다른 진동 장치와 같은 창구). */
+        IInputFeedbackDevice& getFeedbackOutput() { return _feedbackOutput; }
 
         void    setTriggerDeadzone( float32 deadzone ) { _triggerDeadzone = deadzone; }
         float32 getTriggerDeadzone() const { return _triggerDeadzone; }
@@ -141,23 +165,23 @@ namespace sw
 
     protected:
         GamepadConnectionDelegate _onConnectionChanged;
-        uint32                    _deviceIndex;               /**< 컨트롤러 슬롯 인덱스입니다(로컬 멀티플레이어 0~3번 패드). */
-        uint32                    _buttonMask;                /**< 이번 프레임의 디지털 버튼 눌림 비트마스크입니다(GamepadButton 인덱스로 비트를 조회). */
-        uint32                    _prevButtonMask;            /**< 직전 프레임의 버튼 비트마스크입니다. wasButtonPressed/Released 의 엣지 판정에 씁니다. */
-        float2                    _leftStick;                 /**< 왼쪽 스틱 [-1.0, 1.0] 입니다(데드존을 적용하지 않은 원시값). */
-        float2                    _rightStick;                /**< 오른쪽 스틱 [-1.0, 1.0] 입니다. */
-        float32                   _leftTrigger;               /**< 왼쪽 트리거 압력 [0.0, 1.0] 입니다. 모든 입력 경로가 `setAxis` 로 넣어 _triggerDeadzone 을 거칩니다. */
-        float32                   _rightTrigger;              /**< 오른쪽 트리거 압력 [0.0, 1.0] 입니다. */
-        float32                   _prevLeftTrigger;           /**< 직전 프레임의 왼쪽 트리거 값입니다. wasControlPressed/Released 의 임계값(0.5) 판정에 씁니다. */
-        float32                   _prevRightTrigger;          /**< 직전 프레임의 오른쪽 트리거 값입니다. */
-        float32                   _leftMotorSpeed;            /**< 마지막으로 설정한 왼쪽(저주파) 진동 모터 세기 [0.0, 1.0] 입니다. */
-        float32                   _rightMotorSpeed;           /**< 마지막으로 설정한 오른쪽(고주파) 진동 모터 세기 [0.0, 1.0] 입니다. */
-        float32                   _vibrationDurationTimer;    /**< playVibration() 으로 시작한 타이머 진동의 남은 시간(초)입니다. 0 이하가 되면 저절로 멈춥니다. */
-        float32                   _triggerDeadzone;           /**< 트리거 축 노이즈를 거르는 데드존입니다. 이 값 미만이면 0 으로 취급하며, 디지털 눌림 판정용 0.5 임계값과는 별개입니다. `setAxis` 가 적용합니다. */
-        uint8                     _bTimedVibrationActive : 1; /**< playVibration() 으로 시작한 타이머 진동이 진행 중인지 나타냅니다. */
-        uint8                     _bSuppressEdgeOnce     : 1; /**< resetState() 뒤 첫 폴링 값을 "직전 값" 으로 삼아, 누르고 있던 버튼이 새로 눌린 것처럼 보이지 않게 합니다. */
-        uint8                     _bVirtualSession       : 1; /**< 배타 가상 입력 중인지 나타냅니다. 이 동안 연결 여부는 `_bVirtualConnected` 가 정합니다. */
-        uint8                     _bVirtualConnected     : 1; /**< 가상 세션의 연결 여부입니다(가상 연결 이벤트가 정합니다). */
-        [[maybe_unused]] uint8    _reserved              : 4;
+        uint32                    _deviceIndex;           /**< 컨트롤러 슬롯 인덱스입니다(로컬 멀티플레이어 0~3번 패드). */
+        uint32                    _buttonMask;            /**< 이번 프레임의 디지털 버튼 눌림 비트마스크입니다(GamepadButton 인덱스로 비트를 조회). */
+        uint32                    _prevButtonMask;        /**< 직전 프레임의 버튼 비트마스크입니다. wasButtonPressed/Released 의 엣지 판정에 씁니다. */
+        float2                    _leftStick;             /**< 왼쪽 스틱 [-1.0, 1.0] 입니다(데드존을 적용하지 않은 원시값). */
+        float2                    _rightStick;            /**< 오른쪽 스틱 [-1.0, 1.0] 입니다. */
+        float32                   _leftTrigger;           /**< 왼쪽 트리거 압력 [0.0, 1.0] 입니다. 모든 입력 경로가 `setAxis` 로 넣어 _triggerDeadzone 을 거칩니다. */
+        float32                   _rightTrigger;          /**< 오른쪽 트리거 압력 [0.0, 1.0] 입니다. */
+        float32                   _prevLeftTrigger;       /**< 직전 프레임의 왼쪽 트리거 값입니다. wasControlPressed/Released 의 임계값(0.5) 판정에 씁니다. */
+        float32                   _prevRightTrigger;      /**< 직전 프레임의 오른쪽 트리거 값입니다. */
+        float32                   _leftMotorSpeed;        /**< 마지막으로 설정한 왼쪽(저주파) 진동 모터 세기 [0.0, 1.0] 입니다. */
+        float32                   _rightMotorSpeed;       /**< 마지막으로 설정한 오른쪽(고주파) 진동 모터 세기 [0.0, 1.0] 입니다. */
+        float32                   _triggerDeadzone;       /**< 트리거 축 노이즈를 거르는 데드존입니다. 이 값 미만이면 0 으로 취급하며, 디지털 눌림 판정용 0.5 임계값과는 별개입니다. `setAxis` 가 적용합니다. */
+        GamepadFeedbackOutput     _feedbackOutput;        /**< 진동 출력 창구(`getFeedbackOutput`) — 이 장치의 `setVibration` 으로 넘긴다. */
+        HapticPlayback            _hapticPlayback;        /**< 재생 중인 진동 효과(`playVibration` · `playHaptic`). `onFrameBegin` 이 진행하고 끝나면 멈춘다. */
+        uint8                     _bSuppressEdgeOnce : 1; /**< resetState() 뒤 첫 폴링 값을 "직전 값" 으로 삼아, 누르고 있던 버튼이 새로 눌린 것처럼 보이지 않게 합니다. */
+        uint8                     _bVirtualSession   : 1; /**< 배타 가상 입력 중인지 나타냅니다. 이 동안 연결 여부는 `_bVirtualConnected` 가 정합니다. */
+        uint8                     _bVirtualConnected : 1; /**< 가상 세션의 연결 여부입니다(가상 연결 이벤트가 정합니다). */
+        [[maybe_unused]] uint8    _reserved          : 5;
     };
 } // namespace sw

@@ -26,10 +26,11 @@ namespace sw::editor
 
     void InspectorMultiSelection::applyActive( const vector<GameObject*>& listObject, bool bActive )
     {
+        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
         EditorTransaction::beginTransaction( "Set Active (multiple)" );
         for ( GameObject* pObject : listObject )
         {
-            EditorSceneCommands::setActive( pObject, bActive );
+            EditorSceneCommands::setActive( transaction, pObject, bActive );
         }
         EditorTransaction::endTransaction();
     }

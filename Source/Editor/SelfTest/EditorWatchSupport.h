@@ -47,4 +47,9 @@ namespace sw::editor
     [[nodiscard]] uint64 findWatchedObjectID();
     /** @brief 메인 씬에서 고른 첫 오브젝트의 주 씬 컴포넌트 로컬 회전(오일러, 라디안)을 @p outRotation 에 담습니다. 고른 것이 없으면 false 입니다. */
     [[nodiscard]] bool readSelectedObjectLocalRotation( float3& outRotation );
+    /**
+     * @brief 편집 중인 씬의 내용 해시(감시 값 `Editor.SceneHash`)를 @p outHash 에 담습니다. 편집 중인 씬이 없으면 false 입니다.
+     * @details 정의는 `EditorWorkspaceWatches.cpp` 다. 되돌리기 전수 검사(`editor.undoCoverage`)가 같은 해시로 명령 전후를 맞댄다.
+     */
+    [[nodiscard]] bool computeEditedSceneHash( uint64& outHash );
 } // namespace sw::editor

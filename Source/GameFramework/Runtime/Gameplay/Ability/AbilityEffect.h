@@ -59,6 +59,12 @@ namespace sw
         hashed_string  _attribute{};
         AttributeModOp _op{ AttributeModOp::Add };
         float32        _magnitude{ 0.0f }; ///< 스택 하나의 크기
+
+        /** @brief 나누기 분모가 이보다 0 에 가까우면 나누지 않습니다(0 나누기 · 폭주 방지 — 즉시 실행과 지속 집계가 같은 문턱을 쓴다). */
+        static constexpr float32 kMinDenominator = 1.0e-4f;
+
+        /** @brief 즉시 실행 한 번이 base @p baseValue 에 쓰는 값입니다(스택 @p stackScale 만큼). */
+        float32 applyToBase( float32 baseValue, float32 stackScale ) const;
     };
 } // namespace sw
 

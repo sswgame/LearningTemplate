@@ -31,7 +31,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
-#include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Visual/2D/SpriteComponent.h"
 #include "Engine/Visual/Component/MeshComponent.h"

@@ -15,6 +15,7 @@ namespace sw
 
 namespace sw::editor
 {
+    class EditorTransaction;
     class EditorWorkspace;
 
     /** @brief 정렬 축입니다. */
@@ -63,8 +64,8 @@ namespace sw::editor
          *          선택한 폴더는 버려지고 `MyPreset.preset.xml` 이 프리셋 폴더의 `<타입>_MyPreset.preset.preset.xml` 이 되므로 주의한다.
          */
         [[nodiscard]] static bool saveComponentPresetTo( const Component* pComp, string_view filePath );
-        /** @brief 프리셋 XML 을 컴포넌트에 적용합니다. */
-        [[nodiscard]] static bool loadComponentPreset( Component* pComp, string_view presetFilePath );
+        /** @brief 프리셋 XML 을 컴포넌트에 적용합니다. 씬을 바꾸므로 부른 쪽이 연 거래 구간 안에서만 부른다(파일 창 · 하위 메뉴가 끝날 때 — `SceneUnrecorded` 명령의 완료). */
+        [[nodiscard]] static bool loadComponentPreset( EditorTransaction& transaction, Component* pComp, string_view presetFilePath );
         /** @brief 선택한 오브젝트를 지면(Y)에 맞춥니다(`snapObjectsToGround`). */
         static void snapSelectedToGround();
         /** @brief 선택한 오브젝트를 축 기준으로 정렬합니다(`alignObjects`). */

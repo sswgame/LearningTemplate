@@ -140,6 +140,7 @@ namespace sw::editor
 
     string RigSaveParams::writeToRigFile( const PoseModifierComponent& modifier, const RigSaveParams& params, const utf8* pUndoLabel )
     {
+        EditorTransaction            transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
         const string_view            rigPath  = modifier.getRigPath();
         const optional<AbsolutePath> readPath = EditorPaths::getAssetPaths().findLooseFile( rigPath );
         string                       text;
@@ -156,8 +157,8 @@ namespace sw::editor
             return string( "The rig file could not be written" );
         if ( pUndoLabel != nullptr )
         {
-            EditorTransaction::push( SW_UNDO_STEP( RigFileRewriteInternal::writeRigText, writePath, text ),
-                                     SW_UNDO_STEP( RigFileRewriteInternal::writeRigText, writePath, rewritten ), pUndoLabel );
+            transaction.push( SW_UNDO_STEP( RigFileRewriteInternal::writeRigText, writePath, text ),
+                              SW_UNDO_STEP( RigFileRewriteInternal::writeRigText, writePath, rewritten ), pUndoLabel );
         }
         SW_LOG_INFO_ID( "RigDebugPanel.RigSettingsSaved", "Rig settings saved to %#", writePath.c_str() );
         return string( kSavedStatus );

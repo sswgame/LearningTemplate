@@ -298,7 +298,8 @@ namespace sw::editor
 
     void EditorDocumentPanel::notifyDocumentEdited( string_view label, string_view coalesceKey )
     {
-        const string after = captureDocumentText();
+        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
+        const string      after = captureDocumentText();
         if ( after == _documentUndoBaseline )
             return;
         // 이 편집이 속한 문서를 적어 둔다 — 되돌리기는 **그 문서가 아직 열려 있을 때만** 적용한다. 주의: `this` 와 바뀐 구간만 잡으면
@@ -307,7 +308,7 @@ namespace sw::editor
         // 패널은 `this` 가 아니라 표지로 잡는다 — 백엔드 교체는 패널을 다시 만들지만 되돌리기 스택은 남긴다. 사라진 패널의 항목은 건너뛴다.
         const string                           documentPath = _loadedAssetPath;
         const shared_ptr<EditorDocumentPanel*> pTarget      = _pUndoTarget;
-        EditorTransaction::recordDocumentText(
+        transaction.recordDocumentText(
             _documentUndoBaseline, after, label, *_pUndoOwner,
             SW_DELEGATE_LAMBDA( EditorDocumentRestoreDelegate, [pTarget, documentPath]( string_view snapshot )
         {

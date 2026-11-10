@@ -17,7 +17,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
-#include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Physics/PhysicsSettings.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
 #include "Engine/Scene/SceneManager.h"
