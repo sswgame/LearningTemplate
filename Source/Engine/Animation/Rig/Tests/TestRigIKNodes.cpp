@@ -257,6 +257,30 @@ SW_TEST_CASE_F( RigIKTest, TwoBoneDoesNotStretchToAFarGoal )
     SW_EXPECT_NEAR( position( kFootL )._z, 0.0f, 5.0e-2f );
 }
 
+// 2 본 IK 의 출력 `reach_error`: 준비 단계가 지난 평가의 끝 ↔ 목표 거리를 옮겨 둔다 — 닿으면 0, 닿지 않으면 루트 ↔ 목표 거리에서 사슬 길이를 뺀 만큼이다.
+SW_TEST_CASE_F( RigIKTest, TwoBonePublishesReachErrorAfterThePrepare )
+{
+    SW_REQUIRE_TRUE( load( R"(<item type="TwoBoneIK" name="Leg" root="hip.l" mid="knee.l" end="foot.l" target="Goal" />)" ) );
+    const float32 length = segment( kHipL, kKneeL ) + segment( kKneeL, kFootL );
+    setBone( kGoal, float3{ -0.2f, 0.3f, 0.3f } );
+    run();
+    run();
+    float32 value = 1.0f;
+    SW_REQUIRE_TRUE( _instance.getNodeOutputValue( hashed_string( "Leg" ), hashed_string( "reach_error" ), value ) );
+    SW_EXPECT_NEAR( value, 0.0f, 1.0e-3f );
+
+    const float3 farGoal{ -0.2f, -3.0f, 0.0f };
+    _pose.setToReference( _skeleton );
+    refreshModel();
+    setBone( kGoal, farGoal );
+    const float32 expected = ( farGoal - position( kHipL ) ).getLength() - length;
+    run();
+    run();
+    SW_REQUIRE_TRUE( _instance.getNodeOutputValue( hashed_string( "Leg" ), hashed_string( "reach_error" ), value ) );
+    SW_EXPECT_NEAR( value, expected, 1.0e-2f );
+    SW_EXPECT_FALSE( _instance.getNodeOutputValue( hashed_string( "Leg" ), hashed_string( "pelvis_offset" ), value ) );
+}
+
 // 극점 대상이 무릎이 굽는 쪽을 정한다.
 SW_TEST_CASE_F( RigIKTest, PoleChoosesTheKneeSide )
 {
