@@ -14,6 +14,7 @@
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Foundation/EnginePlatformHeaders.h"
 #include "Engine/Graphics/RHI/Backend/FrameResourceRing.h"
+#include "Engine/Graphics/RHI/Backend/RHIBindlessRegistry.h"
 #include "Engine/Graphics/RHI/Backend/RHIConstantBufferMirror.h"
 #include "Engine/Graphics/RHI/Backend/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
@@ -417,6 +418,12 @@ namespace sw
             D3D12_CPU_DESCRIPTOR_HANDLE            _offlineCPUHandle{}; ///< 오프라인 힙의 같은 뷰. 슬롯 테이블 복사 원본이다(가시 힙은 복사 원본이 될 수 없다).
             RHIBufferHandle                        _buffer{ 0 };
             RHITextureHandle                       _texture{ 0 };
+
+            /** @brief `RHIBindlessRegistry` 가 "이 칸이 비었는가" 를 묻는 데 씁니다(핸들 값은 번호에서 나오므로 보지 않는다). */
+            bool operator==( const BindlessResourceRecord& other ) const
+            {
+                return _resource.Get() == other._resource.Get() && _buffer == other._buffer && _texture == other._texture;
+            }
         };
 
         // 구조 버퍼 갱신(updateStructuredBufferRegions) 전용 프레임 링 슬롯. 매 호출마다 업로드 힙과 커맨드 리스트를
@@ -849,17 +856,15 @@ namespace sw
         /// 기록 중에는 레지스트리가 바뀌지 않는다는 규칙(IRHIDevice::setParallelRecording, requireRegistryMutableNow)이
         /// 그것을 보장합니다. 주의: 기록 중에 레지스트리를 락 없이 순회하는 동안 재할당이 일어나면 GPU 가 쓰레기 디스크립터를
         /// 읽어 PageFault(VA=0)가 나고 DEVICE_HUNG 으로 이어집니다.
-        mutable shared_mutex           _bindlessMutex;
-        vector<BindlessResourceRecord> _listRegisteredBindless;
-        IndexFreeList                  _freeBindless;
-
-        /// @brief UAV 레지스트리입니다. 인덱스는 SRV/CBV 와 **같은 힙 인덱스 공간**(_freeBindless 공유)입니다. 셰이더가
-        ///        RWStructuredBuffer<T> name[] 을 그 인덱스로 고르므로 힙 슬롯 번호와 같아야 합니다.
-        vector<BindlessResourceRecord> _listRegisteredUAV;
+        mutable shared_mutex _bindlessMutex;
+        /// @brief 셰이더 가시 힙의 번호 발급기입니다. SRV/CBV 와 UAV 가 **같은 힙 인덱스 공간**을 나눈다 — 셰이더가 RWStructuredBuffer<T> name[] 을
+        ///        그 번호로 고르므로 힙 슬롯 번호와 같아야 한다. 0 번은 null 텍스처 자리라 초기화가 그 다음부터 내게 한다.
+        RHIBindlessIndexAllocator                   _bindlessIndexAllocator;
+        RHIBindlessRegistry<BindlessResourceRecord> _srvRegistry; ///< SRV/CBV 표(`_bindlessIndexAllocator` 를 나눈다)
+        RHIBindlessRegistry<BindlessResourceRecord> _uavRegistry; ///< UAV 표(`_bindlessIndexAllocator` 를 나눈다)
 
         UINT _rtvDescriptorSize;
         UINT _cbvDescriptorSize;
-        UINT _allocatedDescriptorsCount;
         /// @brief 지금까지 새로 만든 (리스트, 얼로케이터) 쌍 수입니다. 풀이 끝없이 늘어나는지 확인하기 위한 계측입니다.
         atomic<uint32> _cmdListEntryCreated;
 

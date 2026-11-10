@@ -86,12 +86,11 @@ namespace sw
         , _validationMessageCount{ 0 }
         , _validationCallbackCookie{ 0 }
         , _frameStreamState{}
-        , _listRegisteredBindless{}
-        , _freeBindless{}
-        , _listRegisteredUAV{}
+        , _bindlessIndexAllocator{ kBindlessDescriptorCapacity, kNullTextureBindlessIndex + 1 }
+        , _srvRegistry{ _bindlessIndexAllocator }
+        , _uavRegistry{ _bindlessIndexAllocator }
         , _rtvDescriptorSize{ 0 }
         , _cbvDescriptorSize{ 0 }
-        , _allocatedDescriptorsCount{ 0 }
         , _cmdListEntryCreated{ 0 }
         , _fence{ nullptr }
         , _fenceValue{ 0 }
@@ -729,7 +728,7 @@ namespace sw
             onlineNull.ptr += static_cast<SIZE_T>( kNullTextureBindlessIndex ) * _cbvDescriptorSize;
             _device->CreateShaderResourceView( nullptr, &nullTexture, onlineNull );
             _device->CreateShaderResourceView( nullptr, &nullTexture, offlineDescriptorAt( kNullTextureBindlessIndex ) );
-            _allocatedDescriptorsCount = kNullTextureBindlessIndex + 1;
+            _bindlessIndexAllocator.reset( kNullTextureBindlessIndex + 1 );
         }
         {
             ScopedLock<mutex> lock{ _onlineBlockMutex };
@@ -854,15 +853,14 @@ namespace sw
         _mapOffscreenTexture.clear();
         _pipelineStates.clear();
         _renderPassRegistry.clear();
-        _listRegisteredBindless.clear();
-        _freeBindless.clear();
-        _listRegisteredUAV.clear();
+        _srvRegistry.clear();
+        _uavRegistry.clear();
+        _bindlessIndexAllocator.reset( kNullTextureBindlessIndex + 1 );
         _mapStructuredBufferState.clear();
         _gpuBuffers.clear();
         _gpuTextures.clear();
-        _frameStreamState          = D3D12RecordingState{};
-        _nextOffscreenRTVIndex     = 0;
-        _allocatedDescriptorsCount = 0;
+        _frameStreamState      = D3D12RecordingState{};
+        _nextOffscreenRTVIndex = 0;
 
         _listFrameSwapChain.clear();
         for ( const unique_ptr<D3D12RHISwapChain>& pWindow : _listWindowSwapChain )
@@ -1839,19 +1837,20 @@ namespace sw
         // 읽기 락을 잡는다. 주의: "단일 스레드 구간" 이 아니다.
         ScopedSharedLock<shared_mutex> registryLock{ _bindlessMutex };
         const uint32                   slot = _frameRing.currentIndex();
-        for ( BindlessResourceRecord& record : _listRegisteredBindless )
+        _srvRegistry.forEachLive( [this, slot]( RHIDescriptorIndex index, const BindlessResourceRecord& record )
         {
+            (void)index;
             if ( record._resource == nullptr || record._buffer == 0 )
-                continue;
+                return;
             const auto sizeIt = _mapCbAlignedSize.find( record._buffer );
             if ( sizeIt == _mapCbAlignedSize.end() )
-                continue; // 링 상수버퍼가 아니다 (구조버퍼 SRV 등은 주소가 안 바뀐다).
+                return; // 링 상수버퍼가 아니다 (구조버퍼 SRV 등은 주소가 안 바뀐다).
 
             D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc{};
             cbvDesc.BufferLocation = record._resource->GetGPUVirtualAddress() + static_cast<UINT64>( slot ) * sizeIt->second;
             cbvDesc.SizeInBytes    = sizeIt->second;
             _device->CreateConstantBufferView( &cbvDesc, record._cpuHandle );
-        }
+        } );
     }
 
     void D3D12RHIDevice::writeConstantBufferSlot( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size )
@@ -2052,13 +2051,11 @@ namespace sw
     bool D3D12RHIDevice::isBindlessIndexLive( RHIBindlessIndexSpace space, RHIDescriptorIndex index ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
-        if ( index >= _listRegisteredBindless.size() )
-            return false;
         // 힙 하나를 나눠 쓰므로 종류까지 본다 — 텍스처 자리에 버퍼 뷰가 있으면 Texture2D 로 읽는 셰이더가 잘못된 디스크립터를 읽는다.
-        const BindlessResourceRecord& record = _listRegisteredBindless[index];
-        if ( record._resource == nullptr )
+        const BindlessResourceRecord* const pRecord = _srvRegistry.find( index );
+        if ( pRecord == nullptr || pRecord->_resource == nullptr )
             return false;
-        return ( space == RHIBindlessIndexSpace::Texture ) ? record._texture != 0 : record._buffer != 0;
+        return ( space == RHIBindlessIndexSpace::Texture ) ? pRecord->_texture != 0 : pRecord->_buffer != 0;
     }
 
     bool D3D12RHIDevice::initializeTransfers( const RHISwapChainDesc& desc )

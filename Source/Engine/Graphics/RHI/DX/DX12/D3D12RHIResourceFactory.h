@@ -93,7 +93,7 @@ namespace sw
 
         /**
          * @brief 어느 bindless 레지스트리인지 나타냅니다. **힙 인덱스 공간은 하나**지만 기록은 둘로 나뉩니다.
-         * @details 둘이 같은 프리리스트를 쓰므로(`_freeBindless`) 인덱스는 섞이지 않습니다.
+         * @details 둘이 같은 번호 발급기를 쓰므로(`_bindlessIndexAllocator`) 인덱스는 섞이지 않습니다.
          *          나뉘는 것은 그 슬롯이 무엇을 보관했는지뿐입니다.
          */
         enum class BindlessRegistry : uint8

@@ -818,22 +818,13 @@ namespace sw
         if ( _pDevice->_gpuBuffers.take( buffer, owned ) == false )
             return;
 
-        {
-            for ( D3D12RHIDevice::BindlessResourceRecord& record : _pDevice->_listRegisteredBindless )
-            {
-                if ( record._buffer != buffer )
-                    continue;
-                record._resource.Reset();
-                record._buffer = 0;
-            }
-            for ( D3D12RHIDevice::BindlessResourceRecord& record : _pDevice->_listRegisteredUAV )
-            {
-                if ( record._buffer != buffer )
-                    continue;
-                record._resource.Reset();
-                record._buffer = 0;
-            }
-        }
+        // 이 버퍼의 번호를 모두 놓는다(다섯 백엔드 같은 계약 — 위 `registryLock` 아래). 예전에는 값만 지우고 번호를 돌려받지 않아 힙 칸이 샜다.
+        const auto isThis = [buffer]( const D3D12RHIDevice::BindlessResourceRecord& record )
+        { return record._buffer == buffer; };
+        const auto deferFree = [this]( RHIDescriptorIndex index )
+        { deferFreeBindlessIndex( index ); };
+        _pDevice->_srvRegistry.releaseIf( RHIBindlessReuse::AfterFence, isThis, deferFree );
+        _pDevice->_uavRegistry.releaseIf( RHIBindlessReuse::AfterFence, isThis, deferFree );
 
         _pDevice->releaseTrackedResourceDeferred( std::move( owned ), RHIMemoryKey::makeBuffer( buffer ) );
     }
@@ -1151,15 +1142,12 @@ namespace sw
         vector<RHIDescriptorIndex> listFreedIndex;
         {
             UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-            for ( size_t index = 0; index < _pDevice->_listRegisteredBindless.size(); ++index )
-            {
-                D3D12RHIDevice::BindlessResourceRecord& record = _pDevice->_listRegisteredBindless[index];
-                if ( record._texture != texture )
-                    continue;
-                record._resource.Reset();
-                record._texture = 0;
-                listFreedIndex.push_back( static_cast<RHIDescriptorIndex>( index ) );
-            }
+            const auto               isThis = [texture]( const D3D12RHIDevice::BindlessResourceRecord& record )
+            { return record._texture == texture; };
+            const auto collect = [&listFreedIndex]( RHIDescriptorIndex index )
+            { listFreedIndex.push_back( index ); };
+            _pDevice->_srvRegistry.releaseIf( RHIBindlessReuse::AfterFence, isThis, collect );
+            _pDevice->_uavRegistry.releaseIf( RHIBindlessReuse::AfterFence, isThis, collect );
         }
         for ( const RHIDescriptorIndex index : listFreedIndex )
         {
@@ -1192,18 +1180,14 @@ namespace sw
         (void)lock;
         // 잠금은 부르는 쪽의 것이다(선언의 SW_REQUIRES_LOCK). 인덱스를 집는 것과 그 자리에 뷰를 만드는 것이 한 임계 구역이어야 한다.
 
-        // 반납된 슬롯이 있으면 그것부터 쓴다(펜스 뒤에 회수된 것들이다). 새 인덱스는 레지스트리 크기가 아니라 힙 카운터다 —
-        // SRV/CBV 와 UAV 가 레지스트리 둘에 나뉘어도 힙 인덱스 공간은 하나라서다.
-        RHIDescriptorIndex reused{ kInvalidDescriptorIndex };
-        if ( _pDevice->_freeBindless.tryPop( reused ) )
-            return reused;
-
-        if ( _pDevice->_allocatedDescriptorsCount >= D3D12RHIDevice::kBindlessDescriptorCapacity )
+        // 반납된 슬롯이 있으면 그것부터 쓴다(펜스 뒤에 회수된 것들이다). SRV/CBV 와 UAV 가 등록표 둘에 나뉘어도 힙 인덱스 공간은 하나라 발급기도 하나다.
+        uint32 index{ 0 };
+        if ( _pDevice->_bindlessIndexAllocator.tryAllocate( index ) == false )
         {
             SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.ShaderVisibleDescriptorHeap", "Shader visible descriptor heap overflow! Max: %#", D3D12RHIDevice::kBindlessDescriptorCapacity );
             return kInvalidDescriptorIndex;
         }
-        return _pDevice->_allocatedDescriptorsCount++;
+        return static_cast<RHIDescriptorIndex>( index );
     }
 
     bool D3D12RHIResourceFactory::isTextureReadyToSample( RHITextureHandle texture )
@@ -1324,7 +1308,7 @@ namespace sw
             {
                 // 집은 인덱스를 돌려준다. 그냥 반환하면 256 바이트보다 좁은 버퍼를 등록할 때마다 힙 슬롯이 하나씩 샌다.
                 // 아직 뷰를 만들지 않았으므로 펜스를 기다릴 것 없이 바로 프리리스트로 간다(잠금은 쥐고 있다).
-                _pDevice->_freeBindless.push( index );
+                _pDevice->_bindlessIndexAllocator.free( index );
                 return kInvalidDescriptorIndex;
             }
         }
@@ -1353,39 +1337,29 @@ namespace sw
     {
         const bool bUAV = ( registry == BindlessRegistry::UnorderedAccess );
 
-        UniqueLock<shared_mutex>                        lock{ _pDevice->_bindlessMutex };
-        vector<D3D12RHIDevice::BindlessResourceRecord>& listRegistry = bUAV ? _pDevice->_listRegisteredUAV : _pDevice->_listRegisteredBindless;
-        if ( index >= listRegistry.size() )
-            return;
-
-        D3D12RHIDevice::BindlessResourceRecord& record = listRegistry[index];
-        // 이미 빈 슬롯을 다시 프리리스트에 넣으면 같은 인덱스가 두 리소스에 발급된다.
-        const bool bSlotAlreadyFree = record._resource == nullptr && record._buffer == 0 && record._texture == 0;
-        if ( bSlotAlreadyFree )
+        UniqueLock<shared_mutex>                                     lock{ _pDevice->_bindlessMutex };
+        RHIBindlessRegistry<D3D12RHIDevice::BindlessResourceRecord>& target = bUAV ? _pDevice->_uavRegistry : _pDevice->_srvRegistry;
+        // 이미 빈 슬롯을 다시 프리리스트에 넣으면 같은 인덱스가 두 리소스에 발급된다 — 등록표가 거절한다.
+        if ( target.release( index, RHIBindlessReuse::AfterFence ) == false )
         {
             SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.IndexAlreadyFreeIgnoring", "%# index %# is already free; ignoring the duplicate release.",
                              bUAV ? "Bindless UAV" : "Bindless", index );
             return;
         }
-
-        record._resource = nullptr;
-        record._buffer   = 0;
-        record._texture  = 0;
-        deferFreeBindlessIndex( index ); // 힙 인덱스 공간이 하나라 프리리스트도 하나다
+        deferFreeBindlessIndex( index ); // 힙 인덱스 공간이 하나라 발급기도 하나다
     }
 
     void D3D12RHIResourceFactory::writeBindlessRecord( BindlessRegistry registry, RHIDescriptorIndex index, ID3D12Resource* pResource,
                                                        const BindlessHandleSet& handle, RHIBufferHandle buffer, RHITextureHandle texture )
     {
-        vector<D3D12RHIDevice::BindlessResourceRecord>& listRegistry =
-            ( registry == BindlessRegistry::UnorderedAccess ) ? _pDevice->_listRegisteredUAV : _pDevice->_listRegisteredBindless;
-        if ( index >= listRegistry.size() )
-            listRegistry.resize( index + 1 );
-
-        D3D12RHIDevice::BindlessResourceRecord& record = listRegistry[index];
-        record                                         = { pResource, handle._cpu, handle._offline };
-        record._buffer                                 = buffer;
-        record._texture                                = texture;
+        RHIBindlessRegistry<D3D12RHIDevice::BindlessResourceRecord>& target =
+            ( registry == BindlessRegistry::UnorderedAccess ) ? _pDevice->_uavRegistry : _pDevice->_srvRegistry;
+        D3D12RHIDevice::BindlessResourceRecord record{ pResource, handle._cpu, handle._offline };
+        record._buffer  = buffer;
+        record._texture = texture;
+        // 번호는 `acquireBindlessIndex` 가 발급기에서 받았다 — 산 칸이면 발급기를 거치지 않은 번호라 멈춘다.
+        if ( target.assign( index, record ) == false )
+            SW_FATAL( "D3D12: bindless index %# was written twice without a release", index );
     }
 
     void D3D12RHIResourceFactory::releaseBindlessSlot( RHIDescriptorIndex index )
@@ -1401,7 +1375,7 @@ namespace sw
         _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pDevice, index]()
         {
             UniqueLock<shared_mutex> lock{ pDevice->_bindlessMutex };
-            pDevice->_freeBindless.push( index );
+            pDevice->_bindlessIndexAllocator.free( index );
         } ),
                                                    _pDevice->_fenceValue );
     }
