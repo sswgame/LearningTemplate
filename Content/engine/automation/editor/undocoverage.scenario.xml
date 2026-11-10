@@ -4,7 +4,9 @@
   명령 동작은 형식으로 거래를 받는다(EditorSceneCommandActionFn — 레지스트리가 FScopedTransaction 처럼 연다). 형식이 막지 못하는 틈을 여기서 잡는다:
   ① 씬을 바꾸고 기록이 없음(Editor.UndoCoverageUnrecorded) ② 한 번 실행이 두 단계 이상(Editor.UndoCoverageSteps) ③ 되돌려도 해시가 다름(Editor.UndoCoverageMismatch).
   선택은 씬의 모든 씬 컴포넌트 오브젝트다 — 정렬 · 분산(둘 이상) · 복제 · 지우기 · 부모 풀기가 켜진다. 선택이 맞지 않아 꺼진 명령은 건너뛰고 로그(Editor.UndoCoverageSkipped)로 남긴다.
-  prefab.applyOverrides 는 건너뛴다 — 프리팹 파일을 쓰므로 씬 되돌리기가 파일까지 돌리지 않는다(언리얼도 에셋 저장은 트랜잭션 밖).
+  건너뛰는 것은 이유와 함께 목록에 적은 둘뿐이다: prefab.applyOverrides(프리팹 파일을 쓰므로 씬 되돌리기가 파일까지 돌리지 않는다 — 언리얼도 에셋 저장은 트랜잭션 밖),
+  play.keepChanges(재생 중에만 켜진다 — 재생 되돌리기는 playedit 시나리오가 본다). 그 밖에 켜지는 대상이 없는 명령은 실패다(Editor.UndoCoverageNoTarget) —
+  명령마다 선택 전체 · 하나씩 · 컴포넌트마다를 대상으로 시도하고, 붙여넣기는 먼저 복사해 둔다. 부모 풀기 대상이 되게 메시 오브젝트에 자식 하나를 만들고, 컴포넌트 위아래 옮기기가 켜지게 그 자식에 컴포넌트 둘을 단다.
   실패 줄의 명령 id 로 그 명령을 고친다. 어느 오브젝트가 달라졌는지는 -gv_automationHashDump=1 로 오브젝트별 해시 로그를 본다.
   실행: App -EnableEditor -scenario=engine/automation/editor/undocoverage.scenario.xml -unattended
 -->
@@ -16,15 +18,26 @@
 	<DevCommand line="layout.reset"/>
 	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.UndoCount" equals="0" timeoutFrames="600"/>
+	<DevCommand line="select.type MeshComponent"/>
+	<WaitUntil watch="Editor.SelectionCount" atLeast="1" timeoutFrames="30"/>
+	<DevCommand line="editor scene.object.createChild"/>
+	<EditorWaitSettled/>
+	<!-- 새 자식이 고른 것이 된다 — 주 씬 컴포넌트 밖 컴포넌트 둘을 달아 컴포넌트 위아래 옮기기가 켜지게 한다 -->
+	<DevCommand line="component.add PointLightComponent"/>
+	<DevCommand line="component.add TypedHandleTestComponent"/>
+	<EditorWaitSettled/>
 	<DevCommand line="select.type SceneComponent"/>
 	<EditorWaitSettled/>
 	<Expect watch="Editor.SelectionCount" atLeast="2"/>
 	<Remember watch="Editor.SceneHash" as="start"/>
-	<DevCommand line="editor.undoCoverage prefab.applyOverrides"/>
+	<DevCommand line="editor.undoCoverage prefab.applyOverrides play.keepChanges"/>
 	<EditorWaitSettled/>
 	<ExpectLog id="Editor.UndoCoverageResult" count="1"/>
 	<ExpectLog id="Editor.UndoCoverageUnrecorded" count="0"/>
 	<ExpectLog id="Editor.UndoCoverageSteps" count="0"/>
 	<ExpectLog id="Editor.UndoCoverageMismatch" count="0"/>
+	<ExpectLog id="Editor.UndoCoverageNoTarget" count="0"/>
+	<ExpectLog id="Editor.UndoCoverageSkipped" count="2"/>
 	<Expect watch="Editor.SceneHash" sameAs="start"/>
+	<Pass/>
 </Scenario>

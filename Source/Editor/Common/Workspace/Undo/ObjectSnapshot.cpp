@@ -149,7 +149,10 @@ namespace sw
                 if ( target._pManager == nullptr )
                     return;
                 const uint64 objectID = snapshot._identity._objectID;
-                GameObject*  pCreated = target._pManager->createGameObjectWithID( hashed_string( name.c_str() ), objectID );
+                // 같은 프레임에 지운 오브젝트는 지연 파괴가 끝날 때까지 그 id 로 등록돼 있다 — 그대로 만들면 스토어가 새 id 를 주어 자식 · 핸들이 원래 부모를 못 찾았다
+                // (부모 · 자식을 지운 뒤 되돌리면 자식이 루트로 돌아왔다). 되돌리기는 프레임 사이에 돌므로 지연 파괴를 먼저 끝낸다.
+                target._pManager->processDeferredDestruction();
+                GameObject* pCreated = target._pManager->createGameObjectWithID( hashed_string( name.c_str() ), objectID );
                 if ( pCreated == nullptr )
                 {
                     SW_LOG_WARNING_ID( "ObjectSnapshot.UndoRedoCouldNot2", "Undo/redo could not recreate '%#' with its id %#", name.c_str(), objectID );

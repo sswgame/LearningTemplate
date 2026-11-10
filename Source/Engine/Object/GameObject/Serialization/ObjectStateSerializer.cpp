@@ -44,6 +44,9 @@ namespace sw
             {
                 TComponentHandle<SceneComponent> _child;
                 string                           _parentKey;
+                float3                           _localPosition; ///< 붙어 있던 동안의 로컬 — 부모 컴포넌트를 지울 때 자식은 월드를 지키며 떨어져 로컬이 바뀐다
+                float3                           _localRotation;
+                float3                           _localScale;
             };
 
             /**
@@ -127,7 +130,8 @@ namespace sw
                         const bool bForeignChild = pChild == nullptr || pChild->getOwner() == nullptr || pChild->getOwner() == pGameObject;
                         if ( bForeignChild )
                             continue;
-                        outListLink.push_back( ChildLink{ TComponentHandle<SceneComponent>{ pChild }, ComponentStableKey::makeKey( pScene ) } );
+                        outListLink.push_back( ChildLink{ TComponentHandle<SceneComponent>{ pChild }, ComponentStableKey::makeKey( pScene ), pChild->getLocalPosition(),
+                                                          pChild->getLocalRotation(), pChild->getLocalScale() } );
                     }
                 }
             }
@@ -156,8 +160,16 @@ namespace sw
                         continue;
                     }
                     if ( pChild->getParent() != pParent && pChild->attachToComponent( pParent ) == false )
+                    {
                         SW_LOG_WARNING_ID( "ObjectStateSerializer.PlaceLoadCouldNot", "In-place load of '%#' could not re-attach child '%#'", pGameObject->getName().c_str(),
                                            pChild->getOwner() != nullptr ? pChild->getOwner()->getName().c_str() : "?" );
+                        continue;
+                    }
+                    // 부모 컴포넌트를 지울 때(`clearComponents`) 자식은 월드를 지키며 떨어져 로컬이 바뀌었다 — 붙어 있던 로컬로 되돌린다. 그래야 부모가 다른 자리로 돌아와도
+                    // 자식이 부모를 따라간다(에디터 되돌리기가 부모 스냅샷을 다시 읽는다 — 부모를 옮긴 뒤 되돌리면 자식이 옮긴 만큼 어긋났다).
+                    pChild->setLocalPosition( link._localPosition );
+                    pChild->setLocalRotation( link._localRotation );
+                    pChild->setLocalScale( link._localScale );
                 }
             }
 

@@ -9,6 +9,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/Commands/Diagnostics/EditorGlobalVariableCommands.h"
+#include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -244,9 +245,10 @@ namespace sw::editor
         snapObjectsToGround( listSel );
     }
 
-    void EditorTransformCommands::snapObjectsToGround( const vector<GameObject*>& listObject )
+    void EditorTransformCommands::snapObjectsToGround( const vector<GameObject*>& listSelected )
     {
-        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
+        const vector<GameObject*> listObject = EditorSceneCommands::filterTopLevel( listSelected ); // 자식은 부모를 따라 움직인다
+        EditorTransaction         transaction;                                                      // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
         if ( listObject.empty() )
             return;
 
@@ -290,8 +292,9 @@ namespace sw::editor
         alignObjects( listSel, axis, type );
     }
 
-    void EditorTransformCommands::alignObjects( const vector<GameObject*>& listSel, AlignAxis axis, AlignType type )
+    void EditorTransformCommands::alignObjects( const vector<GameObject*>& listSelected, AlignAxis axis, AlignType type )
     {
+        const vector<GameObject*> listSel = EditorSceneCommands::filterTopLevel( listSelected ); // 자식은 부모를 따라 움직인다
         if ( listSel.size() < 2 )
             return;
 
@@ -346,8 +349,9 @@ namespace sw::editor
         distributeObjects( std::move( listSel ), axis );
     }
 
-    void EditorTransformCommands::distributeObjects( vector<GameObject*> listSel, AlignAxis axis )
+    void EditorTransformCommands::distributeObjects( vector<GameObject*> listSelected, AlignAxis axis )
     {
+        vector<GameObject*> listSel = EditorSceneCommands::filterTopLevel( listSelected ); // 자식은 부모를 따라 움직인다
         // 주 SceneComponent 가 없는 오브젝트는 분배 대상에서 뺀다(front/back 역참조 보호).
         VectorUtil::removeIf( listSel, []( const GameObject* pGo )
         { return pGo->getPrimarySceneComponent() == nullptr; } );

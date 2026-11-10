@@ -25,16 +25,74 @@ namespace sw::editor
     {
         struct EditorUndoCoverageInternal
         {
-            /** @brief 명령 하나를 부를 대상입니다 — 맥락 메뉴 종류에 맞춰 지금 선택(오브젝트) · 원점(뷰포트) · 없음(전역)을 준다. */
-            static EditorCommandTarget makeTarget( const EditorCommandDesc& desc, const vector<uint64>& listSelectedID )
+            /**
+             * @brief 명령 하나를 부를 대상 후보입니다 — 앞에서부터 켜진 첫 후보로 돈다.
+             * @details 선택 하나로만 돌면 하나에만 뜻이 있는 명령(자식 만들기 · 위아래 옮기기)과 컴포넌트 명령이 "이 선택에서 꺼짐" 으로 빠져 전수가 비었다(16 검사 · 15 건너뜀).
+             *          그래서 종류마다 맥락 메뉴가 줄 수 있는 대상을 모두 낸다: 오브젝트는 선택 전체 → 하나씩(누른 항목), 컴포넌트는 고른 오브젝트의 컴포넌트마다, 뷰포트는 원점.
+             */
+            static void makeTargets( const EditorCommandDesc& desc, GameObjectManager& manager, const vector<uint64>& listSelectedID, vector<EditorCommandTarget>& outListTarget )
             {
-                EditorCommandTarget target{};
-                target._kind = desc._contextMenuKind;
+                outListTarget.clear();
+                // 명령 자신의 맥락 종류(맥락 메뉴 명령은 등록이 종류를 정하지 않아 None 일 수 있다 — 그래서 아래 후보를 종류와 상관없이 더한다).
+                EditorCommandTarget base{};
+                base._kind = desc._contextMenuKind;
                 if ( desc._contextMenuKind == EditorCommandTargetKind::GameObject )
-                    target._listSelectedID = listSelectedID;
+                    base._listSelectedID = listSelectedID;
                 if ( desc._contextMenuKind == EditorCommandTargetKind::Viewport )
-                    target._bHasWorldPosition = true; // 원점 — 뷰포트 빈 곳 메뉴가 바닥 평면과 만난 점을 주는 자리
-                return target;
+                    base._bHasWorldPosition = true; // 원점 — 뷰포트 빈 곳 메뉴가 바닥 평면과 만난 점을 주는 자리
+                outListTarget.push_back( base );
+                if ( desc._contextMenuKind == EditorCommandTargetKind::Viewport )
+                    return;
+                // 오브젝트: 선택 전체 → 하나씩(누른 항목).
+                EditorCommandTarget all{};
+                all._kind           = EditorCommandTargetKind::GameObject;
+                all._listSelectedID = listSelectedID;
+                outListTarget.push_back( all );
+                for ( const uint64 objectID : listSelectedID )
+                {
+                    EditorCommandTarget single{};
+                    single._kind           = EditorCommandTargetKind::GameObject;
+                    single._listSelectedID = { objectID };
+                    single._hoveredID      = objectID;
+                    outListTarget.push_back( single );
+                }
+                // 컴포넌트: 고른 오브젝트의 컴포넌트마다(누른 컴포넌트).
+                for ( const uint64 objectID : listSelectedID )
+                {
+                    const GameObject* pObject = manager.findGameObjectByID( objectID );
+                    if ( pObject == nullptr )
+                        continue;
+                    for ( const Component* pComponent : pObject->getComponents() )
+                    {
+                        EditorCommandTarget component{};
+                        component._kind           = EditorCommandTargetKind::Component;
+                        component._listSelectedID = { pComponent->getComponentID() };
+                        component._hoveredID      = pComponent->getComponentID();
+                        outListTarget.push_back( component );
+                    }
+                }
+            }
+
+            /** @brief 거래를 받지 않는 복사 명령을 먼저 돌려 붙여넣기 명령이 켜지게 합니다(오브젝트 · 컴포넌트 클립보드). 씬을 바꾸지 않는다. */
+            static void fillClipboards( EditorCommandRegistry& registry, GameObjectManager& manager, const vector<uint64>& listSelectedID )
+            {
+                static constexpr const utf8* kArrCopyCommand[] = { "scene.copy", "scene.component.copy" };
+                vector<EditorCommandTarget>  listTarget;
+                for ( const utf8* pCommandID : kArrCopyCommand )
+                {
+                    const EditorCommandDesc* pDesc = registry.find( pCommandID );
+                    if ( pDesc == nullptr )
+                        continue;
+                    makeTargets( *pDesc, manager, listSelectedID, listTarget );
+                    for ( const EditorCommandTarget& target : listTarget )
+                    {
+                        if ( EditorCommandRegistry::isEnabled( *pDesc, target ) )
+                        {
+                            (void)EditorCommandRegistry::executeDesc( *pDesc, target );
+                            break;
+                        }
+                    }
+                }
             }
 
             /** @brief 처음 선택으로 되돌립니다. 지우기 · 복제가 선택을 바꾸므로 명령마다 같은 대상에서 시작한다(선택은 씬 해시 밖이다). */
@@ -128,25 +186,44 @@ namespace sw::editor
                     if ( EditorCommandTargetUtil::isTransacted( desc._edit ) )
                         listCommandID.push_back( desc._id );
                 }
-                uint32 checked = 0;
-                uint32 skipped = 0;
-                uint32 failed  = 0;
+                fillClipboards( registry, *pManager, listSelectedID );
+                uint32                      checked = 0;
+                uint32                      skipped = 0;
+                uint32                      failed  = 0;
+                vector<EditorCommandTarget> listTarget;
                 for ( const string& commandID : listCommandID )
                 {
                     const EditorCommandDesc* pDesc = registry.find( commandID );
                     if ( pDesc == nullptr )
                         continue; // 앞 명령이 레지스트리를 다시 지어 빠졌다
                     const EditorCommandDesc& desc = *pDesc;
-                    restoreSelection( *pManager, listSelectedID );
-                    const EditorCommandTarget target = makeTarget( desc, listSelectedID );
-                    if ( isSkipped( listArgument, desc._id ) || EditorCommandRegistry::isEnabled( desc, target ) == false )
+                    if ( isSkipped( listArgument, desc._id ) )
                     {
                         ++skipped;
-                        SW_LOG_INFO_ID( "Editor.UndoCoverageSkipped", "Undo coverage: '%#' skipped (listed or disabled for this selection)", desc._id.c_str() );
+                        SW_LOG_INFO_ID( "Editor.UndoCoverageSkipped", "Undo coverage: '%#' skipped (listed)", desc._id.c_str() );
+                        continue;
+                    }
+                    restoreSelection( *pManager, listSelectedID );
+                    makeTargets( desc, *pManager, listSelectedID, listTarget );
+                    const EditorCommandTarget* pTarget = nullptr;
+                    for ( const EditorCommandTarget& target : listTarget )
+                    {
+                        if ( EditorCommandRegistry::isEnabled( desc, target ) )
+                        {
+                            pTarget = &target;
+                            break;
+                        }
+                    }
+                    // 켜지는 대상이 하나도 없으면 전수가 빈 것이다 — 조용히 건너뛰지 않고 실패로 센다(장면에 그 대상을 두거나 건너뛸 목록에 이유와 함께 적는다).
+                    if ( pTarget == nullptr )
+                    {
+                        ++failed;
+                        SW_LOG_ERROR_ID( "Editor.UndoCoverageNoTarget", "Undo coverage: '%#' is disabled for every target the selection gives - put that target in the scene or list it with a reason",
+                                         desc._id.c_str() );
                         continue;
                     }
                     ++checked;
-                    if ( checkCommand( desc, target, stack ) == false )
+                    if ( checkCommand( desc, *pTarget, stack ) == false )
                         ++failed;
                 }
                 restoreSelection( *pManager, listSelectedID );
