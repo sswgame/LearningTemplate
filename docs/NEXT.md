@@ -41,6 +41,7 @@
 
 ### 5. 작업자 · 설계 문서가 남긴 일
 
+- **`game-gpu-includes` 를 타깃 게이트 껍데기로(5-2 RHI 작업 뒤):** 게임 코드 86 파일이 엔진 공개 헤더 28 개(MeshComponent 39 · MaterialInstance 17 · RigidBody · CharacterController 12 …)를 거쳐 RHI · Shader 헤더에 닿는다. 끊을 잎은 11 곳이다 — `Mesh.h`(RHIDeviceBuffer · RHIRenderResource · RHITypes), `MeshAssetFormat.h` · `TextureCache.h` · `FractureAsset.h`(RHITypes), `Material.h` · `MaterialInstance.h`(RHIRenderResource), `MaterialRenderProxy.h`(RHIDeviceBuffer · RHIRenderResource · ShaderBindingSlots), `MeshComponent.h`(RHIEnums), `WaterBodyComponent.h` · `WaterWaveMath.h` · `DirectionalLightComponent.h`(ShaderBindingSlots). 에셋 쪽 형식(정점 배치 · 포맷 값)을 RHI 밖 값 헤더로 내리고 GPU 자원(RHIRenderResource 상속)은 렌더 프록시로 떼면(언리얼 FMeshRenderData · FMaterialRenderProxy 나눔) `[gate]` 에 게임 → RHI 껍데기를 걸고 린트를 지운다. 같은 모양으로 직접 include 만 보는 손 목록 린트는 이것 하나다(에디터 View 는 껍데기로 옮겼다).
 - **에디터 MVVM 측정(통합):**
   - Hierarchy: 큐브 8000 루트 씬에서 Hierarchy 창을 연 프레임 시간을 옮기기 전 커밋과 대조한다(모두 접힘 · 루트 하나 펼침 · 맨 아래로 스크롤). 나빠졌으면 원인을 `HierarchyViewModel::gather` 에서 찾는다.
   - 인스펙터 값 행: 프로퍼티 많은 대상(컴포넌트 여럿을 단 오브젝트 · 프로젝트 설정 · 펼친 큰 배열)에서 인스펙터 프레임 시간과 `Editor.InspectorFilledRows` · `Editor.InspectorSkippedRows` 를 값 행 전 커밋과 대조한다(맨 위 · 맨 아래로 스크롤 · 스크롤 중). 나빠졌으면 `PropertyGridModel::gather` 의 행 채우기(값 사본 · 기본값 비교 · 혼합)에서 찾는다.
