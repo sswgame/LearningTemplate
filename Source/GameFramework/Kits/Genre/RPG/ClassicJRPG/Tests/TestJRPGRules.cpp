@@ -251,7 +251,7 @@ SW_TEST_CASE_F( JRPGRulesTest, PhysicalDamageFormula )
  */
 SW_TEST_CASE_F( JRPGRulesTest, AttackRetargetsAndUsesWeakness )
 {
-    SW_REQUIRE_EQUAL( 0, _party.addMember( "hero", "Hero", "hero" ) );
+    SW_REQUIRE_TRUE( _party.addMember( "hero", "Hero", "hero" ) == 0 );
     SW_REQUIRE_TRUE( startBattle( "slime" ) );
     SW_EXPECT_TRUE( _battle.setCommand( 0, sw::JRPGCommand::makeAttack( 9 ) ) );
     _battle.resolveRound();
@@ -272,7 +272,7 @@ SW_TEST_CASE_F( JRPGRulesTest, AttackRetargetsAndUsesWeakness )
  */
 SW_TEST_CASE_F( JRPGRulesTest, DefendAndTimedBlockReduceDamage )
 {
-    SW_REQUIRE_EQUAL( 0, _party.addMember( "hero", "Hero", "hero" ) );
+    SW_REQUIRE_TRUE( _party.addMember( "hero", "Hero", "hero" ) == 0 );
     SW_REQUIRE_TRUE( startBattle( "ogre" ) ); // 힘 80, 방어력 10: 38 × 0.875..1.125 = 33..42
 
     const int32 plain = resolveAndMeasureHeroLoss();
@@ -298,7 +298,7 @@ SW_TEST_CASE_F( JRPGRulesTest, DefendAndTimedBlockReduceDamage )
  */
 SW_TEST_CASE_F( JRPGRulesTest, TimedHitAddsAStrike )
 {
-    SW_REQUIRE_EQUAL( 0, _party.addMember( "hero", "Hero", "hero" ) );
+    SW_REQUIRE_TRUE( _party.addMember( "hero", "Hero", "hero" ) == 0 );
     SW_REQUIRE_TRUE( startBattle( "slime" ) );
 
     SW_EXPECT_TRUE( _battle.setCommand( 0, sw::JRPGCommand::makeAttack( 0 ) ) );
@@ -322,7 +322,7 @@ SW_TEST_CASE_F( JRPGRulesTest, TimedHitAddsAStrike )
  */
 SW_TEST_CASE_F( JRPGRulesTest, DamageSpells )
 {
-    SW_REQUIRE_EQUAL( 0, _party.addMember( "hero", "Hero", "hero" ) );
+    SW_REQUIRE_TRUE( _party.addMember( "hero", "Hero", "hero" ) == 0 );
     sw::vector<sw::hashed_string> listEnemy;
     listEnemy.push_back( "slime" );
     listEnemy.push_back( "slime" );
@@ -364,8 +364,8 @@ SW_TEST_CASE_F( JRPGRulesTest, DamageSpells )
  */
 SW_TEST_CASE_F( JRPGRulesTest, HealAndRevive )
 {
-    SW_REQUIRE_EQUAL( 0, _party.addMember( "hero", "Hero", "hero", 3 ) ); // 레벨 3: HP 120, MP 14, 지능 14 이고 raise 를 배웠다
-    SW_REQUIRE_EQUAL( 1, _party.addMember( "mage", "Mage", "mage" ) );
+    SW_REQUIRE_TRUE( _party.addMember( "hero", "Hero", "hero", 3 ) == 0 ); // 레벨 3: HP 120, MP 14, 지능 14 이고 raise 를 배웠다
+    SW_REQUIRE_TRUE( _party.addMember( "mage", "Mage", "mage" ) == 1 );
     SW_REQUIRE_TRUE( startBattle( "slime" ) );
 
     SW_EXPECT_FALSE( _battle.setCommand( 0, sw::JRPGCommand::makeSpell( "mend", 9 ) ) );
@@ -400,8 +400,8 @@ SW_TEST_CASE_F( JRPGRulesTest, HealAndRevive )
  */
 SW_TEST_CASE_F( JRPGRulesTest, CommandRefusals )
 {
-    SW_REQUIRE_EQUAL( 0, _party.addMember( "hero", "Hero", "hero" ) );
-    SW_REQUIRE_EQUAL( 1, _party.addMember( "mage", "Mage", "mage" ) );
+    SW_REQUIRE_TRUE( _party.addMember( "hero", "Hero", "hero" ) == 0 );
+    SW_REQUIRE_TRUE( _party.addMember( "mage", "Mage", "mage" ) == 1 );
     SW_REQUIRE_TRUE( startBattle( "slime" ) );
 
     SW_EXPECT_FALSE( _battle.setCommand( -1, sw::JRPGCommand::makeDefend() ) );
@@ -422,7 +422,7 @@ SW_TEST_CASE_F( JRPGRulesTest, FailedStartDoesNotProgress )
 {
     SW_EXPECT_FALSE( startBattle( "slime" ) ); // 멤버가 없다
 
-    SW_REQUIRE_EQUAL( 0, _party.addMember( "hero", "Hero", "hero" ) );
+    SW_REQUIRE_TRUE( _party.addMember( "hero", "Hero", "hero" ) == 0 );
     SW_EXPECT_LOG( "JRPGBattle.UnknownEnemy" );
     SW_EXPECT_FALSE( startBattle( "nope" ) );
     SW_EXPECT_FALSE( _battle.setCommand( 0, sw::JRPGCommand::makeDefend() ) );
@@ -441,7 +441,7 @@ SW_TEST_CASE_F( JRPGRulesTest, FailedStartDoesNotProgress )
 
     // 시작 뒤에 멤버가 늘면 명령 표와 맞지 않는다.
     SW_REQUIRE_TRUE( startBattle( "slime" ) );
-    SW_REQUIRE_EQUAL( 1, _party.addMember( "mage", "Mage", "mage" ) );
+    SW_REQUIRE_TRUE( _party.addMember( "mage", "Mage", "mage" ) == 1 );
     SW_EXPECT_FALSE( _battle.setCommand( 1, sw::JRPGCommand::makeDefend() ) );
     _battle.resolveRound();
     SW_EXPECT_EQUAL( 0, _battle.getRound() );
@@ -454,8 +454,8 @@ SW_TEST_CASE_F( JRPGRulesTest, ComboUsesPointsAndParticipants )
 {
     _settings._comboPerHit = 3;
     _settings._comboMax    = 4;
-    SW_REQUIRE_EQUAL( 0, _party.addMember( "hero", "Hero", "hero" ) );
-    SW_REQUIRE_EQUAL( 1, _party.addMember( "mage", "Mage", "mage" ) );
+    SW_REQUIRE_TRUE( _party.addMember( "hero", "Hero", "hero" ) == 0 );
+    SW_REQUIRE_TRUE( _party.addMember( "mage", "Mage", "mage" ) == 1 );
     SW_REQUIRE_TRUE( startBattle( "slime" ) );
 
     SW_EXPECT_FALSE( _battle.setCommand( 1, sw::JRPGCommand::makeCombo( "eclipse", 0 ) ) ); // 포인트가 없다
@@ -488,7 +488,7 @@ SW_TEST_CASE_F( JRPGRulesTest, ComboUsesPointsAndParticipants )
  */
 SW_TEST_CASE_F( JRPGRulesTest, CastReleaseScalesWithRemainingLocks )
 {
-    SW_REQUIRE_EQUAL( 0, _party.addMember( "hero", "Hero", "hero" ) );
+    SW_REQUIRE_TRUE( _party.addMember( "hero", "Hero", "hero" ) == 0 );
     SW_REQUIRE_TRUE( startBattle( "wyrd" ) );
 
     _battle.resolveRound();
@@ -513,7 +513,7 @@ SW_TEST_CASE_F( JRPGRulesTest, CastReleaseScalesWithRemainingLocks )
  */
 SW_TEST_CASE_F( JRPGRulesTest, BreakingEveryLockCancelsTheCast )
 {
-    SW_REQUIRE_EQUAL( 0, _party.addMember( "hero", "Hero", "hero" ) );
+    SW_REQUIRE_TRUE( _party.addMember( "hero", "Hero", "hero" ) == 0 );
     SW_REQUIRE_TRUE( startBattle( "wyrd" ) );
 
     _battle.resolveRound();
@@ -530,7 +530,7 @@ SW_TEST_CASE_F( JRPGRulesTest, BreakingEveryLockCancelsTheCast )
  */
 SW_TEST_CASE_F( JRPGRulesTest, Flee )
 {
-    SW_REQUIRE_EQUAL( 0, _party.addMember( "mage", "Mage", "mage" ) );
+    SW_REQUIRE_TRUE( _party.addMember( "mage", "Mage", "mage" ) == 0 );
     SW_REQUIRE_TRUE( startBattle( "slime" ) ); // 평균 민첩이 같다
     SW_EXPECT_NEAR( 0.5, _battle.computeFleeChance(), 1.0e-5 );
 
@@ -559,8 +559,8 @@ SW_TEST_CASE_F( JRPGRulesTest, Flee )
  */
 SW_TEST_CASE_F( JRPGRulesTest, VictoryDistributesRewards )
 {
-    SW_REQUIRE_EQUAL( 0, _party.addMember( "hero", "Hero", "hero" ) );
-    SW_REQUIRE_EQUAL( 1, _party.addMember( "mage", "Mage", "mage" ) );
+    SW_REQUIRE_TRUE( _party.addMember( "hero", "Hero", "hero" ) == 0 );
+    SW_REQUIRE_TRUE( _party.addMember( "mage", "Mage", "mage" ) == 1 );
     SW_REQUIRE_TRUE( startBattle( "frail" ) );
     SW_EXPECT_TRUE( _battle.setCommand( 0, sw::JRPGCommand::makeAttack( 0 ) ) );
     _battle.resolveRound();
@@ -583,7 +583,7 @@ SW_TEST_CASE_F( JRPGRulesTest, VictoryDistributesRewards )
  */
 SW_TEST_CASE_F( JRPGRulesTest, DefeatWhenEveryMemberFalls )
 {
-    SW_REQUIRE_EQUAL( 0, _party.addMember( "hero", "Hero", "hero" ) );
+    SW_REQUIRE_TRUE( _party.addMember( "hero", "Hero", "hero" ) == 0 );
     SW_REQUIRE_TRUE( startBattle( "giant" ) );
     _party.getMember( 0 )._hp = 1;
     _battle.resolveRound();
@@ -598,7 +598,7 @@ SW_TEST_CASE_F( JRPGRulesTest, DefeatWhenEveryMemberFalls )
  */
 SW_TEST_CASE_F( JRPGRulesTest, WuxiaInnerGauge )
 {
-    SW_REQUIRE_EQUAL( 0, _party.addMember( "hero", "Hero", "hero" ) );
+    SW_REQUIRE_TRUE( _party.addMember( "hero", "Hero", "hero" ) == 0 );
     SW_REQUIRE_TRUE( startBattle( "slime" ) );
     SW_EXPECT_TRUE( _battle.setCommand( 0, sw::JRPGCommand::makeAttack( 0 ) ) );
     _battle.resolveRound();
@@ -630,7 +630,7 @@ SW_TEST_CASE_F( JRPGRulesTest, WuxiaInnerGauge )
 SW_TEST_CASE_F( JRPGRulesTest, ManualTechniques )
 {
     _settings._bWuxia = true;
-    SW_REQUIRE_EQUAL( 0, _party.addMember( "hero", "Hero", "hero" ) );
+    SW_REQUIRE_TRUE( _party.addMember( "hero", "Hero", "hero" ) == 0 );
     SW_EXPECT_FALSE( _party.getMember( 0 ).findProficiency( "pine" ).has_value() );
     SW_EXPECT_FALSE( _party.canUseSpell( 0, "pine_cut" ) );
 
@@ -669,7 +669,7 @@ SW_TEST_CASE_F( JRPGRulesTest, ManualTechniques )
  */
 SW_TEST_CASE_F( JRPGRulesTest, AddMember )
 {
-    SW_REQUIRE_EQUAL( 0, _party.addMember( "hero", "Hero", "hero", 3 ) );
+    SW_REQUIRE_TRUE( _party.addMember( "hero", "Hero", "hero", 3 ) == 0 );
     const sw::JRPGMember& hero = _party.getMember( 0 );
     SW_EXPECT_EQUAL( 120, hero.getStat( sw::JRPGStat::MaxHP ) );
     SW_EXPECT_EQUAL( 14, hero.getStat( sw::JRPGStat::MaxMP ) );
@@ -679,16 +679,16 @@ SW_TEST_CASE_F( JRPGRulesTest, AddMember )
     SW_EXPECT_TRUE( hero.knowsSpell( "raise" ) );
     SW_EXPECT_EQUAL( 0, countPartyEvents( sw::JRPGPartyEvent::Kind::LevelUp ) ); // 처음 만든 멤버의 성장은 알리지 않는다
 
-    SW_EXPECT_EQUAL( -1, _party.addMember( "hero", "Again", "mage" ) );
-    SW_EXPECT_EQUAL( -1, _party.addMember( "", "Blank", "mage" ) );
-    SW_EXPECT_EQUAL( -1, _party.addMember( "ghost", "Ghost", "nope" ) );
+    SW_EXPECT_FALSE( _party.addMember( "hero", "Again", "mage" ).has_value() );
+    SW_EXPECT_FALSE( _party.addMember( "", "Blank", "mage" ).has_value() );
+    SW_EXPECT_FALSE( _party.addMember( "ghost", "Ghost", "nope" ).has_value() );
 
-    SW_EXPECT_EQUAL( 1, _party.addMember( "a", "A", "mage", 99 ) );
+    SW_EXPECT_TRUE( _party.addMember( "a", "A", "mage", 99 ) == 1 );
     SW_EXPECT_EQUAL( 30, _party.getMember( 1 )._level.getLevel() );
-    SW_EXPECT_EQUAL( 2, _party.addMember( "b", "B", "mage", -5 ) );
+    SW_EXPECT_TRUE( _party.addMember( "b", "B", "mage", -5 ) == 2 );
     SW_EXPECT_EQUAL( 1, _party.getMember( 2 )._level.getLevel() );
-    SW_EXPECT_EQUAL( 3, _party.addMember( "c", "C", "mage" ) );
-    SW_EXPECT_EQUAL( -1, _party.addMember( "d", "D", "mage" ) ); // 정원 4
+    SW_EXPECT_TRUE( _party.addMember( "c", "C", "mage" ) == 3 );
+    SW_EXPECT_FALSE( _party.addMember( "d", "D", "mage" ).has_value() ); // 정원 4
     SW_EXPECT_EQUAL( 3, _party.findMemberIndex( "c" ).value() );
     SW_EXPECT_FALSE( _party.findMemberIndex( "d" ).has_value() );
 }
@@ -698,7 +698,7 @@ SW_TEST_CASE_F( JRPGRulesTest, AddMember )
  */
 SW_TEST_CASE_F( JRPGRulesTest, AddExpGrowsPerLevel )
 {
-    SW_REQUIRE_EQUAL( 0, _party.addMember( "hero", "Hero", "hero" ) );
+    SW_REQUIRE_TRUE( _party.addMember( "hero", "Hero", "hero" ) == 0 );
     SW_EXPECT_EQUAL( 0, _party.addExp( 0, 0 ) );
     SW_EXPECT_EQUAL( 0, _party.addExp( 0, -5 ) );
     SW_EXPECT_EQUAL( 0, _party.addExp( 7, 100 ) );
@@ -726,8 +726,8 @@ SW_TEST_CASE_F( JRPGRulesTest, AddExpGrowsPerLevel )
  */
 SW_TEST_CASE_F( JRPGRulesTest, ClassChange )
 {
-    SW_REQUIRE_EQUAL( 0, _party.addMember( "hero", "Hero", "hero", 20 ) );
-    SW_REQUIRE_EQUAL( 1, _party.addMember( "rookie", "Rookie", "mage" ) );
+    SW_REQUIRE_TRUE( _party.addMember( "hero", "Hero", "hero", 20 ) == 0 );
+    SW_REQUIRE_TRUE( _party.addMember( "rookie", "Rookie", "mage" ) == 1 );
 
     SW_EXPECT_EQUAL( sw::JRPGClassChangeResult::UnknownMember, _party.changeClass( 9, "mage" ) );
     SW_EXPECT_EQUAL( sw::JRPGClassChangeResult::UnknownClass, _party.changeClass( 0, "nope" ) );
@@ -760,8 +760,8 @@ SW_TEST_CASE_F( JRPGRulesTest, ClassChange )
  */
 SW_TEST_CASE_F( JRPGRulesTest, InnAndChurch )
 {
-    SW_REQUIRE_EQUAL( 0, _party.addMember( "hero", "Hero", "hero" ) );
-    SW_REQUIRE_EQUAL( 1, _party.addMember( "mage", "Mage", "mage", 2 ) );
+    SW_REQUIRE_TRUE( _party.addMember( "hero", "Hero", "hero" ) == 0 );
+    SW_REQUIRE_TRUE( _party.addMember( "mage", "Mage", "mage", 2 ) == 1 );
     _party.getMember( 0 )._hp        = 10;
     _party.getMember( 0 )._mp        = 1;
     _party.getMember( 1 )._hp        = 0;
@@ -789,7 +789,7 @@ SW_TEST_CASE_F( JRPGRulesTest, InnAndChurch )
 
     sw::JRPGParty unfunded;
     unfunded.initialize( &_catalog, &_itemCatalog, sw::SessionStateRefs{} );
-    SW_REQUIRE_EQUAL( 0, unfunded.addMember( "hero", "Hero", "hero" ) );
+    SW_REQUIRE_TRUE( unfunded.addMember( "hero", "Hero", "hero" ) == 0 );
     SW_EXPECT_FALSE( unfunded.restAtInn( 1 ) );
     SW_EXPECT_TRUE( unfunded.restAtInn( 0 ) );
     SW_EXPECT_EQUAL( 100, unfunded.distributeRewards( 100, 5 ) ); // 지갑이 없어도 경험치는 받는다
@@ -800,7 +800,7 @@ SW_TEST_CASE_F( JRPGRulesTest, InnAndChurch )
  */
 SW_TEST_CASE_F( JRPGRulesTest, EquipmentStatsAndRoundTrip )
 {
-    SW_REQUIRE_EQUAL( 0, _party.addMember( "hero", "Hero", "hero" ) );
+    SW_REQUIRE_TRUE( _party.addMember( "hero", "Hero", "hero" ) == 0 );
     SW_EXPECT_EQUAL( 40, _party.computeAttack( 0 ) );
     SW_EXPECT_EQUAL( 10, _party.computeDefense( 0 ) );
     SW_EXPECT_EQUAL( 0, _party.computeAttack( 9 ) );
@@ -834,8 +834,8 @@ SW_TEST_CASE_F( JRPGRulesTest, EquipmentStatsAndRoundTrip )
  */
 SW_TEST_CASE_F( JRPGRulesTest, PartyStateRoundTrip )
 {
-    SW_REQUIRE_EQUAL( 0, _party.addMember( "hero", "Hero", "hero", 3 ) );
-    SW_REQUIRE_EQUAL( 1, _party.addMember( "mage", "Mage", "mage" ) );
+    SW_REQUIRE_TRUE( _party.addMember( "hero", "Hero", "hero", 3 ) == 0 );
+    SW_REQUIRE_TRUE( _party.addMember( "mage", "Mage", "mage" ) == 1 );
     _party.learnManual( 0, "pine" );
     _party.addProficiency( 0, "pine", 35 );
     SW_EXPECT_EQUAL( 0, _party.addExp( 0, 50 ) );
@@ -938,7 +938,7 @@ SW_TEST_CASE_F( JRPGRulesTest, PartyStateRefusals )
     initializeParty( target );
     SW_EXPECT_FALSE( target.readState( readingOversized ) );
 
-    SW_REQUIRE_EQUAL( 0, _party.addMember( "hero", "Hero", "hero" ) );
+    SW_REQUIRE_TRUE( _party.addMember( "hero", "Hero", "hero" ) == 0 );
     sw::Archive written;
     _party.writeState( written );
     sw::Archive   readingLayout( written.getData(), written.getSize() );
@@ -952,7 +952,7 @@ SW_TEST_CASE_F( JRPGRulesTest, PartyStateRefusals )
  */
 SW_TEST_CASE_F( JRPGRulesTest, BattleStateRoundTrip )
 {
-    SW_REQUIRE_EQUAL( 0, _party.addMember( "hero", "Hero", "hero" ) );
+    SW_REQUIRE_TRUE( _party.addMember( "hero", "Hero", "hero" ) == 0 );
     SW_REQUIRE_TRUE( startBattle( "wyrd" ) );
     _battle.resolveRound();
     SW_EXPECT_TRUE( _battle.setCommand( 0, sw::JRPGCommand::makeDefend() ) ); // 정한 명령도 싣는다
@@ -1000,7 +1000,7 @@ SW_TEST_CASE_F( JRPGRulesTest, BattleStateRoundTrip )
  */
 SW_TEST_CASE_F( JRPGRulesTest, BattleStateRefusals )
 {
-    SW_REQUIRE_EQUAL( 0, _party.addMember( "hero", "Hero", "hero" ) );
+    SW_REQUIRE_TRUE( _party.addMember( "hero", "Hero", "hero" ) == 0 );
     SW_REQUIRE_TRUE( startBattle( "slime" ) );
 
     const auto refuses = [this]( auto mutate )
@@ -1263,6 +1263,6 @@ SW_TEST_CASE( JRPGTest, CatalogReportsUnknownReferences )
     // 모르는 주문은 배우지 않는다 - 배우면 그 멤버의 세이브가 읽히지 않는다.
     sw::JRPGParty party;
     party.initialize( &catalog, nullptr, sw::SessionStateRefs{} );
-    SW_REQUIRE_EQUAL( 0, party.addMember( "hero", "Hero", "hero" ) );
+    SW_REQUIRE_TRUE( party.addMember( "hero", "Hero", "hero" ) == 0 );
     SW_EXPECT_TRUE( party.getMember( 0 )._listSpell.empty() );
 }

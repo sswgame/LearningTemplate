@@ -95,12 +95,12 @@ namespace sw
         _pWallet    = refs._pWallet;
     }
 
-    int32 JRPGParty::addMember( const hashed_string& memberID, string_view name, const hashed_string& classID, int32 level )
+    expected<int32> JRPGParty::addMember( const hashed_string& memberID, string_view name, const hashed_string& classID, int32 level )
     {
         const JRPGClassDef* pClass           = _pCatalog != nullptr ? _pCatalog->findClass( classID ) : nullptr;
         const bool          bCannotAddMember = pClass == nullptr || memberID.empty() || static_cast<int32>( _listMember.size() ) >= kMaxMembers || findMemberIndex( memberID ).has_value();
         if ( bCannotAddMember )
-            return constant::invalid_index::kInt32;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "empty or duplicate member id, unknown class, or the party is full" } );
 
         JRPGMember member;
         member._id      = memberID;
