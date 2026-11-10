@@ -8,6 +8,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "DevTools/Client/Automation/Runner/AutomationGoldenUtil.h"
 #include "DevTools/Client/Automation/Scenario/AutomationTimeline.h"
 #include "DevTools/DevToolsAPI.h"
 
@@ -16,18 +17,19 @@ namespace sw
     /** @struct AutomationReportParams @brief 보고 한 편에 적을 실행 결과입니다(`AutomationReportWriter::write` 의 인자 묶음). */
     struct AutomationReportParams
     {
-        string_view           _scenarioName{};
-        const utf8*           _pResultName{ "" };
-        int32                 _exitCode{ 0 };
-        uint32                _frameCount{ 0 };
-        string_view           _reason{};
-        const vector<string>* _pListFailure{ nullptr };
-        const vector<string>* _pListUpdatedGolden{ nullptr };   ///< `-scenario-update-golden` 이 쓴 골든(리소스 id) — 리뷰할 목록
-        const vector<string>* _pListNearLimitGolden{ nullptr }; ///< 통과했지만 허용치에 가까운 골든의 비교 줄 — 기록 모드로 다시 뜰 목록
-        const vector<string>* _pListUnhandledLog{ nullptr };    ///< 로그 게이트가 처리하지 않았다고 본 Warning · Error 줄
-        const vector<string>* _pListAllowedLog{ nullptr };      ///< 허용 목록 항목이 맞은 로그 id(`scenario-logs --check` 가 낡은 항목을 세는 근거)
-        const vector<string>* _pListMetric{ nullptr };          ///< 지표 값 줄(`darkFraction(0,0,1,0.12) park.ppm = 0.034`) — 판정(`AutomationJudge`)이 소유한다
-        const vector<string>* _pListRecord{ nullptr };          ///< 기록 값 줄(`frame 300 Scene.TransformHash = 12345`, 결정성 대조) — 판정이 소유한다
+        string_view                           _scenarioName{};
+        const utf8*                           _pResultName{ "" };
+        int32                                 _exitCode{ 0 };
+        uint32                                _frameCount{ 0 };
+        string_view                           _reason{};
+        const vector<string>*                 _pListFailure{ nullptr };
+        const vector<string>*                 _pListUpdatedGolden{ nullptr };   ///< `-scenario-update-golden` 이 쓴 골든(리소스 id) — 리뷰할 목록
+        const vector<string>*                 _pListNearLimitGolden{ nullptr }; ///< 통과했지만 허용치에 가까운 골든의 비교 줄 — 기록 모드로 다시 뜰 목록
+        const vector<AutomationGoldenSample>* _pListGoldenSample{ nullptr };    ///< 골든마다의 측정값과 상한(기록 모드가 아닌 실행) — 여러 보고를 모아 실행 사이 흔들림을 잰다
+        const vector<string>*                 _pListUnhandledLog{ nullptr };    ///< 로그 게이트가 처리하지 않았다고 본 Warning · Error 줄
+        const vector<string>*                 _pListAllowedLog{ nullptr };      ///< 허용 목록 항목이 맞은 로그 id(`scenario-logs --check` 가 낡은 항목을 세는 근거)
+        const vector<string>*                 _pListMetric{ nullptr };          ///< 지표 값 줄(`darkFraction(0,0,1,0.12) park.ppm = 0.034`) — 판정(`AutomationJudge`)이 소유한다
+        const vector<string>*                 _pListRecord{ nullptr };          ///< 기록 값 줄(`frame 300 Scene.TransformHash = 12345`, 결정성 대조) — 판정이 소유한다
         // --- 실행 환경: 이 보고만으로 어디서 어떻게 돌았고 어떻게 다시 돌리는지 알게 하는 칸입니다(없으면 빈 글 · 0) ---
         string_view               _backendName{};              ///< 끝날 때의 RHI 백엔드(`dx12` …). 헤드리스면 빔
         string_view               _gameName{};                 ///< 돌린 게임
@@ -47,7 +49,7 @@ namespace sw
      * @class AutomationReportWriter
      * @brief 보고 경로를 들고 있다가 시나리오가 끝나면 JSON 보고를 씁니다(`AutomationRunner` 의 값 멤버).
      * @details 보고 형식: `name` · `result` · `exitCode` · `frames` · `reason` · `backend` · `game` · `startedAt` · `startedAtUnixMs` · `wallMilliseconds` · `wallLimitMilliseconds` · `lastStep` · `reproduce` · `timeline` ·
-     *          `failures[]` · `updatedGoldens[]` · `nearLimitGoldens[]` · `unhandledLogs[]` · `allowedLogs[]` · `metrics[]` · `records[]`. 경로가 비어 있으면 쓰지 않는다.
+     *          `failures[]` · `updatedGoldens[]` · `nearLimitGoldens[]` · `goldenSamples[]`(객체 — `golden` · 세 측정값 · 세 상한) · `unhandledLogs[]` · `allowedLogs[]` · `metrics[]` · `records[]`. 경로가 비어 있으면 쓰지 않는다.
      *          읽는 쪽(CI · 스크립트가 보고를 읽는다)이 있으니 필드는 **더하기만** 하고 이름을 바꾸지 않는다. `records[]` 는 끝에 둔다(`readReportRecords` 가 `"records"` 키부터 첫 `]` 까지 읽는다).
      */
     class SW_DEVTOOLS_API AutomationReportWriter

@@ -1068,6 +1068,7 @@ namespace sw
         report._pListFailure         = &_judge.getFailures();
         report._pListUpdatedGolden   = &_judge.getUpdatedGoldens();
         report._pListNearLimitGolden = &_judge.getNearLimitGoldens();
+        report._pListGoldenSample    = &_judge.getGoldenSamples();
         report._pListUnhandledLog    = &_judge.getUnhandledLogs();
         report._pListAllowedLog      = &_judge.getAllowedLogIDs();
         report._pListMetric          = &_judge.getMetricLines();

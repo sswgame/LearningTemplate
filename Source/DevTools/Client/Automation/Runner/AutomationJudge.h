@@ -98,6 +98,8 @@ namespace sw
         const vector<string>& getUpdatedGoldens() const { return _listUpdatedGolden; }
         /** @brief 통과했지만 허용치에 가까운 골든의 비교 줄입니다(`GoldenResult::PassNearLimit`, 기록 모드가 아닐 때). 기록 모드로 다시 뜰 목록이다. */
         const vector<string>& getNearLimitGoldens() const { return _listNearLimitGolden; }
+        /** @brief 기록 모드가 아닌 실행에서 견준 골든마다의 측정값입니다(보고 `goldenSamples[]` — 실행 사이 흔들림을 모아 잰다). */
+        const vector<AutomationGoldenSample>& getGoldenSamples() const { return _listGoldenSample; }
         /** @brief 로그 게이트가 처리하지 않았다고 본 줄입니다. 비어 있지 않으면 실패가 없어도 결과는 `UnhandledLog` 입니다. */
         const vector<string>& getUnhandledLogs() const { return _listUnhandledLog; }
         /** @brief 지금까지 모은 Warning · Error 줄 수입니다(허용 판정 전 — 진행 표시용). */
@@ -169,6 +171,7 @@ namespace sw
         vector<string>                   _listFailure;              ///< "frame 40 <Expect> #7: Shooter3D.WeaponIndex == 1, got 2"
         vector<string>                   _listUpdatedGolden;        ///< 이 실행이 쓴 골든(리소스 id)
         vector<string>                   _listNearLimitGolden;      ///< 통과했지만 허용치에 가까운 골든의 비교 줄
+        vector<AutomationGoldenSample>   _listGoldenSample;         ///< 기록 모드가 아닌 실행의 골든 측정값
         expected<AutomationGoldenPolicy> _goldenPolicy;             ///< 시작 때 읽은 판정 정책(`Config/Dev/GoldenImage.json`) — 못 읽었으면 이미지 단언마다 그 이유로 진다
         string                           _recordingCommit;          ///< 기록 모드가 처음 쓸 때 찾은 커밋(메타에 적는다)
         vector<DeferredImageCheck>       _listDeferredImage;        ///< 시나리오 끝에서 판정할 `<ExpectImage>`

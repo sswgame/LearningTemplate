@@ -27,6 +27,34 @@ namespace sw
             writer.endArray();
         }
 
+        /** @brief `"goldenSamples": [ { golden, 측정값 셋, 상한 셋 } ]` 을 씁니다. 읽는 쪽은 `Scripts/dev/ScenarioCulprit.py --golden-margins` 다(키 이름을 바꾸지 않는다). */
+        void writeAutomationGoldenSamples( JSONWriter& writer, const vector<AutomationGoldenSample>* pListSample )
+        {
+            writer.key( "goldenSamples" );
+            writer.beginArray();
+            for ( size_t index = 0; pListSample != nullptr && index < pListSample->size(); ++index )
+            {
+                const AutomationGoldenSample& sample = ( *pListSample )[index];
+                writer.beginObject();
+                writer.key( "golden" );
+                writer.valueString( sample._goldenID );
+                writer.key( "differingFraction" );
+                writer.valueFloat( sample._difference._differingFraction );
+                writer.key( "meanDistance" );
+                writer.valueFloat( sample._difference._meanDistance );
+                writer.key( "largestDeepRegionPixels" );
+                writer.valueUint( sample._difference._largestDeepRegionPixels );
+                writer.key( "maxDifferingFraction" );
+                writer.valueFloat( sample._limits._maxDifferingFraction );
+                writer.key( "maxMeanDistance" );
+                writer.valueFloat( sample._limits._maxMeanDistance );
+                writer.key( "maxDeepRegionPixels" );
+                writer.valueUint( sample._limits._maxDeepRegionPixels );
+                writer.endObject();
+            }
+            writer.endArray();
+        }
+
         [[nodiscard]] uint32 toAutomationMilliseconds( float64 seconds )
         {
             return static_cast<uint32>( seconds * static_cast<float64>( constant::time::kMillisecondsPerSecond ) );
@@ -115,6 +143,7 @@ namespace sw
         writeAutomationReportList( writer, "failures", params._pListFailure );
         writeAutomationReportList( writer, "updatedGoldens", params._pListUpdatedGolden );
         writeAutomationReportList( writer, "nearLimitGoldens", params._pListNearLimitGolden );
+        writeAutomationGoldenSamples( writer, params._pListGoldenSample );
         writeAutomationReportList( writer, "unhandledLogs", params._pListUnhandledLog );
         writeAutomationReportList( writer, "allowedLogs", params._pListAllowedLog );
         writeAutomationReportList( writer, "metrics", params._pListMetric );

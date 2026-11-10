@@ -67,6 +67,18 @@ namespace sw
         uint32                    _height{ 0 };
     };
 
+    /**
+     * @struct AutomationGoldenSample
+     * @brief 골든 비교 한 번의 측정값과 그때의 상한입니다. 기록 모드가 아닌 실행이 보고 `goldenSamples[]` 에 남기고,
+     *        `Scripts/dev/ScenarioCulprit.py --golden-margins` 가 여러 보고를 모아 골든마다 실행 사이 흔들림(최대값)과 여유(상한 / 최대값)를 낸다.
+     */
+    struct AutomationGoldenSample
+    {
+        string                    _goldenID{};
+        AutomationImageDifference _difference{};
+        AutomationGoldenLimits    _limits{};
+    };
+
     /** @struct AutomationGoldenUtil @brief 골든 판정 · 기록 결정 · 정책 읽기 · 이름 짓기입니다. */
     struct SW_DEVTOOLS_API AutomationGoldenUtil
     {
@@ -97,5 +109,7 @@ namespace sw
         [[nodiscard]] static string makeMetaText( const AutomationGoldenMeta& meta );
         /** @brief 지금 작업 트리의 커밋(`git describe --always --dirty --abbrev=40`)입니다. git 이 없거나 저장소가 아니면 오류입니다. */
         [[nodiscard]] static expected<string> findRecordingCommit();
+        /** @brief `git describe` 의 결과(종료 코드 · 첫 줄)를 커밋으로 읽습니다. git 을 띄우지 못함 · 저장소 아님 · 빈 출력은 저마다 까닭을 말하는 오류입니다(폴백 없음). */
+        [[nodiscard]] static expected<string> readRecordingCommit( int32 exitCode, string_view firstLine );
     };
 } // namespace sw

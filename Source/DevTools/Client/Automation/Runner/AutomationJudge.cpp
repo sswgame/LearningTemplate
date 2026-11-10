@@ -51,6 +51,7 @@ namespace sw
         , _listFailure{}
         , _listUpdatedGolden{}
         , _listNearLimitGolden{}
+        , _listGoldenSample{}
         , _goldenPolicy{ unexpected( Error{ ErrorKind::NotFound, "the golden policy is read when a scenario starts" } ) }
         , _goldenFolderID{}
         , _goldenPrefix{}
@@ -486,6 +487,9 @@ namespace sw
                    to_string( limits._maxDeepRegionPixels ) + ") - " + kArrVerdictName[static_cast<uint32>( verdict )];
             SW_LOG_INFO_ID( "Automation.Image", "[Scenario] image %#", line.c_str() );
             _listMetricLine.push_back( line );
+            // 기록 모드는 앞 골든과의 차이라 같은 골든의 실행 사이 흔들림이 아니다 — 일반 실행만 모은다.
+            if ( _bUpdateGolden == false )
+                _listGoldenSample.push_back( AutomationGoldenSample{ goldenID, difference, limits } );
         }
         switch ( AutomationGoldenUtil::decide( bHasGolden, bCompared, verdict, _bUpdateGolden ) )
         {
@@ -611,6 +615,7 @@ namespace sw
         _listRemembered.clear();
         _listUpdatedGolden.clear();
         _listNearLimitGolden.clear();
+        _listGoldenSample.clear();
         _recordingCommit.clear();
         _goldenPolicy   = AutomationGoldenUtil::loadPolicy(); // 이미지 단언이 없는 시나리오는 오류를 쓰지 않는다 — 단언이 그 이유로 진다
         _goldenFolderID = FileUtil::getDirectoryPart( scenario.getSourcePath() ) + "/" + kAutomationGoldenFolder;
