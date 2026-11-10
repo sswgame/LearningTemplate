@@ -112,6 +112,26 @@ GameObject/Component API 는 저작 · 수명 · 직렬화 층으로 두고, 프
 
 병렬 작업자: A(0 · 1, Task · 생성기 · TickBatch), B(3 · 4, `Engine/Physics/**` — `-1` 기본값 브랜치 병합 뒤), C(2, A 뒤), D(6, C 뒤). 확인할 결함 후보: 틱 본문 안 중첩 `runParallel` 이 돕기 중 TLS 틱 상태를 비워 writerID 가 0 이 되는 것(`SceneTickScheduler.cpp:83`), 남의 오브젝트에 `setCanEverTick` 을 쓰는 비트필드 경쟁(`Component.h:620`).
 
+### 5-4. 리플렉션(2026-11-10 설계 — 규모: REFLECT 1,408 · PROPERTY 6,708 · ENUM 413, 생성 TU 가 전체 컴파일 CPU 의 20 %(Debug) · 17 %(Release))
+
+조회 핫패스(`StaticType` · `castTo`, 1~2 ns)는 상용 수준이다. 비용과 결함은 등록 쪽과 생성 코드의 무게에 있다.
+
+- **W-R0 계측:** `registerModuleTypes` · `registerPendingTypes` · `populateLookupCaches` 에 구간, `MemoryTag::Reflection` 전후 바이트, 등록당 캐시 비움 수 카운터. `.ninja_log` 로 생성 TU 비중을 내는 `Scripts/dev/BuildTimeReport.py`.
+- **W-R1 런타임 핵심(결함 먼저):**
+  - `registerClass` 가 등록 한 번마다 **모든 타입**의 상속 프로퍼티 목록을 비운다(`TypeRegistry.cpp:190`). 다음 조회가 부모 목록을 값으로 복사해 다시 짓는다(`TypeInfo.cpp:311`).
+    - 등록 비용이 O(타입²) 이다.
+    - 무관한 키트 하나만 로드돼도, 들고 있던 `const PropertyInfo*`(UI 바인딩 경로 · 시퀀서 트랙)가 매달린다.
+    - 지연 `mutable` 캐시를 잠금 없이 읽는 것과 등록이 경합한다.
+  - 고칠 모양: 상속 목록을 복사 대신 뷰(`span<const PropertyInfo*>`)로 둔다. 무효화는 자손만 하고, 캐시는 등록 때 즉시 지어 `mutable` 을 없앤다. 보관처는 (타입, 색인, 세대)로 든다. 소비자 없는 `_onPropertyBoundChanged` 는 지운다.
+- **W-R3 생성기(5-3 선결):**
+  - **(a) 정적 서술자 표:** 생성 코드를 constexpr 서술자 표로 바꾼다(언리얼 UHT `PropPointers` 자리). 해시를 미리 계산하고, 컨테이너 래퍼는 정적 객체로 두어 `shared_ptr` 를 없앤다. 목표는 등록 할당 타입당 3 이하, 생성 바이트 10.8 → 4 MB 미만이다.
+  - **(b) 메타데이터 형식화:** `Units` 는 열거로 둔다(지금은 검증한 뒤 문자열로 실어 인스펙터가 `== "rad"` 로 다시 푼다). `Default` 는 그 프로퍼티 타입의 리터럴로 내서 오타가 컴파일 오류가 되게 한다. `EditCondition` 은 생성기가 미리 풀고, 없는 이름은 생성 오류로 막는다.
+  - **(c) 타입 특성 수집기:** 재정의(`onTick` · `onSubTick` · `serializeState`)를 특성 비트로 모은다. `REFLECT( TickMode = … )` 를 받아 `TickBatchRegistry` 등록을 생성 코드에 낸다. 그러면 손 매크로 `SW_REGISTER_TICK_BATCH` 가 사라진다.
+  - **(d) 경고를 생성 오류로:** 클래스 템플릿 `REFLECT` · 멤버 함수 템플릿 `FUNCTION` 은 지금 경고만 남기고 건너뛴다. `#if` 아래 `PROPERTY` 가 조용히 빠지는 것도 막는다. 같은 모듈 안에 리프 이름이 겹치면 오류로 낸다.
+- **W-R5 빌드 시간(W-R3 와 병렬 — 파일이 다르다):** 헤더당 `.gen.cpp` 대신 모듈 안 8~16 헤더 묶음 TU 로 짓는다(PCH 를 1,465 번 연다). `.gen.meta.cpp` 는 같은 TU 의 `#if` 절로, 의존은 헤더별로 귀속한다. 목표는 생성 비중 8 % 미만이다.
+- **W-R4 프로퍼티 방문자 하나(W-R3 · 인스펙터 값 행 뒤):** 직렬화 9 루프 · 검증 · 문서 · 인스펙터 gather · 상태 해시 기본 구현이 `ReflectVisit` 하나를 쓴다. 지금 `foldStateHash` 는 손으로 써서 새 칸이 해시에서 빠질 수 있다. 소비자가 테스트뿐인 `Replicated` 메타데이터는 여기서 첫 소비자를 얻는다.
+- **W-R6 밀집 타입 색인:** 5-3 의 5 단계(`ComponentDataStore<T>`)와 함께만.
+
 ### 6. 리소스
 
 - **Sprite Fusion 타일셋**(상세 페이지마다 `License: CC0`): Castle · Tiny Swords(Pixel Frog), Dungeon(0x72), Four Seasons Platformer(Analog Studios), Retro Gameboy(Ben Leggett) — `https://www.spritefusion.com/downloads/tilesets/<이름>.zip`. 1Bit Platformer(Kenney)는 Kenney 원본에서.
