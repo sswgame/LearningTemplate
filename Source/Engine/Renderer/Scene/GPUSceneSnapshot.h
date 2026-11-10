@@ -47,7 +47,7 @@ namespace sw
         float32  _boundsRadius{ 1.0f };
         uint32   _meshBatchIndex{ 0 };
         uint32   _materialIndex{ 0 };
-        uint32   _blendMode{ 0 }; ///< RHIBlendMode
+        uint32   _blendMode{ 0 }; ///< BlendMode
         /**
          * @brief GPU 인스턴스 애니메이션 시드입니다. 0 이면 애니메이션이 없습니다.
          * @details instance_animation.hlsl 이 이 값을 해시해 **인스턴스마다 다른 각속도**를 만든다. 회전은 CPU 가 매 프레임
@@ -135,8 +135,8 @@ namespace sw
         /// @brief 그룹의 낮은 단계(1 이상) 배치에만 있는 값으로, 이 단계로 넘어가는 화면 크기 임계값입니다(`MeshLOD::_screenSize`).
         float32 _lodScreenSize{ 0.0f };
         /** @brief 배치 머리 인스턴스의 머티리얼 원소(`_materialGroup` 그룹의 `_listEntry` 인덱스)입니다. RT 가 이 원소의 (프록시, 사본)으로 `GPUMeshBatchBinding` 의 CB 와 텍스처 슬롯을 채운다. */
-        uint32       _materialIndex{ 0 };
-        RHIBlendMode _blendMode = RHIBlendMode::Opaque;
+        uint32    _materialIndex{ 0 };
+        BlendMode _blendMode = BlendMode::Opaque;
         /**
          * @brief 인스턴스의 월드 행렬식이 음수(거울 변환)인 배치입니다. 이 배치는 컬 모드를 뒤집은 PSO 로 그립니다(언리얼 `bReverseCulling`).
          * @details 거울 변환은 삼각형 감김 방향을 뒤집는다. 컬 모드를 그대로 두면 카메라 쪽 면이 잘리고 안쪽 면이 보인다. 컬 모드는 PSO 의 상태라
@@ -234,7 +234,7 @@ namespace sw
         /// @brief always-define, 정적 스위치, 멀티컴파일 선택을 합친 것입니다. 그대로 PSO 의 셰이더 define 이 됩니다.
         vector<string> _listDefine;
         /// @brief 머티리얼이 패스 위에 덮는 렌더 상태입니다(`Material::getRenderStateOverride`). 패스 → 머티리얼 순서로 합쳐 변형 PSO 를 만듭니다(`FramePSOManager::createMaterialPSOVariant`).
-        RHIRenderStateOverride _renderStateOverride{};
+        RenderStateOverride _renderStateOverride{};
         /// @brief (경로, define, 렌더 상태) 해시입니다. PSO 캐시 키이자 **배치 병합 키**입니다.
         uint64 _hash{ 0 };
     };
@@ -558,7 +558,7 @@ namespace sw
             const uint32 batchCount = static_cast<uint32>( getAllBatches().size() );
             SW_ASSERT( batch._instanceBase == computeInstanceEnd( batchCount ) );
             SW_ASSERT( batch._visibleBase == computeVisibleEnd( batchCount ) );
-            if ( batch._blendMode != RHIBlendMode::Transparent )
+            if ( batch._blendMode != BlendMode::Transparent )
             {
                 SW_ASSERT( _opaqueBatchCount == batchCount );
                 ++_opaqueBatchCount;

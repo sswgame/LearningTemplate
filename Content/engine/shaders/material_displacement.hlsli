@@ -135,7 +135,7 @@ DisplacementPatchConstants DisplacementPatchConstantMain( InputPatch<MaterialCon
     return constants;
 }
 
-// 출력 감김은 입력 패치와 같은 시계 방향이다 — 엔진의 앞면은 시계 방향(RHIFrontFace::Clockwise 기본)이라 뒷면 컬링이 그대로 맞는다.
+// 출력 감김은 입력 패치와 같은 시계 방향이다 — 엔진의 앞면은 시계 방향(FrontFace::Clockwise 기본)이라 뒷면 컬링이 그대로 맞는다.
 // fractional_odd: 거리에 따라 계수가 바뀔 때 새 정점이 한 번에 튀지 않고 미끄러져 나온다(언리얼 테셀레이션 기본과 같다, 기억에 의존).
 [domain( "tri" )]
     [partitioning( "fractional_odd" )]

@@ -35,7 +35,7 @@ namespace sw
          */
         uint8 _bThreadSafeResourceCreation{ SW_FALSE };
         /**
-         * @brief 삼각형을 선으로 채우는 래스터(`RHIFillMode::Wireframe`)를 쓸 수 있는지입니다.
+         * @brief 삼각형을 선으로 채우는 래스터(`FillMode::Wireframe`)를 쓸 수 있는지입니다.
          * @details Vulkan 은 디바이스 기능 `fillModeNonSolid` 가 있어야 한다. 없는 디바이스에서 와이어프레임 PSO 를 만들면 백엔드가 거절하고(솔리드로 바꾸지 않는다),
          *          렌더러는 와이어프레임 보기 모드를 받지 않는다(`FrameRenderer::setViewMode`).
          */

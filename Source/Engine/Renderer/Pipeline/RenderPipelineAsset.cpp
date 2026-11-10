@@ -188,8 +188,8 @@ namespace sw
             static uint32 resolvePassRenderState( RenderGraphPassDesc& pass, string_view sourcePath )
             {
                 uint32 issueCount{ 0 };
-                pass._resolvedRenderState                                      = RHIRenderState{};
-                static_cast<RHIFixedRenderState&>( pass._resolvedRenderState ) = pass;
+                pass._resolvedRenderState                                   = RenderState{};
+                static_cast<FixedRenderState&>( pass._resolvedRenderState ) = pass;
                 if ( pass._blendPreset.empty() == false && pass._listBlendTarget.empty() == false )
                 {
                     SW_LOG_ERROR_ID( "RenderPipelineAsset.PassBlendPresetAndTargets", "[%#] pass '%#': _blendPreset and _listBlendTarget go separately - write one of them", sourcePath, pass._name );
@@ -219,8 +219,8 @@ namespace sw
                 }
                 for ( size_t targetIndex = 0; targetIndex < targetCount && targetIndex < kMaxColorAttachments; ++targetIndex )
                 {
-                    const RHIBlendTargetState& target  = pass._listBlendTarget[targetIndex];
-                    const utf8* const          pReason = target.findInvalidReason();
+                    const BlendTargetState& target  = pass._listBlendTarget[targetIndex];
+                    const utf8* const       pReason = target.findInvalidReason();
                     if ( pReason != nullptr )
                     {
                         SW_LOG_ERROR_ID( "RenderPipelineAsset.PassBlendTargetInvalid", "[%#] pass '%#': blend target %#: %#", sourcePath, pass._name, static_cast<uint32>( targetIndex ), pReason );
@@ -273,7 +273,7 @@ namespace sw
                     const RenderPassTypeInfo& info   = getRenderPassTypeInfo( pass._type );
                     const bool                bDepth = pass._depthAttachment.empty() == false;
                     issueCount += resolvePassRenderState( pass, sourcePath );
-                    if ( info.hasFlag( RenderPassTraitFlag::kDrawsSceneMeshes ) == false && pass._cullMode != RHICullMode::None )
+                    if ( info.hasFlag( RenderPassTraitFlag::kDrawsSceneMeshes ) == false && pass._cullMode != CullMode::None )
                     {
                         SW_LOG_ERROR_ID( "RenderPipelineAsset.PassFullscreenCull", "[%#] pass '%#' draws a fullscreen triangle - _cullMode must be None, not '%#'", sourcePath, pass._name, getEnumName( pass._cullMode ) );
                         ++issueCount;
@@ -293,7 +293,7 @@ namespace sw
                         SW_LOG_ERROR_ID( "RenderPipelineAsset.PassDepthWriteNoTest", "[%#] pass '%#': _bEnableDepthWrite needs _bEnableDepthTest", sourcePath, pass._name );
                         ++issueCount;
                     }
-                    // 같은 규칙을 머티리얼을 합친 값에도 건다(`RHIFixedRenderState::findInvalidReason`). 깊이 쓰기는 위가 알렸다.
+                    // 같은 규칙을 머티리얼을 합친 값에도 건다(`FixedRenderState::findInvalidReason`). 깊이 쓰기는 위가 알렸다.
                     const utf8* const pStateReason = pass._bEnableDepthWrite && pass._bEnableDepthTest == false ? nullptr : pass.findInvalidReason();
                     if ( pStateReason != nullptr )
                     {

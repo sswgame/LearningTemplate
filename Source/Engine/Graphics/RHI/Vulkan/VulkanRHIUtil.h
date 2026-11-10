@@ -72,100 +72,100 @@ namespace sw
         }
 
         /** @brief 블렌드 계수를 Vulkan 값으로 바꿉니다. */
-        static inline VkBlendFactor toVulkanBlendFactor( RHIBlendFactor factor )
+        static inline VkBlendFactor toVulkanBlendFactor( BlendFactor factor )
         {
             switch ( factor )
             {
-                case RHIBlendFactor::Zero:
+                case BlendFactor::Zero:
                     return VK_BLEND_FACTOR_ZERO;
-                case RHIBlendFactor::One:
+                case BlendFactor::One:
                     return VK_BLEND_FACTOR_ONE;
-                case RHIBlendFactor::SrcColor:
+                case BlendFactor::SrcColor:
                     return VK_BLEND_FACTOR_SRC_COLOR;
-                case RHIBlendFactor::InvSrcColor:
+                case BlendFactor::InvSrcColor:
                     return VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
-                case RHIBlendFactor::SrcAlpha:
+                case BlendFactor::SrcAlpha:
                     return VK_BLEND_FACTOR_SRC_ALPHA;
-                case RHIBlendFactor::InvSrcAlpha:
+                case BlendFactor::InvSrcAlpha:
                     return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-                case RHIBlendFactor::DstColor:
+                case BlendFactor::DstColor:
                     return VK_BLEND_FACTOR_DST_COLOR;
-                case RHIBlendFactor::InvDstColor:
+                case BlendFactor::InvDstColor:
                     return VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR;
-                case RHIBlendFactor::DstAlpha:
+                case BlendFactor::DstAlpha:
                     return VK_BLEND_FACTOR_DST_ALPHA;
-                case RHIBlendFactor::InvDstAlpha:
+                case BlendFactor::InvDstAlpha:
                     return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
-                case RHIBlendFactor::SrcAlphaSaturate:
+                case BlendFactor::SrcAlphaSaturate:
                     return VK_BLEND_FACTOR_SRC_ALPHA_SATURATE;
             }
             return VK_BLEND_FACTOR_ONE;
         }
 
         /** @brief 블렌드 연산을 Vulkan 값으로 바꿉니다. */
-        static inline VkBlendOp toVulkanBlendOp( RHIBlendOp op )
+        static inline VkBlendOp toVulkanBlendOp( BlendOp op )
         {
             switch ( op )
             {
-                case RHIBlendOp::Add:
+                case BlendOp::Add:
                     return VK_BLEND_OP_ADD;
-                case RHIBlendOp::Subtract:
+                case BlendOp::Subtract:
                     return VK_BLEND_OP_SUBTRACT;
-                case RHIBlendOp::ReverseSubtract:
+                case BlendOp::ReverseSubtract:
                     return VK_BLEND_OP_REVERSE_SUBTRACT;
-                case RHIBlendOp::Min:
+                case BlendOp::Min:
                     return VK_BLEND_OP_MIN;
-                case RHIBlendOp::Max:
+                case BlendOp::Max:
                     return VK_BLEND_OP_MAX;
             }
             return VK_BLEND_OP_ADD;
         }
 
         /** @brief 비교 함수를 Vulkan 값으로 바꿉니다. */
-        static inline VkCompareOp toVulkanCompareOp( RHICompareFunc func )
+        static inline VkCompareOp toVulkanCompareOp( CompareFunc func )
         {
             switch ( func )
             {
-                case RHICompareFunc::Never:
+                case CompareFunc::Never:
                     return VK_COMPARE_OP_NEVER;
-                case RHICompareFunc::Less:
+                case CompareFunc::Less:
                     return VK_COMPARE_OP_LESS;
-                case RHICompareFunc::Equal:
+                case CompareFunc::Equal:
                     return VK_COMPARE_OP_EQUAL;
-                case RHICompareFunc::LessEqual:
+                case CompareFunc::LessEqual:
                     return VK_COMPARE_OP_LESS_OR_EQUAL;
-                case RHICompareFunc::Greater:
+                case CompareFunc::Greater:
                     return VK_COMPARE_OP_GREATER;
-                case RHICompareFunc::NotEqual:
+                case CompareFunc::NotEqual:
                     return VK_COMPARE_OP_NOT_EQUAL;
-                case RHICompareFunc::GreaterEqual:
+                case CompareFunc::GreaterEqual:
                     return VK_COMPARE_OP_GREATER_OR_EQUAL;
-                case RHICompareFunc::Always:
+                case CompareFunc::Always:
                     return VK_COMPARE_OP_ALWAYS;
             }
             return VK_COMPARE_OP_LESS_OR_EQUAL;
         }
 
         /** @brief 스텐실 연산을 Vulkan 값으로 바꿉니다. */
-        static inline VkStencilOp toVulkanStencilOp( RHIStencilOp op )
+        static inline VkStencilOp toVulkanStencilOp( StencilOp op )
         {
             switch ( op )
             {
-                case RHIStencilOp::Keep:
+                case StencilOp::Keep:
                     return VK_STENCIL_OP_KEEP;
-                case RHIStencilOp::Zero:
+                case StencilOp::Zero:
                     return VK_STENCIL_OP_ZERO;
-                case RHIStencilOp::Replace:
+                case StencilOp::Replace:
                     return VK_STENCIL_OP_REPLACE;
-                case RHIStencilOp::IncrementClamp:
+                case StencilOp::IncrementClamp:
                     return VK_STENCIL_OP_INCREMENT_AND_CLAMP;
-                case RHIStencilOp::DecrementClamp:
+                case StencilOp::DecrementClamp:
                     return VK_STENCIL_OP_DECREMENT_AND_CLAMP;
-                case RHIStencilOp::Invert:
+                case StencilOp::Invert:
                     return VK_STENCIL_OP_INVERT;
-                case RHIStencilOp::IncrementWrap:
+                case StencilOp::IncrementWrap:
                     return VK_STENCIL_OP_INCREMENT_AND_WRAP;
-                case RHIStencilOp::DecrementWrap:
+                case StencilOp::DecrementWrap:
                     return VK_STENCIL_OP_DECREMENT_AND_WRAP;
             }
             return VK_STENCIL_OP_KEEP;

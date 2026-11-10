@@ -288,7 +288,7 @@ namespace sw
                 entry._shaderPathHash      = material.getShaderPathHash();
                 entry._permutationHash     = material.getPermutationHash();
                 entry._renderStateOverride = material.getRenderStateOverride();
-                entry._bTransparent        = material.getBlendMode() == RHIBlendMode::Transparent;
+                entry._bTransparent        = material.getBlendMode() == BlendMode::Transparent;
                 _impl->_listPSOWarmEntry.push_back( std::move( entry ) );
             }
             VectorUtil::removeAtSwap( _impl->_listPSOWarmKey, keyIndex );

@@ -958,13 +958,13 @@ namespace sw
             }
         }
 
-        const RHIRenderState& renderState = desc._renderState;
+        const RenderState&    renderState = desc._renderState;
         D3D11_RASTERIZER_DESC rasterizerDesc{};
-        rasterizerDesc.FillMode              = ( renderState._fillMode == RHIFillMode::Wireframe ) ? D3D11_FILL_WIREFRAME : D3D11_FILL_SOLID;
-        rasterizerDesc.CullMode              = ( renderState._cullMode == RHICullMode::Front ) ? D3D11_CULL_FRONT : ( ( renderState._cullMode == RHICullMode::Back ) ? D3D11_CULL_BACK : D3D11_CULL_NONE );
-        rasterizerDesc.FrontCounterClockwise = renderState._frontFace == RHIFrontFace::CounterClockwise ? TRUE : FALSE;
+        rasterizerDesc.FillMode              = ( renderState._fillMode == FillMode::Wireframe ) ? D3D11_FILL_WIREFRAME : D3D11_FILL_SOLID;
+        rasterizerDesc.CullMode              = ( renderState._cullMode == CullMode::Front ) ? D3D11_CULL_FRONT : ( ( renderState._cullMode == CullMode::Back ) ? D3D11_CULL_BACK : D3D11_CULL_NONE );
+        rasterizerDesc.FrontCounterClockwise = renderState._frontFace == FrontFace::CounterClockwise ? TRUE : FALSE;
         rasterizerDesc.DepthClipEnable       = renderState._bEnableDepthClip != SW_FALSE ? TRUE : FALSE;
-        // 깊이 바이어스 — 다른 백엔드와 같은 상수 · 기울기 두 칸이다(RHIFixedRenderState::_depthBias).
+        // 깊이 바이어스 — 다른 백엔드와 같은 상수 · 기울기 두 칸이다(FixedRenderState::_depthBias).
         rasterizerDesc.DepthBias            = renderState._depthBias;
         rasterizerDesc.SlopeScaledDepthBias = renderState._slopeScaledDepthBias;
         // 가위는 항상 켠다. 뷰포트를 바인딩하는 곳(setViewport, beginRenderPass, beginFrame)이 가위도 뷰포트 전체로 함께 바인딩하므로
@@ -981,13 +981,13 @@ namespace sw
             // 렌더 타깃마다 따로 건다. 꺼 두면 0 번 값이 모든 타깃에 간다.
             D3D11_BLEND_DESC blendDesc{};
             blendDesc.IndependentBlendEnable = TRUE;
-            const RHIBlendTargetState unusedTarget{};
+            const BlendTargetState unusedTarget{};
             for ( uint32 targetIndex = 0; targetIndex < D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT; ++targetIndex )
             {
                 // 쓰지 않는 칸도 유효한 계수여야 한다(0 은 D3D11_BLEND 값이 아니다).
-                const RHIBlendTargetState&      source = targetIndex < kMaxColorAttachments ? renderState._arrBlendTarget[targetIndex] : unusedTarget;
+                const BlendTargetState&         source = targetIndex < kMaxColorAttachments ? renderState._arrBlendTarget[targetIndex] : unusedTarget;
                 D3D11_RENDER_TARGET_BLEND_DESC& target = blendDesc.RenderTarget[targetIndex];
-                target.RenderTargetWriteMask           = static_cast<UINT8>( source._colorWriteMask ); // 비트가 같다(RHIColorWriteMask)
+                target.RenderTargetWriteMask           = static_cast<UINT8>( source._colorWriteMask ); // 비트가 같다(ColorWriteMask)
                 target.BlendEnable                     = source._bEnableBlend != SW_FALSE ? TRUE : FALSE;
                 target.SrcBlend                        = RHIDxRenderState::toBlend<D3D11_BLEND>( source._srcColor );
                 target.DestBlend                       = RHIDxRenderState::toBlend<D3D11_BLEND>( source._dstColor );

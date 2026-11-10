@@ -53,10 +53,10 @@ namespace sw
             const RenderViewModeInfo& info = getRenderViewModeInfo( viewMode );
             if ( info._bWireframe )
             {
-                desc._renderState._fillMode = RHIFillMode::Wireframe;
+                desc._renderState._fillMode = FillMode::Wireframe;
                 // 와이어프레임은 뒷면도 보여야 형태를 읽을 수 있다. 컬링을 남기면 뒤쪽 선이 사라져
                 // 상자가 열린 것처럼 보인다. 에디터의 와이어프레임은 관례적으로 양면이다.
-                desc._renderState._cullMode = RHICullMode::None;
+                desc._renderState._cullMode = CullMode::None;
                 bChanged                    = true;
             }
             if ( info._bOverlay )
@@ -76,9 +76,9 @@ namespace sw
                 // 깊이 테스트는 남긴다. 패스가 깊이를 클리어(1)하고 아무도 쓰지 않으니 모든 면이 통과한다. 테스트를 끄면 백엔드가 깊이 첨부 없는
                 // PSO 로 만들어(Vulkan 렌더 패스 호환) 깊이를 바인딩한 패스에서 검증 오류가 난다. 깊이 프리패스가 있는 파이프라인에서는 보이는 면만 센다.
                 // 프리멀티플라이(색 One / InvSrcAlpha)에 셰이더가 알파 0을 내면 그것이 더하기다.
-                desc._renderState.setAllBlendTargets( RHIBlendTargetState::makePremultipliedAlpha() );
+                desc._renderState.setAllBlendTargets( BlendTargetState::makePremultipliedAlpha() );
                 desc._renderState._bEnableDepthWrite = SW_FALSE;
-                desc._renderState._cullMode          = RHICullMode::None;
+                desc._renderState._cullMode          = CullMode::None;
                 bChanged                             = true;
             }
 
@@ -103,14 +103,14 @@ namespace sw
          */
         bool reverseCullMode( RHIPipelineStateDesc& desc )
         {
-            if ( desc._renderState._cullMode == RHICullMode::Back )
+            if ( desc._renderState._cullMode == CullMode::Back )
             {
-                desc._renderState._cullMode = RHICullMode::Front;
+                desc._renderState._cullMode = CullMode::Front;
                 return true;
             }
-            if ( desc._renderState._cullMode == RHICullMode::Front )
+            if ( desc._renderState._cullMode == CullMode::Front )
             {
-                desc._renderState._cullMode = RHICullMode::Back;
+                desc._renderState._cullMode = CullMode::Back;
                 return true;
             }
             return false;
@@ -119,17 +119,17 @@ namespace sw
         /** @brief 파이프라인에 없는 내부 슬롯(`pPassDesc` 없음)의 깊이 · 블렌드 · 컬을 표에서 정합니다. 파이프라인 패스는 XML 값이 그대로 들어간다(`applyPassRenderState`). */
         void applyInternalPassRenderState( RHIPipelineStateDesc& desc, const RenderPassTypeInfo& info, RenderPassType passType )
         {
-            RHIRenderState& state    = desc._renderState;
-            state                    = RHIRenderState{};
+            RenderState& state       = desc._renderState;
+            state                    = RenderState{};
             state._bEnableDepthTest  = info.hasFlag( RenderPassTraitFlag::kDepthTest ) ? SW_TRUE : SW_FALSE;
             state._bEnableDepthWrite = ( info.hasFlag( RenderPassTraitFlag::kDepthTest ) && info.hasFlag( RenderPassTraitFlag::kDepthWrite ) ) ? SW_TRUE : SW_FALSE;
             if ( info.hasFlag( RenderPassTraitFlag::kBlend ) )
-                state.setAllBlendTargets( info.hasFlag( RenderPassTraitFlag::kPremultipliedAlpha ) ? RHIBlendTargetState::makePremultipliedAlpha() : RHIBlendTargetState::makeStraightAlpha() );
+                state.setAllBlendTargets( info.hasFlag( RenderPassTraitFlag::kPremultipliedAlpha ) ? BlendTargetState::makePremultipliedAlpha() : BlendTargetState::makeStraightAlpha() );
             // 풀스크린 삼각형의 와인딩에는 앞뒤 의미가 없다. 컬링하면 화면이 빈다.
             if ( FrameRendererUtil::drawsSceneMeshes( passType ) == false )
-                state._cullMode = RHICullMode::None;
+                state._cullMode = CullMode::None;
             else
-                state._cullMode = info.hasFlag( RenderPassTraitFlag::kCullFront ) ? RHICullMode::Front : RHICullMode::Back;
+                state._cullMode = info.hasFlag( RenderPassTraitFlag::kCullFront ) ? CullMode::Front : CullMode::Back;
         }
 
         /**
@@ -167,9 +167,9 @@ namespace sw
             desc._vertexEntryPoint    = string( resolveEntryPoint( string_view{}, ShaderStage::Vertex ) );
             desc._pixelEntryPoint     = string( resolveEntryPoint( string_view{}, ShaderStage::Pixel ) );
             desc._listShaderDefine.clear();
-            desc._renderState._cullMode = RHICullMode::None;
-            desc._renderState._fillMode = RHIFillMode::Solid;
-            desc._renderState.setAllBlendTargets( RHIBlendTargetState::makePremultipliedAlpha() );
+            desc._renderState._cullMode = CullMode::None;
+            desc._renderState._fillMode = FillMode::Solid;
+            desc._renderState.setAllBlendTargets( BlendTargetState::makePremultipliedAlpha() );
             desc._renderState._bEnableDepthWrite = SW_FALSE;
             return desc;
         }
@@ -185,12 +185,12 @@ namespace sw
             desc._numRenderTargets   = 1;
             desc._arrRTVFormat[0]    = colorFormat;
             desc._depthStencilFormat = bDepthTest ? constant::render::kDepthStencilFormat : RHIFormat::Unknown;
-            RHIRenderState& state    = desc._renderState;
+            RenderState& state       = desc._renderState;
             state._bEnableDepthTest  = bDepthTest ? SW_TRUE : SW_FALSE;
             state._bEnableDepthWrite = ( bDepthTest && program._bDepthWrite ) ? SW_TRUE : SW_FALSE;
-            state._cullMode          = program._bCullBack ? RHICullMode::Back : RHICullMode::None;
+            state._cullMode          = program._bCullBack ? CullMode::Back : CullMode::None;
             if ( program._bBlend )
-                state.setAllBlendTargets( RHIBlendTargetState::makePremultipliedAlpha() );
+                state.setAllBlendTargets( BlendTargetState::makePremultipliedAlpha() );
             return desc;
         }
 
@@ -831,8 +831,8 @@ namespace sw
         bool bChanged{ false };
         if ( pPermutation != nullptr )
         {
-            // 패스 → 머티리얼 순서로 합친다. 무엇을 덮는지는 패스 종류의 표가 정한다(`RHIRenderStateOverride::Scope`). 값이 같으면 PSO 를 더 만들지 않는다.
-            const RHIRenderState merged = pPermutation->_renderStateOverride.applyTo( desc._renderState, FrameRendererUtil::getMaterialStateScope( passType ) );
+            // 패스 → 머티리얼 순서로 합친다. 무엇을 덮는지는 패스 종류의 표가 정한다(`RenderStateOverride::Scope`). 값이 같으면 PSO 를 더 만들지 않는다.
+            const RenderState merged = pPermutation->_renderStateOverride.applyTo( desc._renderState, FrameRendererUtil::getMaterialStateScope( passType ) );
             if ( merged != desc._renderState )
             {
                 desc._renderState = merged;

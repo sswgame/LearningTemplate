@@ -1409,8 +1409,8 @@ namespace sw
     RHIPipelineStateHandle VulkanRHIResourceFactory::createPipelineStateNative( const RHIPipelineStateDesc& desc )
     {
         // 와이어프레임 채우기는 디바이스 기능 fillModeNonSolid 가 있어야 한다. 없으면 솔리드로 바꾸지 않고 셰이더 모듈을 만들기 전에 거절한다(아래 래스터 상태 주석).
-        const RHIRenderState& renderState = desc._renderState;
-        if ( renderState._fillMode == RHIFillMode::Wireframe && _pDevice->_bFillModeNonSolid == 0 )
+        const RenderState& renderState = desc._renderState;
+        if ( renderState._fillMode == FillMode::Wireframe && _pDevice->_bFillModeNonSolid == 0 )
         {
             SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.CreatePipelineStateWireframeFillNeeds", "createPipelineState: wireframe fill needs the fillModeNonSolid device feature ('%#')", desc._vertexShaderPath );
             return 0;
@@ -1590,12 +1590,12 @@ namespace sw
         rasterizer.rasterizerDiscardEnable = VK_FALSE;
         // 기능을 못 켠 디바이스에서 LINE 을 요청하면 솔리드로 바꾸지 않고 거절한다 — 다른 그림이 와이어프레임으로 통과하면 안 된다.
         // 렌더러는 능력(RHICapabilities::_bWireframeFill)을 보고 와이어프레임 보기 모드를 받지 않으므로 여기 닿으면 결함이다.
-        const bool bUseWireframe = renderState._fillMode == RHIFillMode::Wireframe;
+        const bool bUseWireframe = renderState._fillMode == FillMode::Wireframe;
         rasterizer.polygonMode   = bUseWireframe ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
         rasterizer.lineWidth     = 1.0f;
-        rasterizer.cullMode      = ( renderState._cullMode == RHICullMode::Front ) ? VK_CULL_MODE_FRONT_BIT : ( ( renderState._cullMode == RHICullMode::Back ) ? VK_CULL_MODE_BACK_BIT : VK_CULL_MODE_NONE );
-        rasterizer.frontFace     = renderState._frontFace == RHIFrontFace::CounterClockwise ? VK_FRONT_FACE_COUNTER_CLOCKWISE : VK_FRONT_FACE_CLOCKWISE;
-        // 깊이 바이어스 — 다른 백엔드와 같은 상수 · 기울기 두 칸이다(RHIFixedRenderState::_depthBias). LINE 다각형 모드에도 걸린다.
+        rasterizer.cullMode      = ( renderState._cullMode == CullMode::Front ) ? VK_CULL_MODE_FRONT_BIT : ( ( renderState._cullMode == CullMode::Back ) ? VK_CULL_MODE_BACK_BIT : VK_CULL_MODE_NONE );
+        rasterizer.frontFace     = renderState._frontFace == FrontFace::CounterClockwise ? VK_FRONT_FACE_COUNTER_CLOCKWISE : VK_FRONT_FACE_CLOCKWISE;
+        // 깊이 바이어스 — 다른 백엔드와 같은 상수 · 기울기 두 칸이다(FixedRenderState::_depthBias). LINE 다각형 모드에도 걸린다.
         rasterizer.depthBiasEnable         = ( renderState._depthBias != 0 || renderState._slopeScaledDepthBias != 0.0f ) ? VK_TRUE : VK_FALSE;
         rasterizer.depthBiasConstantFactor = static_cast<float32>( renderState._depthBias );
         rasterizer.depthBiasSlopeFactor    = renderState._slopeScaledDepthBias;
@@ -1611,8 +1611,8 @@ namespace sw
         VkPipelineColorBlendAttachmentState arrColorBlendAttachment[kMaxColorAttachments]{};
         for ( uint32 blendIndex = 0; blendIndex < blendCount; ++blendIndex )
         {
-            const RHIBlendTargetState& source                  = renderState._arrBlendTarget[blendIndex];
-            arrColorBlendAttachment[blendIndex].colorWriteMask = static_cast<VkColorComponentFlags>( source._colorWriteMask ); // 비트가 같다(RHIColorWriteMask)
+            const BlendTargetState& source                     = renderState._arrBlendTarget[blendIndex];
+            arrColorBlendAttachment[blendIndex].colorWriteMask = static_cast<VkColorComponentFlags>( source._colorWriteMask ); // 비트가 같다(ColorWriteMask)
             // 블렌드 지원은 형식마다 선택이다(R16G16_SNORM 등, lavapipe 는 없다). 못 섞는 첨부는 덮어쓴다 - 겹침 보기가 G버퍼 전체에 블렌드를 켜도 값을 보는 것은 알베도 칸이다.
             // 형식이 없으면 ensurePipelineRenderPass 가 R8G8B8A8_UNORM 으로 두며 그 형식은 블렌드가 필수다.
             const VkFormat     attachmentFormat = VulkanRHIUtil::toVulkanTextureFormat( desc._arrRTVFormat[blendIndex] );

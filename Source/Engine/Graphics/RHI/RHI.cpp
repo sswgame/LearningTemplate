@@ -93,7 +93,7 @@ namespace sw
         , _meshVertexFormat{ RHIMeshVertexFormat::Packed }
     {
         // 렌더 상태의 기본값은 패스의 일반적인 값이다. 코드가 짓는 PSO(풀스크린 · UI)는 컬링도 깊이도 없이 시작한다.
-        _renderState._cullMode         = RHICullMode::None;
+        _renderState._cullMode         = CullMode::None;
         _renderState._bEnableDepthTest = SW_FALSE;
         for ( uint32 attachmentIndex = 0; attachmentIndex < kMaxColorAttachments; ++attachmentIndex )
         {

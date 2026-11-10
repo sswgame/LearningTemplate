@@ -1498,19 +1498,19 @@ namespace sw
             }
             if ( bHasPixelShader )
                 psoDesc.PS = { psResult._bytecode.data(), psResult._bytecode.size() };
-            const RHIRenderState& renderState = desc._renderState;
+            const RenderState& renderState = desc._renderState;
             // 다른 백엔드와 같이 채우기 모드를 읽는다. SOLID 로 고정하면 Wireframe 요청이 DX12 에서만 조용히 솔리드가 된다.
-            psoDesc.RasterizerState.FillMode              = ( renderState._fillMode == RHIFillMode::Wireframe )
+            psoDesc.RasterizerState.FillMode              = ( renderState._fillMode == FillMode::Wireframe )
                                                               ? D3D12_FILL_MODE_WIREFRAME
                                                               : D3D12_FILL_MODE_SOLID;
-            psoDesc.RasterizerState.CullMode              = ( renderState._cullMode == RHICullMode::Front )
+            psoDesc.RasterizerState.CullMode              = ( renderState._cullMode == CullMode::Front )
                                                               ? D3D12_CULL_MODE_FRONT
-                                                              : ( ( renderState._cullMode == RHICullMode::Back ) ? D3D12_CULL_MODE_BACK : D3D12_CULL_MODE_NONE );
-            psoDesc.RasterizerState.FrontCounterClockwise = renderState._frontFace == RHIFrontFace::CounterClockwise ? TRUE : FALSE;
+                                                              : ( ( renderState._cullMode == CullMode::Back ) ? D3D12_CULL_MODE_BACK : D3D12_CULL_MODE_NONE );
+            psoDesc.RasterizerState.FrontCounterClockwise = renderState._frontFace == FrontFace::CounterClockwise ? TRUE : FALSE;
             // 기본은 가까운 · 먼 평면에서 자른다 — DX11(DepthClipEnable) · Vulkan(depthClampEnable 끔) · GL(GL_DEPTH_CLAMP 끔)과 같다. 0 으로 두면 DX12 만 평면 밖 기하를 깊이 1 로 눌러 그린다
             // (psoDesc{} 의 기본값이 FALSE 다). 시야 거리 설정(gv_viewDistanceScale)이 먼 평면을 당겨도 DX12 에서만 먼 기하가 남았다(useroptions distance 0.307, 나머지 0.665).
             psoDesc.RasterizerState.DepthClipEnable = renderState._bEnableDepthClip != SW_FALSE ? TRUE : FALSE;
-            // 깊이 바이어스 — 다른 백엔드와 같은 상수 · 기울기 두 칸이다(RHIFixedRenderState::_depthBias).
+            // 깊이 바이어스 — 다른 백엔드와 같은 상수 · 기울기 두 칸이다(FixedRenderState::_depthBias).
             psoDesc.RasterizerState.DepthBias            = renderState._depthBias;
             psoDesc.RasterizerState.SlopeScaledDepthBias = renderState._slopeScaledDepthBias;
             psoDesc.SampleMask                           = MathUtil::kMaxUInt32;
@@ -1533,17 +1533,17 @@ namespace sw
             }
             for ( UINT rtvIndex = 0; rtvIndex < psoDesc.NumRenderTargets; ++rtvIndex )
             {
-                auto&                      rtBlend = psoDesc.BlendState.RenderTarget[rtvIndex];
-                const RHIBlendTargetState& source  = renderState._arrBlendTarget[rtvIndex < kMaxColorAttachments ? rtvIndex : 0u];
-                rtBlend.RenderTargetWriteMask      = static_cast<UINT8>( source._colorWriteMask ); // 비트가 같다(RHIColorWriteMask)
-                psoDesc.RTVFormats[rtvIndex]       = toDXGIFormat( desc._arrRTVFormat[rtvIndex] );
-                rtBlend.BlendEnable                = source._bEnableBlend != SW_FALSE ? TRUE : FALSE;
-                rtBlend.SrcBlend                   = RHIDxRenderState::toBlend<D3D12_BLEND>( source._srcColor );
-                rtBlend.DestBlend                  = RHIDxRenderState::toBlend<D3D12_BLEND>( source._dstColor );
-                rtBlend.BlendOp                    = RHIDxRenderState::toBlendOp<D3D12_BLEND_OP>( source._colorOp );
-                rtBlend.SrcBlendAlpha              = RHIDxRenderState::toBlend<D3D12_BLEND>( source._srcAlpha );
-                rtBlend.DestBlendAlpha             = RHIDxRenderState::toBlend<D3D12_BLEND>( source._dstAlpha );
-                rtBlend.BlendOpAlpha               = RHIDxRenderState::toBlendOp<D3D12_BLEND_OP>( source._alphaOp );
+                auto&                   rtBlend = psoDesc.BlendState.RenderTarget[rtvIndex];
+                const BlendTargetState& source  = renderState._arrBlendTarget[rtvIndex < kMaxColorAttachments ? rtvIndex : 0u];
+                rtBlend.RenderTargetWriteMask   = static_cast<UINT8>( source._colorWriteMask ); // 비트가 같다(ColorWriteMask)
+                psoDesc.RTVFormats[rtvIndex]    = toDXGIFormat( desc._arrRTVFormat[rtvIndex] );
+                rtBlend.BlendEnable             = source._bEnableBlend != SW_FALSE ? TRUE : FALSE;
+                rtBlend.SrcBlend                = RHIDxRenderState::toBlend<D3D12_BLEND>( source._srcColor );
+                rtBlend.DestBlend               = RHIDxRenderState::toBlend<D3D12_BLEND>( source._dstColor );
+                rtBlend.BlendOp                 = RHIDxRenderState::toBlendOp<D3D12_BLEND_OP>( source._colorOp );
+                rtBlend.SrcBlendAlpha           = RHIDxRenderState::toBlend<D3D12_BLEND>( source._srcAlpha );
+                rtBlend.DestBlendAlpha          = RHIDxRenderState::toBlend<D3D12_BLEND>( source._dstAlpha );
+                rtBlend.BlendOpAlpha            = RHIDxRenderState::toBlendOp<D3D12_BLEND_OP>( source._alphaOp );
             }
             if ( renderState._bEnableDepthTest != SW_FALSE )
             {

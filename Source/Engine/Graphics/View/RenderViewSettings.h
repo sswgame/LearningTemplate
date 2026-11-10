@@ -29,7 +29,7 @@ namespace sw
     {
         Lit = 0,      ///< 조명과 그림자를 모두 계산한 기본 화면
         Unlit,        ///< 알베도만 보인다. 조명 항이 셰이더에서 컴파일 아웃된다.
-        Wireframe,    ///< 삼각형 외곽선만 보인다(RHIFillMode::Wireframe).
+        Wireframe,    ///< 삼각형 외곽선만 보인다(FillMode::Wireframe).
         Normals,      ///< 월드 노멀을 색으로 보인다(0.5 + 0.5 n).
         Depth,        ///< 카메라에서의 거리(뷰 공간 깊이)를 보이며 `kViewModeDepthRange` 에서 흰색이 된다.
         Overdraw,     ///< 겹쳐 그린 횟수를 보인다. 단색을 깊이 쓰기 없이 더한다(유니티 Overdraw).

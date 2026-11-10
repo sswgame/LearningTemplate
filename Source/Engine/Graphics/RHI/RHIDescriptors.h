@@ -484,7 +484,7 @@ namespace sw
         uint32               _numRenderTargets;                   ///< 컬러 RT 개수 (MRT)
         RHIFormat            _arrRTVFormat[kMaxColorAttachments]; ///< RT별 포맷
         RHIFormat            _depthStencilFormat;
-        RHIRenderState       _renderState; ///< 블렌드 · 깊이 · 래스터 · 스텐실. 칸은 `RHIRenderState` 한 곳에서 더한다
+        RenderState          _renderState; ///< 블렌드 · 깊이 · 래스터 · 스텐실. 칸은 `RenderState` 한 곳에서 더한다
         /**
          * @brief 정점 셰이더가 메시 속성을 읽을 때 쓸 속성 스트림 형식입니다(입력 레이아웃 표를 고른다). 정점 입력이 없는 셰이더는 쓰지 않는다.
          * @details 그리는 메시의 형식과 같아야 한다 — 머티리얼 PSO 는 배치의 형식으로 짓는다(`RenderPSOCache::materialPSOKey`). 다르면 속성 스트림 원소 크기가 달라

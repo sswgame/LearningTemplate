@@ -296,13 +296,13 @@ namespace sw
          */
         uint32 getElementStride() const { return _elementStride; }
         /** @brief 배치 목록 분류입니다(`alphaMode="Blend"` 면 반투명). */
-        RHIBlendMode getBlendMode() const { return _desc._alphaMode == MaterialAlphaMode::Blend ? RHIBlendMode::Transparent : RHIBlendMode::Opaque; }
+        BlendMode getBlendMode() const { return _desc._alphaMode == MaterialAlphaMode::Blend ? BlendMode::Transparent : BlendMode::Opaque; }
         /** @brief 알파 다루는 법을 반환합니다. */
         MaterialAlphaMode getAlphaMode() const { return _desc._alphaMode; }
         /** @brief 그리기 순서입니다(작은 것부터). 배치 나누기와 반투명 정렬의 첫 키입니다. */
         int32 getRenderQueue() const { return _desc._renderQueue; }
-        /** @brief 불투명 그리기 띠입니다 — 덮은 렌더 상태가 정한다(`RHIRenderStateOverride::classifyOpaqueDrawBand`). 정렬의 첫 키이고 차례(`getRenderQueue`)는 띠 안의 순서다. */
-        RHIOpaqueDrawBand getOpaqueDrawBand() const { return _desc._renderStateOverride.classifyOpaqueDrawBand(); }
+        /** @brief 불투명 그리기 띠입니다 — 덮은 렌더 상태가 정한다(`RenderStateOverride::classifyOpaqueDrawBand`). 정렬의 첫 키이고 차례(`getRenderQueue`)는 띠 안의 순서다. */
+        OpaqueDrawBand getOpaqueDrawBand() const { return _desc._renderStateOverride.classifyOpaqueDrawBand(); }
         /**
          * @brief 반투명 앞에 떠 둔 장면 색 사본을 읽는 굴절 머티리얼이면 true 입니다(`MATERIAL_REFRACTION` — 물 · 유리, scene_refraction.hlsli).
          * @details 반투명 정렬의 첫 띠다 — 사본 뒤에 그린 반투명은 사본에 없어 굴절 면이 먼저 그려져야 그 위에 얹힌다(유니티 HDRP 의 굴절 앞 · 뒤 반투명 자리).
@@ -315,7 +315,7 @@ namespace sw
          */
         [[nodiscard]] static Material* resolveDrawMaterial( Material* pOwn, const MaterialInstance* pInstance, Material* pSceneDefault );
         /** @brief 패스의 렌더 상태 위에 덮는 칸입니다. */
-        const RHIRenderStateOverride& getRenderStateOverride() const { return _desc._renderStateOverride; }
+        const RenderStateOverride& getRenderStateOverride() const { return _desc._renderStateOverride; }
         /** @brief float32 파라미터를 읽습니다. */
         bool getScalarParameter( hashed_string name, float32& outValue ) const;
 

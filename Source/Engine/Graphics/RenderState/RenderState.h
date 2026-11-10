@@ -24,54 +24,54 @@ namespace sw
     inline constexpr uint32 kMaxColorAttachments = 8;
 
     /**
-     * @struct RHIBlendTargetState
+     * @struct BlendTargetState
      * @brief 컬러 첨부 하나의 블렌드입니다(색 · 알파 분리, 쓰기 마스크). XML 은 프리셋 이름(`engine/renderstate/blendpresets.xml`) 또는 이 칸들로 적습니다.
      */
     REFLECT()
-    struct SW_API RHIBlendTargetState
+    struct SW_API BlendTargetState
     {
         REFLECT_BODY();
 
         PROPERTY()
-        RHIBlendFactor _srcColor;
+        BlendFactor _srcColor;
         PROPERTY()
-        RHIBlendFactor _dstColor;
+        BlendFactor _dstColor;
         PROPERTY()
-        RHIBlendOp _colorOp;
+        BlendOp _colorOp;
         PROPERTY()
-        RHIBlendFactor _srcAlpha;
+        BlendFactor _srcAlpha;
         PROPERTY()
-        RHIBlendFactor _dstAlpha;
+        BlendFactor _dstAlpha;
         PROPERTY()
-        RHIBlendOp _alphaOp;
+        BlendOp _alphaOp;
         PROPERTY()
-        RHIColorWriteMask _colorWriteMask;
+        ColorWriteMask _colorWriteMask;
         PROPERTY()
         uint8                  _bEnableBlend  : 1; ///< 꺼져 있으면 계수를 보지 않고 덮어쓴다
         [[maybe_unused]] uint8 _reservedFlags : 7;
 
         /** @brief 불투명(블렌드 꺼짐, 모든 채널 쓰기)으로 만듭니다. */
-        RHIBlendTargetState() noexcept;
+        BlendTargetState() noexcept;
         /** @brief 곧은 알파입니다(색 SrcAlpha / InvSrcAlpha, 알파 One / InvSrcAlpha). 코드가 짓는 PSO 가 쓰며 데이터의 `Transparent` 프리셋과 같아야 한다(테스트). */
-        [[nodiscard]] static RHIBlendTargetState makeStraightAlpha() noexcept;
+        [[nodiscard]] static BlendTargetState makeStraightAlpha() noexcept;
         /** @brief 프리멀티플라이 알파입니다(색 · 알파 One / InvSrcAlpha). 코드가 짓는 PSO 가 쓰며 데이터의 `Premultiplied` 프리셋과 같아야 한다(테스트). */
-        [[nodiscard]] static RHIBlendTargetState makePremultipliedAlpha() noexcept;
+        [[nodiscard]] static BlendTargetState makePremultipliedAlpha() noexcept;
 
         /** @brief 칸이 모두 같으면 true 입니다. */
-        [[nodiscard]] bool operator==( const RHIBlendTargetState& other ) const noexcept;
-        [[nodiscard]] bool operator!=( const RHIBlendTargetState& other ) const noexcept { return ( *this == other ) == false; }
+        [[nodiscard]] bool operator==( const BlendTargetState& other ) const noexcept;
+        [[nodiscard]] bool operator!=( const BlendTargetState& other ) const noexcept { return ( *this == other ) == false; }
         /** @brief 받아 줄 수 없는 조합의 이유입니다. 맞으면 nullptr 입니다(알파 계수 자리에 색 계수를 적은 것 — D3D 가 PSO 를 거절한다). */
         [[nodiscard]] const utf8* findInvalidReason() const noexcept;
     };
-    static_assert( sizeof( RHIBlendTargetState ) == 8, "the blend target is hashed and compared as bytes - it must have no padding" );
+    static_assert( sizeof( BlendTargetState ) == 8, "the blend target is hashed and compared as bytes - it must have no padding" );
 
     /**
-     * @struct RHIFixedRenderState
+     * @struct FixedRenderState
      * @brief 렌더 타깃 수와 상관없는 렌더 상태입니다(깊이 · 래스터 · 스텐실). 파이프라인 XML 의 패스와 머티리얼 XML 의 루트에 같은 칸으로 적습니다.
      * @details 기본값은 패스의 일반적인 값이다(뒷면 컬링, 깊이 테스트 · 쓰기, LessEqual, 깊이 클립, 스텐실 꺼짐). 칸을 더하면 패딩이 생기지 않게 `_arrReserved` 로 맞춘다.
      */
     REFLECT()
-    struct SW_API RHIFixedRenderState
+    struct SW_API FixedRenderState
     {
         REFLECT_BODY();
 
@@ -87,13 +87,13 @@ namespace sw
         float32 _slopeScaledDepthBias;
 
         PROPERTY()
-        RHICullMode _cullMode;
+        CullMode _cullMode;
         PROPERTY()
-        RHIFillMode _fillMode;
+        FillMode _fillMode;
         PROPERTY()
-        RHIFrontFace _frontFace;
+        FrontFace _frontFace;
         PROPERTY()
-        RHICompareFunc _depthCompare; ///< LessEqual 이 기본이다. Less 로 두면 깊이 프리패스 뒤 같은 깊이를 다시 그리는 기본 패스가 모두 탈락한다
+        CompareFunc _depthCompare; ///< LessEqual 이 기본이다. Less 로 두면 깊이 프리패스 뒤 같은 깊이를 다시 그리는 기본 패스가 모두 탈락한다
 
         PROPERTY()
         uint8 _bEnableDepthTest : 1; ///< 깊이 첨부를 붙이는지이기도 하다(꺼지면 PSO 의 깊이 형식이 없다). 머티리얼은 덮을 수 없다 — 항상 통과는 `_depthCompare` 의 `Always` 다
@@ -113,60 +113,60 @@ namespace sw
         uint8 _stencilWriteMask;
 
         PROPERTY()
-        RHIStencilOp _stencilFrontFail;
+        StencilOp _stencilFrontFail;
         PROPERTY()
-        RHIStencilOp _stencilFrontDepthFail;
+        StencilOp _stencilFrontDepthFail;
         PROPERTY()
-        RHIStencilOp _stencilFrontPass;
+        StencilOp _stencilFrontPass;
         PROPERTY()
-        RHICompareFunc _stencilFrontCompare;
+        CompareFunc _stencilFrontCompare;
         PROPERTY()
-        RHIStencilOp _stencilBackFail;
+        StencilOp _stencilBackFail;
         PROPERTY()
-        RHIStencilOp _stencilBackDepthFail;
+        StencilOp _stencilBackDepthFail;
         PROPERTY()
-        RHIStencilOp _stencilBackPass;
+        StencilOp _stencilBackPass;
         PROPERTY()
-        RHICompareFunc _stencilBackCompare;
+        CompareFunc _stencilBackCompare;
 
         /** @brief 패스의 일반적인 값(클래스 설명)으로 만듭니다. */
-        RHIFixedRenderState() noexcept;
+        FixedRenderState() noexcept;
 
         /** @brief 칸이 모두 같으면 true 입니다. */
-        [[nodiscard]] bool operator==( const RHIFixedRenderState& other ) const noexcept;
-        [[nodiscard]] bool operator!=( const RHIFixedRenderState& other ) const noexcept { return ( *this == other ) == false; }
+        [[nodiscard]] bool operator==( const FixedRenderState& other ) const noexcept;
+        [[nodiscard]] bool operator!=( const FixedRenderState& other ) const noexcept { return ( *this == other ) == false; }
         /** @brief 받아 줄 수 없는 조합의 이유입니다. 맞으면 nullptr 입니다. 패스와 머티리얼의 합친 결과에 함께 쓰는 규칙이다. */
         [[nodiscard]] const utf8* findInvalidReason() const noexcept;
     };
-    static_assert( sizeof( RHIFixedRenderState ) == 24, "the fixed render state is hashed, compared and overlaid as bytes - it must have no padding" );
+    static_assert( sizeof( FixedRenderState ) == 24, "the fixed render state is hashed, compared and overlaid as bytes - it must have no padding" );
 
     /**
-     * @struct RHIRenderState
+     * @struct RenderState
      * @brief PSO 하나의 렌더 상태 전체입니다(`RHIPipelineStateDesc::_renderState`). 네 백엔드가 이것만 읽습니다.
      */
-    struct SW_API RHIRenderState : RHIFixedRenderState
+    struct SW_API RenderState : FixedRenderState
     {
-        RHIBlendTargetState _arrBlendTarget[kMaxColorAttachments]; ///< 렌더 타깃마다의 블렌드. 쓰지 않는 칸은 기본값이다
+        BlendTargetState _arrBlendTarget[kMaxColorAttachments]; ///< 렌더 타깃마다의 블렌드. 쓰지 않는 칸은 기본값이다
 
         /** @brief 칸이 모두 같으면 true 입니다. */
-        [[nodiscard]] bool operator==( const RHIRenderState& other ) const noexcept;
-        [[nodiscard]] bool operator!=( const RHIRenderState& other ) const noexcept { return ( *this == other ) == false; }
+        [[nodiscard]] bool operator==( const RenderState& other ) const noexcept;
+        [[nodiscard]] bool operator!=( const RenderState& other ) const noexcept { return ( *this == other ) == false; }
         /** @brief 칸 전체의 해시입니다. 칸을 더해도 따라온다. */
         [[nodiscard]] uint64 computeHash() const noexcept;
         /** @brief 모든 렌더 타깃의 블렌드를 @p target 으로 둡니다. */
-        void setAllBlendTargets( const RHIBlendTargetState& target ) noexcept;
+        void setAllBlendTargets( const BlendTargetState& target ) noexcept;
         /** @brief 한 타깃이라도 블렌드가 켜져 있으면 true 입니다. */
         [[nodiscard]] bool isAnyBlendEnabled() const noexcept;
     };
-    static_assert( sizeof( RHIRenderState ) == sizeof( RHIFixedRenderState ) + sizeof( RHIBlendTargetState ) * kMaxColorAttachments, "RHIRenderState is hashed as bytes - it must have no padding" );
+    static_assert( sizeof( RenderState ) == sizeof( FixedRenderState ) + sizeof( BlendTargetState ) * kMaxColorAttachments, "RenderState is hashed as bytes - it must have no padding" );
 
     /**
-     * @enum RHIOpaqueDrawBand
+     * @enum OpaqueDrawBand
      * @brief 불투명 그리기의 띠입니다 — 이미 그려진 것에 기대는 렌더 상태는 뒤 띠로 간다(유니티 Geometry 큐 뒤의 큐 · 언리얼 커스텀 깊이 · 스텐실 패스 자리).
-     * @details 띠는 머티리얼이 덮은 렌더 상태에서 나온다(`RHIRenderStateOverride::classifyOpaqueDrawBand`) — 차례(`renderQueue`)를 적지 않아도 바닥 뒤에 그려진다.
+     * @details 띠는 머티리얼이 덮은 렌더 상태에서 나온다(`RenderStateOverride::classifyOpaqueDrawBand`) — 차례(`renderQueue`)를 적지 않아도 바닥 뒤에 그려진다.
      *          같은 띠 안의 순서만 차례 → 퍼뮤테이션 해시가 정한다. 띠가 없으면 순서에 기대는 머티리얼이 해시 순서로 먼저 그려져 지운 색 · 빈 스텐실 위에 그렸다.
      */
-    enum class RHIOpaqueDrawBand : uint8
+    enum class OpaqueDrawBand : uint8
     {
         Ordinary,     ///< 모든 색 채널을 덮어쓰고 보통 깊이 비교(Less · LessEqual)로 그린다 — 순서와 상관없다
         StencilWrite, ///< 스텐실을 쓰기만 한다(마스크) — 그것을 읽는 띠보다 먼저다
@@ -174,13 +174,13 @@ namespace sw
     };
 
     /**
-     * @struct RHIRenderStateOverride
+     * @struct RenderStateOverride
      * @brief 패스의 렌더 상태 위에 머티리얼이 적은 칸만 덮는 값입니다. 적지 않은 칸은 패스의 것이 남습니다.
      * @details 어느 칸을 적었는지는 칸마다 "적지 않음" 값을 두는 대신 비트 마스크로 든다. 같은 XML 을 0 으로 채운 값과 1 로 채운 값 위에 읽어 두 값이 같은 비트가 곧 적은 칸이다
      *          (`makeFromReads`). 그래서 enum 에 `Inherit` 같은 값이 들어가 백엔드까지 새지 않고, 칸을 더해도 읽기 · 합치기 · 해시 · 쓰기가 그대로 따라온다.
      *          언리얼 머티리얼 인스턴스의 Base Property Overrides(칸마다 켜는 체크) 자리다.
      */
-    struct SW_API RHIRenderStateOverride
+    struct SW_API RenderStateOverride
     {
         /**
          * @enum Scope
@@ -193,21 +193,21 @@ namespace sw
             FixedAndBlend, ///< 블렌드까지 모두(포워드 · 반투명)
         };
 
-        RHIFixedRenderState _values;                               ///< 적은 칸의 값. 적지 않은 칸의 비트는 0 이다
-        RHIFixedRenderState _mask;                                 ///< 적은 칸의 비트가 1 이다
-        RHIBlendTargetState _arrBlendTarget[kMaxColorAttachments]; ///< `_blendTargetCount` 칸만 쓴다
-        uint8               _blendTargetCount;                     ///< 0 이면 패스의 블렌드를 그대로 쓴다. 1 이면 모든 타깃에 같은 값이다
-        uint8               _arrReserved[3];
+        FixedRenderState _values;                               ///< 적은 칸의 값. 적지 않은 칸의 비트는 0 이다
+        FixedRenderState _mask;                                 ///< 적은 칸의 비트가 1 이다
+        BlendTargetState _arrBlendTarget[kMaxColorAttachments]; ///< `_blendTargetCount` 칸만 쓴다
+        uint8            _blendTargetCount;                     ///< 0 이면 패스의 블렌드를 그대로 쓴다. 1 이면 모든 타깃에 같은 값이다
+        uint8            _arrReserved[3];
 
         /** @brief 아무것도 덮지 않는 값으로 만듭니다. */
-        RHIRenderStateOverride() noexcept;
+        RenderStateOverride() noexcept;
 
         /**
          * @brief 같은 XML 을 0 으로 채운 값(@p readOverZeros)과 1 로 채운 값(@p readOverOnes) 위에 읽은 결과로 만듭니다(`makeFilledState`). 두 값이 같은 비트가 적은 칸입니다.
          */
-        [[nodiscard]] static RHIRenderStateOverride makeFromReads( const RHIFixedRenderState& readOverZeros, const RHIFixedRenderState& readOverOnes ) noexcept;
+        [[nodiscard]] static RenderStateOverride makeFromReads( const FixedRenderState& readOverZeros, const FixedRenderState& readOverOnes ) noexcept;
         /** @brief 모든 바이트가 @p byteValue 인 값입니다(`makeFromReads` 의 읽을 바탕). */
-        [[nodiscard]] static RHIFixedRenderState makeFilledState( uint8 byteValue ) noexcept;
+        [[nodiscard]] static FixedRenderState makeFilledState( uint8 byteValue ) noexcept;
         /** @brief 적은 칸이 하나라도 있거나 블렌드를 덮으면 true 입니다. */
         [[nodiscard]] bool hasAny() const noexcept;
         /** @brief `_bEnableDepthTest` 를 적었으면 true 입니다(비트필드라 주소를 받지 않는다). */
@@ -217,11 +217,11 @@ namespace sw
          * @details 표의 규칙: 범위(@p scope) 밖 칸은 패스의 것이다. 패스가 뒷면 컬링이 아니면 컬은 패스의 것이다(뒤집은 껍질 외곽선은 양면 머티리얼도 앞면을 잘라야 외곽선이다).
          *          깊이 첨부가 없는 패스(`_bEnableDepthTest` 꺼짐)는 깊이 · 스텐실 칸을 받지 않는다 — 붙일 첨부가 없다. 깊이 테스트 칸 자체는 언제나 패스의 것이다(첨부와 함께 움직인다).
          */
-        [[nodiscard]] RHIRenderState applyTo( const RHIRenderState& passState, Scope scope ) const noexcept;
-        /** @brief 덮은 칸으로 불투명 그리기 띠를 정합니다(`RHIOpaqueDrawBand`). 덮지 않은 칸은 패스의 보통 값이라 띠를 바꾸지 않는다. */
-        [[nodiscard]] RHIOpaqueDrawBand classifyOpaqueDrawBand() const noexcept;
+        [[nodiscard]] RenderState applyTo( const RenderState& passState, Scope scope ) const noexcept;
+        /** @brief 덮은 칸으로 불투명 그리기 띠를 정합니다(`OpaqueDrawBand`). 덮지 않은 칸은 패스의 보통 값이라 띠를 바꾸지 않는다. */
+        [[nodiscard]] OpaqueDrawBand classifyOpaqueDrawBand() const noexcept;
         /** @brief 덮는 칸 · 값의 해시입니다. 머티리얼의 배치 키와 PSO 변형 키에 들어갑니다. */
         [[nodiscard]] uint64 computeHash() const noexcept;
     };
-    static_assert( sizeof( RHIRenderStateOverride ) == sizeof( RHIFixedRenderState ) * 2 + sizeof( RHIBlendTargetState ) * kMaxColorAttachments + 4, "the override is hashed as bytes - it must have no padding" );
+    static_assert( sizeof( RenderStateOverride ) == sizeof( FixedRenderState ) * 2 + sizeof( BlendTargetState ) * kMaxColorAttachments + 4, "the override is hashed as bytes - it must have no padding" );
 } // namespace sw

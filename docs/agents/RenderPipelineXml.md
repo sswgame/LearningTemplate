@@ -35,7 +35,7 @@
 | `_type` | `RenderPassType` | 그 밖의 글. 내부 슬롯 |
 | `_depthAttachment` | 붙일 깊이 첨부 | 깊이 테스트를 끄고 적었을 때 |
 | `_blendPreset` | 모든 렌더 타깃의 블렌드 프리셋. 비면 불투명. 곧은 알파인지 프리멀티플라이인지는 셰이더의 출력 규약에 맞춘다(캔버스 · 안개는 `Premultiplied`) | 없는 이름. `_listBlendTarget` 과 함께. 컴퓨트 패스. 반투명 패스에서 끄면 경고만 한다 |
-| `_listBlendTarget` | 렌더 타깃마다의 `RHIBlendTargetState`. 하나면 모든 타깃에 같다 | 둘 이상인데 컬러 출력 수와 다를 때. 알파 계수 자리의 색 계수 |
+| `_listBlendTarget` | 렌더 타깃마다의 `BlendTargetState`. 하나면 모든 타깃에 같다 | 둘 이상인데 컬러 출력 수와 다를 때. 알파 계수 자리의 색 계수 |
 | `_shaderPath` · `_listPermutation` | 셰이더와 define. 비면 표의 기본 셰이더 | 컴퓨트 패스의 빈 `_shaderPath` |
 | `_vertexEntryPoint` · `_pixelEntryPoint` | 진입점. 비면 `VSMain` · `PSMain` | |
 | `_geometryEntryPoint` | 적으면 지오메트리 스테이지가 붙는다 | 머티리얼 셰이더 패스, 컴퓨트 패스 |
@@ -46,7 +46,7 @@
 
 ## 렌더 상태 칸
 
-패스(`RenderGraphPassDesc`)와 머티리얼 루트가 같은 칸을 쓴다. 정본은 `RHIFixedRenderState` · `RHIBlendTargetState` 이고 패스 XML 은 C++ 이름 그대로(`_cullMode`), 머티리얼 XML 은 앞의 `_` 와 불리언 `b` 를 뗀 이름(`cullMode`, `enableStencil`)이다.
+패스(`RenderGraphPassDesc`)와 머티리얼 루트가 같은 칸을 쓴다. 정본은 `FixedRenderState` · `BlendTargetState` 이고 패스 XML 은 C++ 이름 그대로(`_cullMode`), 머티리얼 XML 은 앞의 `_` 와 불리언 `b` 를 뗀 이름(`cullMode`, `enableStencil`)이다.
 
 | 묶음 | 칸 | 뜻 · 조합 규칙 |
 |---|---|---|
@@ -56,17 +56,17 @@
 | 래스터 | `_cullMode` · `_fillMode` · `_frontFace` | 풀스크린 패스의 컬은 `None` 이어야 한다 |
 | 스텐실 | `_bEnableStencil` · `_stencilRef` · `_stencilReadMask` · `_stencilWriteMask` | 깊이 테스트가 있어야 첨부가 있다(모두 통과시키려면 `_depthCompare="Always"`). 마스크 · 참조는 면마다 있지 않다(D3D 와 같다) |
 | | `_stencilFront*` · `_stencilBack*`(`Fail` · `DepthFail` · `Pass` · `Compare`) | 앞면 · 뒷면의 연산과 비교. 첨부의 스텐실은 깊이와 같은 로드 · 저장 동작이다 |
-| 블렌드 | `_srcColor` · `_dstColor` · `_colorOp` · `_srcAlpha` · `_dstAlpha` · `_alphaOp` · `_colorWriteMask` · `_bEnableBlend` | 렌더 타깃 하나의 값(`RHIBlendTargetState`) |
+| 블렌드 | `_srcColor` · `_dstColor` · `_colorOp` · `_srcAlpha` · `_dstAlpha` · `_alphaOp` · `_colorWriteMask` · `_bEnableBlend` | 렌더 타깃 하나의 값(`BlendTargetState`) |
 
 ## 머티리얼 칸
 
-머티리얼은 위 렌더 상태 칸 중 **적은 칸만** 패스 위에 덮는다. 적지 않은 칸은 패스의 값이다. 실행은 패스 → 머티리얼 → 보기 모드 → 컬 반전 순서로 합쳐 변형 PSO 를 만든다(`FramePSOManager::createMaterialPSOVariant`, `RHIRenderStateOverride::applyTo`).
+머티리얼은 위 렌더 상태 칸 중 **적은 칸만** 패스 위에 덮는다. 적지 않은 칸은 패스의 값이다. 실행은 패스 → 머티리얼 → 보기 모드 → 컬 반전 순서로 합쳐 변형 PSO 를 만든다(`FramePSOManager::createMaterialPSOVariant`, `RenderStateOverride::applyTo`).
 
 | 칸 | 뜻 | 받아 주지 않는 조합(읽기 오류) |
 |---|---|---|
 | `alphaMode` | `Opaque` · `Mask`(불투명 목록, 문턱 아래 알파를 버린다 — `MATERIAL_ALPHA_CUTOFF`) · `Blend`(반투명 목록) | 그 밖의 글. define `MATERIAL_ALPHA_CUTOFF` 를 직접 적었을 때 |
 | `alphaCutoff` | `Mask` 의 문턱. `_alphaCutoff` 프로퍼티로 간다 | `Mask` 가 아닌데 기본값(0.5)이 아닐 때. 프로퍼티가 없는 셰이더의 기본값 아닌 값 |
-| `renderQueue` | 그리기 순서(작은 것부터, 기본 0). 반투명 정렬의 첫 키, 불투명은 띠 안의 순서다. 불투명의 띠는 렌더 상태가 정한다(`RHIOpaqueDrawBand`) — 보통 → 스텐실 쓰기(마스크) → 그려진 것을 읽거나 일부만 덮는 것(채널 일부 쓰기 · 블렌드 · 스텐실 비교 · 깊이 Less/LessEqual 밖 · 깊이 쓰기 끔). 순서에 기대는 머티리얼에 차례를 적지 않는다 | |
+| `renderQueue` | 그리기 순서(작은 것부터, 기본 0). 반투명 정렬의 첫 키, 불투명은 띠 안의 순서다. 불투명의 띠는 렌더 상태가 정한다(`OpaqueDrawBand`) — 보통 → 스텐실 쓰기(마스크) → 그려진 것을 읽거나 일부만 덮는 것(채널 일부 쓰기 · 블렌드 · 스텐실 비교 · 깊이 Less/LessEqual 밖 · 깊이 쓰기 끔). 순서에 기대는 머티리얼에 차례를 적지 않는다 | |
 | `twoSidedLighting` | 뒷면에서 노멀을 뒤집는다(`MATERIAL_TWO_SIDED`) | `cullMode="None"` 없이 적었을 때. define 을 직접 적었을 때 |
 | `blendPreset` · `_listBlendTarget` | 패스의 블렌드를 덮는다 | 함께 적었을 때. 없는 이름. 블렌드가 켜진 값인데 `alphaMode` 가 `Blend` 가 아닐 때(쓰기 마스크만 바꾸는 값은 불투명도 받는다) |
 | `enableDepthTest` | 없음 — 첨부와 함께 움직여 패스의 것이다 | 적었을 때 |
@@ -247,7 +247,7 @@ TAA · 모션 블러가 읽는 물체별 화면 속도(이번 UV - 지난 UV)는
 
 ## 고칠 때
 
-렌더 상태 칸을 더할 곳은 `Engine/Graphics/RenderState/RenderState.h` 하나와 네 백엔드의 읽기다 — XML 읽기 · 쓰기는 리플렉션이, 패스 · 머티리얼 합치기와 해시 · 비교는 바이트가 따라온다(패딩이 생기면 `static_assert` 가 멈춘다). 조합 규칙은 `findInvalidReason`, 머티리얼에게 내주지 않을 칸은 `RHIRenderStateOverride::applyTo` 에 적는다. RHI ABI 번호를 올린다.
+렌더 상태 칸을 더할 곳은 `Engine/Graphics/RenderState/RenderState.h` 하나와 네 백엔드의 읽기다 — XML 읽기 · 쓰기는 리플렉션이, 패스 · 머티리얼 합치기와 해시 · 비교는 바이트가 따라온다(패딩이 생기면 `static_assert` 가 멈춘다). 조합 규칙은 `findInvalidReason`, 머티리얼에게 내주지 않을 칸은 `RenderStateOverride::applyTo` 에 적는다. RHI ABI 번호를 올린다.
 
 그 밖의 패스 칸은 PSO(`FramePSOManager::makePassPSODesc`) · 쿠커(`ShaderCookRequestCollector`) · 검증(`RenderPipelineAsset::validate`)을 함께 고친다. 칸만 두고 실행이 읽지 않으면 XML 이 거짓말을 한다. 값이 그림을 바꾸는지는 끄고 켠 두 장을 같은 실행에서 견주는 시나리오로 확인한다(`<ExpectImagesDiffer>`, 예: `game/empty/automation/renderstate_stencil`).
 

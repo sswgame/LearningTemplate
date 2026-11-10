@@ -1238,7 +1238,7 @@ namespace sw
         deviceFeatures.fillModeNonSolid = availableFeatures.fillModeNonSolid;
         // 깊이 클립을 끄는 렌더 상태(depthClampEnable)도 마찬가지다.
         deviceFeatures.depthClamp = availableFeatures.depthClamp;
-        // 렌더 타깃마다 다른 블렌드 · 쓰기 마스크(RHIRenderState::_arrBlendTarget). 켜지 않으면 첨부 상태가 모두 같아야 한다.
+        // 렌더 타깃마다 다른 블렌드 · 쓰기 마스크(RenderState::_arrBlendTarget). 켜지 않으면 첨부 상태가 모두 같아야 한다.
         deviceFeatures.independentBlend = availableFeatures.independentBlend;
         // 프래그먼트 셰이더의 스토리지 버퍼 쓰기 · 원자 연산 — 셰이더 메시지 채널(`SW_GPU_PRINT`)이 픽셀 셰이더에서 쓴다. 없으면 능력이 거짓이고 메시지를 요구한 실행이 멈춘다.
         // https://docs.vulkan.org/refpages/latest/refpages/source/VkPhysicalDeviceFeatures.html — 꺼져 있으면 프래그먼트 단계의 스토리지 자원은 읽기 전용이어야 한다.

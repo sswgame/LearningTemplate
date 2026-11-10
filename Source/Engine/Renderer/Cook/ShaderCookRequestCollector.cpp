@@ -385,7 +385,7 @@ namespace sw
                     MaterialVariantInfo variant;
                     variant._shaderPath = material->getShaderPath();
                     // 불투명 머티리얼은 등장 디더 변형도 쿠킹한다 — 로드가 끝나 서서히 나타나는 메시가 그 변형으로 그려진다(`GPUMaterialRegistry::permutationHashFor`).
-                    const bool bCooksAppearanceDither = material->getBlendMode() != RHIBlendMode::Transparent;
+                    const bool bCooksAppearanceDither = material->getBlendMode() != BlendMode::Transparent;
                     for ( vector<string>& listDefine : listRuntimeDefine )
                     {
                         variant._listDefine = std::move( listDefine );

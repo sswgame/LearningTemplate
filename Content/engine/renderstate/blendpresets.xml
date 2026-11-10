@@ -1,7 +1,7 @@
 <!--
 	블렌드 프리셋 — 파이프라인 XML 의 _blendPreset 과 머티리얼 XML 의 blendPreset 이 이름으로 고른다. 코드 없이 이 파일에 줄을 더하면 새 프리셋이다.
-	칸: `RHIBlendTargetState`. 계수를 적지 않으면 기본값(One · Zero · Add, 쓰기 RGBA, 블렌드 꺼짐)이다.
-	Transparent · Premultiplied 는 코드가 짓는 PSO 의 값(RHIBlendTargetState::makeStraightAlpha · makePremultipliedAlpha)과 같아야 한다 — TestRenderState 가 대조한다.
+	칸: `BlendTargetState`. 계수를 적지 않으면 기본값(One · Zero · Add, 쓰기 RGBA, 블렌드 꺼짐)이다.
+	Transparent · Premultiplied 는 코드가 짓는 PSO 의 값(BlendTargetState::makeStraightAlpha · makePremultipliedAlpha)과 같아야 한다 — TestRenderState 가 대조한다.
 -->
 <RenderBlendPresetTable>
 	<_listPreset>

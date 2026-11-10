@@ -413,7 +413,7 @@ namespace sw
             // 투명은 압축한 뒤 GPU 가 깊이순으로 다시 정렬한다. 한 워크그룹에 안 담기는 큰 배치만
             // 압축을 포기하고 CPU 가 정렬해 둔 순서를 그대로 쓴다.
             GPUBatchSortMode sortMode = GPUBatchSortMode::None;
-            if ( infoBatch._blendMode == RHIBlendMode::Transparent )
+            if ( infoBatch._blendMode == BlendMode::Transparent )
                 sortMode = ( infoBatch._instanceCount <= kGPUSortMaxElements ) ? GPUBatchSortMode::DepthGPU : GPUBatchSortMode::Preserve;
             _listScratchBatchInfo[argIndex]._sortMode = static_cast<uint32>( sortMode );
         }

@@ -245,7 +245,7 @@ namespace sw
 
     bool MaterialXML::isRenderStateAttribute( const utf8* pName )
     {
-        for ( const PropertyInfo& prop : RHIFixedRenderState::StaticType()->getPropertiesWithBase() )
+        for ( const PropertyInfo& prop : FixedRenderState::StaticType()->getPropertiesWithBase() )
         {
             if ( XMLFields::getAttributeName( prop ) == pName )
                 return true;
@@ -255,15 +255,15 @@ namespace sw
 
     bool MaterialXML::parseRenderFields( XMLNode root, const MaterialRootParams& rootParams, string_view sourceName, MaterialDef& inoutDesc )
     {
-        // 렌더 상태 칸을 0 으로 채운 값과 1 로 채운 값 위에 두 번 읽으면 두 값이 같은 비트가 적은 칸이다(`RHIRenderStateOverride::makeFromReads`). 다른 스키마의 속성은 모르는 칸이 아니다.
+        // 렌더 상태 칸을 0 으로 채운 값과 1 로 채운 값 위에 두 번 읽으면 두 값이 같은 비트가 적은 칸이다(`RenderStateOverride::makeFromReads`). 다른 스키마의 속성은 모르는 칸이 아니다.
         const auto isOtherAttribute = []( const utf8* pName )
         { return isRenderStateAttribute( pName ) == false; };
-        const TypeInfo&     stateType = *RHIFixedRenderState::StaticType();
-        RHIFixedRenderState overZeros = RHIRenderStateOverride::makeFilledState( 0x00 );
-        RHIFixedRenderState overOnes  = RHIRenderStateOverride::makeFilledState( 0xFF );
+        const TypeInfo&  stateType = *FixedRenderState::StaticType();
+        FixedRenderState overZeros = RenderStateOverride::makeFilledState( 0x00 );
+        FixedRenderState overOnes  = RenderStateOverride::makeFilledState( 0xFF );
         if ( XMLFields::readFields( root, &overZeros, stateType, sourceName, {}, isOtherAttribute ) == false || XMLFields::readFields( root, &overOnes, stateType, sourceName, {}, isOtherAttribute ) == false )
             return false;
-        RHIRenderStateOverride stateOverride = RHIRenderStateOverride::makeFromReads( overZeros, overOnes );
+        RenderStateOverride stateOverride = RenderStateOverride::makeFromReads( overZeros, overOnes );
 
         inoutDesc._alphaMode         = rootParams._alphaMode;
         inoutDesc._alphaCutoff       = rootParams._alphaCutoff;
@@ -281,7 +281,7 @@ namespace sw
             SW_LOG_ERROR_ID( "Material.DepthTestNotOverridable", "%#: enableDepthTest belongs to the pass (it binds the depth attachment) - write depthCompare=\"Always\" to pass every pixel", sourceName );
             fail();
         }
-        const bool bNoCull = static_cast<uint8>( stateOverride._mask._cullMode ) != 0 && stateOverride._values._cullMode == RHICullMode::None;
+        const bool bNoCull = static_cast<uint8>( stateOverride._mask._cullMode ) != 0 && stateOverride._values._cullMode == CullMode::None;
         if ( rootParams._bTwoSidedLighting && bNoCull == false )
         {
             SW_LOG_ERROR_ID( "Material.TwoSidedLightingNeedsNoCull", "%#: twoSidedLighting lights the back faces - it needs cullMode=\"None\" too", sourceName );
@@ -314,9 +314,9 @@ namespace sw
                 fail();
             }
         }
-        for ( XMLNode item = blendTargets.isValid() ? blendTargets.findChild( "RHIBlendTargetState" ) : XMLNode{}; item; item = item.findNextSibling( "RHIBlendTargetState" ) )
+        for ( XMLNode item = blendTargets.isValid() ? blendTargets.findChild( "BlendTargetState" ) : XMLNode{}; item; item = item.findNextSibling( "BlendTargetState" ) )
         {
-            RHIBlendTargetState target{};
+            BlendTargetState target{};
             if ( XMLFields::readFields( item, target, sourceName ) == false )
             {
                 fail();
@@ -373,22 +373,22 @@ namespace sw
     void MaterialXML::appendRenderFields( XMLNode root, const MaterialDef& desc )
     {
         // 적은 칸의 비트를 뒤집은 값을 "기본값" 으로 넘기면 적은 칸만 다르다 — 적지 않은 칸은 쓰이지 않는다.
-        const RHIFixedRenderState& values   = desc._renderStateOverride._values;
-        const RHIFixedRenderState& mask     = desc._renderStateOverride._mask;
-        RHIFixedRenderState        flipped  = values;
-        const uint8*               pMask    = reinterpret_cast<const uint8*>( &mask );
-        uint8*                     pFlipped = reinterpret_cast<uint8*>( &flipped );
-        for ( size_t byteIndex = 0; byteIndex < sizeof( RHIFixedRenderState ); ++byteIndex )
+        const FixedRenderState& values   = desc._renderStateOverride._values;
+        const FixedRenderState& mask     = desc._renderStateOverride._mask;
+        FixedRenderState        flipped  = values;
+        const uint8*            pMask    = reinterpret_cast<const uint8*>( &mask );
+        uint8*                  pFlipped = reinterpret_cast<uint8*>( &flipped );
+        for ( size_t byteIndex = 0; byteIndex < sizeof( FixedRenderState ); ++byteIndex )
         {
             pFlipped[byteIndex] = static_cast<uint8>( pFlipped[byteIndex] ^ pMask[byteIndex] );
         }
-        XMLFields::writeFields( root, &values, &flipped, *RHIFixedRenderState::StaticType() );
+        XMLFields::writeFields( root, &values, &flipped, *FixedRenderState::StaticType() );
         if ( desc._listBlendTarget.empty() )
             return;
         const XMLNode list = root.appendChild( MaterialXMLInternal::kBlendTargetListName );
-        for ( const RHIBlendTargetState& target : desc._listBlendTarget )
+        for ( const BlendTargetState& target : desc._listBlendTarget )
         {
-            XMLFields::writeEveryField( list.appendChild( "RHIBlendTargetState" ), target );
+            XMLFields::writeEveryField( list.appendChild( "BlendTargetState" ), target );
         }
     }
 } // namespace sw

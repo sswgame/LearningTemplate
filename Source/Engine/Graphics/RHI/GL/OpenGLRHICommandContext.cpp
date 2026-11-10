@@ -21,104 +21,104 @@ namespace sw
         /** @brief PSO 의 렌더 상태를 GL 상태로 겁니다. GL 은 PSO 가 없어 상태를 모두 다시 건다 — 앞 PSO 의 값이 다음 드로우로 새지 않게 칸을 빠뜨리지 않는다. */
         struct OpenGLRenderStateInternal
         {
-            static GLenum toBlendFactor( RHIBlendFactor factor )
+            static GLenum toBlendFactor( BlendFactor factor )
             {
                 switch ( factor )
                 {
-                    case RHIBlendFactor::Zero:
+                    case BlendFactor::Zero:
                         return GL_ZERO;
-                    case RHIBlendFactor::One:
+                    case BlendFactor::One:
                         return GL_ONE;
-                    case RHIBlendFactor::SrcColor:
+                    case BlendFactor::SrcColor:
                         return GL_SRC_COLOR;
-                    case RHIBlendFactor::InvSrcColor:
+                    case BlendFactor::InvSrcColor:
                         return GL_ONE_MINUS_SRC_COLOR;
-                    case RHIBlendFactor::SrcAlpha:
+                    case BlendFactor::SrcAlpha:
                         return GL_SRC_ALPHA;
-                    case RHIBlendFactor::InvSrcAlpha:
+                    case BlendFactor::InvSrcAlpha:
                         return GL_ONE_MINUS_SRC_ALPHA;
-                    case RHIBlendFactor::DstColor:
+                    case BlendFactor::DstColor:
                         return GL_DST_COLOR;
-                    case RHIBlendFactor::InvDstColor:
+                    case BlendFactor::InvDstColor:
                         return GL_ONE_MINUS_DST_COLOR;
-                    case RHIBlendFactor::DstAlpha:
+                    case BlendFactor::DstAlpha:
                         return GL_DST_ALPHA;
-                    case RHIBlendFactor::InvDstAlpha:
+                    case BlendFactor::InvDstAlpha:
                         return GL_ONE_MINUS_DST_ALPHA;
-                    case RHIBlendFactor::SrcAlphaSaturate:
+                    case BlendFactor::SrcAlphaSaturate:
                         return GL_SRC_ALPHA_SATURATE;
                 }
                 return GL_ONE;
             }
-            static GLenum toBlendOp( RHIBlendOp op )
+            static GLenum toBlendOp( BlendOp op )
             {
                 switch ( op )
                 {
-                    case RHIBlendOp::Add:
+                    case BlendOp::Add:
                         return GL_FUNC_ADD;
-                    case RHIBlendOp::Subtract:
+                    case BlendOp::Subtract:
                         return GL_FUNC_SUBTRACT;
-                    case RHIBlendOp::ReverseSubtract:
+                    case BlendOp::ReverseSubtract:
                         return GL_FUNC_REVERSE_SUBTRACT;
-                    case RHIBlendOp::Min:
+                    case BlendOp::Min:
                         return GL_MIN;
-                    case RHIBlendOp::Max:
+                    case BlendOp::Max:
                         return GL_MAX;
                 }
                 return GL_FUNC_ADD;
             }
-            static GLenum toCompare( RHICompareFunc func )
+            static GLenum toCompare( CompareFunc func )
             {
                 switch ( func )
                 {
-                    case RHICompareFunc::Never:
+                    case CompareFunc::Never:
                         return GL_NEVER;
-                    case RHICompareFunc::Less:
+                    case CompareFunc::Less:
                         return GL_LESS;
-                    case RHICompareFunc::Equal:
+                    case CompareFunc::Equal:
                         return GL_EQUAL;
-                    case RHICompareFunc::LessEqual:
+                    case CompareFunc::LessEqual:
                         return GL_LEQUAL;
-                    case RHICompareFunc::Greater:
+                    case CompareFunc::Greater:
                         return GL_GREATER;
-                    case RHICompareFunc::NotEqual:
+                    case CompareFunc::NotEqual:
                         return GL_NOTEQUAL;
-                    case RHICompareFunc::GreaterEqual:
+                    case CompareFunc::GreaterEqual:
                         return GL_GEQUAL;
-                    case RHICompareFunc::Always:
+                    case CompareFunc::Always:
                         return GL_ALWAYS;
                 }
                 return GL_LEQUAL;
             }
-            static GLenum toStencilOp( RHIStencilOp op )
+            static GLenum toStencilOp( StencilOp op )
             {
                 switch ( op )
                 {
-                    case RHIStencilOp::Keep:
+                    case StencilOp::Keep:
                         return GL_KEEP;
-                    case RHIStencilOp::Zero:
+                    case StencilOp::Zero:
                         return GL_ZERO;
-                    case RHIStencilOp::Replace:
+                    case StencilOp::Replace:
                         return GL_REPLACE;
-                    case RHIStencilOp::IncrementClamp:
+                    case StencilOp::IncrementClamp:
                         return GL_INCR;
-                    case RHIStencilOp::DecrementClamp:
+                    case StencilOp::DecrementClamp:
                         return GL_DECR;
-                    case RHIStencilOp::Invert:
+                    case StencilOp::Invert:
                         return GL_INVERT;
-                    case RHIStencilOp::IncrementWrap:
+                    case StencilOp::IncrementWrap:
                         return GL_INCR_WRAP;
-                    case RHIStencilOp::DecrementWrap:
+                    case StencilOp::DecrementWrap:
                         return GL_DECR_WRAP;
                 }
                 return GL_KEEP;
             }
 
-            static void apply( const RHIRenderState& state )
+            static void apply( const RenderState& state )
             {
-                glPolygonMode( GL_FRONT_AND_BACK, state._fillMode == RHIFillMode::Wireframe ? GL_LINE : GL_FILL );
+                glPolygonMode( GL_FRONT_AND_BACK, state._fillMode == FillMode::Wireframe ? GL_LINE : GL_FILL );
 
-                // 깊이 바이어스 — 다른 백엔드와 같은 상수 · 기울기 두 칸이다(RHIFixedRenderState::_depthBias). 채우기 · 선 다각형 모드 모두에 건다.
+                // 깊이 바이어스 — 다른 백엔드와 같은 상수 · 기울기 두 칸이다(FixedRenderState::_depthBias). 채우기 · 선 다각형 모드 모두에 건다.
                 if ( state._depthBias != 0 || state._slopeScaledDepthBias != 0.0f )
                 {
                     glEnable( GL_POLYGON_OFFSET_FILL );
@@ -131,13 +131,13 @@ namespace sw
                     glDisable( GL_POLYGON_OFFSET_LINE );
                 }
 
-                glFrontFace( state._frontFace == RHIFrontFace::CounterClockwise ? GL_CCW : GL_CW ); // 기본은 DirectX · 클립 제어 경로와 같은 앞면 방향
-                if ( state._cullMode == RHICullMode::None )
+                glFrontFace( state._frontFace == FrontFace::CounterClockwise ? GL_CCW : GL_CW ); // 기본은 DirectX · 클립 제어 경로와 같은 앞면 방향
+                if ( state._cullMode == CullMode::None )
                     glDisable( GL_CULL_FACE );
                 else
                 {
                     glEnable( GL_CULL_FACE );
-                    glCullFace( state._cullMode == RHICullMode::Front ? GL_FRONT : GL_BACK );
+                    glCullFace( state._cullMode == CullMode::Front ? GL_FRONT : GL_BACK );
                 }
 
                 if ( state._bEnableDepthClip != SW_FALSE )
@@ -171,8 +171,8 @@ namespace sw
 
                 for ( uint32 targetIndex = 0; targetIndex < kMaxColorAttachments; ++targetIndex )
                 {
-                    const RHIBlendTargetState& target = state._arrBlendTarget[targetIndex];
-                    const uint32               mask   = static_cast<uint32>( target._colorWriteMask );
+                    const BlendTargetState& target = state._arrBlendTarget[targetIndex];
+                    const uint32            mask   = static_cast<uint32>( target._colorWriteMask );
                     glColorMaski( targetIndex, ( mask & 1u ) != 0, ( mask & 2u ) != 0, ( mask & 4u ) != 0, ( mask & 8u ) != 0 );
                     if ( target._bEnableBlend == SW_FALSE )
                     {
