@@ -22,7 +22,6 @@
 - 흔들리는 단위 테스트 `AudioDataVariantTest.GraphVariantSavesOnlyItsDifference`: 전체 실행 한 번에 "base 'testproject/base.audiograph.xml' could not be read" 로 졌다. 같은 씨앗 · 단독 1800 회로는 재현되지 않았다 — 다시 지면 그 로그의 앞 케이스와 스크래치 도메인 마운트 상태를 본다.
 - 통합 때 확인하지 못한 동작: 셋이 시나리오에서 본다 — Vulkan AMD 브레드크럼 · 128 타임스탬프 슬롯(실장치), DX12 placed 텍스처(`D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES` 가 RT+SRV 를 받는지), 배포 서버(shipping-check — 서버가 `Window/Linux` · `Input/Linux` 를 짓지 않는다).
 
-
 ### 2. 플랫폼 ([PlatformTargets](PlatformTargets.md) "남은 일")
 
 - **Android:** `CookAssets`(호스트 빌드로 굽기) 통과 → `py -3 -m Scripts android-apk --game <게임>` → 실기기에서 기동 · 회전(pre-rotation 방향) · APK 팩 읽기 · 터치. JNI 클립보드(`AndroidClipboard.cpp` 는 지금 `isAvailable` false).
@@ -33,7 +32,7 @@
 
 - **에디터 첫 패널의 느린 프레임:** 새 패널이 처음 열리는 프레임이 약 1 초. `-gv_traceSlowTickMs` 트레이스로 그 프레임의 동기 일을 찾아 비동기로.
 - **시나리오 대기:** boat · clothshowcase(골든 앞 구간이 물리 이력), waterplay(강체 속도 · 잠듦 감시 값으로 조건 대기).
-- **측정:** 유니티 배치 크기 12 · 24 · 48(Release 깨끗한 빌드), [DesignBacklog](DesignBacklog.md) S8 측정 표 7 행, 작업자 W25 가 남긴 GPU 비교(`gpu.timings` — `GPU.<프레임 패스>` · `RT.GPUScene.upload` · `RT.Light.uploadBytes` · `GT.GPUScene.build.viewTransparentOrder`, c05a3ee251 대 지금 — 이득이 노이즈 안이면 되돌린다).
+- **측정:** Tracy 에서 `GT.Frame` 자식 구간 합이 90% 이상인지(W-P0 계측 자동 부착이 들어왔다 — 모자라면 빠진 호출부에 구간), 유니티 배치 크기 12 · 24 · 48(Release 깨끗한 빌드), [DesignBacklog](DesignBacklog.md) S8 측정 표 7 행, 작업자 W25 가 남긴 GPU 비교(`gpu.timings` — `GPU.<프레임 패스>` · `RT.GPUScene.upload` · `RT.Light.uploadBytes` · `GT.GPUScene.build.viewTransparentOrder`, c05a3ee251 대 지금 — 이득이 노이즈 안이면 되돌린다).
 
 ### 4. Shooter3D 총 (사용자 지적)
 
@@ -52,15 +51,11 @@
 
 ### 5-1. 구조 · 성능 설계(2026-11-10 설계안 — 순서대로, 폴더가 겹치지 않는 작업자 단위)
 
-- **W-P0 계측 자동 부착(선결):** `SceneTickScheduler` 가 프레임 시스템 · 씬 서비스 · 틱 배치마다 등록 이름으로 `SW_PROFILE_SCOPE` 를 건다. 오디오 · 물리 드라이버 호출부(`Engine.cpp`)에도 존 하나씩. 지금 존은 Physics 1 · Audio 0 · Scene 2 · Asset 1 이다. 완료: Tracy 에서 `GT.Frame` 자식 합 90% 이상.
-- **W-S1 Engine 6층 하위 티어:** 바닥 기능(Physics · Visual · Audio · UserSettings · Net · TileMap · Navigation)과 합성 기능(Animation · VFX · Environment · Destruction · Character · UI …)으로 가른다. 층 안 상호 include 5쌍(Animation↔Character · Physics · Visual, TileMap↔Visual, Telemetry↔UserSettings)을 끊는다.
-- **W-S2 `GameFrameworkLayers.toml`:** Runtime 에 Foundation 0 · World 1 · Character 2 · Gameplay/Online 3 의 층 부분과 `#error` 껍데기를 둔다. 역방향 include 24 를 끊고, 생성기 `Scripts/generate/EngineLayers.py` 를 매개변수화한다.
-- **W-S3 등록 사슬 통일 · `state-shape` 형식화:** `s_pHead` 손 사슬(Audio · RHI · Module 2 · UI 접근성 · UserSettings)을 `ModuleEntryRegistrar`/`RegistrationList` 로 옮기고 `MutableStaticExceptions` 의 그 줄을 지운다. `Archive` 를 내부 헤더로 숨기고 린트 행을 지운다.
-- **W-S4 `GameObjectManager.h` 허브 해체(W-P0 뒤):** 포함 TU 428 · include 30 이다. 소유 타입을 pimpl 로, 템플릿 전달은 `.inl` 로. `-ftime-trace` 집계로 재컴파일 TU · ms 를 전후 비교한다.
+- **W-S4 `GameObjectManager.h` 허브 해체:** 포함 TU 428 · include 30 이다. 소유 타입을 pimpl 로, 템플릿 전달은 `.inl` 로. `-ftime-trace` 집계로 재컴파일 TU · ms 를 전후 비교한다.
 - **W-R1 `FramePassExecutor` 분할 → 프레임 아레나:** 3257줄을 그래프 짓기 · 패스 라이브러리 · 제출로 나눈다(성능 변화 0). 그 뒤 프레임 지역 `vector` 를 `LinearAllocator` 기반 `frame_vector` 로 옮긴다(RT 프레임 힙 할당 0).
 - **W-R2 PSO 배치 색인(W-R1 뒤):** 배치를 만들 때 PSO 핸들을 한 번 풀어 둔다. `RT.PSO.ensureMaterial` 전후를 재고, 흔들림 안이면 되돌린다.
 - **W-E1 패널 열림 훅:** `IEditorPanel::onPanelOpened` 에서만 비동기 준비를 시작하고, View 는 준비 전에 뼈대만 그린다(3절 "첫 패널 느린 프레임" 측정이 후보를 고른다).
-- **W-G1 분할(W-S2 뒤):** `InputMap`(데이터 · 평가기 · 상태 — Enhanced Input 자리), `PrefabAsset`(포맷 셋 + 스폰), `AbilityComponent`(어트리뷰트 · 이펙트 · 스펙 컨테이너).
+- **W-G1 분할:** `InputMap`(데이터 · 평가기 · 상태 — Enhanced Input 자리), `PrefabAsset`(포맷 셋 + 스폰), `AbilityComponent`(어트리뷰트 · 이펙트 · 스펙 컨테이너).
 
 ### 5-2. RHI 진단(2026-11-10 — 결함 먼저, 폴더가 겹치는 단위는 순서대로)
 
@@ -78,7 +73,7 @@
 
 GameObject/Component API 는 저작 · 수명 · 직렬화 층으로 두고, 프레임마다 도는 일은 읽기 · 쓰기 종류를 선언한 잡으로, 핫 데이터는 종류별 SoA(`SceneTransformStorage` 일반화)로 옮긴다. 완전 ECS 는 기각했다(컴포넌트 타입 229 · `getComponent<>` 593 · 리플렉션 · 프리팹 전부 재작성). 단계마다 빌드 · 테스트가 통과해야 하고, 이득이 흔들림 안이면 되돌린다.
 
-0. **측정 기반(W-P0 뒤):** `-workers=N` 인자, Debug 카운터(`getComponentLookups` · `virtualTicks`), `load/*` 4 시나리오 × 워커 1 · 2 · 4 · 8 기준선을 S8 표에.
+0. **측정 기반:** `-workers=N` 인자, Debug 카운터(`getComponentLookups` · `virtualTicks`), `load/*` 4 시나리오 × 워커 1 · 2 · 4 · 8 기준선을 S8 표에.
 1. **일괄 틱이 기본:** 리플렉션 생성기가 `onTick` 을 재정의한 타입(102 개)에 `TickBatchOf` 등록을 자동으로 낸다. 지금 수동 등록은 `StressTestMover` 하나뿐이다. 완료: `batchElements/objectEntries ≥ 0.9`.
    - **서브틱 · 선행 조건은 그대로 돌아야 한다(사용자 요구).** 지금 규칙(`TickRegistry::findBatchFunction`, `TickRegistry.cpp:814`)을 유지한다.
      - 일괄 경로는 그 그룹의 틱 항목이 주 틱 하나뿐이고 선행 조건이 없는 오브젝트만 탄다.
@@ -110,7 +105,7 @@ GameObject/Component API 는 저작 · 수명 · 직렬화 층으로 두고, 프
 6. **엔진 공간 색인:** `SceneSpatialGrid` 서비스(월드 버전으로 증분, 이중 버퍼 읽기). GF `InteractionSpatialIndex` · `ZoneOccupantIndex` 는 읽기만. `TagIndex` 는 세대 스냅샷으로.
 7. W-S4 허브 해체(5-1) → 8. `StructuralChangeBuffer` 를 스레드별 버퍼 + (writerID, 순번) 병합으로(틱 뒤 큐가 뮤텍스 하나라 투사체 수천에서 줄 선다).
 
-병렬 작업자: A(0 · 1, Task · 생성기 · TickBatch), B(3 · 4, `Engine/Physics/**` — `-1` 기본값 브랜치 병합 뒤), C(2, A 뒤), D(6, C 뒤). 확인할 결함 후보: 틱 본문 안 중첩 `runParallel` 이 돕기 중 TLS 틱 상태를 비워 writerID 가 0 이 되는 것(`SceneTickScheduler.cpp:83`), 남의 오브젝트에 `setCanEverTick` 을 쓰는 비트필드 경쟁(`Component.h:620`).
+병렬 작업자: A(0 · 1, Task · 생성기 · TickBatch), B(3 · 4, `Engine/Physics/**`), C(2, A 뒤), D(6, C 뒤). 확인할 결함 후보: 틱 본문 안 중첩 `runParallel` 이 돕기 중 TLS 틱 상태를 비워 writerID 가 0 이 되는 것(`SceneTickScheduler.cpp:83`), 남의 오브젝트에 `setCanEverTick` 을 쓰는 비트필드 경쟁(`Component.h:620`).
 
 ### 5-4. 리플렉션(2026-11-10 설계 — 규모: REFLECT 1,408 · PROPERTY 6,708 · ENUM 413, 생성 TU 가 전체 컴파일 CPU 의 20 %(Debug) · 17 %(Release))
 
@@ -129,7 +124,7 @@ GameObject/Component API 는 저작 · 수명 · 직렬화 층으로 두고, 프
   - **(c) 타입 특성 수집기:** 재정의(`onTick` · `onSubTick` · `serializeState`)를 특성 비트로 모은다. `REFLECT( TickMode = … )` 를 받아 `TickBatchRegistry` 등록을 생성 코드에 낸다. 그러면 손 매크로 `SW_REGISTER_TICK_BATCH` 가 사라진다.
   - **(d) 경고를 생성 오류로:** 클래스 템플릿 `REFLECT` · 멤버 함수 템플릿 `FUNCTION` 은 지금 경고만 남기고 건너뛴다. `#if` 아래 `PROPERTY` 가 조용히 빠지는 것도 막는다. 같은 모듈 안에 리프 이름이 겹치면 오류로 낸다.
 - **W-R5 빌드 시간(W-R3 와 병렬 — 파일이 다르다):** 헤더당 `.gen.cpp` 대신 모듈 안 8~16 헤더 묶음 TU 로 짓는다(PCH 를 1,465 번 연다). `.gen.meta.cpp` 는 같은 TU 의 `#if` 절로, 의존은 헤더별로 귀속한다. 목표는 생성 비중 8 % 미만이다.
-- **W-R4 프로퍼티 방문자 하나(W-R3 · 인스펙터 값 행 뒤):** 직렬화 9 루프 · 검증 · 문서 · 인스펙터 gather · 상태 해시 기본 구현이 `ReflectVisit` 하나를 쓴다. 지금 `foldStateHash` 는 손으로 써서 새 칸이 해시에서 빠질 수 있다. 소비자가 테스트뿐인 `Replicated` 메타데이터는 여기서 첫 소비자를 얻는다.
+- **W-R4 프로퍼티 방문자 하나(W-R3 뒤):** 직렬화 9 루프 · 검증 · 문서 · 인스펙터 gather · 상태 해시 기본 구현이 `ReflectVisit` 하나를 쓴다. 지금 `foldStateHash` 는 손으로 써서 새 칸이 해시에서 빠질 수 있다. 소비자가 테스트뿐인 `Replicated` 메타데이터는 여기서 첫 소비자를 얻는다.
 - **W-R6 밀집 타입 색인:** 5-3 의 5 단계(`ComponentDataStore<T>`)와 함께만.
 
 ### 5-5. 상용 대비 고도화(2026-11-10 진단 — 5-1 ~ 5-4 밖)
@@ -160,7 +155,7 @@ GameObject/Component API 는 저작 · 수명 · 직렬화 층으로 두고, 프
   - `ServerApp --check-config` 를 둔다(잘못된 설정은 종료 11).
   - `OpsHTTPEndpoint` 는 인증 없는 GET 이다. 바인드 주소를 루프백 · 사설로 형식에서 제한하고, 외부 바인드는 토큰 필수로 한다.
 - **U1 햅틱 · UI 포커스 내비:** 진동 · 트리거 출력 API 가 없다(grep 0). `IInputFeedbackDevice` 와 `*.haptic.xml` 을 둔다. 패드 전용 메뉴 탐색(방향 포커스)을 확인하고 없으면 더한다.
-- **A1 애니메이션 포즈 노드 등록식(W-S1 뒤, 평가 경로는 5-3 뒤):**
+- **A1 애니메이션 포즈 노드 등록식(평가 경로는 5-3 뒤):**
   - 포즈 노드가 `None · BlendPoses` 둘뿐이라(`AnimationGraphAsset.h:106`) 새 블렌드마다 enum · 로더 · 플레이어를 고친다. 리그 노드처럼 등록표로 바꾼다.
   - 그 위에 Mirror · Montage(섹션 · 분기)를 더한다.
 - **R1 에셋 리다이렉터(5-4 뒤):** GUID 전환은 기각한다(경로 id 가 언리얼 SoftObjectPath 자리). `redirects.xml`(옛 → 새)를 `AssetPaths` 앞단에서 풀어, 세이브 · 서버에 적힌 옛 경로가 산다. 린트가 남은 참조를 보고한다.
@@ -168,7 +163,7 @@ GameObject/Component API 는 저작 · 수명 · 직렬화 층으로 두고, 프
   - 엔티티 상태 바이트를 게임이 손으로 양자화한다. 그래서 칸 하나를 더하면 서버 · 클라 두 곳을 고쳐야 한다.
   - `PROPERTY( Replicated, Quantize = … )` 로 작성기를 생성하고, 스키마 해시를 와이어 버전에 합친다.
   - `kMaxEntityBytes` 초과는 첫 경고만 남기고 엔티티가 사라진다 — `registerEntity` 의 오류로 바꾼다.
-- **E1 되돌리기를 형식으로(에디터 MVVM 3 단계 뒤):** 씬 변이 명령이 `EditorTransaction&` 를 요구하게 한다. 시나리오 `editor/undocoverage` 는 등록 명령 전수를 실행 → undo 한 뒤 씬 해시가 같은지 본다.
+- **E1 되돌리기를 형식으로:** 씬 변이 명령이 `EditorTransaction&` 를 요구하게 한다. 시나리오 `editor/undocoverage` 는 등록 명령 전수를 실행 → undo 한 뒤 씬 해시가 같은지 본다.
 - **E2 런타임 디버거 한 자리(5-1 W-E1 뒤):** AI 섹션 · 시퀀스 디버거 · 애니 리와인드 · HUD 섹션을 `IDebugSource` 등록표 하나로 묶는다. 선택 오브젝트에 연동하는 패널을 둔다(언리얼 Gameplay Debugger 자리).
 - **G1 장르 수직 슬라이스(T1 · T2 뒤):** 완결 루프가 없는 게임마다 `slice.scenario.xml` 을 둔다(시작 → 목표 → 결과 → 저장 · 복원 해시 동일).
 
