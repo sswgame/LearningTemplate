@@ -590,6 +590,10 @@ namespace sw
         VulkanRHISwapChain* useSwapChain( IRHISwapChain* pSwapChain );
         /** @brief 다른 창의 스왑체인 · 프레임버퍼 · 세마포어를 새 크기로 다시 만듭니다. GPU 는 비어 있어야 합니다. */
         [[nodiscard]] bool rebuildWindowSwapChain( VulkanRHISwapChain& swapChain, uint32 width, uint32 height );
+        /** @brief `useSwapChain` 이 낡았다고 본 창들을 한 번의 GPU 대기로 다시 만듭니다(`beginFrame` 첫머리 — 메인 창 재생성과 같은 자리). */
+        void rebuildPendingWindowSwapChains();
+        /** @brief 이번 제출이 기다릴 세마포어 · 단계를 재사용 목록(`_listSubmitWait*`)에 모읍니다(acquire 는 색 출력, 비동기 컴퓨트는 모든 단계). 프레임마다 할당하지 않는다. */
+        void gatherSubmitWaits();
         /**
          * @brief 서피스를 잃었을 때(VK_ERROR_SURFACE_LOST_KHR) 같은 창 위에 서피스와 스왑체인을 다시 만듭니다. 스왑체인만이 아니라 서피스부터 만들어야 합니다.
          * @return 다시 만들었으면 true 입니다. 창이 사라졌거나 새 서피스를 그래픽스 큐가 프레젠트할 수 없으면 false 이며, 다음 프레임에 다시 시도합니다.
@@ -844,6 +848,12 @@ namespace sw
         vector<VkSemaphore> _listPendingAcquireWait;
         /// @brief 조인이 남긴 컴퓨트 신호 세마포어입니다. 다음 그래픽스 제출(포크 · 조인의 비우기 · 즉시 모드 · `endFrame`)이 모두 기다리고 비운다.
         vector<VkSemaphore> _listPendingComputeWait;
+        /// @brief 제출 하나가 기다리고 신호할 세마포어의 재사용 목록입니다(`gatherSubmitWaits` · `endFrame`). 렌더 스레드만 쓴다.
+        vector<VkSemaphore>          _listSubmitWaitSemaphore;
+        vector<VkPipelineStageFlags> _listSubmitWaitStage;
+        vector<VkSemaphore>          _listSubmitSignalSemaphore;
+        /// @brief 이번 프레임에 낡은 것을 본 다른 창입니다. 프레임 중간에 GPU 를 비우지 않고 다음 `beginFrame` 이 다시 만든다.
+        vector<VulkanRHISwapChain*> _listWindowRebuild;
         /// @brief 이번 프레임에 비동기 컴퓨트 제출이 신호한 세마포어입니다(번호 = 순번 + 1 이 `RHIQueueSyncPoint`). `endFrame` 이 아직 기다리지 않은 것을 모두 기다린다.
         vector<VkSemaphore> _listAsyncSignal;
         /// @brief `_listAsyncSignal` 마다 그래픽스가 이미 기다렸는지입니다(이진 세마포어는 신호 한 번에 대기 한 번이다).

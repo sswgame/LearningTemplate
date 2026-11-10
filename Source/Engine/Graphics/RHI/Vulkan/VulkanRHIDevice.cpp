@@ -80,6 +80,10 @@ namespace sw
         , _listFrameSwapChain{}
         , _listPendingAcquireWait{}
         , _listPendingComputeWait{}
+        , _listSubmitWaitSemaphore{}
+        , _listSubmitWaitStage{}
+        , _listSubmitSignalSemaphore{}
+        , _listWindowRebuild{}
         , _listAsyncSignal{}
         , _listAsyncSignalWaited{}
         , _listAsyncSemaphorePool{}
@@ -547,6 +551,7 @@ namespace sw
             }
             _listWindowSwapChain.clear();
             _listFrameSwapChain.clear();
+            _listWindowRebuild.clear();
             _swapChain.destroy( _device );
             _swapChain.destroySemaphores( _device );
             destroyFrameFences();
@@ -1585,11 +1590,32 @@ namespace sw
     void VulkanRHIDevice::destroySwapChainInternal( IRHISwapChain& swapChain )
     {
         VulkanRHISwapChain& window = static_cast<VulkanRHISwapChain&>( swapChain ); // 이 디바이스가 만든 것만 들어온다(`createSwapChain`)
+        (void)VectorUtil::removeIf( _listWindowRebuild, [&window]( const VulkanRHISwapChain* pEntry )
+        { return pEntry == &window; } );
         window.destroy( _device );
         window.destroySemaphores( _device );
         window.destroySurface( _instance );
         (void)VectorUtil::removeIf( _listWindowSwapChain, [&window]( const unique_ptr<VulkanRHISwapChain>& pEntry )
         { return pEntry.get() == &window; } );
+    }
+
+    void VulkanRHIDevice::rebuildPendingWindowSwapChains()
+    {
+        if ( _listWindowRebuild.empty() )
+            return;
+        {
+            ScopedLock<mutex> queueLock{ _queueMutex };
+            reportQueueResult( static_cast<int32>( vkDeviceWaitIdle( _device ) ), "rebuildPendingWindowSwapChains: vkDeviceWaitIdle" );
+        }
+        if ( isDeviceLost() == false )
+        {
+            _frameFenceRing.markAllCompleted(); // GPU 가 쉰다
+            for ( VulkanRHISwapChain* pWindow : _listWindowRebuild )
+            {
+                (void)rebuildWindowSwapChain( *pWindow, pWindow->getExtentWidth(), pWindow->getExtentHeight() ); // 실패 알림은 안에서 남긴다. 다음 획득이 다시 본다
+            }
+        }
+        _listWindowRebuild.clear();
     }
 
     bool VulkanRHIDevice::rebuildWindowSwapChain( VulkanRHISwapChain& swapChain, uint32 width, uint32 height )
@@ -1618,14 +1644,11 @@ namespace sw
         VulkanSwapChainStatus status = window.isValid() ? window.acquireNextImage( _device, getFrameSlot() ) : VulkanSwapChainStatus::OutOfDate;
         if ( status == VulkanSwapChainStatus::OutOfDate || status == VulkanSwapChainStatus::SurfaceLost )
         {
-            // 창 크기가 바뀌었거나 표면이 낡았다 — 메인 창의 beginFrame 처럼 그 자리에서 다시 만든다(GPU 를 비운다 — 창 크기 변경 중에만 드물게 온다).
-            {
-                ScopedLock<mutex> queueLock{ _queueMutex };
-                reportQueueResult( static_cast<int32>( vkDeviceWaitIdle( _device ) ), "useSwapChain: vkDeviceWaitIdle" );
-            }
-            if ( isDeviceLost() || rebuildWindowSwapChain( window, window.getExtentWidth(), window.getExtentHeight() ) == false )
-                return nullptr;
-            status = window.acquireNextImage( _device, getFrameSlot() );
+            // 창 크기가 바뀌었거나 표면이 낡았다 — 프레임 중간에 GPU 를 비우지 않고 이번 프레임은 이 창을 건너뛴다.
+            // 다음 beginFrame 이 메인 창 재생성과 같은 자리에서 다시 만든다(언리얼 FVulkanViewport 도 재생성을 프레임 경계의 플러시에서 한다 — 기억에 의존한 비교).
+            if ( std::find( _listWindowRebuild.begin(), _listWindowRebuild.end(), &window ) == _listWindowRebuild.end() )
+                _listWindowRebuild.push_back( &window );
+            return nullptr;
         }
         if ( status == VulkanSwapChainStatus::DeviceLost )
             reportQueueResult( static_cast<int32>( VK_ERROR_DEVICE_LOST ), "useSwapChain: vkAcquireNextImageKHR" );
@@ -2153,6 +2176,7 @@ namespace sw
         }
         if ( _bSwapChainDirty && recreateSwapChain() )
             _bSwapChainDirty = 0;
+        rebuildPendingWindowSwapChains();
 
         // 재생성이 실패하면 스왑체인 · 동기화 객체가 없는 상태이므로 프레임을 건너뛰고 다음 프레임에 다시 시도한다.
         if ( _swapChain.isValid() == false || _listInFlightFence.empty() )
@@ -2312,14 +2336,11 @@ namespace sw
             _listAsyncSignalWaited[signalIndex] = SW_TRUE;
         }
         // acquire 대기는 이미지마다 한 번뿐이다. 즉시 모드에서 앞선 제출이 이미 소비했으면 남은 것만 기다린다.
-        vector<VkSemaphore>          listWaitSemaphore = _listPendingAcquireWait;
-        vector<VkPipelineStageFlags> listWaitStage( _listPendingAcquireWait.size(), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT );
-        listWaitSemaphore.insert( listWaitSemaphore.end(), _listPendingComputeWait.begin(), _listPendingComputeWait.end() );
-        listWaitStage.insert( listWaitStage.end(), _listPendingComputeWait.size(), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT );
+        gatherSubmitWaits();
         _listPendingComputeWait.clear();
-        submitInfo.waitSemaphoreCount = static_cast<uint32>( listWaitSemaphore.size() );
-        submitInfo.pWaitSemaphores    = listWaitSemaphore.data();
-        submitInfo.pWaitDstStageMask  = listWaitStage.data();
+        submitInfo.waitSemaphoreCount = static_cast<uint32>( _listSubmitWaitSemaphore.size() );
+        submitInfo.pWaitSemaphores    = _listSubmitWaitSemaphore.data();
+        submitInfo.pWaitDstStageMask  = _listSubmitWaitStage.data();
 
         // 프레임 세그먼트와 리스트 버퍼를 기록 순서 그대로 한 번에 제출한다. 같은 큐에 대한
         // 제출 순서가 곧 실행 순서라, 세그먼트 사이의 리소스 의존성이 그대로 지켜진다.
@@ -2328,16 +2349,16 @@ namespace sw
 
         // renderFinished 를 기다리는 건 present 뿐이다. present 하지 않는 프레임까지 시그널하면
         // 아무도 소비하지 않은 이진 세마포어를 거듭 시그널하게 되어 규약 위반이다.
-        vector<VkSemaphore> listSignalSemaphore;
+        _listSubmitSignalSemaphore.clear();
         if ( bPresent )
         {
-            listSignalSemaphore.push_back( _swapChain.getRenderFinishedSemaphore() );
+            _listSubmitSignalSemaphore.push_back( _swapChain.getRenderFinishedSemaphore() );
             for ( const VulkanRHISwapChain* pWindow : _listFrameSwapChain )
             {
-                listSignalSemaphore.push_back( pWindow->getRenderFinishedSemaphore() );
+                _listSubmitSignalSemaphore.push_back( pWindow->getRenderFinishedSemaphore() );
             }
-            submitInfo.signalSemaphoreCount = static_cast<uint32>( listSignalSemaphore.size() );
-            submitInfo.pSignalSemaphores    = listSignalSemaphore.data();
+            submitInfo.signalSemaphoreCount = static_cast<uint32>( _listSubmitSignalSemaphore.size() );
+            submitInfo.pSignalSemaphores    = _listSubmitSignalSemaphore.data();
         }
 
         // 이번 프레임 기록 중 등록된 지연 해제(enqueueGPURelease)는 기록 시리얼(`_frameFenceRing`)이 실제로 끝났다고 확인될 때까지(beginFrame) 보류된다.
@@ -2570,20 +2591,25 @@ namespace sw
         openNextFrameSegment();
     }
 
-    void VulkanRHIDevice::submitPendingGraphics( VkSemaphore signal )
+    void VulkanRHIDevice::gatherSubmitWaits()
     {
         // acquire 대기는 색 출력 단계에서, 비동기 컴퓨트 대기는 모든 단계에서 기다린다(컴퓨트 결과를 정점 · 간접 인자 단계부터 읽는다).
-        vector<VkSemaphore>          listWaitSemaphore = _listPendingAcquireWait;
-        vector<VkPipelineStageFlags> listWaitStage( _listPendingAcquireWait.size(), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT );
-        listWaitSemaphore.insert( listWaitSemaphore.end(), _listPendingComputeWait.begin(), _listPendingComputeWait.end() );
-        listWaitStage.insert( listWaitStage.end(), _listPendingComputeWait.size(), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT );
+        _listSubmitWaitSemaphore.assign( _listPendingAcquireWait.begin(), _listPendingAcquireWait.end() );
+        _listSubmitWaitStage.assign( _listPendingAcquireWait.size(), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT );
+        _listSubmitWaitSemaphore.insert( _listSubmitWaitSemaphore.end(), _listPendingComputeWait.begin(), _listPendingComputeWait.end() );
+        _listSubmitWaitStage.insert( _listSubmitWaitStage.end(), _listPendingComputeWait.size(), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT );
+    }
+
+    void VulkanRHIDevice::submitPendingGraphics( VkSemaphore signal )
+    {
+        gatherSubmitWaits();
         VkSubmitInfo flushInfo{};
         flushInfo.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         flushInfo.commandBufferCount   = static_cast<uint32>( _listPendingSubmit.size() );
         flushInfo.pCommandBuffers      = _listPendingSubmit.data();
-        flushInfo.waitSemaphoreCount   = static_cast<uint32>( listWaitSemaphore.size() );
-        flushInfo.pWaitSemaphores      = listWaitSemaphore.data();
-        flushInfo.pWaitDstStageMask    = listWaitStage.data();
+        flushInfo.waitSemaphoreCount   = static_cast<uint32>( _listSubmitWaitSemaphore.size() );
+        flushInfo.pWaitSemaphores      = _listSubmitWaitSemaphore.data();
+        flushInfo.pWaitDstStageMask    = _listSubmitWaitStage.data();
         flushInfo.signalSemaphoreCount = signal != VK_NULL_HANDLE ? 1u : 0u;
         flushInfo.pSignalSemaphores    = &signal;
         {

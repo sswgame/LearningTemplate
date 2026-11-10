@@ -15,6 +15,7 @@
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/WebGPU/WebGPURHICommandContext.h"
 #include "Engine/Graphics/RHI/WebGPU/WebGPURHIResourceFactory.h"
+#include "Engine/Profiling/FrameProfiler.h"
 
 namespace sw
 {
@@ -162,6 +163,9 @@ namespace sw
 
     void WebGPUBindGroupCache::clear()
     {
+        // NEXT 5-2 측정: 프레임마다 비우는 캐시가 얼마나 다시 짓는지 센다(만든 수 ÷ 건 수). 높으면 프레임 펜스로 은퇴시키는 캐시로 바꾼다.
+        SW_PROFILE_COUNT( "RT.Bind.bindGroupCreates", _createdCount );
+        SW_PROFILE_COUNT( "RT.Bind.bindGroupHits", _hitCount );
         for ( auto& [hash, listBucket] : _mapGroup )
         {
             (void)hash;

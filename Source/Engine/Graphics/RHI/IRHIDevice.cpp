@@ -195,6 +195,14 @@ namespace sw
         return restoreSurfaceInternal();
     }
 
+    ShaderTargetFormat IRHIDevice::getShaderTargetFormat() const
+    {
+        const RHIBackendInfo* const pInfo = RHIBackendInfoTable::find( getBackendType() );
+        if ( pInfo == nullptr )
+            SW_FATAL( "IRHIDevice::getShaderTargetFormat: backend %# is not in the backend table", static_cast<uint32>( getBackendType() ) );
+        return pInfo->_shaderTarget;
+    }
+
     uint64 IRHIDevice::getGPUIdleWaitCount() const
     {
         return _pDeferredHandleQueue->_gpuIdleWaitCount.load( std::memory_order_relaxed );

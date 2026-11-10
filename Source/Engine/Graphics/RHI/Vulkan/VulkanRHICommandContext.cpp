@@ -10,6 +10,7 @@
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
+#include "Engine/Profiling/FrameProfiler.h"
 
 #include <vulkan/vulkan.h>
 
@@ -785,6 +786,9 @@ namespace sw
         }
         if ( writeCount > 0 )
             vkUpdateDescriptorSets( _pDevice->_device, writeCount, arrWrite, 0, nullptr );
+        // NEXT 5-2 측정: 드로마다 슬롯 세트를 새로 쓰는지 센다(갱신 수 ÷ 드로 수). 높으면 동적 오프셋 · 푸시 디스크립터로 옮긴다.
+        SW_PROFILE_COUNT( "RT.Bind.descriptorUpdates", writeCount );
+        SW_PROFILE_COUNT( "RT.Bind.descriptorSetFlushes", 1 );
 
         vkCmdBindDescriptorSets( cmd, bCompute ? VK_PIPELINE_BIND_POINT_COMPUTE : VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, 0, 1, &set, 0, nullptr );
         state._bDirty = SW_FALSE;

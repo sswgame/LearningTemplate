@@ -86,7 +86,7 @@ namespace sw
         // 1) 바인딩 레이아웃: PSO 를 만든 desc 로 리플렉션 레이아웃을 만들어 핸들에 연결한다
         // ------------------------------------------------------------------------------
         /** @brief PSO 생성 desc 로 레이아웃을 만들고(캐시) 핸들에 연결합니다. 0 핸들은 무시합니다. */
-        void registerLayout( RHIPipelineStateHandle pso, const RHIPipelineStateDesc& desc, RHIBackend backend );
+        void registerLayout( RHIPipelineStateHandle pso, const RHIPipelineStateDesc& desc, ShaderTargetFormat targetFormat );
         /** @brief PSO 핸들의 바인딩 레이아웃입니다. 없으면 nullptr 입니다. */
         const ShaderBindingLayout* findLayout( RHIPipelineStateHandle pso ) const;
         /**

@@ -40,13 +40,13 @@ namespace sw
         virtual void destroyPipelineState( RHIPipelineStateHandle pso ) = 0;
 
         /** @brief 렌더 패스 객체를 만듭니다. */
-        virtual RHIRenderPassHandle createRenderPass( const RHIRenderPassDesc& desc ) = 0;
+        [[nodiscard]] virtual RHIRenderPassHandle createRenderPass( const RHIRenderPassDesc& desc ) = 0;
 
         /** @brief 렌더 패스 객체를 해제합니다. */
         virtual void destroyRenderPass( RHIRenderPassHandle pass ) = 0;
 
         /** @brief 상수 버퍼를 만듭니다. */
-        virtual RHIBufferHandle createConstantBuffer( uint32 size ) = 0;
+        [[nodiscard]] virtual RHIBufferHandle createConstantBuffer( uint32 size ) = 0;
 
         /**
          * @brief 상수 버퍼 데이터를 갱신합니다.
@@ -61,7 +61,7 @@ namespace sw
         virtual void updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) = 0;
 
         /** @brief 구조화(Structured) 버퍼나 스토리지(Storage) 버퍼를 만듭니다. */
-        virtual RHIBufferHandle createStructuredBuffer( uint32 elementSize, uint32 elementCount ) = 0;
+        [[nodiscard]] virtual RHIBufferHandle createStructuredBuffer( uint32 elementSize, uint32 elementCount ) = 0;
 
         /**
          * @brief 구조화 버퍼나 스토리지 버퍼의 **여러 조각**을 한 번에 갱신합니다.
@@ -90,7 +90,7 @@ namespace sw
         }
 
         /** @brief 내용을 담아 정점 버퍼를 만듭니다. 레이아웃은 PSO 의 입력 레이아웃(`constant::render::getMeshVertexAttributes`)이 정합니다. */
-        virtual RHIBufferHandle createVertexBuffer( const void* pData, uint32 sizeBytes ) = 0;
+        [[nodiscard]] virtual RHIBufferHandle createVertexBuffer( const void* pData, uint32 sizeBytes ) = 0;
 
         /**
          * @brief `createVertexBuffer` · `createIndexBuffer` 로 만든 정점 · 인덱스 버퍼의 **여러 조각**을 갱신합니다. 메시 풀(`GPUMeshVertexPool`)의 부분 갱신용입니다.
@@ -109,7 +109,7 @@ namespace sw
          * @details 내용이 있는 `Vertex` 용도는 createVertexBuffer 로, `Index` 용도는 createIndexBuffer 로 넘긴다
          *          (`_elementSize` 가 2 면 uint16 인덱스).
          */
-        virtual RHIBufferHandle createBuffer( const RHIBufferDesc& desc )
+        [[nodiscard]] virtual RHIBufferHandle createBuffer( const RHIBufferDesc& desc )
         {
             const bool bHasVertexInitialData = EnumUtil::hasFlag( desc._usage, RHIBufferUsage::Vertex ) && desc._pInitialData != nullptr && desc._sizeBytes > 0;
             if ( bHasVertexInitialData )
@@ -136,7 +136,7 @@ namespace sw
          *          주의: 구조화 버퍼로 대신하면 안 된다(D3D11 은 BUFFER_STRUCTURED 에 BIND_INDEX_BUFFER 를 붙일 수 없고, Vulkan 은
          *          검증 레이어가 용도 위반으로 잡는다). 드라이버가 받아 줘서 그려지는 백엔드도 있어 이미지만으로는 드러나지 않는다.
          */
-        virtual RHIBufferHandle createIndexBuffer( const void* pData, uint32 sizeBytes ) = 0;
+        [[nodiscard]] virtual RHIBufferHandle createIndexBuffer( const void* pData, uint32 sizeBytes ) = 0;
 
         /** @brief GPU 버퍼 리소스를 삭제합니다. */
         virtual void destroyBuffer( RHIBufferHandle buffer ) = 0;
@@ -158,7 +158,7 @@ namespace sw
         [[nodiscard]] virtual bool readReadbackBuffer( RHIBufferHandle readback, uint32 sizeBytes, void* pDestination ) = 0;
 
         /** @brief 2D 텍스처(렌더 타깃 포함)를 만듭니다. */
-        virtual RHITextureHandle createTexture2D( const RHITextureDesc& desc ) = 0;
+        [[nodiscard]] virtual RHITextureHandle createTexture2D( const RHITextureDesc& desc ) = 0;
 
         /**
          * @brief @p desc 텍스처를 힙에 놓을 때의 크기 · 정렬입니다(DX12 `GetResourceAllocationInfo`). 능력 `_bPlacedTextures` 가 없으면 {0, 0} 이다.
@@ -170,7 +170,7 @@ namespace sw
             return {};
         }
         /** @brief 렌더 타깃 · 깊이 텍스처를 겹쳐 놓을 힙을 만듭니다. 능력이 없거나 못 만들면 0 입니다(오류는 백엔드가 남긴다). */
-        virtual RHITransientHeapHandle createTransientHeap( uint64 sizeBytes )
+        [[nodiscard]] virtual RHITransientHeapHandle createTransientHeap( uint64 sizeBytes )
         {
             (void)sizeBytes;
             return 0;
@@ -181,7 +181,7 @@ namespace sw
          * @brief 힙 @p heap 의 @p offsetBytes 에 텍스처를 놓습니다. 서술 · 뷰 · 파괴 규칙은 `createTexture2D` 와 같다. 능력이 없으면 0 입니다.
          * @details 같은 바이트를 쓰는 다른 텍스처가 앞서 쓰였을 수 있으므로 프레임의 첫 쓰기 앞에 `IRHICommandList::beginTextureAlias` 를 부르고, 첫 쓰기는 지우기여야 한다(내용이 정해져 있지 않다).
          */
-        virtual RHITextureHandle createPlacedTexture2D( const RHITextureDesc& desc, RHITransientHeapHandle heap, uint64 offsetBytes )
+        [[nodiscard]] virtual RHITextureHandle createPlacedTexture2D( const RHITextureDesc& desc, RHITransientHeapHandle heap, uint64 offsetBytes )
         {
             (void)desc;
             (void)heap;
@@ -352,9 +352,9 @@ namespace sw
 
     protected:
         /** @brief 백엔드의 그래픽스 PSO 생성입니다 — 부르는 쪽은 `createPipelineState` 를 쓴다(컴파일 시계). */
-        virtual RHIPipelineStateHandle createPipelineStateNative( const RHIPipelineStateDesc& desc ) = 0;
+        [[nodiscard]] virtual RHIPipelineStateHandle createPipelineStateNative( const RHIPipelineStateDesc& desc ) = 0;
 
         /** @brief 백엔드의 컴퓨트 PSO 생성입니다 — 부르는 쪽은 `createComputePipelineState` 를 쓴다(컴파일 시계). */
-        virtual RHIPipelineStateHandle createComputePipelineStateNative( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine ) = 0;
+        [[nodiscard]] virtual RHIPipelineStateHandle createComputePipelineStateNative( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine ) = 0;
     };
 } // namespace sw

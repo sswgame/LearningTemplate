@@ -33,6 +33,7 @@ namespace sw
     class IRHITimestampProvider;
     class RHIMemoryTracker;
     class BindlessIndexReportLog;
+    enum class ShaderTargetFormat : uint8;
 
     /** @brief `IRHIDevice::releaseHandle` 이 해제하는 핸들의 종류입니다. 종류마다 해제에 쓰는 팩터리 함수가 다릅니다. */
     /**
@@ -341,6 +342,8 @@ namespace sw
 
         /** @brief 현재 RHI 백엔드 종류를 반환합니다. */
         virtual RHIBackend getBackendType() const = 0;
+        /** @brief 이 장치가 읽는 셰이더 바이트코드 형식입니다(백엔드 표 `RHIBackendInfo::_shaderTarget`). 렌더러가 백엔드 종류로 갈라 묻지 않게 한다. */
+        ShaderTargetFormat getShaderTargetFormat() const;
 
         /**
          * @brief 셰이더가 디스크립터 인덱스로 텍스처를 샘플링할 수 있는지 반환합니다(DX12 텍스처 배열 테이블, Vulkan 디스크립터 인덱싱).
