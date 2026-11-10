@@ -145,18 +145,17 @@ namespace sw
             }
 
             /**
-             * @brief 셸 명령을 실행하고 표준 출력(stdout)을 문자열로 받아 반환합니다.
+             * @brief 셸 명령을 실행하고, 0 으로 끝났으면 표준 출력(stdout)을 끝 줄바꿈을 떼어 반환합니다. 띄우지 못했거나 · 기다리지 못했거나 · 0 이 아니면(취소) 없음입니다.
              * @details `Process` 는 표준 오류를 표준 출력에 합치므로 표준 오류는 버린다(`2>/dev/null`) — 대화상자 도구가 찍는 GTK 경고가 경로로 읽히지 않게.
              */
-            static string runCommandCapture( string_view command, int32& outExitCode )
+            static optional<string> runCommandCapture( string_view command )
             {
-                outExitCode = -1;
                 string commandWithoutStderr( command );
                 commandWithoutStderr.append( " 2>/dev/null" );
                 Process process;
                 // `2>/dev/null` 리디렉션이 셸 문법이라 셸을 실행 파일로 쓴다. 호출자가 인자를 shellQuote 로 이미 인용했다.
                 if ( process.launch( ProcessCommand::fromSearchPath( "sh", { "-c", commandWithoutStderr } ) ) == false )
-                    return {};
+                    return nullopt;
 
                 string output;
                 string line;
@@ -165,7 +164,9 @@ namespace sw
                     output.append( line );
                     output.push_back( '\n' );
                 }
-                outExitCode = process.waitForExit();
+                const expected<int32> exitCode = process.waitForExit();
+                if ( exitCode.has_value() == false || *exitCode != 0 )
+                    return nullopt;
 
                 while ( output.empty() == false && ( output.back() == '\n' || output.back() == '\r' ) )
                 {
@@ -252,12 +253,11 @@ namespace sw
                 const bool   bMulti = isMultiselectEnabled( params );
                 const string cmd    = buildGtkStyleCommand( toolPath, "--file-selection", params, bMulti );
 
-                int32        exitCode = -1;
-                const string output   = runCommandCapture( cmd, exitCode );
-                if ( exitCode != 0 || output.empty() )
+                const optional<string> output = runCommandCapture( cmd );
+                if ( output.has_value() == false || output->empty() )
                     return false;
 
-                return collectGtkStyleOutput( output, bMulti, outListPath );
+                return collectGtkStyleOutput( *output, bMulti, outListPath );
             }
 
             /** @brief yad 로 다이얼로그를 엽니다. */
@@ -266,12 +266,11 @@ namespace sw
                 const bool   bMulti = isMultiselectEnabled( params );
                 const string cmd    = buildGtkStyleCommand( toolPath, "--file", params, bMulti );
 
-                int32        exitCode = -1;
-                const string output   = runCommandCapture( cmd, exitCode );
-                if ( exitCode != 0 || output.empty() )
+                const optional<string> output = runCommandCapture( cmd );
+                if ( output.has_value() == false || output->empty() )
                     return false;
 
-                return collectGtkStyleOutput( output, bMulti, outListPath );
+                return collectGtkStyleOutput( *output, bMulti, outListPath );
             }
 
             /** @brief kdialog 로 다이얼로그를 엽니다. */
@@ -305,15 +304,14 @@ namespace sw
                     cmd += shellQuote( label + " (" + globs + ")" );
                 }
 
-                int32        exitCode = -1;
-                const string output   = runCommandCapture( cmd, exitCode );
-                if ( exitCode != 0 || output.empty() )
+                const optional<string> output = runCommandCapture( cmd );
+                if ( output.has_value() == false || output->empty() )
                     return false;
 
                 if ( bMulti )
-                    splitPaths( output, '\n', outListPath );
+                    splitPaths( *output, '\n', outListPath );
                 else
-                    outListPath.push_back( FileUtil::normalizeSeparators( output ) );
+                    outListPath.push_back( FileUtil::normalizeSeparators( *output ) );
                 return outListPath.empty() == false;
             }
         };

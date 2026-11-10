@@ -459,7 +459,18 @@ namespace sw
             if ( bKilled )
                 SW_LOG_ERROR_ID( "ScenarioPerBackend.PerBackendDidNot", "[Scenario] per-backend: %# %# - killed", child._backend.c_str(),
                                  child._killDeadline.isExpired() ? "did not finish within the process limit" : "logged nothing for the stall limit (stopped)" );
-            child._exitCode = child._process.waitForExit();
+            const expected<int32> waited = child._process.waitForExit();
+            if ( waited.has_value() )
+            {
+                child._exitCode = *waited;
+            }
+            else
+            {
+                // 기다리지 못한 자식은 결과를 모른다 — 통과로 세지 않고 실패로 적는다(까닭은 이 줄).
+                SW_LOG_ERROR_ID( "ScenarioPerBackend.PerBackendWaitFailed", "[Scenario] per-backend: %# could not be waited for: %# %#", child._backend.c_str(), string( waited.error().message() ),
+                                 string( waited.error().detail() ) );
+                child._exitCode = getAutomationExitStatus( AutomationResult::Failed );
+            }
             if ( bKilled )
                 child._exitCode = getAutomationExitStatus( AutomationResult::TimedOut ); // POSIX 는 종료 코드를 줄 수 없다(128 + SIGKILL) — 결과는 시간 초과다
             child._flushThread.join();

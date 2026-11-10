@@ -502,7 +502,11 @@ namespace sw::test
             result._output += line;
             result._output.push_back( '\n' );
         }
-        result._exitCode  = process.waitForExit();
+        const expected<int32> waited = process.waitForExit();
+        if ( waited.has_value() )
+            result._exitCode = *waited;
+        else
+            result._output += "[test runner] could not wait for the child: " + string( waited.error().message() ) + " " + string( waited.error().detail() ) + "\n";
         watchThread       = thread{};                                    // 정지를 요청하고 합류한다
         result._bTimedOut = bTimedOut.load( std::memory_order_acquire ); // 실패로 적지 않는다 — 시한에 죽이는 것을 보는 케이스도 있다. 죽은 자식은 종료 코드가 0 이 아니다
     }
@@ -517,11 +521,11 @@ namespace sw::test
         countAssertion();
         if ( child._bLaunched == false )
             return; // 띄우지 못한 까닭은 위에서 적었다
-        if ( child._exitCode == 0 )
+        if ( child._exitCode.has_value() && *child._exitCode == 0 )
             return;
         StringBuilder<constant::buffer::kMax256> textBuilder;
-        textBuilder.appendFormat( "the isolated case %# (exit code %#) - child output:\n%#", child._bTimedOut ? "timed out and was killed" : "failed", child._exitCode,
-                                  child.getOutputTail( 20 ) );
+        const string                             exitText = child._exitCode.has_value() ? "exit code " + to_string( *child._exitCode ) : string( "not waited for" );
+        textBuilder.appendFormat( "the isolated case %# (%#) - child output:\n%#", child._bTimedOut ? "timed out and was killed" : "failed", exitText, child.getOutputTail( 20 ) );
         reportFailure( testCase._pFile, testCase._line,
                        string( textBuilder.view() ) );
     }

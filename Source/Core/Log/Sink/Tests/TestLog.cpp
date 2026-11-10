@@ -831,7 +831,7 @@ SW_TEST_CHILD_ROLE( LogTest, ConsoleChildWritesAMarker )
 SW_TEST_CASE( LogTest, ConsoleLogOutputReachesStandardOutput, ._tags = "slow", ._timeoutSeconds = 180.0f )
 {
     const sw::test::ChildRunResult child = sw::test::runChildRole( "LogTest.ConsoleChildWritesAMarker", {}, kLogChildTimeoutSeconds );
-    SW_EXPECT_EQUAL( 0, child._exitCode );
+    SW_EXPECT_TRUE_MSG( child._exitCode == 0, child.getOutputTail() ); // 기다리지 못했으면 값이 없어 진다
     SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( child._output, "SW_CONSOLE_LOG_PROBE warning line" ), child.getOutputTail() );
 }
 
@@ -869,7 +869,7 @@ SW_TEST_CHILD_ROLE( LogTest, StderrChildWritesMarkers )
 SW_TEST_CASE( LogTest, LineWithoutASinkReachesStandardError, ._tags = "slow", ._timeoutSeconds = 180.0f )
 {
     const sw::test::ChildRunResult child = sw::test::runChildRole( "LogTest.StderrChildWritesMarkers", "nosink", kLogChildTimeoutSeconds );
-    SW_EXPECT_EQUAL( 0, child._exitCode );
+    SW_EXPECT_TRUE_MSG( child._exitCode == 0, child.getOutputTail() ); // 기다리지 못했으면 값이 없어 진다
     SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( child._output, "SW_NOSINK_PROBE error line" ), child.getOutputTail() );
 }
 
@@ -880,7 +880,7 @@ SW_TEST_CASE( LogTest, LineWithoutASinkReachesStandardError, ._tags = "slow", ._
 SW_TEST_CASE( LogTest, FailedLogAssertWritesStandardErrorBeforeStopping, ._tags = "slow", ._timeoutSeconds = 180.0f )
 {
     const sw::test::ChildRunResult child = sw::test::runChildRole( "LogTest.StderrChildWritesMarkers", "assert", kLogChildTimeoutSeconds );
-    SW_EXPECT_EQUAL( 0, child._exitCode );
+    SW_EXPECT_TRUE_MSG( child._exitCode == 0, child.getOutputTail() ); // 기다리지 못했으면 값이 없어 진다
     SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( child._output, "[SW_LOG_ASSERT] bLogAssertProbeHolds" ), child.getOutputTail() );
     SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( child._output, "SW_ASSERT_PROBE message" ), child.getOutputTail() );
 }
@@ -908,6 +908,6 @@ SW_TEST_CHILD_ROLE( LogTest, ListenerWithoutASinkChild )
 SW_TEST_CASE( LogTest, RegisteringAListenerWithoutASinkIsReported, ._tags = "slow", ._timeoutSeconds = 180.0f )
 {
     const sw::test::ChildRunResult child = sw::test::runChildRole( "LogTest.ListenerWithoutASinkChild", {}, kLogChildTimeoutSeconds );
-    SW_EXPECT_EQUAL( 0, child._exitCode );
+    SW_EXPECT_TRUE_MSG( child._exitCode == 0, child.getOutputTail() ); // 기다리지 못했으면 값이 없어 진다
     SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( child._output, "needs a global log sink" ), child.getOutputTail() );
 }

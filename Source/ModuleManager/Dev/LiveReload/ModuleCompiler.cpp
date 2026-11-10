@@ -142,12 +142,12 @@ namespace sw
 
     bool ModuleCompiler::recordBuildResult( const string& targetDisplayName, const StopToken& stopToken )
     {
-        int32 exitCode = -1;
+        expected<int32> waited = unexpected( Error{ ErrorKind::NotFound, "no build process was running" } );
         {
             ScopedLock<mutex> lock{ _mutex };
             if ( _pCurrentProcess != nullptr )
             {
-                exitCode = _pCurrentProcess->waitForExit();
+                waited = _pCurrentProcess->waitForExit();
                 _pCurrentProcess.reset();
             }
         }
@@ -155,6 +155,11 @@ namespace sw
         _buildTimer.stopTimer();
         const float32 durationSec = _buildTimer.getTotalTime();
 
+        if ( waited.has_value() == false )
+            SW_LOG_ERROR_ID( "ModuleCompiler.BuildWaitFailed", "Could not wait for the build process (target: %#): %# %#", targetDisplayName.c_str(), string( waited.error().message() ),
+                             string( waited.error().detail() ) );
+        // `IModuleCompiler::getLastExitCode` 는 C-ABI 계약이라 정수다 — 기다리지 못한 빌드는 0 이 아닌 값(-1)으로 실패를 알린다(로그가 까닭을 남겼다).
+        const int32 exitCode = waited.value_or( -1 );
         _lastDurationSec.store( durationSec, std::memory_order_relaxed );
         _lastExitCode.store( exitCode, std::memory_order_relaxed );
 
