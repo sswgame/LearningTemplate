@@ -760,6 +760,8 @@ namespace sw
             return false;
         // 레이아웃을 보는 것은 CB 가 다를 때만(대부분 같다).
         const bool bCbDiffers = otherBinding._materialCb != headBinding._materialCb;
+        if ( bCbDiffers )
+            SW_PROFILE_COUNT( "RT.PSO.batchLookups", 1 ); // W-R2 계측: 배치를 만들 때 PSO 를 한 번 풀어 두면 없어질 조회 수(`RT.Draw.gpuBatches` · `RT.PSO.ensureMaterial` 와 함께 본다)
         return GPUMeshBatchBinding::canShareMaterialBinding( headBinding, otherBinding, bCbDiffers && layoutBindsMaterialCb( _psoManager.psoForBatch( pso, head, drawMode ) ) );
     }
 
@@ -770,7 +772,8 @@ namespace sw
         // 정적 스위치(유리의 MATERIAL_BLEND_TRANSLUCENT 같은)가 쿠킹되기만 하고 한 번도 걸리지 않는다.
         // 캐시는 ensureMaterialPSOs 가 기록 전에 채운다. 여기서는 조회만 한다.
         RenderPSOCache::MaterialPSOState psoState = RenderPSOCache::MaterialPSOState::Ready;
-        const RHIPipelineStateHandle     batchPSO = _psoManager.psoForBatch( inoutState._pso, head, drawMode, &psoState );
+        SW_PROFILE_COUNT( "RT.PSO.batchLookups", 1 );
+        const RHIPipelineStateHandle batchPSO = _psoManager.psoForBatch( inoutState._pso, head, drawMode, &psoState );
         // 변형이 `Ready` 가 아닌 묶음(0)은 그리지 않는다 — 앞 묶음의 PSO 로 그리면 틀린 그림이다. 실패는 만들 때 오류를 남겼고, 만드는 중이면 이번 프레임만 건너뛴다.
         if ( batchPSO == 0 )
         {
