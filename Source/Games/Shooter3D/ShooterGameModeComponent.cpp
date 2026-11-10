@@ -839,7 +839,7 @@ namespace sw
                 bool bFound = false;
                 if ( pManager == nullptr )
                     return false;
-                pManager->forEachComponentOfType<ShooterGameModeComponent>( [&bFound, &outValue]( ShooterGameModeComponent* pGameMode )
+                pManager->forEachComponentOfType<ShooterGameModeComponent>( [&bFound, &outValue]( const ShooterGameModeComponent* pGameMode )
                 {
                     if ( bFound )
                         return;

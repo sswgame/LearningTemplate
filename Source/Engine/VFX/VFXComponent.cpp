@@ -186,9 +186,7 @@ namespace sw
             const VFXCPUSimulation* pCPUSimulation = std::get_if<VFXCPUSimulation>( &simulation );
             bAnyCollision                          = bAnyCollision || ( pCPUSimulation != nullptr && pCPUSimulation->getDef()._collision._mode != VFXCollisionMode::None );
         }
-        const GameObject*                    pOwner        = getOwner();
-        const GameObjectManager*             pManager      = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const IPhysicsQueryScene3D*          pPhysicsScene = ( bAnyCollision && pManager != nullptr ) ? pManager->getSubsystem<ScenePhysics>().findScene3D() : nullptr;
+        const IPhysicsQueryScene3D*          pPhysicsScene = bAnyCollision ? context.getManager().getSubsystem<ScenePhysics>().findScene3D() : nullptr;
         unique_ptr<VFXPhysicsCollisionScene> pCollision;
         if ( pPhysicsScene != nullptr )
             pCollision = sw::make_unique<VFXPhysicsCollisionScene>( *pPhysicsScene, getWorldMatrix() );

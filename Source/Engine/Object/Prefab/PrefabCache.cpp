@@ -530,7 +530,7 @@ namespace sw
                                                    vector<string>& inoutListSpawnedPath )
     {
         const vector<PrefabInstanceNode>& listNode = asset.getNestedInstances();
-        GameObjectManager*                pManager = pRoot != nullptr ? pRoot->getManager() : nullptr;
+        GameObjectManager*                pManager = pRoot != nullptr ? pRoot->getMutableManager() : nullptr;
         if ( listNode.empty() || pManager == nullptr )
             return 0;
         SW_MEMORY_SCOPE( Scene );
@@ -613,7 +613,7 @@ namespace sw
     bool PrefabCache::collectPartOverrides( const GameObject& root, const PrefabAsset& asset, vector<PrefabPartOverride>& outListPartOverride )
     {
         outListPartOverride.clear();
-        GameObjectManager* pManager = root.getManager();
+        GameObjectManager* pManager = root.getMutableManager();
         if ( asset.getNestedInstances().empty() || pManager == nullptr )
             return true;
         const PrefabInstanceRegistry& registry = pManager->getSubsystem<PrefabInstanceRegistry>();

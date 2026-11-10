@@ -33,12 +33,11 @@ namespace sw
         Component::onTick( context );
         GameObject*          pOwner        = getOwner();
         const PawnComponent* pPawn         = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
-        GameObjectManager*   pManager      = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const bool           bNoMountInput = pPawn == nullptr || pManager == nullptr || pPawn->wasButtonTriggered( _interactIndex ) == false;
+        const bool           bNoMountInput = pPawn == nullptr || pPawn->wasButtonTriggered( _interactIndex ) == false;
         if ( bNoMountInput )
             return;
         // 버튼이 발동한 프레임에만 미룬다(좌석 · 탑승자 계층을 바꾸는 사건) — 매 프레임 일이 아니라 시스템으로 옮기지 않는다.
-        pManager->executeOrDeferPostTickOnComponent( *this, []( MountInteractionComponent& component )
+        context.deferPostTickOnComponent( *this, []( MountInteractionComponent& component )
         { component.toggleMount(); } );
     }
 

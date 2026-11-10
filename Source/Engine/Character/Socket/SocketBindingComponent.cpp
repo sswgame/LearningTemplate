@@ -118,7 +118,7 @@ namespace sw
         return pOwner == nullptr ? nullptr : pOwner->getPrimarySceneComponent();
     }
 
-    GameObject* SocketBindingComponent::resolveHolder() const
+    const GameObject* SocketBindingComponent::resolveHolder() const
     {
         const GameObject* pOwner          = getOwner();
         const bool        bNoHolderObject = pOwner == nullptr || pOwner->getManager() == nullptr || _holder.isValid() == false;

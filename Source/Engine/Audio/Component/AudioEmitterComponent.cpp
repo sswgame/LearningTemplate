@@ -50,9 +50,9 @@ namespace sw
     AudioEngine* AudioEmitterComponent::findAudioEngine() const
     {
         const GameObject* pOwner = getOwner();
-        if ( pOwner == nullptr || pOwner->getManager() == nullptr )
+        if ( pOwner == nullptr || pOwner->getMutableManager() == nullptr )
             return nullptr;
-        return pOwner->getManager()->getSubsystem<sw::SceneAudio>().findAudioEngine();
+        return pOwner->getMutableManager()->getSubsystem<sw::SceneAudio>().findAudioEngine();
     }
 
     AudioPlayingID AudioEmitterComponent::post( const hashed_string& eventName )

@@ -119,21 +119,18 @@ namespace sw
     {
         Component::onTick( context );
         _step += _clock.consume( context.getDeltaTime() );
-        GameObject*        pOwner               = getOwner();
-        GameObjectManager* pManager             = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        LightComponent*    pLight               = pOwner != nullptr ? pOwner->getComponent<LightComponent>() : nullptr;
-        const float32      scale                = computeScaleAtStep( _step );
-        const bool         bNoLightUpdateNeeded = pLight == nullptr || pManager == nullptr || scale == _appliedScale;
+        const GameObject*     pOwner               = getOwner();
+        const LightComponent* pLight               = pOwner != nullptr ? pOwner->getComponent<LightComponent>() : nullptr;
+        const float32         scale                = computeScaleAtStep( _step );
+        const bool            bNoLightUpdateNeeded = pLight == nullptr || scale == _appliedScale;
         if ( bNoLightUpdateNeeded )
             return;
         _appliedScale = scale;
-        const TComponentHandle<LightComponent> light{ pLight };
-        const float32                          target = _baseIntensity * scale;
-        pManager->executeOrDeferPostTick( [pManager, light, target]()
+        context.deferPostTickOnComponent( *this, []( FlickerLightComponent& flicker )
         {
-            LightComponent* pResolved = pManager->resolveComponent( light );
+            LightComponent* pResolved = flicker.getOwner()->getComponent<LightComponent>();
             if ( pResolved != nullptr )
-                pResolved->setIntensity( target );
+                pResolved->setIntensity( flicker._baseIntensity * flicker._appliedScale );
         } );
     }
 
@@ -172,18 +169,20 @@ namespace sw
     {
         Component::onTick( context );
         GameObject*             pOwner           = getOwner();
-        GameObjectManager*      pManager         = pOwner != nullptr ? pOwner->getManager() : nullptr;
         GimmickSensorComponent* pSensor          = pOwner != nullptr ? pOwner->getComponent<GimmickSensorComponent>() : nullptr;
-        const bool              bNoUsesAvailable = pManager == nullptr || pSensor == nullptr || pSensor->consumeUses() <= 0.0f;
+        const bool              bNoUsesAvailable = pSensor == nullptr || pSensor->consumeUses() <= 0.0f;
         if ( bNoUsesAvailable )
             return;
-        const InteractableComponent* pInteractable = pOwner->getComponent<InteractableComponent>();
-        GameObject*                  pWho          = pInteractable != nullptr ? pManager->resolveGameObject( pInteractable->getLastInteractor() ) : nullptr;
-        if ( pWho == nullptr )
-            return;
-        // 숨은 쪽이 다시 사용하면 나오고, 아니면 들어간다.
-        if ( exit( *pWho ) == false )
-            (void)enter( *pWho );
+        // 숨기 · 나오기는 사용한 쪽(남의 오브젝트)의 태그 · 자리를 바꾼다 — 틱 뒤에 한다. 숨은 쪽이 다시 사용하면 나오고, 아니면 들어간다.
+        context.deferPostTickOnComponent( *this, []( HidingSpotComponent& spot, GameObjectManager& manager )
+        {
+            const InteractableComponent* pInteractable = spot.getOwner()->getComponent<InteractableComponent>();
+            GameObject*                  pWho          = pInteractable != nullptr ? manager.resolveGameObject( pInteractable->getLastInteractor() ) : nullptr;
+            if ( pWho == nullptr )
+                return;
+            if ( spot.exit( *pWho ) == false )
+                (void)spot.enter( *pWho );
+        } );
     }
 
     NoiseEmitterComponent::NoiseEmitterComponent()

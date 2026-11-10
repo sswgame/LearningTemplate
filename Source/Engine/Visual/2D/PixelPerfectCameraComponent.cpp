@@ -48,7 +48,7 @@ namespace sw
         // 카메라를 따라가게 하는 컴포넌트(앞 그룹) 뒤, 시차 레이어(PostUpdate) 앞.
         setTickGroup( TickGroup::PostPhysics );
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getMutableManager() : nullptr;
         if ( pManager != nullptr )
         {
             _barBatch.setSorting( _barSortingLayer, Render2DSettings::kMaxOrderInLayer );
@@ -177,17 +177,17 @@ namespace sw
     {
         if ( unit == _publishedSnapUnit )
             return;
-        _publishedSnapUnit          = unit;
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
+        _publishedSnapUnit                = unit;
+        const GameObject*        pOwner   = getOwner();
+        const GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr )
             return;
         // 다른 오브젝트의 메시를 고치므로 틱 뒤로 미룬다(그 오브젝트의 틱 — 애니메이터의 프레임 넘기기 — 와 겹치지 않게).
-        pManager->executeOrDeferPostTick( [pManager, unit]()
+        pManager->executeOrDeferPostTickOnScene( [unit]( GameObjectManager& sceneManager )
         {
-            pManager->getCameraRegistry().setPixelSnapUnit( unit );
+            sceneManager.getCameraRegistry().setPixelSnapUnit( unit );
             // 레지스트리는 코어 기반만 알고, 들어오는 타입은 메시 계열뿐이다(`ScenePrimitive.h` 의 불변식).
-            for ( ScenePrimitive* pPrimitive : pManager->getPrimitiveRegistry().getAll() )
+            for ( ScenePrimitive* pPrimitive : sceneManager.getPrimitiveRegistry().getAll() )
             {
                 if ( pPrimitive != nullptr )
                     static_cast<MeshComponent*>( pPrimitive )->setPixelSnapUnit( unit );

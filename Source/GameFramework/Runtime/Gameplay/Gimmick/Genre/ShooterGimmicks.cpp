@@ -105,10 +105,10 @@ namespace sw
 
     void ExplosiveBarrelComponent::explode( GameObject& owner )
     {
-        _bExploded                     = true;
-        GameObjectManager*    pManager = owner.getManager();
-        const SceneComponent* pScene   = owner.getPrimarySceneComponent();
-        const float3          center   = pScene != nullptr ? pScene->getWorldPosition() : float3{};
+        _bExploded                        = true;
+        const GameObjectManager* pManager = owner.getManager(); // 틱에서 부른다 — 반경 피해는 명령 버퍼로
+        const SceneComponent*    pScene   = owner.getPrimarySceneComponent();
+        const float3             center   = pScene != nullptr ? pScene->getWorldPosition() : float3{};
         ShooterGimmicksInternal::sendCue( owner, hashed_string( "Explosion" ), center, _damage );
         // 파괴 컴포넌트가 있으면 몸을 끄지 않는다. 조각으로 부서져 날아가며, 조각의 그래픽과 바디가 그 몸이다.
         FractureComponentBase* pSelfFracture = ShooterGimmicksInternal::findFracture( owner );
@@ -259,7 +259,7 @@ namespace sw
 
     void TurretComponent::stepProjectiles( GameObject& owner )
     {
-        GameObjectManager* pManager = owner.getManager();
+        const GameObjectManager* pManager = owner.getManager(); // 틱에서 부른다 — 읽기 · 피해는 명령 버퍼(`GimmickDamageUtil`)
         if ( _projectiles.getProjectiles().empty() || pManager == nullptr )
             return;
         _listShotTarget.clear();
@@ -275,7 +275,7 @@ namespace sw
         {
             if ( event._kind != ProjectileEvent::Kind::Hit || event._hit._kind != ProjectileHitKind::Target )
                 continue;
-            GameObject* pVictim = pManager->resolveGameObject( GameObjectHandle::make( _listShotTarget[static_cast<size_t>( event._hit._other )]._objectID ) );
+            const GameObject* pVictim = pManager->resolveGameObject( GameObjectHandle::make( _listShotTarget[static_cast<size_t>( event._hit._other )]._objectID ) );
             if ( pVictim == nullptr )
                 continue;
             ++_hitCount;
@@ -283,7 +283,7 @@ namespace sw
         }
     }
 
-    void TurretComponent::fireAt( GameObject& owner, GameObject& victim, const float3& origin, const float3& direction )
+    void TurretComponent::fireAt( GameObject& owner, const GameObject& victim, const float3& origin, const float3& direction )
     {
         ++_shotCount;
         if ( _projectileSpeed <= 0.0f )
@@ -312,9 +312,9 @@ namespace sw
 
     void TurretComponent::stepOnce()
     {
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        SceneComponent*    pScene   = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
+        GameObject*              pOwner   = getOwner();
+        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        SceneComponent*          pScene   = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         if ( pManager == nullptr || pScene == nullptr )
             return;
         if ( _cooldownSteps > 0 )
@@ -371,8 +371,8 @@ namespace sw
         const bool bAimed = MathUtil::abs( delta ) <= _aimTolerance + maxTurn;
         if ( bAimed == false || bCanHit == false || _cooldownSteps > 0 )
             return;
-        _cooldownSteps      = GenreGimmickUtil::toSteps( _fireInterval, 1 );
-        GameObject* pVictim = pManager->resolveGameObject( _target );
+        _cooldownSteps            = GenreGimmickUtil::toSteps( _fireInterval, 1 );
+        const GameObject* pVictim = pManager->resolveGameObject( _target );
         if ( pVictim == nullptr )
             return;
         fireAt( *pOwner, *pVictim, origin, direction );

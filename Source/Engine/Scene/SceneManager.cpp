@@ -804,7 +804,7 @@ namespace sw
 
     GameObject* SceneManager::findActiveObject( const hashed_string& name ) const
     {
-        const GameObjectManager* pManager = findActiveObjectManager();
+        GameObjectManager* pManager = findActiveObjectManager();
         return pManager != nullptr ? pManager->findGameObjectByName( name ) : nullptr;
     }
 

@@ -42,7 +42,7 @@ namespace sw
         const TGameMode* findGameMode() const
         {
             TObject* pOwner   = getOwner();
-            auto*    pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+            auto*    pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
             return pManager != nullptr ? GameModeComponent::resolve<TGameMode>( *pManager, _gameMode ) : nullptr;
         }
 

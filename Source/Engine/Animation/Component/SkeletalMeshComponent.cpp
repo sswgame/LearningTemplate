@@ -559,10 +559,10 @@ namespace sw
 
     SkeletalMeshComponent* SkeletalMeshComponent::findLeaderPose() const
     {
-        const bool bNoLeader = _leader.isValid() == false || getOwner() == nullptr || getOwner()->getManager() == nullptr;
+        const bool bNoLeader = _leader.isValid() == false || getOwner() == nullptr || getOwner()->getMutableManager() == nullptr;
         if ( bNoLeader )
             return nullptr;
-        return getOwner()->getManager()->resolveComponent( _leader );
+        return getOwner()->getMutableManager()->resolveComponent( _leader );
     }
 
     void SkeletalMeshComponent::addAnimationDependency( SkeletalMeshComponent* pUpstream )

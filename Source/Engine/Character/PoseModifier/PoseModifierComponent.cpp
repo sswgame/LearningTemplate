@@ -375,7 +375,7 @@ namespace sw
     void PoseModifierComponent::releaseDependencies()
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getMutableManager() : nullptr;
         if ( _pSkeletalMesh != nullptr && pManager != nullptr )
         {
             for ( const TComponentHandle<SkeletalMeshComponent> handle : _listDependency )
@@ -426,8 +426,8 @@ namespace sw
         }
         _boundContentID = _asset->getContentID();
         _groundQuery.reset();
-        if ( pOwner->getManager() != nullptr )
-            _groundQuery = make_unique<PoseModifierComponentInternal::SceneGroundQuery>( *pOwner->getManager(), _instance.getSolveSpace()._bPlanar == SW_TRUE, pOwner->getObjectID() );
+        if ( pOwner->getMutableManager() != nullptr )
+            _groundQuery = make_unique<PoseModifierComponentInternal::SceneGroundQuery>( *pOwner->getMutableManager(), _instance.getSolveSpace()._bPlanar == SW_TRUE, pOwner->getObjectID() );
         loadSharedColliders();
         bindExternalTargets();
         // 리그가 읽고 쓰는 본(대상 · 노드 사슬 · 바깥 대상의 공간 본)은 본 LOD 가 빼지 않는다 — 빠지면 IK 대상이 레퍼런스 포즈로 굳는다.
@@ -472,7 +472,7 @@ namespace sw
     SkeletalMeshComponent* PoseModifierComponent::findUnitByName( const hashed_string& skeletalMeshName, shared_ptr<const SocketSet>* pOutSockets ) const
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getMutableManager() : nullptr;
         if ( pManager == nullptr )
             return nullptr;
         const SkeletalMeshBinding* pBinding = findUnitBinding( skeletalMeshName );
@@ -497,7 +497,7 @@ namespace sw
     GameObject* PoseModifierComponent::findObjectByName( const hashed_string& objectName ) const
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getMutableManager() : nullptr;
         if ( pManager == nullptr )
             return nullptr;
         for ( const ObjectBinding& binding : _listObjectBinding )
@@ -510,7 +510,7 @@ namespace sw
 
     bool PoseModifierComponent::wouldCreateCycle( const SkeletalMeshComponent* pUpstream ) const
     {
-        GameObjectManager* pManager = ( getOwner() != nullptr ) ? getOwner()->getManager() : nullptr;
+        GameObjectManager* pManager = ( getOwner() != nullptr ) ? getOwner()->getMutableManager() : nullptr;
         if ( pManager == nullptr || pUpstream == nullptr )
             return false;
         // 위 유닛에서 의존을 따라 올라가다 내 유닛을 만나면 고리다.
@@ -543,7 +543,7 @@ namespace sw
         BoneTransform               socketLocal{};
         bool                        bSocketRoot  = false;
         const SkeletalMeshBinding*  pBinding     = ( def._skeletalMesh.empty() == false ) ? findUnitBinding( def._skeletalMesh ) : nullptr;
-        GameObjectManager*          pManager     = getOwner()->getManager();
+        GameObjectManager*          pManager     = getOwner()->getMutableManager();
         GameObject*                 pRigidObject = ( pBinding != nullptr && pManager != nullptr ) ? pManager->resolveGameObject( pBinding->_rigidObject ) : nullptr;
         SceneComponent*             pRigidFrame  = ( pBinding != nullptr && pManager != nullptr ) ? pManager->resolveComponent( pBinding->_rigidFrame ) : nullptr;
         if ( pRigidObject != nullptr || pRigidFrame != nullptr )
@@ -583,8 +583,8 @@ namespace sw
             const SocketID   socketID          = _pSocketTable->resolveTarget( _pSocketTable->findSocket( def._socket ) );
             const SocketDef* pDef              = ( socketID != kInvalidSocketID ) ? _pSocketTable->findSocketDef( socketID ) : nullptr;
             const uint32     skeletalMeshIndex = ( pDef != nullptr ) ? _pSocketTable->getSocketUnit( socketID ) : MathUtil::kMaxUInt32;
-            if ( skeletalMeshIndex < _listTableUnit.size() && getOwner()->getManager() != nullptr )
-                pTargetUnit = getOwner()->getManager()->resolveComponent( _listTableUnit[skeletalMeshIndex] );
+            if ( skeletalMeshIndex < _listTableUnit.size() && getOwner()->getMutableManager() != nullptr )
+                pTargetUnit = getOwner()->getMutableManager()->resolveComponent( _listTableUnit[skeletalMeshIndex] );
             if ( pDef != nullptr )
             {
                 float4x4 local = pDef->makeLocalTransform();
@@ -751,7 +751,7 @@ namespace sw
         _pFrameAnimator                        = ( getOwner() != nullptr ) ? getOwner()->getComponent<SkeletalAnimatorComponent>() : nullptr;
         _worldFromModel                        = skeletalMesh.getWorldMatrix();
         const float4x4          modelFromWorld = _worldFromModel.invert();
-        GameObjectManager*      pManager       = ( getOwner() != nullptr ) ? getOwner()->getManager() : nullptr;
+        GameObjectManager*      pManager       = ( getOwner() != nullptr ) ? getOwner()->getMutableManager() : nullptr;
         const vector<float4x4>& listOwnModel   = skeletalMesh.getModelSpaceTransforms(); // 지난 프레임의 최종 포즈
         for ( uint32 targetIndex = 0; targetIndex < static_cast<uint32>( _listExternal.size() ); ++targetIndex )
         {

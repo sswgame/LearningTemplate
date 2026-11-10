@@ -238,7 +238,7 @@ namespace sw
     GameObject* DialogueRunnerComponent::findSpeakerObject( uint32 speakerID ) const
     {
         const GameObject*        pOwner   = getOwner();
-        GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager == nullptr || speakerID == kDialogueNoSpeaker )
             return nullptr;
         const DialogueSpeakerSlot* pSlot = VectorUtil::findBy<&DialogueSpeakerSlot::_speaker>( _listSpeakerSlot, speakerID );

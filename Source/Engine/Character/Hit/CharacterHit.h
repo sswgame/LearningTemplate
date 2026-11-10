@@ -24,13 +24,16 @@ namespace sw
     /** @brief 광선이 처음 맞은 것입니다. 2D 면 Z = 0 입니다. */
     struct SW_API CharacterRayHit
     {
-        GameObject*       _pObject{ nullptr }; ///< 맞은 바디의 오브젝트(사용자 값이 오브젝트 id 가 아니면 nullptr)
+        const GameObject* _pObject{ nullptr }; ///< 맞은 바디의 오브젝트(사용자 값이 오브젝트 id 가 아니면 nullptr). 광선은 읽기라 const 매니저로 쏘므로 읽기 전용이다
         PhysicsBodyHandle _body{};
         float3            _point{};
         float3            _normal{};
         hashed_string     _material{}; ///< 맞은 셰이프의 물리 재질 이름이다.
         float32           _distance{ 0.0f };
         bool              _bIs2D{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+
+        /** @brief 맞은 오브젝트를 쓰기 가능한 매니저에서 다시 찾습니다(맞음 전달 · 틱 밖). 없으면 nullptr 입니다. */
+        GameObject* findMutableObject( GameObjectManager& manager ) const;
 
         // 맞힘 도우미입니다(전부 static, 게임 스레드에서 호출합니다. 물리 씬은 한 스레드에서만 다룹니다).
         /**
@@ -74,7 +77,7 @@ namespace sw
          * @param outHit 알린 맞음입니다(맞지 않았으면 그대로입니다).
          * @return 오브젝트를 맞혔으면 true 입니다.
          */
-        static bool traceWeaponHit( const GameObjectManager& manager, const float3& origin, const float3& direction, float32 maxDistance, uint32 layerMask,
+        static bool traceWeaponHit( GameObjectManager& manager, const float3& origin, const float3& direction, float32 maxDistance, uint32 layerMask,
                                     GameObject* pInstigator, float32 damage, float32 impulse, bool bIs2D, HitInfo& outHit );
     };
 } // namespace sw

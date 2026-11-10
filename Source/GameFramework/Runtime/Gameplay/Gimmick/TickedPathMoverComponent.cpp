@@ -32,14 +32,13 @@ namespace sw
         registerSubTick( TickGroup::DuringPhysics, kApplySubTickID );
     }
 
-    void TickedPathMoverComponent::onSubTick( uint32 subTickID, float32 deltaTime )
+    void TickedPathMoverComponent::onSubTick( uint32 subTickID, TickContext& context )
     {
-        Component::onSubTick( subTickID, deltaTime );
+        Component::onSubTick( subTickID, context );
         if ( subTickID != kApplySubTickID )
             return;
-        const GameObject*        pOwner   = getOwner();
-        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const ControlSystem*     pControl = pManager != nullptr ? ControlSystem::find( *pManager ) : nullptr;
+        const GameObject*    pOwner   = getOwner();
+        const ControlSystem* pControl = ControlSystem::find( context.getManager() );
         if ( pControl == nullptr )
         {
             if ( _bWarnedNoTick == false )

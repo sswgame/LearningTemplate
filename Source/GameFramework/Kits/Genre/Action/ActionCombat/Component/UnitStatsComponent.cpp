@@ -27,7 +27,7 @@ namespace sw
             if ( pOwner == nullptr )
                 return;
 
-            GameObjectManager* pManager = pOwner->getManager();
+            GameObjectManager* pManager = pOwner->getMutableManager();
             if ( pManager == nullptr )
                 return;
 
@@ -55,7 +55,7 @@ namespace sw
          */
         void enqueueStatsHit( GameObject* pOwner, const HitInfo& hit )
         {
-            GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+            GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
             if ( pManager == nullptr )
                 return;
             const uint64           objectID   = pOwner->getObjectID();
@@ -131,7 +131,7 @@ namespace sw
     void UnitStatsComponent::takeDamage( int32 amount, GameObjectHandle instigator )
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager != nullptr && pManager->isStructuralMutationFrozen() )
         {
             enqueueStatsMutation( pOwner, amount, false, instigator );
@@ -145,7 +145,7 @@ namespace sw
     void UnitStatsComponent::onHitReceived( const HitInfo& hit )
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager != nullptr && pManager->isStructuralMutationFrozen() )
         {
             enqueueStatsHit( pOwner, hit ); // 틱 직후 같은 함수로 다시 들어온다
@@ -161,7 +161,7 @@ namespace sw
     void UnitStatsComponent::heal( int32 amount )
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager != nullptr && pManager->isStructuralMutationFrozen() )
         {
             enqueueStatsMutation( pOwner, amount, true, GameObjectHandle{} );
@@ -236,7 +236,7 @@ namespace sw
     void UnitStatsComponent::spawnDamageNumber( int32 amount )
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getMutableManager() : nullptr;
         if ( pManager == nullptr )
             return;
         const SceneComponent* pRoot    = pOwner->getPrimarySceneComponent();

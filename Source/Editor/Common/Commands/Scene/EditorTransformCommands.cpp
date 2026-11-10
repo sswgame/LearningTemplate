@@ -136,7 +136,7 @@ namespace sw::editor
         if ( pTargetObj == nullptr || typeName.empty() )
             return nullptr;
 
-        GameObjectManager* pManager = pTargetObj->getManager();
+        GameObjectManager* pManager = pTargetObj->getMutableManager();
         if ( pManager == nullptr )
             return nullptr;
 

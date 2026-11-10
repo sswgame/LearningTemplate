@@ -77,31 +77,35 @@ namespace sw
 
     private:
         void makeView( InteractionView& outViewer ) const;
-        void gatherCandidates( GameObjectManager& manager, const GameObject& owner, const InteractionView& viewer );
+        void gatherCandidates( const GameObjectManager& manager, const GameObject& owner, const InteractionView& viewer );
         /** @brief 대상 하나가 쓸 수 있고 닿으면 후보 목록에 넣습니다. 목록을 도는 길과 격자 질의 길이 같은 판정을 쓰는 자리입니다. */
-        void considerCandidate( InteractableComponent& interactable, const GameObject& owner, const InteractionView& viewer );
-        void setFocus( GameObjectManager& manager, GameObjectHandle focus, TComponentHandle<InteractableComponent> focusComponent );
+        void considerCandidate( const InteractableComponent& interactable, const GameObject& owner, const InteractionView& viewer );
+        /** @brief 초점만 바꿉니다(자기 상태). 대상의 강조는 `syncHighlight` 가 틱 뒤에 맞춘다 — 남의 컴포넌트를 틱에서 쓰지 않는다. */
+        void setFocus( GameObjectHandle focus, TComponentHandle<InteractableComponent> focusComponent );
+        /** @brief 강조를 켠 대상(`_highlightComponent`)을 초점에 맞춥니다 — 옛 대상은 끄고 새 대상은 켠다(틱 밖 · 틱 뒤). */
+        void syncHighlight( GameObjectManager& manager );
         /** @brief 진행 중인 상호작용을 이어 갑니다. 진행 중에는 대상을 바꾸지 않고, 대상을 쓸 수 없게 됐거나 멀어지면 취소합니다. */
-        void updateActiveSession( GameObjectManager& manager, const InteractionView& viewer, float32 deltaTime, bool bHeld, bool bPressed );
+        void updateActiveSession( const GameObjectManager& manager, const InteractionView& viewer, float32 deltaTime, bool bHeld, bool bPressed );
         /** @brief 가장 알맞은 후보로 초점을 옮기고, 눌렀으면 권한을 확인한 뒤 상호작용을 시작합니다. */
-        void updateFocusAndBegin( GameObjectManager& manager, GameObject& owner, const InteractionView& viewer, bool bPressed );
+        void updateFocusAndBegin( const GameObjectManager& manager, GameObject& owner, const InteractionView& viewer, bool bPressed );
         /**
          * @brief 세션 이벤트마다 몽타주와 페어드 애니메이션을 처리합니다.
          * @details 몽타주는 단계가 시작될 때 튼다. 시작은 첫 단계이고, 마지막이 아닌 단계를 끝내면 다음 단계다. 취소하면 끊고 그 전 상태로 돌아간다.
          */
-        void handleSessionEvents( GameObjectManager& manager, GameObject& owner );
+        void handleSessionEvents( TickContext& context, GameObject& owner );
         /** @brief 화면 안내(`_prompt`)를 초점과 진행 단계로 다시 채웁니다. 진행 중이 아니면 첫 단계의 안내를 보입니다. */
-        void updatePrompt( GameObjectManager& manager );
-        void finishSession( GameObjectManager& manager, const GameObject& owner );
+        void updatePrompt( const GameObjectManager& manager );
+        /** @brief 완료된 상호작용을 틱 뒤에 대상의 `completeInteraction` 으로 넘깁니다. */
+        void finishSession( TickContext& context, const GameObject& owner );
         /** @brief 단계의 페어드 애니메이션 세트를 틱 뒤(게임 스레드)에 시작하도록 미룹니다. */
-        void deferPairedAnimationStart( GameObjectManager& manager, const InteractionStepDef& step );
+        void deferPairedAnimationStart( TickContext& context, const InteractionStepDef& step );
         /**
          * @brief 하는 쪽(`interactorRole`)과 대상(`interactableRole`)의 애니메이터로 배치에 맞는 첫 세트를 시작합니다(게임 스레드, 틱 밖).
          * @details 애니메이터나 에셋이 없거나 시작이 거절되면 상호작용을 취소한다. 애니메이션 없이 진행하지 않는다.
          */
         void startPairedAnimation( GameObjectManager& manager, TComponentHandle<InteractableComponent> target, const InteractionStepDef& step );
         /** @brief 이 상호작용이 시작한 페어드 애니메이션이 있으면 틱 뒤에 중단합니다. */
-        void deferPairedAnimationAbort( GameObjectManager& manager );
+        void deferPairedAnimationAbort( TickContext& context );
 
     private:
         PROPERTY( Category = "Interaction", DisplayName = "Space", Tooltip = "3D distance and view, or the 2D XY plane" )
@@ -125,6 +129,7 @@ namespace sw
         vector<InteractionSessionEvent>                 _listSessionEvent;
         GameObjectHandle                                _focus;
         TComponentHandle<InteractableComponent>         _focusComponent;
+        TComponentHandle<InteractableComponent>         _highlightComponent; ///< 강조를 켜 둔 대상입니다(틱 뒤 `syncHighlight` 가 `_focusComponent` 로 맞춘다)
         uint8                                           _bHeld;
         uint8                                           _bWasHeld;
         uint8                                           _bPressed;

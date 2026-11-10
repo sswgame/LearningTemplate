@@ -47,7 +47,7 @@ namespace sw::editor
          * @param b2DMode true 이면 같은 거리에서 스프라이트와 콜라이더가 메시보다 우선합니다.
          * @return 맞은 것이 있으면 true 이고 outResult 를 채웁니다.
          */
-        static bool pick( const GameObjectManager* pManager, const Ray& ray, bool b2DMode,
+        static bool pick( GameObjectManager* pManager, const Ray& ray, bool b2DMode,
                           EditorPickResult& outResult );
 
         /** @brief 레이와 구의 교차를 검사합니다. 맞으면 outHitT 에 원점으로부터의 거리(0 이상)를 씁니다. */

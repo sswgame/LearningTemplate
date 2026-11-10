@@ -72,7 +72,7 @@ namespace sw
     void ZoneContactComponent::onEndPlay()
     {
         GameObject* const        pOwner   = getOwner();
-        GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         for ( unique_ptr<SurfaceZone>& pZone : _listSurfaceZone )
         {
             if ( pManager != nullptr && pZone->_bValid == SW_TRUE )
@@ -97,7 +97,7 @@ namespace sw
     void ZoneContactComponent::recordCollision( const CollisionInfo& collision )
     {
         GameObject* const        pOwner   = getOwner();
-        GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager == nullptr || collision._pOther == nullptr || collision._bIs2D )
             return;
         // 상대의 재질이 곧 표면 종류다(가시덩굴 · 전기 울타리 · 용암 바위). 충격 세기는 충격량 ÷ 이 바디 질량(속도 변화)이다.
@@ -166,8 +166,8 @@ namespace sw
             SW_LOG_ERROR_ID( "Zone.ProfileMissing", "%#: zone profile could not be read", sourceName );
         else if ( pZone->_compiled.compile( *pProfile, sourceName, game::findSubsystem<const AbilityCatalog>() ) )
             pZone->_bValid = SW_TRUE;
-        if ( pZone->_bValid == SW_TRUE && pOwner != nullptr && pOwner->getManager() != nullptr )
-            ZoneTracker::onZoneOpened( *pOwner->getManager(), pZone->_compiled );
+        if ( pZone->_bValid == SW_TRUE && pOwner != nullptr && pOwner->getMutableManager() != nullptr )
+            ZoneTracker::onZoneOpened( *pOwner->getMutableManager(), pZone->_compiled );
         _listSurfaceZone.push_back( std::move( pZone ) );
         return *_listSurfaceZone.back();
     }

@@ -37,10 +37,9 @@ namespace sw
         Component::onTick( context );
         if ( _spin == 0.0f )
             return;
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
-        if ( pManager == nullptr || pMesh == nullptr )
+        GameObject*    pOwner = getOwner();
+        MeshComponent* pMesh  = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
+        if ( pMesh == nullptr )
             return;
         const ParkGameModeComponent* pGameMode = findGameMode<ParkGameModeComponent>();
         if ( pGameMode == nullptr )

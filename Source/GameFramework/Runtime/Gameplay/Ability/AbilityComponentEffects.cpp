@@ -119,7 +119,7 @@ namespace sw
 
         // 다른 워커가 대상을 틱하고 있을 수 있으므로 틱 직후 게임 스레드에서 건다. 그 사이 대상이 사라질 수 있어서 핸들로 다시 찾는다.
         GameObject*                              pTargetOwner = pTarget->getOwner();
-        GameObjectManager*                       pManager     = pTargetOwner != nullptr ? pTargetOwner->getManager() : nullptr;
+        GameObjectManager*                       pManager     = pTargetOwner != nullptr ? pTargetOwner->getMutableManager() : nullptr;
         const TComponentHandle<AbilityComponent> targetHandle{ pTarget };
         if ( pManager == nullptr )
             return ActiveEffectHandle{};
@@ -689,7 +689,7 @@ namespace sw
         if ( bShows == false )
             return;
         const GameObject*  pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager == nullptr )
             return;
         // 자리는 지금 읽는다(자기 오브젝트라 이 워커가 읽어도 된다). 스폰 · 소리는 창구가 게임 스레드의 틱 뒤에 한다.

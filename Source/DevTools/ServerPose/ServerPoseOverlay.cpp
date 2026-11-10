@@ -228,7 +228,7 @@ namespace sw
     void ServerPoseOverlay::collectPoses( const GameObjectManager& manager, vector<AuthorityPose>& outListPose )
     {
         outListPose.clear();
-        manager.forEachGameObject( [&outListPose]( GameObject* pObject )
+        manager.forEachGameObject( [&outListPose]( const GameObject* pObject )
         {
             const SceneComponent* pRoot = pObject->getName().empty() ? nullptr : pObject->getComponent<SceneComponent>();
             if ( pRoot == nullptr )

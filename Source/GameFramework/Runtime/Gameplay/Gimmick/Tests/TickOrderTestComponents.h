@@ -26,13 +26,13 @@ namespace sw
         void onBeginPlay() override
         {
             Component::onBeginPlay();
-            ControlSystem::ensureFor( *getOwner()->getManager() ).setServerTickSource( getTickHandle() );
+            ControlSystem::ensureFor( *getOwner()->getMutableManager() ).setServerTickSource( getTickHandle() );
         }
 
         void onTick( TickContext& context ) override
         {
             Component::onTick( context );
-            ControlSystem* pControl = ControlSystem::find( *getOwner()->getManager() );
+            ControlSystem* pControl = ControlSystem::find( *getOwner()->getMutableManager() );
             if ( pControl == nullptr )
                 return;
             ++_offset;

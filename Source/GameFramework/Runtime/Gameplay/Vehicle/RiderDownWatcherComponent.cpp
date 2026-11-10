@@ -18,7 +18,7 @@ namespace sw
         if ( event._kind != HealthChangeKind::Died )
             return;
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager != nullptr )
             pManager->executeOrDeferPostTickOnComponent( *this, []( RiderDownWatcherComponent& component )
             { component.forceDismount(); } );

@@ -67,7 +67,7 @@ namespace sw::editor
                     entry._identity               = ObjectStateSerializer::captureIdentity( pObj );
                     entry._name                   = pObj->getName().c_str();
                     entry._prefabPath             = pScene->getEntityPrefabPath( entry._identity._objectID );
-                    const PrefabNestedPart* pPart = pObj->getManager()->getSubsystem<PrefabInstanceRegistry>().findNestedPart( entry._identity._objectID );
+                    const PrefabNestedPart* pPart = pObj->getMutableManager()->getSubsystem<PrefabInstanceRegistry>().findNestedPart( entry._identity._objectID );
                     if ( pPart != nullptr )
                     {
                         entry._nestedPart  = *pPart;

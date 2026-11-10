@@ -93,10 +93,10 @@ namespace sw
     {
     }
 
-    void Component::onSubTick( uint32 subTickID, float32 deltaTime )
+    void Component::onSubTick( uint32 subTickID, TickContext& context )
     {
         (void)subTickID;
-        (void)deltaTime;
+        (void)context;
     }
 
     SubTickHandle Component::registerSubTick( TickGroup group, uint32 subTickID, TickPhase phase, uint8 priority )
@@ -343,7 +343,7 @@ namespace sw
 
     bool Component::deferIfStructureFrozen( Delegate<void( Component& )> func )
     {
-        GameObjectManager* pManager = ( _pOwner != nullptr ) ? _pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = ( _pOwner != nullptr ) ? _pOwner->_pOwnerManager : nullptr; // 틱 중에 부른다(구조 변경 큐) — getMutableManager 의 틱 단언을 지나지 않는다
         if ( pManager == nullptr || pManager->isStructuralMutationFrozen() == false )
             return false;
         const sw::ComponentHandle handle = getHandle();

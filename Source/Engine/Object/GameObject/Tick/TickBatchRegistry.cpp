@@ -70,13 +70,11 @@ namespace sw
             threadState._pTickWriter        = element._pObject;
             if ( shouldRunTickElement( *pComp, subTickID ) == false )
                 continue;
+            TickContext context{ *element._pObject, deltaTime };
             if ( subTickID == 0 )
-            {
-                TickContext context{ *element._pObject, deltaTime };
                 pComp->onTick( context );
-            }
             else
-                pComp->onSubTick( subTickID, deltaTime );
+                pComp->onSubTick( subTickID, context );
             ++tickCount;
         }
 #if defined( SW_DEBUG )

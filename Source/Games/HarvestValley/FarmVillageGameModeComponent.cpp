@@ -104,7 +104,7 @@ namespace sw
         const GameObjectManager* pManager     = getOwner()->getManager();
         const int32              radiusCells  = static_cast<int32>( MathUtil::ceil( _navObstacleRadius / _navCellSize ) );
         uint32                   blockedCount = 0;
-        pManager->forEachGameObject( [&]( GameObject* pObject )
+        pManager->forEachGameObject( [&]( const GameObject* pObject )
         {
             const SceneComponent* pScene     = pObject->getPrimarySceneComponent();
             bool                  bObstacle  = false;

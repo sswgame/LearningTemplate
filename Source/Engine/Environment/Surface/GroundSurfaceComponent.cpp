@@ -27,7 +27,7 @@ namespace sw
             /** @brief @p object 의 발(주 씬 컴포넌트 자리) 아래 표면을 읽습니다. 씬 · 표 · 맞은 것이 없으면 false 입니다. */
             static bool sampleUnder( GameObject& object, float32 probeLength, SurfaceSample& outSample )
             {
-                GameObjectManager*                       pManager = object.getManager();
+                GameObjectManager*                       pManager = object.getMutableManager();
                 const SceneComponent*                    pScene   = object.getPrimarySceneComponent();
                 const shared_ptr<const SurfaceKindTable> pTable   = pManager != nullptr && pScene != nullptr ? SurfaceKindTable::findDefault() : nullptr;
                 if ( pTable == nullptr )

@@ -269,18 +269,24 @@ namespace sw
         }
     }
 
-    bool CharacterRayHit::traceWeaponHit( const GameObjectManager& manager, const float3& origin, const float3& direction, float32 maxDistance, uint32 layerMask,
+    GameObject* CharacterRayHit::findMutableObject( GameObjectManager& manager ) const
+    {
+        return _pObject != nullptr ? manager.findGameObjectByID( _pObject->getObjectID() ) : nullptr;
+    }
+
+    bool CharacterRayHit::traceWeaponHit( GameObjectManager& manager, const float3& origin, const float3& direction, float32 maxDistance, uint32 layerMask,
                                           GameObject* pInstigator, float32 damage, float32 impulse, bool bIs2D, HitInfo& outHit )
     {
-        const uint64    ignoreID = pInstigator != nullptr ? pInstigator->getObjectID() : 0;
-        CharacterRayHit rayHit;
-        const bool      bHit = bIs2D ? raycast2D( manager, origin, direction, maxDistance, layerMask, ignoreID, rayHit )
-                                     : raycast3D( manager, origin, direction, maxDistance, layerMask, ignoreID, rayHit );
-        if ( bHit == false || rayHit._pObject == nullptr )
+        const uint64      ignoreID = pInstigator != nullptr ? pInstigator->getObjectID() : 0;
+        CharacterRayHit   rayHit;
+        const bool        bHit    = bIs2D ? raycast2D( manager, origin, direction, maxDistance, layerMask, ignoreID, rayHit )
+                                          : raycast3D( manager, origin, direction, maxDistance, layerMask, ignoreID, rayHit );
+        GameObject* const pTarget = bHit ? rayHit.findMutableObject( manager ) : nullptr;
+        if ( pTarget == nullptr )
             return false;
         const HitInfo hit = makeHitInfo( rayHit, pInstigator, direction, damage, impulse );
         outHit            = hit;
-        deliverHit( *rayHit._pObject, hit );
+        deliverHit( *pTarget, hit );
         return true;
     }
 } // namespace sw

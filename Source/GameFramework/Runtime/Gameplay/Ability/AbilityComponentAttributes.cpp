@@ -271,7 +271,7 @@ namespace sw
             if ( _pExecutingContext != nullptr && _pExecutingContext->_bHasHit == SW_TRUE )
             {
                 GameObject*        pOwner   = getOwner();
-                GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+                GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
                 hit                         = _pExecutingContext->_hit;
                 hit._pInstigator            = pManager != nullptr ? pManager->resolveGameObject( _pExecutingContext->_instigator ) : nullptr;
             }

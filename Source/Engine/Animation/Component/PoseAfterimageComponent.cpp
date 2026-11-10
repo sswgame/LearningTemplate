@@ -10,6 +10,7 @@
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 
 namespace sw
 {
@@ -33,6 +34,7 @@ namespace sw
         , _listGhost{}
         , _sinceCapture{ 0.0f }
         , _captureCount{ 0 }
+        , _pendingGhostStep{ 0.0f }
     {
         setCanEverTick( true );
     }
@@ -45,7 +47,7 @@ namespace sw
             SW_LOG_ERROR_ID( "PoseAfterimage.NoOpacityCurve", "Pose afterimage on '%#' has no opacity keys - afterimages stay invisible", getOwner() != nullptr ? getOwner()->getName().c_str() : "?" );
         // 사본 풀은 시작할 때 꺼 둔 채 만든다 — 틱 안에서 오브젝트를 만들지 않는다.
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         const uint32       count    = MathUtil::min( MathUtil::max( _maxGhosts, 1u ), kMaxGhostLimit );
         _listGhost.assign( count, Ghost{} );
         for ( uint32 ghostIndex = 0; ghostIndex < count && pManager != nullptr; ++ghostIndex )
@@ -68,7 +70,7 @@ namespace sw
     void PoseAfterimageComponent::onEndPlay()
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         for ( const Ghost& ghost : _listGhost )
         {
             GameObject* pGhost = pManager != nullptr ? pManager->resolveGameObject( ghost._object ) : nullptr;
@@ -83,17 +85,24 @@ namespace sw
     void PoseAfterimageComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        if ( pManager == nullptr )
+        if ( _bCapturing == SW_FALSE && countVisibleGhosts() == 0 )
             return;
-        const float32 step = MathUtil::max( context.getDeltaTime(), 0.0f );
+        // 사본은 다른 오브젝트다 — 사본 쓰기(끄기 · 불투명도 · 포즈 고정)는 틱 뒤에 한 번에 한다. 그사이 흐른 시간은 쌓아 둔다.
+        _pendingGhostStep += MathUtil::max( context.getDeltaTime(), 0.0f );
+        context.deferPostTickOnComponent( *this, []( PoseAfterimageComponent& afterimage, GameObjectManager& manager )
+        { afterimage.advanceGhosts( manager ); } );
+    }
+
+    void PoseAfterimageComponent::advanceGhosts( GameObjectManager& manager )
+    {
+        const float32 step = _pendingGhostStep;
+        _pendingGhostStep  = 0.0f;
         for ( Ghost& ghost : _listGhost )
         {
             if ( ghost._bVisible == false )
                 continue;
             ghost._age += step;
-            GameObject* pGhost = pManager->resolveGameObject( ghost._object );
+            GameObject* pGhost = manager.resolveGameObject( ghost._object );
             if ( pGhost == nullptr )
                 continue;
             if ( ghost._age >= _lifetime )
@@ -193,9 +202,9 @@ namespace sw
 
     SkeletalMeshComponent* PoseAfterimageComponent::findGhostMesh( Ghost& ghost )
     {
-        const GameObject*        pOwner   = getOwner();
-        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        GameObject*              pGhost   = pManager != nullptr ? pManager->resolveGameObject( ghost._object ) : nullptr;
+        GameObject*        pOwner   = getOwner();
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr; // 틱 뒤(`advanceGhosts`)에서만 부른다
+        GameObject*        pGhost   = pManager != nullptr ? pManager->resolveGameObject( ghost._object ) : nullptr;
         return pGhost != nullptr ? pGhost->getComponent<SkeletalMeshComponent>() : nullptr;
     }
 } // namespace sw

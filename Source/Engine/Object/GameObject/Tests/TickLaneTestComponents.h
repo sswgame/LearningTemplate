@@ -55,9 +55,9 @@ namespace sw
             ++_frame;
         }
 
-        void onSubTick( uint32 subTickID, float32 deltaTime ) override
+        void onSubTick( uint32 subTickID, TickContext& context ) override
         {
-            (void)deltaTime;
+            (void)context;
             if ( subTickID == kEarlySubTick )
             {
                 _value = _value * 0.5f + 1.0f;
@@ -104,10 +104,10 @@ namespace sw
                 (void)addSubTickPrerequisite( _followSubTickID, _pLeader->getTickHandle(), TickPrerequisiteKind::ReadsWrites ); // 리더가 옮긴 자리를 읽는다
         }
 
-        void onSubTick( uint32 subTickID, float32 deltaTime ) override
+        void onSubTick( uint32 subTickID, TickContext& context ) override
         {
             (void)subTickID;
-            (void)deltaTime;
+            (void)context;
             if ( _pLeaderRoot == nullptr )
                 return;
             _value                = _pLeaderRoot->getLocalPosition()._x + 1.0f;
@@ -151,12 +151,12 @@ namespace sw
             _chainHandle = registerSubTick( TickGroup::DuringPhysics, kChainSubTick );
         }
 
-        void onSubTick( uint32 subTickID, float32 deltaTime ) override
+        void onSubTick( uint32 subTickID, TickContext& context ) override
         {
             (void)subTickID;
             ++_frame;
             const float32 previous = _pPrev != nullptr ? _pPrev->_value : static_cast<float32>( _frame );
-            _value                 = previous * 0.5f + _gain + deltaTime;
+            _value                 = previous * 0.5f + _gain + context.getDeltaTime();
         }
     };
 

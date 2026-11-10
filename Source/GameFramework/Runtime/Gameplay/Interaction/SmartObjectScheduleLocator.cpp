@@ -59,7 +59,7 @@ namespace sw
     {
     }
 
-    void SmartObjectScheduleLocator::initialize( const GameObjectManager* pManager )
+    void SmartObjectScheduleLocator::initialize( GameObjectManager* pManager )
     {
         _pManager = pManager;
         clear();
@@ -103,7 +103,7 @@ namespace sw
     {
         if ( _pManager == nullptr )
             return false;
-        GameObject* pObject = _pManager->resolveGameObject( GameObjectHandle::make( reservation._objectID ) );
+        const GameObject* pObject = _pManager->resolveGameObject( GameObjectHandle::make( reservation._objectID ) );
         if ( pObject == nullptr )
             return false;
         const SmartObjectComponent* pSmart = pObject->getComponent<SmartObjectComponent>();

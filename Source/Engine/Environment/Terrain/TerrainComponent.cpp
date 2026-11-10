@@ -254,12 +254,10 @@ namespace sw
     void TerrainComponent::onTick( TickContext& context )
     {
         SceneComponent::onTick( context );
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        if ( pManager != nullptr && _bOriginDirty.exchange( false, std::memory_order_relaxed ) )
+        if ( _bOriginDirty.exchange( false, std::memory_order_relaxed ) )
         {
             // 다시 읽기는 배치를 레지스트리에서 빼고 넣는 구조 변경이다. 틱 뒤로 미루고, 그 사이 사라졌을 수 있으니 핸들로 다시 찾는다.
-            pManager->executeOrDeferPostTickOnComponent( *this, []( TerrainComponent& terrain )
+            context.deferPostTickOnComponent( *this, []( TerrainComponent& terrain )
             {
                 (void)terrain.reloadTerrainKeepingEdits(); // 경로가 없으면 지형 없이 남고, 읽기 실패는 HeightfieldAsset 가 오류로 남긴다
             } );
@@ -267,8 +265,8 @@ namespace sw
         }
         (void)rebuildStaleChunkMeshes( TerrainComponentInternal::kMaxChunkMeshRebuildsPerFrame );
         float3     viewPosition{};
-        const bool bHasChunks = pManager != nullptr && _listChunk.empty() == false;
-        if ( bHasChunks && EnvironmentUtil::findViewPosition( *pManager, viewPosition ) )
+        const bool bHasChunks = _listChunk.empty() == false;
+        if ( bHasChunks && EnvironmentUtil::findViewPosition( context.getManager(), viewPosition ) )
             (void)updateLODs( viewPosition );
     }
 
@@ -417,7 +415,7 @@ namespace sw
     {
         // 내비메시는 바뀐 자리의 타일만 워커가 다시 베이크한다(타일은 XZ 로 고르므로 높이는 범위 전체로 둔다).
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager == nullptr )
             return;
         const float3 low  = _heightfield.getSamplePosition( sampleRect._minX, sampleRect._minZ );

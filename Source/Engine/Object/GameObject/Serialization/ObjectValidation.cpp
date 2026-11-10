@@ -66,7 +66,7 @@ namespace sw
     {
         ValidationContext        context;
         const uint32             issueCount = validateGameObject( object, context );
-        GameObjectManager* const pManager   = object.getManager();
+        GameObjectManager* const pManager   = object.getMutableManager();
         // 결과는 오브젝트가 사는 월드의 표다. 매니저 밖에서 만든 오브젝트는 둘 월드가 없어 결과 수만 돌려준다(로그는 아래가 남긴다).
         if ( pManager != nullptr )
             pManager->getSubsystem<SceneValidationIssues>().getLog().replaceIssues( object.getObjectID(), context.getIssues() );

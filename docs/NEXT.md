@@ -58,7 +58,9 @@
 
 GameObject/Component API 는 저작 · 수명 · 직렬화 층, 프레임 일은 접근을 선언한 잡, 핫 데이터는 종류별 SoA(완전 ECS 는 기각). 단계마다 빌드 · 테스트가 통과해야 하고, 이득이 흔들림 안이면 되돌린다.
 
-- **컴포넌트 틱의 컨텍스트 남은 틈:** 주 틱은 `onTick( TickContext& )` 로 옮겼다. 틱 본문 45 곳이 아직 `getOwner()->getManager()`(쓰기 가능)를 꺼낸다 — 읽기는 `context.getManager()`(const), 쓰기는 `context.deferPostTick` 로 옮긴 뒤 틱에서 쓰기 가능한 매니저 길을 닫는다(빌드 고리가 필요). `onSubTick` 도 같은 컨텍스트로.
+- **컴포넌트 틱의 컨텍스트 남은 틈:** 틱 본문 · const 매니저 찾기 · 틱 중 `getMutableManager` 단언은 닫았다(작업자 브랜치 — 통합 빌드 · Debug 시나리오에서 컴파일과 단언 확인이 남았다). 남은 것:
+  - const 에서 쓰기 가능한 포인터가 새는 다른 길: `ComponentRegistry::View` · `CameraRegistry::getAll` · `TagIndex::findObjectsWithTags` · `GameObject::getComponent` · `Component::getOwner` 가 const 에서도 `T*` · `GameObject*` 를 낸다 — 같은 상수성 두 갈래로.
+  - 틱 단언은 같은 파일 호출만 훑어 닫았다 — 다른 파일 도우미 · 가상 함수로 닿는 길은 Debug 시나리오의 단언이 짚는다. 레인 프레임 시스템(`ISceneLaneFrameSystem`, 워커)은 틱 표지를 세우지 않아 단언 밖이다.
 - **서비스 갱신 병렬화:** 같은 단계 서비스 갱신을 접근이 겹치지 않는 것끼리 워커로 — 본문의 게임 스레드 전용 API 를 서명으로 먼저 가린다.
 - **공간 질의:** 근접 기믹 · 감지 · 넷 관심 격자를 `SceneSpatialGrid` 층으로 옮길지 측정 뒤.
 

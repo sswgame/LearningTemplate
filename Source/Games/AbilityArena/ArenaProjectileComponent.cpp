@@ -3,7 +3,7 @@
 #include "Games/AbilityArena/ArenaProjectileComponent.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileSimulation.h"
@@ -54,10 +54,12 @@ namespace sw
 
     void ArenaProjectileComponent::finish()
     {
-        _bFinished                  = SW_TRUE;
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        _bFinished                        = SW_TRUE;
+        const GameObject*        pOwner   = getOwner();
+        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        // 틱에서 부른다 — 지우기는 명령 버퍼로 틱 뒤에 한다.
         if ( pManager != nullptr )
-            pManager->destroyGameObject( pOwner ); // 지연 삭제 — 틱 안에서도 된다
+            pManager->executeOrDeferPostTickOnComponent( *this, []( ArenaProjectileComponent& self, GameObjectManager& sceneManager )
+            { sceneManager.destroyGameObject( self.getOwner() ); } );
     }
 } // namespace sw

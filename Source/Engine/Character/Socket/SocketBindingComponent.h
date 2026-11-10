@@ -117,7 +117,7 @@ namespace sw
 
     private:
         SceneComponent*     findOwnerScene() const;
-        GameObject*         resolveHolder() const;
+        const GameObject*   resolveHolder() const;
         ISocketPhysicsBody* resolvePhysicsBody() const;
         bool                computeSocketWorld( float4x4& outWorldTransform ) const;
         [[nodiscard]] bool  attachToHolder();

@@ -74,8 +74,6 @@ namespace sw
         Component::onTick( context );
         if ( _bRebuildRequested == SW_FALSE || _bApplyScheduled == SW_TRUE )
             return;
-        GameObject*                   pOwner    = getOwner();
-        GameObjectManager*            pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
         const VoxelGameModeComponent* pGameMode = findGameMode<VoxelGameModeComponent>();
         if ( pGameMode == nullptr || pGameMode->isStarted() == false )
             return;
@@ -83,7 +81,7 @@ namespace sw
         _bRebuildRequested = SW_FALSE;
         VoxelMesher::fillChunkMesh( pGameMode->getWorld(), _chunkX, _chunkZ, _scratchMesh );
         _bApplyScheduled = SW_TRUE;
-        pManager->executeOrDeferPostTickOnComponent( *this, []( VoxelChunkComponent& chunk )
+        context.deferPostTickOnComponent( *this, []( VoxelChunkComponent& chunk )
         { chunk.applyMeshes(); } );
     }
 

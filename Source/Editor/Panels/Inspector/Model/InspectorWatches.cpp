@@ -130,7 +130,7 @@ namespace sw::editor
         {
             GameObject*  pObject   = editor::getMainSceneSelection().getPrimaryObject();
             const size_t dot       = gv_editorWatchProperty.find( '.' );
-            const bool   bNoObject = pObject == nullptr || pObject->getManager() == nullptr;
+            const bool   bNoObject = pObject == nullptr || pObject->getMutableManager() == nullptr;
             if ( bNoObject || dot == string::npos )
                 return false;
             Component* pComponent = pObject->findComponentByTypeName( hashed_string( gv_editorWatchProperty.substr( 0, dot ).c_str() ) );
@@ -142,7 +142,7 @@ namespace sw::editor
             const ComponentHandle* pHandle = pProperty->getValuePtr<ComponentHandle>( pComponent );
             if ( pHandle == nullptr )
                 return false;
-            const Component* pTarget = pHandle->isValid() ? pObject->getManager()->resolveComponent( *pHandle ) : nullptr;
+            const Component* pTarget = pHandle->isValid() ? pObject->getMutableManager()->resolveComponent( *pHandle ) : nullptr;
             outValue.setText( pTarget != nullptr ? InspectorComponentChoice::makeLabel( *pTarget ) : string{ "(none)" } );
             return true;
         }

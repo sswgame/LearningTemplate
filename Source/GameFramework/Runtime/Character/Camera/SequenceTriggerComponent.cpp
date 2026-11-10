@@ -19,7 +19,7 @@ namespace sw
     {
         (void)activator;
         const GameObject*        pOwner    = getOwner();
-        GameObjectManager*       pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager*       pManager  = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         GameObject*              pSequence = pManager != nullptr ? pManager->resolveGameObject( _sequence ) : nullptr;
         SequencePlayerComponent* pPlayer   = pSequence != nullptr ? pSequence->getComponent<SequencePlayerComponent>() : nullptr;
         if ( pPlayer == nullptr )

@@ -332,12 +332,12 @@ namespace sw::editor
     {
         if ( EditorPlaySession::refuseSceneEdit( "Add component" ) )
             return nullptr;
-        const bool bInvalidComponentTarget = pObj == nullptr || pObj->getManager() == nullptr || typeName.empty();
+        const bool bInvalidComponentTarget = pObj == nullptr || pObj->getMutableManager() == nullptr || typeName.empty();
         if ( bInvalidComponentTarget )
             return nullptr;
 
         const ObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pObj );
-        Component*           pComp          = pObj->getManager()->addComponentByName( pObj, typeName );
+        Component*           pComp          = pObj->getMutableManager()->addComponentByName( pObj, typeName );
         if ( pComp == nullptr )
             return nullptr;
         pComp->onPostLoad();

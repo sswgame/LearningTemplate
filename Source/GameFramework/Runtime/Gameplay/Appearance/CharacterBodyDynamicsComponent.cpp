@@ -161,13 +161,11 @@ namespace sw
     void CharacterBodyDynamicsComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        if ( pManager == nullptr || context.getDeltaTime() <= 0.0f )
+        if ( context.getDeltaTime() <= 0.0f )
             return;
         // 물리 질의 · 표면 쓰기 · 다른 컴포넌트 쓰기는 틱(워커) 밖에서 한다 — 쌓은 시간을 틱 뒤 게임 스레드가 한 번에 쓴다.
         _pendingSeconds += context.getDeltaTime();
-        pManager->executeOrDeferPostTickOnComponent( *this, []( CharacterBodyDynamicsComponent& self, GameObjectManager& manager )
+        context.deferPostTickOnComponent( *this, []( CharacterBodyDynamicsComponent& self, GameObjectManager& manager )
         { self.update( manager ); } );
     }
 
@@ -418,7 +416,7 @@ namespace sw
         stream._dripRemaining = MathUtil::max( 0.0f, stream._dripRemaining - seconds );
 
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner->getManager();
+        GameObjectManager* pManager = pOwner->getMutableManager();
         VFXComponent*      pEffect  = pManager != nullptr ? pManager->resolveComponent( stream._effect ) : nullptr;
         if ( pEffect == nullptr )
         {
@@ -450,7 +448,7 @@ namespace sw
     void CharacterBodyDynamicsComponent::removeFluidEffects()
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         for ( FluidStream& stream : _listFluid )
         {
             VFXComponent* pEffect = pManager != nullptr ? pManager->resolveComponent( stream._effect ) : nullptr;

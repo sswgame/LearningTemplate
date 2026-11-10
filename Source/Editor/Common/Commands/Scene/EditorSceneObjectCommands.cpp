@@ -308,7 +308,7 @@ namespace sw::editor
     void EditorSceneObjectCommands::removeComponent( GameObject* pOwner, Component* pComponent )
     {
         EditorTransaction  transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
-        GameObjectManager* pManager = pOwner->getManager();
+        GameObjectManager* pManager = pOwner->getMutableManager();
         if ( pManager == nullptr )
             (void)pOwner->removeComponent( pComponent ); // 실패는 removeComponent 가 알리고 카드가 남는다
         else if ( EditorPlaySession::areSceneEditsAllowed() )

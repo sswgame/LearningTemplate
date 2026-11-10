@@ -141,7 +141,7 @@ namespace sw
     {
         const GameObject* pOwner = getOwner();
         if ( pOwner != nullptr && pOwner->getManager() != nullptr )
-            pOwner->getManager()->getCameraRegistry().recordChanged();
+            pOwner->getManager()->getCameraRegistry().recordChanged(); // 원자 일련번호라 틱 중에도 const 레지스트리에 올린다
     }
 
     void CameraComponent::setRenderOutput( const CameraRenderOutput& output )

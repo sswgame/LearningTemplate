@@ -172,7 +172,7 @@ namespace sw
                 return;
             }
             _role = Role::Server;
-            (void)MeleeSweepHistory::ensureFor( *getOwner()->getManager() ); // 서버만 켠다 — 권위 있는 스윕이 여기에 적힌다
+            (void)MeleeSweepHistory::ensureFor( *getOwner()->getMutableManager() ); // 서버만 켠다 — 권위 있는 스윕이 여기에 적힌다
         }
         else
         {
@@ -194,7 +194,7 @@ namespace sw
         _controllerID   = -1;
         pMovement->setNetDriven( true );
         // 서버 틱을 읽는 바닥이 이 틱 뒤에 돌게 한다(바닥 서브틱의 선행 조건).
-        if ( ControlSystem* pControl = ControlSystem::find( *getOwner()->getManager() ) )
+        if ( ControlSystem* pControl = ControlSystem::find( *getOwner()->getMutableManager() ) )
             pControl->setServerTickSource( getTickHandle() );
         SW_LOG_INFO_ID( "ShooterNetPawn.ShooterNetPawnMovement", "Shooter net pawn: %# movement at %# Hz", _role == Role::Server ? "server-authoritative" : "predicted", static_cast<int32>( MathUtil::round( 1.0f / _tickInterval ) ) );
     }
@@ -202,9 +202,9 @@ namespace sw
     void ShooterNetPawnComponent::onEndPlay()
     {
         _routerSubscription.reset();
-        if ( _role == Role::Server && getOwner() != nullptr && getOwner()->getManager() != nullptr )
-            MeleeSweepHistory::release( *getOwner()->getManager() );
-        ControlSystem* pControl = getOwner() != nullptr && getOwner()->getManager() != nullptr ? ControlSystem::find( *getOwner()->getManager() ) : nullptr;
+        if ( _role == Role::Server && getOwner() != nullptr && getOwner()->getMutableManager() != nullptr )
+            MeleeSweepHistory::release( *getOwner()->getMutableManager() );
+        ControlSystem* pControl = getOwner() != nullptr && getOwner()->getMutableManager() != nullptr ? ControlSystem::find( *getOwner()->getMutableManager() ) : nullptr;
         if ( pControl != nullptr && pControl->getServerTickSource() == getTickHandle() )
             pControl->setServerTickSource( SubTickHandle{} );
         ShooterBodyMovementComponent* pMovement = findMovement();
@@ -231,7 +231,7 @@ namespace sw
         if ( _role == Role::Server && _bRemoteRequested == SW_FALSE )
         {
             _bRemoteRequested = SW_TRUE;
-            getOwner()->getManager()->executeOrDeferPostTickOnComponent( *this, []( ShooterNetPawnComponent& netPawn )
+            context.deferPostTickOnComponent( *this, []( ShooterNetPawnComponent& netPawn )
             { netPawn.possessRemote(); } );
         }
         _accumulator += context.getDeltaTime();
@@ -250,7 +250,7 @@ namespace sw
         if ( _listPendingClaim.empty() == false && _bClaimsScheduled == SW_FALSE )
         {
             _bClaimsScheduled = SW_TRUE;
-            getOwner()->getManager()->executeOrDeferPostTickOnComponent( *this, []( ShooterNetPawnComponent& netPawn )
+            context.deferPostTickOnComponent( *this, []( ShooterNetPawnComponent& netPawn )
             { netPawn.resolveClaims(); } );
         }
         if ( _role == Role::Client )
@@ -428,7 +428,7 @@ namespace sw
     void ShooterNetPawnComponent::possessRemote()
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         PawnComponent*     pPawn    = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
         if ( pManager == nullptr || pPawn == nullptr )
         {
@@ -497,8 +497,8 @@ namespace sw
 
     const ShooterGameModeComponent* ShooterNetPawnComponent::findGameMode() const
     {
-        GameObject*                   pOwner   = getOwner();
-        GameObjectManager*            pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const GameObject*             pOwner   = getOwner();
+        const GameObjectManager*      pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         const ShooterPlayerComponent* pPlayer  = pOwner != nullptr ? pOwner->getComponent<ShooterPlayerComponent>() : nullptr;
         return pManager != nullptr && pPlayer != nullptr ? GameModeComponent::resolve<ShooterGameModeComponent>( *pManager, pPlayer->getGameMode() ) : nullptr;
     }
@@ -548,7 +548,7 @@ namespace sw
     {
         _bClaimsScheduled                         = SW_FALSE;
         GameObject*                     pOwner    = getOwner();
-        GameObjectManager*              pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager*              pManager  = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         ShooterPlayerComponent*         pPlayer   = pOwner != nullptr ? pOwner->getComponent<ShooterPlayerComponent>() : nullptr;
         const MeleeSweepHistory*        pLedger   = pManager != nullptr ? MeleeSweepHistory::find( *pManager ) : nullptr;
         const ShooterGameModeComponent* pGameMode = findGameMode();

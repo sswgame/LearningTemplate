@@ -425,6 +425,17 @@ namespace sw
             _listNode[static_cast<size_t>( node )]._sensorImpulse += amount;
     }
 
+    void GimmickCircuit::appendRaisedOutputs( const vector<hashed_string>& listPortByNode, vector<int32>& inoutListNode ) const
+    {
+        const int32 nodeCount = MathUtil::min( getNodeCount(), static_cast<int32>( listPortByNode.size() ) );
+        for ( int32 node = 0; node < nodeCount; ++node )
+        {
+            const hashed_string& port = listPortByNode[static_cast<size_t>( node )];
+            if ( port.empty() == false && getOutput( node, port ) )
+                inoutListNode.push_back( node );
+        }
+    }
+
     void GimmickCircuit::setPathLength( int32 node, float32 length )
     {
         if ( 0 <= node && node < getNodeCount() )

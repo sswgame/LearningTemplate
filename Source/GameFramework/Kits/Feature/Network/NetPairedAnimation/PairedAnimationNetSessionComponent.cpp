@@ -28,7 +28,7 @@ namespace sw
 
         // 넷 링크는 이 컴포넌트의 월드(오브젝트 매니저)에 올라 있다 - 전역 세션을 찾지 않는다(`SceneNetLink`). 링크가 비면 혼자 하는 게임이다.
         GameObject*         pOwner     = getOwner();
-        GameObjectManager*  pManager   = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager*  pManager   = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         const SceneNetLink* pLink      = SceneNetLink::findFor( *this );
         const bool          bNoSession = pLink == nullptr || pLink->isBound() == false;
         if ( bNoSession )
@@ -84,12 +84,10 @@ namespace sw
         if ( _routerSubscription.isActive() )
             reportReplicaStats();
         // 클라이언트: 클립을 읽는 중이라 보관한 상태는 준비된 뒤 복원한다 — 세션이 다른 오브젝트의 애니메이터를 바꾸므로 틱 뒤에 한다.
-        const bool         bRetries = _routerSubscription.isActive() && _bServer == SW_FALSE && _client.getPendingCount() > 0;
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        if ( bRetries && pManager != nullptr )
+        const bool bRetries = _routerSubscription.isActive() && _bServer == SW_FALSE && _client.getPendingCount() > 0;
+        if ( bRetries )
         {
-            pManager->executeOrDeferPostTickOnComponent( *this, []( PairedAnimationNetSessionComponent& component, GameObjectManager& manager )
+            context.deferPostTickOnComponent( *this, []( PairedAnimationNetSessionComponent& component, GameObjectManager& manager )
             {
                 (void)manager;
                 component._client.retryPending();
