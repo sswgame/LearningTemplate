@@ -48,7 +48,7 @@ namespace sw
             if ( _listLayer[layerIndex]._pDesc == &layer )
                 return layerIndex;
         }
-        Layer added{};
+        Layer added; // 기본 초기화 — `{}` 집합 초기화는 explicit 기본 생성자의 격자 칸을 복사 목록 초기화한다
         added._pDesc = &layer;
         _listLayer.push_back( std::move( added ) );
         return static_cast<uint32>( _listLayer.size() - 1 );

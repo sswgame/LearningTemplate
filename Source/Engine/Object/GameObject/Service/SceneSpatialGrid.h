@@ -121,7 +121,7 @@ namespace sw
         struct Layer
         {
             const SpatialGridLayerDesc* _pDesc{ nullptr };
-            SpatialHashGrid2D           _arrGrid[2]{};
+            SpatialHashGrid2D           _arrGrid[2];        ///< 앞 · 뒤 버퍼(기본 생성자가 explicit 이라 `{}` 로 복사 목록 초기화하지 않는다)
             float32                     _arrBuiltCell[2]{}; ///< 버퍼마다 지은 셀 크기. 0 이면 짓지 않았다
             float32                     _cellSize{ 0.0f };  ///< 받은 셀 크기와 항목 반 크기 두 배 중 큰 값
             uint32                      _userCount{ 0 };
