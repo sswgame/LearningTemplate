@@ -1,3 +1,4 @@
+<?asset guid="1999460ba0f6a2e0c923f5612dab2ea9"?>
 <Prefab formatVersion="0" _base="common/prefabs/gimmicks/platformer/spring3d.prefab.xml" name="JumpPad3D">
 	<PrefabOverrides>
 		<Override key="RigidBodyComponent#0">

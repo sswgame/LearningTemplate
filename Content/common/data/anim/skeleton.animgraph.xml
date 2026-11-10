@@ -1,3 +1,4 @@
+<?asset guid="8d5a84b9050b8cadf1d06d0d49363c85"?>
 <AnimationGraphAsset>
 	<nodes>
 		<node id="1" name="Spawn_Ground_Skeletons" x="40.0" y="40.0" loop="false" />

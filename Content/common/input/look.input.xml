@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="1abeeec10d6bebf4200fea820d7eab36"?>
 <!-- 1 · 3인칭 시선 — Look 은 폰의 _lookAction(플레이어 조종자가 조종 회전에 더한다), ToggleMouseLock 은 플레이어 조종자의 _mouseLockAction. -->
 <InputMap>
 	<layers>

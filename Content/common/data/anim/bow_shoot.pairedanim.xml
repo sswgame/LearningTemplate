@@ -1,3 +1,4 @@
+<?asset guid="5d70fdf422cb3d7ef5f7b413a2b3a113"?>
 <!--
   활 쏘기 페어드 애니메이션 샘플(`docs/decisions/5-8_GameFramework.md`). 궁수가 앵커이고, 활은 궁수 손 소켓에 붙은 채로 같은 시각을 재생한다.
   궁수 클립은 기사(KayKit)의 2H_Ranged_Shoot 이고 길이(1.0666667 초)가 타임라인 길이다. 활 · 화살 클립은 Scripts/dev/MakeBowProps.py 가 만든다

@@ -1,3 +1,4 @@
+<?asset guid="75e20f04788a717f0f48de8da5c0fcd9"?>
 <Prefab formatVersion="0" _base="common/prefabs/kaykit/knight_cape.prefab.xml" name="RogueCape">
 	<PrefabOverrides>
 		<Override key="MeshComponent#0">

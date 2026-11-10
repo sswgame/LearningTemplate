@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="c8fd0b4facf3656e888ac4df13a1c625"?>
 <!-- 게임 시간 빠르기를 한 단계씩 — 명령형 게임(RTS · 도시 건설). -->
 <InputMap>
 	<layers>

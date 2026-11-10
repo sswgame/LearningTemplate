@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="ac43c1f814fc7ab0ced13bbe596abca2"?>
 <!--
   카트 — 바디 없는 탈것 튜닝(KinematicVehicleSettings, 관성 이동 + 조작감 모듈). 모듈: 그립 · 드리프트 · 부스트 · 공중 제어(점프).
   변형은 _base="common/data/vehicles/kart.vehicle.xml" 에 바뀌는 칸만 적는다(DataInheritance). 바퀴 구름 저항은 표면 종류 표(_rollingResistance) × _inertia._rollingResistanceScale 이다.

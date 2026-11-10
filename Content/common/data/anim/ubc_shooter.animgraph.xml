@@ -1,3 +1,4 @@
+<?asset guid="8cebced63ca8ff97b480861e215c639c"?>
 <!-- Shooter3D 플레이어(Quaternius 기본 캐릭터 UBC · UAL1 클립) — adventurer.animgraph.xml(KayKit)과 같은 상태 · 전이 · 층(같은 Move · Dead · Hit · AimWeight · ShootWeight)을
      UAL1 클립으로 든다. 노드 이름이 클립 이름이라, UAL1 에 짝이 없는 뒷걸음 · 옆 달리기는 한 표본 블렌드 공간으로 같은 클립을 다른 이름으로 든다.
      선 자세는 idle_loop 다 — pistol_idle_loop 는 총을 머리 옆으로 들어 소총이 머리 위로 간다. -->

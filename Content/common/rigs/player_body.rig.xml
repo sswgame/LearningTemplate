@@ -1,3 +1,4 @@
+<?asset guid="d77d12739dbde9d793157f6e5a3eee8c"?>
 <RigAsset>
 	<targets>
 		<item name="Grip" skeletalMesh="MainHand" socket="SupportHand" space="handslot.r" />

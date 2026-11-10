@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="2e76d8303bd2eb9ce4748bba563fdb36"?>
 <!-- 캐릭터 외형 프리셋(CharacterAppearance). parent 위에 다른 값만 적는다 — 값은 매개변수별, 칸은 칸별, 소켓은 이름별로 아래가 덮고 세트는 쌓인다.
      쉼표 목록(items · options) · 범위(min/max) · 색 목록(colors, ; 로 나눔)은 씨앗으로 뽑는다(무작위 NPC).
      Equip 는 set 하나 또는 slot 하나 — item="" 은 칸을 비우고, visible 은 보이는 외형만 바꾼다(형상 변경), 안의 Value 는 그 아이템 인스턴스의 꾸미기 값이다.

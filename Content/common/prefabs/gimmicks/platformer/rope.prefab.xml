@@ -1,3 +1,4 @@
+<?asset guid="71bab12868aa71f12b692901833399fc"?>
 <Prefab formatVersion="0" _base="common/prefabs/gimmicks/platformer/ladder.prefab.xml" name="Rope">
 	<PrefabOverrides>
 		<Override key="BoxCollider2DComponent#0">

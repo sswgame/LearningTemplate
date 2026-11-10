@@ -1,3 +1,4 @@
+<?asset guid="f0fb61b143f7a3dac4bb00114b544906"?>
 <RetargetProfile source_skeleton="common/models/kaykit/knight/knight.skeleton.xml"
                  target_skeleton="common/models/kaykit/skeleton_minion/skeleton_minion.skeleton.xml"
                  translation="ScaleByPelvisHeight">
