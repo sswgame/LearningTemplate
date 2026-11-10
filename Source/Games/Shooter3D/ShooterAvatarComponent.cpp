@@ -68,8 +68,8 @@ namespace sw
         , _hitPause{ 0.45f }
         , _turnRate{ 10.0f }
         , _layerBlendRate{ 10.0f }
-        , _leftFootBone{ "foot.l" }
-        , _rightFootBone{ "foot.r" }
+        , _leftFootBone{} // 스켈레톤마다 다르다 — 프리팹이 적는다(없으면 발 속도 측정이 오류를 남긴다)
+        , _rightFootBone{}
         , _minPlayRate{ 0.6f }
         , _maxPlayRate{ 1.8f }
         , _minLocomotionFootSpeed{ 0.3f }

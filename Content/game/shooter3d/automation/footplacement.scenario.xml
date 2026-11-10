@@ -18,6 +18,7 @@
 	<Expect watch="Rig.Output" target="PlayerBody" key="Feet.foot_offset_0" near="0" tolerance="0.02"/>
 	<Expect watch="Rig.Output" target="PlayerBody" key="Feet.foot_offset_1" near="0" tolerance="0.02"/>
 	<Expect watch="Rig.Output" target="PlayerBody" key="Feet.pelvis_offset" near="0" tolerance="0.01"/>
+	<Wait frames="1"/> <!-- 판정 뒤 같은 프레임에 누르지 않는다(검사기) -->
 	<!-- 첫 칸(0.12 m): 두 발이 칸 위로 올라가고 골반은 그대로다. -->
 	<Press slot="Key.W"/>
 	<Wait frames="27"/>
@@ -27,6 +28,7 @@
 	<Expect watch="Rig.Output" target="PlayerBody" key="Feet.foot_offset_1" near="0.12" tolerance="0.03"/>
 	<Expect watch="Rig.Output" target="PlayerBody" key="Feet.pelvis_offset" near="0" tolerance="0.01"/>
 	<Screenshot file="step_low.ppm"/>
+	<Wait frames="1"/>
 	<!-- 둘째 칸(0.24 m). -->
 	<Press slot="Key.W"/>
 	<Wait frames="24"/>
