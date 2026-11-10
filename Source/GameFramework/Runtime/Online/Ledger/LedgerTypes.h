@@ -227,7 +227,7 @@ namespace sw
     {
         /** @brief 클라이언트 멱등 키(128 비트)로 `<범위>/<16 진 32>` 키를 만듭니다. */
         static string makeFromIdempotency( string_view scope, uint64 keyHigh, uint64 keyLow );
-        /** @brief 바깥 토큰(영수증 거래 id, 우편 키, 거래 id)으로 `<범위>/<토큰 바이트의 16 진>` 키를 만듭니다. 범위가 틀리거나 토큰이 비거나 `kMaxTokenBytes` 를 넘으면 false 입니다. */
+        /** @brief 바깥 토큰(영수증 거래 id, 우편 키, 거래 id)으로 `<범위>/<토큰 바이트의 16 진>` 키를 만듭니다. 범위가 틀리거나 토큰이 비거나 `kMaxTokenBytes` 를 넘거나 키가 `kMaxJournalKeySize` 를 넘으면 false 입니다. */
         [[nodiscard]] static bool makeFromToken( string_view scope, string_view token, string& outKey );
         static string             makeAccountScope( uint64 accountID );    ///< `acct.<16 진 16>`
         static string             makeAdminScope( uint64 adminAccountID ); ///< `gm.<16 진 16>`

@@ -165,7 +165,9 @@ namespace sw
         outKey.clear();
         const bool bScopeOk = LedgerTypesInternal::isTokenText( scope, LedgerTypesInternal::kMaxScopeSize, "_." );
         const bool bTokenOk = token.empty() == false && token.size() <= static_cast<size_t>( LedgerConstant::kMaxTokenBytes );
-        if ( bScopeOk == false || bTokenOk == false )
+        // 상한 토큰(16 진 192 자)과 긴 범위를 합치면 분개 키 상한을 넘는다 — 원장이 Invalid 로 거절할 키를 만들었다고 하지 않는다.
+        const bool bKeyFits = scope.size() + 1 + token.size() * 2 <= static_cast<size_t>( LedgerConstant::kMaxJournalKeySize );
+        if ( bScopeOk == false || bTokenOk == false || bKeyFits == false )
             return false;
         outKey.reserve( scope.size() + 1 + token.size() * 2 );
         outKey += scope;
