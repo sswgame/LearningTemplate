@@ -5,7 +5,6 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/SlotHandle.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/PackedTypes.h"
@@ -27,6 +26,7 @@
 #include "Editor/Panels/Inspector/Model/InspectorComponentPicker.h"
 #include "Editor/Panels/Inspector/Model/InspectorPropertyLayout.h"
 #include "Editor/Panels/Inspector/Model/PropertyGridModel.h"
+#include "Editor/Panels/Inspector/Model/PropertyGridViewState.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Content/AssetPaths.h"
@@ -73,55 +73,56 @@ namespace sw::editor
         class BuiltinPropertyBase : public IInspectorProperty
         {
         protected:
-            void showTooltipIfHovered( const PropertyInfo& prop )
+            void showTooltipIfHovered( const PropertyValueRow& row )
             {
-                EditorWidgets::drawTooltip( prop._metadata->getEditor()._tooltip.c_str() );
+                EditorWidgets::drawTooltip( row._tooltip.c_str() );
             }
-            void drawReadOnlyText( const PropertyInfo& prop, const utf8* pValue )
+            void drawReadOnlyText( const PropertyValueRow& row, const utf8* pValue )
             {
                 ImGui::TextDisabled( "%s", _pLabel );
                 ImGui::SameLine();
                 ImGui::TextUnformatted( pValue != nullptr ? pValue : "" );
-                showTooltipIfHovered( prop );
+                showTooltipIfHovered( row );
             }
-            /** @brief 내장 타입 값을 테이블의 형식(`InspectorBuiltinValue::_pFormatValue`)으로 읽기 전용 표시합니다. */
-            void drawReadOnlyValue( const PropertyInfo& prop, const ValueAddress value )
-            {
-                fixed_string<constant::buffer::kMax512> buf;
-                const InspectorBuiltinValue*            pRow = InspectorBuiltinValue::findBuiltin( prop._typeName.c_str() );
-                if ( pRow != nullptr )
-                    pRow->_pFormatValue( value.get(), buf.data(), buf.capacity() );
-                drawReadOnlyText( prop, buf.c_str() );
-            }
-            bool isColorRequested( const PropertyInfo& prop ) { return InspectorPropertyLayout::isColorRequested( prop ); }
             /** @brief 색 편집 플래그입니다. `ColorHDR` 이면 1 을 넘는 값을 받습니다. */
-            ImGuiColorEditFlags getColorFlags( const PropertyInfo& prop )
+            ImGuiColorEditFlags getColorFlags( const PropertyValueRow& row )
             {
-                return ImGuiColorEditFlags_Float | ( prop._metadata->getEditor()._bColorHDR != SW_FALSE ? ImGuiColorEditFlags_HDR : ImGuiColorEditFlags_None );
+                return ImGuiColorEditFlags_Float | ( row._bColorHDR != SW_FALSE ? ImGuiColorEditFlags_HDR : ImGuiColorEditFlags_None );
+            }
+            /** @brief 값 행의 사본이 그 C++ 타입이면 그 자리, 아니면 nullptr 입니다(모델이 같은 표 줄로 채웠다 — 크기로 한 번 더 가린다). */
+            template <typename T>
+            static const T* findRowValue( const PropertyValueRow& row )
+            {
+                return row._value.getStoredSize() == sizeof( T ) ? row._value.getPtr<T>() : nullptr;
             }
 
-            /** @brief 비트필드는 포인터를 잡을 수 없으므로 값으로 읽고 씁니다. 정수 계열과 bool 이 같은 체크박스를 씁니다. */
-            bool drawBitFieldCheckbox( const MutableObjectAddress instance, const PropertyInfo& prop )
+            /** @brief 비트필드는 포인터를 잡을 수 없으므로 모델이 값으로 읽어 bool 사본을 준다. 정수 계열과 bool 이 같은 체크박스를 씁니다. */
+            bool drawBitFieldCheckbox( const PropertyValueRow& row, PropertyGridModel& model )
             {
-                bool bValue = prop.getValue<bool>( instance.get() );
-                if ( prop._metadata->_bReadOnly != SW_FALSE )
+                const bool* pValue = findRowValue<bool>( row );
+                if ( pValue == nullptr )
+                    return true;
+                if ( row._bReadOnly != SW_FALSE )
                 {
-                    drawReadOnlyText( prop, bValue ? "true" : "false" );
+                    drawReadOnlyText( row, *pValue ? "true" : "false" );
                     return true;
                 }
-                if ( ImGui::Checkbox( _pLabel, &bValue ) )
-                    prop.setValue<bool>( instance.get(), bValue );
-                showTooltipIfHovered( prop );
+                bool       bValue   = *pValue;
+                const bool bChanged = ImGui::Checkbox( _pLabel, &bValue );
+                showTooltipIfHovered( row );
+                InspectorPropertyUndo::trackRowEdit( row );
+                if ( bChanged )
+                    model.setRowValue( row._rowID, TaskValue{ bValue } );
                 return true;
             }
 
             /**
              * @brief 애셋 경로 필드의 틀(입력란, 드롭 대상, 지우기 버튼)을 그립니다.
              * @details 입력란만 호출하는 쪽이 그린다. `string` 은 키 입력마다 반영하고, `hashed_string` 은 Enter 로 확정한다.
-             *          키 입력마다 인턴하면 그 문자열이 모두 테이블에 남기 때문이다. 드롭과 지우기의 처리도 호출하는 쪽이 한다.
+             *          키 입력마다 인턴하면 그 문자열이 모두 테이블에 남기 때문이다. 드롭과 지우기의 처리도 호출하는 쪽이 한다(받는 종류는 모델이 가린다 — `setAssetPath`).
              */
             template <typename DrawInputFn>
-            AssetFieldAction drawAssetPathField( DrawInputFn&& drawInput, const PropertyInfo& prop, string_view currentPath, string& outDroppedPath, const AssetTypeDef* pTargetType = nullptr )
+            AssetFieldAction drawAssetPathField( DrawInputFn&& drawInput, const PropertyValueRow& row, PropertyGridModel& model, string_view currentPath, string& outDroppedPath )
             {
                 const float32    kButtonWidth = ImGui::GetFrameHeight();
                 AssetFieldAction action       = AssetFieldAction::None;
@@ -138,16 +139,16 @@ namespace sw::editor
                 if ( EditorWidgets::acceptAssetDrop( outDroppedPath ) )
                     action = AssetFieldAction::Dropped;
 
-                // 선택 팝업이다(언리얼의 에셋 피커, 유니티의 Object Picker). 프로퍼티의 FileFilter 에 맞는 리소스만 보여 주고 검색으로 거른다.
+                // 선택 팝업이다(언리얼의 에셋 피커, 유니티의 Object Picker). 그 칸이 받는 종류만 모델이 모아 주고(`collectAssetEntries`), 여기서는 검색으로 거른다.
                 EditorChrome::sameLineIfFits( kButtonWidth );
                 if ( ImGui::Button( SW_EDITOR_ICON( "Search" ), ImVec2( kButtonWidth, 0 ) ) )
                 {
                     _assetPicker._search.clear();
-                    PropertyGridModel::collectAssetEntries( _assetPicker._listEntry );
+                    model.collectAssetEntries( row._rowID, _assetPicker._listEntry );
                     EditorInputGUI::openPopup( "AssetPicker" );
                 }
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "PickAsset" ) );
-                EditorSelfTestMarks::record( ( string( "inspector.assetPicker." ) + prop._name.c_str() ).c_str() );
+                EditorSelfTestMarks::record( ( string( "inspector.assetPicker." ) + row._propName.c_str() ).c_str() );
                 if ( ImGui::BeginPopup( "AssetPicker" ) )
                 {
                     AssetPickerState& picker = _assetPicker;
@@ -160,10 +161,7 @@ namespace sw::editor
                     ImGui::BeginChild( "##pickerList", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 43.0f, 14.0f ) ) );
                     for ( const EditorAssetIndexEntry& entry : picker._listEntry )
                     {
-                        // 타입 있는 참조는 대상 종류가 거른다(언리얼 `TSoftObjectPtr<T>` 의 선택기와 같다). 그 밖의 경로 칸은 `FileFilter` 를 본다.
-                        const bool bMatchesKind = pTargetType != nullptr ? AssetRefBase::isPathOfTarget( entry._path, *pTargetType ) : InspectorPropertyLayout::matchesFileFilter( prop._metadata->getEditor()._fileFilter, entry._path );
-                        if ( bMatchesKind == false ||
-                             filter.matchesAny( { string_view{ entry._path }, string_view{ entry._title } } ) == false )
+                        if ( filter.matchesAny( { string_view{ entry._path }, string_view{ entry._title } } ) == false )
                             continue;
                         const bool bFirst = shownCount == 0;
                         ++shownCount;
@@ -194,9 +192,26 @@ namespace sw::editor
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "ClearAssetReference" ) );
 
                 ImGui::PopID();
-                // 이 묶음의 "마지막 항목" 은 입력란이다(BeginMenu 가 메뉴 머리로 되돌리는 것과 같다). 지우기 단추로 두면 뒤의 값 표시(`inspector.property.*`) · 툴팁 · 되돌리기 추적(`trackString`)이 모두 단추를 봐, 친 글자가 되돌리기에 남지 않았다.
+                // 이 묶음의 "마지막 항목" 은 입력란이다(BeginMenu 가 메뉴 머리로 되돌리는 것과 같다). 지우기 단추로 두면 뒤의 값 표시(`inspector.property.*`) · 툴팁 · 되돌리기 추적(`trackRowEdit`)이 모두 단추를 봐, 친 글자가 되돌리기에 남지 않았다.
                 ImGui::GetCurrentContext()->LastItemData = inputItem;
                 return action;
+            }
+
+            /** @brief 끌어 놓기 · 지우기 단추의 결과를 모델에 돌려줍니다. 처리했으면 true 입니다(입력란의 글 편집은 쓰지 않는다). */
+            static bool applyAssetFieldAction( AssetFieldAction action, const PropertyValueRow& row, PropertyGridModel& model, const string& droppedPath )
+            {
+                // 받는 종류(`FileFilter` · `AssetRef<T>` 의 대상 종류)가 아니면 모델이 받지 않는다. 드롭, 선택, 지우기는 모델 명령이라야 알림과 되돌리기에 남는다.
+                if ( action == AssetFieldAction::Dropped )
+                {
+                    (void)model.setAssetPath( row._rowID, droppedPath );
+                    return true;
+                }
+                if ( action == AssetFieldAction::Cleared )
+                {
+                    model.setPropertyText( row._rowID, "", "Clear Asset" );
+                    return true;
+                }
+                return false;
             }
 
             /** @brief 리소스 id 의 폴더를 콘텐츠 브라우저로 엽니다. */
@@ -439,6 +454,7 @@ namespace sw::editor
 
         // ------------------------------------------------------------------------------
         // 숫자 프로퍼티. 정수 여덟 개와 실수 두 개가 같은 경로로 그리고, 타입마다 다른 것은 ImGui 데이터 타입뿐이다
+        // 위젯은 값 행의 사본을 고치고, 바뀌면 저장 단위 값을 모델 명령(`setRowNumber`)으로 돌려준다 — 허용 범위 자르기는 모델이 한다
         // ------------------------------------------------------------------------------
         template <typename T>
         class NumericProperty : public BuiltinPropertyBase
@@ -446,174 +462,154 @@ namespace sw::editor
             static constexpr bool kIsInteger = std::is_integral_v<T>;
 
         public:
-            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, PropertyGridModel& model ) override
+            bool draw( const PropertyValueRow& row, PropertyGridModel& model ) override
             {
-                if constexpr ( kIsInteger )
-                {
-                    if ( prop._bIsBitField == SW_TRUE )
-                        return drawBitFieldCheckbox( instance, prop );
-                }
+                if ( row._kind == PropertyRowKind::BitField )
+                    return drawBitFieldCheckbox( row, model );
 
-                T* pPtr = prop.getValuePtr<T>( instance.get() );
-                if ( pPtr == nullptr )
+                const T* pValue = findRowValue<T>( row );
+                if ( pValue == nullptr )
                     return true;
-
-                // 표시 단위(라디안에서 도)의 배율은 실수에만 적용한다. 정수는 단위를 문자열로만 붙인다. 단위 · 서식은 그리드가 묶음과 함께 캐시한다.
-                const InspectorDisplayUnit& unit      = model.getDisplayUnit( prop );
-                const float64               scale     = kIsInteger ? 1.0 : static_cast<float64>( unit._scale );
-                const float32               dragSpeed = kIsInteger ? 1.0f : ( unit._dragSpeed > 0.0f ? unit._dragSpeed : 0.01f );
-                if ( prop._metadata->_bReadOnly != SW_FALSE )
+                if ( row._bReadOnly != SW_FALSE )
                 {
-                    fixed_string<constant::buffer::kMax64> buf;
-                    if constexpr ( kIsInteger )
-                        formatstring( buf.data(), buf.capacity(), "%#", *pPtr );
-                    else
-                        formatstring( buf.data(), buf.capacity(), "%#", static_cast<float64>( *pPtr ) * scale );
-                    drawReadOnlyText( prop, buf.c_str() );
+                    drawReadOnlyText( row, row._valueText.c_str() );
                     return true;
                 }
 
-                // 위젯은 `UIMin` 과 `UIMax`(없으면 `Min` 과 `Max`) 안에서 움직이고, 값은 항상 `Min` 과 `Max` 로 제한한다(`InspectorNumericRange`).
-                // 적히지 않은 쪽은 nullptr 이므로 ImGui 가 타입의 범위로 제한한다(uint8 은 0..255). 필드 이름 형태 경계는 이 객체의 그 필드 값이다.
-                const InspectorNumericRange range    = InspectorPropertyLayout::getNumericRange( prop, instance );
-                const T                     minValue = static_cast<T>( range._widgetMin * scale );
-                const T                     maxValue = static_cast<T>( range._widgetMax * scale );
-                const T*                    pMin     = range._bHasWidgetMin ? &minValue : nullptr;
-                const T*                    pMax     = range._bHasWidgetMax ? &maxValue : nullptr;
-                const bool                  bSlider  = range._bSlider;
-                const utf8* const           pFormat  = model.getUnitNumberFormat( prop, getNumberFormat<T>() );
+                // 표시 단위(라디안에서 도)의 배율은 실수에만 적용한다. 정수는 단위를 문자열로만 붙인다. 단위 · 서식은 모델이 묶음과 함께 캐시한다.
+                const float64 scale     = kIsInteger ? 1.0 : static_cast<float64>( row._scale );
+                const float32 dragSpeed = kIsInteger ? 1.0f : ( row._dragSpeed > 0.0f ? row._dragSpeed : 0.01f );
+                // 위젯은 `UIMin` 과 `UIMax`(없으면 `Min` 과 `Max`) 안에서 움직인다. 적히지 않은 쪽은 nullptr 이므로 ImGui 가 타입의 범위로 제한한다(uint8 은 0..255).
+                const InspectorNumericRange& range    = row._range;
+                const T                      minValue = static_cast<T>( range._widgetMin * scale );
+                const T                      maxValue = static_cast<T>( range._widgetMax * scale );
+                const T*                     pMin     = range._bHasWidgetMin ? &minValue : nullptr;
+                const T*                     pMax     = range._bHasWidgetMax ? &maxValue : nullptr;
+                const utf8* const            pFormat  = model.getUnitNumberFormat( row._rowID, getNumberFormat<T>() );
 
-                T    widgetValue = kIsInteger ? *pPtr : static_cast<T>( static_cast<float64>( *pPtr ) * scale );
+                T    widgetValue = kIsInteger ? *pValue : static_cast<T>( static_cast<float64>( *pValue ) * scale );
                 bool bChanged    = false;
-                if ( bSlider )
+                if ( range._bSlider )
                     bChanged = ImGui::SliderScalar( _pLabel, getNumberDataType<T>(), &widgetValue, pMin, pMax, pFormat );
                 else
                     bChanged = ImGui::DragScalar( _pLabel, getNumberDataType<T>(), &widgetValue, dragSpeed, pMin, pMax, pFormat );
+                showTooltipIfHovered( row );
+                InspectorPropertyUndo::trackRowEdit( row );
                 if ( bChanged )
-                {
-                    const float64 stored = kIsInteger ? static_cast<float64>( widgetValue ) : static_cast<float64>( widgetValue ) / scale;
-                    *pPtr                = static_cast<T>( InspectorPropertyLayout::clampToAllowedRange( range, stored ) );
-                }
-                showTooltipIfHovered( prop );
-                InspectorPropertyUndo::trackPOD( MutableValueAddress{ pPtr }, sizeof( *pPtr ), prop );
+                    model.setRowNumber( row._rowID, kIsInteger ? static_cast<float64>( widgetValue ) : static_cast<float64>( widgetValue ) / scale );
                 return true;
             }
         };
 
         // ------------------------------------------------------------------------------
-        // 그 밖의 내장 타입
+        // 그 밖의 내장 타입 — 사본을 고쳐 바뀌면 `setRowValue` 로 돌려준다
         // ------------------------------------------------------------------------------
         /** @brief bool 과 atomic<bool> 의 체크박스입니다. 정수 비트필드와 같은 체크박스를 씁니다. */
         template <typename T>
         class CheckboxProperty : public BuiltinPropertyBase
         {
         public:
-            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, PropertyGridModel& /*model*/ ) override
+            bool draw( const PropertyValueRow& row, PropertyGridModel& model ) override
             {
-                if constexpr ( std::is_same_v<T, bool> )
-                {
-                    if ( prop._bIsBitField == SW_TRUE )
-                        return drawBitFieldCheckbox( instance, prop );
-                }
+                if ( row._kind == PropertyRowKind::BitField )
+                    return drawBitFieldCheckbox( row, model );
 
-                T* pPtr = prop.getValuePtr<T>( instance.get() );
-                if ( pPtr == nullptr )
+                const T* pValue = findRowValue<T>( row );
+                if ( pValue == nullptr )
                     return true;
-                if ( prop._metadata->_bReadOnly != SW_FALSE )
+                if ( row._bReadOnly != SW_FALSE )
                 {
-                    drawReadOnlyValue( prop, ValueAddress{ pPtr } );
+                    drawReadOnlyText( row, row._valueText.c_str() );
                     return true;
                 }
-                drawValueWidget( _pLabel, *pPtr );
-                showTooltipIfHovered( prop );
+                T          edited   = *pValue;
+                const bool bChanged = drawValueWidget( _pLabel, edited );
+                showTooltipIfHovered( row );
                 // atomic<bool> 은 다른 스레드가 쓰는 값이므로 되돌리기 기록에 넣지 않는다.
                 if constexpr ( std::is_same_v<T, bool> )
-                    InspectorPropertyUndo::trackPOD( MutableValueAddress{ pPtr }, sizeof( *pPtr ), prop );
+                    InspectorPropertyUndo::trackRowEdit( row );
+                if ( bChanged )
+                    model.setRowValue( row._rowID, TaskValue{ std::move( edited ) } );
                 return true;
             }
         };
 
-        /** @brief 메타데이터가 필요 없는 분기(행렬, 회전, 핸들, 태그)의 프로퍼티입니다. 편집 위젯은 인자 입력란과 같습니다. */
+        /** @brief 메타데이터가 필요 없는 분기(행렬, 회전, 핸들, 태그, 압축 값, 방향)의 프로퍼티입니다. 편집 위젯은 인자 입력란과 같습니다. */
         template <typename T>
         class ValueProperty : public BuiltinPropertyBase
         {
         public:
-            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, PropertyGridModel& /*model*/ ) override
+            bool draw( const PropertyValueRow& row, PropertyGridModel& model ) override
             {
-                T* pPtr = prop.getValuePtr<T>( instance.get() );
-                if ( pPtr == nullptr )
+                const T* pValue = findRowValue<T>( row );
+                if ( pValue == nullptr )
                     return true;
-                if ( prop._metadata->_bReadOnly != SW_FALSE )
+                if ( row._bReadOnly != SW_FALSE )
                 {
-                    drawReadOnlyValue( prop, ValueAddress{ pPtr } );
+                    drawReadOnlyText( row, row._valueText.c_str() );
                     return true;
                 }
-                drawValueWidget( _pLabel, *pPtr );
-                showTooltipIfHovered( prop );
-                InspectorPropertyUndo::trackPOD( MutableValueAddress{ pPtr }, sizeof( *pPtr ), prop );
+                T          edited   = *pValue;
+                const bool bChanged = drawValueWidget( _pLabel, edited );
+                showTooltipIfHovered( row );
+                InspectorPropertyUndo::trackRowEdit( row );
+                if ( bChanged )
+                    model.setRowValue( row._rowID, TaskValue{ std::move( edited ) } );
                 return true;
             }
         };
 
         /**
          * @brief 컴포넌트 핸들의 위젯입니다. 대상 타입이 있는 핸들(`TComponentHandle<T>`)은 선택기만 그리고, 없는 핸들은 `ValueProperty` 와 같이 그립니다.
-         * @details 선택기가 쓰는 값은 **열거한 컴포넌트의 `getHandle()`** 뿐이라 타입이 틀린 값이 들어갈 수 없다.
-         *          대상 타입, 레지스트리, 편집 대상의 씬 중 하나라도 없으면 선택기를 그리지 않고 오류 글과 한 번의 로그로 멈춘다. 활성 씬이나 모든 컴포넌트로
-         *          넓히는 것은 폴백이다.
+         * @details 선택기가 쓰는 값은 **열거한 컴포넌트의 `getHandle()`** 뿐이라 타입이 틀린 값이 들어갈 수 없다(모델의 `collectComponentChoices`).
+         *          대상 타입이나 편집 대상의 씬이 없으면 모델이 오류 글을 채우고 한 번 로그를 남긴다 — 선택기를 그리지 않는다. 활성 씬이나 모든 컴포넌트로 넓히는 것은 폴백이다.
          */
         class ComponentHandleProperty : public BuiltinPropertyBase
         {
         public:
-            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, PropertyGridModel& model ) override
+            bool draw( const PropertyValueRow& row, PropertyGridModel& model ) override
             {
-                if ( prop._handleTargetTypeName.empty() )
-                    return _untyped.draw( instance, prop, model );
-
-                const TypeInfo*          pTargetType = InspectorComponentChoice::findTargetType( PropertyGridModel::getTypeRegistry(), prop );
-                const GameObjectManager* pManager    = model.findEditOwnerManager();
-                if ( pTargetType == nullptr || pManager == nullptr )
+                if ( row._bHandlePicker == SW_FALSE )
+                    return _untyped.draw( row, model );
+                if ( row._bHandleUnavailable != SW_FALSE )
                 {
-                    drawUnavailable( prop, pTargetType == nullptr );
+                    ImGui::TextDisabled( "%s", _pLabel );
+                    ImGui::SameLine();
+                    EditorThemeUtil::textError( row._valueText.c_str() );
+                    showTooltipIfHovered( row );
                     return true;
                 }
-
-                ComponentHandle* pValue = prop.getValuePtr<ComponentHandle>( instance.get() );
+                const ComponentHandle* pValue = findRowValue<ComponentHandle>( row );
                 if ( pValue == nullptr )
                     return true;
-
-                if ( prop._metadata->_bReadOnly != SW_FALSE )
+                if ( row._bReadOnly != SW_FALSE )
                 {
-                    const InspectorHandleState state   = InspectorComponentChoice::computeHandleState( *pManager, *pTargetType, *pValue );
-                    const string               preview = InspectorComponentChoice::makePreview( *pManager, *pValue, state );
-                    drawReadOnlyText( prop, preview.c_str() );
+                    drawReadOnlyText( row, row._valueText.c_str() );
                     return true;
                 }
 
                 ComponentHandle picked{};
-                // 쓰기는 그리드 한곳(통지 · 되돌리기)이 맡는다. Selectable 은 ImGui 편집 플래그를 세우지 않으므로 trackPOD 도 부르지 않는다.
-                if ( drawPicker( _pLabel, *pManager, *pTargetType, *pValue, _listChoice, picked ) )
+                // 고른 것은 모델 명령 한 번(통지 · 되돌리기)이다. Selectable 은 위젯의 활성 ~ 해제가 아니라 되돌리기 추적을 부르지 않는다.
+                if ( drawPicker( _pLabel, row._valueText, row._handleState, *pValue, model, row._handleTargetTypeName, _listChoice, picked ) )
                 {
                     // `picked` 는 값 자체라 값 주소 쪽 변환(`formatValueText`)으로 쓴다. 객체 주소 쪽(`formatPropertyText`)은 오프셋을 한 번 더 더한다.
-                    const string undoLabel = InspectorPropertyLayout::makeUndoLabel( InspectorPropertyLayout::getPropertyLabel( prop ).c_str() );
-                    model.setPropertyText( instance, prop,
-                                           SerializerUtil::formatValueText( ValueAddress{ &picked }, prop._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) ),
+                    const string undoLabel = InspectorPropertyLayout::makeUndoLabel( row._label.c_str() );
+                    model.setPropertyText( row._rowID, SerializerUtil::formatValueText( ValueAddress{ &picked }, row._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) ),
                                            undoLabel.c_str() );
                 }
-                showTooltipIfHovered( prop );
+                showTooltipIfHovered( row );
                 return true;
             }
 
             /**
              * @brief 선택기 콤보 하나입니다. 프로퍼티와 CallInEditor 인자(`InspectorPropertyManager::drawMethodArg`)가 같은 것을 씁니다.
-             * @details 고를 수 있는 값은 "(none)" 과 @p targetType 의 열거한 컴포넌트 핸들뿐이다. 목록은 콤보가 열린 프레임에만 @p inoutListChoice 에 모은다.
+             * @details 고를 수 있는 값은 "(none)" 과 @p targetTypeName 의 열거한 컴포넌트 핸들뿐이다. 목록은 콤보가 열린 프레임에만 @p inoutListChoice 에 모은다.
              * @return 지금 값과 다른 것을 골랐으면 true 이고 @p outPicked 에 담습니다.
              */
-            static bool drawPicker( const utf8* pLabel, const GameObjectManager& manager, const TypeInfo& targetType, ComponentHandle current,
-                                    vector<InspectorComponentChoice>& inoutListChoice, ComponentHandle& outPicked )
+            static bool drawPicker( const utf8* pLabel, const string& preview, InspectorHandleState state, ComponentHandle current, const PropertyGridModel& model,
+                                    const hashed_string& targetTypeName, vector<InspectorComponentChoice>& inoutListChoice, ComponentHandle& outPicked )
             {
-                const InspectorHandleState state    = InspectorComponentChoice::computeHandleState( manager, targetType, current );
-                const string               preview  = InspectorComponentChoice::makePreview( manager, current, state );
-                const bool                 bColored = state == InspectorHandleState::Missing || state == InspectorHandleState::WrongType;
+                const bool bColored = state == InspectorHandleState::Missing || state == InspectorHandleState::WrongType;
                 if ( bColored )
                     EditorThemeUtil::pushTextColor( state == InspectorHandleState::Missing ? SW_THEME_COLOR( "Signal", "Warning" ) : SW_THEME_COLOR( "Signal", "Error" ) );
                 const bool bOpen = ImGui::BeginCombo( pLabel, preview.c_str() );
@@ -622,14 +618,14 @@ namespace sw::editor
                 if ( bOpen == false )
                     return false;
                 // 열린 프레임에만 모은다. 닫혀 있을 때 비용은 0 이다.
-                InspectorComponentChoice::collectChoices( manager, targetType, inoutListChoice );
+                model.collectComponentChoices( targetTypeName, inoutListChoice );
                 ComponentHandle picked{};
                 bool            bPicked = false;
                 if ( ImGui::Selectable( "(none)", current.isValid() == false ) )
                     bPicked = true;
                 EditorSelfTestMarks::record( "inspector.handle.none" ); // 시나리오가 누른다 — 콤보를 연 프레임에만 그려진다
                 if ( inoutListChoice.empty() )
-                    ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "NoneInScene", TextArgumentList().addText( "type", targetType._name.c_str() ) ).c_str() );
+                    ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "NoneInScene", TextArgumentList().addText( "type", targetTypeName.c_str() ) ).c_str() );
                 for ( const InspectorComponentChoice& choice : inoutListChoice )
                 {
                     if ( ImGui::Selectable( choice._label.c_str(), choice._handle == current ) )
@@ -648,66 +644,43 @@ namespace sw::editor
             }
 
         private:
-            /** @brief 선택기를 그릴 수 없을 때의 오류 글입니다. 필드마다 한 번만 로그를 남깁니다. */
-            void drawUnavailable( const PropertyInfo& prop, bool bUnknownType )
-            {
-                fixed_string<constant::buffer::kMax512> text;
-                if ( bUnknownType )
-                    formatstring( text.data(), text.capacity(), "(unknown component type '%#')", prop._handleTargetTypeName.c_str() );
-                else
-                    formatstring( text.data(), text.capacity(), "(no scene: cannot pick a component)" );
-                ImGui::TextDisabled( "%s", _pLabel );
-                ImGui::SameLine();
-                EditorThemeUtil::textError( text.c_str() );
-                if ( _uniqueReported.insert( static_cast<uint32>( prop._name.getHash() ) ).second )
-                    SW_LOG_ERROR_ID( "InspectorPropertyManager.InspectorComponentHandleCannot", "Inspector: component handle '%#' cannot be edited: %#", prop._name.c_str(), text.c_str() );
-                showTooltipIfHovered( prop );
-            }
-
-        private:
             ValueProperty<ComponentHandle>   _untyped;
-            vector<InspectorComponentChoice> _listChoice;     ///< 콤보가 열린 프레임에만 채운다
-            unordered_set<uint32>            _uniqueReported; ///< 오류를 이미 남긴 필드(이름 해시)
+            vector<InspectorComponentChoice> _listChoice; ///< 콤보가 열린 프레임에만 채운다
         };
 
         class StringProperty : public BuiltinPropertyBase
         {
         public:
-            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, PropertyGridModel& model ) override
+            bool draw( const PropertyValueRow& row, PropertyGridModel& model ) override
             {
-                const bool bAssetPath = prop._metadata->_bAssetPath != SW_FALSE || prop._metadata->_assetType.empty() == false;
-
-                string* pPtr = prop.getValuePtr<string>( instance.get() );
-                if ( pPtr == nullptr )
+                const string* pValue = findRowValue<string>( row );
+                if ( pValue == nullptr )
                     return true;
-                if ( prop._metadata->_bReadOnly != SW_FALSE )
+                if ( row._bReadOnly != SW_FALSE )
                 {
-                    drawReadOnlyText( prop, pPtr->c_str() );
+                    drawReadOnlyText( row, pValue->c_str() );
                     return true;
                 }
 
-                if ( bAssetPath )
+                string edited   = *pValue;
+                bool   bChanged = false;
+                bool   bApplied = false;
+                if ( row._bAssetPath != SW_FALSE )
                 {
                     string                 droppedPath;
                     const AssetFieldAction action = drawAssetPathField(
-                        [pPtr]( const utf8* pID )
-                    { EditorWidgets::drawTextField( pID, *pPtr ); }, prop, string_view{ *pPtr }, droppedPath );
-                    // `FileFilter` 에 맞지 않는 파일은 받지 않는다. 드롭, 선택, 지우기는 위젯 편집이 아니라 그리드가 적용해야 알림과 되돌리기에 남는다.
-                    if ( action == AssetFieldAction::Dropped && InspectorPropertyLayout::matchesFileFilter( prop._metadata->getEditor()._fileFilter, droppedPath ) )
-                        model.setPropertyText( instance, prop, droppedPath, "Set Asset" );
-                    else if ( action == AssetFieldAction::Cleared )
-                        model.setPropertyText( instance, prop, "", "Clear Asset" );
+                        [&edited, &bChanged]( const utf8* pID )
+                    { bChanged = EditorWidgets::drawTextField( pID, edited ); }, row, model, string_view{ *pValue }, droppedPath );
+                    bApplied = applyAssetFieldAction( action, row, model, droppedPath );
                 }
-                else if ( prop._metadata->getEditor()._bMultiline != SW_FALSE )
-                {
-                    EditorWidgets::drawTextFieldMultiline( _pLabel, *pPtr );
-                }
+                else if ( row._bMultiline != SW_FALSE )
+                    bChanged = EditorWidgets::drawTextFieldMultiline( _pLabel, edited );
                 else
-                {
-                    EditorWidgets::drawTextField( _pLabel, *pPtr );
-                }
-                showTooltipIfHovered( prop );
-                InspectorPropertyUndo::trackString( pPtr, prop );
+                    bChanged = EditorWidgets::drawTextField( _pLabel, edited );
+                showTooltipIfHovered( row );
+                InspectorPropertyUndo::trackRowEdit( row );
+                if ( bChanged && bApplied == false )
+                    model.setRowValue( row._rowID, TaskValue{ std::move( edited ) } );
                 return true;
             }
         };
@@ -715,76 +688,68 @@ namespace sw::editor
         class HashedStringProperty : public BuiltinPropertyBase
         {
         public:
-            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, PropertyGridModel& model ) override
+            bool draw( const PropertyValueRow& row, PropertyGridModel& model ) override
             {
-                const bool bAssetPath = prop._metadata->_bAssetPath != SW_FALSE || prop._metadata->_assetType.empty() == false;
-
-                hashed_string* pPtr = prop.getValuePtr<hashed_string>( instance.get() );
-                if ( pPtr == nullptr )
+                const hashed_string* pValue = findRowValue<hashed_string>( row );
+                if ( pValue == nullptr )
                     return true;
-                if ( prop._metadata->_bReadOnly != SW_FALSE )
+                if ( row._bReadOnly != SW_FALSE )
                 {
-                    drawReadOnlyText( prop, pPtr->c_str() );
+                    drawReadOnlyText( row, pValue->c_str() );
                     return true;
                 }
 
-                if ( bAssetPath )
+                hashed_string edited   = *pValue;
+                bool          bChanged = false;
+                bool          bApplied = false;
+                if ( row._bAssetPath != SW_FALSE )
                 {
                     string                 droppedPath;
                     const AssetFieldAction action = drawAssetPathField(
-                        [pPtr]( const utf8* pID )
-                    { drawNameInput( pID, *pPtr ); }, prop, pPtr->view(), droppedPath );
-                    if ( action == AssetFieldAction::Dropped && InspectorPropertyLayout::matchesFileFilter( prop._metadata->getEditor()._fileFilter, droppedPath ) )
-                        model.setPropertyText( instance, prop, droppedPath, "Set Asset" );
-                    else if ( action == AssetFieldAction::Cleared )
-                        model.setPropertyText( instance, prop, "", "Clear Asset" );
+                        [&edited, &bChanged]( const utf8* pID )
+                    { bChanged = drawNameInput( pID, edited ); }, row, model, pValue->view(), droppedPath );
+                    bApplied = applyAssetFieldAction( action, row, model, droppedPath );
                 }
                 else
-                {
-                    drawNameInput( _pLabel, *pPtr );
-                }
-                showTooltipIfHovered( prop );
-                // 인턴 인덱스 하나이므로 POD 로 되돌린다. 인턴된 문자열은 해제되지 않으므로 이전 인덱스는 언제나 유효하다.
-                InspectorPropertyUndo::trackPOD( MutableValueAddress{ pPtr }, sizeof( *pPtr ), prop );
+                    bChanged = drawNameInput( _pLabel, edited );
+                showTooltipIfHovered( row );
+                // 인턴 인덱스 하나이므로 되돌리기는 스냅샷 한 번이다. 인턴된 문자열은 해제되지 않으므로 이전 인덱스는 언제나 유효하다.
+                InspectorPropertyUndo::trackRowEdit( row );
+                if ( bChanged && bApplied == false )
+                    model.setRowValue( row._rowID, TaskValue{ edited } );
                 return true;
             }
         };
 
         /**
          * @brief `AssetRef<T>` 칸입니다 — 글로 치거나 끌어 놓거나 대상 종류로 거른 선택 팝업에서 고릅니다.
-         * @details 값은 칸을 떠날 때 그리드가 글 처리기로 넣어(`applyPropertyTextAsEdit`) 되돌리기에 남고 종류 검사를 지난다. 글을 치는 칸은 한 번에 하나라 버퍼도 하나다(`DataPathPropertyDrawer` 와 같다).
+         * @details 값은 칸을 떠날 때 모델에 글로 넣어(`setPropertyText`) 되돌리기에 남고 종류 검사를 지난다. 값 행의 값 글(`_valueText`)이 경로다.
+         *          글을 치는 칸은 한 번에 하나라 버퍼도 하나다(`DataPathPropertyDrawer` 와 같다).
          */
         class AssetRefProperty : public BuiltinPropertyBase
         {
         public:
-            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, PropertyGridModel& model ) override
+            bool draw( const PropertyValueRow& row, PropertyGridModel& model ) override
             {
-                const AssetRefBase* pRef = prop.getValuePtr<AssetRefBase>( instance.get() );
-                if ( pRef == nullptr )
-                    return true;
-                if ( prop._metadata->_bReadOnly != SW_FALSE )
+                if ( row._bReadOnly != SW_FALSE )
                 {
-                    drawReadOnlyText( prop, pRef->c_str() );
+                    drawReadOnlyText( row, row._valueText.c_str() );
                     return true;
                 }
                 string                 droppedPath;
                 bool                   bEdited = false;
                 const AssetFieldAction action  = drawAssetPathField(
-                    [this, pRef, &bEdited]( const utf8* pID )
+                    [this, &row, &bEdited]( const utf8* pID )
                 {
                     if ( ImGui::GetActiveID() != ImGui::GetID( pID ) )
-                        _buffer = pRef->path();
+                        _buffer = row._valueText;
                     EditorWidgets::drawTextField( pID, _buffer );
                     bEdited = ImGui::IsItemDeactivatedAfterEdit();
                 },
-                    prop, pRef->path(), droppedPath, &pRef->getTargetType() );
-                if ( action == AssetFieldAction::Dropped && AssetRefBase::isPathOfTarget( droppedPath, pRef->getTargetType() ) )
-                    model.setPropertyText( instance, prop, droppedPath, "Set Asset" );
-                else if ( action == AssetFieldAction::Cleared )
-                    model.setPropertyText( instance, prop, "", "Clear Asset" );
-                else if ( bEdited && *pRef != string_view( _buffer ) )
-                    model.setPropertyText( instance, prop, _buffer, "Edit Path" );
-                showTooltipIfHovered( prop );
+                    row, model, string_view{ row._valueText }, droppedPath );
+                if ( applyAssetFieldAction( action, row, model, droppedPath ) == false && bEdited && _buffer != row._valueText )
+                    model.setPropertyText( row._rowID, _buffer, "Edit Path" );
+                showTooltipIfHovered( row );
                 return true;
             }
 
@@ -795,34 +760,34 @@ namespace sw::editor
         class Float3Property : public BuiltinPropertyBase
         {
         public:
-            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, PropertyGridModel& model ) override
+            bool draw( const PropertyValueRow& row, PropertyGridModel& model ) override
             {
-                float3* pPtr = prop.getValuePtr<float3>( instance.get() );
-                if ( pPtr == nullptr )
+                const float3* pValue = findRowValue<float3>( row );
+                if ( pValue == nullptr )
                     return true;
-                // 라디안으로 저장한 각도(`Units=rad`)는 도로 보여 주고 편집한다. 바뀌었을 때만 다시 쓴다.
-                const InspectorDisplayUnit& unit = model.getDisplayUnit( prop );
-                if ( prop._metadata->_bReadOnly != SW_FALSE )
+                if ( row._bReadOnly != SW_FALSE )
                 {
-                    const float3                            shown = *pPtr * unit._scale;
-                    fixed_string<constant::buffer::kMax128> buf;
-                    formatstring( buf.data(), buf.capacity(), "(%#, %#)",
-                                  Fmt( shown._x, Format( 2 ) ), Fmt( shown._y, Format( 2 ) ), Fmt( shown._z, Format( 2 ) ) );
-                    drawReadOnlyText( prop, buf.c_str() );
+                    drawReadOnlyText( row, row._valueText.c_str() );
                     return true;
                 }
-                if ( isColorRequested( prop ) )
-                    ImGui::ColorEdit3( _pLabel, &pPtr->_x, getColorFlags( prop ) );
-                else if ( unit._scale != 1.0f )
+                // 라디안으로 저장한 각도(`Units=rad`)는 도로 보여 주고 편집한다. 바뀌었을 때만 다시 쓴다.
+                float3 edited   = *pValue;
+                bool   bChanged = false;
+                if ( row._bColor != SW_FALSE )
+                    bChanged = ImGui::ColorEdit3( _pLabel, &edited._x, getColorFlags( row ) );
+                else if ( row._scale != 1.0f )
                 {
-                    float3 shown = *pPtr * unit._scale;
-                    if ( EditorWidgets::drawVec3Control( _pLabel, shown, 0.0f, 100.0f, unit._dragSpeed ) )
-                        *pPtr = shown * ( 1.0f / unit._scale );
+                    float3 shown = edited * row._scale;
+                    bChanged     = EditorWidgets::drawVec3Control( _pLabel, shown, 0.0f, 100.0f, row._dragSpeed );
+                    if ( bChanged )
+                        edited = shown * ( 1.0f / row._scale );
                 }
                 else
-                    EditorWidgets::drawVec3Control( _pLabel, *pPtr, 0.0f, 100.0f, 0.1f );
-                showTooltipIfHovered( prop );
-                InspectorPropertyUndo::trackPOD( MutableValueAddress{ pPtr }, sizeof( *pPtr ), prop );
+                    bChanged = EditorWidgets::drawVec3Control( _pLabel, edited, 0.0f, 100.0f, 0.1f );
+                showTooltipIfHovered( row );
+                InspectorPropertyUndo::trackRowEdit( row );
+                if ( bChanged )
+                    model.setRowValue( row._rowID, TaskValue{ edited } );
                 return true;
             }
         };
@@ -830,22 +795,22 @@ namespace sw::editor
         class Float2Property : public BuiltinPropertyBase
         {
         public:
-            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, PropertyGridModel& /*model*/ ) override
+            bool draw( const PropertyValueRow& row, PropertyGridModel& model ) override
             {
-                float2* pPtr = prop.getValuePtr<float2>( instance.get() );
-                if ( pPtr == nullptr )
+                const float2* pValue = findRowValue<float2>( row );
+                if ( pValue == nullptr )
                     return true;
-                if ( prop._metadata->_bReadOnly != SW_FALSE )
+                if ( row._bReadOnly != SW_FALSE )
                 {
-                    fixed_string<constant::buffer::kMax128> buf;
-                    formatstring( buf.data(), buf.capacity(), "(%#, %#)",
-                                  Fmt( pPtr->_x, Format( 2 ) ), Fmt( pPtr->_y, Format( 2 ) ) );
-                    drawReadOnlyText( prop, buf.c_str() );
+                    drawReadOnlyText( row, row._valueText.c_str() );
                     return true;
                 }
-                ImGui::DragFloat2( _pLabel, &pPtr->_x, 0.1f );
-                showTooltipIfHovered( prop );
-                InspectorPropertyUndo::trackPOD( MutableValueAddress{ pPtr }, sizeof( *pPtr ), prop );
+                float2     edited   = *pValue;
+                const bool bChanged = ImGui::DragFloat2( _pLabel, &edited._x, 0.1f );
+                showTooltipIfHovered( row );
+                InspectorPropertyUndo::trackRowEdit( row );
+                if ( bChanged )
+                    model.setRowValue( row._rowID, TaskValue{ edited } );
                 return true;
             }
         };
@@ -853,26 +818,22 @@ namespace sw::editor
         class Float4Property : public BuiltinPropertyBase
         {
         public:
-            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, PropertyGridModel& /*model*/ ) override
+            bool draw( const PropertyValueRow& row, PropertyGridModel& model ) override
             {
-                float4* pPtr = prop.getValuePtr<float4>( instance.get() );
-                if ( pPtr == nullptr )
+                const float4* pValue = findRowValue<float4>( row );
+                if ( pValue == nullptr )
                     return true;
-                if ( prop._metadata->_bReadOnly != SW_FALSE )
+                if ( row._bReadOnly != SW_FALSE )
                 {
-                    fixed_string<constant::buffer::kMax256> buf;
-                    formatstring( buf.data(), buf.capacity(), "(%#, %#, %#, %#)",
-                                  Fmt( pPtr->_x, Format( 2 ) ), Fmt( pPtr->_y, Format( 2 ) ),
-                                  Fmt( pPtr->_z, Format( 2 ) ), Fmt( pPtr->_w, Format( 2 ) ) );
-                    drawReadOnlyText( prop, buf.c_str() );
+                    drawReadOnlyText( row, row._valueText.c_str() );
                     return true;
                 }
-                if ( isColorRequested( prop ) )
-                    ImGui::ColorEdit4( _pLabel, &pPtr->_x, getColorFlags( prop ) );
-                else
-                    ImGui::DragFloat4( _pLabel, &pPtr->_x, 0.01f );
-                showTooltipIfHovered( prop );
-                InspectorPropertyUndo::trackPOD( MutableValueAddress{ pPtr }, sizeof( *pPtr ), prop );
+                float4     edited   = *pValue;
+                const bool bChanged = row._bColor != SW_FALSE ? ImGui::ColorEdit4( _pLabel, &edited._x, getColorFlags( row ) ) : ImGui::DragFloat4( _pLabel, &edited._x, 0.01f );
+                showTooltipIfHovered( row );
+                InspectorPropertyUndo::trackRowEdit( row );
+                if ( bChanged )
+                    model.setRowValue( row._rowID, TaskValue{ edited } );
                 return true;
             }
         };
@@ -975,7 +936,7 @@ namespace sw::editor
         registerType( AssetRefBase::kTypeName, make_unique<AssetRefProperty>() );
     }
 
-    bool InspectorPropertyManager::drawMethodArg( const utf8* pLabel, InspectorMethodArgSlot& slot, const FunctionParameterInfo& parameter, const GameObjectManager* pManager,
+    bool InspectorPropertyManager::drawMethodArg( const utf8* pLabel, InspectorMethodArgSlot& slot, const FunctionParameterInfo& parameter, const PropertyGridModel& model,
                                                   vector<InspectorComponentChoice>& inoutListChoice )
     {
         if ( slot._value.hasValue() == false || slot._builtinIndex >= std::size( kArrDrawMethodArg ) )
@@ -987,17 +948,18 @@ namespace sw::editor
             return kArrDrawMethodArg[slot._builtinIndex]( pLabel, slot._value );
 
         // 타입 핸들 인자 — 프로퍼티와 같은 선택기다. 칸의 값은 타입 없는 핸들이고(`_typeName` 이 `ComponentHandle`), 호출 썽크가 대상 타입을 다시 확인한다.
-        const TypeInfo* pTargetType = InspectorComponentChoice::findTargetType( PropertyGridModel::getTypeRegistry(), parameter._handleTargetTypeName );
-        const bool      bPickable   = pTargetType != nullptr && pManager != nullptr && slot._value.getPtr<ComponentHandle>() != nullptr;
-        if ( bPickable == false )
+        const ComponentHandle* pCurrent = slot._value.getStoredSize() == sizeof( ComponentHandle ) ? slot._value.getPtr<ComponentHandle>() : nullptr;
+        string                 preview;
+        InspectorHandleState   state{};
+        if ( pCurrent == nullptr || model.describeComponentHandle( parameter._handleTargetTypeName, *pCurrent, preview, state ) == false )
         {
             ImGui::TextDisabled( "%s", pLabel );
             ImGui::SameLine();
-            EditorThemeUtil::textError( pTargetType == nullptr ? "(unknown component type)" : "(no scene: cannot pick a component)" );
+            EditorThemeUtil::textError( pCurrent == nullptr ? "(unsupported argument value)" : preview.c_str() );
             return false;
         }
         ComponentHandle picked{};
-        if ( ComponentHandleProperty::drawPicker( pLabel, *pManager, *pTargetType, slot._value.getValue<ComponentHandle>(), inoutListChoice, picked ) == false )
+        if ( ComponentHandleProperty::drawPicker( pLabel, preview, state, *pCurrent, model, parameter._handleTargetTypeName, inoutListChoice, picked ) == false )
             return false;
         slot._value = TaskValue{ picked };
         return true;

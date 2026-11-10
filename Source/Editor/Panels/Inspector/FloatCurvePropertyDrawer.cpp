@@ -12,10 +12,10 @@
 #include "Editor/Common/Widgets/EditorCurveEditorState.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
 #include "Editor/Panels/Inspector/Model/PropertyGridModel.h"
+#include "Editor/Panels/Inspector/Model/PropertyGridViewState.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Curve/FloatCurve.h"
-#include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 #include <imgui.h>
@@ -27,27 +27,27 @@ namespace sw::editor
     {
         /**
          * @class FloatCurvePropertyDrawer
-         * @brief 편집기는 작업 사본을 고치고, 마칠 때(끌기를 놓음 · 메뉴 동작) 한 번 값에 입힌다 — 되돌리기 한 줄(그리드의 `applyPropertyTextAsEdit`).
-         * @details 열린 팝업은 하나뿐이라 상태도 하나입니다. 끄는 중이 아니면 프레임마다 값에서 사본을 다시 떠서 Undo · 다른 편집이 바로 보입니다.
+         * @brief 편집기는 작업 사본을 고치고, 마칠 때(끌기를 놓음 · 메뉴 동작) 한 번 값에 입힌다 — 되돌리기 한 줄(모델의 `setPropertyText`).
+         * @details 값은 값 행의 글(`_valueText`)로 받아 곡선으로 읽는다(글이 바뀐 때만 다시 읽는다). 열린 팝업은 하나뿐이라 상태도 하나입니다.
+         *          끄는 중이 아니면 프레임마다 값에서 사본을 다시 떠서 Undo · 다른 편집이 바로 보입니다.
          */
         class FloatCurvePropertyDrawer final : public IInspectorProperty
         {
         public:
-            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, PropertyGridModel& model ) override
+            bool draw( const PropertyValueRow& row, PropertyGridModel& model ) override
             {
-                FloatCurve* pCurve = prop.getValuePtr<FloatCurve>( instance.get() );
-                if ( pCurve == nullptr )
+                if ( readCurve( row ) == false )
                     return false;
-                if ( EditorCurveEditorState::drawPreview( "##curvePreview", *pCurve, ImGui::GetFrameHeight() * 2.0f ) )
+                if ( EditorCurveEditorState::drawPreview( "##curvePreview", _curve, ImGui::GetFrameHeight() * 2.0f ) )
                 {
                     _state                = EditorCurveEditorState{};
-                    _state._working       = *pCurve;
+                    _state._working       = _curve;
                     const ImGuiID popupID = ImGui::GetID( "CurveEditor" );
                     _openPopupID          = popupID;
                     EditorInputGUI::openPopup( "CurveEditor" ); // 같은 id(위의 GetID 와 같은 이름)
                 }
                 fixed_string<constant::buffer::kMax128> mark;
-                formatstring( mark.data(), mark.capacity(), "inspector.curve.%#", prop._name.c_str() );
+                formatstring( mark.data(), mark.capacity(), "inspector.curve.%#", row._propName.c_str() );
                 EditorSelfTestMarks::record( mark.c_str() );
 
                 const ImGuiID popupID = ImGui::GetID( "CurveEditor" );
@@ -59,25 +59,43 @@ namespace sw::editor
                 if ( popupID != _openPopupID )
                 {
                     _state          = EditorCurveEditorState{};
-                    _state._working = *pCurve;
+                    _state._working = _curve;
                     _openPopupID    = popupID;
                 }
-                ImGui::TextUnformatted( prop._name.c_str() );
+                ImGui::TextUnformatted( row._propName.c_str() );
                 // 끄는 중 · 필드 입력 중이 아니면 값에서 다시 뜬다(Undo · 다른 곳의 편집이 편집기에 보인다).
                 if ( _state._drag == EditorCurveDrag::None && ImGui::IsAnyItemActive() == false )
-                    _state._working = *pCurve;
+                    _state._working = _curve;
                 if ( EditorCurveEditorState::drawEditor( _state, "inspector.curveEditor" ) )
                 {
-                    const string text = SerializerUtil::formatValueText( ValueAddress{ &_state._working }, prop._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
-                    model.setPropertyText( instance, prop, text, "Edit Curve" );
+                    const string text = SerializerUtil::formatValueText( ValueAddress{ &_state._working }, row._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
+                    model.setPropertyText( row._rowID, text, "Edit Curve" );
                 }
                 ImGui::EndPopup();
                 return true;
             }
 
         private:
+            /** @brief 값 행의 글을 곡선(`_curve`)으로 읽습니다. 지난번과 같은 글이면 다시 읽지 않습니다. 읽지 못하면 false 입니다. */
+            bool readCurve( const PropertyValueRow& row )
+            {
+                if ( _bCurveRead && row._valueText == _curveText )
+                    return true;
+                FloatCurve curve{};
+                if ( SerializerUtil::parseTextValue( MutableValueAddress{ &curve }, row._typeName, row._valueText, SerializeContext::getDefault( SerializePurpose::Authoring ) ) == false )
+                    return false;
+                _curve      = std::move( curve );
+                _curveText  = row._valueText;
+                _bCurveRead = true;
+                return true;
+            }
+
+        private:
             EditorCurveEditorState _state{};
+            FloatCurve             _curve{};     ///< 값 행 글을 읽은 곡선(미리보기 · 편집기의 바탕)
+            string                 _curveText{}; ///< `_curve` 를 읽은 값 글
             ImGuiID                _openPopupID{ 0 };
+            bool                   _bCurveRead{ false }; ///< `_curve` 가 `_curveText` 를 읽은 값이다 NOLINT(sw-bool-flag): 클래스 안 기본값 초기화(비트필드는 기본값을 둘 수 없다)
         };
     } // namespace
 

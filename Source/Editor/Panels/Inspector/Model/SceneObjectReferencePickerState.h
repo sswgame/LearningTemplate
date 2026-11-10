@@ -10,12 +10,10 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Reflection/TextAddress.h"
-
-namespace sw
+namespace sw::editor
 {
-    struct PropertyInfo;
-} // namespace sw
+    class PropertyGridModel;
+} // namespace sw::editor
 
 namespace sw::editor
 {
@@ -48,9 +46,9 @@ namespace sw::editor
 
         SceneObjectReferencePickerState();
 
-        /** @brief @p prop 값(`SceneObjectReference`)의 미리보기 · 상태를 채웁니다. 씬 줄은 비웁니다. 값을 읽지 못하면 false 입니다. */
-        [[nodiscard]] static bool gatherPreview( MutableObjectAddress instance, const PropertyInfo& prop, SceneObjectReferencePickerState& outChoices );
+        /** @brief 그리드 값 행 @p rowID(`SceneObjectReference`)의 미리보기 · 상태를 채웁니다. 씬 줄은 비웁니다. 값을 읽지 못하면 false 입니다. */
+        [[nodiscard]] static bool gatherPreview( const PropertyGridModel& model, uint32 rowID, SceneObjectReferencePickerState& outChoices );
         /** @brief 올라와 있는 씬마다 고를 수 있는 오브젝트 줄을 채웁니다(콤보를 연 프레임에만 부른다). `gatherPreview` 뒤에 부릅니다. */
-        static void gatherScenes( MutableObjectAddress instance, const PropertyInfo& prop, SceneObjectReferencePickerState& inoutChoices );
+        static void gatherScenes( const PropertyGridModel& model, uint32 rowID, SceneObjectReferencePickerState& inoutChoices );
     };
 } // namespace sw::editor

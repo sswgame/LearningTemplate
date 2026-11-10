@@ -43,6 +43,10 @@ namespace sw::editor
         uint32 getMethodRowCount() const { return _propertyGrid.getMethodRowCount(); }
         /** @brief 그리드가 마지막 프레임에 숨긴(`CallInEditor` 없는) 메서드 수입니다. */
         uint32 getHiddenMethodCount() const { return _propertyGrid.getHiddenMethodCount(); }
+        /** @brief 그리드가 마지막 프레임에 값을 채운 프로퍼티 행 수입니다(`EditorPropertyGrid::getFilledRowCount`). */
+        uint32 getFilledRowCount() const { return _propertyGrid.getFilledRowCount(); }
+        /** @brief 그리드가 마지막 프레임에 화면 밖이라 높이만 둔 행 수입니다(`EditorPropertyGrid::getSkippedRowCount`). */
+        uint32 getSkippedRowCount() const { return _propertyGrid.getSkippedRowCount(); }
         /** @brief 컴포넌트 메뉴의 Presets 하위 메뉴 안(이름 붙여 저장, 저장한 프리셋 적용)을 그립니다. 하위 메뉴 명령 `inspector.component.presets` 가 부릅니다. */
         void drawComponentPresetItems( const EditorCommandTarget& target );
 

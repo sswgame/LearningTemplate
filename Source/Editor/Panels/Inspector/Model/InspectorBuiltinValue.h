@@ -128,6 +128,10 @@ namespace sw::editor
         void ( *_pFormatValue )( const void* pValue, utf8* pOutBuf, uint32 capacity );
         /** @brief TaskValue 에 들어 있는 그 C++ 타입 값의 주소를 반환합니다. 비어 있으면 nullptr 입니다. */
         const void* ( *_pFindTaskValue )( const TaskValue& value );
+        /** @brief 그 C++ 타입 값(@p pValue)의 사본을 TaskValue 로 만듭니다. 프로퍼티 그리드의 값 행(`PropertyValueRow::_value`)이 위젯에 넘기는 값입니다. */
+        TaskValue ( *_pReadValue )( const void* pValue );
+        /** @brief TaskValue @p value 에 든 그 C++ 타입 값을 @p pValue 에 씁니다. 비었거나 크기가 그 타입과 다르면 false 이고 쓰지 않습니다. */
+        bool ( *_pWriteValue )( const TaskValue& value, void* pValue );
         InspectorValueWidget _widget; ///< 프로퍼티와 인자를 그리는 위젯 종류
         uint8                _index;  ///< 테이블 안의 인덱스
 
