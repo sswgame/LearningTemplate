@@ -17,7 +17,7 @@
 #include "GameFramework/Kits/Feature/Online/Admin/Runtime/AdminProtocol.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Service/OnlineProtocolService.h"
 #include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
-#include "GameFramework/Runtime/Online/Store/ServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 
 namespace sw
 {

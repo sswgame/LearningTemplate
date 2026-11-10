@@ -16,8 +16,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
-#include "GameFramework/Runtime/Online/Store/ServiceStore.h"
-#include "GameFramework/Runtime/Online/Store/ServiceStoreUtil.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceStoreUtil.h"
 
 #include <type_traits>
 

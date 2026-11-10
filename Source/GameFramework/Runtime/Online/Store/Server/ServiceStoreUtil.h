@@ -7,7 +7,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "GameFramework/Runtime/Online/Store/ServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 
 namespace sw
 {

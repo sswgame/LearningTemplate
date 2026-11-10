@@ -34,7 +34,7 @@
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Schedule/Server/ServicePeriodicJob.h"
 #include "GameFramework/Runtime/Online/Service/PendingRequestTable.h"
-#include "GameFramework/Runtime/Online/Store/ServiceStoreTracker.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceStoreTracker.h"
 
 namespace sw
 {

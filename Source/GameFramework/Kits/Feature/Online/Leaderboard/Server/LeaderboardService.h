@@ -30,8 +30,8 @@
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountStatSource.h"
 #include "GameFramework/Runtime/Online/Schedule/Server/ServiceScheduler.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
-#include "GameFramework/Runtime/Online/Store/ServiceStore.h"
-#include "GameFramework/Runtime/Online/Store/ServiceStoreTracker.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceStoreTracker.h"
 
 namespace sw
 {

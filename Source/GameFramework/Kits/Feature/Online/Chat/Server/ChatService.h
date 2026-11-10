@@ -37,8 +37,8 @@
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatWordFilter.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresenceTracker.h"
 #include "GameFramework/Runtime/Online/Guard/Server/TokenBucketMap.h"
-#include "GameFramework/Runtime/Online/Store/ServiceStore.h"
-#include "GameFramework/Runtime/Online/Store/ServiceStoreTracker.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceStoreTracker.h"
 
 namespace sw
 {

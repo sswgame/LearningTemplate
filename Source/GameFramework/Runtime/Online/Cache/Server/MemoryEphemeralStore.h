@@ -19,7 +19,7 @@
 #include "Core/Time/Clock.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Online/Cache/EphemeralStore.h"
+#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
 
 namespace sw
 {

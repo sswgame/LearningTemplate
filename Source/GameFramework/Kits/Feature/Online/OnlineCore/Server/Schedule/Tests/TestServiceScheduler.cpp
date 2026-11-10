@@ -7,7 +7,7 @@
 #include "GameFramework/Runtime/Online/Schedule/Server/ServiceRetentionJob.h"
 #include "GameFramework/Runtime/Online/Schedule/Server/ServiceScheduler.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
-#include "GameFramework/Runtime/Online/Store/ServiceRetentionRule.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRetentionRule.h"
 
 using namespace sw;
 

@@ -26,7 +26,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Storage/CacheStore/Server/Driver/RESP/RESPConnection.h"
-#include "GameFramework/Runtime/Online/Cache/EphemeralStore.h"
+#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
 
 namespace sw
 {

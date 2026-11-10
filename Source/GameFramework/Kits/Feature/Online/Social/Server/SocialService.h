@@ -27,7 +27,7 @@
 #include "GameFramework/Kits/Feature/Online/Social/Runtime/SocialProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
-#include "GameFramework/Runtime/Online/Store/ServiceStoreTracker.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceStoreTracker.h"
 
 namespace sw
 {

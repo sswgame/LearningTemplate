@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Online/Cache/EphemeralStore.h"
+#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
 
 #include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
 

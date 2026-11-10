@@ -5,8 +5,8 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Serialization/BitStream.h"
 
+#include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
-#include "GameFramework/Runtime/Online/Store/ServiceStore.h"
 
 namespace sw
 {

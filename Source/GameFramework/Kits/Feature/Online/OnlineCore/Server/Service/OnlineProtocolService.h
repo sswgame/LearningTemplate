@@ -29,7 +29,7 @@
 #include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocolRegistry.h"
 #include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
-#include "GameFramework/Runtime/Online/Store/ServiceStoreTracker.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceStoreTracker.h"
 
 namespace sw
 {

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Online/Store/ServiceRetentionRule.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRetentionRule.h"
 
 #include "Core/Math/MathUtil.h"
 

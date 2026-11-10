@@ -7,7 +7,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Foundation/Types.h"
 
-#include "GameFramework/Runtime/Online/Guard/TokenBucket.h"
+#include "GameFramework/Runtime/Online/Guard/Server/TokenBucket.h"
 
 namespace sw
 {

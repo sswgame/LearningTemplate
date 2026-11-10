@@ -10,7 +10,7 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/Rule/LoginStoreLogic.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginSecretVault.h"
 #include "GameFramework/Runtime/Online/Config/Server/RemoteConfig.h"
-#include "GameFramework/Runtime/Online/Store/ServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 
 #include <algorithm>
 
