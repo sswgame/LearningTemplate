@@ -7,6 +7,7 @@
 #include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
+#include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Serialization/Format/ReflectedXMLFile.h"
 
 namespace sw
@@ -106,6 +107,8 @@ namespace sw
 
 namespace sw
 {
+    VFXEmitterDef::VFXEmitterDef() = default;
+
     void VFXEmitterDef::sortCurves()
     {
         _sizeOverLife.sortAndComputeAutoTangents();

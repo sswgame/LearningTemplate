@@ -22,11 +22,12 @@
 #include "Engine/Curve/FloatCurve.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
-#include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
+    class Texture2D;
+
     /** @brief 입자를 그릴 때 색을 섞는 방식입니다. 방출기 하나가 투명 정렬 후보 하나이므로 방출기마다 하나입니다. */
     ENUM()
     enum class VFXBlendMode : uint8
@@ -304,6 +305,13 @@ namespace sw
         string _tintParameter{};
         PROPERTY( Meta = "NotLocalizable", Tooltip = "User parameter whose x multiplies the particle size; empty multiplies nothing" )
         string _sizeParameter{};
+
+        /**
+         * @brief 칸의 기본값으로 만듭니다.
+         * @details .cpp 에 두는 까닭: `AssetRef<Texture2D>` 칸은 만드는 자리에서 `Texture2D::kAssetType` 이 완전해야 한다 — 이 헤더가 `Texture2D.h`(RHI)를 include 하지 않게
+         *          .cpp 만 읽는다(`AssetRef.h` 의 규칙, 게임이 보는 헤더의 타깃 게이트).
+         */
+        VFXEmitterDef();
 
         /** @brief 커브를 시각 순으로 정렬하고 자동 접선을 다시 셉니다. 파일을 읽은 뒤 `validate` 전에 부릅니다. */
         void sortCurves();
