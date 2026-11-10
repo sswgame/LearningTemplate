@@ -11,7 +11,7 @@
 namespace sw
 {
     MoveAnimationComponent::MoveAnimationComponent()
-        : _speedParameter{ "Speed" }
+        : _speedParameter{}
         , _smoothingSeconds{ 0.15f }
         , _faceMinSpeed{ 0.2f }
         , _turnRateDegrees{ 540.0f }

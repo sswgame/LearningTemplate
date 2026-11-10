@@ -75,11 +75,11 @@ namespace sw
         static MountGait computeRequestedGait( float32 moveAmount, bool bSprint );
 
     private:
-        PROPERTY( Category = "Mount", DisplayName = "Sprint Button", Tooltip = "Intent button that asks for a gallop while held" )
+        PROPERTY( Required, Category = "Mount", DisplayName = "Sprint Button", Tooltip = "Intent button that asks for a gallop while held" )
         hashed_string _sprintButton;
-        PROPERTY( Category = "Mount", DisplayName = "Gait Parameter", Tooltip = "Animator float parameter set to the gait (0 idle .. 4 gallop); empty = none" )
+        PROPERTY( Required, Category = "Mount", DisplayName = "Gait Parameter", Tooltip = "Animator float parameter set to the gait (0 idle .. 4 gallop); empty = none" )
         hashed_string _gaitParameter;
-        PROPERTY( Category = "Mount", DisplayName = "Turn Parameter", Tooltip = "Animator float parameter set to the steering (-1..1); empty = none" )
+        PROPERTY( Required, Category = "Mount", DisplayName = "Turn Parameter", Tooltip = "Animator float parameter set to the steering (-1..1); empty = none" )
         hashed_string _turnParameter;
         PROPERTY( Category = "Mount", DisplayName = "Walk Speed", Min = 0.0, Units = "m/s" )
         float32 _walkSpeed;

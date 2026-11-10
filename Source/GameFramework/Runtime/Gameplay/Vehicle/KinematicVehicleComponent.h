@@ -85,11 +85,11 @@ namespace sw
         AssetRef<KinematicVehicleSettings> _tuning;
         PROPERTY( Category = "Vehicle", DisplayName = "Rail", Tooltip = "Object with the spline the rail module rides (rail tuning only)" )
         GameObjectHandle _rail;
-        PROPERTY( Category = "Vehicle", DisplayName = "Drift Button", Tooltip = "Intent button held to drift" )
+        PROPERTY( Required, Category = "Vehicle", DisplayName = "Drift Button", Tooltip = "Intent button held to drift" )
         hashed_string _driftButton;
-        PROPERTY( Category = "Vehicle", DisplayName = "Boost Button", Tooltip = "Intent button that fires a nitro" )
+        PROPERTY( Required, Category = "Vehicle", DisplayName = "Boost Button", Tooltip = "Intent button that fires a nitro" )
         hashed_string _boostButton;
-        PROPERTY( Category = "Vehicle", DisplayName = "Jump Button", Tooltip = "Intent button that hops" )
+        PROPERTY( Required, Category = "Vehicle", DisplayName = "Jump Button", Tooltip = "Intent button that hops" )
         hashed_string _jumpButton;
         PROPERTY( Category = "Vehicle", DisplayName = "Use Physics Ground", Tooltip = "Ground height and surface from a downward physics ray (off: flat at the start height, no surface)" )
         bool _bUsePhysicsGround;

@@ -40,7 +40,7 @@ namespace sw
         int32 getFireCount() const { return _fireCount; }
 
     private:
-        PROPERTY( Category = "Scare", DisplayName = "Cue", Tooltip = "Cue name for the sequencer / camera / audio listeners" )
+        PROPERTY( Required, Category = "Scare", DisplayName = "Cue", Tooltip = "Cue name for the sequencer / camera / audio listeners" )
         hashed_string _cue;
         PROPERTY( Category = "Scare", DisplayName = "Sound" )
         AssetRef<AudioPlayableAsset> _sound;
@@ -79,7 +79,7 @@ namespace sw
         float32 computeScaleAtStep( int32 step ) const;
 
     private:
-        PROPERTY( Category = "Flicker", DisplayName = "Pattern", Tooltip = "a = off, m = normal, z = double" )
+        PROPERTY( Required, Category = "Flicker", DisplayName = "Pattern", Tooltip = "a = off, m = normal, z = double" )
         string _pattern;
         PROPERTY( Category = "Flicker", DisplayName = "Rate", Min = 0.1, Tooltip = "Pattern letters per second" )
         float32 _rate;

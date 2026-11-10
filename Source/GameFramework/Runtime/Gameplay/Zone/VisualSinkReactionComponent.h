@@ -62,7 +62,7 @@ namespace sw
         void restoreVisuals( GameObjectManager& manager );
 
     private:
-        PROPERTY( Category = "Reaction", DisplayName = "Attribute", Tooltip = "Ability attribute read as the sink depth" )
+        PROPERTY( Required, Category = "Reaction", DisplayName = "Attribute", Tooltip = "Ability attribute read as the sink depth" )
         hashed_string _attribute;
         PROPERTY( Category = "Reaction", DisplayName = "Scale", Min = 0.0, Units = m, Tooltip = "Metres lowered per attribute unit" )
         float32 _scale;

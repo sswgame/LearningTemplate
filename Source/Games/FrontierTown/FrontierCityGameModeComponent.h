@@ -66,7 +66,7 @@ namespace sw
         int32 _startingDeben;
         PROPERTY( Category = "Economy", DisplayName = "Starting Minerals", Tooltip = "RTS money a fresh game starts with (the same shared wallet)", Min = 0 )
         int32 _startingMinerals;
-        PROPERTY( Category = "Layout", DisplayName = "Landmark Building", Tooltip = "City catalog id of the building laid out on the first tick" )
+        PROPERTY( Required, Category = "Layout", DisplayName = "Landmark Building", Tooltip = "City catalog id of the building laid out on the first tick" )
         string _landmarkBuilding;
         PROPERTY( Category = "Layout", DisplayName = "Landmark X", Min = 0 )
         int32 _landmarkX;

@@ -77,8 +77,8 @@ namespace sw
         , _firstPersonHandsSlot{}
         , _thirdPersonHandsSlot{}
         , _listFirstPersonHiddenSlot{}
-        , _strideNode{ "Stride" }
-        , _lookSourceObject{ "LookSource" }
+        , _strideNode{}
+        , _lookSourceObject{}
         , _locomotion{ 0.25f }
         , _mapClipFootSpeed{}
         , _aimWeight{ 0.0f }

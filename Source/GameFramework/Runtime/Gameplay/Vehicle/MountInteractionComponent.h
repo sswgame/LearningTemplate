@@ -39,7 +39,7 @@ namespace sw
         void toggleMount();
 
     private:
-        PROPERTY( Category = "Vehicle", DisplayName = "Interact Button", Tooltip = "Intent button that gets on or off" )
+        PROPERTY( Required, Category = "Vehicle", DisplayName = "Interact Button", Tooltip = "Intent button that gets on or off" )
         hashed_string _interactButton;
 
         optional<int32> _interactIndex;

@@ -75,9 +75,9 @@ namespace sw
     KinematicVehicleComponent::KinematicVehicleComponent()
         : _tuning{}
         , _rail{}
-        , _driftButton{ "Drift" }
-        , _boostButton{ "Boost" }
-        , _jumpButton{ "Jump" }
+        , _driftButton{}
+        , _boostButton{}
+        , _jumpButton{}
         , _bUsePhysicsGround{ true }
         , _motor{}
         , _ground{}

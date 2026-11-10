@@ -139,7 +139,7 @@ namespace sw
         , _hitImpulseScale{ 0.02f }
         , _sunTraceDistance{ 50.0f }
         , _skyLightValue{}
-        , _wipeEvent{ "WipeFace" }
+        , _wipeEvent{}
         , _fluidSmearStrength{ 0.6f }
         , _listFluid{}
         , _listManualTrigger{}

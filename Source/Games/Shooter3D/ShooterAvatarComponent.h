@@ -86,9 +86,9 @@ namespace sw
         float32 _turnRate;
         PROPERTY( Category = "Avatar", DisplayName = "Layer Blend Rate", Tooltip = "How fast the aim and shoot layer weights follow their target", Min = 0.0 )
         float32 _layerBlendRate;
-        PROPERTY( Category = "Avatar", DisplayName = "Left Foot Bone", Tooltip = "Bone used to measure the foot speed of locomotion clips" )
+        PROPERTY( Required, Category = "Avatar", DisplayName = "Left Foot Bone", Tooltip = "Bone used to measure the foot speed of locomotion clips" )
         string _leftFootBone;
-        PROPERTY( Category = "Avatar", DisplayName = "Right Foot Bone", Tooltip = "Bone used to measure the foot speed of locomotion clips" )
+        PROPERTY( Required, Category = "Avatar", DisplayName = "Right Foot Bone", Tooltip = "Bone used to measure the foot speed of locomotion clips" )
         string _rightFootBone;
         PROPERTY( Category = "Avatar", DisplayName = "Min Play Rate", Tooltip = "Slowest play rate speed matching may choose", Min = 0.0 )
         float32 _minPlayRate;
@@ -104,9 +104,9 @@ namespace sw
         hashed_string _thirdPersonHandsSlot;
         PROPERTY( Category = "First Person", DisplayName = "Hidden Appearance Slots", Tooltip = "Appearance slots whose parts are hidden in first person (head gear, the body's weapon)" )
         vector<hashed_string> _listFirstPersonHiddenSlot;
-        PROPERTY( Category = "Avatar", DisplayName = "Stride Node", Tooltip = "StrideWarping node of this body's pose modifier rig that takes the rest of the speed matching" )
+        PROPERTY( Required, Category = "Avatar", DisplayName = "Stride Node", Tooltip = "StrideWarping node of this body's pose modifier rig that takes the rest of the speed matching" )
         string _strideNode;
-        PROPERTY( Category = "Avatar", DisplayName = "Look Source Object", Tooltip = "Object name of the rig target the player object is bound to (its camera drives the look-at)" )
+        PROPERTY( Required, Category = "Avatar", DisplayName = "Look Source Object", Tooltip = "Object name of the rig target the player object is bound to (its camera drives the look-at)" )
         hashed_string _lookSourceObject;
 
         LocomotionDirectionFilter                    _locomotion;

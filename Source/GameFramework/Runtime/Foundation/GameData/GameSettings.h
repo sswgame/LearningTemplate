@@ -62,8 +62,8 @@ namespace sw
         PROPERTY()
         DataPath _localizationProject; ///< 로컬라이제이션 프로젝트(`*.locproject.xml`, 리소스 경로) — 원문 표 · 문화권 번역 표가 그 옆에 있다. 없으면 게임 문자열 표 없음
 
-        PROPERTY()
-        string _defaultLanguage{ "ko_kr" }; ///< 기본 활성 언어
+        PROPERTY( Required )
+        string _defaultLanguage; ///< 기본 활성 언어
 
         PROPERTY()
         string _fallbackLanguage{ "en_us" }; ///< 대체(Fallback) 언어

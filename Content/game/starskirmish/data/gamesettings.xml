@@ -13,4 +13,5 @@
   <inputMap path="game/starskirmish/data/skirmish.input.xml"/>
   <loadingScreen>engine/ui/loading.ui.xml</loadingScreen>
   <audioEvents>game/starskirmish/audio/starskirmish.audioevents.xml</audioEvents>
+  <defaultLanguage>ko_kr</defaultLanguage>
 </GameSettings>

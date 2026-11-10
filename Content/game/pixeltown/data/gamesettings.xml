@@ -8,4 +8,5 @@
   <inputMap path="common/input/move.input.xml"/>
   <inputMap path="common/input/interact.input.xml"/>
   <inputMap path="game/pixeltown/data/town.input.xml"/>
+  <defaultLanguage>ko_kr</defaultLanguage>
 </GameSettings>

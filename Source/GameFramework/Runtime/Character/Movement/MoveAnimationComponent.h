@@ -46,7 +46,7 @@ namespace sw
         [[nodiscard]] static float32 turnTowards( float32 yaw, float32 targetYaw, float32 maxStep );
 
     private:
-        PROPERTY( Category = "Animation", DisplayName = "Speed Parameter", Tooltip = "Animator float parameter that receives the horizontal speed (m/s)" )
+        PROPERTY( Required, Category = "Animation", DisplayName = "Speed Parameter", Tooltip = "Animator float parameter that receives the horizontal speed (m/s)" )
         hashed_string _speedParameter;
         PROPERTY( Category = "Animation", DisplayName = "Smoothing", Tooltip = "Time constant of the speed smoothing; 0 uses each frame's speed", Min = 0.0, Units = s )
         float32 _smoothingSeconds;

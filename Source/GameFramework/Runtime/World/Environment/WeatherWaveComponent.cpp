@@ -14,7 +14,7 @@
 namespace sw
 {
     WeatherWaveComponent::WeatherWaveComponent()
-        : _weatherValue{ "wind" }
+        : _weatherValue{}
         , _stormScale{ 4.0f }
     {
         setCanEverTick( true );

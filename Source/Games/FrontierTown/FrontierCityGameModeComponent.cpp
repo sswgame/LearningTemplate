@@ -22,7 +22,7 @@ namespace sw
         : _tilePrefab{}
         , _startingDeben{ 500 }
         , _startingMinerals{ 500 }
-        , _landmarkBuilding{ "temple" }
+        , _landmarkBuilding{}
         , _landmarkX{ 4 }
         , _landmarkY{ 4 }
         , _roadFromX{ 0 }

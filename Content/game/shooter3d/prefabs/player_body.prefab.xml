@@ -52,6 +52,7 @@
 			                        _firstPersonHeadSlot="FirstPersonHead"
 			                        _firstPersonHandsSlot="FirstPersonHands"
 			                        _thirdPersonHandsSlot="ThirdPersonHands"
+			                        _strideNode="Stride"
 			                        _lookSourceObject="LookSource">
 				<_listFirstPersonHiddenSlot>
 					<item>Head</item>

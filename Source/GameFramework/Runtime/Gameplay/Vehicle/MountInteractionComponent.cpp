@@ -13,7 +13,7 @@
 namespace sw
 {
     MountInteractionComponent::MountInteractionComponent()
-        : _interactButton{ "Interact" }
+        : _interactButton{}
         , _interactIndex{}
     {
         setCanEverTick( true );

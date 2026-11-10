@@ -13,4 +13,5 @@
   <inputMap path="game/nilecity/data/nile.input.xml"/>
   <loadingScreen>engine/ui/loading.ui.xml</loadingScreen>
   <audioEvents>game/nilecity/audio/nilecity.audioevents.xml</audioEvents>
+  <defaultLanguage>ko_kr</defaultLanguage>
 </GameSettings>

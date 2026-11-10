@@ -116,7 +116,7 @@ namespace sw
         float32 _sunTraceDistance;
         PROPERTY( Category = "Eyes", DisplayName = "Sky Light Value", Tooltip = "Weather value (WeatherCatalog <Values>) that scales direct sunlight: 1 clear, lower for overcast, rain, fog. Empty = the sun light already carries the weather (DaylightComponent)" )
         hashed_string _skyLightValue;
-        PROPERTY( Category = "Smear", DisplayName = "Wipe Event", Tooltip = "Animation notify event that wipes the face (drags makeup sideways)" )
+        PROPERTY( Required, Category = "Smear", DisplayName = "Wipe Event", Tooltip = "Animation notify event that wipes the face (drags makeup sideways)" )
         hashed_string _wipeEvent;
         PROPERTY( Category = "Smear", DisplayName = "Tear Smear Strength", Min = 0.0, Tooltip = "Pigment transport per wet stamp of a fluid stream" )
         float32 _fluidSmearStrength;

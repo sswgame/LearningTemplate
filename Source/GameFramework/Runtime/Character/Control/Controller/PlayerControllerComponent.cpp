@@ -6,6 +6,7 @@
 
 #include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Input/Map/CommonInputActions.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -30,7 +31,7 @@ namespace sw
         , _playerIndex{ 0 }
         , _lookSensitivity{ 0.0022f }
         , _bManageViewTarget{ true }
-        , _mouseLockAction{ "ToggleMouseLock" }
+        , _mouseLockAction{ CommonInputActions::kToggleMouseLock } // 엔진 공용 액션 이름 — ControlSystem 이 코드로 붙이는 컨트롤러도 같은 값이다
         , _pushedLayer{}
         , _previousPawn{}
         , _warnedPawn{}

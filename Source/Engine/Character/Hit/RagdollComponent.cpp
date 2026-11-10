@@ -86,7 +86,7 @@ namespace sw
     RagdollComponent::RagdollComponent()
         : PhysicsComponent{ PhysicsComponentPhase::Body }
         , _physicsAssetPath{}
-        , _partialRootBone{ "spine" }
+        , _partialRootBone{}
         , _getUpClipFaceUp{}
         , _getUpClipFaceDown{}
         , _getUpExitState{}
