@@ -62,9 +62,7 @@ namespace sw
         , _timestampRing{}
         , _gpuBuffers{}
         , _gpuTextures{}
-        , _resourceStateMutex{}
-        , _mapStructuredBufferState{}
-        , _mapOffscreenTexture{}
+        , _offscreenViewMutex{}
         , _nextOffscreenRTVIndex{ 0 }
         , _nextOffscreenDSVIndex{ 0 }
         , _freeOffscreenRTV{}
@@ -88,6 +86,7 @@ namespace sw
         , _bindlessIndexAllocator{ kBindlessDescriptorCapacity, kNullTextureBindlessIndex + 1 }
         , _srvRegistry{ _bindlessIndexAllocator }
         , _uavRegistry{ _bindlessIndexAllocator }
+        , _arrBindlessReadSlot{ makeFixedCountArray<BindlessReadSlot, kBindlessDescriptorCapacity>() }
         , _rtvDescriptorSize{ 0 }
         , _cbvDescriptorSize{ 0 }
         , _cmdListEntryCreated{ 0 }
@@ -131,35 +130,33 @@ namespace sw
 
     ID3D12Resource* D3D12RHIDevice::resolveBuffer( RHIBufferHandle handle ) const
     {
-        const Microsoft::WRL::ComPtr<ID3D12Resource>* slot = _gpuBuffers.get( handle );
-        return slot != nullptr ? slot->Get() : nullptr;
+        const BufferRecord* const pRecord = _gpuBuffers.get( handle );
+        return pRecord != nullptr ? pRecord->_resource.Get() : nullptr;
     }
 
     ID3D12Resource* D3D12RHIDevice::resolveTexture( RHITextureHandle handle ) const
     {
-        const Microsoft::WRL::ComPtr<ID3D12Resource>* slot = _gpuTextures.get( handle );
-        return slot != nullptr ? slot->Get() : nullptr;
+        const TextureRecord* const pRecord = _gpuTextures.get( handle );
+        return pRecord != nullptr ? pRecord->_resource.Get() : nullptr;
     }
 
     D3D12_RESOURCE_STATES D3D12RHIDevice::getTrackedTextureState( RHITextureHandle texture )
     {
-        ScopedLock<mutex> lock{ _resourceStateMutex };
-        const auto        offscreenIt = _mapOffscreenTexture.find( texture );
-        if ( offscreenIt == _mapOffscreenTexture.end() )
+        const TextureRecord* const pRecord = _gpuTextures.get( texture );
+        if ( pRecord == nullptr || pRecord->_bOffscreen == SW_FALSE )
             return D3D12_RESOURCE_STATE_COMMON;
-        return offscreenIt->second._state;
+        return pRecord->_state.load();
     }
 
     bool D3D12RHIDevice::findOffscreenTargetView( RHITextureHandle texture, uint32 slice, OffscreenTargetView& outView )
     {
-        ScopedLock<mutex> lock{ _resourceStateMutex };
-        const auto        it = _mapOffscreenTexture.find( texture );
-        if ( it == _mapOffscreenTexture.end() )
+        const TextureRecord* const pTextureRecord = _gpuTextures.get( texture );
+        if ( pTextureRecord == nullptr || pTextureRecord->_bOffscreen == SW_FALSE )
             return false;
 
-        const OffscreenTextureRecord& record = it->second;
+        const OffscreenTextureRecord& record = pTextureRecord->_offscreen;
         outView                              = OffscreenTargetView{};
-        outView._state                       = record._state;
+        outView._state                       = pTextureRecord->_state.load();
         outView._format                      = record._format;
         outView._bHasRTV                     = record._bHasRTV;
         outView._bHasDSV                     = record._bHasDSV;
@@ -307,7 +304,9 @@ namespace sw
     #if defined( SW_DEBUG )
         ID3D12Resource* pNamed = buffer.Get();
     #endif
-        const RHIBufferHandle handle = _gpuBuffers.insert( std::move( buffer ) );
+        BufferRecord record{};
+        record._resource             = std::move( buffer );
+        const RHIBufferHandle handle = _gpuBuffers.insert( std::move( record ) );
         getMemoryTracker().recordAllocation( RHIMemoryKey::makeBuffer( handle ), RHIMemoryKind::Buffer, bytes );
     #if defined( SW_DEBUG )
         nameResourceForDiagnostics( pNamed, L"Buffer", handle );
@@ -387,7 +386,9 @@ namespace sw
     #if defined( SW_DEBUG )
         ID3D12Resource* pNamed = texture.Get();
     #endif
-        const RHITextureHandle handle = _gpuTextures.insert( std::move( texture ) );
+        TextureRecord record{};
+        record._resource              = std::move( texture );
+        const RHITextureHandle handle = _gpuTextures.insert( std::move( record ) );
         getMemoryTracker().recordAllocation( RHIMemoryKey::makeTexture( handle ), kind, bytes );
     #if defined( SW_DEBUG )
         nameResourceForDiagnostics( pNamed, L"Texture", handle );
@@ -873,17 +874,25 @@ namespace sw
                 track._buffer->Unmap( 0, nullptr );
             track = BreadcrumbTrack{};
         }
-        _mapOffscreenTexture.clear();
         _pipelineStates.clear();
         _renderPassRegistry.clear();
         _srvRegistry.clear();
         _uavRegistry.clear();
         _bindlessIndexAllocator.reset( kNullTextureBindlessIndex + 1 );
-        _mapStructuredBufferState.clear();
+        for ( uint32 index = 0; index < kBindlessDescriptorCapacity; ++index )
+        {
+            retireBindlessReadSlot( index );
+        }
         _gpuBuffers.clear();
         _gpuTextures.clear();
-        _frameStreamState      = D3D12RecordingState{};
-        _nextOffscreenRTVIndex = 0;
+        _frameStreamState = D3D12RecordingState{};
+        {
+            ScopedLock<mutex> lock{ _offscreenViewMutex };
+            _nextOffscreenRTVIndex = 0;
+            _nextOffscreenDSVIndex = 0;
+            _freeOffscreenRTV.clear();
+            _freeOffscreenDSV.clear();
+        }
 
         _windowSwapChains.clearFrame();
         for ( const unique_ptr<D3D12RHISwapChain>& pWindow : _windowSwapChains.getOwnedList() )
@@ -906,7 +915,6 @@ namespace sw
         }
         _dsvHeap.Reset();
         _rtvHeap.Reset();
-        _nextOffscreenDSVIndex = 0;
         _commandList.Reset();
         for ( Microsoft::WRL::ComPtr<ID3D12CommandAllocator>& allocator : _arrCommandAllocator )
         {
@@ -2063,6 +2071,39 @@ namespace sw
             return false;
 
         return true;
+    }
+
+    void D3D12RHIDevice::publishBindlessReadSlot( RHIDescriptorIndex index, BindlessReadRegistry registry, const BindlessResourceRecord& record )
+    {
+        if ( index >= kBindlessDescriptorCapacity )
+            SW_FATAL( "D3D12: bindless index %# is outside the read table (%#)", index, kBindlessDescriptorCapacity );
+        BindlessReadSlot& slot = _arrBindlessReadSlot.get()[index];
+        // 텍스처는 GPU 주소가 없다(GetGPUVirtualAddress 는 버퍼만 뜻이 있다). 상수 버퍼 크기는 등록이 같은 배타 락 안에서 읽는다.
+        const auto sizeIt = record._buffer != 0 ? _mapCbAlignedSize.find( record._buffer ) : _mapCbAlignedSize.end();
+        slot._gpuAddress.store( record._buffer != 0 && record._resource != nullptr ? record._resource->GetGPUVirtualAddress() : 0, std::memory_order_relaxed );
+        slot._offlineView.store( record._offlineCPUHandle.ptr, std::memory_order_relaxed );
+        slot._cbAlignedSize.store( sizeIt != _mapCbAlignedSize.end() ? sizeIt->second : 0u, std::memory_order_relaxed );
+        // 값을 다 쓴 뒤에 공개한다 — 읽는 쪽은 `_registry` 를 acquire 로 본 뒤에만 값을 읽는다.
+        slot._registry.store( static_cast<uint8>( registry ), std::memory_order_release );
+    }
+
+    const D3D12RHIDevice::BindlessReadSlot* D3D12RHIDevice::findBindlessReadSlot( RHIDescriptorIndex index, bool bUAV ) const
+    {
+        if ( index >= kBindlessDescriptorCapacity )
+            return nullptr;
+        // 락이 없다 — 표는 크기가 고정이고 `_registry` 를 acquire 로 본 뒤에만 값을 읽는다(`D3D12RHIDevice::BindlessReadSlot`).
+        const BindlessReadSlot&    slot     = _arrBindlessReadSlot.get()[index];
+        const BindlessReadRegistry expected = bUAV ? BindlessReadRegistry::UnorderedAccess : BindlessReadRegistry::ShaderResource;
+        if ( slot._registry.load( std::memory_order_acquire ) != static_cast<uint8>( expected ) )
+            return nullptr;
+        return &slot;
+    }
+
+    void D3D12RHIDevice::retireBindlessReadSlot( RHIDescriptorIndex index )
+    {
+        if ( index >= kBindlessDescriptorCapacity )
+            return;
+        _arrBindlessReadSlot.get()[index]._registry.store( static_cast<uint8>( BindlessReadRegistry::Empty ), std::memory_order_release );
     }
 
     bool D3D12RHIDevice::isBindlessIndexLive( RHIBindlessIndexSpace space, RHIDescriptorIndex index ) const

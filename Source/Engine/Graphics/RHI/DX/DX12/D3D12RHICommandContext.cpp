@@ -116,42 +116,26 @@ namespace sw
 
     D3D12_GPU_VIRTUAL_ADDRESS D3D12RHICommandContext::resolveBufferAddress( RHIDescriptorIndex index, bool bUAV, bool bConstantBuffer ) const
     {
-        if ( index == kInvalidDescriptorIndex )
+        const D3D12RHIDevice::BindlessReadSlot* const pSlot = _pDevice->findBindlessReadSlot( index, bUAV );
+        if ( pSlot == nullptr )
             return 0;
-
-        // 렌더 스레드 안에서 레지스트리는 기록 중에 바뀌지 않는다(등록/해제는 그래프 셋업에서 끝나고 requireRegistryMutableNow 가 감시한다). 그러나
-        // **게임 스레드**는 렌더 스레드의 기록과 겹쳐 버퍼를 만들고 부순다(에디터가 없는 빌드 — 오브젝트가 사라지며 머티리얼 인스턴스가 풀린다).
-        // 그 쓰기와 겹치지 않게 짧은 읽기 락을 잡는다(경합이 없으면 원자 연산 하나). const 참조로 받는 것도 중요하다.
-        ScopedSharedLock<shared_mutex>                                     registryLock{ _pDevice->_bindlessMutex };
-        const RHIBindlessRegistry<D3D12RHIDevice::BindlessResourceRecord>& registry = bUAV ? _pDevice->_uavRegistry : _pDevice->_srvRegistry;
-        const D3D12RHIDevice::BindlessResourceRecord* const                pRecord  = registry.find( index );
-        if ( pRecord == nullptr || pRecord->_resource == nullptr )
-            return 0;
-        const D3D12RHIDevice::BindlessResourceRecord& record = *pRecord;
-
-        D3D12_GPU_VIRTUAL_ADDRESS address = record._resource->GetGPUVirtualAddress();
-        if ( bConstantBuffer )
+        D3D12_GPU_VIRTUAL_ADDRESS address = pSlot->_gpuAddress.load( std::memory_order_relaxed );
+        if ( bConstantBuffer && address != 0 )
         {
-            // 링 상수버퍼(createConstantBuffer)는 프레임 슬롯마다 정렬 크기만큼 떨어진 자리에 쓴다.
+            // 링 상수버퍼(createConstantBuffer)는 프레임 슬롯마다 정렬 크기만큼 떨어진 자리에 쓴다(링이 아니면 크기가 0 이다).
             // updateConstantBuffer 가 이번 프레임 슬롯에 썼으므로 같은 슬롯 주소를 건다.
-            const auto sizeIt = _pDevice->_mapCbAlignedSize.find( record._buffer );
-            if ( sizeIt != _pDevice->_mapCbAlignedSize.end() )
-                address += static_cast<D3D12_GPU_VIRTUAL_ADDRESS>( _pDevice->_frameRing.currentIndex() ) * sizeIt->second;
+            const uint32 alignedSize = pSlot->_cbAlignedSize.load( std::memory_order_relaxed );
+            address += static_cast<D3D12_GPU_VIRTUAL_ADDRESS>( _pDevice->_frameRing.currentIndex() ) * alignedSize;
         }
         return address;
     }
 
     D3D12_CPU_DESCRIPTOR_HANDLE D3D12RHICommandContext::resolveOfflineView( RHIDescriptorIndex index, bool bUAV ) const
     {
-        if ( index == kInvalidDescriptorIndex )
+        const D3D12RHIDevice::BindlessReadSlot* const pSlot = _pDevice->findBindlessReadSlot( index, bUAV );
+        if ( pSlot == nullptr )
             return D3D12_CPU_DESCRIPTOR_HANDLE{};
-        // resolveBufferAddress 와 같은 이유로 짧은 읽기 락을 잡는다.
-        ScopedSharedLock<shared_mutex>                                     registryLock{ _pDevice->_bindlessMutex };
-        const RHIBindlessRegistry<D3D12RHIDevice::BindlessResourceRecord>& registry = bUAV ? _pDevice->_uavRegistry : _pDevice->_srvRegistry;
-        const D3D12RHIDevice::BindlessResourceRecord* const                pRecord  = registry.find( index );
-        if ( pRecord == nullptr || pRecord->_resource == nullptr )
-            return D3D12_CPU_DESCRIPTOR_HANDLE{};
-        return pRecord->_offlineCPUHandle;
+        return D3D12_CPU_DESCRIPTOR_HANDLE{ static_cast<SIZE_T>( pSlot->_offlineView.load( std::memory_order_relaxed ) ) };
     }
 
     bool D3D12RHICommandContext::allocateOnlineDescriptors( uint32 count, uint32& outBase )
@@ -277,26 +261,23 @@ namespace sw
         if ( pResource == nullptr )
             return;
 
-        // 상태 확인과 배리어 기록이 한 덩어리여야 한다. RenderGraph::executeParallel 이 같은 레벨의
-        // 패스 콜백을 여러 스레드에서 돌리는데, 둘이 같은 텍스처를 전이하면 둘 다 같은 "이전 상태" 를
-        // 보고 각자 배리어를 쏴서 두 번째가 before==after 가 된다(검증 오류 → 디바이스 제거).
-        ScopedLock<mutex> lock{ _pDevice->_resourceStateMutex };
-
-        auto it = _pDevice->_mapOffscreenTexture.find( texture );
-        if ( it == _pDevice->_mapOffscreenTexture.end() )
+        D3D12RHIDevice::TextureRecord* const pRecord = _pDevice->findTextureRecord( texture );
+        if ( pRecord == nullptr || pRecord->_bOffscreen == SW_FALSE )
             return;
-        D3D12RHIDevice::OffscreenTextureRecord& record = it->second;
-        if ( record._state == newState )
+        // 상태 확인과 상태 바꾸기가 한 덩어리여야 한다. RenderGraph::executeParallel 이 같은 레벨의 패스 콜백을 여러 스레드에서 돌리는데,
+        // 둘이 같은 텍스처를 전이하면 둘 다 같은 "이전 상태" 를 보고 각자 배리어를 쏴서 두 번째가 before==after 가 된다(검증 오류 → 디바이스 제거).
+        // 비교 교환에서 이긴 쪽 하나만 배리어를 낸다(락 없음 — `D3D12RHIDevice::TrackedState`).
+        D3D12_RESOURCE_STATES stateBefore{};
+        if ( pRecord->_state.transitionTo( newState, stateBefore ) == false )
             return;
 
         D3D12_RESOURCE_BARRIER barrier{};
         barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
         barrier.Transition.pResource   = pResource;
-        barrier.Transition.StateBefore = record._state;
+        barrier.Transition.StateBefore = stateBefore;
         barrier.Transition.StateAfter  = newState;
         barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
         commandListForRecord()->ResourceBarrier( 1, &barrier );
-        record._state = newState;
     }
 
     // 길이 유지(긴 함수 정리 기준): 같은 포맷 복사와 셰이더 블릿의 상태 전이 순서가 곧 의미라 나누지 않는다.
@@ -404,8 +385,6 @@ namespace sw
             return;
         }
 
-        ScopedLock<mutex> lock{ _pDevice->_resourceStateMutex };
-
         D3D12_RESOURCE_BARRIER barrier{};
         barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
         barrier.Transition.pResource   = pDstResource;
@@ -414,9 +393,9 @@ namespace sw
         barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
         commandListForRecord()->ResourceBarrier( 1, &barrier );
 
-        auto dstIt = _pDevice->_mapOffscreenTexture.find( dst );
-        if ( dstIt != _pDevice->_mapOffscreenTexture.end() )
-            dstIt->second._state = stateAfter;
+        D3D12RHIDevice::TextureRecord* const pRecord = _pDevice->findTextureRecord( dst );
+        if ( pRecord != nullptr && pRecord->_bOffscreen != SW_FALSE )
+            pRecord->_state.store( stateAfter );
     }
 
     void D3D12RHICommandContext::bindShaderResource( RHIDescriptorIndex index, uint32 slot )
@@ -476,14 +455,10 @@ namespace sw
             return;
         }
 
-        bool bDepth = false;
-        {
-            ScopedLock<mutex> lock{ _pDevice->_resourceStateMutex };
-            const auto        it = _pDevice->_mapOffscreenTexture.find( texture );
-            if ( it == _pDevice->_mapOffscreenTexture.end() )
-                return;
-            bDepth = it->second._bHasDSV != SW_FALSE;
-        }
+        const D3D12RHIDevice::TextureRecord* const pRecord = _pDevice->findTextureRecord( texture );
+        if ( pRecord == nullptr || pRecord->_bOffscreen == SW_FALSE )
+            return;
+        const bool bDepth = pRecord->_offscreen._bHasDSV != SW_FALSE;
         transitionTexture( texture, bDepth ? D3D12_RESOURCE_STATE_DEPTH_WRITE : D3D12_RESOURCE_STATE_RENDER_TARGET );
     }
 
@@ -1056,20 +1031,15 @@ namespace sw
         uint32                 barrierCount = 0;
         for ( uint32 index = 0; index < count; ++index )
         {
-            const RHIBufferHandle buffer    = pTransition[index]._buffer;
-            ID3D12Resource*       pResource = buffer != 0 ? _pDevice->resolveBuffer( buffer ) : nullptr;
-            if ( pResource == nullptr )
+            const RHIBufferHandle               buffer  = pTransition[index]._buffer;
+            D3D12RHIDevice::BufferRecord* const pRecord = buffer != 0 ? _pDevice->findBufferRecord( buffer ) : nullptr;
+            if ( pRecord == nullptr || pRecord->_resource == nullptr || pRecord->_bTrackedState == SW_FALSE )
                 continue;
+            ID3D12Resource* const       pResource  = pRecord->_resource.Get();
             const D3D12_RESOURCE_STATES stateAfter = toQueueState( toD3D12BufferState( pTransition[index]._state ) );
-            D3D12_RESOURCE_STATES       stateBefore;
-            {
-                ScopedLock<mutex> lock{ _pDevice->_resourceStateMutex };
-                auto              stateIt = _pDevice->_mapStructuredBufferState.find( buffer );
-                if ( stateIt == _pDevice->_mapStructuredBufferState.end() || stateIt->second == stateAfter )
-                    continue;
-                stateBefore     = stateIt->second;
-                stateIt->second = stateAfter;
-            }
+            D3D12_RESOURCE_STATES       stateBefore{};
+            if ( pRecord->_state.transitionTo( stateAfter, stateBefore ) == false )
+                continue;
             // 컴퓨트 큐 리스트는 따로 낸 ExecuteCommandLists 라 버퍼가 COMMON 으로 감쇠해 들어온다. 기록한 상태에 그래픽스 전용 비트가 있으면 COMMON 을 앞 상태로 쓴다
             // (COMMON 또는 승격 가능한 상태를 앞 상태로 쓰는 것이 문서의 허용 범위다 — 그래픽스 전용 비트는 COMPUTE 리스트의 배리어에 적을 수 없다).
             if ( _bComputeQueueList != SW_FALSE && toQueueState( stateBefore ) != stateBefore )

@@ -33,7 +33,7 @@
 
 - **에디터 첫 패널의 느린 프레임:** 새 패널이 처음 열리는 프레임이 약 1 초. `-gv_editorPanelTimes` · `-gv_traceSlowTickMs` 로 그 패널의 동기 준비를 찾아 `IEditorPanel::onPanelOpened` 의 비동기 잡으로(`ModulesModel::ensureLoaded` 가 후보).
 - **시나리오 대기:** boat · clothshowcase(골든 앞 구간이 물리 이력), waterplay(강체 속도 · 잠듦 감시 값으로 조건 대기).
-- **측정(S8 표):** Tracy `GT.Frame` 자식 구간 합 90% 이상, 유니티 배치 크기 12 · 24 · 48, `load/*` 4 시나리오 × 워커 1 · 2 · 4 · 8 기준선과 구조 지표(`GT.Scene.tick.waves` · `batchElements` · `taskEntries` · `mainEntries` · `objectEntries` · `stageLists`), W25 GPU 비교(c05a3ee251 대 지금 — 노이즈 안이면 되돌린다), W-S4 `-ftime-trace` 재컴파일 TU · ms 전후, W-R1 RT 프레임 힙 할당, W-R2 `RT.PSO.batchLookups` · `ensureMaterial` · `RT.Draw.gpuBatches`(이득이 있으면 배치 때 PSO 핸들을 풀어 둔다), 5-2 `RT.Bind.*` 비율, 에디터 MVVM(Hierarchy 큐브 8000 · 인스펙터 값 행 — 옮기기 전 커밋 대비), 골든 여유(`ScenarioCulprit --golden-margins`).
+- **측정(S8 표):** Tracy `GT.Frame` 자식 구간 합 90% 이상, 유니티 배치 크기 12 · 24 · 48, `load/*` 4 시나리오 × 워커 1 · 2 · 4 · 8 기준선과 구조 지표(`GT.Scene.tick.waves` · `batchElements` · `taskEntries` · `mainEntries` · `objectEntries` · `stageLists`), W25 GPU 비교(c05a3ee251 대 지금 — 노이즈 안이면 되돌린다), W-S4 `-ftime-trace` 재컴파일 TU · ms 전후, W-R1 RT 프레임 힙 할당, W-R2 `RT.PSO.batchLookups` · `ensureMaterial` · `RT.Draw.gpuBatches`(이득이 있으면 배치 때 PSO 핸들을 풀어 둔다), 5-2 `RT.Bind.*` 비율, DX12 기록 경로 락 제거(bindless 읽기 표 · 레코드 안 원자 상태) 전후 `bench.json` p50, 에디터 MVVM(Hierarchy 큐브 8000 · 인스펙터 값 행 — 옮기기 전 커밋 대비), 골든 여유(`ScenarioCulprit --golden-margins`).
 
 ### 4. Shooter3D 총 (사용자 지적)
 
@@ -48,7 +48,7 @@
 - **표면 변형:** 지형(`terrain.hlsl`)은 머티리얼을 픽셀에서만 읽어 정점 변위를 받지 못한다 — 엔진 텍스처 칸 `SurfaceDeform` 과 패스 상수 `g_SurfaceDeformParams`(창)를 더해 지형 정점 셰이더가 읽게 한다(언리얼 RVT · 유니티 `SetGlobalTexture` 자리, 그림자 패스도 같은 오프셋). 네 백엔드 셰이더 · 바인딩을 함께 바꾸므로 빌드 · 시나리오를 돌릴 수 있는 작업자가 한 묶음으로 한다.
 - **폴더 자리:** 엔진 쪽 `Dev/` 예외(`Config/Rules/Lint/FolderLayout.json` `_devFolderAllowed` — ModuleManager/Dev · Host/Dev · App/Dev · GF GameData/Dev · Graphics/Material/Dev)를 DevTools 로 — ModuleManager 를 공유 라이브러리로(언리얼 HotReload 처럼), DevTools 에 리플렉션 단계를 더하면 핫 리로드 · 머티리얼 그래프가 옮겨 간다.
 - **W-S4 막는 구조:** clang `-Werror=undefined-func-template` 을 Engine · GameFramework · Games 에 켜 `.inl` 누락을 링크가 아니라 컴파일에서 잡을 수 있는지 본다.
-- **RHI(5-2):** DX12 기록 경로 락 — 바인딩마다 `shared_mutex`(`resolveBufferAddress` · `resolveOfflineView`), 배리어마다 `_resourceStateMutex` + `_mapOffscreenTexture.find` 를 병렬 기록 구간의 레지스트리 불변식(`setParallelRecording`)으로 걷어 내고 텍스처 상태를 `RHIHandleTable` 레코드로(`bench.json` p50 전후). 측정 뒤에만: Vulkan 동적 오프셋 · 푸시 디스크립터, WebGPU 바인드 그룹 캐시 은퇴, 중립 커맨드 스트림 · RHI 스레드, 복사 큐, SM6.6 바인드리스, RT · 메시 셰이더, Android `VkDeviceMemory` 서브할당.
+- **RHI(5-2):** 측정 뒤에만: Vulkan 동적 오프셋 · 푸시 디스크립터, WebGPU 바인드 그룹 캐시 은퇴, 중립 커맨드 스트림 · RHI 스레드, 복사 큐, SM6.6 바인드리스, RT · 메시 셰이더, Android `VkDeviceMemory` 서브할당.
 
 ### 5-3. 병렬 오브젝트 · 물리 모델 남은 것
 

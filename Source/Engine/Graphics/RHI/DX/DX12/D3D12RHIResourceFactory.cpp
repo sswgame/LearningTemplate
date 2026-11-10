@@ -67,8 +67,8 @@ namespace sw
 
         const RHIBufferHandle handle = _pDevice->storeBuffer( buffer );
         {
-            // 상수버퍼 맵은 렌더 스레드가 드로우마다 읽는다(`resolveBufferAddress`). 에디터가 없는 빌드는 게임 틱과 기록이 겹치므로, 게임 스레드의
-            // 삽입(해시 표 재배치)이 그 읽기와 겹치지 않게 배타 락으로 넣는다.
+            // 상수버퍼 맵은 등록(`publishBindlessReadSlot` 이 크기를 읽기 표로 옮긴다) · 프레임 CBV 갱신 · 갱신 그림자가 읽는다. 에디터가 없는 빌드는
+            // 게임 틱과 기록이 겹치므로, 게임 스레드의 삽입(해시 표 재배치)이 그 읽기와 겹치지 않게 배타 락으로 넣는다.
             UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
             _pDevice->_mapCbAlignedSize[handle] = alignedSize;
             _pDevice->_mapCbMapped[handle]      = pMapped;
@@ -109,10 +109,9 @@ namespace sw
             return 0;
 
         const RHIBufferHandle handle = _pDevice->storeBuffer( buffer );
-        {
-            ScopedLock<mutex> lock{ _pDevice->_resourceStateMutex };
-            _pDevice->_mapStructuredBufferState[handle] = D3D12_RESOURCE_STATE_COMMON;
-        }
+        // 핸들을 돌려주기 전이라 다른 스레드는 이 칸을 아직 모른다 — 추적 표시를 락 없이 켠다(상태는 COMMON 으로 시작한다).
+        if ( D3D12RHIDevice::BufferRecord* const pRecord = _pDevice->findBufferRecord( handle ) )
+            pRecord->_bTrackedState = SW_TRUE;
         {
             // 등록(registerBindlessBufferSRV · registerBindlessBufferUAV)이 같은 배타 락 안에서 읽는다. 다른 스레드의 생성과 겹쳐 재해시되지 않게 한다.
             UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
@@ -303,13 +302,9 @@ namespace sw
         D3D12RHIDevice::StructuredUploadSlot& slot  = _pDevice->_arrStructuredUploadSlot[slotIndex];
         ID3D12GraphicsCommandList*            pList = slot._copyCommandList.Get();
 
-        D3D12_RESOURCE_STATES stateBefore = D3D12_RESOURCE_STATE_COMMON;
-        {
-            ScopedLock<mutex>                                                           lock{ _pDevice->_resourceStateMutex };
-            const unordered_map<RHIBufferHandle, D3D12_RESOURCE_STATES>::const_iterator stateIt = _pDevice->_mapStructuredBufferState.find( buffer );
-            if ( stateIt != _pDevice->_mapStructuredBufferState.end() )
-                stateBefore = stateIt->second;
-        }
+        D3D12RHIDevice::BufferRecord* const pBufferRecord = _pDevice->findBufferRecord( buffer );
+        const bool                          bTracked      = pBufferRecord != nullptr && pBufferRecord->_bTrackedState != SW_FALSE;
+        const D3D12_RESOURCE_STATES         stateBefore   = bTracked ? pBufferRecord->_state.load() : D3D12_RESOURCE_STATE_COMMON;
 
         if ( stateBefore != D3D12_RESOURCE_STATE_COPY_DEST )
         {
@@ -345,10 +340,8 @@ namespace sw
         pList->ResourceBarrier( 1, &toShaderRead );
         // 제출은 프레임 끝(또는 큐 대기 직전)에 한 번이다. D3D12RHIDevice::flushPendingUploads.
 
-        {
-            ScopedLock<mutex> lock{ _pDevice->_resourceStateMutex };
-            _pDevice->_mapStructuredBufferState[buffer] = kShaderReadState;
-        }
+        if ( bTracked )
+            pBufferRecord->_state.store( kShaderReadState );
     }
 
     // 길이를 나누지 않는다: 서브리소스 · 풋프린트 · 스테이징 복사 · 상태 전이의 순서가 곧 뜻이다.
@@ -799,10 +792,6 @@ namespace sw
         // 렌더 스레드의 기록 상태(`_frameStreamState` 의 묶인 정점 · 인덱스 버퍼)는 여기서 지우지 않는다. 이 함수는 게임 스레드에서도 불리는데 그 값은
         // 렌더 스레드만 쓴다(여기서 쓰면 경쟁이다). 핸들은 세대가 있어 다시 쓰이지 않으므로, 지운 핸들은 드로우의 `resolveBuffer` 가 null 로
         // 풀어 건너뛴다.
-        {
-            ScopedLock<mutex> lock{ _pDevice->_resourceStateMutex };
-            _pDevice->_mapStructuredBufferState.erase( buffer );
-        }
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         const auto               mapIt = _pDevice->_mapCbMapped.find( buffer );
         if ( mapIt != _pDevice->_mapCbMapped.end() && mapIt->second != nullptr )
@@ -815,15 +804,19 @@ namespace sw
         _pDevice->_mapCbAlignedSize.erase( buffer );
         _pDevice->_mapStructuredStride.erase( buffer );
         _pDevice->_constantBufferMirror.remove( buffer );
-        Microsoft::WRL::ComPtr<ID3D12Resource> owned;
-        if ( _pDevice->_gpuBuffers.take( buffer, owned ) == false )
+        D3D12RHIDevice::BufferRecord taken{};
+        if ( _pDevice->_gpuBuffers.take( buffer, taken ) == false )
             return;
+        Microsoft::WRL::ComPtr<ID3D12Resource> owned = std::move( taken._resource );
 
         // 이 버퍼의 번호를 모두 놓는다(다섯 백엔드 같은 계약 — 위 `registryLock` 아래). 예전에는 값만 지우고 번호를 돌려받지 않아 힙 칸이 샜다.
         const auto isThis = [buffer]( const D3D12RHIDevice::BindlessResourceRecord& record )
         { return record._buffer == buffer; };
         const auto deferFree = [this]( RHIDescriptorIndex index )
-        { deferFreeBindlessIndex( index ); };
+        {
+            _pDevice->retireBindlessReadSlot( index );
+            deferFreeBindlessIndex( index );
+        };
         _pDevice->_srvRegistry.releaseIf( RHIBindlessReuse::AfterFence, isThis, deferFree );
         _pDevice->_uavRegistry.releaseIf( RHIBindlessReuse::AfterFence, isThis, deferFree );
 
@@ -843,7 +836,7 @@ namespace sw
                                                                       IID_PPV_ARGS( readback.GetAddressOf() ) ),
                           "CreateCommittedResource" ) == false )
             return 0;
-        // 읽기 힙 리소스는 COPY_DEST 로 고정이다 — 상태 추적(`_mapStructuredBufferState`)에 올리지 않는다.
+        // 읽기 힙 리소스는 COPY_DEST 로 고정이다 — 상태 추적(`BufferRecord::_bTrackedState`)에 올리지 않는다.
         return _pDevice->storeBuffer( readback );
     }
 
@@ -999,7 +992,6 @@ namespace sw
         const RHITextureHandle                 handle  = _pDevice->storeTexture( texture, RHIMemoryTracker::classifyTexture( desc ) );
         ID3D12Resource*                        pNative = _pDevice->resolveTexture( handle );
         D3D12RHIDevice::OffscreenTextureRecord record{};
-        record._state      = D3D12_RESOURCE_STATE_COMMON;
         record._format     = bDepth ? dsvFmt : colorFmt;
         record._width      = desc._width;
         record._height     = desc._height;
@@ -1012,10 +1004,8 @@ namespace sw
 
         _pDevice->requireRegistryMutableNow( "createTexture2D" );
 
-        // 오프스크린 레코드와 디스크립터 프리리스트는 `transitionTexture` 가 기록 중에 읽는 것과
-        // 같은 자료다. 슬롯 배정부터 맵 삽입까지를 그 락 안에서 끝낸다. 읽는 쪽만 잠그면
-        // 생성/파괴가 맵을 리해시할 때 읽는 쪽이 무효한 참조를 잡는다.
-        ScopedLock<mutex> offscreenLock{ _pDevice->_resourceStateMutex };
+        // RTV · DSV 칸 발급기만 잠근다. 오프스크린 레코드는 핸들 테이블 칸에 들어가고, 핸들을 돌려주기 전이라 기록 워커가 그 칸을 아직 모른다.
+        ScopedLock<mutex> offscreenLock{ _pDevice->_offscreenViewMutex };
 
         for ( uint32 slice = 0; pNative != nullptr && desc._bIsRenderTarget && _pDevice->_rtvHeap != nullptr && slice < desc._arraySize; ++slice )
         {
@@ -1103,7 +1093,11 @@ namespace sw
                 record._listExtraDSVIndex.push_back( dsvSlot );
         }
 
-        _pDevice->_mapOffscreenTexture[handle] = record;
+        D3D12RHIDevice::TextureRecord* const pTextureRecord = _pDevice->findTextureRecord( handle );
+        if ( pTextureRecord == nullptr )
+            SW_FATAL( "D3D12: texture handle %# vanished while it was being created", handle );
+        pTextureRecord->_offscreen  = std::move( record );
+        pTextureRecord->_bOffscreen = SW_TRUE;
         return handle;
     }
 
@@ -1112,31 +1106,28 @@ namespace sw
         if ( texture == 0 )
             return;
         _pDevice->requireRegistryMutableNow( "destroyTexture" );
+        D3D12RHIDevice::TextureRecord taken{};
+        if ( _pDevice->_gpuTextures.take( texture, taken ) == false )
+            return;
+        if ( taken._bOffscreen != SW_FALSE )
         {
-            ScopedLock<mutex> offscreenLock{ _pDevice->_resourceStateMutex };
-
-            auto it = _pDevice->_mapOffscreenTexture.find( texture );
-            if ( it != _pDevice->_mapOffscreenTexture.end() )
+            const D3D12RHIDevice::OffscreenTextureRecord& offscreen        = taken._offscreen;
+            const uint32                                  offscreenRTVBase = _pDevice->_swapChain.getBufferCount();
+            ScopedLock<mutex>                             offscreenLock{ _pDevice->_offscreenViewMutex };
+            if ( offscreen._bHasRTV != SW_FALSE && offscreen._rtvIndex >= offscreenRTVBase )
+                _pDevice->_freeOffscreenRTV.push( offscreen._rtvIndex - offscreenRTVBase );
+            if ( offscreen._bHasDSV != SW_FALSE )
+                _pDevice->_freeOffscreenDSV.push( offscreen._dsvIndex );
+            for ( const uint32 rtvIndex : offscreen._listExtraRTVIndex )
             {
-                const uint32 offscreenRTVBase = _pDevice->_swapChain.getBufferCount();
-                if ( it->second._bHasRTV != SW_FALSE && it->second._rtvIndex >= offscreenRTVBase )
-                    _pDevice->_freeOffscreenRTV.push( it->second._rtvIndex - offscreenRTVBase );
-                if ( it->second._bHasDSV != SW_FALSE )
-                    _pDevice->_freeOffscreenDSV.push( it->second._dsvIndex );
-                for ( const uint32 rtvIndex : it->second._listExtraRTVIndex )
-                {
-                    _pDevice->_freeOffscreenRTV.push( rtvIndex - offscreenRTVBase );
-                }
-                for ( const uint32 dsvIndex : it->second._listExtraDSVIndex )
-                {
-                    _pDevice->_freeOffscreenDSV.push( dsvIndex );
-                }
-                _pDevice->_mapOffscreenTexture.erase( it );
+                _pDevice->_freeOffscreenRTV.push( rtvIndex - offscreenRTVBase );
+            }
+            for ( const uint32 dsvIndex : offscreen._listExtraDSVIndex )
+            {
+                _pDevice->_freeOffscreenDSV.push( dsvIndex );
             }
         }
-        Microsoft::WRL::ComPtr<ID3D12Resource> owned;
-        if ( _pDevice->_gpuTextures.take( texture, owned ) == false )
-            return;
+        Microsoft::WRL::ComPtr<ID3D12Resource> owned = std::move( taken._resource );
 
         // 이 텍스처에 발급한 bindless 번호는 파괴가 모두 놓는다(DX11 · GL · Vulkan 과 같은 규칙 — IRHIResourceFactory::registerBindlessTexture). 남겨 두면 등록한 쪽이 해제를
         // 잊거나 늦게 한 번호가 새고, 늦은 해제가 이미 다른 리소스에 다시 발급된 번호를 놓는다.
@@ -1145,8 +1136,11 @@ namespace sw
             UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
             const auto               isThis = [texture]( const D3D12RHIDevice::BindlessResourceRecord& record )
             { return record._texture == texture; };
-            const auto collect = [&listFreedIndex]( RHIDescriptorIndex index )
-            { listFreedIndex.push_back( index ); };
+            const auto collect = [this, &listFreedIndex]( RHIDescriptorIndex index )
+            {
+                _pDevice->retireBindlessReadSlot( index );
+                listFreedIndex.push_back( index );
+            };
             _pDevice->_srvRegistry.releaseIf( RHIBindlessReuse::AfterFence, isThis, collect );
             _pDevice->_uavRegistry.releaseIf( RHIBindlessReuse::AfterFence, isThis, collect );
         }
@@ -1210,12 +1204,11 @@ namespace sw
             return kInvalidDescriptorIndex;
         // 셰이더의 bindless 텍스처 배열은 Texture2D[] 다 — 배열 · 큐브 뷰를 넣으면 셰이더가 읽지 못한다(RHITextureDimension 참고).
         {
-            ScopedLock<mutex> stateLock{ _pDevice->_resourceStateMutex };
-            const auto        it = _pDevice->_mapOffscreenTexture.find( texture );
-            if ( it != _pDevice->_mapOffscreenTexture.end() && it->second._dimension != RHITextureDimension::Texture2D )
+            const D3D12RHIDevice::TextureRecord* const pTextureRecord = _pDevice->findTextureRecord( texture );
+            if ( pTextureRecord != nullptr && pTextureRecord->_bOffscreen != SW_FALSE && pTextureRecord->_offscreen._dimension != RHITextureDimension::Texture2D )
             {
                 SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.RegisterBindlessTextureTextureTextureOnly", "registerBindlessTexture: texture %# is a %# texture — only Texture2D can be bound to the bindless texture table yet",
-                                 texture, static_cast<uint32>( it->second._dimension ) );
+                                 texture, static_cast<uint32>( pTextureRecord->_offscreen._dimension ) );
                 return kInvalidDescriptorIndex;
             }
         }
@@ -1347,6 +1340,7 @@ namespace sw
                              bUAV ? "Bindless UAV" : "Bindless", index );
             return;
         }
+        _pDevice->retireBindlessReadSlot( index );
         deferFreeBindlessIndex( index ); // 힙 인덱스 공간이 하나라 발급기도 하나다
     }
 
@@ -1361,6 +1355,8 @@ namespace sw
         // 번호는 `acquireBindlessIndex` 가 발급기에서 받았다 — 산 칸이면 발급기를 거치지 않은 번호라 멈춘다.
         if ( target.assign( index, record ) == false )
             SW_FATAL( "D3D12: bindless index %# was written twice without a release", index );
+        _pDevice->publishBindlessReadSlot( index, registry == BindlessRegistry::UnorderedAccess ? D3D12RHIDevice::BindlessReadRegistry::UnorderedAccess : D3D12RHIDevice::BindlessReadRegistry::ShaderResource,
+                                           record );
     }
 
     void D3D12RHIResourceFactory::releaseBindlessSlot( RHIDescriptorIndex index )
