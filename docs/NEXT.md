@@ -41,7 +41,6 @@
 
 ### 5. 작업자 · 설계 문서가 남긴 일
 
-- **린트를 빌드 구조로(린트 표에서 지우기):** `editor-view-includes` 를 Panels View 부분의 `#error` 껍데기로. 먼저 린트가 못 보는 전이 include 둘을 끊는다 — `VFXPreviewPanel.cpp` → `Engine/VFX/VFXComponent.h`(View 가 미리보기 `VFXComponent*` 를 든다 — ViewModel 값으로), `PrefabEditorPanel.h` → `Viewport/EditorPreviewGizmo.h` → `EditorViewportGizmo.h` → `Workspace/EditorTransaction.h`. 껍데기는 티어 6 View 부분 중 `Panels` 만(같은 티어 `AssetActions` 는 씬 헤더를 쓴다 — 부분을 가른다), `GameFramework/.../MultiplayerInProcessTab` 은 확장 모듈 쪽 껍데기로. 닫힘 검사는 전이 include 를 다 따라간다(EditorUI 'MVVM' 절).
 - **에디터 MVVM 측정(통합):**
   - Hierarchy: 큐브 8000 루트 씬에서 Hierarchy 창을 연 프레임 시간을 옮기기 전 커밋과 대조한다(모두 접힘 · 루트 하나 펼침 · 맨 아래로 스크롤). 나빠졌으면 원인을 `HierarchyViewModel::gather` 에서 찾는다.
   - 인스펙터 값 행: 프로퍼티 많은 대상(컴포넌트 여럿을 단 오브젝트 · 프로젝트 설정 · 펼친 큰 배열)에서 인스펙터 프레임 시간과 `Editor.InspectorFilledRows` · `Editor.InspectorSkippedRows` 를 값 행 전 커밋과 대조한다(맨 위 · 맨 아래로 스크롤 · 스크롤 중). 나빠졌으면 `PropertyGridModel::gather` 의 행 채우기(값 사본 · 기본값 비교 · 혼합)에서 찾는다.

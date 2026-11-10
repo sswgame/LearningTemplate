@@ -21,6 +21,7 @@ namespace sw::editor
     {
     public:
         EditorPreviewGizmo();
+        ~EditorPreviewGizmo(); ///< .cpp 에 둔다 — 확장 모듈이 인라인으로 기즈모의 되돌리기 상태(내보내지 않은 형식)를 지우지 않게
 
         /** @brief 지난 프레임에 기즈모가 마우스를 가졌으면(위 · 드래그 중) true 입니다. 뷰포트의 오빗 입력을 막는 데 씁니다. */
         bool hasMouse() const { return _gizmo.isHovered() || _gizmo.isDragging(); }

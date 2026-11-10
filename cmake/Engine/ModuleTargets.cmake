@@ -407,9 +407,21 @@ endfunction()
 # 에디터 확장 모듈(GF_EditorPlugin_<이름> · SWGameEditor) — Dev 전용 SHARED. EditorModule 을 링크하고(언리얼 <X>Editor 모듈이 UnrealEd 를 링크하는 것과 같다),
 # 매니페스트의 의존 가운데 키트 · GameFramework 를 링크한다(목록을 CMake 에 다시 적지 않는다 — 매니페스트가 원본). ImGui 결속 소스를 만들어 넣는다
 # (손으로 빠뜨릴 수 없게 — `cmake/Engine/EditorExtensionUIBinder.cpp.in`). 다시 로드되는 DLL(EditorModule · 키트)도 일반 import 다(모듈 호스트가 이름을 바꾼다).
+#
+#   PANEL_VIEW_SOURCES  MVVM 패널 View 파일(이 폴더 기준). 따로 부분(`<TARGET>PanelView`)으로 짓고 에디터 패널 View 와 같은 모델 · 씬 헤더 껍데기를 받는다
+#                       (Source/Editor/CMakeLists.txt 2-2 — 전역 속성 SW_EDITOR_PANEL_VIEW_STUB_ROOT).
 # ------------------------------------------------------------------------------
 function(sw_addEditorExtension TARGET_NAME)
+	cmake_parse_arguments(ARG "" "" "PANEL_VIEW_SOURCES" ${ARGN})
 	file(GLOB_RECURSE listExtensionSource CONFIGURE_DEPENDS "*.cpp" "*.h")
+	set(listPanelViewSource "")
+	foreach(viewSource IN LISTS ARG_PANEL_VIEW_SOURCES)
+		set(viewPath "${CMAKE_CURRENT_SOURCE_DIR}/${viewSource}")
+		if(NOT viewPath IN_LIST listExtensionSource)
+			message(FATAL_ERROR "sw_addEditorExtension(${TARGET_NAME}): PANEL_VIEW_SOURCES '${viewSource}' is not a source in ${CMAKE_CURRENT_SOURCE_DIR}")
+		endif()
+		list(APPEND listPanelViewSource "${viewPath}")
+	endforeach()
 	if(SW_SHIPPING_BUILD)
 		sw_declareUnbuiltSources(${listExtensionSource})
 		return()
@@ -432,6 +444,9 @@ function(sw_addEditorExtension TARGET_NAME)
 		endif()
 	endforeach()
 
+	if(listPanelViewSource)
+		list(REMOVE_ITEM listExtensionSource ${listPanelViewSource}) # View 는 껍데기를 받는 부분이 짓는다(아래)
+	endif()
 	sw_addModuleLibrary(${TARGET_NAME}
 		KIND editorextension
 		DEV_TYPE SHARED
@@ -442,6 +457,19 @@ function(sw_addEditorExtension TARGET_NAME)
 		LINK_PRIVATE EditorModule Engine ModuleAPI ${listLinkedModule} imgui implot imgui_nodeeditor
 	)
 	sw_applyEditorInputBan(${TARGET_NAME}) # 확장 패널도 에디터 코드다 — ImGui 입력은 입력 맵 · EditorInputGUI 로
+	if(listPanelViewSource)
+		get_property(panelViewStubRoot GLOBAL PROPERTY SW_EDITOR_PANEL_VIEW_STUB_ROOT)
+		if(NOT panelViewStubRoot)
+			message(FATAL_ERROR "sw_addEditorExtension(${TARGET_NAME}): SW_EDITOR_PANEL_VIEW_STUB_ROOT is not set - Source/Editor must be configured first")
+		endif()
+		sw_addModulePart(${TARGET_NAME}PanelView
+			OWNER ${TARGET_NAME}
+			SOURCES ${listPanelViewSource}
+			LINK EditorModule Engine ModuleAPI ${listLinkedModule} imgui implot imgui_nodeeditor
+		)
+		target_include_directories(${TARGET_NAME}PanelView BEFORE PRIVATE "${panelViewStubRoot}")
+		sw_applyEditorInputBan(${TARGET_NAME}PanelView)
+	endif()
 	add_dependencies(EditorAll ${TARGET_NAME})
 endfunction()
 

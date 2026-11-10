@@ -32,6 +32,14 @@ namespace sw::editor
         bool   _bLooping{ false };  ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 
+    /** @brief 미리보기 효과의 재생 수(View 가 그리는 값 — View 는 `VFXComponent` 를 보지 않는다)입니다. */
+    struct VFXPreviewSubjectStats
+    {
+        uint64 _spawnedCount{ 0 };        ///< 이번 재생에서 만든 입자 수(GPU 방출기 포함)
+        uint32 _cpuAliveCount{ 0 };       ///< CPU 방출기의 살아 있는 입자 수
+        uint32 _enabledEmitterCount{ 0 }; ///< 켜진 방출기 수(격리 반영)
+    };
+
     /**
      * @class VFXPreviewModel
      * @brief VFX 미리보기 창의 상태와 명령입니다. 파일 머리말 참고.
@@ -61,8 +69,12 @@ namespace sw::editor
          * @details 문서를 읽지 못했으면 부르는 쪽이 부르지 않는다. 미리보기 씬은 플레이하지 않으므로(틱만) 재생은 여기서 시작한다.
          */
         void syncEffect( Scene* pScene, string_view assetPath );
-        /** @brief @p pScene 의 효과입니다. 씬이 없으면 nullptr 입니다(이 호출 안에서만 씁니다). */
-        [[nodiscard]] static VFXComponent* findSubject( Scene* pScene );
+        /** @brief @p pScene 의 효과가 있으면 그 재생 수를 @p outStats 에 담고 true 를 돌려줍니다. */
+        [[nodiscard]] static bool findSubjectStats( Scene* pScene, VFXPreviewSubjectStats& outStats );
+        /** @brief @p pScene 의 효과를 처음부터 다시 재생합니다(효과가 없으면 아무것도 하지 않는다). */
+        static void restartSubject( Scene* pScene );
+        /** @brief @p pScene 의 효과를 멈추고 입자를 비웁니다(효과가 없으면 아무것도 하지 않는다). */
+        static void stopSubject( Scene* pScene );
 
         /**
          * @brief 읽은 효과 파일의 내용이 그 뒤에 바뀌었으면(카탈로그 편집기의 저장 · 바깥 편집) true 를 돌려주고 새 내용 해시를 기억합니다. 패널은 true 면 다시 읽고 다시 건다(자동 갱신).
@@ -107,6 +119,8 @@ namespace sw::editor
         [[nodiscard]] static float3 computeOrbitPosition( float32 angle );
 
     private:
+        /** @brief @p pScene 의 효과입니다. 씬이 없으면 nullptr 입니다(이 호출 안에서만 씁니다). */
+        [[nodiscard]] static VFXComponent* findSubject( Scene* pScene );
         /** @brief 확정한 타깃 몸을 놓거나(경로가 바뀌었을 때만) 치우고, 효과 오브젝트를 몸에 붙이거나 원점으로 되돌립니다. */
         void syncTarget( Scene& scene, VFXComponent& subject );
 

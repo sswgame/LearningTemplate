@@ -7,18 +7,20 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
-
-#include "Editor/Common/Workspace/EditorTransaction.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
 
 namespace sw
 {
+    struct ObjectSnapshot;
+
     class GameObject;
 } // namespace sw
 
 namespace sw::editor
 {
+    struct EditorViewportGizmoUndo;
     struct ViewportToolbarSettings;
 
     class EditorSelection;
@@ -34,6 +36,9 @@ namespace sw::editor
     {
     public:
         EditorViewportGizmo();
+        ~EditorViewportGizmo();
+        EditorViewportGizmo( const EditorViewportGizmo& )            = delete;
+        EditorViewportGizmo& operator=( const EditorViewportGizmo& ) = delete;
 
         /**
          * @brief @p selection 의 오브젝트에 기즈모를 그리고 조작합니다. 편집이 막혔거나(Play) 선택이 비면 진행 중인 드래그를 정리하고 반환합니다.
@@ -77,17 +82,17 @@ namespace sw::editor
         void commitDrag( GameObject& obj, const ObjectSnapshot& before ) const;
 
     private:
-        ObjectSnapshot           _undoBefore;
-        GameObjectHandle         _object;     ///< `_undoBefore` 의 대상이다. 드래그가 여러 프레임에 걸치므로 핸들로 보관한다
-        vector<GameObjectHandle> _listObject; ///< 그룹 기즈모의 대상이다. 드래그하는 동안 여러 프레임에 걸치므로 핸들로 보관한다
-        vector<ObjectSnapshot>   _listUndo;
-        vector<float4x4>         _listRelativeWorld;
-        EditorSelection*         _pTarget; ///< 지금 드래그(또는 마지막으로 그린)의 대상 선택(빌림)
-        float32                  _arrGroupMatrix[16];
-        int32                    _lastDrawFrame;
-        uint32                   _lastObjectCount;
-        uint8                    _bTracking : 1;
-        uint8                    _bHovered  : 1;
-        [[maybe_unused]] uint8   _reserved  : 6;
+        /// 드래그 시작 전 스냅샷(단일 · 그룹). 되돌리기 형식(`Workspace/Undo`)은 .cpp 만 본다 — 이 헤더를 include 하는 패널 View 가 작업 공간 헤더에 닿지 않게(언리얼 FScopedTransaction 이 기즈모 구현 안에 있는 자리)
+        unique_ptr<EditorViewportGizmoUndo> _pUndo;
+        GameObjectHandle                    _object;     ///< `_pUndo->_before` 의 대상이다. 드래그가 여러 프레임에 걸치므로 핸들로 보관한다
+        vector<GameObjectHandle>            _listObject; ///< 그룹 기즈모의 대상이다. 드래그하는 동안 여러 프레임에 걸치므로 핸들로 보관한다
+        vector<float4x4>                    _listRelativeWorld;
+        EditorSelection*                    _pTarget; ///< 지금 드래그(또는 마지막으로 그린)의 대상 선택(빌림)
+        float32                             _arrGroupMatrix[16];
+        int32                               _lastDrawFrame;
+        uint32                              _lastObjectCount;
+        uint8                               _bTracking : 1;
+        uint8                               _bHovered  : 1;
+        [[maybe_unused]] uint8              _reserved  : 6;
     };
 } // namespace sw::editor

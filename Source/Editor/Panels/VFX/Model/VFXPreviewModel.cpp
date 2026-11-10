@@ -223,6 +223,34 @@ namespace sw::editor
         return pSubject != nullptr ? pSubject->getComponent<VFXComponent>() : nullptr;
     }
 
+    bool VFXPreviewModel::findSubjectStats( Scene* pScene, VFXPreviewSubjectStats& outStats )
+    {
+        const VFXComponent* pSubject = findSubject( pScene );
+        if ( pSubject == nullptr )
+            return false;
+        outStats._spawnedCount        = pSubject->getSpawnedParticleCount();
+        outStats._cpuAliveCount       = pSubject->getCPUAliveParticleCount();
+        outStats._enabledEmitterCount = 0;
+        for ( uint32 emitterIndex = 0; emitterIndex < pSubject->getEmitterCount(); ++emitterIndex )
+        {
+            if ( pSubject->isEmitterEnabled( emitterIndex ) )
+                ++outStats._enabledEmitterCount;
+        }
+        return true;
+    }
+
+    void VFXPreviewModel::restartSubject( Scene* pScene )
+    {
+        if ( VFXComponent* pSubject = findSubject( pScene ) )
+            pSubject->play();
+    }
+
+    void VFXPreviewModel::stopSubject( Scene* pScene )
+    {
+        if ( VFXComponent* pSubject = findSubject( pScene ) )
+            pSubject->stop();
+    }
+
     void VFXPreviewModel::syncEffect( Scene* pScene, string_view assetPath )
     {
         if ( string_view{ _previewEffectPath } == assetPath )
