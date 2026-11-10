@@ -1,5 +1,5 @@
 /**
- * @file Engine/Visual/2D/Scene2DOccluderProvider.h
+ * @file Engine/Visual/2D/Shadow/Scene2DOccluderProvider.h
  * @brief 2D 그림자 가림막의 렌더 기여입니다(씬 서비스) — 가림막 세그먼트를 씬 라이트 목록 맨 뒤에 붙입니다. 렌더러는 `ShadowCaster2DComponent` 를 모릅니다.
  */
 #pragma once

@@ -1,10 +1,10 @@
 #include "pch.h"
 
-#include "Engine/Visual/2D/Scene2DOccluderProvider.h"
+#include "Engine/Visual/2D/Shadow/Scene2DOccluderProvider.h"
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
-#include "Engine/Visual/2D/ShadowCaster2DComponent.h"
+#include "Engine/Visual/2D/Shadow/ShadowCaster2DComponent.h"
 
 namespace sw
 {

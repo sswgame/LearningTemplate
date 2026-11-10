@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Physics/Component/ClothComponent.h"
+#include "Engine/Physics/Cloth/ClothComponent.h"
 
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
