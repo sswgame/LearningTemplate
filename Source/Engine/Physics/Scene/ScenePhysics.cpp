@@ -22,6 +22,7 @@
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Physics/PhysicsDebugDraw.h"
 #include "Engine/Physics/PhysicsSystem.h"
+#include "Engine/Physics/Scene/PhysicsPoseStore.h"
 #include "Engine/Profiling/FrameProfiler.h"
 
 namespace sw
@@ -46,26 +47,26 @@ namespace sw
                 return 0;
             }
 
-            /** @brief @p owner 를 자기 바디 핸들의 칸 번호 자리에 적습니다. */
+            /** @brief @p owner 의 바디 칸에 그 강체 칸 번호를 적습니다(바디가 없으면 아무것도 하지 않는다). */
             template <typename TOwner>
-            static void bindOwner( vector<TOwner*>& listOwner, TOwner& owner )
+            static void bindOwner( vector<uint32>& listPoseSlot, const TOwner& owner )
             {
                 const PhysicsBodyHandle body = owner.getBodyHandle();
                 if ( body.isValid() == false )
                     return;
                 const uint32 index = body.getSlot().index();
-                if ( index >= listOwner.size() )
-                    listOwner.resize( static_cast<size_t>( index ) + 1, nullptr );
-                listOwner[index] = &owner;
+                if ( index >= listPoseSlot.size() )
+                    listPoseSlot.resize( static_cast<size_t>( index ) + 1, PhysicsPoseStore::kInvalidSlot );
+                listPoseSlot[index] = owner.getPoseSlot();
             }
 
             /** @brief @p owner 가 자기 바디 칸의 주인이면 지웁니다. */
             template <typename TOwner>
-            static void unbindOwner( vector<TOwner*>& listOwner, const TOwner& owner )
+            static void unbindOwner( vector<uint32>& listPoseSlot, const TOwner& owner )
             {
                 const uint32 index = owner.getBodyHandle().getSlot().index();
-                if ( index < listOwner.size() && listOwner[index] == &owner )
-                    listOwner[index] = nullptr;
+                if ( index < listPoseSlot.size() && listPoseSlot[index] == owner.getPoseSlot() )
+                    listPoseSlot[index] = PhysicsPoseStore::kInvalidSlot;
             }
         };
     } // namespace
@@ -90,8 +91,8 @@ namespace sw
         , _stepTimer{}
         , _arrListComponent{}
         , _arrListFrameHook{}
-        , _listBodyOwner3D{}
-        , _listBodyOwner2D{}
+        , _listBodyPoseSlot3D{}
+        , _listBodyPoseSlot2D{}
         , _listFrameEvent3D{}
         , _listFrameEvent2D{}
         , _poseRead3D{}
@@ -145,8 +146,8 @@ namespace sw
         }
         _pScene3D.reset();
         _pScene2D.reset();
-        _listBodyOwner3D.clear();
-        _listBodyOwner2D.clear();
+        _listBodyPoseSlot3D.clear();
+        _listBodyPoseSlot2D.clear();
         _listFrameEvent3D.clear();
         _listFrameEvent2D.clear();
         _listSweptOverlap2D.clear();
@@ -336,38 +337,44 @@ namespace sw
 
     void ScenePhysics::bindBodyOwner( RigidBodyComponent& owner )
     {
-        ScenePhysicsInternal::bindOwner( _listBodyOwner3D, owner );
+        ScenePhysicsInternal::bindOwner( _listBodyPoseSlot3D, owner );
     }
 
     void ScenePhysics::bindBodyOwner( RigidBody2DComponent& owner )
     {
-        ScenePhysicsInternal::bindOwner( _listBodyOwner2D, owner );
+        ScenePhysicsInternal::bindOwner( _listBodyPoseSlot2D, owner );
     }
 
     void ScenePhysics::unbindBodyOwner( const RigidBodyComponent& owner )
     {
-        ScenePhysicsInternal::unbindOwner( _listBodyOwner3D, owner );
+        ScenePhysicsInternal::unbindOwner( _listBodyPoseSlot3D, owner );
     }
 
     void ScenePhysics::unbindBodyOwner( const RigidBody2DComponent& owner )
     {
-        ScenePhysicsInternal::unbindOwner( _listBodyOwner2D, owner );
+        ScenePhysicsInternal::unbindOwner( _listBodyPoseSlot2D, owner );
     }
 
-    template <typename TOwner, typename TDimension>
-    void ScenePhysics::readMovedBodies( const vector<TOwner*>& listOwner, const IPhysicsBodyScene<TDimension>& scene, PoseReadBuffer<TOwner, TDimension>& buffer )
+    template <typename TDimension>
+    void ScenePhysics::readMovedBodies( const vector<uint32>& listPoseSlot, const IPhysicsBodyScene<TDimension>& scene, PoseReadBuffer<TDimension>& buffer )
     {
+        using Store  = PhysicsPoseStore::Store<TDimension>;
+        using Page   = PhysicsBodyPage<TDimension>;
+        Store& store = engine::getSubsystem<PhysicsPoseStore>().getStore<TDimension>();
         buffer._listBody.clear();
-        buffer._listOwner.clear();
+        buffer._listPoseSlot.clear();
         for ( const PhysicsBodyHandle body : scene.getMovedBodies() )
         {
-            const uint32 index  = body.getSlot().index();
-            TOwner*      pOwner = index < listOwner.size() ? listOwner[index] : nullptr;
+            const uint32 index    = body.getSlot().index();
+            const uint32 poseSlot = index < listPoseSlot.size() ? listPoseSlot[index] : PhysicsPoseStore::kInvalidSlot;
+            if ( poseSlot == PhysicsPoseStore::kInvalidSlot )
+                continue;
             // 칸 번호가 같아도 세대가 다르면 다른 바디다(파괴 · 래그돌이 만든 주인 없는 바디도 이 목록에 든다).
-            if ( pOwner != nullptr && pOwner->getBodyHandle() == body )
+            const Page* pPage = store.findPage( poseSlot );
+            if ( pPage != nullptr && pPage->_arrBody[poseSlot & Page::kSlotMask] == body )
             {
                 buffer._listBody.push_back( body );
-                buffer._listOwner.push_back( pOwner );
+                buffer._listPoseSlot.push_back( poseSlot );
             }
         }
         const uint32 count = static_cast<uint32>( buffer._listBody.size() );
@@ -375,12 +382,13 @@ namespace sw
             return;
         buffer._listState.resize( count );
 
-        // 구간마다 백엔드 한 번(잠그지 않는 일괄 읽기) + 주인의 자기 멤버 쓰기다 — 워커는 컨테이너를 만지지 않고 포인터만 받는다.
+        // 구간마다 백엔드 한 번(잠그지 않는 일괄 읽기) + 강체 칸 쓰기다 — 워커는 컨테이너를 만지지 않고 포인터만 받고, 컴포넌트를 거치지 않는다.
         struct PoseReadJob
         {
             const IPhysicsBodyScene<TDimension>* _pScene{ nullptr };
+            const Store*                         _pStore{ nullptr };
             const PhysicsBodyHandle*             _pBody{ nullptr };
-            TOwner* const*                       _ppOwner{ nullptr };
+            const uint32*                        _pPoseSlot{ nullptr };
             PhysicsBodyState<TDimension>*        _pState{ nullptr };
             uint64                               _stepCount{ 0 };
 
@@ -390,14 +398,16 @@ namespace sw
                 _pScene->readBodyStates( span<const PhysicsBodyHandle>{ _pBody + start, rangeCount }, span<PhysicsBodyState<TDimension>>{ _pState + start, rangeCount } );
                 for ( uint32 index = start; index < end; ++index )
                 {
-                    _ppOwner[index]->applySteppedPose( _pState[index], _stepCount );
+                    const uint32 poseSlot = _pPoseSlot[index];
+                    _pStore->findPage( poseSlot )->applySteppedPose( poseSlot & Page::kSlotMask, _pState[index], _stepCount );
                 }
             }
         };
         PoseReadJob job{};
         job._pScene    = &scene;
+        job._pStore    = &store;
         job._pBody     = buffer._listBody.data();
-        job._ppOwner   = buffer._listOwner.data();
+        job._pPoseSlot = buffer._listPoseSlot.data();
         job._pState    = buffer._listState.data();
         job._stepCount = _stepCount;
         engine::runParallelByCost( count, SW_DELEGATE_METHOD( ParallelBlockDelegate, &PoseReadJob::readRange, &job ) );
@@ -507,9 +517,9 @@ namespace sw
             ++_stepCount;
             // 자세는 이 스텝에 깨어 있던 바디의 주인만 읽는다 — 정적 · 잠든 바디마다 백엔드 세 번(자세 · 두 속도)을 부르지 않는다.
             if ( _pScene3D != nullptr )
-                readMovedBodies( _listBodyOwner3D, static_cast<const IPhysicsBodyScene3D&>( *_pScene3D ), _poseRead3D );
+                readMovedBodies( _listBodyPoseSlot3D, static_cast<const IPhysicsBodyScene3D&>( *_pScene3D ), _poseRead3D );
             if ( _pScene2D != nullptr )
-                readMovedBodies( _listBodyOwner2D, static_cast<const IPhysicsBodyScene2D&>( *_pScene2D ), _poseRead2D );
+                readMovedBodies( _listBodyPoseSlot2D, static_cast<const IPhysicsBodyScene2D&>( *_pScene2D ), _poseRead2D );
             refreshFrameHookLists();
             for ( uint32 phase = 0; phase < ScenePhysicsInternal::kPhaseCount; ++phase )
             {

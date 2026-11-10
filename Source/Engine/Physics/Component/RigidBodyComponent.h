@@ -3,7 +3,6 @@
  * @brief 3D 강체 하나 — 바디 종류 · 셰이프(여럿이면 컴파운드) · 레이어 · 재질 · 질량을 데이터로 들고, 바디를 이 컴포넌트의 월드 자세와 맞춥니다.
  */
 #pragma once
-#include "Core/Concurrency/SpinLock.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -24,6 +23,8 @@ namespace sw
 {
     class RigidBodyComponent;
     class ValidationContext;
+    template <typename TDimension>
+    struct PhysicsBodyPage;
 
     /**
      * @class RigidBodySocketPhysics
@@ -63,11 +64,15 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        /** @brief 강체 칸(`PhysicsPoseStore`)을 받습니다. */
         RigidBodyComponent();
-        ~RigidBodyComponent() override = default;
+        /** @brief 강체 칸을 놓습니다. */
+        ~RigidBodyComponent() override;
 
         /** @brief 바디 핸들입니다(시작 전 · 꺼짐이면 무효). 질의 결과 · 이벤트의 바디와 비교합니다. */
-        PhysicsBodyHandle getBodyHandle() const { return _body; }
+        PhysicsBodyHandle getBodyHandle() const;
+        /** @brief 강체 칸 번호입니다(`PhysicsPoseStore`, 컴포넌트 수명 동안 그대로). 씬이 바디 칸 → 강체 칸 표에 적는다(`ScenePhysics::bindBodyOwner`). */
+        uint32 getPoseSlot() const { return _poseSlot; }
         /** @brief 바디가 사는 3D 씬입니다(없으면 nullptr). */
         IPhysicsBodyScene3D* findScene() const;
 
@@ -112,9 +117,9 @@ namespace sw
         /** @brief 잠든 바디를 깨웁니다. */
         void wake();
         /** @brief 마지막 스텝 뒤의 선속도입니다. */
-        float3 getLinearVelocity() const { return _lastLinearVelocity; }
+        float3 getLinearVelocity() const;
         /** @brief 마지막 스텝 뒤의 각속도입니다. */
-        float3 getAngularVelocity() const { return _lastAngularVelocity; }
+        float3 getAngularVelocity() const;
         /** @brief 바디의 질량(kg)입니다(바디가 없으면 0). */
         float32 getBodyMass() const;
         /**
@@ -149,10 +154,8 @@ namespace sw
         void validateMaterial( ValidationContext& context ) const;
 
     private:
-        friend class ScenePhysics; ///< 스텝 뒤 움직인 바디의 주인만 `applySteppedPose` 로 부른다
-
-        /** @brief 이 스텝에 깨어 있던 바디의 자세 · 속도 @p state 를 받습니다. `ScenePhysics` 가 백엔드 일괄 읽기(`readBodyStates`) 뒤 워커 구간에서 부릅니다 — 자기 멤버만 쓴다. */
-        void applySteppedPose( const PhysicsBodyState3D& state, uint64 stepCount );
+        /** @brief 강체 칸의 페이지 안 자리입니다. */
+        uint32 getPoseIndex() const;
         /** @brief 지금 속성과 자세 @p position · @p rotation · @p scale 의 바디 서술자입니다. */
         PhysicsBodyDesc3D makeBodyDesc( const ScenePhysics& physics, const float3& position, const quaternion& rotation, const float3& scale ) const;
         /** @brief 이번 물리 프레임의 필드가 이 스텝에 바디에 줄 힘입니다(중력 배율의 차이 · 가속 · 부력 · 흐름 쪽 저항). */
@@ -187,25 +190,17 @@ namespace sw
         PROPERTY( Category = "Body", Tooltip = "Draw the pose interpolated between the last two physics steps" )
         bool _bInterpolate;
 
-        RigidBodySocketPhysics                          _socketPhysics;
-        PhysicsBodyHandle                               _body;
-        mutable SpinLock                                _commandLock; ///< 아무 스레드의 입력(`addForce` …) → 물리 스텝의 꺼내기를 지킨다 — 다른 물리 컴포넌트와 같은 규약(검사는 `SW_GUARDED_BY`)
-        PhysicsBodyCommand<PhysicsDimension3D> _command SW_GUARDED_BY( _commandLock );
-        PhysicsFieldSample _pendingField                SW_GUARDED_BY( _commandLock ); ///< 이번 게임 프레임에 모인 물리 필드
-        PhysicsFieldSample                              _frameField;                   ///< 이번 물리 프레임의 필드(`beginPhysicsFrame` 이 옮긴다)
-        uint64                                          _movedStep;                    ///< 바디가 마지막으로 깨어 있던 스텝 번호(`ScenePhysics::getStepCount`, `applySteppedPose`)
-        float3                                          _previousPosition;
-        float3                                          _currentPosition;
-        float3                                          _worldScale; ///< 트랜스폼에서 마지막으로 읽은 월드 배율(변경 번호가 같으면 그대로다)
-        float3                                          _kinematicStartPosition;
-        float3                                          _kinematicTargetPosition;
-        float3                                          _lastLinearVelocity;
-        float3                                          _lastAngularVelocity;
-        quaternion                                      _previousRotation;
-        quaternion                                      _currentRotation;
-        quaternion                                      _kinematicStartRotation;
-        quaternion                                      _kinematicTargetRotation;
-        PhysicsBodyType                                 _appliedBodyType;  ///< 바디에 든 종류(`_bodyType` 이 바뀌면 다음 프레임에 맞춘다)
-        bool                                            _bRestPoseWritten; ///< 잠든 자세를 트랜스폼에 이미 썼다 — 깨기 전까지 다시 쓰지 않는다
+        RigidBodySocketPhysics               _socketPhysics;
+        PhysicsBodyPage<PhysicsDimension3D>* _pPosePage;    ///< 강체 칸이 든 페이지 — 바디 핸들 · 스텝 자세 · 속도 · 명령(`PhysicsPoseStore`)
+        uint32                               _poseSlot;     ///< 강체 칸 번호
+        PhysicsFieldSample                   _pendingField; ///< 이번 게임 프레임에 모인 물리 필드 — 명령과 같은 칸 잠금(`PhysicsBodyPage::_arrCommandLock`) 아래다
+        PhysicsFieldSample                   _frameField;   ///< 이번 물리 프레임의 필드(`beginPhysicsFrame` 이 옮긴다)
+        float3                               _worldScale;   ///< 트랜스폼에서 마지막으로 읽은 월드 배율(변경 번호가 같으면 그대로다)
+        float3                               _kinematicStartPosition;
+        float3                               _kinematicTargetPosition;
+        quaternion                           _kinematicStartRotation;
+        quaternion                           _kinematicTargetRotation;
+        PhysicsBodyType                      _appliedBodyType;  ///< 바디에 든 종류(`_bodyType` 이 바뀌면 다음 프레임에 맞춘다)
+        bool                                 _bRestPoseWritten; ///< 잠든 자세를 트랜스폼에 이미 썼다 — 깨기 전까지 다시 쓰지 않는다
     };
 } // namespace sw

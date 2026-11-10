@@ -178,8 +178,8 @@ namespace sw
 
         /**
          * @brief 강체 컴포넌트를 자기 바디(`getBodyHandle`)의 주인으로 적습니다. 바디를 만든 직후에 부릅니다.
-         * @details 스텝마다 백엔드가 깨어 있던 바디 목록(`getMovedBodies`)을 주면 그 바디의 주인만 자세를 읽는다 — 정적 · 잠든 바디는 스텝마다
-         *          불리지 않는다. 주인 표는 바디 핸들의 칸 번호로 찾고, 주인의 핸들과 세대까지 같을 때만 부른다.
+         * @details 스텝마다 백엔드가 깨어 있던 바디 목록(`getMovedBodies`)을 주면 그 바디의 강체 칸(`PhysicsPoseStore`)에만 자세를 쓴다 — 정적 · 잠든 바디는
+         *          스텝마다 건드리지 않는다. 표는 바디 칸 번호 → 강체 칸 번호이고, 강체 칸의 바디 핸들과 세대까지 같을 때만 쓴다.
          */
         void bindBodyOwner( RigidBodyComponent& owner );
         void bindBodyOwner( RigidBody2DComponent& owner );
@@ -225,19 +225,19 @@ namespace sw
         /** @brief 설정 표의 스텝 크기 · 상한을 누적기에 한 번 맞춥니다. */
         void configureOnce();
         /** @brief 움직인 바디의 자세를 읽는 프레임 버퍼입니다(용량을 프레임마다 재사용한다). 세 목록은 같은 자리끼리 짝이다. */
-        template <typename TOwner, typename TDimension>
+        template <typename TDimension>
         struct PoseReadBuffer
         {
             vector<PhysicsBodyHandle>            _listBody;
-            vector<TOwner*>                      _listOwner;
+            vector<uint32>                       _listPoseSlot; ///< 강체 칸 번호(`PhysicsPoseStore`)
             vector<PhysicsBodyState<TDimension>> _listState;
         };
         /**
-         * @brief 씬 @p scene 이 마지막 스텝에 움직였다고 한 바디 가운데 주인(@p listOwner)이 확인된 것을 모아, 워커 구간마다 백엔드 일괄 읽기(`readBodyStates`)와
-         *        주인의 `applySteppedPose` 를 부릅니다(.cpp 에서만 쓴다). 주인은 자기 멤버만 쓴다 — 구간끼리 겹치지 않는다.
+         * @brief 씬 @p scene 이 마지막 스텝에 움직였다고 한 바디 가운데 강체 칸(@p listPoseSlot)이 확인된 것을 모아, 워커 구간마다 백엔드 일괄 읽기(`readBodyStates`)와
+         *        강체 칸 쓰기(`PhysicsBodyPage::applySteppedPose`)를 합니다(.cpp 에서만 쓴다). 칸끼리 겹치지 않아 구간끼리 겹치지 않는다 — 컴포넌트는 건드리지 않는다.
          */
-        template <typename TOwner, typename TDimension>
-        void readMovedBodies( const vector<TOwner*>& listOwner, const IPhysicsBodyScene<TDimension>& scene, PoseReadBuffer<TOwner, TDimension>& buffer );
+        template <typename TDimension>
+        void readMovedBodies( const vector<uint32>& listPoseSlot, const IPhysicsBodyScene<TDimension>& scene, PoseReadBuffer<TDimension>& buffer );
         /** @brief `queuePoseWrite` 로 모은 쓰기를 적용합니다(그 머리말의 순서). */
         void applyPoseWrites();
 
@@ -272,26 +272,26 @@ namespace sw
         FixedStepTimer                  _stepTimer;
         vector<PhysicsComponent*>       _arrListComponent[3]; ///< 단계(`PhysicsComponentPhase`)마다 하나. 컴포넌트가 자기 자리(`_physicsIndex`)를 든다
         /// @brief 프레임 훅(`PhysicsFrameHook` 의 BeginFrame · PreStep · PostStep · EndFrame 차례)마다, 단계마다 그 훅을 부를 컴포넌트입니다(`refreshFrameHookLists`).
-        vector<PhysicsComponent*>                                _arrListFrameHook[4][3];
-        vector<RigidBodyComponent*>                              _listBodyOwner3D; ///< 3D 바디 핸들의 칸 번호 → 주인 강체(없으면 nullptr, `bindBodyOwner`)
-        vector<RigidBody2DComponent*>                            _listBodyOwner2D; ///< 2D 바디 핸들의 칸 번호 → 주인 강체
-        vector<PhysicsContactEvent3D>                            _listFrameEvent3D;
-        vector<PhysicsContactEvent2D>                            _listFrameEvent2D;
-        PoseReadBuffer<RigidBodyComponent, PhysicsDimension3D>   _poseRead3D;                         ///< 스텝마다 움직인 3D 바디의 자세 읽기
-        PoseReadBuffer<RigidBody2DComponent, PhysicsDimension2D> _poseRead2D;                         ///< 위와 같다(2D)
-        vector<PoseWrite>                                        _listPoseWrite;                      ///< 이번 프레임 끝 자세 쓰기(`queuePoseWrite`)
-        vector<SceneTransformWrite>                              _listTransformWrite;                 ///< 그 가운데 부모 없는 것의 일괄 쓰기(`applyPoseWrites` 가 채운다, 재사용)
-        vector<PhysicsContactEvent3D>                            _listDispatchEvent3D;                ///< `dispatchEvents` 가 처리하는 동안의 사본(재사용)
-        vector<PhysicsContactEvent2D>                            _listDispatchEvent2D;                ///< 위와 같다
-        vector<SweptOverlap2D>                                   _listDispatchSwept;                  ///< 위와 같다
-        PhysicsContactLogEntry                                   _arrContactLog[kContactLogCapacity]; ///< 시작 · 끝 접촉 고리(진단 — `collectContactLog`)
-        uint64                                                   _contactLogCount;                    ///< 기록한 누계(다음 칸은 `% kContactLogCapacity`)
-        uint64                                                   _stepCount;
-        uint32                                                   _debrisBodyCount;
-        float32                                                  _fixedStepOverride; ///< 0 이면 엔진 설정의 고정 스텝(`setFixedStepOverride`)
-        uint8                                                    _bConfigured         : 1;
-        uint8                                                    _bFrameHookListStale : 1; ///< 스텝 훅 목록을 다시 걸러야 한다(등록 · 해제 · 기본 구현 호출)
-        uint8                                                    _bFrameEventsPending : 1; ///< 마지막 `step` 의 이벤트를 아직 나눠 주지 않았다(`deliverFrameEvents`)
+        vector<PhysicsComponent*>          _arrListFrameHook[4][3];
+        vector<uint32>                     _listBodyPoseSlot3D; ///< 3D 바디 핸들의 칸 번호 → 강체 칸 번호(없으면 `PhysicsPoseStore::kInvalidSlot`, `bindBodyOwner`)
+        vector<uint32>                     _listBodyPoseSlot2D; ///< 2D 바디 핸들의 칸 번호 → 강체 칸 번호
+        vector<PhysicsContactEvent3D>      _listFrameEvent3D;
+        vector<PhysicsContactEvent2D>      _listFrameEvent2D;
+        PoseReadBuffer<PhysicsDimension3D> _poseRead3D;                         ///< 스텝마다 움직인 3D 바디의 자세 읽기
+        PoseReadBuffer<PhysicsDimension2D> _poseRead2D;                         ///< 위와 같다(2D)
+        vector<PoseWrite>                  _listPoseWrite;                      ///< 이번 프레임 끝 자세 쓰기(`queuePoseWrite`)
+        vector<SceneTransformWrite>        _listTransformWrite;                 ///< 그 가운데 부모 없는 것의 일괄 쓰기(`applyPoseWrites` 가 채운다, 재사용)
+        vector<PhysicsContactEvent3D>      _listDispatchEvent3D;                ///< `dispatchEvents` 가 처리하는 동안의 사본(재사용)
+        vector<PhysicsContactEvent2D>      _listDispatchEvent2D;                ///< 위와 같다
+        vector<SweptOverlap2D>             _listDispatchSwept;                  ///< 위와 같다
+        PhysicsContactLogEntry             _arrContactLog[kContactLogCapacity]; ///< 시작 · 끝 접촉 고리(진단 — `collectContactLog`)
+        uint64                             _contactLogCount;                    ///< 기록한 누계(다음 칸은 `% kContactLogCapacity`)
+        uint64                             _stepCount;
+        uint32                             _debrisBodyCount;
+        float32                            _fixedStepOverride; ///< 0 이면 엔진 설정의 고정 스텝(`setFixedStepOverride`)
+        uint8                              _bConfigured         : 1;
+        uint8                              _bFrameHookListStale : 1; ///< 스텝 훅 목록을 다시 걸러야 한다(등록 · 해제 · 기본 구현 호출)
+        uint8                              _bFrameEventsPending : 1; ///< 마지막 `step` 의 이벤트를 아직 나눠 주지 않았다(`deliverFrameEvents`)
     };
 
     /**
