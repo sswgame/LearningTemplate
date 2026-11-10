@@ -78,7 +78,7 @@ namespace sw
     bool SkinLayerValue::readFromXML( const XMLNode& node, AppearanceLoadReport& report, string_view sourceName )
     {
         // 속성은 리플렉션 칸이다(필수 층 이름 · 범위 · 모르는 속성은 XMLFields 가 알린다). 적지 않은 칸은 지금 값이 남는다. 회전 범위는 kMaxRotation 과 같다(PROPERTY 는 글자 범위만 받는다).
-        SkinLayerValueDef def;
+        SkinLayerValueParams def;
         def._color           = _color;
         def._opacity         = _opacity;
         def._offset          = _offset;
