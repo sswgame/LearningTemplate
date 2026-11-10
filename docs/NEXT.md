@@ -141,9 +141,9 @@ GameObject/Component API 는 저작 · 수명 · 직렬화 층으로 두고, 프
   - 판정을 두 축으로 나눈다: 넓고 얕은 차이(평균 거리)와 좁고 깊은 차이(최대 연결 영역). 지금 "색 거리 12 이상 화소 ≤ 1 %" 한 식은 작은 마젠타 덩어리를 놓친다.
   - 골든 옆 `*.golden.json` 에 기록 커밋과 측정값을 둔다. 30 일간 골든 631 개가 1442 회 다시 쓰였다.
   - WebGPU 골든은 0 이다 — 체인 백엔드 집합을 한 곳에서 정의해 골든 폴더와 대조한다.
-- **T2 자동화 격리 — 통합 검증만 남음:** `-scenario` 실행은 사용자 데이터 뿌리를 `Saved/Automation/UserData/` 아래로 가두고 밖이면 종료 11(`AutomationUserDataRoot`), 백엔드별 부모가 자식마다 `<뿌리>/<백엔드>`, 두 번 기동 쌍은 묶음 뿌리(`RunStateDirPair.cmake`).
-  - 남은 일: 빌드 · `AutomationUserDataRootTest` · 체인(`engine.isolation` 포함) · `Scenario.velmora.sequence.*` · `Scenario.editor.statedir.*` · `Scripts/net/NetPairRun.py`(클라이언트가 실행마다 새 뿌리를 받아도 되는지)를 돌린다.
-  - `-unattended` 만 주고 `-scenario` 가 없는 실행(벤치 · 텔레메트리)은 아직 사람의 폴더를 쓴다 — 세이브를 쓰는 것이 나오면 같은 판정을 넓힌다.
+- **T2 자동화 격리 — 통합 검증만 남음:** 자동화 실행(`CommandLineManager::isAutomatedRun` — `-unattended` · `-scenario`)은 사용자 데이터 뿌리를 `Saved/Automation/UserData/` 아래로 가두고 밖이면 종료 11(`AutomationUserDataRoot`), 상태 자리 변수(`gv_editorStateDir` · `gv_userSettingsFile`)가 사람의 폴더여도 11, 백엔드별 부모가 자식마다 `<뿌리>/<백엔드>`, 두 번 기동 쌍은 묶음 뿌리(`RunStateDirPair.cmake`).
+  - 남은 일: 빌드 · `AutomationUserDataRootTest`(리눅스 포함 — 대소문자 케이스) · `UnitTests*`(무인 실행이라 이제 격리된다) · 체인(`engine.isolation` 포함) · `Scenario.velmora.sequence.*` · `Scenario.editor.statedir.*` · `py -3 -m Scripts net-pair mmo` 를 돌린다.
+  - `-unattended` 도 `-scenario` 도 없는 스크립트 실행(`LockstepPairRun.py` · `TelemetryLocalRun.py` — 표준 입력 명령으로 모는 보이는 실행)은 판정 밖이라 사람의 세이브 폴더를 쓴다. 세이브를 쓰면 스크립트가 `-unattended` 를 붙이거나 판정에 표준 입력 실행을 더한다.
 - **T3 테스트 이력 · 격리 · 파이프라인(T1 뒤):**
   - 보고 JSON 을 sqlite 에 쌓고, 흔들림 지수와 p95 추세를 낸다. 격리 표 `Config/Rules/Test/Quarantine.json` 은 사유 · 만료 필수다.
   - 샤드를 시간 균형으로 나누고, 묶음 끝 셸 스크립트를 단계 · 산출물 · 재시도가 적힌 파이프라인 정의로 옮긴다.
