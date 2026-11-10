@@ -6,6 +6,7 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Diagnostics/ScopedProgressReport.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Hash/HashUtil.h"
@@ -836,6 +837,8 @@ namespace sw
                 SW_LOG_INFO_ID( "ShaderCompiler.CompiledOnCacheMiss", "Compiled %# %# (%#) in %# ms", desc._source.c_str(), desc._entryPoint.c_str(), profile.c_str(),
                                 ( MonotonicClock::nowNanoseconds() - compileStartNanos ) / constant::time::kNanosecondsPerMillisecond );
         };
+        // 위 줄은 컴파일이 끝나야 찍힌다 — 한 번이 정지 시한보다 긴 컴파일(fxc 의 mesh_morph)도 일하는 중임을 간격마다 알린다.
+        const ScopedProgressReport progress{ string( desc._source.c_str() ) + " " + desc._entryPoint + " (" + profile + ") compile" };
 
         const ShaderTargetFormatInfo* const pTargetInfo = ShaderTargetFormatTable::find( desc._targetFormat );
         const bool                          bFxcTarget  = pTargetInfo != nullptr && pTargetInfo->_tool == ShaderCompilerTool::Fxc;

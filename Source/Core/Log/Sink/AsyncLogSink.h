@@ -92,6 +92,8 @@ namespace sw
         void workerLoop();
         /** @brief 큐에 남은 로그를 모두 비우고 기록합니다. */
         void flushQueue();
+        /** @brief 장치마다 쌓인 버퍼를 디스크로 내보냅니다(작업 스레드가 쉬는 동안 간격마다 부른다). */
+        void flushOutputs();
         /** @brief 타임스탬프를 붙여 큐에 넣거나 바로 씁니다. */
         void writeLogInternal( LogLevel level, const utf8* pTag, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID );
         /** @brief 레코드를 비동기 I/O 큐에 넣고 작업 스레드를 깨웁니다. 초기화 전이거나 큐가 가득 차면 이 스레드에서 바로 씁니다. */

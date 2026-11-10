@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/RHI/GL/OpenGLRHIResourceFactory.h"
 
+#include "Core/Diagnostics/ScopedProgressReport.h"
 #include "Core/Foundation/EnumUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
@@ -1203,10 +1204,13 @@ namespace sw
 
     bool OpenGLRHIResourceFactory::linkProgram( uint32 program, const utf8* pLabel )
     {
-        glLinkProgram( program );
-
         GLint isLinked{ 0 };
-        glGetProgramiv( program, GL_LINK_STATUS, &isLinked );
+        {
+            // 드라이버 링크(상태를 묻는 데서 기다린다)가 정지 시한보다 길 수 있다 — 일하는 중임을 간격마다 알린다.
+            const ScopedProgressReport progress{ string( pLabel ) + " program link" };
+            glLinkProgram( program );
+            glGetProgramiv( program, GL_LINK_STATUS, &isLinked );
+        }
         if ( isLinked == GL_TRUE )
             return true;
 
