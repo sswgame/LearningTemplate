@@ -363,9 +363,9 @@ SW_TEST_CASE( AsymmetricHorrorRulesTest, InitializeRefusesNoCatalog )
 {
     AsymmetricHorrorMatch match;
     SW_EXPECT_FALSE( match.initialize( AsymmetricHorrorTestUtil::makeSettings(), nullptr ) );
-    SW_EXPECT_EQUAL( -1, match.addSurvivor( float3{} ) );
-    SW_EXPECT_EQUAL( -1, match.addGenerator( float3{} ) );
-    SW_EXPECT_EQUAL( -1, match.addGate( float3{} ) );
+    SW_EXPECT_FALSE( match.addSurvivor( float3{} ).has_value() );
+    SW_EXPECT_FALSE( match.addGenerator( float3{} ).has_value() );
+    SW_EXPECT_FALSE( match.addGate( float3{} ).has_value() );
 }
 
 /**
@@ -373,14 +373,14 @@ SW_TEST_CASE( AsymmetricHorrorRulesTest, InitializeRefusesNoCatalog )
  */
 SW_TEST_CASE_F( AsymmetricHorrorRulesTest, StartAndFixedStep )
 {
-    SW_EXPECT_EQUAL( 0, _match.addSurvivor( float3{} ) );
+    SW_EXPECT_TRUE( _match.addSurvivor( float3{} ) == 0 );
     _match.update( 1.0f );
     SW_EXPECT_EQUAL( 0u, _match.getTick() );
     SW_EXPECT_TRUE( _match.getMatch().getPhase() == MatchPhase::Waiting );
 
     _match.start();
     SW_EXPECT_TRUE( _match.getMatch().getPhase() == MatchPhase::InProgress );
-    SW_EXPECT_EQUAL( -1, _match.addSurvivor( float3{} ) );
+    SW_EXPECT_FALSE( _match.addSurvivor( float3{} ).has_value() );
     _match.update( 0.05f );
     SW_EXPECT_EQUAL( 0u, _match.getTick() ); // 한 걸음이 차지 않았다
     _match.update( 0.05f );
