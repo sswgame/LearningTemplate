@@ -18,6 +18,7 @@
 #include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Animation/AnimationPlayback.h"
+#include "Engine/Animation/Graph/AnimationGraphAsset.h"
 #include "Engine/Animation/Graph/AnimationGraphPlayer.h"
 #include "Engine/Animation/Skeletal/Pose.h"
 
@@ -28,6 +29,7 @@ namespace sw
 
     class AnimationGraphAsset;
     class AnimationParameterSet;
+    class Skeleton;
 
     /**
      * @class IAnimationPoseSampler
@@ -50,12 +52,14 @@ namespace sw
 {
     /**
      * @struct AnimationPoseParams
-     * @brief 포즈 노드 평가에 넘기는 값 묶음입니다. 샘플러와 파라미터는 반드시 있어야 합니다.
+     * @brief 포즈 노드 평가에 넘기는 값 묶음입니다. 샘플러와 파라미터는 반드시 있어야 하고, 스켈레톤 · 미러 본 표는 그것을 읽는 노드(`Mirror`)만 요구합니다.
      */
     struct AnimationPoseParams
     {
-        IAnimationPoseSampler*       _pSampler{ nullptr };   ///< 입력 클립을 샘플하는 쪽
-        const AnimationParameterSet* _pParameter{ nullptr }; ///< 노드가 읽는 상태 기계 파라미터(섞기 가중치 등)
+        IAnimationPoseSampler*       _pSampler{ nullptr };      ///< 입력 클립을 샘플하는 쪽
+        const AnimationParameterSet* _pParameter{ nullptr };    ///< 노드가 읽는 상태 기계 파라미터(섞기 가중치 등)
+        const Skeleton*              _pSkeleton{ nullptr };     ///< 평가하는 스켈레톤(부모 · 레퍼런스 포즈)
+        const vector<uint32>*        _pMirroredBone{ nullptr }; ///< 본마다 짝 본 번호(`SkeletonMirrorTable::buildBoneMap`) — 스켈레톤 옆 미러 표에서 만든다
     };
 } // namespace sw
 
@@ -103,29 +107,105 @@ namespace sw
         hashed_string             _weightParameter;
         mutable Pose              _scratchPose; ///< 둘째 입력을 샘플할 임시 포즈다(인스턴스마다 한 스레드에서 평가하므로 공유되지 않는다)
     };
+
+    /**
+     * @class MirrorPoseNode
+     * @brief 입력 클립 하나의 포즈를 좌우로 뒤집습니다(그래프 XML `<pose_node type="Mirror" mirror_axis="X">`). 언리얼 Mirror 노드(`FAnimNode_Mirror` + `UMirrorDataTable`) 자리다.
+     * @details 본 i 는 짝 본 p(`AnimationPoseParams::_pMirroredBone`, 스켈레톤 옆 미러 표)의 모델 공간 변환을 축 면으로 비춘 것을 받는다. 짝의 본 축이 서로 거울상이 아닐 수 있어
+     *          레퍼런스 포즈로 보정한다 — 레퍼런스 포즈를 넣으면 레퍼런스 포즈가 나온다. 결과는 부모 기준 로컬로 되돌린다. 길이 · 반복은 입력을 따른다.
+     */
+    class SW_API MirrorPoseNode final : public IAnimationPoseNode
+    {
+    public:
+        MirrorPoseNode( const IAnimationPlayable& input, AnimationMirrorAxis axis );
+
+        float32 getPlayLength() const override { return _pInput->getPlayLength(); }
+        bool    isLoopingByDefault() const override { return _pInput->isLoopingByDefault(); }
+
+        [[nodiscard]] bool evaluatePose( const AnimationPoseParams& params, float32 time, Pose& inoutPose ) const override;
+
+    private:
+        const IAnimationPlayable* _pInput;
+        AnimationMirrorAxis       _axis;
+        mutable Pose              _scratchPose;        ///< 레퍼런스 포즈(평가 임시)
+        mutable vector<float4x4>  _listModel;          ///< 입력 포즈의 모델 공간(평가 임시)
+        mutable vector<float4x4>  _listReferenceModel; ///< 레퍼런스 포즈의 모델 공간(평가 임시)
+        mutable vector<float4x4>  _listMirroredModel;  ///< 뒤집은 모델 공간(평가 임시)
+    };
+
+    /**
+     * @class MontagePoseNode
+     * @brief 입력 클립 하나를 섹션으로 나눠 다음 섹션 링크 · 분기를 따라 재생합니다(그래프 XML `<pose_node type="Montage"><sections>…`). 언리얼 AnimMontage 섹션 자리다.
+     * @details 섹션은 `AnimationMontageSection` 이다. 플레이어가 주는 시각이 앞으로 간 만큼 클립 시각을 섹션 링크를 따라 옮긴다(시각이 뒤로 가면 첫 섹션부터 다시).
+     *          분기 파라미터는 섹션 끝에 닿는 순간에 읽는다. 다음 섹션이 없으면 그 섹션 끝에서 멈춘다.
+     *          길이는 첫 섹션에서 `next` 만 따라간 길이의 합이고, 그 길이 순환하면(반복 섹션) 끝이 없어 `kEndlessLength` 다 — "끝나면 다음" 전이는 분기가 끝 섹션으로 보낼 때만 탄다.
+     */
+    class SW_API MontagePoseNode final : public IAnimationPoseNode
+    {
+    public:
+        /** @brief 반복 섹션이 있는 몽타주의 길이입니다. */
+        static constexpr float32 kEndlessLength = 3.0e38f;
+        /** @brief 다음 섹션이 없음(멈춤)입니다. */
+        static constexpr uint32 kNoSection = 0xFFFFFFFFu;
+
+        /** @brief 섹션 하나의 풀이입니다(이름 대신 번호, 끝 시각). */
+        struct Section
+        {
+            float32       _startSeconds{ 0.0f };
+            float32       _endSeconds{ 0.0f };
+            uint32        _next{ kNoSection };
+            uint32        _branch{ kNoSection };
+            hashed_string _branchParameter{};
+        };
+
+        MontagePoseNode( const IAnimationPlayable& input, vector<Section>&& listSection );
+
+        float32 getPlayLength() const override { return _playLength; }
+        bool    isLoopingByDefault() const override { return false; }
+
+        [[nodiscard]] bool evaluatePose( const AnimationPoseParams& params, float32 time, Pose& inoutPose ) const override;
+        /** @brief 마지막 평가가 있던 섹션 번호입니다(진단 · 테스트). */
+        uint32 getCurrentSection() const { return _currentSection; }
+        /** @brief 마지막 평가의 입력 클립 시각입니다(진단 · 테스트). */
+        float32 getClipTime() const { return _clipTime; }
+
+    private:
+        /** @brief 클립 시각을 @p delta 초만큼 섹션 링크를 따라 옮깁니다. */
+        void advance( float32 delta, const AnimationParameterSet& parameter ) const;
+
+    private:
+        const IAnimationPlayable* _pInput;
+        vector<Section>           _listSection;
+        float32                   _playLength;
+        mutable float32           _lastTime;       ///< 마지막으로 받은 플레이어 시각(음수 = 아직 평가하지 않음)
+        mutable float32           _clipTime;       ///< 입력 클립 시각
+        mutable uint32            _currentSection; ///< 지금 섹션 번호
+    };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 포즈 노드 하나를 만드는 함수입니다. @p listInput 은 정의의 입력을 클립 풀이로 푼 것이고, 개수는 종류의 `_inputCount` 와 같습니다. */
-    using AnimationPoseNodeFactory = unique_ptr<IAnimationPoseNode> ( * )( const vector<const IAnimationPlayable*>& listInput, const AnimationGraphPoseNodeDef& def );
+    /** @brief 포즈 노드 하나를 만드는 함수입니다. @p listInput 은 정의의 입력을 클립 풀이로 푼 것이고, 개수는 종류의 `_inputCount` 와 같습니다. 입력과 정의가 맞지 않으면 오류를 남기고 nullptr 입니다. */
+    using AnimationPoseNodeFactory = unique_ptr<IAnimationPoseNode> ( * )( const vector<const IAnimationPlayable*>& listInput, const AnimationGraphPoseNodeDef& def, string_view nodeName );
+    /** @brief 종류가 요구하는 칸(weight · 축 · 섹션)을 봅니다. 어긴 까닭을 오류로 남기고 false 입니다. 입력 수는 표가 따로 본다. */
+    using AnimationPoseNodeValidator = bool ( * )( const AnimationGraphPoseNodeDef& def, string_view nodeName );
 
     /**
      * @struct AnimationPoseNodeType
-     * @brief 포즈 노드 종류 하나의 계약입니다 — 입력 수 · 가중치 파라미터 요구와 생성 함수. 로드(`AnimationGraphAsset::parsePoseNode`)와 생성(`AnimationPoseNodeSet`)이 같은 계약을 본다.
+     * @brief 포즈 노드 종류 하나의 계약입니다 — 입력 수 · 종류가 요구하는 칸의 검사 · 생성 함수. 로드(`AnimationGraphAsset::parsePoseNode`)와 생성(`AnimationPoseNodeSet`)이 같은 계약을 본다.
      */
     struct AnimationPoseNodeType
     {
-        uint32                   _inputCount{ 0 };          ///< 정확한 입력 수
-        AnimationPoseNodeFactory _create{ nullptr };        ///< 노드를 만드는 함수
-        bool                     _bRequiresWeight{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 초기화로 만든다) — "weight" 파라미터 이름이 있어야 한다
+        uint32                     _inputCount{ 0 };     ///< 정확한 입력 수
+        AnimationPoseNodeFactory   _create{ nullptr };   ///< 노드를 만드는 함수
+        AnimationPoseNodeValidator _validate{ nullptr }; ///< 종류가 요구하는 칸의 검사(없으면 입력만 본다)
     };
 
     /**
      * @class AnimationPoseNodeRegistry
      * @brief 포즈 노드 종류 이름(XML `<pose_node type="…">`)에서 계약 · 생성 함수로 가는 표입니다. 모르는 이름은 로드 오류입니다.
-     * @details 리그 노드(`RigNodeRegistry`)와 같은 틀 — 새 블렌드(Mirror · Montage · 모션 매칭)를 더할 때 열거 · 로더 · 생성 switch 를 고치지 않고 등록 한 줄을 더한다.
-     *          엔진 노드(BlendPoses)는 만들 때 등록되고, 게임 · 키트는 `registerType` 으로 더한다(언리얼 애님 노드가 형식 등록으로 모이는 것, 유니티 Playable 형식과 같은 자리).
+     * @details 리그 노드(`RigNodeRegistry`)와 같은 틀 — 새 블렌드(모션 매칭 등)를 더할 때 열거 · 로더 · 생성 switch 를 고치지 않고 등록 한 줄을 더한다.
+     *          엔진 노드(BlendPoses · Mirror · Montage)는 만들 때 등록되고, 게임 · 키트는 `registerType` 으로 더한다(언리얼 애님 노드가 형식 등록으로 모이는 것, 유니티 Playable 형식과 같은 자리).
      */
     class SW_API AnimationPoseNodeRegistry final : public ISubsystem
     {
@@ -146,8 +226,8 @@ namespace sw
         const AnimationPoseNodeType* findType( const hashed_string& typeName ) const;
         /** @brief 등록된 종류 이름들을 등록 순서로 반환합니다(진단과 에디터용). */
         vector<hashed_string> getTypeNames() const;
-        /** @brief 정의 @p def 가 종류 @p type 의 계약(입력 수 · 빈 입력 이름 없음 · 가중치 파라미터)을 지키면 true 입니다. */
-        [[nodiscard]] static bool isSatisfiedBy( const AnimationPoseNodeType& type, const AnimationGraphPoseNodeDef& def );
+        /** @brief 정의 @p def 가 종류 @p type 의 계약(입력 수 · 빈 입력 이름 없음 · 종류의 검사 `_validate`)을 지키면 true 입니다. 어기면 그 까닭을 노드 이름 @p nodeName 과 함께 오류로 남깁니다. */
+        [[nodiscard]] static bool isSatisfiedBy( const AnimationPoseNodeType& type, const AnimationGraphPoseNodeDef& def, string_view nodeName );
 
     private:
         NameRegistry<AnimationPoseNodeType> _registry; ///< 종류 이름 → 계약(등록 순서)

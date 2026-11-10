@@ -299,6 +299,11 @@ namespace sw
          *          런타임 · 에디터의 쓰는 쪽은 `SharedAssetCache<Skeleton>::acquire` 로 한 벌을 쥔다.
          */
         [[nodiscard]] bool loadCopyFromAsset( const AssetID& assetID ) { return loadFromAsset( assetID ); }
+        /**
+         * @brief 스켈레톤 경로 옆에 손으로 두는 데이터(본 LOD · 미러 표)의 경로입니다. 임포트가 다시 써도 지워지지 않는 자리다.
+         * @details `a/knight/knight.skeleton.xml`(임포트 옆 폴더, 폴더 이름 = 파일 이름)은 `a/knight<확장자>`, `a/b.skeleton.xml` 은 `a/b<확장자>` 입니다. 스켈레톤 확장자가 아니면 빈 문자열입니다.
+         */
+        static string makeSidePath( string_view skeletonPath, string_view extension );
         /** @brief XML 본문을 만듭니다(모든 PROPERTY). */
         string toXML() const;
         /** @brief 파일로 씁니다(부모 폴더를 만듭니다). */
