@@ -926,7 +926,7 @@ namespace sw::editor
         const PropertyInfo& prop = *pBinding->_pProp;
         // 받는 종류가 아니면 쓰지 않는다 — `AssetRef<T>` 는 대상 종류(언리얼 `TSoftObjectPtr<T>`), 경로 칸은 `FileFilter`.
         bool bAccepted = false;
-        if ( prop._typeName == AssetRefBase::kTypeName )
+        if ( prop._typeName == hashed_string( AssetRefBase::kTypeName ) )
         {
             const AssetRefBase* pRef = prop.getValuePtr<AssetRefBase>( pBinding->_instance.get() );
             bAccepted                = pRef != nullptr && AssetRefBase::isPathOfTarget( path, pRef->getTargetType() );
@@ -1128,7 +1128,7 @@ namespace sw::editor
         EditorAssetIndex::collectEntries( EditorPaths::getAssetPaths(), outListEntry );
         // 타입 있는 참조는 대상 종류가 거른다(언리얼 `TSoftObjectPtr<T>` 의 선택기와 같다). 그 밖의 경로 칸은 `FileFilter` 를 본다.
         const PropertyInfo& prop = *pBinding->_pProp;
-        const AssetRefBase* pRef = prop._typeName == AssetRefBase::kTypeName ? prop.getValuePtr<AssetRefBase>( pBinding->_instance.get() ) : nullptr;
+        const AssetRefBase* pRef = prop._typeName == hashed_string( AssetRefBase::kTypeName ) ? prop.getValuePtr<AssetRefBase>( pBinding->_instance.get() ) : nullptr;
         const string_view   fileFilter{ prop._metadata->getEditor()._fileFilter };
         VectorUtil::removeIf( outListEntry, [pRef, fileFilter]( const EditorAssetIndexEntry& entry )
         { return ( pRef != nullptr ? AssetRefBase::isPathOfTarget( entry._path, pRef->getTargetType() ) : InspectorPropertyLayout::matchesFileFilter( fileFilter, entry._path ) ) == false; } );

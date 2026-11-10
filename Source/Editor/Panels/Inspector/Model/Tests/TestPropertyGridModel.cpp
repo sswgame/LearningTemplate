@@ -10,6 +10,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/TypeRegistry.h"
 
 // PropertyGridModelTest — 프로퍼티 그리드 대상이 값(범위 · 오브젝트 id · 컴포넌트 id)이라 그리는 사이 사라진 대상은 묶이지 않고, 씬 밖 대상은 주소 그대로 묶인다.
 // 값 행은 사본을 들고 명령은 행 번호로 쓰며, 화면 밖 행은 높이만 낸다.
