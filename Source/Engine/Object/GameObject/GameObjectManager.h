@@ -18,20 +18,14 @@
 
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/GameObjectHandle.h"
-#include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectStore.h"
 #include "Engine/Object/GameObject/ObjectIDAllocator.h"
-#include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
-#include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
-#include "Engine/Object/GameObject/Registry/TagIndex.h"
 #include "Engine/Object/GameObject/Service/ISceneService.h"
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
-#include "Engine/Object/GameObject/Tick/ISceneFrameSystem.h"
 #include "Engine/Object/GameObject/Tick/SceneFrameAccess.h"
 #include "Engine/Object/GameObject/Tick/SceneFrameStep.h"
-#include "Engine/Object/GameObject/Tick/SceneTickScheduler.h"
 #include "Engine/Object/GameObject/Tick/StructuralChangeBuffer.h"
 #include "Engine/Profiling/ProfileScopeID.h"
 
@@ -75,9 +69,17 @@ namespace sw
 {
     class AssetManager;
     class CameraComponent;
+    class CameraRegistry;
     class Component;
     class GameObjectManager;
+    class ISceneFrameSystem;
+    class ISceneLaneFrameSystem;
+    class PrimitiveRegistry;
     class SceneComponent;
+    class SceneTickScheduler;
+    class SceneTransformHierarchy;
+    class TagIndex;
+    struct SceneTransformWrite;
 
     /** @brief `GameObjectManager::makeTypedHandle` 의 결과입니다. */
     enum class TypedHandleResult : uint8
@@ -210,9 +212,9 @@ namespace sw
          * @brief 태그 → 오브젝트 색인입니다. 태그로 오브젝트를 찾는 곳은 씬을 훑지 않고 `getTagIndex().findObjectsWithTags( required, 버퍼 )` 를 씁니다.
          * @details 카메라 · 프리미티브 레지스트리와 같은 자리입니다. 태그 컴포넌트가 등록 · 해제 · 태그 쓰기마다 칸을 맞춥니다(TagIndex.h).
          */
-        TagIndex& getTagIndex() { return _tagIndex; }
+        TagIndex& getTagIndex();
         /** @brief 태그 → 오브젝트 색인입니다. */
-        const TagIndex& getTagIndex() const { return _tagIndex; }
+        const TagIndex& getTagIndex() const;
 
         /**
          * @brief 오브젝트 구조 세대입니다. 오브젝트 생성 · 파괴 표시 · 이름 · 부모 · 형제 순서 · 컴포넌트 붙이기와 떼기가 바뀔 때마다 오릅니다.
@@ -293,14 +295,14 @@ namespace sw
          * @details `PrimitiveRegistry` 와 같은 자리입니다. 능력은 별도 타입이 갖고, 매니저는 순서만 정합니다. 병렬 시스템을
          *          하나 더하려면 이런 타입 하나와 tick 의 한 줄이면 됩니다. 매니저가 그 알고리즘을 알 필요가 없습니다.
          */
-        SceneTransformHierarchy&       getTransformHierarchy() { return _transformHierarchy; }
-        const SceneTransformHierarchy& getTransformHierarchy() const { return _transformHierarchy; }
+        SceneTransformHierarchy&       getTransformHierarchy();
+        const SceneTransformHierarchy& getTransformHierarchy() const;
 
         /** @brief 더티 루트의 SceneComponent 월드 캐시를 계층 순으로 갱신합니다. `getTransformHierarchy().flush()` 와 같습니다. */
-        void flushSceneTransforms() { _transformHierarchy.flush(); }
+        void flushSceneTransforms();
 
         /** @brief 플러시를 기다리는 더티 루트가 하나라도 있으면 true 입니다. */
-        bool hasDirtySceneTransforms() const { return _transformHierarchy.hasDirty(); }
+        bool hasDirtySceneTransforms() const;
 
         /**
          * @brief 트랜스폼 쓰기 여러 건을 한 번에 적용합니다. 건수가 많으면 워커에 나눕니다.
@@ -419,9 +421,9 @@ namespace sw
          * @details `PrimitiveRegistry` 와 같은 자리입니다. 능력은 별도 타입으로 두고 매니저는 그것을 소유만
          *          합니다. 컴포넌트는 등록 시점에 이것을 받아 들고 있으므로, 매니저 전체를 알 필요가 없습니다.
          */
-        PrimitiveRegistry& getPrimitiveRegistry() { return _primitiveRegistry; }
+        PrimitiveRegistry& getPrimitiveRegistry();
         /** @brief 그릴 수 있는 컴포넌트의 레지스트리입니다. */
-        const PrimitiveRegistry& getPrimitiveRegistry() const { return _primitiveRegistry; }
+        const PrimitiveRegistry& getPrimitiveRegistry() const;
 
         /**
          * @brief 타입별 컴포넌트 레지스트리입니다(빛 · 2D 그림자 가림막 · 상호작용 대상 · 환경 질의 대상 …).
@@ -437,18 +439,18 @@ namespace sw
          * @brief 카메라 컴포넌트의 레지스트리입니다. 역할 · 우선순위로 고르는 규칙(`selectCamera`)도 여기 하나입니다.
          * @details 빛과 같은 이유로 있습니다 — 게임 · 에디터 카메라 선택이 씬 전체를 훑지 않습니다. 자세한 사연은 CameraRegistry.h 에 있습니다.
          */
-        CameraRegistry& getCameraRegistry() { return _cameraRegistry; }
+        CameraRegistry& getCameraRegistry();
         /** @brief 카메라 컴포넌트의 레지스트리입니다. */
-        const CameraRegistry& getCameraRegistry() const { return _cameraRegistry; }
+        const CameraRegistry& getCameraRegistry() const;
 
         /**
          * @brief 틱에 참여하는 오브젝트의 레지스트리입니다(언리얼 `FTickTaskManager` 의 자리). 자세한 사연은 TickRegistry.h 에 있습니다.
          * @details 틱 디스패치(`SceneTickScheduler`)가 소유합니다. 컴포넌트가 틱을 켜고 끄면 소유 오브젝트가 여기에 표시하고, 디스패치 전에
          *          표시된 오브젝트만 다시 훑습니다.
          */
-        TickRegistry& getTickRegistry() { return _tickScheduler.getTickRegistry(); }
+        TickRegistry& getTickRegistry();
         /** @brief 틱에 참여하는 오브젝트의 레지스트리입니다. */
-        const TickRegistry& getTickRegistry() const { return _tickScheduler.getTickRegistry(); }
+        const TickRegistry& getTickRegistry() const;
 
         /** @brief 핸들이 가리키는 컴포넌트를 찾습니다. 삭제 예정이면 nullptr 입니다. 타입을 아는 곳은 타입 핸들(`TComponentHandle<T>`)의 찾기를 씁니다. */
         Component* resolveComponent( ComponentHandle handle ) const { return _store.resolveComponent( handle ); }
@@ -621,22 +623,22 @@ namespace sw
         Component* addComponentByName( GameObject* pGameObject, hashed_string typeName, bool bLogWarning = true );
 
         /** @brief 모든 오브젝트의 틱 항목을 다음 틱 전에 다시 짓게 합니다(타입 재바인딩 · 씬 초기화). */
-        void markTickStagesDirty() { _tickScheduler.getTickRegistry().markAllDirty(); }
+        void markTickStagesDirty();
         /**
          * @brief 틱 레지스트리가 오브젝트 항목을 다시 지은 틱의 수입니다. 진단 · 회귀 테스트용입니다.
          * @details 틱에 참여하는 컴포넌트(`Component::hasTickWork`)가 생기거나 없어지거나 순서가 바뀔 때만 올라야 합니다.
          *          틱하지 않는 MeshComponent 를 붙였다 떼는 것으로는 오르지 않습니다. 다시 지을 때도 바뀐 오브젝트의 컴포넌트 몇 개만 훑습니다.
          */
         /** @brief 선행 조건 스테이지 경계에서 틱 중 트랜스폼 쓰기를 적용한 횟수(누적)입니다. 진단 · 회귀 테스트용입니다. */
-        uint32 getStageTransformApplyCount() const { return _tickScheduler.getStageTransformApplyCount(); }
+        uint32 getStageTransformApplyCount() const;
 
         /** @brief 이름으로 만들 수 있는 컴포넌트 타입(리플렉션 표에서 `_addComponent` 가 있는 타입)의 짧은 이름 목록입니다. 에디터의 "Add Component" 가 씁니다. */
         static vector<hashed_string> getRegisteredComponentTypeNames();
 
         /** @brief 트랜스폼이 바뀌었음을 알려 세대를 올립니다(`getTransformHierarchy().notifyDirtied()`). */
-        void notifyTransformDirtied() { _transformHierarchy.notifyDirtied(); }
+        void notifyTransformDirtied();
         /** @brief 현재 트랜스폼 더티 세대 번호를 반환합니다. */
-        uint64 getTransformGeneration() const { return _transformHierarchy.getGeneration(); }
+        uint64 getTransformGeneration() const;
 
     private:
         /** @brief @p component 의 타입이 @p pToType 이거나 그 파생이면 true 입니다. 타입 정보가 없으면(모듈이 내려감) false 입니다. */
@@ -716,20 +718,18 @@ namespace sw
 
         /** @brief 틱 중 규칙(동결 플래그 · 구조 변경 큐 · 틱 뒤 큐 · 비우는 순서)입니다. 게임이 부르는 API 는 위의 전달 함수입니다. */
         StructuralChangeBuffer _structuralChangeBuffer;
-        /** @brief 트랜스폼 계층입니다. */
-        SceneTransformHierarchy _transformHierarchy;
-        // 레지스트리 셋은 값 멤버로 둔다. 헤더가 Core 만 include 해 `unique_ptr` 로 빼도 퍼지는 include 가 줄지 않고, 3 개월 동안 1 ~ 3 번 바뀌어
-        // 다시 빌드를 아끼는 이득도 없다(2026-10-21 판정, 이 헤더는 같은 기간 112 번). 접근마다 간접 참조만 는다.
-        /** @brief 그릴 수 있는 컴포넌트의 레지스트리입니다. */
-        PrimitiveRegistry _primitiveRegistry;
+        /**
+         * @brief 이 매니저만 쓰는 씬 부품(트랜스폼 계층 · 프리미티브 · 카메라 레지스트리 · 태그 색인 · 틱 스케줄러)입니다 — .cpp 에만 형식이 보인다(W-S4 허브 해체).
+         * @details 매니저 헤더를 포함하는 TU 400 여 개가 이 부품의 헤더를 다시 컴파일하지 않게 한다(언리얼 `UWorld` 가 서브시스템을 앞 선언 포인터로 드는 자리).
+         *          `_store` 가 틱 스케줄러를 참조로 받으므로 `_store` 보다 먼저 선언한다.
+         */
+        struct State;
+        unique_ptr<State> _pState;
+        // 컴포넌트 레지스트리는 값 멤버로 둔다 — 헤더의 템플릿(`forEachActiveRegistered` 의 `View<T>`)이 형식을 본다. 프리미티브 · 카메라 레지스트리는
+        // 2026-10-21 판정(레지스트리 헤더가 Core 만 포함해 빼도 이득이 없다)과 달리 `State` 로 옮겼다 — 카메라 쪽이 흔들림 채널 · 구독 · 등록 목록을
+        // 끌어와 포함 TU 마다 다시 읽혔고, 접근은 패스마다 참조 한 번이라 간접 참조 비용이 프레임 경로에 없다(W-S4).
         /** @brief 타입별 컴포넌트 레지스트리입니다(빛 포함). */
         ComponentRegistry _componentRegistry;
-        /** @brief 카메라 컴포넌트의 레지스트리입니다. */
-        CameraRegistry _cameraRegistry;
-        /** @brief 태그 → 오브젝트 색인입니다(`getTagIndex`). */
-        TagIndex _tagIndex;
-        /** @brief 컴포넌트 틱 디스패치(틱 레지스트리 · 그룹 포크-조인 · 선행 조건 스테이지)입니다. */
-        SceneTickScheduler _tickScheduler;
         /** @brief 오브젝트 저장소(생성 · 이름 · id 표 · 조회 · 지연 파괴 · 컴포넌트 풀 · 시작 줄)입니다. 게임이 부르는 API 는 위의 전달 함수입니다. */
         GameObjectStore _store;
         /** @brief 씬 범위입니다 — 레지스트리(`SceneServiceRegistry`)에서 만든 기능 서비스(물리 · 오디오 · 내비게이션 …)를 소유한다. 부모는 엔진 범위. */

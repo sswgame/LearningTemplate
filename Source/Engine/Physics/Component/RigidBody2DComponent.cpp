@@ -4,10 +4,12 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/Scene/PhysicsNameValidation.h"
+#include "Engine/Physics/Scene/PhysicsPoseStore.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 
@@ -42,26 +44,44 @@ namespace sw
         , _bContinuous{ false }
         , _bLockRotation{ false }
         , _bInterpolate{ true }
-        , _body{}
-        , _commandLock{}
-        , _command{}
-        , _movedStep{ 0 }
-        , _previousPosition{}
-        , _currentPosition{}
+        , _pPosePage{ nullptr }
+        , _poseSlot{ PhysicsPoseStore::kInvalidSlot }
         , _kinematicStartPosition{}
         , _kinematicTargetPosition{}
-        , _lastLinearVelocity{}
         , _worldPosition{}
         , _worldRotation{}
         , _worldScale{ 1.0f, 1.0f, 1.0f }
-        , _previousAngle{ 0.0f }
-        , _currentAngle{ 0.0f }
         , _kinematicStartAngle{ 0.0f }
         , _kinematicTargetAngle{ 0.0f }
-        , _lastAngularVelocity{ 0.0f }
         , _appliedBodyType{ PhysicsBodyType::Dynamic }
         , _bRestPoseWritten{ false }
     {
+        _poseSlot = engine::getSubsystem<PhysicsPoseStore>().getStore<PhysicsDimension2D>().allocateSlot( this, _pPosePage );
+    }
+
+    RigidBody2DComponent::~RigidBody2DComponent()
+    {
+        engine::getSubsystem<PhysicsPoseStore>().getStore<PhysicsDimension2D>().freeSlot( _poseSlot );
+    }
+
+    PhysicsBodyHandle RigidBody2DComponent::getBodyHandle() const
+    {
+        return _pPosePage->_arrBody[getPoseIndex()];
+    }
+
+    float2 RigidBody2DComponent::getLinearVelocity() const
+    {
+        return _pPosePage->_arrLinearVelocity[getPoseIndex()];
+    }
+
+    float32 RigidBody2DComponent::getAngularVelocity() const
+    {
+        return _pPosePage->_arrAngularVelocity[getPoseIndex()];
+    }
+
+    uint32 RigidBody2DComponent::getPoseIndex() const
+    {
+        return _poseSlot & PhysicsBodyPage2D::kSlotMask;
     }
 
     IPhysicsBodyScene2D* RigidBody2DComponent::findScene() const
@@ -124,59 +144,63 @@ namespace sw
 
     void RigidBody2DComponent::addForce( const float2& force )
     {
-        ScopedLock<SpinLock> lock{ _commandLock };
-        _command._force += force;
+        _pPosePage->editCommand( getPoseIndex(), [&force]( PhysicsBodyCommand<PhysicsDimension2D>& command )
+        { command._force += force; } );
     }
 
     void RigidBody2DComponent::addImpulse( const float2& impulse )
     {
-        ScopedLock<SpinLock> lock{ _commandLock };
-        _command._impulse += impulse;
+        _pPosePage->editCommand( getPoseIndex(), [&impulse]( PhysicsBodyCommand<PhysicsDimension2D>& command )
+        { command._impulse += impulse; } );
     }
 
     void RigidBody2DComponent::addTorque( float32 torque )
     {
-        ScopedLock<SpinLock> lock{ _commandLock };
-        _command._torque += torque;
+        _pPosePage->editCommand( getPoseIndex(), [torque]( PhysicsBodyCommand<PhysicsDimension2D>& command )
+        { command._torque += torque; } );
     }
 
     void RigidBody2DComponent::setLinearVelocity( const float2& velocity )
     {
-        ScopedLock<SpinLock> lock{ _commandLock };
-        _command._linearVelocity     = velocity;
-        _command._bSetLinearVelocity = true;
+        _pPosePage->editCommand( getPoseIndex(), [&velocity]( PhysicsBodyCommand<PhysicsDimension2D>& command )
+        {
+            command._linearVelocity     = velocity;
+            command._bSetLinearVelocity = true;
+        } );
     }
 
     void RigidBody2DComponent::setAngularVelocity( float32 velocity )
     {
-        ScopedLock<SpinLock> lock{ _commandLock };
-        _command._angularVelocity     = velocity;
-        _command._bSetAngularVelocity = true;
+        _pPosePage->editCommand( getPoseIndex(), [velocity]( PhysicsBodyCommand<PhysicsDimension2D>& command )
+        {
+            command._angularVelocity     = velocity;
+            command._bSetAngularVelocity = true;
+        } );
     }
 
     void RigidBody2DComponent::wake()
     {
-        ScopedLock<SpinLock> lock{ _commandLock };
-        _command._bWake = true;
+        _pPosePage->editCommand( getPoseIndex(), []( PhysicsBodyCommand<PhysicsDimension2D>& command )
+        { command._bWake = true; } );
     }
 
     float32 RigidBody2DComponent::getBodyMass() const
     {
         const IPhysicsBodyScene2D* pScene = findScene();
-        return pScene != nullptr ? pScene->getBodyMass( _body ) : 0.0f;
+        return pScene != nullptr ? pScene->getBodyMass( getBodyHandle() ) : 0.0f;
     }
 
     bool RigidBody2DComponent::isSleeping() const
     {
         const IPhysicsBodyScene2D* pScene = findScene();
-        return pScene != nullptr && pScene->isBodySleeping( _body );
+        return pScene != nullptr && pScene->isBodySleeping( getBodyHandle() );
     }
 
     void RigidBody2DComponent::foldStateHash( StateHashBuilder& inoutBuilder ) const
     {
         PhysicsComponent::foldStateHash( inoutBuilder );
-        inoutBuilder.addFloat2( _lastLinearVelocity );
-        inoutBuilder.addFloat( _lastAngularVelocity );
+        inoutBuilder.addFloat2( getLinearVelocity() );
+        inoutBuilder.addFloat( getAngularVelocity() );
     }
 
     void RigidBody2DComponent::createBody( ScenePhysics& physics, IPhysicsBodyScene2D& scene, const float2& position, float32 angle, const float3& scale )
@@ -187,28 +211,26 @@ namespace sw
         {
             desc._listShape.push_back( PhysicsComponent::makeScaledShape( shape, scale ) );
         }
-        desc._position           = position;
-        desc._rotation           = angle;
-        desc._userData           = getOwner()->getObjectID();
-        desc._material           = _material;
-        desc._mass               = _mass;
-        desc._linearDamping      = _linearDamping;
-        desc._angularDamping     = _angularDamping;
-        desc._gravityFactor      = _gravityFactor;
-        desc._type               = _bodyType;
-        desc._layer              = physics.resolveLayer( _layer );
-        desc._bTrigger           = _bTrigger;
-        desc._bContinuous        = _bContinuous;
-        desc._bLockRotation      = _bLockRotation;
-        desc._bAllowTypeChange   = true;
-        _body                    = scene.createBody( desc );
+        desc._position              = position;
+        desc._rotation              = angle;
+        desc._userData              = getOwner()->getObjectID();
+        desc._material              = _material;
+        desc._mass                  = _mass;
+        desc._linearDamping         = _linearDamping;
+        desc._angularDamping        = _angularDamping;
+        desc._gravityFactor         = _gravityFactor;
+        desc._type                  = _bodyType;
+        desc._layer                 = physics.resolveLayer( _layer );
+        desc._bTrigger              = _bTrigger;
+        desc._bContinuous           = _bContinuous;
+        desc._bLockRotation         = _bLockRotation;
+        desc._bAllowTypeChange      = true;
+        const uint32 index          = getPoseIndex();
+        _pPosePage->_arrBody[index] = scene.createBody( desc );
+        _pPosePage->resetPose( index, position, angle );
         _appliedBodyType         = _bodyType;
-        _previousPosition        = position;
-        _currentPosition         = position;
         _kinematicStartPosition  = position;
         _kinematicTargetPosition = position;
-        _previousAngle           = angle;
-        _currentAngle            = angle;
         _kinematicStartAngle     = angle;
         _kinematicTargetAngle    = angle;
         _bRestPoseWritten        = false;
@@ -236,12 +258,15 @@ namespace sw
             releasePhysics( physics );
 
         // 트랜스폼의 바깥 변화는 칸의 변경 번호로 안다 — 같으면 월드 행렬을 풀지 않는다(3D 강체와 같은 규칙).
-        const bool bTransformChanged = consumeTransformChange();
-        float2     position{};
-        float32    angle = 0.0f;
+        const bool              bTransformChanged = consumeTransformChange();
+        PhysicsBodyPage2D&      page              = *_pPosePage;
+        const uint32            index             = getPoseIndex();
+        const PhysicsBodyHandle body              = page._arrBody[index];
+        float2                  position{};
+        float32                 angle = 0.0f;
         // 바디는 이 컴포넌트만 지운다(씬을 내릴 때는 `ScenePhysics::onSceneCleared` 가 먼저 놓게 한다) — 프레임마다 백엔드에 묻지 않고 Debug 에서만 확인한다.
-        SW_ASSERT( _body.isValid() == false || pScene->isBodyValid( _body ) );
-        if ( _body.isValid() == false )
+        SW_ASSERT( body.isValid() == false || pScene->isBodyValid( body ) );
+        if ( body.isValid() == false )
         {
             readWorldPose2D( position, angle );
             createBody( physics, *pScene, position, angle, _worldScale );
@@ -251,7 +276,7 @@ namespace sw
 
         if ( _appliedBodyType != _bodyType )
         {
-            pScene->setBodyType( _body, _bodyType );
+            pScene->setBodyType( body, _bodyType );
             _appliedBodyType = _bodyType;
         }
 
@@ -261,8 +286,8 @@ namespace sw
             readWorldPose2D( position, angle );
         if ( _bodyType == PhysicsBodyType::Kinematic && bTeleported == false )
         {
-            _kinematicStartPosition = _currentPosition;
-            _kinematicStartAngle    = _currentAngle;
+            _kinematicStartPosition = page._arrCurrentPosition[index];
+            _kinematicStartAngle    = page._arrCurrentRotation[index];
             if ( bMoved )
             {
                 _kinematicTargetPosition = position;
@@ -271,52 +296,51 @@ namespace sw
         }
         else if ( bMoved )
         {
-            pScene->setBodyTransform( _body, position, angle );
-            _previousPosition        = position;
-            _currentPosition         = position;
+            pScene->setBodyTransform( body, position, angle );
+            page.resetPose( index, position, angle );
             _kinematicStartPosition  = position;
             _kinematicTargetPosition = position;
-            _previousAngle           = angle;
-            _currentAngle            = angle;
             _kinematicStartAngle     = angle;
             _kinematicTargetAngle    = angle;
         }
 
         PhysicsBodyCommand<PhysicsDimension2D> command;
+        page.editCommand( index, [&command]( PhysicsBodyCommand<PhysicsDimension2D>& pending )
         {
-            ScopedLock<SpinLock> lock{ _commandLock };
-            command                       = _command;
-            _command._impulse             = float2{};
-            _command._bSetLinearVelocity  = false;
-            _command._bSetAngularVelocity = false;
-            _command._bWake               = false;
-        }
+            command                      = pending;
+            pending._impulse             = float2{};
+            pending._bSetLinearVelocity  = false;
+            pending._bSetAngularVelocity = false;
+            pending._bWake               = false;
+        } );
         if ( command._bSetLinearVelocity )
-            pScene->setLinearVelocity( _body, command._linearVelocity );
+            pScene->setLinearVelocity( body, command._linearVelocity );
         if ( command._bSetAngularVelocity )
-            pScene->setAngularVelocity( _body, command._angularVelocity );
+            pScene->setAngularVelocity( body, command._angularVelocity );
         if ( command._impulse.getLengthSquared() > 0.0f )
-            pScene->addImpulse( _body, command._impulse );
+            pScene->addImpulse( body, command._impulse );
         if ( command._bWake )
-            pScene->wakeBody( _body );
+            pScene->wakeBody( body );
     }
 
     void RigidBody2DComponent::prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount )
     {
-        IPhysicsBodyScene2D* pScene = physics.findScene2D();
-        if ( pScene == nullptr || _body.isValid() == false )
+        IPhysicsBodyScene2D*    pScene = physics.findScene2D();
+        const uint32            index  = getPoseIndex();
+        const PhysicsBodyHandle body   = _pPosePage->_arrBody[index];
+        if ( pScene == nullptr || body.isValid() == false )
             return;
         if ( _bodyType == PhysicsBodyType::Kinematic )
         {
             // 서 있는 키네마틱 바디는 스텝마다 백엔드를 부르지 않는다(3D 강체와 같은 규칙).
             const bool bResting = _kinematicStartPosition == _kinematicTargetPosition && _kinematicStartAngle == _kinematicTargetAngle &&
-                                  _movedStep != physics.getStepCount();
+                                  _pPosePage->_arrMovedStep[index] != physics.getStepCount();
             if ( bResting )
                 return;
             const float32 fraction = static_cast<float32>( stepIndex + 1 ) / static_cast<float32>( stepCount );
             const float2  target   = float2::lerp( _kinematicStartPosition, _kinematicTargetPosition, fraction );
             const float32 angle    = MathUtil::lerpAngle( _kinematicStartAngle, _kinematicTargetAngle, fraction );
-            pScene->moveKinematic( _body, target, angle, fixedDeltaTime );
+            pScene->moveKinematic( body, target, angle, fixedDeltaTime );
             return;
         }
         if ( _bodyType != PhysicsBodyType::Dynamic )
@@ -324,48 +348,38 @@ namespace sw
         float2  force{};
         float32 torque = 0.0f;
         {
-            ScopedLock<SpinLock> lock{ _commandLock };
-            force  = _command._force;
-            torque = _command._torque;
+            ScopedLock<SpinLock> lock{ _pPosePage->_arrCommandLock[index] };
+            force  = _pPosePage->_arrCommand[index]._force;
+            torque = _pPosePage->_arrCommand[index]._torque;
         }
         if ( force.getLengthSquared() > 0.0f )
-            pScene->addForce( _body, force );
+            pScene->addForce( body, force );
         if ( torque != 0.0f )
-            pScene->addTorque( _body, torque );
-    }
-
-    void RigidBody2DComponent::applySteppedPose( const PhysicsBodyState2D& state, uint64 stepCount )
-    {
-        _previousPosition    = _currentPosition;
-        _previousAngle       = _currentAngle;
-        _currentPosition     = state._position;
-        _currentAngle        = state._rotation;
-        _lastLinearVelocity  = state._linearVelocity;
-        _lastAngularVelocity = state._angularVelocity;
-        _movedStep           = stepCount;
+            pScene->addTorque( body, torque );
     }
 
     void RigidBody2DComponent::endPhysicsFrame( ScenePhysics& physics, float32 alpha )
     {
+        PhysicsBodyPage2D& page  = *_pPosePage;
+        const uint32       index = getPoseIndex();
+        page.editCommand( index, []( PhysicsBodyCommand<PhysicsDimension2D>& command )
         {
-            ScopedLock<SpinLock> lock{ _commandLock };
-            _command._force  = float2{};
-            _command._torque = 0.0f;
-        }
-        if ( _body.isValid() == false || _bodyType != PhysicsBodyType::Dynamic )
+            command._force  = float2{};
+            command._torque = 0.0f;
+        } );
+        if ( page._arrBody[index].isValid() == false || _bodyType != PhysicsBodyType::Dynamic )
             return;
         // 마지막 스텝에 잠들어 있었으면 보간할 사이가 없다 — 그 자세를 한 번 쓴 뒤로는 깰 때까지 쓰지 않는다(3D 강체와 같은 규칙).
-        const bool bMovedLastStep = _movedStep == physics.getStepCount();
+        const bool bMovedLastStep = page._arrMovedStep[index] == physics.getStepCount();
         if ( bMovedLastStep == false )
         {
-            _previousPosition = _currentPosition;
-            _previousAngle    = _currentAngle;
+            page.holdPose( index );
             if ( _bRestPoseWritten )
                 return;
         }
         const float32 weight   = _bInterpolate ? alpha : 1.0f;
-        const float2  position = float2::lerp( _previousPosition, _currentPosition, weight );
-        const float32 angle    = MathUtil::lerpAngle( _previousAngle, _currentAngle, weight );
+        const float2  position = float2::lerp( page._arrPreviousPosition[index], page._arrCurrentPosition[index], weight );
+        const float32 angle    = MathUtil::lerpAngle( page._arrPreviousRotation[index], page._arrCurrentRotation[index], weight );
         // Z 와 Z 둘레 밖의 회전은 트랜스폼의 것이다 — 변경 번호가 같으면 지난번에 읽은 값 그대로다.
         const float3     worldPosition{ position._x, position._y, _worldPosition._z };
         const quaternion worldRotation = replaceRigidBody2DAngle( _worldRotation, angle );
@@ -376,13 +390,14 @@ namespace sw
 
     void RigidBody2DComponent::releasePhysics( ScenePhysics& physics )
     {
-        if ( _body.isValid() == false )
+        PhysicsBodyHandle& body = _pPosePage->_arrBody[getPoseIndex()];
+        if ( body.isValid() == false )
             return;
         physics.unbindBodyOwner( *this );
         IPhysicsBodyScene2D* pScene = physics.findScene2D();
         if ( pScene != nullptr )
-            pScene->destroyBody( _body );
-        _body = PhysicsBodyHandle{};
+            pScene->destroyBody( body );
+        body = PhysicsBodyHandle{};
     }
 } // namespace sw
 

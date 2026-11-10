@@ -177,27 +177,3 @@ namespace sw
         SlotHandle            _spatialEntry;     ///< 씬 공간 색인 항목(3D 캐릭터 · 강체만, 등록 ~ 해제)
     };
 } // namespace sw
-
-namespace sw
-{
-    /**
-     * @brief 컴포넌트가 다음 물리 프레임에 바디에 줄 명령입니다. 틱 중 어느 워커에서든 쌓고(컴포넌트의 잠금 아래), 물리 프레임이 게임 스레드에서 씁니다.
-     * @details 물리 씬은 한 스레드에서만 만집니다(Box2D 는 동시 호출을 막는다) — 병렬 틱의 `addForce` 가 씬을 바로 부르지 않는 이유입니다.
-     *          힘 · 토크는 그 프레임의 모든 스텝에, 충격량은 첫 스텝에 한 번 줍니다.
-     */
-    template <typename TDimension>
-    struct PhysicsBodyCommand
-    {
-        using Vector  = typename TDimension::Vector;
-        using Angular = typename TDimension::Angular;
-
-        Vector  _force{};
-        Vector  _impulse{};
-        Angular _torque{};
-        Vector  _linearVelocity{};
-        Angular _angularVelocity{};
-        bool    _bSetLinearVelocity{ false };  ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool    _bSetAngularVelocity{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool    _bWake{ false };               ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-    };
-} // namespace sw

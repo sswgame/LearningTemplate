@@ -3,9 +3,6 @@
  * @brief 씬 컴포넌트 트랜스폼 값(로컬 TRS, 월드 행렬, LWC)의 전역 저장소입니다. 값마다 연속 배열이고, 컴포넌트는 슬롯 번호와 페이지만 가집니다.
  */
 #pragma once
-#include "Core/Concurrency/atomic.h"
-#include "Core/Concurrency/mutex.h"
-#include "Core/Container/IndexFreeList.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
@@ -16,6 +13,8 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+
+#include "Engine/Object/Component/ComponentDataStore.h"
 
 namespace sw
 {
@@ -37,9 +36,13 @@ namespace sw
      */
     struct alignas( 64 ) SceneTransformPage
     {
+        using Owner = SceneComponent; ///< `ComponentDataStore` 페이지 계약
+
         static constexpr uint32 kSlotShift = 8;
         static constexpr uint32 kSlotCount = 1u << kSlotShift;
         static constexpr uint32 kSlotMask  = kSlotCount - 1u;
+        /** @brief 칸에 렌더 프리미티브가 없음을 나타냅니다(`_arrPrimitiveIndex`). */
+        static constexpr uint32 kNoPrimitive = constant::invalid_index::kUint32;
 
         /** @brief `_arrFlag` 비트입니다. 게임 스레드가 구조를 바꿀 때(붙이기, 떼기, 등록)만 씁니다. */
         enum SlotFlag : uint8
@@ -70,10 +73,15 @@ namespace sw
         float3          _arrPendingRotation[kSlotCount];  ///< 틱 중에 쓴 로컬 회전(적용 전)
         float3          _arrPendingScale[kSlotCount];     ///< 틱 중에 쓴 로컬 스케일(적용 전)
         SceneComponent* _arrOwner[kSlotCount];            ///< 슬롯을 쓰는 컴포넌트다. 빈 슬롯이면 nullptr 이다
-        uint32          _arrPrimitiveIndex[kSlotCount];   ///< 렌더 프리미티브 번호(`PrimitiveRegistry`). 없으면 `SceneTransformStorage::kNoPrimitive`
+        uint32          _arrPrimitiveIndex[kSlotCount];   ///< 렌더 프리미티브 번호(`PrimitiveRegistry`). 없으면 `kNoPrimitive`
         uint32          _arrWorldVersion[kSlotCount];     ///< 월드 변경 번호. 월드를 쓰는 `composeWorld` · `initializeSlot` 만 올리고 0 으로 되돌리지 않는다(아래 설명)
         uint8           _arrPendingMask[kSlotCount];      ///< 적용을 기다리는 틱 대기 값(`LocalValueBit` 조합). 슬롯의 주인 오브젝트를 틱하는 스레드만 쓴다
         uint8           _arrFlag[kSlotCount];             ///< `SlotFlag` 조합
+
+        /** @brief 받은 칸을 기본값(항등 로컬, 항등 월드, 소유자 알림 켬)으로 채웁니다(`ComponentDataStore` 페이지 계약). */
+        void initializeSlot( uint32 pageIndex, SceneComponent* pOwner );
+        /** @brief 놓은 칸이 누구의 것으로도 읽히지 않게 비웁니다. 틱 대기 표시도 내린다 — 파괴는 틱 밖이라 대기 목록에 남은 번호가 없다. */
+        void releaseSlot( uint32 pageIndex );
 
         /** @brief 비트 하나가 가리키는 로컬 값의 위치입니다. */
         float3& getLocalValueRef( uint32 pageIndex, uint8 bit )
@@ -129,15 +137,18 @@ namespace sw
         /** @brief 서브시스템 이름입니다. */
         static constexpr const utf8* kSubsystemName = "SceneTransformStorage";
 
-        /** @brief 슬롯이 없음을 나타냅니다. */
-        static constexpr uint32 kInvalidSlot = constant::invalid_index::kUint32;
-        /** @brief 슬롯에 렌더 프리미티브가 없음을 나타냅니다(`SceneTransformPage::_arrPrimitiveIndex`). */
-        static constexpr uint32 kNoPrimitive = constant::invalid_index::kUint32;
         /**
-         * @brief 페이지 테이블의 슬롯 수입니다. 페이지 16384 × 슬롯 256 = 씬 컴포넌트 약 400만 개까지입니다.
+         * @brief 페이지 표의 칸 수입니다. 페이지 16384 × 슬롯 256 = 씬 컴포넌트 약 400만 개까지입니다.
          * @details 오브젝트 테이블(`GameObjectManager` 의 id 테이블)이 약 100만 개에서 끝나므로 오브젝트마다 씬 컴포넌트가 네 개를 넘어야 닿습니다.
          */
         static constexpr uint32 kMaxPageCount = 16384;
+        /** @brief 칸 저장소입니다. */
+        using Store = ComponentDataStore<SceneTransformPage, kMaxPageCount>;
+
+        /** @brief 슬롯이 없음을 나타냅니다. */
+        static constexpr uint32 kInvalidSlot = Store::kInvalidSlot;
+        /** @brief 슬롯에 렌더 프리미티브가 없음을 나타냅니다(`SceneTransformPage::_arrPrimitiveIndex`). */
+        static constexpr uint32 kNoPrimitive = SceneTransformPage::kNoPrimitive;
 
         /**
          * @brief 빈 저장소를 만듭니다. 서비스 범위가 하나 들고(`EngineSubsystemSet`), 컴포넌트 · 계층 · 렌더 수집은 `engine::getSubsystem<SceneTransformStorage>()` 로 찾는다.
@@ -151,24 +162,14 @@ namespace sw
         void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
-        /**
-         * @brief 빈 슬롯 하나를 받아 기본값(항등 로컬, 항등 월드, 소유자 알림 켬)으로 채웁니다. 어느 스레드에서 불러도 됩니다.
-         * @param pOwner  슬롯을 쓸 컴포넌트
-         * @param pOutPage 슬롯이 들어 있는 페이지. 컴포넌트가 보관하고 있다가 테이블 없이 찾습니다
-         * @return 슬롯 번호
-         */
+        /** @brief 빈 슬롯 하나를 받아 기본값으로 채웁니다(`SceneTransformPage::initializeSlot`). 어느 스레드에서 불러도 됩니다. @p pOutPage 는 컴포넌트가 들고 있다가 표 없이 찾는다. */
         uint32 allocateSlot( SceneComponent* pOwner, SceneTransformPage*& pOutPage );
         /** @brief 슬롯을 반환합니다. 어느 스레드에서 불러도 됩니다. `kInvalidSlot` 이면 아무것도 하지 않습니다. */
         void freeSlot( uint32 slot );
-
         /** @brief 슬롯이 들어 있는 페이지를 반환합니다. 잠금이 없습니다. 받은 적 없는 번호면 nullptr 일 수 있습니다. */
-        SceneTransformPage* findPage( uint32 slot ) const
-        {
-            const uint32 pageNumber = slot >> SceneTransformPage::kSlotShift;
-            return pageNumber < kMaxPageCount ? _arrPage[pageNumber].load( std::memory_order_acquire ) : nullptr;
-        }
+        SceneTransformPage* findPage( uint32 slot ) const { return _store.findPage( slot ); }
         /** @brief 지금 쓰이는 슬롯 수입니다(테스트와 진단용). */
-        uint32 getLiveSlotCount() const;
+        uint32 getLiveSlotCount() const { return _store.getLiveSlotCount(); }
 
         /**
          * @brief 슬롯의 로컬 값으로 월드 행렬과 LWC 를 합성합니다. 부모가 없으면 두 부모 포인터를 nullptr 로 줍니다.
@@ -185,19 +186,7 @@ namespace sw
         ~SceneTransformStorage() override;
 
     private:
-        /** @brief 슬롯 하나를 기본값으로 채웁니다. */
-        static void initializeSlot( SceneTransformPage& page, uint32 pageIndex, SceneComponent* pOwner );
-
-        /** @brief 페이지 테이블입니다. 한 번 발행한 페이지는 저장소가 소멸할 때까지 그 위치에 있습니다. */
-        atomic<SceneTransformPage*> _arrPage[kMaxPageCount];
-        /** @brief 반환된 슬롯입니다. 나중에 반환된 것부터 다시 씁니다. */
-        IndexFreeList _freeSlot SW_GUARDED_BY( _mutex );
-        /** @brief 한 번도 쓰지 않은 슬롯의 첫 번호입니다. */
-        uint32 _nextSlot SW_GUARDED_BY( _mutex );
-        /** @brief 지금 쓰이는 슬롯 수입니다. */
-        uint32 _liveSlotCount SW_GUARDED_BY( _mutex );
-        /** @brief 슬롯 받기, 반환, 페이지 만들기를 보호합니다. */
-        mutable mutex _mutex;
+        Store _store; ///< 칸 받기 · 놓기는 .cpp 에서만 인스턴스화한다(페이지의 칸 채우기 · 비우기가 엔진 모듈 밖에 보이지 않는다)
     };
 
     SW_SERVICE_SLOT( SceneTransformStorage, Required );

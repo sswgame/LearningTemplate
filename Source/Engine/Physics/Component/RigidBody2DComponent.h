@@ -3,7 +3,6 @@
  * @brief 2D 강체 하나(XY 평면, Z 축 둘레 회전) — 바디 종류 · 셰이프(여럿이면 컴파운드) · 레이어 · 재질 · 질량을 데이터로 들고, 바디를 이 컴포넌트의 월드 자세와 맞춥니다.
  */
 #pragma once
-#include "Core/Concurrency/SpinLock.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -21,6 +20,8 @@
 namespace sw
 {
     class ValidationContext;
+    template <typename TDimension>
+    struct PhysicsBodyPage;
 } // namespace sw
 
 namespace sw
@@ -43,11 +44,15 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        /** @brief 강체 칸(`PhysicsPoseStore`)을 받습니다. */
         RigidBody2DComponent();
-        ~RigidBody2DComponent() override = default;
+        /** @brief 강체 칸을 놓습니다. */
+        ~RigidBody2DComponent() override;
 
         /** @brief 바디 핸들입니다(시작 전 · 꺼짐이면 무효). 질의 결과 · 이벤트의 바디와 비교합니다. */
-        PhysicsBodyHandle getBodyHandle() const { return _body; }
+        PhysicsBodyHandle getBodyHandle() const;
+        /** @brief 강체 칸 번호입니다(`PhysicsPoseStore`, 컴포넌트 수명 동안 그대로 — `RigidBodyComponent::getPoseSlot` 과 같다). */
+        uint32 getPoseSlot() const { return _poseSlot; }
         /** @brief 바디가 사는 2D 씬입니다(없으면 nullptr). */
         IPhysicsBodyScene2D* findScene() const;
 
@@ -92,9 +97,9 @@ namespace sw
         /** @brief 잠든 바디를 깨웁니다. */
         void wake();
         /** @brief 마지막 스텝 뒤의 선속도입니다. */
-        float2 getLinearVelocity() const { return _lastLinearVelocity; }
+        float2 getLinearVelocity() const;
         /** @brief 마지막 스텝 뒤의 각속도입니다. */
-        float32 getAngularVelocity() const { return _lastAngularVelocity; }
+        float32 getAngularVelocity() const;
         /** @brief 바디의 질량(kg)입니다(바디가 없으면 0). */
         float32 getBodyMass() const;
         /** @brief 바디가 잠들었는지입니다. */
@@ -115,10 +120,8 @@ namespace sw
         void validateMaterial( ValidationContext& context ) const;
 
     private:
-        friend class ScenePhysics; ///< 스텝 뒤 움직인 바디의 주인만 `applySteppedPose` 로 부른다
-
-        /** @brief 이 스텝에 깨어 있던 바디의 자세 · 속도 @p state 를 받습니다. `ScenePhysics` 가 백엔드 일괄 읽기(`readBodyStates`) 뒤 워커 구간에서 부릅니다 — 자기 멤버만 쓴다. */
-        void applySteppedPose( const PhysicsBodyState2D& state, uint64 stepCount );
+        /** @brief 강체 칸의 페이지 안 자리입니다. */
+        uint32 getPoseIndex() const;
         /** @brief 트랜스폼에서 월드 자세를 읽어 `_world*` 에 두고, 2D 자리 · 각을 돌려줍니다. */
         void readWorldPose2D( float2& outPosition, float32& outAngle );
         /** @brief 지금 속성 · 자세로 바디를 만듭니다. */
@@ -151,24 +154,16 @@ namespace sw
         PROPERTY( Category = "Body", Tooltip = "Draw the pose interpolated between the last two physics steps" )
         bool _bInterpolate;
 
-        PhysicsBodyHandle                               _body;
-        mutable SpinLock                                _commandLock; ///< 아무 스레드의 입력 → 물리 스텝의 꺼내기를 지킨다(`RigidBodyComponent` 와 같다)
-        PhysicsBodyCommand<PhysicsDimension2D> _command SW_GUARDED_BY( _commandLock );
-        uint64                                          _movedStep; ///< 바디가 마지막으로 깨어 있던 스텝 번호(`ScenePhysics::getStepCount`, `applySteppedPose`)
-        float2                                          _previousPosition;
-        float2                                          _currentPosition;
-        float2                                          _kinematicStartPosition;
-        float2                                          _kinematicTargetPosition;
-        float2                                          _lastLinearVelocity;
-        float3                                          _worldPosition; ///< 트랜스폼에서 마지막으로 읽은 월드 자리(Z 를 쓴다). 변경 번호가 같으면 그대로다
-        quaternion                                      _worldRotation; ///< 마지막으로 읽은 월드 회전(Z 둘레 각 밖의 회전을 지킨다)
-        float3                                          _worldScale;    ///< 마지막으로 읽은 월드 배율
-        float32                                         _previousAngle;
-        float32                                         _currentAngle;
-        float32                                         _kinematicStartAngle;
-        float32                                         _kinematicTargetAngle;
-        float32                                         _lastAngularVelocity;
-        PhysicsBodyType                                 _appliedBodyType;  ///< 바디에 든 종류(`_bodyType` 이 바뀌면 다음 프레임에 맞춘다)
-        bool                                            _bRestPoseWritten; ///< 잠든 자세를 트랜스폼에 이미 썼다 — 깨기 전까지 다시 쓰지 않는다
+        PhysicsBodyPage<PhysicsDimension2D>* _pPosePage; ///< 강체 칸이 든 페이지 — 바디 핸들 · 스텝 자세 · 속도 · 명령(`PhysicsPoseStore`)
+        uint32                               _poseSlot;  ///< 강체 칸 번호
+        float2                               _kinematicStartPosition;
+        float2                               _kinematicTargetPosition;
+        float3                               _worldPosition; ///< 트랜스폼에서 마지막으로 읽은 월드 자리(Z 를 쓴다). 변경 번호가 같으면 그대로다
+        quaternion                           _worldRotation; ///< 마지막으로 읽은 월드 회전(Z 둘레 각 밖의 회전을 지킨다)
+        float3                               _worldScale;    ///< 마지막으로 읽은 월드 배율
+        float32                              _kinematicStartAngle;
+        float32                              _kinematicTargetAngle;
+        PhysicsBodyType                      _appliedBodyType;  ///< 바디에 든 종류(`_bodyType` 이 바뀌면 다음 프레임에 맞춘다)
+        bool                                 _bRestPoseWritten; ///< 잠든 자세를 트랜스폼에 이미 썼다 — 깨기 전까지 다시 쓰지 않는다
     };
 } // namespace sw

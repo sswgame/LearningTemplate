@@ -11,6 +11,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/TagIndex.h"
 #include "Engine/Physics/PhysicsSystem.h"
 
 #include "GameFramework/Runtime/Character/Combat/Projectile/ResolvedShot.h"
