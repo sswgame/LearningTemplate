@@ -6,7 +6,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Graphics/Mesh/Mesh.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/Mesh/MeshVertex.h"
 
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/AppearanceEditModel.h"
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/BodyCustomizationViewModel.h"

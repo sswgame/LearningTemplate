@@ -4,7 +4,7 @@
 
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/Mesh/MeshVertex.h"
 
 namespace sw::editor
 {

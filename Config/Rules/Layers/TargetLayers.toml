@@ -18,7 +18,9 @@ server = ["App", "Editor", "GameFramework", "Games", "Programs"]
 gameframework = ["DevTools", "Editor", "ModuleManager", "App", "Server", "Games", "Programs", "GameFramework/Kits", "GameFramework/Plugin", "Engine/Graphics/RHI", "Engine/Graphics/Shader"]
 kit = ["DevTools", "Editor", "ModuleManager", "App", "Server", "Games", "Programs", "GameFramework/Plugin", "Engine/Graphics/RHI", "Engine/Graphics/Shader"]
 game = ["DevTools", "Editor", "ModuleManager", "App", "Server", "Programs", "GameFramework/Plugin", "Engine/Graphics/RHI", "Engine/Graphics/Shader"]
-editorextension = ["ModuleManager", "App", "Server", "Games", "Programs"]
+# 에디터 확장(키트의 `Editor/` · `GameFramework/Plugin/Editor`)도 게임 코드 곁이라 GPU 칸을 보지 않는다 — 에디터 본체(`editor`)는 RHI 를 보지만 확장은 에디터 창구
+# (`EditorPreviewViewport::requestImageFile` · `EditorViewSurface::registerImage`)로만 닿는다(언리얼 에디터 플러그인이 RHI 모듈 대신 에디터 모듈을 의존하는 자리).
+editorextension = ["ModuleManager", "App", "Server", "Games", "Programs", "Engine/Graphics/RHI", "Engine/Graphics/Shader"]
 # 전용 서버 구성은 오디오 · 렌더러 · 런타임 UI · 클라이언트 전용 소스 헤더를 읽지 않는다 — 이음매는 `IEngineAudioDriver` · `ISoundPlayer` · `IEngineRenderDriver` · `IEngineUIDriver` 와 게임 코드의 창구다.
 # Server 타깃 구성의 모든 타깃이 더 받는다(`sw_applyTargetLayerGate`). 엔진 폴더는 `cmake/Engine/BuildLayout.cmake` 의 `SW_UNBUILT_ENGINE_FOLDERS`(서버)와 같아야 한다 —
 # 생성기가 대조해 빠지면 configure 가 멈춘다. 클라이언트 전용 소스 폴더(`Client/`)는 모듈 · 게임마다 있어 아래 `[gatefolder]` 가 이름으로 막는다.
@@ -67,3 +69,4 @@ reflectionparser = [
 gameframework = ["Engine/Graphics/RHI/RHIEnums.h"]
 kit = ["Engine/Graphics/RHI/RHIEnums.h"]
 game = ["Engine/Graphics/RHI/RHIEnums.h"]
+editorextension = ["Engine/Graphics/RHI/RHIEnums.h"]
