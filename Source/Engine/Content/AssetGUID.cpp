@@ -146,15 +146,14 @@ namespace sw
             result._state = AssetGUIDHeaderState::Invalid;
             return result;
         }
-        const size_t searchFrom = span._headerBegin == string_view::npos ? 0 : span._headerEnd;
-        const bool   bStray     = xmlText.find( AssetGUIDInternal::kOpening, searchFrom ) != string_view::npos;
+        // 머리는 맨 앞 자리의 것 하나다 — 그 뒤의 글(주석이 머리 모양을 적어도)은 보지 않는다. 파서는 처리 지시를 문서에 올리지 않으므로 뒤의 것은 아무 뜻이 없다.
         if ( span._headerBegin == string_view::npos )
         {
-            result._state = bStray ? AssetGUIDHeaderState::Invalid : AssetGUIDHeaderState::Missing;
+            result._state = AssetGUIDHeaderState::Missing;
             return result;
         }
         result._guid  = AssetGUIDInternal::parseHeader( xmlText.substr( span._headerBegin, span._headerEnd - span._headerBegin ) );
-        result._state = result._guid.has_value() && bStray == false ? AssetGUIDHeaderState::Found : AssetGUIDHeaderState::Invalid;
+        result._state = result._guid.has_value() ? AssetGUIDHeaderState::Found : AssetGUIDHeaderState::Invalid;
         if ( result._state == AssetGUIDHeaderState::Invalid )
             result._guid = nullopt;
         return result;

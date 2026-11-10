@@ -54,6 +54,23 @@ namespace sw
         AssetIdentityKind classify( string_view assetID ) const;
         /** @brief @p assetID 가 임포트 산출물 폴더(`_listDerivedFolder`) 아래면 true 입니다. */
         bool isUnderDerivedFolder( string_view assetID ) const;
+
+        // ------------------------------------------------------------------------------
+        // 디스크의 에셋 파일 하나의 정체성 — 에디터 새로 만들기 · 복제 · 가져오기(새 GUID)와 내용 바꾸기(GUID 유지)가 함께 지난다. 자리는 `classify` 가 정한다.
+        // ------------------------------------------------------------------------------
+        /** @brief 디스크 파일 @p absPath(리소스 id @p assetID)의 GUID 입니다 — 우리 형식 글은 머리, 원본은 곁의 `.meta`. 정체성이 없거나 읽지 못하면 없음입니다. */
+        [[nodiscard]] optional<AssetGUID> readIdentity( string_view absPath, string_view assetID ) const;
+        /**
+         * @brief 막 생긴 파일 @p absPath(리소스 id @p assetID)에 새 GUID 를 줍니다. 베낀 글이 든 머리 · 베낀 원본의 옛 서술은 새 것으로 바꾼다(복사본은 새 에셋이다).
+         * @return 읽거나 쓰지 못하면 오류를 남기고 false 입니다. 정체성이 없는 파일(건너뛰는 파일 · `.meta` 자신)은 할 일이 없어 true 입니다.
+         */
+        [[nodiscard]] bool assignNewIdentity( string_view absPath, string_view assetID ) const;
+        /**
+         * @brief 에셋 @p targetAbs 의 내용을 @p newContentAbs 의 바이트로 바꾸고 정체성(GUID)은 그대로 둡니다 — 지우고 다시 만들면 새 GUID 가 되어 가리키던 참조가 끊긴다.
+         * @details 우리 형식 글은 새 글에 옛 머리를 다시 쓰고, 원본은 바이트만 바꾼다(곁의 `.meta` 는 그대로). 쓰기가 지면 옛 바이트로 되돌린다.
+         * @return 대상에 정체성이 없거나(머리 · `.meta` 없음 — `asset-ids --fix` 먼저) 읽기 · 쓰기가 지면 오류를 남기고 false 입니다(디스크는 시작 상태).
+         */
+        [[nodiscard]] bool replaceContentKeepingIdentity( string_view targetAbs, string_view targetID, string_view newContentAbs ) const;
     };
 
     /**

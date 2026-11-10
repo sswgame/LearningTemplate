@@ -133,6 +133,81 @@ namespace sw
         return meta.toXML();
     }
 
+    bool AssetIdentityRules::assignNewIdentity( string_view absPath, string_view assetID ) const
+    {
+        const AssetGUID guid = AssetGUID::create();
+        switch ( classify( assetID ) )
+        {
+            case AssetIdentityKind::Skipped:
+            case AssetIdentityKind::Sidecar:
+                return true;
+            case AssetIdentityKind::Header:
+            {
+                string text;
+                if ( FileUtil::readTextFile( absPath, text ) && FileUtil::writeTextFile( absPath, AssetGUIDHeader::write( text, guid ) ) )
+                    return true;
+                break;
+            }
+            case AssetIdentityKind::Source:
+                if ( FileUtil::writeTextFile( AssetMeta::makePath( absPath ), AssetMeta::makeText( assetID, guid ) ) )
+                    return true;
+                break;
+        }
+        SW_LOG_ERROR_ID( "AssetIdentity.AssignFailed", "Could not give '%#' its asset GUID - run py -3 -m Scripts asset-ids --fix", assetID );
+        return false;
+    }
+
+    bool AssetIdentityRules::replaceContentKeepingIdentity( string_view targetAbs, string_view targetID, string_view newContentAbs ) const
+    {
+        const AssetIdentityKind kind = classify( targetID );
+        if ( kind == AssetIdentityKind::Header )
+        {
+            string oldText;
+            string newText;
+            if ( FileUtil::readTextFile( targetAbs, oldText ) == false || FileUtil::readTextFile( newContentAbs, newText ) == false )
+            {
+                SW_LOG_ERROR_ID( "AssetIdentity.ReplaceUnreadable", "Could not read '%#' or the new content '%#' - nothing was replaced", targetID, string( newContentAbs ) );
+                return false;
+            }
+            const AssetGUIDHeader header = AssetGUIDHeader::read( oldText );
+            if ( header._state != AssetGUIDHeaderState::Found )
+            {
+                SW_LOG_ERROR_ID( "AssetIdentity.ReplaceNoIdentity", "'%#' has no asset GUID to keep - run py -3 -m Scripts asset-ids --fix first, nothing was replaced", targetID );
+                return false;
+            }
+            // 쓰기는 임시 파일을 바꿔 끼운다(`writeTextFile`) — 지면 옛 글이 그대로다.
+            if ( FileUtil::writeTextFile( targetAbs, AssetGUIDHeader::write( newText, *header._guid ) ) )
+                return true;
+            SW_LOG_ERROR_ID( "AssetIdentity.ReplaceWriteFailed", "Could not write '%#' - nothing was replaced", targetID );
+            return false;
+        }
+        if ( kind == AssetIdentityKind::Source && FileUtil::isRegularFile( AssetMeta::makePath( targetAbs ) ) == false )
+        {
+            SW_LOG_ERROR_ID( "AssetIdentity.ReplaceNoIdentity", "'%#' has no asset GUID to keep - run py -3 -m Scripts asset-ids --fix first, nothing was replaced", targetID );
+            return false;
+        }
+        // 원본 · 정체성이 없는 파일은 바이트만 바꾼다(곁의 .meta 는 그대로). 지면 옛 바이트로 되돌린다.
+        const string backupAbs = string( targetAbs ) + ".replacing";
+        if ( FileUtil::copyFile( targetAbs, backupAbs ) == false )
+        {
+            SW_LOG_ERROR_ID( "AssetIdentity.ReplaceWriteFailed", "Could not write '%#' - nothing was replaced", targetID );
+            return false;
+        }
+        if ( FileUtil::copyFile( newContentAbs, targetAbs ) )
+        {
+            (void)FileUtil::tryRemoveFile( backupAbs ); // 남아도 다음 바꾸기가 덮는다
+            return true;
+        }
+        if ( FileUtil::copyFile( backupAbs, targetAbs ) )
+        {
+            (void)FileUtil::tryRemoveFile( backupAbs );
+            SW_LOG_ERROR_ID( "AssetIdentity.ReplaceWriteFailed", "Could not write '%#' - nothing was replaced", targetID );
+            return false;
+        }
+        SW_LOG_ERROR_ID( "AssetIdentity.ReplaceRestoreFailed", "Could not replace '%#' nor put it back - the old bytes are kept in '%#'", targetID, backupAbs );
+        return false;
+    }
+
     string AssetIdentityIssue::toString() const
     {
         switch ( _kind )
@@ -256,6 +331,20 @@ namespace sw
             listFile.push_back( std::move( file ) );
         }
         return build( listFile, rules, outListIssue );
+    }
+
+    optional<AssetGUID> AssetIdentityRules::readIdentity( string_view absPath, string_view assetID ) const
+    {
+        const AssetIdentityKind kind = classify( assetID );
+        string                  text;
+        if ( kind == AssetIdentityKind::Header && FileUtil::readTextFile( absPath, text ) )
+            return AssetGUIDHeader::read( text )._guid;
+        if ( kind == AssetIdentityKind::Source && FileUtil::isRegularFile( AssetMeta::makePath( absPath ) ) && FileUtil::readTextFile( AssetMeta::makePath( absPath ), text ) )
+        {
+            AssetMeta meta;
+            return meta.parseXML( text, AssetMeta::makePath( assetID ) );
+        }
+        return nullopt;
     }
 
     optional<string> AssetDatabase::findPath( const AssetGUID& guid ) const

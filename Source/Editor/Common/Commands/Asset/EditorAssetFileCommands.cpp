@@ -18,6 +18,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 
+#include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Asset/Reference/AssetReferenceFields.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -232,8 +233,8 @@ namespace sw::editor
                 for ( size_t moveIndex = 0; moveIndex < inoutPlan._listOldID.size(); ++moveIndex )
                 {
                     const string& oldID = inoutPlan._listOldID[moveIndex];
-                    if ( AssetRedirect::isTable( oldID ) )
-                        continue; // 표 자신을 옮기는 일은 리다이렉트할 것이 아니다
+                    if ( AssetRedirect::isTable( oldID ) || isSidecar( oldID ) )
+                        continue; // 표 자신 · 원본 곁의 .meta(원본과 함께 간다)를 옮기는 일은 리다이렉트할 것이 아니다
                     const string tableID = AssetRedirect::makeTableID( oldID );
                     // 표 자리는 옮기는 파일의 디스크 경로에서 잰다 — 옛 id 에서 도메인 뒤 꼬리를 떼면 도메인 폴더다(붙인 디스크 도메인 · 사본 도메인도 같다).
                     const size_t  domainLength = tableID.size() - string_view{ AssetRedirect::kFileName }.size() - 1;
@@ -279,6 +280,75 @@ namespace sw::editor
                     inoutListRewrite.push_back( std::move( table ) );
                 }
                 return true;
+            }
+
+            /** @brief @p path 가 원본 곁의 정체성 서술(`<파일>.meta`)이면 true 입니다. */
+            static bool isSidecar( string_view path ) { return StringUtil::endsWith( path, AssetMeta::kExtension, true ); }
+
+            /**
+             * @brief 옮기기 목록에 원본 곁 `.meta` 의 옮기기를 더한 목록입니다 — 정체성은 원본과 함께 간다(유니티가 .meta 를 함께 옮기는 것과 같다).
+             * @details 폴더 옮기기(`collectFolderMoves`)는 안의 `.meta` 를 이미 들고 있으므로 겹치지 않게 더하지 않는다.
+             */
+            static vector<EditorAssetMove> appendSidecarMoves( const vector<EditorAssetMove>& listMove )
+            {
+                vector<EditorAssetMove> listResult = listMove;
+                for ( const EditorAssetMove& move : listMove )
+                {
+                    const string sidecar = AssetMeta::makePath( move._sourceAbs );
+                    if ( isSidecar( move._sourceAbs ) || FileUtil::isRegularFile( sidecar ) == false )
+                        continue;
+                    bool bListed = false;
+                    for ( const EditorAssetMove& other : listMove )
+                        bListed = bListed || FileUtil::isSameDiskPath( other._sourceAbs, sidecar );
+                    if ( bListed == false )
+                        listResult.push_back( EditorAssetMove{ sidecar, AssetMeta::makePath( move._destinationAbs ) } );
+                }
+                return listResult;
+            }
+
+            /**
+             * @brief 옮기는 `.meta` 마다 원본 이름 칸(`_source`)을 새 이름으로 쓴 글을 @p inoutListRewrite 끝에 더합니다(GUID 는 그대로). 이름이 같으면 더하지 않는다.
+             * @return `.meta` 를 읽지 못하면 false 입니다(`_failure` 에 이유 — 아무것도 옮기지 않는다).
+             */
+            [[nodiscard]] static bool prepareSidecarRewrites( EditorAssetMovePlan& inoutPlan, vector<PreparedRewrite>& inoutListRewrite )
+            {
+                for ( size_t moveIndex = 0; moveIndex < inoutPlan._listMove.size(); ++moveIndex )
+                {
+                    const EditorAssetMove& move = inoutPlan._listMove[moveIndex];
+                    if ( isSidecar( move._sourceAbs ) == false )
+                        continue;
+                    PreparedRewrite     rewrite{};
+                    AssetMeta           meta;
+                    optional<AssetGUID> guid;
+                    if ( FileUtil::readTextFile( move._sourceAbs, rewrite._originalText ) )
+                        guid = meta.parseXML( rewrite._originalText, inoutPlan._listOldID[moveIndex] );
+                    if ( guid.has_value() == false )
+                    {
+                        inoutPlan._failure = "could not read the asset identity '" + inoutPlan._listOldID[moveIndex] + "' - nothing was moved";
+                        return false;
+                    }
+                    const string_view newSourceAbs = string_view{ move._destinationAbs }.substr( 0, move._destinationAbs.size() - AssetMeta::kExtension.size() );
+                    rewrite._rewrittenText         = AssetMeta::makeText( newSourceAbs, *guid );
+                    if ( rewrite._rewrittenText == rewrite._originalText )
+                        continue;
+                    rewrite._referrerID  = inoutPlan._listNewID[moveIndex];
+                    rewrite._referrerAbs = move._destinationAbs;
+                    inoutListRewrite.push_back( std::move( rewrite ) );
+                }
+                return true;
+            }
+
+            /** @brief 정체성 규칙(`Config/Dev/AssetIdentity.json`)을 읽습니다. 읽지 못하면 오류를 남기고 false 입니다(규칙 없이 정체성을 쓰지 않는다). */
+            [[nodiscard]] static bool loadIdentityRules( AssetIdentityRules& outRules ) { return outRules.load( ProcessRoots::get()._project.str() ); }
+
+            /** @brief 막 생긴 파일(새로 만들기 · 복제 · 가져오기)에 새 GUID 를 줍니다. 리소스 트리 밖이면 정체성이 없다(할 일 없음). */
+            [[nodiscard]] static bool assignNewIdentity( const string& absPath )
+            {
+                const string       assetID = editor::getSubsystem<AssetPaths>().toAssetID( absPath );
+                AssetIdentityRules rules;
+                if ( assetID.empty() )
+                    return true;
+                return loadIdentityRules( rules ) && rules.assignNewIdentity( absPath, assetID );
             }
         };
     } // namespace
@@ -382,7 +452,8 @@ namespace sw::editor
             splitAssetName( FileUtil::getFileNamePart( outAssetAbs ), uniqueStem, uniqueSuffix );
             (void)replaceReference( text, assetTemplate._pNameAttribute, "name=\"" + uniqueStem + "\"" ); // 이름 속성이 없으면 템플릿 이름 그대로다
         }
-        if ( FileUtil::writeTextFile( outAssetAbs, text ) )
+        // 틀은 그 자신의 정체성(머리 GUID)을 든 에셋이다 — 새 에셋은 새 GUID 를 받는다.
+        if ( FileUtil::writeTextFile( outAssetAbs, text ) && EditorAssetFileCommandsInternal::assignNewIdentity( outAssetAbs ) )
         {
             SW_LOG_INFO_ID( "Asset.Created", "Created '%#'", editor::getSubsystem<AssetPaths>().toAssetID( outAssetAbs ) );
             return true;
@@ -397,7 +468,8 @@ namespace sw::editor
         string suffix;
         splitAssetName( FileUtil::getFileNamePart( sourceAbs ), stem, suffix );
         outAssetAbs = makeUniquePath( FileUtil::getDirectoryPart( sourceAbs ), stem, suffix );
-        return FileUtil::copyFile( sourceAbs, outAssetAbs );
+        // 복제는 새 에셋이다 — 베낀 머리 GUID 는 새 것으로 바꾸고, 원본이면 곁의 .meta 를 베끼지 않고 새로 쓴다(겹친 GUID 는 참조를 엉뚱한 쪽으로 푼다).
+        return FileUtil::copyFile( sourceAbs, outAssetAbs ) && EditorAssetFileCommandsInternal::assignNewIdentity( outAssetAbs );
     }
 
     bool EditorAssetFileCommands::planAssetMoves( const vector<EditorAssetMove>& listMove, const EditorReferenceIndex& index, EditorAssetMovePlan& outPlan )
@@ -413,8 +485,9 @@ namespace sw::editor
             outPlan._failure = "the reference index is still building - try again in a moment";
             return false;
         }
-        const AssetPaths& assetPaths = editor::getSubsystem<AssetPaths>();
-        for ( const EditorAssetMove& move : listMove )
+        const AssetPaths&             assetPaths   = editor::getSubsystem<AssetPaths>();
+        const vector<EditorAssetMove> listExpanded = EditorAssetFileCommandsInternal::appendSidecarMoves( listMove );
+        for ( const EditorAssetMove& move : listExpanded )
         {
             EditorAssetMove normalized{ FileUtil::normalizeSeparators( move._sourceAbs ), FileUtil::normalizeSeparators( move._destinationAbs ) };
             const string    oldID = assetPaths.toAssetID( normalized._sourceAbs );
@@ -500,7 +573,8 @@ namespace sw::editor
         }
         // 리다이렉트 표도 같은 트랜잭션으로 쓴다(참조 글 뒤에 붙인다 — 고친 참조 파일 수에는 세지 않는다).
         const size_t referrerRewriteCount = listRewrite.size();
-        if ( EditorAssetFileCommandsInternal::prepareRedirectTables( outPlan, listRewrite ) == false )
+        if ( EditorAssetFileCommandsInternal::prepareRedirectTables( outPlan, listRewrite ) == false ||
+             EditorAssetFileCommandsInternal::prepareSidecarRewrites( outPlan, listRewrite ) == false )
         {
             SW_LOG_WARNING_ID( "EditorAssetFileCommands.NothingMoved", "Nothing was moved - %#", outPlan._failure );
             return false;
@@ -643,8 +717,13 @@ namespace sw::editor
         if ( PlatformFileUtil::hasRecycleBin() == false )
             return deleteAsset( absolutePath );
 
-        const string assetPath = FileUtil::normalizeSeparators( absolutePath );
-        if ( FileUtil::moveToRecycleBin( vector<string>{ assetPath } ) )
+        // 에셋과 곁의 정체성 서술(.meta)을 한 번에 보낸다 — 휴지통에서 되살리면 둘이 함께 온다.
+        const string   assetPath = FileUtil::normalizeSeparators( absolutePath );
+        const string   metaPath  = AssetMeta::makePath( assetPath );
+        vector<string> listPath{ assetPath };
+        if ( FileUtil::isRegularFile( metaPath ) )
+            listPath.push_back( metaPath );
+        if ( FileUtil::moveToRecycleBin( listPath ) )
         {
             SW_LOG_INFO_ID( "Asset.Recycled", "Moved '%#' to the recycle bin", editor::getSubsystem<AssetPaths>().toAssetID( assetPath ) );
             return true;
@@ -663,6 +742,25 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "EditorAssetFileCommands.CouldNotDelete", "Could not delete '%#' - it is kept", abs );
             return false;
         }
+        // .meta 는 에셋이 실제로 지워진 뒤에만 지운다 — 남은 에셋에서 정체성을 떼면 다음에 새 GUID 를 받아 가리키던 참조가 끊긴다.
+        const string metaPath = AssetMeta::makePath( abs );
+        if ( FileUtil::isRegularFile( metaPath ) && FileUtil::removeFile( metaPath ) == false )
+            SW_LOG_WARNING_ID( "EditorAssetFileCommands.DeletedButMetaKept", "Deleted '%#' but its .meta could not be removed - delete it too (asset-ids reports it)", abs );
+        return true;
+    }
+
+    bool EditorAssetFileCommands::replaceAssetContent( string_view targetAbs, string_view newContentAbs )
+    {
+        const string       assetID = editor::getSubsystem<AssetPaths>().toAssetID( targetAbs );
+        AssetIdentityRules rules;
+        if ( assetID.empty() )
+        {
+            SW_LOG_ERROR_ID( "EditorAssetFileCommands.ReplaceOutsideResources", "'%#' is outside the resource tree - only an asset has an identity to keep", string( targetAbs ) );
+            return false;
+        }
+        if ( EditorAssetFileCommandsInternal::loadIdentityRules( rules ) == false || rules.replaceContentKeepingIdentity( targetAbs, assetID, newContentAbs ) == false )
+            return false;
+        SW_LOG_INFO_ID( "Asset.ContentReplaced", "Replaced the content of '%#' and kept its asset GUID", assetID );
         return true;
     }
 
@@ -716,6 +814,7 @@ namespace sw::editor
             }
 
             ++copied;
+            (void)EditorAssetFileCommandsInternal::assignNewIdentity( destPath ); // 가져온 파일은 새 에셋이다(밖에서 든 머리는 이 프로젝트의 정체성이 아니다). 지면 오류가 남고 asset-ids 가 잡는다
             SW_LOG_TRACE_ID( "EditorAssetFileCommands.Imported", "Imported: %# -> %#", sourcePath.c_str(), destPath.c_str() );
         }
         return copied;

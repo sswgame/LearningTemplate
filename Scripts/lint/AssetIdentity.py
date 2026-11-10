@@ -72,7 +72,7 @@ class Issue:
         return {
             "duplicate": f"{path}: GUID 가 {kContentFolder}/{self.other} 와 겹친다 — 복사본에는 새 GUID 를 준다(`asset-ids --fix`)",
             "missing-header": f"{path}: 머리 `<?asset guid?>` 가 없다(`asset-ids --fix`)",
-            "invalid-header": f"{path}: 머리 `<?asset guid?>` 를 읽지 못했다 · 자리가 틀렸다 · 둘이다 — 손으로 고친다",
+            "invalid-header": f"{path}: 머리 `<?asset guid?>` 를 읽지 못했다(꼴 · GUID 표기) — 손으로 고친다",
             "missing-meta": f"{path}: 곁에 .meta 가 없다(`asset-ids --fix`)",
             "orphan-meta": f"{path}: 원본이 없다 — 원본과 함께 옮기거나 지운다(`asset-ids --fix` 가 옮긴 원본을 내용 · 이름으로 찾아 다시 붙인다)",
             "invalid-meta": f"{path}: .meta 를 읽지 못했거나 다른 원본을 적었다 — 손으로 고친다",
@@ -152,16 +152,15 @@ def readHeader(text: str) -> tuple[str, str | None]:
     if head is None:
         return kInvalid, None
     _, begin, end = head
-    bStray = text.find(kOpening, end if begin >= 0 else 0) >= 0
-    if begin < 0:
-        return (kInvalid if bStray else kMissing), None
+    if begin < 0:   # 머리는 맨 앞 자리의 것 하나다 — 그 뒤의 글(주석이 적은 머리 모양)은 보지 않는다
+        return kMissing, None
     body = text[begin + len(kOpening):end - len(kEndPI)]
     position = _skipSpace(body, 0)
     if not body.startswith(kGUIDKey, position):
         return kInvalid, None
     position += len(kGUIDKey)
     quote = body.find('"', position)
-    if quote < 0 or _skipSpace(body, quote + 1) != len(body) or bStray or not isGUID(body[position:quote]):
+    if quote < 0 or _skipSpace(body, quote + 1) != len(body) or not isGUID(body[position:quote]):
         return kInvalid, None
     return kFound, body[position:quote]
 
@@ -537,8 +536,8 @@ def runSelfCheck(projectRoot: Path) -> None:
     assert readHeader('<?xml version="1.0"?>\n<Root/>')[0] == kMissing
     assert readHeader('<?asset guid="nope"?>\n<Root/>')[0] == kInvalid
     assert readHeader(f'<?asset guid="{sample}" extra="1"?>\n<Root/>')[0] == kInvalid
-    assert readHeader(f'<Root/>\n<?asset guid="{sample}"?>')[0] == kInvalid
-    assert readHeader(f'<?asset guid="{sample}"?>\n<?asset guid="{sample}"?>\n<Root/>')[0] == kInvalid
+    assert readHeader(f'<Root/>\n<?asset guid="{sample}"?>')[0] == kMissing
+    assert readHeader(f'<?asset guid="{sample}"?>\n<!-- <?asset guid?> -->\n<Root/>') == (kFound, sample)
     assert readHeader('<?xml version="1.0"\n<Root/>')[0] == kInvalid
     assert not isGUID(sample.upper()) and not isGUID("0" * kGUIDLength) and not isGUID(sample[:-1])
     assert parseMeta(makeMetaText("a/b/hit.ogg", sample)) == (sample, "hit.ogg")

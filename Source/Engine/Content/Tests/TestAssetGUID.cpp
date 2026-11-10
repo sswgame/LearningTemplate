@@ -75,9 +75,8 @@ SW_TEST_CASE( AssetGUIDTest, HeaderStatesSeparateMissingFromBroken )
     SW_EXPECT_TRUE( AssetGUIDHeader::read( "<?xml version=\"1.0\"?>\n<Root/>" )._state == AssetGUIDHeaderState::Missing );
     SW_EXPECT_TRUE( AssetGUIDHeader::read( "<?asset guid=\"nope\"?>\n<Root/>" )._state == AssetGUIDHeaderState::Invalid );
     SW_EXPECT_TRUE( AssetGUIDHeader::read( "<?asset guid=\"0123456789abcdef0011223344556677\" extra=\"1\"?>\n<Root/>" )._state == AssetGUIDHeaderState::Invalid );
-    // 머리 자리(맨 앞) 밖에 있는 것 · 둘인 것은 고르지 않는다
-    SW_EXPECT_TRUE( AssetGUIDHeader::read( "<Root/>\n<?asset guid=\"0123456789abcdef0011223344556677\"?>" )._state == AssetGUIDHeaderState::Invalid );
-    SW_EXPECT_TRUE( AssetGUIDHeader::read( "<?asset guid=\"0123456789abcdef0011223344556677\"?>\n<?asset guid=\"0123456789abcdef0011223344556677\"?>\n<Root/>" )._state ==
-                    AssetGUIDHeaderState::Invalid );
+    // 머리는 맨 앞 자리의 것 하나다 — 그 뒤(주석이 적은 머리 모양 · 루트 뒤의 처리 지시)는 보지 않는다
+    SW_EXPECT_TRUE( AssetGUIDHeader::read( "<Root/>\n<?asset guid=\"0123456789abcdef0011223344556677\"?>" )._state == AssetGUIDHeaderState::Missing );
+    SW_EXPECT_TRUE( AssetGUIDHeader::read( "<?asset guid=\"0123456789abcdef0011223344556677\"?>\n<!-- <?asset guid?> -->\n<Root/>" )._state == AssetGUIDHeaderState::Found );
     SW_EXPECT_TRUE( AssetGUIDHeader::read( "<?xml version=\"1.0\"\n<Root/>" )._state == AssetGUIDHeaderState::Invalid );
 }
