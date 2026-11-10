@@ -39,6 +39,18 @@ namespace sw
         template <typename TComponent, typename TFunc>
         void deferPostTickOnComponent( const TComponent& self, TFunc func );
 
+        /**
+         * @brief 씬을 바꾸는 일을 틱 뒤로 미룹니다 — `deferPostTick` 과 같되 @p func 가 쓰기 가능한 매니저를 받습니다(`func( GameObjectManager& )`).
+         * @details 붙잡은 값(핸들 · 단계 정의 사본)을 함께 넘길 때 쓴다. 핸들은 돌 때 다시 찾는다 — 틱과 틱 뒤 사이에 사라질 수 있다.
+         */
+        template <typename TFunc>
+        void deferPostTickOnScene( TFunc func )
+        {
+            GameObjectManager* pManager = _pSceneManager;
+            deferPostTick( [pManager, func]()
+            { func( *pManager ); } );
+        }
+
     private:
         GameObject*        _pSelf;
         GameObjectManager* _pSceneManager; ///< 틱 뒤 작업을 거는 데만 쓴다 — 틱 본문에는 내지 않는다

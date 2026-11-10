@@ -49,11 +49,11 @@ namespace sw
                     pScene->setLocalRotation( float3{ pose._rotation._x, MathUtil::atan2( sample._tangent._x, sample._tangent._z ), pose._rotation._z } );
             }
 
-            /** @brief 피해 틱 출력이 켜진 틱에 대상 센서 안의 오브젝트마다 피해를 줍니다. */
+            /** @brief 피해 틱 출력이 켜진 스텝마다(`recordPulses`) 대상 센서 안의 오브젝트마다 피해를 줍니다. */
             static void applyHazard( const GimmickCircuit& circuit, int32 node, GameObjectManager& manager, GameObject& target )
             {
                 const GimmickSensorComponent* pSensor = target.getComponent<GimmickSensorComponent>();
-                if ( pSensor == nullptr || circuit.getOutput( node, hashed_string( "OnDamageTick" ) ) == false )
+                if ( pSensor == nullptr )
                     return;
                 const float32 damage = circuit.readParamNumber( node, "damage" ).value_or( 0.0f );
                 for ( const GameObjectHandle& handle : pSensor->getOccupants() )
@@ -99,11 +99,11 @@ namespace sw
                 } );
             }
 
-            /** @brief 스폰 출력이 켜진 틱에 프리팹을 대상 위치(오프셋 더함)에 스폰합니다. 스폰은 틱 뒤로 미룹니다. */
+            /** @brief 스폰 출력이 켜진 스텝마다(`recordPulses`) 프리팹을 대상 위치(오프셋 더함)에 스폰합니다. 스폰은 틱 뒤로 미룹니다. */
             static void applySpawner( const GimmickCircuit& circuit, int32 node, GameObjectManager& manager, const SceneComponent* pScene )
             {
                 const string* pPrefab      = circuit.readParamText( node, "prefab" );
-                const bool    bCannotSpawn = circuit.getOutput( node, hashed_string( "OnSpawn" ) ) == false || pPrefab == nullptr || pPrefab->empty() || pScene == nullptr;
+                const bool    bCannotSpawn = pPrefab == nullptr || pPrefab->empty() || pScene == nullptr;
                 if ( bCannotSpawn )
                     return;
                 const string       prefab   = *pPrefab;
@@ -119,11 +119,11 @@ namespace sw
                 } );
             }
 
-            /** @brief 재생 출력이 켜진 틱에 소리를 냅니다. 재생은 틱 뒤로 미룹니다. */
+            /** @brief 재생 출력이 켜진 스텝마다(`recordPulses`) 소리를 냅니다. 재생은 틱 뒤로 미룹니다. */
             static void applySound( const GimmickCircuit& circuit, int32 node, GameObjectManager& manager )
             {
                 const string* pSound           = circuit.readParamText( node, "sound" );
-                const bool    bCannotPlaySound = circuit.getOutput( node, hashed_string( "OnPlay" ) ) == false || pSound == nullptr || pSound->empty();
+                const bool    bCannotPlaySound = pSound == nullptr || pSound->empty();
                 if ( bCannotPlaySound )
                     return;
                 const string sound = *pSound;
@@ -148,6 +148,9 @@ namespace sw
         , _listBinding{}
         , _listNodeTag{}
         , _listTagged{}
+        , _listPulsePort{}
+        , _listPendingPulse{}
+        , _listSensorRead{}
         , _listError{}
         , _checkpoint{}
     {
@@ -269,6 +272,9 @@ namespace sw
         }
         _listBinding.clear();
         _listNodeTag.clear();
+        _listPulsePort.clear();
+        _listPendingPulse.clear();
+        _listSensorRead.clear();
         return bBuilt;
     }
 
@@ -299,6 +305,14 @@ namespace sw
             applyActuators( *pManager );
     }
 
+    const GameObject* GimmickCircuitComponent::resolveTarget( const GameObjectManager& manager, int32 node ) const
+    {
+        const size_t index = static_cast<size_t>( node );
+        if ( index < _listNodeTarget.size() && _listNodeTarget[index].isValid() )
+            return manager.resolveGameObject( _listNodeTarget[index] );
+        return getOwner();
+    }
+
     GameObject* GimmickCircuitComponent::resolveTarget( GameObjectManager& manager, int32 node ) const
     {
         const size_t index = static_cast<size_t>( node );
@@ -309,10 +323,11 @@ namespace sw
 
     void GimmickCircuitComponent::bindNodes()
     {
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        const GameObject*        pOwner   = getOwner();
+        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         _listBinding.assign( static_cast<size_t>( _circuit.getNodeCount() ), Binding::None );
         _listNodeTag.assign( static_cast<size_t>( _circuit.getNodeCount() ), TagContainer{} );
+        _listPulsePort.assign( static_cast<size_t>( _circuit.getNodeCount() ), hashed_string{} );
         _listRestPose.resize( static_cast<size_t>( _circuit.getNodeCount() ) );
         if ( pManager == nullptr )
             return;
@@ -320,11 +335,18 @@ namespace sw
         {
             const Binding binding                     = findBinding( _circuit.getKind( node )._name );
             _listBinding[static_cast<size_t>( node )] = binding;
+            // 펄스 작동기는 켜진 스텝마다 한 번씩 돈다(`recordPulses`). 상태 작동기는 틱의 마지막 값만 적용한다.
+            if ( binding == Binding::Hazard )
+                _listPulsePort[static_cast<size_t>( node )] = hashed_string( "OnDamageTick" );
+            else if ( binding == Binding::Spawner )
+                _listPulsePort[static_cast<size_t>( node )] = hashed_string( "OnSpawn" );
+            else if ( binding == Binding::Sound )
+                _listPulsePort[static_cast<size_t>( node )] = hashed_string( "OnPlay" );
             // 근접 노드의 태그는 여기서 한 번 TagID 로 바꾼다. 스텝마다 문자열을 intern 하지 않는다.
             const string* pTag = binding == Binding::Proximity ? _circuit.readParamText( node, "tag" ) : nullptr;
             if ( pTag != nullptr && pTag->empty() == false )
                 _listNodeTag[static_cast<size_t>( node )].addTag( TagID::request( *pTag ) );
-            GameObject* pTarget = resolveTarget( *pManager, node );
+            const GameObject* pTarget = resolveTarget( *pManager, node );
             if ( pTarget == nullptr )
             {
                 if ( binding != Binding::None )
@@ -362,7 +384,7 @@ namespace sw
         }
     }
 
-    float32 GimmickCircuitComponent::computeProximity( GameObjectManager& manager, int32 node, const GameObject& target )
+    float32 GimmickCircuitComponent::computeProximity( const GameObjectManager& manager, int32 node, const GameObject& target )
     {
         const size_t          index        = static_cast<size_t>( node );
         const SceneComponent* pScene       = target.getPrimarySceneComponent();
@@ -388,7 +410,7 @@ namespace sw
         return nearest;
     }
 
-    float32 GimmickCircuitComponent::computeLaserBlocked( GameObjectManager& manager, int32 node, const GameObject& target ) const
+    float32 GimmickCircuitComponent::computeLaserBlocked( const GameObjectManager& manager, int32 node, const GameObject& target ) const
     {
         const SceneComponent* pScene = target.getPrimarySceneComponent();
         if ( pScene == nullptr )
@@ -401,17 +423,37 @@ namespace sw
         return WorldQuery::raycast( manager, origin, origin + direction * range, target.getObjectID(), hit ) ? 1.0f : 0.0f;
     }
 
-    void GimmickCircuitComponent::pullSensors( GameObjectManager& manager )
+    float32 GimmickCircuitComponent::readSensorImpulse( const GimmickSensorComponent& sensor, Binding binding, bool bFirstStep )
+    {
+        // 한 틱에 한 번만 읽는다 — 옛 소비(`consumeDamage` · `consumeUses`)처럼 둘째 스텝이나 같은 센서를 보는 둘째 노드는 0 을 받는다.
+        // 센서는 남의 오브젝트일 수 있어 틱에서는 읽기만 하고, 읽은 몫을 비우는 것은 틱 뒤(`applyPendingActuators`)다.
+        const TComponentHandle<GimmickSensorComponent> handle{ &sensor };
+        if ( bFirstStep == false )
+            return 0.0f;
+        for ( const SensorRead& read : _listSensorRead )
+        {
+            if ( read._sensor == handle && read._binding == binding )
+                return 0.0f;
+        }
+        SensorRead read;
+        read._sensor  = handle;
+        read._read    = binding == Binding::Damage ? sensor.peekDamage() : sensor.peekUses();
+        read._binding = binding;
+        _listSensorRead.push_back( read );
+        return read._read._amount;
+    }
+
+    void GimmickCircuitComponent::pullSensors( const GameObjectManager& manager, bool bFirstStep )
     {
         for ( int32 node = 0; node < _circuit.getNodeCount() && static_cast<size_t>( node ) < _listBinding.size(); ++node )
         {
             const Binding binding = _listBinding[static_cast<size_t>( node )];
             if ( binding == Binding::None )
                 continue;
-            GameObject* pTarget = resolveTarget( manager, node );
+            const GameObject* pTarget = resolveTarget( manager, node );
             if ( pTarget == nullptr )
                 continue;
-            GimmickSensorComponent* pSensor = pTarget->getComponent<GimmickSensorComponent>();
+            const GimmickSensorComponent* pSensor = pTarget->getComponent<GimmickSensorComponent>();
             switch ( binding )
             {
                 case Binding::Volume:
@@ -429,13 +471,13 @@ namespace sw
                 case Binding::Damage:
                 {
                     if ( pSensor != nullptr )
-                        _circuit.addSensorImpulse( node, pSensor->consumeDamage() );
+                        _circuit.addSensorImpulse( node, readSensorImpulse( *pSensor, binding, bFirstStep ) );
                     break;
                 }
                 case Binding::Interaction:
                 {
                     if ( pSensor != nullptr )
-                        _circuit.addSensorImpulse( node, pSensor->consumeUses() );
+                        _circuit.addSensorImpulse( node, readSensorImpulse( *pSensor, binding, bFirstStep ) );
                     break;
                 }
                 case Binding::Signal:
@@ -462,11 +504,40 @@ namespace sw
         }
     }
 
+    void GimmickCircuitComponent::recordPulses()
+    {
+        _circuit.appendRaisedOutputs( _listPulsePort, _listPendingPulse );
+    }
+
     void GimmickCircuitComponent::applyActuators( GameObjectManager& manager )
     {
-        for ( int32 node = 0; node < _circuit.getNodeCount() && static_cast<size_t>( node ) < _listBinding.size(); ++node )
+        recordPulses();
+        applyPendingActuators( manager );
+    }
+
+    void GimmickCircuitComponent::applyPendingActuators( GameObjectManager& manager )
+    {
+        for ( const SensorRead& read : _listSensorRead )
+        {
+            GimmickSensorComponent* pSensor = manager.resolveComponent( read._sensor );
+            if ( pSensor == nullptr )
+                continue;
+            if ( read._binding == Binding::Damage )
+                pSensor->acknowledgeDamage( read._read );
+            else
+                pSensor->acknowledgeUses( read._read );
+        }
+        _listSensorRead.clear();
+        // 펄스는 켜진 (스텝, 노드) 순서대로 모두, 상태 작동기는 마지막 스텝의 값으로 한 번(앞 스텝의 자세는 같은 틱 안에서 덮였다).
+        for ( const int32 node : _listPendingPulse )
         {
             applyActuator( manager, node, _listBinding[static_cast<size_t>( node )] );
+        }
+        _listPendingPulse.clear();
+        for ( int32 node = 0; node < _circuit.getNodeCount() && static_cast<size_t>( node ) < _listBinding.size(); ++node )
+        {
+            if ( _listPulsePort[static_cast<size_t>( node )].empty() )
+                applyActuator( manager, node, _listBinding[static_cast<size_t>( node )] );
         }
     }
 
@@ -585,7 +656,7 @@ namespace sw
             return;
         if ( _listBinding.size() != static_cast<size_t>( _circuit.getNodeCount() ) )
             bindNodes();
-        pullSensors( *pManager );
+        pullSensors( *pManager, true );
         _circuit.step();
         applyActuators( *pManager );
         storeState();
@@ -594,19 +665,22 @@ namespace sw
     void GimmickCircuitComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
-        if ( pManager == nullptr || _circuit.isBuilt() == false )
+        if ( _circuit.isBuilt() == false )
             return;
         const int32 stepCount = _circuit.consumeTime( context.getDeltaTime() );
+        if ( stepCount <= 0 )
+            return;
+        // 스텝은 회로 자기 상태만 돈다(센서는 읽기만). 작동기 쓰기(남의 오브젝트)는 마지막에 한 번 틱 뒤로 모은다 — 언리얼 Mass 의 Defer 자리.
+        const GameObjectManager& manager = context.getManager();
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
-            pullSensors( *pManager );
+            pullSensors( manager, stepIndex == 0 );
             _circuit.step();
-            applyActuators( *pManager );
+            recordPulses();
         }
-        if ( stepCount > 0 )
-            storeState();
+        storeState();
+        context.deferPostTickOnComponent( *this, []( GimmickCircuitComponent& self, GameObjectManager& sceneManager )
+        { self.applyPendingActuators( sceneManager ); } );
     }
 
     void GimmickCircuitComponent::captureCheckpoint()

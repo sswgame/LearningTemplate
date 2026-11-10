@@ -107,6 +107,11 @@ namespace sw
             const optional<uint32> portIndex = getKind( node ).findOutput( port );
             return portIndex.has_value() && getOutput( node, static_cast<int32>( *portIndex ) );
         }
+        /**
+         * @brief 지금 스텝에 출력 `listPortByNode[node]` 가 켜진 노드를 노드 순서로 @p inoutListNode 뒤에 붙입니다(이름이 빈 칸 · 목록 밖 노드는 건너뛴다).
+         * @details 스텝마다 부르면 목록이 (스텝, 노드) 순서가 된다 — 회로 컴포넌트가 한 틱의 펄스 작동기(스폰 · 소리 · 피해 틱)를 틱 뒤에 그 순서로 한 번에 돌리는 자리.
+         */
+        void appendRaisedOutputs( const vector<hashed_string>& listPortByNode, vector<int32>& inoutListNode ) const;
         /** @brief 액추에이터가 오브젝트에 적용하는 값입니다. 상태 float[0] 이며 열림, 거리, 높이, 각도를 나타냅니다. 실수 상태가 없으면 0 입니다. */
         float32 getActuatorValue( int32 node ) const;
         float32 getFloatState( int32 node, int32 slot ) const;

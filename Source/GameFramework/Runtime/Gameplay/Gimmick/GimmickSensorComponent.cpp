@@ -145,6 +145,36 @@ namespace sw
         return _pendingDamage.exchange( 0.0f );
     }
 
+    GimmickSensorImpulse GimmickSensorComponent::peekDamage() const
+    {
+        GimmickSensorImpulse read;
+        read._pending = _pendingDamage.load( std::memory_order_relaxed );
+        read._amount  = read._pending;
+        return read;
+    }
+
+    GimmickSensorImpulse GimmickSensorComponent::peekUses() const
+    {
+        const GameObject*            pOwner        = getOwner();
+        const InteractableComponent* pInteractable = pOwner != nullptr ? pOwner->getComponent<InteractableComponent>() : nullptr;
+        GimmickSensorImpulse         read;
+        read._pending        = _pendingUse.load( std::memory_order_relaxed );
+        read._completedCount = pInteractable != nullptr ? pInteractable->getCompletedCount() : _seenCompletedCount.load( std::memory_order_relaxed );
+        read._amount         = read._pending + static_cast<float32>( read._completedCount - _seenCompletedCount.load( std::memory_order_relaxed ) );
+        return read;
+    }
+
+    void GimmickSensorComponent::acknowledgeDamage( const GimmickSensorImpulse& read )
+    {
+        addAtomic( _pendingDamage, -read._pending );
+    }
+
+    void GimmickSensorComponent::acknowledgeUses( const GimmickSensorImpulse& read )
+    {
+        addAtomic( _pendingUse, -read._pending );
+        _seenCompletedCount.store( read._completedCount, std::memory_order_relaxed );
+    }
+
     float32 GimmickSensorComponent::consumeUses()
     {
         // 상호작용은 센서를 모른다. 그래서 같은 오브젝트의 완료 수를 직접 읽고, 지난번 이후 늘어난 만큼을 사용 횟수로 센다.
