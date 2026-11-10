@@ -9,7 +9,6 @@
 #include "Core/Hash/HashUtil.h"
 #include "Core/String/formatString.h"
 
-#include "Engine/Animation/Component/PoseModifierComponent.h"
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Character/CharacterDataCache.h"
@@ -20,6 +19,7 @@
 #include "Engine/Character/Fit/FitTables.h"
 #include "Engine/Character/Fit/SurfaceState.h"
 #include "Engine/Character/PoseModifier/CharacterPoseUtil.h"
+#include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Character/Socket/ResolvedSocketTable.h"
 #include "Engine/Character/Socket/SocketBindingComponent.h"
 #include "Engine/Character/Socket/SocketPartPool.h"

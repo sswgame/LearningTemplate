@@ -4,6 +4,7 @@
  * @details 평가는 자기 onTick 이 아니라 `AnimationSystem` 이 한다. 같은 오브젝트의 `SkeletalMeshComponent`(유닛)에 단계 작업으로 붙고, 유닛들은
  *          성분 단위로 병렬로 돈다. 대상이 다른 유닛의 본이나 소켓이면 그 유닛을 의존으로 등록해 모든 단계를 먼저 마치게 하고(최종 포즈를 읽는다), 고리가 생기면 로드 오류로 그 대상을 끈다.
  *          언리얼의 Control Rig(후처리 노드)와 IK Rig, 유니티의 Animation Rigging(Rig Builder, 제약 컴포넌트)에 해당한다.
+ *          캐릭터 폴더에 둔다 — 소켓 세트(`SocketSet` · `ResolvedSocketTable`)와 물리 에셋을 읽어 애니메이션(아래 단)이 캐릭터를 보지 않게 한다(언리얼 Control Rig 도 플러그인으로 Engine 위에 있다).
  */
 #pragma once
 #include "Core/Container/string.h"

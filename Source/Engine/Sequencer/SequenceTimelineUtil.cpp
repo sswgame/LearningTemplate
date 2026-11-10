@@ -9,8 +9,8 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Animation/AnimationClip.h"
-#include "Engine/Animation/Component/PoseModifierComponent.h"
 #include "Engine/Asset/AssetManager.h"
+#include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"

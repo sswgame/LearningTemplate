@@ -11,7 +11,6 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Animation/Component/FacialAnimationComponent.h"
-#include "Engine/Animation/Component/PoseModifierComponent.h"
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Facial/WrinkleMap.h"
@@ -20,6 +19,7 @@
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Character/Fit/SurfaceState.h"
 #include "Engine/Character/Hit/CharacterHit.h"
+#include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Object/Component/SceneComponent.h"
