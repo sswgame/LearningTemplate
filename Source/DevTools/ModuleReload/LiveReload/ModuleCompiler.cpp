@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "ModuleManager/Dev/LiveReload/ModuleCompiler.h"
+#include "DevTools/ModuleReload/LiveReload/ModuleCompiler.h"
 
 #include "Core/Concurrency/thread.h"
 #include "Core/File/FileUtil.h"
@@ -10,7 +10,7 @@
 #include "Core/Process/Process.h"
 #include "Core/Process/ThreadCrashStack.h"
 
-#include "ModuleManager/Dev/LiveReload/LiveReloadManager.h"
+#include "DevTools/ModuleReload/LiveReload/LiveReloadManager.h"
 
 namespace sw
 {

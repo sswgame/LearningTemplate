@@ -18,7 +18,7 @@
     #include "Core/File/FileUtil.h"
     #include "Core/Module/ModuleLibraryUtil.h"
     #include "Core/Path/AbsolutePath.h"
-    #include "ModuleManager/Dev/LiveReload/LiveReloadManager.h"
+    #include "ModuleManager/ILiveReloadManager.h"
 #endif
 
 namespace sw
@@ -54,7 +54,7 @@ namespace sw
         shutdown();
     }
 
-    bool EditorModuleManager::loadModuleLibraries( LiveReloadManager* pLiveReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution )
+    bool EditorModuleManager::loadModuleLibraries( ILiveReloadManager* pLiveReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution )
     {
         _bEditorModuleActive = resolution.isActive( config::kTargetEditorModule ) ? SW_TRUE : SW_FALSE;
         // 에디터 확장은 에디터를 켤 때만 로드한다(initialize 의 에디터 블록). 여기서는 이름과 의존만 적어 둔다. 카탈로그는 initialize 에 없다.
@@ -75,7 +75,7 @@ namespace sw
         return GameModuleManager::loadModuleLibraries( pLiveReloadManager, catalog, resolution );
     }
 
-    bool EditorModuleManager::initialize( LiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, IEngineRenderDriver* pRenderDriver, bool bEnableEditor )
+    bool EditorModuleManager::initialize( ILiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, IEngineRenderDriver* pRenderDriver, bool bEnableEditor )
     {
         _bEnableEditor = bEnableEditor ? SW_TRUE : SW_FALSE;
 
@@ -381,7 +381,7 @@ namespace sw
     // 개발 구성에만 있는 경로 — 리로드 그래프 등록(LiveReload), 인스턴스 없는 헤드리스 작업(동적 모듈 올리고 내리기).
     // 배포는 이 헤더 · 라이브러리를 짓지 않아 여기만 `#if` 로 가른다(docs/agents/BuildConfigSwitch.md 둘째 줄). 부르는 자리는 `build::kShipping` 으로 가른다.
     // ----------------------------------------------------------------------------------------------------------------------
-    bool EditorModuleManager::registerEditorModule( LiveReloadManager* pLiveReloadManager )
+    bool EditorModuleManager::registerEditorModule( ILiveReloadManager* pLiveReloadManager )
     {
         if ( _bEnableEditor == SW_TRUE && _bEditorModuleActive == SW_FALSE )
         {
@@ -396,15 +396,15 @@ namespace sw
         {
             SW_MEMORY_SCOPE( Editor );
             holdReloadSubscription( pLiveReloadManager->setOnBeforeReload(
-                config::kTargetEditorModule, SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeReloadDelegate, &EditorModuleManager::onBeforeEditorReload, this ) ) );
+                config::kTargetEditorModule, SW_DELEGATE_METHOD( ILiveReloadManager::OnBeforeReloadDelegate, &EditorModuleManager::onBeforeEditorReload, this ) ) );
             holdReloadSubscription( pLiveReloadManager->setOnAfterReload(
-                config::kTargetEditorModule, SW_DELEGATE_METHOD( LiveReloadManager::OnAfterReloadDelegate, &EditorModuleManager::onAfterEditorReload, this ) ) );
+                config::kTargetEditorModule, SW_DELEGATE_METHOD( ILiveReloadManager::OnAfterReloadDelegate, &EditorModuleManager::onAfterEditorReload, this ) ) );
             holdReloadSubscription( pLiveReloadManager->setOnReloadFault(
-                config::kTargetEditorModule, SW_DELEGATE_METHOD( LiveReloadManager::OnReloadFaultDelegate, &EditorModuleManager::onEditorReloadFault, this ) ) );
+                config::kTargetEditorModule, SW_DELEGATE_METHOD( ILiveReloadManager::OnReloadFaultDelegate, &EditorModuleManager::onEditorReloadFault, this ) ) );
             holdReloadSubscription( pLiveReloadManager->setOnValidateLibrary(
-                config::kTargetEditorModule, SW_DELEGATE_METHOD( LiveReloadManager::OnValidateLibraryDelegate, &EditorModuleManager::isEditorLibraryUsable, this ) ) );
+                config::kTargetEditorModule, SW_DELEGATE_METHOD( ILiveReloadManager::OnValidateLibraryDelegate, &EditorModuleManager::isEditorLibraryUsable, this ) ) );
             // 편집기 코드가 다른 스레드에서 돌고 있으면(열린 파일 대화상자) 닫힐 때까지 리로드를 기다린다 — 변경은 버리지 않는다.
-            holdReloadSubscription( pLiveReloadManager->addReloadHold( SW_DELEGATE_METHOD( LiveReloadManager::ReloadHoldDelegate, &EditorModuleManager::isEditorReloadHeld, this ) ) );
+            holdReloadSubscription( pLiveReloadManager->addReloadHold( SW_DELEGATE_METHOD( ILiveReloadManager::ReloadHoldDelegate, &EditorModuleManager::isEditorReloadHeld, this ) ) );
             if ( pLiveReloadManager->registerModule( config::kTargetEditorModule ) == false )
             {
                 SW_LOG_ERROR_ID( "EditorModuleManager.FailedLoadEditorModule", "Failed to load the Editor Module." );

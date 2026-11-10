@@ -24,14 +24,10 @@
 
 #include "ModuleAPI/Service/IModuleStateStore.h"
 
+#include "ModuleManager/ILiveReloadManager.h"
 #include "ModuleManager/ModuleInstanceUtil.h"
 
 #include "sw/config/ConfigConstants.h"
-
-#if SW_WITH_DYNAMIC_MODULES
-    #include "ModuleManager/Dev/LiveReload/LiveReloadManager.h"
-    #include "ModuleManager/Dev/LiveReload/ModuleCompiler.h"
-#endif
 
 namespace sw
 {
@@ -78,7 +74,7 @@ namespace sw
         shutdown();
     }
 
-    bool GameModuleManager::initializeGame( LiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, IEngineRenderDriver* pRenderDriver )
+    bool GameModuleManager::initializeGame( ILiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, IEngineRenderDriver* pRenderDriver )
     {
         _pLiveReloadManager = pLiveReloadManager;
         _pRHI               = pRHI;
@@ -94,7 +90,7 @@ namespace sw
         return startGameInstance();
     }
 
-    bool GameModuleManager::initializeDedicatedServer( LiveReloadManager* pLiveReloadManager )
+    bool GameModuleManager::initializeDedicatedServer( ILiveReloadManager* pLiveReloadManager )
     {
         return initializeGame( pLiveReloadManager, nullptr, nullptr, nullptr );
     }
@@ -498,11 +494,11 @@ namespace sw
     // ----------------------------------------------------------------------------------------------------------------------
     // 모듈 잇기 — 개발은 게임 · 키트 · GameFramework 를 동적 라이브러리로 리로드 매니저에 올리고 게임 API 를 라이브러리 심볼에서 읽는다.
     // 배포는 정적 링크라 로드할 라이브러리 · 리로드 매니저 · 모듈 컴파일러가 없고 게임 API 는 정적 `exportGameAPI` 다. 두 방식은 진짜 구현 둘이다
-    // (빈 몸통이 아니다 — 언리얼 `IS_MONOLITHIC`). 동적 쪽이 배포가 짓지 않는 `LiveReload/` 를 써서 여기만 `SW_WITH_DYNAMIC_MODULES` 로 가른다(docs/agents/BuildConfigSwitch.md 둘째 줄).
+    // (빈 몸통이 아니다 — 언리얼 `IS_MONOLITHIC`). 동적 쪽이 배포에 없는 리로드 매니저(`ILiveReloadManager` — DevTools 가 구현)를 써서 여기만 `SW_WITH_DYNAMIC_MODULES` 로 가른다(docs/agents/BuildConfigSwitch.md 둘째 줄).
     // ----------------------------------------------------------------------------------------------------------------------
 #if SW_WITH_DYNAMIC_MODULES
 
-    bool GameModuleManager::loadModuleLibraries( LiveReloadManager* pLiveReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution )
+    bool GameModuleManager::loadModuleLibraries( ILiveReloadManager* pLiveReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution )
     {
         _pLiveReloadManager = pLiveReloadManager;
         if ( _pLiveReloadManager == nullptr )
@@ -542,19 +538,19 @@ namespace sw
                 return false;
             }
             holdReloadSubscription(
-                _pLiveReloadManager->setOnBeforeReload( moduleName, SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeReloadDelegate, &GameModuleManager::onBeforeGameplayDLLReload, this ) ) );
+                _pLiveReloadManager->setOnBeforeReload( moduleName, SW_DELEGATE_METHOD( ILiveReloadManager::OnBeforeReloadDelegate, &GameModuleManager::onBeforeGameplayDLLReload, this ) ) );
             holdReloadSubscription(
-                _pLiveReloadManager->setOnAfterReload( moduleName, SW_DELEGATE_METHOD( LiveReloadManager::OnAfterReloadDelegate, &GameModuleManager::onAfterGameplayDLLReload, this ) ) );
+                _pLiveReloadManager->setOnAfterReload( moduleName, SW_DELEGATE_METHOD( ILiveReloadManager::OnAfterReloadDelegate, &GameModuleManager::onAfterGameplayDLLReload, this ) ) );
             listGameModule.push_back( moduleName );
         }
 
         // 게임 모듈은 라이브러리만 로드한다(타입 등록까지). 리로드 직후 콜백인 인스턴스 생성은 기동(`initializeGame`)이 등록하고 호출한다.
         holdReloadSubscription( _pLiveReloadManager->setOnBeforeReload(
-            sw::config::kTargetGameModule, SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeReloadDelegate, &GameModuleManager::onBeforeGameReload, this ) ) );
+            sw::config::kTargetGameModule, SW_DELEGATE_METHOD( ILiveReloadManager::OnBeforeReloadDelegate, &GameModuleManager::onBeforeGameReload, this ) ) );
         holdReloadSubscription( _pLiveReloadManager->setOnReloadFault(
-            sw::config::kTargetGameModule, SW_DELEGATE_METHOD( LiveReloadManager::OnReloadFaultDelegate, &GameModuleManager::onGameReloadFault, this ) ) );
+            sw::config::kTargetGameModule, SW_DELEGATE_METHOD( ILiveReloadManager::OnReloadFaultDelegate, &GameModuleManager::onGameReloadFault, this ) ) );
         holdReloadSubscription( _pLiveReloadManager->setOnValidateLibrary(
-            sw::config::kTargetGameModule, SW_DELEGATE_METHOD( LiveReloadManager::OnValidateLibraryDelegate, &GameModuleManager::isGameLibraryUsable, this ) ) );
+            sw::config::kTargetGameModule, SW_DELEGATE_METHOD( ILiveReloadManager::OnValidateLibraryDelegate, &GameModuleManager::isGameLibraryUsable, this ) ) );
         _listGameScopeModule = listGameModule; // SWGame 은 이름으로 따로 본다(onBeforeCommitBatch)
         if ( _pLiveReloadManager->registerModule( sw::config::kTargetGameModule, listGameModule ) == false )
         {
@@ -569,25 +565,25 @@ namespace sw
         }
 
         holdReloadSubscription(
-            _pLiveReloadManager->addOnBeforeCommitBatch( SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeCommitBatchDelegate, &GameModuleManager::onBeforeCommitBatch, this ) ) );
+            _pLiveReloadManager->addOnBeforeCommitBatch( SW_DELEGATE_METHOD( ILiveReloadManager::OnBeforeCommitBatchDelegate, &GameModuleManager::onBeforeCommitBatch, this ) ) );
         return true;
     }
 
     bool GameModuleManager::startGameInstance()
     {
-        _moduleCompiler = make_unique<ModuleCompiler>( _pLiveReloadManager );
         if ( _pLiveReloadManager == nullptr )
             return true;
+        _moduleCompiler = _pLiveReloadManager->createModuleCompiler(); // 빌드 시작 · 끝을 리로드 매니저에 알리는 구현(DevTools)
 
         // 매니저가 비우기를 부르는 것은 모듈을 내리기 직전(리로드)뿐이다 — 종료는 `shutdown` 이 이 콜백을 놓은 뒤 매니저를 내린다.
-        holdReloadSubscription( _pLiveReloadManager->setFlushWorkers( SW_DELEGATE_LAMBDA( LiveReloadManager::FlushWorkersDelegate, [this]()
+        holdReloadSubscription( _pLiveReloadManager->setFlushWorkers( SW_DELEGATE_LAMBDA( ILiveReloadManager::FlushWorkersDelegate, [this]()
         { flushRenderWorkers( FlushReason::Reload ); } ) ) );
 
         BLOCK( "SWGame 인스턴스 생성" )
         {
             SW_MEMORY_SCOPE( Game );
             holdReloadSubscription( _pLiveReloadManager->setOnAfterReload(
-                sw::config::kTargetGameModule, SW_DELEGATE_METHOD( LiveReloadManager::OnAfterReloadDelegate, &GameModuleManager::onAfterGameReload, this ) ) );
+                sw::config::kTargetGameModule, SW_DELEGATE_METHOD( ILiveReloadManager::OnAfterReloadDelegate, &GameModuleManager::onAfterGameReload, this ) ) );
             if ( _pLiveReloadManager->runAfterReload( sw::config::kTargetGameModule ) == false )
             {
                 SW_LOG_ERROR_ID( "GameModuleManager.SWGameInstanceCouldNot", "SWGame instance could not be started" );
@@ -617,7 +613,7 @@ namespace sw
     }
 #else
 
-    bool GameModuleManager::loadModuleLibraries( LiveReloadManager* pLiveReloadManager, [[maybe_unused]] const ModuleCatalog& catalog,
+    bool GameModuleManager::loadModuleLibraries( ILiveReloadManager* pLiveReloadManager, [[maybe_unused]] const ModuleCatalog& catalog,
                                                  [[maybe_unused]] const ModuleResolution& resolution )
     {
         // 그 타입은 리플렉션 단계가 이미 모았고, 무엇을 링크할지는 CMake 가 같은 매니페스트로 정했다.

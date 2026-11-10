@@ -20,6 +20,8 @@
 #include "ModuleAPI/ABI/GameAPI.h"
 #include "ModuleAPI/Service/IModuleCompiler.h"
 
+#include "ModuleManager/ModuleManagerAPI.h"
+
 namespace sw
 {
     struct ModuleAPISymbols;
@@ -27,7 +29,7 @@ namespace sw
 
     class IEngineRenderDriver;
     class IWindow;
-    class LiveReloadManager;
+    class ILiveReloadManager;
     class ModuleCatalog;
     class RHI;
     class SceneManager;
@@ -97,7 +99,7 @@ namespace sw
      *
      *   파생 클래스는 소멸자에서 `shutdown()` 을 먼저 부릅니다. 이 클래스의 소멸자 안에서는 가상 함수가 파생 클래스 쪽으로 가지 않기 때문입니다.
      */
-    class GameModuleManager : public IGameRestarter
+    class SW_MODULEMANAGER_API GameModuleManager : public IGameRestarter
     {
     public:
         // 1) 생성 · 소멸과 initialize/shutdown
@@ -124,12 +126,12 @@ namespace sw
          * @param catalog 매니페스트 번들(`Bin/Modules/<모듈>.module.json`)
          * @param resolution `catalog.resolve` 결과
          */
-        [[nodiscard]] virtual bool loadModuleLibraries( LiveReloadManager* pLiveReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution );
+        [[nodiscard]] virtual bool loadModuleLibraries( ILiveReloadManager* pLiveReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution );
         /**
          * @brief 전용 서버로 게임 인스턴스를 만듭니다. 창, RHI, 렌더 스레드, 에디터가 없고 게임은 `initialize( nullptr )`(창 없음)를 받습니다.
          * @details 모듈 콜백, 핫 리로드(Dev), 상태 보존은 App 과 같습니다.
          */
-        [[nodiscard]] bool initializeDedicatedServer( LiveReloadManager* pLiveReloadManager );
+        [[nodiscard]] bool initializeDedicatedServer( ILiveReloadManager* pLiveReloadManager );
         /**
          * @brief 모듈 인스턴스를 종료하고, 레지스트리에 걸어 둔 이 객체의 콜백(구독)을 놓습니다.
          * @details 콜백은 이 객체의 메서드를 가리킵니다. 실행 파일이 이 객체를 레지스트리보다 먼저 지우므로, 놓지 않으면 그 사이에
@@ -229,15 +231,15 @@ namespace sw
          * @param pWindow 플랫폼 창(없으면 nullptr)
          * @param pRenderDriver 렌더러 창구(워커 비우기용, 없으면 nullptr)
          */
-        [[nodiscard]] bool initializeGame( LiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, IEngineRenderDriver* pRenderDriver );
+        [[nodiscard]] bool initializeGame( ILiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, IEngineRenderDriver* pRenderDriver );
         /** @brief RHI 교체 뒤 게임을 다시 만듭니다. 테이블이 비었으면 모듈에서 다시 바인딩합니다. */
         [[nodiscard]] bool recreateGameInstance( void* pGameModule );
         /** @brief 호스트가 모듈에 넘기는 서비스 테이블을 채웁니다. @p bGameModule 이면 게임에 허용된 것(GameVisible)만 채웁니다. */
         void fillModuleServiceScope( SubsystemScope& outScope, bool bGameModule ) const;
 
         /** @brief 이번 프레임 상태를 호스트 모듈이 채웁니다(뷰 RT, 씬 틱 여부). */
-        ModuleFrameState&  getMutableFrameState() { return _frameState; }
-        LiveReloadManager* getLiveReloadManager() const { return _pLiveReloadManager; }
+        ModuleFrameState&   getMutableFrameState() { return _frameState; }
+        ILiveReloadManager* getLiveReloadManager() const { return _pLiveReloadManager; }
         /** @brief 리로드 매니저에 건 콜백의 구독을 이 객체의 수명에 묶습니다(`shutdown` 이 놓는다). */
         void holdReloadSubscription( Subscription subscription ) { _listReloadSubscription.push_back( std::move( subscription ) ); }
         RHI* getRHI() const { return _pRHI; }
@@ -300,14 +302,14 @@ namespace sw
         void restoreGameState();
 
     private:
-        unique_ptr<IModuleCompiler> _moduleCompiler; ///< 개발 잇기(`GameModuleManager.cpp` 의 `SW_WITH_DYNAMIC_MODULES` 구역)가 만든다 — 구현(`LiveReload/ModuleCompiler`)은 배포가 짓지 않는다
+        unique_ptr<IModuleCompiler> _moduleCompiler; ///< 개발 잇기(`SW_WITH_DYNAMIC_MODULES` 구역)가 리로드 매니저에게서 받는다(`ILiveReloadManager::createModuleCompiler`, 구현은 DevTools) — 배포는 nullptr
 
         GameAPI    _gameAPI;
         GameHandle _game;
         /** @brief 게임 모듈에 넘긴 호스트 서비스 범위입니다(`rebindGameService` 가 새로 만든다 — 모듈이 들고 있는 동안 산다). */
         unique_ptr<SubsystemScope> _gameServices;
 
-        LiveReloadManager*   _pLiveReloadManager; // 소유하지 않는다.
+        ILiveReloadManager*  _pLiveReloadManager; // 소유하지 않는다.
         RHI*                 _pRHI;               // 소유하지 않는다.
         IWindow*             _pWindow;            // 소유하지 않는다.
         IEngineRenderDriver* _pRenderDriver;      // 소유하지 않는다.

@@ -592,7 +592,7 @@
             "_why": "정적 등록 항목 — 칸이 없는(상태 없는) 구현 객체다. 정적 등록 틀(RegistrationSlot · RegistrationList 등록자)이 이 객체를 가리키고 이미지와 수명이 같다(언리얼 compiled-in 등록 항목 자리)."
         },
         {
-            "_path": "Source/ModuleManager/Dev/LiveReload/ModuleCallGuard.cpp",
+            "_path": "Source/DevTools/ModuleReload/LiveReload/ModuleCallGuard.cpp",
             "_name": "_s_installDepth",
             "_why": "OS 시그널 바닥 — 모듈 호출 보호의 시그널 처리기 설치 깊이다. 처리기는 문맥 인자 없이 불리고(크래시 처리기와 같은 자리) 바깥 호출이 설치 · 해제한다."
         },

@@ -7,6 +7,8 @@
 #pragma once
 #include "Engine/HostServiceSet.h"
 
+#include "ModuleManager/ModuleManagerAPI.h"
+
 namespace sw
 {
     class CommandLineManager;
@@ -15,7 +17,7 @@ namespace sw
      * @struct HostServiceUtil
      * @brief 호스트 서비스 세우기의 공통 걸음입니다.
      */
-    struct HostServiceUtil
+    struct SW_MODULEMANAGER_API HostServiceUtil
     {
         /**
          * @brief @p listPart 를 의존 순서로 세웁니다(`startHostServices`). 서면 선 순서를 로그로 남기고, 모듈 · 게임이 모두 선 지금까지 가져간 곳이 없는 `-gv_*` 를 경고합니다.

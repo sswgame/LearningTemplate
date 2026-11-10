@@ -1,7 +1,7 @@
 /**
- * @file ModuleManager/Host/Dev/HostDevTools.h
+ * @file DevTools/Host/HostDevTools.h
  * @brief 호스트(App · Server)의 개발 도구 연결 — 개발 도구 호스트(`DevToolsHost`)를 호스트 범위에 더하고, 엔진 기동 확장 · 프레임 훅 · 개발 콘솔을 겁니다.
- * @details 개발 구성에만 있다(`ModuleManager/Dev/` — 배포는 폴더째 짓지 않는다). 호스트는 개발 계층(`IHostDevLayer`)으로 닿고, 같은 순서로 부른다 — `addToHostScope`(호스트 범위를 세울 때) →
+ * @details 개발 도구(DevTools.dll)에만 있다 — 배포는 DevTools 를 짓지 않는다. 호스트는 개발 계층(`IHostDevLayer`)으로 닿고, 같은 순서로 부른다 — `addToHostScope`(호스트 범위를 세울 때) →
  *          `attachFrameHooks`(엔진 기동 뒤) → `startConsole` / `stopConsole`(호스트 서비스, App 만) → `detach`(엔진 종료 앞).
  *          리로드 단축키는 리로드 구동기(`ModuleReloadDriver::pollShellActions`), App 의 백엔드 시험 훅은 `App/Dev/RHIBackendSwitcher` 가 든다.
  */

@@ -2,7 +2,7 @@
     "_comment": "플랫폼 #if 사슬 린트(Scripts/lint/PlatformChains.py)의 예외. 예외가 아닌 곳은 빠진 플랫폼을 컴파일 오류로 낸다.",
     "_exemptPaths": {
         "Source/Editor/": "에디터는 데스크톱 전용 종류다(ModuleCatalog 가 Android · Web 에서 뺀다)",
-        "Source/ModuleManager/Dev/LiveReload/": "핫 리로드는 Dev 데스크톱 전용 기능이다(동적 모듈을 다시 올린다)",
+        "Source/DevTools/ModuleReload/LiveReload/": "핫 리로드는 Dev 데스크톱 전용 기능이다(동적 모듈을 다시 올린다)",
         "Source/Programs/": "쿠커 · 파서는 데스크톱 호스트에서 도는 도구다",
         "Source/Core/Foundation/TargetMacroCheck.h": "매크로 자체를 검사하는 파일이다",
         "Source/Core/Foundation/BuildInfo.h": "매크로 자체를 검사하는 파일이다"

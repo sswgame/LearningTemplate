@@ -2,8 +2,9 @@
 
 #include "ModuleManager/Host/HostDevLayer.h"
 
-#include "ModuleManager/Dev/ModuleReloadDriver.h"
-#include "ModuleManager/Host/Dev/HostDevTools.h"
+#include "DevTools/Host/HostDevTools.h"
+#include "DevTools/ModuleReload/LiveReload/LiveReloadManager.h"
+#include "DevTools/ModuleReload/ModuleReloadDriver.h"
 
 namespace sw
 {
@@ -24,11 +25,11 @@ namespace sw
                 return _moduleReload.initialize( targetMask, host, moduleLibraryHost, outCatalog, outResolution );
             }
 
-            LiveReloadManager* getLiveReloadManager() const override { return _moduleReload.getLiveReloadManager(); }
-            Subscription       addOnBeforeReloadBatch( BeforeReloadBatchDelegate onBeforeBatch ) override { return _moduleReload.addOnBeforeReloadBatch( onBeforeBatch ); }
-            void               requestReload( const utf8* pModuleName ) override { _moduleReload.requestReload( pModuleName ); }
-            void               updateModuleReload() override { _moduleReload.update(); }
-            void               pollShellActions( float32 deltaTime, bool bEnableEditor ) override { _moduleReload.pollShellActions( deltaTime, bEnableEditor ); }
+            ILiveReloadManager* getLiveReloadManager() const override { return _moduleReload.getLiveReloadManager(); }
+            Subscription        addOnBeforeReloadBatch( BeforeReloadBatchDelegate onBeforeBatch ) override { return _moduleReload.addOnBeforeReloadBatch( onBeforeBatch ); }
+            void                requestReload( const utf8* pModuleName ) override { _moduleReload.requestReload( pModuleName ); }
+            void                updateModuleReload() override { _moduleReload.update(); }
+            void                pollShellActions( float32 deltaTime, bool bEnableEditor ) override { _moduleReload.pollShellActions( deltaTime, bEnableEditor ); }
 
             void attachFrameHooks( Engine& engine ) override { _devTools.attachFrameHooks( engine ); }
             void startConsole( bool bEnableEditor ) override { _devTools.startConsole( bEnableEditor ); }
@@ -41,7 +42,7 @@ namespace sw
         };
     } // namespace
 
-    unique_ptr<IHostDevLayer> makeHostDevLayer()
+    SW_HOST_DEV_API unique_ptr<IHostDevLayer> makeHostDevLayer()
     {
         return make_unique<HostDevLayer>();
     }

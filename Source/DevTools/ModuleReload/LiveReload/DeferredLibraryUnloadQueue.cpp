@@ -1,11 +1,11 @@
 #include "pch.h"
 
-#include "ModuleManager/Dev/LiveReload/DeferredLibraryUnloadQueue.h"
+#include "DevTools/ModuleReload/LiveReload/DeferredLibraryUnloadQueue.h"
 
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 
-#include "ModuleManager/Dev/LiveReload/ModuleShadowCopy.h"
+#include "DevTools/ModuleReload/LiveReload/ModuleShadowCopy.h"
 
 namespace sw
 {

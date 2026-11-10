@@ -1,9 +1,11 @@
 #include "pch.h"
 
-#include "ModuleManager/Dev/ModuleReloadDriver.h"
+#include "DevTools/ModuleReload/ModuleReloadDriver.h"
 
 #include "Core/String/formatString.h"
 #include "Core/Subsystem/SubsystemScope.h"
+
+#include "DevTools/ModuleReload/LiveReload/LiveReloadManager.h"
 
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -14,13 +16,12 @@
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Module/ModuleCatalog.h"
 
-#include "ModuleManager/Dev/LiveReload/LiveReloadManager.h"
 #include "ModuleManager/ModuleCatalogLoader.h"
 #include "ModuleManager/ModuleLoaderSubsystem.h"
 
 #include "sw/config/ConfigConstants.h"
 
-// 개발 구성에만 있다(`ModuleManager/Dev/` — 배포는 폴더째 짓지 않는다). 호스트는 개발 계층(`IHostDevLayer`)으로만 닿는다.
+// 개발 도구(DevTools.dll)에만 있다 — 배포는 DevTools 를 짓지 않는다. 호스트는 개발 계층(`IHostDevLayer`)으로만 닿는다.
 namespace sw
 {
     namespace

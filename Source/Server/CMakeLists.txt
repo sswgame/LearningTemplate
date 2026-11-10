@@ -10,7 +10,7 @@ if(SW_TARGET_TYPE STREQUAL "Client")
 	return()
 endif()
 
-# 개발 전용(`Tests/` · `Dev/`)은 배포가 짓지 않는다. 서버 개발 조종(`ModuleManager/Host/ServerDebugControl` — 구현은 `Host/Dev/`)은 `ServerApp` 은 `build::kShipping` 이 아닐 때만 만든다.
+# 개발 전용(`Tests/` · `Dev/`)은 배포가 짓지 않는다. 서버 개발 조종(`ModuleManager/Host/ServerDebugControl` — 구현은 DevTools 의 `Host/`)과 개발 계층은 `ServerApp` 이 `build::kShipping` 이 아닐 때만 만든다.
 if(SW_SHIPPING_BUILD)
 	sw_excludeUnbuiltSources(SERVER_SOURCES ${SW_DEV_ONLY_SOURCE_PATTERNS})
 endif()

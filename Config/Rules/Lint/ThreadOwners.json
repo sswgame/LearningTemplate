@@ -17,7 +17,7 @@
         { "_path": "Source/Core/Network/Connection/NetEndpointThread", "_reason": "연결 하나의 소켓 대기 루프 — OS 에서 막힌다" },
         { "_path": "Source/DevTools/FileWatch/Windows/WindowsFileWatcher", "_reason": "ReadDirectoryChangesW 대기 — OS 에서 막힌다" },
         { "_path": "Source/DevTools/FileWatch/Linux/LinuxFileWatcher", "_reason": "inotify 읽기 대기 — OS 에서 막힌다" },
-        { "_path": "Source/ModuleManager/Dev/LiveReload/ModuleCompiler", "_reason": "빌드 프로세스가 끝나기를 분 단위로 기다린다 — 워커를 그만큼 잡을 수 없다" },
+        { "_path": "Source/DevTools/ModuleReload/LiveReload/ModuleCompiler", "_reason": "빌드 프로세스가 끝나기를 분 단위로 기다린다 — 워커를 그만큼 잡을 수 없다" },
         { "_path": "Source/Editor/Common/Task/EditorExternalToolJob", "_reason": "외부 도구 프로세스가 끝나기를 기다린다 — 워커를 그만큼 잡을 수 없다(머리말)" },
         { "_path": "Source/Editor/Common/Workspace/NetPlay/EditorNetPlaySession", "_reason": "자식 프로세스 출력 파이프의 막히는 읽기 — 프로세스마다 하나" },
         { "_path": "Source/Engine/Renderer/RenderThread", "_reason": "렌더 스레드 — 게임 스레드와 한 프레임 겹쳐 도는 고정 스레드(언리얼 RenderThread)" },

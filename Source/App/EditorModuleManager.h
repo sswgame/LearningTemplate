@@ -34,7 +34,7 @@ namespace sw
         ~EditorModuleManager() override;
 
         /** @brief 매니페스트가 에디터 모듈을 켰는지 기억하고 공통 `GameModuleManager::loadModuleLibraries` 를 부릅니다. */
-        [[nodiscard]] bool loadModuleLibraries( LiveReloadManager* pLiveReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution ) override;
+        [[nodiscard]] bool loadModuleLibraries( ILiveReloadManager* pLiveReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution ) override;
         /**
          * @brief LiveReloadManager 에 콜백을 등록하고 게임과 에디터 인스턴스를 만듭니다(게임 모듈 라이브러리는 `loadModuleLibraries` 가 이미 로드했습니다).
          * @details **게임이 먼저, 에디터가 나중**입니다. 게임이 처음 여는 씬(실행 설정의 시작 씬, 타이틀, 시작 맵)을 요청한 뒤에 에디터가 자기 시작 씬
@@ -45,7 +45,7 @@ namespace sw
          * @param pRenderDriver 렌더러 창구(워커 비우기용)
          * @param bEnableEditor 에디터 모드 여부
          */
-        [[nodiscard]] bool initialize( LiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, IEngineRenderDriver* pRenderDriver, bool bEnableEditor );
+        [[nodiscard]] bool initialize( ILiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, IEngineRenderDriver* pRenderDriver, bool bEnableEditor );
 
         /**
          * @brief 에디터 인스턴스 없이 에디터 모듈만 로드해 @p kind 원본을 임포트하거나 대조합니다(`App --import-textures`, `--import-models` 와 `--check-*`).
@@ -173,7 +173,7 @@ namespace sw
          * @details 개발 구성에만 있다 — 배포는 `initialize` 가 부르지 않고 `-EnableEditor` 면 오류로 멈춘다.
          * @return 매니페스트가 에디터 모듈을 껐거나 등록이 실패하거나 리로드 그래프가 깨졌으면 false 입니다(기동 실패).
          */
-        [[nodiscard]] bool registerEditorModule( LiveReloadManager* pLiveReloadManager );
+        [[nodiscard]] bool registerEditorModule( ILiveReloadManager* pLiveReloadManager );
 
     private:
         EditorAPI                     _editorAPI;
