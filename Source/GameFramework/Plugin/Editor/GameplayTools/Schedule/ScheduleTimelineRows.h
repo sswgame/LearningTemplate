@@ -19,12 +19,12 @@ namespace sw::editor
     /** @brief 타임라인 표의 한 행입니다. */
     struct ScheduleTimelineRow
     {
-        string _time{};     ///< "08:00-12:00"
-        string _travel{};   ///< "07:40 -> 07:55"(이동이 없으면 빈 글)
-        string _place{};    ///< 지역 이름, 없으면 좌표
-        string _activity{}; ///< 활동 이름
-        string _source{};   ///< "Routine 'work'"
-        int32  _segmentIndex{ -1 };
+        string _time{};              ///< "08:00-12:00"
+        string _travel{};            ///< "07:40 -> 07:55"(이동이 없으면 빈 글)
+        string _place{};             ///< 지역 이름, 없으면 좌표
+        string _activity{};          ///< 활동 이름
+        string _source{};            ///< "Routine 'work'"
+        int32  _segmentIndex;        ///< 일정 구간 번호(줄을 만들 때 채운다)
         bool   _bActive{ SW_FALSE }; ///< 미리 보는 시각을 덮는 칸 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool   _bPast{ false };      ///< 계획을 세운 시각보다 앞에 끝난 칸 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };

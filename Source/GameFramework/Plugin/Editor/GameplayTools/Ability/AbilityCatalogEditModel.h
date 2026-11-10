@@ -29,8 +29,8 @@ namespace sw::editor
     /** @brief 항목 하나입니다. */
     struct AbilityCatalogEntry
     {
-        string           _id{};          ///< id(큐는 태그)
-        int32            _element{ -1 }; ///< 원문의 원소 번호(`CatalogXMLText`)
+        string           _id{};    ///< id(큐는 태그)
+        int32            _element; ///< 원문의 원소 번호(`CatalogXMLText`). 읽을 때 채운다
         AbilityEntryKind _kind{ AbilityEntryKind::Effect };
     };
 
@@ -54,7 +54,7 @@ namespace sw::editor
     struct AbilityCatalogIssue
     {
         string _message{};
-        int32  _entry{ -1 };
+        int32  _entry; ///< 문제가 난 항목 번호(만들 때 채운다)
     };
 
     /**
