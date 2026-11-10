@@ -346,6 +346,12 @@ namespace sw
         // 이 스레드에서 스택이 넘쳐도 크래시 리포트가 남게 한다(ThreadCrashStack::initializeCurrentThread 설명).
         ThreadCrashStack::initializeCurrentThread();
         ThreadName::setCurrentThreadName( "Logger" );
+        // 파일 출력은 Warning 이하를 stdio 버퍼에 둔다(줄마다 fflush 하면 느리다). 버퍼가 찰 때까지 디스크에 닿지 않으면, 로그 크기로 자식이 일하는지 보는 감시
+        // (`AutomationPerBackend`)가 드문드문 줄을 내며 일하는 자식(긴 셰이더 컴파일의 진행 줄)을 멈춘 것으로 보고 죽였다. 쉬는 동안 쓴 것이 있으면 간격마다 내보낸다
+        // (언리얼 로그 파일 출력의 주기 flush 와 같은 자리).
+        constexpr int64 kIdleFlushIntervalNanos = constant::time::kNanosecondsPerSecond;
+        bool            bUnflushed              = false;
+        int64           lastFlushNanos          = MonotonicClock::nowNanoseconds();
         while ( _bIsRunning.load( std::memory_order_acquire ) || _queue.empty() == false )
         {
             LogRecord record;
@@ -354,6 +360,13 @@ namespace sw
             {
                 bProcessedAny = true;
                 dispatchToOutputs( record );
+            }
+            bUnflushed = bUnflushed || bProcessedAny;
+            if ( bUnflushed && MonotonicClock::nowNanoseconds() - lastFlushNanos >= kIdleFlushIntervalNanos )
+            {
+                flushOutputs();
+                bUnflushed     = false;
+                lastFlushNanos = MonotonicClock::nowNanoseconds();
             }
 
             if ( bProcessedAny == false && _bIsRunning.load( std::memory_order_acquire ) )
@@ -368,6 +381,16 @@ namespace sw
                 } );
                 _bWorkerSleeping.store( false, std::memory_order_relaxed );
             }
+        }
+    }
+
+    void AsyncLogSink::flushOutputs()
+    {
+        ILogOutput*  arrDevice[_s_kMaxOutput]{};
+        const uint32 deviceCount = snapshotOutputs( arrDevice );
+        for ( uint32 index = 0; index < deviceCount; ++index )
+        {
+            arrDevice[index]->flushWithoutWaiting();
         }
     }
 

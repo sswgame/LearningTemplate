@@ -3,6 +3,7 @@
  * @brief 시나리오 실행의 벽시계 시한들과 그 대소 관계입니다 — 서로 겹치지 않게 한 곳에서 못 박습니다.
  */
 #pragma once
+#include "Core/Diagnostics/ScopedProgressReport.h"
 #include "Core/Foundation/Types.h"
 
 namespace sw
@@ -24,7 +25,9 @@ namespace sw
         static constexpr float32 kHangGraceSeconds          = 5.0f;
         static constexpr float64 kClockHoldTimeoutSeconds   = 170.0;
         static constexpr uint32  kProcessStallSeconds       = 180;
-        static constexpr uint32  kProcessKillSeconds        = 540;
+        // 한 호출이 정지 시한보다 긴 일(캐시 미스 셰이더 컴파일 · 드라이버 프로그램 링크)은 `ScopedProgressReport` 가 간격마다 줄을 남겨 로그를 자라게 한다.
+        static_assert( ScopedProgressReport::kIntervalSeconds * 2 <= kProcessStallSeconds, "progress lines must arrive well inside the stall limit" );
+        static constexpr uint32 kProcessKillSeconds = 540;
         /**
          * @brief 단계 · 시계 잡기 조건이 이만큼(초) 넘게 기다리면 무엇을 기다리는지 로그에 찍고, 그 뒤로 `kWaitReportIntervalSeconds` 마다 다시 찍습니다.
          * @details 끝날 때만 까닭을 찍으면 끝나지 않는 대기는 창이 멈춘 듯 아무것도 남기지 않는다(사용자 지적 2026-11-08). 짧은 대기(에셋 한 프레임)는 찍지 않는다.
