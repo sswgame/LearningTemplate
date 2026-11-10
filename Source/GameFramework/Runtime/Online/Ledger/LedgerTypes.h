@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -195,7 +196,7 @@ namespace sw
         vector<HolderBalance> _listHolderBalance{};
         string                _journalKey{};
         int64                 _timeMs{ 0 };
-        int32                 _failedPostingIndex{ constant::invalid_index::kInt32 };
+        optional<int32>       _failedPostingIndex; ///< 거절한 다리 번호(다리 하나를 가리킬 수 없으면 비어 있다)
         LedgerResult          _result{ LedgerResult::Invalid };
         uint8                 _bReplayed{ SW_FALSE };
 

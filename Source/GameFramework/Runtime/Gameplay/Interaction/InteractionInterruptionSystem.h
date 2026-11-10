@@ -63,7 +63,7 @@ namespace sw
         struct Active
         {
             uint64 _targetObjectID{ 0 };
-            int32  _npcIndex{ constant::invalid_index::kInt32 };
+            int32  _npcIndex; ///< 쌓을 때 채운다(`resolveNPC` 가 찾은 NPC)
         };
 
         [[nodiscard]] optional<int32> resolveNPC( const GameObject& target ) const;

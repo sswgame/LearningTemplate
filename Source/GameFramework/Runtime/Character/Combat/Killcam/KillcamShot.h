@@ -124,8 +124,8 @@ namespace sw
     {
         float3       _position{};
         float3       _lookAt{};
-        float3       _bullet{};                                    ///< 연출 속 탄의 자리
-        int32        _hitIndex{ constant::invalid_index::kInt32 }; ///< 멈춘(또는 다음) 명중 번호
+        float3       _bullet{}; ///< 연출 속 탄의 자리
+        int32        _hitIndex; ///< 멈춘(또는 다음) 명중 번호. 자세를 만들 때 채운다(`KillcamShot::sample`)
         KillcamPhase _phase{ KillcamPhase::Follow };
     };
 
