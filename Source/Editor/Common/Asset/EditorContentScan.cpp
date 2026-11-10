@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/Commands/Asset/EditorContentScan.h"
+#include "Editor/Common/Asset/EditorContentScan.h"
 
 #include "Core/File/FileUtil.h"
 

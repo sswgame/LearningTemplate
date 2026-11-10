@@ -9,7 +9,7 @@
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Editor/Common/Commands/Asset/EditorContentScan.h"
+#include "Editor/Common/Asset/EditorContentScan.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Serialization/Inherit/DataInheritance.h"

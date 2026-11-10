@@ -12,7 +12,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
-#include "Editor/Common/Commands/Asset/EditorContentScan.h"
+#include "Editor/Common/Asset/EditorContentScan.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Localization/PortableObjectFile.h"
 #include "Editor/Common/Localization/TranslationMemory.h"

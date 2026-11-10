@@ -8,7 +8,7 @@
 #include "Core/String/fixed_string.h"
 #include "Core/Testing/TestRunner.h"
 
-#include "Editor/Common/Commands/Asset/EditorContentScan.h"
+#include "Editor/Common/Asset/EditorContentScan.h"
 #include "Editor/Common/EditorExtensionRegistry.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"

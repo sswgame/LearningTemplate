@@ -14,7 +14,7 @@
 #include "Core/File/ProcessRoots.h"
 #include "Core/Log/Logger.h"
 
-#include "Editor/Common/Commands/Asset/EditorContentScan.h"
+#include "Editor/Common/Asset/EditorContentScan.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Asset/Reference/AssetReferenceFields.h"

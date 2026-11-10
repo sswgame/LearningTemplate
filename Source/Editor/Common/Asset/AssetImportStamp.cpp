@@ -16,7 +16,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Task/TaskManager.h"
 
-#include "Editor/Common/Commands/Asset/EditorContentScan.h"
+#include "Editor/Common/Asset/EditorContentScan.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 namespace sw::editor

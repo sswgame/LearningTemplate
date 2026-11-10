@@ -13,8 +13,8 @@
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Asset/AssetImportStamp.h"
+#include "Editor/Common/Asset/EditorContentScan.h"
 #include "Editor/Common/Asset/Model/ModelImportUtil.h"
-#include "Editor/Common/Commands/Asset/EditorContentScan.h"
 
 namespace sw::editor
 {

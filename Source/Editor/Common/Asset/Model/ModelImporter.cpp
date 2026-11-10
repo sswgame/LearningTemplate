@@ -22,6 +22,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Editor/Common/Asset/AssetImportStamp.h"
+#include "Editor/Common/Asset/EditorContentScan.h"
 #include "Editor/Common/Asset/ImportedAssetStore.h"
 #include "Editor/Common/Asset/Model/MeshFracture.h"
 #include "Editor/Common/Asset/Model/ModelImportAnimation.h"
@@ -32,7 +33,6 @@
 #include "Editor/Common/Asset/Model/ModelImportVrm.h"
 #include "Editor/Common/Asset/Model/ToonMaterialDef.h"
 #include "Editor/Common/Asset/Texture/TextureImporter.h"
-#include "Editor/Common/Commands/Asset/EditorContentScan.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Animation/AnimationClip.h"

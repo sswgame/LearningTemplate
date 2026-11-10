@@ -50,7 +50,7 @@
         "Source/Editor/Common/Commands/Diagnostics/EditorTracyLauncher.cpp": "엔진이 아닌 도구(Tracy 프로파일러)다"
     },
     "editorContentScan": {
-        "Source/Editor/Common/Commands/Asset/EditorContentScan.cpp|folder": "입구 자신이다(훑은 뒤 남의 시나리오 사본을 뺀다)",
+        "Source/Editor/Common/Asset/EditorContentScan.cpp|folder": "입구 자신이다(훑은 뒤 남의 시나리오 사본을 뺀다)",
         "Source/Editor/Common/Commands/EditorBackgroundIO.cpp|input._folder": "프리셋 폴더 하나(인스펙터 · 전역 변수 프리셋, 재귀 아님)를 훑는 일반 잡이다 — 트리를 걷지 않는다. 리소스 트리를 훑는 곳은 EditorContentScan 을 쓴다",
         "Source/Editor/Common/Commands/Scene/EditorAutosaveCommands.cpp|folder": "자동 저장 칸(Saved 아래)이다 — 리소스 트리 밖",
         "Source/Editor/Common/Commands/Scene/EditorAutosaveCommands.cpp|getFolder()": "자동 저장 칸(Saved 아래)이다 — 리소스 트리 밖",

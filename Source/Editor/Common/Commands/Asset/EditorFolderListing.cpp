@@ -6,7 +6,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/File/FileUtil.h"
 
-#include "Editor/Common/Commands/Asset/EditorContentScan.h"
+#include "Editor/Common/Asset/EditorContentScan.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 
