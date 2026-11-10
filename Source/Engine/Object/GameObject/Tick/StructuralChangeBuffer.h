@@ -68,11 +68,16 @@ namespace sw
             Callback _callback;
         };
 
-        vector<unique_ptr<LockedSwapQueue<KeyedCallback>>> _listSlot;                     ///< 스레드 슬롯마다의 큐(잠금이 옮겨지지 않게 하나씩 잡는다). 끝 칸이 넘침 큐다
-        atomic<uint64>                                     _sequence;                     ///< 넣은 순번(전역 — 틱 밖 일의 시간 순)
-        ThreadRole                                         _flushThread;                  ///< 비우는 스레드 역할 — 꺼내 온 목록은 drain 을 도는 스레드만 만진다(잠금이 아니라 분석용 능력)
-        vector<KeyedCallback> _listTaken                   SW_GUARDED_BY( _flushThread ); ///< 슬롯 하나에서 맞바꿔 온 일(비우는 스레드만)
-        vector<KeyedCallback> _listProcessing              SW_GUARDED_BY( _flushThread ); ///< 비우는 중인 일(비우는 스레드만)
+        /** @brief 스레드 슬롯 수만큼의 큐를 만듭니다(만들 때 한 번 — 넣는 스레드가 도는 동안 목록이 바뀌지 않는다). */
+        static vector<unique_ptr<LockedSwapQueue<KeyedCallback>>> makeSlotList();
+
+        /// 스레드 슬롯마다의 큐(잠금이 옮겨지지 않게 하나씩 잡는다). 끝 칸이 넘침 큐다.
+        /// const 목록이라 여러 스레드가 동시에 칸을 찾아도 읽기다 — 쓰기 접근(`operator[]`)은 경합 검출기가 한 칸씩이 아니라 목록 전체의 쓰기로 본다.
+        const vector<unique_ptr<LockedSwapQueue<KeyedCallback>>> _listSlot;
+        atomic<uint64>                                           _sequence;                     ///< 넣은 순번(전역 — 틱 밖 일의 시간 순)
+        ThreadRole                                               _flushThread;                  ///< 비우는 스레드 역할 — 꺼내 온 목록은 drain 을 도는 스레드만 만진다(잠금이 아니라 분석용 능력)
+        vector<KeyedCallback> _listTaken                         SW_GUARDED_BY( _flushThread ); ///< 슬롯 하나에서 맞바꿔 온 일(비우는 스레드만)
+        vector<KeyedCallback> _listProcessing                    SW_GUARDED_BY( _flushThread ); ///< 비우는 중인 일(비우는 스레드만)
     };
 } // namespace sw
 

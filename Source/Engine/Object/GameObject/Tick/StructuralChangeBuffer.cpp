@@ -19,19 +19,25 @@
 // DeferredDelegateQueue
 namespace sw
 {
+    vector<unique_ptr<LockedSwapQueue<DeferredDelegateQueue::KeyedCallback>>> DeferredDelegateQueue::makeSlotList()
+    {
+        // 서비스가 없으면(엔진 없는 테스트) 슬롯 하나 + 넘침이다.
+        const uint32                                       slotCount = engine::getParallelScratchSlotCount() + 1;
+        vector<unique_ptr<LockedSwapQueue<KeyedCallback>>> listSlot;
+        listSlot.reserve( slotCount );
+        for ( uint32 slot = 0; slot < slotCount; ++slot )
+        {
+            listSlot.push_back( make_unique<LockedSwapQueue<KeyedCallback>>() );
+        }
+        return listSlot;
+    }
+
     DeferredDelegateQueue::DeferredDelegateQueue()
-        : _listSlot{}
+        : _listSlot{ makeSlotList() }
         , _sequence{ 0 }
         , _listTaken{}
         , _listProcessing{}
     {
-        // 슬롯 수는 만들 때 한 번 정한다(넣는 스레드가 도는 동안 바뀌지 않게). 서비스가 없으면(엔진 없는 테스트) 슬롯 하나 + 넘침이다.
-        const uint32 slotCount = engine::getParallelScratchSlotCount() + 1;
-        _listSlot.reserve( slotCount );
-        for ( uint32 slot = 0; slot < slotCount; ++slot )
-        {
-            _listSlot.push_back( make_unique<LockedSwapQueue<KeyedCallback>>() );
-        }
         _listProcessing.reserve( 128 );
     }
 
