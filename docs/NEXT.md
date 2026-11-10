@@ -73,7 +73,7 @@ GameObject/Component API 는 저작 · 수명 · 직렬화 층, 프레임 일은
 
 - **T3:** 샤드 시간 균형, 파이프라인 정의로. 외부 CI 러너는 사용자 결정.
 - **U1 햅틱:** 방아쇠 진동(DualSense · GameInput) · Android Vibrator 는 그 백엔드가 생길 때.
-- **A1 포즈 노드 평가 잇기:** BlendPoses · Mirror · Montage 는 등록 · 로드 · 단위 테스트까지다. `SkeletalAnimatorComponent::rebuildNodePlayables` 가 아직 포즈 노드 상태를 오류로 거른다 — `AnimationPoseNodeSet` 을 플레이어 클립 풀이로 걸고, 평가에 스켈레톤과 옆 미러 표(`SkeletonMirrorTable`, 공유 캐시 · 에셋 종류 등록)의 본 표를 넘긴다. 에디터 그래프 패널은 노드 종류 메뉴가 없어(이름 = 클립 상태만 더한다) 등록만으로는 뜨지 않는다 — `AnimationPoseNodeRegistry::getTypeNames` 로 더하기 메뉴를 만든다.
+- **A1 포즈 노드 남은 것:** 평가 · 미러 표 에셋 · 에디터 메뉴 · 칸은 이어졌다(통합에서 단위 테스트 `AnimationPoseNodeTest.*` 와 시나리오 `game.empty.animmirror` 를 처음 돌린다). 남은 것: 포즈 노드가 루트 모션 · 커브 · 알림을 내지 않는다(`computePlayableRootMotion` · `accumulatePlayableCurves` 의 shortcut — 몽타주가 입력 걸음을 옮겨 내게), 같은 상태가 현재 · 다음 칸에 함께 있으면 몽타주 인스턴스 하나가 두 시각을 받아 처음부터 다시 걷는다.
 
 ### 6. 리소스
 

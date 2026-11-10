@@ -20,6 +20,10 @@ Content/**/textures/**
 !Content/game/empty/textures/twod/
 !Content/game/empty/textures/twod/**
 Content/**/models/**
+# 임포트 폴더 옆에 손으로 쓰는 스켈레톤 곁 파일(본 LOD · 미러 표)은 추적한다 — 임포트가 다시 쓰지 않는다(Skeleton::makeSidePath).
+!Content/**/models/**/
+!Content/**/models/**/*.bonelod.xml
+!Content/**/models/**/*.mirrortable.xml
 Content/**/heightfields/**
 !Content/game/empty/heightfields/valley.layerweights
 Content/**/*_raw/import.stamp

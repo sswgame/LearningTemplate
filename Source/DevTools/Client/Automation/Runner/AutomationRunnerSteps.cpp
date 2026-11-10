@@ -173,11 +173,16 @@ namespace sw
                 const expected<void> reference = validateWatchReference( step );
                 if ( reference.has_value() == false )
                     return reference;
-                if ( countComparisons( step, { "equals", "near", "atLeast", "atMost", "is", "sameAs", "differsFrom" } ) == false )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "needs exactly one of equals · near · atLeast · atMost · is · sameAs · differsFrom" } );
+                if ( countComparisons( step, { "equals", "near", "atLeast", "atMost", "is", "sameAs", "differsFrom", "oppositeOf" } ) == false )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "needs exactly one of equals · near · atLeast · atMost · is · sameAs · differsFrom · oppositeOf" } );
                 const bool bTextRule = step.findAttribute( "is" ) != nullptr || step.findAttribute( "sameAs" ) != nullptr || step.findAttribute( "differsFrom" ) != nullptr;
                 if ( bTextRule )
                     return {};
+                if ( step.findAttribute( "oppositeOf" ) != nullptr )
+                {
+                    float32 tolerance = AutomationStepArgsUtil::kWatchNearTolerance;
+                    return AutomationStepArgsUtil::readFloat( step, "tolerance", tolerance ); // 기억한 수는 실행 때 본다
+                }
                 const expected<AutomationStepArgsUtil::NumberComparison> comparison = AutomationStepArgsUtil::parseNumberComparison( step, AutomationStepArgsUtil::kWatchNearTolerance );
                 if ( comparison.has_value() == false )
                     return unexpected( comparison.error() );

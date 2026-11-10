@@ -1,0 +1,23 @@
+<!-- KayKit 기사 스켈레톤의 좌우 본 짝(포즈 노드 Mirror — SkeletonMirrorTable). 임포트 폴더(knight/) 밖이라 다시 임포트해도 지워지지 않는다. 표에 없는 본(root · hips · spine · chest · head)은 자기 자신이다. -->
+<SkeletonMirrorTable>
+	<_listPair>
+		<SkeletonMirrorPair _bone="upperarm.l" _mirroredBone="upperarm.r" />
+		<SkeletonMirrorPair _bone="lowerarm.l" _mirroredBone="lowerarm.r" />
+		<SkeletonMirrorPair _bone="wrist.l" _mirroredBone="wrist.r" />
+		<SkeletonMirrorPair _bone="hand.l" _mirroredBone="hand.r" />
+		<SkeletonMirrorPair _bone="handslot.l" _mirroredBone="handslot.r" />
+		<SkeletonMirrorPair _bone="upperleg.l" _mirroredBone="upperleg.r" />
+		<SkeletonMirrorPair _bone="lowerleg.l" _mirroredBone="lowerleg.r" />
+		<SkeletonMirrorPair _bone="foot.l" _mirroredBone="foot.r" />
+		<SkeletonMirrorPair _bone="toes.l" _mirroredBone="toes.r" />
+		<SkeletonMirrorPair _bone="kneeIK.l" _mirroredBone="kneeIK.r" />
+		<SkeletonMirrorPair _bone="control-toe-roll.l" _mirroredBone="control-toe-roll.r" />
+		<SkeletonMirrorPair _bone="control-heel-roll.l" _mirroredBone="control-heel-roll.r" />
+		<SkeletonMirrorPair _bone="control-foot-roll.l" _mirroredBone="control-foot-roll.r" />
+		<SkeletonMirrorPair _bone="heelIK.l" _mirroredBone="heelIK.r" />
+		<SkeletonMirrorPair _bone="IK-foot.l" _mirroredBone="IK-foot.r" />
+		<SkeletonMirrorPair _bone="IK-toe.l" _mirroredBone="IK-toe.r" />
+		<SkeletonMirrorPair _bone="elbowIK.l" _mirroredBone="elbowIK.r" />
+		<SkeletonMirrorPair _bone="handIK.l" _mirroredBone="handIK.r" />
+	</_listPair>
+</SkeletonMirrorTable>

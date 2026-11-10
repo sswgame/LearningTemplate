@@ -1,0 +1,115 @@
+<Scene formatVersion="2" name="animmirror">
+	<!-- 시나리오 automation/animmirror 의 무대 — 같은 자리 · 같은 그래프의 기사 둘이 같은 프레임에 조준 상태와 그 미러 상태(포즈 노드 Mirror)를 시작한다. 겹쳐 서도 본 값만 읽는다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,1.0,-3.4"
+					                 _localRotation="0.05,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _fovY="0.7"
+					                 _nearZ="0.1"
+					                 _farZ="100"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,0,0"
+					                           _localRotation="0.628882,0.93002,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachComponent="None"
+					                           _color="1,0.96,0.9"
+					                           _intensity="1.2"
+					                           _ambient="0.3"
+					                           _shadowExtent="8"
+					                           _shadowDistance="20"
+					                           _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="KnightAim">
+			<GameObject _schemaVersion="0" _name="KnightAim" _bActive="true">
+				<_listComponent>
+					<SkeletalMeshComponent _componentName="SkeletalMeshComponent"
+					                       _bActive="true"
+					                       _localPosition="0,0,0"
+					                       _localRotation="0,3.1415927,0"
+					                       _localScale="1,1,1"
+					                       _attachOwner="None"
+					                       _attachOwnerID="0"
+					                       _attachComponent="None"
+					                       _meshID="common/models/kaykit/knight.mesh"
+					                       _materialPath="common/materials/kaykit_knight.material"
+					                       _boundsRadius="2"
+					                       _gpuSpinSeed="0"
+					                       _bVisible="true"
+					                       _skeletonPath="common/models/kaykit/knight/knight.skeleton.xml"
+					                       _updateRateDivisor="1"
+					                       _bFollowParentPose="false"
+					                       _bAnimateWhenOffscreen="false" />
+					<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
+					                           _bActive="true"
+					                           _animationGraphPath="game/empty/data/anim/animvariant_base.animgraph.xml"
+					                           _animationSetPath="common/models/kaykit/knight/knight.animset.xml"
+					                           _initialState="1h_ranged_aiming"
+					                           _currentState=""
+					                           _stateTime="0"
+					                           _playRate="1"
+					                           _blendSeconds="0.2"
+					                           _syncGroup=""
+					                           _syncWeight="1"
+					                           _bExtractRootMotion="false"
+					                           _bPlayOnBegin="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="KnightMirrored">
+			<GameObject _schemaVersion="0" _name="KnightMirrored" _bActive="true">
+				<_listComponent>
+					<SkeletalMeshComponent _componentName="SkeletalMeshComponent"
+					                       _bActive="true"
+					                       _localPosition="0,0,0"
+					                       _localRotation="0,3.1415927,0"
+					                       _localScale="1,1,1"
+					                       _attachOwner="None"
+					                       _attachOwnerID="0"
+					                       _attachComponent="None"
+					                       _meshID="common/models/kaykit/knight.mesh"
+					                       _materialPath="common/materials/kaykit_knight.material"
+					                       _boundsRadius="2"
+					                       _gpuSpinSeed="0"
+					                       _bVisible="true"
+					                       _skeletonPath="common/models/kaykit/knight/knight.skeleton.xml"
+					                       _updateRateDivisor="1"
+					                       _bFollowParentPose="false"
+					                       _bAnimateWhenOffscreen="false" />
+					<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
+					                           _bActive="true"
+					                           _animationGraphPath="game/empty/data/anim/animvariant_base.animgraph.xml"
+					                           _animationSetPath="common/models/kaykit/knight/knight.animset.xml"
+					                           _initialState="AimMirrored"
+					                           _currentState=""
+					                           _stateTime="0"
+					                           _playRate="1"
+					                           _blendSeconds="0.2"
+					                           _syncGroup=""
+					                           _syncWeight="1"
+					                           _bExtractRootMotion="false"
+					                           _bPlayOnBegin="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>
