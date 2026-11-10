@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  장르 수직 슬라이스(G1) — 시작 → 목표(talk.scenario.xml 의 단계 그대로) → 결과 → 저장 · 복원 해시 동일.
+  목표 단계는 그 시나리오가 정본이다 — 거기를 고치면 이 파일도 맞춘다. 저장 슬롯은 pixeltown/slice.
+-->
+<Scenario name="game.pixeltown.slice" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="ScenePlaying" input="exclusive">
+	<Wait frames="1"/>
+	<Expect watch="Town.HeroTileX" equals="7"/>
+	<Expect watch="Town.HeroTileY" equals="7"/>
+	<!-- 위로 두 칸, 셋째 칸은 집 벽이라 서서 위를 본다(3 = 위). -->
+	<Wait frames="1"/>
+	<Tap slot="Key.W" hold="2"/>
+	<Wait frames="19"/>
+	<Tap slot="Key.W" hold="2"/>
+	<Wait frames="19"/>
+	<Expect watch="Town.HeroTileY" equals="5"/>
+	<Wait frames="1"/>
+	<Tap slot="Key.W" hold="2"/>
+	<Wait frames="19"/>
+	<Expect watch="Town.HeroTileY" equals="5"/>
+	<Expect watch="Town.HeroFacing" equals="3"/>
+	<!-- 길로 내려와 오른쪽 다섯 칸. -->
+	<Wait frames="1"/>
+	<Tap slot="Key.S" hold="2"/>
+	<Wait frames="19"/>
+	<Tap slot="Key.S" hold="2"/>
+	<Wait frames="21"/>
+	<Tap slot="Key.D" hold="2"/>
+	<Wait frames="19"/>
+	<Tap slot="Key.D" hold="2"/>
+	<Wait frames="19"/>
+	<Tap slot="Key.D" hold="2"/>
+	<Wait frames="19"/>
+	<Tap slot="Key.D" hold="2"/>
+	<Wait frames="19"/>
+	<Tap slot="Key.D" hold="2"/>
+	<Wait frames="19"/>
+	<Expect watch="Town.HeroTileX" equals="12"/>
+	<Expect watch="Town.HeroTileY" equals="7"/>
+	<!-- 위는 촌장이 선 칸이라 막히고 위를 본다. -->
+	<Wait frames="1"/>
+	<Tap slot="Key.W" hold="2"/>
+	<Wait frames="19"/>
+	<Expect watch="Town.HeroTileY" equals="7"/>
+	<Expect watch="Town.HeroFacing" equals="3"/>
+	<Expect watch="Town.Talking" equals="0"/>
+	<!-- 말을 건다 — 첫 줄. -->
+	<Wait frames="1"/>
+	<Tap slot="Key.Space" hold="1"/>
+	<WaitUntil watch="Town.Talking" equals="1" timeoutFrames="30"/>
+	<Expect watch="Town.ShownLines" equals="1"/>
+	<!-- 자막의 화자는 그래프 화자 목록(id 1 → Elder)에서 푼 이름이다 — 노드는 화자를 id 로 가리킨다. -->
+	<WaitUntil watch="UI.SubtitleSpeaker" is="Elder" timeoutFrames="10"/>
+	<!-- 대화 중에는 걷지 않는다. -->
+	<Wait frames="1"/>
+	<Tap slot="Key.D" hold="2"/>
+	<Wait frames="19"/>
+	<Expect watch="Town.HeroTileX" equals="12"/>
+	<!-- 둘째 줄, 그리고 끝. -->
+	<Wait frames="1"/>
+	<Tap slot="Key.Space" hold="1"/>
+	<WaitUntil watch="Town.ShownLines" equals="2" timeoutFrames="30"/>
+	<Expect watch="Town.Talking" equals="1"/>
+	<Wait frames="1"/>
+	<Tap slot="Key.Space" hold="1"/>
+	<WaitUntil watch="Town.Talking" equals="0" timeoutFrames="30"/>
+	<Expect watch="Town.FinishedTalks" equals="1"/>
+	<!-- 대화가 끝나면 다시 걷는다. -->
+	<Wait frames="1"/>
+	<Tap slot="Key.D" hold="2"/>
+	<WaitUntil watch="Town.HeroTileX" equals="13" timeoutFrames="30"/>
+	<!-- 저장 → 세계를 더 돌림 → 두 번 복원: 같은 슬롯을 두 번 불러온 직후의 씬 상태 해시가 같아야 한다(복원이 세계를 다 되살린다 — 저장 순간의 해시와 견주면 명령이 도는 프레임만큼 흔들린다) -->
+	<Wait frames="1"/>
+	<DevCommand line="game.save pixeltown/slice"/>
+	<WaitUntil watch="Save.Written" atLeast="1" timeoutWallSeconds="10"/>
+	<Wait seconds="1"/>
+	<DevCommand line="game.load pixeltown/slice"/>
+	<WaitUntil watch="Save.Loaded" atLeast="1" timeoutWallSeconds="10"/>
+	<RecordStateHash key="restored"/>
+	<Wait seconds="1"/>
+	<DevCommand line="game.load pixeltown/slice"/>
+	<WaitUntil watch="Save.Loaded" atLeast="2" timeoutWallSeconds="10"/>
+	<ExpectStateHash key="restored"/>
+	<Pass/>
+</Scenario>

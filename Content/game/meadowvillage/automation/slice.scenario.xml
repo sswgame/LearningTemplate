@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  장르 수직 슬라이스(G1) — 시작 → 목표(day.scenario.xml 의 단계 그대로) → 결과 → 저장 · 복원 해시 동일.
+  목표 단계는 그 시나리오가 정본이다 — 거기를 고치면 이 파일도 맞춘다. 저장 슬롯은 meadowvillage/slice.
+-->
+<Scenario name="game.meadowvillage.slice" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="ScenePlaying" input="exclusive">
+	<Variable name="gv_meadowAutoPlay" value="0"/>
+	<Wait frames="1"/>
+	<Expect watch="Clock.Day" equals="0"/>
+	<Expect watch="Clock.Hour" near="6" tolerance="0.2"/>
+	<Expect watch="Session.Money" equals="20"/>
+	<Wait frames="1"/>
+	<AdvanceGameTime hours="24"/>
+	<Wait frames="2"/>
+	<Expect watch="Clock.Day" equals="1"/>
+	<Wait frames="1"/>
+	<AdvanceGameTime hours="24"/>
+	<Wait frames="2"/>
+	<AdvanceGameTime hours="24"/>
+	<Wait frames="2"/>
+	<AdvanceGameTime hours="24"/>
+	<Wait frames="2"/>
+	<AdvanceGameTime hours="24"/>
+	<Wait frames="2"/>
+	<AdvanceGameTime hours="24"/>
+	<Wait frames="2"/>
+	<AdvanceGameTime hours="24"/>
+	<Wait frames="2"/>
+	<AdvanceGameTime hours="24"/>
+	<Wait frames="2"/>
+	<Expect watch="Clock.Day" equals="8"/>
+	<WaitUntil watch="Quest.Status" target="meadow_request" is="Completed" timeoutFrames="30"/>
+	<ExpectVisited watch="Quest.Status" target="meadow_request" sequence="NotStarted, Active, Completed"/>
+	<Record watch="Session.Money"/>
+	<Record watch="Clock.Day"/>
+	<!-- 저장 → 세계를 더 돌림 → 두 번 복원: 같은 슬롯을 두 번 불러온 직후의 씬 상태 해시가 같아야 한다(복원이 세계를 다 되살린다 — 저장 순간의 해시와 견주면 명령이 도는 프레임만큼 흔들린다) -->
+	<Wait frames="1"/>
+	<DevCommand line="game.save meadowvillage/slice"/>
+	<WaitUntil watch="Save.Written" atLeast="1" timeoutWallSeconds="10"/>
+	<Wait seconds="1"/>
+	<DevCommand line="game.load meadowvillage/slice"/>
+	<WaitUntil watch="Save.Loaded" atLeast="1" timeoutWallSeconds="10"/>
+	<RecordStateHash key="restored"/>
+	<Wait seconds="1"/>
+	<DevCommand line="game.load meadowvillage/slice"/>
+	<WaitUntil watch="Save.Loaded" atLeast="2" timeoutWallSeconds="10"/>
+	<ExpectStateHash key="restored"/>
+	<Pass/>
+</Scenario>

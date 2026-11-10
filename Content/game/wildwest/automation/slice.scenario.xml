@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  장르 수직 슬라이스(G1) — 시작 → 목표(outlaw.scenario.xml 의 단계 그대로) → 결과 → 저장 · 복원 해시 동일.
+  목표 단계는 그 시나리오가 정본이다 — 거기를 고치면 이 파일도 맞춘다. 저장 슬롯은 wildwest/slice.
+-->
+<Scenario name="game.wildwest.slice" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="ScenePlaying" input="exclusive">
+	<Variable name="gv_wildWestAutoPlay" value="0"/>
+	<WaitUntil watch="Pawn.Controller" target="Player" is="PlayerController" timeoutFrames="60"/>
+	<Expect watch="WildWest.OutlawStatus" target="Ranch" is=""/>
+	<Expect watch="Western.Honor" target="Ranch" equals="0"/>
+	<Expect watch="Western.Money" target="Ranch" equals="20"/>
+	<!-- 절도: 점원이 금고 쪽을 보고 있다 -->
+	<DevCommand line="teleport Player 44 0.05 1.5"/>
+	<Wait frames="3"/>
+	<Tap slot="Key.G" hold="1"/>
+	<WaitUntil watch="Western.Honor" target="Ranch" equals="-20" timeoutFrames="30"/>
+	<Expect watch="Western.PendingReports" target="Ranch" equals="1"/>
+	<WaitUntil watch="Western.Bounty" target="Ranch" equals="25" timeoutFrames="120"/>
+	<Expect watch="Western.Wanted" target="Ranch" equals="1"/>
+	<Expect watch="WildWest.OutlawStatus" target="Ranch" is="Honor -20 (Neutral) - Wanted 1 - Bounty $25 - $20"/>
+	<!-- 한 번 턴 금고는 다시 고르지 않는다 -->
+	<Wait frames="1"/>
+	<Tap slot="Key.G" hold="1"/>
+	<Wait frames="5"/>
+	<Expect watch="Western.Honor" target="Ranch" equals="-20"/>
+	<!-- 보안관(X 70)이 안 보는 동안 수배가 식는다 -->
+	<WaitUntil watch="Western.Wanted" target="Ranch" equals="0" timeoutFrames="240"/>
+	<Expect watch="Western.Bounty" target="Ranch" equals="25"/>
+	<!-- 낯선 이 돕기 -->
+	<DevCommand line="teleport Player 52 0.05 1.5"/>
+	<Wait frames="3"/>
+	<Tap slot="Key.G" hold="1"/>
+	<WaitUntil watch="Western.Honor" target="Ranch" equals="5" timeoutFrames="30"/>
+	<!-- 사냥 → 가죽 → 팔기: 알맞은 무기 · 머리 · 한 발이라 3 성, 30 달러 -->
+	<DevCommand line="teleport Player 60 0.05 11"/>
+	<Wait frames="3"/>
+	<Tap slot="Key.G" hold="1"/>
+	<WaitUntil watch="Western.Carcasses" target="Ranch" equals="1" timeoutFrames="30"/>
+	<WaitUntil watch="Object.Property" target="Deer" key="WesternDeedComponent._useCount" equals="1" timeoutFrames="30"/>
+	<DevCommand line="teleport Player 60 0.05 17"/>
+	<Wait frames="3"/>
+	<Tap slot="Key.G" hold="1"/>
+	<WaitUntil watch="Western.Pelts" target="Ranch" equals="1" timeoutFrames="30"/>
+	<Expect watch="Western.Carcasses" target="Ranch" equals="0"/>
+	<DevCommand line="teleport Player 60 0.05 23"/>
+	<Wait frames="3"/>
+	<Tap slot="Key.G" hold="1"/>
+	<WaitUntil watch="Western.Money" target="Ranch" equals="50" timeoutFrames="30"/>
+	<Expect watch="Western.Pelts" target="Ranch" equals="0"/>
+	<!-- 현상금 내기 -->
+	<DevCommand line="teleport Player 70 0.05 1.5"/>
+	<Wait frames="3"/>
+	<Tap slot="Key.G" hold="1"/>
+	<WaitUntil watch="Western.Bounty" target="Ranch" equals="0" timeoutFrames="30"/>
+	<Expect watch="Western.Money" target="Ranch" equals="25"/>
+	<Expect watch="WildWest.OutlawStatus" target="Ranch" is="Honor 5 (Neutral) - $25"/>
+	<!-- 하루가 흐르면 코어가 준다(시간당 1.5). 스태미나 코어를 본다 — 체력 코어는 날씨(추위)에 따라 더 줄어 값이 정해지지 않는다 -->
+	<AdvanceGameTime hours="24"/>
+	<WaitUntil watch="Western.StaminaCore" target="Ranch" atMost="70" timeoutFrames="10"/>
+	<!-- 식사: 코어가 25 오른다 -->
+	<DevCommand line="teleport Player 60 0.05 29"/>
+	<Wait frames="3"/>
+	<Tap slot="Key.G" hold="1"/>
+	<WaitUntil watch="Western.StaminaCore" target="Ranch" atLeast="80" timeoutFrames="30"/>
+	<!-- 갈아입기: 보온이 오른다 -->
+	<DevCommand line="teleport Player 60 0.05 35"/>
+	<Wait frames="3"/>
+	<Tap slot="Key.G" hold="1"/>
+	<WaitUntil watch="Western.Warmth" target="Ranch" equals="5" timeoutFrames="30"/>
+	<!-- 저장 → 세계를 더 돌림 → 두 번 복원: 같은 슬롯을 두 번 불러온 직후의 씬 상태 해시가 같아야 한다(복원이 세계를 다 되살린다 — 저장 순간의 해시와 견주면 명령이 도는 프레임만큼 흔들린다) -->
+	<Wait frames="1"/>
+	<DevCommand line="game.save wildwest/slice"/>
+	<WaitUntil watch="Save.Written" atLeast="1" timeoutWallSeconds="10"/>
+	<Wait seconds="1"/>
+	<DevCommand line="game.load wildwest/slice"/>
+	<WaitUntil watch="Save.Loaded" atLeast="1" timeoutWallSeconds="10"/>
+	<RecordStateHash key="restored"/>
+	<Wait seconds="1"/>
+	<DevCommand line="game.load wildwest/slice"/>
+	<WaitUntil watch="Save.Loaded" atLeast="2" timeoutWallSeconds="10"/>
+	<ExpectStateHash key="restored"/>
+	<Pass/>
+</Scenario>

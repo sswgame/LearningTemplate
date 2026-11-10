@@ -331,6 +331,32 @@ namespace sw
         return true;
     }
 
+    void AutomationRunner::rememberValue( string_view name, uint64 value )
+    {
+        for ( RememberedValue& remembered : _listRememberedValue )
+        {
+            if ( string_view{ remembered._name } == name )
+            {
+                remembered._value = value;
+                return;
+            }
+        }
+        _listRememberedValue.push_back( RememberedValue{ string( name ), value } );
+    }
+
+    bool AutomationRunner::findRememberedValue( string_view name, uint64& outValue ) const
+    {
+        for ( const RememberedValue& remembered : _listRememberedValue )
+        {
+            if ( string_view{ remembered._name } == name )
+            {
+                outValue = remembered._value;
+                return true;
+            }
+        }
+        return false;
+    }
+
     GameObjectManager* AutomationRunner::findActiveObjectManager() const
     {
         if ( _pObjectManagerOverride != nullptr )

@@ -155,7 +155,7 @@ GameObject/Component API 는 저작 · 수명 · 직렬화 층으로 두고, 프
   - `kMaxEntityBytes` 초과는 첫 경고만 남기고 엔티티가 사라진다 — `registerEntity` 의 오류로 바꾼다.
 - **E1 되돌리기를 형식으로:** 씬 변이 명령이 `EditorTransaction&` 를 요구하게 한다. 시나리오 `editor/undocoverage` 는 등록 명령 전수를 실행 → undo 한 뒤 씬 해시가 같은지 본다.
 - **E2 런타임 디버거 한 자리(5-1 W-E1 뒤):** AI 섹션 · 시퀀스 디버거 · 애니 리와인드 · HUD 섹션을 `IDebugSource` 등록표 하나로 묶는다. 선택 오브젝트에 연동하는 패널을 둔다(언리얼 Gameplay Debugger 자리).
-- **G1 장르 수직 슬라이스(T1 · T2 뒤):** 완결 루프가 없는 게임마다 `slice.scenario.xml` 을 둔다(시작 → 목표 → 결과 → 저장 · 복원 해시 동일).
+- **G1 장르 수직 슬라이스 — 통합 실행만 남음:** 게임 12개에 `automation/slice.scenario.xml`(목표 단계는 그 게임 시나리오의 사본 + `game.save` → 두 번 `game.load` 뒤 `<RecordStateHash>` · `<ExpectStateHash>`)이 들어왔다. 체인에서 처음 돈다 — 진 게임은 목표 사본(원본 시나리오)과 복원이 되살리지 못한 오브젝트(`state.objects`)를 본다. velmora 는 `vale` 이 슬라이스다.
 
 ### 6. 리소스
 

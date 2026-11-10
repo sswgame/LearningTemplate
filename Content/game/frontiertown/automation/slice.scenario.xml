@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  장르 수직 슬라이스(G1) — 시작 → 목표(month.scenario.xml 의 단계 그대로) → 결과 → 저장 · 복원 해시 동일.
+  목표 단계는 그 시나리오가 정본이다 — 거기를 고치면 이 파일도 맞춘다. 저장 슬롯은 frontiertown/slice.
+-->
+<Scenario name="game.frontiertown.slice" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="ScenePlaying" input="exclusive">
+	<Variable name="gv_frontierAutoPlay" value="0"/>
+	<!-- 시계는 6 시에 시작하고 하루가 실제 24 초다(FrontierTownData) — 시작 전 프레임까지 합쳐 한 시간이 지나기 전이다. -->
+	<Wait frames="1"/>
+	<Expect watch="Clock.Day" equals="0"/>
+	<Expect watch="Clock.Hour" atLeast="6"/>
+	<Expect watch="Clock.Hour" atMost="7"/>
+	<Wait frames="1"/>
+	<AdvanceGameTime hours="24"/>
+	<Wait frames="2"/>
+	<Expect watch="Clock.Day" equals="1"/>
+	<Wait frames="1"/>
+	<AdvanceGameTime hours="24"/>
+	<Wait frames="2"/>
+	<AdvanceGameTime hours="24"/>
+	<Wait frames="2"/>
+	<Expect watch="Clock.Day" equals="3"/>
+	<ExpectLog id="Frontier.LandmarkRefused" count="0"/>
+	<Record watch="Clock.Day"/>
+	<!-- 저장 → 세계를 더 돌림 → 두 번 복원: 같은 슬롯을 두 번 불러온 직후의 씬 상태 해시가 같아야 한다(복원이 세계를 다 되살린다 — 저장 순간의 해시와 견주면 명령이 도는 프레임만큼 흔들린다) -->
+	<Wait frames="1"/>
+	<DevCommand line="game.save frontiertown/slice"/>
+	<WaitUntil watch="Save.Written" atLeast="1" timeoutWallSeconds="10"/>
+	<Wait seconds="1"/>
+	<DevCommand line="game.load frontiertown/slice"/>
+	<WaitUntil watch="Save.Loaded" atLeast="1" timeoutWallSeconds="10"/>
+	<RecordStateHash key="restored"/>
+	<Wait seconds="1"/>
+	<DevCommand line="game.load frontiertown/slice"/>
+	<WaitUntil watch="Save.Loaded" atLeast="2" timeoutWallSeconds="10"/>
+	<ExpectStateHash key="restored"/>
+	<Pass/>
+</Scenario>

@@ -111,6 +111,16 @@ namespace sw
         uint32 _timeoutFrames{ 600 };
     };
 
+    /** @brief `RecordStateHash` · `ExpectStateHash` 의 인자입니다 — 같은 `key` 로 앞에서 잰 활성 씬 상태 해시를 뒤에서 견준다. */
+    REFLECT()
+    struct SW_API AutomationStateHashStepParams
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _key{}; ///< 기억할 이름(한 시나리오 안에서)
+    };
+
     /** @brief `PlaySequence` · `WaitSequence` 의 인자입니다. */
     REFLECT()
     struct SW_API AutomationSequenceStepParams
