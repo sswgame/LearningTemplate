@@ -105,8 +105,8 @@ namespace sw
             SW_LOG_WARNING_ID( "GameMode.GameDirectorTickAfterDoesNot", "GameMode: _tickAfter does not point at another game mode - the rules stay on the main tick" );
             return;
         }
-        (void)registerSubTick( TickGroup::PrePhysics, kRuleSubTick ); // 핸들은 쓰지 않는다 — id 로 다룬다
-        (void)addSubTickPrerequisite( kRuleSubTick, pBefore->getRuleTickHandle() );
+        (void)registerSubTick( TickGroup::PrePhysics, kRuleSubTick );                                                // 핸들은 쓰지 않는다 — id 로 다룬다
+        (void)addSubTickPrerequisite( kRuleSubTick, pBefore->getRuleTickHandle(), TickPrerequisiteKind::OrderOnly ); // 앞 디렉터의 규칙 뒤에만 돌면 된다 — 그 자리를 읽지 않는다
         _bRuleOnSubTick = SW_TRUE;
     }
 

@@ -54,7 +54,6 @@
 
 GameObject/Component API 는 저작 · 수명 · 직렬화 층, 프레임 일은 접근을 선언한 잡, 핫 데이터는 종류별 SoA(완전 ECS 는 기각). 단계마다 빌드 · 테스트가 통과해야 하고, 이득이 흔들림 안이면 되돌린다.
 
-- **선행 조건 간선 종류:** `addSubTickPrerequisite` 에 종류(순서만 · 쓰기를 봄)를 필수 인자로(쓰는 곳 — `GameModeComponent` 규칙 틱은 순서만, `TickedPathMoverComponent` 는 자리를 읽는다). 순서만인 간선은 `TaskHandle::runAfter` 태스크 간선으로, 쓰기를 보는 간선만 레벨 장벽에(틱 중 쓰기는 `_bApplyBefore` 적용으로만 보인다).
 - **컴포넌트 틱의 컨텍스트:** Batch 레인의 `onTick` 도 `SceneJobContext` 형식(읽기 전용 남의 오브젝트 + 명령 버퍼)으로 — 남의 컴포넌트 직접 쓰기를 컴파일에서 막는다. 102 개 타입 서명이 바뀐다(`TickBatchRegistry.h` 머리말).
 - **서비스 갱신 병렬화:** 같은 단계 서비스 갱신을 접근이 겹치지 않는 것끼리 워커로 — 본문의 게임 스레드 전용 API 를 서명으로 먼저 가린다.
 - **물리 훅 배치:** 훅 4 종(`beginPhysicsFrame` · `prePhysicsStep` · `postPhysicsStep` · `endPhysicsFrame`, 재정의 타입 12)을 생성된 `SW_REGISTER_PHYSICS_HOOKS( 타입 )` 배치 함수로(재정의 여부는 `&T::hook` 의 클래스 형식으로 컴파일에서).
