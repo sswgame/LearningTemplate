@@ -262,6 +262,7 @@ namespace sw
             caps._bGPUBreadcrumbs       = _breadcrumbMode != VulkanBreadcrumbMode::None ? SW_TRUE : SW_FALSE;
             caps._bAsyncCompute         = _asyncComputeQueue != nullptr ? SW_TRUE : SW_FALSE;
             caps._bGraphicsShaderWrites = _bFragmentStores;
+            caps._bPlacedTextures       = SW_TRUE; // 메모리 하나에 이미지를 겹쳐 묶고 해제 큐가 힙 참조를 펜스까지 든다(`VulkanHeapMemory`)
 #if defined( SW_PLATFORM_ANDROID )
             caps._bSurfacePreRotation = SW_TRUE; // 휴대 기기 화면만 회전한다 — 데스크톱 서피스의 currentTransform 은 늘 IDENTITY 다
 #endif
@@ -349,23 +350,43 @@ namespace sw
             RHIBufferState _state = RHIBufferState::Common;
         };
 
+        /**
+         * @brief 트랜지언트 힙(`IRHIResourceFactory::createTransientHeap`)의 메모리입니다. 힙 핸들 표와 그 위의 placed 텍스처 레코드 · 해제 대리자가 `shared_ptr` 로 함께 붙든다.
+         * @details 마지막 참조가 사라질 때 메모리를 놓는다(소멸자). placed 텍스처는 해제 큐의 펜스 뒤에 참조를 놓으므로, 힙 핸들을 먼저 놓아도 그 텍스처를 그린 프레임이 끝나기 전에는
+         *          메모리가 남는다 — 해제 큐에 넣은 메모리 참조 세기다. DX12 는 placed 리소스가 힙을 COM 참조로 붙든다(`SetPrivateDataInterface`), 언리얼 `FRHITransientHeap` 도 같은 자리다.
+         */
+        struct VulkanHeapMemory
+        {
+            VkDevice       _device{ VK_NULL_HANDLE };
+            VkDeviceMemory _memory{ VK_NULL_HANDLE };
+            uint64         _sizeBytes{ 0 };
+            uint32         _memoryTypeIndex{ 0 };
+
+            VulkanHeapMemory()                                     = default;
+            VulkanHeapMemory( const VulkanHeapMemory& )            = delete;
+            VulkanHeapMemory& operator=( const VulkanHeapMemory& ) = delete;
+            ~VulkanHeapMemory();
+        };
+
         /// @brief VkImage 와 뷰, 현재 레이아웃입니다.
         struct VulkanTextureRecord
         {
-            VkImage             _image{ nullptr };
-            VkImageView         _imageView{ nullptr };
-            VkImageView         _sampleView{ nullptr }; ///< 깊이 텍스처 샘플링용 DEPTH 단일 aspect 뷰입니다. 컬러는 nullptr 이며 `_imageView` 를 그대로 씁니다.
-            VkDeviceMemory      _memory{ nullptr };
-            VkFramebuffer       _framebuffer{ nullptr };
-            VkRenderPass        _renderPass{ nullptr };
-            uint32              _format{ 0 };    ///< VkFormat
-            uint32              _rhiFormat{ 0 }; ///< RHIFormat. 업로드 때 픽셀 크기를 계산하는 데 쓴다(VkFormat 은 깊이 선택에 따라 달라질 수 있다).
-            uint32              _layout{ 0 };    ///< VkImageLayout (UNDEFINED=0)
-            uint32              _width{ 0 };
-            uint32              _height{ 0 };
-            uint32              _mipLevels{ 1 };
-            uint32              _arrayLayers{ 1 }; ///< 면 수(배열 원소 · 큐브 면)
-            RHITextureDimension _dimension{ RHITextureDimension::Texture2D };
+            VkImage        _image{ nullptr };
+            VkImageView    _imageView{ nullptr };
+            VkImageView    _sampleView{ nullptr }; ///< 깊이 텍스처 샘플링용 DEPTH 단일 aspect 뷰입니다. 컬러는 nullptr 이며 `_imageView` 를 그대로 씁니다.
+            VkDeviceMemory _memory{ nullptr };     ///< 자기 메모리입니다. placed 텍스처는 비어 있고 `_heapMemory` 가 메모리를 붙든다.
+            /// @brief placed 텍스처(`createPlacedTexture2D`)가 놓인 힙입니다. 파괴의 해제 대리자가 이 참조를 펜스 뒤까지 들고 간다.
+            shared_ptr<VulkanHeapMemory> _heapMemory;
+            VkFramebuffer                _framebuffer{ nullptr };
+            VkRenderPass                 _renderPass{ nullptr };
+            uint32                       _format{ 0 };    ///< VkFormat
+            uint32                       _rhiFormat{ 0 }; ///< RHIFormat. 업로드 때 픽셀 크기를 계산하는 데 쓴다(VkFormat 은 깊이 선택에 따라 달라질 수 있다).
+            uint32                       _layout{ 0 };    ///< VkImageLayout (UNDEFINED=0)
+            uint32                       _width{ 0 };
+            uint32                       _height{ 0 };
+            uint32                       _mipLevels{ 1 };
+            uint32                       _arrayLayers{ 1 }; ///< 면 수(배열 원소 · 큐브 면)
+            RHITextureDimension          _dimension{ RHITextureDimension::Texture2D };
             /// 이 텍스처에 마지막으로 제출한 쓰기 전송(업로드)의 시리얼입니다. 0 이면 전송한 적이 없습니다. bindless 등록이 이 전송이 끝났는지 확인합니다(`RHITransferSerials::isTextureReadyToRegister`).
             RHITextureUploadSerials _uploadSerials;
             /// 이 텍스처에서 마지막으로 읽은 전송(되읽기)의 시리얼입니다. bindless 등록은 보지 않고, 파괴가 이 복사가 끝날 때까지 이미지를 남길 때 씁니다(전송 계약 6).
@@ -703,6 +724,13 @@ namespace sw
          * @note 이미 그 레이아웃이면 아무것도 하지 않습니다.
          */
         void transitionTextureLayout( VkCommandBuffer cmd, VulkanTextureRecord& record, uint32 targetLayout, uint32 aspect );
+        /**
+         * @brief 힙에 겹쳐 놓은 @p record 를 이제부터 쓴다고 기록합니다(`IRHICommandList::beginTextureAlias`). 같은 바이트를 쓴 앞 이미지의 일이 끝난 뒤에 이 이미지를 쓰고, 내용은 버린다.
+         * @details 앨리어스 사이의 쓰기는 메모리 의존으로 갈라야 하고, 다른 앨리어스가 쓴 이미지는 UNDEFINED 에서 옮겨야 한다(Vulkan 명세 Memory Aliasing —
+         *          https://raw.githubusercontent.com/KhronosGroup/Vulkan-Docs/main/chapters/resources.adoc). 추적 레이아웃은 그대로 두고 UNDEFINED → 추적 레이아웃 전이로 내용을 버린다
+         *          (추적이 UNDEFINED 면 다음 전이가 이미 UNDEFINED 에서 출발한다). DX12 는 앞 리소스를 특정하지 않는 앨리어싱 배리어다.
+         */
+        void beginImageAlias( VkCommandBuffer cmd, VulkanTextureRecord& record, uint32 aspect );
         /** @brief 오프스크린 VkRenderPass 를 확보합니다. */
         [[nodiscard]] bool ensureOffscreenRenderPass( uint32 vkFormat );
         /** @brief 오프스크린 텍스처용 프레임버퍼를 만듭니다. */
@@ -935,7 +963,10 @@ namespace sw
         RHIBindlessRegistry<UAVEntry> _uavRegistry;
 
         RHIHandleTable<VulkanTextureRecord> _gpuTextures;
-        RHIReleaseQueue                     _releaseQueue;
+        /// @brief 트랜지언트 힙 핸들 표입니다. 생성 · 파괴는 셋업 스레드다(DX12 와 같다). 종료가 텍스처 표보다 먼저 비워 마지막 참조가 장치가 살아 있을 때 놓이게 한다.
+        unordered_map<RHITransientHeapHandle, shared_ptr<VulkanHeapMemory>> _mapTransientHeap;
+        RHITransientHeapHandle                                              _nextTransientHeap{ 1 };
+        RHIReleaseQueue                                                     _releaseQueue;
         /// @brief PSO 호환 렌더 패스, 합성 프레임버퍼, desc 렌더 패스 캐시입니다. Vulkan 만 가지고 있습니다(스왑체인 RP 는 위 `_renderPass`).
         VulkanRHIRenderPassCache _renderPassCache;
 

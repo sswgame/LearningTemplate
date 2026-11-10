@@ -525,6 +525,24 @@ namespace sw
         _pState->_bRenderPassActive = SW_FALSE;
     }
 
+    void VulkanRHICommandContext::beginTextureAlias( RHITextureHandle texture )
+    {
+        VkCommandBuffer cmd = commandBuffer();
+        if ( cmd == VK_NULL_HANDLE || texture == 0 )
+            return;
+        VulkanRHIDevice::VulkanTextureRecord* pResolved = _pDevice->resolveTexture( texture );
+        if ( pResolved == nullptr || pResolved->_image == VK_NULL_HANDLE || pResolved->_heapMemory == nullptr )
+            return; // 겹쳐 놓지 않은 텍스처는 같은 바이트를 쓴 앞 이미지가 없다
+        // 배리어는 렌더패스 밖에서만 낸다.
+        if ( _pState->_bRenderPassActive == SW_TRUE )
+        {
+            vkCmdEndRenderPass( cmd );
+            _pState->_bRenderPassActive = SW_FALSE;
+        }
+        const uint32 aspect = pResolved->_bDepthStencil != SW_FALSE ? _pDevice->depthAspectMask() : static_cast<uint32>( VK_IMAGE_ASPECT_COLOR_BIT );
+        _pDevice->beginImageAlias( cmd, *pResolved, aspect );
+    }
+
     void VulkanRHICommandContext::uavBarrierNative( RHIBufferHandle buffer )
     {
         VkCommandBuffer                      cmd                  = commandBuffer();

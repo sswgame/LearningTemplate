@@ -177,6 +177,12 @@ namespace sw
         shutdown();
     }
 
+    VulkanRHIDevice::VulkanHeapMemory::~VulkanHeapMemory()
+    {
+        if ( _device != VK_NULL_HANDLE && _memory != VK_NULL_HANDLE )
+            vkFreeMemory( _device, _memory, nullptr );
+    }
+
     IRHIResourceFactory* VulkanRHIDevice::getResourceFactory()
     {
         return _resourceImpl.get();
@@ -431,6 +437,8 @@ namespace sw
                 if ( record._memory != VK_NULL_HANDLE )
                     vkFreeMemory( _device, record._memory, nullptr );
             } );
+            // 힙 핸들 표를 텍스처 표보다 먼저 비운다 — 이미지는 위에서 모두 지웠고, 남은 참조(레코드 · 해제 대리자)가 놓일 때 장치가 아직 살아 있다.
+            _mapTransientHeap.clear();
             _gpuTextures.clear();
             // 오프스크린 프레임버퍼는 해제 큐로 놓인다(`enqueueFramebufferRelease`). GPU 는 2 단계에서 이미 쉬고 있으니 디바이스가 살아 있는 지금 부른다 —
             // 남기면 해제 큐의 소멸자가 부순 VkDevice 로 vkDestroyFramebuffer 를 부른다(`IRHIDevice::shutdown` 이 단언한다).
@@ -3478,6 +3486,37 @@ namespace sw
                 _listDroppedFrameLayout.push_back( VulkanPendingLayout{ cmd, record._image, record._layout } );
         }
         record._layout = targetLayout;
+    }
+
+    void VulkanRHIDevice::beginImageAlias( VkCommandBuffer cmd, VulkanTextureRecord& record, uint32 aspect )
+    {
+        if ( cmd == VK_NULL_HANDLE || record._image == VK_NULL_HANDLE )
+            return;
+        // 앞 앨리어스가 어느 단계에서 썼는지 이 자리는 모른다 — 모든 단계의 쓰기를 기다린다(첨부를 바꾸는 패스 경계에서 프레임에 몇 번뿐이다).
+        VkMemoryBarrier memoryBarrier{};
+        memoryBarrier.sType         = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+        memoryBarrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
+        memoryBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+
+        ScopedLock<mutex>    lock{ _imageLayoutMutex };
+        VkImageMemoryBarrier imageBarrier{};
+        uint32               imageBarrierCount{ 0 };
+        if ( record._layout != static_cast<uint32>( VK_IMAGE_LAYOUT_UNDEFINED ) )
+        {
+            imageBarrier.sType                       = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            imageBarrier.srcAccessMask               = VK_ACCESS_MEMORY_WRITE_BIT;
+            imageBarrier.dstAccessMask               = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+            imageBarrier.oldLayout                   = VK_IMAGE_LAYOUT_UNDEFINED;
+            imageBarrier.newLayout                   = static_cast<VkImageLayout>( record._layout );
+            imageBarrier.srcQueueFamilyIndex         = VK_QUEUE_FAMILY_IGNORED;
+            imageBarrier.dstQueueFamilyIndex         = VK_QUEUE_FAMILY_IGNORED;
+            imageBarrier.image                       = record._image;
+            imageBarrier.subresourceRange.aspectMask = aspect;
+            imageBarrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+            imageBarrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+            imageBarrierCount                        = 1;
+        }
+        vkCmdPipelineBarrier( cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 1, &memoryBarrier, 0, nullptr, imageBarrierCount, &imageBarrier );
     }
 
     void VulkanRHIDevice::restoreDroppedFrameLayouts()

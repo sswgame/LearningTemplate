@@ -480,25 +480,23 @@ namespace sw
     }
 
     // 길이 유지(긴 함수 정리 기준): 서술 채우기 · 이미지 생성 · 메모리 · 뷰 · 초기 데이터 업로드의 순서가 곧 의미라 나누지 않는다.
-    RHITextureHandle VulkanRHIResourceFactory::createTexture2D( const RHITextureDesc& desc )
+    bool VulkanRHIResourceFactory::buildImageCreateInfo( const RHITextureDesc& desc, VkImageCreateInfo& outInfo )
     {
         const bool bInvalidTextureRequest = _pDevice->_device == nullptr || desc._width == 0 || desc._height == 0;
         if ( bInvalidTextureRequest )
-            return 0;
+            return false;
         if ( isRHITextureShapeValid( desc ) == false )
         {
             SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.CreateTexture2DDimensionSlicesX", "createTexture2D: dimension %# with %# slices (%#x%#) is not a valid texture shape", static_cast<uint32>( desc._dimension ),
                              desc._arraySize, desc._width, desc._height );
-            return 0;
+            return false;
         }
         // 이 장치가 샘플링하지 못하는 압축 형식(데스크톱의 ASTC · ETC2)은 드라이버에 넘기지 않는다 — 넘기면 D3D12 는 실패, Vulkan 드라이버는 0 나누기로 죽었다.
         if ( isRHIFormatBlockCompressed( desc._format ) && _pDevice->supportsTextureFormat( desc._format ) == false )
         {
             SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.CreateTexture2DFormatUnsupported", "createTexture2D: this device cannot sample format %# (%#x%#) - the texture is not created", static_cast<uint32>( desc._format ), desc._width, desc._height );
-            return 0;
+            return false;
         }
-        const bool bSliced = desc._dimension != RHITextureDimension::Texture2D;
-
         VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
         if ( desc._bIsRenderTarget )
             usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
@@ -514,26 +512,118 @@ namespace sw
             if ( _pDevice->_depthFormat == 0 )
             {
                 SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.CreateTexture2DDepthFormatNot", "createTexture2D: depth format not selected." );
-                return 0;
+                return false;
             }
             format = static_cast<VkFormat>( _pDevice->_depthFormat );
         }
 
+        VkImageCreateInfo& imageInfo = outInfo;
+        imageInfo                    = VkImageCreateInfo{};
+        imageInfo.sType              = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        imageInfo.imageType          = VK_IMAGE_TYPE_2D;
+        imageInfo.extent.width       = desc._width;
+        imageInfo.extent.height      = desc._height;
+        imageInfo.extent.depth       = 1;
+        imageInfo.mipLevels          = desc._mipLevels > 0 ? desc._mipLevels : 1;
+        imageInfo.arrayLayers        = desc._arraySize;
+        imageInfo.flags              = ( desc._dimension == RHITextureDimension::TextureCube ) ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0u;
+        imageInfo.format             = format;
+        imageInfo.tiling             = VK_IMAGE_TILING_OPTIMAL;
+        imageInfo.initialLayout      = VK_IMAGE_LAYOUT_UNDEFINED;
+        imageInfo.usage              = usage;
+        imageInfo.samples            = VK_SAMPLE_COUNT_1_BIT;
+        imageInfo.sharingMode        = VK_SHARING_MODE_EXCLUSIVE;
+        return true;
+    }
+
+    RHITextureAllocationInfo VulkanRHIResourceFactory::getTextureAllocationInfo( const RHITextureDesc& desc )
+    {
+        // 1.2 에는 서술만으로 요구를 묻는 함수(vkGetDeviceImageMemoryRequirements, 1.3 · maintenance4)가 없다 — 임시 이미지를 만들어 묻고 지운다(셋업 단계에서 첨부마다 한 번).
         VkImageCreateInfo imageInfo{};
-        imageInfo.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-        imageInfo.imageType     = VK_IMAGE_TYPE_2D;
-        imageInfo.extent.width  = desc._width;
-        imageInfo.extent.height = desc._height;
-        imageInfo.extent.depth  = 1;
-        imageInfo.mipLevels     = desc._mipLevels > 0 ? desc._mipLevels : 1;
-        imageInfo.arrayLayers   = desc._arraySize;
-        imageInfo.flags         = ( desc._dimension == RHITextureDimension::TextureCube ) ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0u;
-        imageInfo.format        = format;
-        imageInfo.tiling        = VK_IMAGE_TILING_OPTIMAL;
-        imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        imageInfo.usage         = usage;
-        imageInfo.samples       = VK_SAMPLE_COUNT_1_BIT;
-        imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
+        if ( buildImageCreateInfo( desc, imageInfo ) == false )
+            return {};
+        VkImage probe{ VK_NULL_HANDLE };
+        if ( isVkSuccess( vkCreateImage( _pDevice->_device, &imageInfo, nullptr, &probe ), "vkCreateImage (allocation probe)" ) == false )
+            return {};
+        VkMemoryRequirements requirements{};
+        vkGetImageMemoryRequirements( _pDevice->_device, probe, &requirements );
+        vkDestroyImage( _pDevice->_device, probe, nullptr );
+        return RHITextureAllocationInfo{ requirements.size, requirements.alignment };
+    }
+
+    RHITransientHeapHandle VulkanRHIResourceFactory::createTransientHeap( uint64 sizeBytes )
+    {
+        if ( sizeBytes == 0 || _pDevice->_device == VK_NULL_HANDLE )
+            return 0;
+        // 메모리 종류는 힙에 놓일 첨부(렌더 타깃 · 샘플 — `TransientAttachmentPool::allocatePlaced`)의 이미지가 받는 종류에서 고른다. 놓을 때 그 이미지의 memoryTypeBits 가
+        // 이 종류를 받는지 다시 본다(VUID-VkBindImageMemoryInfo-memory-01612) — 받지 않으면 그 첨부는 만들지 않는다.
+        constexpr uint32 kProbeExtent = 64; // 메모리 종류만 묻는 이미지다 — 크기는 종류에 상관없다
+        RHITextureDesc   probeDesc{};
+        probeDesc._width             = kProbeExtent;
+        probeDesc._height            = kProbeExtent;
+        probeDesc._format            = RHIFormat::R8G8B8A8_UNORM;
+        probeDesc._bIsRenderTarget   = SW_TRUE;
+        probeDesc._bIsShaderResource = SW_TRUE;
+        VkImageCreateInfo imageInfo{};
+        if ( buildImageCreateInfo( probeDesc, imageInfo ) == false )
+            return 0;
+        VkImage probe{ VK_NULL_HANDLE };
+        if ( isVkSuccess( vkCreateImage( _pDevice->_device, &imageInfo, nullptr, &probe ), "vkCreateImage (transient heap probe)" ) == false )
+            return 0;
+        VkMemoryRequirements requirements{};
+        vkGetImageMemoryRequirements( _pDevice->_device, probe, &requirements );
+        vkDestroyImage( _pDevice->_device, probe, nullptr );
+
+        uint32 memoryTypeIndex{ 0 };
+        if ( _pDevice->findMemoryType( requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memoryTypeIndex ) == false )
+        {
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.TransientHeapNoMemoryType", "createTransientHeap: no device local memory type for render target images" );
+            return 0;
+        }
+        VkMemoryAllocateInfo allocInfo{};
+        allocInfo.sType                                     = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        allocInfo.allocationSize                            = sizeBytes;
+        allocInfo.memoryTypeIndex                           = memoryTypeIndex;
+        shared_ptr<VulkanRHIDevice::VulkanHeapMemory> pHeap = make_shared<VulkanRHIDevice::VulkanHeapMemory>();
+        if ( isVkSuccess( vkAllocateMemory( _pDevice->_device, &allocInfo, nullptr, &pHeap->_memory ), "vkAllocateMemory (transient heap)" ) == false )
+            return 0;
+        pHeap->_device                      = _pDevice->_device;
+        pHeap->_sizeBytes                   = sizeBytes;
+        pHeap->_memoryTypeIndex             = memoryTypeIndex;
+        const RHITransientHeapHandle handle = _pDevice->_nextTransientHeap++;
+        _pDevice->_mapTransientHeap.emplace( handle, std::move( pHeap ) );
+        return handle;
+    }
+
+    void VulkanRHIResourceFactory::destroyTransientHeap( RHITransientHeapHandle heap )
+    {
+        // 그 위의 placed 텍스처가 각자 힙 참조를 든다 — 핸들 표에서만 지운다. 마지막 텍스처의 해제 대리자가 (펜스 뒤) 놓일 때 메모리가 풀린다.
+        _pDevice->_mapTransientHeap.erase( heap );
+    }
+
+    RHITextureHandle VulkanRHIResourceFactory::createPlacedTexture2D( const RHITextureDesc& desc, RHITransientHeapHandle heap, uint64 offsetBytes )
+    {
+        const auto it = _pDevice->_mapTransientHeap.find( heap );
+        if ( it == _pDevice->_mapTransientHeap.end() )
+        {
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.PlacedTextureNoHeap", "createPlacedTexture2D: transient heap %# does not exist", heap );
+            return 0;
+        }
+        return createTextureResource( desc, it->second, offsetBytes );
+    }
+
+    RHITextureHandle VulkanRHIResourceFactory::createTexture2D( const RHITextureDesc& desc )
+    {
+        return createTextureResource( desc, nullptr, 0 );
+    }
+
+    RHITextureHandle VulkanRHIResourceFactory::createTextureResource( const RHITextureDesc& desc, const shared_ptr<VulkanRHIDevice::VulkanHeapMemory>& pHeap, uint64 offsetBytes )
+    {
+        VkImageCreateInfo imageInfo{};
+        if ( buildImageCreateInfo( desc, imageInfo ) == false )
+            return 0;
+        const bool     bSliced = desc._dimension != RHITextureDimension::Texture2D;
+        const VkFormat format  = imageInfo.format;
 
         VulkanRHIDevice::VulkanTextureRecord record{};
         record._width         = desc._width;
@@ -557,31 +647,55 @@ namespace sw
         VkMemoryRequirements memRequirements;
         vkGetImageMemoryRequirements( _pDevice->_device, record._image, &memRequirements );
 
-        uint32 memoryTypeIndex{ 0 };
-        if ( _pDevice->findMemoryType( memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memoryTypeIndex ) == false )
+        if ( pHeap != nullptr )
         {
-            vkDestroyImage( _pDevice->_device, record._image, nullptr );
-            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.FailedFindDeviceLocal", "Failed to find a device local memory type for Texture2D." );
-            return 0;
+            // placed — 힙 메모리의 오프셋에 묶는다. 종류 · 정렬 · 크기는 vkBindImageMemory 의 유효 사용(VUID-VkBindImageMemoryInfo-memory-01612 · memoryOffset-01613 · memory-01614)이다.
+            // https://raw.githubusercontent.com/KhronosGroup/Vulkan-Docs/main/chapters/resources.adoc (Memory Aliasing · VkBindImageMemoryInfo)
+            const bool bTypeAccepted = ( memRequirements.memoryTypeBits & ( 1u << pHeap->_memoryTypeIndex ) ) != 0;
+            const bool bAligned      = memRequirements.alignment == 0 || offsetBytes % memRequirements.alignment == 0;
+            const bool bFits         = offsetBytes <= pHeap->_sizeBytes && pHeap->_sizeBytes - offsetBytes >= memRequirements.size;
+            if ( bTypeAccepted == false || bAligned == false || bFits == false )
+            {
+                vkDestroyImage( _pDevice->_device, record._image, nullptr );
+                SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.PlacedTextureRejected", "createPlacedTexture2D: %#x%# does not fit the heap (type accepted %#, offset %# aligned %#, size %# + %# of %#)", desc._width, desc._height,
+                                 bTypeAccepted, offsetBytes, bAligned, memRequirements.size, offsetBytes, pHeap->_sizeBytes );
+                return 0;
+            }
+            if ( isVkSuccess( vkBindImageMemory( _pDevice->_device, record._image, pHeap->_memory, offsetBytes ), "vkBindImageMemory (placed Texture2D)" ) == false )
+            {
+                vkDestroyImage( _pDevice->_device, record._image, nullptr );
+                return 0;
+            }
+            record._heapMemory = pHeap;
         }
-
-        VkMemoryAllocateInfo allocInfo{};
-        allocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        allocInfo.allocationSize  = memRequirements.size;
-        allocInfo.memoryTypeIndex = memoryTypeIndex;
-
-        if ( vkAllocateMemory( _pDevice->_device, &allocInfo, nullptr, &record._memory ) != VK_SUCCESS )
+        else
         {
-            vkDestroyImage( _pDevice->_device, record._image, nullptr );
-            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.FailedAllocateMemoryTexture2D", "Failed to allocate memory for Texture2D." );
-            return 0;
-        }
+            uint32 memoryTypeIndex{ 0 };
+            if ( _pDevice->findMemoryType( memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memoryTypeIndex ) == false )
+            {
+                vkDestroyImage( _pDevice->_device, record._image, nullptr );
+                SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.FailedFindDeviceLocal", "Failed to find a device local memory type for Texture2D." );
+                return 0;
+            }
 
-        if ( isVkSuccess( vkBindImageMemory( _pDevice->_device, record._image, record._memory, 0 ), "vkBindImageMemory (Texture2D)" ) == false )
-        {
-            vkDestroyImage( _pDevice->_device, record._image, nullptr );
-            vkFreeMemory( _pDevice->_device, record._memory, nullptr );
-            return 0;
+            VkMemoryAllocateInfo allocInfo{};
+            allocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+            allocInfo.allocationSize  = memRequirements.size;
+            allocInfo.memoryTypeIndex = memoryTypeIndex;
+
+            if ( vkAllocateMemory( _pDevice->_device, &allocInfo, nullptr, &record._memory ) != VK_SUCCESS )
+            {
+                vkDestroyImage( _pDevice->_device, record._image, nullptr );
+                SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.FailedAllocateMemoryTexture2D", "Failed to allocate memory for Texture2D." );
+                return 0;
+            }
+
+            if ( isVkSuccess( vkBindImageMemory( _pDevice->_device, record._image, record._memory, 0 ), "vkBindImageMemory (Texture2D)" ) == false )
+            {
+                vkDestroyImage( _pDevice->_device, record._image, nullptr );
+                vkFreeMemory( _pDevice->_device, record._memory, nullptr );
+                return 0;
+            }
         }
 
         VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -647,7 +761,7 @@ namespace sw
 
         // GPU 메모리 추적기에 올리는 유일한 자리다. 크기는 드라이버가 요구한 할당 크기(정렬 포함)다.
         const RHITextureHandle handle = _pDevice->_gpuTextures.insert( record );
-        _pDevice->getMemoryTracker().recordAllocation( RHIMemoryKey::makeTexture( handle ), RHIMemoryTracker::classifyTexture( desc ), allocInfo.allocationSize );
+        _pDevice->getMemoryTracker().recordAllocation( RHIMemoryKey::makeTexture( handle ), RHIMemoryTracker::classifyTexture( desc ), memRequirements.size );
         return handle;
     }
 
@@ -1059,16 +1173,18 @@ namespace sw
         VulkanRHIDevice::VulkanTextureRecord owned;
         if ( _pDevice->_gpuTextures.take( texture, owned ) == false )
             return;
-        VkDevice                         dev        = _pDevice->_device;
-        VkImageView                      view       = owned._imageView;
-        VkImageView                      sampleView = owned._sampleView;
-        VkImage                          image      = owned._image;
-        VkDeviceMemory                   mem        = owned._memory;
-        vector<VkImageView>              listSliceView{ owned._listSliceView };
-        RHIMemoryTracker*                pTracker = &_pDevice->getMemoryTracker();
+        VkDevice            dev        = _pDevice->_device;
+        VkImageView         view       = owned._imageView;
+        VkImageView         sampleView = owned._sampleView;
+        VkImage             image      = owned._image;
+        VkDeviceMemory      mem        = owned._memory;
+        vector<VkImageView> listSliceView{ owned._listSliceView };
+        RHIMemoryTracker*   pTracker = &_pDevice->getMemoryTracker();
+        // placed 텍스처는 힙 메모리 참조를 대리자가 펜스까지 든다 — 대리자가 놓이면서 마지막 참조면 메모리가 풀린다(`VulkanHeapMemory`).
         const RHIResourceReleaseDelegate releaseDelegate =
-            SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, view, sampleView, image, mem, listSliceView, pTracker, texture]()
+            SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, view, sampleView, image, mem, listSliceView, pTracker, texture, heapMemory = owned._heapMemory]()
         {
+            (void)heapMemory;
             for ( VkImageView sliceView : listSliceView )
             {
                 vkDestroyImageView( dev, sliceView, nullptr );

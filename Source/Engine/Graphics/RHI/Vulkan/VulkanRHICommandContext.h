@@ -72,6 +72,7 @@ namespace sw
         void                     transitionBuffersNative( const RHIBufferTransition* pTransition, uint32 count ) override;
         void                     copyBufferToReadbackNative( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes ) override;
         void                     uavBarrierNative( RHIBufferHandle buffer ) override;
+        void                     beginTextureAlias( RHITextureHandle texture ) override;
         /** @brief 마지막으로 연 이벤트 마커입니다(없으면 빈 문자열). 기록이 끝난 뒤 제출하는 스레드가 읽습니다. */
         const utf8* getLastEventMarker() const { return _lastEventMarker.c_str(); }
 
