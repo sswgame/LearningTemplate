@@ -157,10 +157,14 @@ namespace sw
             SeatLeft,       ///< 서버 쪽 이벤트. 연결이 끊겼다
             SeatReturned    ///< 서버 쪽 이벤트. 끊겼던 연결이 돌아왔다
         };
+        // 자리 · 행동 번호는 선 메시지(`NetTurnRelayMessage`)의 칸을 그대로 옮긴다 — 선 형식이라 "없음" 을 optional 이 아닌 이름 단 -1 로 둔다(언리얼 `INDEX_NONE`).
+        static constexpr int32 kNoSeat  = constant::invalid_index::kInt32; ///< 자리가 실리지 않는 이벤트(거절 · 거부)
+        static constexpr int32 kNoIndex = constant::invalid_index::kInt32; ///< 행동 번호가 실리지 않는 이벤트(입장 · 시작 · 자리 이탈)
+
         vector<uint8>    _buffer{};
         uint32           _roomID{ 0 };
-        int32            _seat{ constant::invalid_index::kInt32 };
-        int32            _index{ constant::invalid_index::kInt32 };
+        int32            _seat{ kNoSeat };
+        int32            _index{ kNoIndex };
         TurnRejectReason _reason{ TurnRejectReason::NotYourTurn };
         Kind             _kind{ Kind::Joined };
     };
