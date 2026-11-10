@@ -135,8 +135,11 @@ namespace sw
         static string normalizeSeparators( string_view path );
         /** @brief OS 고유의 경로 구분자로 바꿉니다(Windows: `\`, POSIX: `/`). */
         static string toNativeSeparators( string_view path );
-        /** @brief normalizePath 기준으로 두 경로가 같은지 비교합니다. */
-        static bool pathsEqualNormalized( string_view lhs, string_view rhs );
+        /**
+         * @brief 두 디스크 경로가 같은지 이 OS 의 규칙(`makeComparableDiskPath` — 구분자 · 끝 구분자 무시, 대소문자는 Windows 만 무시)으로 봅니다.
+         * @details 예전 `pathsEqualNormalized` 는 `normalizePath`(늘 소문자)로 견줘 리눅스에서 대소문자만 다른 두 파일을 같다고 봤다. 리소스 id 끼리는 `normalizePath` 결과를 `==` 로 견준다.
+         */
+        static bool isSameDiskPath( string_view lhs, string_view rhs );
         /**
          * @brief 경로 끝의 `/` · `\` 를 뗍니다(루트 `/` 는 남깁니다).
          */

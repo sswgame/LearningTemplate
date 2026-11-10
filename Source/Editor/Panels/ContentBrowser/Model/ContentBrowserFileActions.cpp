@@ -33,7 +33,7 @@ namespace sw::editor
     {
         for ( Move& move : _listMove )
         {
-            if ( move._bRename == false && FileUtil::pathsEqualNormalized( move._sourceAbs, sourceAbs ) )
+            if ( move._bRename == false && FileUtil::isSameDiskPath( move._sourceAbs, sourceAbs ) )
             {
                 move._folderAbs = string( folderAbs );
                 return;
@@ -92,7 +92,7 @@ namespace sw::editor
         if ( FileUtil::isDirectory( sourceAbs ) )
             return EditorAssetFileCommands::collectFolderMoves( sourceAbs, folderAbs );
         const string destinationAbs = FileUtil::joinPath( folderAbs, FileUtil::getFileNamePart( sourceAbs ) );
-        if ( FileUtil::pathsEqualNormalized( destinationAbs, sourceAbs ) )
+        if ( FileUtil::isSameDiskPath( destinationAbs, sourceAbs ) )
             return unexpected( Error{ ErrorKind::InvalidArgument, "it is already in that folder", FileUtil::getFileNamePart( sourceAbs ) } );
         return vector<EditorAssetMove>{
             EditorAssetMove{ string( sourceAbs ), destinationAbs }
@@ -177,7 +177,7 @@ namespace sw::editor
         if ( suffix.empty() == false && StringUtil::endsWith( fileName, suffix ) == false )
             fileName += suffix;
         outDestinationAbs = FileUtil::joinPath( FileUtil::getDirectoryPart( sourceAbs ), fileName );
-        return FileUtil::pathsEqualNormalized( outDestinationAbs, sourceAbs ) == false;
+        return FileUtil::isSameDiskPath( outDestinationAbs, sourceAbs ) == false;
     }
 
     bool ContentBrowserFileActions::confirmDelete()

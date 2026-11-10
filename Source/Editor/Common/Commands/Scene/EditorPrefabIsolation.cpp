@@ -20,7 +20,7 @@ namespace sw::editor
                 if ( pObject == nullptr || prefabPath.empty() )
                     return false;
                 const string_view mapped = workspace.findPrefabPath( pObject );
-                return mapped.empty() == false && FileUtil::pathsEqualNormalized( mapped, prefabPath );
+                return mapped.empty() == false && FileUtil::isSameDiskPath( mapped, prefabPath );
             }
 
             /** @brief @p pScopeRoot 아래에서 @p pRoot 의 줄기(자손 · 조상)가 아닌 오브젝트를 숨깁니다. */

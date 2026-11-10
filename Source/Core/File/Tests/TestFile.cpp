@@ -42,7 +42,7 @@ SW_TEST_CASE( FileTest, FileUtilPathOperations )
 
     SW_EXPECT_EQUAL( sw::string( "Foo/Bar" ), sw::FileUtil::normalizeSeparators( "Foo\\Bar" ) );
     SW_EXPECT_EQUAL( sw::string( "foo/bar" ), sw::FileUtil::normalizePath( "Foo\\Bar" ) );
-    SW_EXPECT_TRUE( sw::FileUtil::pathsEqualNormalized( "Foo/Bar", "foo/bar" ) );
+    SW_EXPECT_TRUE( sw::FileUtil::isSameDiskPath( "Foo/Bar/", "Foo\\Bar" ) );
 
     SW_EXPECT_TRUE( sw::FileUtil::isAbsolutePath( "C:/Projects/Sample/TestFile.txt" ) );
     SW_EXPECT_TRUE( sw::FileUtil::isAbsolutePath( "c:\\projects\\sample\\testfile.txt" ) );
@@ -77,6 +77,7 @@ SW_TEST_CASE( FileTest, PathContainmentFollowsTheOSCaseRule )
     SW_EXPECT_TRUE( sw::FileUtil::isPathAtOrUnderRoot( root, root + "/" ) );
     SW_EXPECT_FALSE( sw::FileUtil::isPathAtOrUnderRoot( root, root + "2/a.txt" ) );
 
+    SW_EXPECT_EQUAL( bCaseFolds, sw::FileUtil::isSameDiskPath( root, sw::FileUtil::getDirectoryPart( root ) + "/SCRATCH" ) );
     SW_EXPECT_EQUAL( bCaseFolds, sw::FileUtil::isPathUnderRoot( root, otherCased ) );
     SW_EXPECT_EQUAL( bCaseFolds, sw::FileUtil::isPathAtOrUnderRoot( root, otherCased ) );
     SW_EXPECT_EQUAL( bCaseFolds, sw::FileUtil::startsWithPathComponent( sw::FileUtil::makeComparableDiskPath( otherCased ), sw::FileUtil::makeComparableDiskPath( root ) ) );

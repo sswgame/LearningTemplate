@@ -1195,7 +1195,7 @@ namespace sw::editor
             const string fullFavPath = kArrFavorites[favIdx]._bEngine
                                          ? EditorPaths::findContentFolder( FileUtil::joinPath( constant::path::kEnginePack, kArrFavorites[favIdx]._pRelPath ) )
                                          : EditorPaths::findContentFolder( FileUtil::joinPath( ContentBrowserModel::getGamePackRoot(), kArrFavorites[favIdx]._pRelPath ) );
-            const bool   bSelected   = FileUtil::pathsEqualNormalized( fullFavPath, _model.getSelectedFolderPath() );
+            const bool   bSelected   = FileUtil::isSameDiskPath( fullFavPath, _model.getSelectedFolderPath() );
 
             if ( ImGui::Selectable( kArrFavorites[favIdx]._pLabel, bSelected ) )
             {
@@ -1223,7 +1223,7 @@ namespace sw::editor
     void ContentBrowserPanel::drawFolderTreeNode( string_view folderPath, string_view label, int32 depth )
     {
         const string absPath  = FileUtil::normalizeSeparators( folderPath );
-        const bool   selected = FileUtil::pathsEqualNormalized( absPath, _model.getSelectedFolderPath() );
+        const bool   selected = FileUtil::isSameDiskPath( absPath, _model.getSelectedFolderPath() );
 
         ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
         if ( selected )
@@ -1419,7 +1419,7 @@ namespace sw::editor
 
                     drawSourceControlBadge( pDrawList, float2{ cursor.x + cell - inset, cursor.y + inset }, entry );
                     // 메인 씬에서 고른 오브젝트의 애셋은 테두리 하나(고른 타일의 채움과 겹쳐도 구분된다 — 언리얼 Sync to Content Browser · 유니티 Ping 의 표시).
-                    if ( _syncedAssetID.empty() == false && entry._bIsDirectory == false && FileUtil::pathsEqualNormalized( entry._relativePath, _syncedAssetID ) )
+                    if ( _syncedAssetID.empty() == false && entry._bIsDirectory == false && FileUtil::normalizePath( entry._relativePath ) == FileUtil::normalizePath( _syncedAssetID ) )
                     {
                         pDrawList->AddRect( cursor, ImVec2( cursor.x + cell, cursor.y + cell ), EditorColorUtil::toImU32( accent ), 0.0f, 0, 2.0f * EditorThemeUtil::getDPIScale() );
                         EditorSelfTestMarks::record( "contentBrowser.synced" );

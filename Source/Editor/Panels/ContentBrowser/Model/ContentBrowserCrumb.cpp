@@ -99,7 +99,7 @@ namespace sw::editor
     void ContentBrowserHistory::record( string_view folderAbs, const vector<ContentBrowserCrumb>& listCrumb )
     {
         const bool bSameAsCurrent = 0 <= _currentIndex && _currentIndex < static_cast<int32>( _listEntry.size() ) &&
-                                    FileUtil::pathsEqualNormalized( _listEntry[static_cast<size_t>( _currentIndex )]._folderPathAbs, folderAbs );
+                                    FileUtil::isSameDiskPath( _listEntry[static_cast<size_t>( _currentIndex )]._folderPathAbs, folderAbs );
         if ( bSameAsCurrent )
             return;
 

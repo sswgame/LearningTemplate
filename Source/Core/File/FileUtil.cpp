@@ -549,11 +549,9 @@ namespace sw
         return outResult;
     }
 
-    bool FileUtil::pathsEqualNormalized( string_view lhs, string_view rhs )
+    bool FileUtil::isSameDiskPath( string_view lhs, string_view rhs )
     {
-        const string aNorm = normalizePath( trimTrailingSlashes( lhs ) );
-        const string bNorm = normalizePath( trimTrailingSlashes( rhs ) );
-        return aNorm == bNorm;
+        return makeComparableDiskPath( lhs ) == makeComparableDiskPath( rhs );
     }
 
     string FileUtil::trimTrailingSlashes( string_view path )

@@ -400,7 +400,7 @@ namespace sw::editor
     {
         for ( const AssetEntry& entry : _listEntry )
         {
-            if ( FileUtil::pathsEqualNormalized( entry._absolutePath, absolutePath ) )
+            if ( FileUtil::isSameDiskPath( entry._absolutePath, absolutePath ) )
             {
                 selectAsset( entry );
                 return;
@@ -425,9 +425,9 @@ namespace sw::editor
 
     bool ContentBrowserModel::isSelected( const AssetEntry& entry, bool bFolderToo ) const
     {
-        if ( FileUtil::pathsEqualNormalized( entry._absolutePath, _selectedAssetAbs ) )
+        if ( FileUtil::isSameDiskPath( entry._absolutePath, _selectedAssetAbs ) )
             return true;
-        return bFolderToo && entry._bIsDirectory && FileUtil::pathsEqualNormalized( entry._absolutePath, _selectedFolderAbs );
+        return bFolderToo && entry._bIsDirectory && FileUtil::isSameDiskPath( entry._absolutePath, _selectedFolderAbs );
     }
 
     void ContentBrowserModel::selectAfterFileChange( string_view absolutePath )
@@ -517,7 +517,7 @@ namespace sw::editor
     bool ContentBrowserModel::isRenaming( const AssetEntry& entry ) const
     {
         const string& renamingAbs = _fileActions.getRenamingPath();
-        return renamingAbs.empty() == false && FileUtil::pathsEqualNormalized( entry._absolutePath, renamingAbs );
+        return renamingAbs.empty() == false && FileUtil::isSameDiskPath( entry._absolutePath, renamingAbs );
     }
 
     bool ContentBrowserModel::moveAssetToFolder( string_view sourceAbs, string_view folderAbs )

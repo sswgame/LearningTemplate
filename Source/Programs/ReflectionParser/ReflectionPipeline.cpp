@@ -534,7 +534,7 @@ namespace sw
         {
             // 대소문자만 바뀐 폴더 이름(`GUI` → `GUI`)은 같은 파일이다 — Windows 에서는 옛 철자로도 exists 가 참이다.
             const string& recordedSource = existingStamp._sourcePath;
-            const bool    bOtherOwner    = recordedSource.empty() == false && FileUtil::pathsEqualNormalized( recordedSource, inputFile ) == false &&
+            const bool    bOtherOwner    = recordedSource.empty() == false && FileUtil::isSameDiskPath( recordedSource, inputFile ) == false &&
                                      FileUtil::exists( recordedSource );
             if ( bOtherOwner )
             {

@@ -177,7 +177,7 @@ namespace sw::editor
                 if ( bNotOtherLiveObject )
                     return;
                 const string_view otherPrefab = workspace.findPrefabPath( pOther );
-                if ( otherPrefab.empty() == false && FileUtil::pathsEqualNormalized( otherPrefab, prefabPath ) )
+                if ( otherPrefab.empty() == false && FileUtil::isSameDiskPath( otherPrefab, prefabPath ) )
                     listInstance.push_back( pOther );
             } );
         }
