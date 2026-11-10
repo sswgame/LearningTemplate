@@ -5,7 +5,6 @@
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Component/SpriteAnimatorComponent.h"
-#include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/Hit/CharacterHit.h"
 #include "Engine/Character/Socket/SocketSetComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -25,6 +24,16 @@ namespace sw
             _owner.deferFrame( frame );
         else
             _owner.processFrame( frame );
+    }
+
+    bool AnimationNotifyListenerBinding::hasNotify( const hashed_string& notify ) const
+    {
+        return _owner.findEntry( notify ) != nullptr;
+    }
+
+    bool AnimationNotifyListenerBinding::processExternalNotify( const AnimationFiredNotify& fired )
+    {
+        return _owner.processExternalNotify( fired );
     }
 
     AnimationNotifyComponent::AnimationNotifyComponent()

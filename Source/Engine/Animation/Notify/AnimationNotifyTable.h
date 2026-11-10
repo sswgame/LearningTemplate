@@ -30,6 +30,7 @@
 
 #include "Engine/Animation/AnimationPlayback.h"
 #include "Engine/Animation/Notify/AnimationFootContact.h"
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Foundation/GameObjectHandle.h"
@@ -123,7 +124,7 @@ namespace sw
         static constexpr AssetSuffix kArrAssetSuffix[] = {
             { kExtension, AssetSuffixRole::Plain },
         };
-        /** @brief 이 에셋 종류입니다(등록은 `CharacterDataCache.cpp` 의 공유 캐시 줄). 타입 있는 참조 `AssetRef<AnimationNotifyTable>` 가 접미사로 가른다. */
+        /** @brief 이 에셋 종류입니다(등록은 `AnimationNotifyTable.cpp` 의 공유 캐시 줄). 타입 있는 참조 `AssetRef<AnimationNotifyTable>` 가 접미사로 가른다. */
         static constexpr AssetTypeDef kAssetType{ "AnimationNotifyTable", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
         /** @brief XML 텍스트에서 읽습니다(지금 내용을 비우고). 처리기는 @p registry 에서 이름으로 찾습니다. 오류가 있으면 모두 로그로 내고 false 입니다. */
@@ -249,6 +250,12 @@ namespace sw
     };
 
     SW_SERVICE_SLOT( AnimationNotifyHandlerRegistry, Required );
+
+    /**
+     * @brief 알림 테이블을 기본 처리기 레지스트리로 읽어 나눠 줍니다("AnimationNotifyTable"). 모르는 처리기나 인자는 오류입니다. 제자리에서 다시 읽습니다.
+     * @details 종류의 주인(이 폴더)이 캐시 줄을 든다 — 예전에는 캐릭터의 공유 캐시 묶음(`CharacterDataCache`)이 들어 캐릭터가 알림 디스패치를 include 했다.
+     */
+    extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<AnimationNotifyTable>;
 } // namespace sw
 
 /*
