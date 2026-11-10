@@ -54,6 +54,8 @@ namespace sw
         friend class ObjectStateSerializer;
         friend class SceneComponent; ///< 붙이고 뗄 때 소유 오브젝트의 계층 활성을 다시 맞춘다
         friend class TickRegistry;   ///< 틱 항목과 그룹 인덱스를 만들고 지운다
+        friend class TickContext;    ///< 틱 디스패치가 컨텍스트를 세울 때 매니저를 잡는다(`getMutableManager` 의 틱 단언을 지나지 않는다)
+        friend class Component;      ///< 구조 변경 미루기(`Component::deferIfStructureFrozen`)는 틱 중에도 매니저 큐에 건다
 
     public:
         REFLECT_BODY();
@@ -104,8 +106,12 @@ namespace sw
          *          잡이므로 기본 길을 읽기로 두고, 쓰기는 이름이 다른 `getMutableManager` 로 가른다.
          */
         const GameObjectManager* getManager() const { return _pOwnerManager; }
-        /** @brief 소유 매니저를 쓰기 가능하게 반환합니다. 틱 밖(시작 · 끝 · 이벤트 · 틱 뒤 작업)에서만 씁니다 — 틱 본문은 `TickContext` 로 미룹니다. */
-        GameObjectManager* getMutableManager() const { return _pOwnerManager; }
+        /**
+         * @brief 소유 매니저를 쓰기 가능하게 반환합니다. 틱 밖(시작 · 끝 · 이벤트 · 틱 뒤 작업)에서만 씁니다 — 틱 본문은 `TickContext` 로 미룹니다.
+         * @details 틱 디스패치가 항목을 도는 동안(이 스레드의 틱 표지 — `StructuralChangeBuffer::getTickingObject`) 부르면 Debug 단언으로 멈춘다. 틱 뒤 큐를 비우는 동안 · 틱 밖은 표지가 비어 허용된다.
+         *          틱에서 일을 거는 길은 const 매니저의 명령 버퍼(`GameObjectManager::executeOrDeferPostTickOnComponent`)와 `TickContext` 다.
+         */
+        GameObjectManager* getMutableManager() const;
 
         /**
          * @brief 삭제 예정인지 확인합니다.

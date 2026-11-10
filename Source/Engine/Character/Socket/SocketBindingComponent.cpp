@@ -118,23 +118,23 @@ namespace sw
         return pOwner == nullptr ? nullptr : pOwner->getPrimarySceneComponent();
     }
 
-    GameObject* SocketBindingComponent::resolveHolder() const
+    const GameObject* SocketBindingComponent::resolveHolder() const
     {
         const GameObject* pOwner          = getOwner();
-        const bool        bNoHolderObject = pOwner == nullptr || pOwner->getMutableManager() == nullptr || _holder.isValid() == false;
+        const bool        bNoHolderObject = pOwner == nullptr || pOwner->getManager() == nullptr || _holder.isValid() == false;
         if ( bNoHolderObject )
             return nullptr;
-        return pOwner->getMutableManager()->resolveGameObject( _holder );
+        return pOwner->getManager()->resolveGameObject( _holder );
     }
 
     ISocketPhysicsBody* SocketBindingComponent::resolvePhysicsBody() const
     {
         // 인터페이스 포인터는 핸들이 살아 있다고 확인될 때만 쓴다. 바디 컴포넌트가 먼저 사라질 수 있다.
         const GameObject* pOwner               = getOwner();
-        const bool        bNoPhysicsBodyObject = _pPhysicsBody == nullptr || pOwner == nullptr || pOwner->getMutableManager() == nullptr;
+        const bool        bNoPhysicsBodyObject = _pPhysicsBody == nullptr || pOwner == nullptr || pOwner->getManager() == nullptr;
         if ( bNoPhysicsBodyObject )
             return nullptr;
-        return pOwner->getMutableManager()->resolveComponent( _physicsBodyComponent ) != nullptr ? _pPhysicsBody : nullptr;
+        return pOwner->getManager()->resolveComponent( _physicsBodyComponent ) != nullptr ? _pPhysicsBody : nullptr;
     }
 
     bool SocketBindingComponent::computeSocketWorld( float4x4& outWorldTransform ) const

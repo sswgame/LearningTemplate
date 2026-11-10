@@ -761,10 +761,10 @@ namespace sw
                 pBatch->setVisible( distance < fadeEnd );
         }
 
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
-        WindSettings       wind;
-        float4             arrSphere[FoliageInfluencerComponent::kMaxInfluencerCount]{};
+        const GameObject*        pOwner   = getOwner();
+        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        WindSettings             wind;
+        float4                   arrSphere[FoliageInfluencerComponent::kMaxInfluencerCount]{};
         if ( pManager != nullptr )
         {
             (void)WindComponent::findWind( *pManager, wind );                                       // 없으면 기본 바람

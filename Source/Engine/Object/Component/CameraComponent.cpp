@@ -140,8 +140,8 @@ namespace sw
     void CameraComponent::recordSelectionInputChanged() const
     {
         const GameObject* pOwner = getOwner();
-        if ( pOwner != nullptr && pOwner->getMutableManager() != nullptr )
-            pOwner->getMutableManager()->getCameraRegistry().recordChanged();
+        if ( pOwner != nullptr && pOwner->getManager() != nullptr )
+            pOwner->getManager()->getCameraRegistry().recordChanged(); // 원자 일련번호라 틱 중에도 const 레지스트리에 올린다
     }
 
     void CameraComponent::setRenderOutput( const CameraRenderOutput& output )

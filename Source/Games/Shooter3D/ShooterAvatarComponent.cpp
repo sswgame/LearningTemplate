@@ -222,8 +222,8 @@ namespace sw
 
     void ShooterAvatarComponent::sampleGunJerk( bool bMoving )
     {
-        GameObject*                         pOwner      = getOwner();
-        GameObjectManager*                  pManager    = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        const GameObject*                   pOwner      = getOwner();
+        const GameObjectManager*            pManager    = pOwner != nullptr ? pOwner->getManager() : nullptr;
         const SceneComponent*               pScene      = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         const CharacterAppearanceComponent* pAppearance = pOwner != nullptr ? pOwner->getComponent<CharacterAppearanceComponent>() : nullptr;
         const GameObject*                   pGun        = ( pAppearance != nullptr && pManager != nullptr ) ? pManager->resolveGameObject( pAppearance->findSlotPartObject( hashed_string( "MainHand" ) ) ) : nullptr;

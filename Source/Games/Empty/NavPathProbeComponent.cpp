@@ -164,7 +164,7 @@ namespace sw
             }
         }
         // 대상은 이름으로 찾는다 — 틱 동안 구조가 얼어 있어 읽기만 한다.
-        const GameObject*     pTarget      = getOwner()->getMutableManager() != nullptr ? getOwner()->getMutableManager()->findGameObjectByName( _target ) : nullptr;
+        const GameObject*     pTarget      = getOwner()->getManager() != nullptr ? getOwner()->getManager()->findGameObjectByName( _target ) : nullptr;
         const SceneComponent* pTargetScene = pTarget != nullptr ? pTarget->getPrimarySceneComponent() : nullptr;
         if ( pTargetScene == nullptr )
             return;

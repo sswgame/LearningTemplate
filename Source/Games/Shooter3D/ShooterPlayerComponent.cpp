@@ -968,8 +968,8 @@ namespace sw
 
     bool ShooterPlayerComponent::queryFirstPerson() const
     {
-        const GameObject*  pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        const GameObject*        pOwner   = getOwner();
+        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr )
             return true;
         // 이 오브젝트를 따라가는 게임 카메라 디렉터(시점 카메라)의 프리셋 모드를 구한다.
@@ -1051,8 +1051,8 @@ namespace sw
 
     void ShooterPlayerComponent::scheduleFlush()
     {
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        const GameObject*        pOwner   = getOwner();
+        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr || _bFlushScheduled == SW_TRUE )
             return;
         _bFlushScheduled = SW_TRUE;

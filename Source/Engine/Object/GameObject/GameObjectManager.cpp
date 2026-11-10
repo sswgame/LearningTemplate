@@ -184,9 +184,9 @@ namespace sw
     }
 
     TickContext::TickContext( GameObject& self, float32 deltaTime )
-        : SceneJobContext{ *self.getMutableManager(), self.getMutableManager()->_structuralChangeBuffer, deltaTime }
+        : SceneJobContext{ *self._pOwnerManager, self._pOwnerManager->_structuralChangeBuffer, deltaTime } // 디스패치 안이라 getMutableManager(틱 단언)를 지나지 않는다
         , _pSelf{ &self }
-        , _pSceneManager{ self.getMutableManager() }
+        , _pSceneManager{ self._pOwnerManager }
     {
     }
 

@@ -19,16 +19,15 @@ namespace sw
 
     void GenreGimmickUtil::setBodyActive( GameObject& object, bool bActive, const Component* pKeep )
     {
-        GameObjectManager* pManager = object.getMutableManager();
+        const GameObjectManager* pManager = object.getManager(); // 틱에서도 부른다 — 켜고 끄기는 명령 버퍼로 틱 뒤에 한다
         if ( pManager == nullptr )
             return;
         // 몸은 씬 컴포넌트(콜라이더, 메시, 스프라이트, 라이트)이다. 논리 컴포넌트(센서, 회로, 이 기믹)는 켜 둔 채로 시간을 센다.
-        const GameObjectHandle handle    = object.getHandle();
-        const uint64           keepID    = pKeep != nullptr ? pKeep->getComponentID() : 0;
-        GameObjectManager*     pResolver = pManager;
-        pManager->executeOrDeferPostTick( [pResolver, handle, keepID, bActive]()
+        const GameObjectHandle handle = object.getHandle();
+        const uint64           keepID = pKeep != nullptr ? pKeep->getComponentID() : 0;
+        pManager->executeOrDeferPostTickOnScene( [handle, keepID, bActive]( GameObjectManager& sceneManager )
         {
-            GameObject* pObject = pResolver->resolveGameObject( handle );
+            GameObject* pObject = sceneManager.resolveGameObject( handle );
             if ( pObject == nullptr )
                 return;
             for ( Component* pComp : pObject->getComponents() )
@@ -42,13 +41,13 @@ namespace sw
 
     void GenreGimmickUtil::setInteractableEnabled( GameObject& object, bool bEnabled )
     {
-        GameObjectManager* pManager = object.getMutableManager();
+        const GameObjectManager* pManager = object.getManager(); // 틱에서도 부른다 — 명령 버퍼로 틱 뒤에 한다
         if ( pManager == nullptr )
             return;
         const GameObjectHandle handle = object.getHandle();
-        pManager->executeOrDeferPostTick( [pManager, handle, bEnabled]()
+        pManager->executeOrDeferPostTickOnScene( [handle, bEnabled]( GameObjectManager& sceneManager )
         {
-            GameObject*            pObject       = pManager->resolveGameObject( handle );
+            GameObject*            pObject       = sceneManager.resolveGameObject( handle );
             InteractableComponent* pInteractable = pObject != nullptr ? pObject->getComponent<InteractableComponent>() : nullptr;
             if ( pInteractable != nullptr )
                 pInteractable->setEnabled( bEnabled );

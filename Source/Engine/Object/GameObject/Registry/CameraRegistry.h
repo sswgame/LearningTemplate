@@ -54,7 +54,7 @@ namespace sw
          */
         uint32 getRegistrySerial() const { return _registrySerial.load( std::memory_order_relaxed ); }
         /** @brief 선택 규칙과 맞춤의 입력(역할 · 우선순위 · 출력 대상 · 시야각)이 바뀌었음을 알려 번호를 올립니다. 카메라 컴포넌트의 세터가 값이 실제로 바뀔 때만 부릅니다. */
-        void recordChanged() { _registrySerial.fetch_add( 1, std::memory_order_relaxed ); }
+        void recordChanged() const { _registrySerial.fetch_add( 1, std::memory_order_relaxed ); }
 
         /**
          * @brief 역할 @p role 의 켜진 카메라 중 우선순위가 가장 높은 것입니다. 같으면 컴포넌트 id 가 큰(나중에 만든) 것이 이깁니다 — 되돌리기 ·
@@ -112,7 +112,7 @@ namespace sw
         RegistrationList<CameraComponent> _registeredCamera{ "CameraRegistry.Camera", RegistrationList<CameraComponent>::ReleaseFunction::create<&CameraRegistry::releaseCamera>( this ) };
         /** @brief 목록을 지킵니다. 등록/해제는 드물고(비동기 씬 로드는 워커에서 등록합니다), 조회는 게임 스레드입니다. */
         mutable mutex                _mutex;
-        atomic<uint32>               _registrySerial{ 0 };               ///< 등록 · 해제 때마다 오릅니다(`getRegistrySerial`)
+        mutable atomic<uint32>       _registrySerial{ 0 };               ///< 등록 · 해제 때마다 오릅니다(`getRegistrySerial`). mutable: 바뀜 알림은 읽기 전용 레지스트리에서도 올린다(원자)
         CameraComponent* _pCutCamera SW_GUARDED_BY( _mutex ){ nullptr }; ///< 시퀀서 카메라 컷(`setCutCamera`). 등록 해제가 함께 푼다
         uint32                       _viewportWidth{ 0 };                ///< 게임 뷰포트 픽셀 폭(게임 스레드가 틱 전에 적고 틱이 읽습니다)
         uint32                       _viewportHeight{ 0 };               ///< 게임 뷰포트 픽셀 높이

@@ -307,7 +307,7 @@ namespace sw
             if ( pRemote != nullptr )
                 pRemote->receiveIntent( inputTick, intent ); // 서버의 폰은 이 의도로 쏘고 무기를 바꾼다(다음 조종 시스템 틱)
             _viewTickByInput.acquire( inputTick ) = _server.getClientViewTick( _controllerID );
-            const MeleeSweepHistory* pLedger      = MeleeSweepHistory::find( *getOwner()->getMutableManager() );
+            const MeleeSweepHistory* pLedger      = MeleeSweepHistory::find( *getOwner()->getManager() );
             for ( const MeleeHitClaim& claim : _listClaim )
             {
                 PendingClaim& pending = _listPendingClaim.emplace_back();
@@ -497,8 +497,8 @@ namespace sw
 
     const ShooterGameModeComponent* ShooterNetPawnComponent::findGameMode() const
     {
-        GameObject*                   pOwner   = getOwner();
-        GameObjectManager*            pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        const GameObject*             pOwner   = getOwner();
+        const GameObjectManager*      pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         const ShooterPlayerComponent* pPlayer  = pOwner != nullptr ? pOwner->getComponent<ShooterPlayerComponent>() : nullptr;
         return pManager != nullptr && pPlayer != nullptr ? GameModeComponent::resolve<ShooterGameModeComponent>( *pManager, pPlayer->getGameMode() ) : nullptr;
     }

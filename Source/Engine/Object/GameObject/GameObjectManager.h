@@ -374,9 +374,11 @@ namespace sw
          *          이 타입의 일을 거는 실수(핸들과 템플릿 인자가 어긋나는 것)가 형식으로 없습니다. `const` 멤버 함수 안의 `*this` 도 받습니다.
          *          func 는 붙잡은 값이 없는 람다여야 하며(델리게이트 인라인 버퍼를 넘지 않게) `func( TComponent& )` 또는
          *          `func( TComponent&, GameObjectManager& )` 로 부릅니다.
+         *          **const 매니저에서도 부릅니다(명령 버퍼).** 일을 거는 것은 씬을 바꾸지 않는다 — 틱 중에는 늘 큐로 가고, 쓰기 가능한 매니저는 틱 밖 · 틱 뒤에
+         *          도는 @p func 만 받는다(언리얼 Mass 의 읽기 전용 처리기도 `Defer()` 명령 버퍼는 연다). 그래서 틱에서 부르는 예약 도우미가 쓰기 가능한 매니저를 꺼내지 않는다.
          */
         template <typename TComponent, typename TFunc>
-        void executeOrDeferPostTickOnComponent( const TComponent& self, TFunc func );
+        void executeOrDeferPostTickOnComponent( const TComponent& self, TFunc func ) const;
 
         /**
          * @brief `executeOrDeferPostTickOnComponent` 와 같되 늘 틱 뒤(게임 스레드의 씬 프레임)로 미룹니다 - 바로 실행하지 않는다.
@@ -384,12 +386,24 @@ namespace sw
          *          구조 변경 버퍼는 씬 프레임마다 비워지므로 편집 모드(플레이 전)에서도 돈다 - `onBeginPlay` 로 넘기면 편집 모드에서는 오지 않는다.
          */
         template <typename TComponent, typename TFunc>
-        void deferPostTickOnComponent( const TComponent& self, TFunc func );
+        void deferPostTickOnComponent( const TComponent& self, TFunc func ) const;
+
+        /**
+         * @brief 씬 일 하나를 `executeOrDeferPostTick` 으로 넘깁니다 — @p func 는 `func( GameObjectManager& )` 로 쓰기 가능한 매니저를 받고, 붙잡은 값(핸들 · 값)을 가질 수 있다.
+         * @details const 매니저에서도 부르는 명령 버퍼다(`executeOrDeferPostTickOnComponent` 와 같은 까닭). 핸들은 돌 때 다시 찾는다.
+         */
+        template <typename TFunc>
+        void executeOrDeferPostTickOnScene( TFunc func ) const
+        {
+            GameObjectManager* pManager = const_cast<GameObjectManager*>( this ); // 명령 버퍼 — 쓰기 가능한 매니저는 일이 도는 때(틱 밖 · 틱 뒤)에만 @p func 로 나간다
+            _structuralChangeBuffer.executeOrDeferPostTick( [pManager, func]()
+            { func( *pManager ); } );
+        }
 
     private:
         /** @brief 컴포넌트 일을 핸들로 다시 찾아 부르는 틱 뒤 작업입니다(위 두 함수가 함께 쓴다). 사라졌거나 삭제 대기면 부르지 않는다. */
         template <typename TComponent, typename TFunc>
-        PostTickDelegate makeComponentPostTickTask( const TComponent& self, TFunc func );
+        PostTickDelegate makeComponentPostTickTask( const TComponent& self, TFunc func ) const;
 
     public:
         /** @brief SceneComponent 가 루트가 됐음을 트랜스폼 계층에 알립니다(더티면 플러시 목록에 오릅니다). */
@@ -658,7 +672,7 @@ namespace sw
         ObjectIDAllocator* _pObjectIDAllocator;
 
         /** @brief 틱 중 규칙(동결 플래그 · 구조 변경 큐 · 틱 뒤 큐 · 비우는 순서)입니다. 게임이 부르는 API 는 위의 전달 함수입니다. */
-        StructuralChangeBuffer _structuralChangeBuffer;
+        mutable StructuralChangeBuffer _structuralChangeBuffer; ///< mutable: 명령 버퍼다 — const 매니저도 일을 건다(`executeOrDeferPostTickOnComponent`). 큐는 스레드 안전하다
         /**
          * @brief 씬 부품(트랜스폼 계층 · 프리미티브 · 카메라 · 컴포넌트 레지스트리 · 태그 색인 · 틱 스케줄러 · 오브젝트 저장소 · 씬 범위와 서비스 목록)입니다 — .cpp 에만 형식이 보인다(W-S4 허브 해체).
          * @details 매니저 헤더를 포함하는 TU 400 여 개가 이 부품의 헤더를 다시 컴파일하지 않게 한다(언리얼 `UWorld` 가 서브시스템을 앞 선언 포인터로 드는 자리).

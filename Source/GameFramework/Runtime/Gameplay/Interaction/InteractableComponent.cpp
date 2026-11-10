@@ -63,8 +63,8 @@ namespace sw
 
     void InteractableComponent::syncSpatialExtent()
     {
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        const GameObject*        pOwner   = getOwner();
+        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr || _arrSpatialEntry[0].isValid() == false )
             return;
         // 테이블을 다시 읽은 틱(워커)에서도 불린다 — 색인은 게임 스레드에서만 고친다.

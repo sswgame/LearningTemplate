@@ -87,7 +87,7 @@ namespace sw
     bool TagComponent::isStructureFrozen() const
     {
         const GameObject* pOwner = getOwner();
-        return pOwner != nullptr && pOwner->getMutableManager() != nullptr && pOwner->getMutableManager()->isStructuralMutationFrozen();
+        return pOwner != nullptr && pOwner->getManager() != nullptr && pOwner->getManager()->isStructuralMutationFrozen();
     }
 
     bool TagComponent::hasTag( TagID tag, bool bExactMatch ) const

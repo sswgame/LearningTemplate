@@ -182,15 +182,15 @@ namespace sw
 
     void HealthBarComponent::scheduleRefresh()
     {
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getMutableManager() : nullptr;
+        const GameObject*        pOwner   = getOwner();
+        const GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr )
             return;
         // 핸들로 다시 찾는다 — 그 사이 지워졌으면(구조 변경 큐가 먼저 돈다) 아무것도 하지 않는다.
         const TComponentHandle<HealthBarComponent> handle{ this };
-        pManager->executeOrDeferPostTick( [pManager, handle]()
+        pManager->executeOrDeferPostTickOnScene( [handle]( GameObjectManager& sceneManager )
         {
-            HealthBarComponent* pResolved = pManager->resolveComponent( handle );
+            HealthBarComponent* pResolved = sceneManager.resolveComponent( handle );
             if ( pResolved != nullptr )
                 pResolved->refreshWidgets();
         } );

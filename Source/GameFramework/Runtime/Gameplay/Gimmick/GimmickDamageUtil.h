@@ -20,6 +20,6 @@ namespace sw
          * @details 틱 중이면 틱 뒤의 게임 스레드로 미룬다. 병렬 틱에서 다른 오브젝트의 센서에 바로 넣으면, 그 센서가 이번 틱에 처리할지 다음 틱에 처리할지가
          *          스케줄에 달려서 결과가 결정적이지 않다. 연쇄 폭발과 롤백에서 문제가 된다. 미루면 항상 다음 틱에 처리한다.
          */
-        static void applyDamage( GameObject& target, const GameObject* pSource, const hashed_string& kind, float32 amount );
+        static void applyDamage( const GameObject& target, const GameObject* pSource, const hashed_string& kind, float32 amount );
     };
 } // namespace sw

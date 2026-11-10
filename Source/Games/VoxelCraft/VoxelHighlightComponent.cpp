@@ -76,12 +76,12 @@ namespace sw
 
     void VoxelHighlightComponent::scheduleOutline( const float3& center ) const
     {
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        const GameObject*        pOwner   = getOwner();
+        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr )
             return;
         // 디버그 선 큐는 게임 스레드에서만 쓸 수 있습니다. 이 선은 에디터 게임 뷰에서만 보입니다.
-        pManager->executeOrDeferPostTick( [center]()
+        pManager->executeOrDeferPostTickOnScene( [center]( GameObjectManager& /*sceneManager*/ )
         {
             DebugDrawQueue* pDebugDraw = game::findSubsystem<DebugDrawQueue>();
             if ( pDebugDraw == nullptr )

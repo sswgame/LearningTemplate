@@ -174,8 +174,8 @@ namespace sw
 
     GameObjectHandle CameraManagerComponent::cycleViewTarget( CameraRole role )
     {
-        const GameObject*  pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        const GameObject*        pOwner   = getOwner();
+        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr )
             return _viewTarget;
         vector<CameraComponent*> listCamera;

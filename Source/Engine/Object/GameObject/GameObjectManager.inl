@@ -88,15 +88,15 @@ namespace sw
     }
 
     template <typename TComponent, typename TFunc>
-    void GameObjectManager::executeOrDeferPostTickOnComponent( const TComponent& self, TFunc func )
+    void GameObjectManager::executeOrDeferPostTickOnComponent( const TComponent& self, TFunc func ) const
     {
-        executeOrDeferPostTick( makeComponentPostTickTask( self, func ) );
+        _structuralChangeBuffer.executeOrDeferPostTick( makeComponentPostTickTask( self, func ) );
     }
 
     template <typename TComponent, typename TFunc>
-    void GameObjectManager::deferPostTickOnComponent( const TComponent& self, TFunc func )
+    void GameObjectManager::deferPostTickOnComponent( const TComponent& self, TFunc func ) const
     {
-        deferPostTick( makeComponentPostTickTask( self, func ) );
+        _structuralChangeBuffer.deferPostTick( makeComponentPostTickTask( self, func ) );
     }
 
     template <typename TComponent, typename TFunc>
@@ -106,11 +106,12 @@ namespace sw
     }
 
     template <typename TComponent, typename TFunc>
-    GameObjectManager::PostTickDelegate GameObjectManager::makeComponentPostTickTask( const TComponent& self, TFunc func )
+    GameObjectManager::PostTickDelegate GameObjectManager::makeComponentPostTickTask( const TComponent& self, TFunc func ) const
     {
         static_assert( std::is_empty_v<TFunc>, "post-tick component callable must not capture" );
         const TComponentHandle<TComponent> handle{ &self };
-        GameObjectManager*                 pManager = this;
+        // 명령 버퍼: 쓰기 가능한 매니저는 이 일이 도는 때(틱 밖 · 틱 뒤)에만 @p func 로 나간다 — 거는 쪽(const 매니저 · 틱)은 받지 않는다.
+        GameObjectManager* pManager = const_cast<GameObjectManager*>( this );
         return PostTickDelegate( [pManager, handle, func]()
         {
             TComponent* pComponent = pManager->resolveComponent( handle );

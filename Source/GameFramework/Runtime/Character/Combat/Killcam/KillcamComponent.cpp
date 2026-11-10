@@ -145,12 +145,14 @@ namespace sw
     {
         if ( _bPlaying == SW_FALSE )
             return;
-        _bPlaying                   = SW_FALSE;
-        _pose._phase                = KillcamPhase::Done;
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        _bPlaying                         = SW_FALSE;
+        _pose._phase                      = KillcamPhase::Done;
+        const GameObject*        pOwner   = getOwner();
+        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        // 틱(재생 끝)에서도 부른다 — 씬의 컷 카메라는 명령 버퍼로 틱 뒤에 비운다.
         if ( pManager != nullptr )
-            pManager->getCameraRegistry().setCutCamera( nullptr );
+            pManager->executeOrDeferPostTickOnScene( []( GameObjectManager& sceneManager )
+            { sceneManager.getCameraRegistry().setCutCamera( nullptr ); } );
     }
 
     uint32 KillcamComponent::getLastHitCount() const

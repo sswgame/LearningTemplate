@@ -98,8 +98,10 @@ namespace sw
             {
                 const TileMapXMLData map = _map;
                 setTileMapData( map, std::move( pReloaded ) );
+                // 청크 배치를 다시 만드는 것은 씬 레지스트리 쓰기라 틱 뒤(같은 프레임)에 한다.
                 if ( _bLoaded == SW_TRUE )
-                    (void)rebuild();
+                    context.deferPostTickOnComponent( *this, []( TileMapRendererComponent& tiles )
+                    { (void)tiles.rebuild(); } );
             }
         }
         if ( _listChunkBatch.empty() )
@@ -425,8 +427,8 @@ namespace sw
             // 빈 청크에 칠했다. 배치를 만드는 것은 구조 변경이라 틱 중에는 틱 뒤로 미룬다(그 청크를 통째로 다시 놓는다).
             if ( _bChunkBuildQueued == SW_TRUE )
                 return;
-            GameObject*        pOwner   = getOwner();
-            GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getMutableManager() : nullptr;
+            const GameObject*        pOwner   = getOwner();
+            const GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
             if ( pManager == nullptr )
                 return;
             _bChunkBuildQueued = SW_TRUE;

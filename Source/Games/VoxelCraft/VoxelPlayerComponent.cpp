@@ -435,8 +435,8 @@ namespace sw
     // ------------------------------------------------------------------------------
     void VoxelPlayerComponent::scheduleFlush()
     {
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        const GameObject*        pOwner   = getOwner();
+        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr || _bFlushScheduled == SW_TRUE )
             return;
         _bFlushScheduled = SW_TRUE;
