@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Character/Combat/Dismemberment/Dismemberment.h"
+#include "GameFramework/Runtime/Gameplay/Dismemberment/Dismemberment.h"
 
 #include "Engine/Character/Fit/CharacterGeometry.h"
 

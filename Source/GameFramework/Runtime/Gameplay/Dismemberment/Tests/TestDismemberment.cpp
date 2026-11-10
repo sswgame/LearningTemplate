@@ -2,7 +2,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "GameFramework/Runtime/Character/Combat/Dismemberment/Dismemberment.h"
+#include "GameFramework/Runtime/Gameplay/Dismemberment/Dismemberment.h"
 
 using namespace sw;
 

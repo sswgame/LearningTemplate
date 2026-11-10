@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/World/Environment/WeatherWaveComponent.h"
+#include "GameFramework/Runtime/Gameplay/Weather/WeatherWaveComponent.h"
 
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"

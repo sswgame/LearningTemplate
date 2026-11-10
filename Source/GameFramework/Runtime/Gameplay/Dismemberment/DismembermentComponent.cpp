@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Character/Combat/Dismemberment/DismembermentComponent.h"
+#include "GameFramework/Runtime/Gameplay/Dismemberment/DismembermentComponent.h"
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
@@ -23,9 +23,9 @@
 #include "Engine/Reflection/ReflectionValidation.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
-#include "GameFramework/Runtime/Character/Combat/Dismemberment/Dismemberment.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
+#include "GameFramework/Runtime/Gameplay/Dismemberment/Dismemberment.h"
 
 namespace sw
 {

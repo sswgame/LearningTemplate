@@ -7,7 +7,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/Rule/AdventureDungeon.h"
-#include "GameFramework/Runtime/Gameplay/Condition/GameFlags.h"
+#include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
 #include "GameFramework/Runtime/World/Land/AreaGraph.h"
 

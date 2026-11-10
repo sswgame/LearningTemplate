@@ -10,7 +10,7 @@
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 
-#include "GameFramework/Runtime/Gameplay/Condition/GameFlags.h"
+#include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestLog.h"
 #include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 

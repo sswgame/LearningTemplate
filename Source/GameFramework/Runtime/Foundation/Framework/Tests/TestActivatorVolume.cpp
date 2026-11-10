@@ -12,9 +12,8 @@
 #include "GameFramework/Runtime/Foundation/Framework/Save/AutosaveTriggerComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/GameLocalStore.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/Local/MemoryLocalStore.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/TickedPathMoverComponent.h"
 
-// ActivatorVolumeTest — 볼륨 바탕(한 번 · 거리로 들어오기, 안에 있는 동안 되풀이하지 않기)을 자동 저장 볼륨으로 보고, 틱 함수 바닥의 자리 계산을 본다. 슬롯은 메모리 저장소다(nogpu, 물리 없음).
+// ActivatorVolumeTest — 볼륨 바탕(한 번 · 거리로 들어오기, 안에 있는 동안 되풀이하지 않기)을 자동 저장 볼륨으로 본다. 슬롯은 메모리 저장소다(nogpu, 물리 없음).
 
 using namespace sw;
 
@@ -66,13 +65,6 @@ namespace
             _manager.update( 1.0f / 60.0f );
         }
     };
-
-    struct TickedMoverTestUtil
-    {
-        static constexpr float32 kTolerance = 1.0e-4f;
-
-        static bool isNear( float32 expected, float32 actual ) { return expected - actual < kTolerance && actual - expected < kTolerance; }
-    };
 } // namespace
 
 /** @brief [ActivatorVolumeTest] 한 번만 하는 볼륨은 두 번째 활성자를 거절하고, 관리자에 체크포인트 이름을 넘긴다 */
@@ -115,32 +107,4 @@ SW_TEST_CASE( ActivatorVolumeTest, ProximityFiresWhenTheActivatorEnters )
     rig.moveWalkerAndTick( 1.5f );
     SW_EXPECT_TRUE( rig._pVolume->hasFired() );
     SW_EXPECT_TRUE( rig._autosave.getLastCheckpointID() == hashed_string( "gate" ) );
-}
-
-/** @brief [TickedPathMoverTest] 왕복은 끝에서 되돌아오고 같은 시각이면 같은 자리다(틱의 순수 함수) */
-SW_TEST_CASE( TickedPathMoverTest, PingPongGoesBackFromTheEnd )
-{
-    const vector<float3> listWaypoint{
-        float3{ 6.0f, 0.0f, 0.0f }
-    };
-    using Util = TickedMoverTestUtil;
-    SW_EXPECT_TRUE( Util::isNear( 0.0f, TickedPathMoverComponent::computeOffset( listWaypoint, 2.0f, true, 0.0 )._x ) );
-    SW_EXPECT_TRUE( Util::isNear( 3.0f, TickedPathMoverComponent::computeOffset( listWaypoint, 2.0f, true, 1.0 )._x ) );
-    SW_EXPECT_TRUE( Util::isNear( 3.0f, TickedPathMoverComponent::computeOffset( listWaypoint, 2.0f, true, 3.0 )._x ) );
-    SW_EXPECT_TRUE( Util::isNear( 3.0f, TickedPathMoverComponent::computeOffset( listWaypoint, 2.0f, true, 5.0 )._x ) ); // 한 바퀴(4 초) 뒤
-}
-
-/** @brief [TickedPathMoverTest] 고리는 끝에서 시작으로 한 구간 더 가고, 경유점이 없으면 움직이지 않는다 */
-SW_TEST_CASE( TickedPathMoverTest, LoopClosesAndEmptyPathStays )
-{
-    const vector<float3> listWaypoint{
-        float3{2.0f, 0.0f, 0.0f},
-        float3{2.0f, 0.0f, 2.0f}
-    };
-    using Util = TickedMoverTestUtil;
-    SW_EXPECT_TRUE( Util::isNear( 2.0f, TickedPathMoverComponent::computeOffset( listWaypoint, 1.0f, false, 1.0 )._x ) );
-    SW_EXPECT_TRUE( Util::isNear( 2.0f, TickedPathMoverComponent::computeOffset( listWaypoint, 1.0f, false, 2.0 )._z ) );
-    SW_EXPECT_TRUE( Util::isNear( 1.0f, TickedPathMoverComponent::computeOffset( listWaypoint, 1.0f, false, 2.5 )._z ) );
-    SW_EXPECT_TRUE( Util::isNear( 0.0f, TickedPathMoverComponent::computeOffset( listWaypoint, 1.0f, false, 3.0 )._x ) );
-    SW_EXPECT_TRUE( Util::isNear( 0.0f, TickedPathMoverComponent::computeOffset( vector<float3>{}, 1.0f, false, 1.0 )._x ) );
 }

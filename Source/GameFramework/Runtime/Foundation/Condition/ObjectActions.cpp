@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Gameplay/Condition/ObjectActions.h"
+#include "GameFramework/Runtime/Foundation/Condition/ObjectActions.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Behavior/ActionRegistry.h"
@@ -10,7 +10,7 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 
-#include "GameFramework/Runtime/Gameplay/Condition/GameConditions.h"
+#include "GameFramework/Runtime/Foundation/Condition/GameConditions.h"
 
 namespace sw
 {
