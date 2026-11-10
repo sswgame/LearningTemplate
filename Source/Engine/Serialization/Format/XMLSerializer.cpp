@@ -1006,19 +1006,27 @@ namespace sw
                 continue;
             const bool      bContainer = prop._bIsContainer == SW_TRUE;
             const TypeInfo* pNested    = SerializerUtil::findNestedObjectType( bContainer ? prop._elementTypeName : prop._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
-            if ( pNested == nullptr )
-                continue;
             if ( bContainer == false )
             {
-                collectMissingRequired( child, *pNested, outListPath, path );
+                if ( pNested != nullptr )
+                    collectMissingRequired( child, *pNested, outListPath, path );
                 continue;
             }
             size_t elementIndex{ 0 };
             for ( XMLNode item = child.findChild(); item.isValid(); item = item.findNextSibling(), ++elementIndex )
             {
+                // 소유 포인터 목록(컴포넌트 목록)은 태그 이름이 런타임 타입이다(`readOwnedPointer` 와 같은 규칙) — 그 타입의 필수 칸을 본다.
+                const utf8* const   pTagName = item.getName();
+                const hashed_string tagType  = StringUtil::isNullOrEmpty( pTagName ) ? hashed_string{} : hashed_string::findInterned( pTagName );
+                const TypeInfo*     pTagInfo = tagType.empty() ? nullptr : engine::getSubsystem<TypeRegistry>().findType( tagType );
+                const TypeInfo*     pItem    = pTagInfo != nullptr ? pTagInfo : pNested;
+                if ( pItem == nullptr )
+                    continue;
                 StringBuilder<constant::buffer::kMax256> textBuilder;
                 textBuilder.appendFormat( "%#[%#]", path, static_cast<uint64>( elementIndex ) );
-                collectMissingRequired( item, *pNested, outListPath, string( textBuilder.view() ) );
+                if ( pTagInfo != nullptr )
+                    textBuilder.appendFormat( "(%#)", pTagInfo->_name.c_str() ); // 어느 컴포넌트인지 경로에 남긴다
+                collectMissingRequired( item, *pItem, outListPath, string( textBuilder.view() ) );
             }
         }
     }

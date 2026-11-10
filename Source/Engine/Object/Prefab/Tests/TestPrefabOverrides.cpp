@@ -2,6 +2,10 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Animation/Component/LocomotionWarpingComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabOverrides.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -258,4 +262,37 @@ SW_TEST_CASE( PrefabOverridesTest, BrokenPartOverridesAreRefused )
     vector<PrefabPartOverride> listPart;
     SW_EXPECT_FALSE( PrefabOverrides::collectPartOverrides( R"(<PrefabOverrides><Part path="Leg"/></PrefabOverrides>)", listPart ) );
     SW_EXPECT_TRUE( listPart.empty() );
+}
+
+// ---------------------------------------------------------------------- 필수 칸
+
+/**
+ * @brief [PrefabOverridesTest] 필수 칸(`PROPERTY( Required )`)은 합친 상태에서 본다 — override 가 다른 칸만 적어도 기반에 있으면 읽고,
+ *        기반에도 없으면 오류 id 를 남기고 읽지 않는다(초기값이 데이터를 대신하지 않는다)
+ */
+SW_TEST_CASE( PrefabOverridesTest, RequiredFieldsAreCheckedOnTheMergedState )
+{
+    static constexpr const utf8* kWritten = R"(<GameObject _schemaVersion="0" _name="Walker" _bActive="true"><_listComponent>)"
+                                            R"(<LocomotionWarpingComponent _componentName="LocomotionWarpingComponent" _bStrideWarping="true" _speedCurve="Speed"/>)"
+                                            R"(</_listComponent></GameObject>)";
+    static constexpr const utf8* kMissing = R"(<GameObject _schemaVersion="0" _name="Walker" _bActive="true"><_listComponent>)"
+                                            R"(<LocomotionWarpingComponent _componentName="LocomotionWarpingComponent" _bStrideWarping="true"/>)"
+                                            R"(</_listComponent></GameObject>)";
+    string                       instance = kWritten;
+    instance.replace( instance.find( "_bStrideWarping=\"true\"" ), 22, "_bStrideWarping=\"false\"" );
+    const string overrides = Util::makeOverrides( instance, kWritten );
+    SW_REQUIRE_TRUE( overrides.find( "_speedCurve" ) == string::npos ); // override 는 바꾼 칸만 적는다
+
+    GameObjectManager manager;
+    GameObject*       pObject = manager.createGameObject( hashed_string( "Walker" ) );
+    SW_REQUIRE_NOT_NULL( pObject );
+
+    string merged;
+    SW_REQUIRE_TRUE( PrefabOverrides::makeInstanceState( kWritten, overrides, "Walker", merged ) );
+    SW_EXPECT_TRUE( ObjectStateSerializer::loadFromXMLString( pObject, merged, ObjectLoadContext{ SerializePurpose::Authoring } ) );
+    SW_EXPECT_NOT_NULL( pObject->getComponent<LocomotionWarpingComponent>() );
+
+    SW_EXPECT_LOG( "ObjectStateSerializer.RequiredMissing" );
+    SW_REQUIRE_TRUE( PrefabOverrides::makeInstanceState( kMissing, overrides, "Walker", merged ) );
+    SW_EXPECT_FALSE( ObjectStateSerializer::loadFromXMLString( pObject, merged, ObjectLoadContext{ SerializePurpose::Authoring } ) );
 }

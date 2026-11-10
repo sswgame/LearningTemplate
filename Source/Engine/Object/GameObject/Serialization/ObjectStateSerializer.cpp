@@ -26,6 +26,7 @@
 #include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Serializer/Serializer.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
 {
@@ -43,6 +44,28 @@ namespace sw
                 TComponentHandle<SceneComponent> _child;
                 string                           _parentKey;
             };
+
+            /**
+             * @brief 합친 상태 글(프리팹 기반 + override · 변형)에서 빠진 필수 칸(`PROPERTY( Required )`)을 알립니다. 하나라도 빠지면 false 입니다.
+             * @details 씬 · 프리팹 · 되돌리기의 텍스트 로드가 모두 이 자리를 지난다. override 는 일부 칸만 적으므로 원소마다 보지 않고 합친 뒤에 본다.
+             *          컴포넌트 목록 원소는 태그 이름의 타입으로 본다(`XMLSerializer::collectMissingRequired`).
+             */
+            static bool reportMissingRequired( const TypeInfo& typeInfo, string_view stateXML )
+            {
+                XMLDocument document;
+                if ( document.parse( stateXML ) == false || document.getRoot().isValid() == false )
+                    return true; // 읽지 못하는 글은 역직렬화가 알린다
+                const XMLNode  root = document.getRoot();
+                vector<string> listMissing;
+                XMLSerializer::collectMissingRequired( root, typeInfo, listMissing );
+                const utf8* const pName = root.findAttribute( "_name" );
+                for ( const string& missingPath : listMissing )
+                {
+                    SW_LOG_ERROR_ID( "ObjectStateSerializer.RequiredMissing", "Object '%#' has no required '%#' (PROPERTY( Required ) - write it in the prefab or scene)",
+                                     pName != nullptr ? pName : "(unnamed)", missingPath.c_str() );
+                }
+                return listMissing.empty();
+            }
 
             /**
              * @brief 다시 읽기 전에 다른 오브젝트의 자식 연결을 기록합니다.
@@ -608,6 +631,10 @@ namespace sw
 
     bool ObjectStateSerializer::loadFromXMLString( GameObject* pGameObject, string_view xmlString, const ObjectLoadContext& context )
     {
+        // 필수 칸은 읽기 전에 본다 — 빠지면 오브젝트를 건드리지 않고 실패다(초기값은 형식일 뿐 기본값이 아니다).
+        const TypeInfo* pTypeInfo = pGameObject != nullptr ? pGameObject->getTypeInfo() : nullptr;
+        if ( pTypeInfo != nullptr && ObjectStateSerializerInternal::reportMissingRequired( *pTypeInfo, xmlString ) == false )
+            return false;
         return loadFromXMLText<XMLSerializer>( pGameObject, xmlString, context );
     }
 
