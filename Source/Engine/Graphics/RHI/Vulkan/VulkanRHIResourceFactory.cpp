@@ -9,7 +9,6 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Graphics/RHI/Backend/FrameResourceRing.h"
 #include "Engine/Graphics/RHI/Backend/RHIBufferSizeUtil.h"
 #include "Engine/Graphics/RHI/Backend/RHIShaderRequest.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
@@ -126,7 +125,7 @@ namespace sw
             }
             return;
         }
-        _pDevice->_constantBufferMirror.write( buffer, _pDevice->_currentFrame % constant::render::kMaxFrameCountInFlight, pData, size,
+        _pDevice->_constantBufferMirror.write( buffer, _pDevice->getFrameSlot() % constant::render::kMaxFrameCountInFlight, pData, size,
                                                [this]( RHIBufferHandle target, uint32 slot, const void* pBytes, uint32 byteCount )
         { _pDevice->writeConstantBufferSlot( target, slot, pBytes, byteCount ); } );
     }
@@ -149,15 +148,15 @@ namespace sw
 
     bool VulkanRHIResourceFactory::acquireStructuredUploadStaging( uint64 sizeBytes, uint64& outOffset, VkBuffer& outBuffer )
     {
-        const uint32                           slotIndex = _pDevice->_currentFrame;
+        const uint32                           slotIndex = _pDevice->getFrameSlot();
         VulkanRHIDevice::StructuredUploadSlot& slot      = _pDevice->_arrStructuredUploadSlot[slotIndex];
 
         // 슬롯이 다시 내 차례가 됐다는 것은 beginFrame 이 그 슬롯의 펜스를 기다렸다는 뜻이다. 오프셋을 되감는다.
         // 같은 펜스 구간(같은 프레임) 안의 두 번째 호출은 앞선 복사가 아직 스테이징을 읽을 수 있으므로 이어 쓴다.
-        if ( slot._resetFence != _pDevice->_frameFenceCounter )
+        if ( slot._resetFence != _pDevice->_frameFenceRing.getRecordingSerial() )
         {
             slot._uploadOffset = 0;
-            slot._resetFence   = _pDevice->_frameFenceCounter;
+            slot._resetFence   = _pDevice->_frameFenceRing.getRecordingSerial();
         }
 
         uint64 offset = MathUtil::align( slot._uploadOffset, static_cast<uint64>( constant::render::kConstantBufferAlignment ) );
@@ -180,7 +179,7 @@ namespace sw
                     vkFreeMemory( dev, mem, nullptr );
                     pTracker->recordFree( RHIMemoryKey::makeDeviceObject( mem ) );
                 } ),
-                                                           _pDevice->_frameFenceCounter + 1 );
+                                                           _pDevice->_frameFenceRing.getRecordingSerial() );
                 slot._buffer   = VK_NULL_HANDLE;
                 slot._memory   = VK_NULL_HANDLE;
                 slot._pMapped  = nullptr;
@@ -224,7 +223,7 @@ namespace sw
                     vkFreeMemory( _pDevice->_device, slot._memory, nullptr );
                 vkDestroyBuffer( _pDevice->_device, slot._buffer, nullptr );
                 slot             = VulkanRHIDevice::StructuredUploadSlot{};
-                slot._resetFence = _pDevice->_frameFenceCounter;
+                slot._resetFence = _pDevice->_frameFenceRing.getRecordingSerial();
                 SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.AcquireStructuredUploadStagingFailedAllocateMap", "acquireStructuredUploadStaging: failed to allocate/map the staging memory" );
                 return false;
             }
@@ -275,7 +274,7 @@ namespace sw
             return;
 
         const uint8* pBase  = static_cast<const uint8*>( pBaseSource );
-        uint8* const pStage = static_cast<uint8*>( _pDevice->_arrStructuredUploadSlot[_pDevice->_currentFrame]._pMapped );
+        uint8* const pStage = static_cast<uint8*>( _pDevice->_arrStructuredUploadSlot[_pDevice->getFrameSlot()]._pMapped );
         uint64       cursor{ stagingOffset };
         for ( uint32 regionIndex = 0; regionIndex < regionCount; ++regionIndex )
         {
@@ -458,7 +457,7 @@ namespace sw
             // 추적기는 메모리를 실제로 놓을 때 줄인다(해제 요청 시점이 아니라).
             pTracker->recordFree( RHIMemoryKey::makeBuffer( buffer ) );
         } ),
-                                                   _pDevice->_frameFenceCounter + 1 );
+                                                   _pDevice->_frameFenceRing.getRecordingSerial() );
     }
 
     void VulkanRHIResourceFactory::setTextureDebugName( RHITextureHandle texture, const utf8* pName )
@@ -1113,11 +1112,11 @@ namespace sw
         {
             VulkanRHIDevice* pDevice = _pDevice;
             _pDevice->_transferReleaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pDevice, releaseDelegate]()
-            { pDevice->_releaseQueue.enqueueGPURelease( releaseDelegate, pDevice->_frameFenceCounter + 1 ); } ),
+            { pDevice->_releaseQueue.enqueueGPURelease( releaseDelegate, pDevice->_frameFenceRing.getRecordingSerial() ); } ),
                                                                lastSerial );
             return;
         }
-        _pDevice->_releaseQueue.enqueueGPURelease( releaseDelegate, _pDevice->_frameFenceCounter + 1 );
+        _pDevice->_releaseQueue.enqueueGPURelease( releaseDelegate, _pDevice->_frameFenceRing.getRecordingSerial() );
     }
 
     bool VulkanRHIResourceFactory::isTextureReadyToSample( RHITextureHandle texture )
@@ -1216,7 +1215,7 @@ namespace sw
             UniqueLock<shared_mutex> lock{ pDevice->_bindlessMutex };
             ( bUAV ? pDevice->_freeUAV : pDevice->_freeBindless ).push( index );
         } ),
-                                                   _pDevice->_frameFenceCounter + 1 );
+                                                   _pDevice->_frameFenceRing.getRecordingSerial() );
     }
 
     void VulkanRHIResourceFactory::unregisterBindlessTexture( RHIDescriptorIndex index )
@@ -1268,7 +1267,7 @@ namespace sw
                 pDevice->writeBindlessTextureSlot( index, pDevice->_bindlessDummyView, static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ) );
                 pDevice->_freeTexture.release( pDevice->_listTextureUsed, index, uint8{ 0 } );
             } ),
-                                                       _pDevice->_frameFenceCounter + 1 );
+                                                       _pDevice->_frameFenceRing.getRecordingSerial() );
         }
     }
 
@@ -1691,7 +1690,7 @@ namespace sw
             {
                 vkDestroyPipeline( dev, pipe, nullptr );
             } ),
-                                                       _pDevice->_frameFenceCounter + 1 );
+                                                       _pDevice->_frameFenceRing.getRecordingSerial() );
         }
         if ( _pDevice->_recordingState._activeGraphicsPSO == pso )
             _pDevice->_recordingState._activeGraphicsPSO = 0;

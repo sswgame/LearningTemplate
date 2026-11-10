@@ -439,10 +439,8 @@ namespace sw
         , _listQueuedReadbackBuffer{}
         , _liveCommandListMutex{}
         , _listLiveCommandList{}
-        , _listFrameFence{}
-        , _frameSerial{ 1 }
-        , _lastSubmittedSerial{ 0 }
-        , _completedFrameSerial{ 0 }
+        , _arrFrameFence{}
+        , _frameFenceRing{}
         , _bInitialized{ SW_FALSE }
         , _bDeviceLost{ SW_FALSE }
         , _bTextureFormatsTier1{ SW_FALSE }
@@ -726,7 +724,7 @@ namespace sw
             wgpuRenderPassEncoderEnd( pass );
             wgpuRenderPassEncoderRelease( pass );
         }
-        record._depthCopySerial = _frameSerial;
+        record._depthCopySerial = getFrameSerial();
     }
 
     void WebGPURHIDevice::releaseDepthSampleCopy( WebGPUTextureRecord& record )
@@ -933,7 +931,11 @@ namespace sw
         _transferQueue.retireAll( []( unique_ptr<WebGPUTransferProbe>& probe )
         { (void)probe; } );
         _readbackTable.clear();
-        _listFrameFence.clear();
+        for ( WebGPUFrameFence& fence : _arrFrameFence )
+        {
+            fence.clear();
+        }
+        _frameFenceRing.reset();
         _bindGroupCache.clear();
         for ( const unique_ptr<WebGPUTimestampReadback>& readback : _listTimestampReadback )
         {
@@ -1172,7 +1174,7 @@ namespace sw
         outBuffer = ring._buffer;
         outOffset = ring._used;
         ring._used += alignedSize;
-        ring._retireSerial = _frameSerial;
+        ring._retireSerial = getFrameSerial();
     }
 
     void WebGPURHIDevice::appendConstantRing( uint64 capacity )
@@ -1185,7 +1187,7 @@ namespace sw
         ring._buffer   = wgpuDeviceCreateBuffer( _device, &desc );
         ring._capacity = capacity;
         ring._staging.resize( static_cast<size_t>( capacity ) );
-        ring._retireSerial = _frameSerial;
+        ring._retireSerial = getFrameSerial();
         _listConstantRing.push_back( std::move( ring ) );
         _activeRingIndex = static_cast<uint32>( _listConstantRing.size() - 1 );
     }
@@ -1198,11 +1200,20 @@ namespace sw
         processCompletions();
         if ( _bDeviceLost != SW_FALSE )
             return;
+        // 앞서가기 상한(`IRHIDevice` 계약): 이 칸을 앞 프레임이 아직 쓰면 그 프레임을 기다린다. 기다리지 않으면 상수 링 · 프레임 완료가 GPU 가 뒤처진 만큼 자란다.
+        // 브라우저도 같은 대기다 — 웹 빌드는 ASYNCIFY · JSPI 로 링크해 `wgpuInstanceWaitAny` 가 이벤트 루프에 양보한다(`waitForFuture` 와 같은 길).
+        const uint64 busySerial = _frameFenceRing.getRecordingSlotBusySerial();
+        if ( busySerial != 0 )
+        {
+            if ( waitFrameFence( _arrFrameFence[RHIFrameFenceRing::getSlot( busySerial )] ) == false )
+                SW_LOG_ERROR_ONCE_ID( "WebGPU.FrameFenceWaitFailed", "WebGPU: waiting for frame %# to finish failed", busySerial );
+            retireFinishedFrames();
+        }
         // 지난 프레임의 그룹은 그 프레임의 커맨드가 붙들고 있다(명세) — 캐시는 놓는다. 프레임을 넘겨 들면 놓인 자원의 핸들 값이 새 객체에 다시 나갈 수 있다.
         _bindGroupCache.clear();
         ensureTimestampQuerySet();
-        // GPU 가 끝낸 프레임의 링을 다시 쓴다 — 끝나지 않았으면 이 프레임의 첫 칸 요청이 새 링을 만든다(브라우저는 기다릴 수 없다. 링 수가 앞서간 프레임 수만큼 자란다).
-        const uint64 completed = _completedFrameSerial.load( std::memory_order_acquire );
+        // GPU 가 끝낸 프레임의 링을 다시 쓴다 — 끝나지 않았으면 이 프레임의 첫 칸 요청이 새 링을 만든다(앞서가기 상한이 링 수를 프레임 인 플라이트 수 언저리로 묶는다).
+        const uint64 completed = _frameFenceRing.getCompletedSerial();
         _activeRingIndex       = static_cast<uint32>( _listConstantRing.size() );
         for ( uint32 ringIndex = 0; ringIndex < _listConstantRing.size(); ++ringIndex )
         {
@@ -1225,17 +1236,18 @@ namespace sw
         submitPending();
         mapTimestampReadback();
 
-        unique_ptr<WebGPUFrameFence> fence = make_unique<WebGPUFrameFence>();
-        fence->_serial                     = _frameSerial;
-        fence->_pDevice                    = this;
-        WebGPUFrameFence* const pFence     = fence.get();
-        _listFrameFence.push_back( std::move( fence ) );
+        // 칸은 beginFrame 이 비웠다. 비지 않았으면 앞 프레임의 콜백이 이 칸을 아직 가리킨다 — 덮으면 그 콜백이 새 프레임의 셈을 깎는다.
+        const uint64 busySerial = _frameFenceRing.getRecordingSlotBusySerial();
+        if ( busySerial != 0 )
+            SW_FATAL( "WebGPU: frame %# is submitted into a ring slot still held by frame %#", _frameFenceRing.getRecordingSerial(), busySerial );
+        WebGPUFrameFence* const pFence = &_arrFrameFence[_frameFenceRing.getRecordingSlot()];
+        pFence->arm( _frameFenceRing.getRecordingSerial(), this );
         WGPUQueueWorkDoneCallbackInfo doneInfo{};
-        doneInfo.mode      = WGPUCallbackMode_AllowSpontaneous;
-        doneInfo.callback  = &WebGPURHIDevice::onFrameWorkDone;
-        doneInfo.userdata1 = pFence;
-        (void)wgpuQueueOnSubmittedWorkDone( _queue, doneInfo );
-        mapQueuedReadbacks( _frameSerial );
+        doneInfo.mode           = WGPUCallbackMode_AllowSpontaneous;
+        doneInfo.callback       = &WebGPURHIDevice::onFrameWorkDone;
+        doneInfo.userdata1      = pFence;
+        pFence->_workDoneFuture = wgpuQueueOnSubmittedWorkDone( _queue, doneInfo );
+        mapQueuedReadbacks( _frameFenceRing.getRecordingSerial() );
 
         if ( bPresent )
         {
@@ -1252,16 +1264,14 @@ namespace sw
             pSwapChain->releaseCurrent();
         }
         _listAcquiredSwapChain.clear();
-        _lastSubmittedSerial = _frameSerial;
-        ++_frameSerial;
+        (void)_frameFenceRing.markSubmitted();
     }
 
     void WebGPURHIDevice::mapQueuedReadbacks( uint64 frameSerial )
     {
-        (void)frameSerial;
         if ( _listQueuedReadbackBuffer.empty() )
             return;
-        WebGPUFrameFence* const pFence = _listFrameFence.back().get();
+        WebGPUFrameFence* const pFence = &_arrFrameFence[RHIFrameFenceRing::getSlot( frameSerial )];
         pFence->_listMappedBuffer      = std::move( _listQueuedReadbackBuffer );
         _listQueuedReadbackBuffer.clear();
         pFence->_pendingMapCount.store( static_cast<uint32>( pFence->_listMappedBuffer.size() ), std::memory_order_release );
@@ -1278,7 +1288,7 @@ namespace sw
             mapInfo.mode      = WGPUCallbackMode_AllowSpontaneous;
             mapInfo.callback  = &WebGPURHIDevice::onFrameBufferMapped;
             mapInfo.userdata1 = pFence;
-            (void)wgpuBufferMapAsync( pRecord->_buffer, WGPUMapMode_Read, 0, pRecord->_sizeBytes, mapInfo );
+            pFence->_listMapFuture.push_back( wgpuBufferMapAsync( pRecord->_buffer, WGPUMapMode_Read, 0, pRecord->_sizeBytes, mapInfo ) );
         }
     }
 
@@ -1302,24 +1312,35 @@ namespace sw
 
     void WebGPURHIDevice::retireFinishedFrames()
     {
-        uint64 completed = _completedFrameSerial.load( std::memory_order_acquire );
-        while ( _listFrameFence.empty() == false )
+        const uint64 completed = _frameFenceRing.retire( [this]( uint32 slot, uint64 serial )
         {
-            WebGPUFrameFence& fence = *_listFrameFence.front();
-            if ( fence._bWorkDone.load( std::memory_order_acquire ) == SW_FALSE || fence._pendingMapCount.load( std::memory_order_acquire ) != 0 )
-                break;
+            (void)serial;
+            const WebGPUFrameFence& fence = _arrFrameFence[slot];
+            if ( fence.isDone() == false )
+                return false;
             for ( const RHIBufferHandle handle : fence._listMappedBuffer )
             {
                 WebGPUBufferRecord* const pRecord = findBuffer( handle );
                 if ( pRecord != nullptr )
                     pRecord->_bReadbackReady = SW_TRUE;
             }
-            completed = fence._serial;
-            _listFrameFence.pop_front();
-        }
-        _completedFrameSerial.store( completed, std::memory_order_release );
+            return true;
+        } );
         // 그 프레임의 지연 해제를 부른다 — 읽기 버퍼를 읽는 콜백(`readReadbackBuffer`)이 여기서 돈다.
         _releaseQueue.tickCompleted( completed );
+    }
+
+    bool WebGPURHIDevice::waitFrameFence( const WebGPUFrameFence& fence ) const
+    {
+        // 큐 완료와 매핑을 하나씩 기다린다(이미 끝난 퓨처는 바로 돌아온다). 상한은 두지 않는다 — Vulkan 칸 펜스 대기(`vkWaitForFences` UINT64_MAX)와 같다.
+        if ( fence._workDoneFuture.id != 0 && waitForFuture( fence._workDoneFuture, "the frame's submitted work" ) == false )
+            return false;
+        for ( const WGPUFuture future : fence._listMapFuture )
+        {
+            if ( future.id != 0 && waitForFuture( future, "the frame's readback mapping" ) == false )
+                return false;
+        }
+        return fence.isDone();
     }
 
     void WebGPURHIDevice::processCompletions()
@@ -1338,7 +1359,7 @@ namespace sw
 
     void WebGPURHIDevice::enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate )
     {
-        _releaseQueue.enqueueGPURelease( releaseDelegate, _frameSerial );
+        _releaseQueue.enqueueGPURelease( releaseDelegate, _frameFenceRing.getRecordingSerial() );
     }
 
     void WebGPURHIDevice::waitIdleInternal()
@@ -1356,7 +1377,7 @@ namespace sw
         // 폴링으로 둔다: 이 길은 waitIdle(기동 · 종료 · 백엔드 교체 · 창 크기)만 지나고 프레임 경로가 아니다.
         const Deadline deadline = Deadline::afterMilliseconds( static_cast<int64>( WebGPURHIDeviceInternal::kIdleWaitTimeoutMs ) );
         bool           bTimedOut{ false };
-        while ( _bDeviceLost == SW_FALSE && _completedFrameSerial.load( std::memory_order_acquire ) < _lastSubmittedSerial )
+        while ( _bDeviceLost == SW_FALSE && _frameFenceRing.isIdle() == false )
         {
             processCompletions();
             if ( deadline.isExpired() )

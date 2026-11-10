@@ -9,6 +9,7 @@
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/RHI/Backend/RHIConstantBufferMirror.h"
+#include "Engine/Graphics/RHI/Backend/RHIFrameFenceRing.h"
 #include "Engine/Graphics/RHI/Backend/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHITimestampFrame.h"
@@ -189,7 +190,7 @@ namespace sw
          */
         [[nodiscard]] bool queryGPUMemoryBudgetInternal( RHIMemoryBudget& outBudget ) override;
 
-        /** @brief 이번 프레임이 제출할 세대(`_frameFenceCounter + 1`)로 해제 큐에 넣습니다. */
+        /** @brief 기록 중인 프레임의 시리얼(`_frameFenceRing.getRecordingSerial()`)로 해제 큐에 넣습니다. */
         void   enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
         uint32 getPendingReleaseCount() const override { return _releaseQueue.getPendingReleaseCount(); }
         /**
@@ -233,7 +234,9 @@ namespace sw
             return _timestampPool;
         }
         /** @brief 이번 프레임이 쓰는 쿼리 구간의 시작 인덱스입니다. */
-        uint32 getTimestampBase() const { return _currentFrame * constant::render::kMaxGPUTimestampSlot; }
+        /** @brief 기록 중인 프레임의 인플라이트 칸(0..kMaxFrameCountInFlight-1)입니다. 어느 스레드에서나 읽는다. */
+        uint32 getFrameSlot() const { return _frameFenceRing.getRecordingSlot(); }
+        uint32 getTimestampBase() const { return getFrameSlot() * constant::render::kMaxGPUTimestampSlot; }
         /** @brief 리소스 생성과 파괴 인터페이스(VulkanRHIResourceFactory)를 반환합니다. */
         IRHIResourceFactory* getResourceFactory() override;
         /** @brief 프레임 스트림 컨텍스트입니다. 백버퍼 패스와 Present 가 여기에 기록합니다. */
@@ -418,7 +421,7 @@ namespace sw
             void*          _pMapped{ nullptr };
             uint64         _capacity{ 0 };
             uint64         _uploadOffset{ 0 };
-            uint64         _resetFence{ UINT64_MAX }; ///< 마지막으로 오프셋을 되감은 _frameFenceCounter
+            uint64         _resetFence{ UINT64_MAX }; ///< 마지막으로 오프셋을 되감은 프레임 시리얼(`_frameFenceRing.getRecordingSerial()`)
         };
 
         /**
@@ -648,7 +651,7 @@ namespace sw
         /** @brief 풀 묶음의 풀을 모두 파괴합니다(shutdown). */
         void destroyDescriptorPoolSet( VulkanDescriptorPoolSet& poolSet );
         /** @brief 디바이스 프레임 스트림이 이번 링 슬롯에서 쓰는 풀 묶음입니다. */
-        VulkanDescriptorPoolSet& currentFrameDescriptorPoolSet() { return _arrFrameDescriptorPoolSet[_currentFrame % constant::render::kMaxFrameCountInFlight]; }
+        VulkanDescriptorPoolSet& currentFrameDescriptorPoolSet() { return _arrFrameDescriptorPoolSet[getFrameSlot() % constant::render::kMaxFrameCountInFlight]; }
         /** @brief SRV/CB 레지스트리 인덱스에서 버퍼 핸들을 찾습니다(없으면 0). */
         RHIBufferHandle bindlessSourceBufferAt( RHIDescriptorIndex index ) const;
         /** @brief UAV 레지스트리 인덱스에서 버퍼 핸들을 찾습니다(없으면 0). */
@@ -768,10 +771,9 @@ namespace sw
          *          제출은 `_queueMutex` 로 그래픽스 큐와 같이 직렬화한다.
          */
         VkQueue _asyncComputeQueue;
-        /// @brief 인플라이트 프레임 슬롯(0..kMaxFrameCountInFlight-1)입니다. 스왑체인 이미지 인덱스와 **다른 값**입니다.
-        ///        이미지 인덱스는 스왑체인이 acquire 로 받아 가지고 있습니다(`_swapChain.getImageIndex()`).
-        ///        렌더 스레드만 넘기고(`endFrame`), 다른 스레드의 `updateConstantBuffer` 도 칸을 고르려 읽으므로 atomic 입니다.
-        atomic<uint32> _currentFrame;
+        /// @brief 프레임 시리얼 · 완료 워터마크 · 앞서가기 상한입니다. 인플라이트 칸(`getFrameSlot`)은 스왑체인 이미지 인덱스와 **다른 값**입니다
+        ///        (이미지 인덱스는 스왑체인이 acquire 로 받아 가지고 있다). 렌더 스레드만 넘기고(`endFrame`), 다른 스레드도 칸 · 해제 키를 읽는다(원자).
+        RHIFrameFenceRing _frameFenceRing;
 
         /// @brief 창 하나의 서피스, 스왑체인, 백버퍼입니다. 이미지, 뷰, 프레임버퍼, 세마포어가 모두 여기 있습니다.
         VulkanRHISwapChain _swapChain;
@@ -849,17 +851,11 @@ namespace sw
         /// @brief 프레임 슬롯마다의 이진 세마포어 풀입니다. 슬롯의 펜스를 기다린 뒤(beginFrame) 커서를 0 으로 돌려 다시 쓴다.
         vector<vector<VkSemaphore>> _listAsyncSemaphorePool;
         uint32                      _asyncSemaphoreCursor; ///< 이번 프레임 슬롯 풀에서 다음에 빌릴 칸
-        /// @brief 링 슬롯마다 마지막 제출에 매긴 _frameFenceCounter 값입니다. beginFrame 이 그 슬롯의 펜스를
-        ///        기다린 뒤 _releaseQueue.tickCompleted(이 값)을 불러 실제 GPU 완료를 확인하고 해제합니다.
-        vector<uint64> _listRingFrameNumber;
 
-        void*             _pHWnd;
-        void*             _pDisplayHandle;
-        NativeSurfaceKind _surfaceKind; ///< 두 핸들의 창 시스템(리눅스 WSI 를 고른다 — X11 이면 xlib · xcb, Wayland 면 wayland)
-        VulkanWsiKind     _wsiKind;     ///< 인스턴스를 만들 때 고른 서피스 확장(`createSurface` 가 이 값으로 만든다). 인스턴스 전에는 None
-        /// @brief 스왑체인 제출마다 1씩 증가하는 단조 세대 번호입니다. 해제 큐가 실제 GPU 펜스 완료를 기준으로
-        ///        해제하도록(enqueueGPURelease) 프레임 카운트 대신 이 값을 씁니다.
-        uint64                  _frameFenceCounter;
+        void*                   _pHWnd;
+        void*                   _pDisplayHandle;
+        NativeSurfaceKind       _surfaceKind; ///< 두 핸들의 창 시스템(리눅스 WSI 를 고른다 — X11 이면 xlib · xcb, Wayland 면 wayland)
+        VulkanWsiKind           _wsiKind;     ///< 인스턴스를 만들 때 고른 서피스 확장(`createSurface` 가 이 값으로 만든다). 인스턴스 전에는 None
         uint32                  _width;
         uint32                  _height;
         uint32                  _depthFormat;      ///< VkFormat. createTexture2D 와 렌더 패스가 함께 쓰는 깊이 포맷

@@ -12,7 +12,6 @@
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Graphics/RHI/Backend/FrameResourceRing.h"
 #include "Engine/Graphics/RHI/Backend/RHILiveCommandListUtil.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandContext.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandList.h"
@@ -59,7 +58,6 @@ namespace sw
         , _graphicsQueue{ nullptr }
         , _graphicsQueueFamilyIndex{ 0 }
         , _asyncComputeQueue{ nullptr }
-        , _currentFrame{ 0 }
         , _swapChain{}
         , _renderPass{ nullptr }
         , _renderPassLoad{ nullptr }
@@ -86,12 +84,11 @@ namespace sw
         , _listAsyncSignalWaited{}
         , _listAsyncSemaphorePool{}
         , _asyncSemaphoreCursor{ 0 }
-        , _listRingFrameNumber{}
         , _pHWnd{ nullptr }
         , _pDisplayHandle{ nullptr }
         , _surfaceKind{ NativeSurfaceKind::Win32 }
         , _wsiKind{ VulkanWsiKind::None }
-        , _frameFenceCounter{ 0 }
+        , _frameFenceRing{}
         , _width{ 0 }
         , _height{ 0 }
         , _depthFormat{ 0 }
@@ -356,7 +353,7 @@ namespace sw
     {
         // 표 조회가 게임 스레드의 만들기 · 부수기와 겹치지 않게 읽기 락을 쥔다(락 순서: 레지스트리 → 그림자).
         ScopedSharedLock<shared_mutex> registryLock{ _bindlessMutex };
-        _constantBufferMirror.fillSlot( _currentFrame % constant::render::kMaxFrameCountInFlight,
+        _constantBufferMirror.fillSlot( getFrameSlot() % constant::render::kMaxFrameCountInFlight,
                                         [this]( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size )
         { writeConstantBufferSlot( buffer, slot, pData, size ); } );
     }
@@ -1509,7 +1506,6 @@ namespace sw
         // 펜스는 인플라이트 슬롯마다 하나다. 스왑체인 이미지 개수와 무관하다.
         // 이미지별 세마포어는 스왑체인이 만든다(VulkanRHISwapChain::createSemaphores).
         _listInFlightFence.resize( constant::render::kMaxFrameCountInFlight );
-        _listRingFrameNumber.resize( constant::render::kMaxFrameCountInFlight, 0 );
 
         VkFenceCreateInfo fenceInfo{};
         fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -1535,7 +1531,6 @@ namespace sw
                 vkDestroyFence( _device, fence, nullptr );
         }
         _listInFlightFence.clear();
-        _listRingFrameNumber.clear();
 
         // 스왑체인의 이미지별 펜스 표는 위 펜스의 사본이므로 비우기만 한다.
         _swapChain.removeImageFences();
@@ -1625,7 +1620,7 @@ namespace sw
         if ( _bFrameStarted == SW_FALSE || isDeviceLost() )
             return nullptr;
 
-        VulkanSwapChainStatus status = window.isValid() ? window.acquireNextImage( _device, _currentFrame ) : VulkanSwapChainStatus::OutOfDate;
+        VulkanSwapChainStatus status = window.isValid() ? window.acquireNextImage( _device, getFrameSlot() ) : VulkanSwapChainStatus::OutOfDate;
         if ( status == VulkanSwapChainStatus::OutOfDate || status == VulkanSwapChainStatus::SurfaceLost )
         {
             // 창 크기가 바뀌었거나 표면이 낡았다 — 메인 창의 beginFrame 처럼 그 자리에서 다시 만든다(GPU 를 비운다 — 창 크기 변경 중에만 드물게 온다).
@@ -1635,7 +1630,7 @@ namespace sw
             }
             if ( isDeviceLost() || rebuildWindowSwapChain( window, window.getExtentWidth(), window.getExtentHeight() ) == false )
                 return nullptr;
-            status = window.acquireNextImage( _device, _currentFrame );
+            status = window.acquireNextImage( _device, getFrameSlot() );
         }
         if ( status == VulkanSwapChainStatus::DeviceLost )
             reportQueueResult( static_cast<int32>( VK_ERROR_DEVICE_LOST ), "useSwapChain: vkAcquireNextImageKHR" );
@@ -1645,7 +1640,7 @@ namespace sw
         const VkSemaphore acquireWait = window.takeAcquireWait();
         if ( acquireWait != VK_NULL_HANDLE )
             _listPendingAcquireWait.push_back( acquireWait );
-        reportQueueResult( window.waitForImageReuse( _device, _listInFlightFence[_currentFrame] ), "useSwapChain: vkWaitForFences (image in flight)" );
+        reportQueueResult( window.waitForImageReuse( _device, _listInFlightFence[getFrameSlot()] ), "useSwapChain: vkWaitForFences (image in flight)" );
         _listFrameSwapChain.push_back( &window );
         return &window;
     }
@@ -1665,6 +1660,8 @@ namespace sw
             ScopedLock<mutex> queueLock{ _queueMutex };
             reportQueueResult( static_cast<int32>( vkDeviceWaitIdle( _device ) ), "releaseSurface: vkDeviceWaitIdle" );
         }
+        if ( isDeviceLost() == false )
+            _frameFenceRing.markAllCompleted();
         // 네이티브 창(ANativeWindow)은 이 함수가 돌아온 뒤 사라진다 — 스왑체인 · 표면을 지금 놓는다. 장치 · 자원은 그대로다(돌아오면 표면만 다시 짓는다).
         destroyFrameFences();
         _swapChain.destroySemaphores( _device );
@@ -1699,6 +1696,7 @@ namespace sw
         // 대기에서 잃었음을 봤으면 다시 만들지 않는다 — 잃은 장치의 스왑체인 생성은 같은 손실만 다시 듣는다.
         if ( isDeviceLost() )
             return false;
+        _frameFenceRing.markAllCompleted(); // GPU 가 쉰다 — 새 펜스는 신호된 채 만든다
 
         // 세마포어와 이미지별 펜스 표는 스왑체인 이미지 개수로 크기가 정해지므로 함께 다시 만든다.
         destroyFrameFences();
@@ -1730,7 +1728,6 @@ namespace sw
         }
 
         _bSwapChainRecreateFailing = SW_FALSE;
-        _currentFrame              = 0;
         return true;
     }
 
@@ -1738,7 +1735,7 @@ namespace sw
     {
         ++_surfaceLostCount;
         SW_LOG_WARNING_ID( "Vulkan.VulkanSurfaceLostTime", "Vulkan surface lost at %# (%# time(s) on this device, frame %#) - recreating the surface and swapchain", pWhere, _surfaceLostCount,
-                           _frameFenceCounter );
+                           _frameFenceRing.getLastSubmittedSerial() );
     }
 
     bool VulkanRHIDevice::recreateSurfaceAndSwapChain()
@@ -1752,6 +1749,7 @@ namespace sw
         }
         if ( isDeviceLost() )
             return false;
+        _frameFenceRing.markAllCompleted(); // GPU 가 쉰다 — 새 펜스는 신호된 채 만든다
         // 스왑체인이 서피스 위에 있으므로 스왑체인 → 서피스 순으로 버리고 서피스 → 스왑체인 순으로 만든다.
         destroyFrameFences();
         _swapChain.destroySemaphores( _device );
@@ -1993,10 +1991,13 @@ namespace sw
                 ScopedLock<mutex> queueLock{ _queueMutex };
                 reportQueueResult( static_cast<int32>( vkDeviceWaitIdle( _device ) ), "waitIdle: vkDeviceWaitIdle" );
             }
-            // 큐가 비었으니 낸 전송은 모두 끝났다. 잃었으면 워터마크를 올리지 않는다 — 끝나지 않은 티켓이 Complete 로 보이면 안 된다.
+            // 큐가 비었으니 낸 전송 · 프레임은 모두 끝났다. 잃었으면 워터마크를 올리지 않는다 — 끝나지 않은 티켓이 Complete 로 보이면 안 된다.
             if ( isDeviceLost() == false )
+            {
+                _frameFenceRing.markAllCompleted();
                 _transferFenceQueue.retireAll( [this]( VulkanTransferJob& job )
                 { recycleTransferJob( job ); } );
+            }
         }
         // 전송을 기다리던 해제가 먼저 프레임 해제 큐로 넘어가야 아래에서 함께 놓인다.
         _transferReleaseQueue.flushAll();
@@ -2005,7 +2006,7 @@ namespace sw
 
     void VulkanRHIDevice::enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate )
     {
-        _releaseQueue.enqueueGPURelease( releaseDelegate, _frameFenceCounter + 1 );
+        _releaseQueue.enqueueGPURelease( releaseDelegate, _frameFenceRing.getRecordingSerial() );
     }
 
     uint32 VulkanRHIDevice::getTimestampSlotCount() const
@@ -2102,7 +2103,7 @@ namespace sw
         _renderThread.assumeHeld(); // 렌더 스레드의 프레임 진행(그 병렬 기록 태스크 포함)에서, 또는 렌더 스레드를 세운 뒤(초기화 · 종료 · resize) 불린다
         _timestampFrame._listMicro.clear();
         const bool bNoTimestampsToRead = _bTimestampEnabled.load( std::memory_order_relaxed ) == SW_FALSE || _timestampPool == VK_NULL_HANDLE || _timestampPeriod <= 0.0f ||
-                                         _arrTimestampSubmitted[_currentFrame] == SW_FALSE;
+                                         _arrTimestampSubmitted[getFrameSlot()] == SW_FALSE;
         if ( bNoTimestampsToRead )
             return;
 
@@ -2165,29 +2166,34 @@ namespace sw
             return;
         }
 
-        const VkResult fenceResult = vkWaitForFences( _device, 1, &_listInFlightFence[_currentFrame], VK_TRUE, UINT64_MAX );
-        reportQueueResult( static_cast<int32>( fenceResult ), "beginFrame: vkWaitForFences" );
+        // 앞서가기 상한: 이 칸을 앞 프레임이 아직 쓰면 그 펜스를 기다린다(`RHIFrameFenceRing`). 칸이 비었으면 펜스는 이미 신호돼 있다.
+        (void)_frameFenceRing.waitForRecordingSlot( [this]( uint32 slot, uint64 busySerial )
+        {
+            (void)busySerial;
+            const VkResult fenceResult = vkWaitForFences( _device, 1, &_listInFlightFence[slot], VK_TRUE, UINT64_MAX );
+            reportQueueResult( static_cast<int32>( fenceResult ), "beginFrame: vkWaitForFences" );
+            return true; // 잃었으면 아래에서 프레임을 건너뛴다 — 잃은 장치는 끝나지 않을 일을 기다리지 않는다
+        } );
         // 펜스 대기에서 잃었음을 봤으면 이 프레임을 바로 건너뛴다 — 획득 · 기록으로 이어가면 잃은 장치에 대기와 제출을 더 낸다.
         if ( isDeviceLost() )
             return;
         // **여기가 타임스탬프를 읽는 유일한 안전한 자리다.** 이 슬롯의 펜스를 방금 통과했다.
         ensureTimestampPool();
         collectTimestampsForSlot();
-        // 이 링 슬롯의 펜스가 신호됐다는 것은 그 슬롯에 마지막으로 제출한 세대(_listRingFrameNumber)의
-        // GPU 작업이 실제로 끝났다는 뜻이다. 그 세대 이하로 태그된 리소스 해제를 지금 실행한다.
-        _releaseQueue.tickCompleted( _listRingFrameNumber[_currentFrame] );
+        // 이 칸의 앞 프레임까지 GPU 가 끝냈다. 그 시리얼 이하로 태그된 리소스 해제를 지금 실행한다.
+        _releaseQueue.tickCompleted( _frameFenceRing.getCompletedSerial() );
         // 끝난 텍스처 전송도 걷는다 — 아무도 폴링하지 않는 전송(구간 갱신)의 링 구간과, 전송을 기다리던 텍스처 해제가 프레임마다 진행한다.
         retireFinishedTransfers();
         // 이 칸의 GPU 사용이 끝났다. 값이 바뀔 때만 쓰는 상수버퍼 가운데 이 칸이 옛 값인 것을 채운다.
         fillConstantBufferSlot();
         // 이 링 슬롯에서 프레임 스트림이 쓴 슬롯 세트들도 GPU 가 다 읽었다. 풀 묶음을 통째로 비워 이번 프레임에 다시 쓴다.
         // (리스트가 쓴 세트는 리스트 쌍의 풀 묶음에 있고, 쌍이 재사용 풀로 돌아온 뒤 beginCommandList 가 비운다.)
-        resetDescriptorPoolSet( _arrFrameDescriptorPoolSet[_currentFrame] );
+        resetDescriptorPoolSet( _arrFrameDescriptorPoolSet[getFrameSlot()] );
 
         // 앞 프레임이 present 하지 않았다면 그때 획득한 이미지를 스왑체인이 아직 쥐고 있고, acquireNextImage 는 그 이미지를 돌려준다(VulkanRHISwapChain 머리말).
         _listPendingAcquireWait.clear();
         {
-            VulkanSwapChainStatus status = _swapChain.acquireNextImage( _device, _currentFrame );
+            VulkanSwapChainStatus status = _swapChain.acquireNextImage( _device, getFrameSlot() );
             if ( status == VulkanSwapChainStatus::SurfaceLost )
             {
                 // 사양: 서피스를 잃으면 스왑체인만이 아니라 서피스부터 다시 만든다. 잃은 서피스로 다시 acquire 하면 계속 진다.
@@ -2197,7 +2203,7 @@ namespace sw
                     _bSurfaceLost = SW_TRUE;
                     return;
                 }
-                status = _swapChain.acquireNextImage( _device, _currentFrame );
+                status = _swapChain.acquireNextImage( _device, getFrameSlot() );
             }
             if ( status == VulkanSwapChainStatus::DeviceLost )
             {
@@ -2214,7 +2220,7 @@ namespace sw
                     return;
                 }
 
-                status = _swapChain.acquireNextImage( _device, _currentFrame );
+                status = _swapChain.acquireNextImage( _device, getFrameSlot() );
             }
 
             // Suboptimal 은 "창과 어긋났지만 이번 프레임은 그릴 수 있다" 는 뜻이다. 위에서 이미 한 번 다시
@@ -2230,26 +2236,26 @@ namespace sw
             _listPendingAcquireWait.push_back( mainAcquireWait );
 
         // 이 이미지를 마지막으로 쓴 프레임이 아직 GPU 에 있으면 그 펜스를 기다린 뒤에 덮어쓴다.
-        reportQueueResult( _swapChain.waitForImageReuse( _device, _listInFlightFence[_currentFrame] ), "beginFrame: vkWaitForFences (image in flight)" );
+        reportQueueResult( _swapChain.waitForImageReuse( _device, _listInFlightFence[getFrameSlot()] ), "beginFrame: vkWaitForFences (image in flight)" );
 
         // 이 셋은 메모리 부족으로만 실패한다(장치 분실은 돌려주지 않는다). 실패한 버퍼에 기록하면 제출이 검증 오류 · 크래시라 멈춘다.
-        requireVk( vkResetFences( _device, 1, &_listInFlightFence[_currentFrame] ), "beginFrame: vkResetFences" );
+        requireVk( vkResetFences( _device, 1, &_listInFlightFence[getFrameSlot()] ), "beginFrame: vkResetFences" );
         // 이 슬롯의 지난 프레임이 끝났다 — 그 프레임이 빌린 비동기 컴퓨트 세마포어는 모두 신호되고 기다려졌다(endFrame 이 남은 것을 기다린다).
         _asyncSemaphoreCursor = 0;
         _listAsyncSignal.clear();
         _listAsyncSignalWaited.clear();
         _listPendingComputeWait.clear();
-        requireVk( vkResetCommandBuffer( _listCommandBuffer[_currentFrame], 0 ), "beginFrame: vkResetCommandBuffer" );
+        requireVk( vkResetCommandBuffer( _listCommandBuffer[getFrameSlot()], 0 ), "beginFrame: vkResetCommandBuffer" );
 
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        requireVk( vkBeginCommandBuffer( _listCommandBuffer[_currentFrame], &beginInfo ), "beginFrame: vkBeginCommandBuffer" );
+        requireVk( vkBeginCommandBuffer( _listCommandBuffer[getFrameSlot()], &beginInfo ), "beginFrame: vkBeginCommandBuffer" );
         // Vulkan 은 **쓰기 전에 반드시 리셋**해야 한다. 안 하면 결과가 정의되지 않는다.
         if ( _bTimestampEnabled.load( std::memory_order_relaxed ) != SW_FALSE && _timestampPool != VK_NULL_HANDLE )
-            vkCmdResetQueryPool( _listCommandBuffer[_currentFrame], _timestampPool, getTimestampBase(), constant::render::kMaxGPUTimestampSlot );
+            vkCmdResetQueryPool( _listCommandBuffer[getFrameSlot()], _timestampPool, getTimestampBase(), constant::render::kMaxGPUTimestampSlot );
 
         // 프레임 스트림의 첫 세그먼트. 리스트가 제출될 때마다 여기서 잘리고 새 세그먼트가 열린다.
-        _activeFrameBuffer  = _listCommandBuffer[_currentFrame];
+        _activeFrameBuffer  = _listCommandBuffer[getFrameSlot()];
         _frameSegmentCursor = 0;
         _listPendingSubmit.clear();
 
@@ -2339,20 +2345,18 @@ namespace sw
             submitInfo.pSignalSemaphores    = listSignalSemaphore.data();
         }
 
-        // 이 제출에 새 세대 번호를 매긴다. 이번 프레임 기록 중 등록된 지연 해제(enqueueGPURelease)는
-        // 이 세대가 실제로 끝났다고 확인될 때까지(beginFrame 의 tickCompleted) 보류된다.
-        _listRingFrameNumber[_currentFrame] = ++_frameFenceCounter;
+        // 이번 프레임 기록 중 등록된 지연 해제(enqueueGPURelease)는 기록 시리얼(`_frameFenceRing`)이 실제로 끝났다고 확인될 때까지(beginFrame) 보류된다.
         if ( _frameStreamContext != nullptr )
             recordSubmittedEventMarker( _frameStreamContext->getLastEventMarker() );
         UniqueLock<mutex> queueLock{ _queueMutex };
         // 기록하는 사이에 장치를 잃었으면(다른 스레드의 손실 · rhi.removeDevice) 내지 않는다. 버퍼는 위에서 닫았다.
         const bool     bDeviceLost  = isDeviceLost();
-        const VkResult submitResult = bDeviceLost ? VK_ERROR_DEVICE_LOST : vkQueueSubmit( _graphicsQueue, 1, &submitInfo, _listInFlightFence[_currentFrame] );
+        const VkResult submitResult = bDeviceLost ? VK_ERROR_DEVICE_LOST : vkQueueSubmit( _graphicsQueue, 1, &submitInfo, _listInFlightFence[getFrameSlot()] );
         reportQueueResult( static_cast<int32>( submitResult ), "endFrame: vkQueueSubmit" );
         _listPendingAcquireWait.clear();
         // 이 링 슬롯의 쿼리 구간은 이제 "리셋 + 제출" 을 한 번은 거쳤다. 그 전에 읽으면 미정의다.
         if ( _bTimestampEnabled.load( std::memory_order_relaxed ) != SW_FALSE && _timestampPool != VK_NULL_HANDLE )
-            _arrTimestampSubmitted[_currentFrame] = SW_TRUE;
+            _arrTimestampSubmitted[getFrameSlot()] = SW_TRUE;
 
         if ( bPresent && isDeviceLost() == false )
         {
@@ -2383,8 +2387,8 @@ namespace sw
 
         _listPendingSubmit.clear();
         _activeFrameBuffer = VK_NULL_HANDLE;
-        _currentFrame      = ( _currentFrame + 1 ) % constant::render::kMaxFrameCountInFlight;
-        _bFrameStarted     = SW_FALSE;
+        (void)_frameFenceRing.markSubmitted(); // 칸 · 해제 키가 다음 프레임으로 넘어간다
+        _bFrameStarted = SW_FALSE;
         _releaseQueue.tickFrame();
     }
 
@@ -2478,15 +2482,15 @@ namespace sw
             ScopedLock<mutex> lock{ _cmdListPoolMutex };
             _listFreeCmdListEntry.push_back( entry );
         };
-        _releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, recycleCb ), _frameFenceCounter + 1 );
+        _releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, recycleCb ), _frameFenceRing.getRecordingSerial() );
     }
 
     VkCommandBuffer VulkanRHIDevice::beginNextFrameSegment()
     {
-        if ( _device == nullptr || _currentFrame >= constant::render::kMaxFrameCountInFlight )
+        if ( _device == nullptr || getFrameSlot() >= constant::render::kMaxFrameCountInFlight )
             return VK_NULL_HANDLE;
 
-        vector<VkCommandBuffer>& listSegment = _arrFrameSegment[_currentFrame];
+        vector<VkCommandBuffer>& listSegment = _arrFrameSegment[getFrameSlot()];
         if ( _frameSegmentCursor >= listSegment.size() )
         {
             VkCommandBufferAllocateInfo allocInfo{};
@@ -2613,7 +2617,7 @@ namespace sw
 
     VkSemaphore VulkanRHIDevice::acquireAsyncSemaphore()
     {
-        vector<VkSemaphore>& listPool = _listAsyncSemaphorePool[_currentFrame];
+        vector<VkSemaphore>& listPool = _listAsyncSemaphorePool[getFrameSlot()];
         if ( _asyncSemaphoreCursor < listPool.size() )
             return listPool[_asyncSemaphoreCursor++];
         VkSemaphoreCreateInfo createInfo{};
@@ -3661,7 +3665,7 @@ namespace sw
             if ( ownedRenderPass != VK_NULL_HANDLE )
                 vkDestroyRenderPass( dev, ownedRenderPass, nullptr );
         } ),
-                                         _frameFenceCounter + 1 );
+                                         _frameFenceRing.getRecordingSerial() );
     }
 
     VkRenderPass VulkanRHIDevice::ensurePipelineRenderPass( const RHIPipelineStateDesc& desc )

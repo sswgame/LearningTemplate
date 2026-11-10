@@ -50,10 +50,9 @@ namespace sw
         , _arrComputeRootConstantShadow{}
         , _pipelineStates{}
         , _renderPassRegistry{}
-        , _releaseQueue{ constant::render::kGPUReleaseFrameLatency }
+        , _releaseQueue{}
         , _arrFrameDoneSync{}
-        , _frameSerial{ 0 }
-        , _completedFrameSerial{ 0 }
+        , _frameFenceRing{}
         , _transferSerials{ deviceGeneration }
         , _transferQueue{ _transferSerials }
         , _readbackTable{}
@@ -726,8 +725,7 @@ namespace sw
         _pCurrentSwapChain = &_swapChain;
 
         // 프레임 펜스는 `waitIdleInternal`(종료 2단계)이 이미 놓았다. 다시 세우는 디바이스가 이어받지 않도록 번호만 처음으로 돌린다.
-        _frameSerial          = 0;
-        _completedFrameSerial = 0;
+        _frameFenceRing.reset();
 
         if ( _defaultSampler )
         {
@@ -1099,7 +1097,6 @@ namespace sw
         if ( bPresent == false )
         {
             retireFrameOnGPU();
-            _releaseQueue.tickFrame();
             return;
         }
 
@@ -1116,7 +1113,6 @@ namespace sw
         if ( _platformContext != nullptr )
             _platformContext->present();
         retireFrameOnGPU();
-        _releaseQueue.tickFrame();
     }
 
     void OpenGLRHIDevice::waitIdleInternal()
@@ -1134,7 +1130,7 @@ namespace sw
                     glDeleteSync( static_cast<GLsync>( rpSync ) );
                 rpSync = nullptr;
             }
-            _completedFrameSerial = _frameSerial;
+            _frameFenceRing.markAllCompleted();
             // glFinish 가 낸 전송도 모두 끝냈다. 펜스를 놓고 워터마크를 올린다.
             _transferQueue.retireAll( []( void*& pSync )
             {
@@ -1312,43 +1308,41 @@ namespace sw
     void OpenGLRHIDevice::retireFrameOnGPU()
     {
         ScopedOpenGLContext contextScope( this );
-        const uint64        serial     = _frameSerial + 1;
-        void*&              rpSlotSync = _arrFrameDoneSync[( serial - 1 ) % constant::render::kMaxFrameCountInFlight];
-        // 링이 한 바퀴 돌았다. 이 칸은 프레임 serial - kMaxFrameCountInFlight 의 것이니, 그 프레임이 끝나야 칸을 다시 쓴다.
-        const bool bRingFull = serial - _completedFrameSerial > constant::render::kMaxFrameCountInFlight;
-        if ( bRingFull )
+        // 링이 한 바퀴 돌았다. 이 칸은 kMaxFrameCountInFlight 프레임 앞의 것이니, 그 프레임이 끝나야 칸을 다시 쓴다.
+        (void)_frameFenceRing.waitForRecordingSlot( [this]( uint32 slot, uint64 busySerial )
         {
             constexpr GLuint64 kRingWaitTimeoutNanoseconds = 10ull * 1000ull * 1000ull * 1000ull;
+            void*&             rpSlotSync                  = _arrFrameDoneSync[slot];
             const GLenum       waitResult                  = glClientWaitSync( static_cast<GLsync>( rpSlotSync ), GL_SYNC_FLUSH_COMMANDS_BIT, kRingWaitTimeoutNanoseconds );
             if ( waitResult == GL_TIMEOUT_EXPIRED || waitResult == GL_WAIT_FAILED )
-                SW_LOG_ERROR_ID( "OpenGL.EndFrameGPUDidNot", "endFrame: the GPU did not finish frame %# (glClientWaitSync result %#)", serial - constant::render::kMaxFrameCountInFlight, static_cast<uint32>( waitResult ) );
+                SW_LOG_ERROR_ID( "OpenGL.EndFrameGPUDidNot", "endFrame: the GPU did not finish frame %# (glClientWaitSync result %#)", busySerial, static_cast<uint32>( waitResult ) );
             glDeleteSync( static_cast<GLsync>( rpSlotSync ) );
-            rpSlotSync            = nullptr;
-            _completedFrameSerial = serial - constant::render::kMaxFrameCountInFlight;
-        }
-        rpSlotSync   = glFenceSync( GL_SYNC_GPU_COMMANDS_COMPLETE, 0 );
-        _frameSerial = serial;
+            rpSlotSync = nullptr;
+            return true; // 시한을 넘겨도 칸은 다시 쓴다(이전과 같다)
+        } );
+        _arrFrameDoneSync[_frameFenceRing.getRecordingSlot()] = glFenceSync( GL_SYNC_GPU_COMMANDS_COMPLETE, 0 );
+        (void)_frameFenceRing.markSubmitted();
 
         // 이미 끝난 프레임을 오래된 순서로 모은다(기다리지 않고 묻기만 한다).
-        while ( _completedFrameSerial < _frameSerial )
+        const uint64 completedSerial = _frameFenceRing.retire( [this]( uint32 slot, uint64 serial )
         {
-            const uint64 next       = _completedFrameSerial + 1;
-            void*&       rpNextSync = _arrFrameDoneSync[( next - 1 ) % constant::render::kMaxFrameCountInFlight];
-            const GLenum pollResult = glClientWaitSync( static_cast<GLsync>( rpNextSync ), 0, 0 );
+            (void)serial;
+            void*&       rpSync     = _arrFrameDoneSync[slot];
+            const GLenum pollResult = glClientWaitSync( static_cast<GLsync>( rpSync ), 0, 0 );
             if ( pollResult == GL_TIMEOUT_EXPIRED )
-                break;
-            glDeleteSync( static_cast<GLsync>( rpNextSync ) );
-            rpNextSync            = nullptr;
-            _completedFrameSerial = next;
-        }
+                return false;
+            glDeleteSync( static_cast<GLsync>( rpSync ) );
+            rpSync = nullptr;
+            return true;
+        } );
         // 프레임을 돌리는 스레드는 컨텍스트를 쥐고 있으니 여기서 전송 워터마크도 올린다(컨텍스트 없는 스레드의 폴링은 이 값을 본다).
         retireFinishedTransfers();
-        _releaseQueue.tickCompleted( _completedFrameSerial );
+        _releaseQueue.tickCompleted( completedSerial );
     }
 
     void OpenGLRHIDevice::enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate )
     {
-        _releaseQueue.enqueueGPURelease( releaseDelegate, _frameSerial + 1 );
+        _releaseQueue.enqueueGPURelease( releaseDelegate, _frameFenceRing.getRecordingSerial() );
     }
 
     unique_ptr<IRHICommandList> OpenGLRHIDevice::createCommandList()

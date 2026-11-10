@@ -14,6 +14,7 @@
 
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Foundation/EnginePlatformHeaders.h"
+#include "Engine/Graphics/RHI/Backend/RHIFrameFenceRing.h"
 #include "Engine/Graphics/RHI/Backend/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIRenderPassRegistry.h"
@@ -536,10 +537,9 @@ namespace sw
         RHIRenderPassRegistry                     _renderPassRegistry; ///< 렌더 패스 핸들 등록부. 자기 뮤텍스로 직렬화해 어느 스레드에서나 부른다.
 
         RHIReleaseQueue _releaseQueue;
-        /// @brief 프레임마다 끝에 내는 펜스 링입니다(`retireFrameOnGPU`). `GLsync` 는 불투명 포인터라 `void*` 로 둔다. 프레임 번호 n 의 칸은 `( n - 1 ) % kMaxFrameCountInFlight` 이고, 비면 nullptr 입니다.
-        void*  _arrFrameDoneSync[constant::render::kMaxFrameCountInFlight];
-        uint64 _frameSerial;          ///< `endFrame` 이 끝낸 프레임 수입니다. `enqueueGPURelease` 는 다음 프레임 번호(`_frameSerial + 1`)에 맡깁니다.
-        uint64 _completedFrameSerial; ///< GPU 가 지난 것이 확인된 가장 큰 프레임 번호입니다.
+        /// @brief 프레임마다 끝에 내는 펜스 링입니다(`retireFrameOnGPU`). `GLsync` 는 불투명 포인터라 `void*` 로 둔다. 칸은 `RHIFrameFenceRing::getSlot` 이고, 비면 nullptr 입니다.
+        void*             _arrFrameDoneSync[RHIFrameFenceRing::kSlotCount];
+        RHIFrameFenceRing _frameFenceRing; ///< 프레임 시리얼 · 완료 워터마크 · 앞서가기 상한(해제 키는 `getRecordingSerial`)
 
         /// @brief 전송 티켓의 시리얼 발급기와 완료 워터마크입니다(GL 은 컨텍스트 하나라 제출 순서가 곧 실행 순서입니다).
         RHITransferSerials _transferSerials;

@@ -102,8 +102,7 @@ namespace sw
         , _clockQuery{}
         , _idleQuery{}
         , _arrFrameDoneQuery{}
-        , _frameSerial{ 0 }
-        , _completedFrameSerial{ 0 }
+        , _frameFenceRing{}
         , _lastTimestampFrequency{ 0 }
         , _listRegisteredBindless{}
         , _freeBindless{}
@@ -116,7 +115,7 @@ namespace sw
         , _renderPassRegistry{}
         , _arrStaticSampler{}
         , _pHWnd{ nullptr }
-        , _releaseQueue{ constant::render::kGPUReleaseFrameLatency }
+        , _releaseQueue{}
         , _transferSerials{ deviceGeneration }
         , _transferQueue{ _transferSerials }
         , _listFreeTransferQuery{}
@@ -705,8 +704,7 @@ namespace sw
         {
             frameDoneQuery.Reset();
         }
-        _frameSerial          = 0;
-        _completedFrameSerial = 0;
+        _frameFenceRing.reset();
         // 낸 전송의 쿼리와 아직 가져가지 않은 읽기는 장치와 함께 놓는다(COM 이 GPU 가 쓰는 동안 자원을 붙들어 준다).
         _transferQueue.retireAll( []( TransferProbe& probe )
         { probe._query.Reset(); } );
@@ -1110,7 +1108,6 @@ namespace sw
         }
 
         retireFrameOnGPU();
-        _releaseQueue.tickFrame();
     }
 
     void D3D11RHIDevice::waitIdleInternal()
@@ -1125,7 +1122,7 @@ namespace sw
             context->Flush();
             if ( waitForEventQuery( context, _idleQuery.Get(), D3D11RHIDeviceInternal::kIdleWaitTimeoutMilliseconds ) == false )
                 SW_LOG_ERROR_ID( "D3D11.WaitIdleGPUDidNot", "waitIdle: the GPU did not finish within %# ms", D3D11RHIDeviceInternal::kIdleWaitTimeoutMilliseconds );
-            _completedFrameSerial = _frameSerial; // GPU 가 쉰다 — 낸 프레임이 모두 끝났다
+            _frameFenceRing.markAllCompleted(); // GPU 가 쉰다 — 낸 프레임이 모두 끝났다
             // 낸 전송도 모두 끝났다. 쿼리를 풀로 돌려주고 워터마크를 올린다(업로드 스테이징은 항목과 함께 놓인다).
             _transferQueue.retireAll( [this]( TransferProbe& probe )
             { _listFreeTransferQuery.push_back( std::move( probe._query ) ); } );
@@ -1140,30 +1137,23 @@ namespace sw
         uint64 completedSerial{ 0 };
         {
             const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
-            const uint64                            serial  = _frameSerial + 1;
-            const uint32                            slot    = static_cast<uint32>( ( serial - 1 ) % constant::render::kMaxFrameCountInFlight );
-            // 링이 한 바퀴 돌았다. 이 칸은 프레임 serial - kMaxFrameCountInFlight 의 것이니, 그 프레임이 끝나야 쿼리를 다시 쓴다.
-            const bool bRingFull = serial - _completedFrameSerial > constant::render::kMaxFrameCountInFlight;
-            if ( bRingFull )
+            // 링이 한 바퀴 돌았다. 이 칸은 kMaxFrameCountInFlight 프레임 앞의 것이니, 그 프레임이 끝나야 쿼리를 다시 쓴다.
+            (void)_frameFenceRing.waitForRecordingSlot( [this, &context]( uint32 slot, uint64 busySerial )
             {
                 if ( waitForEventQuery( context, _arrFrameDoneQuery[slot].Get(), D3D11RHIDeviceInternal::kIdleWaitTimeoutMilliseconds ) == false )
-                    SW_LOG_ERROR_ID( "D3D11.EndFrameGPUDidNot", "endFrame: the GPU did not finish frame %# within %# ms", serial - constant::render::kMaxFrameCountInFlight,
+                    SW_LOG_ERROR_ID( "D3D11.EndFrameGPUDidNot", "endFrame: the GPU did not finish frame %# within %# ms", busySerial,
                                      D3D11RHIDeviceInternal::kIdleWaitTimeoutMilliseconds );
-                _completedFrameSerial = serial - constant::render::kMaxFrameCountInFlight;
-            }
-            context->End( _arrFrameDoneQuery[slot].Get() );
-            _frameSerial = serial;
+                return true; // 시한을 넘겨도 칸은 다시 쓴다(이전과 같다 — 쿼리는 다시 End 하면 새 구간이다)
+            } );
+            context->End( _arrFrameDoneQuery[_frameFenceRing.getRecordingSlot()].Get() );
+            (void)_frameFenceRing.markSubmitted();
 
             // 이미 끝난 프레임을 오래된 순서로 모은다. Present 가 명령을 보냈으므로 여기서는 Flush 하지 않고 묻기만 한다.
-            while ( _completedFrameSerial < _frameSerial )
+            completedSerial = _frameFenceRing.retire( [this, &context]( uint32 slot, uint64 serial )
             {
-                const uint64       next      = _completedFrameSerial + 1;
-                ID3D11Query* const pNextDone = _arrFrameDoneQuery[( next - 1 ) % constant::render::kMaxFrameCountInFlight].Get();
-                if ( isEventQueryDone( context, pNextDone, D3D11_ASYNC_GETDATA_DONOTFLUSH ) == false )
-                    break;
-                _completedFrameSerial = next;
-            }
-            completedSerial = _completedFrameSerial;
+                (void)serial;
+                return isEventQueryDone( context, _arrFrameDoneQuery[slot].Get(), D3D11_ASYNC_GETDATA_DONOTFLUSH );
+            } );
         }
         // 콜백은 즉시 컨텍스트 잠금 밖에서 부른다 — 비동기 되읽기의 콜백이 같은 잠금을 잡고 Map 한다.
         _releaseQueue.tickCompleted( completedSerial );
@@ -1217,7 +1207,7 @@ namespace sw
 
     void D3D11RHIDevice::enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate )
     {
-        _releaseQueue.enqueueGPURelease( releaseDelegate, _frameSerial + 1 );
+        _releaseQueue.enqueueGPURelease( releaseDelegate, _frameFenceRing.getRecordingSerial() );
     }
 
     unique_ptr<IRHICommandList> D3D11RHIDevice::createCommandList()

@@ -16,7 +16,6 @@
 #pragma once
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/IndexFreeList.h"
-#include "Core/Container/deque.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -24,6 +23,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Config/RHIBackendType.h"
+#include "Engine/Graphics/RHI/Backend/RHIFrameFenceRing.h"
 #include "Engine/Graphics/RHI/Backend/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHITimestampFrame.h"
@@ -176,10 +176,35 @@ namespace sw
     struct WebGPUFrameFence
     {
         uint64                  _serial{ 0 };
-        atomic<uint8>           _bWorkDone{ SW_FALSE };
+        atomic<uint8>           _bWorkDone{ SW_TRUE }; ///< 빈 칸은 끝난 것이다(`RHIFrameFenceRing` 은 낸 적 없는 칸을 기다리지 않는다)
         atomic<uint32>          _pendingMapCount{ 0 };
         WebGPURHIDevice*        _pDevice{ nullptr };
         vector<RHIBufferHandle> _listMappedBuffer{}; ///< 이 프레임에 매핑하는 읽기 버퍼(콜백이 다 끝나면 "읽을 수 있음" 으로 적는다)
+        WGPUFuture              _workDoneFuture{};   ///< 큐 완료 콜백의 퓨처 — 링이 차면 `wgpuInstanceWaitAny` 로 기다린다
+        vector<WGPUFuture>      _listMapFuture{};    ///< 매핑 콜백의 퓨처(같은 대기)
+
+        /** @brief 이 칸에 새 프레임을 겁니다. 칸의 앞 프레임은 끝났어야 합니다(링이 기다린다). */
+        void arm( uint64 serial, WebGPURHIDevice* pDevice )
+        {
+            _serial = serial;
+            _bWorkDone.store( SW_FALSE, std::memory_order_release );
+            _pendingMapCount.store( 0, std::memory_order_release );
+            _pDevice = pDevice;
+            _listMappedBuffer.clear();
+            _workDoneFuture = WGPUFuture{};
+            _listMapFuture.clear();
+        }
+        /** @brief 칸을 빈 상태(끝남)로 되돌립니다(장치를 놓을 때). */
+        void clear()
+        {
+            _bWorkDone.store( SW_TRUE, std::memory_order_release );
+            _pendingMapCount.store( 0, std::memory_order_release );
+            _listMappedBuffer.clear();
+            _workDoneFuture = WGPUFuture{};
+            _listMapFuture.clear();
+        }
+        /** @brief 큐 완료와 매핑이 모두 끝났는지 봅니다. */
+        bool isDone() const { return _bWorkDone.load( std::memory_order_acquire ) != SW_FALSE && _pendingMapCount.load( std::memory_order_acquire ) == 0; }
     };
 
     /** @brief 읽기 하나의 결과입니다(`submitTextureReadback`). 매핑 콜백이 패딩을 벗긴 바이트를 채운다. */
@@ -347,6 +372,8 @@ namespace sw
         void processCompletions();
         /** @brief 앞에서부터 끝난 프레임을 거둬 완료 시리얼을 올립니다(`processCompletions`). */
         void retireFinishedFrames();
+        /** @brief 칸 @p fence 의 큐 완료 · 매핑을 `wgpuInstanceWaitAny` 로 기다립니다(앞서가기 상한 — `beginFrameInternal`). 잃은 장치도 콜백은 온다(명세). */
+        [[nodiscard]] bool waitFrameFence( const WebGPUFrameFence& fence ) const;
         /** @brief 큐 완료 콜백입니다(userdata1 = 프레임 완료). */
         static void onFrameWorkDone( WGPUQueueWorkDoneStatus status, WGPUStringView message, void* pUserdata1, void* pUserdata2 );
         /** @brief 읽기 버퍼 매핑 콜백입니다(userdata1 = 프레임 완료). */
@@ -371,8 +398,8 @@ namespace sw
 
         /** @brief 지금 프레임 인코더입니다. 프레임 밖이면 nullptr 입니다. */
         WGPUCommandEncoder getFrameEncoder() const { return _frameEncoder; }
-        /** @brief 이번 프레임(다음 제출)의 시리얼입니다. 상수 링 칸 · 지연 해제가 이 값을 쓴다. */
-        uint64 getFrameSerial() const { return _frameSerial; }
+        /** @brief 이번 프레임(다음 제출)의 시리얼입니다. 상수 링 칸 · 지연 해제가 이 값을 쓴다. 어느 스레드에서나 읽는다. */
+        uint64 getFrameSerial() const { return _frameFenceRing.getRecordingSerial(); }
         /** @brief 살아 있는 리스트를 적습니다(종료 때 분리한다). */
         void registerCommandList( WebGPURHICommandList* pList );
         void unregisterCommandList( WebGPURHICommandList* pList );
@@ -468,10 +495,9 @@ namespace sw
         mutex                         _liveCommandListMutex;
         vector<WebGPURHICommandList*> _listLiveCommandList;
 
-        deque<unique_ptr<WebGPUFrameFence>> _listFrameFence;       ///< 제출했고 아직 거두지 않은 프레임(오래된 것이 앞)
-        uint64                              _frameSerial;          ///< 이번 프레임(또는 다음 제출)의 시리얼 — 지연 해제가 이 값을 기다린다
-        uint64                              _lastSubmittedSerial;  ///< 마지막으로 제출한 프레임 시리얼
-        atomic<uint64>                      _completedFrameSerial; ///< GPU 가 끝낸 마지막 프레임 시리얼(`retireFinishedFrames` 가 올린다)
+        /// @brief 칸마다의 프레임 완료(`RHIFrameFenceRing::getSlot`). 콜백 userdata 라 자리가 움직이지 않는 고정 배열이다.
+        WebGPUFrameFence  _arrFrameFence[RHIFrameFenceRing::kSlotCount];
+        RHIFrameFenceRing _frameFenceRing; ///< 프레임 시리얼 · 완료 워터마크 · 앞서가기 상한(해제 키는 `getRecordingSerial`)
 
         uint8 _bInitialized         : 1;
         uint8 _bDeviceLost          : 1;

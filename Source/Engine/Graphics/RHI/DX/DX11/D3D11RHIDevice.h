@@ -13,6 +13,7 @@
 
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Foundation/EnginePlatformHeaders.h"
+#include "Engine/Graphics/RHI/Backend/RHIFrameFenceRing.h"
 #include "Engine/Graphics/RHI/Backend/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/DX/DX11/D3D11ImmediateContext.h"
@@ -593,10 +594,9 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D11Query> _clockQuery;
         /// @brief `waitIdleInternal` 이 GPU 가 앞선 일을 모두 끝냈는지 묻는 이벤트 쿼리입니다. 디바이스를 세울 때 만들고, 못 만들면 초기화가 실패합니다.
         Microsoft::WRL::ComPtr<ID3D11Query> _idleQuery;
-        /// @brief 프레임마다 끝에 내는 이벤트 쿼리 링입니다(`retireFrameOnGPU`). 프레임 번호 n 의 칸은 `( n - 1 ) % kMaxFrameCountInFlight` 입니다. 디바이스를 세울 때 만듭니다.
-        Microsoft::WRL::ComPtr<ID3D11Query> _arrFrameDoneQuery[constant::render::kMaxFrameCountInFlight];
-        uint64                              _frameSerial;            ///< `endFrame` 이 끝낸 프레임 수입니다. `enqueueGPURelease` 는 다음 프레임 번호(`_frameSerial + 1`)에 맡깁니다.
-        uint64                              _completedFrameSerial;   ///< GPU 가 지난 것이 확인된 가장 큰 프레임 번호입니다.
+        /// @brief 프레임마다 끝에 내는 이벤트 쿼리 링입니다(`retireFrameOnGPU`). 칸은 `RHIFrameFenceRing::getSlot` 입니다. 디바이스를 세울 때 만듭니다.
+        Microsoft::WRL::ComPtr<ID3D11Query> _arrFrameDoneQuery[RHIFrameFenceRing::kSlotCount];
+        RHIFrameFenceRing                   _frameFenceRing;         ///< 프레임 시리얼 · 완료 워터마크 · 앞서가기 상한(해제 키는 `getRecordingSerial`)
         uint64                              _lastTimestampFrequency; ///< 마지막으로 읽은 disjoint 의 주파수(틱/초)
 
         vector<RHIBufferHandle> _listRegisteredBindless;

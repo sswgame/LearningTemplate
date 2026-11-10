@@ -10,6 +10,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Graphics/RHI/Backend/RHIConstantBufferMirror.h"
+#include "Engine/Graphics/RHI/Backend/RHIFrameFenceRing.h"
 #include "Engine/Graphics/RHI/Backend/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Backend/RHIShaderRequest.h"
@@ -117,6 +118,47 @@ SW_TEST_CASE( RHIReleaseQueueTest, ConcurrentTicksRunEachCallbackOnce )
     frameThread.join();
     SW_EXPECT_EQUAL( kCount, calledCount.load() );
     SW_EXPECT_EQUAL( 0u, queue.getPendingReleaseCount() );
+}
+
+/**
+ * @brief [RHIFrameFenceRingTest] 칸이 한 바퀴 돌면 가장 오래된 프레임을 기다리고, 끝난 프레임만 오래된 순서로 거둔다
+ */
+SW_TEST_CASE( RHIFrameFenceRingTest, BoundsFramesInFlightAndRetiresInOrder )
+{
+    constexpr uint32  kSlots = RHIFrameFenceRing::kSlotCount;
+    RHIFrameFenceRing ring;
+    SW_EXPECT_EQUAL( static_cast<uint64>( 1 ), ring.getRecordingSerial() );
+    SW_EXPECT_TRUE( ring.isIdle() );
+
+    uint32 waitCount{ 0 };
+    for ( uint32 frame = 0; frame < kSlots; ++frame )
+    {
+        SW_EXPECT_TRUE( ring.waitForRecordingSlot( [&waitCount]( uint32, uint64 )
+        { ++waitCount; return true; } ) );
+        SW_EXPECT_EQUAL( frame, ring.getRecordingSlot() );
+        SW_EXPECT_EQUAL( static_cast<uint64>( frame + 1 ), ring.markSubmitted() );
+    }
+    SW_EXPECT_EQUAL( 0u, waitCount ); // 칸이 모두 처음 쓰인다
+    SW_EXPECT_EQUAL( static_cast<uint64>( 1 ), ring.getRecordingSlotBusySerial() );
+
+    // 2 번이 끝났다고 해도 1 번이 안 끝났으면 워터마크는 그대로다(순서대로만 거둔다).
+    SW_EXPECT_EQUAL( static_cast<uint64>( 0 ), ring.retire( []( uint32, uint64 serial )
+    { return serial != 1; } ) );
+
+    uint64 waitedSerial{ 0 };
+    SW_EXPECT_TRUE( ring.waitForRecordingSlot( [&waitedSerial]( uint32 slot, uint64 serial )
+    {
+        waitedSerial = serial;
+        return slot == RHIFrameFenceRing::getSlot( serial );
+    } ) );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 1 ), waitedSerial );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 1 ), ring.getCompletedSerial() );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 0 ), ring.getRecordingSlotBusySerial() );
+
+    ring.markAllCompleted();
+    SW_EXPECT_TRUE( ring.isIdle() );
+    ring.markCompleted( 1 ); // 뒤로 가지 않는다
+    SW_EXPECT_EQUAL( static_cast<uint64>( kSlots ), ring.getCompletedSerial() );
 }
 
 /**

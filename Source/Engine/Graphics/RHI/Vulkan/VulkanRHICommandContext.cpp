@@ -706,7 +706,7 @@ namespace sw
             if ( slotIt != _pDevice->_mapCbSlotSize.end() )
             {
                 candidate._range  = slotIt->second;
-                candidate._offset = static_cast<uint64>( _pDevice->_currentFrame % constant::render::kMaxFrameCountInFlight ) * slotIt->second;
+                candidate._offset = static_cast<uint64>( _pDevice->getFrameSlot() % constant::render::kMaxFrameCountInFlight ) * slotIt->second;
             }
         }
 
