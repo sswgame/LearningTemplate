@@ -139,6 +139,7 @@ namespace sw
         : _mutex{}
         , _registration{ "DebugHUDRegistry", RegistrationOrder::ByOrderThenName, true, NameCase::IgnoreCase }
         , _revision{ 0 }
+        , _target{}
     {
     }
 
@@ -211,6 +212,18 @@ namespace sw
     {
         ScopedLock<mutex> lock{ _mutex };
         return _revision;
+    }
+
+    void DebugHUDRegistry::setTarget( GameObjectHandle target )
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        _target = target;
+    }
+
+    GameObjectHandle DebugHUDRegistry::getTarget() const
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        return _target;
     }
 } // namespace sw
 

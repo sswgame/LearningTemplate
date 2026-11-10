@@ -17,6 +17,11 @@ namespace sw::editor
 {
     void IEditorPanel::draw()
     {
+        if ( _bOpenedNotified == SW_FALSE )
+        {
+            _bOpenedNotified = SW_TRUE;
+            onPanelOpened();
+        }
         EditorChrome::setNextPanelSize( getInitialPanelSize() );
         IEditorDocumentPanel* const pDocument = asDocumentPanel();
         if ( pDocument != nullptr )

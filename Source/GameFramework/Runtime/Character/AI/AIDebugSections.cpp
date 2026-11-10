@@ -24,19 +24,30 @@ namespace sw
     {
         struct AIDebugSectionsInternal
         {
-            /** @brief 일정 절 — 대상 이름과 같은 NPC, 없으면 첫 일정의 첫 NPC 의 `explainNPC` 를 줄마다 적는다. 적은 줄 수를 돌려준다. */
+            /**
+             * @brief 대상 오브젝트 이름에서 일정 NPC id 를 고릅니다 — 이름 그대로, 또는 마지막 `.` 뒤(게임이 NPC 오브젝트를 `Villager.<id>` 처럼 이름 짓는다).
+             * @details shortcut: 일정 NPC 와 오브젝트를 잇는 칸이 없어 이름으로 맞춘다, NPC 오브젝트가 자기 NPC id 를 컴포넌트로 들게 되면 그 칸을 읽는다.
+             */
+            static string_view toNPCID( string_view objectName )
+            {
+                const size_t dot = objectName.rfind( '.' );
+                return dot == string_view::npos ? objectName : objectName.substr( dot + 1 );
+            }
+
+            /** @brief 일정 절 — 대상 오브젝트의 NPC, 없으면 첫 일정의 첫 NPC 의 `explainNPC` 를 줄마다 적는다. 적은 줄 수를 돌려준다. */
             static uint32 writeSchedule( DebugHUDSectionWriter& writer, uint32 maxLines )
             {
                 vector<const ScheduleSystem*> listSystem;
                 ScheduleSystem::collectLiveSystems( listSystem );
-                const ScheduleSystem* pFound   = nullptr;
-                int32                 npcIndex = -1;
-                const hashed_string   wanted( GameplayDebugTarget::getTargetName() );
+                const ScheduleSystem* pFound     = nullptr;
+                int32                 npcIndex   = -1;
+                const string          targetName = GameplayDebugTarget::getTargetName();
+                const hashed_string   wanted( toNPCID( targetName ) );
                 for ( const ScheduleSystem* pSystem : listSystem )
                 {
                     if ( pSystem == nullptr || pSystem->getNPCCount() == 0 )
                         continue;
-                    const optional<int32> namedIndex = GameplayDebugTarget::getTargetName().empty() ? optional<int32>{} : pSystem->findNPCIndex( wanted );
+                    const optional<int32> namedIndex = targetName.empty() ? optional<int32>{} : pSystem->findNPCIndex( wanted );
                     if ( namedIndex.has_value() )
                     {
                         pFound   = pSystem;

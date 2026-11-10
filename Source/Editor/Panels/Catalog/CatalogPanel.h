@@ -57,6 +57,8 @@ namespace sw::editor
         bool acceptsDocumentPath( string_view assetPath ) const override;
         /** @brief 받아들인 문서 경로의 글을 읽어 세션을 엽니다. 읽지 못하면 `Malformed` 라 저장이 막힌다(앞 파일의 글을 이 파일에 쓰지 않는다). */
         ToolAssetLoadResult loadDocument() override;
+        /** @brief 파일 색인 잡을 냅니다(아직 색인이 없을 때만). */
+        void onPanelOpened() override;
 
     private:
         void               pollIndexJob();

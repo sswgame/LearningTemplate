@@ -129,6 +129,7 @@ namespace sw::editor
             : _bOpen{ bOpenByDefault }
             , _bWindowFocused{ SW_FALSE }
             , _bContentDrawn{ SW_FALSE }
+            , _bOpenedNotified{ SW_FALSE }
             , _contentLineCount{ 0.0f }
             , _contentColumnCount{ 0.0f }
         {
@@ -138,6 +139,13 @@ namespace sw::editor
         virtual void drawContent() = 0;
         /** @brief 패널이 접히거나 탭이 숨겨졌을 때 호출합니다. */
         virtual void onPanelCollapsed() {}
+        /**
+         * @brief 패널이 열린 뒤 첫 `draw()` 에서 내용보다 먼저 한 번 부릅니다(처음부터 열린 패널은 첫 그리기, 닫혔다 다시 열리면 그 첫 그리기).
+         * @details 무거운 준비(파일 스캔 · 색인 · 카탈로그 읽기)는 여기서 **비동기 잡을 내기만** 하고, View 는 결과가 오기 전에 뼈대(빈 목록 · "찾는 중")를 그린다 —
+         *          첫 `drawContent` 에서 동기로 준비하면 패널이 처음 열리는 프레임이 그만큼 멈춘다. 여는 경로(메뉴 · 레이아웃 · `setOpen` · 기본 열림)가 여럿이라 훅은 `draw()` 한 곳이 부른다.
+         *          언리얼 `SDockTab::OnTabActivated` · 유니티 `EditorWindow.OnEnable` 자리다.
+         */
+        virtual void onPanelOpened() {}
         /**
          * @brief 패널이 닫힌 순간 한 번 부릅니다. `requestClose` 와 문서의 `applyCloseChoice` 가 닫는 모든 경로에서 부릅니다.
          * @details 닫힌 패널은 `draw()` 가 돌지 않으므로, 창이 가지고 있던 전역 상태(초점 씬, Undo 스택)는 여기서 해제해야 한다.
@@ -167,15 +175,17 @@ namespace sw::editor
         /** @brief 열림 표시를 끄고 `onPanelClosed` 를 부릅니다. 패널을 닫는 유일한 위치입니다(문서 쪽 닫기 확인도 이것으로 닫는다). */
         void closeNow()
         {
-            _bOpen = false;
+            _bOpen           = false;
+            _bOpenedNotified = SW_FALSE; // 다시 열면 첫 draw 가 `onPanelOpened` 를 다시 부른다
             onPanelClosed();
         }
 
     private:
         bool    _bOpen; ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
-        uint8   _bWindowFocused : 1;
-        uint8   _bContentDrawn  : 1; ///< 마지막 draw 에서 내용을 그렸다(접히거나 가려지지 않았다)
-        float32 _contentLineCount;   ///< 마지막으로 그린 draw 의 내용 영역 높이 / 글자 줄 높이
-        float32 _contentColumnCount; ///< 마지막으로 그린 draw 의 내용 영역 폭 / 숫자 "0" 너비
+        uint8   _bWindowFocused  : 1;
+        uint8   _bContentDrawn   : 1; ///< 마지막 draw 에서 내용을 그렸다(접히거나 가려지지 않았다)
+        uint8   _bOpenedNotified : 1; ///< 이번 열림에 `onPanelOpened` 를 불렀다(`closeNow` 가 내린다)
+        float32 _contentLineCount;    ///< 마지막으로 그린 draw 의 내용 영역 높이 / 글자 줄 높이
+        float32 _contentColumnCount;  ///< 마지막으로 그린 draw 의 내용 영역 폭 / 숫자 "0" 너비
     };
 } // namespace sw::editor

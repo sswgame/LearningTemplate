@@ -31,8 +31,8 @@
 	<ExpectVisited watch="Schedule.Activity" target="harvey" sequence="Sleep, WorkAt, GoTo, Sleep"/>
 	<ExpectVisited watch="Schedule.Phase" target="pierre" sequence="Traveling, Performing"/>
 	<Record watch="Schedule.MinuteOfDay"/>
-	<!-- NPC 디버거(HUD 섹션 npc): 이름으로 고른 NPC 의 일정 근거(explainNPC)가 줄로 나온다 -->
-	<DevCommand line="debug.target harvey"/>
+	<!-- NPC 디버거(HUD 섹션 npc): 이름으로 고른 NPC 오브젝트(대상은 id 로 저장된다)의 일정 근거(explainNPC)가 줄로 나온다 -->
+	<DevCommand line="debug.target Villager.harvey"/>
 	<DevCommand line="hud.print npc"/>
 	<ExpectLog id="DebugHUD.PrintLine" contains="[npc] schedule npc: harvey" atLeast="1"/>
 	<ExpectLog id="DebugHUD.PrintLine" contains="[npc] why: " atLeast="1"/>

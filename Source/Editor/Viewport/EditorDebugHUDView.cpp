@@ -11,8 +11,10 @@
 
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
+#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
+#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Profiling/FrameProfiler.h"
 
 #include <imgui.h>
@@ -49,6 +51,7 @@ namespace sw::editor
         , _refreshTimer{ 0.0f }
         , _drawnSectionCount{ 0 }
         , _skippedProfilerSectionCount{ 0 }
+        , _followedObjectID{ 0 }
     {
     }
 
@@ -74,8 +77,20 @@ namespace sw::editor
         _registryRevision = editor::getSubsystem<DebugHUDRegistry>().getRevision();
     }
 
+    void EditorDebugHUDView::followSelection()
+    {
+        const GameObject* const pSelected = editor::getMainSceneSelection().getPrimaryObject();
+        const uint64            objectID  = pSelected != nullptr ? pSelected->getObjectID() : 0;
+        if ( objectID == _followedObjectID )
+            return;
+        _followedObjectID = objectID;
+        if ( pSelected != nullptr )
+            editor::getSubsystem<DebugHUDRegistry>().setTarget( GameObjectHandle::make( objectID ) );
+    }
+
     void EditorDebugHUDView::refresh()
     {
+        followSelection();
         const bool bProfilerOn       = editor::getSubsystem<FrameProfiler>().isEnabled();
         _skippedProfilerSectionCount = 0;
         for ( SectionSlot& slot : _listSlot )

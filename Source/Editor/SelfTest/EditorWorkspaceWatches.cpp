@@ -101,6 +101,22 @@ namespace sw::editor
             return true;
         }
 
+        /** @brief 디버그 대상(`DebugHUDRegistry::getTarget`)이 메인 씬의 첫 선택과 같은 오브젝트면 1, 다르면 0, 선택이 없으면 -1 입니다(씬 뷰 HUD 가 선택을 따르는지). */
+        [[nodiscard]] bool readDebugTargetFollowsSelection( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            EditorContext* pContext = getWatchContext( __func__ );
+            if ( pContext == nullptr )
+                return false;
+            const uint64 selectedID = editor::getMainSceneSelection().getPrimaryObjectID();
+            if ( selectedID == 0 )
+            {
+                outValue = -1.0;
+                return true;
+            }
+            outValue = editor::getSubsystem<DebugHUDRegistry>().getTarget().objectID() == selectedID ? 1.0 : 0.0;
+            return true;
+        }
+
         [[nodiscard]] bool readSelectedIsEditorCamera( const GameObjectManager* /*pManager*/, float64& outValue )
         {
             EditorContext* pContext = getWatchContext( __func__ );
@@ -376,6 +392,9 @@ namespace sw::editor
                          &readRenderDocAvailable );
     SW_AUTOMATION_WATCH( editorObjectCount, "Editor.ObjectCount", "Objects in the active scene", &readObjectCount );
     SW_AUTOMATION_WATCH( editorSelectionCount, "Editor.SelectionCount", "Selected objects", &readSelectionCount );
+    SW_AUTOMATION_WATCH( editorDebugTargetFollowsSelection, "Editor.DebugTargetFollowsSelection",
+                         "1 when the debug target (debug.target) is the main scene's primary selection, 0 when another object, -1 without a selection",
+                         &readDebugTargetFollowsSelection );
     SW_AUTOMATION_WATCH( editorSelectedIsEditorCamera, "Editor.SelectedIsEditorCamera", "1 when the primary selection is the viewport's editor camera",
                          &readSelectedIsEditorCamera );
     SW_AUTOMATION_WATCH( editorUndoCount, "Editor.UndoCount", "Commands on the undo stack", &readUndoCount );

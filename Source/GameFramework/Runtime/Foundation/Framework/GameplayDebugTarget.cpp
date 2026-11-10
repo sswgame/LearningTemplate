@@ -2,42 +2,47 @@
 
 #include "GameFramework/Runtime/Foundation/Framework/GameplayDebugTarget.h"
 
+#include "Core/String/StringUtil.h"
+
+#include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Console/DevCommandRegistry.h"
-#include "Engine/Module/ModuleSubsystemRegistrar.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Scene/SceneManager.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
 namespace sw
 {
-    /**
-     * @struct GameplayDebugTargetName
-     * @brief 개발 명령 `debug.target` 이 정한 대상 이름입니다(게임 스레드만 — 개발 명령과 HUD 섹션이 같은 스레드다).
-     * @details GameFramework 의 모듈 부분이라 엔진 범위와 함께 생기고 사라진다(언리얼 게임플레이 디버거의 선택 대상이 `UGameplayDebuggerLocalController` 멤버인 자리).
-     */
-    struct GameplayDebugTargetName
-    {
-        static constexpr const utf8* kModulePartName = "GameplayDebugTargetName";
-
-        string _name;
-    };
-
-    SW_MODULE_PART( Engine, GameplayDebugTargetName, GameplayDebugTargetName );
-
     namespace
     {
         struct GameplayDebugTargetInternal
         {
-
-            /** @brief `debug.target [이름|clear]` — 인자가 없으면 지금 대상을 알린다. */
+            /** @brief `debug.target [이름|#id|clear]` — 인자가 없으면 지금 대상을 알린다. 저장은 핸들이다(이름은 고르는 입구일 뿐). */
             static bool runTarget( const vector<string>& listArgument, string& outReply )
             {
                 if ( listArgument.size() > 1 )
                     return false;
-                if ( listArgument.empty() == false )
-                    GameplayDebugTarget::setTargetName( listArgument[0] == "clear" ? string_view{} : string_view( listArgument[0] ) );
-                outReply = GameplayDebugTarget::getTargetName().empty() ? string( "debug.target: none (each section shows the first object that has its component)" )
-                                                                        : "debug.target: " + GameplayDebugTarget::getTargetName();
+                const GameObjectManager* const pManager = GameplayDebugTarget::findActiveObjectManager();
+                if ( listArgument.empty() == false && listArgument[0] == "clear" )
+                    GameplayDebugTarget::setTarget( GameObjectHandle{} );
+                else if ( listArgument.empty() == false )
+                {
+                    if ( pManager == nullptr )
+                    {
+                        outReply = "debug.target: no active scene";
+                        return false;
+                    }
+                    const expected<GameObjectHandle> target = GameplayDebugTarget::resolveTargetArgument( *pManager, listArgument[0] );
+                    if ( target.has_value() == false )
+                    {
+                        outReply = "debug.target: " + string( target.error().message() ) + " " + string( target.error().detail() );
+                        return false;
+                    }
+                    GameplayDebugTarget::setTarget( *target );
+                }
+                const GameObject* const pTarget = pManager != nullptr ? GameplayDebugTarget::findTargetObject( *pManager ) : nullptr;
+                outReply                        = pTarget != nullptr ? "debug.target: " + string( pTarget->getName().c_str() ) + " #" + to_string( pTarget->getObjectID() )
+                                                                     : string( "debug.target: none (each section shows the first object that has its component)" );
                 return true;
             }
         };
@@ -49,19 +54,61 @@ namespace sw
         return pSceneManager != nullptr ? pSceneManager->findActiveObjectManager() : nullptr;
     }
 
-    const string& GameplayDebugTarget::getTargetName()
+    GameObjectHandle GameplayDebugTarget::getTarget()
     {
-        static const string            s_none;
-        const GameplayDebugTargetName* pTarget = game::findSubsystem<GameplayDebugTargetName>();
-        return pTarget != nullptr ? pTarget->_name : s_none; // 게임 서비스가 없는 실행(테스트)은 대상이 없다
+        const DebugHUDRegistry* const pRegistry = engine::findSubsystem<DebugHUDRegistry>();
+        return pRegistry != nullptr ? pRegistry->getTarget() : GameObjectHandle{}; // 엔진 서비스가 없는 실행(테스트)은 대상이 없다
     }
 
-    void GameplayDebugTarget::setTargetName( string_view name )
+    void GameplayDebugTarget::setTarget( GameObjectHandle target )
     {
-        if ( GameplayDebugTargetName* const pTarget = game::findSubsystem<GameplayDebugTargetName>() )
-            pTarget->_name = string( name );
+        if ( DebugHUDRegistry* const pRegistry = engine::findSubsystem<DebugHUDRegistry>() )
+            pRegistry->setTarget( target );
     }
 
-    SW_DEV_COMMAND( DebugTarget, "debug.target", "debug.target [object|clear]",
-                    "Pick the object the gameplay debug HUD sections (quest, progress, gimmick, npc, contacts, movement, ability, interaction) show", &GameplayDebugTargetInternal::runTarget );
+    const GameObject* GameplayDebugTarget::findTargetObject( const GameObjectManager& manager )
+    {
+        const GameObjectHandle target = getTarget();
+        return target.isValid() ? manager.findGameObjectByID( target.objectID() ) : nullptr;
+    }
+
+    string GameplayDebugTarget::getTargetName()
+    {
+        const GameObjectManager* const pManager = findActiveObjectManager();
+        const GameObject* const        pTarget  = pManager != nullptr ? findTargetObject( *pManager ) : nullptr;
+        return pTarget != nullptr ? string( pTarget->getName().c_str() ) : string{};
+    }
+
+    expected<GameObjectHandle> GameplayDebugTarget::resolveTargetArgument( const GameObjectManager& manager, string_view argument )
+    {
+        const string_view idText = ( argument.empty() == false && argument[0] == '#' ) ? argument.substr( 1 ) : argument;
+        uint64            objectID{ 0 };
+        if ( StringUtil::parseUint64( idText, objectID ) )
+        {
+            if ( objectID != 0 && manager.findGameObjectByID( objectID ) != nullptr )
+                return GameObjectHandle::make( objectID );
+            return unexpected( Error{ ErrorKind::NotFound, "no object with id", idText } );
+        }
+        // 이름은 고르는 입구다 — 겹치면 아무것도 고르지 않고 id 를 알린다(첫 것을 고르면 다른 오브젝트를 조용히 본다).
+        const hashed_string name( argument );
+        GameObjectHandle    found;
+        string              listID;
+        uint32              matchCount = 0;
+        for ( const GameObject* pObject : manager.getAllGameObjects() )
+        {
+            if ( pObject == nullptr || ( pObject->getName() == name ) == false )
+                continue;
+            ++matchCount;
+            found = GameObjectHandle::make( pObject->getObjectID() );
+            listID += " #" + to_string( pObject->getObjectID() );
+        }
+        if ( matchCount == 1 )
+            return found;
+        if ( matchCount == 0 )
+            return unexpected( Error{ ErrorKind::NotFound, "no object named", argument } );
+        return unexpected( Error{ ErrorKind::InvalidArgument, "several objects have this name, pick one by #id:", listID } );
+    }
+
+    SW_DEV_COMMAND( DebugTarget, "debug.target", "debug.target [object|#id|clear]",
+                    "Pick the object the target debug sections (quest, npc, contacts, movement, ability, interaction, sequence, animrewind, ...) show", &GameplayDebugTargetInternal::runTarget );
 } // namespace sw
