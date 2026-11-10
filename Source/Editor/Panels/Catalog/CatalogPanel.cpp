@@ -180,10 +180,13 @@ namespace sw::editor
             rebuildFileList( listEntry );
             _bIndexLoaded = SW_TRUE;
         }
-        else if ( _bIndexLoaded == false && poll == EditorTaskPoll::Idle )
-        {
+    }
+
+    void CatalogPanel::onPanelOpened()
+    {
+        // 색인은 열 때 한 번 낸다 — 결과가 오기 전 목록은 "찾는 중" 뼈대다(`drawFileList`). 다시 연 패널은 앞 색인을 그대로 쓴다(새로 고침은 툴바).
+        if ( _bIndexLoaded == SW_FALSE )
             _indexJob.request();
-        }
     }
 
     void CatalogPanel::rebuildFileList( const vector<EditorAssetIndexEntry>& listEntry )
@@ -203,7 +206,10 @@ namespace sw::editor
     void CatalogPanel::drawToolbar()
     {
         if ( ImGui::Button( SW_LOCKEY( "EdText", "RefreshFiles" ) ) )
+        {
             _bIndexLoaded = SW_FALSE;
+            _indexJob.request();
+        }
         EditorSelfTestMarks::record( "catalog.refresh" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Save" ) ) );
         CatalogDocument& document = _session.editDocument();
