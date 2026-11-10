@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Online/Schedule/Server/Server/ServiceScheduler.h"
+#include "GameFramework/Runtime/Online/Schedule/Server/ServiceScheduler.h"
 
 #include "Core/Foundation/Constants.h"
 #include "Core/Serialization/BitStream.h"

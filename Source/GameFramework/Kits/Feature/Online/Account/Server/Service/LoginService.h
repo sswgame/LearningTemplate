@@ -32,7 +32,7 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginTicketAuthority.h"
 #include "GameFramework/Runtime/Online/Guard/Server/TokenBucketMap.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
-#include "GameFramework/Runtime/Online/Schedule/Server/Server/ServicePeriodicJob.h"
+#include "GameFramework/Runtime/Online/Schedule/Server/ServicePeriodicJob.h"
 #include "GameFramework/Runtime/Online/Service/PendingRequestTable.h"
 #include "GameFramework/Runtime/Online/Store/ServiceStoreTracker.h"
 

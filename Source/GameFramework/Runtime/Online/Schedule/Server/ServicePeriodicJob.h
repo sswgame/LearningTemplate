@@ -11,7 +11,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
-#include "GameFramework/Runtime/Online/Schedule/Server/Server/ServiceScheduler.h"
+#include "GameFramework/Runtime/Online/Schedule/Server/ServiceScheduler.h"
 
 namespace sw
 {

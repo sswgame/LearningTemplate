@@ -1021,7 +1021,7 @@
     "Source/GameFramework/Runtime/Online/HTTP/HTTPServer.cpp": {"integer": 1},
     "Source/GameFramework/Runtime/Online/HTTP/HTTPTypes.cpp": {"integer": 20},
     "Source/GameFramework/Runtime/Online/HTTP/HTTPTypes.h": {"integer": 2},
-    "Source/GameFramework/Runtime/Online/Schedule/Server/Server/ServiceScheduler.cpp": {"integer": 4},
+    "Source/GameFramework/Runtime/Online/Schedule/Server/ServiceScheduler.cpp": {"integer": 4},
     "Source/GameFramework/Runtime/Online/Security/OpenSSL/OpenSSLNetSecurityProvider.cpp": {"minus-one": 8, "integer": 11, "hex": 6},
     "Source/GameFramework/Runtime/Online/Server/OnlineServerService.cpp": {"integer": 1},
     "Source/GameFramework/Runtime/Online/Service/OnlineProtocol.h": {"hex": 2},

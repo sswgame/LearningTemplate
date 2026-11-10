@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Online/Schedule/Server/Server/ServiceRetentionJob.h"
+#include "GameFramework/Runtime/Online/Schedule/Server/ServiceRetentionJob.h"
 
 #include "GameFramework/Runtime/Online/Store/ServiceStore.h"
 
