@@ -92,22 +92,14 @@ GameObject/Component API 는 저작 · 수명 · 직렬화 층으로 두고, 프
 
 조회 핫패스(`StaticType` · `castTo`, 1~2 ns)는 상용 수준이다. 비용과 결함은 등록 쪽과 생성 코드의 무게에 있다.
 
-- **W-R0 계측:** `registerModuleTypes` · `registerPendingTypes` · `populateLookupCaches` 에 구간, `MemoryTag::Reflection` 전후 바이트, 등록당 캐시 비움 수 카운터. `.ninja_log` 로 생성 TU 비중을 내는 `Scripts/dev/BuildTimeReport.py`.
-- **W-R1 런타임 핵심(결함 먼저):**
-  - `registerClass` 가 등록 한 번마다 **모든 타입**의 상속 프로퍼티 목록을 비운다(`TypeRegistry.cpp:190`). 다음 조회가 부모 목록을 값으로 복사해 다시 짓는다(`TypeInfo.cpp:311`).
-    - 등록 비용이 O(타입²) 이다.
-    - 무관한 키트 하나만 로드돼도, 들고 있던 `const PropertyInfo*`(UI 바인딩 경로 · 시퀀서 트랙)가 매달린다.
-    - 지연 `mutable` 캐시를 잠금 없이 읽는 것과 등록이 경합한다.
-  - 고칠 모양: 상속 목록을 복사 대신 뷰(`span<const PropertyInfo*>`)로 둔다. 무효화는 자손만 하고, 캐시는 등록 때 즉시 지어 `mutable` 을 없앤다. 보관처는 (타입, 색인, 세대)로 든다. 소비자 없는 `_onPropertyBoundChanged` 는 지운다.
-- **W-R3 생성기(5-3 선결):**
-  - **(a) 정적 서술자 표:** 생성 코드를 constexpr 서술자 표로 바꾼다(언리얼 UHT `PropPointers` 자리). 해시를 미리 계산하고, 컨테이너 래퍼는 정적 객체로 두어 `shared_ptr` 를 없앤다. 목표는 등록 할당 타입당 3 이하, 생성 바이트 10.8 → 4 MB 미만이다.
-  - **(b) 메타데이터 형식화:** `Units` 는 열거로 둔다(지금은 검증한 뒤 문자열로 실어 인스펙터가 `== "rad"` 로 다시 푼다). `Default` 는 그 프로퍼티 타입의 리터럴로 내서 오타가 컴파일 오류가 되게 한다. `EditCondition` 은 생성기가 미리 풀고, 없는 이름은 생성 오류로 막는다.
-  - **(c) 타입 특성 수집기:** 재정의(`onTick` · `onSubTick` · `serializeState`)를 특성 비트로 모은다. `REFLECT( TickMode = … )` 를 받아 `TickBatchRegistry` 등록을 생성 코드에 낸다. 그러면 손 매크로 `SW_REGISTER_TICK_BATCH` 가 사라진다.
-  - **(e) 조건부 필수 주석:** "부모(`_base` · 상속)가 없을 때만 `Required`" 같은 조건을 메타데이터로 적는다. `CultureInfo` 는 상속 덮어쓰기라 칸이 비어도 부모 값을 받으므로 지금의 무조건 `Required` 로는 `XMLFields` 로 옮기지 못했다(D1 손 파서 이전에서 남김). 생성기가 조건을 서술자에 싣고 필수 칸 판정(`SerializerUtil::isRequiredValueMissing`)이 합친 상태에서 본다.
-  - **(d) 경고를 생성 오류로:** 클래스 템플릿 `REFLECT` · 멤버 함수 템플릿 `FUNCTION` 은 지금 경고만 남기고 건너뛴다. `#if` 아래 `PROPERTY` 가 조용히 빠지는 것도 막는다. 같은 모듈 안에 리프 이름이 겹치면 오류로 낸다.
-- **W-R5 빌드 시간(W-R3 와 병렬 — 파일이 다르다):** 헤더당 `.gen.cpp` 대신 모듈 안 8~16 헤더 묶음 TU 로 짓는다(PCH 를 1,465 번 연다). `.gen.meta.cpp` 는 같은 TU 의 `#if` 절로, 의존은 헤더별로 귀속한다. 목표는 생성 비중 8 % 미만이다.
-- **W-R4 프로퍼티 방문자 하나(W-R3 뒤):** 직렬화 9 루프 · 검증 · 문서 · 인스펙터 gather · 상태 해시 기본 구현이 `ReflectVisit` 하나를 쓴다. 지금 `foldStateHash` 는 손으로 써서 새 칸이 해시에서 빠질 수 있다. 소비자가 테스트뿐인 `Replicated` 메타데이터는 여기서 첫 소비자를 얻는다.
-- **W-R6 밀집 타입 색인:** 5-3 의 5 단계(`ComponentDataStore<T>`)와 함께만.
+- **됨(작업자 브랜치, 통합 빌드 · 검증 전):** W-R0 계측(구간 · 모듈마다 시간 · Reflection 바이트 · 상속 캐시 비움 수 로그, `Scripts/dev/BuildTimeReport.py` — 지금 Debug 생성 TU 17.4 %), W-R1(바뀐 타입과 자손만 비우고 배치 끝에 한 번 다시 짓기, 상속 목록 = 선언 타입 원소의 포인터 뷰 `PropertyListView`, 등록이 짓고 조회는 읽기만, `_onPropertyBoundChanged` 삭제), W-R3 (c) 특성 비트 · `REFLECT( TickMode )` · 생성된 `SW_REGISTER_TICK_TYPE` 등록(StressTestMover 손 등록 삭제), (d) 경고 → 생성 오류(클래스 템플릿 · 멤버 함수 템플릿 · 없는 ENUM 센티널 · `#if` 아래 리플렉션 매크로), (b) 중 `Units` 열거화.
+- **남은 일(순서대로):**
+  - W-R1 나머지: 보관처를 (타입, 색인, 세대)로 — 지금 포인터는 선언 타입 자신이 다시 등록(핫 리로드) · 해제될 때만 매달린다. 판정 비트(POD · 세이브 · 검증)는 등록이 미리 구하지만 아직 `mutable` 지연 자리가 남았다(검증 판정이 칸 타입을 재귀로 묻는다).
+  - W-R3 (a) 정적 서술자 표(constexpr, 해시 사전 계산, 컨테이너 래퍼 정적 객체 — 목표 등록 할당 타입당 3 이하, 생성 바이트 4 MB 미만). (b) 나머지: `Default` 를 프로퍼티 타입 리터럴로, `EditCondition` 사전 해소. (d) 나머지: 같은 모듈 리프 이름 겹침 — 파서가 증분이라 모듈 전체를 못 본다(모듈 목록 단계에서 보거나 런타임 `Reflection.TypeShortNameCollision` 을 같은 모듈이면 오류로). (e) 조건부 필수(부모 없을 때만 `Required`)와 `CultureInfo` 의 `XMLFields` 이전 — `CultureInfo` 는 아직 REFLECT 가 아니고 부모 병합이 손 코드다.
+  - W-R5 빌드 시간: 헤더당 `.gen.cpp` 대신 모듈 안 8~16 헤더 묶음 TU(목표 생성 비중 8 % 미만 — `BuildTimeReport.py` 로 잰다).
+  - W-R4 `ReflectVisit` 하나(직렬화 9 루프 · 검증 · 문서 · 인스펙터 gather · 상태 해시 기본 구현). `foldStateHash` 손 구현 대체는 해시 구성이 바뀌므로 상태 해시 동등성 판정(T1 · 5-3)과 같은 묶음에서.
+  - W-R6 밀집 타입 색인: 5-3 의 5 단계(`ComponentDataStore<T>`)와 함께만.
+- **5-3 과 맞춘 자리(병합함):** 생성기는 `onTick` · `onSubTick` 을 직접 재정의한 컴포넌트와 `REFLECT( TickMode = … )` 를 단 컴포넌트에 `SW_REGISTER_TICK_TYPE( 타입, 레인 )` 을 낸다(`CodeGenerator::emitTickBatchRegistration` 한 곳, 메타데이터가 없으면 Batch). `TickMode` 는 `TickRegistry.h` 하나, 재정의 비트는 `TypeMetadata::_bOverridesTick` · `_bOverridesSubTick` · `_bOverridesSerializeState`. `REFLECT_BODY` 가 `TickBatchOf` 를 친구로 연다.
 
 ### 5-5. 상용 대비 고도화(2026-11-10 진단 — 5-1 ~ 5-4 밖)
 
@@ -139,11 +131,11 @@ GameObject/Component API 는 저작 · 수명 · 직렬화 층으로 두고, 프
 - **A1 애니메이션 포즈 노드 등록식(평가 경로는 5-3 뒤):**
   - 포즈 노드가 `None · BlendPoses` 둘뿐이라(`AnimationGraphAsset.h:106`) 새 블렌드마다 enum · 로더 · 플레이어를 고친다. 리그 노드처럼 등록표로 바꾼다.
   - 그 위에 Mirror · Montage(섹션 · 분기)를 더한다.
-- **R1 에셋 리다이렉터(5-4 뒤):** GUID 전환은 기각한다(경로 id 가 언리얼 SoftObjectPath 자리). `redirects.xml`(옛 → 새)를 `AssetPaths` 앞단에서 풀어, 세이브 · 서버에 적힌 옛 경로가 산다. 린트가 남은 참조를 보고한다.
+- **R1 에셋 리다이렉터 — 됨(작업자 브랜치):** 도메인 뿌리마다 `redirects.xml`(옛 → 새), `AssetIO` 가 경로 교체보다 먼저 푼다(`AssetRedirect`), 사슬은 접고 순환 · 중복은 기동 오류, 린트 `asset-references` 가 남은 옛 참조를 보고한다. 남은 일: 에디터 옮기기 · 이름 바꾸기가 표에 줄을 더하게(`move-asset`).
 - **N1 복제 스키마를 리플렉션에서(5-4 뒤):**
   - 엔티티 상태 바이트를 게임이 손으로 양자화한다. 그래서 칸 하나를 더하면 서버 · 클라 두 곳을 고쳐야 한다.
-  - `PROPERTY( Replicated, Quantize = … )` 로 작성기를 생성하고, 스키마 해시를 와이어 버전에 합친다.
-  - `kMaxEntityBytes` 초과는 첫 경고만 남기고 엔티티가 사라진다 — `registerEntity` 의 오류로 바꾼다.
+  - `PROPERTY( Replicated, Quantize = … )` 로 작성기를 생성하고, 스키마 해시를 와이어 버전에 합친다(남음 — W-R3 (a) 서술자 표 위에 얹는다).
+  - 됨: 상한(`kMaxEntityBytes` · MMO `kMaxStateBytes`) 초과는 경고가 아니라 오류다(`ReplicationServer::setEntity` · `MMOReplicator::setEntity`, 첫 번째만 남기고 횟수를 센다).
 - **E1 되돌리기를 형식으로:** 씬 변이 명령이 `EditorTransaction&` 를 요구하게 한다. 시나리오 `editor/undocoverage` 는 등록 명령 전수를 실행 → undo 한 뒤 씬 해시가 같은지 본다.
 - **E2 런타임 디버거 한 자리(5-1 W-E1 뒤):** AI 섹션 · 시퀀스 디버거 · 애니 리와인드 · HUD 섹션을 `IDebugSource` 등록표 하나로 묶는다. 선택 오브젝트에 연동하는 패널을 둔다(언리얼 Gameplay Debugger 자리).
 - **G1 장르 수직 슬라이스(T1 · T2 뒤):** 완결 루프가 없는 게임마다 `slice.scenario.xml` 을 둔다(시작 → 목표 → 결과 → 저장 · 복원 해시 동일).
