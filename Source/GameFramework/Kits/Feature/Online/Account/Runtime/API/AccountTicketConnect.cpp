@@ -114,7 +114,14 @@ namespace sw
         , _pTransport{}
         , _client{}
         , _account{}
+        , _loginName{}
+        , _password{}
+        , _serverID{}
+        , _deadline{ 0 }
         , _bServiceRegistered{ SW_FALSE }
+        , _bPending{ SW_FALSE }
+        , _bLoginSent{ SW_FALSE }
+        , _bTicketSent{ SW_FALSE }
     {
     }
 
@@ -128,11 +135,18 @@ namespace sw
         _client.shutdown();
         _pTransport.reset();
         _tlsContext.reset();
+        _password.clear();
+        _bPending = SW_FALSE;
     }
 
-    expected<void> AccountTicketConnector::acquire( AccountTicketRequest request, NetConnectCredentials& outCredentials )
+    unexpected<Error> AccountTicketConnector::fail( Error error )
     {
         shutdown();
+        return unexpected( std::move( error ) );
+    }
+
+    expected<NetAddress> AccountTicketConnector::checkRequest( const AccountTicketRequest& request )
+    {
         const bool bComplete = request._loginAddress.empty() == false && request._loginName.empty() == false && request._password.empty() == false &&
                                request._serverID.empty() == false && request._timeoutMilliseconds > 0;
         if ( bComplete == false )
@@ -140,9 +154,45 @@ namespace sw
         NetAddress loginAddress;
         if ( NetAddress::parse( request._loginAddress, 0, loginAddress ) == false || loginAddress.isValid() == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "the login address needs host:port", request._loginAddress } );
+        return loginAddress;
+    }
+
+    expected<void> AccountTicketConnector::acquire( AccountTicketRequest request, NetConnectCredentials& outCredentials )
+    {
+        shutdown();
+        // 전송 · TLS 를 만들기 전에 거절한다 — 빈 요청은 연결도 보안 공급자도 건드리지 않는다.
+        if ( const expected<NetAddress> checked = checkRequest( request ); checked.has_value() == false )
+            return unexpected( checked.error() );
         _pTransport = StreamTransportFactory::createPlatformTransport();
         if ( _pTransport == nullptr )
             return unexpected( Error{ ErrorKind::InvalidArgument, "this platform has no stream transport" } );
+        // 서버의 서비스 스트림은 늘 TLS 1.3 이다 — 평문으로 붙으면 핸드셰이크가 닫힌다.
+        expected<unique_ptr<ITLSContext>> tlsContext = NetSecurity::createClientTLSContext( game::getSubsystem<INetSecurityProvider>(), request._tlsTrustFile, "" );
+        if ( tlsContext.has_value() == false )
+            return fail( tlsContext.error() );
+        _tlsContext = std::move( *tlsContext );
+        // `begin` 은 이전 연결만 닫고 위에서 만든 전송 · TLS 는 남긴다.
+        const expected<void> begun = begin( std::move( request ), *_pTransport, OnlineClientSecurity::tls( *_tlsContext ), SystemMonotonicClock{}.nowMilliseconds() );
+        if ( begun.has_value() == false )
+            return fail( begun.error() );
+        for ( ;; )
+        {
+            const expected<AccountTicketStep> step = poll( SystemMonotonicClock{}.nowMilliseconds(), outCredentials );
+            if ( step.has_value() == false )
+                return unexpected( step.error() );
+            if ( *step == AccountTicketStep::Received )
+                return {}; // 연결은 열어 둔다 — 티켓은 이 계정 세션에 묶여 있다
+            MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + AccountTicketConnectInternal::kPollIntervalMilliseconds * constant::time::kNanosecondsPerMillisecond );
+        }
+    }
+
+    expected<void> AccountTicketConnector::begin( AccountTicketRequest request, IStreamTransport& transport, OnlineClientSecurity security, MonotonicMilliseconds nowMs )
+    {
+        _client.shutdown(); // 이전 연결만 닫는다 — 부르는 쪽의 전송 · TLS(`acquire` 가 막 만든 것)는 그대로 쓴다
+        _bPending                               = SW_FALSE;
+        const expected<NetAddress> loginAddress = checkRequest( request );
+        if ( loginAddress.has_value() == false )
+            return unexpected( loginAddress.error() );
         if ( _bServiceRegistered == false )
         {
             AccountClientInfo info;
@@ -153,70 +203,66 @@ namespace sw
                 return unexpected( Error{ ErrorKind::InvalidArgument, "the account client could not be registered (method range already taken)" } );
             _bServiceRegistered = SW_TRUE;
         }
-        // 서버의 서비스 스트림은 늘 TLS 1.3 이다 — 평문으로 붙으면 핸드셰이크가 닫힌다.
-        expected<unique_ptr<ITLSContext>> tlsContext = NetSecurity::createClientTLSContext( game::getSubsystem<INetSecurityProvider>(), request._tlsTrustFile, "" );
-        if ( tlsContext.has_value() == false )
-            return unexpected( tlsContext.error() );
-        _tlsContext = std::move( *tlsContext );
-        OnlineServiceClientConfig settings{ OnlineClientSecurity::tls( *_tlsContext ) };
-        settings._transportSettings._ioThreadCount = 0; // 이 함수의 `update` 가 전송을 돌린다
-        settings._serverAddress                    = loginAddress;
+        OnlineServiceClientConfig settings{ security };
+        settings._transportSettings._ioThreadCount = 0; // `poll` 의 `update` 가 전송을 돌린다
+        settings._serverAddress                    = *loginAddress;
         settings._gameBuild                        = request._gameBuild;
-        if ( expected<void> result = _client.initialize( _pTransport.get(), settings ); result.has_value() == false )
+        if ( expected<void> result = _client.initialize( &transport, settings ); result.has_value() == false )
             return result;
+        _loginName   = std::move( request._loginName );
+        _password    = std::move( request._password );
+        _serverID    = std::move( request._serverID );
+        _deadline    = nowMs + request._timeoutMilliseconds;
+        _bPending    = SW_TRUE;
+        _bLoginSent  = SW_FALSE;
+        _bTicketSent = SW_FALSE;
+        return {};
+    }
 
-        const Deadline deadline    = Deadline::afterMilliseconds( request._timeoutMilliseconds );
-        bool           bLoginSent  = false;
-        bool           bTicketSent = false;
-        while ( deadline.isExpired() == false )
+    expected<AccountTicketStep> AccountTicketConnector::poll( MonotonicMilliseconds nowMs, NetConnectCredentials& outCredentials )
+    {
+        if ( _bPending == SW_FALSE )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "no ticket request in progress - call begin first" } );
+        if ( nowMs >= _deadline )
         {
-            _client.update( SystemMonotonicClock{}.nowMilliseconds() );
-            const OnlineClientState state = _client.getState();
-            if ( state == OnlineClientState::VersionMismatch || state == OnlineClientState::HandshakeFailed )
-            {
-                shutdown();
-                return unexpected( Error{ ErrorKind::InvalidArgument, "the login server refused the handshake (version mismatch or bad Hello)" } );
-            }
-            if ( _client.isReady() && bLoginSent == false )
-            {
-                bLoginSent = true;
-                (void)_account.login( request._loginName, request._password );
-                request._password.clear(); // 보낸 뒤에는 쓰지 않는다
-            }
-            vector<AccountClientReply> listReply;
-            (void)_account.pollReplies( listReply );
-            for ( const AccountClientReply& reply : listReply )
-            {
-                if ( reply._operation == AccountClientOperation::Login )
-                {
-                    if ( reply._errorCode != 0 || reply._result != LoginResult::Ok )
-                    {
-                        shutdown();
-                        return unexpected( Error{ ErrorKind::ExternalFailure, "login refused", AccountTicketConnectInternal::describeFailure( reply ) } );
-                    }
-                    if ( bTicketSent == false )
-                    {
-                        bTicketSent = true;
-                        (void)_account.issueGameTicket( request._serverID );
-                    }
-                }
-                else if ( reply._operation == AccountClientOperation::IssueGameTicket )
-                {
-                    if ( reply._errorCode != 0 || reply._result != LoginResult::Ok )
-                    {
-                        shutdown();
-                        return unexpected( Error{ ErrorKind::ExternalFailure, "game ticket refused", AccountTicketConnectInternal::describeFailure( reply ) } );
-                    }
-                    AccountClient::makeConnectCredentials( reply._ticket, outCredentials );
-                    SW_LOG_INFO_ID( "AccountTicketConnect.GameTicketServerReceived", "Game ticket for server '%#' received (the account session stays open)", request._serverID.c_str() );
-                    return {}; // 연결은 열어 둔다 — 티켓은 이 계정 세션에 묶여 있다
-                }
-            }
-            MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + AccountTicketConnectInternal::kPollIntervalMilliseconds * constant::time::kNanosecondsPerMillisecond );
+            return fail( Error{ ErrorKind::ExternalFailure, _bLoginSent ? ( _bTicketSent ? "timed out waiting for the game ticket" : "timed out waiting for the login reply" )
+                                                                        : "timed out connecting to the login server" } );
         }
-        shutdown();
-        return unexpected( Error{ ErrorKind::ExternalFailure,
-                                  bLoginSent ? ( bTicketSent ? "timed out waiting for the game ticket" : "timed out waiting for the login reply" ) : "timed out connecting to the login server" } );
+        _client.update( nowMs );
+        const OnlineClientState state = _client.getState();
+        if ( state == OnlineClientState::VersionMismatch || state == OnlineClientState::HandshakeFailed )
+            return fail( Error{ ErrorKind::InvalidArgument, "the login server refused the handshake (version mismatch or bad Hello)" } );
+        if ( _client.isReady() && _bLoginSent == SW_FALSE )
+        {
+            _bLoginSent = SW_TRUE;
+            (void)_account.login( _loginName, _password );
+            _password.clear(); // 보낸 뒤에는 쓰지 않는다
+        }
+        vector<AccountClientReply> listReply;
+        (void)_account.pollReplies( listReply );
+        for ( const AccountClientReply& reply : listReply )
+        {
+            if ( reply._operation == AccountClientOperation::Login )
+            {
+                if ( reply._errorCode != 0 || reply._result != LoginResult::Ok )
+                    return fail( Error{ ErrorKind::ExternalFailure, "login refused", AccountTicketConnectInternal::describeFailure( reply ) } );
+                if ( _bTicketSent == SW_FALSE )
+                {
+                    _bTicketSent = SW_TRUE;
+                    (void)_account.issueGameTicket( _serverID );
+                }
+            }
+            else if ( reply._operation == AccountClientOperation::IssueGameTicket )
+            {
+                if ( reply._errorCode != 0 || reply._result != LoginResult::Ok )
+                    return fail( Error{ ErrorKind::ExternalFailure, "game ticket refused", AccountTicketConnectInternal::describeFailure( reply ) } );
+                AccountClient::makeConnectCredentials( reply._ticket, outCredentials );
+                _bPending = SW_FALSE;
+                SW_LOG_INFO_ID( "AccountTicketConnect.GameTicketServerReceived", "Game ticket for server '%#' received (the account session stays open)", _serverID.c_str() );
+                return AccountTicketStep::Received;
+            }
+        }
+        return AccountTicketStep::Pending;
     }
 
     SW_DEV_COMMAND( NetTicketConnect, "net.ticketconnect", "net.ticketconnect <loginHost:port> <account> <password> <serverID> <gameHost:port> [build [trustFile]]",
