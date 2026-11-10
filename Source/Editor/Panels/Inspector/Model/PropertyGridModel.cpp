@@ -40,6 +40,8 @@ namespace sw::editor
             /** @brief 대상 범위의 씬입니다. 미리보기 범위는 지금 겨눈 미리보기 선택의 씬이고, 겨눈 창이 미리보기가 아니면 없습니다. */
             static Scene* findScene( EditorPropertyGridScope scope )
             {
+                if ( scope == EditorPropertyGridScope::None )
+                    return nullptr;
                 if ( scope == EditorPropertyGridScope::MainScene )
                     return editor::getActiveScene();
                 const EditorSelection* pSelection = editor::getFocusedSelection();
@@ -100,7 +102,7 @@ namespace sw::editor
         }
         else
         {
-            GameObject* pObject = PropertyGridModelInternal::findObject( target._scope, target._objectID );
+            GameObject* pObject = findSceneObject( target._scope, target._objectID );
             if ( pObject == nullptr )
                 return false;
             Component* pComponent = target._componentID != 0 ? pObject->findComponentByID( target._componentID ) : nullptr;
@@ -392,6 +394,11 @@ namespace sw::editor
     void PropertyGridModel::broadcastEvent( const EventInfo& event, void* pInstance )
     {
         (void)ReflectionInvoke::broadcastEvent( event, pInstance, {} );
+    }
+
+    GameObject* PropertyGridModel::findSceneObject( EditorPropertyGridScope scope, uint64 objectID )
+    {
+        return PropertyGridModelInternal::findObject( scope, objectID );
     }
 
     InspectorPropertyManager& PropertyGridModel::getPropertyManager()

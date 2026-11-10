@@ -199,6 +199,8 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         /** @brief 프로퍼티 타입별 그리기 확장 관리자입니다(에디터 컨텍스트 서브시스템). View 가 작업 공간 헤더를 보지 않고 찾는 길이다. */
         static InspectorPropertyManager& getPropertyManager();
+        /** @brief @p scope 씬의 오브젝트 @p objectID 입니다. 미리보기 범위는 지금 겨눈 미리보기 선택의 씬이고, 겨눈 창이 미리보기가 아니거나 없으면 nullptr 입니다. */
+        static GameObject* findSceneObject( EditorPropertyGridScope scope, uint64 objectID );
         /** @brief 리플렉션 타입 레지스트리입니다. */
         static const TypeRegistry& getTypeRegistry();
         /** @brief 에셋 선택 팝업이 고를 수 있는 리소스를 모아 @p outListEntry 를 채웁니다(팝업을 열 때 한 번 — 파일 목록을 프레임마다 훑지 않는다). */

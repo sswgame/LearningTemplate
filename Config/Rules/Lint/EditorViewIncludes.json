@@ -59,6 +59,7 @@
         "Source/Editor/Panels/Inspector/IInspectorComponent",
         "Source/Editor/Panels/Inspector/IInspectorProperty",
         "Source/Editor/Panels/Inspector/InspectorLayoutWatches",
+        "Source/Editor/Panels/Inspector/InspectorPanel",
         "Source/Editor/Panels/Inspector/InspectorPropertyManager",
         "Source/Editor/Panels/Inspector/InspectorPropertyUndo",
         "Source/Editor/Panels/Inspector/SceneComponentInspector",
