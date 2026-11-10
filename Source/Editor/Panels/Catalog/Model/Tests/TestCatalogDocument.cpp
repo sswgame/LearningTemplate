@@ -625,7 +625,7 @@ SW_TEST_CASE( CatalogTableEditTest, DescribesWhatChangedOrWhyItWasRefused )
     SW_EXPECT_TRUE( description == "Edited Item.cost" );
     SW_REQUIRE_TRUE( ( CatalogTableEdit{ CatalogTableEdit::Kind::UnsetCell, row, "cost", "" }.apply( document, description ) ) );
     SW_EXPECT_TRUE( description == "Unset Item.cost" );
-    SW_REQUIRE_TRUE( ( CatalogTableEdit{ CatalogTableEdit::Kind::AddRow, -1, "", "Item" }.apply( document, description ) ) );
+    SW_REQUIRE_TRUE( ( CatalogTableEdit{ CatalogTableEdit::Kind::AddRow, sw::nullopt, "", "Item" }.apply( document, description ) ) );
     SW_EXPECT_TRUE( description == "Added row to Item" );
     SW_REQUIRE_TRUE( ( CatalogTableEdit{ CatalogTableEdit::Kind::DuplicateRow, row, "", "" }.apply( document, description ) ) );
     SW_EXPECT_TRUE( description == "Duplicated row in Item" );

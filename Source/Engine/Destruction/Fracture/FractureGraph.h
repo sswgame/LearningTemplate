@@ -10,6 +10,7 @@
 #include "Core/Container/span.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -20,14 +21,17 @@ namespace sw
     /** @brief 계층의 노드 하나입니다. 잎은 조각 하나이고, 묶음은 자식 노드들입니다. */
     struct FractureNode
     {
-        float3  _centroid{};      ///< 부피 중심이다(메시 공간).
-        float32 _volume{ 0.0f };  ///< 부피다(2D 는 넓이).
-        int32   _parent{ -1 };    ///< 부모 노드다(루트는 -1).
-        uint32  _firstChild{ 0 }; ///< `FractureGraph::_listChildNode` 안의 첫 자식 인덱스다.
-        uint32  _childCount{ 0 }; ///< 자식 수(잎은 0)
-        uint32  _firstLeaf{ 0 };  ///< 이 노드가 포함한 첫 잎이다.
-        uint32  _leafCount{ 0 };  ///< 포함한 잎 수다(잎은 1).
-        uint8   _depth{ 0 };      ///< 루트 0 부터 센 깊이다. 피해 임계값 테이블의 인덱스로 쓴다.
+        /** @brief 루트 노드의 부모 값입니다(파괴 에셋이 그대로 쓰고 읽는 칸이라 optional 로 두지 않는다 — 언리얼 `INDEX_NONE` 부모와 같다). */
+        static constexpr int32 kRootParent = constant::invalid_index::kInt32;
+
+        float3  _centroid{};            ///< 부피 중심이다(메시 공간).
+        float32 _volume{ 0.0f };        ///< 부피다(2D 는 넓이).
+        int32   _parent{ kRootParent }; ///< 부모 노드다(루트는 `kRootParent`).
+        uint32  _firstChild{ 0 };       ///< `FractureGraph::_listChildNode` 안의 첫 자식 인덱스다.
+        uint32  _childCount{ 0 };       ///< 자식 수(잎은 0)
+        uint32  _firstLeaf{ 0 };        ///< 이 노드가 포함한 첫 잎이다.
+        uint32  _leafCount{ 0 };        ///< 포함한 잎 수다(잎은 1).
+        uint8   _depth{ 0 };            ///< 루트 0 부터 센 깊이다. 피해 임계값 테이블의 인덱스로 쓴다.
 
         /** @brief 잎이면 true 입니다. */
         bool isLeaf() const { return _childCount == 0; }

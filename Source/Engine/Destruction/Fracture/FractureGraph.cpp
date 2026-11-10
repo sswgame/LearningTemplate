@@ -301,7 +301,7 @@ namespace sw
                     node._leafCount    = 1;
                     node._firstChild   = 0;
                     node._childCount   = 0;
-                    node._parent       = -1;
+                    node._parent       = FractureNode::kRootParent;
                 }
                 for ( const uint32 buildIndex : order._listClusterOrder )
                 {
@@ -369,7 +369,7 @@ namespace sw
         if ( _leafCount == 0 || _listNode.size() < _leafCount )
             return unexpected( Error{ ErrorKind::InvalidArgument, "no leaves" } );
         const uint32 root             = getRootNode();
-        const bool   bInvalidRootNode = _listNode[root]._parent != -1 || _listNode[root]._firstLeaf != 0 || _listNode[root]._leafCount != _leafCount;
+        const bool   bInvalidRootNode = _listNode[root]._parent != FractureNode::kRootParent || _listNode[root]._firstLeaf != 0 || _listNode[root]._leafCount != _leafCount;
         if ( bInvalidRootNode )
             return unexpected( Error{ ErrorKind::InvalidArgument, "root must hold every leaf" } );
         for ( uint32 nodeIndex = 0; nodeIndex < static_cast<uint32>( _listNode.size() ); ++nodeIndex )

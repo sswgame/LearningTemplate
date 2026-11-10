@@ -29,7 +29,7 @@ namespace sw
         const int32 startSegment  = static_cast<int32>( *startFound );
         _playback._segment        = startSegment;
         _playback._segmentStart   = voices.getMusicClock();
-        _playback._pendingSegment = constant::invalid_index::kInt32;
+        _playback._pendingSegment = nullopt;
         scheduleSegment( voices, startSegment, voices.getMusicClock(), fadeSeconds );
     }
 
@@ -49,15 +49,15 @@ namespace sw
     void AudioMusicPlayer::reset()
     {
         _playback._pDesc.reset();
-        _playback._segment        = constant::invalid_index::kInt32;
-        _playback._pendingSegment = constant::invalid_index::kInt32;
+        _playback._segment        = nullopt;
+        _playback._pendingSegment = nullopt;
     }
 
     uint64 AudioMusicPlayer::computeSyncFrame( uint64 now, AudioMusicSync sync ) const
     {
-        if ( _playback._segment < 0 || sync == AudioMusicSync::Immediate )
+        if ( _playback._segment.has_value() == false || sync == AudioMusicSync::Immediate )
             return now;
-        const uint32  segmentIndex  = static_cast<uint32>( _playback._segment );
+        const uint32  segmentIndex  = static_cast<uint32>( *_playback._segment );
         const float64 framesPerBeat = _playback._pDesc->computeFramesPerBeat( segmentIndex );
         float64       unit          = framesPerBeat;
         if ( sync == AudioMusicSync::NextBar )
@@ -86,21 +86,21 @@ namespace sw
         }
         const int32 targetSegment = static_cast<int32>( *targetFound );
 
-        const hashed_string            currentName = _playback._segment >= 0 ? _playback._pDesc->_listSegment[static_cast<size_t>( _playback._segment )]._name : hashed_string{};
+        const hashed_string            currentName = _playback._segment.has_value() ? _playback._pDesc->_listSegment[static_cast<size_t>( *_playback._segment )]._name : hashed_string{};
         const AudioMusicTransitionDef* pRule       = _playback._pDesc->findTransition( currentName, segment );
         const float32                  fadeIn      = pRule != nullptr ? pRule->_fadeInSeconds : 0.0f;
 
         // 이미 전환을 기다리는 중이면 목적지만 바꾼다. 경계와 이전 구간의 페이드는 그대로다.
-        if ( _playback._pendingSegment >= 0 )
+        if ( _playback._pendingSegment.has_value() )
         {
-            if ( targetSegment == _playback._pendingSegment )
+            if ( _playback._pendingSegment == targetSegment )
                 return;
-            voices.freeMusicVoices( _playback._playingID, _playback._pendingSegment );
+            voices.freeMusicVoices( _playback._playingID, *_playback._pendingSegment );
             _playback._pendingSegment = targetSegment;
             scheduleSegment( voices, targetSegment, _playback._pendingFrame, fadeIn );
             return;
         }
-        if ( targetSegment == _playback._segment )
+        if ( _playback._segment == targetSegment )
             return;
 
         const uint64         now      = voices.getMusicClock();
@@ -110,7 +110,8 @@ namespace sw
         const uint32         fadeOut  = pRule != nullptr ? static_cast<uint32>( pRule->_fadeOutSeconds * static_cast<float32>( audio::kSampleRate ) ) : 0u;
 
         // 옛 구간은 경계에서(샘플 단위) 빠지기 시작한다.
-        voices.fadeMusicVoices( _playback._playingID, _playback._segment, fadeOut, delay );
+        if ( _playback._segment.has_value() ) // 구간이 끝나 멈춘 음악은 뺄 옛 구간이 없다
+            voices.fadeMusicVoices( _playback._playingID, *_playback._segment, fadeOut, delay );
         scheduleSegment( voices, targetSegment, boundary, fadeIn );
 
         if ( pRule != nullptr && pRule->_stinger.empty() == false )
@@ -173,23 +174,23 @@ namespace sw
         const uint64 blockEnd = now + audio::kBlockFrameCount;
 
         // 경계가 이 블록 안에 들어오면 지금 구간을 넘긴다(소리는 보이스의 지연과 페이드가 샘플 단위로 맞춘다).
-        if ( _playback._pendingSegment >= 0 && _playback._pendingFrame < blockEnd )
+        if ( _playback._pendingSegment.has_value() && _playback._pendingFrame < blockEnd )
         {
             _playback._segment        = _playback._pendingSegment;
             _playback._segmentStart   = _playback._pendingFrame;
-            _playback._pendingSegment = constant::invalid_index::kInt32;
+            _playback._pendingSegment = nullopt;
         }
 
         // 루프하지 않는 구간이다. 다음 구간이 있으면 끝에 연결하고, 없으면 끝나면 멈춘다.
-        if ( _playback._segment >= 0 && _playback._pendingSegment < 0 )
+        if ( _playback._segment.has_value() && _playback._pendingSegment.has_value() == false )
         {
-            const AudioMusicSegmentDef& segment = _playback._pDesc->_listSegment[static_cast<size_t>( _playback._segment )];
+            const AudioMusicSegmentDef& segment = _playback._pDesc->_listSegment[static_cast<size_t>( *_playback._segment )];
             if ( segment._bLoop == false )
             {
                 if ( segment._next.empty() == false )
                     scheduleTransition( voices, segment._next, true );
-                else if ( now >= _playback._segmentStart + _playback._pDesc->computeSegmentFrames( static_cast<uint32>( _playback._segment ) ) )
-                    _playback._segment = constant::invalid_index::kInt32;
+                else if ( now >= _playback._segmentStart + _playback._pDesc->computeSegmentFrames( static_cast<uint32>( *_playback._segment ) ) )
+                    _playback._segment = nullopt;
             }
         }
 

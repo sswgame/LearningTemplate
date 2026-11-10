@@ -98,9 +98,9 @@ namespace sw
         void*       _pOwner{ nullptr }; ///< 게임이 넘긴 행위자
         INavMover*  _pMover{ nullptr }; ///< 행위자의 이동 인터페이스(`BehaviorTreeRunner::setMover`). 없으면 이동 노드가 실패한다
         float32     _deltaTime{ 0.0f };
-        int32       _nodeIndex{ -1 };
-        uint8       _bJustStarted{ SW_FALSE }; ///< 이 작업이 이번 틱에 시작했다. 목적지 정하기처럼 처음 한 번 할 일에 쓴다
-        uint8       _bAborted{ SW_FALSE };     ///< 중단되어 불렸다. 돌려준 값은 쓰지 않는다
+        int32       _nodeIndex;    ///< 불린 노드 번호. 러너가 부를 때마다 채운다(`BehaviorTreeRunner::invokeTask`)
+        uint8       _bJustStarted; ///< 이 작업이 이번 틱에 시작했다. 목적지 정하기처럼 처음 한 번 할 일에 쓴다
+        uint8       _bAborted;     ///< 중단되어 불렸다. 돌려준 값은 쓰지 않는다
     };
 } // namespace sw
 
@@ -243,6 +243,8 @@ namespace sw
         optional<int32> findChild( const BehaviorNode& node, int32 order ) const;
         /** @brief 작업 잎 하나를 부릅니다(코드 함수 또는 등록된 동작). */
         BehaviorStatus runAction( const BehaviorNode& node, int32 index, bool bJustStarted );
+        /** @brief 작업 함수 @p function 을 노드 @p index 의 문맥으로 부릅니다. 부를 때마다 문맥을 새로 채운다(노드 번호 · 시작 · 중단). */
+        BehaviorStatus invokeTask( BehaviorTaskFunction function, int32 index, bool bJustStarted, bool bAborted );
         /** @brief 슬롯 @p slot 의 러너입니다. 비어 있으면 nullptr 입니다. */
         BehaviorTreeRunner* findSlotRunner( const hashed_string& slot );
         /** @brief 이동 노드 한 틱입니다(목적지를 요청하거나 다시 요청하고, 이동 인터페이스의 상태를 노드 상태로 옮긴다). */

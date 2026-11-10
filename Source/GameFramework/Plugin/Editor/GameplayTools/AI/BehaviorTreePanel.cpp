@@ -334,10 +334,10 @@ namespace sw::editor
         vector<EditorGraphNodeIssue> listNodeIssue;
         for ( const BehaviorTreeEditIssue& issue : _listIssue )
         {
-            if ( issue._nodeID < 0 )
+            if ( issue._nodeID.has_value() == false )
                 continue;
             EditorGraphNodeIssue nodeIssue;
-            nodeIssue._nodeID  = issue._nodeID;
+            nodeIssue._nodeID  = *issue._nodeID;
             nodeIssue._message = issue._message;
             listNodeIssue.push_back( std::move( nodeIssue ) );
         }
@@ -716,7 +716,7 @@ namespace sw::editor
         ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Error" ) ), "%s", SW_LOCKEYFORMAT( "EdPluginFormat", "Problems", TextArgumentList().addInteger( "issueCount", static_cast<int64>( _listIssue.size() ) ) ).c_str() );
         for ( const BehaviorTreeEditIssue& issue : _listIssue )
         {
-            const string where = issue._nodeID >= 0 ? _model.makeDisplayName( issue._nodeID ) : string{ "Tree" };
+            const string where = issue._nodeID.has_value() ? _model.makeDisplayName( *issue._nodeID ) : string{ "Tree" };
             ImGui::BulletText( "%s: %s", where.c_str(), issue._message.c_str() );
         }
     }

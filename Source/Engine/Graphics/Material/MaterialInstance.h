@@ -3,6 +3,7 @@
  * @brief 마스터 Material 위에 드로우나 액터 단위로 덮어쓰는 오버라이드를 정의합니다.
  */
 #pragma once
+#include "Core/Foundation/Expected.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Path/AbsolutePath.h"
 
@@ -190,9 +191,9 @@ namespace sw
         void releaseTextureOverrides();
         /**
          * @brief 덮어쓴 텍스처의 슬롯 번호입니다. 부모가 그 프로퍼티에 텍스처를 빌렸으면 그 슬롯을, 아니면 부모 슬롯 뒤에 덮어쓰기 순서대로 이어 붙입니다.
-         * @return 슬롯 수(`shaderslot::kMaterialTextureCount`)를 넘거나 덮어쓰기가 없으면 Material::kInvalidTextureSlot 입니다.
+         * @return 슬롯 수(`shaderslot::kMaterialTextureCount`)를 넘거나 덮어쓰기가 없으면 비어 있습니다.
          */
-        uint32 findTextureSlot( hashed_string name ) const;
+        optional<uint32> findTextureSlot( hashed_string name ) const;
         /** @brief XML 텍스트에서 인스턴스를 로드합니다. */
         [[nodiscard]] bool loadFromXML( string_view xmlText );
         /** @brief 정의 캐시가 더러우면 다시 만듭니다(`getCachedShaderDefines` · `getPermutationHash`). */

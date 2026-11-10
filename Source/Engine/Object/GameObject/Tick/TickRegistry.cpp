@@ -25,8 +25,6 @@ namespace sw
         {
             /** @brief 물리 뒤 단계의 첫 그룹입니다. 같은 단계의 그룹끼리는 그 사이에 틱 결과 적용이 없습니다. */
             static constexpr uint8 kPostPhysicsGroup = static_cast<uint8>( TickGroup::PostPhysics );
-            /** @brief 바깥(보통 길) 선행 조건이 없다는 표시입니다. */
-            static constexpr uint8 kNoExternalGroup = 0xFF;
 
             /** @brief 선행 조건 스테이지를 지을 때의 후보 하나입니다(선행 조건을 가진 항목 + 그 선행 목록). */
             struct StageCandidate
@@ -36,8 +34,8 @@ namespace sw
                 uint32                       _objectOrdinal{ 0 }; ///< 후보를 낸 오브젝트의 순번(0 부터, 후보가 있는 오브젝트만)
                 uint64                       _componentID{ 0 };
                 uint32                       _originalIndex{ 0 };
-                const vector<SubTickHandle>* _pListPrerequisite{ nullptr };      ///< 서브틱의 선행 목록
-                uint8                        _externalGroup{ kNoExternalGroup }; ///< 보통 길에서 도는 선행 조건 중 가장 늦은 그룹
+                const vector<SubTickHandle>* _pListPrerequisite{ nullptr }; ///< 서브틱의 선행 목록
+                optional<uint8>              _externalGroup;                ///< 보통 길에서 도는 선행 조건 중 가장 늦은 그룹. 없으면 비어 있다.
             };
 
             /** @brief 정렬된 id 목록에 @p id 를 넣습니다(이미 있으면 그대로). 새 오브젝트는 id 가 가장 커서 보통 끝에 붙습니다. */
@@ -101,15 +99,15 @@ namespace sw
             }
 
             /**
-             * @brief 보통 길에서 도는 선행 조건 항목의 그룹을 찾습니다. 오브젝트가 없거나 꺼졌거나 그 항목이 없으면 `kNoExternalGroup` 입니다.
+             * @brief 보통 길에서 도는 선행 조건 항목의 그룹을 찾습니다. 오브젝트가 없거나 꺼졌거나 그 항목이 없으면 비어 있습니다.
              * @details 핸들이 든 오브젝트 id 로 찾고 그 오브젝트의 항목만 훑습니다(씬 전체를 보지 않는다).
              */
-            static uint8 findExternalGroup( GameObjectManager& manager, const SubTickHandle& handle )
+            static optional<uint8> findExternalGroup( GameObjectManager& manager, const SubTickHandle& handle )
             {
                 GameObject* pObj            = manager.findGameObjectByID( handle._objectID );
                 const bool  bInactiveObject = pObj == nullptr || pObj->isPendingDestroy() || pObj->isActiveInHierarchy() == false;
                 if ( bInactiveObject )
-                    return kNoExternalGroup;
+                    return nullopt;
                 for ( const TickItem& item : pObj->getTickItems() )
                 {
                     const bool bMatchingTickItem = item._pComponent != nullptr && item._pComponent->getComponentID() == handle._componentID && item._subTickID == handle._subTickID &&
@@ -117,19 +115,20 @@ namespace sw
                     if ( bMatchingTickItem )
                         return item._group;
                 }
-                return kNoExternalGroup;
+                return nullopt;
             }
 
             /** @brief 후보를 (구성요소 id, 서브틱 id) 로 찾는 평평한 열린 주소 표입니다. 해시맵의 노드 할당 없이 한 번 짓고 그래프와 바깥 선행 조건 검사가 함께 씁니다. */
             struct CandidateIndex
             {
-                static constexpr uint32 kNone = constant::invalid_index::kUint32;
+                /** @brief 빈 칸 표시입니다(열린 주소 표의 칸이라 optional 로 키우지 않는다 — 밖으로는 find 가 optional 로 낸다). */
+                static constexpr uint32 kEmptySlot = constant::invalid_index::kUint32;
 
                 struct Slot
                 {
                     uint64 _componentID{ 0 };
                     uint32 _subTickID{ 0 };
-                    uint32 _index{ kNone };
+                    uint32 _index{ kEmptySlot };
                 };
 
                 vector<Slot> _listSlot;
@@ -154,7 +153,7 @@ namespace sw
                         const uint64 componentID = listCandidate[index]._componentID;
                         const uint32 subTickID   = listCandidate[index]._item._subTickID;
                         uint64       cursor      = hash( componentID, subTickID ) & _mask;
-                        while ( _listSlot[static_cast<size_t>( cursor )]._index != kNone )
+                        while ( _listSlot[static_cast<size_t>( cursor )]._index != kEmptySlot )
                         {
                             cursor = ( cursor + 1 ) & _mask;
                         }
@@ -162,15 +161,15 @@ namespace sw
                     }
                 }
 
-                /** @brief 후보 번호를 돌려줍니다. 없으면 `kNone` 입니다. */
-                uint32 find( uint64 componentID, uint32 subTickID ) const
+                /** @brief 후보 번호를 돌려줍니다. 없으면 비어 있습니다. */
+                optional<uint32> find( uint64 componentID, uint32 subTickID ) const
                 {
                     uint64 cursor = hash( componentID, subTickID ) & _mask;
                     while ( true )
                     {
                         const Slot& slot = _listSlot[static_cast<size_t>( cursor )];
-                        if ( slot._index == kNone )
-                            return kNone;
+                        if ( slot._index == kEmptySlot )
+                            return nullopt;
                         if ( slot._componentID == componentID && slot._subTickID == subTickID )
                             return slot._index;
                         cursor = ( cursor + 1 ) & _mask;
@@ -234,9 +233,10 @@ namespace sw
                 {
                     for ( const SubTickHandle& prerequisite : *listCandidate[dependent]._pListPrerequisite )
                     {
-                        const uint32 source = index.find( prerequisite._componentID, prerequisite._subTickID );
-                        if ( source == CandidateIndex::kNone || source == dependent )
+                        const optional<uint32> foundSource = index.find( prerequisite._componentID, prerequisite._subTickID );
+                        if ( foundSource.has_value() == false || *foundSource == dependent )
                             continue;
+                        const uint32 source = *foundSource;
                         listEdge.push_back( ( static_cast<uint64>( source ) << 32 ) | dependent );
                         ++outGraph._listOffset[source + 1];
                         ++outGraph._listInDegree[dependent];
@@ -265,8 +265,8 @@ namespace sw
                 const size_t count = listCandidate.size();
                 for ( StageCandidate& candidate : listCandidate )
                 {
-                    if ( candidate._externalGroup != kNoExternalGroup && candidate._item._group < candidate._externalGroup )
-                        candidate._item._group = candidate._externalGroup;
+                    if ( candidate._externalGroup.has_value() && candidate._item._group < *candidate._externalGroup )
+                        candidate._item._group = *candidate._externalGroup;
                 }
 
                 vector<uint32> listInDegree = graph._listInDegree;
@@ -314,7 +314,7 @@ namespace sw
                 for ( const uint32 index : listLevel )
                 {
                     const StageCandidate& candidate = listCandidate[index];
-                    if ( candidate._externalGroup != kNoExternalGroup && candidate._externalGroup >= getPhaseFirstGroup( candidate._item._group ) )
+                    if ( candidate._externalGroup.has_value() && *candidate._externalGroup >= getPhaseFirstGroup( candidate._item._group ) )
                         return true;
                 }
                 return false;
@@ -748,8 +748,8 @@ namespace sw
 
         struct NewItem
         {
-            TickItem _item;
-            uint8    _externalGroup{ TickRegistryInternal::kNoExternalGroup };
+            TickItem        _item;
+            optional<uint8> _externalGroup;
         };
         vector<NewItem> listNew;
         for ( const TickItem& item : pObj->_listTickItem )
@@ -768,13 +768,12 @@ namespace sw
                 if ( std::binary_search( _listDependentObjectID.begin(), _listDependentObjectID.end(), prerequisite._objectID ) )
                     return false;
                 TickRegistryInternal::insertSorted( _listReferencedObjectID, prerequisite._objectID );
-                const uint8 externalGroup = TickRegistryInternal::findExternalGroup( manager, prerequisite );
-                const bool  bLaterGroup   = entry._externalGroup == TickRegistryInternal::kNoExternalGroup || entry._externalGroup < externalGroup;
-                if ( externalGroup != TickRegistryInternal::kNoExternalGroup && bLaterGroup )
+                const optional<uint8> externalGroup = TickRegistryInternal::findExternalGroup( manager, prerequisite );
+                if ( externalGroup.has_value() && ( entry._externalGroup.has_value() == false || *entry._externalGroup < *externalGroup ) )
                     entry._externalGroup = externalGroup;
             }
-            if ( entry._externalGroup != TickRegistryInternal::kNoExternalGroup && entry._item._group < entry._externalGroup )
-                entry._item._group = entry._externalGroup;
+            if ( entry._externalGroup.has_value() && entry._item._group < *entry._externalGroup )
+                entry._item._group = *entry._externalGroup;
             listNew.push_back( entry );
         }
         VectorUtil::stableSort( listNew, []( const NewItem& left, const NewItem& right )
@@ -793,8 +792,8 @@ namespace sw
             for ( uint32 slot = 0; cursor < listNew.size() && listNew[cursor]._item._group == group; ++cursor, ++slot )
             {
                 const NewItem& entry        = listNew[cursor];
-                bWaits                      = bWaits || ( entry._externalGroup != TickRegistryInternal::kNoExternalGroup &&
-                                     entry._externalGroup >= TickRegistryInternal::getPhaseFirstGroup( group ) );
+                bWaits                      = bWaits || ( entry._externalGroup.has_value() &&
+                                     *entry._externalGroup >= TickRegistryInternal::getPhaseFirstGroup( group ) );
                 const bool     bLastOfGroup = cursor + 1 == listNew.size() || listNew[cursor + 1]._item._group != group;
                 StageInsertion insertion{};
                 insertion._item             = entry._item;
@@ -1008,24 +1007,23 @@ namespace sw
         // 같은 대상을 거듭 가리키는 일(한 리더를 따르는 뷰 여럿)이 흔해서 바로 앞에 본 대상의 결과는 다시 찾지 않는다.
         TickRegistryInternal::CandidateIndex candidateIndex;
         candidateIndex.build( listCandidate );
-        SubTickHandle lastHandle{};
-        uint8         lastExternalGroup = TickRegistryInternal::kNoExternalGroup;
+        SubTickHandle   lastHandle{};
+        optional<uint8> lastExternalGroup;
         for ( TickRegistryInternal::StageCandidate& candidate : listCandidate )
         {
             for ( const SubTickHandle& prerequisite : *candidate._pListPrerequisite )
             {
                 if ( _listReferencedObjectID.empty() || _listReferencedObjectID.back() != prerequisite._objectID )
                     _listReferencedObjectID.push_back( prerequisite._objectID );
-                if ( candidateIndex.find( prerequisite._componentID, prerequisite._subTickID ) != TickRegistryInternal::CandidateIndex::kNone )
+                if ( candidateIndex.find( prerequisite._componentID, prerequisite._subTickID ).has_value() )
                     continue;
                 if ( prerequisite != lastHandle || lastHandle.isValid() == false )
                 {
                     lastHandle        = prerequisite;
                     lastExternalGroup = TickRegistryInternal::findExternalGroup( manager, prerequisite );
                 }
-                const uint8 externalGroup = lastExternalGroup;
-                if ( externalGroup != TickRegistryInternal::kNoExternalGroup &&
-                     ( candidate._externalGroup == TickRegistryInternal::kNoExternalGroup || candidate._externalGroup < externalGroup ) )
+                const optional<uint8> externalGroup = lastExternalGroup;
+                if ( externalGroup.has_value() && ( candidate._externalGroup.has_value() == false || *candidate._externalGroup < *externalGroup ) )
                     candidate._externalGroup = externalGroup;
             }
         }

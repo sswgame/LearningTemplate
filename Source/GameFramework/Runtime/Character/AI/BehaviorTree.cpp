@@ -449,11 +449,7 @@ namespace sw
         }
         if ( node._type == BehaviorNodeKind::Action && node._function != nullptr )
         {
-            _context._nodeIndex    = index;
-            _context._bJustStarted = SW_FALSE;
-            _context._bAborted     = SW_TRUE;
-            (void)node._function( _context ); // 뒷정리만 — 결과는 쓰지 않는다
-            _context._bAborted = SW_FALSE;
+            (void)invokeTask( node._function, index, false, true ); // 뒷정리만 — 결과는 쓰지 않는다
         }
         if ( node._type == BehaviorNodeKind::Action && node._action.isValid() )
         {
@@ -606,9 +602,7 @@ namespace sw
             {
                 if ( node._function != nullptr )
                 {
-                    _context._nodeIndex    = index;
-                    _context._bJustStarted = SW_TRUE;
-                    status                 = node._function( _context ) == BehaviorStatus::Success ? BehaviorStatus::Success : BehaviorStatus::Failure;
+                    status = invokeTask( node._function, index, true, false ) == BehaviorStatus::Success ? BehaviorStatus::Success : BehaviorStatus::Failure;
                 }
                 else
                 {
@@ -670,9 +664,7 @@ namespace sw
     {
         if ( node._function != nullptr )
         {
-            _context._nodeIndex    = index;
-            _context._bJustStarted = bJustStarted ? SW_TRUE : SW_FALSE;
-            return node._function( _context );
+            return invokeTask( node._function, index, bJustStarted, false );
         }
         _actionContext._bJustStarted = bJustStarted ? SW_TRUE : SW_FALSE;
         switch ( node._action.invoke( _actionContext ) )
@@ -717,6 +709,15 @@ namespace sw
         binding._pRunner = sw::make_shared<BehaviorTreeRunner>();
         binding._pRunner->initialize( pTree );
         _listSlot.push_back( std::move( binding ) );
+    }
+
+    BehaviorStatus BehaviorTreeRunner::invokeTask( BehaviorTaskFunction function, int32 index, bool bJustStarted, bool bAborted )
+    {
+        BehaviorContext context = _context;
+        context._nodeIndex      = index;
+        context._bJustStarted   = bJustStarted ? SW_TRUE : SW_FALSE;
+        context._bAborted       = bAborted ? SW_TRUE : SW_FALSE;
+        return function( context );
     }
 
     BehaviorStatus BehaviorTreeRunner::tickMoveTo( int32 index, bool bFirst )

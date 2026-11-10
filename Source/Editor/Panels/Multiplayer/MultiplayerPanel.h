@@ -7,6 +7,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
@@ -43,7 +44,7 @@ namespace sw::editor
         /** @brief 등록 세대가 바뀌었으면(확장 모듈 로드 · 언로드) 탭 인스턴스를 등록 순서대로 다시 만듭니다. */
         void syncTabs();
         /** @brief 창 위쪽의 대상 고르기(서버 · 클라이언트 N)를 그리고 고른 프로세스 번호를 반환합니다. 세션이 돌지 않으면 -1 입니다. */
-        int32 drawTargetPicker();
+        optional<int32> drawTargetPicker();
 
     private:
         MultiplayerSessionViewModel _viewModel;

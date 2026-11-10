@@ -19,13 +19,15 @@ namespace sw
         struct CanvasMarkerProjectionInternal
         {
             /** @brief 마커 투영 컴퓨트의 입력 행 배치입니다 — canvas_marker.hlsl 의 kRow* · kMarkerFlagActive · numthreads 와 같아야 합니다. */
-            static constexpr uint32 kRowViewProjection     = 0;
-            static constexpr uint32 kRowCamera             = 4;
-            static constexpr uint32 kRowViewport           = 5;
-            static constexpr uint32 kRowLimits             = 6;
-            static constexpr uint32 kRowFirstMarker        = 8;
-            static constexpr uint32 kMarkerRowCount        = 3;
-            static constexpr uint32 kMarkerFlagActive      = 0x80000000u;
+            static constexpr uint32 kRowViewProjection = 0;
+            static constexpr uint32 kRowCamera         = 4;
+            static constexpr uint32 kRowViewport       = 5;
+            static constexpr uint32 kRowLimits         = 6;
+            static constexpr uint32 kRowFirstMarker    = 8;
+            static constexpr uint32 kMarkerRowCount    = 3;
+            static constexpr uint32 kMarkerFlagActive  = 0x80000000u;
+            /** @brief 셰이더 행에 쓰는 "인스턴스 칸 없음" 비트입니다(canvas_marker.hlsl 이 이 값이면 월드 점을 쓴다). */
+            static constexpr uint32 kNoInstanceSlot        = constant::invalid_index::kUint32;
             static constexpr uint32 kMarkerThreadGroupSize = 64;
         };
     } // namespace
@@ -71,8 +73,8 @@ namespace sw
             const uint32              bits   = record._flags | ( record._bActive != 0 ? Internal::kMarkerFlagActive : 0u );
             _listMarkerRowScratch[rowAt]     = float4{ record._worldPosition._x, record._worldPosition._y, record._worldPosition._z, record._maxDistance };
             _listMarkerRowScratch[rowAt + 1] = float4{ record._screenOffset._x, record._screenOffset._y, record._referenceDistance, BitUtil::bitsToFloat( bits ) };
-            _listMarkerRowScratch[rowAt + 2] = float4{ record._worldOffset._x, record._worldOffset._y, record._worldOffset._z, BitUtil::bitsToFloat( record._instanceSlot ) };
-            bAnyInstanceSlot                 = bAnyInstanceSlot || record._instanceSlot != constant::invalid_index::kUint32;
+            _listMarkerRowScratch[rowAt + 2] = float4{ record._worldOffset._x, record._worldOffset._y, record._worldOffset._z, BitUtil::bitsToFloat( record._instanceSlot.value_or( Internal::kNoInstanceSlot ) ) };
+            bAnyInstanceSlot                 = bAnyInstanceSlot || record._instanceSlot.has_value();
         }
         constexpr RHIBufferUsage kRowUsage = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
         if ( _markerRowBuffer.ensureCapacity( &device, sizeof( float4 ), rowCount, kRowUsage, true, false, nullptr ) == false )

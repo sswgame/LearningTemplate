@@ -225,7 +225,7 @@ namespace sw::editor
              *        지원하지 않는 텍스처 확장(KHR_texture_transform)이나 0 이 아닌 texCoord 는 무시 목록에 남깁니다.
              * @return index 가 0 이상의 정수가 아니거나 texCoord 가 정수가 아니면 그 칸이 대상인 오류입니다.
              */
-            [[nodiscard]] static expected<void> readTextureIndex( const JSONValue& textureInfo, string_view what, int32& inoutTexture, vector<string>* pOutListIgnored )
+            [[nodiscard]] static expected<void> readTextureIndex( const JSONValue& textureInfo, string_view what, optional<uint32>& inoutTexture, vector<string>* pOutListIgnored )
             {
                 if ( textureInfo.isObject() == false )
                     return {};
@@ -249,7 +249,7 @@ namespace sw::editor
                     if ( *texCoordIndex != 0 )
                         appendIgnored( pOutListIgnored, "texCoord" );
                 }
-                inoutTexture = *index;
+                inoutTexture = static_cast<uint32>( *index );
                 return {};
             }
 
@@ -387,13 +387,13 @@ namespace sw::editor
                 return {};
             }
 
-            /** @brief VRM 0.x `textureProperties` 를 표(`kArrVrm0Texture`) 순서로 glTF 텍스처 번호로 읽습니다. 적지 않은 키는 -1 입니다. */
-            [[nodiscard]] static expected<void> readVrm0Textures( const JSONValue& materialProperty, vector<string>* pOutListIgnored, int32 ( &outTexture )[kVrm0TextureCount] )
+            /** @brief VRM 0.x `textureProperties` 를 표(`kArrVrm0Texture`) 순서로 glTF 텍스처 번호로 읽습니다. 적지 않은 키(와 음수)는 비어 있습니다. */
+            [[nodiscard]] static expected<void> readVrm0Textures( const JSONValue& materialProperty, vector<string>* pOutListIgnored, optional<uint32> ( &outTexture )[kVrm0TextureCount] )
             {
                 const JSONValue textures = materialProperty.get( "textureProperties" );
                 for ( size_t index = 0; index < kVrm0TextureCount; ++index )
                 {
-                    outTexture[index] = -1;
+                    outTexture[index] = nullopt;
                 }
                 for ( const string& key : textures.isObject() ? textures.getMemberNames() : vector<string>{} )
                 {
@@ -405,7 +405,7 @@ namespace sw::editor
                     {
                         if ( kArrVrm0Texture[index] != key )
                             continue;
-                        outTexture[index] = *textureIndex;
+                        outTexture[index] = *textureIndex >= 0 ? optional<uint32>{ static_cast<uint32>( *textureIndex ) } : nullopt;
                         bKnown            = true;
                     }
                     if ( bKnown )
@@ -460,7 +460,7 @@ namespace sw::editor
             }
 
             /** @brief 읽은 색 · 텍스처 · 실수를 `ToonMaterialDef` 에 옮깁니다 — 색 · 텍스처 칸, UV 애니메이션, 블렌드 · 컬, 음영 계단, 림, 외곽선. */
-            [[nodiscard]] static expected<void> applyVrm0Mtoon( const float4 ( &arrColor )[kVrm0ColorCount], const int32 ( &arrTexture )[kVrm0TextureCount], const float32 ( &arrFloat )[Vrm0FloatCount],
+            [[nodiscard]] static expected<void> applyVrm0Mtoon( const float4 ( &arrColor )[kVrm0ColorCount], const optional<uint32> ( &arrTexture )[kVrm0TextureCount], const float32 ( &arrFloat )[Vrm0FloatCount],
                                                                 ToonMaterialDef& inoutDesc )
             {
                 inoutDesc._baseColor              = arrColor[0];
@@ -552,7 +552,7 @@ namespace sw::editor
 
         float32              arrFloat[Internal::Vrm0FloatCount]{};
         float4               arrColor[Internal::kVrm0ColorCount]{};
-        int32                arrTexture[Internal::kVrm0TextureCount]{};
+        optional<uint32>     arrTexture[Internal::kVrm0TextureCount]{};
         const expected<void> read = Internal::readVrm0Floats( materialProperty, pOutListIgnored, arrFloat )
                                         .and_then( [&]()
         { return Internal::readVrm0Colors( materialProperty, pOutListIgnored, arrColor ); } )
@@ -599,8 +599,8 @@ namespace sw::editor
                 return unexpected( Internal::withContext( Error{ ErrorKind::InvalidArgument, "the color factor is not three or four numbers", factor.first }, context ) );
         }
         // 셰이딩 시프트 텍스처는 shadingShiftTextureInfo(index · texCoord · scale)다.
-        const JSONValue                 shiftTexture = mtoon.get( "shadingShiftTexture" );
-        const pair<string_view, int32*> arrTexture[] = {
+        const JSONValue                            shiftTexture = mtoon.get( "shadingShiftTexture" );
+        const pair<string_view, optional<uint32>*> arrTexture[] = {
             {       "shadeMultiplyTexture",           &desc._shadeTexture},
             {              "matcapTexture",          &desc._matcapTexture},
             {         "rimMultiplyTexture",     &desc._rimMultiplyTexture},
@@ -608,7 +608,7 @@ namespace sw::editor
             {     "uvAnimationMaskTexture", &desc._uvAnimationMaskTexture},
             {        "shadingShiftTexture",    &desc._shadingShiftTexture},
         };
-        for ( const pair<string_view, int32*>& texture : arrTexture )
+        for ( const pair<string_view, optional<uint32>*>& texture : arrTexture )
         {
             const expected<void> textureRead = Internal::readTextureIndex( mtoon.get( texture.first ), texture.first, *texture.second, pOutListIgnored );
             if ( textureRead.has_value() == false )
@@ -695,7 +695,7 @@ namespace sw::editor
             }
             item.setAttribute( "defaultValue", string_view( value ) );
         };
-        auto setTexture = [&]( string_view name, int32 textureIndex )
+        auto setTexture = [&]( string_view name, optional<uint32> textureIndex )
         {
             const XMLNode item = Internal::findProperty( properties, name );
             if ( item.isValid() == false )
@@ -703,10 +703,10 @@ namespace sw::editor
                 bMissingProperty = true;
                 return;
             }
-            const bool bInRange          = 0 <= textureIndex && static_cast<size_t>( textureIndex ) < listTexturePath.size();
-            const bool bCanAssignTexture = bInRange && listTexturePath[static_cast<size_t>( textureIndex )].empty() == false;
+            const bool bInRange          = textureIndex.has_value() && *textureIndex < listTexturePath.size();
+            const bool bCanAssignTexture = bInRange && listTexturePath[*textureIndex].empty() == false;
             if ( bCanAssignTexture )
-                item.setAttribute( "assetPath", string_view( listTexturePath[static_cast<size_t>( textureIndex )] ) );
+                item.setAttribute( "assetPath", string_view( listTexturePath[*textureIndex] ) );
         };
         setValue( "_baseColor", Internal::formatColor( desc._baseColor ) );
         setValue( "_shadeColor", Internal::formatColor( desc._shadeColor ) );

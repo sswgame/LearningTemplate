@@ -168,7 +168,7 @@ namespace sw::editor
 
         if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "AddRow" ) ) )
         {
-            _pending = CatalogTableEdit{ CatalogTableEdit::Kind::AddRow, -1, string(), group._name };
+            _pending = CatalogTableEdit{ CatalogTableEdit::Kind::AddRow, nullopt, string(), group._name };
         }
         if ( bFirstGroup )
             EditorSelfTestMarks::record( "catalog.addrow.first" );

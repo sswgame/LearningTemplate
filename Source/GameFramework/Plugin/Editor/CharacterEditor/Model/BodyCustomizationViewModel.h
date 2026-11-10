@@ -12,6 +12,7 @@
 #include "Core/Container/span.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Name/hashed_string.h"
@@ -170,8 +171,8 @@ namespace sw::editor
         static bool setSectionAlias( BodyDataEditModel& visuals, const BodyCustomizationViewState::SectionRow& row, string_view alias );
         static bool setSectionGroups( BodyDataEditModel& visuals, const BodyCustomizationViewState::SectionRow& row, string_view groups );
         static bool setSectionDyeable( BodyDataEditModel& visuals, const BodyCustomizationViewState::SectionRow& row, bool bDyeable );
-        /** @brief 구간 이름 @p section 의 줄 번호입니다(뷰포트에서 집은 구간 — 이름이 같은 첫 줄). 없으면 무효입니다. */
-        static uint32 findSectionRow( const BodyCustomizationViewState& state, const hashed_string& section );
+        /** @brief 구간 이름 @p section 의 줄 번호입니다(뷰포트에서 집은 구간 — 이름이 같은 첫 줄). 없으면 비어 있습니다. */
+        static optional<uint32> findSectionRow( const BodyCustomizationViewState& state, const hashed_string& section );
         /** @brief 배치 층 @p index 의 가운데를 피부 UV @p uv 로 옮깁니다(뷰포트에서 표면을 집어 끄는 배치 — 끄는 동안 한 되돌리기 단계). */
         static bool placeSkinLayer( AppearanceEditModel& model, uint32 index, const float2& uv, bool bContinuous );
 

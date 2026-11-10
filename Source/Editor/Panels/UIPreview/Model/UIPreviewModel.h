@@ -7,6 +7,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
@@ -154,8 +155,8 @@ namespace sw::editor
         const UIViewport& getViewport() const { return _viewport; }
 
         // --- 고른 위젯 · 위젯 목록 ---------------------------------------------------------------
-        WidgetID getSelected() const { return _selected; }
-        uint32   getSelectedOrdinal() const { return _selectedOrdinal; }
+        WidgetID         getSelected() const { return _selected; }
+        optional<uint32> getSelectedOrdinal() const { return _selectedOrdinal; }
         /** @brief 위젯 @p widget(문서 순서 번호 @p ordinal)을 고릅니다. */
         void select( WidgetID widget, uint32 ordinal );
         /** @brief UI 점 @p point 아래의 맨 위 위젯을 고릅니다(없으면 고름을 비운다). */
@@ -172,7 +173,7 @@ namespace sw::editor
          * @brief 슬롯 편집 하나(손잡이 · Slot 필드 · 격자 셀)를 맺습니다 — `_slot` 텍스트 전후가 다르면 되돌리기 항목을 남기고 dirty 로 하고 기준 값을 다시 잡게 합니다.
          * @return 항목을 남겼으면 true 입니다.
          */
-        bool commitSlotEdit( uint32 ordinal, const string& oldText, const string& newText );
+        bool commitSlotEdit( optional<uint32> ordinal, const string& oldText, const string& newText );
 
         // --- 디자이너: 팔레트 · 구조 편집 ---------------------------------------------------------------
         /**
@@ -253,8 +254,8 @@ namespace sw::editor
         void captureBaseline( const Widget& widget );
         /** @brief 프로퍼티 편집 하나를 되돌리기 항목으로 남깁니다(인스펙터와 슬롯 편집이 함께 씁니다). */
         void pushPropertyEdit( uint32 ordinal, const string& propertyName, const string& oldText, const string& newText, const string& coalesceKey );
-        /** @brief 구조를 고친 뒤 고름 · 기준 값 · 호버를 정리합니다 — @p selectedOrdinal 의 위젯을 고릅니다. */
-        void afterStructureEdit( UIScreen& screen, uint32 selectedOrdinal );
+        /** @brief 구조를 고친 뒤 고름 · 기준 값 · 호버를 정리합니다 — @p selectedOrdinal 의 위젯을 고릅니다(비어 있으면 고름을 푼다). */
+        void afterStructureEdit( UIScreen& screen, optional<uint32> selectedOrdinal );
         /** @brief 되돌리기와 다시 하기가 부릅니다 — 문서 순서 번호 @p ordinal 의 위젯 프로퍼티 @p propertyName 에 @p text 를 씁니다. 다른 세대의 항목이면 버립니다. */
         void applyEditedText( uint32 generation, uint32 ordinal, const string& propertyName, const string& text );
         /** @brief 문서 순서 번호 @p parentOrdinal 인 패널의 @p index 번째에 @p typeName 위젯을 끼웁니다. 다른 세대의 항목이면 버립니다. */
@@ -295,7 +296,7 @@ namespace sw::editor
         WidgetID                        _selected;
         WidgetID                        _seenRootID;       ///< 마지막으로 본 트리 루트(바뀌면 문서를 다시 읽은 것)
         WidgetID                        _baselineWidget;   ///< 기준 값을 잡은 위젯
-        uint32                          _selectedOrdinal;  ///< 고른 위젯의 문서 순서 번호(트리를 새로 지어도 이어 간다)
+        optional<uint32>                _selectedOrdinal;  ///< 고른 위젯의 문서 순서 번호(트리를 새로 지어도 이어 간다). 고르지 않았으면 비어 있다.
         uint32                          _generation;       ///< 트리가 새로 지어질 때마다 오른다(옛 되돌리기 항목을 끊는다)
         uint32                          _gameTextRevision; ///< 사본을 만들 때 본 게임 텍스트 버전
         uint32                          _languageIndex;

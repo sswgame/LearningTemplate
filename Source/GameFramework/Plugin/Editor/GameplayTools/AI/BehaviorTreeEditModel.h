@@ -36,8 +36,8 @@ namespace sw::editor
     /** @brief 저장 전에 고쳐야 할 문제 하나입니다. */
     struct BehaviorTreeEditIssue
     {
-        int32  _nodeID{ -1 };
-        string _message{};
+        optional<int32> _nodeID; ///< 문제가 난 노드. 트리 전체의 문제면 비어 있다
+        string          _message{};
     };
 } // namespace sw::editor
 

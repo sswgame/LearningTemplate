@@ -312,8 +312,8 @@ namespace sw::editor
         using Internal = TileSetPanelInternal;
         ImGui::SeparatorText( SW_LOCKEY( "EditorTileSet", "Look" ) );
         // 기본 모습은 그냥 타일의 모습이고, 규칙 타일에서는 어느 규칙도 맞지 않을 때의 모습이다.
-        if ( ImGui::Selectable( SW_LOCKEY( "EditorTileSet", "DefaultLook" ), _model.getSelectedRule() == TileSetEditModel::kDefaultVisual ) )
-            _model.selectRule( TileSetEditModel::kDefaultVisual );
+        if ( ImGui::Selectable( SW_LOCKEY( "EditorTileSet", "DefaultLook" ), _model.getSelectedRule().has_value() == false ) )
+            _model.selectRule( nullopt );
         EditorSelfTestMarks::record( "tileSet.defaultLook" );
         drawIssuesFor( _model.getSelectedBrush(), nullopt ); // 기본 모습
         if ( brush.isRuleTile() )
@@ -334,7 +334,7 @@ namespace sw::editor
             if ( ImGui::Button( SW_LOCKEY( "EditorTileSet", "AddRule" ) ) && _model.addRule() )
                 notifyDocumentEdited( "Add Tile Rule" );
             EditorSelfTestMarks::record( "tileSet.addRule" );
-            const bool bRuleSelected = _model.getSelectedRule() >= 0;
+            const bool bRuleSelected = _model.getSelectedRule().has_value();
             ImGui::BeginDisabled( bRuleSelected == false );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Remove" ) ) );
             if ( ImGui::Button( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdVerb", "Remove" ), "Remove##rule" ) ) && _model.removeSelectedRule() )
@@ -355,9 +355,10 @@ namespace sw::editor
             return;
         const TileVisual visual = *pVisual;
         drawVisualRow( visual );
-        const int32 ruleIndex = _model.getSelectedRule();
-        if ( ruleIndex < 0 || ruleIndex >= static_cast<int32>( brush._listRule.size() ) )
+        const optional<int32> selectedRule = _model.getSelectedRule();
+        if ( selectedRule.has_value() == false || *selectedRule < 0 || *selectedRule >= static_cast<int32>( brush._listRule.size() ) )
             return;
+        const int32 ruleIndex = *selectedRule;
         // 이웃 패턴 3 × 3 — 가운데는 이 규칙이 고르는 셀이다. 단추를 누르면 상관없음(.) → 같음(o) → 다름(x) 으로 돈다(파일의 패턴 글자 그대로).
         ImGui::TextUnformatted( SW_LOCKEY( "EditorTileSet", "Pattern" ) );
         EditorWidgets::drawHelpMarker( SW_LOCKEY( "EditorTileSet", "PatternTip" ) );

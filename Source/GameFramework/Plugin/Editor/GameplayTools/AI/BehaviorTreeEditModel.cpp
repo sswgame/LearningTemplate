@@ -255,7 +255,7 @@ namespace sw::editor
         outListIssue.clear();
         if ( _rootID < 0 )
         {
-            outListIssue.push_back( BehaviorTreeEditIssue{ -1, "The tree has no root node - right-click the canvas to add one" } );
+            outListIssue.push_back( BehaviorTreeEditIssue{ nullopt, "The tree has no root node - right-click the canvas to add one" } );
             return;
         }
         for ( const BehaviorTreeEditNode& node : _listNode )

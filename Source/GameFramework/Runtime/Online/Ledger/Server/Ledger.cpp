@@ -27,12 +27,12 @@ namespace sw
             /** @brief 한 (보유자, 자산)의 순변화입니다. */
             struct Delta
             {
-                LedgerHolder _holder{};
-                string       _holderKey{};
-                string       _assetID{};
-                int64        _delta{ 0 };
-                int32        _firstDebitIndex{ constant::invalid_index::kInt32 };  ///< 이 보유자가 보낸 첫 다리(모자람 보고)
-                int32        _firstCreditIndex{ constant::invalid_index::kInt32 }; ///< 이 보유자가 받은 첫 다리(상한 보고)
+                LedgerHolder    _holder{};
+                string          _holderKey{};
+                string          _assetID{};
+                int64           _delta{ 0 };
+                optional<int32> _firstDebitIndex;  ///< 이 보유자가 보낸 첫 다리(모자람 보고)
+                optional<int32> _firstCreditIndex; ///< 이 보유자가 받은 첫 다리(상한 보고)
             };
 
             static LedgerResult finish( LedgerTransferResult& outOutcome, LedgerResult result )
@@ -134,9 +134,9 @@ namespace sw
                 return reader.hasOverflowed() == false;
             }
 
-            static LedgerResult validate( const LedgerTransferRequest& request, int32& outFailedPostingIndex )
+            static LedgerResult validate( const LedgerTransferRequest& request, optional<int32>& outFailedPostingIndex )
             {
-                outFailedPostingIndex        = constant::invalid_index::kInt32;
+                outFailedPostingIndex        = nullopt;
                 const int32 postingCount     = static_cast<int32>( request._listPosting.size() );
                 const bool  bCountOk         = 1 <= postingCount && postingCount <= LedgerConstant::kMaxPostingCount;
                 const bool  bKeyOk           = LedgerUtil::isValidJournalKey( request._journalKey );
@@ -188,14 +188,14 @@ namespace sw
                     {
                         Delta& debit = getOrCreateDelta( outListDelta, posting._from, posting._assetID );
                         debit._delta -= posting._amount;
-                        if ( debit._firstDebitIndex < 0 )
+                        if ( debit._firstDebitIndex.has_value() == false )
                             debit._firstDebitIndex = static_cast<int32>( postingIndex );
                     }
                     if ( posting._to.isSystem() == false )
                     {
                         Delta& credit = getOrCreateDelta( outListDelta, posting._to, posting._assetID );
                         credit._delta += posting._amount;
-                        if ( credit._firstCreditIndex < 0 )
+                        if ( credit._firstCreditIndex.has_value() == false )
                             credit._firstCreditIndex = static_cast<int32>( postingIndex );
                     }
                 }

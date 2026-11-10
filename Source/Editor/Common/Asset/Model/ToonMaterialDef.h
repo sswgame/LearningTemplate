@@ -46,41 +46,41 @@ namespace sw::editor
      */
     struct ToonMaterialDef
     {
-        string          _name;
-        float4          _baseColor{ 1.0f, 1.0f, 1.0f, 1.0f };
-        float4          _shadeColor{ 0.0f, 0.0f, 0.0f, 1.0f };
-        float4          _emissiveColor{ 0.0f, 0.0f, 0.0f, 1.0f };
-        float4          _rimColor{ 0.0f, 0.0f, 0.0f, 1.0f };
-        float4          _matcapColor{ 1.0f, 1.0f, 1.0f, 1.0f };
-        float4          _outlineColor{ 0.0f, 0.0f, 0.0f, 1.0f };
-        float32         _shadingShift{ 0.0f };
-        float32         _shadingToony{ 0.9f };
-        float32         _shadowReceive{ 1.0f };
-        float32         _emissiveStrength{ 1.0f };
-        float32         _rimFresnelPower{ 5.0f };
-        float32         _rimLift{ 0.0f };
-        float32         _rimLightingMix{ 1.0f };
-        float32         _outlineWidth{ 0.0f };
-        float32         _outlineLightingMix{ 1.0f };
-        float32         _outlineMaxDistance{ 1000.0f };
-        float32         _alphaCutoff{ 0.5f };
-        float32         _normalScale{ 1.0f };              ///< glTF normalTexture.scale · 0.x _BumpScale
-        float32         _shadingShiftTextureScale{ 1.0f }; ///< MToon shadingShiftTexture.scale
-        float32         _uvAnimationScrollXSpeed{ 0.0f };  ///< MToon uvAnimationScrollXSpeedFactor(glTF UV / 초)
-        float32         _uvAnimationScrollYSpeed{ 0.0f };  ///< MToon uvAnimationScrollYSpeedFactor(glTF UV / 초, v 는 아래가 +)
-        float32         _uvAnimationRotationSpeed{ 0.0f }; ///< MToon uvAnimationRotationSpeedFactor(라디안 / 초, UV 중심 (0.5, 0.5) 기준)
-        int32           _baseColorTexture{ -1 };
-        int32           _shadeTexture{ -1 };
-        int32           _emissiveTexture{ -1 };
-        int32           _matcapTexture{ -1 };
-        int32           _normalTexture{ -1 };          ///< glTF normalTexture · 0.x _BumpMap
-        int32           _shadingShiftTexture{ -1 };    ///< MToon shadingShiftTexture
-        int32           _rimMultiplyTexture{ -1 };     ///< MToon rimMultiplyTexture · 0.x _RimTexture
-        int32           _outlineWidthTexture{ -1 };    ///< MToon outlineWidthMultiplyTexture · 0.x _OutlineWidthTexture
-        int32           _uvAnimationMaskTexture{ -1 }; ///< MToon uvAnimationMaskTexture · 0.x _UvAnimMaskTexture(b 채널)
-        ToonOutlineMode _outlineMode{ ToonOutlineMode::None };
-        ToonAlphaMode   _alphaMode{ ToonAlphaMode::Opaque };
-        uint8           _bTwoSided{ SW_FALSE };
+        string           _name;
+        float4           _baseColor{ 1.0f, 1.0f, 1.0f, 1.0f };
+        float4           _shadeColor{ 0.0f, 0.0f, 0.0f, 1.0f };
+        float4           _emissiveColor{ 0.0f, 0.0f, 0.0f, 1.0f };
+        float4           _rimColor{ 0.0f, 0.0f, 0.0f, 1.0f };
+        float4           _matcapColor{ 1.0f, 1.0f, 1.0f, 1.0f };
+        float4           _outlineColor{ 0.0f, 0.0f, 0.0f, 1.0f };
+        float32          _shadingShift{ 0.0f };
+        float32          _shadingToony{ 0.9f };
+        float32          _shadowReceive{ 1.0f };
+        float32          _emissiveStrength{ 1.0f };
+        float32          _rimFresnelPower{ 5.0f };
+        float32          _rimLift{ 0.0f };
+        float32          _rimLightingMix{ 1.0f };
+        float32          _outlineWidth{ 0.0f };
+        float32          _outlineLightingMix{ 1.0f };
+        float32          _outlineMaxDistance{ 1000.0f };
+        float32          _alphaCutoff{ 0.5f };
+        float32          _normalScale{ 1.0f };              ///< glTF normalTexture.scale · 0.x _BumpScale
+        float32          _shadingShiftTextureScale{ 1.0f }; ///< MToon shadingShiftTexture.scale
+        float32          _uvAnimationScrollXSpeed{ 0.0f };  ///< MToon uvAnimationScrollXSpeedFactor(glTF UV / 초)
+        float32          _uvAnimationScrollYSpeed{ 0.0f };  ///< MToon uvAnimationScrollYSpeedFactor(glTF UV / 초, v 는 아래가 +)
+        float32          _uvAnimationRotationSpeed{ 0.0f }; ///< MToon uvAnimationRotationSpeedFactor(라디안 / 초, UV 중심 (0.5, 0.5) 기준)
+        optional<uint32> _baseColorTexture;
+        optional<uint32> _shadeTexture;
+        optional<uint32> _emissiveTexture;
+        optional<uint32> _matcapTexture;
+        optional<uint32> _normalTexture;          ///< glTF normalTexture · 0.x _BumpMap
+        optional<uint32> _shadingShiftTexture;    ///< MToon shadingShiftTexture
+        optional<uint32> _rimMultiplyTexture;     ///< MToon rimMultiplyTexture · 0.x _RimTexture
+        optional<uint32> _outlineWidthTexture;    ///< MToon outlineWidthMultiplyTexture · 0.x _OutlineWidthTexture
+        optional<uint32> _uvAnimationMaskTexture; ///< MToon uvAnimationMaskTexture · 0.x _UvAnimMaskTexture(b 채널)
+        ToonOutlineMode  _outlineMode{ ToonOutlineMode::None };
+        ToonAlphaMode    _alphaMode{ ToonAlphaMode::Opaque };
+        uint8            _bTwoSided{ SW_FALSE };
 
         // VRM 머티리얼 읽기와 엔진 툰 머티리얼 쓰기를 담당합니다. 모든 함수가 static 입니다. 지원하는 키의 기준은 `ToonMaterialDef.cpp` 의 키 표(`kArrVrm0Float` · `kArrVrm0Texture` · `kArrVrm0Color` · `kArrMtoon1Key`)입니다.
         // 모르는 키는 오류다. 철자가 틀린 키가 조용히 기본값이 되지 않게 하는 이 저장소의 규칙이다. 아는데 지원하지 않는 키(텍스처 확장 · 0 이 아닌 texCoord 등)는

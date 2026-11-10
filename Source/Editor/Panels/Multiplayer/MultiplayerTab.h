@@ -5,6 +5,7 @@
  *          서버 디버깅의 다음 단위(Inspector · Sync)와 확장 모듈(게임별 상태 보기)도 자기 .cpp 에 같은 한 줄을 둔다.
  */
 #pragma once
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
@@ -22,9 +23,9 @@ namespace sw::editor
      */
     struct MultiplayerTabContext
     {
-        MultiplayerSessionViewModel*       _pSession{ nullptr };      ///< 멀티 프로세스 재생 세션의 명령(창이 들고 있다 — 언제나 있다)
-        const MultiplayerSessionViewState* _pState{ nullptr };        ///< 창이 이 프레임 첫머리에 모은 세션 값(돌고 있는지는 `_bRunning`)
-        int32                              _targetProcessIndex{ -1 }; ///< 고른 대상 프로세스(0 = 서버, N = 클라이언트 N). 세션이 돌지 않으면 -1
+        MultiplayerSessionViewModel*       _pSession{ nullptr }; ///< 멀티 프로세스 재생 세션의 명령(창이 들고 있다 — 언제나 있다)
+        const MultiplayerSessionViewState* _pState{ nullptr };   ///< 창이 이 프레임 첫머리에 모은 세션 값(돌고 있는지는 `_bRunning`)
+        optional<int32>                    _targetProcessIndex;  ///< 고른 대상 프로세스(0 = 서버, N = 클라이언트 N). 프로세스가 없으면 비어 있다
     };
 } // namespace sw::editor
 

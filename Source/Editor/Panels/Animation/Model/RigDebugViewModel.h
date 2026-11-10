@@ -10,6 +10,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
@@ -52,10 +53,10 @@ namespace sw::editor
         RigDebugContent           _content{ RigDebugContent::NoRig };
         vector<RigDebugNodeRow>   _listNode{};
         vector<RigDebugTargetRow> _listTarget{};
-        string                    _status{};                                        ///< "Save to rig" 결과 줄
-        string                    _targetStatus{};                                  ///< 대상 기즈모 저장 결과 줄
-        int32                     _selectedNode{ constant::invalid_index::kInt32 }; ///< 고른 노드 번호(없으면 무효 번호)
-        uint8                     _bCanSave{ SW_FALSE };                            ///< 리그 파일 경로가 있다
+        string                    _status{};             ///< "Save to rig" 결과 줄
+        string                    _targetStatus{};       ///< 대상 기즈모 저장 결과 줄
+        optional<uint32>          _selectedNode;         ///< 고른 노드 번호(없으면 비어 있다)
+        uint8                     _bCanSave{ SW_FALSE }; ///< 리그 파일 경로가 있다
     };
 
     /** @brief 리그 디버그 창의 ViewModel 입니다. */
@@ -82,8 +83,8 @@ namespace sw::editor
         void submitBoneMarkers( const float4& color );
 
     private:
-        string _status;           ///< 저장 결과 줄
-        uint64 _selectedObjectID; ///< 고른 노드가 속한 오브젝트다(오브젝트가 바뀌면 노드 선택을 푼다)
-        int32  _selectedNode;     ///< 고른 노드 번호다(없으면 무효 번호)
+        string           _status;           ///< 저장 결과 줄
+        uint64           _selectedObjectID; ///< 고른 노드가 속한 오브젝트다(오브젝트가 바뀌면 노드 선택을 푼다)
+        optional<uint32> _selectedNode;     ///< 고른 노드 번호다(없으면 비어 있다)
     };
 } // namespace sw::editor

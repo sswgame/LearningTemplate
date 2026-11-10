@@ -365,18 +365,18 @@ namespace sw
             batch._scissor     = scissor;
             batch._bScissor    = bHasScissor ? SW_TRUE : SW_FALSE;
         }
-        quad._textureSlot = selectBatch( pTexture );
+        quad._textureSlot = selectBatch( pTexture ).value_or( CanvasQuad::kNoTextureSlot );
         quad._anchor      = _anchor;
         _pDrawList->_listQuad.push_back( quad );
         ++_pDrawList->_listBatch.back()._quadCount;
     }
 
-    uint32 CanvasPainter::selectBatch( const CanvasTextureRef* pTexture )
+    optional<uint32> CanvasPainter::selectBatch( const CanvasTextureRef* pTexture )
     {
         // appendQuad 가 가위가 같은 일괄을 이미 끝에 두었다. 여기서는 텍스처만 본다.
         CanvasBatch& current = _pDrawList->_listBatch.back();
         if ( pTexture == nullptr )
-            return constant::invalid_index::kUint32;
+            return nullopt;
         for ( uint32 slot = 0; slot < current._textureCount; ++slot )
         {
             if ( current._arrTexture[slot].isEqual( *pTexture ) )

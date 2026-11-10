@@ -250,9 +250,9 @@ namespace sw
                 const Texture2D* pTexture = texture.findReadyTexture();
                 if ( pTexture == nullptr )
                     continue;
-                const uint32 textureBinding = bNativeBindless ? pTexture->getSRV() : findTextureSlot( texture._name );
-                if ( textureBinding != kInvalidDescriptorIndex && textureBinding != Material::kInvalidTextureSlot )
-                    _pParentMaterial->packTextureIntoBuffer( texture._name, textureBinding, data->_bytes );
+                const optional<uint32> textureBinding = bNativeBindless ? optional<uint32>{ pTexture->getSRV() } : findTextureSlot( texture._name );
+                if ( textureBinding.has_value() && *textureBinding != kInvalidDescriptorIndex )
+                    _pParentMaterial->packTextureIntoBuffer( texture._name, *textureBinding, data->_bytes );
             }
         }
         fillTextureSlots( data->_arrTextureSRV, shaderslot::kMaterialTextureCount );
@@ -358,24 +358,24 @@ namespace sw
         markRenderDirty();
     }
 
-    uint32 MaterialInstance::findTextureSlot( hashed_string name ) const
+    optional<uint32> MaterialInstance::findTextureSlot( hashed_string name ) const
     {
         if ( _pParentMaterial == nullptr )
-            return Material::kInvalidTextureSlot;
-        const uint32 parentSlot = _pParentMaterial->findTextureSlot( name );
-        if ( parentSlot != Material::kInvalidTextureSlot )
+            return nullopt;
+        const optional<uint32> parentSlot = _pParentMaterial->findTextureSlot( name );
+        if ( parentSlot.has_value() )
             return parentSlot;
         // 부모에 없는 프로퍼티는 부모 슬롯 뒤에 덮어쓰기 순서대로 잇는다. 지울 것(빈 경로)은 자리를 차지하지 않는다.
         uint32 slot = static_cast<uint32>( _pParentMaterial->getMaterialTextureSRVs().size() );
         for ( const TextureOverride& texture : _listTextureOverride )
         {
-            if ( texture._assetPath.empty() || _pParentMaterial->findTextureSlot( texture._name ) != Material::kInvalidTextureSlot )
+            if ( texture._assetPath.empty() || _pParentMaterial->findTextureSlot( texture._name ).has_value() )
                 continue;
             if ( texture._name == name )
-                return slot < shaderslot::kMaterialTextureCount ? slot : Material::kInvalidTextureSlot;
+                return slot < shaderslot::kMaterialTextureCount ? optional<uint32>{ slot } : nullopt;
             ++slot;
         }
-        return Material::kInvalidTextureSlot;
+        return nullopt;
     }
 
     void MaterialInstance::fillTextureSlots( RHIDescriptorIndex* pOutSlot, uint32 slotCount ) const
@@ -392,9 +392,9 @@ namespace sw
             const Texture2D* pTexture = texture.findReadyTexture();
             if ( pTexture == nullptr )
                 continue;
-            const uint32 slot = findTextureSlot( texture._name );
-            if ( slot < slotCount )
-                pOutSlot[slot] = pTexture->getSRV();
+            const optional<uint32> slot = findTextureSlot( texture._name );
+            if ( slot.has_value() && *slot < slotCount )
+                pOutSlot[*slot] = pTexture->getSRV();
         }
     }
 

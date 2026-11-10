@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -30,8 +31,8 @@ namespace sw
         Scene* acquireScene( NetSimRole role, int32 worldIndex ) override;
         void   releaseScene( Scene& scene ) override;
 
-        /** @brief @p worldIndex 월드에 빌려 준 씬의 키입니다(`SceneManager::getPreviewSceneKey`). 없으면 `kInvalidSceneKey` 입니다. */
-        uint32 findSceneKey( int32 worldIndex ) const;
+        /** @brief @p worldIndex 월드에 빌려 준 씬의 키입니다(`SceneManager::getPreviewSceneKey`). 빌려 준 씬이 없으면 비어 있습니다. */
+        optional<uint32> findSceneKey( int32 worldIndex ) const;
         /** @brief 빌려 준 씬 수입니다. */
         uint32 getLentCount() const { return static_cast<uint32>( _listLent.size() ); }
 

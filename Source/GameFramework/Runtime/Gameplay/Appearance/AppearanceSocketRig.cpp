@@ -82,7 +82,6 @@ namespace sw
         : _table{}
         , _rigidBones{}
         , _listUnitPart{}
-        , _listPartUnit{}
     {
         (void)_rigidBones.addBone( hashed_string( AppearanceSocketRigInternal::kRigidRootBone ), constant::invalid_index::kInt32, float4x4::Identity );
     }
@@ -91,7 +90,6 @@ namespace sw
     {
         _table.beginResolve();
         _listUnitPart.clear();
-        _listPartUnit.assign( resolved._listPart.size(), kNoUnit );
         bool bSucceeded = true;
 
         // 유닛 0 은 몸이다. 소켓 에셋이 없어도 유닛을 만든다. 덮어쓰기만으로 소켓이 생길 수 있기 때문이다.
@@ -107,9 +105,7 @@ namespace sw
                 bSucceeded = false;
         }
         applySocketOverrides( resolved, bodyBindBones, bodySockets );
-        _listUnitPart.push_back( bodyPart.value_or( kNoUnit ) );
-        if ( bodyPart.has_value() )
-            _listPartUnit[*bodyPart] = kBodyUnit;
+        _listUnitPart.push_back( bodyPart );
         if ( _table.addUnit( hashed_string{}, kBodyUnit, bodySockets, bodyBindBones, nullptr, outIssues ) == false )
             bSucceeded = false;
 
@@ -132,15 +128,9 @@ namespace sw
                 continue;
             }
             _listUnitPart.push_back( static_cast<uint32>( partIndex ) );
-            _listPartUnit[partIndex] = unitIndex;
         }
         _table.endResolve();
         return bSucceeded;
-    }
-
-    uint32 AppearanceSocketRig::findPartUnit( uint32 partIndex ) const
-    {
-        return partIndex < _listPartUnit.size() ? _listPartUnit[partIndex] : kNoUnit;
     }
 
     bool AppearanceSocketRig::computePlacement( const AppearancePlacement& placement, const CharacterBoneArray& bodyBones, float4x4& outInUnit, uint32& outUnitIndex ) const

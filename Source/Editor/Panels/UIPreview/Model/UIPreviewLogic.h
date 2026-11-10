@@ -204,9 +204,8 @@ namespace sw::editor
         static bool isPseudoLanguage( string_view code );
 
         // --- 위젯 고르기 · 속성 고치기 ---------------------------------------------------------------
-        /** @brief 위젯 번호 @p id 의 문서 순서 번호입니다. 없으면 `kNoOrdinal` 입니다. 문서를 다시 읽으면 위젯 번호가 바뀌므로 고른 위젯을 번호로 이어 갑니다. */
-        static constexpr uint32 kNoOrdinal = 0xFFFFFFFFu;
-        static uint32           findWidgetOrdinal( const WidgetTree& tree, WidgetID id );
+        /** @brief 위젯 번호 @p id 의 문서 순서 번호입니다. 트리에 없으면 비어 있습니다. 문서를 다시 읽으면 위젯 번호가 바뀌므로 고른 위젯을 번호로 이어 갑니다. */
+        static optional<uint32> findWidgetOrdinal( const WidgetTree& tree, WidgetID id );
         /** @brief 문서 순서 번호 @p ordinal 의 위젯 번호입니다. 범위 밖이면 무효입니다. */
         static WidgetID findWidgetByOrdinal( const WidgetTree& tree, uint32 ordinal );
         /** @brief 위젯의 프로퍼티 @p name (기반 타입 것 포함)입니다. 없으면 nullptr 입니다. */

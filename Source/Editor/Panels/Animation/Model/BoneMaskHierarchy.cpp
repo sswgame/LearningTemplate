@@ -38,7 +38,7 @@ namespace sw::editor
             const bool          bHasParent  = bone._parentIndex >= 0;
             const uint32        parentIndex = bHasParent ? static_cast<uint32>( bone._parentIndex ) : 0u;
             row._bone                       = bone._name;
-            row._parentIndex                = bone._parentIndex;
+            row._parentIndex                = bHasParent ? optional<uint32>{ parentIndex } : nullopt;
             row._depth                      = bHasParent ? outListRow[parentIndex]._depth + 1u : 0u;
             row._weight                     = listWeight[boneIndex];
             bool bHasRoot                   = false;

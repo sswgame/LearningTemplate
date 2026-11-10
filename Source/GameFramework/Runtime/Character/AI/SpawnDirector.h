@@ -204,7 +204,7 @@ namespace sw
         struct SpawnAlive
         {
             uint32 _spawnID{ 0 };
-            int32  _entryIndex{ -1 };
+            int32  _entryIndex; ///< 낳을 때 채운다(상태 읽기는 범위를 검사한다)
         };
 
         bool isEligible( int32 entryIndex ) const;

@@ -7,6 +7,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Message/NetStatsReport.h"
@@ -48,7 +49,7 @@ namespace sw::editor
         /**
          * @brief 대상 @p targetIndex 의 값을 채웁니다. 비중은 @p bAllProcessKinds 면 모든 프로세스의 합, @p bSentKinds 면 보낸 메시지(아니면 받은 메시지)입니다.
          */
-        void gather( int32 targetIndex, bool bAllProcessKinds, bool bSentKinds, MultiplayerProfilerViewState& outState );
+        void gather( optional<int32> targetIndex, bool bAllProcessKinds, bool bSentKinds, MultiplayerProfilerViewState& outState );
         /** @brief 모든 프로세스의 시계열을 지웁니다. */
         void clear();
 

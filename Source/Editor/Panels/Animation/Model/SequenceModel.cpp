@@ -696,10 +696,10 @@ namespace sw::editor
             copied._channelCount = static_cast<uint32>( track._listChannel.size() );
             for ( uint32 channelIndex = 0; channelIndex < copied._channelCount && channelIndex < kSequenceMaxChannelCount; ++channelIndex )
             {
-                const uint32 keyIndex = track.findChannelKey( channelIndex, key._frame );
-                if ( keyIndex == constant::invalid_index::kUint32 )
+                const optional<uint32> keyIndex = track.findChannelKey( channelIndex, key._frame );
+                if ( keyIndex.has_value() == false )
                     continue;
-                copied._arrChannelKey[channelIndex] = track._listChannel[channelIndex]._listKey[keyIndex];
+                copied._arrChannelKey[channelIndex] = track._listChannel[channelIndex]._listKey[*keyIndex];
                 copied._channelMask |= 1u << channelIndex;
             }
             if ( copied._channelMask != 0 )

@@ -5,6 +5,7 @@
  *          그래서 값은 뷰포트가 들고 시각화는 그리기 인자(`EditorViewportVisualizerArgs::_pStats`)로 받아 적는다.
  */
 #pragma once
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 
 namespace sw::editor
@@ -15,9 +16,9 @@ namespace sw::editor
      */
     struct EditorDebugDrawStats
     {
-        uint32 _segmentCount{ 0 };
-        uint32 _textCount{ 0 };
-        int32  _frame{ -1 };
+        uint32          _segmentCount{ 0 };
+        uint32          _textCount{ 0 };
+        optional<int32> _frame; ///< 마지막으로 그린 ImGui 프레임(그린 적 없으면 비어 있다)
     };
 } // namespace sw::editor
 

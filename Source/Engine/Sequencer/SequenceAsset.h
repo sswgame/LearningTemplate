@@ -314,8 +314,8 @@ namespace sw
         void collectKeyFrames( vector<float32>& outListFrame ) const;
         /** @brief 채널의 @p frame 값입니다. 채널이 없거나 키가 없으면 비어 있습니다 — 부르는 쪽이 "키 없음" 의 뜻(지금 값 유지 등)을 정한다. */
         [[nodiscard]] optional<float32> evaluateChannel( uint32 channelIndex, float32 frame ) const;
-        /** @brief 채널 @p channelIndex 의 @p frame 키 인덱스를 반환합니다. 없으면 `constant::invalid_index::kUint32` 입니다. */
-        uint32 findChannelKey( uint32 channelIndex, float32 frame ) const;
+        /** @brief 채널 @p channelIndex 의 @p frame 키 인덱스를 반환합니다. 없으면 비어 있습니다. */
+        optional<uint32> findChannelKey( uint32 channelIndex, float32 frame ) const;
     };
 } // namespace sw
 

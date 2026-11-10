@@ -68,7 +68,7 @@ SW_TEST_CASE( SequencerTest, KeyTrackSetKeyReplacesAndRemovesAcrossChannels )
     track.collectKeyFrames( listFrame );
     SW_REQUIRE_EQUAL( size_t( 2 ), listFrame.size() );
     SW_EXPECT_TRUE( track.hasKeyAt( 30.0f ) );
-    SW_EXPECT_TRUE( track.findChannelKey( 0, 30.0f ) == constant::invalid_index::kUint32 );
+    SW_EXPECT_TRUE( track.findChannelKey( 0, 30.0f ).has_value() == false );
 
     SW_EXPECT_TRUE( track.removeKeysAt( 10.0f ) );
     SW_EXPECT_TRUE( track._listChannel[0]._listKey.empty() );

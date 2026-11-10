@@ -297,14 +297,14 @@ namespace sw
         textures.release( standIn );
     }
 
-    uint32 Material::findTextureSlot( hashed_string name ) const
+    optional<uint32> Material::findTextureSlot( hashed_string name ) const
     {
         for ( size_t slot = 0; slot < _listMaterialTextureName.size(); ++slot )
         {
             if ( _listMaterialTextureName[slot] == name )
                 return static_cast<uint32>( slot );
         }
-        return kInvalidTextureSlot;
+        return nullopt;
     }
 
     void Material::collectTexturePaths( vector<string>& outListPath ) const

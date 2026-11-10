@@ -208,10 +208,9 @@ namespace sw::editor
 
     void MultiplayerProfilerTab::drawTab( const MultiplayerTabContext& context )
     {
-        const MultiplayerSessionViewState& session     = *context._pState;
-        const int32                        targetIndex = context._targetProcessIndex;
+        const MultiplayerSessionViewState& session = *context._pState;
         _viewModel.update();
-        _viewModel.gather( targetIndex, _bAllProcessKinds, _bSentKinds, _viewState );
+        _viewModel.gather( context._targetProcessIndex, _bAllProcessKinds, _bSentKinds, _viewState );
         ImGui::Checkbox( SW_LOCKEY( "EdLabel", "RecordWhileHidden" ), &_bRecordHidden );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ProfilerRecordHidden" ) );
         if ( _viewState._bHasData == SW_FALSE )
@@ -222,8 +221,9 @@ namespace sw::editor
                 ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorMultiplayer", "ProfilerNoSession" ) );
             return;
         }
-        // 대상 번호는 모은 프로세스 목록에서 왔다(창의 대상 고르기가 그 수로 맞춘다).
-        const string& label = session._listProcess[static_cast<size_t>( targetIndex )]._label;
+        // 대상 번호는 모은 프로세스 목록에서 왔다(창의 대상 고르기가 그 수로 맞춘다). 자료가 있으면 대상도 있다(`gather`).
+        const int32   targetIndex = *context._targetProcessIndex;
+        const string& label       = session._listProcess[static_cast<size_t>( targetIndex )]._label;
         ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "ConnectionsSamples", TextArgumentList().addText( "label", label.c_str() ).addInteger( "connectionCount", static_cast<int64>( _viewState._connectionCount ) ).addInteger( "seriesCount", static_cast<int64>( _viewState._sampleCount ) ) ).c_str() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ProfilerSource" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Clear" ) ) );
