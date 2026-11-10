@@ -21,7 +21,7 @@ namespace sw::editor
 {
     /**
      * @struct CharacterEditorPackData
-     * @brief `<CharacterEditor sockets="…" skeleton="…" items="…" appearance="…" animationSet="…" previewPreset="…" [rig="…"]/>` 한 줄입니다(`rig` 만 선택). 경로 값은 도메인을 포함한 리소스 경로이고 `previewPreset` 은 프리셋 id 입니다.
+     * @brief `<CharacterEditor sockets="…" skeleton="…" items="…" appearance="…" animationSet="…" previewPreset="…" [rig="…"] [wipeEvent="…"]/>` 한 줄입니다(`rig` · `wipeEvent` 만 선택). 경로 값은 도메인을 포함한 리소스 경로이고 `previewPreset` 은 프리셋 id 입니다.
      */
     REFLECT()
     struct CharacterEditorPackData
@@ -54,6 +54,12 @@ namespace sw::editor
          */
         PROPERTY( AssetPath, Name = "rig" )
         string _rigPath{};
+        /**
+         * @brief 미리보기 몸이 얼굴을 닦는 애니 알림 이벤트(`CharacterBodyDynamicsComponent::_wipeEvent`)입니다. **선택 칸**: 비면 미리보기 몸은 닦지 않는다.
+         * @details 창은 몸을 코드로 세워 컴포넌트 칸을 데이터가 채우지 못한다 — 이벤트 이름은 애니 셋의 것이라 셋 옆(이 줄)에 적는다.
+         */
+        PROPERTY( Name = "wipeEvent" )
+        string _wipeEvent{};
 
         /** @brief 리소스 경로의 파일을 읽어 표를 바꿉니다. 파일이 없거나, 모르는 원소 · 속성이 있거나, 칸이 빠지면 false 이고 표는 비웁니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );

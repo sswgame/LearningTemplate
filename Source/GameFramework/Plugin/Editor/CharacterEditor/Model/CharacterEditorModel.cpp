@@ -74,6 +74,7 @@ namespace sw::editor
         , _packDataPath{}
         , _packDataMessage{}
         , _previewPresetID{}
+        , _previewWipeEvent{}
         , _packDataState{ PackDataState::Unread }
         , _gizmoTarget{ CharacterGizmoTarget::None }
         , _bClipNamesLoaded{ SW_FALSE }
@@ -124,6 +125,7 @@ namespace sw::editor
         _bClipNamesLoaded        = SW_FALSE; // 팩 데이터가 바뀌면 클립 목록을 다시 모은다
         _selectedClip            = hashed_string{};
         _previewPresetID         = hashed_string( string_view( data._previewPresetID ) );
+        _previewWipeEvent        = data._wipeEvent.empty() ? hashed_string{} : hashed_string( string_view( data._wipeEvent ) );
         // 프리셋 내보내기 폴더는 외형 폴더에서 파생한다(기준은 팩 데이터의 외형 폴더 하나).
         const string exportFolder = FileUtil::joinPath( data._appearanceFolder, AppearanceDatabase::kPresetFolder );
         _paths._exportFolder      = string_view( exportFolder );

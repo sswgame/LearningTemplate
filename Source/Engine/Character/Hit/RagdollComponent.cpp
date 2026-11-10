@@ -86,7 +86,6 @@ namespace sw
     RagdollComponent::RagdollComponent()
         : PhysicsComponent{ PhysicsComponentPhase::Body }
         , _physicsAssetPath{}
-        , _partialRootBone{}
         , _getUpClipFaceUp{}
         , _getUpClipFaceDown{}
         , _getUpExitState{}
@@ -189,8 +188,6 @@ namespace sw
         {
             listBone.push_back( body._bone );
         }
-        if ( _partialRootBone.empty() == false )
-            listBone.push_back( _partialRootBone );
         _boneRequirement = _pUnit->requireBones( std::move( listBone ) );
     }
 
@@ -351,14 +348,15 @@ namespace sw
 
     void RagdollComponent::startPartialRagdoll( float32 weight )
     {
-        if ( _state == RagdollState::Ragdoll || _pUnit == nullptr )
+        if ( _state == RagdollState::Ragdoll || _pUnit == nullptr || _asset == nullptr )
             return;
-        const optional<uint32> boneIndex = _pUnit->getSkeleton().findBoneIndex( _partialRootBone );
+        const hashed_string&   rootBone  = _asset->_partialRootBone; // 에셋 칸 — 바디가 있는 뼈다(PhysicsAsset::validate)
+        const optional<uint32> boneIndex = _pUnit->getSkeleton().findBoneIndex( rootBone );
         const optional<uint32> bodyIndex = ( boneIndex.has_value() && *boneIndex < _ragdoll._listBodyOfBone.size() ) ? _ragdoll._listBodyOfBone[*boneIndex] : nullopt;
         if ( bodyIndex.has_value() == false )
         {
             SW_LOG_WARNING_ID( "Ragdoll.PartialRagdollRootBone", "'%#': partial ragdoll root bone '%#' has no body", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)",
-                               _partialRootBone.c_str() );
+                               rootBone.c_str() );
             return;
         }
         _listPartialMask.clear();
@@ -577,7 +575,7 @@ namespace sw
             if ( _ragdoll._listParentBody[body].has_value() == false )
                 pelvisBone = _ragdoll._listBoneIndex[body];
         }
-        const optional<uint32> upperBone = skeleton.findBoneIndex( _partialRootBone );
+        const optional<uint32> upperBone = _asset != nullptr ? skeleton.findBoneIndex( _asset->_partialRootBone ) : nullopt;
         if ( pelvisBone < 0 || upperBone.has_value() == false )
             return false;
         const float4x4      oldUnitWorld  = _pUnit->getWorldMatrix();

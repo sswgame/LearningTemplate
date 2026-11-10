@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 캐릭터 편집 창(GF_EditorPlugin_CharacterEditor)이 이 게임에서 여는 데이터 — 여섯 칸은 필수이고 rig(미리보기 몸에 얹어 볼 제약 리그)만 선택이다. 레퍼런스 포즈는 스켈레톤 이름에서 만든다(superhero_male_fullbody.refpose.xml).
+<!-- 캐릭터 편집 창(GF_EditorPlugin_CharacterEditor)이 이 게임에서 여는 데이터 — 여섯 칸은 필수이고 rig(미리보기 몸에 얹어 볼 제약 리그) · wipeEvent(미리보기 몸이 얼굴을 닦는 애니 알림)는 선택이다. 레퍼런스 포즈는 스켈레톤 이름에서 만든다(superhero_male_fullbody.refpose.xml).
      animationSet 은 미리보기 몸이 재생하는 클립의 셋이다. previewPreset 은 창의 미리보기 몸이다 — 외형 선택에 기준 프리셋이 없으면 이 프리셋(UBC 남자 몸 — 플레이어와 같은 몸) 위에 선택을 입힌다. -->
 <CharacterEditor sockets="common/data/sockets/ubc_humanoid.sockets.xml"
                  skeleton="common/models/quaternius/characters/superhero_male_fullbody/superhero_male_fullbody.skeleton.xml"
@@ -7,4 +7,5 @@
                  appearance="common/data/appearance"
                  animationSet="common/models/quaternius/animations/ual1_standard/ual1_standard.animset.xml"
                  previewPreset="TownsfolkMale"
-                 rig="common/rigs/ubc_player_body.rig.xml"/>
+                 rig="common/rigs/ubc_player_body.rig.xml"
+                 wipeEvent="WipeFace"/>
