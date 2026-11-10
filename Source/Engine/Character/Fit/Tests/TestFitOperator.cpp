@@ -325,7 +325,7 @@ SW_TEST_CASE( FitOperatorTest, ShrinkRingFollowsBone )
 {
     using Util = FitOperatorTestUtil;
     CharacterBoneArray bones;
-    SW_REQUIRE_EQUAL( 0, bones.addBone( hashed_string( "arm" ), -1, float4x4::makeTranslation( 0.0f, 1.0f, 0.0f ) ) );
+    SW_REQUIRE_TRUE( bones.addBone( hashed_string( "arm" ), -1, float4x4::makeTranslation( 0.0f, 1.0f, 0.0f ) ) == 0 );
 
     FitOperatorTestScene scene;
     scene._innerGeometry = Util::makePoints( {

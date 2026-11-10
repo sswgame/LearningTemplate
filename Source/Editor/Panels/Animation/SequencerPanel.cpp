@@ -376,7 +376,7 @@ namespace sw::editor
         const utf8* const pPasteItem = SW_LOCKEY( "EditorSequencer", "PasteItem" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( pPasteItem ) );
         ImGui::BeginDisabled( _document.hasCopiedItem() == false );
-        if ( ImGui::Button( pPasteItem ) && _document.pasteItem( _currentFrame ) >= 0 )
+        if ( ImGui::Button( pPasteItem ) && _document.pasteItem( _currentFrame ).has_value() )
         {
             notifyDocumentEdited( "Paste Sequence Item" );
             previewCurrentFrame();
@@ -564,7 +564,7 @@ namespace sw::editor
         ImGui::SeparatorText( SW_LOCKEY( "EditorSequencer", "CameraCutsSection" ) );
         const utf8* const pAddCut = SW_LOCKEY( "EditorSequencer", "AddCutButton" );
         ImGui::BeginDisabled( _document._asset.findBinding( _document._selectedBinding ) == nullptr );
-        if ( ImGui::Button( pAddCut ) && _document.addCameraCut( _currentFrame ) >= 0 )
+        if ( ImGui::Button( pAddCut ) && _document.addCameraCut( _currentFrame ).has_value() )
         {
             notifyDocumentEdited( "Add Camera Cut" );
             previewCurrentFrame();
@@ -621,7 +621,7 @@ namespace sw::editor
     {
         // 컷 차선이 쇼트 목록이다(언리얼 Camera Cut 트랙 · Shot 트랙의 쇼트 하나 = 컷 하나). 하위 시퀀스(Shot 트랙)는 두지 않는다 — 쇼트를 따로 저작할 요구가 확인되기 전까지 한 시퀀스의 컷으로 짠다.
         const utf8* const pSplit = SW_LOCKEY( "EditorSequencer", "SplitCut" );
-        if ( ImGui::Button( pSplit ) && _document.splitCameraCut( _currentFrame ) >= 0 )
+        if ( ImGui::Button( pSplit ) && _document.splitCameraCut( _currentFrame ).has_value() )
         {
             notifyDocumentEdited( "Split Camera Cut" );
             previewCurrentFrame();
@@ -844,7 +844,7 @@ namespace sw::editor
     {
         const utf8* const pCreate = SW_LOCKEY( "EditorSequencer", "CreateItemButton" );
         ImGui::BeginDisabled( _document.isItemAcceptable( _document._itemEdit ) == false );
-        if ( ImGui::Button( pCreate ) && _document.commitItemDraft() >= 0 )
+        if ( ImGui::Button( pCreate ) && _document.commitItemDraft().has_value() )
             notifyDocumentEdited( "Add Sequence Item" );
         ImGui::EndDisabled();
         EditorSelfTestMarks::record( "sequencer.item.create" );

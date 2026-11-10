@@ -20,9 +20,9 @@ namespace
         {
             Skeleton            skeleton;
             const BoneTransform local{};
-            const int32         root  = skeleton.addBone( hashed_string( "root" ), -1, local );
-            const int32         spine = skeleton.addBone( hashed_string( "spine" ), root, local );
-            const int32         arm   = skeleton.addBone( hashed_string( "arm" ), spine, local );
+            const int32         root  = skeleton.addBone( hashed_string( "root" ), -1, local ).value();
+            const int32         spine = skeleton.addBone( hashed_string( "spine" ), root, local ).value();
+            const int32         arm   = skeleton.addBone( hashed_string( "arm" ), spine, local ).value();
             (void)skeleton.addBone( hashed_string( "hand" ), arm, local );
             (void)skeleton.addBone( hashed_string( "head" ), spine, local );
             return skeleton;

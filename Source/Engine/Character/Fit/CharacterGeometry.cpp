@@ -90,11 +90,11 @@ namespace sw
 
 namespace sw
 {
-    int32 CharacterBoneArray::addBone( const hashed_string& name, int32 parentIndex, const float4x4& localTransform )
+    expected<int32> CharacterBoneArray::addBone( const hashed_string& name, int32 parentIndex, const float4x4& localTransform )
     {
         const int32 boneCount = static_cast<int32>( _listName.size() );
         if ( parentIndex < -1 || parentIndex >= boneCount )
-            return -1;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the parent is not an already-added bone", name.c_str() } );
         _listName.push_back( name );
         _listParent.push_back( parentIndex );
         _listLocal.push_back( localTransform );

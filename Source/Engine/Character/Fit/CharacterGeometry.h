@@ -135,8 +135,8 @@ namespace sw
         vector<float4x4>      _listLocal{};
         vector<float4x4>      _listModel{};
 
-        /** @brief 본을 끝에 붙이고 번호를 돌려줍니다. 부모가 이미 있는 본이 아니면(루트는 -1) 붙이지 않고 -1 입니다. */
-        int32 addBone( const hashed_string& name, int32 parentIndex, const float4x4& localTransform );
+        /** @brief 본을 끝에 붙이고 번호를 돌려줍니다. 부모(루트는 스켈레톤 저장 형식대로 -1)가 이미 있는 본이 아니면 붙이지 않고 그 이유입니다. */
+        [[nodiscard]] expected<int32> addBone( const hashed_string& name, int32 parentIndex, const float4x4& localTransform );
         /** @brief 이름의 본 번호입니다. 없으면 비어 있습니다. */
         optional<uint32> findBone( const hashed_string& name ) const;
         /** @brief 본 수입니다. */

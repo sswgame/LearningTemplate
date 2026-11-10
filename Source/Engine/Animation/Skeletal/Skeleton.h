@@ -238,9 +238,9 @@ namespace sw
 
         /**
          * @brief 본 하나를 끝에 붙이고 그 인덱스를 반환합니다.
-         * @param parentIndex 부모 본 인덱스. **이미 추가된 본만 가리킬 수 있습니다**(루트는 -1). 아니면 아무것도 추가하지 않고 -1 입니다.
+         * @param parentIndex 부모 본 인덱스(저장 형식 그대로 루트는 -1). **이미 추가된 본만 가리킬 수 있습니다** — 아니면 아무것도 추가하지 않고 그 이유(대상은 본 이름)입니다.
          */
-        int32 addBone( const hashed_string& name, int32 parentIndex, const BoneTransform& referencePose );
+        [[nodiscard]] expected<int32> addBone( const hashed_string& name, int32 parentIndex, const BoneTransform& referencePose );
         /** @brief 레퍼런스 포즈를 바인드로 삼은 메시의 역 바인드를 본마다 구합니다(코드가 지은 메시와 테스트용 — 임포트한 메시는 원본의 값을 싣는다). */
         void computeReferenceInverseBinds( vector<float4x4>& outListInverseBind ) const;
         /**

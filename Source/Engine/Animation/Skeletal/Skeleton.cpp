@@ -84,15 +84,12 @@ namespace sw
     {
     }
 
-    int32 Skeleton::addBone( const hashed_string& name, int32 parentIndex, const BoneTransform& referencePose )
+    expected<int32> Skeleton::addBone( const hashed_string& name, int32 parentIndex, const BoneTransform& referencePose )
     {
         // 부모가 자식보다 뒤에 있으면 모델 공간을 한 번 훑어서 구할 수 없다. 읽을 때 걸러 낸다.
         const int32 boneCount = static_cast<int32>( _listBone.size() );
         if ( parentIndex < constant::invalid_index::kInt32 || boneCount <= parentIndex )
-        {
-            SW_LOG_ERROR_ID( "Skeleton.BoneRejectedParentIndex", "Bone '%#' rejected: parent index %# is not an already-added bone (bone count %#)", name.c_str(), parentIndex, boneCount );
-            return constant::invalid_index::kInt32;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the parent is not an already-added bone", name.c_str() } );
 
         SkeletonBone bone{};
         bone._name          = name;
@@ -382,7 +379,7 @@ namespace sw
         _bPartial = bPartial;
         for ( const SkeletonBone& bone : listLoadedBone )
         {
-            if ( addBone( bone._name, bone._parentIndex, bone._referencePose ) < 0 )
+            if ( addBone( bone._name, bone._parentIndex, bone._referencePose ).has_value() == false )
             {
                 SW_LOG_ERROR_ID( "Skeleton.SkeletonBoneMustName", "Skeleton '%#': bone '%#' must name an earlier bone as its parent", sourceLabel, bone._name.c_str() );
                 return false;
