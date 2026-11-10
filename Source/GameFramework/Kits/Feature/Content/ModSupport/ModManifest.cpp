@@ -9,6 +9,7 @@
 
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
@@ -18,57 +19,24 @@ namespace sw
     {
         struct ModManifestInternal
         {
-            /** @brief 필수 속성 @p pName 의 글입니다. 없으면 이유를 남기고 false 입니다. */
-            [[nodiscard]] static bool readText( const XMLNode& node, const utf8* pName, string_view sourceName, string_view& outText )
+            /** @brief 읽은 id @p text 의 꼴(a-z · 0-9 · _, 1 ~ kMaxIDLength 자)을 봅니다. 틀리면 이유를 남기고 false 입니다. */
+            [[nodiscard]] static bool checkID( string_view text, const utf8* pElement, string_view sourceName )
             {
-                const utf8* pValue = node.findAttribute( pName );
-                if ( pValue == nullptr )
-                {
-                    SW_LOG_ERROR_ID( "ModManifest.MissingField", "Mod manifest '%#': <%#> needs the '%#' attribute", sourceName, node.getName(), pName );
-                    return false;
-                }
-                outText = pValue;
-                return true;
-            }
-
-            [[nodiscard]] static bool readUInt( const XMLNode& node, const utf8* pName, string_view sourceName, uint32& outValue )
-            {
-                string_view text;
-                if ( readText( node, pName, sourceName, text ) == false )
-                    return false;
-                int32 value = 0;
-                if ( StringUtil::parseInt( text, value ) == false || value < 0 )
-                {
-                    SW_LOG_ERROR_ID( "ModManifest.BadNumber", "Mod manifest '%#': '%#' of <%#> is '%#', not a whole number of 0 or more", sourceName, pName, node.getName(), text );
-                    return false;
-                }
-                outValue = static_cast<uint32>( value );
-                return true;
-            }
-
-            [[nodiscard]] static bool readID( const XMLNode& node, string_view sourceName, string& outID )
-            {
-                string_view text;
-                if ( readText( node, "id", sourceName, text ) == false )
-                    return false;
                 if ( ModManifest::isValidID( text ) == false )
                 {
-                    SW_LOG_ERROR_ID( "ModManifest.BadID", "Mod manifest '%#': id '%#' of <%#> must be 1 to %# characters of a-z, 0-9 and _", sourceName, text, node.getName(),
+                    SW_LOG_ERROR_ID( "ModManifest.BadID", "Mod manifest '%#': id '%#' of <%#> must be 1 to %# characters of a-z, 0-9 and _", sourceName, text, pElement,
                                      ModManifest::kMaxIDLength );
                     return false;
                 }
-                outID = string{ text };
                 return true;
             }
 
-            [[nodiscard]] static bool readVersion( const XMLNode& node, const utf8* pName, string_view sourceName, ModVersion& outVersion )
+            /** @brief 읽은 판 글 @p text(`major.minor.patch`)를 풉니다. 틀리면 이유를 남기고 false 입니다. */
+            [[nodiscard]] static bool parseVersion( string_view text, const utf8* pName, const utf8* pElement, string_view sourceName, ModVersion& outVersion )
             {
-                string_view text;
-                if ( readText( node, pName, sourceName, text ) == false )
-                    return false;
                 if ( ModVersion::parse( text, outVersion ) == false )
                 {
-                    SW_LOG_ERROR_ID( "ModManifest.BadVersion", "Mod manifest '%#': '%#' of <%#> is '%#', not major.minor.patch (each 0 to 65535)", sourceName, pName, node.getName(), text );
+                    SW_LOG_ERROR_ID( "ModManifest.BadVersion", "Mod manifest '%#': '%#' of <%#> is '%#', not major.minor.patch (each 0 to 65535)", sourceName, pName, pElement, text );
                     return false;
                 }
                 return true;
@@ -168,17 +136,17 @@ namespace sw
             return false;
         }
 
+        // 속성은 리플렉션 필수 칸이다 — 빠진 칸(XMLFields.RequiredFieldMissing) · 숫자가 아닌 글(XMLFields.ValueUnreadable) · 모르는 속성을 이름과 함께 알린다.
+        ModManifestRootDef rootDef;
+        if ( XMLFields::readFields( root, rootDef, sourceName ) == false )
+            return false;
         ModManifest manifest;
-        string_view priorityText;
-        if ( Internal::readID( root, sourceName, manifest._id ) == false || Internal::readVersion( root, "version", sourceName, manifest._version ) == false ||
-             Internal::readUInt( root, "minContentVersion", sourceName, manifest._minContentVersion ) == false ||
-             Internal::readUInt( root, "maxContentVersion", sourceName, manifest._maxContentVersion ) == false || Internal::readText( root, "priority", sourceName, priorityText ) == false )
+        if ( Internal::checkID( rootDef._id, kRootElement, sourceName ) == false || Internal::parseVersion( rootDef._version, "version", kRootElement, sourceName, manifest._version ) == false )
             return false;
-        if ( StringUtil::parseInt( priorityText, manifest._priority ) == false )
-        {
-            SW_LOG_ERROR_ID( "ModManifest.BadNumber", "Mod manifest '%#': priority '%#' is not a whole number", sourceName, priorityText );
-            return false;
-        }
+        manifest._id                = rootDef._id;
+        manifest._minContentVersion = rootDef._minContentVersion;
+        manifest._maxContentVersion = rootDef._maxContentVersion;
+        manifest._priority          = rootDef._priority;
         if ( manifest._minContentVersion > manifest._maxContentVersion )
         {
             SW_LOG_ERROR_ID( "ModManifest.BadContentRange", "Mod manifest '%#': minContentVersion %# is above maxContentVersion %#", sourceName, manifest._minContentVersion,
@@ -211,16 +179,14 @@ namespace sw
     bool ModManifest::readDependency( const XMLNode& node, string_view sourceName )
     {
         using Internal = ModManifestInternal;
+        ModDependencyDef def;
+        if ( XMLFields::readFields( node, def, sourceName ) == false || Internal::checkID( def._id, "Dependency", sourceName ) == false )
+            return false;
         ModDependency dependency;
-        string_view   optionalText;
-        if ( Internal::readID( node, sourceName, dependency._id ) == false || Internal::readVersion( node, "minVersion", sourceName, dependency._minVersion ) == false ||
-             Internal::readText( node, "optional", sourceName, optionalText ) == false )
+        if ( Internal::parseVersion( def._minVersion, "minVersion", "Dependency", sourceName, dependency._minVersion ) == false )
             return false;
-        if ( StringUtil::tryParseBool( optionalText, dependency._bOptional ) == false )
-        {
-            SW_LOG_ERROR_ID( "ModManifest.BadBool", "Mod manifest '%#': optional '%#' of dependency '%#' is not true or false", sourceName, optionalText, dependency._id );
-            return false;
-        }
+        dependency._id        = def._id;
+        dependency._bOptional = def._bOptional;
         if ( dependency._id == _id || findDependency( dependency._id ) != nullptr )
         {
             SW_LOG_ERROR_ID( "ModManifest.BadDependency", "Mod manifest '%#': dependency '%#' is the mod itself or listed twice", sourceName, dependency._id );
@@ -232,9 +198,10 @@ namespace sw
 
     bool ModManifest::readConflict( const XMLNode& node, string_view sourceName )
     {
-        string conflictID;
-        if ( ModManifestInternal::readID( node, sourceName, conflictID ) == false )
+        ModConflictDef def;
+        if ( XMLFields::readFields( node, def, sourceName ) == false || ModManifestInternal::checkID( def._id, "Conflict", sourceName ) == false )
             return false;
+        string conflictID = def._id;
         if ( conflictID == _id || VectorUtil::contains( _listConflict, conflictID ) )
         {
             SW_LOG_ERROR_ID( "ModManifest.BadConflict", "Mod manifest '%#': conflict '%#' is the mod itself or listed twice", sourceName, conflictID );
@@ -246,9 +213,10 @@ namespace sw
 
     bool ModManifest::readOverride( const XMLNode& node, string_view sourceName )
     {
-        string_view path;
-        if ( ModManifestInternal::readText( node, "path", sourceName, path ) == false || ModManifestInternal::checkOverridePath( path, sourceName ) == false )
+        ModPathDef def;
+        if ( XMLFields::readFields( node, def, sourceName ) == false || ModManifestInternal::checkOverridePath( def._path, sourceName ) == false )
             return false;
+        const string_view path = def._path;
         if ( VectorUtil::contains( _listOverride, string{ path } ) || VectorUtil::contains( _listLayer, string{ path } ) )
         {
             SW_LOG_ERROR_ID( "ModManifest.DuplicateOverride", "Mod manifest '%#': '%#' is listed twice (as an override or a layer)", sourceName, path );
@@ -261,9 +229,10 @@ namespace sw
     bool ModManifest::readLayer( const XMLNode& node, string_view sourceName )
     {
         // 층은 덮어쓰기와 같은 경로 규칙이다(정규형 · 기본 리소스만) — 한 리소스를 통째로 바꾸면서 그 위에 차이를 얹는 것은 뜻이 없어 겹치면 거절한다.
-        string_view path;
-        if ( ModManifestInternal::readText( node, "path", sourceName, path ) == false || ModManifestInternal::checkOverridePath( path, sourceName ) == false )
+        ModPathDef def;
+        if ( XMLFields::readFields( node, def, sourceName ) == false || ModManifestInternal::checkOverridePath( def._path, sourceName ) == false )
             return false;
+        const string_view path = def._path;
         if ( VectorUtil::contains( _listOverride, string{ path } ) || VectorUtil::contains( _listLayer, string{ path } ) )
         {
             SW_LOG_ERROR_ID( "ModManifest.DuplicateOverride", "Mod manifest '%#': '%#' is listed twice (as an override or a layer)", sourceName, path );

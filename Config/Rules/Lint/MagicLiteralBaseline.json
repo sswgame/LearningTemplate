@@ -1029,7 +1029,7 @@
     "Source/Games/Shooter3D/ShooterPlayerComponent.cpp": {"minus-one": 1, "float": 11, "hex": 1},
     "Source/Games/StarSkirmish/SkirmishGameModeComponent.cpp": {"minus-one": 1, "float": 6},
     "Source/Games/StarSkirmish/SkirmishMatch.cpp": {"float": 4, "integer": 15},
-    "Source/Games/StarSkirmish/SkirmishUnitComponent.cpp": {"float": 7},
+    "Source/Games/StarSkirmish/SkirmishUnitComponent.cpp": {"float": 5},
     "Source/Games/ThemeParkTycoon/CoasterCarComponent.cpp": {"minus-one": 1},
     "Source/Games/ThemeParkTycoon/FlatRideComponent.cpp": {"minus-one": 1},
     "Source/Games/ThemeParkTycoon/ParkGameModeComponent.cpp": {"minus-one": 9, "float": 15},

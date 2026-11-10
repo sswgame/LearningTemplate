@@ -90,6 +90,44 @@ namespace sw
         uint64 _sourceHash{ 0 };   ///< 번역할 때의 원문 해시입니다. 0 이면 확인하지 않습니다(손으로 넣은 테이블).
         bool   _bReview{ false };  ///< 검토가 필요한지 나타냅니다(번역 메모리의 근사 일치, PO `#, fuzzy`). 화면에 나오지 않습니다. NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
     };
+
+    // 표 항목(`<entry …/>`)의 속성 스키마다 — `XMLFields::readFields` 가 필수 칸 · 값 꼴 · 모르는 속성을 본다(원본 · 번역 표가 같은 길).
+
+    /** @brief 원본 표의 `<entry key source context comment maxLength>` 입니다. */
+    REFLECT()
+    struct SourceTextEntryDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _key;
+        PROPERTY( Required )
+        string _source;
+        PROPERTY()
+        string _context;
+        PROPERTY()
+        string _comment;
+        PROPERTY()
+        uint32 _maxLength{ 0 }; ///< 0 = 제한 없음
+    };
+
+    /** @brief 번역 표의 `<entry key text sourceHash review translatorComment>` 입니다. */
+    REFLECT()
+    struct TranslationEntryDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _key;
+        PROPERTY( Required )
+        string _text;
+        PROPERTY()
+        string _sourceHash; ///< 16 자리 16 진수(읽은 뒤 `SourceTextEntry::tryParseSourceHash`)
+        PROPERTY( Name = "review" )
+        bool _bReview{ false }; ///< NOLINT(sw-bool-flag): 스키마 집합체다(XMLFields 가 칸마다 쓴다)
+        PROPERTY()
+        string _translatorComment;
+    };
 } // namespace sw
 
 namespace sw

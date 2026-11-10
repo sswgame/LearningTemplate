@@ -12,6 +12,7 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Content/AssetTypeRegistry.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Rule/ActionRoom.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
@@ -48,6 +49,50 @@ namespace sw
         bool hasEncounter() const { return _listHallSpawn.empty() == false || _listBossSpawn.empty() == false; }
         /** @brief 이 지역의 전투 배치입니다(액션 룸에 그대로 넘긴다). */
         ActionRoomLayout makeLayout() const;
+    };
+
+    /** @brief `<Region id name min max respawn startQuest>` 속성의 스키마입니다(`XMLFields::readFields`). 이름이 비면 id 를 쓴다. */
+    REFLECT()
+    struct VelmoraRegionAttributeDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id;
+        PROPERTY()
+        string _name; ///< 보이는 이름(비면 id)
+        PROPERTY( Required )
+        float2 _min{}; ///< 평면(x, z) 경계의 작은 쪽 — `x,z`
+        PROPERTY( Required )
+        float2 _max{};
+        PROPERTY( Required )
+        float2 _respawn{};
+        PROPERTY()
+        string _startQuest; ///< 받기를 시도하는 퀘스트 id 목록(`a, b`)
+    };
+
+    /** @brief `<Camp id at/>` · `<Beacon id at/>` 의 스키마입니다. */
+    REFLECT()
+    struct VelmoraSiteAttributeDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id;
+        PROPERTY( Required )
+        float2 _at{};
+    };
+
+    /** @brief `<Hall monster at/>` · `<Boss monster at/>` 의 스키마입니다. */
+    REFLECT()
+    struct VelmoraSpawnAttributeDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _monster;
+        PROPERTY( Required )
+        float2 _at{};
     };
 } // namespace sw
 

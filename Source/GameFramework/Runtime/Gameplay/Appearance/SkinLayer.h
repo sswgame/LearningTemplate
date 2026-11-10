@@ -51,7 +51,8 @@ namespace sw
         hashed_string _palette{}; ///< 색 견본 묶음(`customization.xml` 의 `<Palette>`). 비어 있으면 자유 색
         PROPERTY()
         SkinLayerBlend _blend{ SkinLayerBlend::Normal };
-        float4         _defaultColor{ 1.0f, 1.0f, 1.0f, 1.0f }; ///< `defaultColor="r g b a"`(손으로 읽는다)
+        PROPERTY()
+        float4 _defaultColor{ 1.0f, 1.0f, 1.0f, 1.0f }; ///< `defaultColor="r g b a"`
         PROPERTY( Min = 0.0, Max = 1.0 )
         float32 _defaultOpacity{ 1.0f };
         PROPERTY( Min = 0.0, Max = 1.0 )
@@ -64,8 +65,10 @@ namespace sw
         float32 _metallicWeight{ 0.0f }; ///< 금속을 층 값으로 바꾸는 정도(펄 · 반짝이)
         PROPERTY( Min = 0.0, Max = 1.0 )
         float32 _smearResistance{ 0.0f }; ///< 번짐 저항(1 = 방수 마스카라 · 문신, 0 = 바로 번지는 립스틱)
-        float2  _regionMin{ 0.0f, 0.0f }; ///< 피부 UV 경계(`regionMin="u v"`) — 밖은 자른다
-        float2  _regionMax{ 1.0f, 1.0f };
+        PROPERTY()
+        float2 _regionMin{ 0.0f, 0.0f }; ///< 피부 UV 경계(`regionMin="u v"`) — 밖은 자른다
+        PROPERTY()
+        float2 _regionMax{ 1.0f, 1.0f };
         PROPERTY( Name = "placeable" )
         bool _bPlaceable{ false }; ///< 배치(이동 · 회전 · 크기 · 대칭)를 받는지(문신 · 데칼)
 
@@ -116,6 +119,33 @@ namespace sw
         [[nodiscard]] bool readFromXML( const XMLNode& node, AppearanceLoadReport& report, string_view sourceName );
         /** @brief `readFromXML` 이 같은 값으로 다시 읽는 원소로 씁니다. */
         void writeToXML( const XMLNode& node ) const;
+    };
+
+    /**
+     * @brief 프리셋의 `<SkinLayer layer color opacity offset scale rotation mirror hidden/>` 한 줄의 스키마입니다(`XMLFields` — `SkinLayerValue::readFromXML`).
+     * @details 층 이름만 필수다. 적지 않은 칸은 읽기 전에 채운 값(`SkinLayerValue` 의 현재 값)이 남는다. 범위는 `SkinLayerValue` 의 상수와 같다(불투명도 0..1, 회전 ±180).
+     */
+    REFLECT()
+    struct SkinLayerValueDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _layer;
+        PROPERTY()
+        float4 _color{};
+        PROPERTY( Min = 0.0, Max = 1.0 )
+        float32 _opacity{ 0.0f };
+        PROPERTY()
+        float2 _offset{};
+        PROPERTY()
+        float2 _scale{};
+        PROPERTY( Name = "rotation", Min = -180.0, Max = 180.0 )
+        float32 _rotationDegrees{ 0.0f };
+        PROPERTY( Name = "mirror" )
+        bool _bMirror{ false }; ///< NOLINT(sw-bool-flag): 스키마 집합체다(XMLFields 가 칸마다 쓴다)
+        PROPERTY( Name = "hidden" )
+        bool _bHidden{ false }; ///< NOLINT(sw-bool-flag): 스키마 집합체다(XMLFields 가 칸마다 쓴다)
     };
 } // namespace sw
 
