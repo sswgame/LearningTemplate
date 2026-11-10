@@ -23,3 +23,23 @@ SW_TEST_CASE( AutomationScratchTest, TellsOtherProcessInstancesApart )
     SW_EXPECT_FALSE( sw::AutomationScratch::isOtherProcessInstance( "game/empty/assetmanage_p1/probe.material" ) );
     SW_EXPECT_FALSE( sw::AutomationScratch::isOtherProcessInstance( "scratchpad_p1/x.material" ) );
 }
+
+/**
+ * @brief [AutomationScratchTest] 리소스 루트를 훑은 디스크 경로 목록에서 남의 사본(파일 · 폴더)만 빠지고, 이 프로세스의 사본 · 원본 · 루트 밖 경로는 남는다.
+ *        잔여 사본이 원본과 같은 파일 이름이면 Quick Open 이 사본을 먼저 집어 시퀀서가 씬 플레이어를 찾지 못했다(editor.sequencerkeys · sequencercuts).
+ */
+SW_TEST_CASE( AutomationScratchTest, RemovesOtherProcessInstancesFromScans )
+{
+    const sw::string contentRoot   = "/work/Content";
+    const sw::string ownInstance   = sw::AutomationScratch::makeInstanceID( "scratch/sequencerkeys" );
+    const sw::string otherInstance = "scratch/sequencerkeys_p" + sw::to_string( sw::Process::getCurrentProcessID() + 1 );
+
+    sw::vector<sw::string> listPath{ contentRoot + "/" + otherInstance + "/sequencerkeys.seq.xml", contentRoot + "/" + otherInstance,
+                                     contentRoot + "/" + ownInstance + "/sequencerkeys.seq.xml", contentRoot + "/engine/automation/editor/sequencerkeys/sequencerkeys.seq.xml",
+                                     "/elsewhere/scratch/x_p1/a.xml" };
+    sw::AutomationScratch::removeOtherProcessInstances( contentRoot, listPath );
+    SW_REQUIRE_EQUAL( size_t{ 3 }, listPath.size() );
+    SW_EXPECT_EQUAL( contentRoot + "/" + ownInstance + "/sequencerkeys.seq.xml", listPath[0] );
+    SW_EXPECT_EQUAL( contentRoot + "/engine/automation/editor/sequencerkeys/sequencerkeys.seq.xml", listPath[1] );
+    SW_EXPECT_EQUAL( sw::string( "/elsewhere/scratch/x_p1/a.xml" ), listPath[2] );
+}

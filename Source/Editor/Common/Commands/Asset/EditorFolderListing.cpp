@@ -6,6 +6,8 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/File/FileUtil.h"
 
+#include "Editor/Common/Asset/EditorContentScan.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 
 #include "Engine/Asset/Cook/AssetCompanion.h"
@@ -58,13 +60,12 @@ namespace sw::editor
         if ( folderAbs.empty() || FileUtil::isDirectory( folderAbs ) == false )
             return;
 
+        const string&  resourceRoot = assetPaths.getRootFolderPath(); // 워커(`EditorFolderListingJob`)에서 돈다 — 부른 쪽이 넘긴 경로 상태다
         vector<string> listFolder;
         vector<string> listFile;
-        // 표시용 목록이다(폴더는 위에서 확인했다) — 도중에 멈춘 목록은 collect 가 경로와 함께 알리고, 모은 데까지 보인다.
-        (void)FileUtil::collectFolders( folderAbs, listFolder, false );                 // 표시용 — 모은 데까지 보인다
-        (void)FileUtil::collectFiles( folderAbs, {}, listFile, bRecursive, stopToken ); // 표시용 — 모은 데까지 보인다
-
-        const string& resourceRoot = assetPaths.getRootFolderPath(); // 워커(`EditorFolderListingJob`)에서 돈다 — 부른 쪽이 넘긴 경로 상태다
+        // 표시용 목록이다(폴더는 위에서 확인했다) — 도중에 멈춘 목록은 collect 가 경로와 함께 알리고, 모은 데까지 보인다. 남의 시나리오 사본은 빠진다.
+        (void)EditorContentScan::collectFolders( resourceRoot, folderAbs, listFolder, false );
+        (void)EditorContentScan::collectFiles( resourceRoot, folderAbs, {}, listFile, bRecursive, stopToken );
 
         for ( const string& folder : listFolder )
         {
@@ -99,7 +100,8 @@ namespace sw::editor
         if ( folderAbs.empty() || FileUtil::isDirectory( folderAbs ) == false )
             return;
 
-        (void)FileUtil::collectFolders( folderAbs, outList, false ); // 표시용 목록 — 도중에 멈춘 것은 collectFolders 가 알리고 모은 데까지 보인다
+        // 표시용 목록 — 도중에 멈춘 것은 collectFolders 가 알리고 모은 데까지 보인다. 남의 시나리오 사본 폴더는 빠진다.
+        (void)EditorContentScan::collectFolders( editor::getSubsystem<AssetPaths>().getRootFolderPath(), folderAbs, outList, false );
         for ( string& child : outList )
         {
             child = FileUtil::normalizeSeparators( child );

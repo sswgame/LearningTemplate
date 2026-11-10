@@ -16,6 +16,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Editor/Common/Asset/EditorContentScan.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 namespace sw::editor
@@ -335,7 +336,7 @@ namespace sw::editor
                 readStamp( stampPath, importer.getStampHeader(), mapStamped );
 
                 vector<string> listPath;
-                (void)FileUtil::collectFiles( rawFolder, "", listPath, true ); // 폴더는 방금 훑어서 찾았다
+                (void)EditorContentScan::collectFiles( rootDir, rawFolder, "", listPath, true ); // 폴더는 방금 훑어서 찾았다
                 VectorUtil::sort( listPath );
 
                 vector<SourceFile> listFile;
@@ -472,7 +473,8 @@ namespace sw::editor
                 const string       rootDir = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
 
                 vector<string> listFolder;
-                if ( rootDir.empty() || FileUtil::collectFolders( rootDir, listFolder, true ) == false )
+                // 남의 시나리오 사본의 원본 폴더는 임포트하지 않는다(그 프로세스가 쓰는 중일 수 있다 — EditorContentScan 이 뺀다)
+                if ( rootDir.empty() || EditorContentScan::collectFolders( rootDir, rootDir, listFolder, true ) == false )
                 {
                     summary._listProblem.push_back( "리소스 루트를 훑지 못했습니다: " + rootDir );
                     return summary;
@@ -512,7 +514,7 @@ namespace sw::editor
         const string   rootDir = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
         vector<string> listFolder;
         vector<string> listAssetPath;
-        if ( rootDir.empty() || FileUtil::collectFolders( rootDir, listFolder, true ) == false )
+        if ( rootDir.empty() || EditorContentScan::collectFolders( rootDir, rootDir, listFolder, true ) == false )
             return listAssetPath;
         for ( const string& folder : listFolder )
         {
@@ -520,7 +522,7 @@ namespace sw::editor
             if ( FileUtil::getFileNamePart( normalizedFolder ) != importer.getRawFolderName() )
                 continue;
             vector<string> listPath;
-            (void)FileUtil::collectFiles( normalizedFolder, "", listPath, true );
+            (void)EditorContentScan::collectFiles( rootDir, normalizedFolder, "", listPath, true );
             for ( const string& path : listPath )
             {
                 const string sourcePath = FileUtil::normalizeSeparators( path );

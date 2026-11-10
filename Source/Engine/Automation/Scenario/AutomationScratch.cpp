@@ -3,6 +3,7 @@
 #include "Engine/Automation/Scenario/AutomationScratch.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/File/FileUtil.h"
 #include "Core/Process/Process.h"
 #include "Core/String/StringUtil.h"
 
@@ -84,6 +85,15 @@ namespace sw
         const string_view     folder  = rest.substr( 0, rest.find( '/' ) );
         const optional<int32> ownerID = findInstanceProcessID( folder );
         return ownerID.has_value() && *ownerID != static_cast<int32>( Process::getCurrentProcessID() );
+    }
+
+    void AutomationScratch::removeOtherProcessInstances( string_view contentRoot, vector<string>& inoutListPath )
+    {
+        (void)VectorUtil::removeIf( inoutListPath, [contentRoot]( const string& path )
+        {
+            string relativePath;
+            return FileUtil::makeRelativePath( contentRoot, path, relativePath ) && isOtherProcessInstance( FileUtil::normalizeSeparators( relativePath ) );
+        } );
     }
 
     optional<int32> AutomationScratch::findInstanceProcessID( string_view folderName )

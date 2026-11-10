@@ -9,6 +9,7 @@
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Editor/Common/Asset/EditorContentScan.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Serialization/Inherit/DataInheritance.h"
@@ -229,7 +230,8 @@ namespace sw::editor
         const Stopwatch stopwatch;
         outData = EditorReferenceIndexData{};
         vector<string> listFile;
-        if ( resourceRoot.empty() || FileUtil::collectFiles( resourceRoot, "", listFile, true ) == false )
+        // 남의 시나리오 사본의 참조는 이 에디터의 참조가 아니다(EditorContentScan 이 뺀다)
+        if ( resourceRoot.empty() || EditorContentScan::collectFiles( resourceRoot, resourceRoot, "", listFile, true ) == false )
             return;
 
         outData._listKnownID.reserve( listFile.size() );

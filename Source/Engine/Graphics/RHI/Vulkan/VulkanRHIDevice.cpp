@@ -1265,7 +1265,11 @@ namespace sw
         vkGetPhysicalDeviceFeatures2( _physicalDevice, &features2 );
 
         VkPhysicalDeviceVulkan12Features vulkan12Features{};
-        vulkan12Features.sType                                         = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+        vulkan12Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+        // 묶음 비트(descriptorIndexing)도 켠다 — 개별 비트를 대신하지 않는 "descriptor indexing 을 쓴다" 선언이다(VkPhysicalDeviceVulkan12Features 명세:
+        // "does not imply the other minimum descriptor indexing features are also enabled"). dzn(Mesa 26 Vulkan-on-D3D12)은 이 비트나 그 확장을 보고서야
+        // bindless 디스크립터 경로로 셰이더를 내린다 — 개별 비트만 켜면 크기 없는 텍스처 배열(g_SwBindless*)을 SRV 로 선언하지 못해 컴퓨트 PSO 컴파일에서 죽었다.
+        vulkan12Features.descriptorIndexing                            = available12.descriptorIndexing;
         vulkan12Features.descriptorBindingPartiallyBound               = available12.descriptorBindingPartiallyBound;
         vulkan12Features.descriptorBindingUniformBufferUpdateAfterBind = available12.descriptorBindingUniformBufferUpdateAfterBind;
         vulkan12Features.descriptorBindingStorageBufferUpdateAfterBind = available12.descriptorBindingStorageBufferUpdateAfterBind;
