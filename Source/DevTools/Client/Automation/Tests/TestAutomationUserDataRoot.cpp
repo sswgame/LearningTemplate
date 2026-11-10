@@ -55,6 +55,44 @@ SW_TEST_CASE( AutomationUserDataRootTest, OnlyRootsUnderTheAutomationFolderPass 
 }
 
 /**
+ * @brief [AutomationUserDataRootTest] 대소문자만 다른 폴더는 OS 규칙을 따른다 — Windows 는 같은 폴더라 통과, 리눅스는 다른(바깥) 폴더라 거절
+ * @details 변이: 비교를 소문자로 접으면(예전 `normalizePath`) 리눅스에서 `.../userdata/run_p12` 가 통과해 이 시험이 진다.
+ */
+SW_TEST_CASE( AutomationUserDataRootTest, CaseOnlyDifferenceFollowsTheOSRule )
+{
+    const sw::string base       = sw::AutomationUserDataRoot::getBaseFolder(); // `.../Saved/Automation/UserData`
+    const sw::string otherCased = sw::FileUtil::getDirectoryPart( base ) + "/userdata/run_p12";
+#if defined( SW_PLATFORM_WINDOWS )
+    SW_EXPECT_TRUE( sw::AutomationUserDataRoot::checkUnderBase( otherCased, base ).has_value() );
+#elif defined( SW_PLATFORM_POSIX )
+    SW_EXPECT_FALSE( sw::AutomationUserDataRoot::checkUnderBase( otherCased, base ).has_value() );
+#else
+    #error "Unsupported platform"
+#endif
+}
+
+/**
+ * @brief [AutomationUserDataRootTest] 상태 자리 변수가 사람의 폴더 자신이거나 그 아래면 거절하고, 자동화 폴더 · 이름만 겹치는 옆 폴더는 받는다. 백엔드별 부모는 상태 자리 인자를 찾아낸다
+ * @details 변이: 폴더 자신 판정을 빼면 `Saved/Editor` 그대로가, 인자 이름 비교를 앞머리로 하면 `-gv_editorStateDirX` 가 걸려 이 시험이 진다.
+ */
+SW_TEST_CASE( AutomationUserDataRootTest, StatePathsMayNotPointAtThePersonFolders )
+{
+    const sw::string             base   = sw::AutomationUserDataRoot::getBaseFolder();
+    const sw::string             person = sw::FileUtil::getDirectoryPart( base ) + "/PersonEditor";
+    const sw::vector<sw::string> listPerson{ person };
+    SW_EXPECT_FALSE( sw::AutomationUserDataRoot::checkStatePath( "gv_editorStateDir", person, listPerson ).has_value() );
+    SW_EXPECT_FALSE( sw::AutomationUserDataRoot::checkStatePath( "gv_userSettingsFile", person + "/usersettings.json", listPerson ).has_value() );
+    SW_EXPECT_TRUE( sw::AutomationUserDataRoot::checkStatePath( "gv_editorStateDir", person + "2", listPerson ).has_value() );
+    SW_EXPECT_TRUE( sw::AutomationUserDataRoot::checkStatePath( "gv_editorStateDir", base + "/statedir.layout", listPerson ).has_value() );
+    SW_EXPECT_FALSE( sw::AutomationUserDataRoot::makePersonFolders().empty() ); // 적어도 `Saved/Editor`
+
+    const sw::optional<sw::string> shared = sw::AutomationUserDataRoot::findSharedStateArgument( { "-unattended", "-gv_editorStateDir=C:/x", "-gv_firstScene=a" } );
+    SW_EXPECT_TRUE( shared.has_value() && *shared == "-gv_editorStateDir=C:/x" );
+    SW_EXPECT_FALSE( sw::AutomationUserDataRoot::findSharedStateArgument( { "-unattended", "-gv_editorStateDirX=C:/x", "-gv_userSettingsFileName" } ).has_value() );
+    SW_EXPECT_TRUE( sw::AutomationUserDataRoot::findSharedStateArgument( { "-gv_userSettingsFile=a.json" } ).has_value() );
+}
+
+/**
  * @brief [AutomationUserDataRootTest] 세션 시작 판정 — 환경 변수가 자동화 폴더 밖(사람의 OS 폴더)이면 거절하고, 명시 허락이 있을 때만 받는다. 안이면 그대로 쓴다
  * @details `AutomationUserDataIsolation` 이 이 판정으로 기동을 멈춘다(종료 11). 변이: 밖 뿌리를 받아 주면 첫 단언이 진다.
  */

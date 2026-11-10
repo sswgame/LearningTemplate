@@ -634,6 +634,12 @@ namespace sw
         return true;
     }
 
+    bool FileUtil::isPathUnderRoot( string_view root, string_view path )
+    {
+        string relative;
+        return tryMakePathUnderRoot( root, path, relative, PlatformFileSystem::kPathsAreCaseInsensitive );
+    }
+
     bool FileUtil::ensureParentDirectoryExists( string_view filePath )
     {
         // 구분자 정규화까지 `ensureDirectoryExists` 와 같게 한다.

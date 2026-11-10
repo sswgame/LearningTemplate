@@ -32,13 +32,13 @@ namespace sw::editor
         struct EditorPathsInternal
         {
             /**
-             * @brief 시나리오 실행(`-scenario`)의 상태 폴더입니다. 시나리오 실행이 아니거나 `-gv_editorStateDir` 를 주었으면 빈 문자열입니다.
+             * @brief 자동화 실행(`-unattended` · `-scenario` — `CommandLineManager::isAutomatedRun`)의 상태 폴더입니다. 자동화 실행이 아니거나 `-gv_editorStateDir` 를 주었으면 빈 문자열입니다.
              * @details 시나리오가 닫은 패널 · 바꾼 설정이 사용자의 Saved/Editor 에 남아 다음 실행(사람 · 다른 시나리오)이 그 상태로 시작했다.
              *          이름에 프로세스 꼬리를 붙여 동시에 도는 App 끼리 겹치지 않는다.
              */
             static string getAutomationStateDirectory()
             {
-                if ( gv_editorStateDir.empty() == false || editor::getSubsystem<CommandLineManager>().isArgumentProvided( CommandLineArgument::SCENARIO ) == false )
+                if ( gv_editorStateDir.empty() == false || editor::getSubsystem<CommandLineManager>().isAutomatedRun() == false )
                     return {};
                 return FileUtil::joinPath( FileUtil::joinPath( makeAutomationOutputFolderPath(), kAutomationEditorStateFolder ), AutomationScratch::makeInstanceID( "editor" ) );
             }

@@ -597,7 +597,16 @@ namespace sw
         expected<string> userDataRoot = AutomationUserDataRoot::resolve( AutomationUserDataRoot::isOutsideAllowed() );
         if ( userDataRoot.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "AutomationUserData.RootRejected", "[Scenario] %#: %#", userDataRoot.error().message(), userDataRoot.error().detail() );
+            SW_LOG_ERROR_ID( "AutomationUserData.RootRejected", "[Automation] %#: %#", userDataRoot.error().message(), userDataRoot.error().detail() );
+            inoutState._bFailed         = SW_TRUE;
+            inoutState._failureExitCode = getAutomationExitStatus( AutomationResult::LoadError );
+            return;
+        }
+        // 상태 자리 변수(`-gv_editorStateDir` 등)를 그대로 넘기면 자식 모두가 한 자리를 함께 쓴다 — 사용자 데이터 뿌리와 같은 결함이라 띄우지 않는다.
+        if ( const optional<string> shared = AutomationUserDataRoot::findSharedStateArgument( options._listPassThroughArgument ); shared.has_value() )
+        {
+            SW_LOG_ERROR_ID( "AutomationUserData.SharedStateArgument", "[Scenario] -scenario-backends would hand '%#' to every backend child - they would share one state folder; drop it",
+                             shared->c_str() );
             inoutState._bFailed         = SW_TRUE;
             inoutState._failureExitCode = getAutomationExitStatus( AutomationResult::LoadError );
             return;

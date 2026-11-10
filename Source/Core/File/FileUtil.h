@@ -101,6 +101,11 @@ namespace sw
          * @details 글로만 비교합니다(파일 시스템을 보지 않고 `..` 를 만들지 않습니다). `makeRelativePath` 는 절대화한 두 경로를 구간별로 맞대어 루트 밖이면 `../` 를 만듭니다.
          */
         [[nodiscard]] static bool tryMakePathUnderRoot( string_view root, string_view path, string& outRelative, bool bIgnoreCase = false );
+        /**
+         * @brief @p path 가 @p root 아래(구간 경계 기준, 루트 자신은 아님)인지를 이 OS 의 대소문자 규칙(Windows 무시 · POSIX 구별)으로 봅니다. 글 연산입니다(`..` 를 풀지 않는다).
+         * @details 비교 · 맵 키용 `normalizePath` 는 POSIX 에서도 소문자로 접어 대소문자만 다른 바깥 폴더를 안으로 본다 — 포함 판정은 이것을 쓴다.
+         */
+        [[nodiscard]] static bool isPathUnderRoot( string_view root, string_view path );
         /** @brief 절대 경로를 만듭니다. */
         [[nodiscard]] static bool makeAbsolutePath( string_view path, string& outResult );
         /** @brief 비교 · 맵 키가 아니라 **실제** 경로를 만듭니다(링크 · `.` · `..` · 8.3 짧은 이름을 풀어서). 경로가 없으면 false 입니다. 구분자는 `/` 입니다. */
