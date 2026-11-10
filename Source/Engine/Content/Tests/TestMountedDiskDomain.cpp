@@ -56,15 +56,13 @@ SW_TEST_CASE( MountedDiskDomainTest, WritePathKeepsTheDiskSpellingOfExistingFold
     const string                 lowerID   = FileUtil::normalizePath( diskID );
     const optional<AbsolutePath> writePath = paths.toDiskPath( lowerID );
     SW_REQUIRE_TRUE( writePath.has_value() );
-    SW_EXPECT_TRUE( FileUtil::isSameDiskPath( diskFile, writePath->str() ) );
-#if defined( SW_PLATFORM_LINUX )
-    SW_EXPECT_EQUAL( directory + "/Saved/Automation/out.txt", writePath->str() );
-#endif
+    // 기대 경로는 대소문자를 구분하는 표기로 적는다 — isSameDiskPath 는 Linux 에서 정확히 같아야, Windows 에서는 같은 파일이면 참이다.
+    SW_EXPECT_TRUE( FileUtil::isSameDiskPath( directory + "/Saved/Automation/out.txt", writePath->str() ) );
 
-    // 없는 폴더부터는 id 의 표기를 쓴다(소문자로 바꾸지 않는다). Windows 는 소문자로 잇는다 — 같은 폴더다.
+    // 없는 폴더부터는 id 의 표기를 쓴다 — 리소스 id 는 소문자로 접히므로(`normalizeAssetID`) 새 성분은 소문자다. Windows 는 대소문자를 가리지 않아 같은 폴더다.
     const optional<AbsolutePath> freshPath = paths.toDiskPath( ScopedScratchDomain::makeID( "Saved/Fresh/Deep/New.txt" ).str() );
     SW_REQUIRE_TRUE( freshPath.has_value() );
-    SW_EXPECT_TRUE( FileUtil::isSameDiskPath( directory + "/Saved/Fresh/Deep/New.txt", freshPath->str() ) );
+    SW_EXPECT_TRUE( FileUtil::isSameDiskPath( directory + "/Saved/fresh/deep/new.txt", freshPath->str() ) );
 
     // 쓴 뒤에는 같은 id 를 대소문자만 다르게 물어도 같은 파일이다(둘째 쓰기가 옆 폴더를 만들지 않는다).
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( writePath->str(), "first" ) );
