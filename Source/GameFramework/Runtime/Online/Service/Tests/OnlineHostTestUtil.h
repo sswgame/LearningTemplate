@@ -230,37 +230,37 @@ namespace sw::test
         {
             (void)remote;
             (void)bAccepted;
-            const int32 clientIndex = findClient( handle );
-            if ( clientIndex >= 0 )
-                SW_EXPECT_TRUE( getClient( clientIndex ).initializeOnSharedEndpoint( &_endpoint, &_requestClient, handle, OnlineServiceClientConfig{ OnlineClientSecurity::sharedEndpoint() } ) );
+            const optional<int32> clientIndex = findClient( handle );
+            if ( clientIndex.has_value() )
+                SW_EXPECT_TRUE( getClient( *clientIndex ).initializeOnSharedEndpoint( &_endpoint, &_requestClient, handle, OnlineServiceClientConfig{ OnlineClientSecurity::sharedEndpoint() } ) );
         }
 
         void onEndpointFrame( StreamConnectionHandle handle, StreamFrameKind kind, const uint8* pBody, int32 bodySize ) override
         {
             if ( _requestClient.handleFrame( handle, kind, pBody, bodySize ) )
                 return;
-            const int32 clientIndex = findClient( handle );
-            if ( clientIndex >= 0 )
-                getClient( clientIndex ).handleFrame( kind, pBody, bodySize );
+            const optional<int32> clientIndex = findClient( handle );
+            if ( clientIndex.has_value() )
+                getClient( *clientIndex ).handleFrame( kind, pBody, bodySize );
         }
 
         void onEndpointClosed( StreamConnectionHandle handle, StreamCloseReason reason ) override
         {
             _requestClient.onConnectionClosed( handle );
-            const int32 clientIndex = findClient( handle );
-            if ( clientIndex >= 0 )
-                getClient( clientIndex ).handleClosed( reason );
+            const optional<int32> clientIndex = findClient( handle );
+            if ( clientIndex.has_value() )
+                getClient( *clientIndex ).handleClosed( reason );
         }
 
     private:
-        int32 findClient( StreamConnectionHandle handle ) const
+        optional<int32> findClient( StreamConnectionHandle handle ) const
         {
             for ( size_t index = 0; index < _listHandle.size(); ++index )
             {
                 if ( _listHandle[index] == handle )
                     return static_cast<int32>( index );
             }
-            return -1;
+            return nullopt;
         }
 
     private:

@@ -357,15 +357,15 @@ namespace
             return writer;
         }
 
-        /** @brief 잔액 목록에서 자산의 값입니다. 없으면 -1 입니다. */
-        static int64 findBalance( const vector<TradeBalance>& listBalance, string_view assetID )
+        /** @brief 잔액 목록에서 자산의 값입니다. 없으면 비어 있습니다. */
+        static optional<int64> findBalance( const vector<TradeBalance>& listBalance, string_view assetID )
         {
             for ( const TradeBalance& balance : listBalance )
             {
                 if ( balance._assetID == assetID )
                     return balance._amount;
             }
-            return -1;
+            return nullopt;
         }
     };
 } // namespace
@@ -507,18 +507,18 @@ SW_TEST_CASE( TradeServerTest, SettlementCarriesOwnBalances )
     const TradeReply settled = rig.confirm( kBobSlot, first, kBob );
     SW_REQUIRE_TRUE( settled._result == TradeResult::Ok );
     SW_EXPECT_TRUE( settled._snapshot._state == TradeState::Settled );
-    SW_EXPECT_EQUAL( int64( 40 ), TradeServerTestUtil::findBalance( settled._listBalance, "cur.gold" ) );
-    SW_EXPECT_EQUAL( int64( 30 ), TradeServerTestUtil::findBalance( settled._listBalance, "cur.gem" ) );
+    SW_EXPECT_TRUE( TradeServerTestUtil::findBalance( settled._listBalance, "cur.gold" ) == int64( 40 ) );
+    SW_EXPECT_TRUE( TradeServerTestUtil::findBalance( settled._listBalance, "cur.gem" ) == int64( 30 ) );
 
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._arrSink[kAliceSlot]._listKind.size() );
     SW_EXPECT_EQUAL( TradeMethod::Closed::kKind, rig._arrSink[kAliceSlot]._listKind[0] );
     const TradeNotice& alicePush = rig._arrSink[kAliceSlot]._listReply[0];
     SW_EXPECT_TRUE( alicePush._snapshot._state == TradeState::Settled );
-    SW_EXPECT_EQUAL( int64( 60 ), TradeServerTestUtil::findBalance( alicePush._listBalance, "cur.gold" ) );
-    SW_EXPECT_EQUAL( int64( 20 ), TradeServerTestUtil::findBalance( alicePush._listBalance, "cur.gem" ) );
+    SW_EXPECT_TRUE( TradeServerTestUtil::findBalance( alicePush._listBalance, "cur.gold" ) == int64( 60 ) );
+    SW_EXPECT_TRUE( TradeServerTestUtil::findBalance( alicePush._listBalance, "cur.gem" ) == int64( 20 ) );
 
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._arrSink[kBobSlot]._listKind.size() );
-    SW_EXPECT_EQUAL( int64( 40 ), TradeServerTestUtil::findBalance( rig._arrSink[kBobSlot]._listReply[0]._listBalance, "cur.gold" ) );
+    SW_EXPECT_TRUE( TradeServerTestUtil::findBalance( rig._arrSink[kBobSlot]._listReply[0]._listBalance, "cur.gold" ) == int64( 40 ) );
     SW_EXPECT_TRUE( rig._arrSink[kCarolSlot]._listKind.empty() );
 
     SW_EXPECT_EQUAL( int64( 60 ), rig.balanceOf( kAlice, "cur.gold" ) );

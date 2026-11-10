@@ -179,12 +179,12 @@ namespace
             return sw::VectorUtil::countBy<&sw::MonsterBattleEvent::_kind>( _listEvent, kind );
         }
 
-        /** @brief 지금까지의 이벤트에서 @p kind 가 처음 나온 값입니다. 없으면 -1 입니다. */
-        int32 findFirstValue( sw::MonsterBattleEvent::Kind kind )
+        /** @brief 지금까지의 이벤트에서 @p kind 가 처음 나온 값입니다. 없으면 비어 있습니다. */
+        sw::optional<int32> findFirstValue( sw::MonsterBattleEvent::Kind kind )
         {
             _battle.pollEvents( _listEvent );
             const sw::MonsterBattleEvent* pEvent = sw::VectorUtil::findBy<&sw::MonsterBattleEvent::_kind>( _listEvent, kind );
-            return pEvent != nullptr ? pEvent->_value : -1;
+            return pEvent != nullptr ? sw::optional<int32>{ pEvent->_value } : sw::nullopt;
         }
 
         /** @brief 이번에 처음 기술을 쓴 편입니다. 이벤트 목록을 비웁니다. */
@@ -1096,7 +1096,7 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, WinAndLose )
     _battle.resolveRound();
     SW_EXPECT_EQUAL( sw::MonsterBattleResult::Won, _battle.getResult() );
     SW_EXPECT_EQUAL( expBefore + 500, _battle.getActive( player )._exp );
-    SW_EXPECT_EQUAL( static_cast<int32>( sw::MonsterBattleResult::Won ), findFirstValue( sw::MonsterBattleEvent::Kind::BattleEnded ) );
+    SW_EXPECT_TRUE( findFirstValue( sw::MonsterBattleEvent::Kind::BattleEnded ) == static_cast<int32>( sw::MonsterBattleResult::Won ) );
     SW_EXPECT_FALSE( _battle.setAction( player, sw::MonsterAction::makeMove( 0 ) ) );
 
     open( weak, make( "swift", 50, "strike" ) );
@@ -1148,7 +1148,7 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, Weather )
     _battle.resolveRound();
     SW_EXPECT_TRUE( _battle.getWeather() == sw::hashed_string( "Rain" ) );
     SW_EXPECT_EQUAL( 1, _battle.getWeatherTurns() ); // 데이터의 2 턴에서 라운드 끝에 하나
-    SW_EXPECT_EQUAL( 2, findFirstValue( sw::MonsterBattleEvent::Kind::WeatherStarted ) );
+    SW_EXPECT_TRUE( findFirstValue( sw::MonsterBattleEvent::Kind::WeatherStarted ) == 2 );
     _battle.resolveRound();
     SW_EXPECT_TRUE( _battle.getWeather().empty() );
     SW_EXPECT_EQUAL( 0, _battle.getWeatherTurns() );
