@@ -120,10 +120,10 @@ namespace sw
             {
                 const string_view                        brushName = content._listBrush[static_cast<size_t>( brushIndex )]._name.view();
                 StringBuilder<constant::buffer::kMax256> ownerBuilder;
-                if ( ruleIndex < 0 )
+                if ( ruleIndex.has_value() == false )
                     ownerBuilder.appendFormat( "brush '%#'", brushName );
                 else
-                    ownerBuilder.appendFormat( "rule %# of '%#'", ruleIndex, brushName );
+                    ownerBuilder.appendFormat( "rule %# of '%#'", *ruleIndex, brushName );
                 const string_view owner = ownerBuilder.view();
                 if ( visual._listFrameCell.empty() )
                 {
