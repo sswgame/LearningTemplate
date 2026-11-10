@@ -396,48 +396,77 @@ namespace sw
             Device ///< 가림과 상관없는 장치 값. 바인딩이 "보이게 되는 순간" 이미 눌려 있었는지 추적하는 데만 쓴다.
         };
 
-        struct ActionEntry
+        /** @brief 액션 하나의 정의입니다 — 맵 파일 · 리바인드 · 패널 편집이 정하고 프레임은 바꾸지 않는다(언리얼 `UInputAction` + 매핑 컨텍스트의 몫). */
+        struct ActionDef
         {
-            InputActionValueType                   _valueType{ InputActionValueType::Boolean };
-            vector<ActionBinding>                  _listBinding{};
-            vector<InputBindingState>              _listBindingState{};
-            vector<ActionBinding>                  _listDefaultBinding{};
-            MulticastDelegate<void()>              _onTriggered{}; ///< `bindActionCallback`
-            MulticastDelegate<void( ActionPhase )> _onPhase{};     ///< `bindPhaseCallback` — 항목이 자기 단계만 거른다
-            MulticastDelegate<void( float2 )>      _onVector2D{};  ///< `bindVector2DCallback`
-            float2                                 _currentValue{ 0.0f, 0.0f };
-            float32                                _holdDuration{ 0.0f };
-            ActionPhase                            _currentPhase{ ActionPhase::None };
-            uint32                                 _handleIndex{ ActionHandle::kInvalidIndex };
-            uint32                                 _generation{ 1 };
-            uint32                                 _sourceIndex{ 0 }; ///< 이 액션을 정한 묶음 파일 번호(`_listSource`)
-            uint8                                  _bOverride    : 1; ///< 앞 파일의 액션을 `<override>` 로 덮은 것이다
-            uint8                                  _bDown        : 1;
-            uint8                                  _bPressed     : 1;
-            uint8                                  _bReleased    : 1;
-            uint8                                  _bTriggered   : 1;
-            uint8                                  _bToggleState : 1; ///< 토글 액션의 켜짐. 토글 여부는 `InputAccessibilitySettings` 가 가진다(맵을 다시 읽어도 남게)
+            InputActionValueType   _valueType;
+            vector<ActionBinding>  _listBinding;
+            vector<ActionBinding>  _listDefaultBinding; ///< `resetActionToDefault` 가 되돌리는 처음 바인딩(`_listBinding` 과 인덱스가 같다)
+            uint32                 _sourceIndex;        ///< 이 액션을 정한 묶음 파일 번호(`_listSource`)
+            uint8                  _bOverride : 1;      ///< 앞 파일의 액션을 `<override>` 로 덮은 것이다
+            [[maybe_unused]] uint8 _reserved  : 7;
 
-            ActionEntry()
+            ActionDef()
                 : _valueType{ InputActionValueType::Boolean }
                 , _listBinding{}
-                , _listBindingState{}
                 , _listDefaultBinding{}
-                , _onTriggered{}
-                , _onPhase{}
-                , _onVector2D{}
+                , _sourceIndex{ 0 }
+                , _bOverride{ SW_FALSE }
+                , _reserved{ 0 }
+            {
+            }
+        };
+
+        /** @brief 액션 하나의 프레임 상태입니다 — `update` 가 매 프레임 바꾼다(언리얼 `FInputActionInstance` 의 몫). 바인딩 상태는 정의의 바인딩과 인덱스가 같다. */
+        struct ActionFrameState
+        {
+            vector<InputBindingState> _listBindingState;
+            float2                    _currentValue;
+            float32                   _holdDuration;
+            ActionPhase               _currentPhase;
+            uint8                     _bDown        : 1;
+            uint8                     _bPressed     : 1;
+            uint8                     _bReleased    : 1;
+            uint8                     _bTriggered   : 1;
+            uint8                     _bToggleState : 1; ///< 토글 액션의 켜짐. 토글 여부는 `InputAccessibilitySettings` 가 가진다(맵을 다시 읽어도 남게)
+            [[maybe_unused]] uint8    _reserved     : 3;
+
+            ActionFrameState()
+                : _listBindingState{}
                 , _currentValue{ 0.0f, 0.0f }
                 , _holdDuration{ 0.0f }
                 , _currentPhase{ ActionPhase::None }
-                , _handleIndex{ ActionHandle::kInvalidIndex }
-                , _generation{ 1 }
-                , _sourceIndex{ 0 }
-                , _bOverride{ SW_FALSE }
                 , _bDown{ SW_FALSE }
                 , _bPressed{ SW_FALSE }
                 , _bReleased{ SW_FALSE }
                 , _bTriggered{ SW_FALSE }
-                , _bToggleState{ SW_FALSE } {}
+                , _bToggleState{ SW_FALSE }
+                , _reserved{ 0 }
+            {
+            }
+        };
+
+        /** @brief 액션 저장소의 칸 하나입니다 — 정의와 프레임 상태, 구독, 핸들 세대. */
+        struct ActionEntry
+        {
+            ActionDef                              _definition;
+            ActionFrameState                       _state;
+            MulticastDelegate<void()>              _onTriggered; ///< `bindActionCallback`
+            MulticastDelegate<void( ActionPhase )> _onPhase;     ///< `bindPhaseCallback` — 항목이 자기 단계만 거른다
+            MulticastDelegate<void( float2 )>      _onVector2D;  ///< `bindVector2DCallback`
+            uint32                                 _handleIndex;
+            uint32                                 _generation;
+
+            ActionEntry()
+                : _definition{}
+                , _state{}
+                , _onTriggered{}
+                , _onPhase{}
+                , _onVector2D{}
+                , _handleIndex{ ActionHandle::kInvalidIndex }
+                , _generation{ 1 }
+            {
+            }
         };
 
         /** @brief 뒤 파일이 덮거나 지운 정의입니다. 맵에서는 사라지지만 파일에는 남아야 하므로 정의한 파일의 기록이 든다. */

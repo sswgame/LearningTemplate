@@ -49,7 +49,7 @@ namespace sw
             return 0.0f;
         float32 bounded  = 0.0f;
         float32 relative = 0.0f;
-        for ( const ActionBinding& binding : pEntry->_listBinding )
+        for ( const ActionBinding& binding : pEntry->_definition._listBinding )
         {
             float2 bVal{ 0.0f, 0.0f };
             if ( isBindingLayerActive( binding ) == false || evaluateBindingDown( binding, bVal ) == false )
@@ -70,7 +70,7 @@ namespace sw
 
         float2 bounded{ 0.0f, 0.0f };
         float2 relative{ 0.0f, 0.0f };
-        for ( const ActionBinding& binding : pEntry->_listBinding )
+        for ( const ActionBinding& binding : pEntry->_definition._listBinding )
         {
             float2 bindingValue{ 0.0f, 0.0f };
             if ( isBindingLayerActive( binding ) && evaluateBindingDown( binding, bindingValue ) )
@@ -99,7 +99,7 @@ namespace sw
         if ( pEntry == nullptr || _pInput == nullptr )
             return false;
 
-        for ( const ActionBinding& binding : pEntry->_listBinding )
+        for ( const ActionBinding& binding : pEntry->_definition._listBinding )
         {
             if ( binding._kind == BindingKind::Chord && isBindingLayerActive( binding ) )
             {
@@ -116,19 +116,19 @@ namespace sw
     bool InputMap::isActionToggled( const hashed_string& action ) const
     {
         const ActionEntry* pEntry = findAction( action );
-        return pEntry != nullptr && pEntry->_bToggleState == SW_TRUE;
+        return pEntry != nullptr && pEntry->_state._bToggleState == SW_TRUE;
     }
 
     bool InputMap::wasActionTriggered( const hashed_string& action ) const
     {
         const ActionEntry* pEntry = findAction( action );
-        return pEntry != nullptr && pEntry->_bTriggered == SW_TRUE;
+        return pEntry != nullptr && pEntry->_state._bTriggered == SW_TRUE;
     }
 
     bool InputMap::isActionDown( const hashed_string& action ) const
     {
         const ActionEntry* pEntry = findAction( action );
-        return pEntry != nullptr && pEntry->_bDown == SW_TRUE;
+        return pEntry != nullptr && pEntry->_state._bDown == SW_TRUE;
     }
 
     ActionHandle InputMap::getActionHandle( const hashed_string& action ) const
@@ -153,39 +153,39 @@ namespace sw
     bool InputMap::wasActionTriggered( ActionHandle handle ) const
     {
         const ActionEntry* pEntry = getActionFromHandle( handle );
-        return pEntry != nullptr && pEntry->_bTriggered == SW_TRUE;
+        return pEntry != nullptr && pEntry->_state._bTriggered == SW_TRUE;
     }
 
     bool InputMap::isActionDown( ActionHandle handle ) const
     {
         const ActionEntry* pEntry = getActionFromHandle( handle );
-        return pEntry != nullptr && pEntry->_bDown == SW_TRUE;
+        return pEntry != nullptr && pEntry->_state._bDown == SW_TRUE;
     }
 
     bool InputMap::wasActionPressed( const hashed_string& action ) const
     {
         const ActionEntry* pEntry = findAction( action );
-        return pEntry != nullptr && pEntry->_bPressed == SW_TRUE;
+        return pEntry != nullptr && pEntry->_state._bPressed == SW_TRUE;
     }
 
     bool InputMap::wasActionPressed( ActionHandle handle ) const
     {
         const ActionEntry* pEntry = getActionFromHandle( handle );
-        return pEntry != nullptr && pEntry->_bPressed == SW_TRUE;
+        return pEntry != nullptr && pEntry->_state._bPressed == SW_TRUE;
     }
 
     bool InputMap::tryGetActionPressInstant( ActionHandle handle, InputPressInstant& outInstant ) const
     {
         const ActionEntry* pEntry      = getActionFromHandle( handle );
-        const bool         bNotPressed = pEntry == nullptr || pEntry->_bPressed == SW_FALSE || _pInput == nullptr;
+        const bool         bNotPressed = pEntry == nullptr || pEntry->_state._bPressed == SW_FALSE || _pInput == nullptr;
         if ( bNotPressed )
             return false;
         bool bFound = false;
-        for ( size_t bindingIndex = 0; bindingIndex < pEntry->_listBinding.size(); ++bindingIndex )
+        for ( size_t bindingIndex = 0; bindingIndex < pEntry->_definition._listBinding.size(); ++bindingIndex )
         {
-            if ( pEntry->_listBindingState[bindingIndex]._bPressed == SW_FALSE )
+            if ( pEntry->_state._listBindingState[bindingIndex]._bPressed == SW_FALSE )
                 continue;
-            const ActionBinding& binding = pEntry->_listBinding[bindingIndex];
+            const ActionBinding& binding = pEntry->_definition._listBinding[bindingIndex];
             // 바인딩이 완성된 순간 — 단일 슬롯은 그 슬롯, 조합 키(수정자 + 트리거)·단축키는 이번 프레임에 눌린 슬롯 중 늦은 것이다.
             int32 slotCount = 0;
             if ( binding._kind == BindingKind::SingleSlot || binding._kind == BindingKind::Shortcut )
@@ -215,43 +215,43 @@ namespace sw
     bool InputMap::wasActionReleased( const hashed_string& action ) const
     {
         const ActionEntry* pEntry = findAction( action );
-        return pEntry != nullptr && pEntry->_bReleased == SW_TRUE;
+        return pEntry != nullptr && pEntry->_state._bReleased == SW_TRUE;
     }
 
     bool InputMap::wasActionReleased( ActionHandle handle ) const
     {
         const ActionEntry* pEntry = getActionFromHandle( handle );
-        return pEntry != nullptr && pEntry->_bReleased == SW_TRUE;
+        return pEntry != nullptr && pEntry->_state._bReleased == SW_TRUE;
     }
 
     float32 InputMap::getActionHoldDuration( const hashed_string& action ) const
     {
         const ActionEntry* pEntry = findAction( action );
-        return pEntry != nullptr ? pEntry->_holdDuration : 0.0f;
+        return pEntry != nullptr ? pEntry->_state._holdDuration : 0.0f;
     }
 
     float32 InputMap::getActionHoldDuration( ActionHandle handle ) const
     {
         const ActionEntry* pEntry = getActionFromHandle( handle );
-        return pEntry != nullptr ? pEntry->_holdDuration : 0.0f;
+        return pEntry != nullptr ? pEntry->_state._holdDuration : 0.0f;
     }
 
     float2 InputMap::getVector2D( ActionHandle handle ) const
     {
         const ActionEntry* pEntry = getActionFromHandle( handle );
-        return pEntry != nullptr ? pEntry->_currentValue : float2{ 0.0f, 0.0f };
+        return pEntry != nullptr ? pEntry->_state._currentValue : float2{ 0.0f, 0.0f };
     }
 
     ActionPhase InputMap::getActionPhase( const hashed_string& action ) const
     {
         const ActionEntry* pEntry = findAction( action );
-        return pEntry != nullptr ? pEntry->_currentPhase : ActionPhase::None;
+        return pEntry != nullptr ? pEntry->_state._currentPhase : ActionPhase::None;
     }
 
     ActionPhase InputMap::getActionPhase( ActionHandle handle ) const
     {
         const ActionEntry* pEntry = getActionFromHandle( handle );
-        return pEntry != nullptr ? pEntry->_currentPhase : ActionPhase::None;
+        return pEntry != nullptr ? pEntry->_state._currentPhase : ActionPhase::None;
     }
 
     void InputMap::getDebugActionStates( vector<DebugActionState>& outListState ) const
@@ -263,13 +263,13 @@ namespace sw
             const ActionEntry& entry = _listActionEntry[actIndex];
             DebugActionState   state{};
             state._action       = actName;
-            state._layer        = entry._listBinding.empty() ? _defaultLayerName : entry._listBinding[0]._layer;
-            state._valueType    = entry._valueType;
-            state._phase        = entry._currentPhase;
-            state._value        = entry._currentValue;
-            state._holdDuration = entry._holdDuration;
-            state._bTriggered   = entry._bTriggered;
-            state._bDown        = entry._bDown;
+            state._layer        = entry._definition._listBinding.empty() ? _defaultLayerName : entry._definition._listBinding[0]._layer;
+            state._valueType    = entry._definition._valueType;
+            state._phase        = entry._state._currentPhase;
+            state._value        = entry._state._currentValue;
+            state._holdDuration = entry._state._holdDuration;
+            state._bTriggered   = entry._state._bTriggered;
+            state._bDown        = entry._state._bDown;
             outListState.push_back( state );
         }
     }
@@ -291,37 +291,37 @@ namespace sw
         {
             ActionEntry& actionEntry = _listActionEntry[actIndex];
 
-            const size_t bindCount = actionEntry._listBinding.size();
-            if ( actionEntry._listBindingState.size() != bindCount )
+            const size_t bindCount = actionEntry._definition._listBinding.size();
+            if ( actionEntry._state._listBindingState.size() != bindCount )
                 rebuildBindingStates( actionEntry );
 
             ActionFrameAccum accum{};
             for ( size_t bindIndex = 0; bindIndex < bindCount; ++bindIndex )
             {
-                updateBinding( actionEntry._listBinding[bindIndex], actionEntry._listBindingState[bindIndex], deltaSeconds, curMousePos, accum );
+                updateBinding( actionEntry._definition._listBinding[bindIndex], actionEntry._state._listBindingState[bindIndex], deltaSeconds, curMousePos, accum );
             }
 
-            const bool bPrevDown      = actionEntry._bDown == SW_TRUE;
-            actionEntry._bDown        = accum._bAnyDown ? SW_TRUE : SW_FALSE;
-            actionEntry._bPressed     = accum._bAnyPressed ? SW_TRUE : SW_FALSE;
-            actionEntry._bReleased    = accum._bAnyReleased ? SW_TRUE : SW_FALSE;
-            actionEntry._bTriggered   = accum._bAnyTriggered ? SW_TRUE : SW_FALSE;
-            actionEntry._holdDuration = accum._maxHold;
+            const bool bPrevDown             = actionEntry._state._bDown == SW_TRUE;
+            actionEntry._state._bDown        = accum._bAnyDown ? SW_TRUE : SW_FALSE;
+            actionEntry._state._bPressed     = accum._bAnyPressed ? SW_TRUE : SW_FALSE;
+            actionEntry._state._bReleased    = accum._bAnyReleased ? SW_TRUE : SW_FALSE;
+            actionEntry._state._bTriggered   = accum._bAnyTriggered ? SW_TRUE : SW_FALSE;
+            actionEntry._state._holdDuration = accum._maxHold;
 
             // 모디파이어를 적용한다(축 반전, 클램핑 또는 원형 정규화 — 마우스 이동량은 빼고).
-            actionEntry._currentValue = composeActionValue( accum._totalValue, accum._relativeValue );
+            actionEntry._state._currentValue = composeActionValue( accum._totalValue, accum._relativeValue );
 
             advanceActionPhase( actionEntry, bPrevDown, accum._bAnyHoldReached );
 
             // 접근성 토글 — 누른 프레임이나 켜진 동안만 목록을 본다. 토글에서 빠진 액션은 꺼진다.
-            const bool bToggleCandidate = actionEntry._bPressed == SW_TRUE || actionEntry._bToggleState == SW_TRUE;
+            const bool bToggleCandidate = actionEntry._state._bPressed == SW_TRUE || actionEntry._state._bToggleState == SW_TRUE;
             if ( bToggleCandidate && _accessibility.isToggleAction( actionName ) == false )
-                actionEntry._bToggleState = SW_FALSE;
-            else if ( actionEntry._bPressed == SW_TRUE )
-                actionEntry._bToggleState = ( actionEntry._bToggleState == SW_TRUE ) ? SW_FALSE : SW_TRUE;
+                actionEntry._state._bToggleState = SW_FALSE;
+            else if ( actionEntry._state._bPressed == SW_TRUE )
+                actionEntry._state._bToggleState = ( actionEntry._state._bToggleState == SW_TRUE ) ? SW_FALSE : SW_TRUE;
 
             // 커맨드 이력 기록
-            if ( actionEntry._bTriggered == SW_TRUE )
+            if ( actionEntry._state._bTriggered == SW_TRUE )
                 _actionBuffer.recordTriggered( actionName );
 
             dispatchActionCallbacks( actionEntry, bPrevDown );
@@ -374,43 +374,43 @@ namespace sw
 
     void InputMap::advanceActionPhase( ActionEntry& actionEntry, bool bPrevDown, bool bAnyHoldReached )
     {
-        if ( actionEntry._bTriggered == SW_TRUE )
+        if ( actionEntry._state._bTriggered == SW_TRUE )
         {
-            actionEntry._currentPhase = ActionPhase::Triggered;
+            actionEntry._state._currentPhase = ActionPhase::Triggered;
         }
-        else if ( actionEntry._bPressed == SW_TRUE || ( bPrevDown == false && actionEntry._bDown == SW_TRUE ) )
+        else if ( actionEntry._state._bPressed == SW_TRUE || ( bPrevDown == false && actionEntry._state._bDown == SW_TRUE ) )
         {
-            actionEntry._currentPhase = ActionPhase::Started;
+            actionEntry._state._currentPhase = ActionPhase::Started;
         }
-        else if ( actionEntry._bDown == SW_TRUE )
+        else if ( actionEntry._state._bDown == SW_TRUE )
         {
-            actionEntry._currentPhase = ActionPhase::Ongoing;
+            actionEntry._state._currentPhase = ActionPhase::Ongoing;
         }
-        else if ( actionEntry._bReleased == SW_TRUE )
+        else if ( actionEntry._state._bReleased == SW_TRUE )
         {
-            actionEntry._currentPhase = ( actionEntry._currentPhase == ActionPhase::Triggered || actionEntry._currentPhase == ActionPhase::Ongoing || bAnyHoldReached )
-                                          ? ActionPhase::Completed
-                                          : ActionPhase::Canceled;
+            actionEntry._state._currentPhase = ( actionEntry._state._currentPhase == ActionPhase::Triggered || actionEntry._state._currentPhase == ActionPhase::Ongoing || bAnyHoldReached )
+                                                 ? ActionPhase::Completed
+                                                 : ActionPhase::Canceled;
         }
         else
         {
-            actionEntry._currentPhase = ActionPhase::None;
+            actionEntry._state._currentPhase = ActionPhase::None;
         }
     }
 
     void InputMap::dispatchActionCallbacks( ActionEntry& actionEntry, bool bPrevDown )
     {
         // 델리게이트 이벤트 디스패치(Triggered)
-        if ( actionEntry._bTriggered == SW_TRUE )
+        if ( actionEntry._state._bTriggered == SW_TRUE )
             actionEntry._onTriggered.broadcast();
 
         // 페이즈 델리게이트 디스패치(Phase) — 항목이 자기 단계만 거른다
-        if ( actionEntry._currentPhase != ActionPhase::None )
-            actionEntry._onPhase.broadcast( actionEntry._currentPhase );
+        if ( actionEntry._state._currentPhase != ActionPhase::None )
+            actionEntry._onPhase.broadcast( actionEntry._state._currentPhase );
 
         // 2D 벡터 델리게이트 디스패치
-        if ( ( actionEntry._currentValue._x != 0.0f || actionEntry._currentValue._y != 0.0f ) || ( bPrevDown && actionEntry._bDown == SW_FALSE ) )
-            actionEntry._onVector2D.broadcast( actionEntry._currentValue );
+        if ( ( actionEntry._state._currentValue._x != 0.0f || actionEntry._state._currentValue._y != 0.0f ) || ( bPrevDown && actionEntry._state._bDown == SW_FALSE ) )
+            actionEntry._onVector2D.broadcast( actionEntry._state._currentValue );
     }
 
     float2 InputMap::composeActionValue( const float2& bounded, const float2& relative ) const
@@ -448,16 +448,16 @@ namespace sw
 
     void InputMap::reseedBindingState( ActionEntry& entry, uint32 bindIndex ) const
     {
-        entry._listBindingState[bindIndex] = makeBindingState( entry._listBinding[bindIndex] );
+        entry._state._listBindingState[bindIndex] = makeBindingState( entry._definition._listBinding[bindIndex] );
     }
 
     void InputMap::rebuildBindingStates( ActionEntry& entry ) const
     {
-        entry._listBindingState.clear();
-        entry._listBindingState.reserve( entry._listBinding.size() );
-        for ( const ActionBinding& binding : entry._listBinding )
+        entry._state._listBindingState.clear();
+        entry._state._listBindingState.reserve( entry._definition._listBinding.size() );
+        for ( const ActionBinding& binding : entry._definition._listBinding )
         {
-            entry._listBindingState.push_back( makeBindingState( binding ) );
+            entry._state._listBindingState.push_back( makeBindingState( binding ) );
         }
     }
 
@@ -545,7 +545,7 @@ namespace sw
         const uint8 heldMask = static_cast<uint8>( ( bShiftHeld ? ModifierKey::Shift : 0 ) | ( bSuperHeld ? ModifierKey::Super : 0 ) );
         for ( const ActionEntry& entry : _listActionEntry )
         {
-            for ( const ActionBinding& other : entry._listBinding )
+            for ( const ActionBinding& other : entry._definition._listBinding )
             {
                 const bool bSameKey = other._arrSlot[0]._deviceKind == InputDeviceKind::Keyboard && other._arrSlot[0]._controlIndex == binding._arrSlot[0]._controlIndex;
                 if ( bSameKey && other._modifierMask == heldMask )

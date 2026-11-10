@@ -125,9 +125,9 @@ namespace sw
     void InputMap::commitBinding( const hashed_string& action, InputActionValueType valueType, const ActionBinding& binding )
     {
         ActionEntry& entry = getOrCreateAction( action, valueType );
-        entry._listBinding.push_back( binding );
-        entry._listDefaultBinding.push_back( binding );
-        entry._listBindingState.push_back( makeBindingState( binding ) );
+        entry._definition._listBinding.push_back( binding );
+        entry._definition._listDefaultBinding.push_back( binding );
+        entry._state._listBindingState.push_back( makeBindingState( binding ) );
     }
 
     void InputMap::bind( const hashed_string& action, InputSlot slot, ActionTrigger trigger, const hashed_string& layer )
@@ -383,11 +383,11 @@ namespace sw
     bool InputMap::rebindSlot( const hashed_string& action, InputSlot slot, uint32 bindIndex )
     {
         ActionEntry* pEntry = findAction( action );
-        if ( pEntry == nullptr || bindIndex >= pEntry->_listBinding.size() )
+        if ( pEntry == nullptr || bindIndex >= pEntry->_definition._listBinding.size() )
             return false;
 
         // 종류는 그대로 두고 그 종류에서 키가 들어가는 슬롯만 바꾼다(`rebindKey` 설명 참고). 단일 키로 바꾸면 수식 키와 축이 사라진다.
-        ActionBinding& binding   = pEntry->_listBinding[bindIndex];
+        ActionBinding& binding   = pEntry->_definition._listBinding[bindIndex];
         const uint32   slotIndex = BindingKinds::getRebindSlotIndex( binding._kind );
         if ( slotIndex == BindingKinds::kNoRebindSlot )
         {
@@ -409,10 +409,10 @@ namespace sw
     {
         ActionEntry* pEntry      = findAction( action );
         const bool   bValidChord = key != Key::Unknown && ( modifierMask & ~ModifierKey::All ) == 0;
-        const bool   bNoBinding  = pEntry == nullptr || bindIndex >= pEntry->_listBinding.size();
+        const bool   bNoBinding  = pEntry == nullptr || bindIndex >= pEntry->_definition._listBinding.size();
         if ( bNoBinding || bValidChord == false )
             return false;
-        ActionBinding& binding        = pEntry->_listBinding[bindIndex];
+        ActionBinding& binding        = pEntry->_definition._listBinding[bindIndex];
         const bool     bKeyboardSlot  = binding._arrSlot[0]._deviceKind == InputDeviceKind::Keyboard;
         const bool     bKeyOrShortcut = binding._kind == BindingKind::SingleSlot || binding._kind == BindingKind::Shortcut;
         if ( bKeyboardSlot == false || bKeyOrShortcut == false )
@@ -465,7 +465,7 @@ namespace sw
             const ActionEntry* pOther = otherName == action ? nullptr : findAction( otherName );
             if ( pOther == nullptr )
                 continue;
-            for ( const ActionBinding& other : pOther->_listBinding )
+            for ( const ActionBinding& other : pOther->_definition._listBinding )
             {
                 bool bSameInput = other._kind == pBinding->_kind && other._layer == pBinding->_layer && other._trigger == pBinding->_trigger &&
                                   other._modifierMask == pBinding->_modifierMask;
@@ -486,31 +486,31 @@ namespace sw
     const ActionBinding* InputMap::getDefaultBinding( const hashed_string& action, uint32 bindIndex ) const
     {
         const ActionEntry* pEntry = findAction( action );
-        if ( pEntry == nullptr || bindIndex >= pEntry->_listDefaultBinding.size() )
+        if ( pEntry == nullptr || bindIndex >= pEntry->_definition._listDefaultBinding.size() )
             return nullptr;
-        return &pEntry->_listDefaultBinding[bindIndex];
+        return &pEntry->_definition._listDefaultBinding[bindIndex];
     }
 
     bool InputMap::rebindWithResolution( const hashed_string& action, InputSlot newSlot, ConflictResolution strategy, uint32 bindIndex )
     {
         ActionEntry* pEntry = findAction( action );
-        if ( pEntry == nullptr || bindIndex >= pEntry->_listBinding.size() )
+        if ( pEntry == nullptr || bindIndex >= pEntry->_definition._listBinding.size() )
             return false;
 
         // 대상의 어느 슬롯을 바꾸는지는 `rebindSlot` 과 같은 규칙이다(Chord 는 방아쇠, 키 하나로 못 바꾸는 종류는 거절). 늘 0 번에 쓰면
         // Chord 의 수식 키를 덮어쓰고, 겹침도 다른 액션의 0 번 슬롯만 보면 Chord 의 방아쇠나 축의 양의 키와 겹쳐도 알 수 없다.
-        const uint32 targetSlot = BindingKinds::getRebindSlotIndex( pEntry->_listBinding[bindIndex]._kind );
+        const uint32 targetSlot = BindingKinds::getRebindSlotIndex( pEntry->_definition._listBinding[bindIndex]._kind );
         if ( targetSlot == BindingKinds::kNoRebindSlot )
         {
             SW_LOG_WARNING_ID( "InputMap.RebindBindingBindingOne", "rebind: binding %# of '%#' is a '%#' binding - one key cannot replace it (bind it again, or edit its parts)", bindIndex,
-                               action.c_str(), BindingKinds::toName( pEntry->_listBinding[bindIndex]._kind ) );
+                               action.c_str(), BindingKinds::toName( pEntry->_definition._listBinding[bindIndex]._kind ) );
             return false;
         }
-        ActionBinding candidate        = pEntry->_listBinding[bindIndex];
+        ActionBinding candidate        = pEntry->_definition._listBinding[bindIndex];
         candidate._arrSlot[targetSlot] = newSlot;
         if ( reportVirtualCursorConflict( "rebind", action, candidate ) )
             return false;
-        const hashed_string targetLayer = pEntry->_listBinding[bindIndex]._layer;
+        const hashed_string targetLayer = pEntry->_definition._listBinding[bindIndex]._layer;
 
         hashed_string conflictingAction{};
         uint32        conflictingBindIndex = 0;
@@ -520,11 +520,11 @@ namespace sw
             if ( actName == action )
                 continue;
             const ActionEntry& entry = _listActionEntry[actIndex];
-            for ( uint32 bIdx = 0; bIdx < entry._listBinding.size(); ++bIdx )
+            for ( uint32 bIdx = 0; bIdx < entry._definition._listBinding.size(); ++bIdx )
             {
-                if ( entry._listBinding[bIdx]._layer != targetLayer )
+                if ( entry._definition._listBinding[bIdx]._layer != targetLayer )
                     continue;
-                conflictingSlot = findConflictingSlot( entry._listBinding[bIdx], newSlot );
+                conflictingSlot = findConflictingSlot( entry._definition._listBinding[bIdx], newSlot );
                 if ( conflictingSlot != BindingKinds::kNoRebindSlot )
                 {
                     conflictingAction    = actName;
@@ -541,32 +541,32 @@ namespace sw
             ActionEntry* pConflictEntry = findAction( conflictingAction );
             if ( strategy == ConflictResolution::Swap && pConflictEntry != nullptr )
             {
-                const InputSlot oldSlot                                                      = pEntry->_listBinding[bindIndex]._arrSlot[targetSlot];
-                pConflictEntry->_listBinding[conflictingBindIndex]._arrSlot[conflictingSlot] = oldSlot;
-                pEntry->_listBinding[bindIndex]._arrSlot[targetSlot]                         = newSlot;
+                const InputSlot oldSlot                                                                  = pEntry->_definition._listBinding[bindIndex]._arrSlot[targetSlot];
+                pConflictEntry->_definition._listBinding[conflictingBindIndex]._arrSlot[conflictingSlot] = oldSlot;
+                pEntry->_definition._listBinding[bindIndex]._arrSlot[targetSlot]                         = newSlot;
                 reseedBindingState( *pEntry, bindIndex );
                 reseedBindingState( *pConflictEntry, conflictingBindIndex );
                 return true;
             }
             else if ( strategy == ConflictResolution::Override && pConflictEntry != nullptr )
             {
-                pConflictEntry->_listBinding[conflictingBindIndex]._arrSlot[conflictingSlot] = InputSlot{};
-                pEntry->_listBinding[bindIndex]._arrSlot[targetSlot]                         = newSlot;
+                pConflictEntry->_definition._listBinding[conflictingBindIndex]._arrSlot[conflictingSlot] = InputSlot{};
+                pEntry->_definition._listBinding[bindIndex]._arrSlot[targetSlot]                         = newSlot;
                 reseedBindingState( *pEntry, bindIndex );
                 reseedBindingState( *pConflictEntry, conflictingBindIndex );
                 return true;
             }
             else if ( strategy == ConflictResolution::AddSecondary )
             {
-                ActionBinding newBinding        = pEntry->_listBinding[bindIndex];
+                ActionBinding newBinding        = pEntry->_definition._listBinding[bindIndex];
                 newBinding._arrSlot[targetSlot] = newSlot;
-                pEntry->_listBinding.push_back( newBinding );
-                pEntry->_listBindingState.push_back( makeBindingState( newBinding ) );
+                pEntry->_definition._listBinding.push_back( newBinding );
+                pEntry->_state._listBindingState.push_back( makeBindingState( newBinding ) );
                 return true;
             }
         }
 
-        pEntry->_listBinding[bindIndex]._arrSlot[targetSlot] = newSlot;
+        pEntry->_definition._listBinding[bindIndex]._arrSlot[targetSlot] = newSlot;
         reseedBindingState( *pEntry, bindIndex );
         return true;
     }
@@ -574,9 +574,9 @@ namespace sw
     bool InputMap::findRebindSlot( const hashed_string& action, uint32 bindIndex, InputSlot& outSlot ) const
     {
         const ActionEntry* pEntry = findAction( action );
-        if ( pEntry == nullptr || bindIndex >= pEntry->_listBinding.size() )
+        if ( pEntry == nullptr || bindIndex >= pEntry->_definition._listBinding.size() )
             return false;
-        const ActionBinding& binding   = pEntry->_listBinding[bindIndex];
+        const ActionBinding& binding   = pEntry->_definition._listBinding[bindIndex];
         const uint32         slotIndex = BindingKinds::getRebindSlotIndex( binding._kind );
         if ( slotIndex == BindingKinds::kNoRebindSlot )
             return false;
@@ -587,9 +587,9 @@ namespace sw
     bool InputMap::findDefaultRebindSlot( const hashed_string& action, uint32 bindIndex, InputSlot& outSlot ) const
     {
         const ActionEntry* pEntry = findAction( action );
-        if ( pEntry == nullptr || bindIndex >= pEntry->_listDefaultBinding.size() )
+        if ( pEntry == nullptr || bindIndex >= pEntry->_definition._listDefaultBinding.size() )
             return false;
-        const ActionBinding& binding   = pEntry->_listDefaultBinding[bindIndex];
+        const ActionBinding& binding   = pEntry->_definition._listDefaultBinding[bindIndex];
         const uint32         slotIndex = BindingKinds::getRebindSlotIndex( binding._kind );
         if ( slotIndex == BindingKinds::kNoRebindSlot )
             return false;
@@ -600,9 +600,9 @@ namespace sw
     hashed_string InputMap::findBindingLayer( const hashed_string& action, uint32 bindIndex ) const
     {
         const ActionEntry* pEntry = findAction( action );
-        if ( pEntry == nullptr || bindIndex >= pEntry->_listBinding.size() )
+        if ( pEntry == nullptr || bindIndex >= pEntry->_definition._listBinding.size() )
             return {};
-        return pEntry->_listBinding[bindIndex]._layer;
+        return pEntry->_definition._listBinding[bindIndex]._layer;
     }
 
     bool InputMap::hasBindingConflict( const InputSlot& slot, const hashed_string& layer, string& outConflictingAction ) const
@@ -612,7 +612,7 @@ namespace sw
         for ( const auto& [actionName, actIndex] : _mapAction )
         {
             const ActionEntry& entry = _listActionEntry[actIndex];
-            for ( const ActionBinding& binding : entry._listBinding )
+            for ( const ActionBinding& binding : entry._definition._listBinding )
             {
                 if ( canLayersFireTogether( binding._layer, targetLayer ) == false )
                     continue;
@@ -637,10 +637,10 @@ namespace sw
     bool InputMap::resetActionToDefault( const hashed_string& action )
     {
         ActionEntry* pEntry = findAction( action );
-        if ( pEntry == nullptr || pEntry->_listDefaultBinding.empty() )
+        if ( pEntry == nullptr || pEntry->_definition._listDefaultBinding.empty() )
             return false;
 
-        pEntry->_listBinding = pEntry->_listDefaultBinding;
+        pEntry->_definition._listBinding = pEntry->_definition._listDefaultBinding;
         rebuildBindingStates( *pEntry );
         return true;
     }
@@ -649,9 +649,9 @@ namespace sw
     {
         for ( ActionEntry& entry : _listActionEntry )
         {
-            if ( entry._listDefaultBinding.empty() == false )
+            if ( entry._definition._listDefaultBinding.empty() == false )
             {
-                entry._listBinding = entry._listDefaultBinding;
+                entry._definition._listBinding = entry._definition._listDefaultBinding;
                 rebuildBindingStates( entry );
             }
         }
@@ -723,13 +723,13 @@ namespace sw
     uint32 InputMap::getActionSourceIndex( const hashed_string& action ) const
     {
         const ActionEntry* pEntry = findAction( action );
-        return pEntry != nullptr ? pEntry->_sourceIndex : 0;
+        return pEntry != nullptr ? pEntry->_definition._sourceIndex : 0;
     }
 
     bool InputMap::isActionOverride( const hashed_string& action ) const
     {
         const ActionEntry* pEntry = findAction( action );
-        return pEntry != nullptr && pEntry->_bOverride == SW_TRUE;
+        return pEntry != nullptr && pEntry->_definition._bOverride == SW_TRUE;
     }
 
     int32 InputMap::getLayerPriority( const hashed_string& layer ) const
@@ -746,53 +746,53 @@ namespace sw
     ActionTrigger InputMap::getBindingTrigger( const hashed_string& action, uint32 bindIndex ) const
     {
         const ActionEntry* pEntry = findAction( action );
-        if ( pEntry == nullptr || bindIndex >= pEntry->_listBinding.size() )
+        if ( pEntry == nullptr || bindIndex >= pEntry->_definition._listBinding.size() )
             return ActionTrigger::Pressed;
-        return pEntry->_listBinding[bindIndex]._trigger;
+        return pEntry->_definition._listBinding[bindIndex]._trigger;
     }
 
     bool InputMap::setBindingTrigger( const hashed_string& action, uint32 bindIndex, ActionTrigger trigger )
     {
         ActionEntry* pEntry                = findAction( action );
-        const bool   bInvalidTriggerRebind = pEntry == nullptr || bindIndex >= pEntry->_listBinding.size() || trigger >= ActionTrigger::Count;
+        const bool   bInvalidTriggerRebind = pEntry == nullptr || bindIndex >= pEntry->_definition._listBinding.size() || trigger >= ActionTrigger::Count;
         if ( bInvalidTriggerRebind )
             return false;
-        pEntry->_listBinding[bindIndex]._trigger = trigger;
+        pEntry->_definition._listBinding[bindIndex]._trigger = trigger;
         return true;
     }
 
     bool InputMap::setBindingTriggerTime( const hashed_string& action, uint32 bindIndex, float32 seconds )
     {
         ActionEntry* pEntry = findAction( action );
-        if ( pEntry == nullptr || bindIndex >= pEntry->_listBinding.size() )
+        if ( pEntry == nullptr || bindIndex >= pEntry->_definition._listBinding.size() )
             return false;
-        const float32 triggerTime                    = ( seconds > 0.0f ) ? seconds : 0.0f;
-        pEntry->_listBinding[bindIndex]._triggerTime = triggerTime;
-        if ( bindIndex < pEntry->_listDefaultBinding.size() )
-            pEntry->_listDefaultBinding[bindIndex]._triggerTime = triggerTime;
+        const float32 triggerTime                                = ( seconds > 0.0f ) ? seconds : 0.0f;
+        pEntry->_definition._listBinding[bindIndex]._triggerTime = triggerTime;
+        if ( bindIndex < pEntry->_definition._listDefaultBinding.size() )
+            pEntry->_definition._listDefaultBinding[bindIndex]._triggerTime = triggerTime;
         return true;
     }
 
     bool InputMap::setBindingNegate( const hashed_string& action, uint32 bindIndex, bool bNegate )
     {
         ActionEntry* pEntry = findAction( action );
-        if ( pEntry == nullptr || bindIndex >= pEntry->_listBinding.size() )
+        if ( pEntry == nullptr || bindIndex >= pEntry->_definition._listBinding.size() )
             return false;
-        pEntry->_listBinding[bindIndex]._bNegate = bNegate;
-        if ( bindIndex < pEntry->_listDefaultBinding.size() )
-            pEntry->_listDefaultBinding[bindIndex]._bNegate = bNegate;
+        pEntry->_definition._listBinding[bindIndex]._bNegate = bNegate;
+        if ( bindIndex < pEntry->_definition._listDefaultBinding.size() )
+            pEntry->_definition._listDefaultBinding[bindIndex]._bNegate = bNegate;
         return true;
     }
 
     bool InputMap::setBindingTapCount( const hashed_string& action, uint32 bindIndex, uint8 tapCount )
     {
         ActionEntry* pEntry = findAction( action );
-        if ( pEntry == nullptr || bindIndex >= pEntry->_listBinding.size() )
+        if ( pEntry == nullptr || bindIndex >= pEntry->_definition._listBinding.size() )
             return false;
-        const uint8 clampedCount                  = ( tapCount < 2 ) ? static_cast<uint8>( 2 ) : tapCount;
-        pEntry->_listBinding[bindIndex]._tapCount = clampedCount;
-        if ( bindIndex < pEntry->_listDefaultBinding.size() )
-            pEntry->_listDefaultBinding[bindIndex]._tapCount = clampedCount;
+        const uint8 clampedCount                              = ( tapCount < 2 ) ? static_cast<uint8>( 2 ) : tapCount;
+        pEntry->_definition._listBinding[bindIndex]._tapCount = clampedCount;
+        if ( bindIndex < pEntry->_definition._listDefaultBinding.size() )
+            pEntry->_definition._listDefaultBinding[bindIndex]._tapCount = clampedCount;
         return true;
     }
 
@@ -800,14 +800,14 @@ namespace sw
     {
         ActionEntry* pEntry  = findAction( action );
         const auto   itLayer = _mapLayer.find( layer );
-        if ( pEntry == nullptr || bindIndex >= pEntry->_listBinding.size() || itLayer == _mapLayer.end() )
+        if ( pEntry == nullptr || bindIndex >= pEntry->_definition._listBinding.size() || itLayer == _mapLayer.end() )
             return false;
-        pEntry->_listBinding[bindIndex]._layer            = layer;
-        pEntry->_listBinding[bindIndex]._cachedLayerIndex = itLayer->second;
-        if ( bindIndex < pEntry->_listDefaultBinding.size() )
+        pEntry->_definition._listBinding[bindIndex]._layer            = layer;
+        pEntry->_definition._listBinding[bindIndex]._cachedLayerIndex = itLayer->second;
+        if ( bindIndex < pEntry->_definition._listDefaultBinding.size() )
         {
-            pEntry->_listDefaultBinding[bindIndex]._layer            = layer;
-            pEntry->_listDefaultBinding[bindIndex]._cachedLayerIndex = itLayer->second;
+            pEntry->_definition._listDefaultBinding[bindIndex]._layer            = layer;
+            pEntry->_definition._listDefaultBinding[bindIndex]._cachedLayerIndex = itLayer->second;
         }
         reseedBindingState( *pEntry, bindIndex );
         return true;
@@ -816,12 +816,12 @@ namespace sw
     bool InputMap::removeBinding( const hashed_string& action, uint32 bindIndex )
     {
         ActionEntry* pEntry = findAction( action );
-        if ( pEntry == nullptr || bindIndex >= pEntry->_listBinding.size() )
+        if ( pEntry == nullptr || bindIndex >= pEntry->_definition._listBinding.size() )
             return false;
-        pEntry->_listBinding.erase( pEntry->_listBinding.begin() + bindIndex );
-        pEntry->_listBindingState.erase( pEntry->_listBindingState.begin() + bindIndex );
-        if ( bindIndex < pEntry->_listDefaultBinding.size() )
-            pEntry->_listDefaultBinding.erase( pEntry->_listDefaultBinding.begin() + bindIndex );
+        pEntry->_definition._listBinding.erase( pEntry->_definition._listBinding.begin() + bindIndex );
+        pEntry->_state._listBindingState.erase( pEntry->_state._listBindingState.begin() + bindIndex );
+        if ( bindIndex < pEntry->_definition._listDefaultBinding.size() )
+            pEntry->_definition._listDefaultBinding.erase( pEntry->_definition._listDefaultBinding.begin() + bindIndex );
         return true;
     }
 
@@ -832,13 +832,13 @@ namespace sw
             return false;
         ActionEntry& entry = _listActionEntry[it->second];
         // 덮은 액션을 지우면 앞 파일의 정의가 다시 읽힌다 — 저장이 덮던 파일에 지우기로 남긴다. 앞 파일에는 원래 정의가 남아 있다(`_listShadowed`).
-        if ( entry._bOverride == SW_TRUE && entry._sourceIndex < _listSource.size() )
-            _listSource[entry._sourceIndex]._listRemove.push_back( action );
-        entry._listBinding.clear();
-        entry._listBindingState.clear();
-        entry._listDefaultBinding.clear();
-        entry._bOverride  = SW_FALSE;
-        entry._generation = ++_nextGeneration;
+        if ( entry._definition._bOverride == SW_TRUE && entry._definition._sourceIndex < _listSource.size() )
+            _listSource[entry._definition._sourceIndex]._listRemove.push_back( action );
+        entry._definition._listBinding.clear();
+        entry._state._listBindingState.clear();
+        entry._definition._listDefaultBinding.clear();
+        entry._definition._bOverride = SW_FALSE;
+        entry._generation            = ++_nextGeneration;
         _mapAction.erase( it );
         (void)VectorUtil::removeFirst( _listActionName, action ); // 목록 순서가 저장 순서라 순서를 지키며 지운다
         return true;
@@ -847,15 +847,15 @@ namespace sw
     uint32 InputMap::getBindingCount( const hashed_string& action ) const
     {
         const ActionEntry* pEntry = findAction( action );
-        return pEntry != nullptr ? static_cast<uint32>( pEntry->_listBinding.size() ) : 0;
+        return pEntry != nullptr ? static_cast<uint32>( pEntry->_definition._listBinding.size() ) : 0;
     }
 
     const ActionBinding* InputMap::getBinding( const hashed_string& action, uint32 bindIndex ) const
     {
         const ActionEntry* pEntry = findAction( action );
-        if ( pEntry == nullptr || bindIndex >= pEntry->_listBinding.size() )
+        if ( pEntry == nullptr || bindIndex >= pEntry->_definition._listBinding.size() )
             return nullptr;
-        return &pEntry->_listBinding[bindIndex];
+        return &pEntry->_definition._listBinding[bindIndex];
     }
 
     void InputMap::ensureActionListed( const hashed_string& action )
@@ -898,18 +898,18 @@ namespace sw
             const uint32 index = static_cast<uint32>( _listActionEntry.size() );
 
             ActionEntry entry{};
-            entry._valueType   = valueType;
-            entry._handleIndex = index;
-            entry._generation  = ++_nextGeneration;
-            entry._sourceIndex = _currentSourceIndex;
+            entry._definition._valueType   = valueType;
+            entry._handleIndex             = index;
+            entry._generation              = ++_nextGeneration;
+            entry._definition._sourceIndex = _currentSourceIndex;
             _listActionEntry.push_back( std::move( entry ) );
             _mapAction.emplace( action, index );
             return _listActionEntry[index];
         }
 
         ActionEntry& entry = _listActionEntry[it->second];
-        if ( entry._valueType == InputActionValueType::Boolean && valueType != InputActionValueType::Boolean )
-            entry._valueType = valueType;
+        if ( entry._definition._valueType == InputActionValueType::Boolean && valueType != InputActionValueType::Boolean )
+            entry._definition._valueType = valueType;
         return entry;
     }
 

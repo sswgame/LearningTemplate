@@ -249,13 +249,13 @@ namespace sw
             SW_LOG_ERROR_ID( "InputMap.DiffUnknownAction", "InputMap %#: <%#> names action '%#' that no earlier map of the bundle defines", absPath, node.getName(), action.c_str() );
             return nullptr;
         }
-        if ( pEntry->_bOverride == SW_TRUE )
+        if ( pEntry->_definition._bOverride == SW_TRUE )
         {
             SW_LOG_ERROR_ID( "InputMap.DiffTwice", "InputMap %#: <%#> names action '%#' that %# already overrode - one diff per action, or the winner depends on the load order", absPath, node.getName(),
-                             action.c_str(), _listSource[pEntry->_sourceIndex]._assetPath.c_str() );
+                             action.c_str(), _listSource[pEntry->_definition._sourceIndex]._assetPath.c_str() );
             return nullptr;
         }
-        if ( pEntry->_sourceIndex == _currentSourceIndex )
+        if ( pEntry->_definition._sourceIndex == _currentSourceIndex )
         {
             SW_LOG_ERROR_ID( "InputMap.DiffSameFile", "InputMap %#: <%#> names action '%#' that the same file defines - edit the definition instead", absPath, node.getName(), action.c_str() );
             return nullptr;
@@ -267,9 +267,9 @@ namespace sw
     {
         SourceActionSnapshot snapshot;
         snapshot._action      = action;
-        snapshot._valueType   = entry._valueType;
-        snapshot._listBinding = entry._listBinding;
-        _listSource[entry._sourceIndex]._listShadowed.push_back( std::move( snapshot ) );
+        snapshot._valueType   = entry._definition._valueType;
+        snapshot._listBinding = entry._definition._listBinding;
+        _listSource[entry._definition._sourceIndex]._listShadowed.push_back( std::move( snapshot ) );
     }
 
     void InputMap::readOverride( const XMLNode& node, string_view absPath, vector<hashed_string>& outListLoadedAction, bool& inoutbValid )
@@ -283,12 +283,12 @@ namespace sw
         }
         shadowActionDefinition( *pEntry, action );
         // `layer` 를 적지 않은 덮기는 덮는 액션의 레이어에 남는다 — 차이는 키만 적으면 된다.
-        const hashed_string inheritedLayer = pEntry->_listBinding.empty() ? _defaultLayerName : pEntry->_listBinding.front()._layer;
-        pEntry->_listBinding.clear();
-        pEntry->_listDefaultBinding.clear();
-        pEntry->_listBindingState.clear();
-        pEntry->_sourceIndex = _currentSourceIndex;
-        pEntry->_bOverride   = SW_TRUE;
+        const hashed_string inheritedLayer = pEntry->_definition._listBinding.empty() ? _defaultLayerName : pEntry->_definition._listBinding.front()._layer;
+        pEntry->_definition._listBinding.clear();
+        pEntry->_definition._listDefaultBinding.clear();
+        pEntry->_state._listBindingState.clear();
+        pEntry->_definition._sourceIndex = _currentSourceIndex;
+        pEntry->_definition._bOverride   = SW_TRUE;
         outListLoadedAction.push_back( action );
         InputMapXML::readAction( *this, node, inheritedLayer, absPath, inoutbValid );
     }
@@ -341,13 +341,13 @@ namespace sw
         if ( pEntry == nullptr )
             return 0;
         uint32 conflictCount = 0;
-        for ( uint32 bindIndex = 0; bindIndex < static_cast<uint32>( pEntry->_listBinding.size() ); ++bindIndex )
+        for ( uint32 bindIndex = 0; bindIndex < static_cast<uint32>( pEntry->_definition._listBinding.size() ); ++bindIndex )
         {
             hashed_string otherName{};
             if ( findSameLayerInputConflict( action, bindIndex, otherName ) == false )
                 continue;
             SW_LOG_ERROR_ID( "InputMap.InputMapActionUsesSame", "InputMap %#: action '%#' uses the same input as '%#' in layer '%#' - one press would fire both", sourceName, action.c_str(), otherName.c_str(),
-                             pEntry->_listBinding[bindIndex]._layer.c_str() );
+                             pEntry->_definition._listBinding[bindIndex]._layer.c_str() );
             ++conflictCount;
         }
         return conflictCount;
@@ -361,7 +361,7 @@ namespace sw
             const ActionEntry* pEntry = findAction( actionName );
             if ( pEntry == nullptr )
                 continue;
-            for ( const ActionBinding& binding : pEntry->_listBinding )
+            for ( const ActionBinding& binding : pEntry->_definition._listBinding )
             {
                 if ( reportVirtualCursorConflict( sourceName, actionName, binding ) )
                     ++conflictCount;
@@ -376,14 +376,14 @@ namespace sw
         if ( pEntry == nullptr )
             return 0;
         uint32 removedCount = 0;
-        for ( uint32 bindIndex = static_cast<uint32>( pEntry->_listBinding.size() ); bindIndex > firstIndex; --bindIndex )
+        for ( uint32 bindIndex = static_cast<uint32>( pEntry->_definition._listBinding.size() ); bindIndex > firstIndex; --bindIndex )
         {
             const uint32 removeIndex = bindIndex - 1;
-            if ( reportVirtualCursorConflict( sourceName, action, pEntry->_listBinding[removeIndex] ) == false )
+            if ( reportVirtualCursorConflict( sourceName, action, pEntry->_definition._listBinding[removeIndex] ) == false )
                 continue;
-            pEntry->_listBinding.erase( pEntry->_listBinding.begin() + removeIndex );
-            pEntry->_listDefaultBinding.erase( pEntry->_listDefaultBinding.begin() + removeIndex );
-            pEntry->_listBindingState.erase( pEntry->_listBindingState.begin() + removeIndex );
+            pEntry->_definition._listBinding.erase( pEntry->_definition._listBinding.begin() + removeIndex );
+            pEntry->_definition._listDefaultBinding.erase( pEntry->_definition._listDefaultBinding.begin() + removeIndex );
+            pEntry->_state._listBindingState.erase( pEntry->_state._listBindingState.begin() + removeIndex );
             ++removedCount;
         }
         return removedCount;
@@ -506,8 +506,8 @@ namespace sw
         for ( const hashed_string& actionName : _listActionName )
         {
             const ActionEntry* pEntry = findAction( actionName );
-            if ( pEntry != nullptr && pEntry->_sourceIndex == sourceIndex && pEntry->_bOverride == SW_FALSE )
-                bAllWritten = InputMapXML::writeActionElement( root, "action", actionName, pEntry->_valueType, pEntry->_listBinding ) && bAllWritten;
+            if ( pEntry != nullptr && pEntry->_definition._sourceIndex == sourceIndex && pEntry->_definition._bOverride == SW_FALSE )
+                bAllWritten = InputMapXML::writeActionElement( root, "action", actionName, pEntry->_definition._valueType, pEntry->_definition._listBinding ) && bAllWritten;
         }
         for ( const SourceActionSnapshot& snapshot : source._listShadowed )
         {
@@ -516,8 +516,8 @@ namespace sw
         for ( const hashed_string& actionName : _listActionName )
         {
             const ActionEntry* pEntry = findAction( actionName );
-            if ( pEntry != nullptr && pEntry->_sourceIndex == sourceIndex && pEntry->_bOverride == SW_TRUE )
-                bAllWritten = InputMapXML::writeActionElement( root, "override", actionName, pEntry->_valueType, pEntry->_listBinding ) && bAllWritten;
+            if ( pEntry != nullptr && pEntry->_definition._sourceIndex == sourceIndex && pEntry->_definition._bOverride == SW_TRUE )
+                bAllWritten = InputMapXML::writeActionElement( root, "override", actionName, pEntry->_definition._valueType, pEntry->_definition._listBinding ) && bAllWritten;
         }
         for ( const hashed_string& actionName : source._listRemove )
         {
