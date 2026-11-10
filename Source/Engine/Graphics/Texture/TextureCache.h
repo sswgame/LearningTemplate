@@ -1,6 +1,7 @@
 /**
  * @file TextureCache.h
  * @brief 경로를 키로 Texture2D 소유권을 관리합니다(MaterialCache 와 같은 구조).
+ * @details 게임이 보는 헤더라 `Texture2D`(GPU 텍스처 · SRV)를 앞선 선언으로만 안다 — 텍스처 몸체가 필요한 쪽(렌더러 · 에디터)이 `Texture2D.h` 를 include 한다.
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
@@ -14,8 +15,6 @@
 #include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/RenderTargetDeclaration.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
-#include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureLayerBake.h"
 
 namespace sw
@@ -25,6 +24,7 @@ namespace sw
     class IRHIDevice;
     class Texture2D;
     class TextureLoadOperation;
+    enum class TextureResidency : uint8; // 값은 Texture2D.h — 로드 작업이 칸으로만 든다
 
     /** @brief 텍스처 로드 핸들입니다. 핸들이 살아 있는 동안 준비된 텍스처의 참조 하나를 쥡니다(놓으면 `release` 와 같다). */
     using TextureHandle = AssetHandle<TextureLoadOperation>;
@@ -285,6 +285,11 @@ namespace sw
         shared_ptr<Texture2D> getAsset() const;
         /** @brief 텍스처 객체입니다(`Ready` 가 아니면 쓰지 않는다). 핸들이 살아 있는 동안 유효합니다. */
         Texture2D* getTexture() const { return _pTexture; }
+        /**
+         * @brief 올라간 GPU 텍스처의 정체(핸들 값)입니다. 준비 전이거나 올라가 있지 않으면 0 입니다.
+         * @details 디바이스 교체 · 크기 바꾸기로 값이 바뀐다 — 게임 코드는 같은지만 본다(RHI 형식 · `Texture2D.h` 를 모르고 다시 구울지 정한다).
+         */
+        uint64 getResidentIdentity() const;
 
     private:
         [[nodiscard]] expected<void> runLoad() override;

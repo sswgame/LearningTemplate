@@ -12,6 +12,7 @@
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialPacking.h"
 #include "Engine/Graphics/Material/MaterialPermutation.h"
+#include "Engine/Graphics/Material/MaterialRenderProxy.h"
 #include "Engine/Graphics/Material/MaterialXML.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"

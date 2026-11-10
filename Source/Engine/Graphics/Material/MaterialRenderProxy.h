@@ -2,7 +2,7 @@
  * @file MaterialRenderProxy.h
  * @brief 머티리얼의 렌더 스레드 쪽 객체입니다(언리얼 `FMaterialRenderProxy` 에 해당).
  * @details 게임 스레드의 `Material` · `MaterialInstance` 는 CPU 상태(속성, 패킹한 바이트, 텍스처 요청)만 가지고, 바뀔 때마다 불변 사본
- *          `MaterialRenderData` 를 새로 만든다. 장면 빌더가 배치 · 원소마다 (프록시, 그 사본) 쌍(`MaterialRenderBinding`)을 스냅샷에 싣고,
+ *          `MaterialRenderData` 를 새로 만든다. 장면 빌더가 배치 · 원소마다 (프록시, 그 사본) 쌍(`MaterialRenderBinding` — 게임이 보는 헤더가 쓰도록 따로 둔다)을 스냅샷에 싣고,
  *          렌더 스레드가 받은 사본이 지난번과 다를 때만 프록시의 상수 버퍼에 올린다.
  *          한 객체를 두 스레드가 고치지 않으므로 잠금이 없다 — 사본은 불변이고, 프록시는 렌더 스레드만 고친다.
  *          갱신 기록(델타)이 아니라 상태를 싣는 이유: 그리지 않고 버려지는 패킷이 있어도 다음 패킷이 같은 상태를 다시 싣는다.
@@ -11,6 +11,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Graphics/Material/MaterialRenderBinding.h"
 #include "Engine/Graphics/RHI/RHIDeviceBuffer.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -81,18 +82,5 @@ namespace sw
         uint32                               _constantByteSize; ///< `_constant` 를 만든 크기. 바이트가 이보다 커지면 다시 만든다(크기를 넘긴 update 는 버퍼 밖을 쓴다)
         RHIDescriptorIndex                   _descriptorIndex;
         shared_ptr<const MaterialRenderData> _uploaded; ///< 마지막으로 올린 사본. 같은 사본이면 다시 올리지 않는다
-    };
-
-    /**
-     * @struct MaterialRenderBinding
-     * @brief 스냅샷이 배치 · 원소마다 싣는 (프록시, 사본) 쌍입니다. 둘 다 소유권을 함께 싣는다(패킷이 사는 동안 살아 있다).
-     */
-    struct MaterialRenderBinding
-    {
-        shared_ptr<MaterialRenderProxy>      _proxy;
-        shared_ptr<const MaterialRenderData> _data;
-
-        /** @brief 프록시와 사본이 모두 있으면 true 입니다. */
-        bool isValid() const { return _proxy != nullptr && _data != nullptr; }
     };
 } // namespace sw

@@ -6,6 +6,7 @@
 
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
+#include "Engine/Graphics/Material/MaterialRenderProxy.h"
 
 // MaterialInstance — 값 덮어쓰기의 사본 재사용과 저장 글(nogpu).
 

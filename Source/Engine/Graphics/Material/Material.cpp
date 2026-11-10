@@ -15,6 +15,7 @@
 #include "Engine/Graphics/Material/MaterialPacking.h"
 #include "Engine/Graphics/Material/MaterialParameterCollection.h"
 #include "Engine/Graphics/Material/MaterialPermutation.h"
+#include "Engine/Graphics/Material/MaterialRenderProxy.h"
 #include "Engine/Graphics/Material/MaterialXML.h"
 #include "Engine/Graphics/RHI/Diagnostics/BindlessIndexValidator.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
