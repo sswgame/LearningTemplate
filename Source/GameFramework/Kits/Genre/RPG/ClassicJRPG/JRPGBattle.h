@@ -155,12 +155,12 @@ namespace sw
             Victory, ///< `_value` 는 한 멤버의 경험치 몫
             Defeat
         };
-        hashed_string _id{};
-        int32         _actor{ constant::invalid_index::kInt32 };
-        int32         _target{ constant::invalid_index::kInt32 };
-        int32         _value{ 0 };
-        Kind          _kind{ Kind::Attack };
-        bool          _bEnemyActor{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        hashed_string   _id{};
+        optional<int32> _actor{};  ///< 없으면 전투 전체의 일(도주 · 승패 · 콤보 포인트)
+        optional<int32> _target{}; ///< 없으면 대상이 없는 일
+        int32           _value{ 0 };
+        Kind            _kind{ Kind::Attack };
+        bool            _bEnemyActor{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -220,7 +220,7 @@ namespace sw
         int64                         getRewardGold() const { return _rewardGold; }
 
     private:
-        void pushEvent( JRPGBattleEvent::Kind kind, bool bEnemyActor, int32 actor, int32 target, int32 value = 0, const hashed_string& id = hashed_string{} );
+        void pushEvent( JRPGBattleEvent::Kind kind, bool bEnemyActor, optional<int32> actor, optional<int32> target, int32 value = 0, const hashed_string& id = hashed_string{} );
         /** @brief 시작한 전투가 끝나지 않았고 표들이 파티와 맞는지입니다. 실패한 `start`, `start` 없는 전투, 시작 뒤 달라진 파티를 진행하지 않습니다(빈 적 목록이 승리가 되고, 멤버 인덱스가 표를 넘는다). */
         [[nodiscard]] bool isInProgress() const;
         /** @brief 읽은 적 하나가 카탈로그의 정의 안에 있는지입니다. */
