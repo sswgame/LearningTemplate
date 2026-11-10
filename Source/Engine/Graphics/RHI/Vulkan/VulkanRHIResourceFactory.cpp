@@ -12,6 +12,8 @@
 #include "Engine/Graphics/RHI/Backend/RHIShaderRequest.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"
+#include "Engine/Graphics/RHI/Transfer/RHIStagingPlacement.h"
+#include "Engine/Graphics/RHI/Transfer/RHITextureTransferDriver.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanOneShotCommands.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIUtil.h"
@@ -158,10 +160,12 @@ namespace sw
             slot._resetFence   = _pDevice->_frameFenceRing.getRecordingSerial();
         }
 
-        uint64 offset = MathUtil::align( slot._uploadOffset, static_cast<uint64>( constant::render::kConstantBufferAlignment ) );
-        if ( slot._buffer == VK_NULL_HANDLE || slot._capacity < offset + sizeBytes )
+        const RHIStagingPlacement placement = RHIStagingPlacement::place( slot._uploadOffset, static_cast<uint64>( constant::render::kConstantBufferAlignment ), sizeBytes, slot._capacity,
+                                                                          slot._buffer != VK_NULL_HANDLE );
+        uint64                    offset    = placement._offset;
+        if ( placement._newCapacity != 0 )
         {
-            const uint64 newCapacity = MathUtil::align( ( offset + sizeBytes ) * 2, 65536ull );
+            const uint64 newCapacity = placement._newCapacity;
 
             // 옛 스테이징은 이번 구간의 앞선 복사가 아직 읽고 있을 수 있다. 펜스 뒤에 놓아준다.
             if ( slot._buffer != VK_NULL_HANDLE )
@@ -715,52 +719,48 @@ namespace sw
             ringOffset += mipSpan._sizeBytes;
         }
 
-        ScopedLock<mutex>                  transferLock{ _pDevice->_transferMutex };
-        VulkanRHIDevice::VulkanTransferJob job{};
-        if ( _pDevice->beginTransferJob( job ) == false )
+        ScopedLock<mutex> transferLock{ _pDevice->_transferMutex };
+        return RHITextureTransferDriver::runJob<VulkanRHIDevice::VulkanTransferJob>(
+            ring, span, _pDevice->_transferSerials, [this]( VulkanRHIDevice::VulkanTransferJob& job )
+        { return _pDevice->beginTransferJob( job ); },
+            [&]( VulkanRHIDevice::VulkanTransferJob& job )
         {
-            ring._allocator.free( span );
-            return RHITransferSubmit::rejected();
-        }
-        uint32 layoutBefore{ 0 };
+            uint32 layoutBefore{ 0 };
+            {
+                ScopedLock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
+                layoutBefore = pRecord->_layout;
+            }
+
+            // 앞선 모든 큐 작업(이미 낸 프레임 · 전송)의 접근 뒤에 쓴다. transitionImageLayout 은 밉 하나만 다루므로 전체 밉 체인 배리어를 직접 쓴다.
+            VkImageMemoryBarrier barrier = makeWholeImageBarrier( pRecord->_image, pRecord->_mipLevels, pRecord->_arrayLayers );
+            barrier.oldLayout            = static_cast<VkImageLayout>( layoutBefore );
+            barrier.newLayout            = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            barrier.srcAccessMask        = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT;
+            barrier.dstAccessMask        = VK_ACCESS_TRANSFER_WRITE_BIT;
+            vkCmdPipelineBarrier( job._commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier );
+
+            vkCmdCopyBufferToImage( job._commandBuffer, ring.getSpanBuffer( span ), pRecord->_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipCount, arrRegion );
+
+            // 뒤에 낼 프레임의 셰이더 읽기가 이 쓰기를 본다(배리어의 두 번째 범위는 제출 순서상 뒤의 모든 명령이다 — 계약 3).
+            barrier.oldLayout     = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            barrier.newLayout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            vkCmdPipelineBarrier( job._commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                  VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                                  0, 0, nullptr, 0, nullptr, 1, &barrier );
+        },
+            [this]( VulkanRHIDevice::VulkanTransferJob& job )
+        { return _pDevice->submitTransferJob( job, "submitTextureUpload: vkQueueSubmit" ); },
+            [&]( uint64 serial )
         {
-            ScopedLock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
-            layoutBefore = pRecord->_layout;
-        }
-
-        // 앞선 모든 큐 작업(이미 낸 프레임 · 전송)의 접근 뒤에 쓴다. transitionImageLayout 은 밉 하나만 다루므로 전체 밉 체인 배리어를 직접 쓴다.
-        VkImageMemoryBarrier barrier = makeWholeImageBarrier( pRecord->_image, pRecord->_mipLevels, pRecord->_arrayLayers );
-        barrier.oldLayout            = static_cast<VkImageLayout>( layoutBefore );
-        barrier.newLayout            = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        barrier.srcAccessMask        = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT;
-        barrier.dstAccessMask        = VK_ACCESS_TRANSFER_WRITE_BIT;
-        vkCmdPipelineBarrier( job._commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier );
-
-        vkCmdCopyBufferToImage( job._commandBuffer, ring.getSpanBuffer( span ), pRecord->_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipCount, arrRegion );
-
-        // 뒤에 낼 프레임의 셰이더 읽기가 이 쓰기를 본다(배리어의 두 번째 범위는 제출 순서상 뒤의 모든 명령이다 — 계약 3).
-        barrier.oldLayout     = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        barrier.newLayout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        vkCmdPipelineBarrier( job._commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                              VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                              0, 0, nullptr, 0, nullptr, 1, &barrier );
-
-        const uint64 serial = _pDevice->submitTransferJob( job, "submitTextureUpload: vkQueueSubmit" );
-        if ( serial == 0 )
-        {
-            ring._allocator.free( span );
-            return RHITransferSubmit::rejected();
-        }
-        ring._allocator.markSubmitted( span, serial );
-        // 레이아웃 기록은 제출 순서를 따른다 — 뒤에 기록 · 제출하는 명령은 이 전송 뒤에 실행되므로 지금 바꿔 둔다.
-        {
-            ScopedLock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
-            pRecord->_layout = static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
-        }
-        pRecord->_uploadSerials.recordWrite( serial );
-        return _pDevice->_transferSerials.makeAccepted( serial );
+            // 레이아웃 기록은 제출 순서를 따른다 — 뒤에 기록 · 제출하는 명령은 이 전송 뒤에 실행되므로 지금 바꿔 둔다.
+            {
+                ScopedLock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
+                pRecord->_layout = static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+            }
+            pRecord->_uploadSerials.recordWrite( serial );
+        } );
     }
 
     // 길이 유지(긴 함수 정리 기준): 전체 업로드와 같은 순서(검사 · 링 복사 · 기록 · 제출 · 레코드 갱신)라 나누지 않는다.
@@ -791,60 +791,56 @@ namespace sw
         const uint64 ringOffset = alignUpToMultiple( span._offsetBytes, copyAlignment );
         Memory::copy( ring.getSpanMappedBase( span ) + ringOffset, desc._pData, static_cast<size_t>( usedBytes ) );
 
-        ScopedLock<mutex>                  transferLock{ _pDevice->_transferMutex };
-        VulkanRHIDevice::VulkanTransferJob job{};
-        if ( _pDevice->beginTransferJob( job ) == false )
+        ScopedLock<mutex> transferLock{ _pDevice->_transferMutex };
+        return RHITextureTransferDriver::runJob<VulkanRHIDevice::VulkanTransferJob>(
+            ring, span, _pDevice->_transferSerials, [this]( VulkanRHIDevice::VulkanTransferJob& job )
+        { return _pDevice->beginTransferJob( job ); },
+            [&]( VulkanRHIDevice::VulkanTransferJob& job )
         {
-            ring._allocator.free( span );
-            return RHITransferSubmit::rejected();
-        }
-        uint32 layoutBefore{ 0 };
+            uint32 layoutBefore{ 0 };
+            {
+                ScopedLock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
+                layoutBefore = pRecord->_layout;
+            }
+
+            // 레코드가 이미지 레이아웃 하나만 들므로 배리어도 이미지 전체다. 구간 밖 픽셀은 지금 레이아웃에서 보존된다(UNDEFINED 였다면 원래 정의되지 않았다).
+            VkImageMemoryBarrier barrier = makeWholeImageBarrier( pRecord->_image, pRecord->_mipLevels, pRecord->_arrayLayers );
+            barrier.oldLayout            = static_cast<VkImageLayout>( layoutBefore );
+            barrier.newLayout            = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            barrier.srcAccessMask        = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT;
+            barrier.dstAccessMask        = VK_ACCESS_TRANSFER_WRITE_BIT;
+            vkCmdPipelineBarrier( job._commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier );
+
+            VkBufferImageCopy region{};
+            region.bufferOffset                    = ringOffset;
+            region.bufferRowLength                 = 0; // 0 = 빈틈없는 행(imageExtent.width)
+            region.bufferImageHeight               = 0;
+            region.imageSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+            region.imageSubresource.mipLevel       = desc._mip;
+            region.imageSubresource.baseArrayLayer = desc._arraySlice;
+            region.imageSubresource.layerCount     = 1;
+            region.imageOffset                     = { static_cast<int32>( desc._x ), static_cast<int32>( desc._y ), 0 };
+            region.imageExtent                     = { desc._width, desc._height, 1 };
+            vkCmdCopyBufferToImage( job._commandBuffer, ring.getSpanBuffer( span ), pRecord->_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region );
+
+            barrier.oldLayout     = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            barrier.newLayout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            vkCmdPipelineBarrier( job._commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                  VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr,
+                                  0, nullptr, 1, &barrier );
+        },
+            [this]( VulkanRHIDevice::VulkanTransferJob& job )
+        { return _pDevice->submitTransferJob( job, "submitTextureRegionUpload: vkQueueSubmit" ); },
+            [&]( uint64 serial )
         {
-            ScopedLock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
-            layoutBefore = pRecord->_layout;
-        }
-
-        // 레코드가 이미지 레이아웃 하나만 들므로 배리어도 이미지 전체다. 구간 밖 픽셀은 지금 레이아웃에서 보존된다(UNDEFINED 였다면 원래 정의되지 않았다).
-        VkImageMemoryBarrier barrier = makeWholeImageBarrier( pRecord->_image, pRecord->_mipLevels, pRecord->_arrayLayers );
-        barrier.oldLayout            = static_cast<VkImageLayout>( layoutBefore );
-        barrier.newLayout            = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        barrier.srcAccessMask        = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT;
-        barrier.dstAccessMask        = VK_ACCESS_TRANSFER_WRITE_BIT;
-        vkCmdPipelineBarrier( job._commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier );
-
-        VkBufferImageCopy region{};
-        region.bufferOffset                    = ringOffset;
-        region.bufferRowLength                 = 0; // 0 = 빈틈없는 행(imageExtent.width)
-        region.bufferImageHeight               = 0;
-        region.imageSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-        region.imageSubresource.mipLevel       = desc._mip;
-        region.imageSubresource.baseArrayLayer = desc._arraySlice;
-        region.imageSubresource.layerCount     = 1;
-        region.imageOffset                     = { static_cast<int32>( desc._x ), static_cast<int32>( desc._y ), 0 };
-        region.imageExtent                     = { desc._width, desc._height, 1 };
-        vkCmdCopyBufferToImage( job._commandBuffer, ring.getSpanBuffer( span ), pRecord->_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region );
-
-        barrier.oldLayout     = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        barrier.newLayout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        vkCmdPipelineBarrier( job._commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                              VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr,
-                              0, nullptr, 1, &barrier );
-
-        const uint64 serial = _pDevice->submitTransferJob( job, "submitTextureRegionUpload: vkQueueSubmit" );
-        if ( serial == 0 )
-        {
-            ring._allocator.free( span );
-            return RHITransferSubmit::rejected();
-        }
-        ring._allocator.markSubmitted( span, serial );
-        {
-            ScopedLock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
-            pRecord->_layout = static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
-        }
-        pRecord->_uploadSerials.recordWrite( serial );
-        return _pDevice->_transferSerials.makeAccepted( serial );
+            {
+                ScopedLock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
+                pRecord->_layout = static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+            }
+            pRecord->_uploadSerials.recordWrite( serial );
+        } );
     }
 
     RHITransferStatus VulkanRHIResourceFactory::pollTransfer( RHITransferTicket ticket )

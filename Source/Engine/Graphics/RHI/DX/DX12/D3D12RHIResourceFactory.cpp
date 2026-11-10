@@ -16,6 +16,8 @@
 #include "Engine/Graphics/RHI/DX/DXGIFormat.h"
 #include "Engine/Graphics/RHI/DX/RHIDxRenderState.h"
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"
+#include "Engine/Graphics/RHI/Transfer/RHIStagingPlacement.h"
+#include "Engine/Graphics/RHI/Transfer/RHITextureTransferDriver.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 
@@ -211,10 +213,11 @@ namespace sw
             return false;
         D3D12RHIDevice::StructuredUploadSlot& slot = _pDevice->_arrStructuredUploadSlot[slotIndex];
 
-        uint64 stagingOffset = MathUtil::align( slot._uploadOffset, alignment );
-        if ( slot._uploadHeap == nullptr || slot._capacity < stagingOffset + sizeBytes )
+        const RHIStagingPlacement placement     = RHIStagingPlacement::place( slot._uploadOffset, alignment, sizeBytes, slot._capacity, slot._uploadHeap != nullptr );
+        uint64                    stagingOffset = placement._offset;
+        if ( placement._newCapacity != 0 )
         {
-            const uint64 newCapacity = MathUtil::align( ( stagingOffset + sizeBytes ) * 2, 65536ull );
+            const uint64 newCapacity = placement._newCapacity;
 
             // 옛 힙은 이번 구간의 앞선 복사가 아직 읽고 있을 수 있다. 펜스 뒤에 놓아 준다.
             if ( slot._uploadHeap != nullptr )
@@ -408,58 +411,55 @@ namespace sw
             }
         }
 
-        D3D12RHIDevice::D3D12TransferJob job{};
-        if ( _pDevice->beginTransferJob( job ) == false )
+        return RHITextureTransferDriver::runJob<D3D12RHIDevice::D3D12TransferJob>(
+            ring, span, _pDevice->_transferSerials, [this]( D3D12RHIDevice::D3D12TransferJob& job )
+        { return _pDevice->beginTransferJob( job ); },
+            [&]( D3D12RHIDevice::D3D12TransferJob& job )
         {
-            ring._allocator.free( span );
-            return RHITransferSubmit::rejected();
-        }
-        ID3D12GraphicsCommandList* pList = job._list.Get();
+            ID3D12GraphicsCommandList* pList = job._list.Get();
 
-        // 추적 상태에서 출발해 같은 상태로 돌아간다(getTrackedTextureState).
-        const D3D12_RESOURCE_STATES stateBefore = _pDevice->getTrackedTextureState( texture );
+            // 추적 상태에서 출발해 같은 상태로 돌아간다(getTrackedTextureState).
+            const D3D12_RESOURCE_STATES stateBefore = _pDevice->getTrackedTextureState( texture );
 
-        D3D12_RESOURCE_BARRIER barrier{};
-        barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-        barrier.Transition.pResource   = pTexture;
-        barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-        if ( stateBefore != D3D12_RESOURCE_STATE_COPY_DEST )
+            D3D12_RESOURCE_BARRIER barrier{};
+            barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+            barrier.Transition.pResource   = pTexture;
+            barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+            if ( stateBefore != D3D12_RESOURCE_STATE_COPY_DEST )
+            {
+                barrier.Transition.StateBefore = stateBefore;
+                barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_COPY_DEST;
+                pList->ResourceBarrier( 1, &barrier );
+            }
+
+            for ( uint32 mip = 0; mip < mipCount; ++mip )
+            {
+                D3D12_TEXTURE_COPY_LOCATION dst{};
+                dst.pResource        = pTexture;
+                dst.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+                dst.SubresourceIndex = firstSubresource + arrMip[mip]._mip;
+
+                D3D12_TEXTURE_COPY_LOCATION src{};
+                src.pResource       = ring.getSpanResource( span );
+                src.Type            = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+                src.PlacedFootprint = arrFootprint[mip];
+                pList->CopyTextureRegion( &dst, 0, 0, 0, &src, nullptr );
+            }
+
+            if ( stateBefore != D3D12_RESOURCE_STATE_COPY_DEST )
+            {
+                barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+                barrier.Transition.StateAfter  = stateBefore;
+                pList->ResourceBarrier( 1, &barrier );
+            }
+            // 기록이 끝났다. 즉시 큐에 내고 전송 펜스를 올린다(기다리지 않는다). 시리얼은 큐 제출과 같은 락 안에서 매겨진다.
+        },
+            [this]( D3D12RHIDevice::D3D12TransferJob& job )
+        { return _pDevice->submitTransferJob( std::move( job ), "submitTextureUpload" ); },
+            [&]( uint64 serial )
         {
-            barrier.Transition.StateBefore = stateBefore;
-            barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_COPY_DEST;
-            pList->ResourceBarrier( 1, &barrier );
-        }
-
-        for ( uint32 mip = 0; mip < mipCount; ++mip )
-        {
-            D3D12_TEXTURE_COPY_LOCATION dst{};
-            dst.pResource        = pTexture;
-            dst.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-            dst.SubresourceIndex = firstSubresource + arrMip[mip]._mip;
-
-            D3D12_TEXTURE_COPY_LOCATION src{};
-            src.pResource       = ring.getSpanResource( span );
-            src.Type            = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-            src.PlacedFootprint = arrFootprint[mip];
-            pList->CopyTextureRegion( &dst, 0, 0, 0, &src, nullptr );
-        }
-
-        if ( stateBefore != D3D12_RESOURCE_STATE_COPY_DEST )
-        {
-            barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-            barrier.Transition.StateAfter  = stateBefore;
-            pList->ResourceBarrier( 1, &barrier );
-        }
-        // 기록이 끝났다. 즉시 큐에 내고 전송 펜스를 올린다(기다리지 않는다). 시리얼은 큐 제출과 같은 락 안에서 매겨진다.
-        const uint64 serial = _pDevice->submitTransferJob( std::move( job ), "submitTextureUpload" );
-        if ( serial == 0 )
-        {
-            ring._allocator.free( span );
-            return RHITransferSubmit::rejected();
-        }
-        ring._allocator.markSubmitted( span, serial );
-        _pDevice->recordTextureTransfer( texture, serial );
-        return _pDevice->_transferSerials.makeAccepted( serial );
+            _pDevice->recordTextureTransfer( texture, serial );
+        } );
     }
 
     RHITransferSubmit D3D12RHIResourceFactory::submitTextureRegionUpload( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )
@@ -493,58 +493,55 @@ namespace sw
             Memory::copy( pDstBase + static_cast<uint64>( row ) * rowPitch, pSrcBase + static_cast<uint64>( row ) * rowBytes, rowBytes );
         }
 
-        D3D12RHIDevice::D3D12TransferJob job{};
-        if ( _pDevice->beginTransferJob( job ) == false )
+        return RHITextureTransferDriver::runJob<D3D12RHIDevice::D3D12TransferJob>(
+            ring, span, _pDevice->_transferSerials, [this]( D3D12RHIDevice::D3D12TransferJob& job )
+        { return _pDevice->beginTransferJob( job ); },
+            [&]( D3D12RHIDevice::D3D12TransferJob& job )
         {
-            ring._allocator.free( span );
-            return RHITransferSubmit::rejected();
-        }
-        ID3D12GraphicsCommandList* pList = job._list.Get();
+            ID3D12GraphicsCommandList* pList = job._list.Get();
 
-        // 추적 상태에서 출발해 같은 상태로 돌아간다(전체 업로드와 같다).
-        const D3D12_RESOURCE_STATES stateBefore = _pDevice->getTrackedTextureState( texture );
-        D3D12_RESOURCE_BARRIER      barrier{};
-        barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-        barrier.Transition.pResource   = pTexture;
-        barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-        if ( stateBefore != D3D12_RESOURCE_STATE_COPY_DEST )
+            // 추적 상태에서 출발해 같은 상태로 돌아간다(전체 업로드와 같다).
+            const D3D12_RESOURCE_STATES stateBefore = _pDevice->getTrackedTextureState( texture );
+            D3D12_RESOURCE_BARRIER      barrier{};
+            barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+            barrier.Transition.pResource   = pTexture;
+            barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+            if ( stateBefore != D3D12_RESOURCE_STATE_COPY_DEST )
+            {
+                barrier.Transition.StateBefore = stateBefore;
+                barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_COPY_DEST;
+                pList->ResourceBarrier( 1, &barrier );
+            }
+
+            D3D12_TEXTURE_COPY_LOCATION dst{};
+            dst.pResource        = pTexture;
+            dst.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+            dst.SubresourceIndex = desc._mip + desc._arraySlice * resourceDesc.MipLevels; // D3D12CalcSubresource 와 같은 순서
+
+            D3D12_TEXTURE_COPY_LOCATION src{};
+            src.pResource                          = ring.getSpanResource( span );
+            src.Type                               = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+            src.PlacedFootprint.Offset             = span._offsetBytes;
+            src.PlacedFootprint.Footprint.Format   = resourceDesc.Format;
+            src.PlacedFootprint.Footprint.Width    = desc._width;
+            src.PlacedFootprint.Footprint.Height   = desc._height;
+            src.PlacedFootprint.Footprint.Depth    = 1;
+            src.PlacedFootprint.Footprint.RowPitch = rowPitch;
+            pList->CopyTextureRegion( &dst, desc._x, desc._y, 0, &src, nullptr );
+
+            if ( stateBefore != D3D12_RESOURCE_STATE_COPY_DEST )
+            {
+                barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+                barrier.Transition.StateAfter  = stateBefore;
+                pList->ResourceBarrier( 1, &barrier );
+            }
+        },
+            [this]( D3D12RHIDevice::D3D12TransferJob& job )
+        { return _pDevice->submitTransferJob( std::move( job ), "submitTextureRegionUpload" ); },
+            [&]( uint64 serial )
         {
-            barrier.Transition.StateBefore = stateBefore;
-            barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_COPY_DEST;
-            pList->ResourceBarrier( 1, &barrier );
-        }
-
-        D3D12_TEXTURE_COPY_LOCATION dst{};
-        dst.pResource        = pTexture;
-        dst.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-        dst.SubresourceIndex = desc._mip + desc._arraySlice * resourceDesc.MipLevels; // D3D12CalcSubresource 와 같은 순서
-
-        D3D12_TEXTURE_COPY_LOCATION src{};
-        src.pResource                          = ring.getSpanResource( span );
-        src.Type                               = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-        src.PlacedFootprint.Offset             = span._offsetBytes;
-        src.PlacedFootprint.Footprint.Format   = resourceDesc.Format;
-        src.PlacedFootprint.Footprint.Width    = desc._width;
-        src.PlacedFootprint.Footprint.Height   = desc._height;
-        src.PlacedFootprint.Footprint.Depth    = 1;
-        src.PlacedFootprint.Footprint.RowPitch = rowPitch;
-        pList->CopyTextureRegion( &dst, desc._x, desc._y, 0, &src, nullptr );
-
-        if ( stateBefore != D3D12_RESOURCE_STATE_COPY_DEST )
-        {
-            barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-            barrier.Transition.StateAfter  = stateBefore;
-            pList->ResourceBarrier( 1, &barrier );
-        }
-        const uint64 serial = _pDevice->submitTransferJob( std::move( job ), "submitTextureRegionUpload" );
-        if ( serial == 0 )
-        {
-            ring._allocator.free( span );
-            return RHITransferSubmit::rejected();
-        }
-        ring._allocator.markSubmitted( span, serial );
-        _pDevice->recordTextureTransfer( texture, serial );
-        return _pDevice->_transferSerials.makeAccepted( serial );
+            _pDevice->recordTextureTransfer( texture, serial );
+        } );
     }
 
     RHITransferStatus D3D12RHIResourceFactory::pollTransfer( RHITransferTicket ticket )
