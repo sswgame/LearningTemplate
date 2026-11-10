@@ -106,7 +106,8 @@ def _run(argument: argparse.Namespace) -> int:
     outDir = Path(argument.out) if argument.out else root / "Saved" / "LockstepPairRun"
     outDir.mkdir(parents=True, exist_ok=True)
     port = _freePort()
-    common = [AppArguments.option("game", argument.game), AppArguments.variable("gv_standardInputCommands", "1"), AppArguments.variable("gv_skirmishAutoPlay", "1")]
+    # -unattended: 무인 실행이라 세이브 · 사용자 데이터는 프로세스마다 Saved/Automation/UserData 아래로 간다(사람의 폴더를 쓰지 않는다 — AutomationUserDataRoot).
+    common = [AppArguments.option("game", argument.game), AppArguments.flag("unattended"), AppArguments.variable("gv_standardInputCommands", "1"), AppArguments.variable("gv_skirmishAutoPlay", "1")]
     hostArgs = [str(clientExe), *common, AppArguments.variable("gv_netListenPort", port), AppArguments.variable("gv_userSettingsFile", outDir / 'host.usersettings.json')]
     clientArgs = [str(clientExe), *common, AppArguments.variable("gv_netConnectAddress", f"127.0.0.1:{port}"), AppArguments.variable("gv_userSettingsFile", outDir / 'client.usersettings.json')]
     hostLog = outDir / "host.log"
