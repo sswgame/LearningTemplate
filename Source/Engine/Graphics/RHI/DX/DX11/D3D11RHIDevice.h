@@ -16,6 +16,8 @@
 #include "Engine/Graphics/RHI/Backend/RHIFrameFenceRing.h"
 #include "Engine/Graphics/RHI/Backend/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
+#include "Engine/Graphics/RHI/Backend/RHISwapChainSet.h"
+#include "Engine/Graphics/RHI/Backend/RHITimestampRing.h"
 #include "Engine/Graphics/RHI/DX/DX11/D3D11ImmediateContext.h"
 #include "Engine/Graphics/RHI/DX/DX11/D3D11RHISwapChain.h"
 #include "Engine/Graphics/RHI/DX/DXGIFormat.h"
@@ -392,8 +394,6 @@ namespace sw
         {
             Microsoft::WRL::ComPtr<ID3D11Query> _disjoint;
             Microsoft::WRL::ComPtr<ID3D11Query> _arrQuery[constant::render::kMaxGPUTimestampSlot];
-            GPUTimestampSlotMask                _writtenMask{};
-            uint8                               _bPending{ SW_FALSE };
         };
 
         /// @brief 읽기 하나가 들고 있는 것입니다. 복사한 스테이징 텍스처와, 결과 바이트를 꺼낼 때 필요한 배치입니다(`takeTextureReadback` 이 쿼리가 지난 뒤 기다리는 `Map` 으로 읽습니다).
@@ -551,10 +551,8 @@ namespace sw
         RHIFormat             _backBufferFormat; ///< 스왑체인 백버퍼 포맷(DXGI 는 요청값 그대로)
         /// @brief 메인 창의 백버퍼입니다. 백버퍼 RTV, 크기, Present 가 모두 여기 모여 있습니다.
         D3D11RHISwapChain _swapChain;
-        /// @brief 다른 창의 스왑체인입니다(`createSwapChain`). 렌더 스레드와 GPU 를 비운 뒤에만 바뀐다.
-        vector<unique_ptr<D3D11RHISwapChain>> _listWindowSwapChain;
-        /// @brief 이 프레임에 그린 다른 창입니다. `useSwapChain` 이 백버퍼를 잡으며 올리고 `endFrame` 이 표시한 뒤 비운다. 프레임 스트림(렌더 스레드)만 쓴다.
-        vector<D3D11RHISwapChain*> _listFrameSwapChain;
+        /// @brief 다른 창(`createSwapChain`)과 이 프레임에 그린 창입니다(`endFrame` 이 표시한 뒤 비운다).
+        RHISwapChainSet<D3D11RHISwapChain> _windowSwapChains;
 
         /// @brief 버퍼 핸들에서 버퍼와 SRV 를 찾는 테이블입니다(텍스처 `_gpuTextures` 와 같은 구조). 기록 스레드가 SRV 를 락 없이 읽습니다(`resolveBufferSRV`).
         RHIHandleTable<BufferRecord>  _gpuBuffers;
@@ -574,9 +572,8 @@ namespace sw
          *          아직 결과가 없으면 이번 바퀴는 건너뛴다. 기다리면 측정하려던 파이프라인을 멈춰 세운다.
          */
         D3D11TimestampFrame _arrTimestampFrame[constant::render::kMaxFrameCountInFlight];
-        uint32              _timestampFrameIndex;
-        /// @brief 이번 프레임에 기록된 슬롯 비트입니다. 패스가 병렬로 기록하므로 atomic 입니다.
-        GPUTimestampSlotAtomicMask _timestampWrittenMask;
+        /// @brief 이번 프레임 · 묶음마다 기록된 슬롯 비트입니다(패스가 병렬로 기록한다). 묶음 칸은 프레임 펜스 링의 기록 칸이다.
+        RHITimestampRing _timestampRing;
         /// @brief 엔진이 켜기 전에는 쿼리도 만들지 않는다. `setTimestampEnabled` 는 어느 스레드에서나 부를 수 있고 기록 워커가 읽으므로 atomic 이다.
         atomic<uint8> _bTimestampEnabled;
         /// @brief 쿼리 묶음을 다 만들었다. 렌더 스레드가 만들고(release) 기록 워커의 `writeTimestampSlot` 이 읽는다(acquire).

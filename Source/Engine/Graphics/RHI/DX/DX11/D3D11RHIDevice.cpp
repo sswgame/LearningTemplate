@@ -92,8 +92,7 @@ namespace sw
         , _swapChain{}
         , _gpuBuffers{}
         , _gpuTextures{}
-        , _timestampFrameIndex{ 0 }
-        , _timestampWrittenMask{}
+        , _timestampRing{}
         , _bTimestampEnabled{ SW_FALSE }
         , _bTimestampReady{ SW_FALSE }
         , _bTimestampFrameOpen{ SW_FALSE }
@@ -667,8 +666,7 @@ namespace sw
 
     void D3D11RHIDevice::shutdownInternal()
     {
-        _listFrameSwapChain.clear();
-        _listWindowSwapChain.clear();
+        _windowSwapChains.clear();
         _swapChain.shutdown();
         _gpuTextures.clear();
         _gpuBuffers.clear();
@@ -707,8 +705,7 @@ namespace sw
         unique_ptr<D3D11RHISwapChain> pSwapChain = make_unique<D3D11RHISwapChain>();
         if ( pSwapChain->createLike( _device.Get(), _swapChain, static_cast<HWND>( desc._pWindowHandle ), desc._width, desc._height ) == false )
             return nullptr;
-        _listWindowSwapChain.push_back( std::move( pSwapChain ) );
-        return _listWindowSwapChain.back().get();
+        return _windowSwapChains.add( std::move( pSwapChain ) );
     }
 
     void D3D11RHIDevice::resizeSwapChainInternal( IRHISwapChain& swapChain, uint32 width, uint32 height )
@@ -724,8 +721,7 @@ namespace sw
             const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
             context->ClearState();
         }
-        (void)VectorUtil::removeIf( _listWindowSwapChain, [&swapChain]( const unique_ptr<D3D11RHISwapChain>& pEntry )
-        { return pEntry.get() == &swapChain; } );
+        _windowSwapChains.remove( static_cast<D3D11RHISwapChain&>( swapChain ) );
     }
 
     D3D11RHISwapChain& D3D11RHIDevice::useSwapChain( IRHISwapChain* pSwapChain )
@@ -733,11 +729,8 @@ namespace sw
         if ( pSwapChain == nullptr || pSwapChain == &_swapChain )
             return _swapChain;
         D3D11RHISwapChain& swapChain = static_cast<D3D11RHISwapChain&>( *pSwapChain ); // 이 디바이스가 만든 것만 들어온다(`createSwapChain`)
-        if ( std::find( _listFrameSwapChain.begin(), _listFrameSwapChain.end(), &swapChain ) == _listFrameSwapChain.end() )
-        {
+        if ( _windowSwapChains.markUsedThisFrame( swapChain ) )
             swapChain.acquireNextImage( _device.Get() );
-            _listFrameSwapChain.push_back( &swapChain );
-        }
         return swapChain;
     }
 
@@ -899,12 +892,12 @@ namespace sw
             return;
 
         // 이 프레임 묶음의 칸 하나. Deferred Context 마다 다른 칸이라 같은 쿼리 객체가 겹치지 않는다.
-        ID3D11Query* pQuery = _arrTimestampFrame[_timestampFrameIndex]._arrQuery[slotIndex].Get();
+        ID3D11Query* pQuery = _arrTimestampFrame[_frameFenceRing.getRecordingSlot()]._arrQuery[slotIndex].Get();
         if ( pQuery == nullptr )
             return;
         // 타임스탬프 쿼리는 Begin 이 없다. End 하나가 "지금 GPU 시각" 이다.
         pContext->End( pQuery );
-        _timestampWrittenMask.set( slotIndex );
+        _timestampRing.markWritten( slotIndex );
     }
 
     void D3D11RHIDevice::ensureTimestampResources()
@@ -936,8 +929,10 @@ namespace sw
     void D3D11RHIDevice::collectTimestampsForSlot()
     {
         _timestampFrame._listMicro.clear();
-        D3D11TimestampFrame& frame                   = _arrTimestampFrame[_timestampFrameIndex];
-        const bool           bNoTimestampFrameToRead = getTimestampSlotCount() == 0 || frame._bPending == SW_FALSE || frame._writtenMask.any() == false;
+        const uint32                ringSlot                = _frameFenceRing.getRecordingSlot();
+        D3D11TimestampFrame&        frame                   = _arrTimestampFrame[ringSlot];
+        const GPUTimestampSlotMask& writtenMask             = _timestampRing.getSlotMask( ringSlot );
+        const bool                  bNoTimestampFrameToRead = getTimestampSlotCount() == 0 || writtenMask.any() == false;
         if ( bNoTimestampFrameToRead )
             return;
 
@@ -967,7 +962,6 @@ namespace sw
         if ( waitForQuery( frame._disjoint.Get(), &disjointData, sizeof( disjointData ) ) == false )
             return;
 
-        frame._bPending = SW_FALSE;
         // 이 구간에서 GPU 클럭이 흔들렸다. 틱을 초로 바꿀 근거가 없으니 프레임을 통째로 버린다.
         if ( disjointData.Disjoint != FALSE || disjointData.Frequency == 0 )
             return;
@@ -976,7 +970,7 @@ namespace sw
         GPUTimestampSlotMask readyMask{};
         for ( uint32 slotIndex = 0; slotIndex < constant::render::kMaxGPUTimestampSlot; ++slotIndex )
         {
-            if ( frame._writtenMask.test( slotIndex ) == false )
+            if ( writtenMask.test( slotIndex ) == false )
                 continue;
 
             uint64 tick{ 0 };
@@ -1000,11 +994,10 @@ namespace sw
         const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
         if ( getTimestampSlotCount() != 0 )
         {
-            _arrTimestampFrame[_timestampFrameIndex]._writtenMask = GPUTimestampSlotMask{};
-            _timestampWrittenMask.clear();
+            _timestampRing.beginFrame( _frameFenceRing.getRecordingSlot() );
 
             // disjoint 는 프레임 전체를 감싼다. 그 사이에 즉시 컨텍스트가 커맨드 리스트를 실행한다.
-            context->Begin( _arrTimestampFrame[_timestampFrameIndex]._disjoint.Get() );
+            context->Begin( _arrTimestampFrame[_frameFenceRing.getRecordingSlot()]._disjoint.Get() );
             _bTimestampFrameOpen = SW_TRUE;
         }
 
@@ -1045,15 +1038,14 @@ namespace sw
         // beginFrame 이 열었으면 반드시 닫는다. 짝이 안 맞으면 런타임이 경고를 뿜고 값이 무의미해진다.
         if ( _bTimestampFrameOpen != SW_FALSE )
         {
-            D3D11TimestampFrame& frame = _arrTimestampFrame[_timestampFrameIndex];
+            const uint32         ringSlot = _frameFenceRing.getRecordingSlot();
+            D3D11TimestampFrame& frame    = _arrTimestampFrame[ringSlot];
             {
                 const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
                 context->End( frame._disjoint.Get() );
             }
-            frame._writtenMask   = _timestampWrittenMask.load();
-            frame._bPending      = frame._writtenMask.any() ? SW_TRUE : SW_FALSE;
+            (void)_timestampRing.closeFrame( ringSlot ); // 칸은 `retireFrameOnGPU` 의 제출 표시로 넘어간다
             _bTimestampFrameOpen = SW_FALSE;
-            _timestampFrameIndex = ( _timestampFrameIndex + 1 ) % constant::render::kMaxFrameCountInFlight;
         }
 
         if ( _swapChain.isValid() == false )
@@ -1061,7 +1053,7 @@ namespace sw
 
         _swapChain.releaseBackBufferRTV();
         // 이 프레임에 그린 다른 창을 메인 창과 같은 규칙으로 표시한다(무인 실행은 내보내지 않는다).
-        for ( D3D11RHISwapChain* pWindow : _listFrameSwapChain )
+        for ( D3D11RHISwapChain* pWindow : _windowSwapChains.getFrameList() )
         {
             pWindow->releaseBackBufferRTV();
             if ( bPresent )
@@ -1071,7 +1063,7 @@ namespace sw
                     SW_LOG_ERROR_ONCE_ID( "D3D11.WindowPresentFailedHr", "Present of a window swap chain failed hr=%#", static_cast<uint32>( windowHr ) );
             }
         }
-        _listFrameSwapChain.clear();
+        _windowSwapChains.clearFrame();
 
         if ( bPresent )
         {

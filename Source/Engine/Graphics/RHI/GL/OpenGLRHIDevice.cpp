@@ -42,8 +42,7 @@ namespace sw
         , _mapCompositeFbo{}
         , _textureRegistry{}
         , _arrTimestampQuery{}
-        , _arrTimestampMask{}
-        , _timestampFrameIndex{ 0 }
+        , _timestampRing{}
         , _timestampFrame{}
         , _arrComputeRootConstantShadow{}
         , _pipelineStates{}
@@ -732,13 +731,12 @@ namespace sw
         // GL 자원을 지우기 전에 컨텍스트를 되찾는다 (플랫폼이 필요 없으면 아무것도 하지 않는다).
         if ( _platformContext != nullptr )
             _platformContext->reacquireForFrame();
-        for ( const unique_ptr<OpenGLRHISwapChain>& pWindow : _listWindowSwapChain )
+        for ( const unique_ptr<OpenGLRHISwapChain>& pWindow : _windowSwapChains.getOwnedList() )
         {
             if ( _platformContext != nullptr )
                 _platformContext->destroyWindowSurface( pWindow->getSurface() );
         }
-        _listWindowSwapChain.clear();
-        _listFrameSwapChain.clear();
+        _windowSwapChains.clear();
         _pCurrentSwapChain = &_swapChain;
 
         // 프레임 펜스는 `waitIdleInternal`(종료 2단계)이 이미 놓았다. 다시 세우는 디바이스가 이어받지 않도록 번호만 처음으로 돌린다.
@@ -982,8 +980,8 @@ namespace sw
             return;
 
         // glQueryCounter 는 Begin/End 쌍이 아니다. 한 번 부르면 "여기까지 GPU 가 끝낸 시각" 이 찍힌다.
-        glQueryCounter( _arrTimestampQuery[_timestampFrameIndex * constant::render::kMaxGPUTimestampSlot + slotIndex], GL_TIMESTAMP );
-        _arrTimestampMask[_timestampFrameIndex].set( slotIndex );
+        glQueryCounter( _arrTimestampQuery[_frameFenceRing.getRecordingSlot() * constant::render::kMaxGPUTimestampSlot + slotIndex], GL_TIMESTAMP );
+        _timestampRing.markWritten( slotIndex );
     }
 
     void OpenGLRHIDevice::ensureTimestampQueries()
@@ -1006,12 +1004,13 @@ namespace sw
     void OpenGLRHIDevice::collectTimestampsForSlot()
     {
         _timestampFrame._listMicro.clear();
-        const GPUTimestampSlotMask writtenMask         = _arrTimestampMask[_timestampFrameIndex];
+        const uint32               ringSlot            = _frameFenceRing.getRecordingSlot();
+        const GPUTimestampSlotMask writtenMask         = _timestampRing.getSlotMask( ringSlot );
         const bool                 bNoTimestampsToRead = _bTimestampEnabled.load( std::memory_order_relaxed ) == SW_FALSE || _bTimestampReady.load( std::memory_order_acquire ) == SW_FALSE || writtenMask.any() == false;
         if ( bNoTimestampsToRead )
             return;
 
-        const uint32         base = _timestampFrameIndex * constant::render::kMaxGPUTimestampSlot;
+        const uint32         base = ringSlot * constant::render::kMaxGPUTimestampSlot;
         uint64               arrTick[constant::render::kMaxGPUTimestampSlot]{};
         GPUTimestampSlotMask readyMask{};
         for ( uint32 slotIndex = 0; slotIndex < constant::render::kMaxGPUTimestampSlot; ++slotIndex )
@@ -1040,8 +1039,7 @@ namespace sw
         void* const pSurface = _platformContext != nullptr ? _platformContext->createWindowSurface( desc ) : nullptr;
         if ( pSurface == nullptr )
             return nullptr;
-        _listWindowSwapChain.push_back( make_unique<OpenGLRHISwapChain>( pSurface, desc._width, desc._height ) );
-        return _listWindowSwapChain.back().get();
+        return _windowSwapChains.add( make_unique<OpenGLRHISwapChain>( pSurface, desc._width, desc._height ) );
     }
 
     void OpenGLRHIDevice::resizeSwapChainInternal( IRHISwapChain& swapChain, uint32 width, uint32 height )
@@ -1054,8 +1052,7 @@ namespace sw
         OpenGLRHISwapChain& window = static_cast<OpenGLRHISwapChain&>( swapChain );
         if ( _platformContext != nullptr )
             _platformContext->destroyWindowSurface( window.getSurface() );
-        (void)VectorUtil::removeIf( _listWindowSwapChain, [&window]( const unique_ptr<OpenGLRHISwapChain>& pEntry )
-        { return pEntry.get() == &window; } );
+        _windowSwapChains.remove( window );
     }
 
     OpenGLRHISwapChain* OpenGLRHIDevice::useSwapChain( IRHISwapChain* pSwapChain )
@@ -1067,8 +1064,8 @@ namespace sw
                 return nullptr;
             _pCurrentSwapChain = pTarget;
         }
-        if ( pTarget != &_swapChain && std::find( _listFrameSwapChain.begin(), _listFrameSwapChain.end(), pTarget ) == _listFrameSwapChain.end() )
-            _listFrameSwapChain.push_back( pTarget );
+        if ( pTarget != &_swapChain )
+            (void)_windowSwapChains.markUsedThisFrame( *pTarget );
         return pTarget;
     }
 
@@ -1089,7 +1086,7 @@ namespace sw
         // 이 슬롯은 곧 다시 쓴다. 덮어쓰기 전에 지난 바퀴의 결과를 한 번만 묻는다.
         ensureTimestampQueries();
         collectTimestampsForSlot();
-        _arrTimestampMask[_timestampFrameIndex] = GPUTimestampSlotMask{};
+        _timestampRing.beginFrame( _frameFenceRing.getRecordingSlot() );
     }
 
     void OpenGLRHIDevice::endFrameInternal( bool vsync, bool bPresent )
@@ -1097,16 +1094,16 @@ namespace sw
         if ( _bInitialized == SW_FALSE )
             return;
 
-        // present 여부와 무관하게 이번 프레임의 슬롯은 다 기록됐다. 다음 슬롯으로 넘긴다.
-        _timestampFrameIndex = ( _timestampFrameIndex + 1 ) % constant::render::kMaxFrameCountInFlight;
+        // present 여부와 무관하게 이번 프레임의 슬롯은 다 기록됐다. 칸에 굳힌다(칸은 `retireFrameOnGPU` 의 제출 표시로 넘어간다).
+        (void)_timestampRing.closeFrame( _frameFenceRing.getRecordingSlot() );
 
         // 이 프레임에 그린 다른 창을 먼저 내보내고 메인 창으로 돌아간다(아래 present 가 메인 창을 다시 건다).
-        for ( OpenGLRHISwapChain* pWindow : _listFrameSwapChain )
+        for ( OpenGLRHISwapChain* pWindow : _windowSwapChains.getFrameList() )
         {
             if ( bPresent && _platformContext != nullptr && _platformContext->makeCurrentOnWindowSurface( pWindow->getSurface() ) )
                 _platformContext->presentWindowSurface( pWindow->getSurface() );
         }
-        _listFrameSwapChain.clear();
+        _windowSwapChains.clearFrame();
         if ( _pCurrentSwapChain != &_swapChain && _platformContext != nullptr )
             (void)_platformContext->makeCurrent(); // 실패는 다음 프레임의 reacquireForFrame 이 다시 본다
         _pCurrentSwapChain = &_swapChain;

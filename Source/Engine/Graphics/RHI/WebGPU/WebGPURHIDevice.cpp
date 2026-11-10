@@ -374,8 +374,7 @@ namespace sw
         , _queue{ nullptr }
         , _limits{}
         , _swapChain{}
-        , _listExtraSwapChain{}
-        , _listAcquiredSwapChain{}
+        , _windowSwapChains{}
         , _frameEncoder{ nullptr }
         , _listPendingCommandBuffer{}
         , _resourceFactory{}
@@ -950,7 +949,7 @@ namespace sw
         _defaultTextureView = nullptr;
         _defaultTexture     = nullptr;
         _defaultBuffer      = nullptr;
-        _listExtraSwapChain.clear();
+        _windowSwapChains.clear();
         _swapChain.destroy();
         _resourceFactory.reset();
         if ( _queue != nullptr )
@@ -1231,19 +1230,19 @@ namespace sw
 
         if ( bPresent )
         {
-            if ( _listAcquiredSwapChain.empty() )
+            if ( _windowSwapChains.getFrameList().empty() )
                 _swapChain.present(); // 메인 창만 그린 프레임(대부분) — acquireSwapChainImage 를 부르지 않는 렌더러도 백버퍼 패스가 이미 받았다
-            for ( WebGPURHISwapChain* pSwapChain : _listAcquiredSwapChain )
+            for ( WebGPURHISwapChain* pSwapChain : _windowSwapChains.getFrameList() )
             {
                 pSwapChain->present();
             }
         }
         _swapChain.releaseCurrent();
-        for ( WebGPURHISwapChain* pSwapChain : _listAcquiredSwapChain )
+        for ( WebGPURHISwapChain* pSwapChain : _windowSwapChains.getFrameList() )
         {
             pSwapChain->releaseCurrent();
         }
-        _listAcquiredSwapChain.clear();
+        _windowSwapChains.clearFrame();
         (void)_frameFenceRing.markSubmitted();
     }
 
@@ -1385,8 +1384,7 @@ namespace sw
         unique_ptr<WebGPURHISwapChain> swapChain = make_unique<WebGPURHISwapChain>();
         if ( swapChain->createSurface( _instance, _adapter, desc ) == false || swapChain->configure( _device, desc._width, desc._height, isVSyncEnabled() ) == false )
             return nullptr;
-        _listExtraSwapChain.push_back( std::move( swapChain ) );
-        return _listExtraSwapChain.back().get();
+        return _windowSwapChains.add( std::move( swapChain ) );
     }
 
     void WebGPURHIDevice::resizeSwapChainInternal( IRHISwapChain& swapChain, uint32 width, uint32 height )
@@ -1396,14 +1394,7 @@ namespace sw
 
     void WebGPURHIDevice::destroySwapChainInternal( IRHISwapChain& swapChain )
     {
-        for ( auto it = _listExtraSwapChain.begin(); it != _listExtraSwapChain.end(); ++it )
-        {
-            if ( it->get() == &swapChain )
-            {
-                _listExtraSwapChain.erase( it );
-                return;
-            }
-        }
+        _windowSwapChains.remove( static_cast<WebGPURHISwapChain&>( swapChain ) ); // 이 프레임 목록에서도 뺀다 — 예전에는 부순 창이 표시 목록에 매달렸다
     }
 
     bool WebGPURHIDevice::acquireSwapChainImageInternal( IRHISwapChain& swapChain )
@@ -1411,7 +1402,7 @@ namespace sw
         WebGPURHISwapChain& target = static_cast<WebGPURHISwapChain&>( swapChain );
         if ( target.acquire( _device ) == false )
             return false;
-        _listAcquiredSwapChain.push_back( &target );
+        (void)_windowSwapChains.markUsedThisFrame( target );
         return true;
     }
 

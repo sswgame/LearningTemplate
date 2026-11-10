@@ -18,6 +18,8 @@
 #include "Engine/Graphics/RHI/Backend/RHIFrameFenceRing.h"
 #include "Engine/Graphics/RHI/Backend/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
+#include "Engine/Graphics/RHI/Backend/RHISwapChainSet.h"
+#include "Engine/Graphics/RHI/Backend/RHITimestampRing.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIRenderPassRegistry.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHITimestampFrame.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHISwapChain.h"
@@ -490,10 +492,8 @@ namespace sw
         unique_ptr<IOpenGLPlatformContext> _platformContext;
         /** @brief 메인 창입니다(표면 nullptr — 컨텍스트를 만든 창). 크기는 `_width` · `_height` 와 같다. */
         OpenGLRHISwapChain _swapChain{ nullptr, 0, 0 };
-        /** @brief 다른 창입니다(`createSwapChain`). 렌더 스레드와 GPU 를 비운 뒤에만 바뀐다. */
-        vector<unique_ptr<OpenGLRHISwapChain>> _listWindowSwapChain;
-        /** @brief 이 프레임에 그린 다른 창입니다. `endFrame` 이 표시한 뒤 비운다. */
-        vector<OpenGLRHISwapChain*> _listFrameSwapChain;
+        /** @brief 다른 창(`createSwapChain`)과 이 프레임에 그린 창입니다(`endFrame` 이 표시한 뒤 비운다). */
+        RHISwapChainSet<OpenGLRHISwapChain> _windowSwapChains;
         /** @brief 지금 컨텍스트가 걸린 창입니다(렌더 스레드). 프레임 시작 · 끝에 메인 창이다. */
         OpenGLRHISwapChain* _pCurrentSwapChain{ &_swapChain };
 
@@ -532,10 +532,9 @@ namespace sw
          * @details 읽기는 그 묶음을 **다시 쓰기 직전**(링 한 바퀴 뒤)에 GL_QUERY_RESULT_AVAILABLE
          *          로 먼저 물어보고 준비된 슬롯만 읽는다. 준비되지 않은 슬롯을 바로 읽으면 GL 이 거기서 막힌다.
          */
-        uint32               _arrTimestampQuery[constant::render::kMaxGPUTimestampSlot * constant::render::kMaxFrameCountInFlight];
-        GPUTimestampSlotMask _arrTimestampMask[constant::render::kMaxFrameCountInFlight];
-        uint32               _timestampFrameIndex;
-        RHITimestampFrame    _timestampFrame; ///< 마지막으로 읽은 프레임(`readTimestamps`)
+        uint32            _arrTimestampQuery[constant::render::kMaxGPUTimestampSlot * constant::render::kMaxFrameCountInFlight];
+        RHITimestampRing  _timestampRing;  ///< 칸마다 적은 슬롯. 칸은 프레임 펜스 링의 기록 칸이다(`_frameFenceRing.getRecordingSlot`)
+        RHITimestampFrame _timestampFrame; ///< 마지막으로 읽은 프레임(`readTimestamps`)
 
         uint32 _arrComputeRootConstantShadow[shaderslot::kRootConstantDwords];
 

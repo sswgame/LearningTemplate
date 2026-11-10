@@ -26,6 +26,7 @@
 #include "Engine/Graphics/RHI/Backend/RHIFrameFenceRing.h"
 #include "Engine/Graphics/RHI/Backend/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
+#include "Engine/Graphics/RHI/Backend/RHISwapChainSet.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHITimestampFrame.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHISwapChain.h"
@@ -439,9 +440,8 @@ namespace sw
         WGPUQueue    _queue;
         WGPULimits   _limits;
 
-        WebGPURHISwapChain                     _swapChain;
-        vector<unique_ptr<WebGPURHISwapChain>> _listExtraSwapChain;
-        vector<WebGPURHISwapChain*>            _listAcquiredSwapChain; ///< 이번 프레임에 그린 스왑체인(endFrame 이 표시한다)
+        WebGPURHISwapChain                  _swapChain;
+        RHISwapChainSet<WebGPURHISwapChain> _windowSwapChains; ///< 다른 창과 이번 프레임에 그린 창(endFrame 이 표시한다)
 
         WGPUCommandEncoder        _frameEncoder;
         vector<WGPUCommandBuffer> _listPendingCommandBuffer;

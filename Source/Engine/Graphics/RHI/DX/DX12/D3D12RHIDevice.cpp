@@ -59,8 +59,7 @@ namespace sw
         , _freeOnlineBlock{}
         , _frameRing{}
         , _timestampFrequency{ 0 }
-        , _timestampWrittenMask{}
-        , _arrTimestampMask{}
+        , _timestampRing{}
         , _gpuBuffers{}
         , _gpuTextures{}
         , _resourceStateMutex{}
@@ -862,13 +861,13 @@ namespace sw
         _frameStreamState      = D3D12RecordingState{};
         _nextOffscreenRTVIndex = 0;
 
-        _listFrameSwapChain.clear();
-        for ( const unique_ptr<D3D12RHISwapChain>& pWindow : _listWindowSwapChain )
+        _windowSwapChains.clearFrame();
+        for ( const unique_ptr<D3D12RHISwapChain>& pWindow : _windowSwapChains.getOwnedList() )
         {
             ScopedThreadRoleBorrow borrow{ pWindow->getRenderThreadRole() };
             pWindow->shutdown();
         }
-        _listWindowSwapChain.clear();
+        _windowSwapChains.clear();
         _swapChain.shutdown();
         _rootSignature.Reset();
         _drawCommandSignature.Reset();
@@ -945,8 +944,7 @@ namespace sw
         pSwapChain->createBackBuffers( _device.Get(), pSwapChain->getOwnedRTVHeap(), _rtvDescriptorSize );
         if ( pSwapChain->isBackBufferReady() == false )
             return nullptr;
-        _listWindowSwapChain.push_back( std::move( pSwapChain ) );
-        return _listWindowSwapChain.back().get();
+        return _windowSwapChains.add( std::move( pSwapChain ) );
     }
 
     void D3D12RHIDevice::resizeSwapChainInternal( IRHISwapChain& swapChain, uint32 width, uint32 height )
@@ -961,8 +959,7 @@ namespace sw
             ScopedThreadRoleBorrow borrow{ window.getRenderThreadRole() };
             window.shutdown();
         }
-        (void)VectorUtil::removeIf( _listWindowSwapChain, [&window]( const unique_ptr<D3D12RHISwapChain>& pEntry )
-        { return pEntry.get() == &window; } );
+        _windowSwapChains.remove( window );
     }
 
     D3D12RHISwapChain& D3D12RHIDevice::useSwapChain( IRHISwapChain* pSwapChain )
@@ -970,11 +967,8 @@ namespace sw
         if ( pSwapChain == nullptr || pSwapChain == &_swapChain )
             return _swapChain;
         D3D12RHISwapChain& swapChain = static_cast<D3D12RHISwapChain&>( *pSwapChain ); // 이 디바이스가 만든 것만 들어온다(`createSwapChain`)
-        if ( std::find( _listFrameSwapChain.begin(), _listFrameSwapChain.end(), &swapChain ) == _listFrameSwapChain.end() )
-        {
+        if ( _windowSwapChains.markUsedThisFrame( swapChain ) )
             swapChain.acquireNextImage();
-            _listFrameSwapChain.push_back( &swapChain );
-        }
         return swapChain;
     }
 
@@ -1012,7 +1006,7 @@ namespace sw
     void D3D12RHIDevice::onRenderThreadRoleChanged( std::thread::id owner )
     {
         _swapChain.bindRenderThread( owner );
-        for ( const unique_ptr<D3D12RHISwapChain>& pWindow : _listWindowSwapChain )
+        for ( const unique_ptr<D3D12RHISwapChain>& pWindow : _windowSwapChains.getOwnedList() )
         {
             pWindow->bindRenderThread( owner );
         }
@@ -1583,7 +1577,7 @@ namespace sw
     {
         // 이 슬롯은 방금 펜스를 통과했다. 지난번 이 슬롯에 적은 값이 GPU 에서 이미 끝나 있다.
         _timestampFrame._listMicro.clear();
-        const GPUTimestampSlotMask writtenMask         = _arrTimestampMask[_frameRing.currentIndex()];
+        const GPUTimestampSlotMask writtenMask         = _timestampRing.getSlotMask( _frameRing.currentIndex() );
         const bool                 bNoTimestampsToRead = _timestampReadback == nullptr || _timestampFrequency == 0 || writtenMask.any() == false;
         if ( bNoTimestampsToRead )
             return;
@@ -1615,7 +1609,7 @@ namespace sw
             // 지난번 이 슬롯에 적은 값이 GPU 에서 끝나 있다. 기다리지 않으니 파이프라인이 안 멈춘다.
             ensureTimestampResources();
             collectTimestampsForSlot();
-            _timestampWrittenMask.clear();
+            _timestampRing.beginFrame( _frameRing.currentIndex() );
             // 링 슬롯이 정해졌다. 상수버퍼 CBV 를 그 슬롯으로 맞춘다(드로우 경로에서 하던 일).
             refreshConstantBufferViews();
             // 프레임 스트림은 세그먼트로 나뉜다. 첫 세그먼트는 디바이스 소유 리스트를 그대로 쓰고,
@@ -1674,7 +1668,7 @@ namespace sw
         if ( bPresent )
         {
             _swapChain.transitionTo( _pActiveFrameList, D3D12_RESOURCE_STATE_PRESENT );
-            for ( D3D12RHISwapChain* pWindow : _listFrameSwapChain )
+            for ( D3D12RHISwapChain* pWindow : _windowSwapChains.getFrameList() )
             {
                 pWindow->transitionTo( _pActiveFrameList, D3D12_RESOURCE_STATE_PRESENT );
             }
@@ -1690,9 +1684,8 @@ namespace sw
                 // 구간 전체를 읽기 버퍼로 옮긴다. 32 칸이면 256 바이트라 옮기는 값이 사실상 공짜고,
                 // 어느 칸이 이번 것인지는 비트로 따로 굳혀 둔다(안 적은 칸에는 지난 사이클 값이 남아 있다).
                 // 슬롯 번호는 **패스 인덱스로 고정**이라 병렬 기록에도 경쟁이 없다.
-                const GPUTimestampSlotMask writtenMask       = _timestampWrittenMask.load();
-                _arrTimestampMask[_frameRing.currentIndex()] = writtenMask;
-                const bool bShouldResolveTimestamps          = _bTimestampEnabled.load( std::memory_order_relaxed ) != SW_FALSE && _timestampHeap != nullptr && _timestampReadback != nullptr &&
+                const GPUTimestampSlotMask writtenMask              = _timestampRing.closeFrame( _frameRing.currentIndex() );
+                const bool                 bShouldResolveTimestamps = _bTimestampEnabled.load( std::memory_order_relaxed ) != SW_FALSE && _timestampHeap != nullptr && _timestampReadback != nullptr &&
                                                       writtenMask.any();
                 if ( bShouldResolveTimestamps )
                 {
@@ -1762,7 +1755,7 @@ namespace sw
                 SW_PROFILE_SCOPE( "RT.Present.present" );
                 presentHr = _swapChain.present( vsync );
                 // 이 프레임에 그린 다른 창도 같은 제출 뒤에 표시한다(Godot 의 execute_and_present 가 여러 스왑체인을 함께 내는 자리).
-                for ( D3D12RHISwapChain* pWindow : _listFrameSwapChain )
+                for ( D3D12RHISwapChain* pWindow : _windowSwapChains.getFrameList() )
                 {
                     const HRESULT windowHr = pWindow->present( vsync );
                     if ( FAILED( windowHr ) )
@@ -1795,7 +1788,7 @@ namespace sw
         }
         if ( bPresent )
             _swapChain.markPresented();
-        _listFrameSwapChain.clear();
+        _windowSwapChains.clearFrame();
     }
 
     void D3D12RHIDevice::bindBindlessRootState( ID3D12GraphicsCommandList* pList )

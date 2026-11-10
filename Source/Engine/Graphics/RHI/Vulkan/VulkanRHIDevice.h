@@ -12,6 +12,8 @@
 #include "Engine/Graphics/RHI/Backend/RHIFrameFenceRing.h"
 #include "Engine/Graphics/RHI/Backend/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
+#include "Engine/Graphics/RHI/Backend/RHISwapChainSet.h"
+#include "Engine/Graphics/RHI/Backend/RHITimestampRing.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHITimestampFrame.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
@@ -237,6 +239,8 @@ namespace sw
         /** @brief 기록 중인 프레임의 인플라이트 칸(0..kMaxFrameCountInFlight-1)입니다. 어느 스레드에서나 읽는다. */
         uint32 getFrameSlot() const { return _frameFenceRing.getRecordingSlot(); }
         uint32 getTimestampBase() const { return getFrameSlot() * constant::render::kMaxGPUTimestampSlot; }
+        /** @brief 슬롯 하나를 기록했다고 표시합니다. 여러 패스 스레드가 동시에 부를 수 있습니다. */
+        void markTimestampWritten( uint32 slotIndex ) { _timestampRing.markWritten( slotIndex ); }
         /** @brief 리소스 생성과 파괴 인터페이스(VulkanRHIResourceFactory)를 반환합니다. */
         IRHIResourceFactory* getResourceFactory() override;
         /** @brief 프레임 스트림 컨텍스트입니다. 백버퍼 패스와 Present 가 여기에 기록합니다. */
@@ -840,10 +844,8 @@ namespace sw
 
         vector<VkCommandBuffer>            _listCommandBuffer;
         vector<VkFence> _listInFlightFence SW_GUARDED_BY( _renderThread );
-        /// @brief 다른 창의 스왑체인입니다(`createSwapChain`). 렌더 스레드와 GPU 를 비운 뒤에만 바뀐다.
-        vector<unique_ptr<VulkanRHISwapChain>> _listWindowSwapChain;
-        /// @brief 이 프레임에 이미지를 잡은 다른 창입니다(`useSwapChain`). `endFrame` 이 신호 · 표시한 뒤 비운다.
-        vector<VulkanRHISwapChain*> _listFrameSwapChain;
+        /// @brief 다른 창(`createSwapChain`) · 이 프레임에 이미지를 잡은 창(`useSwapChain`, `endFrame` 이 신호 · 표시한 뒤 비운다) · 다음 프레임에 다시 만들 창.
+        RHISwapChainSet<VulkanRHISwapChain> _windowSwapChains;
         /// @brief 이 프레임에 새로 획득한 이미지의 acquire 세마포어입니다. 이 프레임의 첫 제출(즉시 모드 비우기 · `endFrame`)이 모두 기다리고 비운다.
         vector<VkSemaphore> _listPendingAcquireWait;
         /// @brief 조인이 남긴 컴퓨트 신호 세마포어입니다. 다음 그래픽스 제출(포크 · 조인의 비우기 · 즉시 모드 · `endFrame`)이 모두 기다리고 비운다.
@@ -852,8 +854,6 @@ namespace sw
         vector<VkSemaphore>          _listSubmitWaitSemaphore;
         vector<VkPipelineStageFlags> _listSubmitWaitStage;
         vector<VkSemaphore>          _listSubmitSignalSemaphore;
-        /// @brief 이번 프레임에 낡은 것을 본 다른 창입니다. 프레임 중간에 GPU 를 비우지 않고 다음 `beginFrame` 이 다시 만든다.
-        vector<VulkanRHISwapChain*> _listWindowRebuild;
         /// @brief 이번 프레임에 비동기 컴퓨트 제출이 신호한 세마포어입니다(번호 = 순번 + 1 이 `RHIQueueSyncPoint`). `endFrame` 이 아직 기다리지 않은 것을 모두 기다린다.
         vector<VkSemaphore> _listAsyncSignal;
         /// @brief `_listAsyncSignal` 마다 그래픽스가 이미 기다렸는지입니다(이진 세마포어는 신호 한 번에 대기 한 번이다).
@@ -898,9 +898,9 @@ namespace sw
         void*                  _pCmdDrawIndexedIndirectCount;
         VkBuffer               _breadcrumbBuffer; ///< AMD 표지 버퍼 — uint32 두 칸([0] 시작 · [1] 끝), 호스트 보임 · 일관 메모리를 영속 매핑해 소실 뒤 CPU 가 읽는다
         VkDeviceMemory         _breadcrumbMemory;
-        const volatile uint32* _pBreadcrumbMapped;                                                                              ///< `_breadcrumbBuffer` 의 매핑. GPU 가 쓰므로 volatile 로 읽는다
-        atomic<uint8>          _bTimestampEnabled;                                                                              ///< 엔진이 켜기 전에는 풀도 만들지 않는다. `setTimestampEnabled` 는 어느 스레드에서나 부를 수 있어 atomic 이다.
-        uint8                  _arrTimestampSubmitted[constant::render::kMaxFrameCountInFlight] SW_GUARDED_BY( _renderThread ); ///< 링 슬롯마다 타임스탬프 쿼리를 제출했는가
+        const volatile uint32* _pBreadcrumbMapped; ///< `_breadcrumbBuffer` 의 매핑. GPU 가 쓰므로 volatile 로 읽는다
+        atomic<uint8>          _bTimestampEnabled; ///< 엔진이 켜기 전에는 풀도 만들지 않는다. `setTimestampEnabled` 는 어느 스레드에서나 부를 수 있어 atomic 이다.
+        RHITimestampRing       _timestampRing;     ///< 링 칸마다 적은 슬롯 — 빈 칸은 "리셋 + 제출" 을 거치지 않았으니 읽지 않는다
 
         VkSampler _defaultSampler;
 

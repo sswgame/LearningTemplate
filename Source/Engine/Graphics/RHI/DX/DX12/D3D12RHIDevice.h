@@ -18,6 +18,8 @@
 #include "Engine/Graphics/RHI/Backend/RHIConstantBufferMirror.h"
 #include "Engine/Graphics/RHI/Backend/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
+#include "Engine/Graphics/RHI/Backend/RHISwapChainSet.h"
+#include "Engine/Graphics/RHI/Backend/RHITimestampRing.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHISwapChain.h"
 #include "Engine/Graphics/RHI/DX/DXGIFormat.h"
 #include "Engine/Graphics/RHI/DX/RHIDxResultCheck.h"
@@ -277,10 +279,7 @@ namespace sw
         /** @brief 이번 프레임이 쓰는 쿼리 구간의 시작 인덱스를 반환합니다. */
         uint32 getTimestampBase() const { return _frameRing.currentIndex() * constant::render::kMaxGPUTimestampSlot; }
         /** @brief 슬롯 하나를 기록했다고 표시합니다. 여러 패스 스레드가 동시에 부를 수 있습니다. */
-        void markTimestampWritten( uint32 slotIndex )
-        {
-            _timestampWrittenMask.set( slotIndex );
-        }
+        void                         markTimestampWritten( uint32 slotIndex ) { _timestampRing.markWritten( slotIndex ); }
         void                         resizeInternal( uint32 width, uint32 height ) override;
         [[nodiscard]] IRHISwapChain* createSwapChainInternal( const RHISwapChainDesc& desc ) override;
         void                         resizeSwapChainInternal( IRHISwapChain& swapChain, uint32 width, uint32 height ) override;
@@ -782,10 +781,8 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D12QueryHeap> _timestampHeap;
         Microsoft::WRL::ComPtr<ID3D12Resource>  _timestampReadback;
         uint64                                  _timestampFrequency;
-        /// @brief 이번 프레임에 실제로 기록된 슬롯 비트입니다. 패스가 병렬로 기록하므로 atomic 입니다.
-        GPUTimestampSlotAtomicMask _timestampWrittenMask;
-        /// @brief 링 슬롯별로 확정한 비트입니다. 그 슬롯이 다시 돌아왔을 때 어느 슬롯이 진짜 값인지 가립니다.
-        GPUTimestampSlotMask _arrTimestampMask[constant::render::kMaxFrameCountInFlight];
+        /// @brief 이번 프레임 · 링 슬롯별로 기록된 슬롯 비트입니다. 쿼리 힙은 리셋하지 않아 안 적은 칸에 지난 사이클 값이 남으므로 이 비트로 가린다.
+        RHITimestampRing     _timestampRing;
         RHITimestampFrame    _timestampFrame; ///< 마지막으로 읽은 프레임(`readTimestamps`)
         StructuredUploadSlot _arrStructuredUploadSlot[constant::render::kMaxFrameCountInFlight];
 
@@ -811,10 +808,8 @@ namespace sw
 
         /// @brief 메인 창의 백버퍼 묶음입니다. 백버퍼, 인덱스, 리소스 상태, Present 가 모두 여기 모여 있습니다.
         D3D12RHISwapChain _swapChain;
-        /// @brief 다른 창의 스왑체인입니다(`createSwapChain`). 렌더 스레드와 GPU 를 비운 뒤에만 바뀐다.
-        vector<unique_ptr<D3D12RHISwapChain>> _listWindowSwapChain;
-        /// @brief 이 프레임에 그린 다른 창입니다. `useSwapChain` 이 올리고 `endFrame` 이 PRESENT 로 되돌려 표시한 뒤 비운다. 프레임 스트림(렌더 스레드)만 쓴다.
-        vector<D3D12RHISwapChain*> _listFrameSwapChain;
+        /// @brief 다른 창(`createSwapChain`)과 이 프레임에 그린 창입니다(`endFrame` 이 표시한 뒤 비운다).
+        RHISwapChainSet<D3D12RHISwapChain> _windowSwapChains;
 
         uint8                  _bBindlessRootSignature : 1; ///< 루트 시그니처(텍스처 배열 테이블 포함)를 만드는 데 성공했다. 네이티브 bindless 텍스처 샘플링이 가능하다.
         [[maybe_unused]] uint8 _reservedPassFlags      : 7;

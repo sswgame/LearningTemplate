@@ -76,14 +76,12 @@ namespace sw
         , _timestampFrame{}
         , _listCommandBuffer{}
         , _listInFlightFence{}
-        , _listWindowSwapChain{}
-        , _listFrameSwapChain{}
+        , _windowSwapChains{}
         , _listPendingAcquireWait{}
         , _listPendingComputeWait{}
         , _listSubmitWaitSemaphore{}
         , _listSubmitWaitStage{}
         , _listSubmitSignalSemaphore{}
-        , _listWindowRebuild{}
         , _listAsyncSignal{}
         , _listAsyncSignalWaited{}
         , _listAsyncSemaphorePool{}
@@ -128,7 +126,7 @@ namespace sw
         , _breadcrumbMemory{ VK_NULL_HANDLE }
         , _pBreadcrumbMapped{ nullptr }
         , _bTimestampEnabled{ SW_FALSE }
-        , _arrTimestampSubmitted{}
+        , _timestampRing{}
         , _defaultSampler{ nullptr }
         , _pipelineLayout{ nullptr }
         , _descriptorPool{ nullptr }
@@ -543,15 +541,13 @@ namespace sw
                 sampler = VK_NULL_HANDLE;
             }
 
-            for ( const unique_ptr<VulkanRHISwapChain>& pWindow : _listWindowSwapChain )
+            for ( const unique_ptr<VulkanRHISwapChain>& pWindow : _windowSwapChains.getOwnedList() )
             {
                 pWindow->destroy( _device );
                 pWindow->destroySemaphores( _device );
                 pWindow->destroySurface( _instance );
             }
-            _listWindowSwapChain.clear();
-            _listFrameSwapChain.clear();
-            _listWindowRebuild.clear();
+            _windowSwapChains.clear();
             _swapChain.destroy( _device );
             _swapChain.destroySemaphores( _device );
             destroyFrameFences();
@@ -1534,7 +1530,7 @@ namespace sw
 
         // 스왑체인의 이미지별 펜스 표는 위 펜스의 사본이므로 비우기만 한다.
         _swapChain.removeImageFences();
-        for ( const unique_ptr<VulkanRHISwapChain>& pWindow : _listWindowSwapChain )
+        for ( const unique_ptr<VulkanRHISwapChain>& pWindow : _windowSwapChains.getOwnedList() )
         {
             pWindow->removeImageFences();
         }
@@ -1578,8 +1574,7 @@ namespace sw
             pSwapChain->destroySurface( _instance );
             return nullptr;
         }
-        _listWindowSwapChain.push_back( std::move( pSwapChain ) );
-        return _listWindowSwapChain.back().get();
+        return _windowSwapChains.add( std::move( pSwapChain ) );
     }
 
     void VulkanRHIDevice::resizeSwapChainInternal( IRHISwapChain& swapChain, uint32 width, uint32 height )
@@ -1590,18 +1585,15 @@ namespace sw
     void VulkanRHIDevice::destroySwapChainInternal( IRHISwapChain& swapChain )
     {
         VulkanRHISwapChain& window = static_cast<VulkanRHISwapChain&>( swapChain ); // 이 디바이스가 만든 것만 들어온다(`createSwapChain`)
-        (void)VectorUtil::removeIf( _listWindowRebuild, [&window]( const VulkanRHISwapChain* pEntry )
-        { return pEntry == &window; } );
         window.destroy( _device );
         window.destroySemaphores( _device );
         window.destroySurface( _instance );
-        (void)VectorUtil::removeIf( _listWindowSwapChain, [&window]( const unique_ptr<VulkanRHISwapChain>& pEntry )
-        { return pEntry.get() == &window; } );
+        _windowSwapChains.remove( window );
     }
 
     void VulkanRHIDevice::rebuildPendingWindowSwapChains()
     {
-        if ( _listWindowRebuild.empty() )
+        if ( _windowSwapChains.getRebuildList().empty() )
             return;
         {
             ScopedLock<mutex> queueLock{ _queueMutex };
@@ -1610,12 +1602,12 @@ namespace sw
         if ( isDeviceLost() == false )
         {
             _frameFenceRing.markAllCompleted(); // GPU 가 쉰다
-            for ( VulkanRHISwapChain* pWindow : _listWindowRebuild )
+            for ( VulkanRHISwapChain* pWindow : _windowSwapChains.getRebuildList() )
             {
                 (void)rebuildWindowSwapChain( *pWindow, pWindow->getExtentWidth(), pWindow->getExtentHeight() ); // 실패 알림은 안에서 남긴다. 다음 획득이 다시 본다
             }
         }
-        _listWindowRebuild.clear();
+        _windowSwapChains.clearRebuild();
     }
 
     bool VulkanRHIDevice::rebuildWindowSwapChain( VulkanRHISwapChain& swapChain, uint32 width, uint32 height )
@@ -1636,7 +1628,7 @@ namespace sw
         if ( pSwapChain == nullptr || pSwapChain == &_swapChain )
             return &_swapChain;
         VulkanRHISwapChain& window = static_cast<VulkanRHISwapChain&>( *pSwapChain ); // 이 디바이스가 만든 것만 들어온다(`createSwapChain`)
-        if ( std::find( _listFrameSwapChain.begin(), _listFrameSwapChain.end(), &window ) != _listFrameSwapChain.end() )
+        if ( _windowSwapChains.isUsedThisFrame( window ) )
             return &window;
         if ( _bFrameStarted == SW_FALSE || isDeviceLost() )
             return nullptr;
@@ -1646,8 +1638,7 @@ namespace sw
         {
             // 창 크기가 바뀌었거나 표면이 낡았다 — 프레임 중간에 GPU 를 비우지 않고 이번 프레임은 이 창을 건너뛴다.
             // 다음 beginFrame 이 메인 창 재생성과 같은 자리에서 다시 만든다(언리얼 FVulkanViewport 도 재생성을 프레임 경계의 플러시에서 한다 — 기억에 의존한 비교).
-            if ( std::find( _listWindowRebuild.begin(), _listWindowRebuild.end(), &window ) == _listWindowRebuild.end() )
-                _listWindowRebuild.push_back( &window );
+            _windowSwapChains.markRebuild( window );
             return nullptr;
         }
         if ( status == VulkanSwapChainStatus::DeviceLost )
@@ -1659,7 +1650,7 @@ namespace sw
         if ( acquireWait != VK_NULL_HANDLE )
             _listPendingAcquireWait.push_back( acquireWait );
         reportQueueResult( window.waitForImageReuse( _device, _listInFlightFence[getFrameSlot()] ), "useSwapChain: vkWaitForFences (image in flight)" );
-        _listFrameSwapChain.push_back( &window );
+        (void)_windowSwapChains.markUsedThisFrame( window );
         return &window;
     }
 
@@ -2121,7 +2112,7 @@ namespace sw
         _renderThread.assumeHeld(); // 렌더 스레드의 프레임 진행(그 병렬 기록 태스크 포함)에서, 또는 렌더 스레드를 세운 뒤(초기화 · 종료 · resize) 불린다
         _timestampFrame._listMicro.clear();
         const bool bNoTimestampsToRead = _bTimestampEnabled.load( std::memory_order_relaxed ) == SW_FALSE || _timestampPool == VK_NULL_HANDLE || _timestampPeriod <= 0.0f ||
-                                         _arrTimestampSubmitted[getFrameSlot()] == SW_FALSE;
+                                         _timestampRing.getSlotMask( getFrameSlot() ).any() == false;
         if ( bNoTimestampsToRead )
             return;
 
@@ -2199,6 +2190,7 @@ namespace sw
         // **여기가 타임스탬프를 읽는 유일한 안전한 자리다.** 이 슬롯의 펜스를 방금 통과했다.
         ensureTimestampPool();
         collectTimestampsForSlot();
+        _timestampRing.beginFrame( getFrameSlot() );
         // 이 칸의 앞 프레임까지 GPU 가 끝냈다. 그 시리얼 이하로 태그된 리소스 해제를 지금 실행한다.
         _releaseQueue.tickCompleted( _frameFenceRing.getCompletedSerial() );
         // 끝난 텍스처 전송도 걷는다 — 아무도 폴링하지 않는 전송(구간 갱신)의 링 구간과, 전송을 기다리던 텍스처 해제가 프레임마다 진행한다.
@@ -2353,7 +2345,7 @@ namespace sw
         if ( bPresent )
         {
             _listSubmitSignalSemaphore.push_back( _swapChain.getRenderFinishedSemaphore() );
-            for ( const VulkanRHISwapChain* pWindow : _listFrameSwapChain )
+            for ( const VulkanRHISwapChain* pWindow : _windowSwapChains.getFrameList() )
             {
                 _listSubmitSignalSemaphore.push_back( pWindow->getRenderFinishedSemaphore() );
             }
@@ -2372,7 +2364,7 @@ namespace sw
         _listPendingAcquireWait.clear();
         // 이 링 슬롯의 쿼리 구간은 이제 "리셋 + 제출" 을 한 번은 거쳤다. 그 전에 읽으면 미정의다.
         if ( _bTimestampEnabled.load( std::memory_order_relaxed ) != SW_FALSE && _timestampPool != VK_NULL_HANDLE )
-            _arrTimestampSubmitted[getFrameSlot()] = SW_TRUE;
+            (void)_timestampRing.closeFrame( getFrameSlot() );
 
         if ( bPresent && isDeviceLost() == false )
         {
@@ -2391,13 +2383,13 @@ namespace sw
                 _bSurfaceLost = SW_TRUE;
             }
             // 다른 창도 같은 제출 뒤에 표시한다(Godot 의 execute_and_present 자리). 낡았으면 다음에 그 창을 쓸 때(`useSwapChain`) 다시 만든다.
-            for ( VulkanRHISwapChain* pWindow : _listFrameSwapChain )
+            for ( VulkanRHISwapChain* pWindow : _windowSwapChains.getFrameList() )
             {
                 if ( pWindow->present( _graphicsQueue ) == VulkanSwapChainStatus::DeviceLost )
                     reportQueueResult( static_cast<int32>( VK_ERROR_DEVICE_LOST ), "endFrame: vkQueuePresentKHR (window)" );
             }
         }
-        _listFrameSwapChain.clear();
+        _windowSwapChains.clearFrame();
         queueLock.unlock();
 
         _listPendingSubmit.clear();
