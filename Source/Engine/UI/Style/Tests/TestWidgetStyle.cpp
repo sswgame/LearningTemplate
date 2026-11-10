@@ -53,7 +53,7 @@ namespace
 /** @brief [UIStyleTest] 필드 번호 · 표 · 리플렉션이 같은 순서다 — PROPERTY 이름으로 찾으면 그 번호가 나온다 */
 SW_TEST_CASE( UIStyleTest, FieldTableMatchesReflection )
 {
-    const vector<PropertyInfo>& listProperty = WidgetStyle::StaticType()->getPropertiesWithBase();
+    const PropertyListView listProperty = WidgetStyle::StaticType()->getPropertiesWithBase();
     SW_REQUIRE_EQUAL( Util::kFieldCount, static_cast<uint32>( listProperty.size() ) );
     for ( uint32 index = 0; index < Util::kFieldCount; ++index )
     {

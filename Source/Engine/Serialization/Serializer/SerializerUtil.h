@@ -263,14 +263,14 @@ namespace sw
         [[nodiscard]] SW_API static bool isWithinDeclaredRanges( const TypeInfo& typeInfo, ObjectAddress instance );
 
         /** @brief 프로퍼티 목록에서 키(철자 그대로)에 맞는 프로퍼티 메타데이터를 찾습니다. 지금 이름을 모두 본 뒤에 옛 이름(Alias)을 봅니다. */
-        static const PropertyInfo* matchProperty( const vector<PropertyInfo>& listProp, string_view keyRaw );
+        static const PropertyInfo* matchProperty( PropertyListView listProp, string_view keyRaw );
 
         /**
          * @brief 이름 해시(바이너리 태그 · diff 항목)에 맞는 프로퍼티의 인덱스입니다. 없으면 비어 있습니다.
          * @details 모든 프로퍼티의 지금 이름을 먼저 보고, 없을 때만 옛 이름(`PROPERTY( Alias = … )`)을 봅니다. 그래서 정상 경로는 옛 이름을 보지 않고,
          *          지금 이름이 늘 옛 이름보다 먼저입니다. 바이너리 태그 스트림과 오브젝트 diff 가 함께 씁니다.
          */
-        [[nodiscard]] static optional<uint32> findPropertyIndexByNameHash( const vector<PropertyInfo>& listProp, uint32 nameHash );
+        [[nodiscard]] static optional<uint32> findPropertyIndexByNameHash( PropertyListView listProp, uint32 nameHash );
 
         /**
          * @brief 이 문맥의 저장 목적에서 이 타입의 프로퍼티를 쓰고 읽는지 판정합니다. 세 형식(XML · JSON · 바이너리)과 diff 가 모두 이 함수를 지납니다.

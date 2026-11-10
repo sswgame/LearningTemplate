@@ -26,7 +26,6 @@ namespace sw
     /// @brief 프로퍼티 하나의 리플렉션 정보입니다. 오프셋, 타입, 별칭, 컨테이너 래퍼를 담습니다.
     struct SW_API PropertyInfo
     {
-        using PropertyBindingDelegate = Delegate<void( const PropertyInfo& prop, ObjectAddress instance )>;
         /**
          * @brief 값이 객체 **밖**에 있는 프로퍼티의 값 주소를 반환하는 함수입니다. 참조를 반환하는 메서드에 `PROPERTY` 를 붙이면 생성됩니다.
          * @details 인자는 오프셋의 기준이 되는 객체 주소(`getRawPtr` 의 인자와 같다)이고, 반환값은 그 인스턴스의 값 주소다.
@@ -42,7 +41,6 @@ namespace sw
 
         shared_ptr<IContainerWrapper>   _containerWrapper;
         shared_ptr<NestedContainerInfo> _nestedContainer; ///< 컨테이너일 때 중첩 구조 전체다
-        mutable PropertyBindingDelegate _onPropertyBoundChanged;
 
         /** @brief 값이 객체 밖에 있을 때 그 주소를 찾는 함수입니다. nullptr 이면 값은 `인스턴스 + _offset` 에 있습니다. */
         ValueAccessor _pValueAccessor;
@@ -138,9 +136,6 @@ namespace sw
         /** @brief 단일 컨테이너와 중첩 컨테이너를 똑같이 다루기 위한 구조 정보를 반환합니다. */
         NestedContainerInfo getContainerShape() const;
 
-        /** @brief 값이 바뀔 때 부르는 콜백을 등록합니다. */
-        void bindOnChanged( PropertyBindingDelegate delegate ) const { _onPropertyBoundChanged = std::move( delegate ); }
-
         /** @brief 비트필드에서 그 비트 하나만 1 로 세우는 함수입니다. 생성 코드가 만듭니다. 인자는 0 으로 채운, 그 타입 크기의 메모리입니다. */
         using SetBitFunction = void ( * )( void* pInstance );
 
@@ -205,9 +200,6 @@ namespace sw
                     IPropertyObserver* pObserver = static_cast<IPropertyObserver*>( pInstance );
                     pObserver->onPropertyChanged( _name );
                 }
-
-                if ( _onPropertyBoundChanged.isBound() )
-                    _onPropertyBoundChanged( *this, ObjectAddress{ pInstance } );
                 return;
             }
 
@@ -226,9 +218,6 @@ namespace sw
                 IPropertyObserver* pObserver = static_cast<IPropertyObserver*>( pInstance );
                 pObserver->onPropertyChanged( _name );
             }
-
-            if ( _onPropertyBoundChanged.isBound() )
-                _onPropertyBoundChanged( *this, ObjectAddress{ pInstance } );
         }
 
         /** @brief 프로퍼티 값의 포인터입니다. 비트필드는 nullptr 입니다. 위치는 `getRawPtr` 가 정합니다. */

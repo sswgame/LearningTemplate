@@ -175,7 +175,7 @@ namespace sw
 
         // **주소는 고정이다.** 같은 FQN 이 있으면(재등록, 묘비) 그 객체에 덮어써 복원한다. 밖에서 가진 포인터
         // (`TypeLookupCache`, `_pParentType`, 컴포넌트 풀 키)가 모두 그대로 맞는다. 새 타입은 새 객체다.
-        // 캐시는 배치 끝(`populateLookupCaches`)이 단일 스레드에서 만든다.
+        // 캐시는 아래에서 이 타입과 자손만 다시 짓는다(배치 안이면 배치 끝이).
         if ( existingIt != _mapFqnToClassType.end() )
         {
             *existingIt->second = stored;
@@ -186,16 +186,8 @@ namespace sw
             _mapFqnToClassType.emplace( canonicalKey, make_unique<TypeInfo>( std::move( stored ) ) );
         }
         _mapHashToCanonicalName.insert_or_assign( canonicalKey.getHash(), canonicalName );
-        // 체인이 바뀌었을 수 있다. 재등록은 부모를 바꿀 수 있고, 새 타입은 누군가의 비어 있던 부모일 수 있다.
-        // 조상 테이블과 부모에게서 복사해 온 프로퍼티 목록을 모두 비운다. 배치 끝의 populateLookupCaches 나 첫 조회가 다시 만든다.
-        for ( const auto& [storedFqn, pStoredInfo] : _mapFqnToClassType )
-        {
-            (void)storedFqn;
-            pStoredInfo->clearAncestorDisplay();
-            pStoredInfo->clearInheritedProperties();
-        }
-        _inheritedCacheInvalidations.fetch_add( _mapFqnToClassType.size(), std::memory_order_relaxed );
-        hashed_string shadowedFqn;
+        const TypeInfo* const pRegistered = _mapFqnToClassType.find( canonicalKey )->second.get();
+        hashed_string         shadowedFqn;
         if ( shortName.empty() == false && shortName != canonicalKey )
         {
             // 짧은 이름이 이미 **다른 살아 있는** 타입을 가리키면 그 타입을 가린다. 씬, 프리팹, `addComponentByName` 은 짧은 이름으로
@@ -213,8 +205,22 @@ namespace sw
         // 테이블이 바뀌었으니 세대를 올린다. 기록해 둔 빈 결과(`TypeLookupCache` 의 미등록, 찾지 못한 부모)를 다음 조회가 다시 찾는다.
         s_typeTableGeneration.fetch_add( 1, std::memory_order_acq_rel );
 
+        // 사슬이 바뀌었을 수 있다 — 재등록은 부모를 바꿀 수 있고, 새 타입은 누군가의 비어 있던 부모일 수 있다. 그 타입과 **자손만** 비우고 다시 짓는다.
+        // 배치 안이면 모아 두고 배치 끝이 한 번에 찾는다(등록마다 찾으면 배치가 O(타입²) 이다).
+        vector<TypeInfo*> listAffected;
+        if ( _batchDepth != 0 )
+        {
+            _uniqueBatchRoot.insert( pRegistered );
+        }
+        else
+        {
+            collectAffectedLocked( unordered_set<const TypeInfo*>{ pRegistered }, listAffected );
+            clearAffectedLocked( listAffected );
+        }
+
         // 로그는 잠금 밖에서 남긴다. 리스너가 레지스트리를 다시 물어도 멈추지 않게 하려는 것이다.
         lock.unlock();
+        rebuildAffected( listAffected );
         if ( shadowedFqn.empty() == false )
             SW_LOG_WARNING_ID( "Reflection.TypeShortNameCollision", "Reflected type name '%#' now means %# and no longer %# - short names must be unique (scenes, prefabs and "
                                                                     "addComponentByName look types up by them)",
@@ -315,6 +321,10 @@ namespace sw
     void TypeRegistry::registerPendingTypes( TypeRegistrar* pClassHead, EnumRegistrar* pEnumHead )
     {
         SW_PROFILE_SCOPE( "Reflection.registerPendingTypes" );
+        {
+            UniqueLock<shared_mutex> lock{ _mutex };
+            ++_batchDepth;
+        }
         TypeRegistrar* pCurrClass = pClassHead;
         while ( pCurrClass != nullptr )
         {
@@ -331,8 +341,94 @@ namespace sw
             pCurrEnum = pCurrEnum->_pNext;
         }
 
-        // 이 배치의 마지막 삽입까지 끝난 지금 캐시를 만든다. 여기는 아직 단일 스레드다.
-        populateLookupCaches();
+        // 이 배치의 마지막 삽입까지 끝난 지금, 바뀐 타입과 그 자손의 캐시를 한 번에 다시 짓는다. 여기는 아직 단일 스레드다.
+        vector<TypeInfo*> listAffected;
+        {
+            UniqueLock<shared_mutex> lock{ _mutex };
+            --_batchDepth;
+            if ( _batchDepth == 0 )
+            {
+                collectAffectedLocked( _uniqueBatchRoot, listAffected );
+                clearAffectedLocked( listAffected );
+                _uniqueBatchRoot.clear();
+            }
+        }
+        rebuildAffected( listAffected );
+    }
+
+    TypeInfo* TypeRegistry::findTypeLocked( const hashed_string& nameOrFqn, const bool bIncludeDead ) const
+    {
+        auto it = _mapFqnToClassType.find( nameOrFqn );
+        if ( it == _mapFqnToClassType.end() )
+        {
+            const auto aliasIt = _mapAliasToFqn.find( nameOrFqn );
+            if ( aliasIt == _mapAliasToFqn.end() )
+                return nullptr;
+            it = _mapFqnToClassType.find( aliasIt->second );
+            if ( it == _mapFqnToClassType.end() )
+                return nullptr;
+        }
+        return bIncludeDead || it->second->isAlive() ? it->second.get() : nullptr;
+    }
+
+    void TypeRegistry::collectAffectedLocked( const unordered_set<const TypeInfo*>& uniqueRoot, vector<TypeInfo*>& outListType ) const
+    {
+        if ( uniqueRoot.empty() )
+            return;
+        for ( const auto& [fqn, pInfo] : _mapFqnToClassType )
+        {
+            (void)fqn;
+            if ( pInfo->isAlive() == false )
+                continue;
+            // 부모 이름을 따라 올라가며 바뀐 타입을 만나는지 본다. 묘비도 따라간다(해제가 내려가는 타입의 자손을 찾는다). 순환은 깊이 상한에서 끊긴다.
+            const TypeInfo* pCurrent  = pInfo.get();
+            bool            bAffected = uniqueRoot.contains( pCurrent );
+            for ( uint32 depth = 0; bAffected == false && depth < constant::reflection::kMaxParentChainDepth && pCurrent->_parentFQN.empty() == false; ++depth )
+            {
+                pCurrent = findTypeLocked( pCurrent->_parentFQN, true );
+                if ( pCurrent == nullptr )
+                    break;
+                bAffected = uniqueRoot.contains( pCurrent );
+            }
+            if ( bAffected )
+                outListType.push_back( pInfo.get() );
+        }
+    }
+
+    void TypeRegistry::clearAffectedLocked( const vector<TypeInfo*>& listType )
+    {
+        for ( TypeInfo* pType : listType )
+        {
+            pType->clearParentType();
+            pType->clearAncestorDisplay();
+            pType->clearInheritedProperties();
+        }
+        _inheritedCacheInvalidations.fetch_add( listType.size(), std::memory_order_relaxed );
+    }
+
+    void TypeRegistry::rebuildAffected( const vector<TypeInfo*>& listType ) const
+    {
+        // 부모 포인터부터 모두 찾는다. 아래 셋이 부모를 따라가고, 캐스트의 핫패스는 이것만 본다.
+        for ( TypeInfo* pType : listType )
+        {
+            pType->resolveParentType();
+        }
+        for ( TypeInfo* pType : listType )
+        {
+            pType->rebuildDerivedCaches();
+        }
+        // 조상 표는 부모 포인터가 **모두** 찾아진 뒤에 만든다. 표는 사슬 끝까지 따라가므로 한 바퀴 뒤여야 한다.
+        for ( const TypeInfo* pType : listType )
+        {
+            (void)pType->computeAncestorDisplay();
+        }
+        // 지연 판정(세이브 옵트인, 검증 함수 유무, POD)도 여기서 구한다. 로드 워커가 처음 물을 때 같은 바이트의 비트를 함께 쓰지 않게 하려는 것이다.
+        for ( const TypeInfo* pType : listType )
+        {
+            (void)pType->hasSaveGameProperty();
+            (void)pType->usesPODCopyFastPath();
+            (void)ReflectionValidation::hasValidator( *pType );
+        }
     }
 
     string TypeRegistry::describeType( const hashed_string& nameOrFqn ) const
@@ -466,7 +562,7 @@ namespace sw
     void TypeRegistry::populateLookupCaches() const
     {
         SW_PROFILE_SCOPE( "Reflection.populateLookupCaches" );
-        vector<const TypeInfo*> listType;
+        vector<TypeInfo*> listType;
         {
             ScopedSharedLock<shared_mutex> lock{ _mutex };
             listType.reserve( _mapFqnToClassType.size() );
@@ -477,32 +573,8 @@ namespace sw
                     listType.push_back( pInfo.get() );
             }
         }
-
-        // **잠금 밖에서** 만든다. getPropertiesWithBase 가 부모를 찾으려고 레지스트리를 다시
-        // 잠그는데, shared_mutex 는 재귀가 아니라서 잠금 안에서 부르면 그 자리에서 멈춘다.
-        for ( const TypeInfo* pType : listType )
-        {
-            if ( pType == nullptr )
-                continue;
-            // 부모 포인터부터 찾는다. 아래 두 캐시가 부모를 따라가고, 캐스트의 핫패스는 이것만 본다.
-            pType->resolveParentType();
-            pType->populateLookupCache();
-            (void)pType->getPropertiesWithBase();
-        }
-        // 부모 포인터가 **모두** 찾아진 뒤에 조상 테이블을 만든다. 테이블은 체인 끝까지 따라가므로 한 바퀴 뒤여야 한다.
-        for ( const TypeInfo* pType : listType )
-        {
-            if ( pType != nullptr )
-                (void)pType->computeAncestorDisplay();
-        }
-        // 지연 판정(세이브 옵트인, 검증 함수 유무)도 여기서 한 번 처리한다. 로드 워커가 처음 물을 때 같은 바이트의 캐시 비트를 함께 쓰지 않게 하려는 것이다.
-        for ( const TypeInfo* pType : listType )
-        {
-            if ( pType == nullptr )
-                continue;
-            (void)pType->hasSaveGameProperty();
-            (void)ReflectionValidation::hasValidator( *pType );
-        }
+        // **잠금 밖에서** 짓는다. 부모를 찾으려고 레지스트리를 다시 잠그는데, shared_mutex 는 재귀가 아니라서 잠금 안에서 부르면 그 자리에서 멈춘다.
+        rebuildAffected( listType );
     }
 
     Subscription TypeRegistry::subscribeModuleUnloading( const ModuleUnloadingDelegate& delegate )
@@ -529,6 +601,19 @@ namespace sw
     {
         UniqueLock<shared_mutex> lock{ _mutex };
         hashed_string            hashModule( moduleName.data(), static_cast<uint32>( moduleName.size() ) );
+
+        // 내려가는 타입의 자손(다른 모듈)을 묘비로 바꾸기 **전에** 찾는다 — 그 자손만 상속 캐시(내려가는 모듈의 접근자를 가리킨다)를 버리고 다시 짓는다.
+        unordered_set<const TypeInfo*> uniqueUnloading;
+        for ( const auto& [fqn, pInfo] : _mapFqnToClassType )
+        {
+            (void)fqn;
+            if ( pInfo->_moduleName == hashModule && pInfo->isAlive() )
+                uniqueUnloading.insert( pInfo.get() );
+        }
+        vector<TypeInfo*> listAffected;
+        collectAffectedLocked( uniqueUnloading, listAffected );
+        (void)VectorUtil::removeIf( listAffected, [&]( const TypeInfo* pType )
+        { return uniqueUnloading.contains( pType ); } );
 
         // 지우지 않고 **묘비**를 남긴다. 밖에서 가진 포인터(`TypeLookupCache` 의 정적 슬롯, 다른 모듈 타입의 부모 포인터)가
         // 허공을 가리키지 않도록 객체는 그 자리에 둔다. `findType` 은 해제된 타입을 nullptr 로 답하고, 같은 FQN 이
@@ -580,18 +665,12 @@ namespace sw
             const hashed_string canonicalName = info._name.empty() == false ? info._name : info._fullyQualifiedName;
             _mapHashToCanonicalName.insert_or_assign( alias.getHash(), canonicalName );
         }
-        // 부모 포인터는 옮겨지지 않지만 **해제된 부모**를 가리킬 수 있다. 비워서 다음 조회가 이름으로 다시 찾게 한다
-        // (해제된 타입은 `findType` 이 nullptr 를 반환하므로 체인은 거기서 끝난다). 조상 테이블도, 부모에게서 복사해 온 프로퍼티도 같이 비운다.
-        // 그 사본의 접근자는 지금 언로드되는 모듈의 코드를 가리킨다(모듈이 아직 살아 있는 지금 버려야 한다. `clearContent` 와 같은 이유다).
-        for ( const auto& [fqn, pInfo] : _mapFqnToClassType )
-        {
-            (void)fqn;
-            pInfo->clearParentType();
-            pInfo->clearAncestorDisplay();
-            pInfo->clearInheritedProperties();
-        }
-        _inheritedCacheInvalidations.fetch_add( _mapFqnToClassType.size(), std::memory_order_relaxed );
+        // 자손의 부모 포인터는 **해제된 부모**를 가리킨다. 비워서 이름으로 다시 찾게 한다(해제된 타입은 `findType` 이 nullptr 라 사슬은 거기서 끝난다).
+        // 상속 목록은 내려가는 모듈의 프로퍼티를 가리킨다 — 모듈이 아직 살아 있는 지금 버린다(`clearContent` 와 같은 이유).
+        clearAffectedLocked( listAffected );
         s_typeTableGeneration.fetch_add( 1, std::memory_order_acq_rel );
+        lock.unlock();
+        rebuildAffected( listAffected );
     }
 
     void TypeRegistry::registerTypeAlias( const utf8* pAliasName, const utf8* pCanonicalName )
@@ -635,6 +714,20 @@ namespace sw
             _mapAliasToFqn.insert_or_assign( qualifiedHash, canonicalKey );
             _mapHashToCanonicalName.insert_or_assign( qualifiedHash.getHash(), canonicalName );
         }
+
+        // 옛 이름을 부모로 적은 타입이 이제 이 타입에 이어진다 — 그 자손을 다시 짓는다(배치 안이면 배치 끝이).
+        vector<TypeInfo*> listAffected;
+        if ( _batchDepth != 0 )
+        {
+            _uniqueBatchRoot.insert( &stored );
+        }
+        else
+        {
+            collectAffectedLocked( unordered_set<const TypeInfo*>{ &stored }, listAffected );
+            clearAffectedLocked( listAffected );
+        }
+        lock.unlock();
+        rebuildAffected( listAffected );
     }
 
     void TypeRegistry::registerEnumAlias( const utf8* pAliasName, const utf8* pCanonicalName )

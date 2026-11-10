@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/EnumUtil.h"
 #include "Core/Foundation/StdHeaders.h"
@@ -159,16 +160,11 @@ namespace sw
         }
 
         /**
-         * @brief 등록된 모든 타입의 지연 조회 캐시를 만들어 둡니다. 등록 배치가 끝난 뒤 부릅니다.
-         * @details `TypeInfo` 는 이름→프로퍼티 맵과 상속 병합 목록을 **첫 조회 때 `mutable` 로,
-         *          잠금 없이** 채운다. 그래서 워커 둘이 같은 타입을 처음 조회하면 같은 맵에 동시에
-         *          삽입한다. 등록이 끝난 직후 **단일 스레드에서** 한 번 만들어 그 틈을 없앤다.
-         *
-         *          `TypeInfo` 는 `unique_ptr` 로 보관해 주소가 고정이므로 등록하는 곳에서 만들어도 사라지지는
-         *          않는다. 그래도 배치 끝 한 곳에서 만드는 이유는 위의 단일 스레드 보장이다. 재등록은 같은
-         *          객체에 덮어쓰며 캐시를 비우므로, 그 뒤에도 여기서 다시 만든다.
-         * @note 레지스트리 잠금을 **잡지 않은 채** 만든다. 상속 병합이 부모를 찾으려고 레지스트리를
-         *       다시 잠그는데 `shared_mutex` 는 재귀 잠금이 안 되므로, 잠금 안에서 부르면 그 자리에서 멈춘다.
+         * @brief 살아 있는 **모든** 타입의 파생 캐시(이름 맵 · 상속 병합 목록 · 부모 포인터 · 조상 표 · 판정)를 다시 짓습니다.
+         * @details 등록 · 별칭 · 해제는 바뀐 타입과 그 자손만 스스로 다시 짓는다(배치 안이면 배치 끝이 한 번에) — 이 함수는 전체를 다시 지을 때
+         *          (테스트, 진단)만 쓴다. 조회는 지어 둔 것을 읽기만 한다.
+         * @note 레지스트리 잠금을 **잡지 않은 채** 짓는다. 부모를 찾으려고 레지스트리를 다시 잠그는데 `shared_mutex` 는 재귀 잠금이 안 되므로,
+         *       잠금 안에서 부르면 그 자리에서 멈춘다.
          */
         void populateLookupCaches() const;
 
@@ -314,6 +310,19 @@ namespace sw
         /** @brief 열거형 @p info 에 에디터 메타데이터를 붙입니다(`attachEditorMetadata` 의 짝). 잠금 안에서 부른다. */
         void attachEditorMetadata( EnumInfo& info ) SW_REQUIRES_LOCK( _mutex );
 
+        /** @brief 이름 · 별칭으로 타입을 찾습니다(잠금 안). @p bIncludeDead 이면 묘비도 돌려줍니다 — 해제가 내려가는 타입의 자손을 찾을 때 쓴다. */
+        TypeInfo* findTypeLocked( const hashed_string& nameOrFqn, bool bIncludeDead ) const SW_REQUIRES_LOCK( _mutex );
+        /**
+         * @brief @p uniqueRoot 의 타입이거나 그 자손인 살아 있는 타입을 @p outListType 에 더합니다(잠금 안). 부모 이름을 걸어 올라가 본다 — 타입 수 × 사슬 깊이.
+         * @details 상속 캐시를 비우고 다시 짓는 범위다. 예전에는 등록 한 번마다 **모든** 타입을 비워 무관한 키트 하나가 오를 때도 모든 상속 목록이
+         *          다시 지어졌다(밖에서 든 `const PropertyInfo*` 가 매달리고 등록이 O(타입²)). 언리얼도 클래스를 다시 올릴 때 그 자식 클래스만 다시 잇는다.
+         */
+        void collectAffectedLocked( const unordered_set<const TypeInfo*>& uniqueRoot, vector<TypeInfo*>& outListType ) const SW_REQUIRES_LOCK( _mutex );
+        /** @brief @p listType 의 부모 포인터 · 조상 표 · 상속 캐시를 비웁니다(잠금 안). 다시 짓기 전까지 그 목록을 묻는 쪽은 멈춘다(옛 포인터를 읽지 않는다). */
+        void clearAffectedLocked( const vector<TypeInfo*>& listType ) SW_REQUIRES_LOCK( _mutex );
+        /** @brief @p listType 의 파생 캐시를 다시 짓습니다(**잠금 밖**, 단일 스레드 — 부모를 찾으려고 레지스트리를 다시 잠근다). */
+        void rebuildAffected( const vector<TypeInfo*>& listType ) const SW_EXCLUDES_LOCK( _mutex );
+
         /** @brief 템플릿 enum 의 EnumInfo 입니다. 찾는 규칙은 `findEnumByTypeFqn` 입니다. */
         template <typename E>
         const EnumInfo* findEnumOf() const
@@ -357,6 +366,10 @@ namespace sw
         atomic<bool> _bAllModuleTypesRegistered;
         /** @brief 상속 캐시를 비운 타입 수의 누계입니다(`getInheritedCacheInvalidations`). 잠금 안에서 더하고 아무 데서나 읽는다. */
         atomic<uint64> _inheritedCacheInvalidations{ 0 };
+        /** @brief `registerPendingTypes` 의 깊이입니다. 0 이 아니면 `registerClass` · 별칭은 바뀐 타입만 모으고(`_uniqueBatchRoot`), 배치 끝이 자손을 한 번에 찾아 다시 짓는다. */
+        uint32 _batchDepth SW_GUARDED_BY( _mutex ){ 0 };
+        /** @brief 이 배치에서 다시 등록됐거나 별칭이 붙은 타입입니다. */
+        unordered_set<const TypeInfo*> _uniqueBatchRoot SW_GUARDED_BY( _mutex );
     };
 
     SW_SERVICE_SLOT( TypeRegistry, Required );

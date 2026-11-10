@@ -146,8 +146,8 @@ namespace sw
     void PostProcessValues::blendOverrides( PostProcessValues& inoutValues, const PostProcessValues& target, const PostProcessOverrides& overrides, float32 weight )
     {
         // 값 칸과 표시 칸은 같은 차례다(단위 테스트 PostProcessVolumeTest.OverrideFlagsPairEveryValue 가 이름으로 대조한다). 칸을 더해도 이 함수는 그대로다.
-        const vector<PropertyInfo>& listValue    = PostProcessValues::StaticType()->getPropertiesWithBase();
-        const vector<PropertyInfo>& listOverride = PostProcessOverrides::StaticType()->getPropertiesWithBase();
+        const PropertyListView listValue    = PostProcessValues::StaticType()->getPropertiesWithBase();
+        const PropertyListView listOverride = PostProcessOverrides::StaticType()->getPropertiesWithBase();
         SW_ASSERT( listValue.size() == listOverride.size() );
         const float32 alpha = MathUtil::saturate( weight );
         const size_t  count = MathUtil::min( listValue.size(), listOverride.size() );

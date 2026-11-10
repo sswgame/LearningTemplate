@@ -172,8 +172,8 @@ namespace sw
 
     bool UIStyleFieldTable::tryFindField( string_view name, UIStyleField& outField )
     {
-        const vector<PropertyInfo>& listProperty = WidgetStyle::StaticType()->getPropertiesWithBase();
-        const uint32                fieldCount   = MathUtil::min( static_cast<uint32>( listProperty.size() ), static_cast<uint32>( UIStyleField::Count ) );
+        const PropertyListView listProperty = WidgetStyle::StaticType()->getPropertiesWithBase();
+        const uint32           fieldCount   = MathUtil::min( static_cast<uint32>( listProperty.size() ), static_cast<uint32>( UIStyleField::Count ) );
         for ( uint32 index = 0; index < fieldCount; ++index )
         {
             if ( name == listProperty[index]._name.view() )

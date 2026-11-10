@@ -590,10 +590,10 @@ namespace sw
         if ( pInstance == nullptr || src.isObject() == false )
             return FieldReadResult::FieldFailed;
 
-        const vector<PropertyInfo>& listProp = typeInfo.getPropertiesWithBase();
-        unordered_set<uint32>       uniqueMatched;
-        bool                        bFieldError{ false };
-        bool                        bForbiddenField{ false };
+        const PropertyListView listProp = typeInfo.getPropertiesWithBase();
+        unordered_set<uint32>  uniqueMatched;
+        bool                   bFieldError{ false };
+        bool                   bForbiddenField{ false };
         // 소프트 읽기(orphan 목록이 있음)는 읽지 못한 필드를 orphan 으로 넘기고 이어 읽는다. 그 필드는 **읽기 전 값**이다(바이너리 · XML 과 같다).
         const bool           bContinuesAfterUnreadable = pOutListOrphan != nullptr;
         PropertyReadRollback rollback;

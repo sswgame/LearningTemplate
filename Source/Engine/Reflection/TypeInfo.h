@@ -9,6 +9,74 @@
 
 namespace sw
 {
+    /**
+     * @brief 상속 포함 프로퍼티 목록의 읽기 뷰입니다(`TypeInfo::getPropertiesWithBase`). 원소는 그 프로퍼티를 **선언한 타입**의 `_listProperty` 에 있습니다.
+     * @details 예전에는 부모 목록을 값으로 복사해 들어, 무관한 타입이 하나 등록될 때마다 모든 타입이 사본을 비우고 다시 지었다 — 밖에서 든
+     *          `const PropertyInfo*`(UI 바인딩 · 시퀀서 트랙)가 매달렸다. 지금은 선언한 타입의 원소를 가리키는 포인터 배열이라, 그 타입 자신이
+     *          다시 등록되거나 내려가기 전까지 포인터가 산다(언리얼 `FProperty` 사슬이 선언 클래스의 것을 가리키는 것과 같은 자리).
+     *          부모가 없는 타입은 자기 `_listProperty` 를 그대로 본다(포인터 배열을 따로 짓지 않는다).
+     */
+    class PropertyListView
+    {
+    public:
+        class Iterator
+        {
+        public:
+            Iterator( const PropertyInfo* pValue, const PropertyInfo* const* ppItem ) noexcept
+                : _pValue{ pValue }
+                , _ppItem{ ppItem }
+            {
+            }
+            const PropertyInfo& operator*() const noexcept { return _ppItem != nullptr ? **_ppItem : *_pValue; }
+            const PropertyInfo* operator->() const noexcept { return &**this; }
+            Iterator&           operator++() noexcept
+            {
+                if ( _ppItem != nullptr )
+                    ++_ppItem;
+                else
+                    ++_pValue;
+                return *this;
+            }
+            bool operator==( const Iterator& other ) const noexcept { return _pValue == other._pValue && _ppItem == other._ppItem; }
+            bool operator!=( const Iterator& other ) const noexcept { return ( *this == other ) == false; }
+
+        private:
+            const PropertyInfo*        _pValue; ///< 값 배열을 볼 때의 위치(`_ppItem` 이 nullptr 일 때)
+            const PropertyInfo* const* _ppItem; ///< 포인터 배열을 볼 때의 위치
+        };
+
+        /** @brief 값 배열(부모 없는 타입의 `_listProperty`)을 봅니다. */
+        PropertyListView( const PropertyInfo* pValues, size_t count ) noexcept
+            : _pValues{ pValues }
+            , _ppItems{ nullptr }
+            , _count{ count }
+        {
+        }
+        /** @brief 선언 목록(`TypeInfo::_listProperty`)을 그대로 봅니다 — 목록을 받는 도구(`SerializerUtil::matchProperty`)에 자기 선언만 넘길 때 쓴다. */
+        PropertyListView( const vector<PropertyInfo>& listProperty ) noexcept // NOLINT(google-explicit-constructor): 선언 목록도 같은 뷰로 받는다
+            : PropertyListView{ listProperty.data(), listProperty.size() }
+        {
+        }
+        /** @brief 포인터 배열(상속 병합 목록)을 봅니다. */
+        PropertyListView( const PropertyInfo* const* ppItems, size_t count ) noexcept
+            : _pValues{ nullptr }
+            , _ppItems{ ppItems }
+            , _count{ count }
+        {
+        }
+
+        size_t              size() const noexcept { return _count; }
+        bool                empty() const noexcept { return _count == 0; }
+        const PropertyInfo& operator[]( size_t index ) const noexcept { return _ppItems != nullptr ? *_ppItems[index] : _pValues[index]; }
+        Iterator            begin() const noexcept { return _ppItems != nullptr ? Iterator{ nullptr, _ppItems } : Iterator{ _pValues, nullptr }; }
+        Iterator            end() const noexcept { return _ppItems != nullptr ? Iterator{ nullptr, _ppItems + _count } : Iterator{ _pValues + _count, nullptr }; }
+
+    private:
+        const PropertyInfo*        _pValues;
+        const PropertyInfo* const* _ppItems;
+        size_t                     _count;
+    };
+
     /// @brief 등록된 타입의 정보입니다. FQN, 프로퍼티, 메서드, 생성 가능 여부를 담습니다.
     struct SW_API TypeInfo
     {
@@ -41,19 +109,24 @@ namespace sw
          * @brief 고정 배치형(B) 코덱 테이블입니다(`Engine/Serialization/Fixed/FixedLayout.h`). 코드젠이 모든 `REFLECT` 타입에 채우고, 적격이 아니면
          *        이유만 든 테이블입니다. 코드젠을 거치지 않은 타입(내장 스칼라)은 nullptr 입니다. 모듈 코드를 가리키므로 `clearContent` 가 비웁니다.
          */
-        const FixedCodec*                                         _pFixedCodec;
-        hashed_string                                             _name;
-        hashed_string                                             _fullyQualifiedName;
-        hashed_string                                             _parentFQN;
-        hashed_string                                             _moduleName;
-        vector<PropertyInfo>                                      _listProperty;
-        vector<FunctionInfo>                                      _listMethod;
-        vector<EventInfo>                                         _listEvent; ///< 이 타입이 선언한 이벤트다. 기반 타입의 이벤트는 `findEventInHierarchy` 가 따라 올라가며 찾는다
-        ReflectMetadataBox<TypeMetadata>                          _metadata;  ///< `REFLECT()` 에 적은 메타데이터(`ReflectionMetadata.h`)
-        mutable vector<PropertyInfo>                              _listPropertyWithBase;
-        mutable unordered_map<hashed_string, const PropertyInfo*> _mapNameToPropertyWithBase; ///< 계층 병합 목록에서 이름과 별칭으로 항목을 찾는 맵이다. 목록과 함께 만든다
-        mutable unordered_map<hashed_string, const PropertyInfo*> _mapNameToProperty;
-        mutable unordered_map<hashed_string, const FunctionInfo*> _mapNameToMethod;
+        const FixedCodec*                _pFixedCodec;
+        hashed_string                    _name;
+        hashed_string                    _fullyQualifiedName;
+        hashed_string                    _parentFQN;
+        hashed_string                    _moduleName;
+        vector<PropertyInfo>             _listProperty;
+        vector<FunctionInfo>             _listMethod;
+        vector<EventInfo>                _listEvent; ///< 이 타입이 선언한 이벤트다. 기반 타입의 이벤트는 `findEventInHierarchy` 가 따라 올라가며 찾는다
+        ReflectMetadataBox<TypeMetadata> _metadata;  ///< `REFLECT()` 에 적은 메타데이터(`ReflectionMetadata.h`)
+        /**
+         * @brief 상속 병합 목록입니다 — 기반부터, 파생이 같은 이름을 제자리에서 덮는다. 원소는 선언한 타입의 `_listProperty` 를 가리킨다(`PropertyListView`).
+         * @details `TypeRegistry` 가 등록 · 해제 때 **그 타입과 자손만** 다시 짓는다(`rebuildDerivedCaches`). 조회는 읽기만 한다 — `mutable` 지연 캐시가
+         *          워커의 첫 조회와 등록 사이에서 경합하던 자리다.
+         */
+        vector<const PropertyInfo*>                       _listPropertyWithBase;
+        unordered_map<hashed_string, const PropertyInfo*> _mapNameToPropertyWithBase; ///< 계층 병합 목록에서 이름과 별칭으로 항목을 찾는 맵이다. 목록과 함께 만든다
+        unordered_map<hashed_string, const PropertyInfo*> _mapNameToProperty;
+        unordered_map<hashed_string, const FunctionInfo*> _mapNameToMethod;
         /**
          * @brief `_parentFQN` 을 한 번 찾아 둔 부모 `TypeInfo` 입니다. 없거나 아직 찾지 못했으면 nullptr 입니다.
          * @details `isDerivedFrom` 이 조상마다 `findType(_parentFQN)`(shared_mutex 잠금과 해시맵 조회)을 부르지 않도록,
@@ -77,25 +150,23 @@ namespace sw
         /** @brief `REFLECT( Static )` 타입(함수 라이브러리)입니다. `FunctionMetadata::_bStatic` 과는 다릅니다. */
         uint8 _bStatic : 1;
         /** @brief 내장 스칼라나 문자열 타입입니다(int32, bool, sw::string 등). REFLECT 코드젠이 없습니다. */
-        uint8         _bPrimitive                 : 1;
-        mutable uint8 _bIsCacheBuilt              : 1;
-        mutable uint8 _bIsPODFastPath             : 1;
-        mutable uint8 _bIsPODCalculated           : 1;
-        mutable uint8 _bListPropertyWithBaseBuilt : 1;
+        uint8 _bPrimitive                 : 1;
+        uint8 _bIsCacheBuilt              : 1; ///< 자기 이름 맵(`_mapNameToProperty` · `_mapNameToMethod`)을 지었다. 아니면 이름 조회는 선형으로 찾는다
+        uint8 _bListPropertyWithBaseBuilt : 1; ///< 상속 병합 목록을 지었다(`rebuildDerivedCaches`). 부모가 있는데 아니면 `getPropertiesWithBase` 가 멈춘다
         /**
-         * @brief `getPropertiesWithBase()` 가 지금 이 타입에서 재귀 중인지 나타냅니다.
-         * @details 부모 체인이 순환하면(`_parentFQN` 이 자기 자신이나 자손을 가리키면) 재귀가 끝나지 않아 스택이 넘친다.
-         *          `_parentFQN` 은 코드젠이 적는 값이지만 `registerClass` 는 공개 API 이고 이 값을 검사하지 않는다.
-         *          모듈을 따로 등록하는 핫 리로드에서는 A→B→A 순환이 만들어질 수 있다.
+         * @brief 아래 셋은 상속 목록과 함께 `rebuildDerivedCaches` 가 미리 구하는 판정입니다. 레지스트리 밖 사본만 첫 조회가 구한다(그 사본은 만든 스레드만 쓴다).
+         * @details 검증 함수 유무(`ReflectionValidation::hasValidator`)는 칸 타입을 따라 다른 타입의 판정을 재귀로 묻는다 — 그 타입이 같은 배치에서 아직
+         *          다시 지어지지 않았을 수 있어 지연 계산 자리를 남긴다. 등록이 끝난 뒤에는 모두 계산돼 있어 읽기만 한다.
          */
-        mutable uint8 _bBuildingPropertyWithBase : 1;
-        /** @brief `hasSaveGameProperty` 의 결과와 계산 여부입니다. 상속 목록 캐시와 함께 비웁니다. */
+        mutable uint8 _bIsPODFastPath   : 1;
+        mutable uint8 _bIsPODCalculated : 1;
+        /** @brief `hasSaveGameProperty` 의 결과와 계산 여부입니다. */
         mutable uint8 _bHasSaveGameProperty : 1;
         mutable uint8 _bSaveGameCalculated  : 1;
-        /** @brief `ReflectionValidation::hasValidator` 의 결과와 계산 여부입니다. 상속 목록 캐시와 함께 비웁니다. */
+        /** @brief `ReflectionValidation::hasValidator` 의 결과와 계산 여부입니다. */
         mutable uint8          _bHasValidator        : 1;
         mutable uint8          _bValidatorCalculated : 1;
-        [[maybe_unused]] uint8 _reservedCacheFlags   : 4;
+        [[maybe_unused]] uint8 _reservedCacheFlags   : 5;
         [[maybe_unused]] uint8 _reservedPadding[2];
 
         /** @brief 비어 있는 TypeInfo 를 만듭니다. */
@@ -181,17 +252,23 @@ namespace sw
             _castHeader._ancestorDepth.store( constant::reflection::kAncestorDepthUnknown, std::memory_order_relaxed );
         }
         /**
-         * @brief 부모에게서 **복사해 온** 캐시(상속 포함 목록, 그 이름 맵, POD 판정)를 비웁니다. 다음 조회는 현재 부모로 다시 만듭니다.
-         * @details 등록이나 해제 뒤에 `TypeRegistry` 가 모든 타입에 대해 부른다. 이 함수가 없으면 기반 타입을 다시 등록하거나 해제해도
-         *          **다른 모듈의 파생 타입**이 이전 기반의 프로퍼티(이전 오프셋, 해제된 모듈 코드를 가리키는 접근자)를 계속 노출한다.
+         * @brief 부모에게서 **물려받은** 캐시(상속 포함 목록, 그 이름 맵, POD · 세이브 · 검증 판정)를 비웁니다. 다시 지을 때까지 상속 목록을 물으면 멈춥니다.
+         * @details 기반이 다시 등록되거나 내려갈 때 `TypeRegistry` 가 **그 자손에게만** 부르고, 잠금을 푼 뒤 `rebuildDerivedCaches` 로 다시 짓는다.
+         *          예전에는 등록 한 번마다 모든 타입을 비워 등록 비용이 O(타입²) 였다.
          */
-        void clearInheritedProperties() const;
+        void clearInheritedProperties();
         /**
          * @brief 선언에서 **파생된** 캐시(이름 맵, 상속 포함 목록, 부모 포인터, 조상 테이블, POD 판정)를 모두 비웁니다.
          * @details 복사 대입과 이동 대입이 함께 쓴다. 캐시를 추가하면 여기서도 비워야 한다. 빠뜨리면 대입된 타입이 **이전 타입의 캐시**로 답한다
          *          (이름으로 조회하면 다른 오프셋을 준다).
          */
         void invalidateDerivedCaches();
+        /**
+         * @brief 자기 이름 맵과 상속 병합 목록 · 그 이름 맵을 지금의 부모 사슬로 다시 짓습니다. `TypeRegistry` 가 등록 · 해제 뒤 잠금 밖, 단일 스레드에서 부릅니다.
+         * @details 사슬의 단계마다 **자기 선언 목록**만 접어 넣으므로(부모의 병합 목록을 읽지 않는다) 같은 배치에서 부모가 아직 다시 지어지지 않았어도 답이 같다.
+         *          사슬이 순환하면(`_parentFQN` 이 자손을 가리키는 핫 리로드) 오류를 남기고 자기 목록만 둔다. 판정(POD · 세이브 · 검증)은 부르는 쪽이 이어서 구한다.
+         */
+        void rebuildDerivedCaches();
         /** @brief 레지스트리에 살아 있으면 true 입니다. 모듈을 해제하면 내려가고 다시 등록하면 올라갑니다. 사본은 항상 true 입니다. */
         bool isAlive() const { return _castHeader.isAlive(); }
         /**
@@ -203,69 +280,34 @@ namespace sw
         void clearContent();
 
         /**
-         * @brief 자신과 상속한 기반의 프로퍼티입니다(단일 부모 체인).
-         * @details 자식의 이름이 부모를 덮어쓴다. 단일 상속에서만 안전하다.
+         * @brief 자신과 상속한 기반의 프로퍼티입니다(단일 부모 체인). 원소는 선언한 타입의 것입니다(`PropertyListView`).
+         * @details 자식의 이름이 부모를 제자리에서 덮어쓴다. 단일 상속에서만 안전하다. 부모가 있는 타입은 `rebuildDerivedCaches` 가 지은 뒤에만 부를 수 있다 —
+         *          레지스트리에 든 타입은 등록이 짓는다. 짓지 않은 사본(레지스트리 밖에서 손으로 만든 파생 타입)에 부르면 조용히 자기 목록만 주지 않고 멈춘다.
          */
-        const vector<PropertyInfo>& getPropertiesWithBase() const;
+        PropertyListView getPropertiesWithBase() const;
 
-        /**
-         * @brief 이름으로 프로퍼티와 메서드를 찾는 조회 캐시를 만듭니다.
-         * @warning **여러 스레드가 동시에 부르면 안 됩니다.** `mutable` 맵 두 개를 잠금 없이 채웁니다.
-         *          두 스레드가 같은 `TypeInfo` 를 처음 조회하면 같은 맵에 동시에 삽입합니다.
-         *          그래서 `TypeRegistry::populateLookupCaches()` 가 **등록 배치가 끝난 직후 단일
-         *          스레드에서** 한 번 만듭니다. 등록된 타입을 병렬로 조회하는 것은 그 뒤이므로 안전합니다.
-         *          등록하지 않은 임시 사본은 만든 스레드만 씁니다.
-         */
-        void populateLookupCache() const
-        {
-            if ( _bIsCacheBuilt != SW_FALSE )
-                return;
-
-            _mapNameToProperty.reserve( _listProperty.size() * 2 );
-            _mapNameToMethod.reserve( _listMethod.size() );
-
-            for ( const PropertyInfo& propertyInfo : _listProperty )
-            {
-                _mapNameToProperty[propertyInfo._name] = &propertyInfo;
-                for ( const hashed_string& alias : propertyInfo._listAlias )
-                {
-                    if ( alias.empty() == false )
-                        _mapNameToProperty[alias] = &propertyInfo;
-                }
-            }
-
-            for ( const FunctionInfo& method : _listMethod )
-            {
-                _mapNameToMethod[method._hashName] = &method;
-            }
-
-            _bIsCacheBuilt = SW_TRUE;
-        }
-
-        /** @brief 조회 캐시가 이미 만들어져 있으면 true 입니다(`populateLookupCaches` 뒤에는 true 입니다). */
+        /** @brief 자기 이름 맵이 지어져 있으면 true 입니다(레지스트리에 든 타입은 등록 뒤 늘 true 입니다). */
         bool isLookupCacheBuilt() const { return _bIsCacheBuilt != SW_FALSE; }
 
-        /** @brief 이름이나 별칭으로 프로퍼티를 찾습니다. */
+        /** @brief 이름이나 별칭으로 프로퍼티를 찾습니다. 맵을 짓지 않은 사본은 선형으로 찾습니다(같은 답, 읽기만 한다). */
         const PropertyInfo* findProperty( const hashed_string& propertyNameOrAlias ) const
         {
-            if ( _listProperty.size() <= constant::reflection::kLinearSearchThreshold )
+            if ( _bIsCacheBuilt == SW_FALSE || _listProperty.size() <= constant::reflection::kLinearSearchThreshold )
             {
                 return VectorUtil::findIf( _listProperty, [&]( const PropertyInfo& propertyInfo )
                 { return propertyInfo.matchesName( propertyNameOrAlias ); } );
             }
 
-            populateLookupCache();
             auto it = _mapNameToProperty.find( propertyNameOrAlias );
             return it != _mapNameToProperty.end() ? it->second : nullptr;
         }
 
-        /** @brief 이름으로 메서드를 찾습니다. */
+        /** @brief 이름으로 메서드를 찾습니다. 맵을 짓지 않은 사본은 선형으로 찾습니다. */
         const FunctionInfo* findMethod( const hashed_string& methodName ) const
         {
-            if ( _listMethod.size() <= constant::reflection::kLinearSearchThreshold )
+            if ( _bIsCacheBuilt == SW_FALSE || _listMethod.size() <= constant::reflection::kLinearSearchThreshold )
                 return VectorUtil::findBy<&FunctionInfo::_hashName>( _listMethod, methodName );
 
-            populateLookupCache();
             auto it = _mapNameToMethod.find( methodName );
             return it != _mapNameToMethod.end() ? it->second : nullptr;
         }

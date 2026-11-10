@@ -200,7 +200,7 @@ SW_TEST_CASE( VFXEffectDefTest, UserValuesMultiplyTheOutput )
 /** @brief [VFXEffectDefTest] 방출기의 모든 리플렉션 칸이 모듈 표에 줄을 가진다 — 칸을 더하고 대상을 선언하지 않는 길을 막는다 */
 SW_TEST_CASE( VFXEffectDefTest, EveryEmitterFieldDeclaresItsTargets )
 {
-    const vector<PropertyInfo>& listProperty = VFXEmitterDef::StaticType()->getPropertiesWithBase();
+    const PropertyListView listProperty = VFXEmitterDef::StaticType()->getPropertiesWithBase();
     SW_REQUIRE_FALSE( listProperty.empty() );
     for ( const PropertyInfo& property : listProperty )
     {

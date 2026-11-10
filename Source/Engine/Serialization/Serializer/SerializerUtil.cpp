@@ -1043,7 +1043,7 @@ namespace sw
         return left == right;
     }
 
-    const PropertyInfo* SerializerUtil::matchProperty( const vector<PropertyInfo>& listProp, string_view keyRaw )
+    const PropertyInfo* SerializerUtil::matchProperty( PropertyListView listProp, string_view keyRaw )
     {
         // 지금 이름을 모두 본 뒤에만 옛 이름(Alias)을 본다. 앞 프로퍼티의 옛 이름이 뒤 프로퍼티의 지금 이름을 가로채지 않는다.
         for ( const PropertyInfo& prop : listProp )
@@ -1062,7 +1062,7 @@ namespace sw
         return nullptr;
     }
 
-    optional<uint32> SerializerUtil::findPropertyIndexByNameHash( const vector<PropertyInfo>& listProp, uint32 nameHash )
+    optional<uint32> SerializerUtil::findPropertyIndexByNameHash( PropertyListView listProp, uint32 nameHash )
     {
         for ( size_t propIndex = 0; propIndex < listProp.size(); ++propIndex )
         {
