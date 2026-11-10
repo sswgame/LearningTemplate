@@ -41,12 +41,7 @@
 
 ### 5. 작업자 · 설계 문서가 남긴 일
 
-- **`game-gpu-includes` 를 타깃 게이트 껍데기로(진행 중):** 메시 GPU 버퍼는 `MeshRenderData`, 머티리얼 바인딩 쌍은 `MaterialRenderBinding.h` 로 뗐고 `TextureCache.h` 는 RHI · `Texture2D.h` 를 보지 않는다 — 게임 코드가 RHI 에 닿는 파일 43(`Client/` · `Editor/` 밖 20), 직접 include 는 `Client/` · `Editor/` 포함 0. 남은 잎(include 닫힘으로 센 것):
-  - `Material.h` · `MaterialInstance.h` 의 `RHIRenderResource` 상속(빌린 텍스처 반환 통보) → 메시처럼 멤버 프록시로.
-  - `MaterialTypes.h` 의 `RHIRenderState.h`(`RHIRenderStateOverride` · `RHIBlendTargetState` · `RHIBlendMode` · `RHIOpaqueDrawBand` → `RHIEnums.h`) · `RHIHandles.h`(`RHIDescriptorIndex`) — 저작 값이라 언리얼 `EBlendMode` 처럼 엔진 쪽 형식으로 두고 렌더러가 RHI 로 옮긴다.
-  - `VFXEffectDef.h` 의 `AssetRef<Texture2D>` 가 `Texture2D::kAssetType` 완전 형식을 요구해 `Texture2D.h`(RHI) 를 include — 텍스처 에셋 종류를 GPU 객체와 떼거나 생성자를 .cpp 로.
-  - `Client/` 만 닿는 둘: `CanvasDrawList.h`(`RHIScissorRect` · `shaderslot::kCanvasTextureCount` → 주인 상수 + static_assert), `RenderExtension.h`(`Games/Empty/Client/Dev/EmptyRenderDemo` 가 렌더 확장을 직접 짓는다 — 게이트는 타깃 단위라 폴더로 빼지 못한다: 데모를 DevTools · 에디터 확장으로 옮기거나 `[allow]` 로).
-  그 뒤 TargetLayers `[gate]` 의 gameframework · kit · game 에 `Engine/Graphics/RHI` · `Engine/Graphics/Shader` 를 더하고 린트를 지운다.
+- **`game-gpu-includes` 게이트 통합 검증:** 게임 타깃(`gameframework` · `kit` · `game`)의 `[gate]` 에 `Engine/Graphics/RHI` · `Engine/Graphics/Shader` 를 더했고(연 헤더는 `[allow]` 의 `RHIEnums.h` 하나) 린트 `game-gpu-includes` 는 지웠다 — 머티리얼 디바이스 통보는 멤버 `RHIRenderResourceHook`, 렌더 상태 어휘는 `Engine/Graphics/RenderState/`, 머티리얼 텍스처 인덱스는 `MaterialTextureIndex`, `VFXEmitterDef` 생성자는 .cpp, 캔버스는 `CanvasScissorRect` · `CanvasBatch::kMaxTextureCount`. include 닫힘으로 센 게임 파일의 RHI · Shader 닿음 46 → 0(에디터 플러그인 셋 제외 — 게이트 밖 타깃). 통합에서 configure(게이트 껍데기 생성) · Windows Debug/Release · 서버 · Linux 빌드로 확인한다 — 세기 스크립트는 pch · 생성 헤더(`*.generated.h` · `FlagOps.gen.h`)를 보지 않았다.
 - **에디터 MVVM 측정(통합):**
   - Hierarchy: 큐브 8000 루트 씬에서 Hierarchy 창을 연 프레임 시간을 옮기기 전 커밋과 대조한다(모두 접힘 · 루트 하나 펼침 · 맨 아래로 스크롤). 나빠졌으면 원인을 `HierarchyViewModel::gather` 에서 찾는다.
   - 인스펙터 값 행: 프로퍼티 많은 대상(컴포넌트 여럿을 단 오브젝트 · 프로젝트 설정 · 펼친 큰 배열)에서 인스펙터 프레임 시간과 `Editor.InspectorFilledRows` · `Editor.InspectorSkippedRows` 를 값 행 전 커밋과 대조한다(맨 위 · 맨 아래로 스크롤 · 스크롤 중). 나빠졌으면 `PropertyGridModel::gather` 의 행 채우기(값 사본 · 기본값 비교 · 혼합)에서 찾는다.
