@@ -1,4 +1,4 @@
-# 엔진 층 표 — 읽는 곳은 Scripts/generate/EngineLayers.py(→ EngineLayers.cmake). 예전 린트 게이트 engine-layers(include 글자 검사)를 빌드 형식이 대신한다:
+# 엔진 층 표 — 읽는 곳은 Scripts/generate/ModuleLayers.py(→ EngineLayers.cmake). 예전 린트 게이트 engine-layers(include 글자 검사)를 빌드 형식이 대신한다:
 # Source/Engine/CMakeLists.txt 가 층마다 부분(OBJECT, 오브젝트는 Engine 이미지 안)을 짓고 위 층 헤더 자리에 #error 껍데기를 놓아, 위 층 헤더 include 가
 # 컴파일에서 멈춘다(헤더를 거쳐 닿는 전이 include 도 같다) — 언리얼 Core → CoreUObject → Engine → Renderer 같은 모듈 DAG.
 #
