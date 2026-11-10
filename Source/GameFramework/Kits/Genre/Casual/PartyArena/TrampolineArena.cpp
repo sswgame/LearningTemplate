@@ -417,7 +417,7 @@ namespace sw
             body._velocity._x  = direction._x * _settings._attackDashSpeed;
             body._velocity._z  = direction._z * _settings._attackDashSpeed;
             body._velocity._y  = MathUtil::max( body._velocity._y, 0.0f );
-            pushEvent( TrampolineEvent::Kind::Attacked, player, constant::invalid_index::kInt32, 0 );
+            pushEvent( TrampolineEvent::Kind::Attacked, player, nullopt, 0 );
         }
 
         if ( body._attackTimer.isActive() )
@@ -488,7 +488,7 @@ namespace sw
         body._attackTimer.clear(); // 남겨 두면 튀어 오른 뒤 돌진이 이어져 중력 없이 떠올랐다
         body._landTime = _time;
         body._contactTimer.start( _settings._contactTime );
-        pushEvent( TrampolineEvent::Kind::Landed, player, constant::invalid_index::kInt32, 0 );
+        pushEvent( TrampolineEvent::Kind::Landed, player, nullopt, 0 );
         if ( body._bPounding == SW_FALSE )
             return;
 
@@ -510,9 +510,9 @@ namespace sw
             if ( knockBack( other, player, away, _settings._poundKnockback * body._knockbackDealt ) )
                 ++pushed;
         }
-        pushEvent( TrampolineEvent::Kind::GroundPound, player, constant::invalid_index::kInt32, pushed );
+        pushEvent( TrampolineEvent::Kind::GroundPound, player, nullopt, pushed );
         if ( body._combo > 0 )
-            pushEvent( TrampolineEvent::Kind::ComboBroken, player, constant::invalid_index::kInt32, body._combo );
+            pushEvent( TrampolineEvent::Kind::ComboBroken, player, nullopt, body._combo );
         body._combo         = 0;
         body._jumpPressTime = Internal::kNoPressTime;
     }
@@ -527,7 +527,7 @@ namespace sw
         else
         {
             if ( body._combo > 0 )
-                pushEvent( TrampolineEvent::Kind::ComboBroken, player, constant::invalid_index::kInt32, body._combo );
+                pushEvent( TrampolineEvent::Kind::ComboBroken, player, nullopt, body._combo );
             body._combo = 0;
         }
         float32 height = computeBounceHeight( body._combo );
@@ -604,11 +604,11 @@ namespace sw
 
     void TrampolineArena::ringOut( int32 player )
     {
-        TrampolinePlayer& body    = _listPlayer[static_cast<size_t>( player )];
-        const bool        bCredit = body._lastHitter >= 0 && _time - body._lastHitTime <= _settings._creditWindow;
-        const int32       credit  = bCredit ? body._lastHitter : constant::invalid_index::kInt32;
+        TrampolinePlayer&     body    = _listPlayer[static_cast<size_t>( player )];
+        const bool            bCredit = body._lastHitter >= 0 && _time - body._lastHitTime <= _settings._creditWindow;
+        const optional<int32> credit  = bCredit ? optional<int32>( body._lastHitter ) : nullopt;
         _match.reportKill( player, credit );
-        if ( credit < 0 && _settings._selfOutPenalty > 0 )
+        if ( credit.has_value() == false && _settings._selfOutPenalty > 0 )
             _match.addScore( player, -_settings._selfOutPenalty );
         body._state    = TrampolinePlayerState::Respawning;
         body._velocity = float3{};
@@ -625,7 +625,7 @@ namespace sw
         body._position              = makeSpawnPosition( player );
         body._invulnerableTimer.start( _settings._spawnInvulnerable );
         body._state = TrampolinePlayerState::Air;
-        pushEvent( TrampolineEvent::Kind::Respawned, player, constant::invalid_index::kInt32, 0 );
+        pushEvent( TrampolineEvent::Kind::Respawned, player, nullopt, 0 );
     }
 
     void TrampolineArena::pickUpItems()
@@ -683,7 +683,7 @@ namespace sw
         }
     }
 
-    void TrampolineArena::pushEvent( TrampolineEvent::Kind kind, int32 player, int32 other, int32 value )
+    void TrampolineArena::pushEvent( TrampolineEvent::Kind kind, int32 player, optional<int32> other, int32 value )
     {
         TrampolineEvent event;
         event._kind   = kind;

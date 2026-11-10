@@ -15,6 +15,7 @@
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -150,7 +151,7 @@ namespace sw
         float32               _knockbackTaken{ 1.0f }; ///< Heavy 동안 받는 밀림 배율
         float32               _knockbackDealt{ 1.0f };
         int32                 _combo{ 0 };
-        int32                 _lastHitter{ constant::invalid_index::kInt32 };
+        int32                 _lastHitter{ constant::invalid_index::kInt32 }; ///< 상태 바이트 칸이라 없으면 -1 이다
         uint8                 _bPounding{ SW_FALSE };
         uint8                 _bSuperBounce{ SW_FALSE };
         uint8                 _bShield{ SW_FALSE };
@@ -173,16 +174,16 @@ namespace sw
             Hit,           ///< `_player` 는 맞은 쪽, `_other` 는 때린 쪽이다
             ShieldBlocked, ///< `_player` 는 막은 쪽이다
             GroundPound,   ///< `_value` 는 밀린 사람 수이다
-            RingOut,       ///< `_player` 는 떨어진 쪽, `_other` 는 점수를 받은 쪽이다(-1 이면 없음)
+            RingOut,       ///< `_player` 는 떨어진 쪽, `_other` 는 점수를 받은 쪽이다(없으면 스스로 떨어졌다)
             Respawned,
             ItemPicked ///< `_itemID` 를 쓴다
         };
-        hashed_string _grade{};
-        hashed_string _itemID{};
-        int32         _player{ constant::invalid_index::kInt32 };
-        int32         _other{ constant::invalid_index::kInt32 };
-        int32         _value{ 0 };
-        Kind          _kind{ Kind::Landed };
+        hashed_string   _grade{};
+        hashed_string   _itemID{};
+        int32           _player{ constant::invalid_index::kInt32 };
+        optional<int32> _other{};
+        int32           _value{ 0 };
+        Kind            _kind{ Kind::Landed };
     };
 } // namespace sw
 
@@ -256,7 +257,7 @@ namespace sw
         void               respawn( int32 player );
         void               pickUpItems();
         void               applyItem( int32 player, const PartyItemDef& def );
-        void               pushEvent( TrampolineEvent::Kind kind, int32 player, int32 other, int32 value );
+        void               pushEvent( TrampolineEvent::Kind kind, int32 player, optional<int32> other, int32 value );
 
     private:
         vector<TrampolinePlayer>     _listPlayer;
