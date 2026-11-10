@@ -55,7 +55,6 @@
 - **W-R1 `FramePassExecutor` 분할 → 프레임 아레나:** 3257줄을 그래프 짓기 · 패스 라이브러리 · 제출로 나눈다(성능 변화 0). 그 뒤 프레임 지역 `vector` 를 `LinearAllocator` 기반 `frame_vector` 로 옮긴다(RT 프레임 힙 할당 0).
 - **W-R2 PSO 배치 색인(W-R1 뒤):** 배치를 만들 때 PSO 핸들을 한 번 풀어 둔다. `RT.PSO.ensureMaterial` 전후를 재고, 흔들림 안이면 되돌린다.
 - **W-E1 패널 열림 훅:** `IEditorPanel::onPanelOpened` 에서만 비동기 준비를 시작하고, View 는 준비 전에 뼈대만 그린다(3절 "첫 패널 느린 프레임" 측정이 후보를 고른다).
-- **W-G1 남은 것(파일 분할은 끝 — 통합 빌드로 확인):** 형 분할. `InputMap::ActionEntry` 를 정의(바인딩 · 기본 바인딩)와 프레임 상태(바인딩 상태 · 단계 · 값)로 가르고, `AbilityComponent` 의 스펙 · 활성 이펙트 목록을 컨테이너 형(언리얼 `FGameplayAbilitySpecContainer` · `FActiveGameplayEffectsContainer`)으로 옮긴다. 부품 경로 잇기가 `PrefabInstanceRegistry.cpp:75` · `SceneDocument.cpp:470` 에도 손으로 있다 — `PrefabPartOverride::joinPath` 로.
 
 ### 5-2. RHI 진단(2026-11-10 — 결함 먼저, 폴더가 겹치는 단위는 순서대로)
 
@@ -163,7 +162,7 @@ GameObject/Component API 는 저작 · 수명 · 직렬화 층으로 두고, 프
   - 엔티티 상태 바이트를 게임이 손으로 양자화한다. 그래서 칸 하나를 더하면 서버 · 클라 두 곳을 고쳐야 한다.
   - `PROPERTY( Replicated, Quantize = … )` 로 작성기를 생성하고, 스키마 해시를 와이어 버전에 합친다.
   - `kMaxEntityBytes` 초과는 첫 경고만 남기고 엔티티가 사라진다 — `registerEntity` 의 오류로 바꾼다.
-- **E1 되돌리기 남은 것:** 씬 명령은 `EditorTransaction&` 를 받고(`EditorCommandEdit::Scene` · `SceneDuringPlay`, 레지스트리가 연다) 시나리오 `editor/undocoverage`(`editor.undoCoverage`)가 생겼다 — 통합에서 돌려 실패 줄의 명령을 고친다. 형식 밖에 남은 것: `SceneUnrecorded`(베이크 · 이름 칸 · 프리셋 창 · 하위 메뉴)는 끝날 때 스스로 기록하고, `play.keepChanges` 는 `NoScene` 인데 씬을 바꾼다 — 끝 콜백도 거래를 받게 한다.
+- **E1 되돌리기 남은 것(통합에서):** 씬 명령 · 완료 함수(이름 확정 · 컴포넌트 더하기 · 프리셋 · Keep Simulation Changes)는 `EditorTransaction&` 를 받는다. 시나리오 `editor/undocoverage` 를 돌려 실패 줄의 명령을 고친다 — 컴포넌트 대상 명령(`SceneDuringPlay`)은 선택만으로는 꺼져 건너뛰므로 컴포넌트 대상을 주는 줄을 더한다. 굽기는 파생 데이터라 기록하지 않는다(결정, `EditorCommandEdit`).
 - **E2 런타임 디버거 한 자리(5-1 W-E1 뒤):** AI 섹션 · 시퀀스 디버거 · 애니 리와인드 · HUD 섹션을 `IDebugSource` 등록표 하나로 묶는다. 선택 오브젝트에 연동하는 패널을 둔다(언리얼 Gameplay Debugger 자리).
 - **G1 장르 수직 슬라이스(T1 · T2 뒤):** 완결 루프가 없는 게임마다 `slice.scenario.xml` 을 둔다(시작 → 목표 → 결과 → 저장 · 복원 해시 동일).
 

@@ -42,8 +42,8 @@ namespace sw
 
     AbilityComponent::AbilityComponent()
         : _listAttributeSet{}
-        , _listActiveEffect{}
-        , _listAbilitySpec{}
+        , _activeEffects{}
+        , _abilitySpecs{}
         , _ownedTagCounts{}
         , _ownedTagSubscription{}
         , _blockedAbilityTagCounts{}
@@ -89,7 +89,7 @@ namespace sw
         _gameplayCueMulticast.removeAll();
         _mapAttributeChangedMulticast.clear();
         clearAllAbilities();
-        _listActiveEffect.clear();
+        _activeEffects.clear();
         _listAttributeSet.clear();
         _mapGameplayEventMulticast.clear();
     }
@@ -120,26 +120,9 @@ namespace sw
 
         // 지울 것을 목록 밖으로 먼저 옮긴다. 소멸자(어빌리티의 작업 정리)가 이 컴포넌트를 불러도 목록은 이미 정리된 상태이다.
         vector<unique_ptr<ActiveGameplayEffect>> listRemovedEffect;
-        for ( size_t effectIndex = _listActiveEffect.size(); effectIndex > 0; --effectIndex )
-        {
-            unique_ptr<ActiveGameplayEffect>& pActiveEffect = _listActiveEffect[effectIndex - 1];
-            if ( pActiveEffect->_bPendingRemove == SW_TRUE )
-            {
-                listRemovedEffect.push_back( std::move( pActiveEffect ) );
-                _listActiveEffect.erase( _listActiveEffect.begin() + static_cast<ptrdiff_t>( effectIndex - 1 ) );
-            }
-        }
-
+        _activeEffects.takePendingRemovals( listRemovedEffect );
         vector<unique_ptr<AbilitySpec>> listRemovedSpec;
-        for ( size_t specIndex = _listAbilitySpec.size(); specIndex > 0; --specIndex )
-        {
-            unique_ptr<AbilitySpec>& pSpec = _listAbilitySpec[specIndex - 1];
-            if ( pSpec->_bPendingRemove == SW_TRUE )
-            {
-                listRemovedSpec.push_back( std::move( pSpec ) );
-                _listAbilitySpec.erase( _listAbilitySpec.begin() + static_cast<ptrdiff_t>( specIndex - 1 ) );
-            }
-        }
+        _abilitySpecs.takePendingRemovals( listRemovedSpec );
 
         // 소멸 중에 다시 지우기가 표시되면(드문 경우) 잠금 밖이므로 한 번 더 정리한다.
         ++_listLockDepth;
@@ -258,10 +241,10 @@ namespace sw
         const ScopedListLock lock{ *this };
         AbilityEventData     eventData;
         eventData._eventTag    = tag;
-        const size_t specCount = _listAbilitySpec.size();
-        for ( size_t specIndex = 0; specIndex < specCount && specIndex < _listAbilitySpec.size(); ++specIndex )
+        const size_t specCount = _abilitySpecs.size();
+        for ( size_t specIndex = 0; specIndex < specCount && specIndex < _abilitySpecs.size(); ++specIndex )
         {
-            const AbilitySpec& spec = *_listAbilitySpec[specIndex];
+            const AbilitySpec& spec = *_abilitySpecs[specIndex];
             if ( spec._bPendingRemove == SW_TRUE )
                 continue;
             bool bTriggers = false;
@@ -287,17 +270,17 @@ namespace sw
             // 이펙트 하나를 떼고 붙이면 태그가 바뀌어 앞서 본 이펙트의 답이 달라질 수 있다 — 바뀐 것이 없을 때까지 다시 본다.
             // 서로의 태그를 조건으로 거는 이펙트가 번갈아 뒤집히면 끝나지 않으므로 이펙트 수 + 1 번에서 멈추고 알린다.
             const ScopedListLock lock{ *this };
-            const size_t         maxPassCount = _listActiveEffect.size() + 1;
+            const size_t         maxPassCount = _activeEffects.size() + 1;
             bool                 bChanged     = true;
             size_t               passCount    = 0;
             while ( bChanged && passCount < maxPassCount )
             {
                 bChanged = false;
                 ++passCount;
-                const size_t effectCount = _listActiveEffect.size();
-                for ( size_t effectIndex = 0; effectIndex < effectCount && effectIndex < _listActiveEffect.size(); ++effectIndex )
+                const size_t effectCount = _activeEffects.size();
+                for ( size_t effectIndex = 0; effectIndex < effectCount && effectIndex < _activeEffects.size(); ++effectIndex )
                 {
-                    ActiveGameplayEffect& activeEffect = *_listActiveEffect[effectIndex];
+                    ActiveGameplayEffect& activeEffect = *_activeEffects[effectIndex];
                     if ( activeEffect._bPendingRemove == SW_TRUE )
                         continue;
                     const TagContainer& requiredTags = activeEffect._spec._pDef->_ongoingRequiredTags;
@@ -365,19 +348,19 @@ namespace sw
             const ScopedListLock lock{ *this };
 
             // 1) 어빌리티: 그 모듈 타입이면 코드가 아직 남아 있는 지금 제거한다. 작업이 등록한 이벤트 구독도 함께 해제된다.
-            const size_t specCount = _listAbilitySpec.size();
-            for ( size_t specIndex = 0; specIndex < specCount && specIndex < _listAbilitySpec.size(); ++specIndex )
+            const size_t specCount = _abilitySpecs.size();
+            for ( size_t specIndex = 0; specIndex < specCount && specIndex < _abilitySpecs.size(); ++specIndex )
             {
-                AbilitySpec& spec = *_listAbilitySpec[specIndex];
+                AbilitySpec& spec = *_abilitySpecs[specIndex];
                 if ( spec._bPendingRemove == SW_FALSE && isOfModule( spec._pAbility->getTypeInfo() ) )
                     retireAbilitySpec( spec );
             }
 
             // 2) 그 모듈의 실행 계산을 쓰는 이펙트: 다음 주기에 언로드된 코드를 부르지 않도록 해제한다.
-            const size_t effectCount = _listActiveEffect.size();
-            for ( size_t effectIndex = 0; effectIndex < effectCount && effectIndex < _listActiveEffect.size(); ++effectIndex )
+            const size_t effectCount = _activeEffects.size();
+            for ( size_t effectIndex = 0; effectIndex < effectCount && effectIndex < _activeEffects.size(); ++effectIndex )
             {
-                ActiveGameplayEffect& activeEffect = *_listActiveEffect[effectIndex];
+                ActiveGameplayEffect& activeEffect = *_activeEffects[effectIndex];
                 if ( activeEffect._bPendingRemove == SW_TRUE )
                     continue;
                 for ( const shared_ptr<const IGameplayEffectExecution>& pExecution : activeEffect._spec._pDef->_listExecution )

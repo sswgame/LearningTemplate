@@ -34,7 +34,7 @@ namespace sw
         Ability*                pRaw   = pSpec->_pAbility.get();
         const AbilitySpecHandle handle = pSpec->_handle;
         pRaw->bindToAbilitySystem( this, handle, level );
-        _listAbilitySpec.push_back( std::move( pSpec ) );
+        _abilitySpecs.add( std::move( pSpec ) );
 
         const ScopedListLock lock{ *this };
         pRaw->onGranted();
@@ -73,10 +73,10 @@ namespace sw
     void AbilityComponent::clearAllAbilities()
     {
         const ScopedListLock lock{ *this };
-        const size_t         specCount = _listAbilitySpec.size();
-        for ( size_t specIndex = 0; specIndex < specCount && specIndex < _listAbilitySpec.size(); ++specIndex )
+        const size_t         specCount = _abilitySpecs.size();
+        for ( size_t specIndex = 0; specIndex < specCount && specIndex < _abilitySpecs.size(); ++specIndex )
         {
-            retireAbilitySpec( *_listAbilitySpec[specIndex] );
+            retireAbilitySpec( *_abilitySpecs[specIndex] );
         }
     }
 
@@ -127,7 +127,7 @@ namespace sw
     {
         const ScopedListLock      lock{ *this };
         vector<AbilitySpecHandle> listCandidate;
-        for ( const unique_ptr<AbilitySpec>& pSpec : _listAbilitySpec )
+        for ( const unique_ptr<AbilitySpec>& pSpec : _abilitySpecs )
         {
             const bool bMatches = pSpec->_bPendingRemove == SW_FALSE &&
                                   pSpec->_pAbility->getConfig()._abilityTags.hasAnyTag( tags );
@@ -146,7 +146,7 @@ namespace sw
 
     AbilitySpecHandle AbilityComponent::findAbilitySpecHandle( const hashed_string& abilityID ) const
     {
-        for ( const unique_ptr<AbilitySpec>& pSpec : _listAbilitySpec )
+        for ( const unique_ptr<AbilitySpec>& pSpec : _abilitySpecs )
         {
             if ( pSpec->_bPendingRemove == SW_FALSE && pSpec->_pAbility->getConfig()._id == abilityID )
                 return pSpec->_handle;
@@ -180,10 +180,10 @@ namespace sw
             return;
 
         const ScopedListLock lock{ *this };
-        const size_t         specCount = _listAbilitySpec.size();
-        for ( size_t specIndex = 0; specIndex < specCount && specIndex < _listAbilitySpec.size(); ++specIndex )
+        const size_t         specCount = _abilitySpecs.size();
+        for ( size_t specIndex = 0; specIndex < specCount && specIndex < _abilitySpecs.size(); ++specIndex )
         {
-            AbilitySpec& spec     = *_listAbilitySpec[specIndex];
+            AbilitySpec& spec     = *_abilitySpecs[specIndex];
             Ability*     pAbility = spec._pAbility.get();
             const bool   bSkip    = spec._bPendingRemove == SW_TRUE || pAbility == pIgnore || pAbility->isActive() == false;
             if ( bSkip )
@@ -196,10 +196,10 @@ namespace sw
     void AbilityComponent::cancelAllAbilities()
     {
         const ScopedListLock lock{ *this };
-        const size_t         specCount = _listAbilitySpec.size();
-        for ( size_t specIndex = 0; specIndex < specCount && specIndex < _listAbilitySpec.size(); ++specIndex )
+        const size_t         specCount = _abilitySpecs.size();
+        for ( size_t specIndex = 0; specIndex < specCount && specIndex < _abilitySpecs.size(); ++specIndex )
         {
-            AbilitySpec& spec = *_listAbilitySpec[specIndex];
+            AbilitySpec& spec = *_abilitySpecs[specIndex];
             if ( spec._bPendingRemove == SW_FALSE && spec._pAbility->isActive() )
                 spec._pAbility->cancelAbility();
         }
@@ -208,7 +208,7 @@ namespace sw
     uint32 AbilityComponent::getAbilityCount() const
     {
         uint32 abilityCount = 0;
-        for ( const unique_ptr<AbilitySpec>& pSpec : _listAbilitySpec )
+        for ( const unique_ptr<AbilitySpec>& pSpec : _abilitySpecs )
         {
             if ( pSpec->_bPendingRemove == SW_FALSE )
                 ++abilityCount;
@@ -219,7 +219,7 @@ namespace sw
     void AbilityComponent::getAbilitySpecHandles( vector<AbilitySpecHandle>& outListHandle ) const
     {
         outListHandle.clear();
-        for ( const unique_ptr<AbilitySpec>& pSpec : _listAbilitySpec )
+        for ( const unique_ptr<AbilitySpec>& pSpec : _abilitySpecs )
         {
             if ( pSpec->_bPendingRemove == SW_FALSE )
                 outListHandle.push_back( pSpec->_handle );
@@ -232,10 +232,10 @@ namespace sw
             return;
 
         const ScopedListLock lock{ *this };
-        const size_t         specCount = _listAbilitySpec.size();
-        for ( size_t specIndex = 0; specIndex < specCount && specIndex < _listAbilitySpec.size(); ++specIndex )
+        const size_t         specCount = _abilitySpecs.size();
+        for ( size_t specIndex = 0; specIndex < specCount && specIndex < _abilitySpecs.size(); ++specIndex )
         {
-            AbilitySpec& spec = *_listAbilitySpec[specIndex];
+            AbilitySpec& spec = *_abilitySpecs[specIndex];
             if ( spec._bPendingRemove == SW_TRUE || spec._inputID != inputID )
                 continue;
             Ability*   pAbility   = spec._pAbility.get();
@@ -252,10 +252,10 @@ namespace sw
             return;
 
         const ScopedListLock lock{ *this };
-        const size_t         specCount = _listAbilitySpec.size();
-        for ( size_t specIndex = 0; specIndex < specCount && specIndex < _listAbilitySpec.size(); ++specIndex )
+        const size_t         specCount = _abilitySpecs.size();
+        for ( size_t specIndex = 0; specIndex < specCount && specIndex < _abilitySpecs.size(); ++specIndex )
         {
-            AbilitySpec& spec = *_listAbilitySpec[specIndex];
+            AbilitySpec& spec = *_abilitySpecs[specIndex];
             if ( spec._bPendingRemove == SW_FALSE && spec._inputID == inputID )
                 spec._pAbility->setInputPressed( false );
         }
@@ -285,10 +285,10 @@ namespace sw
 
         // 1) 트리거: 이벤트 태그가 트리거 태그와 같거나 그 하위이면 발동한다("Event.Hit.Fire" 는 "Event.Hit" 트리거를 발동시킨다).
         int32        triggeredCount = 0;
-        const size_t specCount      = _listAbilitySpec.size();
-        for ( size_t specIndex = 0; specIndex < specCount && specIndex < _listAbilitySpec.size(); ++specIndex )
+        const size_t specCount      = _abilitySpecs.size();
+        for ( size_t specIndex = 0; specIndex < specCount && specIndex < _abilitySpecs.size(); ++specIndex )
         {
-            const AbilitySpec& spec = *_listAbilitySpec[specIndex];
+            const AbilitySpec& spec = *_abilitySpecs[specIndex];
             if ( spec._bPendingRemove == SW_TRUE )
                 continue;
             bool bTriggers = false;
@@ -404,7 +404,7 @@ namespace sw
     {
         if ( handle.isValid() == false )
             return nullptr;
-        for ( const unique_ptr<AbilitySpec>& pSpec : _listAbilitySpec )
+        for ( const unique_ptr<AbilitySpec>& pSpec : _abilitySpecs )
         {
             if ( pSpec->_handle == handle && pSpec->_bPendingRemove == SW_FALSE )
                 return pSpec.get();
@@ -432,10 +432,10 @@ namespace sw
 
     void AbilityComponent::updateActiveAbilities( float32 deltaTime )
     {
-        const size_t specCount = _listAbilitySpec.size();
-        for ( size_t specIndex = 0; specIndex < specCount && specIndex < _listAbilitySpec.size(); ++specIndex )
+        const size_t specCount = _abilitySpecs.size();
+        for ( size_t specIndex = 0; specIndex < specCount && specIndex < _abilitySpecs.size(); ++specIndex )
         {
-            AbilitySpec& spec = *_listAbilitySpec[specIndex];
+            AbilitySpec& spec = *_abilitySpecs[specIndex];
             if ( spec._bPendingRemove == SW_FALSE && spec._pAbility->isActive() )
                 spec._pAbility->updateAbility( deltaTime );
         }

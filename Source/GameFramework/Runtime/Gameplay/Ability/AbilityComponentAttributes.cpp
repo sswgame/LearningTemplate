@@ -209,7 +209,7 @@ namespace sw
             return;
 
         AttributeAggregation aggregation;
-        for ( const unique_ptr<ActiveGameplayEffect>& pActiveEffect : _listActiveEffect )
+        for ( const unique_ptr<ActiveGameplayEffect>& pActiveEffect : _activeEffects )
         {
             const bool bContributes = pActiveEffect->_bPendingRemove == SW_FALSE && pActiveEffect->_bInhibited == SW_FALSE;
             if ( bContributes == false )

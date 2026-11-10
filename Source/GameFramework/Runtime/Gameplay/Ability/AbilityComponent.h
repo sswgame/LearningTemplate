@@ -22,6 +22,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Combat/Health/HealthSourceComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityEffect.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilityPendingList.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityTypes.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AttributeSet.h"
 #include "GameFramework/Runtime/Gameplay/Ability/TagCountTable.h"
@@ -230,7 +231,7 @@ namespace sw
         /** @brief 걸려 있는 이펙트 수입니다. */
         uint32 getActiveEffectCount() const;
         /** @brief 적용된 이펙트 목록입니다(적용 순서). 지우는 중인 항목(`_bPendingRemove`)도 들어 있으므로 읽는 쪽이 거릅니다. 디버그 창이 씁니다. */
-        const vector<unique_ptr<ActiveGameplayEffect>>& getActiveEffects() const { return _listActiveEffect; }
+        const vector<unique_ptr<ActiveGameplayEffect>>& getActiveEffects() const { return _activeEffects.getList(); }
         /**
          * @brief 건 길이 @p sourceName 인 이펙트를 모두 지웁니다(효과 영역 이탈 · 상호작용 취소). 지운 수입니다.
          * @details 핸들을 들지 않고 건 길로 지우는 까닭: 영역의 적용은 틱 중이면 미뤄져 핸들을 돌려받지 못하고, 같은 대상이 다시 들어오면 스택 정책이 핸들을 합친다 —
@@ -344,6 +345,11 @@ namespace sw
             uint8               _bPendingRemove{ SW_FALSE };
         };
 
+        /** @brief 부여된 어빌리티 목록입니다(언리얼 `FGameplayAbilitySpecContainer` 자리). */
+        using AbilitySpecContainer = AbilityPendingList<AbilitySpec>;
+        /** @brief 걸린 이펙트 목록입니다(언리얼 `FActiveGameplayEffectsContainer` 자리). */
+        using ActiveEffectContainer = AbilityPendingList<ActiveGameplayEffect>;
+
         /** @brief 스코프가 끝날 때까지 활성 이펙트와 스펙 목록에서 원소를 빼지 않게 합니다. 제거 요청은 표시만 해 두고 스코프가 끝날 때 실제로 지웁니다. */
         class ScopedListLock
         {
@@ -436,8 +442,8 @@ namespace sw
 
         // ---- 런타임 상태(저장하지 않는다) ----
         vector<unique_ptr<AttributeSet>>                                                                _listAttributeSet;
-        vector<unique_ptr<ActiveGameplayEffect>>                                                        _listActiveEffect;
-        vector<unique_ptr<AbilitySpec>>                                                                 _listAbilitySpec;
+        ActiveEffectContainer                                                                           _activeEffects;
+        AbilitySpecContainer                                                                            _abilitySpecs;
         TagCountTable                                                                                   _ownedTagCounts;
         Subscription                                                                                    _ownedTagSubscription;    ///< `_ownedTagCounts` 의 변화를 자기가 듣는 구독(`onOwnedTagChanged`)
         TagCountTable                                                                                   _blockedAbilityTagCounts; ///< `_blockAbilitiesWithTags` 가 막은 어빌리티 태그(알림 없이 센다)

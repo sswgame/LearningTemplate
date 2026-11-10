@@ -142,7 +142,7 @@ namespace sw
 
     ActiveEffectHandle AbilityComponent::findActiveEffectByID( const hashed_string& effectID ) const
     {
-        for ( const unique_ptr<ActiveGameplayEffect>& pActive : _listActiveEffect )
+        for ( const unique_ptr<ActiveGameplayEffect>& pActive : _activeEffects )
         {
             const bool bMatch = pActive != nullptr && pActive->_bPendingRemove == SW_FALSE && pActive->_spec.isValid() && pActive->_spec._pDef->_id == effectID;
             if ( bMatch )
@@ -177,10 +177,10 @@ namespace sw
             return 0;
         const ScopedListLock lock{ *this };
         int32                removedCount = 0;
-        const size_t         effectCount  = _listActiveEffect.size();
+        const size_t         effectCount  = _activeEffects.size();
         for ( size_t effectIndex = 0; effectIndex < effectCount; ++effectIndex )
         {
-            ActiveGameplayEffect* pActiveEffect = _listActiveEffect[effectIndex].get();
+            ActiveGameplayEffect* pActiveEffect = _activeEffects[effectIndex].get();
             if ( pActiveEffect->_bPendingRemove == SW_TRUE || pActiveEffect->_spec._context._sourceName != sourceName )
                 continue;
             removeActiveEffectInternal( *pActiveEffect, AbilityEffectLogKind::RemovedExplicitly );
@@ -196,10 +196,10 @@ namespace sw
 
         const ScopedListLock lock{ *this };
         int32                removedCount = 0;
-        const size_t         effectCount  = _listActiveEffect.size();
+        const size_t         effectCount  = _activeEffects.size();
         for ( size_t effectIndex = 0; effectIndex < effectCount; ++effectIndex )
         {
-            ActiveGameplayEffect* pActiveEffect = _listActiveEffect[effectIndex].get();
+            ActiveGameplayEffect* pActiveEffect = _activeEffects[effectIndex].get();
             if ( pActiveEffect->_bPendingRemove == SW_TRUE )
                 continue;
             const bool bMatches = pActiveEffect->_spec._pDef->_assetTags.hasAnyTag( tags ) ||
@@ -216,7 +216,7 @@ namespace sw
     {
         if ( handle.isValid() == false )
             return nullptr;
-        for ( const unique_ptr<ActiveGameplayEffect>& pActiveEffect : _listActiveEffect )
+        for ( const unique_ptr<ActiveGameplayEffect>& pActiveEffect : _activeEffects )
         {
             if ( pActiveEffect->_handle == handle && pActiveEffect->_bPendingRemove == SW_FALSE )
                 return pActiveEffect.get();
@@ -227,7 +227,7 @@ namespace sw
     uint32 AbilityComponent::getActiveEffectCount() const
     {
         uint32 activeCount = 0;
-        for ( const unique_ptr<ActiveGameplayEffect>& pActiveEffect : _listActiveEffect )
+        for ( const unique_ptr<ActiveGameplayEffect>& pActiveEffect : _activeEffects )
         {
             if ( pActiveEffect->_bPendingRemove == SW_FALSE )
                 ++activeCount;
@@ -252,7 +252,7 @@ namespace sw
     float32 AbilityComponent::findLongestRemainingTimeWithGrantedTags( const TagContainer& tags ) const
     {
         float32 longestTime = 0.0f;
-        for ( const unique_ptr<ActiveGameplayEffect>& pActiveEffect : _listActiveEffect )
+        for ( const unique_ptr<ActiveGameplayEffect>& pActiveEffect : _activeEffects )
         {
             const bool bTimed = pActiveEffect->_bPendingRemove == SW_FALSE && pActiveEffect->_spec._pDef->_durationPolicy == EffectDurationPolicy::HasDuration;
             if ( bTimed && pActiveEffect->_grantedTags.hasAnyTag( tags ) )
@@ -513,7 +513,7 @@ namespace sw
         pNewEffect->_bInhibited = _ownedTagCounts.hasAllMatchingTags( def._ongoingRequiredTags ) ? SW_FALSE : SW_TRUE;
 
         ActiveGameplayEffect* pActiveEffect = pNewEffect.get();
-        _listActiveEffect.push_back( std::move( pNewEffect ) );
+        _activeEffects.add( std::move( pNewEffect ) );
 
         if ( pActiveEffect->_bInhibited == SW_FALSE )
             engageActiveEffect( *pActiveEffect );
@@ -578,7 +578,7 @@ namespace sw
 
     ActiveGameplayEffect* AbilityComponent::findStackableEffect( const AbilityEffectDef& def )
     {
-        for ( const unique_ptr<ActiveGameplayEffect>& pActiveEffect : _listActiveEffect )
+        for ( const unique_ptr<ActiveGameplayEffect>& pActiveEffect : _activeEffects )
         {
             if ( pActiveEffect->_bPendingRemove == SW_TRUE )
                 continue;
@@ -593,11 +593,11 @@ namespace sw
 
     void AbilityComponent::updateActiveEffects( float32 deltaTime )
     {
-        const size_t effectCount = _listActiveEffect.size();
-        for ( size_t effectIndex = 0; effectIndex < effectCount && effectIndex < _listActiveEffect.size(); ++effectIndex )
+        const size_t effectCount = _activeEffects.size();
+        for ( size_t effectIndex = 0; effectIndex < effectCount && effectIndex < _activeEffects.size(); ++effectIndex )
         {
             // 원소가 `unique_ptr` 이고 잠금 중에는 지우지 않으므로, 콜백이 목록을 늘려도 이 포인터는 유효하다.
-            ActiveGameplayEffect* pActiveEffect = _listActiveEffect[effectIndex].get();
+            ActiveGameplayEffect* pActiveEffect = _activeEffects[effectIndex].get();
             if ( pActiveEffect->_bPendingRemove == SW_TRUE )
                 continue;
 
