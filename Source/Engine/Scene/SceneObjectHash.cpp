@@ -312,7 +312,7 @@ namespace sw
         outListObject.clear();
         manager.forEachGameObject( [&outListObject]( GameObject* pObject )
         {
-            if ( pObject->getName().empty() )
+            if ( pObject->getName().empty() || pObject->isTransient() ) // 세운 쪽이 상태에서 다시 세우는 파생 오브젝트는 상태가 아니다
                 return;
             SceneObjectHash& object = outListObject.emplace_back();
             object._name            = pObject->getName().c_str();

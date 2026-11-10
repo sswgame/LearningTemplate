@@ -1084,6 +1084,7 @@ namespace sw
                 SW_LOG_WARNING_ID( "CharacterAppearance.AppearancePartCouldNot", "Appearance '%#' part '%#' (%#) could not be spawned", _presetID.c_str(), part._partName.c_str(), part._asset.c_str() );
                 continue;
             }
+            pObject->setTransient( true ); // 부품은 프리셋 · 장비에서 다시 세운다 — 세이브 · 상태 해시에 넣지 않는다(`GameObject::setTransient`)
             spawned._object = pObject->getHandle();
             _listSpawnedPart.push_back( spawned );
         }

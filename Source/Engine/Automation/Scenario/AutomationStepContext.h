@@ -78,12 +78,13 @@ namespace sw
         virtual void deferExpectAtMost( const AutomationStep& step, string description, float64 limit, shared_ptr<const AutomationDeferredValue> pValue ) = 0;
 
         /**
-         * @brief 이 실행 안에서 값 @p value 를 이름 @p name 으로 기억합니다(같은 이름은 덮는다). 실행이 끝나면 사라진다.
-         * @details 앞 단계가 잰 값을 뒤 단계가 견주는 자리다(`<RecordStateHash as="…">` → 저장 · 복원 → `<ExpectStateHash equals="…">`).
+         * @brief 이 실행 안에서 글 @p text 를 이름 @p name 으로 기억합니다(같은 이름은 덮는다). 실행이 끝나면 사라진다.
+         * @details 앞 단계가 잰 것을 뒤 단계가 견주는 자리다(`<RecordStateHash key="…">` → 저장 · 복원 → `<ExpectStateHash key="…">` — 오브젝트별 해시 글을 기억해
+         *          다르면 어느 오브젝트인지 말한다).
          */
-        virtual void rememberValue( string_view name, uint64 value ) = 0;
-        /** @brief `rememberValue` 로 기억한 값입니다. 없으면 false 입니다. */
-        [[nodiscard]] virtual bool findRememberedValue( string_view name, uint64& outValue ) const = 0;
+        virtual void rememberText( string_view name, string text ) = 0;
+        /** @brief `rememberText` 로 기억한 글입니다. 없으면 nullptr 입니다. */
+        [[nodiscard]] virtual const string* findRememberedText( string_view name ) const = 0;
 
         /** @brief 이 시나리오의 산출물 폴더입니다. */
         virtual const string& getOutputDirectory() const = 0;

@@ -79,3 +79,23 @@ SW_TEST_CASE( SceneStateHashTest, NanPositionIsIndependentOfCreationOrder )
     addStateHashTestObject( second, "CrateA", float3{ 1.0f, 0.0f, 0.0f } );
     SW_EXPECT_EQUAL( SceneObjectHash::compute( first ), SceneObjectHash::compute( second ) );
 }
+
+/**
+ * @brief [SceneStateHashTest] 실행 중에 세운 파생 오브젝트(`GameObject::setTransient`)는 상태가 아니다 — 움직여도 해시가 그대로다
+ * @details 외형 조립의 부품은 워커가 끝낸 프레임에 붙어 자리가 실행마다 달랐다(game.shooter3d.slice 의 두 번 불러오기 해시). 표시를 지우면 진다.
+ */
+SW_TEST_CASE( SceneStateHashTest, TransientObjectsAreNotState )
+{
+    GameObjectManager manager;
+    (void)addStateHashTestObject( manager, "Player", float3{ 0.0f, 0.0f, 0.0f } );
+    SceneComponent* pPart = addStateHashTestObject( manager, "Helmet", float3{ 0.0f, 1.8f, 0.0f } );
+    SW_REQUIRE_NOT_NULL( pPart );
+    pPart->getOwner()->setTransient( true );
+    const uint64 before = SceneObjectHash::compute( manager );
+    pPart->setWorldPosition( float3{ 0.3f, 1.7f, 0.1f } );
+    SW_EXPECT_EQUAL( SceneObjectHash::compute( manager ), before );
+    vector<SceneObjectHash> listObject;
+    SceneObjectHash::collectObjects( manager, listObject );
+    SW_REQUIRE_EQUAL( listObject.size(), static_cast<size_t>( 1 ) );
+    SW_EXPECT_TRUE( listObject[0]._name == "Player" );
+}

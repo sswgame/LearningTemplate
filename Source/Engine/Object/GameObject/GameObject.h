@@ -145,6 +145,15 @@ namespace sw
         bool isAlwaysLoaded() const { return _bAlwaysLoaded; }
 
         /**
+         * @brief 다른 컴포넌트가 실행 중에 상태에서 세운 파생 오브젝트로 표시합니다(유니티 `HideFlags.DontSave` · 언리얼 `RF_Transient`). 저장되지 않는 실행 상태입니다.
+         * @details 상태 스냅샷(세이브 · 핫 리로드)과 씬 상태 해시(`SceneObjectHash`)가 건너뛴다 — 세운 쪽이 상태에서 다시 세우므로 상태가 아니다. 외형 조립의 부품이 쓴다:
+         *          조립은 워커에서 끝나 부품이 붙는 프레임이 실행마다 달라, 해시에 넣으면 같은 세이브를 두 번 불러온 직후의 해시가 달랐다(game.shooter3d.slice).
+         */
+        void setTransient( bool bTransient ) { _bTransient = bTransient; }
+        /** @brief 실행 중에 세운 파생 오브젝트면 true 입니다(`setTransient`). */
+        bool isTransient() const { return _bTransient; }
+
+        /**
          * @brief 계층까지 반영한 최종 활성 여부를 반환합니다.
          * @details `_bActive && _bIsActiveInHierarchy`. 부모 GameObject 가 비활성이면 자식도 false 입니다.
          */
@@ -466,6 +475,7 @@ namespace sw
         atomic<uint8> _bTickDirty;
         bool          _bKeptWhenParentDestroyed; ///< 부모가 파괴돼도 루트로 남는다(`setKeptWhenParentDestroyed`)
         bool          _bBeingDestroyed;          ///< 소멸자 안이다. 컴포넌트를 새로 붙이지 않는다(`allocateComponentStorage`). 소유 스레드만 읽고 쓴다
+        bool          _bTransient;               ///< 실행 중에 세운 파생 오브젝트다 — 스냅샷 · 상태 해시가 건너뛴다(`setTransient`)
         /**
          * @brief 형제 사이의 표시 순서입니다(`getSiblingIndex`). 클래스 끝의 꼬리 패딩에 들어가 오브젝트 크기를 늘리지 않으므로, 앞쪽으로 옮기지 않는다.
          */
