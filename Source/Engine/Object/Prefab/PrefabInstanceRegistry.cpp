@@ -11,7 +11,7 @@
 
 namespace sw
 {
-    SW_SCENE_SERVICE( PrefabInstanceRegistry, DestroyPost )
+    SW_SCENE_SERVICE( PrefabInstanceRegistry, DestroyPost, makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::Structure }, SceneDataKindSet{}, SceneDataKindSet{} ) )
 
     PrefabInstanceRegistry::PrefabInstanceRegistry( GameObjectManager& manager )
         : _pManager{ &manager }

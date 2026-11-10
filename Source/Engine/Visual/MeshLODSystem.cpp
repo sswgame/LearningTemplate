@@ -22,7 +22,7 @@
 
 namespace sw
 {
-    SW_SCENE_SERVICE( MeshLODSystem, FlushEnd )
+    SW_SCENE_SERVICE( MeshLODSystem, FlushEnd, makeSceneFrameAccess( SceneDataKindSet{}, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure, SceneDataKind::Transform } ) )
 
     MeshLODSystem::MeshLODSystem( GameObjectManager& manager )
         : _manager{ manager }

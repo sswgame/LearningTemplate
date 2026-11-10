@@ -13,7 +13,7 @@
 namespace sw
 {
     // 짓는 일은 파괴를 처리한 뒤(`DestroyPost`)다 — 스트리밍 셀과 같은 자리다. 만든 오브젝트는 다음 프레임 병합에서 틱에 든다.
-    SW_SCENE_SERVICE( SceneDataLayerSubsystem, DestroyPost )
+    SW_SCENE_SERVICE( SceneDataLayerSubsystem, DestroyPost, makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::Structure }, SceneDataKindSet{}, SceneDataKindSet{} ) )
 
     SceneDataLayerSubsystem::SceneDataLayerSubsystem( GameObjectManager& /*manager*/ )
         : _pScene{ nullptr }

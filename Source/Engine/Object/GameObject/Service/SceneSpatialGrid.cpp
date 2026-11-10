@@ -12,7 +12,7 @@
 namespace sw
 {
     // 일은 `SpatialIndex` 단계 끝에 넘겨 `ApplyPostPhysics` 본문 앞에서 마친다 — 그 사이 `TickPostPhysics` 틱이 앞 버퍼를 읽는다. 일은 자기 뒤 버퍼만 쓴다.
-    SW_SCENE_SERVICE_WITH_FRAME_JOB( SceneSpatialGrid, SpatialIndex, ApplyPostPhysics, SceneFrameAccess{ SceneDataKindSet{ SceneDataKind::SpatialIndex }, SceneDataKindSet{}, SceneDataKindSet{} } )
+    SW_SCENE_SERVICE_WITH_FRAME_JOB( SceneSpatialGrid, SpatialIndex, makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::SpatialIndex }, SceneDataKindSet{ SceneDataKind::Transform }, SceneDataKindSet{} ), ApplyPostPhysics, makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::SpatialIndex }, SceneDataKindSet{}, SceneDataKindSet{} ) )
 
     SceneSpatialGrid::SceneSpatialGrid( GameObjectManager& manager )
         : _manager{ manager }

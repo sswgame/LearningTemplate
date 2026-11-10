@@ -8,7 +8,7 @@
 
 namespace sw
 {
-    SW_SCENE_SERVICE( Scene2DOccluderProvider, FlushEnd )
+    SW_SCENE_SERVICE( Scene2DOccluderProvider, FlushEnd, makeSceneFrameAccess( SceneDataKindSet{}, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure, SceneDataKind::Transform } ) )
 
     Scene2DOccluderProvider::Scene2DOccluderProvider( GameObjectManager& manager )
         : _manager{ manager }

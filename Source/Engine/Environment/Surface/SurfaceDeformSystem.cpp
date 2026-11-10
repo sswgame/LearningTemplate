@@ -111,7 +111,7 @@ namespace sw
 
 namespace sw
 {
-    SW_SCENE_SERVICE( SurfaceDeformSystem, FlushEnd )
+    SW_SCENE_SERVICE( SurfaceDeformSystem, FlushEnd, makeSceneFrameAccess( SceneDataKindSet{}, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure, SceneDataKind::Transform } ) )
 
     SurfaceDeformSystem::PersistentStamp::PersistentStamp()
         : _def{}

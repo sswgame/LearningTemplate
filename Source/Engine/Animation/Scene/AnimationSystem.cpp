@@ -128,7 +128,7 @@ namespace sw
 
 namespace sw
 {
-    SW_SCENE_SERVICE( AnimationSystem, Animation )
+    SW_SCENE_SERVICE( AnimationSystem, Animation, makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::AnimatorState, SceneDataKind::Transform }, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure } ) )
 
     AnimationSystem::AnimationSystem( GameObjectManager& manager )
         : _skeletalMeshList{}

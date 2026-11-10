@@ -17,7 +17,7 @@
 
 namespace sw
 {
-    SW_SCENE_SERVICE( TextureStreamingSystem, FlushEnd )
+    SW_SCENE_SERVICE( TextureStreamingSystem, FlushEnd, makeSceneFrameAccess( SceneDataKindSet{}, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure, SceneDataKind::Transform } ) )
 
     TextureStreamingSystem::TextureStreamingSystem( GameObjectManager& manager )
         : _manager{ manager }

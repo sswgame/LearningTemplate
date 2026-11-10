@@ -82,7 +82,7 @@ namespace sw
         return issueCount;
     }
 
-    SW_SCENE_SERVICE( SceneValidationIssues, DestroyPost )
+    SW_SCENE_SERVICE( SceneValidationIssues, DestroyPost, makeSceneFrameAccess( SceneDataKindSet{}, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure } ) )
 
     SceneValidationIssues::SceneValidationIssues( GameObjectManager& /*manager*/ )
         : _log{}

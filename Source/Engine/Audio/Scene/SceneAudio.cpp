@@ -100,7 +100,7 @@ namespace sw
 namespace sw
 {
     // 진행은 `Scene::update` 이 카메라와 함께 부른다 — 단계는 자리만 정하고 `update( deltaTime )` 은 빈 함수다.
-    SW_SCENE_SERVICE( SceneAudio, FlushEnd )
+    SW_SCENE_SERVICE( SceneAudio, FlushEnd, makeSceneFrameAccess( SceneDataKindSet{}, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure, SceneDataKind::Transform } ) )
 
     SceneAudio::SceneAudio( GameObjectManager& manager )
         : _listener{ "SceneAudio.Listener", RegistrationList<AudioListenerComponent>::ReleaseFunction::create<&SceneAudio::releaseListener>( this ) }
