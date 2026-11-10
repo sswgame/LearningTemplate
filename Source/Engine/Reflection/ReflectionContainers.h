@@ -37,8 +37,9 @@ namespace sw
         /** @brief constructEmpty 로 만든 컨테이너를 파괴합니다. */
         virtual void destroyContainer( void* pContainer ) const { (void)pContainer; }
 
-        virtual ISequenceContainerWrapper* asSequence() { return nullptr; }
-        virtual IMapContainerWrapper*      asMap() { return nullptr; }
+        // 래퍼는 상태가 없다 — 생성 코드가 서술자 표에서 가리키는 정적 `const` 객체이므로 연산은 모두 const 다.
+        virtual const ISequenceContainerWrapper* asSequence() const { return nullptr; }
+        virtual const IMapContainerWrapper*      asMap() const { return nullptr; }
     };
 } // namespace sw
 
@@ -54,8 +55,8 @@ namespace sw
     /// @brief 인덱스로 접근하는 시퀀스 컨테이너 래퍼입니다.
     struct ISequenceContainerWrapper : IContainerWrapper
     {
-        ContainerKind              getKind() const override { return ContainerKind::Sequence; }
-        ISequenceContainerWrapper* asSequence() override { return this; }
+        ContainerKind                    getKind() const override { return ContainerKind::Sequence; }
+        const ISequenceContainerWrapper* asSequence() const override { return this; }
         /** @brief 인덱스 위치의 원소 포인터를 반환합니다. */
         virtual void* getElement( void* pContainer, size_t index ) const = 0;
         /** @brief 인덱스 요소의 const 포인터. */
@@ -122,8 +123,8 @@ namespace sw
     /// @brief 키-값 맵 컨테이너 래퍼입니다.
     struct IMapContainerWrapper : IContainerWrapper
     {
-        ContainerKind         getKind() const override { return ContainerKind::Map; }
-        IMapContainerWrapper* asMap() override { return this; }
+        ContainerKind               getKind() const override { return ContainerKind::Map; }
+        const IMapContainerWrapper* asMap() const override { return this; }
 
         /** @brief 항목마다 callback 을 부릅니다. */
         virtual void forEach( const void* pContainer, const MapForEachDelegate& callback ) const = 0;
@@ -590,4 +591,14 @@ namespace sw
     template <typename TContainer>
     using UnorderedMapWrapper = MapWrapper<TContainer>;
 
+    /**
+     * @brief 래퍼 타입마다 하나인 정적 `const` 객체입니다. 생성 코드의 서술자 표(`PropertyDesc::_pContainerWrapper`)가 이 주소를 싣는다.
+     * @details 래퍼는 상태가 없어 프로퍼티마다 `make_shared` 로 짓던 것을 공유한다(언리얼 `FArrayProperty` 가 내부 프로퍼티를 정적 서술자로 드는 자리).
+     *          모듈(DLL)마다 하나씩 생기고 그 모듈의 수명이다 — 등록한 타입의 함수 포인터와 같다.
+     */
+    template <typename TWrapper>
+    struct ContainerWrapperOf
+    {
+        static inline const TWrapper kInstance{};
+    };
 } // namespace sw

@@ -11,6 +11,7 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Content/AssetTypeRegistry.h"
+#include "Engine/Reflection/PropertyHandle.h"
 #include "Engine/UI/Style/WidgetStyle.h"
 
 namespace sw
@@ -58,14 +59,14 @@ namespace sw
 {
     /**
      * @struct UIStyleAssignment
-     * @brief 규칙의 필드 하나와 텍스트 값입니다(변수는 읽을 때 해석합니다). 구조체 필드(`_font`)의 안쪽 필드면 `_pNestedProperty` 가 있습니다.
+     * @brief 규칙의 필드 하나와 텍스트 값입니다(변수는 읽을 때 해석합니다). 구조체 필드(`_font`)의 안쪽 필드면 `_nestedProperty` 가 있습니다. 시트 수명 동안 들므로 포인터가 아니라 `PropertyHandle` 이다.
      */
     struct UIStyleAssignment
     {
-        string              _text{};
-        const PropertyInfo* _pProperty{ nullptr };       ///< `WidgetStyle` 의 필드입니다.
-        const PropertyInfo* _pNestedProperty{ nullptr }; ///< 구조체 필드 안의 필드입니다(없으면 필드 전체에 텍스트를 씁니다).
-        UIStyleField        _field{ UIStyleField::Count };
+        string         _text{};
+        PropertyHandle _property{};       ///< `WidgetStyle` 의 필드입니다.
+        PropertyHandle _nestedProperty{}; ///< 구조체 필드 안의 필드입니다(비었으면 필드 전체에 텍스트를 씁니다).
+        UIStyleField   _field{ UIStyleField::Count };
     };
 } // namespace sw
 

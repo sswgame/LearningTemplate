@@ -126,6 +126,24 @@ SW_TEST_CASE( ReflectionPropertyRoleTest, SaveGameOptInWritesOnlyFlaggedProperti
 }
 
 /**
+ * @brief [ReflectionPropertyRoleTest] 판정 비트(세이브 · POD · 검증)는 등록이 미리 구한다 — 레지스트리 밖 사본은 구하기 전에는 내려가 있고, 명시 계산이 같은 답을 낸다
+ */
+SW_TEST_CASE( ReflectionPropertyRoleTest, DerivedFlagsAreBuiltByRegistrationNotByFirstQuery )
+{
+    const sw::TypeInfo* pType = sw::PropertyRoleActor::StaticType();
+    SW_REQUIRE_NOT_NULL( pType );
+    SW_EXPECT_TRUE( pType->_bDerivedFlagsBuilt == SW_TRUE );
+
+    sw::TypeInfo copy = *pType; // 사본은 파생 캐시를 비운다(대입 연산자)
+    SW_EXPECT_TRUE( copy._bDerivedFlagsBuilt == SW_FALSE );
+    copy.rebuildDerivedCaches();
+    copy.computeDerivedFlags();
+    SW_EXPECT_EQUAL( pType->hasSaveGameProperty(), copy.hasSaveGameProperty() );
+    SW_EXPECT_EQUAL( pType->usesPODCopyFastPath(), copy.usesPODCopyFastPath() );
+    SW_EXPECT_EQUAL( pType->hasValidator(), copy.hasValidator() );
+}
+
+/**
  * @brief [ReflectionPropertyRoleTest] SaveGame 이 하나도 없는 타입은 세이브 문맥에서도 전부 쓴다(옵트인이 아닌 타입은 지금 동작 그대로)
  */
 SW_TEST_CASE( ReflectionPropertyRoleTest, TypeWithoutSaveGameSavesEverything )

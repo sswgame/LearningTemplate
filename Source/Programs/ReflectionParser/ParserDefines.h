@@ -173,10 +173,11 @@ namespace sw
         inline constexpr const utf8* kFlagFmsCompatVerPrefix = "fms_compat_version_prefix";
 
         // parsing.*
-        inline constexpr const utf8* kParsingComponentBaseTypes = "component_base_types";
-        inline constexpr const utf8* kParsingTypeStripPrefixes  = "type_strip_prefixes";
-        inline constexpr const utf8* kEmitValueForbiddenBases   = "value_forbidden_base_types";
-        inline constexpr const utf8* kEmitValueForbiddenMessage = "value_forbidden_message";
+        inline constexpr const utf8* kParsingComponentBaseTypes   = "component_base_types";
+        inline constexpr const utf8* kParsingPhysicsHookBaseTypes = "physics_hook_base_types";
+        inline constexpr const utf8* kParsingTypeStripPrefixes    = "type_strip_prefixes";
+        inline constexpr const utf8* kEmitValueForbiddenBases     = "value_forbidden_base_types";
+        inline constexpr const utf8* kEmitValueForbiddenMessage   = "value_forbidden_message";
 
         // tuning.*
         inline constexpr const utf8* kSourceLookbackBytes = "source_lookback_bytes";

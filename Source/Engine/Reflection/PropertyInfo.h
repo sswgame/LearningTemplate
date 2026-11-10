@@ -12,17 +12,19 @@ namespace sw
      */
     struct NestedContainerInfo
     {
-        ContainerKind                   _kind = ContainerKind::None;
-        hashed_string                   _typeName; ///< 컨테이너 TypeInfo 의 이름이다(vector, unordered_map 등)
-        hashed_string                   _elementTypeName;
-        hashed_string                   _keyTypeName;
-        shared_ptr<IContainerWrapper>   _wrapper;
-        shared_ptr<NestedContainerInfo> _elementNested; ///< 원소나 값이 컨테이너일 때 쓴다
+        ContainerKind              _kind = ContainerKind::None;
+        hashed_string              _typeName; ///< 컨테이너 TypeInfo 의 이름이다(vector, unordered_map 등)
+        hashed_string              _elementTypeName;
+        hashed_string              _keyTypeName;
+        const IContainerWrapper*   _wrapper;       ///< 생성 코드의 정적 래퍼 객체다(상태가 없다 — 모듈의 수명)
+        const NestedContainerInfo* _elementNested; ///< 원소나 값이 컨테이너일 때 쓴다. 생성 코드의 정적 객체다
     };
 } // namespace sw
 
 namespace sw
 {
+    struct PropertyDesc;
+
     /// @brief 프로퍼티 하나의 리플렉션 정보입니다. 오프셋, 타입, 별칭, 컨테이너 래퍼를 담습니다.
     struct SW_API PropertyInfo
     {
@@ -39,8 +41,12 @@ namespace sw
          */
         using RepNotifyFunction = void ( * )( void* pInstance, const void* pOldValue );
 
-        shared_ptr<IContainerWrapper>   _containerWrapper;
-        shared_ptr<NestedContainerInfo> _nestedContainer; ///< 컨테이너일 때 중첩 구조 전체다
+        /**
+         * @brief 컨테이너 래퍼입니다. 생성 코드의 정적 `const` 객체(`ContainerWrapperOf`)를 가리킨다 — 상태가 없어 프로퍼티마다 힙에 짓지 않는다.
+         * @details 함수 포인터(`_pValidate` 등)와 같이 그 타입을 등록한 모듈의 수명이다. 모듈을 내리면 타입 등록이 먼저 지워진다.
+         */
+        const IContainerWrapper*   _containerWrapper;
+        const NestedContainerInfo* _nestedContainer; ///< 컨테이너일 때 중첩 구조 전체다. 생성 코드의 정적 객체다
 
         /** @brief 값이 객체 밖에 있을 때 그 주소를 찾는 함수입니다. nullptr 이면 값은 `인스턴스 + _offset` 에 있습니다. */
         ValueAccessor _pValueAccessor;
@@ -62,8 +68,6 @@ namespace sw
         vector<hashed_string>                _listAlias; ///< `PROPERTY( Alias = … )` 로 적은 다른 키 목록이다. 이름을 바꾸기 전의 키를 적는다
         ReflectMetadataBox<PropertyMetadata> _metadata;  ///< `PROPERTY()` 에 적은 메타데이터(`ReflectionMetadata.h`)
 
-        mutable uint32 _cachedNameHash;
-
         uint32                 _bitOffset;
         ContainerKind          _containerKind;
         uint8                  _bIsContainer  : 1;
@@ -77,16 +81,17 @@ namespace sw
         PropertyInfo( hashed_string name, hashed_string typeName, size_t offset,
                       bool bIsContainer = false, ContainerKind containerKind = ContainerKind::None,
                       hashed_string elementTypeName = {}, hashed_string keyTypeName = {},
-                      shared_ptr<IContainerWrapper> containerWrapper = nullptr,
-                      hashed_string                 alias            = {} );
+                      const IContainerWrapper* pContainerWrapper = nullptr,
+                      hashed_string            alias             = {} );
 
-        /** @brief 이름 해시를 반환합니다. 없으면 계산해 캐시합니다. */
-        uint32 getNameHash() const noexcept
-        {
-            if ( _cachedNameHash == 0 && _name.empty() == false )
-                _cachedNameHash = _name.getHash();
-            return _cachedNameHash;
-        }
+        /** @brief 생성 코드의 서술자 한 줄(`PropertyDesc`)로 채웁니다. 비트필드면 이 구성의 레이아웃에서 자리를 찾습니다(`resolveBitField`). */
+        explicit PropertyInfo( const PropertyDesc& desc );
+
+        /**
+         * @brief 이름 해시를 반환합니다. 해시는 intern 항목에 이미 있다(`hashed_string::getHash`, 락 없는 O(1)).
+         * @details 예전에는 `mutable` 칸에 지연 캐시했다 — 이름을 나중에 바꾸는 곳(인스펙터의 원소 프로퍼티)이 낡은 해시를 남길 수 있었고, 잠금 없는 지연 쓰기였다.
+         */
+        uint32 getNameHash() const noexcept { return _name.empty() ? 0u : _name.getHash(); }
 
         /** @brief 이름이나 별칭 중 하나의 해시와 일치하면 true 입니다. */
         bool matchesNameHash( const uint32 nameOrAliasHash ) const noexcept
@@ -294,5 +299,36 @@ namespace sw
          */
         size_t _offset;
         uint8  _bitMask;
+    };
+
+    /**
+     * @brief 생성 코드가 타입마다 내는 프로퍼티 서술자 표(`static constexpr ::sw::PropertyDesc kProperties[]`)의 한 줄입니다. 등록은 이 표를 돌며 `PropertyInfo` 를 짓습니다.
+     * @details 언리얼 UHT 의 `PropPointers`(정적 서술자 배열) 자리다. 예전에는 프로퍼티마다 즉시 호출 람다가 `PropertyInfo` 를 짓는 코드를 냈다(생성 `.gen.cpp` 10.9 MB).
+     *          글은 리터럴, 함수는 캡처 없는 람다의 포인터, 래퍼는 `ContainerWrapperOf` 의 정적 객체 주소라 표가 상수 초기화된다. 이름 해시는 따로 싣지 않는다 —
+     *          intern 항목이 이미 갖고 있어(`PropertyInfo::getNameHash`) 둘째 사본은 낡을 수만 있다.
+     *          칸 차례가 곧 생성기(`CodeGenerator::emitPropertyDesc`)가 내는 차례다. 칸을 더하면 둘을 함께 고친다(빠지면 뒤 칸이 밀려 컴파일 오류다 — 형식이 다르다).
+     */
+    struct PropertyDesc
+    {
+        /** @brief 칸 메타데이터(`PROPERTY( … )` 의 런타임 키)를 채우는 함수입니다. 적은 것이 없으면 nullptr 이고, 그 프로퍼티는 공유 기본값을 쓴다(힙 없음). */
+        using MetadataFillFunction = void ( * )( PropertyMetadata& metadata );
+
+        const utf8*                     _pName;
+        const utf8*                     _pTypeName;
+        size_t                          _offset;        ///< 비트필드 · 접근자 프로퍼티는 0
+        ContainerKind                   _containerKind; ///< 컨테이너가 아니면 None
+        const utf8*                     _pElementTypeName;
+        const utf8*                     _pKeyTypeName;
+        const IContainerWrapper*        _pContainerWrapper;
+        const NestedContainerInfo*      _pNestedContainer;
+        const utf8*                     _pHandleTargetTypeName;
+        const utf8* const*              _ppAlias; ///< `_aliasCount` 개의 옛 이름
+        uint32                          _aliasCount;
+        PropertyInfo::ValueAccessor     _pValueAccessor;
+        PropertyInfo::RepNotifyFunction _pRepNotify;
+        ReflectValidateFunction         _pValidate;
+        PropertyInfo::SetBitFunction    _pSetBit;   ///< 비트필드면 그 비트만 세우는 함수
+        size_t                          _ownerSize; ///< 비트필드의 주인 타입 크기(`resolveBitField`)
+        MetadataFillFunction            _pFillMetadata;
     };
 } // namespace sw

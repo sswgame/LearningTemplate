@@ -20,7 +20,7 @@ namespace sw
         struct XMLFieldsInternal
         {
             /** @brief 한 줄 목록으로 적는 칸이면 그 시퀀스입니다 — 원소가 값 글 하나로 읽히는 시퀀스(이름 · 태그 · 수 · 열거). */
-            [[nodiscard]] static ISequenceContainerWrapper* findTextList( const PropertyInfo& prop, const SerializeContext& context )
+            [[nodiscard]] static const ISequenceContainerWrapper* findTextList( const PropertyInfo& prop, const SerializeContext& context )
             {
                 const bool bSequence = prop._bIsContainer == SW_TRUE && prop._containerWrapper != nullptr && ( prop._nestedContainer == nullptr || prop._nestedContainer->_elementNested == nullptr );
                 if ( bSequence == false || SerializerUtil::canCarryValueType( prop._elementTypeName, context ) == false )
@@ -29,7 +29,7 @@ namespace sw
             }
 
             /** @brief 속성 하나에 이은 낱말을 칸의 목록으로 읽습니다(적은 값으로 바뀐다). 읽지 못한 낱말이 있으면 false 입니다. */
-            [[nodiscard]] static bool readTextList( const PropertyInfo& prop, ISequenceContainerWrapper& sequence, void* pInstance, string_view text, const SerializeContext& context )
+            [[nodiscard]] static bool readTextList( const PropertyInfo& prop, const ISequenceContainerWrapper& sequence, void* pInstance, string_view text, const SerializeContext& context )
             {
                 void* const pContainer = prop.getRawPtr( pInstance );
                 sequence.clear( pContainer );
@@ -132,7 +132,7 @@ namespace sw
             }
             const utf8* const pValue = attribute.getValue() != nullptr ? attribute.getValue() : "";
             // 목록 칸은 속성 하나에 낱말을 잇는다(`days="Mon, Tue"`, `times="60, 120"`) — 데이터가 쓰는 구분자를 모두 받는다.
-            ISequenceContainerWrapper* const pList = Internal::findTextList( *pFound, context );
+            const ISequenceContainerWrapper* const pList = Internal::findTextList( *pFound, context );
             if ( pList != nullptr )
             {
                 if ( Internal::readTextList( *pFound, *pList, pInstance, pValue, context ) == false )

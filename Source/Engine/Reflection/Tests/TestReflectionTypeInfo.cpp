@@ -4,6 +4,8 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Reflection/PropertyHandle.h"
+#include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
@@ -109,9 +111,9 @@ SW_TEST_CASE( ReflectionTypeInfoTest, FindExistingProperty )
 SW_TEST_CASE( ReflectionTypeInfoTest, MetadataBoxCopiesByValue )
 {
     sw::PropertyInfo original;
-    original._metadata->_defaultValue = "7";
-    sw::PropertyInfo copy             = original;
-    copy._metadata->_defaultValue     = "9";
+    original._metadata.edit()._defaultValue = "7";
+    sw::PropertyInfo copy                   = original;
+    copy._metadata.edit()._defaultValue     = "9";
     SW_EXPECT_EQUAL( sw::string( "7" ), original._metadata->_defaultValue );
     SW_EXPECT_EQUAL( sw::string( "9" ), copy._metadata->_defaultValue );
 
@@ -130,21 +132,54 @@ SW_TEST_CASE( ReflectionTypeInfoTest, MetadataBoxCopiesByValue )
 }
 
 /**
+ * @brief [ReflectionTypeInfoTest] 서술자 표(`PropertyDesc`)로 지은 프로퍼티 — 적은 것이 없는 메타데이터는 공유 기본값(힙 없음)이고, 고치면 제 사본을 짓는다.
+ */
+SW_TEST_CASE( ReflectionTypeInfoTest, PropertyDescTableSharesDefaultMetadata )
+{
+    static constexpr const utf8*      kAlias[]      = { "oldValue" };
+    static constexpr sw::PropertyDesc kProperties[] = {
+        {  "value", "int32", 4u, sw::ContainerKind::None, nullptr, nullptr, nullptr, nullptr, nullptr,  kAlias, 1u, nullptr, nullptr, nullptr, nullptr, 0u,nullptr                             },
+        {"flagged",  "bool", 8u, sw::ContainerKind::None, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, 0u, nullptr, nullptr, nullptr, nullptr, 0u,
+         []( sw::PropertyMetadata& m )
+         { m._bTransient = SW_TRUE; }},
+    };
+    sw::TypeInfo info;
+    info.setPropertyTable( kProperties, 2 );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, info._listProperty.size() );
+
+    const sw::PropertyInfo& plain   = info._listProperty[0];
+    const sw::PropertyInfo& flagged = info._listProperty[1];
+    SW_EXPECT_TRUE( plain.matchesName( sw::hashed_string( "oldValue" ) ) );
+    SW_EXPECT_EQUAL( sw::hashed_string( "value" ).getHash(), plain.getNameHash() );
+    SW_EXPECT_EQUAL( size_t{ 4 }, plain.getOffset() );
+    SW_EXPECT_TRUE( flagged._metadata->_bTransient == SW_TRUE );
+
+    const sw::PropertyInfo other;
+    SW_EXPECT_TRUE( &*plain._metadata == &*other._metadata ); // 둘 다 공유 기본값
+    SW_EXPECT_TRUE( &*flagged._metadata != &*other._metadata );
+
+    sw::PropertyInfo copy             = plain;
+    copy._metadata.edit()._bTransient = SW_TRUE; // 고치는 쪽만 제 사본을 짓는다
+    SW_EXPECT_TRUE( plain._metadata->_bTransient == SW_FALSE );
+    SW_EXPECT_TRUE( copy._metadata->_bTransient == SW_TRUE );
+}
+
+/**
  * @brief [ReflectionTypeInfoTest] 프로퍼티 메타데이터
  */
 SW_TEST_CASE( ReflectionTypeInfoTest, PropertyMetadataSupport )
 {
     sw::PropertyInfo           prop;
     sw::PropertyEditorMetadata editor; // 에디터 메타데이터는 옆 표다 — 런타임 메타데이터는 포인터로만 가리킨다(`ReflectionEditorMetadata.h`)
-    editor._category              = "Rendering";
-    editor._displayName           = "Light Intensity";
-    editor._tooltip               = "Controls light intensity";
-    prop._metadata->_pEditor      = &editor;
-    prop._metadata->_minRange     = 0.0f;
-    prop._metadata->_maxRange     = 100.0f;
-    prop._metadata->_bHasMinRange = SW_TRUE;
-    prop._metadata->_bHasMaxRange = SW_TRUE;
-    prop._metadata->_bReadOnly    = SW_TRUE;
+    editor._category                    = "Rendering";
+    editor._displayName                 = "Light Intensity";
+    editor._tooltip                     = "Controls light intensity";
+    prop._metadata.edit()._pEditor      = &editor;
+    prop._metadata.edit()._minRange     = 0.0f;
+    prop._metadata.edit()._maxRange     = 100.0f;
+    prop._metadata.edit()._bHasMinRange = SW_TRUE;
+    prop._metadata.edit()._bHasMaxRange = SW_TRUE;
+    prop._metadata.edit()._bReadOnly    = SW_TRUE;
 
     SW_EXPECT_EQUAL( sw::string( "Rendering" ), prop._metadata->getEditor()._category );
     SW_EXPECT_EQUAL( sw::string( "Light Intensity" ), prop._metadata->getEditor()._displayName );
@@ -396,6 +431,58 @@ SW_TEST_CASE( ReflectionTypeInfoTest, DynamicMethodInvoke )
     sw::engine::getSubsystem<sw::TypeRegistry>().invokeMethod( &actor, sw::hashed_string( "sw::InvokableTestActor" ), sw::hashed_string( "addScore" ), args );
 
     SW_EXPECT_EQUAL( 50, actor._score );
+}
+
+namespace
+{
+    struct MethodTableTestActor
+    {
+        int32  _score{ 0 };
+        int32& _ref; // 참조 멤버 — 기본 생성할 수 없다
+    };
+} // namespace
+
+/**
+ * @brief [ReflectionTypeInfoTest] 메서드 서술자 표(`FunctionDesc`)로 지은 목록 — 인자 · 반환 · 메타데이터 채우기가 들고, 호출 함수가 없는 파서 생성자 줄은 빠진다
+ */
+SW_TEST_CASE( ReflectionTypeInfoTest, MethodTableBuildsMethodList )
+{
+    static_assert( sw::ReflectDefaultCtorOf<MethodTableTestActor>::kInvoke == nullptr );
+    static_assert( sw::ReflectDefaultCtorOf<int32>::kInvoke != nullptr );
+
+    static constexpr sw::FunctionParameterDesc kParams[] = {
+        { "delta", "int32", "1", &sw::ReflectTypeOpsOf<int32>::kOps, nullptr },
+    };
+    static constexpr sw::FunctionDesc kMethods[] = {
+        { "addScore", "addScore", "int32", &sw::ReflectTypeOpsOf<int32>::kOps, kParams, 1u,
+         []( void* pObject, const sw::TaskArgs& args ) -> sw::TaskValue
+    {
+        MethodTableTestActor& actor = *static_cast<MethodTableTestActor*>( pObject );
+        actor._score += args.get<int32>( 0 );
+        return sw::TaskValue{ actor._score };
+    }, []( sw::FunctionMetadata& m )
+    { m._bConst = SW_TRUE; } },
+        { "$ctor", "$ctor", "void", nullptr, nullptr, 0u, sw::ReflectDefaultCtorOf<MethodTableTestActor>::kInvoke, nullptr },
+    };
+
+    sw::TypeInfo info;
+    info.setMethodTable( kMethods, std::size( kMethods ) );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, info._listMethod.size() );
+    const sw::FunctionInfo& method = info._listMethod[0];
+    SW_EXPECT_TRUE( method._hashName == sw::hashed_string( "addScore" ) );
+    SW_REQUIRE_EQUAL( 1u, method.getParameterCount() );
+    SW_EXPECT_EQUAL( sw::string( "delta" ), method._listParameter[0]._name );
+    SW_EXPECT_TRUE( method._listParameter[0].hasDefaultValue() );
+    SW_EXPECT_TRUE( method._pReturnType != nullptr );
+    SW_EXPECT_TRUE( method._metadata->_bConst == SW_TRUE );
+
+    int32                dummy = 0;
+    MethodTableTestActor actor{ 5, dummy };
+    sw::TaskArgs         args;
+    args.add( int32{ 7 } );
+    const sw::TaskValue result = method._invoker( &actor, args );
+    (void)result;
+    SW_EXPECT_EQUAL( 12, actor._score );
 }
 
 /**
@@ -1337,6 +1424,64 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, DerivedPropertyListFollowsItsBase )
     SW_EXPECT_EQUAL( 1u, pDerived->getPropertiesWithBase().size() );
     SW_EXPECT_NULL( pDerived->findPropertyInHierarchy( sw::hashed_string( "_a" ) ) );
     registry.unregisterTypesByModule( "TestMergeDerived" );
+}
+
+/**
+ * @brief [ReflectionTypeRegistryTest] 오래 드는 프로퍼티 참조(`PropertyHandle`)는 선언 타입을 다시 등록하거나 내리면 낡음을 안다 — 매달린 포인터를 주지 않는다
+ * @details 파생 타입에서 찾은 기반 프로퍼티는 기반(선언 타입)의 (색인, 세대)로 든다. 파생만 다시 등록해도 기반 참조는 그대로 산다.
+ */
+SW_TEST_CASE( ReflectionTypeRegistryTest, PropertyHandleGoesStaleWhenItsDeclaringTypeChanges )
+{
+    const sw::test::ScopedTestModule scopedModule( "TestHandleBase" );
+    const sw::test::ScopedTestModule scopedModule1( "TestHandleDerived" );
+    sw::TypeRegistry&                registry     = sw::engine::getSubsystem<sw::TypeRegistry>();
+    const auto                       makeProperty = []( const utf8* pName, size_t offset )
+    {
+        return sw::PropertyInfo{ sw::hashed_string( pName ), sw::hashed_string( "int32" ), offset };
+    };
+
+    sw::TypeInfo base;
+    base._name               = sw::hashed_string( "HandleBase" );
+    base._fullyQualifiedName = sw::hashed_string( "swtest::HandleBase" );
+    base._moduleName         = sw::hashed_string( "TestHandleBase" );
+    base._size               = 8;
+    base._listProperty       = { makeProperty( "_a", 0 ), makeProperty( "_b", 4 ) };
+
+    sw::TypeInfo derived;
+    derived._name               = sw::hashed_string( "HandleDerived" );
+    derived._fullyQualifiedName = sw::hashed_string( "swtest::HandleDerived" );
+    derived._parentFQN          = sw::hashed_string( "swtest::HandleBase" );
+    derived._moduleName         = sw::hashed_string( "TestHandleDerived" );
+    derived._size               = 12;
+    derived._listProperty       = { makeProperty( "_c", 8 ) };
+
+    registry.registerClass( base );
+    registry.registerClass( derived );
+    const sw::TypeInfo* pBase    = registry.findType( sw::hashed_string( "swtest::HandleBase" ) );
+    const sw::TypeInfo* pDerived = registry.findType( sw::hashed_string( "swtest::HandleDerived" ) );
+    SW_REQUIRE_NOT_NULL( pBase );
+    SW_REQUIRE_NOT_NULL( pDerived );
+    const sw::PropertyInfo* pB = pDerived->findPropertyInHierarchy( sw::hashed_string( "_b" ) );
+    const sw::PropertyInfo* pC = pDerived->findPropertyInHierarchy( sw::hashed_string( "_c" ) );
+    SW_REQUIRE_NOT_NULL( pB );
+    SW_REQUIRE_NOT_NULL( pC );
+
+    const sw::PropertyHandle handleB = sw::PropertyHandle::of( *pDerived, *pB );
+    const sw::PropertyHandle handleC = sw::PropertyHandle::of( *pDerived, *pC );
+    SW_EXPECT_TRUE( handleB._pType == pBase ); // 선언 타입은 기반이다
+    SW_EXPECT_EQUAL( 1u, handleB._index );
+    SW_EXPECT_TRUE( handleB.find() == pB );
+    SW_EXPECT_TRUE( handleC.find() == pC );
+
+    // 파생만 다시 올라온다 — 기반 참조는 산다, 파생 참조는 낡는다.
+    registry.registerClass( derived );
+    SW_EXPECT_TRUE( handleB.find() == pB );
+    SW_EXPECT_NULL( handleC.find() );
+
+    // 기반이 내려간다 — 기반 참조도 낡는다.
+    registry.unregisterTypesByModule( "TestHandleBase" );
+    SW_EXPECT_NULL( handleB.find() );
+    registry.unregisterTypesByModule( "TestHandleDerived" );
 }
 
 /**

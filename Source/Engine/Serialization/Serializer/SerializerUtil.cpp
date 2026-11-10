@@ -105,9 +105,9 @@ namespace sw
                         if ( pElement == nullptr && bNumberRange == false )
                             continue;
                         // 필드 경계는 원소가 아니라 이 프로퍼티를 가진 객체에서 읽는다(인스펙터와 같다).
-                        const PropertyAllowedRange range        = bNumberRange ? prop._metadata->computeAllowedRange( pInstance ) : PropertyAllowedRange{};
-                        ISequenceContainerWrapper* pSequence    = prop._containerWrapper->asSequence();
-                        const size_t               elementCount = pSequence->getSize( pValue );
+                        const PropertyAllowedRange       range        = bNumberRange ? prop._metadata->computeAllowedRange( pInstance ) : PropertyAllowedRange{};
+                        const ISequenceContainerWrapper* pSequence    = prop._containerWrapper->asSequence();
+                        const size_t                     elementCount = pSequence->getSize( pValue );
                         for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
                         {
                             // 구조체 원소의 값 주소는 그 원소 타입의 객체 주소다.
@@ -1103,9 +1103,9 @@ namespace sw
             const bool bSequence        = prop._containerWrapper != nullptr && prop._containerWrapper->asSequence() != nullptr && bNestedContainer == false;
             if ( bSequence == false )
                 return;
-            ISequenceContainerWrapper* pSequence    = prop._containerWrapper->asSequence();
-            const TypeInfo*            pElement     = findNestedObjectType( prop._elementTypeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
-            const size_t               elementCount = pSequence->getSize( pValue );
+            const ISequenceContainerWrapper* pSequence    = prop._containerWrapper->asSequence();
+            const TypeInfo*                  pElement     = findNestedObjectType( prop._elementTypeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
+            const size_t                     elementCount = pSequence->getSize( pValue );
             // 필드 경계는 원소가 아니라 이 프로퍼티를 가진 객체에서 읽는다(인스펙터와 같다).
             const PropertyAllowedRange range = prop._metadata->hasAllowedRange() ? prop._metadata->computeAllowedRange( pInstance ) : PropertyAllowedRange{};
             for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )

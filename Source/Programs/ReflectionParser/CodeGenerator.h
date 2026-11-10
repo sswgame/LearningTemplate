@@ -53,16 +53,22 @@ namespace sw
         bool hasHandleArgument() const;
         /** @brief TypeRegistrar 본문을 출력합니다. */
         void emitTypeRegistrar( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo, size_t typeIndex ) const;
-        /** @brief PropertyInfo 한 항목을 출력합니다. */
-        void emitPropertyInfoEntry( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop ) const;
-        /** @brief 프로퍼티 메타데이터(필드 표 + 범위)를 출력합니다. 필드 이름 꼴 범위는 @p typeInfo 의 필드를 읽는 함수가 됩니다. */
+        /** @brief 파일 머리에 `PROPERTY()` 값 타입 검사 템플릿(`sw::generated::checkPropertyValue`)을 한 번 냅니다(parser_config 의 금지 기반 목록이 비면 생략). */
+        void emitPropertyValueCheck( CodeEmitBuffer& outBuffer ) const;
+        /** @brief 서술자 표 앞에 둘 것(값 타입 검사 · 옛 이름 배열 · 중첩 컨테이너의 정적 객체)을 출력합니다. 이름은 @p propIndex 로 가릅니다. */
+        void emitPropertyStatics( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop, uint32 propIndex ) const;
+        /** @brief 서술자 표(`PropertyDesc`) 한 줄을 출력합니다. 칸 차례는 엔진 `PropertyDesc` 와 같습니다. */
+        void emitPropertyDesc( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop, uint32 propIndex ) const;
+        /** @brief 프로퍼티의 선언 타입 식(`decltype( T::m )`, 접근자면 반환 참조의 대상)입니다. */
+        static string makePropertyDeclType( const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop );
+        /** @brief 프로퍼티 메타데이터(필드 표 + 범위)를 채우기 함수 본문(`m.` 대상)으로 출력합니다. 필드 이름 꼴 범위는 @p typeInfo 의 필드를 읽는 함수가 됩니다. */
         void emitPropertyMetadata( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop ) const;
         /** @brief 프로퍼티 · 이벤트 하나의 에디터 메타데이터 블록을 개발 전용 단위에 출력합니다(@p pAddFunction 은 `addProperty` · `addEvent`). */
         void emitPropertyEditorMetadata( CodeEmit& emit, const ParsedPropertyInfo& prop, const utf8* pAddFunction ) const;
         /** @brief 타입 하나의 에디터 메타데이터 채우기 함수와 정적 등록을 출력합니다. 적은 것이 없으면 아무것도 쓰지 않고 false 입니다. */
         bool emitTypeEditorMetadata( CodeEmit& emit, const ParsedTypeInfo& typeInfo ) const;
-        /** @brief 중첩 컨테이너 트리를 출력합니다. */
-        void emitNestedContainerTree( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop ) const;
+        /** @brief 중첩 컨테이너 트리를 단계마다 정적 `const` 객체(`s_nested<색인>_<단계>`)로 출력합니다. */
+        void emitNestedContainerTree( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop, uint32 propIndex ) const;
         /** @brief 이벤트(멀티캐스트 델리게이트 PROPERTY) 목록을 출력합니다. */
         void emitEventList( CodeEmit& emit, const ParsedTypeInfo& typeInfo ) const;
         /** @brief 메서드 목록을 출력합니다. */
@@ -78,6 +84,8 @@ namespace sw
         void emitEnumRegistrar( CodeEmitBuffer& outBuffer, const ParsedEnumInfo& enumInfo ) const;
         /** @brief 틱 레인 등록 줄(`SW_REGISTER_TICK_TYPE( 타입, 레인 )`)을 냅니다(NEXT 5-4 W-R3 c · 5-3 1c). 대상은 `ParsedTypeInfo::requiresTickRegistration`. */
         void emitTickBatchRegistration( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo ) const;
+        /** @brief 물리 훅 등록 줄(`SW_REGISTER_PHYSICS_HOOKS( 타입 )`)을 냅니다(NEXT 5-3 물리 훅 배치). 대상은 `ParsedTypeInfo::requiresPhysicsHookRegistration`. */
+        void emitPhysicsHookRegistration( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo ) const;
 
         // ------------------------------------------------------------------------------
         // 3) maps — enumerator·식별자 표기

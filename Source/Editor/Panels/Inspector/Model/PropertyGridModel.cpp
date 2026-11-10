@@ -473,10 +473,10 @@ namespace sw::editor
                 return;
             }
             fixed_string<constant::buffer::kMax128> header;
-            ISequenceContainerWrapper*              pSeq = prop._containerWrapper->asSequence();
+            const ISequenceContainerWrapper*        pSeq = prop._containerWrapper->asSequence();
             if ( pSeq == nullptr )
             {
-                IMapContainerWrapper* pMap = prop._containerWrapper->asMap();
+                const IMapContainerWrapper* pMap = prop._containerWrapper->asMap();
                 if ( pMap == nullptr )
                 {
                     row._valueText = Internal::makeNoInspectorText( prop );
@@ -560,10 +560,10 @@ namespace sw::editor
         // 원소 위젯도 같은 규칙을 받아야 한다. `ReadOnly` 가 단추만 가리면 `ReadOnly` 컨테이너의 원소가 그대로 편집된다.
         const bool bElementDisabled = bDisabled || EditorSessionPolicy::areContainerElementEditsAllowed( bReadOnly, true ) == false;
 
-        ISequenceContainerWrapper* pSeq = prop._containerWrapper->asSequence();
+        const ISequenceContainerWrapper* pSeq = prop._containerWrapper->asSequence();
         if ( pSeq == nullptr )
         {
-            IMapContainerWrapper* pMap = prop._containerWrapper->asMap();
+            const IMapContainerWrapper* pMap = prop._containerWrapper->asMap();
             if ( pMap == nullptr )
                 return;
             // 값은 맵 노드 안에서 바로 고친다(값 프로퍼티는 오프셋 0 이라 값 주소가 곧 객체 주소다). 지우기는 맵 행 번호로 부른다.
@@ -996,7 +996,7 @@ namespace sw::editor
     {
         applyContainerEdit( rowID, "Add Element", []( const PropertyInfo& prop, void* pContainer )
         {
-            if ( ISequenceContainerWrapper* pSeq = prop._containerWrapper->asSequence() )
+            if ( const ISequenceContainerWrapper* pSeq = prop._containerWrapper->asSequence() )
                 pSeq->addElementDefault( pContainer );
         } );
     }
@@ -1005,7 +1005,7 @@ namespace sw::editor
     {
         applyContainerEdit( rowID, "Clear Elements", []( const PropertyInfo& prop, void* pContainer )
         {
-            if ( ISequenceContainerWrapper* pSeq = prop._containerWrapper->asSequence() )
+            if ( const ISequenceContainerWrapper* pSeq = prop._containerWrapper->asSequence() )
                 pSeq->clear( pContainer );
         } );
     }
@@ -1014,7 +1014,7 @@ namespace sw::editor
     {
         applyContainerEdit( rowID, "Remove Map Entry", [ordinal]( const PropertyInfo& prop, void* pContainer )
         {
-            if ( IMapContainerWrapper* pMap = prop._containerWrapper->asMap() )
+            if ( const IMapContainerWrapper* pMap = prop._containerWrapper->asMap() )
                 (void)pMap->eraseAt( pContainer, ordinal );
         } );
     }
@@ -1024,10 +1024,10 @@ namespace sw::editor
         const RowBinding* pBinding = findValueBinding( rowID );
         if ( pBinding == nullptr || pBinding->_pProp->_containerWrapper == nullptr || pBinding->_pProp->_containerWrapper->asMap() == nullptr )
             return;
-        const PropertyInfo&     prop       = *pBinding->_pProp;
-        IMapContainerWrapper&   mapWrapper = *prop._containerWrapper->asMap();
-        void* const             pContainer = prop.getRawPtr( pBinding->_instance.get() );
-        const SerializeContext& context    = SerializeContext::getDefault( SerializePurpose::Authoring );
+        const PropertyInfo&         prop       = *pBinding->_pProp;
+        const IMapContainerWrapper& mapWrapper = *prop._containerWrapper->asMap();
+        void* const                 pContainer = prop.getRawPtr( pBinding->_instance.get() );
+        const SerializeContext&     context    = SerializeContext::getDefault( SerializePurpose::Authoring );
         if ( pContainer == nullptr )
             return;
         // 키를 키 타입으로 읽어 본다. 같은 키(텍스트가 같다)가 이미 있으면 값을 덮어쓰지 않는다.
@@ -1061,7 +1061,7 @@ namespace sw::editor
     {
         applyContainerEdit( rowID, "Edit Set Element", [index, text]( const PropertyInfo& prop, void* pContainer )
         {
-            ISequenceContainerWrapper* pSeq = prop._containerWrapper->asSequence();
+            const ISequenceContainerWrapper* pSeq = prop._containerWrapper->asSequence();
             if ( pSeq == nullptr )
                 return;
             const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );
@@ -1074,7 +1074,7 @@ namespace sw::editor
     {
         applyContainerEdit( rowID, "Remove Set Element", [index]( const PropertyInfo& prop, void* pContainer )
         {
-            if ( ISequenceContainerWrapper* pSeq = prop._containerWrapper->asSequence() )
+            if ( const ISequenceContainerWrapper* pSeq = prop._containerWrapper->asSequence() )
                 (void)pSeq->eraseAt( pContainer, index );
         } );
     }
@@ -1083,7 +1083,7 @@ namespace sw::editor
     {
         applyContainerEdit( rowID, "Add Set Element", [text]( const PropertyInfo& prop, void* pContainer )
         {
-            ISequenceContainerWrapper* pSeq = prop._containerWrapper->asSequence();
+            const ISequenceContainerWrapper* pSeq = prop._containerWrapper->asSequence();
             if ( pSeq == nullptr )
                 return;
             const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );

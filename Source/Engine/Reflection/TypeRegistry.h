@@ -88,8 +88,8 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 3) 단건 등록과 별칭: REFLECT(Alias=…), ReflectBuiltins 코드젠
         // ------------------------------------------------------------------------------
-        /** @brief TypeInfo를 등록합니다. */
-        void registerClass( const TypeInfo& info );
+        /** @brief TypeInfo를 등록합니다. 값으로 받는다 — 생성 코드는 `std::move` 로 넘겨 프로퍼티 목록을 복사하지 않는다. */
+        void registerClass( TypeInfo info );
         /** @brief EnumInfo를 등록합니다. */
         void registerEnum( const EnumInfo& info );
 

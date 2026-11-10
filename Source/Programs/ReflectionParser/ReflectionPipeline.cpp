@@ -42,6 +42,31 @@ namespace sw
                 return attribute;
             }
 
+            /**
+             * @brief 한 모듈의 타입 · 열거형(`FQN\t모듈` 줄)에서 짧은 이름(리프)이 겹치면 둘을 적고 false 입니다(NEXT 5-4 W-R3 d).
+             * @details 레지스트리는 짧은 이름으로도 찾는다(씬 · 프리팹 · `addComponentByName`). 겹치면 나중에 오른 타입이 앞의 것을 가려
+             *          런타임 경고만 남기고 다른 타입을 만든다 — 같은 모듈 안이면 생성 단계에서 막는다. 이름 비교는 `hashed_string` 처럼 대소문자를 무시한다.
+             *          모듈 사이의 겹침(게임이 엔진 이름을 다시 쓰는 것)은 올리는 순서의 문제라 런타임 경고(`TypeRegistry::registerClass`)에 남긴다.
+             */
+            static bool checkLeafNameCollision( const vector<string>& listLine, const string& moduleName )
+            {
+                unordered_map<string, string> mapLeafToFqn;
+                bool                          bUnique = true;
+                for ( const string& line : listLine )
+                {
+                    const string_view fqn        = string_view( line ).substr( 0, line.find( '\t' ) );
+                    string            leaf       = StringUtil::toLower( string( ParserUtil::scopeLeaf( fqn ) ).c_str() );
+                    const auto [iter, bInserted] = mapLeafToFqn.emplace( std::move( leaf ), string( fqn ) );
+                    if ( bInserted || iter->second == fqn )
+                        continue;
+                    SW_LOG_ERROR_ID( "ReflectionPipeline.LeafNameCollision",
+                                     "Reflected types '%#' and '%#' in module '%#' share the short name '%#' - lookups by short name (scenes, prefabs, addComponentByName) would pick one silently. Rename one.",
+                                     iter->second, fqn, moduleName, ParserUtil::scopeLeaf( fqn ) );
+                    bUnique = false;
+                }
+                return bUnique;
+            }
+
             /** @brief `타입 이름 = 기본값` 꼴로 인자 목록을 씁니다. */
             static void appendParameterList( StringBuilder<constant::buffer::kMax8192>& out, const vector<ParsedParameterInfo>& listParameter )
             {
@@ -697,6 +722,8 @@ namespace sw
             return false;
         }
         VectorUtil::sortUnique( listLine );
+        if ( ReflectionPipelineInternal::checkLeafNameCollision( listLine, _pOptions->_moduleName ) == false )
+            return false;
         string text;
         for ( const string& line : listLine )
         {

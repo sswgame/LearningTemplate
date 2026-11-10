@@ -108,9 +108,11 @@ namespace sw
         static uint32 validateObject( const TypeInfo& type, const void* pInstance, ValidationContext& context );
         /**
          * @brief 이 타입(기반 · 값으로 든 구조체 포함)에 검증 함수가 하나라도 있으면 true 입니다. 없으면 `validateObject` 를 부를 까닭이 없다.
-         * @details 답은 `TypeInfo` 에 캐시한다 — 등록 · 해제가 바뀐 타입과 자손만 비우고 다시 구한다(`TypeRegistry::rebuildAffected`).
+         * @details 답은 `TypeInfo` 의 판정 비트다 — 등록 · 해제가 바뀐 타입과 자손만 비우고 다시 구한다(`TypeRegistry::rebuildAffected` → `TypeInfo::computeDerivedFlags`).
          */
         static bool hasValidator( const TypeInfo& type );
+        /** @brief 위 판정을 지금 구합니다(캐시하지 않는다). 칸 타입을 재귀로 따라가므로 칸 타입의 상속 목록이 지어져 있어야 한다. */
+        static bool computeHasValidator( const TypeInfo& type );
     };
 } // namespace sw
 

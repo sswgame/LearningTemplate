@@ -29,6 +29,8 @@ namespace sw
         [[nodiscard]] bool isBodyFound() const noexcept { return _bBodyFound == SW_TRUE; }
 
         static bool isDerivedFromComponent( CXCursor cursor, const ParserConfig& config );
+        /** @brief @p cursor 가 @p listBaseType(FQN · 짧은 이름 목록) 가운데 하나이거나 그 파생이면 true 입니다(컴포넌트 · 물리 훅 기반 판정이 같은 탐색을 쓴다). */
+        static bool isDerivedFromAny( CXCursor cursor, const vector<string>& listBaseType );
 
         /**
          * @brief 생성자를 하나도 선언하지 않은 타입(집합체 등)에 `$ctor()` 를 더합니다.
@@ -91,7 +93,7 @@ namespace sw
          */
         static CXChildVisitResult memberCollectVisitor( CXCursor cursor, CXCursor, CXClientData data );
         struct ComponentSearch;
-        /** @brief Component / SceneComponent 파생인지 베이스 체인을 검사합니다. */
+        /** @brief 기반 목록(`ComponentSearch::_pListBaseType`)의 파생인지 베이스 체인을 검사합니다. */
         static CXChildVisitResult componentBaseVisitor( CXCursor cursor, CXCursor, CXClientData clientData );
 
     private:

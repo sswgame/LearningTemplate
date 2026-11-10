@@ -25,7 +25,7 @@ namespace sw
     {
         Display, ///< Editor 와 같은 자리에 쓰는 표시 메타 — 어느 멤버(이벤트 포함)에나 붙는다
         Editor,  ///< 개발 전용 단위(`<이름>.gen.meta.cpp`)의 에디터 메타데이터 `<접두><멤버>`(엔진 `ReflectionEditorMetadata.h`)
-        Runtime, ///< 등록 단위(.gen.cpp)의 `<접두>_metadata-><멤버>`(엔진 `ReflectionMetadata.h`)
+        Runtime, ///< 등록 단위(.gen.cpp)의 `<접두><멤버>`(대상은 `PropertyMetadata&` · `_metadata.edit()`, 엔진 `ReflectionMetadata.h`)
         Manual,  ///< CodeGenerator 가 직접 쓴다(템플릿 변수 · 별칭 등록 · 범위처럼 메타데이터 멤버가 아닌 자리)
     };
 
@@ -107,7 +107,7 @@ namespace sw
     {
         /**
          * @brief Runtime 필드를 표 순서대로 등록 단위(.gen.cpp)에 씁니다.
-         * @param prefix 생성 코드의 대상 식. 예: "p._metadata->" · "info._metadata->"
+         * @param prefix 생성 코드의 대상 식. 예: "m." · "info._metadata.edit()."
          */
         template <typename TParsed>
         static void emitRuntimeMetadata( CodeEmit& emit, const TParsed& parsed, string_view prefix );

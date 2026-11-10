@@ -10,6 +10,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Reflection/PropertyHandle.h"
+
 namespace sw
 {
     struct PropertyInfo;
@@ -104,12 +106,13 @@ namespace sw
      */
     struct SW_API UIPropertyPath
     {
-        vector<const PropertyInfo*> _listProperty{}; ///< 루트 쪽부터 나열합니다(마지막이 잎).
-        UIBindingValueKind          _kind{ UIBindingValueKind::None };
+        vector<PropertyHandle> _listProperty{}; ///< 루트 쪽부터 나열합니다(마지막이 잎). 바인딩 수명 동안 들므로 포인터가 아니라 (타입, 색인, 세대)다
+        UIBindingValueKind     _kind{ UIBindingValueKind::None };
 
-        bool                isValid() const { return _listProperty.empty() == false; }
-        const PropertyInfo& getRootProperty() const { return *_listProperty.front(); }
-        const PropertyInfo& getLeafProperty() const { return *_listProperty.back(); }
+        /** @brief 해석된 경로이고 사슬의 모든 타입이 그때 그대로면(다시 등록 · 해제되지 않았으면) true 입니다. 낡은 경로는 읽고 쓰지 않는다. */
+        bool                isValid() const;
+        const PropertyInfo& getRootProperty() const { return _listProperty.front().get(); }
+        const PropertyInfo& getLeafProperty() const { return _listProperty.back().get(); }
         /** @brief 잎의 타입 이름입니다. */
         const hashed_string& getLeafTypeName() const;
         /** @brief 잎 프로퍼티를 가진 객체(사슬의 마지막 구조체)의 주소입니다. */

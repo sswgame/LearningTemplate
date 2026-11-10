@@ -95,7 +95,7 @@ namespace sw
             {
                 if ( pContainer == nullptr || shape._wrapper == nullptr )
                     return;
-                if ( ISequenceContainerWrapper* pSequence = shape._wrapper->asSequence() )
+                if ( const ISequenceContainerWrapper* pSequence = shape._wrapper->asSequence() )
                 {
                     const size_t elementCount = pSequence->getSize( pContainer );
                     for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
@@ -103,7 +103,7 @@ namespace sw
                         collectElement( pSequence->getElementConst( pContainer, elementIndex ), shape );
                     }
                 }
-                else if ( IMapContainerWrapper* pMap = shape._wrapper->asMap() )
+                else if ( const IMapContainerWrapper* pMap = shape._wrapper->asMap() )
                 {
                     pMap->forEach( pContainer, MapForEachDelegate::create( [&]( const void* pKey, const void* pValue )
                     {

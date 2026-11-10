@@ -16,6 +16,7 @@
         "Source/Engine/Profiling/IProfilerBackend.h|IProfilerBackend": "역할 인터페이스(메모리 출력 · GPU 타임라인)를 묶은 순수 인터페이스 — RHI 는 GPU 타임라인 역할만 받는다"
     },
     "staticOwner": {
+        "Source/Engine/Physics/Scene/PhysicsHookRegistry.h|PhysicsHooksOf": "컴포넌트 타입별 함수 묶음 템플릿 — 인자 묶음(PhysicsHookArgs)은 함수 포인터 서명을 하나로 맞추는 값일 뿐이고 일은 TComponent 의 훅 한정 호출이다(TickBatchOf 와 같은 자리, 언리얼 Mass 프로세서)",
         "Source/Editor/Common/Workspace/Undo/UndoStep.h|UndoStepRegistry": "정적 등록 목록 창구 — 처리기 줄(UndoStepHandler)을 다루지만 일은 목록(RegistrationList)에 올리고 내리고 찾는 것이고, 정적 등록자(UndoStepRegistrar)가 함수 포인터로 건다(다른 Registry 창구와 같은 자리)",
         "Source/Engine/Graphics/Shader/Compile/ShaderCompiler.h|ShaderTargetFormatTable": "행 타입의 constexpr 표 — 행 타입 안에는 자기 타입 배열을 constexpr 로 둘 수 없다(RHIFormatInfoTable 과 같은 까닭)",
         "Source/Engine/Graphics/RHI/RHIBackendInfo.h|RHIBackendInfoTable": "행 타입의 constexpr 표 — 행 타입 안에는 자기 타입 배열을 constexpr 로 둘 수 없다(RHIFormatInfoTable 과 같은 까닭)",

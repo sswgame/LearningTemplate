@@ -523,8 +523,8 @@ namespace sw
 
     struct MemberCollector::ComponentSearch
     {
-        const ParserConfig* _pConfig;
-        bool                _bDerives; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        const vector<string>* _pListBaseType;
+        bool                  _bDerives; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 
     CXChildVisitResult MemberCollector::componentBaseVisitor( CXCursor cursor, CXCursor, CXClientData clientData )
@@ -534,7 +534,7 @@ namespace sw
 
         ComponentSearch* pSearch  = static_cast<ComponentSearch*>( clientData );
         const CXCursor   baseDecl = CursorReader::getBaseClassDeclaration( cursor );
-        if ( clang_Cursor_isNull( baseDecl ) != 0 || isDerivedFromComponent( baseDecl, *pSearch->_pConfig ) == false )
+        if ( clang_Cursor_isNull( baseDecl ) != 0 || isDerivedFromAny( baseDecl, *pSearch->_pListBaseType ) == false )
             return CXChildVisit_Continue;
 
         pSearch->_bDerives = true;
@@ -543,26 +543,32 @@ namespace sw
 
     bool MemberCollector::isDerivedFromComponent( const CXCursor cursor, const ParserConfig& config )
     {
-        // 같은 중간 베이스 클래스를 거듭 재귀 탐색하지 않게 한다(스레드마다 한 벌).
+        return isDerivedFromAny( cursor, config._listComponentBaseType );
+    }
+
+    bool MemberCollector::isDerivedFromAny( const CXCursor cursor, const vector<string>& listBaseType )
+    {
+        // 같은 중간 베이스 클래스를 거듭 재귀 탐색하지 않게 한다(스레드마다 한 벌). 열쇠는 (기반 목록, FQN) — 목록마다 답이 다르다.
         thread_local unordered_map<string, bool> s_mapFqnToDerives;
 
         const string fqn = CursorReader::makeFullyQualifiedName( cursor );
-        for ( const string& baseType : config._listComponentBaseType )
+        for ( const string& baseType : listBaseType )
         {
             if ( fqn == baseType )
                 return true;
         }
 
-        const auto cacheIt = s_mapFqnToDerives.find( fqn );
+        const string cacheKey = ( listBaseType.empty() ? string() : listBaseType.front() ) + "|" + fqn;
+        const auto   cacheIt  = s_mapFqnToDerives.find( cacheKey );
         if ( cacheIt != s_mapFqnToDerives.end() )
             return cacheIt->second;
 
         // 캐시 미스. 순환 참조를 막으려고 먼저 false 로 넣는다
-        s_mapFqnToDerives[fqn] = false;
+        s_mapFqnToDerives[cacheKey] = false;
 
-        ComponentSearch search{ &config, false };
+        ComponentSearch search{ &listBaseType, false };
         clang_visitChildren( cursor, componentBaseVisitor, &search );
-        s_mapFqnToDerives[fqn] = search._bDerives;
+        s_mapFqnToDerives[cacheKey] = search._bDerives;
         return search._bDerives;
     }
 } // namespace sw

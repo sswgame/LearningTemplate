@@ -30,6 +30,8 @@ namespace sw
         vector<string> _listValueForbiddenBaseType;
         string         _valueForbiddenMessage;
         vector<string> _listComponentBaseType;
+        /** @brief 물리 훅(`beginPhysicsFrame` …)을 가진 기반 타입입니다. 그 파생마다 `SW_REGISTER_PHYSICS_HOOKS` 를 냅니다(`parsing.physics_hook_base_types`). */
+        vector<string> _listPhysicsHookBaseType;
         vector<string> _listTypeStripPrefix;
         /**
          * @brief 실제로 읽은 설정 파일들입니다.
