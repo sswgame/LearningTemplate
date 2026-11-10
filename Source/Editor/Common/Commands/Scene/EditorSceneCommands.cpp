@@ -207,6 +207,23 @@ namespace sw::editor
         if ( EditorPlaySession::refuseSceneEdit( "Destroy GameObjects" ) || pManager == nullptr )
             return 0;
         // 고른 조상이 있으면 건너뛴다. 조상을 지우면 자식도 지워지므로, 먼저 지운 자식을 다시 지우지 않는다.
+        const vector<GameObject*> listRoot = filterTopLevel( listObject );
+        if ( listRoot.empty() )
+            return 0;
+
+        uint32 destroyedCount = 0;
+        EditorTransaction::beginTransaction( listRoot.size() == 1 ? string( "Destroy GameObject" ) : "Destroy " + to_string( listRoot.size() ) + " GameObjects" );
+        for ( GameObject* pObj : listRoot )
+        {
+            if ( destroy( transaction, pManager, pObj ) )
+                ++destroyedCount;
+        }
+        EditorTransaction::endTransaction();
+        return destroyedCount;
+    }
+
+    vector<GameObject*> EditorSceneCommands::filterTopLevel( const vector<GameObject*>& listObject )
+    {
         vector<GameObject*> listRoot;
         for ( GameObject* pObj : listObject )
         {
@@ -223,18 +240,7 @@ namespace sw::editor
             if ( bAncestorPicked == false )
                 listRoot.push_back( pObj );
         }
-        if ( listRoot.empty() )
-            return 0;
-
-        uint32 destroyedCount = 0;
-        EditorTransaction::beginTransaction( listRoot.size() == 1 ? string( "Destroy GameObject" ) : "Destroy " + to_string( listRoot.size() ) + " GameObjects" );
-        for ( GameObject* pObj : listRoot )
-        {
-            if ( destroy( transaction, pManager, pObj ) )
-                ++destroyedCount;
-        }
-        EditorTransaction::endTransaction();
-        return destroyedCount;
+        return listRoot;
     }
 
     void EditorSceneCommands::collectRootsInOrder( GameObjectManager& manager, vector<GameObject*>& outListRoot )
@@ -422,10 +428,14 @@ namespace sw::editor
 
     uint32 EditorSceneCommands::selectObjects( const vector<GameObject*>& listObject )
     {
-        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+        EditorContext&   editorContext = editor::getSubsystem<EditorContext>();
+        EditorWorkspace& workspace     = editorContext.getSubsystem<EditorWorkspace>();
+        // 바꾸기 선택이다 — 고른 것이 없으면 선택이 빈다(언리얼 "같은 클래스 모두 선택" 과 같다). 예전에는 앞 선택을 남겨 "0 개 선택" 이라 답하고도 선택이 그대로였다.
         if ( listObject.empty() )
+        {
+            workspace.clearSelection();
             return 0;
-        EditorWorkspace& workspace = editorContext.getSubsystem<EditorWorkspace>();
+        }
         workspace.selectGameObject( listObject[0], SelectionMode::Replace );
         for ( size_t index = 1; index < listObject.size(); ++index )
         {

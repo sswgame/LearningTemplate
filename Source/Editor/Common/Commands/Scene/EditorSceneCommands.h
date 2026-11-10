@@ -49,6 +49,12 @@ namespace sw::editor
          */
         static uint32 destroyObjects( EditorTransaction& transaction, GameObjectManager* pManager, const vector<GameObject*>& listObject );
         /**
+         * @brief @p listObject 에서 조상이 함께 든 오브젝트를 뺀 목록입니다(유니티 `SelectionMode.TopLevel` · 언리얼의 붙은 액터 걸러 내기).
+         * @details 부모와 자식을 함께 고른 채 옮기기 · 정렬 · 지우기를 하면 자식은 부모를 따라 한 번, 자기 차례에 또 한 번 바뀐다 — 되돌리기가 그 둘을 맞물려
+         *          되돌리지 못했다(자식 로컬 0 → -0.5 → 되돌린 뒤 +0.5). 오브젝트 묶음을 바꾸는 명령은 모두 이 목록으로 돈다.
+         */
+        static vector<GameObject*> filterTopLevel( const vector<GameObject*>& listObject );
+        /**
          * @brief 계층 창이 그릴 루트 오브젝트를 표시 순서(형제 번호, 같으면 오브젝트 id 오름차순)로 모읍니다. 먼저 출력 목록을 비우며, 지우는 중인 오브젝트는 뺍니다.
          * @details 스토어의 순서는 삭제에 따라 바뀌므로(swap-remove) 쓰지 않는다. 씬은 파일 순서로 id 를 매기므로 번호가 모두 0 인 씬은 처음 연 순서와 같고,
          *          되돌린 오브젝트는 원래 id 와 번호로 돌아와 제 위치에 선다. 번호를 고치는 동작은 `EditorSiblingOrder` 에 있다.
@@ -97,7 +103,7 @@ namespace sw::editor
         static void collectObjectsWithComponent( GameObjectManager& manager, const TypeInfo* pComponentType, vector<GameObject*>& outListObject );
         /** @brief 태그(@p tag 와 그 하위 계층)를 가진 오브젝트를 모읍니다. 예를 들어 `Enemy` 는 `Enemy.Boss` 도 포함합니다. */
         static void collectObjectsWithTag( GameObjectManager& manager, TagID tag, vector<GameObject*>& outListObject );
-        /** @brief 모은 오브젝트로 선택을 바꿉니다. 선택한 수를 반환하며, 0 이면 선택을 건드리지 않습니다. */
+        /** @brief 모은 오브젝트로 선택을 바꿉니다. 선택한 수를 반환합니다. 0 이면 선택을 비웁니다(바꾸기 선택). */
         static uint32 selectObjects( const vector<GameObject*>& listObject );
         /** @brief pNewParent 가 pChild 의 자손이면 true 입니다. */
         static bool wouldCreateParentCycle( GameObject* pChild, GameObject* pNewParent );

@@ -1,3 +1,4 @@
+<?asset guid="d7c847024aad5c6e81229bc29efb164b"?>
 <!-- KayKit 기사 스켈레톤의 좌우 본 짝(포즈 노드 Mirror — SkeletonMirrorTable). 임포트 폴더(knight/) 밖이라 다시 임포트해도 지워지지 않는다. 표에 없는 본(root · hips · spine · chest · head)은 자기 자신이다. -->
 <SkeletonMirrorTable>
 	<_listPair>

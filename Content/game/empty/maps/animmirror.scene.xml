@@ -1,3 +1,4 @@
+<?asset guid="340acf622162e08ce969f3fa71382802"?>
 <Scene formatVersion="2" name="animmirror">
 	<!-- 시나리오 automation/animmirror 의 무대 — 같은 자리 · 같은 그래프의 기사 둘이 같은 프레임에 조준 상태와 그 미러 상태(포즈 노드 Mirror)를 시작한다. 겹쳐 서도 본 값만 읽는다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">

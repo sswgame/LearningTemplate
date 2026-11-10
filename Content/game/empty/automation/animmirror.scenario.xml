@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="9d1c20dc99659c054fba32394081534e"?>
 <!--
   포즈 노드 Mirror — 같은 자리(원점, Y 로 반 바퀴)의 기사 둘이 같은 프레임에 조준(1h_ranged_aiming — 한 손이 앞으로 나온 비대칭 자세)과 그 미러 상태(AimMirrored)를 시작한다.
   미러는 짝 본(스켈레톤 옆 common/models/kaykit/knight.mirrortable.xml)의 포즈를 모델 공간 X 면으로 비추므로, 미러 기사의 왼손 월드 X 는 조준 기사의 오른손 월드 X 의 부호만 바뀐 값이고 오른손도 같다.
