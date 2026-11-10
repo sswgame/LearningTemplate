@@ -4,9 +4,9 @@
 
 #include "Core/File/FileUtil.h"
 
+#include "Editor/Common/Commands/Asset/EditorContentScan.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 
-#include "Engine/Automation/Scenario/AutomationScratch.h"
 #include "Engine/Content/AssetPaths.h"
 
 namespace sw::editor
@@ -38,9 +38,8 @@ namespace sw::editor
 
         vector<string> listAllFile;
         // 검색용 색인이다 — 도중에 멈춘 목록은 collectFiles 가 경로와 함께 알리고, 모은 데까지 검색된다(다음 색인이 다시 훑는다).
-        (void)FileUtil::collectFiles( resourceFolder, "", listAllFile, true, stopToken ); // 종료 신호가 오르면 목록이 비거나 짧다 — 부른 잡이 신호를 다시 읽고 버린다
-        // 남의 시나리오 사본이 원본과 같은 파일 이름이면 Quick Open 이 사본을 먼저 집어 시퀀서가 씬 플레이어를 찾지 못했다
-        AutomationScratch::removeOtherProcessInstances( resourceFolder, listAllFile );
+        // 종료 신호가 오르면 목록이 비거나 짧다 — 부른 잡이 신호를 다시 읽고 버린다. 남의 시나리오 사본은 빠진다(EditorContentScan)
+        (void)EditorContentScan::collectFiles( resourceFolder, resourceFolder, "", listAllFile, true, stopToken );
 
         outList.reserve( listAllFile.size() );
         for ( const string& file : listAllFile )
@@ -83,8 +82,7 @@ namespace sw::editor
         const string&  resourceRootPath = assetPaths.getRootFolderPath();
         // 리소스 루트가 없거나 그새 사라졌으면 모든 종류가 0 개다.
         if ( resourceRootPath.empty() == false )
-            (void)FileUtil::collectFiles( resourceRootPath, "", listAllFile, true, stopToken ); // 표시용 개수 — 도중에 멈춘 것은 collectFiles 가 알리고 모은 데까지 센다
-        AutomationScratch::removeOtherProcessInstances( resourceRootPath, listAllFile );
+            (void)EditorContentScan::collectFiles( resourceRootPath, resourceRootPath, "", listAllFile, true, stopToken ); // 표시용 개수 — 도중에 멈춘 것은 collectFiles 가 알리고 모은 데까지 센다
         countFiles( listAllFile, outCounts );
     }
 } // namespace sw::editor

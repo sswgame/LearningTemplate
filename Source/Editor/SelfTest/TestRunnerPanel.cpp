@@ -4,9 +4,11 @@
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Process/EngineChildProcess.h"
 #include "Core/String/fixed_string.h"
 #include "Core/Testing/TestRunner.h"
 
+#include "Editor/Common/Commands/Asset/EditorContentScan.h"
 #include "Editor/Common/EditorExtensionRegistry.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
@@ -17,7 +19,6 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
-#include "Engine/Automation/Scenario/AutomationScratch.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
@@ -188,9 +189,9 @@ namespace sw::editor
             _bScenarioListDirty = SW_FALSE;
             const string&  root = editor::getSubsystem<AssetPaths>().getRootFolderPath();
             vector<string> listFilePath;
-            if ( FileUtil::collectFiles( root, ".xml", listFilePath, true ) == false )
-                listFilePath.clear();                                             // 도중에 멈춘 목록을 전부로 보이지 않는다
-            AutomationScratch::removeOtherProcessInstances( root, listFilePath ); // 남의 시나리오 사본은 고를 시나리오가 아니다
+            // 남의 시나리오 사본은 고를 시나리오가 아니다(EditorContentScan 이 뺀다)
+            if ( EditorContentScan::collectFiles( root, root, ".xml", listFilePath, true ) == false )
+                listFilePath.clear(); // 도중에 멈춘 목록을 전부로 보이지 않는다
             _scenarios.setFromFiles( listFilePath, root );
         }
 
@@ -201,10 +202,9 @@ namespace sw::editor
         {
             const string& scenarioPath = _scenarios.getChosen();
             // 에디터 상태 폴더는 주지 않는다 — 시나리오 실행은 자식 프로세스가 자기 폴더를 비우고 쓴다(`EditorPaths::prepareAutomationStateDirectory`).
-            const optional<AbsolutePath> executable      = AbsolutePath::tryMake( FileUtil::getExecutablePath() );
-            ProcessCommand               command         = executable.has_value() ? ProcessCommand::at( *executable, {} ) : ProcessCommand{};
-            const string                 backendArgument = TestRunnerPanelInternal::makeBackendArgument(); // " -dx12" 꼴 — 앞 공백 · 줄표를 뗀다
-            command._listArgument                        = EditorTestOutputParser::makeScenarioArguments( scenarioPath, backendArgument.empty() ? string_view{} : string_view( backendArgument ).substr( 2 ) );
+            const string         backendArgument = TestRunnerPanelInternal::makeBackendArgument(); // " -dx12" 꼴 — 앞 공백 · 줄표를 뗀다
+            const ProcessCommand command         = EngineChildProcess::makeSelfCommand(
+                editor::getSubsystem<CommandLineManager>(), EditorTestOutputParser::makeScenarioArguments( scenarioPath, backendArgument.empty() ? string_view{} : string_view( backendArgument ).substr( 2 ) ) );
             if ( _pJob->request( command, TestRunnerPanelInternal::getBinDirectory() ) )
             {
                 _externalRunKind = ExternalRunKind::Scenario;
@@ -238,10 +238,9 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EdText", "RunSelectedCases" ) ) )
         {
             // 작업 폴더는 Bin 이다 — 테스트는 거기서 위로 올라가며 Content/ 를 찾는다(CLAUDE.md 의 테스트 실행 규칙).
-            const optional<AbsolutePath> executable   = AbsolutePath::tryMake( FileUtil::getExecutablePath() );
-            vector<string>               listArgument = EditorTestOutputParser::makeUnitTestArguments( filter );
-            editor::getSubsystem<CommandLineManager>().appendAutomatedRunArgument( listArgument ); // 자동화 실행이 부른 테스트 자식도 자동화 실행이다
-            if ( executable.has_value() && _pJob->request( ProcessCommand::at( *executable, std::move( listArgument ) ), TestRunnerPanelInternal::getBinDirectory() ) )
+            // 자동화 실행이 부른 테스트 자식도 자동화 실행이다(EngineChildProcess)
+            const ProcessCommand command = EngineChildProcess::makeSelfCommand( editor::getSubsystem<CommandLineManager>(), EditorTestOutputParser::makeUnitTestArguments( filter ) );
+            if ( _pJob->request( command, TestRunnerPanelInternal::getBinDirectory() ) )
             {
                 _externalRunKind = ExternalRunKind::UnitTestRun;
                 _externalTitle   = "App -test -test-filter=" + filter;

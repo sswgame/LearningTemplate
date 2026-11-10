@@ -38,5 +38,31 @@
         "Source/Engine/Serialization/JSON/JSONDocument.cpp|JSONDocument::loadResource": "JSON 리소스 입구 자신이다(loadResource… 는 싣는 길로 센다) — 합치기 · 덮어쓰기 층은 XML 형식(ResourceComposer)만 다루어 JSON 에 실을 문맥이 없다",
         "Source/Editor/Panels/MaterialGraph/Model/MaterialGraphModel.cpp|MaterialGraphModel::load": "에디터가 고칠 원본을 읽는다 — 층 · 합치기를 거치면 층의 값이 원본 저장에 구워진다(ResourceComposer 의 SaveWouldBake 와 같은 까닭). 부모는 findBasePath 로 따로 든다",
         "Source/GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQLMigrationRunner.cpp|SQLMigrationRunner::loadMigrations": "SQL 이주 글이다 — XML 합치기 · 층의 형식이 아니고, 이주는 서버 저장소 스키마라 팩 층으로 바뀌면 안 된다"
+    },
+    "engineChildCommand": {
+        "Source/Core/Process/Process.cpp": "ProcessCommand::at 의 정의 자신이다",
+        "Source/Core/Process/EngineChildProcess.cpp": "입구 자신이다(실행 파일 · 인자 · 자동화 인자를 함께 쥔다)",
+        "Source/Core/Testing/TestRunner.cpp": "테스트 자식 역할(runChild)은 늘 -test · -unattended 로 뜬다 — Core 의 테스트 실행기라 부모 명령줄 서비스를 쥐지 않는다",
+        "Source/DevTools/Client/Automation/Runner/AutomationPerBackend.cpp": "백엔드 자식은 늘 -scenario 로 뜬다 — 그 인자가 곧 자동화 판정이다(CommandLineManager::isAutomatedRun). 실행 파일은 실행기 옵션이 준다",
+        "Source/Engine/Telemetry/CrashReportService.cpp": "크래시 보고 업로더(보고 폴더 하나만 받는 업로드 전용 실행)다 — 게임 · 에디터 실행이 아니라 사용자 설정 · 품질을 읽지 않는다",
+        "Source/Engine/Graphics/Shader/Compile/ShaderCompiler.cpp": "엔진이 아닌 도구(tint — SPIR-V 를 WGSL 로)다",
+        "Source/Editor/Panels/Console/Model/EditorSourceLocation.cpp": "엔진이 아닌 도구(사람이 고른 소스 편집기)다",
+        "Source/Editor/Common/Commands/Diagnostics/EditorTracyLauncher.cpp": "엔진이 아닌 도구(Tracy 프로파일러)다"
+    },
+    "editorContentScan": {
+        "Source/Editor/Common/Commands/Asset/EditorContentScan.cpp|folder": "입구 자신이다(훑은 뒤 남의 시나리오 사본을 뺀다)",
+        "Source/Editor/Common/Commands/EditorBackgroundIO.cpp|input._folder": "프리셋 폴더 하나(인스펙터 · 전역 변수 프리셋, 재귀 아님)를 훑는 일반 잡이다 — 트리를 걷지 않는다. 리소스 트리를 훑는 곳은 EditorContentScan 을 쓴다",
+        "Source/Editor/Common/Commands/Scene/EditorAutosaveCommands.cpp|folder": "자동 저장 칸(Saved 아래)이다 — 리소스 트리 밖",
+        "Source/Editor/Common/Commands/Scene/EditorAutosaveCommands.cpp|getFolder()": "자동 저장 칸(Saved 아래)이다 — 리소스 트리 밖",
+        "Source/Editor/Common/Commands/Scene/EditorAutosaveCommands.cpp|slotFolder": "자동 저장 칸 하나(Saved 아래)다 — 리소스 트리 밖",
+        "Source/Editor/Common/Workspace/EditorLayoutStore.cpp|folder": "에디터 배치 ini 폴더(에디터 상태 폴더)다 — 리소스 트리 밖",
+        "Source/Editor/Panels/BugReport/Model/BugReportViewModel.cpp|BugReportViewModelInternal::makeRoot()": "버그 보고 폴더(Saved/BugReports)다 — 리소스 트리 밖",
+        "Source/Editor/Panels/Packaging/Model/PackagingModel.cpp|FileUtil::joinPath( ProcessRoots::get()._project.str()": "게임 설정 폴더(Config/Game)다 — 리소스 트리 밖",
+        "Source/Editor/Common/Localization/LocalizationTools.cpp|codeFolder": "소스 코드 폴더(Source)다 — 리소스 트리 밖",
+        "Source/Editor/Common/Localization/LocalizationTools.cpp|gameFolder": "게임 팩 하나의 현지화 폴더(game/<팩>/data/localization, 재귀 아님)다 — scratch 를 지나지 않는다",
+        "Source/Editor/Common/Asset/Model/ModelImporter.cpp|sideFolder": "모델 하나의 곁 폴더(그 원본 옆)만 훑는다 — 트리를 걷지 않아 남의 사본으로 건너가지 않는다",
+        "Source/Editor/Common/Commands/Asset/EditorAssetFileCommands.cpp|source": "사람이 옮기거나 복사하려고 고른 폴더 하나의 내용이다 — 그 폴더를 통째로 다룬다",
+        "Source/Editor/Common/Commands/Asset/EditorDataTableCommands.cpp|dataFolder": "데이터 표 폴더 하나(재귀 아님)다 — scratch 를 지나지 않는다",
+        "Source/Editor/Panels/ContentBrowser/Model/ContentBrowserFileActions.cpp|sourceAbs": "사람이 옮기려고 고른 폴더 하나에 남은 파일이다 — 그 폴더를 통째로 다룬다"
     }
 }

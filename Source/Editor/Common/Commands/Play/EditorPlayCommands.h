@@ -7,6 +7,11 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Process/Process.h"
 
+namespace sw
+{
+    class CommandLineManager;
+} // namespace sw
+
 namespace sw::editor
 {
     /**
@@ -29,7 +34,10 @@ namespace sw::editor
         static uint32 keepSelectedChanges();
         /** @brief 저장된 활성 씬을 새 창(엔진을 따로 띄운 프로세스)에서 엽니다(언리얼 Standalone Game). 띄웠으면 true 입니다. */
         [[nodiscard]] static bool launchStandalone();
-        /** @brief 새 창 플레이의 명령입니다 — 실행 파일, `-gv_firstScene=<씬>`, 환경설정의 덧붙일 인자(`StringUtil::splitQuotedTokens` 으로 나눈다) 순서입니다. */
-        static ProcessCommand makeStandaloneCommand( string_view executablePath, string_view scenePath, string_view extraArguments );
+        /**
+         * @brief 새 창 플레이의 명령입니다 — 실행 파일, `-gv_firstScene=<씬>`, 환경설정의 덧붙일 인자(`StringUtil::splitQuotedTokens` 으로 나눈다) 순서입니다.
+         *        엔진 자식이라 @p parent 가 자동화 실행이면 `-unattended` 가 붙는다(`EngineChildProcess`).
+         */
+        static ProcessCommand makeStandaloneCommand( const CommandLineManager& parent, string_view executablePath, string_view scenePath, string_view extraArguments );
     };
 } // namespace sw::editor

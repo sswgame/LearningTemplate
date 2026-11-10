@@ -5,6 +5,7 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Process/EngineChildProcess.h"
 #include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
@@ -143,8 +144,8 @@ namespace sw::editor
         // 새 창은 디스크의 씬을 연다(언리얼 Standalone 처럼) — 저장하지 않은 편집은 들어가지 않는다고 알린다.
         if ( editorContext.getSubsystem<EditorWorkspace>().isSceneDirty() )
             editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyPlayNewWindowTitle" ), SW_LOCKEY( "EdCommon", "NotifyPlayNewWindowUnsaved" ), NotificationKind::Warning );
-        ProcessCommand command = makeStandaloneCommand( FileUtil::getExecutablePath(), pScene->getSourcePath(), getPreferences<EditorPlayPreferences>()._standaloneArguments );
-        editor::getSubsystem<CommandLineManager>().appendAutomatedRunArgument( command._listArgument ); // 자동화 실행이 띄운 새 창은 사람의 설정 · 세이브를 건드리지 않는다
+        const ProcessCommand command = makeStandaloneCommand( editor::getSubsystem<CommandLineManager>(), FileUtil::getExecutablePath(), pScene->getSourcePath(),
+                                                              getPreferences<EditorPlayPreferences>()._standaloneArguments );
         if ( Process::launchDetached( command ) == false )
         {
             SW_LOG_WARNING_ID( "EditorPlay.FailedLaunchStandaloneGame", "Failed to launch the standalone game: %#", command.toCommandLine() );
@@ -154,15 +155,13 @@ namespace sw::editor
         return true;
     }
 
-    ProcessCommand EditorPlayCommands::makeStandaloneCommand( string_view executablePath, string_view scenePath, string_view extraArguments )
+    ProcessCommand EditorPlayCommands::makeStandaloneCommand( const CommandLineManager& parent, string_view executablePath, string_view scenePath, string_view extraArguments )
     {
-        const optional<AbsolutePath> executable = AbsolutePath::tryMake( executablePath );
-        if ( executable.has_value() == false )
-            return {}; // 빈 명령 - 띄우기가 실패로 알린다
-        ProcessCommand       command           = ProcessCommand::at( *executable, { "-gv_firstScene=" + string( scenePath ) } );
+        vector<string>       listArgument{ "-gv_firstScene=" + string( scenePath ) };
         const vector<string> listExtraArgument = StringUtil::splitQuotedTokens( extraArguments );
-        command._listArgument.insert( command._listArgument.end(), listExtraArgument.begin(), listExtraArgument.end() );
-        return command;
+        listArgument.insert( listArgument.end(), listExtraArgument.begin(), listExtraArgument.end() );
+        // 자동화 실행이 띄운 새 창은 사람의 설정 · 세이브를 건드리지 않는다. 경로가 절대 경로가 아니면 빈 명령 - 띄우기가 실패로 알린다
+        return EngineChildProcess::makeCommand( parent, executablePath, std::move( listArgument ) );
     }
 } // namespace sw::editor
 

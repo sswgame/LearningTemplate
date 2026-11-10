@@ -32,13 +32,13 @@
 #include "Editor/Common/Asset/Model/ModelImportVrm.h"
 #include "Editor/Common/Asset/Model/ToonMaterialDef.h"
 #include "Editor/Common/Asset/Texture/TextureImporter.h"
+#include "Editor/Common/Commands/Asset/EditorContentScan.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/AnimationSet.h"
 #include "Engine/Animation/Codec/AnimationCodec.h"
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
-#include "Engine/Automation/Scenario/AutomationScratch.h"
 #include "Engine/Character/Fit/CharacterMeshUtil.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -968,12 +968,12 @@ namespace sw::editor
     {
         // 손으로 쓴 셋(가져오기 산출물 `models/` 밖)의 `<clip … retarget="…"/>` 줄이 대상이다. 굽기는 클립 몇 개라 가볍다 — 가져올 때마다 다시 구워 원본 · 프로필이 바뀐 것을 놓치지 않는다.
         vector<string> listSetFile;
-        if ( FileUtil::collectFiles( resourceRoot, AnimationSet::kExtension, listSetFile, true ) == false )
+        // 남의 시나리오 사본을 굽지 않는다(그 프로세스가 쓰는 중일 수 있다 — EditorContentScan 이 뺀다)
+        if ( EditorContentScan::collectFiles( resourceRoot, resourceRoot, AnimationSet::kExtension, listSetFile, true ) == false )
         {
             inoutSummary._listProblem.push_back( "retarget bake: the animation sets under the content root could not be listed" );
             return;
         }
-        AutomationScratch::removeOtherProcessInstances( resourceRoot, listSetFile ); // 남의 시나리오 사본을 굽지 않는다(그 프로세스가 쓰는 중일 수 있다)
         for ( const string& setFile : listSetFile )
         {
             if ( StringUtil::contains( FileUtil::normalizeSeparators( setFile ), "/models/" ) )

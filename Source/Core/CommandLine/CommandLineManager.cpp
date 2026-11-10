@@ -270,19 +270,6 @@ namespace sw
         return isArgumentProvided( CommandLineArgument::UNATTENDED ) || isArgumentProvided( CommandLineArgument::SCENARIO );
     }
 
-    void CommandLineManager::appendAutomatedRunArgument( vector<string>& inoutListArgument ) const
-    {
-        if ( isAutomatedRun() == false )
-            return;
-        const string unattended = "-" + string( getCommandLineArgumentSpelling( CommandLineArgument::UNATTENDED ) );
-        for ( const string& argument : inoutListArgument )
-        {
-            if ( argument == unattended )
-                return;
-        }
-        inoutListArgument.push_back( unattended );
-    }
-
     bool CommandLineManager::findPendingGlobalValue( string_view name, string& outValue ) const
     {
         const auto iter = _mapPendingGlobal.find( name );
