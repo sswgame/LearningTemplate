@@ -12,6 +12,7 @@
 #include "Engine/Asset/Cook/AssetCompanion.h"
 #include "Engine/Asset/Reference/AssetReferenceFields.h"
 #include "Engine/Content/Pack/PackConfig.h"
+#include "Engine/Serialization/Inherit/AssetRedirect.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -437,6 +438,25 @@ namespace sw
                     return static_cast<uint32>( _files._listCodeRoot.size() );
                 }
 
+                /**
+                 * @brief 도메인 뿌리의 리다이렉트 표(`AssetRedirect::makeTableID` 자리의 `redirects.xml`)를 담습니다. 뿌리 수를 돌려준다.
+                 * @details 런타임이 이름으로 읽어(`AssetRedirect::loadFromSearchDomains`) 참조 칸으로는 닿지 않는다 — 빠지면 배포 팩에서 세이브 · 서버의 옛 id 가 죽는다.
+                 *          훑지 않는다: `from` 은 이제 없는 옛 id 라 따라가면 빠진 참조다(참조 검사도 표를 보지 않는다 — `AssetReferenceFields::isReferrer`).
+                 *          언리얼은 리다이렉터가 패키지(`UObjectRedirector`)라 그 경로를 참조하는 쪽이 쿠킹에 끌고 오고, 여기는 도메인마다 표 하나라 뿌리로 둔다.
+                 */
+                uint32 addRedirectTableRoots()
+                {
+                    uint32 rootCount = 0;
+                    for ( const string& assetID : _files._setPackable )
+                    {
+                        if ( AssetRedirect::isTable( assetID ) == false || AssetRedirect::makeTableID( assetID ) != assetID )
+                            continue;
+                        _setIncluded.insert( assetID );
+                        ++rootCount;
+                    }
+                    return rootCount;
+                }
+
                 /** @brief 굽는 게임마다 게임 설정의 `<RequiredData kind pack>` 이 가리키는 자리를 뿌리로 담습니다. 뿌리 수를 돌려준다. */
                 uint32 addRequiredDataRoots()
                 {
@@ -562,6 +582,7 @@ namespace sw
         outResult._rootCount += walker.addCodeRoots();
         outResult._rootCount += walker.addAlwaysCookRoots();
         outResult._rootCount += walker.addRequiredDataRoots();
+        outResult._rootCount += walker.addRedirectTableRoots();
         walker.run();
         return walker._bFailed == false;
     }
