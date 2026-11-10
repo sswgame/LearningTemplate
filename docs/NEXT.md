@@ -51,7 +51,7 @@
 
 ### 5-1. 구조 · 성능 설계(2026-11-10 설계안 — 순서대로, 폴더가 겹치지 않는 작업자 단위)
 
-- **W-S4 `GameObjectManager.h` 허브 해체(포함 TU 433):** 첫 조각은 들어갔다 — 매니저만 쓰는 부품(트랜스폼 계층 · 프리미티브 · 카메라 레지스트리 · 태그 색인 · 틱 스케줄러)을 `GameObjectManager::State`(pimpl)로, include 30 → 24(닫힘에서 헤더 12 개가 빠졌다). 남은 것: (a) 템플릿 전달(`forEachComponentOfType` · `forEachActiveRegistered` · `resolveComponent<T>` · `makeTypedHandle` · `getSubsystem<T>` · 틱 뒤 컴포넌트 작업)을 `GameObjectManager.inl` 로 — 부르는 TU 가 수백이라 같은 방식(전후 include 닫힘 × 심볼 대조)으로 `.inl` 을 직접 더한다. 그러면 `GameObjectStore` · `ComponentRegistry` · `SubsystemScope` 도 State 로 갈 수 있다. (b) `GameObject.h` 포함(기본 이름 `kDefaultName` 기본 인자 하나 때문)을 앞 선언 + .cpp 오버로드로. (c) `-ftime-trace` 집계로 재컴파일 TU · ms 를 전후 비교(통합 담당).
+- **W-S4 `GameObjectManager.h` 허브 해체(포함 TU 433):** 구조 조각은 다 들어갔다 — 씬 부품(트랜스폼 계층 · 프리미티브 · 카메라 · 컴포넌트 레지스트리 · 태그 색인 · 틱 스케줄러 · 오브젝트 저장소 · 씬 범위와 서비스 목록)은 `GameObjectManager::State`(pimpl), 템플릿 몸체는 `GameObjectManager.inl`(부르는 파일 215 개만 포함), `createGameObject` 기본 이름은 오버로드. 헤더 include 30 → 24 → 16 이고 `GameObject.h` · `GameObjectStore.h` · `ISceneService.h`(→ `SubsystemScope` · `RegistrationList`) · `ComponentRegistry.h` · `ObjectIDAllocator.h` 가 닫힘에서 빠졌다. 남은 것: (c) 통합 빌드 — `.inl` 을 빠뜨린 TU 는 컴파일이 아니라 링크(정의 없는 `GameObjectManager::forEach…` · `resolveComponent<…>` 템플릿 심볼)에서 멈추므로 그 TU 에 `.inl` 을 더한다. 막는 구조로는 clang `-Werror=undefined-func-template` 을 Engine · GameFramework · Games 에 켜 컴파일에서 잡을 수 있는지 그 빌드에서 본다. 이어 `-ftime-trace` 집계로 재컴파일 TU · ms 를 전후 비교(통합 담당).
 - **W-R1 `FramePassExecutor` 분할 → 프레임 아레나:** 3257줄을 그래프 짓기 · 패스 라이브러리 · 제출로 나눈다(성능 변화 0). 그 뒤 프레임 지역 `vector` 를 `LinearAllocator` 기반 `frame_vector` 로 옮긴다(RT 프레임 힙 할당 0).
 - **W-R2 PSO 배치 색인(W-R1 뒤):** 배치를 만들 때 PSO 핸들을 한 번 풀어 둔다. `RT.PSO.ensureMaterial` 전후를 재고, 흔들림 안이면 되돌린다.
 - **W-E1 패널 열림 훅:** `IEditorPanel::onPanelOpened` 에서만 비동기 준비를 시작하고, View 는 준비 전에 뼈대만 그린다(3절 "첫 패널 느린 프레임" 측정이 후보를 고른다).
@@ -84,7 +84,7 @@ GameObject/Component API 는 저작 · 수명 · 직렬화 층으로 두고, 프
 4. **물리 훅 배치:** Jolt 조임(인라인 실행 폴백 삭제 · `WaitForJobs` 돕기)은 들어갔다. 남은 것: 물리 훅 4 종(`beginPhysicsFrame` · `prePhysicsStep` · `postPhysicsStep` · `endPhysicsFrame`, 재정의 타입 12)을 타입별 배치 함수로 — 재정의가 대개 보호 · 비공개라 `TickBatchOf` 처럼 한정 이름으로 부르려면 `REFLECT_BODY` 의 친구 열기가 필요해 5-4 생성기와 함께(`SW_REGISTER_PHYSICS_HOOKS( 타입 )`, 재정의 여부는 `&T::hook` 의 클래스 형식으로 컴파일에서 — 지금의 "기본 구현이 불리면 뺀다" 런타임 비트를 대신한다). 명령 저장소(강체마다 `SpinLock` + `PhysicsBodyCommand`)는 5 의 첫 사용자(강체 자세 · 명령)로 옮긴다.
 5. **`ComponentDataStore<TPage, MaxPages>` — 들어갔다:** 트랜스폼 칸 저장소가 그 틀 위에 있고(페이지 계약 `initializeSlot` · `releaseSlot`), 첫 물리 사용자 `PhysicsPoseStore` 가 강체 3D · 2D 의 바디 핸들 · 앞뒤 스텝 자세 · 속도 · 명령(칸마다 스핀락)을 강체 칸 SoA 로 든다 — 스텝 뒤 일괄 읽기는 바디 칸 → 강체 칸 표로 칸에 바로 쓴다. 투사체(`ProjectileSimulation`)는 옮기지 않는다: 컴포넌트가 아니라 시뮬레이션이 든 연속 `vector<ProjectileState>` 라 칸 번호가 필요 없고(저장 · 롤백이 목록 순서), SoA 로 가르는 것은 배치 레이아웃 문제라 측정(`load/*`)이 이득을 보일 때만. 남은 것: 캐릭터 컨트롤러 3D · 2D 의 입력(`_commandLock` + 이동 · 점프 · 루트 모션 대기 값)을 같은 칸 모양으로 — 강체와 명령 집합이 달라 페이지가 따로다.
 6. **엔진 공간 색인:** `SceneSpatialGrid` 서비스(월드 버전으로 증분, 이중 버퍼 읽기). GF `InteractionSpatialIndex` · `ZoneOccupantIndex` 는 읽기만. `TagIndex` 는 세대 스냅샷으로.
-7. W-S4 허브 해체(5-1) — 첫 조각(부품 pimpl)은 들어갔고 템플릿 `.inl` 이 남았다(5-1 줄).
+7. W-S4 허브 해체(5-1) — 구조 조각(State pimpl · 템플릿 .inl · GameObject.h 제거)은 들어갔고 통합 빌드 · 측정이 남았다(5-1 줄).
 
 병렬 작업자: B(3 · 4, `Engine/Physics/**`), C(2), D(6, C 뒤), 5-4 작업자(1 의 생성기). 결함 후보 둘은 확인했다 — 중첩 `runParallel` 의 writerID 0 은 고쳤고(`TickThreadScope` 가 들어올 때의 상태로 되돌린다), `setCanEverTick` 비트필드는 틱 중 쓰기가 `deferIfStructureFrozen` 으로 미뤄져 지금은 경쟁이 없다(틱 밖에서 워커 레인이 남의 컴포넌트에 쓰면 다시 열린다 — 2 단계 형식이 막을 자리).
 
