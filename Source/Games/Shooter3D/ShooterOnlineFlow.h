@@ -19,7 +19,6 @@
 #include "GameFramework/Kits/Feature/Online/Mailbox/Runtime/MailboxProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingProtocol.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocolClient.h"
-#include "GameFramework/Runtime/Online/Store/ServiceStoreTracker.h"
 
 namespace sw
 {
@@ -52,11 +51,7 @@ namespace sw
         void requestSubmitKills( OnlineSession& session, int64 kills );
         /** @brief 순위표 `kBoardKills` 의 상위 `kTopCount` 를 받습니다. */
         void requestTopKills( OnlineSession& session );
-        /** @brief 이 프로세스 안에 세운 서버의 저장소에 로그인한 계정 앞으로 금화 우편을 넣습니다. 개발 명령과 시나리오의 준비 단계입니다. @return 안에 세운 서버가 없거나 로그인 전이면 false 입니다.
-         *  정의는 서버 코드(`Server/ShooterSelfMail.cpp`)라 클라이언트 구성에는 없다 — 부르는 개발 명령도 그 파일에 있다. */
-        [[nodiscard]] bool sendSelfMailOnLocalServer( OnlineSession& session, int64 amount, int64 nowMs );
-
-        /** @brief 저장소가 맡긴 우편을 끝냈을 때 부릅니다. */
+        /** @brief 프로세스 안 서버의 저장소에 넣은 금화 우편이 끝났을 때 부릅니다. 넣기는 서버 코드(`Server/ShooterSelfMail.cpp`)의 개발 명령이라 클라이언트 구성에는 없습니다. */
         void  recordSelfMailSent() { ++_selfMailSentCount; }
         int32 getSelfMailSentCount() const { return _selfMailSentCount; }
         /** @brief 받은 배정의 경기 id 입니다. 아직 없으면 0 입니다. */
@@ -81,6 +76,5 @@ namespace sw
         uint64                     _matchID;
         int32                      _submittedScoreCount;
         int32                      _selfMailSentCount;
-        ServiceStoreTracker        _localStore; ///< 로컬 서버 저장소에 맡긴 일이다(세션이 빌려준다)
     };
 } // namespace sw

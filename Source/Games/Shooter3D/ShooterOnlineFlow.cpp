@@ -241,7 +241,6 @@ namespace sw
         , _matchID{ 0 }
         , _submittedScoreCount{ 0 }
         , _selfMailSentCount{ 0 }
-        , _localStore{}
     {
     }
 
