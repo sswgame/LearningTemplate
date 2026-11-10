@@ -424,7 +424,7 @@ namespace sw
                     const string   assetFolder = resolveAbsolutePath( assetRoot );
                     vector<string> listFile;
                     // 에셋 루트가 리소스 루트면 남의 시나리오 사본이 섞인다 — EditorContentScan 이 뺀다
-                    const bool bListed = FileUtil::isDirectory( assetFolder ) && EditorContentScan::collectFiles( editor::getSubsystem<AssetPaths>().getRootFolderPath(), assetFolder, "", listFile, true );
+                    const bool bListed = FileUtil::isDirectory( assetFolder ) && editor::EditorContentScan::collectFiles( editor::getSubsystem<AssetPaths>().getRootFolderPath(), assetFolder, "", listFile, true );
                     if ( bListed == false )
                     {
                         gatherer.addIssue( assetRoot, "asset root does not exist", true );
