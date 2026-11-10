@@ -58,6 +58,8 @@ namespace sw
          * @return 초기화에 성공하면 true
          */
         [[nodiscard]] bool initialize( uint32 threadCount = 0 );
+        /** @brief 서브시스템 기동(`initializeSubsystem`)이 만들 워커 수를 정합니다(명령줄 `-workers=N`). 기동 전에만 부릅니다. */
+        void setSubsystemWorkerCount( uint32 workerCount ) { _subsystemWorkerCount = workerCount; }
 
         /** @brief 모든 워커 스레드를 멈추고 풀을 종료합니다. */
         void shutdown();
@@ -446,9 +448,10 @@ namespace sw
         /** @brief 유휴 비트마스크가 담을 수 있는 워커 수입니다. `initialize` 가 이 수로 제한합니다. */
         static constexpr uint32 kMaxWorkerCount = 64;
 
-        uint8           _bInitialized : 1; ///< 매니저를 초기화했는지 여부
-        std::thread::id _mainThreadID;     ///< 메인 스레드의 ID
-        atomic<bool>    _bStop;            ///< 워커 스레드 종료 플래그. `StopSource` 가 아닌 이유: 깨우기 프로토콜이 이 칸을 seq_cst 로 쓰고 읽는다(잠들기 직전 재확인과 짝)
+        uint8           _bInitialized : 1;     ///< 매니저를 초기화했는지 여부
+        uint32          _subsystemWorkerCount; ///< 서브시스템 기동이 만들 워커 수(0 = 코어 수에서 정한다, `setSubsystemWorkerCount`)
+        std::thread::id _mainThreadID;         ///< 메인 스레드의 ID
+        atomic<bool>    _bStop;                ///< 워커 스레드 종료 플래그. `StopSource` 가 아닌 이유: 깨우기 프로토콜이 이 칸을 seq_cst 로 쓰고 읽는다(잠들기 직전 재확인과 짝)
         /** @brief `workerLoop` 에 들어가 아직 나오지 않은 워커 수입니다. `shutdown` 이 시간 제한 있는 join 대신 이 수가 0 이 되기를 기다립니다(`std::thread::join` 은 시간 제한이 없다). */
         atomic<uint32>                 _runningWorkerCount;
         vector<unique_ptr<WorkerSlot>> _listWorkerSlot; ///< 워커마다 데크 + 잠드는 워드 + 스레드. 워커가 도는 동안 크기가 바뀌지 않는다

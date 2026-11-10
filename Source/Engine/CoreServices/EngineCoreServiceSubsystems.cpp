@@ -6,6 +6,7 @@
  */
 #include "pch.h"
 
+#include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Event/EventDispatcher.h"
 #include "Core/File/AsyncFileIO.h"
@@ -53,7 +54,19 @@ namespace sw
         (void)scope.emplaceSubsystem<EngineCompressionCodecs>( *build._pStartupParts->_pCodecRegistry );
     } );
 
-    SW_ENGINE_SERVICE_SUBSYSTEM( TaskManager, HostOnly, Startup, (), SW_ENGINE_DEFAULT_FACTORY( TaskManager ) );
+    // 워커 수는 명령줄 `-workers=N` 이 정한다(없으면 코어 수). 명령줄은 코어 범위에 있어 상위 범위로 올라가며 찾는다 — 공장 범위의 먼저 만들 타입이 아니다.
+    SW_ENGINE_SERVICE_SUBSYSTEM( TaskManager, HostOnly, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
+    {
+        (void)build;
+        TaskManager&              taskManager = scope.emplaceSubsystem<TaskManager>();
+        const CommandLineManager& commandLine = requireSubsystem<CommandLineManager>( scope.getScope() );
+        int32                     workerCount = 0;
+        if ( commandLine.getArgument( CommandLineArgument::WORKERS, workerCount ) == false )
+            return;
+        if ( workerCount < 1 )
+            SW_FATAL( "-workers=%# must be 1 or more", workerCount );
+        taskManager.setSubsystemWorkerCount( static_cast<uint32>( workerCount ) );
+    } );
 
     // 완료 콜백(팩 해제 · CRC · 스트리밍 완료 기록)은 태스크 워커에서 돈다 — IO 스레드는 다음 읽기를 거는 일만 한다. 공장이 태스크 매니저를 찾으므로 그것을 먼저 만든다.
     SW_ENGINE_SERVICE_SUBSYSTEM( AsyncFileIO, HostOnly, Startup, ( TaskManager ), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
