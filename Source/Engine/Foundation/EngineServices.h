@@ -86,9 +86,10 @@ namespace sw
         /**
          * @brief 엔진 서비스 @p T 입니다. **없으면 nullptr 이므로** 받는 쪽이 확인해야 합니다(바인딩 전 · 선택 칸 · 하네스가 넣지 않은 서비스).
          * @details 칸이 있는 타입은 그 칸을 읽고, 칸이 없는 타입은 바인딩한 범위에서 상위로 올라가며 찾는다(선형 검색 — 핫 패스면 칸을 선언한다).
+         *          `const T` 로 찾으면 const 로 건 객체(전용 서버의 `const ServerConfig`)도 찾고 const 포인터를 돌려준다(`findInLocator` 와 같은 규칙).
          */
         template <class T>
-        typename ServiceSlotOf<std::remove_const_t<T>>::Access* findSubsystem()
+        std::conditional_t<std::is_const_v<T>, const typename ServiceSlotOf<std::remove_const_t<T>>::Access, typename ServiceSlotOf<std::remove_const_t<T>>::Access>* findSubsystem()
         {
             using Slot = ServiceSlotOf<std::remove_const_t<T>>;
             if constexpr ( Slot::kRegistered )

@@ -6,7 +6,7 @@
  */
 #pragma once
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Store/ServiceStore.h"
 
 namespace sw

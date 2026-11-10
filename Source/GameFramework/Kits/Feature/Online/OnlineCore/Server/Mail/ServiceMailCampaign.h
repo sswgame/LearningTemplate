@@ -13,7 +13,7 @@
 #include "Core/Name/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Online/Mail/ServiceMail.h"
+#include "GameFramework/Runtime/Online/Mail/Server/ServiceMail.h"
 #include "GameFramework/Runtime/Online/Store/ServiceStore.h"
 
 namespace sw

@@ -28,6 +28,7 @@
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Online/Security/NetSecurity.h"
+#include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
 
 #include "Programs/OnlineLoadBot/LoadBotLocalServer.h"
 #include "Programs/OnlineLoadBot/LoadBotModuleEntry.h"
@@ -55,7 +56,7 @@ namespace sw
 
         struct LoadBotMainInternal
         {
-            static constexpr uint16 kDefaultServerPort    = OnlineServiceHostConfig::kDefaultPort;
+            static constexpr uint16 kDefaultServerPort    = OnlineProtocolConstant::kDefaultPort;
             static constexpr int64  kIdleSleepNs          = 200000; ///< 틱 사이 — 전송을 I/O 스레드 없이 돌리므로 짧게
             static constexpr int32  kPercentScale         = 100;
             static constexpr int32  kSpareConnectionCount = 16;

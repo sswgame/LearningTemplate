@@ -12,9 +12,9 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
+#include "Core/Registry/ServiceFactoryList.h"
 #include "Core/Serialization/BitStream.h"
 
-#include "Engine/DedicatedServer/ServiceFactoryList.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -22,7 +22,7 @@
 #include "GameFramework/Runtime/Online/Bus/MixedBuildCodec.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBus.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
-#include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 
 namespace sw
 {

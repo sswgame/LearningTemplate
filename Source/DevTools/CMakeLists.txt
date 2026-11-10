@@ -18,6 +18,8 @@ sw_filterPlatformSources(DEVTOOLS_SOURCES) # OS 파일 감시기(`FileWatch/Wind
 # 설정 리로드 · 콘솔의 입력 · 시작 명령은 서버에도 선다.
 if(SW_TARGET_TYPE STREQUAL "Server")
 	sw_excludeUnbuiltSources(DEVTOOLS_SOURCES ${SW_CLIENT_ONLY_SOURCE_PATTERNS})
+elseif(SW_TARGET_TYPE STREQUAL "Client")
+	sw_excludeUnbuiltSources(DEVTOOLS_SOURCES ${SW_SERVER_ONLY_SOURCE_PATTERNS}) # 서버 전용 부분(Server/)은 클라이언트 구성이 짓지 않는다
 endif()
 
 add_library(DevTools SHARED ${DEVTOOLS_SOURCES})

@@ -28,9 +28,9 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/Registry/ServiceFactoryList.h"
 #include "Core/Serialization/BitStream.h"
 
-#include "Engine/DedicatedServer/ServiceFactoryList.h"
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 
 #include "GameFramework/GameFrameworkExports.h"

@@ -5,7 +5,7 @@
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Server/ServerDirectoryService.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
-#include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
+#include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
 
 // 서버 디렉터리 키트의 서버 조립 — 점검 · 공지 · 접속 서버 배정 서비스와 바인딩을 만든다.
 // 이 서버를 디렉터리에 등록하는 일(하트비트)은 키트가 아니라 런타임이 온라인 설정의 `_publicAddress` 로 한다.

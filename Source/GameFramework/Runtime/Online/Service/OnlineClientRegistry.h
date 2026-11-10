@@ -9,9 +9,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Registry/ServiceFactoryList.h"
 #include "Core/Subsystem/SubsystemScope.h"
-
-#include "Engine/DedicatedServer/ServiceFactoryList.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 

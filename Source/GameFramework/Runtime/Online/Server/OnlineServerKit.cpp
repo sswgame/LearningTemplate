@@ -3,7 +3,7 @@
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
 
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
-#include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
+#include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
 
 namespace sw
 {

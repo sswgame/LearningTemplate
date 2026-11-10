@@ -6,7 +6,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Config/ConfigManager.h"
-#include "Engine/Config/Server/ServerConfig.h"
+#include "Engine/Config/ServerConfig.h"
 
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"

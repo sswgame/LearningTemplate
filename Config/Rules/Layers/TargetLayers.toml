@@ -20,15 +20,20 @@ editorextension = ["ModuleManager", "App", "Server", "Games", "Programs"]
 # Server 타깃 구성의 모든 타깃이 더 받는다(`sw_applyTargetLayerGate`). 엔진 폴더는 `cmake/Engine/BuildLayout.cmake` 의 `SW_UNBUILT_ENGINE_FOLDERS`(서버)와 같아야 한다 —
 # 생성기가 대조해 빠지면 configure 가 멈춘다. 클라이언트 전용 소스 폴더(`Client/`)는 모듈 · 게임마다 있어 아래 `[gatefolder]` 가 이름으로 막는다.
 serverbuild = ["Engine/Audio", "Engine/Renderer", "Engine/UI", "Engine/Window/Linux", "Engine/Input/Linux"]
+# 클라이언트 구성(Client 타깃)의 모든 타깃이 더 받는다 — 위의 반대쪽. 서버 전용 소스 폴더(`Server/`)가 Engine · GameFramework · 게임마다 있어 아래 `[gatefolder]` 가 이름으로 막고,
+# 경로로 막을 엔진 폴더는 없다(서버만 짓는 `Window/Headless` · `Input/Headless` 에는 헤더가 없다). 이음매는 `IOnlineLocalServerFactory` 같은 창구다.
+clientbuild = []
 # 리플렉션 파서는 Core 만 링크한다(Engine.dll 과 순환) — 그래도 리플렉션 스키마(매크로 · 키 · 형식 기술자)는 엔진과 같아야 해 Engine 헤더 몇 개를 읽는다.
 # `Source/` 가 Core 의 include 루트라 경로로는 나머지 Engine 헤더를 막지 못한다 — 게이트로 Engine 전체를 막고 아래 `[allow]` 의 헤더만 연다.
 reflectionparser = ["Engine", "ModuleAPI", "DevTools", "Editor", "ModuleManager", "App", "Server", "GameFramework", "Games"]
 
-# [gatefolder] 게이트 이름 → 그 이름의 폴더(`Source/` 아래 어느 깊이든) 안 헤더를 모두 막는다. 같은 DLL(GameFramework · 게임 모듈 · DevTools)이 짓는 폴더라 타깃으로는
-# 가르지 못하지만, 서버 구성은 그 폴더의 소스를 짓지 않으므로(`SW_CLIENT_ONLY_SOURCE_PATTERNS`) 그 구성의 모든 타깃에서 헤더를 막아도 된다. 키트의 `Client/` 는
-# 따로 짓는 모듈(`GF_Client_<X>`)이라 모듈별 게이트도 막는다. 그 이름의 폴더가 하나도 없으면 configure 가 멈춘다.
+# [gatefolder] 게이트 이름 → 그 이름의 폴더(`Source/` 아래 어느 깊이든) 안 헤더를 모두 막는다. 같은 DLL(Engine · GameFramework · 게임 모듈 · DevTools)이 짓는 폴더라 타깃으로는
+# 가르지 못하지만, 서버 구성은 `Client/` 의 소스를(`SW_CLIENT_ONLY_SOURCE_PATTERNS`), 클라이언트 구성은 `Server/` 의 소스를(`SW_SERVER_ONLY_SOURCE_PATTERNS`) 짓지 않으므로
+# 그 구성의 모든 타깃에서 헤더를 막아도 된다. 키트의 `Client/` · `Server/` 는 따로 짓는 모듈(`GF_Client_<X>` · `GF_Server_<X>`)이라 모듈별 게이트도 막는다.
+# 그 이름의 폴더가 하나도 없으면 configure 가 멈춘다. 공유 형식이 그 폴더에 있으면 폴더 이름이 거짓말이다 — 옮긴다(`Engine/Config/ServerConfig.h`).
 [gatefolder]
 serverbuild = ["Client"]
+clientbuild = ["Server"]
 
 # [allow] 게이트 이름 → 그 게이트가 막는 접두어 안에서도 여는 헤더(`Source/` 기준 경로). 연 헤더가 include 하는 헤더도 모두 열려 있어야 한다 — 아니면 configure 가 멈춘다.
 # 언리얼 Build.cs 의 `PublicIncludePathModuleNames`(헤더만 쓰고 링크하지 않는 의존)와 같은 자리다. 이 목록이 CMake 의 `ReflectionSchema` 헤더 묶음이기도 하다

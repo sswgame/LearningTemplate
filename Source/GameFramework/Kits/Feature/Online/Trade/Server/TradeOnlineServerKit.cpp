@@ -9,7 +9,7 @@
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeStateMachine.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
-#include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
+#include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
 
 // 거래 키트의 서버 조립 — 거래 서비스(양쪽 확정 → 원장 분개 하나로 정산)와 바인딩을 만든다. 상대 찾기는 계정 키트(필수), 다른 서버의 상대는 접속 상태,
 // 계정 잔액 상한은 경제 키트의 원장 정책을 받는다.

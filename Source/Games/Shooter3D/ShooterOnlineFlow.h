@@ -52,7 +52,8 @@ namespace sw
         void requestSubmitKills( OnlineSession& session, int64 kills );
         /** @brief 순위표 `kBoardKills` 의 상위 `kTopCount` 를 받습니다. */
         void requestTopKills( OnlineSession& session );
-        /** @brief 이 프로세스 안에 세운 서버의 저장소에 로그인한 계정 앞으로 금화 우편을 넣습니다. 개발 명령과 시나리오의 준비 단계입니다. @return 안에 세운 서버가 없거나 로그인 전이면 false 입니다. */
+        /** @brief 이 프로세스 안에 세운 서버의 저장소에 로그인한 계정 앞으로 금화 우편을 넣습니다. 개발 명령과 시나리오의 준비 단계입니다. @return 안에 세운 서버가 없거나 로그인 전이면 false 입니다.
+         *  정의는 서버 코드(`Server/ShooterSelfMail.cpp`)라 클라이언트 구성에는 없다 — 부르는 개발 명령도 그 파일에 있다. */
         [[nodiscard]] bool sendSelfMailOnLocalServer( OnlineSession& session, int64 amount, int64 nowMs );
 
         /** @brief 저장소가 맡긴 우편을 끝냈을 때 부릅니다. */

@@ -3,7 +3,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Store/ServiceIdempotency.h"
-#include "GameFramework/Runtime/Online/Store/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 
 // ServiceStoreTest — 서비스 저장소 트랜잭션의 약속(원장 · 우편 · 거래가 기대는 것): "없어야 한다" 조건, 버전 조건, 원자성, 키 규칙,
 // 그리고 그 위의 멱등 기록. 메모리 구현으로 본다(SQL 구현도 같은 약속을 지킨다)(nogpu).

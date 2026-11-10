@@ -16,7 +16,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
-#include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
+#include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
 
 // 계정 키트의 서버 조립 — 로그인 서비스 · 바인딩을 만들고 신원(디렉터리) · 접속 상태 · 세션 끊기 · 이름 찾기 · 외부 로그인 연동 조회를 문맥에 내놓는다.
 // 설정은 `AccountKitConfig` 이고, 개발 설정의 값(가벼운 해시 · 개발 티켓 키)은 확장점 `AccountDevOptions`(이 파일 아래의 등록이 올린다)가 준다.

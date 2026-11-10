@@ -10,7 +10,7 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 
-#include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 
 namespace sw
 {

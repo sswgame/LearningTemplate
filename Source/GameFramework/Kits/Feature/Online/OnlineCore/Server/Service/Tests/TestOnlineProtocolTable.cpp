@@ -6,7 +6,7 @@
 
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Observability/ServiceMetrics.h"
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
-#include "GameFramework/Runtime/Online/Mail/ServiceMail.h"
+#include "GameFramework/Runtime/Online/Mail/Server/ServiceMail.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocolRegistry.h"
 

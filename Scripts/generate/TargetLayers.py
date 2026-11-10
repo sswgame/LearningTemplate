@@ -8,7 +8,7 @@ Scripts/generate/TargetLayers.py
 파일을 `<빌드>/generated/sw/TargetLayerStubs/<게이트>/` 에 놓고, CMake(`sw_applyTargetLayerGate`)가 그 폴더를 타깃의 include 자리 맨 앞에 둔다.
 위반하면(헤더를 거쳐 닿는 전이 include 도) 컴파일이 멈춘다 — `EngineLayers.py` · `EditorLayers.py` 와 같은 틀이고, 그쪽이 폴더 층을 보면 이쪽은 타깃 경계를 본다.
 
-`[gatefolder]` 는 경로 접두어 대신 폴더 이름(`Client`)으로 막는다 — 서버 구성이 짓지 않는 클라이언트 전용 폴더가 모듈 · 게임마다 있어서다.
+`[gatefolder]` 는 경로 접두어 대신 폴더 이름으로 막는다 — 서버 구성이 짓지 않는 `Client/`, 클라이언트 구성이 짓지 않는 `Server/` 가 모듈 · 게임마다 있어서다.
 `serverbuild` 는 서버가 짓지 않는 엔진 폴더(`cmake/Engine/BuildLayout.cmake` 의 `SW_UNBUILT_ENGINE_FOLDERS`)를 모두 막아야 한다 — 대조해 빠지면 멈춘다.
 
 파일 수가 많아(키트 60 여 개 × 헤더 수백) CMake 대신 여기서 쓴다. 게이트마다 목록 스탬프가 같으면 파일을 건드리지 않아 configure 가 파일 하나만 읽는다.
@@ -39,6 +39,7 @@ kModuleKinds = {"Kit", "EditorExtension", "Game"}   # 모듈별 게이트를 받
 kStubFolderName = "TargetLayerStubs"
 kQuotedInclude = re.compile(r'^\s*#\s*include\s+"([^"]+)"', re.M)
 kServerGateName = "serverbuild"
+kClientGateName = "clientbuild"
 kUnbuiltFolderLine = re.compile(r'list\(APPEND SW_UNBUILT_ENGINE_FOLDERS ([^)]*)\)')
 
 
@@ -199,6 +200,8 @@ def collectGates(sourceDir: Path, mapRule: dict[str, list[str]], mapAllow: dict[
             checkAllowClosure(sourceDir, gateName, sorted(setAllowed), set(listDenied))
         if gateName == kServerGateName:
             message = f"Target gate '{gateName}' forbids this header (Config/Rules/Layers/TargetLayers.toml): a dedicated server does not build client-only code (Engine Audio/Renderer/UI, Client/ folders). Call it through a seam (GameSound, IHUDViewModelBinder, IGameClientPart, IEngineRenderDriver ...) or move the caller into a Client/ folder."
+        elif gateName == kClientGateName:
+            message = f"Target gate '{gateName}' forbids this header (Config/Rules/Layers/TargetLayers.toml): a client build does not build server-only code (Server/ folders). Call it through a seam (IOnlineLocalServerFactory ...), move a shared type out of the Server/ folder, or move the caller into a Server/ folder."
         else:
             message = f"Target gate '{gateName}' forbids this header (Config/Rules/Layers/TargetLayers.toml): a lower target must not see an upper one. Move what you need down, or invert the dependency."
         mapGate[gateName] = (listDenied, message)
@@ -226,8 +229,10 @@ def generateTargetLayers(outputPath: Path) -> None:
         mapAllow: dict[str, list[str]] = table["allow"]
         mapFolder: dict[str, list[str]] = table["gatefolder"]
         listServerPrefix = mapRule[kServerGateName]
+        if kClientGateName not in mapRule:   # CMake(`sw_applyTargetLayerGate`)가 Client 구성에 거는 게이트
+            raise KeyError(kClientGateName)
     except (OSError, tomllib.TOMLDecodeError, KeyError) as exception:
-        raise GeneratorError(f"{kRuleFile.name}: 읽지 못했다 ({exception!r}) — [gate] · [gatefolder] · [allow] 표와 [gate] {kServerGateName} 가 있어야 한다") from exception
+        raise GeneratorError(f"{kRuleFile.name}: 읽지 못했다 ({exception!r}) — [gate] · [gatefolder] · [allow] 표와 [gate] {kServerGateName} · {kClientGateName} 가 있어야 한다") from exception
     projectRoot = getProjectRoot()
     checkServerGateCoversUnbuiltFolders(listServerPrefix, readServerUnbuiltFolders(projectRoot))
     sourceDir = projectRoot / "Source"

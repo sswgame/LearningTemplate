@@ -11,7 +11,7 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
-#include "Engine/Config/Server/ServerConfig.h"
+#include "Engine/Config/ServerConfig.h"
 #include "Engine/Content/Pack/PackConfig.h"
 #include "Engine/Profiling/MemoryBudgetMonitor.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"

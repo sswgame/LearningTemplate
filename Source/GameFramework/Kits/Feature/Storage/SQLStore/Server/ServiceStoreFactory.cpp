@@ -18,7 +18,7 @@
 
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Server/SQLServiceStore.h"
 #include "GameFramework/Runtime/Online/Server/IOnlineStoreDriver.h"
-#include "GameFramework/Runtime/Online/Store/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 
 namespace sw
 {

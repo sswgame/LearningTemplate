@@ -4,12 +4,12 @@
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/Clock.h"
 
-#include "Engine/Config/Server/ServerConfig.h"
-#include "Engine/DedicatedServer/ServiceHealthRegistry.h"
+#include "Engine/Config/ServerConfig.h"
+#include "Engine/Server/ServiceHealthRegistry.h"
 
-#include "GameFramework/Runtime/Online/Cache/EphemeralStoreRouter.h"
+#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
 #include "GameFramework/Runtime/Online/Directory/ServerRecord.h"
-#include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Server/IOnlineStoreDriver.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"

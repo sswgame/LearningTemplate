@@ -3,6 +3,7 @@
  * @brief 최소 HTTP/1.1 서버입니다. 연결마다 요청 하나를 받아 처리기에 넘기고 답한 뒤 닫습니다.
  *        PC 외부 로그인의 루프백 리다이렉트 받기(127.0.0.1)와 테스트의 가짜 제공자가 씁니다.
  * @details 게임 서비스나 운영 엔드포인트가 아니다(그쪽은 `Online/Service` 와 관측 엔드포인트). 받은 요청은 I/O 스레드에서 모으고 `tick` 을 부른 스레드에서 처리기를 부른다.
+ *          클라이언트(루프백 PKCE 로그인)가 쓰므로 `Server/` 가 아니라 공유에 둔다 — 언리얼 `HTTPServer` 모듈도 에디터 · 클라이언트의 OAuth 리다이렉트 받기에 쓴다.
  */
 #pragma once
 #include "Core/Concurrency/OnceInit.h"

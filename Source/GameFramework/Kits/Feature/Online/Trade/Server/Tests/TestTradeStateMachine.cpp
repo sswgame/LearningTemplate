@@ -6,8 +6,8 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeStateMachine.h"
-#include "GameFramework/Runtime/Online/Ledger/LedgerItemInstance.h"
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
+#include "GameFramework/Runtime/Online/Ledger/Server/LedgerItemInstance.h"
 
 using namespace sw;
 
