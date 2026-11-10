@@ -221,12 +221,12 @@ namespace sw
 
     bool ReflectionValidation::hasValidator( const TypeInfo& type )
     {
-        if ( type._bValidatorCalculated == SW_TRUE )
-            return type._bHasValidator == SW_TRUE;
-        const bool bHasValidator   = ReflectionValidationInternal::computeHasValidator( type, 0 );
-        type._bHasValidator        = bHasValidator ? SW_TRUE : SW_FALSE;
-        type._bValidatorCalculated = SW_TRUE;
-        return bHasValidator;
+        return type.hasValidator();
+    }
+
+    bool ReflectionValidation::computeHasValidator( const TypeInfo& type )
+    {
+        return ReflectionValidationInternal::computeHasValidator( type, 0 );
     }
 
     void ValidationIssueLog::replaceIssues( const uint64 sourceID, const vector<ValidationIssue>& listIssue )

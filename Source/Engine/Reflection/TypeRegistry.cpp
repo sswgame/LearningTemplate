@@ -422,12 +422,10 @@ namespace sw
         {
             (void)pType->computeAncestorDisplay();
         }
-        // 지연 판정(세이브 옵트인, 검증 함수 유무, POD)도 여기서 구한다. 로드 워커가 처음 물을 때 같은 바이트의 비트를 함께 쓰지 않게 하려는 것이다.
-        for ( const TypeInfo* pType : listType )
+        // 판정(세이브 옵트인, 검증 함수 유무, POD)은 모든 상속 목록을 지은 뒤 구한다 — 검증 판정이 칸 타입의 목록을 재귀로 읽는다. 조회는 읽기만 한다.
+        for ( TypeInfo* pType : listType )
         {
-            (void)pType->hasSaveGameProperty();
-            (void)pType->usesPODCopyFastPath();
-            (void)ReflectionValidation::hasValidator( *pType );
+            pType->computeDerivedFlags();
         }
     }
 

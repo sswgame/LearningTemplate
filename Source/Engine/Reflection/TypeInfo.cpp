@@ -121,11 +121,9 @@ namespace sw
         , _bIsCacheBuilt{ SW_FALSE }
         , _bListPropertyWithBaseBuilt{ SW_FALSE }
         , _bIsPODFastPath{ SW_FALSE }
-        , _bIsPODCalculated{ SW_FALSE }
         , _bHasSaveGameProperty{ SW_FALSE }
-        , _bSaveGameCalculated{ SW_FALSE }
         , _bHasValidator{ SW_FALSE }
-        , _bValidatorCalculated{ SW_FALSE }
+        , _bDerivedFlagsBuilt{ SW_FALSE }
         , _reservedCacheFlags{ 0 }
         , _reservedPadding{ 0, 0 }
     {
@@ -147,11 +145,8 @@ namespace sw
     {
         _listPropertyWithBase.clear();
         _mapNameToPropertyWithBase.clear();
-        _bIsPODFastPath             = SW_FALSE;
-        _bIsPODCalculated           = SW_FALSE;
         _bListPropertyWithBaseBuilt = SW_FALSE;
-        _bSaveGameCalculated        = SW_FALSE;
-        _bValidatorCalculated       = SW_FALSE;
+        _bDerivedFlagsBuilt         = SW_FALSE;
     }
 
     void TypeInfo::rebuildDerivedCaches()
@@ -300,27 +295,24 @@ namespace sw
 
     bool TypeInfo::hasSaveGameProperty() const
     {
-        if ( _bSaveGameCalculated == SW_TRUE )
-            return _bHasSaveGameProperty == SW_TRUE;
-        bool bHasSaveGame = false;
-        for ( const PropertyInfo& prop : getPropertiesWithBase() )
-        {
-            if ( prop._metadata->_bSaveGame == SW_TRUE )
-            {
-                bHasSaveGame = true;
-                break;
-            }
-        }
-        _bHasSaveGameProperty = bHasSaveGame ? SW_TRUE : SW_FALSE;
-        _bSaveGameCalculated  = SW_TRUE;
-        return bHasSaveGame;
+        SW_ASSERT( _bDerivedFlagsBuilt == SW_TRUE && "판정을 구하지 않은 TypeInfo 다 — 레지스트리 밖 사본은 computeDerivedFlags 를 먼저 부른다" );
+        return _bHasSaveGameProperty == SW_TRUE;
     }
 
     bool TypeInfo::usesPODCopyFastPath() const
     {
-        if ( _bIsPODCalculated == SW_TRUE )
-            return _bIsPODFastPath == SW_TRUE;
+        SW_ASSERT( _bDerivedFlagsBuilt == SW_TRUE && "판정을 구하지 않은 TypeInfo 다 — 레지스트리 밖 사본은 computeDerivedFlags 를 먼저 부른다" );
+        return _bIsPODFastPath == SW_TRUE;
+    }
 
+    bool TypeInfo::hasValidator() const
+    {
+        SW_ASSERT( _bDerivedFlagsBuilt == SW_TRUE && "판정을 구하지 않은 TypeInfo 다 — 레지스트리 밖 사본은 computeDerivedFlags 를 먼저 부른다" );
+        return _bHasValidator == SW_TRUE;
+    }
+
+    void TypeInfo::computeDerivedFlags()
+    {
         TypeRegistry& registry = engine::getSubsystem<TypeRegistry>();
 
         static const hashed_string kArrDynamicTypes[] = {
@@ -329,35 +321,34 @@ namespace sw
         };
 
         // 부모의 프로퍼티까지 본다. 자기 것만 보면 부모가 문자열이나 컨테이너를 가진 타입도 통째 복사로 간다.
-        _bIsPODFastPath = SW_TRUE;
+        bool bPOD      = true;
+        bool bSaveGame = false;
         for ( const PropertyInfo& prop : getPropertiesWithBase() )
         {
+            if ( prop._metadata->_bSaveGame == SW_TRUE )
+                bSaveGame = true;
+            if ( bPOD == false )
+                continue;
             // 값이 객체 밖에 있는 프로퍼티는 객체를 통째로 복사해도 따라오지 않는다(그 위치를 찾는 슬롯 번호가 복사돼 두 객체가 한 위치를 나눠 쓴다).
             const bool bNotPODProperty = prop._bIsContainer == SW_TRUE || prop._containerKind != ContainerKind::None || prop.hasValueAccessor();
             if ( bNotPODProperty )
             {
-                _bIsPODFastPath = SW_FALSE;
-                break;
+                bPOD = false;
+                continue;
             }
-
-            bool bIsDynamicType = false;
             for ( const hashed_string& dynamicType : kArrDynamicTypes )
             {
                 if ( registry.isType( prop._typeName, dynamicType ) )
                 {
-                    bIsDynamicType = true;
+                    bPOD = false;
                     break;
                 }
             }
-
-            if ( bIsDynamicType )
-            {
-                _bIsPODFastPath = SW_FALSE;
-                break;
-            }
         }
-        _bIsPODCalculated = SW_TRUE;
-        return _bIsPODFastPath;
+        _bIsPODFastPath       = bPOD ? SW_TRUE : SW_FALSE;
+        _bHasSaveGameProperty = bSaveGame ? SW_TRUE : SW_FALSE;
+        _bHasValidator        = ReflectionValidation::computeHasValidator( *this ) ? SW_TRUE : SW_FALSE;
+        _bDerivedFlagsBuilt   = SW_TRUE;
     }
 
     PropertyListView TypeInfo::getPropertiesWithBase() const

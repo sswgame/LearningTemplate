@@ -154,19 +154,16 @@ namespace sw
         uint8 _bIsCacheBuilt              : 1; ///< 자기 이름 맵(`_mapNameToProperty` · `_mapNameToMethod`)을 지었다. 아니면 이름 조회는 선형으로 찾는다
         uint8 _bListPropertyWithBaseBuilt : 1; ///< 상속 병합 목록을 지었다(`rebuildDerivedCaches`). 부모가 있는데 아니면 `getPropertiesWithBase` 가 멈춘다
         /**
-         * @brief 아래 셋은 상속 목록과 함께 `rebuildDerivedCaches` 가 미리 구하는 판정입니다. 레지스트리 밖 사본만 첫 조회가 구한다(그 사본은 만든 스레드만 쓴다).
-         * @details 검증 함수 유무(`ReflectionValidation::hasValidator`)는 칸 타입을 따라 다른 타입의 판정을 재귀로 묻는다 — 그 타입이 같은 배치에서 아직
-         *          다시 지어지지 않았을 수 있어 지연 계산 자리를 남긴다. 등록이 끝난 뒤에는 모두 계산돼 있어 읽기만 한다.
+         * @brief 아래 셋은 판정(POD · 세이브 · 검증)이고 `computeDerivedFlags` 가 한 번에 구한다 — 조회는 읽기만 한다(`mutable` 지연 계산이 없다).
+         * @details 등록은 배치 끝에 바뀐 타입의 상속 목록을 **모두** 다시 지은 뒤 판정을 구한다(`TypeRegistry::rebuildAffected`) — 검증 판정이 칸 타입의
+         *          상속 목록을 재귀로 읽기 때문이다. 레지스트리 밖 사본(테스트)은 `rebuildDerivedCaches` → `computeDerivedFlags` 를 직접 부른다.
+         *          구하지 않은 채 물으면 멈춘다(`_bDerivedFlagsBuilt`). 예전에는 첫 조회가 구해 로드 워커들이 같은 바이트의 비트를 함께 썼다.
          */
-        mutable uint8 _bIsPODFastPath   : 1;
-        mutable uint8 _bIsPODCalculated : 1;
-        /** @brief `hasSaveGameProperty` 의 결과와 계산 여부입니다. */
-        mutable uint8 _bHasSaveGameProperty : 1;
-        mutable uint8 _bSaveGameCalculated  : 1;
-        /** @brief `ReflectionValidation::hasValidator` 의 결과와 계산 여부입니다. */
-        mutable uint8          _bHasValidator        : 1;
-        mutable uint8          _bValidatorCalculated : 1;
-        [[maybe_unused]] uint8 _reservedCacheFlags   : 5;
+        uint8                  _bIsPODFastPath       : 1;
+        uint8                  _bHasSaveGameProperty : 1;
+        uint8                  _bHasValidator        : 1;
+        uint8                  _bDerivedFlagsBuilt   : 1; ///< 위 셋을 구했다. 상속 목록을 비우면 함께 내려간다
+        [[maybe_unused]] uint8 _reservedCacheFlags   : 7;
         [[maybe_unused]] uint8 _reservedPadding[2];
 
         /** @brief 비어 있는 TypeInfo 를 만듭니다. */
@@ -198,13 +195,20 @@ namespace sw
         /** @brief REFLECT 없이 등록된 내장 타입(int32, float32, …)이면 true 입니다. */
         bool isPrimitive() const noexcept { return _bPrimitive != SW_FALSE; }
 
-        /** @brief 직렬화나 복사에서 memcpy POD 경로를 쓸 수 있으면 true 입니다. */
+        /** @brief 직렬화나 복사에서 memcpy POD 경로를 쓸 수 있으면 true 입니다(`computeDerivedFlags` 가 구한 값). */
         bool usesPODCopyFastPath() const;
         /**
          * @brief 상속한 기반까지 포함해 `SaveGame` 프로퍼티가 하나라도 있으면 true 입니다. 세이브 직렬화가 그 프로퍼티만 쓰는 타입(옵트인)인지 나타냅니다.
-         * @details 상속 목록 캐시와 함께 비우고 다시 구한다(`clearInheritedProperties`).
+         * @details 상속 목록 캐시와 함께 비우고 다시 구한다(`clearInheritedProperties` → `computeDerivedFlags`).
          */
         bool hasSaveGameProperty() const;
+        /** @brief 검증 함수 유무입니다(`ReflectionValidation::hasValidator` 가 읽는다). */
+        bool hasValidator() const;
+        /**
+         * @brief 판정(POD · 세이브 · 검증)을 지금의 상속 목록으로 구합니다. `rebuildDerivedCaches` 뒤에 부르고, 칸 타입의 목록도 지어져 있어야 합니다.
+         * @details 레지스트리가 배치 끝에 바뀐 타입마다 부른다. 레지스트리 밖 사본은 부르는 쪽이 직접 부른다.
+         */
+        void computeDerivedFlags();
         /** @brief 이 타입이 targetFqn 이거나 그 파생이면 true 입니다. 부모가 등록되지 않았어도 `_parentFQN` 이 같으면 true 입니다. */
         bool isDerivedFrom( const hashed_string& targetFqn ) const;
         /**
