@@ -45,6 +45,7 @@ kPackDataName = "packs.data"
 kPackLoaderName = "packs.js"
 kFilePackagerPath = Path("Tools") / "emsdk" / "upstream" / "emscripten" / "tools" / "file_packager.py"
 kDefaultPort = 8080
+#: 페이지 틀. `reporter` 는 배포 페이지에서 비고, 확인 페이지(`web-check` 의 check.html)만 보고 스크립트를 넣는다 — Module 을 만든 뒤 · App.js 앞.
 kIndexHtml = """<!doctype html>
 <html lang="ko">
 <head>
@@ -62,7 +63,7 @@ var Module = {{
     printErr: (text) => console.error(text),
 }};
 </script>
-<script src="{loader}"></script>
+{reporter}<script src="{loader}"></script>
 <script src="App.js"></script>
 </body>
 </html>
@@ -98,7 +99,7 @@ def makeWebPackage(game: str, buildDir: Path, packsDir: Path, outDir: Path, proj
         raise WebPackageError(f"file_packager failed ({result.returncode}): {result.stderr.strip() or result.stdout.strip()}")
     for appFile in listAppFile:
         shutil.copy2(appFile, outDir / appFile.name)
-    (outDir / "index.html").write_text(kIndexHtml.format(title=game, loader=kPackLoaderName), encoding="utf-8", newline="\n")
+    (outDir / "index.html").write_text(kIndexHtml.format(title=game, loader=kPackLoaderName, reporter=""), encoding="utf-8", newline="\n")
     return outDir
 
 
