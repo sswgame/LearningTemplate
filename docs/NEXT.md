@@ -164,7 +164,6 @@ GameObject/Component API 는 저작 · 수명 · 직렬화 층으로 두고, 프
   - `PROPERTY( Replicated, Quantize = … )` 로 작성기를 생성하고, 스키마 해시를 와이어 버전에 합친다.
   - `kMaxEntityBytes` 초과는 첫 경고만 남기고 엔티티가 사라진다 — `registerEntity` 의 오류로 바꾼다.
 - **E1 되돌리기를 형식으로:** 씬 변이 명령이 `EditorTransaction&` 를 요구하게 한다. 시나리오 `editor/undocoverage` 는 등록 명령 전수를 실행 → undo 한 뒤 씬 해시가 같은지 본다.
-- **E2 남은 것:** 디버그 섹션 표(`DebugHUDRegistry` — 따로 `IDebugSource` 표를 두지 않고 이 표 하나로)가 대상(`setTargetName`)을 들고 `sequence` · `animrewind` 섹션이 더해졌으며, 씬 뷰 HUD 가 메인 씬 선택을 따른다. 남은 것: 대상을 이름에서 오브젝트 id 로(이름이 겹치는 씬), 섹션 표 · 대상을 시나리오로 확인(`hud.print sequence` · `animrewind`, 선택 → 대상).
 - **G1 장르 수직 슬라이스(T1 · T2 뒤):** 완결 루프가 없는 게임마다 `slice.scenario.xml` 을 둔다(시작 → 목표 → 결과 → 저장 · 복원 해시 동일).
 
 ### 6. 리소스

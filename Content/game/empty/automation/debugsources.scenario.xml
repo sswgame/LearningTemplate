@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  런타임 디버거 한 자리(디버그 섹션 표) — 컷씬 디버거(섹션 sequence)와 애니메이션 되감기(섹션 animrewind)가 다른 게임플레이 섹션과 같은 표 · 같은 대상(debug.target, 핸들로 저장)으로 줄을 낸다.
+  무대 maps/cinematic: Director 의 시퀀스 플레이어(바인딩 셋 — CutA · CutB · Actor)와 스켈레탈 Actor. 되감기 기록을 켜고 시퀀스를 재생한 뒤 hud.print 로 줄을 로그(DebugHUD.PrintLine)에서 본다.
+  ① 대상 Director — sequence 섹션이 그 플레이어의 재생 상태 · 프레임 · 바인딩을 낸다. ② 대상 Actor — animrewind 섹션이 그 오브젝트의 트랙을 고른다(첫 트랙이 아니라 대상의 트랙).
+  읽기만 하는 섹션이라 재생이 바뀌지 않는다. 끝에 대상 · 기록을 끈다.
+  실행: App -scenario=game/empty/automation/debugsources.scenario.xml -unattended (체인: ctest -R Scenario.empty)
+-->
+<Scenario name="game.empty.debugsources" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/cinematic.scene.xml"/>
+	<Wait frames="10"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="debug.target clear"/>
+	<DevCommand line="anim.rewind on"/>
+	<PlaySequence object="Director"/>
+	<Wait frames="30"/>
+	<!-- ① 컷씬: 대상 오브젝트의 플레이어 — 재생 중, 바인딩 셋이 모두 풀렸다(경고 없음) -->
+	<DevCommand line="debug.target Director"/>
+	<ExpectLog id="DevCommand.Reply" contains="debug.target: Director #" atLeast="1"/>
+	<DevCommand line="hud.print sequence"/>
+	<ExpectLog id="DebugHUD.PrintLine" contains="[sequence] target: Director" atLeast="1"/>
+	<ExpectLog id="DebugHUD.PrintLine" contains="[sequence] state: playing" atLeast="1"/>
+	<ExpectLog id="DebugHUD.PrintLine" contains="[sequence] frame: " atLeast="1"/>
+	<ExpectLog id="DebugHUD.PrintLine" contains="[sequence] bindings: 3" atLeast="1"/>
+	<ExpectLog id="DebugHUD.PrintLine" contains="unbound" count="0"/>
+	<ExpectLog id="DebugHUD.PrintLine" contains="[sequence] sequence: none" count="0"/>
+	<!-- ② 되감기: 기록이 켜졌고 대상 Actor 의 트랙에 프레임이 쌓였다 -->
+	<DevCommand line="debug.target Actor"/>
+	<DevCommand line="hud.print animrewind"/>
+	<ExpectLog id="DebugHUD.PrintLine" contains="[animrewind] rewind: rewind on" atLeast="1"/>
+	<ExpectLog id="DebugHUD.PrintLine" contains="[animrewind] track: Actor" atLeast="1"/>
+	<ExpectLog id="DebugHUD.PrintLine" contains="[animrewind] frames: 0" count="0"/>
+	<ExpectLog id="DebugHUD.PrintLine" contains="[animrewind] latest frame: " atLeast="1"/>
+	<DevCommand line="debug.target clear"/>
+	<DevCommand line="anim.rewind off"/>
+	<Pass/>
+</Scenario>

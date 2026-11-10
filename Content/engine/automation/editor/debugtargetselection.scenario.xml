@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 런타임 디버거의 대상이 선택을 따른다(언리얼 Gameplay Debugger 의 선택 액터 자리). 씬 뷰 HUD 상자가 켜져 있으면 메인 씬의 첫 선택이 바뀔 때마다
+  디버그 대상(debug.target — 핸들)을 그 오브젝트로 바꾼다(Editor.DebugTargetFollowsSelection: 1 같다, 0 다르다, -1 선택 없음).
+  ① 선택이 없으면 -1. ② 메시 오브젝트를 고르면 대상이 그것이 된다(1). ③ debug.target clear 로 지우면 선택이 그대로인 동안 다시 덮지 않는다(0 이 남는다 — 매 프레임 덮지 않는다).
+  ④ 선택을 비웠다가 다시 고르면 다시 따른다(1). HUD 상자 · 대상은 끝에 되돌린다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/debugtargetselection.scenario.xml -unattended
+-->
+<Scenario name="editor.debugtargetselection" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitSettled/>
+	<DevCommand line="debug.target clear"/>
+	<DevCommand line="panel.focus scene_view"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="viewport.hud"/>
+	<WaitUntil watch="Editor.SceneViewHUDSections" atLeast="1" timeoutFrames="90"/>
+	<EditorWaitSettled/>
+	<!-- ① 선택 없음 -->
+	<DevCommand line="select.tag Automation.NoSuchTag"/>
+	<ExpectLog id="DevCommand.Reply" contains="selected 0" atLeast="1"/>
+	<WaitUntil watch="Editor.DebugTargetFollowsSelection" equals="-1" timeoutFrames="30"/>
+	<!-- ② 고르면 대상이 그 오브젝트다(HUD 갱신 4 Hz — 몇 프레임 안) -->
+	<DevCommand line="select.type MeshComponent"/>
+	<WaitUntil watch="Editor.SelectionCount" atLeast="1" timeoutFrames="30"/>
+	<WaitUntil watch="Editor.DebugTargetFollowsSelection" equals="1" timeoutFrames="60"/>
+	<!-- ③ 지운 대상은 선택이 바뀌기 전까지 다시 덮이지 않는다 -->
+	<DevCommand line="debug.target clear"/>
+	<ExpectLog id="DevCommand.Reply" contains="debug.target: none" atLeast="1"/>
+	<WaitUntil watch="Editor.DebugTargetFollowsSelection" equals="0" timeoutFrames="10"/>
+	<Wait frames="40"/>
+	<Expect watch="Editor.DebugTargetFollowsSelection" equals="0"/>
+	<!-- ④ 비웠다 다시 고르면 다시 따른다 -->
+	<DevCommand line="select.tag Automation.NoSuchTag"/>
+	<WaitUntil watch="Editor.DebugTargetFollowsSelection" equals="-1" timeoutFrames="30"/>
+	<Wait frames="20"/>
+	<DevCommand line="select.type MeshComponent"/>
+	<WaitUntil watch="Editor.DebugTargetFollowsSelection" equals="1" timeoutFrames="60"/>
+	<EditorWaitSettled/>
+	<!-- 되돌리기 -->
+	<EditorClick mark="viewport.hud"/>
+	<WaitUntil watch="Editor.SceneViewHUDSections" equals="0" timeoutFrames="60"/>
+	<DevCommand line="debug.target clear"/>
+	<EditorWaitSettled/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>
