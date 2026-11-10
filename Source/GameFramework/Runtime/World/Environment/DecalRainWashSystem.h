@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Object/GameObject/Tick/ISceneFrameSystem.h"
@@ -49,7 +50,8 @@ namespace sw
         void runWashPass( GameObjectManager& manager, float32 seconds );
 
     private:
-        vector<ComponentHandle> _listHandleScratch; ///< 도는 동안의 핸들 사본(재사용 버퍼)
-        float32                 _pendingSeconds;    ///< 아직 넣지 않은 플레이 시간
+        vector<ComponentHandle> _listHandleScratch;  ///< 도는 동안의 핸들 사본(재사용 버퍼)
+        float32                 _pendingSeconds;     ///< 아직 넣지 않은 플레이 시간
+        hashed_string           _precipitationValue; ///< 강수 날씨 값 이름(프레임마다 intern 하지 않게 한 번 만든다)
     };
 } // namespace sw
