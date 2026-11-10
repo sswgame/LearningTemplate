@@ -24,6 +24,7 @@ import json
 import secrets
 import subprocess
 import sys
+import tempfile
 import xml.etree.ElementTree as ElementTree
 from dataclasses import dataclass
 from pathlib import Path
@@ -331,10 +332,14 @@ def _findGUIDHolders(projectRoot: Path, listGUID: list[str], rules: Rules) -> di
     """인덱스에서 GUID 들을 든 파일 — GUID → 정체성을 든 리소스 id 목록. `git grep` 이 인덱스를 훑는다(전체 블롭을 읽지 않는다 — 에셋이 수십만이어도 커밋마다 돈다)."""
     if not listGUID:
         return {}
-    listArgument = ["grep", "--cached", "-l", "-F"]
-    for guid in listGUID:
-        listArgument += ["-e", guid]
-    completed = subprocess.run([resolveGitExecutable() or "git", *listArgument, "--", kContentFolder], cwd=projectRoot, capture_output=True, check=False)
+    # 패턴은 파일로 넘긴다 — 한 커밋의 GUID 가 수천이면 명령줄 길이(Windows 32K)를 넘는다.
+    with tempfile.NamedTemporaryFile("w", encoding="ascii", suffix=".txt", delete=False) as patternFile:
+        patternFile.write("\n".join(listGUID) + "\n")
+    try:
+        completed = subprocess.run([resolveGitExecutable() or "git", "grep", "--cached", "-l", "-F", "-f", patternFile.name, "--", kContentFolder], cwd=projectRoot,
+                                   capture_output=True, check=False)
+    finally:
+        Path(patternFile.name).unlink()
     if completed.returncode not in (0, 1):   # 1 은 "찾은 것 없음"
         raise RuntimeError(f"git grep 실패: {completed.stderr.decode('utf-8', 'replace').strip()}")
     prefix = kContentFolder + "/"
