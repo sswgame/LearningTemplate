@@ -70,6 +70,11 @@ namespace sw
         /** @brief 기동 단계 `ModuleLoadStage` 의 호스트 로더입니다. 서버 대상 모듈의 라이브러리를 로드하고 리로드 전 콜백을 겁니다(App::loadModuleLibraries 에 해당합니다). */
         [[nodiscard]] bool loadModuleLibraries();
         [[nodiscard]] bool loadServerConfig();
+        /**
+         * @brief 읽은 설정의 칸 사이 규칙을 서비스를 세우지 않고 봅니다(`--check-config` · 기동이 같은 검사를 지난다). 어긴 규칙마다 오류를 남기고, 하나라도 있으면 false 입니다.
+         * @details 운영 포트 바인드 · 토큰, 관리 채널 토큰, 크래시 보고 동의. 배포 전에 CI · 이미지 빌드(`Scripts/package/ServerImage.py`)가 돌린다(언리얼 `-run=` 커맨드릿 · 서버 `-validate` 자리).
+         */
+        [[nodiscard]] static bool checkServerConfig( const ServerConfig& config );
         /** @brief 호스트 서비스 하나를 세웁니다(`kArrServerHostService` — 순서는 `HostService` 의 의존 선언이 정한다). */
         [[nodiscard]] bool startHostService( HostServiceID id );
         /** @brief `startHostService` 가 세운 서비스 하나를 내립니다. 호스트 서비스 집합이 역순으로 부릅니다. */
@@ -130,6 +135,7 @@ namespace sw
         uint8                            _bReady                 : 1;
         uint8                            _bRestartServerServices : 1; ///< 모듈 리로드로 서버 서비스를 멈췄다. 다음 틱에 다시 시작한다
         uint8                            _bDraining              : 1; ///< 종료 요청을 받아 드레인 중이다(`beginDrain`)
-        [[maybe_unused]] uint8           _reserved               : 5;
+        uint8                            _bConfigCheckOnly       : 1; ///< `--check-config` — 설정을 읽고 검사한 뒤 서비스를 세우지 않고 끝낸다
+        [[maybe_unused]] uint8           _reserved               : 4;
     };
 } // namespace sw

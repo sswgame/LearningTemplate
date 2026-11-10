@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  장르 수직 슬라이스(G1) — 시작 → 목표(actions.scenario.xml 의 단계 그대로) → 결과 → 저장 · 복원 해시 동일.
+  목표 단계는 그 시나리오가 정본이다 — 거기를 고치면 이 파일도 맞춘다. 저장 슬롯은 harvestvalley/slice.
+-->
+<Scenario name="game.harvestvalley.slice" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="ScenePlaying" input="exclusive">
+	<Variable name="gv_farmAutoPlay" value="0"/>
+	<WaitUntil watch="Farm.FarmerControllerKind" equals="0" timeoutFrames="60"/>
+	<Expect watch="Farm.FarmerX" near="6" tolerance="0.01"/>
+	<Expect watch="Farm.FarmerTool" equals="0"/>
+	<!-- 농부는 부품을 몸 메시 하나로 합쳐 한 번에 스키닝한다(_bMergeParts) — 구간 조각 열: 몸 2(피부 · 눈) · 머리 · 수염 · 눈썹 · 팔 2(옷 · 피부) · 상의 · 하의 · 신발. -->
+	<WaitUntil watch="Appearance.MergedSections" target="Farmer" equals="10" timeoutSeconds="10"/>
+	<!-- 오른쪽으로 0.5 초(2 m) 걷고 선 뒤에 잰다. -->
+	<Wait frames="1"/>
+	<ActionAxis name="Move" x="1" seconds="0.5"/>
+	<Wait seconds="0.6"/>
+	<Expect watch="Farm.FarmerX" near="8" tolerance="0.2"/>
+	<!-- 물뿌리개를 들었다가 괭이로 돌아온다(연속 액션). -->
+	<Wait frames="1"/>
+	<Action name="Farm.Tool2"/>
+	<WaitUntil watch="Farm.FarmerTool" equals="1" timeoutFrames="30"/>
+	<Action name="Farm.Tool1"/>
+	<WaitUntil watch="Farm.FarmerTool" equals="0" timeoutFrames="30"/>
+	<!-- 위로 0.45 초 걸어 밭(Z 0 부터) 앞 타일을 바라보고 선다 — 그리고 사용(괭이로 갈기, 체력 4). -->
+	<ActionAxis name="Move" y="1" seconds="0.45"/>
+	<Wait seconds="0.6"/>
+	<Action name="Farm.Use"/>
+	<WaitUntil watch="Farm.TilledCount" equals="1" timeoutFrames="60"/>
+	<Record watch="Farm.FarmerX"/>
+	<Record watch="Object.Z" target="Farmer"/>
+	<Record watch="Farm.TilledCount"/>
+	<!-- 저장 → 세계를 더 돌림 → 두 번 복원: 같은 슬롯을 두 번 불러온 직후의 씬 상태 해시가 같아야 한다(복원이 세계를 다 되살린다 — 저장 순간의 해시와 견주면 명령이 도는 프레임만큼 흔들린다) -->
+	<Wait frames="1"/>
+	<DevCommand line="game.save harvestvalley/slice"/>
+	<WaitUntil watch="Save.Written" atLeast="1" timeoutWallSeconds="10"/>
+	<Wait seconds="1"/>
+	<DevCommand line="game.load harvestvalley/slice"/>
+	<WaitUntil watch="Save.Loaded" atLeast="1" timeoutWallSeconds="10"/>
+	<RecordStateHash key="restored"/>
+	<Wait seconds="1"/>
+	<DevCommand line="game.load harvestvalley/slice"/>
+	<WaitUntil watch="Save.Loaded" atLeast="2" timeoutWallSeconds="10"/>
+	<ExpectStateHash key="restored"/>
+	<Pass/>
+</Scenario>

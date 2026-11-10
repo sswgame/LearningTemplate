@@ -7,6 +7,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/IStreamTransport.h"
+#include "Core/Process/ProcessEnvironment.h"
 #include "Core/Process/ProcessSession.h"
 #include "Core/Time/MonotonicClock.h"
 #include "Core/Time/WallClock.h"
@@ -98,7 +99,9 @@ namespace sw
             return false;
         }
         opsSettings._bindAddress._port = static_cast<uint16>( config._opsPort ); // 포트는 `_opsPort` 가 기준이다(주소 필드에 포트를 적어도 무시한다).
-        _opsTransport                  = StreamTransportFactory::createPlatformTransport();
+        // 토큰은 환경에서만 읽는다(관리 채널과 같다). 없으면 인증 없이 열고, 그때 엔드포인트가 루프백 · 사설 밖 바인드를 거절한다.
+        (void)ProcessEnvironment::tryReadNonEmpty( config._opsTokenEnvironment, opsSettings._bearerToken );
+        _opsTransport = StreamTransportFactory::createPlatformTransport();
         if ( _opsTransport == nullptr )
         {
             SW_LOG_ERROR_ID( "Server.OpsHTTPEndpointNeeds", "Ops HTTP endpoint needs a stream transport and this platform has none" );

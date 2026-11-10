@@ -10,7 +10,6 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
-#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -39,23 +38,26 @@ namespace sw
 {
     /**
      * @struct WaterWaveMath
-     * @brief 거스트너 변위, 노멀, 수면 높이를 계산합니다. 파도는 `shaderslot::kGerstnerWaveCount` 개까지이고, 진폭 0 인 슬롯은 빈 슬롯입니다.
+     * @brief 거스트너 변위, 노멀, 수면 높이를 계산합니다. 파도는 `kMaxWaveCount` 개까지이고, 진폭 0 인 슬롯은 빈 슬롯입니다.
      * @details @p gravity 는 깊은 물 분산의 중력 크기(m/s²)다. 물은 설정된 물리 중력(`PhysicsSystem::getConfiguredGravityMagnitude`)을 넘기고
      *          같은 값을 머티리얼(`waveParams.x`)로 셰이더에 싣는다. 값을 따로 적지 않는다.
      */
     struct SW_API WaterWaveMath
     {
+        /** @brief 파도 칸 수입니다. 셰이더 칸(shaderslot::kGerstnerWaveCount)과 같아야 한다 — WaterWaveMath.cpp 의 static_assert 가 지킨다(게임이 보는 헤더는 셰이더 칸 헤더를 모른다). */
+        static constexpr uint32 kMaxWaveCount = 4;
+
         /** @brief 수평 원점 (x, z) 의 점이 시간 @p time 에 옮겨 가는 변위(x, y, z)입니다. */
-        static float3 computeDisplacement( const float2& origin, float32 time, float32 gravity, const float4 ( &arrWave )[shaderslot::kGerstnerWaveCount] );
+        static float3 computeDisplacement( const float2& origin, float32 time, float32 gravity, const float4 ( &arrWave )[kMaxWaveCount] );
         /** @brief 수평 원점 (x, z) 의 옮겨 간 점에서의 수면 노멀입니다. */
-        static float3 computeNormal( const float2& origin, float32 time, float32 gravity, const float4 ( &arrWave )[shaderslot::kGerstnerWaveCount] );
+        static float3 computeNormal( const float2& origin, float32 time, float32 gravity, const float4 ( &arrWave )[kMaxWaveCount] );
         /**
          * @brief 월드 (x, z) 의 수면 높이(기준면 0 에 대한 변위)를 구합니다. 그 위치로 옮겨 오는 원점을 고정점 반복 @p iterationCount 번으로 찾습니다.
          * @param pOutOrigin 찾은 원점입니다(nullptr 이면 버립니다). 노멀은 이 원점으로 `computeNormal` 을 호출해 구합니다.
          */
-        static float32 computeSurfaceHeight( const float2& position, float32 time, float32 gravity, const float4 ( &arrWave )[shaderslot::kGerstnerWaveCount], uint32 iterationCount = 4,
+        static float32 computeSurfaceHeight( const float2& position, float32 time, float32 gravity, const float4 ( &arrWave )[kMaxWaveCount], uint32 iterationCount = 4,
                                              float2* pOutOrigin = nullptr );
         /** @brief 파도 수(진폭 > 0 인 슬롯)를 반환합니다. 가파름 Q 를 나누는 수입니다. */
-        static uint32 countActiveWaves( const float4 ( &arrWave )[shaderslot::kGerstnerWaveCount] );
+        static uint32 countActiveWaves( const float4 ( &arrWave )[kMaxWaveCount] );
     };
 } // namespace sw

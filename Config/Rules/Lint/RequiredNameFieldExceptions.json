@@ -29,6 +29,7 @@
         "Source/Engine/Config/ServerConfig.h::ServerConfig::_adminListenAddress": "(2) 주소 값 — 관리 포트는 루프백에만 여는 안전한 기본이다(보안 강화)",
         "Source/Engine/Config/ServerConfig.h::ServerConfig::_opsListenAddress": "(2) 주소 값 — 운영 포트는 루프백에만 여는 안전한 기본이다(보안 강화)",
         "Source/Engine/Config/ServerConfig.h::ServerConfig::_adminChannelTokenEnvironment": "(2) 엔진이 정한 환경 변수 이름 — 데이터를 가리키지 않는다",
+        "Source/Engine/Config/ServerConfig.h::ServerConfig::_opsTokenEnvironment": "(2) 엔진이 정한 환경 변수 이름 — 데이터를 가리키지 않는다",
         "Source/Engine/Config/ServerConfig.h::ServerConfig::_crashReportConsent": "(2) 동의 단계 값(local · ask · send) — 엔진 설정 표(engine.settings.xml)의 기본 local 과 같다",
         "Source/GameFramework/Runtime/Online/Server/OnlineServerConfig.h::OnlineServerConfig::_serverKind": "(2) 엔진이 정한 서버 종류 이름(게임 서버 = game) — 디렉터리 · 매치메이킹 기본과 같은 값이다",
         "Source/GameFramework/Runtime/Online/Server/OnlineServerConfig.h::OnlineServerConfig::_region": "(2) 자기 이름표(서버 지역) — 로컬 개발 서버의 기본",

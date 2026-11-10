@@ -196,6 +196,8 @@ namespace sw
         {
             _judge.deferExpectAtMost( step, std::move( description ), limit, std::move( pValue ) );
         }
+        void               rememberValue( string_view name, uint64 value ) override;
+        [[nodiscard]] bool findRememberedValue( string_view name, uint64& outValue ) const override;
         /** @brief 이 시나리오의 산출물 폴더(`Saved/Automation/<이름>/`)입니다. */
         const string& getOutputDirectory() const override { return _outputDirectory; }
         /** @brief 상대 경로면 산출물 폴더 아래로 둡니다(단계 처리기가 파일을 쓸 때). */
@@ -338,5 +340,12 @@ namespace sw
         TaskFuture<Scene*>       _startSceneLoad;         ///< 시작 씬의 로드 요청(요청 전이면 무효)
         AutomationResult         _result;
         AutomationFrameStats     _frameStats{}; ///< 벤치마크 구간의 프레임 시간(`BeginFrameStats` … `EndFrameStats`)
+        /** @brief 이 실행 안에서 이름 붙여 기억한 값(`rememberValue`) — 한 시나리오에 몇 개뿐이라 선형으로 찾는다. */
+        struct RememberedValue
+        {
+            string _name{};
+            uint64 _value{ 0 };
+        };
+        vector<RememberedValue> _listRememberedValue{};
     };
 } // namespace sw

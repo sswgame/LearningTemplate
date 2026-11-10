@@ -52,8 +52,8 @@ kRules: tuple[Rule, ...] = (
     Rule("include-order", "형식", "include 순서 · 묶음", "include 줄의 순서는 컴파일러가 보지 않는다", kCpp, "lint.IncludeOrder:checkStaged", perFile=True),
     # --- 경계(빌드 게이트가 닿지 않는 자리) ------------------------------------------------------------------------------------
     Rule("game-gpu-includes", "경계", "게임 코드가 GPU 칸 배치 헤더(Engine/Graphics/RHI · Shader)를 직접 include", "게이트는 전이 include 도 막는데 게임이 쓰는 엔진 공개 헤더가 RHI 헤더를 include 한다 — 직접 include 만 가르지 못한다", kCpp, "lint.GameGPUIncludes:checkGameGPUIncludes"),
+    Rule("layer-includes", "경계", "아래 층 파일이 위 층 헤더를 include(Core · Engine · GameFramework · Editor 층 표)", "빌드의 #error 껍데기가 막지만 그 부분을 컴파일할 때(Debug 빌드)에야 드러나고, 아무도 include 하지 않는 헤더는 보지 않는다 — 같은 표로 커밋 때 먼저 본다", kCpp + (".toml",), "lint.LayerIncludes:checkLayerIncludes"),
     Rule("layer-cycles", "경계", "같은 엔진 층의 폴더끼리 서로 include(층 안 순환)", "같은 층은 한 부분이라 #error 껍데기가 없다 — 폴더마다 부분을 나누면 층 번호가 폴더 순서를 흉내 낼 뿐이다", kCpp + (".toml",), "lint.LayerCycles:checkLayerCycles", exceptions="Config/Rules/Layers/EngineLayers.toml [sameTierCycle]"),
-    Rule("editor-view-includes", "경계", "MVVM 으로 옮긴 에디터 View 가 모델 · 씬 헤더를 include", "옮기는 동안의 목록 — 다 옮기면 View 부분의 #error 껍데기로 바꾼다", kCpp, "lint.EditorViewIncludes:checkEditorViewIncludes", exceptions="Config/Rules/Lint/EditorViewIncludes.json"),
     Rule("thread-owners", "경계", "TaskManager 밖에서 스레드를 만드는 파일", "스레드 형식은 합법이라 만드는 자리를 형식으로 막지 못한다", kCpp, "lint.ThreadOwners:checkThreadOwners", exceptions="Config/Rules/Lint/ThreadOwners.json"),
     Rule("cmake-path-case", "경계", "대소문자만 다른 CMake include · add_subdirectory 경로", "CMake 경로는 컴파일러가 보지 않는다(Linux 구성만 선다)", kCMake, "lint.CMakePathCase:checkCMakePathCase"),
     Rule("folder-layout", "경계", "잡동사니 폴더 · 엔진 쪽 Dev/ · Component 폴더", "파일 자리는 형식이 아니다", kAny, "lint.FolderLayout:checkFolderLayout", exceptions="Config/Rules/Lint/FolderLayout.json"),

@@ -21,6 +21,13 @@
 
 namespace sw::editor
 {
+    /** @brief 기즈모 드래그 하나의 시작 전 스냅샷입니다(단일은 `_before`, 그룹은 `_listBefore` — `_listObject` 와 같은 순서). */
+    struct EditorViewportGizmoUndo
+    {
+        ObjectSnapshot         _before{};
+        vector<ObjectSnapshot> _listBefore{};
+    };
+
     namespace
     {
         struct EditorViewportGizmoInternal
@@ -61,10 +68,9 @@ namespace sw::editor
         };
     } // namespace
     EditorViewportGizmo::EditorViewportGizmo()
-        : _undoBefore{}
+        : _pUndo{ make_unique<EditorViewportGizmoUndo>() }
         , _object{}
         , _listObject{}
-        , _listUndo{}
         , _listRelativeWorld{}
         , _pTarget{ nullptr }
         , _arrGroupMatrix{}
@@ -75,6 +81,8 @@ namespace sw::editor
         , _reserved{ 0 }
     {
     }
+
+    EditorViewportGizmo::~EditorViewportGizmo() = default;
 
     bool EditorViewportGizmo::isMouseOverDrawnGizmo() const
     {
@@ -153,8 +161,8 @@ namespace sw::editor
         const bool bGizmoDragStarted = _bTracking == SW_FALSE && ImGuizmo::IsOver() && EditorInputGUI::readPointer().wasPressed( EditorMouseButton::Left );
         if ( bGizmoDragStarted )
         {
-            _undoBefore = EditorTransaction::captureSnapshot( &object );
-            _object     = object.getHandle();
+            _pUndo->_before = EditorTransaction::captureSnapshot( &object );
+            _object         = object.getHandle();
         }
 
         if ( ImGuizmo::Manipulate( pView, pProj, static_cast<ImGuizmo::OPERATION>( operation ), static_cast<ImGuizmo::MODE>( gizmoMode ), arrMatrix, nullptr, pSnap ) )
@@ -181,8 +189,8 @@ namespace sw::editor
             // 클릭 없이 시작된 드래그(스냅샷이 없다)는 대상만 기억한다. 커밋할 "이전" 값이 없으므로 끝에서 버린다.
             if ( _bTracking == SW_FALSE && _object != object.getHandle() )
             {
-                _undoBefore = ObjectSnapshot{};
-                _object     = object.getHandle();
+                _pUndo->_before = ObjectSnapshot{};
+                _object         = object.getHandle();
             }
             _bTracking = SW_TRUE;
         }
@@ -198,21 +206,21 @@ namespace sw::editor
         {
             // 단일 드래그는 스냅샷을 찍은 그 오브젝트에만 커밋한다. 핸들로 다시 찾으며, 지워졌으면 버린다.
             GameObject* pTracked = findTracked( _object );
-            if ( pTracked != nullptr && _undoBefore._xml.empty() == false )
-                commitDrag( *pTracked, _undoBefore );
+            if ( pTracked != nullptr && _pUndo->_before._xml.empty() == false )
+                commitDrag( *pTracked, _pUndo->_before );
             // 그룹 드래그: 살아 있는 대상마다 커밋한다.
             const uint32 count = static_cast<uint32>( _listObject.size() );
             for ( uint32 objectIndex = 0; objectIndex < count; ++objectIndex )
             {
                 GameObject* pObj = findTracked( _listObject[objectIndex] );
                 if ( pObj != nullptr )
-                    commitDrag( *pObj, _listUndo[objectIndex] );
+                    commitDrag( *pObj, _pUndo->_listBefore[objectIndex] );
             }
         }
-        _undoBefore = ObjectSnapshot{};
-        _object     = GameObjectHandle{};
+        _pUndo->_before = ObjectSnapshot{};
+        _object         = GameObjectHandle{};
         _listObject.clear();
-        _listUndo.clear();
+        _pUndo->_listBefore.clear();
         _listRelativeWorld.clear();
         _bTracking = SW_FALSE;
     }
@@ -257,13 +265,13 @@ namespace sw::editor
             if ( ImGuizmo::IsOver() && EditorInputGUI::readPointer().wasPressed( EditorMouseButton::Left ) )
             {
                 _listObject.clear();
-                _listUndo.clear();
+                _pUndo->_listBefore.clear();
                 _listRelativeWorld.clear();
                 const float4x4 invGroup = groupWorld.invert();
                 for ( GameObject* pObj : listGizmo )
                 {
                     _listObject.push_back( pObj->getHandle() );
-                    _listUndo.push_back( EditorTransaction::captureSnapshot( pObj ) );
+                    _pUndo->_listBefore.push_back( EditorTransaction::captureSnapshot( pObj ) );
                     _listRelativeWorld.push_back( pObj->getPrimarySceneComponent()->getWorldMatrix() * invGroup );
                 }
             }

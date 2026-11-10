@@ -13,6 +13,9 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
+#include "Core/Registry/RegistrationList.h"
+#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Animation/AnimationPlayback.h"
 #include "Engine/Animation/Graph/AnimationGraphPlayer.h"
@@ -21,6 +24,7 @@
 namespace sw
 {
     struct AnimationGraphNode;
+    struct AnimationGraphPoseNodeDef;
 
     class AnimationGraphAsset;
     class AnimationParameterSet;
@@ -99,6 +103,57 @@ namespace sw
         hashed_string             _weightParameter;
         mutable Pose              _scratchPose; ///< 둘째 입력을 샘플할 임시 포즈다(인스턴스마다 한 스레드에서 평가하므로 공유되지 않는다)
     };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 포즈 노드 하나를 만드는 함수입니다. @p listInput 은 정의의 입력을 클립 풀이로 푼 것이고, 개수는 종류의 `_inputCount` 와 같습니다. */
+    using AnimationPoseNodeFactory = unique_ptr<IAnimationPoseNode> ( * )( const vector<const IAnimationPlayable*>& listInput, const AnimationGraphPoseNodeDef& def );
+
+    /**
+     * @struct AnimationPoseNodeType
+     * @brief 포즈 노드 종류 하나의 계약입니다 — 입력 수 · 가중치 파라미터 요구와 생성 함수. 로드(`AnimationGraphAsset::parsePoseNode`)와 생성(`AnimationPoseNodeSet`)이 같은 계약을 본다.
+     */
+    struct AnimationPoseNodeType
+    {
+        uint32                   _inputCount{ 0 };          ///< 정확한 입력 수
+        AnimationPoseNodeFactory _create{ nullptr };        ///< 노드를 만드는 함수
+        bool                     _bRequiresWeight{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 초기화로 만든다) — "weight" 파라미터 이름이 있어야 한다
+    };
+
+    /**
+     * @class AnimationPoseNodeRegistry
+     * @brief 포즈 노드 종류 이름(XML `<pose_node type="…">`)에서 계약 · 생성 함수로 가는 표입니다. 모르는 이름은 로드 오류입니다.
+     * @details 리그 노드(`RigNodeRegistry`)와 같은 틀 — 새 블렌드(Mirror · Montage · 모션 매칭)를 더할 때 열거 · 로더 · 생성 switch 를 고치지 않고 등록 한 줄을 더한다.
+     *          엔진 노드(BlendPoses)는 만들 때 등록되고, 게임 · 키트는 `registerType` 으로 더한다(언리얼 애님 노드가 형식 등록으로 모이는 것, 유니티 Playable 형식과 같은 자리).
+     */
+    class SW_API AnimationPoseNodeRegistry final : public ISubsystem
+    {
+    public:
+        static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::Animation; ///< 할당 용도(`ISubsystem::getSubsystemMemoryTag`)
+        static constexpr const utf8* kSubsystemName      = "AnimationPoseNodeRegistry";
+
+        /** @brief 엔진 노드가 든 표를 만듭니다. */
+        AnimationPoseNodeRegistry();
+
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
+
+        /** @brief 종류를 등록합니다. 같은 이름이 있으면 바꿉니다. 이름이나 생성 함수가 없으면 오류를 남기고 등록하지 않습니다. */
+        void registerType( const hashed_string& typeName, const AnimationPoseNodeType& type );
+        /** @brief 이름의 종류입니다. 모르는 이름이면 nullptr 입니다. */
+        const AnimationPoseNodeType* findType( const hashed_string& typeName ) const;
+        /** @brief 등록된 종류 이름들을 등록 순서로 반환합니다(진단과 에디터용). */
+        vector<hashed_string> getTypeNames() const;
+        /** @brief 정의 @p def 가 종류 @p type 의 계약(입력 수 · 빈 입력 이름 없음 · 가중치 파라미터)을 지키면 true 입니다. */
+        [[nodiscard]] static bool isSatisfiedBy( const AnimationPoseNodeType& type, const AnimationGraphPoseNodeDef& def );
+
+    private:
+        NameRegistry<AnimationPoseNodeType> _registry; ///< 종류 이름 → 계약(등록 순서)
+    };
+
+    SW_SERVICE_SLOT( AnimationPoseNodeRegistry, Required );
 } // namespace sw
 
 namespace sw

@@ -1,6 +1,8 @@
 /**
  * @file Mesh.h
- * @brief CPU 메시 데이터와 GPU 정점 버퍼 업로드를 정의합니다. 씬 지오메트리용이며 RHI 데모용이 아닙니다.
+ * @brief CPU 메시 데이터를 정의합니다. 씬 지오메트리용이며 RHI 데모용이 아닙니다.
+ * @details GPU 정점 · 인덱스 버퍼는 렌더 쪽 프록시 `MeshRenderData`(렌더러 · 업로드 큐만 include)가 든다 — 게임이 보는 이 헤더는 RHI 헤더를 include 하지 않는다
+ *          (언리얼 `UStaticMesh` ↔ `FStaticMeshRenderData`).
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
@@ -16,15 +18,12 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Graphics/Mesh/MeshBuildVertex.h"
-#include "Engine/Graphics/RHI/RHIDeviceBuffer.h"
-#include "Engine/Graphics/RHI/RHIRenderResource.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/Mesh/MeshVertex.h"
 
 namespace sw
 {
     struct MeshVertexAnimation;
-
-    class IRHIDevice;
+    class MeshRenderData;
 
     /**
      * @struct MeshSkinVertex
@@ -195,10 +194,10 @@ namespace sw
 {
     /**
      * @class Mesh
-     * @brief 인덱스 삼각형 메시입니다 — 고유 정점(위치, 노멀, UV, 색)과 삼각형마다 정점 번호 셋(uint32)입니다. initRHI() 로 올린 GPU 정점 버퍼를 소유합니다.
+     * @brief 인덱스 삼각형 메시입니다 — 고유 정점(위치, 노멀, UV, 색)과 삼각형마다 정점 번호 셋(uint32)입니다. GPU 정점 버퍼는 렌더 프록시(`getRenderData`)가 든다.
      * @details 언리얼 · 유니티 · Godot 과 같이 모든 메시가 인덱스를 가진다(색인 없는 모드는 없다). 구간 · LOD 는 인덱스 범위이고, 스킨 · 모프 · VAT 는 고유 정점 번호다.
      */
-    class SW_API Mesh final : public RHIRenderResource
+    class SW_API Mesh final
     {
     public:
         /**
@@ -213,19 +212,10 @@ namespace sw
             CreateKey() = default;
             friend class Mesh;
         };
-        /** @brief create() 전용 생성자입니다. 빈 메시를 만듭니다. */
-        explicit Mesh( CreateKey ) noexcept {}
-        /**
-         * @brief 정점 버퍼를 해제합니다. 디바이스가 살아 있으면 반환하고, 이미 없으면 핸들만 버립니다.
-         * @note 디바이스가 먼저 죽었다면 통보(`releaseRHI`, `clearRHI`)가 먼저 와서 핸들을 비워 두므로,
-         *       소멸 순서와 상관없이 죽은 디바이스로 destroy 하지 않습니다.
-         */
-        ~Mesh() override;
-
-        /** @brief (RHIRenderResource) 살아 있는 디바이스에 정점 버퍼를 반환합니다. */
-        void releaseRHI( IRHIDevice* pDevice ) override;
-        /** @brief (RHIRenderResource) 디바이스가 이미 없을 때 부릅니다. 핸들만 버립니다. */
-        void clearRHI( IRHIDevice* pDevice ) override;
+        /** @brief create() 전용 생성자입니다. 빈 메시와 그 렌더 프록시(GPU 버퍼 없음)를 만듭니다. */
+        explicit Mesh( CreateKey ) noexcept;
+        /** @brief 렌더 프록시를 함께 놓습니다 — 프록시 소멸자가 정점 버퍼를 디바이스에 돌려준다(`MeshRenderData`). */
+        ~Mesh();
 
         /** @brief 복사를 금지합니다. */
         Mesh( const Mesh& ) = delete;
@@ -443,23 +433,13 @@ namespace sw
          */
         const IdentityToken& getContentID() const { return _contentID; }
 
-        /** @brief 디바이스에 업로드(또는 재업로드)합니다. 같은 디바이스면 여러 번 불러도 결과가 같습니다. */
-        [[nodiscard]] bool initRHI( IRHIDevice* pDevice ) override;
-
-        /** @brief GPU 정점 버퍼 핸들을 반환합니다(그릴 정점 흐름 — LOD 0 뒤에 낮은 단계). */
-        RHIBufferHandle getVertexBuffer() const { return _vertex._buffer; }
-        /** @brief GPU 인덱스 버퍼(uint32) 핸들을 반환합니다(그릴 인덱스 흐름 — LOD 0 뒤에 낮은 단계, 값은 정점 흐름 번호). */
-        RHIBufferHandle getIndexBuffer() const { return _index._buffer; }
         /**
-         * @brief 살아 있는 디바이스에 올라가 있는지 반환합니다.
-         * @details 옛 디바이스가 죽으면 통보(`RHIRenderResource`)가 먼저 와서 핸들을 비운다. 그래서 값이 남아
-         *          있다는 것만으로 "살아 있는 디바이스의 것" 임이 보장된다(업로드 큐는 백엔드 교체 뒤 다시 올릴 메시를 이 값으로 고른다).
+         * @brief GPU 정점 · 인덱스 버퍼(렌더 프록시)입니다. 렌더러 · 업로드 큐가 `MeshRenderData.h` 를 include 해 업로드 · 바인딩한다.
+         * @details const 메시에서도 얻는다 — GPU 사본은 CPU 내용의 캐시라 그리는 쪽(const 소유)이 올린다. 수명은 메시와 같다.
          */
-        bool isRHIValid() const { return _vertex.isResident() && _index.isResident(); }
+        MeshRenderData& getRenderData() const { return *_renderData; }
 
     private:
-        /** @brief 정점 · 인덱스 버퍼를 실제로 해제합니다. 살아 있는 디바이스면 반환하고, 아니면 버립니다. */
-        void releaseVertexBuffer();
         /** @brief 정점에서 경계 반지름을 다시 구합니다. */
         void refreshBoundingRadius();
         /** @brief 낮은 단계를 뗍니다(정점 · 스킨이 바뀌어 옛 단계가 맞지 않을 때). */
@@ -501,8 +481,7 @@ namespace sw
         shared_ptr<const vector<float4>> _deformProgram SW_GUARDED_BY( _deformProgramMutex );
         mutable mutex                                   _deformProgramMutex;
         atomic<uint64>                                  _deformProgramGeneration{ 0 };
-        /** @brief 정점 · 인덱스 버퍼입니다. 어느 디바이스의 것인지를 함께 가지고 있습니다(RHIDeviceBuffer). 둘은 함께 만들고 함께 놓는다. */
-        RHIDeviceBuffer _vertex;
-        RHIDeviceBuffer _index;
+        /// @brief getRenderData 를 참고하세요. 생성자가 만들고 소멸까지 바뀌지 않는다(널 아님).
+        unique_ptr<MeshRenderData> _renderData;
     };
 } // namespace sw

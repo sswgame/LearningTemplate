@@ -18,7 +18,6 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
-#include "Engine/VFX/VFXComponent.h"
 #include "Engine/VFX/VFXEffectDef.h"
 
 #include <imgui.h>
@@ -164,21 +163,22 @@ namespace sw::editor
         }
         EditorSelfTestMarks::record( "vfx.reload" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "ReadTheEffectFileAgainAfterSaving" ) );
-        VFXComponent* pSubject = VFXPreviewModel::findSubject( getPreviewScene() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Restart" ) ) );
-        if ( ImGui::Button( SW_LOCKEY( "EdText", "Restart" ) ) && pSubject != nullptr )
-            pSubject->play();
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "Restart" ) ) )
+            VFXPreviewModel::restartSubject( getPreviewScene() );
         EditorSelfTestMarks::record( "vfx.restart" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "PlayTheEffectAgainFromTheStart" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Stop" ) ) );
-        if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Stop" ) ) && pSubject != nullptr )
-            pSubject->stop();
+        if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Stop" ) ) )
+            VFXPreviewModel::stopSubject( getPreviewScene() );
         EditorSelfTestMarks::record( "vfx.stop" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "StopAndClearTheParticles" ) );
         ImGui::SameLine();
         // GPU 방출기의 살아 있는 입자는 GPU 버퍼에만 있다 — 이번 재생에서 만든 수(일정)와 CPU 방출기의 살아 있는 수를 따로 보인다.
-        const uint32 spawnedCount = pSubject != nullptr ? static_cast<uint32>( pSubject->getSpawnedParticleCount() ) : 0u; // 표시용 — 한 재생에 40 억을 넘지 않는다
-        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "SpawnedCPUAlive", TextArgumentList().addInteger( "spawnedCount", static_cast<int64>( spawnedCount ) ).addInteger( "subject", static_cast<int64>( pSubject != nullptr ? pSubject->getCPUAliveParticleCount() : 0u ) ) ).c_str() );
+        VFXPreviewSubjectStats stats;
+        (void)VFXPreviewModel::findSubjectStats( getPreviewScene(), stats );    // 효과가 없으면 0 으로 보인다
+        const uint32 spawnedCount = static_cast<uint32>( stats._spawnedCount ); // 표시용 — 한 재생에 40 억을 넘지 않는다
+        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "SpawnedCPUAlive", TextArgumentList().addInteger( "spawnedCount", static_cast<int64>( spawnedCount ) ).addInteger( "subject", static_cast<int64>( stats._cpuAliveCount ) ) ).c_str() );
 
         // 방출기 줄마다 격리(Solo) 토글 — 켜면 그 방출기만 돈다(언리얼 Niagara 의 Isolate). 저장되는 효과는 바뀌지 않는다.
         const vector<VFXPreviewEmitterRow>& listRow = _model.getEmitterRows();
@@ -229,24 +229,19 @@ namespace sw::editor
 
     bool VFXPreviewPanel::findPreviewSpawnedParticleCount( uint64& outCount ) const
     {
-        const VFXComponent* pSubject = VFXPreviewModel::findSubject( getPreviewScene() );
-        if ( pSubject == nullptr )
+        VFXPreviewSubjectStats stats;
+        if ( VFXPreviewModel::findSubjectStats( getPreviewScene(), stats ) == false )
             return false;
-        outCount = pSubject->getSpawnedParticleCount();
+        outCount = stats._spawnedCount;
         return true;
     }
 
     bool VFXPreviewPanel::findEnabledEmitterCount( uint32& outCount ) const
     {
-        const VFXComponent* pSubject = VFXPreviewModel::findSubject( getPreviewScene() );
-        if ( pSubject == nullptr )
+        VFXPreviewSubjectStats stats;
+        if ( VFXPreviewModel::findSubjectStats( getPreviewScene(), stats ) == false )
             return false;
-        outCount = 0;
-        for ( uint32 emitterIndex = 0; emitterIndex < pSubject->getEmitterCount(); ++emitterIndex )
-        {
-            if ( pSubject->isEmitterEnabled( emitterIndex ) )
-                ++outCount;
-        }
+        outCount = stats._enabledEmitterCount;
         return true;
     }
 

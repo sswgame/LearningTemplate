@@ -4,7 +4,7 @@
  * @details - 전송의 처리기가 되어 I/O 스레드에서 요청 머리를 읽고 바로 답한다(서비스 스레드를 기다리지 않는다 — 지표는 원자 값, 상태는 잠금 하나).
  *          - 머리가 `_maxRequestBytes` 를 넘으면 431, GET 이 아니면 405, 모르는 경로는 404, 요청 줄이 깨지면 400 — 모두 답한 뒤 닫는다.
  *          - 평문 · 따로 포트 · **기본 바인드는 이 기계만**(`NetAddress::makeLoopback`) — Prometheus 스크레이프 · 감시자는 같은 기계나 사설망에서 온다.
- *            다른 기계에 열려면 설정에서 사설 주소를 준다(공용 인터페이스에 열지 말 것 — 인증이 없다).
+ *            토큰 없이는 루프백 · 사설 주소에만 묶인다(`initialize` 가 그 밖을 거절 — 형식으로 막는다). 모든 인터페이스 · 공용 주소는 Bearer 토큰이 있어야 열리고, 그때 요청마다 401 로 거른다.
  */
 #pragma once
 #include "Core/Concurrency/OnceInit.h"
@@ -29,6 +29,11 @@ namespace sw
     {
         NetAddress _bindAddress{ NetAddress::makeLoopback( 9100 ) }; ///< 받을 주소 — 기본은 이 기계만. 포트 0 = 아무 포트(테스트)
         int32      _maxRequestBytes{ 8 * 1024 };                     ///< 요청 머리 상한(넘으면 431)
+        /**
+         * @brief 요청마다 요구하는 `Authorization: Bearer <토큰>` 의 토큰입니다. 비면 인증하지 않는다 — 그때 바인드는 루프백 · 사설 주소만 받는다(`initialize` 가 거절).
+         * @details 모든 인터페이스(0.0.0.0) · 공용 주소에 열려면 토큰이 있어야 한다(Prometheus `authorization.credentials_file` 자리). 토큰은 설정 파일이 아니라 환경에서 읽는다(`ServerConfig::_opsTokenEnvironment`).
+         */
+        string _bearerToken{};
     };
 } // namespace sw
 
@@ -54,10 +59,14 @@ namespace sw
         /**
          * @brief 요청 머리(빈 줄 앞까지) 하나에 대한 응답 전체를 @p outResponse 에 씁니다 — 전송 없이 테스트한다.
          * @param monotonicMs 상태 판정 시각(단조 밀리초)
+         * @param bearerToken 비지 않으면 요청 머리의 `Authorization: Bearer` 가 같아야 한다(길이에만 시간이 드는 비교). 틀리거나 없으면 `/metrics` 는 401,
+         *                    탐침 경로(`/healthz` · `/readyz`)는 상태 코드와 짧은 글만 준다(kubelet 탐침은 비밀 머리를 실을 수 없다 — 서비스별 보고는 숨긴다)
          * @return HTTP 상태 코드
          */
         static int32 makeResponse( string_view requestHead, const MetricRegistry* pMetricRegistry, const ServiceHealthRegistry* pHealthRegistry, int64 monotonicMs,
-                                   string& outResponse );
+                                   string_view bearerToken, string& outResponse );
+        /** @brief 토큰 없이 열어도 되는 바인드(루프백 · 사설)면 true 입니다. 모든 인터페이스 · 공용 주소는 토큰이 있어야 한다. */
+        [[nodiscard]] static bool isBindAllowedWithoutToken( const NetAddress& bindAddress ) { return bindAddress.isLoopbackOrPrivate(); }
 
         // IStreamHandler — I/O 스레드
         void onStreamOpened( StreamConnectionHandle handle, const NetAddress& remote, bool bAccepted ) override;

@@ -7,7 +7,9 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/Graph/AnimationGraphParams.h"
+#include "Engine/Animation/Skeletal/AnimationPoseNode.h"
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -239,13 +241,14 @@ namespace sw
         AnimationGraphPoseNodeParams params;
         if ( Internal::readElement( poseNodeXML, params, inoutNode._name, Internal::kArrPoseNodeChild ) == false )
             return false;
-        AnimationGraphPoseNodeDef& def = inoutNode._poseNode;
-        def                            = AnimationGraphPoseNodeDef{};
-        def._type                      = params._type;
-        def._weightParameter           = params._weight;
-        if ( def._type == AnimationPoseNodeKind::None )
+        AnimationGraphPoseNodeDef& def     = inoutNode._poseNode;
+        def                                = AnimationGraphPoseNodeDef{};
+        def._type                          = params._type;
+        def._weightParameter               = params._weight;
+        const AnimationPoseNodeType* pType = engine::getSubsystem<AnimationPoseNodeRegistry>().findType( def._type );
+        if ( pType == nullptr )
         {
-            SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphNodeUnknown", "Animation graph node '%#' has a pose_node of type None", inoutNode._name.c_str() );
+            SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphNodeUnknown", "Animation graph node '%#' has an unknown pose_node type '%#'", inoutNode._name.c_str(), def._type.c_str() );
             return false;
         }
         for ( XMLNode input = poseNodeXML.findChild( "inputs" ).findChild(); input.isValid(); input = input.findNextSibling() )
@@ -253,12 +256,11 @@ namespace sw
             def._listInput.push_back( hashed_string( string_view{ input.getText() } ) );
         }
 
-        // 종류마다 요구하는 값 — 지금은 BlendPoses 하나다.
-        const bool bHasEmptyInput     = VectorUtil::contains( def._listInput, hashed_string{} );
-        const bool bHasRequiredValues = def._listInput.size() == 2 && bHasEmptyInput == false && def._weightParameter.empty() == false;
-        if ( bHasRequiredValues == false )
+        // 종류마다 요구하는 값은 그 종류의 계약이다(입력 수 · weight — 표가 정한다).
+        if ( AnimationPoseNodeRegistry::isSatisfiedBy( *pType, def ) == false )
         {
-            SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphNodeBlend7", "Animation graph node '%#' BlendPoses needs two named 'inputs' and a 'weight' parameter", inoutNode._name.c_str() );
+            SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphNodeBlend7", "Animation graph node '%#' pose_node '%#' needs %# named 'inputs'%#", inoutNode._name.c_str(), def._type.c_str(), pType->_inputCount,
+                             pType->_bRequiresWeight ? " and a 'weight' parameter" : "" );
             return false;
         }
         return true;

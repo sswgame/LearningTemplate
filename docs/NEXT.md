@@ -42,7 +42,12 @@
 
 ### 5. 작업자 · 설계 문서가 남긴 일
 
-- **린트를 빌드 구조로(린트 표에서 지우기):** `editor-view-includes` 를 Panels View 부분의 `#error` 껍데기로. 먼저 린트가 못 보는 전이 include 둘을 끊는다 — `VFXPreviewPanel.cpp` → `Engine/VFX/VFXComponent.h`(View 가 미리보기 `VFXComponent*` 를 든다 — ViewModel 값으로), `PrefabEditorPanel.h` → `Viewport/EditorPreviewGizmo.h` → `EditorViewportGizmo.h` → `Workspace/EditorTransaction.h`. 껍데기는 티어 6 View 부분 중 `Panels` 만(같은 티어 `AssetActions` 는 씬 헤더를 쓴다 — 부분을 가른다), `GameFramework/.../MultiplayerInProcessTab` 은 확장 모듈 쪽 껍데기로. 닫힘 검사는 전이 include 를 다 따라간다(EditorUI 'MVVM' 절).
+- **`game-gpu-includes` 를 타깃 게이트 껍데기로(진행 중):** 메시 GPU 버퍼는 `MeshRenderData`, 머티리얼 바인딩 쌍은 `MaterialRenderBinding.h` 로 뗐고 `TextureCache.h` 는 RHI · `Texture2D.h` 를 보지 않는다 — 게임 코드가 RHI 에 닿는 파일 43(`Client/` · `Editor/` 밖 20), 직접 include 는 `Client/` · `Editor/` 포함 0. 남은 잎(include 닫힘으로 센 것):
+  - `Material.h` · `MaterialInstance.h` 의 `RHIRenderResource` 상속(빌린 텍스처 반환 통보) → 메시처럼 멤버 프록시로.
+  - `MaterialTypes.h` 의 `RHIRenderState.h`(`RHIRenderStateOverride` · `RHIBlendTargetState` · `RHIBlendMode` · `RHIOpaqueDrawBand` → `RHIEnums.h`) · `RHIHandles.h`(`RHIDescriptorIndex`) — 저작 값이라 언리얼 `EBlendMode` 처럼 엔진 쪽 형식으로 두고 렌더러가 RHI 로 옮긴다.
+  - `VFXEffectDef.h` 의 `AssetRef<Texture2D>` 가 `Texture2D::kAssetType` 완전 형식을 요구해 `Texture2D.h`(RHI) 를 include — 텍스처 에셋 종류를 GPU 객체와 떼거나 생성자를 .cpp 로.
+  - `Client/` 만 닿는 둘: `CanvasDrawList.h`(`RHIScissorRect` · `shaderslot::kCanvasTextureCount` → 주인 상수 + static_assert), `RenderExtension.h`(`Games/Empty/Client/Dev/EmptyRenderDemo` 가 렌더 확장을 직접 짓는다 — 게이트는 타깃 단위라 폴더로 빼지 못한다: 데모를 DevTools · 에디터 확장으로 옮기거나 `[allow]` 로).
+  그 뒤 TargetLayers `[gate]` 의 gameframework · kit · game 에 `Engine/Graphics/RHI` · `Engine/Graphics/Shader` 를 더하고 린트를 지운다.
 - **에디터 MVVM 측정(통합):**
   - Hierarchy: 큐브 8000 루트 씬에서 Hierarchy 창을 연 프레임 시간을 옮기기 전 커밋과 대조한다(모두 접힘 · 루트 하나 펼침 · 맨 아래로 스크롤). 나빠졌으면 원인을 `HierarchyViewModel::gather` 에서 찾는다.
   - 인스펙터 값 행: 프로퍼티 많은 대상(컴포넌트 여럿을 단 오브젝트 · 프로젝트 설정 · 펼친 큰 배열)에서 인스펙터 프레임 시간과 `Editor.InspectorFilledRows` · `Editor.InspectorSkippedRows` 를 값 행 전 커밋과 대조한다(맨 위 · 맨 아래로 스크롤 · 스크롤 중). 나빠졌으면 `PropertyGridModel::gather` 의 행 채우기(값 사본 · 기본값 비교 · 혼합)에서 찾는다.
@@ -136,29 +141,20 @@ GameObject/Component API 는 저작 · 수명 · 직렬화 층으로 두고, 프
   - 남은 일: 빌드 · `AutomationUserDataRootTest`(리눅스 포함 — 대소문자 케이스) · `UnitTests*`(무인 실행이라 이제 격리된다) · 체인(`engine.isolation` 포함) · `Scenario.velmora.sequence.*` · `Scenario.editor.statedir.*` · `py -3 -m Scripts net-pair mmo` 를 돌린다.
   - `-unattended` 도 `-scenario` 도 없는 스크립트 실행(`LockstepPairRun.py` · `TelemetryLocalRun.py` — 표준 입력 명령으로 모는 보이는 실행)은 판정 밖이라 사람의 세이브 폴더를 쓴다. 세이브를 쓰면 스크립트가 `-unattended` 를 붙이거나 판정에 표준 입력 실행을 더한다.
 - **T3 테스트 이력 · 격리 · 파이프라인(T1 뒤):**
-  - 보고 JSON 을 sqlite 에 쌓고, 흔들림 지수와 p95 추세를 낸다. 격리 표 `Config/Rules/Test/Quarantine.json` 은 사유 · 만료 필수다.
+  - 이력 · 격리 표는 들어왔다(`Scripts/dev/TestHistory.py` ingest · report · quarantine, `Config/Rules/Test/Quarantine.json` — 사유 · 만료 필수). 남은 일: 묶음 끝 스크립트가 보고 폴더를 `ingest` 하고 ctest 에 `quarantine --ctest-exclude` 를 `-E` 로 넘긴다(bundle-verify 스킬의 절차와 함께 고친다).
   - 샤드를 시간 균형으로 나누고, 묶음 끝 셸 스크립트를 단계 · 산출물 · 재시도가 적힌 파이프라인 정의로 옮긴다.
-  - `ScenarioCulprit.py` 는 로그 문구 대신 JSON 을 읽는다. 외부 CI 러너는 비용이 드는 연동이라 사용자 결정이다.
+  - 외부 CI 러너는 비용이 드는 연동이라 사용자 결정이다. 범인 찾기(`ScenarioCulprit.py` · `LinuxScenarios.py culprit`)는 실행마다 보고 폴더의 JSON 으로 판정한다 — 처음 한 번 돌려 확인한다.
 - **D1 데이터 필수 칸 린트:** 발 뼈 결함의 모양이다. `PROPERTY` 의 문자열 · `hashed_string` · `AssetID` 칸이 비어 있지 않은 C++ 기본값을 갖고 `Required` 가 아니면 오류로 낸다. 빠진 칸은 로드 오류 id(`Reflection.RequiredMissing`)로 드러낸다.
-- **D2 포맷 · 세이브 이관 표:**
-  - 지금 에셋(`AssetFormat.h:5`) · 세이브(`SaveGame.h:85`)는 판이 다르면 거절한다. 출시 뒤 첫 판 올림에서 사용자 데이터를 모두 잃는다.
-  - `SW_FORMAT_UPGRADE( 종류, n, n+1, fn )` 순수 함수 사슬을 둔다. 빠진 단계는 오류이므로 폴백이 아니다. `Test/Fixtures/formats/<종류>/v<n>/` 샘플로 단위 테스트한다.
-  - 표가 비어 있는 동안 동작은 같다(언리얼 `FCustomVersion` 자리).
-- **N2 서버 배포 · 설정 검증:**
-  - `Scripts/package/ServerImage.py` 를 둔다(Linux 서버 + 팩 + 설정 → tar + systemd unit, 컨테이너는 선택).
-  - `ServerApp --check-config` 를 둔다(잘못된 설정은 종료 11).
-  - `OpsHTTPEndpoint` 는 인증 없는 GET 이다. 바인드 주소를 루프백 · 사설로 형식에서 제한하고, 외부 바인드는 토큰 필수로 한다.
+- **N2 서버 배포 — 통합 검증만 남음:** Linux 서버 패키지로 `py -3 -m Scripts server-image --package … --config … --game …`(묶기 전 `Server -check-config` 를 WSL 로 돈다) 한 번, 쿠버네티스 예시는 비밀 `ops-token` 을 더해야 뜬다(운영 포트 0.0.0.0 은 토큰 필수 — 스크레이퍼도 Bearer).
 - **U1 햅틱 남은 것:** 출력 `IInputFeedbackDevice` · 데이터 `*.haptic.xml`(`HapticEffectDef`, 공유 캐시) · 재생 `HapticPlayback`(게임패드가 든다, XInput · evdev 백엔드 그대로)은 들어갔다 — 통합에서 `HapticEffectTest` 를 돌린다. 방아쇠 진동(DualSense · GameInput)과 터치 기기 진동(Android Vibrator)은 그 백엔드가 생길 때 같은 출력으로 건다. 패드 메뉴 방향 포커스는 이미 있다(`UINavigationSolver` · `UIInputRouter`).
-- **A1 애니메이션 포즈 노드 등록식(평가 경로는 5-3 뒤):**
-  - 포즈 노드가 `None · BlendPoses` 둘뿐이라(`AnimationGraphAsset.h:106`) 새 블렌드마다 enum · 로더 · 플레이어를 고친다. 리그 노드처럼 등록표로 바꾼다.
-  - 그 위에 Mirror · Montage(섹션 · 분기)를 더한다.
+- **A1 애니메이션 포즈 노드(5-3 뒤):** 등록표(`AnimationPoseNodeRegistry`)는 들어왔다. 그 위에 Mirror · Montage(섹션 · 분기)를 등록 한 줄씩 더한다(평가 경로가 5-3 에서 정해진 뒤).
 - **R1 에셋 리다이렉터(5-4 뒤):** GUID 전환은 기각한다(경로 id 가 언리얼 SoftObjectPath 자리). `redirects.xml`(옛 → 새)를 `AssetPaths` 앞단에서 풀어, 세이브 · 서버에 적힌 옛 경로가 산다. 린트가 남은 참조를 보고한다.
 - **N1 복제 스키마를 리플렉션에서(5-4 뒤):**
   - 엔티티 상태 바이트를 게임이 손으로 양자화한다. 그래서 칸 하나를 더하면 서버 · 클라 두 곳을 고쳐야 한다.
   - `PROPERTY( Replicated, Quantize = … )` 로 작성기를 생성하고, 스키마 해시를 와이어 버전에 합친다.
   - `kMaxEntityBytes` 초과는 첫 경고만 남기고 엔티티가 사라진다 — `registerEntity` 의 오류로 바꾼다.
 - **E1 되돌리기 남은 것(통합에서):** 씬 명령 · 완료 함수(이름 확정 · 컴포넌트 더하기 · 프리셋 · Keep Simulation Changes)는 `EditorTransaction&` 를 받는다. 시나리오 `editor/undocoverage` 를 돌려 실패 줄의 명령을 고친다 — 컴포넌트 대상 명령(`SceneDuringPlay`)은 선택만으로는 꺼져 건너뛰므로 컴포넌트 대상을 주는 줄을 더한다. 굽기는 파생 데이터라 기록하지 않는다(결정, `EditorCommandEdit`).
-- **G1 장르 수직 슬라이스(T1 · T2 뒤):** 완결 루프가 없는 게임마다 `slice.scenario.xml` 을 둔다(시작 → 목표 → 결과 → 저장 · 복원 해시 동일).
+- **G1 장르 수직 슬라이스 — 통합 실행만 남음:** 게임 12개에 `automation/slice.scenario.xml`(목표 단계는 그 게임 시나리오의 사본 + `game.save` → 두 번 `game.load` 뒤 `<RecordStateHash>` · `<ExpectStateHash>`)이 들어왔다. 체인에서 처음 돈다 — 진 게임은 목표 사본(원본 시나리오)과 복원이 되살리지 못한 오브젝트(`state.objects`)를 본다. velmora 는 `vale` 이 슬라이스다.
 
 ### 6. 리소스
 

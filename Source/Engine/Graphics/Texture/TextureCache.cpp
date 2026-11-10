@@ -1093,6 +1093,11 @@ namespace sw
         return shared_ptr<Texture2D>( shared_from_this(), _pTexture );
     }
 
+    uint64 TextureLoadOperation::getResidentIdentity() const
+    {
+        return getState() == AssetLoadState::Ready && _pTexture != nullptr ? static_cast<uint64>( _pTexture->getHandle() ) : 0u;
+    }
+
     expected<void> TextureLoadOperation::runLoad()
     {
         // 렌더 타깃 · CPU 텍스처는 읽을 파일이 없다 — 업로드 단계만 있다.

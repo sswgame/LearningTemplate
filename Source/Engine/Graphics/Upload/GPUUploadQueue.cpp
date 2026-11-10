@@ -7,6 +7,7 @@
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Graphics/Mesh/MeshRenderData.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Profiling/FrameProfiler.h"
 
@@ -49,7 +50,7 @@ namespace sw
         if ( _bParallel == SW_FALSE )
             return;
         // 이미 이 디바이스에 업로드되어 있으면 할 일이 없다. 상주 판단은 Mesh 가 세대로 한다.
-        const bool bNothingToUpload = mesh == nullptr || _pDevice == nullptr || mesh->isRHIValid();
+        const bool bNothingToUpload = mesh == nullptr || _pDevice == nullptr || mesh->getRenderData().isRHIValid();
         if ( bNothingToUpload )
             return;
         if ( mesh->getVertexCount() == 0 )
@@ -87,7 +88,7 @@ namespace sw
             {
                 const shared_ptr<Mesh>& mesh = listMesh[index];
                 if ( mesh != nullptr )
-                    (void)mesh->initRHI( pDevice ); // 실패는 메시가 자기 코드에서 로그로 남긴다(RHIRenderResource::initRHI 와 같다)
+                    (void)mesh->getRenderData().initRHI( pDevice ); // 실패는 메시가 자기 코드에서 로그로 남긴다(RHIRenderResource::initRHI 와 같다)
             }
         };
 

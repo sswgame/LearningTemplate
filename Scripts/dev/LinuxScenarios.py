@@ -316,21 +316,23 @@ def culprit(arguments):
     """이분 탐색은 ScenarioCulprit.findCulprit(Windows 와 같은 함수) — 여기는 Xvfb · 드라이버(scenario_env) 실행기와 ctest 목록만 댄다."""
     target = arguments[0]
     pack = arguments[1] if len(arguments) > 1 else 'editor'
-    names = ScenarioCulprit.readStageNames(open(f'{LOGS}/Scenario.{pack}.vk.log', errors='replace').read())
-    if not names:
-        sys.exit(f'체인 로그에 단계가 없다 - 먼저 chain {pack}')
-    target_index, target_name = ScenarioCulprit.resolveTarget(names, target)
     with Xvfb():
         env = scenario_env(99)
         command = AppArguments.findChainCommand(pathlib.Path(RELEASE), pack, env)
         paths = AppArguments.readChainStages(command)
-        base = AppArguments.without(command, 'scenario-backend-split', 'scenario-keep-going', 'scenario-backends', 'log-file', 'scenario')
+        # 단계 이름은 시나리오 파일의 name 속성, 판정은 실행마다 비운 보고 폴더의 JSON(ScenarioCulprit 과 같은 함수) — 로그 문구를 읽지 않는다.
+        target_index, target_name = ScenarioCulprit.resolveTarget({index: ScenarioCulprit.readScenarioName(path) for index, path in enumerate(paths)}, target)
+        base = AppArguments.without(command, 'scenario-backend-split', 'scenario-keep-going', 'scenario-backends', 'log-file', 'scenario', 'scenario-report')
+        run_counter = [0]
 
         def fails(prefix):
             listed = ','.join(prefix + [paths[target_index]])
+            run_counter[0] += 1
+            run_dir = ScenarioCulprit.makeRunReportFolder(pathlib.Path(RELEASE), run_counter[0])
             subprocess.run(['timeout', '1200', *base, AppArguments.option('scenario', listed), AppArguments.flag('scenario-keep-going'), AppArguments.option('scenario-backends', 'vk'),
+                            AppArguments.option('scenario-report', run_dir / 'report.json'),
                             *window_arguments(), AppArguments.option('log-file', 'x_culprit.log')], cwd=f'{RELEASE}/Bin', env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            bad = ScenarioCulprit.stageFailed(open(f'{RELEASE}/Bin/x_culprit.vk.log', errors='replace').read(), target_name)
+            bad = ScenarioCulprit.stageFailedInReports(ScenarioCulprit.readRunReports(run_dir), target_name)
             print(len(prefix), prefix[0] if prefix else '-', '짐' if bad else '통과', flush=True)
             return bad
 

@@ -70,6 +70,8 @@ namespace sw::editor
     {
     }
 
+    EditorPreviewGizmo::~EditorPreviewGizmo() = default;
+
     void EditorPreviewGizmo::draw( EditorPreviewPanel& panel )
     {
         EditorSelection&             selection = panel.getPreviewSelection();

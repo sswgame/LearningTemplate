@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  장르 수직 슬라이스(G1) — 시작 → 목표(enemydeath.scenario.xml 의 단계 그대로) → 결과 → 저장 · 복원 해시 동일.
+  목표 단계는 그 시나리오가 정본이다 — 거기를 고치면 이 파일도 맞춘다. 저장 슬롯은 shooter3d/slice.
+-->
+<Scenario name="game.shooter3d.slice" fixedDelta="0.0166667" timeoutFrames="3000" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<DevCommand line="camera.preset orbit"/>
+	<Variable name="gv_shooterAutoPlay" value="1"/>
+	<!-- 두 번 맞힐 때까지(시뮬레이션 시각 — 고정 델타라 결정적이다). 예전 고정 420 프레임은 해골 적의 다가오는 시간에 맞춘 값이라 생물 적(크기 · 닿는 거리를 메시에서 구했다)에서는 한 번째에 닿았다 -->
+	<WaitUntil watch="Shooter3D.EnemyHitCount" atLeast="2" timeoutSeconds="20"/>
+	<Screenshot file="death_a.ppm"/>
+	<Wait frames="180"/>
+	<Screenshot file="death_b.ppm"/>
+	<Wait frames="300"/>
+	<Screenshot file="death_c.ppm"/>
+	<Wait frames="600"/>
+	<Expect watch="Shooter3D.ShotCount" atLeast="6"/>
+	<Screenshot file="death_d.ppm"/>
+	<Wait frames="600"/>
+	<Screenshot file="death_e.ppm"/>
+	<Wait frames="5"/>
+	<ExpectImage file="death_a.ppm" golden="death_a"/>
+	<ExpectImage file="death_b.ppm" golden="death_b"/>
+	<ExpectImage file="death_c.ppm" golden="death_c"/>
+	<ExpectImage file="death_d.ppm" golden="death_d"/>
+	<ExpectImage file="death_e.ppm" golden="death_e"/>
+	<!-- 저장 → 세계를 더 돌림 → 두 번 복원: 같은 슬롯을 두 번 불러온 직후의 씬 상태 해시가 같아야 한다(복원이 세계를 다 되살린다 — 저장 순간의 해시와 견주면 명령이 도는 프레임만큼 흔들린다) -->
+	<Wait frames="1"/>
+	<DevCommand line="game.save shooter3d/slice"/>
+	<WaitUntil watch="Save.Written" atLeast="1" timeoutWallSeconds="10"/>
+	<Wait seconds="1"/>
+	<DevCommand line="game.load shooter3d/slice"/>
+	<WaitUntil watch="Save.Loaded" atLeast="1" timeoutWallSeconds="10"/>
+	<RecordStateHash key="restored"/>
+	<Wait seconds="1"/>
+	<DevCommand line="game.load shooter3d/slice"/>
+	<WaitUntil watch="Save.Loaded" atLeast="2" timeoutWallSeconds="10"/>
+	<ExpectStateHash key="restored"/>
+	<Pass/>
+</Scenario>

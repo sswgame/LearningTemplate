@@ -140,8 +140,7 @@ namespace sw
     {
         if ( set._listHandle.empty() || set._listHandle.front().isReady() == false )
             return 0;
-        const Texture2D* pTexture = set._listHandle.front().getOperation()->getTexture();
-        return pTexture != nullptr ? static_cast<uint64>( pTexture->getHandle() ) : 0u; // GPU 핸들 값(`RHITextureHandle`) — 헤더가 RHI 를 모르게 수로 든다
+        return set._listHandle.front().getOperation()->getResidentIdentity(); // GPU 핸들 값 — 게임은 RHI · Texture2D 를 모르고 같은지만 본다
     }
 
     bool SkinLayerBakeBinding::areInputsReady( const BakeSet& set )

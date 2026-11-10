@@ -47,3 +47,43 @@ SelfTest = 7
 "Editor/Viewport/EditorOrbitMath.h" = "궤도 카메라 수식(dolly · panWorldPerPixel) — Core 만 include 하는 순수 수학 잎 헤더라 미리보기 뷰포트(4층)와 씬 뷰가 함께 쓴다"
 "Editor/SelfTest/EditorWatchSupport.h" = "감시 값 대상 전역 변수와 읽기 보조 함수의 선언 — Core 만 include 하는 잎 헤더라 기능 폴더의 *Probes.cpp 가 층을 가리지 않고 쓴다"
 "Editor/SelfTest/EditorSelfTestInput.h" = "입력 흉내 표식(EditorSelfTestMarks::note) — 위젯이 그린 자리를 남기는 잎 헤더(Core 만 include)"
+
+# 패널 View(`Panels` 층의 `Model` 폴더 밖 파일 — MVVM 의 View)가 include 하지 못하는 모델 · 씬 헤더(Source 기준 경로의 정규식). docs/agents/EditorUI.md 'MVVM' 절.
+# Source/Editor/CMakeLists.txt 가 Panels View 를 따로 짓는 부분(`EditorPanelsView`)에 이 헤더마다 `#error` 껍데기를 놓는다 — 전이 include 도 멈춘다.
+# 같은 티어의 `AssetActions` 는 씬 헤더를 쓰므로 받지 않는다. 확장 모듈의 View 는 `sw_addEditorPanelView` 로 같은 껍데기를 받는다.
+# 언리얼은 Slate 위젯이 모델을 보지만(규칙 없음), 유니티 UI Toolkit 의 바인딩처럼 View 는 ViewModel 값만 본다 — 형식(껍데기)으로 막는다.
+[panelViewBan]
+layer = "Panels"   # View 를 따로 짓는 층(그 층의 `Model` 폴더 밖 파일)
+patterns = [
+    "^Editor/Common/Workspace/",
+    "^Editor/Common/Commands/",
+    "^Engine/Object/",
+    "^Engine/Scene/",
+    "^Engine/.+/Component/",
+]
+
+# 금지 폴더 안에 있지만 값 · 창구라 View 가 써도 되는 헤더 → 까닭. 껍데기를 놓지 않는다(그 헤더가 include 하는 금지 헤더는 껍데기가 멈춘다).
+[panelViewAllowed]
+"Editor/Common/Commands/EditorCommandRegistry.h" = "등록된 명령을 id 로 부르는 창구 — 명령은 다음 프레임 시작에 메인 스레드가 돈다(queueCommand)"
+"Editor/Common/Commands/EditorCommandTarget.h" = "명령이 받는 대상 값(종류 · 선택 스냅숏 · id) — 포인터가 없다"
+"Editor/Common/Commands/EditorDragPayload.h" = "끌어 놓기 페이로드 값({종류, id})"
+"Editor/Common/Workspace/EditorPanelID.h" = "패널 id 형식과 상수 — 값"
+"Editor/Common/Workspace/Play/EditorSessionPolicy.h" = "미저장 · 플레이 중 편집 판정 값(IEditorPanel 이 쓴다)"
+"Editor/Common/Workspace/Asset/EditorAssetType.h" = "에셋 종류 서술(IEditorPanel 이 쓴다)"
+"Editor/Common/Commands/EditorCommandText.h" = "명령의 표시 · 배치 데이터(라벨 · 아이콘 · 메뉴) — 값이고, 허용한 EditorCommandRegistry.h 가 include 한다"
+"Engine/Object/GameObject/Service/ScenePreviewPolicy.h" = "미리보기 씬 틱 정책 값(집합체) — 미리보기 패널이 getPreviewPolicy 로 돌려준다"
+"Editor/Common/Commands/Diagnostics/EditorModuleDetail.h" = "모듈 창 상세 한 모듈의 값(집합체) — makeDetail 이 채우고 View 가 그린다"
+"Editor/Common/Commands/EditorBackgroundIO.h" = "백그라운드 잡(요청 · 꺼내기) — 결과 값 헤더와 잡 뼈대(Common/Task)만 include 한다. 작업 본문이 부르는 커맨드는 .cpp 가 본다(Model 이 잡을 값으로 든다)"
+"Editor/Common/Commands/Asset/EditorAssetIndexEntry.h" = "퀵 런처 항목 · 리소스 카탈로그 개수 값"
+"Editor/Common/Commands/Asset/EditorFolderListingEntry.h" = "콘텐츠 브라우저 폴더 항목 값"
+"Editor/Common/Commands/Asset/EditorLocalizationSheet.h" = "로컬라이즈 표 · 게임 데이터 파일 항목 값(판정 함수만 있다)"
+"Editor/Common/Workspace/Undo/EditorDocumentState.h" = "문서 한 벌의 저장한 값과 창 안 되돌리기 기록 — Core 와 EditSnapshotHistory 만 include 하는 값 템플릿(문서 Model 이 값으로 든다)"
+"Editor/Common/Workspace/Undo/EditSnapshotHistory.h" = "창 안 되돌리기 스냅숏 기록 — Core 만 include 하는 값 템플릿"
+"Editor/Common/Workspace/EditorViewTargetUtil.h" = "뷰 종류 · 게임 뷰 비율 값과 렌더 타깃 크기 · 이미지 사각형 판정 — Core 만 include 하는 값 · 순수 계산"
+"Editor/Common/Commands/Asset/EditorPrefabOverrideItem.h" = "프리팹 오버라이드 항목 값"
+"Editor/Common/Workspace/NetPlay/EditorNetPlaySettings.h" = "멀티 프로세스 재생 구성 · 프리셋 파일 값(리플렉션 집합체) — Core 와 리플렉션 매크로만 include 한다. Multiplayer 세션 ViewState 가 구성 사본을 들고 Net Mode 위젯이 고친다"
+"Editor/Common/Commands/Play/EditorNetConditions.h" = "회선 조절 패널 값(ms · % · KB/s)과 명령 글을 만드는 순수 함수 — Core 만 include 한다. Conditions ViewState 가 대상의 패널 값을 든다"
+"Editor/Common/Workspace/NetPlay/EditorNetProfilerSample.h" = "Profiler 표본 값 형식(채널 열거 · 종류별 비중 · 복제 셈)과 그 계산 — Core 와 리플렉션 매크로만 include 한다. Profiler ViewState 가 그대로 든다"
+"Editor/Common/Workspace/EditorFrameStep.h" = "UI 프레임 단계 등록 줄(SW_EDITOR_FRAME_STEP)과 순서 값 — EditorExtensionRegistry 만 include 하고 EditorContext 는 앞 선언이다. 창이 닫혀도 도는 단계를 그 창 View 가 등록한다(Profiler 의 합친 트레이스 열기)"
+"Editor/Common/Workspace/Asset/EditorAssetTypeActions.h" = "종류별 썸네일 · 열기 · 뷰포트 배치 확장 인터페이스 — Core 와 내보내기만 include 하고 씬 형식은 앞 선언이다. 콘텐츠 브라우저 View 가 카드 썸네일을 그 종류의 동작으로 그린다"
+"Editor/Common/Commands/Asset/EditorAssetMove.h" = "에셋 옮기기 · 옮기기 계획 값(EditorAssetFileCommands 에서 떼어 낸 값) — Core 만 include 한다. 콘텐츠 브라우저 확인 대화상자가 계획을 그린다"

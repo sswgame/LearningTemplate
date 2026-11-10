@@ -59,6 +59,8 @@ endfunction()
 set(listEditorRootSource "")
 set(listEditorPartSource "")
 set(listEditorViewModelRegex "")   # 뷰 층 안 `Model` 폴더의 절대 경로 정규식(코어 리플렉션 입력 · EditorModule 훑기 제외에 같이 쓴다)
+set(swEditorPanelViewSource "")    # 패널 View(`SW_EDITOR_PANEL_VIEW_LAYER` 의 Model 밖 파일) — 아래 2-2) 의 부분이 MVVM 껍데기와 함께 짓는다
+set(swEditorPanelViewTier "")
 foreach(tier IN LISTS SW_EDITOR_TIER_LIST)
 	set(swEditorTierModelSource_${tier} "")
 	set(swEditorTierViewSource_${tier} "")
@@ -80,11 +82,20 @@ foreach(tier IN LISTS SW_EDITOR_TIER_LIST)
 			list(FILTER layerModelSource INCLUDE REGEX "${layerModelRegex}")
 			list(FILTER layerViewSource EXCLUDE REGEX "${layerModelRegex}")
 			list(APPEND swEditorTierModelSource_${tier} ${layerModelSource})
-			list(APPEND swEditorTierViewSource_${tier} ${layerViewSource})
+			if(layer STREQUAL SW_EDITOR_PANEL_VIEW_LAYER)
+				list(APPEND swEditorPanelViewSource ${layerViewSource})
+				set(swEditorPanelViewTier ${tier})
+			else()
+				list(APPEND swEditorTierViewSource_${tier} ${layerViewSource})
+			endif()
 		endif()
 	endforeach()
 	list(APPEND listEditorPartSource ${swEditorTierModelSource_${tier}} ${swEditorTierViewSource_${tier}})
 endforeach()
+if(NOT swEditorPanelViewSource)
+	message(FATAL_ERROR "[Editor] panel view layer '${SW_EDITOR_PANEL_VIEW_LAYER}' (EditorLayers.toml [panelViewBan] layer) has no view sources")
+endif()
+list(APPEND listEditorPartSource ${swEditorPanelViewSource})
 set(listEditorUnassignedSource ${listEditorSource})
 list(REMOVE_ITEM listEditorUnassignedSource ${listEditorRootSource} ${listEditorPartSource})
 if(listEditorUnassignedSource)
@@ -312,6 +323,49 @@ foreach(tier IN LISTS SW_EDITOR_TIER_LIST)
 endforeach()
 
 # ------------------------------------------------------------------------------
+# 2-2) 패널 View 의 MVVM 경계(`docs/agents/EditorUI.md` 'MVVM' 절): View(`Panels` 의 `Model` 폴더 밖)는 모델 · 씬 헤더를 include 하지 못한다.
+#      표 `EditorLayers.toml` 의 `[panelViewBan]`(Source 기준 정규식)에 맞는 헤더마다 `#error` 껍데기를 놓는다 — 값 · 창구 헤더(`[panelViewAllowed]`)만 뺀다.
+#      층 껍데기와 같은 장치라 헤더를 거친 전이 include 도 멈춘다. View 부분은 티어 껍데기도 받는다(같은 티어 `AssetActions` 는 씬 헤더를 쓰므로 부분을 가른다).
+#      확장 모듈의 View 는 `sw_addEditorExtension( … PANEL_VIEW_SOURCES … )` 가 같은 껍데기 자리(전역 속성 SW_EDITOR_PANEL_VIEW_STUB_ROOT)를 받는다.
+#      언리얼 Slate 는 위젯이 모델을 바로 보지만, 유니티 UI Toolkit 바인딩처럼 View 는 ViewModel 값만 본다 — 목록 린트 대신 형식으로 막는다.
+# ------------------------------------------------------------------------------
+set(swEditorPanelViewStubRoot "${CMAKE_BINARY_DIR}/generated/sw/EditorPanelViewStubs")
+set(listPanelViewBanGlob "")
+foreach(pattern IN LISTS SW_EDITOR_PANEL_VIEW_BAN_REGEX)
+	if(NOT pattern MATCHES "^\\^([A-Za-z0-9_]+)/")
+		message(FATAL_ERROR "[Editor] [panelViewBan] pattern '${pattern}' must start with ^<top folder under Source>/")
+	endif()
+	list(APPEND listPanelViewBanGlob "${CMAKE_SOURCE_DIR}/Source/${CMAKE_MATCH_1}/*.h" "${CMAKE_SOURCE_DIR}/Source/${CMAKE_MATCH_1}/*.hpp" "${CMAKE_SOURCE_DIR}/Source/${CMAKE_MATCH_1}/*.inl")
+endforeach()
+list(REMOVE_DUPLICATES listPanelViewBanGlob)
+file(GLOB_RECURSE listPanelViewBanCandidate RELATIVE "${CMAKE_SOURCE_DIR}/Source" CONFIGURE_DEPENDS ${listPanelViewBanGlob})
+set(listPanelViewStub "")
+foreach(header IN LISTS listPanelViewBanCandidate)
+	if(header IN_LIST SW_EDITOR_PANEL_VIEW_ALLOWED_HEADERS)
+		continue()
+	endif()
+	foreach(pattern IN LISTS SW_EDITOR_PANEL_VIEW_BAN_REGEX)
+		if(header MATCHES "${pattern}")
+			sw_writeLayerStub(listPanelViewStub "${swEditorPanelViewStubRoot}/${header}" "#error \"Editor panel view (MVVM View) cannot include the model/scene header '${header}' (Config/Rules/Layers/EditorLayers.toml [panelViewBan]). Gather the value into the ViewState in the ViewModel, and call ViewModel commands to change things.\"
+")
+			break()
+		endif()
+	endforeach()
+endforeach()
+sw_addModulePart(EditorPanelView
+	OWNER EditorModule
+	SOURCES ${swEditorPanelViewSource}
+	LINK ${listEditorViewLink}
+)
+sw_addEditorLayerStubs(EditorPanelView ${swEditorPanelViewTier})
+sw_applyLayerStubs(EditorPanelView "${swEditorPanelViewStubRoot}" ${listPanelViewStub})
+set_property(GLOBAL PROPERTY SW_EDITOR_PANEL_VIEW_STUB_ROOT "${swEditorPanelViewStubRoot}")
+if(TARGET EditorCoreReflect)
+	add_dependencies(EditorPanelView EditorCoreReflect_ReflectionGen)
+endif()
+list(APPEND listEditorPart EditorPanelView)
+
+# ------------------------------------------------------------------------------
 # 2-1) 에디터 코드의 ImGui 입력 함수 금지(`docs/agents/EditorUI.md` 입력 절 — 형식이 먼저, 린트는 형식이 못 막는 `ImGuiIO` 필드 읽기만)
 #      모든 뷰 부분(EditorTier<N>View)과 루트(EditorModule), 에디터 확장 모듈(`sw_addEditorExtension`)이 imgui.h 끝(사용자 헤더 자리)에
 #      `Common/Input/EditorInputBan.h` 를 붙이고 사용 중단 경고를 오류로 올린다(`sw_applyEditorInputBan`). 모델 부분은 ImGui 를 아예 include 하지 못한다.
@@ -323,6 +377,7 @@ foreach(tier IN LISTS SW_EDITOR_TIER_LIST)
 		sw_applyEditorInputBan(EditorTier${tier}View)
 	endif()
 endforeach()
+sw_applyEditorInputBan(EditorPanelView)
 sw_applyEditorInputBan(EditorModule)
 
 # 에디터는 LTO 를 받지 않는다(링크 시간 — Tools/ 와 같은 이유).

@@ -82,8 +82,13 @@ namespace sw
         SaveGame( SaveGame&& ) noexcept            = default;
         SaveGame& operator=( SaveGame&& ) noexcept = default;
 
-        /** @brief 이 타입의 바이트 형식 버전입니다. 봉투에 적히며, 읽을 때 다르면 거절합니다. 옛 버전 리더는 두지 않습니다. */
+        /**
+         * @brief 이 타입의 바이트 형식 버전입니다. 봉투에 적힌다. 읽을 때 옛 판이면 판 올림 사슬(`SW_SAVE_FORMAT_UPGRADE( id, getFormatKind(), n, n+1, fn )`)로 올리고,
+         *        새 판 · 빠진 단계는 거절합니다. 옛 버전 리더는 두지 않습니다(바이트를 올린 뒤 현재 리더가 읽는다).
+         */
         virtual uint32 getFormatVersion() const { return 1; }
+        /** @brief 판 올림 사슬의 종류 이름입니다(`FormatUpgradeDomain::SaveBytes`). 타입마다 다르고 바꾸지 않는다 — 바꾸면 옛 세이브의 단계를 찾지 못한다. */
+        [[nodiscard]] virtual const utf8* getFormatKind() const = 0;
         /** @brief 세이브 바이트를 씁니다. 파생 타입이 자기 형식(리플렉션 세이브는 자기 타입)으로 씁니다. */
         [[nodiscard]] virtual bool writeBytes( vector<uint8>& outBytes ) const = 0;
         /** @brief 세이브 바이트를 읽습니다. `writeBytes` 와 같은 형식입니다. */

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  장르 수직 슬라이스(G1) — 시작 → 목표(control.scenario.xml 의 단계 그대로) → 결과 → 저장 · 복원 해시 동일.
+  목표 단계는 그 시나리오가 정본이다 — 거기를 고치면 이 파일도 맞춘다. 저장 슬롯은 voxelcraft/slice.
+-->
+<Scenario name="game.voxelcraft.slice" fixedDelta="0.0166667" timeoutFrames="1800" startAfter="ScenePlaying" input="exclusive">
+	<Variable name="gv_voxelAutoPlay" value="0"/>
+	<!-- 시작 60 프레임은 옛 시나리오 그대로 둔다 — 몸이 자리를 잡는 시뮬레이션 시간(걷기 거리를 그 뒤부터 잰다). -->
+	<Wait frames="60"/>
+	<Expect watch="VoxelCraft.ControllerKind" equals="0"/>
+
+	<!-- 걷기: W 를 1 초 — 몸이 1 m 넘게 간다. -->
+	<Wait frames="1"/>
+	<Press slot="Key.W"/>
+	<Wait frames="60"/>
+	<Release slot="Key.W"/>
+	<WaitUntil watch="VoxelCraft.WalkedDistance" atLeast="1" timeoutFrames="30"/>
+
+	<!-- 핫바: 3 을 한 번 — 셋째 칸. -->
+	<Tap slot="Key.Digit3" hold="1"/>
+	<WaitUntil watch="VoxelCraft.HotbarSlot" equals="2" timeoutFrames="30"/>
+
+	<!-- 시선: 마우스 오른쪽 100 px — 조종 요가 시작 0.6 에서 100 × 0.0022 만큼 돈다. -->
+	<MouseDelta x="100" y="0"/>
+	<WaitUntil watch="VoxelCraft.ControlYaw" near="0.82" tolerance="0.01" timeoutFrames="30"/>
+
+	<!-- 부수기: 아래를 보고 왼쪽 버튼을 4 초 — 블록이 하나 넘게 부서진다. -->
+	<MouseDelta x="0" y="400"/>
+	<Wait frames="5"/>
+	<Press slot="Mouse.Left"/>
+	<Wait frames="240"/>
+	<Release slot="Mouse.Left"/>
+	<WaitUntil watch="VoxelCraft.BrokenCount" atLeast="1" timeoutFrames="30"/>
+
+	<!-- 자동 플레이 = AI 조종자의 빙의. 얼마 동안 AI 가 몸을 움직이게 둔 뒤 끄면 플레이어 조종자가 다시 쥐고 키가 먹는다. -->
+	<Variable name="gv_voxelAutoPlay" value="1"/>
+	<WaitUntil watch="VoxelCraft.ControllerKind" equals="1" timeoutFrames="30"/>
+	<Wait frames="280"/>
+	<Variable name="gv_voxelAutoPlay" value="0"/>
+	<WaitUntil watch="VoxelCraft.ControllerKind" equals="0" timeoutFrames="30"/>
+	<Tap slot="Key.Digit5" hold="1"/>
+	<WaitUntil watch="VoxelCraft.HotbarSlot" equals="4" timeoutFrames="30"/>
+	<!-- 저장 → 세계를 더 돌림 → 두 번 복원: 같은 슬롯을 두 번 불러온 직후의 씬 상태 해시가 같아야 한다(복원이 세계를 다 되살린다 — 저장 순간의 해시와 견주면 명령이 도는 프레임만큼 흔들린다) -->
+	<Wait frames="1"/>
+	<DevCommand line="game.save voxelcraft/slice"/>
+	<WaitUntil watch="Save.Written" atLeast="1" timeoutWallSeconds="10"/>
+	<Wait seconds="1"/>
+	<DevCommand line="game.load voxelcraft/slice"/>
+	<WaitUntil watch="Save.Loaded" atLeast="1" timeoutWallSeconds="10"/>
+	<RecordStateHash key="restored"/>
+	<Wait seconds="1"/>
+	<DevCommand line="game.load voxelcraft/slice"/>
+	<WaitUntil watch="Save.Loaded" atLeast="2" timeoutWallSeconds="10"/>
+	<ExpectStateHash key="restored"/>
+	<Pass/>
+</Scenario>

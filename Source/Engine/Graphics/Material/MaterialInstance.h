@@ -9,7 +9,7 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Graphics/Material/Material.h"
-#include "Engine/Graphics/Material/MaterialRenderProxy.h"
+#include "Engine/Graphics/Material/MaterialRenderBinding.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 
