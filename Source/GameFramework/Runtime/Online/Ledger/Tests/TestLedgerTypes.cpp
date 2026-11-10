@@ -188,17 +188,17 @@ SW_TEST_CASE( LedgerTypesTest, JournalKeysFromIdempotencyAndTokens )
 
 /**
  * @brief [LedgerTypesTest] 토큰으로 만든 분개 키는 언제나 원장이 받는 키다 — 만들 수 있다고 하고 원장이 Invalid 로 거절하는 키를 내지 않는다.
- * @details 토큰 상한(96 바이트)의 16 진은 192 자라 긴 범위와 합치면 분개 키 상한(200)을 넘는다. 만들기가 그 키를 거절해야 부르는 쪽(영수증 · 우편)이 원장에 닿기 전에 안다.
+ * @details 토큰 상한은 분개 키 상한에서 낸다(범위 상한 + '/' + 16 진). 예전 상한(96 바이트, 16 진 192 자)은 긴 범위와 합치면 키 상한(200)을 넘어,
+ *          와이어가 받은 청약철회 거래 id 가 원장 앞에서 거절됐다. 범위가 상한을 넘으면 만들기가 거절한다.
  */
 SW_TEST_CASE( LedgerTypesTest, TokenJournalKeyIsAlwaysAValidJournalKey )
 {
-    // 틀리면: 만들기가 길이를 보지 않으면 상한 토큰 + 긴 범위에서 true 를 돌려 첫 거짓 단언이 진다.
-    const sw::string longScope    = Util::repeat( 32, 's' );
+    // 틀리면: 토큰 상한이 키 상한과 갈리면 상한 범위 + 상한 토큰이 거절되거나 원장이 받지 않는 키라 REQUIRE · 유효 단언이, 범위 상한 검사를 빼면 거짓 단언이 진다.
+    const sw::string longestScope = Util::repeat( LedgerConstant::kMaxJournalScopeSize, 's' );
     const sw::string longestToken = Util::repeat( LedgerConstant::kMaxTokenBytes, 'x' );
     sw::string       key;
-    SW_EXPECT_FALSE( LedgerJournalKey::makeFromToken( longScope, longestToken, key ) );
-    SW_EXPECT_TRUE( key.empty() );
-    // 짧은 범위면 상한 토큰도 들어간다 — 범위 1 + '/' + 16 진 192 = 194
-    SW_REQUIRE_TRUE( LedgerJournalKey::makeFromToken( "s", longestToken, key ) );
+    SW_REQUIRE_TRUE( LedgerJournalKey::makeFromToken( longestScope, longestToken, key ) );
     SW_EXPECT_TRUE( LedgerUtil::isValidJournalKey( key ) );
+    SW_EXPECT_FALSE( LedgerJournalKey::makeFromToken( Util::repeat( LedgerConstant::kMaxJournalScopeSize + 1, 's' ), "ab", key ) );
+    SW_EXPECT_TRUE( key.empty() );
 }

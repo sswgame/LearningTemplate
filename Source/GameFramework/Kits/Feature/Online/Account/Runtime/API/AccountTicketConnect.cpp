@@ -256,6 +256,7 @@ namespace sw
             {
                 if ( reply._errorCode != 0 || reply._result != LoginResult::Ok )
                     return fail( Error{ ErrorKind::ExternalFailure, "game ticket refused", AccountTicketConnectInternal::describeFailure( reply ) } );
+                // 티켓 시한(`_expiresAtMs`)은 여기서 보지 않는다 — 시한은 봉인된 토큰 안에 있어 게임 서버(LoginTicketAuthority)가 판정하고, 클라이언트 벽시계로 보면 시계가 어긋난 기기만 막는다(EOS · Steam 세션 티켓도 서버가 본다).
                 AccountClient::makeConnectCredentials( reply._ticket, outCredentials );
                 _bPending = SW_FALSE;
                 SW_LOG_INFO_ID( "AccountTicketConnect.GameTicketServerReceived", "Game ticket for server '%#' received (the account session stays open)", _serverID.c_str() );

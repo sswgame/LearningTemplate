@@ -15,7 +15,6 @@ namespace sw
         {
             static constexpr int32 kMaxEscrowDomainSize = 16;
             static constexpr int32 kMaxEscrowTokenSize  = 64;
-            static constexpr int32 kMaxScopeSize        = 32;
 
             static bool isLowerOrDigit( utf8 ch ) { return ( 'a' <= ch && ch <= 'z' ) || ( '0' <= ch && ch <= '9' ); }
 
@@ -163,11 +162,11 @@ namespace sw
     bool LedgerJournalKey::makeFromToken( string_view scope, string_view token, string& outKey )
     {
         outKey.clear();
-        const bool bScopeOk = LedgerTypesInternal::isTokenText( scope, LedgerTypesInternal::kMaxScopeSize, "_." );
+        // 상한 범위 + '/' + 상한 토큰의 16 진이 분개 키 상한 안이다(토큰 상한이 그 식에서 나온다) — 받은 범위 · 토큰은 언제나 원장이 받는 키가 된다.
+        static_assert( LedgerConstant::kMaxJournalScopeSize + 1 + LedgerConstant::kMaxTokenBytes * 2 <= LedgerConstant::kMaxJournalKeySize );
+        const bool bScopeOk = LedgerTypesInternal::isTokenText( scope, LedgerConstant::kMaxJournalScopeSize, "_." );
         const bool bTokenOk = token.empty() == false && token.size() <= static_cast<size_t>( LedgerConstant::kMaxTokenBytes );
-        // 상한 토큰(16 진 192 자)과 긴 범위를 합치면 분개 키 상한을 넘는다 — 원장이 Invalid 로 거절할 키를 만들었다고 하지 않는다.
-        const bool bKeyFits = scope.size() + 1 + token.size() * 2 <= static_cast<size_t>( LedgerConstant::kMaxJournalKeySize );
-        if ( bScopeOk == false || bTokenOk == false || bKeyFits == false )
+        if ( bScopeOk == false || bTokenOk == false )
             return false;
         outKey.reserve( scope.size() + 1 + token.size() * 2 );
         outKey += scope;
