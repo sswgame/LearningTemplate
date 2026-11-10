@@ -1,3 +1,4 @@
+<?asset guid="03a7b6e371e9dc64234616e597fe9707"?>
 <SkeletonVariant _base="common/models/kaykit/knight/knight.skeleton.xml">
 	<_listAddedBone>
 		<SkeletonAddedBone _name="tail0" _parentBone="hips">

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="5bdd4d3bbfd48b5adcb65cc5d000738f"?>
 <!-- 머리카락 카드 머티리얼(hair.hlsl — 셰이딩 모델 Hair: Marschner 근사 R · TT · TRT). 프로퍼티 이름 · 타입은 hair.hlsl 의 SW_MATERIAL 구조체와 같다.
      alphaMode="Mask" 는 빼지 않는다 — 카드 덮임 · 길이 자르기 · 디더가 모두 알파 컷오프 길로 버린다(깊이 · 그림자 · 본 패스가 같은 픽셀). 카드는 양면이다.
      _alwaysDefines 의 MATERIAL_FORWARD_ONLY 는 빼지 않는다 — G버퍼에 머리카락 칸이 없어 디퍼드는 ForwardOnlyOpaque 패스가 포워드로 그린다.

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="c7ce2a61845c0647bd85803106c1dfeb"?>
 <!--
   에디터 시나리오 — 씬 뷰 툴바의 보기 모드(Unlit · Wireframe · Normals · Depth · Overdraw)는 씬 뷰에만 걸린다(뷰마다의 설정, 언리얼 뷰포트 View Mode).
   ① 게임 뷰를 앞에 두고 Lit 기준을 찍는다. ② 씬 뷰를 앞에 두고 Lit 을 찍은 뒤, 툴바 콤보(viewport.viewMode)로 모드를 하나씩 골라 찍는다 —

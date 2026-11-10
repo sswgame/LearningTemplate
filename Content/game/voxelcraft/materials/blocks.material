@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="9eb1d1a8e15248eae83ea9abd53317d4"?>
 <!-- 블록 청크의 불투명 머티리얼 — _albedoMap 이 Kenney Voxel Pack 타일 아틀라스다(메셔가 UV 로 칸을 고른다). -->
 <MaterialDef formatVersion="0" name="VoxelBlocks" _base="engine/materials/benchtextured.material">
 	<_properties>

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="3bb8806abcf235e5ceab48bfcf07dba7"?>
 <!-- 무광 플라스틱 — 거친 유전체, 옅은 잔무늬. 부모(environmentsurface.material)의 값만 바꾼 프리셋이다. -->
 <MaterialDef formatVersion="0" name="PlasticMatte" _base="engine/materials/environmentsurface.material">
 	<_properties>

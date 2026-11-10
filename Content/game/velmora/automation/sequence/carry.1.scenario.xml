@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="43d0e68b5ae4e92d87b62696bcb55d9a"?>
 <!--
   확장 팩 세이브 승계 두 번 기동 ① — 확장 팩 없이 기본 퀘스트(ember_oath)를 끝내고 슬롯 velmora/carry 에 저장하고 끝낸다.
   ② carry.2 가 확장 팩(velmora_tidecaves)을 켜고 다시 기동해 이 세이브를 불러 잇는다. 혼자 돌면 ② 의 전제를 만들 뿐이라 게임 체인은 이 폴더(sequence/)를 줍지 않는다.

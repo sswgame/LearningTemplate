@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="26445ac2078f4f668fc938940016b83b"?>
 <!-- 공통 어휘 시나리오(game.empty.vocabulary)의 행동 트리 — 경보가 꺼져 있으면(`!flag(alarm)`) 경보를 켠다(`flag.set`). 같은 이름을 스케줄과 대화가 읽는다. -->
 <BehaviorTree>
 	<Sequence id="root" name="Guard">

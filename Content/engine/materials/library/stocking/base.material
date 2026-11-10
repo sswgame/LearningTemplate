@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="33bdb52762ea3eab8775e4f07d8ce75b"?>
 <!-- 외형 라이브러리 갈래 바탕: 피부 위 그물(망사 스타킹) — 불투명 한 장: 덮임(픽셀 발자국으로 거른 선)으로 실(시엔)과 아래 피부(감싼 확산)를 섞는다. 알파 · 정렬이 없고 멀리서 밀도의 평균색이 된다. -->
 <MaterialDef formatVersion="0" name="AppearanceStocking" _base="engine/materials/library/appearance.material">
 	<_properties>

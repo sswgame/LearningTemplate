@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="a31dc19402c4b8bcbb9079fdebb795f3"?>
 <!-- VFX 미리보기 자동 갱신 시나리오(editor/vfxautoreload)의 처음 효과 — 엔진 표본(engine/vfx/sparks.vfx.xml)과 같은 두 방출기. 사본을 autoreload_edited 로 덮어쓰면 방출기가 하나가 된다. -->
 <VFXEffectDef>
 	<_listEmitter>

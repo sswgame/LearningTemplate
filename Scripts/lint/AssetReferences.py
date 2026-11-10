@@ -3,7 +3,8 @@
 """
 Scripts/lint/AssetReferences.py
 
-에셋 참조 검사 — 에셋은 경로 하나로 가리키므로(식별자 표 · `.meta` 는 없다, 언리얼 소프트 경로와 같다) 끊어진 경로를 커밋 전에 잡는다.
+에셋 참조 검사 — 참조 칸은 아직 경로로 가리키므로(언리얼 소프트 경로와 같다 — GUID 로 바꾸는 일은 docs/NEXT.md 의 2 단계) 끊어진 경로를 커밋 전에 잡는다.
+정체성(GUID · `.meta`)의 짝은 `AssetIdentity.py`(`asset-ids`)가 본다.
 
 - 어떤 칸이 경로인지는 리플렉션 선언이 정하고 파서가 낸 표(`Config/Dev/AssetReferenceFields.generated.json`) 한 곳에 모인다. 도메인 · 확장자 · 임포트 폴더는
   `Config/Dev/AssetReferenceFields.json` 이다. 같은 파일을 C++ 검사(`App --check-asset-refs`,
@@ -431,13 +432,6 @@ def collectProblems(listRelativePath: list[str], mapText: dict[str, str], assets
     return listProblem
 
 
-def listMetaProblems(listIndex: list[str]) -> list[str]:
-    """인덱스에 오른 `Content/**/*.meta` 입니다 — 에셋은 경로 하나로 가리키고 `.meta` 는 없다.
-    `.gitignore` 는 새 파일만 막고, 옛 커밋을 옮기는 체리픽 · 리베이스는 그 파일을 그대로 들여온다(작업자 브랜치 병합에서 아홉 개가 다시 들어왔다)."""
-    prefix = kContentFolder + "/"
-    return [f"{path}: .meta 는 쓰지 않는다 — 지운다(에셋은 경로로만 가리킨다)" for path in listIndex if path.startswith(prefix) and path.endswith(".meta")]
-
-
 def checkStagedAssetReferences(projectRoot: Path) -> list[str] | None:
     """
     커밋 전 검사입니다. 스테이지에 Content · CMake 참조 파일 · 칸 목록의 변경(지우기 · 옮기기 포함)이 없으면 None(돌지 않음),
@@ -457,7 +451,7 @@ def checkStagedAssetReferences(projectRoot: Path) -> list[str] | None:
     listReferrer = [path for path in listIndex if isReferrer(path, config)]
     listRedirect = [path for path in listIndex if isRedirectTable(path)]
     mapRedirect = parseRedirects(readIndexBlobs(projectRoot, listRedirect)) if listRedirect else {}
-    return listMetaProblems(listIndex) + collectProblems(listReferrer, readIndexBlobs(projectRoot, listReferrer), assets, config, mapRedirect)
+    return collectProblems(listReferrer, readIndexBlobs(projectRoot, listReferrer), assets, config, mapRedirect)
 
 
 def checkWorkingTree(projectRoot: Path) -> list[str]:
@@ -469,7 +463,7 @@ def checkWorkingTree(projectRoot: Path) -> list[str]:
     listReferrer = [path for path in listIndex if isReferrer(path, config)]
     mapText = {path: (projectRoot / path).read_text(encoding="utf-8", errors="replace") for path in listReferrer}
     mapRedirect = parseRedirects({path: (projectRoot / path).read_text(encoding="utf-8", errors="replace") for path in listIndex if isRedirectTable(path)})
-    return listMetaProblems(listIndex) + collectProblems(listReferrer, mapText, assets, config, mapRedirect)
+    return collectProblems(listReferrer, mapText, assets, config, mapRedirect)
 
 
 def runSelfCheck() -> None:

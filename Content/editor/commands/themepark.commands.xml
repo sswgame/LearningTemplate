@@ -1,3 +1,4 @@
+<?asset guid="32be0d3858f9d0216a5ed550038d3fad"?>
 <!-- 에디터 명령의 표시 · 배치(themepark) — 코드는 id 와 동작만 든다(SW_EDITOR_COMMAND · 명령 표). 칸은 모두 적는다, 빈 글은 "없음". -->
 <EditorCommandTextTable>
 	<_listCommand>

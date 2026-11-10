@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="a7826b5ffba84ef2823d1d65367620cc"?>
 <!--
   에디터 흐름 시나리오 — 지형 편집이 플레이와 백엔드 교체를 넘는다. envshowcase 를 열고 지형 칠하기 도구로 높이를 올린 뒤(저장하지 않는다)
   ① 플레이 인 → 플레이 아웃 ② 다른 백엔드로 갔다가 시작 백엔드로 돌아온다. 경계마다 편집이 남아 있고(Terrain.WrittenEditCount, 그림),

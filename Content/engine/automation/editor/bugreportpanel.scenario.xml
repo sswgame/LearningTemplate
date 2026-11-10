@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="77cc7f2e445f1a03e37673e6a9fc0c13"?>
 <!--
   에디터 시나리오 — 버그 리포트 창(Bug It): 창을 열고 메모 칸에 글을 적은 뒤 Collect Now 를 누르면 개발 명령 bugreport 와 같은 수집이 그 메모로 Saved/BugReports/<시각>/ 에
   리포트를 남긴다(창은 목록을 새로 읽는다). 수집 자체(폴더 내용 · bugreport.goto)는 editor/bugreport 가 본다 — 이 시나리오는 창의 길(메모 → 수집)을 본다.

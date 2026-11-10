@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="8a294f6743a2c3d9e9b1df598f2575d5"?>
 <!-- 장치 · 기믹 표면 마스터 머티리얼(gimmick_surface.hlsl) — 불투명. 프리셋은 engine/materials/library/gimmick_*.material 이 값만 바꾼다.
      효과(_effect): 0 발광(네온) · 1 상호작용 강조(프레넬 맥동) · 2 녹아 사라짐(gimmicksurface_dissolve 부모) · 3 홀로그램 · 4 역장(gimmicksurface_translucent 부모) · 5 용암 · 6 얼음 · 7 켜진 화면.
      _patternScale 은 효과마다 뜻이 다르다(셰이더 evaluateGimmick 의 주석). 자체 발광이 G버퍼에 칸이 없어 MATERIAL_FORWARD_ONLY 를 빼지 않는다(툰과 같다). -->

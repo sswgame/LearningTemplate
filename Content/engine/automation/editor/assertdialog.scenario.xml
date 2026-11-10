@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="2bae261fce3915c3f492dad5a93f7058"?>
 <!--
   에디터 시나리오 — 단언 대화상자(EditorPlus H1 · S3): 자동 실행(-scenario · -unattended)에는 대화상자를 걸지 않는다. 대화상자는 모달 창이라 시나리오가 누를 수 없으므로,
   세 단추(이번만 · 디버거 · 이 자리 늘 무시)와 설정(띄우지 않음 · 늘 무시를 기억하지 않음 · 기억 지우기)은 CoreTest 의 AssertDialogTest 가 테스트 함수로 본다.

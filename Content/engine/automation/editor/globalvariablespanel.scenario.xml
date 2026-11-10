@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="232c07a2613d130a47feda409801bfbd"?>
 <!--
   에디터 시나리오 — 전역 변수 창(global_variables): 검색 칸에 gv_debugHUD 를 치고 그 줄의 체크 상자를 누르면 변수가 바로 켜지고 창이 저장 안 된 상태가 된다.
   기본값과 달라진 줄에만 서는 Reset 단추를 누르면 기본값(false)으로 돌아간다.

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="48df711f57958abcd6fb1ce94b67b4be"?>
 <!-- Velmora 팩의 설정 — 시작 맵은 골짜기 씬 하나다. 기본 세이브 슬롯은 `game.save` 를 슬롯 없이 부를 때 쓴다(세이브 메뉴 자리). -->
 <GameSettings>
   <!-- 엔진이 읽는 칸(PackEngineSettings) — 창 제목 -->

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="8e793d90f9b5c9e33f78cb94664e72f7"?>
 <!--
   엔진 시나리오 — 표시 경로: 무인 실행도 그린 프레임을 화면에 내보내게 하고(present="true"), 창 크기를 두 번 바꾸고, 최소화했다 되돌린 뒤 다시 크기를 바꾼다.
   무인 체인은 기본으로 내보내지 않아(-unattended — 언리얼 -RenderOffScreen 자리) 스왑체인 획득 · 표시 · 다시 만들기를 이 시나리오만 지난다.

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="008e5a96f5d7f1d5dec21f216c052fec"?>
 <!--
   시나리오 resourcecondition 의 표 — 사거리가 리소스 조건(`_when`)으로 바뀐다. 품질이 low 면 5, 데이터 레이어 Night 가 켜지면 9(뒤 조건이 이긴다), 둘 다 아니면 3.
   둘 다 로드 축이라 쿠킹본에 조건이 남고, 태그가 바뀌면 표를 쥔 공유 캐시가 다시 읽는다.

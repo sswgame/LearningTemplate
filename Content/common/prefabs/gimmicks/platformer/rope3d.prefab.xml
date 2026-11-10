@@ -1,3 +1,4 @@
+<?asset guid="d3e9132bce60ecb6ca5bb5395afb87df"?>
 <Prefab formatVersion="0" _base="common/prefabs/gimmicks/platformer/ladder3d.prefab.xml" name="Rope3D">
 	<PrefabOverrides>
 		<Override key="RigidBodyComponent#0">

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="0089d87e1a01f875c335b8ab5c9b3db0"?>
 <!--
   HarvestValley 자동 농부 AI — 판단 상태(AI.State)와 블랙보드 · 목표 도달을 단언한다. 아침 6 시, 갈린 타일이 없고 봄 씨앗 10 개로 시작하므로
   첫 할 일은 갈기(Till)이고, 갈린 타일이 생기면 심기(Sow, 우선순위 3)가 갈기(2)보다 앞서고, 심은 타일은 물주기(Water, 4)가 앞선다.

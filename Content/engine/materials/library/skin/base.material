@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="840a34cee276109e0b3866e08bd97f76"?>
 <!-- 외형 라이브러리 갈래 바탕: 피부 — 미리 적분한 피부의 값싼 판(채널마다 감싼 확산 × 곡률) + 피지 막(코트, _maskMap R 이 T 존 마스크). 화면 공간 SSS 프로필 패스를 두지 않은 까닭은 appearance_lit.hlsl 머리말. -->
 <MaterialDef formatVersion="0" name="AppearanceSkin" _base="engine/materials/library/appearance.material">
 	<_properties>

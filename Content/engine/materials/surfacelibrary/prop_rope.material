@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="5405505fd6caf3e938830f4aa488cacb"?>
 <!-- 밧줄 — 꼬인 가닥(기운 줄 무늬)과 범프, 섬유 잔무늬. 부모(environmentsurface.material)의 값만 바꾼 프리셋이다. -->
 <MaterialDef formatVersion="0" name="Rope" _base="engine/materials/environmentsurface.material">
 	<_properties>

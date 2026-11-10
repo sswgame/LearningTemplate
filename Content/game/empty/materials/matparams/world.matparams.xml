@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="f86795fce96284b1e6c06badd9b71f0f"?>
 <!-- 머티리얼 파라미터 묶음 표본 — 시나리오 game/empty/automation/matparamcollection 이 런타임에 WorldTint 를 바꾸면 이 값을 묶은 머티리얼 둘이 함께 바뀐다. -->
 <MaterialParameterCollectionDef>
 	<_listParameter>

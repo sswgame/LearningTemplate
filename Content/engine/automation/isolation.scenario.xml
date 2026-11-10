@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="002c861bd9db0e8b64044129d010fe87"?>
 <!--
   엔진 시나리오 — 자동화 격리: 이 실행의 사용자 데이터 뿌리(SW_USER_DATA_ROOT)가 자동화 폴더(Saved/Automation/UserData) 아래이고,
   기동 뒤로 사람의 OS 사용자 데이터 폴더(활성 게임 — Windows %LOCALAPPDATA%/SWEngine/<게임>)가 바뀌지 않았는지 본다(AutomationUserDataRoot).

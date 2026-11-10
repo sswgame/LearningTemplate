@@ -1,3 +1,4 @@
+<?asset guid="5cad7c59138b3cc560e7632ebc7ef34b"?>
 <Scene formatVersion="2" name="TwoDPhysics">
 	<!-- 2D 물리 묶음의 무대(automation/twodphysics) — 걷고 뛰는 2D 캐릭터, 힌지로 매단 판, 폭발로 깨지는 상자, 다각형 2D 빛. twod 씬은 골든이 있어 그대로 두고 따로 세웠다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">

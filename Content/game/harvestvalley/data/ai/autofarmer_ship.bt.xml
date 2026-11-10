@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="5f7677dc1c1b88bf7f8ceeb24a9f0cc5"?>
 <!-- 자동 농부의 출하 가지 — autofarmer.bt.xml 이 두 자리(급한 출하 · 남은 수확물)에서 펼친다. 출하함 옆자리로 가서 0.25 초마다 한 번 넣는다. -->
 <BehaviorTree>
 	<Sequence name="Ship">

@@ -1,3 +1,4 @@
+<?asset guid="ce51ad9bbffd549e91d8349dfc2448a9"?>
 <Scene formatVersion="2" name="AutoExposure">
 	<!-- 자동 노출 시나리오(automation/autoexposure)의 무대 — 카메라 앞을 어두운 벽이 다 덮는다. Bright 레이어를 켜면 앞에 밝은 벽과 강한 점광이 오른다(카메라는 움직이지 않는다).
 	     범위 -5 · 3 EV 는 언리얼 AutoExposureMinBrightness · MaxBrightness 자리다. 어두운 벽에서는 노출이 올라가 있어 밝은 벽이 처음에 하얗게 날아간다. -->

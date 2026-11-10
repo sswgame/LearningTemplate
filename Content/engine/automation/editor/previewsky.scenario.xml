@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="9d105e78eec4fcc1911b19e5e3e89c08"?>
 <!--
   에디터 시나리오 — 미리보기 창의 하늘(다중 월드 6절 3번). 미리보기 조명 환경은 하늘(SkyComponent)을 스폰하고(EditorPreviewEnvironment::_bSky 기본 켬),
   스카이 패스가 불투명 · 외곽선 뒤에 깊이 1 의 풀스크린 삼각형으로 빈 곳만 칠한다. 그래서 구 둘레의 배경은 SceneColor 클리어 색이 아니라 천정 → 지평선 그러데이션이어야 한다.

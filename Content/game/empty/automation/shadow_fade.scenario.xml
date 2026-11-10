@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="aa621a052a8b975f3351fd5cbf522710"?>
 <!--
   그림자 거리 끝 옅어짐 — 같은 무대를 옅어짐 없이(maps/shadowtest, 칼로 자른 끝)와 몫 0.5(maps/shadowtest_fade)로 찍어 둘이 다른지 보고, 두 장을 골든으로 지킨다.
   해는 카메라에 맞춘 캐스케이드 둘(그림자 거리 14 m)이다. 캐스케이드 경계 섞기 · 텍셀 스냅은 그대로다(옅어짐만 다르다). PCF(gv_shadowFilter 0)로 찍는다.

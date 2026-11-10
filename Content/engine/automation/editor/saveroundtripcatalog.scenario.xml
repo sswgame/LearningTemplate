@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="8dbe1ea3f806c219805670621956635a"?>
 <!--
   에디터 시나리오 — 카탈로그 편집기 저장 왕복: 표면 종류 카탈로그(engine/environment/default.surfacekinds.xml)의 실행마다 새 사본(scratch/saveroundtripcatalog — <Scratch>)을 연다.
   카탈로그 편집기는 문서 기반(EditorDocumentPanel)이라 asset.openScratch 가 목록 클릭 · 콘텐츠 브라우저와 같은 길(워크스페이스 포커스)로 사본을 연다.

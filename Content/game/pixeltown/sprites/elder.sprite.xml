@@ -1,3 +1,4 @@
+<?asset guid="7f7cd6b4d4ad6a9df44f8dd87631a8d1"?>
 <SpriteClipAsset _atlasPath="engine/textures/pixel/puny_characters/mage_cyan.dds" _atlasPixelSize="768,256">
 	<_listFrame>
 		<SpriteClipFrame _uvRect="0.0,0.0,0.04166667,0.125" _borderPixels="0,0,0,0" _durationMs="400" />

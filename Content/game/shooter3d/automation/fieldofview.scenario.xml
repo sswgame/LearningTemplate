@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="450c84e72705804ba8e0216d5a87e8fb"?>
 <!--
   Shooter3D 기본 시야각 — 팩 설정(data/gamesettings.xml 의 gameplay.fieldOfView 80)이 전역 변수 gv_cameraFieldOfView 로 적용되는지 본다.
   엔진 기본값은 70 이라, 팩 설정이 안 먹으면 70 으로 남아 실패한다.

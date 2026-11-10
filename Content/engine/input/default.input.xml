@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="065999ceb24ab50efc772b962670a020"?>
 <!--
   Engine default InputMap (shell map) — Title Confirm/Continue/Cancel, Debug reload actions and the game-window dev console.
   Debug reload actions use Ctrl+F6, Ctrl+F7, Ctrl+F8 chords to prevent collision with gameplay F1~F12 skills.

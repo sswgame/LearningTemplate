@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="6737db3a15544b0e2d96547b546e5e36"?>
 <!--
   에디터 시나리오 — 렌더 타깃 창의 깊이 · 채널 보기와 픽셀 값(에디터 보강 "그 밖에": 렌더 타깃 보기).
   1) 창을 열면 화면에 나가는 타깃을 고르고 CPU 스냅샷을 읽는다(Editor.RenderTargetSnapshotReady).

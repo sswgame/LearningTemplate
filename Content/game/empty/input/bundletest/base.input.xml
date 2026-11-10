@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="ddf1977de9a3ba0302e8eed932aaee1b"?>
 <InputMap defaultLayer="Gameplay" holdThreshold="0.5">
 	<layers>
 		<layer name="Gameplay" enabled="1" blockLower="0"/>

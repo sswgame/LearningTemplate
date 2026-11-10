@@ -22,6 +22,7 @@
     "*.psd",
     "*.blend",
     "*.blend1",
+    "*.meta",
     "*.sources.json",
     "*.matgraph.xml",
     "*.bak",

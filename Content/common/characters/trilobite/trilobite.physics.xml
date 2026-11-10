@@ -1,3 +1,4 @@
+<?asset guid="143ad73a66964ca5cd16cc32d8086025"?>
 <!--
 	Quaternius Sci-Fi Essentials Trilobite(CC0)의 래그돌 · 맞음 상자 물리 에셋 — 몸(원반 판의 팔각 기둥 볼록 껍질 + 총 두 자루 상자의 컴파운드)과 다리 여덟 마디(넷째 마디는 발 포함).
 	셰이프 · 관절 축은 뼈 로컬(엔진 공간: glTF 의 X 를 뒤집은 것, +Y 가 뼈 방향)이고, 값은 원본 glTF(models_raw/quaternius/scifi/enemy_trilobite.gltf)의 묶인 정점에서 계산했다:

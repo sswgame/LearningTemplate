@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="208d87efe067fa6afbe4acbb6d712edc"?>
 <!--
   외형 머티리얼 라이브러리 쇼케이스 — engine/materials/library 의 프리셋이 appearance_lit.hlsl 로 그려지는지 본다(네 백엔드).
   첫 무대(materiallibrary.scene.xml): 불투명 프리셋 41 개 + 털 껍질 둘을 9 열로 세운다 — 피부(감싼 확산 · 피지 · 젖음) · 기름막 · 마른 자국 · 천(시엔 · 직조) · 비단(비등방) · 가죽 ·

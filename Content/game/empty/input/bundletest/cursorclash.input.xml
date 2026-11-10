@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="00c8236b9772bb0bd743ca2d0717dd27"?>
 <InputMap>
 	<action name="Game.Accept" layer="Gameplay" trigger="Pressed">
 		<bind source="Gamepad" code="A"/>

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="aa706f2ac93ff2aac820a5b7ccd52750"?>
 <!-- CCTV 모니터 화면 — 알베도가 렌더 텍스처(rendertarget/shooter_cctv)다. CctvCamera 의 캡처 카메라가 그 텍스처에 10 Hz 로 그린다.
      셰이더는 게임 도메인의 cctv_monitor.hlsl 이다 — 빛을 받지 않는 화면에 가로 주사선을 겹친다. 프로퍼티는 그 셰이더의 머티리얼 구조체와 이름 · 순서가 같다. -->
 <MaterialDef formatVersion="0" name="ShooterCctvMonitor" shaderPath="game/shooter3d/shaders/cctv_monitor.hlsl" alphaMode="Opaque">

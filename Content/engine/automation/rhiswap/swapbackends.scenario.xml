@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="a0086a5c5dce0379182f3372c5e57b75"?>
 <!--
   백엔드 교체 시나리오 — 한 프로세스에서 네 백엔드를 차례로 건너고(DX11 → DX12 → Vulkan → OpenGL → DX12), 교체마다 디바이스가 정말 그 백엔드이고 교체가 실패하지 않았으며
   모듈이 의존 라이브러리에 묶여 있고(Module.BindingsOk) 씬이 사라지지 않았는지(Scene.ObjectCount) 본다. 단계 `SwapBackend` 는 교체를 요청만 하므로(메뉴 · 콘솔과 같은 길)

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="41b4887db886a33f3937535e0f3e0233"?>
 <!--
   블룸 먼지 마스크 · 렌즈 플레어(post_bloom.hlsli 의 Bloom::applyDirt · computeLensFlare) — 강한 점광(레이어 BloomLamp)으로 밝은 부분을 만든 뒤
   먼지 마스크(BloomDirt) · 렌즈 플레어(LensFlare)를 하나씩 켠다. 켠 그림마다 점광만 켠 그림과 달라야 한다(그 효과가 돌지 않으면 같다).

@@ -1,3 +1,4 @@
+<?asset guid="9cb9fa1f20546c963c99f1ac5b977697"?>
 <Scene formatVersion="2" name="SurfaceInteraction">
 	<!-- 표면 상호작용 무대(automation/surface*.scenario.xml) — 왼쪽부터 돌(지붕 반쪽) · 눈 · 물웅덩이(얕은 곳 0.3 m · 깊은 곳 1.5 m) · 모래 함몰 구역.
 	     걷는 해골(Walker)은 제자리 걷기(Walking_A, 발 알림 FootL · FootR)라 시나리오가 object.place 로 자리를 옮긴다. 처음 자리는 돌 패드(-3)다 —

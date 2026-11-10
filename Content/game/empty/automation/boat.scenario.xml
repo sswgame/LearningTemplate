@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="960cdb99cbfdfa15198a3f0318fb602f"?>
 <!--
   배(BoatComponent · BoatHelmComponent · BuoyancyComponent 폰툰 · WeatherWaveComponent) — 무대 maps/boat. 값으로 판정하고, 폭풍 속 배 사진 한 장을 남긴다.
   ① 잔잔한 바다: 서 있는 Upwind 의 롤 · 피치 최댓값이 작다. ② 조타륜 좌석: Captain 이 쥔 Helmsman 이 Rowboat 운전석에 타면 Captain 이 배를 쥔다.

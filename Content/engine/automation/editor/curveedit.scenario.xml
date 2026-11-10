@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="a4d4be650c1428d5fee774a883b3a9d0"?>
 <!--
   에디터 시나리오 — FloatCurve 편집기(T1): TestParent(트랜스폼만 있어 인스펙터가 짧다 — 카메라는 렌더 출력 · 후처리 · 렌즈 칸이 늘어 커브 칸이 화면 밖으로 밀렸다)에 테스트 컴포넌트(EditorCurveTestComponent, 키 둘)를 달고, 인스펙터의 커브 미리보기
   (이름표 inspector.curve._curve)를 눌러 편집기를 연다. 빈 곳 오른쪽 클릭 → Add Key 로 키가 셋이 되고 되돌리기가 한 줄 는다.

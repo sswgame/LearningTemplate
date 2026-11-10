@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="3f0415c9a1afb3ba569abd986ecbabf7"?>
 <!--
   에디터 시나리오 — 문서 패널이 아닌 패널(Input Map Editor, IEditorPanel 직접 상속)의 닫기 확인. 닫는 길이 하나(IEditorPanel::requestClose)라서
   패널 메뉴 토글(= panel.close, 같은 setOpen(false))도 X 도 편집이 남았으면 닫지 않고 Save / Don't Save / Cancel 을 묻는다.

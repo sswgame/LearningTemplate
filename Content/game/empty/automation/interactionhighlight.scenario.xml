@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="f9de891a24dd96b4a9191a69150a7d03"?>
 <!--
   상호작용 강조 — 고른 대상이 외곽선(PickUp)으로, 감각 모드(Hide)는 벽 너머로도 구별되는지 본다(InteractionHighlightAndMontage H3). 강조 패스(highlight_outline.hlsl)를 본다.
   결정적: 무대 maps/interactionhighlight(카메라 고정), 고정 프레임 시간. 하는 쪽(Player 빈 오브젝트)만 순간이동으로 옮겨 같은 그림틀에서 강조만 켜고 끈다 —

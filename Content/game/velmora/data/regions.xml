@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="8059e7a6ebaa444e5fba17a13f2ee967"?>
 <!--
   벨모라 골짜기의 지역(VelmoraRegionCatalog — 게임의 필수 데이터). 평면(x, z) 위 사각 경계이고 겹치지 않는다(맞닿는 것은 된다). 동쪽으로 셋이 이어진다.
   - hearth(난롯마을, 시작): 들어서면 퀘스트 ember_oath 를 받는다. 야영지가 있다.

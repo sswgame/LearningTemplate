@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="456ecda93701a6a0f3bcd93c11cd775f"?>
 <MaterialDef formatVersion="0" name="reflectionprobe_mirror" _base="engine/materials/pbrmaterial.material">
 	<_properties>
 		<item name="_roughness" defaultValue="0.05"/>

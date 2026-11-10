@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="b544a37bde21f2024776ebee9fa6759b"?>
 <!-- 외형 라이브러리 프리셋(skin): 중간 피부. 값만 바꾼다 — 셰이더 변형은 갈래 바탕과 같다. -->
 <MaterialDef formatVersion="0" name="SkinMedium" _base="engine/materials/library/skin/base.material">
 	<_properties>

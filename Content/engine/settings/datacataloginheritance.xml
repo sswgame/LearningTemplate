@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="4d7e12b60bea69a9724d1dab48c71ca4"?>
 <!--
   항목 · 파일 상속의 합치기 규칙 표입니다(`DataCatalogInheritance`). 팩 쿠킹은 게임 모듈을 올리기 전에 돌아 코드 옆 등록을 보지 못하고, 배포 런타임은 덮어쓰기 층을 얹을 때 이 표를 읽어 엔진 팩에 담깁니다.
   <Document> 는 한 문서 형식의 칸 규칙(리플렉션 형식 줄은 ResourceComposerTest.DocumentTableMatchesReflection 이 코드와 대조합니다), <Catalog> 는 항목이 되풀이되는 카탈로그입니다.

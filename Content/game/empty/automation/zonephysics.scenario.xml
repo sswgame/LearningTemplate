@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="98b5957f290df2d33aa15c370020577a"?>
 <!--
   지역 효과 — 물리 필드와 물리 재질 입력(maps/zoneshowcase 의 ZeroG · IcePad · ThornBush).
   ① 무중력 방(zones/zerog.zone.xml — 중력 배율 0): 걷는 사람은 부유(Floating)하며 떠 있고, 나무 상자도 떠 있다(강체에도 같은 필드).

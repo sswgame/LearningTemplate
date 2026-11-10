@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="4f1f6edd7e6e281918eb8d1426f35d1c"?>
 <!--
   장르 키트 시연 — 택틱스 SRPG 전투 하나(maps/kitdemo_tactics)의 지형 · 무기 · 기체 · 파일럿.
   시연 시나리오(automation/kitdemo_tactics)가 기대는 값: 칼은 반드시 맞고(hit 999 · crit -999) 경비병(HP 1000 · 장갑 0)을 한 번에 쓰러뜨린다.

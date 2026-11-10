@@ -1,3 +1,4 @@
+<?asset guid="da4c4d9ba9049f1730c2c0edc61b4520"?>
 <!-- Shooter3D 플레이어 몸(Quaternius UBC). 보폭 워핑 뒤 발 디딤이 발을 땅(물리 광선, 제 몸 바디는 거른다)에 올리고, 시선은 등뼈 · 목 · 머리가 나눠 카메라 앞 10 m 를 본다.
      LookSource 는 ShooterPlayerComponent 가 몸을 세울 때 bindObject 로 플레이어 오브젝트(1인칭 카메라가 주 장면 컴포넌트)를 건다 — 이름이 같은 다른 오브젝트를 찾지 않게 명시로 건다.
      UBC 뼈의 로컬 축을 가정하지 않으려고 조준 축은 모델 공간(+Z 앞, aim_axis_in_model)으로 적는다.

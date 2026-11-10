@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="21fb73da8f7ef2799860863c50eee37b"?>
 <!--
   장르 키트 시연 — 액션 플랫포머 스테이지 하나(maps/kitdemo_actionplatformer). 체크포인트 · 비밀의 자리는 씬이 이 id 순서대로 놓는다.
   기준 시간 30 초 안에 깨고 맞지 않고 비밀을 주우면 100 점(S).

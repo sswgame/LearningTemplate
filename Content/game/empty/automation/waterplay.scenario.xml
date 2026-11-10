@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="99b48f6bd4a68d5152bb2e3ee479a56b"?>
 <!--
   물 · 지형 물리(maps/waterplay — envshowcase 를 물려받음) — 값으로 판정한다(골든 없음).
   ① 지형 충돌: TerrainColliderComponent 가 청크 바디를 세우고, 지형에 떨어진 Roller 는 지형 위(Y ≥ 0)에 멈춘다(충돌이 없으면 끝없이 떨어진다). Roller 의 FoliageInfluencerComponent 가 풀 휘게 하는 구 하나로 잡힌다.

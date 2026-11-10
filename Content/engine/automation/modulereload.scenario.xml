@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="f3c82e9b6bc64098376a1ddf169a42b0"?>
 <!--
   엔진 시나리오 — 게임 모듈 핫 리로드: 씬이 돌 때 개발 명령 module.reload 로 SWGame(과 그에 기대는 모듈)을 섀도 복사본으로 갈아 끼우고,
   리로드가 끝나 그래프가 막히지 않았는지(Module.GraphBroken) · 모듈이 의존 이미지에 묶였는지(Module.BindingsOk) · 씬이 이어지는지(Scene.ObjectCount) 본다.

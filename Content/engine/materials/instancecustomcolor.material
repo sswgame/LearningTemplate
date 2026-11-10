@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="b01f08d2ec93202f4ecd166389d811ef"?>
 <!-- 인스턴스 사용자 값 본보기 — 색을 머티리얼이 아니라 인스턴스(MeshComponent 의 _customData0)가 정한다. 스프라이트와 같은 투명 경로를 탄다(값의 알파가 곧 알파다). -->
 <MaterialDef formatVersion="0" name="InstanceCustomColor" shaderPath="engine/shaders/instance_custom_color.hlsl" alphaMode="Blend">
 	<_properties>

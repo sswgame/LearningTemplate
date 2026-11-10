@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="d1495cf4de26154a73324b6311e51dd0"?>
 <!--
   Empty 의 어빌리티 카탈로그 — 지역 효과 시연(maps/zoneshowcase · surfaceinteraction)의 이펙트 · 어빌리티 · 세트.
   지역 프로필(zones/*.zone.xml)은 이펙트를 정본으로 쓴다: 가라앉음은 머문 시간만큼 쌓이는 스택(SinkDepth · MoveSpeedScale 를 스택 수만큼 바꾼다),

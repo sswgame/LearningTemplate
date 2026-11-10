@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="a136eadd46465426b788c572c7090267"?>
 <!--
   Shooter3D 적의 쓰러짐(ShooterCharacterIntegration S1 · S2 · S4) — 자동 플레이로 스켈레톤 적을 쓰러뜨리며 사진을 골든과 견준다.
   ① 쓰러질 때 래그돌로 넘어져 바닥에 눕는다(키네마틱 바디가 포즈를 따르다가 물리로 넘어간다).

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="5beda10eb0ac768d7ef7125039f80858"?>
 <!--
   지역 효과 — 할 일 어휘(maps/zoneshowcase 의 Spring · SkillCircle · Pit). 지역은 이펙트 하나가 아니라 진입 · 체류 · 이탈마다 할 일 목록을 갖는다.
   ① 버프 샘(zones/buffspring.zone.xml): 들어오면 회복(0.5 초마다 5)과 가속(10 초), 나가면 회복만 지운다(가속은 남는다).

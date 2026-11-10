@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="221e2d770465c901d0dcc7672c2732a9"?>
 <!-- 외형 라이브러리 프리셋(cloth): 벨벳(스치는 각에서 밝은 잔털). 값만 바꾼다 — 셰이더 변형은 갈래 바탕과 같다. -->
 <MaterialDef formatVersion="0" name="Velvet" _base="engine/materials/library/cloth/base.material">
 	<_properties>

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="41d7749bdd0c3d958c176f2895a43aa5"?>
 <!-- Shooter3D 팩의 설정 — 시작 맵은 아레나 씬이다(게임마다 팩의 data/gamesettings.xml 하나다).
      inputMap 줄들은 입력 맵 묶음이다 — 기본 맵, 공통 파일들, 맨 끝이 게임 차이다(docs/InputMapBundle.md). -->
 <GameSettings>

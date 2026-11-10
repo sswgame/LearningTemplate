@@ -1,3 +1,4 @@
+<?asset guid="3fbc24d540dc6c39f050a4920708a471"?>
 <!--
 	후처리를 **패스마다 따로** 두는 형태. 지금 기본(forwardpipeline.xml)은 이것을 Present 한 패스로
 	합쳐 쓴다 — 중간 타깃 왕복 둘이 사라져 GPU 프레임이 그만큼 싸다.

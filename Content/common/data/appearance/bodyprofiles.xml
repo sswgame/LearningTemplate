@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="74c7a16b587009f1279a1d5c6f5ab1e3"?>
 <!-- 캐릭터 몸 프로필(CharacterBodyProfileCatalog) — 외형 프리셋이 bodyProfile 로 고른다. _base 는 다른 칸만 적는 부모 항목이다(카탈로그 상속 표의 BodyProfileCatalog —
      BodyChannel 은 name, Jiggle 은 group, ActionScale 은 tag, Wrinkle 은 region, Fluid 는 name 으로 합친다).
      BodyChannel: 몸 채널 기본 층(굽 높이 · 체형 보정). 매핑은 몸 부품의 *.bodyshape.xml 이다 — 뼈 이름을 적지 않는다.

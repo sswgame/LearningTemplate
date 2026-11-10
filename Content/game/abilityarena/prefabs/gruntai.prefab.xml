@@ -1,3 +1,4 @@
+<?asset guid="6c22e0b3e6f254d93665583fb6959df3"?>
 <Prefab formatVersion="0" _base="game/abilityarena/prefabs/casterai.prefab.xml" name="ArenaGruntAI">
 	<PrefabOverrides>
 		<Override key="ArenaEnemyAIComponent#0">

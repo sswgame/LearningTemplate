@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="88cfd171d0e9113bd2c68a653fa0930e"?>
 <!-- 배 무대(maps/boat)의 날씨 — wind 는 WeatherWaveComponent 가 폭풍 세기(0 잔잔 .. 1 폭풍)로 읽어 바다의 파도 진폭을 1 → 4 배로 키운다.
      시나리오가 cheat.weather storm 으로 바꾸므로 잔잔함만 고를 무게를 갖고, 폭풍은 무게 0 이다(저절로 오지 않는다). -->
 <WeatherCatalog transition="3">

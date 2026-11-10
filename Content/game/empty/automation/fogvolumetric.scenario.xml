@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="29597506273587003f6868f5e7a0fe76"?>
 <!--
   볼륨 안개(froxel, FogComponent._bVolumetric) — 같은 무대의 안개를 평범한 안개(fogshowcase)와 볼륨 안개(fogvolumetric, 그 씬을 물려받아 안개만 바꿨다)로 찍어 견준다.
   컴퓨트(volumetric_fog.hlsl)가 돌지 않거나 안개 패스(fog.hlsl)가 볼륨을 읽지 않으면 두 장이 같아서 진다. 골든이 아니라 같은 실행의 두 장이다.

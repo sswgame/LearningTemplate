@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="a9ab5f265ca64974c06a85b10838bb93"?>
 <!--
   에디터 시나리오 — UI Preview 패널(runtime-ui 8-5 뒤의 남은 것):
   1) 콘텐츠 열기 — Quick Open 이 `*.ui.xml` 을 열면(콘텐츠 브라우저 더블클릭과 같은 EditorAssetCommands::openPath) 에셋 종류 UIDocument 의 패널 UI Preview 가 열려 그 문서를 짓는다.

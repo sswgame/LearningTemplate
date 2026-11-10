@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="4c7f8fc603fdb8d04a20c1ddd18feebc"?>
 <!--
   에디터 시나리오 — 클립 미리보기 창: 창을 열고 Quick Open 으로 기사의 환호 클립(cheer.animclip, 1.67 초)을 고른 뒤 몸 프리팹 칸에 기사(knight_merged)를 적고 Spawn 하면
   창의 미리보기 씬에 몸이 서서 그 클립을 재생하고, 렌더러가 그 씬을 그린다.

@@ -1,3 +1,4 @@
+<?asset guid="cb6295e68735f123a8e3b5a82d5a7ef7"?>
 <!-- 회선 흉내 프리셋(한 방향). 개발 명령 net.emulation · 에디터 Multiplayer 회선 조절 · 부하 시나리오 <Load network> · -gv_netEmulationPreset 이 이 표를 읽는다(NetEmulationPresetTable). -->
 <NetEmulationPresetTable>
 	<_listPreset>

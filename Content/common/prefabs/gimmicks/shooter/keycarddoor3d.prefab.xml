@@ -1,3 +1,4 @@
+<?asset guid="308e0f591f0edeefc4844bfadfea63fa"?>
 <Prefab formatVersion="0" _base="common/prefabs/gimmicks/adventure/lockeddoor3d.prefab.xml" name="KeycardDoor3D">
 	<PrefabOverrides>
 		<Override key="InteractableComponent#0">

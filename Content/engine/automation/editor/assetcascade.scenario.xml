@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="7b0e4b1ddeac70ab16ea8d06b145ff11"?>
 <!--
   에디터 시나리오 — 연쇄 리로드: 조부모 머티리얼(grand)을 바깥에서 고치면 그것을 로드할 때 펼쳐 넣은 부모 · 자식 머티리얼(_base=)이 감시를 따라 다시 읽힌다.
   테스트 폴더 engine/automation/editor/assetcascade 의 씬은 parent.material · child.material 을 쓰는 메시 둘이다(grand 는 아무 메시도 직접 쓰지 않는다 — 그래도 연쇄는 돈다).

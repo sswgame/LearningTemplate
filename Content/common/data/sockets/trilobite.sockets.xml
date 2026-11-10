@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="44eed0ec2de4166fbf3a9a159d52413a"?>
 <!-- Quaternius Sci-Fi Essentials Trilobite(CC0)의 몸 소켓 — 몸 뼈(Body) 로컬, 원본 glTF 의 Body 에 묶인 정점에서 계산했다. Chest 는 맞음 상자 몸 셰이프의 중심(조준 보정 · 맞은 자리), Eyes 는 몸 앞(+Z) 끝 5 cm 안 정점의 평균 높이 · 앞끝(락온). -->
 <SocketSet>
   <Socket name="Eyes" parent="Body" translation="0 0.26 1.26" kind="LockOn"/>

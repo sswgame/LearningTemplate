@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="ddb133fee2a433baccb390eefddb6e5b"?>
 <!-- 부모(parent → grand 사슬)를 펼쳐 넣고 금속성만 바꾼다 -->
 <MaterialDef formatVersion="0" name="CascadeChild" _base="engine/automation/editor/assetcascade/parent.material">
 	<_properties>

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="f5f8752a13864380b802d0222c106d45"?>
 <!-- 가벼운 맞음 — 짧게 세게 시작해 0.18 초에 걷힌다(저주파가 먼저 빠지고 고주파가 끝을 남긴다). GamepadDevice::playHaptic 으로 재생한다. -->
 <HapticEffectDef>
 	<_listKey>

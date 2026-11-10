@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="0488e0409f5f09199fc1aff3341f61b9"?>
 <!--
   LanternVale 두 프로세스 — 첫 접속(클라이언트). `py -3 -m Scripts net-pair mmo` 가 전용 서버(-game=LanternVale, 게임 접속 티켓 · 실행마다 빈 사용자 데이터 폴더 SW_USER_DATA_ROOT)를 띄운 뒤 이 시나리오로 클라이언트를 돌린다.
   로그인 → 티켓 → 암호화 UDP 접속 → 서버가 계정 진행(새 계정)을 읽어 아바타를 세움 → 짐승 둘을 세 번씩 쳐 쓰러뜨림(경험 60 씩, 동전 5 씩) → 레벨 2 → 버섯 채집(경험 15)

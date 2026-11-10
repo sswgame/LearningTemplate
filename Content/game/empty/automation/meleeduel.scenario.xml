@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="b60ffe60257199e061686a73c2c8021f"?>
 <!--
   근접 판정 · 유닛 스탯(ActionCombat 키트의 MeleeHitboxComponent · UnitStatsComponent, maps/meleeduel) — 값으로 판정한다(골든 없음).
   ① 휘두르기(개발 명령 combat.swing — 게임의 공격 입력 · AI 가 부르는 beginAttack 과 같은 함수)가 칼날 안의 Dummy 를 한 번 맞혀 HP 30 → 20(방어 0).

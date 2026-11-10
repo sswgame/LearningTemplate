@@ -1,3 +1,4 @@
+<?asset guid="49bdf4275a3cacc32889ec00e1d89f53"?>
 <Scene formatVersion="2" name="InteractionHighlight">
 	<!-- 상호작용 강조 패스 확인(automation/interactionhighlight)의 무대 — 애니메이션 · 비동기 메시가 없어 같은 프레임이 실행마다 같은 그림이다.
 	     카메라는 움직이지 않는다. 하는 쪽(Player, 눈에 안 보이는 빈 오브젝트)만 시나리오가 순간이동(teleport Player …)으로 옮겨, 같은 그림틀에서 강조만 켜고 끈다.

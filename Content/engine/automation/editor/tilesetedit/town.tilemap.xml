@@ -1,3 +1,4 @@
+<?asset guid="5995fd4541e06dd15aac39604a386739"?>
 <TileMap name="Tile Set Edit Test" width="20" height="12">
 	<spawn x="7" y="7" />
 	<tiles />

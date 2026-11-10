@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="25fc652bae68d72402b2e4181380801c"?>
 <!-- 외형 라이브러리 갈래 바탕: 얇은 불투명 면(잎 · 종이 등) — 뒤에서 오는 빛의 투과(언리얼 Two Sided Foliage). -->
 <MaterialDef formatVersion="0" name="AppearanceThin" _base="engine/materials/library/appearance.material" cullMode="None" twoSidedLighting="true">
 	<_properties>

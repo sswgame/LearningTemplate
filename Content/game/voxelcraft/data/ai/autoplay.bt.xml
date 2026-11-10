@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="00123f3c083c6edb920fbb45bc034aa2"?>
 <!--
   VoxelCraft 자동 플레이 조종자(VoxelAutoPlayControllerComponent)의 판단. 감각이 적는 것:
   Playing(판이 시작됐고 시간이 흐른다) · FocusPoint(천천히 도는 시선의 점) · WalkTarget(앞의 걷는 점) · Blocked(앞 블록이 막았다) · InWater,

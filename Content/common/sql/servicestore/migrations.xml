@@ -1,3 +1,4 @@
+<?asset guid="a5dc89178ece253cc3f8cdec82df1ff4"?>
 <SQLMigrationList>
 	<Migration _name="0001_records" />
 	<Migration _name="0002_commit_version" />

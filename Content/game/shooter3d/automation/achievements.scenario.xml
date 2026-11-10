@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="ab94d60be1147cf232fe5cb51cef6286"?>
 <!--
   Shooter3D 플레이어 통계 → 업적 → 플랫폼 서비스(E15). 자동 플레이가 해골을 쓰러뜨리면 디렉터가 enemies_killed 를 올리고, 추적기가 first_blood 를 풀고,
   로컬 플랫폼 서비스(SDK 없는 구현, 무인 실행마다 새 사용자 설정 폴더 옆)가 그 업적을 받는지 값으로 본다. 최대 통계는 개발 명령으로 기록을 내 문턱(3)을 넘긴다.

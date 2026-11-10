@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="93ec579f74fe5a0b8828a5155bc3843c"?>
 <!-- 나무 상자 · 판자. 가볍고 잘 쪼개진다. -->
 <DestructionProfile density="600" physicsMaterial="Wood">
   <Strain thresholds="30 25"/>

@@ -5,7 +5,7 @@ Scripts/lint/PreCommit.py
 
 린트 입구 하나 — 규칙은 `Rules.py` 의 표 한 곳에 있다.
 
-  py -3 -m Scripts lint                 # 커밋 훅: 스테이지된 파일 종류에 걸리는 규칙만 돈다 + 에셋 참조 + clang-format
+  py -3 -m Scripts lint                 # 커밋 훅: 스테이지된 파일 종류에 걸리는 규칙만 돈다 + 에셋 참조 · 정체성 + clang-format
   py -3 -m Scripts lint --list          # 규칙 표(갈래 · 막는 것 · 왜 린트인가 · 예외 파일)
   py -3 -m Scripts lint <id> [인자…]    # 규칙 하나의 단독 실행(`--all` · `--self-check` 등은 그 모듈의 인자)
 
@@ -27,6 +27,7 @@ from common.ExitCode import ExitCode  # noqa: E402
 from common.Git import getAllStagedFiles  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from lint.Format import getStagedCppFiles, runClangFormatBatch  # noqa: E402
+from lint.AssetIdentity import checkStagedAssetIdentity  # noqa: E402
 from lint.AssetReferences import checkStagedAssetReferences  # noqa: E402
 from lint.Rules import Rule, formatTable, isTriggered, kRuleById, kRules  # noqa: E402
 
@@ -45,6 +46,13 @@ def runStaged(projectRoot: Path) -> int:
         hasErrors = True
         print(f"[asset-refs] FAIL — 끊어진 에셋 참조 {len(listAssetProblem)}건(옮기기는 `py -3 -m Scripts move-asset <옛> <새>` 가 참조를 함께 고친다)")
         for line in listAssetProblem:
+            print(f"  - {line}")
+    # 에셋 정체성도 같은 까닭으로 먼저 돈다 — 원본만 지우거나 옮긴 커밋이 남긴 짝 없는 .meta 를 잡는다(AssetIdentity.py 머리말).
+    listIdentityProblem = checkStagedAssetIdentity(projectRoot)
+    if listIdentityProblem:
+        hasErrors = True
+        print(f"[asset-ids] FAIL — 에셋 정체성 결함 {len(listIdentityProblem)}건(`py -3 -m Scripts asset-ids --fix` 가 없는 GUID 를 만들고 짝 잃은 .meta 를 다시 붙인다)")
+        for line in listIdentityProblem:
             print(f"  - {line}")
 
     listStagedName = [path.replace("\\", "/") for path in map(str, getAllStagedFiles(projectRoot))]

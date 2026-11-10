@@ -6,13 +6,16 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Asset/AssetFormat.h"
+#include "Engine/Asset/AssetPackIndex.h"
 #include "Engine/Asset/Cook/CookStore.h"
 #include "Engine/Asset/Cook/PackReachResult.h"
 #include "Engine/Asset/Reference/AssetReferenceFields.h"
@@ -403,6 +406,39 @@ namespace sw
             }
 
             /**
+             * @brief 팩에 담은 소스 파일 하나의 정체성(GUID)을 팩 색인(@p inoutIndex)에 한 줄 더합니다 — 배포본에는 `.meta` 가 없어(PackConfig 가 뺀다) 정체성은 이 색인이 나른다.
+             * @details 우리 형식 글은 머리를, 원본은 곁의 `.meta` 를 디스크 입구(`AssetIO::readTextFile`)로 읽는다 — 이 작업의 입력이 되어 GUID 가 바뀌면 팩을 다시 굽는다.
+             *          임포트 산출물(`.meta` 없는 `textures/` · `models/` 파일)은 원본의 정체성을 쓴다 — 원본 GUID → 산출물 경로 줄은 2 단계에서 임포트 기록으로 잇는다(docs/NEXT.md).
+             *          정체성이 없는 파일은 쿠킹 실패다 — 경로로 대신하지 않는다(`py -3 -m Scripts asset-ids --fix`).
+             */
+            [[nodiscard]] static bool addPackedIdentity( const AssetIdentityRules& rules, const string& domain, const string& relativePath, const string& absPath, AssetPackIndex& inoutIndex )
+            {
+                const string            assetID = makeAssetID( domain, relativePath );
+                const AssetIdentityKind kind    = rules.classify( assetID );
+                const string            metaAbs = AssetMeta::makePath( absPath );
+                if ( kind == AssetIdentityKind::Skipped || kind == AssetIdentityKind::Sidecar )
+                    return true;
+                if ( kind == AssetIdentityKind::Source && rules.isUnderDerivedFolder( assetID ) && FileUtil::isRegularFile( metaAbs ) == false )
+                    return true;
+                string              text;
+                optional<AssetGUID> guid;
+                if ( kind == AssetIdentityKind::Header && AssetIO::readTextFile( absPath, text ) )
+                    guid = AssetGUIDHeader::read( text )._guid;
+                if ( kind == AssetIdentityKind::Source && FileUtil::isRegularFile( metaAbs ) && AssetIO::readTextFile( metaAbs, text ) )
+                {
+                    AssetMeta meta;
+                    guid = meta.parseXML( text, AssetMeta::makePath( assetID ) );
+                }
+                if ( guid.has_value() == false )
+                {
+                    SW_LOG_ERROR_ID( "PackCooker.PackCookNoIdentity", "Pack cook: '%#' has no asset GUID - run py -3 -m Scripts asset-ids --fix", assetID );
+                    return false;
+                }
+                inoutIndex._listEntry.push_back( AssetPackIndexEntry{ *guid, FileUtil::normalizeSeparators( relativePath ) } );
+                return true;
+            }
+
+            /**
              * @brief 팩 쿠킹 요약 한 줄을 남깁니다 — 단계별 ms 로 병렬 압축의 효과를 잰다.
              * @details `compress` 는 `벽시계 / CPU 합` 이다(CPU 합이 직렬로 돌았다면 든 시간이라 둘의 비가 병렬 효과). `hash` 는 입력 내용 해시(`addFile`)와 출력 내용 해시(`CookStore` 의 재사용 판정 · 기록)에 쓴 시간이고,
              *          바뀐 것 없는 실행에서는 출력 해시가 거의 전부다. `other` 는 총 시간에서 나머지 단계를 뺀 몫이다 — 출력 읽기 · DDC 저장 · 기록 쓰기 · 폴더 훑기.
@@ -438,6 +474,11 @@ namespace sw
                 DataCatalogReferenceRules references;
                 if ( references.loadFromAsset() == false )
                     return CookStep::Failed;
+                // 정체성 규칙 — 팩마다 GUID → 팩 안 경로 색인을 담는다(`AssetPackIndex`). 못 읽으면 색인 없이 굽지 않는다.
+                AssetIdentityRules identityRules;
+                AssetPackIndex     identityIndex;
+                if ( identityRules.load( ProcessRoots::get()._project.str() ) == false )
+                    return CookStep::Failed;
                 // 목록도 입력이다 — 파일이 생기거나 사라지면 다시 베이크한다(`CookJob::collectFiles` 가 기록한다).
                 vector<string> listSourceFile;
                 if ( CookJob::collectFiles( domainDir, "", listSourceFile ) == false )
@@ -460,7 +501,8 @@ namespace sw
                     }
                     if ( selection._setIncluded.contains( makeAssetID( domain, relativePath ) ) == false )
                         continue; // 뿌리에서 참조로 닿지 않는다 - 이 빌드의 게임이 쓰지 않는다(`PackReachResult`)
-                    if ( addSourceFile( writer, relativePath, absPath, params._resourceRoot, references, ioTiming ) == false )
+                    if ( addSourceFile( writer, relativePath, absPath, params._resourceRoot, references, ioTiming ) == false ||
+                         addPackedIdentity( identityRules, domain, relativePath, absPath, identityIndex ) == false )
                         return CookStep::Failed;
                 }
                 if ( listStale.empty() == false )
@@ -497,6 +539,14 @@ namespace sw
                 if ( droppedOther._count > 0 )
                     SW_LOG_INFO_ID( "PackCooker.PackCookDroppedShaderBinaries", "Pack cook: %# drops %# %# shader binaries outside the cook requests (first: %#)", domain, droppedOther._count,
                                     params._shaderFolder, droppedOther._names );
+
+                const expected<string> indexText = identityIndex.makeText();
+                if ( indexText.has_value() == false )
+                {
+                    SW_LOG_ERROR_ID( "PackCooker.PackCookIndexInvalid", "Pack cook: %# asset index - %# '%#'", domain, indexText.error().message(), indexText.error().detail() );
+                    return CookStep::Failed;
+                }
+                writer.addBytes( AssetPackIndex::kFileName, vector<uint8>( indexText->begin(), indexText->end() ) );
 
                 PackWriteStats writeStats;
                 if ( writer.writePackFile( outputPath, &writeStats ) == false )

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="d3896b43b085f9963963bce49979a555"?>
 <!--
   에디터 시나리오 — UI Preview 디자이너(runtime-ui 8-5 뒤의 (6)): 팔레트 → 끌어 놓기 · 지우기 · 슬롯 손잡이. 문서를 저장하지 않으므로 저장소 파일은 바뀌지 않는다.
   1) 슬롯 손잡이 — pause 문서의 Window(캔버스의 자식)를 고르고 가운데 손잡이를 끌면 슬롯의 _offsetMin._x 가 늘고(Editor.UIPreviewSelectedOffsetMinX) 되돌리기 하나가 쌓이며 Undo 로 돌아온다.

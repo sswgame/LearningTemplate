@@ -1,3 +1,4 @@
+<?asset guid="8685b6809ad8bd0cc6672017781c4f1f"?>
 <UIDocument _schemaVersion="1">
 	<UIScreenDef _layer="Loading" _bTakesFocus="false" _bShowCursor="false" />
 	<BorderPanel _name="Backdrop">

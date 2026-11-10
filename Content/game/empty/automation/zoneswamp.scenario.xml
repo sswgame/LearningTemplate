@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="5cd422899f30d453e87648bd8d5678bb"?>
 <!--
   지역 효과 — 늪(maps/zoneshowcase 의 Swamp, 프로필 zones/swamp.zone.xml, 볼륨 겹침 입력).
   ① 걷는 사람이 들어오면 감속 이펙트(State.Slowed)와 1 초마다 가라앉음 스택, 진흙 · 감속이 이동 계수를 내린다(MovementConstraint → 컨트롤러), 외형이 같은 깊이로 내려간다.

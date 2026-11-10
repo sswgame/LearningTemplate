@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="5cd759ecde1e6caca0688c7f1c80d8e8"?>
 <!--
   에디터 시나리오 — 보기 모드 ShadingPath(셰이딩 경로): 씬 뷰 툴바 콤보로 고르면 표면이 그려진 경로의 색으로 바뀐다
   (디퍼드 G버퍼 조명 파랑 · G버퍼 조명 없음 청회색 · 포워드 전용 주황 · 반투명 보라 · 포워드 초록 · 포워드 조명 없음 짙은 초록 — RenderViewSettings.h).

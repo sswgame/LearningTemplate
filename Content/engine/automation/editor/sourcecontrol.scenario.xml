@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="554de5f8e3db0cbd1d1b560775a06963"?>
 <!--
   에디터 시나리오 — 버전 관리 Changes 창(S3): git 이 있으면(LFS 없이도) 공급자가 변경을 다루고, 창이 바뀐 파일 목록을 읽는다.
   저장소 상태는 기계마다 다르므로 목록 수는 0 이상만 본다. sourcecontrol.history CLAUDE.md 로 추적 파일의 최근 커밋을 읽는다(줄 수 1 이상).

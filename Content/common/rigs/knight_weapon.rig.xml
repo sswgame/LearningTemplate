@@ -1,3 +1,4 @@
+<?asset guid="bdccc8ee26345fa9c3e2c6c0d8f6a30b"?>
 <RigAsset>
 	<targets>
 		<item name="RightHand" bone="handslot.r" skeletalMesh="Body" translation="0.1046,-0.0104,0.0" rotation="0,-90,0" />

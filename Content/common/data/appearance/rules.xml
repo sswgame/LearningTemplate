@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="69f9964aee62683459568a8fa8f24153"?>
 <!-- 외형 규칙. 조건(When — 칸의 보이는 외형 태그 · 아무 외형의 태그 · 캐릭터 태그 · 칸 점유 · 체형 · 몸 종류, not="true" 로 뒤집음)이 모두 맞으면 동작
      (Hide · Variant · SwapMesh · SwapMaterial · Morph · OverrideSocket · MaterialValue)을 건다. Hide 에 part 를 주면 그 주인의 그 부품만 감춘다. SwapMaterial · MaterialValue 에
      section 을 주면 그 메시 구간 하나만 바꾼다(넓은 교체 위에 좁은 교체가 덮는다). 조건은 점유 · 세트 뒤의 요청된 목록만 본다 — 규칙끼리 사슬을 만들지 않는다.

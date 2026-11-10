@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="cf73852cf97c0710162a72caf4586ad4"?>
 <!--
   오픈월드 싱글 수직 슬라이스 한 판 — 지역 진입 → 탐험(봉화) → 야영지(체크포인트) → 지역 전투(홀 → 보스) → 퀘스트 보상 → 저장 → 다른 곳으로 걸은 뒤 불러오기.
   플레이어와 같은 입력 맵 액션(Move · Velmora.Use · Velmora.Attack)과 세이브 메뉴 자리의 개발 명령(game.save · game.load)만 쓴다(테스트 전용 경로 없음).

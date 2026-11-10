@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="49e1b0ec048ad2be9bc0543ba646949f"?>
 <!--
   AbilityArena 원거리 적(Caster)의 판단 — 적당한 거리(5 ~ 9 m)를 지키며 12 m 안이면 화염구를 쏜다. 물러나도 대상을 본다(초점).
   감각은 ArenaEnemyAIComponent(SelfPosition · TargetPosition · TargetDistance). 상태 이름은 움직임 쪽이다(쏘기는 거리마다 겹친다).

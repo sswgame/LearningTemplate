@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="a6ebe3bae346e85000c608173eaf36c7"?>
 <!--
   지역 효과 — 사구(maps/zoneshowcase 의 Dune · QuietDune, 프로필 zones/dune.zone.xml = sand.zone.xml 의 변형). 위치 값으로 단계가 갈린다.
   ① 바깥(zoneDepth01 < 0.5 — 반지름 3 의 2.5 m 자리, 깊이 0.17)은 가라앉기만 하고 끌려감이 없다.

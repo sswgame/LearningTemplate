@@ -1,3 +1,4 @@
+<?asset guid="a1f716c1c5e7a641b4834c54e4a45dec"?>
 <!-- 에디터 명령의 표시 · 배치(onlineadmin) — 코드는 id 와 동작만 든다(SW_EDITOR_COMMAND · 명령 표). 칸은 모두 적는다, 빈 글은 "없음". -->
 <EditorCommandTextTable>
 	<_listCommand>

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="01d5bec9854062ef1d12856c0008efcc"?>
 <!--
   Shooter3D 키 다시 잡기 — 옵션 메뉴와 같은 길(settings.apply → 사용자 설정 → 입력 맵)로 점프 키를 Space 에서 J 로 바꾸면 J 가 점프하고 Space 는 더는 점프하지 않으며,
   같은 액션의 다른 바인딩(패드 A)은 그대로 점프한다(패드 실기 입력은 가상 패드 device="Gamepad" 로 같은 길을 지난다).

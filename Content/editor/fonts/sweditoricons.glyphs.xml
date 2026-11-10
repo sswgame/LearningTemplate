@@ -1,3 +1,4 @@
+<?asset guid="c7d6b8910dc317fa95ac1a7c072cd5f3"?>
 <!-- 에디터 아이콘 글꼴(editor/fonts/sweditoricons.ttf)의 이름 → 코드포인트 표(EditorIconTable). 글꼴을 바꾸면 이 표를 바꾼다.
      코드는 이름으로만 찾는다(SW_EDITOR_ICON). 이름 · 코드포인트는 겹치지 않고 Missing 이 있어야 한다. -->
 <EditorIconGlyphTable>

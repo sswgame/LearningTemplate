@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="e5fcec3143f839074fa710b060077321"?>
 <!--
   실시간 라이트 프로브 갱신(LightProbeVolumeComponent::_bRealtime, 결정 기록 5-5 R6) — 직접광이 거의 닿지 않는 큐브 옆면이 바닥에서 튕긴 빛(프로브의 간접광)으로 밝아진다.
   프로브 갱신 컴퓨트(probe_update.hlsl)가 돌지 않으면 그 면은 앰비언트 0 이라 거의 검다. 무대: maps/realtimegi (갱신 주기 4 프레임 · 섞는 비율 0.25 라 몇 십 프레임이면 수렴한다).

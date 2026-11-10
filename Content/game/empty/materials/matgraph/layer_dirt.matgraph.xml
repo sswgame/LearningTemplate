@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="af31ce0205f2b79f785990f597a676ce"?>
 <!-- 머티리얼 층 견본(언리얼 Material Layer) — 흙: 색과 거칠기를 낸다. 머티리얼 여럿이 Layer 노드로 이 한 벌을 쓰고, 칸은 쓰는 쪽에서 `_<층 노드>_color` · `_<층 노드>_roughness` 가 된다. -->
 <MaterialGraphDef formatVersion="0">
 	<_listNode>

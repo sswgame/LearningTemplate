@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="3de8648c2f5e58acc80ac4165db01947"?>
 <!--
   Empty 의 장르 키트 시연 입력 — 공통 묶음(gamesettings.xml 의 <inputMap> 줄: base · move) 위에 얹힌다. 시연 디렉터(Source/Games/Empty/KitDemo)는 키를 묻지 않고
   액션 이름만 묻는다. 한 게임만 쓰는 이름은 접두(KitDemo.)다. 걷기 · 커서는 공통 `Move` 축이다.

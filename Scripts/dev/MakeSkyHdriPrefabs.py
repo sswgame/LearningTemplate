@@ -8,11 +8,14 @@
 from __future__ import annotations
 
 import math
+import sys
 from pathlib import Path
 
 import numpy as np
 
 _ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(_ROOT / "Scripts"))
+from lint.AssetIdentity import writeKeepingIdentity  # noqa: E402 — 다시 지어도 있던 프리팹의 정체성(머리 GUID)을 지킨다
 _SOURCE = _ROOT / "Content/engine/textures_raw/sky"
 _OUTPUT = _ROOT / "Content/engine/prefabs/sky"
 

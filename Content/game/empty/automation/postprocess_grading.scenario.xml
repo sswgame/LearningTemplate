@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="f28a0ad5d5462902ce963ed5e4e379ce"?>
 <!--
   컬러 그레이딩(post_grade.hlsli 의 CameraGrade::applyColorGrading · applyLut) — 레이어 Grading 의 무한 볼륨이 화이트 밸런스 4000 K, 그림자 · 밝은 부분 게인,
   세피아 LUT(세기 0.5)를 건다. 켠 그림은 끈 그림과 달라야 하고(그레이딩 · LUT 가 돌지 않으면 같다), 끄면 처음 그림으로 돌아와야 한다(중립 값은 그림을 바꾸지 않는다).

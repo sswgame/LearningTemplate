@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="478965903dea965d0ea6f4d13f672da5"?>
 <!--
   에디터 시나리오 — 리그 디버그 창(rig_debug): 기사 몸 + 애니메이터 + 리그(노드 둘 — ForearmTwist 가중치 1, ShrinkHead 가중치 0.5) 프리팹을 놓고 고른 채 플레이하면
   리그가 묶여 창에 노드 표가 뜬다(리그는 플레이 시작에서 묶는다 — 언리얼 Control Rig 디버그도 PIE 인스턴스를 본다).

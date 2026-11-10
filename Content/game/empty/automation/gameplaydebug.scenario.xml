@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="95ab8102d729e785f13ca94d7e47999e"?>
 <!--
   런타임 게임플레이 디버거(디버그 HUD 섹션)를 HUD 없이 한 번씩 돌려 줄을 로그(DebugHUD.PrintLine)로 본다 — 읽기만 하는 섹션이라 게임이 바뀌지 않는다.
   무대 maps/gimmickshowcase: 회로가 도는 기믹들(움직이는 발판 · 횃불 문 …). debug.target 을 정하지 않으면 섹션마다 그 컴포넌트를 가진 첫 오브젝트를 보고,

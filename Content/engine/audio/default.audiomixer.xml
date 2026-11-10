@@ -1,3 +1,4 @@
+<?asset guid="0c613d558a1f63d3934b7f2776811bb5"?>
 <!--
 	엔진 기본 믹서 그래프(AudioMixerDef). master 가 유일한 루트이고, 사용자 설정의 버스 볼륨(audio.busVolume)은 이 이름들로 찾아간다.
 	reverb 는 이펙트 리턴 버스다 — sfx · voice · ambient 가 센드로 보낸다(리버브만 나오도록 dry 0).

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="b84fbefa0ee380fcbdee41408fcff494"?>
 <!-- 외형 라이브러리 프리셋(glass): 맑은 유리(두께 2cm). 값만 바꾼다 — 셰이더 변형은 갈래 바탕과 같다. -->
 <MaterialDef formatVersion="0" name="GlassClear" _base="engine/materials/library/glass/base.material">
 </MaterialDef>

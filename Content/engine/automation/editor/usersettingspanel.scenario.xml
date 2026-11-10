@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="b7209c1439b2ee0ce40315a73914a4b6"?>
 <!--
   에디터 시나리오 — 사용자 설정 창(user_settings): debug 탭의 debug.hud(즉시 적용 · 대상 gv_debugHUD) 체크 상자를 누르면 보류 값이 생기고 변수가 미리 켜진다.
   Revert 는 보류를 버려 변수를 되돌리고, 다시 눌러 Apply 하면 보류 없이 켜진 채 남는다. Reset Tab 은 탭을 기본값으로 보류하고 Apply 로 확정한다.

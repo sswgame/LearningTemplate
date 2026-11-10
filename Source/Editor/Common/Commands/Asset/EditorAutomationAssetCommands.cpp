@@ -8,6 +8,7 @@
 
 #include "Core/Container/unordered_map.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Name/TagID.h"
 #include "Core/Path/AbsolutePath.h"
@@ -28,6 +29,7 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
+#include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationScratch.h"
@@ -307,6 +309,50 @@ namespace sw::editor
                 return true;
             }
 
+            /**
+             * @brief 임시 리소스 폴더(`kImportTempFolder`)의 에셋 하나의 내용을 원본 파일로 바꾸고 GUID 가 그대로인지 봅니다 — 에디터 "내용 바꾸기"
+             *        (`EditorAssetFileCommands::replaceAssetContent`)와 같은 길이다. 대상은 임시 폴더만 받는다(추적 중인 에셋을 시나리오가 고치지 않게).
+             * @details 바꾸기 전에 GUID 가 없으면 실패다 — 가져오기(`asset.import`)가 새 GUID 를 줬는지도 함께 본다.
+             */
+            static bool runReplaceAssetContent( const vector<string>& listArgument, string& outReply )
+            {
+                string sourcePath;
+                if ( listArgument.size() != 2 || EditorAssetFileCommands::readSourceFileArgument( listArgument[1], sourcePath, outReply ) == false )
+                    return false; // 원본이 없으면 readSourceFileArgument 가 이유를 적었다
+                const string targetID = FileUtil::normalizePath( listArgument[0] );
+                if ( FileUtil::startsWithPathComponent( targetID, kImportTempFolder ) == false || targetID.find( ".." ) != string::npos )
+                {
+                    outReply = "asset.replaceContent takes a target under " + string( kImportTempFolder ) + "/";
+                    return false;
+                }
+                const optional<AbsolutePath> targetPath = editor::getSubsystem<AssetPaths>().findLooseFile( targetID );
+                AssetIdentityRules           rules;
+                if ( targetPath.has_value() == false || rules.load( ProcessRoots::get()._project.str() ) == false )
+                {
+                    outReply = "no asset '" + targetID + "' or no asset identity rules";
+                    return false;
+                }
+                const optional<AssetGUID> before = rules.readIdentity( targetPath->str(), targetID );
+                if ( before.has_value() == false )
+                {
+                    outReply = "'" + targetID + "' has no asset GUID - asset.import gives one";
+                    return false;
+                }
+                if ( EditorAssetFileCommands::replaceAssetContent( targetPath->str(), sourcePath ) == false )
+                {
+                    outReply = "could not replace '" + targetID + "'";
+                    return false;
+                }
+                const optional<AssetGUID> after = rules.readIdentity( targetPath->str(), targetID );
+                if ( after.has_value() == false || *after != *before )
+                {
+                    outReply = "'" + targetID + "' lost its asset GUID " + before->toString();
+                    return false;
+                }
+                outReply = "replaced " + targetID + " and kept guid " + before->toString();
+                return true;
+            }
+
             /** @brief 시나리오의 처음과 끝에 임시 리소스 폴더 하나를 통째로 지웁니다. 폴더가 없으면 할 일이 없으므로 성공입니다. */
             static bool runRemoveImportFolder( const vector<string>& listArgument, string& outReply )
             {
@@ -441,6 +487,9 @@ namespace sw::editor
     SW_DEV_COMMAND( ImportAsset, "asset.import", "asset.import <source file> <scratch/import/...folder>",
                     "Import a file into a temp resource folder the way Content Browser Import does, without the file dialog",
                     &EditorAutomationAssetCommandsInternal::runImportAsset );
+    SW_DEV_COMMAND( ReplaceAssetContent, "asset.replaceContent", "asset.replaceContent <scratch/import/...target id> <source file>",
+                    "Replace an imported asset's content with another file the way the editor's Replace Content does - fails unless the asset keeps its GUID",
+                    &EditorAutomationAssetCommandsInternal::runReplaceAssetContent );
     SW_DEV_COMMAND( RemoveImportFolder, "asset.removeImportFolder", "asset.removeImportFolder <scratch/import/...folder>",
                     "Remove a temp resource folder that asset.import filled", &EditorAutomationAssetCommandsInternal::runRemoveImportFolder );
     SW_AUTOMATION_WATCH( editorTempAssetExists, "Editor.TempAssetExists", "1 when the file of the last asset.open exists on disk",

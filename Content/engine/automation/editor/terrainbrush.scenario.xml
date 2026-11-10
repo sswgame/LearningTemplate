@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="34f6b5f6da872012ae0792a8b581eed1"?>
 <!--
   에디터 시나리오 — 지형 칠하기 도구: envshowcase 를 열고(비동기 로드를 Scene.Transitioning 으로 기다린다) 씬 뷰 카메라를 지형 위로 옮긴 뒤 Terrain 토글(viewport.visualizer.terrainbrush)을 켠다.
   ① 칠하기 전을 찍는다. ② 레이어 3(모래)을 반경 20 m 로 씬 뷰 가운데에서 끌어 칠하면 드래그 하나가 되돌리기 하나로 남고(Editor.TerrainBrushStrokeCount),

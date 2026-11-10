@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="9efd4fa00b9ca4c001e7ba33c9e0c701"?>
 <!--
   FrontierTown 자동 플레이 — gv_frontierAutoPlay 를 켜면 도시 디렉터가 공유 시계를 8 배로 흘려(하루 24 초 → 3 초) 달 결산과 RTS 가 스스로 돈다.
   시계는 아침 6 시에 시작하므로 8 배속이면 이틀째로 넘어가는 것이 5 초 즈음이다. 1 배속이면 42 초라 시한(30 초)에서 진다 — 스위치가 안 먹은 것을 잡는다.

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="d6647aa80c92ce5f675856fdeaa81848"?>
 <!--
   에디터 시나리오 — 콘텐츠 브라우저의 저장 검색 · 컬렉션과 한 검색 제공자(S3).
   ① 검색 칸에 crate 를 치고 Save Search 로 이름 "Crates" 를 주면 저장 검색이 하나 생긴다(로컬 — 에디터 상태 폴더의 ContentBrowserCollectionStore.txt).

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="7c0b760a7298e015942786e642d03eaa"?>
 <!-- 카메라 확대 — 카메라 디렉터의 _zoomAction(프리셋 <Input> 이 받을 때만 읽는다). 휠은 굴린 칸만큼, 패드 D 패드 위 · 아래는 누름 · 반복마다 한 칸. -->
 <InputMap>
 	<layers>

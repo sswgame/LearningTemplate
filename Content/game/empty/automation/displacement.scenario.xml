@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="7dce38d5ef05cbfccf3f7b524c3f3c11"?>
 <!--
   머티리얼 변위(MATERIAL_DISPLACEMENT) — 체커 높이 맵으로 칸이 솟은 판의 먼 가장자리가 계단 윤곽이 된다(헐 · 도메인 변형, material_displacement.hlsli).
   같은 실행의 두 장을 견주는 음성 대조다 — 변위가 윤곽(판 위쪽 띠)을 바꾸지 않으면 진다. 바뀐 그림은 골든으로도 지킨다. 그림자 · 깊이 프리패스도 같은 변위로 그린다(그림자 켬).

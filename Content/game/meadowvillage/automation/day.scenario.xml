@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="9e7f0f1c9c1f318dc2984cb0aaa783a0"?>
 <!--
   MeadowVillage 키트 둘의 흐름 — 공유 시계(SessionStateComponent)를 날 단위로 감아 밭이 번 돈으로 마을이 부탁을 들어주는지 단언한다.
   아침 6 시 · 시작 돈 20G 로 연다. 날이 넘어가면 밭(4 × 2 순무)이 자라고 다 자란 칸을 30G 에 판다. 낮에 sprout 가 찾아와 과수원을 부탁하고(퀘스트 meadow_request),

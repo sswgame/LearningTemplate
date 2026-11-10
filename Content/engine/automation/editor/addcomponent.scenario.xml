@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="a20a074a7fb036b4482e69e11d5b8162"?>
 <!--
   에디터 시나리오 — 인스펙터의 Add Component 단추(N4): 오브젝트를 고르고 컴포넌트 목록 끝의 Add Component(inspector.addComponent)를 눌러 검색 팝업에
   PointLight 를 치고 Enter 를 보내면 그 오브젝트에 컴포넌트가 하나 늘고 되돌리기가 한 줄 는다. 인스펙터를 잠그면 다른 오브젝트를 골라도 잠근 오브젝트를 보인다.

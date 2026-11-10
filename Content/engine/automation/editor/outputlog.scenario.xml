@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="104285ebb9adbc53ad5de616732fbf3e"?>
 <!--
   에디터 시나리오 — Output Log(N5): 같은 경고 줄을 열 번 남기는 개발 명령(log.repeat)을 넣고, 검색 칸으로 그 줄만 남긴다(Info 를 꺼서 명령 메아리 줄도 숨긴다).
   접기 전에는 열 줄, Collapse 를 켜면 한 줄, Clear 를 누르면 0 줄이다.

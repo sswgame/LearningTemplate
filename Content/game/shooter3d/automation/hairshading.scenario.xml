@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="625f59453ad0d4dcf0e8616e110baaec"?>
 <!--
   Shooter3D 머리카락 셰이딩 — 플레이어 몸(ShooterPlayer 외형, Hair = Buzzed)의 머리카락 부품이 셰이딩 모델 Hair(common/materials/quaternius/hair_1.material →
   engine/materials/hair.material · hair.hlsl, Marschner 근사 + 디더 덮임)로 그려지는지 사진을 골든과 견준다(골든은 통합 때 백엔드마다 기록).

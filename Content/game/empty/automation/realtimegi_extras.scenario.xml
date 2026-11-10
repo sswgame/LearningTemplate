@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="8ca28bcb0e14cc1e67125afe66aa0eb9"?>
 <!--
   실시간 프로브의 하늘 가림 · 발광(LightProbeVolumeComponent::_realtimeSkyOcclusion · _realtimeEmissiveIntensity) — 두 값이 0 인 무대(이전 그림)와 1 인 무대를 같은 실행에서 견준다.
   켜면 발광 큐브(머티리얼 _emissiveColor)의 빛이 프로브를 거쳐 큰 큐브 옆면 · 바닥을 물들이고(probe_update.hlsl 의 발광 칸), 반사 앰비언트가 프로브의 하늘 보임만큼 가려진다(lighting.hlsli).

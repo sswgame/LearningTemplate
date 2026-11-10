@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="c3ac23ef94b78a5bc444bfd6a8bd32a5"?>
 <!--
   장르 수직 슬라이스(G1) — 시작 → 목표(control.scenario.xml 의 단계 그대로) → 결과 → 저장 · 복원 해시 동일.
   목표 단계는 그 시나리오가 정본이다 — 거기를 고치면 이 파일도 맞춘다. 저장 슬롯은 nilecity/slice.

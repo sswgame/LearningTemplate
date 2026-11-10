@@ -1,3 +1,4 @@
+<?asset guid="73be3aa73dc4412155047fa80cb6838a"?>
 <Prefab formatVersion="0" _base="common/prefabs/kaykit/knight_cape.prefab.xml" name="KnightHelmet">
 	<PrefabOverrides>
 		<Override key="MeshComponent#0">

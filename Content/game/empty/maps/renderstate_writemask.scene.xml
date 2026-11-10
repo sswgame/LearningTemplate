@@ -1,3 +1,4 @@
+<?asset guid="21e42fc2390b2528dd65d57b3b295f3a"?>
 <Scene formatVersion="2" name="RenderState_writemask">
 	<!-- 시나리오 automation/renderstate_* 의 무대 — 다섯 자리가 왼쪽부터 양면 · 가산 · 스텐실 · 깊이 비교 · 쓰기 마스크를 하나씩 보인다. renderstate_base 와 나머지 맵은 한 자리의 머티리얼만 다르다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
