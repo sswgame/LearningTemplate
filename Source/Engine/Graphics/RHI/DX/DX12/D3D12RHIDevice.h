@@ -14,9 +14,12 @@
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Foundation/EnginePlatformHeaders.h"
 #include "Engine/Graphics/RHI/Backend/FrameResourceRing.h"
+#include "Engine/Graphics/RHI/Backend/RHIBindlessRegistry.h"
 #include "Engine/Graphics/RHI/Backend/RHIConstantBufferMirror.h"
 #include "Engine/Graphics/RHI/Backend/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
+#include "Engine/Graphics/RHI/Backend/RHISwapChainSet.h"
+#include "Engine/Graphics/RHI/Backend/RHITimestampRing.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHISwapChain.h"
 #include "Engine/Graphics/RHI/DX/DXGIFormat.h"
 #include "Engine/Graphics/RHI/DX/RHIDxResultCheck.h"
@@ -276,10 +279,7 @@ namespace sw
         /** @brief 이번 프레임이 쓰는 쿼리 구간의 시작 인덱스를 반환합니다. */
         uint32 getTimestampBase() const { return _frameRing.currentIndex() * constant::render::kMaxGPUTimestampSlot; }
         /** @brief 슬롯 하나를 기록했다고 표시합니다. 여러 패스 스레드가 동시에 부를 수 있습니다. */
-        void markTimestampWritten( uint32 slotIndex )
-        {
-            _timestampWrittenMask.set( slotIndex );
-        }
+        void                         markTimestampWritten( uint32 slotIndex ) { _timestampRing.markWritten( slotIndex ); }
         void                         resizeInternal( uint32 width, uint32 height ) override;
         [[nodiscard]] IRHISwapChain* createSwapChainInternal( const RHISwapChainDesc& desc ) override;
         void                         resizeSwapChainInternal( IRHISwapChain& swapChain, uint32 width, uint32 height ) override;
@@ -417,6 +417,12 @@ namespace sw
             D3D12_CPU_DESCRIPTOR_HANDLE            _offlineCPUHandle{}; ///< 오프라인 힙의 같은 뷰. 슬롯 테이블 복사 원본이다(가시 힙은 복사 원본이 될 수 없다).
             RHIBufferHandle                        _buffer{ 0 };
             RHITextureHandle                       _texture{ 0 };
+
+            /** @brief `RHIBindlessRegistry` 가 "이 칸이 비었는가" 를 묻는 데 씁니다(핸들 값은 번호에서 나오므로 보지 않는다). */
+            bool operator==( const BindlessResourceRecord& other ) const
+            {
+                return _resource.Get() == other._resource.Get() && _buffer == other._buffer && _texture == other._texture;
+            }
         };
 
         // 구조 버퍼 갱신(updateStructuredBufferRegions) 전용 프레임 링 슬롯. 매 호출마다 업로드 힙과 커맨드 리스트를
@@ -458,13 +464,14 @@ namespace sw
 
         /**
          * @struct D3D12StagingRing
-         * @brief 영속 매핑한 업로드 힙 버퍼 하나와 그 구간 할당기입니다. 텍스처 업로드가 소스를 여기에 복사한 뒤 복사 리스트가 이 버퍼에서 읽습니다.
+         * @brief 영속 매핑한 스테이징 버퍼 하나와 그 구간 할당기입니다. 업로드 링은 소스를 여기에 복사한 뒤 복사 리스트가 읽고, 되읽기 링은 복사 리스트가 쓴 뒤 가져가기가 읽습니다(Vulkan 과 같은 두 링).
          * @details 구간은 시리얼을 붙여(`markSubmitted`) 워터마크가 지나면 돌아온다. 링보다 큰 한 장은 할당기가 단독 구간(`RHIStagingSpan::_bSolo`, 오프셋 0)으로 내주고,
          *          그 크기의 일회성 업로드 힙 버퍼(`_solo*`)를 만들어 쓴다. 할당기가 단독 구간을 한 번에 하나만 내주므로 링마다 하나다. 할당기가 돌려받은 뒤(`hasLiveSolo` 거짓)
          *          `retireCompletedTransfers` 가 지운다. 구간 시작은 `D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT`(512)의 배수라 텍스처 복사의 배치 오프셋 규칙을 그대로 만족한다.
          */
         struct D3D12StagingRing
         {
+            D3D12_HEAP_TYPE                        _heapType{ D3D12_HEAP_TYPE_UPLOAD }; ///< UPLOAD(업로드 소스) 또는 READBACK(되읽기 도착지) — 단독 버퍼도 같은 힙에 만든다
             RHIStagingAllocator                    _allocator;
             Microsoft::WRL::ComPtr<ID3D12Resource> _buffer;
             uint8*                                 _pMapped{ nullptr };
@@ -487,12 +494,12 @@ namespace sw
         /// @brief 읽기 하나가 들고 있는 것입니다. 읽기 힙 버퍼와 그 안의 배치, 결과를 꺼낼 때 필요한 배치입니다(`takeTextureReadback` 이 Map 해서 읽습니다).
         struct TextureReadbackRecord
         {
-            Microsoft::WRL::ComPtr<ID3D12Resource> _readback;
-            D3D12_PLACED_SUBRESOURCE_FOOTPRINT     _footprint{};
-            RHITextureMipSpan                      _layout{};
-            UINT                                   _rowCount{ 0 };
-            UINT64                                 _rowSize{ 0 };
-            uint8                                  _bDepth{ SW_FALSE };
+            RHIStagingSpan                     _span{};      ///< 되읽기 링의 구간(가져가거나 버릴 때까지 쥔다)
+            D3D12_PLACED_SUBRESOURCE_FOOTPRINT _footprint{}; ///< 링 안 배치(`Offset` 은 링 버퍼 시작에서 센다)
+            RHITextureMipSpan                  _layout{};
+            UINT                               _rowCount{ 0 };
+            UINT64                             _rowSize{ 0 };
+            uint8                              _bDepth{ SW_FALSE };
         };
 
     protected:
@@ -564,6 +571,8 @@ namespace sw
          * @details 상수 버퍼 링, 정점/인덱스 업로드 버퍼, 전체 화면 삼각형, 업로드 스테이징 네 곳이 "만들기, 매핑" 을 이 함수로 처리한다.
          */
         [[nodiscard]] bool createMappedUploadBuffer( uint64 sizeBytes, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, void*& pOutMapped );
+        /** @brief READBACK 힙 버퍼를 만들어 영속 매핑합니다(복사 도착지 상태로 만든다). */
+        [[nodiscard]] bool createMappedReadbackBuffer( uint64 sizeBytes, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, void*& pOutMapped );
         /** @brief ComPtr 을 핸들 테이블에 넣고 핸들을 반환합니다. GPU 메모리 추적기의 `kind` 항목에 할당 크기를 올리는 유일한 지점입니다. */
         RHITextureHandle storeTexture( Microsoft::WRL::ComPtr<ID3D12Resource> texture, RHIMemoryKind kind );
     #if defined( SW_DEBUG )
@@ -639,11 +648,11 @@ namespace sw
         /** @brief 남은 전송 작업, 전송을 기다리던 해제, 가져가지 않은 읽기, 링을 놓습니다. GPU 가 쉰 뒤(종료 2단계 뒤)에 부릅니다. */
         void shutdownTransfers();
         /** @brief 업로드 힙에 @p capacityBytes 의 버퍼를 만들어 영속 매핑하고 구간 할당기를 초기화합니다. 실패하면 이유를 로그로 남기고 false 입니다. */
-        [[nodiscard]] bool createStagingRing( D3D12StagingRing& ring, uint64 capacityBytes, uint64 soloMaxBytes );
+        [[nodiscard]] bool createStagingRing( D3D12StagingRing& ring, D3D12_HEAP_TYPE heapType, uint64 capacityBytes, uint64 soloMaxBytes );
         /** @brief 링 버퍼와 단독 버퍼를 놓고 구간 할당기를 비웁니다. 없는 링이면 아무것도 하지 않습니다. */
         void destroyStagingRing( D3D12StagingRing& ring );
         /** @brief 업로드 힙 버퍼를 만들어 영속 매핑하고 메모리 추적기의 Staging 항목에 올립니다(링과 단독 버퍼가 같이 쓴다). 실패하면 두 출력은 비어 있다. */
-        [[nodiscard]] bool createMappedStagingBuffer( uint64 sizeBytes, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, uint8*& pOutMapped );
+        [[nodiscard]] bool createMappedStagingBuffer( D3D12_HEAP_TYPE heapType, uint64 sizeBytes, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, uint8*& pOutMapped );
         /** @brief `createMappedStagingBuffer` 로 만든 버퍼를 놓고 메모리 추적기에서 내립니다. 비어 있으면 아무것도 하지 않습니다. */
         void destroyMappedStagingBuffer( Microsoft::WRL::ComPtr<ID3D12Resource>& rBuffer, uint8*& pMapped );
         /**
@@ -775,10 +784,8 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D12QueryHeap> _timestampHeap;
         Microsoft::WRL::ComPtr<ID3D12Resource>  _timestampReadback;
         uint64                                  _timestampFrequency;
-        /// @brief 이번 프레임에 실제로 기록된 슬롯 비트입니다. 패스가 병렬로 기록하므로 atomic 입니다.
-        GPUTimestampSlotAtomicMask _timestampWrittenMask;
-        /// @brief 링 슬롯별로 확정한 비트입니다. 그 슬롯이 다시 돌아왔을 때 어느 슬롯이 진짜 값인지 가립니다.
-        GPUTimestampSlotMask _arrTimestampMask[constant::render::kMaxFrameCountInFlight];
+        /// @brief 이번 프레임 · 링 슬롯별로 기록된 슬롯 비트입니다. 쿼리 힙은 리셋하지 않아 안 적은 칸에 지난 사이클 값이 남으므로 이 비트로 가린다.
+        RHITimestampRing     _timestampRing;
         RHITimestampFrame    _timestampFrame; ///< 마지막으로 읽은 프레임(`readTimestamps`)
         StructuredUploadSlot _arrStructuredUploadSlot[constant::render::kMaxFrameCountInFlight];
 
@@ -804,10 +811,8 @@ namespace sw
 
         /// @brief 메인 창의 백버퍼 묶음입니다. 백버퍼, 인덱스, 리소스 상태, Present 가 모두 여기 모여 있습니다.
         D3D12RHISwapChain _swapChain;
-        /// @brief 다른 창의 스왑체인입니다(`createSwapChain`). 렌더 스레드와 GPU 를 비운 뒤에만 바뀐다.
-        vector<unique_ptr<D3D12RHISwapChain>> _listWindowSwapChain;
-        /// @brief 이 프레임에 그린 다른 창입니다. `useSwapChain` 이 올리고 `endFrame` 이 PRESENT 로 되돌려 표시한 뒤 비운다. 프레임 스트림(렌더 스레드)만 쓴다.
-        vector<D3D12RHISwapChain*> _listFrameSwapChain;
+        /// @brief 다른 창(`createSwapChain`)과 이 프레임에 그린 창입니다(`endFrame` 이 표시한 뒤 비운다).
+        RHISwapChainSet<D3D12RHISwapChain> _windowSwapChains;
 
         uint8                  _bBindlessRootSignature : 1; ///< 루트 시그니처(텍스처 배열 테이블 포함)를 만드는 데 성공했다. 네이티브 bindless 텍스처 샘플링이 가능하다.
         [[maybe_unused]] uint8 _reservedPassFlags      : 7;
@@ -849,17 +854,15 @@ namespace sw
         /// 기록 중에는 레지스트리가 바뀌지 않는다는 규칙(IRHIDevice::setParallelRecording, requireRegistryMutableNow)이
         /// 그것을 보장합니다. 주의: 기록 중에 레지스트리를 락 없이 순회하는 동안 재할당이 일어나면 GPU 가 쓰레기 디스크립터를
         /// 읽어 PageFault(VA=0)가 나고 DEVICE_HUNG 으로 이어집니다.
-        mutable shared_mutex           _bindlessMutex;
-        vector<BindlessResourceRecord> _listRegisteredBindless;
-        IndexFreeList                  _freeBindless;
-
-        /// @brief UAV 레지스트리입니다. 인덱스는 SRV/CBV 와 **같은 힙 인덱스 공간**(_freeBindless 공유)입니다. 셰이더가
-        ///        RWStructuredBuffer<T> name[] 을 그 인덱스로 고르므로 힙 슬롯 번호와 같아야 합니다.
-        vector<BindlessResourceRecord> _listRegisteredUAV;
+        mutable shared_mutex _bindlessMutex;
+        /// @brief 셰이더 가시 힙의 번호 발급기입니다. SRV/CBV 와 UAV 가 **같은 힙 인덱스 공간**을 나눈다 — 셰이더가 RWStructuredBuffer<T> name[] 을
+        ///        그 번호로 고르므로 힙 슬롯 번호와 같아야 한다. 0 번은 null 텍스처 자리라 초기화가 그 다음부터 내게 한다.
+        RHIBindlessIndexAllocator                   _bindlessIndexAllocator;
+        RHIBindlessRegistry<BindlessResourceRecord> _srvRegistry; ///< SRV/CBV 표(`_bindlessIndexAllocator` 를 나눈다)
+        RHIBindlessRegistry<BindlessResourceRecord> _uavRegistry; ///< UAV 표(`_bindlessIndexAllocator` 를 나눈다)
 
         UINT _rtvDescriptorSize;
         UINT _cbvDescriptorSize;
-        UINT _allocatedDescriptorsCount;
         /// @brief 지금까지 새로 만든 (리스트, 얼로케이터) 쌍 수입니다. 풀이 끝없이 늘어나는지 확인하기 위한 계측입니다.
         atomic<uint32> _cmdListEntryCreated;
 
@@ -883,6 +886,7 @@ namespace sw
         RHITransferFenceQueue<D3D12TransferJob> _transferFenceQueue;
         /// @brief 업로드 스테이징 링입니다(`gv_rhiStagingRingMegabytes`).
         D3D12StagingRing _uploadRing;
+        D3D12StagingRing _readbackRing; ///< 텍스처 되읽기 도착지(READBACK 힙). 예전에는 되읽기마다 읽기 버퍼를 새로 만들었다
         /// @brief 놀고 있는 전송 작업 목록입니다. 펜스 줄의 회수 콜백 안에서도 잡는 잎 락(`_transferJobMutex`)이 지킵니다.
         mutex                                         _transferJobMutex;
         vector<D3D12TransferJob> _listFreeTransferJob SW_GUARDED_BY( _transferJobMutex );

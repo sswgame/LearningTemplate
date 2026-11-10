@@ -33,6 +33,7 @@ namespace sw
     class IRHITimestampProvider;
     class RHIMemoryTracker;
     class BindlessIndexReportLog;
+    enum class ShaderTargetFormat : uint8;
 
     /** @brief `IRHIDevice::releaseHandle` 이 해제하는 핸들의 종류입니다. 종류마다 해제에 쓰는 팩터리 함수가 다릅니다. */
     /**
@@ -109,7 +110,7 @@ namespace sw
      *          - `enqueueGPURelease`: 맡긴 프레임의 GPU 작업이 끝난 **뒤에만** 부른다. 프레임 수를 세어 짐작하지 않는다
      *            (`EnqueuedGPUReleaseRunsOnlyAfterTheFrameGPUWorkIsDone`, `EnqueuedGPUReleaseRunsOnceAfterItsFrame`). 구현: DX12 · Vulkan 펜스, DX11 프레임 끝 이벤트 쿼리 링, GL 프레임 끝 `glFenceSync` 링.
      *          - 앞서가기 제한: GPU 가 `constant::render::kMaxFrameCountInFlight` 프레임보다 더 뒤처지지 못한다. 링이 차면 가장 오래된 프레임을 기다린다
-     *            (DX12 · Vulkan `beginFrame` 의 링 슬롯 대기, DX11 · GL `endFrame` 의 링 대기). Present 를 하지 않는 반복에도 적용된다.
+     *            (공통 `RHIFrameFenceRing` — Vulkan · WebGPU `beginFrame` 의 칸 대기, DX11 · GL `endFrame` 의 칸 대기, DX12 `FrameResourceRing` 의 펜스 값 대기). Present 를 하지 않는 반복에도 적용된다.
      *          - `IRHIResourceFactory::readReadbackBuffer`: 기다리지 않는다. 복사를 기록한 프레임이 끝난 뒤(위 콜백)에만 부르고, 읽기 버퍼가 아닌 핸들과
      *            버퍼를 넘는 크기는 오류를 남기고 false 다(`ReadReadbackBufferRejectsWhatIsNotAReadbackBuffer`).
      *          - `IRHIResourceFactory::submitTexture*` 와 `pollTransfer`: 제출은 소스를 복사하고 기다리지 않으며(다시 시도하면 될 때만 `Busy`, 안 되는 요청은 `Rejected`),
@@ -341,6 +342,8 @@ namespace sw
 
         /** @brief 현재 RHI 백엔드 종류를 반환합니다. */
         virtual RHIBackend getBackendType() const = 0;
+        /** @brief 이 장치가 읽는 셰이더 바이트코드 형식입니다(백엔드 표 `RHIBackendInfo::_shaderTarget`). 렌더러가 백엔드 종류로 갈라 묻지 않게 한다. */
+        ShaderTargetFormat getShaderTargetFormat() const;
 
         /**
          * @brief 셰이더가 디스크립터 인덱스로 텍스처를 샘플링할 수 있는지 반환합니다(DX12 텍스처 배열 테이블, Vulkan 디스크립터 인덱싱).

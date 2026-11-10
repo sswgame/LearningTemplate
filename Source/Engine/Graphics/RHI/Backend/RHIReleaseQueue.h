@@ -14,52 +14,35 @@
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 
-// 프레임 상수(kGPUReleaseFrameLatency)는 EngineDefines 가 아니라 RHIDescriptors.h 의 constant 블록에 있다.
-// 백엔드 간 계약 상수와 같은 위치에 모아 두기 때문이다(EngineDefines.h 의 주석 참고).
-
 namespace sw
 {
     /**
      * @class RHIReleaseQueue
-     * @brief GPU 리소스 해제 콜백을 frameLatency 프레임 뒤, 또는 GPU 펜스가 지난 뒤에 실행합니다.
+     * @brief GPU 리소스 해제 콜백을 GPU 펜스(프레임 시리얼 · 전송 시리얼)가 지난 뒤에 실행합니다.
+     * @details 키는 하나다 — GPU 가 끝낸 시리얼. CPU 프레임 수를 세어 짐작하는 길은 두지 않는다(그 길은 해제 지연과 프레임 인 플라이트 수가 우연히 같아야 안전했다).
+     *          프레임 해제의 키는 `RHIFrameFenceRing::getRecordingSerial()`(어느 스레드에서나 원자 읽기)이다. 언리얼 `FRHIResource` 지연 삭제도 펜스 기준이다(기억에 의존한 비교).
      */
     class SW_API RHIReleaseQueue
     {
     public:
         // ------------------------------------------------------------------------------
-        // 1) 수명: frameLatency 뒤 해제, 소멸 시 flushAll
+        // 1) 수명: 소멸 시 flushAll
         // ------------------------------------------------------------------------------
-        /** @brief frameLatency 프레임 뒤 해제를 수행하는 큐를 만듭니다. */
-        explicit RHIReleaseQueue( uint32 frameLatency = constant::render::kGPUReleaseFrameLatency );
+        RHIReleaseQueue();
         /** @brief 대기 중인 해제를 모두 실행합니다. */
         ~RHIReleaseQueue();
 
         // ------------------------------------------------------------------------------
         // 2) enqueue, tick, flush
         // ------------------------------------------------------------------------------
-        /** @brief GPU 리소스 해제 콜백을 지연 큐에 넣습니다. CPU 프레임 지연입니다. */
-        void enqueueRelease( const RHIResourceReleaseDelegate& releaseDelegate );
-
         /** @brief GPU 펜스 값이 완료된 뒤에 해제합니다. */
         void enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate, uint64 fenceValue );
 
         /**
-         * @brief 자원을 해제 큐에 쥐여 두었다가 CPU 프레임 지연 뒤 놓고, 그때 추적기에서 줄입니다.
+         * @brief 자원을 해제 큐에 쥐여 두었다가 펜스가 지난 뒤 놓고, 그때 추적기에서 줄입니다.
          * @details 키 공간은 템플릿 인자로 받아 람다가 델리게이트의 인라인 칸(24 바이트)에 들게 한다 — 자원 · 추적기 · id.
          *          추적기는 자원을 실제로 놓을 때 줄인다(해제 요청 시점이 아니라).
          */
-        template <RHIMemoryKeySpace kSpace, class Owned>
-        void enqueueTrackedRelease( Owned owned, RHIMemoryTracker& tracker, uint64 id )
-        {
-            RHIMemoryTracker* pTracker = &tracker;
-            enqueueRelease( RHIResourceReleaseDelegate::create( [owned, pTracker, id]()
-            {
-                (void)owned;
-                pTracker->recordFree( RHIMemoryKey{ id, kSpace } );
-            } ) );
-        }
-
-        /** @brief `enqueueTrackedRelease` 의 GPU 펜스 판입니다. 펜스가 지난 뒤 자원을 놓고 추적기에서 줄입니다. */
         template <RHIMemoryKeySpace kSpace, class Owned>
         void enqueueGPUTrackedRelease( Owned owned, RHIMemoryTracker& tracker, uint64 id, uint64 fenceValue )
         {
@@ -81,9 +64,6 @@ namespace sw
                                fenceValue );
         }
 
-        /** @brief 프레임을 진행하고 만기된 해제 콜백을 실행합니다. */
-        void tickFrame();
-
         /** @brief 완료된 GPU 펜스 이하의 해제 콜백을 실행합니다. */
         void tickCompleted( uint64 completedFence );
 
@@ -94,24 +74,10 @@ namespace sw
         uint32 getPendingReleaseCount() const;
 
     private:
-        /** @brief 어느 목록을 비울지입니다 — 목록 참조를 잠금 밖으로 넘기지 않고 잠금 안에서 고른다. */
-        enum class ReleaseList : uint8
-        {
-            Frame,
-            GPU
-        };
-
-        /** @brief 키 이하가 된 해제를 꺼내 잠금 밖에서 실행합니다(tickFrame 과 tickCompleted 공통). */
-        void releaseReady( ReleaseList which, uint64 threshold );
-
-    private:
-        RHIRetireList<RHIResourceReleaseDelegate> _listFrameEntry SW_GUARDED_BY( _spinLock ); ///< 키 = 해제할 CPU 프레임 번호
-        RHIRetireList<RHIResourceReleaseDelegate> _listGPUEntry   SW_GUARDED_BY( _spinLock ); ///< 키 = 지나야 할 GPU 펜스 값
+        RHIRetireList<RHIResourceReleaseDelegate> _listGPUEntry SW_GUARDED_BY( _spinLock ); ///< 키 = 지나야 할 GPU 펜스 값
         /// @brief tick 이 완료된 콜백을 옮겨 담는 임시 버퍼입니다. 잠금 밖에서 부르려고 옮깁니다. 프레임마다 다시 채워 용량이 남습니다.
         ///        `_spinLock` 안에서만 꺼내고 돌려놓습니다. tick 은 여러 스레드에서 올 수 있습니다(DX12 업로드 펜스 대기).
         vector<RHIResourceReleaseDelegate> _listReadyScratch SW_GUARDED_BY( _spinLock );
         mutable SpinLock                                     _spinLock;
-        uint64 _currentFrame                                 SW_GUARDED_BY( _spinLock );
-        uint32 _frameLatency                                 SW_GUARDED_BY( _spinLock );
     };
 } // namespace sw

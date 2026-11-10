@@ -59,14 +59,8 @@
 
 ### 5-2. RHI 진단(2026-11-10 — 결함 먼저, 폴더가 겹치는 단위는 순서대로)
 
-- **D1 WebGPU 백프레셔 + 공통 `RHIFrameFenceRing`(High):** 네이티브 Dawn 은 프레임 인 플라이트 상한이 없다. `WebGPURHIDevice::beginFrameInternal` 이 끝나지 않은 링을 두고 새 링을 만들어, 상수 링 · 프레임 펜스가 GPU 가 뒤처진 만큼 자란다(`IRHIDevice.h:111` 계약 위반). 네이티브는 `wgpuInstanceWaitAny` 로 가장 오래된 프레임을 기다린다. 다섯 백엔드의 프레임 펜스 링(Vulkan 손 링 · DX11/GL `retireFrameOnGPU` · WebGPU deque)을 `Backend/RHIFrameFenceRing` 하나로 모아 상한을 강제한다.
-- **D2/D3 해제 키 한 길:** Vulkan `_frameFenceCounter`(원자 아님, 렌더 스레드가 올림)를 전송 완료 콜백(`VulkanRHIResourceFactory.cpp:1115`, 폴링 스레드)이 해제 키로 읽는다 — 데이터 경쟁이다. GL · DX11 의 CPU 프레임 지연 `enqueueRelease` 는 `kGPUReleaseFrameLatency == kMaxFrameCountInFlight` 의 우연한 일치에 기댄다 → `enqueueRelease` 와 그 상수를 지우고 GPU 펜스 길 하나로. GL · WebGPU `_frameSerial` 도 같은 점검.
-- **C1 `RHIBindlessRegistry`:** 백엔드 다섯이 같은 등록표(번호 발급 · 생존 · 해제 대기 · 락)를 다시 쓴다. 공통으로 올리고 백엔드는 디스크립터 쓰기 훅만. GL · WebGPU `isBindlessIndexLive` 의 무락 읽기와 Vulkan 해제의 전 텍스처 선형 탐색도 사라진다.
-- **DX12 기록 경로 락:** 바인딩마다 `shared_mutex`(`D3D12RHICommandContext.cpp:125,151`), 배리어마다 `_resourceStateMutex` + `_mapOffscreenTexture.find`. 병렬 기록 구간의 레지스트리 불변식(`setParallelRecording`)으로 락을 걷어 내고, 텍스처 상태를 `RHIHandleTable` 레코드로 옮긴다. `bench.json` p50 으로 전후를 잰다.
-- **C2 전송 조립 템플릿:** 업로드 · 되읽기 · 구간 갱신의 조립 순서를 `Transfer/RHITextureTransferDriver` 로, DX12/Vulkan 구조 버퍼 스테이징 성장 정책을 공유한다.
-- **C3/C4 타임스탬프 링 · 스왑체인 세트:** `RHITimestampRing` · `RHISwapChainSet`. Vulkan 보조 창 재생성의 프레임 중간 `vkDeviceWaitIdle`(`VulkanRHIDevice.cpp:1634`)은 다음 프레임으로 미룬다.
-- **측정 뒤 조건부:** Vulkan 드로마다 `vkUpdateDescriptorSets` 인지 `RT.Bind.descriptorUpdates` 로 먼저 센다. WebGPU 바인드 그룹 캐시를 프레임마다 비우지 말고 펜스로 은퇴시킨다.
-- **작은 정리:** `IRHIDevice::getShaderTargetFormat()` 으로 Renderer 의 `getBackendType()` 6곳을 없앤다. `IRHIResourceFactory::create*` 에 `[[nodiscard]]`, `transitionBuffer` 단건은 `[[deprecated]]`, Vulkan 프레임마다 세마포어 `vector` 할당을 없앤다.
+- **DX12 기록 경로 락:** 바인딩마다 `shared_mutex`(`D3D12RHICommandContext::resolveBufferAddress` · `resolveOfflineView`), 배리어마다 `_resourceStateMutex` + `_mapOffscreenTexture.find`. 병렬 기록 구간의 레지스트리 불변식(`setParallelRecording`)으로 락을 걷어 내고, 텍스처 상태를 `RHIHandleTable` 레코드로 옮긴다. 등록표는 이미 `RHIBindlessRegistry`(`_srvRegistry` · `_uavRegistry` + `_bindlessIndexAllocator`)라 락만 바꾸면 된다. `bench.json` p50 으로 전후를 잰다.
+- **측정 뒤 조건부(계측은 넣었다):** 묶음 검증의 bench 로 `RT.Bind.descriptorUpdates ÷ RT.Bind.descriptorSetFlushes`(Vulkan 드로마다 슬롯 세트 갱신)와 `RT.Bind.bindGroupCreates ÷ bindGroupHits`(WebGPU 프레임 캐시)를 읽는다. 갱신이 드로 수에 붙으면 동적 오프셋 · 푸시 디스크립터로, 다시 짓기가 많으면 바인드 그룹 캐시를 프레임 펜스(`RHIFrameFenceRing`)로 은퇴시킨다.
 - **측정 뒤에만:** 중립 커맨드 스트림 · RHI 스레드, 복사 큐, SM6.6 바인드리스, RT · 메시 셰이더(`RHIHandleKind`/`RHIPipelineStateDesc._kind` + ABI 범프). Android 는 이미지마다 `VkDeviceMemory` 하나라 `maxMemoryAllocationCount`(4096)에 닿을 수 있다 → 서브할당(추정).
 
 ### 5-3. 병렬이 기본인 오브젝트 · 물리 모델(2026-11-10 설계 — 하이브리드: 언리얼 Mass + 액터 자리)

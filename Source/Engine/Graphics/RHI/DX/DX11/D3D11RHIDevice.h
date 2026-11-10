@@ -5,7 +5,6 @@
 #pragma once
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/IndexFreeList.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
@@ -13,8 +12,12 @@
 
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Foundation/EnginePlatformHeaders.h"
+#include "Engine/Graphics/RHI/Backend/RHIBindlessRegistry.h"
+#include "Engine/Graphics/RHI/Backend/RHIFrameFenceRing.h"
 #include "Engine/Graphics/RHI/Backend/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
+#include "Engine/Graphics/RHI/Backend/RHISwapChainSet.h"
+#include "Engine/Graphics/RHI/Backend/RHITimestampRing.h"
 #include "Engine/Graphics/RHI/DX/DX11/D3D11ImmediateContext.h"
 #include "Engine/Graphics/RHI/DX/DX11/D3D11RHISwapChain.h"
 #include "Engine/Graphics/RHI/DX/DXGIFormat.h"
@@ -391,8 +394,6 @@ namespace sw
         {
             Microsoft::WRL::ComPtr<ID3D11Query> _disjoint;
             Microsoft::WRL::ComPtr<ID3D11Query> _arrQuery[constant::render::kMaxGPUTimestampSlot];
-            GPUTimestampSlotMask                _writtenMask{};
-            uint8                               _bPending{ SW_FALSE };
         };
 
         /// @brief 읽기 하나가 들고 있는 것입니다. 복사한 스테이징 텍스처와, 결과 바이트를 꺼낼 때 필요한 배치입니다(`takeTextureReadback` 이 쿼리가 지난 뒤 기다리는 `Map` 으로 읽습니다).
@@ -474,8 +475,6 @@ namespace sw
         // 원시 vector 를 직접 인덱싱하면 기록 스레드가 쓰레기를 읽는다. 읽기는 공유 락이라 병렬
         // 기록끼리는 서로를 막지 않는다.
         // ------------------------------------------------------------------------------
-        /** @brief 등록된 버퍼 슬롯 수입니다. */
-        size_t bindlessBufferCount() const;
         /** @brief 인덱스의 버퍼 핸들입니다. 범위 밖이면 0 입니다. */
         RHIBufferHandle bindlessBufferAt( RHIDescriptorIndex index ) const;
         /** @brief 인덱스의 텍스처 핸들입니다. 범위 밖이면 0 입니다. */
@@ -552,10 +551,8 @@ namespace sw
         RHIFormat             _backBufferFormat; ///< 스왑체인 백버퍼 포맷(DXGI 는 요청값 그대로)
         /// @brief 메인 창의 백버퍼입니다. 백버퍼 RTV, 크기, Present 가 모두 여기 모여 있습니다.
         D3D11RHISwapChain _swapChain;
-        /// @brief 다른 창의 스왑체인입니다(`createSwapChain`). 렌더 스레드와 GPU 를 비운 뒤에만 바뀐다.
-        vector<unique_ptr<D3D11RHISwapChain>> _listWindowSwapChain;
-        /// @brief 이 프레임에 그린 다른 창입니다. `useSwapChain` 이 백버퍼를 잡으며 올리고 `endFrame` 이 표시한 뒤 비운다. 프레임 스트림(렌더 스레드)만 쓴다.
-        vector<D3D11RHISwapChain*> _listFrameSwapChain;
+        /// @brief 다른 창(`createSwapChain`)과 이 프레임에 그린 창입니다(`endFrame` 이 표시한 뒤 비운다).
+        RHISwapChainSet<D3D11RHISwapChain> _windowSwapChains;
 
         /// @brief 버퍼 핸들에서 버퍼와 SRV 를 찾는 테이블입니다(텍스처 `_gpuTextures` 와 같은 구조). 기록 스레드가 SRV 를 락 없이 읽습니다(`resolveBufferSRV`).
         RHIHandleTable<BufferRecord>  _gpuBuffers;
@@ -575,9 +572,8 @@ namespace sw
          *          아직 결과가 없으면 이번 바퀴는 건너뛴다. 기다리면 측정하려던 파이프라인을 멈춰 세운다.
          */
         D3D11TimestampFrame _arrTimestampFrame[constant::render::kMaxFrameCountInFlight];
-        uint32              _timestampFrameIndex;
-        /// @brief 이번 프레임에 기록된 슬롯 비트입니다. 패스가 병렬로 기록하므로 atomic 입니다.
-        GPUTimestampSlotAtomicMask _timestampWrittenMask;
+        /// @brief 이번 프레임 · 묶음마다 기록된 슬롯 비트입니다(패스가 병렬로 기록한다). 묶음 칸은 프레임 펜스 링의 기록 칸이다.
+        RHITimestampRing _timestampRing;
         /// @brief 엔진이 켜기 전에는 쿼리도 만들지 않는다. `setTimestampEnabled` 는 어느 스레드에서나 부를 수 있고 기록 워커가 읽으므로 atomic 이다.
         atomic<uint8> _bTimestampEnabled;
         /// @brief 쿼리 묶음을 다 만들었다. 렌더 스레드가 만들고(release) 기록 워커의 `writeTimestampSlot` 이 읽는다(acquire).
@@ -593,21 +589,23 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D11Query> _clockQuery;
         /// @brief `waitIdleInternal` 이 GPU 가 앞선 일을 모두 끝냈는지 묻는 이벤트 쿼리입니다. 디바이스를 세울 때 만들고, 못 만들면 초기화가 실패합니다.
         Microsoft::WRL::ComPtr<ID3D11Query> _idleQuery;
-        /// @brief 프레임마다 끝에 내는 이벤트 쿼리 링입니다(`retireFrameOnGPU`). 프레임 번호 n 의 칸은 `( n - 1 ) % kMaxFrameCountInFlight` 입니다. 디바이스를 세울 때 만듭니다.
-        Microsoft::WRL::ComPtr<ID3D11Query> _arrFrameDoneQuery[constant::render::kMaxFrameCountInFlight];
-        uint64                              _frameSerial;            ///< `endFrame` 이 끝낸 프레임 수입니다. `enqueueGPURelease` 는 다음 프레임 번호(`_frameSerial + 1`)에 맡깁니다.
-        uint64                              _completedFrameSerial;   ///< GPU 가 지난 것이 확인된 가장 큰 프레임 번호입니다.
+        /// @brief 프레임마다 끝에 내는 이벤트 쿼리 링입니다(`retireFrameOnGPU`). 칸은 `RHIFrameFenceRing::getSlot` 입니다. 디바이스를 세울 때 만듭니다.
+        Microsoft::WRL::ComPtr<ID3D11Query> _arrFrameDoneQuery[RHIFrameFenceRing::kSlotCount];
+        RHIFrameFenceRing                   _frameFenceRing;         ///< 프레임 시리얼 · 완료 워터마크 · 앞서가기 상한(해제 키는 `getRecordingSerial`)
         uint64                              _lastTimestampFrequency; ///< 마지막으로 읽은 disjoint 의 주파수(틱/초)
 
-        vector<RHIBufferHandle> _listRegisteredBindless;
-        IndexFreeList           _freeBindless;
+        /// @brief UAV 번호 하나입니다 — 뷰와 그 원본 버퍼(텍스처 UAV 면 0 — SRV/UAV 해저드를 풀 때 본다).
+        struct UAVEntry
+        {
+            Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> _uav{};
+            RHIBufferHandle                                   _sourceBuffer{ 0 };
 
-        vector<RHITextureHandle> _listRegisteredTexture;
-        IndexFreeList            _freeTexture;
-
-        vector<Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView>> _listRegisteredUAV;
-        vector<RHIBufferHandle>                                   _listUAVSourceBuffer;
-        IndexFreeList                                             _freeUAV;
+            bool operator==( const UAVEntry& other ) const { return _uav.Get() == other._uav.Get() && _sourceBuffer == other._sourceBuffer; }
+        };
+        /// @brief 세 번호 공간(`RHIBindlessRegistry`, `_bindlessMutex` 아래). DX11 은 번호를 기록 때 뷰로 풀므로 비운 번호는 바로 다시 쓴다(`RHIBindlessReuse::Immediately`).
+        RHIBindlessRegistry<RHIBufferHandle>  _bufferRegistry;
+        RHIBindlessRegistry<RHITextureHandle> _textureRegistry;
+        RHIBindlessRegistry<UAVEntry>         _uavRegistry;
 
         RHIHandleTable<D3D11PipelineStateRecord> _pipelineStates;
         RHIRenderPassRegistry                    _renderPassRegistry; ///< 렌더 패스 핸들 등록부. 자기 뮤텍스로 직렬화해 어느 스레드에서나 부른다.

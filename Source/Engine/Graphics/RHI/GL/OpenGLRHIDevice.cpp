@@ -35,25 +35,21 @@ namespace sw
         , _contextOwnerThread{}
         , _contextOwnedStartNanos{ 0 }
         , _gpuBuffers{}
-        , _listRegisteredBindless{}
-        , _freeBindless{}
-        , _listRegisteredUAV{}
-        , _freeUAV{}
+        , _bindlessMutex{}
+        , _bufferRegistry{}
+        , _uavRegistry{}
         , _gpuTextures{}
         , _mapCompositeFbo{}
-        , _listRegisteredTexture{}
-        , _freeTexture{}
+        , _textureRegistry{}
         , _arrTimestampQuery{}
-        , _arrTimestampMask{}
-        , _timestampFrameIndex{ 0 }
+        , _timestampRing{}
         , _timestampFrame{}
         , _arrComputeRootConstantShadow{}
         , _pipelineStates{}
         , _renderPassRegistry{}
-        , _releaseQueue{ constant::render::kGPUReleaseFrameLatency }
+        , _releaseQueue{}
         , _arrFrameDoneSync{}
-        , _frameSerial{ 0 }
-        , _completedFrameSerial{ 0 }
+        , _frameFenceRing{}
         , _transferSerials{ deviceGeneration }
         , _transferQueue{ _transferSerials }
         , _readbackTable{}
@@ -295,9 +291,28 @@ namespace sw
 
     bool OpenGLRHIDevice::isBindlessIndexLive( RHIBindlessIndexSpace space, RHIDescriptorIndex index ) const
     {
+        ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
         if ( space == RHIBindlessIndexSpace::Texture )
-            return index < _listRegisteredTexture.size() && _listRegisteredTexture[index]._texture != 0;
-        return index < _listRegisteredBindless.size() && _listRegisteredBindless[index]._buffer != 0;
+            return _textureRegistry.isLive( index );
+        return _bufferRegistry.isLive( index );
+    }
+
+    OpenGLRHIDevice::BindlessResourceRecord OpenGLRHIDevice::findBindlessBuffer( RHIDescriptorIndex index ) const
+    {
+        ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
+        return _bufferRegistry.get( index );
+    }
+
+    OpenGLRHIDevice::BindlessResourceRecord OpenGLRHIDevice::findBindlessUAV( RHIDescriptorIndex index ) const
+    {
+        ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
+        return _uavRegistry.get( index );
+    }
+
+    RHITextureHandle OpenGLRHIDevice::findBindlessTexture( RHIDescriptorIndex index ) const
+    {
+        ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
+        return _textureRegistry.get( index )._texture;
     }
 
     namespace
@@ -716,18 +731,16 @@ namespace sw
         // GL 자원을 지우기 전에 컨텍스트를 되찾는다 (플랫폼이 필요 없으면 아무것도 하지 않는다).
         if ( _platformContext != nullptr )
             _platformContext->reacquireForFrame();
-        for ( const unique_ptr<OpenGLRHISwapChain>& pWindow : _listWindowSwapChain )
+        for ( const unique_ptr<OpenGLRHISwapChain>& pWindow : _windowSwapChains.getOwnedList() )
         {
             if ( _platformContext != nullptr )
                 _platformContext->destroyWindowSurface( pWindow->getSurface() );
         }
-        _listWindowSwapChain.clear();
-        _listFrameSwapChain.clear();
+        _windowSwapChains.clear();
         _pCurrentSwapChain = &_swapChain;
 
         // 프레임 펜스는 `waitIdleInternal`(종료 2단계)이 이미 놓았다. 다시 세우는 디바이스가 이어받지 않도록 번호만 처음으로 돌린다.
-        _frameSerial          = 0;
-        _completedFrameSerial = 0;
+        _frameFenceRing.reset();
 
         if ( _defaultSampler )
         {
@@ -774,12 +787,12 @@ namespace sw
             }
         } );
         _recordingState._geometry = RHIGeometryBindings{};
-        _listRegisteredBindless.clear();
-        _listRegisteredUAV.clear();
-        _listRegisteredTexture.clear();
-        _freeTexture.clear();
-        _freeBindless.clear();
-        _freeUAV.clear();
+        {
+            UniqueLock<shared_mutex> lock{ _bindlessMutex };
+            _bufferRegistry.clear();
+            _uavRegistry.clear();
+            _textureRegistry.clear();
+        }
         Memory::set( _arrComputeRootConstantShadow, 0, sizeof( _arrComputeRootConstantShadow ) );
 
         _pipelineStates.forEach( []( OpenGLPipelineStateRecord& pso )
@@ -967,8 +980,8 @@ namespace sw
             return;
 
         // glQueryCounter 는 Begin/End 쌍이 아니다. 한 번 부르면 "여기까지 GPU 가 끝낸 시각" 이 찍힌다.
-        glQueryCounter( _arrTimestampQuery[_timestampFrameIndex * constant::render::kMaxGPUTimestampSlot + slotIndex], GL_TIMESTAMP );
-        _arrTimestampMask[_timestampFrameIndex].set( slotIndex );
+        glQueryCounter( _arrTimestampQuery[_frameFenceRing.getRecordingSlot() * constant::render::kMaxGPUTimestampSlot + slotIndex], GL_TIMESTAMP );
+        _timestampRing.markWritten( slotIndex );
     }
 
     void OpenGLRHIDevice::ensureTimestampQueries()
@@ -991,12 +1004,13 @@ namespace sw
     void OpenGLRHIDevice::collectTimestampsForSlot()
     {
         _timestampFrame._listMicro.clear();
-        const GPUTimestampSlotMask writtenMask         = _arrTimestampMask[_timestampFrameIndex];
+        const uint32               ringSlot            = _frameFenceRing.getRecordingSlot();
+        const GPUTimestampSlotMask writtenMask         = _timestampRing.getSlotMask( ringSlot );
         const bool                 bNoTimestampsToRead = _bTimestampEnabled.load( std::memory_order_relaxed ) == SW_FALSE || _bTimestampReady.load( std::memory_order_acquire ) == SW_FALSE || writtenMask.any() == false;
         if ( bNoTimestampsToRead )
             return;
 
-        const uint32         base = _timestampFrameIndex * constant::render::kMaxGPUTimestampSlot;
+        const uint32         base = ringSlot * constant::render::kMaxGPUTimestampSlot;
         uint64               arrTick[constant::render::kMaxGPUTimestampSlot]{};
         GPUTimestampSlotMask readyMask{};
         for ( uint32 slotIndex = 0; slotIndex < constant::render::kMaxGPUTimestampSlot; ++slotIndex )
@@ -1025,8 +1039,7 @@ namespace sw
         void* const pSurface = _platformContext != nullptr ? _platformContext->createWindowSurface( desc ) : nullptr;
         if ( pSurface == nullptr )
             return nullptr;
-        _listWindowSwapChain.push_back( make_unique<OpenGLRHISwapChain>( pSurface, desc._width, desc._height ) );
-        return _listWindowSwapChain.back().get();
+        return _windowSwapChains.add( make_unique<OpenGLRHISwapChain>( pSurface, desc._width, desc._height ) );
     }
 
     void OpenGLRHIDevice::resizeSwapChainInternal( IRHISwapChain& swapChain, uint32 width, uint32 height )
@@ -1039,8 +1052,7 @@ namespace sw
         OpenGLRHISwapChain& window = static_cast<OpenGLRHISwapChain&>( swapChain );
         if ( _platformContext != nullptr )
             _platformContext->destroyWindowSurface( window.getSurface() );
-        (void)VectorUtil::removeIf( _listWindowSwapChain, [&window]( const unique_ptr<OpenGLRHISwapChain>& pEntry )
-        { return pEntry.get() == &window; } );
+        _windowSwapChains.remove( window );
     }
 
     OpenGLRHISwapChain* OpenGLRHIDevice::useSwapChain( IRHISwapChain* pSwapChain )
@@ -1052,8 +1064,8 @@ namespace sw
                 return nullptr;
             _pCurrentSwapChain = pTarget;
         }
-        if ( pTarget != &_swapChain && std::find( _listFrameSwapChain.begin(), _listFrameSwapChain.end(), pTarget ) == _listFrameSwapChain.end() )
-            _listFrameSwapChain.push_back( pTarget );
+        if ( pTarget != &_swapChain )
+            (void)_windowSwapChains.markUsedThisFrame( *pTarget );
         return pTarget;
     }
 
@@ -1074,7 +1086,7 @@ namespace sw
         // 이 슬롯은 곧 다시 쓴다. 덮어쓰기 전에 지난 바퀴의 결과를 한 번만 묻는다.
         ensureTimestampQueries();
         collectTimestampsForSlot();
-        _arrTimestampMask[_timestampFrameIndex] = GPUTimestampSlotMask{};
+        _timestampRing.beginFrame( _frameFenceRing.getRecordingSlot() );
     }
 
     void OpenGLRHIDevice::endFrameInternal( bool vsync, bool bPresent )
@@ -1082,16 +1094,16 @@ namespace sw
         if ( _bInitialized == SW_FALSE )
             return;
 
-        // present 여부와 무관하게 이번 프레임의 슬롯은 다 기록됐다. 다음 슬롯으로 넘긴다.
-        _timestampFrameIndex = ( _timestampFrameIndex + 1 ) % constant::render::kMaxFrameCountInFlight;
+        // present 여부와 무관하게 이번 프레임의 슬롯은 다 기록됐다. 칸에 굳힌다(칸은 `retireFrameOnGPU` 의 제출 표시로 넘어간다).
+        (void)_timestampRing.closeFrame( _frameFenceRing.getRecordingSlot() );
 
         // 이 프레임에 그린 다른 창을 먼저 내보내고 메인 창으로 돌아간다(아래 present 가 메인 창을 다시 건다).
-        for ( OpenGLRHISwapChain* pWindow : _listFrameSwapChain )
+        for ( OpenGLRHISwapChain* pWindow : _windowSwapChains.getFrameList() )
         {
             if ( bPresent && _platformContext != nullptr && _platformContext->makeCurrentOnWindowSurface( pWindow->getSurface() ) )
                 _platformContext->presentWindowSurface( pWindow->getSurface() );
         }
-        _listFrameSwapChain.clear();
+        _windowSwapChains.clearFrame();
         if ( _pCurrentSwapChain != &_swapChain && _platformContext != nullptr )
             (void)_platformContext->makeCurrent(); // 실패는 다음 프레임의 reacquireForFrame 이 다시 본다
         _pCurrentSwapChain = &_swapChain;
@@ -1099,7 +1111,6 @@ namespace sw
         if ( bPresent == false )
         {
             retireFrameOnGPU();
-            _releaseQueue.tickFrame();
             return;
         }
 
@@ -1116,7 +1127,6 @@ namespace sw
         if ( _platformContext != nullptr )
             _platformContext->present();
         retireFrameOnGPU();
-        _releaseQueue.tickFrame();
     }
 
     void OpenGLRHIDevice::waitIdleInternal()
@@ -1134,7 +1144,7 @@ namespace sw
                     glDeleteSync( static_cast<GLsync>( rpSync ) );
                 rpSync = nullptr;
             }
-            _completedFrameSerial = _frameSerial;
+            _frameFenceRing.markAllCompleted();
             // glFinish 가 낸 전송도 모두 끝냈다. 펜스를 놓고 워터마크를 올린다.
             _transferQueue.retireAll( []( void*& pSync )
             {
@@ -1312,43 +1322,41 @@ namespace sw
     void OpenGLRHIDevice::retireFrameOnGPU()
     {
         ScopedOpenGLContext contextScope( this );
-        const uint64        serial     = _frameSerial + 1;
-        void*&              rpSlotSync = _arrFrameDoneSync[( serial - 1 ) % constant::render::kMaxFrameCountInFlight];
-        // 링이 한 바퀴 돌았다. 이 칸은 프레임 serial - kMaxFrameCountInFlight 의 것이니, 그 프레임이 끝나야 칸을 다시 쓴다.
-        const bool bRingFull = serial - _completedFrameSerial > constant::render::kMaxFrameCountInFlight;
-        if ( bRingFull )
+        // 링이 한 바퀴 돌았다. 이 칸은 kMaxFrameCountInFlight 프레임 앞의 것이니, 그 프레임이 끝나야 칸을 다시 쓴다.
+        (void)_frameFenceRing.waitForRecordingSlot( [this]( uint32 slot, uint64 busySerial )
         {
             constexpr GLuint64 kRingWaitTimeoutNanoseconds = 10ull * 1000ull * 1000ull * 1000ull;
+            void*&             rpSlotSync                  = _arrFrameDoneSync[slot];
             const GLenum       waitResult                  = glClientWaitSync( static_cast<GLsync>( rpSlotSync ), GL_SYNC_FLUSH_COMMANDS_BIT, kRingWaitTimeoutNanoseconds );
             if ( waitResult == GL_TIMEOUT_EXPIRED || waitResult == GL_WAIT_FAILED )
-                SW_LOG_ERROR_ID( "OpenGL.EndFrameGPUDidNot", "endFrame: the GPU did not finish frame %# (glClientWaitSync result %#)", serial - constant::render::kMaxFrameCountInFlight, static_cast<uint32>( waitResult ) );
+                SW_LOG_ERROR_ID( "OpenGL.EndFrameGPUDidNot", "endFrame: the GPU did not finish frame %# (glClientWaitSync result %#)", busySerial, static_cast<uint32>( waitResult ) );
             glDeleteSync( static_cast<GLsync>( rpSlotSync ) );
-            rpSlotSync            = nullptr;
-            _completedFrameSerial = serial - constant::render::kMaxFrameCountInFlight;
-        }
-        rpSlotSync   = glFenceSync( GL_SYNC_GPU_COMMANDS_COMPLETE, 0 );
-        _frameSerial = serial;
+            rpSlotSync = nullptr;
+            return true; // 시한을 넘겨도 칸은 다시 쓴다(이전과 같다)
+        } );
+        _arrFrameDoneSync[_frameFenceRing.getRecordingSlot()] = glFenceSync( GL_SYNC_GPU_COMMANDS_COMPLETE, 0 );
+        (void)_frameFenceRing.markSubmitted();
 
         // 이미 끝난 프레임을 오래된 순서로 모은다(기다리지 않고 묻기만 한다).
-        while ( _completedFrameSerial < _frameSerial )
+        const uint64 completedSerial = _frameFenceRing.retire( [this]( uint32 slot, uint64 serial )
         {
-            const uint64 next       = _completedFrameSerial + 1;
-            void*&       rpNextSync = _arrFrameDoneSync[( next - 1 ) % constant::render::kMaxFrameCountInFlight];
-            const GLenum pollResult = glClientWaitSync( static_cast<GLsync>( rpNextSync ), 0, 0 );
+            (void)serial;
+            void*&       rpSync     = _arrFrameDoneSync[slot];
+            const GLenum pollResult = glClientWaitSync( static_cast<GLsync>( rpSync ), 0, 0 );
             if ( pollResult == GL_TIMEOUT_EXPIRED )
-                break;
-            glDeleteSync( static_cast<GLsync>( rpNextSync ) );
-            rpNextSync            = nullptr;
-            _completedFrameSerial = next;
-        }
+                return false;
+            glDeleteSync( static_cast<GLsync>( rpSync ) );
+            rpSync = nullptr;
+            return true;
+        } );
         // 프레임을 돌리는 스레드는 컨텍스트를 쥐고 있으니 여기서 전송 워터마크도 올린다(컨텍스트 없는 스레드의 폴링은 이 값을 본다).
         retireFinishedTransfers();
-        _releaseQueue.tickCompleted( _completedFrameSerial );
+        _releaseQueue.tickCompleted( completedSerial );
     }
 
     void OpenGLRHIDevice::enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate )
     {
-        _releaseQueue.enqueueGPURelease( releaseDelegate, _frameSerial + 1 );
+        _releaseQueue.enqueueGPURelease( releaseDelegate, _frameFenceRing.getRecordingSerial() );
     }
 
     unique_ptr<IRHICommandList> OpenGLRHIDevice::createCommandList()

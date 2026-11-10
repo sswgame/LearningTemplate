@@ -59,8 +59,7 @@ namespace sw
         , _freeOnlineBlock{}
         , _frameRing{}
         , _timestampFrequency{ 0 }
-        , _timestampWrittenMask{}
-        , _arrTimestampMask{}
+        , _timestampRing{}
         , _gpuBuffers{}
         , _gpuTextures{}
         , _resourceStateMutex{}
@@ -86,12 +85,11 @@ namespace sw
         , _validationMessageCount{ 0 }
         , _validationCallbackCookie{ 0 }
         , _frameStreamState{}
-        , _listRegisteredBindless{}
-        , _freeBindless{}
-        , _listRegisteredUAV{}
+        , _bindlessIndexAllocator{ kBindlessDescriptorCapacity, kNullTextureBindlessIndex + 1 }
+        , _srvRegistry{ _bindlessIndexAllocator }
+        , _uavRegistry{ _bindlessIndexAllocator }
         , _rtvDescriptorSize{ 0 }
         , _cbvDescriptorSize{ 0 }
-        , _allocatedDescriptorsCount{ 0 }
         , _cmdListEntryCreated{ 0 }
         , _fence{ nullptr }
         , _fenceValue{ 0 }
@@ -101,12 +99,13 @@ namespace sw
         , _transferSubmitMutex{}
         , _transferFenceQueue{ _transferSerials }
         , _uploadRing{}
+        , _readbackRing{}
         , _transferJobMutex{}
         , _listFreeTransferJob{}
         , _textureTransferMutex{}
         , _mapTextureTransferMarks{}
         , _readbackTable{}
-        , _releaseQueue{ constant::render::kGPUReleaseFrameLatency }
+        , _releaseQueue{}
         , _transferReleaseQueue{}
         , _frameStreamContext{ nullptr }
         , _resourceImpl{ nullptr }
@@ -349,6 +348,29 @@ namespace sw
             return false;
 
         if ( isHrSuccess( outBuffer->Map( 0, nullptr, &pOutMapped ), "ID3D12Resource::Map (mapped upload buffer)" ) == false || pOutMapped == nullptr )
+        {
+            pOutMapped = nullptr;
+            outBuffer.Reset();
+            return false;
+        }
+        return true;
+    }
+
+    bool D3D12RHIDevice::createMappedReadbackBuffer( uint64 sizeBytes, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, void*& pOutMapped )
+    {
+        pOutMapped = nullptr;
+        outBuffer.Reset();
+
+        const D3D12_HEAP_PROPERTIES heapProps    = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_READBACK );
+        const D3D12_RESOURCE_DESC   resourceDesc = D3D12RHIResourcePreset::bufferDesc( sizeBytes );
+        if ( isHrSuccess( _device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
+                                                            IID_PPV_ARGS( outBuffer.GetAddressOf() ) ),
+                          "CreateCommittedResource (mapped readback buffer)" ) == false )
+            return false;
+
+        // CPU 접근 힙은 영속 매핑할 수 있다(ID3D12Resource::Map 비고 — https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12resource-map). 가져가기가 읽기 범위로 다시 Map 해 CPU 캐시를 무효화한다.
+        const D3D12_RANGE noRead{ 0, 0 };
+        if ( isHrSuccess( outBuffer->Map( 0, &noRead, &pOutMapped ), "ID3D12Resource::Map (mapped readback buffer)" ) == false || pOutMapped == nullptr )
         {
             pOutMapped = nullptr;
             outBuffer.Reset();
@@ -729,7 +751,7 @@ namespace sw
             onlineNull.ptr += static_cast<SIZE_T>( kNullTextureBindlessIndex ) * _cbvDescriptorSize;
             _device->CreateShaderResourceView( nullptr, &nullTexture, onlineNull );
             _device->CreateShaderResourceView( nullptr, &nullTexture, offlineDescriptorAt( kNullTextureBindlessIndex ) );
-            _allocatedDescriptorsCount = kNullTextureBindlessIndex + 1;
+            _bindlessIndexAllocator.reset( kNullTextureBindlessIndex + 1 );
         }
         {
             ScopedLock<mutex> lock{ _onlineBlockMutex };
@@ -854,23 +876,22 @@ namespace sw
         _mapOffscreenTexture.clear();
         _pipelineStates.clear();
         _renderPassRegistry.clear();
-        _listRegisteredBindless.clear();
-        _freeBindless.clear();
-        _listRegisteredUAV.clear();
+        _srvRegistry.clear();
+        _uavRegistry.clear();
+        _bindlessIndexAllocator.reset( kNullTextureBindlessIndex + 1 );
         _mapStructuredBufferState.clear();
         _gpuBuffers.clear();
         _gpuTextures.clear();
-        _frameStreamState          = D3D12RecordingState{};
-        _nextOffscreenRTVIndex     = 0;
-        _allocatedDescriptorsCount = 0;
+        _frameStreamState      = D3D12RecordingState{};
+        _nextOffscreenRTVIndex = 0;
 
-        _listFrameSwapChain.clear();
-        for ( const unique_ptr<D3D12RHISwapChain>& pWindow : _listWindowSwapChain )
+        _windowSwapChains.clearFrame();
+        for ( const unique_ptr<D3D12RHISwapChain>& pWindow : _windowSwapChains.getOwnedList() )
         {
             ScopedThreadRoleBorrow borrow{ pWindow->getRenderThreadRole() };
             pWindow->shutdown();
         }
-        _listWindowSwapChain.clear();
+        _windowSwapChains.clear();
         _swapChain.shutdown();
         _rootSignature.Reset();
         _drawCommandSignature.Reset();
@@ -947,8 +968,7 @@ namespace sw
         pSwapChain->createBackBuffers( _device.Get(), pSwapChain->getOwnedRTVHeap(), _rtvDescriptorSize );
         if ( pSwapChain->isBackBufferReady() == false )
             return nullptr;
-        _listWindowSwapChain.push_back( std::move( pSwapChain ) );
-        return _listWindowSwapChain.back().get();
+        return _windowSwapChains.add( std::move( pSwapChain ) );
     }
 
     void D3D12RHIDevice::resizeSwapChainInternal( IRHISwapChain& swapChain, uint32 width, uint32 height )
@@ -963,8 +983,7 @@ namespace sw
             ScopedThreadRoleBorrow borrow{ window.getRenderThreadRole() };
             window.shutdown();
         }
-        (void)VectorUtil::removeIf( _listWindowSwapChain, [&window]( const unique_ptr<D3D12RHISwapChain>& pEntry )
-        { return pEntry.get() == &window; } );
+        _windowSwapChains.remove( window );
     }
 
     D3D12RHISwapChain& D3D12RHIDevice::useSwapChain( IRHISwapChain* pSwapChain )
@@ -972,11 +991,8 @@ namespace sw
         if ( pSwapChain == nullptr || pSwapChain == &_swapChain )
             return _swapChain;
         D3D12RHISwapChain& swapChain = static_cast<D3D12RHISwapChain&>( *pSwapChain ); // 이 디바이스가 만든 것만 들어온다(`createSwapChain`)
-        if ( std::find( _listFrameSwapChain.begin(), _listFrameSwapChain.end(), &swapChain ) == _listFrameSwapChain.end() )
-        {
+        if ( _windowSwapChains.markUsedThisFrame( swapChain ) )
             swapChain.acquireNextImage();
-            _listFrameSwapChain.push_back( &swapChain );
-        }
         return swapChain;
     }
 
@@ -1014,7 +1030,7 @@ namespace sw
     void D3D12RHIDevice::onRenderThreadRoleChanged( std::thread::id owner )
     {
         _swapChain.bindRenderThread( owner );
-        for ( const unique_ptr<D3D12RHISwapChain>& pWindow : _listWindowSwapChain )
+        for ( const unique_ptr<D3D12RHISwapChain>& pWindow : _windowSwapChains.getOwnedList() )
         {
             pWindow->bindRenderThread( owner );
         }
@@ -1585,7 +1601,7 @@ namespace sw
     {
         // 이 슬롯은 방금 펜스를 통과했다. 지난번 이 슬롯에 적은 값이 GPU 에서 이미 끝나 있다.
         _timestampFrame._listMicro.clear();
-        const GPUTimestampSlotMask writtenMask         = _arrTimestampMask[_frameRing.currentIndex()];
+        const GPUTimestampSlotMask writtenMask         = _timestampRing.getSlotMask( _frameRing.currentIndex() );
         const bool                 bNoTimestampsToRead = _timestampReadback == nullptr || _timestampFrequency == 0 || writtenMask.any() == false;
         if ( bNoTimestampsToRead )
             return;
@@ -1617,7 +1633,7 @@ namespace sw
             // 지난번 이 슬롯에 적은 값이 GPU 에서 끝나 있다. 기다리지 않으니 파이프라인이 안 멈춘다.
             ensureTimestampResources();
             collectTimestampsForSlot();
-            _timestampWrittenMask.clear();
+            _timestampRing.beginFrame( _frameRing.currentIndex() );
             // 링 슬롯이 정해졌다. 상수버퍼 CBV 를 그 슬롯으로 맞춘다(드로우 경로에서 하던 일).
             refreshConstantBufferViews();
             // 프레임 스트림은 세그먼트로 나뉜다. 첫 세그먼트는 디바이스 소유 리스트를 그대로 쓰고,
@@ -1676,7 +1692,7 @@ namespace sw
         if ( bPresent )
         {
             _swapChain.transitionTo( _pActiveFrameList, D3D12_RESOURCE_STATE_PRESENT );
-            for ( D3D12RHISwapChain* pWindow : _listFrameSwapChain )
+            for ( D3D12RHISwapChain* pWindow : _windowSwapChains.getFrameList() )
             {
                 pWindow->transitionTo( _pActiveFrameList, D3D12_RESOURCE_STATE_PRESENT );
             }
@@ -1692,9 +1708,8 @@ namespace sw
                 // 구간 전체를 읽기 버퍼로 옮긴다. 32 칸이면 256 바이트라 옮기는 값이 사실상 공짜고,
                 // 어느 칸이 이번 것인지는 비트로 따로 굳혀 둔다(안 적은 칸에는 지난 사이클 값이 남아 있다).
                 // 슬롯 번호는 **패스 인덱스로 고정**이라 병렬 기록에도 경쟁이 없다.
-                const GPUTimestampSlotMask writtenMask       = _timestampWrittenMask.load();
-                _arrTimestampMask[_frameRing.currentIndex()] = writtenMask;
-                const bool bShouldResolveTimestamps          = _bTimestampEnabled.load( std::memory_order_relaxed ) != SW_FALSE && _timestampHeap != nullptr && _timestampReadback != nullptr &&
+                const GPUTimestampSlotMask writtenMask              = _timestampRing.closeFrame( _frameRing.currentIndex() );
+                const bool                 bShouldResolveTimestamps = _bTimestampEnabled.load( std::memory_order_relaxed ) != SW_FALSE && _timestampHeap != nullptr && _timestampReadback != nullptr &&
                                                       writtenMask.any();
                 if ( bShouldResolveTimestamps )
                 {
@@ -1764,7 +1779,7 @@ namespace sw
                 SW_PROFILE_SCOPE( "RT.Present.present" );
                 presentHr = _swapChain.present( vsync );
                 // 이 프레임에 그린 다른 창도 같은 제출 뒤에 표시한다(Godot 의 execute_and_present 가 여러 스왑체인을 함께 내는 자리).
-                for ( D3D12RHISwapChain* pWindow : _listFrameSwapChain )
+                for ( D3D12RHISwapChain* pWindow : _windowSwapChains.getFrameList() )
                 {
                     const HRESULT windowHr = pWindow->present( vsync );
                     if ( FAILED( windowHr ) )
@@ -1797,7 +1812,7 @@ namespace sw
         }
         if ( bPresent )
             _swapChain.markPresented();
-        _listFrameSwapChain.clear();
+        _windowSwapChains.clearFrame();
     }
 
     void D3D12RHIDevice::bindBindlessRootState( ID3D12GraphicsCommandList* pList )
@@ -1839,19 +1854,20 @@ namespace sw
         // 읽기 락을 잡는다. 주의: "단일 스레드 구간" 이 아니다.
         ScopedSharedLock<shared_mutex> registryLock{ _bindlessMutex };
         const uint32                   slot = _frameRing.currentIndex();
-        for ( BindlessResourceRecord& record : _listRegisteredBindless )
+        _srvRegistry.forEachLive( [this, slot]( RHIDescriptorIndex index, const BindlessResourceRecord& record )
         {
+            (void)index;
             if ( record._resource == nullptr || record._buffer == 0 )
-                continue;
+                return;
             const auto sizeIt = _mapCbAlignedSize.find( record._buffer );
             if ( sizeIt == _mapCbAlignedSize.end() )
-                continue; // 링 상수버퍼가 아니다 (구조버퍼 SRV 등은 주소가 안 바뀐다).
+                return; // 링 상수버퍼가 아니다 (구조버퍼 SRV 등은 주소가 안 바뀐다).
 
             D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc{};
             cbvDesc.BufferLocation = record._resource->GetGPUVirtualAddress() + static_cast<UINT64>( slot ) * sizeIt->second;
             cbvDesc.SizeInBytes    = sizeIt->second;
             _device->CreateConstantBufferView( &cbvDesc, record._cpuHandle );
-        }
+        } );
     }
 
     void D3D12RHIDevice::writeConstantBufferSlot( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size )
@@ -2052,23 +2068,22 @@ namespace sw
     bool D3D12RHIDevice::isBindlessIndexLive( RHIBindlessIndexSpace space, RHIDescriptorIndex index ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
-        if ( index >= _listRegisteredBindless.size() )
-            return false;
         // 힙 하나를 나눠 쓰므로 종류까지 본다 — 텍스처 자리에 버퍼 뷰가 있으면 Texture2D 로 읽는 셰이더가 잘못된 디스크립터를 읽는다.
-        const BindlessResourceRecord& record = _listRegisteredBindless[index];
-        if ( record._resource == nullptr )
+        const BindlessResourceRecord* const pRecord = _srvRegistry.find( index );
+        if ( pRecord == nullptr || pRecord->_resource == nullptr )
             return false;
-        return ( space == RHIBindlessIndexSpace::Texture ) ? record._texture != 0 : record._buffer != 0;
+        return ( space == RHIBindlessIndexSpace::Texture ) ? pRecord->_texture != 0 : pRecord->_buffer != 0;
     }
 
     bool D3D12RHIDevice::initializeTransfers( const RHISwapChainDesc& desc )
     {
-        if ( desc._stagingRingBytes == 0 )
+        if ( desc._stagingRingBytes == 0 || desc._readbackRingBytes == 0 )
         {
-            SW_LOG_ERROR_ID( "D3D12.D3D12BackendNeedsStaging", "The D3D12 backend needs a staging ring capacity (gv_rhiStagingRingMegabytes must be positive)" );
+            SW_LOG_ERROR_ID( "D3D12.D3D12BackendNeedsStaging", "The D3D12 backend needs staging and readback ring capacities (gv_rhiStagingRingMegabytes · gv_rhiReadbackRingMegabytes must be positive)" );
             return false;
         }
-        return createStagingRing( _uploadRing, desc._stagingRingBytes, desc._stagingSoloMaxBytes );
+        return createStagingRing( _uploadRing, D3D12_HEAP_TYPE_UPLOAD, desc._stagingRingBytes, desc._stagingSoloMaxBytes ) &&
+               createStagingRing( _readbackRing, D3D12_HEAP_TYPE_READBACK, desc._readbackRingBytes, desc._stagingSoloMaxBytes );
     }
 
     void D3D12RHIDevice::shutdownTransfers()
@@ -2090,11 +2105,13 @@ namespace sw
         // 가져가지 않은 읽기는 읽기 버퍼와 함께 사라진다. 그 뒤의 가져가기 · 버리기는 업로드 티켓처럼 아무 일도 하지 않는다.
         _readbackTable.clear();
         destroyStagingRing( _uploadRing );
+        destroyStagingRing( _readbackRing );
     }
 
-    bool D3D12RHIDevice::createStagingRing( D3D12StagingRing& ring, uint64 capacityBytes, uint64 soloMaxBytes )
+    bool D3D12RHIDevice::createStagingRing( D3D12StagingRing& ring, D3D12_HEAP_TYPE heapType, uint64 capacityBytes, uint64 soloMaxBytes )
     {
-        if ( createMappedStagingBuffer( capacityBytes, ring._buffer, ring._pMapped ) == false )
+        ring._heapType = heapType;
+        if ( createMappedStagingBuffer( heapType, capacityBytes, ring._buffer, ring._pMapped ) == false )
             return false;
         // 구간 시작 정렬은 텍스처 복사의 배치 오프셋 규칙(512)이다 — 구간 안에서 다시 맞추지 않아도 된다.
         ring._allocator.initialize( capacityBytes, static_cast<uint64>( D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT ), soloMaxBytes );
@@ -2111,11 +2128,12 @@ namespace sw
         ring._allocator.shutdown();
     }
 
-    bool D3D12RHIDevice::createMappedStagingBuffer( uint64 sizeBytes, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, uint8*& pOutMapped )
+    bool D3D12RHIDevice::createMappedStagingBuffer( D3D12_HEAP_TYPE heapType, uint64 sizeBytes, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, uint8*& pOutMapped )
     {
         pOutMapped = nullptr;
-        void* pMapped{ nullptr };
-        if ( createMappedUploadBuffer( sizeBytes, outBuffer, pMapped ) == false )
+        void*      pMapped{ nullptr };
+        const bool bCreated = heapType == D3D12_HEAP_TYPE_READBACK ? createMappedReadbackBuffer( sizeBytes, outBuffer, pMapped ) : createMappedUploadBuffer( sizeBytes, outBuffer, pMapped );
+        if ( bCreated == false )
         {
             SW_LOG_ERROR_ID( "D3D12.FailedCreateMapD3D12", "Failed to create or map the D3D12 staging upload buffer (%# bytes, gv_rhiStagingRingMegabytes · gv_rhiStagingSingleMaxMegabytes)", sizeBytes );
             return false;
@@ -2149,7 +2167,7 @@ namespace sw
         // 할당기가 단독 구간을 내줬다면 앞선 단독 구간은 이미 돌아왔다 — 남은 버퍼(아직 회수가 지우지 않은 것)를 GPU 가 더 쓰지 않는다.
         ScopedLock<mutex> soloLock{ ring._soloMutex };
         destroyMappedStagingBuffer( ring._soloBuffer, ring._pSoloMapped );
-        if ( createMappedStagingBuffer( outSpan._sizeBytes, ring._soloBuffer, ring._pSoloMapped ) )
+        if ( createMappedStagingBuffer( ring._heapType, outSpan._sizeBytes, ring._soloBuffer, ring._pSoloMapped ) )
             return RHISubmitResult::Accepted;
         return RHIStagingRingUtil::rejectSoloBufferFailure( ring._allocator, outSpan, "D3D12", pCaller );
     }
@@ -2268,6 +2286,7 @@ namespace sw
         _transferReleaseQueue.tickCompleted( _transferSerials.getWatermark() );
         // 할당기가 단독 구간을 돌려받았으면 그 일회성 버퍼를 지운다(업로드 힙 메모리를 링 하나 크기 넘게 쥐고 있지 않는다).
         destroyIdleSoloBuffer( _uploadRing );
+        destroyIdleSoloBuffer( _readbackRing );
     }
 
     void D3D12RHIDevice::releaseTextureAfterTransfer( Microsoft::WRL::ComPtr<ID3D12Resource> owned, RHITextureHandle texture, uint64 lastSerial )

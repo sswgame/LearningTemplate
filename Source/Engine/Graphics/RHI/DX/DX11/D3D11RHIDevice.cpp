@@ -92,8 +92,7 @@ namespace sw
         , _swapChain{}
         , _gpuBuffers{}
         , _gpuTextures{}
-        , _timestampFrameIndex{ 0 }
-        , _timestampWrittenMask{}
+        , _timestampRing{}
         , _bTimestampEnabled{ SW_FALSE }
         , _bTimestampReady{ SW_FALSE }
         , _bTimestampFrameOpen{ SW_FALSE }
@@ -102,21 +101,16 @@ namespace sw
         , _clockQuery{}
         , _idleQuery{}
         , _arrFrameDoneQuery{}
-        , _frameSerial{ 0 }
-        , _completedFrameSerial{ 0 }
+        , _frameFenceRing{}
         , _lastTimestampFrequency{ 0 }
-        , _listRegisteredBindless{}
-        , _freeBindless{}
-        , _listRegisteredTexture{}
-        , _freeTexture{}
-        , _listRegisteredUAV{}
-        , _listUAVSourceBuffer{}
-        , _freeUAV{}
+        , _bufferRegistry{}
+        , _textureRegistry{}
+        , _uavRegistry{}
         , _pipelineStates{}
         , _renderPassRegistry{}
         , _arrStaticSampler{}
         , _pHWnd{ nullptr }
-        , _releaseQueue{ constant::render::kGPUReleaseFrameLatency }
+        , _releaseQueue{}
         , _transferSerials{ deviceGeneration }
         , _transferQueue{ _transferSerials }
         , _listFreeTransferQuery{}
@@ -249,42 +243,28 @@ namespace sw
         return pRecord != nullptr ? pRecord->_srv.Get() : nullptr;
     }
 
-    size_t D3D11RHIDevice::bindlessBufferCount() const
-    {
-        ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
-        return _listRegisteredBindless.size();
-    }
-
     RHIBufferHandle D3D11RHIDevice::bindlessBufferAt( RHIDescriptorIndex index ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
-        if ( index >= _listRegisteredBindless.size() )
-            return 0;
-        return _listRegisteredBindless[index];
+        return _bufferRegistry.get( index );
     }
 
     RHITextureHandle D3D11RHIDevice::bindlessTextureAt( RHIDescriptorIndex index ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
-        if ( index >= _listRegisteredTexture.size() )
-            return 0;
-        return _listRegisteredTexture[index];
+        return _textureRegistry.get( index );
     }
 
     Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> D3D11RHIDevice::bindlessUAVAt( RHIDescriptorIndex index ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
-        if ( index >= _listRegisteredUAV.size() )
-            return nullptr;
-        return _listRegisteredUAV[index];
+        return _uavRegistry.get( index )._uav;
     }
 
     RHIBufferHandle D3D11RHIDevice::uavSourceBufferAt( RHIDescriptorIndex index ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
-        if ( index >= _listUAVSourceBuffer.size() )
-            return RHIBufferHandle{ 0 };
-        return _listUAVSourceBuffer[index];
+        return _uavRegistry.get( index )._sourceBuffer;
     }
 
     RHIBufferHandle D3D11RHIDevice::storeBuffer( Microsoft::WRL::ComPtr<ID3D11Buffer> buffer, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> srv )
@@ -474,8 +454,8 @@ namespace sw
     {
         ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
         if ( space == RHIBindlessIndexSpace::Texture )
-            return index < _listRegisteredTexture.size() && _listRegisteredTexture[index] != 0;
-        return index < _listRegisteredBindless.size() && _listRegisteredBindless[index] != 0;
+            return _textureRegistry.isLive( index );
+        return _bufferRegistry.isLive( index );
     }
 
     // 길이 유지(긴 함수 정리 기준): 디바이스 · 스왑체인 · 상태 객체 생성의 순서가 곧 의미라 나누지 않는다.
@@ -686,27 +666,24 @@ namespace sw
 
     void D3D11RHIDevice::shutdownInternal()
     {
-        _listFrameSwapChain.clear();
-        _listWindowSwapChain.clear();
+        _windowSwapChains.clear();
         _swapChain.shutdown();
         _gpuTextures.clear();
         _gpuBuffers.clear();
         _recordingState._activeGraphicsPSO = 0;
-        _listRegisteredBindless.clear();
-        _freeBindless.clear();
-        _listRegisteredTexture.clear();
-        _freeTexture.clear();
-        _listRegisteredUAV.clear();
-        _listUAVSourceBuffer.clear();
-        _freeUAV.clear();
+        {
+            UniqueLock<shared_mutex> lock{ _bindlessMutex };
+            _bufferRegistry.clear();
+            _textureRegistry.clear();
+            _uavRegistry.clear();
+        }
         _recordingState = D3D11RecordingState{};
         _idleQuery.Reset();
         for ( Microsoft::WRL::ComPtr<ID3D11Query>& frameDoneQuery : _arrFrameDoneQuery )
         {
             frameDoneQuery.Reset();
         }
-        _frameSerial          = 0;
-        _completedFrameSerial = 0;
+        _frameFenceRing.reset();
         // 낸 전송의 쿼리와 아직 가져가지 않은 읽기는 장치와 함께 놓는다(COM 이 GPU 가 쓰는 동안 자원을 붙들어 준다).
         _transferQueue.retireAll( []( TransferProbe& probe )
         { probe._query.Reset(); } );
@@ -728,8 +705,7 @@ namespace sw
         unique_ptr<D3D11RHISwapChain> pSwapChain = make_unique<D3D11RHISwapChain>();
         if ( pSwapChain->createLike( _device.Get(), _swapChain, static_cast<HWND>( desc._pWindowHandle ), desc._width, desc._height ) == false )
             return nullptr;
-        _listWindowSwapChain.push_back( std::move( pSwapChain ) );
-        return _listWindowSwapChain.back().get();
+        return _windowSwapChains.add( std::move( pSwapChain ) );
     }
 
     void D3D11RHIDevice::resizeSwapChainInternal( IRHISwapChain& swapChain, uint32 width, uint32 height )
@@ -745,8 +721,7 @@ namespace sw
             const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
             context->ClearState();
         }
-        (void)VectorUtil::removeIf( _listWindowSwapChain, [&swapChain]( const unique_ptr<D3D11RHISwapChain>& pEntry )
-        { return pEntry.get() == &swapChain; } );
+        _windowSwapChains.remove( static_cast<D3D11RHISwapChain&>( swapChain ) );
     }
 
     D3D11RHISwapChain& D3D11RHIDevice::useSwapChain( IRHISwapChain* pSwapChain )
@@ -754,11 +729,8 @@ namespace sw
         if ( pSwapChain == nullptr || pSwapChain == &_swapChain )
             return _swapChain;
         D3D11RHISwapChain& swapChain = static_cast<D3D11RHISwapChain&>( *pSwapChain ); // 이 디바이스가 만든 것만 들어온다(`createSwapChain`)
-        if ( std::find( _listFrameSwapChain.begin(), _listFrameSwapChain.end(), &swapChain ) == _listFrameSwapChain.end() )
-        {
+        if ( _windowSwapChains.markUsedThisFrame( swapChain ) )
             swapChain.acquireNextImage( _device.Get() );
-            _listFrameSwapChain.push_back( &swapChain );
-        }
         return swapChain;
     }
 
@@ -920,12 +892,12 @@ namespace sw
             return;
 
         // 이 프레임 묶음의 칸 하나. Deferred Context 마다 다른 칸이라 같은 쿼리 객체가 겹치지 않는다.
-        ID3D11Query* pQuery = _arrTimestampFrame[_timestampFrameIndex]._arrQuery[slotIndex].Get();
+        ID3D11Query* pQuery = _arrTimestampFrame[_frameFenceRing.getRecordingSlot()]._arrQuery[slotIndex].Get();
         if ( pQuery == nullptr )
             return;
         // 타임스탬프 쿼리는 Begin 이 없다. End 하나가 "지금 GPU 시각" 이다.
         pContext->End( pQuery );
-        _timestampWrittenMask.set( slotIndex );
+        _timestampRing.markWritten( slotIndex );
     }
 
     void D3D11RHIDevice::ensureTimestampResources()
@@ -957,8 +929,10 @@ namespace sw
     void D3D11RHIDevice::collectTimestampsForSlot()
     {
         _timestampFrame._listMicro.clear();
-        D3D11TimestampFrame& frame                   = _arrTimestampFrame[_timestampFrameIndex];
-        const bool           bNoTimestampFrameToRead = getTimestampSlotCount() == 0 || frame._bPending == SW_FALSE || frame._writtenMask.any() == false;
+        const uint32                ringSlot                = _frameFenceRing.getRecordingSlot();
+        D3D11TimestampFrame&        frame                   = _arrTimestampFrame[ringSlot];
+        const GPUTimestampSlotMask& writtenMask             = _timestampRing.getSlotMask( ringSlot );
+        const bool                  bNoTimestampFrameToRead = getTimestampSlotCount() == 0 || writtenMask.any() == false;
         if ( bNoTimestampFrameToRead )
             return;
 
@@ -988,7 +962,6 @@ namespace sw
         if ( waitForQuery( frame._disjoint.Get(), &disjointData, sizeof( disjointData ) ) == false )
             return;
 
-        frame._bPending = SW_FALSE;
         // 이 구간에서 GPU 클럭이 흔들렸다. 틱을 초로 바꿀 근거가 없으니 프레임을 통째로 버린다.
         if ( disjointData.Disjoint != FALSE || disjointData.Frequency == 0 )
             return;
@@ -997,7 +970,7 @@ namespace sw
         GPUTimestampSlotMask readyMask{};
         for ( uint32 slotIndex = 0; slotIndex < constant::render::kMaxGPUTimestampSlot; ++slotIndex )
         {
-            if ( frame._writtenMask.test( slotIndex ) == false )
+            if ( writtenMask.test( slotIndex ) == false )
                 continue;
 
             uint64 tick{ 0 };
@@ -1021,11 +994,10 @@ namespace sw
         const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
         if ( getTimestampSlotCount() != 0 )
         {
-            _arrTimestampFrame[_timestampFrameIndex]._writtenMask = GPUTimestampSlotMask{};
-            _timestampWrittenMask.clear();
+            _timestampRing.beginFrame( _frameFenceRing.getRecordingSlot() );
 
             // disjoint 는 프레임 전체를 감싼다. 그 사이에 즉시 컨텍스트가 커맨드 리스트를 실행한다.
-            context->Begin( _arrTimestampFrame[_timestampFrameIndex]._disjoint.Get() );
+            context->Begin( _arrTimestampFrame[_frameFenceRing.getRecordingSlot()]._disjoint.Get() );
             _bTimestampFrameOpen = SW_TRUE;
         }
 
@@ -1066,15 +1038,14 @@ namespace sw
         // beginFrame 이 열었으면 반드시 닫는다. 짝이 안 맞으면 런타임이 경고를 뿜고 값이 무의미해진다.
         if ( _bTimestampFrameOpen != SW_FALSE )
         {
-            D3D11TimestampFrame& frame = _arrTimestampFrame[_timestampFrameIndex];
+            const uint32         ringSlot = _frameFenceRing.getRecordingSlot();
+            D3D11TimestampFrame& frame    = _arrTimestampFrame[ringSlot];
             {
                 const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
                 context->End( frame._disjoint.Get() );
             }
-            frame._writtenMask   = _timestampWrittenMask.load();
-            frame._bPending      = frame._writtenMask.any() ? SW_TRUE : SW_FALSE;
+            (void)_timestampRing.closeFrame( ringSlot ); // 칸은 `retireFrameOnGPU` 의 제출 표시로 넘어간다
             _bTimestampFrameOpen = SW_FALSE;
-            _timestampFrameIndex = ( _timestampFrameIndex + 1 ) % constant::render::kMaxFrameCountInFlight;
         }
 
         if ( _swapChain.isValid() == false )
@@ -1082,7 +1053,7 @@ namespace sw
 
         _swapChain.releaseBackBufferRTV();
         // 이 프레임에 그린 다른 창을 메인 창과 같은 규칙으로 표시한다(무인 실행은 내보내지 않는다).
-        for ( D3D11RHISwapChain* pWindow : _listFrameSwapChain )
+        for ( D3D11RHISwapChain* pWindow : _windowSwapChains.getFrameList() )
         {
             pWindow->releaseBackBufferRTV();
             if ( bPresent )
@@ -1092,7 +1063,7 @@ namespace sw
                     SW_LOG_ERROR_ONCE_ID( "D3D11.WindowPresentFailedHr", "Present of a window swap chain failed hr=%#", static_cast<uint32>( windowHr ) );
             }
         }
-        _listFrameSwapChain.clear();
+        _windowSwapChains.clearFrame();
 
         if ( bPresent )
         {
@@ -1110,7 +1081,6 @@ namespace sw
         }
 
         retireFrameOnGPU();
-        _releaseQueue.tickFrame();
     }
 
     void D3D11RHIDevice::waitIdleInternal()
@@ -1125,7 +1095,7 @@ namespace sw
             context->Flush();
             if ( waitForEventQuery( context, _idleQuery.Get(), D3D11RHIDeviceInternal::kIdleWaitTimeoutMilliseconds ) == false )
                 SW_LOG_ERROR_ID( "D3D11.WaitIdleGPUDidNot", "waitIdle: the GPU did not finish within %# ms", D3D11RHIDeviceInternal::kIdleWaitTimeoutMilliseconds );
-            _completedFrameSerial = _frameSerial; // GPU 가 쉰다 — 낸 프레임이 모두 끝났다
+            _frameFenceRing.markAllCompleted(); // GPU 가 쉰다 — 낸 프레임이 모두 끝났다
             // 낸 전송도 모두 끝났다. 쿼리를 풀로 돌려주고 워터마크를 올린다(업로드 스테이징은 항목과 함께 놓인다).
             _transferQueue.retireAll( [this]( TransferProbe& probe )
             { _listFreeTransferQuery.push_back( std::move( probe._query ) ); } );
@@ -1140,30 +1110,23 @@ namespace sw
         uint64 completedSerial{ 0 };
         {
             const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
-            const uint64                            serial  = _frameSerial + 1;
-            const uint32                            slot    = static_cast<uint32>( ( serial - 1 ) % constant::render::kMaxFrameCountInFlight );
-            // 링이 한 바퀴 돌았다. 이 칸은 프레임 serial - kMaxFrameCountInFlight 의 것이니, 그 프레임이 끝나야 쿼리를 다시 쓴다.
-            const bool bRingFull = serial - _completedFrameSerial > constant::render::kMaxFrameCountInFlight;
-            if ( bRingFull )
+            // 링이 한 바퀴 돌았다. 이 칸은 kMaxFrameCountInFlight 프레임 앞의 것이니, 그 프레임이 끝나야 쿼리를 다시 쓴다.
+            (void)_frameFenceRing.waitForRecordingSlot( [this, &context]( uint32 slot, uint64 busySerial )
             {
                 if ( waitForEventQuery( context, _arrFrameDoneQuery[slot].Get(), D3D11RHIDeviceInternal::kIdleWaitTimeoutMilliseconds ) == false )
-                    SW_LOG_ERROR_ID( "D3D11.EndFrameGPUDidNot", "endFrame: the GPU did not finish frame %# within %# ms", serial - constant::render::kMaxFrameCountInFlight,
+                    SW_LOG_ERROR_ID( "D3D11.EndFrameGPUDidNot", "endFrame: the GPU did not finish frame %# within %# ms", busySerial,
                                      D3D11RHIDeviceInternal::kIdleWaitTimeoutMilliseconds );
-                _completedFrameSerial = serial - constant::render::kMaxFrameCountInFlight;
-            }
-            context->End( _arrFrameDoneQuery[slot].Get() );
-            _frameSerial = serial;
+                return true; // 시한을 넘겨도 칸은 다시 쓴다(이전과 같다 — 쿼리는 다시 End 하면 새 구간이다)
+            } );
+            context->End( _arrFrameDoneQuery[_frameFenceRing.getRecordingSlot()].Get() );
+            (void)_frameFenceRing.markSubmitted();
 
             // 이미 끝난 프레임을 오래된 순서로 모은다. Present 가 명령을 보냈으므로 여기서는 Flush 하지 않고 묻기만 한다.
-            while ( _completedFrameSerial < _frameSerial )
+            completedSerial = _frameFenceRing.retire( [this, &context]( uint32 slot, uint64 serial )
             {
-                const uint64       next      = _completedFrameSerial + 1;
-                ID3D11Query* const pNextDone = _arrFrameDoneQuery[( next - 1 ) % constant::render::kMaxFrameCountInFlight].Get();
-                if ( isEventQueryDone( context, pNextDone, D3D11_ASYNC_GETDATA_DONOTFLUSH ) == false )
-                    break;
-                _completedFrameSerial = next;
-            }
-            completedSerial = _completedFrameSerial;
+                (void)serial;
+                return isEventQueryDone( context, _arrFrameDoneQuery[slot].Get(), D3D11_ASYNC_GETDATA_DONOTFLUSH );
+            } );
         }
         // 콜백은 즉시 컨텍스트 잠금 밖에서 부른다 — 비동기 되읽기의 콜백이 같은 잠금을 잡고 Map 한다.
         _releaseQueue.tickCompleted( completedSerial );
@@ -1217,7 +1180,7 @@ namespace sw
 
     void D3D11RHIDevice::enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate )
     {
-        _releaseQueue.enqueueGPURelease( releaseDelegate, _frameSerial + 1 );
+        _releaseQueue.enqueueGPURelease( releaseDelegate, _frameFenceRing.getRecordingSerial() );
     }
 
     unique_ptr<IRHICommandList> D3D11RHIDevice::createCommandList()

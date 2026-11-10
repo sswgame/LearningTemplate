@@ -5,7 +5,7 @@
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
-#include "Core/Container/IndexFreeList.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -14,8 +14,12 @@
 
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Foundation/EnginePlatformHeaders.h"
+#include "Engine/Graphics/RHI/Backend/RHIBindlessRegistry.h"
+#include "Engine/Graphics/RHI/Backend/RHIFrameFenceRing.h"
 #include "Engine/Graphics/RHI/Backend/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
+#include "Engine/Graphics/RHI/Backend/RHISwapChainSet.h"
+#include "Engine/Graphics/RHI/Backend/RHITimestampRing.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIRenderPassRegistry.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHITimestampFrame.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHISwapChain.h"
@@ -177,7 +181,7 @@ namespace sw
 
         /**
          * @brief 텍스처 · 버퍼 등록 표의 그 자리에 핸들이 있으면 true 입니다(GL 은 인덱스를 텍스처 유닛 · 버퍼 바인딩으로 흉내 낸다).
-         * @note GL 의 등록 표에는 잠금이 없다. 표는 GL 컨텍스트를 쥔 스레드만 읽고 쓴다 — 등록 · 해제 · 파괴가 `ScopedOpenGLContext` 안에서 표를 바꾸고, 읽는 쪽은 프레임을 기록하는 스레드다.
+         * @note 등록표는 `_bindlessMutex` 가 지킨다 — 진단(`BindlessIndexValidator`)은 GL 컨텍스트 없이 어느 스레드에서나 묻는다.
          */
         bool isBindlessIndexLive( RHIBindlessIndexSpace space, RHIDescriptorIndex index ) const override;
 
@@ -268,7 +272,7 @@ namespace sw
             RHIBufferHandle  _buffer{ 0 };
             RHITextureHandle _texture{ 0 }; ///< UAV 레지스트리에서 RW 텍스처(이미지 유닛)면 0이 아니다.
 
-            /** @brief `IndexFreeList::release` 가 "이 슬롯이 비었는가" 를 묻는 데 씁니다. */
+            /** @brief `RHIBindlessRegistry` 가 "이 칸이 비었는가" 를 묻는 데 씁니다. */
             bool operator==( const BindlessResourceRecord& other ) const
             {
                 return _buffer == other._buffer && _texture == other._texture;
@@ -342,10 +346,15 @@ namespace sw
         {
             RHITextureHandle _texture{ 0 };
 
-            /** @brief `IndexFreeList::release` 가 "이 슬롯이 비었는가" 를 묻는 데 씁니다. */
+            /** @brief `RHIBindlessRegistry` 가 "이 칸이 비었는가" 를 묻는 데 씁니다. */
             bool operator==( const BindlessTextureRecord& other ) const { return _texture == other._texture; }
             bool operator!=( const BindlessTextureRecord& other ) const { return ( *this == other ) == false; }
         };
+
+        /** @brief 번호가 가리키는 버퍼 · UAV · 텍스처를 공유 잠금 아래에서 읽습니다(빈 칸이면 빈 값). */
+        BindlessResourceRecord findBindlessBuffer( RHIDescriptorIndex index ) const;
+        BindlessResourceRecord findBindlessUAV( RHIDescriptorIndex index ) const;
+        RHITextureHandle       findBindlessTexture( RHIDescriptorIndex index ) const;
 
         /// @brief 프로그램과 래스터, 블렌드, 깊이 상태입니다.
         struct OpenGLPipelineStateRecord
@@ -483,10 +492,8 @@ namespace sw
         unique_ptr<IOpenGLPlatformContext> _platformContext;
         /** @brief 메인 창입니다(표면 nullptr — 컨텍스트를 만든 창). 크기는 `_width` · `_height` 와 같다. */
         OpenGLRHISwapChain _swapChain{ nullptr, 0, 0 };
-        /** @brief 다른 창입니다(`createSwapChain`). 렌더 스레드와 GPU 를 비운 뒤에만 바뀐다. */
-        vector<unique_ptr<OpenGLRHISwapChain>> _listWindowSwapChain;
-        /** @brief 이 프레임에 그린 다른 창입니다. `endFrame` 이 표시한 뒤 비운다. */
-        vector<OpenGLRHISwapChain*> _listFrameSwapChain;
+        /** @brief 다른 창(`createSwapChain`)과 이 프레임에 그린 창입니다(`endFrame` 이 표시한 뒤 비운다). */
+        RHISwapChainSet<OpenGLRHISwapChain> _windowSwapChains;
         /** @brief 지금 컨텍스트가 걸린 창입니다(렌더 스레드). 프레임 시작 · 끝에 메인 창이다. */
         OpenGLRHISwapChain* _pCurrentSwapChain{ &_swapChain };
 
@@ -509,26 +516,25 @@ namespace sw
         /// @brief 기록 상태입니다. GL 은 실제 상태가 하나라 리스트도 이것을 함께 씁니다(OpenGLRecordingState 참고).
         OpenGLRecordingState _recordingState;
 
-        vector<BindlessResourceRecord> _listRegisteredBindless;
-        IndexFreeList                  _freeBindless;
-        vector<BindlessResourceRecord> _listRegisteredUAV;
-        IndexFreeList                  _freeUAV;
+        /// @brief 세 번호 공간(`RHIBindlessRegistry`)을 지킨다. 등록 · 해제는 배타, 읽기(바인딩 · `isBindlessIndexLive` 진단)는 공유 잠금이다.
+        ///        GL 은 번호를 기록 때 이름으로 풀므로 비운 번호는 바로 다시 쓴다(`RHIBindlessReuse::Immediately`).
+        mutable shared_mutex                        _bindlessMutex;
+        RHIBindlessRegistry<BindlessResourceRecord> _bufferRegistry;
+        RHIBindlessRegistry<BindlessResourceRecord> _uavRegistry;
 
         RHIHandleTable<OpenGLTextureRecord>                         _gpuTextures;
         unordered_map<CompositeFboKey, uint32, CompositeFboKeyHash> _mapCompositeFbo;
 
-        vector<BindlessTextureRecord> _listRegisteredTexture;
-        IndexFreeList                 _freeTexture;
+        RHIBindlessRegistry<BindlessTextureRecord> _textureRegistry;
 
         /**
          * @brief GPU 타임스탬프입니다. 프레임 링만큼 쿼리 묶음을 돌려 씁니다.
          * @details 읽기는 그 묶음을 **다시 쓰기 직전**(링 한 바퀴 뒤)에 GL_QUERY_RESULT_AVAILABLE
          *          로 먼저 물어보고 준비된 슬롯만 읽는다. 준비되지 않은 슬롯을 바로 읽으면 GL 이 거기서 막힌다.
          */
-        uint32               _arrTimestampQuery[constant::render::kMaxGPUTimestampSlot * constant::render::kMaxFrameCountInFlight];
-        GPUTimestampSlotMask _arrTimestampMask[constant::render::kMaxFrameCountInFlight];
-        uint32               _timestampFrameIndex;
-        RHITimestampFrame    _timestampFrame; ///< 마지막으로 읽은 프레임(`readTimestamps`)
+        uint32            _arrTimestampQuery[constant::render::kMaxGPUTimestampSlot * constant::render::kMaxFrameCountInFlight];
+        RHITimestampRing  _timestampRing;  ///< 칸마다 적은 슬롯. 칸은 프레임 펜스 링의 기록 칸이다(`_frameFenceRing.getRecordingSlot`)
+        RHITimestampFrame _timestampFrame; ///< 마지막으로 읽은 프레임(`readTimestamps`)
 
         uint32 _arrComputeRootConstantShadow[shaderslot::kRootConstantDwords];
 
@@ -536,10 +542,9 @@ namespace sw
         RHIRenderPassRegistry                     _renderPassRegistry; ///< 렌더 패스 핸들 등록부. 자기 뮤텍스로 직렬화해 어느 스레드에서나 부른다.
 
         RHIReleaseQueue _releaseQueue;
-        /// @brief 프레임마다 끝에 내는 펜스 링입니다(`retireFrameOnGPU`). `GLsync` 는 불투명 포인터라 `void*` 로 둔다. 프레임 번호 n 의 칸은 `( n - 1 ) % kMaxFrameCountInFlight` 이고, 비면 nullptr 입니다.
-        void*  _arrFrameDoneSync[constant::render::kMaxFrameCountInFlight];
-        uint64 _frameSerial;          ///< `endFrame` 이 끝낸 프레임 수입니다. `enqueueGPURelease` 는 다음 프레임 번호(`_frameSerial + 1`)에 맡깁니다.
-        uint64 _completedFrameSerial; ///< GPU 가 지난 것이 확인된 가장 큰 프레임 번호입니다.
+        /// @brief 프레임마다 끝에 내는 펜스 링입니다(`retireFrameOnGPU`). `GLsync` 는 불투명 포인터라 `void*` 로 둔다. 칸은 `RHIFrameFenceRing::getSlot` 이고, 비면 nullptr 입니다.
+        void*             _arrFrameDoneSync[RHIFrameFenceRing::kSlotCount];
+        RHIFrameFenceRing _frameFenceRing; ///< 프레임 시리얼 · 완료 워터마크 · 앞서가기 상한(해제 키는 `getRecordingSerial`)
 
         /// @brief 전송 티켓의 시리얼 발급기와 완료 워터마크입니다(GL 은 컨텍스트 하나라 제출 순서가 곧 실행 순서입니다).
         RHITransferSerials _transferSerials;

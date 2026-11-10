@@ -260,13 +260,6 @@ namespace sw
         inline constexpr uint32 kMaxGPUTimestampSlot = 128;
 
         /**
-         * @brief GPU 리소스를 지연 해제하는 프레임 수입니다(RHIReleaseQueue 기본 frameLatency).
-         * @details 네 RHI 백엔드(DX11, DX12, Vulkan, OpenGL)가 모두 같은 값을 써야 하는 계약이다.
-         *          한쪽만 바꾸면 GPU 가 아직 참조 중인 리소스를 일찍 해제할 위험이 있다.
-         */
-        inline constexpr uint32 kGPUReleaseFrameLatency = 3;
-
-        /**
          * @brief 게임 스레드가 만든 프레임 패킷이 렌더 스레드에 소비되기까지 큐에 쌓일 수 있는 최대
          *        프레임 수입니다(RenderThread 패킷 링 깊이).
          * @details 아직 큐에 있는(소비되지 않은) 패킷이 참조할 수 있는 자원은 최소 이 프레임 수만큼

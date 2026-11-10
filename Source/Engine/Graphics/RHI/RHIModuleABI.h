@@ -14,18 +14,18 @@ namespace sw
     class IRHIDevice;
 
     /** @brief 정수 버전입니다. 스탬프의 `v<N>` 과 같아야 합니다(아래 static_assert 가 비교합니다). */
-    inline constexpr uint32 kRHIModuleABIVersion = 52;
+    inline constexpr uint32 kRHIModuleABIVersion = 53;
     /**
      * @brief 불투명 표면 지문입니다. 커맨드 리스트와 디바이스 ABI 가 바뀌면 `v<N>` 을 올리고 문자열을 바꿉니다.
      * @details 올려야 하는 변경은 다음과 같습니다. 어느 것이든 vtable 이나 레이아웃이 바뀝니다.
      *          - IRHIDevice, IRHIResourceFactory, IRHICommandList, IRHICommandContext 의 가상 함수를 더하거나 빼거나 시그니처를 바꿀 때
      *          - 가상과 비가상 사이를 전환할 때(`waitIdle` 과 `shutdown` 은 비가상 템플릿 메서드이고 백엔드는 `...Internal` 훅만 채웁니다)
      *          - 경계를 넘는 구조체(RHITextureDesc, RHITextureUploadDesc, RHIRenderPassBeginInfo, RHINativeHandles 등)의 필드가 바뀔 때
-     *          - 백엔드 디바이스가 멤버로 가지는 공유 타입(RHI/Backend 의 FrameResourceRing 등)의 레이아웃이 바뀔 때
+     *          - 백엔드 디바이스가 멤버로 가지는 공유 타입(RHI/Backend 의 FrameResourceRing · RHIFrameFenceRing · RHIReleaseQueue 등)의 레이아웃이 바뀔 때
      *          RHINativeHandles 는 이 스탬프가 Engine ↔ RHI_* 를 덮고, Engine ↔ 호출하는 모듈(에디터)은 구조체의 `_version` 과 `_byteSize` 로 대조합니다.
      *          버전마다 무엇이 바뀌었는지는 git log 에 있습니다.
      */
-    inline constexpr auto kRHIModuleABIStamp = "rhi-cl-v52-2026-11";
+    inline constexpr auto kRHIModuleABIStamp = "rhi-cl-v53-2026-11";
 
     namespace RHIModuleABIInternal
     {

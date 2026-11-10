@@ -15,8 +15,6 @@
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/IndexFreeList.h"
-#include "Core/Container/deque.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -24,8 +22,12 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Config/RHIBackendType.h"
+#include "Engine/Graphics/RHI/Backend/RHIBindlessRegistry.h"
+#include "Engine/Graphics/RHI/Backend/RHIFrameFenceRing.h"
 #include "Engine/Graphics/RHI/Backend/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
+#include "Engine/Graphics/RHI/Backend/RHISwapChainSet.h"
+#include "Engine/Graphics/RHI/Backend/RHITimestampRing.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHITimestampFrame.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHISwapChain.h"
@@ -93,21 +95,12 @@ namespace sw
     {
         uint64 _handle{ 0 };          ///< 버퍼 또는 텍스처 핸들(0 이면 빈 칸)
         uint8  _bTexture{ SW_FALSE }; ///< 참이면 텍스처, 거짓이면 버퍼
+
+        bool operator==( const WebGPUBindlessEntry& other ) const { return _handle == other._handle && _bTexture == other._bTexture; }
     };
 
-    /** @brief 번호 공간 하나(텍스처 SRV · 버퍼 · UAV)의 표입니다. 빈 칸은 다시 씁니다. */
-    struct WebGPUBindlessTable
-    {
-        vector<WebGPUBindlessEntry> _listEntry{};
-        IndexFreeList               _freeEntry{};
-
-        [[nodiscard]] RHIDescriptorIndex add( uint64 handle, bool bTexture );
-        /** @brief 칸을 비웁니다. 이미 빈 칸(이중 해제 · 다른 공간의 번호)은 빈 목록에 다시 넣지 않는다 — 넣으면 한 번호가 두 자원에 나간다. */
-        void                                     remove( RHIDescriptorIndex index );
-        [[nodiscard]] const WebGPUBindlessEntry* find( RHIDescriptorIndex index ) const;
-        /** @brief @p handle 을 가리키는 칸을 모두 비웁니다(자원을 부술 때 — 네 백엔드와 같은 계약). */
-        void removeHandle( uint64 handle, bool bTexture );
-    };
+    /** @brief 번호 공간 하나(텍스처 SRV · 버퍼 · UAV)의 표입니다. 기록 때 번호를 자원으로 풀므로 비운 번호는 바로 다시 쓴다(`RHIBindlessReuse::Immediately`). */
+    using WebGPUBindlessTable = RHIBindlessRegistry<WebGPUBindlessEntry>;
 
     /**
      * @class WebGPUBindGroupCache
@@ -145,19 +138,16 @@ namespace sw
         uint32                                     _hitCount;     ///< 이번 프레임에 다시 건 수(진단)
     };
 
-    /** @brief 타임스탬프 되읽기 버퍼 하나입니다. 매핑 콜백이 `_state` 를 올리고, 렌더 스레드(`processCompletions`)가 읽어 비웁니다. */
+    /**
+     * @brief 프레임 칸 하나의 타임스탬프 되읽기 버퍼입니다(`RHIFrameFenceRing` 칸마다 하나 — 다른 백엔드의 칸마다 쿼리 묶음과 같은 자리).
+     * @details 매핑은 그 칸의 프레임 완료(`WebGPUFrameFence::_pendingMapCount`)에 든다 — 칸을 다시 쓰는 `beginFrame` 에서는 매핑이 끝나 있다.
+     *          적은 슬롯 마스크는 `RHITimestampRing` 이 칸마다 든다.
+     */
     struct WebGPUTimestampReadback
     {
-        enum State : uint8
-        {
-            Free = 0, ///< 다음 프레임이 쓸 수 있다
-            Mapping,  ///< 복사를 냈고 매핑을 기다린다
-            Mapped,   ///< 매핑이 끝났다 — 읽어 비운다
-            Failed,   ///< 매핑이 실패했다 — 읽지 않고 비운다
-        };
-        WGPUBuffer           _buffer{ nullptr };
-        GPUTimestampSlotMask _writtenMask{}; ///< 그 프레임에 적은 칸
-        atomic<uint8>        _state{ Free };
+        WGPUBuffer    _buffer{ nullptr };
+        uint8         _bQueued{ SW_FALSE }; ///< 이 칸에 풀이 · 복사 · 매핑을 냈다(렌더 스레드만)
+        atomic<uint8> _bMapped{ SW_FALSE }; ///< 매핑이 성공했다(콜백이 켠다)
     };
 
     /** @brief 전송 하나의 완료 표지입니다. 콜백이 켜고 `RHITransferFenceQueue` 가 순서대로 거둡니다. 주소가 콜백의 userdata 라 큐 안에서 움직이지 않게 따로 할당한다. */
@@ -176,10 +166,35 @@ namespace sw
     struct WebGPUFrameFence
     {
         uint64                  _serial{ 0 };
-        atomic<uint8>           _bWorkDone{ SW_FALSE };
+        atomic<uint8>           _bWorkDone{ SW_TRUE }; ///< 빈 칸은 끝난 것이다(`RHIFrameFenceRing` 은 낸 적 없는 칸을 기다리지 않는다)
         atomic<uint32>          _pendingMapCount{ 0 };
         WebGPURHIDevice*        _pDevice{ nullptr };
         vector<RHIBufferHandle> _listMappedBuffer{}; ///< 이 프레임에 매핑하는 읽기 버퍼(콜백이 다 끝나면 "읽을 수 있음" 으로 적는다)
+        WGPUFuture              _workDoneFuture{};   ///< 큐 완료 콜백의 퓨처 — 링이 차면 `wgpuInstanceWaitAny` 로 기다린다
+        vector<WGPUFuture>      _listMapFuture{};    ///< 매핑 콜백의 퓨처(같은 대기)
+
+        /** @brief 이 칸에 새 프레임을 겁니다. 칸의 앞 프레임은 끝났어야 합니다(링이 기다린다). */
+        void arm( uint64 serial, WebGPURHIDevice* pDevice )
+        {
+            _serial = serial;
+            _bWorkDone.store( SW_FALSE, std::memory_order_release );
+            _pendingMapCount.store( 0, std::memory_order_release );
+            _pDevice = pDevice;
+            _listMappedBuffer.clear();
+            _workDoneFuture = WGPUFuture{};
+            _listMapFuture.clear();
+        }
+        /** @brief 칸을 빈 상태(끝남)로 되돌립니다(장치를 놓을 때). */
+        void clear()
+        {
+            _bWorkDone.store( SW_TRUE, std::memory_order_release );
+            _pendingMapCount.store( 0, std::memory_order_release );
+            _listMappedBuffer.clear();
+            _workDoneFuture = WGPUFuture{};
+            _listMapFuture.clear();
+        }
+        /** @brief 큐 완료와 매핑이 모두 끝났는지 봅니다. */
+        bool isDone() const { return _bWorkDone.load( std::memory_order_acquire ) != SW_FALSE && _pendingMapCount.load( std::memory_order_acquire ) == 0; }
     };
 
     /** @brief 읽기 하나의 결과입니다(`submitTextureReadback`). 매핑 콜백이 패딩을 벗긴 바이트를 채운다. */
@@ -325,15 +340,15 @@ namespace sw
         void releaseDepthSampleCopy( WebGPUTextureRecord& record );
         /** @brief 켰는데 쿼리 세트가 없으면 만듭니다(프레임 시작). 기능이 없으면 아무것도 하지 않는다. */
         void ensureTimestampQuerySet();
-        /** @brief 이번 프레임에 적은 칸을 풀어 되읽기 버퍼로 복사합니다(프레임 인코더를 닫기 전). 빈 되읽기 버퍼가 없으면 이번 프레임은 건너뛴다(기다리지 않는다). */
+        /** @brief 이번 프레임에 적은 칸을 굳혀(`RHITimestampRing::closeFrame`) 풀고 이 프레임 칸의 되읽기 버퍼로 복사합니다(프레임 인코더를 닫기 전). */
         void resolveTimestamps();
-        /** @brief 이번 프레임의 되읽기 버퍼를 매핑합니다(제출 뒤). */
-        void mapTimestampReadback();
-        /** @brief 매핑이 끝난 되읽기 버퍼를 읽어 `_timestampFrame` 에 풀고 비웁니다(`processCompletions`). */
-        void collectTimestampReadbacks();
+        /** @brief 이번 프레임 칸의 되읽기 버퍼를 매핑하고, 매핑을 그 프레임 완료(@p pFence)에 넣습니다(제출 뒤). */
+        void mapTimestampReadback( WebGPUFrameFence* pFence );
+        /** @brief 칸 @p ringSlot 의 앞 프레임 결과를 읽어 `_timestampFrame` 에 풀고 칸을 비웁니다(`beginFrame` — 그 프레임은 끝났다). */
+        void collectTimestampReadback( uint32 ringSlot );
         /** @brief 빈 계산 패스의 시작 시각을 @p slotIndex 에 적습니다(`WebGPURHICommandList::writeTimestamp`). 쿼리 세트가 없으면 아무것도 하지 않는다. */
         void writeTimestampSlot( WGPUCommandEncoder encoder, uint32 slotIndex );
-        /** @brief 타임스탬프 되읽기 매핑 콜백입니다(userdata1 = 되읽기 버퍼). */
+        /** @brief 타임스탬프 되읽기 매핑 콜백입니다(userdata1 = 프레임 완료, userdata2 = 되읽기 버퍼). */
         static void onTimestampMapped( WGPUMapAsyncStatus status, WGPUStringView message, void* pUserdata1, void* pUserdata2 );
         /** @brief 빈 프레임 인코더를 엽니다(프레임 시작 · 리스트 사이 잘린 뒤). */
         void openFrameEncoder();
@@ -347,6 +362,8 @@ namespace sw
         void processCompletions();
         /** @brief 앞에서부터 끝난 프레임을 거둬 완료 시리얼을 올립니다(`processCompletions`). */
         void retireFinishedFrames();
+        /** @brief 칸 @p fence 의 큐 완료 · 매핑을 `wgpuInstanceWaitAny` 로 기다립니다(앞서가기 상한 — `beginFrameInternal`). 잃은 장치도 콜백은 온다(명세). */
+        [[nodiscard]] bool waitFrameFence( const WebGPUFrameFence& fence ) const;
         /** @brief 큐 완료 콜백입니다(userdata1 = 프레임 완료). */
         static void onFrameWorkDone( WGPUQueueWorkDoneStatus status, WGPUStringView message, void* pUserdata1, void* pUserdata2 );
         /** @brief 읽기 버퍼 매핑 콜백입니다(userdata1 = 프레임 완료). */
@@ -371,8 +388,10 @@ namespace sw
 
         /** @brief 지금 프레임 인코더입니다. 프레임 밖이면 nullptr 입니다. */
         WGPUCommandEncoder getFrameEncoder() const { return _frameEncoder; }
-        /** @brief 이번 프레임(다음 제출)의 시리얼입니다. 상수 링 칸 · 지연 해제가 이 값을 쓴다. */
-        uint64 getFrameSerial() const { return _frameSerial; }
+        /** @brief @p table 의 @p index 칸 값을 공유 잠금 아래에서 읽습니다(빈 칸이면 빈 값). 값으로 돌려준다 — 포인터는 다른 스레드의 등록이 표를 늘리면 매달린다. */
+        WebGPUBindlessEntry findBindless( const WebGPUBindlessTable& table, RHIDescriptorIndex index ) const;
+        /** @brief 이번 프레임(다음 제출)의 시리얼입니다. 상수 링 칸 · 지연 해제가 이 값을 쓴다. 어느 스레드에서나 읽는다. */
+        uint64 getFrameSerial() const { return _frameFenceRing.getRecordingSerial(); }
         /** @brief 살아 있는 리스트를 적습니다(종료 때 분리한다). */
         void registerCommandList( WebGPURHICommandList* pList );
         void unregisterCommandList( WebGPURHICommandList* pList );
@@ -419,9 +438,8 @@ namespace sw
         WGPUQueue    _queue;
         WGPULimits   _limits;
 
-        WebGPURHISwapChain                     _swapChain;
-        vector<unique_ptr<WebGPURHISwapChain>> _listExtraSwapChain;
-        vector<WebGPURHISwapChain*>            _listAcquiredSwapChain; ///< 이번 프레임에 그린 스왑체인(endFrame 이 표시한다)
+        WebGPURHISwapChain                  _swapChain;
+        RHISwapChainSet<WebGPURHISwapChain> _windowSwapChains; ///< 다른 창과 이번 프레임에 그린 창(endFrame 이 표시한다)
 
         WGPUCommandEncoder        _frameEncoder;
         vector<WGPUCommandBuffer> _listPendingCommandBuffer;
@@ -434,9 +452,11 @@ namespace sw
         RHIHandleTable<WebGPUPipelineRecord> _pipelines;
         RHIHandleTable<RHIRenderPassDesc>    _renderPasses;
 
-        WebGPUBindlessTable _textureTable;
-        WebGPUBindlessTable _bufferTable;
-        WebGPUBindlessTable _uavTable;
+        /// @brief 세 번호 공간을 지킨다. 등록은 게임 스레드, 읽기는 기록 스레드 · 진단(`isBindlessIndexLive`)이라 읽기는 공유 잠금이다.
+        mutable shared_mutex _bindlessMutex;
+        WebGPUBindlessTable  _textureTable;
+        WebGPUBindlessTable  _bufferTable;
+        WebGPUBindlessTable  _uavTable;
 
         WGPUSampler     _arrStaticSampler[shaderslot::kStaticSamplerArrayCount];
         WGPUTexture     _defaultTexture;
@@ -447,14 +467,13 @@ namespace sw
         WGPUBindGroupLayout  _depthCopyGroupLayout; ///< 그 파이프라인의 그룹 0(깊이 텍스처 하나)
         WebGPUBindGroupCache _bindGroupCache;
 
-        TimestampProvider                           _timestampProvider;
-        WGPUQuerySet                                _timestampQuerySet;         ///< `kMaxGPUTimestampSlot` 칸(켠 뒤 첫 프레임에 만든다)
-        WGPUBuffer                                  _timestampResolveBuffer;    ///< QueryResolve | CopySrc — 풀이 결과를 되읽기 버퍼로 옮긴다
-        vector<unique_ptr<WebGPUTimestampReadback>> _listTimestampReadback;     ///< 되읽기 버퍼 풀(콜백 userdata 라 자리가 움직이지 않게 따로 할당한다)
-        WebGPUTimestampReadback*                    _pPendingTimestampReadback; ///< 이번 프레임에 풀어 담은 버퍼(제출 뒤 매핑한다)
-        GPUTimestampSlotMask                        _timestampWrittenMask;      ///< 이번 프레임에 적은 칸(기록은 장치를 만든 한 스레드다)
-        RHITimestampFrame                           _timestampFrame;            ///< 마지막으로 읽은 프레임
-        atomic<uint8>                               _bTimestampEnabled;
+        TimestampProvider       _timestampProvider;
+        WGPUQuerySet            _timestampQuerySet;                                   ///< `kMaxGPUTimestampSlot` 칸(켠 뒤 첫 프레임에 만든다)
+        WGPUBuffer              _timestampResolveBuffer;                              ///< QueryResolve | CopySrc — 풀이 결과를 되읽기 버퍼로 옮긴다
+        WebGPUTimestampReadback _arrTimestampReadback[RHIFrameFenceRing::kSlotCount]; ///< 칸마다 되읽기 버퍼(콜백 userdata 라 자리가 움직이지 않는 고정 배열)
+        RHITimestampRing        _timestampRing;                                       ///< 이번 프레임 · 칸마다 적은 슬롯
+        RHITimestampFrame       _timestampFrame;                                      ///< 마지막으로 읽은 프레임
+        atomic<uint8>           _bTimestampEnabled;
 
         vector<ConstantRing> _listConstantRing;
         uint32               _activeRingIndex;
@@ -468,10 +487,9 @@ namespace sw
         mutex                         _liveCommandListMutex;
         vector<WebGPURHICommandList*> _listLiveCommandList;
 
-        deque<unique_ptr<WebGPUFrameFence>> _listFrameFence;       ///< 제출했고 아직 거두지 않은 프레임(오래된 것이 앞)
-        uint64                              _frameSerial;          ///< 이번 프레임(또는 다음 제출)의 시리얼 — 지연 해제가 이 값을 기다린다
-        uint64                              _lastSubmittedSerial;  ///< 마지막으로 제출한 프레임 시리얼
-        atomic<uint64>                      _completedFrameSerial; ///< GPU 가 끝낸 마지막 프레임 시리얼(`retireFinishedFrames` 가 올린다)
+        /// @brief 칸마다의 프레임 완료(`RHIFrameFenceRing::getSlot`). 콜백 userdata 라 자리가 움직이지 않는 고정 배열이다.
+        WebGPUFrameFence  _arrFrameFence[RHIFrameFenceRing::kSlotCount];
+        RHIFrameFenceRing _frameFenceRing; ///< 프레임 시리얼 · 완료 워터마크 · 앞서가기 상한(해제 키는 `getRecordingSerial`)
 
         uint8 _bInitialized         : 1;
         uint8 _bDeviceLost          : 1;

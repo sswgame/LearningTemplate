@@ -15,6 +15,7 @@
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/WebGPU/WebGPURHICommandContext.h"
 #include "Engine/Graphics/RHI/WebGPU/WebGPURHIResourceFactory.h"
+#include "Engine/Profiling/FrameProfiler.h"
 
 namespace sw
 {
@@ -22,12 +23,11 @@ namespace sw
     {
         struct WebGPURHIDeviceInternal
         {
-            static constexpr uint64 kConstantRingBytes      = 4ull * 1024ull * 1024ull;                     ///< 프레임마다의 상수 링(넘치면 더 큰 링을 하나 더 만든다)
-            static constexpr uint64 kConstantAlignment      = 256;                                          ///< 상수 버퍼 바인딩 오프셋 정렬(기본 한도 minUniformBufferOffsetAlignment)
-            static constexpr uint64 kDefaultBufferBytes     = 64ull * 1024ull;                              ///< 빈 슬롯에 거는 버퍼(셰이더가 읽는 최소 크기를 넘게 넉넉히)
-            static constexpr uint64 kIdleWaitTimeoutMs      = 10000;                                        ///< 네이티브 `waitIdle` 의 상한(DX11 · 전송 대기와 같다)
-            static constexpr uint32 kTimestampReadbackCount = constant::render::kMaxFrameCountInFlight + 1; ///< 되읽기 버퍼 풀 — 매핑이 늦어도 그만큼은 이어 잰다(넘치면 그 프레임을 건너뛴다)
-            static constexpr uint64 kTimestampBytes         = static_cast<uint64>( constant::render::kMaxGPUTimestampSlot ) * sizeof( uint64 );
+            static constexpr uint64 kConstantRingBytes  = 4ull * 1024ull * 1024ull; ///< 프레임마다의 상수 링(넘치면 더 큰 링을 하나 더 만든다)
+            static constexpr uint64 kConstantAlignment  = 256;                      ///< 상수 버퍼 바인딩 오프셋 정렬(기본 한도 minUniformBufferOffsetAlignment)
+            static constexpr uint64 kDefaultBufferBytes = 64ull * 1024ull;          ///< 빈 슬롯에 거는 버퍼(셰이더가 읽는 최소 크기를 넘게 넉넉히)
+            static constexpr uint64 kIdleWaitTimeoutMs  = 10000;                    ///< 네이티브 `waitIdle` 의 상한(DX11 · 전송 대기와 같다)
+            static constexpr uint64 kTimestampBytes     = static_cast<uint64>( constant::render::kMaxGPUTimestampSlot ) * sizeof( uint64 );
 
             /**
              * @brief 깊이 → R32 실수 사본의 WGSL 입니다. 큰 삼각형 하나로 덮고 같은 텍셀의 깊이를 `textureLoad` 로 옮긴다(필터 없음 — 크기가 같다).
@@ -91,38 +91,6 @@ namespace sw
         , _bReadbackQueued{ SW_FALSE }
         , _reserved{ 0 }
     {
-    }
-
-    RHIDescriptorIndex WebGPUBindlessTable::add( uint64 handle, bool bTexture )
-    {
-        // 등록마다 새 번호다(다섯 백엔드 같은 계약) — 같은 자원을 여러 쪽이 등록해도 각자의 번호를 각자 놓는다.
-        const WebGPUBindlessEntry entry{ handle, static_cast<uint8>( bTexture ? SW_TRUE : SW_FALSE ) };
-        return _freeEntry.allocate( _listEntry, entry );
-    }
-
-    void WebGPUBindlessTable::remove( RHIDescriptorIndex index )
-    {
-        if ( index >= _listEntry.size() || _listEntry[index]._handle == 0 )
-            return;
-        _listEntry[index] = WebGPUBindlessEntry{};
-        _freeEntry.push( index );
-    }
-
-    const WebGPUBindlessEntry* WebGPUBindlessTable::find( RHIDescriptorIndex index ) const
-    {
-        if ( index == kInvalidDescriptorIndex || index >= _listEntry.size() || _listEntry[index]._handle == 0 )
-            return nullptr;
-        return &_listEntry[index];
-    }
-
-    void WebGPUBindlessTable::removeHandle( uint64 handle, bool bTexture )
-    {
-        const uint8 kind = bTexture ? SW_TRUE : SW_FALSE;
-        for ( size_t index = 0; index < _listEntry.size(); ++index )
-        {
-            if ( _listEntry[index]._handle == handle && _listEntry[index]._bTexture == kind )
-                remove( static_cast<RHIDescriptorIndex>( index ) );
-        }
     }
 
     // ------------------------------------------------------------------------------
@@ -194,6 +162,9 @@ namespace sw
 
     void WebGPUBindGroupCache::clear()
     {
+        // NEXT 5-2 측정: 프레임마다 비우는 캐시가 얼마나 다시 짓는지 센다(만든 수 ÷ 건 수). 높으면 프레임 펜스로 은퇴시키는 캐시로 바꾼다.
+        SW_PROFILE_COUNT( "RT.Bind.bindGroupCreates", _createdCount );
+        SW_PROFILE_COUNT( "RT.Bind.bindGroupHits", _hitCount );
         for ( auto& [hash, listBucket] : _mapGroup )
         {
             (void)hash;
@@ -402,8 +373,7 @@ namespace sw
         , _queue{ nullptr }
         , _limits{}
         , _swapChain{}
-        , _listExtraSwapChain{}
-        , _listAcquiredSwapChain{}
+        , _windowSwapChains{}
         , _frameEncoder{ nullptr }
         , _listPendingCommandBuffer{}
         , _resourceFactory{}
@@ -412,6 +382,7 @@ namespace sw
         , _textures{}
         , _pipelines{}
         , _renderPasses{}
+        , _bindlessMutex{}
         , _textureTable{}
         , _bufferTable{}
         , _uavTable{}
@@ -425,9 +396,8 @@ namespace sw
         , _timestampProvider{ *this }
         , _timestampQuerySet{ nullptr }
         , _timestampResolveBuffer{ nullptr }
-        , _listTimestampReadback{}
-        , _pPendingTimestampReadback{ nullptr }
-        , _timestampWrittenMask{}
+        , _arrTimestampReadback{}
+        , _timestampRing{}
         , _timestampFrame{}
         , _bTimestampEnabled{ SW_FALSE }
         , _listConstantRing{}
@@ -439,10 +409,8 @@ namespace sw
         , _listQueuedReadbackBuffer{}
         , _liveCommandListMutex{}
         , _listLiveCommandList{}
-        , _listFrameFence{}
-        , _frameSerial{ 1 }
-        , _lastSubmittedSerial{ 0 }
-        , _completedFrameSerial{ 0 }
+        , _arrFrameFence{}
+        , _frameFenceRing{}
         , _bInitialized{ SW_FALSE }
         , _bDeviceLost{ SW_FALSE }
         , _bTextureFormatsTier1{ SW_FALSE }
@@ -726,7 +694,7 @@ namespace sw
             wgpuRenderPassEncoderEnd( pass );
             wgpuRenderPassEncoderRelease( pass );
         }
-        record._depthCopySerial = _frameSerial;
+        record._depthCopySerial = getFrameSerial();
     }
 
     void WebGPURHIDevice::releaseDepthSampleCopy( WebGPUTextureRecord& record )
@@ -790,15 +758,13 @@ namespace sw
         resolveDesc.usage       = WGPUBufferUsage_QueryResolve | WGPUBufferUsage_CopySrc;
         resolveDesc.size        = WebGPURHIDeviceInternal::kTimestampBytes;
         _timestampResolveBuffer = wgpuDeviceCreateBuffer( _device, &resolveDesc );
-        for ( uint32 index = 0; index < WebGPURHIDeviceInternal::kTimestampReadbackCount; ++index )
+        for ( WebGPUTimestampReadback& readback : _arrTimestampReadback )
         {
-            unique_ptr<WebGPUTimestampReadback> readback = make_unique<WebGPUTimestampReadback>();
-            WGPUBufferDescriptor                readDesc{};
-            readDesc.label    = WebGPURHIUtil::toStringView( "SW Timestamp Readback" );
-            readDesc.usage    = WGPUBufferUsage_MapRead | WGPUBufferUsage_CopyDst;
-            readDesc.size     = WebGPURHIDeviceInternal::kTimestampBytes;
-            readback->_buffer = wgpuDeviceCreateBuffer( _device, &readDesc );
-            _listTimestampReadback.push_back( std::move( readback ) );
+            WGPUBufferDescriptor readDesc{};
+            readDesc.label   = WebGPURHIUtil::toStringView( "SW Timestamp Readback" );
+            readDesc.usage   = WGPUBufferUsage_MapRead | WGPUBufferUsage_CopyDst;
+            readDesc.size    = WebGPURHIDeviceInternal::kTimestampBytes;
+            readback._buffer = wgpuDeviceCreateBuffer( _device, &readDesc );
         }
         if ( _timestampQuerySet == nullptr || _timestampResolveBuffer == nullptr )
             SW_LOG_ERROR_ID( "WebGPU.TimestampQuerySetFailed", "WebGPU: the timestamp query set or its resolve buffer could not be created - GPU pass times stay empty" );
@@ -823,72 +789,65 @@ namespace sw
             return;
         wgpuComputePassEncoderEnd( pass );
         wgpuComputePassEncoderRelease( pass );
-        _timestampWrittenMask.set( slotIndex );
+        _timestampRing.markWritten( slotIndex );
     }
 
     void WebGPURHIDevice::resolveTimestamps()
     {
-        const GPUTimestampSlotMask mask = _timestampWrittenMask;
-        _timestampWrittenMask           = GPUTimestampSlotMask{};
-        _pPendingTimestampReadback      = nullptr;
-        if ( mask.any() == false || _timestampQuerySet == nullptr || _timestampResolveBuffer == nullptr || _frameEncoder == nullptr )
+        const uint32               ringSlot = _frameFenceRing.getRecordingSlot();
+        const GPUTimestampSlotMask mask     = _timestampRing.closeFrame( ringSlot );
+        WebGPUTimestampReadback&   readback = _arrTimestampReadback[ringSlot];
+        readback._bQueued                   = SW_FALSE;
+        const bool bNoResolve               = mask.any() == false || _timestampQuerySet == nullptr || _timestampResolveBuffer == nullptr || readback._buffer == nullptr ||
+                                _frameEncoder == nullptr;
+        if ( bNoResolve )
             return;
-        WebGPUTimestampReadback* pFree = nullptr;
-        for ( const unique_ptr<WebGPUTimestampReadback>& readback : _listTimestampReadback )
-        {
-            if ( readback->_buffer != nullptr && readback->_state.load( std::memory_order_acquire ) == WebGPUTimestampReadback::Free )
-            {
-                pFree = readback.get();
-                break;
-            }
-        }
-        if ( pFree == nullptr )
-            return; // 앞 프레임들의 매핑이 아직이다 — 이번 프레임은 재지 않는다(기다리면 재려던 파이프라인이 멈춘다)
+        // 이 칸의 앞 프레임은 끝났고 그 결과는 beginFrame 이 읽었다(`collectTimestampReadback`) — 버퍼가 비어 있다.
         wgpuCommandEncoderResolveQuerySet( _frameEncoder, _timestampQuerySet, 0, constant::render::kMaxGPUTimestampSlot, _timestampResolveBuffer, 0 );
-        wgpuCommandEncoderCopyBufferToBuffer( _frameEncoder, _timestampResolveBuffer, 0, pFree->_buffer, 0, WebGPURHIDeviceInternal::kTimestampBytes );
-        pFree->_writtenMask = mask;
-        pFree->_state.store( WebGPUTimestampReadback::Mapping, std::memory_order_release );
-        _pPendingTimestampReadback = pFree;
+        wgpuCommandEncoderCopyBufferToBuffer( _frameEncoder, _timestampResolveBuffer, 0, readback._buffer, 0, WebGPURHIDeviceInternal::kTimestampBytes );
+        readback._bQueued = SW_TRUE;
     }
 
-    void WebGPURHIDevice::mapTimestampReadback()
+    void WebGPURHIDevice::mapTimestampReadback( WebGPUFrameFence* pFence )
     {
-        WebGPUTimestampReadback* const pReadback = _pPendingTimestampReadback;
-        _pPendingTimestampReadback               = nullptr;
-        if ( pReadback == nullptr )
+        WebGPUTimestampReadback& readback = _arrTimestampReadback[_frameFenceRing.getRecordingSlot()];
+        if ( readback._bQueued == SW_FALSE )
             return;
+        readback._bMapped.store( SW_FALSE, std::memory_order_release );
+        // 매핑을 그 프레임 완료에 넣는다 — 칸을 다시 쓸 때(beginFrame) 매핑이 끝나 있다.
+        pFence->_pendingMapCount.fetch_add( 1, std::memory_order_acq_rel );
         WGPUBufferMapCallbackInfo mapInfo{};
         mapInfo.mode      = WGPUCallbackMode_AllowSpontaneous;
         mapInfo.callback  = &WebGPURHIDevice::onTimestampMapped;
-        mapInfo.userdata1 = pReadback;
-        (void)wgpuBufferMapAsync( pReadback->_buffer, WGPUMapMode_Read, 0, WebGPURHIDeviceInternal::kTimestampBytes, mapInfo );
+        mapInfo.userdata1 = pFence;
+        mapInfo.userdata2 = &readback;
+        pFence->_listMapFuture.push_back( wgpuBufferMapAsync( readback._buffer, WGPUMapMode_Read, 0, WebGPURHIDeviceInternal::kTimestampBytes, mapInfo ) );
     }
 
     void WebGPURHIDevice::onTimestampMapped( WGPUMapAsyncStatus status, WGPUStringView message, void* pUserdata1, void* pUserdata2 )
     {
-        (void)pUserdata2;
-        WebGPUTimestampReadback* const pReadback = static_cast<WebGPUTimestampReadback*>( pUserdata1 );
+        WebGPUFrameFence* const        pFence    = static_cast<WebGPUFrameFence*>( pUserdata1 );
+        WebGPUTimestampReadback* const pReadback = static_cast<WebGPUTimestampReadback*>( pUserdata2 );
         if ( status != WGPUMapAsyncStatus_Success )
             SW_LOG_ERROR_ONCE_ID( "WebGPU.TimestampMapFailed", "WebGPU: timestamp readback mapping failed: %#", WebGPURHIUtil::fromStringView( message ) );
-        pReadback->_state.store( status == WGPUMapAsyncStatus_Success ? WebGPUTimestampReadback::Mapped : WebGPUTimestampReadback::Failed, std::memory_order_release );
+        pReadback->_bMapped.store( status == WGPUMapAsyncStatus_Success ? SW_TRUE : SW_FALSE, std::memory_order_release );
+        pFence->_pendingMapCount.fetch_sub( 1, std::memory_order_acq_rel );
     }
 
-    void WebGPURHIDevice::collectTimestampReadbacks()
+    void WebGPURHIDevice::collectTimestampReadback( uint32 ringSlot )
     {
-        for ( const unique_ptr<WebGPUTimestampReadback>& readback : _listTimestampReadback )
+        WebGPUTimestampReadback& readback = _arrTimestampReadback[ringSlot];
+        if ( readback._bQueued != SW_FALSE && readback._bMapped.load( std::memory_order_acquire ) != SW_FALSE )
         {
-            const uint8 state = readback->_state.load( std::memory_order_acquire );
-            if ( state == WebGPUTimestampReadback::Mapped )
-            {
-                // 값은 나노초다(명세) — 틱 하나 = 1 ns. 적지 않은 칸은 `RHITimestampFrame::resolve` 가 음수로 둔다(마스크).
-                const uint64* const pTick = static_cast<const uint64*>( wgpuBufferGetConstMappedRange( readback->_buffer, 0, WebGPURHIDeviceInternal::kTimestampBytes ) );
-                if ( pTick != nullptr )
-                    (void)RHITimestampFrame::resolve( pTick, readback->_writtenMask, 1.0, _timestampFrame );
-                wgpuBufferUnmap( readback->_buffer );
-            }
-            if ( state == WebGPUTimestampReadback::Mapped || state == WebGPUTimestampReadback::Failed )
-                readback->_state.store( WebGPUTimestampReadback::Free, std::memory_order_release );
+            // 값은 나노초다(명세) — 틱 하나 = 1 ns. 적지 않은 칸은 `RHITimestampFrame::resolve` 가 음수로 둔다(마스크).
+            const uint64* const pTick = static_cast<const uint64*>( wgpuBufferGetConstMappedRange( readback._buffer, 0, WebGPURHIDeviceInternal::kTimestampBytes ) );
+            if ( pTick != nullptr )
+                (void)RHITimestampFrame::resolve( pTick, _timestampRing.getSlotMask( ringSlot ), 1.0, _timestampFrame );
+            wgpuBufferUnmap( readback._buffer );
         }
+        readback._bQueued = SW_FALSE;
+        readback._bMapped.store( SW_FALSE, std::memory_order_release );
+        _timestampRing.beginFrame( ringSlot );
     }
 
     bool WebGPURHIDevice::initializeInternal( const RHISwapChainDesc& desc )
@@ -933,15 +892,21 @@ namespace sw
         _transferQueue.retireAll( []( unique_ptr<WebGPUTransferProbe>& probe )
         { (void)probe; } );
         _readbackTable.clear();
-        _listFrameFence.clear();
-        _bindGroupCache.clear();
-        for ( const unique_ptr<WebGPUTimestampReadback>& readback : _listTimestampReadback )
+        for ( WebGPUFrameFence& fence : _arrFrameFence )
         {
-            if ( readback->_buffer != nullptr )
-                wgpuBufferRelease( readback->_buffer );
+            fence.clear();
         }
-        _listTimestampReadback.clear();
-        _pPendingTimestampReadback = nullptr;
+        _frameFenceRing.reset();
+        _bindGroupCache.clear();
+        for ( WebGPUTimestampReadback& readback : _arrTimestampReadback )
+        {
+            if ( readback._buffer != nullptr )
+                wgpuBufferRelease( readback._buffer );
+            readback._buffer  = nullptr;
+            readback._bQueued = SW_FALSE;
+            readback._bMapped.store( SW_FALSE, std::memory_order_release );
+        }
+        _timestampRing.reset();
         if ( _timestampResolveBuffer != nullptr )
             wgpuBufferRelease( _timestampResolveBuffer );
         if ( _timestampQuerySet != nullptr )
@@ -975,7 +940,7 @@ namespace sw
         _defaultTextureView = nullptr;
         _defaultTexture     = nullptr;
         _defaultBuffer      = nullptr;
-        _listExtraSwapChain.clear();
+        _windowSwapChains.clear();
         _swapChain.destroy();
         _resourceFactory.reset();
         if ( _queue != nullptr )
@@ -1053,8 +1018,15 @@ namespace sw
 
     bool WebGPURHIDevice::isBindlessIndexLive( RHIBindlessIndexSpace space, RHIDescriptorIndex index ) const
     {
-        const WebGPUBindlessTable& table = space == RHIBindlessIndexSpace::Texture ? _textureTable : _bufferTable;
-        return table.find( index ) != nullptr;
+        ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
+        const WebGPUBindlessTable&     table = space == RHIBindlessIndexSpace::Texture ? _textureTable : _bufferTable;
+        return table.isLive( index );
+    }
+
+    WebGPUBindlessEntry WebGPURHIDevice::findBindless( const WebGPUBindlessTable& table, RHIDescriptorIndex index ) const
+    {
+        ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
+        return table.get( index );
     }
 
     IRHIResourceFactory* WebGPURHIDevice::getResourceFactory()
@@ -1172,7 +1144,7 @@ namespace sw
         outBuffer = ring._buffer;
         outOffset = ring._used;
         ring._used += alignedSize;
-        ring._retireSerial = _frameSerial;
+        ring._retireSerial = getFrameSerial();
     }
 
     void WebGPURHIDevice::appendConstantRing( uint64 capacity )
@@ -1185,7 +1157,7 @@ namespace sw
         ring._buffer   = wgpuDeviceCreateBuffer( _device, &desc );
         ring._capacity = capacity;
         ring._staging.resize( static_cast<size_t>( capacity ) );
-        ring._retireSerial = _frameSerial;
+        ring._retireSerial = getFrameSerial();
         _listConstantRing.push_back( std::move( ring ) );
         _activeRingIndex = static_cast<uint32>( _listConstantRing.size() - 1 );
     }
@@ -1198,11 +1170,21 @@ namespace sw
         processCompletions();
         if ( _bDeviceLost != SW_FALSE )
             return;
+        // 앞서가기 상한(`IRHIDevice` 계약): 이 칸을 앞 프레임이 아직 쓰면 그 프레임을 기다린다. 기다리지 않으면 상수 링 · 프레임 완료가 GPU 가 뒤처진 만큼 자란다.
+        // 브라우저도 같은 대기다 — 웹 빌드는 ASYNCIFY · JSPI 로 링크해 `wgpuInstanceWaitAny` 가 이벤트 루프에 양보한다(`waitForFuture` 와 같은 길).
+        const uint64 busySerial = _frameFenceRing.getRecordingSlotBusySerial();
+        if ( busySerial != 0 )
+        {
+            if ( waitFrameFence( _arrFrameFence[RHIFrameFenceRing::getSlot( busySerial )] ) == false )
+                SW_LOG_ERROR_ONCE_ID( "WebGPU.FrameFenceWaitFailed", "WebGPU: waiting for frame %# to finish failed", busySerial );
+            retireFinishedFrames();
+        }
         // 지난 프레임의 그룹은 그 프레임의 커맨드가 붙들고 있다(명세) — 캐시는 놓는다. 프레임을 넘겨 들면 놓인 자원의 핸들 값이 새 객체에 다시 나갈 수 있다.
         _bindGroupCache.clear();
         ensureTimestampQuerySet();
-        // GPU 가 끝낸 프레임의 링을 다시 쓴다 — 끝나지 않았으면 이 프레임의 첫 칸 요청이 새 링을 만든다(브라우저는 기다릴 수 없다. 링 수가 앞서간 프레임 수만큼 자란다).
-        const uint64 completed = _completedFrameSerial.load( std::memory_order_acquire );
+        collectTimestampReadback( _frameFenceRing.getRecordingSlot() ); // 이 칸의 앞 프레임은 끝났다(위 칸 대기)
+        // GPU 가 끝낸 프레임의 링을 다시 쓴다 — 끝나지 않았으면 이 프레임의 첫 칸 요청이 새 링을 만든다(앞서가기 상한이 링 수를 프레임 인 플라이트 수 언저리로 묶는다).
+        const uint64 completed = _frameFenceRing.getCompletedSerial();
         _activeRingIndex       = static_cast<uint32>( _listConstantRing.size() );
         for ( uint32 ringIndex = 0; ringIndex < _listConstantRing.size(); ++ringIndex )
         {
@@ -1223,45 +1205,44 @@ namespace sw
         resolveTimestamps(); // 프레임 인코더는 이 프레임의 마지막 세그먼트다 — 앞서 낸 리스트의 시각까지 모두 풀린다
         closeFrameEncoder();
         submitPending();
-        mapTimestampReadback();
 
-        unique_ptr<WebGPUFrameFence> fence = make_unique<WebGPUFrameFence>();
-        fence->_serial                     = _frameSerial;
-        fence->_pDevice                    = this;
-        WebGPUFrameFence* const pFence     = fence.get();
-        _listFrameFence.push_back( std::move( fence ) );
+        // 칸은 beginFrame 이 비웠다. 비지 않았으면 앞 프레임의 콜백이 이 칸을 아직 가리킨다 — 덮으면 그 콜백이 새 프레임의 셈을 깎는다.
+        const uint64 busySerial = _frameFenceRing.getRecordingSlotBusySerial();
+        if ( busySerial != 0 )
+            SW_FATAL( "WebGPU: frame %# is submitted into a ring slot still held by frame %#", _frameFenceRing.getRecordingSerial(), busySerial );
+        WebGPUFrameFence* const pFence = &_arrFrameFence[_frameFenceRing.getRecordingSlot()];
+        pFence->arm( _frameFenceRing.getRecordingSerial(), this );
         WGPUQueueWorkDoneCallbackInfo doneInfo{};
-        doneInfo.mode      = WGPUCallbackMode_AllowSpontaneous;
-        doneInfo.callback  = &WebGPURHIDevice::onFrameWorkDone;
-        doneInfo.userdata1 = pFence;
-        (void)wgpuQueueOnSubmittedWorkDone( _queue, doneInfo );
-        mapQueuedReadbacks( _frameSerial );
+        doneInfo.mode           = WGPUCallbackMode_AllowSpontaneous;
+        doneInfo.callback       = &WebGPURHIDevice::onFrameWorkDone;
+        doneInfo.userdata1      = pFence;
+        pFence->_workDoneFuture = wgpuQueueOnSubmittedWorkDone( _queue, doneInfo );
+        mapQueuedReadbacks( _frameFenceRing.getRecordingSerial() );
+        mapTimestampReadback( pFence ); // 위 매핑 수 기록 뒤에 더한다(`mapQueuedReadbacks` 는 수를 덮어 적는다)
 
         if ( bPresent )
         {
-            if ( _listAcquiredSwapChain.empty() )
+            if ( _windowSwapChains.getFrameList().empty() )
                 _swapChain.present(); // 메인 창만 그린 프레임(대부분) — acquireSwapChainImage 를 부르지 않는 렌더러도 백버퍼 패스가 이미 받았다
-            for ( WebGPURHISwapChain* pSwapChain : _listAcquiredSwapChain )
+            for ( WebGPURHISwapChain* pSwapChain : _windowSwapChains.getFrameList() )
             {
                 pSwapChain->present();
             }
         }
         _swapChain.releaseCurrent();
-        for ( WebGPURHISwapChain* pSwapChain : _listAcquiredSwapChain )
+        for ( WebGPURHISwapChain* pSwapChain : _windowSwapChains.getFrameList() )
         {
             pSwapChain->releaseCurrent();
         }
-        _listAcquiredSwapChain.clear();
-        _lastSubmittedSerial = _frameSerial;
-        ++_frameSerial;
+        _windowSwapChains.clearFrame();
+        (void)_frameFenceRing.markSubmitted();
     }
 
     void WebGPURHIDevice::mapQueuedReadbacks( uint64 frameSerial )
     {
-        (void)frameSerial;
         if ( _listQueuedReadbackBuffer.empty() )
             return;
-        WebGPUFrameFence* const pFence = _listFrameFence.back().get();
+        WebGPUFrameFence* const pFence = &_arrFrameFence[RHIFrameFenceRing::getSlot( frameSerial )];
         pFence->_listMappedBuffer      = std::move( _listQueuedReadbackBuffer );
         _listQueuedReadbackBuffer.clear();
         pFence->_pendingMapCount.store( static_cast<uint32>( pFence->_listMappedBuffer.size() ), std::memory_order_release );
@@ -1278,7 +1259,7 @@ namespace sw
             mapInfo.mode      = WGPUCallbackMode_AllowSpontaneous;
             mapInfo.callback  = &WebGPURHIDevice::onFrameBufferMapped;
             mapInfo.userdata1 = pFence;
-            (void)wgpuBufferMapAsync( pRecord->_buffer, WGPUMapMode_Read, 0, pRecord->_sizeBytes, mapInfo );
+            pFence->_listMapFuture.push_back( wgpuBufferMapAsync( pRecord->_buffer, WGPUMapMode_Read, 0, pRecord->_sizeBytes, mapInfo ) );
         }
     }
 
@@ -1302,24 +1283,36 @@ namespace sw
 
     void WebGPURHIDevice::retireFinishedFrames()
     {
-        uint64 completed = _completedFrameSerial.load( std::memory_order_acquire );
-        while ( _listFrameFence.empty() == false )
+        const uint64 completed = _frameFenceRing.retire( [this]( uint32 slot, uint64 serial )
         {
-            WebGPUFrameFence& fence = *_listFrameFence.front();
-            if ( fence._bWorkDone.load( std::memory_order_acquire ) == SW_FALSE || fence._pendingMapCount.load( std::memory_order_acquire ) != 0 )
-                break;
+            (void)serial;
+            const WebGPUFrameFence& fence = _arrFrameFence[slot];
+            if ( fence.isDone() == false )
+                return false;
             for ( const RHIBufferHandle handle : fence._listMappedBuffer )
             {
                 WebGPUBufferRecord* const pRecord = findBuffer( handle );
                 if ( pRecord != nullptr )
                     pRecord->_bReadbackReady = SW_TRUE;
             }
-            completed = fence._serial;
-            _listFrameFence.pop_front();
-        }
-        _completedFrameSerial.store( completed, std::memory_order_release );
+            return true;
+        } );
         // 그 프레임의 지연 해제를 부른다 — 읽기 버퍼를 읽는 콜백(`readReadbackBuffer`)이 여기서 돈다.
         _releaseQueue.tickCompleted( completed );
+    }
+
+    bool WebGPURHIDevice::waitFrameFence( const WebGPUFrameFence& fence ) const
+    {
+        // 큐 완료와 매핑을 하나씩 기다린다(이미 끝난 퓨처는 바로 돌아온다). 상한은 두지 않는다 — Vulkan 칸 펜스 대기(`vkWaitForFences` UINT64_MAX)와 같다.
+        // AllowSpontaneous 콜백도 WaitAny 로 기다릴 수 있다(AllowProcessEvents 와 같은 까닭으로 불린다 — https://webgpu-native.github.io/webgpu-headers/Asynchronous-Operations.html).
+        if ( fence._workDoneFuture.id != 0 && waitForFuture( fence._workDoneFuture, "the frame's submitted work" ) == false )
+            return false;
+        for ( const WGPUFuture future : fence._listMapFuture )
+        {
+            if ( future.id != 0 && waitForFuture( future, "the frame's readback mapping" ) == false )
+                return false;
+        }
+        return fence.isDone();
     }
 
     void WebGPURHIDevice::processCompletions()
@@ -1329,7 +1322,6 @@ namespace sw
         // 네이티브(Dawn)는 이벤트를 돌려야 콜백이 온다. 브라우저는 이벤트 루프가 이미 불렀다 — 불러도 해가 없다.
         wgpuInstanceProcessEvents( _instance );
         retireFinishedFrames();
-        collectTimestampReadbacks();
         (void)_transferQueue.retireDone( []( const unique_ptr<WebGPUTransferProbe>& probe )
         { return probe->_bDone.load( std::memory_order_acquire ) != SW_FALSE; },
                                          []( unique_ptr<WebGPUTransferProbe>& probe )
@@ -1338,7 +1330,7 @@ namespace sw
 
     void WebGPURHIDevice::enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate )
     {
-        _releaseQueue.enqueueGPURelease( releaseDelegate, _frameSerial );
+        _releaseQueue.enqueueGPURelease( releaseDelegate, _frameFenceRing.getRecordingSerial() );
     }
 
     void WebGPURHIDevice::waitIdleInternal()
@@ -1356,7 +1348,7 @@ namespace sw
         // 폴링으로 둔다: 이 길은 waitIdle(기동 · 종료 · 백엔드 교체 · 창 크기)만 지나고 프레임 경로가 아니다.
         const Deadline deadline = Deadline::afterMilliseconds( static_cast<int64>( WebGPURHIDeviceInternal::kIdleWaitTimeoutMs ) );
         bool           bTimedOut{ false };
-        while ( _bDeviceLost == SW_FALSE && _completedFrameSerial.load( std::memory_order_acquire ) < _lastSubmittedSerial )
+        while ( _bDeviceLost == SW_FALSE && _frameFenceRing.isIdle() == false )
         {
             processCompletions();
             if ( deadline.isExpired() )
@@ -1383,8 +1375,7 @@ namespace sw
         unique_ptr<WebGPURHISwapChain> swapChain = make_unique<WebGPURHISwapChain>();
         if ( swapChain->createSurface( _instance, _adapter, desc ) == false || swapChain->configure( _device, desc._width, desc._height, isVSyncEnabled() ) == false )
             return nullptr;
-        _listExtraSwapChain.push_back( std::move( swapChain ) );
-        return _listExtraSwapChain.back().get();
+        return _windowSwapChains.add( std::move( swapChain ) );
     }
 
     void WebGPURHIDevice::resizeSwapChainInternal( IRHISwapChain& swapChain, uint32 width, uint32 height )
@@ -1394,14 +1385,7 @@ namespace sw
 
     void WebGPURHIDevice::destroySwapChainInternal( IRHISwapChain& swapChain )
     {
-        for ( auto it = _listExtraSwapChain.begin(); it != _listExtraSwapChain.end(); ++it )
-        {
-            if ( it->get() == &swapChain )
-            {
-                _listExtraSwapChain.erase( it );
-                return;
-            }
-        }
+        _windowSwapChains.remove( static_cast<WebGPURHISwapChain&>( swapChain ) ); // 이 프레임 목록에서도 뺀다 — 예전에는 부순 창이 표시 목록에 매달렸다
     }
 
     bool WebGPURHIDevice::acquireSwapChainImageInternal( IRHISwapChain& swapChain )
@@ -1409,7 +1393,7 @@ namespace sw
         WebGPURHISwapChain& target = static_cast<WebGPURHISwapChain&>( swapChain );
         if ( target.acquire( _device ) == false )
             return false;
-        _listAcquiredSwapChain.push_back( &target );
+        (void)_windowSwapChains.markUsedThisFrame( target );
         return true;
     }
 

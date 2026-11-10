@@ -4,28 +4,16 @@
 
 namespace sw
 {
-    RHIReleaseQueue::RHIReleaseQueue( uint32 frameLatency )
-        : _listFrameEntry{}
-        , _listGPUEntry{}
+    RHIReleaseQueue::RHIReleaseQueue()
+        : _listGPUEntry{}
         , _listReadyScratch{}
         , _spinLock{}
-        , _currentFrame{ 0 }
-        , _frameLatency{ frameLatency }
     {
     }
 
     RHIReleaseQueue::~RHIReleaseQueue()
     {
         flushAll();
-    }
-
-    void RHIReleaseQueue::enqueueRelease( const RHIResourceReleaseDelegate& releaseDelegate )
-    {
-        if ( releaseDelegate.isBound() == false )
-            return;
-
-        ScopedLock<SpinLock> lock{ _spinLock };
-        _listFrameEntry.push( releaseDelegate, _currentFrame + static_cast<uint64>( _frameLatency ) );
     }
 
     void RHIReleaseQueue::enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate, uint64 fenceValue )
@@ -37,22 +25,7 @@ namespace sw
         _listGPUEntry.push( releaseDelegate, fenceValue );
     }
 
-    void RHIReleaseQueue::tickFrame()
-    {
-        uint64 currentFrame{ 0 };
-        {
-            ScopedLock<SpinLock> lock{ _spinLock };
-            currentFrame = ++_currentFrame;
-        }
-        releaseReady( ReleaseList::Frame, currentFrame );
-    }
-
     void RHIReleaseQueue::tickCompleted( uint64 completedFence )
-    {
-        releaseReady( ReleaseList::GPU, completedFence );
-    }
-
-    void RHIReleaseQueue::releaseReady( ReleaseList which, uint64 threshold )
     {
         // 스크래치를 빌려 쓴다. 콜백이 다시 tick 을 부르는 드문 재진입에도 안전하도록 잠깐 꺼내 두고 끝나면 돌려놓는다.
         // 꺼내고 돌려놓는 것도 잠금 안에서 한다. DX12 는 렌더 스레드의 endFrame 과 리소스를 만드는 스레드의
@@ -62,8 +35,7 @@ namespace sw
         {
             UniqueLock<SpinLock> lock{ _spinLock };
             listReady.swap( _listReadyScratch );
-            RHIRetireList<RHIResourceReleaseDelegate>& list = which == ReleaseList::Frame ? _listFrameEntry : _listGPUEntry;
-            list.extractReadyReserving( lock, threshold, listReady );
+            _listGPUEntry.extractReadyReserving( lock, completedFence, listReady );
         }
 
         for ( const RHIResourceReleaseDelegate& callback : listReady )
@@ -80,17 +52,14 @@ namespace sw
 
     void RHIReleaseQueue::flushAll()
     {
-        RHIRetireList<RHIResourceReleaseDelegate> listFrameFlush;
         RHIRetireList<RHIResourceReleaseDelegate> listGPUFlush;
         {
             ScopedLock<SpinLock> lock{ _spinLock };
-            listFrameFlush.swap( _listFrameEntry );
             listGPUFlush.swap( _listGPUEntry );
         }
 
         vector<RHIResourceReleaseDelegate> listFlush;
-        listFlush.reserve( listFrameFlush.size() + listGPUFlush.size() );
-        listFrameFlush.extractAll( listFlush );
+        listFlush.reserve( listGPUFlush.size() );
         listGPUFlush.extractAll( listFlush );
         for ( const RHIResourceReleaseDelegate& callback : listFlush )
         {
@@ -102,6 +71,6 @@ namespace sw
     uint32 RHIReleaseQueue::getPendingReleaseCount() const
     {
         ScopedLock<SpinLock> lock{ _spinLock };
-        return static_cast<uint32>( _listFrameEntry.size() + _listGPUEntry.size() );
+        return static_cast<uint32>( _listGPUEntry.size() );
     }
 } // namespace sw
