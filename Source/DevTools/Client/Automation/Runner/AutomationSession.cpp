@@ -31,6 +31,7 @@
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Module/HostInterfaces.h"
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
+#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Presentation/IEngineRenderDriver.h"
 #include "Engine/Reflection/EnumName.h"

@@ -6,14 +6,19 @@
  *          포함을 잊으면 컴파일이 아니라 링크에서 정의 없는 템플릿 심볼로 멈춘다 — 그 이름(`GameObjectManager::forEach…`)이 이 파일을 가리킨다.
  */
 #pragma once
+#include "Core/Subsystem/SubsystemScope.h"
+
+#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectStore.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 
 namespace sw
 {
     template <typename Func>
     void GameObjectManager::forEachGameObject( Func&& func ) const
     {
-        _store.forEachGameObject( std::forward<Func>( func ) );
+        getObjectStore().forEachGameObject( std::forward<Func>( func ) );
     }
 
     template <typename Func>
@@ -29,7 +34,7 @@ namespace sw
     void GameObjectManager::forEachComponentOfType( Func&& func ) const
     {
         static_assert( std::is_base_of_v<Component, TComponent>, "TComponent must derive from sw::Component" );
-        _store.forEachComponentOfType( findStaticType<TComponent>(), [&func]( Component* pComp )
+        getObjectStore().forEachComponentOfType( findStaticType<TComponent>(), [&func]( Component* pComp )
         {
             func( static_cast<TComponent*>( pComp ) );
         } );
@@ -38,7 +43,7 @@ namespace sw
     template <typename Func>
     void GameObjectManager::forEachComponentOfType( const TypeInfo* pToType, Func&& func ) const
     {
-        _store.forEachComponentOfType( pToType, std::forward<Func>( func ) );
+        getObjectStore().forEachComponentOfType( pToType, std::forward<Func>( func ) );
     }
 
     template <typename TComponent, typename TFunc>
@@ -76,7 +81,7 @@ namespace sw
     void GameObjectManager::forEachActiveRegistered( vector<ComponentHandle>& inoutScratch, TFunc&& func )
     {
         inoutScratch.clear();
-        const ComponentRegistry::View<T> view = _componentRegistry.getAll<T>();
+        const ComponentRegistry::View<T> view = getComponentRegistry().getAll<T>();
         for ( size_t index = 0; index < view.size(); ++index )
         {
             inoutScratch.push_back( view.getHandle( index ) );
@@ -120,12 +125,12 @@ namespace sw
     template <typename TService>
     TService& GameObjectManager::getSubsystem()
     {
-        return _sceneScope.get<TService>();
+        return getSceneScope().get<TService>();
     }
 
     template <typename TService>
     const TService& GameObjectManager::getSubsystem() const
     {
-        return _sceneScope.get<TService>();
+        return getSceneScope().get<TService>();
     }
 } // namespace sw

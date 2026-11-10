@@ -17,9 +17,11 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/ObjectIDAllocator.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Object/GameObject/Registry/TagIndex.h"
+#include "Engine/Object/GameObject/Service/ISceneService.h"
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Object/GameObject/Tick/ISceneFrameSystem.h"
 #include "Engine/Object/GameObject/Tick/SceneTickScheduler.h"
@@ -186,7 +188,18 @@ namespace sw
         runLane( context );
     }
 
-    /** @brief 매니저가 드는 씬 부품입니다(`GameObjectManager::_pState`). 틱 스케줄러가 계층 · 프리미티브 레지스트리를 참조하므로 그 뒤에 선다. */
+    struct GameObjectManager::SceneServiceEntry
+    {
+        const SceneServiceRegistration* _pRegistration;
+        ISceneService*                  _pService;
+        ProfileScopeID                  _updateScopeID;   ///< `update` 구간(`GT.Scene.service.<이름>`) — 서비스 이름으로 만들 때 한 번 받는다
+        ProfileScopeID                  _completeScopeID; ///< `completeFrameJob` 구간(`GT.Scene.serviceJob.<이름>`)
+    };
+
+    /**
+     * @brief 매니저가 드는 씬 부품입니다(`GameObjectManager::_pState`). 선언 순서가 생성 순서다 — 틱 스케줄러가 계층 · 프리미티브 레지스트리를,
+     *        저장소가 틱 스케줄러를 참조하므로 그 뒤에 선다. 소멸은 역순이라 씬 범위(서비스)가 저장소보다 먼저 사라진다.
+     */
     struct GameObjectManager::State
     {
         SceneTransformHierarchy _transformHierarchy;
@@ -194,13 +207,25 @@ namespace sw
         CameraRegistry          _cameraRegistry;
         TagIndex                _tagIndex;
         SceneTickScheduler      _tickScheduler;
+        /** @brief 타입별 컴포넌트 레지스트리입니다(빛 포함). */
+        ComponentRegistry _componentRegistry;
+        /** @brief 오브젝트 저장소(생성 · 이름 · id 표 · 조회 · 지연 파괴 · 컴포넌트 풀 · 시작 줄)입니다. 게임이 부르는 API 는 매니저의 전달 함수입니다. */
+        GameObjectStore _store;
+        /** @brief 씬 범위입니다 — 레지스트리(`SceneServiceRegistry`)에서 만든 기능 서비스(물리 · 오디오 · 내비게이션 …)를 소유한다. 부모는 엔진 범위. */
+        SubsystemScope _sceneScope;
+        /** @brief 씬 서비스를 범위의 초기화 순서로 든 목록입니다. 코어는 타입을 모르고 단계마다 `update` 만 부른다. */
+        vector<SceneServiceEntry> _listSceneService;
 
-        State( GameObjectManager& manager, StructuralChangeBuffer& structuralChangeBuffer )
+        State( GameObjectManager& manager, StructuralChangeBuffer& structuralChangeBuffer, ObjectIDAllocator& objectIDAllocator, const SceneEngineServices& services )
             : _transformHierarchy{}
             , _primitiveRegistry{}
             , _cameraRegistry{}
             , _tagIndex{}
             , _tickScheduler{ manager, _transformHierarchy, _primitiveRegistry, structuralChangeBuffer }
+            , _componentRegistry{}
+            , _store{ manager, _tickScheduler, structuralChangeBuffer, objectIDAllocator }
+            , _sceneScope{ services._pEngineSubsystems }
+            , _listSceneService{}
         {
         }
     };
@@ -214,11 +239,7 @@ namespace sw
         : _pOwnedObjectIDAllocator{ services._pObjectIDAllocator == nullptr ? make_unique<ObjectIDAllocator>() : nullptr } // 엔진 범위가 없으면 이 매니저가 번호 공간의 주인이다
         , _pObjectIDAllocator{ services._pObjectIDAllocator != nullptr ? services._pObjectIDAllocator : _pOwnedObjectIDAllocator.get() }
         , _structuralChangeBuffer{}
-        , _pState{ make_unique<State>( *this, _structuralChangeBuffer ) }
-        , _componentRegistry{}
-        , _store{ *this, _pState->_tickScheduler, _structuralChangeBuffer, *_pObjectIDAllocator }
-        , _sceneScope{ services._pEngineSubsystems }
-        , _listSceneService{}
+        , _pState{ make_unique<State>( *this, _structuralChangeBuffer, *_pObjectIDAllocator, services ) }
         , _pFrameCamera{ nullptr }
         , _listFrameSystem{}
         , _frameSystemLanePlan{}
@@ -240,7 +261,7 @@ namespace sw
         listCreated.reserve( listRegistration.size() );
         for ( const SceneServiceRegistration* pRegistration : listRegistration )
         {
-            ISceneService& service = pRegistration->_pCreate( *this, _sceneScope );
+            ISceneService& service = pRegistration->_pCreate( *this, _pState->_sceneScope );
             // 구간은 서비스 이름으로 여기서 한 번 받는다 — 서비스마다 손으로 구간을 걸지 않아도 새 서비스가 계측에서 빠지지 않는다.
             const utf8* pName = service.getSubsystemName();
             // 프레임 일이 없는 서비스는 `completeFrameJob` 구간을 받지 않는다(불리지 않는다 — 슬롯 수 `FrameProfiler::kMaxScope` 를 아낀다).
@@ -248,18 +269,18 @@ namespace sw
             const ProfileScopeID completeScopeID = pRegistration->hasFrameJob() ? FrameProfiler::registerEngineNamedScope( "GT.Scene.serviceJob.", pName, __func__, __FILE__, __LINE__ ) : ProfileScopeID{};
             listCreated.push_back( SceneServiceEntry{ pRegistration, &service, updateScopeID, completeScopeID } );
         }
-        SubsystemCollection& collection = _sceneScope.getCollection();
+        SubsystemCollection& collection = _pState->_sceneScope.getCollection();
         if ( collection.initializeAll( SubsystemHostMask::All ) == false )
             SW_LOG_ERROR_ID( "GameObjectManager.SceneServicesFailedStart", "Scene services failed to start: %#", collection.getError().c_str() );
         // 갱신도 초기화 순서다 — 같은 단계의 서비스가 서로 기대면 의존으로 적는다.
-        _listSceneService.reserve( listCreated.size() );
+        _pState->_listSceneService.reserve( listCreated.size() );
         for ( const uint32 index : collection.getInitializeOrder() )
         {
             const ISubsystem& subsystem = collection.getSubsystem( index );
             for ( const SceneServiceEntry& entry : listCreated )
             {
                 if ( entry._pService == &subsystem )
-                    _listSceneService.push_back( entry );
+                    _pState->_listSceneService.push_back( entry );
             }
         }
         validateSceneServiceJobs();
@@ -267,27 +288,27 @@ namespace sw
 
     void GameObjectManager::validateSceneServiceJobs() const
     {
-        for ( size_t serviceIndex = 0; serviceIndex < _listSceneService.size(); ++serviceIndex )
+        for ( size_t serviceIndex = 0; serviceIndex < _pState->_listSceneService.size(); ++serviceIndex )
         {
-            const SceneServiceRegistration& registration = *_listSceneService[serviceIndex]._pRegistration;
+            const SceneServiceRegistration& registration = *_pState->_listSceneService[serviceIndex]._pRegistration;
             if ( registration.hasFrameJob() == false )
                 continue;
-            const utf8* pName = _listSceneService[serviceIndex]._pService->getSubsystemName();
+            const utf8* pName = _pState->_listSceneService[serviceIndex]._pService->getSubsystemName();
             if ( registration._completeStep <= registration._frameStep )
             {
                 SW_LOG_ERROR_ID( "GameObjectManager.FrameJobCompleteStep", "Scene service '%#' completes its frame job at step %# which is not after its update step %# - the job would be waited a frame late",
                                  pName, getSceneFrameStepName( registration._completeStep ), getSceneFrameStepName( registration._frameStep ) );
                 continue;
             }
-            for ( size_t otherIndex = serviceIndex + 1; otherIndex < _listSceneService.size(); ++otherIndex )
+            for ( size_t otherIndex = serviceIndex + 1; otherIndex < _pState->_listSceneService.size(); ++otherIndex )
             {
-                const SceneServiceRegistration& other = *_listSceneService[otherIndex]._pRegistration;
+                const SceneServiceRegistration& other = *_pState->_listSceneService[otherIndex]._pRegistration;
                 // 두 일의 사이(넘긴 단계 끝 ~ 마치는 단계 앞)가 겹치면 같이 돈다 — 겹치는 접근이면 워커끼리 경합한다.
                 const bool bWindowsOverlap = other.hasFrameJob() && other._frameStep < registration._completeStep && registration._frameStep < other._completeStep;
                 if ( bWindowsOverlap == false || hasFrameAccessConflict( registration._jobAccess, other._jobAccess ) == false )
                     continue;
                 SW_LOG_ERROR_ID( "GameObjectManager.FrameJobAccessConflict", "Scene services '%#' and '%#' run frame jobs at the same time with conflicting scene data access - move one completion step or split the data",
-                                 pName, _listSceneService[otherIndex]._pService->getSubsystemName() );
+                                 pName, _pState->_listSceneService[otherIndex]._pService->getSubsystemName() );
             }
         }
     }
@@ -295,6 +316,165 @@ namespace sw
     GameObjectManager::~GameObjectManager()
     {
         clear();
+    }
+
+    GameObject* GameObjectManager::createGameObject()
+    {
+        return _pState->_store.createGameObject( hashed_string( GameObject::kDefaultName ) );
+    }
+
+    GameObject* GameObjectManager::createGameObject( hashed_string name )
+    {
+        return _pState->_store.createGameObject( name );
+    }
+
+    vector<GameObject*> GameObjectManager::getAllGameObjects() const
+    {
+        vector<GameObject*> listAllGameObject;
+        _pState->_store.getAllGameObjects( listAllGameObject );
+        return listAllGameObject;
+    }
+
+    uint32 GameObjectManager::destroyComponentsOfModule( string_view moduleName )
+    {
+        if ( _structuralChangeBuffer.isFrozen() == false )
+            _structuralChangeBuffer.flushUntilEmpty( *this );
+        return _pState->_store.destroyComponentsOfModule( moduleName );
+    }
+
+    const GameObjectStore& GameObjectManager::getObjectStore() const
+    {
+        return _pState->_store;
+    }
+
+    GameObject* GameObjectManager::createGameObjectWithID( hashed_string name, uint64 objectID )
+    {
+        return _pState->_store.createGameObjectWithID( name, objectID );
+    }
+
+    void GameObjectManager::notifyNameChanged( GameObject* pObj, hashed_string oldName, hashed_string newName )
+    {
+        _pState->_store.notifyNameChanged( pObj, oldName, newName );
+    }
+
+    GameObject* GameObjectManager::findGameObjectByName( hashed_string name ) const
+    {
+        return _pState->_store.findGameObjectByName( name );
+    }
+
+    GameObject* GameObjectManager::findGameObjectByID( uint64 objectID ) const
+    {
+        return _pState->_store.findGameObjectByID( objectID );
+    }
+
+    uint32 GameObjectManager::getOverflowObjectCount() const
+    {
+        return _pState->_store.getOverflowObjectCount();
+    }
+
+    void GameObjectManager::getAllGameObjects( vector<GameObject*>& outListGameObject ) const
+    {
+        _pState->_store.getAllGameObjects( outListGameObject );
+    }
+
+    uint32 GameObjectManager::getTypedComponentBucketCount() const
+    {
+        return _pState->_store.getTypedComponentBucketCount();
+    }
+
+    uint64 GameObjectManager::getStructureGeneration() const
+    {
+        return _pState->_store.getStructureGeneration();
+    }
+
+    void GameObjectManager::notifyStructureChanged()
+    {
+        _pState->_store.notifyStructureChanged();
+    }
+
+    void GameObjectManager::beginPlay()
+    {
+        _pState->_store.beginPlay();
+    }
+
+    void GameObjectManager::endPlay()
+    {
+        _pState->_store.endPlay();
+    }
+
+    bool GameObjectManager::hasBegunPlay() const
+    {
+        return _pState->_store.hasBegunPlay();
+    }
+
+    ComponentRegistry& GameObjectManager::getComponentRegistry()
+    {
+        return _pState->_componentRegistry;
+    }
+
+    const ComponentRegistry& GameObjectManager::getComponentRegistry() const
+    {
+        return _pState->_componentRegistry;
+    }
+
+    Component* GameObjectManager::resolveComponent( ComponentHandle handle ) const
+    {
+        return _pState->_store.resolveComponent( handle );
+    }
+
+    GameObject* GameObjectManager::resolveGameObject( GameObjectHandle handle ) const
+    {
+        return _pState->_store.resolveGameObject( handle );
+    }
+
+    const SubsystemScope& GameObjectManager::getSceneScope() const
+    {
+        return _pState->_sceneScope;
+    }
+
+    void GameObjectManager::destroyGameObject( GameObject* pObj, bool bDestroyChildren )
+    {
+        _pState->_store.destroyGameObject( pObj, bDestroyChildren );
+    }
+
+    void GameObjectManager::destroyComponent( Component* pComp )
+    {
+        _pState->_store.destroyComponent( pComp );
+    }
+
+    void GameObjectManager::destroyComponentInstance( Component* pComp )
+    {
+        _pState->_store.destroyComponentInstance( pComp );
+    }
+
+    void GameObjectManager::processDeferredDestruction()
+    {
+        _pState->_store.processDeferredDestruction();
+    }
+
+    void GameObjectManager::mergePendingAdds()
+    {
+        _pState->_store.mergePendingAdds();
+    }
+
+    void GameObjectManager::dispatchPendingBeginPlay()
+    {
+        _pState->_store.dispatchPendingBeginPlay();
+    }
+
+    void GameObjectManager::queueBeginPlay( ComponentHandle handle )
+    {
+        _pState->_store.queueBeginPlay( handle );
+    }
+
+    ComponentPoolEntry* GameObjectManager::getOrCreateComponentPoolEntry( const TypeInfo* pTypeInfo, size_t typeSize )
+    {
+        return _pState->_store.getOrCreateComponentPoolEntry( pTypeInfo, typeSize );
+    }
+
+    void GameObjectManager::registerTypedComponent( Component* pComp )
+    {
+        _pState->_store.registerTypedComponent( pComp );
     }
 
     TagIndex& GameObjectManager::getTagIndex()
@@ -385,11 +565,11 @@ namespace sw
         // 저장소가 오브젝트를 지우기 전에 미룬 일 · 루트 목록을 버린다 — 지울 오브젝트를 가리킨다.
         _structuralChangeBuffer.clear();
         _pState->_transformHierarchy.clear();
-        _store.clear();
+        _pState->_store.clear();
         _pState->_tickScheduler.getTickRegistry().clear();
         markTickStagesDirty();
         // 컴포넌트가 바디 · 등록을 놓았다 — 서비스가 남은 것을 버린다(물리는 빈 씬과 쌓인 시간을 버리고 다음 씬은 처음 쓸 때 새로 만든다).
-        for ( SceneServiceEntry& entry : _listSceneService )
+        for ( SceneServiceEntry& entry : _pState->_listSceneService )
         {
             entry._pService->onSceneCleared();
         }
@@ -397,7 +577,7 @@ namespace sw
 
     void GameObjectManager::notifySceneLoading( const string_view sourcePath )
     {
-        for ( SceneServiceEntry& entry : _listSceneService )
+        for ( SceneServiceEntry& entry : _pState->_listSceneService )
         {
             entry._pService->onSceneLoading( sourcePath );
         }
@@ -405,7 +585,7 @@ namespace sw
 
     void GameObjectManager::applyPreviewPolicy( const ScenePreviewPolicy& policy )
     {
-        for ( SceneServiceEntry& entry : _listSceneService )
+        for ( SceneServiceEntry& entry : _pState->_listSceneService )
         {
             entry._pService->applyPreviewPolicy( policy );
         }
@@ -413,7 +593,7 @@ namespace sw
 
     void GameObjectManager::drawServiceDebug( DebugDrawQueue& queue )
     {
-        for ( SceneServiceEntry& entry : _listSceneService )
+        for ( SceneServiceEntry& entry : _pState->_listSceneService )
         {
             entry._pService->drawDebug( queue );
         }
@@ -421,7 +601,7 @@ namespace sw
 
     void GameObjectManager::collectServiceLights( const SceneLightPhase phase, vector<GPULight>& inoutList ) const
     {
-        for ( const SceneServiceEntry& entry : _listSceneService )
+        for ( const SceneServiceEntry& entry : _pState->_listSceneService )
         {
             entry._pService->contributeLights( phase, inoutList );
         }
@@ -429,7 +609,7 @@ namespace sw
 
     void GameObjectManager::collectServiceParticles( ISceneParticleSink& sink ) const
     {
-        for ( const SceneServiceEntry& entry : _listSceneService )
+        for ( const SceneServiceEntry& entry : _pState->_listSceneService )
         {
             entry._pService->contributeParticles( sink );
         }
@@ -437,7 +617,7 @@ namespace sw
 
     bool GameObjectManager::findServiceSky( SkyGradient& outGradient ) const
     {
-        for ( const SceneServiceEntry& entry : _listSceneService )
+        for ( const SceneServiceEntry& entry : _pState->_listSceneService )
         {
             if ( entry._pService->contributeSky( outGradient ) )
                 return true;
@@ -447,7 +627,7 @@ namespace sw
 
     bool GameObjectManager::findServiceFog( const float3& viewPosition, FogSettings& outSettings ) const
     {
-        for ( const SceneServiceEntry& entry : _listSceneService )
+        for ( const SceneServiceEntry& entry : _pState->_listSceneService )
         {
             if ( entry._pService->contributeFog( viewPosition, outSettings ) )
                 return true;
@@ -563,7 +743,7 @@ namespace sw
         if ( handle.isValid() == false )
             return TypedHandleResult::Success;
         const utf8*      pExpected  = pToType != nullptr ? pToType->_fullyQualifiedName.c_str() : "(no type)";
-        const Component* pComponent = _store.resolveComponent( handle );
+        const Component* pComponent = _pState->_store.resolveComponent( handle );
         if ( pComponent == nullptr )
         {
             SW_LOG_ERROR_ID( "GameObjectManager.TypedHandleCouldNot", "Typed handle to '%#' could not be made: component %#:%# does not exist (destroyed or pending destroy)", pExpected, handle.objectID(),
@@ -713,7 +893,7 @@ namespace sw
     void GameObjectManager::runFrameStepTickPrePhysics( float32 deltaTime )
     {
         // 오브젝트가 없으면 컴포넌트 틱만 건너뛴다(적용 · 병합 · 파괴는 늘 돈다).
-        if ( _store.hasMergedObjects() )
+        if ( _pState->_store.hasMergedObjects() )
             _pState->_tickScheduler.tickPhase( deltaTime, 0, static_cast<uint32>( TickGroup::PostPhysics ) );
     }
 
@@ -730,7 +910,7 @@ namespace sw
 
     void GameObjectManager::completeSceneServiceJobs( SceneFrameStep step )
     {
-        for ( SceneServiceEntry& entry : _listSceneService )
+        for ( SceneServiceEntry& entry : _pState->_listSceneService )
         {
             if ( entry._pRegistration->_completeStep != step )
                 continue;
@@ -741,7 +921,7 @@ namespace sw
 
     void GameObjectManager::updateSceneServices( SceneFrameStep step, float32 deltaTime )
     {
-        for ( SceneServiceEntry& entry : _listSceneService )
+        for ( SceneServiceEntry& entry : _pState->_listSceneService )
         {
             if ( entry._pRegistration->_frameStep != step )
                 continue;
@@ -779,7 +959,7 @@ namespace sw
 
     void GameObjectManager::runFrameStepTickPostPhysics( float32 deltaTime )
     {
-        if ( _store.hasMergedObjects() )
+        if ( _pState->_store.hasMergedObjects() )
             _pState->_tickScheduler.tickPhase( deltaTime, static_cast<uint32>( TickGroup::PostPhysics ), TickRegistry::kGroupCount );
     }
 
