@@ -10,6 +10,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/VFX/VFXEmitterClock.h"
@@ -185,6 +186,8 @@ namespace sw
         void releaseStaleEmitters( IRHIDevice& device );
         /** @brief 모은 매개변수 단어를 버퍼에 올립니다. 버퍼를 잡지 못하면 이번 프레임의 디스패치를 모두 비웁니다. */
         void uploadParamBuffer( IRHIDevice& device, const vector<GPUParticleBatch>& listBatch );
+        /** @brief 이번 프레임 디스패치 앞뒤의 버퍼 전이를 단계별 목록으로 짓습니다(`recordDispatches` 가 단계마다 `transitionBuffers` 한 번으로 낸다). */
+        void buildTransitionLists();
         /** @brief 요청의 상태를 찾거나 만들고 버퍼를 갖춥니다. 버퍼를 만들지 못했으면 오류를 남기고 nullptr 입니다. */
         EmitterState* prepareEmitterState( IRHIDevice& device, const VFXGPUEmitterRequest& request );
         /** @brief @p state 의 시뮬레이션 디스패치를 붙입니다(밀린 단계가 없고 이미 돌았으면 매개변수를 버리고 붙이지 않는다). */
@@ -201,8 +204,11 @@ namespace sw
         vector<const DrawSource*>                       _listBatchDrawSource; ///< 배치마다(GPU 배치가 아니면 nullptr) — 이번 프레임 안에서만 쓴다
         vector<uint32>                                  _listParamWord;       ///< 매개변수 행(uint4)을 단어로 이어 붙인 사본
         vector<uint64>                                  _listScratchStaleRunID;
-        vector<VFXGPULightRange>                        _listLightRange; ///< 이번 프레임의 방출기별 파티클 라이트 슬롯 범위(`assignLightRanges`)
-        VFXSimulationFrameInput                         _frameInput;     ///< 이번 프레임 입력(기록이 깊이 히스토리 · 인스턴스 버퍼 · 라이트 버퍼를 건다)
+        vector<RHIBufferTransition>                     _listTransitionBeforeSimulate; ///< 시뮬레이션 앞 — 방출기 버퍼 셋 · 라이트 버퍼를 UAV 로
+        vector<RHIBufferTransition>                     _listTransitionAfterSimulate;  ///< 시뮬레이션 뒤 — 입자 SRV · 인자 간접 인자 · 라이트 SRV
+        vector<RHIBufferTransition>                     _listTransitionBeforeMesh;     ///< 메시 입자 앞 — 인스턴스 버퍼 UAV · 인자 SRV
+        vector<VFXGPULightRange>                        _listLightRange;               ///< 이번 프레임의 방출기별 파티클 라이트 슬롯 범위(`assignLightRanges`)
+        VFXSimulationFrameInput                         _frameInput;                   ///< 이번 프레임 입력(기록이 깊이 히스토리 · 인스턴스 버퍼 · 라이트 버퍼를 건다)
         RHIStructuredBuffer                             _paramBuffer;
         uint8                                           _bPipelineMissingLogged     : 1;
         uint8                                           _bMeshPipelineMissingLogged : 1;
