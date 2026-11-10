@@ -577,9 +577,10 @@ namespace sw
         return StringUtil::startsWith( name, "AssetRef<" );
     }
 
-    bool SerializerUtil::isRequiredValueMissing( const PropertyInfo& prop, const bool bWritten, const string_view* pWrittenText )
+    bool SerializerUtil::isRequiredValueMissing( const PropertyInfo& prop, const bool bWritten, const string_view* pWrittenText, const RequiredScope scope )
     {
-        if ( prop._metadata->_bRequired == SW_FALSE )
+        const bool bRequiredHere = prop._metadata->_bRequired == SW_TRUE || ( prop._metadata->_bRequiredAtRoot == SW_TRUE && scope == RequiredScope::Root );
+        if ( bRequiredHere == false )
             return false;
         if ( bWritten == false )
             return true;
@@ -829,15 +830,13 @@ namespace sw
         return false;
     }
 
-    void SerializerUtil::applyPropertyDefault( const PropertyInfo& prop, MutableObjectAddress instance, const SerializeContext& context )
+    void SerializerUtil::applyPropertyDefault( const PropertyInfo& prop, MutableObjectAddress instance )
     {
         if ( instance.get() == nullptr || prop._bIsContainer != SW_FALSE )
             return;
-        if ( prop._metadata->_defaultValue.empty() )
-            return;
-        if ( applyPropertyText( prop, instance, prop._metadata->_defaultValue, context ) == false )
-            SW_LOG_WARNING_ID( "Serialization.DefaultUnreadable", "Default '%#' of property '%#' (%#) cannot be read - the field keeps its current value", prop._metadata->_defaultValue,
-                               prop._name.c_str(), prop._typeName.c_str() );
+        // 기본값은 생성된 타입 있는 대입이다 — 글을 읽다 실패하는 경로가 없다.
+        if ( prop._metadata->_pApplyDefault != nullptr )
+            prop._metadata->_pApplyDefault( instance.get() );
     }
 
     bool SerializerUtil::copyPropertyValue( const PropertyInfo& prop, ObjectAddress srcInstance, MutableObjectAddress dstInstance, const SerializeContext& context )
@@ -1046,7 +1045,7 @@ namespace sw
         return left == right;
     }
 
-    const PropertyInfo* SerializerUtil::matchProperty( const vector<PropertyInfo>& listProp, string_view keyRaw )
+    const PropertyInfo* SerializerUtil::matchProperty( PropertyListView listProp, string_view keyRaw )
     {
         // 지금 이름을 모두 본 뒤에만 옛 이름(Alias)을 본다. 앞 프로퍼티의 옛 이름이 뒤 프로퍼티의 지금 이름을 가로채지 않는다.
         for ( const PropertyInfo& prop : listProp )
@@ -1065,7 +1064,7 @@ namespace sw
         return nullptr;
     }
 
-    optional<uint32> SerializerUtil::findPropertyIndexByNameHash( const vector<PropertyInfo>& listProp, uint32 nameHash )
+    optional<uint32> SerializerUtil::findPropertyIndexByNameHash( PropertyListView listProp, uint32 nameHash )
     {
         for ( size_t propIndex = 0; propIndex < listProp.size(); ++propIndex )
         {

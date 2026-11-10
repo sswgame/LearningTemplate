@@ -387,7 +387,7 @@ SW_TEST_CASE( ZoneTest, PlacementOverridesWorkByName )
     SW_EXPECT_FALSE( broken.applyOverrides( listBad, "test" ) ); // 두 번째 빼기는 없는 이름이다
 }
 
-/** @brief [ZoneTest] 볼륨이 여럿이어도 지역 후보 격자는 프레임에 한 번 짓고(볼륨마다 씬을 돌지 않는다), 프레임 앞(`runBeforeTick`)에 낡는다 */
+/** @brief [ZoneTest] 볼륨이 여럿이어도 지역 후보 격자는 프레임에 한 번 짓고(볼륨마다 씬을 돌지 않는다), 프레임 앞(`runLane`)에 낡는다 */
 SW_TEST_CASE( ZoneTest, OccupantIndexBuildsOncePerFrame )
 {
     GameObjectManager manager;
@@ -407,7 +407,7 @@ SW_TEST_CASE( ZoneTest, OccupantIndexBuildsOncePerFrame )
     pIndex->queryCandidates( manager, -5.0f, -5.0f, 5.0f, 5.0f, listCandidate );
     SW_EXPECT_TRUE( listCandidate.empty() ); // 물리 개체가 없는 씬
     SW_EXPECT_EQUAL( 1u, pIndex->getBuildCount() );
-    pIndex->runBeforeTick( manager, 1.0f / 60.0f );
+    pIndex->runMain( manager, 1.0f / 60.0f );
     pIndex->queryCandidates( manager, -2.0f, -3.0f, 2.0f, 3.0f, listCandidate );
     SW_EXPECT_EQUAL( 2u, pIndex->getBuildCount() );
 }

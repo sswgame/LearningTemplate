@@ -36,6 +36,14 @@ namespace sw
         return nullptr;
     }
 
+    bool DeclarationValidator::validateTickMode( const ParsedTypeInfo& type )
+    {
+        if ( type._tickMode.empty() || type._tickMode == "Batch" || type._tickMode == "Task" || type._tickMode == "Main" )
+            return true;
+        SW_LOG_ERROR_ID( "AstVisitor.ERRORUnknownTickMode", "ERROR: REFLECT( TickMode = %# ) on '%#' - TickMode is Batch, Task or Main.", type._tickMode, type._fullyQualifiedName );
+        return false;
+    }
+
     bool DeclarationValidator::validateMemberFunctions( ParsedTypeInfo& type, const vector<ParsedMethodSignature>& listMethodSignature )
     {
         bool bValid = true;
@@ -76,9 +84,35 @@ namespace sw
         bool bValid = true;
         for ( const ParsedPropertyInfo& prop : type._listProperty )
         {
+            const string owner = CursorReader::makeMemberOwnerName( type._fullyQualifiedName, prop._name );
+            // 기본값은 칸 하나에 넣는 대입으로 생성된다(`_pApplyDefault`) — 컨테이너는 읽기가 원소를 채우므로 기본값 자리가 없다.
+            if ( prop._defaultValue.empty() == false && prop._bIsContainer == SW_TRUE )
+            {
+                SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYDefaultContainer", "ERROR: PROPERTY( Default = \"%#\" ) on '%#' - a container has no single default value. Initialize it in C++.",
+                                 prop._defaultValue, owner );
+                bValid = false;
+            }
+            // 기반이 없으면 조건식의 이름은 이 타입의 프로퍼티여야 한다. 기반이 있으면 생성된 판정의 멤버 접근이 컴파일에서 본다.
+            if ( prop._editCondition.empty() == false && type._baseCount == 0 && hasEditConditionSubject( type, prop._editCondition ) == false )
+            {
+                SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYEditConditionName", "ERROR: PROPERTY( EditCondition = \"%#\" ) on '%#' - names a property '%#' does not declare.", prop._editCondition,
+                                 owner, type._fullyQualifiedName );
+                bValid = false;
+            }
+            if ( prop._bRequired == SW_TRUE && prop._bRequiredAtRoot == SW_TRUE )
+            {
+                SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYRequiredTwice", "ERROR: PROPERTY( Required, RequiredAtRoot ) on '%#' - Required already covers every element. Keep one.", owner );
+                bValid = false;
+            }
+            // 부모를 가리키는 칸이 없으면 "부모가 없을 때만" 은 늘 참이다 — Required 로 적는다(기반 타입의 칸은 등록이 합쳐 보므로 기반이 있으면 넘긴다).
+            if ( prop._bRequiredAtRoot == SW_TRUE && type._baseCount == 0 && hasInheritParent( type ) == false )
+            {
+                SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYRequiredAtRootNoParent", "ERROR: PROPERTY( RequiredAtRoot ) on '%#' - '%#' has no PROPERTY( InheritParent ) field, so every element is a root. Write Required.",
+                                 owner, type._fullyQualifiedName );
+                bValid = false;
+            }
             if ( prop._bRuntimeState == SW_FALSE )
                 continue;
-            const string owner = CursorReader::makeMemberOwnerName( type._fullyQualifiedName, prop._name );
             if ( prop._bTransient == SW_TRUE )
             {
                 SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYRuntimeStateTransient", "ERROR: PROPERTY( RuntimeState, Transient ) on '%#' - RuntimeState is written to snapshots and saves, Transient is never "
@@ -215,7 +249,7 @@ namespace sw
                     return false;
                 }
             }
-            prop._listCustomMeta.emplace_back( "Units", prop._units );
+            // 아는 단위는 커스텀 메타 글이 아니라 런타임 메타데이터의 열거로 싣는다(`CodeGenerator::emitPropertyMetadata`).
         }
 
         if ( prop._editCondition.empty() == false && isEditConditionWellFormed( prop._editCondition ) == false )
@@ -245,6 +279,32 @@ namespace sw
                 return false;
         }
         return true;
+    }
+
+    bool DeclarationValidator::hasInheritParent( const ParsedTypeInfo& type )
+    {
+        for ( const ParsedPropertyInfo& prop : type._listProperty )
+        {
+            if ( prop._bInheritParent == SW_TRUE )
+                return true;
+        }
+        return false;
+    }
+
+    bool DeclarationValidator::hasEditConditionSubject( const ParsedTypeInfo& type, const string_view text )
+    {
+        const string_view trimmed = StringUtil::trim( text );
+        const size_t      opPos   = trimmed.find( "==" ) != string_view::npos ? trimmed.find( "==" ) : trimmed.find( "!=" );
+        string_view       name    = opPos == string_view::npos ? trimmed : trimmed.substr( 0, opPos );
+        if ( name.empty() == false && name.front() == '!' )
+            name = name.substr( 1 );
+        name = StringUtil::trim( name );
+        for ( const ParsedPropertyInfo& prop : type._listProperty )
+        {
+            if ( string_view( prop._memberName ) == name )
+                return true;
+        }
+        return false;
     }
 
     bool DeclarationValidator::isEditConditionWellFormed( const string_view text )

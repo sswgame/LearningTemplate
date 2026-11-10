@@ -89,6 +89,13 @@ namespace sw
                                          uint32 currentVersion, SchemaVersionSource versionSource, SchemaOrphanPolicy orphanPolicy,
                                          const SoftDeserializeFn& softDeserialize );
 
+    /** @brief 필수 판정의 범위입니다 — 원소가 부모를 가리키면(`PROPERTY( InheritParent )` 칸이 적힘) `RequiredAtRoot` 칸은 물려받은 값이다. */
+    enum class RequiredScope : uint8
+    {
+        Root,      ///< 부모가 없다 — `Required` 와 `RequiredAtRoot` 칸이 모두 필수다.
+        Inherited, ///< 부모를 가리킨다 — `Required` 칸만 필수다.
+    };
+
     /** @brief 직렬화기 TU 들이 함께 쓰는 도우미입니다. */
     struct SerializerUtil
     {
@@ -147,10 +154,10 @@ namespace sw
 
         /**
          * @brief 프로퍼티에 선언된 기본값(PROPERTY `Default=`)이 있으면 적용합니다. 없으면 아무것도 하지 않습니다.
-         * @details "선언된 기본값을 읽지 못함"(코드 결함)은 경고한다. 그 필드는 현재 값을 유지한다. 값은 `applyPropertyText` 로 쓴다
-         *          (비트필드는 그 비트만 쓴다. 값 주소에 bool 을 통째로 쓰면 같은 바이트의 다른 플래그까지 지워진다).
+         * @details 값은 생성된 타입 있는 대입(`PropertyMetadata::_pApplyDefault`)이 넣는다 — 기본값의 철자 · 타입 결함은 컴파일 오류라 여기서 실패할 길이 없다.
+         *          비트필드도 멤버 대입이라 그 비트만 바뀐다.
          */
-        static void applyPropertyDefault( const PropertyInfo& prop, MutableObjectAddress instance, const SerializeContext& context );
+        static void applyPropertyDefault( const PropertyInfo& prop, MutableObjectAddress instance );
 
         // ------------------------------------------------------------------------------
         // 프로퍼티 값 하나: 비트필드, 컨테이너, 값 세 경우를 한 벌로 처리한다. 직렬화기 셋, 프리팹 오버라이드 도구, 인스펙터가 함께 쓴다
@@ -228,8 +235,23 @@ namespace sw
          * @details XML · JSON 의 `collectMissingRequired` 가 함께 쓰는 한 판정이다(한쪽만 바뀌면 두 포맷이 같은 데이터를 다르게 통과시킨다).
          *          빈 이름은 형식만 있고 값이 없는 칸이다 — 에디터가 빈 칸을 속성으로 적어도 데이터가 값을 준 것이 아니다.
          * @param pWrittenText 적힌 글(스칼라 칸). 적히지 않았으면 nullptr, 객체 · 목록으로 적혔으면 빈 값이 아닌 것으로 본다(@p bWritten 만 본다).
+         * @param scope 원소가 부모를 가리키는지(`findRequiredScope`). 부모를 모르는 읽기(객체 · 인스턴스 구조체)는 `Root` 다.
          */
-        SW_API static bool isRequiredValueMissing( const PropertyInfo& prop, bool bWritten, const string_view* pWrittenText );
+        SW_API static bool isRequiredValueMissing( const PropertyInfo& prop, bool bWritten, const string_view* pWrittenText, RequiredScope scope );
+        /**
+         * @brief 원소의 필수 판정 범위를 정합니다 — `InheritParent` 칸이 비어 있지 않게 적혔으면 `Inherited` 입니다.
+         * @param fnWrittenText 칸 색인 → 적힌 글(적히지 않았으면 빈 글). 형식마다 원소를 읽는 법만 다르다.
+         */
+        template <typename TList, typename FnWrittenText>
+        static RequiredScope findRequiredScope( const TList& listProperty, FnWrittenText&& fnWrittenText )
+        {
+            for ( size_t propIndex = 0; propIndex < listProperty.size(); ++propIndex )
+            {
+                if ( listProperty[propIndex]._metadata->_bInheritParent == SW_TRUE && fnWrittenText( propIndex ).empty() == false )
+                    return RequiredScope::Inherited;
+            }
+            return RequiredScope::Root;
+        }
         /** @brief 이름 · 경로 형식(hashed_string · TagID · DataPath · AssetID · AssetRef<…>)인지 봅니다 — 빈 값이 "없음" 인 형식이다. 글(`string`)은 빈 값도 값이라 넣지 않는다. */
         SW_API static bool isNameValueType( const hashed_string& typeName );
 
@@ -263,14 +285,14 @@ namespace sw
         [[nodiscard]] SW_API static bool isWithinDeclaredRanges( const TypeInfo& typeInfo, ObjectAddress instance );
 
         /** @brief 프로퍼티 목록에서 키(철자 그대로)에 맞는 프로퍼티 메타데이터를 찾습니다. 지금 이름을 모두 본 뒤에 옛 이름(Alias)을 봅니다. */
-        static const PropertyInfo* matchProperty( const vector<PropertyInfo>& listProp, string_view keyRaw );
+        static const PropertyInfo* matchProperty( PropertyListView listProp, string_view keyRaw );
 
         /**
          * @brief 이름 해시(바이너리 태그 · diff 항목)에 맞는 프로퍼티의 인덱스입니다. 없으면 비어 있습니다.
          * @details 모든 프로퍼티의 지금 이름을 먼저 보고, 없을 때만 옛 이름(`PROPERTY( Alias = … )`)을 봅니다. 그래서 정상 경로는 옛 이름을 보지 않고,
          *          지금 이름이 늘 옛 이름보다 먼저입니다. 바이너리 태그 스트림과 오브젝트 diff 가 함께 씁니다.
          */
-        [[nodiscard]] static optional<uint32> findPropertyIndexByNameHash( const vector<PropertyInfo>& listProp, uint32 nameHash );
+        [[nodiscard]] static optional<uint32> findPropertyIndexByNameHash( PropertyListView listProp, uint32 nameHash );
 
         /**
          * @brief 이 문맥의 저장 목적에서 이 타입의 프로퍼티를 쓰고 읽는지 판정합니다. 세 형식(XML · JSON · 바이너리)과 diff 가 모두 이 함수를 지납니다.

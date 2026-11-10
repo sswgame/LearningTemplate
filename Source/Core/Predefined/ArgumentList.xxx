@@ -223,3 +223,6 @@ SW_REGISTER_ARGUMENT( RENDERDOC, false, false, "renderdoc" )
 
 // 사람이 지켜보지 않는 실행이다 — 에디터를 켜도 단언 대화상자를 걸지 않는다(Debug 단언은 지금처럼 멈춘다). App 을 띄우는 테스트 · 스크립트가 준다.
 SW_REGISTER_ARGUMENT( UNATTENDED, false, false, "unattended" )
+
+// 작업 풀의 워커 수(1 이상) — 없으면 쓸 수 있는 코어 수에서 정한다. 부하 시나리오(`load/*`)를 워커 1 · 2 · 4 · 8 로 재서 병렬 효율 기준선을 잡는다(언리얼 `-numberofworkerthreadstouse=`)
+SW_REGISTER_ARGUMENT( WORKERS, 0, false, "workers" )

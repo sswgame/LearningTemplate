@@ -37,7 +37,7 @@ namespace sw::editor
                 const JSONValue   value = root.get( prop._name.view() );
                 const string      text  = value.isValid() && value.isString() ? value.asString() : string{};
                 const string_view textView( text );
-                if ( SerializerUtil::isRequiredValueMissing( prop, value.isValid(), value.isValid() && value.isString() ? &textView : nullptr ) == false )
+                if ( SerializerUtil::isRequiredValueMissing( prop, value.isValid(), value.isValid() && value.isString() ? &textView : nullptr, RequiredScope::Root ) == false )
                     continue;
                 SW_LOG_ERROR_ID( "EditorToolDefaults.EditorToolDefaultsRequired", "Editor tool defaults %#: required key '%#' is missing", pSourceLabel, prop._name.c_str() );
                 bComplete = false;

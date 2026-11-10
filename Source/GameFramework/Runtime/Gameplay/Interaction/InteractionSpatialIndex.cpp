@@ -70,19 +70,17 @@ namespace sw
         SceneFrameAccess access{};
         access._writes        = { SceneDataKind::InteractionIndex };
         access._readsPrevious = { SceneDataKind::Structure, SceneDataKind::Transform };
-        // 감사: 자기 격자와 레지스트리 읽기, 월드 위치 읽기만 한다 — 더티 트랜스폼은 레인 실행기가 먼저 펼친다(`runFrameStepFrameSystems`). 워커에서 돌려도 된다.
-        access._bLaneSafe = true;
+        // 자기 격자와 레지스트리 읽기, 월드 위치 읽기만 한다(레인 시스템 — 매니저는 읽기 전용). 더티 트랜스폼은 레인 실행기가 먼저 펼친다(`runFrameStepFrameSystems`).
         return access;
     }
 
-    void InteractionSpatialIndex::runBeforeTick( GameObjectManager& manager, float32 deltaTime )
+    void InteractionSpatialIndex::runLane( SceneJobContext& context )
     {
-        (void)deltaTime;
-        rebuildSpace( manager, InteractionSpace::Space3D, _arrSpace[0] );
-        rebuildSpace( manager, InteractionSpace::Space2D, _arrSpace[1] );
+        rebuildSpace( context.getManager(), InteractionSpace::Space3D, _arrSpace[0] );
+        rebuildSpace( context.getManager(), InteractionSpace::Space2D, _arrSpace[1] );
     }
 
-    void InteractionSpatialIndex::rebuildSpace( GameObjectManager& manager, InteractionSpace space, SpaceGrid& inoutSpace )
+    void InteractionSpatialIndex::rebuildSpace( const GameObjectManager& manager, InteractionSpace space, SpaceGrid& inoutSpace )
     {
         inoutSpace._bBuilt = SW_FALSE;
         inoutSpace._listTarget.clear();

@@ -5,7 +5,6 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
-#include "Engine/Object/GameObject/Tick/TickBatchRegistry.h"
 
 namespace sw
 {
@@ -41,7 +40,4 @@ namespace sw
         _pTarget->setLocalPosition( float3{ _basePosition._x, wave * 0.75f, _basePosition._z } );
         _pTarget->setLocalScale( float3{ scale, scale, scale } );
     }
-
-    // 큐브마다 무버가 하나면(`-gv_stressTestTickMovers=1`) 오브젝트 슬롯 대신 타입별 일괄 목록으로 틱을 실행합니다(`TickBatchRegistry`).
-    SW_REGISTER_TICK_BATCH( StressTestMoverComponent );
 } // namespace sw

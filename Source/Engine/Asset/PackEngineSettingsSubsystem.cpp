@@ -8,6 +8,7 @@
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Serialization/Inherit/AssetRedirect.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 #include "Engine/Serialization/Inherit/ResourceRemap.h"
 
@@ -39,6 +40,10 @@ namespace sw
             return SubsystemInitResult::Failed;
         ResourceRemap::clear();
         if ( _settings->_resourceRemap.isSet() && ResourceRemap::loadFromAsset( AssetID{ _settings->_resourceRemap.get() } ) == false )
+            return SubsystemInitResult::Failed;
+        // 옮긴 에셋의 리다이렉트 표(도메인마다 `redirects.xml`) — 게임 데이터 · 세이브를 읽기 전에 선다. 틀린 표는 기동을 멈춘다.
+        AssetRedirect::clear();
+        if ( AssetRedirect::loadFromSearchDomains() == false )
             return SubsystemInitResult::Failed;
         return SubsystemInitResult::Succeeded;
     }

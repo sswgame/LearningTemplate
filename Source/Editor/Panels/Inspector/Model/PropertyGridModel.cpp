@@ -344,7 +344,7 @@ namespace sw::editor
             {
                 const PropertyInfo& prop = *pProp;
                 // `EditCondition` 이 거짓이면 숨기거나(EditConditionHides) 막는다. 판정은 ImGui 에 의존하지 않는 `PropertyEditConditionExpr` 이 한다.
-                const PropertyEditState editState = PropertyEditConditionExpr::getEditState( type, prop, instance );
+                const PropertyEditState editState = PropertyEditConditionExpr::getEditState( prop, instance );
                 if ( editState == PropertyEditState::Hidden )
                     continue;
                 const uint64  rowKey    = HashUtil::combine( salt, static_cast<uint64>( prop._name.getHash() ) );
@@ -543,7 +543,7 @@ namespace sw::editor
             pFieldType->forEachProperty( [&]( const PropertyInfo& nestedProp )
             {
                 // 구조체 필드의 값 주소는 그 구조체 타입의 객체 주소다.
-                const PropertyEditState editState = PropertyEditConditionExpr::getEditState( *pFieldType, nestedProp, ObjectAddress{ pNestedPtr } );
+                const PropertyEditState editState = PropertyEditConditionExpr::getEditState( nestedProp, ObjectAddress{ pNestedPtr } );
                 if ( editState == PropertyEditState::Hidden )
                     return;
                 const uint32 childRowID = outState._rowCount;

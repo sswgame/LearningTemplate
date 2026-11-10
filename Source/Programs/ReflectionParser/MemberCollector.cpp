@@ -52,6 +52,24 @@ namespace sw
             _bHasError = SW_TRUE;
         if ( DeclarationValidator::validateBusBodyExport( *_pType, _bBusBody == SW_TRUE, _bExported == SW_TRUE, _pSession->_bModuleLocal ) == false )
             _bHasError = SW_TRUE;
+        if ( DeclarationValidator::validateTickMode( *_pType ) == false )
+            _bHasError = SW_TRUE;
+        collectTraits();
+    }
+
+    void MemberCollector::collectTraits()
+    {
+        // 이 타입이 **직접 선언한** 재정의만 센다(언리얼 UHT 가 선언에서 클래스 플래그를 모으는 자리). 손 매크로(`SW_REGISTER_TICK_BATCH`)는 타입을 빠뜨릴 수 있었다.
+        for ( const ParsedMethodSignature& signature : _listMethodSignature )
+        {
+            const size_t parameterCount = signature._listParameterTypeName.size();
+            if ( signature._name == "onTick" && parameterCount == 1 )
+                _pType->_bOverridesTick = SW_TRUE;
+            else if ( signature._name == "onSubTick" && parameterCount == 2 )
+                _pType->_bOverridesSubTick = SW_TRUE;
+            else if ( signature._name == "serializeState" && parameterCount == 1 )
+                _pType->_bOverridesSerializeState = SW_TRUE;
+        }
     }
 
     CXChildVisitResult MemberCollector::memberCollectVisitor( CXCursor cursor, CXCursor, CXClientData data )
@@ -494,11 +512,12 @@ namespace sw
             return;
         }
 
-        // 멤버 함수 템플릿은 인자 타입이 정해지지 않아 등록할 수 없다. 클래스 템플릿처럼 알리고 건너뛴다.
+        // 멤버 함수 템플릿은 인자 타입이 정해지지 않아 등록할 수 없다. 클래스 템플릿과 같이 생성 오류다(건너뛰면 적은 FUNCTION 이 조용히 사라진다).
         if ( kind == CXCursor_FunctionTemplate && annotation._functionSpelling.empty() == false )
         {
-            SW_LOG_WARNING_ID( "AstVisitor.FUNCTIONMemberFunctionTemplate", "FUNCTION on a member function template is not supported, skipping: %#",
-                               CursorReader::makeMemberOwnerName( _pType->_fullyQualifiedName, spelling ) );
+            SW_LOG_ERROR_ID( "AstVisitor.FUNCTIONMemberFunctionTemplate", "ERROR: FUNCTION on a member function template is not supported: %#",
+                             CursorReader::makeMemberOwnerName( _pType->_fullyQualifiedName, spelling ) );
+            _bHasError = SW_TRUE;
         }
     }
 

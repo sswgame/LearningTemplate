@@ -157,7 +157,7 @@ namespace sw
         string                       _assetType;
         string                       _repNotify;     ///< `RepNotify = fn` — 같은 타입의 메서드 이름(모양은 `validateMemberFunctions` 가 본다)
         string                       _validate;      ///< `Validate = fn` — 같은 타입의 `void fn( ValidationContext& )`
-        string                       _editCondition; ///< `EditCondition = "…"` — 식은 편집기 인스펙터(`PropertyEditConditionExpr`)가 푼다
+        string                       _editCondition; ///< `EditCondition = "…"` — 생성기가 컴파일된 판정(`PropertyMetadata::_pEditCondition`)으로 낸다
         string                       _fileFilter;    ///< `FileFilter = "*.png;*.dds"`
         string                       _units;         ///< `Units = m` — 단위 표(`ReflectionUnits.h`)에 있어야 한다. 커스텀 메타 `Units` 로 실린다
         vector<pair<string, string>> _listCustomMeta;
@@ -199,7 +199,11 @@ namespace sw
         /** @brief 데이터 파일이 반드시 적어야 하는 칸입니다(PROPERTY(Required)). */
         uint8 _bRequired : 1;
         /** @brief 목록 원소의 열쇠 칸입니다(PROPERTY(InheritKey), DataInheritance). */
-        uint8 _bInheritKey      : 1;
+        uint8 _bInheritKey : 1;
+        /** @brief 부모가 없는 원소만 반드시 적는 칸입니다(PROPERTY(RequiredAtRoot)). */
+        uint8 _bRequiredAtRoot : 1;
+        /** @brief 부모 원소를 가리키는 칸입니다(PROPERTY(InheritParent)). */
+        uint8 _bInheritParent   : 1;
         uint8 _bHideInInspector : 1;
         /**
          * @brief 값이 객체 밖에 있습니다 — `PROPERTY` 가 필드가 아니라 값 참조(`T&`)를 돌려주는 인자 없는 메서드에 붙었습니다.
@@ -269,6 +273,8 @@ namespace sw
             , _bSkipIfEmpty{ SW_FALSE }
             , _bRequired{ SW_FALSE }
             , _bInheritKey{ SW_FALSE }
+            , _bRequiredAtRoot{ SW_FALSE }
+            , _bInheritParent{ SW_FALSE }
             , _bHideInInspector{ SW_FALSE }
             , _bIsAccessor{ SW_FALSE }
             , _bReplicated{ SW_FALSE }
@@ -397,6 +403,7 @@ namespace sw
         string                       _tooltip;
         vector<string>               _listAlias;
         string                       _validate; ///< `REFLECT( Validate = fn )` — 같은 타입의 `void fn( ValidationContext& )`
+        string                       _tickMode; ///< `REFLECT( TickMode = Batch|Task|Main )` 의 글. 비면 Batch(`DeclarationValidator::validateTickMode` 가 철자를 본다)
         vector<pair<string, string>> _listCustomMeta;
         vector<ParsedPropertyInfo>   _listProperty;
         vector<ParsedFunctionInfo>   _listMethod;
@@ -408,8 +415,15 @@ namespace sw
         uint8                        _bComponentFactory : 1;
         uint8                        _bHideInMenu       : 1;
         /** @brief 첫 기반 클래스에 `REFLECT()` 가 있습니다. 없으면 기반의 필드는 프로퍼티가 아니므로 고정 배치형 코덱도 기반을 건너뜁니다. */
-        uint8                  _bParentReflected : 1;
-        [[maybe_unused]] uint8 _reserved         : 2;
+        uint8 _bParentReflected : 1;
+        /** @brief `Component` 파생입니다(추상 포함). 틱 레인 등록(`requiresTickRegistration`)과 `TickMode` 검사가 본다. */
+        uint8                  _bComponent : 1;
+        [[maybe_unused]] uint8 _reserved   : 1;
+        /** @brief 이 타입이 직접 선언한 재정의입니다(`MemberCollector::collectTraits`). 코드젠이 `TypeMetadata` 의 특성 비트와 일괄 틱 등록을 낸다. */
+        uint8                  _bOverridesTick           : 1;
+        uint8                  _bOverridesSubTick        : 1;
+        uint8                  _bOverridesSerializeState : 1;
+        [[maybe_unused]] uint8 _reservedTraits           : 5;
 
         ParsedTypeInfo() noexcept
             : _name{}
@@ -420,6 +434,7 @@ namespace sw
             , _tooltip{}
             , _listAlias{}
             , _validate{}
+            , _tickMode{}
             , _listCustomMeta{}
             , _listProperty{}
             , _listMethod{}
@@ -431,12 +446,29 @@ namespace sw
             , _bComponentFactory{ SW_FALSE }
             , _bHideInMenu{ SW_FALSE }
             , _bParentReflected{ SW_FALSE }
+            , _bComponent{ SW_FALSE }
             , _reserved{ 0 }
+            , _bOverridesTick{ SW_FALSE }
+            , _bOverridesSubTick{ SW_FALSE }
+            , _bOverridesSerializeState{ SW_FALSE }
+            , _reservedTraits{ 0 }
         {
         }
 
         bool requiresTypeAPI() const noexcept { return _bReflectBody == SW_TRUE; }
         bool requiresComponentFactory() const noexcept { return _bComponentFactory == SW_TRUE; }
+        /**
+         * @brief 이 타입에 틱 레인 등록(`SW_REGISTER_TICK_TYPE`)을 낸다 — 컴포넌트가 `onTick` · `onSubTick` 을 직접 재정의했거나 `REFLECT( TickMode = … )` 를 달았을 때다.
+         * @details 추상 타입은 `TickMode` 를 적었을 때만 낸다(파생이 물려받는 레인 — 재정의만으로는 그 타입의 인스턴스가 없다).
+         */
+        bool requiresTickRegistration() const noexcept
+        {
+            if ( _bComponent == SW_FALSE )
+                return false;
+            if ( _tickMode.empty() == false )
+                return true;
+            return _bAbstract == SW_FALSE && ( _bOverridesTick == SW_TRUE || _bOverridesSubTick == SW_TRUE );
+        }
     };
 } // namespace sw
 

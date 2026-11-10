@@ -173,6 +173,14 @@ namespace sw::reflect::attr
         static constexpr AnnotationKey InheritKey{};
         /** @brief flag.InheritKey — 단독 토큰 `inheritKey` 또는 `inheritKey = true`. 같은 필드의 철자: InheritKey, inheritKey. 이 칸이 목록 원소의 열쇠다(DataInheritance) */
         static constexpr AnnotationKey inheritKey{};
+        /** @brief flag.RequiredAtRoot — 단독 토큰 `RequiredAtRoot`. 같은 필드의 철자: RequiredAtRoot, requiredAtRoot. 부모가 없는 원소만 이 칸을 반드시 적는다 */
+        static constexpr AnnotationKey RequiredAtRoot{};
+        /** @brief flag.RequiredAtRoot — 단독 토큰 `requiredAtRoot`. */
+        static constexpr AnnotationKey requiredAtRoot{};
+        /** @brief flag.InheritParent — 단독 토큰 `InheritParent`. 같은 필드의 철자: InheritParent, inheritParent. 이 칸이 부모 원소를 가리킨다 */
+        static constexpr AnnotationKey InheritParent{};
+        /** @brief flag.InheritParent — 단독 토큰 `inheritParent`. */
+        static constexpr AnnotationKey inheritParent{};
         /** @brief flag.HideInInspector — 단독 토큰 `HideInInspector` 또는 `HideInInspector = true`. 같은 필드의 철자: HideInInspector, hideInInspector, HiddenInInspector, EditorHidden. */
         static constexpr AnnotationKey HideInInspector{};
         /** @brief flag.HideInInspector — 단독 토큰 `hideInInspector` 또는 `hideInInspector = true`. 같은 필드의 철자: HideInInspector, hideInInspector, HiddenInInspector, EditorHidden. */
@@ -293,6 +301,10 @@ namespace sw::reflect::attr
         "required",
         "InheritKey",
         "inheritKey",
+        "RequiredAtRoot",
+        "requiredAtRoot",
+        "InheritParent",
+        "inheritParent",
         "HideInInspector",
         "hideInInspector",
         "HiddenInInspector",

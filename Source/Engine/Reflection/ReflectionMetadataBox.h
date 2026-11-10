@@ -27,6 +27,10 @@ namespace sw
     using ReflectValidateFunction = void ( * )( const void* pInstance, ValidationContext& context );
     /** @brief 필드 이름 꼴 범위 경계(`PROPERTY( Min = "-_halfSize" )`)를 인스턴스에서 읽는 함수 타입입니다. 생성 코드가 이 함수를 만듭니다(`PropertyMetadata::_pReadMinRange`). */
     using PropertyRangeReadFunction = float64 ( * )( const void* pInstance );
+    /** @brief `PROPERTY( Default = … )` 을 인스턴스의 필드에 넣는 함수 타입입니다. 생성 코드가 칸 타입의 리터럴로 만들어 철자가 틀리면 컴파일 오류입니다(`PropertyMetadata::_pApplyDefault`). */
+    using PropertyDefaultApplyFunction = void ( * )( void* pInstance );
+    /** @brief `PROPERTY( EditCondition = "…" )` 을 인스턴스 값으로 판정하는 함수 타입입니다. 생성 코드가 컴파일된 식으로 만듭니다(`PropertyMetadata::_pEditCondition`). */
+    using PropertyEditConditionFunction = bool ( * )( const void* pInstance );
 
     /// @brief 함수의 네트워크 역할입니다. 목록은 PredefinedFunctionNetRole.xxx 에 있습니다.
     enum class FunctionNetRole : uint8

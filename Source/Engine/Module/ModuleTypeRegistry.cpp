@@ -5,10 +5,12 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Foundation/EngineScope.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -17,6 +19,7 @@
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/Scene.h"
@@ -188,9 +191,22 @@ namespace sw
             }
 
             // 컴포넌트 생성 함수는 타입과 함께 오른다(`TypeInfo::_addComponent`) — 씬마다 팩토리 표를 다시 채울 일이 없다.
-            // 등록은 모든 타입의 상속 캐시를 비운다 — 워커가 짓는 씬 로드가 그 캐시를 읽는 중이면 경합이다. 먼저 끝나기를 기다린다.
+            // 등록은 바뀐 타입과 그 자손의 상속 캐시를 비우고 다시 짓는다 — 워커가 짓는 씬 로드가 그 캐시를 읽는 중이면 경합이다. 먼저 끝나기를 기다린다.
             getSubsystem<SceneManager>().waitForPendingLoad();
-            getSubsystem<TypeRegistry>().registerPendingTypes( pTypeHead, pEnumHead );
+            {
+                // 계측(NEXT 5-4 W-R0): 등록 시간 · `MemoryTag::Reflection` 살아 있는 바이트 차이 · 상속 캐시를 비운 타입 수. 추적이 꺼져 있으면 바이트는 0 이다.
+                SW_PROFILE_SCOPE( "Reflection.registerModuleTypes" );
+                TypeRegistry&         registry          = getSubsystem<TypeRegistry>();
+                const MemoryProfiler* pProfiler         = findSubsystem<MemoryProfiler>();
+                const uint64          bytesBefore       = pProfiler != nullptr ? pProfiler->getStats( MemoryTag::Reflection )._currentAllocatedBytes : 0;
+                const uint64          invalidatesBefore = registry.getInheritedCacheInvalidations();
+                const Stopwatch       watch;
+                registry.registerPendingTypes( pTypeHead, pEnumHead );
+                const uint64 bytesAfter = pProfiler != nullptr ? pProfiler->getStats( MemoryTag::Reflection )._currentAllocatedBytes : 0;
+                SW_LOG_INFO_ID( "ModuleTypeRegistry.RegisterModuleTypes", "Registered reflection types of '%#' in %# us (+%# Reflection bytes, %# inherited-cache invalidations)", moduleName,
+                                watch.getElapsedMicroseconds(), static_cast<int64>( bytesAfter ) - static_cast<int64>( bytesBefore ),
+                                registry.getInheritedCacheInvalidations() - invalidatesBefore );
+            }
 
             // 모듈 서브시스템은 타입이 오른 뒤에 선다(초기화가 그 모듈의 리플렉션 타입을 쓸 수 있다). 새로 뗀 것만 — 리로드는 내릴 때 걷었다.
             if ( heads._pSubsystem != nullptr )

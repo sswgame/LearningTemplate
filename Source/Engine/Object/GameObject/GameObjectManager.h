@@ -52,8 +52,8 @@ namespace sw
     /** @brief 한 파도에서 워커로 보낼 프레임 시스템 하나입니다 — 구간 값을 함께 복사해 든다(같은 파도의 시스템이 시스템을 붙이면 매니저의 시스템 목록이 옮겨진다). */
     struct FrameSystemLaneEntry
     {
-        ISceneFrameSystem* _pSystem;
-        ProfileScopeID     _scopeID; ///< 그 시스템의 `runBeforeTick` 구간
+        ISceneLaneFrameSystem* _pSystem;
+        ProfileScopeID         _scopeID; ///< 그 시스템의 `runLane` 구간
     };
 
     /** @brief 파도의 순서 목록입니다. 호출처가 재사용해도 됩니다(`build` 가 비우고 채운다). */
@@ -93,6 +93,7 @@ namespace sw
     {
         friend class GameObject;
         friend class StructuralChangeBuffer; ///< `drain` 이 틱 뒤 시작 줄(`dispatchPendingBeginPlay`)을 돌린다
+        friend class ISceneLaneFrameSystem;  ///< 게임 스레드에서 도는 레인 시스템도 같은 잡 컨텍스트(명령 버퍼 = 틱 뒤 큐)로 돈다
 
     public:
         /**
@@ -681,7 +682,7 @@ namespace sw
         {
             hashed_string                 _key;
             unique_ptr<ISceneFrameSystem> _pSystem;
-            ProfileScopeID                _scopeID; ///< `runBeforeTick` 구간(`GT.Scene.frameSystem.<키>`) — 붙일 때 한 번 받는다
+            ProfileScopeID                _scopeID; ///< `runMain` · `runLane` 구간(`GT.Scene.frameSystem.<키>`) — 붙일 때 한 번 받는다
         };
 
         // 프레임 단계 본문 — 표(`SceneFrameStepList.xxx`)의 줄마다 하나. `tick` 이 줄 순서대로 부른다.

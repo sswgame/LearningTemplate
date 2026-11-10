@@ -3,7 +3,7 @@
  * @brief 프레임 시스템(`ISceneFrameSystem`)이 씬 데이터의 어떤 종류를 읽고 쓰는지 말하는 선언의 형식입니다. 종류는 표(`SceneDataKindList.xxx`)의 줄입니다.
  * @details 프레임 시스템은 붙인 순서가 의미입니다(겹치는 접근은 그 순서로 돈다). 그 순서가 뜻을 갖는 곳(쓰는 시스템이 먼저, 읽는 시스템이 나중)을 코드로 말하는 것이 이 선언이고,
  *          `GameObjectManager::addFrameSystem` 이 읽는 시스템 뒤에 쓰는 시스템을 붙이는 등록을 거절합니다. 같은 선언이 나중에 시스템을 병렬로 돌릴 때
- *          "서로 겹치는 접근이 없는 것끼리만 같이 돈다" 의 입력입니다(`FrameSystemLanePlan` 이 파도로 묶고 `runFrameStepFrameSystems` 가 `_bLaneSafe` 인 것을 워커로 보낸다).
+ *          "서로 겹치는 접근이 없는 것끼리만 같이 돈다" 의 입력입니다(`FrameSystemLanePlan` 이 파도로 묶고 `runFrameStepFrameSystems` 가 레인 시스템(`ISceneLaneFrameSystem`)을 워커로 보낸다 — 워커에서 돌지는 선언이 아니라 서명이 정한다).
  */
 #pragma once
 #include "Core/Foundation/Macros.h"
@@ -39,7 +39,7 @@ namespace sw
     class SceneDataKindSet
     {
     public:
-        static_assert( static_cast<uint32>( SceneDataKind::Count ) <= 32, "SceneDataKindSet holds 32 kinds - widen _bits before adding a 33rd line to SceneDataKindList.xxx" );
+        static_assert( static_cast<uint32>( SceneDataKind::Count ) <= 64, "SceneDataKindSet holds 64 kinds - widen _bits before adding a 65th line to SceneDataKindList.xxx" );
 
         constexpr SceneDataKindSet()
             : _bits{ 0 }
@@ -69,16 +69,16 @@ namespace sw
         {
             for ( uint32 index = 0; index < static_cast<uint32>( SceneDataKind::Count ); ++index )
             {
-                if ( ( _bits & ( 1u << index ) ) != 0 )
+                if ( ( _bits & ( uint64{ 1 } << index ) ) != 0 )
                     return static_cast<SceneDataKind>( index );
             }
             return SceneDataKind::Count;
         }
 
     private:
-        static constexpr uint32 toBit( SceneDataKind kind ) { return 1u << static_cast<uint32>( kind ); }
+        static constexpr uint64 toBit( SceneDataKind kind ) { return uint64{ 1 } << static_cast<uint32>( kind ); }
 
-        uint32 _bits;
+        uint64 _bits;
     };
 } // namespace sw
 
@@ -86,7 +86,7 @@ namespace sw
 {
     /**
      * @struct SceneFrameAccess
-     * @brief 프레임 시스템 하나가 `runBeforeTick` 에서 하는 일의 접근 선언입니다. 시스템 밖(컴포넌트 틱 · 다른 단계)이 하는 일은 적지 않습니다.
+     * @brief 프레임 시스템 하나가 `runMain` · `runLane` 에서 하는 일의 접근 선언입니다. 시스템 밖(컴포넌트 틱 · 다른 단계)이 하는 일은 적지 않습니다.
      * @details 세 집합은 이렇게 가릅니다. 어느 집합에도 없는 종류는 그 시스템이 건드리지 않는다는 선언입니다.
      *          - `_writes`: 바꾸는 종류. 만들고 지우는 것(`Structure`)도 쓰기입니다. 확신이 없으면 쓰기로 적습니다(읽기보다 보수적).
      *          - `_reads`: **이번 프레임에 앞서 붙은 시스템이 쓴 값을 본 뒤여야 하는** 읽기. 이 종류를 쓰는 시스템이 자기보다 **뒤에** 붙으면 등록을 거절합니다.
@@ -99,11 +99,5 @@ namespace sw
         SceneDataKindSet _writes{};
         SceneDataKindSet _reads{};
         SceneDataKindSet _readsPrevious{};
-        /**
-         * @brief true 면 `runBeforeTick` 를 워커 스레드에서 불러도 된다는 선언입니다(기본 false — 게임 스레드에서만).
-         * @details 같은 파도(`FrameSystemLanePlan`)에 든 시스템 중 이것이 true 인 것만 `TaskManager` 로 보냅니다. true 의 조건: 선언한 종류 밖의 공유 가변 상태(싱글턴 · 입력 ·
-         *          그리기 큐 · 게임 스레드 전용 API)를 만지지 않고, 프레임 시스템을 붙이거나 떼지 않는다. 확신이 없으면 false 로 둔다(조용한 데이터 경합보다 직렬이 낫다).
-         */
-        bool _bLaneSafe{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw

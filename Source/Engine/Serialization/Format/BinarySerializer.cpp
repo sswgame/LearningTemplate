@@ -135,8 +135,8 @@ namespace sw
             static void applyDefaultsToUnmatched( const TypeInfo& typeInfo, void* pInstance, const SerializeContext& context, uint64 matchedBitmask,
                                                   const unordered_set<uint32>& uniqueMatchedPropHashes )
             {
-                const vector<PropertyInfo>& listProp = typeInfo.getPropertiesWithBase();
-                const size_t                numProps = listProp.size();
+                const PropertyListView listProp = typeInfo.getPropertiesWithBase();
+                const size_t           numProps = listProp.size();
                 for ( size_t propIdx = 0; propIdx < numProps; ++propIdx )
                 {
                     bool bMatched = false;
@@ -146,7 +146,7 @@ namespace sw
                         bMatched = uniqueMatchedPropHashes.find( listProp[propIdx].getNameHash() ) != uniqueMatchedPropHashes.end();
                     const bool bOutsidePurpose = SerializerUtil::shouldSerializeProperty( typeInfo, listProp[propIdx], context ) == false;
                     if ( bMatched == false && bOutsidePurpose == false )
-                        SerializerUtil::applyPropertyDefault( listProp[propIdx], MutableObjectAddress{ pInstance }, context );
+                        SerializerUtil::applyPropertyDefault( listProp[propIdx], MutableObjectAddress{ pInstance } );
                 }
             }
 
@@ -188,11 +188,11 @@ namespace sw
                     return FieldReadResult::FieldFailed;
 
                 // 지금 이름을 먼저, 없을 때만 옛 이름(Alias)을 본다. Transient 칸을 가리키는 태그는 모르는 칸과 같다.
-                const vector<PropertyInfo>& listProp     = state._typeInfo.getPropertiesWithBase();
-                const size_t                numProps     = listProp.size();
-                const optional<uint32>      matchedIndex = SerializerUtil::findPropertyIndexByNameHash( listProp, tagHash );
-                const bool                  bMatched     = matchedIndex.has_value() && listProp[*matchedIndex]._metadata->_bTransient == SW_FALSE;
-                const PropertyInfo*         pTargetProp  = bMatched ? &listProp[*matchedIndex] : nullptr;
+                const PropertyListView listProp     = state._typeInfo.getPropertiesWithBase();
+                const size_t           numProps     = listProp.size();
+                const optional<uint32> matchedIndex = SerializerUtil::findPropertyIndexByNameHash( listProp, tagHash );
+                const bool             bMatched     = matchedIndex.has_value() && listProp[*matchedIndex]._metadata->_bTransient == SW_FALSE;
+                const PropertyInfo*    pTargetProp  = bMatched ? &listProp[*matchedIndex] : nullptr;
 
                 if ( pTargetProp == nullptr )
                 {
@@ -446,7 +446,7 @@ namespace sw
     bool BinarySerializer::serializeKeepingUnknown( const void* pInstance, const TypeInfo& typeInfo, const vector<SchemaOrphanValue>& listUnknown, vector<uint8>& outListBuffer,
                                                     const SerializeContext& context )
     {
-        const vector<PropertyInfo>& listProp = typeInfo.getPropertiesWithBase();
+        const PropertyListView listProp = typeInfo.getPropertiesWithBase();
         // 다시 싣는 칸은 이 빌드가 모르는 칸(읽을 때 이름이 없었다)이고 같은 와이어 버전으로 적힌 것뿐이다. 아는 칸이나 다른 버전의 값을 그대로 실으면
         // 같은 이름이 두 번 적히거나 읽는 쪽이 값의 뜻을 잘못 안다 — 고쳐 싣지 않고 쓰기를 멈춘다.
         for ( const SchemaOrphanValue& unknown : listUnknown )

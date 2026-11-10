@@ -56,7 +56,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 틱 큐 건의 적용 순서입니다 — 대상(componentID), 쓴 오브젝트, 그 스레드의 순번. 같은 대상의 건이 연속하고 마지막이 이깁니다. */
+            /** @brief 틱 큐 건의 적용 순서입니다 — 대상(componentID), 쓴 오브젝트, 디스패치 순번, 그 스레드의 순번. 같은 대상의 건이 연속하고 마지막이 이깁니다. */
             template <typename TOrderedWrite>
             static bool isWriteOrderedBefore( const TOrderedWrite& left, const TOrderedWrite& right )
             {
@@ -64,6 +64,8 @@ namespace sw
                     return left._targetID < right._targetID;
                 if ( left._key._writerID != right._key._writerID )
                     return left._key._writerID < right._key._writerID;
+                if ( left._key._dispatchOrdinal != right._key._dispatchOrdinal )
+                    return left._key._dispatchOrdinal < right._key._dispatchOrdinal;
                 return left._key._sequence < right._key._sequence;
             }
 
@@ -238,7 +240,7 @@ namespace sw
         return ( slot < _writeScratchCount ) ? &_pPendingSlotScratch[slot] : nullptr;
     }
 
-    bool SceneTransformHierarchy::queueWriteParallel( const SceneTransformWrite& write, uint64 writerID )
+    bool SceneTransformHierarchy::queueWriteParallel( const SceneTransformWrite& write, uint64 writerID, uint32 dispatchOrdinal )
     {
         const uint32 slot = engine::getParallelScratchSlot();
         if ( slot >= _writeScratchCount )
@@ -246,9 +248,10 @@ namespace sw
 
         vector<SceneTransformWrite>& listSlot = _pWriteScratch[slot];
         vector<TickWriteKey>&        listKey  = _pWriteKeyScratch[slot];
-        // 같은 오브젝트의 틱이 같은 컴포넌트에 잇따라 쓰면 한 건으로 합친다. 마지막 값이 이긴다(세터를 차례로 부른 것과 같다). 쓴 오브젝트가
-        // 다르면 합치지 않는다 — 합친 건은 앞 건의 순서 키를 들고 있어, 사이에 다른 스레드가 쓴 건과의 순서가 틀어진다.
-        const bool bMergeableWrite = listSlot.empty() == false && listSlot.back()._handle == write._handle && listKey.back()._writerID == writerID;
+        // 같은 오브젝트의 틱이 같은 디스패치에서 같은 컴포넌트에 잇따라 쓰면 한 건으로 합친다. 마지막 값이 이긴다(세터를 차례로 부른 것과 같다). 쓴 오브젝트나
+        // 디스패치가 다르면 합치지 않는다 — 합친 건은 앞 건의 순서 키를 들고 있어, 사이에 다른 스레드가 쓴 건(같은 오브젝트의 다음 파도 포함)과의 순서가 틀어진다.
+        const bool bMergeableWrite = listSlot.empty() == false && listSlot.back()._handle == write._handle && listKey.back()._writerID == writerID &&
+                                     listKey.back()._dispatchOrdinal == dispatchOrdinal;
         if ( bMergeableWrite )
         {
             SceneTransformWrite& last      = listSlot.back();
@@ -261,7 +264,7 @@ namespace sw
             return true;
         }
         listSlot.push_back( write );
-        listKey.push_back( TickWriteKey{ writerID, t_writeSequence++ } );
+        listKey.push_back( TickWriteKey{ writerID, dispatchOrdinal, t_writeSequence++ } );
         return true;
     }
 

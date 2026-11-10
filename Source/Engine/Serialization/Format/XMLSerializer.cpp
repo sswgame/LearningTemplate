@@ -419,7 +419,7 @@ namespace sw
                     } );
                     if ( entered == false )
                     {
-                        SerializerUtil::applyPropertyDefault( prop, MutableObjectAddress{ pInstance }, _context );
+                        SerializerUtil::applyPropertyDefault( prop, MutableObjectAddress{ pInstance } );
                         return;
                     }
                     if ( _bContinuesAfterUnreadable && _rollback.keepValueBeforeRead( _typeInfo, prop, ObjectAddress{ pInstance }, _context ) == false )
@@ -468,7 +468,7 @@ namespace sw
                     } );
                     if ( entered == false )
                     {
-                        SerializerUtil::applyPropertyDefault( prop, MutableObjectAddress{ pInstance }, _context );
+                        SerializerUtil::applyPropertyDefault( prop, MutableObjectAddress{ pInstance } );
                         return;
                     }
                     // 소프트 읽기의 안쪽 실패는 안쪽 필드가 이미 되돌렸으므로 FieldFailed 는 엄격 읽기에서만 온다.
@@ -506,7 +506,7 @@ namespace sw
                     } );
                     if ( readOk == false )
                     {
-                        SerializerUtil::applyPropertyDefault( prop, MutableObjectAddress{ pInstance }, _context );
+                        SerializerUtil::applyPropertyDefault( prop, MutableObjectAddress{ pInstance } );
                         return;
                     }
                     if ( _bContinuesAfterUnreadable && _rollback.keepValueBeforeRead( _typeInfo, prop, ObjectAddress{ pInstance }, _context ) == false )
@@ -999,7 +999,7 @@ namespace sw
             const bool        bWritten   = pAttribute != nullptr || child.isValid();
             // 스칼라는 속성으로 적힌다 — 그 글로 빈 이름을 가른다(판정은 JSON 과 한 함수).
             const string_view attributeText = pAttribute != nullptr ? string_view( pAttribute ) : string_view{};
-            if ( SerializerUtil::isRequiredValueMissing( prop, bWritten, pAttribute != nullptr ? &attributeText : nullptr ) )
+            if ( SerializerUtil::isRequiredValueMissing( prop, bWritten, pAttribute != nullptr ? &attributeText : nullptr, RequiredScope::Root ) )
             {
                 outListPath.push_back( path );
                 continue;

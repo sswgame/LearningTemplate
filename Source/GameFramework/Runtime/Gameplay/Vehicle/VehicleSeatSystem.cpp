@@ -40,7 +40,7 @@ namespace sw
             manager.removeFrameSystem( hashed_string( kFrameSystemKey ) );
     }
 
-    void VehicleSeatSystem::runBeforeTick( GameObjectManager& manager, float32 /*deltaTime*/ )
+    void VehicleSeatSystem::runMain( GameObjectManager& manager, float32 /*deltaTime*/ )
     {
         // 일은 시스템을 붙잡지 않고 매니저에서 다시 찾는다 — 큐가 돌기 전에 마지막 좌석이 떠나 시스템이 떨어졌을 수 있다.
         // 이 일은 `ApplyPrePhysics` 비우기의 맨 앞에서 돈다 — 지난 프레임 `PostPhysics` 틱이 잰 값을 이번 프레임 카메라 계산(`ApplyPostPhysics`) 앞에 건다.

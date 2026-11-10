@@ -46,7 +46,7 @@ namespace sw
         return _userCount == 0;
     }
 
-    void PairedAnimationSystem::runBeforeTick( GameObjectManager& manager, float32 deltaTime )
+    void PairedAnimationSystem::runMain( GameObjectManager& manager, float32 deltaTime )
     {
         // 지난 프레임에 끝난 세션은 그 프레임 동안 조회됐다. 이제 뺀다.
         size_t keptCount = 0;

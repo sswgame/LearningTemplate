@@ -83,13 +83,18 @@ namespace sw
         }
 
         // 2) 필수 칸이 빠졌는지 본다. 초기값은 형식일 뿐이라 대신 쓰지 않는다.
+        const RequiredScope scope = SerializerUtil::findRequiredScope( listProperty, [&object, &listKeyName]( const size_t propIndex )
+        {
+            const JSONValue field = object.get( listKeyName[propIndex].c_str() );
+            return field.isValid() && field.isString() ? field.asString() : string{};
+        } );
         for ( size_t propIndex = 0; propIndex < listProperty.size(); ++propIndex )
         {
             // 판정은 XML · JSON 직렬화기와 한 함수다 — 빠졌거나, 이름 · 경로 형식인데 빈 글이다.
             const JSONValue   field     = object.get( listKeyName[propIndex].c_str() );
             const string      fieldText = field.isValid() && field.isString() ? field.asString() : string{};
             const string_view textView( fieldText );
-            if ( SerializerUtil::isRequiredValueMissing( listProperty[propIndex], field.isValid(), field.isValid() && field.isString() ? &textView : nullptr ) == false )
+            if ( SerializerUtil::isRequiredValueMissing( listProperty[propIndex], field.isValid(), field.isValid() && field.isString() ? &textView : nullptr, scope ) == false )
                 continue;
             SW_LOG_ERROR_ID( "JSONFields.RequiredFieldMissing", "%#: needs '%#' (%#)", sourceName, listKeyName[propIndex], typeInfo._name.c_str() );
             bOk = false;

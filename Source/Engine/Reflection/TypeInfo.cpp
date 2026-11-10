@@ -109,10 +109,9 @@ namespace sw
         , _bStatic{ SW_FALSE }
         , _bPrimitive{ SW_FALSE }
         , _bIsCacheBuilt{ SW_FALSE }
+        , _bListPropertyWithBaseBuilt{ SW_FALSE }
         , _bIsPODFastPath{ SW_FALSE }
         , _bIsPODCalculated{ SW_FALSE }
-        , _bListPropertyWithBaseBuilt{ SW_FALSE }
-        , _bBuildingPropertyWithBase{ SW_FALSE }
         , _bHasSaveGameProperty{ SW_FALSE }
         , _bSaveGameCalculated{ SW_FALSE }
         , _bHasValidator{ SW_FALSE }
@@ -134,19 +133,86 @@ namespace sw
         *this = std::move( other );
     }
 
-    void TypeInfo::clearInheritedProperties() const
+    void TypeInfo::clearInheritedProperties()
     {
-        // 등록마다 모든 타입에 불린다(배치 동안 타입 수의 제곱). 빈 것은 건드리지 않는다.
-        if ( _listPropertyWithBase.empty() == false )
-            _listPropertyWithBase.clear();
-        if ( _mapNameToPropertyWithBase.empty() == false )
-            _mapNameToPropertyWithBase.clear();
+        _listPropertyWithBase.clear();
+        _mapNameToPropertyWithBase.clear();
         _bIsPODFastPath             = SW_FALSE;
         _bIsPODCalculated           = SW_FALSE;
         _bListPropertyWithBaseBuilt = SW_FALSE;
-        _bBuildingPropertyWithBase  = SW_FALSE;
         _bSaveGameCalculated        = SW_FALSE;
         _bValidatorCalculated       = SW_FALSE;
+    }
+
+    void TypeInfo::rebuildDerivedCaches()
+    {
+        // 자기 이름 맵 — 자기 선언만 본다.
+        _mapNameToProperty.clear();
+        _mapNameToMethod.clear();
+        _mapNameToProperty.reserve( _listProperty.size() * 2 );
+        _mapNameToMethod.reserve( _listMethod.size() );
+        for ( const PropertyInfo& propertyInfo : _listProperty )
+        {
+            _mapNameToProperty[propertyInfo._name] = &propertyInfo;
+            for ( const hashed_string& alias : propertyInfo._listAlias )
+            {
+                if ( alias.empty() == false )
+                    _mapNameToProperty[alias] = &propertyInfo;
+            }
+        }
+        for ( const FunctionInfo& method : _listMethod )
+        {
+            _mapNameToMethod[method._hashName] = &method;
+        }
+        _bIsCacheBuilt = SW_TRUE;
+
+        clearInheritedProperties();
+        if ( _parentFQN.empty() )
+        {
+            _bListPropertyWithBaseBuilt = SW_TRUE; // 부모가 없으면 `getPropertiesWithBase` 는 자기 목록을 본다
+            return;
+        }
+
+        // 사슬을 모아 기반부터 단계마다 **자기 선언 목록**을 접는다. 같은 타입이 사슬에 두 번 나오면 순환이다 — 자기 것만 둔다.
+        const TypeInfo* arrChain[constant::reflection::kMaxParentChainDepth];
+        const uint32    chainLength = collectTypeChain( arrChain );
+        bool            bLoop       = false;
+        for ( uint32 outer = 0; outer < chainLength && bLoop == false; ++outer )
+        {
+            for ( uint32 inner = outer + 1; inner < chainLength && bLoop == false; ++inner )
+            {
+                bLoop = arrChain[outer] == arrChain[inner];
+            }
+        }
+        if ( bLoop )
+            SW_LOG_ERROR_ID( "Reflection.ParentChainLoop", "Reflection parent chain loops at '%#' - returning own properties only.", _fullyQualifiedName.c_str() );
+        const uint32 depth = bLoop ? 1 : chainLength;
+
+        unordered_map<hashed_string, uint32> mapNameToIndex;
+        for ( uint32 level = depth; level > 0; --level )
+        {
+            for ( const PropertyInfo& prop : arrChain[level - 1]->_listProperty )
+            {
+                const auto [iter, bInserted] = mapNameToIndex.emplace( prop._name, static_cast<uint32>( _listPropertyWithBase.size() ) );
+                if ( bInserted )
+                    _listPropertyWithBase.push_back( &prop );
+                else
+                    _listPropertyWithBase[iter->second] = &prop; // 파생이 같은 이름을 제자리에서 덮는다
+            }
+        }
+
+        // 이름과 별칭에서 항목으로 가는 맵을 목록과 함께 만든다. 뒤의 항목(파생)이 앞(기반)을 덮는다.
+        _mapNameToPropertyWithBase.reserve( _listPropertyWithBase.size() * 2 );
+        for ( const PropertyInfo* pProp : _listPropertyWithBase )
+        {
+            _mapNameToPropertyWithBase[pProp->_name] = pProp;
+            for ( const hashed_string& alias : pProp->_listAlias )
+            {
+                if ( alias.empty() == false )
+                    _mapNameToPropertyWithBase[alias] = pProp;
+            }
+        }
+        _bListPropertyWithBaseBuilt = SW_TRUE;
     }
 
     void TypeInfo::invalidateDerivedCaches()
@@ -217,6 +283,7 @@ namespace sw
         other._destroyInstance = nullptr;
         other._addComponent    = nullptr;
         other._bIsCacheBuilt   = SW_FALSE;
+        other.invalidateDerivedCaches(); // 옮겨 간 목록을 가리키던 맵을 남기지 않는다
 
         return *this;
     }
@@ -283,66 +350,14 @@ namespace sw
         return _bIsPODFastPath;
     }
 
-    const vector<PropertyInfo>& TypeInfo::getPropertiesWithBase() const
+    PropertyListView TypeInfo::getPropertiesWithBase() const
     {
         if ( _parentFQN.empty() )
-            return _listProperty;
-
-        if ( _bListPropertyWithBaseBuilt == SW_TRUE )
-            return _listPropertyWithBase;
-
-        // **순환에서 멈춘다.** 이 타입에서 이미 만드는 중인데 다시 들어왔다는 것은 부모 체인이
-        // 돌아왔다는 뜻이다. 더 올라가면 스택이 넘친다. 자기 것만 반환하고 끊는다.
-        if ( _bBuildingPropertyWithBase == SW_TRUE )
-        {
-            SW_LOG_ERROR_ID( "Reflection.ParentChainLoop", "Reflection parent chain loops at '%#' - returning own properties only.", _fullyQualifiedName.c_str() );
-            return _listProperty;
-        }
-        _bBuildingPropertyWithBase = SW_TRUE;
-
-        const TypeInfo*             pParent      = getParentType();
-        const vector<PropertyInfo>* pParentProps = ( pParent != nullptr ) ? &pParent->getPropertiesWithBase() : nullptr;
-        const size_t                totalCount   = ( pParentProps != nullptr ? pParentProps->size() : 0 ) + _listProperty.size();
-
-        _listPropertyWithBase.clear();
-        _mapNameToPropertyWithBase.clear();
-        _listPropertyWithBase.reserve( totalCount );
-        if ( pParentProps != nullptr )
-            _listPropertyWithBase = *pParentProps;
-
-        for ( const PropertyInfo& prop : _listProperty )
-        {
-            bool replaced{ false };
-            for ( PropertyInfo& existing : _listPropertyWithBase )
-            {
-                if ( existing._name == prop._name )
-                {
-                    existing = prop;
-                    replaced = true;
-                    break;
-                }
-            }
-            if ( replaced == false )
-                _listPropertyWithBase.push_back( prop );
-        }
-
-        // 이름과 별칭에서 항목으로 가는 맵을 목록과 함께 만든다. `findPropertyInHierarchy` 가 단계마다 맵을 따로 보지 않게 하려는 것이다.
-        // 뒤의 항목(파생)이 앞(기반)을 덮는다.
-        _mapNameToPropertyWithBase.clear();
-        _mapNameToPropertyWithBase.reserve( _listPropertyWithBase.size() * 2 );
-        for ( const PropertyInfo& prop : _listPropertyWithBase )
-        {
-            _mapNameToPropertyWithBase[prop._name] = &prop;
-            for ( const hashed_string& alias : prop._listAlias )
-            {
-                if ( alias.empty() == false )
-                    _mapNameToPropertyWithBase[alias] = &prop;
-            }
-        }
-
-        _bListPropertyWithBaseBuilt = SW_TRUE;
-        _bBuildingPropertyWithBase  = SW_FALSE;
-        return _listPropertyWithBase;
+            return PropertyListView{ _listProperty.data(), _listProperty.size() };
+        if ( _bListPropertyWithBaseBuilt == SW_FALSE )
+            SW_FATAL( "TypeInfo %# has a parent but its inherited property list was not built - only TypeRegistry-owned types (rebuildDerivedCaches) can list inherited properties",
+                      _fullyQualifiedName.c_str() );
+        return PropertyListView{ _listPropertyWithBase.data(), _listPropertyWithBase.size() };
     }
 
     const TypeInfo* TypeInfo::getParentType() const
@@ -433,19 +448,14 @@ namespace sw
         _listProperty.clear();
         _listMethod.clear();
         _listEvent.clear();
-        _listPropertyWithBase.clear();
-        _mapNameToPropertyWithBase.clear();
+        clearInheritedProperties();
         _mapNameToProperty.clear();
         _mapNameToMethod.clear();
         _metadata                   = {};
         _destroyInstance            = nullptr;
         _addComponent               = nullptr;
         _bIsCacheBuilt              = SW_FALSE;
-        _bIsPODCalculated           = SW_FALSE;
-        _bIsPODFastPath             = SW_FALSE;
-        _bListPropertyWithBaseBuilt = SW_FALSE;
-        _bSaveGameCalculated        = SW_FALSE;
-        _bValidatorCalculated       = SW_FALSE;
+        _bListPropertyWithBaseBuilt = SW_TRUE; // 묘비는 빈 목록이 답이다 — 든 포인터로 물어도 멈추지 않는다
         _pValidate                  = nullptr;
         _pFixedCodec                = nullptr;
     }
@@ -526,10 +536,10 @@ namespace sw
 
     const PropertyInfo* TypeInfo::findPropertyInHierarchy( const hashed_string& propNameOrAlias ) const
     {
-        // 부모가 없거나(또는 순환으로 자기 것만 반환하는 경우) 자기 목록만 본다.
-        const vector<PropertyInfo>& listWithBase = getPropertiesWithBase();
-        if ( &listWithBase == &_listProperty )
+        // 부모가 없으면 자기 목록만 본다.
+        if ( _parentFQN.empty() )
             return findProperty( propNameOrAlias );
+        const PropertyListView listWithBase = getPropertiesWithBase();
 
         // 작으면 선형으로 찾는다. 뒤(파생)부터 보아 병합 규칙(파생이 이긴다)과 같은 결과를 낸다.
         if ( listWithBase.size() <= constant::reflection::kLinearSearchThreshold )

@@ -29,6 +29,10 @@ namespace sw
 {
     TypeMetadata::TypeMetadata() noexcept
         : _pEditor{ nullptr }
+        , _bOverridesTick{ SW_FALSE }
+        , _bOverridesSubTick{ SW_FALSE }
+        , _bOverridesSerializeState{ SW_FALSE }
+        , _reservedTraits{ 0 }
     {
     }
 
@@ -40,14 +44,17 @@ namespace sw
     PropertyMetadata::PropertyMetadata() noexcept
         : _pEditor{ nullptr }
         , _defaultValue{}
+        , _pApplyDefault{ nullptr }
         , _assetType{}
         , _repNotify{}
         , _validate{}
         , _pReadMinRange{ nullptr }
         , _pReadMaxRange{ nullptr }
+        , _pEditCondition{ nullptr }
         , _minRange{ 0.0f }
         , _maxRange{ 1.0f }
         , _maxCount{ 0 }
+        , _unit{}
         , _bHasMinRange{ SW_FALSE }
         , _bHasMaxRange{ SW_FALSE }
         , _bReadOnly{ SW_FALSE }
@@ -62,7 +69,8 @@ namespace sw
         , _bSaveGame{ SW_FALSE }
         , _bInterp{ SW_FALSE }
         , _bRuntimeState{ SW_FALSE }
-        , _reservedRoles{ 0 }
+        , _bRequiredAtRoot{ SW_FALSE }
+        , _bInheritParent{ SW_FALSE }
     {
     }
 

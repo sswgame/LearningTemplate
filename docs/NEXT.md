@@ -72,60 +72,34 @@
 
 GameObject/Component API 는 저작 · 수명 · 직렬화 층으로 두고, 프레임마다 도는 일은 읽기 · 쓰기 종류를 선언한 잡으로, 핫 데이터는 종류별 SoA(`SceneTransformStorage` 일반화)로 옮긴다. 완전 ECS 는 기각했다(컴포넌트 타입 229 · `getComponent<>` 593 · 리플렉션 · 프리팹 전부 재작성). 단계마다 빌드 · 테스트가 통과해야 하고, 이득이 흔들림 안이면 되돌린다.
 
-0. **측정 기반:** `-workers=N` 인자, Debug 카운터(`getComponentLookups` · `virtualTicks`), `load/*` 4 시나리오 × 워커 1 · 2 · 4 · 8 기준선을 S8 표에.
-1. **일괄 틱이 기본:** 리플렉션 생성기가 `onTick` 을 재정의한 타입(102 개)에 `TickBatchOf` 등록을 자동으로 낸다. 지금 수동 등록은 `StressTestMover` 하나뿐이다. 완료: `batchElements/objectEntries ≥ 0.9`.
-   - **서브틱 · 선행 조건은 그대로 돌아야 한다(사용자 요구).** 지금 규칙(`TickRegistry::findBatchFunction`, `TickRegistry.cpp:814`)을 유지한다.
-     - 일괄 경로는 그 그룹의 틱 항목이 주 틱 하나뿐이고 선행 조건이 없는 오브젝트만 탄다.
-     - 서브틱(`registerSubTick`)이 있거나, 항목이 둘 이상이거나, 선행 조건이 걸리면 오브젝트 칸 경로나 선행 조건 스테이지로 간다.
-     - 오브젝트 안 순서(그룹 · 단계 · 우선순위 · 붙은 순서), "한 오브젝트는 한 스레드", 선행 조건 스테이지가 앞 경로의 쓰기를 먼저 적용하는 것(`_bApplyBefore`)이 일괄 경로에도 그대로다.
-   - **틱 중 바뀌는 상태:**
-     - 서브틱 등록 · 해제 · 선행 조건 · 활성 변경은 지금처럼 틱 뒤로 미루고, 다음 `refresh` 가 일괄 소속을 다시 정한다.
-     - 실행 여부(원자 마스크 · `_bRunnable`)는 일괄 함수도 항목마다 본다.
-   - **1b. 서브틱도 일괄(사용자 요구 — 서브틱을 쓴다고 느린 길로 빠지지 않게).** 서브틱 · 다중 항목 오브젝트가 일괄에서 빠지는 까닭은 "오브젝트 안 순서를 한 스레드가 지킨다" 하나뿐이다. 이 순서를 스레드 대신 **파도**로 지킨다.
-     - 파도 키: (단계, 우선순위, 같은 키끼리의 오브젝트 안 순번). 대부분 순번 0 이라 파도는 몇 개다.
-     - 파도 안에서는 (정확한 타입, 서브틱 id) 별 일괄 함수를 병렬로 돌린다. 파도 사이에는 장벽을 둔다.
-     - 한 오브젝트의 두 항목은 다른 파도에만 들므로 오브젝트 안 순서와 형제 컴포넌트의 무락 접근이 그대로다.
-     - 선행 조건 스테이지는 레벨마다 같은 방식으로 일괄한다.
-     - 일괄 함수는 `onSubTick( id, dt )` 를 한정 이름으로 부른다(비가상).
-     - 유니티 DOTS(시스템 순서 = 장벽, 시스템 안 = 청크 병렬)와 같은 자리. 언리얼은 TickFunction 마다 태스크다.
-     - 동등성 테스트에 이 경로도 넣는다.
-   - **1c. 레인을 타입 선언으로 가른다(혼합 — 사용자 결정 2026-11-10).** 기준은 측정한 비용이 아니라 상용 엔진처럼 타입이 선언한 성격이다(규모가 작은 지금의 벽시계 비교로 정하지 않는다). 리플렉션 메타데이터 `TickMode`:
-     - **Batch(기본):** 자기 오브젝트만 읽고 쓰는 틱. 파도 · 타입별 일괄(Mass 프로세서 · DOTS 청크 자리).
-     - **Task:** 특정 오브젝트를 선행 조건으로 기다리는 틱, 인스턴스마다 일의 양이 크게 다른 틱(계획기 · 경로 · IK 풀이), 몇 개뿐인 관리자형(GameMode · 디렉터). 선행 조건 간선만 기다리는 개별 태스크로, 파도 장벽에 묶이지 않는다(언리얼 TickFunction `bRunOnAnyThread` · Godot `process_thread_group` 자리).
-     - **Main:** 입력 · UI · 렌더 큐 같은 메인 스레드 전용 API 를 만지는 틱(언리얼 기본 · 유니티 `Update` 자리).
-     - **엔진 시스템:** 애니메이션 · 물리 · 내비 · VFX 처럼 무겁고 공통인 일은 컴포넌트 틱에 두지 않고 프레임 시스템 · 씬 서비스로(언리얼 애님 평가 태스크 · Chaos, Godot 서버 자리).
-     - 선언과 실제 일의 어긋남(Batch 가 메인 전용 API 를 부르거나 남의 오브젝트에 직접 쓰기)은 2 단계의 잡 컨텍스트 형식이 컴파일에서 막는다. `addSubTickPrerequisite` 를 건 항목은 선언과 관계없이 Task 로 간다.
-     - 판정은 규모와 무관한 구조 지표로 한다: 프레임당 장벽 수, 파도당 항목 수, 레인별 항목 비율, 일괄 비율. 벽시계는 부하 시나리오(오브젝트 8000 이상)에서만 본다.
-   - **테스트:** 같은 씬을 일괄 경로 켬 · 끔으로 N 프레임 돌려 상태 해시(`TestSceneStateHash`)가 같다. 서브틱 · 선행 조건 · 틱 중 서브틱 등록 · 해제를 섞은 케이스(`TickedPathMover` 테스트, 래그돌 `TickPhase::Late` 순서)가 두 경로에서 같다. 2 단계(잡 컨텍스트)도 이 동등성 테스트를 그대로 통과해야 한다.
-2. **잡 컨텍스트 형식:** `_bLaneSafe` 를 서명 분리(`runLane(SceneJobContext&)` / `runMain`)로 바꾸고, `SW_SCENE_SERVICE` 의 접근 선언을 필수로, `SceneDataKind` 를 64 비트로. 컨텍스트는 명령 버퍼만 노출한다(틱 안 구조 변경을 형식으로 막는다).
+0. **측정 기반(통합 담당):** `-workers=N` 인자 · Debug 카운터(`GT.Object.getComponentLookups` · `GT.Scene.tick.virtualTicks`)는 들어갔다. `load/*` 4 시나리오 × 워커 1 · 2 · 4 · 8 기준선을 S8 표에 적는다.
+1. **일괄 틱 · 파도 · 레인 — 런타임은 들어갔다(`TickRegistry` · `SceneTickScheduler` · `TickBatchRegistry`, 테스트 `TickLanesTest`).** Batch 레인은 서브틱 · 여러 항목 오브젝트까지 파도(순서 키, 오브젝트 안 순번)로 일괄하고, Task 는 오브젝트마다 태스크, Main 은 게임 스레드다. 일괄 경로를 끈 레지스트리(`setBatchPathEnabled( false )`)가 동등성의 기준 길이다. 남은 것:
+   - **생성기(5-4 작업자):** `REFLECT( TickMode = Batch|Task|Main )` 을 받아, `onTick` · `onSubTick` 을 재정의했거나 `TickMode` 를 단 타입마다 생성 TU 의 `namespace sw` 에 `SW_REGISTER_TICK_TYPE( 타입, 레인 )` 을 낸다(`TickBatchRegistry.h` 머리말이 계약). `TickBatchOf<타입>` 이 `onTick` · `onSubTick` 을 한정 이름으로 부르므로 보호 재정의는 `REFLECT_BODY` 가 친구로 연다. 손 등록은 `StressTestMoverComponent` 하나 — 생성기가 내면 지운다. 완료: Debug `virtualTicks` 가 0 에 가깝다.
+   - **선행 조건 스테이지 일괄:** 스테이지 항목은 레인의 일괄 함수(비가상)로 돈다(`TickStage::_listItemFunction`). 남은 것은 같은 함수의 이웃 항목을 한 번에 넘기도록 레벨 안을 (타입, 서브틱 id) 로 묶는 것 — 스테이지 편집(`flushStageEdits`)이 항목 순서를 가정하므로 그 정렬 규칙과 함께 바꾼다.
+   - **Task 의 선행 조건 간선:** 선행 조건을 건 항목은 지금 그룹 끝 스테이지(Kahn 레벨 장벽)로 간다. 간선만 기다리는 개별 태스크로 바꾸면 파도 · 레벨 장벽에 묶이지 않는다(언리얼 TickFunction 선행 조건 자리).
+   - **판정 숫자(통합 담당):** 구조 지표 `GT.Scene.tick.waves`(장벽 수) · `batchElements` · `taskEntries` · `mainEntries` · `objectEntries` 를 부하 시나리오에서 읽어 S8 표에. 벽시계는 오브젝트 8000 이상에서만.
+2. **잡 컨텍스트 형식 — 프레임 시스템은 들어갔다:** `ISceneMainFrameSystem::runMain` / `ISceneLaneFrameSystem::runLane( SceneJobContext& )`(매니저 읽기 전용 + 틱 뒤 큐), `SceneDataKindSet` 64 비트. 남은 것: (a) **컴포넌트 틱의 컨텍스트** — Batch 레인의 `onTick` 도 같은 형식(읽기 전용 남의 오브젝트 + 명령 버퍼)으로 받아 남의 컴포넌트 직접 쓰기(결함 후보 2 · `setCanEverTick` 비트필드)를 컴파일에서 막는다. 102 개 타입의 서명이 바뀌므로 생성기(5-4)의 `TickBatchOf` 호출과 함께 옮긴다. (b) `SW_SCENE_SERVICE` 의 접근 선언 필수화 — 지금 접근 선언은 프레임 일(`SW_SCENE_SERVICE_WITH_FRAME_JOB`)만 읽으므로, 단계 본문의 접근을 쓰는 곳(서비스 병렬화)을 먼저 정해야 의미가 있다.
 3. **물리 Export · 지연 이벤트:** `PhysicsPoseStore` 이중 버퍼를 병렬로 읽고 `applyTransformBatch` 로 일괄 쓴다(지금은 바디마다 백엔드 3 호출 + 세터). 충돌 배달은 `Physics` 단계 안 동기 가상 호출 대신 `FlushPostPhysics` 서비스로.
-4. **Jolt 조임 · 물리 훅 배치:** `JoltJobSystem.cpp:103` 의 인라인 실행 폴백을 지우고, `WaitForJobs` 가 `yield` 대신 돕기로 기다린다. 물리 훅 4 종을 배치 함수 + 명령 저장소로.
+4. **물리 훅 배치:** Jolt 조임(인라인 실행 폴백 삭제 · `WaitForJobs` 돕기)은 들어갔다. 물리 훅 4 종을 배치 함수 + 명령 저장소로.
 5. **`ComponentDataStore<T>`:** 트랜스폼 SoA 페이지를 템플릿으로 일반화한다. 첫 사용자는 강체 자세 · 명령, 투사체.
 6. **엔진 공간 색인:** `SceneSpatialGrid` 서비스(월드 버전으로 증분, 이중 버퍼 읽기). GF `InteractionSpatialIndex` · `ZoneOccupantIndex` 는 읽기만. `TagIndex` 는 세대 스냅샷으로.
-7. W-S4 허브 해체(5-1) → 8. `StructuralChangeBuffer` 를 스레드별 버퍼 + (writerID, 순번) 병합으로(틱 뒤 큐가 뮤텍스 하나라 투사체 수천에서 줄 선다).
+7. W-S4 허브 해체(5-1).
 
-병렬 작업자: A(0 · 1, Task · 생성기 · TickBatch), B(3 · 4, `Engine/Physics/**`), C(2, A 뒤), D(6, C 뒤). 확인할 결함 후보: 틱 본문 안 중첩 `runParallel` 이 돕기 중 TLS 틱 상태를 비워 writerID 가 0 이 되는 것(`SceneTickScheduler.cpp:83`), 남의 오브젝트에 `setCanEverTick` 을 쓰는 비트필드 경쟁(`Component.h:620`).
+병렬 작업자: B(3 · 4, `Engine/Physics/**`), C(2), D(6, C 뒤), 5-4 작업자(1 의 생성기). 결함 후보 둘은 확인했다 — 중첩 `runParallel` 의 writerID 0 은 고쳤고(`TickThreadScope` 가 들어올 때의 상태로 되돌린다), `setCanEverTick` 비트필드는 틱 중 쓰기가 `deferIfStructureFrozen` 으로 미뤄져 지금은 경쟁이 없다(틱 밖에서 워커 레인이 남의 컴포넌트에 쓰면 다시 열린다 — 2 단계 형식이 막을 자리).
 
 ### 5-4. 리플렉션(2026-11-10 설계 — 규모: REFLECT 1,408 · PROPERTY 6,708 · ENUM 413, 생성 TU 가 전체 컴파일 CPU 의 20 %(Debug) · 17 %(Release))
 
 조회 핫패스(`StaticType` · `castTo`, 1~2 ns)는 상용 수준이다. 비용과 결함은 등록 쪽과 생성 코드의 무게에 있다.
 
-- **W-R0 계측:** `registerModuleTypes` · `registerPendingTypes` · `populateLookupCaches` 에 구간, `MemoryTag::Reflection` 전후 바이트, 등록당 캐시 비움 수 카운터. `.ninja_log` 로 생성 TU 비중을 내는 `Scripts/dev/BuildTimeReport.py`.
-- **W-R1 런타임 핵심(결함 먼저):**
-  - `registerClass` 가 등록 한 번마다 **모든 타입**의 상속 프로퍼티 목록을 비운다(`TypeRegistry.cpp:190`). 다음 조회가 부모 목록을 값으로 복사해 다시 짓는다(`TypeInfo.cpp:311`).
-    - 등록 비용이 O(타입²) 이다.
-    - 무관한 키트 하나만 로드돼도, 들고 있던 `const PropertyInfo*`(UI 바인딩 경로 · 시퀀서 트랙)가 매달린다.
-    - 지연 `mutable` 캐시를 잠금 없이 읽는 것과 등록이 경합한다.
-  - 고칠 모양: 상속 목록을 복사 대신 뷰(`span<const PropertyInfo*>`)로 둔다. 무효화는 자손만 하고, 캐시는 등록 때 즉시 지어 `mutable` 을 없앤다. 보관처는 (타입, 색인, 세대)로 든다. 소비자 없는 `_onPropertyBoundChanged` 는 지운다.
-- **W-R3 생성기(5-3 선결):**
-  - **(a) 정적 서술자 표:** 생성 코드를 constexpr 서술자 표로 바꾼다(언리얼 UHT `PropPointers` 자리). 해시를 미리 계산하고, 컨테이너 래퍼는 정적 객체로 두어 `shared_ptr` 를 없앤다. 목표는 등록 할당 타입당 3 이하, 생성 바이트 10.8 → 4 MB 미만이다.
-  - **(b) 메타데이터 형식화:** `Units` 는 열거로 둔다(지금은 검증한 뒤 문자열로 실어 인스펙터가 `== "rad"` 로 다시 푼다). `Default` 는 그 프로퍼티 타입의 리터럴로 내서 오타가 컴파일 오류가 되게 한다. `EditCondition` 은 생성기가 미리 풀고, 없는 이름은 생성 오류로 막는다.
-  - **(c) 타입 특성 수집기:** 재정의(`onTick` · `onSubTick` · `serializeState`)를 특성 비트로 모은다. `REFLECT( TickMode = … )` 를 받아 `TickBatchRegistry` 등록을 생성 코드에 낸다. 그러면 손 매크로 `SW_REGISTER_TICK_BATCH` 가 사라진다.
-  - **(e) 조건부 필수 주석:** "부모(`_base` · 상속)가 없을 때만 `Required`" 같은 조건을 메타데이터로 적는다. `CultureInfo` 는 상속 덮어쓰기라 칸이 비어도 부모 값을 받으므로 지금의 무조건 `Required` 로는 `XMLFields` 로 옮기지 못했다(D1 손 파서 이전에서 남김). 생성기가 조건을 서술자에 싣고 필수 칸 판정(`SerializerUtil::isRequiredValueMissing`)이 합친 상태에서 본다.
-  - **(d) 경고를 생성 오류로:** 클래스 템플릿 `REFLECT` · 멤버 함수 템플릿 `FUNCTION` 은 지금 경고만 남기고 건너뛴다. `#if` 아래 `PROPERTY` 가 조용히 빠지는 것도 막는다. 같은 모듈 안에 리프 이름이 겹치면 오류로 낸다.
-- **W-R5 빌드 시간(W-R3 와 병렬 — 파일이 다르다):** 헤더당 `.gen.cpp` 대신 모듈 안 8~16 헤더 묶음 TU 로 짓는다(PCH 를 1,465 번 연다). `.gen.meta.cpp` 는 같은 TU 의 `#if` 절로, 의존은 헤더별로 귀속한다. 목표는 생성 비중 8 % 미만이다.
-- **W-R4 프로퍼티 방문자 하나(W-R3 뒤):** 직렬화 9 루프 · 검증 · 문서 · 인스펙터 gather · 상태 해시 기본 구현이 `ReflectVisit` 하나를 쓴다. 지금 `foldStateHash` 는 손으로 써서 새 칸이 해시에서 빠질 수 있다. 소비자가 테스트뿐인 `Replicated` 메타데이터는 여기서 첫 소비자를 얻는다.
-- **W-R6 밀집 타입 색인:** 5-3 의 5 단계(`ComponentDataStore<T>`)와 함께만.
+- **됨(작업자 브랜치, 통합 빌드 · 검증 전):** W-R0 계측(구간 · 모듈마다 시간 · Reflection 바이트 · 상속 캐시 비움 수 로그, `Scripts/dev/BuildTimeReport.py` — 지금 Debug 생성 TU 17.4 %), W-R1(바뀐 타입과 자손만 비우고 배치 끝에 한 번 다시 짓기, 상속 목록 = 선언 타입 원소의 포인터 뷰 `PropertyListView`, 등록이 짓고 조회는 읽기만, `_onPropertyBoundChanged` 삭제), W-R3 (c) 특성 비트 · `REFLECT( TickMode )` · 생성된 `SW_REGISTER_TICK_TYPE` 등록(StressTestMover 손 등록 삭제), (d) 경고 → 생성 오류(클래스 템플릿 · 멤버 함수 템플릿 · 없는 ENUM 센티널 · `#if` 아래 리플렉션 매크로), (b) `Units` 열거화 · `Default` 는 칸 타입 리터럴의 생성 대입(`_pApplyDefault`) · `EditCondition` 은 생성된 판정(`_pEditCondition`, 기반 없는 타입의 없는 이름은 생성 오류 — 런타임 파서 삭제), (e) `PROPERTY( RequiredAtRoot )` + `InheritParent`(판정 `isRequiredValueMissing( …, RequiredScope )` 한 곳) · `CultureInfo` 의 `<culture>` 속성을 REFLECT 스키마(`XMLFields`)로.
+- **남은 일(순서대로):**
+  - W-R1 나머지: 보관처를 (타입, 색인, 세대)로 — 지금 포인터는 선언 타입 자신이 다시 등록(핫 리로드) · 해제될 때만 매달린다. 판정 비트(POD · 세이브 · 검증)는 등록이 미리 구하지만 아직 `mutable` 지연 자리가 남았다(검증 판정이 칸 타입을 재귀로 묻는다).
+  - W-R3 (a) 정적 서술자 표(constexpr, 해시 사전 계산, 컨테이너 래퍼 정적 객체 — 목표 등록 할당 타입당 3 이하, 생성 바이트 4 MB 미만). 지금 생성 모양: 프로퍼티마다 즉시 호출 람다가 `PropertyInfo` 를 짓고 `_metadata` 상자에 대입한다(`CodeGenerator::emitPropertyInfoEntry` · `emitPropertyMetadata`). (d) 나머지: 같은 모듈 리프 이름 겹침 — 파서가 증분이라 모듈 전체를 못 본다(모듈 목록 단계에서 보거나 런타임 `Reflection.TypeShortNameCollision` 을 같은 모듈이면 오류로). (e) 나머지: `CultureInfo` 의 부모 병합(부모 값 복사 → 적힌 칸 덮기)과 자식 요소(규칙 · 패턴 · 목록) · `pseudo` 는 손 읽기다 — 자식 요소를 리플렉션 컨테이너 칸으로 옮기려면 `<item>` 목록 · 범주 속성 규칙 묶음의 코덱이 필요하다. 구분 기호 · 패턴의 C++ 초기값은 표 없는 불변 문화권(`CultureInfo{}` 폴백 — `LocalizationManager` · `LocText`)이라 린트 예외 표에 두었다. 그 폴백을 없애면(문화권을 못 찾으면 오류) 초기값을 지우고 `RequiredAtRoot` 로 바꾼다.
+  - (b) 확인 남음: 생성기를 실제 헤더에 돌린 결과(`_pApplyDefault` · `_pEditCondition` 줄)와 파서 사례 3 개(`DefaultOnContainer` · `EditConditionUnknownName` · `RequiredAtRootWithoutParent`)는 통합 빌드에서 본다. `Default` 를 단 문자열 칸이 `const char*` 대입을 받지 않는 타입(명시 생성자)이면 생성 코드가 컴파일되지 않는다 — 지금 `Default` 4 곳은 int · string 이다.
+  - W-R5 빌드 시간: 헤더당 `.gen.cpp` 대신 모듈 안 8~16 헤더 묶음 TU(목표 생성 비중 8 % 미만 — `BuildTimeReport.py` 로 잰다).
+  - W-R4 `ReflectVisit` 하나(직렬화 9 루프 · 검증 · 문서 · 인스펙터 gather · 상태 해시 기본 구현). `foldStateHash` 손 구현 대체는 해시 구성이 바뀌므로 상태 해시 동등성 판정(T1 · 5-3)과 같은 묶음에서.
+  - W-R6 밀집 타입 색인: 5-3 의 5 단계(`ComponentDataStore<T>`)와 함께만.
+- **5-3 과 맞춘 자리(병합함):** 생성기는 `onTick` · `onSubTick` 을 직접 재정의한 컴포넌트와 `REFLECT( TickMode = … )` 를 단 컴포넌트에 `SW_REGISTER_TICK_TYPE( 타입, 레인 )` 을 낸다(`CodeGenerator::emitTickBatchRegistration` 한 곳, 메타데이터가 없으면 Batch). `TickMode` 는 `TickRegistry.h` 하나, 재정의 비트는 `TypeMetadata::_bOverridesTick` · `_bOverridesSubTick` · `_bOverridesSerializeState`. `REFLECT_BODY` 가 `TickBatchOf` 를 친구로 연다.
 
 ### 5-5. 상용 대비 고도화(2026-11-10 진단 — 5-1 ~ 5-4 밖)
 
@@ -148,11 +122,11 @@ GameObject/Component API 는 저작 · 수명 · 직렬화 층으로 두고, 프
 - **N2 서버 배포 — 통합 검증만 남음:** Linux 서버 패키지로 `py -3 -m Scripts server-image --package … --config … --game …`(묶기 전 `Server -check-config` 를 WSL 로 돈다) 한 번, 쿠버네티스 예시는 비밀 `ops-token` 을 더해야 뜬다(운영 포트 0.0.0.0 은 토큰 필수 — 스크레이퍼도 Bearer).
 - **U1 햅틱 남은 것:** 출력 `IInputFeedbackDevice` · 데이터 `*.haptic.xml`(`HapticEffectDef`, 공유 캐시) · 재생 `HapticPlayback`(게임패드가 든다, XInput · evdev 백엔드 그대로)은 들어갔다 — 통합에서 `HapticEffectTest` 를 돌린다. 방아쇠 진동(DualSense · GameInput)과 터치 기기 진동(Android Vibrator)은 그 백엔드가 생길 때 같은 출력으로 건다. 패드 메뉴 방향 포커스는 이미 있다(`UINavigationSolver` · `UIInputRouter`).
 - **A1 애니메이션 포즈 노드(5-3 뒤):** 등록표(`AnimationPoseNodeRegistry`)는 들어왔다. 그 위에 Mirror · Montage(섹션 · 분기)를 등록 한 줄씩 더한다(평가 경로가 5-3 에서 정해진 뒤).
-- **R1 에셋 리다이렉터(5-4 뒤):** GUID 전환은 기각한다(경로 id 가 언리얼 SoftObjectPath 자리). `redirects.xml`(옛 → 새)를 `AssetPaths` 앞단에서 풀어, 세이브 · 서버에 적힌 옛 경로가 산다. 린트가 남은 참조를 보고한다.
+- **R1 에셋 리다이렉터 — 됨(작업자 브랜치):** 도메인 뿌리마다 `redirects.xml`(옛 → 새), `AssetIO` 가 경로 교체보다 먼저 푼다(`AssetRedirect`), 사슬은 접고 순환 · 중복은 기동 오류, 린트 `asset-references` 가 남은 옛 참조를 보고한다. 남은 일: 에디터 옮기기 · 이름 바꾸기가 표에 줄을 더하게(`move-asset`).
 - **N1 복제 스키마를 리플렉션에서(5-4 뒤):**
   - 엔티티 상태 바이트를 게임이 손으로 양자화한다. 그래서 칸 하나를 더하면 서버 · 클라 두 곳을 고쳐야 한다.
-  - `PROPERTY( Replicated, Quantize = … )` 로 작성기를 생성하고, 스키마 해시를 와이어 버전에 합친다.
-  - `kMaxEntityBytes` 초과는 첫 경고만 남기고 엔티티가 사라진다 — `registerEntity` 의 오류로 바꾼다.
+  - `PROPERTY( Replicated, Quantize = … )` 로 작성기를 생성하고, 스키마 해시를 와이어 버전에 합친다(남음 — W-R3 (a) 서술자 표 위에 얹는다).
+  - 됨: 상한(`kMaxEntityBytes` · MMO `kMaxStateBytes`) 초과는 경고가 아니라 오류다(`ReplicationServer::setEntity` · `MMOReplicator::setEntity`, 첫 번째만 남기고 횟수를 센다).
 - **E1 되돌리기 남은 것(통합에서):** 씬 명령 · 완료 함수(이름 확정 · 컴포넌트 더하기 · 프리셋 · Keep Simulation Changes)는 `EditorTransaction&` 를 받는다. 시나리오 `editor/undocoverage` 를 돌려 실패 줄의 명령을 고친다 — 컴포넌트 대상 명령(`SceneDuringPlay`)은 선택만으로는 꺼져 건너뛰므로 컴포넌트 대상을 주는 줄을 더한다. 굽기는 파생 데이터라 기록하지 않는다(결정, `EditorCommandEdit`).
 - **G1 장르 수직 슬라이스 — 통합 실행만 남음:** 게임 12개에 `automation/slice.scenario.xml`(목표 단계는 그 게임 시나리오의 사본 + `game.save` → 두 번 `game.load` 뒤 `<RecordStateHash>` · `<ExpectStateHash>`)이 들어왔다. 체인에서 처음 돈다 — 진 게임은 목표 사본(원본 시나리오)과 복원이 되살리지 못한 오브젝트(`state.objects`)를 본다. velmora 는 `vale` 이 슬라이스다.
 

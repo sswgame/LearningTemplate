@@ -149,7 +149,7 @@ namespace sw
          */
         [[nodiscard]] bool initialize( INetPeers* pHost, const ReplicationServerConfig& settings, IReplicationPolicy* pPolicy = nullptr );
         void               beginTick( uint32 tick );
-        /** @brief 이 틱의 엔티티를 등록합니다. 상태가 `NetSnapshot::kMaxEntityBytes` 를 넘으면 복제하지 않으며, 처음 한 번만 경고하고 그 뒤로는 횟수만 셉니다. */
+        /** @brief 이 틱의 엔티티를 등록합니다. 상태가 `NetSnapshot::kMaxEntityBytes` 를 넘으면 복제하지 않으며, 처음 한 번 오류를 남기고(상태 스키마의 결함이다 — 테스트 · 시나리오가 멈춘다) 그 뒤로는 횟수만 셉니다. */
         void setEntity( uint32 entityID, uint32 typeID, const vector<uint8>& buffer );
         /** @brief 이 틱의 엔티티를 확정하고 id 순으로 정렬합니다. 그 전까지 월드에는 지난 틱의 엔티티가 남아 있으므로 `sendSnapshots` 와 `getWorldSnapshot` 은 이 함수 뒤에 씁니다. */
         void endTick();

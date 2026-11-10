@@ -65,7 +65,7 @@ namespace sw
                                               SerializerUtil::shouldSerializeProperty( typeInfo, prop, context ) == false;
                     if ( bKeepCurrent )
                         continue;
-                    SerializerUtil::applyPropertyDefault( prop, MutableObjectAddress{ pInstance }, context );
+                    SerializerUtil::applyPropertyDefault( prop, MutableObjectAddress{ pInstance } );
                 }
             }
 
@@ -506,7 +506,7 @@ namespace sw
             // 판정은 XML 과 한 함수다(`SerializerUtil::isRequiredValueMissing`) — 빈 이름 글도 빠진 것이다.
             const string      valueText = value.isValid() && value.isString() ? value.asString() : string{};
             const string_view textView( valueText );
-            if ( SerializerUtil::isRequiredValueMissing( prop, value.isValid(), value.isValid() && value.isString() ? &textView : nullptr ) )
+            if ( SerializerUtil::isRequiredValueMissing( prop, value.isValid(), value.isValid() && value.isString() ? &textView : nullptr, RequiredScope::Root ) )
             {
                 outListPath.push_back( path );
                 continue;
@@ -590,10 +590,10 @@ namespace sw
         if ( pInstance == nullptr || src.isObject() == false )
             return FieldReadResult::FieldFailed;
 
-        const vector<PropertyInfo>& listProp = typeInfo.getPropertiesWithBase();
-        unordered_set<uint32>       uniqueMatched;
-        bool                        bFieldError{ false };
-        bool                        bForbiddenField{ false };
+        const PropertyListView listProp = typeInfo.getPropertiesWithBase();
+        unordered_set<uint32>  uniqueMatched;
+        bool                   bFieldError{ false };
+        bool                   bForbiddenField{ false };
         // 소프트 읽기(orphan 목록이 있음)는 읽지 못한 필드를 orphan 으로 넘기고 이어 읽는다. 그 필드는 **읽기 전 값**이다(바이너리 · XML 과 같다).
         const bool           bContinuesAfterUnreadable = pOutListOrphan != nullptr;
         PropertyReadRollback rollback;

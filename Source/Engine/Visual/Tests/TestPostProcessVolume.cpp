@@ -56,8 +56,8 @@ namespace
 /** @brief [PostProcessVolumeTest] 덮어쓰기 표시는 값 칸마다 하나이고 같은 차례 · 이름(`_b` + 첫 글자 대문자)이다. 모든 값 칸은 섞을 수 있는 형식이거나 섞기가 따로 다루는 칸이다 */
 SW_TEST_CASE( PostProcessVolumeTest, OverrideFlagsPairEveryValue )
 {
-    const vector<PropertyInfo>& listValue    = PostProcessValues::StaticType()->getPropertiesWithBase();
-    const vector<PropertyInfo>& listOverride = PostProcessOverrides::StaticType()->getPropertiesWithBase();
+    const PropertyListView listValue    = PostProcessValues::StaticType()->getPropertiesWithBase();
+    const PropertyListView listOverride = PostProcessOverrides::StaticType()->getPropertiesWithBase();
     SW_REQUIRE_EQUAL( listValue.size(), listOverride.size() );
     for ( size_t index = 0; index < listValue.size(); ++index )
     {

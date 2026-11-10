@@ -2,6 +2,7 @@
 
 #include "Programs/ReflectionParser/CodeGenerator.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
@@ -83,6 +84,70 @@ namespace sw
                 const utf8* pCall = pField->_bIsAccessor == SW_TRUE ? "()" : "";
                 emit.linef( "p._metadata->%# = []( const void* pInstance ) -> ::float64 { return %#static_cast<::float64>( static_cast<const %#*>( pInstance )->%#%# ); };",
                             pMemberName, bNegate ? "-" : "", typeInfo._fullyQualifiedName, pField->_memberName, pCall );
+            }
+
+            /** @brief 이 타입이 선언한 프로퍼티 중 C++ 이름이 @p name 인 것입니다. 없으면(기반의 이름 포함) nullptr 입니다. */
+            static const ParsedPropertyInfo* findOwnProperty( const ParsedTypeInfo& typeInfo, const string_view name )
+            {
+                for ( const ParsedPropertyInfo& candidate : typeInfo._listProperty )
+                {
+                    if ( string_view( candidate._memberName ) == name )
+                        return &candidate;
+                }
+                return nullptr;
+            }
+
+            /** @brief 인스턴스 `o` 에서 그 이름의 값을 읽는 C++ 식입니다. 이 타입의 접근자 프로퍼티면 메서드를 부르고, 기반의 이름은 필드로 읽는다(틀리면 컴파일 오류). */
+            static string makeMemberRead( const ParsedTypeInfo& typeInfo, const string_view name )
+            {
+                const ParsedPropertyInfo* pOwn  = findOwnProperty( typeInfo, name );
+                const bool                bCall = pOwn != nullptr && pOwn->_bIsAccessor == SW_TRUE;
+                return "o." + string( name ) + ( bCall ? "()" : "" );
+            }
+
+            /**
+             * @brief `Default = "…"` 를 그 프로퍼티 타입의 C++ 리터럴로 바꿉니다 — 문자열은 따옴표, 열거는 `::열거형::이름`, 나머지는 적은 식 그대로.
+             * @details 대입문으로 나가므로 오타 · 타입이 맞지 않는 기본값은 생성된 코드의 컴파일 오류다(글을 로드 때 읽다 경고하던 길을 없앤다).
+             */
+            static string makeDefaultLiteral( const ParsedPropertyInfo& prop )
+            {
+                const string_view    text = StringUtil::trim( prop._defaultValue );
+                const FixedValueKind kind = prop._fixedType != nullptr ? prop._fixedType->_kind : FixedValueKind::Ineligible;
+                if ( kind == FixedValueKind::String )
+                    return CodeEmit::quoted( text );
+                const bool bBareEnumerator = kind == FixedValueKind::Enum && prop._fixedType->_enum != nullptr && text.find( "::" ) == string_view::npos &&
+                                             ( text.empty() == false && ( text.front() < '0' || text.front() > '9' ) && text.front() != '-' );
+                if ( bBareEnumerator )
+                    return "::" + prop._fixedType->_enum->_fullyQualifiedName + "::" + string( text );
+                return string( text );
+            }
+
+            /**
+             * @brief `EditCondition` 식(꼴은 `DeclarationValidator::isEditConditionWellFormed` 가 봤다)을 인스턴스 `o` 에 대한 C++ bool 식으로 바꿉니다.
+             * @details 열거자는 그 칸의 타입으로 한정한다(`decltype`) — 없는 이름 · 없는 열거자는 생성된 코드의 컴파일 오류다.
+             *          언리얼 `EditCondition` 은 글을 에디터가 런타임에 풀어 틀린 이름이 조용히 무시된다.
+             */
+            static string makeEditConditionExpr( const ParsedTypeInfo& typeInfo, const string_view rawText )
+            {
+                const string_view text  = StringUtil::trim( rawText );
+                const size_t      eqPos = text.find( "==" );
+                const size_t      nePos = text.find( "!=" );
+                if ( eqPos == string_view::npos && nePos == string_view::npos )
+                {
+                    const bool        bNegate = text.front() == '!';
+                    const string_view name    = StringUtil::trim( bNegate ? text.substr( 1 ) : text );
+                    return string( bNegate ? "!" : "" ) + "static_cast<bool>( " + makeMemberRead( typeInfo, name ) + " )";
+                }
+                const size_t      opPos = eqPos != string_view::npos ? eqPos : nePos;
+                const string      read  = makeMemberRead( typeInfo, StringUtil::trim( text.substr( 0, opPos ) ) );
+                const string_view op    = text.substr( opPos, 2 );
+                string_view       value = StringUtil::trim( text.substr( opPos + 2 ) );
+                int64             number{ 0 };
+                if ( StringUtil::parseInt64( value, number ) )
+                    return "static_cast<::sw::int64>( " + read + " ) " + string( op ) + " " + string( value );
+                // 한정해 적어도(`Mode::Orbit`) 끝 이름을 칸의 타입으로 다시 한정한다 — 적은 한정자가 다른 열거형이어도 칸과 맞춘다.
+                value = ParserUtil::scopeLeaf( value );
+                return read + " " + string( op ) + " ::std::decay_t<decltype( " + read + " )>::" + string( value );
             }
 
             /**
@@ -295,10 +360,16 @@ namespace sw
         // 타입 핸들 인자의 확인(`ComponentHandleArgument`)은 씬 매니저를 보므로, 그런 인자가 있는 산출물만 그 헤더를 넣는다(모든 .gen.cpp 가 매니저를 끌어오지 않는다).
         if ( hasHandleArgument() )
             buffer.append( "#include \"Engine/Object/GameObject/ComponentHandleArgument.h\"\n\n" );
+        // 일괄 틱 등록도 같은 규칙이다 — 그런 타입이 있는 산출물만 레지스트리 헤더를 넣는다.
+        const bool bTickBatch = VectorUtil::containsIf( _header._listType, []( const ParsedTypeInfo& typeInfo )
+        { return typeInfo.requiresTickRegistration(); } );
+        if ( bTickBatch )
+            buffer.append( "#include \"Engine/Object/GameObject/Tick/TickBatchRegistry.h\"\n\n" );
         buffer.append( emitdirective::kGeneratedNsOpen );
         for ( size_t typeIndex = 0; typeIndex < _header._listType.size(); ++typeIndex )
         {
             emitTypeRegistrar( buffer, _header._listType[typeIndex], typeIndex );
+            emitTickBatchRegistration( buffer, _header._listType[typeIndex] );
         }
         for ( const ParsedEnumInfo& enumInfo : _header._listEnum )
         {
@@ -372,9 +443,28 @@ namespace sw
         // 상한은 코덱이 지키는 값 그대로다(상수 이름으로 적었으면 `PropertyResolver` 가 푼 값).
         if ( prop._bHasMaxCount != SW_FALSE )
             emit.linef( "p._metadata->_maxCount     = %#u;", prop._maxCount );
+        // 단위는 상수 문맥에서 철자를 열거로 바꾼다 — 표에서 빠진 철자는 이 줄이 컴파일 오류다(검증은 `applyDisplayMeta` 가 먼저 했다).
+        if ( prop._units.empty() == false )
+        {
+            emit.line( "{" );
+            emit.push();
+            emit.linef( "constexpr ::sw::ReflectUnitKind kUnit = ::sw::ReflectUnit::kindOf( %# );", CodeEmit::quoted( prop._units ) );
+            emit.line( "static_assert( kUnit != ::sw::ReflectUnitKind::None, \"unknown PROPERTY( Units )\" );" );
+            emit.line( "p._metadata->_unit = kUnit;" );
+            emit.pop();
+            emit.line( "}" );
+        }
         // 숫자가 아닌 경계 중 이 타입의 필드 하나를 가리키는 것은 인스턴스에서 읽는 함수로 낸다(인스펙터와 읽기 공통 끝이 그 값으로 막는다).
         CodeGeneratorInternal::emitRangeReader( emit, typeInfo, prop._minRangeExpr._text, "_pReadMinRange" );
         CodeGeneratorInternal::emitRangeReader( emit, typeInfo, prop._maxRangeExpr._text, "_pReadMaxRange" );
+        // 기본값 · 편집 조건은 글이 아니라 컴파일된 대입 · 판정이다 — 이름 · 철자가 틀리면 이 줄이 컴파일되지 않는다.
+        // 이 함수는 `Registrar<T>`(모든 REFLECT 타입의 친구) 안에서 나가므로 기반의 비공개 칸도 읽는다.
+        if ( prop._defaultValue.empty() == false )
+            emit.linef( "p._metadata->_pApplyDefault = []( void* pInstance ) { static_cast<%#*>( pInstance )->%#%# = %#; };", typeInfo._fullyQualifiedName, prop._memberName,
+                        prop._bIsAccessor == SW_TRUE ? "()" : "", CodeGeneratorInternal::makeDefaultLiteral( prop ) );
+        if ( prop._editCondition.empty() == false )
+            emit.linef( "p._metadata->_pEditCondition = []( const void* pInstance ) -> bool { const %#& o = *static_cast<const %#*>( pInstance ); return %#; };",
+                        typeInfo._fullyQualifiedName, typeInfo._fullyQualifiedName, CodeGeneratorInternal::makeEditConditionExpr( typeInfo, prop._editCondition ) );
         // 슬라이더 범위는 에디터 메타데이터다 — 개발 전용 단위가 낸다(`emitPropertyEditorMetadata`).
     }
 
@@ -710,6 +800,9 @@ namespace sw
         emit.push( 3 );
 
         AnnotationFields::emitRuntimeMetadata( emit, typeInfo, "info._metadata->" );
+        emit.flagIf( typeInfo._bOverridesTick, "info._metadata->_bOverridesTick" );
+        emit.flagIf( typeInfo._bOverridesSubTick, "info._metadata->_bOverridesSubTick" );
+        emit.flagIf( typeInfo._bOverridesSerializeState, "info._metadata->_bOverridesSerializeState" );
 
         if ( typeInfo._listProperty.empty() == false )
         {
@@ -740,6 +833,29 @@ namespace sw
                              CodeGeneratorInternal::emitAliasRegisterLines( typeInfo._listAlias, typeInfo._fullyQualifiedName, false ) },
                             { templatekey::kFixedCodec, _fixedCodec.getMemberText( typeIndex ) },
         } );
+    }
+
+    void CodeGenerator::emitTickBatchRegistration( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo ) const
+    {
+        // 등록 줄 모양은 틱 런타임(5-3)이 정한 `SW_REGISTER_TICK_TYPE( 타입, 레인 )` 하나다 — 손 등록과 같은 줄. 메타데이터가 없으면 Batch.
+        if ( typeInfo.requiresTickRegistration() == false )
+            return;
+        const string mode = typeInfo._tickMode.empty() ? string( "Batch" ) : typeInfo._tickMode;
+        CodeEmit     emit( outBuffer );
+        emit.push( 1 );
+        // 생성 이름공간(`sw::generated`)은 `sw` 안이라 `sw` 바로 아래 타입은 짧은 이름으로 닿는다. 다른 이름공간의 타입은 매크로가 이름을 붙여 쓰지 못해(토큰 붙이기) 같은 줄을 펼쳐 쓴다.
+        if ( typeInfo._fullyQualifiedName == "sw::" + typeInfo._name )
+        {
+            emit.linef( "SW_REGISTER_TICK_TYPE( %#, %# );", typeInfo._name, mode );
+        }
+        else
+        {
+            const string id = sanitizeIdentifier( typeInfo._fullyQualifiedName );
+            emit.linef( "static constexpr utf8 kTickBatchScopeName_%#[] = \"GT.Scene.tickBatch.%#\";", id, typeInfo._name );
+            emit.linef( "static ::sw::TickBatchRegistrar s_%#_tickBatch{ ::sw::TickBatchRegistry::Entry{ &%#::StaticType, &::sw::TickBatchOf<%#, kTickBatchScopeName_%#>::tickRange, ::sw::TickMode::%# } };",
+                        id, typeInfo._fullyQualifiedName, typeInfo._fullyQualifiedName, id, mode );
+        }
+        emit.line( "" );
     }
 
     void CodeGenerator::emitEnumRegistrar( CodeEmitBuffer& outBuffer, const ParsedEnumInfo& enumInfo ) const
@@ -964,12 +1080,17 @@ namespace sw
         {
             if ( enumInfo._bIsBitFlag == SW_TRUE )
                 bNeedFlags = true;
+            // 없는 센티널은 생성 오류다 — 경고로 두면 Invalid · Count 가 없는 열거형으로 조용히 등록된다(W-R3 d).
             if ( enumInfo._invalidEnumerator.empty() == false && findEnumerator( enumInfo, enumInfo._invalidEnumerator ) == nullptr )
-                SW_LOG_WARNING_ID( "CodeGenerator.ENUMInvalidNotFound", "ENUM(Invalid=%#) not found on %#", enumInfo._invalidEnumerator,
-                                   enumInfo._fullyQualifiedName );
+            {
+                SW_LOG_ERROR_ID( "CodeGenerator.ENUMInvalidNotFound", "ENUM(Invalid=%#) not found on %#", enumInfo._invalidEnumerator, enumInfo._fullyQualifiedName );
+                return false;
+            }
             if ( enumInfo._countEnumerator.empty() == false && findEnumerator( enumInfo, enumInfo._countEnumerator ) == nullptr )
-                SW_LOG_WARNING_ID( "CodeGenerator.ENUMCountNotFound", "ENUM(Count=%#) not found on %#", enumInfo._countEnumerator,
-                                   enumInfo._fullyQualifiedName );
+            {
+                SW_LOG_ERROR_ID( "CodeGenerator.ENUMCountNotFound", "ENUM(Count=%#) not found on %#", enumInfo._countEnumerator, enumInfo._fullyQualifiedName );
+                return false;
+            }
         }
 
         if ( bNeedFlags )

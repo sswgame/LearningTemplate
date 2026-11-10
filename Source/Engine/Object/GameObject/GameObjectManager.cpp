@@ -146,19 +146,21 @@ namespace sw
             }
         };
 
-        /** @brief 같은 파도의 워커 레인 묶음입니다 — 구간마다 시스템의 `runBeforeTick` 을 부른다. */
+        /** @brief 같은 파도의 워커 레인 묶음입니다 — 구간마다 시스템의 `runLane` 을 잡 컨텍스트(매니저 읽기 전용 + 틱 뒤 큐)로 부른다. */
         struct FrameSystemLaneJob
         {
-            GameObjectManager*          _pManager;
+            const GameObjectManager*    _pManager;
+            StructuralChangeBuffer*     _pCommandBuffer;
             const FrameSystemLaneEntry* _arrLane;
             float32                     _deltaTime;
 
             void runRange( uint32 start, uint32 end ) const
             {
+                SceneJobContext context{ *_pManager, *_pCommandBuffer, _deltaTime };
                 for ( uint32 jobIndex = start; jobIndex < end; ++jobIndex )
                 {
                     const ScopedFrameProfile systemScope{ _arrLane[jobIndex]._scopeID };
-                    _arrLane[jobIndex]._pSystem->runBeforeTick( *_pManager, _deltaTime );
+                    _arrLane[jobIndex]._pSystem->runLane( context );
                 }
             }
         };
@@ -167,6 +169,18 @@ namespace sw
 
 namespace sw
 {
+    void SceneJobContext::deferPostTick( Callback func )
+    {
+        // 늘 큐로 간다 — 레인은 워커에서 돌 수 있어, 얼지 않았다고 바로 실행하면(`executeOrDeferPostTick`) 워커가 씬을 바꾼다.
+        _pCommandBuffer->deferPostTick( std::move( func ) );
+    }
+
+    void ISceneLaneFrameSystem::runMain( GameObjectManager& manager, float32 deltaTime )
+    {
+        SceneJobContext context{ manager, manager._structuralChangeBuffer, deltaTime };
+        runLane( context );
+    }
+
     GameObjectManager::GameObjectManager()
         : GameObjectManager( SceneEngineServices::makeFromBoundEngine() )
     {
@@ -358,7 +372,7 @@ namespace sw
         // 붙인 순서가 실행 순서다 — 이미 붙은 시스템이 이번 프레임의 값을 보아야 하는 종류를 새 시스템이 쓰면, 쓰는 쪽이 읽는 쪽 뒤에 서게 되므로 붙이지 않는다.
         // 워커에서 돌 시스템은 오브젝트 · 컴포넌트를 만들거나 지울 수 없다(생성 · 파괴는 게임 스레드 전용이다) — 구조를 쓰는 시스템이 레인 안전을 선언하면 모순이라 붙이지 않는다.
         const SceneFrameAccess newAccess = pSystem->getFrameAccess();
-        if ( newAccess._bLaneSafe && newAccess._writes.contains( SceneDataKind::Structure ) )
+        if ( pSystem->findLaneSystem() != nullptr && newAccess._writes.contains( SceneDataKind::Structure ) )
         {
             SW_LOG_ERROR_ID( "FrameSystem.LaneStructure", "Frame system '%#' is rejected: it declares itself lane-safe (worker thread) but writes Structure", key.c_str() );
             return false;
@@ -525,7 +539,7 @@ namespace sw
         _bRunningFrameSystems = SW_TRUE;
         const size_t count    = _listFrameSystem.size();
         // 파도 계획 — 붙인 순서를 지키되 접근이 겹치지 않는 시스템끼리 한 파도에 묶는다(`FrameSystemLanePlan`). 뗀 칸은 빈 접근이라 아무와도 겹치지 않는다.
-        // 언리얼 Task Graph 의 선행 있는 태스크, 유니티 Job System 의 JobHandle 의존과 같다. 파도는 차례로 돌고, 같은 파도의 `_bLaneSafe` 시스템은 `TaskManager` 가 병렬로 돌린다.
+        // 언리얼 Task Graph 의 선행 있는 태스크, 유니티 Job System 의 JobHandle 의존과 같다. 파도는 차례로 돌고, 같은 파도의 레인 시스템(`ISceneLaneFrameSystem`)은 `TaskManager` 가 병렬로 돌린다.
         _listFrameAccess.clear();
         for ( size_t systemIndex = 0; systemIndex < count; ++systemIndex )
         {
@@ -542,15 +556,16 @@ namespace sw
                 if ( pSystem == nullptr )
                     continue;
                 // 워커로 보내지 않는 것은 이 스레드가 먼저 돈다 — 같은 파도의 다른 시스템과 접근이 겹치지 않으므로 순서는 결과에 영향이 없다.
-                const ProfileScopeID scopeID = _listFrameSystem[systemIndex]._scopeID;
-                if ( _listFrameAccess[systemIndex]._bLaneSafe )
+                const ProfileScopeID   scopeID     = _listFrameSystem[systemIndex]._scopeID;
+                ISceneLaneFrameSystem* pLaneSystem = pSystem->findLaneSystem();
+                if ( pLaneSystem != nullptr )
                 {
-                    _listLaneJob.push_back( FrameSystemLaneEntry{ pSystem, scopeID } );
+                    _listLaneJob.push_back( FrameSystemLaneEntry{ pLaneSystem, scopeID } );
                 }
                 else
                 {
                     const ScopedFrameProfile systemScope{ scopeID };
-                    pSystem->runBeforeTick( *this, deltaTime );
+                    pSystem->runMain( *this, deltaTime );
                 }
             }
             if ( _listLaneJob.empty() )
@@ -563,14 +578,15 @@ namespace sw
                 for ( const uint32 systemIndex : wave._listSystem )
                 {
                     const SceneFrameAccess& laneAccess = _listFrameAccess[systemIndex];
-                    if ( laneAccess._bLaneSafe && ( laneAccess._reads.contains( SceneDataKind::Transform ) || laneAccess._readsPrevious.contains( SceneDataKind::Transform ) ) )
+                    const bool              bLane      = _listFrameSystem[systemIndex]._pSystem != nullptr && _listFrameSystem[systemIndex]._pSystem->findLaneSystem() != nullptr;
+                    if ( bLane && ( laneAccess._reads.contains( SceneDataKind::Transform ) || laneAccess._readsPrevious.contains( SceneDataKind::Transform ) ) )
                     {
                         flushSceneTransforms();
                         break;
                     }
                 }
             }
-            FrameSystemLaneJob job{ this, _listLaneJob.data(), deltaTime };
+            FrameSystemLaneJob job{ this, &_structuralChangeBuffer, _listLaneJob.data(), deltaTime };
             engine::runParallel( static_cast<uint32>( _listLaneJob.size() ), 2, SW_DELEGATE_METHOD( ParallelBlockDelegate, &FrameSystemLaneJob::runRange, &job ) );
         }
         _bRunningFrameSystems = SW_FALSE;
@@ -701,10 +717,10 @@ namespace sw
 
     void GameObjectManager::queueTransformWrite( const SceneTransformWrite& write )
     {
-        // 순서 키는 이 쓰기를 낸 틱의 주인 오브젝트다 — 여러 오브젝트의 틱이 한 컴포넌트에 쓰면 id 가 큰 쪽이 이긴다.
-        const GameObject* pTickWriter = StructuralChangeBuffer::getTickWriter();
-        const uint64      writerID    = ( pTickWriter != nullptr ) ? pTickWriter->getObjectID() : 0;
-        if ( _transformHierarchy.queueWriteParallel( write, writerID ) )
+        // 순서 키는 이 쓰기를 낸 틱의 주인 오브젝트다 — 여러 오브젝트의 틱이 한 컴포넌트에 쓰면 id 가 큰 쪽이 이긴다. 같은 주인의 건끼리는 디스패치 순번이 선후다.
+        const TickThreadState& threadState = StructuralChangeBuffer::getThreadState();
+        const uint64           writerID    = ( threadState._pTickWriter != nullptr ) ? threadState._pTickWriter->getObjectID() : 0;
+        if ( _transformHierarchy.queueWriteParallel( write, writerID, threadState._dispatchOrdinal ) )
             return;
 
         // 이 스레드가 스크래치 슬롯을 받지 못했다(도우미 칸이 다 찬 드문 경우). 계층 변경과 같은 지연 경로로 가서, 틱 뒤에 한 건짜리 배치로 적용한다.

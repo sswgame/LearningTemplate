@@ -37,7 +37,7 @@ namespace sw
      *          GameFramework 모듈이 내려가기 전에 그 컴포넌트가 먼저 지워지므로, 매니저에 이 타입의 객체가 남지 않는다.
      *          에디터가 씬을 멈추면 `GameObjectManager::update` 이 돌지 않으므로 이 단계도 돌지 않는다.
      */
-    class SW_GF_API ControlSystem final : public ISceneFrameSystem
+    class SW_GF_API ControlSystem final : public ISceneMainFrameSystem
     {
     public:
         ControlSystem();
@@ -63,7 +63,7 @@ namespace sw
         /** @brief 폰과 조종자가 하나도 등록되어 있지 않으면 시스템을 뗍니다. */
         static void releaseIfUnused( GameObjectManager& manager );
 
-        void runBeforeTick( GameObjectManager& manager, float32 deltaTime ) override;
+        void runMain( GameObjectManager& manager, float32 deltaTime ) override;
         /**
          * @brief 조종자의 판단이 하는 일입니다. 폰의 의도 · 시선 · 빙의를 쓰고(`ControlIntent`), 자동 빙의가 조종자 오브젝트를 만들며(`Structure`),
          *        AI 가 내비게이션 에이전트에 목적지를 건네고 멈추게 합니다(`Navigation`). 폰 자리(AI 의 이동 방향)와 에이전트의 이동 상태는 지난 프레임의 값을 읽습니다.

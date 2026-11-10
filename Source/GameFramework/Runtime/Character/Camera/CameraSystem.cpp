@@ -42,7 +42,7 @@ namespace sw
             manager.removeFrameSystem( hashed_string( kFrameSystemKey ) );
     }
 
-    void CameraSystem::runBeforeTick( GameObjectManager& manager, float32 /*deltaTime*/ )
+    void CameraSystem::runMain( GameObjectManager& manager, float32 /*deltaTime*/ )
     {
         // 일은 시스템을 붙잡지 않고 매니저에서 다시 찾는다 — 큐가 돌기 전에 마지막 카메라 컴포넌트가 떠나 시스템이 떨어졌을 수 있다.
         // 첫 일은 `ApplyPrePhysics` 의 비우기에서 돌고, 거기서 넣은 일은 다음 비우기(`ApplyPostPhysics`)의 맨 앞에 선다 — 늦은 틱이 끝나고 그 틱이 미룬 일보다 앞이다.

@@ -551,7 +551,7 @@
     "Source/Engine/Object/GameObject/Registry/PrimitiveRegistry.cpp": {"integer": 11},
     "Source/Engine/Object/GameObject/Serialization/ObjectStateSerializer.cpp": {"integer": 2},
     "Source/Engine/Object/GameObject/Tick/SceneFrameAccess.h": {"integer": 1},
-    "Source/Engine/Object/GameObject/Tick/StructuralChangeBuffer.cpp": {"integer": 2},
+    "Source/Engine/Object/GameObject/Tick/StructuralChangeBuffer.cpp": {"integer": 1},
     "Source/Engine/Object/GameObject/Tick/TickRegistry.cpp": {"integer": 1},
     "Source/Engine/Object/Prefab/PrefabAsset.cpp": {"minus-one": 7, "integer": 1},
     "Source/Engine/Observability/MetricRegistry.cpp": {"float": 12},

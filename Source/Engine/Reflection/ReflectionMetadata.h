@@ -13,15 +13,24 @@
 
 namespace sw
 {
+    enum class ReflectUnitKind : uint8; // `ReflectionUnits.h` — 칸만 든다(표 · 변환은 읽는 쪽이 include 한다)
     struct FunctionEditorMetadata;
     struct PropertyEditorMetadata;
     struct TypeEditorMetadata;
 
-    /// @brief `REFLECT()` 를 붙인 클래스와 구조체의 메타데이터입니다. 지금은 에디터 메타데이터를 가리키는 칸뿐입니다.
+    /// @brief `REFLECT()` 를 붙인 클래스와 구조체의 메타데이터입니다. 에디터 메타데이터를 가리키는 칸과 생성기가 모은 재정의 특성을 담습니다(틱 레인은 생성된 `SW_REGISTER_TICK_TYPE` 줄이 `TickBatchRegistry` 에 싣는다).
     struct SW_API TypeMetadata
     {
         /** @brief 에디터 메타데이터(`ReflectionEditorMetadata.h`)입니다. 타입을 등록할 때 `TypeRegistry` 가 붙이고, 없으면(배포 · 적은 것 없음) nullptr 입니다. 읽기는 `getEditor` 로. */
         const TypeEditorMetadata* _pEditor;
+        /**
+         * @brief 이 타입이 **직접 선언한** 재정의입니다(생성기가 선언에서 모은다 — 손 등록 매크로가 빠뜨리는 타입이 없게). 기반에서 물려받은 것은 세지 않는다.
+         * @details `onTick` 은 일괄 등록(`TickBatchOf`)을, `onSubTick` 은 서브틱 일괄(5-3 1b)을, `serializeState` 는 상태 해시 · 롤백 대상(W-R4)을 정한다.
+         */
+        uint8                  _bOverridesTick           : 1;
+        uint8                  _bOverridesSubTick        : 1;
+        uint8                  _bOverridesSerializeState : 1;
+        [[maybe_unused]] uint8 _reservedTraits           : 5;
 
         TypeMetadata() noexcept;
 
@@ -61,10 +70,15 @@ namespace sw
         /** @brief 에디터 메타데이터(`ReflectionEditorMetadata.h`)입니다. 타입을 등록할 때 붙고, 없으면 nullptr 입니다. 읽기는 `getEditor` 로. */
         const PropertyEditorMetadata* _pEditor;
         /**
-         * @brief 에셋이 이 프로퍼티를 생략할 때 쓰는 기본값입니다(`PROPERTY( Default = "..." )`).
-         * @details XML, JSON, 바이너리 역직렬화가 이 값을 적용한다. C++ 멤버 초기화자와는 별개이므로 둘을 맞춰 둔다.
+         * @brief `PROPERTY( Default = "..." )` 에 적은 글입니다. 문서 · 덤프용이고, 적용은 `_pApplyDefault` 가 합니다.
          */
         string _defaultValue;
+        /**
+         * @brief 에셋이 이 프로퍼티를 생략할 때 기본값을 넣는 함수입니다. `Default` 가 없으면 nullptr 입니다.
+         * @details 생성기가 칸 타입의 리터럴(문자열은 따옴표, 열거는 `Enum::이름`, 나머지는 적은 식)로 내므로 오타 · 타입이 맞지 않는 기본값은
+         *          런타임 경고가 아니라 컴파일 오류다(언리얼 메타 `DefaultValue` 는 글이라 로드 때에야 드러난다). C++ 멤버 초기화자와는 별개다.
+         */
+        PropertyDefaultApplyFunction _pApplyDefault;
         /** @brief 소프트 에셋의 타입 힌트입니다(`PROPERTY( AssetPath )`, `AssetType = "Texture"`). */
         string _assetType;
         /** @brief `RepNotify = fn` 에 적은 메서드 이름입니다. 받은 값으로 바꾼 뒤 이 메서드를 부르며, 호출은 `PropertyInfo::_pRepNotify` 가 맡습니다. */
@@ -80,14 +94,22 @@ namespace sw
          */
         PropertyRangeReadFunction _pReadMinRange;
         PropertyRangeReadFunction _pReadMaxRange;
-        float32                   _minRange;
-        float32                   _maxRange;
+        /**
+         * @brief `EditCondition` 식을 판정하는 함수입니다. 조건이 없으면 nullptr 입니다. 글(`PropertyEditorMetadata::_editCondition`)은 문서 · 덤프용입니다.
+         * @details 생성기가 멤버 읽기와 칸 타입으로 한정한 열거자로 내므로 없는 이름 · 열거자는 컴파일 오류다. 비공개 칸을 읽으려면 `Registrar<T>` 안에서 나가야 해서
+         *          에디터 메타데이터 단위가 아니라 등록 단위에 있다(포인터 하나).
+         */
+        PropertyEditConditionFunction _pEditCondition;
+        float32                       _minRange;
+        float32                       _maxRange;
         /**
          * @brief 문자열 · 컨테이너 최대 길이입니다(`PROPERTY( MaxCount = 32 )`, `MaxCount = kMaxSlotCount`). 적지 않았으면 0 입니다.
          * @details 고정 배치형 코덱이 쓰기와 읽기에서 지키는 상한과 같은 값입니다. 상수 이름으로 적으면 생성기가 그 상수의 값을 넣으므로
          *          상한을 C++ 상수와 애노테이션 두 곳에 숫자로 적지 않습니다.
          */
         uint32 _maxCount;
+        /** @brief `PROPERTY( Units = … )` 의 저장 단위입니다(없으면 None). 표 · 변환은 `ReflectionUnits.h`. 자유 글 단위(`Meta = "Units=HP"`)는 커스텀 메타로 남는다. */
+        ReflectUnitKind _unit;
         /**
          * @brief 아래 경계와 위 경계를 각각 적었는지 나타냅니다(`PROPERTY( Min = … )`, `Max = …`). 적은 쪽만 막습니다.
          * @details 경계 표시를 하나로 합치면 `Min = 0` 만 적은 프로퍼티의 위 경계가 기본값 1 로 남아, 인스펙터가 그 값을 1 에서 막는다.
@@ -136,8 +158,14 @@ namespace sw
          * @details 판정 표는 `SerializerUtil::shouldSerializeProperty` 한 곳이다. 저작 파일을 읽을 때 이 칸이 있으면 로드 오류다(옛 데이터를 다시 쓴다).
          *          `Transient` · `Required` 와 함께 붙이면 파서가 멈춘다.
          */
-        uint8                  _bRuntimeState : 1;
-        [[maybe_unused]] uint8 _reservedRoles : 2;
+        uint8 _bRuntimeState : 1;
+        /**
+         * @brief 부모가 없는 원소만 반드시 적는 칸입니다(`PROPERTY( RequiredAtRoot )`). 부모를 가리키는 칸(`_bInheritParent`)이 적힌 원소는 물려받은 값을 쓴다.
+         * @details 판정은 `SerializerUtil::isRequiredValueMissing` 한 곳이다 — 손 읽기가 "부모가 없으면 이 칸 필수" 를 따로 적지 않는다(문화권 표의 `digits`).
+         */
+        uint8 _bRequiredAtRoot : 1;
+        /** @brief 이 칸이 같은 표의 부모 원소를 가리킵니다(`PROPERTY( InheritParent )`). 비어 있지 않게 적히면 그 원소는 상속한다. */
+        uint8 _bInheritParent : 1;
 
         /** @brief 범위와 플래그를 끈 기본값으로 만듭니다. */
         PropertyMetadata() noexcept;

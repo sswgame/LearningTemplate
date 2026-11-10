@@ -36,7 +36,6 @@ namespace sw
     PropertyInfo::PropertyInfo() noexcept
         : _containerWrapper{ nullptr }
         , _nestedContainer{ nullptr }
-        , _onPropertyBoundChanged{}
         , _pValueAccessor{ nullptr }
         , _pRepNotify{ nullptr }
         , _pValidate{ nullptr }
@@ -122,7 +121,6 @@ namespace sw
                                 hashed_string                 alias )
         : _containerWrapper{ std::move( containerWrapper ) }
         , _nestedContainer{ nullptr }
-        , _onPropertyBoundChanged{}
         , _pValueAccessor{ nullptr }
         , _pRepNotify{ nullptr }
         , _pValidate{ nullptr }

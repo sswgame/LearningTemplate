@@ -26,7 +26,7 @@ namespace sw
      * @class PairedAnimationSystem
      * @brief 세션 목록과 참가자 독점을 맡습니다. 파일 머리말 참고.
      */
-    class SW_API PairedAnimationSystem final : public ISceneFrameSystem
+    class SW_API PairedAnimationSystem final : public ISceneMainFrameSystem
     {
     public:
         /** @brief 매니저의 프레임 시스템 키입니다. */
@@ -40,7 +40,7 @@ namespace sw
         static PairedAnimationSystem& getOrCreate( GameObjectManager& manager );
 
         /** @brief 이번 프레임을 갱신합니다 — 지난 프레임에 끝난 세션을 빼고, 남은 세션을 갱신합니다. */
-        void runBeforeTick( GameObjectManager& manager, float32 deltaTime ) override;
+        void runMain( GameObjectManager& manager, float32 deltaTime ) override;
         /**
          * @brief 세션 갱신이 하는 일입니다. 참가자 애니메이터의 재생 상태(클립 · 속도 · 워프 · 알림)를 쓰고, 정렬 `Snap` 은 참가자 루트의 월드 자리를 씁니다.
          *        정렬 거리 · 워프 목표를 위해 자리를, 시계를 위해 애니메이터 상태를 읽습니다. 참가자는 핸들로 찾으므로 등록부는 지난 프레임의 것으로 충분합니다.

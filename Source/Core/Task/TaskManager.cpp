@@ -211,6 +211,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     TaskManager::TaskManager()
         : _bInitialized{ SW_FALSE }
+        , _subsystemWorkerCount{ 0 }
         , _mainThreadID{}
         , _bStop{ false }
         , _runningWorkerCount{ 0 }
@@ -1498,7 +1499,7 @@ namespace sw
 {
     SubsystemInitResult TaskManager::initializeSubsystem()
     {
-        return initialize() ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed;
+        return initialize( _subsystemWorkerCount ) ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed;
     }
 
     void TaskManager::shutdownSubsystem()

@@ -13,12 +13,12 @@ using namespace sw;
 namespace
 {
     /** @brief 아무것도 하지 않는 프레임 시스템입니다 — 붙인 이름으로 구간이 열리는지만 본다. */
-    class ProfileProbeSystem final : public ISceneFrameSystem
+    class ProfileProbeSystem final : public ISceneMainFrameSystem
     {
     public:
         uint32 _runCount{ 0 };
 
-        void             runBeforeTick( GameObjectManager& /*manager*/, float32 /*deltaTime*/ ) override { ++_runCount; }
+        void             runMain( GameObjectManager& /*manager*/, float32 /*deltaTime*/ ) override { ++_runCount; }
         SceneFrameAccess getFrameAccess() const override { return SceneFrameAccess{}; }
     };
 

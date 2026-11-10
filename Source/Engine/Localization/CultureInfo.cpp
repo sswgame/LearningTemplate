@@ -10,6 +10,7 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Localization/TimeZoneInfo.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
@@ -24,9 +25,6 @@ namespace sw
             static constexpr const utf8* kArrCategoryName[] = { "zero", "one", "two", "few", "many", "other" };
             static_assert( SW_COUNT_OF( kArrCategoryName ) == static_cast<size_t>( PluralCategory::Count ), "kArrCategoryName must name every PluralCategory" );
 
-            /** @brief 문화권 요소의 속성 이름입니다(`code` 는 문화권 코드, 나머지는 덮어쓰는 값). */
-            static constexpr string_view kArrCultureAttribute[] = { "code", "parent", "nativeName", "rightToLeft", "digits", "decimalSeparator",
-                                                                    "groupSeparator", "percentPattern", "currencyCode", "currencyPattern", "pseudo" };
             /** @brief 문화권 요소의 자식 요소 이름입니다(규칙 묶음 둘, 패턴 묶음 둘과 문자열 목록 넷). */
             static constexpr string_view kArrCultureChild[] = { "pluralRules", "ordinalRules", "datePatterns", "timePatterns", "monthNames", "monthAbbreviations", "dayPeriods", "fonts" };
             /** @brief 표 루트의 자식 요소 이름입니다(숫자 체계 · 통화는 없어도 된다 — 앞서 읽은 파일의 것을 쓴다). */
@@ -43,17 +41,9 @@ namespace sw
                 return false;
             }
 
-            /** @brief 문화권 요소에서 알려지지 않은 첫 속성 · 자식 이름을 @p outName 에 적고 true 를 반환합니다. 모두 알려져 있으면 false 입니다. */
-            [[nodiscard]] static bool findUnknownName( const XMLNode& entry, string& outName )
+            /** @brief 문화권 요소에서 알려지지 않은 첫 자식 이름을 @p outName 에 적고 true 를 반환합니다. 속성은 스키마(`readFields`)가 본다. */
+            [[nodiscard]] static bool findUnknownChild( const XMLNode& entry, string& outName )
             {
-                for ( XMLAttribute attribute = entry.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
-                {
-                    if ( isListed( kArrCultureAttribute, string_view{ attribute.getName() } ) == false )
-                    {
-                        outName = attribute.getName();
-                        return true;
-                    }
-                }
                 for ( XMLNode child = entry.findChild(); child.isValid(); child = child.findNextSibling() )
                 {
                     if ( isListed( kArrCultureChild, string_view{ child.getName() } ) == false )
@@ -131,13 +121,6 @@ namespace sw
                 return {};
             }
 
-            /** @brief 문자열 필드 하나(적힌 것만)를 덮어씁니다. */
-            static void applyStringField( const XMLNode& entry, const utf8* pFieldName, string& outTarget )
-            {
-                if ( entry.findAttribute( pFieldName ) != nullptr )
-                    outTarget = string{ entry.getAttributeText( pFieldName ) };
-            }
-
             /**
              * @brief 규칙 묶음 요소(`<pluralRules one="…" few="…"/>`, 적힌 것만)로 @p outRules 를 통째로 바꿉니다. 부모의 규칙은 섞지 않는다 — 범주 하나만 물려받으면 규칙이 겹친다.
              * @details 속성 이름이 범주 키워드이고 값이 CLDR 규칙 글(보기 `@integer` · `@decimal` 까지, other 는 보기만)이다. 빈 요소는 "모든 수가 other" 다.
@@ -178,23 +161,16 @@ namespace sw
                 return {};
             }
 
-            /** @brief 글쓰기 방향 · 숫자 체계(@p mapNumberingSystem 의 id) · 의사 로케일을 덮어씁니다. 모르는 이름이면 false 입니다. */
+            /**
+             * @brief 숫자 체계(@p mapNumberingSystem 의 id — 스키마가 읽은 `_numberingSystem`, 물려받았을 수 있다)의 글자와 의사 로케일을 덮어씁니다. 모르는 이름이면 오류입니다.
+             * @details `pseudo` 는 손 읽기다 — 소문자 철자(`accented`)가 데이터 형식이고, 물려받지 않는 칸이다(`resolveEntry`).
+             */
             [[nodiscard]] static expected<void> applyScriptFields( const XMLNode& entry, const map<string, vector<string>>& mapNumberingSystem, CultureInfo& inoutInfo )
             {
-                optional<bool> bRightToLeft;
-                if ( entry.readOptionalAttribute( "rightToLeft", bRightToLeft ) == false )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "rightToLeft must be true or false", entry.getAttributeText( "rightToLeft" ) } );
-                if ( bRightToLeft.has_value() )
-                    inoutInfo._bRightToLeft = *bRightToLeft;
-                if ( entry.findAttribute( "digits" ) != nullptr )
-                {
-                    const string digitsName{ entry.getAttributeText( "digits" ) };
-                    const auto   systemIt = mapNumberingSystem.find( digitsName );
-                    if ( systemIt == mapNumberingSystem.end() )
-                        return unexpected( Error{ ErrorKind::NotFound, "unknown digits (declare it in <numberingSystems>)", digitsName } );
-                    inoutInfo._numberingSystem = digitsName;
-                    inoutInfo._listDigit       = systemIt->second;
-                }
+                const auto systemIt = mapNumberingSystem.find( inoutInfo._numberingSystem );
+                if ( systemIt == mapNumberingSystem.end() )
+                    return unexpected( Error{ ErrorKind::NotFound, "unknown digits (declare it in <numberingSystems>)", inoutInfo._numberingSystem } );
+                inoutInfo._listDigit = systemIt->second;
                 if ( entry.findAttribute( "pseudo" ) != nullptr )
                 {
                     const string pseudoName{ entry.getAttributeText( "pseudo" ) };
@@ -252,25 +228,33 @@ namespace sw
                 return {};
             }
 
-            /** @brief 한 문화권 요소의 필드를 @p inoutInfo 에 덮어씁니다(적힌 필드만). */
-            [[nodiscard]] static expected<void> applyFields( const XMLNode& entry, const map<string, vector<string>>& mapNumberingSystem, CultureInfo& inoutInfo )
+            /**
+             * @brief 한 문화권 요소의 필드를 @p inoutInfo 에 덮어씁니다(적힌 필드만). 속성은 스키마로 읽는다 — 부모가 없을 때만 `digits` 필수(`RequiredAtRoot`).
+             * @param sourceName 오류 줄에 쓰는 이름(문화권 코드)입니다.
+             */
+            [[nodiscard]] static expected<void> applyFields( const XMLNode& entry, string_view sourceName, const map<string, vector<string>>& mapNumberingSystem, CultureInfo& inoutInfo )
             {
                 string unknownName;
-                if ( findUnknownName( entry, unknownName ) )
+                if ( findUnknownChild( entry, unknownName ) )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "unknown field", unknownName } );
 
-                applyStringField( entry, "nativeName", inoutInfo._nativeName );
+                // 스키마 읽기의 첫 문제를 오류의 자세한 글로 옮긴다(표 읽기는 오류를 돌려주는 API 다 — `LocalizationDocuments::readEntryFields` 와 같은 모양).
+                string                   firstIssue;
+                const XMLFieldsIssueSink sink{ []( void* pContext, const utf8* /*pID*/, string_view text )
+                {
+                    string& first = *static_cast<string*>( pContext );
+                    if ( first.empty() )
+                        first = string( text );
+                },
+                                               &firstIssue };
+                if ( XMLFields::readFields( entry, &inoutInfo, *CultureInfo::StaticType(), sourceName, { "pseudo" }, nullptr, sink ) == false )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "a culture field is missing or unreadable", firstIssue } );
                 if ( expected<void> applied = applyRuleSet( entry, "pluralRules", inoutInfo._pluralRules ); applied.has_value() == false )
                     return applied;
                 if ( expected<void> applied = applyRuleSet( entry, "ordinalRules", inoutInfo._ordinalRules ); applied.has_value() == false )
                     return applied;
                 if ( expected<void> applied = applyScriptFields( entry, mapNumberingSystem, inoutInfo ); applied.has_value() == false )
                     return applied;
-                applyStringField( entry, "decimalSeparator", inoutInfo._decimalSeparator );
-                applyStringField( entry, "groupSeparator", inoutInfo._groupSeparator );
-                applyStringField( entry, "percentPattern", inoutInfo._percentPattern );
-                applyStringField( entry, "currencyCode", inoutInfo._currencyCode );
-                applyStringField( entry, "currencyPattern", inoutInfo._currencyPattern );
                 return applyPatternAndListFields( entry, inoutInfo );
             }
 
@@ -390,15 +374,16 @@ namespace sw
                     else
                         return ResolveResult::Deferred;
                 }
-                else if ( entry.findChild( "pluralRules" ).isValid() == false || entry.findAttribute( "digits" ) == nullptr )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "a culture without a parent needs <pluralRules> (empty when every number is other) and digits", rawCode } );
-                info._code       = code;
-                info._parentCode = parentCode;
+                else if ( entry.findChild( "pluralRules" ).isValid() == false )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "a culture without a parent needs <pluralRules> (empty when every number is other)", rawCode } );
                 info._nativeName.clear();
                 if ( info._pseudoMode != PseudoLocaleMode::None && entry.findAttribute( "pseudo" ) == nullptr )
                     info._pseudoMode = PseudoLocaleMode::None; // 의사 방식은 물려받지 않는다. `qps_ploc` 을 부모로 둔 실제 문화권이 의사 문화권이 되면 안 된다
-                if ( const expected<void> applied = applyFields( entry, mapNumberingSystem, info ); applied.has_value() == false )
+                if ( const expected<void> applied = applyFields( entry, rawCode, mapNumberingSystem, info ); applied.has_value() == false )
                     return unexpected( Error{ applied.error().kind(), applied.error().message().data(), rawCode }.appendDetail( ": " ).appendDetail( applied.error().detail() ) );
+                // 스키마는 적힌 글 그대로 읽었다 — 코드는 정규형만 받았고(위), 부모는 정규형으로 둔다(찾기 열쇠).
+                info._code             = code;
+                info._parentCode       = parentCode;
                 inoutMapResolved[code] = std::move( info );
                 return ResolveResult::Resolved;
             }

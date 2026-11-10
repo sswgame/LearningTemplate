@@ -902,7 +902,7 @@ SW_TEST_CASE( ReflectionTypeInfoTest, FindPropertyInHierarchyMatchesMergedList )
     SW_REQUIRE_NOT_NULL( pActor );
     SW_REQUIRE_NOT_NULL( pBase );
 
-    const sw::vector<sw::PropertyInfo>& listMerged = pActor->getPropertiesWithBase();
+    const sw::PropertyListView listMerged = pActor->getPropertiesWithBase();
     SW_EXPECT_TRUE( listMerged.size() >= pActor->_listProperty.size() );
     uint32 checkedCount = 0;
     for ( const sw::PropertyInfo& prop : listMerged )
@@ -962,7 +962,7 @@ SW_TEST_CASE( ReflectionTypeInfoTest, FindPropertyInHierarchyUsesMergedMapWhenLa
 
     const sw::TypeInfo* pLeaf = registry.findType( sw::hashed_string( "swtest::MapLeaf" ) );
     SW_REQUIRE_NOT_NULL( pLeaf );
-    const sw::vector<sw::PropertyInfo>& listMerged = pLeaf->getPropertiesWithBase();
+    const sw::PropertyListView listMerged = pLeaf->getPropertiesWithBase();
     SW_EXPECT_EQUAL( size_t( 5 ), listMerged.size() ); // 3 + 3 - 겹친 이름 1
     SW_EXPECT_TRUE( listMerged.size() > sw::constant::reflection::kLinearSearchThreshold );
 
@@ -1337,6 +1337,56 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, DerivedPropertyListFollowsItsBase )
     SW_EXPECT_EQUAL( 1u, pDerived->getPropertiesWithBase().size() );
     SW_EXPECT_NULL( pDerived->findPropertyInHierarchy( sw::hashed_string( "_a" ) ) );
     registry.unregisterTypesByModule( "TestMergeDerived" );
+}
+
+/**
+ * @brief [ReflectionTypeRegistryTest] 무관한 타입의 등록은 남의 상속 목록을 건드리지 않는다
+ * @details 예전에는 등록 한 번마다 모든 타입의 상속 목록(부모 프로퍼티의 사본)을 비워, 무관한 키트 하나가 올라와도 밖에서 든
+ *          `const PropertyInfo*` 가 매달렸고 등록이 O(타입²) 였다. 지금은 바뀐 타입과 자손만 다시 짓고, 목록은 선언한 타입의 원소를 가리킨다.
+ */
+SW_TEST_CASE( ReflectionTypeRegistryTest, UnrelatedRegistrationKeepsInheritedPropertyPointers )
+{
+    const sw::test::ScopedTestModule scopedModule( "TestStableBase" );
+    const sw::test::ScopedTestModule scopedModule1( "TestStableOther" );
+    sw::TypeRegistry&                registry = sw::engine::getSubsystem<sw::TypeRegistry>();
+
+    sw::TypeInfo base;
+    base._name               = sw::hashed_string( "StableBase" );
+    base._fullyQualifiedName = sw::hashed_string( "swtest::StableBase" );
+    base._moduleName         = sw::hashed_string( "TestStableBase" );
+    base._size               = 4;
+    base._listProperty       = {
+        sw::PropertyInfo{ sw::hashed_string( "_a" ), sw::hashed_string( "int32" ), 0 }
+    };
+    sw::TypeInfo derived;
+    derived._name               = sw::hashed_string( "StableDerived" );
+    derived._fullyQualifiedName = sw::hashed_string( "swtest::StableDerived" );
+    derived._parentFQN          = sw::hashed_string( "swtest::StableBase" );
+    derived._moduleName         = sw::hashed_string( "TestStableBase" );
+    derived._size               = 4;
+    registry.registerClass( base );
+    registry.registerClass( derived );
+    const sw::TypeInfo* pBase    = registry.findType( sw::hashed_string( "swtest::StableBase" ) );
+    const sw::TypeInfo* pDerived = registry.findType( sw::hashed_string( "swtest::StableDerived" ) );
+    SW_REQUIRE_NOT_NULL( pBase );
+    SW_REQUIRE_NOT_NULL( pDerived );
+    const sw::PropertyInfo* pHeld = pDerived->findPropertyInHierarchy( sw::hashed_string( "_a" ) );
+    SW_REQUIRE_NOT_NULL( pHeld );
+    SW_EXPECT_TRUE( pHeld == &pBase->_listProperty[0] ); // 사본이 아니라 선언한 타입의 원소다
+
+    sw::TypeInfo other;
+    other._name                    = sw::hashed_string( "StableOther" );
+    other._fullyQualifiedName      = sw::hashed_string( "swtest::StableOther" );
+    other._moduleName              = sw::hashed_string( "TestStableOther" );
+    other._size                    = 4;
+    const uint64 invalidatesBefore = registry.getInheritedCacheInvalidations();
+    registry.registerClass( other );
+    SW_EXPECT_EQUAL( invalidatesBefore + 1, registry.getInheritedCacheInvalidations() ); // 자기 하나만
+    SW_EXPECT_TRUE( pDerived->findPropertyInHierarchy( sw::hashed_string( "_a" ) ) == pHeld );
+
+    registry.unregisterTypesByModule( "TestStableOther" );
+    SW_EXPECT_TRUE( pDerived->findPropertyInHierarchy( sw::hashed_string( "_a" ) ) == pHeld );
+    registry.unregisterTypesByModule( "TestStableBase" );
 }
 
 namespace

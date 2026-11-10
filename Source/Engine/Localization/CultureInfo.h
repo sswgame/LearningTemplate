@@ -15,6 +15,7 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Localization/PluralRules.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 /*
  * 통화(ISO 4217) 한 줄 — 코드 · 기호 · 소수 자리입니다. 줄은 문화권 표(`*.cultures.xml` 의 `<currencies>`)의 데이터이고, `CultureInfo::formatCurrency` 와 `{n, number, currency}` 가 읽습니다.
@@ -80,20 +81,34 @@ namespace sw
     /**
      * @struct CultureInfo
      * @brief 문화권 하나의 형식 데이터입니다. 부모(`parent`)에서 적지 않은 필드를 물려받은 뒤의 값입니다.
+     * @details `<culture>` 의 속성은 이 구조체의 `PROPERTY` 가 스키마다(`XMLFields::readFields` — 모르는 속성 · 읽지 못한 값 · 필수 칸).
+     *          부모가 없는 문화권만 `digits` 가 필수다(`RequiredAtRoot` — 부모를 가리키는 `parent` 가 적히면 물려받는다). 자식 요소(규칙 · 패턴 · 목록)는 손 읽기다.
      */
+    REFLECT()
     struct SW_API CultureInfo
     {
+        REFLECT_BODY();
+
         /** @brief 숫자 글자 수입니다(0 ~ 9). */
         static constexpr uint32 kDigitCount = 10;
 
-        string                                 _code;            ///< 원본 철자(`ko_kr`)
-        string                                 _parentCode;      ///< 물려받는 문화권(없으면 빈 값)
-        string                                 _nativeName;      ///< 자기 언어로 쓴 이름(언어 선택 메뉴)
-        string                                 _numberingSystem; ///< 숫자 체계 id(`latn` · `arab` — 표의 `<numberingSystems>`)
-        string                                 _decimalSeparator;
-        string                                 _groupSeparator;
-        string                                 _percentPattern;  ///< `#` 위치에 숫자가 들어갑니다(`#%`, `# %`).
-        string                                 _currencyCode;    ///< 이 문화권의 기본 통화(ISO 4217, `KRW`)입니다.
+        PROPERTY( Name = "code", Required, Tooltip = "Culture code in its normalized form (ko_kr)" )
+        string _code; ///< 원본 철자(`ko_kr`)
+        PROPERTY( Name = "parent", InheritParent, Tooltip = "Culture whose fields this one inherits" )
+        string _parentCode; ///< 물려받는 문화권(없으면 빈 값)
+        PROPERTY( Tooltip = "Name in its own language (language menu)" )
+        string _nativeName; ///< 자기 언어로 쓴 이름(언어 선택 메뉴)
+        PROPERTY( Name = "digits", RequiredAtRoot, Tooltip = "Numbering system id declared in <numberingSystems>" )
+        string _numberingSystem; ///< 숫자 체계 id(`latn` · `arab` — 표의 `<numberingSystems>`)
+        PROPERTY()
+        string _decimalSeparator;
+        PROPERTY()
+        string _groupSeparator;
+        PROPERTY()
+        string _percentPattern; ///< `#` 위치에 숫자가 들어갑니다(`#%`, `# %`).
+        PROPERTY()
+        string _currencyCode; ///< 이 문화권의 기본 통화(ISO 4217, `KRW`)입니다.
+        PROPERTY()
         string                                 _currencyPattern; ///< `#` 위치에 숫자가, `¤` 위치에 통화 기호가 들어갑니다(`¤#`, `# ¤`).
         string                                 _dateShort;
         string                                 _dateMedium;
@@ -109,7 +124,8 @@ namespace sw
         PluralRuleSet                          _ordinalRules;          ///< 서수(`selectordinal`) 규칙(`<ordinalRules>`)
         shared_ptr<const vector<CurrencyInfo>> _pCurrencyList;         ///< 표의 통화 목록(`<currencies>`). 표가 문화권을 읽을 때 걸어 준다
         PseudoLocaleMode                       _pseudoMode;
-        uint8                                  _bRightToLeft : 1;
+        PROPERTY()
+        uint8 _bRightToLeft : 1; ///< 속성 `rightToLeft`
 
         CultureInfo();
 

@@ -12,6 +12,7 @@
 #include "Engine/Reflection/ReflectionEnumNames.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/ReflectionUnits.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 namespace sw
@@ -103,8 +104,9 @@ namespace sw
                 const PropertyEditorMetadata& editor = meta.getEditor(); // 에디터 메타데이터가 붙지 않은 구성(배포)은 기본값이라 빈 칸이다
                 if ( editor._editCondition.empty() == false )
                     appendFlag( text, "EditCondition=`" + editor._editCondition + "`" );
-                const string* pUnits = editor.findCustomMeta( hashed_string( "Units" ) );
-                if ( pUnits != nullptr )
+                if ( const ReflectUnit* pUnit = ReflectUnit::findUnit( meta._unit ) )
+                    appendFlag( text, string( "Units=" ) + pUnit->_pName );
+                else if ( const string* pUnits = editor.findCustomMeta( hashed_string( "Units" ) ) )
                     appendFlag( text, "Units=" + *pUnits );
                 return text;
             }
