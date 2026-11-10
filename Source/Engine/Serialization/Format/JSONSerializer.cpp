@@ -503,32 +503,50 @@ namespace sw
                 continue;
             const string    path  = prefix.empty() ? string( prop._name.c_str() ) : prefix + "." + prop._name.c_str();
             const JSONValue value = object.get( prop._name.c_str() );
-            if ( value.isValid() == false )
+            // 판정은 XML 과 한 함수다(`SerializerUtil::isRequiredValueMissing`) — 빈 이름 글도 빠진 것이다.
+            const string      valueText = value.isValid() && value.isString() ? value.asString() : string{};
+            const string_view textView( valueText );
+            if ( SerializerUtil::isRequiredValueMissing( prop, value.isValid(), value.isValid() && value.isString() ? &textView : nullptr ) )
             {
-                if ( prop._metadata->_bRequired != SW_FALSE )
-                    outListPath.push_back( path );
+                outListPath.push_back( path );
                 continue;
             }
+            if ( value.isValid() == false )
+                continue;
             const bool      bContainer = prop._bIsContainer == SW_TRUE;
             const TypeInfo* pNested    = SerializerUtil::findNestedObjectType( bContainer ? prop._elementTypeName : prop._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
-            if ( pNested == nullptr )
-                continue;
             if ( bContainer == false && value.isObject() )
             {
-                collectMissingRequired( value, *pNested, outListPath, path );
+                if ( pNested != nullptr )
+                    collectMissingRequired( value, *pNested, outListPath, path );
                 continue;
             }
             if ( bContainer == false || value.isArray() == false )
                 continue;
+            const bool bOwnedPointer = SerializerUtil::isOwnedPointerElementType( prop._elementTypeName );
             for ( size_t elementIndex = 0; elementIndex < value.size(); ++elementIndex )
             {
                 const JSONValue element = value.at( elementIndex );
-                if ( element.isObject() )
+                if ( element.isObject() == false )
+                    continue;
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "%#[%#]", path, static_cast<uint64>( elementIndex ) );
+                // 소유 포인터 원소(컴포넌트 목록)는 `{ "타입이름": {...} }` 다 — 그 런타임 타입의 칸으로 본다(XML 은 태그 이름, 같은 규칙).
+                const vector<string> listMember = bOwnedPointer ? element.getMemberNames() : vector<string>{};
+                if ( listMember.size() == 1 )
                 {
-                    StringBuilder<constant::buffer::kMax256> textBuilder;
-                    textBuilder.appendFormat( "%#[%#]", path, static_cast<uint64>( elementIndex ) );
-                    collectMissingRequired( element, *pNested, outListPath, string( textBuilder.view() ) );
+                    const hashed_string memberType = hashed_string::findInterned( listMember[0] );
+                    const TypeInfo*     pMember    = memberType.empty() ? nullptr : engine::getSubsystem<TypeRegistry>().findType( memberType );
+                    const JSONValue     body       = element.get( listMember[0] );
+                    if ( pMember != nullptr && body.isObject() )
+                    {
+                        textBuilder.appendFormat( "(%#)", pMember->_name.c_str() );
+                        collectMissingRequired( body, *pMember, outListPath, string( textBuilder.view() ) );
+                    }
+                    continue;
                 }
+                if ( pNested != nullptr )
+                    collectMissingRequired( element, *pNested, outListPath, string( textBuilder.view() ) );
             }
         }
     }

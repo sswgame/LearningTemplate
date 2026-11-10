@@ -87,9 +87,9 @@ namespace sw
         PROPERTY( Category = "Avatar", DisplayName = "Layer Blend Rate", Tooltip = "How fast the aim and shoot layer weights follow their target", Min = 0.0 )
         float32 _layerBlendRate;
         PROPERTY( Required, Category = "Avatar", DisplayName = "Left Foot Bone", Tooltip = "Bone used to measure the foot speed of locomotion clips" )
-        string _leftFootBone;
+        hashed_string _leftFootBone;
         PROPERTY( Required, Category = "Avatar", DisplayName = "Right Foot Bone", Tooltip = "Bone used to measure the foot speed of locomotion clips" )
-        string _rightFootBone;
+        hashed_string _rightFootBone;
         PROPERTY( Category = "Avatar", DisplayName = "Min Play Rate", Tooltip = "Slowest play rate speed matching may choose", Min = 0.0 )
         float32 _minPlayRate;
         PROPERTY( Category = "Avatar", DisplayName = "Max Play Rate", Tooltip = "Fastest play rate speed matching may choose", Min = 0.0 )

@@ -114,16 +114,13 @@ namespace sw
             }
         }
 
-        // 필수 칸은 적혀 있어야 한다(형식을 가리지 않는다 — 예전에는 DataPath 만 봐 다른 필수 칸은 초기값으로 통과했다). DataPath 는 빈 글(비움)도 빠진 것이다.
-        const hashed_string dataPathType( "DataPath" );
+        // 필수 칸은 적혀 있어야 하고, 이름 · 경로 형식은 빈 글도 빠진 것이다 — 판정은 직렬화기 · XMLFields 와 한 함수다(`SerializerUtil::isRequiredValueMissing`).
         for ( const PropertyInfo& prop : listProperty )
         {
-            if ( prop._metadata->_bRequired == SW_FALSE )
-                continue;
-            const string    elementName{ makeElementName( prop ) };
-            const DataPath* pPath    = prop._typeName == dataPathType ? prop.getValuePtr<DataPath>( this ) : nullptr;
-            const bool      bMissing = root.findChild( elementName.c_str() ).isValid() == false || ( pPath != nullptr && pPath->isSet() == false );
-            if ( bMissing == false )
+            const string      elementName{ makeElementName( prop ) };
+            const XMLNode     element = root.findChild( elementName.c_str() );
+            const string_view text    = element.isValid() && element.getText() != nullptr ? string_view( element.getText() ) : string_view{};
+            if ( SerializerUtil::isRequiredValueMissing( prop, element.isValid(), element.isValid() ? &text : nullptr ) == false )
                 continue;
             SW_LOG_ERROR_ID( "GameSettings.GameSettingsRequiredResourceId", "GameSettings %#: <%#> is required (PROPERTY( Required ) - the initial value is not a default)", sourceName, elementName.c_str() );
             bOk = false;

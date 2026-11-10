@@ -63,6 +63,11 @@ namespace sw
          */
         uint8 _bOmitExternalParent : 1;
         /**
+         * @brief 텍스트 저장 전 검증(`ObjectValidation::reportGameObject`)을 건너뜁니다. 기본값 견본(`PrefabOverrides::omitDefaultValues` 가 새로 만든 오브젝트)이 씁니다.
+         * @details 견본은 데이터가 아니라 형식의 초기값이라, 빈 필수 이름 칸 같은 검증 경고가 저장마다 거짓으로 남는다.
+         */
+        uint8 _bSkipValidation : 1;
+        /**
          * @brief 있으면 이 저장이 가리킨 다른 오브젝트의 런타임 id(0 제외)를 모두 더합니다. 쿠커가 셀을 넘는 참조를 찾는 데 씁니다(`SceneCooker`).
          * @details 참조는 모두 `getSavedObjectID` 를 거치므로 여기서 모으면 부착 · 핸들 PROPERTY 를 타입마다 따로 훑지 않아도 된다.
          */
@@ -76,7 +81,7 @@ namespace sw
         string_view _attachOwnerNamePrefix{};
         /** @brief 목적 @p purpose 로 저장합니다. 참조는 런타임 id 그대로 적습니다(아래 필드로 바꾼다). */
         explicit ObjectSaveOptions( SerializePurpose purpose )
-            : _bOmitExternalParent{ SW_FALSE }, _purpose{ purpose }
+            : _bOmitExternalParent{ SW_FALSE }, _bSkipValidation{ SW_FALSE }, _purpose{ purpose }
         {
         }
 

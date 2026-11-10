@@ -993,15 +993,19 @@ namespace sw
     {
         for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
         {
-            const string  path     = prefix.empty() ? string( prop._name.c_str() ) : prefix + "." + prop._name.c_str();
-            const XMLNode child    = element.findChild( prop._name.c_str() );
-            const bool    bWritten = element.findAttribute( prop._name.c_str() ) != nullptr || child.isValid();
-            if ( bWritten == false )
+            const string      path       = prefix.empty() ? string( prop._name.c_str() ) : prefix + "." + prop._name.c_str();
+            const XMLNode     child      = element.findChild( prop._name.c_str() );
+            const utf8* const pAttribute = element.findAttribute( prop._name.c_str() );
+            const bool        bWritten   = pAttribute != nullptr || child.isValid();
+            // 스칼라는 속성으로 적힌다 — 그 글로 빈 이름을 가른다(판정은 JSON 과 한 함수).
+            const string_view attributeText = pAttribute != nullptr ? string_view( pAttribute ) : string_view{};
+            if ( SerializerUtil::isRequiredValueMissing( prop, bWritten, pAttribute != nullptr ? &attributeText : nullptr ) )
             {
-                if ( prop._metadata->_bRequired != SW_FALSE )
-                    outListPath.push_back( path );
+                outListPath.push_back( path );
                 continue;
             }
+            if ( bWritten == false )
+                continue;
             if ( child.isValid() == false )
                 continue;
             const bool      bContainer = prop._bIsContainer == SW_TRUE;

@@ -561,6 +561,31 @@ namespace sw
         return pTypeInfo;
     }
 
+    bool SerializerUtil::isNameValueType( const hashed_string& typeName )
+    {
+        string_view name = typeName.viewOrEmpty();
+        if ( StringUtil::startsWith( name, "sw::" ) )
+            name.remove_prefix( 4 );
+        // 이름 · 경로 형식은 빈 글이 "없음" 이다. `string` 은 넣지 않는다 — 글 칸은 빈 값이 뜻 있는 값일 수 있다(명령 표의 "단축키 없음" 같은 고정 열).
+        // 다른 데이터를 가리키는 이름은 hashed_string 으로 둔다(린트 required-name-fields 가 기본값을, 이 판정이 빈 값을 막는다).
+        static constexpr string_view kArrNameType[] = { "hashed_string", "TagID", "DataPath", "AssetID" };
+        for ( const string_view nameType : kArrNameType )
+        {
+            if ( name == nameType )
+                return true;
+        }
+        return StringUtil::startsWith( name, "AssetRef<" );
+    }
+
+    bool SerializerUtil::isRequiredValueMissing( const PropertyInfo& prop, const bool bWritten, const string_view* pWrittenText )
+    {
+        if ( prop._metadata->_bRequired == SW_FALSE )
+            return false;
+        if ( bWritten == false )
+            return true;
+        return pWrittenText != nullptr && pWrittenText->empty() && prop._bIsContainer == SW_FALSE && isNameValueType( prop._typeName );
+    }
+
     hashed_string SerializerUtil::resolveHandlerTypeName( const hashed_string& typeName, const SerializeContext& context )
     {
         // 등록된 이름 그대로 핸들러가 있으면 그것이 원본이다.

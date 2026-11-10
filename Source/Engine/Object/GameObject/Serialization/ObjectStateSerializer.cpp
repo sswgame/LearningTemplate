@@ -24,6 +24,7 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/Serializer/Serializer.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -46,25 +47,65 @@ namespace sw
             };
 
             /**
-             * @brief 합친 상태 글(프리팹 기반 + override · 변형)에서 빠진 필수 칸(`PROPERTY( Required )`)을 알립니다. 하나라도 빠지면 false 입니다.
-             * @details 씬 · 프리팹 · 되돌리기의 텍스트 로드가 모두 이 자리를 지난다. override 는 일부 칸만 적으므로 원소마다 보지 않고 합친 뒤에 본다.
-             *          컴포넌트 목록 원소는 태그 이름의 타입으로 본다(`XMLSerializer::collectMissingRequired`).
+             * @brief 상태 글에서 빠졌거나 빈 필수 칸(`PROPERTY( Required )`)의 경로를 모읍니다. 읽지 못하는 글은 빈 목록이다(역직렬화가 알린다).
+             * @details 컴포넌트 목록 원소는 런타임 타입의 칸으로 본다(`XMLSerializer` · `JSONSerializer::collectMissingRequired`). 읽기와 저장이 이 하나를 쓰고,
+             *          형식은 문서를 여는 법만 가른다 — 빠짐 · 빈 이름 판정은 `SerializerUtil::isRequiredValueMissing` 하나다.
              */
-            static bool reportMissingRequired( const TypeInfo& typeInfo, string_view stateXML )
+            template <typename TSerializer>
+            static vector<string> collectMissingRequired( const TypeInfo& typeInfo, string_view stateText, string& outObjectName )
             {
-                XMLDocument document;
-                if ( document.parse( stateXML ) == false || document.getRoot().isValid() == false )
-                    return true; // 읽지 못하는 글은 역직렬화가 알린다
-                const XMLNode  root = document.getRoot();
                 vector<string> listMissing;
-                XMLSerializer::collectMissingRequired( root, typeInfo, listMissing );
-                const utf8* const pName = root.findAttribute( "_name" );
+                if constexpr ( std::is_same_v<TSerializer, JSONSerializer> )
+                {
+                    JSONDocument document;
+                    if ( document.tryParse( stateText ) == false || document.getRoot().isObject() == false )
+                        return listMissing;
+                    const JSONValue root = document.getRoot();
+                    JSONSerializer::collectMissingRequired( root, typeInfo, listMissing );
+                    const JSONValue name = root.get( "_name" );
+                    outObjectName        = name.isValid() && name.isString() ? name.asString() : string{};
+                }
+                else
+                {
+                    XMLDocument document;
+                    if ( document.parse( stateText ) == false || document.getRoot().isValid() == false )
+                        return listMissing;
+                    const XMLNode root = document.getRoot();
+                    XMLSerializer::collectMissingRequired( root, typeInfo, listMissing );
+                    const utf8* const pName = root.findAttribute( "_name" );
+                    outObjectName           = pName != nullptr ? string( pName ) : string{};
+                }
+                return listMissing;
+            }
+
+            /**
+             * @brief 합친 상태 글(프리팹 기반 + override · 변형)에서 빠졌거나 빈 필수 칸을 오류로 알립니다. 하나라도 있으면 false 입니다.
+             * @details 씬 · 프리팹 · 되돌리기의 텍스트 로드(XML · JSON)가 모두 이 자리를 지난다. override 는 일부 칸만 적으므로 원소마다 보지 않고 합친 뒤에 본다.
+             */
+            template <typename TSerializer>
+            static bool reportMissingRequiredOnLoad( const TypeInfo& typeInfo, string_view stateText )
+            {
+                string               objectName;
+                const vector<string> listMissing = collectMissingRequired<TSerializer>( typeInfo, stateText, objectName );
                 for ( const string& missingPath : listMissing )
                 {
-                    SW_LOG_ERROR_ID( "ObjectStateSerializer.RequiredMissing", "Object '%#' has no required '%#' (PROPERTY( Required ) - write it in the prefab or scene)",
-                                     pName != nullptr ? pName : "(unnamed)", missingPath.c_str() );
+                    SW_LOG_ERROR_ID( "ObjectStateSerializer.RequiredMissing", "Object '%#' has no required '%#' or it is empty (PROPERTY( Required ) - write it in the prefab or scene)",
+                                     objectName.empty() ? "(unnamed)" : objectName.c_str(), missingPath.c_str() );
                 }
                 return listMissing.empty();
+            }
+
+            /** @brief 저작 저장(씬 · 프리팹)이 쓴 글의 빠졌거나 빈 필수 칸을 경고로 알립니다 — 저장은 막지 않지만 다음 로드가 실패할 글이다. */
+            template <typename TSerializer>
+            static void warnMissingRequiredOnSave( const TypeInfo& typeInfo, string_view stateText )
+            {
+                string               objectName;
+                const vector<string> listMissing = collectMissingRequired<TSerializer>( typeInfo, stateText, objectName );
+                for ( const string& missingPath : listMissing )
+                {
+                    SW_LOG_WARNING_ID( "ObjectStateSerializer.RequiredEmptyOnSave", "Object '%#' is saved without required '%#' - the next load fails until it is written",
+                                       objectName.empty() ? "(unnamed)" : objectName.c_str(), missingPath.c_str() );
+                }
             }
 
             /**
@@ -478,7 +519,9 @@ namespace sw
             return {};
 
         // 텍스트로 저장하는 경로(씬과 프리팹 저작)는 쓰기 전에 검증한다. 결과만 남기고 저장은 그대로 한다. 바이너리(플레이, 되돌리기 스냅샷)는 검증하지 않는다.
-        (void)ObjectValidation::reportGameObject( *pGameObject, true );
+        // 빈 필수 이름 칸도 여기서 경고로 남는다(다음 로드는 그 글을 RequiredMissing 으로 거절한다). 기본값 견본은 검증하지 않는다(`_bSkipValidation`).
+        if ( options._bSkipValidation == SW_FALSE )
+            (void)ObjectValidation::reportGameObject( *pGameObject, true );
 
         const ObjectStateSerializerInternal::GameObjectWriteContext writeContext( pGameObject, options );
         return TSerializer::serializeVersioned( kObjectReflectedSchemaVersion, pGameObject, *pTypeInfo, writeContext.getContext() );
@@ -559,6 +602,11 @@ namespace sw
         if ( pTypeInfo == nullptr )
             return false;
 
+        // 필수 칸은 합친 상태 글(프리팹 기반 + override · 변형)에서 읽기 전에 본다 — 빠지거나 빈 이름이면 오브젝트를 건드리지 않고 실패다.
+        // XML · JSON 이 이 한 자리를 지난다(형식은 문서를 여는 법만 가른다).
+        if ( ObjectStateSerializerInternal::reportMissingRequiredOnLoad<TSerializer>( *pTypeInfo, text ) == false )
+            return false;
+
         return loadStateInPlace( pGameObject, context, [&]( uint32& outVersion, const SerializeContext& serializeContext )
         {
             return TSerializer::deserializeVersioned( outVersion, pGameObject, *pTypeInfo, text, kObjectReflectedSchemaVersion, serializeContext );
@@ -631,10 +679,6 @@ namespace sw
 
     bool ObjectStateSerializer::loadFromXMLString( GameObject* pGameObject, string_view xmlString, const ObjectLoadContext& context )
     {
-        // 필수 칸은 읽기 전에 본다 — 빠지면 오브젝트를 건드리지 않고 실패다(초기값은 형식일 뿐 기본값이 아니다).
-        const TypeInfo* pTypeInfo = pGameObject != nullptr ? pGameObject->getTypeInfo() : nullptr;
-        if ( pTypeInfo != nullptr && ObjectStateSerializerInternal::reportMissingRequired( *pTypeInfo, xmlString ) == false )
-            return false;
         return loadFromXMLText<XMLSerializer>( pGameObject, xmlString, context );
     }
 

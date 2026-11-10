@@ -295,4 +295,11 @@ SW_TEST_CASE( PrefabOverridesTest, RequiredFieldsAreCheckedOnTheMergedState )
     SW_EXPECT_LOG( "ObjectStateSerializer.RequiredMissing" );
     SW_REQUIRE_TRUE( PrefabOverrides::makeInstanceState( kMissing, overrides, "Walker", merged ) );
     SW_EXPECT_FALSE( ObjectStateSerializer::loadFromXMLString( pObject, merged, ObjectLoadContext{ SerializePurpose::Authoring } ) );
+
+    // 적혀 있어도 빈 이름은 빠진 것이다(에디터가 빈 칸을 속성으로 적는 길) — XML · JSON 이 같은 판정을 지난다.
+    string empty = kWritten;
+    empty.replace( empty.find( "_speedCurve=\"Speed\"" ), 19, "_speedCurve=\"\"" );
+    SW_EXPECT_FALSE( ObjectStateSerializer::loadFromXMLString( pObject, empty, ObjectLoadContext{ SerializePurpose::Authoring } ) );
+    SW_EXPECT_FALSE( ObjectStateSerializer::loadFromJSONString( pObject, R"({"_schemaVersion":0,"_name":"Walker","_listComponent":[{"LocomotionWarpingComponent":{"_speedCurve":""}}]})",
+                                                                ObjectLoadContext{ SerializePurpose::Authoring } ) );
 }
