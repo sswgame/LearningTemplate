@@ -67,14 +67,30 @@ namespace sw::editor
         [[nodiscard]] bool saveGraphData();
         /** @brief 주어진 이름의 노드를 추가하고 그 id 를 반환합니다. */
         int32 addNamedNode( const utf8* pName );
+        /**
+         * @brief 포즈 노드 종류 @p typeName 의 상태를 더하고 그 id 를 반환합니다. 정의는 종류의 첫 값(`AnimationPoseNodeRegistry::makeDefaultDef`)이라 저장 · 되돌리기 글이 계약을 지킨다.
+         * @return 모르는 종류면 더하지 않고 0 입니다.
+         */
+        int32 addPoseNode( const hashed_string& typeName );
+        /** @brief 노드 더하기 메뉴(도구줄 · 캔버스)의 항목입니다 — 클립 상태와 등록된 포즈 노드 종류(`AnimationPoseNodeRegistry::getTypeNames`). */
+        void collectAddKinds( vector<EditorGraphNodeKind>& outListKind );
+        /** @brief 메뉴 항목 @p kindID 의 노드를 더하고 그 id 를 반환합니다(`collectAddKinds` 의 번호). */
+        int32 addNodeOfKind( uint32 kindID );
         /** @brief 핀 번호의 연결 정보를 구합니다. 포즈 타입 하나입니다. 이 그래프의 핀이 아니면 false 입니다. */
         [[nodiscard]] bool findGraphPin( int32 pinID, EditorGraphPinInfo& outInfo ) const;
         /** @brief 오른쪽 편집 영역을 그립니다. 그래프 탭(상태와 전이)과 레이어 탭(레이어와 본 마스크, `AnimationGraphLayerEditor`)입니다. */
         void drawInspector();
         /** @brief 상태와 전이 편집입니다. 이름이 곧 클립이며, 반복, 전이 조건, 블렌드를 편집합니다. */
         void drawGraphInspector();
-        /** @brief 고른 상태(노드)의 클립 이름과 반복 설정입니다. */
+        /** @brief 고른 상태(노드)의 클립 이름과 반복 설정입니다. 포즈 노드 상태면 그 정의(`drawPoseNodeInspector`)도 그립니다. */
         void drawStateInspector();
+        /**
+         * @brief 포즈 노드 상태의 정의 편집입니다 — 입력, 그리고 종류의 첫 값이 쓴 칸(가중치 파라미터 · 미러 축 · 몽타주 섹션)만 그린다(종류 이름으로 가르지 않는다).
+         * @details 편집은 사본에 하고 종류의 계약(`AnimationPoseNodeRegistry::isSatisfiedBy`)을 지킬 때만 들인다 — 저장 · 되돌리기 글이 읽히지 않는 상태를 만들지 않는다.
+         */
+        void drawPoseNodeInspector( GraphNode& node );
+        /** @brief 이름 칸 하나입니다. 치는 동안은 패널 버퍼에 두고 칸을 떠날 때 @p inoutName 에 씁니다. 바뀌었으면 true 입니다. */
+        [[nodiscard]] bool drawNameField( const utf8* pID, hashed_string& inoutName );
         /** @brief 전이 목록입니다. 누르면 그 전이를 고릅니다. */
         void drawTransitionList();
         /** @brief 고른 전이의 조건(파라미터 · 비교 · 값)과 블렌드 시간입니다. */
@@ -99,6 +115,10 @@ namespace sw::editor
         AnimationGraphLayerEditor  _layerEditor;         ///< 레이어 탭의 레이어 · 본 마스크 편집
         string                     _nameEditBuffer;      ///< 상태 이름 입력란의 텍스트
         string                     _parameterEditBuffer; ///< 조건 파라미터 입력란의 텍스트
+        string                     _nameFieldBuffer;     ///< 치는 중인 이름 칸의 텍스트(`drawNameField`)
+        string                     _nameFieldShown;      ///< 치지 않는 이름 칸이 보이는 텍스트(프레임마다 값에서 다시 쓴다)
+        vector<hashed_string>      _listPoseTypeName;    ///< 노드 더하기 메뉴의 포즈 노드 종류(`collectAddKinds` 가 채운다)
+        uint32                     _nameFieldID;         ///< 치는 중인 이름 칸의 ImGui id(0 = 없음)
         vector<int32>              _listSelectionOrder;  ///< 캔버스에서 선택한 노드를 선택한 순서대로 담는다
         int32                      _selectedNodeID;
         int32                      _selectedLinkID;

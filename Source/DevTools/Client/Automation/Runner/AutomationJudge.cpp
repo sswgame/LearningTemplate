@@ -149,6 +149,29 @@ namespace sw
             outMessage = subject + ( pSameAs != nullptr ? " same as " : " differs from " ) + name + " ('" + *pRemembered + "'), got " + valueText;
             return true;
         }
+        if ( const string* pOppositeOf = step.findAttribute( "oppositeOf" ); pOppositeOf != nullptr )
+        {
+            // 기억한 수의 부호를 뒤집은 값과 허용 폭 안이다(미러가 좌우 본의 X 를 뒤집었는지). 수끼리 보므로 글 비교(sameAs)의 자릿수 차이에 지지 않는다.
+            const RememberedValue* pRemembered = nullptr;
+            for ( const RememberedValue& entry : _listRemembered )
+            {
+                if ( entry._name == *pOppositeOf )
+                    pRemembered = &entry;
+            }
+            float32 remembered = 0.0f;
+            if ( pRemembered == nullptr || StringUtil::parseFloat( string_view{ pRemembered->_text }, remembered ) == false )
+            {
+                outMessage = subject + ": no number was remembered as '" + *pOppositeOf + "' (add <Remember as=\"" + *pOppositeOf + "\"> on a number watch before this step)";
+                return false;
+            }
+            float32 tolerance = Internal::kWatchNearTolerance;
+            if ( Internal::readFloat( step, "tolerance", tolerance ).has_value() == false )
+                return false; // 검사가 본다 — 단계가 바뀌었다(핫 리로드)
+            bOk        = MathUtil::abs( value._number + static_cast<float64>( remembered ) ) <= static_cast<float64>( tolerance );
+            outMatched = bOk;
+            outMessage = subject + " opposite of " + *pOppositeOf + " ('" + pRemembered->_text + "'), got " + valueText;
+            return true;
+        }
         if ( step.findAttribute( "is" ) != nullptr )
         {
             bOk  = valueText == *step.findAttribute( "is" );

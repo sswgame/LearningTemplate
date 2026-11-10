@@ -9,6 +9,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetIO.h"
@@ -413,6 +414,24 @@ namespace sw
         _firstAddedBone   = state._firstAddedBone;
         _translationRatio = state._translationRatio;
         return true;
+    }
+
+    string Skeleton::makeSidePath( string_view skeletonPath, string_view extension )
+    {
+        if ( StringUtil::endsWith( skeletonPath, kExtension ) == false )
+            return string{};
+        const string_view stemPath = skeletonPath.substr( 0, skeletonPath.size() - kExtension.size() );
+        string_view       folder;
+        string_view       stem;
+        FileUtil::splitPath( stemPath, folder, stem );
+        if ( folder.empty() == false )
+            folder.remove_suffix( 1 ); // 끝 구분자
+        string_view folderName;
+        FileUtil::getFileNamePart( folder, folderName );
+        // 임포트 옆 폴더(폴더 이름 = 파일 이름)는 다시 임포트할 때 지워진다. 그 밖의 메시 옆에 둔다.
+        string path = ( folder.empty() == false && folderName == stem ) ? string{ folder } : string{ stemPath };
+        path.append( extension.data(), extension.size() );
+        return path;
     }
 
     string Skeleton::toXML() const

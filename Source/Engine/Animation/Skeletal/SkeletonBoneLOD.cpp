@@ -291,20 +291,7 @@ namespace sw
 
     string SkeletonBoneLOD::makePathForSkeleton( string_view skeletonPath )
     {
-        if ( StringUtil::endsWith( skeletonPath, Skeleton::kExtension ) == false )
-            return string{};
-        const string_view stemPath = skeletonPath.substr( 0, skeletonPath.size() - Skeleton::kExtension.size() );
-        string_view       folder;
-        string_view       stem;
-        FileUtil::splitPath( stemPath, folder, stem );
-        if ( folder.empty() == false )
-            folder.remove_suffix( 1 ); // 끝 구분자
-        string_view folderName;
-        FileUtil::getFileNamePart( folder, folderName );
-        // 임포트 옆 폴더(폴더 이름 = 파일 이름)는 다시 임포트할 때 지워진다. 그 밖의 메시 옆에 둔다.
-        string path = ( folder.empty() == false && folderName == stem ) ? string{ folder } : string{ stemPath };
-        path.append( kExtension.data(), kExtension.size() );
-        return path;
+        return Skeleton::makeSidePath( skeletonPath, kExtension );
     }
 
     void SkeletonBoneLOD::makeSkeletonCandidatePaths( string_view boneLODPath, string& outImportedPath, string& outSiblingPath )
