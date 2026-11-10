@@ -366,14 +366,14 @@ namespace sw::editor
         return visuals.setAttribute( BodyCustomizationViewModelInternal::makeSectionPath( row ), "dyeable", bDyeable ? "true" : "false", false );
     }
 
-    uint32 BodyCustomizationViewModel::findSectionRow( const BodyCustomizationViewState& state, const hashed_string& section )
+    optional<uint32> BodyCustomizationViewModel::findSectionRow( const BodyCustomizationViewState& state, const hashed_string& section )
     {
         for ( uint32 index = 0; index < static_cast<uint32>( state._listSection.size() ); ++index )
         {
             if ( state._listSection[index]._section == section )
                 return index;
         }
-        return constant::invalid_index::kUint32;
+        return nullopt;
     }
 
     bool BodyCustomizationViewModel::placeSkinLayer( AppearanceEditModel& model, uint32 index, const float2& uv, bool bContinuous )

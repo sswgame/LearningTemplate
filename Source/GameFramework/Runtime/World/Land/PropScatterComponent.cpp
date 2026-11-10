@@ -29,20 +29,22 @@ namespace sw
                 if ( deltaX * deltaX + deltaZ * deltaZ < exclusion._radius * exclusion._radius )
                     return;
             }
-            PropScatterPlacement placement;
-            placement._position   = position;
-            placement._modelIndex = PropScatterPlacement::pickModel( params._listModel, pick );
-            placement._scale      = params._scaleMin + inoutRandom.nextFloat() * ( params._scaleMax - params._scaleMin );
-            placement._yaw        = inoutRandom.nextFloat() * MathUtil::kTwoPi;
-            if ( placement._modelIndex >= 0 )
-                outListPlacement.push_back( placement );
+            const optional<int32> modelIndex = PropScatterPlacement::pickModel( params._listModel, pick );
+            PropScatterPlacement  placement;
+            placement._position = position;
+            placement._scale    = params._scaleMin + inoutRandom.nextFloat() * ( params._scaleMax - params._scaleMin );
+            placement._yaw      = inoutRandom.nextFloat() * MathUtil::kTwoPi;
+            if ( modelIndex.has_value() == false )
+                return;
+            placement._modelIndex = *modelIndex;
+            outListPlacement.push_back( placement );
         }
     } // namespace
 } // namespace sw
 
 namespace sw
 {
-    int32 PropScatterPlacement::pickModel( const vector<PropScatterModel>& listModel, float32 unit )
+    optional<int32> PropScatterPlacement::pickModel( const vector<PropScatterModel>& listModel, float32 unit )
     {
         float32 totalWeight = 0.0f;
         for ( const PropScatterModel& model : listModel )
@@ -50,10 +52,10 @@ namespace sw
             totalWeight += model._weight > 0.0f ? model._weight : 0.0f;
         }
         if ( totalWeight <= 0.0f )
-            return constant::invalid_index::kInt32;
+            return nullopt;
         // 누적 비중의 경계보다 작으면 그 모델 — 비중 0.45 · 0.35 · 0.2 면 0.45 · 0.8 이 경계다.
-        float32 cumulative = 0.0f;
-        int32   lastIndex  = constant::invalid_index::kInt32;
+        float32         cumulative = 0.0f;
+        optional<int32> lastIndex;
         for ( int32 modelIndex = 0; modelIndex < static_cast<int32>( listModel.size() ); ++modelIndex )
         {
             const float32 weight = listModel[static_cast<size_t>( modelIndex )]._weight;

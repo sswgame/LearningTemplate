@@ -9,6 +9,7 @@
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
@@ -52,18 +53,21 @@ namespace sw
      */
     struct CanvasQuad
     {
-        float4 _rect{};                                          ///< x, y(변환 전 왼쪽 위의 화면 위치), 너비, 높이(변환 전 픽셀)
-        float4 _uvRect{};                                        ///< u0, v0, u1, v1
-        float4 _color{};                                         ///< 곧은 RGBA(셰이더가 프리멀티플라이한다)
-        float4 _borderColor{};                                   ///< Rect 는 테두리 색, Glyph 는 외곽선 색
-        float4 _cornerRadius{};                                  ///< 왼쪽 위, 오른쪽 위, 오른쪽 아래, 왼쪽 아래 순서(픽셀)
-        float4 _clipRect{};                                      ///< x0, y0, x1, y1(픽셀). `CanvasQuadFlag::kRoundedClip` 일 때만 읽는다.
-        float4 _axis{ 1.0f, 0.0f, 0.0f, 1.0f };                  ///< 2×2 변환(축 X는 xy, 축 Y는 zw). 사각형 왼쪽 위 기준이며 회전, 기울임, 크기를 나타낸다.
-        float4 _params{};                                        ///< Rect 는 x 테두리 두께. Glyph 는 x 거리 배율(px), y 외곽선 두께, z 굵게 이동. Shadow 는 y 흐림. 모두 w 가 둥근 자르기 반지름
-        uint32 _kind{ 0 };                                       ///< `CanvasQuadKind`
-        uint32 _textureSlot{ constant::invalid_index::kUint32 }; ///< 일괄 텍스처의 번호(0..3). 없으면 constant::invalid_index::kUint32
-        uint32 _flags{ 0 };                                      ///< `CanvasQuadFlag`
-        uint32 _anchor{ constant::invalid_index::kUint32 };      ///< 화면 앵커 번호(`CanvasFrameData::_listAnchor`). 있으면 `_rect` 위치는 앵커 기준이다. 없으면 constant::invalid_index::kUint32
+        /** @brief 셰이더가 읽는 "텍스처 없음" 번호입니다(GPU 구조 버퍼 칸이라 optional 로 둘 수 없다). */
+        static constexpr uint32 kNoTextureSlot = constant::invalid_index::kUint32;
+
+        float4 _rect{};                                     ///< x, y(변환 전 왼쪽 위의 화면 위치), 너비, 높이(변환 전 픽셀)
+        float4 _uvRect{};                                   ///< u0, v0, u1, v1
+        float4 _color{};                                    ///< 곧은 RGBA(셰이더가 프리멀티플라이한다)
+        float4 _borderColor{};                              ///< Rect 는 테두리 색, Glyph 는 외곽선 색
+        float4 _cornerRadius{};                             ///< 왼쪽 위, 오른쪽 위, 오른쪽 아래, 왼쪽 아래 순서(픽셀)
+        float4 _clipRect{};                                 ///< x0, y0, x1, y1(픽셀). `CanvasQuadFlag::kRoundedClip` 일 때만 읽는다.
+        float4 _axis{ 1.0f, 0.0f, 0.0f, 1.0f };             ///< 2×2 변환(축 X는 xy, 축 Y는 zw). 사각형 왼쪽 위 기준이며 회전, 기울임, 크기를 나타낸다.
+        float4 _params{};                                   ///< Rect 는 x 테두리 두께. Glyph 는 x 거리 배율(px), y 외곽선 두께, z 굵게 이동. Shadow 는 y 흐림. 모두 w 가 둥근 자르기 반지름
+        uint32 _kind{ 0 };                                  ///< `CanvasQuadKind`
+        uint32 _textureSlot{ kNoTextureSlot };              ///< 일괄 텍스처의 번호(0..3). 없으면 kNoTextureSlot
+        uint32 _flags{ 0 };                                 ///< `CanvasQuadFlag`
+        uint32 _anchor{ constant::invalid_index::kUint32 }; ///< 화면 앵커 번호(`CanvasFrameData::_listAnchor`). 있으면 `_rect` 위치는 앵커 기준이다. 없으면 constant::invalid_index::kUint32
     };
     static_assert( sizeof( CanvasQuad ) == 144, "CanvasQuad must match SwCanvasQuad in canvas.hlsl" );
 } // namespace sw
@@ -173,15 +177,15 @@ namespace sw
      */
     struct CanvasMarkerRecord
     {
-        float3  _worldPosition{};                                    ///< 마커의 월드 기준점입니다(주 씬 컴포넌트 위치 + 월드 오프셋).
-        float32 _maxDistance{ 0.0f };                                ///< 이보다 멀면 숨깁니다(0 이면 제한 없음).
-        float2  _screenOffset{};                                     ///< 투영한 점에 더하는 UI 단위 오프셋입니다.
-        float32 _referenceDistance{ 0.0f };                          ///< 0 보다 크면 거리 배율(`_referenceDistance / 거리`, 뷰의 최소 · 최대로 자른다)을 씁니다.
-        uint32  _flags{ 0 };                                         ///< `CanvasMarkerFlag` 비트입니다.
-        uint32  _bActive{ 0 };                                       ///< 1 이면 컴퓨트가 이 앵커를 씁니다.
-        float3  _worldOffset{};                                      ///< 주 씬 컴포넌트 위치에서 기준점까지의 월드 오프셋입니다. 인스턴스 칸이 있으면 컴퓨트가 인스턴스 변환의 위치에 이것을 더합니다.
-        uint32  _primitiveIndex{ constant::invalid_index::kUint32 }; ///< 게임 스레드가 적은 마커 오브젝트의 렌더 프리미티브 번호(`PrimitiveRegistry`)입니다. 메시가 주 씬 컴포넌트일 때만 있습니다.
-        uint32  _instanceSlot{ constant::invalid_index::kUint32 };   ///< 패킷을 채울 때 빌더가 푼 GPUScene 인스턴스 칸입니다(`GPUSceneBuilder::findOpaqueInstanceSlot`). 없으면 `_worldPosition` 을 씁니다.
+        float3           _worldPosition{};                                    ///< 마커의 월드 기준점입니다(주 씬 컴포넌트 위치 + 월드 오프셋).
+        float32          _maxDistance{ 0.0f };                                ///< 이보다 멀면 숨깁니다(0 이면 제한 없음).
+        float2           _screenOffset{};                                     ///< 투영한 점에 더하는 UI 단위 오프셋입니다.
+        float32          _referenceDistance{ 0.0f };                          ///< 0 보다 크면 거리 배율(`_referenceDistance / 거리`, 뷰의 최소 · 최대로 자른다)을 씁니다.
+        uint32           _flags{ 0 };                                         ///< `CanvasMarkerFlag` 비트입니다.
+        uint32           _bActive{ 0 };                                       ///< 1 이면 컴퓨트가 이 앵커를 씁니다.
+        float3           _worldOffset{};                                      ///< 주 씬 컴포넌트 위치에서 기준점까지의 월드 오프셋입니다. 인스턴스 칸이 있으면 컴퓨트가 인스턴스 변환의 위치에 이것을 더합니다.
+        uint32           _primitiveIndex{ constant::invalid_index::kUint32 }; ///< 게임 스레드가 적은 마커 오브젝트의 렌더 프리미티브 번호(`PrimitiveRegistry`)입니다. 메시가 주 씬 컴포넌트일 때만 있습니다.
+        optional<uint32> _instanceSlot;                                       ///< 패킷을 채울 때 빌더가 푼 GPUScene 인스턴스 칸입니다(`GPUSceneBuilder::findOpaqueInstanceSlot`). 없으면 `_worldPosition` 을 씁니다.
     };
 
     /** @brief 마커 투영이 한 프레임에 쓰는 공용 값입니다(게임 카메라의 뷰 · 투영과 UI 뷰포트). */

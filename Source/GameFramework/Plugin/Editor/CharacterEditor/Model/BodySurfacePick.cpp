@@ -23,7 +23,7 @@ namespace sw::editor
         }
     }
 
-    uint32 BodySurfaceHit::findSection( vector_reference<const MeshSection> listSection, uint32 triangle )
+    optional<uint32> BodySurfaceHit::findSection( vector_reference<const MeshSection> listSection, uint32 triangle )
     {
         const uint32 firstIndex = triangle * 3u;
         for ( uint32 index = 0; index < static_cast<uint32>( listSection.size() ); ++index )
@@ -32,7 +32,7 @@ namespace sw::editor
             if ( firstIndex >= section._firstIndex && firstIndex < section._firstIndex + section._indexCount )
                 return index;
         }
-        return constant::invalid_index::kUint32;
+        return nullopt;
     }
 
     bool BodySurfaceHit::pick( vector_reference<const BodyPickSurface> listSurface, const float3& origin, const float3& direction, BodySurfaceHit& outHit )

@@ -293,7 +293,7 @@ namespace sw::editor
         , _slotFieldBaseline{}
         , _pTextureID{ nullptr }
         , _texture{ 0 }
-        , _slotDragOrdinal{ UIPreviewLogic::kNoOrdinal }
+        , _slotDragOrdinal{}
         , _bShowLayout{ true }
         , _bSlotDragging{ SW_FALSE }
         , _bLayoutDragging{ SW_FALSE }

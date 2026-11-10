@@ -26,10 +26,19 @@ namespace sw
                 return bLetter || bDigit || ch == '-' || ch == '.' || ch == '_' || ch == '~';
             }
 
-            static int32 findHexValue( utf8 ch )
+            /** @brief 16 진 숫자 @p ch 의 값입니다. 16 진 숫자가 아니면 비어 있습니다. */
+            static optional<uint32> findHexValue( utf8 ch )
             {
                 uint32 value = 0;
-                return HexDigitUtil::tryParseDigit( ch, value ) ? static_cast<int32>( value ) : constant::invalid_index::kInt32;
+                return HexDigitUtil::tryParseDigit( ch, value ) ? optional<uint32>{ value } : nullopt;
+            }
+
+            /** @brief @p base(10 · 16) 진 숫자 @p ch 의 값입니다. 숫자가 아니면 비어 있습니다. */
+            static optional<uint32> findDigitValue( utf8 ch, int32 base )
+            {
+                if ( base == 16 )
+                    return findHexValue( ch );
+                return '0' <= ch && ch <= '9' ? optional<uint32>{ static_cast<uint32>( ch - '0' ) } : nullopt;
             }
 
             /** @brief @p bytes 에서 "\r\n" 의 위치입니다(없으면 npos). */
@@ -66,10 +75,10 @@ namespace sw
                 int64 value = 0;
                 for ( const utf8 ch : text )
                 {
-                    const int32 digit = base == 16 ? findHexValue( ch ) : ( '0' <= ch && ch <= '9' ? ch - '0' : constant::invalid_index::kInt32 );
-                    if ( digit < 0 )
+                    const optional<uint32> digit = findDigitValue( ch, base );
+                    if ( digit.has_value() == false )
                         return false;
-                    value = value * base + digit;
+                    value = value * base + static_cast<int64>( *digit );
                 }
                 outValue = value;
                 return true;
@@ -189,11 +198,11 @@ namespace sw
             }
             if ( index + 2 >= text.size() )
                 return false;
-            const int32 high = HTTPTypesInternal::findHexValue( text[index + 1] );
-            const int32 low  = HTTPTypesInternal::findHexValue( text[index + 2] );
-            if ( high < 0 || low < 0 )
+            const optional<uint32> high = HTTPTypesInternal::findHexValue( text[index + 1] );
+            const optional<uint32> low  = HTTPTypesInternal::findHexValue( text[index + 2] );
+            if ( high.has_value() == false || low.has_value() == false )
                 return false;
-            outText.push_back( static_cast<utf8>( high * 16 + low ) );
+            outText.push_back( static_cast<utf8>( *high * 16 + *low ) );
             index += 2;
         }
         return true;

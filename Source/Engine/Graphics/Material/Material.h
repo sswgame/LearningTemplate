@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Concurrency/atomic.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Path/AbsolutePath.h"
 
@@ -83,8 +84,6 @@ namespace sw
             CreateKey() = default;
             friend class Material;
         };
-        /** @brief 빌린 텍스처가 없는 프로퍼티의 슬롯 값입니다(`findTextureSlot`). */
-        static constexpr uint32 kInvalidTextureSlot = constant::invalid_index::kUint32;
         /** @brief 머티리얼 에셋 종류입니다(등록은 `MaterialCache.cpp` 의 `SW_ASSET_TYPE`). 판 0. */
         static constexpr AssetTypeDef kAssetType{ "Material", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
         /** @brief create() 전용 생성자입니다. 키 없이는 만들 수 없습니다. */
@@ -224,10 +223,10 @@ namespace sw
         const vector<RHIDescriptorIndex>& getMaterialTextureSRVs() const { return _listMaterialTextureSRV; }
         /**
          * @brief 텍스처 프로퍼티 `name` 이 슬롯 목록(`getMaterialTextureSRVs`)의 몇 번째인지 반환합니다. 이 머티리얼이 그 프로퍼티에 텍스처를 빌리지
-         *        않았으면 kInvalidTextureSlot 입니다.
+         *        않았으면 비어 있습니다.
          * @details 인스턴스가 같은 프로퍼티의 텍스처를 덮어쓸 때 같은 슬롯을 쓰려고 묻는다(`MaterialInstance::findTextureSlot`).
          */
-        uint32 findTextureSlot( hashed_string name ) const;
+        optional<uint32> findTextureSlot( hashed_string name ) const;
         /** @brief 품질 레벨을 설정합니다. */
         void setQualityLevel( MaterialQualityLevel level );
         /**

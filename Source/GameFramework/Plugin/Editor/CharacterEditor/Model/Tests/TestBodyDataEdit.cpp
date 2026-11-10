@@ -163,12 +163,12 @@ SW_TEST_CASE( BodyDataEditTest, SurfacePickFindsNearestSectionAndUV )
     BodySurfaceHit hit{};
     SW_REQUIRE_TRUE( BodySurfaceHit::pick( listSurface, float3{ 0.25f, 0.75f, 5.0f }, float3{ 0.0f, 0.0f, -1.0f }, hit ) );
     SW_EXPECT_EQUAL( 0u, hit._surface );
-    SW_EXPECT_EQUAL( 1u, hit._section );
+    SW_EXPECT_TRUE( hit._section == 1u );
     SW_EXPECT_NEAR( 4.0f, hit._distance, 1e-4f );
     SW_EXPECT_NEAR( 0.25f, hit._uv._x, 1e-4f );
     SW_EXPECT_NEAR( 0.75f, hit._uv._y, 1e-4f );
     SW_EXPECT_FALSE( BodySurfaceHit::pick( listSurface, float3{ 3.0f, 3.0f, 5.0f }, float3{ 0.0f, 0.0f, -1.0f }, hit ) );
-    SW_EXPECT_EQUAL( constant::invalid_index::kUint32, BodySurfaceHit::findSection( listSection, 9 ) );
+    SW_EXPECT_TRUE( BodySurfaceHit::findSection( listSection, 9 ).has_value() == false );
 }
 
 /**

@@ -13,6 +13,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/String/fixed_string.h"
@@ -218,7 +219,7 @@ namespace sw::editor
         Published                               _published;                ///< 감시 값이 읽는 게시 값
         BodyCustomizationViewState              _bodyState;                ///< 몸 탭의 상태(그리기마다 `gather` — 벡터 저장소를 다시 쓴다)
         uint32                                  _bodyHighlightDrive;       ///< 강조할 드라이브의 `_listDrive` 번호(무효면 강조 없음)
-        uint32                                  _bodySelectedSection;      ///< 고른 구간 줄(뷰포트에서 집었거나 표에서 눌렀다 — 무효면 없음)
+        optional<uint32>                        _bodySelectedSection;      ///< 고른 구간 줄(뷰포트에서 집었거나 표에서 눌렀다). 고르지 않았으면 비어 있다.
         uint32                                  _bodyPickLayer;            ///< 배치 집기 중인 층 번호(무효면 구간 고르기)
         float3                                  _bodyPickMarker;           ///< 마지막으로 집은 월드 자리
         float32                                 _bodyStepTimer;            ///< 동작 태그 시험의 다음 걸음까지 남은 시간(초)

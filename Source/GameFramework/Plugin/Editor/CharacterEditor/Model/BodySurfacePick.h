@@ -11,6 +11,7 @@
 #include "Core/Container/span.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
@@ -49,16 +50,16 @@ namespace sw::editor
     /** @brief 표면 집기의 결과입니다. */
     struct BodySurfaceHit
     {
-        float3  _position{};                                   ///< 맞은 월드 자리
-        float2  _uv{};                                         ///< 맞은 자리의 UV(무게중심 보간)
-        float32 _distance{ 0.0f };                             ///< 광선 시작에서의 거리
-        uint32  _surface{ constant::invalid_index::kUint32 };  ///< 맞은 표면 번호
-        uint32  _section{ constant::invalid_index::kUint32 };  ///< 맞은 삼각형이 든 구간 번호(구간이 없으면 무효)
-        uint32  _triangle{ constant::invalid_index::kUint32 }; ///< 맞은 삼각형 번호
+        float3           _position{};       ///< 맞은 월드 자리
+        float2           _uv{};             ///< 맞은 자리의 UV(무게중심 보간)
+        float32          _distance{ 0.0f }; ///< 광선 시작에서의 거리
+        uint32           _surface{ 0 };     ///< 맞은 표면 번호(`pick` 이 참일 때만 읽는다)
+        optional<uint32> _section;          ///< 맞은 삼각형이 든 구간 번호. 구간이 없으면 비어 있다.
+        uint32           _triangle{ 0 };    ///< 맞은 삼각형 번호(`pick` 이 참일 때만 읽는다)
 
         /** @brief 광선(@p origin, 단위 방향 @p direction)이 표면들과 처음 맞는 자리를 찾습니다. 맞지 않으면 false 입니다. */
         [[nodiscard]] static bool pick( vector_reference<const BodyPickSurface> listSurface, const float3& origin, const float3& direction, BodySurfaceHit& outHit );
-        /** @brief 삼각형 @p triangle(인덱스 칸 triangle × 3)이 든 구간 번호입니다. 없으면 무효입니다. */
-        static uint32 findSection( vector_reference<const MeshSection> listSection, uint32 triangle );
+        /** @brief 삼각형 @p triangle(인덱스 칸 triangle × 3)이 든 구간 번호입니다. 없으면 비어 있습니다. */
+        static optional<uint32> findSection( vector_reference<const MeshSection> listSection, uint32 triangle );
     };
 } // namespace sw::editor

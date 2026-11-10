@@ -224,7 +224,7 @@ namespace sw
         return false;
     }
 
-    int32 PlacementScatter::pickEntry( const vector<float32>& listEntryWeight, float32 unit )
+    optional<int32> PlacementScatter::pickEntry( const vector<float32>& listEntryWeight, float32 unit )
     {
         if ( listEntryWeight.empty() )
             return 0;
@@ -234,9 +234,9 @@ namespace sw
             totalWeight += MathUtil::max( weight, 0.0f );
         }
         if ( totalWeight <= 0.0f )
-            return -1;
-        float32 cumulative = 0.0f;
-        int32   lastIndex  = -1;
+            return nullopt;
+        float32         cumulative = 0.0f;
+        optional<int32> lastIndex;
         for ( int32 entryIndex = 0; entryIndex < static_cast<int32>( listEntryWeight.size() ); ++entryIndex )
         {
             const float32 weight = listEntryWeight[static_cast<size_t>( entryIndex )];
@@ -311,8 +311,8 @@ namespace sw
             if ( bPoisson && grid.isTooClose( position ) )
                 continue;
 
-            const int32 entryIndex = pickEntry( listEntryWeight, toUnit( hashCandidate( rule._seed, candidateIndex, Internal::kLaneEntry ) ) );
-            if ( entryIndex < 0 )
+            const optional<int32> entryIndex = pickEntry( listEntryWeight, toUnit( hashCandidate( rule._seed, candidateIndex, Internal::kLaneEntry ) ) );
+            if ( entryIndex.has_value() == false )
                 return; // 비중 합이 0 이면 놓을 것이 없다.
 
             if ( bPoisson )
@@ -326,7 +326,7 @@ namespace sw
             instance._yaw           = rule._yawMin + toUnit( hashCandidate( rule._seed, candidateIndex, Internal::kLaneYaw ) ) * ( rule._yawMax - rule._yawMin );
             instance._alignToNormal = MathUtil::saturate( rule._alignToNormal );
             instance._hash          = hashCandidate( rule._seed, candidateIndex, 0xA5A5A5A5u );
-            instance._entryIndex    = entryIndex;
+            instance._entryIndex    = *entryIndex;
             outListInstance.push_back( instance );
         }
     }

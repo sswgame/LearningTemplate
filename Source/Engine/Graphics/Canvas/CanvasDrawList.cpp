@@ -110,7 +110,7 @@ namespace sw
                 for ( size_t quadIndex = firstNew; quadIndex < _listQuad.size(); ++quadIndex )
                 {
                     CanvasQuad& quad = _listQuad[quadIndex];
-                    if ( quad._textureSlot != constant::invalid_index::kUint32 )
+                    if ( quad._textureSlot != CanvasQuad::kNoTextureSlot )
                         quad._textureSlot = arrSlot[quad._textureSlot];
                 }
             }

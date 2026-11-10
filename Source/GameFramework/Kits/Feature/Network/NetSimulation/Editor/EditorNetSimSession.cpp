@@ -133,7 +133,8 @@ namespace sw::editor
         if ( pWorld == nullptr )
             return nullptr;
         unique_ptr<EditorPreviewViewport> pViewport = make_unique<EditorPreviewViewport>();
-        if ( pViewport->attachScene( pWorld->getScene(), _pSceneSource->findSceneKey( worldIndex ) ) == false )
+        const optional<uint32>            sceneKey  = _pSceneSource->findSceneKey( worldIndex );
+        if ( sceneKey.has_value() == false || pViewport->attachScene( pWorld->getScene(), *sceneKey ) == false )
         {
             SW_LOG_ERROR_ID( "EditorNetSimSession.ProcessPlayWorldNo", "In-process play: world %# has no preview scene key", worldIndex );
             return nullptr;

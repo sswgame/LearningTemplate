@@ -457,7 +457,7 @@
     "Source/Engine/Dialogue/DialogueCursor.h": {"minus-one": 1},
     "Source/Engine/Engine.cpp": {"integer": 1},
     "Source/Engine/Environment/Foliage/FoliageComponent.cpp": {"float": 2},
-    "Source/Engine/Environment/Placement/PlacementRule.cpp": {"minus-one": 3, "float": 1, "hex": 6},
+    "Source/Engine/Environment/Placement/PlacementRule.cpp": {"minus-one": 1, "float": 1, "hex": 6},
     "Source/Engine/Environment/Placement/PlacementRule.h": {"minus-one": 2},
     "Source/Engine/Environment/Placement/SurfaceLayerWeights.h": {"float": 1},
     "Source/Engine/Environment/Sky/SkyGradient.cpp": {"float": 6},
