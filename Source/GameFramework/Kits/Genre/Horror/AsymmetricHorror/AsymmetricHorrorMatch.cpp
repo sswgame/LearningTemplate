@@ -243,9 +243,9 @@ namespace sw
         _killerTeam   = _match.addTeam( hashed_string( "Killer" ) );
         for ( AsymmetricHorrorSurvivor& survivor : _listSurvivor )
         {
-            survivor._participant = _match.addParticipant( _survivorTeam, hashed_string( "Survivor" ) );
+            survivor._participant = _match.addParticipant( _survivorTeam, hashed_string( "Survivor" ) ).value(); // 팀은 바로 위에서 만들었다
         }
-        _killer._participant = _match.addParticipant( _killerTeam, hashed_string( "Killer" ) );
+        _killer._participant = _match.addParticipant( _killerTeam, hashed_string( "Killer" ) ).value();
         _match.start();
         _bStarted = SW_TRUE;
     }

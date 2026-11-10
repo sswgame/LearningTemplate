@@ -69,7 +69,7 @@ namespace sw
         const int32        participant = _matchState.getParticipantCount();
         if ( initializePlayer( player, team, participant ) == false )
             return constant::invalid_index::kInt32;
-        const int32 added = _matchState.addParticipant( team, hashed_string{} );
+        const int32 added = _matchState.addParticipant( team, hashed_string{} ).value(); // 팀은 위에서 확인했다
         SW_ASSERT( added == participant );
         _listPlayer.push_back( std::move( player ) );
         return added;

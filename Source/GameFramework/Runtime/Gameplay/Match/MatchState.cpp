@@ -46,10 +46,10 @@ namespace sw
         return static_cast<int32>( _listTeam.size() ) - 1;
     }
 
-    int32 MatchState::addParticipant( int32 team, const hashed_string& role, int32 respawnCost )
+    expected<int32> MatchState::addParticipant( int32 team, const hashed_string& role, int32 respawnCost )
     {
         if ( isValidTeam( team ) == false )
-            return constant::invalid_index::kInt32;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the team does not exist" } );
         MatchParticipant participant;
         participant._team        = team;
         participant._role        = role;

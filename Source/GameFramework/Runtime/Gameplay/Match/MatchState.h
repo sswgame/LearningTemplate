@@ -7,6 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -114,9 +115,10 @@ namespace sw
         void initialize( const MatchSettings& settings );
         /** @brief 팀을 추가합니다. @p costPool 이 0 이면 부활 비용이 없습니다. */
         int32 addTeam( const hashed_string& name, int32 costPool = 0 );
-        int32 addParticipant( int32 team, const hashed_string& role, int32 respawnCost = 0 );
-        void  start();
-        void  update( float32 deltaTime );
+        /** @brief 참가자를 추가하고 번호를 돌려줍니다. 없는 팀이면 이유를 돌려줍니다. */
+        [[nodiscard]] expected<int32> addParticipant( int32 team, const hashed_string& role, int32 respawnCost = 0 );
+        void                          start();
+        void                          update( float32 deltaTime );
 
         /** @brief 피해를 기록합니다. 도움 판정과 통계에 씁니다. */
         void reportDamage( int32 attacker, int32 victim, float32 amount );

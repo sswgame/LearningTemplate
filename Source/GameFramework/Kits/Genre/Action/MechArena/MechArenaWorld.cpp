@@ -396,7 +396,7 @@ namespace sw
             pilot._listParticipant.clear();
             for ( const MechDef* pMech : pilot._listDeckMech )
             {
-                pilot._listParticipant.push_back( _match.addParticipant( pilot._team, pMech->_id, pMech->_cost ) );
+                pilot._listParticipant.push_back( _match.addParticipant( pilot._team, pMech->_id, pMech->_cost ).value() ); // 팀은 위에서 모두 만들었다
             }
         }
         _match.start();
