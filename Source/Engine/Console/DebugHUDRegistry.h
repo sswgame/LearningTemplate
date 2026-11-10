@@ -158,10 +158,20 @@ namespace sw
         /** @brief @p name 이 명령의 예약어라 섹션 이름으로 쓸 수 없으면 true 입니다. */
         static bool isReservedName( string_view name );
 
+        /**
+         * @brief 대상을 보는 섹션(npc · movement · sequence · animrewind …)이 볼 오브젝트 이름을 정합니다(빈 값은 지운다). 개발 명령 `debug.target` 과 에디터 Gameplay Debugger 창(선택을 따른다)이 부른다.
+         * @details 디버그 소스 표와 그것들이 함께 보는 대상을 한 곳에 둔다 — 언리얼 Gameplay Debugger 가 카테고리 목록과 선택 액터를 한 컨트롤러에 두는 자리다.
+         *          shortcut: 대상은 이름이다(같은 이름이 여럿이면 첫 것), 이름이 겹치는 씬에서 고르기가 틀리면 오브젝트 id 로 바꾼다.
+         */
+        void setTargetName( string_view name );
+        /** @brief 지금 대상 이름입니다(비면 정하지 않았다 — 섹션마다 자기 컴포넌트를 가진 첫 오브젝트를 본다). */
+        string getTargetName() const;
+
     private:
         mutable mutex                                                     _mutex;                  ///< 등록 목록 · 판 번호를 지킨다(본문 호출은 잠금 밖)
         RegistrationList<const DebugHUDSectionRegistration> _registration SW_GUARDED_BY( _mutex ); ///< (순서, 이름) 순 · 이름은 대소문자 무시
         uint64 _revision                                                  SW_GUARDED_BY( _mutex );
+        string _targetName                                                SW_GUARDED_BY( _mutex ); ///< `setTargetName` 이 정한 대상(비면 없음)
     };
 
     SW_SERVICE_SLOT( DebugHUDRegistry, Required );

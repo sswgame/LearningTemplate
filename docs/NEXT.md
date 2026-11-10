@@ -52,9 +52,9 @@
 ### 5-1. 구조 · 성능 설계(2026-11-10 설계안 — 순서대로, 폴더가 겹치지 않는 작업자 단위)
 
 - **W-S4 `GameObjectManager.h` 허브 해체:** 포함 TU 428 · include 30 이다. 소유 타입을 pimpl 로, 템플릿 전달은 `.inl` 로. `-ftime-trace` 집계로 재컴파일 TU · ms 를 전후 비교한다.
-- **W-R1 `FramePassExecutor` 분할 → 프레임 아레나:** 3257줄을 그래프 짓기 · 패스 라이브러리 · 제출로 나눈다(성능 변화 0). 그 뒤 프레임 지역 `vector` 를 `LinearAllocator` 기반 `frame_vector` 로 옮긴다(RT 프레임 힙 할당 0).
-- **W-R2 PSO 배치 색인(W-R1 뒤):** 배치를 만들 때 PSO 핸들을 한 번 풀어 둔다. `RT.PSO.ensureMaterial` 전후를 재고, 흔들림 안이면 되돌린다.
-- **W-E1 패널 열림 훅:** `IEditorPanel::onPanelOpened` 에서만 비동기 준비를 시작하고, View 는 준비 전에 뼈대만 그린다(3절 "첫 패널 느린 프레임" 측정이 후보를 고른다).
+- **W-R1 남은 것(통합):** 세 TU 분할 · `frame_vector`(프레임 아레나 `FramePassExecutor::_frameArena`)는 들어왔다 — 빌드 뒤 RT 프레임 힙 할당을 재서 남은 지역 목록을 옮긴다(`drawTextureLayerBakes` 의 `TextureCache::takeLayerBakes( vector& )` 는 API 가 `vector` 라 남았다).
+- **W-R2 PSO 배치 색인(측정 먼저):** 계측 `RT.PSO.batchLookups`(묶음마다 · 병합 판정의 CB 차이마다 PSO 조회 수)이 들어왔다. 그 수와 `RT.PSO.ensureMaterial` · `RT.Draw.gpuBatches` 를 재고, 이득이 있으면 배치를 만들 때 PSO 핸들을 한 번 풀어 두고 흔들림 안이면 하지 않는다.
+- **W-E1 남은 것:** 훅 `IEditorPanel::onPanelOpened`(첫 사용처 카탈로그 창)이 들어왔다 — 3절 "첫 패널 느린 프레임" 측정(`-gv_editorPanelTimes`)이 고른 패널의 동기 준비를 이 훅의 비동기 잡으로 옮긴다(`ModulesModel::ensureLoaded` 가 후보).
 - **W-G1 분할:** `InputMap`(데이터 · 평가기 · 상태 — Enhanced Input 자리), `PrefabAsset`(포맷 셋 + 스폰), `AbilityComponent`(어트리뷰트 · 이펙트 · 스펙 컨테이너).
 
 ### 5-2. RHI 진단(2026-11-10 — 결함 먼저, 폴더가 겹치는 단위는 순서대로)
@@ -164,7 +164,7 @@ GameObject/Component API 는 저작 · 수명 · 직렬화 층으로 두고, 프
   - `PROPERTY( Replicated, Quantize = … )` 로 작성기를 생성하고, 스키마 해시를 와이어 버전에 합친다.
   - `kMaxEntityBytes` 초과는 첫 경고만 남기고 엔티티가 사라진다 — `registerEntity` 의 오류로 바꾼다.
 - **E1 되돌리기를 형식으로:** 씬 변이 명령이 `EditorTransaction&` 를 요구하게 한다. 시나리오 `editor/undocoverage` 는 등록 명령 전수를 실행 → undo 한 뒤 씬 해시가 같은지 본다.
-- **E2 런타임 디버거 한 자리(5-1 W-E1 뒤):** AI 섹션 · 시퀀스 디버거 · 애니 리와인드 · HUD 섹션을 `IDebugSource` 등록표 하나로 묶는다. 선택 오브젝트에 연동하는 패널을 둔다(언리얼 Gameplay Debugger 자리).
+- **E2 남은 것:** 디버그 섹션 표(`DebugHUDRegistry` — 따로 `IDebugSource` 표를 두지 않고 이 표 하나로)가 대상(`setTargetName`)을 들고 `sequence` · `animrewind` 섹션이 더해졌으며, 씬 뷰 HUD 가 메인 씬 선택을 따른다. 남은 것: 대상을 이름에서 오브젝트 id 로(이름이 겹치는 씬), 섹션 표 · 대상을 시나리오로 확인(`hud.print sequence` · `animrewind`, 선택 → 대상).
 - **G1 장르 수직 슬라이스(T1 · T2 뒤):** 완결 루프가 없는 게임마다 `slice.scenario.xml` 을 둔다(시작 → 목표 → 결과 → 저장 · 복원 해시 동일).
 
 ### 6. 리소스

@@ -14,6 +14,7 @@
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
+#include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -166,6 +167,9 @@ namespace sw
 
         struct AnimationDevCommandsInternal
         {
+            /** @brief 디버그 섹션 `animrewind` 의 순서입니다(`sequence` 바로 뒤). */
+            static constexpr int32 kSectionOrder = 295;
+
             /** @brief 활성 씬의 애니메이션 시스템입니다(없으면 nullptr). */
             static AnimationSystem* findActiveAnimationSystem()
             {
@@ -207,6 +211,40 @@ namespace sw
                 outReply                               = pRewind != nullptr ? describeRewind( *pRewind )
                                                                             : string( "rewind " ) + ( AnimationRewindRecorder::isRecordingRequested() ? "on" : "off" ) + " (no active scene)";
                 return true;
+            }
+
+            /**
+             * @brief 디버그 섹션 `animrewind` — 기록 상태 한 줄과 대상(`debug.target` · 에디터 선택) 이름의 트랙(없으면 첫 트랙)의 프레임 수 · 마지막 프레임 번호.
+             * @details 되감기 조작은 에디터 Animation Rewind 창 · `anim.rewind.scrub` 이고, 여기는 다른 디버그 섹션과 같은 대상 · 같은 표에서 읽기만 한다.
+             */
+            static void writeSection( DebugHUDSectionWriter& writer )
+            {
+                const AnimationSystem*         pSystem = findActiveAnimationSystem();
+                const AnimationRewindRecorder* pRewind = pSystem != nullptr ? AnimationRewindRecorder::find( *pSystem ) : nullptr;
+                if ( pRewind == nullptr )
+                {
+                    writer.addLine( "rewind", AnimationRewindRecorder::isRecordingRequested() ? "on (no active scene)" : "off (anim.rewind on)" );
+                    return;
+                }
+                writer.addLine( "rewind", describeRewind( *pRewind ) );
+                const vector<AnimationRewindTrack>& listTrack = pRewind->getTracks();
+                if ( listTrack.empty() )
+                    return;
+                const DebugHUDRegistry* const pRegistry  = engine::findSubsystem<DebugHUDRegistry>();
+                const string                  targetName = pRegistry != nullptr ? pRegistry->getTargetName() : string{};
+                const AnimationRewindTrack*   pTrack     = &listTrack[0];
+                for ( const AnimationRewindTrack& track : listTrack )
+                {
+                    if ( targetName.empty() == false && track._label == targetName )
+                    {
+                        pTrack = &track;
+                        break;
+                    }
+                }
+                writer.addLine( "track", pTrack->_label );
+                writer.addLine( "frames", to_string( pTrack->_count ) );
+                if ( pTrack->_count > 0 )
+                    writer.addLine( "latest frame", to_string( pTrack->getFrame( pTrack->_count - 1 )._frameIndex ) );
             }
 
             static bool runAnimationRewindSeconds( const vector<string>& listArgument, string& outReply )
@@ -582,4 +620,5 @@ namespace sw
     SW_DEV_COMMAND( AnimationRewindScrub, "anim.rewind.scrub", "anim.rewind.scrub <seconds ago>|resume",
                     "Freeze animation and show the recorded poses of the active scene that many seconds ago, or resume",
                     &AnimationDevCommandsInternal::runAnimationRewindScrub );
+    SW_DEBUG_HUD_SECTION( animrewind, "animrewind", "Animation rewind (recording, target track)", AnimationDevCommandsInternal::kSectionOrder, DebugHUDSectionFlag::kNone, &AnimationDevCommandsInternal::writeSection );
 } // namespace sw

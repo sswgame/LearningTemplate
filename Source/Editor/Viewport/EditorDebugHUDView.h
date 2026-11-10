@@ -25,6 +25,8 @@ namespace sw::editor
      * @details 게임 HUD(`DebugHUD`)는 런타임 UI 라 게임 뷰에만 그려진다. 씬 뷰는 에디터 카메라 화면이라 같은 섹션 본문을 4 Hz 로 불러 ImGui 로 그린다.
      *          섹션 켜짐은 게임 HUD 와 같은 설정(`debug.hudSections`)이고, 이 상자를 켜고 끄는 것만 뷰마다다(툴바 `HUD`).
      *          `kUsesFrameProfiler` 섹션은 프로파일러가 꺼져 있으면 건너뛰고 한 줄로 알린다(씬 뷰가 프로파일러를 켜지 않는다).
+     *          대상을 보는 섹션(npc · movement · ability · sequence · animrewind …)의 대상은 메인 씬 선택을 따른다(`followSelection`) — 언리얼 Gameplay Debugger 가
+     *          뷰포트에서 고른 액터의 카테고리를 그리는 자리다. 선택이 바뀔 때만 대상을 바꾸므로 그 사이 `debug.target` 으로 정한 대상은 다음 선택까지 남는다.
      */
     class EditorDebugHUDView
     {
@@ -47,6 +49,8 @@ namespace sw::editor
 
         void rebuildSlots();
         void refresh();
+        /** @brief 메인 씬의 첫 선택이 바뀌었으면 디버그 대상(`DebugHUDRegistry::setTargetName`)을 그 오브젝트 이름으로 바꿉니다. 선택이 비면 대상을 그대로 둔다. */
+        void followSelection();
 
     private:
         vector<SectionSlot> _listSlot;
@@ -54,5 +58,6 @@ namespace sw::editor
         float32             _refreshTimer;
         uint32              _drawnSectionCount;
         uint32              _skippedProfilerSectionCount;
+        uint64              _followedObjectID; ///< 지난 `followSelection` 이 본 첫 선택(0 = 없음)
     };
 } // namespace sw::editor
