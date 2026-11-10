@@ -18,6 +18,8 @@ namespace
 
 // IDBFS 를 붙이고 지난 세션의 파일을 읽어 올 때까지 기다린다(JSPI) — 본문은 App/Web/WebPersistentRoot.js(Emscripten JS 라이브러리)다.
 extern "C" void swMountWebPersistentRoot( const char* pRoot );
+// 영속 폴더를 IndexedDB 로 내리기 시작한다(기다리지 않는다 — 페이지가 남아 있어 끝난다). 앱이 끝날 때 부른다: 숨김 · 닫힘 없이 끝난 세션의 마지막 세이브를 잃지 않게.
+extern "C" void swFlushWebPersistentRoot();
 #endif
 
 namespace sw
@@ -76,6 +78,7 @@ namespace sw
         emscripten_cancel_main_loop();
         const int32 exitCode = getWebApp()->finishMainLoop();
         getWebApp().reset();
+        swFlushWebPersistentRoot(); // 앱이 다 내린 뒤(세이브 · 설정 쓰기가 끝난 뒤) 한 번
         emscripten_force_exit( exitCode );
     }
 
