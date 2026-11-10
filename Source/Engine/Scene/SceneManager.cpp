@@ -563,7 +563,7 @@ namespace sw
         // 띄운다. 대기열이 **다른** 경로면 어차피 이 결과를 버리므로 아래에 맡긴다. 대기열이 **같은** 경로면 아래는 이 결과를 그대로 쓰므로
         // 여기서 다시 짓는다. 대기열은 그대로 두어, 다시 지은 결과가 두 요청자를 함께 채운다.
         const bool bQueuedSamePath = _queuedPath.empty() == false && pendingScene != nullptr &&
-                                     FileUtil::pathsEqualNormalized( pendingScene->getSourcePath(), _queuedPath );
+                                     FileUtil::isSameDiskPath( pendingScene->getSourcePath(), _queuedPath );
         const bool bTypeTableChanged    = _services._pTypeRegistry != nullptr && _asyncLoad->_typeTableGeneration != _services._pTypeRegistry->getGeneration();
         const bool bReloadForTypeChange = pendingScene != nullptr && ( _queuedPath.empty() || bQueuedSamePath ) && bTypeTableChanged;
         if ( bReloadForTypeChange )
@@ -581,7 +581,7 @@ namespace sw
         {
             const string nextPath = std::move( _queuedPath );
             _queuedPath.clear();
-            if ( pendingScene != nullptr && FileUtil::pathsEqualNormalized( pendingScene->getSourcePath(), nextPath ) )
+            if ( pendingScene != nullptr && FileUtil::isSameDiskPath( pendingScene->getSourcePath(), nextPath ) )
             {
                 // 같은 경로가 이미 로드됐다(대소문자 무관). 아래 스왑에서 대기열 요청자도 같이 채운다.
                 bQueuedSatisfiedByThisLoad = true;
@@ -634,7 +634,7 @@ namespace sw
             ScopedLock<mutex> lock{ _asyncLoad->_mutex }; // 워커는 끝났다(`_bReady`) — 칸만 읽고 훅은 잠금 밖에서 부른다
             pScene = _asyncLoad->_scene.get();
         }
-        const bool bDiscard = pScene == nullptr || bTypeTableChanged || ( _queuedPath.empty() == false && FileUtil::pathsEqualNormalized( pScene->getSourcePath(), _queuedPath ) == false );
+        const bool bDiscard = pScene == nullptr || bTypeTableChanged || ( _queuedPath.empty() == false && FileUtil::isSameDiskPath( pScene->getSourcePath(), _queuedPath ) == false );
         if ( bAllAtOnce || bDiscard )
             return true; // `applyScene` 이 끝낸다
         return pScene->pumpHeldRegistration( static_cast<uint32>( gv_sceneRegisterComponentsPerFrame ) );

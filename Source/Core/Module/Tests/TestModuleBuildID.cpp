@@ -63,7 +63,7 @@ SW_TEST_CASE( ModuleBuildIDTest, AddressesInsideOneModuleShareItsKey )
     SW_REQUIRE_TRUE( self.isValid() );
     SW_EXPECT_TRUE_MSG( isModuleBuildIDHex( self._id ), self._id );
     SW_EXPECT_EQUAL( self._id, other._id );
-    SW_EXPECT_TRUE( FileUtil::pathsEqualNormalized( self._modulePath, other._modulePath ) );
+    SW_EXPECT_TRUE( FileUtil::isSameDiskPath( self._modulePath, other._modulePath ) );
 }
 
 /**
@@ -82,7 +82,7 @@ SW_TEST_CASE( ModuleBuildIDTest, AddressInsideAnotherModuleNamesThatModule )
     // 가로채므로, 그 주소는 libc 가 아니라 실행 파일 안이다.
     const ModuleBuildID system = ModuleBuildID::find( reinterpret_cast<const void*>( &gnu_get_libc_version ) );
     SW_EXPECT_FALSE( system._modulePath.empty() );
-    SW_EXPECT_FALSE( FileUtil::pathsEqualNormalized( system._modulePath, executable._modulePath ) );
+    SW_EXPECT_FALSE( FileUtil::isSameDiskPath( system._modulePath, executable._modulePath ) );
 #else
     #error "Unsupported platform"
 #endif

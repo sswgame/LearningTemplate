@@ -52,7 +52,7 @@ namespace sw::editor
                 const string& animatorPath = pAnimator->getAnimationGraphPath();
                 if ( animatorPath.empty() )
                     return true;
-                return FileUtil::pathsEqualNormalized( animatorPath, graphPath );
+                return FileUtil::isSameDiskPath( animatorPath, graphPath );
             }
 
             /** @brief 대사 미리보기 메서드의 시그니처( string graphPath, uint32 speakerID, string text ) -> GameObjectHandle 인지입니다. */

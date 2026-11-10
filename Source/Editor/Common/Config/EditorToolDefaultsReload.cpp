@@ -23,7 +23,7 @@ namespace sw::editor
     ReloadResult EditorToolDefaultsReload::reloadIfToolDefaults( string_view fullPath )
     {
         const AbsolutePath toolDefaultsPath = EditorToolDefaults::getHostPath();
-        if ( FileUtil::pathsEqualNormalized( toolDefaultsPath.str(), fullPath ) == false )
+        if ( FileUtil::isSameDiskPath( toolDefaultsPath.str(), fullPath ) == false )
             return ReloadResult::NotTracked;
         // 편집기가 저장하며 잠시 지웠다 다시 쓰는 사건은 다시 읽을 것이 없다 — 이어지는 생성 사건이 읽는다. 정말 지웠으면 다음 기동이 오류로 멈춘다.
         if ( FileUtil::exists( toolDefaultsPath.str() ) == false )

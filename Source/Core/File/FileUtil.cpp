@@ -29,6 +29,8 @@ namespace sw
             atomic<uint64> _removalEpoch{ 0 };
             /** @brief 쓰기 입구 게이트입니다(`FileUtil::setWriteGate`). 함수 포인터 하나라 상수 초기화된다. */
             atomic<FileUtil::WriteGate> _writeGate{ nullptr };
+            /** @brief 새로 만드는 자리의 이름 규칙입니다(`FileUtil::setCreateRule`). 함수 포인터 하나라 상수 초기화된다. */
+            atomic<FileUtil::WriteGate> _createRule{ nullptr };
         };
 
         struct FileUtilInternal
@@ -549,11 +551,9 @@ namespace sw
         return outResult;
     }
 
-    bool FileUtil::pathsEqualNormalized( string_view lhs, string_view rhs )
+    bool FileUtil::isSameDiskPath( string_view lhs, string_view rhs )
     {
-        const string aNorm = normalizePath( trimTrailingSlashes( lhs ) );
-        const string bNorm = normalizePath( trimTrailingSlashes( rhs ) );
-        return aNorm == bNorm;
+        return makeComparableDiskPath( lhs ) == makeComparableDiskPath( rhs );
     }
 
     string FileUtil::trimTrailingSlashes( string_view path )
@@ -623,15 +623,36 @@ namespace sw
         return string{ path.substr( component.size() + 1 ) };
     }
 
-    bool FileUtil::tryMakePathUnderRoot( string_view root, string_view path, string& outRelative, bool bIgnoreCase )
+    bool FileUtil::tryMakePathUnderRoot( string_view root, string_view path, string& outRelative )
     {
         const string rootText   = trimTrailingSlashes( normalizeSeparators( root ) );
         const string pathText   = normalizeSeparators( path );
-        const bool   bUnderRoot = rootText.empty() == false && pathText.size() > rootText.size() + 1 && pathText[rootText.size()] == '/' && StringUtil::startsWith( pathText, rootText, bIgnoreCase );
+        const bool   bUnderRoot = rootText.empty() == false && pathText.size() > rootText.size() + 1 && pathText[rootText.size()] == '/' &&
+                                StringUtil::startsWith( pathText, rootText, PlatformFileSystem::kPathsAreCaseInsensitive );
         if ( bUnderRoot == false )
             return false;
         outRelative = pathText.substr( rootText.size() + 1 );
         return true;
+    }
+
+    bool FileUtil::isPathUnderRoot( string_view root, string_view path )
+    {
+        string relative;
+        return tryMakePathUnderRoot( root, path, relative );
+    }
+
+    bool FileUtil::isPathAtOrUnderRoot( string_view root, string_view path )
+    {
+        const string rootText = makeComparableDiskPath( root );
+        return rootText.empty() == false && startsWithPathComponent( makeComparableDiskPath( path ), rootText );
+    }
+
+    string FileUtil::makeComparableDiskPath( string_view path )
+    {
+        string text = trimTrailingSlashes( normalizeSeparators( path ) );
+        if ( PlatformFileSystem::kPathsAreCaseInsensitive )
+            text = StringUtil::toLower( text.c_str() );
+        return text;
     }
 
     bool FileUtil::ensureParentDirectoryExists( string_view filePath )
@@ -685,15 +706,35 @@ namespace sw
         FileUtilInternal::s_writeCounters._writeGate.store( gate, std::memory_order_release );
     }
 
+    void FileUtil::setCreateRule( WriteGate rule )
+    {
+        FileUtilInternal::s_writeCounters._createRule.store( rule, std::memory_order_release );
+    }
+
     bool FileUtil::isWriteAllowed( string_view path )
     {
-        const WriteGate gate = FileUtilInternal::s_writeCounters._writeGate.load( std::memory_order_acquire );
-        if ( gate == nullptr )
+        if ( const WriteGate gate = FileUtilInternal::s_writeCounters._writeGate.load( std::memory_order_acquire ); gate != nullptr )
+        {
+            const expected<void> verdict = gate( path );
+            if ( verdict.has_value() == false )
+            {
+                SW_LOG_ERROR_ID( "File.WriteRefused", "Changing %# was refused: %# (%#)", path, verdict.error().message(), verdict.error().detail() );
+                return false;
+            }
+        }
+        return isCreateAllowed( path );
+    }
+
+    bool FileUtil::isCreateAllowed( string_view path )
+    {
+        // 이름 규칙은 새로 생기는 자리만 본다 — 있는 파일을 덮어쓰거나 지우는 것은 이름을 만들지 않는다.
+        const WriteGate rule = FileUtilInternal::s_writeCounters._createRule.load( std::memory_order_acquire );
+        if ( rule == nullptr || exists( path ) )
             return true;
-        const expected<void> verdict = gate( path );
+        const expected<void> verdict = rule( path );
         if ( verdict.has_value() )
             return true;
-        SW_LOG_ERROR_ID( "File.WriteRefused", "Changing %# was refused: %# (%#)", path, verdict.error().message(), verdict.error().detail() );
+        SW_LOG_ERROR_ID( "File.CreateRefused", "Creating %# was refused: %# (%#)", path, verdict.error().message(), verdict.error().detail() );
         return false;
     }
 
@@ -990,6 +1031,9 @@ namespace sw
             return true;
 
         const string directory = FileUtilInternal::trimTrailingSeparators( directoryPath );
+        // 새 폴더도 새 자리다 — 이름 규칙(리소스 트리는 소문자)을 지난다. 자동화 쓰기 게이트는 보지 않는다(이미 있는 폴더에 흔히 부르는 입구다 — `setWriteGate`).
+        if ( isCreateAllowed( directory ) == false )
+            return false;
         if ( FileUtilInternal::createDirectoryTree( directory ) )
             recordFileCreated(); // 폴더를 만들었다(없는 폴더를 기억한 캐시가 버린다)
         // 성공은 "폴더가 있는가" 로만 가른다. 병렬 쿠킹 · 임포트가 같은 폴더를 동시에 만들 때 다른 스레드가 먼저 만든 경쟁은 실패가 아니다.

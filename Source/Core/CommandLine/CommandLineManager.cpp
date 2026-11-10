@@ -265,6 +265,11 @@ namespace sw
         return pArgument != nullptr && pArgument->_bParsed != SW_FALSE;
     }
 
+    bool CommandLineManager::isAutomatedRun() const
+    {
+        return isArgumentProvided( CommandLineArgument::UNATTENDED ) || isArgumentProvided( CommandLineArgument::SCENARIO );
+    }
+
     bool CommandLineManager::findPendingGlobalValue( string_view name, string& outValue ) const
     {
         const auto iter = _mapPendingGlobal.find( name );

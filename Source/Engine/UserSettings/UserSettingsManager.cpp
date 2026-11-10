@@ -1136,7 +1136,7 @@ namespace sw
         // 그림 · 시야 거리가 기계에 따라 달라진다(약한 GPU 의 low 가 지형 원경을 잘라 칠하기 비교가 0 이 됐다). 스키마 기본값 그대로 둔다 — 시나리오가
         // 품질을 보려면 <Launch> 로 정한다.
         const CommandLineManager& commandLine   = *targets._pCommandLineManager;
-        const bool                bAutomatedRun = commandLine.isArgumentProvided( CommandLineArgument::UNATTENDED ) || commandLine.isArgumentProvided( CommandLineArgument::SCENARIO );
+        const bool                bAutomatedRun = commandLine.isAutomatedRun();
         // 사용자 폴더의 파일이다(세이브 게임과 별개). 무인 실행은 그 PC 사용자의 파일을 읽지도 쓰지도 않는다 — 실행마다 빈 파일 자리(프로세스별)를 쓴다.
         // 예전에는 띄우는 쪽이 파일 자리를 빠뜨리면 사람의 설정이 그림을 바꾸고, 시나리오가 바꾼 값이 사람의 파일에 남았다.
         // 기동 확장이 자리를 이미 정했으면(개발 도구의 `-gv_userSettingsFile` — 실행 짝 · 순서 시나리오가 파일을 이어 쓴다) 그 자리다.

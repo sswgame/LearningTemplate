@@ -210,8 +210,8 @@ namespace sw
                     clang_disposeString( fileName );
                 }
                 path                 = FileUtil::normalizeSeparators( path );
-                const bool bSkipPath = path.empty() || StringUtil::startsWith( path, collector._outputDirPrefix, true ) ||
-                                       ( collector._outputDirRealPrefix.empty() == false && StringUtil::startsWith( path, collector._outputDirRealPrefix, true ) );
+                const bool bSkipPath = path.empty() || FileUtil::isPathUnderRoot( collector._outputDirPrefix, path ) ||
+                                       ( collector._outputDirRealPrefix.empty() == false && FileUtil::isPathUnderRoot( collector._outputDirRealPrefix, path ) );
                 if ( bSkipPath )
                     return;
                 const uint64 writeTime = GeneratedFileUtil::getWriteTime( path );
@@ -534,7 +534,7 @@ namespace sw
         {
             // 대소문자만 바뀐 폴더 이름(`GUI` → `GUI`)은 같은 파일이다 — Windows 에서는 옛 철자로도 exists 가 참이다.
             const string& recordedSource = existingStamp._sourcePath;
-            const bool    bOtherOwner    = recordedSource.empty() == false && FileUtil::pathsEqualNormalized( recordedSource, inputFile ) == false &&
+            const bool    bOtherOwner    = recordedSource.empty() == false && FileUtil::isSameDiskPath( recordedSource, inputFile ) == false &&
                                      FileUtil::exists( recordedSource );
             if ( bOtherOwner )
             {

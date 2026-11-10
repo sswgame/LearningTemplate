@@ -35,13 +35,6 @@ namespace sw
              */
             static constexpr string_view kAllowedConfigWrites[] = { "Config/Editor" };
 
-            /** @brief @p target(정규화한 절대 경로)이 @p folder(루트 뒤 상대 폴더) 자신이거나 그 아래인지입니다. */
-            static bool isInside( string_view target, string_view projectRoot, string_view folder )
-            {
-                const string base = string( projectRoot ) + string( folder );
-                return target == base || StringUtil::startsWith( target, base + "/" );
-            }
-
             /** @brief `FileUtil::WriteGate` — 리소스 루트 아래에서 `scratch/` 밖의 쓰기와 프로젝트의 `docs/` · `Config/`(허용 목록 밖) 쓰기를 거절합니다. 그 밖(Saved · 임시 폴더)은 시나리오의 몫이라 막지 않는다. */
             static expected<void> allowWrite( string_view path )
             {
@@ -52,28 +45,31 @@ namespace sw
                 // 상대 경로는 어디를 가리키는지 정할 수 없다 - 통과시키지 않는다(예전에는 절대로 바꾸지 못하면 열어 줬다).
                 if ( AbsolutePath::isStrictAbsolute( path ) == false )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "the path is not absolute - a scenario writes under {out} or a <Scratch> folder" } );
-                const string root        = FileUtil::normalizePath( rootPath ) + "/";
-                const string scratchRoot = root + AutomationScratch::kScratchDomain + "/";
-                const string target      = FileUtil::normalizePath( path );
+                // `..` 는 풀지 않은 글로 사본 폴더를 벗어난다(`scratch/../engine/…`) — 포함 판정은 글 연산이라 받지 않는다.
+                if ( ( "/" + FileUtil::normalizeSeparators( path ) + "/" ).find( "/../" ) != string::npos )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the path has a '..' segment - a scenario writes to a resolved path", path } );
+                // 포함 판정은 OS 대소문자 규칙이다(`isPathAtOrUnderRoot`) — 예전 소문자 비교는 리눅스에서 `Content/SCRATCH/…` 를 사본 폴더로 보고 열어 줬다.
+                const string  scratchRoot = FileUtil::joinPath( rootPath, AutomationScratch::kScratchDomain );
+                const string& projectRoot = ProcessRoots::get()._project.str();
 
                 // 프로젝트 루트의 추적 폴더 — 허용 목록에 든 하위 폴더만 연다.
-                const string projectRoot = FileUtil::normalizePath( ProcessRoots::get()._project.str() ) + "/";
                 for ( const string_view folder : kTrackedFolders )
                 {
-                    if ( isInside( target, projectRoot, folder ) == false )
+                    if ( FileUtil::isPathAtOrUnderRoot( FileUtil::joinPath( projectRoot, folder ), path ) == false )
                         continue;
                     const bool bAllowed = std::any_of( std::begin( kAllowedConfigWrites ), std::end( kAllowedConfigWrites ), [&]( string_view allowed )
                     {
-                        return isInside( target, projectRoot, allowed );
+                        return FileUtil::isPathAtOrUnderRoot( FileUtil::joinPath( projectRoot, allowed ), path );
                     } );
                     if ( bAllowed )
                         return {};
                     return unexpected( Error{ ErrorKind::Unsupported, "an automation run may not write this tracked folder (only Config/Editor is open); run on a copy under Content/scratch/ or write under Saved/", folder } );
                 }
 
-                const bool bScratch = StringUtil::startsWith( target, scratchRoot ) || target + "/" == scratchRoot; // 사본 도메인 폴더 자체도 사본의 것이다
-                if ( StringUtil::startsWith( target, root ) == false || bScratch )
+                const bool bScratch = FileUtil::isPathAtOrUnderRoot( scratchRoot, path ); // 사본 도메인 폴더 자체도 사본의 것이다
+                if ( FileUtil::isPathUnderRoot( rootPath, path ) == false || bScratch )
                     return {};
+                const string target = FileUtil::makeComparableDiskPath( path );
                 // 골든 갱신 실행(`-scenario-update-golden`)만 시나리오 옆 `golden/`(자동화 폴더 아래 어느 깊이든 — `engine/automation/editor/golden/`)에 쓴다.
                 // 그 실행이 하는 일이 바로 그것이고, 쓴 파일은 보고에 남아 리뷰한다. 폴더 이름은 판정이 쓰는 것과 같은 상수다.
                 bool bUpdateGolden = false;

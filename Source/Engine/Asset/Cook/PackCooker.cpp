@@ -164,7 +164,7 @@ namespace sw
                     for ( const string& absPath : listFile )
                     {
                         string relativePath;
-                        if ( FileUtil::tryMakePathUnderRoot( domainDir, absPath, relativePath, true ) == false )
+                        if ( FileUtil::tryMakePathUnderRoot( domainDir, absPath, relativePath ) == false )
                             continue;
                         string assetID = makeAssetID( domain, relativePath );
                         files._setExisting.insert( assetID );
@@ -428,7 +428,7 @@ namespace sw
                 for ( const string& absPath : listSourceFile )
                 {
                     string relativePath;
-                    if ( FileUtil::tryMakePathUnderRoot( domainDir, absPath, relativePath, true ) == false )
+                    if ( FileUtil::tryMakePathUnderRoot( domainDir, absPath, relativePath ) == false )
                         continue;
                     if ( PackCooker::shouldIncludeFile( relativePath, config, params._shaderFolder, params._buildTarget ) == false )
                         continue;
@@ -455,7 +455,7 @@ namespace sw
                 for ( const string& absPath : listStagedFile )
                 {
                     string relativePath;
-                    if ( FileUtil::tryMakePathUnderRoot( stagedDir, absPath, relativePath, true ) == false )
+                    if ( FileUtil::tryMakePathUnderRoot( stagedDir, absPath, relativePath ) == false )
                         continue;
                     if ( PackCooker::shouldIncludeStagedFile( relativePath, params._shaderFolder, params._buildTarget ) == false )
                         continue;

@@ -25,7 +25,7 @@ namespace sw::editor
             };
 
             static void appendFolderListingEntry( vector<EditorFolderListingEntry>& outList, const string& path, bool bIsDirectory,
-                                                  const string& rootNorm )
+                                                  const string& resourceRoot )
             {
                 EditorFolderListingEntry item;
                 item._absolutePath = FileUtil::normalizeSeparators( path );
@@ -37,12 +37,9 @@ namespace sw::editor
                     item._bReadOnly = FileUtil::isReadOnlyFile( item._absolutePath );
                 }
 
-                if ( rootNorm.empty() == false )
-                {
-                    const string absNorm = FileUtil::normalizePath( item._absolutePath );
-                    if ( FileUtil::startsWithPathComponent( absNorm, rootNorm ) )
-                        item._relativePath = FileUtil::suffixAfterPathComponent( absNorm, rootNorm );
-                }
+                string relative;
+                if ( resourceRoot.empty() == false && FileUtil::tryMakePathUnderRoot( resourceRoot, item._absolutePath, relative ) ) // 대소문자는 OS 규칙
+                    item._relativePath = FileUtil::normalizePath( relative );                                                        // 상대 키는 소문자다
                 if ( item._relativePath.empty() )
                     item._relativePath = FileUtil::normalizePath( item._name );
 
@@ -68,7 +65,6 @@ namespace sw::editor
         (void)FileUtil::collectFiles( folderAbs, {}, listFile, bRecursive, stopToken ); // 표시용 — 모은 데까지 보인다
 
         const string& resourceRoot = assetPaths.getRootFolderPath(); // 워커(`EditorFolderListingJob`)에서 돈다 — 부른 쪽이 넘긴 경로 상태다
-        const string  rootNorm     = resourceRoot.empty() ? string{} : FileUtil::normalizePath( resourceRoot );
 
         for ( const string& folder : listFolder )
         {

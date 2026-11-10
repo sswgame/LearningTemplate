@@ -239,12 +239,12 @@ namespace sw::editor
 
         // 처음이거나 지금 폴더가 숨긴 게임 팩 안에 있으면 첫 루트로 이동한다. 루트가 아닌 다른 도메인(자동화 사본 `scratch/` - `content.open` 이 연다)은 그대로 둔다 -
         // 예전에는 "어느 루트 아래도 아니면" 이동해, 루트를 다시 만드는 순간(시나리오 단계 초기화 뒤) 연 사본 폴더에서 쫓겨났다.
-        const string selectedFolder       = FileUtil::normalizePath( _selectedFolderAbs );
+        const string selectedFolder       = FileUtil::makeComparableDiskPath( _selectedFolderAbs );
         const string gamePacksFolder      = EditorPaths::findContentFolder( constant::path::kGamePack );
         const bool   bSelectedIsUnderRoot = VectorUtil::containsIf( _listRoot, [&]( const ContentBrowserRoot& root )
-          { return FileUtil::startsWithPathComponent( selectedFolder, FileUtil::normalizePath( root._absolutePath ) ); } );
+          { return FileUtil::startsWithPathComponent( selectedFolder, FileUtil::makeComparableDiskPath( root._absolutePath ) ); } );
         const bool   bInHiddenGamePack =
-            bSelectedIsUnderRoot == false && gamePacksFolder.empty() == false && FileUtil::startsWithPathComponent( selectedFolder, FileUtil::normalizePath( gamePacksFolder ) );
+            bSelectedIsUnderRoot == false && gamePacksFolder.empty() == false && FileUtil::startsWithPathComponent( selectedFolder, FileUtil::makeComparableDiskPath( gamePacksFolder ) );
         if ( ( selectedFolder.empty() || bInHiddenGamePack ) && _listRoot.empty() == false )
             openFolder( _listRoot.front()._absolutePath );
 
@@ -333,10 +333,9 @@ namespace sw::editor
 
     void ContentBrowserModel::makeTrailForFolder( string_view folderAbs, vector<ContentBrowserCrumb>& outListCrumb ) const
     {
-        const string folderNorm = FileUtil::normalizePath( folderAbs );
         for ( const ContentBrowserRoot& root : _listRoot )
         {
-            if ( FileUtil::startsWithPathComponent( folderNorm, FileUtil::normalizePath( root._absolutePath ) ) )
+            if ( FileUtil::isPathAtOrUnderRoot( root._absolutePath, folderAbs ) )
             {
                 ContentBrowserCrumb::makeFolderTrail( root._displayName, root._absolutePath, folderAbs, outListCrumb );
                 return;
@@ -401,7 +400,7 @@ namespace sw::editor
     {
         for ( const AssetEntry& entry : _listEntry )
         {
-            if ( FileUtil::pathsEqualNormalized( entry._absolutePath, absolutePath ) )
+            if ( FileUtil::isSameDiskPath( entry._absolutePath, absolutePath ) )
             {
                 selectAsset( entry );
                 return;
@@ -426,9 +425,9 @@ namespace sw::editor
 
     bool ContentBrowserModel::isSelected( const AssetEntry& entry, bool bFolderToo ) const
     {
-        if ( FileUtil::pathsEqualNormalized( entry._absolutePath, _selectedAssetAbs ) )
+        if ( FileUtil::isSameDiskPath( entry._absolutePath, _selectedAssetAbs ) )
             return true;
-        return bFolderToo && entry._bIsDirectory && FileUtil::pathsEqualNormalized( entry._absolutePath, _selectedFolderAbs );
+        return bFolderToo && entry._bIsDirectory && FileUtil::isSameDiskPath( entry._absolutePath, _selectedFolderAbs );
     }
 
     void ContentBrowserModel::selectAfterFileChange( string_view absolutePath )
@@ -518,7 +517,7 @@ namespace sw::editor
     bool ContentBrowserModel::isRenaming( const AssetEntry& entry ) const
     {
         const string& renamingAbs = _fileActions.getRenamingPath();
-        return renamingAbs.empty() == false && FileUtil::pathsEqualNormalized( entry._absolutePath, renamingAbs );
+        return renamingAbs.empty() == false && FileUtil::isSameDiskPath( entry._absolutePath, renamingAbs );
     }
 
     bool ContentBrowserModel::moveAssetToFolder( string_view sourceAbs, string_view folderAbs )

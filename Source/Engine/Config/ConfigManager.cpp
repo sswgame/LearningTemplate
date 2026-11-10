@@ -190,7 +190,7 @@ namespace sw
         for ( const auto& [key, source] : _mapSource )
         {
             (void)key;
-            if ( source._pReload != nullptr && FileUtil::pathsEqualNormalized( source._resolvedPath, changedPath ) )
+            if ( source._pReload != nullptr && FileUtil::isSameDiskPath( source._resolvedPath, changedPath ) )
                 return source._pReload( *this, source._resolvedPath ) ? ReloadResult::Reloaded : ReloadResult::Failed;
         }
         return ReloadResult::NotTracked;

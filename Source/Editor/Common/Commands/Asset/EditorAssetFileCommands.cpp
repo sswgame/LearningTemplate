@@ -193,7 +193,7 @@ namespace sw::editor
                     {
                         for ( const EditorAssetMove& move : inoutPlan._listMove )
                         {
-                            if ( FileUtil::pathsEqualNormalized( move._sourceAbs, rewrite._referrerAbs ) )
+                            if ( FileUtil::isSameDiskPath( move._sourceAbs, rewrite._referrerAbs ) )
                                 rewrite._referrerAbs = move._destinationAbs;
                         }
                     }
@@ -528,8 +528,7 @@ namespace sw::editor
         if ( FileUtil::isDirectory( source ) == false )
             return unexpected( Error{ ErrorKind::NotFound, "not a folder", source } );
         // 폴더를 자기 안으로 옮기면 끝없이 깊어진다
-        const string sourcePrefix = source + "/";
-        if ( FileUtil::pathsEqualNormalized( destination, source ) || StringUtil::startsWith( FileUtil::normalizeSeparators( destination ), sourcePrefix ) )
+        if ( FileUtil::isPathAtOrUnderRoot( source, destination ) )
             return unexpected( Error{ ErrorKind::InvalidArgument, "a folder cannot move into itself", FileUtil::getFileNamePart( source ) } );
         if ( FileUtil::exists( destination ) )
             return unexpected( Error{ ErrorKind::AlreadyExists, "the destination already exists - nothing was moved", destination } );
@@ -623,7 +622,7 @@ namespace sw::editor
             // 리소스 id 는 소문자 규칙이라 파일 이름을 소문자로 담는다.
             const string fileName  = FileUtil::normalizePath( FileUtil::getFileNamePart( sourcePath ) );
             const string plainPath = FileUtil::joinPath( destFolderAbs, fileName );
-            if ( FileUtil::pathsEqualNormalized( sourcePath, plainPath ) )
+            if ( FileUtil::isSameDiskPath( sourcePath, plainPath ) )
             {
                 SW_LOG_TRACE_ID( "EditorAssetFileCommands.AlreadyFolder", "Already in folder: %#", fileName.c_str() );
                 continue;

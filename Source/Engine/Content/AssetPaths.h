@@ -114,6 +114,11 @@ namespace sw
          *          성분은 디스크 표기를 쓰고, 없는 성분부터는 id 의 표기를 씁니다. 리소스 트리의 도메인은 소문자 규칙이라 모든 플랫폼에서 소문자로 잇습니다.
          */
         [[nodiscard]] optional<AbsolutePath> toDiskPath( string_view resourceID ) const;
+        /**
+         * @brief 새로 만드는 디스크 자리 @p diskPath 가 리소스 트리(`Content/`) 아래면 그 아래 부분이 소문자인지 봅니다(`FileUtil::setCreateRule` — `initialize` 가 건다).
+         * @return 대문자가 있으면 그 상대 경로가 대상인 오류입니다. 리소스 트리 밖은 늘 통과합니다.
+         */
+        [[nodiscard]] static expected<void> checkLowercaseResourceName( string_view diskPath );
 
         /**
          * @brief **디스크 경로**를 리소스 id(전역 id. 예: `game/empty/maps/x.scene.xml`, 소문자와 `/`)로 바꿉니다.

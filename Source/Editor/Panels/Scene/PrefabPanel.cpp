@@ -116,7 +116,7 @@ namespace sw::editor
                 {
                     // 창이 이 프리팹을 열고 있으면 그 안에서 중첩 부분만 보이게 하고, 아니면 중첩 프리팹을 창의 문서로 연다.
                     PrefabEditorPanel* pNestedWindow          = PrefabEditorPanel::findIsolatingWindow();
-                    const bool         bWindowShowsThisPrefab = pNestedWindow != nullptr && FileUtil::pathsEqualNormalized( pNestedWindow->getIsolatedPrefabPath(), _model.getPrefabPath() );
+                    const bool         bWindowShowsThisPrefab = pNestedWindow != nullptr && FileUtil::isSameDiskPath( pNestedWindow->getIsolatedPrefabPath(), _model.getPrefabPath() );
                     if ( bWindowShowsThisPrefab )
                         pNestedWindow->requestNestedIsolation( listNestedPrefab[prefabIndex] );
                     else

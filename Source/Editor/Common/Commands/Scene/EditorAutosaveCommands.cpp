@@ -139,7 +139,7 @@ namespace sw::editor
                     // 바뀜은 내용 해시로 본다 — 쓰기 시각은 체크아웃 · 복사가 내용과 따로 바꾸고, 같은 틱의 다시 쓰기는 시각이 같다.
                     const optional<AbsolutePath> sourcePath  = editor::getSubsystem<AssetPaths>().toDiskPath( entry._sourceID );
                     const uint64                 currentHash = sourcePath.has_value() ? ContentHash::computeFile( sourcePath->str() ) : 0;
-                    if ( FileUtil::pathsEqualNormalized( entry._projectRoot, projectRoot ) == false )
+                    if ( FileUtil::isSameDiskPath( entry._projectRoot, projectRoot ) == false )
                         entry._refusal = "it was written for another project";
                     else if ( currentHash == 0 )
                         entry._refusal = "the original scene is gone";
