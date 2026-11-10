@@ -19,7 +19,7 @@ namespace sw::editor
     /** @brief 고른 키 하나 — 트랙 번호와 키 프레임입니다(채널마다 같은 프레임의 키는 하나로 고른다, 언리얼 Sequencer 의 키 마름모와 같다). */
     struct SequenceKeyRef
     {
-        int32   _track{ -1 };
+        int32   _track; ///< 고를 때 채운다(`SequenceKeyRef{ 트랙, 프레임 }`)
         float32 _frame{ 0.0f };
     };
 
