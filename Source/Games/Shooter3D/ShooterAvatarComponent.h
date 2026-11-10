@@ -102,6 +102,8 @@ namespace sw
         hashed_string _firstPersonHandsSlot;
         PROPERTY( Category = "First Person", DisplayName = "Third Person Hands Slot", Tooltip = "Rig weight slot of the IK nodes that hold the body's weapon; on only in third person" )
         hashed_string _thirdPersonHandsSlot;
+        PROPERTY( Required, Category = "Avatar", DisplayName = "Two Hand Hold Slot", Tooltip = "Rig weight slot of the IK node that puts the right hand at the shouldered two-handed hold; on while aiming a two-handed weapon" )
+        hashed_string _twoHandHoldSlot;
         PROPERTY( Category = "First Person", DisplayName = "Hidden Appearance Slots", Tooltip = "Appearance slots whose parts are hidden in first person (head gear, the body's weapon)" )
         vector<hashed_string> _listFirstPersonHiddenSlot;
         PROPERTY( Required, Category = "Avatar", DisplayName = "Stride Node", Tooltip = "StrideWarping node of this body's pose modifier rig that takes the rest of the speed matching" )

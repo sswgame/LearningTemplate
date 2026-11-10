@@ -1,8 +1,6 @@
 <!-- Shooter3D 플레이어(Quaternius 기본 캐릭터 UBC · UAL1 클립) — adventurer.animgraph.xml(KayKit)과 같은 상태 · 전이 · 층(같은 Move · Dead · Hit · AimWeight · ShootWeight)을
      UAL1 클립으로 든다. 노드 이름이 클립 이름이라, UAL1 에 짝이 없는 뒷걸음 · 옆 달리기는 한 표본 블렌드 공간으로 같은 클립을 다른 이름으로 든다.
-     선 자세는 idle_loop 다 — pistol_idle_loop 는 총을 머리 옆으로 들어 소총이 머리 위로 간다.
-     상체 층은 무기 들기에 따라 둘 중 하나다 — 한 손(권총)은 Aim · Shoot(UAL1 pistol_*), 두 손(소총 · 산탄총, weapons.xml twoHanded)은 AimTwoHand · ShootTwoHand
-     (KayKit 2h_ranged_* 를 kaykit_to_ubc.retarget.xml 로 구운 ual1_standard/retargeted/). -->
+     선 자세는 idle_loop 다 — pistol_idle_loop 는 총을 머리 옆으로 들어 소총이 머리 위로 간다. -->
 <AnimationGraphAsset>
 	<nodes>
 		<node id="1" name="idle_loop" x="40.0" y="40.0" loop="true" />
@@ -227,18 +225,5 @@
 		       weight="0.0"
 		       blend="Override"
 		       weight_param="ShootWeight" />
-		<layer name="AimTwoHand"
-		       clip="ubc_2h_ranged_aiming"
-		       mask="UpperBody"
-		       weight="0.0"
-		       blend="OverrideMeshSpace"
-		       loop="false"
-		       weight_param="AimTwoHandWeight" />
-		<layer name="ShootTwoHand"
-		       clip="ubc_2h_ranged_shoot"
-		       mask="UpperBody"
-		       weight="0.0"
-		       blend="OverrideMeshSpace"
-		       weight_param="ShootTwoHandWeight" />
 	</layers>
 </AnimationGraphAsset>

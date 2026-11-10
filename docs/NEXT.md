@@ -36,7 +36,8 @@
 
 ### 4. Shooter3D 총 (사용자 지적)
 
-- **소총 자세:** 권총 조준 클립으로 소총이 머리 옆에 들린다. 브랜치 `rifle-pose-wip`(5073ea9105)에 기반이 있다. 다음: Quaternius **Toon Shooter Game Kit**(묶음 페이지가 CC0 인지 먼저 확인)의 `Character_Soldier` 클립을 UBC 로 리타깃 → 몸 전체 사진 → 손 소켓 `Gun` 회전을 사진으로 맞춤 → 골든 다시.
+- **1 인칭 왼손:** 시점 산탄총의 SupportHand 에 왼손이 닿지 않고 손잡이 옆에 뜬다(autoplay cctv — 두 손 자세 전에도 같았다). 시점 총 자리(`ViewWeapon`)와 몸 왼어깨 거리를 재서 시점 총을 당기거나 왼손 IK 에 어깨 끌기를 더한다.
+- **소총 자세 클립(선택):** 지금은 리그 IK 견착(`ubc_player_body.rig.xml` TwoHandHold)이다. 쥔 자세 클립을 들이면 Quaternius Toon Shooter Game Kit(CC0 확인함)의 `Character_Soldier` — 구글 드라이브가 2026-11-10 에 "Quota exceeded" 로 내려받기를 막았다.
 - **걸을 때 총이 떨린다:** 원인 미확인. `-gv_shooterMotionTrace` 기록에 총 위치를 더해 손 · 카메라와 프레임별로 대조한다.
 
 ### 5. 작업자 · 설계 문서가 남긴 일

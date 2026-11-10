@@ -76,6 +76,7 @@ namespace sw
         , _firstPersonHeadSlot{}
         , _firstPersonHandsSlot{}
         , _thirdPersonHandsSlot{}
+        , _twoHandHoldSlot{}
         , _listFirstPersonHiddenSlot{}
         , _strideNode{}
         , _lookSourceObject{}
@@ -124,16 +125,19 @@ namespace sw
         }
         else
         {
-            // 묶인 리그에 그 슬롯을 쓰는 노드가 없으면 데이터 오류다 — 슬롯 가중치는 아무 노드에도 닿지 않고 머리가 보인다.
+            // 묶인 리그에 그 슬롯을 쓰는 노드가 없으면 데이터 오류다 — 슬롯 가중치는 아무 노드에도 닿지 않고 머리가 보이거나 두 손 무기를 권총 자세로 든다.
             const RigInstance& instance = pRig->getRigInstance();
-            bool               bFound   = instance.isInitialized() == false;
-            for ( uint32 nodeIndex = 0; bFound == false && nodeIndex < instance.getNodeCount(); ++nodeIndex )
+            for ( const hashed_string& slot : { _firstPersonHeadSlot, _twoHandHoldSlot } )
             {
-                bFound = instance.getNode( nodeIndex ).getWeightSlot() == _firstPersonHeadSlot;
+                bool bFound = instance.isInitialized() == false;
+                for ( uint32 nodeIndex = 0; bFound == false && nodeIndex < instance.getNodeCount(); ++nodeIndex )
+                {
+                    bFound = instance.getNode( nodeIndex ).getWeightSlot() == slot;
+                }
+                if ( bFound == false )
+                    SW_LOG_ERROR_ID( "ShooterAvatar.RigNoNodeWeight", "[Shooter] rig '%#' has no node with weight_slot '%#' - first person head or two-handed hold does not work", pRig->getRigPath().c_str(),
+                                     slot.c_str() );
             }
-            if ( bFound == false )
-                SW_LOG_ERROR_ID( "ShooterAvatar.RigNoNodeWeight", "[Shooter] rig '%#' has no node with weight_slot '%#' - the head stays visible in first person", pRig->getRigPath().c_str(),
-                                 _firstPersonHeadSlot.c_str() );
             // 슬롯 가중치 1 = ScaleBone 이 머리를 0 으로 모은다, 0 = 그대로.
             pRig->setSlotWeight( _firstPersonHeadSlot, bFirstPerson ? 1.0f : 0.0f );
             pRig->setSlotWeight( _firstPersonHandsSlot, bFirstPerson ? 1.0f : 0.0f );
@@ -248,13 +252,14 @@ namespace sw
         _aimWeight                   = MathUtil::moveToward( _aimWeight, aimTarget, _layerBlendRate * step );
         _shootWeight                 = MathUtil::moveToward( _shootWeight, shootTarget, _layerBlendRate * 2.0f * step );
         // 레이어(클립 · 상체 마스크)는 그래프 데이터("layers" · "bone_masks")가 갖는다 — 코드는 가중치 파라미터만 쓴다.
-        // 들고 있는 무기가 두 손이면 두 손 층에 가중치를 준다(한 손 권총 자세로 소총을 들면 머리 옆으로 간다).
-        const bool    bTwoHanded = pPlayer->getWeapon( pPlayer->getWeaponIndex() ).getDef()._bTwoHanded == SW_TRUE;
-        const float32 oneHand    = bTwoHanded ? 0.0f : 1.0f;
-        parameters.setFloat( hashed_string( ShooterAnimationParameter::kAimWeight ), _aimWeight * oneHand );
-        parameters.setFloat( hashed_string( ShooterAnimationParameter::kShootWeight ), _shootWeight * oneHand );
-        parameters.setFloat( hashed_string( ShooterAnimationParameter::kAimTwoHandWeight ), _aimWeight * ( 1.0f - oneHand ) );
-        parameters.setFloat( hashed_string( ShooterAnimationParameter::kShootTwoHandWeight ), _shootWeight * ( 1.0f - oneHand ) );
+        parameters.setFloat( hashed_string( ShooterAnimationParameter::kAimWeight ), _aimWeight );
+        parameters.setFloat( hashed_string( ShooterAnimationParameter::kShootWeight ), _shootWeight );
+        // 두 손 무기는 리그가 몸을 돌리고 오른손을 견착 자리에 IK 로 둔다(왼손은 총의 SupportHand). 상체 층(권총 클립)은 손가락 쥠과 몸의 반동만 맡는다 —
+        // 한 손 권총 자세로 소총을 들면 머리 옆으로 간다. 언리얼 ALS · 유니티 Animation Rigging 의 두 손 무기 IK 와 같은 자리다.
+        const bool             bTwoHanded = pPlayer->getWeapon( pPlayer->getWeaponIndex() ).getDef()._bTwoHanded == SW_TRUE;
+        PoseModifierComponent* pRig       = pOwner->getComponent<PoseModifierComponent>();
+        if ( pRig != nullptr )
+            pRig->setSlotWeight( _twoHandHoldSlot, bTwoHanded ? _aimWeight : 0.0f );
     }
 } // namespace sw
 
