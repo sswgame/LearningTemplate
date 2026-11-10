@@ -12,7 +12,6 @@
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Facial/FacialLiveSource.h"
 #include "Engine/Animation/Facial/FacialRig.h"
-#include "Engine/Animation/Facial/IVoiceDecoder.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Content/AssetIO.h"
@@ -22,6 +21,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Presentation/ISoundPlayer.h"
+#include "Engine/Presentation/IVoiceDecoder.h"
 
 namespace sw
 {

@@ -5,7 +5,6 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Animation/Notify/AnimationNotifyTable.h"
 #include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
 #include "Engine/Character/Fit/BodyShape.h"
 #include "Engine/Character/Fit/FitPartDef.h"
@@ -13,7 +12,6 @@
 #include "Engine/Character/Fit/FitTables.h"
 #include "Engine/Character/PairedAnimation/PairedAnimationDef.h"
 #include "Engine/Character/Socket/SocketSet.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
 
 namespace sw
@@ -36,7 +34,6 @@ namespace sw
                 }
                 return outSocketSet.loadFromAsset( assetID, kinds );
             }
-            [[nodiscard]] static bool loadNotifyTable( const AssetID& assetID, AnimationNotifyTable& outTable ) { return outTable.loadFromAsset( assetID, sw::engine::getSubsystem<AnimationNotifyHandlerRegistry>() ); }
             /** @brief 엔진 기본 연산(`FitSolver` 가 등록하는 넷)으로 연산 이름 · 인자를 대조합니다. 사용자 연산을 쓰는 표는 자기 풀이기로 직접 읽습니다. */
             [[nodiscard]] static bool loadFitTables( const AssetID& assetID, FitTables& outTables )
             {
@@ -52,8 +49,6 @@ namespace sw
     SW_SHARED_ASSET_CACHE( SocketSet, SocketSet, SocketSet::kAssetType.withLoader( AssetTypeLoader::with<SocketSet, &CharacterDataCacheInternal::loadSocketSet>( MemoryTag::Animation ) ) );
     SW_SHARED_ASSET_CACHE( BodyShapeSet, BodyShapeSet,
                            AssetTypeDef::makeDataFile( "bodyshape", AssetPathRule{ {}, {}, ".bodyshape.xml" }, AssetTypeLoader::of<BodyShapeSet>( MemoryTag::Animation ) ) );
-    SW_SHARED_ASSET_CACHE( AnimationNotifyTable, AnimationNotifyTable,
-                           AnimationNotifyTable::kAssetType.withLoader( AssetTypeLoader::with<AnimationNotifyTable, &CharacterDataCacheInternal::loadNotifyTable>( MemoryTag::Animation ) ) );
     /** 돌고 있는 세션이 옛 에셋의 역할 인덱스를 읽으므로 제자리에서 바꾸지 않고 떼어 낸다. */
     SW_SHARED_ASSET_CACHE( PairedAnimationDef, PairedAnimationDef,
                            PairedAnimationDef::kAssetType.withLoader( AssetTypeLoader::of<PairedAnimationDef>( MemoryTag::Animation, SharedAssetReloadMode::Detach ) ) );

@@ -1,6 +1,7 @@
 /**
- * @file Engine/Animation/Facial/IVoiceDecoder.h
+ * @file Engine/Presentation/IVoiceDecoder.h
  * @brief 립싱크가 음성 파일을 모노 PCM 으로 푸는 창구입니다 — 얼굴 애니메이션 · 립싱크 임포트는 오디오 헤더를 읽지 않습니다.
+ *        표현 층(Presentation)에 둔다 — 구현하는 오디오(바닥 기능 층)가 부르는 애니메이션(그 위 층)을 보지 않도록, `ISoundPlayer` 와 같은 자리다.
  * @details 구현은 오디오 폴더(`Engine/Audio/AudioVoiceDecoder.cpp`)의 정적 등록 하나다. 전용 서버 구성은 오디오를 짓지 않아 창구가 없다 —
  *          `--import-lipsync` 는 서버에서 클라이언트 전용 작업으로 거절되고, 런타임 립싱크는 임포트가 만든 비즘 트랙만 쓴다(`IShaderCookService` 와 같은 갈림).
  */

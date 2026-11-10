@@ -9,7 +9,6 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Animation/Component/FacialAnimationComponent.h"
-#include "Engine/Animation/Component/PoseModifierComponent.h"
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Scene/AnimationSystem.h"
@@ -17,6 +16,7 @@
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Character/Hit/RagdollComponent.h"
+#include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetIO.h"

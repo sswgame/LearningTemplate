@@ -11,8 +11,7 @@
 #include "Engine/Animation/Component/MotionWarpingComponent.h"
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
-#include "Engine/Animation/Notify/AnimationNotifyComponent.h"
-#include "Engine/Animation/Notify/AnimationNotifyTable.h"
+#include "Engine/Animation/Notify/AnimationNotifyListener.h"
 #include "Engine/Character/PairedAnimation/PairedAnimationDef.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -252,9 +251,9 @@ namespace sw
             if ( role._stage == PairedAnimationRoleStage::Unbound )
                 continue;
             const SkeletalAnimatorComponent* pAnimator = resolveAnimator( manager, role );
-            const AnimationNotifyComponent*  pNotify   = pAnimator != nullptr ? PairedAnimationSessionInternal::findSibling<AnimationNotifyComponent>( *pAnimator ) : nullptr;
-            const AnimationNotifyTable*      pTable    = pNotify != nullptr ? pNotify->getNotifyTable() : nullptr;
-            if ( pTable == nullptr || pTable->findEntry( notify._name ) == nullptr )
+            // 알림 디스패치(위 단)는 애니메이터에 받는 쪽으로 붙어 있다 — 그 형식을 모르고 받는 쪽 창구로만 묻는다.
+            const IAnimationNotifyListener* pListener = pAnimator != nullptr ? pAnimator->getNotifyListener() : nullptr;
+            if ( pListener == nullptr || pListener->hasNotify( notify._name ) == false )
             {
                 SW_LOG_ERROR_ID( "PairedAnimation.PairedAnimationNotifyNo", "Paired animation notify '%#' has no entry in the notify table of role '%#'", notify._name.c_str(), notify._role.c_str() );
                 return PairedAnimationStartResult::NotifyTargetMissing;
@@ -553,8 +552,8 @@ namespace sw
         const RoleState&                 role      = _listRole[*roleIndex];
         const bool                       bBound    = role._stage == PairedAnimationRoleStage::Waiting || role._stage == PairedAnimationRoleStage::Playing;
         const SkeletalAnimatorComponent* pAnimator = bBound ? resolveAnimator( manager, role ) : nullptr;
-        AnimationNotifyComponent*        pNotify   = pAnimator != nullptr ? PairedAnimationSessionInternal::findSibling<AnimationNotifyComponent>( *pAnimator ) : nullptr;
-        if ( pNotify == nullptr )
+        IAnimationNotifyListener*        pListener = pAnimator != nullptr ? pAnimator->getNotifyListener() : nullptr;
+        if ( pListener == nullptr )
             return;
         AnimationFiredNotify fired{};
         fired._name       = notify._name;
@@ -564,7 +563,7 @@ namespace sw
         fired._duration   = 0.0f;
         fired._eventIndex = notifyIndex;
         fired._phase      = AnimationNotifyPhase::Instant;
-        if ( pNotify->processExternalNotify( fired ) == false )
+        if ( pListener->processExternalNotify( fired ) == false )
             SW_LOG_ERROR_ID( "PairedAnimation.PairedAnimationNotifyLost", "Paired animation notify '%#' lost its entry in the notify table of role '%#'", notify._name.c_str(), notify._role.c_str() );
     }
 

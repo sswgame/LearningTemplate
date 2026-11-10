@@ -7,11 +7,11 @@
 #include "Core/Math/Ray.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Engine/Animation/Component/PoseModifierComponent.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Character/Hit/CharacterHit.h"
 #include "Engine/Character/Hit/MeleeHitWindow.h"
+#include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"

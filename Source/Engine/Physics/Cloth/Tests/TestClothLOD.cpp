@@ -6,7 +6,7 @@
 #include "Engine/Animation/Scene/AnimationLOD.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Physics/Component/ClothComponent.h"
+#include "Engine/Physics/Cloth/ClothComponent.h"
 
 using namespace sw;
 
