@@ -78,6 +78,8 @@ namespace sw
         void collectConstructor( CXCursor cursor, const string& functionSpelling );
         /** @brief FUNCTION 이 붙은 메서드를 수집합니다. */
         void collectMethod( CXCursor cursor, const string& functionSpelling );
+        /** @brief 직접 선언한 재정의(`onTick` · `onSubTick` · `serializeState`)를 타입의 특성 비트로 모읍니다(`ParsedTypeInfo::_bOverridesTick` …). */
+        void collectTraits();
         /** @brief 메서드의 이름 · 인자 타입을 적어 둡니다. FUNCTION 이 없어도 — `RepNotify` 처럼 애노테이션이 이름으로 가리킬 수 있다. */
         void recordMethodSignature( CXCursor cursor, const string& name );
         /** @brief 함수 꼴 멤버 하나 — 마커 · 생성자 · 메서드로 나눕니다. */

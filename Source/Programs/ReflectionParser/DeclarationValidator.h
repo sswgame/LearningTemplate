@@ -66,6 +66,9 @@ namespace sw
          */
         [[nodiscard]] static bool validateBusBodyExport( const ParsedTypeInfo& type, bool bBusBody, bool bExported, bool bModuleLocal );
 
+        /** @brief `REFLECT( TickMode = … )` 의 철자가 `Batch` · `Task` · `Main` 중 하나인지 봅니다(엔진 `TickMode` 열거자와 같은 철자 — 생성 코드가 그대로 쓴다). */
+        [[nodiscard]] static bool validateTickMode( const ParsedTypeInfo& type );
+
         /**
          * @brief 멤버에 붙은 애노테이션이 REFLECT 타입 안에 있는지 봅니다. 아니면 알리고 false 입니다.
          * @param pMacroName 멤버 쪽 매크로 이름(오류 메시지용)

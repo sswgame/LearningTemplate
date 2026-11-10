@@ -397,6 +397,7 @@ namespace sw
         string                       _tooltip;
         vector<string>               _listAlias;
         string                       _validate; ///< `REFLECT( Validate = fn )` — 같은 타입의 `void fn( ValidationContext& )`
+        string                       _tickMode; ///< `REFLECT( TickMode = Batch|Task|Main )` 의 글. 비면 Batch(`DeclarationValidator::validateTickMode` 가 철자를 본다)
         vector<pair<string, string>> _listCustomMeta;
         vector<ParsedPropertyInfo>   _listProperty;
         vector<ParsedFunctionInfo>   _listMethod;
@@ -410,6 +411,11 @@ namespace sw
         /** @brief 첫 기반 클래스에 `REFLECT()` 가 있습니다. 없으면 기반의 필드는 프로퍼티가 아니므로 고정 배치형 코덱도 기반을 건너뜁니다. */
         uint8                  _bParentReflected : 1;
         [[maybe_unused]] uint8 _reserved         : 2;
+        /** @brief 이 타입이 직접 선언한 재정의입니다(`MemberCollector::collectTraits`). 코드젠이 `TypeMetadata` 의 특성 비트와 일괄 틱 등록을 낸다. */
+        uint8                  _bOverridesTick           : 1;
+        uint8                  _bOverridesSubTick        : 1;
+        uint8                  _bOverridesSerializeState : 1;
+        [[maybe_unused]] uint8 _reservedTraits           : 5;
 
         ParsedTypeInfo() noexcept
             : _name{}
@@ -420,6 +426,7 @@ namespace sw
             , _tooltip{}
             , _listAlias{}
             , _validate{}
+            , _tickMode{}
             , _listCustomMeta{}
             , _listProperty{}
             , _listMethod{}
@@ -432,11 +439,20 @@ namespace sw
             , _bHideInMenu{ SW_FALSE }
             , _bParentReflected{ SW_FALSE }
             , _reserved{ 0 }
+            , _bOverridesTick{ SW_FALSE }
+            , _bOverridesSubTick{ SW_FALSE }
+            , _bOverridesSerializeState{ SW_FALSE }
+            , _reservedTraits{ 0 }
         {
         }
 
         bool requiresTypeAPI() const noexcept { return _bReflectBody == SW_TRUE; }
         bool requiresComponentFactory() const noexcept { return _bComponentFactory == SW_TRUE; }
+        /** @brief 이 타입에 일괄 틱 등록(`TickBatchOf`)을 낸다 — 만들 수 있는 컴포넌트가 `onTick` 을 직접 재정의했고 레인이 Batch(기본)일 때다. */
+        bool requiresTickBatch() const noexcept
+        {
+            return _bComponentFactory == SW_TRUE && _bOverridesTick == SW_TRUE && ( _tickMode.empty() || _tickMode == "Batch" );
+        }
     };
 } // namespace sw
 

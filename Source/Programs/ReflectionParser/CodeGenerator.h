@@ -76,6 +76,8 @@ namespace sw
         void emitTypeInfoAccessors( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo ) const;
         /** @brief EnumRegistrar 본문을 출력합니다. */
         void emitEnumRegistrar( CodeEmitBuffer& outBuffer, const ParsedEnumInfo& enumInfo ) const;
+        /** @brief `onTick` 을 직접 재정의한 Batch 레인 컴포넌트의 일괄 틱 등록(`TickBatchOf` 정적 등록자)을 냅니다(NEXT 5-4 W-R3 c). 아니면 아무것도 내지 않습니다. */
+        void emitTickBatchRegistration( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo ) const;
 
         // ------------------------------------------------------------------------------
         // 3) maps — enumerator·식별자 표기

@@ -2,6 +2,7 @@
 
 #include "Programs/ReflectionParser/CodeGenerator.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
@@ -295,10 +296,16 @@ namespace sw
         // 타입 핸들 인자의 확인(`ComponentHandleArgument`)은 씬 매니저를 보므로, 그런 인자가 있는 산출물만 그 헤더를 넣는다(모든 .gen.cpp 가 매니저를 끌어오지 않는다).
         if ( hasHandleArgument() )
             buffer.append( "#include \"Engine/Object/GameObject/ComponentHandleArgument.h\"\n\n" );
+        // 일괄 틱 등록도 같은 규칙이다 — 그런 타입이 있는 산출물만 레지스트리 헤더를 넣는다.
+        const bool bTickBatch = VectorUtil::containsIf( _header._listType, []( const ParsedTypeInfo& typeInfo )
+        { return typeInfo.requiresTickBatch(); } );
+        if ( bTickBatch )
+            buffer.append( "#include \"Engine/Object/GameObject/Tick/TickBatchRegistry.h\"\n\n" );
         buffer.append( emitdirective::kGeneratedNsOpen );
         for ( size_t typeIndex = 0; typeIndex < _header._listType.size(); ++typeIndex )
         {
             emitTypeRegistrar( buffer, _header._listType[typeIndex], typeIndex );
+            emitTickBatchRegistration( buffer, _header._listType[typeIndex] );
         }
         for ( const ParsedEnumInfo& enumInfo : _header._listEnum )
         {
@@ -710,6 +717,11 @@ namespace sw
         emit.push( 3 );
 
         AnnotationFields::emitRuntimeMetadata( emit, typeInfo, "info._metadata->" );
+        if ( typeInfo._tickMode.empty() == false )
+            emit.linef( "info._metadata->_tickMode = ::sw::TickMode::%#;", typeInfo._tickMode );
+        emit.flagIf( typeInfo._bOverridesTick, "info._metadata->_bOverridesTick" );
+        emit.flagIf( typeInfo._bOverridesSubTick, "info._metadata->_bOverridesSubTick" );
+        emit.flagIf( typeInfo._bOverridesSerializeState, "info._metadata->_bOverridesSerializeState" );
 
         if ( typeInfo._listProperty.empty() == false )
         {
@@ -740,6 +752,20 @@ namespace sw
                              CodeGeneratorInternal::emitAliasRegisterLines( typeInfo._listAlias, typeInfo._fullyQualifiedName, false ) },
                             { templatekey::kFixedCodec, _fixedCodec.getMemberText( typeIndex ) },
         } );
+    }
+
+    void CodeGenerator::emitTickBatchRegistration( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo ) const
+    {
+        // 손 매크로 `SW_REGISTER_TICK_BATCH` 가 하던 일 그대로다(정적 등록자가 모듈을 올릴 때 붙고 내리기 전에 떨어진다). 5-3 의 레인 런타임이 등록 API 를 바꾸면 여기만 바꾼다.
+        if ( typeInfo.requiresTickBatch() == false )
+            return;
+        const string id = sanitizeIdentifier( typeInfo._fullyQualifiedName );
+        CodeEmit     emit( outBuffer );
+        emit.push( 1 );
+        emit.linef( "static constexpr utf8 kTickBatchScopeName_%#[] = \"GT.Scene.tickBatch.%#\";", id, typeInfo._name );
+        emit.linef( "static ::sw::TickBatchRegistrar s_%#_tickBatch{ ::sw::TickBatchRegistry::Entry{ &%#::StaticType, &::sw::TickBatchOf<%#, kTickBatchScopeName_%#>::tickRange } };",
+                    id, typeInfo._fullyQualifiedName, typeInfo._fullyQualifiedName, id );
+        emit.line( "" );
     }
 
     void CodeGenerator::emitEnumRegistrar( CodeEmitBuffer& outBuffer, const ParsedEnumInfo& enumInfo ) const

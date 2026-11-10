@@ -36,6 +36,14 @@ namespace sw
         return nullptr;
     }
 
+    bool DeclarationValidator::validateTickMode( const ParsedTypeInfo& type )
+    {
+        if ( type._tickMode.empty() || type._tickMode == "Batch" || type._tickMode == "Task" || type._tickMode == "Main" )
+            return true;
+        SW_LOG_ERROR_ID( "AstVisitor.ERRORUnknownTickMode", "ERROR: REFLECT( TickMode = %# ) on '%#' - TickMode is Batch, Task or Main.", type._tickMode, type._fullyQualifiedName );
+        return false;
+    }
+
     bool DeclarationValidator::validateMemberFunctions( ParsedTypeInfo& type, const vector<ParsedMethodSignature>& listMethodSignature )
     {
         bool bValid = true;

@@ -9,7 +9,9 @@
  * `IJobEntity` 가 같은 종류를 한 번에 도는 것과 같은 자리이고, 타입이 자기 데이터를 연속 배열로 옮기는 다음 단계(SoA)의 입구입니다.
  *
  * [규약]
- * - 컴포넌트 `.cpp` 에서 `onTick` 정의 뒤에 `SW_REGISTER_TICK_BATCH( 타입 )` 한 줄을 둡니다. `onTick` 이 공개여야 합니다(한정 이름으로 직접 부른다).
+ * - 등록은 리플렉션 생성기가 낸다 — `onTick` 을 직접 재정의한, 만들 수 있는 컴포넌트이고 `REFLECT( TickMode = … )` 가 Batch(기본)이면
+ *   그 타입의 `.gen.cpp` 에 정적 등록자가 생긴다(`CodeGenerator::emitTickBatchRegistration`). 손 등록 매크로는 없다 — 타입을 빠뜨렸다.
+ *   `onTick` 이 공개여야 합니다(한정 이름으로 직접 부른다).
  * - **정확한 타입만** 일괄 경로로 갑니다. 파생 타입은 기반의 등록을 물려받지 않습니다(파생의 `onTick` 을 건너뛰지 않게) — 파생도 쓰려면 따로 등록합니다.
  * - 일괄 경로로 가는 것은 그 그룹에서 틱 항목이 **그 컴포넌트의 주 틱 하나뿐인** 오브젝트입니다. 오브젝트 안의 순서(그룹 · 순서 키 · 붙은 순서)와
  *   "한 오브젝트의 항목은 한 스레드가" 규칙이 그대로입니다. 항목이 둘 이상이면 오브젝트 칸 경로로 갑니다.
@@ -99,7 +101,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 타입 @p TComponent 의 일괄 틱 함수입니다. `SW_REGISTER_TICK_BATCH` 가 그 타입의 `.cpp` 에서 인스턴스화합니다(`onTick` 이 인라인될 수 있게).
+     * @brief 타입 @p TComponent 의 일괄 틱 함수입니다. 생성기가 그 타입의 `.gen.cpp` 에서 인스턴스화합니다(원본 헤더가 정의한 인라인 `onTick` 은 인라인될 수 있다).
      * @details 원소마다 기본 경로(`runTickItemIfLive`)와 같은 검사(삭제 대기 · 자기 활성 · 주 틱 참여)를 하고 `TComponent::onTick` 을 한정 이름으로
      *          부릅니다. 레지스트리가 정확한 타입만 넣으므로 가상 호출과 같은 함수입니다.
      *          부를 때마다 @p TScopeName 구간(타입 이름 — 구간 하나 = 워커 청크 하나)을 엽니다. 이름이 템플릿 인자라 등록이 곧 계측이고 새 타입이 빠지지 않는다.
@@ -124,18 +126,3 @@ namespace sw
         }
     };
 } // namespace sw
-
-/**
- * @brief 컴포넌트 타입을 일괄 틱 경로에 올립니다. 그 타입의 `.cpp` 에서 `onTick` 정의 뒤, `namespace sw` 안에 `SW_REGISTER_TICK_BATCH( 타입 );` 로 한 번 씁니다.
- * @details 정적 등록 객체가 모듈을 올릴 때 등록되고 내리기 전에 지워집니다(`TickBatchRegistrar`).
- *          등록한 함수는 타입 이름의 계측 구간(`GT.Scene.tickBatch.<타입>`)을 엽니다(`TickBatchOf`).
- */
-#define SW_REGISTER_TICK_BATCH( Type )                                                         \
-    static constexpr utf8           kTickBatchScopeName##Type[] = "GT.Scene.tickBatch." #Type; \
-    static ::sw::TickBatchRegistrar s_tickBatchRegistration##Type                              \
-    {                                                                                          \
-        ::sw::TickBatchRegistry::Entry                                                         \
-        {                                                                                      \
-            &Type::StaticType, &::sw::TickBatchOf<Type, kTickBatchScopeName##Type>::tickRange  \
-        }                                                                                      \
-    }
