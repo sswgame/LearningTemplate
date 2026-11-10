@@ -38,12 +38,13 @@ namespace sw
     /**
      * @struct ProfileScopeID
      * @brief 계측 지점 하나의 등록 결과입니다 — 이 표의 슬롯과 외부 출력의 지점. 매크로가 static 으로 한 번 받습니다.
+     * @details 기본값은 "어디에도 쌓이지 않는 지점" 입니다 — 0 이 기본이면 등록하지 못한 칸이 슬롯 0 의 구간에 섞인다.
      */
     struct ProfileScopeID
     {
-        uint32 _slot; ///< `FrameProfiler` 슬롯(없으면 `kInvalidSlot`)
+        uint32 _slot{ constant::invalid_index::kUint32 }; ///< `FrameProfiler` 슬롯(없으면 `kInvalidSlot`)
 #if SW_PROFILER_BACKEND_COMPILED
-        const ProfileZoneSite* _pSite; ///< 외부 출력 지점(프로세스 수명, 없으면 nullptr)
+        const ProfileZoneSite* _pSite{ nullptr }; ///< 외부 출력 지점(프로세스 수명, 없으면 nullptr)
 #endif
     };
 } // namespace sw
@@ -138,6 +139,14 @@ namespace sw
          *          모듈(GameFramework · 플러그인)에서 컴파일되지 않았다. 창구를 내보낸 함수로 두어 이 헤더 하나로 어디서나 쓴다.
          */
         static ProfileScopeID registerEngineScopeSite( const utf8* pName, const utf8* pFunction, const utf8* pFile, uint32 line );
+        /**
+         * @brief 실행 중에 정해지는 이름(붙인 프레임 시스템 · 씬 서비스의 등록 이름)의 구간을 등록합니다 — 이름은 @p pPrefix 뒤에 @p pName 을 이은 것입니다.
+         * @details 디스패치하는 쪽이 항목을 붙일 때 **한 번** 받아 항목에 들고, 부를 때마다 그 값으로 `ScopedFrameProfile` 을 엽니다 — 프레임마다 이름을 잇거나
+         *          찾지 않는다. 시스템마다 손으로 구간을 더하지 않으므로 새 시스템도 계측에서 빠지지 않는다(언리얼 `FTickFunction` 이 틱 함수 이름으로
+         *          stat 을 여는 자리). 이름은 두 표(이 표 · 외부 출력)가 사본을 든다.
+         *          엔진 서비스가 묶이지 않았으면(엔진 없는 테스트 매니저) 어디에도 쌓이지 않는 지점입니다(`EditorProfileUtil::registerScope` 와 같은 계약).
+         */
+        static ProfileScopeID registerEngineNamedScope( const utf8* pPrefix, const utf8* pName, const utf8* pFunction, const utf8* pFile, uint32 line );
         /** @brief 엔진의 FrameProfiler 에 카운터 이름을 등록합니다(`registerScope`). */
         static uint32 registerEngineCounter( const utf8* pName );
         /** @brief 엔진의 FrameProfiler 의 카운터에 수를 더합니다(`addCount`). */

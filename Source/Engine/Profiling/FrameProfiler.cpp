@@ -129,6 +129,16 @@ namespace sw
         return engine::getSubsystem<FrameProfiler>().registerScopeSite( pName, pFunction, pFile, line );
     }
 
+    ProfileScopeID FrameProfiler::registerEngineNamedScope( const utf8* pPrefix, const utf8* pName, const utf8* pFunction, const utf8* pFile, uint32 line )
+    {
+        if ( engine::areEngineServicesBound() == false )
+            return ProfileScopeID{};
+        fixed_string<constant::buffer::kMax128> scopeName;
+        scopeName.append( pPrefix );
+        scopeName.append( pName );
+        return engine::getSubsystem<FrameProfiler>().registerScopeSite( scopeName.c_str(), pFunction, pFile, line );
+    }
+
     uint32 FrameProfiler::registerEngineCounter( const utf8* pName )
     {
         return engine::getSubsystem<FrameProfiler>().registerScope( pName );

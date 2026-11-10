@@ -33,6 +33,7 @@
 #include "Engine/Module/ModuleEntryRegistrar.h"
 #include "Engine/Object/GameObject/Tick/StructuralChangeBuffer.h"
 #include "Engine/Object/GameObject/Tick/TickRegistry.h"
+#include "Engine/Profiling/FrameProfiler.h"
 
 namespace sw
 {
@@ -101,12 +102,14 @@ namespace sw
      * @brief 타입 @p TComponent 의 일괄 틱 함수입니다. `SW_REGISTER_TICK_BATCH` 가 그 타입의 `.cpp` 에서 인스턴스화합니다(`onTick` 이 인라인될 수 있게).
      * @details 원소마다 기본 경로(`runTickItemIfLive`)와 같은 검사(삭제 대기 · 자기 활성 · 주 틱 참여)를 하고 `TComponent::onTick` 을 한정 이름으로
      *          부릅니다. 레지스트리가 정확한 타입만 넣으므로 가상 호출과 같은 함수입니다.
+     *          부를 때마다 @p TScopeName 구간(타입 이름 — 구간 하나 = 워커 청크 하나)을 엽니다. 이름이 템플릿 인자라 등록이 곧 계측이고 새 타입이 빠지지 않는다.
      */
-    template <typename TComponent>
+    template <typename TComponent, const utf8* TScopeName>
     struct TickBatchOf
     {
         static void tickRange( TickThreadState& threadState, const TickBatchElement* pElement, uint32 count, float32 deltaTime )
         {
+            SW_PROFILE_SCOPE( TScopeName );
             for ( uint32 index = 0; index < count; ++index )
             {
                 const TickBatchElement& element = pElement[index];
@@ -125,12 +128,14 @@ namespace sw
 /**
  * @brief 컴포넌트 타입을 일괄 틱 경로에 올립니다. 그 타입의 `.cpp` 에서 `onTick` 정의 뒤, `namespace sw` 안에 `SW_REGISTER_TICK_BATCH( 타입 );` 로 한 번 씁니다.
  * @details 정적 등록 객체가 모듈을 올릴 때 등록되고 내리기 전에 지워집니다(`TickBatchRegistrar`).
+ *          등록한 함수는 타입 이름의 계측 구간(`GT.Scene.tickBatch.<타입>`)을 엽니다(`TickBatchOf`).
  */
-#define SW_REGISTER_TICK_BATCH( Type )                             \
-    static ::sw::TickBatchRegistrar s_tickBatchRegistration##Type  \
-    {                                                              \
-        ::sw::TickBatchRegistry::Entry                             \
-        {                                                          \
-            &Type::StaticType, &::sw::TickBatchOf<Type>::tickRange \
-        }                                                          \
+#define SW_REGISTER_TICK_BATCH( Type )                                                         \
+    static constexpr utf8           kTickBatchScopeName##Type[] = "GT.Scene.tickBatch." #Type; \
+    static ::sw::TickBatchRegistrar s_tickBatchRegistration##Type                              \
+    {                                                                                          \
+        ::sw::TickBatchRegistry::Entry                                                         \
+        {                                                                                      \
+            &Type::StaticType, &::sw::TickBatchOf<Type, kTickBatchScopeName##Type>::tickRange  \
+        }                                                                                      \
     }

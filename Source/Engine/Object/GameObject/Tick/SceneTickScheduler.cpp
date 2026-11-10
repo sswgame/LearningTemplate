@@ -225,8 +225,17 @@ namespace sw
         // 스테이지로 간다 — 사슬 밖 오브젝트는 선행 조건이 씬에 있든 없든 같은 길이다. 보통 길이 먼저라 선행 조건이 보통 길의 항목이어도 순서가 맞다.
         const vector<TickStage>& listStage  = _tickRegistry.getStages();
         size_t                   stageIndex = 0;
+        // 그룹마다 구간 하나(보통 길 + 그 그룹의 스테이지) — 두 단계가 같은 `GT.Scene.tick.components` 에 섞여 PrePhysics 와 PostPhysics 가 갈리지 않았다.
+        static_assert( TickRegistry::kGroupCount == 4, "tick group scope names follow TickGroup" );
+        static const ProfileScopeID kArrGroupScopeID[TickRegistry::kGroupCount] = {
+            FrameProfiler::registerEngineScopeSite( "GT.Scene.tick.group.PrePhysics", __func__, __FILE__, __LINE__ ),
+            FrameProfiler::registerEngineScopeSite( "GT.Scene.tick.group.DuringPhysics", __func__, __FILE__, __LINE__ ),
+            FrameProfiler::registerEngineScopeSite( "GT.Scene.tick.group.PostPhysics", __func__, __FILE__, __LINE__ ),
+            FrameProfiler::registerEngineScopeSite( "GT.Scene.tick.group.PostUpdate", __func__, __FILE__, __LINE__ ),
+        };
         for ( uint32 group = firstGroup; group < endGroup && group < TickRegistry::kGroupCount; ++group )
         {
+            const ScopedFrameProfile groupScope{ kArrGroupScopeID[group] };
             // 오브젝트 칸과 타입별 일괄 목록은 한 번호 공간으로 이어 한 번의 포크-조인으로 돈다(일괄 목록을 따로 돌면 워커를 한 번 더 깨운다).
             const vector<TickObjectEntry>& listEntry  = _tickRegistry.getEntries( group );
             const vector<TickBatchList>&   listBatch  = _tickRegistry.getBatchLists( group );
