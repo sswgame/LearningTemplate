@@ -35,14 +35,12 @@ namespace sw
         , _contextOwnerThread{}
         , _contextOwnedStartNanos{ 0 }
         , _gpuBuffers{}
-        , _listRegisteredBindless{}
-        , _freeBindless{}
-        , _listRegisteredUAV{}
-        , _freeUAV{}
+        , _bindlessMutex{}
+        , _bufferRegistry{}
+        , _uavRegistry{}
         , _gpuTextures{}
         , _mapCompositeFbo{}
-        , _listRegisteredTexture{}
-        , _freeTexture{}
+        , _textureRegistry{}
         , _arrTimestampQuery{}
         , _arrTimestampMask{}
         , _timestampFrameIndex{ 0 }
@@ -294,9 +292,28 @@ namespace sw
 
     bool OpenGLRHIDevice::isBindlessIndexLive( RHIBindlessIndexSpace space, RHIDescriptorIndex index ) const
     {
+        ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
         if ( space == RHIBindlessIndexSpace::Texture )
-            return index < _listRegisteredTexture.size() && _listRegisteredTexture[index]._texture != 0;
-        return index < _listRegisteredBindless.size() && _listRegisteredBindless[index]._buffer != 0;
+            return _textureRegistry.isLive( index );
+        return _bufferRegistry.isLive( index );
+    }
+
+    OpenGLRHIDevice::BindlessResourceRecord OpenGLRHIDevice::findBindlessBuffer( RHIDescriptorIndex index ) const
+    {
+        ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
+        return _bufferRegistry.get( index );
+    }
+
+    OpenGLRHIDevice::BindlessResourceRecord OpenGLRHIDevice::findBindlessUAV( RHIDescriptorIndex index ) const
+    {
+        ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
+        return _uavRegistry.get( index );
+    }
+
+    RHITextureHandle OpenGLRHIDevice::findBindlessTexture( RHIDescriptorIndex index ) const
+    {
+        ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
+        return _textureRegistry.get( index )._texture;
     }
 
     namespace
@@ -772,12 +789,12 @@ namespace sw
             }
         } );
         _recordingState._geometry = RHIGeometryBindings{};
-        _listRegisteredBindless.clear();
-        _listRegisteredUAV.clear();
-        _listRegisteredTexture.clear();
-        _freeTexture.clear();
-        _freeBindless.clear();
-        _freeUAV.clear();
+        {
+            UniqueLock<shared_mutex> lock{ _bindlessMutex };
+            _bufferRegistry.clear();
+            _uavRegistry.clear();
+            _textureRegistry.clear();
+        }
         Memory::set( _arrComputeRootConstantShadow, 0, sizeof( _arrComputeRootConstantShadow ) );
 
         _pipelineStates.forEach( []( OpenGLPipelineStateRecord& pso )

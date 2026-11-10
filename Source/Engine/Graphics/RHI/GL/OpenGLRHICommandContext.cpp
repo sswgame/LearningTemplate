@@ -559,13 +559,12 @@ namespace sw
         if ( _pDevice->_bInitialized == SW_FALSE || index == kInvalidDescriptorIndex )
             return;
 
-        if ( index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAV.size() ) )
+        const OpenGLRHIDevice::BindlessResourceRecord record = _pDevice->findBindlessUAV( index );
+        if ( record == OpenGLRHIDevice::BindlessResourceRecord{} )
         {
             SW_LOG_WARNING_ID( "OpenGLRHICommandContext.BindComputeUAVIndexNotRegistered", "bindComputeUAV: index %# is not a registered UAV.", index );
             return;
         }
-
-        const OpenGLRHIDevice::BindlessResourceRecord& record = _pDevice->_listRegisteredUAV[index];
 
         if ( record._texture != 0 )
         {
@@ -614,14 +613,14 @@ namespace sw
         if ( _pDevice->_bInitialized == SW_FALSE || index == kInvalidDescriptorIndex )
             return;
 
-        if ( index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredTexture.size() ) ||
-             _pDevice->_listRegisteredTexture[index]._texture == 0 )
+        const RHITextureHandle texture = _pDevice->findBindlessTexture( index );
+        if ( texture == 0 )
         {
             SW_LOG_WARNING_ID( "OpenGLRHICommandContext.BindShaderResourceIndexNotRegistered", "bindShaderResource: index %# is not a registered texture - use bindStructuredBuffer for a buffer.", index );
             return;
         }
 
-        const OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( _pDevice->_listRegisteredTexture[index]._texture );
+        const OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( texture );
         const GLuint                                tex     = pRecord != nullptr ? pRecord->_texture : 0;
         if ( tex == 0 )
             return;
@@ -639,11 +638,11 @@ namespace sw
     {
         // 그래픽스 bindConstantBuffer 와 같은 근거다. 명시 [[vk::binding]] 이 있으면 -fvk-b-shift 는 적용되지
         // 않으므로 b# 는 SPIR-V binding # 그대로다(gpu_cull 의 CullParams b0 = binding 0).
-        const bool bInvalidConstantBufferIndex = _pDevice->_bInitialized == SW_FALSE || constantBufferIndex == kInvalidDescriptorIndex ||
-                                                 constantBufferIndex >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() );
+        const bool bInvalidConstantBufferIndex = _pDevice->_bInitialized == SW_FALSE || constantBufferIndex == kInvalidDescriptorIndex;
         if ( bInvalidConstantBufferIndex )
             return;
-        const GLuint ubo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindless[constantBufferIndex]._buffer );
+        const RHIBufferHandle buffer = _pDevice->findBindlessBuffer( constantBufferIndex )._buffer;
+        const GLuint          ubo    = buffer != 0 ? _pDevice->resolveGlBuffer( buffer ) : 0;
         if ( ubo != 0 )
             glBindBufferBase( GL_UNIFORM_BUFFER, slot, ubo );
     }
@@ -651,11 +650,11 @@ namespace sw
     void OpenGLRHICommandContext::bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot )
     {
         // HLSL t# 는 시프트 없이 그대로 GL SSBO 바인딩 # 에 매핑된다(gpu_cull 의 g_Instances 등).
-        const bool bInvalidBufferIndex = _pDevice->_bInitialized == SW_FALSE || index == kInvalidDescriptorIndex ||
-                                         index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() );
+        const bool bInvalidBufferIndex = _pDevice->_bInitialized == SW_FALSE || index == kInvalidDescriptorIndex;
         if ( bInvalidBufferIndex )
             return;
-        const GLuint ssbo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindless[index]._buffer );
+        const RHIBufferHandle buffer = _pDevice->findBindlessBuffer( index )._buffer;
+        const GLuint          ssbo   = buffer != 0 ? _pDevice->resolveGlBuffer( buffer ) : 0;
         if ( ssbo != 0 )
             glBindBufferBase( GL_SHADER_STORAGE_BUFFER, slot, ssbo );
     }
@@ -805,11 +804,11 @@ namespace sw
         // 주의: 엔진이 16+# 에 걸면 셰이더가 PassCB 를 못 읽어 g_ViewProj 가 0 이 되고, 드로우도 GL 에러도
         // 정상인 채로 메시가 하나도 그려지지 않는다.
         // 확인 방법: 쿠킹된 .spv 의 OpDecorate 를 읽으면 `PassCB DescriptorSet 0 Binding 0` 이 그대로 보인다.
-        const bool bInvalidComputeConstantBufferIndex = _pDevice->_bInitialized == SW_FALSE || constantBufferIndex == kInvalidDescriptorIndex ||
-                                                        constantBufferIndex >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() );
+        const bool bInvalidComputeConstantBufferIndex = _pDevice->_bInitialized == SW_FALSE || constantBufferIndex == kInvalidDescriptorIndex;
         if ( bInvalidComputeConstantBufferIndex )
             return;
-        const GLuint ubo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindless[constantBufferIndex]._buffer );
+        const RHIBufferHandle buffer = _pDevice->findBindlessBuffer( constantBufferIndex )._buffer;
+        const GLuint          ubo    = buffer != 0 ? _pDevice->resolveGlBuffer( buffer ) : 0;
         if ( ubo != 0 )
             glBindBufferBase( GL_UNIFORM_BUFFER, slot, ubo );
     }
@@ -821,14 +820,14 @@ namespace sw
         if ( _pDevice->_bInitialized == SW_FALSE || index == kInvalidDescriptorIndex )
             return;
 
-        if ( index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) ||
-             _pDevice->_listRegisteredBindless[index]._buffer == 0 )
+        const RHIBufferHandle buffer = _pDevice->findBindlessBuffer( index )._buffer;
+        if ( buffer == 0 )
         {
             SW_LOG_WARNING_ID( "OpenGLRHICommandContext.BindStructuredBufferIndexNotRegistered", "bindStructuredBuffer: index %# is not a registered buffer - use bindShaderResource for a texture.", index );
             return;
         }
 
-        const GLuint ssbo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindless[index]._buffer );
+        const GLuint ssbo = _pDevice->resolveGlBuffer( buffer );
         if ( ssbo != 0 )
             glBindBufferBase( GL_SHADER_STORAGE_BUFFER, slot, ssbo );
     }

@@ -9,6 +9,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Graphics/RHI/Backend/RHIBindlessRegistry.h"
 #include "Engine/Graphics/RHI/Backend/RHIConstantBufferMirror.h"
 #include "Engine/Graphics/RHI/Backend/RHIFrameFenceRing.h"
 #include "Engine/Graphics/RHI/Backend/RHIHandleTable.h"
@@ -88,6 +89,42 @@ SW_TEST_CASE( RHIReleaseQueueTest, ConcurrentTicksRunEachCallbackOnce )
     otherThread.join();
     SW_EXPECT_EQUAL( kCount, calledCount.load() );
     SW_EXPECT_EQUAL( 0u, queue.getPendingReleaseCount() );
+}
+
+/**
+ * @brief [RHIBindlessRegistryTest] 펜스 뒤 재사용 칸은 finishRelease 전에는 다시 나가지 않고, 이중 해제 · 상한 초과는 거절한다
+ */
+SW_TEST_CASE( RHIBindlessRegistryTest, DefersReuseAndRejectsDoubleRelease )
+{
+    RHIBindlessRegistry<uint64> registry( 2 );
+    const RHIDescriptorIndex    first  = registry.allocate( 11 );
+    const RHIDescriptorIndex    second = registry.allocate( 22 );
+    SW_EXPECT_EQUAL( 0u, first );
+    SW_EXPECT_EQUAL( 1u, second );
+    SW_EXPECT_EQUAL( kInvalidDescriptorIndex, registry.allocate( 33 ) ); // 상한
+    SW_EXPECT_EQUAL( kInvalidDescriptorIndex, registry.allocate( 0 ) );  // 빈 값
+
+    SW_EXPECT_TRUE( registry.release( first, RHIBindlessReuse::AfterFence ) );
+    SW_EXPECT_FALSE( registry.isLive( first ) );
+    SW_EXPECT_FALSE( registry.release( first, RHIBindlessReuse::AfterFence ) ); // 이중 해제
+    SW_EXPECT_EQUAL( kInvalidDescriptorIndex, registry.allocate( 44 ) );        // 대기 칸은 아직 나가지 않는다
+    registry.finishRelease( first );
+    SW_EXPECT_EQUAL( first, registry.allocate( 44 ) );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 44 ), registry.get( first ) );
+
+    // 쓰기 훅이 거절하면 칸을 바로 돌려받는다.
+    SW_EXPECT_TRUE( registry.release( second, RHIBindlessReuse::Immediately ) );
+    SW_EXPECT_EQUAL( kInvalidDescriptorIndex, registry.allocate( 55, []( RHIDescriptorIndex )
+    { return false; } ) );
+    SW_EXPECT_EQUAL( second, registry.allocate( 55 ) );
+
+    uint32 releasedCount{ 0 };
+    registry.releaseIf( RHIBindlessReuse::Immediately, []( uint64 value )
+    { return value == 55; },
+                        [&releasedCount]( RHIDescriptorIndex )
+    { ++releasedCount; } );
+    SW_EXPECT_EQUAL( 1u, releasedCount );
+    SW_EXPECT_FALSE( registry.isLive( second ) );
 }
 
 /**

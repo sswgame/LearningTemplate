@@ -104,13 +104,9 @@ namespace sw
         , _arrFrameDoneQuery{}
         , _frameFenceRing{}
         , _lastTimestampFrequency{ 0 }
-        , _listRegisteredBindless{}
-        , _freeBindless{}
-        , _listRegisteredTexture{}
-        , _freeTexture{}
-        , _listRegisteredUAV{}
-        , _listUAVSourceBuffer{}
-        , _freeUAV{}
+        , _bufferRegistry{}
+        , _textureRegistry{}
+        , _uavRegistry{}
         , _pipelineStates{}
         , _renderPassRegistry{}
         , _arrStaticSampler{}
@@ -248,42 +244,28 @@ namespace sw
         return pRecord != nullptr ? pRecord->_srv.Get() : nullptr;
     }
 
-    size_t D3D11RHIDevice::bindlessBufferCount() const
-    {
-        ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
-        return _listRegisteredBindless.size();
-    }
-
     RHIBufferHandle D3D11RHIDevice::bindlessBufferAt( RHIDescriptorIndex index ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
-        if ( index >= _listRegisteredBindless.size() )
-            return 0;
-        return _listRegisteredBindless[index];
+        return _bufferRegistry.get( index );
     }
 
     RHITextureHandle D3D11RHIDevice::bindlessTextureAt( RHIDescriptorIndex index ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
-        if ( index >= _listRegisteredTexture.size() )
-            return 0;
-        return _listRegisteredTexture[index];
+        return _textureRegistry.get( index );
     }
 
     Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> D3D11RHIDevice::bindlessUAVAt( RHIDescriptorIndex index ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
-        if ( index >= _listRegisteredUAV.size() )
-            return nullptr;
-        return _listRegisteredUAV[index];
+        return _uavRegistry.get( index )._uav;
     }
 
     RHIBufferHandle D3D11RHIDevice::uavSourceBufferAt( RHIDescriptorIndex index ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
-        if ( index >= _listUAVSourceBuffer.size() )
-            return RHIBufferHandle{ 0 };
-        return _listUAVSourceBuffer[index];
+        return _uavRegistry.get( index )._sourceBuffer;
     }
 
     RHIBufferHandle D3D11RHIDevice::storeBuffer( Microsoft::WRL::ComPtr<ID3D11Buffer> buffer, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> srv )
@@ -473,8 +455,8 @@ namespace sw
     {
         ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
         if ( space == RHIBindlessIndexSpace::Texture )
-            return index < _listRegisteredTexture.size() && _listRegisteredTexture[index] != 0;
-        return index < _listRegisteredBindless.size() && _listRegisteredBindless[index] != 0;
+            return _textureRegistry.isLive( index );
+        return _bufferRegistry.isLive( index );
     }
 
     // 길이 유지(긴 함수 정리 기준): 디바이스 · 스왑체인 · 상태 객체 생성의 순서가 곧 의미라 나누지 않는다.
@@ -691,13 +673,12 @@ namespace sw
         _gpuTextures.clear();
         _gpuBuffers.clear();
         _recordingState._activeGraphicsPSO = 0;
-        _listRegisteredBindless.clear();
-        _freeBindless.clear();
-        _listRegisteredTexture.clear();
-        _freeTexture.clear();
-        _listRegisteredUAV.clear();
-        _listUAVSourceBuffer.clear();
-        _freeUAV.clear();
+        {
+            UniqueLock<shared_mutex> lock{ _bindlessMutex };
+            _bufferRegistry.clear();
+            _textureRegistry.clear();
+            _uavRegistry.clear();
+        }
         _recordingState = D3D11RecordingState{};
         _idleQuery.Reset();
         for ( Microsoft::WRL::ComPtr<ID3D11Query>& frameDoneQuery : _arrFrameDoneQuery )

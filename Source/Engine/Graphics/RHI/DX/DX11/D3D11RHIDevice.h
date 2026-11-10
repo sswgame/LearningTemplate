@@ -5,7 +5,6 @@
 #pragma once
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/IndexFreeList.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
@@ -13,6 +12,7 @@
 
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Foundation/EnginePlatformHeaders.h"
+#include "Engine/Graphics/RHI/Backend/RHIBindlessRegistry.h"
 #include "Engine/Graphics/RHI/Backend/RHIFrameFenceRing.h"
 #include "Engine/Graphics/RHI/Backend/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
@@ -475,8 +475,6 @@ namespace sw
         // 원시 vector 를 직접 인덱싱하면 기록 스레드가 쓰레기를 읽는다. 읽기는 공유 락이라 병렬
         // 기록끼리는 서로를 막지 않는다.
         // ------------------------------------------------------------------------------
-        /** @brief 등록된 버퍼 슬롯 수입니다. */
-        size_t bindlessBufferCount() const;
         /** @brief 인덱스의 버퍼 핸들입니다. 범위 밖이면 0 입니다. */
         RHIBufferHandle bindlessBufferAt( RHIDescriptorIndex index ) const;
         /** @brief 인덱스의 텍스처 핸들입니다. 범위 밖이면 0 입니다. */
@@ -599,15 +597,18 @@ namespace sw
         RHIFrameFenceRing                   _frameFenceRing;         ///< 프레임 시리얼 · 완료 워터마크 · 앞서가기 상한(해제 키는 `getRecordingSerial`)
         uint64                              _lastTimestampFrequency; ///< 마지막으로 읽은 disjoint 의 주파수(틱/초)
 
-        vector<RHIBufferHandle> _listRegisteredBindless;
-        IndexFreeList           _freeBindless;
+        /// @brief UAV 번호 하나입니다 — 뷰와 그 원본 버퍼(텍스처 UAV 면 0 — SRV/UAV 해저드를 풀 때 본다).
+        struct UAVEntry
+        {
+            Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> _uav{};
+            RHIBufferHandle                                   _sourceBuffer{ 0 };
 
-        vector<RHITextureHandle> _listRegisteredTexture;
-        IndexFreeList            _freeTexture;
-
-        vector<Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView>> _listRegisteredUAV;
-        vector<RHIBufferHandle>                                   _listUAVSourceBuffer;
-        IndexFreeList                                             _freeUAV;
+            bool operator==( const UAVEntry& other ) const { return _uav.Get() == other._uav.Get() && _sourceBuffer == other._sourceBuffer; }
+        };
+        /// @brief 세 번호 공간(`RHIBindlessRegistry`, `_bindlessMutex` 아래). DX11 은 번호를 기록 때 뷰로 풀므로 비운 번호는 바로 다시 쓴다(`RHIBindlessReuse::Immediately`).
+        RHIBindlessRegistry<RHIBufferHandle>  _bufferRegistry;
+        RHIBindlessRegistry<RHITextureHandle> _textureRegistry;
+        RHIBindlessRegistry<UAVEntry>         _uavRegistry;
 
         RHIHandleTable<D3D11PipelineStateRecord> _pipelineStates;
         RHIRenderPassRegistry                    _renderPassRegistry; ///< 렌더 패스 핸들 등록부. 자기 뮤텍스로 직렬화해 어느 스레드에서나 부른다.

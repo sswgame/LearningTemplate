@@ -15,7 +15,6 @@
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/IndexFreeList.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -23,6 +22,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Config/RHIBackendType.h"
+#include "Engine/Graphics/RHI/Backend/RHIBindlessRegistry.h"
 #include "Engine/Graphics/RHI/Backend/RHIFrameFenceRing.h"
 #include "Engine/Graphics/RHI/Backend/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
@@ -93,21 +93,12 @@ namespace sw
     {
         uint64 _handle{ 0 };          ///< 버퍼 또는 텍스처 핸들(0 이면 빈 칸)
         uint8  _bTexture{ SW_FALSE }; ///< 참이면 텍스처, 거짓이면 버퍼
+
+        bool operator==( const WebGPUBindlessEntry& other ) const { return _handle == other._handle && _bTexture == other._bTexture; }
     };
 
-    /** @brief 번호 공간 하나(텍스처 SRV · 버퍼 · UAV)의 표입니다. 빈 칸은 다시 씁니다. */
-    struct WebGPUBindlessTable
-    {
-        vector<WebGPUBindlessEntry> _listEntry{};
-        IndexFreeList               _freeEntry{};
-
-        [[nodiscard]] RHIDescriptorIndex add( uint64 handle, bool bTexture );
-        /** @brief 칸을 비웁니다. 이미 빈 칸(이중 해제 · 다른 공간의 번호)은 빈 목록에 다시 넣지 않는다 — 넣으면 한 번호가 두 자원에 나간다. */
-        void                                     remove( RHIDescriptorIndex index );
-        [[nodiscard]] const WebGPUBindlessEntry* find( RHIDescriptorIndex index ) const;
-        /** @brief @p handle 을 가리키는 칸을 모두 비웁니다(자원을 부술 때 — 네 백엔드와 같은 계약). */
-        void removeHandle( uint64 handle, bool bTexture );
-    };
+    /** @brief 번호 공간 하나(텍스처 SRV · 버퍼 · UAV)의 표입니다. 기록 때 번호를 자원으로 풀므로 비운 번호는 바로 다시 쓴다(`RHIBindlessReuse::Immediately`). */
+    using WebGPUBindlessTable = RHIBindlessRegistry<WebGPUBindlessEntry>;
 
     /**
      * @class WebGPUBindGroupCache
@@ -398,6 +389,8 @@ namespace sw
 
         /** @brief 지금 프레임 인코더입니다. 프레임 밖이면 nullptr 입니다. */
         WGPUCommandEncoder getFrameEncoder() const { return _frameEncoder; }
+        /** @brief @p table 의 @p index 칸 값을 공유 잠금 아래에서 읽습니다(빈 칸이면 빈 값). 값으로 돌려준다 — 포인터는 다른 스레드의 등록이 표를 늘리면 매달린다. */
+        WebGPUBindlessEntry findBindless( const WebGPUBindlessTable& table, RHIDescriptorIndex index ) const;
         /** @brief 이번 프레임(다음 제출)의 시리얼입니다. 상수 링 칸 · 지연 해제가 이 값을 쓴다. 어느 스레드에서나 읽는다. */
         uint64 getFrameSerial() const { return _frameFenceRing.getRecordingSerial(); }
         /** @brief 살아 있는 리스트를 적습니다(종료 때 분리한다). */
@@ -461,9 +454,11 @@ namespace sw
         RHIHandleTable<WebGPUPipelineRecord> _pipelines;
         RHIHandleTable<RHIRenderPassDesc>    _renderPasses;
 
-        WebGPUBindlessTable _textureTable;
-        WebGPUBindlessTable _bufferTable;
-        WebGPUBindlessTable _uavTable;
+        /// @brief 세 번호 공간을 지킨다. 등록은 게임 스레드, 읽기는 기록 스레드 · 진단(`isBindlessIndexLive`)이라 읽기는 공유 잠금이다.
+        mutable shared_mutex _bindlessMutex;
+        WebGPUBindlessTable  _textureTable;
+        WebGPUBindlessTable  _bufferTable;
+        WebGPUBindlessTable  _uavTable;
 
         WGPUSampler     _arrStaticSampler[shaderslot::kStaticSamplerArrayCount];
         WGPUTexture     _defaultTexture;

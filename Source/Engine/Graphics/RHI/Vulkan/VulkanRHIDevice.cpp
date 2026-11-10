@@ -129,19 +129,15 @@ namespace sw
         , _pipelineLayout{ nullptr }
         , _descriptorPool{ nullptr }
         , _arrStaticSampler{}
-        , _freeBindless{}
         , _gpuBuffers{}
         , _mapCbSlotSize{}
         , _constantBufferMirror{}
-        , _listBindlessSourceBuffer{}
-        , _listUAVSourceBuffer{}
-        , _listUAVSourceTexture{}
-        , _freeUAV{}
+        , _bufferRegistry{}
+        , _uavRegistry{}
         , _gpuTextures{}
         , _releaseQueue{}
         , _renderPassCache{}
-        , _listTextureUsed{}
-        , _freeTexture{}
+        , _textureRegistry{ kBindlessTextureCount }
         , _slotSetLayout{ nullptr }
         , _textureSetLayout{ nullptr }
         , _textureSet{ nullptr }
@@ -437,12 +433,11 @@ namespace sw
             // 오프스크린 프레임버퍼는 해제 큐로 놓인다(`enqueueFramebufferRelease`). GPU 는 2 단계에서 이미 쉬고 있으니 디바이스가 살아 있는 지금 부른다 —
             // 남기면 해제 큐의 소멸자가 부순 VkDevice 로 vkDestroyFramebuffer 를 부른다(`IRHIDevice::shutdown` 이 단언한다).
             _releaseQueue.flushAll();
-            _listBindlessSourceBuffer.clear();
-            _listUAVSourceBuffer.clear();
+            _bufferRegistry.clear(); // 빈 목록도 함께 — 남기면 다음 장치가 표 밖 번호를 낸다
+            _uavRegistry.clear();
             // 합성 프레임버퍼 · PSO 호환 RP · desc RP 는 캐시가 한 번에 놓는다. 스왑체인 RP(_renderPass)는 아래에서 따로.
             _renderPassCache.destroyAll( _device, _renderPass );
-            _listTextureUsed.clear();
-            _freeTexture.clear();
+            _textureRegistry.clear();
 
             _textureSet = VK_NULL_HANDLE; // 디스크립터 풀이 소유한다
             if ( _textureSetLayout )
@@ -2991,22 +2986,22 @@ namespace sw
     RHIBufferHandle VulkanRHIDevice::bindlessSourceBufferAt( RHIDescriptorIndex index ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
-        return index < _listBindlessSourceBuffer.size() ? _listBindlessSourceBuffer[index] : RHIBufferHandle{ 0 };
+        return _bufferRegistry.get( index );
     }
 
     bool VulkanRHIDevice::isBindlessIndexLive( RHIBindlessIndexSpace space, RHIDescriptorIndex index ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
         if ( space == RHIBindlessIndexSpace::Buffer )
-            return index < _listBindlessSourceBuffer.size() && _listBindlessSourceBuffer[index] != 0;
-        // 1 = 사용 중. 2(해제 대기)는 원소가 아직 옛 이미지를 가리키지만 그 이미지는 같은 펜스 뒤에 파괴된다.
-        return index < kBindlessTextureCount && index < _listTextureUsed.size() && _listTextureUsed[index] == 1;
+            return _bufferRegistry.isLive( index );
+        // 해제 대기 칸은 살아 있지 않다 — 원소가 아직 옛 이미지를 가리키지만 그 이미지는 같은 펜스 뒤에 파괴된다.
+        return _textureRegistry.isLive( index );
     }
 
     RHIBufferHandle VulkanRHIDevice::uavSourceBufferAt( RHIDescriptorIndex index ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
-        return index < _listUAVSourceBuffer.size() ? _listUAVSourceBuffer[index] : RHIBufferHandle{ 0 };
+        return _uavRegistry.get( index )._buffer;
     }
 
     uint32 VulkanRHIDevice::getAllShaderStages() const

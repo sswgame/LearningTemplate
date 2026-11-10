@@ -5,7 +5,7 @@
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
-#include "Core/Container/IndexFreeList.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -14,6 +14,7 @@
 
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Foundation/EnginePlatformHeaders.h"
+#include "Engine/Graphics/RHI/Backend/RHIBindlessRegistry.h"
 #include "Engine/Graphics/RHI/Backend/RHIFrameFenceRing.h"
 #include "Engine/Graphics/RHI/Backend/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
@@ -178,7 +179,7 @@ namespace sw
 
         /**
          * @brief 텍스처 · 버퍼 등록 표의 그 자리에 핸들이 있으면 true 입니다(GL 은 인덱스를 텍스처 유닛 · 버퍼 바인딩으로 흉내 낸다).
-         * @note GL 의 등록 표에는 잠금이 없다. 표는 GL 컨텍스트를 쥔 스레드만 읽고 쓴다 — 등록 · 해제 · 파괴가 `ScopedOpenGLContext` 안에서 표를 바꾸고, 읽는 쪽은 프레임을 기록하는 스레드다.
+         * @note 등록표는 `_bindlessMutex` 가 지킨다 — 진단(`BindlessIndexValidator`)은 GL 컨텍스트 없이 어느 스레드에서나 묻는다.
          */
         bool isBindlessIndexLive( RHIBindlessIndexSpace space, RHIDescriptorIndex index ) const override;
 
@@ -269,7 +270,7 @@ namespace sw
             RHIBufferHandle  _buffer{ 0 };
             RHITextureHandle _texture{ 0 }; ///< UAV 레지스트리에서 RW 텍스처(이미지 유닛)면 0이 아니다.
 
-            /** @brief `IndexFreeList::release` 가 "이 슬롯이 비었는가" 를 묻는 데 씁니다. */
+            /** @brief `RHIBindlessRegistry` 가 "이 칸이 비었는가" 를 묻는 데 씁니다. */
             bool operator==( const BindlessResourceRecord& other ) const
             {
                 return _buffer == other._buffer && _texture == other._texture;
@@ -343,10 +344,15 @@ namespace sw
         {
             RHITextureHandle _texture{ 0 };
 
-            /** @brief `IndexFreeList::release` 가 "이 슬롯이 비었는가" 를 묻는 데 씁니다. */
+            /** @brief `RHIBindlessRegistry` 가 "이 칸이 비었는가" 를 묻는 데 씁니다. */
             bool operator==( const BindlessTextureRecord& other ) const { return _texture == other._texture; }
             bool operator!=( const BindlessTextureRecord& other ) const { return ( *this == other ) == false; }
         };
+
+        /** @brief 번호가 가리키는 버퍼 · UAV · 텍스처를 공유 잠금 아래에서 읽습니다(빈 칸이면 빈 값). */
+        BindlessResourceRecord findBindlessBuffer( RHIDescriptorIndex index ) const;
+        BindlessResourceRecord findBindlessUAV( RHIDescriptorIndex index ) const;
+        RHITextureHandle       findBindlessTexture( RHIDescriptorIndex index ) const;
 
         /// @brief 프로그램과 래스터, 블렌드, 깊이 상태입니다.
         struct OpenGLPipelineStateRecord
@@ -510,16 +516,16 @@ namespace sw
         /// @brief 기록 상태입니다. GL 은 실제 상태가 하나라 리스트도 이것을 함께 씁니다(OpenGLRecordingState 참고).
         OpenGLRecordingState _recordingState;
 
-        vector<BindlessResourceRecord> _listRegisteredBindless;
-        IndexFreeList                  _freeBindless;
-        vector<BindlessResourceRecord> _listRegisteredUAV;
-        IndexFreeList                  _freeUAV;
+        /// @brief 세 번호 공간(`RHIBindlessRegistry`)을 지킨다. 등록 · 해제는 배타, 읽기(바인딩 · `isBindlessIndexLive` 진단)는 공유 잠금이다.
+        ///        GL 은 번호를 기록 때 이름으로 풀므로 비운 번호는 바로 다시 쓴다(`RHIBindlessReuse::Immediately`).
+        mutable shared_mutex                        _bindlessMutex;
+        RHIBindlessRegistry<BindlessResourceRecord> _bufferRegistry;
+        RHIBindlessRegistry<BindlessResourceRecord> _uavRegistry;
 
         RHIHandleTable<OpenGLTextureRecord>                         _gpuTextures;
         unordered_map<CompositeFboKey, uint32, CompositeFboKeyHash> _mapCompositeFbo;
 
-        vector<BindlessTextureRecord> _listRegisteredTexture;
-        IndexFreeList                 _freeTexture;
+        RHIBindlessRegistry<BindlessTextureRecord> _textureRegistry;
 
         /**
          * @brief GPU 타임스탬프입니다. 프레임 링만큼 쿼리 묶음을 돌려 씁니다.

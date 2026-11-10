@@ -93,38 +93,6 @@ namespace sw
     {
     }
 
-    RHIDescriptorIndex WebGPUBindlessTable::add( uint64 handle, bool bTexture )
-    {
-        // 등록마다 새 번호다(다섯 백엔드 같은 계약) — 같은 자원을 여러 쪽이 등록해도 각자의 번호를 각자 놓는다.
-        const WebGPUBindlessEntry entry{ handle, static_cast<uint8>( bTexture ? SW_TRUE : SW_FALSE ) };
-        return _freeEntry.allocate( _listEntry, entry );
-    }
-
-    void WebGPUBindlessTable::remove( RHIDescriptorIndex index )
-    {
-        if ( index >= _listEntry.size() || _listEntry[index]._handle == 0 )
-            return;
-        _listEntry[index] = WebGPUBindlessEntry{};
-        _freeEntry.push( index );
-    }
-
-    const WebGPUBindlessEntry* WebGPUBindlessTable::find( RHIDescriptorIndex index ) const
-    {
-        if ( index == kInvalidDescriptorIndex || index >= _listEntry.size() || _listEntry[index]._handle == 0 )
-            return nullptr;
-        return &_listEntry[index];
-    }
-
-    void WebGPUBindlessTable::removeHandle( uint64 handle, bool bTexture )
-    {
-        const uint8 kind = bTexture ? SW_TRUE : SW_FALSE;
-        for ( size_t index = 0; index < _listEntry.size(); ++index )
-        {
-            if ( _listEntry[index]._handle == handle && _listEntry[index]._bTexture == kind )
-                remove( static_cast<RHIDescriptorIndex>( index ) );
-        }
-    }
-
     // ------------------------------------------------------------------------------
     // 바인드 그룹 캐시
     // ------------------------------------------------------------------------------
@@ -412,6 +380,7 @@ namespace sw
         , _textures{}
         , _pipelines{}
         , _renderPasses{}
+        , _bindlessMutex{}
         , _textureTable{}
         , _bufferTable{}
         , _uavTable{}
@@ -1055,8 +1024,15 @@ namespace sw
 
     bool WebGPURHIDevice::isBindlessIndexLive( RHIBindlessIndexSpace space, RHIDescriptorIndex index ) const
     {
-        const WebGPUBindlessTable& table = space == RHIBindlessIndexSpace::Texture ? _textureTable : _bufferTable;
-        return table.find( index ) != nullptr;
+        ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
+        const WebGPUBindlessTable&     table = space == RHIBindlessIndexSpace::Texture ? _textureTable : _bufferTable;
+        return table.isLive( index );
+    }
+
+    WebGPUBindlessEntry WebGPURHIDevice::findBindless( const WebGPUBindlessTable& table, RHIDescriptorIndex index ) const
+    {
+        ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
+        return table.get( index );
     }
 
     IRHIResourceFactory* WebGPURHIDevice::getResourceFactory()
@@ -1333,6 +1309,7 @@ namespace sw
     bool WebGPURHIDevice::waitFrameFence( const WebGPUFrameFence& fence ) const
     {
         // 큐 완료와 매핑을 하나씩 기다린다(이미 끝난 퓨처는 바로 돌아온다). 상한은 두지 않는다 — Vulkan 칸 펜스 대기(`vkWaitForFences` UINT64_MAX)와 같다.
+        // AllowSpontaneous 콜백도 WaitAny 로 기다릴 수 있다(AllowProcessEvents 와 같은 까닭으로 불린다 — https://webgpu-native.github.io/webgpu-headers/Asynchronous-Operations.html).
         if ( fence._workDoneFuture.id != 0 && waitForFuture( fence._workDoneFuture, "the frame's submitted work" ) == false )
             return false;
         for ( const WGPUFuture future : fence._listMapFuture )

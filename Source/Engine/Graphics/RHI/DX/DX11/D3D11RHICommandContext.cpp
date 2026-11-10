@@ -456,8 +456,7 @@ namespace sw
 
     void D3D11RHICommandContext::bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
     {
-        const bool bInvalidConstantBufferIndex = _pContext == nullptr || constantBufferIndex == kInvalidDescriptorIndex ||
-                                                 constantBufferIndex >= static_cast<RHIDescriptorIndex>( _pDevice->bindlessBufferCount() );
+        const bool bInvalidConstantBufferIndex = _pContext == nullptr || constantBufferIndex == kInvalidDescriptorIndex;
         if ( bInvalidConstantBufferIndex )
             return;
         ID3D11Buffer* pCb = _pDevice->resolveBuffer( _pDevice->bindlessBufferAt( constantBufferIndex ) );
@@ -500,8 +499,7 @@ namespace sw
 
     void D3D11RHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
     {
-        const bool bInvalidConstantBufferIndex = _pContext == nullptr || constantBufferIndex == kInvalidDescriptorIndex ||
-                                                 constantBufferIndex >= static_cast<RHIDescriptorIndex>( _pDevice->bindlessBufferCount() );
+        const bool bInvalidConstantBufferIndex = _pContext == nullptr || constantBufferIndex == kInvalidDescriptorIndex;
         if ( bInvalidConstantBufferIndex )
             return;
         ID3D11Buffer* pCb = _pDevice->resolveBuffer( _pDevice->bindlessBufferAt( constantBufferIndex ) );

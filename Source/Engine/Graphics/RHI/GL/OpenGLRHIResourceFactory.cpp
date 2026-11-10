@@ -2,7 +2,6 @@
 
 #include "Engine/Graphics/RHI/GL/OpenGLRHIResourceFactory.h"
 
-#include "Core/Container/IndexFreeList.h"
 #include "Core/Foundation/EnumUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
@@ -376,17 +375,14 @@ namespace sw
         if ( _pDevice->_gpuBuffers.take( buffer, glName ) == false )
             return;
 
-        for ( OpenGLRHIDevice::BindlessResourceRecord& record : _pDevice->_listRegisteredBindless )
         {
-            if ( record._buffer != buffer )
-                continue;
-            record._buffer = 0;
-        }
-        for ( OpenGLRHIDevice::BindlessResourceRecord& record : _pDevice->_listRegisteredUAV )
-        {
-            if ( record._buffer != buffer )
-                continue;
-            record._buffer = 0;
+            // 이 버퍼의 번호를 모두 놓는다(다섯 백엔드 같은 계약 — `IRHIResourceFactory::registerBindlessTexture`). 예전에는 값만 지우고 번호를 돌려받지 않아 칸이 샜다.
+            UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+            const auto               isThis = [buffer]( const OpenGLRHIDevice::BindlessResourceRecord& record )
+            { return record._buffer == buffer; };
+            const auto ignore = []( RHIDescriptorIndex ) {};
+            _pDevice->_bufferRegistry.releaseIf( RHIBindlessReuse::Immediately, isThis, ignore );
+            _pDevice->_uavRegistry.releaseIf( RHIBindlessReuse::Immediately, isThis, ignore );
         }
 
         // 추적기는 이름을 실제로 지울 때 줄인다(해제 요청 시점이 아니라).
@@ -865,11 +861,15 @@ namespace sw
         const GLuint fboName = owned._fbo;
         const GLuint texName = owned._texture;
 
-        for ( size_t textureIndex = 0; textureIndex < _pDevice->_listRegisteredTexture.size(); ++textureIndex )
         {
-            if ( _pDevice->_listRegisteredTexture[textureIndex]._texture != texture )
-                continue;
-            _pDevice->_freeTexture.release( _pDevice->_listRegisteredTexture, static_cast<uint32>( textureIndex ), OpenGLRHIDevice::BindlessTextureRecord{} );
+            UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+            const auto               ignore = []( RHIDescriptorIndex ) {};
+            _pDevice->_textureRegistry.releaseIf( RHIBindlessReuse::Immediately, [texture]( const OpenGLRHIDevice::BindlessTextureRecord& record )
+            { return record._texture == texture; },
+                                                  ignore );
+            _pDevice->_uavRegistry.releaseIf( RHIBindlessReuse::Immediately, [texture]( const OpenGLRHIDevice::BindlessResourceRecord& record )
+            { return record._texture == texture; },
+                                              ignore );
         }
 
         RHIMemoryTracker* pTracker  = &_pDevice->getMemoryTracker();
@@ -909,7 +909,8 @@ namespace sw
         if ( pRecord != nullptr && _pDevice->_transferSerials.isTextureReadyToRegister( pRecord->_uploadSerials, texture ) == false )
             return kInvalidDescriptorIndex;
 
-        return _pDevice->_freeTexture.allocate( _pDevice->_listRegisteredTexture, OpenGLRHIDevice::BindlessTextureRecord{ texture } );
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        return _pDevice->_textureRegistry.allocate( OpenGLRHIDevice::BindlessTextureRecord{ texture } );
     }
 
     RHIDescriptorIndex OpenGLRHIResourceFactory::registerBindlessBufferSRV( RHIBufferHandle buffer )
@@ -921,22 +922,23 @@ namespace sw
         GLuint              ubo = _pDevice->resolveGlBuffer( buffer );
         if ( ubo == 0 )
             return kInvalidDescriptorIndex;
-        return _pDevice->_freeBindless.allocate( _pDevice->_listRegisteredBindless, OpenGLRHIDevice::BindlessResourceRecord{ buffer } );
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        return _pDevice->_bufferRegistry.allocate( OpenGLRHIDevice::BindlessResourceRecord{ buffer } );
     }
 
     void OpenGLRHIResourceFactory::unregisterBindlessResource( RHIDescriptorIndex index )
     {
         ScopedOpenGLContext contextScope( _pDevice );
-        // 이중 해제 가드는 `IndexFreeList::release` 안에 있다.
-        _pDevice->_freeBindless.release( _pDevice->_listRegisteredBindless, index,
-                                         OpenGLRHIDevice::BindlessResourceRecord{} );
+        // 이중 해제 · 다른 공간 번호는 `RHIBindlessRegistry::release` 가 거절한다.
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        (void)_pDevice->_bufferRegistry.release( index, RHIBindlessReuse::Immediately );
     }
 
     void OpenGLRHIResourceFactory::unregisterBindlessTexture( RHIDescriptorIndex index )
     {
-        ScopedOpenGLContext contextScope( _pDevice );
-        _pDevice->_freeTexture.release( _pDevice->_listRegisteredTexture, index,
-                                        OpenGLRHIDevice::BindlessTextureRecord{} );
+        ScopedOpenGLContext      contextScope( _pDevice );
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        (void)_pDevice->_textureRegistry.release( index, RHIBindlessReuse::Immediately );
     }
 
     RHIDescriptorIndex OpenGLRHIResourceFactory::registerBindlessBufferUAV( RHIBufferHandle buffer )
@@ -948,7 +950,8 @@ namespace sw
         GLuint              ssbo = _pDevice->resolveGlBuffer( buffer );
         if ( ssbo == 0 )
             return kInvalidDescriptorIndex;
-        return _pDevice->_freeUAV.allocate( _pDevice->_listRegisteredUAV, OpenGLRHIDevice::BindlessResourceRecord{ buffer } );
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        return _pDevice->_uavRegistry.allocate( OpenGLRHIDevice::BindlessResourceRecord{ buffer } );
     }
 
     RHIDescriptorIndex OpenGLRHIResourceFactory::registerBindlessTextureUAV( RHITextureHandle texture )
@@ -961,15 +964,16 @@ namespace sw
             return kInvalidDescriptorIndex;
         OpenGLRHIDevice::BindlessResourceRecord record{};
         record._texture = texture;
-        return _pDevice->_freeUAV.allocate( _pDevice->_listRegisteredUAV, record );
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        return _pDevice->_uavRegistry.allocate( record );
     }
 
     void OpenGLRHIResourceFactory::unregisterBindlessUAV( RHIDescriptorIndex index )
     {
         ScopedOpenGLContext contextScope( _pDevice );
-        // 이중 해제는 도우미가 막는다. 막지 않으면 같은 인덱스가 프리리스트에 두 번 들어간다.
-        _pDevice->_freeUAV.release( _pDevice->_listRegisteredUAV, index,
-                                    OpenGLRHIDevice::BindlessResourceRecord{} );
+        // 이중 해제는 등록표가 막는다. 막지 않으면 같은 인덱스가 프리리스트에 두 번 들어간다.
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        (void)_pDevice->_uavRegistry.release( index, RHIBindlessReuse::Immediately );
     }
 
     RHIPipelineStateHandle OpenGLRHIResourceFactory::createPipelineStateNative( const RHIPipelineStateDesc& desc )
