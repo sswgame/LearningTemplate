@@ -5,7 +5,7 @@ Scripts/generate/TargetLayers.py
 
 타깃 경계 껍데기를 만든다. `Source/` 가 모든 타깃의 include 루트라 Core 가 `Engine/...` 을, 키트가 매니페스트에 적지 않은 키트를 include 해도 헤더만 쓰면
 컴파일 · 링크가 된다. 표(`Config/Rules/Layers/TargetLayers.toml`)의 게이트마다, 그리고 모듈(키트 · 에디터 확장 · 게임)마다 보면 안 되는 헤더와 같은 경로의 `#error`
-파일을 `<빌드>/generated/sw/TargetLayerStubs/<게이트>/` 에 놓고, CMake(`sw_applyTargetLayerGate`)가 그 폴더를 타깃의 include 자리 맨 앞에 둔다.
+파일을 `<빌드>/gates/<게이트>/` 에 놓고, CMake(`sw_applyTargetLayerGate`)가 그 폴더를 타깃의 include 자리 맨 앞에 둔다.
 위반하면(헤더를 거쳐 닿는 전이 include 도) 컴파일이 멈춘다 — `ModuleLayers.py` · `EditorLayers.py` 와 같은 틀이고, 그쪽이 폴더 층을 보면 이쪽은 타깃 경계를 본다.
 
 `[gatefolder]` 는 경로 접두어 대신 폴더 이름으로 막는다 — 서버 구성이 짓지 않는 `Client/`, 클라이언트 구성이 짓지 않는 `Server/` 가 모듈 · 게임마다 있어서다.
@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import shutil
 import sys
@@ -36,7 +37,8 @@ kTag = "TargetLayers"
 kRuleFile = Path(__file__).resolve().parents[2] / "Config" / "Rules" / "Layers" / "TargetLayers.toml"
 kHeaderSuffix = {".h", ".hpp", ".inl", ".xxx"}
 kModuleKinds = {"Kit", "EditorExtension", "Game"}   # 모듈별 게이트를 받는 종류
-kStubFolderName = "TargetLayerStubs"
+kStubFolderName = "gates"   # 빌드 루트 바로 밑 — 껍데기 경로가 키트 헤더의 깊은 경로를 그대로 이어 받아 워크트리에서 260 자를 넘었다
+kWindowsMaxPath = 260   # LongPathsEnabled 가 꺼진 Windows 의 컴파일러는 이보다 긴 include 후보를 못 열어 껍데기를 건너뛴다(게이트가 조용히 풀린다)
 kQuotedInclude = re.compile(r'^\s*#\s*include\s+"([^"]+)"', re.M)
 kServerGateName = "serverbuild"
 kClientGateName = "clientbuild"
@@ -145,6 +147,11 @@ def writeGateStubs(stubDir: Path, gateName: str, listHeader: list[str], message:
         stubRoot.mkdir(parents=True)
         setPrevious = set()
     setCurrent = set(listHeader)
+    if os.name == "nt":
+        listLong = [header for header in setCurrent if len(str(stubRoot / header)) >= kWindowsMaxPath]
+        if listLong:
+            raise GeneratorError(f"게이트 껍데기 경로가 {kWindowsMaxPath} 자를 넘는다({len(listLong)} 개, 예: {stubRoot / max(listLong, key=len)}) — "
+                                 "컴파일러가 못 열어 게이트가 풀린다. 빌드 폴더를 얕은 경로에 두거나 헤더 경로를 줄이세요")
     if setCurrent == setPrevious:
         return
     for header in setPrevious - setCurrent:
@@ -237,7 +244,7 @@ def generateTargetLayers(outputPath: Path) -> None:
     checkServerGateCoversUnbuiltFolders(listServerPrefix, readServerUnbuiltFolders(projectRoot))
     sourceDir = projectRoot / "Source"
     mapGate = collectGates(sourceDir, mapRule, mapAllow, mapFolder)
-    stubDir = outputPath.parent.parent / kStubFolderName
+    stubDir = outputPath.parents[3] / kStubFolderName   # <빌드>/generated/sw/config/TargetLayers.cmake → <빌드>/gates
     for gateName, (listDenied, message) in mapGate.items():
         writeGateStubs(stubDir, gateName, listDenied, message)
     listLine = [
@@ -252,7 +259,7 @@ def generateTargetLayers(outputPath: Path) -> None:
 
 def main(argv: Sequence[str] | None = None) -> int:
     return runGenerator(argv, tag=kTag, description="타깃 경계 표 → #error 껍데기",
-                        addArguments=lambda parser: parser.add_argument("output", type=Path, help="쓸 .cmake 파일"),
+                        addArguments=lambda parser: parser.add_argument("output", type=Path, help="쓸 .cmake 파일(<빌드>/generated/sw/config/TargetLayers.cmake — 껍데기는 <빌드>/gates)"),
                         generate=lambda args: generateTargetLayers(args.output))
 
 
