@@ -5,7 +5,7 @@
                  skeleton="common/models/quaternius/characters/superhero_male_fullbody/superhero_male_fullbody.skeleton.xml"
                  items="common/data/items.xml"
                  appearance="common/data/appearance"
-                 animationSet="common/models/quaternius/animations/ual1_standard/ual1_standard.animset.xml"
+                 animationSet="common/data/anim/ubc_shooter.animset.xml"
                  previewPreset="TownsfolkMale"
                  rig="common/rigs/ubc_player_body.rig.xml"
                  wipeEvent="WipeFace"/>

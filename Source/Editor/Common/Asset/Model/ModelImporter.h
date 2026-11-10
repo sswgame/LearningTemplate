@@ -216,6 +216,11 @@ namespace sw::editor
          *          @p assetPaths 는 워커의 임포트가 산출물을 리소스 id 로 바꿀 때 쓴다(부른 스레드가 찾아 넘긴다).
          */
         [[nodiscard]] static AssetImportSummary importAllModels( const AssetPaths& assetPaths, string_view resourceRoot, const ModelImportConfig& config, AssetImportMode mode );
+        /**
+         * @brief 손으로 쓴 애니메이션 셋의 리타깃 줄(`<clip … retarget="…"/>`)이 가리키는 원본 클립을 프로필로 구워 `AnimationSet::makeRetargetedClipPath` 에 둡니다. 검사 모드는 빠진 것만 보고합니다.
+         * @details 구운 클립은 모델 가져오기 산출물(`models/`, 저장소에 두지 않는다)이다 — 언리얼 리타깃 배치가 만든 애니메이션 시퀀스와 같은 자리. 원본은 위에서 가져온 공유 클립이다.
+         */
+        static void bakeRetargetedClips( const AssetPaths& assetPaths, string_view resourceRoot, AssetImportMode mode, AssetImportSummary& inoutSummary );
 
         /** @brief 원본 경로에 해당하는 메시 경로를 만듭니다(`<x>/models_raw/<y>.glb` → `<x>/models/<y>.mesh`). `models_raw/` 구간이 없으면 빈 문자열입니다. */
         static string makeImportedModelPath( string_view rawModelPath );

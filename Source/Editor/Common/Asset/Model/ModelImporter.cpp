@@ -37,6 +37,7 @@
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/AnimationSet.h"
 #include "Engine/Animation/Codec/AnimationCodec.h"
+#include "Engine/Animation/Retarget/PoseRetargeter.h"
 #include "Engine/Character/Fit/CharacterMeshUtil.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -958,7 +959,48 @@ namespace sw::editor
         {
             summary._listProblem.push_back( "ModelImportConfig: rule " + rule + " matches no model source - its patterns are dead (a moved folder?)" );
         }
+        bakeRetargetedClips( assetPaths, resourceRoot, mode, summary ); // 구울 원본 클립이 위에서 막 가져온 공유 파일이다
         return summary;
+    }
+
+    void ModelImporter::bakeRetargetedClips( const AssetPaths& assetPaths, string_view resourceRoot, AssetImportMode mode, AssetImportSummary& inoutSummary )
+    {
+        // 손으로 쓴 셋(가져오기 산출물 `models/` 밖)의 `<clip … retarget="…"/>` 줄이 대상이다. 굽기는 클립 몇 개라 가볍다 — 가져올 때마다 다시 구워 원본 · 프로필이 바뀐 것을 놓치지 않는다.
+        vector<string> listSetFile;
+        if ( FileUtil::collectFiles( resourceRoot, AnimationSet::kExtension, listSetFile, true ) == false )
+        {
+            inoutSummary._listProblem.push_back( "retarget bake: the animation sets under the content root could not be listed" );
+            return;
+        }
+        for ( const string& setFile : listSetFile )
+        {
+            if ( StringUtil::contains( FileUtil::normalizeSeparators( setFile ), "/models/" ) )
+                continue;
+            AnimationSet set;
+            if ( set.loadCopyFromAsset( AssetID{ assetPaths.toAssetID( setFile ) } ) == false )
+                continue; // 셋 읽기가 이유를 남겼다 — 셋을 쓰는 쪽이 같은 오류로 멈춘다
+            for ( const AnimationSetEntry& entry : set.getEntries() )
+            {
+                if ( entry._retargetProfile.empty() )
+                    continue;
+                const optional<AbsolutePath> outFile = assetPaths.toDiskPath( entry._clipPath );
+                if ( outFile.has_value() == false )
+                {
+                    inoutSummary._listProblem.push_back( "retarget bake: '" + entry._clipPath + "' has no disk place" );
+                    continue;
+                }
+                if ( mode == AssetImportMode::CheckOnly )
+                {
+                    if ( FileUtil::exists( outFile->str() ) == false )
+                        inoutSummary._listProblem.push_back( "retarget bake: '" + entry._clipPath + "' is not baked - run App --import-models" );
+                    continue;
+                }
+                const bool bBaked = FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( outFile->str() ) ) &&
+                                    PoseRetargeter::bakeClipFile( AssetID{ entry._retargetProfile }, AssetID{ entry._retargetSourceClip }, outFile->str() );
+                if ( bBaked == false )
+                    inoutSummary._listProblem.push_back( "retarget bake: '" + entry._retargetSourceClip + "' could not be baked with '" + entry._retargetProfile + "'" );
+            }
+        }
     }
 
     string ModelImporter::makeImportedModelPath( string_view rawModelPath )

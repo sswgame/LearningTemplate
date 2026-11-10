@@ -47,6 +47,7 @@ namespace sw
         , _maxReserveAmmo{ 180 }
         , _pelletCount{ 1 }
         , _bAutomatic{ SW_TRUE }
+        , _bTwoHanded{ SW_FALSE }
         , _acceptsExpr{}
         , _listModifier{}
     {

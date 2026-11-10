@@ -248,8 +248,13 @@ namespace sw
         _aimWeight                   = MathUtil::moveToward( _aimWeight, aimTarget, _layerBlendRate * step );
         _shootWeight                 = MathUtil::moveToward( _shootWeight, shootTarget, _layerBlendRate * 2.0f * step );
         // 레이어(클립 · 상체 마스크)는 그래프 데이터("layers" · "bone_masks")가 갖는다 — 코드는 가중치 파라미터만 쓴다.
-        parameters.setFloat( hashed_string( ShooterAnimationParameter::kAimWeight ), _aimWeight );
-        parameters.setFloat( hashed_string( ShooterAnimationParameter::kShootWeight ), _shootWeight );
+        // 들고 있는 무기가 두 손이면 두 손 층에 가중치를 준다(한 손 권총 자세로 소총을 들면 머리 옆으로 간다).
+        const bool    bTwoHanded = pPlayer->getWeapon( pPlayer->getWeaponIndex() ).getDef()._bTwoHanded == SW_TRUE;
+        const float32 oneHand    = bTwoHanded ? 0.0f : 1.0f;
+        parameters.setFloat( hashed_string( ShooterAnimationParameter::kAimWeight ), _aimWeight * oneHand );
+        parameters.setFloat( hashed_string( ShooterAnimationParameter::kShootWeight ), _shootWeight * oneHand );
+        parameters.setFloat( hashed_string( ShooterAnimationParameter::kAimTwoHandWeight ), _aimWeight * ( 1.0f - oneHand ) );
+        parameters.setFloat( hashed_string( ShooterAnimationParameter::kShootTwoHandWeight ), _shootWeight * ( 1.0f - oneHand ) );
     }
 } // namespace sw
 

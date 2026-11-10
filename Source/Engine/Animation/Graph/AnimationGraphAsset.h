@@ -32,6 +32,11 @@ namespace sw
     {
         Override = 0, ///< 마스크 안의 본을 가중치만큼 레이어 포즈로 섞습니다(상체만 조준).
         Additive,     ///< 레이어 클립의 시각 0 포즈 기준 차이를 가중치만큼 더합니다(숨쉬기, 맞음 움찔).
+        /**
+         * Override 와 같되 마스크의 맨 위 뼈(부모가 마스크 밖인 뼈)는 레이어 클립의 **메시 공간** 방향을 따릅니다. 엉덩이째 몸을 돌려 선 클립(두 손 사격 자세)을
+         * 다른 하체 위에 얹으면 부모 기준 덮기는 팔이 옆을 향한다 — 언리얼 Layered blend per bone 의 Mesh Space Rotation Blend 와 같은 자리다.
+         */
+        OverrideMeshSpace,
     };
 } // namespace sw
 

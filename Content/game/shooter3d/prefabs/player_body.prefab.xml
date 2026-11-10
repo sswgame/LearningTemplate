@@ -21,7 +21,7 @@
 			<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
 			                           _bActive="true"
 			                           _animationGraphPath="common/data/anim/ubc_shooter.animgraph.xml"
-			                           _animationSetPath="common/models/quaternius/animations/ual1_standard/ual1_standard.animset.xml"
+			                           _animationSetPath="common/data/anim/ubc_shooter.animset.xml"
 			                           _initialState="idle_loop"
 			                           _currentState=""
 			                           _stateTime="0"
