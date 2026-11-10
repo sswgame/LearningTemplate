@@ -10,6 +10,7 @@
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Graphics/Mesh/MeshRenderData.h"
 #include "Engine/Graphics/Mesh/MeshVertexAnimation.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
@@ -238,21 +239,21 @@ namespace sw
             const bool bCreatedBeforeHandoff = _snapshot._bMeshesCreatedBeforeHandoff == SW_TRUE && batch._mesh->isDynamic() == false;
             if ( bCreatedBeforeHandoff )
             {
-                if ( batch._mesh->isRHIValid() )
+                if ( batch._mesh->getRenderData().isRHIValid() )
                 {
-                    gpu._vertexBuffer    = batch._mesh->getVertexBuffer();
+                    gpu._vertexBuffer    = batch._mesh->getRenderData().getVertexBuffer();
                     gpu._attributeOffset = batch._mesh->getAttributeStreamOffset();
-                    gpu._indexBuffer     = batch._mesh->getIndexBuffer();
+                    gpu._indexBuffer     = batch._mesh->getRenderData().getIndexBuffer();
                 }
                 else
                     SW_LOG_ERROR_ONCE_ID( "GPUScene.MeshNotCreatedBeforeHandoff", "A mesh in the snapshot has no vertex buffer although the upload queue owns its creation - it is not drawn" );
                 continue;
             }
-            if ( batch._mesh->initRHI( pDevice ) )
+            if ( batch._mesh->getRenderData().initRHI( pDevice ) )
             {
-                gpu._vertexBuffer    = batch._mesh->getVertexBuffer();
+                gpu._vertexBuffer    = batch._mesh->getRenderData().getVertexBuffer();
                 gpu._attributeOffset = batch._mesh->getAttributeStreamOffset();
-                gpu._indexBuffer     = batch._mesh->getIndexBuffer();
+                gpu._indexBuffer     = batch._mesh->getRenderData().getIndexBuffer();
             }
         }
     }

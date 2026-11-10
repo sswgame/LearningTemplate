@@ -23,17 +23,6 @@ namespace sw
 {
     class IRHISwapChain;
 
-    /**
-     * @brief GPU 메시 정점의 속성 스트림 형식입니다. 메시마다 고르고(`Mesh::setVertexFormat`), PSO 가 같은 형식으로 레이아웃을 짓는다(`RHIPipelineStateDesc::_meshVertexFormat`).
-     * @details 위치 스트림(슬롯 0, float3)은 두 형식이 같다. 언리얼이 메시 종류마다 vertex factory 로 정점 선언을 고르는 자리다.
-     */
-    enum class RHIMeshVertexFormat : uint8
-    {
-        Packed,        ///< 노멀 · 탄젠트 snorm8x4, UV float2, 색 float4(32 B). 노멀 · 탄젠트가 단위 벡터인 일반 메시
-        HighPrecision, ///< 노멀 float3, UV float2, 색 float4, 탄젠트 float4(52 B). 색 · 탄젠트 칸에 단위 벡터가 아닌 데이터를 싣는 메시(지형 형태 변환) — 언리얼의 고정밀 탄젠트 옵션 자리
-        Count,
-    };
-
     /** @brief `RHIMeshVertexFormat::Packed` 의 속성 스트림 원소입니다(슬롯 2). */
     struct RHIPackedMeshAttributes
     {

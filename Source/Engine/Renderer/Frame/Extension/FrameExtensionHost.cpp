@@ -14,6 +14,7 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
+#include "Engine/Graphics/Mesh/MeshRenderData.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Renderer/Extension/RenderExtensionRegistry.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
@@ -392,7 +393,7 @@ namespace sw
             }
             _mapMesh.insert_or_assign( meshID, pMesh );
         }
-        if ( pMesh->initRHI( _pDevice ) == false )
+        if ( pMesh->getRenderData().initRHI( _pDevice ) == false )
         {
             logFailureOnce( string( "meshgpu:" ) + string( meshID.view() ), "draw element mesh could not be uploaded - the element is not drawn", meshID.view() );
             return nullptr;

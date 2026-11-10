@@ -31,6 +31,7 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
+#include "Engine/Graphics/Mesh/MeshRenderData.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Graphics/RHI/Diagnostics/BindlessIndexValidator.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
@@ -3225,7 +3226,7 @@ namespace sw
         {
             // 메시 표는 셋업(`FrameExtensionHost::collectFrame`)이 채웠다 — 기록 중에는 읽기만 한다. 없으면 셋업이 이유를 남겼다.
             const Mesh* pMesh = _extensionHost.findMesh( element._mesh );
-            if ( pMesh == nullptr || pMesh->isRHIValid() == false )
+            if ( pMesh == nullptr || pMesh->getRenderData().isRHIValid() == false )
             {
                 bAllDrawn = false;
                 continue;
@@ -3244,8 +3245,8 @@ namespace sw
             elementScope.apply( element._arrConstant, element._constantCount );
             context._world = element._world;
             context._pCmd->setPipelineState( pass._pso ); // 정점 슬롯을 비운다 — 메시 스트림은 그 뒤에 건다
-            RHIMeshVertexStreams::bind( *context._pCmd, mesh.getVertexBuffer(), mesh.getAttributeStreamOffset(), mesh.getVertexFormat() );
-            context._pCmd->setIndexBuffer( mesh.getIndexBuffer(), sizeof( uint32 ), 0 );
+            RHIMeshVertexStreams::bind( *context._pCmd, mesh.getRenderData().getVertexBuffer(), mesh.getAttributeStreamOffset(), mesh.getVertexFormat() );
+            context._pCmd->setIndexBuffer( mesh.getRenderData().getIndexBuffer(), sizeof( uint32 ), 0 );
             commitBindlessTextureBindings( context );
             if ( bindForDraw( context, pass._pso, kInvalidDescriptorIndex ) )
                 context._pCmd->drawIndexedInstanced( indexCount, element._instanceCount );
