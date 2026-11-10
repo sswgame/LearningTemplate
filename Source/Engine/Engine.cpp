@@ -449,18 +449,32 @@ namespace sw
             engine::getSubsystem<AssetManager>().finishPendingAssetWork();
         }
         // 품질 · 언어 · 데이터 레이어 태그나 덮어쓰기 층이 바뀌었으면 그 값에 기댄 리소스를 쥔 캐시가 다시 읽는다(틱 밖 — 쥔 쪽은 다음 틱에 새 값을 본다).
-        (void)engine::getSubsystem<AssetManager>().reloadComposedDependents();
+        {
+            SW_PROFILE_SCOPE( "GT.Asset.reloadDependents" );
+            (void)engine::getSubsystem<AssetManager>().reloadComposedDependents();
+        }
         BLOCK( "스트리밍 / 씬 트랜지션 / 이벤트" )
         {
             // 결정적 실행이면 끝난 스트리밍 완료를 상한 없이 이번 프레임에 모두 부른다(상한이면 몇 개가 넘어갈지가 도착 순서에 달린다).
-            engine::getSubsystem<AssetStreamingQueue>().update( bFinishAssetWork ? SIZE_MAX : 32 );
-
+            {
+                SW_PROFILE_SCOPE( "GT.Asset.streamingQueue" );
+                engine::getSubsystem<AssetStreamingQueue>().update( bFinishAssetWork ? SIZE_MAX : 32 );
+            }
             if ( _pSceneManager != nullptr )
+            {
+                SW_PROFILE_SCOPE( "GT.Scene.transitions" );
                 _pSceneManager->updateTransitions();
+            }
             if ( _pEventDispatcher != nullptr )
+            {
+                SW_PROFILE_SCOPE( "GT.Event.process" );
                 _pEventDispatcher->processEvents();
+            }
             if ( _pAudioDriver != nullptr )
+            {
+                SW_PROFILE_SCOPE( "GT.Audio.update" );
                 _pAudioDriver->update( engine::getSubsystem<GameTimeScale>().getUnscaledDeltaTime() ); // 장치는 게임이 멈춰도 돈다 — 장치 없는 렌더도 같아야 정지 · 에디터에서 오디오 상태가 움직인다
+            }
         }
     }
 
