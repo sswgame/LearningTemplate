@@ -835,6 +835,24 @@ namespace sw
         return true;
     }
 
+    void Box2DPhysicsScene::readBodyStates( span<const PhysicsBodyHandle> listBody, span<PhysicsBodyState2D> outListState ) const
+    {
+        SW_ASSERT( listBody.size() == outListState.size() );
+        // Box2D 의 바디 읽기는 월드를 고치지 않는다 — 스텝 밖에서 겹치지 않는 구간을 여러 스레드가 함께 읽어도 된다(계약).
+        for ( size_t index = 0; index < listBody.size(); ++index )
+        {
+            const BodyRecord* pRecord = findBody( listBody[index] );
+            if ( pRecord == nullptr )
+                SW_FATAL( "Box2DPhysicsScene::readBodyStates: the body handle is not live (pass only moved bodies whose owner matched)" );
+            const b2Transform   transform = b2Body_GetTransform( pRecord->_bodyID );
+            PhysicsBodyState2D& state     = outListState[index];
+            state._position               = Box2DUtil::toEngine( transform.p );
+            state._rotation               = b2Rot_GetAngle( transform.q );
+            state._linearVelocity         = Box2DUtil::toEngine( b2Body_GetLinearVelocity( pRecord->_bodyID ) );
+            state._angularVelocity        = b2Body_GetAngularVelocity( pRecord->_bodyID );
+        }
+    }
+
     void Box2DPhysicsScene::setBodyTransform( PhysicsBodyHandle body, const float2& position, const float32& rotation )
     {
         const BodyRecord* pRecord = findBody( body );

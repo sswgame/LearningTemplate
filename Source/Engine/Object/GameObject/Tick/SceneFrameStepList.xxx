@@ -29,8 +29,8 @@ SW_SCENE_FRAME_STEP( ApplyPrePhysics )    // 틱이 남긴 것을 적용 — 구
 SW_SCENE_FRAME_STEP( Navigation )         // 비동기 경로 질의를 수확하고 타일을 바꾼 뒤, 틱이 건 목적지를 군중에 넣고 군중 진행 · 경로 질의를 워커로 넘긴다(애니메이션과 겹친다)
 SW_SCENE_FRAME_STEP( Animation )          // 포즈 · 스킨 팔레트 · 루트 모션. 물리 **앞**이라 키네마틱 히트박스가 이번 포즈를 쫓는다
 SW_SCENE_FRAME_STEP( FlushPostAnimation ) // 본문 앞에서 군중 결과(자리 · 컨트롤러 속도)를 쓰고(`completeFrameJob`) 더티 트랜스폼을 월드로 펼친다 — 그 속도 · 자리가 이번 물리에 든다
-SW_SCENE_FRAME_STEP( Physics )            // 겹침 월드(2D 콜라이더 · 겹침 이벤트) → 강체(고정 스텝 · 보간 · 접촉 이벤트)(`ScenePhysics`)
-SW_SCENE_FRAME_STEP( FlushPostPhysics )   // 물리가 쓴 자리를 월드로 펼친다 — 아래 틱과 이번 그림이 그 자리를 본다
+SW_SCENE_FRAME_STEP( Physics )            // 겹침 월드(2D 콜라이더) → 강체(고정 스텝 · 움직인 바디 일괄 읽기 · 보간 자세 일괄 쓰기)(`ScenePhysics`) — 접촉 · 겹침 이벤트는 모으기만 한다
+SW_SCENE_FRAME_STEP( FlushPostPhysics )   // 물리가 쓴 자리를 월드로 펼친 뒤 모은 접촉 · 겹침 이벤트를 나눠 준다(`ScenePhysicsEvents`) — 아래 틱과 이번 그림이 그 자리와 처리 결과를 본다
 SW_SCENE_FRAME_STEP( TickPostPhysics )    // PostPhysics · PostUpdate 그룹 병렬 틱 — 이번 프레임의 바디 자세 · 겹침을 본다
 SW_SCENE_FRAME_STEP( ApplyPostPhysics )   // 위 그룹이 남긴 것을 적용(`StructuralChangeBuffer::drain`)
 SW_SCENE_FRAME_STEP( FlushEnd )           // 그리기 전에 더티 트랜스폼을 펼친다 — 뒤이어 메시 LOD · 텍스처 스트리밍 서비스가 펼친 자리로 고른다

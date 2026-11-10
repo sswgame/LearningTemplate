@@ -103,6 +103,7 @@ namespace
         uint32                           getBodyCount() const override { return static_cast<uint32>( _listState.size() ); }
         void                             setBodyEnabled( PhysicsBodyHandle, bool ) override {}
         const vector<PhysicsBodyHandle>& getMovedBodies() const override { return _listDestroyed; }
+        void                             readBodyStates( span<const PhysicsBodyHandle>, span<PhysicsBodyState3D> ) const override {}
         float3                           getLinearVelocity( PhysicsBodyHandle ) const override { return float3{}; }
         void                             setLinearVelocity( PhysicsBodyHandle, const float3& ) override {}
         float3                           getAngularVelocity( PhysicsBodyHandle ) const override { return float3{}; }

@@ -19,6 +19,16 @@ namespace sw
 {
     class IPhysicsDebugRenderer;
 
+    /** @brief 스텝 뒤 바디 하나의 자세 · 속도입니다(`IPhysicsBodyScene::readBodyStates`). */
+    template <typename TDimension>
+    struct PhysicsBodyState
+    {
+        typename TDimension::Vector   _position{};
+        typename TDimension::Rotation _rotation{};
+        typename TDimension::Vector   _linearVelocity{};
+        typename TDimension::Angular  _angularVelocity{};
+    };
+
     /** @brief 셰이프와 바디를 다룹니다. 차원 트레이트(`PhysicsDimension3D`, `PhysicsDimension2D`)만 다르고 함수는 같습니다. */
     template <typename TDimension>
     class IPhysicsBodyScene
@@ -29,6 +39,7 @@ namespace sw
         using Angular   = typename TDimension::Angular;
         using ShapeDesc = typename TDimension::ShapeDesc;
         using BodyDesc  = PhysicsBodyDesc<TDimension>;
+        using BodyState = PhysicsBodyState<TDimension>;
 
         virtual ~IPhysicsBodyScene() = default;
 
@@ -75,6 +86,13 @@ namespace sw
          */
         virtual const vector<PhysicsBodyHandle>& getMovedBodies() const                                                                       = 0;
         virtual bool                             getBodyTransform( PhysicsBodyHandle body, Vector& outPosition, Rotation& outRotation ) const = 0;
+        /**
+         * @brief 바디 @p listBody 의 자세 · 속도를 같은 자리의 @p outListState 에 씁니다(두 길이가 같아야 한다).
+         * @details 스텝이 끝난 뒤 씬을 고치는 호출이 없는 동안 여러 스레드가 겹치지 않는 구간을 동시에 불러도 된다 — 바디마다 잠그거나 백엔드를 세 번
+         *          부르지 않는다(Jolt `GetBodyLockInterfaceNoLock`, 언리얼 Chaos 결과 버퍼 · 유니티 물리 결과의 일괄 읽기 자리). 없는 바디는 호출자의
+         *          오류다 — 움직인 바디 목록(`getMovedBodies`)에서 주인이 확인한 핸들만 넘긴다.
+         */
+        virtual void readBodyStates( span<const PhysicsBodyHandle> listBody, span<BodyState> outListState ) const = 0;
         /** @brief 바디를 그 위치로 옮깁니다(순간이동). 그 사이를 쓸지 않고 바디를 깨웁니다. */
         virtual void setBodyTransform( PhysicsBodyHandle body, const Vector& position, const Rotation& rotation ) = 0;
         /** @brief 키네마틱 바디가 @p deltaTime 뒤에 목표 자세에 닿도록 속도를 줍니다(밀린 동적 바디가 그 속도를 받는다). */
@@ -116,4 +134,6 @@ namespace sw
 
     using IPhysicsBodyScene3D = IPhysicsBodyScene<PhysicsDimension3D>;
     using IPhysicsBodyScene2D = IPhysicsBodyScene<PhysicsDimension2D>;
+    using PhysicsBodyState3D  = PhysicsBodyState<PhysicsDimension3D>;
+    using PhysicsBodyState2D  = PhysicsBodyState<PhysicsDimension2D>;
 } // namespace sw

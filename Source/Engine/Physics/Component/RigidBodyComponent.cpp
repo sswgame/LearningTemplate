@@ -401,13 +401,14 @@ namespace sw
         return acceleration * scene.getBodyMass( _body );
     }
 
-    void RigidBodyComponent::readSteppedPose( const IPhysicsBodyScene3D& scene, uint64 stepCount )
+    void RigidBodyComponent::applySteppedPose( const PhysicsBodyState3D& state, uint64 stepCount )
     {
-        _previousPosition = _currentPosition;
-        _previousRotation = _currentRotation;
-        (void)scene.getBodyTransform( _body, _currentPosition, _currentRotation );
-        _lastLinearVelocity  = scene.getLinearVelocity( _body );
-        _lastAngularVelocity = scene.getAngularVelocity( _body );
+        _previousPosition    = _currentPosition;
+        _previousRotation    = _currentRotation;
+        _currentPosition     = state._position;
+        _currentRotation     = state._rotation;
+        _lastLinearVelocity  = state._linearVelocity;
+        _lastAngularVelocity = state._angularVelocity;
         _movedStep           = stepCount;
     }
 
@@ -433,9 +434,9 @@ namespace sw
         const float32    weight   = _bInterpolate ? alpha : 1.0f;
         const float3     position = float3::lerp( _previousPosition, _currentPosition, weight );
         const quaternion rotation = quaternion::slerp( _previousRotation, _currentRotation, weight );
-        PhysicsComponent::writeWorldPose( *this, position, rotation, _worldScale );
-        markTransformSynced();
-        _bRestPoseWritten = bMovedLastStep == false;
+        _bRestPoseWritten         = bMovedLastStep == false;
+        // 모아 한 번에 쓴다 — 적용 · 변경 번호 맞추기는 `ScenePhysics::queuePoseWrite` 가 한다.
+        physics.queuePoseWrite( *this, position, rotation, _worldScale );
     }
 
     void RigidBodyComponent::releasePhysics( ScenePhysics& physics )

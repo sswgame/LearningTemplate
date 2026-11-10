@@ -8,6 +8,7 @@
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/Config/EngineConfig.h"
+#include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Object/Component/Component.h"
@@ -73,6 +74,7 @@ namespace sw
 namespace sw
 {
     SW_SCENE_SERVICE( ScenePhysics, Physics )
+    SW_SCENE_SERVICE( ScenePhysicsEvents, FlushPostPhysics )
 
     /** @brief 활성 씬의 강체 물리(바디 셰이프 · 캐릭터 캡슐)를 디버그 선으로 그립니다(`ScenePhysics::drawDebug` → `DebugDrawQueue`). */
     SW_GLOBAL_VARIABLE( bool, gv_physicsDebugDraw, false, "강체 물리 바디 · 캐릭터를 디버그 선으로 그린다" );
@@ -92,6 +94,10 @@ namespace sw
         , _listBodyOwner2D{}
         , _listFrameEvent3D{}
         , _listFrameEvent2D{}
+        , _poseRead3D{}
+        , _poseRead2D{}
+        , _listPoseWrite{}
+        , _listTransformWrite{}
         , _listDispatchEvent3D{}
         , _listDispatchEvent2D{}
         , _listDispatchSwept{}
@@ -102,6 +108,7 @@ namespace sw
         , _fixedStepOverride{ 0.0f }
         , _bConfigured{ SW_FALSE }
         , _bFrameHookListStale{ SW_TRUE }
+        , _bFrameEventsPending{ SW_FALSE }
     {
     }
 
@@ -123,7 +130,7 @@ namespace sw
             return;
         SW_PROFILE_SCOPE( "GT.Scene.tick.physics" );
         SW_MEMORY_SCOPE( Physics );
-        step( _manager, deltaTime );
+        step( deltaTime );
     }
 
     void ScenePhysics::onSceneCleared()
@@ -144,6 +151,8 @@ namespace sw
         _listFrameEvent2D.clear();
         _listSweptOverlap2D.clear();
         _listMovedCollider2D.clear();
+        _listPoseWrite.clear();
+        _bFrameEventsPending = SW_FALSE;
         _stepTimer.reset();
     }
 
@@ -345,17 +354,92 @@ namespace sw
         ScenePhysicsInternal::unbindOwner( _listBodyOwner2D, owner );
     }
 
-    template <typename TOwner, typename TScene>
-    void ScenePhysics::readMovedBodies( const vector<TOwner*>& listOwner, const TScene& scene )
+    template <typename TOwner, typename TDimension>
+    void ScenePhysics::readMovedBodies( const vector<TOwner*>& listOwner, const IPhysicsBodyScene<TDimension>& scene, PoseReadBuffer<TOwner, TDimension>& buffer )
     {
+        buffer._listBody.clear();
+        buffer._listOwner.clear();
         for ( const PhysicsBodyHandle body : scene.getMovedBodies() )
         {
             const uint32 index  = body.getSlot().index();
             TOwner*      pOwner = index < listOwner.size() ? listOwner[index] : nullptr;
             // 칸 번호가 같아도 세대가 다르면 다른 바디다(파괴 · 래그돌이 만든 주인 없는 바디도 이 목록에 든다).
             if ( pOwner != nullptr && pOwner->getBodyHandle() == body )
-                pOwner->readSteppedPose( scene, _stepCount );
+            {
+                buffer._listBody.push_back( body );
+                buffer._listOwner.push_back( pOwner );
+            }
         }
+        const uint32 count = static_cast<uint32>( buffer._listBody.size() );
+        if ( count == 0 )
+            return;
+        buffer._listState.resize( count );
+
+        // 구간마다 백엔드 한 번(잠그지 않는 일괄 읽기) + 주인의 자기 멤버 쓰기다 — 워커는 컨테이너를 만지지 않고 포인터만 받는다.
+        struct PoseReadJob
+        {
+            const IPhysicsBodyScene<TDimension>* _pScene{ nullptr };
+            const PhysicsBodyHandle*             _pBody{ nullptr };
+            TOwner* const*                       _ppOwner{ nullptr };
+            PhysicsBodyState<TDimension>*        _pState{ nullptr };
+            uint64                               _stepCount{ 0 };
+
+            void readRange( uint32 start, uint32 end )
+            {
+                const size_t rangeCount = static_cast<size_t>( end - start );
+                _pScene->readBodyStates( span<const PhysicsBodyHandle>{ _pBody + start, rangeCount }, span<PhysicsBodyState<TDimension>>{ _pState + start, rangeCount } );
+                for ( uint32 index = start; index < end; ++index )
+                {
+                    _ppOwner[index]->applySteppedPose( _pState[index], _stepCount );
+                }
+            }
+        };
+        PoseReadJob job{};
+        job._pScene    = &scene;
+        job._pBody     = buffer._listBody.data();
+        job._ppOwner   = buffer._listOwner.data();
+        job._pState    = buffer._listState.data();
+        job._stepCount = _stepCount;
+        engine::runParallelByCost( count, SW_DELEGATE_METHOD( ParallelBlockDelegate, &PoseReadJob::readRange, &job ) );
+    }
+
+    void ScenePhysics::queuePoseWrite( PhysicsComponent& writer, const float3& position, const quaternion& rotation, const float3& scale )
+    {
+        _listPoseWrite.push_back( PoseWrite{ &writer, position, rotation, scale } );
+    }
+
+    void ScenePhysics::applyPoseWrites()
+    {
+        if ( _listPoseWrite.empty() )
+            return;
+        // 부모 없는 쓰기(동적 바디 대부분)는 월드가 곧 로컬이다 — 한 번에 적용한다(`writeWorldPose` 의 루트 길과 같은 값: 자리 · 오일러 각 · 배율).
+        _listTransformWrite.clear();
+        for ( const PoseWrite& poseWrite : _listPoseWrite )
+        {
+            if ( poseWrite._pWriter->getParent() != nullptr )
+                continue;
+            SceneTransformWrite write{};
+            write._handle        = poseWrite._pWriter->getHandle();
+            write._localPosition = poseWrite._position;
+            write._localRotation = poseWrite._rotation.getEulerAngles();
+            write._localScale    = poseWrite._scale;
+            write._bSetPosition  = SW_TRUE;
+            write._bSetRotation  = SW_TRUE;
+            write._bSetScale     = SW_TRUE;
+            _listTransformWrite.push_back( write );
+        }
+        if ( _listTransformWrite.empty() == false )
+            (void)_manager.applyTransformBatch( _listTransformWrite.data(), static_cast<uint32>( _listTransformWrite.size() ) );
+        // 펼친 뒤에 부모 있는 쓰기를 푼다(부모 바디의 이번 자리 위) — 변경 번호도 펼친 뒤 읽어야 컴포넌트마다 월드를 따로 합성하지 않는다.
+        if ( _manager.hasDirtySceneTransforms() )
+            _manager.flushSceneTransforms();
+        for ( const PoseWrite& poseWrite : _listPoseWrite )
+        {
+            if ( poseWrite._pWriter->getParent() != nullptr )
+                PhysicsComponent::writeWorldPose( *poseWrite._pWriter, poseWrite._position, poseWrite._rotation, poseWrite._scale );
+            poseWrite._pWriter->markTransformSynced();
+        }
+        _listPoseWrite.clear();
     }
 
     uint32 ScenePhysics::getComponentCount() const
@@ -368,7 +452,7 @@ namespace sw
         return count;
     }
 
-    void ScenePhysics::step( GameObjectManager& manager, float32 deltaTime )
+    void ScenePhysics::step( float32 deltaTime )
     {
         _listFrameEvent3D.clear();
         _listFrameEvent2D.clear();
@@ -423,9 +507,9 @@ namespace sw
             ++_stepCount;
             // 자세는 이 스텝에 깨어 있던 바디의 주인만 읽는다 — 정적 · 잠든 바디마다 백엔드 세 번(자세 · 두 속도)을 부르지 않는다.
             if ( _pScene3D != nullptr )
-                readMovedBodies( _listBodyOwner3D, *_pScene3D );
+                readMovedBodies( _listBodyOwner3D, static_cast<const IPhysicsBodyScene3D&>( *_pScene3D ), _poseRead3D );
             if ( _pScene2D != nullptr )
-                readMovedBodies( _listBodyOwner2D, *_pScene2D );
+                readMovedBodies( _listBodyOwner2D, static_cast<const IPhysicsBodyScene2D&>( *_pScene2D ), _poseRead2D );
             refreshFrameHookLists();
             for ( uint32 phase = 0; phase < ScenePhysicsInternal::kPhaseCount; ++phase )
             {
@@ -449,8 +533,37 @@ namespace sw
                 recordFrameHookCalled( *listComponent[index], PhysicsFrameHook::EndFrame );
             }
         }
+        applyPoseWrites();
+        // 이벤트는 여기서 나눠 주지 않는다 — `FlushPostPhysics` 단계의 `ScenePhysicsEvents` 가 부른다(파일 머리말).
+        _bFrameEventsPending = SW_TRUE;
+    }
 
-        dispatchEvents( manager );
+    void ScenePhysics::deliverFrameEvents()
+    {
+        if ( _bFrameEventsPending == SW_FALSE )
+            return;
+        _bFrameEventsPending = SW_FALSE;
+        dispatchEvents( _manager );
+        // 처리가 옮긴 트랜스폼을 PostPhysics 틱 전에 펼친다 — 병렬 틱은 더티 월드를 합성하지 않는다.
+        if ( _manager.hasDirtySceneTransforms() )
+            _manager.flushSceneTransforms();
+    }
+
+    ScenePhysicsEvents::ScenePhysicsEvents( GameObjectManager& manager )
+        : _manager{ manager }
+    {
+    }
+
+    span<const utf8* const> ScenePhysicsEvents::getSubsystemDependencies() const
+    {
+        static constexpr const utf8* kArrDependency[] = { ScenePhysics::kSubsystemName };
+        return kArrDependency;
+    }
+
+    void ScenePhysicsEvents::update( float32 deltaTime )
+    {
+        (void)deltaTime;
+        _manager.getSubsystem<ScenePhysics>().deliverFrameEvents();
     }
 
     void ScenePhysics::sweepContinuousColliders2D()
