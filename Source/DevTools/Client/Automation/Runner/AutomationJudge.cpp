@@ -13,6 +13,7 @@
 #include "Core/Time/WallClock.h"
 
 #include "DevTools/Client/Automation/Runner/AutomationExitCode.h"
+#include "DevTools/Client/Automation/Runner/AutomationGoldenUtil.h"
 #include "DevTools/Client/Automation/Runner/AutomationImage.h"
 #include "DevTools/Client/Automation/Runner/AutomationRunTitle.h"
 #include "DevTools/Client/Automation/Runner/AutomationStepArgs.h"
@@ -49,6 +50,8 @@ namespace sw
         , _pLogPolicy{ std::move( pLogPolicy ) }
         , _listFailure{}
         , _listUpdatedGolden{}
+        , _listNearLimitGolden{}
+        , _goldenPolicy{ unexpected( Error{ ErrorKind::NotFound, "the golden policy is read when a scenario starts" } ) }
         , _goldenFolderID{}
         , _goldenPrefix{}
         , _listUnhandledLog{}
@@ -340,7 +343,6 @@ namespace sw
             return;
         }
         // 골든은 백엔드마다 따로다(래스터 · 정밀도 차가 백엔드마다 다르다). 시나리오 안에서 백엔드를 바꿀 수 있어 단언하는 때의 백엔드를 쓴다.
-        static constexpr const utf8* kArrBackendTag[] = { "dx11", "dx12", "vk", "gl" };
         // 백엔드는 감시 값 `RHI.Backend`(App 의 교체기가 올린다)로 읽는다 — 판정이 RHI 를 직접 알지 않는다. 없으면(RHI 없는 호스트) 이미지 단언을 할 수 없다.
         const AutomationWatchRegistration* pBackendWatch = AutomationWatchRegistry::find( "RHI.Backend" );
         float64                            backendValue  = -1.0;
@@ -349,8 +351,14 @@ namespace sw
             context.recordFailure( step, "the RHI backend is unknown (watch RHI.Backend) - an image assertion needs a rendering host" );
             return;
         }
-        const uint32 backendIndex = static_cast<uint32>( backendValue );
-        _listDeferredImage.push_back( DeferredImageCheck{ &step, backendIndex < std::size( kArrBackendTag ) ? kArrBackendTag[backendIndex] : "unknown" } );
+        // 골든 꼬리는 쿠킹 표의 명령줄 이름이다(`AutomationGoldenUtil::findBackendTag`) — 손으로 적은 표가 WebGPU 를 빠뜨려 그 골든을 뜰 수 없었다.
+        const optional<string_view> backendTag = AutomationGoldenUtil::findBackendTag( static_cast<uint32>( backendValue ) );
+        if ( backendTag.has_value() == false )
+        {
+            context.recordFailure( step, "the RHI backend " + AutomationStepArgsUtil::formatNumber( backendValue ) + " is not in the cook table - no golden name for it" );
+            return;
+        }
+        _listDeferredImage.push_back( DeferredImageCheck{ &step, string( *backendTag ) } );
     }
 
     void AutomationJudge::deferExpectImagesDiffer( const AutomationStep& step )
@@ -361,7 +369,12 @@ namespace sw
     void AutomationJudge::judgeImagesDiffer( AutomationStepContext& context, const AutomationStep& step )
     {
         const AutomationExpectImagesDifferParams params = step.readValidatedFields<AutomationExpectImagesDifferParams>();
-        AutomationImageRegion                    region{};
+        if ( _goldenPolicy.has_value() == false )
+        {
+            context.recordFailure( step, "could not compare the images: " + AutomationStep::describeReason( _goldenPolicy.error() ) );
+            return;
+        }
+        AutomationImageRegion region{};
         if ( params._region.empty() == false && AutomationImage::tryParseRegion( params._region, region ) == false )
         {
             context.recordFailure( step, "could not compare the images: the region is not x0,y0,x1,y1 - " + params._region ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
@@ -374,7 +387,7 @@ namespace sw
         const expected<AutomationImage>           reducedSecond = reducedFirst.has_value() ? loadReduced( params._second ) : reducedFirst;
         const expected<AutomationImageDifference> compared =
             reducedSecond.and_then( [&]( const AutomationImage& second )
-        { return AutomationImage::compare( *reducedFirst, second ); } );
+        { return AutomationImage::compare( *reducedFirst, second, _goldenPolicy->_measure ); } );
         if ( compared.has_value() == false )
         {
             context.recordFailure( step, "could not compare the images: " + AutomationStep::describeReason( compared.error() ) );
@@ -401,7 +414,7 @@ namespace sw
     {
         for ( const DeferredImageCheck& check : _listDeferredImage )
         {
-            judgeImage( context, *check._pStep, check._pBackendTag );
+            judgeImage( context, *check._pStep, check._backendTag );
         }
         _listDeferredImage.clear();
 
@@ -425,7 +438,7 @@ namespace sw
         _listDeferredAtMost.clear();
     }
 
-    void AutomationJudge::judgeImage( AutomationStepContext& context, const AutomationStep& step, const utf8* pBackendTag )
+    void AutomationJudge::judgeImage( AutomationStepContext& context, const AutomationStep& step, string_view backendTag )
     {
         const expected<AutomationStepArgsUtil::ExpectImageArgs> parsedArgs = AutomationStepArgsUtil::parseExpectImage( step );
         if ( parsedArgs.has_value() == false )
@@ -433,8 +446,15 @@ namespace sw
             context.recordFailure( step, AutomationStep::describeReason( parsedArgs.error() ) ); // 미룰 때 읽혔다 — 그 뒤 단계가 바뀌었다(핫 리로드)
             return;
         }
-        const AutomationStepArgsUtil::ExpectImageArgs& args = *parsedArgs;
-        const string                                   file = step.readValidatedFields<AutomationExpectImageParams>()._file;
+        if ( _goldenPolicy.has_value() == false )
+        {
+            context.recordFailure( step, "could not judge the image: " + AutomationStep::describeReason( _goldenPolicy.error() ) );
+            return;
+        }
+        const AutomationGoldenPolicy&                  policy = *_goldenPolicy;
+        const AutomationStepArgsUtil::ExpectImageArgs& args   = *parsedArgs;
+        const AutomationGoldenLimits                   limits = args.resolveLimits( policy._limits );
+        const string                                   file   = step.readValidatedFields<AutomationExpectImageParams>()._file;
         const expected<AutomationImage>                loaded =
             AutomationImage::loadPpm( context.resolveOutputPath( file ) ).and_then( [&]( const AutomationImage& image )
         { return AutomationImage::reduce( image, args._region ); } );
@@ -443,16 +463,8 @@ namespace sw
             context.recordFailure( step, "could not read the image: " + AutomationStep::describeReason( loaded.error() ) );
             return;
         }
-        const AutomationImage& reduced = *loaded;
-        // Linux 는 골든을 따로 둔다 - 편집기 기본 글꼴이 OS 마다 달라 배치가 다르고, 지금 도는 곳이 소프트웨어 렌더러(lavapipe)다.
-#if defined( SW_PLATFORM_LINUX )
-        static constexpr const utf8* kGoldenPlatformTag = ".linux";
-#elif defined( SW_PLATFORM_WINDOWS )
-        static constexpr const utf8* kGoldenPlatformTag = "";
-#else
-    #error "Unsupported platform"
-#endif
-        const string                              goldenID = _goldenFolderID + "/" + _goldenPrefix + "." + args._golden + "." + pBackendTag + kGoldenPlatformTag + ".ppm";
+        const AutomationImage&                    reduced  = *loaded;
+        const string                              goldenID = AutomationGoldenUtil::makeGoldenID( _goldenFolderID, _goldenPrefix, args._golden, backendTag, AutomationGoldenUtil::getPlatformTag() );
         vector<uint8>                             listBytes;
         const bool                                bReadGolden = AssetIO::hasAsset( AssetID{ goldenID } ) && AssetIO::readBinaryAsset( AssetID{ goldenID }, listBytes );
         const expected<AutomationImage>           golden      = bReadGolden ? AutomationImage::parsePpm( listBytes.data(), listBytes.size() )
@@ -460,46 +472,96 @@ namespace sw
         const bool                                bHasGolden  = golden.has_value();
         const expected<AutomationImageDifference> compared =
             golden.and_then( [&]( const AutomationImage& goldenImage )
-        { return AutomationImage::compare( reduced, goldenImage ); } );
+        { return AutomationImage::compare( reduced, goldenImage, policy._measure ); } );
         const bool                      bCompared  = compared.has_value();
         const AutomationImageDifference difference = bCompared ? *compared : AutomationImageDifference{};
-        const bool                      bMatches   = bCompared && difference._differingFraction <= args._tolerance;
+        const GoldenResult              verdict    = bCompared ? AutomationGoldenUtil::judge( difference, limits, policy._nearLimitRatio ) : GoldenResult::Fail;
+        string                          line;
         if ( bCompared )
         {
-            string line = file + " vs " + goldenID + ": " + AutomationStepArgsUtil::formatNumber( difference._differingFraction * 100.0 ) + "% differing (tolerance " +
-                          AutomationStepArgsUtil::formatNumber( args._tolerance * 100.0 ) + "%), mean distance " + AutomationStepArgsUtil::formatNumber( difference._meanDistance );
+            static constexpr const utf8* kArrVerdictName[] = { "pass", "pass near limit", "fail" };
+            line                                           = file + " vs " + goldenID + ": " + AutomationStepArgsUtil::formatNumber( difference._differingFraction * 100.0 ) + "% differing (at most " +
+                   AutomationStepArgsUtil::formatNumber( limits._maxDifferingFraction * 100.0 ) + "%), mean distance " + AutomationStepArgsUtil::formatNumber( difference._meanDistance ) + " (at most " +
+                   AutomationStepArgsUtil::formatNumber( limits._maxMeanDistance ) + "), largest deep region " + to_string( difference._largestDeepRegionPixels ) + " px (at most " +
+                   to_string( limits._maxDeepRegionPixels ) + ") - " + kArrVerdictName[static_cast<uint32>( verdict )];
             SW_LOG_INFO_ID( "Automation.Image", "[Scenario] image %#", line.c_str() );
-            _listMetricLine.push_back( std::move( line ) );
+            _listMetricLine.push_back( line );
         }
-        if ( bMatches )
-            return;
-        if ( _bUpdateGolden )
+        switch ( AutomationGoldenUtil::decide( bHasGolden, bCompared, verdict, _bUpdateGolden ) )
         {
-            // 골든 쓰기는 이 모드에서만 연다(`AutomationScratch` 의 쓰기 문 — 평소에는 리소스 루트에 쓰지 못한다). 쓴 파일은 보고에 남아 리뷰한다.
-            vector<uint8> listEncoded;
-            AutomationImage::encodePpm( reduced, listEncoded );
-            const optional<AbsolutePath> path = engine::getSubsystem<AssetPaths>().toDiskPath( goldenID );
-            if ( path.has_value() == false || FileUtil::ensureParentDirectoryExists( path->str() ) == false || FileUtil::writeFile( path->str(), listEncoded.data(), listEncoded.size() ) == false )
+            case GoldenAction::Keep:
             {
-                context.recordFailure( step, "could not write the golden " + goldenID );
                 return;
             }
-            SW_LOG_INFO_ID( "Automation.Golden", "[Scenario] golden %# %#", bHasGolden ? "updated" : "recorded", goldenID.c_str() );
-            _listUpdatedGolden.push_back( goldenID );
-            return;
+            case GoldenAction::KeepNearLimit:
+            {
+                // 실행기 줄(`[Scenario]`)이라 로그 게이트가 세지 않는다(`AutomationLogPolicy::isExemptMessage`) — 판정 대상의 결함이 아니라 골든의 여유 문제라 시나리오를
+                // 지게 하지 않는다. 경고 id 로 묶음 끝 로그 분류에, 보고의 `nearLimitGoldens[]` 에 남겨 기록 모드로 다시 뜨게 한다.
+                SW_LOG_WARNING_ID( "Automation.GoldenNearLimit", "[Scenario] golden near its limit - record it again with -scenario-update-golden: %#", line.c_str() );
+                _listNearLimitGolden.push_back( line );
+                return;
+            }
+            case GoldenAction::Write:
+            {
+                writeGolden( context, step, reduced, goldenID, backendTag, AutomationGoldenUtil::describeWriteReason( bHasGolden, bCompared, verdict ), bCompared ? &difference : nullptr, limits );
+                return;
+            }
+            case GoldenAction::FailMissing:
+            {
+                context.recordFailure( step, "no golden " + goldenID + " yet - run with -scenario-update-golden and review the image" );
+                return;
+            }
+            case GoldenAction::FailUnreadable:
+            {
+                context.recordFailure( step, AutomationStep::describeReason( compared.error() ) );
+                return;
+            }
+            case GoldenAction::Fail:
+            {
+                context.recordFailure( step, "differs from its golden: " + line );
+                return;
+            }
         }
-        if ( bHasGolden == false )
+    }
+
+    void AutomationJudge::writeGolden( AutomationStepContext& context, const AutomationStep& step, const AutomationImage& image, const string& goldenID, string_view backendTag, const utf8* pReason,
+                                       const AutomationImageDifference* pPrevious, const AutomationGoldenLimits& limits )
+    {
+        // 골든 쓰기는 이 모드에서만 연다(`AutomationScratch` 의 쓰기 문 — 평소에는 리소스 루트에 쓰지 못한다). 쓴 파일은 보고에 남아 리뷰한다.
+        if ( _recordingCommit.empty() )
         {
-            context.recordFailure( step, "no golden " + goldenID + " yet - run with -scenario-update-golden and review the image" );
-            return;
+            const expected<string> commit = AutomationGoldenUtil::findRecordingCommit();
+            if ( commit.has_value() == false )
+            {
+                context.recordFailure( step, "could not write the golden " + goldenID + ": " + AutomationStep::describeReason( commit.error() ) );
+                return;
+            }
+            _recordingCommit = *commit;
         }
-        if ( bCompared == false )
+        AutomationGoldenMeta meta;
+        meta._backendTag     = string( backendTag );
+        meta._platform       = AutomationGoldenUtil::getPlatformTag().empty() ? "windows" : "linux";
+        meta._commit         = _recordingCommit;
+        meta._recordedUnixMs = WallClock::nowUnixMilliseconds().count();
+        meta._reason         = pReason;
+        meta._bMeasured      = pPrevious != nullptr;
+        meta._difference     = pPrevious != nullptr ? *pPrevious : AutomationImageDifference{};
+        meta._limits         = limits;
+        meta._width          = image._width;
+        meta._height         = image._height;
+        vector<uint8> listEncoded;
+        AutomationImage::encodePpm( image, listEncoded );
+        const optional<AbsolutePath> imagePath = engine::getSubsystem<AssetPaths>().toDiskPath( goldenID );
+        const optional<AbsolutePath> metaPath  = engine::getSubsystem<AssetPaths>().toDiskPath( AutomationGoldenUtil::makeMetaID( goldenID ) );
+        const bool                   bWritten  = imagePath.has_value() && metaPath.has_value() && FileUtil::ensureParentDirectoryExists( imagePath->str() ) &&
+                              FileUtil::writeFile( imagePath->str(), listEncoded.data(), listEncoded.size() ) && FileUtil::writeTextFile( metaPath->str(), AutomationGoldenUtil::makeMetaText( meta ) );
+        if ( bWritten == false )
         {
-            context.recordFailure( step, AutomationStep::describeReason( compared.error() ) );
+            context.recordFailure( step, "could not write the golden " + goldenID );
             return;
         }
-        context.recordFailure( step, file + " differs from " + goldenID + ": " + AutomationStepArgsUtil::formatNumber( difference._differingFraction * 100.0 ) +
-                                         "% of pixels differ (tolerance " + AutomationStepArgsUtil::formatNumber( args._tolerance * 100.0 ) + "%)" );
+        SW_LOG_INFO_ID( "Automation.Golden", "[Scenario] golden written (%#) %#", pReason, goldenID.c_str() );
+        _listUpdatedGolden.push_back( goldenID );
     }
 
     optional<string> AutomationJudge::applyLogGate( AutomationResult result )
@@ -548,6 +610,9 @@ namespace sw
         prepareWatches( scenario );
         _listRemembered.clear();
         _listUpdatedGolden.clear();
+        _listNearLimitGolden.clear();
+        _recordingCommit.clear();
+        _goldenPolicy   = AutomationGoldenUtil::loadPolicy(); // 이미지 단언이 없는 시나리오는 오류를 쓰지 않는다 — 단언이 그 이유로 진다
         _goldenFolderID = FileUtil::getDirectoryPart( scenario.getSourcePath() ) + "/" + kAutomationGoldenFolder;
         _goldenPrefix   = scenario.getName();
         _bUpdateGolden  = false;

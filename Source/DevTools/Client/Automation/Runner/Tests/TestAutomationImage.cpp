@@ -33,6 +33,9 @@ namespace
             return listByte;
         }
 
+        /** @brief 테스트의 측정 문턱 — 정책 데이터의 기본(`Config/Dev/GoldenImage.json`)과 같은 값이다. */
+        static constexpr AutomationImageThreshold kMeasure{ 12, 96 };
+
         static uint8* getPixel( AutomationImage& image, uint32 x, uint32 y ) { return &image._listRGB[( static_cast<size_t>( y ) * image._width + x ) * 3u]; }
 
         /** @brief 틀린 PPM 은 이유가 있는 오류입니다. */
@@ -269,11 +272,11 @@ SW_TEST_CASE( AutomationImageMetricTest, ReduceRejectsEmptyCoverage )
 /** @brief [AutomationImageMetricTest] 크기가 다르면 비교하지 않고 다시 뜨라는 이유를 낸다(가로 · 세로 어느 쪽이든) */
 SW_TEST_CASE( AutomationImageMetricTest, CompareRejectsDifferentSizes )
 {
-    const expected<AutomationImageDifference> wider = AutomationImage::compare( Util::makeImage( 2, 2, 0 ), Util::makeImage( 3, 2, 0 ) );
+    const expected<AutomationImageDifference> wider = AutomationImage::compare( Util::makeImage( 2, 2, 0 ), Util::makeImage( 3, 2, 0 ), Util::kMeasure );
     SW_REQUIRE_FALSE( wider.has_value() );
     SW_EXPECT_TRUE( wider.error().detail().find( "2x2" ) != string_view::npos );
     SW_EXPECT_TRUE( wider.error().detail().find( "3x2" ) != string_view::npos );
-    const expected<AutomationImageDifference> taller = AutomationImage::compare( Util::makeImage( 2, 2, 0 ), Util::makeImage( 2, 3, 0 ) );
+    const expected<AutomationImageDifference> taller = AutomationImage::compare( Util::makeImage( 2, 2, 0 ), Util::makeImage( 2, 3, 0 ), Util::kMeasure );
     SW_REQUIRE_FALSE( taller.has_value() );
     SW_EXPECT_TRUE( taller.error().detail().find( "2x3" ) != string_view::npos );
 }
@@ -281,12 +284,12 @@ SW_TEST_CASE( AutomationImageMetricTest, CompareRejectsDifferentSizes )
 /** @brief [AutomationImageMetricTest] 같은 그림은 차이가 0 이고 빈 그림끼리도 0 이다(0 으로 나누지 않는다) */
 SW_TEST_CASE( AutomationImageMetricTest, CompareIdenticalImages )
 {
-    const expected<AutomationImageDifference> same = AutomationImage::compare( Util::makeImage( 4, 4, 33 ), Util::makeImage( 4, 4, 33 ) );
+    const expected<AutomationImageDifference> same = AutomationImage::compare( Util::makeImage( 4, 4, 33 ), Util::makeImage( 4, 4, 33 ), Util::kMeasure );
     SW_REQUIRE_TRUE( same.has_value() );
     SW_EXPECT_NEAR( 0.0, same->_differingFraction, 0.0 );
     SW_EXPECT_NEAR( 0.0, same->_meanDistance, 0.0 );
 
-    const expected<AutomationImageDifference> empty = AutomationImage::compare( AutomationImage{}, AutomationImage{} );
+    const expected<AutomationImageDifference> empty = AutomationImage::compare( AutomationImage{}, AutomationImage{}, Util::kMeasure );
     SW_REQUIRE_TRUE( empty.has_value() );
     SW_EXPECT_NEAR( 0.0, empty->_differingFraction, 0.0 );
 }
@@ -295,11 +298,11 @@ SW_TEST_CASE( AutomationImageMetricTest, CompareIdenticalImages )
 SW_TEST_CASE( AutomationImageMetricTest, CompareDifferingThreshold )
 {
     const AutomationImage golden = Util::makeImage( 2, 1, 100 );
-    const uint32          limit  = AutomationImage::kDifferingMinDistance;
+    const uint32          limit  = Util::kMeasure._differingMinDistance;
 
     AutomationImage below                                     = golden;
     below._listRGB[0]                                         = static_cast<uint8>( 100u + ( limit - 1u ) );
-    const expected<AutomationImageDifference> belowDifference = AutomationImage::compare( below, golden );
+    const expected<AutomationImageDifference> belowDifference = AutomationImage::compare( below, golden, Util::kMeasure );
     SW_REQUIRE_TRUE( belowDifference.has_value() );
     SW_EXPECT_NEAR( 0.0, belowDifference->_differingFraction, 0.0 );
     SW_EXPECT_NEAR( static_cast<float64>( limit - 1u ) / ( 2.0 * 765.0 ), belowDifference->_meanDistance, 0.0000001 );
@@ -309,14 +312,33 @@ SW_TEST_CASE( AutomationImageMetricTest, CompareDifferingThreshold )
     spread._listRGB[3]                                         = static_cast<uint8>( 100u - 4u );
     spread._listRGB[4]                                         = static_cast<uint8>( 100u + 4u );
     spread._listRGB[5]                                         = static_cast<uint8>( 100u - ( limit - 8u ) );
-    const expected<AutomationImageDifference> spreadDifference = AutomationImage::compare( spread, golden );
+    const expected<AutomationImageDifference> spreadDifference = AutomationImage::compare( spread, golden, Util::kMeasure );
     SW_REQUIRE_TRUE( spreadDifference.has_value() );
     SW_EXPECT_NEAR( 0.5, spreadDifference->_differingFraction, 0.0 );
     SW_EXPECT_NEAR( static_cast<float64>( limit ) / ( 2.0 * 765.0 ), spreadDifference->_meanDistance, 0.0000001 );
 
     // 가장 먼 값 — 평균 거리는 1 이다.
-    const expected<AutomationImageDifference> farthest = AutomationImage::compare( Util::makeImage( 1, 1, 0 ), Util::makeImage( 1, 1, 255 ) );
+    const expected<AutomationImageDifference> farthest = AutomationImage::compare( Util::makeImage( 1, 1, 0 ), Util::makeImage( 1, 1, 255 ), Util::kMeasure );
     SW_REQUIRE_TRUE( farthest.has_value() );
     SW_EXPECT_NEAR( 1.0, farthest->_differingFraction, 0.0 );
     SW_EXPECT_NEAR( 1.0, farthest->_meanDistance, 0.0 );
+    SW_EXPECT_EQUAL( 1u, farthest->_largestDeepRegionPixels );
+}
+
+/** @brief [AutomationImageMetricTest] 깊은 화소 덩어리는 4 이웃으로 잇는다 — 대각선은 다른 덩어리이고, 가장 큰 덩어리의 화소 수를 낸다 */
+SW_TEST_CASE( AutomationImageMetricTest, CompareLargestDeepRegion )
+{
+    const AutomationImage golden = Util::makeImage( 6, 4, 0 );
+    AutomationImage       actual = golden;
+    // 가로 셋이 이어진 덩어리 + 대각선으로만 닿은 화소 하나 + 얕은(깊은 문턱 아래) 화소 하나
+    for ( uint32 x = 0; x < 3; ++x )
+    {
+        Util::getPixel( actual, x, 0 )[0] = 255;
+    }
+    Util::getPixel( actual, 3, 1 )[0]                    = 255;
+    Util::getPixel( actual, 5, 3 )[0]                    = static_cast<uint8>( Util::kMeasure._deepMinDistance - 1u );
+    const expected<AutomationImageDifference> difference = AutomationImage::compare( actual, golden, Util::kMeasure );
+    SW_REQUIRE_TRUE( difference.has_value() );
+    SW_EXPECT_EQUAL( 3u, difference->_largestDeepRegionPixels );
+    SW_EXPECT_NEAR( 5.0 / 24.0, difference->_differingFraction, 0.0000001 );
 }

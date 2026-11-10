@@ -114,6 +114,7 @@ namespace sw
             writeAutomationTimeline( writer, *params._pTimeline );
         writeAutomationReportList( writer, "failures", params._pListFailure );
         writeAutomationReportList( writer, "updatedGoldens", params._pListUpdatedGolden );
+        writeAutomationReportList( writer, "nearLimitGoldens", params._pListNearLimitGolden );
         writeAutomationReportList( writer, "unhandledLogs", params._pListUnhandledLog );
         writeAutomationReportList( writer, "allowedLogs", params._pListAllowedLog );
         writeAutomationReportList( writer, "metrics", params._pListMetric );
