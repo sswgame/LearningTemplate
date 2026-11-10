@@ -42,7 +42,7 @@
 ### 5. 작업자 · 설계 문서가 남긴 일
 
 - **린트를 빌드 구조로(린트 표에서 지우기):** `core-tiers`(Core 도 엔진 · 에디터처럼 층별 부분과 위 층 헤더 `#error` 껍데기 — pch 비용을 측정해 정한다), `server-ui`(게임 모듈 `Client/` 를 타깃 게이트의 모듈별 껍데기로), `dev-only-variables`(테스트 변수 매크로 헤더를 개발 단위로 옮겨 런타임 include 가 컴파일에서 멈추게), `editor-view-includes`(MVVM 이 끝나면 View 부분의 껍데기로).
-- **에디터 MVVM 남은 View 21 개:** 인스펙터 코어(EditorPropertyGrid · InspectorPanel · InspectorPropertyManager · SceneObjectReferencePropertyDrawer — 편집 기록기는 됐고, 남은 단계는 EditorUI 'Property grid edit model' 2 ~ 6), 큰 패널(Hierarchy · Profiler · MapCheck · PrefabEditor · ContentBrowser · Sequencer). 다 옮기면 `_migratedViews` 표와 린트를 지운다([EditorUI](agents/EditorUI.md)).
+- **에디터 MVVM 남은 View:** 큰 패널(Hierarchy · Profiler · MapCheck · PrefabEditor · ContentBrowser · Sequencer)과 인스펙터 그리드의 값 행(EditorUI 'Property grid edit model' Not done — 그리드를 메인 스레드 밖으로 내는 단계). 다 옮기면 `_migratedViews` 표와 린트를 지운다([EditorUI](agents/EditorUI.md)).
 - **저장 왕복 시나리오:** Catalog · InputMap + 재생 · BehaviorTree · Rig · Terrain · AudioEvent/Graph. 틀(`panel.saveDocument` · `panel.reloadDocument` · `asset.snapshotScratch` · `asset.expectScratchUnchanged`, 예 `saveroundtripmaterial.scenario.xml`)은 있다 — 이 패널들은 경로로 열리지 않거나(자체 저장 패널 · 리그) 고정 파일을 써서 `scratch` 사본을 가리킬 문서 경로 입구가 먼저다.
 - **렌더링:** Vulkan placed 텍스처(해제 큐에 메모리 참조 세기), TransientLeasePool 을 뷰 풀에 잇기, 비동기 컴퓨트 큐 패스 타임스탬프 · Tracy 프레임 패스 내보내기, 같은 자리 후처리 머티리얼이 앞 결과를 이어 읽기, 박막 · 털 · 스타킹 · 비단 외형의 디퍼드(G버퍼 칸 부족 — 포워드 전용으로 남김), 몸 머티리얼이 피부 층 표면 덮어쓰기(`_skinLayerSurfaceMap`)를 읽기, 텍스처 전이 · VFX · 프로브 디스패치의 버퍼별 전이를 묶음 API 로.
 - **캐릭터:** 문신 집기를 바인드 자세가 아닌 지금 포즈로, 부품 오브젝트도 집기, 몸 탭 동작 시나리오.
