@@ -18,7 +18,7 @@
 | 항목 | 엔진이 쓰는 것 | Android Vulkan 1.2 | WebGPU | 가르는 법 |
 |---|---|---|---|---|
 | 바인딩 모델 | DX12 · Vulkan 은 네이티브 bindless(텍스처 4096 · RW 텍스처 1024 칸 update-after-bind 배열), DX11 · GL 은 고정 슬롯 에뮬(엔진 텍스처 12 + 머티리얼 16) | 1.2 코어지만 기능 비트는 선택이다(`runtimeDescriptorArray` · `descriptorBindingPartiallyBound` · `…SampledImageUpdateAfterBind` · `…StorageImageUpdateAfterBind` · 비균일 인덱싱). 한도(`maxPerStageDescriptorUpdateAfterBind…`)도 장치마다다 | bindless 없음(`binding_array` 는 제안 단계, 기억) | Android: 필수. 장치 고르기가 기능 · 한도를 대조해 못 미치는 장치는 건너뛴다(`VulkanRHIDevice::meetsBindlessRequirements`). 웹: DX11 과 같은 고정 슬롯 모델(`SW_BINDLESS` 없음, 머티리얼은 서수) — 셰이더 갈래 `WEBGPU` |
-| 바인딩 수 | 패스마다 다르다(쓰는 것만 셰이더에 남는다) | 위 한도 | 기본 한도: 그룹 4, 단계마다 텍스처 16 · 샘플러 16 · 저장 버퍼 8 · 상수 버퍼 12(기억) | WebGPU 는 장치를 만들 때 어댑터 한도를 그대로 요구하고(`requiredLimits`), PSO 의 바인딩 표(쿠킹 때 SPIR-V 리플렉션으로 셰이더 옆에 적는다)가 한도를 넘으면 PSO 를 만들지 않고 오류다 |
+| 바인딩 수 | 패스마다 다르다(쓰는 것만 셰이더에 남는다) | 위 한도 | 기본 한도: 그룹 4, 단계마다 텍스처 16 · 샘플러 16 · 저장 버퍼 8(명세 https://www.w3.org/TR/webgpu/#limits), 상수 버퍼 12(기억) | WebGPU 는 장치를 만들 때 어댑터 한도를 그대로 요구한다(`requiredLimits`). 단계 텍스처는 계약 16(`CookContract.json` stage_texture_unit_limit = `shaderslot::wgpu::kStageTextureBudget`) — 쿠킹이 넘는 WGSL 을 멈추고, 장치 생성이 어댑터 `maxSampledTexturesPerShaderStage` 가 그보다 작으면 멈춘다. 그 밖의 한도는 PSO 의 바인딩 표(쿠킹 때 SPIR-V 리플렉션)가 넘으면 PSO 를 만들지 않고 오류다 |
 | 루트 상수 | 16 dword(`SW_ROOT_DWORD_COUNT`) — DX12 루트 상수, Vulkan 푸시 상수 | 푸시 상수 최소 128 B — 64 B 로 맞다 | 푸시 상수 없음(immediates 는 실험, 기억) | WebGPU 는 DX11 · GL 처럼 상수 버퍼 `b2`(`SW_SLOT_ROOT_CB_EMUL`) 에뮬. 셰이더 갈래 `SW_ROOT_CONSTANTS_BEGIN` 의 `WEBGPU` |
 | 아토믹 | 32 비트 `InterlockedAdd`(버퍼 · groupshared)만 — 컬링 · 라이트 그리드 · NaN 검사 · GPU assert | 필수 | `atomic<u32>`(저장 버퍼 · workgroup) | 그대로. 64 비트 · 실수 · 텍스처 아토믹은 쓰지 않는다 — 새로 쓰면 이 표에 줄을 더한다 |
 | 웨이브 연산 | `gpu_cull.hlsl` 의 `WaveReadLaneFirst` · `WaveActiveCountBits` · `WavePrefixCountBits` | 서브그룹 기본 연산은 1.1 코어, ballot 은 선택 | `subgroups` 기능은 선택(기억) | WebGPU 대상은 `SW_NO_WAVE_OPS` 로 쿠킹한다 — DX11 과 같은 스레드마다 원자 연산 길(`gpu_cull.hlsl`). 결과는 같고 경합만 늘어난다 |
@@ -57,8 +57,8 @@
 
 ## 남은 일(코드를 붙여 보지 못한 것)
 
-- 웹 실행: `Web-Shipping` 은 App(App.wasm · App.js)까지 지어진다. 아직 브라우저에 띄우지 않았다 — 쿠킹한 팩을 가상 파일 시스템에 얹는 패키징(--preload-file), COOP · COEP 헤더를 주는 로컬 서버, 브라우저 MCP 로 기동 · WebGPU 장치 · 입력 · 클립보드(paste 이벤트) · IDBFS 영속을 본다.
-- 웹 온라인: 브라우저에는 원시 TCP 가 없어 스트림 전송이 nullptr 다(`StreamTransportFactory`). WebSocket 전송(클라이언트 connect)과 서버의 WebSocket 수락을 함께 넣어야 웹에서 접속한다.
+- 웹 실행: 확인 절차는 `py -3 -m Scripts web-check --game Empty` 하나다(묶기 · COOP/COEP 서버 · 헤드리스 브라우저 두 번 — WebGPU · 오류 없음 · 화면 PNG · IDBFS 영속). 아직 돌리지 않았다 — Web-Shipping 빌드(호스트 Ninja-Release 로 쿠킹, 단계 텍스처 16 계약이 처음 걸린다) 뒤 통합에서 돌린다. 입력 · 클립보드(paste 이벤트) 판정은 없다 — 배포 빌드에 시나리오 실행기가 없어 앱 반응을 읽을 길이 없다(웹 시나리오를 쿠킹하거나 반응을 페이지로 내보내는 길이 필요하다).
+- 웹 온라인: 스트림은 WebSocket 이다 — 클라이언트 `WebSocketStreamTransport`(Web), 서버는 같은 리슨에서 첫 바이트로 가르는 `WebSocketAcceptTransport`(온라인 서비스 리슨). 남은 것: `ws://` 만이라 https 페이지는 `wss://`(수락 쪽 TLS 종단)가 필요하다. 게임 세션(암호화 UDP)은 브라우저에 UDP 가 없어 아직 길이 없다(WebSocket · WebTransport 위 데이터그램 갈래).
 - Android 실기기: APK 기동 · 회전(pre-rotation 방향) · APK 팩 읽기(`AAssetDir_getNextFileName` 이 폴더 앞머리를 붙이는지) · 터치를 확인한다. 클립보드는 아직 OS 를 잇지 않는다(`AndroidClipboard.cpp` 의 `isAvailable` false — JNI `ClipboardManager` 는 Looper 스레드 제약을 실기기와 함께 본다).
 
 ## 입력(웹 · Android)
