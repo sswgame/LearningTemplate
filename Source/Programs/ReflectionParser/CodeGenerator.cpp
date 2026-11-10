@@ -844,7 +844,9 @@ namespace sw
         CodeEmit     emit( outBuffer );
         emit.push( 1 );
         // 생성 이름공간(`sw::generated`)은 `sw` 안이라 `sw` 바로 아래 타입은 짧은 이름으로 닿는다. 다른 이름공간의 타입은 매크로가 이름을 붙여 쓰지 못해(토큰 붙이기) 같은 줄을 펼쳐 쓴다.
-        if ( typeInfo._fullyQualifiedName == "sw::" + typeInfo._name )
+        const string_view qualifiedName = typeInfo._fullyQualifiedName;
+        const string_view swPrefix      = "sw::";
+        if ( StringUtil::startsWith( qualifiedName, swPrefix ) && qualifiedName.substr( swPrefix.size() ) == string_view( typeInfo._name ) )
         {
             emit.linef( "SW_REGISTER_TICK_TYPE( %#, %# );", typeInfo._name, mode );
         }

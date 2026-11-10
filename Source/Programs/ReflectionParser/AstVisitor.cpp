@@ -81,17 +81,17 @@ namespace sw
             const string_view line = StringUtil::trim( text.substr( start, end == string_view::npos ? string_view::npos : end - start ) );
             start                  = end == string_view::npos ? text.size() : end + 1;
             ++lineNo;
-            if ( line.starts_with( "#" ) )
+            if ( StringUtil::startsWith( line, "#" ) )
             {
                 const string_view directive = StringUtil::trim( line.substr( 1 ) );
-                if ( directive.starts_with( "if" ) )
+                if ( StringUtil::startsWith( directive, "if" ) )
                     ++depth;
-                else if ( directive.starts_with( "endif" ) && depth > 0 )
+                else if ( StringUtil::startsWith( directive, "endif" ) && depth > 0 )
                     --depth;
                 continue;
             }
-            const bool bReflectMacro = line.starts_with( "PROPERTY(" ) || line.starts_with( "PROPERTY (" ) || line.starts_with( "FUNCTION(" ) ||
-                                       line.starts_with( "FUNCTION (" ) || line.starts_with( "REFLECT(" ) || line.starts_with( "REFLECT (" );
+            const bool bReflectMacro = StringUtil::startsWith( line, "PROPERTY(" ) || StringUtil::startsWith( line, "PROPERTY (" ) || StringUtil::startsWith( line, "FUNCTION(" ) ||
+                                       StringUtil::startsWith( line, "FUNCTION (" ) || StringUtil::startsWith( line, "REFLECT(" ) || StringUtil::startsWith( line, "REFLECT (" );
             if ( depth > 0 && bReflectMacro )
             {
                 SW_LOG_ERROR_ID( "AstVisitor.ERRORReflectMacroUnderIf", "ERROR: %#(%#): a reflection macro is under #if - the parser sees one configuration, so it would be "
