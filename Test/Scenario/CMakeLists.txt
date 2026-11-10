@@ -163,6 +163,7 @@ foreach(game IN LISTS listBuiltGame)
 		set(sequenceStateDir "${CMAKE_BINARY_DIR}/Testing/StateDir/${pack}.${pairName}")
 		add_test(NAME ${sequenceTestName}
 			COMMAND ${CMAKE_COMMAND} -DAPP=$<TARGET_FILE:App> -DPAIR=${pairPath} -DSTATE_DIR=${sequenceStateDir} "-DSTATE_ARG=-gv_userSettingsFile=${sequenceStateDir}/usersettings.json"
+				-DUSER_DATA_DIR=$<TARGET_FILE_DIR:App>/Saved/Automation/UserData/sequence.${pack}.${pairName}
 				"-DGAME_ARG=${gameArgument}" -DLOG_NAME=${sequenceTestName} -DLOG_DIR=${CMAKE_BINARY_DIR}/Testing/Logs -DSKIP_CODE=${SW_EXIT_CODE_Skipped} -P ${CMAKE_CURRENT_SOURCE_DIR}/RunStateDirPair.cmake
 			WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
 		set_tests_properties(${sequenceTestName} PROPERTIES LABELS hostgpu TIMEOUT 600 SKIP_RETURN_CODE ${SW_EXIT_CODE_Skipped})
@@ -190,7 +191,7 @@ if(TARGET EditorModule)
 		get_filename_component(pairName "${pairPath}" NAME)
 		add_test(NAME Scenario.editor.statedir.${pairName}
 			COMMAND ${CMAKE_COMMAND} -DAPP=$<TARGET_FILE:App> -DPAIR=${pairPath} -DSTATE_DIR=${CMAKE_BINARY_DIR}/Testing/StateDir/${pairName}
-				"-DSTATE_ARG=-gv_editorStateDir=${CMAKE_BINARY_DIR}/Testing/StateDir/${pairName}" -DEDITOR=ON -DLOG_NAME=Scenario.editor.statedir.${pairName} -DLOG_DIR=${CMAKE_BINARY_DIR}/Testing/Logs -DSKIP_CODE=${SW_EXIT_CODE_Skipped} -P ${CMAKE_CURRENT_SOURCE_DIR}/RunStateDirPair.cmake
+				"-DSTATE_ARG=-gv_editorStateDir=${CMAKE_BINARY_DIR}/Testing/StateDir/${pairName}" -DUSER_DATA_DIR=$<TARGET_FILE_DIR:App>/Saved/Automation/UserData/statedir.${pairName} -DEDITOR=ON -DLOG_NAME=Scenario.editor.statedir.${pairName} -DLOG_DIR=${CMAKE_BINARY_DIR}/Testing/Logs -DSKIP_CODE=${SW_EXIT_CODE_Skipped} -P ${CMAKE_CURRENT_SOURCE_DIR}/RunStateDirPair.cmake
 			WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
 		set_tests_properties(Scenario.editor.statedir.${pairName} PROPERTIES LABELS hostgpu TIMEOUT 600 SKIP_RETURN_CODE ${SW_EXIT_CODE_Skipped})
 	endforeach()

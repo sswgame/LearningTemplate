@@ -5,6 +5,7 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/UserDataPath.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
@@ -14,6 +15,7 @@
 
 #include "DevTools/Client/Automation/Runner/AutomationExitCode.h"
 #include "DevTools/Client/Automation/Runner/AutomationScenarioChain.h"
+#include "DevTools/Client/Automation/Scenario/AutomationUserDataRoot.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationTimeLimits.h"
@@ -76,6 +78,7 @@ namespace sw
                 string         _logPath{};
                 string         _reportPath{};
                 ProcessCommand _command{}; ///< 띄울 명령(슬롯이 비면 띄운다)
+                ProcessOptions _options{}; ///< 자식의 환경(사용자 데이터 뿌리)
                 Process        _process{};
                 thread         _flushThread{};
                 Deadline       _killDeadline  = Deadline::afterMilliseconds( 0 ); ///< 띄운 때부터 센 프로세스 시한(띄울 때 다시 정한다)
@@ -409,7 +412,14 @@ namespace sw
 
             const optional<AbsolutePath> executable = AbsolutePath::tryMake( options._executablePath );
             pChild->_command                        = executable.has_value() ? ProcessCommand::at( *executable, std::move( listArgument ) ) : ProcessCommand{};
-            pChild->_bPending                       = true;
+            // 자식마다 제 사용자 데이터 뿌리 — 한 폴더를 함께 쓰면 한 자식이 다른 자식의 쓰는 중인 임시 파일을 잔재로 지웠다(와일드웨스트 세이브).
+            if ( options._userDataRoot.empty() == false )
+            {
+                const string childRoot = AutomationUserDataRoot::makeChildRoot( options._userDataRoot, backend );
+                (void)FileUtil::removeDirectory( childRoot ); // 앞 실행이 남긴 세이브로 시작하지 않게 — 못 지우면 FileUtil 이 경고를 남긴다
+                pChild->_options._listEnvironment.push_back( ProcessEnvironmentEntry{ kUserDataRootVariable, childRoot } );
+            }
+            pChild->_bPending = true;
             listChild.push_back( std::move( pChild ) );
         }
 
@@ -427,7 +437,7 @@ namespace sw
             child._killDeadline     = Deadline::afterSeconds( killSeconds );
             child._stallDeadline    = Deadline::afterSeconds( AutomationTimeLimits::kProcessStallSeconds );
             child._observedLogBytes = 0;
-            child._bLaunched        = child._process.launch( child._command );
+            child._bLaunched        = child._process.launch( child._command, child._options );
             if ( child._bLaunched == false )
             {
                 SW_LOG_ERROR_ID( "ScenarioPerBackend.PerBackendCouldNot2", "[Scenario] per-backend: could not launch %#", child._command.toCommandLine().c_str() );
