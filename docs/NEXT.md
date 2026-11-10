@@ -73,7 +73,7 @@ GameObject/Component API 는 저작 · 수명 · 직렬화 층, 프레임 일은
 ### 5-5. 상용 대비 고도화 남은 것
 
 - **T2:** 표준 입력으로 모는 스크립트 실행(`LockstepPairRun.py` · `TelemetryLocalRun.py`)이 세이브를 쓰면 `-unattended` 를 붙이거나 판정에 더한다.
-- **T3:** 묶음 끝 스크립트가 보고 폴더를 `TestHistory.py ingest` 하고 ctest 에 `quarantine --ctest-exclude` 를 `-E` 로(bundle-verify 스킬과 함께), 샤드 시간 균형, 파이프라인 정의로. 외부 CI 러너는 사용자 결정.
+- **T3:** 샤드 시간 균형, 파이프라인 정의로. 외부 CI 러너는 사용자 결정.
 - **U1 햅틱:** 방아쇠 진동(DualSense · GameInput) · Android Vibrator 는 그 백엔드가 생길 때.
 - **A1 포즈 노드:** Mirror · Montage(섹션 · 분기)를 `AnimationPoseNodeRegistry` 에 한 줄씩.
 - **R1 리다이렉터:** 에디터 옮기기 · 이름 바꾸기가 `redirects.xml` 에 줄을 더하게(`move-asset`).

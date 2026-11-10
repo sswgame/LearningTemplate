@@ -40,13 +40,22 @@ build_preset() {
   echo "build warnings: $(grep -c 'warning:' build/$P/Testing/Logs/verify.build.log)"
 }
 
+# 격리 표(Config/Rules/Test/Quarantine.json)의 테스트를 ctest -E 로 뺀다. 만료가 지났거나 칸이 빠진 표는 검증 실패다(격리가 말없이 늘어지지 않게).
+QUARANTINE_EXCLUDE=$(py -3 Scripts/dev/TestHistory.py quarantine --ctest-exclude) || { echo "$QUARANTINE_EXCLUDE"; windows_failed "quarantine table"; }
+QUARANTINE_EXCLUDE=${QUARANTINE_EXCLUDE//$'\r'/}   # Windows 파이썬의 print 는 CRLF 를 쓴다 — 정규식 끝에 CR 이 붙으면 아무것도 빼지 못한다
+[ -z "$QUARANTINE_EXCLUDE" ] || echo "격리로 뺀다: $QUARANTINE_EXCLUDE"
+
 run_ctest() {
   local P=$1
+  local EXCLUDE=()
+  [ -z "$QUARANTINE_EXCLUDE" ] || EXCLUDE=(-E "$QUARANTINE_EXCLUDE")
   echo "== $P ctest $(date +%T)"
-  (cd build/$P && ctest -j$CTEST_JOBS --output-on-failure > Testing/Logs/verify.ctest.log 2>&1)
+  (cd build/$P && ctest -j$CTEST_JOBS --output-on-failure "${EXCLUDE[@]}" > Testing/Logs/verify.ctest.log 2>&1)
   local RC=$?
   echo "ctest exit=$RC"
   grep -E "tests passed|tests failed|\*\*\*Failed|Timeout|Not Run" build/$P/Testing/Logs/verify.ctest.log | head -30
+  # 이긴 실행 · 진 실행 모두 이력에 쌓는다(흔들림 지수 · p95 추세는 여러 묶음을 모아야 보인다 — TestHistory.py report).
+  py -3 Scripts/dev/TestHistory.py ingest build/$P/Bin/Saved/Automation --commit "$SHA" || windows_failed "$P test history ingest"
   [ $RC -eq 0 ] || windows_failed "$P ctest"
 }
 
