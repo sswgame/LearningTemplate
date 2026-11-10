@@ -59,9 +59,8 @@
 
 ### 5-2. RHI 진단(2026-11-10 — 결함 먼저, 폴더가 겹치는 단위는 순서대로)
 
-- **DX12 기록 경로 락 + C1 의 DX12:** 바인딩마다 `shared_mutex`(`D3D12RHICommandContext.cpp:125,151`), 배리어마다 `_resourceStateMutex` + `_mapOffscreenTexture.find`. 병렬 기록 구간의 레지스트리 불변식(`setParallelRecording`)으로 락을 걷어 내고, 텍스처 상태를 `RHIHandleTable` 레코드로 옮긴다. 같은 걸음에 SRV · UAV 가 한 힙 번호 공간을 나누는 표 둘(`_listRegisteredBindless` · `_listRegisteredUAV` + `_freeBindless` + `_allocatedDescriptorsCount`)을 `RHIBindlessRegistry` 하나(값에 SRV/UAV 종류)로 — 기록 경로가 같은 `_bindlessMutex` 로 그 표를 읽어 따로 옮기면 락을 두 번 고친다. `bench.json` p50 으로 전후를 잰다.
-- **C2 전송 조립 템플릿:** 업로드 · 되읽기 · 구간 갱신의 조립 순서를 `Transfer/RHITextureTransferDriver` 로, DX12/Vulkan 구조 버퍼 스테이징 성장 정책을 공유한다.
-- **C4 타임스탬프 링 · 스왑체인 세트:** `RHITimestampRing`(DX12 `_arrTimestampMask` · Vulkan `_arrTimestampSubmitted` · WebGPU 되읽기 풀 — 칸은 `RHIFrameFenceRing::getSlot`) · `RHISwapChainSet`(창 목록 · 이 프레임 창 · 재생성 대기 — Vulkan `_listWindowRebuild` 가 첫 모양).
+- **DX12 기록 경로 락:** 바인딩마다 `shared_mutex`(`D3D12RHICommandContext::resolveBufferAddress` · `resolveOfflineView`), 배리어마다 `_resourceStateMutex` + `_mapOffscreenTexture.find`. 병렬 기록 구간의 레지스트리 불변식(`setParallelRecording`)으로 락을 걷어 내고, 텍스처 상태를 `RHIHandleTable` 레코드로 옮긴다. 등록표는 이미 `RHIBindlessRegistry`(`_srvRegistry` · `_uavRegistry` + `_bindlessIndexAllocator`)라 락만 바꾸면 된다. `bench.json` p50 으로 전후를 잰다.
+- **전송 되읽기 조립:** `RHITextureTransferDriver::runJob` 은 업로드 · 구간 갱신(DX12 · Vulkan)만 쓴다. Vulkan 되읽기는 구간을 가져갈 때까지 쥐어(시리얼을 붙이지 않는다) 같은 꼬리가 아니다 — 구간 반납 정책을 인자로 받아 되읽기도 태울지 정한다. WebGPU 타임스탬프는 되읽기 버퍼 풀 모양이라 `RHITimestampRing` 밖이다.
 - **측정 뒤 조건부(계측은 넣었다):** 묶음 검증의 bench 로 `RT.Bind.descriptorUpdates ÷ RT.Bind.descriptorSetFlushes`(Vulkan 드로마다 슬롯 세트 갱신)와 `RT.Bind.bindGroupCreates ÷ bindGroupHits`(WebGPU 프레임 캐시)를 읽는다. 갱신이 드로 수에 붙으면 동적 오프셋 · 푸시 디스크립터로, 다시 짓기가 많으면 바인드 그룹 캐시를 프레임 펜스(`RHIFrameFenceRing`)로 은퇴시킨다.
 - **측정 뒤에만:** 중립 커맨드 스트림 · RHI 스레드, 복사 큐, SM6.6 바인드리스, RT · 메시 셰이더(`RHIHandleKind`/`RHIPipelineStateDesc._kind` + ABI 범프). Android 는 이미지마다 `VkDeviceMemory` 하나라 `maxMemoryAllocationCount`(4096)에 닿을 수 있다 → 서브할당(추정).
 
