@@ -1,0 +1,23 @@
+# GameFramework 런타임 층 표 — 읽는 곳은 Scripts/generate/ModuleLayers.py(→ GameFrameworkLayers.cmake). 엔진 층 표(EngineLayers.toml)와 같은 틀이다:
+# Source/GameFramework/CMakeLists.txt 가 층마다 부분(OBJECT, 오브젝트는 GameFramework 이미지 안)을 짓고 위 층 헤더 자리에 #error 껍데기를 놓아,
+# 위 층 헤더 include 가 컴파일에서 멈춘다(헤더를 거쳐 닿는 전이 include 도 같다).
+# 범위는 Source/GameFramework/Runtime 뿐이다 — Client · Kits · Plugin(그리고 서버 조립)은 Runtime 위라 이 표가 다루지 않는다(Kits 경계는 TargetLayers.toml).
+#
+# 키는 `Source/GameFramework/Runtime/` 아래 경로 접두어(폴더 또는 파일)이고 가장 긴 것이 이긴다. 같은 층끼리는 include 해도 된다.
+# 표에 없는 파일이 있으면 configure 가 멈춘다 — 새 폴더는 층을 정하고 들어온다.
+# 층 순서는 include 집계로 정했다: Online 은 Foundation 만 보고(언리얼 OnlineSubsystem 이 게임 코드를 모르는 자리), Gameplay 가 맨 위다
+# (언리얼 GameplayTags 가 바닥, GameplayAbilities 가 그 위인 방향 — 조건 · 깃발 어휘는 Foundation/Condition 에 둔다).
+[tier]
+# 0 — 바닥: 게임 서비스 · 저장 · 게임 데이터 · 격자 · 난수 · 조건 · 깃발 어휘
+Foundation = 0
+"Foundation/Framework/Save/Local/Tests" = 1      # 로컬 저장 계약 테스트의 봉인 케이스는 실제 암호 제공자(Online/Security/OpenSSL)를 픽스처가 든다 — 통합 테스트라 그 위에 둔다
+# 1 — 온라인: 세션 · HTTP · 보안 제공자(Foundation 만 본다)
+Online = 1
+# 2 — 월드: 땅 · 환경(시계 · 날씨 값) · 월드 질의
+World = 2
+# 3 — 캐릭터: 조종 · 이동 · AI · 전투 · 카메라 · 길찾기
+Character = 3
+"Gameplay/Ability/MovementConstraint.h" = 3      # 이동 제약의 선언은 이동기(캐릭터)가 읽는다 — 읽기 구현(.cpp)은 어빌리티 컴포넌트를 보는 Gameplay 다(언리얼 CMC 가 GAS 를 모르고 값만 받는 나눔)
+# 4 — 게임플레이: 어빌리티 · 외형 · 인벤토리 · 퀘스트 · 판 상태 · 날씨 연출 · 기믹 · 존
+Gameplay = 4
+"Foundation/Framework/Flow/GameInstance.cpp" = 4 # 게임 인스턴스 조립(서브시스템 · 카탈로그를 만든다)은 맨 위 층이다 — 선언(.h)은 아래 층이 쓴다(엔진 표의 Module/ModuleTypeRegistry.h 와 같은 나눔)

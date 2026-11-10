@@ -65,6 +65,16 @@
 | `Renderer`(7) | 렌더 스레드 · 프레임 그래프 · GPU 파이프라인 |
 | `Module` · `Automation`(8) | 엔진 루프 조립 · 핫 리로드 바인딩 · 자동화 창구(감시 값 · 단계 등록 · 시나리오 형식 · `IAutomationRuntime`). 실행기 · 판정 · 세션 · 녹화는 `DevTools/Client/Automation`(언리얼 Automation 컨트롤러 · Gauntlet 이 Developer 모듈인 자리) |
 
+### 3-1 GameFramework 런타임 폴더 (층 = GameFrameworkLayers.toml, `Source/GameFramework/Runtime` 만)
+
+| 폴더(층) | 두는 것 |
+| --- | --- |
+| `Foundation`(0) | 게임 서비스 · 저장 · 게임 데이터 · 격자 · 난수, 조건 · 깃발 어휘(`Foundation/Condition` — 아래층 AI · 무기 · 땅이 읽는다) |
+| `Online`(1) | 세션 · HTTP · 보안 제공자 — Foundation 만 본다 |
+| `World`(2) | 땅 · 환경 값(시계 · 날씨) · 월드 질의 |
+| `Character`(3) | 조종 · 이동 · AI · 전투 · 카메라 · 길찾기 |
+| `Gameplay`(4) | 어빌리티 · 외형 · 인벤토리 · 퀘스트 · 판 상태와 그것을 읽는 연출(날씨 · 절단) · 기믹 · 존. 게임 인스턴스 조립(`GameInstance.cpp`)도 이 층이다 |
+
 ### 4 그 밖의 규칙
 
 | 규칙 | 까닭 |
