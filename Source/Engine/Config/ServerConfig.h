@@ -108,7 +108,7 @@ namespace sw
          */
         PROPERTY( Min = 0, Max = 65535 )
         int32 _adminServicePort{ 0 };
-        /** @brief GM 포트가 받을 주소입니다. 기본 `127.0.0.1` 은 이 기계만 받습니다. GM 도구가 다른 기계면 사설 주소를 준다(공용 인터페이스에 열지 말 것). */
+        /** @brief GM 포트가 받을 주소입니다. 기본 `127.0.0.1` 은 이 기계만 받습니다. GM 도구가 다른 기계면 사설 주소를 준다 — 루프백 · 사설 밖(0.0.0.0 · 공용)은 기동이 거절한다(`NetAddress::isLoopbackOrPrivate`). */
         PROPERTY()
         string _adminListenAddress{ "127.0.0.1" };
         /**

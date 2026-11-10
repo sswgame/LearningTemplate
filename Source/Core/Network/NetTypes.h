@@ -183,6 +183,9 @@ namespace sw
             return ( _ipv4 & kPrivateMask8 ) == kPrivateBlock10 || ( _ipv4 & kPrivateMask12 ) == kPrivateBlock172 || ( _ipv4 & kPrivateMask16 ) == kPrivateBlock192;
         }
 
+        /** @brief 이 기계(루프백)나 사설망 주소면 true 입니다. 인증이 약한 운영 · GM 포트가 받을 수 있는 바인드다. */
+        constexpr bool isLoopbackOrPrivate() const { return isLoopback() || isPrivate(); }
+
         static constexpr uint32 kPrivateBlock10  = 0x0A000000u; ///< 10.0.0.0/8
         static constexpr uint32 kPrivateBlock172 = 0xAC100000u; ///< 172.16.0.0/12
         static constexpr uint32 kPrivateBlock192 = 0xC0A80000u; ///< 192.168.0.0/16

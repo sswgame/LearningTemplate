@@ -80,7 +80,10 @@ namespace sw
             if ( NetAddress::parse( serverConfig._adminListenAddress, adminPort, settings._adminListenAddress ) == false )
                 return unexpected( Error{ ErrorKind::InvalidArgument, "server config _adminListenAddress is not an IPv4 address", serverConfig._adminListenAddress } );
             settings._adminListenAddress._port = adminPort;
-            settings._bAdminListener           = SW_TRUE;
+            // GM 포트는 계정 로그인 뒤 운영 명령을 받는 자리다 — 공용 인터페이스에 열지 않는다(형식으로 막는다, 운영 HTTP 와 같은 규칙. 바깥 GM 은 VPN · 배스천으로 사설망에 들어온다).
+            if ( settings._adminListenAddress.isLoopbackOrPrivate() == false )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "server config _adminListenAddress must be loopback or a private address (the GM port is never public)", serverConfig._adminListenAddress } );
+            settings._bAdminListener = SW_TRUE;
         }
         if ( expected<void> stores = OnlineServerRuntime::resolveStores( serverConfig, settings._config, settings ); stores.has_value() == false )
             return stores;

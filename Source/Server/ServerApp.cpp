@@ -259,6 +259,15 @@ namespace sw
                 bValid = false;
             }
         }
+        if ( config._adminServicePort > 0 )
+        {
+            NetAddress adminAddress;
+            if ( NetAddress::parse( config._adminListenAddress, static_cast<uint16>( config._adminServicePort ), adminAddress ) == false || adminAddress.isLoopbackOrPrivate() == false )
+            {
+                SW_LOG_ERROR_ID( "Server.CheckAdminListenAddress", "Server config _adminListenAddress '%#' must be a loopback or private IPv4 address (the GM port is never public)", config._adminListenAddress.c_str() );
+                bValid = false;
+            }
+        }
         string adminToken;
         if ( config._adminChannelPort > 0 && ProcessEnvironment::tryReadNonEmpty( config._adminChannelTokenEnvironment, adminToken ) == false )
         {

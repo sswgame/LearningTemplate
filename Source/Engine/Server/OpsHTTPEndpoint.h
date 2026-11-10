@@ -66,7 +66,7 @@ namespace sw
         static int32 makeResponse( string_view requestHead, const MetricRegistry* pMetricRegistry, const ServiceHealthRegistry* pHealthRegistry, int64 monotonicMs,
                                    string_view bearerToken, string& outResponse );
         /** @brief 토큰 없이 열어도 되는 바인드(루프백 · 사설)면 true 입니다. 모든 인터페이스 · 공용 주소는 토큰이 있어야 한다. */
-        [[nodiscard]] static bool isBindAllowedWithoutToken( const NetAddress& bindAddress ) { return bindAddress.isLoopback() || bindAddress.isPrivate(); }
+        [[nodiscard]] static bool isBindAllowedWithoutToken( const NetAddress& bindAddress ) { return bindAddress.isLoopbackOrPrivate(); }
 
         // IStreamHandler — I/O 스레드
         void onStreamOpened( StreamConnectionHandle handle, const NetAddress& remote, bool bAccepted ) override;
