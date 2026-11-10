@@ -719,13 +719,12 @@ namespace sw
         if ( bConstantBuffer )
         {
             // 링 상수버퍼(createConstantBuffer)는 프레임 슬롯마다 slotSize 만큼 떨어진 자리에 쓴다. updateConstantBuffer 가
-            // 이번 프레임 슬롯에 썼으므로 같은 구간을 건다. 표는 게임 스레드가 만들고 부수며 바꾸므로 짧은 읽기 락을 쥔다.
-            ScopedSharedLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
-            const auto                     slotIt = _pDevice->_mapCbSlotSize.find( handle );
-            if ( slotIt != _pDevice->_mapCbSlotSize.end() )
+            // 이번 프레임 슬롯에 썼으므로 같은 구간을 건다. 칸 크기는 레코드가 만든 때부터 들고 있다(락 없음 — `VulkanBufferRecord::_cbSlotSize`).
+            const uint32 slotSize = pRecord->_cbSlotSize;
+            if ( slotSize != 0 )
             {
-                candidate._range  = slotIt->second;
-                candidate._offset = static_cast<uint64>( _pDevice->getFrameSlot() % constant::render::kMaxFrameCountInFlight ) * slotIt->second;
+                candidate._range  = slotSize;
+                candidate._offset = static_cast<uint64>( _pDevice->getFrameSlot() % constant::render::kMaxFrameCountInFlight ) * slotSize;
             }
         }
 

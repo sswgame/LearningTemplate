@@ -21,6 +21,7 @@
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Backend/RHISwapChainSet.h"
 #include "Engine/Graphics/RHI/Backend/RHITimestampRing.h"
+#include "Engine/Graphics/RHI/Backend/RHITrackedState.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHISwapChain.h"
 #include "Engine/Graphics/RHI/DX/DXGIFormat.h"
 #include "Engine/Graphics/RHI/DX/RHIDxResultCheck.h"
@@ -372,51 +373,8 @@ namespace sw
             uint8               _reserved : 6;
         };
 
-        /**
-         * @brief 텍스처 · 버퍼 레코드의 추적 상태입니다. 병렬 기록 워커가 락 없이 바꾸므로 원자값입니다.
-         * @details 예전에는 상태를 해시 맵에 두고 배리어마다 디바이스 전역 뮤텍스를 잡았다. 상태가 레코드(핸들 테이블 칸)에 있으면 찾기가 칸 번호이고,
-         *          같은 레벨의 두 패스가 같은 자원을 같은 상태로 옮기려 하면 `transitionTo` 의 비교 교환이 하나에게만 배리어를 맡긴다(락과 같은 보장 — 리스트의 제출 순서는 락도 정하지 않았다).
-         *          핸들 테이블이 칸을 옮기므로(넣기 · 꺼내기, 그동안 다른 스레드는 그 칸을 보지 않는다) 복사는 값을 읽어 옮긴다. Vulkan 은 레이아웃을 레코드에 두고 뮤텍스를 잡는다(`_imageLayoutMutex`).
-         */
-        class TrackedState
-        {
-        public:
-            TrackedState()
-                : _value{ static_cast<uint32>( D3D12_RESOURCE_STATE_COMMON ) }
-            {
-            }
-            TrackedState( const TrackedState& other )
-                : _value{ other._value.load( std::memory_order_relaxed ) }
-            {
-            }
-            TrackedState& operator=( const TrackedState& other )
-            {
-                _value.store( other._value.load( std::memory_order_relaxed ), std::memory_order_relaxed );
-                return *this;
-            }
-            /** @brief 지금 상태입니다. */
-            D3D12_RESOURCE_STATES load() const { return static_cast<D3D12_RESOURCE_STATES>( _value.load( std::memory_order_relaxed ) ); }
-            /** @brief 상태를 덮어씁니다(배리어를 이미 낸 쪽 — 복사 전이 · 업로드). */
-            void store( D3D12_RESOURCE_STATES state ) { _value.store( static_cast<uint32>( state ), std::memory_order_relaxed ); }
-            /**
-             * @brief 상태를 @p desired 로 바꿉니다. 바꿨으면 true 이고 @p outBefore 에 옛 상태를 담는다 — 그 배리어는 부른 쪽이 낸다.
-             *        이미 @p desired 면 false 다(다른 워커가 먼저 옮겼거나 옮길 것이 없다).
-             */
-            bool transitionTo( D3D12_RESOURCE_STATES desired, D3D12_RESOURCE_STATES& outBefore )
-            {
-                uint32 current = _value.load( std::memory_order_relaxed );
-                do
-                {
-                    if ( current == static_cast<uint32>( desired ) )
-                        return false;
-                } while ( _value.compare_exchange_weak( current, static_cast<uint32>( desired ), std::memory_order_relaxed ) == false );
-                outBefore = static_cast<D3D12_RESOURCE_STATES>( current );
-                return true;
-            }
-
-        private:
-            atomic<uint32> _value;
-        };
+        /// @brief 텍스처 · 버퍼 레코드의 추적 상태입니다(`RHITrackedState` — Vulkan 이미지 레이아웃과 같은 형식).
+        using TrackedState = RHITrackedState<D3D12_RESOURCE_STATES>;
 
         /// @brief 텍스처 핸들 테이블의 칸입니다. 오프스크린(RTV · DSV 를 가진) 텍스처만 상태를 추적한다 — 나머지는 COMMON 에서 암묵 승격된다.
         struct TextureRecord

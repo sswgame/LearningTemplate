@@ -89,16 +89,10 @@ namespace sw
 
     RHIBufferHandle VulkanRHIResourceFactory::createConstantBuffer( uint32 size )
     {
-        const uint32          aligned = MathUtil::align( size, constant::render::kConstantBufferAlignment );
-        const uint32          total   = aligned * constant::render::kMaxFrameCountInFlight;
-        const RHIBufferHandle handle  = _pDevice->createVulkanBuffer( total, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, nullptr );
-        if ( handle != 0 )
-        {
-            // 렌더 스레드가 드로우마다 이 표를 읽는다. 게임 스레드의 삽입(재배치)이 그와 겹치지 않게 배타 락으로 넣는다.
-            UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
-            _pDevice->_mapCbSlotSize[handle] = aligned;
-        }
-        return handle;
+        const uint32 aligned = MathUtil::align( size, constant::render::kConstantBufferAlignment );
+        const uint32 total   = aligned * constant::render::kMaxFrameCountInFlight;
+        // 칸 크기는 레코드가 표에 오르기 전에 적힌다 — 렌더 스레드가 드로우마다 락 없이 읽는다.
+        return _pDevice->createVulkanBuffer( total, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, nullptr, aligned );
     }
 
     void VulkanRHIResourceFactory::updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
@@ -110,11 +104,10 @@ namespace sw
         // 이번 프레임 칸에 쓰고, 나머지 칸은 링이 그 칸으로 돌아올 때 채운다(`RHIConstantBufferMirror` — 값이 바뀔 때만 쓰는 머티리얼 버퍼가
         // 세 프레임 중 두 프레임을 옛 값으로 그리던 것). 링 상수버퍼가 아니면(칸 크기가 없다) 버퍼 앞에 그대로 쓴다.
         // 디스크립터는 여기서 손대지 않는다. 드로우 직전 슬롯 세트를 쓸 때(flushSlotSet) 이번 프레임 칸의 오프셋을 넣는다.
-        ScopedSharedLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
-        if ( _pDevice->_mapCbSlotSize.contains( buffer ) == false )
+        VulkanRHIDevice::VulkanBufferRecord* const pRecord = _pDevice->resolveAllocatedBuffer( buffer );
+        if ( pRecord == nullptr || pRecord->_cbSlotSize == 0 )
         {
-            VulkanRHIDevice::VulkanBufferRecord* pRecord = _pDevice->resolveAllocatedBuffer( buffer );
-            void*                                pMapped{ nullptr };
+            void* pMapped{ nullptr };
             // Map 실패는 오류로 남긴다(isVkSuccess) — 조용히 건너뛰면 옛 상수로 그린다.
             const bool bCanMapBufferMemory = pRecord != nullptr && pRecord->_memory != VK_NULL_HANDLE &&
                                              isVkSuccess( vkMapMemory( _pDevice->_device, pRecord->_memory, 0, size, 0, &pMapped ), "vkMapMemory (constant buffer)" ) &&
@@ -144,7 +137,7 @@ namespace sw
         // TRANSFER_SRC: 어느 구조 버퍼든 비동기 되읽기(`copyBufferToReadback`)의 원본이 될 수 있다 — IRHICommandList 계약이 원본을 가리지 않는다(다른 백엔드는 복사 원본 제한이 없다).
         constexpr uint32 usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
                                  VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-        return _pDevice->createVulkanBuffer( static_cast<uint32>( totalBytes ), usage, nullptr );
+        return _pDevice->createVulkanBuffer( static_cast<uint32>( totalBytes ), usage, nullptr, 0 );
     }
 
     bool VulkanRHIResourceFactory::acquireStructuredUploadStaging( uint64 sizeBytes, uint64& outOffset, VkBuffer& outBuffer )
@@ -364,7 +357,7 @@ namespace sw
         // vkCmdBindIndexBuffer 에 거는 것이 용도 위반이므로 인덱스 용도로 따로 만든다.
         if ( pData == nullptr )
             return 0;
-        return _pDevice->createVulkanBuffer( sizeBytes, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, pData );
+        return _pDevice->createVulkanBuffer( sizeBytes, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, pData, 0 );
     }
 
     RHIBufferHandle VulkanRHIResourceFactory::createVertexBuffer( const void* pData, uint32 sizeBytes )
@@ -372,7 +365,7 @@ namespace sw
         // 인덱스 버퍼와 같은 경로다(디바이스의 `createVulkanBuffer` 가 용도 `_usage` 까지 기록에 남긴다).
         if ( pData == nullptr )
             return 0;
-        return _pDevice->createVulkanBuffer( sizeBytes, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, pData );
+        return _pDevice->createVulkanBuffer( sizeBytes, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, pData, 0 );
     }
 
     void VulkanRHIResourceFactory::updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
@@ -419,11 +412,7 @@ namespace sw
         // 렌더 스레드의 기록 상태(`_recordingState` 의 묶인 정점 · 인덱스 버퍼)는 여기서 지우지 않는다. 이 함수는 게임 스레드에서도 불리는데 그 값은
         // 렌더 스레드만 쓴다(여기서 쓰면 경쟁이다). 핸들은 세대가 있어 다시 쓰이지 않으므로 지운 핸들은 드로우에서 풀리지 않고,
         // 그 드로우는 버리고 알린다(`bindMeshVertexBufferForDraw` · `RHIDrawDiagnostics`).
-        {
-            UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
-            _pDevice->_mapCbSlotSize.erase( buffer );
-            _pDevice->_constantBufferMirror.remove( buffer );
-        }
+        _pDevice->_constantBufferMirror.remove( buffer );
 
         VulkanRHIDevice::VulkanBufferRecord owned;
         if ( _pDevice->_gpuBuffers.take( buffer, owned ) == false )
@@ -626,14 +615,14 @@ namespace sw
         const VkFormat format  = imageInfo.format;
 
         VulkanRHIDevice::VulkanTextureRecord record{};
-        record._width         = desc._width;
-        record._height        = desc._height;
-        record._format        = static_cast<uint32>( format );
-        record._rhiFormat     = static_cast<uint32>( desc._format );
-        record._mipLevels     = imageInfo.mipLevels;
-        record._arrayLayers   = desc._arraySize;
-        record._dimension     = desc._dimension;
-        record._layout        = static_cast<uint32>( VK_IMAGE_LAYOUT_UNDEFINED );
+        record._width       = desc._width;
+        record._height      = desc._height;
+        record._format      = static_cast<uint32>( format );
+        record._rhiFormat   = static_cast<uint32>( desc._format );
+        record._mipLevels   = imageInfo.mipLevels;
+        record._arrayLayers = desc._arraySize;
+        record._dimension   = desc._dimension;
+        record._layout.store( static_cast<uint32>( VK_IMAGE_LAYOUT_UNDEFINED ) );
         record._bRenderTarget = desc._bIsRenderTarget ? 1 : 0;
         record._bDepthStencil = desc._bIsDepthStencil ? 1 : 0;
         record._listBindlessIndex.clear();
@@ -839,11 +828,7 @@ namespace sw
         { return _pDevice->beginTransferJob( job ); },
             [&]( VulkanRHIDevice::VulkanTransferJob& job )
         {
-            uint32 layoutBefore{ 0 };
-            {
-                ScopedLock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
-                layoutBefore = pRecord->_layout;
-            }
+            const uint32 layoutBefore = pRecord->_layout.load();
 
             // 앞선 모든 큐 작업(이미 낸 프레임 · 전송)의 접근 뒤에 쓴다. transitionImageLayout 은 밉 하나만 다루므로 전체 밉 체인 배리어를 직접 쓴다.
             VkImageMemoryBarrier barrier = makeWholeImageBarrier( pRecord->_image, pRecord->_mipLevels, pRecord->_arrayLayers );
@@ -869,10 +854,7 @@ namespace sw
             [&]( uint64 serial )
         {
             // 레이아웃 기록은 제출 순서를 따른다 — 뒤에 기록 · 제출하는 명령은 이 전송 뒤에 실행되므로 지금 바꿔 둔다.
-            {
-                ScopedLock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
-                pRecord->_layout = static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
-            }
+            pRecord->_layout.store( static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ) );
             pRecord->_uploadSerials.recordWrite( serial );
         } );
     }
@@ -911,11 +893,7 @@ namespace sw
         { return _pDevice->beginTransferJob( job ); },
             [&]( VulkanRHIDevice::VulkanTransferJob& job )
         {
-            uint32 layoutBefore{ 0 };
-            {
-                ScopedLock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
-                layoutBefore = pRecord->_layout;
-            }
+            const uint32 layoutBefore = pRecord->_layout.load();
 
             // 레코드가 이미지 레이아웃 하나만 들므로 배리어도 이미지 전체다. 구간 밖 픽셀은 지금 레이아웃에서 보존된다(UNDEFINED 였다면 원래 정의되지 않았다).
             VkImageMemoryBarrier barrier = makeWholeImageBarrier( pRecord->_image, pRecord->_mipLevels, pRecord->_arrayLayers );
@@ -949,10 +927,7 @@ namespace sw
         { return _pDevice->submitTransferJob( job, "submitTextureRegionUpload: vkQueueSubmit" ); },
             [&]( uint64 serial )
         {
-            {
-                ScopedLock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
-                pRecord->_layout = static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
-            }
+            pRecord->_layout.store( static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ) );
             pRecord->_uploadSerials.recordWrite( serial );
         } );
     }
@@ -1015,7 +990,7 @@ namespace sw
         if ( bInvalidReadbackRequest )
             return 0;
         // 모든 Vulkan 버퍼가 HOST_VISIBLE | HOST_COHERENT 메모리다(createVulkanBuffer) — 복사 도착지 용도로 만들면 맵해 읽을 수 있다.
-        return _pDevice->createVulkanBuffer( totalBytes, VK_BUFFER_USAGE_TRANSFER_DST_BIT, nullptr );
+        return _pDevice->createVulkanBuffer( totalBytes, VK_BUFFER_USAGE_TRANSFER_DST_BIT, nullptr, 0 );
     }
 
     bool VulkanRHIResourceFactory::readReadbackBuffer( RHIBufferHandle readback, uint32 sizeBytes, void* pDestination )
@@ -1088,11 +1063,7 @@ namespace sw
         { return _pDevice->beginTransferJob( job ); },
             [&]( VulkanRHIDevice::VulkanTransferJob& job )
         {
-            uint32 layoutBeforeValue{ 0 };
-            {
-                ScopedLock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
-                layoutBeforeValue = pRecord->_layout;
-            }
+            const uint32 layoutBeforeValue = pRecord->_layout.load();
 
             // 읽기는 요청 시점까지 낸 프레임의 쓰기를 본다(ALL_COMMANDS 배리어 — 계약 3).
             const VkImageLayout  layoutBefore = static_cast<VkImageLayout>( layoutBeforeValue );
@@ -1141,10 +1112,7 @@ namespace sw
         { return _pDevice->submitTransferJob( job, "submitTextureReadback: vkQueueSubmit" ); },
             [&]( uint64 serial )
         {
-            {
-                ScopedLock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
-                pRecord->_layout = static_cast<uint32>( layoutAfter );
-            }
+            pRecord->_layout.store( static_cast<uint32>( layoutAfter ) );
             pRecord->_lastReadbackSerial.store( serial );
 
             VulkanRHIDevice::VulkanPendingReadback pending{};
@@ -1285,7 +1253,14 @@ namespace sw
         // 버퍼는 인덱스 → 핸들 표에만 올린다. 실제 VkBuffer · 오프셋은 슬롯 세트를 쓰는 순간(flushSlotSet)에 푼다.
         // 링 상수버퍼의 프레임 오프셋도 그때 더한다.
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
-        return _pDevice->_bufferRegistry.allocate( buffer );
+        const RHIDescriptorIndex index = _pDevice->_bufferRegistry.allocate( buffer );
+        if ( index == kInvalidDescriptorIndex )
+        {
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.BindlessBufferTableFull", "The bindless buffer table (%#) is full.", VulkanRHIDevice::kBindlessBufferCapacity );
+            return kInvalidDescriptorIndex;
+        }
+        _pDevice->publishBufferReadSlot( index, false, buffer );
+        return index;
     }
 
     void VulkanRHIResourceFactory::unregisterBindlessResource( RHIDescriptorIndex index )
@@ -1305,8 +1280,9 @@ namespace sw
 
     void VulkanRHIResourceFactory::deferFreeBufferIndex( RHIDescriptorIndex index, bool bUAV )
     {
-        // 인덱스는 이 프레임의 커맨드가 끝난 뒤에 재사용한다. 같은 프레임에 등록된 새 버퍼가 아직 실행 중인
-        // 세트가 가리키던 자리를 받지 않도록 한다(언리얼의 지연 해제와 같다).
+        // 기록 경로의 읽기 표는 바로 비운다(부르는 쪽이 배타 락을 쥐고 있다). 번호 재사용은 이 프레임의 커맨드가 끝난 뒤다 —
+        // 같은 프레임에 등록된 새 버퍼가 아직 실행 중인 세트가 가리키던 자리를 받지 않도록 한다(언리얼의 지연 해제와 같다).
+        _pDevice->publishBufferReadSlot( index, bUAV, 0 );
         VulkanRHIDevice* pDevice = _pDevice;
         _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pDevice, index, bUAV]()
         {
@@ -1381,8 +1357,15 @@ namespace sw
             return kInvalidDescriptorIndex;
         UniqueLock<shared_mutex>  registryLock{ _pDevice->_bindlessMutex };
         VulkanRHIDevice::UAVEntry entry{};
-        entry._buffer = buffer;
-        return _pDevice->_uavRegistry.allocate( entry );
+        entry._buffer                  = buffer;
+        const RHIDescriptorIndex index = _pDevice->_uavRegistry.allocate( entry );
+        if ( index == kInvalidDescriptorIndex )
+        {
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.BindlessUAVTableFull", "The bindless UAV table (%#) is full.", VulkanRHIDevice::kBindlessBufferCapacity );
+            return kInvalidDescriptorIndex;
+        }
+        _pDevice->publishBufferReadSlot( index, true, buffer );
+        return index;
     }
 
     RHIDescriptorIndex VulkanRHIResourceFactory::registerBindlessTextureUAV( RHITextureHandle texture )
@@ -1403,7 +1386,7 @@ namespace sw
         const VkImageView        view    = pResolved->_imageView;
         const RHIDescriptorIndex index   = _pDevice->_uavRegistry.allocate( entry, [pDevice, view]( RHIDescriptorIndex slot )
           {
-            // 버퍼 UAV 와 같은 번호 공간이라 표 상한은 두지 않고, RW 텍스처 배열(set 1 binding 3) 크기는 여기서 본다.
+            // 버퍼 UAV 와 같은 번호 공간이라 표 상한은 버퍼 표(`kBindlessBufferCapacity`)이고, RW 텍스처 배열(set 1 binding 3) 크기는 여기서 본다. 읽기 표 칸은 0(버퍼 아님) 그대로다.
             if ( slot >= VulkanRHIDevice::kBindlessStorageImageCount )
                 return false;
             pDevice->writeBindlessStorageImageSlot( slot, view );

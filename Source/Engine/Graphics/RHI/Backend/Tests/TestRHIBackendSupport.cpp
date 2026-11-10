@@ -1,10 +1,11 @@
 /**
  * @file TestRHIBackendSupport.cpp
- * @brief 네 백엔드가 함께 쓰는 보조 자료구조(`RHI/Backend`) 테스트 — 해제 큐의 지연과 펜스, 핸들 표의 세대 무효화, 셰이더 요청 해석, 상수 버퍼 링 거울입니다.
+ * @brief 네 백엔드가 함께 쓰는 보조 자료구조(`RHI/Backend`) 테스트 — 해제 큐의 지연과 펜스, 핸들 표의 세대 무효화, 셰이더 요청 해석, 상수 버퍼 링 거울, 추적 상태 전이입니다.
  */
 #include "pch.h"
 
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Testing/TestFramework.h"
@@ -15,6 +16,7 @@
 #include "Engine/Graphics/RHI/Backend/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Backend/RHIShaderRequest.h"
+#include "Engine/Graphics/RHI/Backend/RHITrackedState.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 
 #include <thread>
@@ -310,4 +312,46 @@ SW_TEST_CASE( RHIConstantBufferMirrorTest, FillsStaleSlotsOnceAndForgets )
         shadow.fillSlot( slot, writeSlot );
     }
     SW_EXPECT_EQUAL( writeCountBeforeForget, writeCount );
+}
+
+/**
+ * @brief [RHITrackedStateTest] 같은 상태로의 전이는 한 번만 이기고, 이긴 쪽이 옛 상태를 받는다
+ */
+SW_TEST_CASE( RHITrackedStateTest, TransitionReportsBeforeOnce )
+{
+    RHITrackedState<uint32> state;
+    uint32                  before{ 99 };
+    SW_EXPECT_EQUAL( 0u, state.load() );
+    SW_EXPECT_TRUE( state.transitionTo( 5u, before ) );
+    SW_EXPECT_EQUAL( 0u, before );
+    SW_EXPECT_FALSE( state.transitionTo( 5u, before ) );
+    state.store( 2u );
+    SW_EXPECT_TRUE( state.transitionTo( 5u, before ) );
+    SW_EXPECT_EQUAL( 2u, before );
+}
+
+/**
+ * @brief [RHITrackedStateTest] 여러 워커가 같은 자원을 같은 상태로 옮기면 배리어를 낼 쪽은 하나다(병렬 레벨 기록 — 락 없는 비교 교환)
+ */
+SW_TEST_CASE( RHITrackedStateTest, ConcurrentTransitionHasOneWinner )
+{
+    constexpr uint32        kWorkerCount = 8;
+    RHITrackedState<uint32> state;
+    atomic<uint32>          winnerCount{ 0 };
+    vector<std::thread>     listWorker;
+    for ( uint32 worker = 0; worker < kWorkerCount; ++worker )
+    {
+        listWorker.emplace_back( [&state, &winnerCount]()
+        {
+            uint32 before{ 0 };
+            if ( state.transitionTo( 7u, before ) )
+                winnerCount.fetch_add( 1u );
+        } );
+    }
+    for ( std::thread& thread : listWorker )
+    {
+        thread.join();
+    }
+    SW_EXPECT_EQUAL( 1u, winnerCount.load() );
+    SW_EXPECT_EQUAL( 7u, state.load() );
 }
