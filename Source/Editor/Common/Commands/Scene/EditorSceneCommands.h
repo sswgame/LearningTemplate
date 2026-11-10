@@ -25,6 +25,8 @@ namespace sw
 
 namespace sw::editor
 {
+    class EditorTransaction;
+
     /**
      * @class EditorSceneCommands
      * @brief GameObject 의 생성, 복제, 부모 변경, 삭제, 이름 변경을 트랜잭션과 함께 수행합니다.
@@ -64,8 +66,8 @@ namespace sw::editor
         static void pasteObjects( GameObjectManager* pManager, vector<GameObject*>& outListCreated );
         /** @brief 붙여 넣을 오브젝트가 있으면 true 입니다. */
         static bool hasCopiedObjects();
-        /** @brief 이름을 바꾸고 Undo 에 기록합니다. */
-        [[nodiscard]] static bool rename( GameObject* pObj, const utf8* pNewName );
+        /** @brief 이름을 바꾸고 Undo 에 기록합니다. 씬을 바꾸므로 부른 쪽이 연 거래 구간 안에서만 부른다(이름 칸 확정 — `scene.object.rename` 명령은 칸만 연다). */
+        [[nodiscard]] static bool rename( EditorTransaction& transaction, GameObject* pObj, const utf8* pNewName );
         /**
          * @brief 오브젝트의 활성 비트를 바꿉니다. 정지 상태이면 되돌리기와 씬 dirty 에 기록하고, 플레이 중이면 바로 바꿉니다(Stop 이 되돌린다).
          * @details 계층 창의 눈 아이콘 버튼과 인스펙터의 Active 항목이 함께 쓴다. 같은 값이면 아무것도 하지 않는다.
@@ -77,7 +79,7 @@ namespace sw::editor
          *          에디터에서 컴포넌트를 만드는 경로는 모두 이 함수(또는 `onPostLoad` 를 호출하는 붙여넣기)를 지난다. 매니저에 바로 붙이면
          *          기록도 dirty 도 남지 않아 되돌릴 수 없고 저장을 묻지 않고 사라지며, 붙인 메시는 플레이 전까지 그려지지 않는다.
          */
-        static Component* addComponent( GameObject* pObj, const hashed_string& typeName );
+        static Component* addComponent( EditorTransaction& transaction, GameObject* pObj, const hashed_string& typeName );
         /**
          * @brief 오브젝트를 에디터에서만 숨기거나 보입니다. 자식 오브젝트도 함께 처리합니다.
          * @details 저장, 되돌리기, 씬 dirty 에는 남지 않는다. 언리얼과 유니티의 눈 아이콘에 해당한다.

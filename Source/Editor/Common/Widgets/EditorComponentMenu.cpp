@@ -13,6 +13,7 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
@@ -30,7 +31,8 @@ namespace sw::editor
         const hashed_string typeName = drawComponentTypeList( search, pMarkPrefix, bFocusSearch );
         if ( typeName.empty() )
             return false;
-        if ( EditorSceneCommands::addComponent( pObj, typeName ) != nullptr )
+        EditorTransaction transaction; // 목록에서 고른 끝 — 씬을 바꾸는 여기서 거래를 연다
+        if ( EditorSceneCommands::addComponent( transaction, pObj, typeName ) != nullptr )
             return true;
         outbFailed = true;
         return false;

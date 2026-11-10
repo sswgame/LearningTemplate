@@ -4,6 +4,7 @@
   명령 동작은 형식으로 거래를 받는다(EditorSceneCommandActionFn — 레지스트리가 FScopedTransaction 처럼 연다). 형식이 막지 못하는 틈을 여기서 잡는다:
   ① 씬을 바꾸고 기록이 없음(Editor.UndoCoverageUnrecorded) ② 한 번 실행이 두 단계 이상(Editor.UndoCoverageSteps) ③ 되돌려도 해시가 다름(Editor.UndoCoverageMismatch).
   선택은 씬의 모든 씬 컴포넌트 오브젝트다 — 정렬 · 분산(둘 이상) · 복제 · 지우기 · 부모 풀기가 켜진다. 선택이 맞지 않아 꺼진 명령은 건너뛰고 로그(Editor.UndoCoverageSkipped)로 남긴다.
+  prefab.applyOverrides 는 건너뛴다 — 프리팹 파일을 쓰므로 씬 되돌리기가 파일까지 돌리지 않는다(언리얼도 에셋 저장은 트랜잭션 밖).
   실패 줄의 명령 id 로 그 명령을 고친다. 어느 오브젝트가 달라졌는지는 -gv_automationHashDump=1 로 오브젝트별 해시 로그를 본다.
   실행: App -EnableEditor -scenario=engine/automation/editor/undocoverage.scenario.xml -unattended
 -->
@@ -19,7 +20,7 @@
 	<EditorWaitSettled/>
 	<Expect watch="Editor.SelectionCount" atLeast="2"/>
 	<Remember watch="Editor.SceneHash" as="start"/>
-	<DevCommand line="editor.undoCoverage"/>
+	<DevCommand line="editor.undoCoverage prefab.applyOverrides"/>
 	<EditorWaitSettled/>
 	<ExpectLog id="Editor.UndoCoverageResult" count="1"/>
 	<ExpectLog id="Editor.UndoCoverageUnrecorded" count="0"/>

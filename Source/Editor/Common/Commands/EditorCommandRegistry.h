@@ -50,7 +50,7 @@ namespace sw::editor
         NoScene,         ///< 씬을 바꾸지 않는다(창 열기 · 저장 · 빌드 · 플레이 조작)
         Scene,           ///< 이 호출이 활성 씬의 오브젝트를 바꾼다(붙여넣기 · 정렬 · 만들기 · 지우기) — 거래 구간을 받는다
         SceneDuringPlay, ///< `Scene` 과 같이 거래 구간을 받지만 편집 허용 답을 묻지 않는다 — 플레이 중에도 사본을 바로 바꾸고 Stop 이 되돌린다(컴포넌트 지우기 · 옮기기 · 붙여넣기, 인스펙터 편집 규칙)
-        SceneUnrecorded, ///< 편집 허용 답은 묻지만 이 호출은 거래를 열지 않는다 — 되돌리기 · 다시 하기(기록을 오간다), 베이크 · 이름 바꾸기 창 · 하위 메뉴(끝날 때 자기 거래로 기록한다)
+        SceneUnrecorded, ///< 편집 허용 답은 묻지만 이 호출은 거래를 열지 않는다 — 되돌리기 · 다시 하기(기록을 오간다), 이름 칸 · 프리셋 창 · 하위 메뉴(씬을 바꾸는 완료 함수가 `EditorTransaction&` 를 받는다 — `EditorSceneCommands::rename` · `EditorTransformCommands::loadComponentPreset`), 굽기(결과는 파생 데이터라 기록하지 않는다 — 언리얼 Build Lighting 도 트랜잭션 밖)
     };
 } // namespace sw::editor
 

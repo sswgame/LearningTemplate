@@ -216,7 +216,7 @@ namespace sw::editor
         return XMLSerializer::saveToFile( fullPath, pComp, *pComp->getTypeInfo() );
     }
 
-    bool EditorTransformCommands::loadComponentPreset( Component* pComp, string_view presetFilePath )
+    bool EditorTransformCommands::loadComponentPreset( EditorTransaction& /*transaction*/, Component* pComp, string_view presetFilePath )
     {
         const bool bInvalidPresetLoadArguments = pComp == nullptr || pComp->getTypeInfo() == nullptr || presetFilePath.empty();
         if ( bInvalidPresetLoadArguments )

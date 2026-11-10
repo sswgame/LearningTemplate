@@ -299,7 +299,7 @@ namespace sw::editor
         return true;
     }
 
-    bool EditorSceneCommands::rename( GameObject* pObj, const utf8* pNewName )
+    bool EditorSceneCommands::rename( EditorTransaction& /*transaction*/, GameObject* pObj, const utf8* pNewName )
     {
         if ( EditorPlaySession::refuseSceneEdit( "Rename GameObject" ) )
             return false;
@@ -328,7 +328,7 @@ namespace sw::editor
         commitModify( pObj, beforeSnapshot, bActive ? "Activate GameObject" : "Deactivate GameObject" );
     }
 
-    Component* EditorSceneCommands::addComponent( GameObject* pObj, const hashed_string& typeName )
+    Component* EditorSceneCommands::addComponent( EditorTransaction& /*transaction*/, GameObject* pObj, const hashed_string& typeName )
     {
         if ( EditorPlaySession::refuseSceneEdit( "Add component" ) )
             return nullptr;

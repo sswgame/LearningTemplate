@@ -17,6 +17,7 @@
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Object/Component/CameraComponent.h"
@@ -429,8 +430,10 @@ namespace sw::editor
     void HierarchyViewModel::renameObject( uint64 objectID, const utf8* pName )
     {
         GameObject* pObj = HierarchyViewModelInternal::findObject( objectID );
-        if ( pObj != nullptr )
-            (void)EditorSceneCommands::rename( pObj, pName ); // 빈 이름은 거절하므로 이름이 그대로 남는다
+        if ( pObj == nullptr )
+            return;
+        EditorTransaction transaction;                                 // 이름 칸 확정 — 명령(`scene.object.rename`)은 칸만 열었다
+        (void)EditorSceneCommands::rename( transaction, pObj, pName ); // 빈 이름은 거절하므로 이름이 그대로 남는다
     }
 
     void HierarchyViewModel::dropObject( uint64 draggedID, uint64 targetID, HierarchyDropZone zone )
@@ -463,8 +466,10 @@ namespace sw::editor
     void HierarchyViewModel::addComponent( uint64 objectID, const hashed_string& typeName )
     {
         GameObject* pObj = HierarchyViewModelInternal::findObject( objectID );
-        if ( pObj != nullptr )
-            (void)EditorSceneCommands::addComponent( pObj, typeName ); // 더했는지는 되돌리기가 기록하고 실패는 명령이 알린다
+        if ( pObj == nullptr )
+            return;
+        EditorTransaction transaction;                                          // 하위 메뉴(`scene.object.addComponent`)에서 고른 끝
+        (void)EditorSceneCommands::addComponent( transaction, pObj, typeName ); // 더했는지는 되돌리기가 기록하고 실패는 명령이 알린다
     }
 
     void HierarchyViewModel::selectAllWith( uint64 objectID, uint32 itemIndex )

@@ -386,10 +386,11 @@ namespace sw::editor
                     return false;
                 vector<GameObject*> listSelected;
                 pSelection->getSelectedObjects( listSelected );
-                uint32 addedCount{ 0 };
+                uint32            addedCount{ 0 };
+                EditorTransaction transaction; // 선택 모두에 더한 것이 되돌리기 한 단계다(이름은 더하기 기록의 것)
                 for ( GameObject* pObject : listSelected )
                 {
-                    if ( EditorSceneCommands::addComponent( pObject, hashed_string( listArgument[0] ) ) != nullptr )
+                    if ( EditorSceneCommands::addComponent( transaction, pObject, hashed_string( listArgument[0] ) ) != nullptr )
                         ++addedCount;
                 }
                 StringBuilder<constant::buffer::kMax256> replyBuilder;

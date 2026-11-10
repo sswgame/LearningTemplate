@@ -157,18 +157,17 @@ namespace sw::editor
     {
         if ( EditorPlaySession::refuseSceneEdit( "Create folder" ) )
             return nullptr;
-        EditorTransaction::beginTransaction( "Create Folder" );
-        GameObject* pFolder = EditorSceneCommands::create( &manager, pParent );
+        EditorTransaction transaction{ "Create Folder" };
+        GameObject*       pFolder = EditorSceneCommands::create( &manager, pParent );
         if ( pFolder == nullptr )
         {
-            EditorTransaction::cancelTransaction();
+            EditorTransaction::cancelTransaction(); // 구간 전체를 버린다 — 닫기(소멸자)는 깊이 0 이라 아무것도 하지 않는다
             return nullptr;
         }
-        (void)EditorSceneCommands::rename( pFolder, "Folder" ); // 이름이 겹치면 매니저가 번호를 붙인다
+        (void)EditorSceneCommands::rename( transaction, pFolder, "Folder" ); // 이름이 겹치면 매니저가 번호를 붙인다
         const ObjectSnapshot before = EditorTransaction::captureSnapshot( pFolder );
         pFolder->addTag( TagID::request( kFolderTagName ) );
         EditorSceneCommands::commitModify( pFolder, before, "Create Folder" );
-        EditorTransaction::endTransaction();
         return pFolder;
     }
 } // namespace sw::editor

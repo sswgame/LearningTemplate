@@ -14,6 +14,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
@@ -465,8 +466,9 @@ namespace sw::editor
 
     void InspectorViewModel::loadComponentPreset( const EditorCommandTarget& target, string_view presetFile )
     {
-        Component* pComp = InspectorViewModelInternal::findTargetComponent( target );
-        if ( pComp == nullptr || EditorTransformCommands::loadComponentPreset( pComp, string( presetFile ) ) == false )
+        Component*        pComp = InspectorViewModelInternal::findTargetComponent( target );
+        EditorTransaction transaction; // 하위 메뉴(`inspector.component.presets`)가 고른 끝 — 씬을 바꾸는 여기서 거래를 연다
+        if ( pComp == nullptr || EditorTransformCommands::loadComponentPreset( transaction, pComp, string( presetFile ) ) == false )
             SW_LOG_ERROR_ID( "InspectorPanel.CouldNotApplyComponent", "Could not apply component preset '%#'", presetFile );
     }
 

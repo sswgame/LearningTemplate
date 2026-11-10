@@ -246,8 +246,9 @@ namespace sw::editor
                     return;
                 }
                 // 반환값을 버리면 프리셋을 골랐는데 아무 일도 일어나지 않는다. 파일이 없거나
-                // XML 이 그 컴포넌트 타입과 맞지 않으면 실패한다.
-                if ( EditorTransformCommands::loadComponentPreset( pComp, listPath[0] ) == false )
+                // XML 이 그 컴포넌트 타입과 맞지 않으면 실패한다. 명령(`preset.loadComponent`)은 창만 열었다 — 씬을 바꾸는 여기서 거래를 연다.
+                EditorTransaction transaction;
+                if ( EditorTransformCommands::loadComponentPreset( transaction, pComp, listPath[0] ) == false )
                     warn( SW_LOCKEY( "EdCommon", "NotifyPresetTitle" ), SW_LOCKEY( "EdCommon", "NotifyPresetApplyFailed" ) );
             }
 
@@ -328,7 +329,7 @@ namespace sw::editor
                 return string{ editorContext.getSubsystem<EditorWorkspace>().findPrefabPath( pOutObj ) };
             }
 
-            static void commandApplyPrefabOverrides()
+            static void commandApplyPrefabOverrides( EditorTransaction& /*transaction*/ )
             {
                 // 선택한 인스턴스의 프리팹에만 쓴다. 포커스된 에셋 경로(콘텐츠 브라우저에서 마지막에 클릭한 씬, 머티리얼, 텍스처)를
                 // 쓰면 그 파일을 프리팹으로 덮어쓰므로 주의한다.
@@ -413,39 +414,39 @@ namespace sw::editor
              *          Exit 는 단축키를 적지 않는다 — Alt+F4 는 OS 가 창 닫기로 먼저 가로채는 조합이라 입력 맵이 처리하지 않는다.
              */
             inline static const CommandRow _s_arrCommandRow[] = {
-                {                "scene.new",                                  &commandNewScene,                    nullptr,         EditorCommandEdit::NoScene},
-                {               "scene.open",                                 &commandOpenScene,                    nullptr,         EditorCommandEdit::NoScene},
-                {               "asset.save",      &EditorSceneFileCommands::saveFocusedOrScene,                    nullptr,         EditorCommandEdit::NoScene},
-                {          "scene.saveScene", &EditorSceneFileCommands::saveActiveSceneOrPrompt,                    nullptr,         EditorCommandEdit::NoScene},
-                {         "editor.quickOpen",                       &QuickLauncherPopup::toggle,                    nullptr,         EditorCommandEdit::NoScene},
-                {    "editor.commandPalette",                      &CommandPalettePopup::toggle,                    nullptr,         EditorCommandEdit::NoScene},
-                {              "editor.exit",             &EditorSceneFileCommands::requestExit,                    nullptr,         EditorCommandEdit::NoScene},
-                {                "edit.undo",                                      &commandUndo,                    nullptr, EditorCommandEdit::SceneUnrecorded},
-                {                "edit.redo",                                      &commandRedo,                    nullptr, EditorCommandEdit::SceneUnrecorded},
-                {     "editor.themeSettings",                   &EditorMenuBar::openThemeDialog,                    nullptr,         EditorCommandEdit::NoScene},
-                {        "build.compileGame",                               &commandCompileGame,            &isCompilerIdle,         EditorCommandEdit::NoScene},
-                {      "build.compileEditor",                             &commandCompileEditor,            &isCompilerIdle,         EditorCommandEdit::NoScene},
-                {         "build.compileAll",                                &commandCompileAll,            &isCompilerIdle,         EditorCommandEdit::NoScene},
-                {             "build.cancel",                               &commandCancelBuild,            &isCompilerBusy,         EditorCommandEdit::NoScene},
-                {               "play.start",                                      &commandPlay,                    nullptr,         EditorCommandEdit::NoScene},
-                {      "viewport.screenshot",     &EditorScreenshotCommands::captureFocusedView,                    nullptr,         EditorCommandEdit::NoScene},
-                {"viewport.renderDocCapture",                          &commandRenderDocCapture,      &isRenderDocAvailable,         EditorCommandEdit::NoScene},
-                {     "preset.loadComponent",                       &commandLoadComponentPreset,                    nullptr, EditorCommandEdit::SceneUnrecorded}, // 파일 창을 연다 — 고르면 그때 기록한다
-                {     "preset.saveComponent",                       &commandSaveComponentPreset,                    nullptr,         EditorCommandEdit::NoScene},
-                {    "prefab.applyOverrides",                      &commandApplyPrefabOverrides, &hasPrefabInstanceSelected, EditorCommandEdit::SceneUnrecorded}, // 프리팹 파일을 쓴다 — 씬 기록이 아니다
+                {                "scene.new",                                  &commandNewScene,               nullptr,         EditorCommandEdit::NoScene},
+                {               "scene.open",                                 &commandOpenScene,               nullptr,         EditorCommandEdit::NoScene},
+                {               "asset.save",      &EditorSceneFileCommands::saveFocusedOrScene,               nullptr,         EditorCommandEdit::NoScene},
+                {          "scene.saveScene", &EditorSceneFileCommands::saveActiveSceneOrPrompt,               nullptr,         EditorCommandEdit::NoScene},
+                {         "editor.quickOpen",                       &QuickLauncherPopup::toggle,               nullptr,         EditorCommandEdit::NoScene},
+                {    "editor.commandPalette",                      &CommandPalettePopup::toggle,               nullptr,         EditorCommandEdit::NoScene},
+                {              "editor.exit",             &EditorSceneFileCommands::requestExit,               nullptr,         EditorCommandEdit::NoScene},
+                {                "edit.undo",                                      &commandUndo,               nullptr, EditorCommandEdit::SceneUnrecorded},
+                {                "edit.redo",                                      &commandRedo,               nullptr, EditorCommandEdit::SceneUnrecorded},
+                {     "editor.themeSettings",                   &EditorMenuBar::openThemeDialog,               nullptr,         EditorCommandEdit::NoScene},
+                {        "build.compileGame",                               &commandCompileGame,       &isCompilerIdle,         EditorCommandEdit::NoScene},
+                {      "build.compileEditor",                             &commandCompileEditor,       &isCompilerIdle,         EditorCommandEdit::NoScene},
+                {         "build.compileAll",                                &commandCompileAll,       &isCompilerIdle,         EditorCommandEdit::NoScene},
+                {             "build.cancel",                               &commandCancelBuild,       &isCompilerBusy,         EditorCommandEdit::NoScene},
+                {               "play.start",                                      &commandPlay,               nullptr,         EditorCommandEdit::NoScene},
+                {      "viewport.screenshot",     &EditorScreenshotCommands::captureFocusedView,               nullptr,         EditorCommandEdit::NoScene},
+                {"viewport.renderDocCapture",                          &commandRenderDocCapture, &isRenderDocAvailable,         EditorCommandEdit::NoScene},
+                {     "preset.loadComponent",                       &commandLoadComponentPreset,               nullptr, EditorCommandEdit::SceneUnrecorded}, // 파일 창을 연다 — 고르면 그때 기록한다
+                {     "preset.saveComponent",                       &commandSaveComponentPreset,               nullptr,         EditorCommandEdit::NoScene},
             };
 
             /** @brief 씬을 바꾸는 명령의 표입니다. 한 번 실행이 되돌리기 한 단계다(`EditorCommandRegistry::executeDesc` 가 거래를 연다). */
             inline static const SceneCommandRow _s_arrSceneCommandRow[] = {
-                {"clipboard.pasteComponentValues",     &commandPasteComponentValues,            nullptr},
-                { "clipboard.pasteComponentAsNew",      &commandPasteComponentAsNew,            nullptr},
-                {        "transform.snapToGround",             &commandSnapToGround,      &hasSelection},
-                {              "transform.alignX",      &commandAlign<AlignAxis::X>, &hasMultiSelection},
-                {              "transform.alignY",      &commandAlign<AlignAxis::Y>, &hasMultiSelection},
-                {              "transform.alignZ",      &commandAlign<AlignAxis::Z>, &hasMultiSelection},
-                {         "transform.distributeX", &commandDistribute<AlignAxis::X>, &hasMultiSelection},
-                {         "transform.distributeY", &commandDistribute<AlignAxis::Y>, &hasMultiSelection},
-                {         "transform.distributeZ", &commandDistribute<AlignAxis::Z>, &hasMultiSelection},
+                {"clipboard.pasteComponentValues",     &commandPasteComponentValues,                    nullptr},
+                { "clipboard.pasteComponentAsNew",      &commandPasteComponentAsNew,                    nullptr},
+                {        "transform.snapToGround",             &commandSnapToGround,              &hasSelection},
+                {              "transform.alignX",      &commandAlign<AlignAxis::X>,         &hasMultiSelection},
+                {              "transform.alignY",      &commandAlign<AlignAxis::Y>,         &hasMultiSelection},
+                {              "transform.alignZ",      &commandAlign<AlignAxis::Z>,         &hasMultiSelection},
+                {         "transform.distributeX", &commandDistribute<AlignAxis::X>,         &hasMultiSelection},
+                {         "transform.distributeY", &commandDistribute<AlignAxis::Y>,         &hasMultiSelection},
+                {         "transform.distributeZ", &commandDistribute<AlignAxis::Z>,         &hasMultiSelection},
+                {         "prefab.applyOverrides",     &commandApplyPrefabOverrides, &hasPrefabInstanceSelected}, // 프리팹 파일을 쓰고 놓인 인스턴스를 갱신 · 기록한다
             };
 
             // ------------------------------------------------------------------------------
