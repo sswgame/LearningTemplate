@@ -17,7 +17,54 @@ set(SW_UNBUILT_SOURCE_LIST "${CMAKE_BINARY_DIR}/generated/sw/config/UnbuiltSourc
 
 # 배포 구성이 짓지 않는 개발 전용 소스 — 기능 폴더의 단위 테스트(`Tests/`)와 개발 전용 단위 폴더(`Dev/` — 호스트의 개발 계층 · 서버 개발 조종 · 에디터 모듈 개발 경로).
 # 파일 이름 꼬리로 빼지 않는다: 개발 명령 · 캐시 리로드 · 온라인 개발 대체물은 기능 파일에 두고 등록 매크로가 배포에서 등록하지 않는다(`docs/agents/BuildConfigSwitch.md`).
-set(SW_DEV_ONLY_SOURCE_PATTERNS "/Tests/" "/Dev/")
+#
+# `Dev/` 는 아무 폴더에나 붙는 패턴이 아니라 표(`Config/Rules/Layers/DevFolders.json`)에 적은 자리만이다 — 예전 `/Dev/` 한 줄은 어디든 `Dev/` 를 만들면 배포에서 빠지는
+# 편의라 개발 기능이 DevTools 대신 엔진 곳곳에 쌓였다(린트가 뒤에서 막았다). 표 밖 `Source/` 의 `Dev/` 폴더는 configure 가 멈춘다. 언리얼이 개발 코드를 Developer 모듈 단위로만 빼는 자리다.
+set(swDevFolderTable "${CMAKE_SOURCE_DIR}/Config/Rules/Layers/DevFolders.json")
+set_property(DIRECTORY "${CMAKE_SOURCE_DIR}" APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${swDevFolderTable}")
+file(READ "${swDevFolderTable}" swDevFolderJson)
+string(JSON swDevFolderCount ERROR_VARIABLE swDevFolderError LENGTH "${swDevFolderJson}" _devFolderAllowed)
+if(swDevFolderError)
+	message(FATAL_ERROR "${swDevFolderTable}: _devFolderAllowed 를 읽지 못했다 (${swDevFolderError})")
+endif()
+set(SW_DEV_ONLY_SOURCE_PATTERNS "/Tests/")
+set(swDevFolderPatterns "")
+math(EXPR swDevFolderLast "${swDevFolderCount} - 1")
+foreach(swDevFolderIndex RANGE ${swDevFolderLast})
+	string(JSON swDevFolderPrefix MEMBER "${swDevFolderJson}" _devFolderAllowed ${swDevFolderIndex})
+	if(NOT swDevFolderPrefix MATCHES "^Source/[A-Za-z0-9_/]+/$" OR NOT IS_DIRECTORY "${CMAKE_SOURCE_DIR}/${swDevFolderPrefix}")
+		message(FATAL_ERROR "${swDevFolderTable}: '${swDevFolderPrefix}' 는 있는 `Source/` 폴더(끝에 /)가 아니다 — 옮겼으면 줄을 지우세요")
+	endif()
+	if(swDevFolderPrefix MATCHES "/Dev/$")
+		list(APPEND swDevFolderPatterns "/${swDevFolderPrefix}")
+	else()
+		list(APPEND swDevFolderPatterns "/${swDevFolderPrefix}(.*/)?Dev/")
+	endif()
+endforeach()
+list(APPEND SW_DEV_ONLY_SOURCE_PATTERNS ${swDevFolderPatterns})
+
+# 표 밖 `Dev/` 폴더 — 경로 비교는 저장소 기준 앞에 `/` 를 붙여 패턴과 같은 모양으로 한다(저장소를 담은 상위 폴더 이름에 걸리지 않게).
+file(GLOB_RECURSE swSourceFiles "${CMAKE_SOURCE_DIR}/Source/*")
+list(FILTER swSourceFiles INCLUDE REGEX "/Dev/")
+set(swStrayDevFolders "")
+foreach(swSourceFile IN LISTS swSourceFiles)
+	file(RELATIVE_PATH swRelativePath "${CMAKE_SOURCE_DIR}" "${swSourceFile}")
+	set(bAllowed OFF)
+	foreach(swDevFolderPattern IN LISTS swDevFolderPatterns)
+		if("/${swRelativePath}" MATCHES "^${swDevFolderPattern}")
+			set(bAllowed ON)
+		endif()
+	endforeach()
+	if(NOT bAllowed)
+		string(REGEX REPLACE "/Dev/.*$" "/Dev/" swStrayFolder "${swRelativePath}")
+		list(APPEND swStrayDevFolders "${swStrayFolder}")
+	endif()
+endforeach()
+if(swStrayDevFolders)
+	list(REMOVE_DUPLICATES swStrayDevFolders)
+	message(FATAL_ERROR "개발 전용 `Dev/` 폴더가 표 밖에 있다: ${swStrayDevFolders} — 개발 기능은 Source/DevTools/ 로 옮기세요(엔진이 확장점을 내고 DevTools 가 붙는다). "
+		"DevTools 가 볼 수 없는 모듈 안이면 ${swDevFolderTable} 의 _devFolderAllowed 에 까닭과 함께 적습니다.")
+endif()
 
 # 전용 서버가 짓지 않는 클라이언트 전용 소스 — GameFramework · 게임 모듈 안의 `Client/` 폴더(HUD · 마커 · 로딩 화면 · UI 시연). 키트의 `Client/` 는
 # 따로 짓는 모듈(`GF_Client_<X>`, 대상 Client)이라 여기 걸리지 않는다. 공유 코드는 그 헤더를 include 하지 않는다 — 서버 구성 게이트 `serverbuild` 가 이름이 `Client` 인 모든 폴더의 헤더를 막는다(`TargetLayers.toml` 의 `[gatefolder]`).
