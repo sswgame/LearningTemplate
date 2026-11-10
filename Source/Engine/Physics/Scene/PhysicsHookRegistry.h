@@ -3,18 +3,17 @@
  * @brief 물리 프레임 훅(`beginPhysicsFrame` · `prePhysicsStep` · `postPhysicsStep` · `endPhysicsFrame`)의 타입별 일괄 함수 레지스트리입니다.
  *
  * [왜 필요한가]
- * `ScenePhysics` 는 모든 물리 컴포넌트를 훅마다(스텝 훅은 스텝마다) 가상 호출하고, 기본 구현이 불리면 "재정의하지 않음" 비트를 세워 다음부터 뺀다
- * (`PhysicsComponent::_unusedFrameHooks`). 재정의 여부는 컴파일러가 이미 안다 — `&T::prePhysicsStep` 의 형식이 `PhysicsComponent` 의 멤버 포인터면
+ * 예전 `ScenePhysics` 는 모든 물리 컴포넌트를 훅마다(스텝 훅은 스텝마다) 가상 호출하고, 기본 구현이 불리면 런타임 비트를 세워 다음부터 뺐다.
+ * 재정의 여부는 컴파일러가 이미 안다 — `&T::prePhysicsStep` 의 형식이 `PhysicsComponent` 의 멤버 포인터면
  * 그 타입은 훅을 물려받았다. 이 레지스트리는 타입마다 그 판정과 일괄 함수(같은 타입을 연속 배열로 한정 호출)를 둔다. 언리얼 `FTickFunction` 을
  * 재정의한 클래스만 등록하는 자리, Mass 프로세서가 같은 종류를 한 번에 도는 자리와 같다(5-3 "물리 훅 배치").
  *
  * [규약 — 리플렉션 생성기(5-4)와 맞춘 등록 API]
  * - 등록 한 줄은 `SW_REGISTER_PHYSICS_HOOKS( 타입 )` 입니다. 생성기가 `parsing.physics_hook_base_types`(`sw::PhysicsComponent`) 파생의 추상이 아닌
  *   타입마다 생성 `.cpp` 의 `namespace sw` 안에 냅니다. `PhysicsHooksOf<타입>` 이 훅을 한정 이름으로 부르므로 `REFLECT_BODY` 가 친구로 연다.
- * - 줄의 함수가 nullptr 이면 그 타입은 그 훅을 재정의하지 않았다(물려받은 기본 구현은 비트만 세운다) — 부를 것이 없다.
+ * - 줄의 함수가 nullptr 이면 그 타입은 그 훅을 재정의하지 않았다(물려받은 기본 구현은 아무것도 하지 않는다) — 부를 것이 없다.
  * - 함수는 **정확한 타입만** 씁니다. 등록이 없는 타입(생성기를 거치지 않은 테스트 타입)은 지금처럼 가상 호출로 간다.
- *
- * @note 받는 쪽(`ScenePhysics` 의 훅 목록을 타입별 구간으로 짓기)은 NEXT 5-3 에 남아 있다 — 그 뒤 `_unusedFrameHooks` 비트와 기본 구현의 비트 세우기를 지운다.
+ * - 받는 쪽: `ScenePhysics::refreshFrameHookLists` 가 단계 목록에서 이어진 같은 타입을 구간으로 묶어 이 함수를 부른다(세대가 바뀌면 다시 짓는다).
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"

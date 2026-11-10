@@ -2,7 +2,6 @@
 
 #include "Engine/Physics/Scene/ScenePhysics.h"
 
-#include "Core/Foundation/EnumUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/SubsystemScope.h"
@@ -32,20 +31,7 @@ namespace sw
         struct ScenePhysicsInternal
         {
             static constexpr uint32 kPhaseCount = static_cast<uint32>( PhysicsComponentPhase::Count );
-            /** @brief 스텝 훅 목록의 차례(`_arrListFrameHook` 의 첫 번호)입니다. */
-            static constexpr PhysicsFrameHook kArrFrameHook[] = { PhysicsFrameHook::BeginFrame, PhysicsFrameHook::PreStep, PhysicsFrameHook::PostStep, PhysicsFrameHook::EndFrame };
-
-            /** @brief @p hook 의 목록 번호입니다. */
-            static uint32 toFrameHookIndex( PhysicsFrameHook hook )
-            {
-                for ( uint32 index = 0; index < static_cast<uint32>( std::size( kArrFrameHook ) ); ++index )
-                {
-                    if ( kArrFrameHook[index] == hook )
-                        return index;
-                }
-                SW_ASSERT( false && "알 수 없는 스텝 훅" );
-                return 0;
-            }
+            static constexpr uint32 kHookCount  = static_cast<uint32>( PhysicsHookSlot::Count );
 
             /** @brief @p owner 의 바디 칸에 그 강체 칸 번호를 적습니다(바디가 없으면 아무것도 하지 않는다). */
             template <typename TOwner>
@@ -91,6 +77,10 @@ namespace sw
         , _stepTimer{}
         , _arrListComponent{}
         , _arrListFrameHook{}
+        , _arrListFrameHookRun{}
+        , _mapHookEntry{}
+        , _pHookRegistry{ locateSubsystem<PhysicsHookRegistry>( manager.getSceneEngineServices()._pEngineSubsystems ) }
+        , _hookGeneration{ 0 }
         , _listBodyPoseSlot3D{}
         , _listBodyPoseSlot2D{}
         , _listFrameEvent3D{}
@@ -109,6 +99,7 @@ namespace sw
         , _fixedStepOverride{ 0.0f }
         , _bConfigured{ SW_FALSE }
         , _bFrameHookListStale{ SW_TRUE }
+        , _bHookBatchEnabled{ SW_TRUE }
         , _bFrameEventsPending{ SW_FALSE }
     {
     }
@@ -303,36 +294,112 @@ namespace sw
         _bFrameHookListStale      = SW_TRUE; // 스텝 훅 목록이 지운 컴포넌트를 가리키지 않게 다음 사용 전에 다시 거른다
     }
 
+    void ScenePhysics::setHookBatchEnabled( bool bEnabled )
+    {
+        _bHookBatchEnabled   = bEnabled ? SW_TRUE : SW_FALSE;
+        _bFrameHookListStale = SW_TRUE;
+    }
+
+    const PhysicsHookRegistry::Entry* ScenePhysics::findHookEntry( const TypeInfo* pType )
+    {
+        if ( _pHookRegistry == nullptr || pType == nullptr )
+            return nullptr;
+        const auto found = _mapHookEntry.find( pType );
+        if ( found != _mapHookEntry.end() )
+            return found->second;
+        const PhysicsHookRegistry::Entry* pEntry = _pHookRegistry->findEntry( pType );
+        _mapHookEntry.insert_or_assign( pType, pEntry );
+        return pEntry;
+    }
+
+    PhysicsHookBatchFunction ScenePhysics::getVirtualHook( PhysicsHookSlot slot )
+    {
+        // 등록이 없는 타입은 가상 호출이다(기본 구현은 아무것도 하지 않는다). 람다는 `ScenePhysics` 의 멤버 안이라 컴포넌트의 보호된 훅을 부를 수 있다(친구).
+        switch ( slot )
+        {
+            case PhysicsHookSlot::BeginFrame:
+                return []( ScenePhysics& physics, PhysicsComponent* const* ppComponent, uint32 count, const PhysicsHookArgs& )
+                {
+                    for ( uint32 index = 0; index < count; ++index )
+                        ppComponent[index]->beginPhysicsFrame( physics );
+                };
+            case PhysicsHookSlot::PreStep:
+                return []( ScenePhysics& physics, PhysicsComponent* const* ppComponent, uint32 count, const PhysicsHookArgs& args )
+                {
+                    for ( uint32 index = 0; index < count; ++index )
+                        ppComponent[index]->prePhysicsStep( physics, args._fixedDeltaTime, args._stepIndex, args._stepCount );
+                };
+            case PhysicsHookSlot::PostStep:
+                return []( ScenePhysics& physics, PhysicsComponent* const* ppComponent, uint32 count, const PhysicsHookArgs& )
+                {
+                    for ( uint32 index = 0; index < count; ++index )
+                        ppComponent[index]->postPhysicsStep( physics );
+                };
+            case PhysicsHookSlot::EndFrame:
+                return []( ScenePhysics& physics, PhysicsComponent* const* ppComponent, uint32 count, const PhysicsHookArgs& args )
+                {
+                    for ( uint32 index = 0; index < count; ++index )
+                        ppComponent[index]->endPhysicsFrame( physics, args._alpha );
+                };
+            case PhysicsHookSlot::Count:
+                break;
+        }
+        SW_FATAL( "ScenePhysics: unknown physics hook slot %#", static_cast<uint32>( slot ) );
+        return nullptr;
+    }
+
     void ScenePhysics::refreshFrameHookLists()
     {
+        // 훅 표가 바뀌었으면(모듈 적재 · 해제) 기억한 줄을 버린다 — 내려간 모듈의 함수를 들고 있으면 안 된다.
+        const uint32 generation = _pHookRegistry != nullptr ? _pHookRegistry->getGeneration() : 0;
+        if ( generation != _hookGeneration )
+        {
+            _hookGeneration = generation;
+            _mapHookEntry.clear();
+            _bFrameHookListStale = SW_TRUE;
+        }
         if ( _bFrameHookListStale == SW_FALSE )
             return;
         _bFrameHookListStale = SW_FALSE;
-        for ( uint32 hookIndex = 0; hookIndex < static_cast<uint32>( std::size( ScenePhysicsInternal::kArrFrameHook ) ); ++hookIndex )
+        for ( uint32 hookIndex = 0; hookIndex < ScenePhysicsInternal::kHookCount; ++hookIndex )
         {
-            const PhysicsFrameHook hook = ScenePhysicsInternal::kArrFrameHook[hookIndex];
+            const PhysicsHookBatchFunction pVirtualHook = getVirtualHook( static_cast<PhysicsHookSlot>( hookIndex ) );
             for ( uint32 phase = 0; phase < ScenePhysicsInternal::kPhaseCount; ++phase )
             {
                 vector<PhysicsComponent*>& listHook = _arrListFrameHook[hookIndex][phase];
+                vector<FrameHookRun>&      listRun  = _arrListFrameHookRun[hookIndex][phase];
                 listHook.clear();
+                listRun.clear();
+                const TypeInfo* pRunType = nullptr;
                 for ( PhysicsComponent* pComponent : _arrListComponent[phase] )
                 {
-                    if ( EnumUtil::hasFlag( pComponent->_unusedFrameHooks, hook ) == false )
-                        listHook.push_back( pComponent );
+                    const TypeInfo*                   pType     = pComponent->findCachedTypeInfo();
+                    const PhysicsHookRegistry::Entry* pEntry    = _bHookBatchEnabled ? findHookEntry( pType ) : nullptr;
+                    const PhysicsHookBatchFunction    pFunction = pEntry != nullptr ? pEntry->_arrFunction[hookIndex] : pVirtualHook;
+                    if ( pFunction == nullptr )
+                        continue; // 그 타입은 이 훅을 재정의하지 않았다(`PhysicsHooksOf`)
+                    // 단계 목록에서 이어진 같은 타입만 한 구간이다(차례를 지킨다). 가상 호출 구간은 타입이 섞여도 된다.
+                    const bool bContiguous = listRun.empty() == false && listRun.back()._start + listRun.back()._count == static_cast<uint32>( listHook.size() );
+                    const bool bExtend     = bContiguous && listRun.back()._pFunction == pFunction && ( pFunction == pVirtualHook || pRunType == pType );
+                    if ( bExtend )
+                        ++listRun.back()._count;
+                    else
+                        listRun.push_back( FrameHookRun{ pFunction, static_cast<uint32>( listHook.size() ), 1 } );
+                    pRunType = pType;
+                    listHook.push_back( pComponent );
                 }
             }
         }
     }
 
-    vector<PhysicsComponent*>& ScenePhysics::getFrameHookList( PhysicsFrameHook hook, uint32 phase )
+    void ScenePhysics::runFrameHook( PhysicsHookSlot slot, uint32 phase, const PhysicsHookArgs& args )
     {
-        return _arrListFrameHook[ScenePhysicsInternal::toFrameHookIndex( hook )][phase];
-    }
-
-    void ScenePhysics::recordFrameHookCalled( const PhysicsComponent& component, PhysicsFrameHook hook )
-    {
-        if ( EnumUtil::hasFlag( component._unusedFrameHooks, hook ) )
-            _bFrameHookListStale = SW_TRUE;
+        const uint32                     hookIndex = static_cast<uint32>( slot );
+        const vector<PhysicsComponent*>& listHook  = _arrListFrameHook[hookIndex][phase];
+        for ( const FrameHookRun& run : _arrListFrameHookRun[hookIndex][phase] )
+        {
+            run._pFunction( *this, listHook.data() + run._start, run._count, args );
+        }
     }
 
     void ScenePhysics::bindBodyOwner( RigidBodyComponent& owner )
@@ -474,17 +541,13 @@ namespace sw
         SW_MEMORY_SCOPE( Physics );
         configureOnce();
 
-        // 바디 → 관절 → 캐릭터. 콜백이 컴포넌트를 더하거나 뺄 수는 없다(구조 변경은 이 밖에서 난다) — 그래도 자리로 돌아 목록이 줄어도 넘지 않는다.
-        // 훅은 그 훅을 재정의한 컴포넌트만 부른다(기본 구현이 한 번 불리면 목록에서 빠진다 — 차례는 단계 목록 그대로).
+        // 바디 → 관절 → 캐릭터. 콜백이 컴포넌트를 더하거나 뺄 수는 없다(구조 변경은 이 밖에서 난다). 훅 사이마다 구간이 낡았는지 본다.
+        // 훅은 그 훅을 재정의한 타입만 타입별 일괄 함수로 부른다(`PhysicsHookRegistry` — 차례는 단계 목록 그대로).
         refreshFrameHookLists();
+        PhysicsHookArgs args{};
         for ( uint32 phase = 0; phase < ScenePhysicsInternal::kPhaseCount; ++phase )
         {
-            vector<PhysicsComponent*>& listComponent = getFrameHookList( PhysicsFrameHook::BeginFrame, phase );
-            for ( size_t index = 0; index < listComponent.size(); ++index )
-            {
-                listComponent[index]->beginPhysicsFrame( *this );
-                recordFrameHookCalled( *listComponent[index], PhysicsFrameHook::BeginFrame );
-            }
+            runFrameHook( PhysicsHookSlot::BeginFrame, phase, args );
         }
         sweepContinuousColliders2D();
 
@@ -493,14 +556,12 @@ namespace sw
         for ( uint32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             refreshFrameHookLists();
+            args._fixedDeltaTime = fixedStep;
+            args._stepIndex      = stepIndex;
+            args._stepCount      = stepCount;
             for ( uint32 phase = 0; phase < ScenePhysicsInternal::kPhaseCount; ++phase )
             {
-                vector<PhysicsComponent*>& listComponent = getFrameHookList( PhysicsFrameHook::PreStep, phase );
-                for ( size_t index = 0; index < listComponent.size(); ++index )
-                {
-                    listComponent[index]->prePhysicsStep( *this, fixedStep, stepIndex, stepCount );
-                    recordFrameHookCalled( *listComponent[index], PhysicsFrameHook::PreStep );
-                }
+                runFrameHook( PhysicsHookSlot::PreStep, phase, args );
             }
             if ( _pScene3D != nullptr )
             {
@@ -523,25 +584,15 @@ namespace sw
             refreshFrameHookLists();
             for ( uint32 phase = 0; phase < ScenePhysicsInternal::kPhaseCount; ++phase )
             {
-                vector<PhysicsComponent*>& listComponent = getFrameHookList( PhysicsFrameHook::PostStep, phase );
-                for ( size_t index = 0; index < listComponent.size(); ++index )
-                {
-                    listComponent[index]->postPhysicsStep( *this );
-                    recordFrameHookCalled( *listComponent[index], PhysicsFrameHook::PostStep );
-                }
+                runFrameHook( PhysicsHookSlot::PostStep, phase, args );
             }
         }
 
-        const float32 alpha = _stepTimer.getAlpha();
+        args._alpha = _stepTimer.getAlpha();
         refreshFrameHookLists();
         for ( uint32 phase = 0; phase < ScenePhysicsInternal::kPhaseCount; ++phase )
         {
-            vector<PhysicsComponent*>& listComponent = getFrameHookList( PhysicsFrameHook::EndFrame, phase );
-            for ( size_t index = 0; index < listComponent.size(); ++index )
-            {
-                listComponent[index]->endPhysicsFrame( *this, alpha );
-                recordFrameHookCalled( *listComponent[index], PhysicsFrameHook::EndFrame );
-            }
+            runFrameHook( PhysicsHookSlot::EndFrame, phase, args );
         }
         applyPoseWrites();
         // 이벤트는 여기서 나눠 주지 않는다 — `FlushPostPhysics` 단계의 `ScenePhysicsEvents` 가 부른다(파일 머리말).

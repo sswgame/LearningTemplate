@@ -42,22 +42,6 @@ namespace sw
         Count
     };
 
-    /**
-     * @brief 물리 프레임 훅(`beginPhysicsFrame` · `prePhysicsStep` · `postPhysicsStep` · `endPhysicsFrame`)의 비트입니다. 기본 구현이 불리면 그 훅을 재정의하지 않은 컴포넌트다 — 기본 구현이 자기 비트를 세운다.
-     * @details `ScenePhysics` 는 비트가 선 컴포넌트를 그 훅의 목록에서 뺀다(순서는 그대로). 재정의 여부를 컴포넌트가 따로 적지 않으므로 빠뜨릴 수 없다.
-     *          코드 확인(2026-11-07): postPhysicsStep 은 파괴(Fracture)만, prePhysicsStep 은 강체 · 2D 강체 · 캐릭터 둘 · 래그돌 · 부력 둘 · 파괴만,
-     *          endPhysicsFrame 은 관절 · 콜라이더 · 지형 · 부력이 재정의하지 않는다. beginPhysicsFrame 은 부력 둘이 재정의하지 않는다.
-     *          예전에는 모든 컴포넌트를 네 훅 모두(스텝 훅은 스텝마다) 가상 호출했다.
-     */
-    enum class PhysicsFrameHook : uint8
-    {
-        None       = 0,
-        PreStep    = 1u << 0,
-        PostStep   = 1u << 1,
-        EndFrame   = 1u << 2,
-        BeginFrame = 1u << 3,
-    };
-
     REFLECT( Abstract, Category = "Physics", DisplayName = "Physics Component", Tooltip = "Base of rigid body, joint and character components", Meta = "Icon=Physics, IconColor=Physics" )
     class SW_API PhysicsComponent : public SceneComponent
     {
@@ -141,17 +125,17 @@ namespace sw
         /** @brief 이 컴포넌트가 트랜스폼에 쓴 뒤 부릅니다 — 자기 쓰기를 다음 프레임에 바깥 이동으로 보지 않게. */
         void markTransformSynced() { _syncedTransformVersion = getWorldTransformVersion(); }
 
-        /** @brief 물리 프레임 시작 — 백엔드 객체를 만들거나 트랜스폼의 바깥 변화를 옮깁니다. 기본 구현은 `prePhysicsStep` 과 같이 비트(`BeginFrame`)를 세운다. */
-        virtual void beginPhysicsFrame( ScenePhysics& physics );
         /**
-         * @brief 고정 스텝 직전 — @p stepIndex 는 이 프레임의 몇 번째 스텝인지(0 부터), @p stepCount 는 이 프레임의 스텝 수입니다.
-         * @details 기본 구현은 아무것도 하지 않고 "재정의하지 않음" 비트(`PhysicsFrameHook::PreStep`)를 세운다 — 다음부터 이 컴포넌트에는 부르지 않는다.
-         *          재정의한 쪽은 이 기본 구현을 부르지 않는다(부르면 그 훅이 끊긴다).
+         * @brief 물리 프레임 시작 — 백엔드 객체를 만들거나 트랜스폼의 바깥 변화를 옮깁니다.
+         * @details 네 훅의 기본 구현은 아무것도 하지 않는다. 재정의 여부는 `PhysicsHooksOf<T>`(`PhysicsHookRegistry.h`)가 `&T::훅` 의 형식으로 컴파일에서 정하고,
+         *          `ScenePhysics` 는 재정의한 타입만 타입별 일괄 함수로 부른다(등록이 없는 타입만 가상 호출).
          */
+        virtual void beginPhysicsFrame( ScenePhysics& physics );
+        /** @brief 고정 스텝 직전 — @p stepIndex 는 이 프레임의 몇 번째 스텝인지(0 부터), @p stepCount 는 이 프레임의 스텝 수입니다. */
         virtual void prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount );
-        /** @brief 고정 스텝 직후 — 자세를 기록합니다. 기본 구현은 `prePhysicsStep` 과 같이 비트(`PostStep`)를 세운다. */
+        /** @brief 고정 스텝 직후 — 자세를 기록합니다. */
         virtual void postPhysicsStep( ScenePhysics& physics );
-        /** @brief 물리 프레임 끝 — 보간 비 @p alpha 로 자세를 트랜스폼에 씁니다. 기본 구현은 `prePhysicsStep` 과 같이 비트(`EndFrame`)를 세운다. */
+        /** @brief 물리 프레임 끝 — 보간 비 @p alpha 로 자세를 트랜스폼에 씁니다. */
         virtual void endPhysicsFrame( ScenePhysics& physics, float32 alpha );
         /** @brief 백엔드 객체(바디 · 관절 · 캐릭터)를 놓습니다. 몇 번 불려도 됩니다. */
         virtual void releasePhysics( ScenePhysics& physics ) { (void)physics; }
@@ -171,7 +155,6 @@ namespace sw
         uint32                _physicsIndex;           ///< `ScenePhysics` 의 단계 목록 자리. 없으면 `kNotRegistered`
         uint32                _syncedTransformVersion; ///< 마지막으로 맞춘 월드 변경 번호(`consumeTransformChange`). 처음 0 — 칸의 번호는 받을 때 1 이상이라 첫 비교는 "바뀜"
         PhysicsComponentPhase _phase;
-        PhysicsFrameHook      _unusedFrameHooks; ///< 기본 구현이 불린(재정의하지 않은) 스텝 훅(`ScenePhysics` 가 그 훅 목록에서 뺀다)
         bool                  _bRebuildPending;  ///< 게임 스레드에서만 읽고 쓴다(속성 변경 → 다음 물리 프레임)
         atomic<bool>          _bTeleportPending; ///< 틱 중 다른 워커가 세울 수 있어 원자값이다
         SlotHandle            _spatialEntry;     ///< 씬 공간 색인 항목(3D 캐릭터 · 강체만, 등록 ~ 해제)

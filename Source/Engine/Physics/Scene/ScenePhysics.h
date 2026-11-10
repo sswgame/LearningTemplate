@@ -16,6 +16,7 @@
  *          만든 바디도 사용자 값에 오브젝트 id 를 실으면 그 오브젝트가 이벤트를 받습니다.
  */
 #pragma once
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -26,11 +27,11 @@
 #include "Engine/Object/GameObject/Service/ISceneService.h"
 #include "Engine/Physics/Collision/PhysicsContact.h"
 #include "Engine/Physics/IPhysicsScene.h"
+#include "Engine/Physics/Scene/PhysicsHookRegistry.h"
 
 namespace sw
 {
     enum class PhysicsComponentPhase : uint8;
-    enum class PhysicsFrameHook : uint8;
 
     struct PhysicsSettings;
 
@@ -175,6 +176,11 @@ namespace sw
         uint32 getComponentCount() const;
         /** @brief 단계 @p phase 에 등록된 물리 컴포넌트 목록입니다(순서 없음, 편집 중에도 있다). 에디터 시각화가 씬 전체를 훑지 않고 이것을 봅니다. */
         const vector<PhysicsComponent*>& getComponents( PhysicsComponentPhase phase ) const { return _arrListComponent[static_cast<uint32>( phase )]; }
+        /**
+         * @brief 훅을 타입별 일괄 함수(`PhysicsHookRegistry`)로 부를지입니다. 끄면 모든 컴포넌트를 가상 호출한다 — 같은 차례 · 같은 결과여야 한다(동등성 테스트 · 진단).
+         * @details `TickRegistry::setBatchPathEnabled` 와 같은 자리다. 바꾸면 다음 프레임 전에 훅 구간을 다시 짓는다.
+         */
+        void setHookBatchEnabled( bool bEnabled );
 
         /**
          * @brief 강체 컴포넌트를 자기 바디(`getBodyHandle`)의 주인으로 적습니다. 바디를 만든 직후에 부릅니다.
@@ -252,14 +258,27 @@ namespace sw
         /** @brief 받은 물리 서비스가 있고 올라와 있으면 그것, 아니면 nullptr 입니다. */
         PhysicsSystem* findInitializedPhysicsSystem() const;
         /**
-         * @brief 스텝 훅 목록(`_arrListFrameHook`)이 낡았으면 단계 목록에서 다시 거릅니다 — 그 훅을 재정의하지 않은 컴포넌트(`PhysicsComponent::_unusedFrameHooks`)를 뺀다.
-         * @details 순서는 단계 목록의 순서 그대로다(예전과 같은 차례로 부른다). 등록 · 해제와 처음 기본 구현이 불린 때만 낡는다.
+         * @brief 훅 구간 하나입니다 — 단계 목록에서 이어진 같은 타입 컴포넌트(`_arrListFrameHook` 의 `[_start, _start + _count)`)에 일괄 함수 하나를 부른다.
+         * @details 그 타입이 훅을 재정의하지 않았으면 구간 자체가 없다. 등록이 없는 타입(생성기를 거치지 않은 테스트 타입)은 가상 호출 함수다.
+         */
+        struct FrameHookRun
+        {
+            PhysicsHookBatchFunction _pFunction{ nullptr };
+            uint32                   _start{ 0 };
+            uint32                   _count{ 0 };
+        };
+        /**
+         * @brief 훅 구간이 낡았으면(등록 · 해제 · 레지스트리 세대) 단계 목록에서 다시 짓습니다.
+         * @details 차례는 단계 목록 그대로이고 이어진 같은 타입만 한 구간으로 묶는다 — 타입으로 다시 줄 세우면 바디를 만드는 차례(Jolt 바디 id)가 바뀌어
+         *          시뮬레이션 결과가 달라진다. 언리얼 틱 그룹은 그룹 안 차례를 약속하지 않지만 여기는 골든 · 결정성을 지킨다.
          */
         void refreshFrameHookLists();
-        /** @brief 훅 @p hook 의 단계 @p phase 목록입니다(`refreshFrameHookLists` 뒤에 쓴다). */
-        vector<PhysicsComponent*>& getFrameHookList( PhysicsFrameHook hook, uint32 phase );
-        /** @brief 막 부른 @p component 가 훅 @p hook 을 재정의하지 않았다고 밝혔으면 목록을 낡았다고 적습니다. */
-        void recordFrameHookCalled( const PhysicsComponent& component, PhysicsFrameHook hook );
+        /** @brief 정확히 @p pType 의 등록 줄입니다(타입마다 한 번 찾아 기억 — 레지스트리 세대가 바뀌면 비운다). 없으면 nullptr 입니다. */
+        const PhysicsHookRegistry::Entry* findHookEntry( const TypeInfo* pType );
+        /** @brief 훅 @p slot 을 단계 @p phase 의 구간마다 부릅니다. */
+        void runFrameHook( PhysicsHookSlot slot, uint32 phase, const PhysicsHookArgs& args );
+        /** @brief 등록이 없는 타입의 훅 @p slot 을 가상 호출하는 일괄 함수입니다. */
+        static PhysicsHookBatchFunction getVirtualHook( PhysicsHookSlot slot );
 
     private:
         GameObjectManager&              _manager;             ///< 이 서비스를 가진 매니저(이벤트의 오브젝트 id 를 푼다)
@@ -271,27 +290,32 @@ namespace sw
         unique_ptr<IPhysicsScene2D>     _pScene2D;
         FixedStepTimer                  _stepTimer;
         vector<PhysicsComponent*>       _arrListComponent[3]; ///< 단계(`PhysicsComponentPhase`)마다 하나. 컴포넌트가 자기 자리(`_physicsIndex`)를 든다
-        /// @brief 프레임 훅(`PhysicsFrameHook` 의 BeginFrame · PreStep · PostStep · EndFrame 차례)마다, 단계마다 그 훅을 부를 컴포넌트입니다(`refreshFrameHookLists`).
-        vector<PhysicsComponent*>          _arrListFrameHook[4][3];
-        vector<uint32>                     _listBodyPoseSlot3D; ///< 3D 바디 핸들의 칸 번호 → 강체 칸 번호(없으면 `PhysicsPoseStore::kInvalidSlot`, `bindBodyOwner`)
-        vector<uint32>                     _listBodyPoseSlot2D; ///< 2D 바디 핸들의 칸 번호 → 강체 칸 번호
-        vector<PhysicsContactEvent3D>      _listFrameEvent3D;
-        vector<PhysicsContactEvent2D>      _listFrameEvent2D;
-        PoseReadBuffer<PhysicsDimension3D> _poseRead3D;                         ///< 스텝마다 움직인 3D 바디의 자세 읽기
-        PoseReadBuffer<PhysicsDimension2D> _poseRead2D;                         ///< 위와 같다(2D)
-        vector<PoseWrite>                  _listPoseWrite;                      ///< 이번 프레임 끝 자세 쓰기(`queuePoseWrite`)
-        vector<SceneTransformWrite>        _listTransformWrite;                 ///< 그 가운데 부모 없는 것의 일괄 쓰기(`applyPoseWrites` 가 채운다, 재사용)
-        vector<PhysicsContactEvent3D>      _listDispatchEvent3D;                ///< `dispatchEvents` 가 처리하는 동안의 사본(재사용)
-        vector<PhysicsContactEvent2D>      _listDispatchEvent2D;                ///< 위와 같다
-        vector<SweptOverlap2D>             _listDispatchSwept;                  ///< 위와 같다
-        PhysicsContactLogEntry             _arrContactLog[kContactLogCapacity]; ///< 시작 · 끝 접촉 고리(진단 — `collectContactLog`)
-        uint64                             _contactLogCount;                    ///< 기록한 누계(다음 칸은 `% kContactLogCapacity`)
-        uint64                             _stepCount;
-        uint32                             _debrisBodyCount;
-        float32                            _fixedStepOverride; ///< 0 이면 엔진 설정의 고정 스텝(`setFixedStepOverride`)
-        uint8                              _bConfigured         : 1;
-        uint8                              _bFrameHookListStale : 1; ///< 스텝 훅 목록을 다시 걸러야 한다(등록 · 해제 · 기본 구현 호출)
-        uint8                              _bFrameEventsPending : 1; ///< 마지막 `step` 의 이벤트를 아직 나눠 주지 않았다(`deliverFrameEvents`)
+        /// @brief 훅(`PhysicsHookSlot`)마다, 단계마다 그 훅을 부를 컴포넌트와 그 구간입니다(`refreshFrameHookLists`).
+        vector<PhysicsComponent*>                                         _arrListFrameHook[static_cast<size_t>( PhysicsHookSlot::Count )][3];
+        vector<FrameHookRun>                                              _arrListFrameHookRun[static_cast<size_t>( PhysicsHookSlot::Count )][3];
+        unordered_map<const TypeInfo*, const PhysicsHookRegistry::Entry*> _mapHookEntry;       ///< 타입 → 등록 줄 기억(`findHookEntry`, 없음도 기억한다)
+        PhysicsHookRegistry*                                              _pHookRegistry;      ///< 매니저의 서비스 묶음에서 받은 훅 표(빌림, 없으면 모두 가상 호출)
+        uint32                                                            _hookGeneration;     ///< 마지막으로 본 `PhysicsHookRegistry::getGeneration` — 바뀌면 구간을 다시 짓는다
+        vector<uint32>                                                    _listBodyPoseSlot3D; ///< 3D 바디 핸들의 칸 번호 → 강체 칸 번호(없으면 `PhysicsPoseStore::kInvalidSlot`, `bindBodyOwner`)
+        vector<uint32>                                                    _listBodyPoseSlot2D; ///< 2D 바디 핸들의 칸 번호 → 강체 칸 번호
+        vector<PhysicsContactEvent3D>                                     _listFrameEvent3D;
+        vector<PhysicsContactEvent2D>                                     _listFrameEvent2D;
+        PoseReadBuffer<PhysicsDimension3D>                                _poseRead3D;                         ///< 스텝마다 움직인 3D 바디의 자세 읽기
+        PoseReadBuffer<PhysicsDimension2D>                                _poseRead2D;                         ///< 위와 같다(2D)
+        vector<PoseWrite>                                                 _listPoseWrite;                      ///< 이번 프레임 끝 자세 쓰기(`queuePoseWrite`)
+        vector<SceneTransformWrite>                                       _listTransformWrite;                 ///< 그 가운데 부모 없는 것의 일괄 쓰기(`applyPoseWrites` 가 채운다, 재사용)
+        vector<PhysicsContactEvent3D>                                     _listDispatchEvent3D;                ///< `dispatchEvents` 가 처리하는 동안의 사본(재사용)
+        vector<PhysicsContactEvent2D>                                     _listDispatchEvent2D;                ///< 위와 같다
+        vector<SweptOverlap2D>                                            _listDispatchSwept;                  ///< 위와 같다
+        PhysicsContactLogEntry                                            _arrContactLog[kContactLogCapacity]; ///< 시작 · 끝 접촉 고리(진단 — `collectContactLog`)
+        uint64                                                            _contactLogCount;                    ///< 기록한 누계(다음 칸은 `% kContactLogCapacity`)
+        uint64                                                            _stepCount;
+        uint32                                                            _debrisBodyCount;
+        float32                                                           _fixedStepOverride; ///< 0 이면 엔진 설정의 고정 스텝(`setFixedStepOverride`)
+        uint8                                                             _bConfigured         : 1;
+        uint8                                                             _bFrameHookListStale : 1; ///< 훅 구간을 다시 지어야 한다(등록 · 해제 · `setHookBatchEnabled`)
+        uint8                                                             _bHookBatchEnabled   : 1; ///< 훅을 타입별 일괄 함수로 부른다(`setHookBatchEnabled`)
+        uint8                                                             _bFrameEventsPending : 1; ///< 마지막 `step` 의 이벤트를 아직 나눠 주지 않았다(`deliverFrameEvents`)
     };
 
     /**
