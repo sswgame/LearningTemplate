@@ -214,7 +214,7 @@ namespace sw
      * @code
      *     MechArenaWorld world;
      *     world.initialize( settings, &mechCatalog, &weaponCatalog, &projectileCatalog, &moveCatalog );
-     *     const int32 amuro = world.addPilot( config );
+     *     const int32 amuro = world.addPilot( config ).value();
      *     world.start();
      *     world.setInput( amuro, input );
      *     world.update( deltaTime );
@@ -244,8 +244,8 @@ namespace sw
                                        const ProjectileCatalog* pProjectileCatalog, const MoveCatalog* pMoveCatalog );
         /** @brief 팀을 추가하고 번호를 반환합니다. */
         int32 addTeam( const hashed_string& name );
-        /** @brief 조종사를 추가합니다. 덱이 비었거나, 모르는 기체 · 스킬 · 팀이거나, 덱 코스트가 상한을 넘거나, 덱 기체의 체력 설정이 범위 밖이거나, 슬롯의 무기 · 기술이 카탈로그에 없으면 −1 을 반환합니다. */
-        int32 addPilot( const MechPilotConfig& config );
+        /** @brief 조종사를 추가합니다. 덱이 비었거나, 모르는 기체 · 스킬 · 팀이거나, 덱 코스트가 상한을 넘거나, 덱 기체의 체력 설정이 범위 밖이거나, 슬롯의 무기 · 기술이 카탈로그에 없으면 이유를 돌려줍니다. */
+        [[nodiscard]] expected<int32> addPilot( const MechPilotConfig& config );
         /** @brief 팀 게이지를 정하고(코스트 합) 출격시킵니다. */
         void start();
         void update( float32 deltaTime );

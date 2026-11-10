@@ -122,7 +122,7 @@ namespace
             return true;
         }
 
-        int32 addPilot( int32 team, const float3& position, const vector<hashed_string>& listMech, const vector<hashed_string>& listSkill = {} )
+        expected<int32> addPilot( int32 team, const float3& position, const vector<hashed_string>& listMech, const vector<hashed_string>& listSkill = {} )
         {
             MechPilotConfig config;
             config._listMechID    = listMech;
@@ -735,7 +735,7 @@ SW_TEST_CASE_F( MechArenaRulesTest, NothingRunsBeforeStartAndUnknownPilotsAreIgn
     SW_EXPECT_EQUAL( 2, _world.getMatch().getTeamCount() );
     SW_EXPECT_EQUAL( 2, _world.getMatch().getParticipantCount() );
     SW_EXPECT_TRUE( pilot( 0 )._state == MechPilotState::Active );
-    SW_EXPECT_EQUAL( -1, addPilot( 0, float3{}, { hashed_string( "gunner" ) } ) ); // 시작 뒤
+    SW_EXPECT_FALSE( addPilot( 0, float3{}, { hashed_string( "gunner" ) } ).has_value() ); // 시작 뒤
 
     SW_EXPECT_NULL( _world.findPilot( 99 ) );
     SW_EXPECT_NULL( _world.findPilot( -1 ) );
@@ -753,23 +753,23 @@ SW_TEST_CASE_F( MechArenaRulesTest, BrokenPilotConfigsAreRefused )
 {
     SW_EXPECT_LOG( "MechArenaWorld.MechSlotMissingData" );
     SW_REQUIRE_TRUE( open() );
-    SW_EXPECT_EQUAL( -1, addPilot( 0, float3{}, {} ) );
-    SW_EXPECT_EQUAL( -1, addPilot( 0, float3{}, { hashed_string( "none" ) } ) );
-    SW_EXPECT_EQUAL( -1, addPilot( 5, float3{}, { hashed_string( "gunner" ) } ) );
-    SW_EXPECT_EQUAL( -1, addPilot( -1, float3{}, { hashed_string( "gunner" ) } ) );
-    SW_EXPECT_EQUAL( -1, addPilot( 0, float3{}, { hashed_string( "gunner" ) }, { hashed_string( "none" ) } ) );
-    SW_EXPECT_EQUAL( -1, addPilot( 0, float3{}, { hashed_string( "heavy" ), hashed_string( "heavy" ), hashed_string( "heavy" ) } ) ); // 2700 > 2000
-    SW_EXPECT_EQUAL( -1, addPilot( 0, float3{}, { hashed_string( "gunner" ), hashed_string( "ghostgun" ) } ) );                       // 덱 뒤의 기체도 본다
-    SW_EXPECT_EQUAL( -1, addPilot( 0, float3{}, { hashed_string( "ghostmove" ) } ) );
-    SW_EXPECT_EQUAL( -1, addPilot( 0, float3{}, { hashed_string( "nomoves" ) } ) );
-    SW_EXPECT_EQUAL( -1, addPilot( 0, float3{}, { hashed_string( "ghostspecial" ) } ) ); // 특수기의 탄이 탄 카탈로그에 없다
-    SW_EXPECT_EQUAL( -1, addPilot( 0, float3{}, { hashed_string( "flatspecial" ) } ) );  // 특수기의 탄에 사거리가 없다
+    SW_EXPECT_FALSE( addPilot( 0, float3{}, {} ).has_value() );
+    SW_EXPECT_FALSE( addPilot( 0, float3{}, { hashed_string( "none" ) } ).has_value() );
+    SW_EXPECT_FALSE( addPilot( 5, float3{}, { hashed_string( "gunner" ) } ).has_value() );
+    SW_EXPECT_FALSE( addPilot( -1, float3{}, { hashed_string( "gunner" ) } ).has_value() );
+    SW_EXPECT_FALSE( addPilot( 0, float3{}, { hashed_string( "gunner" ) }, { hashed_string( "none" ) } ).has_value() );
+    SW_EXPECT_FALSE( addPilot( 0, float3{}, { hashed_string( "heavy" ), hashed_string( "heavy" ), hashed_string( "heavy" ) } ).has_value() ); // 2700 > 2000
+    SW_EXPECT_FALSE( addPilot( 0, float3{}, { hashed_string( "gunner" ), hashed_string( "ghostgun" ) } ).has_value() );                       // 덱 뒤의 기체도 본다
+    SW_EXPECT_FALSE( addPilot( 0, float3{}, { hashed_string( "ghostmove" ) } ).has_value() );
+    SW_EXPECT_FALSE( addPilot( 0, float3{}, { hashed_string( "nomoves" ) } ).has_value() );
+    SW_EXPECT_FALSE( addPilot( 0, float3{}, { hashed_string( "ghostspecial" ) } ).has_value() ); // 특수기의 탄이 탄 카탈로그에 없다
+    SW_EXPECT_FALSE( addPilot( 0, float3{}, { hashed_string( "flatspecial" ) } ).has_value() );  // 특수기의 탄에 사거리가 없다
     SW_EXPECT_EQUAL( 0, _world.getPilotCount() );
 
     MechArenaWorld  noCatalog; // initialize 전에는 받지 않는다
     MechPilotConfig config;
     config._listMechID.push_back( hashed_string( "gunner" ) );
-    SW_EXPECT_EQUAL( -1, noCatalog.addPilot( config ) );
+    SW_EXPECT_FALSE( noCatalog.addPilot( config ).has_value() );
 }
 
 /**
