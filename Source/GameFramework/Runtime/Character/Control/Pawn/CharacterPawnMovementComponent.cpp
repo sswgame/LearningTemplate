@@ -75,10 +75,10 @@ namespace sw
             _facingYaw = pScene->getLocalRotation()._y;
     }
 
-    void CharacterPawnMovementComponent::onTick( float32 deltaTime )
+    void CharacterPawnMovementComponent::onTick( TickContext& context )
     {
         using Internal = CharacterPawnMovementComponentInternal;
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         if ( _bSuspended == SW_TRUE )
             return;
         GameObject*                   pOwner      = getOwner();
@@ -95,7 +95,7 @@ namespace sw
         const float32            speed      = intent.isDown( _sprintIndex ) ? _sprintSpeed : _walkSpeed;
         const float3             target{ worldMove._x * speed, 0.0f, worldMove._z * speed };
         const bool               bHasTarget = target._x != 0.0f || target._z != 0.0f;
-        _velocity                           = Internal::moveTowards( _velocity, target, ( bHasTarget ? _acceleration : _deceleration ) * deltaTime );
+        _velocity                           = Internal::moveTowards( _velocity, target, ( bHasTarget ? _acceleration : _deceleration ) * context.getDeltaTime() );
         pController->setMoveVelocity( _velocity );
         // 둔화 배율은 컨트롤러의 이동 계수로 넘긴다 — 표면 · 지역 입구(`ZoneContactComponent`)가 같은 계약을 넘겨도 최솟값이라 두 번 곱하지 않는다.
         pController->applyMoveScale( constraint._speedScale );
@@ -109,7 +109,7 @@ namespace sw
             targetYaw = intent._controlYaw;
         else if ( movingSpeed > Internal::kMinFacingSpeed )
             targetYaw = MathUtil::atan2( _velocity._x, _velocity._z );
-        const float32 newYaw = OrientationUtil::turnTowardAngle( _facingYaw, targetYaw, _turnRate * deltaTime );
+        const float32 newYaw = OrientationUtil::turnTowardAngle( _facingYaw, targetYaw, _turnRate * context.getDeltaTime() );
         if ( MathUtil::abs( MathUtil::wrapAngle( newYaw - _facingYaw ) ) <= Internal::kMinYawChange )
             return;
         _facingYaw             = newYaw;

@@ -251,9 +251,9 @@ namespace sw
             _bOriginDirty.store( true, std::memory_order_relaxed );
     }
 
-    void TerrainComponent::onTick( float32 deltaTime )
+    void TerrainComponent::onTick( TickContext& context )
     {
-        SceneComponent::onTick( deltaTime );
+        SceneComponent::onTick( context );
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager != nullptr && _bOriginDirty.exchange( false, std::memory_order_relaxed ) )

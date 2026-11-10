@@ -43,7 +43,7 @@ namespace sw
 
         void onBeginPlay() override;
         void onEndPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         /** @brief 말 상태를 씁니다. 첫 값은 표와 버전이고, 말을 열었는지와 (열었으면) 말 상태가 뒤따릅니다. */
         SW_DECLARE_STATE_IO_IN_PLACE();

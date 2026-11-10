@@ -32,7 +32,7 @@ namespace sw
         BoatHelmComponent();
         ~BoatHelmComponent() override = default;
 
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         /** @brief 의도를 조타 입력으로 바꿉니다. @p boatForward 는 선체의 월드 앞 방향입니다(XZ 만 본다). */
         static BoatHelmInput toHelmInput( const ControlIntent& intent, const float3& boatForward );

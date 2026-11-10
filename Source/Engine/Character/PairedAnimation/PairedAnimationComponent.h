@@ -45,7 +45,7 @@ namespace sw
         void onBeginPlay() override;
         void onEndPlay() override;
         /** @brief `_bStartOnPlay` 가 켜졌으면 첫 틱에 세션 시작을 틱 뒤로 미룹니다(다른 참가자의 애니메이터가 모두 선 뒤). 그 밖에는 할 일이 없습니다. */
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
         void onPropertyChanged( hashed_string propertyName ) override;
 
         /** @brief 에셋 경로를 바꾸고 다시 읽습니다. */

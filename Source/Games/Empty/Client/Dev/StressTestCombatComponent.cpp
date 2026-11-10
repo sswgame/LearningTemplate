@@ -180,16 +180,16 @@ namespace sw
         SW_LOG_INFO_ID( "StressTestCombat.TFatalHitZone", "[StressTestCombat] t=%# fatal hit '%#' zone '%#' x%# -> ragdoll", _elapsed, pBone, hit._zone.c_str(), hit._damageMultiplier );
     }
 
-    void StressTestCombatComponent::onTick( float32 deltaTime )
+    void StressTestCombatComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         GameObject*        pEnemy   = pManager != nullptr ? pManager->resolveGameObject( _enemy ) : nullptr;
         GameObject*        pSword   = pManager != nullptr ? pManager->resolveGameObject( _sword ) : nullptr;
         if ( pEnemy == nullptr || pSword == nullptr )
             return;
-        _elapsed += deltaTime;
+        _elapsed += context.getDeltaTime();
         ++_frame;
 
         const AnimationNotifyComponent* pNotify = pEnemy->getComponent<AnimationNotifyComponent>();

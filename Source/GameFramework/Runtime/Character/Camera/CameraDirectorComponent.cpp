@@ -339,10 +339,10 @@ namespace sw
         return _initialPreset.empty() ? _pCatalog->getAll().front()._id : _initialPreset;
     }
 
-    void CameraDirectorComponent::onTick( float32 deltaTime )
+    void CameraDirectorComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
-        updateCamera( deltaTime );
+        Component::onTick( context );
+        updateCamera( context.getDeltaTime() );
     }
 
     bool CameraDirectorComponent::activatePreset( const hashed_string& id )

@@ -54,7 +54,7 @@ namespace sw
             if ( _boundTickSource.isValid() )
                 (void)removeSubTickPrerequisite( kApplySubTickID, _boundTickSource );
             if ( source.isValid() )
-                (void)addSubTickPrerequisite( kApplySubTickID, source );
+                (void)addSubTickPrerequisite( kApplySubTickID, source, TickPrerequisiteKind::ReadsWrites );
             _boundTickSource = source;
         }
         applyTick( pControl->getServerTick() );

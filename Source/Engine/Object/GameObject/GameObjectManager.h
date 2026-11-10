@@ -105,6 +105,7 @@ namespace sw
         friend class GameObject;
         friend class StructuralChangeBuffer; ///< `drain` 이 틱 뒤 시작 줄(`dispatchPendingBeginPlay`)을 돌린다
         friend class ISceneLaneFrameSystem;  ///< 게임 스레드에서 도는 레인 시스템도 같은 잡 컨텍스트(명령 버퍼 = 틱 뒤 큐)로 돈다
+        friend class TickContext;            ///< 주 틱의 잡 컨텍스트도 같은 명령 버퍼(틱 뒤 큐)를 문다
 
     public:
         /**

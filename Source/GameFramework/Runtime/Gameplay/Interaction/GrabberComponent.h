@@ -88,7 +88,7 @@ namespace sw
 
         /** @brief 폰의 의도 버튼 번호를 찾고 PrePhysics 에서 틱합니다(버튼이 있을 때). */
         void onBeginPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         /** @brief 집습니다. 이미 쥐고 있거나 자기 자신이면 false 입니다. 게임 스레드에서 부릅니다. */
         [[nodiscard]] bool grab( GameObject& target );

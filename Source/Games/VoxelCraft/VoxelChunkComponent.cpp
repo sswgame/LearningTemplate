@@ -69,9 +69,9 @@ namespace sw
         _chunkZ = chunkZ;
     }
 
-    void VoxelChunkComponent::onTick( float32 deltaTime )
+    void VoxelChunkComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         if ( _bRebuildRequested == SW_FALSE || _bApplyScheduled == SW_TRUE )
             return;
         GameObject*                   pOwner    = getOwner();

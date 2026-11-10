@@ -88,14 +88,20 @@ SW_TEST_CASE( ParallaxLayerTest, LayerFollowsTheGameCameraAndRestoresOnEndPlay )
     pLayer->setScrollFactor( sw::float2{ 0.25f, 1.0f } );
 
     pLayer->onBeginPlay();
-    pLayer->onTick( 0.016f );
+    {
+        sw::TickContext context{ *pLayer->getOwner(), 0.016f };
+        pLayer->onTick( context );
+    }
     const sw::float3 moved = pRoot->getLocalPosition();
     SW_EXPECT_NEAR( 1.0f + 20.0f * 0.75f, moved._x, 1e-4f );
     SW_EXPECT_NEAR( 2.0f, moved._y, 1e-4f );
     SW_EXPECT_NEAR( 5.0f, moved._z, 1e-4f );
 
     // 다음 틱은 저작 자리에서 다시 측정한다(누적되지 않는다).
-    pLayer->onTick( 0.016f );
+    {
+        sw::TickContext context{ *pLayer->getOwner(), 0.016f };
+        pLayer->onTick( context );
+    }
     SW_EXPECT_NEAR( moved._x, pRoot->getLocalPosition()._x, 1e-4f );
 
     pLayer->onEndPlay();

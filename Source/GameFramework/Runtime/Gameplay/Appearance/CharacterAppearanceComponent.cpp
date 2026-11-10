@@ -342,15 +342,15 @@ namespace sw
             requestAssemble();
     }
 
-    void CharacterAppearanceComponent::onTick( float32 deltaTime )
+    void CharacterAppearanceComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         GameObjectManager* pManager = findManager();
         if ( pManager == nullptr || _assembleCount == 0 )
             return;
         if ( hasSurfaceState() )
         {
-            _surface.update( deltaTime ); // 감쇠한다. 바뀐 프레임에만 머티리얼로 올라간다
+            _surface.update( context.getDeltaTime() ); // 감쇠한다. 바뀐 프레임에만 머티리얼로 올라간다
             applySurface( *pManager, false );
         }
         if ( _bMeshAssemblyPending == SW_TRUE || _bMeshApplyQueued == SW_TRUE )

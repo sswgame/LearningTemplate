@@ -87,7 +87,7 @@ namespace sw
         virtual ~SkirmishUnitComponent() override = default;
 
         void onBeginPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         /** @brief 따라갈 디렉터 · 유닛 · 모델 폭을 정합니다(디렉터가 스폰한 뒤 부른다). */
         void assignUnit( GameObjectHandle gameMode, SlotHandle unitID, float32 modelWidth );

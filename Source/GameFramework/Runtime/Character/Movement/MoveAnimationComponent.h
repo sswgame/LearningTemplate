@@ -32,7 +32,7 @@ namespace sw
         virtual ~MoveAnimationComponent() override = default;
 
         void onBeginPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         /** @brief 고르게 한 지금 수평 속도(m/s)입니다. */
         float32 getSpeed() const { return _speed; }

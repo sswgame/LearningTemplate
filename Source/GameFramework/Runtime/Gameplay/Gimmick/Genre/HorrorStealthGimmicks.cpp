@@ -78,11 +78,11 @@ namespace sw
             (void)GameSound::play( _sound.id() );
     }
 
-    void ScareTriggerComponent::onTick( float32 deltaTime )
+    void ScareTriggerComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         if ( _cooldownLeft > 0.0f )
-            _cooldownLeft = MathUtil::max( 0.0f, _cooldownLeft - deltaTime );
+            _cooldownLeft = MathUtil::max( 0.0f, _cooldownLeft - context.getDeltaTime() );
     }
 
     FlickerLightComponent::FlickerLightComponent()
@@ -115,10 +115,10 @@ namespace sw
         return static_cast<float32>( letter - 'a' ) / static_cast<float32>( 'm' - 'a' );
     }
 
-    void FlickerLightComponent::onTick( float32 deltaTime )
+    void FlickerLightComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
-        _step += _clock.consume( deltaTime );
+        Component::onTick( context );
+        _step += _clock.consume( context.getDeltaTime() );
         GameObject*        pOwner               = getOwner();
         GameObjectManager* pManager             = pOwner != nullptr ? pOwner->getManager() : nullptr;
         LightComponent*    pLight               = pOwner != nullptr ? pOwner->getComponent<LightComponent>() : nullptr;
@@ -168,9 +168,9 @@ namespace sw
         return object.hasTag( HorrorStealthGimmicksInternal::getHiddenTag(), true );
     }
 
-    void HidingSpotComponent::onTick( float32 deltaTime )
+    void HidingSpotComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         GameObject*             pOwner           = getOwner();
         GameObjectManager*      pManager         = pOwner != nullptr ? pOwner->getManager() : nullptr;
         GimmickSensorComponent* pSensor          = pOwner != nullptr ? pOwner->getComponent<GimmickSensorComponent>() : nullptr;
@@ -213,10 +213,10 @@ namespace sw
         GameEventUtil::send( event );
     }
 
-    void NoiseEmitterComponent::onTick( float32 deltaTime )
+    void NoiseEmitterComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
-        const int32 stepCount = _clock.consume( deltaTime );
+        Component::onTick( context );
+        const int32 stepCount = _clock.consume( context.getDeltaTime() );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             stepOnce();

@@ -11,6 +11,7 @@
 #include "Engine/Navigation/Scene/NavMeshRuntime.h"
 #include "Engine/Navigation/Scene/SceneNavigation.h"
 #include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
 
@@ -124,12 +125,12 @@ namespace sw
         }
     }
 
-    void NavAgentCrowdSync::writeAgentResult( NavMeshAgentComponent& agent, NavMeshRuntime& runtime, float32 deltaTime )
+    bool NavAgentCrowdSync::writeAgentResult( NavMeshAgentComponent& agent, NavMeshRuntime& runtime, float32 deltaTime, vector<SceneTransformWrite>& inoutListWrite )
     {
         using Internal = NavAgentCrowdSyncInternal;
         NavCrowdAgentState state;
         if ( runtime._pCrowd->findAgentState( agent._crowdAgentID, state ) == false )
-            return;
+            return false;
         agent._agentPosition   = state._position;
         agent._velocity        = state._velocity;
         agent._desiredVelocity = state._desiredVelocity;
@@ -174,6 +175,9 @@ namespace sw
         GameObject*                   pOwner      = agent.getOwner();
         CharacterControllerComponent* pController = Internal::findDrivenController( agent );
         SceneComponent*               pScene      = pOwner->getPrimarySceneComponent();
+        // 부모 없는 트랜스폼은 월드가 곧 로컬이다 — 자리 · 회전을 한 건으로 모아 부른 쪽이 한 번에 적용한다(에이전트마다 세터 · 월드 합성을 부르지 않는다).
+        const bool          bBatched = pScene != nullptr && pScene->getParent() == nullptr;
+        SceneTransformWrite write{};
         if ( pController != nullptr && state._bOnOffMeshLink )
         {
             // 링크(사다리 · 틈)는 물리로 걸을 수 없다 — 건너는 동안은 군중이 정한 위치로 컨트롤러를 옮긴다.
@@ -186,7 +190,15 @@ namespace sw
         }
         else if ( agent._driveMode == NavAgentDriveMode::Transform && pScene != nullptr )
         {
-            pScene->setWorldPosition( state._position );
+            if ( bBatched )
+            {
+                write._localPosition = state._position;
+                write._bSetPosition  = SW_TRUE;
+            }
+            else
+            {
+                pScene->setWorldPosition( state._position );
+            }
             agent._writtenPosition = state._position;
             agent._bHasWritten     = SW_TRUE;
         }
@@ -199,9 +211,28 @@ namespace sw
             const float32 delta    = MathUtil::wrapAngle( wantYaw - rotation._y );
             const float32 maxTurn  = agent._turnRate * deltaTime;
             rotation._y            = MathUtil::wrapAngle( rotation._y + MathUtil::clamp( delta, -maxTurn, maxTurn ) );
-            pScene->setLocalRotation( rotation );
+            if ( bBatched )
+            {
+                write._localRotation = rotation;
+                write._bSetRotation  = SW_TRUE;
+            }
+            else
+            {
+                pScene->setLocalRotation( rotation );
+            }
         }
+        if ( write._bSetPosition == SW_TRUE || write._bSetRotation == SW_TRUE )
+        {
+            write._handle = pScene->getHandle();
+            inoutListWrite.push_back( write );
+        }
+        return true;
+    }
+
+    void NavAgentCrowdSync::recordWrittenTransform( NavMeshAgentComponent& agent )
+    {
         // 자기 쓰기(자리 · 회전) 뒤의 번호를 적어 다음 갱신이 그것을 바깥 이동으로 보지 않게 한다.
+        SceneComponent* pScene = agent.getOwner()->getPrimarySceneComponent();
         if ( agent._driveMode == NavAgentDriveMode::Transform && pScene != nullptr )
             agent._writtenTransformVersion = pScene->getWorldTransformVersion();
     }

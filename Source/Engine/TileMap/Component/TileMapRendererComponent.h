@@ -66,7 +66,7 @@ namespace sw
         /** @brief 물리 바디를 뺍니다. 그리기 배치는 컴포넌트가 떨어질 때(`onUnregister`) 놓습니다. */
         void onEndPlay() override;
         /** @brief 애니메이션 타일의 프레임을 넘기고, 오브젝트가 움직였으면 칸 자리를 다시 놓습니다. */
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
         /** @brief 켜고 끄면(`_bActive`) 칸 배치를 더티로 — 빌더가 다시 본다. 맵 · 머티리얼 · 정렬이 바뀌면 미리보기를 다시 만든다. */
         void onPropertyChanged( hashed_string propertyName ) override;
         /** @brief 소유 오브젝트를 켜고 끄면 칸 배치를 더티로 — 빌더가 다시 본다. */

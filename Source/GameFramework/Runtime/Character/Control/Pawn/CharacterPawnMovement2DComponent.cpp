@@ -42,9 +42,9 @@ namespace sw
         return current + MathUtil::clamp( target - current, -maxDelta, maxDelta );
     }
 
-    void CharacterPawnMovement2DComponent::onTick( float32 deltaTime )
+    void CharacterPawnMovement2DComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         GameObject*                     pOwner      = getOwner();
         const PawnComponent*            pPawn       = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
         CharacterController2DComponent* pController = pOwner != nullptr ? pOwner->getComponent<CharacterController2DComponent>() : nullptr;
@@ -54,7 +54,7 @@ namespace sw
         // 이펙트의 이동 제약 — 3D 이동기와 같은 계약(`MovementConstraint`).
         const MovementConstraint constraint = MovementConstraint::read( *pOwner );
         const float32            moveInput  = constraint._bMoveBlocked == SW_TRUE ? 0.0f : intent._move._x;
-        _velocity                           = computeVelocity( _velocity, moveInput, _walkSpeed * constraint._speedScale, _acceleration, _deceleration, deltaTime );
+        _velocity                           = computeVelocity( _velocity, moveInput, _walkSpeed * constraint._speedScale, _acceleration, _deceleration, context.getDeltaTime() );
         pController->setMoveVelocity( _velocity );
         if ( intent.wasTriggered( _jumpIndex ) && pController->isGrounded() && constraint._bJumpBlocked == SW_FALSE )
             pController->jump( _jumpSpeed );

@@ -76,7 +76,7 @@ namespace sw
         virtual ~ItemBoxComponent() override = default;
 
         void onOverlapBegin( const OverlapInfo& overlap ) override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
         void stepOnce();
         /** @brief @p target 에게 엽니다. 겹침이 부릅니다. 비어 있어서(숨은 동안) 아이템을 줄 수 없으면 아무 일도 없이 무효 이름을 반환합니다. */
         hashed_string open( GameObject& target );

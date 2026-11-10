@@ -66,7 +66,7 @@ namespace sw
         void onRegister( GameObjectManager& manager ) override;
         void onUnregister( GameObjectManager& manager ) override;
 
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         /** @brief 그리기 값을 채웁니다(게임 스레드 — 패킷 수집). 노멀 텍스처가 없으면 노멀 칸을 끈다. 불투명도에 수명 · 씻김을 곱한다. */
         void writeDrawData( DecalDrawData& outData ) const;

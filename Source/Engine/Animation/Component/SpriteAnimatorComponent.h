@@ -101,7 +101,7 @@ namespace sw
          *        안 보이면 넘기지 않고, 주기가 1 보다 크면 그 주기의 프레임에만 넘깁니다(다시 보이게 되면 그 프레임에 곧바로 맞춥니다).
          *        되감는 동안에는 진행하지 않습니다(기록된 프레임이 적용됩니다).
          */
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
         /**
          * @brief 그래프 경로(`_animationGraphPath`)가 바뀌면(인스펙터, 에셋 핫 리로드 알림. 값이 같아도) 그래프를 다시 읽습니다.
          * @details 재생 중이면 현재 애니메이션이 새 그래프에도 있을 때 그대로 이어 가고, 없으면 새 목록의 첫 애니메이션을 처음부터 재생한다.

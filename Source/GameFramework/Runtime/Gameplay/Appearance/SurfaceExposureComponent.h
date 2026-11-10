@@ -42,7 +42,7 @@ namespace sw
         /** @brief 레지스트리에서 내리고, 마지막 노출 컴포넌트면 시스템을 뗍니다. */
         void onUnregister( GameObjectManager& manager ) override;
         /** @brief 게임 초를 쌓기만 합니다 — 적용은 시스템이 틱 뒤에 한다. */
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         /** @brief 쌓인 게임 초만큼 비 · 물을 몸 표면에 적용합니다(`SurfaceExposureSystem` 이 틱 뒤 게임 스레드에서 부른다, 테스트도 부른다). 쌓인 시간이 없으면 아무것도 하지 않는다. */
         void applyExposure( GameObjectManager& manager );

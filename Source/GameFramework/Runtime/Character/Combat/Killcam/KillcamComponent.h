@@ -35,7 +35,7 @@ namespace sw
         /** @brief 레지스트리에서 내립니다. */
         void onUnregister( GameObjectManager& manager ) override;
         void onEndPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         /** @brief 판정이 끝낸 발 하나를 기록합니다. 가득 차면 가장 오래된 발을 덮는다. */
         void recordShot( const KillcamShot& shot );

@@ -44,11 +44,11 @@ namespace sw
         applyAlphaToSprites();
     }
 
-    void FadeOutComponent::onTick( float32 deltaTime )
+    void FadeOutComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
 
-        const bool bExpired = LifeSpanUtil::advance( _currentTimer, _duration, deltaTime );
+        const bool bExpired = LifeSpanUtil::advance( _currentTimer, _duration, context.getDeltaTime() );
         if ( _duration <= 0.0f )
             return;
         _currentAlpha = LifeSpanUtil::computeFade( _currentTimer, _duration );

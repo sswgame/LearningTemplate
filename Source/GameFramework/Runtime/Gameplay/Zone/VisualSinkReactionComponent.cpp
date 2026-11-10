@@ -24,9 +24,9 @@ namespace sw
         setTickGroup( TickGroup::PostPhysics );
     }
 
-    void VisualSinkReactionComponent::onTick( float32 deltaTime )
+    void VisualSinkReactionComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         GameObject* const        pOwner   = getOwner();
         GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr )

@@ -37,7 +37,7 @@ namespace sw
         virtual ~StressTestCombatComponent() override = default;
 
         void onBeginPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         /** @brief 래그돌을 가진 걷는 스켈레톤 적 하나를 @p position 에 스폰합니다. `-gv_stressTestRagdolls` 군중도 이 함수를 씁니다. 에셋 경로는 @p settings 의 `_combat*` 값입니다. */
         static GameObject* spawnEnemy( GameObjectManager& objects, const StressTestSceneSettings& settings, const hashed_string& name, const float3& position );

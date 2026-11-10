@@ -27,9 +27,9 @@ namespace sw
         return input;
     }
 
-    void BoatHelmComponent::onTick( float32 deltaTime )
+    void BoatHelmComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         GameObject*           pOwner = getOwner();
         const PawnComponent*  pPawn  = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
         BoatComponent*        pBoat  = pOwner != nullptr ? pOwner->getComponent<BoatComponent>() : nullptr;

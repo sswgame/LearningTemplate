@@ -8,6 +8,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -15,6 +16,9 @@
 #include "Engine/Object/GameObject/Tick/TickBatchRegistry.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/TypeInfo.h"
+
+#include <algorithm>
+#include <functional>
 
 namespace sw
 {
@@ -32,13 +36,14 @@ namespace sw
             /** @brief 선행 조건 스테이지를 지을 때의 후보 하나입니다(선행 조건을 가진 항목 + 그 선행 목록). */
             struct StageCandidate
             {
-                TickItem                     _item;
-                TickStageOrder               _stageOrder;         ///< 스테이지 안 자리 키(오브젝트 id 를 든다)
-                uint32                       _objectOrdinal{ 0 }; ///< 후보를 낸 오브젝트의 순번(0 부터, 후보가 있는 오브젝트만)
-                uint64                       _componentID{ 0 };
-                uint32                       _originalIndex{ 0 };
-                const vector<SubTickHandle>* _pListPrerequisite{ nullptr }; ///< 서브틱의 선행 목록
-                optional<uint8>              _externalGroup;                ///< 보통 길에서 도는 선행 조건 중 가장 늦은 그룹. 없으면 비어 있다.
+                TickItem                           _item;
+                TickStageOrder                     _stageOrder;         ///< 스테이지 안 자리 키(오브젝트 id 를 든다)
+                uint32                             _objectOrdinal{ 0 }; ///< 후보를 낸 오브젝트의 순번(0 부터, 후보가 있는 오브젝트만)
+                uint64                             _componentID{ 0 };
+                uint32                             _originalIndex{ 0 };
+                const vector<SubTickPrerequisite>* _pListPrerequisite{ nullptr }; ///< 서브틱의 선행 목록
+                optional<uint8>                    _externalGroup;                ///< 보통 길에서 도는 선행 조건 중 가장 늦은 그룹. 없으면 비어 있다.
+                optional<uint8>                    _externalWriteGroup;           ///< 그중 쓰기를 보는(`ReadsWrites`) 선행 조건의 가장 늦은 그룹 — 적용을 먼저 할지 가른다
             };
 
             /** @brief 정렬된 id 목록에 @p id 를 넣습니다(이미 있으면 그대로). 새 오브젝트는 id 가 가장 커서 보통 끝에 붙습니다. */
@@ -87,7 +92,7 @@ namespace sw
             }
 
             /** @brief 항목의 서브틱 정보에서 선행 목록을 찾습니다. 주 틱이거나 없으면 nullptr. */
-            static const vector<SubTickHandle>* findPrerequisiteList( const TickItem& item )
+            static const vector<SubTickPrerequisite>* findPrerequisiteList( const TickItem& item )
             {
                 if ( item._subTickID == 0 || item._pComponent == nullptr )
                     return nullptr;
@@ -183,8 +188,21 @@ namespace sw
             {
                 vector<uint32> _listOffset;
                 vector<uint32> _listTarget;
+                vector<uint8>  _listReadsWrites; ///< 간선마다(`_listTarget` 과 같은 자리) 쓰기를 보는 간선(`TickPrerequisiteKind::ReadsWrites`)이면 1 — 레벨을 하나 올린다
                 vector<uint32> _listInDegree;
             };
+
+            /** @brief 선행 목록 원소 하나를 보통 길 그룹 칸들에 접습니다(가장 늦은 그룹, 쓰기를 보는 간선이면 쓰기 그룹도). */
+            static void foldExternalGroup( optional<uint8>& inoutGroup, optional<uint8>& inoutWriteGroup, const optional<uint8>& externalGroup, TickPrerequisiteKind kind )
+            {
+                if ( externalGroup.has_value() == false )
+                    return;
+                if ( inoutGroup.has_value() == false || *inoutGroup < *externalGroup )
+                    inoutGroup = externalGroup;
+                const bool bLaterWrite = kind == TickPrerequisiteKind::ReadsWrites && ( inoutWriteGroup.has_value() == false || *inoutWriteGroup < *externalGroup );
+                if ( bLaterWrite )
+                    inoutWriteGroup = externalGroup;
+            }
 
             /** @brief 순환에 든 항목이 모이는 스테이지의 레벨입니다(어느 정상 레벨보다 뒤이고, 오류 로그와 함께 마지막에 돈다). */
             static constexpr uint32 kCycleLevel = constant::invalid_index::kUint32;
@@ -229,16 +247,18 @@ namespace sw
                 const size_t count = listCandidate.size();
                 outGraph._listOffset.assign( count + 1, 0 );
                 outGraph._listInDegree.assign( count, 0 );
-                vector<uint64> listEdge; // (선행 후보 << 32) | 기다리는 후보
+                vector<uint64> listEdge;       // (선행 후보 << 32) | 기다리는 후보
+                vector<uint8>  listReadsWrite; // listEdge 와 같은 자리의 간선 종류
                 for ( uint32 dependent = 0; dependent < count; ++dependent )
                 {
-                    for ( const SubTickHandle& prerequisite : *listCandidate[dependent]._pListPrerequisite )
+                    for ( const SubTickPrerequisite& prerequisite : *listCandidate[dependent]._pListPrerequisite )
                     {
-                        const optional<uint32> foundSource = index.find( prerequisite._componentID, prerequisite._subTickID );
+                        const optional<uint32> foundSource = index.find( prerequisite._handle._componentID, prerequisite._handle._subTickID );
                         if ( foundSource.has_value() == false || *foundSource == dependent )
                             continue;
                         const uint32 source = *foundSource;
                         listEdge.push_back( ( static_cast<uint64>( source ) << 32 ) | dependent );
+                        listReadsWrite.push_back( prerequisite._kind == TickPrerequisiteKind::ReadsWrites ? SW_TRUE : SW_FALSE );
                         ++outGraph._listOffset[source + 1];
                         ++outGraph._listInDegree[dependent];
                     }
@@ -248,10 +268,13 @@ namespace sw
                     outGraph._listOffset[node + 1] += outGraph._listOffset[node];
                 }
                 outGraph._listTarget.assign( listEdge.size(), 0 );
+                outGraph._listReadsWrites.assign( listEdge.size(), SW_FALSE );
                 vector<uint32> listCursor( outGraph._listOffset.begin(), outGraph._listOffset.end() - 1 );
-                for ( const uint64 edge : listEdge )
+                for ( size_t edgeIndex = 0; edgeIndex < listEdge.size(); ++edgeIndex )
                 {
-                    outGraph._listTarget[listCursor[static_cast<uint32>( edge >> 32 )]++] = static_cast<uint32>( edge );
+                    const uint32 slot               = listCursor[static_cast<uint32>( listEdge[edgeIndex] >> 32 )]++;
+                    outGraph._listTarget[slot]      = static_cast<uint32>( listEdge[edgeIndex] );
+                    outGraph._listReadsWrites[slot] = listReadsWrite[edgeIndex];
                 }
             }
 
@@ -294,14 +317,6 @@ namespace sw
                 }
             }
 
-            /** @brief 스테이지를 짓는 동안 쓰는 작업 칸입니다(후보 수만큼 한 번 잡고 그룹마다 되씁니다). */
-            struct StageScratch
-            {
-                vector<uint32> _listInDegree; ///< 같은 그룹 후보 사이의 진입 차수
-                vector<uint8>  _listVisited;  ///< 레벨에 든 후보
-                vector<uint32> _listSlot;     ///< 오브젝트 순번마다 이미 든 스테이지 수(`splitByObject`)
-            };
-
             /** @brief 한 레벨의 후보를 순서 키 순으로 정렬합니다. */
             static void sortLevel( const vector<StageCandidate>& listCandidate, vector<uint32>& listLevel )
             {
@@ -309,92 +324,228 @@ namespace sw
                 { return isBefore( listCandidate[left], listCandidate[right] ); } );
             }
 
-            /** @brief 보통 길의 선행 조건이 이 단계(같은 단계의 이 그룹 또는 앞 그룹)에서 돌았으면 그 쓰기를 먼저 적용해야 한다. */
+            /** @brief 보통 길의 쓰기를 보는 선행 조건이 이 단계(같은 단계의 이 그룹 또는 앞 그룹)에서 돌았으면 그 쓰기를 먼저 적용해야 한다. 순서만 간선은 적용을 기다리지 않는다. */
             static bool waitsOnObjectPath( const vector<StageCandidate>& listCandidate, const vector<uint32>& listLevel )
             {
                 for ( const uint32 index : listLevel )
                 {
                     const StageCandidate& candidate = listCandidate[index];
-                    if ( candidate._externalGroup.has_value() && *candidate._externalGroup >= getPhaseFirstGroup( candidate._item._group ) )
+                    if ( candidate._externalWriteGroup.has_value() && *candidate._externalWriteGroup >= getPhaseFirstGroup( candidate._item._group ) )
                         return true;
                 }
                 return false;
             }
 
             /**
-             * @brief 한 그룹의 후보(@p listGroupMember — 후보 번호)를 선행 조건 순서로 갈라 스테이지를 붙입니다(Kahn 레벨 + 오브젝트별 스테이지).
-             * @details 레벨 0 은 후보 사이의 선행 조건이 없지만, 보통 길의 선행 조건이 같은 단계에서 돌았으면(그 쓰기가 아직 대기 중이다) 그 레벨도
-             *          돌기 전에 적용합니다. 레벨 1 부터는 늘 앞 레벨을 기다립니다. 다른 그룹에 있는 후보와의 간선은 그룹 사이 장벽이 지키므로 세지 않습니다.
+             * @brief 선행 조건 스테이지를 짓는 일과 그 작업 칸입니다(후보 수만큼 한 번 잡고 그룹 · 레벨마다 되씁니다). 칸은 이 타입의 짓기 함수만 만진다.
              */
-            static void appendGroupStages( const vector<StageCandidate>& listCandidate, const vector<uint32>& listGroupMember, const PrerequisiteGraph& graph, uint8 group,
-                                           StageScratch& scratch, vector<TickStage>& outListStage )
+            class StageBuilder
             {
-                const size_t count = listGroupMember.size();
-                if ( count == 0 )
-                    return;
-
-                for ( const uint32 member : listGroupMember )
+            public:
+                /** @brief 후보 @p candidateCount 개 · 후보를 낸 오브젝트 @p objectCount 개만큼 작업 칸을 잡습니다. */
+                StageBuilder( size_t candidateCount, uint32 objectCount )
+                    : _listInDegree( candidateCount, 0 )
+                    , _listVisited( candidateCount, 0 )
+                    , _listLevel( candidateCount, 0 )
+                    , _listRank( candidateCount, 0 )
+                    , _listMinSlot( candidateCount, 0 )
+                    , _listAssignedSlot( candidateCount, 0 )
+                    , _listPosition( candidateCount, 0 )
+                    , _listSlot( objectCount, 0 )
                 {
-                    scratch._listInDegree[member] = 0;
-                    scratch._listVisited[member]  = 0;
                 }
-                for ( const uint32 member : listGroupMember )
+
+                /**
+                 * @brief 한 그룹의 후보(@p listGroupMember — 후보 번호)를 선행 조건 순서로 갈라 스테이지를 붙입니다(쓰기 간선 레벨 + 레벨마다 칸 스테이지 · 순서만 태스크 간선).
+                 * @details 위상 순서(Kahn)로 걸으며 레벨 = max(선행 레벨 + 쓰기를 보는 간선이면 1) 을 매긴다. 레벨 0 은 쓰기를 기다리는 후보 사이 간선이 없지만, 보통 길의
+                 *          쓰기를 보는 선행 조건이 같은 단계에서 돌았으면(그 쓰기가 아직 대기 중이다) 그 레벨도 돌기 전에 적용한다. 레벨 1 부터는 늘 앞 레벨의 쓰기를
+                 *          기다린다. 다른 그룹에 있는 후보와의 간선은 그룹 사이 장벽이 지키므로 세지 않는다.
+                 */
+                void appendGroupStages( const vector<StageCandidate>& listCandidate, const vector<uint32>& listGroupMember, const PrerequisiteGraph& graph, uint8 group,
+                                        vector<TickStage>& outListStage )
                 {
-                    for ( uint32 edge = graph._listOffset[member]; edge < graph._listOffset[member + 1]; ++edge )
+                    const size_t count = listGroupMember.size();
+                    if ( count == 0 )
+                        return;
+
+                    for ( const uint32 member : listGroupMember )
                     {
-                        const uint32 target = graph._listTarget[edge];
-                        if ( listCandidate[target]._item._group == group )
-                            ++scratch._listInDegree[target];
+                        _listInDegree[member] = 0;
+                        _listVisited[member]  = 0;
+                        _listLevel[member]    = 0;
                     }
-                }
-
-                vector<uint32> listCurrentLevel;
-                for ( const uint32 member : listGroupMember )
-                {
-                    if ( scratch._listInDegree[member] == 0 )
-                        listCurrentLevel.push_back( member );
-                }
-
-                size_t processedCount = 0;
-                uint32 levelNumber    = 0;
-                bool   bWaits         = false; // 레벨 1 부터는 모두 앞 레벨의 선행 조건을 기다린다
-                while ( listCurrentLevel.empty() == false )
-                {
-                    sortLevel( listCandidate, listCurrentLevel );
-                    vector<uint32> listNextLevel;
-                    for ( const uint32 current : listCurrentLevel )
+                    for ( const uint32 member : listGroupMember )
                     {
-                        scratch._listVisited[current] = 1;
-                        ++processedCount;
+                        for ( uint32 edge = graph._listOffset[member]; edge < graph._listOffset[member + 1]; ++edge )
+                        {
+                            const uint32 target = graph._listTarget[edge];
+                            if ( listCandidate[target]._item._group == group )
+                                ++_listInDegree[target];
+                        }
+                    }
+
+                    vector<uint32> listOrder;
+                    listOrder.reserve( count );
+                    for ( const uint32 member : listGroupMember )
+                    {
+                        if ( _listInDegree[member] == 0 )
+                            listOrder.push_back( member );
+                    }
+                    uint32 maxLevel = 0;
+                    for ( size_t cursor = 0; cursor < listOrder.size(); ++cursor )
+                    {
+                        const uint32 current  = listOrder[cursor];
+                        _listVisited[current] = 1;
+                        maxLevel              = MathUtil::max( maxLevel, _listLevel[current] );
                         for ( uint32 edge = graph._listOffset[current]; edge < graph._listOffset[current + 1]; ++edge )
                         {
                             const uint32 next = graph._listTarget[edge];
-                            if ( listCandidate[next]._item._group == group && --scratch._listInDegree[next] == 0 )
-                                listNextLevel.push_back( next );
+                            if ( listCandidate[next]._item._group != group )
+                                continue;
+                            _listLevel[next] = MathUtil::max( _listLevel[next], _listLevel[current] + graph._listReadsWrites[edge] );
+                            if ( --_listInDegree[next] == 0 )
+                                listOrder.push_back( next );
                         }
                     }
-                    splitByObject( listCurrentLevel, listCandidate, bWaits || waitsOnObjectPath( listCandidate, listCurrentLevel ), levelNumber, scratch._listSlot, outListStage );
-                    ++levelNumber;
-                    bWaits           = true;
-                    listCurrentLevel = std::move( listNextLevel );
+
+                    // 레벨마다 칸 스테이지. 레벨 수는 쓰기 간선 사슬의 깊이라 작다 — 레벨마다 위상 순서를 한 번 훑어 모은다.
+                    vector<uint32> listLevel;
+                    for ( uint32 level = 0; level <= maxLevel && listOrder.empty() == false; ++level )
+                    {
+                        listLevel.clear();
+                        for ( const uint32 member : listOrder )
+                        {
+                            if ( _listLevel[member] == level )
+                                listLevel.push_back( member );
+                        }
+                        if ( listLevel.empty() )
+                            continue;
+                        appendLevelStages( listCandidate, listLevel, graph, group, level, level > 0 || waitsOnObjectPath( listCandidate, listLevel ), outListStage );
+                    }
+
+                    // 순환 방어: 닿지 못한 것은 순서 키 순으로 마지막에 붙인다. 틱이 조용히 빠지는 것보다 낫다. 순환은 선행 조건을 잘못 건 데이터 결함이므로
+                    // 오류로 알린다(스테이지는 선행 조건이 바뀔 때만 다시 만들어서 프레임마다 쏟아지지 않는다).
+                    if ( listOrder.size() < count )
+                    {
+                        SW_LOG_ERROR_ID( "TickRegistry.SubTickPrerequisitesForm", "Sub-tick prerequisites form a cycle: %# sub-ticks cannot be ordered and run last in their group by order key - break the cycle",
+                                         static_cast<uint32>( count - listOrder.size() ) );
+                        vector<uint32> listRemaining;
+                        for ( const uint32 member : listGroupMember )
+                        {
+                            if ( _listVisited[member] == 0 )
+                                listRemaining.push_back( member );
+                        }
+                        sortLevel( listCandidate, listRemaining );
+                        splitByObject( listRemaining, listCandidate, true, kCycleLevel, _listSlot, outListStage );
+                    }
                 }
 
-                // 순환 방어: 닿지 못한 것은 순서 키 순으로 마지막에 붙인다. 틱이 조용히 빠지는 것보다 낫다. 순환은 선행 조건을 잘못 건 데이터 결함이므로
-                // 오류로 알린다(스테이지는 선행 조건이 바뀔 때만 다시 만들어서 프레임마다 쏟아지지 않는다).
-                if ( processedCount < count )
+            private:
+                /**
+                 * @brief 한 레벨(@p listLevel — 같은 그룹 · 같은 레벨의 후보)을 오브젝트별 칸 스테이지로 붙이고, 같은 칸의 순서만 간선을 스테이지 간선으로 적습니다.
+                 * @details 레벨 안 간선은 모두 순서만이다(쓰기를 보는 간선은 레벨을 올린다). 순서 키 순위가 작은 것부터 위상 순(Kahn, 최소 힙)으로 걸으며 칸을 고른다 —
+                 *          칸 = max(그 오브젝트의 다음 칸, 순서만 선행이 든 칸). 그래서 같은 오브젝트는 칸이 갈리고(한 스테이지에 하나), 간선의 뒤쪽은 앞쪽과 같은 칸
+                 *          (스테이지 간선 → 태스크 간선)이거나 뒤 칸(장벽)이다. 간선이 없으면 순서 키 순 그대로라 옛 `splitByObject` 와 같은 칸이 나온다.
+                 *          칸 안의 항목은 자리 키 순(`isBefore`)으로 놓는다 — 일괄 목록이 같은 타입 · 서브틱 이웃을 묶는다.
+                 */
+                void appendLevelStages( const vector<StageCandidate>& listCandidate, vector<uint32>& listLevel, const PrerequisiteGraph& graph, uint8 group, uint32 level,
+                                        bool bWaits, vector<TickStage>& outListStage )
                 {
-                    SW_LOG_ERROR_ID( "TickRegistry.SubTickPrerequisitesForm", "Sub-tick prerequisites form a cycle: %# sub-ticks cannot be ordered and run last in their group by order key - break the cycle",
-                                     static_cast<uint32>( count - processedCount ) );
-                    vector<uint32> listRemaining;
-                    for ( const uint32 member : listGroupMember )
+                    sortLevel( listCandidate, listLevel );
+                    for ( uint32 rank = 0; rank < listLevel.size(); ++rank )
                     {
-                        if ( scratch._listVisited[member] == 0 )
-                            listRemaining.push_back( member );
+                        const uint32 member       = listLevel[rank];
+                        _listRank[member]         = rank;
+                        _listInDegree[member]     = 0;
+                        _listMinSlot[member]      = 0;
+                        _listAssignedSlot[member] = 0;
                     }
-                    sortLevel( listCandidate, listRemaining );
-                    splitByObject( listRemaining, listCandidate, true, kCycleLevel, scratch._listSlot, outListStage );
+                    const auto isLevelEdge = [this, &listCandidate, group, level]( uint32 target )
+                    { return listCandidate[target]._item._group == group && _listVisited[target] != 0 && _listLevel[target] == level; };
+                    for ( const uint32 member : listLevel )
+                    {
+                        for ( uint32 edge = graph._listOffset[member]; edge < graph._listOffset[member + 1]; ++edge )
+                        {
+                            if ( isLevelEdge( graph._listTarget[edge] ) )
+                                ++_listInDegree[graph._listTarget[edge]];
+                        }
+                    }
+
+                    vector<uint32> listReady; // 순위의 최소 힙
+                    for ( const uint32 member : listLevel )
+                    {
+                        if ( _listInDegree[member] == 0 )
+                            listReady.push_back( _listRank[member] );
+                    }
+                    std::make_heap( listReady.begin(), listReady.end(), std::greater<uint32>{} );
+                    vector<vector<uint32>> listSlotMember;
+                    while ( listReady.empty() == false )
+                    {
+                        std::pop_heap( listReady.begin(), listReady.end(), std::greater<uint32>{} );
+                        const uint32 current = listLevel[listReady.back()];
+                        listReady.pop_back();
+                        uint32&      nextSlot      = _listSlot[listCandidate[current]._objectOrdinal];
+                        const uint32 slot          = MathUtil::max( nextSlot, _listMinSlot[current] );
+                        nextSlot                   = slot + 1;
+                        _listAssignedSlot[current] = slot;
+                        if ( slot == listSlotMember.size() )
+                            listSlotMember.emplace_back();
+                        listSlotMember[slot].push_back( current );
+                        for ( uint32 edge = graph._listOffset[current]; edge < graph._listOffset[current + 1]; ++edge )
+                        {
+                            const uint32 next = graph._listTarget[edge];
+                            if ( isLevelEdge( next ) == false )
+                                continue;
+                            _listMinSlot[next] = MathUtil::max( _listMinSlot[next], slot );
+                            if ( --_listInDegree[next] == 0 )
+                            {
+                                listReady.push_back( _listRank[next] );
+                                std::push_heap( listReady.begin(), listReady.end(), std::greater<uint32>{} );
+                            }
+                        }
+                    }
+
+                    for ( uint32 slot = 0; slot < listSlotMember.size(); ++slot )
+                    {
+                        vector<uint32>& listMember = listSlotMember[slot];
+                        sortLevel( listCandidate, listMember );
+                        TickStage& stage    = outListStage.emplace_back();
+                        stage._group        = group;
+                        stage._level        = level;
+                        stage._bApplyBefore = ( bWaits && slot == 0 ) ? SW_TRUE : SW_FALSE;
+                        for ( uint32 position = 0; position < listMember.size(); ++position )
+                        {
+                            const StageCandidate& candidate     = listCandidate[listMember[position]];
+                            _listPosition[listMember[position]] = position;
+                            stage._listItem.push_back( candidate._item );
+                            stage._listItemOrder.push_back( candidate._stageOrder );
+                        }
+                        for ( const uint32 member : listMember )
+                        {
+                            for ( uint32 edge = graph._listOffset[member]; edge < graph._listOffset[member + 1]; ++edge )
+                            {
+                                const uint32 next = graph._listTarget[edge];
+                                if ( isLevelEdge( next ) && _listAssignedSlot[next] == slot )
+                                    stage._listEdge.push_back( TickStageEdge{ _listPosition[member], _listPosition[next] } );
+                            }
+                        }
+                    }
+                    for ( const uint32 member : listLevel )
+                    {
+                        _listSlot[listCandidate[member]._objectOrdinal] = 0;
+                    }
                 }
-            }
+
+            private:
+                vector<uint32> _listInDegree;     ///< 같은 그룹 후보 사이의 진입 차수(레벨 안에서는 같은 레벨 간선만 다시 센다)
+                vector<uint8>  _listVisited;      ///< 위상 순서에 든 후보
+                vector<uint32> _listLevel;        ///< 후보의 레벨 — 쓰기를 보는 간선만 하나 올린다
+                vector<uint32> _listRank;         ///< 레벨 안 순서 키 순위(같은 레벨의 위상 순에서 작은 것이 먼저)
+                vector<uint32> _listMinSlot;      ///< 같은 레벨 순서만 선행이 든 칸 중 가장 뒤 — 이보다 앞 칸에 들지 않는다
+                vector<uint32> _listAssignedSlot; ///< 후보가 든 레벨 안 칸
+                vector<uint32> _listPosition;     ///< 후보의 스테이지 안 자리(간선을 항목 번호로 바꿀 때)
+                vector<uint32> _listSlot;         ///< 오브젝트 순번마다 이미 든 스테이지 수(`splitByObject` · 레벨 칸 고르기)
+            };
 
             /**
              * @brief 그룹 @p group 의 레벨 0 에서 @p slot 번째 스테이지의 자리를 찾고, 없으면 레벨 0 의 끝(같은 그룹의 더 높은 레벨이나 다음 그룹이 시작하는 자리)에 만듭니다.
@@ -450,6 +601,11 @@ namespace sw
                 }
                 inoutStage._listItem.insert( inoutStage._listItem.begin() + static_cast<ptrdiff_t>( low ), item );
                 inoutStage._listItemOrder.insert( inoutStage._listItemOrder.begin() + static_cast<ptrdiff_t>( low ), stageOrder );
+                for ( TickStageEdge& edge : inoutStage._listEdge ) // 끼운 자리 뒤 항목의 번호가 하나씩 밀렸다
+                {
+                    edge._source += edge._source >= low ? 1u : 0u;
+                    edge._target += edge._target >= low ? 1u : 0u;
+                }
             }
 
             /** @brief 그룹 @p group 레벨 0 의 0 번 스테이지가 바깥 선행 조건을 기다리게 표시합니다(적용을 먼저 한다). */
@@ -697,8 +853,10 @@ namespace sw
         if ( listRemoval.empty() == false )
         {
             SW_PROFILE_COUNT( "GT.Scene.tick.stageCompacts", 1 ); // 스테이지를 훑어 항목을 걷어 냈다
+            vector<uint32> listNewIndex;                          // 간선이 있는 스테이지의 옛 번호 → 새 번호(빠졌으면 무효)
             for ( TickStage& stage : _listStage )
             {
+                listNewIndex.assign( stage._listEdge.empty() ? 0 : stage._listItem.size(), kNotInList );
                 size_t keptCount = 0;
                 for ( size_t index = 0; index < stage._listItemOrder.size(); ++index )
                 {
@@ -715,10 +873,24 @@ namespace sw
                         stage._listItem[keptCount]      = stage._listItem[index];
                         stage._listItemOrder[keptCount] = stage._listItemOrder[index];
                     }
+                    if ( listNewIndex.empty() == false )
+                        listNewIndex[index] = static_cast<uint32>( keptCount );
                     ++keptCount;
                 }
                 stage._listItem.resize( keptCount );
                 stage._listItemOrder.resize( keptCount );
+                if ( listNewIndex.empty() )
+                    continue;
+                // 빠진 항목에 닿은 간선은 버린다 — 빠진 쪽이 기다리던 간선이면 기다릴 이가 없고, 빠진 쪽을 기다리던 간선이면 그 순서는 이제 없다.
+                size_t keptEdge = 0;
+                for ( const TickStageEdge& edge : stage._listEdge )
+                {
+                    const uint32 source = listNewIndex[edge._source];
+                    const uint32 target = listNewIndex[edge._target];
+                    if ( source != kNotInList && target != kNotInList )
+                        stage._listEdge[keptEdge++] = TickStageEdge{ source, target };
+                }
+                stage._listEdge.resize( keptEdge );
             }
         }
 
@@ -753,6 +925,7 @@ namespace sw
         {
             TickItem        _item;
             optional<uint8> _externalGroup;
+            optional<uint8> _externalWriteGroup; ///< 쓰기를 보는 선행 조건의 가장 늦은 그룹(적용을 먼저 할지)
         };
         vector<NewItem> listNew;
         for ( const TickItem& item : pObj->_listTickItem )
@@ -760,20 +933,19 @@ namespace sw
             const bool bSkipItem = item._bHasPrerequisite == SW_FALSE || item._pComponent == nullptr || item._pComponent->isPendingDestroy();
             if ( bSkipItem )
                 continue;
-            const vector<SubTickHandle>* pListPrerequisite = TickRegistryInternal::findPrerequisiteList( item );
+            const vector<SubTickPrerequisite>* pListPrerequisite = TickRegistryInternal::findPrerequisiteList( item );
             if ( pListPrerequisite == nullptr )
                 continue;
             NewItem entry{};
             entry._item = item;
-            for ( const SubTickHandle& prerequisite : *pListPrerequisite )
+            for ( const SubTickPrerequisite& prerequisite : *pListPrerequisite )
             {
                 // 선행 조건이 의존 오브젝트(자기 자신 포함)를 가리키면 후보 사이의 간선이 생길 수 있다 — 말단이 아니다.
-                if ( std::binary_search( _listDependentObjectID.begin(), _listDependentObjectID.end(), prerequisite._objectID ) )
+                if ( std::binary_search( _listDependentObjectID.begin(), _listDependentObjectID.end(), prerequisite._handle._objectID ) )
                     return false;
-                TickRegistryInternal::insertSorted( _listReferencedObjectID, prerequisite._objectID );
-                const optional<uint8> externalGroup = TickRegistryInternal::findExternalGroup( manager, prerequisite );
-                if ( externalGroup.has_value() && ( entry._externalGroup.has_value() == false || *entry._externalGroup < *externalGroup ) )
-                    entry._externalGroup = externalGroup;
+                TickRegistryInternal::insertSorted( _listReferencedObjectID, prerequisite._handle._objectID );
+                TickRegistryInternal::foldExternalGroup( entry._externalGroup, entry._externalWriteGroup, TickRegistryInternal::findExternalGroup( manager, prerequisite._handle ),
+                                                         prerequisite._kind );
             }
             if ( entry._externalGroup.has_value() && entry._item._group < *entry._externalGroup )
                 entry._item._group = *entry._externalGroup;
@@ -795,8 +967,8 @@ namespace sw
             for ( uint32 slot = 0; cursor < listNew.size() && listNew[cursor]._item._group == group; ++cursor, ++slot )
             {
                 const NewItem& entry        = listNew[cursor];
-                bWaits                      = bWaits || ( entry._externalGroup.has_value() &&
-                                     *entry._externalGroup >= TickRegistryInternal::getPhaseFirstGroup( group ) );
+                bWaits                      = bWaits || ( entry._externalWriteGroup.has_value() &&
+                                     *entry._externalWriteGroup >= TickRegistryInternal::getPhaseFirstGroup( group ) );
                 const bool     bLastOfGroup = cursor + 1 == listNew.size() || listNew[cursor + 1]._item._group != group;
                 StageInsertion insertion{};
                 insertion._item             = entry._item;
@@ -995,16 +1167,23 @@ namespace sw
     {
         // 스테이지 항목도 레인의 일괄 함수로 돈다(가상 호출 대신). 자리 키가 같은 타입 · 서브틱을 붙여 두었으므로 이웃한 같은 (함수, 서브틱 id) 를 한 목록으로
         // 묶으면 디스패치가 파도와 같은 잡으로 목록 하나를 함수 한 번에 넘긴다. 한 스테이지에 한 오브젝트의 항목은 하나라 묶어도 오브젝트 안 순서는 그대로다.
+        // 순서만 간선이 있는 스테이지는 항목마다 목록 하나다 — 디스패치가 목록마다 태스크를 띄우고 간선(항목 번호)을 그대로 건다.
         for ( TickStage& stage : _listStage )
         {
             stage._listBatch.clear();
+            const bool bPerItem = stage._listEdge.empty() == false;
             for ( const TickItem& item : stage._listItem )
             {
                 Component* const pComp = item._pComponent;
                 if ( pComp == nullptr )
+                {
+                    if ( bPerItem )
+                        stage._listBatch.emplace_back(); // 빈 목록 — 항목 번호와 목록 번호를 맞춘다
                     continue;
+                }
                 const TickBatchFunction pFunction   = resolveTypeDispatch( pBatchRegistry, pComp )._pFunction;
-                const bool              bSameAsLast = stage._listBatch.empty() == false && stage._listBatch.back()._pFunction == pFunction && stage._listBatch.back()._subTickID == item._subTickID;
+                const bool              bSameAsLast = bPerItem == false && stage._listBatch.empty() == false && stage._listBatch.back()._pFunction == pFunction &&
+                                         stage._listBatch.back()._subTickID == item._subTickID;
                 if ( bSameAsLast == false )
                 {
                     TickBatchList& created = stage._listBatch.emplace_back();
@@ -1102,7 +1281,7 @@ namespace sw
                 const bool bSkipItem = item._bHasPrerequisite == SW_FALSE || item._pComponent == nullptr || item._pComponent->isPendingDestroy();
                 if ( bSkipItem )
                     continue;
-                const vector<SubTickHandle>* pListPrerequisite = TickRegistryInternal::findPrerequisiteList( item );
+                const vector<SubTickPrerequisite>* pListPrerequisite = TickRegistryInternal::findPrerequisiteList( item );
                 if ( pListPrerequisite == nullptr )
                     continue;
                 TickRegistryInternal::StageCandidate candidate{};
@@ -1127,20 +1306,19 @@ namespace sw
         optional<uint8> lastExternalGroup;
         for ( TickRegistryInternal::StageCandidate& candidate : listCandidate )
         {
-            for ( const SubTickHandle& prerequisite : *candidate._pListPrerequisite )
+            for ( const SubTickPrerequisite& prerequisite : *candidate._pListPrerequisite )
             {
-                if ( _listReferencedObjectID.empty() || _listReferencedObjectID.back() != prerequisite._objectID )
-                    _listReferencedObjectID.push_back( prerequisite._objectID );
-                if ( candidateIndex.find( prerequisite._componentID, prerequisite._subTickID ).has_value() )
+                const SubTickHandle& handle = prerequisite._handle;
+                if ( _listReferencedObjectID.empty() || _listReferencedObjectID.back() != handle._objectID )
+                    _listReferencedObjectID.push_back( handle._objectID );
+                if ( candidateIndex.find( handle._componentID, handle._subTickID ).has_value() )
                     continue;
-                if ( prerequisite != lastHandle || lastHandle.isValid() == false )
+                if ( handle != lastHandle || lastHandle.isValid() == false )
                 {
-                    lastHandle        = prerequisite;
-                    lastExternalGroup = TickRegistryInternal::findExternalGroup( manager, prerequisite );
+                    lastHandle        = handle;
+                    lastExternalGroup = TickRegistryInternal::findExternalGroup( manager, handle );
                 }
-                const optional<uint8> externalGroup = lastExternalGroup;
-                if ( externalGroup.has_value() && ( candidate._externalGroup.has_value() == false || *candidate._externalGroup < *externalGroup ) )
-                    candidate._externalGroup = externalGroup;
+                TickRegistryInternal::foldExternalGroup( candidate._externalGroup, candidate._externalWriteGroup, lastExternalGroup, prerequisite._kind );
             }
         }
         VectorUtil::sortUnique( _listReferencedObjectID );
@@ -1149,11 +1327,8 @@ namespace sw
         TickRegistryInternal::buildPrerequisiteGraph( listCandidate, candidateIndex, graph );
         TickRegistryInternal::raiseGroupsToPrerequisites( listCandidate, graph );
 
-        TickRegistryInternal::StageScratch scratch;
-        scratch._listInDegree.assign( listCandidate.size(), 0 );
-        scratch._listVisited.assign( listCandidate.size(), 0 );
-        scratch._listSlot.assign( objectOrdinal, 0 );
-        vector<uint32> listGroupMember;
+        TickRegistryInternal::StageBuilder builder{ listCandidate.size(), objectOrdinal };
+        vector<uint32>                     listGroupMember;
         listGroupMember.reserve( listCandidate.size() );
         for ( uint32 group = 0; group < kGroupCount; ++group )
         {
@@ -1163,7 +1338,7 @@ namespace sw
                 if ( listCandidate[index]._item._group == group )
                     listGroupMember.push_back( index );
             }
-            TickRegistryInternal::appendGroupStages( listCandidate, listGroupMember, graph, static_cast<uint8>( group ), scratch, _listStage );
+            builder.appendGroupStages( listCandidate, listGroupMember, graph, static_cast<uint8>( group ), _listStage );
         }
         _stageItemCount = static_cast<uint32>( listCandidate.size() );
     }

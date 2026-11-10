@@ -27,7 +27,7 @@ namespace sw
         virtual ~CoasterCarComponent() override = default;
 
         void onBeginPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         /** @brief 따라갈 디렉터 · 코스터 번호 · 칸 번호(0 이 맨 앞)를 정합니다. */
         void assignCar( GameObjectHandle gameMode, int32 coasterIndex, int32 carIndex );

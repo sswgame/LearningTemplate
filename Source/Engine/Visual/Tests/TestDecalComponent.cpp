@@ -43,13 +43,22 @@ SW_TEST_CASE( DecalComponentTest, LifetimeFadesOutAtTheEnd )
     SW_REQUIRE_NOT_NULL( pDecal );
     pDecal->setLifetime( 2.0f, 1.0f );
 
-    pDecal->onTick( 0.5f );
+    {
+        TickContext context{ *pDecal->getOwner(), 0.5f };
+        pDecal->onTick( context );
+    }
     SW_EXPECT_NEAR( 1.0f, pDecal->computeOpacityScale(), 1.0e-5f ); // 페이드 앞
-    pDecal->onTick( 1.0f );
+    {
+        TickContext context{ *pDecal->getOwner(), 1.0f };
+        pDecal->onTick( context );
+    }
     DecalDrawData data;
     pDecal->writeDrawData( data );
     SW_EXPECT_NEAR( 0.5f, data._color._w, 1.0e-5f ); // 남은 0.5 초 / 페이드 1 초
-    pDecal->onTick( 1.0f );
+    {
+        TickContext context{ *pDecal->getOwner(), 1.0f };
+        pDecal->onTick( context );
+    }
     SW_EXPECT_NEAR( 0.0f, pDecal->computeOpacityScale(), 1.0e-5f );
 }
 

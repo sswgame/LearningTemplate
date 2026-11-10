@@ -38,7 +38,7 @@ namespace sw
         virtual ~FarmerComponent() override = default;
 
         void onBeginPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
     private:
         PROPERTY( Category = "Farmer", DisplayName = "Height Offset", Tooltip = "Lift above the ground point", Units = m )

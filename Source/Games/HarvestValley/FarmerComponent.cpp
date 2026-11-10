@@ -48,9 +48,9 @@ namespace sw
         setTickGroup( TickGroup::PostUpdate );
     }
 
-    void FarmerComponent::onTick( float32 deltaTime )
+    void FarmerComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;

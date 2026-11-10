@@ -30,7 +30,7 @@ namespace sw
         ActivatorVolumeComponent();
         ~ActivatorVolumeComponent() override = default;
 
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
         void onOverlapBegin( const OverlapInfo& overlap ) override;
 
         /** @brief 활성자가 들어온 것으로 칩니다(겹침 · 거리 판정 · 테스트). 한 번만 하는 볼륨이 이미 했거나 태그가 맞지 않으면 false 이고, 일을 했으면 true 입니다. */

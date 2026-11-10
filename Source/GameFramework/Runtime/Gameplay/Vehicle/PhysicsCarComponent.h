@@ -46,7 +46,7 @@ namespace sw
         ~PhysicsCarComponent() override = default;
 
         void onBeginPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         /**
          * @brief 의도를 운전 입력으로 바꿉니다. @p carForward 는 차체의 월드 앞 방향(XZ)이고, @p forwardSpeed 는 앞 방향 속도입니다.

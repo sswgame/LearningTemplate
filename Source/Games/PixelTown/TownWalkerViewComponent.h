@@ -33,7 +33,7 @@ namespace sw
         virtual ~TownWalkerViewComponent() override = default;
 
         void onBeginPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
     private:
         PROPERTY( Category = "Walker", DisplayName = "Sprite Offset", Tooltip = "Sprite center from the feet (a 16x32 hero stands half a tile above its tile center)", Units = m )

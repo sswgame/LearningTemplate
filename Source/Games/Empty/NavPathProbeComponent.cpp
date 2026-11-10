@@ -120,9 +120,9 @@ namespace sw
         Component::onEndPlay();
     }
 
-    void NavPathProbeComponent::onTick( float32 deltaTime )
+    void NavPathProbeComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         if ( _pSceneNavigation != nullptr )
             updateProbe();
     }

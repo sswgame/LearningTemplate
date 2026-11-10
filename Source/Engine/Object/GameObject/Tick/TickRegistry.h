@@ -24,8 +24,9 @@
  * 만들고 보관합니다**(`rebuildStages`). 선행 조건을 가진 오브젝트와 그것이 가리키는 오브젝트가 바뀔 때만 다시 만듭니다. 체인 밖 오브젝트의 스폰과
  * 파괴는 스테이지를 건드리지 않습니다. 언리얼이 선행 조건 없는 틱 함수를 그룹 안에서 바로 실행하고 선행 조건이 있는 것만 기다리게 하는 것과 같습니다.
  * 스테이지 안은 자리 키(`TickStageOrder` — 순서 키, 타입, 서브틱, 오브젝트)로 같은 타입 · 서브틱의 이웃을 붙여 두고 파도와 같은 일괄 목록(`TickStage::_listBatch`)으로
- * 돕니다(1b). 레벨 장벽은 남깁니다 — 틱 중 트랜스폼 쓰기는 대기 칸에 쌓였다가 게임 스레드가 적용하므로(`_bApplyBefore`), 간선만 기다리는 태스크로는
- * 기다리는 쪽이 같은 프레임의 선행 쓰기를 보지 못합니다(언리얼은 쓰기가 즉시라 간선만으로 됩니다 — NEXT 5-3 1 의 판단).
+ * 돕니다(1b). 간선은 종류(`TickPrerequisiteKind`)로 갈립니다 — 틱 중 트랜스폼 쓰기는 대기 칸에 쌓였다가 게임 스레드가 적용하므로(`_bApplyBefore`), 선행이 쓴 자리를
+ * 읽는 간선(`ReadsWrites`)만 레벨 장벽을 넘고, 순서만인 간선(`OrderOnly`)은 같은 레벨 · 같은 스테이지 안의 태스크 간선(`TickStage::_listEdge` →
+ * `TaskHandle::runAfter`)이 됩니다(언리얼은 쓰기가 즉시라 간선 하나로 됩니다).
  *
  * **레인은 타입이 선언한 성격(`TickMode`)으로 가릅니다(5-3 1c — 상용 엔진처럼 측정한 비용이 아니라 선언).** 그룹마다 오브젝트는 셋 중 한 레인에 듭니다.
  * - **Batch(기본) — 파도:** 항목마다 파도 키(순서 키, 같은 키끼리의 오브젝트 안 순번)의 파도(`TickWave`)에 들고, 파도 안에서는 (정확한 타입, 서브틱 id)
@@ -182,6 +183,13 @@ namespace sw
         uint8  _orderKey{ 0 };
     };
 
+    /** @struct TickStageEdge @brief 스테이지 안의 순서만 간선 하나입니다 — `_listItem` 의 @c _source 항목이 끝난 뒤 @c _target 항목이 돈다(태스크 간선). */
+    struct TickStageEdge
+    {
+        uint32 _source{ 0 };
+        uint32 _target{ 0 };
+    };
+
     /**
      * @struct TickStage
      * @brief 선행 조건 경로의 스테이지 하나입니다. 같은 오브젝트의 항목이 한 스테이지에 둘 이상 오지 않으며, 스테이지 안은 병렬로 처리합니다.
@@ -189,11 +197,13 @@ namespace sw
      *          (`SceneTickScheduler`). 앞에서 실행된 선행 조건이 옮긴 위치를 이 스테이지가 같은 프레임에 읽게 하려는 것이다.
      *          기다리는 항목이 없는 스테이지(레벨 0, 같은 레벨을 오브젝트별로 나눈 둘째 이후)에는 켜지 않는다.
      *          항목(`_listItem` · `_listItemOrder`)이 편집의 정본이고, 디스패치는 `refresh` 끝이 거기서 지은 일괄 목록(`_listBatch`)만 읽는다 — 파도와 같은
-     *          모양이라 같은 잡이 돈다.
+     *          모양이라 같은 잡이 돈다. 간선(`_listEdge`)이 있으면 일괄 목록이 항목마다 하나(`_listBatch[i]` = `_listItem[i]`)이고, 디스패치는 항목마다 태스크를
+     *          띄워 간선을 `runAfter` 로 건다 — 같은 레벨의 순서만 간선이 장벽 없이 지켜진다.
      */
     struct TickStage
     {
         vector<TickItem>       _listItem;                 ///< `TickStageOrder` 순의 항목이다
+        vector<TickStageEdge>  _listEdge;                 ///< 이 스테이지 항목 사이의 순서만 간선이다(비면 항목 사이에 기다림이 없다 — 일괄 포크-조인)
         vector<TickStageOrder> _listItemOrder;            ///< `_listItem` 과 같은 순서로, 항목마다 그 자리 키다(증분 갱신이 오브젝트 id 로 항목을 찾고 끼울 자리를 고른다)
         vector<TickBatchList>  _listBatch;                ///< 이웃한 같은 (타입 함수, 서브틱 id) 항목의 일괄 목록이다(`refresh` 끝이 `_listItem` 에서 짓는다)
         uint32                 _level{ 0 };               ///< 이 스테이지가 속한 선행 조건 레벨이다(0 = 후보 사이에 기다릴 것이 없는 레벨, 순환의 남은 항목은 최댓값)
@@ -290,8 +300,10 @@ namespace sw
          * @brief 선행 조건을 가진 항목으로 스테이지 목록을 만듭니다. 그룹 순서대로 만들고, 스테이지 안은 병렬로 처리합니다.
          * @details 먼저 선행 조건이 뒤쪽 그룹에 있는 항목을 그 그룹으로 옮긴다(체인을 따라가며, 언리얼의 `ActualStartTickGroup` 에 해당한다). 기본 경로에서 도는
          *          선행 조건은 핸들의 오브젝트 id 로 그 오브젝트의 항목만 찾아 그룹을 본다. 그다음 그룹마다 후보 사이의 선행 조건 DAG 를 Kahn 알고리즘으로
-         *          레벨별 스테이지로 나누고(같은 레벨은 순서 키와 등록 순서로 안정 정렬한다), 레벨 하나를 다시 **오브젝트별 스테이지**로 나눈다. 같은
-         *          오브젝트의 항목이 한 스테이지에서 나란히 실행되지 않게 하려는 것이다. 기다리는 레벨의 첫 스테이지에 `TickStage::_bApplyBefore` 를 켠다.
+         *          레벨별 스테이지로 나누고 — 레벨은 쓰기를 보는 간선(`ReadsWrites`)만 올리고 순서만 간선은 같은 레벨에 남긴다 — 레벨 하나를 다시
+         *          **오브젝트별 스테이지**로 나눈다. 같은 오브젝트의 항목이 한 스테이지에서 나란히 실행되지 않게 하려는 것이다. 칸은 레벨 안 위상 순으로 고르고
+         *          순서만 간선의 뒤쪽이 앞쪽보다 앞 칸에 들지 않게 해서, 같은 칸의 간선은 스테이지의 태스크 간선(`_listEdge`)이 되고 앞 칸의 간선은 장벽이 지킨다.
+         *          쓰기를 기다리는 레벨의 첫 스테이지에 `TickStage::_bApplyBefore` 를 켠다.
          *          순환은 남은 항목을 순서 키 순으로 마지막 스테이지에 붙여 방어한다.
          */
         void rebuildStages( GameObjectManager& manager );
@@ -329,6 +341,7 @@ namespace sw
         TickWave& getOrCreateWave( uint32 group, uint8 orderKey, uint8 ordinal );
         /**
          * @brief 스테이지마다 항목에서 일괄 목록을 다시 짓습니다(스테이지가 다시 지어지거나 편집된 `refresh` 끝). 이웃한 같은 (타입 함수, 서브틱 id) 항목이 한 목록이다.
+         *        간선이 있는 스테이지는 항목마다 목록 하나다(태스크 하나가 항목 하나를 돈다).
          * @details 자리 키가 같은 타입 · 서브틱을 붙여 두므로 목록은 대개 (순서 키, 타입) 마다 하나다. 원소의 오브젝트는 이때의 주인이다(틱 중 구조 변경은 미뤄진다).
          */
         void refreshStageBatches( TickBatchRegistry* pBatchRegistry );

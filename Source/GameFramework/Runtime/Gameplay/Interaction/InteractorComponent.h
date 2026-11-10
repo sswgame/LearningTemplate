@@ -58,7 +58,7 @@ namespace sw
 
         void onBeginPlay() override;
         void onEndPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         /** @brief 이번 프레임의 상호작용 버튼 상태입니다. 틱 전에 게임 입력이 넣습니다. 새로 눌렀는지는 지난 값과 비교해서 정합니다. */
         void setInput( bool bHeld );

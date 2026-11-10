@@ -87,13 +87,9 @@ namespace sw
         _barBatch.markAllEntriesDirty();
     }
 
-    void PixelPerfectCameraComponent::onTick( float32 /*deltaTime*/ )
+    void PixelPerfectCameraComponent::onTick( TickContext& context )
     {
-        GameObject*              pOwner   = getOwner();
-        const GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
-        if ( pManager == nullptr )
-            return;
-        const CameraRegistry& cameras = pManager->getCameraRegistry();
+        const CameraRegistry& cameras = context.getManager().getCameraRegistry();
         (void)applyToCamera( cameras.getViewportWidth(), cameras.getViewportHeight() ); // 돌려주는 배치는 _layout 에도 남는다 — 여기서는 카메라에 거는 것만 필요하다
     }
 

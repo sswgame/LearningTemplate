@@ -29,9 +29,9 @@ namespace sw
         placeMesh( position );
     }
 
-    void ArenaProjectileComponent::onTick( float32 deltaTime )
+    void ArenaProjectileComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         if ( _projectileID == 0 || _bFinished == SW_TRUE )
             return;
         const ArenaGameModeComponent* pGameMode   = findGameMode<ArenaGameModeComponent>();

@@ -14,6 +14,7 @@
 #include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Physics/Scene/PhysicsNameValidation.h"
+#include "Engine/Physics/Scene/PhysicsPoseStore.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 #include "Engine/Scene/SceneManager.h"
@@ -62,18 +63,13 @@ namespace sw
         , _bInnerBody{ false }
         , _character{}
         , _state{}
-        , _commandLock{}
-        , _moveVelocity{}
-        , _pendingRootMotion{}
+        , _pCommandPage{ nullptr }
+        , _commandSlot{ PhysicsPoseStore::kInvalidSlot }
         , _frameRootMotionVelocity{}
-        , _pendingSurfaceVelocity{}
         , _frameSurfaceVelocity{}
-        , _pendingMoveScale{ 1.0f }
         , _frameMoveScale{ 1.0f }
         , _reportedMoveScale{ 1.0f }
-        , _pendingLaunch{}
         , _airVelocity{}
-        , _pendingField{}
         , _frameField{}
         , _walkVelocity{}
         , _fieldVelocity{}
@@ -82,11 +78,22 @@ namespace sw
         , _worldScale{ 1.0f, 1.0f, 1.0f }
         , _worldRotation{}
         , _verticalSpeed{ 0.0f }
-        , _pendingJumpSpeed{ 0.0f }
         , _pendingGroundYaw{ 0.0f }
         , _listStepHistory{}
         , _stepHistoryCount{ 0 }
     {
+        _commandSlot = engine::getSubsystem<PhysicsPoseStore>().getCommandStore<CharacterCommand3D>().allocateSlot( this, _pCommandPage );
+    }
+
+    CharacterControllerComponent::~CharacterControllerComponent()
+    {
+        engine::getSubsystem<PhysicsPoseStore>().getCommandStore<CharacterCommand3D>().freeSlot( _commandSlot );
+    }
+
+    template <typename TFunction>
+    void CharacterControllerComponent::editCommand( TFunction&& function ) const
+    {
+        _pCommandPage->editCommand( _commandSlot & CharacterCommandPage3D::kSlotMask, std::forward<TFunction>( function ) );
     }
 
     namespace
@@ -153,8 +160,10 @@ namespace sw
 
     float3 CharacterControllerComponent::getRequestedMoveVelocity() const
     {
-        ScopedLock<SpinLock> lock{ _commandLock };
-        return _moveVelocity;
+        float3 velocity{};
+        editCommand( [&velocity]( const CharacterCommand3D& command )
+        { velocity = command._moveVelocity; } );
+        return velocity;
     }
 
     void CharacterControllerComponent::collectStepHistory( vector<StepRecord>& outListRecord ) const
@@ -171,44 +180,44 @@ namespace sw
 
     void CharacterControllerComponent::setMoveVelocity( const float3& velocity )
     {
-        ScopedLock<SpinLock> lock{ _commandLock };
-        _moveVelocity = float3{ velocity._x, 0.0f, velocity._z };
+        editCommand( [&velocity]( CharacterCommand3D& command )
+        { command._moveVelocity = float3{ velocity._x, 0.0f, velocity._z }; } );
     }
 
     void CharacterControllerComponent::jump( float32 speed )
     {
-        ScopedLock<SpinLock> lock{ _commandLock };
-        _pendingJumpSpeed = speed;
+        editCommand( [speed]( CharacterCommand3D& command )
+        { command._pendingJumpSpeed = speed; } );
     }
 
     void CharacterControllerComponent::addRootMotionDisplacement( const float3& worldDisplacement )
     {
-        ScopedLock<SpinLock> lock{ _commandLock };
-        _pendingRootMotion += float3{ worldDisplacement._x, 0.0f, worldDisplacement._z };
+        editCommand( [&worldDisplacement]( CharacterCommand3D& command )
+        { command._pendingRootMotion += float3{ worldDisplacement._x, 0.0f, worldDisplacement._z }; } );
     }
 
     void CharacterControllerComponent::launch( const float3& velocity )
     {
-        ScopedLock<SpinLock> lock{ _commandLock };
-        _pendingLaunch = velocity;
+        editCommand( [&velocity]( CharacterCommand3D& command )
+        { command._pendingLaunch = velocity; } );
     }
 
     void CharacterControllerComponent::addSurfaceVelocity( const float3& velocity )
     {
-        ScopedLock<SpinLock> lock{ _commandLock };
-        _pendingSurfaceVelocity += float3{ velocity._x, 0.0f, velocity._z };
+        editCommand( [&velocity]( CharacterCommand3D& command )
+        { command._pendingSurfaceVelocity += float3{ velocity._x, 0.0f, velocity._z }; } );
     }
 
     void CharacterControllerComponent::applyMoveScale( float32 scale )
     {
-        ScopedLock<SpinLock> lock{ _commandLock };
-        _pendingMoveScale = MathUtil::min( _pendingMoveScale, MathUtil::max( scale, 0.0f ) );
+        editCommand( [scale]( CharacterCommand3D& command )
+        { command._pendingMoveScale = MathUtil::min( command._pendingMoveScale, MathUtil::max( scale, 0.0f ) ); } );
     }
 
     void CharacterControllerComponent::applyPhysicsField( const PhysicsFieldSample& sample )
     {
-        ScopedLock<SpinLock> lock{ _commandLock };
-        _pendingField.combine( sample );
+        editCommand( [&sample]( CharacterCommand3D& command )
+        { command._pendingField.combine( sample ); } );
     }
 
     void CharacterControllerComponent::setRadius( float32 radius )
@@ -253,11 +262,13 @@ namespace sw
         if ( pScene == nullptr )
             return;
         // 이번 게임 프레임에 모인 필드를 이 물리 프레임의 것으로 옮긴다 — 스텝이 없는 프레임이 끼어도 한 프레임의 필드가 두 번 쌓이지 않는다.
+        PhysicsFieldSample field{};
+        editCommand( [&field]( CharacterCommand3D& command )
         {
-            ScopedLock<SpinLock> lock{ _commandLock };
-            _frameField   = _pendingField;
-            _pendingField = PhysicsFieldSample{};
-        }
+            field                 = command._pendingField;
+            command._pendingField = PhysicsFieldSample{};
+        } );
+        _frameField = field;
         if ( consumeRebuild() )
             releasePhysics( physics );
 
@@ -302,33 +313,37 @@ namespace sw
         IPhysicsScene3D* pScene = physics.findScene3D();
         if ( pScene == nullptr || _character.isValid() == false )
             return;
-        float3  moveVelocity{};
-        float32 jumpSpeed = 0.0f;
-        bool    bLaunched = false;
+        // 입력 칸에서 꺼낸다(잠금 안에서는 복사 · 비우기만). 루트 모션 · 면 속도 · 이동 계수는 프레임의 첫 스텝에만 꺼낸다.
+        CharacterCommand3D command{};
+        editCommand( [&command, stepIndex]( CharacterCommand3D& pending )
         {
-            ScopedLock<SpinLock> lock{ _commandLock };
-            moveVelocity      = _moveVelocity;
-            jumpSpeed         = _pendingJumpSpeed;
-            _pendingJumpSpeed = 0.0f;
-            // 루트 모션은 프레임의 첫 스텝에 꺼내 이 프레임의 스텝 수로 나눈다 — 프레임이 끝날 때 다 간다. 면 속도도 프레임마다 꺼낸다.
+            command                   = pending;
+            pending._pendingJumpSpeed = 0.0f;
+            pending._pendingLaunch    = float3{};
             if ( stepIndex == 0 )
             {
-                const float32 frameSeconds = fixedDeltaTime * static_cast<float32>( stepCount > 0 ? stepCount : 1 );
-                _frameRootMotionVelocity   = _pendingRootMotion * ( 1.0f / frameSeconds );
-                _pendingRootMotion         = float3{};
-                _frameSurfaceVelocity      = _pendingSurfaceVelocity;
-                _pendingSurfaceVelocity    = float3{};
-                _frameMoveScale            = _pendingMoveScale;
-                _pendingMoveScale          = 1.0f;
-                _reportedMoveScale.store( _frameMoveScale, std::memory_order_relaxed );
+                pending._pendingRootMotion      = float3{};
+                pending._pendingSurfaceVelocity = float3{};
+                pending._pendingMoveScale       = 1.0f;
             }
-            if ( _pendingLaunch.getLengthSquared() > 0.0f )
-            {
-                jumpSpeed      = _pendingLaunch._y;
-                _airVelocity   = float3{ _pendingLaunch._x, 0.0f, _pendingLaunch._z };
-                _pendingLaunch = float3{};
-                bLaunched      = true;
-            }
+        } );
+        float3  moveVelocity = command._moveVelocity;
+        float32 jumpSpeed    = command._pendingJumpSpeed;
+        bool    bLaunched    = false;
+        // 루트 모션은 프레임의 첫 스텝에 꺼내 이 프레임의 스텝 수로 나눈다 — 프레임이 끝날 때 다 간다. 면 속도도 프레임마다 꺼낸다.
+        if ( stepIndex == 0 )
+        {
+            const float32 frameSeconds = fixedDeltaTime * static_cast<float32>( stepCount > 0 ? stepCount : 1 );
+            _frameRootMotionVelocity   = command._pendingRootMotion * ( 1.0f / frameSeconds );
+            _frameSurfaceVelocity      = command._pendingSurfaceVelocity;
+            _frameMoveScale            = command._pendingMoveScale;
+            _reportedMoveScale.store( _frameMoveScale, std::memory_order_relaxed );
+        }
+        if ( command._pendingLaunch.getLengthSquared() > 0.0f )
+        {
+            jumpSpeed    = command._pendingLaunch._y;
+            _airVelocity = float3{ command._pendingLaunch._x, 0.0f, command._pendingLaunch._z };
+            bLaunched    = true;
         }
         // 이동 계수는 걷는 몫(요청 · 루트 모션)에만 든다 — 면이 나르는 속도와 공중 관성은 환경 저항과 상관없다.
         const PhysicsFieldSample& field         = _frameField;

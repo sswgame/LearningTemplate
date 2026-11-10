@@ -64,7 +64,7 @@ namespace sw
         virtual ~FirstPersonCameraComponent() override = default;
 
         void onBeginPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         /** @brief 눈 위치를 넣고 카메라와 뷰 모델을 바로 다시 둡니다. 눈 위치는 카메라의 부모 공간 기준이며 루트 카메라면 월드입니다. 같은 오브젝트의 게임 컴포넌트가 걷고 난 뒤 부릅니다. */
         void          setEyePosition( const float3& eyePosition );

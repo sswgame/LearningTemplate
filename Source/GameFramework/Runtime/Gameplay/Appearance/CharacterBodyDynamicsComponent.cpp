@@ -158,15 +158,15 @@ namespace sw
         setCanEverTick( true );
     }
 
-    void CharacterBodyDynamicsComponent::onTick( float32 deltaTime )
+    void CharacterBodyDynamicsComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        if ( pManager == nullptr || deltaTime <= 0.0f )
+        if ( pManager == nullptr || context.getDeltaTime() <= 0.0f )
             return;
         // 물리 질의 · 표면 쓰기 · 다른 컴포넌트 쓰기는 틱(워커) 밖에서 한다 — 쌓은 시간을 틱 뒤 게임 스레드가 한 번에 쓴다.
-        _pendingSeconds += deltaTime;
+        _pendingSeconds += context.getDeltaTime();
         pManager->executeOrDeferPostTickOnComponent( *this, []( CharacterBodyDynamicsComponent& self, GameObjectManager& manager )
         { self.update( manager ); } );
     }

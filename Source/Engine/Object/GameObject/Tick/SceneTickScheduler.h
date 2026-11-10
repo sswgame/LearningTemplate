@@ -9,6 +9,7 @@
  *          스레드에서) → 그 그룹의 선행 조건 스테이지. 디스패치마다 순번(`TickThreadState::_dispatchOrdinal`)을 매겨 다른 오브젝트에 쓴 건의 선후를 가린다.
  *          기다리는 스테이지(`TickStage::_bApplyBefore`) 앞에서는 그때까지의 틱 중 트랜스폼 쓰기를 적용하고 플러시합니다 — 선행 조건이 옮긴
  *          자리를 같은 프레임에 읽게 합니다. 그 단계에 계층 변경이 미뤄졌으면(`StructuralChangeBuffer::hasDeferredHierarchyChange`) 앞당기지 않습니다.
+ *          순서만 간선(`TickStage::_listEdge`)이 있는 스테이지는 항목마다 태스크를 띄워 간선을 `TaskHandle::runAfter` 로 겁니다 — 장벽 · 적용 없이 선행이 끝나는 대로 돈다.
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
@@ -65,6 +66,17 @@ namespace sw
             void run();
         };
 
+        /** @brief 순서만 간선이 있는 스테이지의 항목 하나를 도는 태스크입니다(`dispatchStageGraph`). 일괄 목록 하나(원소 0 또는 1)를 그 함수에 넘긴다. */
+        struct StageItemTask
+        {
+            const TickBatchList*     _pBatchList{ nullptr };
+            SceneTransformHierarchy* _pHierarchy{ nullptr };
+            uint32                   _dispatchOrdinal{ 0 };
+            float32                  _deltaTime{ 0.0f };
+
+            void run();
+        };
+
         /** @brief 레지스트리의 오브젝트를 그룹 순으로 틱합니다(그룹마다 레인 → 그 그룹의 선행 조건 스테이지). */
         void tickGroups( float32 deltaTime, uint32 firstGroup, uint32 endGroup );
         /** @brief 한 그룹의 세 레인을 돕니다 — Task 태스크를 띄움 → 파도마다 포크-조인 → Task 를 기다림 → Main 을 게임 스레드에서(일괄 경로를 끄면 칸 한 번의 포크-조인). */
@@ -74,6 +86,11 @@ namespace sw
          * @return 돈 원소 수입니다(0 이면 디스패치하지 않았다).
          */
         uint32 dispatchBatchLists( const vector<TickBatchList>& listBatch, float32 deltaTime );
+        /**
+         * @brief 순서만 간선이 있는 스테이지를 항목마다 태스크로 돕니다 — 간선은 `runAfter`, 끝은 자기 태스크 스테이지만 기다린다. 작업 풀이 없으면 위상 순으로 차례로 돈다.
+         * @details 디스패치 순번을 항목의 위상 순으로 하나씩 매긴다 — 남의 오브젝트 쓰기 · 미룬 일이 (순번, 쓴 오브젝트, 넣은 순서) 로 합쳐지므로 선행 항목의 쓰기가 늘 먼저다.
+         */
+        void dispatchStageGraph( const TickStage& stage, float32 deltaTime );
         /** @brief 선행 조건 스테이지 사이(게임 스레드, 동결 중)에서 그때까지 쌓인 틱 중 트랜스폼 쓰기를 적용하고 플러시합니다. */
         void applyStageTransforms();
 
@@ -85,6 +102,7 @@ namespace sw
         TickRegistry             _tickRegistry;
         vector<uint32>           _listBatchStart;           ///< 한 일괄 디스패치(파도 · 스테이지)에서 일괄 목록마다 시작 번호(끝에 전체 수). 할당을 재사용한다
         vector<EntryTask>        _listEntryTask;            ///< 한 그룹의 Task 레인 태스크(할당을 재사용한다)
+        vector<StageItemTask>    _listStageItemTask;        ///< 간선 있는 스테이지 하나의 항목 태스크(할당을 재사용한다)
         uint32                   _stageTransformApplyCount; ///< 스테이지 경계 적용 횟수(진단)
         uint32                   _dispatchOrdinal;          ///< 디스패치마다 오르는 순번(`TickThreadState::_dispatchOrdinal` — 같은 오브젝트가 디스패치마다 다른 스레드에서 쓴 건의 선후). 되감지 않는다
     };

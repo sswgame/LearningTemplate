@@ -46,7 +46,7 @@ namespace sw
         virtual ~ShooterAvatarComponent() override = default;
 
         void onBeginPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         /**
          * @brief 따라갈 플레이어(`ShooterPlayerComponent` 를 가진 오브젝트)입니다. 몸 리그의 시선 원천(`_lookSourceObject` — 리그 대상의 `object`)에도 그 오브젝트를 겁니다.

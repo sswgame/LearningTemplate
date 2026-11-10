@@ -26,9 +26,9 @@ namespace sw
         _bPending = _bLaunched == SW_FALSE ? SW_TRUE : SW_FALSE;
     }
 
-    void LaunchVelocityComponent::onTick( float32 deltaTime )
+    void LaunchVelocityComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         if ( _bPending == SW_FALSE )
         {
             steerTowardVelocity();

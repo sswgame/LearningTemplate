@@ -44,7 +44,10 @@ SW_TEST_CASE( PoseAfterimageTest, PoolIsPreparedAndReleased )
     SW_EXPECT_FALSE( manager.findGameObjectByName( hashed_string( "Actor_Afterimage0" ) )->isActive() );
 
     pAfterimage->startCapturing();
-    pAfterimage->onTick( 0.5f );
+    {
+        TickContext context{ *pAfterimage->getOwner(), 0.5f };
+        pAfterimage->onTick( context );
+    }
     SW_EXPECT_TRUE( pAfterimage->isCapturing() );
     SW_EXPECT_EQUAL( 0u, pAfterimage->getCaptureCount() ); // 스킨 원본이 없다 — 다음 간격에 다시 본다
     SW_EXPECT_EQUAL( 0u, pAfterimage->countVisibleGhosts() );

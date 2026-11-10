@@ -3,7 +3,6 @@
  * @brief 캐릭터 컨트롤러(2D) — 선 캡슐 하나를 Box2D 무버(`b2World_CastMover` · `b2SolvePlanes`)로 움직입니다.
  */
 #pragma once
-#include "Core/Concurrency/SpinLock.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -15,6 +14,10 @@
 
 namespace sw
 {
+    struct CharacterCommand2D;
+    template <typename TCommand>
+    struct PhysicsCommandPage;
+
     class ValidationContext;
 } // namespace sw
 
@@ -34,8 +37,10 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        /** @brief 입력 칸(`PhysicsPoseStore` 의 캐릭터 저장소)을 받습니다. */
         CharacterController2DComponent();
-        ~CharacterController2DComponent() override = default;
+        /** @brief 입력 칸을 놓습니다. */
+        ~CharacterController2DComponent() override;
 
         /** @brief 원하는 수평 이동 속도(미터/초)입니다. 다시 부를 때까지 유지합니다. */
         void setMoveVelocity( float32 velocity );
@@ -74,6 +79,9 @@ namespace sw
     private:
         /** @brief `_layer` 가 물리 레이어 표에 있는지 봅니다(`PhysicsNameValidation`). */
         void validateLayer( ValidationContext& context ) const;
+        /** @brief 입력 칸을 잠그고 @p function( CharacterCommand2D& ) 을 부릅니다(아무 스레드). */
+        template <typename TFunction>
+        void editCommand( TFunction&& function ) const;
 
     private:
         PROPERTY( Category = "Character", Min = 0.01, Tooltip = "Capsule radius", Units = m )
@@ -87,16 +95,15 @@ namespace sw
         PROPERTY( Category = "Character", Tooltip = "Collision layer name from the physics settings", Validate = validateLayer )
         hashed_string _layer;
 
-        PhysicsCharacterHandle    _character;
-        PhysicsCharacterState2D   _state;
-        mutable SpinLock          _commandLock;
-        float2                    _previousPosition;
-        float32 _moveVelocity     SW_GUARDED_BY( _commandLock ); ///< 요청된 수평 속도(`_commandLock`)
-        float3                    _worldPosition;                ///< 트랜스폼에서 마지막으로 읽은 월드 자리(Z 를 쓴다). 변경 번호가 같으면 그대로다
-        quaternion                _worldRotation;                ///< 마지막으로 읽은 월드 회전(캐릭터는 회전을 바꾸지 않는다)
-        float3                    _worldScale;                   ///< 마지막으로 읽은 월드 배율
-        float32                   _verticalSpeed;
-        float32 _pendingJumpSpeed SW_GUARDED_BY( _commandLock ); ///< 0 이 아니면 다음 스텝에 준다(`_commandLock`)
-        float32                   _airVelocity;                  ///< 떠난 바닥이 실어 나르던 수평 속도 — 땅에 다시 닿으면 0
+        PhysicsCharacterHandle                  _character;
+        PhysicsCharacterState2D                 _state;
+        PhysicsCommandPage<CharacterCommand2D>* _pCommandPage; ///< 입력 칸이 든 페이지 — 이동 요청 · 점프 대기(`PhysicsPoseStore::getCommandStore`)
+        uint32                                  _commandSlot;  ///< 입력 칸 번호(컴포넌트 수명 동안 그대로)
+        float2                                  _previousPosition;
+        float3                                  _worldPosition; ///< 트랜스폼에서 마지막으로 읽은 월드 자리(Z 를 쓴다). 변경 번호가 같으면 그대로다
+        quaternion                              _worldRotation; ///< 마지막으로 읽은 월드 회전(캐릭터는 회전을 바꾸지 않는다)
+        float3                                  _worldScale;    ///< 마지막으로 읽은 월드 배율
+        float32                                 _verticalSpeed;
+        float32                                 _airVelocity; ///< 떠난 바닥이 실어 나르던 수평 속도 — 땅에 다시 닿으면 0
     };
 } // namespace sw

@@ -36,7 +36,7 @@ namespace sw
 
         void onBeginPlay() override;
         void onEndPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         const DestructionNetSession& getSession() const { return _session; }
 

@@ -33,7 +33,7 @@ namespace sw
         ~PairedAnimationNetStarterComponent() override = default;
 
         void onBeginPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
     private:
         /** @brief 같은 오브젝트의 `PairedAnimationComponent` 로 세션을 시작합니다(틱 뒤에 불립니다). */

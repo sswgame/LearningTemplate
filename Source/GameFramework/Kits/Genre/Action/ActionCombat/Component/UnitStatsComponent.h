@@ -25,7 +25,7 @@ namespace sw
         virtual ~UnitStatsComponent() override = default;
 
         void onBeginPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         /**
          * @brief 피해를 줍니다. 투사체, 공격 판정, 게임 코드가 모두 이 함수 하나를 지납니다(언리얼 `AActor::TakeDamage` 에 해당).

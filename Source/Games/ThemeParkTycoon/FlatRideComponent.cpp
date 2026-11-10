@@ -32,9 +32,9 @@ namespace sw
         _spin      = spin;
     }
 
-    void FlatRideComponent::onTick( float32 deltaTime )
+    void FlatRideComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         if ( _spin == 0.0f )
             return;
         GameObject*        pOwner   = getOwner();
@@ -50,7 +50,7 @@ namespace sw
         const ParkRide*         pRide    = bInRange ? listRide.data() + _rideIndex : nullptr;
         if ( pRide == nullptr || pRide->_listRider.empty() )
             return;
-        _angle += _spin * deltaTime;
+        _angle += _spin * context.getDeltaTime();
         pMesh->setLocalRotation( float3{ 0.0f, _angle, 0.0f } );
     }
 } // namespace sw

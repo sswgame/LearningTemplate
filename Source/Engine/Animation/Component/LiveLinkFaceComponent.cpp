@@ -60,9 +60,8 @@ namespace sw
         Component::onEndPlay();
     }
 
-    void LiveLinkFaceComponent::onTick( float32 deltaTime )
+    void LiveLinkFaceComponent::onTick( TickContext& /*context*/ )
     {
-        (void)deltaTime;
         if ( _transport == nullptr )
             return;
         NetAddress from{};

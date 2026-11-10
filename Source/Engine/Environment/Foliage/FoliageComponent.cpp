@@ -325,11 +325,11 @@ namespace sw
         return count;
     }
 
-    void FoliageComponent::onTick( float32 deltaTime )
+    void FoliageComponent::onTick( TickContext& context )
     {
-        SceneComponent::onTick( deltaTime );
+        SceneComponent::onTick( context );
         if ( engine::getSubsystem<DeterministicRun>().getPolicy()._bFreezeEnvironmentTime == SW_FALSE ) // 결정적 사진은 바람 · 파도 시간을 0 에 멈춘다
-            _time += deltaTime;
+            _time += context.getDeltaTime();
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         float3             viewPosition{};

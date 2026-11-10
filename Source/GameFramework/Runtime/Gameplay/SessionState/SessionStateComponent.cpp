@@ -236,13 +236,13 @@ namespace sw
             SW_LOG_ERROR_ID( "SessionState.OpenAtBeginPlayRefused", "SessionState: could not open with default settings at begin play" );
     }
 
-    void SessionStateComponent::onTick( float32 deltaTime )
+    void SessionStateComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         _listClockEvent.clear();
         if ( _bInitialized == SW_FALSE )
             return;
-        _clock.update( deltaTime );
+        _clock.update( context.getDeltaTime() );
         _clock.pollEvents( _listClockEvent );
         // 공유 평판은 공유 날짜가 넘어갈 때 한 번만 식힌다. 참조해서 쓰는 키트는 식히지 않는다. 키트 수만큼 반복해서 식지 않게 하기 위해서다.
         for ( const WorldClockEvent& clockEvent : _listClockEvent )
@@ -251,7 +251,7 @@ namespace sw
                 _reputation.advanceDay();
         }
         if ( _bWeather == SW_TRUE && _clock.isPaused() == false )
-            (void)_weather.update( deltaTime * _clock.getTimeScale() * 86400.0f / _clock.getSettings()._secondsPerDay, _clock.getSeasonName() );
+            (void)_weather.update( context.getDeltaTime() * _clock.getTimeScale() * 86400.0f / _clock.getSettings()._secondsPerDay, _clock.getSeasonName() );
     }
 
     void SessionStateComponent::serializeState( StateIO& io )

@@ -117,7 +117,7 @@ namespace sw
         /** @brief PostPhysics 에서 틱합니다(탈것이 움직인 뒤). */
         void onBeginPlay() override;
         /** @brief 앉은 쪽이 있으면 좌석 가속도를 재고 탑승 가속감을 냅니다. 비어 있으면 잰 값을 비웁니다. */
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
         /** @brief 지난 틱이 잰 탑승 반응(탑승자 기울임 · 카메라 킥 · 소리)을 겁니다. 깃발이 없으면 아무것도 하지 않습니다. 게임 스레드, 틱 밖(`VehicleSeatSystem`). */
         void applyPendingRide( GameObjectManager& manager );
 

@@ -89,9 +89,8 @@ namespace sw
         onEndPlay();
     }
 
-    void Component::onTick( float32 deltaTime )
+    void Component::onTick( TickContext& /*context*/ )
     {
-        (void)deltaTime;
     }
 
     void Component::onSubTick( uint32 subTickID, float32 deltaTime )
@@ -169,7 +168,7 @@ namespace sw
         return true;
     }
 
-    bool Component::addSubTickPrerequisite( uint32 subTickID, const SubTickHandle& prerequisiteHandle )
+    bool Component::addSubTickPrerequisite( uint32 subTickID, const SubTickHandle& prerequisiteHandle, TickPrerequisiteKind kind )
     {
         if ( subTickID == 0 || prerequisiteHandle.isValid() == false )
             return false;
@@ -183,16 +182,25 @@ namespace sw
         // 자기 자신을 선행 조건으로 추가하지 못하게 한다
         if ( prerequisiteHandle._componentID == _componentID && prerequisiteHandle._subTickID == subTickID )
             return false;
-        if ( deferIfStructureFrozen( Delegate<void( Component& )>( [subTickID, prerequisiteHandle]( Component& self )
-        { (void)self.addSubTickPrerequisite( subTickID, prerequisiteHandle ); } ) ) )
+        if ( deferIfStructureFrozen( Delegate<void( Component& )>( [subTickID, prerequisiteHandle, kind]( Component& self )
+        { (void)self.addSubTickPrerequisite( subTickID, prerequisiteHandle, kind ); } ) ) )
             return true;
 
         SubTickInfo* pInfo = VectorUtil::findBy<&SubTickInfo::_subTickID>( _listSubTick, subTickID );
         if ( pInfo == nullptr )
             return false;
-        if ( VectorUtil::contains( pInfo->_listPrerequisite, prerequisiteHandle ) )
+        for ( SubTickPrerequisite& prerequisite : pInfo->_listPrerequisite )
+        {
+            if ( prerequisite._handle != prerequisiteHandle )
+                continue;
+            if ( prerequisite._kind == kind )
+                return true;
+            prerequisite._kind = kind; // 같은 간선의 종류만 바뀌었다 — 스테이지가 레벨 · 태스크 간선을 다시 가른다
+            if ( _pOwner != nullptr )
+                _pOwner->markTickOrderDirty();
             return true;
-        pInfo->_listPrerequisite.push_back( prerequisiteHandle );
+        }
+        pInfo->_listPrerequisite.push_back( SubTickPrerequisite{ prerequisiteHandle, kind } );
         if ( _pOwner != nullptr )
             _pOwner->markTickOrderDirty();
         return true;
@@ -212,7 +220,7 @@ namespace sw
                 continue;
             for ( size_t index = 0; index < info._listPrerequisite.size(); ++index )
             {
-                if ( info._listPrerequisite[index] != prerequisiteHandle )
+                if ( info._listPrerequisite[index]._handle != prerequisiteHandle )
                     continue;
                 info._listPrerequisite.erase( info._listPrerequisite.begin() + static_cast<ptrdiff_t>( index ) );
                 if ( _pOwner != nullptr )

@@ -130,13 +130,13 @@ namespace sw
         Component::onUnregister( manager );
     }
 
-    void SurfaceExposureComponent::onTick( float32 deltaTime )
+    void SurfaceExposureComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         // 물리 질의와 외형의 표면 쓰기는 틱(워커) 밖에서 한다 — 쌓은 시간을 시스템이 틱 뒤 게임 스레드에서 한 번에 쓴다.
         // 틱이 도는 동안만(플레이) 시간이 쌓이므로 편집 모드에서는 시스템이 돌아도 아무것도 바꾸지 않는다.
-        if ( deltaTime > 0.0f )
-            _pendingSeconds += deltaTime;
+        if ( context.getDeltaTime() > 0.0f )
+            _pendingSeconds += context.getDeltaTime();
     }
 
     void SurfaceExposureComponent::applyExposure( GameObjectManager& manager )

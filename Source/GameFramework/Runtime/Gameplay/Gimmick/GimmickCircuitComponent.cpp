@@ -591,14 +591,14 @@ namespace sw
         storeState();
     }
 
-    void GimmickCircuitComponent::onTick( float32 deltaTime )
+    void GimmickCircuitComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr || _circuit.isBuilt() == false )
             return;
-        const int32 stepCount = _circuit.consumeTime( deltaTime );
+        const int32 stepCount = _circuit.consumeTime( context.getDeltaTime() );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             pullSensors( *pManager );

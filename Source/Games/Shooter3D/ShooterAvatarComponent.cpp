@@ -190,19 +190,19 @@ namespace sw
         }
     }
 
-    void ShooterAvatarComponent::onTick( float32 deltaTime )
+    void ShooterAvatarComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         GameObject*                   pOwner              = getOwner();
         GameObjectManager*            pManager            = pOwner != nullptr ? pOwner->getManager() : nullptr;
         const GameObject*             pObject             = pManager != nullptr ? pManager->resolveGameObject( _player ) : nullptr;
         const ShooterPlayerComponent* pPlayer             = pObject != nullptr ? pObject->getComponent<ShooterPlayerComponent>() : nullptr;
         SkeletalAnimatorComponent*    pAnimator           = pOwner != nullptr ? pOwner->getComponent<SkeletalAnimatorComponent>() : nullptr;
         SceneComponent*               pScene              = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
-        const bool                    bMissingAvatarParts = pPlayer == nullptr || pScene == nullptr || deltaTime <= 0.0f;
+        const bool                    bMissingAvatarParts = pPlayer == nullptr || pScene == nullptr || context.getDeltaTime() <= 0.0f;
         if ( bMissingAvatarParts )
             return;
-        const float32 step = MathUtil::min( deltaTime, 0.1f );
+        const float32 step = MathUtil::min( context.getDeltaTime(), 0.1f );
 
         // 몸은 발 자리에 서서 보는 쪽을 본다(KayKit 은 +Z 가 앞).
         // 시점이 한 프레임에 크게 돌아도(마우스 휙 · 표적 바꾸기) 몸은 각속도 상한으로 따라간다.

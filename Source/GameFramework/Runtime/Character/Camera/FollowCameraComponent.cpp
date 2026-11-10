@@ -31,9 +31,9 @@ namespace sw
         applyToCamera( float3{ 0.0f, 0.0f, 0.0f } );
     }
 
-    void FollowCameraComponent::onTick( float32 deltaTime )
+    void FollowCameraComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         GameObject*              pOwner    = getOwner();
         GameObjectManager*       pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
         const GameModeComponent* pGameMode = pManager != nullptr ? GameModeComponent::resolve<GameModeComponent>( *pManager, _gameMode ) : nullptr;

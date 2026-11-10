@@ -392,17 +392,17 @@ namespace sw
         _bBodyRequested = SW_TRUE;
     }
 
-    void ShooterPlayerComponent::onTick( float32 deltaTime )
+    void ShooterPlayerComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         _bRoundJustRestarted                                  = SW_FALSE;
         GameObject*                     pOwner                = getOwner();
         FirstPersonCameraComponent*     pCamera               = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;
         const ShooterGameModeComponent* pGameMode             = findGameMode<ShooterGameModeComponent>();
-        const bool                      bMissingCameraContext = pCamera == nullptr || pGameMode == nullptr || deltaTime <= 0.0f;
+        const bool                      bMissingCameraContext = pCamera == nullptr || pGameMode == nullptr || context.getDeltaTime() <= 0.0f;
         if ( bMissingCameraContext )
             return;
-        const float32 step = MathUtil::min( deltaTime, 0.1f );
+        const float32 step = MathUtil::min( context.getDeltaTime(), 0.1f );
 
         // 시점 카메라의 프리셋(1인칭, 3인칭, 궤도, CCTV)이 바뀌면 틱이 끝난 뒤 가시성을 맞춘다.
         const bool bFirstPerson = queryFirstPerson();

@@ -36,9 +36,9 @@ namespace sw
         setTickGroup( TickGroup::PostUpdate );
     }
 
-    void DaylightComponent::onTick( float32 deltaTime )
+    void DaylightComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         GameObject*                pOwner   = getOwner();
         GameObjectManager*         pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         DirectionalLightComponent* pSun     = pOwner != nullptr ? pOwner->getComponent<DirectionalLightComponent>() : nullptr;

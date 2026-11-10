@@ -113,7 +113,7 @@ namespace sw
         void onUnregister( GameObjectManager& manager ) override;
         void onPostLoad() override;
         void onBeginPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
         void onPropertyChanged( hashed_string propertyName ) override;
 
         /** @brief 노드를 추가합니다. 코드로 만드는 회로와 테스트에 씁니다. @p target 이 비어 있으면 소유자입니다. 다음 `rebuild` 부터 반영됩니다. */

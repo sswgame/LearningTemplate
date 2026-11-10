@@ -30,7 +30,7 @@ namespace sw
         virtual ~MeleeHitboxComponent() override = default;
 
         void onBeginPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         bool  isAttackActive() const { return _bIsAttacking; }
         int32 getDamage() const { return _damage; }

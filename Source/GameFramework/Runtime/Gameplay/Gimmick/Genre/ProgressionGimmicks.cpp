@@ -36,10 +36,10 @@ namespace sw
             GenreGimmickUtil::setBodyActive( *pOwner, false, this );
     }
 
-    void AbilityGateComponent::onTick( float32 deltaTime )
+    void AbilityGateComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
-        const int32 stepCount = _clock.consume( deltaTime );
+        Component::onTick( context );
+        const int32 stepCount = _clock.consume( context.getDeltaTime() );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             stepOnce();
@@ -109,10 +109,10 @@ namespace sw
         return true;
     }
 
-    void GatheringNodeComponent::onTick( float32 deltaTime )
+    void GatheringNodeComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
-        const int32 stepCount = _clock.consume( deltaTime );
+        Component::onTick( context );
+        const int32 stepCount = _clock.consume( context.getDeltaTime() );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             stepOnce();

@@ -13,15 +13,19 @@ namespace sw
     PhysicsPoseStore::PhysicsPoseStore()
         : _store3D{}
         , _store2D{}
+        , _commandStore3D{}
+        , _commandStore2D{}
+        , _vehicleInputStore{}
     {
     }
 
     PhysicsPoseStore::~PhysicsPoseStore()
     {
-        // 서비스 범위가 내려갈 때 칸이 남았으면 그 강체가 새었다(`SceneTransformStorage` 와 같은 경고). 페이지는 그래도 놓는다.
-        const uint32 liveSlotCount = _store3D.getLiveSlotCount() + _store2D.getLiveSlotCount();
+        // 서비스 범위가 내려갈 때 칸이 남았으면 그 강체 · 컨트롤러 · 차가 새었다(`SceneTransformStorage` 와 같은 경고). 페이지는 그래도 놓는다.
+        const uint32 liveSlotCount = _store3D.getLiveSlotCount() + _store2D.getLiveSlotCount() + _commandStore3D.getLiveSlotCount() + _commandStore2D.getLiveSlotCount() + _vehicleInputStore.getLiveSlotCount();
         if ( liveSlotCount != 0 )
-            SW_LOG_WARNING_ID( "PhysicsPoseStore.LiveSlotsAtShutdown", "Physics pose store still has %# live slots at shutdown - a rigid body component leaked", liveSlotCount );
+            SW_LOG_WARNING_ID( "PhysicsPoseStore.LiveSlotsAtShutdown", "Physics pose store still has %# live slots at shutdown - a rigid body, character controller or vehicle component leaked",
+                               liveSlotCount );
     }
 } // namespace sw
 

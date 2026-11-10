@@ -39,7 +39,10 @@ namespace sw
                 if ( item._subTickID == 0 )
                 {
                     if ( pComp->canEverTick() )
-                        pComp->onTick( deltaTime );
+                    {
+                        TickContext context{ *pComp->getOwner(), deltaTime };
+                        pComp->onTick( context );
+                    }
                 }
                 else
                 {
@@ -172,6 +175,15 @@ namespace sw
         SceneTickSchedulerInternal::tickEntry( scope._threadState, _deltaTime, *_pEntry );
     }
 
+    void SceneTickScheduler::StageItemTask::run()
+    {
+        SW_PROFILE_SCOPE( "GT.Scene.tick.stageTask" );
+        const SceneTickSchedulerInternal::TickThreadScope scope{ *_pHierarchy, _dispatchOrdinal };
+        const TickBatchList&                              batchList = *_pBatchList;
+        if ( batchList._listElement.empty() == false )
+            batchList._pFunction( scope._threadState, batchList._listElement.data(), static_cast<uint32>( batchList._listElement.size() ), batchList._subTickID, _deltaTime );
+    }
+
     SceneTickScheduler::SceneTickScheduler( GameObjectManager& manager, SceneTransformHierarchy& hierarchy, PrimitiveRegistry& primitiveRegistry,
                                             StructuralChangeBuffer& structuralChangeBuffer )
         : _pManager{ &manager }
@@ -181,6 +193,7 @@ namespace sw
         , _tickRegistry{}
         , _listBatchStart{}
         , _listEntryTask{}
+        , _listStageItemTask{}
         , _stageTransformApplyCount{ 0 }
         , _dispatchOrdinal{ 0 }
     {
@@ -247,9 +260,13 @@ namespace sw
                 // 앞에서 돈 선행 조건(앞 스테이지 · 레인)이 쓴 트랜스폼을 이 스테이지가 같은 프레임에 읽게 한다. 기다리는 스테이지 앞에서만.
                 if ( stage._bApplyBefore == SW_TRUE )
                     applyStageTransforms();
-                // 파도와 같은 잡이다 — 이웃한 같은 (타입 함수, 서브틱 id) 항목은 함수 한 번에 넘어간다(`TickRegistry::refreshStageBatches`).
+                // 순서만 간선이 있으면 항목마다 태스크(간선 = runAfter), 없으면 파도와 같은 잡이다 — 이웃한 같은 (타입 함수, 서브틱 id) 항목은 함수 한 번에 넘어간다
+                // (`TickRegistry::refreshStageBatches`).
                 SW_PROFILE_COUNT( "GT.Scene.tick.stageLists", static_cast<uint32>( stage._listBatch.size() ) ); // 스테이지의 함수 호출 단위 수 — 항목 수보다 작을수록 잘 묶였다
-                (void)dispatchBatchLists( stage._listBatch, deltaTime );
+                if ( stage._listEdge.empty() == false )
+                    dispatchStageGraph( stage, deltaTime );
+                else
+                    (void)dispatchBatchLists( stage._listBatch, deltaTime );
             }
         }
     }
@@ -361,6 +378,94 @@ namespace sw
         job._deltaTime       = deltaTime;
         SceneTickSchedulerInternal::dispatch( totalCount, SW_DELEGATE_METHOD( ParallelBlockDelegate, &SceneTickSchedulerInternal::BatchListTick::tickRange, &job ) );
         return totalCount;
+    }
+
+    void SceneTickScheduler::dispatchStageGraph( const TickStage& stage, float32 deltaTime )
+    {
+        SW_PROFILE_SCOPE( "GT.Scene.tick.stageGraph" );
+        const uint32 itemCount = static_cast<uint32>( stage._listBatch.size() );
+        SW_ASSERT( itemCount == stage._listItem.size() ); // 간선 있는 스테이지는 항목마다 목록 하나다(`TickRegistry::refreshStageBatches`)
+
+        // 위상 순서(Kahn). 간선은 레지스트리가 DAG 에서 지었고 편집은 빼거나 번호만 민다 — 순환이 생길 수 없다.
+        vector<uint32> listOffset( itemCount + 1, 0 );
+        for ( const TickStageEdge& edge : stage._listEdge )
+        {
+            ++listOffset[edge._source + 1];
+        }
+        for ( uint32 index = 0; index < itemCount; ++index )
+        {
+            listOffset[index + 1] += listOffset[index];
+        }
+        vector<uint32> listTarget( stage._listEdge.size(), 0 );
+        vector<uint32> listCursor( listOffset.begin(), listOffset.end() - 1 );
+        vector<uint32> listInDegree( itemCount, 0 );
+        for ( const TickStageEdge& edge : stage._listEdge )
+        {
+            listTarget[listCursor[edge._source]++] = edge._target;
+            ++listInDegree[edge._target];
+        }
+        vector<uint32> listOrder;
+        listOrder.reserve( itemCount );
+        for ( uint32 index = 0; index < itemCount; ++index )
+        {
+            if ( listInDegree[index] == 0 )
+                listOrder.push_back( index );
+        }
+        for ( size_t cursor = 0; cursor < listOrder.size(); ++cursor )
+        {
+            const uint32 current = listOrder[cursor];
+            for ( uint32 edge = listOffset[current]; edge < listOffset[current + 1]; ++edge )
+            {
+                if ( --listInDegree[listTarget[edge]] == 0 )
+                    listOrder.push_back( listTarget[edge] );
+            }
+        }
+        SW_ASSERT( listOrder.size() == itemCount );
+
+        const uint32 firstOrdinal = _dispatchOrdinal + 1;
+        _dispatchOrdinal += itemCount;
+        _listStageItemTask.clear();
+        _listStageItemTask.resize( itemCount ); // 태스크가 원소 주소를 들므로 띄우기 전에 크기를 정한다
+        for ( uint32 rank = 0; rank < itemCount; ++rank )
+        {
+            StageItemTask& task   = _listStageItemTask[listOrder[rank]];
+            task._pBatchList      = &stage._listBatch[listOrder[rank]];
+            task._pHierarchy      = _pHierarchy;
+            task._dispatchOrdinal = firstOrdinal + rank;
+            task._deltaTime       = deltaTime;
+        }
+
+        // 작업 풀이 없으면(엔진 없는 테스트) 위상 순으로 이 스레드가 돈다.
+        const bool bAsync = engine::areEngineServicesBound() && engine::getSubsystem<TaskManager>().getWorkerCount() > 0;
+        if ( bAsync == false )
+        {
+            for ( const uint32 index : listOrder )
+            {
+                _listStageItemTask[index].run();
+            }
+            return;
+        }
+
+        TaskManager&       taskManager = engine::getSubsystem<TaskManager>();
+        TaskStageHandle    taskStage   = taskManager.createStage();
+        vector<TaskHandle> listHandle( itemCount );
+        for ( uint32 index = 0; index < itemCount; ++index )
+        {
+            listHandle[index] = taskManager.emplaceTask( "GT.Scene.tick.stageTask", SW_DELEGATE_METHOD( TaskDelegate, &StageItemTask::run, &_listStageItemTask[index] ) );
+            taskStage.addTask( listHandle[index] );
+        }
+        for ( const TickStageEdge& edge : stage._listEdge )
+        {
+            // 레지스트리가 DAG 로 지었으니 거절(순환)은 결함이다 — 걸지 못한 간선은 순서가 깨진다.
+            const bool bLinked = listHandle[edge._target].runAfter( listHandle[edge._source] );
+            SW_ASSERT( bLinked );
+            (void)bLinked;
+        }
+        for ( TaskHandle& handle : listHandle )
+        {
+            handle.submit();
+        }
+        taskManager.waitStage( taskStage, "SceneTickScheduler" );
     }
 
     void SceneTickScheduler::applyStageTransforms()

@@ -25,7 +25,7 @@ namespace sw
         ShooterEffectComponent();
         virtual ~ShooterEffectComponent() override = default;
 
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         /** @brief @p lifetime 초 동안 보입니다(자리 · 크기 · 색은 디렉터가 메시에 넣는다). */
         void activate( float32 lifetime );

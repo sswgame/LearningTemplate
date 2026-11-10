@@ -41,9 +41,9 @@ namespace sw
             (void)registerSubTick( TickGroup::DuringPhysics, kLateSubTick, TickPhase::Late, 3 );
         }
 
-        void onTick( float32 deltaTime ) override
+        void onTick( TickContext& context ) override
         {
-            _value += deltaTime * _speed;
+            _value += context.getDeltaTime() * _speed;
             writeOwnPosition( float3{ _value, 0.0f, 0.0f } );
             if ( _pShared != nullptr )
                 _pShared->setLocalPosition( float3{ 0.0f, 0.0f, _value } );
@@ -101,7 +101,7 @@ namespace sw
             Component::onBeginPlay();
             (void)registerSubTick( TickGroup::DuringPhysics, _followSubTickID );
             if ( _pLeader != nullptr )
-                (void)addSubTickPrerequisite( _followSubTickID, _pLeader->getTickHandle() );
+                (void)addSubTickPrerequisite( _followSubTickID, _pLeader->getTickHandle(), TickPrerequisiteKind::ReadsWrites ); // 리더가 옮긴 자리를 읽는다
         }
 
         void onSubTick( uint32 subTickID, float32 deltaTime ) override
@@ -128,6 +128,38 @@ namespace sw
         TickLaneFollowerAltTestComponent() { _followSubTickID = kAltFollowSubTick; }
     };
 
+    /**
+     * @brief 앞 고리의 값을 **멤버로 직접** 읽는 사슬 고리입니다(자리가 아니라서 순서만 선행 조건이면 된다 — 게임 모드 규칙 틱과 같은 모양).
+     * @details 값은 그 프레임의 앞 고리 값만으로 정해진다 — 순서가 하나라도 틀리면(앞 고리보다 먼저 돌면) 지난 프레임 값을 읽어 기대값과 달라진다.
+     */
+    REFLECT( HideInMenu )
+    struct TickLaneChainTestComponent : public Component
+    {
+        REFLECT_BODY();
+
+        static constexpr uint32 kChainSubTick = 9;
+
+        TickLaneChainTestComponent* _pPrev{ nullptr }; ///< 앞 고리(없으면 사슬의 머리 — 선행 조건 없이 파도에서 돈다)
+        float32                     _value = 0.0f;
+        float32                     _gain  = 1.0f;
+        uint32                      _frame = 0;
+        SubTickHandle               _chainHandle{};
+
+        void onBeginPlay() override
+        {
+            Component::onBeginPlay();
+            _chainHandle = registerSubTick( TickGroup::DuringPhysics, kChainSubTick );
+        }
+
+        void onSubTick( uint32 subTickID, float32 deltaTime ) override
+        {
+            (void)subTickID;
+            ++_frame;
+            const float32 previous = _pPrev != nullptr ? _pPrev->_value : static_cast<float32>( _frame );
+            _value                 = previous * 0.5f + _gain + deltaTime;
+        }
+    };
+
     /** @brief 메인 레인으로 등록하는(테스트의 지역 줄) 컴포넌트입니다 — 틱한 스레드를 적는다. */
     REFLECT( HideInMenu )
     struct TickLaneMainTestComponent : public Component
@@ -137,9 +169,8 @@ namespace sw
         std::thread::id _tickThread{};
         uint32          _tickCount = 0;
 
-        void onTick( float32 deltaTime ) override
+        void onTick( TickContext& /*context*/ ) override
         {
-            (void)deltaTime;
             _tickThread = std::this_thread::get_id();
             ++_tickCount;
         }

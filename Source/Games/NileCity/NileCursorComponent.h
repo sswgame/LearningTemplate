@@ -27,7 +27,7 @@ namespace sw
         virtual ~NileCursorComponent() override = default;
 
         void onBeginPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
     private:
         PROPERTY( Category = "Cursor", DisplayName = "Height", Tooltip = "Box centre above the ground", Units = m )

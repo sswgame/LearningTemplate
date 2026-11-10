@@ -37,7 +37,7 @@ namespace sw
         VisualSinkReactionComponent();
         ~VisualSinkReactionComponent() override = default;
 
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
         /** @brief 메시를 원래 자리로 되돌립니다(씬 전환 · 컴포넌트 제거에서 표현이 지하에 남지 않게). */
         void onEndPlay() override;
 

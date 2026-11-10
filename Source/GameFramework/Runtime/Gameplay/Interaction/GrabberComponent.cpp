@@ -107,9 +107,9 @@ namespace sw
                              pOwner != nullptr ? pOwner->getName().c_str() : "?", _grabButton.c_str() );
     }
 
-    void GrabberComponent::onTick( float32 deltaTime )
+    void GrabberComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         if ( _grabIndex.has_value() == false )
             return;
         GameObject*          pOwner   = getOwner();

@@ -149,12 +149,12 @@ namespace sw
         Component::onEndPlay();
     }
 
-    void SequencePlayerComponent::onTick( float32 deltaTime )
+    void SequencePlayerComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         if ( _player.isPlaying() == false )
             return;
-        _player.update( deltaTime );
+        _player.update( context.getDeltaTime() );
         applyTimeline();
         // 루프가 아니면 끝 프레임을 적용한 갱신에서 플레이어가 멈춘다 — 그때 끝낸다.
         if ( _player.isPlaying() == false )

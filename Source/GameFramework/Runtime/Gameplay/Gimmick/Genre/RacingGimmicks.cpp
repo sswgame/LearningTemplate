@@ -98,10 +98,10 @@ namespace sw
         return choice._item;
     }
 
-    void ItemBoxComponent::onTick( float32 deltaTime )
+    void ItemBoxComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
-        const int32 stepCount = _clock.consume( deltaTime );
+        Component::onTick( context );
+        const int32 stepCount = _clock.consume( context.getDeltaTime() );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             stepOnce();

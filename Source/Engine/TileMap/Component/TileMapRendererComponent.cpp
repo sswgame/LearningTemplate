@@ -88,7 +88,7 @@ namespace sw
         Component::onEndPlay();
     }
 
-    void TileMapRendererComponent::onTick( float32 deltaTime )
+    void TileMapRendererComponent::onTick( TickContext& context )
     {
         // 타일셋을 다시 읽었으면(핫 리로드 — 떼어 낸 새 객체) 칠한 맵은 그대로 두고 새 타일셋으로 번호 · 배치를 다시 짓는다.
         if ( _pTileSet != nullptr && _tileSetReload.takeChanged() )
@@ -104,7 +104,7 @@ namespace sw
         }
         if ( _listChunkBatch.empty() )
             return;
-        _elapsedSeconds += deltaTime;
+        _elapsedSeconds += context.getDeltaTime();
         // 오브젝트가 움직였으면 모든 칸을 다시 놓는다. 타일맵은 대개 서 있다 — 장면 컴포넌트와 월드 변경 번호가 그대로면 행렬도 읽지 않는다.
         // 번호가 바뀌어도 행렬이 같으면(같은 값으로 다시 합성) 칸을 다시 놓지 않도록 행렬 비교는 남긴다.
         const GameObject*     pOwner         = getOwner();

@@ -54,14 +54,10 @@ namespace sw
         Component::onEndPlay();
     }
 
-    void ParallaxLayerComponent::onTick( float32 /*deltaTime*/ )
+    void ParallaxLayerComponent::onTick( TickContext& context )
     {
-        GameObject*              pOwner   = getOwner();
-        const GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
-        if ( pManager == nullptr )
-            return;
         // 씬의 게임 카메라를 고르는 규칙과 같다(`Scene::pickActiveGameCamera`).
-        const CameraComponent* pCamera = pManager->getCameraRegistry().selectCamera( CameraRole::Game );
+        const CameraComponent* pCamera = context.getManager().getCameraRegistry().selectCamera( CameraRole::Game );
         if ( pCamera == nullptr )
             return;
         const float3 cameraPosition = pCamera->getCameraPosition();

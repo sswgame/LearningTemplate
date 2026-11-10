@@ -34,7 +34,7 @@ namespace sw
         /** @brief 움직일 대상과 격자 자리(기준 위치)·위상을 정합니다. 쓰지 않는 무버는 틱만 돈다. */
         void setTarget( SceneComponent* pTarget, const float3& basePosition, float32 phase, bool bWritesTransform );
 
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
     private:
         SceneComponent* _pTarget;

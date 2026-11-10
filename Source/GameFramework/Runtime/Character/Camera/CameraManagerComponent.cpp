@@ -129,13 +129,13 @@ namespace sw
         _impulseListener.addImpulse( def, request._origin );
     }
 
-    void CameraManagerComponent::onTick( float32 deltaTime )
+    void CameraManagerComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         const InputManager* pInput = _cycleAction.empty() == false ? game::findSubsystem<InputManager>() : nullptr;
         if ( pInput != nullptr && GameInputView( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() ).wasActionTriggered( _cycleAction ) )
             (void)cycleViewTarget( _cycleRole );
-        updateCamera( deltaTime );
+        updateCamera( context.getDeltaTime() );
     }
 
     void CameraManagerComponent::setViewTarget( const GameObjectHandle& target, const BlendCurveDef& blend )

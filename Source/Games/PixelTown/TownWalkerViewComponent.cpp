@@ -47,9 +47,9 @@ namespace sw
         _playingAnimation.clear();
     }
 
-    void TownWalkerViewComponent::onTick( float32 deltaTime )
+    void TownWalkerViewComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         SceneComponent*    pScene   = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;

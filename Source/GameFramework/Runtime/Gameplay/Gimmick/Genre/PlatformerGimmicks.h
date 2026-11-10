@@ -41,7 +41,7 @@ namespace sw
         CrumblePlatformComponent();
         virtual ~CrumblePlatformComponent() override = default;
 
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
         /** @brief 한 스텝(60 Hz)을 진행합니다. 테스트와 롤백 재시뮬레이션에 씁니다. */
         void stepOnce();
 
@@ -135,7 +135,7 @@ namespace sw
         ConveyorComponent();
         virtual ~ConveyorComponent() override = default;
 
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         const float3& getSurfaceVelocity() const { return _velocity; }
 

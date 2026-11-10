@@ -55,8 +55,7 @@
 
 GameObject/Component API 는 저작 · 수명 · 직렬화 층, 프레임 일은 접근을 선언한 잡, 핫 데이터는 종류별 SoA(완전 ECS 는 기각). 단계마다 빌드 · 테스트가 통과해야 하고, 이득이 흔들림 안이면 되돌린다.
 
-- **선행 조건 간선 종류:** `addSubTickPrerequisite` 에 종류(순서만 · 쓰기를 봄)를 필수 인자로(쓰는 곳 — `GameModeComponent` 규칙 틱은 순서만, `TickedPathMoverComponent` 는 자리를 읽는다). 순서만인 간선은 `TaskHandle::runAfter` 태스크 간선으로, 쓰기를 보는 간선만 레벨 장벽에(틱 중 쓰기는 `_bApplyBefore` 적용으로만 보인다).
-- **컴포넌트 틱의 컨텍스트:** Batch 레인의 `onTick` 도 `SceneJobContext` 형식(읽기 전용 남의 오브젝트 + 명령 버퍼)으로 — 남의 컴포넌트 직접 쓰기를 컴파일에서 막는다. 102 개 타입 서명이 바뀐다(`TickBatchRegistry.h` 머리말).
+- **컴포넌트 틱의 컨텍스트 남은 틈:** 주 틱은 `onTick( TickContext& )` 로 옮겼다. 틱 본문 45 곳이 아직 `getOwner()->getManager()`(쓰기 가능)를 꺼낸다 — 읽기는 `context.getManager()`(const), 쓰기는 `context.deferPostTick` 로 옮긴 뒤 틱에서 쓰기 가능한 매니저 길을 닫는다(빌드 고리가 필요). `onSubTick` 도 같은 컨텍스트로.
 - **서비스 갱신 병렬화:** 같은 단계 서비스 갱신을 접근이 겹치지 않는 것끼리 워커로 — 본문의 게임 스레드 전용 API 를 서명으로 먼저 가린다.
 - **SoA 다음 사용자:** 캐릭터 컨트롤러 3D · 2D 입력(`_commandLock` + 이동 · 점프 · 루트 모션 대기)을 `ComponentDataStore` 페이지로, 군중(`NavAgentCrowdSync`)의 에이전트별 `setWorldPosition` 을 `queuePoseWrite` · `applyTransformBatch` 일괄 쓰기로.
 - **공간 질의:** 근접 기믹 · 감지 · 넷 관심 격자를 `SceneSpatialGrid` 층으로 옮길지 측정 뒤.

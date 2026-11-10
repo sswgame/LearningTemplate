@@ -33,9 +33,9 @@ namespace sw
         _colorBucket = -1;
     }
 
-    void ParkGuestComponent::onTick( float32 deltaTime )
+    void ParkGuestComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;

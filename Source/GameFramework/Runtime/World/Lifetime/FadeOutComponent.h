@@ -35,7 +35,7 @@ namespace sw
          */
         void onBeginPlay() override;
         /** @brief 흐림을 진행해 스프라이트에 넣고, 흐른 시간이 `_duration` 에 닿는 걸음에 오브젝트를 지웁니다. */
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         float32 getDuration() const;
         float32 getCurrentTimer() const;

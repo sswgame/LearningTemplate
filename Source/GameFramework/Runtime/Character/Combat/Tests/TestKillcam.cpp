@@ -134,7 +134,10 @@ SW_TEST_CASE( KillcamTest, ComponentCutsToItsCameraAndReleases )
     SW_EXPECT_TRUE( manager.getCameraRegistry().getCutCamera() == pCamera );
     for ( int32 tickIndex = 0; tickIndex < 400 && pKillcam->isPlaying(); ++tickIndex )
     {
-        pKillcam->onTick( 0.05f );
+        {
+            TickContext context{ *pKillcam->getOwner(), 0.05f };
+            pKillcam->onTick( context );
+        }
     }
     SW_EXPECT_FALSE( pKillcam->isPlaying() );
     SW_EXPECT_TRUE( manager.getCameraRegistry().getCutCamera() == nullptr );

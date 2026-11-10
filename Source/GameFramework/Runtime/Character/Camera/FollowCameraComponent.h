@@ -29,7 +29,7 @@ namespace sw
         virtual ~FollowCameraComponent() override = default;
 
         void onBeginPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
     private:
         /** @brief 초점에 오프셋을 더한 자리에서 초점을 보게 둡니다. */

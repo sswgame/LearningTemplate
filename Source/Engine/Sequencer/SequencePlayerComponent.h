@@ -42,7 +42,7 @@ namespace sw
 
         void onBeginPlay() override;
         void onEndPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
         /** @brief 읽어 들인 `_sequencePath` 로 시퀀스를 다시 엽니다. 플레이 전(에디터)에도 Play 가 그 시퀀스를 돌립니다. */
         void onPostLoad() override;
         /** @brief `_sequencePath` 가 바뀌면 그 시퀀스를 다시 엽니다. */

@@ -1,5 +1,6 @@
 // TickLanesTest — 일괄 경로(파도 · 레인)가 기준 길(오브젝트 칸, 한 오브젝트 = 한 스레드)과 같은 상태를 내는지(서브틱 · 선행 조건 · 틱 중 서브틱
-// 등록 · 해제 · 남의 오브젝트 쓰기를 섞어), 타입이 선언한 레인(`TickMode`)대로 가는지 본다(NEXT 5-3 1 · 1b · 1c).
+// 등록 · 해제 · 남의 오브젝트 쓰기를 섞어), 타입이 선언한 레인(`TickMode`)대로 가는지, 선행 조건 종류(순서만 · 쓰기를 봄)가 태스크 간선 · 레벨 장벽으로
+// 갈리는지 본다(NEXT 5-3 1 · 1b · 1c).
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"
@@ -300,4 +301,128 @@ SW_TEST_CASE( TickLanesTest, StageNeighborBatchesMatchOldOrder )
     SW_REQUIRE_TRUE( pBatchedStage != nullptr );
     SW_EXPECT_EQUAL( batched._listFollower.size(), pBatchedStage->_listItem.size() );
     SW_EXPECT_EQUAL( size_t{ 2 }, pBatchedStage->_listBatch.size() );
+}
+
+namespace
+{
+    /**
+     * @brief 사슬 고리를 둔 씬입니다 — 머리(0) ← 1 ← 2 ← 3 ←(쓰기를 봄) 4 ← 5 ← 6 ← 7, 그리고 2 번 오브젝트의 둘째 고리(2b ← 3). 4 번만 `ReadsWrites` 이고 나머지는 순서만이다.
+     * @details 레벨 0 은 {1, 2, 3} 한 스테이지(간선 둘)와 같은 오브젝트라 칸이 갈린 {2b}, 레벨 1 은 {4..7} 한 스테이지(간선 셋, 적용 먼저)가 된다.
+     */
+    struct TickChainRig
+    {
+        static constexpr uint32  kLinkCount       = 8;
+        static constexpr uint32  kReadsWritesLink = 4;
+        static constexpr float32 kDeltaTime       = 1.0f / 60.0f;
+
+        GameObjectManager                   _manager;
+        vector<TickLaneChainTestComponent*> _listLink;
+        TickLaneChainTestComponent*         _pSecond{ nullptr }; ///< 2 번 오브젝트의 둘째 고리(3 번을 기다린다)
+
+        TickChainRig( const SceneEngineServices& services, bool bBatchPath )
+            : _manager{ services }
+        {
+            _manager.getTickRegistry().setBatchPathEnabled( bBatchPath );
+            for ( uint32 index = 0; index < kLinkCount; ++index )
+            {
+                TickLaneChainTestComponent* pLink = _manager.createGameObject( hashed_string( "Link" ) )->addComponent<TickLaneChainTestComponent>();
+                pLink->_gain                      = 1.0f + static_cast<float32>( index ) * 0.25f;
+                pLink->_pPrev                     = index > 0 ? _listLink[index - 1] : nullptr;
+                _listLink.push_back( pLink );
+            }
+            _pSecond         = _listLink[2]->getOwner()->addComponent<TickLaneChainTestComponent>();
+            _pSecond->_gain  = 7.0f;
+            _pSecond->_pPrev = _listLink[3];
+            _manager.beginPlay();
+            // 선행 조건은 고리마다 서브틱 핸들이 생긴 뒤(beginPlay) 건다.
+            for ( uint32 index = 1; index < kLinkCount; ++index )
+            {
+                const TickPrerequisiteKind kind = index == kReadsWritesLink ? TickPrerequisiteKind::ReadsWrites : TickPrerequisiteKind::OrderOnly;
+                SW_EXPECT_TRUE( _listLink[index]->addSubTickPrerequisite( TickLaneChainTestComponent::kChainSubTick, _listLink[index - 1]->_chainHandle, kind ) );
+            }
+            SW_EXPECT_TRUE( _pSecond->addSubTickPrerequisite( TickLaneChainTestComponent::kChainSubTick, _listLink[3]->_chainHandle, TickPrerequisiteKind::OrderOnly ) );
+        }
+
+        void run( uint32 frameCount )
+        {
+            for ( uint32 frame = 0; frame < frameCount; ++frame )
+            {
+                _manager.update( kDeltaTime );
+            }
+        }
+
+        /** @brief 이번 프레임 값이 사슬 순서대로 계산된 값과 같은지 봅니다(앞 고리보다 먼저 돈 고리는 지난 프레임 값을 읽어 어긋난다). */
+        void expectChainValues() const
+        {
+            float32 expected = static_cast<float32>( _listLink[0]->_frame ) * 0.5f + _listLink[0]->_gain + kDeltaTime;
+            SW_EXPECT_NEAR( expected, _listLink[0]->_value, 1e-4f );
+            for ( uint32 index = 1; index < kLinkCount; ++index )
+            {
+                expected = expected * 0.5f + _listLink[index]->_gain + kDeltaTime;
+                SW_EXPECT_NEAR( expected, _listLink[index]->_value, 1e-4f );
+            }
+            SW_EXPECT_NEAR( _listLink[3]->_value * 0.5f + _pSecond->_gain + kDeltaTime, _pSecond->_value, 1e-4f );
+        }
+    };
+} // namespace
+
+/**
+ * @brief [TickLanesTest] 순서만 선행 조건은 같은 레벨 스테이지의 태스크 간선(`runAfter`)이 되고 쓰기를 보는 선행 조건만 레벨 장벽 · 적용을 넘는다 —
+ *        순서는 사슬 그대로이고 일괄 길과 기준 길이 같은 값을 낸다(NEXT 5-3 선행 조건 간선 종류)
+ */
+SW_TEST_CASE( TickLanesTest, OrderOnlyPrerequisitesBecomeTaskEdges )
+{
+    const SceneEngineServices services = SceneEngineServices::makeFromBoundEngine();
+    TickChainRig              batched{ services, true };
+    TickChainRig              reference{ services, false };
+    batched.run( 6 );
+    reference.run( 6 );
+    batched.expectChainValues();
+    reference.expectChainValues();
+    for ( uint32 index = 0; index < TickChainRig::kLinkCount; ++index )
+    {
+        SW_EXPECT_EQUAL( reference._listLink[index]->_value, batched._listLink[index]->_value );
+    }
+    SW_EXPECT_EQUAL( reference._pSecond->_value, batched._pSecond->_value );
+
+    // 스테이지 모양: 레벨 0 = {1, 2, 3}(간선 둘) + {2b}(같은 오브젝트라 다음 칸, 간선 없음), 레벨 1 = {4..7}(간선 셋, 돌기 전에 적용).
+    const uint32      group = static_cast<uint32>( TickGroup::DuringPhysics );
+    vector<TickStage> listStage; // 복사본 — 아래에서 종류를 바꾸면 레지스트리가 다시 짓는다
+    for ( const TickStage& stage : batched._manager.getTickRegistry().getStages() )
+    {
+        if ( stage._group == group && stage._listItem.empty() == false )
+            listStage.push_back( stage );
+    }
+    SW_REQUIRE_EQUAL( size_t{ 3 }, listStage.size() );
+    SW_EXPECT_EQUAL( uint32{ 0 }, listStage[0]._level );
+    SW_EXPECT_EQUAL( size_t{ 3 }, listStage[0]._listItem.size() );
+    SW_EXPECT_EQUAL( size_t{ 2 }, listStage[0]._listEdge.size() );
+    SW_EXPECT_EQUAL( size_t{ 3 }, listStage[0]._listBatch.size() ); // 간선 있는 스테이지는 항목마다 목록 하나
+    SW_EXPECT_EQUAL( uint32{ 0 }, listStage[1]._level );
+    SW_EXPECT_EQUAL( size_t{ 1 }, listStage[1]._listItem.size() );
+    SW_EXPECT_TRUE( listStage[1]._listEdge.empty() );
+    SW_EXPECT_EQUAL( uint32{ 1 }, listStage[2]._level );
+    SW_EXPECT_EQUAL( size_t{ 4 }, listStage[2]._listItem.size() );
+    SW_EXPECT_EQUAL( size_t{ 3 }, listStage[2]._listEdge.size() );
+    SW_EXPECT_TRUE( listStage[0]._bApplyBefore == SW_FALSE ); // 순서만 — 머리의 쓰기를 기다리지 않는다
+    SW_EXPECT_TRUE( listStage[2]._bApplyBefore == SW_TRUE );  // 쓰기를 보는 간선이 넘는 레벨
+
+    // 종류를 바꾸면 스테이지가 다시 갈린다 — 모두 쓰기를 보면 고리마다 레벨 하나(간선 없는 스테이지, 2b 는 4 와 같은 레벨).
+    for ( uint32 index = 1; index < TickChainRig::kLinkCount; ++index )
+    {
+        SW_REQUIRE_TRUE( batched._listLink[index]->addSubTickPrerequisite( TickLaneChainTestComponent::kChainSubTick, batched._listLink[index - 1]->_chainHandle,
+                                                                           TickPrerequisiteKind::ReadsWrites ) );
+    }
+    SW_REQUIRE_TRUE( batched._pSecond->addSubTickPrerequisite( TickLaneChainTestComponent::kChainSubTick, batched._listLink[3]->_chainHandle, TickPrerequisiteKind::ReadsWrites ) );
+    batched.run( 2 );
+    batched.expectChainValues();
+    uint32 maxLevel = 0;
+    for ( const TickStage& stage : batched._manager.getTickRegistry().getStages() )
+    {
+        if ( stage._group != group || stage._listItem.empty() )
+            continue;
+        SW_EXPECT_TRUE( stage._listEdge.empty() );
+        maxLevel = stage._level > maxLevel ? stage._level : maxLevel;
+    }
+    SW_EXPECT_EQUAL( TickChainRig::kLinkCount - 2, maxLevel ); // 고리 1..7 이 레벨 0..6
 }

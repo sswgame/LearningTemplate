@@ -30,7 +30,7 @@ namespace sw
         WeatherWaveComponent();
         ~WeatherWaveComponent() override = default;
 
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         /** @brief 날씨 값 @p weatherValue(음수는 0)에서 진폭 배율입니다 — 0 이면 1, 1 이면 @p stormScale, 그 사이와 너머는 직선입니다. */
         static float32 computeAmplitudeScale( float32 weatherValue, float32 stormScale );

@@ -33,7 +33,7 @@ namespace sw
         virtual ~NileBuildingComponent() override = default;
 
         void onBeginPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         /** @brief 따라갈 디렉터와 건물 번호를 정합니다(디렉터가 스폰한 뒤 부른다). */
         void assignBuilding( GameObjectHandle gameMode, int32 buildingIndex );

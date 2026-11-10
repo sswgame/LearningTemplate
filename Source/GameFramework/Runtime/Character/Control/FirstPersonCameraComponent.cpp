@@ -64,16 +64,16 @@ namespace sw
         applyToCamera();
     }
 
-    void FirstPersonCameraComponent::onTick( float32 deltaTime )
+    void FirstPersonCameraComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         const PawnComponent* pPawn = findPawn();
         if ( pPawn != nullptr )
         {
             const ControlIntent& intent = pPawn->getIntent();
             _look.setAngles( intent._controlYaw, intent._controlPitch );
         }
-        _pendingDeltaTime += MathUtil::max( 0.0f, deltaTime );
+        _pendingDeltaTime += MathUtil::max( 0.0f, context.getDeltaTime() );
         applyToCamera();
     }
 

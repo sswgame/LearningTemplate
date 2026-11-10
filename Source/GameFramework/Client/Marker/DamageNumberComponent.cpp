@@ -57,11 +57,11 @@ namespace sw
         refreshWidget();
     }
 
-    void DamageNumberComponent::onTick( float32 deltaTime )
+    void DamageNumberComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
 
-        const bool bExpired = LifeSpanUtil::advance( _currentLife, _lifeTime, deltaTime );
+        const bool bExpired = LifeSpanUtil::advance( _currentLife, _lifeTime, context.getDeltaTime() );
         if ( _lifeTime > 0.0f )
         {
             _alpha             = computeAlpha();
@@ -81,7 +81,7 @@ namespace sw
             {
                 // 위로 떠오른다 — 월드 위다(돌아가거나 커진 부모 아래에서도). 마커가 이 점을 따라간다.
                 float3 pos = pSceneComp->getWorldPosition();
-                pos._y += _floatSpeed * deltaTime;
+                pos._y += _floatSpeed * context.getDeltaTime();
                 pSceneComp->setWorldPosition( pos );
             }
         }

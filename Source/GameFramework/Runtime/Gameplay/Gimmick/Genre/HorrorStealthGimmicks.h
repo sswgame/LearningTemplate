@@ -36,7 +36,7 @@ namespace sw
         virtual ~ScareTriggerComponent() override = default;
 
         void  onOverlapBegin( const OverlapInfo& overlap ) override;
-        void  onTick( float32 deltaTime ) override;
+        void  onTick( TickContext& context ) override;
         int32 getFireCount() const { return _fireCount; }
 
     private:
@@ -74,7 +74,7 @@ namespace sw
         virtual ~FlickerLightComponent() override = default;
 
         void onBeginPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
         /** @brief 스텝 @p step 의 밝기 배율입니다. 패턴이 비어 있으면 1 입니다. */
         float32 computeScaleAtStep( int32 step ) const;
 
@@ -108,7 +108,7 @@ namespace sw
         HidingSpotComponent();
         virtual ~HidingSpotComponent() override = default;
 
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
         /** @brief 숨깁니다. 슬롯이 없으면 false 입니다. */
         [[nodiscard]] bool enter( GameObject& who );
         /** @brief 나옵니다. 숨어 있지 않았으면 false 입니다. */
@@ -134,7 +134,7 @@ namespace sw
         NoiseEmitterComponent();
         virtual ~NoiseEmitterComponent() override = default;
 
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
         void stepOnce();
         /** @brief 반경 @p radius 의 소리를 냅니다. */
         void    emit( float32 radius );

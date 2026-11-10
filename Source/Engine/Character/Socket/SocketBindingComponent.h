@@ -66,7 +66,7 @@ namespace sw
         virtual ~SocketBindingComponent() override = default;
 
         /** @brief 물리와 되돌아가기 동안만 돕니다. */
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
         /** @brief 물리 바디가 정해지지 않았으면 같은 오브젝트의 강체(`RigidBodyComponent`)를 씁니다. */
         void onBeginPlay() override;
         /** @brief 물리 바디를 쓰고 있으면 끝냅니다. */

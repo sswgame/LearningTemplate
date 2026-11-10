@@ -33,7 +33,7 @@ namespace sw
         ~WesternHorseMountComponent() override = default;
 
         void onBeginPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         /** @brief 말 상태를 빌립니다(소유하지 않습니다). nullptr 이면 연결을 풉니다. */
         void          bindHorse( WesternHorse* pHorse ) { _pHorse = pHorse; }

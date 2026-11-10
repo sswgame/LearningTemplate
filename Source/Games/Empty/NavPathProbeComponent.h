@@ -36,7 +36,7 @@ namespace sw
         void onUnregister( GameObjectManager& manager ) override;
         void onBeginPlay() override;
         void onEndPlay() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
 
         /** @brief 마지막으로 받은 경로의 길이(m)입니다. 아직 받지 못했으면 음수입니다. */
         float32 getLastPathLength() const { return _lastPathLength; }

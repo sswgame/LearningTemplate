@@ -31,10 +31,10 @@ namespace sw
         _respawnDelay = respawnDelay;
     }
 
-    void CrumblePlatformComponent::onTick( float32 deltaTime )
+    void CrumblePlatformComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
-        const int32 stepCount = _clock.consume( deltaTime );
+        Component::onTick( context );
+        const int32 stepCount = _clock.consume( context.getDeltaTime() );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             stepOnce();
@@ -132,9 +132,9 @@ namespace sw
     {
     }
 
-    void ConveyorComponent::onTick( float32 deltaTime )
+    void ConveyorComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         GameObject*                   pOwner             = getOwner();
         GameObjectManager*            pManager           = pOwner != nullptr ? pOwner->getManager() : nullptr;
         const GimmickSensorComponent* pSensor            = pOwner != nullptr ? pOwner->getComponent<GimmickSensorComponent>() : nullptr;
@@ -143,7 +143,7 @@ namespace sw
             return;
         // 겹친 것이 자기 틱에서 쓴 위치 위에 더한다. 틱 뒤의 게임 스레드에서 처리한다. 같은 틱에서 쓰면 그쪽의 쓰기와 순서가 정해지지 않기 때문이다.
         const TComponentHandle<ConveyorComponent> self{ this };
-        const float3                              offset   = _velocity * deltaTime;
+        const float3                              offset   = _velocity * context.getDeltaTime();
         const float3                              velocity = _velocity;
         pManager->executeOrDeferPostTick( [pManager, self, offset, velocity]()
         {

@@ -42,9 +42,9 @@ namespace sw
         _bStarts = SW_TRUE;
     }
 
-    void PairedAnimationNetStarterComponent::onTick( float32 deltaTime )
+    void PairedAnimationNetStarterComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
         GameObject*                     pOwner   = getOwner();
         const PairedAnimationComponent* pPaired  = _bStarts == SW_TRUE && pOwner != nullptr ? pOwner->getComponent<PairedAnimationComponent>() : nullptr;
         GameObjectManager*              pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
@@ -55,7 +55,7 @@ namespace sw
             _endedSeconds = 0.0f;
             return;
         }
-        _endedSeconds += deltaTime;
+        _endedSeconds += context.getDeltaTime();
         if ( _endedSeconds < _restartDelay )
             return;
         // 세션은 다른 오브젝트의 애니메이터를 바꾼다 — 틱 뒤에 시작한다.

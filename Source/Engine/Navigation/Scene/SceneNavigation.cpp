@@ -87,6 +87,8 @@ namespace sw
         , _pathSolver{ *this }
         , _pathQueue{ _pathSolver }
         , _crowdStage{}
+        , _listAgentTransformWrite{}
+        , _listWrittenAgent{}
         , _pManager{ &manager }
         , _waitingMeshCount{ 0 }
         , _crowdDeltaTime{ 0.0f }
@@ -836,10 +838,23 @@ namespace sw
         SW_PROFILE_SCOPE( "GT.Navigation.writeAgents" );
         waitCrowdUpdates();
         _bCrowdUpdateLaunched = SW_FALSE;
+        _listAgentTransformWrite.clear();
+        _listWrittenAgent.clear();
         for ( NavMeshAgentComponent* pAgent : _listAgent )
         {
-            if ( pAgent->_crowdAgentID != NavigationConstant::kInvalidAgentID && pAgent->_crowdIndex < _listRuntime.size() )
-                NavAgentCrowdSync::writeAgentResult( *pAgent, *_listRuntime[pAgent->_crowdIndex], _crowdDeltaTime );
+            const bool bWritten = pAgent->_crowdAgentID != NavigationConstant::kInvalidAgentID && pAgent->_crowdIndex < _listRuntime.size() &&
+                                  NavAgentCrowdSync::writeAgentResult( *pAgent, *_listRuntime[pAgent->_crowdIndex], _crowdDeltaTime, _listAgentTransformWrite );
+            if ( bWritten )
+                _listWrittenAgent.push_back( pAgent );
+        }
+        // 부모 없는 에이전트의 자리 · 회전은 한 번에 적용하고 펼친다(물리 `ScenePhysics::applyPoseWrites` 와 같은 길) — 쓴 번호를 펼친 뒤 읽어 에이전트마다 월드를 따로 합성하지 않는다.
+        if ( _listAgentTransformWrite.empty() == false )
+            (void)_pManager->applyTransformBatch( _listAgentTransformWrite.data(), static_cast<uint32>( _listAgentTransformWrite.size() ) );
+        if ( _listWrittenAgent.empty() == false && _pManager->hasDirtySceneTransforms() )
+            _pManager->flushSceneTransforms();
+        for ( NavMeshAgentComponent* pAgent : _listWrittenAgent )
+        {
+            NavAgentCrowdSync::recordWrittenTransform( *pAgent );
         }
     }
 

@@ -4,9 +4,11 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Physics/Scene/PhysicsNameValidation.h"
+#include "Engine/Physics/Scene/PhysicsPoseStore.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 
@@ -21,34 +23,47 @@ namespace sw
         , _layer{ "Character" }
         , _character{}
         , _state{}
-        , _commandLock{}
+        , _pCommandPage{ nullptr }
+        , _commandSlot{ PhysicsPoseStore::kInvalidSlot }
         , _previousPosition{}
-        , _moveVelocity{ 0.0f }
         , _worldPosition{}
         , _worldRotation{}
         , _worldScale{ 1.0f, 1.0f, 1.0f }
         , _verticalSpeed{ 0.0f }
-        , _pendingJumpSpeed{ 0.0f }
         , _airVelocity{ 0.0f }
     {
+        _commandSlot = engine::getSubsystem<PhysicsPoseStore>().getCommandStore<CharacterCommand2D>().allocateSlot( this, _pCommandPage );
+    }
+
+    CharacterController2DComponent::~CharacterController2DComponent()
+    {
+        engine::getSubsystem<PhysicsPoseStore>().getCommandStore<CharacterCommand2D>().freeSlot( _commandSlot );
+    }
+
+    template <typename TFunction>
+    void CharacterController2DComponent::editCommand( TFunction&& function ) const
+    {
+        _pCommandPage->editCommand( _commandSlot & CharacterCommandPage2D::kSlotMask, std::forward<TFunction>( function ) );
     }
 
     float32 CharacterController2DComponent::getRequestedMoveVelocity() const
     {
-        ScopedLock<SpinLock> lock{ _commandLock };
-        return _moveVelocity;
+        float32 velocity = 0.0f;
+        editCommand( [&velocity]( const CharacterCommand2D& command )
+        { velocity = command._moveVelocity; } );
+        return velocity;
     }
 
     void CharacterController2DComponent::setMoveVelocity( float32 velocity )
     {
-        ScopedLock<SpinLock> lock{ _commandLock };
-        _moveVelocity = velocity;
+        editCommand( [velocity]( CharacterCommand2D& command )
+        { command._moveVelocity = velocity; } );
     }
 
     void CharacterController2DComponent::jump( float32 speed )
     {
-        ScopedLock<SpinLock> lock{ _commandLock };
-        _pendingJumpSpeed = speed;
+        editCommand( [speed]( CharacterCommand2D& command )
+        { command._pendingJumpSpeed = speed; } );
     }
 
     void CharacterController2DComponent::setRadius( float32 radius )
@@ -130,12 +145,12 @@ namespace sw
             return;
         float32 moveVelocity = 0.0f;
         float32 jumpSpeed    = 0.0f;
+        editCommand( [&moveVelocity, &jumpSpeed]( CharacterCommand2D& command )
         {
-            ScopedLock<SpinLock> lock{ _commandLock };
-            moveVelocity      = _moveVelocity;
-            jumpSpeed         = _pendingJumpSpeed;
-            _pendingJumpSpeed = 0.0f;
-        }
+            moveVelocity              = command._moveVelocity;
+            jumpSpeed                 = command._pendingJumpSpeed;
+            command._pendingJumpSpeed = 0.0f;
+        } );
         if ( _state._bGrounded && _verticalSpeed < 0.0f )
             _verticalSpeed = 0.0f;
         _verticalSpeed += pScene->getGravity()._y * _gravityScale * fixedDeltaTime;

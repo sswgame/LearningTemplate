@@ -67,7 +67,7 @@ namespace sw
         /** @brief `_bPlayOnBegin` 이면 재생을 시작합니다. */
         void onBeginPlay() override;
         /** @brief 재생 중이면 시뮬레이션을 프레임 시간만큼 돌리고 입자를 냅니다. 방출이 끝나고 입자가 모두 사라지면 재생을 멈춥니다. */
-        void onTick( float32 deltaTime ) override;
+        void onTick( TickContext& context ) override;
         /** @brief 읽어 들인 `_effectPath` 로 효과를 다시 만듭니다. */
         void onPostLoad() override;
         /** @brief `_effectPath` · `_seed` 가 바뀌면 효과를 다시 만들고, `_listUserParameter` 가 바뀌면 값만 다시 풉니다. */

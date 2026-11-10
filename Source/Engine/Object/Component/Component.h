@@ -14,6 +14,7 @@
 #include "Engine/Foundation/AnimationNotifyPhase.h"
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/PhysicsHandle.h"
+#include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Reflection/TypeCastHeader.h"
 
@@ -97,6 +98,29 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @enum TickPrerequisiteKind
+     * @brief 서브틱 선행 조건이 무엇을 기다리는지입니다(`Component::addSubTickPrerequisite` 의 필수 인자 — 기본값이 없어 부르는 쪽이 고른다).
+     * @details 틱 중 트랜스폼 쓰기는 대기 칸에 쌓였다가 게임 스레드가 적용해야 보인다. 그래서 선행이 **쓴 자리를 읽는** 간선은 레벨 장벽(그 앞에서 적용)이
+     *          있어야 하고, **순서만** 필요한 간선(선행이 고친 자기 멤버를 직접 읽거나 그냥 뒤에 돌면 되는 규칙 틱)은 태스크 간선(`TaskHandle::runAfter`)으로
+     *          충분하다 — 장벽 · 적용 없이 선행이 끝나는 대로 돈다. 언리얼은 쓰기가 즉시라 이 구분이 없다(틱 함수 간선 하나). 여기서는 대기 칸 때문에 고른다.
+     */
+    enum class TickPrerequisiteKind : uint8
+    {
+        OrderOnly,   ///< 선행이 먼저 끝나기만 하면 된다 — 같은 레벨 안의 태스크 간선
+        ReadsWrites, ///< 선행이 이번 틱에 쓴 트랜스폼을 읽는다 — 다음 레벨로, 그 앞에서 대기 쓰기를 적용한다
+    };
+
+    /** @struct SubTickPrerequisite @brief 서브틱 선행 조건 하나입니다 — 기다릴 틱과 그 종류. 같은 틱을 두 번 걸면 종류만 바뀐다. */
+    struct SubTickPrerequisite
+    {
+        SubTickHandle        _handle{};
+        TickPrerequisiteKind _kind{ TickPrerequisiteKind::ReadsWrites };
+    };
+} // namespace sw
+
+namespace sw
+{
     struct SubTickHandleHash
     {
         size_t operator()( const SubTickHandle& handle ) const noexcept
@@ -130,13 +154,13 @@ namespace sw
      */
     struct SubTickInfo
     {
-        uint32                _subTickID;
-        TickGroup             _group;
-        TickPhase             _phase;
-        uint8                 _priority;
-        uint8                 _bActive;
-        atomic<uint8>         _bRunnable;
-        vector<SubTickHandle> _listPrerequisite;
+        uint32                      _subTickID;
+        TickGroup                   _group;
+        TickPhase                   _phase;
+        uint8                       _priority;
+        uint8                       _bActive;
+        atomic<uint8>               _bRunnable;
+        vector<SubTickPrerequisite> _listPrerequisite;
 
         SubTickInfo()
             : _subTickID{ 0 }
@@ -342,8 +366,11 @@ namespace sw
         void dispatchEndPlay();
         /** @brief `onBeginPlay` 가 불렸고 아직 `onEndPlay` 가 불리지 않았으면 true 입니다. */
         bool hasBegunPlay() const { return _bHasBegunPlay == SW_TRUE; }
-        /** @brief 프레임마다 불리는 주 업데이트 콜백입니다. */
-        virtual void onTick( float32 deltaTime );
+        /**
+         * @brief 프레임마다 불리는 주 업데이트 콜백입니다. @p context 가 시간 · 읽기 전용 씬(`getManager`) · 자기 오브젝트(`getSelf`) · 틱 뒤 큐(`deferPostTick`)를 엽니다.
+         * @details 남의 오브젝트 쓰기 · 구조 변경은 `context.deferPostTick` 로 보낸다(`TickContext.h`, `docs/agents/TickPlacement.md`).
+         */
+        virtual void onTick( TickContext& context );
         /** @brief 프레임마다 서브틱별로 불리는 보조 업데이트 콜백입니다. */
         virtual void onSubTick( uint32 subTickID, float32 deltaTime );
         /**
@@ -463,12 +490,13 @@ namespace sw
         bool unregisterSubTick( uint32 subTickID );
         /**
          * @brief 서브틱에 선행 조건을 추가합니다. prerequisiteHandle 이 먼저 실행되어야 합니다.
+         * @param kind 순서만(`OrderOnly` — 태스크 간선) 또는 선행이 쓴 트랜스폼을 읽음(`ReadsWrites` — 레벨 장벽 · 적용). 같은 핸들을 다시 걸면 종류만 바꾼다.
          * @details 선행 조건이 뒤쪽 그룹에 있으면 이 서브틱이 그 그룹으로 옮겨 가서 돈다(언리얼의 `ActualStartTickGroup`). 체인을 따라 옮긴다.
          *          선행 조건이 있는 서브틱만 별도 스테이지로 가고, 이 컴포넌트의 다른 틱과 체인 밖 오브젝트는 기본 경로 그대로 돈다.
-         *          앞에서 실행된 선행 조건이 쓴 트랜스폼은 이 서브틱이 실행되기 전에 적용되므로 같은 프레임에 보인다.
+         *          `ReadsWrites` 면 앞에서 실행된 선행 조건이 쓴 트랜스폼이 이 서브틱이 실행되기 전에 적용되어 같은 프레임에 보인다. `OrderOnly` 는 적용을 기다리지 않는다.
          *          소유자 없이 만든 핸들(`_objectID` 0)은 받지 않는다(false). 틱 중이면 인자만 검사하고 틱 직후로 미루며, 이때는 true(접수됨)를 반환한다.
          */
-        bool addSubTickPrerequisite( uint32 subTickID, const SubTickHandle& prerequisiteHandle );
+        bool addSubTickPrerequisite( uint32 subTickID, const SubTickHandle& prerequisiteHandle, TickPrerequisiteKind kind );
         /** @brief 선행 조건 하나를 제거합니다. 있었으면 true 입니다. 틱 중이면 틱 직후로 미루며 true(접수됨)를 반환합니다. 대상이 바뀌어 선행 조건을 다시 등록할 때 씁니다. */
         [[nodiscard]] bool removeSubTickPrerequisite( uint32 subTickID, const SubTickHandle& prerequisiteHandle );
         /**
@@ -646,7 +674,7 @@ namespace sw
 
     template <typename T>
     struct HasOnTickOverride<T, std::void_t<decltype( &T::onTick )>>
-        : std::bool_constant<std::is_same_v<decltype( &T::onTick ), void ( Component::* )( float32 )> == false>
+        : std::bool_constant<std::is_same_v<decltype( &T::onTick ), void ( Component::* )( TickContext& )> == false>
     {
     };
 

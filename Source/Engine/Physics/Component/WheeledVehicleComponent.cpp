@@ -2,8 +2,10 @@
 
 #include "Engine/Physics/Component/WheeledVehicleComponent.h"
 
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
+#include "Engine/Physics/Scene/PhysicsPoseStore.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
 
 namespace sw
@@ -26,24 +28,30 @@ namespace sw
         , _engineMaxTorque{ 500.0f }
         , _engineMaxRpm{ 6000.0f }
         , _drive{ WheelDrive::Rear }
-        , _inputLock{}
-        , _inputForward{ 0.0f }
-        , _inputRight{ 0.0f }
-        , _inputBrake{ 0.0f }
-        , _inputHandBrake{ 0.0f }
+        , _pInputPage{ nullptr }
+        , _inputSlot{ PhysicsPoseStore::kInvalidSlot }
         , _state{}
         , _vehicle{}
         , _vehicleChassis{}
     {
+        _inputSlot = engine::getSubsystem<PhysicsPoseStore>().getCommandStore<VehicleDriverInput>().allocateSlot( this, _pInputPage );
+    }
+
+    WheeledVehicleComponent::~WheeledVehicleComponent()
+    {
+        engine::getSubsystem<PhysicsPoseStore>().getCommandStore<VehicleDriverInput>().freeSlot( _inputSlot );
+    }
+
+    template <typename TFunction>
+    void WheeledVehicleComponent::editInput( TFunction&& function ) const
+    {
+        _pInputPage->editCommand( _inputSlot & VehicleInputPage::kSlotMask, std::forward<TFunction>( function ) );
     }
 
     void WheeledVehicleComponent::setDriverInput( float32 forward, float32 right, float32 brake, float32 handBrake )
     {
-        ScopedLock<SpinLock> lock{ _inputLock };
-        _inputForward   = forward;
-        _inputRight     = right;
-        _inputBrake     = brake;
-        _inputHandBrake = handBrake;
+        editInput( [&]( VehicleDriverInput& input )
+        { input = VehicleDriverInput{ forward, right, brake, handBrake }; } );
     }
 
     PhysicsVehicleState WheeledVehicleComponent::getVehicleState() const
@@ -121,18 +129,10 @@ namespace sw
         }
         if ( _vehicle.isValid() == false )
             return;
-        float32 forward   = 0.0f;
-        float32 right     = 0.0f;
-        float32 brake     = 0.0f;
-        float32 handBrake = 0.0f;
-        {
-            ScopedLock<SpinLock> lock{ _inputLock };
-            forward   = _inputForward;
-            right     = _inputRight;
-            brake     = _inputBrake;
-            handBrake = _inputHandBrake;
-        }
-        pScene->setVehicleInput( _vehicle, forward, right, brake, handBrake );
+        VehicleDriverInput input;
+        editInput( [&input]( const VehicleDriverInput& stored )
+        { input = stored; } );
+        pScene->setVehicleInput( _vehicle, input._forward, input._right, input._brake, input._handBrake );
     }
 
     void WheeledVehicleComponent::endPhysicsFrame( ScenePhysics& physics, float32 alpha )

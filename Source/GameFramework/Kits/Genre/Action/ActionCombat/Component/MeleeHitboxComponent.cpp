@@ -44,15 +44,15 @@ namespace sw
         _listPreviousPoint.clear();
     }
 
-    void MeleeHitboxComponent::onTick( float32 deltaTime )
+    void MeleeHitboxComponent::onTick( TickContext& context )
     {
-        Component::onTick( deltaTime );
+        Component::onTick( context );
 
         if ( _bIsAttacking == false )
             return;
 
         requestSweep();
-        _currentDuration += deltaTime;
+        _currentDuration += context.getDeltaTime();
         if ( _duration > 0.0f && _currentDuration >= _duration )
         {
             _bIsAttacking    = false;
