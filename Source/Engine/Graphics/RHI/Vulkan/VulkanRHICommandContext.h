@@ -37,6 +37,8 @@ namespace sw
         void prepareTextureForShaderReadNative( RHITextureHandle texture ) override;
         void prepareTextureForRenderTargetNative( RHITextureHandle texture ) override;
         void prepareTextureForUnorderedAccessNative( RHITextureHandle texture ) override;
+        /** @brief 텍스처 전이를 `vkCmdPipelineBarrier` 한 번으로 냅니다(`VulkanRHIDevice::transitionTextureLayouts`). 단일 `prepareTextureFor*Native` 도 원소 하나로 이 길을 지난다. */
+        void transitionTexturesNative( const RHITextureTransition* pTransition, uint32 count ) override;
         void bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override;
         void bindGraphicsUAV( RHIDescriptorIndex index, uint32 slot ) override;
         void setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset = 0 ) override;

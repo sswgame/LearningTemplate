@@ -254,30 +254,96 @@ namespace sw
         return static_cast<D3D12_RESOURCE_STATES>( ( state & ~D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE ) | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE );
     }
 
-    void D3D12RHICommandContext::transitionTexture( RHITextureHandle texture, D3D12_RESOURCE_STATES requestedState )
+    bool D3D12RHICommandContext::makeTextureBarrier( RHITextureHandle texture, D3D12_RESOURCE_STATES requestedState, D3D12_RESOURCE_BARRIER& outBarrier )
     {
-        const D3D12_RESOURCE_STATES newState  = toQueueState( requestedState );
-        ID3D12Resource*             pResource = _pDevice->resolveTexture( texture );
-        if ( pResource == nullptr )
-            return;
-
-        D3D12RHIDevice::TextureRecord* const pRecord = _pDevice->findTextureRecord( texture );
-        if ( pRecord == nullptr || pRecord->_bOffscreen == SW_FALSE )
-            return;
+        const D3D12_RESOURCE_STATES          newState = toQueueState( requestedState );
+        D3D12RHIDevice::TextureRecord* const pRecord  = _pDevice->findTextureRecord( texture );
+        if ( pRecord == nullptr || pRecord->_resource == nullptr || pRecord->_bOffscreen == SW_FALSE )
+            return false;
         // 상태 확인과 상태 바꾸기가 한 덩어리여야 한다. RenderGraph::executeParallel 이 같은 레벨의 패스 콜백을 여러 스레드에서 돌리는데,
         // 둘이 같은 텍스처를 전이하면 둘 다 같은 "이전 상태" 를 보고 각자 배리어를 쏴서 두 번째가 before==after 가 된다(검증 오류 → 디바이스 제거).
-        // 비교 교환에서 이긴 쪽 하나만 배리어를 낸다(락 없음 — `D3D12RHIDevice::TrackedState`).
+        // 비교 교환에서 이긴 쪽 하나만 배리어를 낸다(락 없음 — `RHITrackedState`).
         D3D12_RESOURCE_STATES stateBefore{};
         if ( pRecord->_state.transitionTo( newState, stateBefore ) == false )
-            return;
+            return false;
 
+        outBarrier                        = D3D12_RESOURCE_BARRIER{};
+        outBarrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+        outBarrier.Transition.pResource   = pRecord->_resource.Get();
+        outBarrier.Transition.StateBefore = stateBefore;
+        outBarrier.Transition.StateAfter  = newState;
+        outBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+        return true;
+    }
+
+    void D3D12RHICommandContext::transitionTexture( RHITextureHandle texture, D3D12_RESOURCE_STATES requestedState )
+    {
         D3D12_RESOURCE_BARRIER barrier{};
-        barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-        barrier.Transition.pResource   = pResource;
-        barrier.Transition.StateBefore = stateBefore;
-        barrier.Transition.StateAfter  = newState;
-        barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-        commandListForRecord()->ResourceBarrier( 1, &barrier );
+        if ( makeTextureBarrier( texture, requestedState, barrier ) )
+            commandListForRecord()->ResourceBarrier( 1, &barrier );
+    }
+
+    bool D3D12RHICommandContext::findTextureTransitionState( const RHITextureTransition& transition, D3D12_RESOURCE_STATES& outState ) const
+    {
+        const D3D12RHIDevice::TextureRecord* const pRecord = _pDevice->findTextureRecord( transition._texture );
+        if ( pRecord == nullptr || pRecord->_bOffscreen == SW_FALSE )
+            return false;
+        const bool bDepth = pRecord->_offscreen._bHasDSV != SW_FALSE;
+        switch ( transition._state )
+        {
+            case RHITextureState::ShaderResource:
+                // 첨부가 없는 텍스처는 COMMON 에서 SRV 로 암묵 승격된다 — 옮길 것이 없다.
+                if ( pRecord->_offscreen._bHasRTV == SW_FALSE && bDepth == false )
+                    return false;
+                outState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+                return true;
+            case RHITextureState::RenderTarget:
+                outState = bDepth ? D3D12_RESOURCE_STATE_DEPTH_WRITE : D3D12_RESOURCE_STATE_RENDER_TARGET;
+                return true;
+            case RHITextureState::UnorderedAccess:
+                // COMMON 은 SRV 로만 암묵 승격된다. UAV 는 명시 전이가 필요하다(readback 이 레코드 상태로 되돌린다).
+                outState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+                return true;
+        }
+        return false;
+    }
+
+    void D3D12RHICommandContext::transitionTexturesNative( const RHITextureTransition* pTransition, uint32 count )
+    {
+        if ( _pCmdList == nullptr )
+            return;
+        // 배열 하나로 낸다 — ResourceBarrier 는 배열을 원소마다 부른 것처럼 차례대로 처리하고, 묶어 내는 것이 문서의 권장이다
+        // (https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12graphicscommandlist-resourcebarrier "Transitions should be batched together").
+        constexpr uint32       kBarrierChunk = 32;
+        D3D12_RESOURCE_BARRIER arrBarrier[kBarrierChunk]{};
+        uint32                 barrierCount = 0;
+        bool                   bReported    = false;
+        for ( uint32 index = 0; index < count; ++index )
+        {
+            const RHITextureTransition& transition = pTransition[index];
+            if ( transition._texture == 0 )
+            {
+                // 백버퍼. 뎁스로 쓰이는 일은 없다. 스왑체인은 제 상태를 들고 따로 낸다.
+                if ( transition._state == RHITextureState::RenderTarget )
+                    _pDevice->_swapChain.transitionTo( commandListForRecord(), D3D12_RESOURCE_STATE_RENDER_TARGET );
+                continue;
+            }
+            D3D12_RESOURCE_STATES state{};
+            if ( findTextureTransitionState( transition, state ) == false || makeTextureBarrier( transition._texture, state, arrBarrier[barrierCount] ) == false )
+                continue;
+            if ( bReported == false )
+            {
+                _pDevice->reportBarrierDuringRecording( "transitionTextures" );
+                bReported = true;
+            }
+            if ( ++barrierCount == kBarrierChunk )
+            {
+                commandListForRecord()->ResourceBarrier( barrierCount, arrBarrier );
+                barrierCount = 0;
+            }
+        }
+        if ( barrierCount > 0 )
+            commandListForRecord()->ResourceBarrier( barrierCount, arrBarrier );
     }
 
     // 길이 유지(긴 함수 정리 기준): 같은 포맷 복사와 셰이더 블릿의 상태 전이 순서가 곧 의미라 나누지 않는다.
@@ -419,47 +485,23 @@ namespace sw
         state._bSRVDirty    = SW_TRUE;
     }
 
+    // 단일 전이도 묶음과 같은 길(원소 하나)을 지난다 — 상태 표 · 건너뛰기 규칙이 한 벌이다(버퍼의 `transitionBufferNative` 와 같다).
     void D3D12RHICommandContext::prepareTextureForShaderReadNative( RHITextureHandle texture )
     {
-        if ( _pCmdList == nullptr || texture == 0 )
-            return;
-
-        D3D12RHIDevice::OffscreenTargetView view{};
-        if ( _pDevice->findOffscreenTargetView( texture, 0, view ) == false )
-            return;
-        if ( view._bHasRTV == SW_FALSE && view._bHasDSV == SW_FALSE )
-            return;
-
-        _pDevice->reportBarrierDuringRecording( "prepareTextureForShaderRead" );
-        transitionTexture( texture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE );
+        const RHITextureTransition transition{ texture, RHITextureState::ShaderResource };
+        transitionTexturesNative( &transition, 1 );
     }
 
     void D3D12RHICommandContext::prepareTextureForUnorderedAccessNative( RHITextureHandle texture )
     {
-        if ( _pCmdList == nullptr || texture == 0 )
-            return;
-        // COMMON 은 SRV 로만 암묵 승격된다. UAV 는 명시 전이가 필요하다(readback 이 레코드 상태로 되돌린다).
-        _pDevice->reportBarrierDuringRecording( "prepareTextureForUnorderedAccess" );
-        transitionTexture( texture, D3D12_RESOURCE_STATE_UNORDERED_ACCESS );
+        const RHITextureTransition transition{ texture, RHITextureState::UnorderedAccess };
+        transitionTexturesNative( &transition, 1 );
     }
 
     void D3D12RHICommandContext::prepareTextureForRenderTargetNative( RHITextureHandle texture )
     {
-        if ( _pCmdList == nullptr )
-            return;
-
-        if ( texture == 0 )
-        {
-            // 백버퍼. 뎁스로 쓰이는 일은 없다.
-            _pDevice->_swapChain.transitionTo( commandListForRecord(), D3D12_RESOURCE_STATE_RENDER_TARGET );
-            return;
-        }
-
-        const D3D12RHIDevice::TextureRecord* const pRecord = _pDevice->findTextureRecord( texture );
-        if ( pRecord == nullptr || pRecord->_bOffscreen == SW_FALSE )
-            return;
-        const bool bDepth = pRecord->_offscreen._bHasDSV != SW_FALSE;
-        transitionTexture( texture, bDepth ? D3D12_RESOURCE_STATE_DEPTH_WRITE : D3D12_RESOURCE_STATE_RENDER_TARGET );
+        const RHITextureTransition transition{ texture, RHITextureState::RenderTarget };
+        transitionTexturesNative( &transition, 1 );
     }
 
     void D3D12RHICommandContext::bindComputeUAV( RHIDescriptorIndex index, uint32 slot )

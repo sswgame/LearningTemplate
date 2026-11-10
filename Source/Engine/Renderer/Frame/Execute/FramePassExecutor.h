@@ -214,8 +214,8 @@ namespace sw
         void recordFrameGraph( IRHIDevice* pDevice );
         /**
          * @brief 레벨을 기록하기 **직전에** 그 레벨이 만질 자원의 배리어를 미리 발행합니다. 직렬 경로에서는 패스마다 발행합니다.
-         * @details 자원 이름으로 실제 텍스처를 찾아 `prepareTextureForShaderRead` 와
-         *          `prepareTextureForRenderTarget` 을 레벨 첫 패스 리스트의 앞머리에 기록한다(직렬 경로에서는
+         * @details 자원 이름으로 실제 텍스처를 찾아 읽기 · 렌더 타깃 전이를 한 묶음(`IRHICommandList::transitionTextures`)으로
+         *          레벨 첫 패스 리스트의 앞머리에 기록한다(직렬 경로에서는
          *          그 패스의 리스트). 같은 레벨의 다른 리스트는 큐 순서상 그 뒤에 실행되므로 GPU 타임라인에서도 배리어가 앞선다.
          *
          *          이렇게 하면 패스 콜백이 이미 맞는 상태를 보므로 기록 중에 리소스 상태를 바꾸지

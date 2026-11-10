@@ -415,6 +415,16 @@ namespace sw
         RHIBufferHandle _buffer{ 0 };
         RHIBufferState  _state{ RHIBufferState::Common };
     };
+
+    /**
+     * @struct RHITextureTransition
+     * @brief 텍스처 하나의 상태 전이입니다(`IRHICommandList::transitionTextures` 의 한 원소). 그래프 레벨 프롤로그가 레벨의 장벽을 모은다.
+     */
+    struct RHITextureTransition
+    {
+        RHITextureHandle _texture{ 0 };
+        RHITextureState  _state{ RHITextureState::ShaderResource };
+    };
 } // namespace sw
 
 namespace sw

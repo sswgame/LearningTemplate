@@ -240,73 +240,73 @@ namespace sw
         setSlot( false, shaderslot::vk::kTShift + slot, index, false, false );
     }
 
+    // 단일 전이도 묶음과 같은 길(원소 하나)을 지난다 — 상태 표 · 건너뛰기 규칙이 한 벌이다(버퍼의 `transitionBufferNative` 와 같다).
     void VulkanRHICommandContext::prepareTextureForShaderReadNative( RHITextureHandle texture )
     {
-        VkCommandBuffer cmd = commandBuffer();
-        if ( cmd == VK_NULL_HANDLE || texture == 0 )
-            return;
-        VulkanRHIDevice::VulkanTextureRecord* pResolved = _pDevice->resolveTexture( texture );
-        if ( pResolved == nullptr || pResolved->_image == VK_NULL_HANDLE )
-            return;
-
-        if ( _pState->_bRenderPassActive == SW_TRUE )
-        {
-            vkCmdEndRenderPass( cmd );
-            _pState->_bRenderPassActive = SW_FALSE;
-        }
-
-        VulkanRHIDevice::VulkanTextureRecord& record       = *pResolved;
-        const uint32                          targetLayout = ( record._bDepthStencil != SW_FALSE )
-                                                               ? static_cast<uint32>( VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL )
-                                                               : static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
-        const uint32                          aspect       = ( record._bDepthStencil != SW_FALSE )
-                                                               ? _pDevice->depthAspectMask()
-                                                               : static_cast<uint32>( VK_IMAGE_ASPECT_COLOR_BIT );
-        _pDevice->transitionTextureLayout( cmd, record, targetLayout, aspect );
+        const RHITextureTransition transition{ texture, RHITextureState::ShaderResource };
+        transitionTexturesNative( &transition, 1 );
     }
 
     void VulkanRHICommandContext::prepareTextureForUnorderedAccessNative( RHITextureHandle texture )
     {
-        VkCommandBuffer cmd = commandBuffer();
-        if ( cmd == VK_NULL_HANDLE || texture == 0 )
-            return;
-        VulkanRHIDevice::VulkanTextureRecord* pResolved             = _pDevice->resolveTexture( texture );
-        const bool                            bInvalidTargetTexture = pResolved == nullptr || pResolved->_image == VK_NULL_HANDLE || pResolved->_bDepthStencil != SW_FALSE;
-        if ( bInvalidTargetTexture )
-            return;
-
-        if ( _pState->_bRenderPassActive == SW_TRUE )
-        {
-            vkCmdEndRenderPass( cmd );
-            _pState->_bRenderPassActive = SW_FALSE;
-        }
-        // 스토리지 이미지 디스크립터(writeBindlessStorageImageSlot)가 GENERAL 을 적어 두므로 같은 레이아웃으로 옮긴다.
-        _pDevice->transitionTextureLayout( cmd, *pResolved, static_cast<uint32>( VK_IMAGE_LAYOUT_GENERAL ), static_cast<uint32>( VK_IMAGE_ASPECT_COLOR_BIT ) );
+        const RHITextureTransition transition{ texture, RHITextureState::UnorderedAccess };
+        transitionTexturesNative( &transition, 1 );
     }
 
     void VulkanRHICommandContext::prepareTextureForRenderTargetNative( RHITextureHandle texture )
     {
+        const RHITextureTransition transition{ texture, RHITextureState::RenderTarget };
+        transitionTexturesNative( &transition, 1 );
+    }
+
+    void VulkanRHICommandContext::transitionTexturesNative( const RHITextureTransition* pTransition, uint32 count )
+    {
         VkCommandBuffer cmd = commandBuffer();
-        if ( cmd == VK_NULL_HANDLE || texture == 0 )
-            return; // 스왑체인(0)은 렌더패스의 initialLayout 이 담당한다.
-
-        VulkanRHIDevice::VulkanTextureRecord* pResolved = _pDevice->resolveTexture( texture );
-        if ( pResolved == nullptr || pResolved->_image == VK_NULL_HANDLE )
+        if ( cmd == VK_NULL_HANDLE )
             return;
-
-        // 렌더패스를 열어 둔 채로 레이아웃을 바꿀 수 없다.
-        if ( _pState->_bRenderPassActive == SW_TRUE )
+        constexpr uint32                     kRequestChunk = 32;
+        VulkanRHIDevice::VulkanLayoutRequest arrRequest[kRequestChunk]{};
+        uint32                               requestCount = 0;
+        for ( uint32 index = 0; index < count; ++index )
         {
-            vkCmdEndRenderPass( cmd );
-            _pState->_bRenderPassActive = SW_FALSE;
+            const RHITextureTransition& transition = pTransition[index];
+            // 스왑체인(0)은 렌더패스의 initialLayout 이 담당한다.
+            VulkanRHIDevice::VulkanTextureRecord* const pResolved = transition._texture != 0 ? _pDevice->resolveTexture( transition._texture ) : nullptr;
+            if ( pResolved == nullptr || pResolved->_image == VK_NULL_HANDLE )
+                continue;
+            const bool bDepth = pResolved->_bDepthStencil != SW_FALSE;
+            // 스토리지 이미지 디스크립터(writeBindlessStorageImageSlot)가 GENERAL 을 적어 두므로 UAV 는 같은 레이아웃으로 옮긴다. 깊이는 RW 텍스처가 될 수 없다.
+            if ( transition._state == RHITextureState::UnorderedAccess && bDepth )
+                continue;
+            VulkanRHIDevice::VulkanLayoutRequest& request = arrRequest[requestCount];
+            request._pRecord                              = pResolved;
+            request._aspect                               = bDepth ? _pDevice->depthAspectMask() : static_cast<uint32>( VK_IMAGE_ASPECT_COLOR_BIT );
+            switch ( transition._state )
+            {
+                case RHITextureState::ShaderResource:
+                    request._targetLayout = static_cast<uint32>( bDepth ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+                    break;
+                case RHITextureState::RenderTarget:
+                    request._targetLayout = static_cast<uint32>( bDepth ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+                    break;
+                case RHITextureState::UnorderedAccess:
+                    request._targetLayout = static_cast<uint32>( VK_IMAGE_LAYOUT_GENERAL );
+                    break;
+            }
+            // 렌더패스를 열어 둔 채로 레이아웃을 바꿀 수 없다.
+            if ( _pState->_bRenderPassActive == SW_TRUE )
+            {
+                vkCmdEndRenderPass( cmd );
+                _pState->_bRenderPassActive = SW_FALSE;
+            }
+            if ( ++requestCount == kRequestChunk )
+            {
+                _pDevice->transitionTextureLayouts( cmd, arrRequest, requestCount );
+                requestCount = 0;
+            }
         }
-
-        const bool   bDepth       = pResolved->_bDepthStencil != SW_FALSE;
-        const uint32 targetLayout = bDepth ? static_cast<uint32>( VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL )
-                                           : static_cast<uint32>( VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
-        const uint32 aspect       = bDepth ? _pDevice->depthAspectMask()
-                                           : static_cast<uint32>( VK_IMAGE_ASPECT_COLOR_BIT );
-        _pDevice->transitionTextureLayout( cmd, *pResolved, targetLayout, aspect );
+        if ( requestCount > 0 )
+            _pDevice->transitionTextureLayouts( cmd, arrRequest, requestCount );
     }
 
     void VulkanRHICommandContext::setPipelineState( RHIPipelineStateHandle pso )

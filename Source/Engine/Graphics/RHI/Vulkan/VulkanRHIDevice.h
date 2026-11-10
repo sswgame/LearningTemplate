@@ -432,6 +432,13 @@ namespace sw
             VkPipeline      _pipeline{ nullptr };
             RHIVertexLayout _vertexLayout; ///< 셰이더가 읽는 정점 버퍼 슬롯과 입력을 지은 메시 정점 형식(드로우가 `RHIGeometryBindings::bindVertexBuffersForDraw` 에 넘긴다)
         };
+        /// @brief 텍스처 하나를 옮길 레이아웃 요청입니다(`transitionTextureLayouts` 의 한 원소).
+        struct VulkanLayoutRequest
+        {
+            VulkanTextureRecord* _pRecord{ nullptr };
+            uint32               _targetLayout{ 0 }; ///< VkImageLayout
+            uint32               _aspect{ 0 };       ///< VkImageAspectFlags
+        };
         /// @brief 프레임 밖에서 기록된 리스트가 바꾼 레이아웃의 원래 값입니다.
         struct VulkanPendingLayout
         {
@@ -725,6 +732,11 @@ namespace sw
 
         /** @brief 이미지 레이아웃을 배리어로 전환합니다. */
         bool transitionImageLayout( VkCommandBuffer cmd, VkImage image, uint32 oldLayout, uint32 newLayout, uint32 aspect );
+        /** @brief 레이아웃 전이 하나의 이미지 배리어(모든 밉 · 면)와 그 앞뒤 단계를 채웁니다. `transitionImageLayout` 과 묶음(`transitionTextureLayouts`)이 같은 표를 쓴다. */
+        static void fillImageLayoutBarrier( VkImage image, uint32 oldLayoutU32, uint32 newLayoutU32, uint32 aspectU32, VkImageMemoryBarrier& barrier, VkPipelineStageFlags& srcStage,
+                                            VkPipelineStageFlags& dstStage );
+        /** @brief 프레임 밖 기록이면 @p cmd 가 처음 바꾼 @p image 의 옛 레이아웃을 버린 프레임 기록에 적습니다(다음 `beginFrame` 이 되돌린다). 프레임 안이면 아무것도 하지 않는다. */
+        void rememberDroppedFrameLayout( VkCommandBuffer cmd, VkImage image, uint32 layoutBefore );
 
         /**
          * @brief 텍스처를 `targetLayout` 으로 전이합니다. **확인, 배리어, 기록이 한 덩어리입니다.**
@@ -737,6 +749,12 @@ namespace sw
          * @note 이미 그 레이아웃이면 아무것도 하지 않습니다.
          */
         void transitionTextureLayout( VkCommandBuffer cmd, VulkanTextureRecord& record, uint32 targetLayout, uint32 aspect );
+        /**
+         * @brief 여러 텍스처를 `vkCmdPipelineBarrier` 한 번으로 옮깁니다(`transitionTextureLayout` 의 묶음 — 단일도 이 길이다).
+         * @details 원소마다 레코드 레이아웃을 비교 교환으로 옮기고, 이긴 것의 이미지 배리어만 모은다. 단계 마스크는 호출 하나에 하나라(명세 vkCmdPipelineBarrier — srcStageMask ·
+         *          dstStageMask 가 모든 배리어의 범위) 원소별 단계의 합을 쓴다. 넓어질 뿐 좁아지지 않는다. 이미 그 레이아웃이면 건너뛴다.
+         */
+        void transitionTextureLayouts( VkCommandBuffer cmd, const VulkanLayoutRequest* pRequest, uint32 count );
         /**
          * @brief 힙에 겹쳐 놓은 @p record 를 이제부터 쓴다고 기록합니다(`IRHICommandList::beginTextureAlias`). 같은 바이트를 쓴 앞 이미지의 일이 끝난 뒤에 이 이미지를 쓰고, 내용은 버린다.
          * @details 앨리어스 사이의 쓰기는 메모리 의존으로 갈라야 하고, 다른 앨리어스가 쓴 이미지는 UNDEFINED 에서 옮겨야 한다(Vulkan 명세 Memory Aliasing —

@@ -73,6 +73,7 @@ namespace sw::test
         void prepareTextureForShaderRead( RHITextureHandle ) override {}
         void prepareTextureForRenderTarget( RHITextureHandle ) override {}
         void prepareTextureForUnorderedAccess( RHITextureHandle ) override {}
+        void transitionTextures( const RHITextureTransition*, uint32 ) override {}
         void blitTexture( RHITextureHandle, RHITextureHandle ) override {}
         void drawIndirect( RHIBufferHandle, uint32, uint32, RHIBufferHandle, uint32 ) override {}
         void dispatchIndirect( RHIBufferHandle, uint32 ) override {}

@@ -3475,29 +3475,69 @@ namespace sw
     void VulkanRHIDevice::transitionTextureLayout( VkCommandBuffer cmd, VulkanTextureRecord& record,
                                                    uint32 targetLayout, uint32 aspect )
     {
-        if ( cmd == VK_NULL_HANDLE || record._image == VK_NULL_HANDLE )
+        const VulkanLayoutRequest request{ &record, targetLayout, aspect };
+        transitionTextureLayouts( cmd, &request, 1 );
+    }
+
+    void VulkanRHIDevice::transitionTextureLayouts( VkCommandBuffer cmd, const VulkanLayoutRequest* pRequest, uint32 count )
+    {
+        if ( cmd == VK_NULL_HANDLE || pRequest == nullptr )
             return;
 
-        // 확인과 기록이 비교 교환 하나다 — 같은 레벨의 두 워커가 같은 이미지를 옮기면 이긴 쪽 하나만 배리어를 쏜다(`RHITrackedState`).
-        uint32 layoutBefore{ 0 };
-        if ( record._layout.transitionTo( targetLayout, layoutBefore ) == false )
-            return;
-
-        reportBarrierDuringRecording( "transitionTextureLayout" );
-
-        transitionImageLayout( cmd, record._image, layoutBefore, targetLayout, aspect );
-        // 프레임 밖에서 기록한 리스트는 제출되지 않을 수 있다(시작되지 못한 프레임). 리스트마다 처음 바꾸는 이미지의 옛 레이아웃을 적어 두어 다음 프레임이 되돌린다.
-        if ( _bFrameStarted == SW_FALSE )
+        constexpr uint32     kBarrierChunk = 32;
+        VkImageMemoryBarrier arrBarrier[kBarrierChunk]{};
+        VkPipelineStageFlags srcStage{ 0 };
+        VkPipelineStageFlags dstStage{ 0 };
+        uint32               barrierCount{ 0 };
+        bool                 bReported{ false };
+        const auto           flushBarriers = [&]()
         {
-            ScopedLock<mutex> lock{ _droppedLayoutMutex };
-            bool              bKnown{ false };
-            for ( const VulkanPendingLayout& entry : _listDroppedFrameLayout )
+            vkCmdPipelineBarrier( cmd, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, barrierCount, arrBarrier );
+            srcStage     = 0;
+            dstStage     = 0;
+            barrierCount = 0;
+        };
+        for ( uint32 index = 0; index < count; ++index )
+        {
+            const VulkanLayoutRequest& request = pRequest[index];
+            VulkanTextureRecord* const pRecord = request._pRecord;
+            if ( pRecord == nullptr || pRecord->_image == VK_NULL_HANDLE )
+                continue;
+            // 확인과 기록이 비교 교환 하나다 — 같은 레벨의 두 워커가 같은 이미지를 옮기면 이긴 쪽 하나만 배리어를 쏜다(`RHITrackedState`).
+            uint32 layoutBefore{ 0 };
+            if ( pRecord->_layout.transitionTo( request._targetLayout, layoutBefore ) == false )
+                continue;
+            if ( bReported == false )
             {
-                bKnown = bKnown || ( entry._cmd == cmd && entry._image == record._image );
+                reportBarrierDuringRecording( "transitionTextureLayouts" );
+                bReported = true;
             }
-            if ( bKnown == false )
-                _listDroppedFrameLayout.push_back( VulkanPendingLayout{ cmd, record._image, layoutBefore } );
+            VkPipelineStageFlags barrierSrcStage{ 0 };
+            VkPipelineStageFlags barrierDstStage{ 0 };
+            fillImageLayoutBarrier( pRecord->_image, layoutBefore, request._targetLayout, request._aspect, arrBarrier[barrierCount], barrierSrcStage, barrierDstStage );
+            srcStage |= barrierSrcStage;
+            dstStage |= barrierDstStage;
+            rememberDroppedFrameLayout( cmd, pRecord->_image, layoutBefore );
+            if ( ++barrierCount == kBarrierChunk )
+                flushBarriers();
         }
+        if ( barrierCount > 0 )
+            flushBarriers();
+    }
+
+    void VulkanRHIDevice::rememberDroppedFrameLayout( VkCommandBuffer cmd, VkImage image, uint32 layoutBefore )
+    {
+        // 프레임 밖에서 기록한 리스트는 제출되지 않을 수 있다(시작되지 못한 프레임). 리스트마다 처음 바꾸는 이미지의 옛 레이아웃을 적어 두어 다음 프레임이 되돌린다.
+        if ( _bFrameStarted != SW_FALSE )
+            return;
+        ScopedLock<mutex> lock{ _droppedLayoutMutex };
+        bool              bKnown{ false };
+        for ( const VulkanPendingLayout& entry : _listDroppedFrameLayout )
+        {
+            bKnown = bKnown || ( entry._cmd == cmd && entry._image == image );
+        }
+        if ( bKnown == false )
+            _listDroppedFrameLayout.push_back( VulkanPendingLayout{ cmd, image, layoutBefore } );
     }
 
     void VulkanRHIDevice::beginImageAlias( VkCommandBuffer cmd, VulkanTextureRecord& record, uint32 aspect )
@@ -3554,14 +3594,25 @@ namespace sw
 
     bool VulkanRHIDevice::transitionImageLayout( VkCommandBuffer cmd, VkImage image, uint32 oldLayoutU32, uint32 newLayoutU32, uint32 aspectU32 )
     {
-        const VkImageLayout      oldLayout           = static_cast<VkImageLayout>( oldLayoutU32 );
-        const VkImageLayout      newLayout           = static_cast<VkImageLayout>( newLayoutU32 );
-        const VkImageAspectFlags aspect              = aspectU32;
-        const bool               bNoLayoutTransition = cmd == VK_NULL_HANDLE || image == VK_NULL_HANDLE || oldLayout == newLayout;
+        const bool bNoLayoutTransition = cmd == VK_NULL_HANDLE || image == VK_NULL_HANDLE || oldLayoutU32 == newLayoutU32;
         if ( bNoLayoutTransition )
             return true;
-
         VkImageMemoryBarrier barrier{};
+        VkPipelineStageFlags srcStage{ 0 };
+        VkPipelineStageFlags dstStage{ 0 };
+        fillImageLayoutBarrier( image, oldLayoutU32, newLayoutU32, aspectU32, barrier, srcStage, dstStage );
+        vkCmdPipelineBarrier( cmd, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier );
+        return true;
+    }
+
+    void VulkanRHIDevice::fillImageLayoutBarrier( VkImage image, uint32 oldLayoutU32, uint32 newLayoutU32, uint32 aspectU32, VkImageMemoryBarrier& barrier, VkPipelineStageFlags& srcStage,
+                                                  VkPipelineStageFlags& dstStage )
+    {
+        const VkImageLayout      oldLayout = static_cast<VkImageLayout>( oldLayoutU32 );
+        const VkImageLayout      newLayout = static_cast<VkImageLayout>( newLayoutU32 );
+        const VkImageAspectFlags aspect    = aspectU32;
+
+        barrier                             = VkImageMemoryBarrier{};
         barrier.sType                       = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
         barrier.oldLayout                   = oldLayout;
         barrier.newLayout                   = newLayout;
@@ -3573,8 +3624,8 @@ namespace sw
         barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
         barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
 
-        VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+        srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
 
         if ( oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL )
         {
@@ -3626,9 +3677,6 @@ namespace sw
             srcStage              = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
             dstStage              = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
         }
-
-        vkCmdPipelineBarrier( cmd, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier );
-        return true;
     }
 
     VkRenderPass VulkanRHIDevice::createRenderPassFromSpec( const VulkanRHIRenderPassCache::RenderPassSpec& spec ) const

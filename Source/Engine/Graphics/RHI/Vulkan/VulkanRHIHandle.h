@@ -45,5 +45,6 @@ SW_VK_DEFINE_HANDLE( VkQueryPool )
 typedef uint32_t VkFlags;
 typedef VkFlags  VkPipelineStageFlags;
 
-// 헤더가 참조로만 받는 생성 서술 — 정의는 `vulkan_core.h` 의 같은 이름 struct 다.
+// 헤더가 참조로만 받는 서술(이미지 생성 · 배리어) — 정의는 `vulkan_core.h` 의 같은 이름 struct 다.
 struct VkImageCreateInfo;
+struct VkImageMemoryBarrier;
