@@ -99,6 +99,7 @@ namespace sw
         , _transferSubmitMutex{}
         , _transferFenceQueue{ _transferSerials }
         , _uploadRing{}
+        , _readbackRing{}
         , _transferJobMutex{}
         , _listFreeTransferJob{}
         , _textureTransferMutex{}
@@ -347,6 +348,29 @@ namespace sw
             return false;
 
         if ( isHrSuccess( outBuffer->Map( 0, nullptr, &pOutMapped ), "ID3D12Resource::Map (mapped upload buffer)" ) == false || pOutMapped == nullptr )
+        {
+            pOutMapped = nullptr;
+            outBuffer.Reset();
+            return false;
+        }
+        return true;
+    }
+
+    bool D3D12RHIDevice::createMappedReadbackBuffer( uint64 sizeBytes, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, void*& pOutMapped )
+    {
+        pOutMapped = nullptr;
+        outBuffer.Reset();
+
+        const D3D12_HEAP_PROPERTIES heapProps    = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_READBACK );
+        const D3D12_RESOURCE_DESC   resourceDesc = D3D12RHIResourcePreset::bufferDesc( sizeBytes );
+        if ( isHrSuccess( _device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
+                                                            IID_PPV_ARGS( outBuffer.GetAddressOf() ) ),
+                          "CreateCommittedResource (mapped readback buffer)" ) == false )
+            return false;
+
+        // CPU 접근 힙은 영속 매핑할 수 있다(ID3D12Resource::Map 비고 — https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12resource-map). 가져가기가 읽기 범위로 다시 Map 해 CPU 캐시를 무효화한다.
+        const D3D12_RANGE noRead{ 0, 0 };
+        if ( isHrSuccess( outBuffer->Map( 0, &noRead, &pOutMapped ), "ID3D12Resource::Map (mapped readback buffer)" ) == false || pOutMapped == nullptr )
         {
             pOutMapped = nullptr;
             outBuffer.Reset();
@@ -2053,12 +2077,13 @@ namespace sw
 
     bool D3D12RHIDevice::initializeTransfers( const RHISwapChainDesc& desc )
     {
-        if ( desc._stagingRingBytes == 0 )
+        if ( desc._stagingRingBytes == 0 || desc._readbackRingBytes == 0 )
         {
-            SW_LOG_ERROR_ID( "D3D12.D3D12BackendNeedsStaging", "The D3D12 backend needs a staging ring capacity (gv_rhiStagingRingMegabytes must be positive)" );
+            SW_LOG_ERROR_ID( "D3D12.D3D12BackendNeedsStaging", "The D3D12 backend needs staging and readback ring capacities (gv_rhiStagingRingMegabytes · gv_rhiReadbackRingMegabytes must be positive)" );
             return false;
         }
-        return createStagingRing( _uploadRing, desc._stagingRingBytes, desc._stagingSoloMaxBytes );
+        return createStagingRing( _uploadRing, D3D12_HEAP_TYPE_UPLOAD, desc._stagingRingBytes, desc._stagingSoloMaxBytes ) &&
+               createStagingRing( _readbackRing, D3D12_HEAP_TYPE_READBACK, desc._readbackRingBytes, desc._stagingSoloMaxBytes );
     }
 
     void D3D12RHIDevice::shutdownTransfers()
@@ -2080,11 +2105,13 @@ namespace sw
         // 가져가지 않은 읽기는 읽기 버퍼와 함께 사라진다. 그 뒤의 가져가기 · 버리기는 업로드 티켓처럼 아무 일도 하지 않는다.
         _readbackTable.clear();
         destroyStagingRing( _uploadRing );
+        destroyStagingRing( _readbackRing );
     }
 
-    bool D3D12RHIDevice::createStagingRing( D3D12StagingRing& ring, uint64 capacityBytes, uint64 soloMaxBytes )
+    bool D3D12RHIDevice::createStagingRing( D3D12StagingRing& ring, D3D12_HEAP_TYPE heapType, uint64 capacityBytes, uint64 soloMaxBytes )
     {
-        if ( createMappedStagingBuffer( capacityBytes, ring._buffer, ring._pMapped ) == false )
+        ring._heapType = heapType;
+        if ( createMappedStagingBuffer( heapType, capacityBytes, ring._buffer, ring._pMapped ) == false )
             return false;
         // 구간 시작 정렬은 텍스처 복사의 배치 오프셋 규칙(512)이다 — 구간 안에서 다시 맞추지 않아도 된다.
         ring._allocator.initialize( capacityBytes, static_cast<uint64>( D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT ), soloMaxBytes );
@@ -2101,11 +2128,12 @@ namespace sw
         ring._allocator.shutdown();
     }
 
-    bool D3D12RHIDevice::createMappedStagingBuffer( uint64 sizeBytes, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, uint8*& pOutMapped )
+    bool D3D12RHIDevice::createMappedStagingBuffer( D3D12_HEAP_TYPE heapType, uint64 sizeBytes, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, uint8*& pOutMapped )
     {
         pOutMapped = nullptr;
-        void* pMapped{ nullptr };
-        if ( createMappedUploadBuffer( sizeBytes, outBuffer, pMapped ) == false )
+        void*      pMapped{ nullptr };
+        const bool bCreated = heapType == D3D12_HEAP_TYPE_READBACK ? createMappedReadbackBuffer( sizeBytes, outBuffer, pMapped ) : createMappedUploadBuffer( sizeBytes, outBuffer, pMapped );
+        if ( bCreated == false )
         {
             SW_LOG_ERROR_ID( "D3D12.FailedCreateMapD3D12", "Failed to create or map the D3D12 staging upload buffer (%# bytes, gv_rhiStagingRingMegabytes · gv_rhiStagingSingleMaxMegabytes)", sizeBytes );
             return false;
@@ -2139,7 +2167,7 @@ namespace sw
         // 할당기가 단독 구간을 내줬다면 앞선 단독 구간은 이미 돌아왔다 — 남은 버퍼(아직 회수가 지우지 않은 것)를 GPU 가 더 쓰지 않는다.
         ScopedLock<mutex> soloLock{ ring._soloMutex };
         destroyMappedStagingBuffer( ring._soloBuffer, ring._pSoloMapped );
-        if ( createMappedStagingBuffer( outSpan._sizeBytes, ring._soloBuffer, ring._pSoloMapped ) )
+        if ( createMappedStagingBuffer( ring._heapType, outSpan._sizeBytes, ring._soloBuffer, ring._pSoloMapped ) )
             return RHISubmitResult::Accepted;
         return RHIStagingRingUtil::rejectSoloBufferFailure( ring._allocator, outSpan, "D3D12", pCaller );
     }
@@ -2258,6 +2286,7 @@ namespace sw
         _transferReleaseQueue.tickCompleted( _transferSerials.getWatermark() );
         // 할당기가 단독 구간을 돌려받았으면 그 일회성 버퍼를 지운다(업로드 힙 메모리를 링 하나 크기 넘게 쥐고 있지 않는다).
         destroyIdleSoloBuffer( _uploadRing );
+        destroyIdleSoloBuffer( _readbackRing );
     }
 
     void D3D12RHIDevice::releaseTextureAfterTransfer( Microsoft::WRL::ComPtr<ID3D12Resource> owned, RHITextureHandle texture, uint64 lastSerial )

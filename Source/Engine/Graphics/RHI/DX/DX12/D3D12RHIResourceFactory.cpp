@@ -574,10 +574,16 @@ namespace sw
             return false;
         }
 
-        void* pMapped{ nullptr };
-        if ( isHrSuccess( record._readback->Map( 0, nullptr, &pMapped ), "Map" ) == false || pMapped == nullptr )
+        // 링은 영속 매핑이다. 읽을 범위로 한 번 더 Map 해 CPU 캐시를 무효화하고(중첩 Map 은 참조를 센다) 그 주소에서 읽는다.
+        D3D12RHIDevice::D3D12StagingRing& ring    = _pDevice->_readbackRing;
+        ID3D12Resource* const             pBuffer = ring.getSpanResource( record._span );
+        const D3D12_RANGE                 readRange{ static_cast<SIZE_T>( record._footprint.Offset ),
+                                     static_cast<SIZE_T>( record._footprint.Offset + static_cast<uint64>( record._footprint.Footprint.RowPitch ) * record._rowCount ) };
+        void*                             pMapped{ nullptr };
+        if ( pBuffer == nullptr || isHrSuccess( pBuffer->Map( 0, &readRange, &pMapped ), "Map" ) == false || pMapped == nullptr )
         {
             SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.TakeTextureReadbackFailedMapReadback", "takeTextureReadback: failed to map the readback buffer of ticket %#", ticket._serial );
+            RHITextureTransferDriver::releaseTakenReadback( ring, record._span );
             return false;
         }
         outBytes.assign( record._layout._sizeBytes, 0 );
@@ -588,7 +594,8 @@ namespace sw
                           static_cast<const uint8*>( pMapped ) + record._footprint.Offset + static_cast<uint64>( row ) * record._footprint.Footprint.RowPitch, copyRowBytes );
         }
         D3D12_RANGE noWrite{ 0, 0 };
-        record._readback->Unmap( 0, &noWrite );
+        pBuffer->Unmap( 0, &noWrite );
+        RHITextureTransferDriver::releaseTakenReadback( ring, record._span );
         if ( record._bDepth != SW_FALSE )
             convertRHIDepth24ToFloat( outBytes.data(), record._layout._width * record._layout._height );
         return true;
@@ -601,11 +608,8 @@ namespace sw
         D3D12RHIDevice::TextureReadbackRecord record;
         if ( _pDevice->_readbackTable.take( ticket._serial, record ) == false )
             return; // 업로드 티켓이거나 이미 가져감 · 버림이다 — 계약상 아무 일도 하지 않는다
-        // 복사가 아직 GPU 에서 도는 중일 수 있어 읽기 버퍼를 지금 놓으면 안 된다. 전송이 끝나면(워터마크가 이 시리얼을 지나면) 놓는다.
-        // 이미 끝났다면 바로 놓는다.
-        if ( _pDevice->_transferSerials.isComplete( ticket._serial ) )
-            return;
-        _pDevice->_transferReleaseQueue.enqueueGPUKeepAlive( std::move( record._readback ), ticket._serial );
+        // 복사가 아직 GPU 에서 도는 중이면 구간에 시리얼을 붙여 워터마크가 지난 뒤에 돌아오게 한다(Vulkan 과 같은 꼬리).
+        RHITextureTransferDriver::releaseDiscardedReadback( _pDevice->_readbackRing, record._span, _pDevice->_transferSerials, ticket._serial );
     }
 
     RHIFormat D3D12RHIResourceFactory::getTextureFormat( RHITextureHandle texture ) const
@@ -659,71 +663,71 @@ namespace sw
         UINT64                             totalBytes{ 0 };
         _pDevice->_device->GetCopyableFootprints( &resourceDesc, subresource, 1, 0, &footprint, &rowCount, &rowSize, &totalBytes );
 
-        const D3D12_HEAP_PROPERTIES            readbackHeap = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_READBACK );
-        const D3D12_RESOURCE_DESC              bufferDesc   = D3D12RHIResourcePreset::bufferDesc( totalBytes );
-        Microsoft::WRL::ComPtr<ID3D12Resource> readback;
-        if ( isHrSuccess( _pDevice->_device->CreateCommittedResource( &readbackHeap, D3D12_HEAP_FLAG_NONE, &bufferDesc,
-                                                                      D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS( readback.GetAddressOf() ) ),
-                          "CreateCommittedResource" ) == false )
-        {
-            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.SubmitTextureReadbackFailedCreateReadback", "submitTextureReadback: failed to create the readback buffer (%# bytes)", totalBytes );
-            return RHITransferSubmit::rejected();
-        }
+        // 되읽기 링의 구간에 받는다(Vulkan 과 같은 두 링). 구간 시작이 배치 오프셋 정렬(512)의 배수라 풋프린트 규칙을 그대로 지킨다.
+        D3D12RHIDevice::D3D12StagingRing& ring = _pDevice->_readbackRing;
+        RHIStagingSpan                    span{};
+        const RHISubmitResult             allocateResult = _pDevice->allocateStagingSpan( ring, totalBytes, "submitTextureReadback", span );
+        if ( allocateResult != RHISubmitResult::Accepted )
+            return RHITransferSubmit::fromUnaccepted( allocateResult );
+        // 링 안의 실제 위치로 풋프린트를 다시 받는다(BaseOffset).
+        _pDevice->_device->GetCopyableFootprints( &resourceDesc, subresource, 1, span._offsetBytes, &footprint, &rowCount, &rowSize, &totalBytes );
 
-        D3D12RHIDevice::D3D12TransferJob job{};
-        if ( _pDevice->beginTransferJob( job ) == false )
+        // 구간에는 시리얼을 붙이지 않는다 — 가져가거나 버릴 때까지 결과가 링에 남아야 한다(`runReadbackJob`).
+        return RHITextureTransferDriver::runReadbackJob<D3D12RHIDevice::D3D12TransferJob>(
+            ring, span, _pDevice->_transferSerials, [this]( D3D12RHIDevice::D3D12TransferJob& job )
         {
+            if ( _pDevice->beginTransferJob( job ) )
+                return true;
             SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.SubmitTextureReadbackFailedOpenCopy", "submitTextureReadback: failed to open the copy command list" );
-            return RHITransferSubmit::rejected();
-        }
-        ID3D12GraphicsCommandList* pList = job._list.Get();
-
-        const D3D12_RESOURCE_STATES stateBefore = _pDevice->getTrackedTextureState( texture );
-
-        D3D12_RESOURCE_BARRIER barrier{};
-        barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-        barrier.Transition.pResource   = pTexture;
-        barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-        if ( stateBefore != D3D12_RESOURCE_STATE_COPY_SOURCE )
+            return false;
+        }, [&]( D3D12RHIDevice::D3D12TransferJob& job )
         {
-            barrier.Transition.StateBefore = stateBefore;
-            barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_COPY_SOURCE;
-            pList->ResourceBarrier( 1, &barrier );
-        }
+            ID3D12GraphicsCommandList* pList = job._list.Get();
 
-        D3D12_TEXTURE_COPY_LOCATION src{};
-        src.pResource        = pTexture;
-        src.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-        src.SubresourceIndex = subresource;
-        D3D12_TEXTURE_COPY_LOCATION dst{};
-        dst.pResource       = readback.Get();
-        dst.Type            = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-        dst.PlacedFootprint = footprint;
-        pList->CopyTextureRegion( &dst, 0, 0, 0, &src, nullptr );
+            const D3D12_RESOURCE_STATES stateBefore = _pDevice->getTrackedTextureState( texture );
 
-        if ( stateBefore != D3D12_RESOURCE_STATE_COPY_SOURCE )
+            D3D12_RESOURCE_BARRIER barrier{};
+            barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+            barrier.Transition.pResource   = pTexture;
+            barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+            if ( stateBefore != D3D12_RESOURCE_STATE_COPY_SOURCE )
+            {
+                barrier.Transition.StateBefore = stateBefore;
+                barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_COPY_SOURCE;
+                pList->ResourceBarrier( 1, &barrier );
+            }
+
+            D3D12_TEXTURE_COPY_LOCATION src{};
+            src.pResource        = pTexture;
+            src.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+            src.SubresourceIndex = subresource;
+            D3D12_TEXTURE_COPY_LOCATION dst{};
+            dst.pResource       = ring.getSpanResource( span );
+            dst.Type            = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+            dst.PlacedFootprint = footprint;
+            pList->CopyTextureRegion( &dst, 0, 0, 0, &src, nullptr );
+
+            if ( stateBefore != D3D12_RESOURCE_STATE_COPY_SOURCE )
+            {
+                barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
+                barrier.Transition.StateAfter  = stateBefore;
+                pList->ResourceBarrier( 1, &barrier );
+            }
+        }, [this]( D3D12RHIDevice::D3D12TransferJob& job )
+        { return _pDevice->submitTransferJob( std::move( job ), "submitTextureReadback" ); }, [&]( uint64 serial )
         {
-            barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
-            barrier.Transition.StateAfter  = stateBefore;
-            pList->ResourceBarrier( 1, &barrier );
-        }
-        // 기록이 끝났다. 즉시 큐에 내고 전송 펜스를 올린다(기다리지 않는다). 읽기 버퍼는 보관표가 쥐고 있다가 `takeTextureReadback` 이 Map 한다.
-        // 읽기 버퍼는 읽기마다 만든다(되읽기 링이 없다) — 링이 아니므로 `Busy` 가 없다.
-        const uint64 serial = _pDevice->submitTransferJob( std::move( job ), "submitTextureReadback" );
-        if ( serial == 0 )
-            return RHITransferSubmit::rejected();
-        // 원본 텍스처도 복사가 끝나기 전에는 해제되지 않게 전송 시리얼에 매단다(destroyTexture 가 해제를 미룬다).
-        _pDevice->recordTextureTransfer( texture, serial );
+            // 원본 텍스처도 복사가 끝나기 전에는 해제되지 않게 전송 시리얼에 매단다(destroyTexture 가 해제를 미룬다).
+            _pDevice->recordTextureTransfer( texture, serial );
 
-        D3D12RHIDevice::TextureReadbackRecord record;
-        record._readback  = std::move( readback );
-        record._footprint = footprint;
-        record._layout    = outLayout;
-        record._rowCount  = rowCount;
-        record._rowSize   = rowSize;
-        record._bDepth    = bDepth ? SW_TRUE : SW_FALSE;
-        _pDevice->_readbackTable.add( serial, std::move( record ) );
-        return _pDevice->_transferSerials.makeAccepted( serial );
+            D3D12RHIDevice::TextureReadbackRecord record;
+            record._span      = span;
+            record._footprint = footprint;
+            record._layout    = outLayout;
+            record._rowCount  = rowCount;
+            record._rowSize   = rowSize;
+            record._bDepth    = bDepth ? SW_TRUE : SW_FALSE;
+            _pDevice->_readbackTable.add( serial, std::move( record ) );
+        } );
     }
 
     RHIBufferHandle D3D12RHIResourceFactory::createVertexBuffer( const void* pData, uint32 sizeBytes )

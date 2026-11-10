@@ -464,13 +464,14 @@ namespace sw
 
         /**
          * @struct D3D12StagingRing
-         * @brief 영속 매핑한 업로드 힙 버퍼 하나와 그 구간 할당기입니다. 텍스처 업로드가 소스를 여기에 복사한 뒤 복사 리스트가 이 버퍼에서 읽습니다.
+         * @brief 영속 매핑한 스테이징 버퍼 하나와 그 구간 할당기입니다. 업로드 링은 소스를 여기에 복사한 뒤 복사 리스트가 읽고, 되읽기 링은 복사 리스트가 쓴 뒤 가져가기가 읽습니다(Vulkan 과 같은 두 링).
          * @details 구간은 시리얼을 붙여(`markSubmitted`) 워터마크가 지나면 돌아온다. 링보다 큰 한 장은 할당기가 단독 구간(`RHIStagingSpan::_bSolo`, 오프셋 0)으로 내주고,
          *          그 크기의 일회성 업로드 힙 버퍼(`_solo*`)를 만들어 쓴다. 할당기가 단독 구간을 한 번에 하나만 내주므로 링마다 하나다. 할당기가 돌려받은 뒤(`hasLiveSolo` 거짓)
          *          `retireCompletedTransfers` 가 지운다. 구간 시작은 `D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT`(512)의 배수라 텍스처 복사의 배치 오프셋 규칙을 그대로 만족한다.
          */
         struct D3D12StagingRing
         {
+            D3D12_HEAP_TYPE                        _heapType{ D3D12_HEAP_TYPE_UPLOAD }; ///< UPLOAD(업로드 소스) 또는 READBACK(되읽기 도착지) — 단독 버퍼도 같은 힙에 만든다
             RHIStagingAllocator                    _allocator;
             Microsoft::WRL::ComPtr<ID3D12Resource> _buffer;
             uint8*                                 _pMapped{ nullptr };
@@ -493,12 +494,12 @@ namespace sw
         /// @brief 읽기 하나가 들고 있는 것입니다. 읽기 힙 버퍼와 그 안의 배치, 결과를 꺼낼 때 필요한 배치입니다(`takeTextureReadback` 이 Map 해서 읽습니다).
         struct TextureReadbackRecord
         {
-            Microsoft::WRL::ComPtr<ID3D12Resource> _readback;
-            D3D12_PLACED_SUBRESOURCE_FOOTPRINT     _footprint{};
-            RHITextureMipSpan                      _layout{};
-            UINT                                   _rowCount{ 0 };
-            UINT64                                 _rowSize{ 0 };
-            uint8                                  _bDepth{ SW_FALSE };
+            RHIStagingSpan                     _span{};      ///< 되읽기 링의 구간(가져가거나 버릴 때까지 쥔다)
+            D3D12_PLACED_SUBRESOURCE_FOOTPRINT _footprint{}; ///< 링 안 배치(`Offset` 은 링 버퍼 시작에서 센다)
+            RHITextureMipSpan                  _layout{};
+            UINT                               _rowCount{ 0 };
+            UINT64                             _rowSize{ 0 };
+            uint8                              _bDepth{ SW_FALSE };
         };
 
     protected:
@@ -570,6 +571,8 @@ namespace sw
          * @details 상수 버퍼 링, 정점/인덱스 업로드 버퍼, 전체 화면 삼각형, 업로드 스테이징 네 곳이 "만들기, 매핑" 을 이 함수로 처리한다.
          */
         [[nodiscard]] bool createMappedUploadBuffer( uint64 sizeBytes, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, void*& pOutMapped );
+        /** @brief READBACK 힙 버퍼를 만들어 영속 매핑합니다(복사 도착지 상태로 만든다). */
+        [[nodiscard]] bool createMappedReadbackBuffer( uint64 sizeBytes, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, void*& pOutMapped );
         /** @brief ComPtr 을 핸들 테이블에 넣고 핸들을 반환합니다. GPU 메모리 추적기의 `kind` 항목에 할당 크기를 올리는 유일한 지점입니다. */
         RHITextureHandle storeTexture( Microsoft::WRL::ComPtr<ID3D12Resource> texture, RHIMemoryKind kind );
     #if defined( SW_DEBUG )
@@ -645,11 +648,11 @@ namespace sw
         /** @brief 남은 전송 작업, 전송을 기다리던 해제, 가져가지 않은 읽기, 링을 놓습니다. GPU 가 쉰 뒤(종료 2단계 뒤)에 부릅니다. */
         void shutdownTransfers();
         /** @brief 업로드 힙에 @p capacityBytes 의 버퍼를 만들어 영속 매핑하고 구간 할당기를 초기화합니다. 실패하면 이유를 로그로 남기고 false 입니다. */
-        [[nodiscard]] bool createStagingRing( D3D12StagingRing& ring, uint64 capacityBytes, uint64 soloMaxBytes );
+        [[nodiscard]] bool createStagingRing( D3D12StagingRing& ring, D3D12_HEAP_TYPE heapType, uint64 capacityBytes, uint64 soloMaxBytes );
         /** @brief 링 버퍼와 단독 버퍼를 놓고 구간 할당기를 비웁니다. 없는 링이면 아무것도 하지 않습니다. */
         void destroyStagingRing( D3D12StagingRing& ring );
         /** @brief 업로드 힙 버퍼를 만들어 영속 매핑하고 메모리 추적기의 Staging 항목에 올립니다(링과 단독 버퍼가 같이 쓴다). 실패하면 두 출력은 비어 있다. */
-        [[nodiscard]] bool createMappedStagingBuffer( uint64 sizeBytes, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, uint8*& pOutMapped );
+        [[nodiscard]] bool createMappedStagingBuffer( D3D12_HEAP_TYPE heapType, uint64 sizeBytes, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, uint8*& pOutMapped );
         /** @brief `createMappedStagingBuffer` 로 만든 버퍼를 놓고 메모리 추적기에서 내립니다. 비어 있으면 아무것도 하지 않습니다. */
         void destroyMappedStagingBuffer( Microsoft::WRL::ComPtr<ID3D12Resource>& rBuffer, uint8*& pMapped );
         /**
@@ -883,6 +886,7 @@ namespace sw
         RHITransferFenceQueue<D3D12TransferJob> _transferFenceQueue;
         /// @brief 업로드 스테이징 링입니다(`gv_rhiStagingRingMegabytes`).
         D3D12StagingRing _uploadRing;
+        D3D12StagingRing _readbackRing; ///< 텍스처 되읽기 도착지(READBACK 힙). 예전에는 되읽기마다 읽기 버퍼를 새로 만들었다
         /// @brief 놀고 있는 전송 작업 목록입니다. 펜스 줄의 회수 콜백 안에서도 잡는 잎 락(`_transferJobMutex`)이 지킵니다.
         mutex                                         _transferJobMutex;
         vector<D3D12TransferJob> _listFreeTransferJob SW_GUARDED_BY( _transferJobMutex );

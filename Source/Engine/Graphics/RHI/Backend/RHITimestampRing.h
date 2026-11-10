@@ -1,10 +1,10 @@
 /**
  * @file RHITimestampRing.h
  * @brief GPU 타임스탬프의 칸 표입니다 — 이번 프레임에 적은 슬롯(어느 기록 스레드에서나)과, 프레임 칸마다 굳힌 슬롯 마스크를 한 곳에서 지킵니다.
- * @details DX11 · DX12 · GL · Vulkan 이 같은 표(칸마다 마스크 배열 · 제출 표지 + 이번 프레임 원자 마스크 + 자기 칸 카운터)를 따로 들던 것을 모은다.
+ * @details 다섯 백엔드가 같은 표(칸마다 마스크 배열 · 제출 표지 + 이번 프레임 원자 마스크 + 자기 칸 카운터)를 따로 들던 것을 모은다.
  *          칸은 프레임 펜스 링의 칸(`RHIFrameFenceRing::getRecordingSlot` · DX12 `FrameResourceRing::currentIndex`)을 그대로 쓴다 — 백엔드마다 따로 돌던 칸 카운터가 없다.
  *          네이티브 쿼리(쿼리 힙 · 풀 · GL 쿼리 이름)와 결과 읽기는 백엔드 몫이다. 언리얼 `FRHIRenderQueryPool` 의 프레임별 묶음과 같은 자리다(기억에 의존한 비교).
- *          WebGPU 는 풀이(resolve) 뒤 되읽기 버퍼 풀을 매핑하는 모양이라 칸 표가 아니다 — 이번 프레임 마스크만 같다.
+ *          WebGPU 도 칸마다 되읽기 버퍼 하나(풀이 → 복사 → 매핑을 그 프레임 완료에 넣는다)라 같은 표를 쓴다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"

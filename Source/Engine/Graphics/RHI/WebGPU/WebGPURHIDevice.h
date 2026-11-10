@@ -27,6 +27,7 @@
 #include "Engine/Graphics/RHI/Backend/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Backend/RHISwapChainSet.h"
+#include "Engine/Graphics/RHI/Backend/RHITimestampRing.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHITimestampFrame.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHISwapChain.h"
@@ -137,19 +138,16 @@ namespace sw
         uint32                                     _hitCount;     ///< 이번 프레임에 다시 건 수(진단)
     };
 
-    /** @brief 타임스탬프 되읽기 버퍼 하나입니다. 매핑 콜백이 `_state` 를 올리고, 렌더 스레드(`processCompletions`)가 읽어 비웁니다. */
+    /**
+     * @brief 프레임 칸 하나의 타임스탬프 되읽기 버퍼입니다(`RHIFrameFenceRing` 칸마다 하나 — 다른 백엔드의 칸마다 쿼리 묶음과 같은 자리).
+     * @details 매핑은 그 칸의 프레임 완료(`WebGPUFrameFence::_pendingMapCount`)에 든다 — 칸을 다시 쓰는 `beginFrame` 에서는 매핑이 끝나 있다.
+     *          적은 슬롯 마스크는 `RHITimestampRing` 이 칸마다 든다.
+     */
     struct WebGPUTimestampReadback
     {
-        enum State : uint8
-        {
-            Free = 0, ///< 다음 프레임이 쓸 수 있다
-            Mapping,  ///< 복사를 냈고 매핑을 기다린다
-            Mapped,   ///< 매핑이 끝났다 — 읽어 비운다
-            Failed,   ///< 매핑이 실패했다 — 읽지 않고 비운다
-        };
-        WGPUBuffer           _buffer{ nullptr };
-        GPUTimestampSlotMask _writtenMask{}; ///< 그 프레임에 적은 칸
-        atomic<uint8>        _state{ Free };
+        WGPUBuffer    _buffer{ nullptr };
+        uint8         _bQueued{ SW_FALSE }; ///< 이 칸에 풀이 · 복사 · 매핑을 냈다(렌더 스레드만)
+        atomic<uint8> _bMapped{ SW_FALSE }; ///< 매핑이 성공했다(콜백이 켠다)
     };
 
     /** @brief 전송 하나의 완료 표지입니다. 콜백이 켜고 `RHITransferFenceQueue` 가 순서대로 거둡니다. 주소가 콜백의 userdata 라 큐 안에서 움직이지 않게 따로 할당한다. */
@@ -342,15 +340,15 @@ namespace sw
         void releaseDepthSampleCopy( WebGPUTextureRecord& record );
         /** @brief 켰는데 쿼리 세트가 없으면 만듭니다(프레임 시작). 기능이 없으면 아무것도 하지 않는다. */
         void ensureTimestampQuerySet();
-        /** @brief 이번 프레임에 적은 칸을 풀어 되읽기 버퍼로 복사합니다(프레임 인코더를 닫기 전). 빈 되읽기 버퍼가 없으면 이번 프레임은 건너뛴다(기다리지 않는다). */
+        /** @brief 이번 프레임에 적은 칸을 굳혀(`RHITimestampRing::closeFrame`) 풀고 이 프레임 칸의 되읽기 버퍼로 복사합니다(프레임 인코더를 닫기 전). */
         void resolveTimestamps();
-        /** @brief 이번 프레임의 되읽기 버퍼를 매핑합니다(제출 뒤). */
-        void mapTimestampReadback();
-        /** @brief 매핑이 끝난 되읽기 버퍼를 읽어 `_timestampFrame` 에 풀고 비웁니다(`processCompletions`). */
-        void collectTimestampReadbacks();
+        /** @brief 이번 프레임 칸의 되읽기 버퍼를 매핑하고, 매핑을 그 프레임 완료(@p pFence)에 넣습니다(제출 뒤). */
+        void mapTimestampReadback( WebGPUFrameFence* pFence );
+        /** @brief 칸 @p ringSlot 의 앞 프레임 결과를 읽어 `_timestampFrame` 에 풀고 칸을 비웁니다(`beginFrame` — 그 프레임은 끝났다). */
+        void collectTimestampReadback( uint32 ringSlot );
         /** @brief 빈 계산 패스의 시작 시각을 @p slotIndex 에 적습니다(`WebGPURHICommandList::writeTimestamp`). 쿼리 세트가 없으면 아무것도 하지 않는다. */
         void writeTimestampSlot( WGPUCommandEncoder encoder, uint32 slotIndex );
-        /** @brief 타임스탬프 되읽기 매핑 콜백입니다(userdata1 = 되읽기 버퍼). */
+        /** @brief 타임스탬프 되읽기 매핑 콜백입니다(userdata1 = 프레임 완료, userdata2 = 되읽기 버퍼). */
         static void onTimestampMapped( WGPUMapAsyncStatus status, WGPUStringView message, void* pUserdata1, void* pUserdata2 );
         /** @brief 빈 프레임 인코더를 엽니다(프레임 시작 · 리스트 사이 잘린 뒤). */
         void openFrameEncoder();
@@ -469,14 +467,13 @@ namespace sw
         WGPUBindGroupLayout  _depthCopyGroupLayout; ///< 그 파이프라인의 그룹 0(깊이 텍스처 하나)
         WebGPUBindGroupCache _bindGroupCache;
 
-        TimestampProvider                           _timestampProvider;
-        WGPUQuerySet                                _timestampQuerySet;         ///< `kMaxGPUTimestampSlot` 칸(켠 뒤 첫 프레임에 만든다)
-        WGPUBuffer                                  _timestampResolveBuffer;    ///< QueryResolve | CopySrc — 풀이 결과를 되읽기 버퍼로 옮긴다
-        vector<unique_ptr<WebGPUTimestampReadback>> _listTimestampReadback;     ///< 되읽기 버퍼 풀(콜백 userdata 라 자리가 움직이지 않게 따로 할당한다)
-        WebGPUTimestampReadback*                    _pPendingTimestampReadback; ///< 이번 프레임에 풀어 담은 버퍼(제출 뒤 매핑한다)
-        GPUTimestampSlotMask                        _timestampWrittenMask;      ///< 이번 프레임에 적은 칸(기록은 장치를 만든 한 스레드다)
-        RHITimestampFrame                           _timestampFrame;            ///< 마지막으로 읽은 프레임
-        atomic<uint8>                               _bTimestampEnabled;
+        TimestampProvider       _timestampProvider;
+        WGPUQuerySet            _timestampQuerySet;                                   ///< `kMaxGPUTimestampSlot` 칸(켠 뒤 첫 프레임에 만든다)
+        WGPUBuffer              _timestampResolveBuffer;                              ///< QueryResolve | CopySrc — 풀이 결과를 되읽기 버퍼로 옮긴다
+        WebGPUTimestampReadback _arrTimestampReadback[RHIFrameFenceRing::kSlotCount]; ///< 칸마다 되읽기 버퍼(콜백 userdata 라 자리가 움직이지 않는 고정 배열)
+        RHITimestampRing        _timestampRing;                                       ///< 이번 프레임 · 칸마다 적은 슬롯
+        RHITimestampFrame       _timestampFrame;                                      ///< 마지막으로 읽은 프레임
+        atomic<uint8>           _bTimestampEnabled;
 
         vector<ConstantRing> _listConstantRing;
         uint32               _activeRingIndex;
