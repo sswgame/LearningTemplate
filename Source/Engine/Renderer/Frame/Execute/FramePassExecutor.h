@@ -53,6 +53,8 @@ namespace sw
      * @details 디바이스는 렌더러의 `_pDevice` 변수를 참조한다(다른 협력 객체와 같다). 그래프 콜백은 `RenderGraphPassContext` 만 받으므로 지금 그리는 뷰는
      *          이 객체가 기억한다(`_pActiveView` — 프레임 밖에서는 늘 주 시점). 뷰를 바꾸는 곳은 `renderExtraView` 하나다.
      *          셋업이 쓰는 뷰 상수(`applyViewPassConstants` · `applyViewProjection`)는 뷰를 인자로 받는다.
+     *          정의는 세 TU 다 — 그래프 짓기 · 제출 `FramePassExecutor.cpp`, 패스 라이브러리(`execute*Pass` · 확장 패스) `FramePassExecutorPasses.cpp`,
+     *          렌더 패스 열기 · 바인딩 · 드로우 `FramePassExecutorDraw.cpp`.
      */
     class SW_API FramePassExecutor
     {
