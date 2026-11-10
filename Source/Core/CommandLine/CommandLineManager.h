@@ -193,6 +193,12 @@ namespace sw
          * @details 사용자 설정의 무인 자리(`UserSettingsManager`) · 사용자 데이터 뿌리 격리(`AutomationUserDataIsolation`) · 어서트 대화상자가 같은 판정을 쓴다(예전에는 곳마다 두 인자를 따로 물었다).
          */
         bool isAutomatedRun() const;
+        /**
+         * @brief 이 실행이 자동화 실행이면 엔진 자식 프로세스(App · Server)의 인자 @p inoutListArgument 에 `-unattended` 를 더합니다(이미 있으면 그대로).
+         * @details 엔진 실행 파일을 자식으로 띄우는 곳(넷 플레이 · 새 창 플레이 · 테스트 실행기)은 모두 이것을 거친다 — 빠지면 자식이 사람의 실행으로 떠 사용자 설정을
+         *          읽고 사양으로 품질을 골라(WSL 의 클라이언트가 low) 서버와 합성이 갈렸다. 처음부터 `-scenario` · `-unattended` 를 적어 띄우는 곳(시나리오 · 백엔드 자식 · 테스트 자식 역할)은 이미 자동화다.
+         */
+        void appendAutomatedRunArgument( vector<string>& inoutListArgument ) const;
 
         /**
          * @brief 받는 인자의 목록(`-help` 가 찍는 글)을 만듭니다 — 줄마다 표(ArgumentList.xxx)의 철자와 값 모양(`-key` · `-key=<int>` …)입니다.

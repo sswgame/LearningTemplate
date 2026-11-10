@@ -17,6 +17,7 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
+#include "Engine/Automation/Scenario/AutomationScratch.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
@@ -188,7 +189,8 @@ namespace sw::editor
             const string&  root = editor::getSubsystem<AssetPaths>().getRootFolderPath();
             vector<string> listFilePath;
             if ( FileUtil::collectFiles( root, ".xml", listFilePath, true ) == false )
-                listFilePath.clear(); // 도중에 멈춘 목록을 전부로 보이지 않는다
+                listFilePath.clear();                                             // 도중에 멈춘 목록을 전부로 보이지 않는다
+            AutomationScratch::removeOtherProcessInstances( root, listFilePath ); // 남의 시나리오 사본은 고를 시나리오가 아니다
             _scenarios.setFromFiles( listFilePath, root );
         }
 
@@ -236,8 +238,10 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EdText", "RunSelectedCases" ) ) )
         {
             // 작업 폴더는 Bin 이다 — 테스트는 거기서 위로 올라가며 Content/ 를 찾는다(CLAUDE.md 의 테스트 실행 규칙).
-            const optional<AbsolutePath> executable = AbsolutePath::tryMake( FileUtil::getExecutablePath() );
-            if ( executable.has_value() && _pJob->request( ProcessCommand::at( *executable, EditorTestOutputParser::makeUnitTestArguments( filter ) ), TestRunnerPanelInternal::getBinDirectory() ) )
+            const optional<AbsolutePath> executable   = AbsolutePath::tryMake( FileUtil::getExecutablePath() );
+            vector<string>               listArgument = EditorTestOutputParser::makeUnitTestArguments( filter );
+            editor::getSubsystem<CommandLineManager>().appendAutomatedRunArgument( listArgument ); // 자동화 실행이 부른 테스트 자식도 자동화 실행이다
+            if ( executable.has_value() && _pJob->request( ProcessCommand::at( *executable, std::move( listArgument ) ), TestRunnerPanelInternal::getBinDirectory() ) )
             {
                 _externalRunKind = ExternalRunKind::UnitTestRun;
                 _externalTitle   = "App -test -test-filter=" + filter;

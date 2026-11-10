@@ -11,6 +11,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -51,6 +52,12 @@ namespace sw
          * @details 나란히 도는 시나리오 실행(백엔드마다 하나)은 같은 `Content/scratch/` 에 저마다 사본을 만든다 — 에디터의 파일 감시는 남의 사본 쓰기를 무시해야 한다.
          */
         [[nodiscard]] static bool isOtherProcessInstance( string_view assetID );
+        /**
+         * @brief 리소스 루트 @p contentRoot 아래를 훑은 디스크 경로(파일 · 폴더) 목록에서 다른 프로세스의 사본(`isOtherProcessInstance`)을 뺍니다.
+         * @details 리소스 트리를 디스크에서 훑는 곳(에셋 색인 · 콘텐츠 브라우저 · 참조 색인 · 참조 검사 · 시나리오 목록 · 애니메이션 세트 찾기)은 모두 이것을 거친다 —
+         *          남의 사본(같은 체크아웃의 다른 App · 끝난 실행의 잔여)이 원본과 같은 파일 이름으로 보이면 Quick Open 이 사본을 집는 식으로 엉뚱한 파일을 고른다.
+         */
+        static void removeOtherProcessInstances( string_view contentRoot, vector<string>& inoutListPath );
         /** @brief 프로세스 꼬리의 앞머리(`<이름>_p<pid>` 의 `_p`)입니다. */
         static constexpr string_view kInstanceMark = "_p";
         /** @brief 폴더 이름 @p folderName 이 프로세스 꼬리(`<이름>_p<pid>` — `makeInstanceID`)로 끝나면 그 pid 입니다. 꼬리가 없거나 숫자가 아니면 비었습니다. */

@@ -2,6 +2,7 @@
 
 #include "Editor/Common/Commands/Play/EditorPlayCommands.h"
 
+#include "Core/CommandLine/CommandLineManager.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Process/Process.h"
@@ -142,8 +143,8 @@ namespace sw::editor
         // 새 창은 디스크의 씬을 연다(언리얼 Standalone 처럼) — 저장하지 않은 편집은 들어가지 않는다고 알린다.
         if ( editorContext.getSubsystem<EditorWorkspace>().isSceneDirty() )
             editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyPlayNewWindowTitle" ), SW_LOCKEY( "EdCommon", "NotifyPlayNewWindowUnsaved" ), NotificationKind::Warning );
-        const ProcessCommand command =
-            makeStandaloneCommand( FileUtil::getExecutablePath(), pScene->getSourcePath(), getPreferences<EditorPlayPreferences>()._standaloneArguments );
+        ProcessCommand command = makeStandaloneCommand( FileUtil::getExecutablePath(), pScene->getSourcePath(), getPreferences<EditorPlayPreferences>()._standaloneArguments );
+        editor::getSubsystem<CommandLineManager>().appendAutomatedRunArgument( command._listArgument ); // 자동화 실행이 띄운 새 창은 사람의 설정 · 세이브를 건드리지 않는다
         if ( Process::launchDetached( command ) == false )
         {
             SW_LOG_WARNING_ID( "EditorPlay.FailedLaunchStandaloneGame", "Failed to launch the standalone game: %#", command.toCommandLine() );

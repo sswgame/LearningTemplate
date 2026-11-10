@@ -38,6 +38,7 @@
 #include "Engine/Animation/AnimationSet.h"
 #include "Engine/Animation/Codec/AnimationCodec.h"
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
+#include "Engine/Automation/Scenario/AutomationScratch.h"
 #include "Engine/Character/Fit/CharacterMeshUtil.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -972,6 +973,7 @@ namespace sw::editor
             inoutSummary._listProblem.push_back( "retarget bake: the animation sets under the content root could not be listed" );
             return;
         }
+        AutomationScratch::removeOtherProcessInstances( resourceRoot, listSetFile ); // 남의 시나리오 사본을 굽지 않는다(그 프로세스가 쓰는 중일 수 있다)
         for ( const string& setFile : listSetFile )
         {
             if ( StringUtil::contains( FileUtil::normalizeSeparators( setFile ), "/models/" ) )

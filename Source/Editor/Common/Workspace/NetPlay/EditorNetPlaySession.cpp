@@ -379,10 +379,8 @@ namespace sw::editor
         pChild->_tracePath              = tracePath;
         if ( tracePath.empty() == false )
             listArgument.push_back( "-gv_traceSaveOnExit=" + tracePath );
-        // 자동화 실행의 자식도 자동화 실행이다 — 사람의 사용자 설정을 읽거나 사양으로 품질을 고르지 않는다(`CommandLineManager::isAutomatedRun`).
-        // 빠지면 약한 GPU 의 클라이언트가 품질 low 를 골라 서버(기본 high)와 합성이 갈려 접속이 끊겼다(editor.netresourcedigest, Linux).
-        if ( editor::getSubsystem<CommandLineManager>().isAutomatedRun() )
-            listArgument.push_back( "-" + string( getCommandLineArgumentSpelling( CommandLineArgument::UNATTENDED ) ) );
+        // 자동화 실행의 자식도 자동화 실행이다 — 빠지면 약한 GPU 의 클라이언트가 품질 low 를 골라 서버와 합성이 갈려 접속이 끊겼다(editor.netresourcedigest, Linux).
+        editor::getSubsystem<CommandLineManager>().appendAutomatedRunArgument( listArgument );
         const optional<AbsolutePath> executable = AbsolutePath::tryMake( executablePath );
         const ProcessCommand         command    = executable.has_value() ? ProcessCommand::at( *executable, std::move( listArgument ) ) : ProcessCommand{};
         ProcessOptions               options;

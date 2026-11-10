@@ -9,6 +9,7 @@
 #include "Editor/Common/Workspace/EditorStateStore.h"
 
 #include "Engine/Asset/Cook/AssetCompanion.h"
+#include "Engine/Automation/Scenario/AutomationScratch.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineDefines.h"
 
@@ -65,6 +66,9 @@ namespace sw::editor
         (void)FileUtil::collectFiles( folderAbs, {}, listFile, bRecursive, stopToken ); // 표시용 — 모은 데까지 보인다
 
         const string& resourceRoot = assetPaths.getRootFolderPath(); // 워커(`EditorFolderListingJob`)에서 돈다 — 부른 쪽이 넘긴 경로 상태다
+        // 남의 시나리오 사본 폴더 · 파일은 이 에디터의 콘텐츠가 아니다(`scratch/` 를 열거나 재귀로 훑을 때)
+        AutomationScratch::removeOtherProcessInstances( resourceRoot, listFolder );
+        AutomationScratch::removeOtherProcessInstances( resourceRoot, listFile );
 
         for ( const string& folder : listFolder )
         {

@@ -11,6 +11,7 @@
 
 #include "Editor/Common/Workspace/EditorService.h"
 
+#include "Engine/Automation/Scenario/AutomationScratch.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 
 namespace sw::editor
@@ -231,6 +232,7 @@ namespace sw::editor
         vector<string> listFile;
         if ( resourceRoot.empty() || FileUtil::collectFiles( resourceRoot, "", listFile, true ) == false )
             return;
+        AutomationScratch::removeOtherProcessInstances( resourceRoot, listFile ); // 남의 시나리오 사본의 참조는 이 에디터의 참조가 아니다
 
         outData._listKnownID.reserve( listFile.size() );
         for ( const string& filePath : listFile )

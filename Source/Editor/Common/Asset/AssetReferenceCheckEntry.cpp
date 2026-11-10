@@ -17,6 +17,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Asset/Reference/AssetReferenceFields.h"
+#include "Engine/Automation/Scenario/AutomationScratch.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -80,6 +81,7 @@ namespace sw::editor
                     SW_LOG_ERROR_ID( "AssetReferenceCheck.ContentUnlisted", "Asset reference check: the files under %# could not be listed", contentRoot );
                     return -1;
                 }
+                AutomationScratch::removeOtherProcessInstances( contentRoot, listFile ); // 남의 시나리오 사본은 트리의 에셋이 아니다
                 AssetIDSet                   assets;
                 vector<pair<string, string>> listReferrer; // (디스크 경로, 리소스 id)
                 for ( const string& filePath : listFile )

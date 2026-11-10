@@ -515,3 +515,29 @@ SW_TEST_CASE( CommandLineTest, InitializeIsNotShiftedByEarlierArguments )
     SW_EXPECT_TRUE( cmdManager.getArgument( sw::CommandLineArgument::DIRECTX_12, bDx12 ) );
     SW_EXPECT_TRUE( bDx12 );
 }
+
+/**
+ * @brief 자동화 실행(-unattended · -scenario)만 엔진 자식 인자에 -unattended 를 더하고, 이미 있으면 다시 더하지 않는다
+ * @details 넷 플레이 · 새 창 플레이 · 테스트 실행기가 이 함수 하나로 자식에게 자동화 판정을 넘긴다 — 빠지면 자식이 사람의 실행으로 떠 사양으로 품질을 골랐다.
+ */
+SW_TEST_CASE( CommandLineTest, AutomatedRunPassesUnattendedToChildren )
+{
+    sw::CommandLineManager humanRun;
+    humanRun.initialize();
+    utf8* humanArgv[] = { const_cast<utf8*>( "TestApp.exe" ) };
+    humanRun.parse( 1, humanArgv, makeCommandLineTestBaseDirectory() );
+    sw::vector<sw::string> listHumanChild{ "-gv_firstScene=a.scene.xml" };
+    humanRun.appendAutomatedRunArgument( listHumanChild );
+    SW_EXPECT_EQUAL( size_t{ 1 }, listHumanChild.size() );
+
+    sw::CommandLineManager scenarioRun;
+    scenarioRun.initialize();
+    utf8* scenarioArgv[] = { const_cast<utf8*>( "TestApp.exe" ), const_cast<utf8*>( "-scenario=engine/automation/editor/idle.scenario.xml" ) };
+    scenarioRun.parse( 2, scenarioArgv, makeCommandLineTestBaseDirectory() );
+    sw::vector<sw::string> listChild{ "-gv_firstScene=a.scene.xml" };
+    scenarioRun.appendAutomatedRunArgument( listChild );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listChild.size() );
+    SW_EXPECT_EQUAL( sw::string( "-unattended" ), listChild[1] );
+    scenarioRun.appendAutomatedRunArgument( listChild );
+    SW_EXPECT_EQUAL( size_t{ 2 }, listChild.size() );
+}

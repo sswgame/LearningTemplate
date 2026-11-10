@@ -17,9 +17,7 @@ namespace sw::editor
         if ( pInfo == nullptr )
             return false;
         const string assetID = assetPaths.toAssetID( filePath );
-        // 다른 프로세스의 시나리오 사본(`scratch/<이름>_p<pid>/…` — 같은 체크아웃의 다른 App · 끝난 실행의 잔여)은 이 에디터의 에셋이 아니다.
-        // 색인에 넣으면 Quick Open 이 원본과 같은 파일 이름의 사본을 먼저 집어 시퀀서가 씬 플레이어를 찾지 못했다(파일 감시와 같은 규칙).
-        if ( assetID.empty() || AutomationScratch::isOtherProcessInstance( assetID ) )
+        if ( assetID.empty() )
             return false;
 
         outEntry._kind     = pInfo->getType();
@@ -41,6 +39,8 @@ namespace sw::editor
         vector<string> listAllFile;
         // 검색용 색인이다 — 도중에 멈춘 목록은 collectFiles 가 경로와 함께 알리고, 모은 데까지 검색된다(다음 색인이 다시 훑는다).
         (void)FileUtil::collectFiles( resourceFolder, "", listAllFile, true, stopToken ); // 종료 신호가 오르면 목록이 비거나 짧다 — 부른 잡이 신호를 다시 읽고 버린다
+        // 남의 시나리오 사본이 원본과 같은 파일 이름이면 Quick Open 이 사본을 먼저 집어 시퀀서가 씬 플레이어를 찾지 못했다
+        AutomationScratch::removeOtherProcessInstances( resourceFolder, listAllFile );
 
         outList.reserve( listAllFile.size() );
         for ( const string& file : listAllFile )
@@ -84,6 +84,7 @@ namespace sw::editor
         // 리소스 루트가 없거나 그새 사라졌으면 모든 종류가 0 개다.
         if ( resourceRootPath.empty() == false )
             (void)FileUtil::collectFiles( resourceRootPath, "", listAllFile, true, stopToken ); // 표시용 개수 — 도중에 멈춘 것은 collectFiles 가 알리고 모은 데까지 센다
+        AutomationScratch::removeOtherProcessInstances( resourceRootPath, listAllFile );
         countFiles( listAllFile, outCounts );
     }
 } // namespace sw::editor
