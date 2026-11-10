@@ -396,7 +396,6 @@ namespace sw
 
     void CharacterControllerComponent::endPhysicsFrame( ScenePhysics& physics, float32 alpha )
     {
-        (void)physics;
         if ( _character.isValid() == false )
             return;
         const float3 position = float3::lerp( _previousPosition, _state._position, alpha );
@@ -411,8 +410,8 @@ namespace sw
             _worldRotation    = quaternion::concatenate( _worldRotation, quaternion::makeFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, _pendingGroundYaw ) ).normalize();
             _pendingGroundYaw = 0.0f;
         }
-        PhysicsComponent::writeWorldPose( *this, position, _worldRotation, _worldScale );
-        markTransformSynced();
+        // 강체와 같이 모아 한 번에 쓴다 — 적용 · 변경 번호 맞추기는 `ScenePhysics::queuePoseWrite` 가 한다.
+        physics.queuePoseWrite( *this, position, _worldRotation, _worldScale );
     }
 
     void CharacterControllerComponent::releasePhysics( ScenePhysics& physics )
