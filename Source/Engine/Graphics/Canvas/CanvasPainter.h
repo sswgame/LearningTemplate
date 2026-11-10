@@ -179,7 +179,7 @@ namespace sw
         /** @brief 지금 일괄에 그 텍스처와 가위로 이어 붙일 수 있으면 그 일괄을, 아니면 새 일괄을 엽니다. 사각형의 텍스처 번호를 반환합니다. 텍스처가 없으면 비어 있습니다. */
         optional<uint32> selectBatch( const CanvasTextureRef* pTexture );
         /** @brief 지금 가위 사각형을 만듭니다(픽셀 정수이며 대상 안으로 자릅니다). 전부 잘렸으면 false 입니다. */
-        [[nodiscard]] bool computeScissor( RHIScissorRect& outScissor, bool& outHasScissor ) const;
+        [[nodiscard]] bool computeScissor( CanvasScissorRect& outScissor, bool& outHasScissor ) const;
         /** @brief UI 단위 사각형을 지금 변환으로 옮겨 물리 픽셀 사각형(위치, 크기, 축)을 채웁니다. */
         void placeRect( const float2& position, const float2& size, CanvasQuad& outQuad ) const;
 

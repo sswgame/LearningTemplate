@@ -14,8 +14,8 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"
-#include "Engine/Graphics/RHI/RHIRenderState.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/RenderState/RenderState.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"

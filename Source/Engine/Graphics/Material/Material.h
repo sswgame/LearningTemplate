@@ -17,7 +17,6 @@
 #include "Engine/Graphics/Material/MaterialRenderBinding.h"
 #include "Engine/Graphics/Material/MaterialRenderVersion.h"
 #include "Engine/Graphics/Material/MaterialTypes.h"
-#include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 
 namespace sw
@@ -46,6 +45,8 @@ namespace sw
 
     class IRHIDevice;
     class MaterialInstance;
+    template <typename TOwner>
+    class RHIRenderResourceHook;
     class MaterialParameterCollection;
 
     /// @brief 셰이더 퍼뮤테이션과 패킹한 머티리얼 바이트를 가진 머티리얼 에셋입니다. 게임 스레드 객체입니다.
@@ -62,7 +63,7 @@ namespace sw
      * 엔진(GPUScene 스냅샷)이 마지막까지 가지고 있다가 모듈이 언로드된 뒤 놓으면 이미 없는 코드로 뛰어든다.
      * create() 는 Engine.dll 안에서 만들므로 누가 마지막에 놓든 안전하다.
      */
-    class SW_API Material final : public RHIRenderResource, public std::enable_shared_from_this<Material>
+    class SW_API Material final : public std::enable_shared_from_this<Material>
     {
     public:
         /** @brief 머티리얼 파일의 확장자입니다. 에디터 종류 등록(`Editor/AssetActions`)이 이 값을 씁니다. */
@@ -91,7 +92,7 @@ namespace sw
         /** @brief 빈 머티리얼을 Engine.dll 안에서 shared_ptr 로 만듭니다. Material 을 얻는 유일한 방법입니다. */
         static shared_ptr<Material> create();
         /** @brief GPU 버퍼와 비동기 로드를 정리합니다. */
-        ~Material() override;
+        ~Material();
 
         /** @brief 복사를 금지합니다. */
         Material( const Material& ) = delete;
@@ -104,12 +105,12 @@ namespace sw
 
         /** @brief 머티리얼 에셋을 로드하고 텍스처를 요청하고 셰이더 레이아웃을 맞춥니다(게임 스레드). 상수 버퍼는 렌더 스레드의 프록시가 만든다. */
         [[nodiscard]] bool initialize( IRHIDevice* pRHI, const AssetID& assetID );
-        /** @brief (RHIRenderResource) 빌린 텍스처를 살아 있는 디바이스의 캐시에 돌려줍니다. */
-        void releaseRHI( IRHIDevice* pRHI ) override;
-        /** @brief (RHIRenderResource) 디바이스가 이미 없을 때 부릅니다. 텍스처 참조만 놓습니다. */
-        void clearRHI( IRHIDevice* pDevice ) override;
-        /** @brief (RHIRenderResource) 새 디바이스로 다시 초기화합니다(텍스처를 새로 빌린다). */
-        [[nodiscard]] bool initRHI( IRHIDevice* pDevice ) override;
+        /** @brief (디바이스 통보 — `_renderResourceHook`) 빌린 텍스처를 살아 있는 디바이스의 캐시에 돌려줍니다. */
+        void releaseRHI( IRHIDevice* pRHI );
+        /** @brief (디바이스 통보 — `_renderResourceHook`) 디바이스가 이미 없을 때 부릅니다. 텍스처 참조만 놓습니다. */
+        void clearRHI( IRHIDevice* pDevice );
+        /** @brief (디바이스 통보 — `_renderResourceHook`) 새 디바이스로 다시 초기화합니다(텍스처를 새로 빌린다). */
+        [[nodiscard]] bool initRHI( IRHIDevice* pDevice );
         /** @brief 초기화 상태입니다(캐시의 줄이 잠금 아래에서 읽으므로 원자다). 그릴 수 있는 것은 `Ready` 뿐입니다. */
         MaterialInitState getInitState() const { return static_cast<MaterialInitState>( _initState.load( std::memory_order_acquire ) ); }
         /** @brief 초기화 상태를 정합니다. 초기화 결과는 `initialize` 가, 요청은 `MaterialCache::requestInitialize` 가 씁니다. */
@@ -185,7 +186,7 @@ namespace sw
         /**
          * @brief 텍스처 디스크립터 인덱스를 대상 버퍼에 바로 패킹합니다(문자열 변환 없음).
          */
-        bool packTextureIntoBuffer( hashed_string name, RHIDescriptorIndex descIdx, vector<uint8>& inoutBuffer ) const;
+        bool packTextureIntoBuffer( hashed_string name, MaterialTextureIndex descIdx, vector<uint8>& inoutBuffer ) const;
 
         /**
          * @brief POD 바이너리 데이터를 대상 버퍼의 프로퍼티 오프셋에 바로 씁니다.
@@ -195,7 +196,7 @@ namespace sw
         /** @brief 이름으로 찾은 프로퍼티 값을 텍스트로 설정합니다. 렌더 스레드는 다음 스냅샷의 사본으로 받는다. */
         bool setParameter( hashed_string name, string_view value );
         /** @brief 텍스처 슬롯에 디스크립터를 설정합니다. */
-        bool setTextureParameter( hashed_string name, RHIDescriptorIndex descIdx );
+        bool setTextureParameter( hashed_string name, MaterialTextureIndex descIdx );
         /**
          * @brief Texture2D 프로퍼티 중 assetPath 가 있는 것을 TextureCache 에서 빌려 SRV 인덱스를 패킹합니다.
          * @details initialize 끝에서 부른다(CB 가 있어야 인덱스가 GPU 에 올라간다). releaseRHI 와 clearRHI 가 releaseTextureAssets 로 되돌린다.
@@ -220,7 +221,7 @@ namespace sw
          * @details 네이티브 bindless 가 없는 백엔드(DX11, GL)에서 엔진이 이 순서대로 t16..t31 에 바인딩한다.
          *          그 백엔드에서 MaterialCB 에 실리는 값은 SRV 인덱스가 아니라 이 배열의 **서수**다.
          */
-        const vector<RHIDescriptorIndex>& getMaterialTextureSRVs() const { return _listMaterialTextureSRV; }
+        const vector<MaterialTextureIndex>& getMaterialTextureSRVs() const { return _listMaterialTextureSRV; }
         /**
          * @brief 텍스처 프로퍼티 `name` 이 슬롯 목록(`getMaterialTextureSRVs`)의 몇 번째인지 반환합니다. 이 머티리얼이 그 프로퍼티에 텍스처를 빌리지
          *        않았으면 비어 있습니다.
@@ -381,7 +382,7 @@ namespace sw
         vector<string>                       _listAcquiredTexturePath; ///< resolveTextureAssets 가 해석한 요청 경로(프로퍼티의 assetPath). refreshTextureBindings 가 프로퍼티와 맞춘다.
         vector<TextureHandle>                _listTextureLoad;         ///< 위와 같은 순서의 텍스처 로드(`TextureCache::request`). 준비되면 참조를 쥐고, 실패하면 놓는다
         vector<string>                       _listBorrowedTexturePath; ///< 위와 같은 순서로 대신 빌린 경로(`acquire` · `release` 짝) — 로드 중이면 로드 중 텍스처, 실패면 누락 텍스처, 진짜가 붙었으면 빈 문자열
-        vector<RHIDescriptorIndex>           _listMaterialTextureSRV;  ///< 위 경로와 같은 순서의 백엔드 SRV 인덱스(에뮬레이션 백엔드의 슬롯 바인딩용)
+        vector<MaterialTextureIndex>         _listMaterialTextureSRV;  ///< 위 경로와 같은 순서의 백엔드 SRV 인덱스(에뮬레이션 백엔드의 슬롯 바인딩용)
         vector<hashed_string>                _listMaterialTextureName; ///< 위와 같은 순서의 프로퍼티 이름(인스턴스가 같은 슬롯을 덮어쓴다)
         vector<CollectionBinding>            _listCollectionBinding;   ///< 묶음을 가리키는 프로퍼티(`MaterialParameterCollection`)
         vector<hashed_string>                _listPropertyName;        ///< `_data._listProperty` 와 같은 순서의 이름. `findProperty` 가 프로퍼티마다 intern 하지 않고 정수로 비교한다
@@ -393,5 +394,8 @@ namespace sw
         mutable uint8          _bShaderPathHashDirty : 1;
         uint8                  _bShaderLayoutSynced  : 1; /**< ensureShaderLayout 이 맞췄다(백엔드와 캐시 세대와 함께 본다). 다시 로드하면 풀린다. */
         [[maybe_unused]] uint8 _reservedMaterial     : 5;
+
+        /** @brief 디바이스 수명 통보를 받아 위 `releaseRHI` · `clearRHI` · `initRHI` 로 넘긴다(상속 대신 멤버 — 이 헤더가 RHI 를 include 하지 않는다). 마지막 멤버라 먼저 사라진다. */
+        unique_ptr<RHIRenderResourceHook<Material>> _renderResourceHook;
     };
 } // namespace sw

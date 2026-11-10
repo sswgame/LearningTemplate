@@ -98,7 +98,8 @@ namespace sw
         {
             if ( batch._quadCount == 0 )
                 continue;
-            cmd.setScissorRect( batch._bScissor == SW_TRUE ? batch._scissor : wholeTarget );
+            const CanvasScissorRect& scissor = batch._scissor;
+            cmd.setScissorRect( batch._bScissor == SW_TRUE ? RHIScissorRect{ scissor._x, scissor._y, scissor._width, scissor._height } : wholeTarget );
 
             uint32 arrRoot[CanvasRendererInternal::kRootConstantCount]{};
             arrRoot[CanvasRendererInternal::kRootQuadBase]     = quadBase + batch._firstQuad;

@@ -13,7 +13,7 @@
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Content/AssetID.h"
-#include "Engine/Graphics/RHI/RHIRenderState.h"
+#include "Engine/Graphics/RenderState/RenderState.h"
 
 namespace sw
 
@@ -39,7 +39,7 @@ namespace sw
     /**
      * @class MaterialCache
      * @brief 리소스 상대 경로를 키로 Material 인스턴스를 소유합니다. Scene 은 포인터만 빌립니다.
-     * @note 디바이스 수명은 이 캐시의 일이 아닙니다. `Material` 이 `RHIRenderResource` 라서 디바이스가 죽고
+     * @note 디바이스 수명은 이 캐시의 일이 아닙니다. `Material` 이 멤버 `RHIRenderResourceHook` 로 통보를 받아서 디바이스가 죽고
      *       서는 것을 **스스로** 통보받습니다. 여기에 일괄 해제나 일괄 재생성 함수를 다시 만들지 마십시오.
      *
      * @note **`TextureCache` 와 구조가 같고, 다른 점 둘은 의도한 것입니다.** 둘 다 경로를 키로 참조를

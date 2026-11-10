@@ -17,8 +17,6 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
-#include "Engine/Graphics/RHI/RHIScissorRect.h"
-#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Text/GlyphAtlas.h"
 
 namespace sw
@@ -93,18 +91,34 @@ namespace sw
 namespace sw
 {
     /**
+     * @brief 캔버스 일괄의 가위 사각형입니다(렌더 타깃 픽셀, 원점 왼쪽 위). 렌더러가 `RHIScissorRect` 로 옮긴다(`CanvasRenderer`).
+     * @details 게임이 보는 캔버스 헤더가 RHI 헤더를 include 하지 않도록 주인 형식으로 둔다(타깃 게이트). 일괄을 합칠 때 바이트로 비교해 패딩이 없다.
+     */
+    struct CanvasScissorRect
+    {
+        uint32 _x{ 0 };      ///< 왼쪽 위 X (px)
+        uint32 _y{ 0 };      ///< 왼쪽 위 Y (px)
+        uint32 _width{ 0 };  ///< 너비 (px). 0 이면 아무것도 그리지 않는다
+        uint32 _height{ 0 }; ///< 높이 (px). 0 이면 아무것도 그리지 않는다
+    };
+
+    /**
      * @brief 같은 텍스처 그룹(최대 4개)과 같은 가위로 그리는 연속 사각형입니다. 드로우 하나(`drawInstanced( 6, _quadCount )`)로 그립니다.
-     * @details 텍스처 수 한도는 에뮬레이션 백엔드(DX11, GL)가 머티리얼 텍스처 슬롯 t16..t19 에 서수로 바인딩하는 수와 같다(`shaderslot::kCanvasTextureCount`).
+     * @details 텍스처 수 한도(`kMaxTextureCount`)는 에뮬레이션 백엔드(DX11, GL)가 머티리얼 텍스처 슬롯 t16..t19 에 서수로 바인딩하는 수와 같다 —
+     *          셰이더 칸 표(`shaderslot::kCanvasTextureCount`)와 `CanvasDrawList.cpp` 의 static_assert 가 맞춘다(게임이 보는 이 헤더는 셰이더 칸 헤더를 include 하지 않는다).
      *          가위가 바뀌는 지점에서 일괄이 끊긴다(Slate, Dear ImGui, Godot 의 사각 클리핑과 같다).
      */
     struct CanvasBatch
     {
-        CanvasTextureRef _arrTexture[shaderslot::kCanvasTextureCount]{};
-        RHIScissorRect   _scissor{}; ///< `_bScissor` 일 때만 쓴다(렌더 타깃 픽셀).
-        uint32           _firstQuad{ 0 };
-        uint32           _quadCount{ 0 };
-        uint8            _textureCount{ 0 };
-        uint8            _bScissor{ SW_FALSE }; ///< 0이면 대상 전체
+        /** @brief 일괄 하나가 묶는 텍스처 수 한도입니다(클래스 설명). */
+        static constexpr uint32 kMaxTextureCount = 4;
+
+        CanvasTextureRef  _arrTexture[kMaxTextureCount]{};
+        CanvasScissorRect _scissor{}; ///< `_bScissor` 일 때만 쓴다(렌더 타깃 픽셀).
+        uint32            _firstQuad{ 0 };
+        uint32            _quadCount{ 0 };
+        uint8             _textureCount{ 0 };
+        uint8             _bScissor{ SW_FALSE }; ///< 0이면 대상 전체
     };
 } // namespace sw
 

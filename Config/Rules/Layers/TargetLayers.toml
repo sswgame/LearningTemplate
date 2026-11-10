@@ -12,9 +12,12 @@ editor = ["ModuleManager", "App", "Server", "GameFramework", "Games", "Programs"
 modulemanager = ["Editor", "App", "Server", "GameFramework", "Games", "Programs"]
 app = ["Editor", "Server", "GameFramework", "Games", "Programs"]
 server = ["App", "Editor", "GameFramework", "Games", "Programs"]
-gameframework = ["DevTools", "Editor", "ModuleManager", "App", "Server", "Games", "Programs", "GameFramework/Kits", "GameFramework/Plugin"]
-kit = ["DevTools", "Editor", "ModuleManager", "App", "Server", "Games", "Programs", "GameFramework/Plugin"]
-game = ["DevTools", "Editor", "ModuleManager", "App", "Server", "Programs", "GameFramework/Plugin"]
+# 게임 코드(GameFramework 공유 모듈 · 키트 · 게임)는 GPU 객체 · 셰이더 칸(`Engine/Graphics/RHI` · `Engine/Graphics/Shader`)을 전이로도 보지 않는다 — 게임 쪽 형식(`MeshBuildVertex` ·
+# `LightKind` · 머티리얼 · 메시의 렌더 프록시 분리 · `RenderState/` 의 렌더 상태 어휘)을 쓰고 GPU 칸으로 옮기는 일은 엔진 · 렌더러가 한다(언리얼 게임 모듈이 UMaterial · UStaticMesh 만 보는 자리).
+# 옛 린트 game-gpu-includes(직접 include 만 보던 글자 검사)를 이 게이트가 대신한다. 연 RHI 헤더는 아래 `[allow]` 의 값 열거 하나다.
+gameframework = ["DevTools", "Editor", "ModuleManager", "App", "Server", "Games", "Programs", "GameFramework/Kits", "GameFramework/Plugin", "Engine/Graphics/RHI", "Engine/Graphics/Shader"]
+kit = ["DevTools", "Editor", "ModuleManager", "App", "Server", "Games", "Programs", "GameFramework/Plugin", "Engine/Graphics/RHI", "Engine/Graphics/Shader"]
+game = ["DevTools", "Editor", "ModuleManager", "App", "Server", "Programs", "GameFramework/Plugin", "Engine/Graphics/RHI", "Engine/Graphics/Shader"]
 editorextension = ["ModuleManager", "App", "Server", "Games", "Programs"]
 # 전용 서버 구성은 오디오 · 렌더러 · 런타임 UI · 클라이언트 전용 소스 헤더를 읽지 않는다 — 이음매는 `IEngineAudioDriver` · `ISoundPlayer` · `IEngineRenderDriver` · `IEngineUIDriver` 와 게임 코드의 창구다.
 # Server 타깃 구성의 모든 타깃이 더 받는다(`sw_applyTargetLayerGate`). 엔진 폴더는 `cmake/Engine/BuildLayout.cmake` 의 `SW_UNBUILT_ENGINE_FOLDERS`(서버)와 같아야 한다 —
@@ -60,3 +63,7 @@ reflectionparser = [
 	"Engine/Reflection/TypeInfo.h",
 	"Engine/Reflection/TypeLookupCache.h",
 ]
+# 렌더 확장 계약(`Engine/Renderer/Extension/RenderExtension.h` — 모듈이 패스 · 임시 텍스처를 선언한다)이 픽셀 형식(`RHIFormat`)을 받는다. 값 열거뿐인 헤더라 연다(언리얼 EPixelFormat 을 게임 모듈이 쓰는 자리).
+gameframework = ["Engine/Graphics/RHI/RHIEnums.h"]
+kit = ["Engine/Graphics/RHI/RHIEnums.h"]
+game = ["Engine/Graphics/RHI/RHIEnums.h"]

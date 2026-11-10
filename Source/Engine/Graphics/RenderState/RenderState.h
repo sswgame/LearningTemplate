@@ -1,7 +1,8 @@
 /**
- * @file RHIRenderState.h
+ * @file RenderState.h
  * @brief 패스와 머티리얼이 함께 쓰는 렌더 상태 값 형식입니다. 블렌드 타깃 · 깊이 · 래스터 · 스텐실을 한 벌로 묶어 `RHIPipelineStateDesc` 가 품습니다.
- * @details 칸을 더할 곳은 이 파일 하나다 — XML 읽기 · 쓰기는 리플렉션이, 해시 · 비교 · 합치기는 바이트가 따라온다. 그래서 형식에 패딩이 없어야 한다(아래 static_assert).
+ * @details RHI 폴더 밖의 저작 어휘다(`RenderStateEnums.h` 와 같은 이유 — 머티리얼이 들고 게임이 본다).
+ *          칸을 더할 곳은 이 파일 하나다 — XML 읽기 · 쓰기는 리플렉션이, 해시 · 비교 · 합치기는 바이트가 따라온다. 그래서 형식에 패딩이 없어야 한다(아래 static_assert).
  *          언리얼의 `FGraphicsPipelineStateInitializer` 의 상태 칸과 유니티 ShaderLab 의 렌더 상태 블록(Blend · ZTest · Cull · Stencil)을 한 자리에 모은 것이다(기억에 의존한 비교).
  *          마스크 · 참조 값이 면마다 있지 않고 하나인 것은 D3D 가 그렇기 때문이다(언리얼 · 유니티도 같다).
  */
@@ -10,7 +11,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Foundation/EngineDefines.h"
-#include "Engine/Graphics/RHI/RHIEnums.h"
+#include "Engine/Graphics/RenderState/RenderStateEnums.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
