@@ -33,7 +33,7 @@ namespace sw
      *          1. 원본 포즈의 모델 공간을 구한다.
      *          2. 대상은 레퍼런스(또는 넘겨받은 덮어쓰기, 즉 본 비율 `BoneProportion` 을 적용한 포즈)에서 시작한다.
      *          3. 짝지은 본(루트, 골반, 사슬)은 **모델 공간 회전 차이**를 옮긴다. 대상 = (원본 × 원본 레퍼런스⁻¹) × 대상 레퍼런스다. 두 스켈레톤의
-     *             로컬 축 약속이 달라도 맞다. 본 수가 다른 사슬은 사슬 길이 비율로 원본 본을 고른다.
+     *             로컬 축 약속이 달라도 맞다. 사슬의 대상 본은 사슬을 따라 잰 길이 비율이 가장 가까운 원본 본을 받는다(본 순번이 아니다).
      *          4. 루트와 골반 이동은 골반 높이 비(대상 / 원본)만큼 줄이거나 늘린다(`ScaleByPelvisHeight`).
      *          5. IK 목표 사슬(다리)은 끝을 "원본 끝 위치 × 높이 비"에 두도록 2 본 IK(본 셋) 또는 FABRIK 으로 푼다. 다리 길이가 달라도 발이
      *             보폭과 맞게 디뎌 미끄러지지 않는다. 다 펴도 닿지 않는 목표(보폭 끝)면 골반을 그만큼 내린다. 끝 본의 모델 회전은 3 의 값을 유지한다.
@@ -102,7 +102,9 @@ namespace sw
         /** @brief 짝을 대상 본 순서로 세울 때의 비교입니다. */
         static bool isPairBefore( const BonePair& lhs, const BonePair& rhs ) { return lhs._target < rhs._target; }
 
-        /** @brief 사슬의 원본 · 대상 본을 짝지어 더하고(본 수가 다르면 길이 비율로 가장 가까운 원본 본) IK 사슬을 모읍니다. 본을 못 찾으면 오류를 남기고 false 입니다. */
+        /** @brief 사슬 본마다 레퍼런스 포즈에서 사슬을 따라 잰 길이 비율(첫 본 0 · 끝 본 1)입니다. 길이가 없는 사슬(본 하나)은 모두 0 입니다. */
+        [[nodiscard]] static vector<float32> makeChainParameters( RigPoseBuffer& buffer, const vector<uint32>& listChainBone );
+        /** @brief 사슬의 원본 · 대상 본을 짝지어 더하고(대상 본마다 길이 비율이 가장 가까운 원본 본) IK 사슬을 모읍니다. 본을 못 찾으면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool collectChainBones( const RetargetProfile& profile, const Skeleton& sourceSkeleton, const Skeleton& targetSkeleton, vector<uint32>& inoutListSourceBone,
                                               vector<uint32>& inoutListTargetBone );
         /** @brief 본 이름 짝과 같은 이름 매핑을 더합니다. 본을 못 찾으면 오류를 남기고 false 입니다. */
