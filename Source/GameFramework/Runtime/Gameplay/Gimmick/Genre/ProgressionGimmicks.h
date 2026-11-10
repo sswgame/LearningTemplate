@@ -78,7 +78,7 @@ namespace sw
         int32 getUsesLeft() const { return _uses - _usesTaken; }
 
     private:
-        PROPERTY( Category = "Gathering", DisplayName = "Item" )
+        PROPERTY( Required, Category = "Gathering", DisplayName = "Item" )
         hashed_string _item;
         PROPERTY( Category = "Gathering", DisplayName = "Count", Min = 1 )
         int32 _count;

@@ -9,4 +9,5 @@
   <inputMap path="common/input/fastforward.input.xml"/>
   <inputMap path="common/input/interact.input.xml"/>
   <loadingScreen>engine/ui/loading.ui.xml</loadingScreen>
+  <defaultLanguage>ko_kr</defaultLanguage>
 </GameSettings>

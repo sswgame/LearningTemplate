@@ -77,8 +77,8 @@ namespace sw
         , _firstPersonHandsSlot{}
         , _thirdPersonHandsSlot{}
         , _listFirstPersonHiddenSlot{}
-        , _strideNode{ "Stride" }
-        , _lookSourceObject{ "LookSource" }
+        , _strideNode{}
+        , _lookSourceObject{}
         , _locomotion{ 0.25f }
         , _mapClipFootSpeed{}
         , _aimWeight{ 0.0f }
@@ -161,7 +161,7 @@ namespace sw
         if ( found == _mapClipFootSpeed.end() )
         {
             // 클립마다 한 번만 측정한다(표본 수만큼 디코드한다). 상태가 처음 바뀌는 프레임에만 든다.
-            const float32 footSpeed = LocomotionSpeedUtil::computeFootSpeed( *pClip, pUnit->getSkeleton(), hashed_string( _leftFootBone ), hashed_string( _rightFootBone ),
+            const float32 footSpeed = LocomotionSpeedUtil::computeFootSpeed( *pClip, pUnit->getSkeleton(), _leftFootBone, _rightFootBone,
                                                                              LocomotionSpeedUtil::kDefaultSampleCount );
             found                   = _mapClipFootSpeed.emplace( pClip, footSpeed ).first;
         }

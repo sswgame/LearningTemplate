@@ -99,9 +99,9 @@ namespace sw
     private:
         PROPERTY( Category = "Element", DisplayName = "Rule Table", Tooltip = "Element rule table (required)" )
         AssetRef<ElementRuleCatalog> _tablePath;
-        PROPERTY( Category = "Element", DisplayName = "Material", Tooltip = "Material name in the table" )
+        PROPERTY( Required, Category = "Element", DisplayName = "Material", Tooltip = "Material name in the table" )
         hashed_string _material;
-        PROPERTY( Category = "Element", DisplayName = "Signal Status", Tooltip = "Status that sets the gimmick sensor signal (Burning for torches)" )
+        PROPERTY( Required, Category = "Element", DisplayName = "Signal Status", Tooltip = "Status that sets the gimmick sensor signal (Burning for torches)" )
         hashed_string _signalStatus;
         PROPERTY( Category = "Element", DisplayName = "Start Status", Tooltip = "Stimulus applied at play start (Fire for a lit torch)" )
         hashed_string _startStimulus;

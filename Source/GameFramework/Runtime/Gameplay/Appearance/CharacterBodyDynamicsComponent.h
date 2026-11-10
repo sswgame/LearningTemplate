@@ -67,6 +67,8 @@ namespace sw
         float32 computeActiveFluidEffects() const;
         /** @brief 해석 순서의 피부 층 번짐 상태입니다(굽기가 읽는다). */
         const vector<SkinLayerSmearState>& getSmearStates() const { return _listSmear; }
+        /** @brief 얼굴을 닦는 애니 알림 이벤트를 정합니다 — 데이터가 적는 칸이다. 코드로 붙이는 몸(캐릭터 편집기 미리보기)은 도구의 팩 데이터 값을 건넨다. */
+        void setWipeEvent( const hashed_string& wipeEvent ) { _wipeEvent = wipeEvent; }
 
     private:
         /** @brief 체액 방출 하나의 실행 상태입니다. */
@@ -116,7 +118,7 @@ namespace sw
         float32 _sunTraceDistance;
         PROPERTY( Category = "Eyes", DisplayName = "Sky Light Value", Tooltip = "Weather value (WeatherCatalog <Values>) that scales direct sunlight: 1 clear, lower for overcast, rain, fog. Empty = the sun light already carries the weather (DaylightComponent)" )
         hashed_string _skyLightValue;
-        PROPERTY( Category = "Smear", DisplayName = "Wipe Event", Tooltip = "Animation notify event that wipes the face (drags makeup sideways)" )
+        PROPERTY( Required, Category = "Smear", DisplayName = "Wipe Event", Tooltip = "Animation notify event that wipes the face (drags makeup sideways)" )
         hashed_string _wipeEvent;
         PROPERTY( Category = "Smear", DisplayName = "Tear Smear Strength", Min = 0.0, Tooltip = "Pigment transport per wet stamp of a fluid stream" )
         float32 _fluidSmearStrength;

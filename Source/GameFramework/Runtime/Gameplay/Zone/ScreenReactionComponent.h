@@ -42,6 +42,8 @@ namespace sw
 
         /** @brief 지금 화면 가중치(0..1)입니다(감시 값 · 진단). */
         float32 getWeight() const { return _weight; }
+        /** @brief 화면을 거는 태그를 바꿉니다(데이터가 적는 칸 — 코드로 붙인 컴포넌트 · 테스트가 쓴다). */
+        void setTag( TagID tag ) { _tag = tag; }
         /** @brief 태그를 보고 가중치를 옮긴 뒤 따라가는 디렉터에 덧칠을 겁니다(`ZoneSystem` 이 틱 뒤 게임 스레드에서 부른다, 테스트도 부른다). */
         void updateScreen( GameObjectManager& manager, float32 deltaTime );
 
@@ -50,7 +52,7 @@ namespace sw
         void applyToDirectors( GameObjectManager& manager, float32 weight ) const;
 
     private:
-        PROPERTY( Category = "Reaction", DisplayName = "Tag", Tooltip = "While the object has this tag the screen look blends in" )
+        PROPERTY( Required, Category = "Reaction", DisplayName = "Tag", Tooltip = "While the object has this tag the screen look blends in" )
         TagID _tag;
         PROPERTY( Category = "Reaction", DisplayName = "Post Process", Tooltip = "Look at full weight (vignette, saturation, contrast, exposure); neutral fields change nothing" )
         PostProcessValues _postProcess;

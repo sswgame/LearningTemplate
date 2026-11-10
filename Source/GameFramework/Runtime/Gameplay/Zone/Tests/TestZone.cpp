@@ -427,13 +427,14 @@ SW_TEST_CASE( ZoneTest, ZoneSystemRunsRegisteredZoneComponents )
     SW_EXPECT_EQUAL( 0u, pEscape->getEscapeCount() );
 }
 
-/** @brief [ZoneTest] 화면 반응: 태그(기본 State.Poisoned)가 있으면 페이드 인 시간(0.5 초) 동안 가중치가 1 로 오르고, 태그가 사라지면 페이드 아웃(1 초) 동안 0 으로 내린다. 시간이 0 이면 그대로다 */
+/** @brief [ZoneTest] 화면 반응: 태그(State.Poisoned)가 있으면 페이드 인 시간(0.5 초) 동안 가중치가 1 로 오르고, 태그가 사라지면 페이드 아웃(1 초) 동안 0 으로 내린다. 시간이 0 이면 그대로다 */
 SW_TEST_CASE( ZoneTest, ScreenReactionFadesWithTag )
 {
     ZoneFixture              fixture;
     GameObject*              pHero   = fixture._pHero->getOwner();
     ScreenReactionComponent* pScreen = pHero->addComponent<ScreenReactionComponent>();
     SW_REQUIRE_TRUE( pScreen != nullptr );
+    pScreen->setTag( "State.Poisoned"_tag ); // 태그는 데이터가 적는 칸이다(기본값 없음)
     ZoneSystem* pSystem = ZoneSystem::find( fixture._manager );
     SW_REQUIRE_TRUE( pSystem != nullptr ); // 화면 반응도 지역 프레임 시스템을 붙인다
     const float32 step = 0.1f;

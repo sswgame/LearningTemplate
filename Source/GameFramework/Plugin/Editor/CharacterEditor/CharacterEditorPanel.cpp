@@ -885,7 +885,10 @@ namespace sw::editor
             }
             pAnimator->setAnimationSetPath( string_view( _document.getPaths()._animationSet.c_str() ) );
             // 몸 동작(굽 · 지글 · 동공 · 체액)은 몸 프로필이 있는 외형에서만 일한다 — 없는 몸에서는 쉰다. 몸 탭의 미리보기 단추가 이것을 부른다.
-            (void)pBody->addComponent<CharacterBodyDynamicsComponent>();
+            // 이름 칸은 팩 데이터(charactereditor.xml 의 wipeEvent)에서 온다 — 코드로 붙인 컴포넌트는 데이터 파일이 칸을 채우지 못한다.
+            CharacterBodyDynamicsComponent* pDynamics = pBody->addComponent<CharacterBodyDynamicsComponent>();
+            if ( pDynamics != nullptr )
+                pDynamics->setWipeEvent( _document.getPreviewWipeEvent() );
             _previewBody         = pBody->getHandle();
             _bPreviewBodyDressed = SW_FALSE;
         }

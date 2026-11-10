@@ -47,7 +47,7 @@ namespace sw
         hashed_string _effect;
         PROPERTY( Category = "Reaction", DisplayName = "Stacks Per Jump", Min = 1, Tooltip = "Stacks removed by each jump" )
         int32 _stacksPerJump;
-        PROPERTY( Category = "Reaction", DisplayName = "Blocked Tag", Tooltip = "While the object has this tag, jumping does not help (engulfed)" )
+        PROPERTY( Required, Category = "Reaction", DisplayName = "Blocked Tag", Tooltip = "While the object has this tag, jumping does not help (engulfed)" )
         TagID _blockedTag;
 
         uint32 _escapeCount;

@@ -36,7 +36,7 @@ namespace sw
         static float32 computeAmplitudeScale( float32 weatherValue, float32 stormScale );
 
     private:
-        PROPERTY( Category = "Weather", DisplayName = "Weather Value", Tooltip = "Weather value (WeatherCatalog <Values>) read as storm strength, 0 calm .. 1 storm" )
+        PROPERTY( Required, Category = "Weather", DisplayName = "Weather Value", Tooltip = "Weather value (WeatherCatalog <Values>) read as storm strength, 0 calm .. 1 storm" )
         hashed_string _weatherValue;
         PROPERTY( Category = "Weather", DisplayName = "Storm Scale", Min = 0.0, Tooltip = "Wave amplitude scale at weather value 1 (calm is 1)" )
         float32 _stormScale;

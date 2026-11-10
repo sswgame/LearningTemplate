@@ -21,8 +21,8 @@ namespace sw
     struct RenderPassDesc
     {
         REFLECT_BODY();
-        PROPERTY()
-        string _name = "DefaultMainPass";
+        PROPERTY( Required )
+        string _name;
 
         PROPERTY( SkipIfEmpty )
         vector<RenderPassAttachment> _listAttachment;

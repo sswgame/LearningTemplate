@@ -11,4 +11,5 @@
   <inputMap path="common/input/traversal.input.xml"/>
   <inputMap path="common/input/interact.input.xml"/>
   <inputMap path="game/wildwest/data/wildwest.input.xml"/>
+  <defaultLanguage>ko_kr</defaultLanguage>
 </GameSettings>

@@ -9,6 +9,7 @@
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
 {
@@ -53,12 +54,23 @@ namespace sw
         if ( ResourceComposer::compose( text, sourceName, ResourceContext::forType( *pTypeInfo ).withAsset( assetID ), flatText, bComposed ) == false )
             return false;
         vector<SchemaOrphanValue> listOrphan;
-        const SoftReadResult      result = XMLSerializer::deserializeSoft( pDesc, *pTypeInfo, bComposed ? string_view( flatText ) : string_view( text ), &listOrphan );
+        const string_view         readText = bComposed ? string_view( flatText ) : string_view( text );
+        const SoftReadResult      result   = XMLSerializer::deserializeSoft( pDesc, *pTypeInfo, readText, &listOrphan );
         if ( result == SoftReadResult::NotParsed )
         {
             // 왜 못 읽었는지(`Xml.ParseError` · `Xml.WrongRoot`)는 안쪽이 이미 알렸다 — 어느 파일인지를 더한다. 빈 글은 이 줄만 남는다.
             SW_LOG_ERROR_ID( "Xml.NotRead", "XML load failed: %# is not a readable <%#> document", sourceName, pTypeInfo->_name.c_str() );
             return false;
+        }
+        // 필수 칸은 부모를 펼친 글에서 본다(자식이 물려받은 칸도 적힌 것이다) — 빠졌거나 빈 이름이면 오류다(`XMLSerializer::deserialize` 와 같은 판정).
+        vector<string> listMissing;
+        XMLDocument    document;
+        if ( document.parse( readText ) && document.getRoot().isValid() )
+            XMLSerializer::collectMissingRequired( document.getRoot(), *pTypeInfo, listMissing );
+        for ( const string& missingPath : listMissing )
+        {
+            SW_LOG_ERROR_ID( "Serialization.RequiredMissing", "%#: <%#> has no required '%#' or it is empty (PROPERTY( Required ) - the initial value is not a default)", sourceName,
+                             pTypeInfo->_name.c_str(), missingPath.c_str() );
         }
         // 범위 밖 값(`Rejected`)은 읽기 공통 끝(`SerializerUtil::isWithinDeclaredRanges`)이 칸마다 이미 알렸다.
         // 그래도 모은 이름은 알린다 — 범위 밖 값 하나가 모르는 이름 · 읽지 못한 값의 오류를 삼키지 않게(모두 알린다는 계약).
@@ -67,7 +79,7 @@ namespace sw
             const utf8* const pName = orphan._writtenName.empty() ? orphan._name.c_str() : orphan._writtenName.c_str();
             SW_LOG_ERROR_ID( "Serialization.OrphanValue", "%#: '%#' is unknown to %# or its value '%#' cannot be read", sourceName, pName, pTypeInfo->_name.c_str(), orphan._text.c_str() );
         }
-        return result == SoftReadResult::Read && listOrphan.empty();
+        return result == SoftReadResult::Read && listOrphan.empty() && listMissing.empty();
     }
 
     bool ReflectedXMLFile::saveDescInternal( const AbsolutePath& absPath, const void* pDesc, const void* pParent, const string_view baseID, const TypeInfo* pTypeInfo )

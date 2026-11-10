@@ -339,9 +339,10 @@ SW_TEST_CASE( ModSupportSettingsTest, EveryLimitIsRequired )
     SW_EXPECT_EQUAL( uint64{ 5000000000ull }, settings._maxPackBytes );
     SW_EXPECT_TRUE( settings.isOverridable( "game/test/data/welcome.xml" ) );
     SW_EXPECT_FALSE( settings.isOverridable( "game/test/database.xml" ) );
-    SW_EXPECT_LOG( "ModSupportSettings.MissingField" );
+    SW_EXPECT_LOG( "XMLFields.RequiredFieldMissing" ); // 한계는 리플렉션 필수 칸이다(XMLFields)
     SW_EXPECT_FALSE( ModSupportSettings::parseXMLText( R"(<ModSupportSettings contentVersion="1"/>)", "test", settings ) );
-    SW_EXPECT_LOG( "ModSupportSettings.BadLimit" );
+    SW_EXPECT_LOG( "XMLFields.ValueOutOfRange" ); // 0 인 한계는 Min = 1 밖이다
+    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     SW_EXPECT_FALSE( ModSupportSettings::parseXMLText(
         R"(<ModSupportSettings contentVersion="1" maxModCount="0" maxManifestBytes="1" maxPackBytes="1" maxEntryCount="1" maxEntryBytes="1"/>)", "test", settings ) );
     SW_EXPECT_LOG( "ModSupportSettings.BadPrefix" );

@@ -45,7 +45,7 @@ namespace sw
     {
         Animated = 0, ///< 키네마틱 히트박스다(맞음 반응일 때만 잠깐 동적이 된다).
         Ragdoll,      ///< 모든 바디가 동적이다(죽음).
-        Partial,      ///< 부분 래그돌이다. `_partialRootBone` 아래만 동적이다.
+        Partial,      ///< 부분 래그돌이다. 물리 에셋의 `_partialRootBone` 아래만 동적이다.
         BlendingBack, ///< 래그돌 자세에서 애니메이션(기상 클립)으로 섞으며 돌아가는 중이다. 바디는 키네마틱이다.
     };
 } // namespace sw
@@ -110,7 +110,7 @@ namespace sw
 
         /** @brief 죽음입니다. 모든 바디를 동적으로 넘깁니다(속도는 애니메이션이 끌던 값을 이어받습니다). @p bodyIndex 의 바디에 @p impulse 를 줍니다(비어 있으면 주지 않습니다). */
         void startRagdoll( const float3& impulse, optional<uint32> bodyIndex );
-        /** @brief 부분 래그돌입니다. `_partialRootBone` 아래 바디를 @p weight 만큼 섞는 동적 바디로 바꿉니다(상체가 축 늘어집니다). */
+        /** @brief 부분 래그돌입니다. 물리 에셋의 `_partialRootBone` 아래 바디를 @p weight 만큼 섞는 동적 바디로 바꿉니다(상체가 축 늘어집니다). */
         void startPartialRagdoll( float32 weight );
         /** @brief 부분 래그돌을 끝내고 `_blendBackSeconds` 동안 애니메이션으로 섞어 돌아갑니다. */
         void stopPartialRagdoll();
@@ -175,8 +175,6 @@ namespace sw
 
         PROPERTY( Category = "Ragdoll", DisplayName = "Physics Asset", Tooltip = "Bodies, joints and hit zones (*.physics.xml)" )
         AssetRef<PhysicsAsset> _physicsAssetPath;
-        PROPERTY( Category = "Ragdoll", DisplayName = "Partial Root Bone", Tooltip = "Bodies under this bone go limp in a partial ragdoll" )
-        hashed_string _partialRootBone;
         PROPERTY( Category = "Ragdoll", DisplayName = "Get Up Clip (Face Up)", Tooltip = "Clip played when getting up lying on the back" )
         hashed_string _getUpClipFaceUp;
         PROPERTY( Category = "Ragdoll", DisplayName = "Get Up Clip (Face Down)", Tooltip = "Clip played when getting up lying on the front (empty: the face-up clip)" )

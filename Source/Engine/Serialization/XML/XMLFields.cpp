@@ -156,10 +156,11 @@ namespace sw
         // 2) 필수 칸이 빠졌는지 본다. 초기값은 형식일 뿐이라 대신 쓰지 않는다.
         for ( size_t propIndex = 0; propIndex < listProperty.size(); ++propIndex )
         {
-            if ( listProperty[propIndex]._metadata->_bRequired == SW_FALSE )
-                continue;
-            const string& attributeName = listAttributeName[propIndex];
-            if ( node.findAttribute( attributeName.c_str() ) == nullptr )
+            const string&     attributeName = listAttributeName[propIndex];
+            const utf8* const pAttribute    = node.findAttribute( attributeName.c_str() );
+            const string_view writtenText   = pAttribute != nullptr ? string_view( pAttribute ) : string_view{};
+            // 판정은 XML · JSON 직렬화기와 한 함수다 — 빠졌거나, 이름 · 경로 형식인데 빈 글이다.
+            if ( SerializerUtil::isRequiredValueMissing( listProperty[propIndex], pAttribute != nullptr, pAttribute != nullptr ? &writtenText : nullptr ) )
             {
                 StringBuilder<constant::buffer::kMax256> textBuilder;
                 textBuilder.appendFormat( "%#: <%#> needs %#=\"...\" (%#)", sourceName, pElement, attributeName.c_str(), typeInfo._name.c_str() );

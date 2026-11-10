@@ -52,7 +52,7 @@ namespace sw
         int32 _chunkX;
         PROPERTY( Category = "Chunk", DisplayName = "Chunk Z", Min = 0 )
         int32 _chunkZ;
-        PROPERTY( Category = "Chunk", DisplayName = "Water Mesh", Tooltip = "Component name of the translucent water mesh" )
+        PROPERTY( Required, Category = "Chunk", DisplayName = "Water Mesh", Tooltip = "Component name of the translucent water mesh" )
         hashed_string _waterMeshName;
 
         VoxelChunkMesh _scratchMesh;

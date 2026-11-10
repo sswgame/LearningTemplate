@@ -218,6 +218,7 @@ namespace sw
          * @brief `PROPERTY( Required )` 칸 가운데 @p element 에 적히지 않은 것을 경로(`_listBone[2]._parentIndex`)로 모읍니다.
          * @details 적는 자리는 속성이거나 자식 요소다. 구조체 칸은 이름이 칸 이름인 자식 요소, 구조체 목록은 칸 이름의 자식 요소 안에 원소가 차례로 들어 있다.
          *          그 안으로 들어가 원소마다 본다 — 최상위만 보면 목록 원소 안의 빠진 칸이 초기값으로 읽힌다. @p prefix 는 경로 앞부분이다(최상위는 빈 값).
+         *          소유 포인터 목록(GameObject 의 `_listComponent`)은 원소 태그 이름이 런타임 타입이라 그 타입의 칸으로 본다.
          */
         static void collectMissingRequired( const XMLNode& element, const TypeInfo& typeInfo, vector<string>& outListPath, const string& prefix = string() );
 

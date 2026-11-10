@@ -33,9 +33,9 @@ namespace sw
 namespace sw
 {
     MountMovementComponent::MountMovementComponent()
-        : _sprintButton{ "Sprint" }
-        , _gaitParameter{ "Gait" }
-        , _turnParameter{ "Turn" }
+        : _sprintButton{}
+        , _gaitParameter{}
+        , _turnParameter{}
         , _walkSpeed{ 1.8f }
         , _trotSpeed{ 4.0f }
         , _canterSpeed{ 7.0f }

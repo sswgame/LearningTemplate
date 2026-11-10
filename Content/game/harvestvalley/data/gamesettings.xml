@@ -13,4 +13,5 @@
   <!-- 마을 사람 · 농부 외형(Quaternius 기본 캐릭터 · 옷)은 공용 팩(common)의 외형 데이터다 — 외형이 장비 아이템을 참조하므로 아이템도 함께. 바탕(GameInstance)이 읽어 건다 -->
   <RequiredData kind="items" pack="common"/>
   <RequiredData kind="appearance" pack="common"/>
+  <defaultLanguage>ko_kr</defaultLanguage>
 </GameSettings>

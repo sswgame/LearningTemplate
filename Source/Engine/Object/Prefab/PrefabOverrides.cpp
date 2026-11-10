@@ -560,6 +560,7 @@ namespace sw
         GameObjectManager scratch;
         ObjectSaveOptions options{ SerializePurpose::Authoring };
         options._bOmitExternalParent = SW_TRUE;
+        options._bSkipValidation     = SW_TRUE; // 견본은 형식의 초기값이다 — 빈 필수 칸 경고가 거짓으로 남지 않게
         GameObject* pDefaultObject   = scratch.createGameObject( hashed_string( PrefabOverridesInternal::kBaseName ) );
         if ( pDefaultObject == nullptr )
             return false;

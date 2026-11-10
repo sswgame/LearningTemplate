@@ -5,4 +5,5 @@
   <inputMap path="game/empty/input/bundletest/base.input.xml"/>
   <inputMap path="game/empty/input/bundletest/common.input.xml"/>
   <inputMap path="game/empty/input/bundletest/diff.input.xml"/>
+  <defaultLanguage>ko_kr</defaultLanguage>
 </GameSettings>

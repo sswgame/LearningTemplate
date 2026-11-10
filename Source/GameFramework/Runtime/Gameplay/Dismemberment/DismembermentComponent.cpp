@@ -281,7 +281,7 @@ namespace sw
         , _listSeverableRegion{}
         , _pieceLayer{ "Debris" }
         , _pieceMaterial{ "Flesh" }
-        , _bloodChannel{ "Blood" }
+        , _bloodChannel{}
         , _pieceMass{ 4.0f }
         , _pRegionTable{}
         , _listSeveredRegion{}

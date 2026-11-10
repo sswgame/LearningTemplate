@@ -15,7 +15,7 @@ namespace sw
     JumpEscapeReactionComponent::JumpEscapeReactionComponent()
         : _effect{}
         , _stacksPerJump{ 1 }
-        , _blockedTag{ "State.Engulfed"_tag }
+        , _blockedTag{}
         , _escapeCount{ 0 }
         , _bWasGrounded{ SW_FALSE }
         , _reserved{ 0 }

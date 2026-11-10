@@ -86,6 +86,11 @@ namespace sw
                 bValid = false;
             }
         }
+        if ( _partialRootBone.empty() == false && findBodyIndex( _partialRootBone ).has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "PhysicsAsset.PartialRootBoneNoBody", "%#: partial root bone '%#' has no body", sourceName, _partialRootBone.c_str() );
+            bValid = false;
+        }
         return bValid;
     }
 

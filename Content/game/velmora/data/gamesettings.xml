@@ -9,4 +9,5 @@
   <inputMap path="common/input/base.input.xml"/>
   <inputMap path="common/input/move.input.xml"/>
   <inputMap path="game/velmora/data/velmora.input.xml"/>
+  <defaultLanguage>ko_kr</defaultLanguage>
 </GameSettings>

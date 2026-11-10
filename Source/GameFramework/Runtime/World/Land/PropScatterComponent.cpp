@@ -200,7 +200,7 @@ namespace sw
         : _listModel{}
         , _listExclusion{}
         , _materialPath{}
-        , _propName{ "ScatterProp" }
+        , _propName{}
         , _regionMin{ -10.0f, 0.0f, -10.0f }
         , _regionMax{ 10.0f, 0.0f, 10.0f }
         , _spacing{ 5.0f }

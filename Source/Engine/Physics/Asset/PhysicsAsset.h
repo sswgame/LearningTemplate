@@ -144,6 +144,13 @@ namespace sw
         vector<PhysicsAssetBodyDef> _listBody;
         PROPERTY( Tooltip = "Bone pairs that never collide" )
         vector<PhysicsAssetPairDef> _listDisabledPair;
+        /**
+         * @brief 부분 래그돌의 뿌리 뼈입니다 — 이 뼈의 바디 아래가 축 늘어지고, 일어서기가 누운 방향을 이 뼈로 잰다. 비면 이 몸은 부분 래그돌이 없다.
+         * @details 바디가 있는 뼈여야 한다(`validate` 가 로드 오류로 막는다). 컴포넌트가 아니라 에셋 칸이다 — 바디를 정하는 데이터 곁에 두어야 코드로 붙인
+         *          래그돌(미리보기 · 스트레스 테스트)도 같은 값을 쓰고, 다른 몸의 뼈 이름이 기본값으로 숨지 않는다(언리얼 Physics Asset 의 몸 단위 설정과 같은 자리).
+         */
+        PROPERTY( Tooltip = "Bodies under this bone go limp in a partial ragdoll; empty = no partial ragdoll" )
+        hashed_string _partialRootBone;
         PROPERTY( Tooltip = "Bodies connected by a joint collide with each other" )
         bool   _bCollideJointedBodies{ false };
         string _baseID{}; ///< 읽은 글의 `_base`(PROPERTY 가 아니다 — 파일 칸이 아니라 읽기 앞 단계가 지우는 표시다). `saveToFile` 이 부모와의 차이로 쓴다

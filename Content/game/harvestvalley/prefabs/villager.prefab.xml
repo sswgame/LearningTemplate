@@ -37,7 +37,8 @@
 			                              _seed="0"
 			                              _bMergeParts="true" />
 			<MoveAnimationComponent _componentName="MoveAnimationComponent"
-			                        _bActive="true" />
+			                        _bActive="true"
+			                        _speedParameter="Speed" />
 			<FarmVillagerComponent _componentName="FarmVillagerComponent"
 			                       _bActive="true"
 			                       _gameMode="0"

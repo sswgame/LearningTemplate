@@ -51,7 +51,7 @@ namespace sw
     VoxelChunkComponent::VoxelChunkComponent()
         : _chunkX{ 0 }
         , _chunkZ{ 0 }
-        , _waterMeshName{ "Water" }
+        , _waterMeshName{}
         , _scratchMesh{}
         , _bRebuildRequested{ SW_FALSE }
         , _bApplyScheduled{ SW_FALSE }

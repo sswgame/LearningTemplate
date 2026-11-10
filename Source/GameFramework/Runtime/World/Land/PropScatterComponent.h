@@ -178,7 +178,7 @@ namespace sw
         vector<PropScatterExclusion> _listExclusion;
         PROPERTY( Category = "Scatter", DisplayName = "Material", Tooltip = "Material of every prop; empty uses the scene default" )
         AssetRef<Material> _materialPath;
-        PROPERTY( Category = "Scatter", DisplayName = "Prop Name", Tooltip = "Name of the spawned objects" )
+        PROPERTY( Required, Category = "Scatter", DisplayName = "Prop Name", Tooltip = "Name of the spawned objects" )
         string _propName;
         PROPERTY( Category = "Scatter", DisplayName = "Region Min", Units = m )
         float3 _regionMin;

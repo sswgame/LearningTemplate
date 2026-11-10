@@ -58,7 +58,7 @@ namespace sw
 
     LocomotionWarpingComponent::LocomotionWarpingComponent()
         : _bStrideWarping{ true }
-        , _speedCurve{ "Speed" }
+        , _speedCurve{}
         , _minPlayRate{ 0.6f }
         , _maxPlayRate{ 1.6f }
         , _bOrientationWarping{ true }

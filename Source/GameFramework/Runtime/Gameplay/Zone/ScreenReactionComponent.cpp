@@ -15,7 +15,7 @@
 namespace sw
 {
     ScreenReactionComponent::ScreenReactionComponent()
-        : _tag{ "State.Poisoned"_tag }
+        : _tag{}
         , _postProcess{}
         , _fadeInTime{ 0.5f }
         , _fadeOutTime{ 1.0f }

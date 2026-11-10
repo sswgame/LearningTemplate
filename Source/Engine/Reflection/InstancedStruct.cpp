@@ -109,6 +109,7 @@ namespace sw
         const SerializeContext& context      = SerializeContext::getDefault( SerializePurpose::Authoring );
         const auto&             listProperty = typeInfo.getPropertiesWithBase();
         vector<uint8>           listWritten( listProperty.size(), uint8{ 0 } );
+        vector<string_view>     listWrittenText( listProperty.size() ); // 필수 칸 판정(빈 이름)에 쓴다 — 글은 @p listToken 안을 가리킨다
         size_t                  nextPositional = 0;
         for ( const string_view token : listToken )
         {
@@ -142,17 +143,16 @@ namespace sw
                 detailBuilder.appendFormat( "'%#' as %# of %#", value, XMLFields::getAttributeName( listProperty[propIndex] ).c_str(), typeInfo._name.c_str() );
                 return unexpected( Error{ ErrorKind::InvalidArgument, "a value cannot be read as its field", detailBuilder.view() } );
             }
-            listWritten[propIndex] = 1;
+            listWritten[propIndex]     = 1;
+            listWrittenText[propIndex] = value;
         }
         vector<string> listRangeError;
         for ( size_t index = 0; index < listProperty.size(); ++index )
         {
             if ( listWritten[index] != 0 )
-            {
                 SerializerUtil::collectPropertyRangeErrors( listProperty[index], ObjectAddress{ pInstance }, string(), listRangeError );
-                continue;
-            }
-            if ( listProperty[index]._metadata->_bRequired != SW_FALSE )
+            // 판정은 직렬화기 · XMLFields 와 한 함수다 — 빠졌거나, 이름 · 경로 형식인데 빈 글이다.
+            if ( SerializerUtil::isRequiredValueMissing( listProperty[index], listWritten[index] != 0, listWritten[index] != 0 ? &listWrittenText[index] : nullptr ) )
                 return unexpected( Error{ ErrorKind::InvalidArgument, "a required field is missing", typeInfo._name.c_str() }.appendDetail( "." ).appendDetail( XMLFields::getAttributeName( listProperty[index] ).c_str() ) );
         }
         if ( listRangeError.empty() == false )

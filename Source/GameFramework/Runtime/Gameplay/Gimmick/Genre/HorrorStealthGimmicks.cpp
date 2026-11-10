@@ -45,7 +45,7 @@ namespace sw
 namespace sw
 {
     ScareTriggerComponent::ScareTriggerComponent()
-        : _cue{ "Scare" }
+        : _cue{}
         , _sound{}
         , _requiredTags{}
         , _bOnce{ true }
@@ -86,7 +86,7 @@ namespace sw
     }
 
     FlickerLightComponent::FlickerLightComponent()
-        : _pattern{ "mmamammmmammamamaaamammma" }
+        : _pattern{}
         , _rate{ 10.0f }
         , _step{ 0 }
         , _clock{ GenreGimmickUtil::makeClock() }

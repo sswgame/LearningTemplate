@@ -86,7 +86,7 @@
 				<_listComponent>
 					<SceneComponent _localPosition="-6,11.15,-25" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
 					<MeshComponent _localPosition="0,0.15,0" _localRotation="0,0,0" _localScale="1,0.3,2" _attachOwner="None" _attachComponent="SceneComponent#0" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="1.5" />
-					<KinematicVehicleComponent _tuning="common/data/vehicles/sled.vehicle.xml" _bUsePhysicsGround="true" />
+					<KinematicVehicleComponent _driftButton="Drift" _boostButton="Boost" _jumpButton="Jump" _tuning="common/data/vehicles/sled.vehicle.xml" _bUsePhysicsGround="true" />
 					<VehicleSeatComponent _seatOffset="0,0.6,0" _exitOffset="-1.5,0,0" _enterDistance="4" _bDriverSeat="false" />
 				</_listComponent>
 			</GameObject>
@@ -96,7 +96,7 @@
 				<_listComponent>
 					<SceneComponent _localPosition="0,11.15,-25" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
 					<MeshComponent _localPosition="0,0.15,0" _localRotation="0,0,0" _localScale="1,0.3,2" _attachOwner="None" _attachComponent="SceneComponent#0" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="1.5" />
-					<KinematicVehicleComponent _tuning="common/data/vehicles/sled.vehicle.xml" _bUsePhysicsGround="true" />
+					<KinematicVehicleComponent _driftButton="Drift" _boostButton="Boost" _jumpButton="Jump" _tuning="common/data/vehicles/sled.vehicle.xml" _bUsePhysicsGround="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -121,7 +121,7 @@
 						<_listButton />
 						<_listAnalog />
 					</PawnComponent>
-					<KinematicVehicleComponent _tuning="common/data/vehicles/kart.vehicle.xml" _bUsePhysicsGround="true" />
+					<KinematicVehicleComponent _driftButton="Drift" _boostButton="Boost" _jumpButton="Jump" _tuning="common/data/vehicles/kart.vehicle.xml" _bUsePhysicsGround="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -134,7 +134,7 @@
 						<_listButton />
 						<_listAnalog />
 					</PawnComponent>
-					<KinematicVehicleComponent _tuning="common/data/vehicles/kart.vehicle.xml" _bUsePhysicsGround="true" />
+					<KinematicVehicleComponent _driftButton="Drift" _boostButton="Boost" _jumpButton="Jump" _tuning="common/data/vehicles/kart.vehicle.xml" _bUsePhysicsGround="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -147,7 +147,7 @@
 						<_listButton />
 						<_listAnalog />
 					</PawnComponent>
-					<KinematicVehicleComponent _tuning="common/data/vehicles/kart.vehicle.xml" _bUsePhysicsGround="true" />
+					<KinematicVehicleComponent _driftButton="Drift" _boostButton="Boost" _jumpButton="Jump" _tuning="common/data/vehicles/kart.vehicle.xml" _bUsePhysicsGround="true" />
 					<VehicleSeatComponent _seatOffset="0,0.6,0" _exitOffset="-1.5,0,0" _enterDistance="4" _bDriverSeat="false" />
 				</_listComponent>
 			</GameObject>
@@ -183,7 +183,7 @@
 				<_listComponent>
 					<SceneComponent _localPosition="-20,8,-25" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
 					<MeshComponent _localPosition="0,0.4,0" _localRotation="0,0,0" _localScale="1,0.8,1.4" _attachOwner="None" _attachComponent="SceneComponent#0" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="1.5" />
-					<KinematicVehicleComponent _tuning="common/data/vehicles/minecart.vehicle.xml" _rail="14" _bUsePhysicsGround="true" />
+					<KinematicVehicleComponent _driftButton="Drift" _boostButton="Boost" _jumpButton="Jump" _tuning="common/data/vehicles/minecart.vehicle.xml" _rail="14" _bUsePhysicsGround="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>

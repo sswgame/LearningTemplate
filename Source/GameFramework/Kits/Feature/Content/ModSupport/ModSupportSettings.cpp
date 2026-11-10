@@ -9,48 +9,9 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
-
-namespace sw
-{
-    namespace
-    {
-        struct ModSupportSettingsInternal
-        {
-            /** @brief 필수 양수 속성을 읽습니다. 없거나 숫자가 아니거나 0 이면 이유를 남기고 false 입니다(0 인 한계는 모든 모드를 막는 오타다). */
-            [[nodiscard]] static bool readLimit( const XMLNode& node, const utf8* pName, string_view sourceName, uint64& outValue )
-            {
-                const utf8* pValue = node.findAttribute( pName );
-                if ( pValue == nullptr )
-                {
-                    SW_LOG_ERROR_ID( "ModSupportSettings.MissingField", "Mod support settings '%#': <%#> needs the '%#' attribute", sourceName, node.getName(), pName );
-                    return false;
-                }
-                if ( StringUtil::parseUint64( pValue, outValue ) == false || outValue == 0 )
-                {
-                    SW_LOG_ERROR_ID( "ModSupportSettings.BadLimit", "Mod support settings '%#': '%#' is '%#', not a whole number above 0", sourceName, pName, pValue );
-                    return false;
-                }
-                return true;
-            }
-
-            [[nodiscard]] static bool readLimit32( const XMLNode& node, const utf8* pName, string_view sourceName, uint32& outValue )
-            {
-                uint64 value = 0;
-                if ( readLimit( node, pName, sourceName, value ) == false )
-                    return false;
-                if ( value > 0xFFFFFFFFull )
-                {
-                    SW_LOG_ERROR_ID( "ModSupportSettings.BadLimit", "Mod support settings '%#': '%#' (%#) does not fit 32 bits", sourceName, pName, value );
-                    return false;
-                }
-                outValue = static_cast<uint32>( value );
-                return true;
-            }
-        };
-    } // namespace
-} // namespace sw
 
 namespace sw
 {
@@ -68,7 +29,6 @@ namespace sw
 
     bool ModSupportSettings::parseDocument( const XMLDocument& doc, string_view sourceName, ModSupportSettings& outSettings )
     {
-        using Internal     = ModSupportSettingsInternal;
         const XMLNode root = doc.getRoot( kRootElement );
         if ( root.isValid() == false )
         {
@@ -76,10 +36,8 @@ namespace sw
             return false;
         }
         ModSupportSettings settings;
-        if ( Internal::readLimit32( root, "contentVersion", sourceName, settings._contentVersion ) == false || Internal::readLimit32( root, "maxModCount", sourceName, settings._maxModCount ) == false ||
-             Internal::readLimit32( root, "maxManifestBytes", sourceName, settings._maxManifestBytes ) == false ||
-             Internal::readLimit( root, "maxPackBytes", sourceName, settings._maxPackBytes ) == false || Internal::readLimit32( root, "maxEntryCount", sourceName, settings._maxEntryCount ) == false ||
-             Internal::readLimit32( root, "maxEntryBytes", sourceName, settings._maxEntryBytes ) == false )
+        // 한계는 리플렉션 칸이다 — 빠진 칸(XMLFields.RequiredFieldMissing) · 0 인 한계(XMLFields.ValueOutOfRange) · 숫자가 아닌 글을 모두 이름과 함께 알린다.
+        if ( XMLFields::readFields( root, settings, sourceName ) == false )
             return false;
         using Element                          = XMLCatalogElement<ModSupportSettings>;
         static constexpr Element kArrElement[] = {

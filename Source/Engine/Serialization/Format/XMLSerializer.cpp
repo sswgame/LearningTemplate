@@ -993,32 +993,44 @@ namespace sw
     {
         for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
         {
-            const string  path     = prefix.empty() ? string( prop._name.c_str() ) : prefix + "." + prop._name.c_str();
-            const XMLNode child    = element.findChild( prop._name.c_str() );
-            const bool    bWritten = element.findAttribute( prop._name.c_str() ) != nullptr || child.isValid();
-            if ( bWritten == false )
+            const string      path       = prefix.empty() ? string( prop._name.c_str() ) : prefix + "." + prop._name.c_str();
+            const XMLNode     child      = element.findChild( prop._name.c_str() );
+            const utf8* const pAttribute = element.findAttribute( prop._name.c_str() );
+            const bool        bWritten   = pAttribute != nullptr || child.isValid();
+            // 스칼라는 속성으로 적힌다 — 그 글로 빈 이름을 가른다(판정은 JSON 과 한 함수).
+            const string_view attributeText = pAttribute != nullptr ? string_view( pAttribute ) : string_view{};
+            if ( SerializerUtil::isRequiredValueMissing( prop, bWritten, pAttribute != nullptr ? &attributeText : nullptr ) )
             {
-                if ( prop._metadata->_bRequired != SW_FALSE )
-                    outListPath.push_back( path );
+                outListPath.push_back( path );
                 continue;
             }
+            if ( bWritten == false )
+                continue;
             if ( child.isValid() == false )
                 continue;
             const bool      bContainer = prop._bIsContainer == SW_TRUE;
             const TypeInfo* pNested    = SerializerUtil::findNestedObjectType( bContainer ? prop._elementTypeName : prop._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
-            if ( pNested == nullptr )
-                continue;
             if ( bContainer == false )
             {
-                collectMissingRequired( child, *pNested, outListPath, path );
+                if ( pNested != nullptr )
+                    collectMissingRequired( child, *pNested, outListPath, path );
                 continue;
             }
             size_t elementIndex{ 0 };
             for ( XMLNode item = child.findChild(); item.isValid(); item = item.findNextSibling(), ++elementIndex )
             {
+                // 소유 포인터 목록(컴포넌트 목록)은 태그 이름이 런타임 타입이다(`readOwnedPointer` 와 같은 규칙) — 그 타입의 필수 칸을 본다.
+                const utf8* const   pTagName = item.getName();
+                const hashed_string tagType  = StringUtil::isNullOrEmpty( pTagName ) ? hashed_string{} : hashed_string::findInterned( pTagName );
+                const TypeInfo*     pTagInfo = tagType.empty() ? nullptr : engine::getSubsystem<TypeRegistry>().findType( tagType );
+                const TypeInfo*     pItem    = pTagInfo != nullptr ? pTagInfo : pNested;
+                if ( pItem == nullptr )
+                    continue;
                 StringBuilder<constant::buffer::kMax256> textBuilder;
                 textBuilder.appendFormat( "%#[%#]", path, static_cast<uint64>( elementIndex ) );
-                collectMissingRequired( item, *pNested, outListPath, string( textBuilder.view() ) );
+                if ( pTagInfo != nullptr )
+                    textBuilder.appendFormat( "(%#)", pTagInfo->_name.c_str() ); // 어느 컴포넌트인지 경로에 남긴다
+                collectMissingRequired( item, *pItem, outListPath, string( textBuilder.view() ) );
             }
         }
     }

@@ -21,6 +21,7 @@ SW_TEST_CASE( GameSettingsTest, RequiredDataNamesThePackOfAKind )
     sw::GameSettings settings;
     SW_REQUIRE_TRUE( settings.loadFromXMLText( R"(<GameSettings>
   <startMap>game/test/maps/start.scene.xml</startMap>
+  <defaultLanguage>ko_kr</defaultLanguage>
   <RequiredData kind="items" pack="common"/>
   <RequiredData kind="appearance" pack="common"/>
 </GameSettings>)",
@@ -43,6 +44,7 @@ SW_TEST_CASE( GameSettingsTest, SkipsTheEngineElement )
     const sw::string xml = "<GameSettings>"
                            "<Engine _windowTitle=\"Probe Game\" _bUIPauseMenu=\"true\" />"
                            "<startMap>game/probe/maps/start.scene.xml</startMap>"
+                           "<defaultLanguage>ko_kr</defaultLanguage>"
                            "</GameSettings>";
     sw::GameSettings gameSettings;
     SW_REQUIRE_TRUE( gameSettings.loadFromXMLText( xml, "probe" ) );

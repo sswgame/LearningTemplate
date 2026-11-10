@@ -98,7 +98,7 @@ namespace sw
         hashed_string _pieceLayer;
         PROPERTY( Category = "Dismemberment", DisplayName = "Piece Material", Tooltip = "Physics material of the severed piece", Validate = validatePieceMaterial )
         hashed_string _pieceMaterial;
-        PROPERTY( Category = "Dismemberment", DisplayName = "Blood Channel", Tooltip = "Surface channel raised on the severed region" )
+        PROPERTY( Required, Category = "Dismemberment", DisplayName = "Blood Channel", Tooltip = "Surface channel raised on the severed region" )
         hashed_string _bloodChannel;
         PROPERTY( Category = "Dismemberment", DisplayName = "Piece Mass", Min = 0.1, Units = kg )
         float32 _pieceMass;
