@@ -12,8 +12,9 @@
         "  stage_texture_unit_limit = 셰이더 단계 하나가 쓸 수 있는 텍스처 단위(고정 칸 텍스처 바인딩) 수 — 쿠킹의 계약 검사(ShaderBindingValidatorIssue)가 넘는 바이너리를 오류로 멈추고,",
         "    GL 장치 초기화가 같은 값(shaderslot::gl::kFragmentTextureUnitBudget · checkTextureUnits)보다 작은 드라이버를 거절한다. 한 표라 Windows 에서 쿠킹할 때 Linux 드라이버의 한도가 드러난다.",
         "    GL 32 = GL_MAX_TEXTURE_IMAGE_UNITS: Mesa llvmpipe · NVIDIA 데스크톱 드라이버가 32 다(Mesa 는 넘으면 링크가 'Too many fragment shader texture samplers' 로 실패, NVIDIA 는 넘겨도 링크한다).",
-        "    DX11 128 = D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT. null = 텍스처가 고정 칸이 아니다 — DX12 · Vulkan 은 무제한 bindless 배열 하나(서술자 한도는 장치가 본다),",
-        "    WebGPU 는 장치가 어댑터 최대를 그대로 요구해(WebGPURHIDevice) 단계 한도가 기기마다 다르다(PSO 생성의 검증 오류가 막는다).",
+        "    DX11 128 = D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT. null = 텍스처가 고정 칸이 아니다 — DX12 · Vulkan 은 무제한 bindless 배열 하나(서술자 한도는 장치가 본다).",
+        "    WebGPU 16 = 명세의 maxSampledTexturesPerShaderStage 기본 한도(모든 어댑터가 준다 — https://www.w3.org/TR/webgpu/#limits). 장치 생성이 어댑터 한도를 이 값과 대조해",
+        "    모자라면 멈춘다(WebGPURHIDevice, shaderslot::wgpu::kStageTextureBudget). 텍스처와 샘플러는 따로 센다(WGSL 은 결합 샘플러가 아니다).",
         "  graphics_libs = 플랫폼 그래픽 라이브러리 INTERFACE 타깃(cmake/Modules/Platform), shipping_define = 배포 빌드가 백엔드 하나를 Engine 에 넣을 때 붙이는 매크로.",
         "  CMake 는 configure 가 쓴 generated/sw/config/CookContract.cmake 로 읽는다. 백엔드가 어느 플랫폼에 있는지는 모듈 매니페스트 _listExcludedPlatform 이 정본이다.",
         "platform_rhi_backends: 플랫폼마다 이 빌드가 만들 수 있는 백엔드와 건너갈 순서. 맨 앞이 그 플랫폼의 기본이다. 웹은 WebGPU 하나다(없는 플랫폼은 컴파일 오류). 데스크톱의 WebGPU 는 맨 끝이다 — vcpkg Dawn 위에서 웹 백엔드를 돌려 보는 길이고 기본으로 고르지 않는다(ThirdParty/dawn).",
@@ -40,7 +41,7 @@
           "stage_texture_unit_limit": 32 },
         { "name": "WebGPU", "shader_folder": "webgpu", "shader_target": "WGSL_WebGPU", "command_line_argument": "WEBGPU", "command_line_name": "wgpu",
           "module": "RHI_WebGPU", "source_folder": "WebGPU", "graphics_libs": "sw_graphics_webgpu_libs", "shipping_define": "SW_RHI_TARGET_WEBGPU",
-          "stage_texture_unit_limit": null }
+          "stage_texture_unit_limit": 16 }
     ],
 
     "platform_rhi_backends": [

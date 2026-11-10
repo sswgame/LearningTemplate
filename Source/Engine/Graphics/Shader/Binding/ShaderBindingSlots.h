@@ -380,6 +380,18 @@ namespace sw
             static_assert( kBShift + kBRange <= kTShift && kTShift + kTRange <= kSShift && kSShift + kSRange <= kUShift, "WebGPU 시프트 띠가 겹친다" );
             static_assert( kConstantBufferSlotCount <= kBRange && kEngineTexture0 + kEngineTextureCount <= kTRange && dx11::kMaxSamplerSlotCount <= kSRange,
                            "WebGPU 띠가 슬롯 계약(b · t · s)을 다 담지 못한다" );
+
+            /**
+             * @brief 셰이더 단계 하나가 선언해도 되는 샘플 텍스처 수 — 장치가 어댑터에 요구하는 maxSampledTexturesPerShaderStage 의 하한입니다.
+             * @details 값은 Config/Engine/CookContract.json 의 WebGPU stage_texture_unit_limit 하나다(WebGPU 명세의 기본 한도 16 — 모든 어댑터가 준다).
+             *          칸 에뮬 전체(머티리얼 16 + 엔진 18)는 이보다 커서 셰이더가 쓰는 칸만 남는 것이 전제다 — 쿠킹의 계약 검사가 넘는 바이너리를
+             *          오류로 멈추고(ShaderBindingValidatorIssue), 장치 생성이 한도가 이보다 작은 어댑터를 거절한다(WebGPURHIDevice). GL 의 kFragmentTextureUnitBudget 과 같은 모양이다.
+             */
+#if !defined( SW_STAGE_TEXTURE_UNIT_LIMIT_WGSL_WebGPU )
+    #error "Config/Engine/CookContract.json: the WebGPU row needs stage_texture_unit_limit (maxSampledTexturesPerShaderStage the cooked shaders fit in)"
+#endif
+            inline constexpr uint32 kStageTextureBudget = SW_STAGE_TEXTURE_UNIT_LIMIT_WGSL_WebGPU;
+            static_assert( kMaterialTextureCount <= kStageTextureBudget, "WebGPU 단계 텍스처 예산이 머티리얼 칸 수보다 작다" );
         } // namespace wgpu
 
         /// @brief 엔진 예약 CB 이름입니다(리플렉션 매칭 키).
