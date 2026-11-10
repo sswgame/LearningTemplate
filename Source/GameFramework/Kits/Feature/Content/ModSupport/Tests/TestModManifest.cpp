@@ -150,7 +150,7 @@ SW_TEST_CASE( ModManifestTest, RejectsMalformedManifests )
     SW_EXPECT_FALSE( ModManifest::parseXMLText( "<Mod", "test", manifest ) );
     SW_EXPECT_LOG( "ModManifest.WrongRoot" );
     SW_EXPECT_FALSE( ModManifest::parseXMLText( R"(<Plugin id="a"/>)", "test", manifest ) );
-    SW_EXPECT_LOG( "ModManifest.MissingField" );
+    SW_EXPECT_LOG( "XMLFields.RequiredFieldMissing" ); // 속성은 리플렉션 필수 칸이다(ModManifestRootDef)
     SW_EXPECT_FALSE( ModManifest::parseXMLText( R"(<Mod id="a" version="1.0.0" minContentVersion="1" maxContentVersion="1"/>)", "test", manifest ) );
     SW_EXPECT_LOG( "ModManifest.BadID" );
     SW_EXPECT_FALSE( ModManifest::parseXMLText( R"(<Mod id="../a" version="1.0.0" minContentVersion="1" maxContentVersion="1" priority="0"/>)", "test", manifest ) );
