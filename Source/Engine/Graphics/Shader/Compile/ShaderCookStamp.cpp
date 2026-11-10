@@ -254,8 +254,8 @@ namespace sw
             /** @brief 헤더 키를 만들 때 헤더가 어느 루트 아래인지 가르는 항목입니다(자기 도메인, 다른 include 루트 도메인). */
             struct HeaderRoot
             {
-                /// @brief 실제 경로(`makeCanonicalPath`)를 소문자로 바꾼 루트 폴더입니다(`<도메인>/shaders`). 비교용이다.
-                string _lowerDir;
+                /// @brief 실제 경로(`makeCanonicalPath`)의 비교용 글(`makeComparableDiskPath` — 대소문자는 OS 규칙)인 루트 폴더입니다(`<도메인>/shaders`).
+                string _comparableDir;
                 /// @brief 키 앞에 붙는 도메인 이름입니다. 자기 도메인이면 비어 있다(자기 키에는 ':' 가 없다).
                 string _domain;
             };
@@ -271,16 +271,16 @@ namespace sw
                 string ownCanonical;
                 if ( FileUtil::makeCanonicalPath( shadersDir, ownCanonical ) == false )
                     return false;
-                const string ownLower = StringUtil::toLower( FileUtil::normalizeSeparators( ownCanonical ).c_str() );
-                outListRoot.push_back( HeaderRoot{ ownLower, string{} } );
+                const string ownComparable = FileUtil::makeComparableDiskPath( ownCanonical );
+                outListRoot.push_back( HeaderRoot{ ownComparable, string{} } );
                 for ( const ShaderIncludeRootDomain& rootDomain : resolver.getRootDomains() )
                 {
                     string canonical;
                     if ( FileUtil::makeCanonicalPath( rootDomain._shadersFolder.str(), canonical ) == false )
                         return false;
-                    const string lowerDir = StringUtil::toLower( FileUtil::normalizeSeparators( canonical ).c_str() );
-                    if ( lowerDir != ownLower )
-                        outListRoot.push_back( HeaderRoot{ lowerDir, rootDomain._domain } );
+                    const string comparableDir = FileUtil::makeComparableDiskPath( canonical );
+                    if ( comparableDir != ownComparable )
+                        outListRoot.push_back( HeaderRoot{ comparableDir, rootDomain._domain } );
                 }
                 return true;
             }
@@ -297,14 +297,14 @@ namespace sw
                 string resolved;
                 if ( FileUtil::makeCanonicalPath( absHeader, resolved ) == false )
                     return string{};
-                const string canonical = FileUtil::normalizeSeparators( resolved ); // 구분자를 맞춘다 — 키는 OS 가 달라도 같은 글이어야 한다
-                const string lower     = StringUtil::toLower( canonical.c_str() );
+                const string canonical  = FileUtil::normalizeSeparators( resolved );     // 구분자를 맞춘다 — 키는 OS 가 달라도 같은 글이어야 한다
+                const string comparable = FileUtil::makeComparableDiskPath( canonical ); // 길이는 `canonical` 과 같다(대소문자만 접는다)
                 for ( const HeaderRoot& root : listRoot )
                 {
-                    const bool bInside = FileUtil::startsWithPathComponent( lower, root._lowerDir ) && root._lowerDir.size() < lower.size();
+                    const bool bInside = FileUtil::startsWithPathComponent( comparable, root._comparableDir ) && root._comparableDir.size() < comparable.size();
                     if ( bInside == false )
                         continue;
-                    const string relative = canonical.substr( root._lowerDir.size() + 1 );
+                    const string relative = canonical.substr( root._comparableDir.size() + 1 );
                     if ( root._domain.empty() )
                         return relative;
                     string keyed = root._domain;
@@ -565,13 +565,13 @@ namespace sw
                     resolved += "/";
                     resolved += listTail[index - 1];
                 }
-                const string lower = StringUtil::toLower( resolved.c_str() );
+                const string comparable = FileUtil::makeComparableDiskPath( resolved ); // 길이는 `resolved` 와 같다(대소문자만 접는다)
                 for ( const HeaderRoot& root : listRoot )
                 {
-                    const bool bInside = FileUtil::startsWithPathComponent( lower, root._lowerDir ) && root._lowerDir.size() < lower.size();
+                    const bool bInside = FileUtil::startsWithPathComponent( comparable, root._comparableDir ) && root._comparableDir.size() < comparable.size();
                     if ( bInside == false )
                         continue;
-                    const string relative{ resolved.substr( root._lowerDir.size() + 1 ) };
+                    const string relative{ resolved.substr( root._comparableDir.size() + 1 ) };
                     return root._domain.empty() ? relative : string{ root._domain + ":" + relative };
                 }
                 return string{};

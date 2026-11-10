@@ -97,15 +97,24 @@ namespace sw
         /** @brief rootDir 기준 상대 경로를 만듭니다. */
         [[nodiscard]] static bool makeRelativePath( string_view rootDir, string_view path, string& outResult );
         /**
-         * @brief @p path 가 @p root 아래(경로 구간 경계 기준)에 있으면 그 아래 부분을 `/` 구분자로 돌려주고 true 입니다. 루트 자신이거나 밖이면 false 입니다.
-         * @details 글로만 비교합니다(파일 시스템을 보지 않고 `..` 를 만들지 않습니다). `makeRelativePath` 는 절대화한 두 경로를 구간별로 맞대어 루트 밖이면 `../` 를 만듭니다.
+         * @brief @p path 가 @p root 아래(경로 구간 경계 기준)에 있으면 그 아래 부분을 `/` 구분자로(원래 철자) 돌려주고 true 입니다. 루트 자신이거나 밖이면 false 입니다.
+         * @details 글로만 비교합니다(파일 시스템을 보지 않고 `..` 를 만들지 않습니다). 대소문자는 이 OS 의 규칙입니다(Windows 무시 · POSIX 구별) — 부르는 쪽이 고르던 `bIgnoreCase` 는
+         *          없앴다(리눅스에서도 무시를 고르면 대소문자만 다른 바깥 폴더를 안으로 봤다). `makeRelativePath` 는 절대화한 두 경로를 구간별로 맞대어 루트 밖이면 `../` 를 만듭니다.
          */
-        [[nodiscard]] static bool tryMakePathUnderRoot( string_view root, string_view path, string& outRelative, bool bIgnoreCase = false );
+        [[nodiscard]] static bool tryMakePathUnderRoot( string_view root, string_view path, string& outRelative );
         /**
          * @brief @p path 가 @p root 아래(구간 경계 기준, 루트 자신은 아님)인지를 이 OS 의 대소문자 규칙(Windows 무시 · POSIX 구별)으로 봅니다. 글 연산입니다(`..` 를 풀지 않는다).
          * @details 비교 · 맵 키용 `normalizePath` 는 POSIX 에서도 소문자로 접어 대소문자만 다른 바깥 폴더를 안으로 본다 — 포함 판정은 이것을 쓴다.
          */
         [[nodiscard]] static bool isPathUnderRoot( string_view root, string_view path );
+        /** @brief `isPathUnderRoot` 에 루트 자신도 넣은 판입니다. */
+        [[nodiscard]] static bool isPathAtOrUnderRoot( string_view root, string_view path );
+        /**
+         * @brief 디스크 경로를 이 OS 의 비교용 글로 만듭니다 — 구분자 `/`, 끝 구분자 없음, 대소문자는 Windows 만 소문자로 접는다.
+         * @details 같은 형태끼리 `startsWithPathComponent` · `==` 로 견주면 포함 · 같음 판정이 OS 규칙을 따른다(감시 접두사처럼 미리 만들어 두는 자리). `normalizePath` 는
+         *          리소스 id · 맵 키용(늘 소문자)이라 디스크 경로의 포함 판정에 쓰지 않는다.
+         */
+        static string makeComparableDiskPath( string_view path );
         /** @brief 절대 경로를 만듭니다. */
         [[nodiscard]] static bool makeAbsolutePath( string_view path, string& outResult );
         /** @brief 비교 · 맵 키가 아니라 **실제** 경로를 만듭니다(링크 · `.` · `..` · 8.3 짧은 이름을 풀어서). 경로가 없으면 false 입니다. 구분자는 `/` 입니다. */
@@ -141,7 +150,8 @@ namespace sw
         static string joinPath( string_view root, string_view relative );
         /**
          * @brief `path` 가 `component` 자체이거나 `component/` 로 시작하는지 확인합니다(경로 구간 경계 기준).
-         * @note `games` 와 `gamesfoo` 처럼 접두어만 같은 경우를 맞다고 하지 않습니다.
+         * @note `games` 와 `gamesfoo` 처럼 접두어만 같은 경우를 맞다고 하지 않습니다. 글을 그대로 견준다 — 디스크 경로면 두 글을 `makeComparableDiskPath` 로 만든 뒤 부르거나
+         *       `isPathAtOrUnderRoot` 를 쓴다(`normalizePath` 한 글은 리눅스에서 대소문자를 잃는다).
          */
         static bool startsWithPathComponent( string_view path, string_view component );
         /**

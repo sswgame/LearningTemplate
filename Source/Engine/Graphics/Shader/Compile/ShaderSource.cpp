@@ -137,7 +137,7 @@ namespace sw
             return unexpected( Error{ ErrorKind::NotFound, "Shader source file not found", source.str() } );
         const optional<AbsolutePath> shadersFolder = _pAssetPaths->toDiskPath( *shadersFolderID );
         const bool                   bInsideFolder = shadersFolder.has_value() &&
-                                   FileUtil::startsWithPathComponent( StringUtil::toLower( sourceFile->c_str() ), StringUtil::toLower( shadersFolder->c_str() ) );
+                                   FileUtil::isPathAtOrUnderRoot( shadersFolder->str(), sourceFile->str() );
         if ( bInsideFolder == false )
         {
             // 스탬프 키와 가림 검사는 소스가 자기 `shaders` 폴더 아래라는 데 기댄다 - 다른 자리로 풀린 소스(덮어쓴 도메인)를 고르지 않고 멈춘다.

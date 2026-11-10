@@ -35,7 +35,7 @@ namespace sw::editor
         outListCrumb.clear();
         const string root       = ContentBrowserLogicInternal::makeFolderPath( rootAbs );
         const string folder     = ContentBrowserLogicInternal::makeFolderPath( folderAbs );
-        const bool   bUnderRoot = root.empty() == false && FileUtil::startsWithPathComponent( FileUtil::normalizePath( folder ), FileUtil::normalizePath( root ) );
+        const bool   bUnderRoot = root.empty() == false && FileUtil::isPathAtOrUnderRoot( root, folder );
         if ( bUnderRoot == false )
         {
             outListCrumb.push_back( ContentBrowserCrumb{ FileUtil::getFileNamePart( folder ), folder } );

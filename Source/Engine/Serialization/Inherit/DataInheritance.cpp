@@ -921,7 +921,7 @@ namespace sw
                     return false;
                 const string basePath = findBasePath( text );
                 string       relativePath;
-                if ( basePath.empty() == false && FileUtil::normalizePath( basePath ) == normalizedBase && FileUtil::tryMakePathUnderRoot( contentRoot, filePath, relativePath, true ) )
+                if ( basePath.empty() == false && FileUtil::normalizePath( basePath ) == normalizedBase && FileUtil::tryMakePathUnderRoot( contentRoot, filePath, relativePath ) )
                     outListChildID.push_back( FileUtil::normalizePath( relativePath ) );
             }
         }

@@ -337,15 +337,10 @@ namespace sw::editor
     {
         if ( repositoryRoot.empty() || absolutePath.empty() )
             return {};
-        // 비교는 소문자로(Windows 경로), 돌려주는 경로는 원래 철자로 — git 은 리눅스에서 대소문자를 가린다.
-        const string root      = FileUtil::normalizePath( repositoryRoot );
-        const string lowerPath = FileUtil::normalizePath( absolutePath );
-        if ( FileUtil::startsWithPathComponent( lowerPath, root ) == false )
+        // 비교는 OS 대소문자 규칙으로, 돌려주는 경로는 원래 철자로 — git 은 리눅스에서 대소문자를 가린다.
+        string relative;
+        if ( FileUtil::tryMakePathUnderRoot( repositoryRoot, absolutePath, relative ) == false )
             return {};
-        const string lowerSuffix = FileUtil::suffixAfterPathComponent( lowerPath, root );
-        const string original    = FileUtil::normalizeSeparators( absolutePath );
-        if ( lowerSuffix.empty() || lowerSuffix.size() > original.size() )
-            return {};
-        return original.substr( original.size() - lowerSuffix.size() );
+        return relative;
     }
 } // namespace sw::editor

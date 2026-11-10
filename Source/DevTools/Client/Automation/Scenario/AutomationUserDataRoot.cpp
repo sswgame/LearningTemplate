@@ -143,8 +143,7 @@ namespace sw
     {
         for ( const string& folder : listPersonFolder )
         {
-            // 그 폴더 자신이거나 아래 — 한 마디를 덧붙여 "아래" 판정 하나로 둘을 본다.
-            if ( FileUtil::isPathUnderRoot( folder, FileUtil::joinPath( path, "x" ) ) )
+            if ( FileUtil::isPathAtOrUnderRoot( folder, path ) )
                 return unexpected( Error{ ErrorKind::Unsupported, "an automated run may not point a state variable at the person's folder (pass -gv_automationAllowOutsideUserData=true on purpose)",
                                           string( name ) + "=" + string( path ) } );
         }

@@ -87,10 +87,10 @@ namespace sw
     {
         WatchEntry entry{};
         entry._id = _watchIDAllocator.allocate();
-        // 리스캔(`expandRescanEvents`)의 폴더 훑기에는 실제 파일 시스템 경로를 쓰고, 맞춰 보는 데는 normalizePath 를 쓴다.
+        // 리스캔(`expandRescanEvents`)의 폴더 훑기에는 실제 파일 시스템 경로를 쓰고, 맞춰 보는 데는 OS 비교용 글(`makeComparableDiskPath`)을 쓴다.
         entry._pathPrefix = FileUtil::normalizeSeparators( pathPrefix );
         // 맞춰 볼 때 쓰는 형태로 **여기서 한 번** 만들어 둔다.
-        entry._normalizedPrefix = FileUtil::normalizePath( entry._pathPrefix );
+        entry._normalizedPrefix = FileUtil::makeComparableDiskPath( entry._pathPrefix );
         entry._listExtension    = listExtension;
         entry._onMatch          = onMatch;
         _listWatch.push_back( entry );
@@ -121,7 +121,7 @@ namespace sw
         {
             // **이벤트당 한 번** 만든다(`matchesWatch` 안에서 만들면 감시 수만큼 다시 만든다).
             const string normalizedFullPath =
-                FileUtil::normalizePath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) );
+                FileUtil::makeComparableDiskPath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) );
 
             bool bAnyMatch{ false };
             // **콜백이 감시를 등록 · 해제할 수 있다.** 리로드 콜백이 자기 감시를 다시 걸면

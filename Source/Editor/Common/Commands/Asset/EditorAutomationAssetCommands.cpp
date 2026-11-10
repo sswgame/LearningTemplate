@@ -67,14 +67,6 @@ namespace sw::editor
                 string _lastPath{}; ///< 마지막으로 연 임시 에셋의 절대 경로. 연 적이 없으면 비어 있다
             };
 
-            /** @brief @p path 가 @p folder 와 같거나 그 아래인지입니다. 둘 다 `normalizePath` 를 거친 뒤 대소문자 없이 비교합니다. */
-            [[nodiscard]] static bool isUnderFolder( const string& path, const string& folder )
-            {
-                if ( folder.empty() || StringUtil::startsWith( path, folder, true ) == false )
-                    return false;
-                return path.size() == folder.size() || path[folder.size()] == '/';
-            }
-
             /**
              * @brief 임시 에셋 인자를 읽습니다. 자동화 산출물 폴더(`makeAutomationOutputFolderPath`) 아래이고 리소스 트리 밖인 절대 경로일 때만 true 입니다.
              * @details 시나리오가 저장 단계를 밟아도 저장소 리소스가 바뀌지 않게 하는 문지기다. 절대 경로만 받는다(`scene.saveAs` 와 같다).
@@ -85,14 +77,13 @@ namespace sw::editor
                 if ( DevCommandRegistry::readDiskPathArgument( path, absolutePath, outReply ) == false )
                     return false;
                 const string automationFolder = makeAutomationOutputFolderPath();
-                const string normalized       = FileUtil::normalizePath( absolutePath );
-                if ( isUnderFolder( normalized, FileUtil::normalizePath( automationFolder ) ) == false )
+                if ( FileUtil::isPathAtOrUnderRoot( automationFolder, absolutePath ) == false )
                 {
                     outReply = "temp assets must be under Saved/Automation/: '" + absolutePath + "'";
                     return false;
                 }
                 const string& resourceRoot = editor::getSubsystem<AssetPaths>().getRootFolderPath();
-                if ( resourceRoot.empty() == false && isUnderFolder( normalized, FileUtil::normalizePath( resourceRoot ) ) )
+                if ( resourceRoot.empty() == false && FileUtil::isPathAtOrUnderRoot( resourceRoot, absolutePath ) )
                 {
                     outReply = "temp assets must not be in the resource tree: '" + absolutePath + "'";
                     return false;
@@ -284,7 +275,7 @@ namespace sw::editor
             {
                 const string  normalized       = FileUtil::normalizePath( folderID );
                 const string& resourceRoot     = editor::getSubsystem<AssetPaths>().getRootFolderPath();
-                const bool    bOutsideTempArea = isUnderFolder( normalized, kImportTempFolder ) == false || normalized.find( ".." ) != string::npos;
+                const bool    bOutsideTempArea = FileUtil::startsWithPathComponent( normalized, kImportTempFolder ) == false || normalized.find( ".." ) != string::npos; // 리소스 id 끼리(소문자)
                 if ( bOutsideTempArea || resourceRoot.empty() )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "imports go under the temporary resource folder", kImportTempFolder }.appendDetail( "/: " ).appendDetail( folderID ) );
                 return FileUtil::joinPath( resourceRoot, folderID );

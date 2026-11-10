@@ -54,6 +54,39 @@ SW_TEST_CASE( FileTest, FileUtilPathOperations )
 }
 
 /**
+ * @brief [FileTest] 디스크 경로의 포함 판정은 OS 대소문자 규칙을 따른다 — Windows 는 대소문자만 다른 폴더를 같은 폴더로, POSIX 는 다른(바깥) 폴더로 본다.
+ *        이름만 겹치는 옆 폴더 · 구분자 차이 · 끝 구분자는 OS 와 무관하고, 돌려주는 상대 경로는 원래 철자다
+ * @details 변이: 비교를 소문자로 접으면(예전 `normalizePath` · `bIgnoreCase=true`) POSIX 에서 `Content/SCRATCH` 가 `Content/scratch` 아래로 보여 이 시험이 진다.
+ */
+SW_TEST_CASE( FileTest, PathContainmentFollowsTheOSCaseRule )
+{
+#if defined( SW_PLATFORM_WINDOWS )
+    const sw::string root       = "C:/Proj/Content/scratch";
+    const bool       bCaseFolds = true;
+#elif defined( SW_PLATFORM_POSIX )
+    const sw::string root       = "/proj/Content/scratch";
+    const bool       bCaseFolds = false;
+#else
+    #error "Unsupported platform"
+#endif
+    const sw::string otherCased = sw::FileUtil::getDirectoryPart( root ) + "/SCRATCH/a.txt";
+
+    SW_EXPECT_TRUE( sw::FileUtil::isPathUnderRoot( root, root + "/a.txt" ) );
+    SW_EXPECT_TRUE( sw::FileUtil::isPathUnderRoot( root + "/", root + "\\sub\\a.txt" ) );
+    SW_EXPECT_FALSE( sw::FileUtil::isPathUnderRoot( root, root ) );
+    SW_EXPECT_TRUE( sw::FileUtil::isPathAtOrUnderRoot( root, root + "/" ) );
+    SW_EXPECT_FALSE( sw::FileUtil::isPathAtOrUnderRoot( root, root + "2/a.txt" ) );
+
+    SW_EXPECT_EQUAL( bCaseFolds, sw::FileUtil::isPathUnderRoot( root, otherCased ) );
+    SW_EXPECT_EQUAL( bCaseFolds, sw::FileUtil::isPathAtOrUnderRoot( root, otherCased ) );
+    SW_EXPECT_EQUAL( bCaseFolds, sw::FileUtil::startsWithPathComponent( sw::FileUtil::makeComparableDiskPath( otherCased ), sw::FileUtil::makeComparableDiskPath( root ) ) );
+
+    sw::string relative;
+    SW_EXPECT_TRUE( sw::FileUtil::tryMakePathUnderRoot( root, root + "/Sub/A.txt", relative ) );
+    SW_EXPECT_EQUAL( sw::string( "Sub/A.txt" ), relative ); // 원래 철자
+}
+
+/**
  * @brief [FileTest] hasExtension 은 한 단계 확장자와 두 단계 접미사를 모두 맞춘다
  */
 SW_TEST_CASE( FileTest, HasExtensionMatchesCompoundSuffix )

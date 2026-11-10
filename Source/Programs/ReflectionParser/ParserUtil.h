@@ -37,8 +37,8 @@ namespace sw
             for ( const string& includeRoot : listIncludePath )
             {
                 const string rootSep  = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( includeRoot ) );
-                const string rootNorm = FileUtil::normalizePath( rootSep );
-                const string srcNorm  = FileUtil::normalizePath( sourceSep );
+                const string rootNorm = FileUtil::makeComparableDiskPath( rootSep ); // 대소문자는 OS 규칙
+                const string srcNorm  = FileUtil::makeComparableDiskPath( sourceSep );
                 if ( rootNorm.empty() || FileUtil::startsWithPathComponent( srcNorm, rootNorm ) == false )
                     continue;
                 if ( srcNorm.size() == rootNorm.size() )

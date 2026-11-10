@@ -210,8 +210,8 @@ namespace sw
                     clang_disposeString( fileName );
                 }
                 path                 = FileUtil::normalizeSeparators( path );
-                const bool bSkipPath = path.empty() || StringUtil::startsWith( path, collector._outputDirPrefix, true ) ||
-                                       ( collector._outputDirRealPrefix.empty() == false && StringUtil::startsWith( path, collector._outputDirRealPrefix, true ) );
+                const bool bSkipPath = path.empty() || FileUtil::isPathUnderRoot( collector._outputDirPrefix, path ) ||
+                                       ( collector._outputDirRealPrefix.empty() == false && FileUtil::isPathUnderRoot( collector._outputDirRealPrefix, path ) );
                 if ( bSkipPath )
                     return;
                 const uint64 writeTime = GeneratedFileUtil::getWriteTime( path );

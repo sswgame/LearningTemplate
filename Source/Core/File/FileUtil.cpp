@@ -623,11 +623,12 @@ namespace sw
         return string{ path.substr( component.size() + 1 ) };
     }
 
-    bool FileUtil::tryMakePathUnderRoot( string_view root, string_view path, string& outRelative, bool bIgnoreCase )
+    bool FileUtil::tryMakePathUnderRoot( string_view root, string_view path, string& outRelative )
     {
         const string rootText   = trimTrailingSlashes( normalizeSeparators( root ) );
         const string pathText   = normalizeSeparators( path );
-        const bool   bUnderRoot = rootText.empty() == false && pathText.size() > rootText.size() + 1 && pathText[rootText.size()] == '/' && StringUtil::startsWith( pathText, rootText, bIgnoreCase );
+        const bool   bUnderRoot = rootText.empty() == false && pathText.size() > rootText.size() + 1 && pathText[rootText.size()] == '/' &&
+                                StringUtil::startsWith( pathText, rootText, PlatformFileSystem::kPathsAreCaseInsensitive );
         if ( bUnderRoot == false )
             return false;
         outRelative = pathText.substr( rootText.size() + 1 );
@@ -637,7 +638,21 @@ namespace sw
     bool FileUtil::isPathUnderRoot( string_view root, string_view path )
     {
         string relative;
-        return tryMakePathUnderRoot( root, path, relative, PlatformFileSystem::kPathsAreCaseInsensitive );
+        return tryMakePathUnderRoot( root, path, relative );
+    }
+
+    bool FileUtil::isPathAtOrUnderRoot( string_view root, string_view path )
+    {
+        const string rootText = makeComparableDiskPath( root );
+        return rootText.empty() == false && startsWithPathComponent( makeComparableDiskPath( path ), rootText );
+    }
+
+    string FileUtil::makeComparableDiskPath( string_view path )
+    {
+        string text = trimTrailingSlashes( normalizeSeparators( path ) );
+        if ( PlatformFileSystem::kPathsAreCaseInsensitive )
+            text = StringUtil::toLower( text.c_str() );
+        return text;
     }
 
     bool FileUtil::ensureParentDirectoryExists( string_view filePath )

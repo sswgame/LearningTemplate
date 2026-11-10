@@ -303,14 +303,13 @@ namespace sw
             /** @brief 절대 경로 @p absolutePath 가 붙인 디스크 도메인 폴더 아래면 그 도메인의 id(`<도메인>/<폴더 아래 경로>`)를 적고 true 입니다. */
             [[nodiscard]] static bool findDiskDomainID( State& state, const string& absolutePath, string& outID )
             {
-                const string      path = FileUtil::normalizePath( absolutePath );
                 ScopedLock<mutex> lock{ state._diskDomainMutex };
                 for ( const MountedDiskDomain& mounted : state._listDiskDomain )
                 {
-                    const string folder = FileUtil::normalizePath( mounted._folder );
-                    if ( path.size() <= folder.size() || FileUtil::startsWithPathComponent( path, folder ) == false )
+                    string relative;
+                    if ( FileUtil::tryMakePathUnderRoot( mounted._folder, absolutePath, relative ) == false ) // 대소문자는 OS 규칙
                         continue;
-                    outID = mounted._domain + "/" + FileUtil::suffixAfterPathComponent( path, folder );
+                    outID = mounted._domain + "/" + FileUtil::normalizePath( relative ); // id 는 소문자다
                     return true;
                 }
                 return false;
@@ -729,7 +728,7 @@ namespace sw
             return false;
         }
         const string root = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( AssetPathsInternal::getTable( *_pState )._resourceRootFolderPath ) );
-        if ( root.empty() == false && FileUtil::startsWithPathComponent( FileUtil::normalizePath( folder ), FileUtil::normalizePath( root ) ) )
+        if ( root.empty() == false && FileUtil::isPathAtOrUnderRoot( root, folder ) )
         {
             SW_LOG_ERROR_ID( "AssetPaths.MountInsideContentRoot", "Cannot mount disk domain '%#' - '%#' is inside the content root (packs-only builds would read loose assets)", domainName, diskFolder );
             return false;
