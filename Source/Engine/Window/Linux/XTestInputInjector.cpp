@@ -129,11 +129,9 @@ namespace sw
 
 #endif
 
-// 칸 · 등록 · 명령은 두 갈래가 함께 쓴다 — 칸 특수화는 아래 첫 사용(findSubsystem) 앞에 있어야 한다("specialization after instantiation").
+// 등록 · 명령은 두 갈래(XTest 있음 · 없음)가 함께 쓴다. 서비스 칸은 헤더의 클래스 바로 뒤다.
 namespace sw
 {
-    SW_SERVICE_SLOT( XTestInputInjector, Optional );
-
     namespace
     {
         /// 동작 이름(down · up · tap · click)을 읽습니다. @p outPress · @p outRelease 는 누름 · 뗌이 필요한지입니다.
