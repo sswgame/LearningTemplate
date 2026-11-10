@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Encoding/FourCCUtil.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -82,8 +83,8 @@ namespace sw
 
         /** @brief 캠페인을 새로 엽니다. 지도 설정이 범위 밖이면 오류를 남기고 false 이며 상태를 바꾸지 않습니다. */
         [[nodiscard]] bool initialize( const RunMapSettings& settings, uint32 seed );
-        /** @brief 명단에 추가합니다. 모르는 기체나 파일럿이면 -1 을 반환합니다. */
-        int32 addRosterEntry( const SRPGCatalog& catalog, const hashed_string& unitID, const hashed_string& pilotID, int32 pilotLevel = 1 );
+        /** @brief 명단에 추가합니다. 모르는 기체나 파일럿이면 이유를 돌려줍니다. */
+        [[nodiscard]] expected<int32> addRosterEntry( const SRPGCatalog& catalog, const hashed_string& unitID, const hashed_string& pilotID, int32 pilotLevel = 1 );
 
         void collectChoices( vector<int32>& outListNode ) const { _runMap.collectChoices( outListNode ); }
         /** @brief 지도의 노드로 가서 작전을 엽니다. 갈 수 없거나 판이 끝났으면 false 를 반환합니다. */

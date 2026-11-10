@@ -103,10 +103,10 @@ namespace sw
         return true;
     }
 
-    int32 SRPGCampaign::addRosterEntry( const SRPGCatalog& catalog, const hashed_string& unitID, const hashed_string& pilotID, int32 pilotLevel )
+    expected<int32> SRPGCampaign::addRosterEntry( const SRPGCatalog& catalog, const hashed_string& unitID, const hashed_string& pilotID, int32 pilotLevel )
     {
         if ( catalog.findUnit( unitID ) == nullptr || catalog.findPilot( pilotID ) == nullptr )
-            return constant::invalid_index::kInt32;
+            return unexpected( Error{ ErrorKind::NotFound, "unknown unit or pilot id", unitID.c_str() } );
         SRPGRosterEntry entry;
         entry._unitID  = unitID;
         entry._pilotID = pilotID;
@@ -134,9 +134,11 @@ namespace sw
             const SRPGRosterEntry& entry = _listRoster[rosterIndex];
             if ( entry._bLost == SW_TRUE )
                 continue;
-            const int32 unitIndex = field.addUnit( entry._unitID, entry._pilotID, SRPGTeam::Player, listCell[cellIndex], entry._pilotLevel.getLevel() );
+            const expected<int32> unitIndex = field.addUnit( entry._unitID, entry._pilotID, SRPGTeam::Player, listCell[cellIndex], entry._pilotLevel.getLevel() );
             ++cellIndex;
-            SRPGUnit* pUnit = field.findUnit( unitIndex );
+            if ( unitIndex.has_value() == false )
+                continue;
+            SRPGUnit* pUnit = field.findUnit( *unitIndex );
             if ( pUnit == nullptr )
                 continue;
             pUnit->_pilotLevel  = entry._pilotLevel;
