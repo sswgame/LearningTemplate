@@ -38,8 +38,43 @@ namespace sw
         , _mapKeyToObject{}
         , _mapComponentToRecord{}
         , _listScratchKey{}
+        , _listSnapshot{}
+        , _pPublished{ nullptr }
         , _generation{ 0 }
     {
+        _listSnapshot.push_back( make_unique<Snapshot>() );
+        _pPublished.store( _listSnapshot.back().get(), std::memory_order_release );
+    }
+
+    const TagIndex::Snapshot& TagIndex::acquireSnapshot() const
+    {
+        const Snapshot* pSnapshot = _pPublished.load( std::memory_order_acquire );
+        if ( pSnapshot->_generation == _generation.load( std::memory_order_acquire ) )
+            return *pSnapshot;
+        // 쓰기는 같은 잠금 아래 표와 세대를 함께 바꾸므로, 잠금 안에서 본 세대가 표의 세대다. 먼저 잠근 질의가 냈으면 그것을 쓴다.
+        ScopedLock<shared_mutex> lock{ _mutex };
+        pSnapshot            = _pPublished.load( std::memory_order_relaxed );
+        const uint64 current = _generation.load( std::memory_order_relaxed );
+        if ( pSnapshot->_generation == current )
+            return *pSnapshot;
+        unique_ptr<Snapshot> fresh = make_unique<Snapshot>();
+        fresh->_mapKeyToObject     = _mapKeyToObject;
+        fresh->_generation         = current;
+        pSnapshot                  = fresh.get();
+        _listSnapshot.push_back( std::move( fresh ) );
+        _pPublished.store( pSnapshot, std::memory_order_release );
+        return *pSnapshot;
+    }
+
+    void TagIndex::releaseRetiredSnapshots()
+    {
+        ScopedLock<shared_mutex> lock{ _mutex };
+        if ( _listSnapshot.size() <= 1 )
+            return;
+        // 끝이 지금 낸 것이다(`acquireSnapshot` 이 끝에 더한다).
+        unique_ptr<Snapshot> current = std::move( _listSnapshot.back() );
+        _listSnapshot.clear();
+        _listSnapshot.push_back( std::move( current ) );
     }
 
     void TagIndex::update( const TagComponent& tagComponent, GameObject* pOwner, const TagContainer& tags )
@@ -70,7 +105,7 @@ namespace sw
             }
             _mapComponentToRecord.emplace( &tagComponent, Record{ pOwner, _listScratchKey } );
         }
-        _generation.fetch_add( 1, std::memory_order_relaxed );
+        _generation.fetch_add( 1, std::memory_order_release );
     }
 
     void TagIndex::remove( const TagComponent& tagComponent )
@@ -81,7 +116,7 @@ namespace sw
             return;
         removeFromBucketsUnlocked( recordIt->second );
         _mapComponentToRecord.erase( recordIt );
-        _generation.fetch_add( 1, std::memory_order_relaxed );
+        _generation.fetch_add( 1, std::memory_order_release );
     }
 
     void TagIndex::findObjectsWithTags( const TagContainer& required, vector<GameObject*>& outListObject ) const
@@ -90,12 +125,13 @@ namespace sw
         const vector<TagID>& listRequired = required.getTags();
         if ( listRequired.empty() )
             return;
-        ScopedSharedLock<shared_mutex> lock{ _mutex };
-        const vector<GameObject*>*     pSmallest = nullptr;
+        // 잠그지 않는다 — 스냅샷은 내면 고치지 않는다(파일 머리말의 "세대 스냅샷").
+        const Snapshot&            snapshot  = acquireSnapshot();
+        const vector<GameObject*>* pSmallest = nullptr;
         for ( const TagID& tag : listRequired )
         {
-            const auto bucketIt = _mapKeyToObject.find( tag._id );
-            if ( bucketIt == _mapKeyToObject.end() || bucketIt->second.empty() )
+            const auto bucketIt = snapshot._mapKeyToObject.find( tag._id );
+            if ( bucketIt == snapshot._mapKeyToObject.end() || bucketIt->second.empty() )
                 return;
             if ( pSmallest == nullptr || bucketIt->second.size() < pSmallest->size() )
                 pSmallest = &bucketIt->second;

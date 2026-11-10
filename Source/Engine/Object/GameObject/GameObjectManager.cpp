@@ -508,6 +508,7 @@ namespace sw
     {
         SW_PROFILE_SCOPE( "GT.Scene.tick.destroy" );
         processDeferredDestruction();
+        _tagIndex.releaseRetiredSnapshots(); // 틱이 없는 자리 — 옛 태그 스냅샷을 읽는 질의가 없다
     }
 
     void GameObjectManager::runFrameStepMerge( float32 /*deltaTime*/ )
@@ -670,6 +671,11 @@ namespace sw
         // 물리가 쓴 자리가 이번 프레임의 그림과 PostPhysics 틱에 들게 바로 펼친다.
         if ( hasDirtySceneTransforms() )
             flushSceneTransforms();
+    }
+
+    void GameObjectManager::runFrameStepSpatialIndex( float32 /*deltaTime*/ )
+    {
+        // 공간 색인(`SceneSpatialGrid`)은 이 단계에 등록된 씬 서비스다. 단계를 따로 둔 것은 같은 단계 안의 서비스 순서(의존)가 아니라 표가 접촉 처리(`ScenePhysicsEvents`) 뒤를 정하게 하려는 것이다.
     }
 
     void GameObjectManager::runFrameStepTickPostPhysics( float32 deltaTime )

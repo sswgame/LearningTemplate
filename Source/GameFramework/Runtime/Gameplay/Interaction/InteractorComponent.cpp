@@ -14,12 +14,12 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Object/GameObject/Service/SceneSpatialGrid.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractableComponent.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractionAuthority.h"
-#include "GameFramework/Runtime/Gameplay/Interaction/InteractionSpatialIndex.h"
 
 namespace sw
 {
@@ -145,7 +145,7 @@ namespace sw
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager != nullptr )
         {
-            InteractionSpatialIndex::registerInteractor( *pManager, _space );
+            pManager->getSubsystem<SceneSpatialGrid>().addUser( InteractableComponent::getSpatialLayer( _space ) );
             _bSpatialIndexUser = SW_TRUE;
         }
     }
@@ -157,7 +157,7 @@ namespace sw
         if ( pManager != nullptr )
             setFocus( *pManager, GameObjectHandle{}, TComponentHandle<InteractableComponent>{} );
         if ( pManager != nullptr && _bSpatialIndexUser == SW_TRUE )
-            InteractionSpatialIndex::unregisterInteractor( *pManager, _space );
+            pManager->getSubsystem<SceneSpatialGrid>().removeUser( InteractableComponent::getSpatialLayer( _space ) );
         _bSpatialIndexUser = SW_FALSE;
         Component::onEndPlay();
     }
@@ -171,8 +171,9 @@ namespace sw
         // 세어진 공간과 `_space` 가 어긋나면 뗄 때 다른 공간의 수를 줄인다. 사용자를 함께 옮긴다.
         if ( pManager != nullptr && _bSpatialIndexUser == SW_TRUE )
         {
-            InteractionSpatialIndex::registerInteractor( *pManager, space );
-            InteractionSpatialIndex::unregisterInteractor( *pManager, _space );
+            SceneSpatialGrid& grid = pManager->getSubsystem<SceneSpatialGrid>();
+            grid.addUser( InteractableComponent::getSpatialLayer( space ) );
+            grid.removeUser( InteractableComponent::getSpatialLayer( _space ) );
         }
         _space = space;
     }
@@ -206,17 +207,20 @@ namespace sw
     {
         _listCandidate.clear();
         _listCandidateComponent.clear();
-        // 하는 쪽이 여럿이면 씬이 틱 앞에 맞춘 공유 격자에서 눈 둘레만 받는다(`InteractionSpatialIndex`). 아니면 등록된 대상 목록(`ComponentRegistry`)을
-        // 한 번 돈다. 둘 다 씬 전체는 돌지 않고, 닿는지 · 쓸 수 있는지는 `considerCandidate` 한 곳이 현재 위치로 판정한다.
-        const InteractionSpatialIndex* pIndex = InteractionSpatialIndex::find( manager );
-        if ( pIndex != nullptr && pIndex->hasGrid( viewer._space ) )
+        // 하는 쪽이 여럿이면 씬 공간 색인(`SceneSpatialGrid` — 대상마다 반 크기 = 도달 거리 상자)에서 눈이 든 상자만 받는다. 아니면 등록된 대상 목록(`ComponentRegistry`)을
+        // 한 번 돈다. 둘 다 씬 전체는 돌지 않고, 닿는지 · 쓸 수 있는지는 `considerCandidate` 한 곳이 현재 위치로 판정한다. 색인의 자리는 지난 `SpatialIndex` 단계의 것이다.
+        const SceneSpatialGrid&     grid  = manager.getSubsystem<SceneSpatialGrid>();
+        const SpatialGridLayerDesc& layer = InteractableComponent::getSpatialLayer( viewer._space );
+        if ( grid.isActive( layer ) )
         {
-            pIndex->queryTargets( viewer, _listGridTarget );
-            for ( const TComponentHandle<InteractableComponent> target : _listGridTarget )
+            float32 planeX{ 0.0f };
+            float32 planeY{ 0.0f };
+            SceneSpatialGrid::projectToPlane( layer, viewer._position, planeX, planeY );
+            grid.query( layer, planeX, planeY, planeX, planeY, _listGridTarget );
+            for ( Component* pTarget : _listGridTarget )
             {
-                InteractableComponent* pInteractable = manager.resolveComponent( target );
-                if ( pInteractable != nullptr )
-                    considerCandidate( *pInteractable, owner, viewer );
+                // 이 층의 열쇠는 대상 자신이다(`InteractableComponent::onRegister`). 해제가 항목을 빼므로 살아 있다.
+                considerCandidate( *static_cast<InteractableComponent*>( pTarget ), owner, viewer );
             }
             return;
         }

@@ -10,6 +10,12 @@
  * [계층 태그]
  * `hasTag( tag, false )` 는 `Faction` 으로 `Faction.Player` 도 찾는다. 색인은 오브젝트의 태그마다 **자기와 모든 조상**(점 앞 접두어)의 id 칸에
  * 오브젝트를 넣어 같은 답을 낸다. id 는 `TagID::computeID` 하나로 구하므로 대소문자 무시도 같다.
+ *
+ * [세대 스냅샷]
+ * 질의는 잠그지 않고 마지막에 낸 스냅샷(칸 표의 사본과 그 세대)을 읽는다. 쓰기는 잠금 아래 작업 표를 고치고 세대를 올리며, 세대가 지난 스냅샷을 본 첫 질의가
+ * 잠금 아래 새 스냅샷을 내고 다음 질의들은 다시 잠그지 않는다(기믹이 고정 스텝 워커에서 함께 묻는다 — 예전에는 질의마다 공유 잠금을 잡았다). 옛 스냅샷은
+ * 읽는 쪽이 아직 들고 있을 수 있어 바로 지우지 않고, 틱이 없는 프레임 자리(`Destroy` 단계)에서 `releaseRetiredSnapshots` 가 놓는다.
+ * 언리얼 Mass 의 아키타입 버전 · 유니티 `EntityQuery` 의 순서 버전처럼 세대가 같으면 지난 답의 바탕을 그대로 쓴다.
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
@@ -19,6 +25,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -62,9 +69,22 @@ namespace sw
         void findObjectsWithTags( const TagContainer& required, vector<GameObject*>& outListObject ) const;
 
         /** @brief 칸이 바뀔 때마다 오르는 세대입니다. 태그 필터 결과를 캐시하는 쪽(계층 창)이 마지막 값과 비교합니다. 읽기는 잠금이 없습니다. */
-        uint64 getGeneration() const { return _generation.load( std::memory_order_relaxed ); }
+        uint64 getGeneration() const { return _generation.load( std::memory_order_acquire ); }
+
+        /** @brief 지금 낸 것 말고 옛 스냅샷을 놓습니다. 질의가 도는 동안 부르지 않습니다(게임 스레드, 틱 밖 — 매니저의 `Destroy` 단계). */
+        void releaseRetiredSnapshots();
 
     private:
+        /** @brief 질의가 읽는 칸 표의 사본입니다. 내면 고치지 않습니다. */
+        struct Snapshot
+        {
+            unordered_map<uint64, vector<GameObject*>> _mapKeyToObject{};
+            uint64                                     _generation{ 0 };
+        };
+
+        /** @brief 지금 세대의 스냅샷입니다. 낡았으면 잠금 아래 새로 냅니다. */
+        const Snapshot& acquireSnapshot() const;
+
         /** @brief 태그 컴포넌트 하나가 넣어 둔 칸입니다. 뺄 때 이 목록만 돕니다. */
         struct Record
         {
@@ -80,6 +100,8 @@ namespace sw
         unordered_map<uint64, vector<GameObject*>> _mapKeyToObject       SW_GUARDED_BY( _mutex ); ///< 태그 id(조상 포함) → 오브젝트. 빈 칸도 용량을 위해 남긴다
         unordered_map<const TagComponent*, Record> _mapComponentToRecord SW_GUARDED_BY( _mutex );
         vector<uint64> _listScratchKey                                   SW_GUARDED_BY( _mutex ); ///< `update` 가 새 칸을 모으는 버퍼
+        mutable vector<unique_ptr<Snapshot>> _listSnapshot               SW_GUARDED_BY( _mutex ); ///< 낸 스냅샷 전부(끝이 지금 것). 옛 것은 `releaseRetiredSnapshots` 가 놓는다
+        mutable atomic<const Snapshot*>                                  _pPublished;             ///< 질의가 읽는 스냅샷(늘 차 있다)
         atomic<uint64>                                                   _generation;
     };
 } // namespace sw

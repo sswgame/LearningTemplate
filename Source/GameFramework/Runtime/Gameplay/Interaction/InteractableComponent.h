@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/SlotHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -19,9 +20,12 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractionCatalog.h"
+#include "GameFramework/Runtime/Gameplay/Interaction/InteractionView.h"
 
 namespace sw
 {
+    struct SpatialGridLayerDesc;
+
     /** @brief 상호작용을 시작할 수 없는 까닭입니다(디버거가 판정 결과를 사유별로 보인다). 거리 · 각 · 시야는 고르는 쪽(`InteractionView`)이 따로 본다. */
     ENUM()
     enum class InteractionBlockReason : uint8
@@ -53,7 +57,15 @@ namespace sw
         InteractableComponent();
         virtual ~InteractableComponent() override = default;
 
-        /** @brief 씬의 상호작용 대상 목록(`ComponentRegistry`)에 등록합니다. 하는 쪽이 씬 전체를 순회하지 않고 이 목록에서 고릅니다. */
+        /** @brief 격자를 맞추기 시작하는 하는 쪽 수입니다. 하나는 목록을 한 번 도는 것이 격자를 맞추는 것과 비용이 같다. */
+        static constexpr uint32 kMinInteractorCountForGrid = 2;
+        /** @brief 대상이 공간(3D · 2D)마다 올리는 씬 공간 색인 층입니다(`SceneSpatialGrid`). 주소가 열쇠라 .cpp 에 정의한다. */
+        static const SpatialGridLayerDesc& getSpatialLayer( InteractionSpace space );
+
+        /**
+         * @brief 씬의 상호작용 대상 목록(`ComponentRegistry`)과 공간 색인(공간마다 항목 하나, 반 크기 = 최대 도달 거리)에 등록합니다.
+         *        하는 쪽이 씬 전체를 순회하지 않고 이 목록 · 격자에서 고릅니다.
+         */
         void onRegister( GameObjectManager& manager ) override;
         void onUnregister( GameObjectManager& manager ) override;
         void onPostLoad() override;
@@ -99,7 +111,12 @@ namespace sw
         GameObjectHandle getLastInteractor() const { return _lastInteractor; }
 
     private:
+        /** @brief 정의를 다시 찾고(`findDefinition`) 공간 색인 항목의 반 크기를 맞춥니다. */
         void resolveDefinition();
+        void findDefinition();
+        /** @brief 공간 색인 항목의 반 크기를 지금 정의의 최대 도달 거리로 맞춥니다. 틱 안이면 틱 뒤로 미룬다(색인은 게임 스레드에서만 고친다). */
+        void    syncSpatialExtent();
+        float32 getSpatialExtent() const;
         /**
          * @brief 강조 요청을 이 오브젝트의 메시에 옮깁니다(`MeshComponent::setHighlight` → 강조 패스). 바뀐 때만 씁니다. 자기 틱에서 부릅니다(자기 오브젝트라 워커에서 써도 된다).
          * @details 결정: 요청 플래그는 고른 쪽(`InteractorComponent`)이 다른 오브젝트의 틱에서 켠다. 메시를 거기서 바로 고치면 남의 오브젝트를 쓰는 것이라,
@@ -129,5 +146,6 @@ namespace sw
         atomic<uint32>                       _completedCount;   ///< 끝난 횟수. 같은 오브젝트의 기믹 센서가 읽어 간다
         atomic<uint8>                        _bHighlightRequested;
         uint8                                _bHasOverride;
+        SlotHandle                           _arrSpatialEntry[2]; ///< 공간(3D · 2D)마다의 색인 항목(등록 ~ 해제)
     };
 } // namespace sw

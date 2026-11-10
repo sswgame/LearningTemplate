@@ -7,7 +7,7 @@
  *          언리얼 `UWorldSubsystem` 이 등록받은 목록을 돌고, Mass 처리기가 한 종류를 한 번에 도는 자리다.
  *
  *          - 왜 씬 서비스가 아닌가: 씬 서비스 표(`SW_SCENE_SERVICE`)는 Engine 이미지 안에서만 채운다(매니저가 만들 때 표를 읽는다). GameFramework 의 타입은 프레임 시스템으로
- *            붙고 떼는 길(`ZoneOccupantIndex` 와 같다)을 쓴다 — 첫 지역 컴포넌트의 `onRegister` 가 붙이고(`ensureFor`), 마지막의 `onUnregister` 가 뗀다(`releaseIfUnused`).
+ *            붙고 떼는 길을 쓴다 — 첫 지역 컴포넌트의 `onRegister` 가 붙이고(`ensureFor`), 마지막의 `onUnregister` 가 뗀다(`releaseIfUnused`).
  *          - 왜 틱 뒤 큐인가: `FrameSystems` 단계는 틱 앞이다. 예전과 같은 자리(틱 뒤, 물리 앞)에서 돌아야 볼륨이 보는 자리 · 이펙트가 드는 프레임이 그대로다.
  *            `runMain` 은 일을 넣기만 하므로 씬 데이터를 건드리지 않는다고 선언한다. 넣은 일은 그 프레임의 틱이 미룬 일보다 앞에 돈다(넣은 순서).
  *          - 발 아래 표면: 접촉은 같은 오브젝트의 `GroundSurfaceComponent` 를 먼저 읽게 한다(`sampleGroundOnce`) — 표면 서비스(`SurfaceComponentSystem`)는 같은 단계 끝에 돌고

@@ -5,6 +5,8 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Service/SceneSpatialGrid.h"
+#include "Engine/Physics/Component/PhysicsComponent.h"
 
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
@@ -387,10 +389,11 @@ SW_TEST_CASE( ZoneTest, PlacementOverridesWorkByName )
     SW_EXPECT_FALSE( broken.applyOverrides( listBad, "test" ) ); // 두 번째 빼기는 없는 이름이다
 }
 
-/** @brief [ZoneTest] 볼륨이 여럿이어도 지역 후보 격자는 프레임에 한 번 짓고(볼륨마다 씬을 돌지 않는다), 프레임 앞(`runLane`)에 낡는다 */
-SW_TEST_CASE( ZoneTest, OccupantIndexBuildsOncePerFrame )
+/** @brief [ZoneTest] 볼륨은 씬을 돌지 않고 씬 공간 색인의 물리 층을 읽는다 — 첫 볼륨이 층의 사용자가 되면 층을 맞추고, 마지막 볼륨이 떠나면 놓는다 */
+SW_TEST_CASE( ZoneTest, OccupantIndexReadsSceneSpatialGrid )
 {
     GameObjectManager manager;
+    SceneSpatialGrid& grid   = manager.getSubsystem<SceneSpatialGrid>();
     GameObject*       pSwamp = manager.createGameObject( hashed_string( "Swamp" ) );
     (void)pSwamp->addComponent<SceneComponent>();
     pSwamp->addComponent<ZoneVolumeComponent>()->configure( "", ZoneVolumeShape::Box, float3{ 2.0f, 1.0f, 3.0f } );
@@ -400,16 +403,16 @@ SW_TEST_CASE( ZoneTest, OccupantIndexBuildsOncePerFrame )
     pGasVolume->configure( "", ZoneVolumeShape::Sphere, float3{ 5.0f, 1.0f, 1.0f } );
     SW_EXPECT_NEAR( 5.0f, pGasVolume->getHorizontalReach(), 1.0e-5f ); // 구는 반지름 x 다 — z 반 크기(1)를 쓰지 않는다
 
-    ZoneOccupantIndex* pIndex = ZoneOccupantIndex::find( manager );
-    SW_REQUIRE_TRUE( pIndex != nullptr ); // 첫 볼륨이 등록될 때 붙는다
+    vector<Component*>            listKey;
     vector<ZoneOccupantCandidate> listCandidate;
-    pIndex->queryCandidates( manager, -2.0f, -3.0f, 2.0f, 3.0f, listCandidate );
-    pIndex->queryCandidates( manager, -5.0f, -5.0f, 5.0f, 5.0f, listCandidate );
+    ZoneOccupantIndex::queryCandidates( manager, 6.0f, -2.0f, -3.0f, 2.0f, 3.0f, listKey, listCandidate );
     SW_EXPECT_TRUE( listCandidate.empty() ); // 물리 개체가 없는 씬
-    SW_EXPECT_EQUAL( 1u, pIndex->getBuildCount() );
-    pIndex->runMain( manager, 1.0f / 60.0f );
-    pIndex->queryCandidates( manager, -2.0f, -3.0f, 2.0f, 3.0f, listCandidate );
-    SW_EXPECT_EQUAL( 2u, pIndex->getBuildCount() );
+    SW_EXPECT_TRUE( grid.isActive( PhysicsComponent::getCharacterSpatialLayer() ) && grid.isActive( PhysicsComponent::getBodySpatialLayer() ) );
+
+    manager.destroyGameObject( pSwamp );
+    manager.destroyGameObject( pGas );
+    manager.update( 1.0f / 60.0f ); // 지운 볼륨이 해제되며 사용자를 뺀다
+    SW_EXPECT_FALSE( grid.isActive( PhysicsComponent::getCharacterSpatialLayer() ) );
 }
 
 /** @brief [ZoneTest] 지역 컴포넌트는 틱하지 않는다 — 첫 지역 컴포넌트가 지역 프레임 시스템을 붙이고, 시스템이 켜진 것을 등록 순서로 한 번에 돈다 */
