@@ -76,12 +76,12 @@ GameObject/Component API 는 저작 · 수명 · 직렬화 층으로 두고, 프
 0. **측정 기반(통합 담당):** `-workers=N` 인자 · Debug 카운터(`GT.Object.getComponentLookups` · `GT.Scene.tick.virtualTicks`)는 들어갔다. `load/*` 4 시나리오 × 워커 1 · 2 · 4 · 8 기준선을 S8 표에 적는다.
 1. **일괄 틱 · 파도 · 레인 — 런타임은 들어갔다(`TickRegistry` · `SceneTickScheduler` · `TickBatchRegistry`, 테스트 `TickLanesTest`).** Batch 레인은 서브틱 · 여러 항목 오브젝트까지 파도(순서 키, 오브젝트 안 순번)로 일괄하고, Task 는 오브젝트마다 태스크, Main 은 게임 스레드다. 일괄 경로를 끈 레지스트리(`setBatchPathEnabled( false )`)가 동등성의 기준 길이다. 남은 것:
    - **생성기(5-4 작업자):** `REFLECT( TickMode = Batch|Task|Main )` 을 받아, `onTick` · `onSubTick` 을 재정의했거나 `TickMode` 를 단 타입마다 생성 TU 의 `namespace sw` 에 `SW_REGISTER_TICK_TYPE( 타입, 레인 )` 을 낸다(`TickBatchRegistry.h` 머리말이 계약). `TickBatchOf<타입>` 이 `onTick` · `onSubTick` 을 한정 이름으로 부르므로 보호 재정의는 `REFLECT_BODY` 가 친구로 연다. 손 등록은 `StressTestMoverComponent` 하나 — 생성기가 내면 지운다. 완료: Debug `virtualTicks` 가 0 에 가깝다.
-   - **선행 조건 스테이지 일괄:** 스테이지는 아직 항목마다 가상 호출이다. 레벨마다 (타입, 서브틱 id) 목록으로 묶는다.
+   - **선행 조건 스테이지 일괄:** 스테이지 항목은 레인의 일괄 함수(비가상)로 돈다(`TickStage::_listItemFunction`). 남은 것은 같은 함수의 이웃 항목을 한 번에 넘기도록 레벨 안을 (타입, 서브틱 id) 로 묶는 것 — 스테이지 편집(`flushStageEdits`)이 항목 순서를 가정하므로 그 정렬 규칙과 함께 바꾼다.
    - **Task 의 선행 조건 간선:** 선행 조건을 건 항목은 지금 그룹 끝 스테이지(Kahn 레벨 장벽)로 간다. 간선만 기다리는 개별 태스크로 바꾸면 파도 · 레벨 장벽에 묶이지 않는다(언리얼 TickFunction 선행 조건 자리).
    - **판정 숫자(통합 담당):** 구조 지표 `GT.Scene.tick.waves`(장벽 수) · `batchElements` · `taskEntries` · `mainEntries` · `objectEntries` 를 부하 시나리오에서 읽어 S8 표에. 벽시계는 오브젝트 8000 이상에서만.
-2. **잡 컨텍스트 형식:** `_bLaneSafe` 를 서명 분리(`runLane(SceneJobContext&)` / `runMain`)로 바꾸고, `SW_SCENE_SERVICE` 의 접근 선언을 필수로, `SceneDataKind` 를 64 비트로. 컨텍스트는 명령 버퍼만 노출한다(틱 안 구조 변경을 형식으로 막는다). 레인 선언과 실제 일의 어긋남(Batch 가 메인 전용 API · 남의 오브젝트 직접 쓰기)도 여기서 막는다. `TickLanesTest` 를 그대로 통과해야 한다.
+2. **잡 컨텍스트 형식 — 프레임 시스템은 들어갔다:** `ISceneMainFrameSystem::runMain` / `ISceneLaneFrameSystem::runLane( SceneJobContext& )`(매니저 읽기 전용 + 틱 뒤 큐), `SceneDataKindSet` 64 비트. 남은 것: (a) **컴포넌트 틱의 컨텍스트** — Batch 레인의 `onTick` 도 같은 형식(읽기 전용 남의 오브젝트 + 명령 버퍼)으로 받아 남의 컴포넌트 직접 쓰기(결함 후보 2 · `setCanEverTick` 비트필드)를 컴파일에서 막는다. 102 개 타입의 서명이 바뀌므로 생성기(5-4)의 `TickBatchOf` 호출과 함께 옮긴다. (b) `SW_SCENE_SERVICE` 의 접근 선언 필수화 — 지금 접근 선언은 프레임 일(`SW_SCENE_SERVICE_WITH_FRAME_JOB`)만 읽으므로, 단계 본문의 접근을 쓰는 곳(서비스 병렬화)을 먼저 정해야 의미가 있다.
 3. **물리 Export · 지연 이벤트:** `PhysicsPoseStore` 이중 버퍼를 병렬로 읽고 `applyTransformBatch` 로 일괄 쓴다(지금은 바디마다 백엔드 3 호출 + 세터). 충돌 배달은 `Physics` 단계 안 동기 가상 호출 대신 `FlushPostPhysics` 서비스로.
-4. **Jolt 조임 · 물리 훅 배치:** `JoltJobSystem::QueueJob` 의 인라인 실행 폴백(태스크를 못 내면 그 자리에서 실행)을 지우고, `WaitForJobs` 가 `yield` 대신 돕기로 기다린다(Jolt 판의 `JobSystemWithBarrier` 문서를 context7 로 먼저 본다). 물리 훅 4 종을 배치 함수 + 명령 저장소로.
+4. **물리 훅 배치:** Jolt 조임(인라인 실행 폴백 삭제 · `WaitForJobs` 돕기)은 들어갔다. 물리 훅 4 종을 배치 함수 + 명령 저장소로.
 5. **`ComponentDataStore<T>`:** 트랜스폼 SoA 페이지를 템플릿으로 일반화한다. 첫 사용자는 강체 자세 · 명령, 투사체.
 6. **엔진 공간 색인:** `SceneSpatialGrid` 서비스(월드 버전으로 증분, 이중 버퍼 읽기). GF `InteractionSpatialIndex` · `ZoneOccupantIndex` 는 읽기만. `TagIndex` 는 세대 스냅샷으로.
 7. W-S4 허브 해체(5-1).
