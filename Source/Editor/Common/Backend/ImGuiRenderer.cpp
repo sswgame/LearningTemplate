@@ -276,6 +276,18 @@ namespace sw::editor
             for ( size_t slotIndex = 0; slotIndex < _listTextureSlot.size(); ++slotIndex )
             {
                 TextureSlot& slot = _listTextureSlot[slotIndex];
+                // 패널 텍스처는 그 텍스처의 파괴가 번호를 놓는다 — 렌더 타깃을 다시 만들면(창 크기 변경) 칸이 놓인 번호를 들고 있다가 그 번호를 걸었다(GL "index N is not a registered
+                // texture"). 매 프레임 살아 있는지 묻고, 파괴됐으면 번호 · 캐시를 버리고 이번 프레임은 그리지 않는다(다음 UI 프레임이 새 텍스처로 칸을 받는다).
+                const bool bForeignGone = slot._bInUse && slot._bOwned == false && slot._srv != kInvalidDescriptorIndex && slot._texture != 0 &&
+                                          device.getResourceFactory()->isTextureReadyToSample( slot._texture ) == false;
+                if ( bForeignGone )
+                {
+                    _mapForeignSRV.erase( slot._texture );
+                    _listFrameSRV[slotIndex] = kInvalidDescriptorIndex;
+                    slot._srv                = kInvalidDescriptorIndex;
+                    slot._texture            = 0;
+                    continue;
+                }
                 if ( slot._bInUse && slot._srv == kInvalidDescriptorIndex && slot._texture != 0 )
                 {
                     // 패널 텍스처는 텍스처마다 한 번만 등록한다 — 번호는 텍스처의 파괴가 놓으므로, 다시 열 때마다 등록하면 텍스처가 사는 동안 번호가 쌓인다.
