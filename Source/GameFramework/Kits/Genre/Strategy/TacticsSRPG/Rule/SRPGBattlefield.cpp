@@ -171,7 +171,7 @@ namespace sw
             return;
         }
         _turn = 1;
-        pushEvent( SRPGEvent{ constant::invalid_index::kInt32, constant::invalid_index::kInt32, _turn, SRPGEvent::Kind::TurnStarted, SRPGTeam::Player } );
+        pushEvent( SRPGEvent{ nullopt, nullopt, _turn, SRPGEvent::Kind::TurnStarted, SRPGTeam::Player } );
         for ( int32 team = 0; team < kSRPGTeamCount; ++team )
         {
             if ( countAlive( static_cast<SRPGTeam>( team ) ) > 0 )
@@ -235,7 +235,7 @@ namespace sw
             if ( unit._team == team && unit._bAlive == SW_TRUE )
                 resetUnitTurn( unit );
         }
-        pushEvent( SRPGEvent{ constant::invalid_index::kInt32, constant::invalid_index::kInt32, _turn, SRPGEvent::Kind::PhaseStarted, team } );
+        pushEvent( SRPGEvent{ nullopt, nullopt, _turn, SRPGEvent::Kind::PhaseStarted, team } );
     }
 
     void SRPGBattlefield::advancePhase()
@@ -250,7 +250,7 @@ namespace sw
             if ( team == 0 )
             {
                 ++_turn;
-                pushEvent( SRPGEvent{ constant::invalid_index::kInt32, constant::invalid_index::kInt32, _turn, SRPGEvent::Kind::TurnStarted, SRPGTeam::Player } );
+                pushEvent( SRPGEvent{ nullopt, nullopt, _turn, SRPGEvent::Kind::TurnStarted, SRPGTeam::Player } );
             }
             if ( countAlive( static_cast<SRPGTeam>( team ) ) > 0 )
             {
@@ -283,7 +283,7 @@ namespace sw
             if ( _turnOrder.getRound() > _turn )
             {
                 _turn = _turnOrder.getRound();
-                pushEvent( SRPGEvent{ constant::invalid_index::kInt32, constant::invalid_index::kInt32, _turn, SRPGEvent::Kind::TurnStarted, SRPGTeam::Player } );
+                pushEvent( SRPGEvent{ nullopt, nullopt, _turn, SRPGEvent::Kind::TurnStarted, SRPGTeam::Player } );
             }
             if ( pUnit == nullptr || pUnit->_bAlive == SW_FALSE )
             {
@@ -293,7 +293,7 @@ namespace sw
             resetUnitTurn( *pUnit );
             _activeUnit = unitIndex;
             _phaseTeam  = pUnit->_team;
-            pushEvent( SRPGEvent{ unitIndex, constant::invalid_index::kInt32, _turn, SRPGEvent::Kind::UnitTurnStarted, pUnit->_team } );
+            pushEvent( SRPGEvent{ unitIndex, nullopt, _turn, SRPGEvent::Kind::UnitTurnStarted, pUnit->_team } );
             return;
         }
     }
@@ -407,7 +407,7 @@ namespace sw
         unit._bMoved      = SW_TRUE;
         if ( _settings._bMoveDodge == SW_TRUE )
             unit._dodge = MathUtil::min( _settings._dodgeMax, steps * _settings._dodgePerCell );
-        pushEvent( SRPGEvent{ unitIndex, constant::invalid_index::kInt32, steps, SRPGEvent::Kind::Moved, unit._team } );
+        pushEvent( SRPGEvent{ unitIndex, nullopt, steps, SRPGEvent::Kind::Moved, unit._team } );
         return true;
     }
 
@@ -552,9 +552,9 @@ namespace sw
         if ( bCannotGrantXP )
             return;
         if ( pUnit->_pilotLevel.addXP( _pCatalog->getPilotCurve(), amount ) > 0 )
-            pushEvent( SRPGEvent{ unitIndex, constant::invalid_index::kInt32, pUnit->_pilotLevel.getLevel(), SRPGEvent::Kind::PilotLevelUp, pUnit->_team } );
+            pushEvent( SRPGEvent{ unitIndex, nullopt, pUnit->_pilotLevel.getLevel(), SRPGEvent::Kind::PilotLevelUp, pUnit->_team } );
         if ( pUnit->_unitLevel.addXP( _pCatalog->getUnitCurve(), amount ) > 0 )
-            pushEvent( SRPGEvent{ unitIndex, constant::invalid_index::kInt32, pUnit->_unitLevel.getLevel(), SRPGEvent::Kind::UnitLevelUp, pUnit->_team } );
+            pushEvent( SRPGEvent{ unitIndex, nullopt, pUnit->_unitLevel.getLevel(), SRPGEvent::Kind::UnitLevelUp, pUnit->_team } );
     }
 
     void SRPGBattlefield::pollEvents( const ConsumerLease& lease, vector<SRPGEvent>& outListEvent )
@@ -655,7 +655,7 @@ namespace sw
         unit._pDef     = _pCatalog->findUnit( targetUnitID );
         unit._unitLevel.setLevel( _pCatalog->getUnitCurve(), 1 );
         refillUnit( unit );
-        pushEvent( SRPGEvent{ unitIndex, constant::invalid_index::kInt32, 0, SRPGEvent::Kind::Developed, unit._team } );
+        pushEvent( SRPGEvent{ unitIndex, nullopt, 0, SRPGEvent::Kind::Developed, unit._team } );
         return true;
     }
 

@@ -9,6 +9,7 @@
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -88,10 +89,10 @@ namespace sw
             Expired,
             PickedUp ///< `_player` 가 주운 사람이다
         };
-        hashed_string _itemID{};
-        int32         _serial{ 0 };
-        int32         _player{ constant::invalid_index::kInt32 };
-        Kind          _kind{ Kind::Spawned };
+        hashed_string   _itemID{};
+        int32           _serial{ 0 };
+        optional<int32> _player{};
+        Kind            _kind{ Kind::Spawned };
     };
 } // namespace sw
 

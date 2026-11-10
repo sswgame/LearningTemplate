@@ -427,7 +427,7 @@ namespace sw
         _currentBet    = 0;
         _lastRaiseSize = _settings._bigBlind;
         dealBoard( street == PokerStreet::Flop ? 3 : 1 );
-        _eventBuffer.push( PokerEvent{ constant::invalid_index::kInt32, static_cast<int32>( street ), PokerEvent::Kind::Street } );
+        _eventBuffer.push( PokerEvent{ nullopt, static_cast<int32>( street ), PokerEvent::Kind::Street } );
     }
 
     void PokerTable::dealBoard( int32 count )

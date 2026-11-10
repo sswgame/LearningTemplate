@@ -158,9 +158,9 @@ namespace sw
             Flood,
             GoodsDelivered
         };
-        int32 _value{ 0 }; ///< 달 끝은 번 돈, 진화는 새 단계, 범람은 비옥함(%)이다
-        int32 _building{ constant::invalid_index::kInt32 };
-        Kind  _kind{ Kind::MonthEnded };
+        int32           _value{ 0 }; ///< 달 끝은 번 돈, 진화는 새 단계, 범람은 비옥함(%)이다
+        optional<int32> _building{};
+        Kind            _kind{ Kind::MonthEnded };
     };
 } // namespace sw
 

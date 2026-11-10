@@ -214,7 +214,7 @@ namespace sw
                 (void)_discardPile.drawInto( _drawPile, _discardPile.getCount() );
                 _drawPile.shuffle( _random );
                 _discardPile.push( top );
-                _eventBuffer.push( UnoEvent{ constant::invalid_index::kInt32, _drawPile.getCount(), Card::kNoCard, UnoEvent::Kind::Reshuffled } );
+                _eventBuffer.push( UnoEvent{ nullopt, _drawPile.getCount(), Card::kNoCard, UnoEvent::Kind::Reshuffled } );
             }
             Card card;
             if ( _drawPile.draw( card ) == false )

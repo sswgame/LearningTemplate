@@ -113,9 +113,9 @@ namespace sw
             Street, ///< `_amount` 는 새 스트리트(PokerStreet)이다
             Win     ///< `_seat` 와 `_amount` 를 쓰며, `_amount` 는 받은 칩이다
         };
-        int32 _seat{ constant::invalid_index::kInt32 };
-        int32 _amount{ 0 };
-        Kind  _kind{ Kind::Blind };
+        optional<int32> _seat{};
+        int32           _amount{ 0 };
+        Kind            _kind{ Kind::Blind };
     };
 } // namespace sw
 

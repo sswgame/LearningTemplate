@@ -1018,13 +1018,13 @@ namespace sw
         else if ( _pWallet != nullptr && income < wages )
             _pWallet->charge( _settings._currency, wages - income );
         _monthIncome = income - wages;
-        _eventBuffer.push( CityEvent{ _monthIncome, constant::invalid_index::kInt32, CityEvent::Kind::MonthEnded } );
+        _eventBuffer.push( CityEvent{ _monthIncome, nullopt, CityEvent::Kind::MonthEnded } );
 
         if ( bNewYear )
         {
             // 범람: 해마다 다르다(40 % ... 100 %). 범람원 농장의 다음 한 해 생산량을 정한다.
             _floodFertility = _random.nextRange( 0.4f, 1.0f );
-            _eventBuffer.push( CityEvent{ static_cast<int32>( _floodFertility * 100.0f ), constant::invalid_index::kInt32, CityEvent::Kind::Flood } );
+            _eventBuffer.push( CityEvent{ static_cast<int32>( _floodFertility * 100.0f ), nullopt, CityEvent::Kind::Flood } );
         }
     }
 

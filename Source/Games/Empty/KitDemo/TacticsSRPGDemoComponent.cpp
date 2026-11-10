@@ -213,16 +213,16 @@ namespace sw
         for ( const SRPGEvent& event : _listEvent )
         {
             if ( event._kind == SRPGEvent::Kind::Destroyed )
-                SW_LOG_INFO_ID( "KitDemo.TacticsDestroyed", "[KitDemo] tactics: unit %# destroyed by %#", event._unit, event._other );
+                SW_LOG_INFO_ID( "KitDemo.TacticsDestroyed", "[KitDemo] tactics: unit %# destroyed by %#", event._unit.value(), event._other.has_value() ? to_string( *event._other ).c_str() : "nothing" );
             else if ( event._kind == SRPGEvent::Kind::PhaseStarted )
                 SW_LOG_INFO_ID( "KitDemo.TacticsPhase", "[KitDemo] tactics: turn %# - %# phase", _field.getTurn(), static_cast<int32>( event._team ) );
             if ( event._kind == SRPGEvent::Kind::Hit )
-                cause = "hit unit " + to_string( event._other );
+                cause = "hit unit " + to_string( event._other.value() );
             else if ( event._kind == SRPGEvent::Kind::Destroyed )
-                cause = "destroyed unit " + to_string( event._unit );
+                cause = "destroyed unit " + to_string( event._unit.value() );
             const bool bLevelUp = event._kind == SRPGEvent::Kind::PilotLevelUp || event._kind == SRPGEvent::Kind::UnitLevelUp;
             if ( bLevelUp )
-                _growthLog.record( GrowthEventKind::LevelUp, "unit " + to_string( event._unit ), event._kind == SRPGEvent::Kind::PilotLevelUp ? "pilot" : "unit", event._value, cause );
+                _growthLog.record( GrowthEventKind::LevelUp, "unit " + to_string( event._unit.value() ), event._kind == SRPGEvent::Kind::PilotLevelUp ? "pilot" : "unit", event._value, cause );
         }
         if ( _field.countAlive( SRPGTeam::Enemy ) == 0 )
         {

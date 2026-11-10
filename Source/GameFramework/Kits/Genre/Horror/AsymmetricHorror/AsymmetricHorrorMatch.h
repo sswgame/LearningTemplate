@@ -15,6 +15,7 @@
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -205,11 +206,11 @@ namespace sw
             LockerGrab,
             MatchEnded ///< `_value` 는 희생 수, `_target` 은 탈출 수이다
         };
-        float3  _position{};
-        float32 _value{ 0.0f };
-        int32   _actor{ constant::invalid_index::kInt32 };
-        int32   _target{ constant::invalid_index::kInt32 };
-        Kind    _kind{ Kind::Hit };
+        float3          _position{};
+        float32         _value{ 0.0f };
+        optional<int32> _actor{};
+        optional<int32> _target{};
+        Kind            _kind{ Kind::Hit };
     };
 } // namespace sw
 
@@ -386,7 +387,7 @@ namespace sw
          */
         [[nodiscard]] bool isStateConsistent() const;
         void               makeNoise( int32 survivor, float32 radius, const float3& position );
-        void               pushEvent( AsymmetricHorrorEvent::Kind kind, int32 actor, int32 target, float32 value, const float3& position );
+        void               pushEvent( AsymmetricHorrorEvent::Kind kind, optional<int32> actor, optional<int32> target, float32 value, const float3& position );
 
     private:
         AsymmetricHorrorMatchSettings       _settings;

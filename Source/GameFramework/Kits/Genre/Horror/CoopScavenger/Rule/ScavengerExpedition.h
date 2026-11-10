@@ -8,6 +8,7 @@
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -92,11 +93,11 @@ namespace sw
             QuotaMet,      ///< `_value` 는 새 할당량이다
             GameOver
         };
-        hashed_string _id{};
-        int32         _player{ constant::invalid_index::kInt32 };
-        int32         _value{ 0 };
-        Kind          _kind{ Kind::Routed };
-        uint8         _bIndoor{ SW_FALSE };
+        hashed_string   _id{};
+        optional<int32> _player{};
+        int32           _value{ 0 };
+        Kind            _kind{ Kind::Routed };
+        uint8           _bIndoor{ SW_FALSE };
     };
 } // namespace sw
 
@@ -209,7 +210,7 @@ namespace sw
         void    loseScrapOnWipe();
         void    resetCrew();
         void    collectThreatEvents( SpawnDirector& director, bool bIndoor );
-        void    pushEvent( ScavengerEvent::Kind kind, int32 player, int32 value, const hashed_string& id = hashed_string{} );
+        void    pushEvent( ScavengerEvent::Kind kind, optional<int32> player, int32 value, const hashed_string& id = hashed_string{} );
 
     private:
         vector<ScavengerCrewMember> _listCrew;

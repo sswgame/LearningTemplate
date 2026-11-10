@@ -144,10 +144,10 @@ namespace sw
             MatchEnd  ///< `_value` 는 이긴 쪽
         };
 
-        hashed_string _moveID{};
-        int32         _player{ constant::invalid_index::kInt32 }; ///< 이벤트와 관련된 플레이어(공격하거나 발동한 쪽)
-        int32         _value{ 0 };
-        Kind          _kind{ Kind::MoveStarted };
+        hashed_string   _moveID{};
+        optional<int32> _player{}; ///< 이벤트와 관련된 플레이어(공격하거나 발동한 쪽)
+        int32           _value{ 0 };
+        Kind            _kind{ Kind::MoveStarted };
     };
 } // namespace sw
 
@@ -374,7 +374,7 @@ namespace sw
         void  enterState( int32 player, FighterState state, int32 frames );
         void  resetCombo( int32 player );
         void  endRound( int32 winner, FightingEvent::Kind reason );
-        void  pushEvent( FightingEvent::Kind kind, int32 player, int32 value, const hashed_string& moveID = hashed_string() );
+        void  pushEvent( FightingEvent::Kind kind, optional<int32> player, int32 value, const hashed_string& moveID = hashed_string() );
         /** @brief 읽은 타임라인에 기술 정의를 다시 붙이고 이벤트를 비웁니다. `validateState` 를 통과한 상태에만 부릅니다. */
         void completeLoad();
 

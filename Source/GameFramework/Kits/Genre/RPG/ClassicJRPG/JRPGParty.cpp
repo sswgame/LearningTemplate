@@ -184,7 +184,7 @@ namespace sw
         if ( gold > 0 && _pWallet != nullptr )
         {
             _pWallet->add( Wallet::getDefaultCurrency(), gold );
-            pushEvent( JRPGPartyEvent::Kind::GoldGained, constant::invalid_index::kInt32, static_cast<int32>( gold ) );
+            pushEvent( JRPGPartyEvent::Kind::GoldGained, nullopt, static_cast<int32>( gold ) );
         }
         const int32 aliveCount = countAlive();
         if ( aliveCount <= 0 || exp <= 0 )
@@ -212,7 +212,7 @@ namespace sw
             member._hp = member.getStat( JRPGStat::MaxHP );
             member._mp = member.getStat( JRPGStat::MaxMP );
         }
-        pushEvent( JRPGPartyEvent::Kind::Rested, constant::invalid_index::kInt32, static_cast<int32>( price ) );
+        pushEvent( JRPGPartyEvent::Kind::Rested, nullopt, static_cast<int32>( price ) );
         return true;
     }
 
@@ -430,7 +430,7 @@ namespace sw
         }
     }
 
-    void JRPGParty::pushEvent( JRPGPartyEvent::Kind kind, int32 memberIndex, int32 value, const hashed_string& id )
+    void JRPGParty::pushEvent( JRPGPartyEvent::Kind kind, optional<int32> memberIndex, int32 value, const hashed_string& id )
     {
         JRPGPartyEvent event;
         event._kind        = kind;

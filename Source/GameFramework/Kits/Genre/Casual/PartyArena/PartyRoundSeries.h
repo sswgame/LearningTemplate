@@ -9,6 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -51,11 +52,11 @@ namespace sw
             RoundRanked,      ///< `_player` 는 사람, `_value` 는 순위(1부터), `_points` 는 받은 순위 점수이다
             SeriesWon         ///< `_player` 는 우승한 사람이다
         };
-        hashed_string _roundID{};
-        int32         _player{ constant::invalid_index::kInt32 };
-        int32         _value{ 0 };
-        int32         _points{ 0 };
-        Kind          _kind{ Kind::RoundStarted };
+        hashed_string   _roundID{};
+        optional<int32> _player{};
+        int32           _value{ 0 };
+        int32           _points{ 0 };
+        Kind            _kind{ Kind::RoundStarted };
     };
 } // namespace sw
 
@@ -114,7 +115,7 @@ namespace sw
     private:
         static constexpr const utf8* kXMLRootName = "PartySeries"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
-        void                         pushEvent( PartySeriesEvent::Kind kind, int32 player, int32 value, int32 points );
+        void                         pushEvent( PartySeriesEvent::Kind kind, optional<int32> player, int32 value, int32 points );
 
     private:
         vector<PartyRoundDef>         _listRound;

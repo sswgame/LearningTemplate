@@ -816,7 +816,7 @@ SW_TEST_CASE( PartyArenaTest, SpawnerPicksUpTheNearest )
     vector<PartyItemEvent> listEvent;
     spawner.pollEvents( listEvent );
     SW_REQUIRE_EQUAL( 1, PartyArenaTestUtil::countEvents( listEvent, PartyItemEvent::Kind::PickedUp ) );
-    SW_EXPECT_EQUAL( 3, listEvent.back()._player );
+    SW_EXPECT_TRUE( listEvent.back()._player == 3 );
 }
 
 /**
@@ -964,8 +964,8 @@ SW_TEST_CASE( PartyArenaTest, SeriesRanksRoundsAndFindsAWinner )
         if ( event._kind != PartySeriesEvent::Kind::RoundRanked )
             continue;
         SW_EXPECT_TRUE( event._roundID == hashed_string( "a" ) ); // 끝난 라운드의 id
-        SW_EXPECT_EQUAL( event._player + 1, event._value );
-        SW_EXPECT_EQUAL( 3 - event._player, event._points );
+        SW_EXPECT_EQUAL( event._player.value() + 1, event._value );
+        SW_EXPECT_EQUAL( 3 - event._player.value(), event._points );
     }
 
     SW_REQUIRE_TRUE( series.reportRound( { 10, 5, 1 } ) );
