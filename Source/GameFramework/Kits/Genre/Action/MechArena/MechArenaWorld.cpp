@@ -512,7 +512,7 @@ namespace sw
                 for ( int32 pilot = 0; pilot < getPilotCount(); ++pilot )
                 {
                     const MechPilot& target         = _listPilot[static_cast<size_t>( pilot )];
-                    const bool       bWaitingOnThis = target._state == MechPilotState::Destroyed && target._listParticipant[static_cast<size_t>( target._deckIndex )] == event._participant;
+                    const bool       bWaitingOnThis = target._state == MechPilotState::Destroyed && event._participant == target._listParticipant[static_cast<size_t>( target._deckIndex )];
                     if ( bWaitingOnThis )
                         spawnPilot( pilot, true );
                 }
@@ -522,7 +522,7 @@ namespace sw
                 // 셋 이상의 판에서 게이지가 바닥난 팀은 판이 끝나지 않아도 진 것이다. 내리지 않으면 격추된 조종사가 오지 않을 부활을 기다리고 남은 조종사는 계속 싸웠다.
                 for ( MechPilot& pilot : _listPilot )
                 {
-                    if ( pilot._team == event._team )
+                    if ( event._team == pilot._team )
                         retirePilot( pilot );
                 }
             }

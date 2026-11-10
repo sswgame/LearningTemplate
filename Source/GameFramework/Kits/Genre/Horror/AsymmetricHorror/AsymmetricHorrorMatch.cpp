@@ -694,7 +694,7 @@ namespace sw
         leaveActivity( victim );
         _killer._attackCooldown.start( def._hitCooldown );
         _match.reportDamage( _killer._participant, target._participant, 1.0f );
-        (void)target._healthMachine.applyDamage( 1.0f, 0.0f, constant::invalid_index::kInt32 ); // 결과는 아래 pollEvents 가 이벤트로 읽는다
+        (void)target._healthMachine.applyDamage( 1.0f, 0.0f, nullopt ); // 결과는 아래 pollEvents 가 이벤트로 읽는다
         target._healthMachine.discardEvents();
         awardScore( _killer._score, "Hit", 1.0f );
         if ( target._healthMachine.isDowned() )
@@ -823,7 +823,7 @@ namespace sw
         releaseHealers( occupant, true );
         while ( target._healthMachine.isAlive() )
         {
-            (void)target._healthMachine.applyDamage( 1.0f, 0.0f, constant::invalid_index::kInt32 ); // 결과는 아래 pollEvents 가 이벤트로 읽는다
+            (void)target._healthMachine.applyDamage( 1.0f, 0.0f, nullopt ); // 결과는 아래 pollEvents 가 이벤트로 읽는다
         }
         target._healthMachine.discardEvents();
         target._state          = SurvivorState::Carried;
@@ -945,7 +945,7 @@ namespace sw
     void AsymmetricHorrorMatch::restoreInjured( AsymmetricHorrorSurvivor& survivor )
     {
         survivor._healthMachine.respawn();
-        (void)survivor._healthMachine.applyDamage( 1.0f, 0.0f, constant::invalid_index::kInt32 ); // 결과는 아래 pollEvents 가 이벤트로 읽는다
+        (void)survivor._healthMachine.applyDamage( 1.0f, 0.0f, nullopt ); // 결과는 아래 pollEvents 가 이벤트로 읽는다
         survivor._healthMachine.discardEvents();
         survivor._state          = SurvivorState::Injured;
         survivor._wiggleProgress = 0.0f;
@@ -961,7 +961,7 @@ namespace sw
         releaseHealers( survivorIndex, true );
         if ( _killer._carrying == survivorIndex )
             _killer._carrying = constant::invalid_index::kInt32;
-        survivor._healthMachine.kill( constant::invalid_index::kInt32 );
+        survivor._healthMachine.kill( nullopt );
         survivor._healthMachine.discardEvents();
         survivor._state    = SurvivorState::Sacrificed;
         survivor._bBledOut = bBledOut ? SW_TRUE : SW_FALSE;

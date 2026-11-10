@@ -15,6 +15,9 @@ namespace sw
 {
     namespace
     {
+        /** @brief 상태 바이트에 적는 "때린 쪽 없음"입니다(저장 형식이라 번호 칸에 -1 로 남긴다 — 언리얼 `INDEX_NONE`). */
+        constexpr int32 kNoInstigator = constant::invalid_index::kInt32;
+
         /** @brief 이번 걸음 중 지연이 끝난 뒤의 시간입니다(@p elapsed 는 이번 걸음을 더한 뒤의 값). */
         float32 computeRegenTime( float32 elapsed, float32 delay, float32 deltaTime )
         {
@@ -39,7 +42,7 @@ namespace sw
         , _reviveElapsed{ 0.0f }
         , _reviveSpeedScale{ 1.0f }
         , _reviverID{ constant::invalid_index::kInt32 }
-        , _lastInstigatorID{ constant::invalid_index::kInt32 }
+        , _lastInstigatorID{}
         , _downCount{ 0 }
         , _state{ LifeState::Alive }
         , _bReviving{ SW_FALSE }
@@ -89,7 +92,7 @@ namespace sw
         _reviveSpeedScale = 1.0f;
         _reviverID        = constant::invalid_index::kInt32;
         _bReviving        = SW_FALSE;
-        _lastInstigatorID = constant::invalid_index::kInt32;
+        _lastInstigatorID = nullopt;
     }
 
     void HealthStateMachine::setMaxHealth( float32 maxHealth, bool bFill )
@@ -102,13 +105,13 @@ namespace sw
             const float32 healed = maxHealth - _health;
             _health              = maxHealth;
             if ( healed > 0.0f )
-                pushEvent( HealthEventType::Healed, healed, constant::invalid_index::kInt32 );
+                pushEvent( HealthEventType::Healed, healed, nullopt );
             return;
         }
         _health = MathUtil::min( _health, maxHealth );
     }
 
-    HealthDamageResult HealthStateMachine::applyDamage( float32 amount, float32 poiseDamage, int32 instigatorID )
+    HealthDamageResult HealthStateMachine::applyDamage( float32 amount, float32 poiseDamage, optional<int32> instigatorID )
     {
         HealthDamageResult result;
         amount      = MathUtil::max( 0.0f, amount );
@@ -194,7 +197,7 @@ namespace sw
         const float32 healed = MathUtil::min( amount, _settings._maxHealth - _health );
         _health += healed;
         if ( healed > 0.0f )
-            pushEvent( HealthEventType::Healed, healed, constant::invalid_index::kInt32 );
+            pushEvent( HealthEventType::Healed, healed, nullopt );
         return healed;
     }
 
@@ -242,7 +245,7 @@ namespace sw
             {
                 _poise                = _settings._poiseMax;
                 _timeSincePoiseDamage = 0.0f;
-                pushEvent( HealthEventType::PoiseRecovered, 0.0f, constant::invalid_index::kInt32 );
+                pushEvent( HealthEventType::PoiseRecovered, 0.0f, nullopt );
             }
             return;
         }
@@ -283,7 +286,7 @@ namespace sw
         _invulnerable.extendTo( seconds );
     }
 
-    void HealthStateMachine::kill( int32 instigatorID )
+    void HealthStateMachine::kill( optional<int32> instigatorID )
     {
         if ( _state == LifeState::Dead )
             return;
@@ -307,7 +310,7 @@ namespace sw
         return MathUtil::saturate( _reviveElapsed / _settings._reviveTime );
     }
 
-    void HealthStateMachine::enterDowned( int32 instigatorID )
+    void HealthStateMachine::enterDowned( optional<int32> instigatorID )
     {
         _state        = LifeState::Downed;
         _health       = 0.0f;
@@ -321,7 +324,7 @@ namespace sw
         pushEvent( HealthEventType::Downed, 0.0f, instigatorID );
     }
 
-    void HealthStateMachine::enterDead( int32 instigatorID )
+    void HealthStateMachine::enterDead( optional<int32> instigatorID )
     {
         _state        = LifeState::Dead;
         _health       = 0.0f;
@@ -351,7 +354,7 @@ namespace sw
         pushEvent( HealthEventType::Revived, _health, reviverID );
     }
 
-    void HealthStateMachine::pushEvent( HealthEventType type, float32 amount, int32 instigatorID )
+    void HealthStateMachine::pushEvent( HealthEventType type, float32 amount, optional<int32> instigatorID )
     {
         HealthEvent event;
         event._type         = type;
@@ -380,7 +383,10 @@ namespace sw
         io.value( _reviveElapsed );
         io.value( _reviveSpeedScale );
         io.value( _reviverID );
-        io.value( _lastInstigatorID );
+        int32 lastInstigatorID = _lastInstigatorID.value_or( kNoInstigator );
+        io.value( lastInstigatorID );
+        if ( io.isReading() )
+            _lastInstigatorID = lastInstigatorID == kNoInstigator ? nullopt : optional<int32>( lastInstigatorID );
         io.value( _downCount );
         io.enumValue( _state, LifeState::Dead );
         io.flag( _bReviving );

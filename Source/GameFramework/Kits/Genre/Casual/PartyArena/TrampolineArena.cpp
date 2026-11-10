@@ -232,8 +232,8 @@ namespace sw
         _match.update( deltaTime );
         for ( const MatchEvent& event : _match.takeEvents() )
         {
-            if ( event._kind == MatchEvent::Kind::Respawned && isValidPlayer( event._participant ) )
-                respawn( event._participant );
+            if ( event._kind == MatchEvent::Kind::Respawned && event._participant.has_value() && isValidPlayer( *event._participant ) )
+                respawn( *event._participant );
         }
         for ( TrampolinePlayer& body : _listPlayer )
         {

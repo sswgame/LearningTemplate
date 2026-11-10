@@ -101,7 +101,7 @@ namespace sw
     struct HealthEvent
     {
         float32         _amount{ 0.0f };
-        int32           _instigatorID{ constant::invalid_index::kInt32 };
+        optional<int32> _instigatorID{}; ///< 없으면 환경(자기장 · 낙사)이나 회복
         HealthEventType _type{ HealthEventType::Damaged };
     };
 } // namespace sw
@@ -153,9 +153,9 @@ namespace sw
 
         /**
          * @brief 피해를 줍니다. @p amount 는 실드 → 체력 순서, @p poiseDamage 는 경직 게이지에 갑니다.
-         * @param instigatorID 때린 쪽이다. 게임이 정한 번호이며 알림과 죽음 귀속에 실린다.
+         * @param instigatorID 때린 쪽이다. 게임이 정한 번호이며 알림과 죽음 귀속에 실린다. 없으면 환경이다.
          */
-        HealthDamageResult applyDamage( float32 amount, float32 poiseDamage = 0.0f, int32 instigatorID = -1 );
+        HealthDamageResult applyDamage( float32 amount, float32 poiseDamage = 0.0f, optional<int32> instigatorID = nullopt );
         /** @brief 체력을 최대까지 채웁니다. 살아 있을 때만 채우며, 실제로 찬 양을 반환합니다. */
         float32 heal( float32 amount );
         /** @brief 실드를 최대까지 채웁니다(실드 전지). 살아 있을 때만 채우며, 실제로 찬 양을 반환합니다. */
@@ -184,7 +184,7 @@ namespace sw
          */
         bool ignoresDamage() const { return _state == LifeState::Dead || isInvulnerable() || isDamageImmune(); }
         /** @brief 상태를 가리지 않고 죽입니다. 낙사, 존 밖, 갈고리 희생에 씁니다. 이미 죽었으면 아무 일도 없습니다. */
-        void kill( int32 instigatorID = constant::invalid_index::kInt32 );
+        void kill( optional<int32> instigatorID = nullopt );
         void resetDownCount() { _downCount = 0; }
         /** @brief 쌓인 알림을 @p outListEvent 뒤에 붙이고 비웁니다. */
         void pollEvents( vector<HealthEvent>& outListEvent );
@@ -218,10 +218,10 @@ namespace sw
     private:
         /** @brief 범위를 본 뒤의 설정으로 상태를 비웁니다(`initialize` 와 기본 생성자가 부른다). */
         void applySettings( const HealthSettings& settings );
-        void enterDowned( int32 instigatorID );
-        void enterDead( int32 instigatorID );
+        void enterDowned( optional<int32> instigatorID );
+        void enterDead( optional<int32> instigatorID );
         void finishRevive();
-        void pushEvent( HealthEventType type, float32 amount, int32 instigatorID );
+        void pushEvent( HealthEventType type, float32 amount, optional<int32> instigatorID );
 
     private:
         HealthSettings           _settings;
@@ -237,7 +237,7 @@ namespace sw
         float32                  _reviveElapsed; ///< 배율을 곱해 쌓인 부활 시간
         float32                  _reviveSpeedScale;
         int32                    _reviverID;
-        int32                    _lastInstigatorID;
+        optional<int32>          _lastInstigatorID; ///< 상태 바이트에는 `kNoInstigator` 로 적는다
         int32                    _downCount;
         LifeState                _state;
         uint8                    _bReviving;
