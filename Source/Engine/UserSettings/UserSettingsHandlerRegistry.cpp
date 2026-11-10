@@ -3,6 +3,7 @@
 #include "Engine/UserSettings/UserSettingsHandlerRegistry.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Registry/RegistrationChain.h"
 
 #include "Engine/UserSettings/UserSettingsSchema.h"
 
@@ -12,12 +13,8 @@ namespace sw
     {
         struct UserSettingsHandlerRegistryInternal
         {
-            /** @brief 핸들러 묶음 등록자 목록의 머리입니다(함수 정적 — 정적 초기화 순서와 무관하다). */
-            static const UserSettingsHandlerSetRegistrar*& getRegistrarHead()
-            {
-                static const UserSettingsHandlerSetRegistrar* s_pHead = nullptr;
-                return s_pHead;
-            }
+            /** @brief 핸들러 묶음 등록자 사슬입니다(상수 초기화 — 정적 초기화 순서와 무관하다). */
+            static SW_DEFINE_REGISTRATION_CHAIN( getRegistrarChain, UserSettingsHandlerSetRegistrar )
         };
     } // namespace
 } // namespace sw
@@ -27,15 +24,13 @@ namespace sw
     UserSettingsHandlerSetRegistrar::UserSettingsHandlerSetRegistrar( const utf8* pName, RegisterFunction pRegister )
         : _pName{ pName }
         , _pRegister{ pRegister }
-        , _pNext{ nullptr }
+        , _pNext{ UserSettingsHandlerRegistryInternal::getRegistrarChain().pushFront( this ) }
     {
-        _pNext                                                  = UserSettingsHandlerRegistryInternal::getRegistrarHead();
-        UserSettingsHandlerRegistryInternal::getRegistrarHead() = this;
     }
 
     const UserSettingsHandlerSetRegistrar* UserSettingsHandlerSetRegistrar::getHead()
     {
-        return UserSettingsHandlerRegistryInternal::getRegistrarHead();
+        return UserSettingsHandlerRegistryInternal::getRegistrarChain().getHead();
     }
 
     void UserSettingsHandlerSetRegistrar::registerAll( UserSettingsHandlerRegistry& registry, vector<Subscription>& outListRegistration )

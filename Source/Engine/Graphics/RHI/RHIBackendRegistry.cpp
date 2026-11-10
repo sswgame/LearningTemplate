@@ -6,6 +6,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/Path/AbsolutePath.h"
+#include "Core/Registry/RegistrationChain.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
@@ -20,15 +21,11 @@ namespace sw
     {
         struct RHIBackendRegistryInternal
         {
-            /** @brief 정적 등록자 목록의 머리입니다(함수 정적 — 정적 초기화 순서와 무관하다). */
-            static const RHIStaticBackendRegistrar*& getStaticHead()
-            {
-                static const RHIStaticBackendRegistrar* s_pHead = nullptr;
-                return s_pHead;
-            }
+            /** @brief 정적 등록자 사슬입니다(상수 초기화 — 정적 초기화 순서와 무관하다). */
+            static SW_DEFINE_REGISTRATION_CHAIN( getStaticChain, RHIStaticBackendRegistrar )
 
 #if SW_WITH_DYNAMIC_MODULES
-            [[nodiscard]] static bool tryLoadBackendModule( RHIBackend backend, const utf8* pModuleBaseName )
+                [[nodiscard]] static bool tryLoadBackendModule( RHIBackend backend, const utf8* pModuleBaseName )
             {
                 RHIBackendRegistry& reg        = engine::getSubsystem<RHIBackendRegistry>();
                 const string        dllName    = ModuleLibraryUtil::formatSharedLibraryName( pModuleBaseName );
@@ -63,15 +60,13 @@ namespace sw
     RHIStaticBackendRegistrar::RHIStaticBackendRegistrar( RHIBackend backend, CreateFunction pCreate )
         : _backend{ backend }
         , _pCreate{ pCreate }
-        , _pNext{ nullptr }
+        , _pNext{ RHIBackendRegistryInternal::getStaticChain().pushFront( this ) }
     {
-        _pNext                                      = RHIBackendRegistryInternal::getStaticHead();
-        RHIBackendRegistryInternal::getStaticHead() = this;
     }
 
     const RHIStaticBackendRegistrar* RHIStaticBackendRegistrar::getHead()
     {
-        return RHIBackendRegistryInternal::getStaticHead();
+        return RHIBackendRegistryInternal::getStaticChain().getHead();
     }
 
     RHIBackendRegistry::RHIBackendRegistry()

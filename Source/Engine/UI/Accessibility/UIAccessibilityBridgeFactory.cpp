@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Registry/RegistrationChain.h"
+
 #include "Engine/UI/Accessibility/IUIAccessibilityBridge.h"
 
 namespace sw
@@ -8,12 +10,8 @@ namespace sw
     {
         struct UIAccessibilityBridgeFactoryInternal
         {
-            /** @brief 플랫폼 브리지 등록자 목록의 머리입니다(함수 정적 — 정적 초기화 순서와 무관하다). */
-            static const UIAccessibilityBridgeRegistrar*& getRegistrarHead()
-            {
-                static const UIAccessibilityBridgeRegistrar* s_pHead = nullptr;
-                return s_pHead;
-            }
+            /** @brief 플랫폼 브리지 등록자 사슬입니다(상수 초기화 — 정적 초기화 순서와 무관하다). */
+            static SW_DEFINE_REGISTRATION_CHAIN( getRegistrarChain, UIAccessibilityBridgeRegistrar )
         };
     } // namespace
 } // namespace sw
@@ -23,15 +21,13 @@ namespace sw
     UIAccessibilityBridgeRegistrar::UIAccessibilityBridgeRegistrar( const utf8* pName, CreateFunction pCreate )
         : _pName{ pName }
         , _pCreate{ pCreate }
-        , _pNext{ nullptr }
+        , _pNext{ UIAccessibilityBridgeFactoryInternal::getRegistrarChain().pushFront( this ) }
     {
-        _pNext                                                   = UIAccessibilityBridgeFactoryInternal::getRegistrarHead();
-        UIAccessibilityBridgeFactoryInternal::getRegistrarHead() = this;
     }
 
     const UIAccessibilityBridgeRegistrar* UIAccessibilityBridgeRegistrar::getHead()
     {
-        return UIAccessibilityBridgeFactoryInternal::getRegistrarHead();
+        return UIAccessibilityBridgeFactoryInternal::getRegistrarChain().getHead();
     }
 
     unique_ptr<IUIAccessibilityBridge> UIAccessibilityBridgeFactory::createForWindow( UISystem& ui, IWindow& window )

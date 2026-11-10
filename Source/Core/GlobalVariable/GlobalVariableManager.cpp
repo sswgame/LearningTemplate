@@ -822,14 +822,9 @@ namespace sw
         , _pModuleName{ pModuleName }
         , _typeSize{ typeSize }
         , _bTestOnly{ bTestOnly }
-        , _pNext{ getHead() }
+        , _pNext{ getChain().pushFront( this ) }
     {
-        getHead() = this;
     }
 
-    GlobalVariableRegistrar*& GlobalVariableRegistrar::getHead()
-    {
-        static GlobalVariableRegistrar* s_pHead{ nullptr };
-        return s_pHead;
-    }
+    SW_DEFINE_REGISTRATION_CHAIN( GlobalVariableRegistrar::getChain, GlobalVariableRegistrar )
 } // namespace sw

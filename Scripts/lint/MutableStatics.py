@@ -4,7 +4,7 @@
 Scripts/lint/MutableStatics.py
 
 가변 정적 저장소 — 함수 정적 변수, 이름공간 범위(익명 이름공간 · `static` · 이름 있는 이름공간)의 변수, 클래스의 `static` 데이터 멤버 — 를 두지 않는다.
-정적 등록 공통 틀(`SW_DEFINE_REGISTRATION_LIST` · `SW_DEFINE_LOCKED_REGISTRATION_LIST` · `SW_DEFINE_REGISTRATION_SLOT`)과 예외 표 `Config/Rules/Lint/MutableStaticExceptions.json` 의 자리만 허용한다.
+정적 등록 공통 틀(`SW_DEFINE_REGISTRATION_LIST` · `SW_DEFINE_LOCKED_REGISTRATION_LIST` · `SW_DEFINE_REGISTRATION_SLOT` · `SW_DEFINE_REGISTRATION_CHAIN`)과 예외 표 `Config/Rules/Lint/MutableStaticExceptions.json` 의 자리만 허용한다.
 
 **왜 린트인가.** 가변 정적은 합법 C++ 이라 형식으로 막지 못한다. 그런데 함수 정적이든 파일 범위든 가변 정적은 싱글턴이다(사용자 지적 2026-11-08 —
 함수 정적을 익명 이름공간 · atomic 전역으로 옮기는 것은 자리만 바꾼 같은 싱글턴이다): 런타임 상태 · 정책 · 신호 · 번호 발급기가 엔진 · 에디터 범위 밖에
@@ -13,7 +13,7 @@ Scripts/lint/MutableStatics.py
 같은 자리). 그 매크로들은 함수 정적을 `#define` 안에 두므로 이 검사에 잡히지 않는다 — 다른 매크로가 같은 일을 하지 않게 매크로 본문은 `kMacroHomes` 만 허용한다.
 
 허용(가변이 아니다): `const` · `constexpr` 값(포인터면 포인터 자체가 const), 참조, `thread_local`(스레드 자기 칸 — 공유 상태가 아니다), 함수 선언, `extern` 선언(정의 쪽을 본다).
-예외 표는 까닭(`_why`)이 필수다 — 침입형 정적 등록 머리(리플렉션처럼 할당 · 엔진보다 먼저 도는 경로)와 정말 프로세스 수명인 바닥(크래시 처리기 버퍼 ·
+예외 표는 까닭(`_why`)이 필수다 — 할당 · 엔진보다 먼저 도는 침입형 등록 머리도 틀(`SW_DEFINE_REGISTRATION_CHAIN`)로 두므로, 정말 프로세스 수명인 바닥(크래시 처리기 버퍼 ·
 퓨텍스 버킷 · 플랫폼 진입점의 앱 자리)만 적는다. 항목은 `파일` + `이름`(변수 이름)이고, 이름이 소스에서 사라진 항목도 오류다(표가 썩지 않게).
 
 `py -3 -m Scripts lint mutable-statics [--self-check]` 로 돌리고, 커밋 훅(`Rules.py` 표)이 돌린다.
@@ -34,8 +34,8 @@ from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 
 kExtensions = (".h", ".cpp", ".inl")
-# 함수 정적을 매크로 본문에 둘 수 있는 곳(두 틀의 정의 매크로)
-kMacroHomes = ("Source/Core/Registry/RegistrationList.h", "Source/Core/Registry/RegistrationSlot.h")
+# 함수 정적을 매크로 본문에 둘 수 있는 곳(세 틀의 정의 매크로)
+kMacroHomes = ("Source/Core/Registry/RegistrationList.h", "Source/Core/Registry/RegistrationSlot.h", "Source/Core/Registry/RegistrationChain.h")
 kExceptionFile = "Config/Rules/Lint/MutableStaticExceptions.json"
 kNamespaceHead = re.compile(r"(?:\bnamespace\b[^;{}()]*|extern\s+\"C\"\s*)$")
 kClassHead = re.compile(r"\b(?:class|struct|union)\b[^;{}()]*$")
@@ -242,13 +242,13 @@ def checkMutableStatics(projectRoot: Path) -> list[str]:
             if (relPath, name) in table:
                 used.add((relPath, name))
                 continue
-            listProblem.append(f"{relPath}:{line}: {kWhereText[where]} 가변 변수 `{statement}` — 주인 객체(서비스 · 매니저 · 디바이스 · 레지스트리)의 멤버로, 정적 등록이면 SW_DEFINE_REGISTRATION_LIST · SLOT 로, 정말 프로세스 바닥이면 {kExceptionFile} 에 까닭과 함께")
+            listProblem.append(f"{relPath}:{line}: {kWhereText[where]} 가변 변수 `{statement}` — 주인 객체(서비스 · 매니저 · 디바이스 · 레지스트리)의 멤버로, 정적 등록이면 SW_DEFINE_REGISTRATION_LIST · SLOT · CHAIN 으로, 정말 프로세스 바닥이면 {kExceptionFile} 에 까닭과 함께")
         if relPath not in kMacroHomes:
             for m in re.finditer(r"(?m)^[ \t]*#\s*define\b(?:.*\\\n)*.*", text):
                 if re.search(r"\bstatic\b(?!_assert|_cast)\s+(?!constexpr|const\b|inline\b)[\w:<>]+[^;\\]*\bs_\w+", m.group(0)) and "{" in m.group(0):
                     line = text.count("\n", 0, m.start()) + 1
                     if re.search(r"\)\s*\\?\s*\{", m.group(0)):
-                        listProblem.append(f"{relPath}:{line}: 매크로 본문의 함수 정적 가변 변수 — 정적 등록은 공통 틀 매크로(SW_DEFINE_REGISTRATION_LIST · SLOT)를 감싼다")
+                        listProblem.append(f"{relPath}:{line}: 매크로 본문의 함수 정적 가변 변수 — 정적 등록은 공통 틀 매크로(SW_DEFINE_REGISTRATION_LIST · SLOT · CHAIN)를 감싼다")
     for key in sorted(set(table) - used):
         listProblem.append(f"{kExceptionFile}: {key[0]} `{key[1]}` — 소스에 없는 예외 항목(지운다)")
     return listProblem
