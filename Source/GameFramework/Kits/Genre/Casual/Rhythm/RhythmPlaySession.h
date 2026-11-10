@@ -7,6 +7,7 @@
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -81,13 +82,13 @@ namespace sw
             Cleared,
             Failed
         };
-        hashed_string _grade{};
-        float32       _offset{ 0.0f }; ///< 누른 시각에서 판정 시각을 뺀 값이다(Miss 는 0)
-        int32         _noteIndex{ constant::invalid_index::kInt32 };
-        int32         _lane{ constant::invalid_index::kInt32 };
-        int32         _combo{ 0 };
-        Kind          _kind{ Kind::Judged };
-        uint8         _bTail{ SW_FALSE }; ///< 롱노트 끝 판정이다
+        hashed_string   _grade{};
+        float32         _offset{ 0.0f }; ///< 누른 시각에서 판정 시각을 뺀 값이다(Miss 는 0)
+        optional<int32> _noteIndex{};    ///< 판정한 노트(Judged 에만 있다)
+        optional<int32> _lane{};         ///< 누른 줄(Judged · EmptyPress 에만 있다)
+        int32           _combo{ 0 };
+        Kind            _kind{ Kind::Judged };
+        uint8           _bTail{ SW_FALSE }; ///< 롱노트 끝 판정이다
     };
 } // namespace sw
 
