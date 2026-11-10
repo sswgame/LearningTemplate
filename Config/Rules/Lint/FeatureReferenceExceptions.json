@@ -2,6 +2,7 @@
     "_folders": {},
     "_components": {},
     "_watches": {
+        "Editor.InspectorSkippedRows": "화면 밖 행 수는 창 높이 · 글꼴 · DPI 에 따라 달라 시나리오 값으로 흔들린다. 건너뛰기 판정은 단위 테스트 PropertyGridModelTest.OffscreenRowsCarryHeightOnly 가 보고, 통합 측정이 큰 그리드에서 이 값을 읽는다",
         "Editor.LoadingScreenShown": "에디터 체인에서는 앞 단계의 상태를 따라가 값으로 판정하면 흔들린다. 로딩 화면은 시나리오 loadingscreen 이 그림으로 본다",
         "Editor.NetPlayMeasuredLossPercent": "연결의 손실 값은 표본 창을 지나 부드럽게 오르고 netplay.stats 는 한 순간만 읽어 시나리오로 흔들린다. 손실 측정은 단위 테스트 NetEndpointTest 가 본다",
         "Animation.CrowdVertexAnimationMeshes": "아주 먼 군중의 정점 애니메이션을 켠 콘텐츠가 아직 없어 값이 늘 0 이다 - 그런 콘텐츠를 놓을 때 판정한다",

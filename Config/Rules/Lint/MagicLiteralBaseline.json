@@ -271,7 +271,7 @@
     "Source/Editor/Panels/InputMap/InputMapPanel.cpp": {"minus-one": 1, "float": 48, "integer": 2},
     "Source/Editor/Panels/InputMap/InputMapPanel.h": {"float": 2},
     "Source/Editor/Panels/Inspector/CameraComponentInspector.cpp": {"float": 9},
-    "Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp": {"minus-one": 8, "float": 2},
+    "Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp": {"minus-one": 2, "float": 2},
     "Source/Editor/Panels/Inspector/FloatCurvePropertyDrawer.cpp": {"float": 2},
     "Source/Editor/Panels/Inspector/InspectorPanel.cpp": {"float": 2, "integer": 1},
     "Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp": {"float": 16},

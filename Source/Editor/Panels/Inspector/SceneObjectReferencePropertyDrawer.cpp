@@ -10,6 +10,7 @@
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
 #include "Editor/Panels/Inspector/Model/PropertyGridModel.h"
+#include "Editor/Panels/Inspector/Model/PropertyGridViewState.h"
 #include "Editor/Panels/Inspector/Model/SceneObjectReferencePickerState.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
@@ -22,9 +23,9 @@ namespace sw::editor
         class SceneObjectReferencePropertyDrawer final : public IInspectorProperty
         {
         public:
-            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, PropertyGridModel& model ) override
+            bool draw( const PropertyValueRow& row, PropertyGridModel& model ) override
             {
-                if ( SceneObjectReferencePickerState::gatherPreview( instance, prop, _choices ) == false )
+                if ( SceneObjectReferencePickerState::gatherPreview( model, row._rowID, _choices ) == false )
                     return false;
                 const bool bWarn = _choices._bWarn == SW_TRUE;
                 if ( bWarn )
@@ -41,7 +42,7 @@ namespace sw::editor
                 if ( ImGui::Selectable( "(none)", bSet == false ) && bSet )
                     pPickedText = &_choices._noneText;
                 EditorSelfTestMarks::record( "inspector.sceneref.none" ); // 시나리오가 누른다 — 콤보를 연 프레임에만 그려진다
-                SceneObjectReferencePickerState::gatherScenes( instance, prop, _choices );
+                SceneObjectReferencePickerState::gatherScenes( model, row._rowID, _choices );
                 for ( const SceneObjectReferenceScene& scene : _choices._listScene )
                 {
                     const string* pSceneText = drawSceneChoices( scene, _choices._currentText );
@@ -50,7 +51,7 @@ namespace sw::editor
                 }
                 ImGui::EndCombo();
                 if ( pPickedText != nullptr )
-                    model.setPropertyText( instance, prop, *pPickedText, "Pick Scene Object" );
+                    model.setPropertyText( row._rowID, *pPickedText, "Pick Scene Object" );
                 return true;
             }
 

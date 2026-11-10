@@ -75,6 +75,7 @@ namespace sw::editor
         float32                    _scale{ 1.0f };          ///< 숫자 · 벡터의 표시 배율(보이는 값 = 저장 값 × 이것)
         float32                    _dragSpeed{ 0.0f };      ///< 숫자의 픽셀당 표시 값 변화. 0 이면 타입의 기본값
         uint32                     _rowID{ 0 };             ///< 모델 명령이 받는 행 번호(이 프레임)
+        uint32                     _parentRowID{ 0 };       ///< 자식 행의 부모(컨테이너 · 구조체) 행 번호. 깊이 0 행은 자신이다
         uint32                     _ordinal{ 0 };           ///< 자식 행의 자리(시퀀스 원소 번호 · 맵 항목 순번)
         uint32                     _elementCount{ 0 };      ///< 컨테이너의 원소 수
         uint16                     _depth{ 0 };             ///< 0 은 표의 한 줄, 1 이상은 부모 칸 안의 자식
@@ -103,6 +104,9 @@ namespace sw::editor
         uint8                      _bRemovable         : 1;               ///< 자식 행 앞에 지우기 단추를 둔다(맵 항목 · `set` 원소)
 
         PropertyValueRow();
+
+        /** @brief 값을 기본으로 되돌립니다. 글 · 벡터의 저장 공간은 남긴다(행을 프레임마다 다시 쓴다). */
+        void clear();
     };
 
     /** @brief 그리드가 gather 에 넘기는 그리기 영역입니다(이번 프레임의 스크롤 — 값을 채울 행을 정한다). 화면 좌표입니다. */
