@@ -833,15 +833,15 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, AncestorDisplayMatchesWalkAndFollowsRe
     SW_EXPECT_FALSE( pDeep7->isDerivedFrom( pDeep8 ) );
     SW_EXPECT_FALSE( pDeep9->isDerivedFrom( pRoot ) );
 
-    // (3) 재등록으로 Mid 의 부모가 Root → Other 로 바뀐다. 등록이 표를 비우므로, 배치 끝을 부르기 **전**에도
-    //     옛 표로 답하지 않아야 한다(첫 조회가 새 사슬로 다시 세운다). 등록으로 포인터가 옮겨질 수 있어 다시 찾는다.
+    // (3) 재등록으로 Mid 의 부모가 Root → Other 로 바뀐다. 배치 밖 등록은 그 타입과 자손의 표를 그 자리에서 새 사슬로 다시 짓는다(W-R1) —
+    //     배치 끝을 부르기 **전**에도 옛 표로 답하지 않는다. 등록으로 포인터가 옮겨질 수 있어 다시 찾는다.
     registry.registerClass( makeType( "DispMid", "swtest::DispMid", "swtest::DispOther" ) );
     pRoot  = find( "swtest::DispRoot" );
     pMid   = find( "swtest::DispMid" );
     pLeaf  = find( "swtest::DispLeaf" );
     pOther = find( "swtest::DispOther" );
     SW_REQUIRE_NOT_NULL( pLeaf );
-    SW_EXPECT_FALSE( pLeaf->hasAncestorDisplay() );
+    SW_EXPECT_TRUE( pLeaf->hasAncestorDisplay() );
     SW_EXPECT_FALSE( pLeaf->isDerivedFrom( pRoot ) );
     SW_EXPECT_TRUE( pLeaf->isDerivedFrom( pOther ) );
     SW_EXPECT_TRUE( pLeaf->isDerivedFrom( pMid ) );
@@ -870,18 +870,18 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, AncestorDisplayMatchesWalkAndFollowsRe
     pRoot   = find( "swtest::DispRoot" );
     SW_REQUIRE_NOT_NULL( pOrphan );
     SW_EXPECT_TRUE( pOrphan->getParentType() == find( "swtest::DispLateParent" ) );
-    SW_EXPECT_FALSE( pOrphan->hasAncestorDisplay() );
+    SW_EXPECT_TRUE( pOrphan->hasAncestorDisplay() ); // 부모 등록이 자손의 표를 이어진 사슬로 다시 지었다
     SW_EXPECT_TRUE( pOrphan->isDerivedFrom( pRoot ) );
     SW_EXPECT_TRUE( pOrphan->hasAncestorDisplay() );
     SW_EXPECT_TRUE( pOrphan->isDerivedFrom( find( "swtest::DispLateParent" ) ) );
 
-    // (4) 모듈 해제는 남은 타입의 표도 비운다 — 이 바이너리의 픽스처(DummyActor → DummyBase)가 다시 세워 답한다.
+    // (4) 모듈 해제는 내려간 타입의 자손만 다시 짓는다 — 무관한 픽스처(DummyActor → DummyBase)의 표는 그대로 답한다.
     registry.unregisterTypesByModule( "TestAncestorDisplay" );
     const sw::TypeInfo* pActor = find( "sw::DummyActor" );
     const sw::TypeInfo* pBase  = find( "sw::DummyBase" );
     SW_REQUIRE_NOT_NULL( pActor );
     SW_REQUIRE_NOT_NULL( pBase );
-    SW_EXPECT_FALSE( pActor->hasAncestorDisplay() );
+    SW_EXPECT_TRUE( pActor->hasAncestorDisplay() );
     SW_EXPECT_TRUE( pActor->isDerivedFrom( pBase ) );
     SW_EXPECT_TRUE( pActor->hasAncestorDisplay() );
     SW_EXPECT_FALSE( pBase->isDerivedFrom( pActor ) );

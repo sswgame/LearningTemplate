@@ -253,6 +253,7 @@ namespace
 SW_TEST_CASE( TickLanesTest, LaneFrameSystemRunsThroughJobContext )
 {
     GameObjectManager manager;
+    SW_EXPECT_LOG( "FrameSystem.LaneStructure" );
     SW_EXPECT_TRUE( manager.addFrameSystem( hashed_string( "LaneStructure" ), make_unique<LaneProbeSystem>( true ) ) == false );
     SW_REQUIRE_TRUE( manager.addFrameSystem( hashed_string( "LaneProbe" ), make_unique<LaneProbeSystem>( false ) ) );
     (void)manager.createGameObject( hashed_string( "Anchor" ) );
