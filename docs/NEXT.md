@@ -20,7 +20,7 @@
 
 - main(c4ebf56542)의 묶음 검증 뒤 통합 브랜치를 main 에 합쳐 다시 검증 · push 한다. 통합 작업자가 남긴 위험: `.inl` 누락은 링크에서만 드러난다(Release · 서버의 다른 TU), `EditorTransaction` 을 연 채 같은 범위에서 CommandStack 을 읽는 자리.
 - 흔들리는 단위 테스트 `AudioDataVariantTest.GraphVariantSavesOnlyItsDifference`: 전체 실행 한 번에 "base 'testproject/base.audiograph.xml' could not be read" 로 졌다. 같은 씨앗 · 단독 1800 회로는 재현되지 않았다 — 다시 지면 그 로그의 앞 케이스와 스크래치 도메인 마운트 상태를 본다.
-- 5-4 서술자 표 · 물리 훅 작업자는 워크트리 구성(vcpkg 를 다시 받는다)을 못 해 파서를 짓지 못했다 — 바꾼 TU 와 새 출력 모양의 손 표본만 `/Zs` 로 확인했다. 통합 빌드에서 볼 것: 모든 `.gen.cpp` 가 `static constexpr ::sw::PropertyDesc kProperties[]` 로 컴파일되는지(접근자 · 비트필드 · 중첩 컨테이너 · RepNotify 옛 값), 생성 `.gen.cpp` 합계(전 10.9 MB, 어림 8.4 MB), 모듈 목록 단계의 리프 이름 겹침 오류(`ReflectionPipeline.LeafNameCollision` — Debug Shooter3D 목록에는 없다, 다른 게임 · 킷은 모른다), 단위 `ReflectionTypeInfoTest.PropertyDescTableSharesDefaultMetadata`.
+- 5-4 리플렉션 작업자 둘(서술자 표 · 물리 훅 · 판정 비트 · PropertyHandle · 묶음 TU · 메서드 · 이벤트 표)은 빌드하지 않았다 — 앞 작업자의 프로퍼티 표 · 물리 훅 생성 코드는 워크트리 부분 Debug 빌드(4384 중 약 3900 단계, 실패 0 — Engine · GameFramework 의 모든 `.gen.cpp` 포함)에서 컴파일됐고, 그 뒤 것은 짓지 않았다. 통합 빌드에서 볼 것: 묶음 TU(`ReflectionBundle.N.cpp` — 헤더끼리 한 TU 에서 부딪히는지, Windows 매크로 오염)와 `BuildTimeReport.py` 생성 비중(전 30.7 %, 목표 8 % 미만), 메서드 · 이벤트 표(`kMethods` · `kEvents` — 상태 없는 람다의 상수 초기화, `ReflectDefaultCtorOf`), 생성 `.gen.cpp` 합계(전 7.86 MB), 판정 비트를 구하지 않은 사본에 묻는 단언(`_bDerivedFlagsBuilt`), 단위 `PhysicsHookRegistryTest.*` · `ReflectionTypeRegistryTest.PropertyHandleGoesStaleWhenItsDeclaringTypeChanges` · `ReflectionTypeInfoTest.MethodTableBuildsMethodList` · `ReflectionPropertyRoleTest.DerivedFlagsAreBuiltByRegistrationNotByFirstQuery` · `ReflectionTypeInfoTest.PropertyDescTableSharesDefaultMetadata`, 모듈 목록 단계의 리프 이름 겹침 오류(`ReflectionPipeline.LeafNameCollision`).
 - 통합 때 확인하지 못한 동작: Vulkan AMD 브레드크럼 · 128 타임스탬프 슬롯(실장치), DX12 placed 텍스처(`D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES` 가 RT+SRV 를 받는지).
 - 통합 검증에서 함께 본다: 게이트 껍데기(`<빌드>/gates`) 생성 · 게임 타깃의 RHI · Shader 게이트, 5-4 생성기 출력(`_pApplyDefault` · `_pEditCondition` 줄, 파서 사례 `DefaultOnContainer` · `EditConditionUnknownName` · `RequiredAtRootWithoutParent`), `HapticEffectTest`, 시나리오 `editor/undocoverage`(실패 줄의 명령을 고친다 — 컴포넌트 대상 명령은 대상을 주는 줄을 더한다), G1 `slice` 12 게임(진 게임은 복원이 되살리지 못한 `state.objects` 를 본다), T2 격리(`AutomationUserDataRootTest` · `engine.isolation` · `Scenario.editor.statedir.*` · `net-pair mmo`), N2 `server-image` 한 번.
 
@@ -58,15 +58,12 @@ GameObject/Component API 는 저작 · 수명 · 직렬화 층, 프레임 일은
 - **선행 조건 간선 종류:** `addSubTickPrerequisite` 에 종류(순서만 · 쓰기를 봄)를 필수 인자로(쓰는 곳 — `GameModeComponent` 규칙 틱은 순서만, `TickedPathMoverComponent` 는 자리를 읽는다). 순서만인 간선은 `TaskHandle::runAfter` 태스크 간선으로, 쓰기를 보는 간선만 레벨 장벽에(틱 중 쓰기는 `_bApplyBefore` 적용으로만 보인다).
 - **컴포넌트 틱의 컨텍스트:** Batch 레인의 `onTick` 도 `SceneJobContext` 형식(읽기 전용 남의 오브젝트 + 명령 버퍼)으로 — 남의 컴포넌트 직접 쓰기를 컴파일에서 막는다. 102 개 타입 서명이 바뀐다(`TickBatchRegistry.h` 머리말).
 - **서비스 갱신 병렬화:** 같은 단계 서비스 갱신을 접근이 겹치지 않는 것끼리 워커로 — 본문의 게임 스레드 전용 API 를 서명으로 먼저 가린다.
-- **물리 훅 배치 받는 쪽:** 생성기가 물리 컴포넌트마다 `SW_REGISTER_PHYSICS_HOOKS( 타입 )` 을 내고 `PhysicsHookRegistry`(`Engine/Physics/Scene`)에 타입별 일괄 함수가 오른다(재정의하지 않은 훅은 nullptr — `&T::훅` 형식으로 컴파일에서). 남은 것: `ScenePhysics` 의 훅 목록(`_arrListFrameHook`)을 (타입, 단계) 구간으로 지어 `findEntry` 의 함수를 부르고(등록 없는 타입만 가상 호출), 레지스트리 세대로 다시 짓기 — 그 뒤 `PhysicsComponent::_unusedFrameHooks` 와 기본 구현의 비트 세우기를 지운다.
 - **SoA 다음 사용자:** 캐릭터 컨트롤러 3D · 2D 입력(`_commandLock` + 이동 · 점프 · 루트 모션 대기)을 `ComponentDataStore` 페이지로, 군중(`NavAgentCrowdSync`)의 에이전트별 `setWorldPosition` 을 `queuePoseWrite` · `applyTransformBatch` 일괄 쓰기로.
 - **공간 질의:** 근접 기믹 · 감지 · 넷 관심 격자를 `SceneSpatialGrid` 층으로 옮길지 측정 뒤.
 
 ### 5-4. 리플렉션 남은 것
 
-- W-R1 나머지: 보관처를 (타입, 색인, 세대)로, 판정 비트의 `mutable` 지연 자리 제거(`TypeInfo::_bIsPODCalculated` · `_bSaveGameCalculated` · `_bValidatorCalculated` — 검증 판정이 칸 타입을 재귀로 묻는다. `rebuildDerivedCaches` 가 칸 타입부터 먼저 구하고, 레지스트리 밖 사본(테스트)은 명시 계산 함수로).
-- W-R3 (a) 남은 것: 프로퍼티는 상수 초기화 서술자 표(`PropertyDesc`)가 됐다. 메서드(`emitMethodList` 의 `FunctionInfo` + `Delegate` 호출기) · 이벤트 · 고정 배치형 코덱 본문이 아직 타입마다 코드다 — 생성 바이트 목표(4 MB 미만)는 이 셋을 표로 옮긴 뒤 다시 잰다. (e) `CultureInfo` 의 부모 병합 · 자식 요소를 리플렉션 컨테이너로(`<item>` 코덱 필요) — 불변 문화권 폴백을 없애면 초기값을 지우고 `RequiredAtRoot` 로.
-- W-R5 빌드 시간: 헤더당 `.gen.cpp` 대신 모듈 안 8~16 헤더 묶음 TU(목표 생성 비중 8 % 미만 — `BuildTimeReport.py`). 생성 쪽은 준비됐다(값 검사 템플릿이 `#ifndef` 로 한 번만, 정적 이름은 타입 · 색인으로 갈린다). 남은 것은 `sw_planReflectionOutputs` 가 묶음 `.cpp`(각 `.gen.cpp` 를 `#include`)를 구성 때 쓰고 `target_sources` 에 묶음만 넣는 것 — 전체 빌드로만 확인된다(헤더끼리 한 TU 에서 부딪히는지).
+- W-R3 (a) 남은 것: 고정 배치형 코덱 본문(`fixedWrite` · `fixedRead` · `fixedEquals`)이 아직 타입마다 코드다 — 필드 서술자(오프셋 · 종류 · 경계)를 해석하는 공용 코덱으로(생성 바이트 목표 4 MB 미만은 그 뒤 다시 잰다). (e) `CultureInfo` 의 부모 병합 · 자식 요소를 리플렉션 컨테이너로(`<item>` 코덱 필요) — 불변 문화권 폴백을 없애면 초기값을 지우고 `RequiredAtRoot` 로. 에디터 레이아웃 캐시(`InspectorLayoutCache` 의 `const PropertyInfo*` 키)는 핫 리로드 때 비우는지 확인한 뒤 `PropertyHandle` 로.
 - W-R4 `ReflectVisit` 하나(직렬화 9 루프 · 검증 · 문서 · 인스펙터 gather · 상태 해시 기본 구현) — `foldStateHash` 대체는 상태 해시 동등성 판정과 같은 묶음.
 - W-R6 밀집 타입 색인: 5-3 SoA 와 함께만.
 - N1 복제 스키마: `PROPERTY( Replicated, Quantize = … )` 로 작성기 생성, 스키마 해시를 와이어 버전에(W-R3 (a) 위).
