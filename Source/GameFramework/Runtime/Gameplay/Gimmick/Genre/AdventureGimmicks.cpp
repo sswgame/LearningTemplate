@@ -36,7 +36,7 @@ namespace sw
     bool PushBlockComponent::push( const float3& direction )
     {
         GameObject*        pOwner      = getOwner();
-        GameObjectManager* pManager    = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager    = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         SceneComponent*    pScene      = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         const bool         bCannotMove = pManager == nullptr || pScene == nullptr || isMoving();
         if ( bCannotMove )
@@ -77,7 +77,7 @@ namespace sw
     void PushBlockComponent::stepOnce()
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         SceneComponent*    pScene   = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         if ( pManager == nullptr || pScene == nullptr )
             return;

@@ -118,10 +118,10 @@ namespace sw
     SkeletalMeshComponent* PoseRetargetComponent::findSource() const
     {
         const GameObject* pOwner              = getOwner();
-        const bool        bSourceUnresolvable = _source.isValid() == false || pOwner == nullptr || pOwner->getManager() == nullptr;
+        const bool        bSourceUnresolvable = _source.isValid() == false || pOwner == nullptr || pOwner->getMutableManager() == nullptr;
         if ( bSourceUnresolvable )
             return nullptr;
-        return pOwner->getManager()->resolveComponent( _source );
+        return pOwner->getMutableManager()->resolveComponent( _source );
     }
 
     void PoseRetargetComponent::setSource( SkeletalMeshComponent* pSource )

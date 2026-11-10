@@ -181,7 +181,7 @@ namespace sw
             /** @brief @p object 의 메시 컴포넌트마다 판정 한 줄을 @p outText 에 잇습니다. 메시 컴포넌트가 없으면 false 입니다. */
             static bool describeObject( const GameObject& object, string& outText )
             {
-                GameObjectManager* const pManager = object.getManager();
+                GameObjectManager* const pManager = object.getMutableManager();
                 if ( pManager == nullptr )
                     return false;
                 const MeshLODSystem& system = pManager->getSubsystem<MeshLODSystem>();

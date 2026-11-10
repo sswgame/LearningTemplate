@@ -56,7 +56,7 @@ namespace sw
     {
         _bFinished                  = SW_TRUE;
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager != nullptr )
             pManager->destroyGameObject( pOwner ); // 지연 삭제 — 틱 안에서도 된다
     }

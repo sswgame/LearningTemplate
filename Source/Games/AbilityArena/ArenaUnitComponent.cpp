@@ -59,11 +59,10 @@ namespace sw
     {
         Component::onTick( context );
         GameObject*          pOwner             = getOwner();
-        GameObjectManager*   pManager           = pOwner != nullptr ? pOwner->getManager() : nullptr;
         MeshComponent*       pMesh              = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         AbilityComponent*    pAbilitySystem     = pOwner != nullptr ? pOwner->getComponent<AbilityComponent>() : nullptr;
         const PawnComponent* pPawn              = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
-        const bool           bMissingComponents = pManager == nullptr || pMesh == nullptr || pAbilitySystem == nullptr || pPawn == nullptr || context.getDeltaTime() <= 0.0f;
+        const bool           bMissingComponents = pMesh == nullptr || pAbilitySystem == nullptr || pPawn == nullptr || context.getDeltaTime() <= 0.0f;
         if ( bMissingComponents )
             return;
         const ArenaGameModeComponent* pGameMode = findGameMode<ArenaGameModeComponent>();

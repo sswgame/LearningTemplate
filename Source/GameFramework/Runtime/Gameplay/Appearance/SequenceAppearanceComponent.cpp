@@ -42,7 +42,7 @@ namespace sw
     void SequenceAppearanceComponent::handleSequenceEvent( const SequenceFiredEvent& event )
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager != nullptr )
             (void)applyAppearanceItem( *pManager, event ); // 실패는 안에서 오류로 남겼다
     }

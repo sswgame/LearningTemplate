@@ -1775,6 +1775,6 @@ namespace sw
     GameObjectManager* CharacterAppearanceComponent::findManager() const
     {
         GameObject* pOwner = getOwner();
-        return pOwner != nullptr ? pOwner->getManager() : nullptr;
+        return pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
     }
 } // namespace sw

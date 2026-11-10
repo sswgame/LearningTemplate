@@ -27,7 +27,7 @@ namespace sw
     template <typename T>
     T* FractureRenderUnits::findOwnedComponent( const GameObject& owner, TComponentHandle<T> handle )
     {
-        GameObjectManager* pManager = owner.getManager();
+        GameObjectManager* pManager = owner.getMutableManager();
         return ( pManager != nullptr && handle.isValid() ) ? pManager->resolveComponent( handle ) : nullptr;
     }
 

@@ -39,12 +39,11 @@ namespace sw
     void DaylightComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
-        GameObject*                pOwner   = getOwner();
-        GameObjectManager*         pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        DirectionalLightComponent* pSun     = pOwner != nullptr ? pOwner->getComponent<DirectionalLightComponent>() : nullptr;
-        if ( pManager == nullptr || pSun == nullptr )
+        GameObject*                pOwner = getOwner();
+        DirectionalLightComponent* pSun   = pOwner != nullptr ? pOwner->getComponent<DirectionalLightComponent>() : nullptr;
+        if ( pSun == nullptr )
             return;
-        const GameModeComponent* pGameMode    = GameModeComponent::resolve<GameModeComponent>( *pManager, _gameMode );
+        const GameModeComponent* pGameMode    = GameModeComponent::resolve<GameModeComponent>( context.getManager(), _gameMode );
         float32                  hour         = 0.0f;
         bool                     bPrecipitate = false;
         if ( pGameMode == nullptr || pGameMode->readDaylight( hour, bPrecipitate ) == false )

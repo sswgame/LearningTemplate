@@ -341,7 +341,7 @@ namespace sw
         }
 
         GameObject*                              pTargetOwner = pTarget->getOwner();
-        GameObjectManager*                       pManager     = pTargetOwner != nullptr ? pTargetOwner->getManager() : nullptr;
+        GameObjectManager*                       pManager     = pTargetOwner != nullptr ? pTargetOwner->getMutableManager() : nullptr;
         const TComponentHandle<AbilityComponent> targetHandle{ pTarget };
         if ( pManager == nullptr )
             return;

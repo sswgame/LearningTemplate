@@ -30,7 +30,7 @@ namespace sw
     const SceneNetLink* SceneNetLink::findFor( const Component& component )
     {
         const GameObject*  pOwner   = component.getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         return pManager != nullptr ? &pManager->getSubsystem<SceneNetLink>() : nullptr;
     }
 } // namespace sw

@@ -34,18 +34,17 @@ namespace sw
         Component::onTick( context );
         GameObject*          pOwner       = getOwner();
         const PawnComponent* pPawn        = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
-        GameObjectManager*   pManager     = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const bool           bNoExitInput = pPawn == nullptr || pManager == nullptr || pPawn->wasButtonTriggered( _exitIndex ) == false;
+        const bool           bNoExitInput = pPawn == nullptr || pPawn->wasButtonTriggered( _exitIndex ) == false;
         if ( bNoExitInput )
             return;
-        pManager->executeOrDeferPostTickOnComponent( *this, []( VehicleExitComponent& component )
+        context.deferPostTickOnComponent( *this, []( VehicleExitComponent& component )
         { component.exitDriver(); } );
     }
 
     void VehicleExitComponent::exitDriver()
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager == nullptr )
             return;
         // 이 탈것의 운전석을 좌석 레지스트리에서 찾는다. 씬 전체를 순회하지 않는다.

@@ -64,7 +64,7 @@ namespace sw
     uint32 MeleeHit::sweep( GameObject& attacker, vector_reference<const float3> listPrevious, vector_reference<const float3> listCurrent, const MeleeHitParams& params,
                             MeleeHitAuthority authority, vector<GameObjectHandle>& inoutListHitTarget, vector<MeleeHit>& outListHit )
     {
-        GameObjectManager* pManager = attacker.getManager();
+        GameObjectManager* pManager = attacker.getMutableManager();
         if ( pManager == nullptr )
             return 0;
         // 서버의 장부가 켜져 있으면 스윕을 적어 둔다 — 클라이언트의 맞음 주장을 나중에 이 기록으로 확인한다(`MeleeSweepHistory`). 맞지 않은 스윕도 적는다.

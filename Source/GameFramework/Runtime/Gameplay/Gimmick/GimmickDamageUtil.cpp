@@ -20,7 +20,7 @@ namespace sw
         event._source               = pSource != nullptr ? pSource->getHandle() : GameObjectHandle{};
         event._kind                 = kind;
         event._amount               = amount;
-        GameObjectManager* pManager = target.getManager();
+        GameObjectManager* pManager = target.getMutableManager();
         if ( pManager == nullptr )
         {
             GimmickSensorComponent* pSensor = target.getComponent<GimmickSensorComponent>();

@@ -555,7 +555,7 @@ namespace sw
     void WidgetComponent::createWorldQuad()
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager == nullptr || _worldQuad.isValid() )
             return;
         // 스프라이트 사각형(양면, 단위 크기)에 렌더 텍스처를 읽는 머티리얼 인스턴스를 붙인다. 캔버스는 프리멀티플라이로 그리므로 셰이더가 직선 알파로 되돌린다.
@@ -590,7 +590,7 @@ namespace sw
         if ( _worldQuad.isValid() == false )
             return;
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         GameObject*        pQuad    = pManager != nullptr ? pManager->findGameObjectByID( _worldQuad.objectID() ) : nullptr;
         if ( pQuad != nullptr )
             pQuad->destroy();

@@ -300,7 +300,7 @@ namespace sw
     void DismembermentComponent::onEndPlay()
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         for ( const GameObjectHandle& piece : _listPiece )
         {
             GameObject* pPiece = pManager != nullptr ? pManager->resolveGameObject( piece ) : nullptr;
@@ -404,7 +404,7 @@ namespace sw
     {
         using Internal                     = DismembermentComponentInternal;
         GameObject*            pOwner      = getOwner();
-        GameObjectManager*     pManager    = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager*     pManager    = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         SkeletalMeshComponent* pUnit       = pOwner != nullptr ? pOwner->getComponent<SkeletalMeshComponent>() : nullptr;
         const optional<uint32> foundRegion = findRegionIndex( region );
         if ( foundRegion.has_value() == false )

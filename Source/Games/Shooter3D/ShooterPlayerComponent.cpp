@@ -126,7 +126,7 @@ namespace sw
             [[nodiscard]] static bool readControllerKind( const ShooterPlayerComponent& player, float64& outValue )
             {
                 GameObject*          pOwner   = player.getOwner();
-                GameObjectManager*   pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+                GameObjectManager*   pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
                 const PawnComponent* pPawn    = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
                 if ( pPawn == nullptr || pManager == nullptr )
                     return false;
@@ -377,7 +377,7 @@ namespace sw
     void ShooterPlayerComponent::despawnViews()
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         GameObject*        pBody    = pManager != nullptr ? pManager->resolveGameObject( _body ) : nullptr;
         if ( pBody != nullptr )
         {
@@ -481,7 +481,7 @@ namespace sw
             return;
         const HealthDamageResult  result    = _healthMachine.applyDamage( amount );
         GameObject*               pOwner    = getOwner();
-        GameObjectManager*        pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager*        pManager  = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         const GameObject*         pObject   = pManager != nullptr ? pManager->resolveGameObject( getGameMode() ) : nullptr;
         ShooterGameModeComponent* pGameMode = pObject != nullptr ? pObject->getComponent<ShooterGameModeComponent>() : nullptr;
         if ( result._bIgnored == SW_TRUE )
@@ -969,7 +969,7 @@ namespace sw
     bool ShooterPlayerComponent::queryFirstPerson() const
     {
         const GameObject*  pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager == nullptr )
             return true;
         // 이 오브젝트를 따라가는 게임 카메라 디렉터(시점 카메라)의 프리셋 모드를 구한다.
@@ -1052,7 +1052,7 @@ namespace sw
     void ShooterPlayerComponent::scheduleFlush()
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager == nullptr || _bFlushScheduled == SW_TRUE )
             return;
         _bFlushScheduled = SW_TRUE;
@@ -1064,7 +1064,7 @@ namespace sw
     {
         _bFlushScheduled            = SW_FALSE;
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager == nullptr )
             return;
         if ( _bBodyRequested == SW_TRUE )
@@ -1116,7 +1116,7 @@ namespace sw
     {
         _bBodyRequested                     = SW_FALSE;
         GameObject*        pOwner           = getOwner();
-        GameObjectManager* pManager         = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager         = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         AssetManager*      pAssets          = game::findSubsystem<AssetManager>();
         const bool         bCannotSpawnBody = pManager == nullptr || pAssets == nullptr || _bodyPrefab.empty() || pManager->resolveGameObject( _body ) != nullptr;
         if ( bCannotSpawnBody )
@@ -1145,7 +1145,7 @@ namespace sw
         GameObject* const                   pOwner   = getOwner();
         GameObject* const                   pBody    = findBodyObject();
         const CharacterAppearanceComponent* pLook    = pBody != nullptr ? pBody->getComponent<CharacterAppearanceComponent>() : nullptr;
-        GameObjectManager* const            pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* const            pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pOwner == nullptr || pLook == nullptr || pManager == nullptr )
             return;
         const GameObject* const pPart     = pManager->resolveGameObject( pLook->findSlotPartObject( hashed_string( "MainHand" ) ) );

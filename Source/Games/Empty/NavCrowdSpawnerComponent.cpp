@@ -28,7 +28,7 @@ namespace sw
     void NavCrowdSpawnerComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        GameObjectManager* pManager = getOwner()->getManager();
+        GameObjectManager* pManager = getOwner()->getMutableManager();
         if ( pManager == nullptr || _agentCount == 0 )
             return;
         pManager->executeOrDeferPostTickOnComponent( *this, []( NavCrowdSpawnerComponent& self, GameObjectManager& manager )

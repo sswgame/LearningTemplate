@@ -58,7 +58,7 @@ namespace sw
         // 조종자들이 의도를 내는 중이라 여기서 빙의를 옮기면 같은 틱에 두 조종자가 폰을 몬다 — 다음 틱 첫머리로 미룬다.
         _bReturnPending             = false;
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         ControlSystem*     pSystem  = pManager != nullptr ? ControlSystem::find( *pManager ) : nullptr;
         if ( pSystem == nullptr )
             return;

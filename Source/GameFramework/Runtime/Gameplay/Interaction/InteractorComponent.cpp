@@ -142,7 +142,7 @@ namespace sw
         Component::onBeginPlay();
         setTickGroup( TickGroup::PostPhysics );
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager != nullptr )
         {
             pManager->getSubsystem<SceneSpatialGrid>().addLayerReader( InteractableComponent::getSpatialLayer( _space ) );
@@ -153,7 +153,7 @@ namespace sw
     void InteractorComponent::onEndPlay()
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager != nullptr )
             setFocus( *pManager, GameObjectHandle{}, TComponentHandle<InteractableComponent>{} );
         if ( pManager != nullptr && _bSpatialIndexUser == SW_TRUE )
@@ -167,7 +167,7 @@ namespace sw
         if ( space == _space )
             return;
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         // 세어진 공간과 `_space` 가 어긋나면 뗄 때 다른 공간의 수를 줄인다. 사용자를 함께 옮긴다.
         if ( pManager != nullptr && _bSpatialIndexUser == SW_TRUE )
         {
@@ -487,7 +487,7 @@ namespace sw
     {
         Component::onTick( context );
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager == nullptr )
             return;
         const bool bPressed = _bPressed == SW_TRUE;

@@ -38,7 +38,7 @@ namespace sw
             return;
         }
         // 날씨가 없는 씬은 잔잔한 값(0)이다 — 판 상태가 날씨를 열지 않았다(SurfaceExposureComponent 의 비와 같은 규칙).
-        const SessionStateComponent* pSession = SessionStateComponent::findFirstOpen( pOwner->getManager() );
+        const SessionStateComponent* pSession = SessionStateComponent::findFirstOpen( &context.getManager() );
         const float32                value    = pSession != nullptr ? pSession->getWeather().computeValue( _weatherValue ) : 0.0f;
         pWater->setWaveAmplitudeScale( computeAmplitudeScale( value, _stormScale ) );
     }

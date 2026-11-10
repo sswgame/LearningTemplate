@@ -37,10 +37,9 @@ namespace sw
     void CoasterCarComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
-        GameObject*        pOwner             = getOwner();
-        GameObjectManager* pManager           = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        MeshComponent*     pMesh              = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
-        const bool         bMissingCarContext = pManager == nullptr || pMesh == nullptr || _carIndex < 0;
+        GameObject*    pOwner             = getOwner();
+        MeshComponent* pMesh              = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
+        const bool     bMissingCarContext = pMesh == nullptr || _carIndex < 0;
         if ( bMissingCarContext )
             return;
         const ParkGameModeComponent* pGameMode = findGameMode<ParkGameModeComponent>();

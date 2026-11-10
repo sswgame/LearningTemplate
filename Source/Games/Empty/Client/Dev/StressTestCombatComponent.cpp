@@ -183,10 +183,8 @@ namespace sw
     void StressTestCombatComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        GameObject*        pEnemy   = pManager != nullptr ? pManager->resolveGameObject( _enemy ) : nullptr;
-        GameObject*        pSword   = pManager != nullptr ? pManager->resolveGameObject( _sword ) : nullptr;
+        const GameObject* pEnemy = context.getManager().resolveGameObject( _enemy );
+        const GameObject* pSword = context.getManager().resolveGameObject( _sword );
         if ( pEnemy == nullptr || pSword == nullptr )
             return;
         _elapsed += context.getDeltaTime();
@@ -205,12 +203,12 @@ namespace sw
         }
 
         // 물리, 질의, 스폰은 게임 스레드에서 해야 하므로 틱이 끝난 뒤로 미룹니다. 이 틱은 워커 스레드에서 실행될 수 있습니다.
-        const TComponentHandle<StressTestCombatComponent> self{ this };
-        pManager->executeOrDeferPostTick( [pManager, self]()
+        context.deferPostTickOnComponent( *this, []( StressTestCombatComponent& combat, GameObjectManager& manager )
         {
-            StressTestCombatComponent* pCombat      = pManager->resolveComponent( self );
-            GameObject*                pEnemyObject = pCombat != nullptr ? pManager->resolveGameObject( pCombat->_enemy ) : nullptr;
-            GameObject*                pSwordObject = pCombat != nullptr ? pManager->resolveGameObject( pCombat->_sword ) : nullptr;
+            StressTestCombatComponent* pCombat      = &combat;
+            GameObjectManager*         pManager     = &manager;
+            GameObject*                pEnemyObject = pManager->resolveGameObject( pCombat->_enemy );
+            GameObject*                pSwordObject = pManager->resolveGameObject( pCombat->_sword );
             if ( pEnemyObject == nullptr || pSwordObject == nullptr )
                 return;
             pCombat->followHandSocket( *pManager, *pEnemyObject, *pSwordObject );

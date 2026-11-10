@@ -98,8 +98,14 @@ namespace sw
         /** @brief 이 오브젝트를 가리키는 핸들을 반환합니다. 프레임을 넘겨 보관할 때는 포인터 대신 이것을 씁니다. */
         GameObjectHandle getHandle() const { return GameObjectHandle::make( _objectID ); }
 
-        /** @brief 소유 매니저를 반환합니다. */
-        GameObjectManager* getManager() const { return _pOwnerManager; }
+        /**
+         * @brief 소유 매니저를 읽기 전용으로 반환합니다 — 틱 안에서 꺼내도 씬을 바꾸는 호출이 컴파일되지 않습니다(`TickContext.h`).
+         * @details 언리얼 `GetWorld()` 는 늘 쓰기 가능하고 Mass 프로세서만 실행 컨텍스트로 막으며, 유니티 Jobs 는 `[ReadOnly]` 로 연다. 여기서는 컴포넌트 틱이
+         *          잡이므로 기본 길을 읽기로 두고, 쓰기는 이름이 다른 `getMutableManager` 로 가른다.
+         */
+        const GameObjectManager* getManager() const { return _pOwnerManager; }
+        /** @brief 소유 매니저를 쓰기 가능하게 반환합니다. 틱 밖(시작 · 끝 · 이벤트 · 틱 뒤 작업)에서만 씁니다 — 틱 본문은 `TickContext` 로 미룹니다. */
+        GameObjectManager* getMutableManager() const { return _pOwnerManager; }
 
         /**
          * @brief 삭제 예정인지 확인합니다.

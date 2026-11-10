@@ -27,24 +27,20 @@ namespace sw
     void VisualSinkReactionComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
-        GameObject* const        pOwner   = getOwner();
-        GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        if ( pManager == nullptr )
-            return;
         // 자기 오브젝트의 속성을 읽고 자기 메시만 옮긴다 — 틱 안에서 해도 된다(예전에는 틱 뒤 큐로 미뤄 지역 처리 뒤에 오기를 바랐지만, 같은 큐 안 순서는 워커 순서였다).
-        applySinkDepth( *pManager );
+        applySinkDepth( context.getManager() );
     }
 
     void VisualSinkReactionComponent::onEndPlay()
     {
         GameObject* const        pOwner   = getOwner();
-        GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager != nullptr )
             restoreVisuals( *pManager );
         Component::onEndPlay();
     }
 
-    void VisualSinkReactionComponent::applySinkDepth( GameObjectManager& manager )
+    void VisualSinkReactionComponent::applySinkDepth( const GameObjectManager& manager )
     {
         GameObject* const             pOwner   = getOwner();
         const AbilityComponent* const pAbility = pOwner != nullptr ? pOwner->getComponent<AbilityComponent>() : nullptr;
@@ -76,7 +72,7 @@ namespace sw
         _appliedDepth = depth;
     }
 
-    void VisualSinkReactionComponent::restoreVisuals( GameObjectManager& manager )
+    void VisualSinkReactionComponent::restoreVisuals( const GameObjectManager& manager )
     {
         for ( const SunkVisual& visual : _listVisual )
         {

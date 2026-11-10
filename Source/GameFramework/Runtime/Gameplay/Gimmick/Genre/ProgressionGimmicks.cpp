@@ -49,7 +49,7 @@ namespace sw
     void AbilityGateComponent::stepOnce()
     {
         GameObject*           pOwner           = getOwner();
-        GameObjectManager*    pManager         = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager*    pManager         = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         const SceneComponent* pScene           = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         const bool            bCannotCheckDoor = pManager == nullptr || pScene == nullptr || ( _bOpen && _bStaysOpen ) || _requiredTags.getTagCount() == 0;
         if ( bCannotCheckDoor )
@@ -122,7 +122,7 @@ namespace sw
     void GatheringNodeComponent::stepOnce()
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager == nullptr )
             return;
         // 상호작용(Gather)을 끝낸 쪽에 준다.

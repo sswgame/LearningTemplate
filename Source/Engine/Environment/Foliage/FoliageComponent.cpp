@@ -226,7 +226,7 @@ namespace sw
         // (`onBeginPlay` 로 넘기면 편집 모드에서는 오지 않아 폴리지가 없었다). 그때는 씬이 다 섰으므로 지형이 뒤에 생기는 로드 순서에서도 한 번에 지형 위다.
         const TaskManager* pTaskManager = engine::findSubsystem<TaskManager>(); // 선택: 작업 시스템 없는 호스트(테스트)는 한 스레드다
         GameObject*        pOwner       = getOwner();
-        GameObjectManager* pManager     = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager     = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pTaskManager != nullptr && pTaskManager->isMainThread() == false && pManager != nullptr )
         {
             pManager->deferPostTickOnComponent( *this, []( FoliageComponent& foliage )
@@ -242,7 +242,7 @@ namespace sw
         // 로드 순서상 지형이 뒤에 생성되면 처음 계산은 평면 위에서 했다. 모두 생성된 지금 지형을 다시 찾는다. 레지스트리를 바꾸므로 틱 뒤에 한다.
         // 시작 때 한 번이라 틱 뒤 큐에 둔다 — 매 프레임 지형 따라가기는 씬 서비스(`FoliageTerrainFollower`)가 한다.
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager == nullptr || _bBuiltOnTerrain == SW_TRUE )
             return;
         pManager->executeOrDeferPostTickOnComponent( *this, []( FoliageComponent& foliage )
@@ -330,10 +330,8 @@ namespace sw
         SceneComponent::onTick( context );
         if ( engine::getSubsystem<DeterministicRun>().getPolicy()._bFreezeEnvironmentTime == SW_FALSE ) // 결정적 사진은 바람 · 파도 시간을 0 에 멈춘다
             _time += context.getDeltaTime();
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        float3             viewPosition{};
-        const bool         bCanUpdateView = pManager != nullptr && _listCell.empty() == false && EnvironmentUtil::findViewPosition( *pManager, viewPosition );
+        float3     viewPosition{};
+        const bool bCanUpdateView = _listCell.empty() == false && EnvironmentUtil::findViewPosition( context.getManager(), viewPosition );
         if ( bCanUpdateView )
             updateView( viewPosition );
     }
@@ -764,7 +762,7 @@ namespace sw
         }
 
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         WindSettings       wind;
         float4             arrSphere[FoliageInfluencerComponent::kMaxInfluencerCount]{};
         if ( pManager != nullptr )

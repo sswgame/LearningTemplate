@@ -51,11 +51,10 @@ namespace sw
     void VoxelHighlightComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
-        GameObject*                 pOwner   = getOwner();
-        GameObjectManager*          pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        MeshComponent*              pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
-        const GameObject*           pObject  = pManager != nullptr ? pManager->resolveGameObject( _player ) : nullptr;
-        const VoxelPlayerComponent* pPlayer  = pObject != nullptr ? pObject->getComponent<VoxelPlayerComponent>() : nullptr;
+        GameObject*                 pOwner  = getOwner();
+        MeshComponent*              pMesh   = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
+        const GameObject*           pObject = context.getManager().resolveGameObject( _player );
+        const VoxelPlayerComponent* pPlayer = pObject != nullptr ? pObject->getComponent<VoxelPlayerComponent>() : nullptr;
         if ( pMesh == nullptr )
             return;
         VoxelCoord block{};
@@ -78,7 +77,7 @@ namespace sw
     void VoxelHighlightComponent::scheduleOutline( const float3& center ) const
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager == nullptr )
             return;
         // 디버그 선 큐는 게임 스레드에서만 쓸 수 있습니다. 이 선은 에디터 게임 뷰에서만 보입니다.

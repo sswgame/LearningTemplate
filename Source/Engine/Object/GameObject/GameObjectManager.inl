@@ -12,6 +12,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectStore.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Object/GameObject/Tick/TickContext.h"
 
 namespace sw
 {
@@ -56,6 +57,12 @@ namespace sw
     void GameObjectManager::deferPostTickOnComponent( const TComponent& self, TFunc func )
     {
         deferPostTick( makeComponentPostTickTask( self, func ) );
+    }
+
+    template <typename TComponent, typename TFunc>
+    void TickContext::deferPostTickOnComponent( const TComponent& self, TFunc func )
+    {
+        _pSceneManager->deferPostTickOnComponent( self, func );
     }
 
     template <typename TComponent, typename TFunc>

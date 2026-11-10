@@ -36,10 +36,9 @@ namespace sw
     void NileWalkerComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
-        if ( pManager == nullptr || pMesh == nullptr )
+        GameObject*    pOwner = getOwner();
+        MeshComponent* pMesh  = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
+        if ( pMesh == nullptr )
             return;
         const NileGameModeComponent* pGameMode = findGameMode<NileGameModeComponent>();
         if ( pGameMode == nullptr )

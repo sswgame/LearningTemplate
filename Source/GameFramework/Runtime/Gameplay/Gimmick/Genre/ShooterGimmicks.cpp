@@ -106,7 +106,7 @@ namespace sw
     void ExplosiveBarrelComponent::explode( GameObject& owner )
     {
         _bExploded                     = true;
-        GameObjectManager*    pManager = owner.getManager();
+        GameObjectManager*    pManager = owner.getMutableManager();
         const SceneComponent* pScene   = owner.getPrimarySceneComponent();
         const float3          center   = pScene != nullptr ? pScene->getWorldPosition() : float3{};
         ShooterGimmicksInternal::sendCue( owner, hashed_string( "Explosion" ), center, _damage );
@@ -259,7 +259,7 @@ namespace sw
 
     void TurretComponent::stepProjectiles( GameObject& owner )
     {
-        GameObjectManager* pManager = owner.getManager();
+        GameObjectManager* pManager = owner.getMutableManager();
         if ( _projectiles.getProjectiles().empty() || pManager == nullptr )
             return;
         _listShotTarget.clear();
@@ -313,7 +313,7 @@ namespace sw
     void TurretComponent::stepOnce()
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         SceneComponent*    pScene   = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         if ( pManager == nullptr || pScene == nullptr )
             return;

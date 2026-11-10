@@ -26,8 +26,7 @@ namespace sw
         if ( bNothingToMeasure )
             return;
         const GameObject*     pOwner     = getOwner();
-        GameObjectManager*    pManager   = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const GameObject*     pActivator = pManager != nullptr ? pManager->resolveGameObject( _activator ) : nullptr;
+        const GameObject*     pActivator = context.getManager().resolveGameObject( _activator );
         const SceneComponent* pSelf      = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         const SceneComponent* pOther     = pActivator != nullptr ? pActivator->getPrimarySceneComponent() : nullptr;
         if ( pSelf == nullptr || pOther == nullptr )
@@ -37,12 +36,8 @@ namespace sw
         _bActivatorInside   = bInside;
         if ( bEntered == false )
             return;
-        pManager->executeOrDeferPostTickOnComponent( *this, []( ActivatorVolumeComponent& volume )
-        {
-            const GameObject*        pVolumeOwner = volume.getOwner();
-            const GameObjectManager* pScene       = pVolumeOwner != nullptr ? pVolumeOwner->getManager() : nullptr;
-            (void)volume.activate( pScene != nullptr ? pScene->resolveGameObject( volume._activator ) : nullptr );
-        } );
+        context.deferPostTickOnComponent( *this, []( ActivatorVolumeComponent& volume, GameObjectManager& manager )
+        { (void)volume.activate( manager.resolveGameObject( volume._activator ) ); } );
     }
 
     void ActivatorVolumeComponent::onOverlapBegin( const OverlapInfo& overlap )

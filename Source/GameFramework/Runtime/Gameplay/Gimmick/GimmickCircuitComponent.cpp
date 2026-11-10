@@ -294,7 +294,7 @@ namespace sw
             applySavedState( _state );
         bindNodes();
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager != nullptr && _circuit.isBuilt() )
             applyActuators( *pManager );
     }
@@ -310,7 +310,7 @@ namespace sw
     void GimmickCircuitComponent::bindNodes()
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         _listBinding.assign( static_cast<size_t>( _circuit.getNodeCount() ), Binding::None );
         _listNodeTag.assign( static_cast<size_t>( _circuit.getNodeCount() ), TagContainer{} );
         _listRestPose.resize( static_cast<size_t>( _circuit.getNodeCount() ) );
@@ -571,7 +571,7 @@ namespace sw
     void GimmickCircuitComponent::commitRestoredState()
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager != nullptr )
             applyActuators( *pManager );
         storeState();
@@ -580,7 +580,7 @@ namespace sw
     void GimmickCircuitComponent::stepOnce()
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager == nullptr || _circuit.isBuilt() == false )
             return;
         if ( _listBinding.size() != static_cast<size_t>( _circuit.getNodeCount() ) )
@@ -595,7 +595,7 @@ namespace sw
     {
         Component::onTick( context );
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager == nullptr || _circuit.isBuilt() == false )
             return;
         const int32 stepCount = _circuit.consumeTime( context.getDeltaTime() );

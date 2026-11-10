@@ -19,7 +19,7 @@ namespace sw
 
     void GenreGimmickUtil::setBodyActive( GameObject& object, bool bActive, const Component* pKeep )
     {
-        GameObjectManager* pManager = object.getManager();
+        GameObjectManager* pManager = object.getMutableManager();
         if ( pManager == nullptr )
             return;
         // 몸은 씬 컴포넌트(콜라이더, 메시, 스프라이트, 라이트)이다. 논리 컴포넌트(센서, 회로, 이 기믹)는 켜 둔 채로 시간을 센다.
@@ -42,7 +42,7 @@ namespace sw
 
     void GenreGimmickUtil::setInteractableEnabled( GameObject& object, bool bEnabled )
     {
-        GameObjectManager* pManager = object.getManager();
+        GameObjectManager* pManager = object.getMutableManager();
         if ( pManager == nullptr )
             return;
         const GameObjectHandle handle = object.getHandle();

@@ -34,9 +34,8 @@ namespace sw
     void FollowCameraComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
-        GameObject*              pOwner    = getOwner();
-        GameObjectManager*       pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const GameModeComponent* pGameMode = pManager != nullptr ? GameModeComponent::resolve<GameModeComponent>( *pManager, _gameMode ) : nullptr;
+        const GameObjectManager& manager   = context.getManager();
+        const GameModeComponent* pGameMode = GameModeComponent::resolve<GameModeComponent>( manager, _gameMode );
         GameObjectHandle         focusObject{};
         float3                   focusPosition{ 0.0f, 0.0f, 0.0f };
         if ( pGameMode == nullptr || pGameMode->readCameraFocus( focusObject, focusPosition ) == false )
@@ -46,7 +45,7 @@ namespace sw
         }
         // 디렉터의 초점 자리는 PrePhysics 에서 적은 틱 전 자리다 — 그대로 쓰면 한 프레임 늦게 따라간다. 이 그룹은 물리 뒤 단계라 컨트롤러의
         // 이번 프레임 쓰기가 이미 적용됐으므로 초점 오브젝트 메시의 자리를 바로 읽는다.
-        const GameObject*    pFocus = pManager->resolveGameObject( focusObject );
+        const GameObject*    pFocus = manager.resolveGameObject( focusObject );
         const MeshComponent* pMesh  = pFocus != nullptr ? pFocus->getComponent<MeshComponent>() : nullptr;
         applyToCamera( pMesh != nullptr ? pMesh->getWorldPosition() : focusPosition );
     }

@@ -113,7 +113,7 @@ namespace sw
             return;
         }
         const float3 start      = pRoot->getWorldPosition();
-        _ground._pManager       = _bUsePhysicsGround ? pOwner->getManager() : nullptr;
+        _ground._pManager       = _bUsePhysicsGround ? pOwner->getMutableManager() : nullptr;
         _ground._ownerID        = pOwner->getObjectID();
         _ground._fallbackHeight = start._y;
         _ground._probeTop       = start._y + KinematicVehicleComponentInternal::kProbeAbove;
@@ -134,7 +134,7 @@ namespace sw
     bool KinematicVehicleComponent::attachRail()
     {
         GameObject*             pOwner   = getOwner();
-        GameObjectManager*      pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager*      pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         GameObject*             pRail    = pManager != nullptr && _rail.isValid() ? pManager->resolveGameObject( _rail ) : nullptr;
         const SplineComponent*  pSpline  = pRail != nullptr ? pRail->getComponent<SplineComponent>() : nullptr;
         const SplinePath* const pPath    = pSpline != nullptr ? &pSpline->getWorldPath() : nullptr;

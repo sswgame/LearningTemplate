@@ -140,8 +140,8 @@ namespace sw
     void CameraComponent::recordSelectionInputChanged() const
     {
         const GameObject* pOwner = getOwner();
-        if ( pOwner != nullptr && pOwner->getManager() != nullptr )
-            pOwner->getManager()->getCameraRegistry().recordChanged();
+        if ( pOwner != nullptr && pOwner->getMutableManager() != nullptr )
+            pOwner->getMutableManager()->getCameraRegistry().recordChanged();
     }
 
     void CameraComponent::setRenderOutput( const CameraRenderOutput& output )

@@ -96,7 +96,7 @@ namespace sw
             [[nodiscard]] static bool readControllerKind( const VoxelPlayerComponent& player, float64& outValue )
             {
                 GameObject*          pOwner        = player.getOwner();
-                GameObjectManager*   pOwnerManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+                GameObjectManager*   pOwnerManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
                 const PawnComponent* pPawn         = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
                 if ( pPawn == nullptr || pOwnerManager == nullptr )
                     return false;
@@ -436,7 +436,7 @@ namespace sw
     void VoxelPlayerComponent::scheduleFlush()
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager == nullptr || _bFlushScheduled == SW_TRUE )
             return;
         _bFlushScheduled = SW_TRUE;
@@ -448,7 +448,7 @@ namespace sw
     {
         _bFlushScheduled                  = SW_FALSE;
         GameObject*             pOwner    = getOwner();
-        GameObjectManager*      pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager*      pManager  = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         const GameObject*       pObject   = pManager != nullptr ? pManager->resolveGameObject( getGameMode() ) : nullptr;
         VoxelGameModeComponent* pGameMode = pObject != nullptr ? pObject->getComponent<VoxelGameModeComponent>() : nullptr;
         for ( const BlockEdit& edit : _listPendingEdit )

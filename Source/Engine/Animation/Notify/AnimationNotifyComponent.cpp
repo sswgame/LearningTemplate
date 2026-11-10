@@ -147,7 +147,7 @@ namespace sw
     void AnimationNotifyComponent::unbindFromAnimator()
     {
         const GameObject*  pOwner            = getOwner();
-        GameObjectManager* pManager          = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager          = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         Component*         pTarget           = ( pManager != nullptr && _animator.isValid() ) ? pManager->resolveComponent( _animator ) : nullptr;
         _animator                            = ComponentHandle{};
         SkeletalAnimatorComponent* pSkeletal = castTo<SkeletalAnimatorComponent>( pTarget );
@@ -173,7 +173,7 @@ namespace sw
         const bool bScheduled       = _bPendingFrame == SW_TRUE;
         _bPendingFrame              = SW_TRUE;
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager == nullptr || bScheduled )
             return;
         pManager->executeOrDeferPostTickOnComponent( *this, []( AnimationNotifyComponent& component )
@@ -405,7 +405,7 @@ namespace sw
     bool AnimationNotifyComponent::castFromTo( const float3& from, const float3& to, float32 radius, uint32 layerMask, CharacterRayHit& outHit ) const
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager == nullptr )
             return false;
         const float3  delta    = to - from;

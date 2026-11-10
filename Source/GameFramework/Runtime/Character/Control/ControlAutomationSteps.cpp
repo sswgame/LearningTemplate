@@ -110,7 +110,7 @@ namespace sw
                 vector<ControlIntent> listIntent( params._frames, intent );
                 listIntent[0]._buttonTriggered = intent._buttonDown;
 
-                GameObjectManager& manager        = *pObject->getManager();
+                GameObjectManager& manager        = *pObject->getMutableManager();
                 const string       controllerName = string( IntentPlayback::kControllerPrefix ) + params._pawn;
                 GameObject*        pTrackObject   = manager.findGameObjectByName( hashed_string( controllerName ) );
                 if ( pTrackObject == nullptr )

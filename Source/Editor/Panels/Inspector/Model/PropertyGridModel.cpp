@@ -252,7 +252,7 @@ namespace sw::editor
 
     const GameObjectManager* PropertyGridModel::findEditOwnerManager() const
     {
-        return _pObject != nullptr ? _pObject->getManager() : nullptr;
+        return _pObject != nullptr ? _pObject->getMutableManager() : nullptr;
     }
 
     ObjectAddress PropertyGridModel::findDefaultInstance( const void* pInstance, const TypeInfo& type ) const

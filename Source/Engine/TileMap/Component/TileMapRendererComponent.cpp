@@ -231,7 +231,7 @@ namespace sw
     bool TileMapRendererComponent::rebuildChunks()
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getMutableManager() : nullptr;
         if ( pManager == nullptr || _bLoaded == SW_FALSE )
             return false;
         releaseChunks();
@@ -263,7 +263,7 @@ namespace sw
         if ( pBatch != nullptr )
             return true;
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getMutableManager() : nullptr;
         if ( pManager == nullptr )
             return false;
         const TileRect                  rect  = _chunkGrid.computeChunkRect( chunkIndex );
@@ -283,7 +283,7 @@ namespace sw
     {
         // 레지스트리에서 한 번에 뺀다(청크마다 빼면 항목 목록을 청크 수만큼 접는다). 오너가 매니저에서 빠졌으면 배치마다 소멸자 경로가 뺀다.
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getMutableManager() : nullptr;
         if ( pManager != nullptr )
         {
             SpriteInstanceBatch::shutdownAll( *pManager, _listChunkBatch );
@@ -426,7 +426,7 @@ namespace sw
             if ( _bChunkBuildQueued == SW_TRUE )
                 return;
             GameObject*        pOwner   = getOwner();
-            GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
+            GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getMutableManager() : nullptr;
             if ( pManager == nullptr )
                 return;
             _bChunkBuildQueued = SW_TRUE;
@@ -479,7 +479,7 @@ namespace sw
 
         removePhysicsBodies();
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getMutableManager() : nullptr;
         if ( _bGenerateColliders == false || pManager == nullptr )
             return;
         // 타일 충돌은 씬의 2D 물리 씬의 정적 바디다(유니티 TilemapCollider2D) — 강체를 막고, 2D 콜라이더(센서)가 겹침으로 본다.
@@ -512,7 +512,7 @@ namespace sw
     void TileMapRendererComponent::removePhysicsBodies()
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getMutableManager() : nullptr;
         IPhysicsScene2D*   pScene   = pManager != nullptr ? pManager->getSubsystem<sw::ScenePhysics>().findScene2D() : nullptr;
         if ( pScene != nullptr )
         {

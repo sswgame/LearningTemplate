@@ -125,7 +125,7 @@ namespace sw
     {
         GameObject*        pOwner   = getOwner();
         CameraComponent*   pCamera  = pOwner != nullptr ? pOwner->getComponent<CameraComponent>() : nullptr;
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pCamera == nullptr || pManager == nullptr )
         {
             SW_LOG_ERROR_ID( "Killcam.NoCamera", "Killcam on '%#' has no CameraComponent next to it - it cannot replay", pOwner != nullptr ? pOwner->getName().c_str() : "?" );
@@ -148,7 +148,7 @@ namespace sw
         _bPlaying                   = SW_FALSE;
         _pose._phase                = KillcamPhase::Done;
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager != nullptr )
             pManager->getCameraRegistry().setCutCamera( nullptr );
     }

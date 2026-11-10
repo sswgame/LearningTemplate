@@ -142,7 +142,7 @@ namespace sw
     void PlayerControllerComponent::onPossessed( PawnComponent& pawn )
     {
         GameObject*        pOwner     = getOwner();
-        GameObjectManager* pManager   = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager   = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         GameObject*        pPawnOwner = pawn.getOwner();
         if ( pManager == nullptr || pPawnOwner == nullptr )
             return;
@@ -179,7 +179,7 @@ namespace sw
     void PlayerControllerComponent::onUnpossessed( PawnComponent& pawn )
     {
         GameObject*          pOwner   = getOwner();
-        GameObjectManager*   pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager*   pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         const ControlSystem* pSystem  = pManager != nullptr ? ControlSystem::find( *pManager ) : nullptr;
         InputManager*        pInput   = pSystem != nullptr ? pSystem->findInputManager() : nullptr;
         if ( pInput != nullptr && _pushedLayer.empty() == false )

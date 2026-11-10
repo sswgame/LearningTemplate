@@ -33,7 +33,7 @@ namespace sw
         _bStampChecked = SW_FALSE;
         // 붙잡은 도장은 옛 칸의 사본이다 — 놓으면 다음 틱이 새 칸으로 다시 붙잡는다.
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager != nullptr )
             removePersistentStamp( *pManager );
     }
@@ -55,7 +55,7 @@ namespace sw
     {
         Component::onOwnerActiveInHierarchyChanged();
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager != nullptr && pOwner->isActiveInHierarchy() == false )
             removePersistentStamp( *pManager );
     }

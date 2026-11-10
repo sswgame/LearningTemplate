@@ -60,11 +60,8 @@ namespace sw
         if ( _ageSeconds >= _lifetimeSeconds )
         {
             // 틱(워커) 안에서 오브젝트를 지우지 않는다 — 틱 뒤 게임 스레드에서 핸들로 다시 찾아 정리한다(그 사이 지워졌으면 부르지 않는다).
-            GameObject* const        pOwner   = getOwner();
-            GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-            if ( pManager != nullptr )
-                pManager->deferPostTickOnComponent( *this, []( DecalComponent& decal )
-                { decal.removeWhenGone(); } );
+            context.deferPostTickOnComponent( *this, []( DecalComponent& decal )
+            { decal.removeWhenGone(); } );
         }
     }
 
@@ -102,7 +99,7 @@ namespace sw
             return;
         if ( pOwner->getPrimarySceneComponent() == this )
             pOwner->destroy(); // 데칼 액터 — 오브젝트째(언리얼 DecalActor LifeSpan)
-        else if ( GameObjectManager* const pManager = pOwner->getManager(); pManager != nullptr )
+        else if ( GameObjectManager* const pManager = pOwner->getMutableManager(); pManager != nullptr )
             pManager->destroyComponent( this );
     }
 

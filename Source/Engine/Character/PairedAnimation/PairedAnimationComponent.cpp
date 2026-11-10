@@ -56,7 +56,7 @@ namespace sw
         Component::onBeginPlay();
         loadDef();
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager == nullptr )
             return;
         PairedAnimationSystem::getOrCreate( *pManager ).registerUser();
@@ -69,13 +69,9 @@ namespace sw
         Component::onTick( context );
         if ( _bStartPending == SW_FALSE )
             return;
-        _bStartPending              = SW_FALSE;
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        if ( pManager == nullptr )
-            return;
+        _bStartPending = SW_FALSE;
         // 세션은 다른 오브젝트의 애니메이터를 바꾼다 — 틱 뒤에 시작한다.
-        pManager->executeOrDeferPostTickOnComponent( *this, []( PairedAnimationComponent& component, GameObjectManager& manager )
+        context.deferPostTickOnComponent( *this, []( PairedAnimationComponent& component, GameObjectManager& manager )
         {
             (void)manager;
             const PairedAnimationStartResult result = component.startSession( {} );
@@ -101,7 +97,7 @@ namespace sw
     {
         abortSession();
         GameObject*            pOwner   = getOwner();
-        GameObjectManager*     pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager*     pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         PairedAnimationSystem* pSystem  = ( pManager != nullptr && _bSystemUser == SW_TRUE ) ? PairedAnimationSystem::find( *pManager ) : nullptr;
         _bSystemUser                    = SW_FALSE;
         // 마지막 사용자가 떠나면 시스템을 뗀다(모듈을 내리면 컴포넌트가 먼저 지워진다 — `ISceneFrameSystem` 의 약속).
@@ -143,7 +139,7 @@ namespace sw
     PairedAnimationStartResult PairedAnimationComponent::startSession( const vector<PairedAnimationBinding>& listOtherBinding )
     {
         GameObject*                pOwner    = getOwner();
-        GameObjectManager*         pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager*         pManager  = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         SkeletalAnimatorComponent* pAnimator = pOwner != nullptr ? pOwner->getComponent<SkeletalAnimatorComponent>() : nullptr;
         // 파일을 고쳐 캐시가 다시 읽었으면 새 에셋으로 시작한다(돌고 있는 세션은 옛 에셋을 끝까지 쥔다).
         const bool bAssetReloaded = _pairedAnimationPath.empty() == false && _defReload.isStale();
@@ -207,7 +203,7 @@ namespace sw
     void PairedAnimationComponent::abortSession()
     {
         GameObject*            pOwner   = getOwner();
-        GameObjectManager*     pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager*     pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         PairedAnimationSystem* pSystem  = pManager != nullptr ? PairedAnimationSystem::find( *pManager ) : nullptr;
         if ( pSystem != nullptr && _sessionID != 0 )
             pSystem->abortSession( *pManager, _sessionID );

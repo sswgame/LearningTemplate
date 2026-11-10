@@ -22,7 +22,7 @@ namespace sw
             static bool findTarget( const ActionContext& context, GameObject*& outTarget, GameObjectManager*& outManager )
             {
                 outTarget  = context._world.find<ActionTargetSlot>();
-                outManager = outTarget != nullptr ? outTarget->getManager() : nullptr;
+                outManager = outTarget != nullptr ? outTarget->getMutableManager() : nullptr;
                 return outManager != nullptr && outTarget->isPendingDestroy() == false;
             }
 

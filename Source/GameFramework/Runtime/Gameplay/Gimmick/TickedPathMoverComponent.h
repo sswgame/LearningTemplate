@@ -40,7 +40,7 @@ namespace sw
 
         void onBeginPlay() override;
         /** @brief 이 씬의 서버 틱 자리로 옮깁니다(`kApplySubTickID`). 서버 틱을 알리는 틱이 바뀌었으면 선행 조건을 바꿉니다. */
-        void onSubTick( uint32 subTickID, float32 deltaTime ) override;
+        void onSubTick( uint32 subTickID, TickContext& context ) override;
 
         /**
          * @brief 시작 자리 기준 오프셋입니다. 0 초에 시작 자리(오프셋 0)에서 경유점을 차례로 `segmentSeconds` 씩 지나고, 끝에서 시작 자리로 돌아옵니다(고리).

@@ -184,8 +184,9 @@ namespace sw
     }
 
     TickContext::TickContext( GameObject& self, float32 deltaTime )
-        : SceneJobContext{ *self.getManager(), self.getManager()->_structuralChangeBuffer, deltaTime }
+        : SceneJobContext{ *self.getMutableManager(), self.getMutableManager()->_structuralChangeBuffer, deltaTime }
         , _pSelf{ &self }
+        , _pSceneManager{ self.getMutableManager() }
     {
     }
 

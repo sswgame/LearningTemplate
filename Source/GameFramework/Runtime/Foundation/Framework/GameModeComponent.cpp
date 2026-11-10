@@ -77,11 +77,11 @@ namespace sw
             runRules( context.getDeltaTime() );
     }
 
-    void GameModeComponent::onSubTick( uint32 subTickID, float32 deltaTime )
+    void GameModeComponent::onSubTick( uint32 subTickID, TickContext& context )
     {
-        Component::onSubTick( subTickID, deltaTime );
+        Component::onSubTick( subTickID, context );
         if ( subTickID == kRuleSubTick && _bRuleOnSubTick == SW_TRUE )
-            runRules( deltaTime );
+            runRules( context.getDeltaTime() );
     }
 
     SubTickHandle GameModeComponent::getRuleTickHandle() const
@@ -275,6 +275,6 @@ namespace sw
     GameObjectManager* GameModeComponent::getObjectManager() const
     {
         GameObject* pOwner = getOwner();
-        return pOwner != nullptr ? pOwner->getManager() : nullptr;
+        return pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
     }
 } // namespace sw
