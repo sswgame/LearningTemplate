@@ -141,7 +141,7 @@ SW_TEST_CASE( OverworldTileMoverTest, InteractWinsOverMoveAndIsConsumedOnce )
     SW_EXPECT_FALSE( rig._mover.consumeInteractRequest() );
 
     rig.finishStep();
-    rig._mover.update( 0.0f, intent, -1 ); // 버튼이 없는 폰은 상호작용하지 않고 걷는다
+    rig._mover.update( 0.0f, intent, nullopt ); // 버튼이 없는 폰은 상호작용하지 않고 걷는다
     SW_EXPECT_EQUAL( 3, rig._mover.getTileX() );
     SW_EXPECT_FALSE( rig._mover.consumeInteractRequest() );
 }

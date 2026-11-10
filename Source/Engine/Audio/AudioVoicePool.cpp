@@ -3,7 +3,6 @@
 #include "Engine/Audio/AudioVoicePool.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Foundation/Constants.h"
 
 namespace sw
 {
@@ -42,7 +41,7 @@ namespace sw
         slot._bInUse          = false;
         slot._bWaitingForClip = false;
         slot._playingID       = 0;
-        slot._instanceIndex   = constant::invalid_index::kInt32;
+        slot._instanceIndex.reset();
     }
 
     void AudioVoicePool::selectRealVoices( float32 inaudible, uint32 maxRealCount )
