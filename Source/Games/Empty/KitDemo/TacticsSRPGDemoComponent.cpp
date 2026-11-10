@@ -95,12 +95,12 @@ namespace sw
         outField.initialize( _pCatalog.get(), _width, _height, _defaultTerrain, SRPGSettings{}, _seed );
         for ( size_t index = 0; index < _listPlayerUnit.size() + _listEnemyUnit.size(); ++index )
         {
-            const bool           bPlayer   = index < _listPlayerUnit.size();
-            const size_t         slot      = bPlayer ? index : index - _listPlayerUnit.size();
-            const hashed_string& unitID    = bPlayer ? _listPlayerUnit[slot] : _listEnemyUnit[slot];
-            const int2           cell      = TacticsSRPGDemoComponentInternal::toCell( bPlayer ? _listPlayerCell[slot] : _listEnemyCell[slot] );
-            const int32          unitIndex = outField.addUnit( unitID, _pilot, bPlayer ? SRPGTeam::Player : SRPGTeam::Enemy, cell );
-            if ( unitIndex < 0 )
+            const bool            bPlayer   = index < _listPlayerUnit.size();
+            const size_t          slot      = bPlayer ? index : index - _listPlayerUnit.size();
+            const hashed_string&  unitID    = bPlayer ? _listPlayerUnit[slot] : _listEnemyUnit[slot];
+            const int2            cell      = TacticsSRPGDemoComponentInternal::toCell( bPlayer ? _listPlayerCell[slot] : _listEnemyCell[slot] );
+            const expected<int32> unitIndex = outField.addUnit( unitID, _pilot, bPlayer ? SRPGTeam::Player : SRPGTeam::Enemy, cell );
+            if ( unitIndex.has_value() == false )
             {
                 SW_LOG_ERROR_ID( "KitDemo.TacticsUnitNotPlaced", "Tactics demo: unit '%#' with pilot '%#' cannot stand at (%#, %#) - unknown id, outside the field, taken or impassable; the battle does not open",
                                  unitID.c_str(), _pilot.c_str(), cell._x, cell._y );

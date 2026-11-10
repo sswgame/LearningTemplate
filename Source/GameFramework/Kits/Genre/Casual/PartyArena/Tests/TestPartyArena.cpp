@@ -335,7 +335,7 @@ SW_TEST_CASE_F( PartyArenaRulesTest, DashHitsOnceAndStuns )
     SW_REQUIRE_TRUE( open() );
     SW_REQUIRE_TRUE( dashIntoOther() );
     SW_EXPECT_EQUAL( 1, countEvents( TrampolineEvent::Kind::Attacked, 0 ) );
-    SW_EXPECT_EQUAL( 0, findLastEvent( TrampolineEvent::Kind::Hit, 1 )._other );
+    SW_EXPECT_TRUE( findLastEvent( TrampolineEvent::Kind::Hit, 1 )._other == 0 );
     SW_EXPECT_EQUAL( 0, body( 1 )._lastHitter );
     SW_EXPECT_TRUE( body( 1 )._stunTimer.isActive() );
     SW_EXPECT_TRUE( body( 1 )._velocity._x < 0.0f );
@@ -442,7 +442,7 @@ SW_TEST_CASE_F( PartyArenaRulesTest, RingOutCreditsThePusherThenRespawns )
     SW_REQUIRE_TRUE( open() );
     SW_REQUIRE_TRUE( dashIntoOther() );
     SW_REQUIRE_TRUE( stepUntilEvent( TrampolineEvent::Kind::RingOut, 1 ) );
-    SW_EXPECT_EQUAL( 0, findLastEvent( TrampolineEvent::Kind::RingOut, 1 )._other );
+    SW_EXPECT_TRUE( findLastEvent( TrampolineEvent::Kind::RingOut, 1 )._other == 0 );
     SW_EXPECT_TRUE( body( 1 )._state == TrampolinePlayerState::Respawning );
     vector<int32> listScore;
     _arena.computeRoundScores( listScore );
@@ -467,7 +467,7 @@ SW_TEST_CASE_F( PartyArenaRulesTest, RingOutWithoutCredit )
     SW_REQUIRE_TRUE( open() );
     SW_REQUIRE_TRUE( dashIntoOther() );
     SW_REQUIRE_TRUE( stepUntilEvent( TrampolineEvent::Kind::RingOut, 1 ) );
-    SW_EXPECT_EQUAL( -1, findLastEvent( TrampolineEvent::Kind::RingOut, 1 )._other );
+    SW_EXPECT_FALSE( findLastEvent( TrampolineEvent::Kind::RingOut, 1 )._other.has_value() );
     SW_EXPECT_EQUAL( 0, _arena.getMatch().findTeam( 0 )->_score );
 
     _settings._creditWindow   = 3.0f;
@@ -477,7 +477,7 @@ SW_TEST_CASE_F( PartyArenaRulesTest, RingOutWithoutCredit )
     walkOff._moveX = 1.0f;
     _arena.setInput( 0, walkOff );
     SW_REQUIRE_TRUE( stepUntilEvent( TrampolineEvent::Kind::RingOut, 0 ) );
-    SW_EXPECT_EQUAL( -1, findLastEvent( TrampolineEvent::Kind::RingOut, 0 )._other );
+    SW_EXPECT_FALSE( findLastEvent( TrampolineEvent::Kind::RingOut, 0 )._other.has_value() );
     SW_EXPECT_EQUAL( -2, _arena.getMatch().findTeam( 0 )->_score );
 }
 

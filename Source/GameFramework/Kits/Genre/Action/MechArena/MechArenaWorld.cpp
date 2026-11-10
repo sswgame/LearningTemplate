@@ -326,34 +326,34 @@ namespace sw
         return static_cast<int32>( _listTeamName.size() ) - 1;
     }
 
-    int32 MechArenaWorld::addPilot( const MechPilotConfig& config )
+    expected<int32> MechArenaWorld::addPilot( const MechPilotConfig& config )
     {
         const bool bPilotRejected = _bStarted == SW_TRUE || _pMechCatalog == nullptr || config._listMechID.empty() || config._team < 0 ||
                                     config._team >= static_cast<int32>( _listTeamName.size() );
         if ( bPilotRejected )
-            return constant::invalid_index::kInt32;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the match has started, or the catalog, deck or team is missing" } );
         MechPilot pilot;
         int32     deckCost = 0;
         for ( const hashed_string& mechID : config._listMechID )
         {
             const MechDef* pMech = _pMechCatalog->findMech( mechID );
             if ( pMech == nullptr || pMech->_listMode.empty() || isMechDataComplete( *pMech ) == false )
-                return constant::invalid_index::kInt32;
+                return unexpected( Error{ ErrorKind::InvalidArgument, "the deck mech is unknown or its data is incomplete" } );
             // 기체를 바꿀 때마다 체력과 부스트를 다시 짜므로(equipMech) 덱의 모든 기체가 지금 범위 안이어야 한다(거절 사유는 각 initialize 가 남긴다).
             HealthStateMachine probeHealthMachine;
             ResourceGauge      probeBoost;
             if ( probeHealthMachine.initialize( makeMechHealthMachine( *pMech ) ) == false || probeBoost.initialize( makeMechBoost( *pMech ) ) == false )
-                return constant::invalid_index::kInt32;
+                return unexpected( Error{ ErrorKind::InvalidArgument, "the deck mech health or boost settings are out of range" } );
             deckCost += pMech->_cost;
             pilot._listDeckMech.push_back( pMech );
         }
         if ( _pMechCatalog->getDeckCostLimit() > 0 && deckCost > _pMechCatalog->getDeckCostLimit() )
-            return constant::invalid_index::kInt32;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the deck cost is over the limit" } );
         for ( const hashed_string& skillID : config._listSkillID )
         {
             const MechSkillDef* pSkill = _pMechCatalog->findSkill( skillID );
             if ( pSkill == nullptr )
-                return constant::invalid_index::kInt32; // 오타 하나로 스킬 슬롯이 말없이 당겨지지 않게 거절한다(상태 읽기도 없는 스킬을 거절한다)
+                return unexpected( Error{ ErrorKind::InvalidArgument, "the skill is unknown" } ); // 오타 하나로 스킬 슬롯이 말없이 당겨지지 않게 거절한다(상태 읽기도 없는 스킬을 거절한다)
             pilot._listSkill.push_back( pSkill );
         }
         pilot._listSkillRemaining.resize( pilot._listSkill.size() );
@@ -367,7 +367,7 @@ namespace sw
         if ( equipMech( _listPilot.back(), index ) == false )
         {
             _listPilot.pop_back();
-            return constant::invalid_index::kInt32;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the mech slot weapon or move is not in the catalog" } );
         }
         return index;
     }
@@ -396,7 +396,7 @@ namespace sw
             pilot._listParticipant.clear();
             for ( const MechDef* pMech : pilot._listDeckMech )
             {
-                pilot._listParticipant.push_back( _match.addParticipant( pilot._team, pMech->_id, pMech->_cost ) );
+                pilot._listParticipant.push_back( _match.addParticipant( pilot._team, pMech->_id, pMech->_cost ).value() ); // 팀은 위에서 모두 만들었다
             }
         }
         _match.start();
@@ -512,7 +512,7 @@ namespace sw
                 for ( int32 pilot = 0; pilot < getPilotCount(); ++pilot )
                 {
                     const MechPilot& target         = _listPilot[static_cast<size_t>( pilot )];
-                    const bool       bWaitingOnThis = target._state == MechPilotState::Destroyed && target._listParticipant[static_cast<size_t>( target._deckIndex )] == event._participant;
+                    const bool       bWaitingOnThis = target._state == MechPilotState::Destroyed && event._participant == target._listParticipant[static_cast<size_t>( target._deckIndex )];
                     if ( bWaitingOnThis )
                         spawnPilot( pilot, true );
                 }
@@ -522,7 +522,7 @@ namespace sw
                 // 셋 이상의 판에서 게이지가 바닥난 팀은 판이 끝나지 않아도 진 것이다. 내리지 않으면 격추된 조종사가 오지 않을 부활을 기다리고 남은 조종사는 계속 싸웠다.
                 for ( MechPilot& pilot : _listPilot )
                 {
-                    if ( pilot._team == event._team )
+                    if ( event._team == pilot._team )
                         retirePilot( pilot );
                 }
             }
@@ -880,16 +880,17 @@ namespace sw
         if ( bKnockdown )
             finalDown = MathUtil::max( finalDown, pVictimMech->_downMax ); // 눕히는 기술은 다운치를 한 번에 채운다
 
-        const HealthDamageResult result = target._healthMachine.applyDamage( finalDamage, finalDown, attacker );
+        const optional<int32>    instigator = bAttacker ? optional<int32>( attacker ) : nullopt;
+        const HealthDamageResult result     = target._healthMachine.applyDamage( finalDamage, finalDown, instigator );
         target._healthMachine.discardEvents();
         if ( result._bIgnored == SW_TRUE )
             return;
-        const int32 victimParticipant   = target._listParticipant.empty() ? constant::invalid_index::kInt32 : target._listParticipant[static_cast<size_t>( target._deckIndex )];
-        const int32 attackerParticipant = bAttacker && _listPilot[static_cast<size_t>( attacker )]._listParticipant.empty() == false
-                                            ? _listPilot[static_cast<size_t>( attacker )]._listParticipant[static_cast<size_t>( _listPilot[static_cast<size_t>( attacker )]._deckIndex )]
-                                            : constant::invalid_index::kInt32;
+        const int32           victimParticipant   = target._listParticipant.empty() ? constant::invalid_index::kInt32 : target._listParticipant[static_cast<size_t>( target._deckIndex )];
+        const optional<int32> attackerParticipant = bAttacker && _listPilot[static_cast<size_t>( attacker )]._listParticipant.empty() == false
+                                                      ? optional<int32>( _listPilot[static_cast<size_t>( attacker )]._listParticipant[static_cast<size_t>( _listPilot[static_cast<size_t>( attacker )]._deckIndex )] )
+                                                      : nullopt;
         _match.reportDamage( attackerParticipant, victimParticipant, result._healthDamage );
-        pushEvent( MechArenaEvent::Kind::Hit, victim, attacker, result._healthDamage, hashed_string{} );
+        pushEvent( MechArenaEvent::Kind::Hit, victim, instigator, result._healthDamage, hashed_string{} );
 
         if ( result._bDied == SW_TRUE )
         {
@@ -909,7 +910,7 @@ namespace sw
             ++target._deaths;
             if ( bAttacker && TeamAttitudeUtil::isHostile( _listPilot[static_cast<size_t>( attacker )]._team, target._team ) )
                 ++_listPilot[static_cast<size_t>( attacker )]._kills;
-            pushEvent( MechArenaEvent::Kind::Destroyed, victim, attacker, 0.0f, pVictimMech->_id );
+            pushEvent( MechArenaEvent::Kind::Destroyed, victim, instigator, 0.0f, pVictimMech->_id );
             _match.reportKill( victimParticipant, attackerParticipant );
             return;
         }

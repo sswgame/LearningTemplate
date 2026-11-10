@@ -54,7 +54,7 @@ namespace sw
 
     bool RagdollAnimationBinding::isAnimationActive() const
     {
-        if ( _owner._state != RagdollState::Animated || _owner._flinchLayer >= 0 )
+        if ( _owner._state != RagdollState::Animated || _owner._flinchLayer.has_value() )
             return true;
         for ( const float32 reactionTime : _owner._listReactionTime )
         {
@@ -123,7 +123,7 @@ namespace sw
         , _pBoneNameSkeleton{ nullptr }
         , _pUnit{ nullptr }
         , _assetReload{}
-        , _flinchLayer{ -1 }
+        , _flinchLayer{}
         , _partialWeight{ 1.0f }
         , _settleElapsed{ 0.0f }
         , _blendBackElapsed{ 0.0f }
@@ -416,12 +416,15 @@ namespace sw
         const bool                 bCannotFlinch = _flinchClip.empty() || pAnimator == nullptr || _state == RagdollState::Ragdoll;
         if ( bCannotFlinch )
             return;
-        if ( _flinchLayer < 0 )
-            _flinchLayer = pAnimator->addLayer( AnimationLayerDef{ _flinchClip, hashed_string{}, 1.0f, AnimationLayerBlend::Additive, SW_FALSE } );
-        if ( _flinchLayer < 0 )
-            return;
-        pAnimator->restartLayer( static_cast<uint32>( _flinchLayer ) );
-        pAnimator->setLayerWeight( static_cast<uint32>( _flinchLayer ), 1.0f );
+        if ( _flinchLayer.has_value() == false )
+        {
+            const expected<uint32> layer = pAnimator->addLayer( AnimationLayerDef{ _flinchClip, hashed_string{}, 1.0f, AnimationLayerBlend::Additive, SW_FALSE } );
+            if ( layer.has_value() == false )
+                return; // addLayer 가 오류를 남겼다 — 다음 맞음에서 다시 해 본다
+            _flinchLayer = *layer;
+        }
+        pAnimator->restartLayer( *_flinchLayer );
+        pAnimator->setLayerWeight( *_flinchLayer, 1.0f );
         _flinchElapsed = 0.0f;
     }
 
@@ -430,11 +433,11 @@ namespace sw
         // 움찔 레이어 가중치를 정한다.
         GameObject*                pOwner    = unit.getOwner();
         SkeletalAnimatorComponent* pAnimator = pOwner != nullptr ? pOwner->getComponent<SkeletalAnimatorComponent>() : nullptr;
-        if ( _flinchLayer >= 0 && pAnimator != nullptr )
+        if ( _flinchLayer.has_value() && pAnimator != nullptr )
         {
             _flinchElapsed += deltaSeconds;
             const float32 weight = _flinchSeconds > 0.0f ? MathUtil::saturate( 1.0f - _flinchElapsed / _flinchSeconds ) : 0.0f;
-            pAnimator->setLayerWeight( static_cast<uint32>( _flinchLayer ), weight );
+            pAnimator->setLayerWeight( *_flinchLayer, weight );
         }
         // 기상 클립이 끝나면 다음 상태로.
         const bool bGetUpFinished = _bGettingUp && pAnimator != nullptr && pAnimator->getGraphPlayer().getPlayer().hasFinished();

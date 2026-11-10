@@ -81,7 +81,7 @@ namespace sw::editor
         [[nodiscard]] bool findGraphPin( int32 pinID, EditorGraphPinInfo& outInfo ) const;
 
         // 편집
-        int32   addNodeFromSelection( BehaviorNodeKind type );
+        void    addNodeFromSelection( BehaviorNodeKind type );
         void    markStructureChanged( const utf8* pLabel );
         void    layoutTree();
         float32 layoutNode( int32 id, uint32 depth, float32& inoutNextRow );

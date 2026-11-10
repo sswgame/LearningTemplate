@@ -684,7 +684,7 @@ namespace sw
     {
         RTSEvent event;
         event._kind   = kind;
-        event._player = player;
+        event._player = player >= 0 ? optional<int32>( player ) : nullopt; // 유닛의 `_owner` 는 상태 칸이라 주인 없음이 -1 이다
         event._unit   = unitID;
         event._defID  = defID;
         event._value  = value;

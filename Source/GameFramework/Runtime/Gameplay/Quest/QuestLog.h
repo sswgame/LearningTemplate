@@ -82,7 +82,7 @@ namespace sw
         hashed_string      _questID{};
         hashed_string      _stageID{};
         const QuestReward* _pReward{ nullptr };
-        optional<int32>    _objective; ///< 목표 번호. 목표와 상관없는 이벤트는 비어 있다
+        optional<int32>    _objective{}; ///< 목표 하나의 일(ObjectiveProgress · ObjectiveDone)에만 있다
         int32              _value{ 0 };
         Kind               _kind{ Kind::Started };
     };

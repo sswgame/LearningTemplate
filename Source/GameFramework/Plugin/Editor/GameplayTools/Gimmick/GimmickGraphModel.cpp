@@ -208,10 +208,10 @@ namespace sw::editor
         }
     }
 
-    int32 GimmickGraphModel::addNode( const hashed_string& kind )
+    expected<int32> GimmickGraphModel::addNode( const hashed_string& kind )
     {
         if ( _pRegistry->findKind( kind ) == nullptr )
-            return kNoGraphID;
+            return unexpected( Error{ ErrorKind::NotFound, "unknown gimmick node kind", kind.c_str() } );
         GimmickGraphNode node;
         node._id      = hashed_string( makeUniqueID( kind ) );
         node._kind    = kind;
@@ -230,8 +230,8 @@ namespace sw::editor
             if ( index.has_value() == false )
                 continue;                                      // 고른 뒤 지운 노드
             const GimmickGraphNode source = _listNode[*index]; // addNode 가 목록을 늘리기 전에 값으로 둔다
-            const int32            newID  = addNode( source._kind );
-            if ( newID == kNoGraphID )
+            const expected<int32>  newID  = addNode( source._kind );
+            if ( newID.has_value() == false )
                 continue;
             GimmickGraphNode& copy = _listNode.back();
             copy._params           = source._params;
@@ -239,7 +239,7 @@ namespace sw::editor
             copy._position         = source._position + offset;
             copy._bPlaced          = false;
             listSource.push_back( graphID );
-            listNew.push_back( newID );
+            listNew.push_back( *newID );
         }
         const auto mapID = [&listSource, &listNew]( int32 graphID )
         {

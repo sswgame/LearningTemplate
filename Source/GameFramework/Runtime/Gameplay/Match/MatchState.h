@@ -7,6 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -82,19 +83,19 @@ namespace sw
         enum class Kind : uint8
         {
             PhaseChanged = 0, ///< _value = MatchPhase
-            Killed,           ///< _participant 는 죽은 쪽이고, _other 는 죽인 쪽이다(-1 이면 환경)
+            Killed,           ///< _participant 는 죽은 쪽이고, _other 는 죽인 쪽이다(없으면 환경)
             Assisted,         ///< _participant 는 도운 쪽이고, _other 는 죽은 쪽이다
             Respawned,
             ParticipantEliminated,
             TeamEliminated, ///< _team 은 팀이고, _value 는 순위이다
             ScoreChanged,   ///< _team 은 팀이고, _value 는 새 점수이다
-            MatchEnded      ///< _team 은 이긴 팀이다(-1 이면 무승부)
+            MatchEnded      ///< _team 은 이긴 팀이다(없으면 무승부)
         };
-        int32 _participant{ constant::invalid_index::kInt32 };
-        int32 _other{ constant::invalid_index::kInt32 };
-        int32 _team{ constant::invalid_index::kInt32 };
-        int32 _value{ 0 };
-        Kind  _kind{ Kind::PhaseChanged };
+        optional<int32> _participant{};
+        optional<int32> _other{};
+        optional<int32> _team{};
+        int32           _value{ 0 };
+        Kind            _kind{ Kind::PhaseChanged };
     };
 } // namespace sw
 
@@ -114,14 +115,15 @@ namespace sw
         void initialize( const MatchSettings& settings );
         /** @brief 팀을 추가합니다. @p costPool 이 0 이면 부활 비용이 없습니다. */
         int32 addTeam( const hashed_string& name, int32 costPool = 0 );
-        int32 addParticipant( int32 team, const hashed_string& role, int32 respawnCost = 0 );
-        void  start();
-        void  update( float32 deltaTime );
+        /** @brief 참가자를 추가하고 번호를 돌려줍니다. 없는 팀이면 이유를 돌려줍니다. */
+        [[nodiscard]] expected<int32> addParticipant( int32 team, const hashed_string& role, int32 respawnCost = 0 );
+        void                          start();
+        void                          update( float32 deltaTime );
 
-        /** @brief 피해를 기록합니다. 도움 판정과 통계에 씁니다. */
-        void reportDamage( int32 attacker, int32 victim, float32 amount );
-        /** @brief 죽음을 알립니다. @p killer 가 -1 이면 환경이 죽인 것입니다(낙사, 자기장). */
-        void reportKill( int32 victim, int32 killer );
+        /** @brief 피해를 기록합니다. 도움 판정과 통계에 씁니다. @p attacker 가 없으면(환경) 기록하지 않습니다. */
+        void reportDamage( optional<int32> attacker, int32 victim, float32 amount );
+        /** @brief 죽음을 알립니다. @p killer 가 없으면 환경이 죽인 것입니다(낙사, 자기장). */
+        void reportKill( int32 victim, optional<int32> killer );
         /** @brief 부활 없이 탈락시킵니다. 배틀로얄의 기절 후 확인 사살과 비대칭 대전의 희생에 씁니다. */
         void eliminate( int32 participant );
         /** @brief 팀 점수를 더합니다. 거점, 목표, 탈출에 씁니다. */
@@ -156,7 +158,7 @@ namespace sw
         void eliminateTeam( int32 team );
         void resolveEndConditions();
         void finishByScore();
-        void pushEvent( MatchEvent::Kind kind, int32 participant, int32 other, int32 team, int32 value );
+        void pushEvent( MatchEvent::Kind kind, optional<int32> participant, optional<int32> other, optional<int32> team, int32 value );
 
     private:
         vector<MatchTeam>        _listTeam;

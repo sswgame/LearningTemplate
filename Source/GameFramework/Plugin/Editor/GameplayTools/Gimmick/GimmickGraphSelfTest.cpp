@@ -41,10 +41,14 @@ namespace sw::editor
             /** @brief 모델이 확장 이미지 안에서 노드 · 배선을 만들고 내보내는지 확인합니다. 기본 노드 종류 레지스트리가 확장에서도 보여야 합니다. */
             static EditorSelfTestStep runModelBuildsACircuit( EditorSelfTestContext& context )
             {
-                GimmickGraphModel model( game::getSubsystem<GimmickNodeRegistrySubsystem>().getRegistry() );
-                const int32       plate = model.addNode( hashed_string( "Signal" ) );
-                const int32       door  = model.addNode( hashed_string( "Door" ) );
-                context.expect( plate != GimmickGraphModel::kNoGraphID && door != GimmickGraphModel::kNoGraphID, "the default node registry has no Signal or Door" );
+                GimmickGraphModel     model( game::getSubsystem<GimmickNodeRegistrySubsystem>().getRegistry() );
+                const expected<int32> plateID = model.addNode( hashed_string( "Signal" ) );
+                const expected<int32> doorID  = model.addNode( hashed_string( "Door" ) );
+                context.expect( plateID.has_value() && doorID.has_value(), "the default node registry has no Signal or Door" );
+                if ( plateID.has_value() == false || doorID.has_value() == false )
+                    return EditorSelfTestStep::Done;
+                const int32 plate = *plateID;
+                const int32 door  = *doorID;
                 context.expect( model.addWire( plate, "Active", door, "Open" ).has_value(), "a Signal -> Door wire was rejected" );
                 vector<GimmickGraphIssue> listIssue;
                 model.collectIssues( listIssue );

@@ -9,6 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -211,13 +212,13 @@ namespace sw
             PlayerDefeated,
             GameOver ///< _player 가 이긴 팀이다
         };
-        hashed_string _defID{};
-        float3        _position{};
-        RTSUnitID     _unit{};
-        RTSUnitID     _other{}; ///< 죽음 이벤트에서 죽인 유닛
-        int32         _player{ constant::invalid_index::kInt32 };
-        int32         _value{ 0 };
-        Kind          _kind{ Kind::UnitCreated };
+        hashed_string   _defID{};
+        float3          _position{};
+        RTSUnitID       _unit{};
+        RTSUnitID       _other{};  ///< 죽음 이벤트에서 죽인 유닛
+        optional<int32> _player{}; ///< 주인 없는 유닛(자원)의 일이면 없음
+        int32           _value{ 0 };
+        Kind            _kind{ Kind::UnitCreated };
     };
 } // namespace sw
 
