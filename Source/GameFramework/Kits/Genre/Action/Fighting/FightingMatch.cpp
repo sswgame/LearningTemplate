@@ -630,7 +630,7 @@ namespace sw
             fighter._sidestepSign = -1;
             fighter._stanceIndex  = constant::invalid_index::kInt32;
             fighter._posture      = FighterPosture::Standing;
-            pushEvent( FightingEvent::Kind::Sidestep, player, nullopt );
+            pushEvent( FightingEvent::Kind::Sidestep, player, fighter._sidestepSign ); // 값은 옆걸음 방향(-1 · 1)이다
             return;
         }
         if ( bFloor && fighter._inputBuffer.isCompleted( fighter._pDef->_jump, fighter._side ) )
