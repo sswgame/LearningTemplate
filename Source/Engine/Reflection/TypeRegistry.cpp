@@ -203,7 +203,9 @@ namespace sw
             _mapHashToCanonicalName.insert_or_assign( shortName.getHash(), canonicalName );
         }
         // 테이블이 바뀌었으니 세대를 올린다. 기록해 둔 빈 결과(`TypeLookupCache` 의 미등록, 찾지 못한 부모)를 다음 조회가 다시 찾는다.
-        s_typeTableGeneration.fetch_add( 1, std::memory_order_acq_rel );
+        // 그 세대가 이 내용의 세대다 — 다시 등록하면 오래 든 프로퍼티 참조(`PropertyHandle`)가 낡는다.
+        const uint32 contentGeneration                                      = s_typeTableGeneration.fetch_add( 1, std::memory_order_acq_rel ) + 1;
+        _mapFqnToClassType.find( canonicalKey )->second->_contentGeneration = contentGeneration;
 
         // 사슬이 바뀌었을 수 있다 — 재등록은 부모를 바꿀 수 있고, 새 타입은 누군가의 비어 있던 부모일 수 있다. 그 타입과 **자손만** 비우고 다시 짓는다.
         // 배치 안이면 모아 두고 배치 끝이 한 번에 찾는다(등록마다 찾으면 배치가 O(타입²) 이다).

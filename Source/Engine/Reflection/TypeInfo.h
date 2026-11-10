@@ -145,6 +145,11 @@ namespace sw
          */
         mutable atomic<uint32> _parentMissGeneration;
         uint32                 _typeID;
+        /**
+         * @brief 이 내용이 등록된 때의 타입 표 세대입니다(`TypeRegistry::registerClass` 가 적는다, 사본 · 미등록은 0).
+         * @details 같은 FQN 을 다시 등록하면(핫 리로드) 주소는 그대로 두고 목록을 바꾸므로 이 값이 바뀐다 — 오래 든 프로퍼티 참조(`PropertyHandle`)가 낡았음을 안다.
+         */
+        uint32 _contentGeneration;
         /** @brief `REFLECT( Abstract )` 이거나 C++ 추상 클래스입니다. 생성할 수 없습니다(`UCLASS( Abstract )` 에 해당). */
         uint8 _bAbstract : 1;
         /** @brief `REFLECT( Static )` 타입(함수 라이브러리)입니다. `FunctionMetadata::_bStatic` 과는 다릅니다. */

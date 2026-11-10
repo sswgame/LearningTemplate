@@ -4,6 +4,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Reflection/PropertyHandle.h"
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
@@ -1370,6 +1371,64 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, DerivedPropertyListFollowsItsBase )
     SW_EXPECT_EQUAL( 1u, pDerived->getPropertiesWithBase().size() );
     SW_EXPECT_NULL( pDerived->findPropertyInHierarchy( sw::hashed_string( "_a" ) ) );
     registry.unregisterTypesByModule( "TestMergeDerived" );
+}
+
+/**
+ * @brief [ReflectionTypeRegistryTest] 오래 드는 프로퍼티 참조(`PropertyHandle`)는 선언 타입을 다시 등록하거나 내리면 낡음을 안다 — 매달린 포인터를 주지 않는다
+ * @details 파생 타입에서 찾은 기반 프로퍼티는 기반(선언 타입)의 (색인, 세대)로 든다. 파생만 다시 등록해도 기반 참조는 그대로 산다.
+ */
+SW_TEST_CASE( ReflectionTypeRegistryTest, PropertyHandleGoesStaleWhenItsDeclaringTypeChanges )
+{
+    const sw::test::ScopedTestModule scopedModule( "TestHandleBase" );
+    const sw::test::ScopedTestModule scopedModule1( "TestHandleDerived" );
+    sw::TypeRegistry&                registry     = sw::engine::getSubsystem<sw::TypeRegistry>();
+    const auto                       makeProperty = []( const utf8* pName, size_t offset )
+    {
+        return sw::PropertyInfo{ sw::hashed_string( pName ), sw::hashed_string( "int32" ), offset };
+    };
+
+    sw::TypeInfo base;
+    base._name               = sw::hashed_string( "HandleBase" );
+    base._fullyQualifiedName = sw::hashed_string( "swtest::HandleBase" );
+    base._moduleName         = sw::hashed_string( "TestHandleBase" );
+    base._size               = 8;
+    base._listProperty       = { makeProperty( "_a", 0 ), makeProperty( "_b", 4 ) };
+
+    sw::TypeInfo derived;
+    derived._name               = sw::hashed_string( "HandleDerived" );
+    derived._fullyQualifiedName = sw::hashed_string( "swtest::HandleDerived" );
+    derived._parentFQN          = sw::hashed_string( "swtest::HandleBase" );
+    derived._moduleName         = sw::hashed_string( "TestHandleDerived" );
+    derived._size               = 12;
+    derived._listProperty       = { makeProperty( "_c", 8 ) };
+
+    registry.registerClass( base );
+    registry.registerClass( derived );
+    const sw::TypeInfo* pBase    = registry.findType( sw::hashed_string( "swtest::HandleBase" ) );
+    const sw::TypeInfo* pDerived = registry.findType( sw::hashed_string( "swtest::HandleDerived" ) );
+    SW_REQUIRE_NOT_NULL( pBase );
+    SW_REQUIRE_NOT_NULL( pDerived );
+    const sw::PropertyInfo* pB = pDerived->findPropertyInHierarchy( sw::hashed_string( "_b" ) );
+    const sw::PropertyInfo* pC = pDerived->findPropertyInHierarchy( sw::hashed_string( "_c" ) );
+    SW_REQUIRE_NOT_NULL( pB );
+    SW_REQUIRE_NOT_NULL( pC );
+
+    const sw::PropertyHandle handleB = sw::PropertyHandle::of( *pDerived, *pB );
+    const sw::PropertyHandle handleC = sw::PropertyHandle::of( *pDerived, *pC );
+    SW_EXPECT_TRUE( handleB._pType == pBase ); // 선언 타입은 기반이다
+    SW_EXPECT_EQUAL( 1u, handleB._index );
+    SW_EXPECT_TRUE( handleB.find() == pB );
+    SW_EXPECT_TRUE( handleC.find() == pC );
+
+    // 파생만 다시 올라온다 — 기반 참조는 산다, 파생 참조는 낡는다.
+    registry.registerClass( derived );
+    SW_EXPECT_TRUE( handleB.find() == pB );
+    SW_EXPECT_NULL( handleC.find() );
+
+    // 기반이 내려간다 — 기반 참조도 낡는다.
+    registry.unregisterTypesByModule( "TestHandleBase" );
+    SW_EXPECT_NULL( handleB.find() );
+    registry.unregisterTypesByModule( "TestHandleDerived" );
 }
 
 /**

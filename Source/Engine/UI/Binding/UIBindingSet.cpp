@@ -530,7 +530,7 @@ namespace sw
         for ( ActiveBinding& binding : _listBinding )
         {
             const bool bMatches = binding._widget == widget.getID() && binding._expression._mode == UIBindingMode::TwoWay &&
-                                  binding._target.getRootProperty()._name == propertyName;
+                                  binding._target.isValid() && binding._target.getRootProperty()._name == propertyName; // 낡은 경로(타입 재등록)는 맞추지 않는다
             if ( bMatches == false )
                 continue;
             if ( binding._expression._source == UIBindingSource::Setting )

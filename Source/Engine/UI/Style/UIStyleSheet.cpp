@@ -140,13 +140,14 @@ namespace sw
                 }
 
                 /** @brief 필드 하나를 만들고 값이 그 타입으로 읽히는지 확인합니다(빈 스타일에 써 봅니다). */
-                [[nodiscard]] expected<void> addAssignment( const XMLNode& node, UIStyleRule& inoutRule, UIStyleField field, const PropertyInfo& property, const PropertyInfo* pNested,
-                                                            const utf8* pName, const utf8* pValue ) const
+                [[nodiscard]] expected<void> addAssignment( const XMLNode& node, UIStyleRule& inoutRule, UIStyleField field, const PropertyInfo& property, const TypeInfo* pNestedType,
+                                                            const PropertyInfo* pNested, const utf8* pName, const utf8* pValue ) const
                 {
                     UIStyleAssignment assignment{};
-                    assignment._field           = field;
-                    assignment._pProperty       = &property;
-                    assignment._pNestedProperty = pNested;
+                    assignment._field    = field;
+                    assignment._property = PropertyHandle::of( *WidgetStyle::StaticType(), property );
+                    if ( pNested != nullptr )
+                        assignment._nestedProperty = PropertyHandle::of( *pNestedType, *pNested );
                     if ( resolveValue( pValue, assignment._text ) == false )
                         return fail( node, string( "Rule uses unknown variable '" ) + pValue + "'" );
                     WidgetStyle scratch{};
@@ -187,7 +188,7 @@ namespace sw
                         const PropertyInfo* pProperty = findProperty( styleType, pName );
                         if ( pProperty == nullptr || UIStyleFieldTable::tryFindField( pName, field ) == false )
                             return fail( element, string( "Rule has unknown style property '" ) + pName + "'" );
-                        if ( expected<void> added = addAssignment( element, rule, field, *pProperty, nullptr, pName, attribute.getValue() ); added.has_value() == false )
+                        if ( expected<void> added = addAssignment( element, rule, field, *pProperty, nullptr, nullptr, pName, attribute.getValue() ); added.has_value() == false )
                             return added;
                     }
                     for ( XMLNode child = element.findChild(); child.isValid(); child = child.findNextSibling() )
@@ -203,7 +204,7 @@ namespace sw
                             const PropertyInfo* pInner = findProperty( *pNested, attribute.getName() );
                             if ( pInner == nullptr )
                                 return fail( child, string( "<" ) + pName + "> has unknown attribute '" + attribute.getName() + "'" );
-                            if ( expected<void> added = addAssignment( child, rule, field, *pProperty, pInner, attribute.getName(), attribute.getValue() ); added.has_value() == false )
+                            if ( expected<void> added = addAssignment( child, rule, field, *pProperty, pNested, pInner, attribute.getName(), attribute.getValue() ); added.has_value() == false )
                                 return added;
                         }
                     }
@@ -451,15 +452,20 @@ namespace sw
 
     void UIStyleSheetAsset::applyAssignment( const UIStyleAssignment& assignment, WidgetStyle& inoutStyle )
     {
-        if ( assignment._pProperty == nullptr )
+        // 스타일 타입이 다시 등록됐으면(핫 리로드) 참조가 낡았다 — 시트를 다시 읽을 때까지 그 필드는 쓰지 않는다(매달린 포인터로 쓰지 않는다).
+        const PropertyInfo* pProperty = assignment._property.find();
+        if ( pProperty == nullptr )
             return;
-        if ( assignment._pNestedProperty == nullptr )
+        if ( assignment._nestedProperty.isSet() == false )
         {
-            (void)SerializerUtil::applyPropertyText( *assignment._pProperty, MutableObjectAddress{ &inoutStyle }, assignment._text, SerializeContext::getDefault( SerializePurpose::Authoring ) ); // 읽을 때 이미 확인했다
+            (void)SerializerUtil::applyPropertyText( *pProperty, MutableObjectAddress{ &inoutStyle }, assignment._text, SerializeContext::getDefault( SerializePurpose::Authoring ) ); // 읽을 때 이미 확인했다
             return;
         }
-        void* pNested = assignment._pProperty->getRawPtr( &inoutStyle );
-        (void)SerializerUtil::applyPropertyText( *assignment._pNestedProperty, MutableObjectAddress{ pNested }, assignment._text, SerializeContext::getDefault( SerializePurpose::Authoring ) ); // 읽을 때 이미 확인했다
+        const PropertyInfo* pNestedProperty = assignment._nestedProperty.find();
+        if ( pNestedProperty == nullptr )
+            return;
+        void* pNested = pProperty->getRawPtr( &inoutStyle );
+        (void)SerializerUtil::applyPropertyText( *pNestedProperty, MutableObjectAddress{ pNested }, assignment._text, SerializeContext::getDefault( SerializePurpose::Authoring ) ); // 읽을 때 이미 확인했다
     }
 } // namespace sw
 

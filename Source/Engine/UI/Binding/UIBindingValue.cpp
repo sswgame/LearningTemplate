@@ -339,6 +339,18 @@ namespace sw
 
 namespace sw
 {
+    bool UIPropertyPath::isValid() const
+    {
+        if ( _listProperty.empty() )
+            return false;
+        for ( const PropertyHandle& handle : _listProperty )
+        {
+            if ( handle.find() == nullptr )
+                return false;
+        }
+        return true;
+    }
+
     const hashed_string& UIPropertyPath::getLeafTypeName() const
     {
         return getLeafProperty()._typeName;
@@ -349,7 +361,7 @@ namespace sw
         void* pOwner = pRoot;
         for ( uint32 index = 0; index + 1 < static_cast<uint32>( _listProperty.size() ) && pOwner != nullptr; ++index )
         {
-            pOwner = _listProperty[index]->getRawPtr( pOwner );
+            pOwner = _listProperty[index].get().getRawPtr( pOwner );
         }
         return pOwner;
     }
@@ -422,7 +434,7 @@ namespace sw
                 outPath = UIPropertyPath{};
                 return unexpected( Error{ ErrorKind::Unsupported, "the path goes through a container", path } );
             }
-            outPath._listProperty.push_back( pProperty );
+            outPath._listProperty.push_back( PropertyHandle::of( *pType, *pProperty ) );
             if ( bIsLast == false )
             {
                 pType = engine::getSubsystem<TypeRegistry>().findType( pProperty->_typeName );

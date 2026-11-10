@@ -115,6 +115,7 @@ namespace sw
         , _pParentType{ nullptr }
         , _parentMissGeneration{ 0 }
         , _typeID{ 0 }
+        , _contentGeneration{ 0 }
         , _bAbstract{ SW_FALSE }
         , _bStatic{ SW_FALSE }
         , _bPrimitive{ SW_FALSE }
