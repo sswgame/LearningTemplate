@@ -17,6 +17,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHI.h"
+#include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionData.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
@@ -139,6 +140,7 @@ namespace sw
         , _parentPermutationHash{ 0 }
         , _bDefinesDirty{ SW_TRUE }
         , _instReserved{ 0 }
+        , _renderResourceHook{ make_unique<RHIRenderResourceHook<MaterialInstance>>( *this ) }
     {
     }
 

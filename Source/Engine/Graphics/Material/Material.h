@@ -17,7 +17,6 @@
 #include "Engine/Graphics/Material/MaterialRenderBinding.h"
 #include "Engine/Graphics/Material/MaterialRenderVersion.h"
 #include "Engine/Graphics/Material/MaterialTypes.h"
-#include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 
 namespace sw
@@ -46,6 +45,8 @@ namespace sw
 
     class IRHIDevice;
     class MaterialInstance;
+    template <typename TOwner>
+    class RHIRenderResourceHook;
     class MaterialParameterCollection;
 
     /// @brief 셰이더 퍼뮤테이션과 패킹한 머티리얼 바이트를 가진 머티리얼 에셋입니다. 게임 스레드 객체입니다.
@@ -62,7 +63,7 @@ namespace sw
      * 엔진(GPUScene 스냅샷)이 마지막까지 가지고 있다가 모듈이 언로드된 뒤 놓으면 이미 없는 코드로 뛰어든다.
      * create() 는 Engine.dll 안에서 만들므로 누가 마지막에 놓든 안전하다.
      */
-    class SW_API Material final : public RHIRenderResource, public std::enable_shared_from_this<Material>
+    class SW_API Material final : public std::enable_shared_from_this<Material>
     {
     public:
         /** @brief 머티리얼 파일의 확장자입니다. 에디터 종류 등록(`Editor/AssetActions`)이 이 값을 씁니다. */
@@ -91,7 +92,7 @@ namespace sw
         /** @brief 빈 머티리얼을 Engine.dll 안에서 shared_ptr 로 만듭니다. Material 을 얻는 유일한 방법입니다. */
         static shared_ptr<Material> create();
         /** @brief GPU 버퍼와 비동기 로드를 정리합니다. */
-        ~Material() override;
+        ~Material();
 
         /** @brief 복사를 금지합니다. */
         Material( const Material& ) = delete;
@@ -104,12 +105,12 @@ namespace sw
 
         /** @brief 머티리얼 에셋을 로드하고 텍스처를 요청하고 셰이더 레이아웃을 맞춥니다(게임 스레드). 상수 버퍼는 렌더 스레드의 프록시가 만든다. */
         [[nodiscard]] bool initialize( IRHIDevice* pRHI, const AssetID& assetID );
-        /** @brief (RHIRenderResource) 빌린 텍스처를 살아 있는 디바이스의 캐시에 돌려줍니다. */
-        void releaseRHI( IRHIDevice* pRHI ) override;
-        /** @brief (RHIRenderResource) 디바이스가 이미 없을 때 부릅니다. 텍스처 참조만 놓습니다. */
-        void clearRHI( IRHIDevice* pDevice ) override;
-        /** @brief (RHIRenderResource) 새 디바이스로 다시 초기화합니다(텍스처를 새로 빌린다). */
-        [[nodiscard]] bool initRHI( IRHIDevice* pDevice ) override;
+        /** @brief (디바이스 통보 — `_renderResourceHook`) 빌린 텍스처를 살아 있는 디바이스의 캐시에 돌려줍니다. */
+        void releaseRHI( IRHIDevice* pRHI );
+        /** @brief (디바이스 통보 — `_renderResourceHook`) 디바이스가 이미 없을 때 부릅니다. 텍스처 참조만 놓습니다. */
+        void clearRHI( IRHIDevice* pDevice );
+        /** @brief (디바이스 통보 — `_renderResourceHook`) 새 디바이스로 다시 초기화합니다(텍스처를 새로 빌린다). */
+        [[nodiscard]] bool initRHI( IRHIDevice* pDevice );
         /** @brief 초기화 상태입니다(캐시의 줄이 잠금 아래에서 읽으므로 원자다). 그릴 수 있는 것은 `Ready` 뿐입니다. */
         MaterialInitState getInitState() const { return static_cast<MaterialInitState>( _initState.load( std::memory_order_acquire ) ); }
         /** @brief 초기화 상태를 정합니다. 초기화 결과는 `initialize` 가, 요청은 `MaterialCache::requestInitialize` 가 씁니다. */
@@ -393,5 +394,8 @@ namespace sw
         mutable uint8          _bShaderPathHashDirty : 1;
         uint8                  _bShaderLayoutSynced  : 1; /**< ensureShaderLayout 이 맞췄다(백엔드와 캐시 세대와 함께 본다). 다시 로드하면 풀린다. */
         [[maybe_unused]] uint8 _reservedMaterial     : 5;
+
+        /** @brief 디바이스 수명 통보를 받아 위 `releaseRHI` · `clearRHI` · `initRHI` 로 넘긴다(상속 대신 멤버 — 이 헤더가 RHI 를 include 하지 않는다). 마지막 멤버라 먼저 사라진다. */
+        unique_ptr<RHIRenderResourceHook<Material>> _renderResourceHook;
     };
 } // namespace sw

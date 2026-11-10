@@ -85,4 +85,27 @@ namespace sw
          */
         static uint32 getRegisteredCount();
     };
+
+    /**
+     * @class RHIRenderResourceHook
+     * @brief 게임이 보는 객체(머티리얼 · 머티리얼 인스턴스)가 상속 대신 **멤버로** 쥐는 통보 수신자입니다. 받은 통보를 주인의 같은 이름 함수로 넘긴다.
+     * @details 주인 헤더는 앞선 선언(`template <typename> class RHIRenderResourceHook;`)과 `unique_ptr` 만 들고, 이 헤더는 주인의 .cpp 만 include 한다 —
+     *          게임 코드가 RHI 헤더를 보지 않는다(언리얼 `UMaterial` 이 `FRenderResource` 가 아니고 렌더 프록시가 통보를 받는 것과 같은 갈림).
+     *          주인은 `releaseRHI` · `clearRHI` · `initRHI` 를 가진다. 주인보다 먼저 사라지도록 주인의 마지막 멤버로 둔다(소멸 중 통보가 사라진 멤버를 보지 않게).
+     */
+    template <typename TOwner>
+    class RHIRenderResourceHook final : public RHIRenderResource
+    {
+    public:
+        explicit RHIRenderResourceHook( TOwner& owner ) noexcept
+            : _owner{ owner }
+        {
+        }
+        void               releaseRHI( IRHIDevice* pDevice ) override { _owner.releaseRHI( pDevice ); }
+        void               clearRHI( IRHIDevice* pDevice ) override { _owner.clearRHI( pDevice ); }
+        [[nodiscard]] bool initRHI( IRHIDevice* pDevice ) override { return _owner.initRHI( pDevice ); }
+
+    private:
+        TOwner& _owner;
+    };
 } // namespace sw

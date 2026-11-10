@@ -10,12 +10,13 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialRenderBinding.h"
-#include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 
 namespace sw
 {
     class Texture2D;
+    template <typename TOwner>
+    class RHIRenderResourceHook;
 
     /**
      * @class MaterialInstance
@@ -26,7 +27,7 @@ namespace sw
      * @details 게임 스레드 객체다(`Material` 과 같은 규칙). 덮어쓴 텍스처 요청과 바이트 패킹도 게임 스레드가 하고, 렌더 스레드는 `getRenderBinding` 의
      *          불변 사본과 프록시만 받는다. 예전에는 렌더 스레드의 `updateRHI` 가 이 객체를 잠금 아래에서 함께 고쳤다.
      */
-    class SW_API MaterialInstance final : public RHIRenderResource
+    class SW_API MaterialInstance final
     {
     public:
         /** @brief 머티리얼 인스턴스 에셋 종류입니다(등록은 `MaterialInstance.cpp` 의 `SW_ASSET_TYPE`). 경로에 정해진 접미사가 없어 접미사를 두지 않는다. 판 0. */
@@ -54,17 +55,19 @@ namespace sw
          */
         static shared_ptr<MaterialInstance> create( Material* pParentMaterial );
         /** @brief 덮어쓴 텍스처를 놓습니다. */
-        ~MaterialInstance() override;
+        ~MaterialInstance();
 
         /** @brief 복사를 금지합니다. */
         MaterialInstance( const MaterialInstance& ) = delete;
         /** @brief 대입을 금지합니다. */
         MaterialInstance& operator=( const MaterialInstance& ) = delete;
 
-        /** @brief (RHIRenderResource) 그 디바이스로 요청한 덮어쓴 텍스처를 놓습니다. 상수 버퍼는 프록시가 같은 통보를 받는다. */
-        void releaseRHI( IRHIDevice* pDevice ) override;
-        /** @brief (RHIRenderResource) 디바이스가 이미 없을 때 부릅니다. 텍스처 참조만 놓습니다. */
-        void clearRHI( IRHIDevice* pDevice ) override;
+        /** @brief (디바이스 통보 — `_renderResourceHook`) 그 디바이스로 요청한 덮어쓴 텍스처를 놓습니다. 상수 버퍼는 프록시가 같은 통보를 받는다. */
+        void releaseRHI( IRHIDevice* pDevice );
+        /** @brief (디바이스 통보 — `_renderResourceHook`) 디바이스가 이미 없을 때 부릅니다. 텍스처 참조만 놓습니다. */
+        void clearRHI( IRHIDevice* pDevice );
+        /** @brief (디바이스 통보 — `_renderResourceHook`) 새 디바이스에서 할 일이 없습니다 — 덮어쓴 텍스처는 다음 패킹이 다시 요청한다. */
+        [[nodiscard]] bool initRHI( IRHIDevice* ) { return true; }
 
         /** @brief 오버라이드만 있는 MaterialInstanceDef XML 을 로드합니다. 부모는 따로 설정합니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
@@ -231,5 +234,8 @@ namespace sw
         mutable uint64         _parentPermutationHash;
         mutable uint8          _bDefinesDirty : 1;
         [[maybe_unused]] uint8 _instReserved  : 7;
+
+        /** @brief 디바이스 수명 통보를 받아 위 `releaseRHI` · `clearRHI` 로 넘긴다(상속 대신 멤버 — 이 헤더가 RHI 를 include 하지 않는다). 마지막 멤버라 먼저 사라진다. */
+        unique_ptr<RHIRenderResourceHook<MaterialInstance>> _renderResourceHook;
     };
 } // namespace sw
