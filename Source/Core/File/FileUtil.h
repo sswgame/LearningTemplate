@@ -258,7 +258,16 @@ namespace sw
         using WriteGate = expected<void> ( * )( string_view path );
         /** @brief 쓰기 게이트를 바꿉니다. nullptr 이면 게이트가 없습니다. 거절된 쓰기는 이유를 오류로 남기고 false 입니다(원본은 그대로). */
         static void setWriteGate( WriteGate gate );
-        /** @brief 게이트가 @p path 를 바꾸는 것을 허락하는지 봅니다. 거절하면 경로와 이유를 오류로 남기고 false 입니다. 게이트가 없으면 true. 파일을 바꾸는 모든 입구가 부릅니다. */
+        /**
+         * @brief 새로 만드는 자리의 이름 규칙을 겁니다(있는 파일을 덮어쓰거나 지우는 것은 보지 않는다). 자동화 쓰기 게이트와 따로 늘 선다. nullptr 이면 규칙이 없습니다.
+         * @details 리소스 트리(`Content/`)의 새 파일은 소문자다 — 엔진의 `AssetPaths` 가 건다(Core 는 리소스 루트를 모른다). 입구마다 이름을 접는 대신(`toDiskPath` · 임포트 · 새 에셋)
+         *          쓰기 경로 하나가 막으므로, 접지 않고 이은 새 입구도 대문자 파일을 만들지 못한다.
+         */
+        static void setCreateRule( WriteGate rule );
+        /**
+         * @brief 게이트가 @p path 를 바꾸는 것을 허락하는지, 새 자리면 이름 규칙(`setCreateRule`)에 맞는지 봅니다. 거절하면 경로와 이유를 오류로 남기고 false 입니다.
+         *        둘 다 없으면 true. 파일을 바꾸는 모든 입구가 부릅니다.
+         */
         [[nodiscard]] static bool isWriteAllowed( string_view path );
         /** @brief 파일을 복사합니다(대상이 있으면 덮어씁니다). 실패하면 로그를 남기고 false 입니다. */
         [[nodiscard]] static bool copyFile( string_view source, string_view destination );

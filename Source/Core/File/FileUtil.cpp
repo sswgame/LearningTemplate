@@ -29,6 +29,8 @@ namespace sw
             atomic<uint64> _removalEpoch{ 0 };
             /** @brief 쓰기 입구 게이트입니다(`FileUtil::setWriteGate`). 함수 포인터 하나라 상수 초기화된다. */
             atomic<FileUtil::WriteGate> _writeGate{ nullptr };
+            /** @brief 새로 만드는 자리의 이름 규칙입니다(`FileUtil::setCreateRule`). 함수 포인터 하나라 상수 초기화된다. */
+            atomic<FileUtil::WriteGate> _createRule{ nullptr };
         };
 
         struct FileUtilInternal
@@ -704,15 +706,30 @@ namespace sw
         FileUtilInternal::s_writeCounters._writeGate.store( gate, std::memory_order_release );
     }
 
+    void FileUtil::setCreateRule( WriteGate rule )
+    {
+        FileUtilInternal::s_writeCounters._createRule.store( rule, std::memory_order_release );
+    }
+
     bool FileUtil::isWriteAllowed( string_view path )
     {
-        const WriteGate gate = FileUtilInternal::s_writeCounters._writeGate.load( std::memory_order_acquire );
-        if ( gate == nullptr )
+        if ( const WriteGate gate = FileUtilInternal::s_writeCounters._writeGate.load( std::memory_order_acquire ); gate != nullptr )
+        {
+            const expected<void> verdict = gate( path );
+            if ( verdict.has_value() == false )
+            {
+                SW_LOG_ERROR_ID( "File.WriteRefused", "Changing %# was refused: %# (%#)", path, verdict.error().message(), verdict.error().detail() );
+                return false;
+            }
+        }
+        // 이름 규칙은 새로 생기는 자리만 본다 — 있는 파일을 덮어쓰거나 지우는 것은 이름을 만들지 않는다.
+        const WriteGate rule = FileUtilInternal::s_writeCounters._createRule.load( std::memory_order_acquire );
+        if ( rule == nullptr || exists( path ) )
             return true;
-        const expected<void> verdict = gate( path );
+        const expected<void> verdict = rule( path );
         if ( verdict.has_value() )
             return true;
-        SW_LOG_ERROR_ID( "File.WriteRefused", "Changing %# was refused: %# (%#)", path, verdict.error().message(), verdict.error().detail() );
+        SW_LOG_ERROR_ID( "File.CreateRefused", "Creating %# was refused: %# (%#)", path, verdict.error().message(), verdict.error().detail() );
         return false;
     }
 

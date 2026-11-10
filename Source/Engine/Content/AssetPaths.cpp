@@ -500,8 +500,23 @@ namespace sw
         return false;
     }
 
+    expected<void> AssetPaths::checkLowercaseResourceName( string_view diskPath )
+    {
+        // 리소스 id 는 소문자이고 디스크 이름이 곧 id 다 — 대문자 이름은 리눅스에서 id 로 다시 찾지 못하고 Windows 에서는 소문자 파일과 겹친다.
+        string relative;
+        if ( FileUtil::tryMakePathUnderRoot( ProcessRoots::get()._content.str(), diskPath, relative ) == false )
+            return {}; // 리소스 트리 밖(Saved · 붙인 디스크 도메인 · 임시 폴더)은 이 규칙이 아니다
+        const bool bUppercase = std::any_of( relative.begin(), relative.end(), []( utf8 ch )
+        { return 'A' <= ch && ch <= 'Z'; } );
+        if ( bUppercase )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "a new file under Content/ must be lowercase - resource ids are lowercase (name it through toDiskPath / normalizeAssetID)", relative } );
+        return {};
+    }
+
     bool AssetPaths::initialize()
     {
+        // 리소스 트리에 새로 생기는 이름은 소문자 — 쓰기 경로 하나가 막는다(입구마다 접는 것을 잊어도 대문자 파일이 생기지 않는다). 함수가 상태 없이 루트를 읽어 다시 걸어도 같다.
+        FileUtil::setCreateRule( &AssetPaths::checkLowercaseResourceName );
         // `_bInitialized` 는 "시작했다" 가 아니라 **"성공했다"** 를 뜻한다 — 루트를 못 찾아 false 로 나가면 다음 호출이 다시 찾는다.
         // 예전에는 프로세스 정적이라 `call_once` 로 막았다. 이제 부르는 쪽은 이 객체의 소유자 하나(기동의 직렬 구간)라 겹치지 않는다.
         if ( _pState->_bInitialized )
