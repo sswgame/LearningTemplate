@@ -33,6 +33,7 @@
 #include "Engine/Object/GameObject/Tick/SceneFrameStep.h"
 #include "Engine/Object/GameObject/Tick/SceneTickScheduler.h"
 #include "Engine/Object/GameObject/Tick/StructuralChangeBuffer.h"
+#include "Engine/Profiling/FrameProfiler.h"
 
 namespace sw
 {
@@ -46,6 +47,13 @@ namespace sw
     struct FrameSystemWave
     {
         vector<uint32> _listSystem;
+    };
+
+    /** @brief 한 파도에서 워커로 보낼 프레임 시스템 하나입니다 — 구간 값을 함께 복사해 든다(같은 파도의 시스템이 시스템을 붙이면 매니저의 시스템 목록이 옮겨진다). */
+    struct FrameSystemLaneEntry
+    {
+        ISceneFrameSystem* _pSystem;
+        ProfileScopeID     _scopeID; ///< 그 시스템의 `runBeforeTick` 구간
     };
 
     /** @brief 파도의 순서 목록입니다. 호출처가 재사용해도 됩니다(`build` 가 비우고 채운다). */
@@ -664,6 +672,8 @@ namespace sw
         {
             const SceneServiceRegistration* _pRegistration;
             ISceneService*                  _pService;
+            ProfileScopeID                  _updateScopeID;   ///< `update` 구간(`GT.Scene.service.<이름>`) — 서비스 이름으로 만들 때 한 번 받는다
+            ProfileScopeID                  _completeScopeID; ///< `completeFrameJob` 구간(`GT.Scene.serviceJob.<이름>`)
         };
 
         /** @brief 붙은 프레임 시스템 하나입니다. */
@@ -671,6 +681,7 @@ namespace sw
         {
             hashed_string                 _key;
             unique_ptr<ISceneFrameSystem> _pSystem;
+            ProfileScopeID                _scopeID; ///< `runBeforeTick` 구간(`GT.Scene.frameSystem.<키>`) — 붙일 때 한 번 받는다
         };
 
         // 프레임 단계 본문 — 표(`SceneFrameStepList.xxx`)의 줄마다 하나. `tick` 이 줄 순서대로 부른다.
@@ -729,9 +740,9 @@ namespace sw
         /** @brief `FrameSystems` 단계가 붙인 순서대로 부르는 시스템입니다. 오브젝트보다 먼저 비웁니다(시스템이 컴포넌트를 가리킬 수 있다). */
         vector<FrameSystemEntry> _listFrameSystem;
         /** @brief `FrameSystems` 단계의 파도 계획과 그 계산용 칸입니다 — 프레임마다 다시 만들고(선언은 늘 같은 답이다) 용량만 둡니다. */
-        FrameSystemLanePlan        _frameSystemLanePlan;
-        vector<SceneFrameAccess>   _listFrameAccess;
-        vector<ISceneFrameSystem*> _listLaneJob;
+        FrameSystemLanePlan          _frameSystemLanePlan;
+        vector<SceneFrameAccess>     _listFrameAccess;
+        vector<FrameSystemLaneEntry> _listLaneJob;
         /** @brief 단계가 도는 동안 뗀 시스템입니다 — 그 단계가 끝난 뒤 놓습니다. */
         vector<unique_ptr<ISceneFrameSystem>> _listRetiredFrameSystem;
         /** @brief 생성자로 받은 엔진 서비스 묶음(빌린 포인터들)입니다(`getSceneEngineServices` · `findAssetManager`). */

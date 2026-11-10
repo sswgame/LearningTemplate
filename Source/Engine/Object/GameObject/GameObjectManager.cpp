@@ -149,15 +149,16 @@ namespace sw
         /** @brief 같은 파도의 워커 레인 묶음입니다 — 구간마다 시스템의 `runBeforeTick` 을 부른다. */
         struct FrameSystemLaneJob
         {
-            GameObjectManager*  _pManager;
-            ISceneFrameSystem** _arrSystem;
-            float32             _deltaTime;
+            GameObjectManager*          _pManager;
+            const FrameSystemLaneEntry* _arrLane;
+            float32                     _deltaTime;
 
             void runRange( uint32 start, uint32 end ) const
             {
                 for ( uint32 jobIndex = start; jobIndex < end; ++jobIndex )
                 {
-                    _arrSystem[jobIndex]->runBeforeTick( *_pManager, _deltaTime );
+                    const ScopedFrameProfile systemScope{ _arrLane[jobIndex]._scopeID };
+                    _arrLane[jobIndex]._pSystem->runBeforeTick( *_pManager, _deltaTime );
                 }
             }
         };
@@ -205,7 +206,13 @@ namespace sw
         listCreated.reserve( listRegistration.size() );
         for ( const SceneServiceRegistration* pRegistration : listRegistration )
         {
-            listCreated.push_back( SceneServiceEntry{ pRegistration, &pRegistration->_pCreate( *this, _sceneScope ) } );
+            ISceneService& service = pRegistration->_pCreate( *this, _sceneScope );
+            // 구간은 서비스 이름으로 여기서 한 번 받는다 — 서비스마다 손으로 구간을 걸지 않아도 새 서비스가 계측에서 빠지지 않는다.
+            const utf8* pName = service.getSubsystemName();
+            // 프레임 일이 없는 서비스는 `completeFrameJob` 구간을 받지 않는다(불리지 않는다 — 슬롯 수 `FrameProfiler::kMaxScope` 를 아낀다).
+            const ProfileScopeID updateScopeID   = FrameProfiler::registerEngineNamedScope( "GT.Scene.service.", pName, __func__, __FILE__, __LINE__ );
+            const ProfileScopeID completeScopeID = pRegistration->hasFrameJob() ? FrameProfiler::registerEngineNamedScope( "GT.Scene.serviceJob.", pName, __func__, __FILE__, __LINE__ ) : ProfileScopeID{};
+            listCreated.push_back( SceneServiceEntry{ pRegistration, &service, updateScopeID, completeScopeID } );
         }
         SubsystemCollection& collection = _sceneScope.getCollection();
         if ( collection.initializeAll( SubsystemHostMask::All ) == false )
@@ -368,7 +375,7 @@ namespace sw
                              key.c_str(), getSceneDataKindName( conflictKind ), entry._key.c_str() );
             return false;
         }
-        _listFrameSystem.push_back( FrameSystemEntry{ key, std::move( pSystem ) } );
+        _listFrameSystem.push_back( FrameSystemEntry{ key, std::move( pSystem ), FrameProfiler::registerEngineNamedScope( "GT.Scene.frameSystem.", key.c_str(), __func__, __FILE__, __LINE__ ) } );
         return true;
     }
 
@@ -535,10 +542,16 @@ namespace sw
                 if ( pSystem == nullptr )
                     continue;
                 // 워커로 보내지 않는 것은 이 스레드가 먼저 돈다 — 같은 파도의 다른 시스템과 접근이 겹치지 않으므로 순서는 결과에 영향이 없다.
+                const ProfileScopeID scopeID = _listFrameSystem[systemIndex]._scopeID;
                 if ( _listFrameAccess[systemIndex]._bLaneSafe )
-                    _listLaneJob.push_back( pSystem );
+                {
+                    _listLaneJob.push_back( FrameSystemLaneEntry{ pSystem, scopeID } );
+                }
                 else
+                {
+                    const ScopedFrameProfile systemScope{ scopeID };
                     pSystem->runBeforeTick( *this, deltaTime );
+                }
             }
             if ( _listLaneJob.empty() )
                 continue;
@@ -598,8 +611,10 @@ namespace sw
     {
         for ( SceneServiceEntry& entry : _listSceneService )
         {
-            if ( entry._pRegistration->_completeStep == step )
-                entry._pService->completeFrameJob();
+            if ( entry._pRegistration->_completeStep != step )
+                continue;
+            const ScopedFrameProfile serviceScope{ entry._completeScopeID };
+            entry._pService->completeFrameJob();
         }
     }
 
@@ -607,8 +622,10 @@ namespace sw
     {
         for ( SceneServiceEntry& entry : _listSceneService )
         {
-            if ( entry._pRegistration->_frameStep == step )
-                entry._pService->update( deltaTime );
+            if ( entry._pRegistration->_frameStep != step )
+                continue;
+            const ScopedFrameProfile serviceScope{ entry._updateScopeID };
+            entry._pService->update( deltaTime );
         }
     }
 
