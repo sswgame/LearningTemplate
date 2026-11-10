@@ -9,6 +9,7 @@
   py -3 Scripts/dev/ScenarioCulprit.py editor focusloss --preset Ninja-Release --show
   py -3 Scripts/dev/ScenarioCulprit.py --self-check
   py -3 Scripts/dev/ScenarioCulprit.py --golden-margins [보고 폴더…]                # 흔들리는 골든: 보고의 goldenSamples[] 를 모아 골든별 최대 · 여유
+  py -3 Scripts/dev/ScenarioCulprit.py --golden-coverage                            # 플랫폼 · 백엔드마다 골든 수(체인 백엔드 표와 대조)
 
 Linux 는 `LinuxScenarios.py culprit` 가 같은 함수(`findCulprit`)를 자기 실행기(Xvfb · lavapipe)로 부른다.
 """
@@ -141,7 +142,63 @@ def printGoldenMargins(folders: Sequence[str], preset: str) -> int:
     return 0
 
 
+#: 골든 이름의 플랫폼 꼬리(`AutomationGoldenUtil::getPlatformTag`) — 골든을 뜨는 플랫폼은 이 둘이다(Android · 웹은 아직 체인이 없다).
+kGoldenPlatformSuffix = {'Windows': '', 'Linux': '.linux'}
+
+
+def countGoldenCoverage(listGoldenPath: Sequence[str], tagByBackend: dict[str, str]) -> tuple[dict[tuple[str, str], int], int, list[str]]:
+    """골든 파일 경로들(`<폴더>/golden/<시나리오>.<이름>.<꼬리>[.linux].ppm`)을 (플랫폼, 백엔드)마다 센다.
+
+    돌려주는 것: (플랫폼, 백엔드) → 골든 수, 골든 열쇠(폴더 · 시나리오 · 이름) 수, 쿠킹 표에 없는 꼬리의 파일(지운 백엔드의 골든).
+    """
+    backendByTag = {tag: backend for backend, tag in tagByBackend.items()}
+    counts: dict[tuple[str, str], int] = {}
+    keys: set[str] = set()
+    unknown: list[str] = []
+    for path in listGoldenPath:
+        stem = path[:-len('.ppm')]
+        platform = 'Linux' if stem.endswith('.linux') else 'Windows'
+        stem = stem[:-len('.linux')] if platform == 'Linux' else stem
+        key, _, tag = stem.rpartition('.')
+        if tag not in backendByTag:
+            unknown.append(path)
+            continue
+        keys.add(key)
+        counts[(platform, backendByTag[tag])] = counts.get((platform, backendByTag[tag]), 0) + 1
+    return counts, len(keys), unknown
+
+
+def printGoldenCoverage() -> int:
+    """플랫폼 · 만들 수 있는 백엔드마다 골든 수를 낸다 — 체인 백엔드 집합(쿠킹 표 `scenario_backends`, 한 곳)과 골든 폴더를 대조한다.
+
+    체인 밖 백엔드(데스크톱 WebGPU)의 골든 0 이 여기서 드러난다. 체인 백엔드가 모든 열쇠를 갖췄는지는 단위 테스트 `ScenarioGoldensTest` 가
+    `<SkipUnless>` 를 보아 판정한다 — 여기는 집계와, 쿠킹 표에 없는 꼬리(지운 백엔드의 골든)를 실패로 내는 일만 한다.
+    """
+    from common.CookTable import CookContractSpec
+    from common.Git import runGit
+    spec = CookContractSpec.load(REPO)
+    tagByBackend = {backend.name: backend.commandLineName for backend in spec.listBackend}
+    listed = runGit(['ls-files', '*/golden/*.ppm'], cwd=REPO)
+    if not listed.bSucceeded:
+        print(f'git ls-files 실패: {listed.stderr.strip()}')
+        return 1
+    counts, keyCount, unknown = countGoldenCoverage([line.strip() for line in listed.stdout.splitlines() if line.strip()], tagByBackend)
+    print(f'골든 열쇠(폴더 · 시나리오 · 이름) {keyCount} — * 는 검증 체인 백엔드(Config/Engine/CookContract.json scenario_backends)')
+    for platform, suffix in kGoldenPlatformSuffix.items():
+        chain = spec.mapScenarioBackendsByPlatform[platform]
+        for backend in spec.mapBackendOrderByPlatform[platform]:
+            count = counts.get((platform, backend), 0)
+            print(f'  {platform:8} {"*" if backend in chain else " "} {backend:10} {tagByBackend[backend] + suffix:10} {count:5d}{"  ← 골든 없음" if count == 0 else ""}')
+    for path in unknown:
+        print(f'  [쿠킹 표에 없는 백엔드 꼬리] {path}')
+    return 1 if unknown else 0
+
+
 def selfCheck() -> int:
+    coverage, keyCount, unknown = countGoldenCoverage(['a/golden/s.n.dx12.ppm', 'a/golden/s.n.vk.ppm', 'a/golden/s.n.vk.linux.ppm', 'a/golden/s.m.dx12.ppm', 'a/golden/s.m.old.ppm'],
+                                                      {'DirectX12': 'dx12', 'Vulkan': 'vk', 'WebGPU': 'wgpu'})
+    assert coverage == {('Windows', 'DirectX12'): 2, ('Windows', 'Vulkan'): 1, ('Linux', 'Vulkan'): 1}, coverage
+    assert keyCount == 2 and unknown == ['a/golden/s.m.old.ppm'], (keyCount, unknown)
     reports = [
         {'goldenSamples': [{'golden': 'a', 'differingFraction': 0.002, 'meanDistance': 0.0001, 'largestDeepRegionPixels': 4, 'maxDifferingFraction': 0.01, 'maxMeanDistance': 0.005, 'maxDeepRegionPixels': 16}]},
         {'goldenSamples': [{'golden': 'a', 'differingFraction': 0.001, 'meanDistance': 0.0001, 'largestDeepRegionPixels': 8, 'maxDifferingFraction': 0.01, 'maxMeanDistance': 0.005, 'maxDeepRegionPixels': 16},
@@ -181,9 +238,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument('--self-check', action='store_true')
     parser.add_argument('--golden-margins', nargs='*', metavar='보고 폴더 · 파일',
                         help='체인 대신: 시나리오 보고(goldenSamples[])를 모아 골든마다 실행 사이 최대 차이와 여유를 낸다(기본 build/<preset>/Bin/Saved/Automation)')
+    parser.add_argument('--golden-coverage', action='store_true', help='체인 대신: 플랫폼 · 백엔드마다 저장소 골든 수(체인 백엔드 표와 대조, 체인 밖 백엔드의 골든 0 이 드러난다)')
     options = parser.parse_args(argv)
     if options.self_check:
         return selfCheck()
+    if options.golden_coverage:
+        return printGoldenCoverage()
     if options.golden_margins is not None:
         return printGoldenMargins(options.golden_margins, options.preset)
     if not options.chain or not options.stage:
