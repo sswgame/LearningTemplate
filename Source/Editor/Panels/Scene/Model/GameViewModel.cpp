@@ -18,7 +18,9 @@
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/RawInputEvent.h"
+#include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
+#include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Scene/Scene.h"
 
 namespace sw::editor
@@ -115,5 +117,26 @@ namespace sw::editor
     {
         ViewportInputOverlaySettings* const pSettings = editor::findSubsystem<ViewportInputOverlaySettings>();
         return pSettings != nullptr ? &pSettings->_overlay : nullptr;
+    }
+    bool GameViewModel::findCameraPosition( float3& outPosition )
+    {
+        const Scene*           pScene  = editor::getActiveScene();
+        const CameraComponent* pCamera = pScene != nullptr ? pScene->getActiveGameCamera() : nullptr;
+        if ( pCamera == nullptr )
+            return false;
+        outPosition = pCamera->getWorldPosition();
+        return true;
+    }
+
+    bool GameViewModel::findViewMode( uint32& outMode )
+    {
+        const FrameRenderer* pRenderer = editor::findSubsystem<FrameRenderer>();
+        if ( pRenderer == nullptr ) // 필수 서비스: 없으면 버그
+        {
+            SW_LOG_ERROR_ID( "GameViewModel.ViewModeFrameRenderer", "[Scenario] view mode watch: FrameRenderer is missing" );
+            return false;
+        }
+        outMode = static_cast<uint32>( pRenderer->getViewMode() );
+        return true;
     }
 } // namespace sw::editor

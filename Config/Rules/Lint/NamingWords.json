@@ -23,6 +23,7 @@
     "formatToString": "formatstring + fixed_string(한 번 쓰는 글) · StringBuilder::appendFormat(남기는 글) — 할당을 숨기던 도우미, 사용자 2026-11-08",
     "DataLayersModel": "DataLayersViewModel(창의 ViewModel — gather · ViewState · 명령, docs/agents/EditorUI.md MVVM)",
     "BugReportModel": "BugReportViewModel",
+    "StreamingCellsModel": "StreamingCellsViewModel",
     "kRecoveryPanelID": "editorpanel::kRecoveredWork(코어 패널 id 표 EditorPanelID.h)",
     "AbilityEffectVolumeComponent": "ZoneVolumeComponent(지역 프로필 *.zone.xml 의 할 일 모듈 — 이펙트 하나 · 진입/체류/이탈 정책이던 것)",
     "SinkingSandZoneComponent": "ZoneVolumeComponent + 지역 프로필(가라앉음 스택 이펙트 · VisualSinkReactionComponent · JumpEscapeReactionComponent)",

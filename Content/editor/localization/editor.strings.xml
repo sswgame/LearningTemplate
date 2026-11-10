@@ -4666,13 +4666,13 @@
 		</entry>
 		<entry key="EdVisualizer.RigTargetGizmoLabel" source="Rig Target">
 			<origins>
-				<item>Source/Editor/Panels/Animation/RigDebugPanel.cpp</item>
+				<item>Source/Editor/Viewport/Visualizers/RigTargetGizmoVisualizer.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVisualizer.RigTargetGizmoTip"
 		       source="Gizmo on the rig target picked in the Rig Debug window; releasing a drag writes the target offset into the rig asset">
 			<origins>
-				<item>Source/Editor/Panels/Animation/RigDebugPanel.cpp</item>
+				<item>Source/Editor/Viewport/Visualizers/RigTargetGizmoVisualizer.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVisualizer.SelectionBoundsLabel" source="Sel">

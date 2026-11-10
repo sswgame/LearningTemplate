@@ -42,9 +42,8 @@
 ### 5. 작업자 · 설계 문서가 남긴 일
 
 - **린트를 빌드 구조로(린트 표에서 지우기):** `editor-view-includes`(MVVM 이 끝나면 View 부분의 껍데기로).
-- **에디터 MVVM 남은 View 15 개:** 인스펙터 코어(프로퍼티 그리드에 편집 모델 층 먼저), 큰 패널(AnimationRewind · RigDebug · BoneHierarchyPopup · StreamingCells · VolumetricFog), RenderTarget, 감시 값 4. 다 옮기면 `_migratedViews` 표와 린트를 지운다([EditorUI](agents/EditorUI.md)).
+- **에디터 MVVM 남은 일:** 모든 패널 View 를 옮겼다. 남은 것은 인스펙터 그리드의 값 행(3단계 — `gather` 가 프로퍼티마다 값 행을 내고 위젯이 멤버 주소에 바로 쓰지 않게, EditorUI 'Property grid edit model' 절). 그 뒤 `editor-view-includes` 를 View 부분 `#error` 껍데기로.
   - Hierarchy MVVM 측정(통합): 큐브 8000 루트 씬에서 Hierarchy 창을 연 프레임 시간을 옮기기 전 커밋과 대조한다(모두 접힘 · 루트 하나 펼침 · 맨 아래로 스크롤). 나빠졌으면 원인을 `HierarchyViewModel::gather` 에서 찾는다.
-  - 옮긴 다섯(Profiler · MapCheck · PrefabEditor · ContentBrowser · Sequencer)은 컴파일 · 시나리오(맵 검사 고침 · 프리팹 창 · 시퀀서 바인딩 · 콘텐츠 브라우저)를 다음 묶음 검증에서 본다. ViewModel 데이터 명령의 단위 테스트(맵 검사 고침 · 시퀀서 묶기)가 아직 없다.
 - **렌더링:** Vulkan placed 텍스처(해제 큐에 메모리 참조 세기), TransientLeasePool 을 뷰 풀에 잇기, 비동기 컴퓨트 큐 패스 타임스탬프 · Tracy 프레임 패스 내보내기, 같은 자리 후처리 머티리얼이 앞 결과를 이어 읽기, 박막 · 털 · 스타킹 · 비단 외형의 디퍼드(G버퍼 칸 부족 — 포워드 전용으로 남김), 몸 머티리얼이 피부 층 표면 덮어쓰기(`_skinLayerSurfaceMap`)를 읽기, 텍스처 전이 · VFX · 프로브 디스패치의 버퍼별 전이를 묶음 API 로.
 - **표면 변형:** 지형(`terrain.hlsl`)은 머티리얼을 픽셀에서만 읽어(GL 은 구조버퍼를 두 단계에서 못 읽는다) 정점 변위를 받지 못한다 — 엔진 텍스처 칸 `SurfaceDeform`(`shaderslot::emulated::kEngineTextureNames` 13 번째 — `SW_ENGINE_TEXTURE_COUNT` · DX11 `t44` · GL 유닛 12 · binding.hlsli 의 칸 줄)과 패스 상수 `g_SurfaceDeformParams`(창)를 더해 지형 정점 셰이더가 읽게 한다(언리얼 RVT · 유니티 `SetGlobalTexture` 자리, 그림자 패스도 같은 오프셋). 네 백엔드 셰이더 · 바인딩을 함께 바꾸므로 빌드 · 시나리오를 돌릴 수 있는 작업자가 한 묶음으로 한다.
 - **폴더 자리(막는 구조부터):** 엔진 쪽 `Dev/` 예외(`Config/Rules/Lint/FolderLayout.json` `_devFolderAllowed` — ModuleManager/Dev · Host/Dev · App/Dev · GF GameData/Dev · Graphics/Material/Dev)를 DevTools 로 — ModuleManager 를 공유 라이브러리로(언리얼 HotReload 처럼), DevTools 에 리플렉션 단계를 더하면 핫 리로드 · 머티리얼 그래프가 옮겨 간다.

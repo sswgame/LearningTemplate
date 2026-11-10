@@ -2,169 +2,97 @@
 
 #include "Editor/Panels/Animation/BoneHierarchyPopup.h"
 
-#include "Core/String/StringUtil.h"
-
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/Input/EditorPopupManager.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
-#include "Engine/Object/Component/SceneComponent.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Scene/Scene.h"
 
 #include <imgui.h>
 
 namespace sw::editor
 {
-    namespace
-    {
-        struct BoneHierarchyPopupInternal
-        {
-            static void drawSceneComponentHierarchy( const SceneComponent* pComp )
-            {
-                if ( pComp == nullptr )
-                    return;
-
-                const utf8*       pCompName = "SceneComponent";
-                const GameObject* pOwner    = pComp->getOwner();
-                if ( pOwner != nullptr )
-                {
-                    const utf8* pNameStr = pOwner->getName().c_str();
-                    if ( StringUtil::isNullOrEmpty( pNameStr ) == false )
-                        pCompName = pNameStr;
-                }
-
-                const ImGuiID            nodeID = static_cast<ImGuiID>( pComp->getComponentID() );
-                const ImGuiTreeNodeFlags flags  = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanAvailWidth;
-
-                ImGui::TreeNodeEx( reinterpret_cast<void*>( static_cast<uintptr_t>( nodeID ) ), flags, "%s", pCompName );
-
-                const vector<SceneComponent*>& listChildren = pComp->getChildren();
-                for ( const SceneComponent* pChild : listChildren )
-                {
-                    if ( pChild != nullptr )
-                        drawSceneComponentHierarchy( pChild );
-                }
-            }
-
-            static void drawGameObjectHierarchy( const GameObject* pObj )
-            {
-                if ( pObj == nullptr )
-                    return;
-
-                const utf8* pObjName = pObj->getName().c_str();
-                if ( StringUtil::isNullOrEmpty( pObjName ) )
-                    pObjName = "GameObject";
-
-                vector<GameObject*> listChildren;
-                pObj->getChildren( listChildren );
-                ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_DefaultOpen;
-                if ( listChildren.empty() && pObj->getPrimarySceneComponent() == nullptr )
-                    flags |= ImGuiTreeNodeFlags_Leaf;
-
-                const bool bOpen = ImGui::TreeNodeEx( pObj, flags, "%s", pObjName );
-                if ( bOpen )
-                {
-                    const SceneComponent* pRootComp = pObj->getPrimarySceneComponent();
-                    if ( pRootComp != nullptr )
-                        drawSceneComponentHierarchy( pRootComp );
-
-                    for ( const GameObject* pChild : listChildren )
-                    {
-                        drawGameObjectHierarchy( pChild );
-                    }
-                    ImGui::TreePop();
-                }
-            }
-        };
-    } // namespace
-} // namespace sw::editor
-
-namespace sw::editor
-{
     SW_EDITOR_POPUP( BoneHierarchyPopup, 300 );
 
-    // ------------------------------------------------------------------------------
-    // 생성자
-    // ------------------------------------------------------------------------------
     BoneHierarchyPopup::BoneHierarchyPopup()
         : IEditorPopup{ false }
+        , _viewModel{}
+        , _viewState{}
     {
     }
 
-    // ------------------------------------------------------------------------------
-    // 정적 함수
-    // ------------------------------------------------------------------------------
-    void BoneHierarchyPopup::open()
-    {
-        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-
-        editorContext.getSubsystem<EditorPopupManager>().openPopup( kPopupID );
-    }
-
-    void BoneHierarchyPopup::close()
-    {
-        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-
-        editorContext.getSubsystem<EditorPopupManager>().closePopup( kPopupID );
-    }
-
-    void BoneHierarchyPopup::toggle()
-    {
-        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-
-        editorContext.getSubsystem<EditorPopupManager>().togglePopup( kPopupID );
-    }
-
-    bool BoneHierarchyPopup::isOpen()
-    {
-        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-
-        return editorContext.getSubsystem<EditorPopupManager>().isPopupOpen( kPopupID );
-    }
-
-    // ------------------------------------------------------------------------------
-    // 내용 그리기
-    // ------------------------------------------------------------------------------
     void BoneHierarchyPopup::drawContent()
     {
-        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-
         if ( EditorChrome::beginPanel( getPopupTitle(), &_bOpen ) == false )
         {
             EditorChrome::endPanel();
             return;
         }
 
-        EditorWorkspace& ws   = editorContext.getSubsystem<EditorWorkspace>();
-        const string     name = ws.getSelectedObjectName();
-        if ( name.empty() || ws.getSelectedObjectID() == 0 )
+        _viewModel.gather( _viewState );
+        if ( _viewState._content == BoneHierarchyContent::NoSelection )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdCommon", "BoneNoSelection" ) );
             EditorChrome::endPanel();
             return;
         }
 
-        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "SelectedObject", TextArgumentList().addText( "name", name.c_str() ) ).c_str() );
+        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "SelectedObject", TextArgumentList().addText( "name", _viewState._selectedName.c_str() ) ).c_str() );
         ImGui::Separator();
 
-        Scene* pScene = editor::getActiveScene();
-        if ( pScene != nullptr && pScene->getObjectManager() != nullptr )
+        switch ( _viewState._content )
         {
-            GameObject* pSelectedObj = pScene->getObjectManager()->findGameObjectByID( ws.getSelectedObjectID() );
-            if ( pSelectedObj != nullptr )
-                BoneHierarchyPopupInternal::drawGameObjectHierarchy( pSelectedObj );
-            else
+            case BoneHierarchyContent::Tree:
+                drawTree();
+                break;
+            case BoneHierarchyContent::ObjectNotFound:
                 EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdCommon", "BoneObjectNotFound" ) );
+                break;
+            case BoneHierarchyContent::NoActiveScene:
+            case BoneHierarchyContent::NoSelection:
+                EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdCommon", "NoActiveScene" ) );
+                break;
         }
-        else
-            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdCommon", "NoActiveScene" ) );
 
         EditorChrome::endPanel();
+    }
+
+    void BoneHierarchyPopup::drawTree()
+    {
+        constexpr uint32 kNoSkip     = UINT32_MAX;
+        uint32           pushedDepth = 0;       // 연 오브젝트 노드 수(TreePop 할 수)
+        uint32           skipDepth   = kNoSkip; // 접힌 오브젝트의 깊이 — 그보다 깊은 줄은 건너뛴다
+        for ( const BoneHierarchyRow& row : _viewState._listRow )
+        {
+            if ( skipDepth != kNoSkip && row._depth > skipDepth )
+                continue;
+            skipDepth = kNoSkip;
+            while ( pushedDepth > row._depth )
+            {
+                ImGui::TreePop();
+                --pushedDepth;
+            }
+
+            void* const pNodeID = reinterpret_cast<void*>( static_cast<uintptr_t>( row._id ) );
+            if ( row._bComponent != SW_FALSE )
+            {
+                const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanAvailWidth;
+                ImGui::TreeNodeEx( pNodeID, flags, "%s", row._name.c_str() );
+                continue;
+            }
+            ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_DefaultOpen;
+            if ( row._bHasChildren == SW_FALSE )
+                flags |= ImGuiTreeNodeFlags_Leaf;
+            if ( ImGui::TreeNodeEx( pNodeID, flags, "%s", row._name.c_str() ) )
+                ++pushedDepth;
+            else
+                skipDepth = row._depth;
+        }
+        while ( pushedDepth > 0 )
+        {
+            ImGui::TreePop();
+            --pushedDepth;
+        }
     }
 } // namespace sw::editor

@@ -2,31 +2,17 @@
 
 #include "Editor/Panels/Animation/AnimationRewindPanel.h"
 
-#include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
-
-#include "DevTools/Client/Animation/AnimationRewind.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "Engine/Animation/Component/SkeletalMeshComponent.h"
-#include "Engine/Animation/Scene/AnimationSystem.h"
-#include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
-#include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Scene/Scene.h"
 
 #include <imgui.h>
 
@@ -39,88 +25,13 @@ namespace sw::editor
         struct AnimationRewindPanelInternal
         {
             static constexpr Color kNotifyText{ 1.0f, 0.8f, 0.3f, 1.0f };
-
-            /** @brief 뼈대 색(고른 것 · 나머지)입니다. */
-            /** @brief 디버그 드로우 카테고리입니다(`debugdraw.category AnimationRewind off` 로 끈다). */
-            static constexpr const utf8* kDrawCategory = "AnimationRewind";
-
-            /** @brief 고른 오브젝트의 스켈레탈 유닛 핸들입니다(없으면 무효). */
-            static ComponentHandle findSelectedUnit( Scene* pScene )
-            {
-                EditorContext& editorContext   = editor::getSubsystem<EditorContext>();
-                const bool     bNoSceneObjects = pScene == nullptr || pScene->getObjectManager() == nullptr;
-                if ( bNoSceneObjects )
-                    return ComponentHandle{};
-                const uint64                 objectID = editorContext.getSubsystem<EditorWorkspace>().getSelectedObjectID();
-                GameObject*                  pObject  = objectID != 0 ? pScene->getObjectManager()->findGameObjectByID( objectID ) : nullptr;
-                const SkeletalMeshComponent* pUnit    = pObject != nullptr ? pObject->getComponent<SkeletalMeshComponent>() : nullptr;
-                return pUnit != nullptr ? pUnit->getHandle() : ComponentHandle{};
-            }
-
-            /** @brief 기록된 뼈대(부모 → 자식 선)와 상태 이름을 그립니다(이번 프레임만). */
-            static void drawSkeleton( DebugDrawQueue& queue, const AnimationRewindTrack& track, const AnimationRewindFrame& frame, vector<float3>& inoutListPosition,
-                                      const float4& color, bool bLabel )
-            {
-                AnimationRewindRecorder::computeWorldBonePositions( track, frame, inoutListPosition );
-                if ( inoutListPosition.empty() )
-                    return;
-                const hashed_string category( kDrawCategory );
-                for ( size_t boneIndex = 0; boneIndex < inoutListPosition.size(); ++boneIndex )
-                {
-                    const int32 parentIndex = track._listParentIndex[boneIndex];
-                    if ( parentIndex >= 0 )
-                        queue.drawLine( inoutListPosition[static_cast<size_t>( parentIndex )], inoutListPosition[boneIndex], color, 0.0f, category );
-                }
-                if ( bLabel && frame._state._stateName.empty() == false )
-                    queue.drawText( inoutListPosition[0] + float3{ 0.0f, 0.2f, 0.0f }, frame._state._stateName.c_str(), color, 0.0f, category );
-            }
-
-            /** @brief 활성 씬의 되감기 기록기입니다. 활성 씬이 없으면 nullptr 입니다(감시 값이 읽는다). */
-            [[nodiscard]] static const AnimationRewindRecorder* findActiveRewind()
-            {
-                Scene* pScene = editor::getActiveScene();
-                return pScene != nullptr && pScene->getObjectManager() != nullptr ? AnimationRewindRecorder::find( pScene->getObjectManager()->getSubsystem<AnimationSystem>() ) : nullptr;
-            }
-
-            [[nodiscard]] static bool readTrackCount( const GameObjectManager* /*pManager*/, float64& outValue )
-            {
-                const AnimationRewindRecorder* pRewind = findActiveRewind();
-                if ( pRewind == nullptr )
-                    return false;
-                outValue = static_cast<float64>( pRewind->getTracks().size() );
-                return true;
-            }
-
-            [[nodiscard]] static bool readHistorySeconds( const GameObjectManager* /*pManager*/, float64& outValue )
-            {
-                const AnimationRewindRecorder* pRewind = findActiveRewind();
-                if ( pRewind == nullptr )
-                    return false;
-                outValue = pRewind->getTracks().empty() ? 0.0 : pRewind->getLatestTime() - pRewind->getEarliestTime();
-                return true;
-            }
-
-            [[nodiscard]] static bool readScrubbing( const GameObjectManager* /*pManager*/, float64& outValue )
-            {
-                const AnimationRewindRecorder* pRewind = findActiveRewind();
-                if ( pRewind == nullptr )
-                    return false;
-                outValue = pRewind->isScrubbing() ? 1.0 : 0.0;
-                return true;
-            }
         };
     } // namespace
 
-    SW_AUTOMATION_WATCH( editorAnimationRewindTrackCount, "Editor.AnimationRewindTrackCount", "Animation rewind tracks of the active scene (fails while there is no active scene)",
-                         &AnimationRewindPanelInternal::readTrackCount );
-    SW_AUTOMATION_WATCH( editorAnimationRewindHistorySeconds, "Editor.AnimationRewindHistorySeconds", "Seconds of animation history the active scene's rewind holds",
-                         &AnimationRewindPanelInternal::readHistorySeconds );
-    SW_AUTOMATION_WATCH( editorAnimationRewindScrubbing, "Editor.AnimationRewindScrubbing", "1 while the active scene's animation rewind shows a past time",
-                         &AnimationRewindPanelInternal::readScrubbing );
-
     AnimationRewindPanel::AnimationRewindPanel()
         : IEditorPanel( false ) // 필요할 때 여는 도구라 닫힌 채 시작한다
-        , _listScratchPosition{}
+        , _viewModel{}
+        , _viewState{}
         , _scrubSecondsAgo{ 0.0f }
         , _bDrawSkeleton{ SW_TRUE }
         , _bAllTracks{ SW_FALSE }
@@ -130,68 +41,45 @@ namespace sw::editor
 
     void AnimationRewindPanel::drawContent()
     {
-        Scene* pScene = editor::getActiveScene();
-        if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
+        _viewModel.gather( _viewState );
+        if ( _viewState._content == AnimationRewindContent::NoActiveScene )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorAnimationRewind", "NoActiveScene" ) );
             return;
         }
-        // 기록기는 애니메이션 시스템의 프레임 관찰자다(개발 구성은 늘 등록한다 — 에디터는 개발 구성에만 있다).
-        AnimationRewindRecorder* const pRewind = AnimationRewindRecorder::find( pScene->getObjectManager()->getSubsystem<AnimationSystem>() );
-        SW_ASSERT( pRewind != nullptr );
-        AnimationRewindRecorder& rewind = *pRewind;
-        drawRecordingControls( rewind );
-        if ( rewind.getTracks().empty() )
+        drawRecordingControls();
+        if ( _viewState._content == AnimationRewindContent::NothingRecorded )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorAnimationRewind", "NothingRecorded" ) );
             return;
         }
-        drawTimeline( rewind );
-
-        // 보는 시각 — 되감는 중이면 그 시각, 아니면 가장 늦은 기록.
-        const float64               viewTime  = rewind.isScrubbing() ? rewind.getScrubTime() : rewind.getLatestTime();
-        const ComponentHandle       selected  = AnimationRewindPanelInternal::findSelectedUnit( pScene );
-        const AnimationRewindTrack* pSelected = selected.isValid() ? rewind.findTrack( selected ) : nullptr;
+        drawTimeline();
         if ( _bDrawSkeleton == SW_TRUE )
-        {
-            DebugDrawQueue& queue = editor::getSubsystem<DebugDrawQueue>();
-            for ( const AnimationRewindTrack& track : rewind.getTracks() )
-            {
-                const bool bSelected = &track == pSelected;
-                if ( bSelected == false && _bAllTracks == SW_FALSE )
-                    continue;
-                const AnimationRewindFrame* pFrame = track.findFrame( viewTime );
-                if ( pFrame != nullptr )
-                    AnimationRewindPanelInternal::drawSkeleton( queue, track, *pFrame, _listScratchPosition,
-                                                                bSelected ? SW_THEME_COLOR( "Base", "Highlight" ).toFloat4() : SW_THEME_COLOR( "Base", "Accent" ).toFloat4(),
-                                                                bSelected );
-            }
-        }
+            _viewModel.submitSkeletonDraw( _bAllTracks == SW_TRUE, SW_THEME_COLOR( "Base", "Highlight" ).toFloat4(), SW_THEME_COLOR( "Base", "Accent" ).toFloat4() );
 
         ImGui::Separator();
-        if ( pSelected == nullptr )
+        if ( _viewState._content == AnimationRewindContent::NoSelection )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorAnimationRewind", "SelectCharacter" ) );
             return;
         }
-        const AnimationRewindFrame* pFrame = pSelected->findFrame( viewTime );
-        if ( pFrame != nullptr )
-            drawFrame( *pSelected, *pFrame );
+        if ( _viewState._content == AnimationRewindContent::Frame )
+            drawFrame();
     }
 
-    void AnimationRewindPanel::drawRecordingControls( const AnimationRewindRecorder& rewind )
+    void AnimationRewindPanel::drawRecordingControls()
     {
-        bool bRecord = AnimationRewindRecorder::isRecordingRequested();
+        bool bRecord = _viewState._bRecordingRequested != SW_FALSE;
         if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Record" ), &bRecord ) )
-            AnimationRewindRecorder::setRecordingRequested( bRecord );
+            _viewModel.setRecordingRequested( bRecord );
         EditorSelfTestMarks::record( "animationRewind.record" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationRewind", "RecordTip" ) );
         ImGui::SameLine();
-        float32 seconds = AnimationRewindRecorder::getRequestedWindowSeconds();
+        float32 seconds = _viewState._requestedWindowSeconds;
         EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdField", "WindowS" ) );
         EditorChrome::setNextItemWidthColumns( 16.0f );
         if ( ImGui::SliderFloat( "##Windows", &seconds, 1.0f, 60.0f, "%.0f" ) )
-            AnimationRewindRecorder::setRequestedWindowSeconds( seconds );
+            _viewModel.setRequestedWindowSeconds( seconds );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationRewind", "WindowTip" ) );
         bool bDraw = _bDrawSkeleton == SW_TRUE;
         EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdLabel", "Skeleton" ) ) );
@@ -203,13 +91,13 @@ namespace sw::editor
         if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "All" ), &bAll ) )
             _bAllTracks = bAll ? SW_TRUE : SW_FALSE;
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationRewind", "AllTracksTip" ) );
-        ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "TracksSOfHistory", TextArgumentList().addInteger( "tracksCount", static_cast<int64>( rewind.getTracks().size() ) ).addDecimal( "byteCount", static_cast<float64>( static_cast<float64>( rewind.getByteCount() ) / 1024.0 ), 1 ).addDecimal( "latestTime", static_cast<float64>( rewind.getLatestTime() - rewind.getEarliestTime() ), 1 ) ).c_str() );
+        ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "TracksSOfHistory", TextArgumentList().addInteger( "tracksCount", static_cast<int64>( _viewState._trackCount ) ).addDecimal( "byteCount", static_cast<float64>( static_cast<float64>( _viewState._byteCount ) / 1024.0 ), 1 ).addDecimal( "latestTime", _viewState._historySeconds, 1 ) ).c_str() );
     }
 
-    void AnimationRewindPanel::drawTimeline( AnimationRewindRecorder& rewind )
+    void AnimationRewindPanel::drawTimeline()
     {
-        const float32 history = static_cast<float32>( rewind.getLatestTime() - rewind.getEarliestTime() );
-        if ( rewind.isScrubbing() == false )
+        const float32 history = static_cast<float32>( _viewState._historySeconds );
+        if ( _viewState._bScrubbing == SW_FALSE )
             _scrubSecondsAgo = 0.0f;
         EditorChrome::setNextItemWidthColumns( -12.0f );
         // 왼쪽이 과거다 — 값은 "가장 늦은 기록에서 몇 초 전" 이라 막대를 뒤집어 그린다.
@@ -217,22 +105,17 @@ namespace sw::editor
         if ( ImGui::SliderFloat( "##RewindTimeline", &position, 0.0f, MathUtil::max( history, 0.001f ), "%.2f s" ) )
         {
             _scrubSecondsAgo = MathUtil::clamp( history - position, 0.0f, history );
-            // 훑기는 PIE 를 멈춘다 — 멈추지 않으면 다음 틱이 새 기록을 쌓아 막대가 밀린다.
-            if ( EditorPlaySession::isPlaying() )
-                EditorPlaySession::pause();
-            rewind.setScrubTime( rewind.getLatestTime() - static_cast<float64>( _scrubSecondsAgo ) );
+            _viewModel.scrubTo( _scrubSecondsAgo );
         }
         EditorSelfTestMarks::record( "animationRewind.timeline" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationRewind", "TimelineTip" ) );
         ImGui::SameLine();
-        if ( rewind.isScrubbing() )
+        if ( _viewState._bScrubbing != SW_FALSE )
         {
             if ( ImGui::Button( SW_LOCKEY( "EdText", "Resume" ) ) )
             {
-                rewind.clearScrub();
+                _viewModel.resume();
                 _scrubSecondsAgo = 0.0f;
-                if ( EditorPlaySession::isPaused() )
-                    EditorPlaySession::setState( PlaySessionState::Playing );
             }
             EditorSelfTestMarks::record( "animationRewind.resume" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationRewind", "ResumeTip" ) );
@@ -243,15 +126,15 @@ namespace sw::editor
         }
     }
 
-    void AnimationRewindPanel::drawFrame( const AnimationRewindTrack& track, const AnimationRewindFrame& frame )
+    void AnimationRewindPanel::drawFrame()
     {
-        const AnimationDebugState& state = frame._state;
-        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "FrameTS", TextArgumentList().addText( "label", track._label.c_str() ).addInteger( "frameIndex", static_cast<int64>( frame._frameIndex ) ).addDecimal( "time", static_cast<float64>( frame._time ), 3 ) ).c_str() );
+        const AnimationDebugState& state = _viewState._frameState;
+        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "FrameTS", TextArgumentList().addText( "label", _viewState._trackLabel.c_str() ).addInteger( "frameIndex", static_cast<int64>( _viewState._frameIndex ) ).addDecimal( "time", _viewState._frameTime, 3 ) ).c_str() );
         ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "StateS", TextArgumentList().addText( "stateName", state._stateName.empty() ? "-" : state._stateName.c_str() ).addDecimal( "stateTime", static_cast<float64>( state._stateTime ), 2 ) ).c_str() );
         if ( state._spriteFrame >= 0 )
             ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "SpriteFrame", TextArgumentList().addInteger( "spriteFrame", static_cast<int64>( state._spriteFrame ) ) ).c_str() );
         ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "RootMotion", TextArgumentList().addDecimal( "rootMotionTranslationX", static_cast<float64>( state._rootMotionTranslation._x ), 3 ).addDecimal( "rootMotionTranslationY", static_cast<float64>( state._rootMotionTranslation._y ), 3 ).addDecimal( "rootMotionTranslationZ", static_cast<float64>( state._rootMotionTranslation._z ), 3 ) ).c_str() );
-        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "BonesPoseB", TextArgumentList().addInteger( "boneCount", static_cast<int64>( frame._boneCount ) ).addInteger( "poseByteCount", static_cast<int64>( frame._poseByte.size() ) ) ).c_str() );
+        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "BonesPoseB", TextArgumentList().addInteger( "boneCount", static_cast<int64>( _viewState._boneCount ) ).addInteger( "poseByteCount", static_cast<int64>( _viewState._poseByteCount ) ) ).c_str() );
         if ( state._listNotify.empty() == false )
         {
             ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Notifies" ) );

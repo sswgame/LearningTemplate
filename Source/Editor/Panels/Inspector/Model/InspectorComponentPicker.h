@@ -42,6 +42,8 @@ namespace sw::editor
         static string makeLabel( const Component& component );
         /** @brief @p handle 의 상태입니다. */
         static InspectorHandleState computeHandleState( const GameObjectManager& manager, const TypeInfo& targetType, ComponentHandle handle );
+        /** @brief 선택기 콤보의 미리보기 글입니다: `(none)` · `(missing) object … / component …` · `[(wrong type) ]오브젝트 이름 / 이름#n`. */
+        static string makePreview( const GameObjectManager& manager, ComponentHandle value, InspectorHandleState state );
     };
 } // namespace sw::editor
 

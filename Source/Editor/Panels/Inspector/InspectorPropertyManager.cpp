@@ -11,7 +11,7 @@
 #include "Core/Math/PackedTypes.h"
 #include "Core/Name/TagID.h"
 
-#include "Editor/Common/Commands/Asset/EditorAssetIndex.h"
+#include "Editor/Common/Commands/Asset/EditorAssetIndexEntry.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/GUI/EditorChrome.h"
@@ -20,17 +20,13 @@
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Common/Workspace/EditorStateStore.h"
-#include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/ContentBrowser/ContentBrowserPanel.h"
-#include "Editor/Panels/Inspector/EditorPropertyGrid.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
 #include "Editor/Panels/Inspector/InspectorPropertyUndo.h"
 #include "Editor/Panels/Inspector/Model/InspectorBuiltinValue.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentPicker.h"
 #include "Editor/Panels/Inspector/Model/InspectorPropertyLayout.h"
+#include "Editor/Panels/Inspector/Model/PropertyGridModel.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Content/AssetPaths.h"
@@ -38,13 +34,10 @@
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
-#include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Serializer/AssetRefBase.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 
@@ -70,18 +63,12 @@ namespace sw::editor
             Cleared, ///< 지우기 버튼을 눌렀다
         };
 
-        /** @brief 에셋 선택 팝업의 상태입니다. 열린 팝업은 하나뿐이므로 상태도 하나만 보관합니다. */
+        /** @brief 에셋 선택 팝업의 상태입니다. 위젯 하나가 열린 팝업 하나의 상태를 든다(열린 팝업은 한 번에 하나다). */
         struct AssetPickerState
         {
             vector<EditorAssetIndexEntry>          _listEntry; ///< 팝업을 열 때 한 번 모은 리소스다. 파일 목록을 프레임마다 스캔하지 않는다
             fixed_string<constant::buffer::kMax64> _search;
         };
-
-        /** @brief 열린 선택 팝업의 상태입니다. 에디터 범위의 상태 저장소가 소유한다. */
-        AssetPickerState& getAssetPickerState()
-        {
-            return getEditorState<AssetPickerState>();
-        }
 
         class BuiltinPropertyBase : public IInspectorProperty
         {
@@ -155,17 +142,15 @@ namespace sw::editor
                 EditorChrome::sameLineIfFits( kButtonWidth );
                 if ( ImGui::Button( SW_EDITOR_ICON( "Search" ), ImVec2( kButtonWidth, 0 ) ) )
                 {
-                    AssetPickerState& picker = getAssetPickerState();
-                    picker._listEntry.clear();
-                    picker._search.clear();
-                    EditorAssetIndex::collectEntries( EditorPaths::getAssetPaths(), picker._listEntry );
+                    _assetPicker._search.clear();
+                    PropertyGridModel::collectAssetEntries( _assetPicker._listEntry );
                     EditorInputGUI::openPopup( "AssetPicker" );
                 }
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "PickAsset" ) );
                 EditorSelfTestMarks::record( ( string( "inspector.assetPicker." ) + prop._name.c_str() ).c_str() );
                 if ( ImGui::BeginPopup( "AssetPicker" ) )
                 {
-                    AssetPickerState& picker = getAssetPickerState();
+                    AssetPickerState& picker = _assetPicker;
                     if ( ImGui::IsWindowAppearing() )
                         ImGui::SetKeyboardFocusHere();
                     EditorChrome::setNextItemWidthColumns( 43.0f );
@@ -217,10 +202,10 @@ namespace sw::editor
             /** @brief 리소스 id 의 폴더를 콘텐츠 브라우저로 엽니다. */
             static void revealInContentBrowser( string_view assetPath )
             {
-                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-                if ( editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<ContentBrowserPanel>( true ) == false )
+                EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
+                if ( pPanels == nullptr || pPanels->setPanelOpen<ContentBrowserPanel>( true ) == false )
                     return;
-                ContentBrowserPanel* pPanel = editorContext.getSubsystem<EditorPanelManager>().findPanel<ContentBrowserPanel>();
+                ContentBrowserPanel* pPanel = pPanels->findPanel<ContentBrowserPanel>();
                 if ( pPanel == nullptr )
                     return;
                 const optional<AbsolutePath> fileAbs = EditorPaths::getAssetPaths().findLooseFile( FileUtil::normalizePath( assetPath ) );
@@ -230,7 +215,8 @@ namespace sw::editor
             }
 
         protected:
-            const utf8* _pLabel = "##value";
+            const utf8*      _pLabel = "##value";
+            AssetPickerState _assetPicker{}; ///< 이 위젯의 에셋 선택 팝업 상태
         };
 
         // ------------------------------------------------------------------------------
@@ -460,7 +446,7 @@ namespace sw::editor
             static constexpr bool kIsInteger = std::is_integral_v<T>;
 
         public:
-            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, EditorPropertyGrid& grid ) override
+            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, PropertyGridModel& model ) override
             {
                 if constexpr ( kIsInteger )
                 {
@@ -473,7 +459,7 @@ namespace sw::editor
                     return true;
 
                 // 표시 단위(라디안에서 도)의 배율은 실수에만 적용한다. 정수는 단위를 문자열로만 붙인다. 단위 · 서식은 그리드가 묶음과 함께 캐시한다.
-                const InspectorDisplayUnit& unit      = grid.getDisplayUnit( prop );
+                const InspectorDisplayUnit& unit      = model.getDisplayUnit( prop );
                 const float64               scale     = kIsInteger ? 1.0 : static_cast<float64>( unit._scale );
                 const float32               dragSpeed = kIsInteger ? 1.0f : ( unit._dragSpeed > 0.0f ? unit._dragSpeed : 0.01f );
                 if ( prop._metadata->_bReadOnly != SW_FALSE )
@@ -495,7 +481,7 @@ namespace sw::editor
                 const T*                    pMin     = range._bHasWidgetMin ? &minValue : nullptr;
                 const T*                    pMax     = range._bHasWidgetMax ? &maxValue : nullptr;
                 const bool                  bSlider  = range._bSlider;
-                const utf8* const           pFormat  = grid.getUnitNumberFormat( prop, getNumberFormat<T>() );
+                const utf8* const           pFormat  = model.getUnitNumberFormat( prop, getNumberFormat<T>() );
 
                 T    widgetValue = kIsInteger ? *pPtr : static_cast<T>( static_cast<float64>( *pPtr ) * scale );
                 bool bChanged    = false;
@@ -522,7 +508,7 @@ namespace sw::editor
         class CheckboxProperty : public BuiltinPropertyBase
         {
         public:
-            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, EditorPropertyGrid& /*grid*/ ) override
+            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, PropertyGridModel& /*model*/ ) override
             {
                 if constexpr ( std::is_same_v<T, bool> )
                 {
@@ -552,7 +538,7 @@ namespace sw::editor
         class ValueProperty : public BuiltinPropertyBase
         {
         public:
-            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, EditorPropertyGrid& /*grid*/ ) override
+            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, PropertyGridModel& /*model*/ ) override
             {
                 T* pPtr = prop.getValuePtr<T>( instance.get() );
                 if ( pPtr == nullptr )
@@ -578,14 +564,13 @@ namespace sw::editor
         class ComponentHandleProperty : public BuiltinPropertyBase
         {
         public:
-            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, EditorPropertyGrid& grid ) override
+            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, PropertyGridModel& model ) override
             {
                 if ( prop._handleTargetTypeName.empty() )
-                    return _untyped.draw( instance, prop, grid );
+                    return _untyped.draw( instance, prop, model );
 
-                const TypeInfo*          pTargetType = InspectorComponentChoice::findTargetType( editor::getSubsystem<TypeRegistry>(), prop );
-                const GameObject*        pOwner      = grid.getEditOwner();
-                const GameObjectManager* pManager    = pOwner != nullptr ? pOwner->getManager() : nullptr;
+                const TypeInfo*          pTargetType = InspectorComponentChoice::findTargetType( PropertyGridModel::getTypeRegistry(), prop );
+                const GameObjectManager* pManager    = model.findEditOwnerManager();
                 if ( pTargetType == nullptr || pManager == nullptr )
                 {
                     drawUnavailable( prop, pTargetType == nullptr );
@@ -598,9 +583,8 @@ namespace sw::editor
 
                 if ( prop._metadata->_bReadOnly != SW_FALSE )
                 {
-                    const InspectorHandleState              state = InspectorComponentChoice::computeHandleState( *pManager, *pTargetType, *pValue );
-                    fixed_string<constant::buffer::kMax512> preview;
-                    makePreview( *pManager, *pValue, state, preview );
+                    const InspectorHandleState state   = InspectorComponentChoice::computeHandleState( *pManager, *pTargetType, *pValue );
+                    const string               preview = InspectorComponentChoice::makePreview( *pManager, *pValue, state );
                     drawReadOnlyText( prop, preview.c_str() );
                     return true;
                 }
@@ -611,9 +595,9 @@ namespace sw::editor
                 {
                     // `picked` 는 값 자체라 값 주소 쪽 변환(`formatValueText`)으로 쓴다. 객체 주소 쪽(`formatPropertyText`)은 오프셋을 한 번 더 더한다.
                     const string undoLabel = InspectorPropertyLayout::makeUndoLabel( InspectorPropertyLayout::getPropertyLabel( prop ).c_str() );
-                    grid.applyPropertyTextAsEdit( instance, prop,
-                                                  SerializerUtil::formatValueText( ValueAddress{ &picked }, prop._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) ),
-                                                  undoLabel.c_str() );
+                    model.setPropertyText( instance, prop,
+                                           SerializerUtil::formatValueText( ValueAddress{ &picked }, prop._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) ),
+                                           undoLabel.c_str() );
                 }
                 showTooltipIfHovered( prop );
                 return true;
@@ -627,10 +611,9 @@ namespace sw::editor
             static bool drawPicker( const utf8* pLabel, const GameObjectManager& manager, const TypeInfo& targetType, ComponentHandle current,
                                     vector<InspectorComponentChoice>& inoutListChoice, ComponentHandle& outPicked )
             {
-                const InspectorHandleState              state = InspectorComponentChoice::computeHandleState( manager, targetType, current );
-                fixed_string<constant::buffer::kMax512> preview;
-                makePreview( manager, current, state, preview );
-                const bool bColored = state == InspectorHandleState::Missing || state == InspectorHandleState::WrongType;
+                const InspectorHandleState state    = InspectorComponentChoice::computeHandleState( manager, targetType, current );
+                const string               preview  = InspectorComponentChoice::makePreview( manager, current, state );
+                const bool                 bColored = state == InspectorHandleState::Missing || state == InspectorHandleState::WrongType;
                 if ( bColored )
                     EditorThemeUtil::pushTextColor( state == InspectorHandleState::Missing ? SW_THEME_COLOR( "Signal", "Warning" ) : SW_THEME_COLOR( "Signal", "Error" ) );
                 const bool bOpen = ImGui::BeginCombo( pLabel, preview.c_str() );
@@ -665,32 +648,6 @@ namespace sw::editor
             }
 
         private:
-            /** @brief 현재 값의 미리보기 글입니다. */
-            static void makePreview( const GameObjectManager& manager, ComponentHandle value, InspectorHandleState state, fixed_string<constant::buffer::kMax512>& outPreview )
-            {
-                switch ( state )
-                {
-                    case InspectorHandleState::Empty:
-                    {
-                        formatstring( outPreview.data(), outPreview.capacity(), "(none)" );
-                        return;
-                    }
-                    case InspectorHandleState::Missing:
-                    {
-                        formatstring( outPreview.data(), outPreview.capacity(), "(missing) object %# / component %#", value.objectID(), value.componentID() );
-                        return;
-                    }
-                    case InspectorHandleState::Valid:
-                    case InspectorHandleState::WrongType:
-                    {
-                        break;
-                    }
-                }
-                const Component* pComp = manager.resolveComponent( value );
-                const string     label = pComp != nullptr ? InspectorComponentChoice::makeLabel( *pComp ) : string();
-                formatstring( outPreview.data(), outPreview.capacity(), "%#%#", state == InspectorHandleState::WrongType ? "(wrong type) " : "", label );
-            }
-
             /** @brief 선택기를 그릴 수 없을 때의 오류 글입니다. 필드마다 한 번만 로그를 남깁니다. */
             void drawUnavailable( const PropertyInfo& prop, bool bUnknownType )
             {
@@ -716,7 +673,7 @@ namespace sw::editor
         class StringProperty : public BuiltinPropertyBase
         {
         public:
-            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, EditorPropertyGrid& grid ) override
+            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, PropertyGridModel& model ) override
             {
                 const bool bAssetPath = prop._metadata->_bAssetPath != SW_FALSE || prop._metadata->_assetType.empty() == false;
 
@@ -737,9 +694,9 @@ namespace sw::editor
                     { EditorWidgets::drawTextField( pID, *pPtr ); }, prop, string_view{ *pPtr }, droppedPath );
                     // `FileFilter` 에 맞지 않는 파일은 받지 않는다. 드롭, 선택, 지우기는 위젯 편집이 아니라 그리드가 적용해야 알림과 되돌리기에 남는다.
                     if ( action == AssetFieldAction::Dropped && InspectorPropertyLayout::matchesFileFilter( prop._metadata->getEditor()._fileFilter, droppedPath ) )
-                        grid.applyPropertyTextAsEdit( instance, prop, droppedPath, "Set Asset" );
+                        model.setPropertyText( instance, prop, droppedPath, "Set Asset" );
                     else if ( action == AssetFieldAction::Cleared )
-                        grid.applyPropertyTextAsEdit( instance, prop, "", "Clear Asset" );
+                        model.setPropertyText( instance, prop, "", "Clear Asset" );
                 }
                 else if ( prop._metadata->getEditor()._bMultiline != SW_FALSE )
                 {
@@ -758,7 +715,7 @@ namespace sw::editor
         class HashedStringProperty : public BuiltinPropertyBase
         {
         public:
-            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, EditorPropertyGrid& grid ) override
+            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, PropertyGridModel& model ) override
             {
                 const bool bAssetPath = prop._metadata->_bAssetPath != SW_FALSE || prop._metadata->_assetType.empty() == false;
 
@@ -778,9 +735,9 @@ namespace sw::editor
                         [pPtr]( const utf8* pID )
                     { drawNameInput( pID, *pPtr ); }, prop, pPtr->view(), droppedPath );
                     if ( action == AssetFieldAction::Dropped && InspectorPropertyLayout::matchesFileFilter( prop._metadata->getEditor()._fileFilter, droppedPath ) )
-                        grid.applyPropertyTextAsEdit( instance, prop, droppedPath, "Set Asset" );
+                        model.setPropertyText( instance, prop, droppedPath, "Set Asset" );
                     else if ( action == AssetFieldAction::Cleared )
-                        grid.applyPropertyTextAsEdit( instance, prop, "", "Clear Asset" );
+                        model.setPropertyText( instance, prop, "", "Clear Asset" );
                 }
                 else
                 {
@@ -800,7 +757,7 @@ namespace sw::editor
         class AssetRefProperty : public BuiltinPropertyBase
         {
         public:
-            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, EditorPropertyGrid& grid ) override
+            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, PropertyGridModel& model ) override
             {
                 const AssetRefBase* pRef = prop.getValuePtr<AssetRefBase>( instance.get() );
                 if ( pRef == nullptr )
@@ -822,11 +779,11 @@ namespace sw::editor
                 },
                     prop, pRef->path(), droppedPath, &pRef->getTargetType() );
                 if ( action == AssetFieldAction::Dropped && AssetRefBase::isPathOfTarget( droppedPath, pRef->getTargetType() ) )
-                    grid.applyPropertyTextAsEdit( instance, prop, droppedPath, "Set Asset" );
+                    model.setPropertyText( instance, prop, droppedPath, "Set Asset" );
                 else if ( action == AssetFieldAction::Cleared )
-                    grid.applyPropertyTextAsEdit( instance, prop, "", "Clear Asset" );
+                    model.setPropertyText( instance, prop, "", "Clear Asset" );
                 else if ( bEdited && *pRef != string_view( _buffer ) )
-                    grid.applyPropertyTextAsEdit( instance, prop, _buffer, "Edit Path" );
+                    model.setPropertyText( instance, prop, _buffer, "Edit Path" );
                 showTooltipIfHovered( prop );
                 return true;
             }
@@ -838,13 +795,13 @@ namespace sw::editor
         class Float3Property : public BuiltinPropertyBase
         {
         public:
-            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, EditorPropertyGrid& grid ) override
+            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, PropertyGridModel& model ) override
             {
                 float3* pPtr = prop.getValuePtr<float3>( instance.get() );
                 if ( pPtr == nullptr )
                     return true;
                 // 라디안으로 저장한 각도(`Units=rad`)는 도로 보여 주고 편집한다. 바뀌었을 때만 다시 쓴다.
-                const InspectorDisplayUnit& unit = grid.getDisplayUnit( prop );
+                const InspectorDisplayUnit& unit = model.getDisplayUnit( prop );
                 if ( prop._metadata->_bReadOnly != SW_FALSE )
                 {
                     const float3                            shown = *pPtr * unit._scale;
@@ -873,7 +830,7 @@ namespace sw::editor
         class Float2Property : public BuiltinPropertyBase
         {
         public:
-            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, EditorPropertyGrid& /*grid*/ ) override
+            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, PropertyGridModel& /*model*/ ) override
             {
                 float2* pPtr = prop.getValuePtr<float2>( instance.get() );
                 if ( pPtr == nullptr )
@@ -896,7 +853,7 @@ namespace sw::editor
         class Float4Property : public BuiltinPropertyBase
         {
         public:
-            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, EditorPropertyGrid& /*grid*/ ) override
+            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, PropertyGridModel& /*model*/ ) override
             {
                 float4* pPtr = prop.getValuePtr<float4>( instance.get() );
                 if ( pPtr == nullptr )
@@ -951,11 +908,6 @@ namespace sw::editor
         static_assert( std::size( kArrDrawMethodArg ) == InspectorBuiltinValue::kBuiltinCount,
                        "kArrDrawMethodArg must have one entry per ReflectBuiltins.xxx type" );
 
-        /** @brief 메서드 인자 선택기 콤보의 선택지 버퍼를 담은 상태입니다. 에디터 범위의 상태 저장소가 소유한다. */
-        struct InspectorMethodArgChoiceState
-        {
-            vector<InspectorComponentChoice> _listChoice;
-        };
     } // namespace
 
     InspectorPropertyManager::InspectorPropertyManager()
@@ -1023,7 +975,8 @@ namespace sw::editor
         registerType( AssetRefBase::kTypeName, make_unique<AssetRefProperty>() );
     }
 
-    bool InspectorPropertyManager::drawMethodArg( const utf8* pLabel, InspectorMethodArgSlot& slot, const FunctionParameterInfo& parameter, const GameObjectManager* pManager )
+    bool InspectorPropertyManager::drawMethodArg( const utf8* pLabel, InspectorMethodArgSlot& slot, const FunctionParameterInfo& parameter, const GameObjectManager* pManager,
+                                                  vector<InspectorComponentChoice>& inoutListChoice )
     {
         if ( slot._value.hasValue() == false || slot._builtinIndex >= std::size( kArrDrawMethodArg ) )
         {
@@ -1034,7 +987,7 @@ namespace sw::editor
             return kArrDrawMethodArg[slot._builtinIndex]( pLabel, slot._value );
 
         // 타입 핸들 인자 — 프로퍼티와 같은 선택기다. 칸의 값은 타입 없는 핸들이고(`_typeName` 이 `ComponentHandle`), 호출 썽크가 대상 타입을 다시 확인한다.
-        const TypeInfo* pTargetType = InspectorComponentChoice::findTargetType( editor::getSubsystem<TypeRegistry>(), parameter._handleTargetTypeName );
+        const TypeInfo* pTargetType = InspectorComponentChoice::findTargetType( PropertyGridModel::getTypeRegistry(), parameter._handleTargetTypeName );
         const bool      bPickable   = pTargetType != nullptr && pManager != nullptr && slot._value.getPtr<ComponentHandle>() != nullptr;
         if ( bPickable == false )
         {
@@ -1043,9 +996,8 @@ namespace sw::editor
             EditorThemeUtil::textError( pTargetType == nullptr ? "(unknown component type)" : "(no scene: cannot pick a component)" );
             return false;
         }
-        vector<InspectorComponentChoice>& listChoice = getEditorState<InspectorMethodArgChoiceState>()._listChoice; // 콤보가 열린 프레임에만 채운다(UI 스레드 하나만 그린다)
-        ComponentHandle                   picked{};
-        if ( ComponentHandleProperty::drawPicker( pLabel, *pManager, *pTargetType, slot._value.getValue<ComponentHandle>(), listChoice, picked ) == false )
+        ComponentHandle picked{};
+        if ( ComponentHandleProperty::drawPicker( pLabel, *pManager, *pTargetType, slot._value.getValue<ComponentHandle>(), inoutListChoice, picked ) == false )
             return false;
         slot._value = TaskValue{ picked };
         return true;

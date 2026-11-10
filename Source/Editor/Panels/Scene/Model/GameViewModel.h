@@ -65,6 +65,10 @@ namespace sw::editor
         static InputManager* findInputManager();
         /** @brief 뷰포트 입력 오버레이(눌린 키 · 패드 표시)입니다. 없으면 nullptr 입니다. */
         static ViewportInputOverlay* findInputOverlay();
+        /** @brief 게임 뷰가 그리는 카메라(활성 씬의 게임 카메라)의 월드 위치를 @p outPosition 에 담습니다. 없으면 false 입니다(감시 값이 읽는다). */
+        [[nodiscard]] static bool findCameraPosition( float3& outPosition );
+        /** @brief 주 출력(게임 뷰)의 보기 모드 번호(`RenderViewMode`)를 @p outMode 에 담습니다. 렌더러가 없으면(필수 서비스 — 버그) 오류를 남기고 false 입니다. */
+        [[nodiscard]] static bool findViewMode( uint32& outMode );
 
     private:
         EditorGameViewAspect _aspect;                 ///< 이미지 화면 비율(자유 · 16:9)

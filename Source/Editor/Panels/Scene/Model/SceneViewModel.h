@@ -8,6 +8,11 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+namespace sw
+{
+    struct float3;
+} // namespace sw
+
 namespace sw::editor
 {
     /** @brief 디버그 그리기 범주 하나입니다(값만). */
@@ -26,5 +31,11 @@ namespace sw::editor
         static void gatherDebugCategories( vector<SceneViewDebugCategoryRow>& outListRow );
         /** @brief 디버그 그리기 범주 @p category 를 켜거나 끕니다. */
         static void setDebugCategoryEnabled( const hashed_string& category, bool bEnabled );
+        /** @brief 씬 뷰 카메라(에디터 카메라 — 플레이 중에도)의 월드 위치를 @p outPosition 에 담습니다. 활성 씬에 에디터 카메라가 없으면 false 입니다(감시 값이 읽는다). */
+        [[nodiscard]] static bool findCameraPosition( float3& outPosition );
+        /** @brief 씬 뷰 툴바의 보기 모드 번호(`RenderViewMode`)를 @p outMode 에 담습니다. 렌더러가 없으면(필수 서비스 — 버그) 오류를 남기고 false 입니다. */
+        [[nodiscard]] static bool findViewMode( uint32& outMode );
+        /** @brief 작업 공간의 기즈모 조작(0 이동, 1 회전, 2 크기)입니다. */
+        static int32 getGizmoOperation();
     };
 } // namespace sw::editor

@@ -43,4 +43,8 @@ namespace sw::editor
     [[nodiscard]] const GameObject* findWatchedObject();
     /** @brief `findWatchedObject` 의 주 씬 컴포넌트 로컬 위치를 @p outPosition 에 담습니다. 오브젝트나 씬 컴포넌트가 없으면 false 입니다 — 패널 View 의 감시 값이 오브젝트 헤더를 보지 않게 한다. */
     [[nodiscard]] bool readWatchedObjectLocalPosition( float3& outPosition );
+    /** @brief `findWatchedObject` 의 오브젝트 id 입니다. 없으면 0 입니다. */
+    [[nodiscard]] uint64 findWatchedObjectID();
+    /** @brief 메인 씬에서 고른 첫 오브젝트의 주 씬 컴포넌트 로컬 회전(오일러, 라디안)을 @p outRotation 에 담습니다. 고른 것이 없으면 false 입니다. */
+    [[nodiscard]] bool readSelectedObjectLocalRotation( float3& outRotation );
 } // namespace sw::editor

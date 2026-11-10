@@ -2,27 +2,16 @@
 
 #include "Editor/Panels/Fog/VolumetricFogPanel.h"
 
-#include "Core/GlobalVariable/GlobalVariableManager.h"
-#include "Core/Log/Logger.h"
-#include "Core/String/StringUtil.h"
-#include "Core/String/formatString.h"
-
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorRenderViews.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/Fog/Model/VolumetricFogStatus.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "Engine/Environment/Fog/FogComponent.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Localization/LocText.h"
-#include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/EnumName.h"
 
 #include <imgui.h>
@@ -33,22 +22,6 @@ namespace sw::editor
     {
         struct VolumetricFogPanelInternal
         {
-            static constexpr const utf8* kViewVariable  = "gv_fogDebugView";  ///< 안개 패스의 진단 보기(개발 도구 `RenderDiagnosticsSwitches.cpp` 가 진단 정책으로 넘긴다)
-            static constexpr const utf8* kSliceVariable = "gv_fogDebugSlice"; ///< 진단 단면의 거리 조각
-
-            /** @brief 전역 변수의 지금 글입니다. 등록되지 않았으면(Shipping 이 아닌데 없으면 결함) 빈 글입니다. */
-            static string readVariable( const utf8* pName )
-            {
-                const GlobalVariableInfo* pInfo = editor::getSubsystem<GlobalVariableManager>().findVariable( pName );
-                return pInfo != nullptr ? pInfo->getValueAsString() : string{};
-            }
-
-            static void writeVariable( const utf8* pName, string_view value )
-            {
-                if ( editor::getSubsystem<GlobalVariableManager>().setValueFromString( pName, value ) == false )
-                    SW_LOG_WARNING_ID( "VolumetricFogPanel.VariableNotSet", "The fog debug variable '%#' did not take '%#'", pName, value );
-            }
-
             static Color getSeverityColor( VolumetricFogSeverity severity )
             {
                 switch ( severity )
@@ -69,13 +42,16 @@ namespace sw::editor
 
     VolumetricFogPanel::VolumetricFogPanel()
         : IEditorPanel( false )
+        , _viewModel{}
+        , _viewState{}
     {
     }
 
     void VolumetricFogPanel::drawContent()
     {
-        using Internal             = VolumetricFogPanelInternal;
-        const FogVolumeState state = FrameFog::getLastMainVolumeState();
+        using Internal = VolumetricFogPanelInternal;
+        _viewModel.gather( _viewState );
+        const FogVolumeState state = _viewState._volumeState;
         // 상태는 문장으로 — 색만으로 알리지 않는다. 켜짐은 Success, 못 켬은 Warning, 고른 꺼짐은 흐린 글이다.
         ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( Internal::getSeverityColor( VolumetricFogStatus::getSeverity( state ) ) ) );
         ImGui::TextWrapped( "%s", VolumetricFogStatus::describe( state ) );
@@ -89,8 +65,7 @@ namespace sw::editor
 
     void VolumetricFogPanel::drawDebugViewRow( bool bVolumeActive )
     {
-        using Internal                 = VolumetricFogPanelInternal;
-        const string       current     = Internal::readVariable( Internal::kViewVariable );
+        const string&      current     = _viewState._debugView;
         const FogDebugView arrView[4]  = { FogDebugView::None, FogDebugView::Compare, FogDebugView::Scattering, FogDebugView::Transmittance };
         const utf8* const  arrLabel[4] = { SW_LOCKEY( "EditorVolumetricFog", "ViewNormal" ), SW_LOCKEY( "EditorVolumetricFog", "ViewCompare" ),
                                            SW_LOCKEY( "EditorVolumetricFog", "ViewScattering" ), SW_LOCKEY( "EditorVolumetricFog", "ViewTransmittance" ) };
@@ -105,45 +80,31 @@ namespace sw::editor
             // 볼륨이 없으면 비교 · 단면은 그릴 것이 없다 — 단추를 끄고 까닭은 위 문장이 말한다.
             ImGui::BeginDisabled( index > 0 && bVolumeActive == false );
             if ( EditorWidgets::drawToggleButton( arrLabel[index], bActive ) && bActive == false )
-                Internal::writeVariable( Internal::kViewVariable, pName );
+                _viewModel.setDebugView( arrView[index] );
             ImGui::EndDisabled();
             EditorSelfTestMarks::record( arrMark[index] );
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorVolumetricFog", "DebugViewTip" ) );
-        int32 slice = 0;
-        (void)StringUtil::parseInt( string_view( Internal::readVariable( Internal::kSliceVariable ) ), slice ); // 등록한 int 변수의 글이다
+        int32 slice = _viewState._slice;
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorVolumetricFog", "Slice" ), SW_LOCKEY( "EditorVolumetricFog", "SliceTip" ) );
         if ( ImGui::SliderInt( "##fogSlice", &slice, 0, static_cast<int32>( SW_FOG_VOLUME_DIM_Z ) - 1 ) )
-        {
-            Internal::writeVariable( Internal::kSliceVariable, to_string( slice ) );
-        }
+            _viewModel.setSlice( slice );
         EditorSelfTestMarks::record( "volumetricFog.slice" );
     }
 
     void VolumetricFogPanel::drawFogObjectRow()
     {
         ImGui::SeparatorText( SW_LOCKEY( "EditorVolumetricFog", "Settings" ) );
-        GameObjectManager* pManager = editor::getActiveObjectManager();
-        GameObject*        pFog     = nullptr;
-        if ( pManager != nullptr )
-        {
-            // 공유 잠금 안의 콜백이라 찾기만 한다(고르기는 잠금 밖에서).
-            pManager->forEachComponentOfType<FogComponent>( [&pFog]( FogComponent* pComponent )
-            {
-                if ( pFog == nullptr )
-                    pFog = pComponent->getOwner();
-            } );
-        }
-        if ( pFog == nullptr )
+        if ( _viewState._fogObjectID == 0 )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorVolumetricFog", "NoFogHint" ) );
             return;
         }
-        ImGui::TextUnformatted( pFog->getName().c_str() );
+        ImGui::TextUnformatted( _viewState._fogObjectName.c_str() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorVolumetricFog", "SelectFog" ) ) );
         // 값은 인스펙터에서 고친다 — 씬의 `FogComponent` 가 정본이고 이 창은 사본을 두지 않는다.
         if ( ImGui::Button( SW_LOCKEY( "EditorVolumetricFog", "SelectFog" ) ) )
-            editor::getMainSceneSelection().selectObject( pFog );
+            _viewModel.selectFogObject( _viewState._fogObjectID );
         EditorSelfTestMarks::record( "volumetricFog.selectFog" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorVolumetricFog", "SelectFogTip" ) );
     }
