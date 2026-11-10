@@ -500,6 +500,23 @@ function(sw_writeRuntimeModuleCatalog LOAD_ORDER UNUSED)
 			list(APPEND swKeptManifests "${swName}")
 		endif()
 	endforeach()
+	# 카탈로그는 스스로 닫혀 있어야 한다 — 남긴 매니페스트의 의존이 빠졌으면(쓰지 않아 뺀 키트) 그것도 뺀다. 이 구성의 대상이 아니라 꺼진 모듈
+	# (서버 빌드의 GF_Client_* — 런타임이 대상으로 거른다)은 위 목록에 남는데, 그 의존 키트는 빠져 런타임 해석이 "의존 매니페스트 없음" 으로 졌다
+	# (ModuleCatalogLoaderTest.LoadsManifestsBesideTheExecutable, GF_Client_ServerDirectory -> GF_ServerDirectory). 뺀 것이 또 빼게 하므로 바뀌지 않을 때까지 돈다.
+	set(swChanged ON)
+	while(swChanged)
+		set(swChanged OFF)
+		foreach(swName IN LISTS swKeptManifests)
+			get_property(swDependencies GLOBAL PROPERTY SW_MODULE_${swName}_DEPENDENCIES)
+			foreach(swDependency IN LISTS swDependencies)
+				if(swDependency IN_LIST swNames AND NOT swDependency IN_LIST swKeptManifests)
+					list(REMOVE_ITEM swKeptManifests "${swName}")
+					set(swChanged ON)
+					break()
+				endif()
+			endforeach()
+		endforeach()
+	endwhile()
 
 	# 옛 매니페스트는 **복사 전에** 지운다. Windows 에서 대소문자만 바뀐 이름(`GF_ClassicJRPG` → `GF_ClassicJRPG`)은 같은 파일이라
 	# 복사가 옛 철자 파일 이름을 그대로 두고, 복사 뒤에 글자 그대로 비교해 지우면 방금 복사한 매니페스트를 지운다.
