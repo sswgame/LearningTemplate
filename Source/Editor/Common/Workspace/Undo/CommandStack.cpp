@@ -196,6 +196,8 @@ namespace sw
             _transactionLabel = label;
             _listPendingTransactionCommand.clear();
         }
+        else if ( _transactionLabel.empty() )
+            _transactionLabel = label; // 이름 없는 바깥 구간(명령 레지스트리가 연 것)은 안쪽 구간의 이름을 단다 — 명령이 스스로 지은 이름이 남는다
         ++_transactionDepth;
     }
 

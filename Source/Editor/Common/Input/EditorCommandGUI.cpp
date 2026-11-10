@@ -33,6 +33,7 @@
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
@@ -200,7 +201,7 @@ namespace sw::editor
                 editorContext.getSubsystem<EditorNotificationManager>().push( pTitle, pDetail, NotificationKind::Warning );
             }
 
-            static void commandPasteComponentValues()
+            static void commandPasteComponentValues( EditorTransaction& /*transaction*/ )
             {
                 EditorContext& editorContext = editor::getSubsystem<EditorContext>();
                 Component*     pComp         = selectedComponent();
@@ -217,7 +218,7 @@ namespace sw::editor
                 (void)EditorTransformCommands::pasteCopiedComponentValues( editorContext.getSubsystem<EditorWorkspace>(), pComp ); // 실패는 붙여넣기 함수가 로그로 알린다
             }
 
-            static void commandPasteComponentAsNew()
+            static void commandPasteComponentAsNew( EditorTransaction& /*transaction*/ )
             {
                 EditorContext& editorContext = editor::getSubsystem<EditorContext>();
                 GameObject*    pObj          = primaryObject();
@@ -298,18 +299,23 @@ namespace sw::editor
                 FileDialog::open( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, onSavePresetDialogResult ) );
             }
 
-            // 테이블이 `void()` 를 요구하므로 인자를 고정하는 함수는 필요하지만, 축마다 함수를 만들 이유는 없다. 축을 템플릿 인자로 받으면 테이블은 `&commandAlign<AlignAxis::X>` 로 가리킨다.
+            // 씬 표가 `void( EditorTransaction& )` 를 요구하므로 인자를 고정하는 함수는 필요하지만, 축마다 함수를 만들 이유는 없다. 축을 템플릿 인자로 받으면 표는 `&commandAlign<AlignAxis::X>` 로 가리킨다.
             // 축이 늘어나도 여기서 고칠 것은 없다.
             template <AlignAxis TAxis>
-            static void commandAlign()
+            static void commandAlign( EditorTransaction& /*transaction*/ )
             {
                 EditorTransformCommands::alignSelectedObjects( TAxis, AlignType::Center );
             }
 
             template <AlignAxis TAxis>
-            static void commandDistribute()
+            static void commandDistribute( EditorTransaction& /*transaction*/ )
             {
                 EditorTransformCommands::distributeSelectedObjects( TAxis );
+            }
+
+            static void commandSnapToGround( EditorTransaction& /*transaction*/ )
+            {
+                EditorTransformCommands::snapSelectedToGround();
             }
 
             /** @brief 선택한 오브젝트를 스폰한 프리팹의 경로입니다. 프리팹 인스턴스가 아니면 비어 있습니다. 놓인 프리팹 테이블은 메인 씬의 것이라 메인 선택을 본다. */
@@ -390,7 +396,15 @@ namespace sw::editor
                 const utf8* _pID;
                 void ( *_pAction )();
                 bool ( *_pEnabled )();
-                EditorCommandEdit _edit; ///< 씬을 바꾸는지(필수 — `EditorCommandEdit`)
+                EditorCommandEdit _edit; ///< `NoScene` 또는 `SceneUnrecorded` — 씬을 바꾸는 명령은 거래를 받는 표(`SceneCommandRow`)에 둔다
+            };
+
+            /** @brief 씬을 바꾸는 명령(`EditorCommandEdit::Scene`)의 항목입니다. 동작이 레지스트리가 연 거래 구간을 받는다 — 거래 없이 씬을 바꾸는 줄은 형식이 받지 않는다. */
+            struct SceneCommandRow
+            {
+                const utf8* _pID;
+                void ( *_pAction )( EditorTransaction& transaction );
+                bool ( *_pEnabled )();
             };
 
             /**
@@ -399,35 +413,39 @@ namespace sw::editor
              *          Exit 는 단축키를 적지 않는다 — Alt+F4 는 OS 가 창 닫기로 먼저 가로채는 조합이라 입력 맵이 처리하지 않는다.
              */
             inline static const CommandRow _s_arrCommandRow[] = {
-                {                     "scene.new",                                  &commandNewScene,                    nullptr, EditorCommandEdit::NoScene},
-                {                    "scene.open",                                 &commandOpenScene,                    nullptr, EditorCommandEdit::NoScene},
-                {                    "asset.save",      &EditorSceneFileCommands::saveFocusedOrScene,                    nullptr, EditorCommandEdit::NoScene},
-                {               "scene.saveScene", &EditorSceneFileCommands::saveActiveSceneOrPrompt,                    nullptr, EditorCommandEdit::NoScene},
-                {              "editor.quickOpen",                       &QuickLauncherPopup::toggle,                    nullptr, EditorCommandEdit::NoScene},
-                {         "editor.commandPalette",                      &CommandPalettePopup::toggle,                    nullptr, EditorCommandEdit::NoScene},
-                {                   "editor.exit",             &EditorSceneFileCommands::requestExit,                    nullptr, EditorCommandEdit::NoScene},
-                {                     "edit.undo",                                      &commandUndo,                    nullptr,   EditorCommandEdit::Scene},
-                {                     "edit.redo",                                      &commandRedo,                    nullptr,   EditorCommandEdit::Scene},
-                {          "editor.themeSettings",                   &EditorMenuBar::openThemeDialog,                    nullptr, EditorCommandEdit::NoScene},
-                {             "build.compileGame",                               &commandCompileGame,            &isCompilerIdle, EditorCommandEdit::NoScene},
-                {           "build.compileEditor",                             &commandCompileEditor,            &isCompilerIdle, EditorCommandEdit::NoScene},
-                {              "build.compileAll",                                &commandCompileAll,            &isCompilerIdle, EditorCommandEdit::NoScene},
-                {                  "build.cancel",                               &commandCancelBuild,            &isCompilerBusy, EditorCommandEdit::NoScene},
-                {                    "play.start",                                      &commandPlay,                    nullptr, EditorCommandEdit::NoScene},
-                {           "viewport.screenshot",     &EditorScreenshotCommands::captureFocusedView,                    nullptr, EditorCommandEdit::NoScene},
-                {     "viewport.renderDocCapture",                          &commandRenderDocCapture,      &isRenderDocAvailable, EditorCommandEdit::NoScene},
-                {"clipboard.pasteComponentValues",                      &commandPasteComponentValues,                    nullptr,   EditorCommandEdit::Scene},
-                { "clipboard.pasteComponentAsNew",                       &commandPasteComponentAsNew,                    nullptr,   EditorCommandEdit::Scene},
-                {          "preset.loadComponent",                       &commandLoadComponentPreset,                    nullptr,   EditorCommandEdit::Scene},
-                {          "preset.saveComponent",                       &commandSaveComponentPreset,                    nullptr, EditorCommandEdit::NoScene},
-                {        "transform.snapToGround",    &EditorTransformCommands::snapSelectedToGround,              &hasSelection,   EditorCommandEdit::Scene},
-                {              "transform.alignX",                       &commandAlign<AlignAxis::X>,         &hasMultiSelection,   EditorCommandEdit::Scene},
-                {              "transform.alignY",                       &commandAlign<AlignAxis::Y>,         &hasMultiSelection,   EditorCommandEdit::Scene},
-                {              "transform.alignZ",                       &commandAlign<AlignAxis::Z>,         &hasMultiSelection,   EditorCommandEdit::Scene},
-                {         "transform.distributeX",                  &commandDistribute<AlignAxis::X>,         &hasMultiSelection,   EditorCommandEdit::Scene},
-                {         "transform.distributeY",                  &commandDistribute<AlignAxis::Y>,         &hasMultiSelection,   EditorCommandEdit::Scene},
-                {         "transform.distributeZ",                  &commandDistribute<AlignAxis::Z>,         &hasMultiSelection,   EditorCommandEdit::Scene},
-                {         "prefab.applyOverrides",                      &commandApplyPrefabOverrides, &hasPrefabInstanceSelected,   EditorCommandEdit::Scene},
+                {                "scene.new",                                  &commandNewScene,                    nullptr,         EditorCommandEdit::NoScene},
+                {               "scene.open",                                 &commandOpenScene,                    nullptr,         EditorCommandEdit::NoScene},
+                {               "asset.save",      &EditorSceneFileCommands::saveFocusedOrScene,                    nullptr,         EditorCommandEdit::NoScene},
+                {          "scene.saveScene", &EditorSceneFileCommands::saveActiveSceneOrPrompt,                    nullptr,         EditorCommandEdit::NoScene},
+                {         "editor.quickOpen",                       &QuickLauncherPopup::toggle,                    nullptr,         EditorCommandEdit::NoScene},
+                {    "editor.commandPalette",                      &CommandPalettePopup::toggle,                    nullptr,         EditorCommandEdit::NoScene},
+                {              "editor.exit",             &EditorSceneFileCommands::requestExit,                    nullptr,         EditorCommandEdit::NoScene},
+                {                "edit.undo",                                      &commandUndo,                    nullptr, EditorCommandEdit::SceneUnrecorded},
+                {                "edit.redo",                                      &commandRedo,                    nullptr, EditorCommandEdit::SceneUnrecorded},
+                {     "editor.themeSettings",                   &EditorMenuBar::openThemeDialog,                    nullptr,         EditorCommandEdit::NoScene},
+                {        "build.compileGame",                               &commandCompileGame,            &isCompilerIdle,         EditorCommandEdit::NoScene},
+                {      "build.compileEditor",                             &commandCompileEditor,            &isCompilerIdle,         EditorCommandEdit::NoScene},
+                {         "build.compileAll",                                &commandCompileAll,            &isCompilerIdle,         EditorCommandEdit::NoScene},
+                {             "build.cancel",                               &commandCancelBuild,            &isCompilerBusy,         EditorCommandEdit::NoScene},
+                {               "play.start",                                      &commandPlay,                    nullptr,         EditorCommandEdit::NoScene},
+                {      "viewport.screenshot",     &EditorScreenshotCommands::captureFocusedView,                    nullptr,         EditorCommandEdit::NoScene},
+                {"viewport.renderDocCapture",                          &commandRenderDocCapture,      &isRenderDocAvailable,         EditorCommandEdit::NoScene},
+                {     "preset.loadComponent",                       &commandLoadComponentPreset,                    nullptr, EditorCommandEdit::SceneUnrecorded}, // 파일 창을 연다 — 고르면 그때 기록한다
+                {     "preset.saveComponent",                       &commandSaveComponentPreset,                    nullptr,         EditorCommandEdit::NoScene},
+                {    "prefab.applyOverrides",                      &commandApplyPrefabOverrides, &hasPrefabInstanceSelected, EditorCommandEdit::SceneUnrecorded}, // 프리팹 파일을 쓴다 — 씬 기록이 아니다
+            };
+
+            /** @brief 씬을 바꾸는 명령의 표입니다. 한 번 실행이 되돌리기 한 단계다(`EditorCommandRegistry::executeDesc` 가 거래를 연다). */
+            inline static const SceneCommandRow _s_arrSceneCommandRow[] = {
+                {"clipboard.pasteComponentValues",     &commandPasteComponentValues,            nullptr},
+                { "clipboard.pasteComponentAsNew",      &commandPasteComponentAsNew,            nullptr},
+                {        "transform.snapToGround",             &commandSnapToGround,      &hasSelection},
+                {              "transform.alignX",      &commandAlign<AlignAxis::X>, &hasMultiSelection},
+                {              "transform.alignY",      &commandAlign<AlignAxis::Y>, &hasMultiSelection},
+                {              "transform.alignZ",      &commandAlign<AlignAxis::Z>, &hasMultiSelection},
+                {         "transform.distributeX", &commandDistribute<AlignAxis::X>, &hasMultiSelection},
+                {         "transform.distributeY", &commandDistribute<AlignAxis::Y>, &hasMultiSelection},
+                {         "transform.distributeZ", &commandDistribute<AlignAxis::Z>, &hasMultiSelection},
             };
 
             // ------------------------------------------------------------------------------
@@ -521,6 +539,21 @@ namespace sw::editor
                 desc._enabledPredicate = [pfnEnabled = row._pEnabled]( const EditorCommandTarget& /*target*/ )
                 { return pfnEnabled(); };
             desc._edit = row._edit;
+
+            registry.registerCommand( std::move( desc ) );
+        }
+        for ( const EditorCommandGUIInternal::SceneCommandRow& row : EditorCommandGUIInternal::_s_arrSceneCommandRow )
+        {
+            EditorCommandDesc desc{};
+            desc._id = row._pID;
+            if ( texts.apply( desc ) == false )
+                continue;
+            desc._sceneAction = [pfnAction = row._pAction]( const EditorCommandTarget& /*target*/, EditorTransaction& transaction )
+            { pfnAction( transaction ); };
+            if ( row._pEnabled != nullptr )
+                desc._enabledPredicate = [pfnEnabled = row._pEnabled]( const EditorCommandTarget& /*target*/ )
+                { return pfnEnabled(); };
+            desc._edit = EditorCommandEdit::Scene;
 
             registry.registerCommand( std::move( desc ) );
         }

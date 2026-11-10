@@ -159,46 +159,6 @@ namespace sw::editor
             return text;
         }
 
-        /**
-         * @brief 편집 중인 씬의 내용 해시입니다. 오브젝트마다 (이름, 부모 이름, 상태 XML — 다른 오브젝트 참조는 빼고)를 이름 순으로 접습니다.
-         * @details 씬 뷰 카메라(에디터 카메라 오브젝트)는 뺀다 — 카메라를 움직이는 것은 편집이 아니다. 상태 XML 은 저장과 같은 직렬화기라 인스펙터로 고친 값이 다 들어간다.
-         *          `-gv_automationHashDump=1` 이면 오브젝트마다 해시를 로그로 남긴다(두 시점의 로그를 비교해 바뀐 오브젝트를 찾는다).
-         */
-        bool computeSceneContentHash( uint64& outHash )
-        {
-            const GameObjectManager* pActive = editor::getActiveObjectManager();
-            if ( pActive == nullptr )
-                return false;
-            vector<pair<string, uint64>> listEntry;
-            ObjectSaveOptions            options{ SerializePurpose::Authoring };
-            options._bOmitExternalParent = SW_TRUE;
-            pActive->forEachGameObject( [&listEntry, &options]( const GameObject* pObject )
-            {
-                if ( pObject == nullptr || pObject->isPendingDestroy() )
-                    return;
-                const CameraComponent* pCamera = pObject->getComponent<CameraComponent>();
-                if ( pCamera != nullptr && pCamera->getRole() == CameraRole::Viewport )
-                    return;
-                const GameObject* pParent = pObject->getParent();
-                string            key     = string( pObject->getName().c_str() ) + "|" + ( pParent != nullptr ? string( pParent->getName().c_str() ) : string() );
-                const string      state   = ObjectStateSerializer::saveToXMLString( pObject, options );
-                listEntry.emplace_back( std::move( key ), HashUtil::computeStringHash64( state, false ) );
-            } );
-            VectorUtil::sort( listEntry );
-            const GlobalVariableInfo* pDump = editor::getSubsystem<GlobalVariableManager>().findVariable( "gv_automationHashDump" );
-            const bool                bDump = pDump != nullptr && pDump->getValueAsInt() != 0;
-            uint64                    hash  = HashUtil::kFNVOffset64;
-            for ( const pair<string, uint64>& entry : listEntry )
-            {
-                hash = HashUtil::combine( hash, HashUtil::computeStringHash64( entry.first, false ) );
-                hash = HashUtil::combine( hash, entry.second );
-                if ( bDump )
-                    SW_LOG_INFO_ID( "EditorWorkspaceWatches.SceneHashItem", "[Scenario] scene hash item %# %#", entry.first.c_str(), formatHash( entry.second ).c_str() );
-            }
-            outHash = hash;
-            return true;
-        }
-
         /** @brief 고른 오브젝트 이름(이름 순, 쉼표로 이음). 아무것도 고르지 않았으면 `(none)` 입니다. */
         bool makeSelectedNames( string& outText )
         {
@@ -247,7 +207,7 @@ namespace sw::editor
         [[nodiscard]] bool readSceneHash( const AutomationWatchQuery& /*query*/, AutomationWatchValue& outValue )
         {
             uint64 hash = 0;
-            if ( computeSceneContentHash( hash ) == false )
+            if ( computeEditedSceneHash( hash ) == false )
             {
                 outValue.setText( "no edited scene" );
                 return false;
@@ -287,7 +247,7 @@ namespace sw::editor
             string         selected;
             string         undoState;
             EditorContext* pContext  = editor::findSubsystem<EditorContext>();
-            const bool     bReadable = pContext != nullptr && computeSceneContentHash( sceneHash ) && makeSelectedNames( selected ) && makeUndoState( undoState );
+            const bool     bReadable = pContext != nullptr && computeEditedSceneHash( sceneHash ) && makeSelectedNames( selected ) && makeUndoState( undoState );
             if ( bReadable == false )
             {
                 outValue.setText( "no editor state" );
@@ -365,6 +325,46 @@ namespace sw::editor
             return true;
         }
     } // namespace
+
+    /**
+     * @brief 편집 중인 씬의 내용 해시입니다. 오브젝트마다 (이름, 부모 이름, 상태 XML — 다른 오브젝트 참조는 빼고)를 이름 순으로 접습니다.
+     * @details 씬 뷰 카메라(에디터 카메라 오브젝트)는 뺀다 — 카메라를 움직이는 것은 편집이 아니다. 상태 XML 은 저장과 같은 직렬화기라 인스펙터로 고친 값이 다 들어간다.
+     *          `-gv_automationHashDump=1` 이면 오브젝트마다 해시를 로그로 남긴다(두 시점의 로그를 비교해 바뀐 오브젝트를 찾는다).
+     */
+    bool computeEditedSceneHash( uint64& outHash )
+    {
+        const GameObjectManager* pActive = editor::getActiveObjectManager();
+        if ( pActive == nullptr )
+            return false;
+        vector<pair<string, uint64>> listEntry;
+        ObjectSaveOptions            options{ SerializePurpose::Authoring };
+        options._bOmitExternalParent = SW_TRUE;
+        pActive->forEachGameObject( [&listEntry, &options]( const GameObject* pObject )
+        {
+            if ( pObject == nullptr || pObject->isPendingDestroy() )
+                return;
+            const CameraComponent* pCamera = pObject->getComponent<CameraComponent>();
+            if ( pCamera != nullptr && pCamera->getRole() == CameraRole::Viewport )
+                return;
+            const GameObject* pParent = pObject->getParent();
+            string            key     = string( pObject->getName().c_str() ) + "|" + ( pParent != nullptr ? string( pParent->getName().c_str() ) : string() );
+            const string      state   = ObjectStateSerializer::saveToXMLString( pObject, options );
+            listEntry.emplace_back( std::move( key ), HashUtil::computeStringHash64( state, false ) );
+        } );
+        VectorUtil::sort( listEntry );
+        const GlobalVariableInfo* pDump = editor::getSubsystem<GlobalVariableManager>().findVariable( "gv_automationHashDump" );
+        const bool                bDump = pDump != nullptr && pDump->getValueAsInt() != 0;
+        uint64                    hash  = HashUtil::kFNVOffset64;
+        for ( const pair<string, uint64>& entry : listEntry )
+        {
+            hash = HashUtil::combine( hash, HashUtil::computeStringHash64( entry.first, false ) );
+            hash = HashUtil::combine( hash, entry.second );
+            if ( bDump )
+                SW_LOG_INFO_ID( "EditorWorkspaceWatches.SceneHashItem", "[Scenario] scene hash item %# %#", entry.first.c_str(), formatHash( entry.second ).c_str() );
+        }
+        outHash = hash;
+        return true;
+    }
 
     SW_AUTOMATION_WATCH( editorPlayState, "Editor.PlayState", "Play session state: 0 stopped, 1 playing, 2 paused", &readPlayState );
     SW_AUTOMATION_WATCH( editorPlaySimulating, "Editor.PlaySimulating", "While a session runs: 1 simulating (ejected or Simulate), 0 the player is possessed",

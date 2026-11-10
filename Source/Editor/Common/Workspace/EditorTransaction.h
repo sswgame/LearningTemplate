@@ -25,12 +25,25 @@ namespace sw::editor
      * @brief GameObject 편집을 Undo/Redo 에 기록하는 트랜잭션 관리자입니다.
      * @details 오브젝트 편집(수정 · 생성 · 삭제)은 데이터 명령(`ObjectSnapshot`)으로 기록해 에디터 모듈 핫 리로드를 넘깁니다. 열린 문서 편집
      *          (`recordDocumentText`)은 패널 버퍼에 묶인 코드 단계라 기록을 맡길 때 버립니다.
+     *          인스턴스는 거래 구간이다 — 만들 때 열고 사라질 때 닫는다(언리얼 `FScopedTransaction`). 씬을 바꾸는 명령(`EditorCommandEdit::Scene`)은
+     *          레지스트리가 연 이 구간을 인자로 받는다 — 거래 밖에서 씬을 바꾸는 명령 동작은 형식이 받지 않는다.
      */
     class SW_EDITOR_API EditorTransaction
     {
     public:
         /** @brief 오브젝트 수명 편집의 방향입니다(엔진의 `ObjectLifetimeEdit`). */
         using ObjectLifetimeEdit = sw::ObjectLifetimeEdit;
+
+        /**
+         * @brief 거래 구간을 엽니다(`beginTransaction`). 구간 안의 기록은 되돌리기 한 단계가 된다.
+         * @param label 단계 이름입니다. 비우면 안쪽 거래의 이름, 그것도 없으면 첫 기록의 이름이 된다(`CommandStack::beginTransaction`).
+         */
+        explicit EditorTransaction( string_view label = {} );
+        /** @brief 거래 구간을 닫습니다(`endTransaction`). 기록이 없으면 단계도 없다. */
+        ~EditorTransaction();
+
+        EditorTransaction( const EditorTransaction& )            = delete;
+        EditorTransaction& operator=( const EditorTransaction& ) = delete;
 
         /**
          * @brief 활성 씬을 dirty 로 표시합니다. 기록할 때와 데이터 단계가 되돌리기 · 다시 하기로 씬을 바꿀 때 부릅니다.

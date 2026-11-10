@@ -191,6 +191,16 @@ namespace sw::editor
             pWorkspace->markSceneDirty();
     }
 
+    EditorTransaction::EditorTransaction( string_view label )
+    {
+        beginTransaction( label );
+    }
+
+    EditorTransaction::~EditorTransaction()
+    {
+        endTransaction();
+    }
+
     void EditorTransaction::beginTransaction( string_view label )
     {
         vector<CommandStack*> listStack;

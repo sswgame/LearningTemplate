@@ -22,10 +22,10 @@ namespace sw::editor
                 editor::getSubsystem<EditorLightProbeBakeSession>().start(); // 필수 - 에디터 서브시스템이다
             }
 
-            /** @brief 씬이 있을 때 켠다. 편집 허용 답(플레이 중 · 베이크 중이면 꺼진다)은 레지스트리가 함께 묻는다(`EditorCommandEdit::Scene`). */
+            /** @brief 씬이 있을 때 켠다. 편집 허용 답(플레이 중 · 베이크 중이면 꺼진다)은 레지스트리가 함께 묻는다(`EditorCommandEdit::SceneUnrecorded`). */
             static bool isEnabled() { return editor::getActiveObjectManager() != nullptr; }
         };
     } // namespace
 
-    SW_EDITOR_COMMAND( LightProbeBake, "lighting.bakeProbes", &EditorLightProbeBakeCommandInternal::runBake, &EditorLightProbeBakeCommandInternal::isEnabled, Scene );
+    SW_EDITOR_COMMAND( LightProbeBake, "lighting.bakeProbes", &EditorLightProbeBakeCommandInternal::runBake, &EditorLightProbeBakeCommandInternal::isEnabled, SceneUnrecorded ); // 굽기 작업을 시작한다 — 씬 기록이 아니다
 } // namespace sw::editor
