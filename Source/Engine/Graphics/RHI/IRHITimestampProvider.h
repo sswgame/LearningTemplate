@@ -60,6 +60,14 @@ namespace sw
          */
         virtual bool isGPUClockReadCheap() const = 0;
 
+        /**
+         * @brief 비동기 컴퓨트 큐 리스트(`IRHIDevice::createAsyncComputeCommandList`)에 쓴 타임스탬프를 그래픽스 큐의 것과 같은 시계 · 단위로 읽을 수 있으면 true 입니다.
+         * @details 백엔드가 큐 사이의 순서(그래픽스 쪽 리셋 · 해석이 컴퓨트 쓰기와 어긋나지 않는다)와 시계(같은 카운터 · 같은 주파수)를 대조한 뒤에만 true 를 준다.
+         *          비동기 컴퓨트 큐가 없는 백엔드(DX11 · GL · WebGPU)는 기본값 false 다. false 면 프레임 그래프는 컴퓨트 큐 패스의 GPU 시간을 재지 않는다
+         *          (`FramePassExecutor::onFrameGraphPassExecute`).
+         */
+        virtual bool isComputeQueueTimestampComparable() const { return false; }
+
     protected:
         /** @brief 이 인터페이스로는 지우지 않습니다. 수명은 디바이스가 정합니다. */
         ~IRHITimestampProvider() = default;

@@ -275,6 +275,8 @@ namespace sw
         [[nodiscard]] bool readTimestamps( RHITimestampFrame& outFrame );
         [[nodiscard]] bool readGPUClockNanos( int64& outGPUNanos );
         bool               isGPUClockReadCheap() const { return true; }
+        /** @brief 컴퓨트 큐 타임스탬프가 직접 큐와 같은 시계인지입니다(`compareComputeQueueClock` 이 힙을 만들 때 정한다). */
+        bool isComputeQueueTimestampComparable() const { return _bComputeTimestampComparable.load( std::memory_order_relaxed ) != SW_FALSE; }
 
         /** @brief 타임스탬프 쿼리 힙을 반환합니다. 준비되지 않았으면 nullptr 입니다. */
         ID3D12QueryHeap* getTimestampHeap() const { return _timestampHeap.Get(); }
@@ -330,6 +332,7 @@ namespace sw
             [[nodiscard]] bool readTimestamps( RHITimestampFrame& outFrame ) override { return _owner.readTimestamps( outFrame ); }
             [[nodiscard]] bool readGPUClockNanos( int64& outGPUNanos ) override { return _owner.readGPUClockNanos( outGPUNanos ); }
             bool               isGPUClockReadCheap() const override { return _owner.isGPUClockReadCheap(); }
+            bool               isComputeQueueTimestampComparable() const override { return _owner.isComputeQueueTimestampComparable(); }
 
         private:
             D3D12RHIDevice& _owner;
@@ -567,6 +570,12 @@ namespace sw
     private:
         /** @brief 쿼리 힙과 읽기 버퍼를 한 번만 만듭니다. */
         void ensureTimestampResources();
+        /**
+         * @brief 컴퓨트 큐의 타임스탬프를 직접 큐의 것과 같은 축으로 읽을 수 있는지 대조합니다(주파수 같음 + 두 큐 시계 표본의 GPU 증가분이 CPU 증가분과 맞음).
+         * @details 타임스탬프 주파수와 `GetClockCalibration` 은 큐마다 묻는다(https://learn.microsoft.com/en-us/windows/win32/direct3d12/timing). 같은 카운터면 두 큐의 표본 사이
+         *          GPU 증가분과 QPC 증가분이 같다 — 어긋남이 `kComputeClockSkewToleranceMicros` 안이면 true 다. 결과는 정보 로그로 남긴다(실장치 대조 기록).
+         */
+        [[nodiscard]] bool compareComputeQueueClock( uint64 directFrequency ) const;
         /** @brief 방금 펜스를 통과한 링 슬롯의 결과를 마이크로초로 변환합니다. */
         void collectTimestampsForSlot();
         /**
@@ -834,6 +843,8 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D12QueryHeap> _timestampHeap;
         Microsoft::WRL::ComPtr<ID3D12Resource>  _timestampReadback;
         uint64                                  _timestampFrequency;
+        /// @brief 컴퓨트 큐 타임스탬프가 직접 큐와 같은 시계인가입니다(`isComputeQueueTimestampComparable`). 힙을 만들 때 한 번 정하고, 병렬 기록 워커가 읽어 atomic 이다.
+        atomic<uint8> _bComputeTimestampComparable;
         /// @brief 이번 프레임 · 링 슬롯별로 기록된 슬롯 비트입니다. 쿼리 힙은 리셋하지 않아 안 적은 칸에 지난 사이클 값이 남으므로 이 비트로 가린다.
         RHITimestampRing     _timestampRing;
         RHITimestampFrame    _timestampFrame; ///< 마지막으로 읽은 프레임(`readTimestamps`)

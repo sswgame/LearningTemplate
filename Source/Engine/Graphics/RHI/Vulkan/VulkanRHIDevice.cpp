@@ -2043,6 +2043,12 @@ namespace sw
                  : 0u;
     }
 
+    bool VulkanRHIDevice::isComputeQueueTimestampComparable() const
+    {
+        _renderThread.assumeHeldByJoinedTask(); // 패스 실행(병렬 기록 태스크 포함)이 부른다 — 렌더 스레드가 합류를 기다린다
+        return _asyncComputeQueue != VK_NULL_HANDLE && _timestampPool != VK_NULL_HANDLE;
+    }
+
     bool VulkanRHIDevice::readTimestamps( RHITimestampFrame& outFrame )
     {
         outFrame = _timestampFrame;
@@ -2111,6 +2117,18 @@ namespace sw
         // 주기가 0 이면 이 디바이스는 타임스탬프를 세지 않는다. 큐가 유효 비트를 안 주는 경우도 같다.
         if ( properties.limits.timestampPeriod <= 0.0f || properties.limits.timestampComputeAndGraphics == VK_FALSE )
             return;
+        // 쓰는 큐 가족(그래픽스 · 같은 가족의 비동기 컴퓨트 큐)의 유효 비트가 0 이면 그 큐에서 타임스탬프를 쓸 수 없다
+        // (https://docs.vulkan.org/refpages/latest/refpages/source/VkQueueFamilyProperties.html — "a value of 0, indicating no support for timestamps",
+        // vkCmdWriteTimestamp VUID-00829). 유효 범위 밖 비트는 0 이 보장되므로 값을 가릴 필요는 없다.
+        uint32 familyCount{ 0 };
+        vkGetPhysicalDeviceQueueFamilyProperties( _physicalDevice, &familyCount, nullptr );
+        vector<VkQueueFamilyProperties> listFamily( familyCount );
+        vkGetPhysicalDeviceQueueFamilyProperties( _physicalDevice, &familyCount, listFamily.data() );
+        if ( _graphicsQueueFamilyIndex >= familyCount || listFamily[_graphicsQueueFamilyIndex].timestampValidBits == 0 )
+        {
+            SW_LOG_INFO_ID( "Vulkan.TimestampValidBitsZero", "GPU pass timings are off: queue family %# has no timestamp valid bits", _graphicsQueueFamilyIndex );
+            return;
+        }
 
         VkQueryPoolCreateInfo poolInfo{};
         poolInfo.sType      = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
@@ -2676,6 +2694,8 @@ namespace sw
         if ( pList == nullptr || pList->nativeCommandBuffer() == VK_NULL_HANDLE || _bFrameStarted == SW_FALSE )
             return RHIQueueSyncPoint{};
         // 포크: 지금까지의 그래픽스 일을 내며 신호하고, 두 번째 큐가 그 신호를 기다린 뒤 이 리스트를 실행하고 다른 세마포어를 신호한다.
+        // 이 신호는 프레임 첫 버퍼의 타임스탬프 리셋(`vkCmdResetQueryPool`, beginFrame)까지 덮는다 — 컴퓨트 리스트의 `vkCmdWriteTimestamp` 는 리셋된(미가용) 쿼리에만 쓴다
+        // (VUID-vkCmdWriteTimestamp-None-00830). 제출 순서는 큐마다라 큐 사이 순서는 이 세마포어가 준다. 읽기는 프레임 펜스 뒤다 — 마지막 그래픽스 제출이 남은 컴퓨트 신호를 기다린다.
         const VkSemaphore graphicsDone = acquireAsyncSemaphore();
         const VkSemaphore computeDone  = acquireAsyncSemaphore();
         submitFrameWorkNow( graphicsDone );

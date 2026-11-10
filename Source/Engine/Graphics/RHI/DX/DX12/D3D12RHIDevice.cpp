@@ -59,6 +59,7 @@ namespace sw
         , _freeOnlineBlock{}
         , _frameRing{}
         , _timestampFrequency{ 0 }
+        , _bComputeTimestampComparable{ SW_FALSE }
         , _timestampRing{}
         , _gpuBuffers{}
         , _gpuTextures{}
@@ -1603,6 +1604,39 @@ namespace sw
             return;
         }
         _timestampFrequency = frequency;
+        _bComputeTimestampComparable.store( compareComputeQueueClock( frequency ) ? SW_TRUE : SW_FALSE, std::memory_order_relaxed );
+    }
+
+    bool D3D12RHIDevice::compareComputeQueueClock( uint64 directFrequency ) const
+    {
+        if ( _computeQueue == nullptr || _commandQueue == nullptr || directFrequency == 0 )
+            return false;
+        // 두 표본을 붙여 찍는 사이의 시간 · 호출 잡음보다 넉넉하고, 패스 하나(수십 µs 이상)보다 작은 어긋남만 같은 시계로 본다.
+        constexpr float64 kComputeClockSkewToleranceMicros = 100.0;
+        UINT64            computeFrequency{ 0 };
+        if ( FAILED( _computeQueue->GetTimestampFrequency( &computeFrequency ) ) || computeFrequency != directFrequency )
+        {
+            SW_LOG_INFO_ID( "D3D12.ComputeTimestampFrequency", "Async compute pass timings are off: the compute queue timestamp frequency (%#) differs from the direct queue (%#)",
+                            computeFrequency, directFrequency );
+            return false;
+        }
+        UINT64        directGPUTick{ 0 };
+        UINT64        directCPUTick{ 0 };
+        UINT64        computeGPUTick{ 0 };
+        UINT64        computeCPUTick{ 0 };
+        LARGE_INTEGER cpuFrequency{};
+        const bool    bSampled = SUCCEEDED( _commandQueue->GetClockCalibration( &directGPUTick, &directCPUTick ) ) &&
+                              SUCCEEDED( _computeQueue->GetClockCalibration( &computeGPUTick, &computeCPUTick ) ) && QueryPerformanceFrequency( &cpuFrequency ) != FALSE &&
+                              cpuFrequency.QuadPart > 0;
+        if ( bSampled == false )
+            return false;
+        const float64 gpuDeltaMicros = static_cast<float64>( static_cast<int64>( computeGPUTick - directGPUTick ) ) * constant::time::kMicrosecondsPerSecond / static_cast<float64>( directFrequency );
+        const float64 cpuDeltaMicros = static_cast<float64>( static_cast<int64>( computeCPUTick - directCPUTick ) ) * constant::time::kMicrosecondsPerSecond / static_cast<float64>( cpuFrequency.QuadPart );
+        const float64 skewMicros     = MathUtil::abs( gpuDeltaMicros - cpuDeltaMicros );
+        const bool    bComparable    = skewMicros <= kComputeClockSkewToleranceMicros;
+        SW_LOG_INFO_ID( "D3D12.ComputeTimestampClock", "Async compute pass timings are %#: compute and direct queue clocks differ by %# us (tolerance %# us, %# ticks/s)",
+                        bComparable ? "on" : "off", skewMicros, kComputeClockSkewToleranceMicros, directFrequency );
+        return bComparable;
     }
 
     void D3D12RHIDevice::collectTimestampsForSlot()

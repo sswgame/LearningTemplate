@@ -230,6 +230,11 @@ namespace sw
         [[nodiscard]] bool readTimestamps( RHITimestampFrame& outFrame );
         [[nodiscard]] bool readGPUClockNanos( int64& outGPUNanos );
         bool               isGPUClockReadCheap() const { return false; }
+        /**
+         * @brief 컴퓨트 큐 타임스탬프가 그래픽스 큐와 같은 시계인지입니다. 비동기 컴퓨트 큐가 그래픽스 큐와 같은 큐 가족이라(`createAsyncComputeCommandList`)
+         *        `timestampValidBits` · `timestampPeriod` 를 함께 쓰고, 그 가족의 유효 비트는 풀을 만들 때 봤다(`ensureTimestampPool`). 리셋 순서는 `submitAsyncCompute` 주석.
+         */
+        bool isComputeQueueTimestampComparable() const;
 
         /** @brief 타임스탬프 쿼리 풀입니다. 준비되지 않았으면 VK_NULL_HANDLE 입니다. */
         VkQueryPool getTimestampPool() const
@@ -328,6 +333,7 @@ namespace sw
             [[nodiscard]] bool readTimestamps( RHITimestampFrame& outFrame ) override { return _owner.readTimestamps( outFrame ); }
             [[nodiscard]] bool readGPUClockNanos( int64& outGPUNanos ) override { return _owner.readGPUClockNanos( outGPUNanos ); }
             bool               isGPUClockReadCheap() const override { return _owner.isGPUClockReadCheap(); }
+            bool               isComputeQueueTimestampComparable() const override { return _owner.isComputeQueueTimestampComparable(); }
 
         private:
             VulkanRHIDevice& _owner;
