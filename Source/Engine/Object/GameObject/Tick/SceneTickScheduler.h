@@ -50,7 +50,6 @@ namespace sw
         /** @brief 틱에 참여하는 오브젝트의 레지스트리입니다. */
         const TickRegistry& getTickRegistry() const { return _tickRegistry; }
 
-        /** @brief 레지스트리가 오브젝트 항목을 다시 지은 틱의 수입니다. 진단 · 회귀 테스트용입니다. */
         /** @brief 선행 조건 스테이지 경계에서 틱 중 트랜스폼 쓰기를 적용한 횟수(누적)입니다. 진단 · 회귀 테스트용입니다. */
         uint32 getStageTransformApplyCount() const { return _stageTransformApplyCount; }
 
@@ -70,6 +69,11 @@ namespace sw
         void tickGroups( float32 deltaTime, uint32 firstGroup, uint32 endGroup );
         /** @brief 한 그룹의 세 레인을 돕니다 — Task 태스크를 띄움 → 파도마다 포크-조인 → Task 를 기다림 → Main 을 게임 스레드에서(일괄 경로를 끄면 칸 한 번의 포크-조인). */
         void tickLanes( float32 deltaTime, uint32 group );
+        /**
+         * @brief 일괄 목록들(파도 하나 또는 선행 조건 스테이지 하나)을 한 번의 포크-조인으로 돕니다. 목록을 이어 붙인 번호 공간을 나누고, 겹친 목록마다 그 함수를 한 번 부릅니다.
+         * @return 돈 원소 수입니다(0 이면 디스패치하지 않았다).
+         */
+        uint32 dispatchBatchLists( const vector<TickBatchList>& listBatch, float32 deltaTime );
         /** @brief 선행 조건 스테이지 사이(게임 스레드, 동결 중)에서 그때까지 쌓인 틱 중 트랜스폼 쓰기를 적용하고 플러시합니다. */
         void applyStageTransforms();
 
@@ -79,7 +83,7 @@ namespace sw
         PrimitiveRegistry*       _pPrimitiveRegistry;
         StructuralChangeBuffer*  _pStructuralChangeBuffer;
         TickRegistry             _tickRegistry;
-        vector<uint32>           _listBatchStart;           ///< 한 파도의 디스패치에서 일괄 목록마다 시작 번호(끝에 전체 수). 할당을 재사용한다
+        vector<uint32>           _listBatchStart;           ///< 한 일괄 디스패치(파도 · 스테이지)에서 일괄 목록마다 시작 번호(끝에 전체 수). 할당을 재사용한다
         vector<EntryTask>        _listEntryTask;            ///< 한 그룹의 Task 레인 태스크(할당을 재사용한다)
         uint32                   _stageTransformApplyCount; ///< 스테이지 경계 적용 횟수(진단)
         uint32                   _dispatchOrdinal;          ///< 디스패치마다 오르는 순번(`TickThreadState::_dispatchOrdinal` — 같은 오브젝트가 디스패치마다 다른 스레드에서 쓴 건의 선후). 되감지 않는다

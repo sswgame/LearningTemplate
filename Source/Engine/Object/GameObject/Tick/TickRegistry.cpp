@@ -14,6 +14,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Tick/TickBatchRegistry.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 namespace sw
 {
@@ -32,7 +33,7 @@ namespace sw
             struct StageCandidate
             {
                 TickItem                     _item;
-                uint64                       _objectID{ 0 };
+                TickStageOrder               _stageOrder;         ///< 스테이지 안 자리 키(오브젝트 id 를 든다)
                 uint32                       _objectOrdinal{ 0 }; ///< 후보를 낸 오브젝트의 순번(0 부터, 후보가 있는 오브젝트만)
                 uint64                       _componentID{ 0 };
                 uint32                       _originalIndex{ 0 };
@@ -60,29 +61,27 @@ namespace sw
             /** @brief 그룹의 단계 첫 그룹입니다(물리 앞이면 0, 뒤면 PostPhysics). */
             static uint8 getPhaseFirstGroup( uint8 group ) { return group >= kPostPhysicsGroup ? kPostPhysicsGroup : 0; }
 
-            /** @brief 스테이지 안의 순서를 정하는 키입니다(순서 키, 오브젝트 id). 전체 재구축과 증분 끼움이 같은 키와 같은 비교를 쓰므로 두 길의 순서가 어긋날 수 없다. */
-            struct StageOrder
-            {
-                uint8  _orderKey{ 0 };
-                uint64 _objectID{ 0 };
-            };
-
-            /** @brief 스테이지 안의 순서 규칙의 유일한 정의입니다. @p left 가 @p right 보다 엄격하게 앞이면 true 입니다(같은 키면 둘 다 false). */
-            static bool isOrderedBefore( const StageOrder& left, const StageOrder& right )
+            /**
+             * @brief 스테이지 안의 순서 규칙의 유일한 정의입니다(`TickStageOrder` — 순서 키, 타입 키, 서브틱 id, 오브젝트 id). @p left 가 @p right 보다 엄격하게 앞이면 true 입니다.
+             * @details 전체 재구축의 정렬과 증분 끼움(`insertIntoStage`)이 이 함수만 쓰므로 두 길의 순서가 어긋날 수 없다.
+             */
+            static bool isOrderedBefore( const TickStageOrder& left, const TickStageOrder& right )
             {
                 if ( left._orderKey != right._orderKey )
                     return left._orderKey < right._orderKey;
+                if ( left._typeKey != right._typeKey )
+                    return left._typeKey < right._typeKey;
+                if ( left._subTickID != right._subTickID )
+                    return left._subTickID < right._subTickID;
                 return left._objectID < right._objectID;
             }
 
-            /** @brief `isOrderedBefore` 로, 같은 키(한 오브젝트의 항목끼리)면 등록 순서로 비교합니다. 후보 목록을 정렬할 때의 규칙입니다. */
+            /** @brief `isOrderedBefore` 로, 같은 키(한 오브젝트의 같은 타입 항목끼리)면 등록 순서로 비교합니다. 후보 목록을 정렬할 때의 규칙입니다. */
             static bool isBefore( const StageCandidate& left, const StageCandidate& right )
             {
-                const StageOrder leftOrder{ left._item._orderKey, left._objectID };
-                const StageOrder rightOrder{ right._item._orderKey, right._objectID };
-                if ( isOrderedBefore( leftOrder, rightOrder ) )
+                if ( isOrderedBefore( left._stageOrder, right._stageOrder ) )
                     return true;
-                if ( isOrderedBefore( rightOrder, leftOrder ) )
+                if ( isOrderedBefore( right._stageOrder, left._stageOrder ) )
                     return false;
                 return left._originalIndex < right._originalIndex;
             }
@@ -212,7 +211,7 @@ namespace sw
                         stage._bApplyBefore = ( bWaits && slot == 0 ) ? SW_TRUE : SW_FALSE;
                     }
                     outListStage[firstStage + slot]._listItem.push_back( candidate._item );
-                    outListStage[firstStage + slot]._listItemObjectID.push_back( candidate._objectID );
+                    outListStage[firstStage + slot]._listItemOrder.push_back( candidate._stageOrder );
                     ++slot;
                 }
                 for ( const uint32 candidateIndex : listLevel )
@@ -437,22 +436,20 @@ namespace sw
             }
 
             /** @brief 항목을 스테이지에 끼웁니다. 전체 재구축과 같은 순서 규칙(`isOrderedBefore`)을 쓰고, 같은 키면 뒤에 붙는다. */
-            static void insertIntoStage( TickStage& inoutStage, const TickItem& item, uint64 objectID )
+            static void insertIntoStage( TickStage& inoutStage, const TickItem& item, const TickStageOrder& stageOrder )
             {
-                const StageOrder entryOrder{ item._orderKey, objectID };
-                size_t           low  = 0;
-                size_t           high = inoutStage._listItem.size();
+                size_t low  = 0;
+                size_t high = inoutStage._listItem.size();
                 while ( low < high )
                 {
-                    const size_t     middle = low + ( high - low ) / 2;
-                    const StageOrder otherOrder{ inoutStage._listItem[middle]._orderKey, inoutStage._listItemObjectID[middle] };
-                    if ( isOrderedBefore( entryOrder, otherOrder ) )
+                    const size_t middle = low + ( high - low ) / 2;
+                    if ( isOrderedBefore( stageOrder, inoutStage._listItemOrder[middle] ) )
                         high = middle;
                     else
                         low = middle + 1;
                 }
                 inoutStage._listItem.insert( inoutStage._listItem.begin() + static_cast<ptrdiff_t>( low ), item );
-                inoutStage._listItemObjectID.insert( inoutStage._listItemObjectID.begin() + static_cast<ptrdiff_t>( low ), objectID );
+                inoutStage._listItemOrder.insert( inoutStage._listItemOrder.begin() + static_cast<ptrdiff_t>( low ), stageOrder );
             }
 
             /** @brief 그룹 @p group 레벨 0 의 0 번 스테이지가 바깥 선행 조건을 기다리게 표시합니다(적용을 먼저 한다). */
@@ -563,7 +560,7 @@ namespace sw
         else
             flushStageEdits();
         if ( bStageChanged )
-            refreshStageFunctions( manager.getSceneEngineServices()._pTickBatchRegistry );
+            refreshStageBatches( manager.getSceneEngineServices()._pTickBatchRegistry );
         return bRefreshedAny;
     }
 
@@ -703,10 +700,11 @@ namespace sw
             for ( TickStage& stage : _listStage )
             {
                 size_t keptCount = 0;
-                for ( size_t index = 0; index < stage._listItemObjectID.size(); ++index )
+                for ( size_t index = 0; index < stage._listItemOrder.size(); ++index )
                 {
-                    const auto position = findRemoval( stage._listItemObjectID[index] );
-                    const bool bRemoved = position != listRemoval.end() && position->_objectID == stage._listItemObjectID[index];
+                    const uint64 objectID = stage._listItemOrder[index]._objectID;
+                    const auto   position = findRemoval( objectID );
+                    const bool   bRemoved = position != listRemoval.end() && position->_objectID == objectID;
                     if ( bRemoved )
                     {
                         --_stageItemCount;
@@ -714,26 +712,28 @@ namespace sw
                     }
                     if ( keptCount != index )
                     {
-                        stage._listItem[keptCount]         = stage._listItem[index];
-                        stage._listItemObjectID[keptCount] = stage._listItemObjectID[index];
+                        stage._listItem[keptCount]      = stage._listItem[index];
+                        stage._listItemOrder[keptCount] = stage._listItemOrder[index];
                     }
                     ++keptCount;
                 }
                 stage._listItem.resize( keptCount );
-                stage._listItemObjectID.resize( keptCount );
+                stage._listItemOrder.resize( keptCount );
             }
         }
 
-        // 끼움: 쌓인 순서대로 넣는다. 뒤에 같은 오브젝트의 제거 요청이 있었으면 그 요청 앞의 끼움은 낡았다.
+        // 끼움: 쌓인 순서대로 넣는다. 뒤에 같은 오브젝트의 제거 요청이 있었으면 그 요청 앞의 끼움은 낡았다. 자리는 전체 재구축과 같은 키(`TickStageOrder`)로
+        // 고르므로 끼운 순서와 무관하게 같은 타입 · 서브틱의 이웃이 붙는다 — `refreshStageBatches` 가 그 이웃을 한 일괄 목록으로 묶는다.
         for ( const StageInsertion& insertion : _listStageInsertion )
         {
-            const auto position    = findRemoval( insertion._objectID );
-            const bool bSuperseded = position != listRemoval.end() && position->_objectID == insertion._objectID && position->_order > insertion._order;
+            const uint64 objectID    = insertion._stageOrder._objectID;
+            const auto   position    = findRemoval( objectID );
+            const bool   bSuperseded = position != listRemoval.end() && position->_objectID == objectID && position->_order > insertion._order;
             if ( bSuperseded )
                 continue;
             const uint8  group      = insertion._item._group;
             const size_t stageIndex = TickRegistryInternal::findOrCreateLevelZeroStage( _listStage, group, insertion._slot );
-            TickRegistryInternal::insertIntoStage( _listStage[stageIndex], insertion._item, insertion._objectID );
+            TickRegistryInternal::insertIntoStage( _listStage[stageIndex], insertion._item, insertion._stageOrder );
             ++_stageItemCount;
             if ( insertion._bMarkApplyBefore == SW_TRUE )
                 TickRegistryInternal::markApplyBefore( _listStage, group );
@@ -800,7 +800,7 @@ namespace sw
                 const bool     bLastOfGroup = cursor + 1 == listNew.size() || listNew[cursor + 1]._item._group != group;
                 StageInsertion insertion{};
                 insertion._item             = entry._item;
-                insertion._objectID         = objectID;
+                insertion._stageOrder       = makeStageOrder( entry._item, objectID );
                 insertion._order            = _stageEditOrder++;
                 insertion._slot             = slot;
                 insertion._bMarkApplyBefore = ( bLastOfGroup && bWaits ) ? SW_TRUE : SW_FALSE;
@@ -816,7 +816,22 @@ namespace sw
         if ( _bBatchPathEnabled == newValue )
             return;
         _bBatchPathEnabled = newValue;
+        ++_stageGeneration; // 스테이지 자리 키가 바뀐다(`makeStageOrder`) — 증분 끼움이 옛 키의 항목 사이에 들지 않게 다시 짓는다
         _bAllDirty.store( SW_TRUE, std::memory_order_release );
+    }
+
+    TickStageOrder TickRegistry::makeStageOrder( const TickItem& item, uint64 objectID ) const
+    {
+        TickStageOrder stageOrder{};
+        stageOrder._objectID = objectID;
+        stageOrder._orderKey = item._orderKey;
+        if ( _bBatchPathEnabled == SW_TRUE )
+        {
+            const TypeInfo* pType = item._pComponent != nullptr ? item._pComponent->findCachedTypeInfo() : nullptr;
+            stageOrder._typeKey   = pType != nullptr ? pType->_typeID : 0;
+            stageOrder._subTickID = item._subTickID;
+        }
+        return stageOrder;
     }
 
     TickTypeDispatch TickRegistry::resolveTypeDispatch( TickBatchRegistry* pBatchRegistry, const Component* pComp )
@@ -976,16 +991,27 @@ namespace sw
         }
     }
 
-    void TickRegistry::refreshStageFunctions( TickBatchRegistry* pBatchRegistry )
+    void TickRegistry::refreshStageBatches( TickBatchRegistry* pBatchRegistry )
     {
-        // 스테이지 항목도 레인의 일괄 함수로 돈다(가상 호출 대신) — 스테이지 안은 한 오브젝트에 항목 하나라 순서는 바꾸지 않고, 디스패치가 같은 함수의 이웃 항목을 한 번에 넘긴다.
+        // 스테이지 항목도 레인의 일괄 함수로 돈다(가상 호출 대신). 자리 키가 같은 타입 · 서브틱을 붙여 두었으므로 이웃한 같은 (함수, 서브틱 id) 를 한 목록으로
+        // 묶으면 디스패치가 파도와 같은 잡으로 목록 하나를 함수 한 번에 넘긴다. 한 스테이지에 한 오브젝트의 항목은 하나라 묶어도 오브젝트 안 순서는 그대로다.
         for ( TickStage& stage : _listStage )
         {
-            stage._listItemFunction.resize( stage._listItem.size() );
-            for ( size_t index = 0; index < stage._listItem.size(); ++index )
+            stage._listBatch.clear();
+            for ( const TickItem& item : stage._listItem )
             {
-                const Component* pComp         = stage._listItem[index]._pComponent;
-                stage._listItemFunction[index] = pComp != nullptr ? resolveTypeDispatch( pBatchRegistry, pComp )._pFunction : &tickBatchVirtual;
+                Component* const pComp = item._pComponent;
+                if ( pComp == nullptr )
+                    continue;
+                const TickBatchFunction pFunction   = resolveTypeDispatch( pBatchRegistry, pComp )._pFunction;
+                const bool              bSameAsLast = stage._listBatch.empty() == false && stage._listBatch.back()._pFunction == pFunction && stage._listBatch.back()._subTickID == item._subTickID;
+                if ( bSameAsLast == false )
+                {
+                    TickBatchList& created = stage._listBatch.emplace_back();
+                    created._pFunction     = pFunction;
+                    created._subTickID     = item._subTickID;
+                }
+                stage._listBatch.back()._listElement.push_back( TickBatchElement{ pComp, pComp->getOwner() } );
             }
         }
     }
@@ -1081,7 +1107,7 @@ namespace sw
                     continue;
                 TickRegistryInternal::StageCandidate candidate{};
                 candidate._item              = item;
-                candidate._objectID          = objectID;
+                candidate._stageOrder        = makeStageOrder( item, objectID );
                 candidate._objectOrdinal     = objectOrdinal;
                 candidate._componentID       = item._pComponent->getComponentID();
                 candidate._originalIndex     = originalIndex++;
