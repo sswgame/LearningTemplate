@@ -12,6 +12,8 @@
 #include "Engine/EngineFrameHooks.h"
 #include "Engine/Window/IWindowTitleTarget.h"
 
+#include "sw/config/CookContract.gen.h"
+
 #include <algorithm>
 
 namespace sw
@@ -87,8 +89,13 @@ namespace sw
             static constexpr string_view kArrSecretFragment[] = { "token", "secret", "password", "passwd", "apikey", "api_key", "api-key", "credential", "auth", "license" };
             /** @brief 비밀 값을 대신하는 글입니다(셸에서 따옴표 없이 써도 뜻이 변하지 않는 글자만). */
             static constexpr string_view kRedactedValue = "REDACTED";
-            /** @brief 백엔드를 고르는 인자의 이름입니다(원본에 하나라도 있으면 실행기가 백엔드를 덧붙이지 않는다). */
-            static constexpr string_view kArrBackendName[] = { "dx11", "dx12", "vk", "gl", "gv_rhiBackend" };
+            /** @brief 백엔드를 고르는 인자의 이름입니다(원본에 하나라도 있으면 실행기가 백엔드를 덧붙이지 않는다). 백엔드 플래그는 쿠킹 표의 명령줄 이름 — 손으로 적은 표가 `-wgpu` 를 빠뜨렸다. */
+            static constexpr string_view kArrBackendName[] = {
+#define SW_REPRODUCE_BACKEND_NAME_ROW( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) CommandLineName,
+                SW_RHI_BACKEND_TABLE( SW_REPRODUCE_BACKEND_NAME_ROW )
+#undef SW_REPRODUCE_BACKEND_NAME_ROW
+                    "gv_rhiBackend",
+            };
 
             /** @brief `-key=value` · `--key` · `key=value` 에서 앞의 `-` 와 `=` 뒤를 뗀 이름입니다. */
             static string_view findName( string_view argument )

@@ -23,6 +23,7 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/RHI/RHIBackendInfo.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Virtual/InputReplay.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -345,19 +346,6 @@ namespace sw
         return float3{ MathUtil::sin( yaw ) * MathUtil::cos( pitch ), -MathUtil::sin( pitch ), MathUtil::cos( yaw ) * MathUtil::cos( pitch ) };
     }
 
-    const utf8* BugReport::findBackendFlag( string_view backendName )
-    {
-        if ( StringUtil::startsWith( backendName, "Direct3D 11" ) )
-            return "dx11";
-        if ( StringUtil::startsWith( backendName, "Direct3D 12" ) )
-            return "dx12";
-        if ( StringUtil::startsWith( backendName, "Vulkan" ) )
-            return "vk";
-        if ( StringUtil::startsWith( backendName, "OpenGL" ) )
-            return "gl";
-        return "";
-    }
-
     string BugReport::formatHash( uint64 hash )
     {
         StringBuilder<constant::buffer::kMax32> text;
@@ -426,7 +414,12 @@ namespace sw
         inputs._report._game           = engine::getSubsystem<PackEngineSettings>()._windowTitle;
         const FrameRenderer* pRenderer = engine::findSubsystem<FrameRenderer>();
         if ( pRenderer != nullptr && pRenderer->getDevice() != nullptr )
+        {
             inputs._report._rhiBackend = pRenderer->getDevice()->getBackendName();
+            // 플래그는 장치 이름을 글로 맞춰 고르지 않고 백엔드 형식에서 읽는다 — 이름 표가 WebGPU 를 빠뜨렸다.
+            const utf8* pFlag   = RHIBackendInfoTable::findCommandLineName( pRenderer->getDevice()->getBackendType() );
+            inputs._backendFlag = pFlag != nullptr ? pFlag : "";
+        }
         SceneManager& sceneManager = engine::getSubsystem<SceneManager>();
         if ( Scene* pScene = sceneManager.getActiveScene(); pScene != nullptr )
         {
@@ -499,10 +492,9 @@ namespace sw
                 SW_LOG_WARNING_ID( "BugReport.BugreportSceneCopyCould", "bugreport: the scene copy could not be saved" );
         }
 
-        const utf8* pBackendFlag = findBackendFlag( report._rhiBackend );
-        string      repro        = "App.exe";
-        if ( pBackendFlag[0] != '\0' )
-            repro += string( " -" ) + pBackendFlag;
+        string repro = "App.exe";
+        if ( inputs._backendFlag.empty() == false )
+            repro += " -" + inputs._backendFlag;
         if ( inputs._bEditor )
             repro += " -EnableEditor";
         repro += " -gv_devConsoleExec=\"bugreport.goto " + directory + "\"\n";

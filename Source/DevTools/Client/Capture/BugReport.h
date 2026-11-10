@@ -78,8 +78,6 @@ namespace sw
         static float3 computeRotationDegrees( const float3& forward );
         /** @brief pitch 와 yaw(도)를 시선 벡터로 바꿉니다. */
         static float3 computeForward( const float3& rotationDegrees );
-        /** @brief 디바이스 이름(`Direct3D 12` …)에 맞는 App 명령줄 백엔드 플래그(`dx12` …)입니다. 모르면 빈 문자열입니다. */
-        static const utf8* findBackendFlag( string_view backendName );
         /** @brief 바이트의 FNV-1a 64 를 16 자리 16 진 글로 씁니다(재현 환경 해시의 한 모양). */
         static string formatHash( uint64 hash );
         /**
@@ -128,6 +126,7 @@ namespace sw
         string               _root;                        ///< BugReport 폴더들의 루트(엔진에서는 `Saved/BugReports`)
         ScreenshotLocalTime  _localTime{};                 ///< 폴더 이름의 시각
         string               _logFilePath;                 ///< log.txt 로 복사할 이 프로세스의 로그 파일(`ILogSink::getLogFilePath`). 비면 건너뛴다
+        string               _backendFlag;                 ///< 재현 명령의 백엔드 플래그(쿠킹 표의 명령줄 이름 `dx12` · `wgpu`, `RHIBackendInfoTable::findCommandLineName`). 장치가 없으면 빔
         SceneManager*        _pSceneManager{ nullptr };    ///< 활성 씬 사본을 저장할 씬 관리자. 활성 씬이 없으면 null
         const FrameProfiler* _pFrameProfiler{ nullptr };   ///< 최근 프레임 trace 를 담을 프로파일러. null 이면 건너뛴다
         const InputReplay*   _pInputRecording{ nullptr };  ///< 세션 입력 기록(`InputManager::getSessionRecording`). null 이거나 프레임이 없으면 input.swreplay 를 건너뛴다

@@ -7,10 +7,9 @@
 #include "Core/Process/Process.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Graphics/RHI/RHIBackendInfo.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/JSON/JSONWriter.h"
-
-#include "sw/config/CookContract.gen.h"
 
 namespace sw
 {
@@ -21,13 +20,6 @@ namespace sw
             static constexpr string_view kImageExtension = ".ppm";
             static constexpr string_view kMetaExtension  = ".golden.json";
             static constexpr int32       kMetaIndent     = 4;
-
-            /** @brief 쿠킹 표의 명령줄 이름(표 순서 = RHIBackend 열거값) — 골든 꼬리가 명령줄 `-dx12` 와 같은 철자다. 손으로 적은 표가 WebGPU 를 빠뜨렸다. */
-            static constexpr const utf8* kArrBackendTag[] = {
-#define SW_GOLDEN_BACKEND_TAG_ROW( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) CommandLineName,
-                SW_RHI_BACKEND_TABLE( SW_GOLDEN_BACKEND_TAG_ROW )
-#undef SW_GOLDEN_BACKEND_TAG_ROW
-            };
 
             static bool isFraction( float64 value ) { return value >= 0.0 && value <= 1.0; }
 
@@ -125,10 +117,10 @@ namespace sw
 
     optional<string_view> AutomationGoldenUtil::findBackendTag( uint32 backendIndex )
     {
-        using Internal = AutomationGoldenInternal;
-        if ( backendIndex >= std::size( Internal::kArrBackendTag ) )
+        const utf8* pName = RHIBackendInfoTable::findCommandLineName( static_cast<RHIBackend>( backendIndex ) );
+        if ( pName == nullptr )
             return nullopt;
-        return string_view{ Internal::kArrBackendTag[backendIndex] };
+        return string_view{ pName };
     }
 
     string_view AutomationGoldenUtil::getPlatformTag()

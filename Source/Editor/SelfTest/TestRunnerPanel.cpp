@@ -7,8 +7,6 @@
 #include "Core/String/fixed_string.h"
 #include "Core/Testing/TestRunner.h"
 
-#include "DevTools/Client/Capture/BugReport.h"
-
 #include "Editor/Common/EditorExtensionRegistry.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
@@ -21,6 +19,7 @@
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/RHI/RHIBackendInfo.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
@@ -48,8 +47,8 @@ namespace sw::editor
                 const FrameRenderer& renderer = editor::getSubsystem<FrameRenderer>();
                 if ( renderer.getDevice() == nullptr )
                     return string{}; // 장치가 아직 없으면 플래그를 모른다
-                const utf8* pFlag = BugReport::findBackendFlag( renderer.getDevice()->getBackendName() );
-                return pFlag[0] != '\0' ? string( " -" ) + pFlag : string{};
+                const utf8* pFlag = RHIBackendInfoTable::findCommandLineName( renderer.getDevice()->getBackendType() );
+                return pFlag != nullptr ? string( " -" ) + pFlag : string{};
             }
         };
 
