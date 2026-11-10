@@ -47,6 +47,18 @@
 - **표면 변형:** 지형(`terrain.hlsl`)은 머티리얼을 픽셀에서만 읽어(GL 은 구조버퍼를 두 단계에서 못 읽는다) 정점 변위를 받지 못한다 — 엔진 텍스처 칸 `SurfaceDeform`(`shaderslot::emulated::kEngineTextureNames` 13 번째 — `SW_ENGINE_TEXTURE_COUNT` · DX11 `t44` · GL 유닛 12 · binding.hlsli 의 칸 줄)과 패스 상수 `g_SurfaceDeformParams`(창)를 더해 지형 정점 셰이더가 읽게 한다(언리얼 RVT · 유니티 `SetGlobalTexture` 자리, 그림자 패스도 같은 오프셋). 네 백엔드 셰이더 · 바인딩을 함께 바꾸므로 빌드 · 시나리오를 돌릴 수 있는 작업자가 한 묶음으로 한다.
 - **폴더 자리(막는 구조부터):** 엔진 쪽 `Dev/` 예외(`Config/Rules/Lint/FolderLayout.json` `_devFolderAllowed` — ModuleManager/Dev · Host/Dev · App/Dev · GF GameData/Dev · Graphics/Material/Dev)를 DevTools 로 — ModuleManager 를 공유 라이브러리로(언리얼 HotReload 처럼), DevTools 에 리플렉션 단계를 더하면 핫 리로드 · 머티리얼 그래프가 옮겨 간다.
 
+### 5-1. 구조 · 성능 설계(2026-11-10 설계안 — 순서대로, 폴더가 겹치지 않는 작업자 단위)
+
+- **W-P0 계측 자동 부착(선결):** `SceneTickScheduler` 가 프레임 시스템 · 씬 서비스 · 틱 배치마다 등록 이름으로 `SW_PROFILE_SCOPE` 를 건다. 오디오 · 물리 드라이버 호출부(`Engine.cpp`)에도 존 하나씩. 지금 존은 Physics 1 · Audio 0 · Scene 2 · Asset 1 이다. 완료: Tracy 에서 `GT.Frame` 자식 합 90% 이상.
+- **W-S1 Engine 6층 하위 티어:** 바닥 기능(Physics · Visual · Audio · UserSettings · Net · TileMap · Navigation)과 합성 기능(Animation · VFX · Environment · Destruction · Character · UI …)으로 가른다. 층 안 상호 include 5쌍(Animation↔Character · Physics · Visual, TileMap↔Visual, Telemetry↔UserSettings)을 끊는다.
+- **W-S2 `GameFrameworkLayers.toml`:** Runtime 에 Foundation 0 · World 1 · Character 2 · Gameplay/Online 3 의 층 부분과 `#error` 껍데기를 둔다. 역방향 include 24 를 끊고, 생성기 `Scripts/generate/EngineLayers.py` 를 매개변수화한다.
+- **W-S3 등록 사슬 통일 · `state-shape` 형식화:** `s_pHead` 손 사슬(Audio · RHI · Module 2 · UI 접근성 · UserSettings)을 `ModuleEntryRegistrar`/`RegistrationList` 로 옮기고 `MutableStaticExceptions` 의 그 줄을 지운다. `Archive` 를 내부 헤더로 숨기고 린트 행을 지운다.
+- **W-S4 `GameObjectManager.h` 허브 해체(W-P0 뒤):** 포함 TU 428 · include 30 이다. 소유 타입을 pimpl 로, 템플릿 전달은 `.inl` 로. `-ftime-trace` 집계로 재컴파일 TU · ms 를 전후 비교한다.
+- **W-R1 `FramePassExecutor` 분할 → 프레임 아레나:** 3257줄을 그래프 짓기 · 패스 라이브러리 · 제출로 나눈다(성능 변화 0). 그 뒤 프레임 지역 `vector` 를 `LinearAllocator` 기반 `frame_vector` 로 옮긴다(RT 프레임 힙 할당 0).
+- **W-R2 PSO 배치 색인(W-R1 뒤):** 배치를 만들 때 PSO 핸들을 한 번 풀어 둔다. `RT.PSO.ensureMaterial` 전후를 재고, 흔들림 안이면 되돌린다.
+- **W-E1 패널 열림 훅:** `IEditorPanel::onPanelOpened` 에서만 비동기 준비를 시작하고, View 는 준비 전에 뼈대만 그린다(3절 "첫 패널 느린 프레임" 측정이 후보를 고른다).
+- **W-G1 분할(W-S2 뒤):** `InputMap`(데이터 · 평가기 · 상태 — Enhanced Input 자리), `PrefabAsset`(포맷 셋 + 스폰), `AbilityComponent`(어트리뷰트 · 이펙트 · 스펙 컨테이너).
+
 ### 6. 리소스
 
 - **Sprite Fusion 타일셋**(상세 페이지마다 `License: CC0`): Castle · Tiny Swords(Pixel Frog), Dungeon(0x72), Four Seasons Platformer(Analog Studios), Retro Gameboy(Ben Leggett) — `https://www.spritefusion.com/downloads/tilesets/<이름>.zip`. 1Bit Platformer(Kenney)는 Kenney 원본에서.
