@@ -113,6 +113,7 @@ function(sw_addSharedPCHOwner OWNER_NAME HEADER_PATH)
 		target_compile_definitions(${OWNER_NAME} PRIVATE ${ARG_DEFINITIONS}) # 쓰는 타깃 모두가 같은 정의를 가질 때만(게임 팩의 `SW_LOG_TAG` · `SW_MODULE_EXPORTS`)
 	endif()
 	set_target_properties(${OWNER_NAME} PROPERTIES FOLDER "Build/PCH" EXCLUDE_FROM_ALL ON)
+	sw_requireTemplateDefinitions(${OWNER_NAME}) # 쓰는 쪽(키트 · 게임)과 같은 옵션으로 PCH 를 굽는다
 	target_precompile_headers(${OWNER_NAME} PRIVATE "${HEADER_PATH}")
 endfunction()
 
@@ -331,6 +332,18 @@ function(sw_applyTargetLayerGate TARGET_NAME)
 		endif()
 		target_include_directories(${TARGET_NAME} BEFORE PRIVATE "${SW_TARGET_LAYER_STUB_DIR}/${gate}")
 	endforeach()
+endfunction()
+
+# ------------------------------------------------------------------------------
+# sw_requireTemplateDefinitions: 정의를 보지 못한 템플릿 함수를 부르면 컴파일이 멈춘다(clang `-Werror=undefined-func-template`).
+# 템플릿 몸체를 `.inl` 로 뺀 헤더(`GameObjectManager.inl` — 헤더를 읽는 TU 400 여 개 중 부르는 TU 만 읽게)는 `.inl` 를 빠뜨리면 링크에서야 정의 없는 심볼로 섰고,
+# 같은 이미지의 다른 TU 가 같은 인자로 실체화하면 링크도 지나 숨었다(W-S4). 다른 TU 에 실체화가 있는 템플릿은 `extern template` 선언으로 알린다(`SharedAssetCache`).
+# 엔진 · GameFramework · 키트 · 게임만 건다 — 부분(`sw_addModulePart`)과 Jolt 오브젝트는 소유 타깃의 옵션을 복사하므로 그 전에 부른다. MSVC 에는 같은 진단이 없다.
+# ------------------------------------------------------------------------------
+function(sw_requireTemplateDefinitions TARGET_NAME)
+	if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+		target_compile_options(${TARGET_NAME} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Werror=undefined-func-template>)
+	endif()
 endfunction()
 
 function(sw_applyModuleLayerGate TARGET_NAME KIND MODULE_NAME CONTENT_OWNER)
