@@ -456,24 +456,24 @@ namespace sw
                 SW_LOG_WARNING_ID( "OpenGL.VertexStageSSBOLimit", "The vertex stage SSBO limit (%#) is smaller than the SRV slot count (%#) - reads of high-numbered slots may be wrong.",
                                    static_cast<int32>( maxVertexSsbo ), shaderslot::kSRVSlotCount );
             }
-            // 머티리얼 텍스처는 텍스처 유닛 16..31 이다(binding_slots.hlsli 2). 프래그먼트 유닛이 모자라면 큰 번호의 머티리얼 텍스처가 조용히 흰색이 되므로 이 백엔드를 쓰지 않는다.
-            GLint       maxFragmentTextureUnit{ 0 };
-            const GLint requiredTextureUnit = static_cast<GLint>( shaderslot::kMaterialTexture0 + shaderslot::kMaterialTextureCount );
+            // 결합 유닛은 엔진 칸 끝(머티리얼 t16..t31 위 엔진 t32..)까지, 프래그먼트 유닛은 한 셰이더의 샘플러 예산(머티리얼 + 쓰는 엔진 칸)만큼 있어야 한다.
+            // 유닛이 모자라면 큰 번호의 텍스처가 조용히 흰색이 되거나 링크가 지므로 이 백엔드를 쓰지 않는다(판정은 shaderslot::gl::checkTextureUnits 하나).
+            GLint maxFragmentTextureUnit{ 0 };
+            GLint maxCombinedTextureUnit{ 0 };
             glGetIntegerv( GL_MAX_TEXTURE_IMAGE_UNITS, &maxFragmentTextureUnit );
-            GLint       maxCombinedTextureUnit{ 0 };
-            const GLint requiredCombinedUnit = static_cast<GLint>( shaderslot::kEngineTexture0 + shaderslot::kEngineTextureCount );
             glGetIntegerv( GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &maxCombinedTextureUnit );
-            if ( maxCombinedTextureUnit < requiredCombinedUnit )
+            const shaderslot::gl::TextureUnitCheck unitCheck = shaderslot::gl::checkTextureUnits( maxFragmentTextureUnit, maxCombinedTextureUnit );
+            if ( unitCheck == shaderslot::gl::TextureUnitCheck::Combined )
             {
                 SW_LOG_WARNING_ID( "OpenGL.OpenGLBackendUnusableCombined", "The OpenGL backend is unusable - %# combined texture units, but engine texture slots need %#.",
-                                   static_cast<int32>( maxCombinedTextureUnit ), static_cast<int32>( requiredCombinedUnit ) );
+                                   static_cast<int32>( maxCombinedTextureUnit ), shaderslot::gl::kCombinedTextureUnitCount );
                 _initResult = RHIInitResult::DriverUnsupported;
                 return false;
             }
-            if ( maxFragmentTextureUnit < requiredTextureUnit )
+            if ( unitCheck == shaderslot::gl::TextureUnitCheck::Fragment )
             {
-                SW_LOG_WARNING_ID( "OpenGL.OpenGLBackendUnusableFragment", "The OpenGL backend is unusable - %# fragment texture units, but %# are needed for material texture slots.",
-                                   static_cast<int32>( maxFragmentTextureUnit ), static_cast<int32>( requiredTextureUnit ) );
+                SW_LOG_WARNING_ID( "OpenGL.OpenGLBackendUnusableFragment", "The OpenGL backend is unusable - %# fragment texture units, but a fragment shader may use %# (material + engine texture slots).",
+                                   static_cast<int32>( maxFragmentTextureUnit ), shaderslot::gl::kFragmentTextureUnitBudget );
                 _initResult = RHIInitResult::DriverUnsupported;
                 return false;
             }

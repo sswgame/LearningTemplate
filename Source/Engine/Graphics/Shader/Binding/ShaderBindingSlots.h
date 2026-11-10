@@ -321,6 +321,37 @@ namespace sw
             inline constexpr uint32 kUAVBinding0      = SW_GL_UAV_BINDING0;
             inline constexpr uint32 kImageUnit0       = SW_GL_IMAGE_UNIT0; ///< 컴퓨트 RW 텍스처 u5..u7이 이미지 유닛 0..2 에 대응한다.
             inline constexpr uint32 kTextureUnitLimit = 64;                ///< GL 백엔드가 묶고 추적하는 텍스처 유닛 수(유닛 = 레지스터 — 엔진 칸 끝이 이 안이어야 한다)
+
+            /// @brief 결합 샘플러를 쓰는 유닛 번호의 끝(머티리얼 t16..t31 · 엔진 t32..)입니다. GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS 가 이 이상이어야 한다.
+            inline constexpr uint32 kCombinedTextureUnitCount = kEngineTexture0 + kEngineTextureCount;
+            /// @brief 칸 계약이 한 프래그먼트 셰이더에 허용하는 결합 샘플러 수 — 머티리얼 칸 + 엔진 칸입니다(t0..t15 띠는 GL 에서 SSBO 라 유닛을 쓰지 않는다).
+            inline constexpr uint32 kFragmentTextureUnitCount = kMaterialTextureCount + kEngineTextureCount;
+            /**
+             * @brief 한 프래그먼트 셰이더가 실제로 선언해도 되는 결합 샘플러 수(GL_MAX_TEXTURE_IMAGE_UNITS 의 요구치)입니다.
+             * @details 데스크톱 드라이버(NVIDIA · AMD)와 Mesa(d3d12 · llvmpipe) 모두 단계당 32 다. 계약 전체(kFragmentTextureUnitCount)는 이보다 커서
+             *          셰이더 하나가 모든 칸을 함께 선언하면 Mesa 의 SPIR-V 링크가 "Too many fragment shader texture samplers" 로 진다 — 장치 검사를 계약 전체로
+             *          올리면 32 인 모든 드라이버에서 GL 이 꺼지므로, 장치는 이 예산으로 검사하고 셰이더가 예산 안에 머문다.
+             */
+            inline constexpr uint32 kFragmentTextureUnitBudget = 32;
+            static_assert( kMaterialTextureCount <= kFragmentTextureUnitBudget && kCombinedTextureUnitCount <= kTextureUnitLimit, "GL 텍스처 유닛 예산이 칸 계약보다 작다" );
+
+            /** @brief 드라이버 한도가 모자란 쪽입니다. */
+            enum class TextureUnitCheck : uint8
+            {
+                None,     ///< 둘 다 충분하다
+                Combined, ///< 결합 유닛 수가 엔진 칸 끝(kCombinedTextureUnitCount)에 못 미친다
+                Fragment, ///< 프래그먼트 유닛 수가 셰이더 예산(kFragmentTextureUnitBudget)에 못 미친다
+            };
+
+            /** @brief GL 이 보고한 프래그먼트 · 결합 텍스처 유닛 수로 이 백엔드를 쓸 수 있는지 봅니다(OpenGLRHIDevice 초기화 — 단위 테스트가 같은 함수를 부른다). */
+            [[nodiscard]] constexpr TextureUnitCheck checkTextureUnits( int32 maxFragmentTextureUnit, int32 maxCombinedTextureUnit )
+            {
+                if ( maxCombinedTextureUnit < static_cast<int32>( kCombinedTextureUnitCount ) )
+                    return TextureUnitCheck::Combined;
+                if ( maxFragmentTextureUnit < static_cast<int32>( kFragmentTextureUnitBudget ) )
+                    return TextureUnitCheck::Fragment;
+                return TextureUnitCheck::None;
+            }
         } // namespace gl
 
         /**
