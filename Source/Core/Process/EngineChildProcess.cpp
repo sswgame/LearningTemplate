@@ -4,7 +4,6 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/CommandLine/CommandLineManager.h"
-#include "Core/File/FileUtil.h"
 #include "Core/Path/AbsolutePath.h"
 
 namespace sw
@@ -21,10 +20,5 @@ namespace sw
                 listArgument.push_back( unattended );
         }
         return ProcessCommand::at( *executable, std::move( listArgument ) );
-    }
-
-    ProcessCommand EngineChildProcess::makeSelfCommand( const CommandLineManager& parent, vector<string> listArgument )
-    {
-        return makeCommand( parent, FileUtil::getExecutablePath(), std::move( listArgument ) );
     }
 } // namespace sw

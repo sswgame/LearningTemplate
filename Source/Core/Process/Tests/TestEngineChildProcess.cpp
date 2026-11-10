@@ -38,7 +38,7 @@ SW_TEST_CASE( EngineChildProcessTest, AutomatedRunPassesUnattendedToChildren )
     SW_REQUIRE_EQUAL( size_t{ 2 }, child._listArgument.size() );
     SW_EXPECT_EQUAL( sw::string( "-unattended" ), child._listArgument[1] );
 
-    const sw::ProcessCommand already = sw::EngineChildProcess::makeSelfCommand( scenarioRun, { "-unattended" } );
+    const sw::ProcessCommand already = sw::EngineChildProcess::makeCommand( scenarioRun, executable, { "-unattended" } );
     SW_EXPECT_EQUAL( size_t{ 1 }, already._listArgument.size() );
 }
 

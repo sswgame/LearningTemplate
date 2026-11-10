@@ -16,7 +16,7 @@ Scripts/lint/CommonShapes.py
    id 없이 글 입구로 넘기면 덮어쓰기 층 · 다시 읽기 기록 · 접속 대조를 받지 못한다(조용히 빠진다). id 를 싣는 길(`ResourceContext::withAsset` ·
    `XMLDocument::parseResourceText` · `XMLReadUtil::parseResourceRoot` · `loadResource…`)을 지나거나, 읽은 id 변수를 그대로 다음 함수에 넘겨야 한다.
    예전에는 이름 둘(`loadFromAsset` · `loadFromFile( const AssetID& )`)만 보아 다른 이름의 입구(타일맵 `load`)가 빠졌다 — 입구는 이름이 아니라 "load 로 시작하고 리소스 글을 읽는다" 로 고른다.
-8. 엔진 자식 손 명령: `ProcessCommand::at(` 은 `EngineChildProcess::makeCommand` · `makeSelfCommand` 가 맡는다 — 자동화 실행의 자식에 `-unattended` 를 넘긴다.
+8. 엔진 자식 손 명령: `ProcessCommand::at(` 은 `EngineChildProcess::makeCommand` 가 맡는다 — 자동화 실행의 자식에 `-unattended` 를 넘긴다.
    빠지면 넷 플레이 클라이언트가 사람의 실행으로 떠 사양으로 품질을 골라 서버와 합성이 갈렸다. 엔진이 아닌 도구(Tracy · tint · 편집기)는 예외 표에 까닭과 함께.
 9. 에디터의 리소스 트리 손 훑기: 에디터 코드(`/Editor/` 아래)의 `FileUtil::collectFiles(` · `collectFolders(` 는 `EditorContentScan` 이 맡는다 —
    다른 프로세스의 시나리오 사본을 뺀다. 빠지면 Quick Open 이 남의 사본을 집고 임포터가 남의 사본에 임포트했다. 리소스 트리 밖(Saved · Config · 소스) 폴더는
@@ -129,7 +129,7 @@ def collectViolations(path: str, text: str) -> list[tuple[str, str, str]]:
     for entrance in findIdDroppingEntrances(code):
         listViolation.append(("assetEntrance", f"{path}|{entrance}", f"id 를 버리는 리소스 입구({entrance}) — ResourceContext::withAsset · parseResourceText · parseResourceRoot"))
     if kEngineChildPattern.search(code):
-        listViolation.append(("engineChildCommand", path, "ProcessCommand::at 손 명령 — 엔진 자식은 EngineChildProcess::makeCommand · makeSelfCommand"))
+        listViolation.append(("engineChildCommand", path, "ProcessCommand::at 손 명령 — 엔진 자식은 EngineChildProcess::makeCommand"))
     if "/Editor/" in path:
         for argument in sorted(set(match.group(1) for match in kEditorScanPattern.finditer(code))):
             listViolation.append(("editorContentScan", f"{path}|{argument}", f"FileUtil 손 훑기({argument}) — 리소스 트리는 EditorContentScan"))
