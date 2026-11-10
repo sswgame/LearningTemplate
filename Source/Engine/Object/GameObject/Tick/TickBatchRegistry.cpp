@@ -8,12 +8,14 @@
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Object/Component/Component.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 namespace sw
 {
     bool TickBatchRegistry::registerEntry( Entry& entry )
     {
-        if ( entry._pStaticType == nullptr || entry._pFunction == nullptr )
+        if ( entry._pStaticType == nullptr || ( entry._mode == TickMode::Batch && entry._pFunction == nullptr ) )
             return false;
         {
             ScopedLock<mutex> lock{ _mutex };
@@ -34,20 +36,51 @@ namespace sw
             _generation.fetch_add( 1, std::memory_order_acq_rel );
     }
 
-    TickBatchFunction TickBatchRegistry::findFunction( const TypeInfo* pType )
+    TickTypeDispatch TickBatchRegistry::findDispatch( const TypeInfo* pType )
     {
-        if ( pType == nullptr )
-            return nullptr;
+        TickTypeDispatch      lane{};
         ScopedLock<mutex>     lock{ _mutex };
         const vector<Entry*>& listEntry = _listEntry.getItems();
-        for ( size_t index = listEntry.size(); index > 0; --index )
+        // 정확한 타입의 줄이 함수와 레인을, 없으면 가장 가까운 조상의 줄이 레인만 준다.
+        for ( const TypeInfo* pCursor = pType; pCursor != nullptr; pCursor = pCursor->getParentType() )
         {
-            // 주소가 아니라 지금의 `StaticType` 과 비교한다 — 모듈을 다시 올리면 타입 정보가 새로 만들어질 수 있다.
-            const Entry* const pEntry = listEntry[index - 1];
-            if ( pEntry->_pStaticType() == pType )
-                return pEntry->_pFunction;
+            for ( size_t index = listEntry.size(); index > 0; --index )
+            {
+                // 주소가 아니라 지금의 `StaticType` 과 비교한다 — 모듈을 다시 올리면 타입 정보가 새로 만들어질 수 있다.
+                const Entry* const pEntry = listEntry[index - 1];
+                if ( pEntry->_pStaticType() != pCursor )
+                    continue;
+                lane._mode      = pEntry->_mode;
+                lane._pFunction = pCursor == pType ? pEntry->_pFunction : nullptr;
+                return lane;
+            }
         }
-        return nullptr;
+        return lane;
+    }
+
+    void tickBatchVirtual( TickThreadState& threadState, const TickBatchElement* pElement, uint32 count, uint32 subTickID, float32 deltaTime )
+    {
+        SW_PROFILE_SCOPE( "GT.Scene.tickBatch.virtual" );
+        uint32 tickCount = 0;
+        for ( uint32 index = 0; index < count; ++index )
+        {
+            const TickBatchElement& element = pElement[index];
+            Component*              pComp   = element._pComponent;
+            threadState._pTickingObject     = element._pObject;
+            threadState._pTickWriter        = element._pObject;
+            if ( shouldRunTickElement( *pComp, subTickID ) == false )
+                continue;
+            if ( subTickID == 0 )
+                pComp->onTick( deltaTime );
+            else
+                pComp->onSubTick( subTickID, deltaTime );
+            ++tickCount;
+        }
+#if defined( SW_DEBUG )
+        SW_PROFILE_COUNT( "GT.Scene.tick.virtualTicks", tickCount );
+#else
+        (void)tickCount;
+#endif
     }
 
     uint32 TickBatchRegistry::getRegisteredCount()

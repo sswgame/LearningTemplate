@@ -1,6 +1,6 @@
 /**
  * @file SceneTickScheduler.cpp
- * @brief 컴포넌트 틱 디스패치 — 그룹 포크-조인(오브젝트 칸 + 타입별 일괄 목록) · 선행 조건 스테이지 · 스테이지 경계의 트랜스폼 적용입니다.
+ * @brief 컴포넌트 틱 디스패치 — 그룹마다 레인(Task 태스크 · Batch 파도 · Main 게임 스레드) · 선행 조건 스테이지 · 스테이지 경계의 트랜스폼 적용입니다.
  */
 #include "pch.h"
 
@@ -100,18 +100,12 @@ namespace sw
             };
 
             /**
-             * @brief 한 그룹의 보통 길을 [start, end) 로 나눠 도는 잡 본문입니다. 워커는 포인터만 받습니다.
-             * @details 번호 공간은 [0, 오브젝트 칸 수) 가 오브젝트 칸, 그 뒤가 타입별 일괄 목록을 차례로 이어 붙인 것이다(`_pBatchStart`). 한 칸 · 한 원소는
-             *          한 오브젝트라 나눠지지 않는다. 일괄 구간은 겹치는 목록마다 그 타입의 함수를 한 번 부른다.
+             * @brief 오브젝트 칸 목록 [start, end) 를 도는 잡 본문입니다(일괄 경로를 끈 기준 길 · Main 레인). 한 칸 = 한 오브젝트라 나눠지지 않는다.
              */
-            struct ObjectGroupTick
+            struct EntryTick
             {
                 const TickObjectEntry*   _pEntry{ nullptr };
-                const TickBatchList*     _pBatchList{ nullptr };
-                const uint32*            _pBatchStart{ nullptr }; ///< 일괄 목록마다 시작 번호, 끝에 전체 수(`_batchListCount + 1` 개)
                 SceneTransformHierarchy* _pHierarchy{ nullptr };
-                uint32                   _entryCount{ 0 };
-                uint32                   _batchListCount{ 0 };
                 uint32                   _dispatchOrdinal{ 0 };
                 float32                  _deltaTime{ 0.0f };
 
@@ -120,18 +114,38 @@ namespace sw
                     // 청크 하나의 CPU 시간이다. 모든 스레드의 합이라 `GT.Scene.tick.components`(벽시계)와 비교하면 병렬 효율이 보인다.
                     SW_PROFILE_SCOPE( "GT.Scene.tick.objectRange" );
                     const TickThreadScope scope{ *_pHierarchy, _dispatchOrdinal };
-                    const uint32          entryEnd = MathUtil::min( end, _entryCount );
-                    for ( uint32 index = start; index < entryEnd; ++index )
+                    uint32                itemCount = 0;
+                    for ( uint32 index = start; index < end; ++index )
                     {
                         tickEntry( scope._threadState, _deltaTime, _pEntry[index] );
+                        itemCount += _pEntry[index]._itemCount;
                     }
-                    if ( end > _entryCount )
-                        tickBatchRange( scope._threadState, MathUtil::max( start, _entryCount ), end );
+#if defined( SW_DEBUG )
+                    SW_PROFILE_COUNT( "GT.Scene.tick.virtualTicks", itemCount ); // 칸 길은 항목마다 가상 호출이다
+#else
+                    (void)itemCount;
+#endif
                 }
+            };
 
-                /** @brief 일괄 번호 [start, end) 를 목록마다 잘라 그 타입의 함수에 넘깁니다. */
-                void tickBatchRange( TickThreadState& threadState, uint32 start, uint32 end ) const
+            /**
+             * @brief 파도 하나의 일괄 목록을 이은 번호 [start, end) 를 도는 잡 본문입니다. 워커는 포인터만 받습니다.
+             * @details 번호 공간은 파도의 일괄 목록을 차례로 이어 붙인 것이다(`_pBatchStart`). 한 원소는 한 오브젝트의 항목 하나라 나눠지지 않는다.
+             *          겹치는 목록마다 그 (타입 함수, 서브틱 id) 를 한 번 부른다.
+             */
+            struct WaveTick
+            {
+                const TickBatchList*     _pBatchList{ nullptr };
+                const uint32*            _pBatchStart{ nullptr }; ///< 일괄 목록마다 시작 번호, 끝에 전체 수(`_batchListCount + 1` 개)
+                SceneTransformHierarchy* _pHierarchy{ nullptr };
+                uint32                   _batchListCount{ 0 };
+                uint32                   _dispatchOrdinal{ 0 };
+                float32                  _deltaTime{ 0.0f };
+
+                void tickRange( uint32 start, uint32 end )
                 {
+                    SW_PROFILE_SCOPE( "GT.Scene.tick.waveRange" );
+                    const TickThreadScope scope{ *_pHierarchy, _dispatchOrdinal };
                     // start 를 담은 목록: 시작 번호가 start 보다 큰 첫 목록의 바로 앞(빈 목록은 시작 번호가 같아 건너뛰어진다).
                     uint32 listIndex = static_cast<uint32>( std::upper_bound( _pBatchStart, _pBatchStart + _batchListCount, start ) - _pBatchStart ) - 1u;
                     for ( uint32 cursor = start; cursor < end && listIndex < _batchListCount; ++listIndex )
@@ -139,7 +153,8 @@ namespace sw
                         const TickBatchList& batchList = _pBatchList[listIndex];
                         const uint32         rangeEnd  = MathUtil::min( end, _pBatchStart[listIndex + 1] );
                         if ( cursor < rangeEnd )
-                            batchList._pFunction( threadState, batchList._listElement.data() + ( cursor - _pBatchStart[listIndex] ), rangeEnd - cursor, _deltaTime );
+                            batchList._pFunction( scope._threadState, batchList._listElement.data() + ( cursor - _pBatchStart[listIndex] ), rangeEnd - cursor,
+                                                  batchList._subTickID, _deltaTime );
                         cursor = MathUtil::max( cursor, rangeEnd );
                     }
                 }
@@ -183,6 +198,13 @@ namespace sw
 
 namespace sw
 {
+    void SceneTickScheduler::EntryTask::run()
+    {
+        SW_PROFILE_SCOPE( "GT.Scene.tick.taskEntry" );
+        const SceneTickSchedulerInternal::TickThreadScope scope{ *_pHierarchy, _dispatchOrdinal };
+        SceneTickSchedulerInternal::tickEntry( scope._threadState, _deltaTime, *_pEntry );
+    }
+
     SceneTickScheduler::SceneTickScheduler( GameObjectManager& manager, SceneTransformHierarchy& hierarchy, PrimitiveRegistry& primitiveRegistry,
                                             StructuralChangeBuffer& structuralChangeBuffer )
         : _pManager{ &manager }
@@ -191,6 +213,7 @@ namespace sw
         , _pStructuralChangeBuffer{ &structuralChangeBuffer }
         , _tickRegistry{}
         , _listBatchStart{}
+        , _listEntryTask{}
         , _stageTransformApplyCount{ 0 }
         , _dispatchOrdinal{ 0 }
     {
@@ -208,9 +231,9 @@ namespace sw
         _pStructuralChangeBuffer->freeze();
 
         {
-            // **씬 틱은 자기가 낸 일만 기다린다.** 틱의 병렬 일은 `runParallel` 이 합류까지 기다린다. 주의: `TaskManager::waitAll()` 은
-            // 엔진 **전체의** 태스크 — 렌더 스레드의 패스 기록, 에셋 스트리밍, 비동기 씬 로드, 오디오 재생 — 가 빌 때까지 게임 스레드를
-            // 세운다. onTick 이 낸 태스크가 틱 뒤 단계 전에 끝나야 하면 자기 스테이지를 만들어 `waitStage` 로 기다린다.
+            // **씬 틱은 자기가 낸 일만 기다린다.** 틱의 병렬 일은 `runParallel` 이 합류까지, Task 레인은 자기 스테이지(`waitStage`)를 기다린다.
+            // 주의: `TaskManager::waitAll()` 은 엔진 **전체의** 태스크 — 렌더 스레드의 패스 기록, 에셋 스트리밍, 비동기 씬 로드, 오디오 재생 — 가 빌 때까지
+            // 게임 스레드를 세운다. onTick 이 낸 태스크가 틱 뒤 단계 전에 끝나야 하면 자기 스테이지를 만들어 `waitStage` 로 기다린다.
             SW_PROFILE_SCOPE( "GT.Scene.tick.components" );
             tickGroups( deltaTime, firstGroup, endGroup );
         }
@@ -226,12 +249,12 @@ namespace sw
             (void)_tickRegistry.refresh( *_pManager ); // 다시 지은 횟수는 레지스트리의 계측(`GT.Scene.tick.stageRebuilds`)이 센다
         }
 
-        // 그룹마다: 보통 길(오브젝트 칸 목록을 한 번의 포크-조인) → 그 그룹의 선행 조건 스테이지. 한 오브젝트의 칸은 한 워커가 (순서 키 순으로)
-        // 돌므로 같은 오브젝트의 컴포넌트 둘이 동시에 돌지 않고, 스테이지는 보통 길이 끝난 뒤라 겹치지 않는다. 선행 조건을 가진 항목만
-        // 스테이지로 간다 — 사슬 밖 오브젝트는 선행 조건이 씬에 있든 없든 같은 길이다. 보통 길이 먼저라 선행 조건이 보통 길의 항목이어도 순서가 맞다.
+        // 그룹마다: Task 레인 태스크를 띄움 → 파도(Batch 레인)를 키 순으로, 파도마다 한 번의 포크-조인 → Task 레인을 기다림 → Main 레인(게임 스레드)
+        // → 그 그룹의 선행 조건 스테이지. 오브젝트 안 순서는 파도 장벽(Batch) · 한 태스크(Task) · 게임 스레드(Main)가 지키고, 스테이지는 앞 레인이 모두
+        // 끝난 뒤라 선행 조건이 어느 레인의 항목이어도 순서가 맞다. 일괄 경로를 끄면 모든 오브젝트가 칸 목록 한 번의 포크-조인이다(기준 길).
         const vector<TickStage>& listStage  = _tickRegistry.getStages();
         size_t                   stageIndex = 0;
-        // 그룹마다 구간 하나(보통 길 + 그 그룹의 스테이지) — 두 단계가 같은 `GT.Scene.tick.components` 에 섞여 PrePhysics 와 PostPhysics 가 갈리지 않았다.
+        // 그룹마다 구간 하나(레인 + 그 그룹의 스테이지) — 두 단계가 같은 `GT.Scene.tick.components` 에 섞여 PrePhysics 와 PostPhysics 가 갈리지 않았다.
         static_assert( TickRegistry::kGroupCount == 4, "tick group scope names follow TickGroup" );
         static const ProfileScopeID kArrGroupScopeID[TickRegistry::kGroupCount] = {
             FrameProfiler::registerEngineScopeSite( "GT.Scene.tick.group.PrePhysics", __func__, __FILE__, __LINE__ ),
@@ -242,33 +265,7 @@ namespace sw
         for ( uint32 group = firstGroup; group < endGroup && group < TickRegistry::kGroupCount; ++group )
         {
             const ScopedFrameProfile groupScope{ kArrGroupScopeID[group] };
-            // 오브젝트 칸과 타입별 일괄 목록은 한 번호 공간으로 이어 한 번의 포크-조인으로 돈다(일괄 목록을 따로 돌면 워커를 한 번 더 깨운다).
-            const vector<TickObjectEntry>& listEntry  = _tickRegistry.getEntries( group );
-            const vector<TickBatchList>&   listBatch  = _tickRegistry.getBatchLists( group );
-            const uint32                   entryCount = static_cast<uint32>( listEntry.size() );
-            uint32                         totalCount = entryCount;
-            _listBatchStart.clear();
-            for ( const TickBatchList& batchList : listBatch )
-            {
-                _listBatchStart.push_back( totalCount );
-                totalCount += static_cast<uint32>( batchList._listElement.size() );
-            }
-            _listBatchStart.push_back( totalCount );
-            if ( totalCount > 0 )
-            {
-                SW_PROFILE_COUNT( "GT.Scene.tick.objectEntries", entryCount );
-                SW_PROFILE_COUNT( "GT.Scene.tick.batchElements", totalCount - entryCount );
-                SceneTickSchedulerInternal::ObjectGroupTick job{};
-                job._pEntry          = listEntry.data();
-                job._pBatchList      = listBatch.data();
-                job._pBatchStart     = _listBatchStart.data();
-                job._pHierarchy      = _pHierarchy;
-                job._entryCount      = entryCount;
-                job._batchListCount  = static_cast<uint32>( listBatch.size() );
-                job._dispatchOrdinal = ++_dispatchOrdinal;
-                job._deltaTime       = deltaTime;
-                SceneTickSchedulerInternal::dispatch( totalCount, SW_DELEGATE_METHOD( ParallelBlockDelegate, &SceneTickSchedulerInternal::ObjectGroupTick::tickRange, &job ) );
-            }
+            tickLanes( deltaTime, group );
 
             // 스테이지는 그룹 순서로 지어진다(한 스테이지 = 한 그룹).
             while ( stageIndex < listStage.size() && listStage[stageIndex]._group < group )
@@ -280,7 +277,7 @@ namespace sw
                 const TickStage& stage = listStage[stageIndex];
                 if ( stage._listItem.empty() ) // 증분 갱신이 비워 둔 스테이지는 돌 것도 적용할 것도 없다
                     continue;
-                // 앞에서 돈 선행 조건(앞 스테이지 · 보통 길)이 쓴 트랜스폼을 이 스테이지가 같은 프레임에 읽게 한다. 기다리는 스테이지 앞에서만.
+                // 앞에서 돈 선행 조건(앞 스테이지 · 레인)이 쓴 트랜스폼을 이 스테이지가 같은 프레임에 읽게 한다. 기다리는 스테이지 앞에서만.
                 if ( stage._bApplyBefore == SW_TRUE )
                     applyStageTransforms();
                 SceneTickSchedulerInternal::StageTick job{};
@@ -291,6 +288,107 @@ namespace sw
                 SceneTickSchedulerInternal::dispatch( static_cast<uint32>( stage._listItem.size() ),
                                                       SW_DELEGATE_METHOD( ParallelBlockDelegate, &SceneTickSchedulerInternal::StageTick::tickRange, &job ) );
             }
+        }
+    }
+
+    void SceneTickScheduler::tickLanes( float32 deltaTime, uint32 group )
+    {
+        const vector<TickObjectEntry>& listTask  = _tickRegistry.getEntries( group );
+        const vector<TickObjectEntry>& listMain  = _tickRegistry.getMainEntries( group );
+        const vector<TickWave>&        listWave  = _tickRegistry.getWaves( group );
+        const uint32                   taskCount = static_cast<uint32>( listTask.size() );
+
+        // 일괄 경로를 끈 기준 길은 칸 목록 한 번의 포크-조인이다(예전 길 그대로 — 동등성 테스트가 이것과 파도 길을 맞댄다).
+        if ( _tickRegistry.isBatchPathEnabled() == false )
+        {
+            if ( taskCount == 0 )
+                return;
+            SW_PROFILE_COUNT( "GT.Scene.tick.objectEntries", taskCount );
+            SceneTickSchedulerInternal::EntryTick job{};
+            job._pEntry          = listTask.data();
+            job._pHierarchy      = _pHierarchy;
+            job._dispatchOrdinal = ++_dispatchOrdinal;
+            job._deltaTime       = deltaTime;
+            SceneTickSchedulerInternal::dispatch( taskCount, SW_DELEGATE_METHOD( ParallelBlockDelegate, &SceneTickSchedulerInternal::EntryTick::tickRange, &job ) );
+            return;
+        }
+
+        // Task 레인: 오브젝트마다 태스크 하나를 먼저 띄운다 — 파도 장벽에 묶이지 않고 파도와 겹쳐 돈다. 작업 풀이 없으면(엔진 없는 테스트) 파도 뒤에 차례로 돈다.
+        const bool      bAsyncTask  = taskCount > 0 && engine::areEngineServicesBound() && engine::getSubsystem<TaskManager>().getWorkerCount() > 0;
+        const uint32    taskOrdinal = ++_dispatchOrdinal;
+        TaskStageHandle taskStage{};
+        if ( bAsyncTask )
+        {
+            TaskManager& taskManager = engine::getSubsystem<TaskManager>();
+            _listEntryTask.clear();
+            _listEntryTask.resize( taskCount ); // 태스크가 원소 주소를 들므로 띄우기 전에 크기를 정한다
+            taskStage = taskManager.createStage();
+            for ( uint32 index = 0; index < taskCount; ++index )
+            {
+                EntryTask& task       = _listEntryTask[index];
+                task._pEntry          = &listTask[index];
+                task._pHierarchy      = _pHierarchy;
+                task._dispatchOrdinal = taskOrdinal;
+                task._deltaTime       = deltaTime;
+                TaskHandle handle     = taskManager.emplaceTask( "GT.Scene.tick.task", SW_DELEGATE_METHOD( TaskDelegate, &EntryTask::run, &task ) );
+                taskStage.addTask( handle );
+                handle.submit();
+            }
+        }
+
+        // Batch 레인: 파도 키 순으로 파도마다 한 번의 포크-조인 — 사이가 장벽이라 한 오브젝트의 앞 파도 항목이 다음 파도 항목보다 먼저다.
+        uint32 elementCount = 0;
+        for ( const TickWave& wave : listWave )
+        {
+            uint32 totalCount = 0;
+            _listBatchStart.clear();
+            for ( const TickBatchList& batchList : wave._listBatch )
+            {
+                _listBatchStart.push_back( totalCount );
+                totalCount += static_cast<uint32>( batchList._listElement.size() );
+            }
+            _listBatchStart.push_back( totalCount );
+            if ( totalCount == 0 )
+                continue;
+            elementCount += totalCount;
+            SW_PROFILE_COUNT( "GT.Scene.tick.waves", 1 ); // 프레임당 장벽 수 — 규모와 무관한 구조 지표
+            SceneTickSchedulerInternal::WaveTick job{};
+            job._pBatchList      = wave._listBatch.data();
+            job._pBatchStart     = _listBatchStart.data();
+            job._pHierarchy      = _pHierarchy;
+            job._batchListCount  = static_cast<uint32>( wave._listBatch.size() );
+            job._dispatchOrdinal = ++_dispatchOrdinal;
+            job._deltaTime       = deltaTime;
+            SceneTickSchedulerInternal::dispatch( totalCount, SW_DELEGATE_METHOD( ParallelBlockDelegate, &SceneTickSchedulerInternal::WaveTick::tickRange, &job ) );
+        }
+        SW_PROFILE_COUNT( "GT.Scene.tick.batchElements", elementCount );
+
+        if ( bAsyncTask )
+        {
+            engine::getSubsystem<TaskManager>().waitStage( taskStage, "SceneTickScheduler" );
+        }
+        else if ( taskCount > 0 )
+        {
+            SceneTickSchedulerInternal::EntryTick job{};
+            job._pEntry          = listTask.data();
+            job._pHierarchy      = _pHierarchy;
+            job._dispatchOrdinal = taskOrdinal;
+            job._deltaTime       = deltaTime;
+            job.tickRange( 0, taskCount );
+        }
+        SW_PROFILE_COUNT( "GT.Scene.tick.taskEntries", taskCount );
+
+        // Main 레인: 게임 스레드에서 차례로 — 메인 전용 API 를 만지는 틱이 워커로 새지 않는다.
+        const uint32 mainCount = static_cast<uint32>( listMain.size() );
+        if ( mainCount > 0 )
+        {
+            SW_PROFILE_COUNT( "GT.Scene.tick.mainEntries", mainCount );
+            SceneTickSchedulerInternal::EntryTick job{};
+            job._pEntry          = listMain.data();
+            job._pHierarchy      = _pHierarchy;
+            job._dispatchOrdinal = ++_dispatchOrdinal;
+            job._deltaTime       = deltaTime;
+            job.tickRange( 0, mainCount );
         }
     }
 

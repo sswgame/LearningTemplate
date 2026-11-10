@@ -6,7 +6,11 @@
 
 #include "Engine/Object/GameObject/Tick/StructuralChangeBuffer.h"
 
+#include "Core/Math/MathUtil.h"
+
+#include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
 
@@ -14,10 +18,18 @@
 namespace sw
 {
     DeferredDelegateQueue::DeferredDelegateQueue()
-        : _pending{}
+        : _listSlot{}
+        , _sequence{ 0 }
+        , _listTaken{}
         , _listProcessing{}
     {
-        _pending.reserve( 128 );
+        // 슬롯 수는 만들 때 한 번 정한다(넣는 스레드가 도는 동안 바뀌지 않게). 서비스가 없으면(엔진 없는 테스트) 슬롯 하나 + 넘침이다.
+        const uint32 slotCount = engine::getParallelScratchSlotCount() + 1;
+        _listSlot.reserve( slotCount );
+        for ( uint32 slot = 0; slot < slotCount; ++slot )
+        {
+            _listSlot.push_back( make_unique<LockedSwapQueue<KeyedCallback>>() );
+        }
         _listProcessing.reserve( 128 );
     }
 
@@ -25,31 +37,65 @@ namespace sw
     {
         if ( callback.isBound() == false )
             return;
-        _pending.push( std::move( callback ) );
+        const TickThreadState& threadState = StructuralChangeBuffer::getThreadState();
+        KeyedCallback          keyed{};
+        keyed._dispatchOrdinal = threadState._dispatchOrdinal;
+        keyed._writerID        = threadState._pTickWriter != nullptr ? threadState._pTickWriter->getObjectID() : 0;
+        keyed._sequence        = _sequence.fetch_add( 1, std::memory_order_relaxed );
+        keyed._callback        = std::move( callback );
+        // 슬롯을 받지 못한 스레드(도우미 칸이 다 찬 드문 경우)는 끝의 넘침 큐로 간다 — 같은 키로 정렬되므로 순서는 같다.
+        const uint32 slot = MathUtil::min( engine::getParallelScratchSlot(), static_cast<uint32>( _listSlot.size() - 1 ) );
+        _listSlot[slot]->push( std::move( keyed ) );
     }
 
     void DeferredDelegateQueue::flush()
     {
         _flushThread.assumeHeld(); // drain 은 한 스레드(게임 스레드)만 부른다
-        if ( _pending.takeAll( _listProcessing ) == false )
-            return;
-        for ( Callback& callback : _listProcessing )
+        for ( const unique_ptr<LockedSwapQueue<KeyedCallback>>& pSlot : _listSlot )
         {
-            if ( callback.isBound() )
-                callback();
+            if ( pSlot->takeAll( _listTaken ) == false )
+                continue;
+            for ( KeyedCallback& keyed : _listTaken )
+            {
+                _listProcessing.push_back( std::move( keyed ) );
+            }
+            _listTaken.clear();
+        }
+        if ( _listProcessing.empty() )
+            return;
+        std::sort( _listProcessing.begin(), _listProcessing.end(), []( const KeyedCallback& left, const KeyedCallback& right )
+        {
+            if ( left._dispatchOrdinal != right._dispatchOrdinal )
+                return left._dispatchOrdinal < right._dispatchOrdinal;
+            if ( left._writerID != right._writerID )
+                return left._writerID < right._writerID;
+            return left._sequence < right._sequence;
+        } );
+        for ( KeyedCallback& keyed : _listProcessing )
+        {
+            if ( keyed._callback.isBound() )
+                keyed._callback();
         }
         _listProcessing.clear();
     }
 
     bool DeferredDelegateQueue::isEmpty()
     {
-        return _pending.isEmpty();
+        for ( const unique_ptr<LockedSwapQueue<KeyedCallback>>& pSlot : _listSlot )
+        {
+            if ( pSlot->isEmpty() == false )
+                return false;
+        }
+        return true;
     }
 
     void DeferredDelegateQueue::clear()
     {
         // 처리 목록은 건드리지 않는다. 비우기 밖에서는 늘 비어 있고, 비우는 중(콜백이 씬을 비우는 경우)이면 지금 도는 목록이다.
-        _pending.clear();
+        for ( const unique_ptr<LockedSwapQueue<KeyedCallback>>& pSlot : _listSlot )
+        {
+            pSlot->clear();
+        }
     }
 } // namespace sw
 
@@ -114,7 +160,7 @@ namespace sw
 
     void StructuralChangeBuffer::flush( GameObjectManager& manager )
     {
-        // 지연된 구조 변경(컴포넌트 추가 · attach · detach · 태그 · 활성)을 **부른 순서대로** 먼저 적용한다. 지연 큐 · 파괴보다 앞이다.
+        // 지연된 구조 변경(컴포넌트 추가 · attach · detach · 태그 · 활성)을 **(디스패치, 쓴 오브젝트, 부른 순서) 순으로** 먼저 적용한다. 지연 큐 · 파괴보다 앞이다.
         {
             SW_PROFILE_SCOPE( "GT.Scene.tick.deferredTransforms" );
             _structuralQueue.flush();

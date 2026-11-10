@@ -43,5 +43,5 @@ namespace sw
     }
 
     // 큐브마다 무버가 하나면(`-gv_stressTestTickMovers=1`) 오브젝트 슬롯 대신 타입별 일괄 목록으로 틱을 실행합니다(`TickBatchRegistry`).
-    SW_REGISTER_TICK_BATCH( StressTestMoverComponent );
+    SW_REGISTER_TICK_TYPE( StressTestMoverComponent, Batch );
 } // namespace sw
