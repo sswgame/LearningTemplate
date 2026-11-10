@@ -367,6 +367,12 @@ namespace sw
     {
         if ( _state._gpuScene.getInstanceBuffer() == 0 || _state._gpuScene.getInstanceSRV() == kInvalidDescriptorIndex )
             return;
+        // 표면 변형 층 — 씬 지오메트리 패스(그림자 포함)의 정점 셰이더가 같은 텍스처 · 창을 읽는다. 올라가기 전에는 걸지 않고 창도 0 이다(FrameRenderer::updatePassConstants).
+        if ( _state._surfaceDeform._texture.isReady() )
+        {
+            const Texture2D* pDeform = _state._surfaceDeform._texture.getOperation()->getTexture();
+            context._resourceRegistry.registerTexture( attachmentNames()._surfaceDeform, pDeform->getHandle(), pDeform->getSRV() );
+        }
         // 이름 "SwInstances" ↔ binding.hlsli 의 g_SwInstances / PassCB g_SwInstancesIndex (canonical 매칭).
         context._resourceRegistry.registerBuffer( passConstantNames()._swInstances,
                                                   _state._gpuScene.getInstanceBuffer(), _state._gpuScene.getInstanceSRV() );

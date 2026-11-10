@@ -1,0 +1,65 @@
+<Scene formatVersion="2" name="TerrainDeform">
+	<!-- 지형 표면 변형(시나리오 automation/terraindeform) — 골짜기 높이장을 높이 0..0.01 m 로 눌러 평평하게 둔 지형(terrain.material, 같은 색 레이어 넷) 위, 카메라 바로 앞에
+	     깔때기 도장(Funnel 지름 3 m · 깊이 0.14 m · 홈 셋, 돌지 않는다)을 붙잡는 Stamper 를 레이어 Stamp 에 둔다. 레이어를 켜면 표면 변형 층에 도장이 찍히고
+	     지형 정점 셰이더(엔진 텍스처 칸 SurfaceDeform · g_SurfaceDeformParams)가 정점을 내리고 픽셀이 법선을 기울인다. 낮은 해가 홈의 그늘을 드러낸다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+		<_listDataLayer>
+			<SceneDataLayerDef _name="Stamp" _bInitiallyActive="false" />
+		</_listDataLayer>
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,3,-5" _localRotation="0.55,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="0.9" _nearZ="0.1" _farZ="300" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,0,0" _localRotation="0.356582,-2.338715,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,1,1" _intensity="1.2" _ambient="0.4" _shadowExtent="12" _shadowDistance="30" _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Terrain">
+			<GameObject _schemaVersion="0" _name="Terrain" _bActive="true">
+				<_listComponent>
+					<TerrainComponent _localPosition="-128,0,-128" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None"
+					                  _heightfieldPath="game/empty/heightfields/valley.heightfield"
+					                  _materialPath="engine/materials/terrain.material"
+					                  _layerWeightsPath="game/empty/heightfields/valley.layerweights"
+					                  _detailTexturePath="engine/textures/terrain/terrain_detail.dds"
+					                  _size="256,256"
+					                  _heightMin="0"
+					                  _heightMax="0.01"
+					                  _detailTiling="0.25"
+					                  _heightBlendDepth="0"
+					                  _puddleScale="6"
+					                  _sparkleDensity="40"
+					                  _snowSparkle="0"
+					                  _chunkCells="32"
+					                  _lodDistance="48">
+						<_listLayer>
+							<TerrainLayer _name="Sand" _color="0.66,0.58,0.4,1" _detailStrength="0.2" _bTriplanar="false" _roughness="0.95" _porosity="0.9" _wetness="0.0" _sparkle="0.0" />
+							<TerrainLayer _name="Dirt" _color="0.66,0.58,0.4,1" _detailStrength="0.2" _bTriplanar="false" _roughness="0.95" _porosity="0.9" _wetness="0.0" _sparkle="0.0" />
+							<TerrainLayer _name="Rock" _color="0.66,0.58,0.4,1" _detailStrength="0.2" _bTriplanar="false" _roughness="0.95" _porosity="0.9" _wetness="0.0" _sparkle="0.0" />
+							<TerrainLayer _name="Gravel" _color="0.66,0.58,0.4,1" _detailStrength="0.2" _bTriplanar="false" _roughness="0.95" _porosity="0.9" _wetness="0.0" _sparkle="0.0" />
+						</_listLayer>
+					</TerrainComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="Stamper" layers="Stamp">
+			<GameObject _schemaVersion="0" _name="Stamper" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<SurfaceStampComponent _mode="Hold" _trailStep="0.1" _trailBreak="2">
+						<_stamp _shape="Funnel" _size="3,0" _depth="0.14" _rimHeight="0.03" _rimWidth="0.3" _fillSpeed="0.05" _spinSpeed="0" _armCount="3" />
+					</SurfaceStampComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

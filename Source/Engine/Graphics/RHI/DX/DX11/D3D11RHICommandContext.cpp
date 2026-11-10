@@ -346,6 +346,9 @@ namespace sw
             _pContext->HSSetShaderResources( slot, 1, &pSRV );
             _pContext->DSSetShaderResources( slot, 1, &pSRV );
         }
+        // 엔진 칸 중 정점 단계가 읽는 칸(표면 변형 층 — 지면 · 지형이 정점을 내린다)도 정점 단계에 건다. 칸은 표가 정한다(shaderslot::emulated).
+        if ( slot == shaderslot::emulated::kVertexStageEngineTexture )
+            _pContext->VSSetShaderResources( slot, 1, &pSRV );
         if ( _pState != nullptr && slot < D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT )
             _pState->_arrPixelSRVTexture[slot] = ( pSRV != nullptr ) ? texture : 0;
         // 짝 샘플러는 걸지 않는다 — DX11 샘플러 슬롯은 16 개뿐이라 엔진 텍스처 칸(t32..)과 머티리얼 칸(t16..t31)은 셰이더가 정적 세트(s9..s15)의 샘플러로 읽는다.

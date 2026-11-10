@@ -1,7 +1,7 @@
 /**
  * @file SurfaceComponentSystem.h
- * @brief 씬 하나의 표면 컴포넌트 프레임 일입니다 — 발 아래 표면 읽기(`GroundSurfaceComponent`), 표면 변형 도장(`SurfaceStampComponent`), 지면 메시 머티리얼 싣기(`SurfaceDeformMeshComponent`).
- * @details 세 컴포넌트는 예전에 매 틱 자기 일을 통째로 틱 뒤 큐로 미뤘다(물리 질의 · 씬 서비스 쓰기는 게임 스레드 일이다) — 컴포넌트 수만큼 미룬 일이 쌓이고 순서는 워커 순서였다.
+ * @brief 씬 하나의 표면 컴포넌트 프레임 일입니다 — 발 아래 표면 읽기(`GroundSurfaceComponent`), 표면 변형 도장(`SurfaceStampComponent`).
+ * @details 두 컴포넌트는 예전에 매 틱 자기 일을 통째로 틱 뒤 큐로 미뤘다(물리 질의 · 씬 서비스 쓰기는 게임 스레드 일이다) — 컴포넌트 수만큼 미룬 일이 쌓이고 순서는 워커 순서였다.
  *          이제 컴포넌트는 칸과 등록(`ComponentRegistry`)만 들고, 이 서비스가 같은 자리(`ApplyPrePhysics` — PrePhysics 틱이 남긴 것을 적용한 뒤, 물리 앞)에서 타입마다 등록 순서로 한 번에 돈다.
  *          발 아래 읽기가 먼저다 — 이동 계수가 이번 물리에 든다. 언리얼 `UWorldSubsystem` 이 등록받은 목록을 돌고, Mass 처리기가 한 종류를 한 번에 도는 자리다.
  *          씬 서비스(`ISceneService`)이고 `SW_SCENE_SERVICE` 줄로 매니저마다 하나 생긴다(`manager.getSubsystem<sw::SurfaceComponentSystem>()`).

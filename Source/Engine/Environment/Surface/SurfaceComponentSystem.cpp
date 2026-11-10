@@ -3,7 +3,6 @@
 #include "Engine/Environment/Surface/SurfaceComponentSystem.h"
 
 #include "Engine/Environment/Surface/GroundSurfaceComponent.h"
-#include "Engine/Environment/Surface/SurfaceDeformMeshComponent.h"
 #include "Engine/Environment/Surface/SurfaceStampComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 
@@ -27,7 +26,5 @@ namespace sw
         { ground.finishFrameSample( manager ); } );
         manager.forEachActiveRegistered<SurfaceStampComponent>( _listHandleScratch, [&manager]( SurfaceStampComponent& stamp )
         { stamp.applyStamp( manager ); } );
-        manager.forEachActiveRegistered<SurfaceDeformMeshComponent>( _listHandleScratch, [&manager]( SurfaceDeformMeshComponent& mesh )
-        { mesh.bindMaterial( manager ); } );
     }
 } // namespace sw

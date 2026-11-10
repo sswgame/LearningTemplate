@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  지형 표면 변형 — 지형 머티리얼(terrain.hlsl)이 표면 변형 층(엔진 텍스처 칸 SurfaceDeform · 패스 상수 g_SurfaceDeformParams)을 정점 · 그림자 · 법선에 받는다.
+  무대 maps/terraindeform: 평평한 지형 앞에 레이어 Stamp 의 깔때기(Hold, 지름 3 m · 깊이 0.14 m · 홈 셋, 돌지 않는다).
+  ① 레이어를 켜기 전 사진(층 없음) ② 켜서 도장이 찍힌 뒤 사진 — 둘은 화면 가운데 아래(깔때기 자리)에서 달라야 한다(지형이 층을 읽지 않으면 같다).
+  깊이 감시 값은 CPU 격자라 그림과 무관하게 맞는다 — 그림의 차이가 지형 셰이더가 층을 읽는 증거다.
+  실행: App -scenario=game/empty/automation/terraindeform.scenario.xml -unattended (체인: ctest -R Scenario.empty)
+-->
+<Scenario name="game.empty.terraindeform" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/terraindeform.scene.xml"/>
+	<Wait frames="20"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Wait frames="10"/>
+	<Expect watch="Surface.DeformHeld" equals="0"/>
+	<Screenshot file="terraindeform_off.ppm"/>
+
+	<DevCommand line="scene.layer Stamp on"/>
+	<Wait frames="10"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Wait frames="5"/>
+	<Expect watch="Surface.DeformHeld" equals="1"/>
+	<Expect watch="Surface.DeformDeepestNear" key="0 0 1.5" atLeast="0.08"/>
+	<Screenshot file="terraindeform_on.ppm"/>
+
+	<ExpectImagesDiffer first="terraindeform_off.ppm" second="terraindeform_on.ppm" region="0.25,0.35,0.75,1" minDiffering="0.02"/>
+	<ExpectImage file="terraindeform_on.ppm" golden="terraindeform_on"/>
+	<Pass/>
+</Scenario>

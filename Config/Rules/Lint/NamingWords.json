@@ -12,6 +12,7 @@
     "Work": "Job"
   },
   "_bannedNames": {
+    "SurfaceDeformMeshComponent": "없앴다 — 표면 변형 층은 엔진 텍스처 칸 SurfaceDeform + 패스 상수 g_SurfaceDeformParams 로 모든 지면 · 지형 머티리얼에 걸린다(SurfaceDeformBinding, 2026-11-11)",
     "pathsEqualNormalized": "isSameDiskPath — 디스크 경로 같음은 OS 대소문자 규칙이다(소문자로 접으면 리눅스에서 다른 파일이 같아진다, 2026-11-10)",
     "readServer": "loadFromChannel — 무엇을 어디서 읽는지 말하지 않았다(짝 loadFile, 2026-11-10)",
     "toLookup": "classifyLookupError — 오류를 조회 결과 종류로 가른다(2026-11-10)",
