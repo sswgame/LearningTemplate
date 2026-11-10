@@ -330,10 +330,10 @@ namespace sw::editor
 
     void MeshModifiersPanel::drawStackList( MeshModifierSession& session )
     {
-        MeshModifierStack& stack = session.getStack();
-        const int32        added = drawAddMenu( session, stack, "meshmodifiers" );
-        if ( added >= 0 )
-            session.setSelectedIndex( added );
+        MeshModifierStack&    stack = session.getStack();
+        const optional<int32> added = drawAddMenu( session, stack, "meshmodifiers" );
+        if ( added.has_value() )
+            session.setSelectedIndex( *added );
         session.setSelectedIndex( drawStackRows( session, stack, session.getSelectedIndex(), "meshmodifiers.row", nullptr ) );
     }
 
@@ -424,9 +424,9 @@ namespace sw::editor
             ImGui::SameLine();
         }
         ImGui::TextDisabled( "%s %u", SW_LOCKEY( "EdMeshModifiers", "NestedDepth" ), _model.getNestedDepth() );
-        const int32 added = drawAddMenu( session, shown, "meshmodifiers.nested" );
-        if ( added >= 0 )
-            _model.setNestedSelectedIndex( added );
+        const optional<int32> added = drawAddMenu( session, shown, "meshmodifiers.nested" );
+        if ( added.has_value() )
+            _model.setNestedSelectedIndex( *added );
         int32 enterIndex = -1;
         _model.setNestedSelectedIndex( drawStackRows( session, shown, _model.getNestedSelectedIndex(), "meshmodifiers.nested.row", &enterIndex ) );
         if ( enterIndex >= 0 )
@@ -466,10 +466,10 @@ namespace sw::editor
             _model.exportWarp( shown );
     }
 
-    int32 MeshModifiersPanel::drawAddMenu( MeshModifierSession& session, MeshModifierStack& stack, const utf8* pMarkPrefix )
+    optional<int32> MeshModifiersPanel::drawAddMenu( MeshModifierSession& session, MeshModifierStack& stack, const utf8* pMarkPrefix )
     {
-        int32      addedIndex = -1;
-        const bool bOpenMenu  = ImGui::Button( SW_LOCKEY( "EdMeshModifiers", "AddModifier" ) );
+        optional<int32> addedIndex{};
+        const bool      bOpenMenu = ImGui::Button( SW_LOCKEY( "EdMeshModifiers", "AddModifier" ) );
         MeshModifiersPanelInternal::recordMark( pMarkPrefix, "add" );
         if ( bOpenMenu )
             EditorInputGUI::openPopup( "##AddModifier" );
@@ -500,11 +500,11 @@ namespace sw::editor
                         continue;
                     session.applyEdit( [&]
                     {
-                        const int32   newIndex = stack.addModifier( listRegistration[item]->_pID );
-                        MeshModifier* pAdded   = stack.findModifier( newIndex );
-                        if ( pAdded != nullptr )
-                            pAdded->fitToBounds( session.getSourceBounds() ); // 하위 스택이면 묶음 공간과 다를 수 있다 - 맞추기 단추로 다시 맞춘다
-                        addedIndex = newIndex;
+                        const expected<int32> newIndex = stack.addModifier( listRegistration[item]->_pID );
+                        if ( newIndex.has_value() == false )
+                            return;
+                        stack.findModifier( *newIndex )->fitToBounds( session.getSourceBounds() ); // 하위 스택이면 묶음 공간과 다를 수 있다 - 맞추기 단추로 다시 맞춘다
+                        addedIndex = *newIndex;
                     } );
                 }
                 ImGui::EndMenu();

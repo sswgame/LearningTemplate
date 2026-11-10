@@ -10,6 +10,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/GUI/Panel/EditorStateDocumentPanel.h"
@@ -58,10 +59,10 @@ namespace sw::editor
         void drawTargetRow( MeshModifierSession& session );
         void drawStackList( MeshModifierSession& session );
         /**
-         * @brief 추가 단추와 종류 메뉴를 그리고, 고르면 @p stack 맨 아래에 더합니다. 더한 번호를, 아니면 -1 을 반환합니다.
+         * @brief 추가 단추와 종류 메뉴를 그리고, 고르면 @p stack 맨 아래에 더합니다. 더한 번호를, 아니면 없음을 반환합니다.
          * @param pMarkPrefix 자동화 이름 접두(`<접두>.add` · `<접두>.category.<카테고리>` · `<접두>.item.<id>`)
          */
-        int32 drawAddMenu( MeshModifierSession& session, MeshModifierStack& stack, const utf8* pMarkPrefix );
+        optional<int32> drawAddMenu( MeshModifierSession& session, MeshModifierStack& stack, const utf8* pMarkPrefix );
         /**
          * @brief 스택의 줄(켜짐 · 이름 · 위/아래 · 삭제)을 그리고 바뀐 고른 번호를 반환합니다. 목록은 다 그린 뒤 고친다.
          * @param pMarkPrefix    줄 이름 칸의 자동화 이름 접두(`<접두>.<번호>`)

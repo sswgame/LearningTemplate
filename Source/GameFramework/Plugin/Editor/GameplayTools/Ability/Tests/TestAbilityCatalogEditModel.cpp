@@ -104,8 +104,7 @@ SW_TEST_CASE( AbilityCatalogEditModelTest, UsedEntriesStayAndNewEntriesAreUnique
     SW_EXPECT_FALSE( model.removeEntry( model.findEntry( AbilityEntryKind::Effect, "GE_Cost" ).value() ) );
     SW_EXPECT_FALSE( model.getDocument().getError().empty() );
 
-    const int32 added = model.addEntry( AbilityEntryKind::Effect );
-    SW_REQUIRE_TRUE( added >= 0 );
+    const int32 added = model.addEntry( AbilityEntryKind::Effect ).value();
     SW_EXPECT_TRUE( model.getEntries()[static_cast<size_t>( added )]._kind == AbilityEntryKind::Effect );
     SW_EXPECT_FALSE( model.findEntry( AbilityEntryKind::Effect, "" ).has_value() );
     SW_EXPECT_TRUE( model.removeEntry( added ) );

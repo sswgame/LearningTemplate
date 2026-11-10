@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
@@ -32,10 +33,10 @@ namespace sw::editor
 
         MeshModifierStack();
 
-        /** @brief id 의 기본값 모디파이어를 맨 아래에 더하고 그 번호를 반환합니다. 모르는 id 면 -1 입니다. */
-        int32 addModifier( string_view typeID );
-        /** @brief 이미 만든 모디파이어를 맨 아래에 더하고 그 번호를 반환합니다. */
-        int32 addModifier( unique_ptr<MeshModifier> modifier );
+        /** @brief id 의 기본값 모디파이어를 맨 아래에 더하고 그 번호를 반환합니다. 모르는 id 면 이유를 돌려줍니다. */
+        [[nodiscard]] expected<int32> addModifier( string_view typeID );
+        /** @brief 이미 만든 모디파이어를 맨 아래에 더하고 그 번호를 반환합니다. nullptr 이면 이유를 돌려줍니다. */
+        [[nodiscard]] expected<int32> addModifier( unique_ptr<MeshModifier> modifier );
         /** @brief 번호의 모디파이어를 뺍니다. 범위 밖이면 false 입니다. */
         [[nodiscard]] bool removeModifier( int32 index );
         /** @brief 한 칸 위(먼저 걸리는 쪽)로 옮깁니다. 맨 위거나 범위 밖이면 false 입니다. */
