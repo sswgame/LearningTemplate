@@ -77,23 +77,27 @@ namespace sw
             }
 
             /**
-             * @brief 청크 하나를 시작합니다 — 이 스레드의 틱 상태에 대기 칸 목록을 한 번 넣어 둡니다(세터가 스레드 슬롯을 다시 묻지 않게).
-             * @details 청크 도중 이 스레드가 기다리며 다른 틱 청크를 돌면 그 청크의 끝이 상태를 비운다. 그 뒤의 세터는 쓰기 큐로 가므로 결과는 같다.
+             * @brief 청크 하나의 틱 상태 구간입니다 — 이 스레드의 틱 상태에 대기 칸 목록 · 디스패치 순번을 넣고, 끝날 때 **들어올 때의 상태로 되돌립니다.**
+             * @details 틱 본문 안의 중첩 `runParallel` 이 기다리며 다른 틱 청크를 도울 수 있다. 예전에는 그 청크의 끝이 상태를 비워, 돌아온 바깥 틱의 남은
+             *          세터가 주인 없는 쓰기(writerID 0)가 되어 순서 키가 틀어졌다. 되돌리기로 중첩이 바깥 상태를 지우는 모양 자체를 없앤다.
              */
-            static TickThreadState& beginRange( SceneTransformHierarchy& hierarchy )
+            struct TickThreadScope
             {
-                TickThreadState& threadState  = StructuralChangeBuffer::getThreadState();
-                threadState._pPendingSlotList = hierarchy.findPendingSlotList();
-                return threadState;
-            }
+                TickThreadState& _threadState;
+                TickThreadState  _saved;
 
-            /** @brief 청크를 끝냅니다 — 틱 상태를 비웁니다(틱 밖의 세터가 대기 칸으로 가지 않게). */
-            static void endRange( TickThreadState& threadState )
-            {
-                threadState._pTickingObject   = nullptr;
-                threadState._pTickWriter      = nullptr;
-                threadState._pPendingSlotList = nullptr;
-            }
+                TickThreadScope( SceneTransformHierarchy& hierarchy, uint32 dispatchOrdinal )
+                    : _threadState{ StructuralChangeBuffer::getThreadState() }
+                    , _saved{ _threadState }
+                {
+                    _threadState._pPendingSlotList = hierarchy.findPendingSlotList();
+                    _threadState._dispatchOrdinal  = dispatchOrdinal;
+                }
+                ~TickThreadScope() { _threadState = _saved; }
+
+                TickThreadScope( const TickThreadScope& )            = delete;
+                TickThreadScope& operator=( const TickThreadScope& ) = delete;
+            };
 
             /**
              * @brief 한 그룹의 보통 길을 [start, end) 로 나눠 도는 잡 본문입니다. 워커는 포인터만 받습니다.
@@ -108,21 +112,21 @@ namespace sw
                 SceneTransformHierarchy* _pHierarchy{ nullptr };
                 uint32                   _entryCount{ 0 };
                 uint32                   _batchListCount{ 0 };
+                uint32                   _dispatchOrdinal{ 0 };
                 float32                  _deltaTime{ 0.0f };
 
                 void tickRange( uint32 start, uint32 end )
                 {
                     // 청크 하나의 CPU 시간이다. 모든 스레드의 합이라 `GT.Scene.tick.components`(벽시계)와 비교하면 병렬 효율이 보인다.
                     SW_PROFILE_SCOPE( "GT.Scene.tick.objectRange" );
-                    TickThreadState& threadState = beginRange( *_pHierarchy );
-                    const uint32     entryEnd    = MathUtil::min( end, _entryCount );
+                    const TickThreadScope scope{ *_pHierarchy, _dispatchOrdinal };
+                    const uint32          entryEnd = MathUtil::min( end, _entryCount );
                     for ( uint32 index = start; index < entryEnd; ++index )
                     {
-                        tickEntry( threadState, _deltaTime, _pEntry[index] );
+                        tickEntry( scope._threadState, _deltaTime, _pEntry[index] );
                     }
                     if ( end > _entryCount )
-                        tickBatchRange( threadState, MathUtil::max( start, _entryCount ), end );
-                    endRange( threadState );
+                        tickBatchRange( scope._threadState, MathUtil::max( start, _entryCount ), end );
                 }
 
                 /** @brief 일괄 번호 [start, end) 를 목록마다 잘라 그 타입의 함수에 넘깁니다. */
@@ -149,11 +153,13 @@ namespace sw
             {
                 const TickItem*          _pItem{ nullptr };
                 SceneTransformHierarchy* _pHierarchy{ nullptr };
+                uint32                   _dispatchOrdinal{ 0 };
                 float32                  _deltaTime{ 0.0f };
 
                 void tickRange( uint32 start, uint32 end )
                 {
-                    TickThreadState& threadState = beginRange( *_pHierarchy );
+                    const TickThreadScope scope{ *_pHierarchy, _dispatchOrdinal };
+                    TickThreadState&      threadState = scope._threadState;
                     for ( uint32 index = start; index < end; ++index )
                     {
                         const TickItem& item               = _pItem[index];
@@ -169,7 +175,6 @@ namespace sw
                         threadState._pTickWriter    = pOwner;
                         runTickItem( _deltaTime, item );
                     }
-                    endRange( threadState );
                 }
             };
         };
@@ -187,6 +192,7 @@ namespace sw
         , _tickRegistry{}
         , _listBatchStart{}
         , _stageTransformApplyCount{ 0 }
+        , _dispatchOrdinal{ 0 }
     {
     }
 
@@ -253,13 +259,14 @@ namespace sw
                 SW_PROFILE_COUNT( "GT.Scene.tick.objectEntries", entryCount );
                 SW_PROFILE_COUNT( "GT.Scene.tick.batchElements", totalCount - entryCount );
                 SceneTickSchedulerInternal::ObjectGroupTick job{};
-                job._pEntry         = listEntry.data();
-                job._pBatchList     = listBatch.data();
-                job._pBatchStart    = _listBatchStart.data();
-                job._pHierarchy     = _pHierarchy;
-                job._entryCount     = entryCount;
-                job._batchListCount = static_cast<uint32>( listBatch.size() );
-                job._deltaTime      = deltaTime;
+                job._pEntry          = listEntry.data();
+                job._pBatchList      = listBatch.data();
+                job._pBatchStart     = _listBatchStart.data();
+                job._pHierarchy      = _pHierarchy;
+                job._entryCount      = entryCount;
+                job._batchListCount  = static_cast<uint32>( listBatch.size() );
+                job._dispatchOrdinal = ++_dispatchOrdinal;
+                job._deltaTime       = deltaTime;
                 SceneTickSchedulerInternal::dispatch( totalCount, SW_DELEGATE_METHOD( ParallelBlockDelegate, &SceneTickSchedulerInternal::ObjectGroupTick::tickRange, &job ) );
             }
 
@@ -277,9 +284,10 @@ namespace sw
                 if ( stage._bApplyBefore == SW_TRUE )
                     applyStageTransforms();
                 SceneTickSchedulerInternal::StageTick job{};
-                job._pItem      = stage._listItem.data();
-                job._pHierarchy = _pHierarchy;
-                job._deltaTime  = deltaTime;
+                job._pItem           = stage._listItem.data();
+                job._pHierarchy      = _pHierarchy;
+                job._dispatchOrdinal = ++_dispatchOrdinal;
+                job._deltaTime       = deltaTime;
                 SceneTickSchedulerInternal::dispatch( static_cast<uint32>( stage._listItem.size() ),
                                                       SW_DELEGATE_METHOD( ParallelBlockDelegate, &SceneTickSchedulerInternal::StageTick::tickRange, &job ) );
             }

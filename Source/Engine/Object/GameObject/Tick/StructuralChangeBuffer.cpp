@@ -167,9 +167,4 @@ namespace sw
     {
         return t_tickThreadState._pTickingObject;
     }
-
-    const GameObject* StructuralChangeBuffer::getTickWriter()
-    {
-        return t_tickThreadState._pTickWriter;
-    }
 } // namespace sw

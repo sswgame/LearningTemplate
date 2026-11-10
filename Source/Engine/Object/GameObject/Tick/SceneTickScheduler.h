@@ -68,5 +68,6 @@ namespace sw
         TickRegistry             _tickRegistry;
         vector<uint32>           _listBatchStart;           ///< 한 그룹의 디스패치에서 일괄 목록마다 시작 번호(끝에 전체 수). 할당을 재사용한다
         uint32                   _stageTransformApplyCount; ///< 스테이지 경계 적용 횟수(진단)
+        uint32                   _dispatchOrdinal;          ///< 디스패치마다 오르는 순번(`TickThreadState::_dispatchOrdinal` — 같은 오브젝트가 디스패치마다 다른 스레드에서 쓴 건의 선후). 되감지 않는다
     };
 } // namespace sw

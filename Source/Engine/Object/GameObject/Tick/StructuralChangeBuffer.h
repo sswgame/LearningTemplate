@@ -76,6 +76,12 @@ namespace sw
         const GameObject* _pTickingObject{ nullptr }; ///< 이 스레드가 지금 틱하는 오브젝트 — 그 오브젝트의 대기 칸에 잠금 없이 쓴다
         const GameObject* _pTickWriter{ nullptr };    ///< 지금 도는 틱의 주인 오브젝트 — 다른 오브젝트에 쓴 건의 순서 키
         /**
+         * @brief 지금 도는 디스패치(파도 · 레인 · 스테이지 하나)의 단계 안 순번입니다 — 다른 오브젝트에 쓴 건의 둘째 순서 키(쓴 오브젝트 다음).
+         * @details 한 오브젝트의 항목이 파도 · 스테이지마다 다른 스레드에서 돌 수 있어, 스레드 순번만으로는 같은 오브젝트가 앞뒤로 쓴 건의 선후를 가리지 못한다.
+         *          디스패치는 장벽으로 나뉘므로 이 순번이 그 선후다(유니티 `EntityCommandBuffer` 의 sortKey 가 청크 순번인 자리).
+         */
+        uint32 _dispatchOrdinal{ 0 };
+        /**
          * @brief 이 스레드의 대기 칸 목록입니다(`SceneTransformHierarchy::findPendingSlotList`). 틱 디스패치가 청크마다 한 번 채운다.
          * @details 세터가 칸 번호를 올릴 때마다 스레드 슬롯을 다시 묻지 않게 한다. nullptr 이면(슬롯을 못 받았거나 틱 청크 밖) 세터는 쓰기 큐로 간다.
          */
@@ -139,8 +145,6 @@ namespace sw
         static TickThreadState& getThreadState();
         /** @brief 이 스레드가 지금 틱하는 오브젝트입니다. 틱 밖에서는 nullptr 입니다. */
         static const GameObject* getTickingObject();
-        /** @brief 이 스레드에서 지금 도는 틱의 주인 오브젝트입니다. 틱 밖에서는 nullptr 입니다. */
-        static const GameObject* getTickWriter();
 
     private:
         atomic<bool>          _bFrozen;                  ///< 컴포넌트 틱 중(`isFrozen`)

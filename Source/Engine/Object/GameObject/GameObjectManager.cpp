@@ -701,10 +701,10 @@ namespace sw
 
     void GameObjectManager::queueTransformWrite( const SceneTransformWrite& write )
     {
-        // 순서 키는 이 쓰기를 낸 틱의 주인 오브젝트다 — 여러 오브젝트의 틱이 한 컴포넌트에 쓰면 id 가 큰 쪽이 이긴다.
-        const GameObject* pTickWriter = StructuralChangeBuffer::getTickWriter();
-        const uint64      writerID    = ( pTickWriter != nullptr ) ? pTickWriter->getObjectID() : 0;
-        if ( _transformHierarchy.queueWriteParallel( write, writerID ) )
+        // 순서 키는 이 쓰기를 낸 틱의 주인 오브젝트다 — 여러 오브젝트의 틱이 한 컴포넌트에 쓰면 id 가 큰 쪽이 이긴다. 같은 주인의 건끼리는 디스패치 순번이 선후다.
+        const TickThreadState& threadState = StructuralChangeBuffer::getThreadState();
+        const uint64           writerID    = ( threadState._pTickWriter != nullptr ) ? threadState._pTickWriter->getObjectID() : 0;
+        if ( _transformHierarchy.queueWriteParallel( write, writerID, threadState._dispatchOrdinal ) )
             return;
 
         // 이 스레드가 스크래치 슬롯을 받지 못했다(도우미 칸이 다 찬 드문 경우). 계층 변경과 같은 지연 경로로 가서, 틱 뒤에 한 건짜리 배치로 적용한다.
