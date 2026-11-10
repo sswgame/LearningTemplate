@@ -47,6 +47,7 @@
 #include "Engine/Navigation/Scene/NavGeometryCollector.h"
 #include "Engine/Navigation/Scene/NavPathSolver.h"
 #include "Engine/Navigation/Scene/NavTileRebaker.h"
+#include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/Service/ISceneService.h"
 
 namespace sw
@@ -323,9 +324,11 @@ namespace sw
         vector<AreaCostOverride>             _listAreaCostOverride; ///< 에이전트 종류별 영역 비용 · 통행 덮어쓰기(씬을 비울 때까지)
         NavTileRebaker                       _tileRebaker;
         NavDebugView                         _debugView;
-        NavPathSolver                        _pathSolver; ///< `_pathQueue` 의 풀이(이 내비게이션의 내비메시 표를 읽는다) — 줄보다 먼저 선언한다
-        PathRequestQueue<NavPathSolver>      _pathQueue;  ///< 비동기 경로 요청(⓪ 수확 · ④ 넘기기)
-        TaskStageHandle                      _crowdStage; ///< ⑤ 에서 넘긴 군중 진행 일 전부(`completeFrameJob` · `waitCrowdUpdates` 가 기다린다)
+        NavPathSolver                        _pathSolver;              ///< `_pathQueue` 의 풀이(이 내비게이션의 내비메시 표를 읽는다) — 줄보다 먼저 선언한다
+        PathRequestQueue<NavPathSolver>      _pathQueue;               ///< 비동기 경로 요청(⓪ 수확 · ④ 넘기기)
+        TaskStageHandle                      _crowdStage;              ///< ⑤ 에서 넘긴 군중 진행 일 전부(`completeFrameJob` · `waitCrowdUpdates` 가 기다린다)
+        vector<SceneTransformWrite>          _listAgentTransformWrite; ///< ⑥ 에서 모은 부모 없는 에이전트의 자리 · 회전 쓰기(`applyTransformBatch` 한 번 — 할당을 재사용한다)
+        vector<NavMeshAgentComponent*>       _listWrittenAgent;        ///< ⑥ 에서 결과를 쓴 에이전트(쓰기를 펼친 뒤 쓴 번호를 적는다)
         GameObjectManager*                   _pManager;
         uint32                               _waitingMeshCount; ///< 이번 갱신에 마련을 미룬(`NavMeshArrival::Defer`) 모으기들이 센, 아직 읽는 중인 메시 수. 갱신 첫머리에 0 으로 돌린다
         float32                              _crowdDeltaTime;   ///< ⑤ 에서 넘긴 진행의 시간 — ⑥ 의 몸 돌리기가 같은 값을 쓴다

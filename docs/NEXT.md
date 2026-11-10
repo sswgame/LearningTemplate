@@ -57,7 +57,6 @@ GameObject/Component API 는 저작 · 수명 · 직렬화 층, 프레임 일은
 - **컴포넌트 틱의 컨텍스트:** Batch 레인의 `onTick` 도 `SceneJobContext` 형식(읽기 전용 남의 오브젝트 + 명령 버퍼)으로 — 남의 컴포넌트 직접 쓰기를 컴파일에서 막는다. 102 개 타입 서명이 바뀐다(`TickBatchRegistry.h` 머리말).
 - **서비스 갱신 병렬화:** 같은 단계 서비스 갱신을 접근이 겹치지 않는 것끼리 워커로 — 본문의 게임 스레드 전용 API 를 서명으로 먼저 가린다.
 - **물리 훅 배치:** 훅 4 종(`beginPhysicsFrame` · `prePhysicsStep` · `postPhysicsStep` · `endPhysicsFrame`, 재정의 타입 12)을 생성된 `SW_REGISTER_PHYSICS_HOOKS( 타입 )` 배치 함수로(재정의 여부는 `&T::hook` 의 클래스 형식으로 컴파일에서).
-- **SoA 다음 사용자:** 군중(`NavAgentCrowdSync`)의 에이전트별 `setWorldPosition` 을 `queuePoseWrite` · `applyTransformBatch` 일괄 쓰기로.
 - **공간 질의:** 근접 기믹 · 감지 · 넷 관심 격자를 `SceneSpatialGrid` 층으로 옮길지 측정 뒤.
 
 ### 5-4. 리플렉션 남은 것
