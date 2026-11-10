@@ -6,6 +6,7 @@
 
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 
+#include "Engine/Automation/Scenario/AutomationScratch.h"
 #include "Engine/Content/AssetPaths.h"
 
 namespace sw::editor
@@ -16,7 +17,9 @@ namespace sw::editor
         if ( pInfo == nullptr )
             return false;
         const string assetID = assetPaths.toAssetID( filePath );
-        if ( assetID.empty() )
+        // 다른 프로세스의 시나리오 사본(`scratch/<이름>_p<pid>/…` — 같은 체크아웃의 다른 App · 끝난 실행의 잔여)은 이 에디터의 에셋이 아니다.
+        // 색인에 넣으면 Quick Open 이 원본과 같은 파일 이름의 사본을 먼저 집어 시퀀서가 씬 플레이어를 찾지 못했다(파일 감시와 같은 규칙).
+        if ( assetID.empty() || AutomationScratch::isOtherProcessInstance( assetID ) )
             return false;
 
         outEntry._kind     = pInfo->getType();
