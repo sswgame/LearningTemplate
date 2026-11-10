@@ -33,7 +33,7 @@
 #include "Engine/Object/GameObject/Tick/SceneFrameStep.h"
 #include "Engine/Object/GameObject/Tick/SceneTickScheduler.h"
 #include "Engine/Object/GameObject/Tick/StructuralChangeBuffer.h"
-#include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Profiling/ProfileScopeID.h"
 
 namespace sw
 {
