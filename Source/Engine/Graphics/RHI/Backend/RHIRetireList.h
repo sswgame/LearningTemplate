@@ -1,9 +1,9 @@
 /**
  * @file RHIRetireList.h
- * @brief GPU 자원 지연 해제(프레임 은퇴)의 목록입니다. 항목을 은퇴 키(CPU 프레임 번호 · GPU 펜스 값 · draw 스냅샷 번호)와 함께 들고 있다가, 기준값이 그 키에 닿으면 넣은 순서대로 내줍니다.
+ * @brief GPU 자원 지연 해제(프레임 은퇴)의 목록입니다. 항목을 은퇴 키(GPU 펜스 값 · 렌더 스레드 프레임 수 · draw 스냅샷 번호)와 함께 들고 있다가, 기준값이 그 키에 닿으면 넣은 순서대로 내줍니다.
  * @details 일반 컨테이너(Core/Container)가 아니라 기능(RHI 지연 해제) 쪽에 둔다 — 언리얼 RHI 의 지연 삭제(펜스 · 프레임이 지난 뒤 자원을 놓는 줄)와
  *          Godot `RenderingDevice` 의 프레임별 dispose 목록이 렌더 하드웨어 층에 있는 것과 같은 자리다. 쓰는 곳은 모두 "기준값에 닿으면 놓는다" 는 은퇴 규칙이다:
- *          `RHIReleaseQueue`(CPU 프레임 · GPU 펜스), `IRHIDevice` 의 미룬 핸들(렌더 스레드가 끝낸 프레임 수), 에디터 draw 해제 큐(UI 스냅샷 번호).
+ *          `RHIReleaseQueue`(GPU 펜스), `IRHIDevice` 의 미룬 핸들(렌더 스레드가 끝낸 프레임 수), 에디터 draw 해제 큐(UI 스냅샷 번호).
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"

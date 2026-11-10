@@ -24,11 +24,11 @@ namespace sw
     {
     }
 
-    void RenderPSOCache::registerLayout( RHIPipelineStateHandle pso, const RHIPipelineStateDesc& desc, RHIBackend backend )
+    void RenderPSOCache::registerLayout( RHIPipelineStateHandle pso, const RHIPipelineStateDesc& desc, ShaderTargetFormat targetFormat )
     {
         if ( pso == 0 )
             return;
-        const ShaderBindingLayout& layout = _bindingLayoutCache.getOrBuild( desc, RHI::getShaderTargetFormat( backend ) );
+        const ShaderBindingLayout& layout = _bindingLayoutCache.getOrBuild( desc, targetFormat );
         ScopedLock<mutex>          lock{ _layoutMutex };
         _mapPSOLayout[pso] = &layout;
         _mapPSODesc[pso]   = desc;
@@ -187,7 +187,7 @@ namespace sw
                 setMaterialPSO( result._key, MaterialPSOEntry::failed() );
                 continue;
             }
-            registerLayout( result._handle, result._desc, pDevice->getBackendType() );
+            registerLayout( result._handle, result._desc, pDevice->getShaderTargetFormat() );
             setMaterialPSO( result._key, MaterialPSOEntry::ready( result._handle, true ) );
             ++readyCount;
         }

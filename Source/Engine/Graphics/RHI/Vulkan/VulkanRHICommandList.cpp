@@ -54,6 +54,7 @@ namespace sw
         // 백엔드끼리 값을 그대로 비교할 수 있다.
         vkCmdWriteTimestamp( _entry._buffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, pool,
                              _pDevice->getTimestampBase() + slotIndex );
+        _pDevice->markTimestampWritten( slotIndex );
     }
 
     void VulkanRHICommandList::beginCommandList()

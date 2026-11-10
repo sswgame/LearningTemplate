@@ -370,7 +370,7 @@ namespace sw
             appendShaderWarm( makeCookieAtlasPSODesc( engineDefaultAssets._shaderFullscreenBlit.get(), RHIFormat::R8G8B8A8_UNORM ), listShader );
             appendShaderWarm( makeLayerBakePSODesc( engineDefaultAssets._shaderLayerBake.get(), constant::render::kOffscreenColorFormat ), listShader );
         }
-        const ShaderTargetFormat targetFormat = RHI::getShaderTargetFormat( _pDevice->getBackendType() );
+        const ShaderTargetFormat targetFormat = _pDevice->getShaderTargetFormat();
         for ( const ComputePSOJob& computeJob : listComputeJob )
         {
             listShader.push_back( RHIShaderRequest::resolveCompute( computeJob._shaderPath, string_view( computeJob._entryPoint ), computeJob._listDefine, targetFormat ) );
@@ -489,7 +489,7 @@ namespace sw
             return;
         // gv_rhiBackend(전역) 대신 이 관리자가 실제로 물려 있는 디바이스의 백엔드를 넘긴다.
         // 한 프로세스에 여러 IRHIDevice 가 동시에 있으면 전역값이 어긋날 수 있다.
-        _pCache->registerLayout( pso, desc, _pDevice->getBackendType() );
+        _pCache->registerLayout( pso, desc, _pDevice->getShaderTargetFormat() );
     }
 
     const RenderGraphPassDesc* FramePSOManager::findPassDescByType( RenderPassType passType ) const
@@ -560,7 +560,7 @@ namespace sw
     void FramePSOManager::appendShaderWarm( const RHIPipelineStateDesc& desc, vector<ShaderCompileDesc>& inoutListShader ) const
     {
         // 백엔드 팩토리와 같은 해석이다(`RHIShaderRequest::resolveGraphics`) — 캐시 키가 같아 뒤의 생성이 적중한다.
-        RHIGraphicsShaderRequest request = RHIShaderRequest::resolveGraphics( desc, RHI::getShaderTargetFormat( _pDevice->getBackendType() ) );
+        RHIGraphicsShaderRequest request = RHIShaderRequest::resolveGraphics( desc, _pDevice->getShaderTargetFormat() );
         inoutListShader.push_back( std::move( request._vertex ) );
         if ( request._bHasPixelShader != SW_FALSE )
             inoutListShader.push_back( std::move( request._pixel ) );

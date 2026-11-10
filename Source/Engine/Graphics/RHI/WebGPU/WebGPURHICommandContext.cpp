@@ -404,8 +404,8 @@ namespace sw
 
     WGPUTextureView WebGPURHICommandContext::resolveSampledView( RHIDescriptorIndex index ) const
     {
-        const WebGPUBindlessEntry* pEntry   = _pDevice->_textureTable.find( index );
-        const WebGPUTextureRecord* pTexture = pEntry != nullptr ? _pDevice->findTexture( pEntry->_handle ) : nullptr;
+        const WebGPUBindlessEntry  entry    = _pDevice->findBindless( _pDevice->_textureTable, index );
+        const WebGPUTextureRecord* pTexture = entry._handle != 0 ? _pDevice->findTexture( entry._handle ) : nullptr;
         if ( pTexture == nullptr )
             return _pDevice->_defaultTextureView;
         // 깊이 텍스처의 샘플 뷰는 R32 사본이다 — 이 프레임에 채우지 않았으면 지난 깊이(또는 0)를 읽는다. 부르는 쪽이 `prepareTextureForShaderRead` 를 빠뜨렸다.
@@ -428,18 +428,18 @@ namespace sw
         {
             if ( binding >= wgpu::kUShift )
             {
-                const uint32               slot   = binding - wgpu::kUShift;
-                const WebGPUBindlessEntry* pEntry = slot < wgpu::kURange ? _pDevice->_uavTable.find( slots._arrUnorderedAccess[slot] ) : nullptr;
-                if ( pEntry != nullptr && pEntry->_bTexture != SW_FALSE )
+                const uint32              slot  = binding - wgpu::kUShift;
+                const WebGPUBindlessEntry entry = slot < wgpu::kURange ? _pDevice->findBindless( _pDevice->_uavTable, slots._arrUnorderedAccess[slot] ) : WebGPUBindlessEntry{};
+                if ( entry._handle != 0 && entry._bTexture != SW_FALSE )
                 {
-                    const WebGPUTextureRecord* pTexture = _pDevice->findTexture( pEntry->_handle );
+                    const WebGPUTextureRecord* pTexture = _pDevice->findTexture( entry._handle );
                     if ( pTexture != nullptr && pTexture->_listSliceView.empty() == false )
                     {
                         listEntry.push_back( Internal::makeTextureEntry( binding, pTexture->_listSliceView[0] ) );
                         continue;
                     }
                 }
-                const WebGPUBufferRecord* pBuffer = pEntry != nullptr && pEntry->_bTexture == SW_FALSE ? _pDevice->_buffers.get( pEntry->_handle ) : nullptr;
+                const WebGPUBufferRecord* pBuffer = entry._handle != 0 && entry._bTexture == SW_FALSE ? _pDevice->_buffers.get( entry._handle ) : nullptr;
                 if ( pBuffer == nullptr )
                 {
                     // 셰이더가 쓰는 쓰기 자리를 엔진이 걸지 않았다 — 빈 버퍼에 쓴다. DX11 · GL 도 안 걸린 UAV 쓰기를 버린다(같은 결과).
@@ -467,8 +467,8 @@ namespace sw
                     listEntry.push_back( Internal::makeTextureEntry( binding, resolveSampledView( index ) ) );
                     continue;
                 }
-                const WebGPUBindlessEntry* pEntry  = _pDevice->_bufferTable.find( index );
-                const WebGPUBufferRecord*  pBuffer = pEntry != nullptr ? _pDevice->_buffers.get( pEntry->_handle ) : nullptr;
+                const WebGPUBindlessEntry entry   = _pDevice->findBindless( _pDevice->_bufferTable, index );
+                const WebGPUBufferRecord* pBuffer = entry._handle != 0 ? _pDevice->_buffers.get( entry._handle ) : nullptr;
                 // 안 걸린 읽기 버퍼는 빈 버퍼다 — 셰이더는 PassCB 의 인덱스가 무효면 읽지 않는다(DX11 · GL 의 빈 SRV 와 같다).
                 listEntry.push_back( pBuffer != nullptr ? Internal::makeBufferEntry( binding, pBuffer->_buffer, 0, pBuffer->_sizeBytes )
                                                         : Internal::makeBufferEntry( binding, _pDevice->_defaultBuffer, 0, WGPU_WHOLE_SIZE ) );
@@ -487,8 +487,8 @@ namespace sw
                 listEntry.push_back( Internal::makeBufferEntry( binding, slots._rootSliceBuffer, slots._rootSliceOffset, sizeof( slots._arrRootConstant ) ) );
                 continue;
             }
-            const WebGPUBindlessEntry* pEntry  = slot < wgpu::kBRange ? _pDevice->_bufferTable.find( slots._arrConstantBuffer[slot] ) : nullptr;
-            const WebGPUBufferRecord*  pBuffer = pEntry != nullptr ? _pDevice->_buffers.get( pEntry->_handle ) : nullptr;
+            const WebGPUBindlessEntry entry   = slot < wgpu::kBRange ? _pDevice->findBindless( _pDevice->_bufferTable, slots._arrConstantBuffer[slot] ) : WebGPUBindlessEntry{};
+            const WebGPUBufferRecord* pBuffer = entry._handle != 0 ? _pDevice->_buffers.get( entry._handle ) : nullptr;
             if ( pBuffer == nullptr )
             {
                 listEntry.push_back( Internal::makeBufferEntry( binding, _pDevice->_defaultBuffer, 0, WGPU_WHOLE_SIZE ) );

@@ -3,7 +3,6 @@
 #include "Engine/Graphics/RHI/DX/DX11/D3D11RHIResourceFactory.h"
 
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/IndexFreeList.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
@@ -266,22 +265,16 @@ namespace sw
             return;
 
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
-        for ( size_t bindlessIndex = 0; bindlessIndex < _pDevice->_listRegisteredBindless.size(); ++bindlessIndex )
-        {
-            if ( _pDevice->_listRegisteredBindless[bindlessIndex] != buffer )
-                continue;
-            _pDevice->_freeBindless.release( _pDevice->_listRegisteredBindless, static_cast<uint32>( bindlessIndex ), RHIBufferHandle{ 0 } );
-        }
-        for ( size_t bufferIndex = 0; bufferIndex < _pDevice->_listUAVSourceBuffer.size(); ++bufferIndex )
-        {
-            if ( _pDevice->_listUAVSourceBuffer[bufferIndex] != buffer )
-                continue;
-            _pDevice->_listRegisteredUAV[bufferIndex].Reset();
-            _pDevice->_freeUAV.release( _pDevice->_listUAVSourceBuffer, static_cast<uint32>( bufferIndex ), RHIBufferHandle{ 0 } );
-        }
+        const auto               ignore = []( RHIDescriptorIndex ) {};
+        _pDevice->_bufferRegistry.releaseIf( RHIBindlessReuse::Immediately, [buffer]( RHIBufferHandle entry )
+        { return entry == buffer; },
+                                             ignore );
+        _pDevice->_uavRegistry.releaseIf( RHIBindlessReuse::Immediately, [buffer]( const D3D11RHIDevice::UAVEntry& entry )
+        { return entry._sourceBuffer == buffer; },
+                                          ignore );
 
         // 추적기는 자원을 실제로 놓을 때 줄인다(해제 요청 시점이 아니라). SRV 도 버퍼와 함께 그때 놓인다.
-        _pDevice->_releaseQueue.enqueueTrackedRelease<RHIMemoryKeySpace::Buffer>( owned, _pDevice->getMemoryTracker(), buffer );
+        _pDevice->_releaseQueue.enqueueGPUTrackedRelease<RHIMemoryKeySpace::Buffer>( owned, _pDevice->getMemoryTracker(), buffer, _pDevice->_frameFenceRing.getRecordingSerial() );
     }
 
     RHIBufferHandle D3D11RHIResourceFactory::createReadbackBuffer( uint32 elementSize, uint32 elementCount )
@@ -515,6 +508,7 @@ namespace sw
         if ( ticket._deviceGeneration != _pDevice->_transferSerials.getGeneration() )
             return;
         // 진행 중인 복사가 쓰는 스테이징은 COM 참조가 GPU 가 끝날 때까지 붙들어 준다. 표에서 빼고 참조를 놓으면 된다.
+        // 링 구간 꼬리(`RHITextureTransferDriver::releaseDiscardedReadback`)를 쓰지 않는 까닭: D3D11 은 텍스처를 버퍼로 복사하지 못해 되읽기마다 스테이징 텍스처다 — 다시 쓸 구간이 없다.
         D3D11RHIDevice::TextureReadbackRecord readback;
         (void)_pDevice->_readbackTable.take( ticket._serial, readback ); // 없으면 업로드 티켓이거나 이미 가져감 · 버림이다 — 계약상 아무 일도 하지 않는다
     }
@@ -762,12 +756,9 @@ namespace sw
 
         {
             UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
-            for ( size_t textureIndex = 0; textureIndex < _pDevice->_listRegisteredTexture.size(); ++textureIndex )
-            {
-                if ( _pDevice->_listRegisteredTexture[textureIndex] != texture )
-                    continue;
-                _pDevice->_freeTexture.release( _pDevice->_listRegisteredTexture, static_cast<uint32>( textureIndex ), RHITextureHandle{ 0 } );
-            }
+            _pDevice->_textureRegistry.releaseIf( RHIBindlessReuse::Immediately, [texture]( RHITextureHandle entry )
+            { return entry == texture; },
+                                                  []( RHIDescriptorIndex ) {} );
         }
 
         D3D11RHIDevice::TextureRecord owned;
@@ -775,7 +766,7 @@ namespace sw
             return;
 
         // 추적기는 자원을 실제로 놓을 때 줄인다(해제 요청 시점이 아니라).
-        _pDevice->_releaseQueue.enqueueTrackedRelease<RHIMemoryKeySpace::Texture>( owned, _pDevice->getMemoryTracker(), texture );
+        _pDevice->_releaseQueue.enqueueGPUTrackedRelease<RHIMemoryKeySpace::Texture>( owned, _pDevice->getMemoryTracker(), texture, _pDevice->_frameFenceRing.getRecordingSerial() );
     }
 
     bool D3D11RHIResourceFactory::isTextureReadyToSample( RHITextureHandle texture )
@@ -805,7 +796,7 @@ namespace sw
         }
 
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        return _pDevice->_freeTexture.allocate( _pDevice->_listRegisteredTexture, texture );
+        return _pDevice->_textureRegistry.allocate( texture );
     }
 
     RHIDescriptorIndex D3D11RHIResourceFactory::registerBindlessBufferSRV( RHIBufferHandle buffer )
@@ -818,22 +809,22 @@ namespace sw
         if ( pResource == nullptr )
             return kInvalidDescriptorIndex;
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        return _pDevice->_freeBindless.allocate( _pDevice->_listRegisteredBindless, buffer );
+        return _pDevice->_bufferRegistry.allocate( buffer );
     }
 
     void D3D11RHIResourceFactory::unregisterBindlessResource( RHIDescriptorIndex index )
     {
         _pDevice->requireRegistryMutableNow( "unregisterBindlessResource" );
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        // 이중 해제 가드는 `IndexFreeList::release` 안에 있다.
-        _pDevice->_freeBindless.release( _pDevice->_listRegisteredBindless, index, RHIBufferHandle{ 0 } );
+        // 이중 해제 · 다른 공간 번호는 `RHIBindlessRegistry::release` 가 거절한다.
+        (void)_pDevice->_bufferRegistry.release( index, RHIBindlessReuse::Immediately );
     }
 
     void D3D11RHIResourceFactory::unregisterBindlessTexture( RHIDescriptorIndex index )
     {
         _pDevice->requireRegistryMutableNow( "unregisterBindlessTexture" );
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        _pDevice->_freeTexture.release( _pDevice->_listRegisteredTexture, index, RHITextureHandle{ 0 } );
+        (void)_pDevice->_textureRegistry.release( index, RHIBindlessReuse::Immediately );
     }
 
     RHIDescriptorIndex D3D11RHIResourceFactory::registerBindlessBufferUAV( RHIBufferHandle buffer )
@@ -892,28 +883,17 @@ namespace sw
     RHIDescriptorIndex D3D11RHIResourceFactory::registerUAVView( ID3D11UnorderedAccessView* pUAV, RHIBufferHandle sourceBuffer )
     {
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        RHIDescriptorIndex       index{ 0 };
-        if ( _pDevice->_freeUAV.tryPop( index ) )
-        {
-            _pDevice->_listRegisteredUAV[index]   = pUAV;
-            _pDevice->_listUAVSourceBuffer[index] = sourceBuffer;
-            return index;
-        }
-        index = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAV.size() );
-        _pDevice->_listRegisteredUAV.push_back( pUAV );
-        _pDevice->_listUAVSourceBuffer.push_back( sourceBuffer );
-        return index;
+        D3D11RHIDevice::UAVEntry entry{};
+        entry._uav          = pUAV;
+        entry._sourceBuffer = sourceBuffer;
+        return _pDevice->_uavRegistry.allocate( entry );
     }
 
     void D3D11RHIResourceFactory::unregisterBindlessUAV( RHIDescriptorIndex index )
     {
         _pDevice->requireRegistryMutableNow( "unregisterBindlessUAV" );
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        if ( index >= _pDevice->_listRegisteredUAV.size() || _pDevice->_listRegisteredUAV[index] == nullptr )
-            return;
-        _pDevice->_listRegisteredUAV[index].Reset();
-        _pDevice->_listUAVSourceBuffer[index] = RHIBufferHandle{ 0 };
-        _pDevice->_freeUAV.push( index );
+        (void)_pDevice->_uavRegistry.release( index, RHIBindlessReuse::Immediately );
     }
 
     RHIPipelineStateHandle D3D11RHIResourceFactory::createPipelineStateNative( const RHIPipelineStateDesc& desc )

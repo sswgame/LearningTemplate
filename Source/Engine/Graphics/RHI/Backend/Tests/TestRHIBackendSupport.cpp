@@ -9,7 +9,9 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Graphics/RHI/Backend/RHIBindlessRegistry.h"
 #include "Engine/Graphics/RHI/Backend/RHIConstantBufferMirror.h"
+#include "Engine/Graphics/RHI/Backend/RHIFrameFenceRing.h"
 #include "Engine/Graphics/RHI/Backend/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Backend/RHIShaderRequest.h"
@@ -20,42 +22,17 @@
 using namespace sw;
 
 /**
- * @brief [RHIReleaseQueueTest] 지연 해제는 정한 프레임 수가 지난 뒤에만 부른다
- */
-SW_TEST_CASE( RHIReleaseQueueTest, LatencyRelease )
-{
-    RHIReleaseQueue queue( 3 );
-    SW_EXPECT_EQUAL( 0u, queue.getPendingReleaseCount() );
-
-    bool                       bDestroyed{ false };
-    RHIResourceReleaseDelegate releaseDel = SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [&bDestroyed]()
-    { bDestroyed = true; } );
-
-    queue.enqueueRelease( releaseDel );
-    SW_EXPECT_EQUAL( 1u, queue.getPendingReleaseCount() );
-    SW_EXPECT_FALSE( bDestroyed );
-
-    queue.tickFrame();
-    SW_EXPECT_FALSE( bDestroyed );
-    queue.tickFrame();
-    SW_EXPECT_FALSE( bDestroyed );
-    queue.tickFrame();
-    SW_EXPECT_TRUE( bDestroyed );
-    SW_EXPECT_EQUAL( 0u, queue.getPendingReleaseCount() );
-}
-
-/**
- * @brief [RHIReleaseQueueTest] `flushAll` 은 기한과 무관하게 남은 해제를 모두 부른다
+ * @brief [RHIReleaseQueueTest] `flushAll` 은 펜스와 무관하게 남은 해제를 모두 부른다
  */
 SW_TEST_CASE( RHIReleaseQueueTest, FlushAll )
 {
-    RHIReleaseQueue            queue( 5 );
+    RHIReleaseQueue            queue;
     int32                      releaseCount{ 0 };
     RHIResourceReleaseDelegate releaseDel = SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [&releaseCount]()
     { ++releaseCount; } );
 
-    queue.enqueueRelease( releaseDel );
-    queue.enqueueRelease( releaseDel );
+    queue.enqueueGPURelease( releaseDel, 7 );
+    queue.enqueueGPURelease( releaseDel, 9 );
     SW_EXPECT_EQUAL( 2u, queue.getPendingReleaseCount() );
 
     queue.flushAll();
@@ -64,11 +41,11 @@ SW_TEST_CASE( RHIReleaseQueueTest, FlushAll )
 }
 
 /**
- * @brief [RHIReleaseQueueTest] GPU 펜스가 그 값에 닿기 전에는 해제하지 않는다(프레임이 지나도)
+ * @brief [RHIReleaseQueueTest] GPU 펜스가 그 값에 닿기 전에는 해제하지 않는다
  */
 SW_TEST_CASE( RHIReleaseQueueTest, GPUFenceRelease )
 {
-    RHIReleaseQueue            queue( 3 );
+    RHIReleaseQueue            queue;
     bool                       bDestroyed{ false };
     RHIResourceReleaseDelegate releaseDel = SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [&bDestroyed]()
     { bDestroyed = true; } );
@@ -77,46 +54,118 @@ SW_TEST_CASE( RHIReleaseQueueTest, GPUFenceRelease )
     SW_EXPECT_EQUAL( 1u, queue.getPendingReleaseCount() );
     queue.tickCompleted( 3 );
     SW_EXPECT_FALSE( bDestroyed );
-    queue.tickFrame();
-    SW_EXPECT_FALSE( bDestroyed );
     queue.tickCompleted( 4 );
     SW_EXPECT_TRUE( bDestroyed );
     SW_EXPECT_EQUAL( 0u, queue.getPendingReleaseCount() );
 }
 
 /**
- * @brief [RHIReleaseQueueTest] 두 스레드가 tickFrame · tickCompleted 를 동시에 불러도 콜백이 한 번씩만 돈다
+ * @brief [RHIReleaseQueueTest] 두 스레드가 tickCompleted 를 동시에 불러도 콜백이 한 번씩만 돈다
  * @details DX12 는 렌더 스레드의 endFrame 과 리소스를 만드는 스레드의 업로드 펜스 대기가 둘 다 tickCompleted 를 부른다.
  *          스크래치 목록을 잠금 없이 바꾸던 때는 두 tick 이 같은 벡터를 동시에 만졌다.
  */
 SW_TEST_CASE( RHIReleaseQueueTest, ConcurrentTicksRunEachCallbackOnce )
 {
     constexpr uint32 kCount = 2000;
-    RHIReleaseQueue  queue( 1 );
+    RHIReleaseQueue  queue;
     atomic<uint32>   calledCount{ 0 };
     for ( uint32 index = 0; index < kCount; ++index )
     {
         RHIResourceReleaseDelegate releaseDel = SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [&calledCount]()
         { calledCount.fetch_add( 1u, std::memory_order_relaxed ); } );
-        if ( ( index & 1u ) == 0 )
-            queue.enqueueRelease( releaseDel );
-        else
-            queue.enqueueGPURelease( releaseDel, index );
+        queue.enqueueGPURelease( releaseDel, index );
     }
-    std::thread frameThread( [&queue]()
+    std::thread otherThread( [&queue]()
     {
         for ( uint32 index = 0; index < kCount; ++index )
         {
-            queue.tickFrame();
+            queue.tickCompleted( index );
         }
     } );
     for ( uint32 index = 0; index < kCount; ++index )
     {
         queue.tickCompleted( index );
     }
-    frameThread.join();
+    otherThread.join();
     SW_EXPECT_EQUAL( kCount, calledCount.load() );
     SW_EXPECT_EQUAL( 0u, queue.getPendingReleaseCount() );
+}
+
+/**
+ * @brief [RHIBindlessRegistryTest] 펜스 뒤 재사용 칸은 finishRelease 전에는 다시 나가지 않고, 이중 해제 · 상한 초과는 거절한다
+ */
+SW_TEST_CASE( RHIBindlessRegistryTest, DefersReuseAndRejectsDoubleRelease )
+{
+    RHIBindlessRegistry<uint64> registry( 2 );
+    const RHIDescriptorIndex    first  = registry.allocate( 11 );
+    const RHIDescriptorIndex    second = registry.allocate( 22 );
+    SW_EXPECT_EQUAL( 0u, first );
+    SW_EXPECT_EQUAL( 1u, second );
+    SW_EXPECT_EQUAL( kInvalidDescriptorIndex, registry.allocate( 33 ) ); // 상한
+    SW_EXPECT_EQUAL( kInvalidDescriptorIndex, registry.allocate( 0 ) );  // 빈 값
+
+    SW_EXPECT_TRUE( registry.release( first, RHIBindlessReuse::AfterFence ) );
+    SW_EXPECT_FALSE( registry.isLive( first ) );
+    SW_EXPECT_FALSE( registry.release( first, RHIBindlessReuse::AfterFence ) ); // 이중 해제
+    SW_EXPECT_EQUAL( kInvalidDescriptorIndex, registry.allocate( 44 ) );        // 대기 칸은 아직 나가지 않는다
+    registry.finishRelease( first );
+    SW_EXPECT_EQUAL( first, registry.allocate( 44 ) );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 44 ), registry.get( first ) );
+
+    // 쓰기 훅이 거절하면 칸을 바로 돌려받는다.
+    SW_EXPECT_TRUE( registry.release( second, RHIBindlessReuse::Immediately ) );
+    SW_EXPECT_EQUAL( kInvalidDescriptorIndex, registry.allocate( 55, []( RHIDescriptorIndex )
+    { return false; } ) );
+    SW_EXPECT_EQUAL( second, registry.allocate( 55 ) );
+
+    uint32 releasedCount{ 0 };
+    registry.releaseIf( RHIBindlessReuse::Immediately, []( uint64 value )
+    { return value == 55; },
+                        [&releasedCount]( RHIDescriptorIndex )
+    { ++releasedCount; } );
+    SW_EXPECT_EQUAL( 1u, releasedCount );
+    SW_EXPECT_FALSE( registry.isLive( second ) );
+}
+
+/**
+ * @brief [RHIFrameFenceRingTest] 칸이 한 바퀴 돌면 가장 오래된 프레임을 기다리고, 끝난 프레임만 오래된 순서로 거둔다
+ */
+SW_TEST_CASE( RHIFrameFenceRingTest, BoundsFramesInFlightAndRetiresInOrder )
+{
+    constexpr uint32  kSlots = RHIFrameFenceRing::kSlotCount;
+    RHIFrameFenceRing ring;
+    SW_EXPECT_EQUAL( static_cast<uint64>( 1 ), ring.getRecordingSerial() );
+    SW_EXPECT_TRUE( ring.isIdle() );
+
+    uint32 waitCount{ 0 };
+    for ( uint32 frame = 0; frame < kSlots; ++frame )
+    {
+        SW_EXPECT_TRUE( ring.waitForRecordingSlot( [&waitCount]( uint32, uint64 )
+        { ++waitCount; return true; } ) );
+        SW_EXPECT_EQUAL( frame, ring.getRecordingSlot() );
+        SW_EXPECT_EQUAL( static_cast<uint64>( frame + 1 ), ring.markSubmitted() );
+    }
+    SW_EXPECT_EQUAL( 0u, waitCount ); // 칸이 모두 처음 쓰인다
+    SW_EXPECT_EQUAL( static_cast<uint64>( 1 ), ring.getRecordingSlotBusySerial() );
+
+    // 2 번이 끝났다고 해도 1 번이 안 끝났으면 워터마크는 그대로다(순서대로만 거둔다).
+    SW_EXPECT_EQUAL( static_cast<uint64>( 0 ), ring.retire( []( uint32, uint64 serial )
+    { return serial != 1; } ) );
+
+    uint64 waitedSerial{ 0 };
+    SW_EXPECT_TRUE( ring.waitForRecordingSlot( [&waitedSerial]( uint32 slot, uint64 serial )
+    {
+        waitedSerial = serial;
+        return slot == RHIFrameFenceRing::getSlot( serial );
+    } ) );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 1 ), waitedSerial );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 1 ), ring.getCompletedSerial() );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 0 ), ring.getRecordingSlotBusySerial() );
+
+    ring.markAllCompleted();
+    SW_EXPECT_TRUE( ring.isIdle() );
+    ring.markCompleted( 1 ); // 뒤로 가지 않는다
+    SW_EXPECT_EQUAL( static_cast<uint64>( kSlots ), ring.getCompletedSerial() );
 }
 
 /**

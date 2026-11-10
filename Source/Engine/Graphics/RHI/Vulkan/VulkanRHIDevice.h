@@ -4,13 +4,16 @@
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/IndexFreeList.h"
 
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/EngineMinimal.h"
+#include "Engine/Graphics/RHI/Backend/RHIBindlessRegistry.h"
 #include "Engine/Graphics/RHI/Backend/RHIConstantBufferMirror.h"
+#include "Engine/Graphics/RHI/Backend/RHIFrameFenceRing.h"
 #include "Engine/Graphics/RHI/Backend/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
+#include "Engine/Graphics/RHI/Backend/RHISwapChainSet.h"
+#include "Engine/Graphics/RHI/Backend/RHITimestampRing.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHITimestampFrame.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
@@ -189,7 +192,7 @@ namespace sw
          */
         [[nodiscard]] bool queryGPUMemoryBudgetInternal( RHIMemoryBudget& outBudget ) override;
 
-        /** @brief 이번 프레임이 제출할 세대(`_frameFenceCounter + 1`)로 해제 큐에 넣습니다. */
+        /** @brief 기록 중인 프레임의 시리얼(`_frameFenceRing.getRecordingSerial()`)로 해제 큐에 넣습니다. */
         void   enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
         uint32 getPendingReleaseCount() const override { return _releaseQueue.getPendingReleaseCount(); }
         /**
@@ -233,7 +236,11 @@ namespace sw
             return _timestampPool;
         }
         /** @brief 이번 프레임이 쓰는 쿼리 구간의 시작 인덱스입니다. */
-        uint32 getTimestampBase() const { return _currentFrame * constant::render::kMaxGPUTimestampSlot; }
+        /** @brief 기록 중인 프레임의 인플라이트 칸(0..kMaxFrameCountInFlight-1)입니다. 어느 스레드에서나 읽는다. */
+        uint32 getFrameSlot() const { return _frameFenceRing.getRecordingSlot(); }
+        uint32 getTimestampBase() const { return getFrameSlot() * constant::render::kMaxGPUTimestampSlot; }
+        /** @brief 슬롯 하나를 기록했다고 표시합니다. 여러 패스 스레드가 동시에 부를 수 있습니다. */
+        void markTimestampWritten( uint32 slotIndex ) { _timestampRing.markWritten( slotIndex ); }
         /** @brief 리소스 생성과 파괴 인터페이스(VulkanRHIResourceFactory)를 반환합니다. */
         IRHIResourceFactory* getResourceFactory() override;
         /** @brief 프레임 스트림 컨텍스트입니다. 백버퍼 패스와 Present 가 여기에 기록합니다. */
@@ -418,7 +425,7 @@ namespace sw
             void*          _pMapped{ nullptr };
             uint64         _capacity{ 0 };
             uint64         _uploadOffset{ 0 };
-            uint64         _resetFence{ UINT64_MAX }; ///< 마지막으로 오프셋을 되감은 _frameFenceCounter
+            uint64         _resetFence{ UINT64_MAX }; ///< 마지막으로 오프셋을 되감은 프레임 시리얼(`_frameFenceRing.getRecordingSerial()`)
         };
 
         /**
@@ -587,6 +594,10 @@ namespace sw
         VulkanRHISwapChain* useSwapChain( IRHISwapChain* pSwapChain );
         /** @brief 다른 창의 스왑체인 · 프레임버퍼 · 세마포어를 새 크기로 다시 만듭니다. GPU 는 비어 있어야 합니다. */
         [[nodiscard]] bool rebuildWindowSwapChain( VulkanRHISwapChain& swapChain, uint32 width, uint32 height );
+        /** @brief `useSwapChain` 이 낡았다고 본 창들을 한 번의 GPU 대기로 다시 만듭니다(`beginFrame` 첫머리 — 메인 창 재생성과 같은 자리). */
+        void rebuildPendingWindowSwapChains();
+        /** @brief 이번 제출이 기다릴 세마포어 · 단계를 재사용 목록(`_listSubmitWait*`)에 모읍니다(acquire 는 색 출력, 비동기 컴퓨트는 모든 단계). 프레임마다 할당하지 않는다. */
+        void gatherSubmitWaits();
         /**
          * @brief 서피스를 잃었을 때(VK_ERROR_SURFACE_LOST_KHR) 같은 창 위에 서피스와 스왑체인을 다시 만듭니다. 스왑체인만이 아니라 서피스부터 만들어야 합니다.
          * @return 다시 만들었으면 true 입니다. 창이 사라졌거나 새 서피스를 그래픽스 큐가 프레젠트할 수 없으면 false 이며, 다음 프레임에 다시 시도합니다.
@@ -648,7 +659,7 @@ namespace sw
         /** @brief 풀 묶음의 풀을 모두 파괴합니다(shutdown). */
         void destroyDescriptorPoolSet( VulkanDescriptorPoolSet& poolSet );
         /** @brief 디바이스 프레임 스트림이 이번 링 슬롯에서 쓰는 풀 묶음입니다. */
-        VulkanDescriptorPoolSet& currentFrameDescriptorPoolSet() { return _arrFrameDescriptorPoolSet[_currentFrame % constant::render::kMaxFrameCountInFlight]; }
+        VulkanDescriptorPoolSet& currentFrameDescriptorPoolSet() { return _arrFrameDescriptorPoolSet[getFrameSlot() % constant::render::kMaxFrameCountInFlight]; }
         /** @brief SRV/CB 레지스트리 인덱스에서 버퍼 핸들을 찾습니다(없으면 0). */
         RHIBufferHandle bindlessSourceBufferAt( RHIDescriptorIndex index ) const;
         /** @brief UAV 레지스트리 인덱스에서 버퍼 핸들을 찾습니다(없으면 0). */
@@ -768,10 +779,9 @@ namespace sw
          *          제출은 `_queueMutex` 로 그래픽스 큐와 같이 직렬화한다.
          */
         VkQueue _asyncComputeQueue;
-        /// @brief 인플라이트 프레임 슬롯(0..kMaxFrameCountInFlight-1)입니다. 스왑체인 이미지 인덱스와 **다른 값**입니다.
-        ///        이미지 인덱스는 스왑체인이 acquire 로 받아 가지고 있습니다(`_swapChain.getImageIndex()`).
-        ///        렌더 스레드만 넘기고(`endFrame`), 다른 스레드의 `updateConstantBuffer` 도 칸을 고르려 읽으므로 atomic 입니다.
-        atomic<uint32> _currentFrame;
+        /// @brief 프레임 시리얼 · 완료 워터마크 · 앞서가기 상한입니다. 인플라이트 칸(`getFrameSlot`)은 스왑체인 이미지 인덱스와 **다른 값**입니다
+        ///        (이미지 인덱스는 스왑체인이 acquire 로 받아 가지고 있다). 렌더 스레드만 넘기고(`endFrame`), 다른 스레드도 칸 · 해제 키를 읽는다(원자).
+        RHIFrameFenceRing _frameFenceRing;
 
         /// @brief 창 하나의 서피스, 스왑체인, 백버퍼입니다. 이미지, 뷰, 프레임버퍼, 세마포어가 모두 여기 있습니다.
         VulkanRHISwapChain _swapChain;
@@ -834,14 +844,16 @@ namespace sw
 
         vector<VkCommandBuffer>            _listCommandBuffer;
         vector<VkFence> _listInFlightFence SW_GUARDED_BY( _renderThread );
-        /// @brief 다른 창의 스왑체인입니다(`createSwapChain`). 렌더 스레드와 GPU 를 비운 뒤에만 바뀐다.
-        vector<unique_ptr<VulkanRHISwapChain>> _listWindowSwapChain;
-        /// @brief 이 프레임에 이미지를 잡은 다른 창입니다(`useSwapChain`). `endFrame` 이 신호 · 표시한 뒤 비운다.
-        vector<VulkanRHISwapChain*> _listFrameSwapChain;
+        /// @brief 다른 창(`createSwapChain`) · 이 프레임에 이미지를 잡은 창(`useSwapChain`, `endFrame` 이 신호 · 표시한 뒤 비운다) · 다음 프레임에 다시 만들 창.
+        RHISwapChainSet<VulkanRHISwapChain> _windowSwapChains;
         /// @brief 이 프레임에 새로 획득한 이미지의 acquire 세마포어입니다. 이 프레임의 첫 제출(즉시 모드 비우기 · `endFrame`)이 모두 기다리고 비운다.
         vector<VkSemaphore> _listPendingAcquireWait;
         /// @brief 조인이 남긴 컴퓨트 신호 세마포어입니다. 다음 그래픽스 제출(포크 · 조인의 비우기 · 즉시 모드 · `endFrame`)이 모두 기다리고 비운다.
         vector<VkSemaphore> _listPendingComputeWait;
+        /// @brief 제출 하나가 기다리고 신호할 세마포어의 재사용 목록입니다(`gatherSubmitWaits` · `endFrame`). 렌더 스레드만 쓴다.
+        vector<VkSemaphore>          _listSubmitWaitSemaphore;
+        vector<VkPipelineStageFlags> _listSubmitWaitStage;
+        vector<VkSemaphore>          _listSubmitSignalSemaphore;
         /// @brief 이번 프레임에 비동기 컴퓨트 제출이 신호한 세마포어입니다(번호 = 순번 + 1 이 `RHIQueueSyncPoint`). `endFrame` 이 아직 기다리지 않은 것을 모두 기다린다.
         vector<VkSemaphore> _listAsyncSignal;
         /// @brief `_listAsyncSignal` 마다 그래픽스가 이미 기다렸는지입니다(이진 세마포어는 신호 한 번에 대기 한 번이다).
@@ -849,17 +861,11 @@ namespace sw
         /// @brief 프레임 슬롯마다의 이진 세마포어 풀입니다. 슬롯의 펜스를 기다린 뒤(beginFrame) 커서를 0 으로 돌려 다시 쓴다.
         vector<vector<VkSemaphore>> _listAsyncSemaphorePool;
         uint32                      _asyncSemaphoreCursor; ///< 이번 프레임 슬롯 풀에서 다음에 빌릴 칸
-        /// @brief 링 슬롯마다 마지막 제출에 매긴 _frameFenceCounter 값입니다. beginFrame 이 그 슬롯의 펜스를
-        ///        기다린 뒤 _releaseQueue.tickCompleted(이 값)을 불러 실제 GPU 완료를 확인하고 해제합니다.
-        vector<uint64> _listRingFrameNumber;
 
-        void*             _pHWnd;
-        void*             _pDisplayHandle;
-        NativeSurfaceKind _surfaceKind; ///< 두 핸들의 창 시스템(리눅스 WSI 를 고른다 — X11 이면 xlib · xcb, Wayland 면 wayland)
-        VulkanWsiKind     _wsiKind;     ///< 인스턴스를 만들 때 고른 서피스 확장(`createSurface` 가 이 값으로 만든다). 인스턴스 전에는 None
-        /// @brief 스왑체인 제출마다 1씩 증가하는 단조 세대 번호입니다. 해제 큐가 실제 GPU 펜스 완료를 기준으로
-        ///        해제하도록(enqueueGPURelease) 프레임 카운트 대신 이 값을 씁니다.
-        uint64                  _frameFenceCounter;
+        void*                   _pHWnd;
+        void*                   _pDisplayHandle;
+        NativeSurfaceKind       _surfaceKind; ///< 두 핸들의 창 시스템(리눅스 WSI 를 고른다 — X11 이면 xlib · xcb, Wayland 면 wayland)
+        VulkanWsiKind           _wsiKind;     ///< 인스턴스를 만들 때 고른 서피스 확장(`createSurface` 가 이 값으로 만든다). 인스턴스 전에는 None
         uint32                  _width;
         uint32                  _height;
         uint32                  _depthFormat;      ///< VkFormat. createTexture2D 와 렌더 패스가 함께 쓰는 깊이 포맷
@@ -892,16 +898,15 @@ namespace sw
         void*                  _pCmdDrawIndexedIndirectCount;
         VkBuffer               _breadcrumbBuffer; ///< AMD 표지 버퍼 — uint32 두 칸([0] 시작 · [1] 끝), 호스트 보임 · 일관 메모리를 영속 매핑해 소실 뒤 CPU 가 읽는다
         VkDeviceMemory         _breadcrumbMemory;
-        const volatile uint32* _pBreadcrumbMapped;                                                                              ///< `_breadcrumbBuffer` 의 매핑. GPU 가 쓰므로 volatile 로 읽는다
-        atomic<uint8>          _bTimestampEnabled;                                                                              ///< 엔진이 켜기 전에는 풀도 만들지 않는다. `setTimestampEnabled` 는 어느 스레드에서나 부를 수 있어 atomic 이다.
-        uint8                  _arrTimestampSubmitted[constant::render::kMaxFrameCountInFlight] SW_GUARDED_BY( _renderThread ); ///< 링 슬롯마다 타임스탬프 쿼리를 제출했는가
+        const volatile uint32* _pBreadcrumbMapped; ///< `_breadcrumbBuffer` 의 매핑. GPU 가 쓰므로 volatile 로 읽는다
+        atomic<uint8>          _bTimestampEnabled; ///< 엔진이 켜기 전에는 풀도 만들지 않는다. `setTimestampEnabled` 는 어느 스레드에서나 부를 수 있어 atomic 이다.
+        RHITimestampRing       _timestampRing;     ///< 링 칸마다 적은 슬롯 — 빈 칸은 "리셋 + 제출" 을 거치지 않았으니 읽지 않는다
 
         VkSampler _defaultSampler;
 
         VkPipelineLayout _pipelineLayout;
         VkDescriptorPool _descriptorPool;
         VkSampler        _arrStaticSampler[shaderslot::kStaticSamplerCount]; ///< binding_slots.hlsli 4 의 정적 샘플러 세트(set 1 immutable)
-        IndexFreeList    _freeBindless;
 
         RHIHandleTable<VulkanBufferRecord> _gpuBuffers;
         /// @brief 링 상수 버퍼에서 슬롯 하나의 크기입니다. 게임 스레드가 만들고 부수는 동안 렌더 스레드가 드로우마다 읽으므로 `_bindlessMutex` 로 보호합니다.
@@ -916,20 +921,27 @@ namespace sw
         /// 읽기는 공유 락이라 서로를 막지 않습니다.
         mutable shared_mutex _bindlessMutex;
 
-        /// @brief SRV/CB 버퍼 인덱스에서 원본 버퍼를 찾는 목록입니다(0이면 빈 슬롯). 인덱스 공간의 기준이며 프리리스트와 짝을 이룹니다.
-        vector<RHIBufferHandle> _listBindlessSourceBuffer;
-        vector<RHIBufferHandle> _listUAVSourceBuffer;
-        /// @brief UAV 인덱스에서 원본 텍스처를 찾는 목록입니다(RW 텍스처 배열 원소, 0이면 버퍼 또는 빈 슬롯). 버퍼 UAV 와 같은 인덱스 공간을 씁니다.
-        vector<RHITextureHandle> _listUAVSourceTexture;
-        IndexFreeList            _freeUAV;
+        /// @brief UAV 번호 하나의 원본입니다 — 버퍼 UAV 면 `_buffer`, RW 텍스처 배열 원소(set 1 binding 3)면 `_texture`.
+        struct UAVEntry
+        {
+            RHIBufferHandle  _buffer{ 0 };
+            RHITextureHandle _texture{ 0 };
+
+            bool operator==( const UAVEntry& other ) const { return _buffer == other._buffer && _texture == other._texture; }
+        };
+        /// @brief SRV/CB 버퍼 번호 → 원본 버퍼(`_bindlessMutex` 아래). 디스크립터는 그리는 순간 슬롯 세트에 쓰므로 비운 번호도 이 프레임이 끝난 뒤 다시 낸다(`RHIBindlessReuse::AfterFence`).
+        RHIBindlessRegistry<RHIBufferHandle> _bufferRegistry;
+        /// @brief UAV 번호(버퍼 UAV 와 RW 텍스처가 같은 공간) → 원본(`_bindlessMutex` 아래).
+        RHIBindlessRegistry<UAVEntry> _uavRegistry;
 
         RHIHandleTable<VulkanTextureRecord> _gpuTextures;
         RHIReleaseQueue                     _releaseQueue;
         /// @brief PSO 호환 렌더 패스, 합성 프레임버퍼, desc 렌더 패스 캐시입니다. Vulkan 만 가지고 있습니다(스왑체인 RP 는 위 `_renderPass`).
         VulkanRHIRenderPassCache _renderPassCache;
 
-        vector<uint8> _listTextureUsed; ///< 텍스처 인덱스 공간(1은 사용 중, 2는 해제 대기). 프리리스트와 짝을 이룬다.
-        IndexFreeList _freeTexture;
+        /// @brief 텍스처 번호(set 1 binding 0 배열 원소) → 그 번호를 가진 텍스처(`_bindlessMutex` 아래). 주인을 바로 찾으므로 해제가 전 텍스처를 훑지 않는다.
+        ///        비운 번호는 펜스 뒤에 원소를 더미로 되돌리고 다시 낸다(`RHIBindlessReuse::AfterFence`).
+        RHIBindlessRegistry<RHITextureHandle> _textureRegistry;
 
         VkDescriptorSetLayout _slotSetLayout;    ///< set 0: 슬롯 세트(b 0..15 UBO, t 16..31 SSBO, u 32..47 SSBO)
         VkDescriptorSetLayout _textureSetLayout; ///< set 1: 텍스처 배열과 immutable sampler

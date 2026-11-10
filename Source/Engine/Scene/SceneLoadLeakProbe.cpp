@@ -18,10 +18,10 @@ namespace sw
         {
             static constexpr const utf8* kEmptySceneName = "LeakProbeEmpty";
             /**
-             * @brief 빈 씬으로 바꾼 뒤 재기 전에 기다리는 프레임 수입니다 — 옛 씬의 마지막 패킷이 렌더 큐를 지나고(쌓이는 패킷 수 = 링 칸 수 − 1) GPU 해제 지연이 다 도는 수다.
-             *        예전 3 은 어림이었다(해제 지연 하나만으로도 3 이라 큐에 남은 패킷이 든 자원은 아직 살아 있었다).
+             * @brief 빈 씬으로 바꾼 뒤 재기 전에 기다리는 프레임 수입니다 — 옛 씬의 마지막 패킷이 렌더 큐를 지나고(쌓이는 패킷 수 = 링 칸 수 − 1)
+             *        GPU 가 그 프레임을 끝내 펜스 해제가 도는 수다(앞서가기 상한 = 프레임 인 플라이트 수).
              */
-            static constexpr uint32 kSettleFrames = ( constant::render::kRenderFrameQueueDepth - 1u ) + constant::render::kGPUReleaseFrameLatency;
+            static constexpr uint32 kSettleFrames = ( constant::render::kRenderFrameQueueDepth - 1u ) + constant::render::kMaxFrameCountInFlight;
         };
     } // namespace
 
