@@ -58,7 +58,8 @@ PATH_LINUX = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'  # W
 
 def run_in_wsl(argv):
     """Windows 쪽: HEAD 를 refs/linux-verify 에 적고 같은 명령을 WSL 에서 띄운다."""
-    if argv and argv[0] in ('build', 'all'):
+    command = argv[2:] if argv[:1] == ['--gpu'] else argv  # `--gpu <드라이버> all` 도 HEAD 를 옮긴다
+    if command and command[0] in ('build', 'all'):
         head = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=REPO, text=True).strip()
         subprocess.check_call(['git', 'update-ref', 'refs/linux-verify', head], cwd=REPO)
     env = dict(os.environ, MSYS_NO_PATHCONV='1', MSYS2_ARG_CONV_EXCL='*')
