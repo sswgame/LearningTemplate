@@ -2,7 +2,8 @@
 # Source/Engine/CMakeLists.txt 가 층마다 부분(OBJECT, 오브젝트는 Engine 이미지 안)을 짓고 위 층 헤더 자리에 #error 껍데기를 놓아, 위 층 헤더 include 가
 # 컴파일에서 멈춘다(헤더를 거쳐 닿는 전이 include 도 같다) — 언리얼 Core → CoreUObject → Engine → Renderer 같은 모듈 DAG.
 #
-# 키는 `Source/Engine/` 아래 경로 접두어(폴더 또는 파일)이고 가장 긴 것이 이긴다. 같은 층끼리는 include 해도 된다.
+# 키는 `Source/Engine/` 아래 경로 접두어(폴더 또는 파일)이고 가장 긴 것이 이긴다. 같은 층끼리는 한 방향으로만 include 한다 —
+# 두 키가 서로 include 하면(층 안 순환) 린트 `layer-cycles` 가 멈춘다(아래 [sameTierCycle] 에 적은 층만 아직 둔다).
 # 표에 없는 파일이 있으면 configure 가 멈춘다 — 새 폴더는 층을 정하고 들어온다.
 [tier]
 # 0 — 엔진 바닥: 공용 형식
@@ -43,35 +44,55 @@ Graphics = 4
 # 5 — 월드: 컴포넌트 모델 코어 · 씬
 Object = 5
 Scene = 5
-"Automation/Watch" = 5               # 감시 값은 대상 객체를 찾아 읽는다 — 기능(6)이 자기 폴더에서 등록한다
-# 6 — 기능: 각자 자기 컴포넌트 · 씬 서비스를 든다
-Visual = 6                           # 렌더용 씬 컴포넌트(옛 Rendering + 2D): 메시 · 빛 · 프로브 컴포넌트와 LOD · 스트리밍 시스템 — 월드 코어(5)는 이것을 모른다(언리얼 UPrimitiveComponent 는 Engine, 그리는 쪽은 Renderer 로 갈린다). 렌더러(7)가 이것을 읽는다. 2D(스프라이트 · 2D 라이트 · 패럴랙스, 언리얼 Paper2D)는 Visual/2D
+"Automation/Watch" = 5               # 감시 값은 대상 객체를 찾아 읽는다 — 기능(6~9)이 자기 폴더에서 등록한# 6~9 — 기능: 각자 자기 컴포넌트 · 씬 서비스를 든다. 한 층에 두면 기능끼리 순환이 자랐다(Animation↔Character · Physics · Visual) — 단으로 가르고,
+#        같은 단 안의 폴더끼리 서로 include 하는 것은 린트 `layer-cycles` 가 막는다(같은 부분이라 #error 껍데기가 없다).
+#        언리얼 PhysicsCore · Engine(메시 · 스켈레탈) → AnimGraphRuntime · ClothingSystem → 게임플레이 플러그인과 같은 방향이다.
+# 6 — 바닥 기능: 서로의 위 단을 모르는 기능
+Visual = 6                           # 렌더용 씬 컴포넌트(옛 Rendering + 2D): 메시 · 빛 · 프로브 컴포넌트와 LOD · 스트리밍 시스템 — 월드 코어(5)는 이것을 모른다(언리얼 UPrimitiveComponent 는 Engine, 그리는 쪽은 Renderer 로 갈린다). 렌더러(10)가 이것을 읽는다. 2D(스프라이트 · 2D 라이트 · 패럴랙스, 언리얼 Paper2D)는 Visual/2D
 Physics = 6
 Audio = 6
-Animation = 6
-Navigation = 6
 TileMap = 6
-VFX = 6
-Sequencer = 6
-Dialogue = 6
-Environment = 6
-Destruction = 6
-Server = 6                           # 전용 서버 운영(HTTP 끝점 · 관리 채널 · 서버 서비스 레지스트리) — 이름이 Server 라 클라이언트 구성이 짓지 않는다(`SW_SERVER_ONLY_SOURCE_PATTERNS`)
-Character = 6
-UI = 6
 Net = 6
 UserSettings = 6
+Server = 6                           # 전용 서버 운영(HTTP 끝점 · 관리 채널 · 서버 서비스 레지스트리) — 이름이 Server 라 클라이언트 구성이 짓지 않는다(`SW_SERVER_ONLY_SOURCE_PATTERNS`)
 "Automation/Scenario" = 6
-Telemetry = 6                        # 크래시 · 원격 측정은 엔진 전체(사용자 설정 · 하드웨어 · 팩 설정)를 보고한다 — 엔진 루프(8)만 include 한다
-# 7 — 렌더러(렌더 스레드 · GPU 파이프라인, 전용 서버는 짓지 않는다)
-Renderer = 7
-# 8 — 맨 위: 엔진 루프 조립 · 모듈 핫 리로드(씬 · 에셋 · 입력을 다시 묶는다) · 자동화 실행기
-Module = 8
-Automation = 8
-"Engine.h" = 8
-"Engine.cpp" = 8
-"EngineSubsystemSet.h" = 8
-"EngineSubsystemSet.cpp" = 8
-"HeadlessSubsystem.h" = 8
-"HeadlessSubsystem.cpp" = 8
-"HostServiceSet.h" = 8
+"Animation/AnimationPlayback.h" = 6  # 재생 핵심(시간 커서 · 알림 트랙) — 스프라이트 클립(아래 줄)과 스켈레탈이 함께 쓴다
+"Animation/AnimationPlayback.cpp" = 6
+"Animation/Sprite" = 6               # 스프라이트 클립 · 라이브러리 에셋 — Visual 의 SpriteComponent 가 든다(언리얼 Paper2D 의 Flipbook 이 스프라이트 컴포넌트 곁에 있는 것과 같다)
+# 7 — 애니메이션 단: 스켈레탈 메시 · 애니메이터와 그것을 따르는 것
+Animation = 7
+"Physics/Cloth" = 7                  # 천은 조상 스켈레탈 메시의 뼈 · 애니메이션 LOD 를 따른다(언리얼 ClothingSystemRuntime 이 Engine 위)
+"Visual/2D/Shadow" = 7               # 2D 그림자 가림막은 타일맵 외곽선을 읽는다(유니티 ShadowCaster2D 는 Tilemap 위 URP 2D)
+# 8 — 합성 기능: 애니메이션 · 물리 · 비주얼을 묶는 기능
+Character = 8
+Navigation = 8
+Environment = 8
+Destruction = 8
+VFX = 8
+Sequencer = 8
+Dialogue = 8
+UI = 8
+Telemetry = 8                        # 크래시 · 원격 측정은 엔진 전체(사용자 설정 · 하드웨어 · 팩 설정)를 보고한다 — 엔진 루프(11)만 include 한다
+# 9 — 알림 디스패치: 알림 표의 처리기가 소켓 · 맞힘(Character) · 표면(Environment)을 읽는다. 받는 쪽 창구(Listener)는 애니메이션 단에 있다
+"Animation/Notify" = 9
+"Animation/Notify/AnimationNotifyListener.h" = 7
+# 10 — 렌더러(렌더 스레드 · GPU 파이프라인, 전용 서버는 짓지 않는다)
+Renderer = 10
+# 11 — 맨 위: 엔진 루프 조립 · 모듈 핫 리로드(씬 · 에셋 · 입력을 다시 묶는다) · 자동화 실행기
+Module = 11
+Automation = 11
+"Engine.h" = 11
+"Engine.cpp" = 11
+"EngineSubsystemSet.h" = 11
+"EngineSubsystemSet.cpp" = 11
+"HeadlessSubsystem.h" = 11
+"HeadlessSubsystem.cpp" = 11
+"HostServiceSet.h" = 11
+
+# 층 안 순환이 아직 남은 층 — "층" = "까닭 · 끊을 곳". 적지 않은 층(6 위 전부와 4)은 린트 `layer-cycles` 가 검사한다. 끊으면 줄을 지운다.
+[sameTierCycle]
+"0" = "EngineMinimal.h ↔ Foundation(1/1) — 묶음 헤더끼리. Foundation.h 가 EngineMinimal.h 를 묶는 쪽 하나로 정하면 끊긴다"
+"1" = "Reflection · Serialization · Config · Content · Profiling · Behavior 가 서로 읽는다(Reflection↔Serialization 21/48, Config↔Serialization 17/2, Config↔Content 10/5 …) — 기반 층을 리플렉션 → 직렬화 → 콘텐츠 → 설정 단으로 가르는 일이 남았다"
+"2" = "Localization ↔ Text(1/5) — 현지화 테스트가 리치 텍스트 파서를 읽는다. 테스트를 Text 로 옮기면 끊긴다"
+"3" = "Input ↔ Window(17/1) — 창 테스트(TestWindowTextInput)가 입력 매니저를 읽는다. 테스트를 Input 으로 옮기면 끊긴다"
+"5" = "Object ↔ Scene(1/54) — 오브젝트 테스트(TestSceneStateHash)가 씬 해시를 읽는다. 테스트를 Scene 으로 옮기면 끊긴다"
