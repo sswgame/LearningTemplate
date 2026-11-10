@@ -494,12 +494,12 @@ SW_TEST_CASE( BattleRoyaleMatchTest, AddPlayerNeedsAValidTeam )
     sw::BattleRoyaleMatch noCatalog;
     SW_REQUIRE_TRUE( noCatalog.initialize( nullptr, nullptr, nullptr, 1, nullptr ) );
     const int32 team = noCatalog.addTeam( sw::hashed_string( "A" ) );
-    SW_EXPECT_EQUAL( -1, noCatalog.addPlayer( team ) );
+    SW_EXPECT_FALSE( noCatalog.addPlayer( team ).has_value() );
 
     MatchBench bench;
     SW_REQUIRE_TRUE( bench.setUp( kMatchXML, 1, false ) );
-    SW_EXPECT_EQUAL( -1, bench._match.addPlayer( 7 ) );
-    SW_EXPECT_EQUAL( -1, bench._match.addPlayer( -1 ) );
+    SW_EXPECT_FALSE( bench._match.addPlayer( 7 ).has_value() );
+    SW_EXPECT_FALSE( bench._match.addPlayer( -1 ).has_value() );
     SW_EXPECT_EQUAL( 2, bench._match.getPlayerCount() );
     SW_EXPECT_TRUE( bench._match.findPlayer( 7 ) == nullptr );
     SW_EXPECT_TRUE( bench._match.findPlayer( -1 ) == nullptr );

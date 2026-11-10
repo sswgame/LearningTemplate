@@ -60,15 +60,15 @@ namespace sw
         return _matchState.addTeam( name );
     }
 
-    int32 BattleRoyaleMatch::addPlayer( int32 team )
+    expected<int32> BattleRoyaleMatch::addPlayer( int32 team )
     {
         if ( _pCatalog == nullptr || _matchState.findTeam( team ) == nullptr )
-            return constant::invalid_index::kInt32;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "no catalog or the team does not exist" } );
         // 사람을 먼저 만들어 보고, 설정이 거절되면 판에 참가자를 더하지 않는다.
         BattleRoyalePlayer player;
         const int32        participant = _matchState.getParticipantCount();
         if ( initializePlayer( player, team, participant ) == false )
-            return constant::invalid_index::kInt32;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the catalog player health settings are out of range" } );
         const int32 added = _matchState.addParticipant( team, hashed_string{} ).value(); // 팀은 위에서 확인했다
         SW_ASSERT( added == participant );
         _listPlayer.push_back( std::move( player ) );

@@ -8,6 +8,7 @@
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -115,10 +116,10 @@ namespace sw
         /** @brief 카탈로그, 아이템, 전리품(빌려 옴), 시드, 지형(빌려 옴, nullptr 가능)을 설정하고 상태를 비웁니다. 자기장이 맵 크기를 거절하면 false 입니다. */
         [[nodiscard]] bool initialize( const BattleRoyaleCatalog* pCatalog, const ItemCatalog* pItemCatalog, const LootCatalog* pLootCatalog, uint32 seed, const IBrZoneTerrain* pTerrain );
         int32              addTeam( const hashed_string& name );
-        /** @brief 사람을 추가하고 번호를 반환합니다(`start` 전에 호출합니다). 없는 팀이거나 카탈로그의 체력 설정이 범위 밖이면 −1 입니다. */
-        int32 addPlayer( int32 team );
-        void  start();
-        void  update( float32 deltaTime );
+        /** @brief 사람을 추가하고 번호를 반환합니다(`start` 전에 호출합니다). 없는 팀이거나 카탈로그의 체력 설정이 범위 밖이면 이유를 돌려줍니다. */
+        [[nodiscard]] expected<int32> addPlayer( int32 team );
+        void                          start();
+        void                          update( float32 deltaTime );
 
         void setPlayerPosition( int32 player, const float2& position );
         /**
