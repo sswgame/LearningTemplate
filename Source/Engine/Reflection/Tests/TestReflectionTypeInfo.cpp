@@ -5,6 +5,7 @@
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/PropertyHandle.h"
+#include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
@@ -430,6 +431,58 @@ SW_TEST_CASE( ReflectionTypeInfoTest, DynamicMethodInvoke )
     sw::engine::getSubsystem<sw::TypeRegistry>().invokeMethod( &actor, sw::hashed_string( "sw::InvokableTestActor" ), sw::hashed_string( "addScore" ), args );
 
     SW_EXPECT_EQUAL( 50, actor._score );
+}
+
+namespace
+{
+    struct MethodTableTestActor
+    {
+        int32  _score{ 0 };
+        int32& _ref; // 참조 멤버 — 기본 생성할 수 없다
+    };
+} // namespace
+
+/**
+ * @brief [ReflectionTypeInfoTest] 메서드 서술자 표(`FunctionDesc`)로 지은 목록 — 인자 · 반환 · 메타데이터 채우기가 들고, 호출 함수가 없는 파서 생성자 줄은 빠진다
+ */
+SW_TEST_CASE( ReflectionTypeInfoTest, MethodTableBuildsMethodList )
+{
+    static_assert( sw::ReflectDefaultCtorOf<MethodTableTestActor>::kInvoke == nullptr );
+    static_assert( sw::ReflectDefaultCtorOf<int32>::kInvoke != nullptr );
+
+    static constexpr sw::FunctionParameterDesc kParams[] = {
+        { "delta", "int32", "1", &sw::ReflectTypeOpsOf<int32>::kOps, nullptr },
+    };
+    static constexpr sw::FunctionDesc kMethods[] = {
+        { "addScore", "addScore", "int32", &sw::ReflectTypeOpsOf<int32>::kOps, kParams, 1u,
+         []( void* pObject, const sw::TaskArgs& args ) -> sw::TaskValue
+    {
+        MethodTableTestActor& actor = *static_cast<MethodTableTestActor*>( pObject );
+        actor._score += args.get<int32>( 0 );
+        return sw::TaskValue{ actor._score };
+    }, []( sw::FunctionMetadata& m )
+    { m._bConst = SW_TRUE; } },
+        { "$ctor", "$ctor", "void", nullptr, nullptr, 0u, sw::ReflectDefaultCtorOf<MethodTableTestActor>::kInvoke, nullptr },
+    };
+
+    sw::TypeInfo info;
+    info.setMethodTable( kMethods, std::size( kMethods ) );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, info._listMethod.size() );
+    const sw::FunctionInfo& method = info._listMethod[0];
+    SW_EXPECT_TRUE( method._hashName == sw::hashed_string( "addScore" ) );
+    SW_REQUIRE_EQUAL( 1u, method.getParameterCount() );
+    SW_EXPECT_EQUAL( sw::string( "delta" ), method._listParameter[0]._name );
+    SW_EXPECT_TRUE( method._listParameter[0].hasDefaultValue() );
+    SW_EXPECT_TRUE( method._pReturnType != nullptr );
+    SW_EXPECT_TRUE( method._metadata->_bConst == SW_TRUE );
+
+    int32                dummy = 0;
+    MethodTableTestActor actor{ 5, dummy };
+    sw::TaskArgs         args;
+    args.add( int32{ 7 } );
+    const sw::TaskValue result = method._invoker( &actor, args );
+    (void)result;
+    SW_EXPECT_EQUAL( 12, actor._score );
 }
 
 /**

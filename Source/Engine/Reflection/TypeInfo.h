@@ -184,6 +184,10 @@ namespace sw
 
         /** @brief 생성 코드의 서술자 표(`PropertyDesc`) @p count 줄로 선언 프로퍼티 목록을 짓습니다. 목록 할당은 한 번입니다. */
         void setPropertyTable( const PropertyDesc* pDesc, size_t count );
+        /** @brief 생성 코드의 메서드 서술자 표 @p count 줄로 메서드 목록을 짓습니다. 호출 함수가 없는 줄(기본 생성할 수 없는 타입의 파서 생성자)은 뺀다. */
+        void setMethodTable( const FunctionDesc* pDesc, size_t count );
+        /** @brief 생성 코드의 이벤트 서술자 표 @p count 줄로 이벤트 목록을 짓습니다. */
+        void setEventTable( const EventDesc* pDesc, size_t count );
 
         /** @brief 카테고리를 반환합니다. */
         string_view getCategory() const noexcept;

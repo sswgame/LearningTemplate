@@ -208,30 +208,29 @@ namespace sw
             }
 
             /**
-             * @brief `FunctionParameterInfo` 목록 대입을 씁니다 — 이름 · 정규 타입 · 기본 인자 글 · 변환 표.
+             * @brief 인자 서술자 표 `static constexpr ::sw::FunctionParameterDesc <tableName>[]` 를 씁니다 — 이름 · 정규 타입 · 기본 인자 글 · 변환 표 · 타입 핸들 대상.
              * @param bWithTypeOps 이벤트는 변환 표를 `EventInfo::setOps` 가 템플릿 인자에서 채우므로 nullptr 를 씁니다.
+             * @return 표를 썼으면 그 이름, 인자가 없으면 "nullptr".
              */
-            static void emitParameterList( CodeEmit& emit, const string_view target, const vector<ParsedParameterInfo>& listParameter,
-                                           const ParserSession& session, const bool bWithTypeOps )
+            static string emitParameterTable( CodeEmit& emit, const string& tableName, const vector<ParsedParameterInfo>& listParameter, const ParserSession& session,
+                                              const bool bWithTypeOps )
             {
                 if ( listParameter.empty() )
-                    return;
-                emit.linef( "%# =", target );
+                    return string( "nullptr" );
+                emit.linef( "static constexpr ::sw::FunctionParameterDesc %#[] =", tableName );
                 emit.line( "{" );
                 emit.push();
                 for ( const ParsedParameterInfo& parameter : listParameter )
                 {
                     const string typeName = session._typeNameMap.normalize( parameter._typeName );
                     const string typeOps  = bWithTypeOps ? makeTypeOpsExpr( typeName ) : string( "nullptr" );
-                    if ( parameter._handleTargetTypeName.empty() )
-                        emit.linef( "::sw::FunctionParameterInfo( %#, %#, %#, %# ),", CodeEmit::quoted( parameter._name ), CodeEmit::quoted( typeName ),
-                                    CodeEmit::quoted( parameter._defaultValue ), typeOps );
-                    else
-                        emit.linef( "::sw::FunctionParameterInfo( %#, %#, %#, %#, %# ),", CodeEmit::quoted( parameter._name ), CodeEmit::quoted( typeName ),
-                                    CodeEmit::quoted( parameter._defaultValue ), typeOps, CodeEmit::hs( parameter._handleTargetTypeName ) );
+                    const string target   = parameter._handleTargetTypeName.empty() ? string( "nullptr" ) : CodeEmit::quoted( parameter._handleTargetTypeName );
+                    emit.linef( "{ %#, %#, %#, %#, %# },", CodeEmit::quoted( parameter._name ), CodeEmit::quoted( typeName ), CodeEmit::quoted( parameter._defaultValue ), typeOps,
+                                target );
                 }
                 emit.pop();
                 emit.line( "};" );
+                return tableName;
             }
 
             /**
@@ -691,7 +690,8 @@ namespace sw
                                            const ParsedFunctionInfo& method, const string& returnType,
                                            const string& callArgs ) const
     {
-        emit.line( "auto invokerCb = []( void* objPtr, const ::sw::TaskArgs& args ) -> ::sw::TaskValue" );
+        // 표 칸에 들어가는 상태 없는 람다다 — 함수 포인터(`FunctionDesc::InvokeFunction`)로 바뀐다.
+        emit.line( "[]( void* objPtr, const ::sw::TaskArgs& args ) -> ::sw::TaskValue" );
         emit.line( "{" );
         emit.push();
         if ( method._listParameter.empty() )
@@ -740,69 +740,108 @@ namespace sw
             }
         }
         emit.pop();
-        emit.line( "};" );
-        emit.line( "funcInfo._invoker = SW_DELEGATE_LAMBDA( ::sw::Delegate<::sw::TaskValue( void*, const ::sw::TaskArgs& )>, invokerCb );" );
-        emit.line( "info._listMethod.push_back( funcInfo );" );
+        emit.line( "}," );
     }
 
     void CodeGenerator::emitMethodList( CodeEmit& emit, const ParsedTypeInfo& typeInfo ) const
     {
-        for ( const ParsedFunctionInfo& method : typeInfo._listMethod )
+        // 메서드는 상수 초기화되는 서술자 표 하나다(프로퍼티의 `kProperties` 와 같은 모양). 인자 표를 먼저 쓴다.
+        vector<string> listParamTable;
+        for ( size_t methodIndex = 0; methodIndex < typeInfo._listMethod.size(); ++methodIndex )
         {
-            const string returnType = _session._typeNameMap.normalize( method._returnTypeName );
+            StringBuilder<constant::buffer::kMax64> tableName;
+            tableName.appendFormat( "kMethodParams%#", static_cast<uint32>( methodIndex ) );
+            listParamTable.push_back( CodeGeneratorInternal::emitParameterTable( emit, string( tableName.view() ), typeInfo._listMethod[methodIndex]._listParameter, _session, true ) );
+        }
+        emit.line( "static constexpr ::sw::FunctionDesc kMethods[] =" );
+        emit.line( "{" );
+        emit.push();
+        for ( size_t methodIndex = 0; methodIndex < typeInfo._listMethod.size(); ++methodIndex )
+        {
+            const ParsedFunctionInfo& method       = typeInfo._listMethod[methodIndex];
+            const bool                bConstructor = method._bConstructor != SW_FALSE;
+            const string              returnType   = _session._typeNameMap.normalize( method._returnTypeName );
+            const string              lookupName   = bConstructor ? CodeGeneratorInternal::makeCtorLookupName( method, _session ) : method._name;
+            const string              returnOps    = ( returnType != annotation::kVoidTypeName && bConstructor == false ) ? CodeGeneratorInternal::makeTypeOpsExpr( returnType ) : string( "nullptr" );
 
-            const string lookupName = ( method._bConstructor != SW_FALSE ) ? CodeGeneratorInternal::makeCtorLookupName( method, _session ) : method._name;
-
-            // 파서가 더한 기본 생성자는 그 타입이 기본 생성 가능할 때만 등록한다(참조 멤버 · 기본 생성자 없는 베이스는 가린다).
-            if ( method._bSynthesized != SW_FALSE )
-                emit.linef( "if constexpr ( ::std::is_default_constructible_v<%#> )", typeInfo._fullyQualifiedName );
             emit.line( "{" );
             emit.push();
-            emit.line( "::sw::FunctionInfo funcInfo;" );
-            emit.assign( "funcInfo._name", CodeEmit::quoted( ( method._bConstructor != SW_FALSE ) ? annotation::kCtorLookupName : method._name ) );
-            emit.linef( "funcInfo._hashName       = %#;", CodeEmit::hs( lookupName ) );
-            emit.assign( "funcInfo._returnTypeName", CodeEmit::quoted( returnType ) );
-            if ( returnType != annotation::kVoidTypeName && method._bConstructor == SW_FALSE )
-                emit.assign( "funcInfo._pReturnType", CodeGeneratorInternal::makeTypeOpsExpr( returnType ) );
-            CodeGeneratorInternal::emitParameterList( emit, "funcInfo._listParameter", method._listParameter, _session, true );
+            emit.linef( "%#, %#, %#, %#,", CodeEmit::quoted( bConstructor ? string( annotation::kCtorLookupName ) : method._name ), CodeEmit::quoted( lookupName ),
+                        CodeEmit::quoted( returnType ), returnOps );
+            emit.linef( "%#, %#u,", listParamTable[methodIndex], static_cast<uint32>( method._listParameter.size() ) );
+            // 파서가 더한 기본 생성자는 그 타입이 기본 생성 가능할 때만 등록한다(참조 멤버 · 기본 생성자 없는 베이스는 가린다 — 호출 함수가 nullptr 면 등록에서 빠진다).
+            if ( method._bSynthesized != SW_FALSE )
+                emit.linef( "::sw::ReflectDefaultCtorOf<%#>::kInvoke,", typeInfo._fullyQualifiedName );
+            else
+                emitMethodInvoker( emit, typeInfo, method, returnType, CodeGeneratorInternal::makeInvokerCallArgs( method._listParameter, _session ) );
 
-            AnnotationFields::emitRuntimeMetadata( emit, method, "funcInfo._metadata.edit()." );
-
-            // 애노테이션이 아니라 선언에서 온 사실들이다.
-            emit.flagIf( method._bConstructor != SW_FALSE, "funcInfo._metadata.edit()._bConstructor", "SW_TRUE" );
-            emit.flagIf( method._bStatic != SW_FALSE, "funcInfo._metadata.edit()._bStatic", "SW_TRUE" );
-            emit.flagIf( method._bConst != SW_FALSE, "funcInfo._metadata.edit()._bConst", "SW_TRUE" );
-
-            const string callArgs = CodeGeneratorInternal::makeInvokerCallArgs( method._listParameter, _session );
-
-            emitMethodInvoker( emit, typeInfo, method, returnType, callArgs );
+            // 적은 메타데이터와 선언 사실(생성자 · 정적 · const)이 없으면 채우기 함수도 없다 — 공유 기본값을 쓴다.
+            CodeEmitBuffer fillBuffer;
+            CodeEmit       fillEmit( fillBuffer );
+            fillEmit.push( emit.getIndent() + 1 );
+            AnnotationFields::emitRuntimeMetadata( fillEmit, method, "m." );
+            fillEmit.flagIf( bConstructor, "m._bConstructor", "SW_TRUE" );
+            fillEmit.flagIf( method._bStatic != SW_FALSE, "m._bStatic", "SW_TRUE" );
+            fillEmit.flagIf( method._bConst != SW_FALSE, "m._bConst", "SW_TRUE" );
+            if ( fillBuffer.view().empty() )
+            {
+                emit.line( "nullptr" );
+            }
+            else
+            {
+                emit.line( "[]( ::sw::FunctionMetadata& m ) {" );
+                emit.raw( fillBuffer.view() );
+                emit.line( "}" );
+            }
             emit.pop();
-            emit.line( "}" );
+            emit.line( "}," );
         }
+        emit.pop();
+        emit.line( "};" );
+        emit.line( "info.setMethodTable( kMethods, ::std::size( kMethods ) );" );
     }
 
     void CodeGenerator::emitEventList( CodeEmit& emit, const ParsedTypeInfo& typeInfo ) const
     {
-        emit.line( "info._listEvent =" );
+        vector<string> listParamTable;
+        for ( size_t eventIndex = 0; eventIndex < typeInfo._listEvent.size(); ++eventIndex )
+        {
+            StringBuilder<constant::buffer::kMax64> tableName;
+            tableName.appendFormat( "kEventParams%#", static_cast<uint32>( eventIndex ) );
+            listParamTable.push_back( CodeGeneratorInternal::emitParameterTable( emit, string( tableName.view() ), typeInfo._listEvent[eventIndex]._listParameter, _session, false ) );
+        }
+        emit.line( "static constexpr ::sw::EventDesc kEvents[] =" );
         emit.line( "{" );
         emit.push();
-        for ( const ParsedEventInfo& event : typeInfo._listEvent )
+        for ( size_t eventIndex = 0; eventIndex < typeInfo._listEvent.size(); ++eventIndex )
         {
-            emit.line( "[]() {" );
+            const ParsedEventInfo& event = typeInfo._listEvent[eventIndex];
+            emit.line( "{" );
             emit.push();
-            emit.line( "::sw::EventInfo e;" );
-            emit.linef( "e._name   = %#;", CodeEmit::hs( event._annotation._name ) );
-            emit.linef( "e._offset = offsetof(%#, %#);", typeInfo._fullyQualifiedName, event._memberName );
-            CodeGeneratorInternal::emitParameterList( emit, "e._listParameter", event._listParameter, _session, false );
+            emit.linef( "%#, offsetof( %#, %# ),", CodeEmit::quoted( event._annotation._name ), typeInfo._fullyQualifiedName, event._memberName );
+            emit.linef( "%#, %#u,", listParamTable[eventIndex], static_cast<uint32>( event._listParameter.size() ) );
             // 묶기 · 부르기 · 인자 변환 표는 필드 타입(`MulticastDelegate<void( Args... )>`)에서 템플릿이 만든다.
-            emit.linef( "e.setOps( &::sw::ReflectEventOpsOf<decltype(%#::%#)>::kOps );", typeInfo._fullyQualifiedName, event._memberName );
-            AnnotationFields::emitRuntimeMetadata( emit, event._annotation, "e._metadata.edit()." );
-            emit.line( "return e;" );
+            emit.linef( "&::sw::ReflectEventOpsOf<decltype( %#::%# )>::kOps,", typeInfo._fullyQualifiedName, event._memberName );
+            CodeEmitBuffer fillBuffer;
+            CodeEmit       fillEmit( fillBuffer );
+            fillEmit.push( emit.getIndent() + 1 );
+            AnnotationFields::emitRuntimeMetadata( fillEmit, event._annotation, "m." );
+            if ( fillBuffer.view().empty() )
+            {
+                emit.line( "nullptr" );
+            }
+            else
+            {
+                emit.line( "[]( ::sw::PropertyMetadata& m ) {" );
+                emit.raw( fillBuffer.view() );
+                emit.line( "}" );
+            }
             emit.pop();
-            emit.line( "}()," );
+            emit.line( "}," );
         }
         emit.pop();
         emit.line( "};" );
+        emit.line( "info.setEventTable( kEvents, ::std::size( kEvents ) );" );
     }
 
     void CodeGenerator::emitTypeRegistrar( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo, const size_t typeIndex ) const

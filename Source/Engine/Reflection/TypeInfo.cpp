@@ -68,6 +68,27 @@ namespace sw
         }
     }
 
+    void TypeInfo::setMethodTable( const FunctionDesc* pDesc, const size_t count )
+    {
+        _listMethod.clear();
+        _listMethod.reserve( count );
+        for ( size_t descIndex = 0; descIndex < count; ++descIndex )
+        {
+            if ( pDesc[descIndex]._pInvoke != nullptr )
+                _listMethod.emplace_back( pDesc[descIndex] );
+        }
+    }
+
+    void TypeInfo::setEventTable( const EventDesc* pDesc, const size_t count )
+    {
+        _listEvent.clear();
+        _listEvent.reserve( count );
+        for ( size_t descIndex = 0; descIndex < count; ++descIndex )
+        {
+            _listEvent.emplace_back( pDesc[descIndex] );
+        }
+    }
+
     const string* TypeInfo::findCustomMeta( const hashed_string& key ) const noexcept
     {
         return _metadata->getEditor().findCustomMeta( key );
