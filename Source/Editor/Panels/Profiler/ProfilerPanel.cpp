@@ -258,11 +258,11 @@ namespace sw::editor
         , _capture{}
         , _timeline{}
         , _performance{}
+        , _viewModel{}
+        , _sceneState{}
         , _listScratchRow{}
         , _listScratchSeries{}
         , _arrFilter{}
-        , _viewModel{}
-        , _sceneState{}
         , _leakReport{}
     {
     }

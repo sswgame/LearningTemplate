@@ -58,6 +58,7 @@ namespace sw
         , _graphicsQueue{ nullptr }
         , _graphicsQueueFamilyIndex{ 0 }
         , _asyncComputeQueue{ nullptr }
+        , _frameFenceRing{}
         , _swapChain{}
         , _renderPass{ nullptr }
         , _renderPassLoad{ nullptr }
@@ -90,7 +91,6 @@ namespace sw
         , _pDisplayHandle{ nullptr }
         , _surfaceKind{ NativeSurfaceKind::Win32 }
         , _wsiKind{ VulkanWsiKind::None }
-        , _frameFenceRing{}
         , _width{ 0 }
         , _height{ 0 }
         , _depthFormat{ 0 }
@@ -2184,6 +2184,7 @@ namespace sw
         (void)_frameFenceRing.waitForRecordingSlot( [this]( uint32 slot, uint64 busySerial )
         {
             (void)busySerial;
+            assumeRenderThreadRole(); // 람다 본문은 분석이 둘러싼 함수의 역할을 잇지 못한다 — 같은 렌더 스레드에서 바로 불린다
             const VkResult fenceResult = vkWaitForFences( _device, 1, &_listInFlightFence[slot], VK_TRUE, UINT64_MAX );
             reportQueueResult( static_cast<int32>( fenceResult ), "beginFrame: vkWaitForFences" );
             return true; // 잃었으면 아래에서 프레임을 건너뛴다 — 잃은 장치는 끝나지 않을 일을 기다리지 않는다

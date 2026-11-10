@@ -153,17 +153,16 @@ namespace sw
         void waitJob();
 
     private:
-        GameObjectManager& _manager;
-        vector<Entry>      _listEntry;
-        vector<uint32>     _listFreeEntry;
-        vector<uint32>     _listRemovedEntry; ///< 앞 버퍼에서 뺐고 뒤 버퍼에서 빼기를 기다리는 칸(넘긴 일이 끝나면 비운다)
-        vector<Layer>      _listLayer;
-        vector<Change>     _listChange; ///< 이번에 넘긴 일의 몫
-        TaskStageHandle    _jobStage;
-        uint64             _nextSequence;
-        uint64             _appliedChangeCount;
-        uint8              _frontIndex;
-        uint8              _bJobLaunched  : 1;
-        uint8              _bJobOnWorkers : 1;
+        vector<Entry>   _listEntry;
+        vector<uint32>  _listFreeEntry;
+        vector<uint32>  _listRemovedEntry; ///< 앞 버퍼에서 뺐고 뒤 버퍼에서 빼기를 기다리는 칸(넘긴 일이 끝나면 비운다)
+        vector<Layer>   _listLayer;
+        vector<Change>  _listChange; ///< 이번에 넘긴 일의 몫
+        TaskStageHandle _jobStage;
+        uint64          _nextSequence;
+        uint64          _appliedChangeCount;
+        uint8           _frontIndex;
+        uint8           _bJobLaunched  : 1;
+        uint8           _bJobOnWorkers : 1;
     };
 } // namespace sw

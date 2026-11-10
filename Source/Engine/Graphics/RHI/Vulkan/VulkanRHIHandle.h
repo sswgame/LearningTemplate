@@ -8,6 +8,8 @@
  * @note 실제 Vulkan 함수와 구조체가 필요한 .cpp 는 `VulkanRHIUtil.h` 를 포함합니다.
  */
 #pragma once
+#include <cstdint>
+
 // 인자를 `##` 로 붙이고 선언자 이름으로도 쓴다. 괄호를 씌우면 둘 다 깨진다.
 // NOLINTBEGIN(bugprone-macro-parentheses)
 
@@ -38,3 +40,7 @@ SW_VK_DEFINE_HANDLE( VkPipelineCache )
 SW_VK_DEFINE_HANDLE( VkDebugUtilsMessengerEXT )
 SW_VK_DEFINE_HANDLE( VkSampler )
 SW_VK_DEFINE_HANDLE( VkQueryPool )
+
+// 헤더가 멤버로 드는 플래그 형식 — `vulkan_core.h` 와 같은 typedef 라 둘 다 보이는 TU 에서도 겹치지 않는다.
+typedef uint32_t VkFlags;
+typedef VkFlags  VkPipelineStageFlags;
