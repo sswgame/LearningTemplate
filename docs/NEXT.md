@@ -23,7 +23,6 @@
 - 통합 때 확인하지 못한 동작: 셋이 시나리오에서 본다 — Vulkan AMD 브레드크럼 · 128 타임스탬프 슬롯(실장치), DX12 placed 텍스처(`D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES` 가 RT+SRV 를 받는지), 배포 서버(shipping-check — 서버가 `Window/Linux` · `Input/Linux` 를 짓지 않는다).
 
 - **`-1` 이 optional 에 '값' 으로 들어가는 것을 형식으로 막기(작업자 브랜치 `-1` 둘을 합친 직후):** `optional<int32>` 를 돌려주는 `SkillTreeState::findIndex` 가 못 찾으면 `invalid_index::kInt32` 를 돌려줘 `_listRank[-1]` 로 단위 테스트가 죽었다(고침). `constant::invalid_index::*` 를 정수로 바뀌는 별도 형식으로 두고 `expected<T, Absent>` 에 그 형식을 받는 생성자를 `= delete` 로 둔다(831 사용처 — 비교 · 대입은 그대로 컴파일). 인자 · 대입으로 들어오는 같은 결함도 함께 막힌다.
-- **테스트가 실제 사용자 저장 폴더를 쓴다:** 와일드웨스트 체인이 `AppData/Local/SWEngine/wildwest/saves` 를 백엔드 프로세스끼리 함께 써서, 한 프로세스가 남이 쓰는 중인 임시 파일을 잔재로 지웠다. 잔재 판정은 고쳤다(`FileUtil::isAbandonedWriteTemp` — 쓴 pid 가 살아 있으면 남긴다). 남은 일: 자동화 실행은 저장 뿌리를 프로세스별 scratch 로 돌린다(`AutomationScratchWorkspace`).
 
 ### 2. 플랫폼 ([PlatformTargets](PlatformTargets.md) "남은 일")
 
@@ -131,6 +130,46 @@ GameObject/Component API 는 저작 · 수명 · 직렬화 층으로 두고, 프
 - **W-R5 빌드 시간(W-R3 와 병렬 — 파일이 다르다):** 헤더당 `.gen.cpp` 대신 모듈 안 8~16 헤더 묶음 TU 로 짓는다(PCH 를 1,465 번 연다). `.gen.meta.cpp` 는 같은 TU 의 `#if` 절로, 의존은 헤더별로 귀속한다. 목표는 생성 비중 8 % 미만이다.
 - **W-R4 프로퍼티 방문자 하나(W-R3 · 인스펙터 값 행 뒤):** 직렬화 9 루프 · 검증 · 문서 · 인스펙터 gather · 상태 해시 기본 구현이 `ReflectVisit` 하나를 쓴다. 지금 `foldStateHash` 는 손으로 써서 새 칸이 해시에서 빠질 수 있다. 소비자가 테스트뿐인 `Replicated` 메타데이터는 여기서 첫 소비자를 얻는다.
 - **W-R6 밀집 타입 색인:** 5-3 의 5 단계(`ComponentDataStore<T>`)와 함께만.
+
+### 5-5. 상용 대비 고도화(2026-11-10 진단 — 5-1 ~ 5-4 밖)
+
+기능 폭은 대부분 찼다(패널 64 · 단위 5619 · 시나리오 390 · 골든 631). 빈 곳은 검증 체계의 구조와 출시 뒤를 위한 이관 · 운영이다. 즉시 병렬 가능: T1 · T2 · D1 · D2 · N2 · U1(5-1 ~ 5-4 폴더와 겹치지 않는다). T1 · T2 는 5-1 · 5-3 의 상태 해시 동등성 판정이 흔들리지 않게 하는 선결이다.
+
+- **T1 골든 판정 · 기록(최우선):**
+  - 기록 모드가 진 골든만 다시 쓴다(`AutomationJudge.cpp:474` — 허용치 안이면 돌아간다). 그래서 0.99 % 로 남은 골든이 다음 실행에 1.01 % 로 졌다(오늘의 bodyviews).
+  - `GoldenVerdict { Pass, PassNearLimit, Fail }` 를 두고, 기록은 여유 폭(허용치의 절반) 밖이면 다시 쓴다. 보고에 `nearLimitGoldens[]` 를 남긴다.
+  - 판정을 두 축으로 나눈다: 넓고 얕은 차이(평균 거리)와 좁고 깊은 차이(최대 연결 영역). 지금 "색 거리 12 이상 화소 ≤ 1 %" 한 식은 작은 마젠타 덩어리를 놓친다.
+  - 골든 옆 `*.golden.json` 에 기록 커밋과 측정값을 둔다. 30 일간 골든 631 개가 1442 회 다시 쓰였다.
+  - WebGPU 골든은 0 이다 — 체인 백엔드 집합을 한 곳에서 정의해 골든 폴더와 대조한다.
+- **T2 자동화 격리를 형식으로:**
+  - 자동화가 실제 사용자 폴더(`%LOCALAPPDATA%/SWEngine/<게임>`)를 쓴다. 와일드웨스트 백엔드 프로세스끼리 서로의 임시 파일을 지웠다 — 잔재 판정은 `FileUtil::isAbandonedWriteTemp` 로 고쳤다. `SW_USER_DATA_ROOT` 는 자동화 어디서도 참조하지 않는다.
+  - 세션 시작 때 사용자 데이터 뿌리가 scratch 아래가 아니면 종료 11 로 멈추고, 부모가 자식마다 `SW_USER_DATA_ROOT=<scratch>/p<pid>` 를 건다.
+  - 완료: 체인 중 사용자 폴더 mtime 불변을 단언하는 시나리오.
+- **T3 테스트 이력 · 격리 · 파이프라인(T1 뒤):**
+  - 보고 JSON 을 sqlite 에 쌓고, 흔들림 지수와 p95 추세를 낸다. 격리 표 `Config/Rules/Test/Quarantine.json` 은 사유 · 만료 필수다.
+  - 샤드를 시간 균형으로 나누고, 묶음 끝 셸 스크립트를 단계 · 산출물 · 재시도가 적힌 파이프라인 정의로 옮긴다.
+  - `ScenarioCulprit.py` 는 로그 문구 대신 JSON 을 읽는다. 외부 CI 러너는 비용이 드는 연동이라 사용자 결정이다.
+- **D1 데이터 필수 칸 린트:** 발 뼈 결함의 모양이다. `PROPERTY` 의 문자열 · `hashed_string` · `AssetID` 칸이 비어 있지 않은 C++ 기본값을 갖고 `Required` 가 아니면 오류로 낸다. 빠진 칸은 로드 오류 id(`Reflection.RequiredMissing`)로 드러낸다.
+- **D2 포맷 · 세이브 이관 표:**
+  - 지금 에셋(`AssetFormat.h:5`) · 세이브(`SaveGame.h:85`)는 판이 다르면 거절한다. 출시 뒤 첫 판 올림에서 사용자 데이터를 모두 잃는다.
+  - `SW_FORMAT_UPGRADE( 종류, n, n+1, fn )` 순수 함수 사슬을 둔다. 빠진 단계는 오류이므로 폴백이 아니다. `Test/Fixtures/formats/<종류>/v<n>/` 샘플로 단위 테스트한다.
+  - 표가 비어 있는 동안 동작은 같다(언리얼 `FCustomVersion` 자리).
+- **N2 서버 배포 · 설정 검증:**
+  - `Scripts/package/ServerImage.py` 를 둔다(Linux 서버 + 팩 + 설정 → tar + systemd unit, 컨테이너는 선택).
+  - `ServerApp --check-config` 를 둔다(잘못된 설정은 종료 11).
+  - `OpsHTTPEndpoint` 는 인증 없는 GET 이다. 바인드 주소를 루프백 · 사설로 형식에서 제한하고, 외부 바인드는 토큰 필수로 한다.
+- **U1 햅틱 · UI 포커스 내비:** 진동 · 트리거 출력 API 가 없다(grep 0). `IInputFeedbackDevice` 와 `*.haptic.xml` 을 둔다. 패드 전용 메뉴 탐색(방향 포커스)을 확인하고 없으면 더한다.
+- **A1 애니메이션 포즈 노드 등록식(W-S1 뒤, 평가 경로는 5-3 뒤):**
+  - 포즈 노드가 `None · BlendPoses` 둘뿐이라(`AnimationGraphAsset.h:106`) 새 블렌드마다 enum · 로더 · 플레이어를 고친다. 리그 노드처럼 등록표로 바꾼다.
+  - 그 위에 Mirror · Montage(섹션 · 분기)를 더한다.
+- **R1 에셋 리다이렉터(5-4 뒤):** GUID 전환은 기각한다(경로 id 가 언리얼 SoftObjectPath 자리). `redirects.xml`(옛 → 새)를 `AssetPaths` 앞단에서 풀어, 세이브 · 서버에 적힌 옛 경로가 산다. 린트가 남은 참조를 보고한다.
+- **N1 복제 스키마를 리플렉션에서(5-4 뒤):**
+  - 엔티티 상태 바이트를 게임이 손으로 양자화한다. 그래서 칸 하나를 더하면 서버 · 클라 두 곳을 고쳐야 한다.
+  - `PROPERTY( Replicated, Quantize = … )` 로 작성기를 생성하고, 스키마 해시를 와이어 버전에 합친다.
+  - `kMaxEntityBytes` 초과는 첫 경고만 남기고 엔티티가 사라진다 — `registerEntity` 의 오류로 바꾼다.
+- **E1 되돌리기를 형식으로(에디터 MVVM 3 단계 뒤):** 씬 변이 명령이 `EditorTransaction&` 를 요구하게 한다. 시나리오 `editor/undocoverage` 는 등록 명령 전수를 실행 → undo 한 뒤 씬 해시가 같은지 본다.
+- **E2 런타임 디버거 한 자리(5-1 W-E1 뒤):** AI 섹션 · 시퀀스 디버거 · 애니 리와인드 · HUD 섹션을 `IDebugSource` 등록표 하나로 묶는다. 선택 오브젝트에 연동하는 패널을 둔다(언리얼 Gameplay Debugger 자리).
+- **G1 장르 수직 슬라이스(T1 · T2 뒤):** 완결 루프가 없는 게임마다 `slice.scenario.xml` 을 둔다(시작 → 목표 → 결과 → 저장 · 복원 해시 동일).
 
 ### 6. 리소스
 
