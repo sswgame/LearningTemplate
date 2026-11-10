@@ -244,7 +244,7 @@ namespace sw::editor
         if ( parsed.has_value() )
             return parsed;
         _listElement.clear();
-        _rootIndex = -1;
+        _rootIndex.reset();
         return parsed;
     }
 
@@ -252,7 +252,7 @@ namespace sw::editor
     {
         using Internal = CatalogXMLTextInternal;
         _listElement.clear();
-        _rootIndex = -1;
+        _rootIndex.reset();
 
         vector<int32> listOpen;
         size_t        position = 0;
@@ -281,8 +281,8 @@ namespace sw::editor
             if ( started.has_value() == false )
                 return started;
 
-            element._parent = listOpen.empty() ? -1 : listOpen.back();
-            if ( element._parent < 0 && _rootIndex >= 0 )
+            element._parent = listOpen.empty() ? optional<int32>{} : optional<int32>{ listOpen.back() };
+            if ( element._parent.has_value() == false && _rootIndex.has_value() )
                 return unexpected( Internal::fail( text, lessThan, "more than one root element" ) );
             const bool   bSelfClosing = element._bSelfClosing;
             const uint32 startTagEnd  = element._startTagEnd;
@@ -293,9 +293,9 @@ namespace sw::editor
             }
             const int32 index = static_cast<int32>( _listElement.size() );
             _listElement.push_back( std::move( element ) );
-            const int32 parentIndex = _listElement[static_cast<size_t>( index )]._parent;
-            if ( parentIndex >= 0 )
-                _listElement[static_cast<size_t>( parentIndex )]._listChild.push_back( index );
+            const optional<int32> parentIndex = _listElement[static_cast<size_t>( index )]._parent;
+            if ( parentIndex.has_value() )
+                _listElement[static_cast<size_t>( *parentIndex )]._listChild.push_back( index );
             else
                 _rootIndex = index;
             if ( bSelfClosing == false )
@@ -308,7 +308,7 @@ namespace sw::editor
             const CatalogXMLElement& open = _listElement[static_cast<size_t>( listOpen.back() )];
             return unexpected( Internal::fail( text, open._begin, "element is never closed" ) );
         }
-        if ( _rootIndex < 0 )
+        if ( _rootIndex.has_value() == false )
             return unexpected( Error{ ErrorKind::NotFound, "no root element" } );
         return {};
     }
@@ -412,7 +412,7 @@ namespace sw::editor
 
     expected<string> CatalogXMLText::removeElement( string_view text, const CatalogXMLElement& element )
     {
-        if ( element._parent < 0 )
+        if ( element._parent.has_value() == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "the root element cannot be removed" } );
         size_t begin = element._begin;
         while ( begin > 0 && ( text[begin - 1] == ' ' || text[begin - 1] == '\t' ) )
@@ -439,7 +439,7 @@ namespace sw::editor
 
     expected<string> CatalogXMLText::duplicateElement( string_view text, const CatalogXMLElement& element )
     {
-        if ( element._parent < 0 )
+        if ( element._parent.has_value() == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "the root element cannot be duplicated" } );
         const string_view newline = CatalogXMLTextInternal::detectNewline( text );
         string            middle;

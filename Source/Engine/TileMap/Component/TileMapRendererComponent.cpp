@@ -361,10 +361,10 @@ namespace sw
         return true;
     }
 
-    int32 TileMapRendererComponent::getDisplayedCell( int32 x, int32 y ) const
+    optional<int32> TileMapRendererComponent::getDisplayedCell( int32 x, int32 y ) const
     {
         const TileVisual* pVisual = getTileSet().resolveVisual( _listBrushIndex, _map._width, _map._height, x, y );
-        return ( pVisual != nullptr ) ? pVisual->computeCellAt( _elapsedSeconds ) : constant::invalid_index::kInt32;
+        return ( pVisual != nullptr ) ? pVisual->computeCellAt( _elapsedSeconds ) : nullopt;
     }
 
     float3 TileMapRendererComponent::computeCellCenter( int32 x, int32 y ) const
@@ -466,7 +466,7 @@ namespace sw
         const float32  size = getTileSet().getTileSize();
         const float3   local{ ( static_cast<float32>( x ) + 0.5f ) * size, -( static_cast<float32>( y ) + 0.5f ) * size, 0.0f };
         const float4x4 world = SpriteInstanceBatch::makeQuadWorld( local, size, size ) * _lastOwnerWorld;
-        const float4   uv    = getTileSet().computeCellUVRect( pVisual->computeCellAt( _elapsedSeconds ) );
+        const float4   uv    = getTileSet().computeCellUVRect( pVisual->computeCellAt( _elapsedSeconds ).value() ); // 읽은 타일셋의 모습은 셀이 있다(collectIssues)
         pBatch->setEntry( entry, world, uv, float4{ 1.0f, 1.0f, 1.0f, 1.0f } );
     }
 

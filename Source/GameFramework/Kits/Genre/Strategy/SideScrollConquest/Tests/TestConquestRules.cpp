@@ -228,12 +228,12 @@ namespace
             return sw::VectorUtil::countBy<&sw::ConquestEvent::_kind>( _listEvent, kind );
         }
 
-        /** @brief 지금까지의 이벤트에서 @p kind 가 처음 나온 값입니다. 없으면 -1 입니다. */
-        int32 findFirstValue( sw::ConquestEvent::Kind kind )
+        /** @brief 지금까지의 이벤트에서 @p kind 가 처음 나온 값입니다. 없으면 비어 있습니다. */
+        sw::optional<int32> findFirstValue( sw::ConquestEvent::Kind kind )
         {
             _world.pollEvents( _lease, _listEvent );
             const sw::ConquestEvent* pEvent = sw::VectorUtil::findBy<&sw::ConquestEvent::_kind>( _listEvent, kind );
-            return pEvent != nullptr ? pEvent->_value : -1;
+            return pEvent != nullptr ? sw::optional<int32>{ pEvent->_value } : sw::nullopt;
         }
 
         int32 spawn( const sw::hashed_string& unitID, sw::ConquestTeam team, float32 x, sw::ConquestOrder order = sw::ConquestOrder::Hold ) { return _world.spawnUnit( unitID, team, x, order ); }
@@ -324,7 +324,7 @@ SW_TEST_CASE_F( ConquestRulesTest, WorkersProductionAndIncome )
     run( 4 ); // 2 초: 주기 1 초가 둘(일꾼 2 × 양 2), 수입 주기 하나
     SW_EXPECT_EQUAL( 18, _world.getResource( "wood" ) );
     SW_EXPECT_EQUAL( 2, countEvents( sw::ConquestEvent::Kind::ResourceProduced ) );
-    SW_EXPECT_EQUAL( 4, findFirstValue( sw::ConquestEvent::Kind::ResourceProduced ) );
+    SW_EXPECT_TRUE( findFirstValue( sw::ConquestEvent::Kind::ResourceProduced ) == 4 );
     SW_EXPECT_EQUAL( 81, _world.getResource( "gold" ) );
     SW_EXPECT_EQUAL( 1, countEvents( sw::ConquestEvent::Kind::IncomePaid ) );
 }
@@ -354,7 +354,7 @@ SW_TEST_CASE_F( ConquestRulesTest, TrainUnit )
     SW_EXPECT_TRUE( _world.getBuildings()[0]._listQueue.empty() );
     SW_EXPECT_EQUAL( 1, _world.getSquadSize() );
     SW_EXPECT_EQUAL( 1, _world.computePopulation() );
-    const int32 trainedID = findFirstValue( sw::ConquestEvent::Kind::UnitTrained );
+    const int32 trainedID = findFirstValue( sw::ConquestEvent::Kind::UnitTrained ).value();
     SW_REQUIRE_TRUE( _world.findUnit( trainedID ) != nullptr );
     SW_EXPECT_EQUAL( sw::ConquestOrder::Follow, _world.findUnit( trainedID )->_order );
 
@@ -510,7 +510,7 @@ SW_TEST_CASE_F( ConquestRulesTest, DeadUnitsLeaveTheSquad )
     SW_EXPECT_EQUAL( 0, _world.findUnit( survivor )->_squadSlot );
     SW_EXPECT_EQUAL( 1, _world.getSquadSize() );
     SW_EXPECT_EQUAL( 1, _world.computePopulation() );
-    SW_EXPECT_EQUAL( victim, findFirstValue( sw::ConquestEvent::Kind::UnitDied ) );
+    SW_EXPECT_TRUE( findFirstValue( sw::ConquestEvent::Kind::UnitDied ) == victim );
 }
 
 /**
@@ -596,7 +596,7 @@ SW_TEST_CASE_F( ConquestRulesTest, CounterWaves )
     run( 119 );
     SW_EXPECT_TRUE( _world.getUnits().empty() );
     run( 1 ); // 60 초: 2 + 2
-    SW_EXPECT_EQUAL( 4, findFirstValue( sw::ConquestEvent::Kind::WaveSpawned ) );
+    SW_EXPECT_TRUE( findFirstValue( sw::ConquestEvent::Kind::WaveSpawned ) == 4 );
     SW_REQUIRE_EQUAL( 4u, _world.getUnits().size() );
     SW_EXPECT_NEAR( 0.0, _world.getWaveTimer(), 1.0e-4 );
     for ( const sw::ConquestUnit& unit : _world.getUnits() )

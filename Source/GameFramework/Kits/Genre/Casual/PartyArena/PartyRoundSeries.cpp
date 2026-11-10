@@ -46,7 +46,7 @@ namespace sw
         if ( _series.initialize( _seriesSettings ) == false || _series.start( playerCount ) == false )
             return false;
         _eventBuffer.clear();
-        pushEvent( PartySeriesEvent::Kind::RoundStarted, constant::invalid_index::kInt32, 0, 0 );
+        pushEvent( PartySeriesEvent::Kind::RoundStarted, nullopt, 0, 0 );
         return true;
     }
 
@@ -69,7 +69,7 @@ namespace sw
             pushEvent( PartySeriesEvent::Kind::SeriesWon, getWinner(), getTotal( getWinner() ), 0 );
             return true;
         }
-        pushEvent( PartySeriesEvent::Kind::RoundStarted, constant::invalid_index::kInt32, getRoundNumber(), 0 );
+        pushEvent( PartySeriesEvent::Kind::RoundStarted, nullopt, getRoundNumber(), 0 );
         return true;
     }
 
@@ -140,7 +140,7 @@ namespace sw
         return loadedCount;
     }
 
-    void PartyRoundSeries::pushEvent( PartySeriesEvent::Kind kind, int32 player, int32 value, int32 points )
+    void PartyRoundSeries::pushEvent( PartySeriesEvent::Kind kind, optional<int32> player, int32 value, int32 points )
     {
         PartySeriesEvent event;
         event._kind                 = kind;

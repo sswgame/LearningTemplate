@@ -24,7 +24,7 @@ namespace
             int32 parent       = -1;
             for ( const utf8* pName : { "root", "hips", "thigh", "shin" } )
             {
-                parent = skeleton.addBone( hashed_string( pName ), parent, local );
+                parent = skeleton.addBone( hashed_string( pName ), parent, local ).value();
             }
             return skeleton;
         }

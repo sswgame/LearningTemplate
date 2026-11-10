@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Sequencer/SequenceAsset.h"
@@ -86,13 +87,13 @@ namespace sw::editor
         // 구간 항목
         /**
          * @brief 항목을 타임라인 앞에 더하고 번호를 돌려줍니다(이름은 @p kindName 과 겹치지 않는 번호, 길이는 타임라인 안, 대상은 고른 바인딩). 열려 있던 초안은 닫습니다.
-         * @details 필수 칸이 빈 종류(고른 바인딩이 없는 클립 · 스폰 · 외형 · 시나리오 ...)는 아직 만들지 않고 초안을 열어 -1 을 돌려줍니다(`isDraftingItem`). 표에 없는 종류도 -1 입니다.
+         * @details 필수 칸이 빈 종류(고른 바인딩이 없는 클립 · 스폰 · 외형 · 시나리오 ...)는 아직 만들지 않고 초안을 열어 비어 있습니다(`isDraftingItem` — 오류가 아니라 다음 단계다). 표에 없는 종류도 비어 있습니다.
          */
-        int32 addItem( SequenceItemKind kind, string_view kindName );
+        optional<int32> addItem( SequenceItemKind kind, string_view kindName );
         /** @brief 초안이 열려 있으면 true 입니다. 칸(`_itemEdit`)은 고른 항목이 아니라 초안을 고칩니다. */
         [[nodiscard]] bool isDraftingItem() const;
-        /** @brief 초안의 필수 칸이 찼고 바인딩이 시퀀스에 있으면 항목으로 더하고 고른 뒤 번호를 돌려줍니다. 모자라면 초안을 그대로 두고 -1 입니다. */
-        int32 commitItemDraft();
+        /** @brief 초안의 필수 칸이 찼고 바인딩이 시퀀스에 있으면 항목으로 더하고 고른 뒤 번호를 돌려줍니다. 모자라면 초안을 그대로 두고 비어 있습니다. */
+        optional<int32> commitItemDraft();
         /** @brief 초안을 버립니다. 문서는 바뀌지 않습니다. */
         void cancelItemDraft();
         /** @brief 사본 @p item 이 문서에 들어갈 수 있는지입니다(종류의 칸 규칙 · 바인딩이 시퀀스에 있음). 파일 읽기와 같은 규칙입니다. */
@@ -107,22 +108,22 @@ namespace sw::editor
         [[nodiscard]] bool commitItemEdit();
         /** @brief 항목을 지웁니다. 뒤의 항목을 고르고 있었으면 같은 항목을 계속 가리키게 당깁니다. 범위 밖이면 false 입니다. */
         bool removeItem( int32 itemIndex );
-        /** @brief 항목의 사본을 끝에 더하고 번호를 돌려줍니다. 범위 밖이면 -1 입니다. 스폰 항목은 바인딩을 둘이 채울 수 없어 -1 입니다. */
-        int32 duplicateItem( int32 itemIndex );
+        /** @brief 항목의 사본을 끝에 더하고 번호를 돌려줍니다. 범위 밖이거나 스폰 항목(바인딩을 둘이 채울 수 없다)이면 그 이유입니다. */
+        [[nodiscard]] expected<int32> duplicateItem( int32 itemIndex );
 
         // 카메라 컷 차선
         /** @brief 카메라 컷 항목의 번호를 시작 프레임 순으로 채웁니다(컷 차선이 그 순서로 그린다). */
         void collectCutLane( vector<int32>& outListItemIndex ) const;
         /**
          * @brief @p frame 에서 고른 바인딩의 카메라로 컷을 시작합니다(언리얼 Camera Cut 트랙에 컷을 더하는 것과 같다). 새 컷은 다음 컷 앞(없으면 끝)까지이고,
-         *        @p frame 을 덮던 앞 컷은 @p frame 앞에서 끝나게 줄인다. 새 컷을 고르고 번호를 돌려줍니다. 고른 바인딩이 없거나 @p frame 이 타임라인 밖이면 -1 입니다.
+         *        @p frame 을 덮던 앞 컷은 @p frame 앞에서 끝나게 줄인다. 새 컷을 고르고 번호를 돌려줍니다. 고른 바인딩이 없거나 @p frame 이 타임라인 밖이거나 그 프레임에서 시작하는 컷이 있으면 그 이유입니다.
          */
-        int32 addCameraCut( int32 frame );
+        [[nodiscard]] expected<int32> addCameraCut( int32 frame );
         /**
          * @brief @p frame 을 덮는 컷을 그 프레임에서 둘로 나눕니다(같은 카메라 — 언리얼 Sequencer 의 섹션 Split). 뒤 조각을 고르고 번호를 돌려줍니다.
-         * @details 컷의 첫 프레임에서는 나눌 것이 없어 -1 입니다. 덮는 컷이 없어도 -1 입니다.
+         * @details 컷의 첫 프레임에서는 나눌 것이 없어 오류입니다. 덮는 컷이 없어도 오류입니다.
          */
-        int32 splitCameraCut( int32 frame );
+        [[nodiscard]] expected<int32> splitCameraCut( int32 frame );
         /**
          * @brief 컷 @p itemIndex 를 지우고, 바로 앞에 붙어 있던 컷이 그 자리까지 늘어납니다(쇼트 목록에 빈 화면이 생기지 않는다 — 언리얼 Camera Cut 트랙에서 섹션을 지우고 앞 섹션을 늘리는 것과 같다).
          * @return 컷이 아니거나 범위 밖이면 false 입니다.
@@ -187,7 +188,7 @@ namespace sw::editor
          * @brief 담은 항목을 @p frame 에서 시작하게 붙이고(길이는 그대로, 끝은 타임라인 안으로 자른다) 고른 뒤 번호를 돌려줍니다.
          * @details 이름은 겹치지 않는 번호를 붙인다. 스폰 항목은 바인딩을 둘이 채울 수 없어 -1, 담은 항목이 없거나 @p frame 이 타임라인 밖이면 -1 입니다.
          */
-        int32 pasteItem( int32 frame );
+        [[nodiscard]] expected<int32> pasteItem( int32 frame );
         /** @brief 담은 항목이 있으면 true 입니다. */
         [[nodiscard]] bool hasCopiedItem() const { return _bItemCopied == SW_TRUE; }
 

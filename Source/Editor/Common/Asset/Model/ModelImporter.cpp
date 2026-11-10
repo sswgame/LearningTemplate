@@ -150,11 +150,14 @@ namespace sw::editor
                             rootParent = ModelImportUtil::convertMatrixToEngineSpace( arrParentWorld );
                             local      = BoneTransform::makeFromMatrix( local.toMatrix() * rootParent );
                         }
-                        const int32 boneIndex = outSkeleton.addBone( hashed_string( ModelImportUtil::makeNodeName( data, *pNode ) ), parentBone, local );
-                        if ( boneIndex < 0 )
+                        const expected<int32> boneIndex = outSkeleton.addBone( hashed_string( ModelImportUtil::makeNodeName( data, *pNode ) ), parentBone, local );
+                        if ( boneIndex.has_value() == false )
+                        {
+                            SW_LOG_ERROR_ID( "ModelImporter.GlTFSkinBoneRejected", "glTF '%#': %# (%#)", sourcePath, boneIndex.error().message(), boneIndex.error().detail() );
                             return false;
+                        }
                         outListBoneInverseBind.push_back( listInverseBind[itSlot->second] );
-                        outMapJointBone.emplace( pNode, boneIndex );
+                        outMapJointBone.emplace( pNode, *boneIndex );
                         outListRootParent.push_back( rootParent );
                     }
                     for ( cgltf_size childIndex = pNode->children_count; childIndex > 0; --childIndex )

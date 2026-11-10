@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/fixed_string.h"
@@ -72,9 +73,9 @@ namespace sw::editor
         vector<float4>                          _listGradientColor;   ///< 그래디언트 표본 재사용 버퍼
         vector<int32>                           _listVisibleRow;      ///< 행 거르개에 맞는 행 재사용 버퍼
         vector<CatalogChildSection>             _listChildSection;    ///< 자식 창이 이번 프레임에 그리는 표들
-        int32                                   _curveOwner;          ///< 곡선 창이 보는 원소(-1 이면 닫힘)
-        int32                                   _childOwner;          ///< 자식 창이 보는 행(-1 이면 닫힘). 고쳐도 번호가 그대로다 - 행 안쪽만 고치고 원소 번호는 문서 순서다
-        int32                                   _graphCurve;          ///< 곡선 창의 그래프가 고치는 곡선 원소(-1 이면 그래프를 닫았다)
+        optional<int32>                         _curveOwner;          ///< 곡선 창이 보는 원소(비면 닫힘)
+        optional<int32>                         _childOwner;          ///< 자식 창이 보는 행(비면 닫힘). 고쳐도 번호가 그대로다 - 행 안쪽만 고치고 원소 번호는 문서 순서다
+        optional<int32>                         _graphCurve;          ///< 곡선 창의 그래프가 고치는 곡선 원소(비면 그래프를 닫았다)
         uint8                                   _bOpenCurvePopup : 1; ///< 다음 그리기에서 창을 연다
         uint8                                   _bOpenChildPopup : 1; ///< 다음 그리기에서 자식 창을 연다
         uint8                                   _bEditFailed     : 1; ///< 지난 편집이 거절되었다(`takeEditFailed`)

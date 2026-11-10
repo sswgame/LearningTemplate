@@ -82,7 +82,7 @@ namespace sw
         bool setTileBrush( int32 x, int32 y, string_view brushName );
 
         /** @brief 칸 하나가 지금 보이는 아틀라스 칸입니다(빈 칸이면 -1). 시각은 애니메이션 시각입니다. */
-        int32 getDisplayedCell( int32 x, int32 y ) const;
+        optional<int32> getDisplayedCell( int32 x, int32 y ) const;
         /** @brief 칸 가운데의 월드 자리입니다. */
         float3 computeCellCenter( int32 x, int32 y ) const;
         /** @brief 병합된 충돌 사각형(칸 단위)입니다. */

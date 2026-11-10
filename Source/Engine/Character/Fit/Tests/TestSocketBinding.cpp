@@ -290,7 +290,7 @@ SW_TEST_CASE( Socket2DTest, SocketOnSpriteBoneBindsInPlane )
 {
     using Internal = SocketBindingTestInternal;
     CharacterBoneArray bones2D;
-    const int32        root = bones2D.addBone( hashed_string( "root" ), -1, float4x4::Identity );
+    const int32        root = bones2D.addBone( hashed_string( "root" ), -1, float4x4::Identity ).value();
     (void)bones2D.addBone( hashed_string( "arm" ), root, float4x4::makeRotationZ( MathUtil::kHalfPi ) * float4x4::makeTranslation( 1.0f, 0.0f, 0.0f ) );
     SocketKindTable kinds;
     kinds.addKind( hashed_string( "Attach" ) );

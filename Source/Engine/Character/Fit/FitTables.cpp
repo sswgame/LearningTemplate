@@ -233,12 +233,12 @@ namespace sw
             const BodyRegionDef& region = _listRegion[regionIndex];
             if ( region._group.empty() == false )
             {
-                const uint16 group = geometry.findGroup( region._group );
-                if ( group == CharacterGeometryConstant::kNoGroup || geometry._listVertexGroup.size() != vertexCount )
+                const optional<uint16> group = geometry.findGroup( region._group );
+                if ( group.has_value() == false || geometry._listVertexGroup.size() != vertexCount )
                     continue;
                 for ( uint32 vertex = 0; vertex < vertexCount; ++vertex )
                 {
-                    if ( outListVertexRegion[vertex] == CharacterGeometryConstant::kNoGroup && geometry._listVertexGroup[vertex] == group )
+                    if ( outListVertexRegion[vertex] == CharacterGeometryConstant::kNoGroup && geometry._listVertexGroup[vertex] == *group )
                         outListVertexRegion[vertex] = static_cast<uint16>( regionIndex );
                 }
                 continue;

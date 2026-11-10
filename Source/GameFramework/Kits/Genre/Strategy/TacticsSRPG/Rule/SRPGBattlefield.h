@@ -141,11 +141,11 @@ namespace sw
             Developed        ///< `_unit` 이 개발되었다
         };
 
-        int32    _unit{ constant::invalid_index::kInt32 };
-        int32    _other{ constant::invalid_index::kInt32 };
-        int32    _value{ 0 };
-        Kind     _kind{ Kind::TurnStarted };
-        SRPGTeam _team{ SRPGTeam::Player };
+        optional<int32> _unit{};
+        optional<int32> _other{};
+        int32           _value{ 0 };
+        Kind            _kind{ Kind::TurnStarted };
+        SRPGTeam        _team{ SRPGTeam::Player };
     };
 } // namespace sw
 

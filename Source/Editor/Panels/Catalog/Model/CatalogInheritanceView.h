@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Panels/Catalog/Model/CatalogChildSection.h"
@@ -51,8 +52,8 @@ namespace sw::editor
         /** @brief 행 아래 @p path 원소의 규칙입니다. 규칙에 없는 칸이면(통째로 바뀐다) nullptr 입니다. */
         const DataInheritanceSchema* findChildSchema( const CatalogXMLElement& row, const CatalogChildPath& path ) const;
 
-        /** @brief 원문의 원소 @p ownerIndex 아래에서 @p step 원소의 번호입니다. 없으면 -1 입니다. */
-        static int32 findWrittenChild( const CatalogXMLText& parsed, int32 ownerIndex, const CatalogChildStep& step );
+        /** @brief 원문의 원소 @p ownerIndex 아래에서 @p step 원소의 번호입니다. 없으면 비어 있고, 담는 원소를 적지 않았으면(@p ownerIndex 가 비면) 그 아래도 없습니다. */
+        static optional<int32> findWrittenChild( const CatalogXMLText& parsed, optional<int32> ownerIndex, const CatalogChildStep& step );
         /** @brief @p start 에서 @p path 를 따라 내려간 원소입니다. 없으면 무효입니다. */
         static XMLNode walkPath( const XMLNode& start, const CatalogChildPath& path );
 

@@ -108,13 +108,13 @@ namespace sw
             }
 
             /** @brief @p node 와 자손을 읽어 @p parent 아래에 더합니다. 하나라도 틀리면 false 이고, 읽을 수 있는 나머지는 계속 읽어 오류를 모두 알립니다. */
-            [[nodiscard]] bool readNode( const XMLNode& node, int32 parent, uint32 depth );
+            [[nodiscard]] bool readNode( const XMLNode& node, optional<int32> parent, uint32 depth );
 
         private:
-            /** @brief 칸을 읽은 노드 하나를 트리에 더합니다. 틀린 식 · 모르는 동작이면 더하지 않고 -1 입니다. */
-            int32 addNode( const BehaviorTreeNodeData& data, const XMLNode& node, int32 parent, bool& inoutbValid );
+            /** @brief 칸을 읽은 노드 하나를 트리에 더합니다. 틀린 식 · 모르는 동작이면 더하지 않고 오류입니다(이유는 로그). */
+            [[nodiscard]] expected<int32> addNode( const BehaviorTreeNodeData& data, const XMLNode& node, optional<int32> parent, bool& inoutbValid );
             /** @brief `<SubTree tree="…">` 를 그 자리에 펼칩니다. 순환 · 없는 파일 · 틀린 파일은 오류입니다. */
-            [[nodiscard]] bool expandSubTree( const string& treePath, int32 parent, uint32 depth );
+            [[nodiscard]] bool expandSubTree( const string& treePath, optional<int32> parent, uint32 depth );
 
         private:
             BehaviorTree&           _tree;
@@ -123,7 +123,7 @@ namespace sw
             vector<string>          _listChain; ///< 펼치는 중인 하위 트리 파일(순환 검사)
         };
 
-        bool BehaviorTreeReader::expandSubTree( const string& treePath, int32 parent, uint32 depth )
+        bool BehaviorTreeReader::expandSubTree( const string& treePath, optional<int32> parent, uint32 depth )
         {
             for ( const string& active : _listChain )
             {
@@ -161,7 +161,7 @@ namespace sw
             return bValid;
         }
 
-        int32 BehaviorTreeReader::addNode( const BehaviorTreeNodeData& data, const XMLNode& node, int32 parent, bool& inoutbValid )
+        expected<int32> BehaviorTreeReader::addNode( const BehaviorTreeNodeData& data, const XMLNode& node, optional<int32> parent, bool& inoutbValid )
         {
             const string name = data._name.empty() ? string( node.getName() ) : data._name; // 이름이 없으면 원소 이름(편집기 표시와 같다)
             switch ( data._type )
@@ -216,10 +216,10 @@ namespace sw
                     return _tree.addSubTreeSlot( parent, name.c_str(), hashed_string( data._params.find<BehaviorSubTreeParams>()->_slot ) );
             }
             inoutbValid = false;
-            return -1;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the behavior tree node was not added" } ); // 이유는 위에서 로그로 남겼다
         }
 
-        bool BehaviorTreeReader::readNode( const XMLNode& node, int32 parent, uint32 depth )
+        bool BehaviorTreeReader::readNode( const XMLNode& node, optional<int32> parent, uint32 depth )
         {
             if ( depth > BehaviorTreeNames::kMaxDepth )
             {
@@ -248,7 +248,7 @@ namespace sw
                 if ( pParams->_tree.empty() == false )
                     return expandSubTree( pParams->_tree.path(), parent, depth );
             }
-            const int32 index = addNode( data, node, parent, bValid );
+            const expected<int32> index = addNode( data, node, parent, bValid );
             if ( BehaviorTreeNames::isLeaf( type ) )
             {
                 if ( node.findChild() )
@@ -258,11 +258,11 @@ namespace sw
                 }
                 return bValid;
             }
-            if ( index < 0 )
+            if ( index.has_value() == false )
                 return false; // 노드를 더하지 못했다 - 아래를 읽을 부모가 없다
             for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
             {
-                bValid = readNode( child, index, depth + 1 ) && bValid;
+                bValid = readNode( child, *index, depth + 1 ) && bValid;
             }
             return bValid;
         }
@@ -451,7 +451,7 @@ namespace sw
         }
         // 쓰는 쪽이 글을 직접 넘기는 길이 없도록 공개 읽기가 모두 `_pSource` 를 채운다.
         BehaviorTreeReader reader( _tree, sourceName, *_pSource );
-        bValid = reader.readNode( first, -1, 0 ) && bValid;
+        bValid = reader.readNode( first, nullopt, 0 ) && bValid;
         if ( bValid && _tree.isValid() == false )
         {
             SW_LOG_ERROR_ID( "BehaviorTreeAsset.BehaviorTreeNotValid", "%#: the behavior tree is not valid (decorators need exactly one child, composites at least one)", sourceName );

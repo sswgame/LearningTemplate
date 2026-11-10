@@ -18,7 +18,7 @@ namespace
         static CharacterBoneArray makeBones()
         {
             CharacterBoneArray bones;
-            const int32        root = bones.addBone( hashed_string( "root" ), -1, float4x4::Identity );
+            const int32        root = bones.addBone( hashed_string( "root" ), -1, float4x4::Identity ).value();
             const float4x4     hand = float4x4::makeTrs( float3{ 0.0f, 1.0f, 0.0f }, quaternion::makeFromYawPitchRoll( float3{ 0.0f, MathUtil::kPi * 0.5f, 0.0f } ), float3{ 1.0f } );
             (void)bones.addBone( hashed_string( "hand" ), root, hand );
             bones.computeModelTransforms();

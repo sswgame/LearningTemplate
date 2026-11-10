@@ -170,7 +170,7 @@ SW_TEST_CASE( GeometryCutTest, ExtractKeepsUsedVerticesInOriginalOrder )
     }
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( out._listTrianglePart[0] ) );
     SW_EXPECT_EQUAL( 3u, static_cast<uint32>( out._listTrianglePart[1] ) );
-    SW_EXPECT_TRUE( out.findGroup( hashed_string( "torso" ) ) == 0u );
+    SW_EXPECT_TRUE( out.findGroup( hashed_string( "torso" ) ) == uint16{ 0 } );
 }
 
 /**

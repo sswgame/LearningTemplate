@@ -134,11 +134,11 @@ SW_TEST_CASE( SequenceModelTest, EveryKindCanBeCreatedAndSurvivesSaveAndLoad )
     for ( uint32 kindIndex = 0; kindIndex < SequenceAsset::getItemKindCount(); ++kindIndex )
     {
         const SequenceItemKind kind = static_cast<SequenceItemKind>( kindIndex );
-        if ( document.addItem( kind, "Kind" ) >= 0 )
+        if ( document.addItem( kind, "Kind" ).has_value() )
             continue;
         SW_REQUIRE_TRUE( document.isDraftingItem() );
         SequenceModelTestUtil::fillRequiredFields( document._itemEdit, spawnBinding );
-        SW_EXPECT_TRUE( document.commitItemDraft() >= 0 );
+        SW_EXPECT_TRUE( document.commitItemDraft().has_value() );
     }
     SW_REQUIRE_EQUAL( size_t{ SequenceAsset::getItemKindCount() }, document._asset._listItem.size() );
     SequenceAsset readBack;
@@ -155,13 +155,13 @@ SW_TEST_CASE( SequenceModelTest, KindsThatNeedFieldsOpenADraftInsteadOfAnItem )
     SequenceModel document = SequenceModelTestUtil::makeDocument();
     for ( const SequenceItemKind kind : { SequenceItemKind::Spawn, SequenceItemKind::Appearance, SequenceItemKind::Scenario } )
     {
-        SW_EXPECT_EQUAL( -1, document.addItem( kind, "Kind" ) );
+        SW_EXPECT_FALSE( document.addItem( kind, "Kind" ).has_value() );
         SW_EXPECT_TRUE( document.isDraftingItem() );
         SW_EXPECT_TRUE( document._itemEdit._kind == kind );
     }
     SW_EXPECT_TRUE( document._asset._listItem.empty() );
 
-    SW_EXPECT_EQUAL( -1, document.addItem( SequenceItemKind::Count, "Count" ) );
+    SW_EXPECT_FALSE( document.addItem( SequenceItemKind::Count, "Count" ).has_value() );
     SW_EXPECT_FALSE( document.isDraftingItem() );
     SW_EXPECT_TRUE( document._asset._listItem.empty() );
 }
@@ -172,20 +172,20 @@ SW_TEST_CASE( SequenceModelTest, DraftWithEmptyFieldsNeverEntersTheDocument )
     SequenceModel document    = SequenceModelTestUtil::makeDocument();
     document._asset._frameMin = 5;
     document._asset._frameMax = 8;
-    SW_EXPECT_EQUAL( -1, document.addItem( SequenceItemKind::Spawn, "Spawn" ) );
+    SW_EXPECT_FALSE( document.addItem( SequenceItemKind::Spawn, "Spawn" ).has_value() );
     const string snapshot = document._asset.toXML();
 
-    SW_EXPECT_EQUAL( -1, document.commitItemDraft() );
+    SW_EXPECT_FALSE( document.commitItemDraft().has_value() );
     document._itemEdit._prefab  = "a.prefab.xml";
     document._itemEdit._binding = 9;
-    SW_EXPECT_EQUAL( -1, document.commitItemDraft() ); // 시퀀스에 없는 바인딩이다
+    SW_EXPECT_FALSE( document.commitItemDraft().has_value() ); // 시퀀스에 없는 바인딩이다
     SW_EXPECT_TRUE( document.isDraftingItem() );
     SW_EXPECT_TRUE( document._asset.toXML() == snapshot );
     SequenceAsset readBack;
     SW_EXPECT_TRUE( readBack.loadFromXMLText( document._asset.toXML() ) );
 
     document._itemEdit._binding = 1;
-    SW_REQUIRE_EQUAL( 0, document.commitItemDraft() );
+    SW_REQUIRE_TRUE( document.commitItemDraft() == 0 );
     SW_EXPECT_FALSE( document.isDraftingItem() );
     SW_EXPECT_EQUAL( 0, document._selectedItem );
     const SequenceTrackItem& item = document._asset._listItem[0];
@@ -194,23 +194,23 @@ SW_TEST_CASE( SequenceModelTest, DraftWithEmptyFieldsNeverEntersTheDocument )
     SW_EXPECT_EQUAL( 5, item._start );
     SW_EXPECT_EQUAL( 8, item._end );
     SW_EXPECT_EQUAL( SequenceAsset::findItemKindInfo( SequenceItemKind::Spawn )->_defaultColor, item._color );
-    SW_EXPECT_EQUAL( -1, document.commitItemDraft() ); // 닫힌 초안을 두 번 더하지 않는다
+    SW_EXPECT_FALSE( document.commitItemDraft().has_value() ); // 닫힌 초안을 두 번 더하지 않는다
     SW_EXPECT_EQUAL( size_t{ 1 }, document._asset._listItem.size() );
 }
 
 SW_TEST_CASE( SequenceModelTest, DraftClosesOnCancelPlainAddAndNewDocument )
 {
     SequenceModel document = SequenceModelTestUtil::makeDocument();
-    SW_EXPECT_EQUAL( -1, document.addItem( SequenceItemKind::Scenario, "Scenario" ) );
+    SW_EXPECT_FALSE( document.addItem( SequenceItemKind::Scenario, "Scenario" ).has_value() );
     document.cancelItemDraft();
     SW_EXPECT_FALSE( document.isDraftingItem() );
     SW_EXPECT_TRUE( document._asset._listItem.empty() );
 
-    SW_EXPECT_EQUAL( -1, document.addItem( SequenceItemKind::Scenario, "Scenario" ) );
-    SW_EXPECT_EQUAL( 0, document.addItem( SequenceItemKind::Clip, "Clip" ) );
+    SW_EXPECT_FALSE( document.addItem( SequenceItemKind::Scenario, "Scenario" ).has_value() );
+    SW_EXPECT_TRUE( document.addItem( SequenceItemKind::Clip, "Clip" ) == 0 );
     SW_EXPECT_FALSE( document.isDraftingItem() );
 
-    SW_EXPECT_EQUAL( -1, document.addItem( SequenceItemKind::Scenario, "Scenario" ) );
+    SW_EXPECT_FALSE( document.addItem( SequenceItemKind::Scenario, "Scenario" ).has_value() );
     document.resetSelection();
     SW_EXPECT_FALSE( document.isDraftingItem() );
 }
@@ -221,7 +221,7 @@ SW_TEST_CASE( SequenceModelTest, UndoKeepsTheOpenDraft )
     SequenceModel document = SequenceModelTestUtil::makeDocument();
     (void)document.addItem( SequenceItemKind::Clip, "Clip" );
     document._selectedItem = 0;
-    SW_EXPECT_EQUAL( -1, document.addItem( SequenceItemKind::Scenario, "Scenario" ) );
+    SW_EXPECT_FALSE( document.addItem( SequenceItemKind::Scenario, "Scenario" ).has_value() );
     document._itemEdit._scenario = "a.scenario.xml";
 
     document.restoreAsset( document._asset );
@@ -298,7 +298,7 @@ SW_TEST_CASE( SequenceModelTest, NewItemStaysInsideTheTimeline )
     SequenceModel document    = SequenceModelTestUtil::makeDocument();
     document._asset._frameMin = 5;
     document._asset._frameMax = 8;
-    const int32 itemIndex     = document.addItem( SequenceItemKind::Event, "Event" );
+    const int32 itemIndex     = document.addItem( SequenceItemKind::Event, "Event" ).value();
     SW_REQUIRE_EQUAL( 0, itemIndex );
     const SequenceTrackItem& item = document._asset._listItem[0];
     SW_EXPECT_EQUAL( 5, item._start );
@@ -352,14 +352,14 @@ SW_TEST_CASE( SequenceModelTest, DuplicateCopiesTheItemWithANewName )
     (void)document.addItem( SequenceItemKind::Event, "Event" );
     document._asset._listItem[0]._name  = "Cut";
     document._asset._listItem[0]._start = 3;
-    SW_EXPECT_EQUAL( 1, document.duplicateItem( 0 ) );
+    SW_EXPECT_TRUE( document.duplicateItem( 0 ) == 1 );
     SW_EXPECT_TRUE( document._asset._listItem[1]._name == "Cut Copy" );
     SW_EXPECT_EQUAL( 3, document._asset._listItem[1]._start );
     SW_EXPECT_TRUE( document._asset._listItem[1]._kind == SequenceItemKind::Event );
-    SW_EXPECT_EQUAL( 2, document.duplicateItem( 0 ) );
+    SW_EXPECT_TRUE( document.duplicateItem( 0 ) == 2 );
     SW_EXPECT_TRUE( document._asset._listItem[2]._name == "Cut Copy 2" );
-    SW_EXPECT_EQUAL( -1, document.duplicateItem( 9 ) );
-    SW_EXPECT_EQUAL( -1, document.duplicateItem( -1 ) );
+    SW_EXPECT_FALSE( document.duplicateItem( 9 ).has_value() );
+    SW_EXPECT_FALSE( document.duplicateItem( -1 ).has_value() );
 }
 
 SW_TEST_CASE( SequenceModelTest, AddTrackFitsChannelsAndSelects )
@@ -543,7 +543,7 @@ SW_TEST_CASE( SequenceModelTest, BindingsAreRemovedOnlyWhenUnused )
 
     SequenceModel empty;
     SW_EXPECT_FALSE( empty.addTrack( SequenceTrackKind::Transform ) ); // 고른 바인딩이 없으면 트랙을 더할 대상이 없다
-    SW_EXPECT_EQUAL( -1, empty.addItem( SequenceItemKind::Clip, "Clip" ) );
+    SW_EXPECT_FALSE( empty.addItem( SequenceItemKind::Clip, "Clip" ).has_value() );
     SW_EXPECT_TRUE( empty.isDraftingItem() );
 }
 
@@ -553,19 +553,19 @@ SW_TEST_CASE( SequenceModelTest, AddCameraCutSplitsTheLane )
     SequenceModel document    = SequenceModelTestUtil::makeDocument();
     document._asset._frameMin = 0;
     document._asset._frameMax = 100;
-    SW_REQUIRE_EQUAL( 0, document.addCameraCut( 0 ) );
+    SW_REQUIRE_TRUE( document.addCameraCut( 0 ) == 0 );
     SW_EXPECT_EQUAL( 100, document._asset._listItem[0]._end );
     const uint32 secondCamera = document.addBinding( "CamB" );
-    SW_REQUIRE_EQUAL( 1, document.addCameraCut( 40 ) );
+    SW_REQUIRE_TRUE( document.addCameraCut( 40 ) == 1 );
     SW_EXPECT_EQUAL( 39, document._asset._listItem[0]._end );
     SW_EXPECT_EQUAL( 100, document._asset._listItem[1]._end );
     SW_EXPECT_EQUAL( secondCamera, document._asset._listItem[1]._binding );
     SW_EXPECT_EQUAL( 1, document._selectedItem );
-    SW_REQUIRE_EQUAL( 2, document.addCameraCut( 20 ) );
+    SW_REQUIRE_TRUE( document.addCameraCut( 20 ) == 2 );
     SW_EXPECT_EQUAL( 19, document._asset._listItem[0]._end );
-    SW_EXPECT_EQUAL( 39, document._asset._listItem[2]._end ); // 다음 컷 앞까지
-    SW_EXPECT_EQUAL( -1, document.addCameraCut( 40 ) );       // 같은 프레임에서 두 컷이 시작하지 않는다
-    SW_EXPECT_EQUAL( -1, document.addCameraCut( 200 ) );
+    SW_EXPECT_EQUAL( 39, document._asset._listItem[2]._end );   // 다음 컷 앞까지
+    SW_EXPECT_FALSE( document.addCameraCut( 40 ).has_value() ); // 같은 프레임에서 두 컷이 시작하지 않는다
+    SW_EXPECT_FALSE( document.addCameraCut( 200 ).has_value() );
 
     vector<int32> listLane;
     document.collectCutLane( listLane );
@@ -705,18 +705,18 @@ SW_TEST_CASE( SequenceModelTest, PasteItemShiftsTheSpanAndRenames )
     SW_EXPECT_FALSE( document.copySelectedItem() );
     document._selectedItem = 0;
     SW_REQUIRE_TRUE( document.copySelectedItem() );
-    SW_REQUIRE_EQUAL( 1, document.pasteItem( 90 ) );
+    SW_REQUIRE_TRUE( document.pasteItem( 90 ) == 1 );
     const SequenceTrackItem& copy = document._asset._listItem[1];
     SW_EXPECT_EQUAL( 90, copy._start );
     SW_EXPECT_EQUAL( 100, copy._end ); // 끝은 타임라인 안으로 자른다
     SW_EXPECT_TRUE( copy._name != "Walk" );
     SW_EXPECT_EQUAL( 1, document._selectedItem );
-    SW_EXPECT_EQUAL( -1, document.pasteItem( 150 ) );
+    SW_EXPECT_FALSE( document.pasteItem( 150 ).has_value() );
 
     document._asset._listItem.push_back( SequenceModelTestUtil::makeFilledItem( SequenceItemKind::Spawn ) );
     document._selectedItem = 2;
     SW_REQUIRE_TRUE( document.copySelectedItem() );
-    SW_EXPECT_EQUAL( -1, document.pasteItem( 10 ) );
+    SW_EXPECT_FALSE( document.pasteItem( 10 ).has_value() );
 }
 
 // 보기 확대 · 스크롤: 포인터 자리의 프레임이 남고, 타임라인 밖을 보이지 않으며, 전체에 닿으면 맞춘 상태로 돌아간다.
@@ -790,16 +790,16 @@ SW_TEST_CASE( SequenceModelTest, ShotToolsSplitRemoveAndRebindCuts )
     SequenceModel document    = SequenceModelTestUtil::makeDocument();
     document._asset._frameMin = 0;
     document._asset._frameMax = 100;
-    SW_REQUIRE_EQUAL( 0, document.addCameraCut( 0 ) );
+    SW_REQUIRE_TRUE( document.addCameraCut( 0 ) == 0 );
     const uint32 secondCamera = document.addBinding( "CamB" );
-    SW_REQUIRE_EQUAL( 1, document.addCameraCut( 60 ) );
+    SW_REQUIRE_TRUE( document.addCameraCut( 60 ) == 1 );
 
-    SW_REQUIRE_EQUAL( 2, document.splitCameraCut( 30 ) );
+    SW_REQUIRE_TRUE( document.splitCameraCut( 30 ) == 2 );
     SW_EXPECT_EQUAL( 29, document._asset._listItem[0]._end );
     SW_EXPECT_EQUAL( 30, document._asset._listItem[2]._start );
     SW_EXPECT_EQUAL( 59, document._asset._listItem[2]._end );
     SW_EXPECT_EQUAL( document._asset._listItem[0]._binding, document._asset._listItem[2]._binding );
-    SW_EXPECT_EQUAL( -1, document.splitCameraCut( 30 ) ); // 컷의 첫 프레임 — 나눌 것이 없다
+    SW_EXPECT_FALSE( document.splitCameraCut( 30 ).has_value() ); // 컷의 첫 프레임 — 나눌 것이 없다
 
     SW_EXPECT_TRUE( document.setCutCamera( 2, secondCamera ) );
     SW_EXPECT_EQUAL( secondCamera, document._asset._listItem[2]._binding );

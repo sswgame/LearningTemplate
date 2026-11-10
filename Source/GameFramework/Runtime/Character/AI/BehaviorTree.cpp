@@ -89,30 +89,30 @@ namespace sw
     {
     }
 
-    int32 BehaviorTree::addNode( int32 parent, BehaviorNodeKind type, const utf8* pName )
+    expected<int32> BehaviorTree::addNode( optional<int32> parent, BehaviorNodeKind type, const utf8* pName )
     {
-        if ( parent < 0 && _listNode.empty() == false )
-            return -1; // 루트는 하나
-        if ( parent >= static_cast<int32>( _listNode.size() ) )
-            return -1;
+        if ( parent.has_value() == false && _listNode.empty() == false )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "a behavior tree has one root" } );
+        if ( parent.has_value() && ( *parent < 0 || *parent >= static_cast<int32>( _listNode.size() ) ) )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the parent node does not exist" } );
         const int32  index = static_cast<int32>( _listNode.size() );
         BehaviorNode node;
         node._type   = type;
         node._name   = pName != nullptr ? pName : "";
         node._parent = parent;
         _listNode.push_back( node );
-        if ( parent >= 0 )
+        if ( parent.has_value() )
         {
             // 형제 목록 끝에 붙인다 — 더한 순서가 우선순위다.
-            BehaviorNode& parentNode = _listNode[static_cast<size_t>( parent )];
-            if ( parentNode._firstChild < 0 )
+            BehaviorNode& parentNode = _listNode[static_cast<size_t>( *parent )];
+            if ( parentNode._firstChild.has_value() == false )
                 parentNode._firstChild = index;
             else
             {
-                int32 sibling = parentNode._firstChild;
-                while ( _listNode[static_cast<size_t>( sibling )]._nextSibling >= 0 )
+                int32 sibling = *parentNode._firstChild;
+                while ( _listNode[static_cast<size_t>( sibling )]._nextSibling.has_value() )
                 {
-                    sibling = _listNode[static_cast<size_t>( sibling )]._nextSibling;
+                    sibling = *_listNode[static_cast<size_t>( sibling )]._nextSibling;
                 }
                 _listNode[static_cast<size_t>( sibling )]._nextSibling = index;
             }
@@ -120,54 +120,54 @@ namespace sw
         return index;
     }
 
-    int32 BehaviorTree::addSelector( int32 parent, const utf8* pName, bool bReactive )
+    expected<int32> BehaviorTree::addSelector( optional<int32> parent, const utf8* pName, bool bReactive )
     {
-        const int32 index = addNode( parent, BehaviorNodeKind::Selector, pName );
-        if ( index >= 0 )
-            _listNode[static_cast<size_t>( index )]._bReactive = bReactive ? SW_TRUE : SW_FALSE;
+        const expected<int32> index = addNode( parent, BehaviorNodeKind::Selector, pName );
+        if ( index.has_value() )
+            _listNode[static_cast<size_t>( *index )]._bReactive = bReactive ? SW_TRUE : SW_FALSE;
         return index;
     }
 
-    int32 BehaviorTree::addSequence( int32 parent, const utf8* pName )
+    expected<int32> BehaviorTree::addSequence( optional<int32> parent, const utf8* pName )
     {
         return addNode( parent, BehaviorNodeKind::Sequence, pName );
     }
 
-    int32 BehaviorTree::addInverter( int32 parent )
+    expected<int32> BehaviorTree::addInverter( optional<int32> parent )
     {
         return addNode( parent, BehaviorNodeKind::Inverter, "Inverter" );
     }
 
-    int32 BehaviorTree::addForceSuccess( int32 parent )
+    expected<int32> BehaviorTree::addForceSuccess( optional<int32> parent )
     {
         return addNode( parent, BehaviorNodeKind::ForceSuccess, "ForceSuccess" );
     }
 
-    int32 BehaviorTree::addRepeat( int32 parent, int32 count )
+    expected<int32> BehaviorTree::addRepeat( optional<int32> parent, int32 count )
     {
-        const int32 index = addNode( parent, BehaviorNodeKind::Repeat, "Repeat" );
-        if ( index >= 0 )
-            _listNode[static_cast<size_t>( index )]._count = MathUtil::max( 0, count );
+        const expected<int32> index = addNode( parent, BehaviorNodeKind::Repeat, "Repeat" );
+        if ( index.has_value() )
+            _listNode[static_cast<size_t>( *index )]._count = MathUtil::max( 0, count );
         return index;
     }
 
-    int32 BehaviorTree::addCooldown( int32 parent, float32 seconds )
+    expected<int32> BehaviorTree::addCooldown( optional<int32> parent, float32 seconds )
     {
-        const int32 index = addNode( parent, BehaviorNodeKind::Cooldown, "Cooldown" );
-        if ( index >= 0 )
-            _listNode[static_cast<size_t>( index )]._seconds = MathUtil::max( 0.0f, seconds );
+        const expected<int32> index = addNode( parent, BehaviorNodeKind::Cooldown, "Cooldown" );
+        if ( index.has_value() )
+            _listNode[static_cast<size_t>( *index )]._seconds = MathUtil::max( 0.0f, seconds );
         return index;
     }
 
-    int32 BehaviorTree::addTimeLimit( int32 parent, float32 seconds )
+    expected<int32> BehaviorTree::addTimeLimit( optional<int32> parent, float32 seconds )
     {
-        const int32 index = addNode( parent, BehaviorNodeKind::TimeLimit, "TimeLimit" );
-        if ( index >= 0 )
-            _listNode[static_cast<size_t>( index )]._seconds = MathUtil::max( 0.0f, seconds );
+        const expected<int32> index = addNode( parent, BehaviorNodeKind::TimeLimit, "TimeLimit" );
+        if ( index.has_value() )
+            _listNode[static_cast<size_t>( *index )]._seconds = MathUtil::max( 0.0f, seconds );
         return index;
     }
 
-    int32 BehaviorTree::addBlackboardCondition( int32 parent, const hashed_string& key, BlackboardCompare compare, float32 value, BehaviorAbortMode abortMode )
+    expected<int32> BehaviorTree::addBlackboardCondition( optional<int32> parent, const hashed_string& key, BlackboardCompare compare, float32 value, BehaviorAbortMode abortMode )
     {
         // 코드로 짓는 트리도 같은 식이다. 있는지 묻기와 값 비교는 다른 조건이다(없는 키는 어떤 비교도 참이 아니다).
         const bool bPresence = compare == BlackboardCompare::IsSet || compare == BlackboardCompare::IsNotSet;
@@ -178,7 +178,7 @@ namespace sw
             text = "!" + text;
         ConditionExpr condition;
         if ( ConditionExpr::compile( text, "BehaviorTree", condition ) == false )
-            return -1;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the blackboard condition does not compile" } );
         switch ( compare )
         {
             case BlackboardCompare::IsSet:
@@ -206,71 +206,71 @@ namespace sw
         return addConditionDecorator( parent, key.c_str(), condition, abortMode );
     }
 
-    int32 BehaviorTree::addConditionDecorator( int32 parent, const utf8* pName, const ConditionExpr& condition, BehaviorAbortMode abortMode )
+    expected<int32> BehaviorTree::addConditionDecorator( optional<int32> parent, const utf8* pName, const ConditionExpr& condition, BehaviorAbortMode abortMode )
     {
-        const int32 index = addNode( parent, BehaviorNodeKind::BlackboardCondition, pName );
-        if ( index < 0 )
+        const expected<int32> index = addNode( parent, BehaviorNodeKind::BlackboardCondition, pName );
+        if ( index.has_value() == false )
             return index;
-        BehaviorNode& node = _listNode[static_cast<size_t>( index )];
+        BehaviorNode& node = _listNode[static_cast<size_t>( *index )];
         node._condition    = condition;
         node._abortMode    = abortMode;
         return index;
     }
 
-    int32 BehaviorTree::addAction( int32 parent, const utf8* pName, const GameActionCall& action )
+    expected<int32> BehaviorTree::addAction( optional<int32> parent, const utf8* pName, const GameActionCall& action )
     {
-        const int32 index = addNode( parent, BehaviorNodeKind::Action, pName );
-        if ( index >= 0 )
-            _listNode[static_cast<size_t>( index )]._action = action;
+        const expected<int32> index = addNode( parent, BehaviorNodeKind::Action, pName );
+        if ( index.has_value() )
+            _listNode[static_cast<size_t>( *index )]._action = action;
         return index;
     }
 
-    int32 BehaviorTree::addCondition( int32 parent, const utf8* pName, const ConditionExpr& condition )
+    expected<int32> BehaviorTree::addCondition( optional<int32> parent, const utf8* pName, const ConditionExpr& condition )
     {
-        const int32 index = addNode( parent, BehaviorNodeKind::Condition, pName );
-        if ( index >= 0 )
-            _listNode[static_cast<size_t>( index )]._condition = condition;
+        const expected<int32> index = addNode( parent, BehaviorNodeKind::Condition, pName );
+        if ( index.has_value() )
+            _listNode[static_cast<size_t>( *index )]._condition = condition;
         return index;
     }
 
-    int32 BehaviorTree::addSubTreeSlot( int32 parent, const utf8* pName, const hashed_string& slot )
+    expected<int32> BehaviorTree::addSubTreeSlot( optional<int32> parent, const utf8* pName, const hashed_string& slot )
     {
-        const int32 index = addNode( parent, BehaviorNodeKind::SubTree, pName );
-        if ( index >= 0 )
-            _listNode[static_cast<size_t>( index )]._key = slot;
+        const expected<int32> index = addNode( parent, BehaviorNodeKind::SubTree, pName );
+        if ( index.has_value() )
+            _listNode[static_cast<size_t>( *index )]._key = slot;
         return index;
     }
 
-    int32 BehaviorTree::addAction( int32 parent, const utf8* pName, BehaviorTaskFunction function )
+    expected<int32> BehaviorTree::addAction( optional<int32> parent, const utf8* pName, BehaviorTaskFunction function )
     {
-        const int32 index = addNode( parent, BehaviorNodeKind::Action, pName );
-        if ( index >= 0 )
-            _listNode[static_cast<size_t>( index )]._function = function;
+        const expected<int32> index = addNode( parent, BehaviorNodeKind::Action, pName );
+        if ( index.has_value() )
+            _listNode[static_cast<size_t>( *index )]._function = function;
         return index;
     }
 
-    int32 BehaviorTree::addCondition( int32 parent, const utf8* pName, BehaviorTaskFunction function )
+    expected<int32> BehaviorTree::addCondition( optional<int32> parent, const utf8* pName, BehaviorTaskFunction function )
     {
-        const int32 index = addNode( parent, BehaviorNodeKind::Condition, pName );
-        if ( index >= 0 )
-            _listNode[static_cast<size_t>( index )]._function = function;
+        const expected<int32> index = addNode( parent, BehaviorNodeKind::Condition, pName );
+        if ( index.has_value() )
+            _listNode[static_cast<size_t>( *index )]._function = function;
         return index;
     }
 
-    int32 BehaviorTree::addWait( int32 parent, float32 seconds )
+    expected<int32> BehaviorTree::addWait( optional<int32> parent, float32 seconds )
     {
-        const int32 index = addNode( parent, BehaviorNodeKind::Wait, "Wait" );
-        if ( index >= 0 )
-            _listNode[static_cast<size_t>( index )]._seconds = MathUtil::max( 0.0f, seconds );
+        const expected<int32> index = addNode( parent, BehaviorNodeKind::Wait, "Wait" );
+        if ( index.has_value() )
+            _listNode[static_cast<size_t>( *index )]._seconds = MathUtil::max( 0.0f, seconds );
         return index;
     }
 
-    int32 BehaviorTree::addMoveTo( int32 parent, const hashed_string& destinationKey, float32 repathDistance )
+    expected<int32> BehaviorTree::addMoveTo( optional<int32> parent, const hashed_string& destinationKey, float32 repathDistance )
     {
-        const int32 index = addNode( parent, BehaviorNodeKind::MoveTo, destinationKey.c_str() );
-        if ( index < 0 )
+        const expected<int32> index = addNode( parent, BehaviorNodeKind::MoveTo, destinationKey.c_str() );
+        if ( index.has_value() == false )
             return index;
-        BehaviorNode& node   = _listNode[static_cast<size_t>( index )];
+        BehaviorNode& node   = _listNode[static_cast<size_t>( *index )];
         node._key            = destinationKey;
         node._repathDistance = MathUtil::max( 0.0f, repathDistance );
         return index;
@@ -307,7 +307,7 @@ namespace sw
         {
             const BehaviorNode& node       = getNode( index );
             int32               childCount = 0;
-            for ( int32 child = node._firstChild; child >= 0; child = getNode( child )._nextSibling )
+            for ( optional<int32> child = node._firstChild; child.has_value(); child = getNode( *child )._nextSibling )
             {
                 ++childCount;
             }
@@ -353,8 +353,8 @@ namespace sw
         , _listMoveTarget{}
         , _elapsedTime{ 0.0f }
         , _tickCount{ 0 }
-        , _activeLeaf{ -1 }
-        , _lastSucceededLeaf{ -1 }
+        , _activeLeaf{}
+        , _lastSucceededLeaf{}
     {
     }
 
@@ -369,23 +369,23 @@ namespace sw
         _listActive.assign( nodeCount, SW_FALSE );
         _listLastCondition.assign( nodeCount, SW_FALSE );
         _listMoveTarget.assign( nodeCount, float3{} );
-        _elapsedTime       = 0.0f;
-        _activeLeaf        = -1;
-        _lastSucceededLeaf = -1;
+        _elapsedTime = 0.0f;
+        _activeLeaf.reset();
+        _lastSucceededLeaf.reset();
     }
 
     void BehaviorTreeRunner::reset()
     {
         if ( _pTree != nullptr && _pTree->getNodeCount() > 0 )
             abortNode( 0 );
-        _activeLeaf        = -1;
-        _lastSucceededLeaf = -1;
+        _activeLeaf.reset();
+        _lastSucceededLeaf.reset();
     }
 
     const utf8* BehaviorTreeRunner::getActiveLeafName() const
     {
-        const int32 leaf = _activeLeaf >= 0 ? _activeLeaf : _lastSucceededLeaf;
-        return _pTree != nullptr && leaf >= 0 ? _pTree->getNode( leaf )._name.c_str() : "";
+        const optional<int32> leaf = _activeLeaf.has_value() ? _activeLeaf : _lastSucceededLeaf;
+        return _pTree != nullptr && leaf.has_value() ? _pTree->getNode( *leaf )._name.c_str() : "";
     }
 
     BehaviorStatus BehaviorTreeRunner::tick( Blackboard& blackboard, void* pOwner, float32 deltaTime )
@@ -406,8 +406,8 @@ namespace sw
         _actionContext._deltaTime = deltaTime;
         if ( pollHigherPriorityTrigger() )
             abortNode( 0 ); // 우선순위 높은 가지가 깨어났다 — 처음부터 다시 고른다
-        _activeLeaf        = -1;
-        _lastSucceededLeaf = -1;
+        _activeLeaf.reset();
+        _lastSucceededLeaf.reset();
         return tickNode( 0 );
     }
 
@@ -423,7 +423,7 @@ namespace sw
             const bool  bRisen                               = bNow != SW_FALSE && _listLastCondition[static_cast<size_t>( index )] == SW_FALSE;
             _listLastCondition[static_cast<size_t>( index )] = bNow;
             // 노드 번호가 앞 = 깊이 우선 순서가 앞 = 우선순위가 높다. 도는 가지 안의 조건(자기 조상)은 Self 쪽 일이다.
-            const bool bHigherPriorityRisen = bRisen && _activeLeaf >= 0 && index < _activeLeaf && _listActive[static_cast<size_t>( index )] == SW_FALSE;
+            const bool bHigherPriorityRisen = bRisen && _activeLeaf.has_value() && index < *_activeLeaf && _listActive[static_cast<size_t>( index )] == SW_FALSE;
             if ( bHigherPriorityRisen )
                 bTriggered = true;
         }
@@ -443,9 +443,9 @@ namespace sw
         if ( _listActive[static_cast<size_t>( index )] == SW_FALSE )
             return;
         const BehaviorNode& node = _pTree->getNode( index );
-        for ( int32 child = node._firstChild; child >= 0; child = _pTree->getNode( child )._nextSibling )
+        for ( optional<int32> child = node._firstChild; child.has_value(); child = _pTree->getNode( *child )._nextSibling )
         {
-            abortNode( child );
+            abortNode( *child );
         }
         if ( node._type == BehaviorNodeKind::Action && node._function != nullptr )
         {
@@ -473,21 +473,21 @@ namespace sw
         finishNode( index );
     }
 
-    int32 BehaviorTreeRunner::findChild( const BehaviorNode& node, int32 order ) const
+    optional<int32> BehaviorTreeRunner::findChild( const BehaviorNode& node, int32 order ) const
     {
-        int32 child = node._firstChild;
-        for ( int32 skip = 0; skip < order && child >= 0; ++skip )
+        optional<int32> child = node._firstChild;
+        for ( int32 skip = 0; skip < order && child.has_value(); ++skip )
         {
-            child = _pTree->getNode( child )._nextSibling;
+            child = _pTree->getNode( *child )._nextSibling;
         }
         return child;
     }
 
     BehaviorStatus BehaviorTreeRunner::tickSequence( const BehaviorNode& node, int32& inoutCursor )
     {
-        for ( int32 child = findChild( node, inoutCursor ); child >= 0; child = _pTree->getNode( child )._nextSibling )
+        for ( optional<int32> child = findChild( node, inoutCursor ); child.has_value(); child = _pTree->getNode( *child )._nextSibling )
         {
-            const BehaviorStatus childStatus = tickNode( child );
+            const BehaviorStatus childStatus = tickNode( *child );
             if ( childStatus != BehaviorStatus::Success )
                 return childStatus;
             ++inoutCursor;
@@ -497,18 +497,18 @@ namespace sw
 
     BehaviorStatus BehaviorTreeRunner::tickSelector( const BehaviorNode& node, int32& inoutCursor )
     {
-        const int32 start = ( node._bReactive != SW_FALSE ) ? 0 : inoutCursor;
-        int32       child = findChild( node, start );
-        for ( int32 order = start; child >= 0; ++order, child = _pTree->getNode( child )._nextSibling )
+        const int32     start = ( node._bReactive != SW_FALSE ) ? 0 : inoutCursor;
+        optional<int32> child = findChild( node, start );
+        for ( int32 order = start; child.has_value(); ++order, child = _pTree->getNode( *child )._nextSibling )
         {
-            const BehaviorStatus childStatus = tickNode( child );
+            const BehaviorStatus childStatus = tickNode( *child );
             if ( childStatus == BehaviorStatus::Failure )
                 continue;
             if ( order != inoutCursor )
             {
-                const int32 running = findChild( node, inoutCursor );
-                if ( running >= 0 && running != child )
-                    abortNode( running );
+                const optional<int32> running = findChild( node, inoutCursor );
+                if ( running.has_value() && running != *child )
+                    abortNode( *running );
                 inoutCursor = order;
             }
             return childStatus;
@@ -540,19 +540,19 @@ namespace sw
             }
             case BehaviorNodeKind::Inverter:
             {
-                const BehaviorStatus childStatus = tickNode( node._firstChild );
+                const BehaviorStatus childStatus = tickNode( node._firstChild.value() );
                 status                           = childStatus == BehaviorStatus::Running ? BehaviorStatus::Running
                                                                                           : ( childStatus == BehaviorStatus::Success ? BehaviorStatus::Failure : BehaviorStatus::Success );
                 break;
             }
             case BehaviorNodeKind::ForceSuccess:
             {
-                status = tickNode( node._firstChild ) == BehaviorStatus::Running ? BehaviorStatus::Running : BehaviorStatus::Success;
+                status = tickNode( node._firstChild.value() ) == BehaviorStatus::Running ? BehaviorStatus::Running : BehaviorStatus::Success;
                 break;
             }
             case BehaviorNodeKind::Repeat:
             {
-                const BehaviorStatus childStatus = tickNode( node._firstChild );
+                const BehaviorStatus childStatus = tickNode( node._firstChild.value() );
                 if ( childStatus != BehaviorStatus::Success )
                 {
                     status = childStatus;
@@ -572,7 +572,7 @@ namespace sw
                     status = BehaviorStatus::Failure;
                     break;
                 }
-                status = tickNode( node._firstChild );
+                status = tickNode( node._firstChild.value() );
                 if ( status != BehaviorStatus::Running )
                     cooldownUntil = _elapsedTime + node._seconds;
                 break;
@@ -582,11 +582,11 @@ namespace sw
                 timer += _context._deltaTime;
                 if ( timer > node._seconds )
                 {
-                    abortNode( node._firstChild );
+                    abortNode( node._firstChild.value() );
                     status = BehaviorStatus::Failure;
                     break;
                 }
-                status = tickNode( node._firstChild );
+                status = tickNode( node._firstChild.value() );
                 break;
             }
             case BehaviorNodeKind::BlackboardCondition:
@@ -595,11 +595,11 @@ namespace sw
                 if ( bCheck && BehaviorTree::evaluateCondition( node, _actionContext._world ) == false )
                 {
                     if ( bFirst == false )
-                        abortNode( node._firstChild ); // 관찰 중단 Self — 조건이 깨졌다
+                        abortNode( node._firstChild.value() ); // 관찰 중단 Self — 조건이 깨졌다
                     status = BehaviorStatus::Failure;
                     break;
                 }
-                status = tickNode( node._firstChild );
+                status = tickNode( node._firstChild.value() );
                 break;
             }
             case BehaviorNodeKind::Condition:

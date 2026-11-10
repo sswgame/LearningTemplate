@@ -139,12 +139,12 @@ namespace sw
             BoostPad,
             RaceEnded
         };
-        hashed_string _itemID{};
-        float32       _time{ 0.0f };
-        int32         _racer{ constant::invalid_index::kInt32 };
-        int32         _other{ constant::invalid_index::kInt32 };
-        int32         _value{ 0 };
-        Kind          _kind{ Kind::RaceStarted };
+        hashed_string   _itemID{};
+        float32         _time{ 0.0f };
+        optional<int32> _racer{};
+        optional<int32> _other{};
+        int32           _value{ 0 };
+        Kind            _kind{ Kind::RaceStarted };
     };
 } // namespace sw
 
@@ -251,7 +251,7 @@ namespace sw
         void            updatePlaces();
         void            updateRubberBand( int32 racer );
         void            resolveRaceEnd();
-        void            pushEvent( KartRaceEvent::Kind kind, int32 racer, int32 other, int32 value, float32 time );
+        void            pushEvent( KartRaceEvent::Kind kind, optional<int32> racer, optional<int32> other, int32 value, float32 time );
 
     private:
         vector<KartRacer>          _listRacer;

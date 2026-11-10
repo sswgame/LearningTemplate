@@ -79,8 +79,8 @@ namespace sw
         bool isSkinned() const { return _listSkin.empty() == false && _listSkin.size() == _listPosition.size(); }
         /** @brief 배열 길이가 서로 맞고 인덱스가 정점 안을 가리키면 true 를 반환합니다. */
         bool isValid() const;
-        /** @brief 이름의 정점 그룹 번호입니다. 없으면 `kNoGroup` 입니다. */
-        uint16 findGroup( const hashed_string& name ) const;
+        /** @brief 이름의 정점 그룹 번호입니다. 없으면 비어 있습니다(`kNoGroup` 은 정점마다 적는 표의 칸 값이다). */
+        optional<uint16> findGroup( const hashed_string& name ) const;
         /** @brief 이름의 모프 대상입니다. 없으면 nullptr 입니다. */
         const GeometryMorphTarget* findMorph( const hashed_string& name ) const;
         /** @brief 위치에서 면적 가중 정점 법선을 다시 계산합니다. */
@@ -135,8 +135,8 @@ namespace sw
         vector<float4x4>      _listLocal{};
         vector<float4x4>      _listModel{};
 
-        /** @brief 본을 끝에 붙이고 번호를 돌려줍니다. 부모가 이미 있는 본이 아니면(루트는 -1) 붙이지 않고 -1 입니다. */
-        int32 addBone( const hashed_string& name, int32 parentIndex, const float4x4& localTransform );
+        /** @brief 본을 끝에 붙이고 번호를 돌려줍니다. 부모(루트는 스켈레톤 저장 형식대로 -1)가 이미 있는 본이 아니면 붙이지 않고 그 이유입니다. */
+        [[nodiscard]] expected<int32> addBone( const hashed_string& name, int32 parentIndex, const float4x4& localTransform );
         /** @brief 이름의 본 번호입니다. 없으면 비어 있습니다. */
         optional<uint32> findBone( const hashed_string& name ) const;
         /** @brief 본 수입니다. */

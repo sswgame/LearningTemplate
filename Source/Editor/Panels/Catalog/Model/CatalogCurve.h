@@ -86,9 +86,9 @@ namespace sw::editor
     struct CatalogGradient
     {
         string _label{};
-        int32  _red{ -1 };
-        int32  _green{ -1 };
-        int32  _blue{ -1 };
-        int32  _alpha{ -1 };
+        int32  _red{ 0 }; ///< 네 칸은 묶음이 다 있을 때만 만들어 늘 채워진다(`collectGradients`)
+        int32  _green{ 0 };
+        int32  _blue{ 0 };
+        int32  _alpha{ 0 };
     };
 } // namespace sw::editor

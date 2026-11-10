@@ -149,11 +149,11 @@ namespace sw
             MechSwapped,   ///< _pilot 이 기체를 바꿨다. _value 는 덱 슬롯
             MatchEnded     ///< _other 가 이긴 팀(−1이면 무승부)
         };
-        hashed_string _id{};
-        float32       _value{ 0.0f };
-        int32         _pilot{ constant::invalid_index::kInt32 };
-        int32         _other{ constant::invalid_index::kInt32 };
-        Kind          _kind{ Kind::Fired };
+        hashed_string   _id{};
+        float32         _value{ 0.0f };
+        optional<int32> _pilot{};
+        optional<int32> _other{};
+        Kind            _kind{ Kind::Fired };
     };
 } // namespace sw
 
@@ -333,7 +333,7 @@ namespace sw
         bool            isTargetable( int32 pilot ) const;
         /** @brief @p other 가 @p team 의 적이고 지금 맞힐 수 있는지 반환합니다(근접, 광선, 탄, 록온 후보가 같은 판정을 씁니다). */
         bool isEnemyTarget( int32 team, int32 other ) const;
-        void pushEvent( MechArenaEvent::Kind kind, int32 pilot, int32 other, float32 value, const hashed_string& id );
+        void pushEvent( MechArenaEvent::Kind kind, optional<int32> pilot, optional<int32> other, float32 value, const hashed_string& id );
 
     private:
         MechArenaSettings           _settings;

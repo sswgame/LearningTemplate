@@ -138,22 +138,27 @@ namespace sw::editor
         {
             if ( listCurve[index]._channel != "_red" )
                 continue;
-            CatalogGradient gradient;
-            gradient._red = static_cast<int32>( index );
+            optional<int32> green;
+            optional<int32> blue;
+            optional<int32> alpha;
             for ( size_t other = 0; other < listCurve.size(); ++other )
             {
                 if ( listCurve[other]._parentIndex != listCurve[index]._parentIndex )
                     continue;
                 if ( listCurve[other]._channel == "_green" )
-                    gradient._green = static_cast<int32>( other );
+                    green = static_cast<int32>( other );
                 else if ( listCurve[other]._channel == "_blue" )
-                    gradient._blue = static_cast<int32>( other );
+                    blue = static_cast<int32>( other );
                 else if ( listCurve[other]._channel == "_alpha" )
-                    gradient._alpha = static_cast<int32>( other );
+                    alpha = static_cast<int32>( other );
             }
-            const bool bComplete = gradient._green >= 0 && gradient._blue >= 0 && gradient._alpha >= 0;
-            if ( bComplete == false )
+            if ( green.has_value() == false || blue.has_value() == false || alpha.has_value() == false )
                 continue;
+            CatalogGradient gradient;
+            gradient._red   = static_cast<int32>( index );
+            gradient._green = *green;
+            gradient._blue  = *blue;
+            gradient._alpha = *alpha;
             // 라벨은 빨강 곡선의 라벨에서 마지막 채널 구간을 뺀 것이다.
             const string& redLabel = listCurve[index]._label;
             const size_t  slash    = redLabel.rfind( '/' );
@@ -299,8 +304,10 @@ namespace sw::editor
             return false;
         }
         // 곡선의 키는 부모 아래 곡선 모으기와 같은 길로 읽는다(읽지 못한 키 표시까지 같다).
-        vector<CatalogCurve> listSibling;
-        collectCurves( parsed, parsed.getElement( curveElementIndex )._parent, listSibling );
+        vector<CatalogCurve>  listSibling;
+        const optional<int32> curveParent = parsed.getElement( curveElementIndex )._parent;
+        if ( curveParent.has_value() )
+            collectCurves( parsed, *curveParent, listSibling );
         const CatalogCurve* pCurve = nullptr;
         for ( const CatalogCurve& sibling : listSibling )
         {

@@ -47,7 +47,7 @@ namespace
         BehaviorStatus tick( float32 deltaTime = 0.1f ) { return _runner.tick( _blackboard, &_probe, deltaTime ); }
         int32          addAction( int32 parent, BehaviorStatus result, const utf8* pName = "Action" )
         {
-            const int32 index                               = _tree.addAction( parent, pName, &BehaviorProbe::run );
+            const int32 index                               = _tree.addAction( parent, pName, &BehaviorProbe::run ).value();
             _probe._arrResult[static_cast<size_t>( index )] = result;
             return index;
         }
@@ -91,10 +91,10 @@ namespace
 SW_TEST_CASE( BehaviorTreeTest, BuildingRefusesASecondRootAndUnknownParents )
 {
     BehaviorTree tree;
-    const int32  root = tree.addSequence( -1 );
+    const int32  root = tree.addSequence( nullopt ).value();
     SW_EXPECT_EQUAL( 0, root );
-    SW_EXPECT_EQUAL( -1, tree.addSelector( -1 ) );
-    SW_EXPECT_EQUAL( -1, tree.addWait( 99, 1.0f ) );
+    SW_EXPECT_FALSE( tree.addSelector( nullopt ).has_value() );
+    SW_EXPECT_FALSE( tree.addWait( 99, 1.0f ).has_value() );
     SW_EXPECT_EQUAL( 1, tree.getNodeCount() );
 }
 
@@ -104,31 +104,31 @@ SW_TEST_CASE( BehaviorTreeTest, ValidityChecksEveryNodeShape )
     SW_EXPECT_FALSE( empty.isValid() );
 
     BehaviorTree noChildren;
-    (void)noChildren.addSequence( -1 );
+    (void)noChildren.addSequence( nullopt );
     SW_EXPECT_FALSE( noChildren.isValid() );
 
     BehaviorTree noAction;
-    (void)noAction.addAction( -1, "A", nullptr );
+    (void)noAction.addAction( nullopt, "A", nullptr );
     SW_EXPECT_FALSE( noAction.isValid() );
 
     BehaviorTree bareDecorator;
-    (void)bareDecorator.addInverter( -1 );
+    (void)bareDecorator.addInverter( nullopt );
     SW_EXPECT_FALSE( bareDecorator.isValid() );
 
     BehaviorTree twoUnderDecorator;
-    const int32  inverter = twoUnderDecorator.addInverter( -1 );
+    const int32  inverter = twoUnderDecorator.addInverter( nullopt ).value();
     (void)twoUnderDecorator.addWait( inverter, 1.0f );
     SW_EXPECT_TRUE( twoUnderDecorator.isValid() );
     (void)twoUnderDecorator.addWait( inverter, 1.0f );
     SW_EXPECT_FALSE( twoUnderDecorator.isValid() );
 
     BehaviorTree childUnderLeaf;
-    const int32  wait = childUnderLeaf.addWait( -1, 1.0f );
+    const int32  wait = childUnderLeaf.addWait( nullopt, 1.0f ).value();
     (void)childUnderLeaf.addWait( wait, 1.0f );
     SW_EXPECT_FALSE( childUnderLeaf.isValid() );
 
     BehaviorTree moveWithoutKey;
-    (void)moveWithoutKey.addMoveTo( -1, hashed_string{} );
+    (void)moveWithoutKey.addMoveTo( nullopt, hashed_string{} );
     SW_EXPECT_FALSE( moveWithoutKey.isValid() );
 }
 
@@ -146,7 +146,7 @@ SW_TEST_CASE( BehaviorTreeTest, NoTreeFails )
 SW_TEST_CASE( BehaviorTreeTest, SequenceStopsAtTheFirstFailure )
 {
     BehaviorFixture rig;
-    const int32     root = rig._tree.addSequence( -1 );
+    const int32     root = rig._tree.addSequence( nullopt ).value();
     const int32     a    = rig.addAction( root, BehaviorStatus::Success );
     const int32     b    = rig.addAction( root, BehaviorStatus::Failure );
     const int32     c    = rig.addAction( root, BehaviorStatus::Success );
@@ -161,7 +161,7 @@ SW_TEST_CASE( BehaviorTreeTest, SequenceStopsAtTheFirstFailure )
 SW_TEST_CASE( BehaviorTreeTest, SequenceResumesAtTheRunningChild )
 {
     BehaviorFixture rig;
-    const int32     root = rig._tree.addSequence( -1 );
+    const int32     root = rig._tree.addSequence( nullopt ).value();
     const int32     a    = rig.addAction( root, BehaviorStatus::Success );
     const int32     b    = rig.addAction( root, BehaviorStatus::Running );
     rig.build();
@@ -170,7 +170,7 @@ SW_TEST_CASE( BehaviorTreeTest, SequenceResumesAtTheRunningChild )
     SW_EXPECT_EQUAL( 1u, rig._probe._arrTick[a] );
     SW_EXPECT_EQUAL( 2u, rig._probe._arrTick[b] );
     SW_EXPECT_EQUAL( 1u, rig._probe._arrStart[b] ); // 처음 한 번만 시작이다
-    SW_EXPECT_EQUAL( b, rig._runner.getActiveLeaf() );
+    SW_EXPECT_TRUE( rig._runner.getActiveLeaf() == b );
 
     rig._probe._arrResult[b] = BehaviorStatus::Success;
     SW_EXPECT_TRUE( rig.tick() == BehaviorStatus::Success );
@@ -182,7 +182,7 @@ SW_TEST_CASE( BehaviorTreeTest, SequenceResumesAtTheRunningChild )
 SW_TEST_CASE( BehaviorTreeTest, SelectorTakesTheFirstThatDoesNotFail )
 {
     BehaviorFixture rig;
-    const int32     root = rig._tree.addSelector( -1 );
+    const int32     root = rig._tree.addSelector( nullopt ).value();
     const int32     a    = rig.addAction( root, BehaviorStatus::Failure );
     const int32     b    = rig.addAction( root, BehaviorStatus::Success );
     const int32     c    = rig.addAction( root, BehaviorStatus::Success );
@@ -201,7 +201,7 @@ SW_TEST_CASE( BehaviorTreeTest, SelectorTakesTheFirstThatDoesNotFail )
 SW_TEST_CASE( BehaviorTreeTest, PlainSelectorKeepsItsRunningChild )
 {
     BehaviorFixture rig;
-    const int32     root = rig._tree.addSelector( -1 );
+    const int32     root = rig._tree.addSelector( nullopt ).value();
     const int32     a    = rig.addAction( root, BehaviorStatus::Failure );
     const int32     b    = rig.addAction( root, BehaviorStatus::Running );
     rig.build();
@@ -216,7 +216,7 @@ SW_TEST_CASE( BehaviorTreeTest, PlainSelectorKeepsItsRunningChild )
 SW_TEST_CASE( BehaviorTreeTest, ReactiveSelectorPreemptsWithAnAbort )
 {
     BehaviorFixture rig;
-    const int32     root = rig._tree.addSelector( -1, "Root", true );
+    const int32     root = rig._tree.addSelector( nullopt, "Root", true ).value();
     const int32     a    = rig.addAction( root, BehaviorStatus::Failure, "High" );
     const int32     b    = rig.addAction( root, BehaviorStatus::Running, "Low" );
     rig.build();
@@ -238,7 +238,7 @@ SW_TEST_CASE( BehaviorTreeTest, ReactiveSelectorPreemptsWithAnAbort )
 SW_TEST_CASE( BehaviorTreeTest, InverterAndForceSuccessKeepRunning )
 {
     BehaviorFixture rig;
-    const int32     root = rig._tree.addInverter( -1 );
+    const int32     root = rig._tree.addInverter( nullopt ).value();
     const int32     a    = rig.addAction( root, BehaviorStatus::Success );
     rig.build();
     SW_EXPECT_TRUE( rig.tick() == BehaviorStatus::Failure );
@@ -248,7 +248,7 @@ SW_TEST_CASE( BehaviorTreeTest, InverterAndForceSuccessKeepRunning )
     SW_EXPECT_TRUE( rig.tick() == BehaviorStatus::Running );
 
     BehaviorFixture force;
-    const int32     forceRoot = force._tree.addForceSuccess( -1 );
+    const int32     forceRoot = force._tree.addForceSuccess( nullopt ).value();
     const int32     b         = force.addAction( forceRoot, BehaviorStatus::Failure );
     force.build();
     SW_EXPECT_TRUE( force.tick() == BehaviorStatus::Success );
@@ -260,7 +260,7 @@ SW_TEST_CASE( BehaviorTreeTest, InverterAndForceSuccessKeepRunning )
 SW_TEST_CASE( BehaviorTreeTest, RepeatRunsOncePerTickUpToItsCount )
 {
     BehaviorFixture rig;
-    const int32     root = rig._tree.addRepeat( -1, 3 );
+    const int32     root = rig._tree.addRepeat( nullopt, 3 ).value();
     const int32     a    = rig.addAction( root, BehaviorStatus::Success );
     rig.build();
     SW_EXPECT_TRUE( rig.tick() == BehaviorStatus::Running );
@@ -274,7 +274,7 @@ SW_TEST_CASE( BehaviorTreeTest, RepeatRunsOncePerTickUpToItsCount )
 SW_TEST_CASE( BehaviorTreeTest, RepeatForeverEndsOnlyOnFailure )
 {
     BehaviorFixture rig;
-    const int32     root = rig._tree.addRepeat( -1, 0 );
+    const int32     root = rig._tree.addRepeat( nullopt, 0 ).value();
     const int32     a    = rig.addAction( root, BehaviorStatus::Success );
     rig.build();
     for ( int32 index = 0; index < 5; ++index )
@@ -288,7 +288,7 @@ SW_TEST_CASE( BehaviorTreeTest, RepeatForeverEndsOnlyOnFailure )
 SW_TEST_CASE( BehaviorTreeTest, CooldownFailsUntilItsTimePassed )
 {
     BehaviorFixture rig;
-    const int32     root = rig._tree.addCooldown( -1, 1.0f );
+    const int32     root = rig._tree.addCooldown( nullopt, 1.0f ).value();
     const int32     a    = rig.addAction( root, BehaviorStatus::Success );
     rig.build();
     SW_EXPECT_TRUE( rig.tick( 0.1f ) == BehaviorStatus::Success );
@@ -307,7 +307,7 @@ SW_TEST_CASE( BehaviorTreeTest, CooldownFailsUntilItsTimePassed )
 SW_TEST_CASE( BehaviorTreeTest, TimeLimitAbortsTheChildAndFails )
 {
     BehaviorFixture rig;
-    const int32     root = rig._tree.addTimeLimit( -1, 1.0f );
+    const int32     root = rig._tree.addTimeLimit( nullopt, 1.0f ).value();
     const int32     a    = rig.addAction( root, BehaviorStatus::Running );
     rig.build();
     SW_EXPECT_TRUE( rig.tick( 0.6f ) == BehaviorStatus::Running );
@@ -329,8 +329,8 @@ SW_TEST_CASE( BehaviorTreeTest, BlackboardComparisonsNeedAValue )
     const auto check = [&]( BlackboardCompare compare )
     {
         BehaviorTree tree;
-        const int32  root  = tree.addSelector( -1, "Root" );
-        const int32  index = tree.addBlackboardCondition( root, key, compare, 5.0f );
+        const int32  root  = tree.addSelector( nullopt, "Root" ).value();
+        const int32  index = tree.addBlackboardCondition( root, key, compare, 5.0f ).value();
         return BehaviorTree::evaluateCondition( tree.getNode( index ), world );
     };
     SW_EXPECT_FALSE( check( BlackboardCompare::IsSet ) );
@@ -357,7 +357,7 @@ SW_TEST_CASE( BehaviorTreeTest, ConditionGuardsItsChildWithoutAbortMode )
 {
     BehaviorFixture     rig;
     const hashed_string key( "Enemy" );
-    const int32         root = rig._tree.addBlackboardCondition( -1, key, BlackboardCompare::IsSet );
+    const int32         root = rig._tree.addBlackboardCondition( nullopt, key, BlackboardCompare::IsSet ).value();
     const int32         a    = rig.addAction( root, BehaviorStatus::Running );
     rig.build();
     SW_EXPECT_TRUE( rig.tick() == BehaviorStatus::Failure );
@@ -374,7 +374,7 @@ SW_TEST_CASE( BehaviorTreeTest, SelfAbortStopsTheChildWhenTheConditionBreaks )
 {
     BehaviorFixture     rig;
     const hashed_string key( "Enemy" );
-    const int32         root = rig._tree.addBlackboardCondition( -1, key, BlackboardCompare::IsSet, 0.0f, BehaviorAbortMode::Self );
+    const int32         root = rig._tree.addBlackboardCondition( nullopt, key, BlackboardCompare::IsSet, 0.0f, BehaviorAbortMode::Self ).value();
     const int32         a    = rig.addAction( root, BehaviorStatus::Running );
     rig.build();
     rig._blackboard.setBool( key, true );
@@ -389,8 +389,8 @@ SW_TEST_CASE( BehaviorTreeTest, LowerPriorityAbortLetsAHigherBranchIn )
 {
     BehaviorFixture     rig;
     const hashed_string key( "Enemy" );
-    const int32         root  = rig._tree.addSelector( -1 );
-    const int32         guard = rig._tree.addBlackboardCondition( root, key, BlackboardCompare::IsSet, 0.0f, BehaviorAbortMode::LowerPriority );
+    const int32         root  = rig._tree.addSelector( nullopt ).value();
+    const int32         guard = rig._tree.addBlackboardCondition( root, key, BlackboardCompare::IsSet, 0.0f, BehaviorAbortMode::LowerPriority ).value();
     const int32         fight = rig.addAction( guard, BehaviorStatus::Running, "Fight" );
     const int32         walk  = rig.addAction( root, BehaviorStatus::Running, "Walk" );
     rig.build();
@@ -409,14 +409,14 @@ SW_TEST_CASE( BehaviorTreeTest, LowerPriorityAbortLetsAHigherBranchIn )
 SW_TEST_CASE( BehaviorTreeTest, ResetAbortsWhatIsRunning )
 {
     BehaviorFixture rig;
-    const int32     root = rig._tree.addSequence( -1 );
+    const int32     root = rig._tree.addSequence( nullopt ).value();
     const int32     a    = rig.addAction( root, BehaviorStatus::Success );
     const int32     b    = rig.addAction( root, BehaviorStatus::Running );
     rig.build();
     rig.tick();
     rig._runner.reset();
     SW_EXPECT_EQUAL( 1u, rig._probe._arrAbort[b] );
-    SW_EXPECT_EQUAL( -1, rig._runner.getActiveLeaf() );
+    SW_EXPECT_FALSE( rig._runner.getActiveLeaf().has_value() );
     rig.tick();
     SW_EXPECT_EQUAL( 2u, rig._probe._arrTick[a] ); // 처음부터 다시 돈다
 }
@@ -424,10 +424,10 @@ SW_TEST_CASE( BehaviorTreeTest, ResetAbortsWhatIsRunning )
 SW_TEST_CASE( BehaviorTreeTest, WaitLastsItsSeconds )
 {
     BehaviorFixture rig;
-    (void)rig._tree.addWait( -1, 1.0f );
+    (void)rig._tree.addWait( nullopt, 1.0f );
     rig.build();
     SW_EXPECT_TRUE( rig.tick( 0.6f ) == BehaviorStatus::Running );
-    SW_EXPECT_EQUAL( 0, rig._runner.getActiveLeaf() );
+    SW_EXPECT_TRUE( rig._runner.getActiveLeaf() == 0 );
     SW_EXPECT_TRUE( rig.tick( 0.6f ) == BehaviorStatus::Success );
     SW_EXPECT_TRUE( rig.tick( 0.6f ) == BehaviorStatus::Running ); // 새로 잰다
 }
@@ -438,7 +438,7 @@ SW_TEST_CASE( BehaviorMoveToTest, NeedsAMoverAndATarget )
 {
     BehaviorFixture     rig;
     const hashed_string key( "Goal" );
-    (void)rig._tree.addMoveTo( -1, key );
+    (void)rig._tree.addMoveTo( nullopt, key );
     rig.build();
     SW_EXPECT_TRUE( rig.tick() == BehaviorStatus::Failure ); // 이동 인터페이스가 없다
     FakeMover mover;
@@ -456,7 +456,7 @@ SW_TEST_CASE( BehaviorMoveToTest, StatusIsReadFromTheNextTick )
 {
     BehaviorFixture     rig;
     const hashed_string key( "Goal" );
-    (void)rig._tree.addMoveTo( -1, key );
+    (void)rig._tree.addMoveTo( nullopt, key );
     rig.build();
     FakeMover mover;
     rig._runner.setMover( &mover );
@@ -479,7 +479,7 @@ SW_TEST_CASE( BehaviorMoveToTest, RepathsOnlyWhenTheTargetMovesFarEnough )
 {
     BehaviorFixture     rig;
     const hashed_string key( "Goal" );
-    (void)rig._tree.addMoveTo( -1, key, 1.0f );
+    (void)rig._tree.addMoveTo( nullopt, key, 1.0f );
     rig.build();
     FakeMover mover;
     rig._runner.setMover( &mover );
@@ -497,7 +497,7 @@ SW_TEST_CASE( BehaviorMoveToTest, AbortStopsTheMover )
 {
     BehaviorFixture     rig;
     const hashed_string key( "Goal" );
-    (void)rig._tree.addMoveTo( -1, key );
+    (void)rig._tree.addMoveTo( nullopt, key );
     rig.build();
     FakeMover mover;
     rig._runner.setMover( &mover );
@@ -512,7 +512,7 @@ SW_TEST_CASE( BehaviorMoveToTest, LosingTheTargetStopsTheMover )
 {
     BehaviorFixture     rig;
     const hashed_string key( "Goal" );
-    (void)rig._tree.addMoveTo( -1, key );
+    (void)rig._tree.addMoveTo( nullopt, key );
     rig.build();
     FakeMover mover;
     rig._runner.setMover( &mover );

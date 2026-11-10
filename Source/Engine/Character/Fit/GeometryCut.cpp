@@ -41,9 +41,9 @@ namespace sw
 
             static uint16 getOrCreateGroup( AppearanceGeometry& inoutTarget, const hashed_string& name )
             {
-                const uint16 found = inoutTarget.findGroup( name );
-                if ( found != CharacterGeometryConstant::kNoGroup )
-                    return found;
+                const optional<uint16> found = inoutTarget.findGroup( name );
+                if ( found.has_value() )
+                    return *found;
                 inoutTarget._listGroupName.push_back( name );
                 return static_cast<uint16>( inoutTarget._listGroupName.size() - 1 );
             }

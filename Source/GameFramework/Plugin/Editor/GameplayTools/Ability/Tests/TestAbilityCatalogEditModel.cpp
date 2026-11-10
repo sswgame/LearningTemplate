@@ -31,7 +31,7 @@ namespace
 
     struct AbilityCatalogEditModelTestUtil
     {
-        static int32 findReference( const AbilityCatalogEditModel& model, string_view label, string_view targetID )
+        static optional<int32> findReference( const AbilityCatalogEditModel& model, string_view label, string_view targetID )
         {
             const vector<AbilityCatalogReference>& listReference = model.getReferences();
             for ( int32 index = 0; index < static_cast<int32>( listReference.size() ); ++index )
@@ -40,7 +40,7 @@ namespace
                 if ( string_view( reference._label ) == label && string_view( reference._targetID ) == targetID )
                     return index;
             }
-            return -1;
+            return nullopt;
         }
     };
     using Util = AbilityCatalogEditModelTestUtil;
@@ -57,17 +57,17 @@ SW_TEST_CASE( AbilityCatalogEditModelTest, ReferencesFollowTheLoader )
     vector<int32> listFrom;
     model.collectReferencesFrom( bolt, listFrom );
     SW_EXPECT_EQUAL( 3u, static_cast<uint32>( listFrom.size() ) ); // cost · cooldown · param damageEffect(arena_bolt 는 이펙트가 아니다)
-    const int32 param = Util::findReference( model, "param damageEffect", "GE_Damage" );
-    SW_REQUIRE_TRUE( param >= 0 );
-    SW_EXPECT_TRUE( model.getReferences()[static_cast<size_t>( param )]._bRequired == SW_FALSE );
+    const optional<int32> param = Util::findReference( model, "param damageEffect", "GE_Damage" );
+    SW_REQUIRE_TRUE( param.has_value() );
+    SW_EXPECT_TRUE( model.getReferences()[static_cast<size_t>( *param )]._bRequired == SW_FALSE );
 
     // GA_Free 의 cost="" 는 "없음" 을 적은 것이다.
     model.collectReferencesFrom( model.findEntry( AbilityEntryKind::Ability, "GA_Free" ).value(), listFrom );
     SW_EXPECT_TRUE( listFrom.empty() );
 
-    const int32 cue = Util::findReference( model, "cue", "AbilityPresentation.Hit.Fire" );
-    SW_REQUIRE_TRUE( cue >= 0 );
-    SW_EXPECT_TRUE( model.getReferences()[static_cast<size_t>( cue )]._target == model.findEntry( AbilityEntryKind::Presentation, "AbilityPresentation.Hit" ) );
+    const optional<int32> cue = Util::findReference( model, "cue", "AbilityPresentation.Hit.Fire" );
+    SW_REQUIRE_TRUE( cue.has_value() );
+    SW_EXPECT_TRUE( model.getReferences()[static_cast<size_t>( *cue )]._target == model.findEntry( AbilityEntryKind::Presentation, "AbilityPresentation.Hit" ) );
 
     // 쓰이는 곳: GE_Cost 는 GA_Bolt 하나가 쓴다.
     vector<int32> listTo;
@@ -84,9 +84,9 @@ SW_TEST_CASE( AbilityCatalogEditModelTest, UnresolvedReferenceIsAnIssueUntilFixe
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( model.getIssues().size() ) );
     SW_EXPECT_TRUE( model.findEntry( AbilityEntryKind::AbilitySet, "Player" ) == model.getIssues()[0]._entry );
 
-    const int32 missing = Util::findReference( model, "set ability", "GA_Missing" );
-    SW_REQUIRE_TRUE( missing >= 0 );
-    SW_REQUIRE_TRUE( model.setReference( missing, "GA_Free" ) );
+    const optional<int32> missing = Util::findReference( model, "set ability", "GA_Missing" );
+    SW_REQUIRE_TRUE( missing.has_value() );
+    SW_REQUIRE_TRUE( model.setReference( *missing, "GA_Free" ) );
     SW_EXPECT_TRUE( model.getIssues().empty() );
     SW_EXPECT_TRUE( model.getDocument().getText().find( "<!-- 피해 -->" ) != string::npos );
     SW_EXPECT_TRUE( model.getDocument().getText().find( "id=\"GA_Free\" input=\"2\"" ) != string::npos );

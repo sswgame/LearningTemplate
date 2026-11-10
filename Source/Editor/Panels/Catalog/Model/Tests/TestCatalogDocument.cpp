@@ -67,15 +67,15 @@ namespace
             return result.has_value();
         }
 
-        /** @brief 첫 @p name 원소의 번호입니다. */
-        static int32 findElement( const CatalogXMLText& parsed, string_view name )
+        /** @brief 첫 @p name 원소의 번호입니다. 없으면 비어 있습니다. */
+        static optional<int32> findElement( const CatalogXMLText& parsed, string_view name )
         {
             for ( size_t index = 0; index < parsed.getElements().size(); ++index )
             {
                 if ( string_view( parsed.getElements()[index]._name ) == name )
                     return static_cast<int32>( index );
             }
-            return -1;
+            return nullopt;
         }
     };
     using Util = CatalogTestUtil;
@@ -501,7 +501,7 @@ SW_TEST_CASE( CatalogCurveModelTest, AddKeyContinuesAfterTheLastKey )
 {
     CatalogDocument document;
     SW_REQUIRE_TRUE( document.load( Util::kCurves ) );
-    const int32 green = Util::findElement( document.getParsed(), "_green" );
+    const int32 green = Util::findElement( document.getParsed(), "_green" ).value();
     SW_REQUIRE_TRUE( green >= 0 );
     SW_REQUIRE_TRUE( CatalogCurve::addKey( document, green ) );
     SW_REQUIRE_TRUE( CatalogCurve::addKey( document, green ) );
@@ -529,7 +529,7 @@ SW_TEST_CASE( CatalogCurveModelTest, ApplyEditedCurveMatchesTheGraph )
 {
     CatalogDocument document;
     SW_REQUIRE_TRUE( document.load( Util::kCurves ) );
-    const int32 size = Util::findElement( document.getParsed(), "_size" );
+    const int32 size = Util::findElement( document.getParsed(), "_size" ).value();
     SW_REQUIRE_TRUE( size >= 0 );
 
     FloatCurve edited;
@@ -568,7 +568,7 @@ SW_TEST_CASE( CatalogCurveModelTest, ApplyEditedCurveMatchesTheGraph )
 
     document.undo();
     SW_EXPECT_EQUAL( size_t{ 4 }, findSize()._listKey.size() );
-    SW_EXPECT_FALSE( CatalogCurve::applyEditedCurve( document, Util::findElement( document.getParsed(), "Def" ), shorter ) ); // 곡선이 아니다
+    SW_EXPECT_FALSE( CatalogCurve::applyEditedCurve( document, Util::findElement( document.getParsed(), "Def" ).value(), shorter ) ); // 곡선이 아니다
     SW_EXPECT_FALSE( document.getError().empty() );
 }
 
@@ -577,7 +577,7 @@ SW_TEST_CASE( CatalogCurveModelTest, AddKeyIsOneUndoStep )
 {
     CatalogDocument document;
     SW_REQUIRE_TRUE( document.load( Util::kCurves ) );
-    SW_REQUIRE_TRUE( CatalogCurve::addKey( document, Util::findElement( document.getParsed(), "_green" ) ) );
+    SW_REQUIRE_TRUE( CatalogCurve::addKey( document, Util::findElement( document.getParsed(), "_green" ).value() ) );
     document.undo();
     SW_EXPECT_FALSE( document.isDirty() );
     SW_EXPECT_FALSE( document.canUndo() );
@@ -597,7 +597,7 @@ SW_TEST_CASE( CatalogCurveModelTest, GradientSamplesNeedEveryChannelAndAreClampe
 
     for ( const utf8* pChannel : { "_green", "_blue", "_alpha" } )
     {
-        SW_REQUIRE_TRUE( CatalogCurve::addKey( document, Util::findElement( document.getParsed(), pChannel ) ) );
+        SW_REQUIRE_TRUE( CatalogCurve::addKey( document, Util::findElement( document.getParsed(), pChannel ).value() ) );
     }
     CatalogCurve::collectCurves( document.getParsed(), document.getParsed().getRootIndex(), listCurve );
     SW_REQUIRE_TRUE( document.setCell( listCurve[static_cast<size_t>( listGradient[0]._red )]._listKey[0]._elementIndex, "_value", "5" ) );
@@ -757,8 +757,8 @@ namespace
                                               "\t<Item id=\"c\" _base=\"common/data/items.xml#far\"/>\n"
                                               "</ItemCatalog>\n";
 
-        /** @brief 표에서 id 가 @p id 인 행의 번호입니다. */
-        static int32 findRow( const CatalogDocument& document, string_view id )
+        /** @brief 표에서 id 가 @p id 인 행의 번호입니다. 없으면 비어 있습니다. */
+        static optional<int32> findRow( const CatalogDocument& document, string_view id )
         {
             for ( const int32 rowIndex : document.getParsed().getRowIndices() )
             {
@@ -766,7 +766,7 @@ namespace
                 if ( pID != nullptr && string_view( *pID ) == id )
                     return rowIndex;
             }
-            return -1;
+            return nullopt;
         }
     };
 } // namespace
@@ -781,18 +781,18 @@ SW_TEST_CASE( CatalogDocumentTest, ShowsInheritedValues )
     SW_REQUIRE_TRUE( document.load( Util::kItems ) );
     SW_EXPECT_TRUE( document.getInheritanceError().empty() );
 
-    const int32 b = Util::findRow( document, "b" );
+    const int32 b = Util::findRow( document, "b" ).value();
     SW_EXPECT_TRUE( document.findCellValue( b, "category" ) == nullptr );
     SW_REQUIRE_TRUE( document.findInheritedValue( b, "category" ) != nullptr );
     SW_EXPECT_EQUAL( string( "Armor" ), string( document.findInheritedValue( b, "category" ) ) );
 
-    const int32 c = Util::findRow( document, "c" );
+    const int32 c = Util::findRow( document, "c" ).value();
     SW_REQUIRE_TRUE( document.findInheritedValue( c, "slot" ) != nullptr );
     SW_EXPECT_EQUAL( string( "Head" ), string( document.findInheritedValue( c, "slot" ) ) );
     SW_REQUIRE_EQUAL( document.getGroups().size(), static_cast<size_t>( 1 ) );
     SW_EXPECT_TRUE( VectorUtil::contains( document.getGroups()[0]._listColumn, string( "slot" ) ) ); // 다른 파일의 칸도 열이 된다
 
-    SW_EXPECT_TRUE( document.findInheritedValue( Util::findRow( document, "a" ), "category" ) == nullptr ); // 부모가 없다
+    SW_EXPECT_TRUE( document.findInheritedValue( Util::findRow( document, "a" ).value(), "category" ) == nullptr ); // 부모가 없다
 }
 
 /** @brief [CatalogDocumentTest] 항목 상속의 왕복 저장 - 다른 값은 적고, 부모와 같은 값을 적으면 칸을 지우며, 부모를 고치면 적지 않은 칸이 따라간다 */
@@ -804,26 +804,26 @@ SW_TEST_CASE( CatalogDocumentTest, SavesOnlyDifferences )
     document.setInheritanceSource( &source );
     SW_REQUIRE_TRUE( document.load( Util::kItems ) );
 
-    SW_REQUIRE_TRUE( document.setCell( Util::findRow( document, "b" ), "category", "Weapon" ) );
-    SW_REQUIRE_TRUE( document.findCellValue( Util::findRow( document, "b" ), "category" ) != nullptr );
-    SW_REQUIRE_TRUE( document.setCell( Util::findRow( document, "b" ), "category", "Armor" ) );
-    SW_EXPECT_TRUE( document.findCellValue( Util::findRow( document, "b" ), "category" ) == nullptr );
+    SW_REQUIRE_TRUE( document.setCell( Util::findRow( document, "b" ).value(), "category", "Weapon" ) );
+    SW_REQUIRE_TRUE( document.findCellValue( Util::findRow( document, "b" ).value(), "category" ) != nullptr );
+    SW_REQUIRE_TRUE( document.setCell( Util::findRow( document, "b" ).value(), "category", "Armor" ) );
+    SW_EXPECT_TRUE( document.findCellValue( Util::findRow( document, "b" ).value(), "category" ) == nullptr );
     SW_EXPECT_EQUAL( string( Util::kItems ), document.getText() ); // 부모와 같아지면 원문이 처음과 같다
 
     // 이미 없는 칸에 부모 값을 적으면 아무것도 바뀌지 않는다.
-    SW_REQUIRE_TRUE( document.setCell( Util::findRow( document, "b" ), "category", "Armor" ) );
+    SW_REQUIRE_TRUE( document.setCell( Util::findRow( document, "b" ).value(), "category", "Armor" ) );
     SW_EXPECT_EQUAL( string( Util::kItems ), document.getText() );
 
     // 부모를 고치면 적지 않은 칸이 따라간다.
-    SW_REQUIRE_TRUE( document.setCell( Util::findRow( document, "a" ), "category", "Cloth" ) );
-    SW_EXPECT_EQUAL( string( "Cloth" ), string( document.findInheritedValue( Util::findRow( document, "b" ), "category" ) ) );
+    SW_REQUIRE_TRUE( document.setCell( Util::findRow( document, "a" ).value(), "category", "Cloth" ) );
+    SW_EXPECT_EQUAL( string( "Cloth" ), string( document.findInheritedValue( Util::findRow( document, "b" ).value(), "category" ) ) );
 
     // 저장본을 다시 열어도 같다.
     const string    saved = document.getText();
     CatalogDocument reopened;
     reopened.setInheritanceSource( &source );
     SW_REQUIRE_TRUE( reopened.load( saved ) );
-    SW_EXPECT_EQUAL( string( "Cloth" ), string( reopened.findInheritedValue( Util::findRow( reopened, "b" ), "category" ) ) );
+    SW_EXPECT_EQUAL( string( "Cloth" ), string( reopened.findInheritedValue( Util::findRow( reopened, "b" ).value(), "category" ) ) );
 }
 
 /** @brief [CatalogDocumentTest] 변형 만들기 - 이 행을 `_base` 로 가리키고 id 만 적은 행이 생기며, 값은 물려받는다. 규칙에 없는 문서에는 만들 수 없다 */
@@ -834,8 +834,8 @@ SW_TEST_CASE( CatalogDocumentTest, CreatesVariantRows )
     CatalogDocument              document;
     document.setInheritanceSource( &source );
     SW_REQUIRE_TRUE( document.load( Util::kItems ) );
-    SW_REQUIRE_TRUE( document.createVariant( Util::findRow( document, "a" ) ) );
-    const int32 variant = Util::findRow( document, "a_variant" );
+    SW_REQUIRE_TRUE( document.createVariant( Util::findRow( document, "a" ).value() ) );
+    const int32 variant = Util::findRow( document, "a_variant" ).value();
     SW_REQUIRE_TRUE( variant >= 0 );
     SW_EXPECT_EQUAL( string( "a" ), *document.findCellValue( variant, "_base" ) );
     SW_EXPECT_TRUE( document.findCellValue( variant, "name" ) == nullptr );
@@ -869,7 +869,7 @@ namespace
                                                 "\t<Item id=\"b\" _base=\"a\"/>\n"
                                                 "</ItemCatalog>\n";
 
-        static int32 findRow( const CatalogDocument& document, string_view id )
+        static optional<int32> findRow( const CatalogDocument& document, string_view id )
         {
             for ( const int32 rowIndex : document.getParsed().getRowIndices() )
             {
@@ -877,7 +877,7 @@ namespace
                 if ( pID != nullptr && string_view( *pID ) == id )
                     return rowIndex;
             }
-            return -1;
+            return nullopt;
         }
 
         static const CatalogChildSection* findSection( const vector<CatalogChildSection>& listSection, string_view title )
@@ -928,7 +928,7 @@ SW_TEST_CASE( CatalogDocumentTest, ChildSectionsShowInheritedElements )
     CatalogDocument              document;
     document.setInheritanceSource( &source );
     SW_REQUIRE_TRUE( document.load( Util::kVisuals ) );
-    const int32 b = Util::findRow( document, "b" );
+    const int32 b = Util::findRow( document, "b" ).value();
 
     vector<CatalogChildSection> listSection;
     document.collectChildSections( b, listSection );
@@ -951,7 +951,7 @@ SW_TEST_CASE( CatalogDocumentTest, ChildSectionsShowInheritedElements )
     SW_EXPECT_EQUAL( string( Util::kVisuals ), document.getText() );
 
     // 부모가 없는 행은 모두 적은 칸이다.
-    document.collectChildSections( Util::findRow( document, "a" ), listSection );
+    document.collectChildSections( Util::findRow( document, "a" ).value(), listSection );
     pParts = Util::findSection( listSection, "Part" );
     SW_REQUIRE_TRUE( pParts != nullptr );
     SW_EXPECT_FALSE( pParts->_bHasParent );
@@ -966,7 +966,7 @@ SW_TEST_CASE( CatalogDocumentTest, ChildCellSavesOnlyDifferences )
     CatalogDocument              document;
     document.setInheritanceSource( &source );
     SW_REQUIRE_TRUE( document.load( Util::kVisuals ) );
-    const int32 b = Util::findRow( document, "b" );
+    const int32 b = Util::findRow( document, "b" ).value();
 
     SW_REQUIRE_TRUE( document.setChildCell( b, Util::part( "Shell" ), "material", "y" ) );
     SW_EXPECT_TRUE( Util::contains( document, "<Part name=\"Shell\" material=\"y\" />" ) );
@@ -1007,7 +1007,7 @@ SW_TEST_CASE( CatalogDocumentTest, ChildNodesAddAndRemove )
     CatalogDocument              document;
     document.setInheritanceSource( &source );
     SW_REQUIRE_TRUE( document.load( Util::kVisuals ) );
-    const int32 b = Util::findRow( document, "b" );
+    const int32 b = Util::findRow( document, "b" ).value();
 
     SW_REQUIRE_TRUE( document.removeChildNode( b, Util::part( "Trim" ) ) );
     SW_EXPECT_TRUE( Util::contains( document, "<Part name=\"Trim\" _op=\"Remove\" />" ) );
@@ -1040,7 +1040,7 @@ SW_TEST_CASE( CatalogDocumentTest, ChildNodesMoveWithBeforeAfter )
     CatalogDocument              document;
     document.setInheritanceSource( &source );
     SW_REQUIRE_TRUE( document.load( Util::kVisuals ) );
-    const int32 b = Util::findRow( document, "b" );
+    const int32 b = Util::findRow( document, "b" ).value();
 
     SW_REQUIRE_TRUE( document.moveChildNode( b, Util::part( "Trim" ), true ) );
     SW_EXPECT_TRUE( Util::contains( document, "<Part name=\"Trim\" _before=\"Shell\" />" ) );
@@ -1066,7 +1066,7 @@ SW_TEST_CASE( CatalogDocumentTest, ChildGroupWithoutRuleReplacesWhole )
     CatalogDocument              document;
     document.setInheritanceSource( &source );
     SW_REQUIRE_TRUE( document.load( Util::kItems ) );
-    const int32 b = Util::findRow( document, "b" );
+    const int32 b = Util::findRow( document, "b" ).value();
 
     vector<CatalogChildSection> listSection;
     document.collectChildSections( b, listSection );

@@ -630,7 +630,7 @@ namespace sw
             fighter._sidestepSign = -1;
             fighter._stanceIndex  = constant::invalid_index::kInt32;
             fighter._posture      = FighterPosture::Standing;
-            pushEvent( FightingEvent::Kind::Sidestep, player, constant::invalid_index::kInt32 );
+            pushEvent( FightingEvent::Kind::Sidestep, player, nullopt );
             return;
         }
         if ( bFloor && fighter._inputBuffer.isCompleted( fighter._pDef->_jump, fighter._side ) )
@@ -1104,7 +1104,7 @@ namespace sw
         return _series.getWinner() == RoundSeries::kNoWinner ? kDraw : _series.getWinner();
     }
 
-    void FightingMatch::pushEvent( FightingEvent::Kind kind, int32 player, int32 value, const hashed_string& moveID )
+    void FightingMatch::pushEvent( FightingEvent::Kind kind, optional<int32> player, int32 value, const hashed_string& moveID )
     {
         FightingEvent event;
         event._kind   = kind;

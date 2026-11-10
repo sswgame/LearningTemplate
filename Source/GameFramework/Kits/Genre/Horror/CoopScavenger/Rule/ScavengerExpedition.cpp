@@ -105,7 +105,7 @@ namespace sw
         if ( _pWallet == nullptr || _pWallet->trySpend( _data._pCatalog->getCurrency(), pMoon->_routeCost ) == false )
             return ScavengerActionResult::NotEnoughCredits;
         _pMoon = pMoon;
-        pushEvent( ScavengerEvent::Kind::Routed, constant::invalid_index::kInt32, pMoon->_routeCost, pMoon->_id );
+        pushEvent( ScavengerEvent::Kind::Routed, nullopt, pMoon->_routeCost, pMoon->_id );
         return ScavengerActionResult::Ok;
     }
 
@@ -144,7 +144,7 @@ namespace sw
             _outdoorDirector.setAllowedTags( vector<hashed_string>{ hashed_string( "Outdoor" ) } );
         }
         resetCrew();
-        pushEvent( ScavengerEvent::Kind::Landed, constant::invalid_index::kInt32, _facility.computeGroundValue(), _pMoon->_id );
+        pushEvent( ScavengerEvent::Kind::Landed, nullopt, _facility.computeGroundValue(), _pMoon->_id );
         return ScavengerActionResult::Ok;
     }
 
@@ -181,7 +181,7 @@ namespace sw
         if ( _bDuskAnnounced == SW_FALSE && hour >= day._duskHour )
         {
             _bDuskAnnounced = SW_TRUE;
-            pushEvent( ScavengerEvent::Kind::Dusk, constant::invalid_index::kInt32, 0 );
+            pushEvent( ScavengerEvent::Kind::Dusk, nullopt, 0 );
         }
         if ( hour >= day._departHour )
             departShip( true );
@@ -308,7 +308,7 @@ namespace sw
                 _pWallet->add( _data._pCatalog->getCurrency(), credits );
             _quota.addFulfilled( credits );
         }
-        pushEvent( ScavengerEvent::Kind::ScrapSold, constant::invalid_index::kInt32, credits );
+        pushEvent( ScavengerEvent::Kind::ScrapSold, nullopt, credits );
         return credits;
     }
 
@@ -451,7 +451,7 @@ namespace sw
             member._healthMachine.kill();
             handleDeath( static_cast<int32>( index ), true );
         }
-        pushEvent( ScavengerEvent::Kind::ShipDeparted, constant::invalid_index::kInt32, bAuto ? 1 : 0 );
+        pushEvent( ScavengerEvent::Kind::ShipDeparted, nullopt, bAuto ? 1 : 0 );
 
         const ScavengerPenaltyDef& penalty   = _data._pCatalog->getPenaltySettings();
         float32                    fineRatio = 0.0f;
@@ -465,7 +465,7 @@ namespace sw
         const int64 fine        = static_cast<int64>( static_cast<float32>( getCredits() ) * MathUtil::saturate( fineRatio ) );
         const bool  bCanPayFine = fine > 0 && _pWallet != nullptr && _pWallet->trySpend( _data._pCatalog->getCurrency(), fine );
         if ( bCanPayFine )
-            pushEvent( ScavengerEvent::Kind::FinePaid, constant::invalid_index::kInt32, static_cast<int32>( fine ) );
+            pushEvent( ScavengerEvent::Kind::FinePaid, nullopt, static_cast<int32>( fine ) );
 
         int32                         overtimeBonus = 0;
         const ScavengerDeadlineResult deadline      = _quota.endDay( _random, overtimeBonus );
@@ -474,12 +474,12 @@ namespace sw
             if ( overtimeBonus > 0 )
                 if ( _pWallet != nullptr )
                     _pWallet->add( _data._pCatalog->getCurrency(), overtimeBonus );
-            pushEvent( ScavengerEvent::Kind::QuotaMet, constant::invalid_index::kInt32, _quota.getQuota() );
+            pushEvent( ScavengerEvent::Kind::QuotaMet, nullopt, _quota.getQuota() );
         }
         else if ( deadline == ScavengerDeadlineResult::GameOver )
         {
             _phase = ScavengerPhase::GameOver;
-            pushEvent( ScavengerEvent::Kind::GameOver, constant::invalid_index::kInt32, _quota.getFulfilled() );
+            pushEvent( ScavengerEvent::Kind::GameOver, nullopt, _quota.getFulfilled() );
         }
         if ( _pClock != nullptr && _data._pCatalog != nullptr )
             _pClock->advanceToHour( _data._pCatalog->getDaySettings()._arrivalHour ); // 다음 날 아침이다
@@ -521,7 +521,7 @@ namespace sw
                 listKept.push_back( _listShipScrap[static_cast<size_t>( index )] );
         }
         _listShipScrap.swap( listKept );
-        pushEvent( ScavengerEvent::Kind::CrewWiped, constant::invalid_index::kInt32, loseCount );
+        pushEvent( ScavengerEvent::Kind::CrewWiped, nullopt, loseCount );
     }
 
     void ScavengerExpedition::resetCrew()
@@ -552,7 +552,7 @@ namespace sw
         }
     }
 
-    void ScavengerExpedition::pushEvent( ScavengerEvent::Kind kind, int32 player, int32 value, const hashed_string& id )
+    void ScavengerExpedition::pushEvent( ScavengerEvent::Kind kind, optional<int32> player, int32 value, const hashed_string& id )
     {
         ScavengerEvent event;
         event._kind   = kind;

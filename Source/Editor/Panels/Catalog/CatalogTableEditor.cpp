@@ -32,7 +32,6 @@ namespace sw::editor
             static constexpr int32   kExtraColumnCount       = 2;      ///< 자식 수 · 행 동작
             static constexpr int32   kMaxVisibleRows         = 12;     ///< 넘으면 테이블 안에서 세로로 스크롤한다
             static constexpr float32 kCurveGraphLines        = 12.0f;  ///< 곡선 창 그래프의 높이(글자 줄 수 — 시퀀서 곡선 편집기와 같다)
-            static constexpr int32   kNoElement              = -1;     ///< 창 · 그래프가 보는 원소가 없음
 
             /**
              * @brief 그룹 테이블의 바깥 높이입니다 — 행 수만큼(최대 `kMaxVisibleRows`)만 차지합니다.
@@ -62,9 +61,9 @@ namespace sw::editor
         , _listGradientColor{}
         , _listVisibleRow{}
         , _listChildSection{}
-        , _curveOwner{ -1 }
-        , _childOwner{ -1 }
-        , _graphCurve{ CatalogTableEditorInternal::kNoElement }
+        , _curveOwner{}
+        , _childOwner{}
+        , _graphCurve{}
         , _bOpenCurvePopup{ SW_FALSE }
         , _bOpenChildPopup{ SW_FALSE }
         , _bEditFailed{ SW_FALSE }
@@ -80,11 +79,11 @@ namespace sw::editor
     void CatalogTableEditor::reset()
     {
         _editText.clear();
-        _editID          = 0;
-        _pending         = CatalogTableEdit{};
-        _curveOwner      = -1;
-        _childOwner      = -1;
-        _graphCurve      = CatalogTableEditorInternal::kNoElement;
+        _editID  = 0;
+        _pending = CatalogTableEdit{};
+        _curveOwner.reset();
+        _childOwner.reset();
+        _graphCurve.reset();
         _bOpenCurvePopup = SW_FALSE;
         _bOpenChildPopup = SW_FALSE;
         _bEditFailed     = SW_FALSE;
@@ -327,7 +326,11 @@ namespace sw::editor
         bool bOpen = true;
         if ( ImGui::BeginPopupModal( kPopupName, &bOpen ) == false )
             return;
-        document.collectChildSections( _childOwner, _listChildSection );
+        // 창이 열린 채 편집기가 비워지면(`reset`) 그릴 표가 없다 — 아래 편집은 표가 있을 때만 `_childOwner` 를 읽는다.
+        if ( _childOwner.has_value() )
+            document.collectChildSections( *_childOwner, _listChildSection );
+        else
+            _listChildSection.clear();
         if ( _listChildSection.empty() )
         {
             EditorWidgets::drawEmptyHint( document.getInheritanceError().empty() ? SW_LOCKEY( "EditorCatalog", "NoChildRules" ) : document.getInheritanceError().c_str() );
@@ -348,7 +351,7 @@ namespace sw::editor
         EditorSelfTestMarks::record( "catalog.children.close" );
         if ( bCloseClicked || bOpen == false )
         {
-            _childOwner = -1;
+            _childOwner.reset();
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();
@@ -360,9 +363,9 @@ namespace sw::editor
         if ( section._kind == CatalogChildSectionKind::Field )
             return;
         const auto groupEdit = [this, &section]( CatalogTableEdit::Kind kind )
-        { _pending = CatalogTableEdit{ kind, _childOwner, section._name, string(), section._ownerPath }; };
+        { _pending = CatalogTableEdit{ kind, _childOwner.value(), section._name, string(), section._ownerPath }; };
         if ( ImGui::SmallButton( SW_LOCKEY( "EditorCatalog", "AddChild" ) ) )
-            _pending = CatalogTableEdit{ CatalogTableEdit::Kind::AddChildNode, _childOwner, section._name, section._keyAttribute, section._ownerPath };
+            _pending = CatalogTableEdit{ CatalogTableEdit::Kind::AddChildNode, _childOwner.value(), section._name, section._keyAttribute, section._ownerPath };
         if ( inoutbFirstAdd )
             EditorSelfTestMarks::record( "catalog.children.add" );
         inoutbFirstAdd = false;
@@ -438,7 +441,7 @@ namespace sw::editor
         {
             ImGui::TableSetColumnIndex( 0 );
             const auto nodeEdit = [this, &node]( CatalogTableEdit::Kind kind )
-            { _pending = CatalogTableEdit{ kind, _childOwner, string(), string(), node._path }; };
+            { _pending = CatalogTableEdit{ kind, _childOwner.value(), string(), string(), node._path }; };
             if ( node._bRemoved )
             {
                 ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorCatalog", "ChildRemoved" ) );
@@ -487,12 +490,12 @@ namespace sw::editor
             {
                 string committed;
                 if ( drawValueField( cell._value, cell._bWritten == false, cell._bInherited, -1.0f, inoutbFirstCell, committed ) )
-                    _pending = CatalogTableEdit{ CatalogTableEdit::Kind::SetChildCell, _childOwner, cell._column, committed, node._path };
+                    _pending = CatalogTableEdit{ CatalogTableEdit::Kind::SetChildCell, _childOwner.value(), cell._column, committed, node._path };
                 inoutbFirstCell = false;
                 if ( cell._bWritten && cell._bKey == false && EditorInputGUI::beginItemContextMenu( "##cellMenu" ) )
                 {
                     if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "UnsetAttribute" ) ) )
-                        _pending = CatalogTableEdit{ CatalogTableEdit::Kind::UnsetChildCell, _childOwner, cell._column, string(), node._path };
+                        _pending = CatalogTableEdit{ CatalogTableEdit::Kind::UnsetChildCell, _childOwner.value(), cell._column, string(), node._path };
                     ImGui::EndPopup();
                 }
             }
@@ -601,7 +604,7 @@ namespace sw::editor
         const CatalogCurve* pCurve = nullptr;
         for ( const CatalogCurve& curve : _listCurve )
         {
-            if ( curve._elementIndex == _graphCurve )
+            if ( _graphCurve == curve._elementIndex )
                 pCurve = &curve;
         }
         if ( pCurve == nullptr )
@@ -633,7 +636,10 @@ namespace sw::editor
         bool bOpen = true;
         if ( ImGui::BeginPopupModal( kPopupName, &bOpen ) == false )
             return;
-        CatalogCurve::collectCurves( document.getParsed(), _curveOwner, _listCurve );
+        if ( _curveOwner.has_value() )
+            CatalogCurve::collectCurves( document.getParsed(), *_curveOwner, _listCurve );
+        else
+            _listCurve.clear();
         CatalogCurve::collectGradients( _listCurve, _listGradient );
         if ( _listCurve.empty() )
         {
@@ -660,7 +666,7 @@ namespace sw::editor
         EditorSelfTestMarks::record( "catalog.curves.close" );
         if ( bClose || bOpen == false )
         {
-            _curveOwner = -1;
+            _curveOwner.reset();
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();

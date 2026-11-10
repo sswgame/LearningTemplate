@@ -17,7 +17,6 @@ namespace sw::editor
             /** @brief 새 항목의 길이(프레임)입니다. 타임라인이 더 짧으면 타임라인 끝까지입니다. */
             static constexpr int32 kNewItemFrameLength = 10;
             /** @brief 항목 번호를 돌려주는 명령이 "만들지 않았다" 를 알리는 값입니다. */
-            static constexpr int32 kNoItem = -1;
 
             /** @brief 목록에 @p name 이 있으면 true 입니다(항목 · 트랙은 둘 다 `_name` 을 듭니다). */
             template <typename TEntry>
@@ -189,12 +188,12 @@ namespace sw::editor
         return item._binding == kSequenceNoBinding || _asset.findBinding( item._binding ) != nullptr;
     }
 
-    int32 SequenceModel::addItem( SequenceItemKind kind, string_view kindName )
+    optional<int32> SequenceModel::addItem( SequenceItemKind kind, string_view kindName )
     {
         _bItemDraft                       = SW_FALSE;
         const SequenceItemKindInfo* pInfo = SequenceAsset::findItemKindInfo( kind );
         if ( pInfo == nullptr )
-            return -1;
+            return nullopt;
         SequenceTrackItem item{};
         item._kind    = kind;
         item._start   = _asset._frameMin;
@@ -209,7 +208,7 @@ namespace sw::editor
         {
             _itemEdit   = std::move( item );
             _bItemDraft = SW_TRUE;
-            return -1;
+            return nullopt;
         }
         _asset._listItem.push_back( std::move( item ) );
         return static_cast<int32>( _asset._listItem.size() ) - 1;
@@ -220,10 +219,10 @@ namespace sw::editor
         return _bItemDraft == SW_TRUE;
     }
 
-    int32 SequenceModel::commitItemDraft()
+    optional<int32> SequenceModel::commitItemDraft()
     {
         if ( isDraftingItem() == false || isItemAcceptable( _itemEdit ) == false )
-            return -1;
+            return nullopt;
         _asset._listItem.push_back( _itemEdit );
         _bItemDraft   = SW_FALSE;
         _selectedItem = static_cast<int32>( _asset._listItem.size() ) - 1;
@@ -287,14 +286,14 @@ namespace sw::editor
         return true;
     }
 
-    int32 SequenceModel::duplicateItem( int32 itemIndex )
+    expected<int32> SequenceModel::duplicateItem( int32 itemIndex )
     {
         if ( itemIndex < 0 || itemIndex >= static_cast<int32>( _asset._listItem.size() ) )
-            return -1;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the item index is out of range" } );
         SequenceTrackItem           copy  = _asset._listItem[static_cast<size_t>( itemIndex )];
         const SequenceItemKindInfo* pInfo = SequenceAsset::findItemKindInfo( copy._kind );
         if ( pInfo != nullptr && pInfo->_bSpawns )
-            return -1; // 두 스폰이 한 바인딩을 채우면 파일이 읽히지 않는다
+            return unexpected( Error{ ErrorKind::InvalidArgument, "a spawn item cannot be duplicated" } ); // 두 스폰이 한 바인딩을 채우면 파일이 읽히지 않는다
         copy._name += " Copy";
         if ( SequenceModelInternal::isNameTaken( _asset._listItem, copy._name ) )
             copy._name = SequenceModelInternal::makeNumberedName( _asset._listItem, copy._name );
@@ -315,11 +314,11 @@ namespace sw::editor
         { return _asset._listItem[static_cast<size_t>( left )]._start < _asset._listItem[static_cast<size_t>( right )]._start; } );
     }
 
-    int32 SequenceModel::addCameraCut( int32 frame )
+    expected<int32> SequenceModel::addCameraCut( int32 frame )
     {
         const bool bInvalid = _asset.findBinding( _selectedBinding ) == nullptr || frame < _asset._frameMin || frame > _asset._frameMax;
         if ( bInvalid )
-            return -1;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "no binding is selected or the frame is outside the timeline" } );
         vector<int32> listCut;
         collectCutLane( listCut );
         int32 end = _asset._frameMax;
@@ -335,7 +334,7 @@ namespace sw::editor
             if ( cut._start < frame && frame <= cut._end )
                 cut._end = frame - 1;
             else if ( cut._start == frame )
-                return -1;
+                return unexpected( Error{ ErrorKind::InvalidArgument, "a cut already starts at this frame" } );
         }
         SequenceTrackItem item{};
         item._kind    = SequenceItemKind::CameraCut;
@@ -563,7 +562,7 @@ namespace sw::editor
         _viewFirstFrame = getViewFirstFrame();
     }
 
-    int32 SequenceModel::splitCameraCut( int32 frame )
+    expected<int32> SequenceModel::splitCameraCut( int32 frame )
     {
         for ( int32 itemIndex = 0; itemIndex < static_cast<int32>( _asset._listItem.size() ); ++itemIndex )
         {
@@ -580,7 +579,7 @@ namespace sw::editor
             _selectedItem = static_cast<int32>( _asset._listItem.size() ) - 1;
             return _selectedItem;
         }
-        return SequenceModelInternal::kNoItem;
+        return unexpected( Error{ ErrorKind::InvalidArgument, "no cut covers the frame past its first frame" } );
     }
 
     bool SequenceModel::removeCameraCut( int32 itemIndex )
@@ -745,14 +744,14 @@ namespace sw::editor
         return true;
     }
 
-    int32 SequenceModel::pasteItem( int32 frame )
+    expected<int32> SequenceModel::pasteItem( int32 frame )
     {
         const bool bOutside = frame < _asset._frameMin || frame > _asset._frameMax;
         if ( hasCopiedItem() == false || bOutside )
-            return SequenceModelInternal::kNoItem;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "nothing is copied or the frame is outside the timeline" } );
         const SequenceItemKindInfo* pInfo = SequenceAsset::findItemKindInfo( _copiedItem._kind );
         if ( pInfo == nullptr || pInfo->_bSpawns )
-            return SequenceModelInternal::kNoItem; // 두 스폰이 한 바인딩을 채우면 파일이 읽히지 않는다(`duplicateItem` 과 같다)
+            return unexpected( Error{ ErrorKind::InvalidArgument, "a spawn item cannot be pasted" } ); // 두 스폰이 한 바인딩을 채우면 파일이 읽히지 않는다(`duplicateItem` 과 같다)
         SequenceTrackItem pasted = _copiedItem;
         const int32       length = pasted._end - pasted._start;
         pasted._start            = frame;
@@ -760,7 +759,7 @@ namespace sw::editor
         if ( SequenceModelInternal::isNameTaken( _asset._listItem, pasted._name ) )
             pasted._name = SequenceModelInternal::makeNumberedName( _asset._listItem, pasted._name );
         if ( isItemAcceptable( pasted ) == false )
-            return SequenceModelInternal::kNoItem; // 복사한 뒤 바인딩을 지웠으면 대상이 없다
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the copied item no longer fits the sequence" } ); // 복사한 뒤 바인딩을 지웠으면 대상이 없다
         _asset._listItem.push_back( std::move( pasted ) );
         _selectedItem = static_cast<int32>( _asset._listItem.size() ) - 1;
         return _selectedItem;

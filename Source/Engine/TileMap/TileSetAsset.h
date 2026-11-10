@@ -33,8 +33,8 @@ namespace sw
 
         /** @brief 애니메이션이면 true 를 반환합니다(셀이 둘 이상이고 속도가 0 보다 큽니다). */
         bool isAnimated() const { return _listFrameCell.size() > 1 && _framesPerSecond > 0.0f; }
-        /** @brief 시각 @p seconds 에 보일 아틀라스 셀을 반환합니다. 셀이 없으면 -1 입니다. */
-        SW_API int32 computeCellAt( float32 seconds ) const;
+        /** @brief 시각 @p seconds 에 보일 아틀라스 셀을 반환합니다. 셀이 없으면(읽기가 거절하는 고치는 중의 모습) 비어 있습니다. */
+        SW_API optional<int32> computeCellAt( float32 seconds ) const;
     };
 } // namespace sw
 
@@ -137,9 +137,9 @@ namespace sw
     /** @brief 타일셋 내용의 규칙 위반 하나입니다(`TileSetContent::collectIssues`). 읽기는 이것을 오류로 남기고, 에디터는 그 브러시 · 규칙 옆에 보인다. */
     struct TileSetIssue
     {
-        string _message{};                                     ///< 영어 한 문장
-        int32  _brushIndex{ constant::invalid_index::kInt32 }; ///< 문제가 난 브러시 번호(타일셋 전체의 문제면 -1)
-        int32  _ruleIndex{ constant::invalid_index::kInt32 };  ///< 문제가 난 규칙 번호(브러시 자체 · 기본 모습이면 -1)
+        string          _message{};    ///< 영어 한 문장
+        optional<int32> _brushIndex{}; ///< 문제가 난 브러시 번호(타일셋 전체의 문제면 비어 있다)
+        optional<int32> _ruleIndex{};  ///< 문제가 난 규칙 번호(브러시 자체 · 기본 모습이면 비어 있다)
     };
 
     /**

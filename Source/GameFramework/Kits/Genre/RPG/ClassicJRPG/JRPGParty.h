@@ -93,10 +93,10 @@ namespace sw
             Rested,            ///< 여관에서 쉬었다. `_value` 는 낸 돈
             Revived            ///< 교회에서 부활했다. `_value` 는 낸 돈
         };
-        hashed_string _id{};
-        int32         _memberIndex{ constant::invalid_index::kInt32 };
-        int32         _value{ 0 };
-        Kind          _kind{ Kind::LevelUp };
+        hashed_string   _id{};
+        optional<int32> _memberIndex{};
+        int32           _value{ 0 };
+        Kind            _kind{ Kind::LevelUp };
     };
 } // namespace sw
 
@@ -167,7 +167,7 @@ namespace sw
         void learnSpellsAtLevel( int32 memberIndex, const JRPGClassDef& classDef, int32 level );
         /** @brief 숙련이 ( @p before , @p after ] 로 지나간 단계의 초식이 열렸음을 알립니다. */
         void pushUnlockedTechniques( int32 memberIndex, const JRPGManualDef& manual, int32 before, int32 after );
-        void pushEvent( JRPGPartyEvent::Kind kind, int32 memberIndex, int32 value, const hashed_string& id = hashed_string{} );
+        void pushEvent( JRPGPartyEvent::Kind kind, optional<int32> memberIndex, int32 value, const hashed_string& id = hashed_string{} );
 
     private:
         vector<JRPGMember>          _listMember;

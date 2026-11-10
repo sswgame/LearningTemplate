@@ -210,7 +210,7 @@ namespace sw::editor
         ImGui::InputFloat( "##TileSetTileSize", &tileSize, 0.0f, 0.0f, "%.3f" );
         if ( ImGui::IsItemDeactivatedAfterEdit() && _model.setTileSize( tileSize ) )
             notifyDocumentEdited( "Edit Tile Set Tile Size" );
-        drawIssuesFor( -1, TileSetEditModel::kDefaultVisual );
+        drawIssuesFor( nullopt, nullopt ); // 타일셋 전체의 문제
     }
 
     void TileSetPanel::drawBrushList()
@@ -315,7 +315,7 @@ namespace sw::editor
         if ( ImGui::Selectable( SW_LOCKEY( "EditorTileSet", "DefaultLook" ), _model.getSelectedRule() == TileSetEditModel::kDefaultVisual ) )
             _model.selectRule( TileSetEditModel::kDefaultVisual );
         EditorSelfTestMarks::record( "tileSet.defaultLook" );
-        drawIssuesFor( _model.getSelectedBrush(), TileSetEditModel::kDefaultVisual );
+        drawIssuesFor( _model.getSelectedBrush(), nullopt ); // 기본 모습
         if ( brush.isRuleTile() )
         {
             for ( int32 ruleIndex = 0; ruleIndex < static_cast<int32>( brush._listRule.size() ); ++ruleIndex )
@@ -480,7 +480,7 @@ namespace sw::editor
         ImGui::EndChild();
     }
 
-    void TileSetPanel::drawIssuesFor( int32 brushIndex, int32 ruleIndex )
+    void TileSetPanel::drawIssuesFor( optional<int32> brushIndex, optional<int32> ruleIndex )
     {
         for ( const TileSetIssue& issue : _listIssue )
         {

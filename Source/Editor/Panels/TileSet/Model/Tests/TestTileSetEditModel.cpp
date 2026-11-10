@@ -55,7 +55,7 @@ SW_TEST_CASE( TileSetEditModelTest, NeighborCyclesAndTheRuntimeFollows )
     const vector<uint16> cells   = { ground, 0 };
     const TileVisual*    pVisual = asset.resolveVisual( cells, 1, 2, 0, 0 );
     SW_REQUIRE_NOT_NULL( pVisual );
-    SW_EXPECT_EQUAL( 9, pVisual->computeCellAt( 0.0f ) );
+    SW_EXPECT_TRUE( pVisual->computeCellAt( 0.0f ) == 9 );
 }
 
 // 프레임을 덧붙이면 애니메이션이 되고 fps 가 없으면 기본값을 둔다(읽기는 fps 없는 애니메이션을 거절한다). 마지막 프레임은 빼지 않는다.
@@ -106,8 +106,8 @@ SW_TEST_CASE( TileSetEditModelTest, ViolationsAreShownNotSaved )
     vector<TileSetIssue> listIssue;
     model.collectIssues( listIssue );
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( listIssue.size() ) );
-    SW_EXPECT_EQUAL( 0, listIssue[0]._brushIndex );
-    SW_EXPECT_EQUAL( -1, listIssue[0]._ruleIndex );
+    SW_EXPECT_TRUE( listIssue[0]._brushIndex == 0 );
+    SW_EXPECT_FALSE( listIssue[0]._ruleIndex.has_value() );
     // 되돌리기 글은 위반이 든 채로 돌아온다(편집 중의 상태).
     TileSetEditModel restored;
     restored.applyText( model.captureText() );

@@ -321,7 +321,7 @@ namespace sw
         {
             _phase  = MatgoPhase::Finished;
             _winner = constant::invalid_index::kInt32;
-            _eventBuffer.push( MatgoEvent{ constant::invalid_index::kInt32, 0, Card::kNoCard, MatgoEvent::Kind::Nagari } );
+            _eventBuffer.push( MatgoEvent{ nullopt, 0, Card::kNoCard, MatgoEvent::Kind::Nagari } );
             return;
         }
         _currentPlayer = ( player + 1 ) % getPlayerCount();
