@@ -880,16 +880,17 @@ namespace sw
         if ( bKnockdown )
             finalDown = MathUtil::max( finalDown, pVictimMech->_downMax ); // 눕히는 기술은 다운치를 한 번에 채운다
 
-        const HealthDamageResult result = target._healthMachine.applyDamage( finalDamage, finalDown, attacker );
+        const optional<int32>    instigator = bAttacker ? optional<int32>( attacker ) : nullopt;
+        const HealthDamageResult result     = target._healthMachine.applyDamage( finalDamage, finalDown, instigator );
         target._healthMachine.discardEvents();
         if ( result._bIgnored == SW_TRUE )
             return;
-        const int32 victimParticipant   = target._listParticipant.empty() ? constant::invalid_index::kInt32 : target._listParticipant[static_cast<size_t>( target._deckIndex )];
-        const int32 attackerParticipant = bAttacker && _listPilot[static_cast<size_t>( attacker )]._listParticipant.empty() == false
-                                            ? _listPilot[static_cast<size_t>( attacker )]._listParticipant[static_cast<size_t>( _listPilot[static_cast<size_t>( attacker )]._deckIndex )]
-                                            : constant::invalid_index::kInt32;
+        const int32           victimParticipant   = target._listParticipant.empty() ? constant::invalid_index::kInt32 : target._listParticipant[static_cast<size_t>( target._deckIndex )];
+        const optional<int32> attackerParticipant = bAttacker && _listPilot[static_cast<size_t>( attacker )]._listParticipant.empty() == false
+                                                      ? optional<int32>( _listPilot[static_cast<size_t>( attacker )]._listParticipant[static_cast<size_t>( _listPilot[static_cast<size_t>( attacker )]._deckIndex )] )
+                                                      : nullopt;
         _match.reportDamage( attackerParticipant, victimParticipant, result._healthDamage );
-        pushEvent( MechArenaEvent::Kind::Hit, victim, attacker, result._healthDamage, hashed_string{} );
+        pushEvent( MechArenaEvent::Kind::Hit, victim, instigator, result._healthDamage, hashed_string{} );
 
         if ( result._bDied == SW_TRUE )
         {
@@ -909,7 +910,7 @@ namespace sw
             ++target._deaths;
             if ( bAttacker && TeamAttitudeUtil::isHostile( _listPilot[static_cast<size_t>( attacker )]._team, target._team ) )
                 ++_listPilot[static_cast<size_t>( attacker )]._kills;
-            pushEvent( MechArenaEvent::Kind::Destroyed, victim, attacker, 0.0f, pVictimMech->_id );
+            pushEvent( MechArenaEvent::Kind::Destroyed, victim, instigator, 0.0f, pVictimMech->_id );
             _match.reportKill( victimParticipant, attackerParticipant );
             return;
         }

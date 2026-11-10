@@ -120,8 +120,8 @@ namespace sw
         void                          start();
         void                          update( float32 deltaTime );
 
-        /** @brief 피해를 기록합니다. 도움 판정과 통계에 씁니다. */
-        void reportDamage( int32 attacker, int32 victim, float32 amount );
+        /** @brief 피해를 기록합니다. 도움 판정과 통계에 씁니다. @p attacker 가 없으면(환경) 기록하지 않습니다. */
+        void reportDamage( optional<int32> attacker, int32 victim, float32 amount );
         /** @brief 죽음을 알립니다. @p killer 가 없으면 환경이 죽인 것입니다(낙사, 자기장). */
         void reportKill( int32 victim, optional<int32> killer );
         /** @brief 부활 없이 탈락시킵니다. 배틀로얄의 기절 후 확인 사살과 비대칭 대전의 희생에 씁니다. */

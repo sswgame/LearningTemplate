@@ -110,24 +110,23 @@ namespace sw
             finishByScore();
     }
 
-    void MatchState::reportDamage( int32 attacker, int32 victim, float32 amount )
+    void MatchState::reportDamage( optional<int32> attacker, int32 victim, float32 amount )
     {
-        if ( isValidParticipant( victim ) == false || amount <= 0.0f )
+        const bool bIgnoreDamage = isValidParticipant( victim ) == false || amount <= 0.0f || attacker.has_value() == false || isValidParticipant( *attacker ) == false;
+        if ( bIgnoreDamage )
             return;
-        if ( isValidParticipant( attacker ) )
+        const int32 source = *attacker;
+        _listParticipant[static_cast<size_t>( source )]._damageDealt += amount;
+        vector<MatchParticipant::DamageRecord>& listDamage = _listParticipant[static_cast<size_t>( victim )]._listDamage;
+        for ( MatchParticipant::DamageRecord& record : listDamage )
         {
-            _listParticipant[static_cast<size_t>( attacker )]._damageDealt += amount;
-            vector<MatchParticipant::DamageRecord>& listDamage = _listParticipant[static_cast<size_t>( victim )]._listDamage;
-            for ( MatchParticipant::DamageRecord& record : listDamage )
+            if ( record._attacker == source )
             {
-                if ( record._attacker == attacker )
-                {
-                    record._time = _elapsed;
-                    return;
-                }
+                record._time = _elapsed;
+                return;
             }
-            listDamage.push_back( MatchParticipant::DamageRecord{ attacker, _elapsed } );
         }
+        listDamage.push_back( MatchParticipant::DamageRecord{ source, _elapsed } );
     }
 
     void MatchState::reportKill( int32 victim, optional<int32> killer )
