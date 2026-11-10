@@ -14,7 +14,6 @@
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Environment/EnvironmentUtil.h"
 #include "Engine/Environment/Water/WaterWaveMath.h"
-#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -110,7 +109,7 @@ namespace sw
         /** @brief 이 물이 덮는 위치(파도 없는 기준면 기준)면 true 를 반환합니다. */
         bool coversPosition( float32 worldX, float32 worldZ ) const;
         /** @brief 파도 값 넷(방향, 파장, 진폭 × 진폭 배율, 가파름)을 반환합니다. 셰이더에 싣는 값과 같습니다. */
-        void getWaveVectors( float4 ( &outArrWave )[shaderslot::kGerstnerWaveCount] ) const;
+        void getWaveVectors( float4 ( &outArrWave )[WaterWaveMath::kMaxWaveCount] ) const;
         /** @brief 지금 파도 시간(초)입니다. */
         float32 getWaveTime() const { return _waveTime; }
         /** @brief 파도 시간을 정합니다(테스트와 시퀀서용). 다음 틱부터 그 값에서 쌓입니다. */

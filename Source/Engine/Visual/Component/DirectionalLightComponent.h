@@ -6,7 +6,6 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Visual/Component/LightComponent.h"
 #include "Engine/Visual/LightShadowSettings.h"
@@ -46,7 +45,7 @@ namespace sw
      */
     struct SW_API DirectionalShadowProjection
     {
-        static constexpr uint32 kMaxCascade = shaderslot::kShadowCascadeMax;
+        static constexpr uint32 kMaxCascade = 4; ///< 셰이더 칸(`shaderslot::kShadowCascadeMax`)과 같아야 한다 — .cpp 의 static_assert 가 지킨다(게임이 보는 헤더는 셰이더 칸 헤더를 모른다)
 
         float4x4                 _viewProj{};
         float4x4                 _lightView{};     ///< 빛 공간(볼륨 상자를 측정하는 축) — 컬링 합집합이 같은 축에서 상자를 넓힌다

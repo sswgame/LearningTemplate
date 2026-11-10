@@ -10,6 +10,8 @@
 
 namespace sw
 {
+    static_assert( DirectionalShadowProjection::kMaxCascade == shaderslot::kShadowCascadeMax, "the cascade count must match the shader slot table (binding_slots.hlsli SW_SHADOW_CASCADE_MAX)" );
+
     namespace
     {
         /**

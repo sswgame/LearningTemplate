@@ -13,7 +13,6 @@
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
-#include "Engine/Graphics/RHI/RHIEnums.h"
 #include "Engine/Object/GameObject/Registry/ScenePrimitive.h"
 #include "Engine/Presentation/InstanceCustomData.h"
 #include "Engine/Presentation/InstanceHighlight.h"

@@ -8,6 +8,8 @@
 
 namespace sw
 {
+    static_assert( WaterWaveMath::kMaxWaveCount == shaderslot::kGerstnerWaveCount, "the gameplay wave count must match the shader slot table (binding_slots.hlsli SW_GERSTNER_WAVE_COUNT)" );
+
     namespace
     {
         struct WaterWaveMathInternal
@@ -41,6 +43,7 @@ namespace sw
 
 namespace sw
 {
+
     uint32 WaterWaveMath::countActiveWaves( const float4 ( &arrWave )[shaderslot::kGerstnerWaveCount] )
     {
         uint32 count{ 0 };
