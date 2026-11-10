@@ -4,6 +4,7 @@
 
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Input/Feedback/HapticEffect.h"
 #include "Engine/Input/GamepadButtonUtil.h"
 
 namespace sw
@@ -59,6 +60,21 @@ namespace sw
         return nullptr;
     }
 
+    GamepadFeedbackOutput::GamepadFeedbackOutput( GamepadDevice& owner )
+        : _owner{ owner }
+    {
+    }
+
+    bool GamepadFeedbackOutput::setVibration( float32 lowFrequency, float32 highFrequency )
+    {
+        return _owner.setVibration( lowFrequency, highFrequency );
+    }
+
+    void GamepadFeedbackOutput::stopVibration()
+    {
+        _owner.stopVibration();
+    }
+
     GamepadDevice::GamepadDevice( uint32 deviceIndex )
         : _onConnectionChanged{}
         , _deviceIndex{ deviceIndex }
@@ -72,9 +88,9 @@ namespace sw
         , _prevRightTrigger{ 0.0f }
         , _leftMotorSpeed{ 0.0f }
         , _rightMotorSpeed{ 0.0f }
-        , _vibrationDurationTimer{ 0.0f }
         , _triggerDeadzone{ 0.05f }
-        , _bTimedVibrationActive{ SW_FALSE }
+        , _feedbackOutput{ *this }
+        , _hapticPlayback{}
         , _bSuppressEdgeOnce{ SW_FALSE }
         , _bVirtualSession{ SW_FALSE }
         , _bVirtualConnected{ SW_FALSE }
@@ -95,12 +111,22 @@ namespace sw
         _prevLeftTrigger  = _leftTrigger;
         _prevRightTrigger = _rightTrigger;
 
-        if ( _bTimedVibrationActive == SW_TRUE )
+        _hapticPlayback.advance( deltaTime, _feedbackOutput );
+    }
+
+    bool GamepadDevice::playVibration( float32 leftMotor, float32 rightMotor, float32 durationSeconds )
+    {
+        if ( durationSeconds <= 0.0f )
         {
-            _vibrationDurationTimer -= deltaTime;
-            if ( _vibrationDurationTimer <= 0.0f )
-                stopVibration();
+            stopVibration();
+            return true;
         }
+        return playHaptic( HapticEffectDef::makeConstant( leftMotor, rightMotor, durationSeconds ) );
+    }
+
+    bool GamepadDevice::playHaptic( shared_ptr<const HapticEffectDef> pEffect, float32 scale )
+    {
+        return _hapticPlayback.start( std::move( pEffect ), scale, _feedbackOutput );
     }
 
     void GamepadDevice::onPolled()
