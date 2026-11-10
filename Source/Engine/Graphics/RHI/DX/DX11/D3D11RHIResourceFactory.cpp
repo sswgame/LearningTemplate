@@ -508,6 +508,7 @@ namespace sw
         if ( ticket._deviceGeneration != _pDevice->_transferSerials.getGeneration() )
             return;
         // 진행 중인 복사가 쓰는 스테이징은 COM 참조가 GPU 가 끝날 때까지 붙들어 준다. 표에서 빼고 참조를 놓으면 된다.
+        // 링 구간 꼬리(`RHITextureTransferDriver::releaseDiscardedReadback`)를 쓰지 않는 까닭: D3D11 은 텍스처를 버퍼로 복사하지 못해 되읽기마다 스테이징 텍스처다 — 다시 쓸 구간이 없다.
         D3D11RHIDevice::TextureReadbackRecord readback;
         (void)_pDevice->_readbackTable.take( ticket._serial, readback ); // 없으면 업로드 티켓이거나 이미 가져감 · 버림이다 — 계약상 아무 일도 하지 않는다
     }

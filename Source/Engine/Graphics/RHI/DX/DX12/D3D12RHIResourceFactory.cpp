@@ -583,7 +583,7 @@ namespace sw
         if ( pBuffer == nullptr || isHrSuccess( pBuffer->Map( 0, &readRange, &pMapped ), "Map" ) == false || pMapped == nullptr )
         {
             SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.TakeTextureReadbackFailedMapReadback", "takeTextureReadback: failed to map the readback buffer of ticket %#", ticket._serial );
-            RHITextureTransferDriver::releaseTakenReadback( ring, record._span );
+            RHITextureTransferDriver::releaseTakenReadback( ring._allocator, record._span );
             return false;
         }
         outBytes.assign( record._layout._sizeBytes, 0 );
@@ -595,7 +595,7 @@ namespace sw
         }
         D3D12_RANGE noWrite{ 0, 0 };
         pBuffer->Unmap( 0, &noWrite );
-        RHITextureTransferDriver::releaseTakenReadback( ring, record._span );
+        RHITextureTransferDriver::releaseTakenReadback( ring._allocator, record._span );
         if ( record._bDepth != SW_FALSE )
             convertRHIDepth24ToFloat( outBytes.data(), record._layout._width * record._layout._height );
         return true;
@@ -609,7 +609,7 @@ namespace sw
         if ( _pDevice->_readbackTable.take( ticket._serial, record ) == false )
             return; // 업로드 티켓이거나 이미 가져감 · 버림이다 — 계약상 아무 일도 하지 않는다
         // 복사가 아직 GPU 에서 도는 중이면 구간에 시리얼을 붙여 워터마크가 지난 뒤에 돌아오게 한다(Vulkan 과 같은 꼬리).
-        RHITextureTransferDriver::releaseDiscardedReadback( _pDevice->_readbackRing, record._span, _pDevice->_transferSerials, ticket._serial );
+        RHITextureTransferDriver::releaseDiscardedReadback( _pDevice->_readbackRing._allocator, record._span, _pDevice->_transferSerials, ticket._serial );
     }
 
     RHIFormat D3D12RHIResourceFactory::getTextureFormat( RHITextureHandle texture ) const

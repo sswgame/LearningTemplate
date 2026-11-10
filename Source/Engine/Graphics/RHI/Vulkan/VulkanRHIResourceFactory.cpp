@@ -870,7 +870,7 @@ namespace sw
         VulkanRHIDevice::VulkanStagingRing& ring = _pDevice->_readbackRing;
         outBytes.resize( pending._sizeBytes );
         Memory::copy( outBytes.data(), ring.getSpanMappedBase( pending._span ) + pending._dataOffsetBytes, pending._sizeBytes );
-        RHITextureTransferDriver::releaseTakenReadback( ring, pending._span );
+        RHITextureTransferDriver::releaseTakenReadback( ring._allocator, pending._span );
         if ( pending._depth24TexelCount != 0 )
             convertRHIDepth24ToFloat( outBytes.data(), pending._depth24TexelCount );
         return true;
@@ -884,7 +884,7 @@ namespace sw
         if ( _pDevice->_readbackTable.take( ticket._serial, pending ) == false )
             return; // 업로드 티켓이거나 이미 가져감 · 버림이다 — 계약상 아무 일도 하지 않는다
         // 끝나지 않은 복사는 아직 이 구간에 쓴다. 시리얼을 붙여 워터마크가 지난 뒤에 돌아오게 한다(다음 되읽기가 같은 자리를 받지 않는다).
-        RHITextureTransferDriver::releaseDiscardedReadback( _pDevice->_readbackRing, pending._span, _pDevice->_transferSerials, ticket._serial );
+        RHITextureTransferDriver::releaseDiscardedReadback( _pDevice->_readbackRing._allocator, pending._span, _pDevice->_transferSerials, ticket._serial );
     }
 
     RHIFormat VulkanRHIResourceFactory::getTextureFormat( RHITextureHandle texture ) const

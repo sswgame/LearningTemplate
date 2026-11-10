@@ -12,6 +12,7 @@
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"
+#include "Engine/Graphics/RHI/Transfer/RHITextureTransferDriver.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 
@@ -630,7 +631,7 @@ namespace sw
         // 펜스가 지났으므로 GPU 가 구간에 쓴 바이트가 COHERENT 매핑에 보인다. 복사는 컨텍스트 밖에서 하고, 다 읽은 구간을 링에 돌려준다.
         outBytes.resize( static_cast<size_t>( span._sizeBytes ) );
         Memory::copy( outBytes.data(), _pDevice->getReadbackBytes( span ), static_cast<size_t>( span._sizeBytes ) );
-        _pDevice->_readbackRing.free( span );
+        RHITextureTransferDriver::releaseTakenReadback( _pDevice->_readbackRing, span );
         return true;
     }
 
@@ -641,8 +642,8 @@ namespace sw
         RHIStagingSpan span{};
         if ( _pDevice->_readbackTable.take( ticket._serial, span ) == false )
             return; // 업로드 티켓이거나 이미 가져감 · 버림이다 — 계약상 아무 일도 하지 않는다
-        // Pending 이면 GPU 가 아직 구간에 쓰는 중이다 — 구간은 이 티켓의 펜스가 지난 뒤에 돌아온다.
-        _pDevice->_readbackRing.markSubmitted( span, ticket._serial );
+        // Pending 이면 GPU 가 아직 구간에 쓰는 중이다 — 구간은 이 티켓의 펜스가 지난 뒤에 돌아온다(Vulkan · DX12 와 같은 꼬리).
+        RHITextureTransferDriver::releaseDiscardedReadback( _pDevice->_readbackRing, span, _pDevice->_transferSerials, ticket._serial );
     }
 
     RHIFormat OpenGLRHIResourceFactory::getTextureFormat( RHITextureHandle texture ) const

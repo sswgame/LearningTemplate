@@ -44,21 +44,20 @@ namespace sw
             return run<TJob>( ring, span, serials, false, fnBegin, fnRecord, fnSubmit, fnCommit );
         }
 
-        /** @brief 가져간 되읽기의 구간을 돌려줍니다(복사는 끝났다 — 가져가기는 `Complete` 뒤에만 된다). */
-        template <typename TRing>
-        static void releaseTakenReadback( TRing& ring, const RHIStagingSpan& span )
-        {
-            ring._allocator.free( span );
-        }
+        /**
+         * @brief 가져간 되읽기의 구간을 돌려줍니다(복사는 끝났다 — 가져가기는 `Complete` 뒤에만 된다).
+         * @details 링 구간으로 받는 세 백엔드(Vulkan · DX12 · GL)가 같이 쓴다. DX11 은 D3D11 이 텍스처를 버퍼로 복사하지 못해 되읽기마다 스테이징 텍스처이고
+         *          COM 참조가 GPU 가 끝날 때까지 붙든다. WebGPU 는 되읽기마다 버퍼이고 버릴 때 매핑 콜백이 놓는다 — 둘 다 "끝나기 전에 다시 쓰지 않는다" 를 자원 수명이 지킨다.
+         */
+        static void releaseTakenReadback( RHIStagingAllocator& allocator, const RHIStagingSpan& span ) { allocator.free( span ); }
 
         /** @brief 버린 되읽기의 구간을 돌려줍니다. 복사가 아직 돌면 시리얼을 붙여 워터마크가 지난 뒤에 돌아오게 한다(다음 되읽기가 같은 자리를 받지 않는다). */
-        template <typename TRing>
-        static void releaseDiscardedReadback( TRing& ring, const RHIStagingSpan& span, const RHITransferSerials& serials, uint64 serial )
+        static void releaseDiscardedReadback( RHIStagingAllocator& allocator, const RHIStagingSpan& span, const RHITransferSerials& serials, uint64 serial )
         {
             if ( serials.isComplete( serial ) )
-                ring._allocator.free( span );
+                allocator.free( span );
             else
-                ring._allocator.markSubmitted( span, serial );
+                allocator.markSubmitted( span, serial );
         }
 
     private:
