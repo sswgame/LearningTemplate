@@ -49,7 +49,7 @@ static float2 SceneRefraction::resolveUv( float2 screenUv, float2 offsetUv, floa
     float2       resolvedUv  = candidateUv;
     SW_BRANCH if ( g_SceneDepthCopyIndex != kInvalidIndex )
     {
-        const float candidateDepth = Bindless::sampleIndexWith( g_SceneDepthCopyIndex, SW_SAMPLER_POINT_CLAMP, candidateUv ).r;
+        const float candidateDepth = Bindless::sampleIndexWith( SW_ENGINE_ROLE( SceneDepthCopy ), SW_SAMPLER_POINT_CLAMP, candidateUv ).r;
         resolvedUv                 = ( candidateDepth + kSceneRefractionDepthBias >= pixelDepth ) ? candidateUv : screenUv;
     }
     return resolvedUv;
@@ -57,7 +57,7 @@ static float2 SceneRefraction::resolveUv( float2 screenUv, float2 offsetUv, floa
 
 static float3 SceneRefraction::sampleColor( float2 uv, float blurRadiusUv )
 {
-    float3 color = Bindless::sampleIndex( g_SceneColorCopyIndex, uv ).rgb;
+    float3 color = Bindless::sampleIndex( SW_ENGINE_ROLE( SceneColorCopy ), uv ).rgb;
     SW_BRANCH if ( blurRadiusUv > 0.0f )
     {
         // 보겔 원판 — 황금각으로 돌며 반지름을 √(i/n) 로 늘린다(고른 원판 표본).
@@ -67,7 +67,7 @@ static float3 SceneRefraction::sampleColor( float2 uv, float blurRadiusUv )
             const float  radius = sqrt( ( tap + 0.5f ) / kSceneRefractionBlurTapCount ) * blurRadiusUv;
             const float  angle  = tap * kGoldenAngle;
             const float2 offset = float2( cos( angle ), sin( angle ) ) * radius;
-            color += Bindless::sampleIndex( g_SceneColorCopyIndex, saturate( uv + offset ) ).rgb;
+            color += Bindless::sampleIndex( SW_ENGINE_ROLE( SceneColorCopy ), saturate( uv + offset ) ).rgb;
         }
         color /= (float)kSceneRefractionBlurTapCount;
     }

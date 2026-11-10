@@ -21,7 +21,7 @@ static const int kSsrRefineCount = 4;
 float loadSceneDepth( float2 uv, float2 depthSize )
 {
     const int2 texel = clamp( int2( uv * depthSize ), int2( 0, 0 ), int2( depthSize ) - int2( 1, 1 ) );
-    return Bindless::loadEngineTexel( g_SceneDepthIndex, SW_EMU_SLOT_SceneDepth, texel ).r;
+    return Bindless::loadEngineTexel( SW_ENGINE_ROLE( SceneDepth ), texel ).r;
 }
 
 /**
@@ -47,7 +47,7 @@ int classifyRayPoint( float3 position, float2 depthSize, out float2 outUv )
 float4 PSMain( PSInput input ) : SV_TARGET
 {
     const float2 uv        = input._uv;
-    const float2 depthSize = float2( Bindless::getEngineTextureSize( g_SceneDepthIndex, SW_EMU_SLOT_SceneDepth ) );
+    const float2 depthSize = float2( Bindless::getEngineTextureSize( SW_ENGINE_ROLE( SceneDepth ) ) );
     const float  depth     = loadSceneDepth( uv, depthSize );
     float        roughness;
     float        metallic;
@@ -102,7 +102,7 @@ float4 PSMain( PSInput input ) : SV_TARGET
             const int finalState = classifyRayPoint( position + reflected * hitUpper, depthSize, finalUv );
             hitUv                = finalUv;
 
-            const float3 color       = Bindless::sampleIndex( g_SceneColorCopyIndex, hitUv ).rgb;
+            const float3 color       = Bindless::sampleIndex( SW_ENGINE_ROLE( SceneColorCopy ), hitUv ).rgb;
             const float2 edge        = min( hitUv, 1.0f - hitUv );
             const float  edgeFade    = saturate( min( edge.x, edge.y ) * 10.0f );
             const float  travelFade  = 1.0f - hitStep / float( kSsrStepCount );

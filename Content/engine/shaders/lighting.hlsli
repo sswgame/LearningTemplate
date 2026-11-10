@@ -75,7 +75,7 @@ static float Shadow::filterAtlas( float2 uv, float depth, float texelUv, bool bC
         SW_UNROLL for ( int offsetX = -1; offsetX <= 1; ++offsetX )
         {
             const float2 tapUv = uv + float2( offsetX, offsetY ) * texelUv;
-            lit += Bindless::sampleShadowComparison( g_ShadowMapIndex, bClamp ? clamp( tapUv, clampMin, clampMax ) : tapUv, depth );
+            lit += Bindless::sampleShadowComparison( SW_ENGINE_ROLE( ShadowMap ), bClamp ? clamp( tapUv, clampMin, clampMax ) : tapUv, depth );
         }
     }
     return lit * ( 1.0f / 9.0f );
@@ -101,7 +101,7 @@ static float Shadow::findBlockerDepth( float2 uv, float depth, float texelUv, fl
         {
             const float2 offset = ( float2( offsetX, offsetY ) - 1.5f ) * ( searchTexels / 1.5f );
             const float2 tapUv  = clamp( uv + offset * texelUv, clampMin, clampMax );
-            const float  stored = Bindless::loadEngineTexel( g_ShadowMapIndex, SW_EMU_SLOT_ShadowMap, int2( tapUv / texelUv ) ).r;
+            const float  stored = Bindless::loadEngineTexel( SW_ENGINE_ROLE( ShadowMap ), int2( tapUv / texelUv ) ).r;
             if ( stored < depth )
             {
                 blockerSum += stored;
@@ -122,7 +122,7 @@ static float Shadow::filterDisk( float2 uv, float depth, float texelUv, float2 c
         SW_UNROLL for ( int offsetX = 0; offsetX < 4; ++offsetX )
         {
             const float2 offset = ( float2( offsetX, offsetY ) - 1.5f ) * ( radiusTexels / 1.5f );
-            lit += Bindless::sampleShadowComparison( g_ShadowMapIndex, clamp( uv + offset * texelUv, clampMin, clampMax ), depth );
+            lit += Bindless::sampleShadowComparison( SW_ENGINE_ROLE( ShadowMap ), clamp( uv + offset * texelUv, clampMin, clampMax ), depth );
         }
     }
     return lit * ( 1.0f / 16.0f );

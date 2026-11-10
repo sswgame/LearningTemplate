@@ -52,7 +52,7 @@ float3 evaluateSky( float3 direction )
 float3 loadHdriTexel( int2 texel, int2 size )
 {
     const int2 wrapped = int2( ( texel.x % size.x + size.x ) % size.x, clamp( texel.y, 0, size.y - 1 ) );
-    return Bindless::loadEngineTexel( g_SourceColorIndex, SW_EMU_SLOT_SourceColor, wrapped ).rgb;
+    return Bindless::loadEngineTexel( SW_ENGINE_ROLE( SourceColor ), wrapped ).rgb;
 }
 
 /** @brief 방향의 HDRI 복사휘도입니다. 행 0 이 +Y, u 0.5 가 +Z 다. 텍스처가 아직 없으면 검정입니다. */
@@ -64,7 +64,7 @@ float3 evaluateHdri( float3 direction )
     const float  sine    = sin( g_SkyHorizon.w );
     const float3 rotated = float3( direction.x * cosine - direction.z * sine, direction.y, direction.x * sine + direction.z * cosine );
     const float2 uv      = float2( atan2( rotated.x, rotated.z ) / ( 2.0f * kPi ) + 0.5f, acos( clamp( rotated.y, -1.0f, 1.0f ) ) / kPi );
-    const int2   size    = int2( Bindless::getEngineTextureSize( g_SourceColorIndex, SW_EMU_SLOT_SourceColor ) );
+    const int2   size    = int2( Bindless::getEngineTextureSize( SW_ENGINE_ROLE( SourceColor ) ) );
     const float2 texelUv = uv * float2( size ) - 0.5f;
     const int2   base    = int2( floor( texelUv ) );
     const float2 blend   = texelUv - floor( texelUv );
