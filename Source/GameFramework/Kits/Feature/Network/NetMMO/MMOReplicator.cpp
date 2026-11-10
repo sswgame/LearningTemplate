@@ -121,8 +121,8 @@ namespace sw
         if ( static_cast<int32>( entity._listState.size() ) > NetMMOMessage::kMaxStateBytes )
         {
             if ( _oversizedEntityCount == 0 )
-                SW_LOG_WARNING_ID( "MMOReplicator.MMOReplicatorEntityStateBytes", "MMOReplicator: entity %# has %# state bytes, more than the limit %# - ignored (further ones are only counted)", entity._entityID,
-                                   static_cast<int32>( entity._listState.size() ), NetMMOMessage::kMaxStateBytes );
+                SW_LOG_ERROR_ID( "MMOReplicator.MMOReplicatorEntityStateBytes", "MMOReplicator: entity %# has %# state bytes, more than the limit %# - ignored (a state schema defect: shrink or quantize the state; further ones are only counted)", entity._entityID,
+                                 static_cast<int32>( entity._listState.size() ), NetMMOMessage::kMaxStateBytes );
             ++_oversizedEntityCount;
             return;
         }

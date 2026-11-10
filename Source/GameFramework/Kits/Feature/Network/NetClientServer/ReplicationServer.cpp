@@ -107,8 +107,8 @@ namespace sw
         {
             // 월드에는 넣는다. 빼면 클라이언트에서 엔티티가 사라지기 때문이다. 델타가 싣지 않으므로 클라이언트는 마지막으로 받은 상태를 유지한다.
             if ( _oversizedEntityCount == 0 )
-                SW_LOG_WARNING_ID( "ReplicationServer.ReplicationServerEntityStateBytes", "ReplicationServer: entity %# has %# state bytes, more than the snapshot limit %# - it is not replicated (further ones are only counted)",
-                                   entityID, static_cast<int32>( buffer.size() ), NetSnapshot::kMaxEntityBytes );
+                SW_LOG_ERROR_ID( "ReplicationServer.ReplicationServerEntityStateBytes", "ReplicationServer: entity %# has %# state bytes, more than the snapshot limit %# - it is not replicated (a state schema defect: shrink or quantize the state; further ones are only counted)",
+                                 entityID, static_cast<int32>( buffer.size() ), NetSnapshot::kMaxEntityBytes );
             ++_oversizedEntityCount;
         }
         if ( _worldEntityCount == _world._listEntity.size() )
