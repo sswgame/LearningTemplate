@@ -1,6 +1,6 @@
 /**
  * @file FixedLayout.h
- * @brief 고정 배치형(B) 직렬화입니다. 같은 빌드끼리만 읽는 바이트를 코드 생성기가 타입마다 만든 함수로 쓰고, 읽고, 비교합니다.
+ * @brief 고정 배치형(B) 직렬화입니다. 같은 빌드끼리만 읽는 바이트를 코드 생성기가 타입마다 만든 서술자 표(`FixedFieldDesc`)로 쓰고, 읽고, 비교합니다.
  * @details 계획과 근거는 `Source/Engine/Serialization/Fixed/README.md` 3절과 6절에 있습니다.
  *
  *          **사용자는 B 를 선언하지 않습니다.** 생성기가 `REFLECT()` 타입마다 코덱을 만들어 `TypeInfo::_pFixedCodec` 에 등록합니다.
@@ -24,6 +24,7 @@
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Serialization/Fixed/FixedFieldDesc.h"
 
 namespace sw
 {
@@ -57,39 +58,43 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 생성기가 타입마다 만드는 코덱 테이블입니다. `TypeInfo::_pFixedCodec` 가 가리킵니다.
-     * @details 적격이 아닌 타입은 함수가 모두 비어 있고 `_pIneligibleReason` 에 이유가 있습니다. 함수는 `FixedLayout` 만 부릅니다.
+     * @brief 생성기가 타입마다 만드는 코덱입니다. `TypeInfo::_pFixedCodec` 가 가리킵니다.
+     * @details 본문은 없고 서술자 표(`FixedFieldDesc`)와 정규 문자열 · 의존 목록뿐이다. 쓰기 · 읽기 · 비교는 `FixedLayout` 의 해석기 하나가 이 표로 한다.
+     *          적격이 아닌 타입은 표가 비어 있고 `_pIneligibleReason` 에 이유가 있습니다.
      *          적격 여부와 의존 타입 확인을 `FixedLayout::findCodec` 한 곳에 두어, 확인 없이 부르는 길을 만들지 않습니다.
-     *          모듈 코드(생성된 함수)를 가리키므로 모듈을 해제하면 `TypeInfo` 가 이 포인터를 비웁니다.
+     *          모듈 코드(생성된 표 · 접근 함수)를 가리키므로 모듈을 해제하면 `TypeInfo` 가 이 포인터를 비웁니다.
      */
     struct SW_API FixedCodec
     {
-        using WriteFunction      = bool ( * )( BitWriter& writer, const void* pObject );
-        using ReadFunction       = FixedReadResult ( * )( BitReader& reader, void* pObject );
-        using EqualsFunction     = bool ( * )( const void* pA, const void* pB );
-        using SchemaHashFunction = uint64 ( * )();
+        /** @brief 파생 객체 주소에서 기반 클래스 부분의 주소를 얻습니다. 생성 코드의 캡처 없는 람다입니다(기반이 오프셋 0 이 아닐 수 있다). */
+        using BaseCastFunction = const void* (*)( const void* pObject );
 
         /** @brief 이 코덱이 실행 시간에 찾아 부르는 다른 타입의 코덱입니다(기반 클래스, 펼치지 못한 중첩 타입). */
-        struct Dependency
+        struct SW_API Dependency
         {
-            const utf8* _pFieldName; ///< 오류 메시지에 씁니다. 기반 클래스면 "(base)" 입니다
-            const utf8* _pTypeFqn;
+            const utf8*     _pFieldName; ///< 오류 메시지에 씁니다. 기반 클래스면 "(base)" 입니다
+            hashed_string   _fqn;
+            TypeLookupCache _cache; ///< 그 타입을 찾은 답입니다. 레지스트리 세대가 바뀌면 다시 찾습니다
+
+            Dependency( const utf8* pFieldName, const utf8* pTypeFqn );
         };
 
-        WriteFunction      _pWrite;
-        ReadFunction       _pRead;
-        EqualsFunction     _pEquals;
-        SchemaHashFunction _pComputeSchemaHash;
-        const utf8*        _pCanonical;        ///< 이 타입 몫의 정규 문자열입니다(`FixedSchemas.gen.txt` 와 같은 글)
-        const utf8*        _pIneligibleReason; ///< 적격이 아니면 이유이고, 적격이면 nullptr 입니다
-        const Dependency*  _pDependency;
-        uint32             _dependencyCount;
+        const FixedFieldDesc*   _pField;            ///< 서술자 표입니다. 최상위 필드는 앞 `_fieldCount` 칸입니다
+        const utf8*             _pCanonical;        ///< 이 타입 몫의 정규 문자열입니다(`FixedSchemas.gen.txt` 와 같은 글)
+        const utf8*             _pIneligibleReason; ///< 적격이 아니면 이유이고, 적격이면 nullptr 입니다
+        const Dependency*       _pDependency;
+        BaseCastFunction        _pBaseCast; ///< 기반 클래스가 있으면 있습니다. 그 코덱은 의존 0 번입니다
+        ReflectValidateFunction _pValidate; ///< `REFLECT( Validate = fn )` 입니다. 읽기 끝에 부릅니다
+        uint32                  _fieldCount;
+        uint32                  _dependencyCount;
         /** @brief 의존 코덱을 확인한 결과입니다. 첫 사용이 채우고, 그 뒤로는 원자 읽기 한 번입니다. */
         mutable atomic<FixedDependencyState> _dependencyState;
+        /** @brief 스키마 해시입니다. 0 이면 아직 셈하지 않았습니다(같은 표에서 늘 같은 값이라 경쟁해 셈해도 같다). */
+        mutable atomic<uint64> _schemaHash;
 
-        /** @brief 적격 타입의 코덱입니다. */
-        FixedCodec( WriteFunction pWrite, ReadFunction pRead, EqualsFunction pEquals, SchemaHashFunction pComputeSchemaHash, const utf8* pCanonical,
-                    const Dependency* pDependency, uint32 dependencyCount ) noexcept;
+        /** @brief 적격 타입의 코덱입니다. 필드가 없으면 @p pField 는 nullptr 입니다. */
+        FixedCodec( const FixedFieldDesc* pField, uint32 fieldCount, const utf8* pCanonical, const Dependency* pDependency, uint32 dependencyCount,
+                    BaseCastFunction pBaseCast, ReflectValidateFunction pValidate ) noexcept;
         /** @brief 적격이 아닌 타입입니다. @p pIneligibleReason 은 필드 이름과 이유입니다. */
         explicit FixedCodec( const utf8* pIneligibleReason ) noexcept;
 
@@ -320,14 +325,14 @@ namespace sw
         template <typename T>
         [[nodiscard]] static bool equals( const T& a, const T& b )
         {
-            return requireCodec<T>()._pEquals( &a, &b );
+            return equalsWithCodec( requireCodec<T>(), &a, &b );
         }
 
         /** @brief 스트림 머리에 싣는 스키마 해시입니다. */
         template <typename T>
         [[nodiscard]] static uint64 getSchemaHash()
         {
-            return requireCodec<T>()._pComputeSchemaHash();
+            return getSchemaHash( requireCodec<T>() );
         }
 
         /** @brief 코덱을 찾습니다. 없거나 의존 타입이 적격이 아니면 그 필드와 이유입니다(등록 API 의 기동 확인). */
@@ -344,17 +349,12 @@ namespace sw
         [[nodiscard]] static expected<const FixedCodec*> findCodec( const TypeInfo& type );
 
         // ------------------------------------------------------------------------------
-        // 2) 생성 코드가 부르는 것
+        // 2) 스키마 해시
         // ------------------------------------------------------------------------------
-        /** @brief 다른 타입(기반, 펼치지 못한 중첩)의 적격 코덱을 찾습니다. 등록되지 않았거나 적격이 아니면 nullptr 입니다. */
-        [[nodiscard]] static const FixedCodec* findNestedCodec( const TypeLookupCache& cache, const hashed_string& fqn );
-        /**
-         * @brief 생성 코드가 다른 타입의 코덱을 얻습니다. 진입점이 `findCodec` 으로 의존을 확인했으므로 늘 있습니다.
-         * @details 없으면(확인한 뒤 모듈이 내려간 경우) 이유를 남기고 프로세스를 멈춥니다. 대신 쓸 코덱을 돌려주지 않습니다.
-         */
-        static const FixedCodec& requireNestedCodec( const TypeLookupCache& cache, const hashed_string& fqn );
         /** @brief 정규 문자열과 중첩 타입 해시로 스키마 해시(FNV-1a 64)를 계산합니다. @p version 은 보통 `kVersion` 입니다. */
         [[nodiscard]] static uint64 computeSchemaHash( uint32 version, string_view canonical, std::initializer_list<uint64> listNestedHash );
+        /** @brief 코덱의 스키마 해시입니다. 정규 문자열과 의존 코덱의 해시(의존 차례)로 셈하고 코덱에 남겨 둡니다. */
+        [[nodiscard]] static uint64 getSchemaHash( const FixedCodec& codec );
 
         /** @brief 로그에 쓰는 이름입니다. */
         static const utf8* toString( FixedReadResult result ) noexcept;
@@ -373,6 +373,7 @@ namespace sw
         [[noreturn]] static void             stopForMissingCodec( const hashed_string& fqn, string_view reason, string_view detail = {} );
         [[nodiscard]] static bool            writeWithCodec( const FixedCodec& codec, const void* pObject, BitWriter& writer );
         [[nodiscard]] static FixedReadResult readWithCodec( const FixedCodec& codec, BitReader& reader, void* pObject );
+        [[nodiscard]] static bool            equalsWithCodec( const FixedCodec& codec, const void* pA, const void* pB );
 
         // 스키마 해시 머리 없이 필드만 쓰고 읽는다. 같은 스키마임을 핸드셰이크가 확인한 채널(`NetMessageChannel`) 안에서만 뜻이 있으므로 그 클래스만 부른다 —
         // 다른 길로 머리 없는 바이트를 만들면 다른 빌드의 바이트를 거절할 자리가 사라진다(Source/Engine/Serialization/Fixed/README.md 3.10).
