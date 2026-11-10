@@ -173,6 +173,11 @@ add_test(NAME Scripts.WebPackage
 	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/package/Tests/TestWebPackage.py")
 set_tests_properties(Scripts.WebPackage PROPERTIES LABELS nogpu TIMEOUT 60)
 
+# vcpkg 설치 보호 — 사용자가 끈 설치 · 소스 트리 밖 설치 폴더는 읽기 전용이다(cmake/Modules/Toolchain/Vcpkg/VcpkgInstallPolicy.cmake).
+add_test(NAME Scripts.VcpkgInstallPolicy
+	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/setup/Tests/TestVcpkgInstallPolicy.py" "${CMAKE_COMMAND}")
+set_tests_properties(Scripts.VcpkgInstallPolicy PROPERTIES LABELS nogpu TIMEOUT 60)
+
 # 온라인 부하 봇의 짧은 시나리오 — 같은 프로세스 서버(`--local-server=0`, OS 가 고른 포트라 나란히 돌아도 다투지 않는다)에 봇 여덟이 붙어
 # 로그인 · 채팅 · 순위를 한 번씩 돈다. 오류율 · 보고서 쓰기 실패가 종료 코드다(엔진 · 모듈이 서지 못하면 3). 봇 로그는 `-log-file` 로 같은 폴더에 남는다.
 if(TARGET OnlineLoadBot)

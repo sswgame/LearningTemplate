@@ -5,8 +5,9 @@
 # VcpkgGate.cmake(project() 전)에서 include. 역할:
 # 1. vcpkg 루트 탐색 (Vcpkg.py / 환경 변수)
 # 2. VCPKG_TARGET_TRIPLET 자동 결정
-# 3. install 게이트 — 스탬프(매니페스트 해시)가 같으면 바로 skip, 다르면 `vcpkg install --dry-run` 계획으로:
-#    지을 것이 없으면 skip, 이미 깔린 포트를 지우게 되면 멈추고 경고(공유 설치 폴더), 빠진 포트가 있을 때만 install
+# 3. install 게이트 — 읽기 전용(사용자가 끈 설치 · 소스 트리 밖 설치 폴더, VcpkgInstallPolicy.cmake)이면 설치 · 스탬프 쓰기를 하지 않는다.
+#    그 밖에는 스탬프(매니페스트 해시)가 같으면 바로 skip, 다르면 `vcpkg install --dry-run` 계획으로:
+#    지을 것이 없으면 skip, 이미 깔린 포트를 지우게 되면 멈추고 경고, 빠진 포트가 있을 때만 install
 # 4. sw_toolchain_vcpkg INTERFACE (SW_VCPKG 정의만 — 서드파티 include 는 각 라이브러리 타깃이 준다)
 #
 # project() 이후 루트가 sw_vcpkgWriteManifestStamp() 를 호출해
@@ -18,6 +19,18 @@
 include("${CMAKE_CURRENT_LIST_DIR}/../../../Environment/PythonUtils.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/../../../Config/LoadConfigConstants.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/VcpkgTriplets.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/VcpkgInstallPolicy.cmake")
+
+# 캐시의 VCPKG_MANIFEST_INSTALL 은 사용자 말뿐이다 — 게이트가 정한 값은 project() 뒤 sw_vcpkgWriteManifestStamp 가 캐시에서 지운다.
+# 사용자 OFF 는 SW_VCPKG_USER_INSTALL 로 남아 다음 구성에도 읽기 전용이고, -DVCPKG_MANIFEST_INSTALL=ON 으로만 풀린다.
+# 옛 게이트가 남긴 캐시(SW_VCPKG_GATE_REV 없이 SW_VCPKG_LAST_TREE 만 있음)의 값은 게이트 판단이라 사용자 말로 읽지 않는다.
+if(DEFINED CACHE{VCPKG_MANIFEST_INSTALL} AND (DEFINED SW_VCPKG_GATE_REV OR NOT DEFINED SW_VCPKG_LAST_TREE))
+    if(VCPKG_MANIFEST_INSTALL)
+        unset(SW_VCPKG_USER_INSTALL CACHE)
+    else()
+        set(SW_VCPKG_USER_INSTALL OFF CACHE INTERNAL "사용자가 끈 vcpkg 설치 — 이 빌드 폴더는 설치 폴더를 읽기만 한다")
+    endif()
+endif()
 
 # ------------------------------------------------------------------------------
 # 0) sw_vcpkgHashFileNormalized — 줄끝(CRLF/LF)을 같게 보고 파일 내용의 SHA256 을 구한다
@@ -195,11 +208,15 @@ function(sw_vcpkgWriteManifestStamp)
         return()
     endif()
 
+    # 게이트가 정한 값을 캐시에 남기지 않는다 — 다음 구성이 캐시 값을 사용자 말로 읽는다(파일 머리 참고).
+    unset(VCPKG_MANIFEST_INSTALL CACHE)
+    set(SW_VCPKG_GATE_REV 2 CACHE INTERNAL "vcpkg 게이트 판 — 캐시의 VCPKG_MANIFEST_INSTALL 이 사용자 말인지 가른다")
+
     if(NOT DEFINED VCPKG_INSTALLED_DIR OR NOT DEFINED VCPKG_TARGET_TRIPLET)
         return()
     endif()
 
-    # 설치를 거절한 configure(다른 워크트리가 쓰는 포트를 지우게 되는 옛 매니페스트)는 스탬프를 자기 해시로 덮지 않는다.
+    # 읽기 전용 구성 · 설치를 거절한 configure(다른 워크트리가 쓰는 포트를 지우게 되는 옛 매니페스트)는 스탬프를 자기 해시로 덮지 않는다.
     get_property(swStampHeld GLOBAL PROPERTY SW_VCPKG_STAMP_HELD)
 
     if(swStampHeld)
@@ -408,8 +425,10 @@ if(swTreeReady AND EXISTS "${swStamp}" AND NOT swManifestHash STREQUAL "")
     endif()
 endif()
 
+sw_vcpkgInstallReadOnlyReason("${swSrcDir}" "${VCPKG_INSTALLED_DIR}" "${SW_VCPKG_USER_INSTALL}" swReadOnlyReason)
+
 # 스탬프가 레거시(json만)와 일치하면 overlay-aware 해시로 갱신하고 skip
-if(swTreeReady AND NOT swStampMatch AND NOT swManifestHash STREQUAL "" AND NOT SW_VCPKG_FORCE_INSTALL)
+if(swReadOnlyReason STREQUAL "" AND swTreeReady AND NOT swStampMatch AND NOT swManifestHash STREQUAL "" AND NOT SW_VCPKG_FORCE_INSTALL)
     sw_vcpkgComputeManifestHashLegacy(swLegacyHash)
 
     if(EXISTS "${swStamp}")
@@ -424,7 +443,24 @@ if(swTreeReady AND NOT swStampMatch AND NOT swManifestHash STREQUAL "" AND NOT S
     endif()
 endif()
 
-if(SW_VCPKG_FORCE_INSTALL)
+if(NOT swReadOnlyReason STREQUAL "")
+    # 읽기 전용 — 폴백 없이 멈출 것은 멈춘다. 매니페스트와 다른 포트는 find_package 에서 드러난다.
+    if(SW_VCPKG_FORCE_INSTALL)
+        message(FATAL_ERROR "[vcpkg] SW_VCPKG_FORCE_INSTALL=ON but the installed tree is read-only: ${swReadOnlyReason}")
+    endif()
+
+    if(NOT swTreeReady)
+        message(FATAL_ERROR
+            "[vcpkg] No installed packages at ${swVcpkgTree}, and this configure may not install there: ${swReadOnlyReason}
+"
+            "Copy an installed tree into this source tree's build/vcpkg_installed, or configure without those options.")
+    endif()
+
+    set(VCPKG_MANIFEST_MODE ON CACHE BOOL "vcpkg 매니페스트 모드" FORCE)
+    set(VCPKG_MANIFEST_INSTALL OFF CACHE BOOL "매니페스트에서 vcpkg 자동 설치" FORCE)
+    set_property(GLOBAL PROPERTY SW_VCPKG_STAMP_HELD TRUE)
+    message(STATUS "[vcpkg] Read-only installed tree (${swReadOnlyReason}) — no install, no stamp")
+elseif(SW_VCPKG_FORCE_INSTALL)
     set(VCPKG_MANIFEST_MODE ON CACHE BOOL "vcpkg 매니페스트 모드" FORCE)
     set(VCPKG_MANIFEST_INSTALL ON CACHE BOOL "매니페스트에서 vcpkg 자동 설치" FORCE)
     message(STATUS "[vcpkg] SW_VCPKG_FORCE_INSTALL=ON — manifest install enabled")
