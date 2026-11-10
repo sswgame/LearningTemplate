@@ -12,6 +12,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 namespace sw
 {
@@ -49,4 +50,5 @@ namespace sw
     private:
         [[maybe_unused]] void* _pDisplay; ///< `Display*` — 헤더에 X11 을 끌고 오지 않으려고 불투명하게 둔다. XTest 없는 구성(빈 구현)은 읽지 않는다.
     };
+    SW_SERVICE_SLOT( XTestInputInjector, Optional ); // 칸은 클래스 바로 뒤 — .cpp 에 두면 위의 `findSubsystem` 이 일반 템플릿을 먼저 인스턴스화한다
 } // namespace sw
