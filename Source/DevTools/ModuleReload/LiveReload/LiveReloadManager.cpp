@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "ModuleManager/Dev/LiveReload/LiveReloadManager.h"
+#include "DevTools/ModuleReload/LiveReload/LiveReloadManager.h"
 
 #include "Core/Event/EventDispatcher.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
@@ -13,6 +13,10 @@
 #include "Core/Task/TaskManager.h"
 
 #include "DevTools/FileWatch/IFileWatcher.h"
+#include "DevTools/ModuleReload/LiveReload/ModuleCallGuard.h"
+#include "DevTools/ModuleReload/LiveReload/ModuleCompiler.h"
+#include "DevTools/ModuleReload/LiveReload/ModuleLibraryPatch.h"
+#include "DevTools/ModuleReload/LiveReload/ShadowCopyName.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Module/EngineABIStamp.h"
@@ -20,10 +24,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/SceneManager.h"
-
-#include "ModuleManager/Dev/LiveReload/ModuleCallGuard.h"
-#include "ModuleManager/Dev/LiveReload/ModuleLibraryPatch.h"
-#include "ModuleManager/Dev/LiveReload/ShadowCopyName.h"
 
 #include "sw/config/ConfigConstants.h"
 
@@ -626,6 +626,11 @@ namespace sw
     {
         auto it = _mapModule.find( string( moduleName ) );
         return it != _mapModule.end() ? it->second->_pLibraryModule : nullptr;
+    }
+
+    unique_ptr<IModuleCompiler> LiveReloadManager::createModuleCompiler()
+    {
+        return make_unique<ModuleCompiler>( this );
     }
 
     LiveReloadManager::ModuleRecord& LiveReloadManager::getOrCreateRecord( string_view moduleName )

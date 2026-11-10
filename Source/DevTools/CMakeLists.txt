@@ -5,7 +5,9 @@
 
 # ------------------------------------------------------------------------------
 # DevTools — 엔진 확장점(기동 확장 델리게이트 · 프레임 훅 `EngineFrameHooks`)에 붙는다(`DevToolsHost`). 엔진은 이 단위를 모른다.
-# 링크하는 쪽: 개발 App · Server(호스트 범위에 `DevToolsHost`), EditorModule(설정 · 에셋 감시), GameFramework 의 개발 감시.
+# 링크하는 쪽: 개발 App · Server(호스트 개발 계층 `makeHostDevLayer` · 서버 개발 조종), EditorModule(설정 · 에셋 감시), GameFramework 의 개발 감시.
+# 모듈 핫 리로드(`ModuleReload/` — LiveReloadManager · 리로드 구동기)와 호스트 개발 계층(`Host/`)은 모듈 관리(ModuleManager.dll) 위에 서서 그 창구를 구현한다.
+# 의존은 DevTools → ModuleManager 한 방향이다 — 모듈 관리자는 `ILiveReloadManager` 만 안다(언리얼 HotReload 가 Core ModuleManager 위의 Developer 모듈인 자리).
 # 늘 정의하되 `EXCLUDE_FROM_ALL` 이다 — 배포 호스트는 링크하지 않으므로 짓지 않는다(배포에서도 지어지는 에디터 테스트만 링크한다).
 # 공유 라이브러리다 — 여러 이미지(App · EditorModule · GameFramework)가 링크하므로 정적이면 정적 등록이 이미지마다 돈다(언리얼 Developer 모듈도 DLL).
 # include 경로는 `DevTools/...` 다.
@@ -31,6 +33,7 @@ target_link_libraries(DevTools
 	PUBLIC
 		Engine
 	PRIVATE
+		ModuleManager # 핫 리로드 · 호스트 개발 계층이 구현하는 창구와 매니페스트 해석(PRIVATE — 에디터는 DevTools 를 링크해도 모듈 관리를 보지 않는다)
 		renderdoc # RenderDoc in-app API 헤더 하나(`RenderDoc/RenderDocCapture.cpp`)
 		sw_global_options
 )

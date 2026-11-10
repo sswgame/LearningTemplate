@@ -9,10 +9,11 @@
 #   GF     : SHARED 면 SW_GF_EXPORTS(PRIVATE) · SW_GF_IMPORTS(INTERFACE)  — GameFramework.dll (키트는 SW_KIT_EXPORTS · SW_KIT_SERVER_EXPORTS · SW_KIT_IMPORTS, `sw_addModuleLibrary`)
 #   MODULE : MODULE 이면 SW_MODULE_EXPORTS(PRIVATE)                       — C-ABI 진입점을 내보내는 플러그인(RHI · 게임 · 에디터)
 #   DEVTOOLS : SHARED 면 SW_DEVTOOLS_EXPORTS(PRIVATE) · SW_DEVTOOLS_IMPORTS(INTERFACE) — DevTools.dll(개발 빌드만)
+#   MODULEMANAGER : SHARED 면 SW_MODULEMANAGER_EXPORTS(PRIVATE) · SW_MODULEMANAGER_IMPORTS(INTERFACE) — ModuleManager.dll(개발 빌드, 배포는 정적)
 # ------------------------------------------------------------------------------
 function(sw_configureDLLExports TARGET_NAME LIB_TYPE KIND)
-	if(NOT KIND MATCHES "^(ENGINE|GF|DEVTOOLS|MODULE|MODULE_SHARED|EDITOR)$")
-		message(FATAL_ERROR "sw_configureDLLExports(${TARGET_NAME}): KIND 는 ENGINE | GF | DEVTOOLS | MODULE | MODULE_SHARED | EDITOR 이다 (받은 값: ${KIND})")
+	if(NOT KIND MATCHES "^(ENGINE|GF|DEVTOOLS|MODULEMANAGER|MODULE|MODULE_SHARED|EDITOR)$")
+		message(FATAL_ERROR "sw_configureDLLExports(${TARGET_NAME}): KIND 는 ENGINE | GF | DEVTOOLS | MODULEMANAGER | MODULE | MODULE_SHARED | EDITOR 이다 (받은 값: ${KIND})")
 	endif()
 
 	if(KIND STREQUAL "ENGINE" AND LIB_TYPE STREQUAL "SHARED")
@@ -21,6 +22,8 @@ function(sw_configureDLLExports TARGET_NAME LIB_TYPE KIND)
 		target_compile_definitions(${TARGET_NAME} PRIVATE SW_GF_EXPORTS SW_GAMESERVICE_EXPORTS INTERFACE SW_GF_IMPORTS SW_GAMESERVICE_IMPORTS)
 	elseif(KIND STREQUAL "DEVTOOLS" AND LIB_TYPE STREQUAL "SHARED")
 		target_compile_definitions(${TARGET_NAME} PRIVATE SW_DEVTOOLS_EXPORTS INTERFACE SW_DEVTOOLS_IMPORTS)
+	elseif(KIND STREQUAL "MODULEMANAGER" AND LIB_TYPE STREQUAL "SHARED")
+		target_compile_definitions(${TARGET_NAME} PRIVATE SW_MODULEMANAGER_EXPORTS INTERFACE SW_MODULEMANAGER_IMPORTS)
 	elseif(KIND STREQUAL "MODULE" AND LIB_TYPE STREQUAL "MODULE")
 		target_compile_definitions(${TARGET_NAME} PRIVATE SW_MODULE_EXPORTS)
 	elseif(KIND STREQUAL "MODULE_SHARED" AND LIB_TYPE STREQUAL "SHARED")
@@ -113,6 +116,7 @@ function(sw_addSharedPCHOwner OWNER_NAME HEADER_PATH)
 		target_compile_definitions(${OWNER_NAME} PRIVATE ${ARG_DEFINITIONS}) # 쓰는 타깃 모두가 같은 정의를 가질 때만(게임 팩의 `SW_LOG_TAG` · `SW_MODULE_EXPORTS`)
 	endif()
 	set_target_properties(${OWNER_NAME} PROPERTIES FOLDER "Build/PCH" EXCLUDE_FROM_ALL ON)
+	sw_requireTemplateDefinitions(${OWNER_NAME}) # 쓰는 쪽(키트 · 게임)과 같은 옵션으로 PCH 를 굽는다
 	target_precompile_headers(${OWNER_NAME} PRIVATE "${HEADER_PATH}")
 endfunction()
 
@@ -331,6 +335,18 @@ function(sw_applyTargetLayerGate TARGET_NAME)
 		endif()
 		target_include_directories(${TARGET_NAME} BEFORE PRIVATE "${SW_TARGET_LAYER_STUB_DIR}/${gate}")
 	endforeach()
+endfunction()
+
+# ------------------------------------------------------------------------------
+# sw_requireTemplateDefinitions: 정의를 보지 못한 템플릿 함수를 부르면 컴파일이 멈춘다(clang `-Werror=undefined-func-template`).
+# 템플릿 몸체를 `.inl` 로 뺀 헤더(`GameObjectManager.inl` — 헤더를 읽는 TU 400 여 개 중 부르는 TU 만 읽게)는 `.inl` 를 빠뜨리면 링크에서야 정의 없는 심볼로 섰고,
+# 같은 이미지의 다른 TU 가 같은 인자로 실체화하면 링크도 지나 숨었다(W-S4). 다른 TU 에 실체화가 있는 템플릿은 `extern template` 선언으로 알린다(`SharedAssetCache`).
+# 엔진 · GameFramework · 키트 · 게임만 건다 — 부분(`sw_addModulePart`)과 Jolt 오브젝트는 소유 타깃의 옵션을 복사하므로 그 전에 부른다. MSVC 에는 같은 진단이 없다.
+# ------------------------------------------------------------------------------
+function(sw_requireTemplateDefinitions TARGET_NAME)
+	if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+		target_compile_options(${TARGET_NAME} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Werror=undefined-func-template>)
+	endif()
 endfunction()
 
 function(sw_applyModuleLayerGate TARGET_NAME KIND MODULE_NAME CONTENT_OWNER)

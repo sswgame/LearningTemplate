@@ -6,7 +6,7 @@
 
 - 잡동사니 폴더(`Util` · `Utility` · `Helpers` · `Misc`)를 새로 만들지 않는다 — 하는 일(Encoding · Algorithm · Hash …)로 묶는다. 린트 `folder-layout`(표 `Config/Rules/Lint/FolderLayout.json`)가 막는다.
 - 층(티어) 규칙이 먼저다: 하위 층이 상위 층을 include 하지 않는다(cmake 층 표 · `docs/agents/Includes.md`).
-- 개발 기능은 `Source/DevTools/`(언리얼 Developer 모듈 자리)로. 엔진 쪽 `Dev/` 폴더는 린트가 막고, DevTools 가 볼 수 없는 모듈 안(게임 · App · ModuleManager · GF 내부 · 리플렉션 에셋)만 `Config/Rules/Lint/FolderLayout.json` `_devFolderAllowed` 에 까닭과 함께 둔다. 엔진 내부를 봐야 하면 엔진이 확장점(등록 목록 · 인터페이스 · 프레임 훅)을 내고 DevTools 가 붙는다.
+- 개발 기능은 `Source/DevTools/`(언리얼 Developer 모듈 자리)로. `Dev/` 폴더는 표 `Config/Rules/Layers/DevFolders.json` 에 적은 자리만 — DevTools 가 볼 수 없는 모듈 안(게임 · App · ModuleManager · GF 내부 · 리플렉션 에셋)만 까닭과 함께 적고, 표 밖 `Dev/` 는 configure 가 멈춘다(배포가 빼는 개발 폴더도 이 표다 — `SW_DEV_ONLY_SOURCE_PATTERNS`). 엔진 내부를 봐야 하면 엔진이 확장점(등록 목록 · 인터페이스 · 프레임 훅)을 내고 DevTools 가 붙는다.
 - 약어는 파일 · 폴더 · 식별자 모두 대문자(`FourCCUtil` · `HPACKDecoder`) — 린트 `acronyms`(표 `Config/Rules/Lint/Acronyms.json`).
 - Core 티어 역류는 모든 티어에서 빌드가 막는다 — 티어마다 부분(`Core_tier<N>_objects`)과 위 티어 헤더의 `#error` 껍데기(하위 폴더 티어 `[subtier]` 포함).
 
@@ -81,7 +81,7 @@
 | --- | --- |
 | `Util` · `Utility` · `Helpers` · `Misc` 폴더 금지(린트 `folder-layout`). `Common` 은 새로 만들지 않는다(옛 `Editor/Common` 만) | 잡동사니 폴더는 하는 일로 찾을 수 없다(옛 GF `Runtime/Foundation/Utility` 를 해체했다) |
 | `<기능>/Component` 에는 `*Component` 만 | Navigation · Audio · Physics 의 Component 폴더에 씬 서비스 · 질의 · 검사가 섞였다(4 절) |
-| 엔진 쪽 `Dev/` 금지(린트 `folder-layout`) — 개발 기능은 `DevTools`, 예외는 표의 `_devFolderAllowed` 만 | DevTools 는 Engine 을 보지만 GF · 게임 · ModuleManager · App 은 못 본다 — 그 안에 붙어야 하는 것만 예외 |
+| 엔진 쪽 `Dev/` 금지(configure — `Config/Rules/Layers/DevFolders.json`) — 개발 기능은 `DevTools`, 예외는 표의 `_devFolderAllowed` 만 | DevTools 는 Engine 을 보지만 GF · 게임 · ModuleManager · App 은 못 본다 — 그 안에 붙어야 하는 것만 예외 |
 | 실행 중 바꾸기 · 핫스왑은 개발, 기동 때 고르기는 제품 | 언리얼도 RHI · 모듈 교체는 재시작(10 절) |
 
 ## 판정해 그대로 두는 것(다시 보지 않는다)

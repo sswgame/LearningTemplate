@@ -55,7 +55,7 @@ kRules: tuple[Rule, ...] = (
     Rule("layer-cycles", "경계", "같은 엔진 층의 폴더끼리 서로 include(층 안 순환)", "같은 층은 한 부분이라 #error 껍데기가 없다 — 폴더마다 부분을 나누면 층 번호가 폴더 순서를 흉내 낼 뿐이다", kCpp + (".toml",), "lint.LayerCycles:checkLayerCycles", exceptions="Config/Rules/Layers/EngineLayers.toml [sameTierCycle]"),
     Rule("thread-owners", "경계", "TaskManager 밖에서 스레드를 만드는 파일", "스레드 형식은 합법이라 만드는 자리를 형식으로 막지 못한다", kCpp, "lint.ThreadOwners:checkThreadOwners", exceptions="Config/Rules/Lint/ThreadOwners.json"),
     Rule("cmake-path-case", "경계", "대소문자만 다른 CMake include · add_subdirectory 경로", "CMake 경로는 컴파일러가 보지 않는다(Linux 구성만 선다)", kCMake, "lint.CMakePathCase:checkCMakePathCase"),
-    Rule("folder-layout", "경계", "잡동사니 폴더 · 엔진 쪽 Dev/ · Component 폴더", "파일 자리는 형식이 아니다", kAny, "lint.FolderLayout:checkFolderLayout", exceptions="Config/Rules/Lint/FolderLayout.json"),
+    Rule("folder-layout", "경계", "잡동사니 폴더 · Component 폴더", "파일 자리는 형식이 아니다", kAny, "lint.FolderLayout:checkFolderLayout", exceptions="Config/Rules/Lint/FolderLayout.json"),
     Rule("platform-chains", "경계", "빠진 플랫폼을 컴파일 오류로 내지 않는 #if 사슬", "전처리 갈래는 형식이 막지 못한다", kCpp, "lint.PlatformChains:checkPlatformChains", exceptions="Config/Rules/Lint/PlatformChains.json"),
     # --- 모양(공통 틀이 있는데 손으로 다시 적은 것) ----------------------------------------------------------------------------
     Rule("cpp-shape", "모양", "선언 순서 · 깃발 칸 · 익명 네임스페이스 · 주인 우선 · 기반 하나", "합법 C++ 의 배치 규칙이다", kCpp, "lint.CppShape:checkCppShape", perFile=True, exceptions="Config/Rules/Lint/CppShapeExceptions.json"),

@@ -18,10 +18,10 @@
 
 ### 1. 묶음 검증
 
-- main(c4ebf56542)의 묶음 검증 뒤 통합 브랜치를 main 에 합쳐 다시 검증 · push 한다. 통합 작업자가 남긴 위험: `.inl` 누락은 링크에서만 드러난다(Release · 서버의 다른 TU), `EditorTransaction` 을 연 채 같은 범위에서 CommandStack 을 읽는 자리.
+- main(c4ebf56542)의 묶음 검증 뒤 통합 브랜치를 main 에 합쳐 다시 검증 · push 한다. `.inl` 누락은 이제 컴파일에서 멈춘다(clang `-Werror=undefined-func-template`, `sw_requireTemplateDefinitions` — Engine · GF · 키트 · 게임). 첫 빌드에서 걸린 곳은 `.inl` include 나 `extern template` 선언으로 고치고, 우리 것이 아닌 템플릿(Jolt 등)이 걸리면 플래그를 끄지 말고 그 자리의 정의 헤더를 include 한다. `GameObjectManager.inl` 머리말의 '링크에서 멈춘다' 문장을 맞춘다(Engine/Object 작업자 폴더라 두었다). `EditorTransaction` 을 연 채 같은 범위에서 CommandStack 을 읽는 자리.
 - 흔들리는 단위 테스트 `AudioDataVariantTest.GraphVariantSavesOnlyItsDifference`: 전체 실행 한 번에 "base 'testproject/base.audiograph.xml' could not be read" 로 졌다. 같은 씨앗 · 단독 1800 회로는 재현되지 않았다 — 다시 지면 그 로그의 앞 케이스와 스크래치 도메인 마운트 상태를 본다.
 - 통합 때 확인하지 못한 동작: Vulkan AMD 브레드크럼 · 128 타임스탬프 슬롯(실장치), DX12 placed 텍스처(`D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES` 가 RT+SRV 를 받는지).
-- 통합 검증에서 함께 본다: 게이트 껍데기(`<빌드>/gates`) 생성 · 게임 타깃의 RHI · Shader 게이트, 5-4 생성기 출력(`_pApplyDefault` · `_pEditCondition` 줄, 파서 사례 `DefaultOnContainer` · `EditConditionUnknownName` · `RequiredAtRootWithoutParent`), `HapticEffectTest`, 시나리오 `editor/undocoverage`(실패 줄의 명령을 고친다 — 컴포넌트 대상 명령은 대상을 주는 줄을 더한다), G1 `slice` 12 게임(진 게임은 복원이 되살리지 못한 `state.objects` 를 본다), T2 격리(`AutomationUserDataRootTest` · `engine.isolation` · `Scenario.editor.statedir.*` · `net-pair mmo`), N2 `server-image` 한 번.
+- 통합 검증에서 함께 본다: 게이트 껍데기(`<빌드>/gates`) 생성 · 게임 타깃 · 에디터 확장(`editorextension` — CharacterEditor 의 RHI include 를 끊었다)의 RHI · Shader 게이트, 5-4 생성기 출력(`_pApplyDefault` · `_pEditCondition` 줄, 파서 사례 `DefaultOnContainer` · `EditConditionUnknownName` · `RequiredAtRootWithoutParent`), `HapticEffectTest`, 시나리오 `editor/undocoverage`(실패 줄의 명령을 고친다 — 컴포넌트 대상 명령은 대상을 주는 줄을 더한다), G1 `slice` 12 게임(진 게임은 복원이 되살리지 못한 `state.objects` 를 본다), T2 격리(`AutomationUserDataRootTest` · `engine.isolation` · `Scenario.editor.statedir.*` · `net-pair mmo`), N2 `server-image` 한 번.
 
 ### 2. 플랫폼 ([PlatformTargets](PlatformTargets.md) "남은 일")
 
@@ -42,12 +42,12 @@
 
 ### 5. 작업자 · 설계 문서가 남긴 일
 
-- **린트를 빌드 구조로:** `editor-view-includes` 를 Panels View 부분의 `#error` 껍데기 게이트로(먼저 린트가 못 보는 전이 include 를 끊는다). 에디터 플러그인 타깃(`GameFramework/Plugin/Editor` 의 CharacterEditor 등)은 게임 GPU 게이트 밖이다.
 - **이름:** `Engine/Graphics/RenderState/` 의 형식이 아직 RHI 머리 이름(`RHIBlendTargetState` 등 약 500 곳 — XML 요소 이름 · 리플렉션 이름과 얽힘).
 - **렌더링:** Vulkan placed 텍스처(해제 큐에 메모리 참조 세기), TransientLeasePool 을 뷰 풀에 잇기, 비동기 컴퓨트 큐 패스 타임스탬프 · Tracy 프레임 패스 내보내기, 같은 자리 후처리 머티리얼이 앞 결과를 이어 읽기, 박막 · 털 · 스타킹 · 비단 외형의 디퍼드(G버퍼 칸 부족 — 포워드 전용으로 남김), 몸 머티리얼이 피부 층 표면 덮어쓰기(`_skinLayerSurfaceMap`)를 읽기, 텍스처 전이 · VFX · 프로브 디스패치의 버퍼별 전이를 묶음 API 로. DX11 postprocess_ssr 이 체인 안에서만 골든과 16.1% 다르다(단독은 0% — 앞 단계 상태, 원래 있던 결함).
 - **표면 변형:** 지형(`terrain.hlsl`)은 머티리얼을 픽셀에서만 읽어 정점 변위를 받지 못한다 — 엔진 텍스처 칸 `SurfaceDeform` 과 패스 상수 `g_SurfaceDeformParams`(창)를 더해 지형 정점 셰이더가 읽게 한다(언리얼 RVT · 유니티 `SetGlobalTexture` 자리, 그림자 패스도 같은 오프셋). 네 백엔드 셰이더 · 바인딩을 함께 바꾸므로 빌드 · 시나리오를 돌릴 수 있는 작업자가 한 묶음으로 한다.
-- **폴더 자리:** 엔진 쪽 `Dev/` 예외(`Config/Rules/Lint/FolderLayout.json` `_devFolderAllowed` — ModuleManager/Dev · Host/Dev · App/Dev · GF GameData/Dev · Graphics/Material/Dev)를 DevTools 로 — ModuleManager 를 공유 라이브러리로(언리얼 HotReload 처럼), DevTools 에 리플렉션 단계를 더하면 핫 리로드 · 머티리얼 그래프가 옮겨 간다.
-- **W-S4 막는 구조:** clang `-Werror=undefined-func-template` 을 Engine · GameFramework · Games 에 켜 `.inl` 누락을 링크가 아니라 컴파일에서 잡을 수 있는지 본다.
+- **폴더 자리(남은 둘, `Config/Rules/Layers/DevFolders.json` — App/Dev 는 사용자 결정으로 남는다):** 핫 리로드 · 호스트 개발 계층은 DevTools 로 옮겼다(ModuleManager 공유 라이브러리 · `ILiveReloadManager`, 662582fd9c — 빌드 확인은 통합에서). 남은 길은 정했다.
+  - Graphics/Material/Dev → `DevTools/Material/`: DevTools 에 `sw_addReflectionStep(DevTools MODULE …)`, 셰이더 쿠커(`ShaderCookDriver` 의 `MaterialGraphGeneratedPaths::refreshAll` 한 줄)는 엔진 창구(쿠킹 전 셰이더 소스 생성기 — 정적 등록, 개발 쿠킹인데 없으면 멈춘다)로 뒤집고, `SW_API` → `SW_DEVTOOLS_API`. 막힘: 데이터 상속(`_base`) 매크로가 등록 모듈 "Engine" 을 단언한다(`DataInheritance.h` — 팩 쿠킹이 모듈 등록을 못 본다) — DevTools 는 호스트 라이브러리라 "Engine" 으로 걷히므로(`registerHostLibraryTypes`) 그 단언을 "호스트 라이브러리" 로 넓힌다. 빌드하며 옮긴다.
+  - GF GameData/Dev → GameFramework 층의 개발 전용 공유 모듈 `GameFrameworkDev`(언리얼 플러그인 모듈 Type `DeveloperTool` 자리): 매니페스트에 개발 전용 표시를 두고 배포 CMake 는 그 매니페스트를 짓지 않으며, 개발 호스트는 GameFramework 다음에 `loadSharedModule` 로 올린다. DevTools 는 GameSettings 를 볼 수 없어(게이트) 옮기지 않는다.
 - **RHI(5-2):** DX12 기록 경로 락 — 바인딩마다 `shared_mutex`(`resolveBufferAddress` · `resolveOfflineView`), 배리어마다 `_resourceStateMutex` + `_mapOffscreenTexture.find` 를 병렬 기록 구간의 레지스트리 불변식(`setParallelRecording`)으로 걷어 내고 텍스처 상태를 `RHIHandleTable` 레코드로(`bench.json` p50 전후). 측정 뒤에만: Vulkan 동적 오프셋 · 푸시 디스크립터, WebGPU 바인드 그룹 캐시 은퇴, 중립 커맨드 스트림 · RHI 스레드, 복사 큐, SM6.6 바인드리스, RT · 메시 셰이더, Android `VkDeviceMemory` 서브할당.
 
 ### 5-3. 병렬 오브젝트 · 물리 모델 남은 것

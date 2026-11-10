@@ -39,11 +39,10 @@ target_link_libraries(App
 		ModuleAPI
 		sw_global_options
 )
-# 개발 도구(셰이더 · 설정 리로드) — 호스트 범위의 `DevToolsHost` 가 엔진 확장점에 붙는다. 배포 호스트는 링크하지 않는다.
-# ModuleManager 는 통째로 링크한다 — 그 안의 테스트 등록(`ModuleManager/Tests`)은 밖에서 참조하는 심볼이 없어 링커가 버린다. App 이 그 테스트의 호스트다. 배포는 테스트를 짓지 않아 그대로다.
+# 개발 도구(셰이더 · 설정 리로드 · 핫 리로드) — 호스트가 개발 계층(`makeHostDevLayer`)을 만들어 부팅 열에 넘긴다. 배포 호스트는 링크하지 않는다.
+# 개발 구성의 ModuleManager 는 공유 라이브러리라 그 안의 테스트 등록(`ModuleManager/Tests`)도 그 DLL 이 들고 온다(통째 링크가 필요 없다).
 if(NOT SW_SHIPPING_BUILD)
 	target_link_libraries(App PRIVATE DevTools)
-	sw_linkWholeArchive(App ModuleManager)
 endif()
 target_compile_definitions(App PRIVATE "SW_LOG_TAG=\"Engine\"" "SW_REGISTRAR_MODULE=\"App\"" SW_APP_INTERNAL)
 

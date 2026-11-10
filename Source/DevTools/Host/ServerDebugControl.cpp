@@ -240,7 +240,7 @@ namespace sw
         return true;
     }
 
-    unique_ptr<IServerDebugControl> makeServerDebugControl( const ServerTickCountDelegate& tickCount )
+    SW_HOST_DEV_API unique_ptr<IServerDebugControl> makeServerDebugControl( const ServerTickCountDelegate& tickCount )
     {
         return make_unique<ServerDebugControl>( tickCount );
     }

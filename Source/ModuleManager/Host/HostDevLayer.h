@@ -1,9 +1,9 @@
 /**
  * @file HostDevLayer.h
  * @brief 호스트(App · Server)의 개발 계층 창구 `IHostDevLayer` 입니다 — 개발 도구 연결(`DevToolsHost` · 프레임 훅 · 개발 콘솔)과 모듈 핫 리로드를 한 묶음으로 듭니다.
- * @details 구현(`ModuleManager/Host/Dev/` — DevTools · LiveReload 를 쓴다)은 개발 구성에만 있고 배포는 폴더째 짓지 않는다. 부팅 열(`HostLaunch`)이 엔진을 세우기 전에
- *          `if constexpr ( build::kShipping == false )` 한 곳에서 `makeHostDevLayer` 로 만들고, 배포에서는 포인터가 비어 있다 — 버려지는 갈래라 배포 링크에
- *          `makeHostDevLayer` 의 정의가 없어도 된다. 빈 구현 파일을 두지 않는다(`docs/agents/BuildConfigSwitch.md`). 언리얼이 Developer 모듈을 배포 타깃에 링크하지 않는 것과 같은 자리다.
+ * @details 구현(`DevTools/Host/HostDevLayer.cpp` — 핫 리로드 구동기 · 개발 도구 연결)은 DevTools.dll 에만 있고 배포는 DevTools 를 짓지 않는다. ModuleManager 는
+ *          DevTools 를 보지 않으므로(의존은 DevTools → ModuleManager) 호스트(App · Server)가 `if constexpr ( build::kShipping == false )` 한 곳에서 `makeHostDevLayer` 로 만들어
+ *          부팅 열(`HostLaunch::initializeHostScope`)에 넘긴다. 배포에서는 포인터가 비어 있다 — 버려지는 갈래라 배포 링크에 `makeHostDevLayer` 의 정의가 없어도 된다. 빈 구현 파일을 두지 않는다(`docs/agents/BuildConfigSwitch.md`). 언리얼이 Developer 모듈을 배포 타깃에 링크하지 않는 것과 같은 자리다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -13,11 +13,13 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
+#include "ModuleManager/ModuleManagerAPI.h"
+
 namespace sw
 {
     struct ModuleResolution;
     class Engine;
-    class LiveReloadManager;
+    class ILiveReloadManager;
     class ModuleCatalog;
     class ModuleLoaderSubsystem;
     class SubsystemScope;
@@ -44,7 +46,7 @@ namespace sw
         [[nodiscard]] virtual bool initializeModuleReload( uint8 targetMask, SubsystemScope& host, ModuleLoaderSubsystem& moduleLibraryHost, ModuleCatalog& outCatalog,
                                                            ModuleResolution& outResolution ) = 0;
         /** @brief 핫 리로드 매니저입니다(`initializeModuleReload` 전에는 nullptr). 모듈 관리자가 라이브러리를 올릴 때 넘긴다. */
-        virtual LiveReloadManager* getLiveReloadManager() const = 0;
+        virtual ILiveReloadManager* getLiveReloadManager() const = 0;
         /** @brief 리로드 묶음을 시작하기 전의 알림을 구독합니다(서버가 서비스를 멈춘다). */
         [[nodiscard]] virtual Subscription addOnBeforeReloadBatch( BeforeReloadBatchDelegate onBeforeBatch ) = 0;
         /** @brief 모듈 @p pModuleName 을 다음 `updateModuleReload` 에서 다시 올리게 합니다(단축키 · 개발 명령). */
@@ -64,6 +66,6 @@ namespace sw
         virtual void detach() = 0;
     };
 
-    /** @brief 개발 계층을 만듭니다. 정의는 개발 구성에만 있다(`ModuleManager/Host/Dev/HostDevLayer.cpp`) — `build::kShipping` 이 아닌 갈래에서만 부른다. */
-    [[nodiscard]] unique_ptr<IHostDevLayer> makeHostDevLayer();
+    /** @brief 개발 계층을 만듭니다. 정의는 DevTools.dll 에만 있다(`DevTools/Host/HostDevLayer.cpp`) — 호스트가 `build::kShipping` 이 아닌 갈래에서만 부른다. */
+    [[nodiscard]] SW_HOST_DEV_API unique_ptr<IHostDevLayer> makeHostDevLayer();
 } // namespace sw

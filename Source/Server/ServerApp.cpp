@@ -143,12 +143,15 @@ namespace sw
             SW_MEMORY_SCOPE( EngineMisc );
             _launch.getHostScope().emplaceSubsystem<ShutdownSignalSubsystem>();
         }
-        if constexpr ( build::kShipping == false ) // 개발 조종은 개발 구성에만 있다 — 배포는 구현을 짓지 않는다
+        // 개발 조종 · 개발 계층(핫 리로드 · 개발 도구)은 DevTools.dll 이 구현한다 — ModuleManager 는 DevTools 를 보지 않아 호스트가 만들어 넘긴다. 배포는 짓지 않는다.
+        unique_ptr<IHostDevLayer> pDevLayer;
+        if constexpr ( build::kShipping == false )
         {
             _pDebugControl = makeServerDebugControl( SW_DELEGATE_LAMBDA( ServerTickCountDelegate, [this]()
             { return _tickCount; } ) );
+            pDevLayer      = makeHostDevLayer();
         }
-        if ( _launch.initializeHostScope( SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &ServerApp::loadModuleLibraries, this ), "ServerApp" ) == false )
+        if ( _launch.initializeHostScope( SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &ServerApp::loadModuleLibraries, this ), "ServerApp", std::move( pDevLayer ) ) == false )
             return false;
         // 헤드리스 작업(서버 팩의 씬 쿠킹)은 엔진 기동 안에서 끝났다. 실패는 종료 코드로 알린다. 빌드(CookAssets 타깃) · `Pack.py` 가 이 코드를 본다.
         const HostEngineStart engineStart = _launch.initializeEngine( argc, pArgv, EngineHostRole::DedicatedServer );

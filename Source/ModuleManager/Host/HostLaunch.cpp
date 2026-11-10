@@ -25,14 +25,18 @@ namespace sw
 
     HostLaunch::~HostLaunch() = default;
 
-    bool HostLaunch::initializeHostScope( ModuleTypeLoaderDelegate moduleTypeLoader, const utf8* pHostName )
+    bool HostLaunch::initializeHostScope( ModuleTypeLoaderDelegate moduleTypeLoader, const utf8* pHostName, unique_ptr<IHostDevLayer> pDevLayer )
     {
         // 개발 도구(엔진 기동 확장 · 콘텐츠 폴더 감시). 모듈 맡김 칸(`IModuleStateStore`)은 범위를 세우는 쪽(`ModuleLoaderSubsystem::initializeHostScope`)이 건다.
-        if constexpr ( build::kShipping == false ) // 개발 계층은 개발 구성에만 있다 — 배포는 구현을 짓지 않는다
+        // 개발 계층은 개발 구성에만 있고 배포에는 없다 — 어긋나면 폴백 없이 멈춘다(개발 구성인데 핫 리로드 · 개발 도구 없이 서지 않는다).
+        if ( ( pDevLayer != nullptr ) == build::kShipping )
         {
-            _pDevLayer = makeHostDevLayer();
-            _pDevLayer->addToHostScope( _host, _engine );
+            SW_LOW_LEVEL_ERROR( "[%s] the dev layer must be given in development builds and absent in shipping (given: %d)", pHostName, pDevLayer != nullptr ? 1 : 0 ); // 로거 앞이다
+            return false;
         }
+        _pDevLayer = std::move( pDevLayer );
+        if ( _pDevLayer != nullptr )
+            _pDevLayer->addToHostScope( _host, _engine );
         _pModuleLoader = ModuleLoaderSubsystem::initializeHostScope( _host, std::move( moduleTypeLoader ), pHostName );
         return _pModuleLoader != nullptr;
     }

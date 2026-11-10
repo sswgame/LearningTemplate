@@ -1,10 +1,10 @@
 /**
- * @file ModuleManager/Dev/LiveReload/LiveReloadManager.h
+ * @file DevTools/ModuleReload/LiveReload/LiveReloadManager.h
  * @brief 모듈 공유 라이브러리를 섀도 복사해 핫 리로드합니다(의존 모듈까지 연쇄로 교체합니다).
  *
- * @note **이 클래스는 Engine 이 아니라 GameModuleManager 에 있습니다.** 모듈을 로드하고 교체하는 것은 런처(App, Server)의 일이고, Engine 은 모듈이라는 개념
- *       자체를 몰라야 합니다(Engine 레이어 규칙: Engine 은 Editor, GameFramework, Games 를 모릅니다). 쓰는 쪽은 GameModuleManager(GameModuleManager 와
- *       ModuleCompiler)와 App 의 단축키뿐이고, Shipping 빌드에서는 **파일째 빠집니다**(`Source/ModuleManager/CMakeLists.txt` 의 제외 목록).
+ * @note **이 클래스는 Engine 이 아니라 개발 도구(DevTools.dll)에 있습니다.** 모듈을 로드하고 교체하는 것은 런처(App, Server)의 일이고, Engine 은 모듈이라는 개념
+ *       자체를 몰라야 합니다. 모듈 관리자(GameModuleManager · EditorModuleManager)는 창구 `ILiveReloadManager`(ModuleManager)로만 보고, 이 구현을 만드는 것은
+ *       리로드 구동기(`ModuleReloadDriver`)입니다. 배포는 DevTools 를 짓지 않아 함께 빠집니다(언리얼 HotReload 가 Developer 모듈인 자리).
  *
  *       이 클래스는 리로드 **순서**(prepare → 배치 콜백 → commit, 언로드 구간, 정적 등록 헤드, `RegistrationReloadScope`)를 정하고, 그 밖의 일은
  *       값 멤버나 도우미에 맡깁니다. 연쇄 교체 대상과 순서를 계산하는 `ModuleDependencyGraph`, 섀도 복사본 파일을 쓰고 지우는 `ModuleShadowCopy`,
@@ -26,12 +26,14 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Time/GameTimer.h"
 
+#include "DevTools/ModuleReload/LiveReload/DeferredLibraryUnloadQueue.h"
+#include "DevTools/ModuleReload/LiveReload/ModuleDependencyGraph.h"
+#include "DevTools/ModuleReload/LiveReload/ModuleShadowCopy.h"
+
 #include "Engine/Foundation/Foundation.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 
-#include "ModuleManager/Dev/LiveReload/DeferredLibraryUnloadQueue.h"
-#include "ModuleManager/Dev/LiveReload/ModuleDependencyGraph.h"
-#include "ModuleManager/Dev/LiveReload/ModuleShadowCopy.h"
+#include "ModuleManager/ILiveReloadManager.h"
 
 namespace sw
 {
@@ -48,27 +50,12 @@ namespace sw
      *         덮어쓰거나 통째로 비우는 길이 없습니다. 모듈마다의 칸은 그 모듈의 주인 하나가 걸고(다시 걸면 앞 구독은 아무것도 풀지 않는다),
      *         배치 직전 콜백은 여럿이 걸 수 있는 목록입니다.
      */
-    class LiveReloadManager final : public SubscriptionSource
+    class LiveReloadManager final : public ILiveReloadManager, public SubscriptionSource
     {
     public:
-        using OnBeforeReloadDelegate = Delegate<void()>;
-        using OnAfterReloadDelegate  = Delegate<void( void* pLibraryModule )>;
-        /** @brief onAfterReload 안에서 하드웨어 예외가 났을 때 불립니다. 인자는 예외 코드(Windows)나 시그널 번호(리눅스)입니다. */
-        using OnReloadFaultDelegate = Delegate<void( uint32 faultCode )>;
-        /**
-         * @brief 새로 로드한 라이브러리를 받아들일지 묻습니다. 인자는 새 라이브러리의 핸들입니다. 옛 라이브러리가 아직 돌고 있을 때(prepare) 불립니다.
-         * @details false 면 새 라이브러리를 언로드하고 옛 라이브러리를 그대로 둡니다. 그래프는 막지 않습니다(적용 전 실패).
-         *          호스트가 모듈 API 테이블의 ABI 처럼 "옛 것을 언로드한 뒤에야 알 수 있던 거절 사유"를 여기서 미리 확인합니다.
-         */
-        using OnValidateLibraryDelegate = Delegate<bool( void* pLibraryModule )>;
-        /**
-         * @brief 연쇄 교체의 첫 commit 직전에 불립니다. false 면 아무것도 바꾸지 않고 옛 라이브러리를 모두 유지합니다(그래프는 막지 않습니다).
-         * @details false 는 "아무것도 언로드하지 않았다"는 뜻이어야 합니다. 호스트가 상태를 저장하지 못했을 때(게임 상태 직렬화 실패) 씁니다.
-         */
-        using OnBeforeCommitBatchDelegate = Delegate<bool( const vector<string>& listModuleName )>;
-        using FlushWorkersDelegate        = Delegate<void()>;
-        /** @brief true 를 돌려주는 동안 리로드를 잡아 둡니다(`addReloadHold`). */
-        using ReloadHoldDelegate = Delegate<bool()>;
+        // 델리게이트 형식은 창구(`ILiveReloadManager`)가 정한다. 검사 콜백(`OnValidateLibraryDelegate`)은 옛 라이브러리가 아직 돌 때(prepare) 불리고,
+        // false 면 새 라이브러리를 언로드하고 옛 것을 둔다 — 호스트가 모듈 API 테이블의 ABI 처럼 "옛 것을 언로드한 뒤에야 알 수 있던 거절 사유"를 미리 본다.
+        // 배치 직전 콜백의 false 는 "아무것도 언로드하지 않았다" 는 뜻이어야 한다(게임 상태 직렬화 실패).
 
         /**
          * @brief 교체된 옛 라이브러리의 언로드를 몇 번의 연쇄 리로드(배치)만큼 미룰지 정합니다.
@@ -81,7 +68,7 @@ namespace sw
         /** @brief 모듈 맵과 감시자가 빈 상태로 시작합니다. */
         LiveReloadManager();
         /** @brief 로드된 모듈을 언로드합니다. */
-        ~LiveReloadManager();
+        ~LiveReloadManager() override;
 
         /** @brief 복사를 금지합니다. */
         LiveReloadManager( const LiveReloadManager& ) = delete;
@@ -97,7 +84,7 @@ namespace sw
          * @param moduleName DLL/SO 기본 이름(확장자 없음)
          * @param listDependsOn 이 모듈이 의존하는 모듈 이름(먼저 로드됩니다)
          */
-        [[nodiscard]] bool registerModule( string_view moduleName, const vector<string>& listDependsOn = {} );
+        [[nodiscard]] bool registerModule( string_view moduleName, const vector<string>& listDependsOn ) override;
 
         /**
          * @brief 핫 리로드하지 않는 공용 모듈(GameFramework)을 섀도 복사 없이 로드하고, 그 정적 레지스트리를 **제 이름으로** 등록합니다.
@@ -108,7 +95,7 @@ namespace sw
          *          로드하기 전에 엔진 ABI 스탬프를 대조한다. 라이브러리는 리로드하지 않고, 이 매니저가 `shutdown` 에서 그것을 링크하는 모듈을 모두 내린 뒤 마지막에 내린다(의존 모듈의 import 가 그 라이브러리를 가리킨다).
          * @return 로드했거나 이 매니저가 이미 로드했으면 true 입니다. 파일이 없으면(그 모듈을 쓰지 않는 구성) 아무것도 하지 않고 true 를 반환합니다.
          */
-        [[nodiscard]] bool loadSharedModule( string_view moduleName );
+        [[nodiscard]] bool loadSharedModule( string_view moduleName ) override;
 
         /**
          * @brief 이미 로드한 모듈의 리로드 직후 콜백(`setOnAfterReload`)을 부릅니다. 리로드 때와 같이 `ModuleCallGuard` 로 보호합니다.
@@ -116,7 +103,7 @@ namespace sw
          *          등록되지 않았으므로, 인스턴스를 만드는 쪽이 콜백을 등록한 뒤 이 함수를 부릅니다.
          * @return 모듈이 로드돼 있고, 콜백이 결함 없이 돌았고, 그래프가 깨지지 않았으면 true 입니다.
          */
-        [[nodiscard]] bool runAfterReload( string_view moduleName );
+        [[nodiscard]] bool runAfterReload( string_view moduleName ) override;
 
         /** @brief 해당 모듈(과 그것에 의존하는 모듈)의 리로드를 예약합니다. 게임 스레드(`update` 를 부르는 스레드)에서 부릅니다. */
         void triggerReload( string_view moduleName );
@@ -144,45 +131,45 @@ namespace sw
         void update();
 
         /** @brief 모듈이 리로드되기 직전에 호출할 델리게이트를 겁니다. 구독이 사라지면 풀립니다. */
-        [[nodiscard]] Subscription setOnBeforeReload( string_view moduleName, OnBeforeReloadDelegate delegate );
+        [[nodiscard]] Subscription setOnBeforeReload( string_view moduleName, OnBeforeReloadDelegate delegate ) override;
 
         /** @brief 모듈이 리로드된 직후에 호출할 델리게이트를 겁니다. 구독이 사라지면 풀립니다. */
-        [[nodiscard]] Subscription setOnAfterReload( string_view moduleName, OnAfterReloadDelegate delegate );
+        [[nodiscard]] Subscription setOnAfterReload( string_view moduleName, OnAfterReloadDelegate delegate ) override;
         /**
          * @brief 새 모듈 코드가 onAfterReload 안에서 결함(접근 위반 등)을 냈을 때 부를 콜백을 겁니다. 구독이 사라지면 풀립니다.
          * @details onAfterReload 는 새 라이브러리의 코드가 처음 도는 지점(API 바인딩, 인스턴스 생성, 상태 복원)이라 `ModuleCallGuard` 로
          *          보호한다. 결함이 나면 그래프를 막고 이 콜백을 부른다. 부르는 쪽은 그 모듈에서 받은 것(인스턴스, API 테이블)을 **그 모듈을
          *          부르지 않고** 버려야 한다. 반쯤 만들어진 인스턴스를 파괴하는 코드도 같은 모듈에 있기 때문이다.
          */
-        [[nodiscard]] Subscription setOnReloadFault( string_view moduleName, OnReloadFaultDelegate delegate );
+        [[nodiscard]] Subscription setOnReloadFault( string_view moduleName, OnReloadFaultDelegate delegate ) override;
         /** @brief 새 라이브러리를 옛 라이브러리가 언로드되기 전에 검사할 콜백을 겁니다(`OnValidateLibraryDelegate`). 구독이 사라지면 풀립니다. */
-        [[nodiscard]] Subscription setOnValidateLibrary( string_view moduleName, OnValidateLibraryDelegate delegate );
+        [[nodiscard]] Subscription setOnValidateLibrary( string_view moduleName, OnValidateLibraryDelegate delegate ) override;
 
         /**
          * @brief 연쇄 교체 대상이 모두 prepare 된 뒤 첫 commit 직전에 부를 콜백을 목록에 더합니다. 구독이 사라지면 그 항목만 빠집니다.
          * @details **나중에 더한 것이 먼저 불린다** — 바깥 층(서버 서비스, 모듈 호스트 뒤에 선다)이 안쪽 층(게임 언로드)보다 먼저 내려간다.
          *          하나라도 false 면 거기서 멈추고 이번 연쇄를 취소해 옛 라이브러리를 모두 유지한다(앞에서 멈춘 것은 다음 틱에 스스로 다시 선다).
          */
-        [[nodiscard]] Subscription addOnBeforeCommitBatch( OnBeforeCommitBatchDelegate delegate );
+        [[nodiscard]] Subscription addOnBeforeCommitBatch( OnBeforeCommitBatchDelegate delegate ) override;
 
         /**
          * @brief 리로드를 잡아 둘 조건을 목록에 더합니다. 하나라도 true 인 동안 바뀐 모듈은 **대기열에 남고** 잡음이 풀린 첫 갱신에서 리로드된다(버리지 않는다).
          * @details 모듈 코드가 다른 스레드에서 아직 돌고 있어 지금 내리면 그 스레드가 내려간 코드로 돌아오는 때에 쓴다(편집기의 네이티브 파일 대화상자 —
          *          닫힐 때까지 돌아오지 않는다). 거절(`addOnBeforeCommitBatch`)과 달리 이번 변경을 잃지 않는다. 구독이 사라지면 그 항목만 빠집니다.
          */
-        [[nodiscard]] Subscription addReloadHold( ReloadHoldDelegate delegate );
+        [[nodiscard]] Subscription addReloadHold( ReloadHoldDelegate delegate ) override;
 
         /**
          * @brief 모듈을 언로드하기 직전에 불려 워커 스레드를 비울 콜백을 겁니다. 구독이 사라지면 풀립니다.
          * @details TaskManager 만으로는 부족하다. RenderThread 는 App 소유라 Engine 에서 직접 볼 수 없으므로, 모듈 호스트가
          *          renderThread->waitIdle() 와 device.waitIdle() 을 여기에 연결해야 Present 훅이 실행 중인 라이브러리를 FreeLibrary 하지 않는다.
          */
-        [[nodiscard]] Subscription setFlushWorkers( FlushWorkersDelegate delegate );
+        [[nodiscard]] Subscription setFlushWorkers( FlushWorkersDelegate delegate ) override;
 
         /** @brief DLL 그래프가 섞인 상태로 보고 이후 리로드를 막습니다. 프로세스를 다시 시작해야 합니다. */
-        void markGraphBroken( string_view reason );
+        void markGraphBroken( string_view reason ) override;
         /** @brief commit 실패, 순환, 바인딩 실패로 그래프가 깨졌으면 true 를 반환합니다. */
-        bool isGraphBroken() const { return _bReloadGraphBroken == SW_TRUE; }
+        bool isGraphBroken() const override { return _bReloadGraphBroken == SW_TRUE; }
 
         /**
          * @brief 등록된 모듈마다, 의존 모듈이 **지금 이 매니저가 보관한 라이브러리**에 바인딩됐는지 확인합니다.
@@ -197,7 +184,9 @@ namespace sw
         bool verifyModuleBindings() const;
 
         /** @brief 로드된 모듈의 핸들을 반환합니다. */
-        void* getModuleHandle( string_view moduleName ) const;
+        void* getModuleHandle( string_view moduleName ) const override;
+        /** @brief 이 매니저에 빌드 시작 · 끝을 알리는 모듈 컴파일러(`ModuleCompiler`)를 만듭니다. */
+        [[nodiscard]] unique_ptr<IModuleCompiler> createModuleCompiler() override;
 
         /** @brief 끝까지 성공한 연쇄 리로드 수입니다(교체 · 콜백 · 바인딩 검사를 모두 마친 것). 실패하거나 적용 전에 거절된 리로드는 세지 않습니다. 자동화가 완료를 기다릴 때 읽습니다. */
         uint32 getCompletedReloadCount() const { return _completedReloadCount; }

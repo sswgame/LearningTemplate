@@ -132,6 +132,9 @@ function(sw_addModuleLibrary TARGET_NAME)
 	endif()
 	# 모듈 폴더는 include 경로로 내보내지 않는다 — 키트 · 게임 헤더도 `Source/` 기준 전체 경로로 쓴다(`sw_verifySourceIncludeRoots`).
 	sw_applyModuleLayerGate(${TARGET_NAME} ${ARG_KIND} ${ARG_MODULE_NAME} "${ARG_CONTENT_OWNER}")
+	if(ARG_KIND MATCHES "^(gameframework|kit|game)$")
+		sw_requireTemplateDefinitions(${TARGET_NAME}) # 부분(GameFramework 층)보다 먼저 — 부분이 옵션을 복사한다
+	endif()
 	if(ARG_LINK_PUBLIC)
 		target_link_libraries(${TARGET_NAME} PUBLIC ${ARG_LINK_PUBLIC})
 	endif()

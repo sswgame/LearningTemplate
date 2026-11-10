@@ -106,6 +106,7 @@ sw_findEngineCompressionLibraries(listEngineCompressionLib)
 # ------------------------------------------------------------------------------
 add_library(Engine ${coreLibType} ${ENGINE_SOURCES})
 sw_applyTargetLayerGate(Engine engine) # 타깃 경계 — Engine 은 GameFramework · Editor · 호스트를 보지 못한다. 층 부분 · Jolt 오브젝트는 이 include 자리를 복사한다
+sw_requireTemplateDefinitions(Engine) # `.inl` 누락을 링크가 아니라 컴파일에서 — 층 부분 · Jolt 오브젝트도 이 옵션을 복사한다
 
 # 핫 리로드 ABI 스탬프 — Engine 이 자기 헤더 지문을 박는다(`Engine/Module/EngineABIStamp.cpp`). 모듈도 같은 값을 박는다.
 sw_defineEngineABIStamp()

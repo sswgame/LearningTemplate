@@ -97,6 +97,13 @@ namespace sw::editor
          * @return 렌더 타깃이 없거나 아직 그리지 않았거나 경로가 비어 있으면 false 이고 아무것도 요청하지 않습니다.
          */
         [[nodiscard]] bool requestImageFile( string_view path );
+        /**
+         * @brief 처리한 이미지 쓰기 요청 수입니다(성공 · 실패 모두 — `requestImageFile` 앞에 읽어 두고 바뀌면 그 뒤 요청이 끝났다).
+         * @details 렌더 스레드 창구(`RenderThread`)를 .cpp 에만 둔다 — 이 헤더를 읽는 에디터 확장(게임 GPU 게이트 안)이 RHI 헤더를 전이로 보지 않게.
+         */
+        static uint32 getCompletedImageFileSerial();
+        /** @brief 마지막으로 처리한 이미지 쓰기 요청의 경로입니다. 실패했거나 다른 요청이 덮었으면 내 경로와 다르다. */
+        static string getLastImageFilePath();
 
         /** @brief 오빗 카메라를 정합니다. 각은 라디안입니다. */
         void setOrbit( const float3& target, float32 distance, float32 yaw, float32 pitch );

@@ -8,6 +8,7 @@
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
+#include "Editor/Common/GUI/Panel/EditorPreviewViewport.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
@@ -38,7 +39,6 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/EnumName.h"
-#include "Engine/Renderer/RenderThread.h"
 #include "Engine/Scene/Scene.h"
 
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/BodySurfacePick.h"
@@ -2187,7 +2187,7 @@ namespace sw::editor
         if ( _document.canAttachThumbnail() == false )
             return; // 까닭은 상태 줄에 남았다
         const string imagePath = CharacterEditorLocalStore::makeCaptureImagePath();
-        const uint32 serial    = RenderThread::getCompletedScreenshotSerial(); // 요청 전에 읽는다 - 이 값이 바뀌면 그 뒤에 처리한 요청이다
+        const uint32 serial    = EditorPreviewViewport::getCompletedImageFileSerial(); // 요청 전에 읽는다 - 이 값이 바뀌면 그 뒤에 처리한 요청이다
         const bool   bReady    = FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( imagePath ) ) && getPreviewViewport().requestImageFile( imagePath );
         if ( bReady == false )
         {
@@ -2202,13 +2202,13 @@ namespace sw::editor
 
     void CharacterEditorPanel::pollThumbnailCapture()
     {
-        if ( _thumbnailCapturePath.empty() || RenderThread::getCompletedScreenshotSerial() == _thumbnailCaptureSerial )
+        if ( _thumbnailCapturePath.empty() || EditorPreviewViewport::getCompletedImageFileSerial() == _thumbnailCaptureSerial )
             return;
         const string imagePath = std::move( _thumbnailCapturePath );
         _thumbnailCapturePath.clear();
         vector<uint8> pngBytes;
         // 다른 요청이 이 요청을 덮었거나(앞 요청이 남아 있으면 덮어쓴다) 쓰기에 실패하면 마지막 경로가 다르다.
-        const bool bCaptured = RenderThread::getLastScreenshotPath() == imagePath && FileUtil::readFile( imagePath, pngBytes ) && pngBytes.empty() == false;
+        const bool bCaptured = EditorPreviewViewport::getLastImageFilePath() == imagePath && FileUtil::readFile( imagePath, pngBytes ) && pngBytes.empty() == false;
         if ( FileUtil::exists( imagePath ) && FileUtil::removeFile( imagePath ) == false )
             SW_LOG_WARNING_ID( "CharacterEditorPanel.CharacterEditorThumbnailCapture", "Character Editor: the thumbnail capture file %# could not be removed", imagePath.c_str() );
         if ( bCaptured == false )

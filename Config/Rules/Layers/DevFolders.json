@@ -1,0 +1,9 @@
+{
+    "_comment": "개발 전용 단위 폴더(`Dev/`)를 둘 수 있는 자리 — 읽는 곳은 cmake/Engine/UnbuiltSources.cmake. 배포 구성은 여기 적은 자리의 `Dev/` 만 짓지 않고(`SW_DEV_ONLY_SOURCE_PATTERNS`), 표 밖 `Source/` 에 `Dev/` 폴더가 있으면 configure 가 멈춘다. 개발 기능은 Source/DevTools/(언리얼 Developer 모듈 자리)로 — DevTools 가 볼 수 없는 모듈 안만 까닭과 함께 적는다. 값이 `Dev/` 로 끝나면 그 폴더 하나, 아니면 그 아래 어느 `Dev/` 든이다. 옮기고 나면 줄을 지운다.",
+    "_devFolderAllowed": {
+        "Source/Games/": "게임 모듈의 자동 플레이 · 스트레스 시험 — DevTools 가 게임을 알면 의존이 거꾸로다(게임은 DevTools 를 못 본다)",
+        "Source/App/Dev/": "실행 중 백엔드 교체 — 에디터 모듈 재생성이 App 전용 EditorModuleManager 를 알아야 한다(DevTools 는 App 을 못 본다). DevTools 로 옮기려면 엔진에 모듈 교체 인터페이스를 새로 둬야 하는데 배포(SW_SHIPPING)에서는 쓰지 않는 창구라 두지 않는다(사용자 결정 2026-11-08) — App/Dev 는 배포에서 빠진다",
+        "Source/GameFramework/Runtime/Foundation/GameData/Dev/": "gamesettings 실행 인자 덮어쓰기(IGameSettingsOverride) — GameFramework 내부 형식이라 DevTools 가 볼 수 없다(TargetLayers devtools 게이트)",
+        "Source/Engine/Graphics/Material/Dev/": "머티리얼 그래프 컴파일러 — REFLECT 에셋 형식이라 Engine 리플렉션 단계가 필요하고 헤드리스 셰이더 쿠커(Renderer/Cook)가 부른다. 언리얼도 머티리얼 컴파일러는 Engine(WITH_EDITOR)"
+    }
+}

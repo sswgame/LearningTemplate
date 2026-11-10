@@ -267,6 +267,16 @@ namespace sw::editor
         return true;
     }
 
+    uint32 EditorPreviewViewport::getCompletedImageFileSerial()
+    {
+        return RenderThread::getCompletedScreenshotSerial();
+    }
+
+    string EditorPreviewViewport::getLastImageFilePath()
+    {
+        return RenderThread::getLastScreenshotPath();
+    }
+
     bool EditorPreviewViewport::hasFloor() const
     {
         const GameObjectManager* pManager = _pScene != nullptr ? _pScene->getObjectManager() : nullptr;

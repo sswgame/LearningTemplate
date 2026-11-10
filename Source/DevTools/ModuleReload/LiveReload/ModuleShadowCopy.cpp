@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "ModuleManager/Dev/LiveReload/ModuleShadowCopy.h"
+#include "DevTools/ModuleReload/LiveReload/ModuleShadowCopy.h"
 
 #include "Core/Concurrency/thread.h"
 #include "Core/File/FileUtil.h"
@@ -9,10 +9,10 @@
 #include "Core/Process/Process.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Module/EngineABIStamp.h"
+#include "DevTools/ModuleReload/LiveReload/ModuleLibraryPatch.h"
+#include "DevTools/ModuleReload/LiveReload/ShadowCopyName.h"
 
-#include "ModuleManager/Dev/LiveReload/ModuleLibraryPatch.h"
-#include "ModuleManager/Dev/LiveReload/ShadowCopyName.h"
+#include "Engine/Module/EngineABIStamp.h"
 
 namespace sw
 {

@@ -158,7 +158,11 @@ namespace sw
 
         // 0. 호스트 범위를 먼저 세운다 — 엔진 범위의 부모다. 엔진의 `ModuleLoadStage` 기동 단계가 여기서 모듈 라이브러리 창구를 찾아 타입 공급자 모듈을 올리고
         //    (이 App 의 `loadModuleLibraries`), `ModuleUnloadStage` 종료 단계가 같은 창구로 모듈 DLL 을 내린다.
-        if ( _launch.initializeHostScope( SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &App::loadModuleLibraries, this ), "App" ) == false )
+        //    개발 계층(핫 리로드 · 개발 도구)은 DevTools.dll 이 구현한다 — ModuleManager 는 DevTools 를 보지 않아 호스트가 만들어 넘긴다. 배포는 짓지 않는다.
+        unique_ptr<IHostDevLayer> pDevLayer;
+        if constexpr ( build::kShipping == false )
+            pDevLayer = makeHostDevLayer();
+        if ( _launch.initializeHostScope( SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &App::loadModuleLibraries, this ), "App", std::move( pDevLayer ) ) == false )
             return false;
         // 시동 단계별 시간(측정만 한다 — 시동 요약 로그의 재료).
         StartupTimings timings{};

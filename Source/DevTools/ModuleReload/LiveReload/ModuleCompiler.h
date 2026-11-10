@@ -1,5 +1,5 @@
 /**
- * @file ModuleManager/Dev/LiveReload/ModuleCompiler.h
+ * @file DevTools/ModuleReload/LiveReload/ModuleCompiler.h
  * @brief 에디터 안에서 C++ 모듈을 백그라운드로 비동기 컴파일하는 구현입니다(App 계층).
  */
 #pragma once
