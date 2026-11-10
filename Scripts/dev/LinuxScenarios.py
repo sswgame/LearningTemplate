@@ -56,6 +56,9 @@ WALL_SCALE = '4'  # 소프트웨어 렌더링이라 벽시계 시한을 늘린�
 PATH_LINUX = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'  # Windows PATH 가 끼면 Windows 도구를 잡는다
 
 
+GIT_SOURCE_ENV = 'LT_LINUX_GIT_SOURCE'  # 클론이 받아 올 git 폴더(WSL 경로) — Windows 에서 띄울 때 run_in_wsl 이 적는다
+
+
 def run_in_wsl(argv):
     """Windows 쪽: HEAD 를 refs/linux-verify 에 적고 같은 명령을 WSL 에서 띄운다."""
     command = argv[2:] if argv[:1] == ['--gpu'] else argv  # `--gpu <드라이버> all` 도 HEAD 를 옮긴다
@@ -64,6 +67,10 @@ def run_in_wsl(argv):
         subprocess.check_call(['git', 'update-ref', 'refs/linux-verify', head], cwd=REPO)
     env = dict(os.environ, MSYS_NO_PATHCONV='1', MSYS2_ARG_CONV_EXCL='*')
     wslRepo = to_wsl_path(REPO, env)
+    # 클론은 refs/linux-verify 를 공통 git 폴더에서 받는다 — 워크트리의 .git 은 Windows 경로를 적은 파일이라 WSL 의 git 이 열지 못한다.
+    commonDir = pathlib.Path(subprocess.check_output(['git', 'rev-parse', '--path-format=absolute', '--git-common-dir'], cwd=REPO, text=True).strip())
+    env[GIT_SOURCE_ENV] = to_wsl_path(commonDir, env)
+    env['WSLENV'] = ':'.join(filter(None, (os.environ.get('WSLENV'), GIT_SOURCE_ENV)))
     return subprocess.call(['wsl.exe', '-d', DISTRO, '--', 'python3', f'{wslRepo}/Scripts/dev/LinuxScenarios.py'] + argv, env=env)
 
 
@@ -160,7 +167,9 @@ def setup():
 
 def sync_clone():
     """클론을 refs/linux-verify 로 옮긴다. 옮기지 못하면 옛 빌드를 돌리지 않고 멈춘다."""
-    shell(f'cd {CLONE} && git fetch -q {WSL_REPO} refs/linux-verify && git reset -q --hard FETCH_HEAD', check=True)
+    # WSL 안에서 바로 부르면 이 체크아웃이 곧 원본이다(워크트리는 Windows 에서 불러야 공통 git 폴더를 안다 — run_in_wsl).
+    source = os.environ.get(GIT_SOURCE_ENV) or WSL_REPO
+    shell(f'cd {CLONE} && git fetch -q {source} refs/linux-verify && git reset -q --hard FETCH_HEAD', check=True)
     print('클론:', shell(f'git -C {CLONE} log -1 --format=%h', capture_output=True, text=True).stdout.strip())
 
 
