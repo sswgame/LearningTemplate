@@ -57,10 +57,9 @@
 
 GameObject/Component API 는 저작 · 수명 · 직렬화 층, 프레임 일은 접근을 선언한 잡, 핫 데이터는 종류별 SoA(완전 ECS 는 기각). 단계마다 빌드 · 테스트가 통과해야 하고, 이득이 흔들림 안이면 되돌린다.
 
-- **컴포넌트 틱의 컨텍스트 남은 틈:** 틱 · 서브틱은 `TickContext` 를 받고 `GameObject::getManager` 는 const 다(쓰기는 `getMutableManager`). 남은 것:
-  - 틱 본문 셋이 아직 `getMutableManager` 로 남의 오브젝트를 바로 쓴다 — `InteractorComponent`(초점 · 세션 도우미 다섯이 쓰기 가능한 매니저를 받는다), `GimmickCircuitComponent`(한 틱 안 여러 단계의 당기기 → 단계 → 작동기 쓰기 순서), `CharacterAppearanceComponent`(`applySurface` 가 부품 오브젝트 메시를 쓴다). 쓰기를 틱 뒤 작업으로 모으되 같은 프레임 순서(회로 단계 사이의 작동기 쓰기)를 지킬 자리를 정해야 한다.
-  - const 매니저의 찾기(`resolveGameObject` · `resolveComponent` · `findGameObjectBy…` · `forEach…`)가 쓰기 가능한 포인터를 돌려준다 — const 오버로드가 const 를 돌려주게 해야 남의 컴포넌트 직접 쓰기가 컴파일에서 막힌다(const 매니저를 받는 곳 약 690 곳을 빌드로 확인하며 옮긴다).
-  - `getMutableManager` 를 틱 안에서 부르는 것은 형식으로 막지 못한다(멤버 함수는 부르는 자리를 가리지 못한다) — 위 둘이 끝나면 `StructuralChangeBuffer::getTickingObject() != nullptr` 일 때 단언으로 멈춘다.
+- **컴포넌트 틱의 컨텍스트 남은 틈:** 틱 본문 · const 매니저 찾기 · 틱 중 `getMutableManager` 단언은 닫았다(작업자 브랜치 — 통합 빌드 · Debug 시나리오에서 컴파일과 단언 확인이 남았다). 남은 것:
+  - const 에서 쓰기 가능한 포인터가 새는 다른 길: `ComponentRegistry::View` · `CameraRegistry::getAll` · `TagIndex::findObjectsWithTags` · `GameObject::getComponent` · `Component::getOwner` 가 const 에서도 `T*` · `GameObject*` 를 낸다 — 같은 상수성 두 갈래로.
+  - 틱 단언은 같은 파일 호출만 훑어 닫았다 — 다른 파일 도우미 · 가상 함수로 닿는 길은 Debug 시나리오의 단언이 짚는다. 레인 프레임 시스템(`ISceneLaneFrameSystem`, 워커)은 틱 표지를 세우지 않아 단언 밖이다.
 - **서비스 갱신 병렬화:** 같은 단계 서비스 갱신을 접근이 겹치지 않는 것끼리 워커로 — 본문의 게임 스레드 전용 API 를 서명으로 먼저 가린다.
 - **SoA 다음 사용자:** 캐릭터 컨트롤러 3D · 2D 입력(`_commandLock` + 이동 · 점프 · 루트 모션 대기)을 `ComponentDataStore` 페이지로, 군중(`NavAgentCrowdSync`)의 에이전트별 `setWorldPosition` 을 `queuePoseWrite` · `applyTransformBatch` 일괄 쓰기로.
 - **공간 질의:** 근접 기믹 · 감지 · 넷 관심 격자를 `SceneSpatialGrid` 층으로 옮길지 측정 뒤.
