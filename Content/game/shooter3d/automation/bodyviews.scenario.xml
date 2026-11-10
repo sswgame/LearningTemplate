@@ -65,6 +65,7 @@
 	<Wait frames="60"/>
 	<Expect watch="Shooter3D.GunJerkMax" atMost="0.01"/>
 	<Expect watch="Shooter3D.HandReachError" atMost="0.03"/>
+	<Wait frames="1"/>
 	<Release slot="Key.W"/>
 	<DevCommand line="camera.preset firstperson"/>
 	<Wait frames="20"/>
@@ -72,6 +73,7 @@
 	<Wait frames="60"/>
 	<Expect watch="Shooter3D.GunJerkMax" atMost="0.01"/>
 	<Expect watch="Shooter3D.HandReachError" atMost="0.03"/>
+	<Wait frames="1"/>
 	<Release slot="Key.W"/>
 	<Wait frames="5"/>
 	<ExpectImage file="firstperson_level.ppm" golden="firstperson_level"/>

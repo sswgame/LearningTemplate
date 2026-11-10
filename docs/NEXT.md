@@ -39,10 +39,6 @@
 
 ### 4. Shooter3D 총 (사용자 지적)
 
-- **소총 자세:** 두 손 층 · 리타깃 프로필 · `WeaponDef::_bTwoHanded` 는 main 에 있지만 `weapons.xml` 의 `twoHanded` 는 꺼 두었다 — 켜면 KayKit 2h 조준 클립이 UBC 에서 조준 자세가 아니라(왼손이 앞손잡이를 놓고 펴짐 · 1 인칭 하체 빠짐) shooter3d 골든이 진다. 작업자가 리타깃 팔 사슬을 고치는 중(대안: Quaternius Toon Shooter Game Kit `Character_Soldier` — 묶음 페이지 CC0 확인 먼저) → 켜고 손 소켓 `Gun` 회전을 사진으로 맞춤 → 골든 다시.
-- **판정은 들어왔다(값 미측정):** `bodyviews` 가 `Shooter3D.HandReachError`(켜진 2 본 IK 노드의 끝 ↔ 목표 거리 최댓값 — 리그 노드 출력 `reach_error`) ≤ 0.03 m 를 1인칭 정지 · 3인칭 걷기 · 1인칭 걷기(소총)에서, `Shooter3D.GunJerkMax`(걷는 동안 몸 공간 총 위치 2 차 차분 최댓값) ≤ 0.01 m 를 걷기 둘에서 본다. 문턱은 짐작이다 — 통합 실행의 값으로 맞춘다. `-gv_shooterMotionTrace` 는 UBC 뼈(pelvis · spine_03 · hand_r · hand_l)와 시점 총 · 몸 총 · 카메라 월드 위치를 적는다(이전 기록은 KayKit 뼈 이름이라 뼈 칸이 모두 0 이었다).
-- **1 인칭 왼손:** 시점 총의 SupportHand 에 왼손이 닿지 않는다. 가설(코드 값으로 셈, 실행 미확인): 시점 총은 카메라 자식 (0.16, -0.15, 0.42) · 배율 0.5 라 소총 SupportHand 가 카메라 앞 0.61 m · 오른쪽 0.16 m 인데, 몸 왼어깨는 눈 왼쪽 · 뒤라 거리가 UBC 팔(0.55 m)보다 길다 — 팔이 목표 쪽으로 곧게 뻗고 손이 조준기 근처에 멈춘다. 확인: bodyviews 첫 `HandReachError` 값(0.2 m 안팎이면 가설대로). 고칠 자리: 시점 총을 몸이 닿는 자리로(언리얼 True First Person — 총을 손에 달고 상체가 피치를 따른다) 옮기거나 `_viewModelOffset` 을 당긴다. 산탄총도 같은 값으로 본다.
-- **걸을 때 총이 떨린다:** 원인 미확인. 가설 둘 — ① 몸 리그가 시점 총 소켓(카메라 자식 `ViewWeapon`)을 읽는 때(`PoseModifierComponent::prepareFrame`)가 카메라 · 몸 자리가 정해지기 전이면 손이 총보다 한 프레임 늦는다(1인칭 걷기의 `HandReachError` 가 서 있을 때보다 크면 이쪽), ② 3인칭 견착 목표(TwoHandHold, spine_03 기준)가 걷기 클립의 상체 흔들림을 그대로 받는다(3인칭 걷기의 `GunJerkMax`). 기록으로 프레임별 대조: `App -scenario=game/shooter3d/automation/bodyviews.scenario.xml -gv_shooterMotionTrace=<경로>`.
 - **소총 자세 클립(선택):** 지금은 리그 IK 견착(`ubc_player_body.rig.xml` TwoHandHold). Toon Shooter Game Kit 구글 드라이브는 2026-11-11 에도 "Quota exceeded". 대체 CC0 출처: poly.pizza "SWAT"(Quaternius, CC0 1.0, `https://static.poly.pizza/713f6535-f4f3-4367-a4c6-ced126ae0936.glb` — `Idle_Gun` · `Idle_Gun_Pointing` · `Idle_Gun_Shoot` · `Gun_Shoot` · `Run_Shoot`, 손가락 뼈 있음, 뼈 이름 Hips · Chest · UpperArm.L …). 판단: 상용(Lyra · ALS)은 쥔 자세 클립 + 왼손 IK 라 들이는 쪽이 길게 낫다 — `models_raw/quaternius` 에 넣고 UBC 로 리타깃해 상체 층(Aim)으로 쓰고, IK 견착은 손 자리 보정으로 남긴다. 실행으로 사진을 봐야 해서 이번에 하지 않았다.
 
 ### 5. 작업자 · 설계 문서가 남긴 일

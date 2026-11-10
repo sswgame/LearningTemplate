@@ -3,11 +3,16 @@
      UBC 뼈의 로컬 축을 가정하지 않으려고 조준 축은 모델 공간(+Z 앞, aim_axis_in_model)으로 적는다.
      두 손 무기(weapons.xml twoHanded)는 슬롯 TwoHandHold 가 켠다: 상체를 오른쪽으로 돌려 왼어깨를 내밀고(TwoHandTorso), 오른손을 가슴 앞 견착 자리(spine_03 기준)에 총열이 앞(+Z)을 보게 두면(RightHandHold),
      왼손이 총의 SupportHand 를 잡는다(LeftHandGrip). 상체 층(권총 클립)은 손가락 쥠과 반동만 준다 — 소총을 쥐는 UAL 클립이 없고 KayKit 2h_ranged 는 두 손을 몸 양옆으로 0.75 m 벌린다.
-     값은 사진으로 맞췄다: 바뀐 상체 층이면 spine_03 회전이 달라지니 다시 잰다(총열 방향 = 오른손 → SupportHand). -->
+     값은 사진으로 맞췄다: 바뀐 상체 층이면 spine_03 회전이 달라지니 다시 잰다(총열 방향 = 오른손 → SupportHand).
+     1인칭(슬롯 FirstPersonHands)은 두 손이 카메라 자식인 시점 총(ViewWeapon)의 Grip · SupportHand 를 잡는다. 시점 총은 카메라 앞 0.42 m 라 소총 SupportHand 가
+     서 있는 몸의 왼어깨에서 팔 길이(0.55 m)보다 0.17 m 멀다 — ViewTorso 가 상체를 숙이고(20 도) 돌려(30 도) 왼어깨를 총 쪽으로 낸다(언리얼 True First Person 의
+     1인칭 몸 보정 자리). 머리를 숨겨 1인칭에서는 돌린 상체가 거의 보이지 않는다. 시점 총을 당기면 총이 화면 아래로 빠져 그 길은 버렸다.
+     값은 bodyviews 의 Shooter3D.HandReachError(≤ 0.03 m)와 아래 보기 사진으로 맞췄다. -->
 <RigAsset>
 	<targets>
 		<item name="LookTarget" object="LookSource" translation="0,0,10" />
 		<item name="TorsoTurn" bone="spine_01" rotation="0,10,0" />
+		<item name="ViewTorsoTurn" bone="spine_01" rotation="20,30,0" />
 		<item name="TwoHandHold" bone="spine_03" translation="0.032,0.039,0.096" rotation="4,-135,9" />
 		<item name="TwoHandElbow" bone="spine_03" translation="0.440,-0.222,0.210" />
 		<item name="Grip" skeletalMesh="MainHand" socket="SupportHand" space="hand_r" />
@@ -36,6 +41,7 @@
 				<item root="thigh_r" mid="calf_r" end="foot_r" />
 			</feet>
 		</item>
+		<item type="Rotation" name="ViewTorso" bone="spine_01" target="ViewTorsoTurn" weight_slot="FirstPersonHands" />
 		<item type="Rotation" name="TwoHandTorso" bone="spine_01" target="TorsoTurn" weight_slot="TwoHandHold" />
 		<item type="Aim" name="LookAt" bone="Head" target="LookTarget" aim_axis="0,0,1" aim_axis_in_model="true" max_degrees="70" max_lod="1">
 			<chain>
