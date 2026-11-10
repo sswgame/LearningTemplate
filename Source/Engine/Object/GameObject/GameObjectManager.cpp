@@ -4,7 +4,7 @@
  */
 #include "pch.h"
 
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Math/MathUtil.h"
@@ -551,6 +551,11 @@ namespace sw
                 listName.push_back( info._name );
         } );
         return listName;
+    }
+
+    bool GameObjectManager::isComponentOfType( const Component& component, const TypeInfo* pToType )
+    {
+        return isTypeDerivedFrom( component.findCachedTypeInfo(), pToType );
     }
 
     TypedHandleResult GameObjectManager::resolveTypedHandleResult( ComponentHandle handle, const TypeInfo* pToType ) const

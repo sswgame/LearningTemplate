@@ -10,7 +10,7 @@
 #include "Engine/Environment/Surface/SurfaceFootprintSystem.h"
 #include "Engine/Environment/Surface/SurfaceKind.h"
 #include "Engine/Environment/Surface/SurfaceStamp.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 
 using namespace sw;
 

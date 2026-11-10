@@ -9,7 +9,7 @@
 #include "Engine/Destruction/Fracture/FractureComponent.h"
 #include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Service/NetObjectTable.h"
 
 #include "GameFramework/Runtime/Gameplay/Gimmick/Genre/ShooterGimmicks.h"

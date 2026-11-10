@@ -7,7 +7,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 
 namespace sw
 {

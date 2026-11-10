@@ -16,7 +16,7 @@
 #include "Engine/Object/Component/TagComponent.h"
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Serialization/ObjectValidation.h"
 #include "Engine/Reflection/ReflectedValueWalk.h"
 #include "Engine/Reflection/Reflection.h"

@@ -12,7 +12,7 @@
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Renderer/RHISubsystem.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"

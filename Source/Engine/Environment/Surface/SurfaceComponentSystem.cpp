@@ -5,7 +5,7 @@
 #include "Engine/Environment/Surface/GroundSurfaceComponent.h"
 #include "Engine/Environment/Surface/SurfaceDeformMeshComponent.h"
 #include "Engine/Environment/Surface/SurfaceStampComponent.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 
 namespace sw
 {

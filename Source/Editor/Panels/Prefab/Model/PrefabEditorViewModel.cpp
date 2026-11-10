@@ -17,7 +17,7 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Scene/Scene.h"
 

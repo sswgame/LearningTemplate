@@ -13,7 +13,7 @@
 #include "Engine/Character/Hit/RagdollComponent.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"

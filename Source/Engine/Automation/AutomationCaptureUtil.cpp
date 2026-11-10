@@ -6,7 +6,7 @@
 #include "Engine/Environment/Foliage/FoliageComponent.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/View/ScreenshotRequestQueue.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Presentation/IEngineRenderDriver.h"
 #include "Engine/Scene/SceneManager.h"
 

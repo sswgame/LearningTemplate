@@ -13,6 +13,7 @@
 
 #include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Navigation/Component/NavMeshAgentComponent.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Physics/Component/CharacterController2DComponent.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"

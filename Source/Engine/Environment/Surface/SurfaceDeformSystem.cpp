@@ -13,7 +13,7 @@
 #include "Engine/Environment/EnvironmentUtil.h"
 #include "Engine/Environment/Surface/SurfaceKind.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 
 namespace sw
 {

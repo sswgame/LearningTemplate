@@ -15,7 +15,7 @@
 #include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Object/GameObject/Service/ScenePreviewPolicy.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"

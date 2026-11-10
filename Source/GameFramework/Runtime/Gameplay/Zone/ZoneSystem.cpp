@@ -2,7 +2,7 @@
 
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneSystem.h"
 
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 
 #include "GameFramework/Runtime/Gameplay/Zone/JumpEscapeReactionComponent.h"
