@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Container/span.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
@@ -34,13 +35,16 @@ namespace sw
     /** @brief 피해 사건 하나입니다. */
     struct SW_API DestructionDamageEvent
     {
-        float3                _position{};      ///< 중심이다(메시 공간).
-        float3                _direction{};     ///< 맞은 방향이다(메시 공간, 단위 벡터). 폭발은 쓰지 않는다(바깥쪽으로 향한다).
-        float32               _strain{ 0.0f };  ///< 중심의 변형이다.
-        float32               _radius{ 0.0f };  ///< 감쇠 반경이다(미터). 0 이면 잎 하나만 맞는다.
-        float32               _impulse{ 0.0f }; ///< 떨어진 조각에 줄 충격량이다(뉴턴초). 런타임만 쓴다.
-        int32                 _leafHint{ -1 };  ///< 맞은 잎이다(광선이 고른 것). 있으면 그 잎은 감쇠 없이 `_strain` 을 받는다.
-        uint32                _groupID{ 0 };    ///< 이 그룹의 잎만 맞는다(떨어져서 다른 곳에 있는 덩어리를 맞힌 경우). 0 이면 모든 잎이 대상이다.
+        /** @brief 잎 힌트가 없다는 값입니다(네트워크로 그대로 보내는 칸이라 optional 로 두지 않는다 — `DestructionReplication`). */
+        static constexpr int32 kNoLeafHint = constant::invalid_index::kInt32;
+
+        float3                _position{};              ///< 중심이다(메시 공간).
+        float3                _direction{};             ///< 맞은 방향이다(메시 공간, 단위 벡터). 폭발은 쓰지 않는다(바깥쪽으로 향한다).
+        float32               _strain{ 0.0f };          ///< 중심의 변형이다.
+        float32               _radius{ 0.0f };          ///< 감쇠 반경이다(미터). 0 이면 잎 하나만 맞는다.
+        float32               _impulse{ 0.0f };         ///< 떨어진 조각에 줄 충격량이다(뉴턴초). 런타임만 쓴다.
+        int32                 _leafHint{ kNoLeafHint }; ///< 맞은 잎이다(광선이 고른 것). 있으면 그 잎은 감쇠 없이 `_strain` 을 받는다.
+        uint32                _groupID{ 0 };            ///< 이 그룹의 잎만 맞는다(떨어져서 다른 곳에 있는 덩어리를 맞힌 경우). 0 이면 모든 잎이 대상이다.
         DestructionDamageKind _kind{ DestructionDamageKind::Point };
 
         // 피해 계산 도우미입니다. 전부 static 입니다.

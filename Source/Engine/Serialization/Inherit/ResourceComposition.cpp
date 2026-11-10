@@ -316,8 +316,8 @@ namespace sw
 
     bool ResourceDigestComparer::addPeerLine( int32 peer, const ResourceDigestEntry& entry, int64 nowNanoseconds )
     {
-        const int64 suspectStartTime = _composition.isDigestMismatch( entry ) ? nowNanoseconds : -1;
-        uint32      lineCount        = 0;
+        const optional<int64> suspectStartTime = _composition.isDigestMismatch( entry ) ? optional<int64>{ nowNanoseconds } : nullopt;
+        uint32                lineCount        = 0;
         for ( PeerLine& line : _listLine )
         {
             if ( line._peer != peer )
@@ -353,21 +353,21 @@ namespace sw
         {
             const bool bChanged = listChanged.empty() == false && VectorUtil::containsIf( listChanged, [&line]( const ResourceDigestEntry& changed )
             { return changed._assetID == line._entry._assetID; } );
-            if ( ( bChanged || line._suspectStartTime >= 0 ) == false )
+            if ( ( bChanged || line._suspectStartTime.has_value() ) == false )
                 continue;
             if ( _composition.isDigestMismatch( line._entry ) == false )
             {
-                line._suspectStartTime = -1;
+                line._suspectStartTime = nullopt;
                 continue;
             }
-            if ( line._suspectStartTime < 0 )
+            if ( line._suspectStartTime.has_value() == false )
                 line._suspectStartTime = nowNanoseconds;
-            if ( nowNanoseconds - line._suspectStartTime >= graceNanoseconds )
+            if ( nowNanoseconds - *line._suspectStartTime >= graceNanoseconds )
             {
                 ResourceDigestMismatch& mismatch = outListMismatch.emplace_back();
                 mismatch._peer                   = line._peer;
                 mismatch._assetID                = line._entry._assetID;
-                line._suspectStartTime           = -1;
+                line._suspectStartTime           = nullopt;
             }
         }
     }

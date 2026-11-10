@@ -131,8 +131,8 @@ namespace sw::editor
         const AnimationDebugState& state = _viewState._frameState;
         ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "FrameTS", TextArgumentList().addText( "label", _viewState._trackLabel.c_str() ).addInteger( "frameIndex", static_cast<int64>( _viewState._frameIndex ) ).addDecimal( "time", _viewState._frameTime, 3 ) ).c_str() );
         ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "StateS", TextArgumentList().addText( "stateName", state._stateName.empty() ? "-" : state._stateName.c_str() ).addDecimal( "stateTime", static_cast<float64>( state._stateTime ), 2 ) ).c_str() );
-        if ( state._spriteFrame >= 0 )
-            ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "SpriteFrame", TextArgumentList().addInteger( "spriteFrame", static_cast<int64>( state._spriteFrame ) ) ).c_str() );
+        if ( state._spriteFrame.has_value() )
+            ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "SpriteFrame", TextArgumentList().addInteger( "spriteFrame", static_cast<int64>( *state._spriteFrame ) ) ).c_str() );
         ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "RootMotion", TextArgumentList().addDecimal( "rootMotionTranslationX", static_cast<float64>( state._rootMotionTranslation._x ), 3 ).addDecimal( "rootMotionTranslationY", static_cast<float64>( state._rootMotionTranslation._y ), 3 ).addDecimal( "rootMotionTranslationZ", static_cast<float64>( state._rootMotionTranslation._z ), 3 ) ).c_str() );
         ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "BonesPoseB", TextArgumentList().addInteger( "boneCount", static_cast<int64>( _viewState._boneCount ) ).addInteger( "poseByteCount", static_cast<int64>( _viewState._poseByteCount ) ) ).c_str() );
         if ( state._listNotify.empty() == false )

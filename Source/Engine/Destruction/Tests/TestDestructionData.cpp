@@ -113,7 +113,7 @@ SW_TEST_CASE( DestructionDamageTest, GroupFilterLimitsTheLeaves )
     SW_REQUIRE_EQUAL( listStrain.size(), size_t{ 1 } );
     SW_EXPECT_EQUAL( listStrain[0]._leaf, 2u );
 
-    event._leafHint = -1;
+    event._leafHint = sw::DestructionDamageEvent::kNoLeafHint;
     event._radius   = 10.0f;
     listStrain      = Util::computeStrain( graph, event, listGroup );
     SW_REQUIRE_EQUAL( listStrain.size(), size_t{ 2 } );

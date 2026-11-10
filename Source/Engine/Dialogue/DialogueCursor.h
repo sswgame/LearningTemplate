@@ -13,8 +13,8 @@ namespace sw
     /** @brief 노드 하나를 지날 때 필요한 입력입니다. 노드의 `DialogueNodeFlow` 가 어느 필드를 읽을지 정합니다. */
     struct DialogueStepInput
     {
-        int32 _choiceIndex{ -1 };                                                    /**< `WaitChoice` 노드에서 고른 선택지입니다. 음수면 기본 출력 핀으로 갑니다. */
-        bool  _bConditionMet{ false }; /**< `Condition` 노드의 조건식 결과입니다. */ ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        optional<int32> _choiceIndex;                                                          /**< `WaitChoice` 노드에서 고른 선택지입니다. 비어 있으면 기본 출력 핀으로 갑니다. */
+        bool            _bConditionMet{ false }; /**< `Condition` 노드의 조건식 결과입니다. */ ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 

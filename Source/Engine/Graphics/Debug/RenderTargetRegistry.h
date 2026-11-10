@@ -21,6 +21,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
@@ -45,11 +46,11 @@ namespace sw
         /** @brief 이 첨부에 쓰는 패스(파이프라인 순서, 깊이로 붙인 패스는 `이름 (depth)`)입니다. 그래픽 문제의 원인을 거슬러 찾는다. */
         vector<string> _listProducer;
         /** @brief 이 첨부를 읽는 패스(파이프라인 순서)입니다. */
-        vector<string> _listConsumer;
-        int32          _firstPass{ -1 };        ///< 이 첨부가 처음 쓰이는 패스 번호(파이프라인 순서 — 수명의 시작, 쓰이지 않으면 -1)
-        int32          _lastPass{ -1 };         ///< 마지막으로 쓰이는 패스 번호(수명의 끝)
-        uint8          _bDepth{ SW_FALSE };     ///< 깊이 첨부면 1입니다. 미리보기가 색으로 나오지 않습니다
-        uint8          _bPresented{ SW_FALSE }; ///< 화면에 나가는 첨부면 1입니다(Present 패스의 입력)
+        vector<string>  _listConsumer;
+        optional<int32> _firstPass;              ///< 이 첨부가 처음 쓰이는 패스 번호(파이프라인 순서 — 수명의 시작, 쓰이지 않으면 비어 있다)
+        optional<int32> _lastPass;               ///< 마지막으로 쓰이는 패스 번호(수명의 끝)
+        uint8           _bDepth{ SW_FALSE };     ///< 깊이 첨부면 1입니다. 미리보기가 색으로 나오지 않습니다
+        uint8           _bPresented{ SW_FALSE }; ///< 화면에 나가는 첨부면 1입니다(Present 패스의 입력)
     };
 } // namespace sw
 

@@ -68,14 +68,14 @@ namespace sw
     {
         inoutState._stateName   = _owner._graphPlayer.getCurrentStateName().empty() ? hashed_string( _owner._currentAnimation ) : _owner._graphPlayer.getCurrentStateName();
         inoutState._stateTime   = _owner._graphPlayer.getPlayer().getCurrentTime();
-        inoutState._spriteFrame = _owner._currentFrame;
+        inoutState._spriteFrame = _owner._currentFrame >= 0 ? optional<int32>{ _owner._currentFrame } : nullopt;
     }
 
     void SpriteAnimatorLODClient::applyRewindState( const AnimationDebugState& state )
     {
-        if ( state._spriteFrame < 0 )
+        if ( state._spriteFrame.has_value() == false )
             return;
-        _owner._currentFrame = MathUtil::clamp( state._spriteFrame, 0, MathUtil::max( _owner._totalFrames - 1, 0 ) );
+        _owner._currentFrame = MathUtil::clamp( *state._spriteFrame, 0, MathUtil::max( _owner._totalFrames - 1, 0 ) );
         _owner.updateSpriteFrame();
         _owner._bFrameStale = SW_TRUE; // 되감기가 끝나면 지금 프레임으로 다시 맞춘다
     }
