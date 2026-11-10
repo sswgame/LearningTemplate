@@ -15,9 +15,14 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/Registry/CameraRegistry.h"
+#include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
+#include "Engine/Object/GameObject/Registry/TagIndex.h"
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Object/GameObject/Tick/ISceneFrameSystem.h"
+#include "Engine/Object/GameObject/Tick/SceneTickScheduler.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -181,6 +186,25 @@ namespace sw
         runLane( context );
     }
 
+    /** @brief 매니저가 드는 씬 부품입니다(`GameObjectManager::_pState`). 틱 스케줄러가 계층 · 프리미티브 레지스트리를 참조하므로 그 뒤에 선다. */
+    struct GameObjectManager::State
+    {
+        SceneTransformHierarchy _transformHierarchy;
+        PrimitiveRegistry       _primitiveRegistry;
+        CameraRegistry          _cameraRegistry;
+        TagIndex                _tagIndex;
+        SceneTickScheduler      _tickScheduler;
+
+        State( GameObjectManager& manager, StructuralChangeBuffer& structuralChangeBuffer )
+            : _transformHierarchy{}
+            , _primitiveRegistry{}
+            , _cameraRegistry{}
+            , _tagIndex{}
+            , _tickScheduler{ manager, _transformHierarchy, _primitiveRegistry, structuralChangeBuffer }
+        {
+        }
+    };
+
     GameObjectManager::GameObjectManager()
         : GameObjectManager( SceneEngineServices::makeFromBoundEngine() )
     {
@@ -190,13 +214,9 @@ namespace sw
         : _pOwnedObjectIDAllocator{ services._pObjectIDAllocator == nullptr ? make_unique<ObjectIDAllocator>() : nullptr } // 엔진 범위가 없으면 이 매니저가 번호 공간의 주인이다
         , _pObjectIDAllocator{ services._pObjectIDAllocator != nullptr ? services._pObjectIDAllocator : _pOwnedObjectIDAllocator.get() }
         , _structuralChangeBuffer{}
-        , _transformHierarchy{}
-        , _primitiveRegistry{}
+        , _pState{ make_unique<State>( *this, _structuralChangeBuffer ) }
         , _componentRegistry{}
-        , _cameraRegistry{}
-        , _tagIndex{}
-        , _tickScheduler{ *this, _transformHierarchy, _primitiveRegistry, _structuralChangeBuffer }
-        , _store{ *this, _tickScheduler, _structuralChangeBuffer, *_pObjectIDAllocator }
+        , _store{ *this, _pState->_tickScheduler, _structuralChangeBuffer, *_pObjectIDAllocator }
         , _sceneScope{ services._pEngineSubsystems }
         , _listSceneService{}
         , _pFrameCamera{ nullptr }
@@ -277,6 +297,86 @@ namespace sw
         clear();
     }
 
+    TagIndex& GameObjectManager::getTagIndex()
+    {
+        return _pState->_tagIndex;
+    }
+
+    const TagIndex& GameObjectManager::getTagIndex() const
+    {
+        return _pState->_tagIndex;
+    }
+
+    SceneTransformHierarchy& GameObjectManager::getTransformHierarchy()
+    {
+        return _pState->_transformHierarchy;
+    }
+
+    const SceneTransformHierarchy& GameObjectManager::getTransformHierarchy() const
+    {
+        return _pState->_transformHierarchy;
+    }
+
+    void GameObjectManager::flushSceneTransforms()
+    {
+        _pState->_transformHierarchy.flush();
+    }
+
+    bool GameObjectManager::hasDirtySceneTransforms() const
+    {
+        return _pState->_transformHierarchy.hasDirty();
+    }
+
+    PrimitiveRegistry& GameObjectManager::getPrimitiveRegistry()
+    {
+        return _pState->_primitiveRegistry;
+    }
+
+    const PrimitiveRegistry& GameObjectManager::getPrimitiveRegistry() const
+    {
+        return _pState->_primitiveRegistry;
+    }
+
+    CameraRegistry& GameObjectManager::getCameraRegistry()
+    {
+        return _pState->_cameraRegistry;
+    }
+
+    const CameraRegistry& GameObjectManager::getCameraRegistry() const
+    {
+        return _pState->_cameraRegistry;
+    }
+
+    TickRegistry& GameObjectManager::getTickRegistry()
+    {
+        return _pState->_tickScheduler.getTickRegistry();
+    }
+
+    const TickRegistry& GameObjectManager::getTickRegistry() const
+    {
+        return _pState->_tickScheduler.getTickRegistry();
+    }
+
+    void GameObjectManager::markTickStagesDirty()
+    {
+        _pState->_tickScheduler.getTickRegistry().markAllDirty();
+    }
+
+    uint32 GameObjectManager::getStageTransformApplyCount() const
+    {
+        return _pState->_tickScheduler.getStageTransformApplyCount();
+    }
+
+    void GameObjectManager::notifyTransformDirtied()
+    {
+        _pState->_transformHierarchy.notifyDirtied();
+    }
+
+    uint64 GameObjectManager::getTransformGeneration() const
+    {
+        return _pState->_transformHierarchy.getGeneration();
+    }
+
     void GameObjectManager::clear()
     {
         // 프레임 시스템이 먼저다 — 지울 컴포넌트를 가리킬 수 있다. 컴포넌트의 해제는 시스템이 없으면 할 일이 없다.
@@ -284,9 +384,9 @@ namespace sw
         _listRetiredFrameSystem.clear();
         // 저장소가 오브젝트를 지우기 전에 미룬 일 · 루트 목록을 버린다 — 지울 오브젝트를 가리킨다.
         _structuralChangeBuffer.clear();
-        _transformHierarchy.clear();
+        _pState->_transformHierarchy.clear();
         _store.clear();
-        _tickScheduler.getTickRegistry().clear();
+        _pState->_tickScheduler.getTickRegistry().clear();
         markTickStagesDirty();
         // 컴포넌트가 바디 · 등록을 놓았다 — 서비스가 남은 것을 버린다(물리는 빈 씬과 쌓인 시간을 버리고 다음 씬은 처음 쓸 때 새로 만든다).
         for ( SceneServiceEntry& entry : _listSceneService )
@@ -524,10 +624,10 @@ namespace sw
 
     void GameObjectManager::runFrameStepAssetArrival( float32 deltaTime )
     {
-        if ( _primitiveRegistry.countAssetWaiters() == 0 )
+        if ( _pState->_primitiveRegistry.countAssetWaiters() == 0 )
             return;
         SW_PROFILE_SCOPE( "GT.Scene.tick.assetArrival" );
-        _primitiveRegistry.updateAssetWaiters( deltaTime );
+        _pState->_primitiveRegistry.updateAssetWaiters( deltaTime );
     }
 
     void GameObjectManager::runFrameStepFrameSystems( float32 deltaTime )
@@ -609,7 +709,7 @@ namespace sw
     {
         // 오브젝트가 없으면 컴포넌트 틱만 건너뛴다(적용 · 병합 · 파괴는 늘 돈다).
         if ( _store.hasMergedObjects() )
-            _tickScheduler.tickPhase( deltaTime, 0, static_cast<uint32>( TickGroup::PostPhysics ) );
+            _pState->_tickScheduler.tickPhase( deltaTime, 0, static_cast<uint32>( TickGroup::PostPhysics ) );
     }
 
     void GameObjectManager::runFrameStepApplyPrePhysics( float32 /*deltaTime*/ )
@@ -675,7 +775,7 @@ namespace sw
     void GameObjectManager::runFrameStepTickPostPhysics( float32 deltaTime )
     {
         if ( _store.hasMergedObjects() )
-            _tickScheduler.tickPhase( deltaTime, static_cast<uint32>( TickGroup::PostPhysics ), TickRegistry::kGroupCount );
+            _pState->_tickScheduler.tickPhase( deltaTime, static_cast<uint32>( TickGroup::PostPhysics ), TickRegistry::kGroupCount );
     }
 
     void GameObjectManager::runFrameStepApplyPostPhysics( float32 /*deltaTime*/ )
@@ -712,7 +812,7 @@ namespace sw
 
     uint32 GameObjectManager::applyTransformBatch( const SceneTransformWrite* pWrite, uint32 count )
     {
-        return _transformHierarchy.applyBatch( *this, pWrite, count );
+        return _pState->_transformHierarchy.applyBatch( *this, pWrite, count );
     }
 
     void GameObjectManager::queueTransformWrite( const SceneTransformWrite& write )
@@ -720,25 +820,25 @@ namespace sw
         // 순서 키는 이 쓰기를 낸 틱의 주인 오브젝트다 — 여러 오브젝트의 틱이 한 컴포넌트에 쓰면 id 가 큰 쪽이 이긴다. 같은 주인의 건끼리는 디스패치 순번이 선후다.
         const TickThreadState& threadState = StructuralChangeBuffer::getThreadState();
         const uint64           writerID    = ( threadState._pTickWriter != nullptr ) ? threadState._pTickWriter->getObjectID() : 0;
-        if ( _transformHierarchy.queueWriteParallel( write, writerID, threadState._dispatchOrdinal ) )
+        if ( _pState->_transformHierarchy.queueWriteParallel( write, writerID, threadState._dispatchOrdinal ) )
             return;
 
         // 이 스레드가 스크래치 슬롯을 받지 못했다(도우미 칸이 다 찬 드문 경우). 계층 변경과 같은 지연 경로로 가서, 틱 뒤에 한 건짜리 배치로 적용한다.
         // 그 건이 단계 끝에 적용되므로, 뒤에 부른 쓰기가 스테이지 경계에서 먼저 적용되어 이 건에 지지 않게 계층 변경으로 센다.
         deferHierarchyChange( [this, write]()
         {
-            _transformHierarchy.applyBatch( *this, &write, 1 );
+            _pState->_transformHierarchy.applyBatch( *this, &write, 1 );
         } );
     }
 
     void GameObjectManager::registerRootSceneComponent( SceneComponent* pComp )
     {
-        _transformHierarchy.registerRoot( pComp );
+        _pState->_transformHierarchy.registerRoot( pComp );
     }
 
     void GameObjectManager::unregisterRootSceneComponent( SceneComponent* pComp )
     {
-        _transformHierarchy.unregisterRoot( pComp );
+        _pState->_transformHierarchy.unregisterRoot( pComp );
     }
 
     void GameObjectManager::registerComponent( Component& comp )

@@ -10,8 +10,10 @@
 
 #include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Profiling/FrameProfiler.h"
 
 // DeferredDelegateQueue
