@@ -49,7 +49,7 @@ namespace sw::editor
 
         void rebuildSlots();
         void refresh();
-        /** @brief 메인 씬의 첫 선택이 바뀌었으면 디버그 대상(`DebugHUDRegistry::setTargetName`)을 그 오브젝트 이름으로 바꿉니다. 선택이 비면 대상을 그대로 둔다. */
+        /** @brief 메인 씬의 첫 선택이 바뀌었으면 디버그 대상(`DebugHUDRegistry::setTarget`)을 그 오브젝트로 바꿉니다. 선택이 비면 대상을 그대로 둔다. */
         void followSelection();
 
     private:

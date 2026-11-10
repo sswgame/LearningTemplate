@@ -13,6 +13,7 @@
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
 
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Module/ModuleEntryRegistrar.h"
 
 namespace sw
@@ -159,19 +160,19 @@ namespace sw
         static bool isReservedName( string_view name );
 
         /**
-         * @brief 대상을 보는 섹션(npc · movement · sequence · animrewind …)이 볼 오브젝트 이름을 정합니다(빈 값은 지운다). 개발 명령 `debug.target` 과 에디터 Gameplay Debugger 창(선택을 따른다)이 부른다.
+         * @brief 대상을 보는 섹션(npc · movement · sequence · animrewind …)이 볼 오브젝트를 정합니다(무효 핸들은 지운다). 개발 명령 `debug.target` 과 씬 뷰 HUD(선택을 따른다)가 부른다.
          * @details 디버그 소스 표와 그것들이 함께 보는 대상을 한 곳에 둔다 — 언리얼 Gameplay Debugger 가 카테고리 목록과 선택 액터를 한 컨트롤러에 두는 자리다.
-         *          shortcut: 대상은 이름이다(같은 이름이 여럿이면 첫 것), 이름이 겹치는 씬에서 고르기가 틀리면 오브젝트 id 로 바꾼다.
+         *          대상은 이름이 아니라 핸들이다 — objectID 는 다시 쓰지 않으므로 이름이 겹치는 씬에서도, 대상이 사라진 뒤 같은 이름의 새 오브젝트로도 엉뚱하게 풀리지 않는다.
          */
-        void setTargetName( string_view name );
-        /** @brief 지금 대상 이름입니다(비면 정하지 않았다 — 섹션마다 자기 컴포넌트를 가진 첫 오브젝트를 본다). */
-        string getTargetName() const;
+        void setTarget( GameObjectHandle target );
+        /** @brief 지금 대상입니다(무효면 정하지 않았다 — 섹션마다 자기 컴포넌트를 가진 첫 오브젝트를 본다). 활성 씬의 매니저로 푼다. */
+        GameObjectHandle getTarget() const;
 
     private:
         mutable mutex                                                     _mutex;                  ///< 등록 목록 · 판 번호를 지킨다(본문 호출은 잠금 밖)
         RegistrationList<const DebugHUDSectionRegistration> _registration SW_GUARDED_BY( _mutex ); ///< (순서, 이름) 순 · 이름은 대소문자 무시
         uint64 _revision                                                  SW_GUARDED_BY( _mutex );
-        string _targetName                                                SW_GUARDED_BY( _mutex ); ///< `setTargetName` 이 정한 대상(비면 없음)
+        GameObjectHandle _target                                          SW_GUARDED_BY( _mutex ); ///< `setTarget` 이 정한 대상(무효면 없음)
     };
 
     SW_SERVICE_SLOT( DebugHUDRegistry, Required );

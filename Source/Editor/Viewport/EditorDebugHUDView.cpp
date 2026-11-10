@@ -85,7 +85,7 @@ namespace sw::editor
             return;
         _followedObjectID = objectID;
         if ( pSelected != nullptr )
-            editor::getSubsystem<DebugHUDRegistry>().setTargetName( string_view( pSelected->getName().c_str() ) );
+            editor::getSubsystem<DebugHUDRegistry>().setTarget( GameObjectHandle::make( objectID ) );
     }
 
     void EditorDebugHUDView::refresh()

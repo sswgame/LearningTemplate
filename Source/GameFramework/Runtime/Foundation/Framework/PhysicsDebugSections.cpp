@@ -46,9 +46,8 @@ namespace sw
                     writer.addLine( "scene", "none" );
                     return;
                 }
-                const string&     targetName = GameplayDebugTarget::getTargetName();
-                const GameObject* pTarget    = targetName.empty() ? nullptr : pManager->findGameObjectByName( hashed_string( targetName ) );
-                writer.addLine( "target", pTarget != nullptr ? targetName : string( "all objects" ) );
+                const GameObject* pTarget = GameplayDebugTarget::findTargetObject( *pManager );
+                writer.addLine( "target", pTarget != nullptr ? string( pTarget->getName().c_str() ) : string( "all objects" ) );
                 vector<PhysicsContactLogEntry> listEntry;
                 pManager->getSubsystem<ScenePhysics>().collectContactLog( listEntry );
                 uint32 lineCount = 0;

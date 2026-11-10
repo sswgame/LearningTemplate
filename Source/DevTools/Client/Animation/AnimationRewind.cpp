@@ -230,12 +230,12 @@ namespace sw
                 const vector<AnimationRewindTrack>& listTrack = pRewind->getTracks();
                 if ( listTrack.empty() )
                     return;
-                const DebugHUDRegistry* const pRegistry  = engine::findSubsystem<DebugHUDRegistry>();
-                const string                  targetName = pRegistry != nullptr ? pRegistry->getTargetName() : string{};
-                const AnimationRewindTrack*   pTrack     = &listTrack[0];
+                const DebugHUDRegistry* const pRegistry = engine::findSubsystem<DebugHUDRegistry>();
+                const GameObjectHandle        target    = pRegistry != nullptr ? pRegistry->getTarget() : GameObjectHandle{};
+                const AnimationRewindTrack*   pTrack    = &listTrack[0];
                 for ( const AnimationRewindTrack& track : listTrack )
                 {
-                    if ( targetName.empty() == false && track._label == targetName )
+                    if ( target.isValid() && track._target.objectID() == target.objectID() )
                     {
                         pTrack = &track;
                         break;

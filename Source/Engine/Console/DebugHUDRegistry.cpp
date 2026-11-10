@@ -77,19 +77,6 @@ namespace sw
                 }
                 return true;
             }
-
-            /** @brief `debug.target [이름|clear]` — 대상을 보는 섹션의 대상을 정한다. 인자가 없으면 지금 대상을 알린다. */
-            static bool runTarget( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.size() > 1 || engine::areEngineServicesBound() == false )
-                    return false;
-                DebugHUDRegistry& registry = engine::getSubsystem<DebugHUDRegistry>();
-                if ( listArgument.empty() == false )
-                    registry.setTargetName( listArgument[0] == "clear" ? string_view{} : string_view( listArgument[0] ) );
-                const string targetName = registry.getTargetName();
-                outReply                = targetName.empty() ? string( "debug.target: none (each section shows the first object that has its component)" ) : "debug.target: " + targetName;
-                return true;
-            }
         };
     } // namespace
 } // namespace sw
@@ -152,7 +139,7 @@ namespace sw
         : _mutex{}
         , _registration{ "DebugHUDRegistry", RegistrationOrder::ByOrderThenName, true, NameCase::IgnoreCase }
         , _revision{ 0 }
-        , _targetName{}
+        , _target{}
     {
     }
 
@@ -227,16 +214,16 @@ namespace sw
         return _revision;
     }
 
-    void DebugHUDRegistry::setTargetName( string_view name )
+    void DebugHUDRegistry::setTarget( GameObjectHandle target )
     {
         ScopedLock<mutex> lock{ _mutex };
-        _targetName = string( name );
+        _target = target;
     }
 
-    string DebugHUDRegistry::getTargetName() const
+    GameObjectHandle DebugHUDRegistry::getTarget() const
     {
         ScopedLock<mutex> lock{ _mutex };
-        return _targetName;
+        return _target;
     }
 } // namespace sw
 
@@ -285,7 +272,5 @@ namespace sw
 {
     SW_DEV_COMMAND( DebugHUDPrint, "hud.print", "hud.print <section>", "Run one debug HUD section once and print its lines to the log (no HUD needed; Output Log and scenarios read it)",
                     &DebugHUDRegistryInternal::runPrint );
-    SW_DEV_COMMAND( DebugTarget, "debug.target", "debug.target [object|clear]",
-                    "Pick the object the target debug sections (npc, movement, ability, interaction, sequence, animrewind, ...) show", &DebugHUDRegistryInternal::runTarget );
     SW_ENGINE_SERVICE_SUBSYSTEM( DebugHUDRegistry, GameVisible, Services, (), SW_ENGINE_DEFAULT_FACTORY( DebugHUDRegistry ) );
 } // namespace sw
