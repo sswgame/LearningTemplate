@@ -14,6 +14,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionConstants.h"
 #include "Engine/Reflection/ReflectionEditorMetadata.h"
@@ -193,6 +194,7 @@ namespace sw
             pStoredInfo->clearAncestorDisplay();
             pStoredInfo->clearInheritedProperties();
         }
+        _inheritedCacheInvalidations.fetch_add( _mapFqnToClassType.size(), std::memory_order_relaxed );
         hashed_string shadowedFqn;
         if ( shortName.empty() == false && shortName != canonicalKey )
         {
@@ -312,6 +314,7 @@ namespace sw
 
     void TypeRegistry::registerPendingTypes( TypeRegistrar* pClassHead, EnumRegistrar* pEnumHead )
     {
+        SW_PROFILE_SCOPE( "Reflection.registerPendingTypes" );
         TypeRegistrar* pCurrClass = pClassHead;
         while ( pCurrClass != nullptr )
         {
@@ -462,6 +465,7 @@ namespace sw
 
     void TypeRegistry::populateLookupCaches() const
     {
+        SW_PROFILE_SCOPE( "Reflection.populateLookupCaches" );
         vector<const TypeInfo*> listType;
         {
             ScopedSharedLock<shared_mutex> lock{ _mutex };
@@ -586,6 +590,7 @@ namespace sw
             pInfo->clearAncestorDisplay();
             pInfo->clearInheritedProperties();
         }
+        _inheritedCacheInvalidations.fetch_add( _mapFqnToClassType.size(), std::memory_order_relaxed );
         s_typeTableGeneration.fetch_add( 1, std::memory_order_acq_rel );
     }
 

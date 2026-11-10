@@ -172,6 +172,9 @@ namespace sw
          */
         void populateLookupCaches() const;
 
+        /** @brief 지금까지 상속 캐시(`TypeInfo::clearInheritedProperties`)를 비운 타입 수의 누계입니다(계측 — `engine::registerModuleTypes` 가 모듈마다 차이를 남긴다). */
+        uint64 getInheritedCacheInvalidations() const { return _inheritedCacheInvalidations.load( std::memory_order_relaxed ); }
+
         /** @brief 등록된 모든 고유 TypeInfo를 순회합니다. */
         template <typename Func>
         void forEachType( Func&& func ) const
@@ -352,6 +355,8 @@ namespace sw
         MulticastDelegate<void( string_view )> _moduleObjectsDetached;
         /** @brief 모든 타입 공급자가 등록을 끝냈는지 나타냅니다(`markAllModuleTypesRegistered`). 기동 스레드가 쓰고 씬을 읽는 쪽이 읽습니다. */
         atomic<bool> _bAllModuleTypesRegistered;
+        /** @brief 상속 캐시를 비운 타입 수의 누계입니다(`getInheritedCacheInvalidations`). 잠금 안에서 더하고 아무 데서나 읽는다. */
+        atomic<uint64> _inheritedCacheInvalidations{ 0 };
     };
 
     SW_SERVICE_SLOT( TypeRegistry, Required );
