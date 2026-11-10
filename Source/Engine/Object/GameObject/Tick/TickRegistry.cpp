@@ -557,10 +557,13 @@ namespace sw
 
         // 선행 조건에 걸린 오브젝트(가진 쪽 · 가리켜진 쪽)가 바뀌었을 때만 스테이지를 다시 짓는다 — 스폰이 잦아도 사슬 밖이면 오르지 않는다.
         // 다시 지으면 쌓인 편집은 버려진다(`rebuildStages`). 아니면 이번 `refresh` 의 편집을 스테이지에 한 번에 적용한다.
+        const bool bStageChanged = bAll || _builtStageGeneration != _stageGeneration || _listStageRemoval.empty() == false || _listStageInsertion.empty() == false;
         if ( _builtStageGeneration != _stageGeneration )
             rebuildStages( manager );
         else
             flushStageEdits();
+        if ( bStageChanged )
+            refreshStageFunctions( manager.getSceneEngineServices()._pTickBatchRegistry );
         return bRefreshedAny;
     }
 
@@ -970,6 +973,20 @@ namespace sw
             else if ( index < listMain.size() && listMain[index]._pObject == pObj )
                 removeEntry( listMain, group, index );
             index = kNotInList;
+        }
+    }
+
+    void TickRegistry::refreshStageFunctions( TickBatchRegistry* pBatchRegistry )
+    {
+        // 스테이지 항목도 레인의 일괄 함수로 돈다(가상 호출 대신) — 스테이지 안은 한 오브젝트에 항목 하나라 순서는 바꾸지 않고, 디스패치가 같은 함수의 이웃 항목을 한 번에 넘긴다.
+        for ( TickStage& stage : _listStage )
+        {
+            stage._listItemFunction.resize( stage._listItem.size() );
+            for ( size_t index = 0; index < stage._listItem.size(); ++index )
+            {
+                const Component* pComp         = stage._listItem[index]._pComponent;
+                stage._listItemFunction[index] = pComp != nullptr ? resolveTypeDispatch( pBatchRegistry, pComp )._pFunction : &tickBatchVirtual;
+            }
         }
     }
 

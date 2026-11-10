@@ -130,11 +130,12 @@ namespace sw
      */
     struct TickStage
     {
-        vector<TickItem> _listItem;
-        vector<uint64>   _listItemObjectID;         ///< `_listItem` 과 같은 순서로, 항목마다 그 오브젝트의 id 다(증분 갱신이 오브젝트의 항목을 찾는다)
-        uint32           _level{ 0 };               ///< 이 스테이지가 속한 선행 조건 레벨이다(0 = 후보 사이에 기다릴 것이 없는 레벨, 순환의 남은 항목은 최댓값)
-        uint8            _group{ 0 };               ///< 이 스테이지 항목의 그룹이다(한 스테이지는 한 그룹)
-        uint8            _bApplyBefore{ SW_FALSE }; ///< 실행하기 전에 틱 중 트랜스폼 쓰기를 적용할지 나타낸다
+        vector<TickItem>          _listItem;
+        vector<uint64>            _listItemObjectID;         ///< `_listItem` 과 같은 순서로, 항목마다 그 오브젝트의 id 다(증분 갱신이 오브젝트의 항목을 찾는다)
+        vector<TickBatchFunction> _listItemFunction;         ///< `_listItem` 과 같은 순서로, 항목마다 그 타입의 일괄 함수다(`refresh` 끝이 채운다 — 가상 호출 대신)
+        uint32                    _level{ 0 };               ///< 이 스테이지가 속한 선행 조건 레벨이다(0 = 후보 사이에 기다릴 것이 없는 레벨, 순환의 남은 항목은 최댓값)
+        uint8                     _group{ 0 };               ///< 이 스테이지 항목의 그룹이다(한 스테이지는 한 그룹)
+        uint8                     _bApplyBefore{ SW_FALSE }; ///< 실행하기 전에 틱 중 트랜스폼 쓰기를 적용할지 나타낸다
     };
 } // namespace sw
 
@@ -308,6 +309,8 @@ namespace sw
         void removeWaveElement( GameObject* pObj, TickItem& item );
         /** @brief 이 그룹의 파도 키 (@p orderKey, @p ordinal) 파도입니다. 없으면 키 순 자리에 만듭니다. */
         TickWave& getOrCreateWave( uint32 group, uint8 orderKey, uint8 ordinal );
+        /** @brief 스테이지 항목마다 그 타입의 일괄 함수를 채웁니다(스테이지가 다시 지어지거나 편집된 `refresh` 끝). */
+        void refreshStageFunctions( TickBatchRegistry* pBatchRegistry );
         /** @brief 빈 일괄 목록 · 빈 파도를 걷습니다(모듈이 내려간 타입의 함수를 들고 있지 않게). 목록 안의 위치는 바뀌지 않는다. */
         void removeEmptyBatchLists();
         /** @brief 컴포넌트 타입의 레인 · 일괄 함수입니다. 타입마다 한 번 표에 묻고 기억합니다(표 세대가 바뀌면 `refresh` 가 비운다). */

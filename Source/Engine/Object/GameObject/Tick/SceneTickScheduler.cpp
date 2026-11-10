@@ -167,6 +167,7 @@ namespace sw
             struct StageTick
             {
                 const TickItem*          _pItem{ nullptr };
+                const TickBatchFunction* _pFunction{ nullptr }; ///< 항목마다 그 타입의 일괄 함수(`TickStage::_listItemFunction`)
                 SceneTransformHierarchy* _pHierarchy{ nullptr };
                 uint32                   _dispatchOrdinal{ 0 };
                 float32                  _deltaTime{ 0.0f };
@@ -186,9 +187,9 @@ namespace sw
                         GameObject* pOwner = pComp->getOwner();
                         if ( pOwner == nullptr )
                             continue;
-                        threadState._pTickingObject = pOwner;
-                        threadState._pTickWriter    = pOwner;
-                        runTickItem( _deltaTime, item );
+                        // 레인의 일괄 함수로 부른다(가상 호출 대신 — 등록한 타입은 한정 이름 호출). 함수가 틱 주인을 이 오브젝트로 둔다.
+                        const TickBatchElement element{ pComp, pOwner };
+                        _pFunction[index]( threadState, &element, 1, item._subTickID, _deltaTime );
                     }
                 }
             };
@@ -282,6 +283,7 @@ namespace sw
                     applyStageTransforms();
                 SceneTickSchedulerInternal::StageTick job{};
                 job._pItem           = stage._listItem.data();
+                job._pFunction       = stage._listItemFunction.data();
                 job._pHierarchy      = _pHierarchy;
                 job._dispatchOrdinal = ++_dispatchOrdinal;
                 job._deltaTime       = deltaTime;
