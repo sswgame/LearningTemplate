@@ -60,7 +60,7 @@ kRules: tuple[Rule, ...] = (
     Rule("platform-chains", "경계", "빠진 플랫폼을 컴파일 오류로 내지 않는 #if 사슬", "전처리 갈래는 형식이 막지 못한다", kCpp, "lint.PlatformChains:checkPlatformChains", exceptions="Config/Rules/Lint/PlatformChains.json"),
     # --- 모양(공통 틀이 있는데 손으로 다시 적은 것) ----------------------------------------------------------------------------
     Rule("cpp-shape", "모양", "선언 순서 · 깃발 칸 · 익명 네임스페이스 · 주인 우선 · 기반 하나", "합법 C++ 의 배치 규칙이다", kCpp, "lint.CppShape:checkCppShape", perFile=True, exceptions="Config/Rules/Lint/CppShapeExceptions.json"),
-    Rule("state-shape", "모양", "손으로 짝지은 writeState · readState( Archive& )", "Archive 를 받는 함수를 새로 짓는 것을 형식으로 막지 못한다", kCpp, "lint.StateShape:checkStateShape", perFile=True, exceptions="Config/Rules/Lint/StateShapeExceptions.json"),
+    Rule("state-shape", "모양", "손으로 짝지은 writeState · readState( Archive& )", "스냅샷(ComponentStateStore)은 serializeState 만 받지만, Archive 는 바이트 그릇이라 그것을 받는 멤버 짝을 새로 짓는 것은 형식으로 막지 못한다", kCpp, "lint.StateShape:checkStateShape", perFile=True),
     Rule("byte-read", "모양", "파일에서 읽은 개수를 믿고 할당 · LittleEndianUtil 직접 읽기", "vector::resize 는 어떤 수든 받는다", kCpp, "lint.ByteReadShape:checkByteReadShape", perFile=True, exceptions="Config/Rules/Lint/ByteReadRawFiles.json"),
     Rule("catalog-root", "모양", "게임 데이터 루트의 원소를 손으로 고르기", "findChild 는 어디서든 부를 수 있다", kCpp, "lint.CatalogRootShape:checkCatalogRootShape", perFile=True, exceptions="Config/Rules/Lint/CatalogRootLoopFiles.json"),
     Rule("common-shapes", "모양", "공통 기반을 두고 손으로 적은 모양(열거 이름 표 · 다시 읽기 대조 · id 를 버리는 입구 …)", "칸 이름 · switch 글자 · 부른 함수는 형식이 말하지 못한다", kCpp, "lint.CommonShapes:checkCommonShapes", exceptions="Config/Rules/Lint/CommonShapeExceptions.json"),

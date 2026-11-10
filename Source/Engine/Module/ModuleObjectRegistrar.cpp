@@ -4,15 +4,10 @@
 
 namespace sw
 {
-    ModuleObjectRegistrar*& ModuleObjectRegistrar::getHead()
-    {
-        static ModuleObjectRegistrar* s_pHead = nullptr;
-        return s_pHead;
-    }
+    SW_DEFINE_REGISTRATION_CHAIN( ModuleObjectRegistrar::getChain, ModuleObjectRegistrar )
 
     ModuleObjectRegistrar::ModuleObjectRegistrar()
-        : _pNext{ getHead() }
+        : _pNext{ getChain().pushFront( this ) }
     {
-        getHead() = this;
     }
 } // namespace sw

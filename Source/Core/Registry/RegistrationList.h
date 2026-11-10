@@ -912,7 +912,7 @@ namespace sw
 /**
  * @brief 정적 등록 목록을 함수 지역 정적으로 돌려주는 함수 @p getName 을 정의합니다(.cpp 에서 — 이미지마다 하나라 헤더에 두지 않는다).
  * @details 함수 정적이라 다른 TU · DLL 의 정적 등록자가 먼저 와도 비어 있는 채로 서고, 등록자보다 늦게 사라진다. 함수 정적 가변 변수는 이 매크로와
- *          `SW_DEFINE_LOCKED_REGISTRATION_LIST` · `SW_DEFINE_REGISTRATION_SLOT` 으로만 둔다(린트 `mutable-statics`) — 나머지 런타임 상태 · 정책 · 신호는 엔진 · 에디터 서브시스템이 든다.
+ *          `SW_DEFINE_LOCKED_REGISTRATION_LIST` · `SW_DEFINE_REGISTRATION_SLOT` · `SW_DEFINE_REGISTRATION_CHAIN`(할당 없는 침입형 사슬) 으로만 둔다(린트 `mutable-statics`) — 나머지 런타임 상태 · 정책 · 신호는 엔진 · 에디터 서브시스템이 든다.
  *          클래스 안에서는 앞에 `static` 을 붙인다(`static SW_DEFINE_REGISTRATION_LIST( getList, ... )`).
  * @param T 항목 형식입니다. 나머지 인자는 `RegistrationList` 생성자 인자(목록 이름 · 순서 · 이름 필수 · 대소문자 · 해제 함수)입니다.
  */

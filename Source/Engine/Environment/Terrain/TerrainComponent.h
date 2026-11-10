@@ -18,6 +18,7 @@
 #include "Engine/Environment/Terrain/TerrainMeshBuilder.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
 {
@@ -25,7 +26,6 @@ namespace sw
     class Material;
     class Texture2D;
     struct HeightfieldAsset;
-    class Archive;
     class GameObjectManager;
     class MeshInstanceBatch;
     class PrimitiveRegistry;
@@ -200,10 +200,12 @@ namespace sw
         const string& getCPUSplatPath( uint32 plane ) const { return _arrCPUSplatPath[plane]; }
 
         /**
-         * @brief 상태 스냅샷 계약(`ComponentStateStore`) — 마지막 `reloadTerrain` 뒤에 쓴 높이 · 스플랫을 씁니다. 쓴 것이 없으면 버전과 빈 표시만 씁니다.
+         * @brief 상태 스냅샷 계약(`ComponentStateStore`) — 마지막 `reloadTerrain` 뒤에 쓴 높이 · 구멍 · 스플랫을 씁니다(`writeState`). 쓴 것이 없으면 버전과 빈 표시만 씁니다.
          * @details 모듈 리로드와 백엔드 교체는 씬을 속성으로 복원하고 `onPostLoad` 가 디스크 에셋을 다시 읽으므로, 저장하지 않은 편집은 여기로만 넘어간다.
+         *          상태가 아니라 저장하지 않은 편집 버퍼라 사본에 읽지 않는다(`SW_DECLARE_STATE_IO_IN_PLACE`) — 읽기는 다시 읽은 지형에 편집 API(`writeHeights` ·
+         *          `replaceHeightfield` · `writeHoles` · `writeLayerWeights`)로 되돌려 쓰고, 맞지 않는 묶음은 알리고 거기서 멈춘다(앞 묶음은 쓴 채, 나머지는 디스크 값).
          */
-        void writeState( Archive& outArchive ) const;
+        SW_DECLARE_STATE_IO_IN_PLACE();
         /** @brief 마지막 `reloadTerrain` 뒤에 높이나 스플랫을 썼으면 true 입니다(`writeState` 가 싣는 것이 있다). 저장해도 다시 읽기 전까지는 true 로 남는다. */
         bool hasWrittenEdits() const { return _bHeightsWritten || _bHolesWritten || _splatRevision > 0; }
         /** @brief 상태 스냅샷 계약 — 다시 읽은 지형에 `writeState` 의 편집을 되돌려 씁니다. 크기가 맞지 않거나 읽지 못하면 알리고 디스크 값으로 둡니다. */
@@ -294,6 +296,12 @@ namespace sw
         void markSplatChunks( const TerrainSampleRect& texelRect );
         /** @brief 자기 스플랫 텍스처 둘(`_arrCPUSplatPath`)을 캐시에 돌려줍니다. 없으면 아무것도 하지 않습니다. */
         void releaseCPUSplat();
+        /** @brief `serializeState` 의 높이 묶음입니다. 읽을 때 맞지 않으면 알리고 아카이브를 실패로 남겨 false 입니다(뒤 묶음을 읽지 않는다). */
+        [[nodiscard]] bool serializeHeightEdits( StateIO& io );
+        /** @brief `serializeState` 의 구멍 묶음입니다. 읽을 때 맞지 않으면 알리고 아카이브를 실패로 남겨 false 입니다. */
+        [[nodiscard]] bool serializeHoleEdits( StateIO& io );
+        /** @brief `serializeState` 의 스플랫 묶음입니다(마지막 묶음). 읽을 때 맞지 않으면 알리고 아카이브를 실패로 남깁니다. */
+        void serializeSplatEdits( StateIO& io );
 
     private:
         PROPERTY( Category = "Terrain", DisplayName = "Heightfield", Tooltip = "Imported .heightfield asset" )

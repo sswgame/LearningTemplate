@@ -7,6 +7,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Registry/RegistrationChain.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Task/TaskManager.h"
 
@@ -34,12 +35,8 @@ namespace sw
             /** @brief 스피커 모드의 설정 값입니다(`AudioSpeakerMode` 순서). */
             static constexpr const utf8* kArrSpeakerModeName[] = { "auto", "stereo", "surround51", "surround71", "headphones" };
 
-            /** @brief 장치 백엔드 등록자 목록의 머리입니다(함수 정적 — 정적 초기화 순서와 무관하다). */
-            static const AudioBackendRegistrar*& getRegistrarHead()
-            {
-                static const AudioBackendRegistrar* s_pHead = nullptr;
-                return s_pHead;
-            }
+            /** @brief 장치 백엔드 등록자 사슬입니다(상수 초기화 — 정적 초기화 순서와 무관하다). */
+            static SW_DEFINE_REGISTRATION_CHAIN( getRegistrarChain, AudioBackendRegistrar )
         };
 
         /**
@@ -65,15 +62,13 @@ namespace sw
     AudioBackendRegistrar::AudioBackendRegistrar( const utf8* pName, CreateFunction pCreate )
         : _pName{ pName }
         , _pCreate{ pCreate }
-        , _pNext{ nullptr }
+        , _pNext{ IAudioServiceInternal::getRegistrarChain().pushFront( this ) }
     {
-        _pNext                                    = IAudioServiceInternal::getRegistrarHead();
-        IAudioServiceInternal::getRegistrarHead() = this;
     }
 
     const AudioBackendRegistrar* AudioBackendRegistrar::getHead()
     {
-        return IAudioServiceInternal::getRegistrarHead();
+        return IAudioServiceInternal::getRegistrarChain().getHead();
     }
 
     unique_ptr<IAudioService> IAudioService::create()

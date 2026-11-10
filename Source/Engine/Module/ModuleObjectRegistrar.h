@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Registry/RegistrationChain.h"
 
 namespace sw
 {
@@ -12,7 +13,7 @@ namespace sw
 
     /**
      * @class ModuleObjectRegistrar
-     * @brief 이미지의 정적 객체로 두면 링크 때 목록(`getHead`)에 달리고, 모듈을 올린 쪽이 걷어 모듈 이름과 함께 붙이며(`attach`), 내리기 전에 뗍니다(`detach`).
+     * @brief 이미지의 정적 객체로 두면 링크 때 목록(`getChain`)에 달리고, 모듈을 올린 쪽이 걷어 모듈 이름과 함께 붙이며(`attach`), 내리기 전에 뗍니다(`detach`).
      * @details 타입 등록자(`TypeRegistrar`) · 전역 변수 등록자와 같은 길이다(`engine::registerModuleTypes` · `unregisterModuleTypes`).
      *          만들 때 바로 레지스트리에 오르지 않으므로 핫 리로드가 새 이미지를 먼저 올려 두어도 옛 이미지의 같은 id 와 부딪히지 않고, 떼기는 이미지 코드가 아직
      *          살아 있고 로더 잠금 밖일 때 일어나 레지스트리가 그 등록으로 만든 인스턴스를 그 자리에서 거둔다 — 코드 주소로 고르는 일이 없다.
@@ -21,8 +22,8 @@ namespace sw
     class SW_API ModuleObjectRegistrar
     {
     public:
-        /** @brief 아직 아무도 걷어 가지 않은 등록자들의 목록 머리입니다(Engine 이미지가 가집니다). 걷어 간 쪽이 nullptr 로 비웁니다. 나중에 만든 것이 앞입니다. */
-        static ModuleObjectRegistrar*& getHead();
+        /** @brief 아직 아무도 걷어 가지 않은 등록자들의 사슬입니다(Engine 이미지가 가집니다). 걷어 간 쪽이 비웁니다(`takeAll`). 나중에 만든 것이 앞입니다. */
+        static RegistrationChain<ModuleObjectRegistrar>& getChain();
 
         ModuleObjectRegistrar( const ModuleObjectRegistrar& )            = delete;
         ModuleObjectRegistrar& operator=( const ModuleObjectRegistrar& ) = delete;

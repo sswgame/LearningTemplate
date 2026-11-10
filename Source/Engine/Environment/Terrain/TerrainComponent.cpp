@@ -576,122 +576,121 @@ namespace sw
         }
     }
 
-    void TerrainComponent::writeState( Archive& outArchive ) const
+    void TerrainComponent::serializeState( StateIO& io )
     {
-        outArchive << TerrainComponentInternal::kStateVersion;
-        const bool bHeights = _bHeightsWritten && _heightfield.isValid();
-        outArchive << bHeights;
-        if ( bHeights )
-        {
-            const vector<float32>& listHeight = _heightfield.getHeightSamples();
-            outArchive << _heightfield.getResolution();
-            outArchive << _bResolutionReplaced;
-            outArchive << static_cast<uint32>( listHeight.size() );
-            outArchive.writeBytes( listHeight.data(), listHeight.size() * sizeof( float32 ) );
-        }
-        const bool bHoles = _bHolesWritten && _heightfield.isValid();
-        outArchive << bHoles;
-        if ( bHoles )
-        {
-            outArchive << _heightfield.getResolution();
-            outArchive << _heightfield.getHoleCells(); // 비었으면 구멍 없음
-        }
-        const bool bSplat = _splatRevision > 0 && _heightfield.getSplatWidth() > 0;
-        outArchive << bSplat;
-        if ( bSplat )
-        {
-            outArchive << _heightfield.getSplatWidth();
-            outArchive << _heightfield.getSplatHeight();
-            outArchive << _heightfield.getSplatBytes();
-        }
-    }
-
-    void TerrainComponent::restoreState( vector<uint8>&& bytes )
-    {
-        Archive archive( bytes.data(), static_cast<uint64>( bytes.size() ) );
-        uint32  version{ 0 };
-        bool    bHeights{ false };
-        archive >> version >> bHeights;
-        if ( archive.isError() || version != TerrainComponentInternal::kStateVersion )
+        // 쓸 값으로 채운 지역 변수를 놓는다 — 읽을 때는 읽은 값으로 덮인다.
+        uint32 version  = TerrainComponentInternal::kStateVersion;
+        bool   bHeights = _bHeightsWritten && _heightfield.isValid();
+        io.value( version );
+        io.value( bHeights );
+        if ( io.isReading() && ( io.isOk() == false || version != TerrainComponentInternal::kStateVersion ) )
         {
             SW_LOG_WARNING_ID( "TerrainComponent.TerrainUnsavedEditState", "Terrain '%#': unsaved edit state (version %#) did not read - keeping the asset values", _heightfieldPath.c_str(), version );
+            io.fail();
             return;
         }
-        if ( bHeights )
+        if ( bHeights && serializeHeightEdits( io ) == false )
+            return;
+        bool bHoles = _bHolesWritten && _heightfield.isValid();
+        io.value( bHoles );
+        if ( bHoles && serializeHoleEdits( io ) == false )
+            return;
+        bool bSplat = _splatRevision > 0 && _heightfield.getSplatWidth() > 0;
+        io.value( bSplat );
+        if ( bSplat )
+            serializeSplatEdits( io );
+    }
+
+    bool TerrainComponent::serializeHeightEdits( StateIO& io )
+    {
+        uint32 resolution  = _heightfield.getResolution();
+        bool   bResized    = _bResolutionReplaced;
+        uint32 sampleCount = static_cast<uint32>( _heightfield.getHeightSamples().size() );
+        io.value( resolution );
+        io.value( bResized );
+        io.value( sampleCount );
+        Archive& archive = io.getArchive(); // 높이는 개수 뒤 날 float 바이트다(유한 값만 읽는다) — 칸 함수가 없는 코덱이다
+        if ( io.isWriting() )
         {
-            uint32 resolution{ 0 };
-            uint32 sampleCount{ 0 };
-            bool   bResized{ false };
-            archive >> resolution >> bResized >> sampleCount;
-            // 크기를 먼저 비교한다 — 맞지 않는 수로 버퍼를 잡지 않는다. 해상도가 달라도 되는 것은 크기를 바꾼 편집(`replaceHeightfield`)뿐이다 —
-            // 디스크 에셋을 다른 해상도로 다시 가져왔으면 낡은 편집이 그것을 덮지 않는다.
-            const uint32 current    = _heightfield.getResolution();
-            const bool   bSameSize  = resolution == current;
-            const bool   bSizeKnown = bSameSize || ( bResized && isResolutionUsable( resolution ) );
-            const bool   bFits      = archive.isOk() && bSizeKnown && static_cast<uint64>( sampleCount ) == static_cast<uint64>( resolution ) * resolution &&
-                               archive.hasBytesAvailable( static_cast<uint64>( sampleCount ) * sizeof( float32 ) );
-            vector<float32> listHeight( bFits ? sampleCount : 0u ); // NOLINT(sw-unchecked-count): 위 bFits 가 남은 바이트로 걸렀다
-            if ( bFits )
-                archive.readFiniteFloats( listHeight.data(), sampleCount ); // NaN 높이는 물리 · 렌더 어디서도 걸러지지 않는다
-            const bool bRead    = bFits && archive.isOk();
-            bool       bWritten = false;
-            if ( bRead && bSameSize )
-            {
-                TerrainSampleRect all{};
-                all.include( 0, 0 );
-                all.include( resolution - 1, resolution - 1 );
-                bWritten = writeHeights( listHeight, all );
-            }
-            else if ( bRead )
-            {
-                vector<uint8> listHole;
-                bWritten = TerrainHeightfield::resampleHoles( _heightfield.getHoleCells(), current, resolution, listHole ) && replaceHeightfield( resolution, listHeight, listHole );
-            }
-            if ( bWritten == false )
-            {
-                SW_LOG_WARNING_ID( "TerrainComponent.TerrainUnsavedHeightEdits", "Terrain '%#': unsaved height edits (%#x%#) do not fit the reloaded heightfield - keeping the asset values", _heightfieldPath.c_str(), resolution, resolution );
-                return;
-            }
+            const vector<float32>& listHeight = _heightfield.getHeightSamples();
+            archive.writeBytes( listHeight.data(), listHeight.size() * sizeof( float32 ) );
+            return true;
         }
-        bool bHoles{ false };
-        archive >> bHoles;
-        if ( bHoles )
+        // 크기를 먼저 비교한다 — 맞지 않는 수로 버퍼를 잡지 않는다. 해상도가 달라도 되는 것은 크기를 바꾼 편집(`replaceHeightfield`)뿐이다 —
+        // 디스크 에셋을 다른 해상도로 다시 가져왔으면 낡은 편집이 그것을 덮지 않는다.
+        const uint32 current    = _heightfield.getResolution();
+        const bool   bSameSize  = resolution == current;
+        const bool   bSizeKnown = bSameSize || ( bResized && isResolutionUsable( resolution ) );
+        const bool   bFits      = io.isOk() && bSizeKnown && static_cast<uint64>( sampleCount ) == static_cast<uint64>( resolution ) * resolution &&
+                           archive.hasBytesAvailable( static_cast<uint64>( sampleCount ) * sizeof( float32 ) );
+        vector<float32> listHeight( bFits ? sampleCount : 0u ); // NOLINT(sw-unchecked-count): 위 bFits 가 남은 바이트로 걸렀다
+        if ( bFits )
+            archive.readFiniteFloats( listHeight.data(), sampleCount ); // NaN 높이는 물리 · 렌더 어디서도 걸러지지 않는다
+        const bool bRead    = bFits && io.isOk();
+        bool       bWritten = false;
+        if ( bRead && bSameSize )
         {
-            uint32        resolution{ 0 };
+            TerrainSampleRect all{};
+            all.include( 0, 0 );
+            all.include( resolution - 1, resolution - 1 );
+            bWritten = writeHeights( listHeight, all );
+        }
+        else if ( bRead )
+        {
             vector<uint8> listHole;
-            archive >> resolution >> listHole;
-            const uint32 cells    = resolution >= 2 ? resolution - 1 : 0u;
-            const bool   bSizeOk  = listHole.empty() || listHole.size() == static_cast<size_t>( cells ) * cells;
-            const bool   bFits    = archive.isOk() && cells > 0 && resolution == _heightfield.getResolution() && bSizeOk;
-            bool         bWritten = false;
-            if ( bFits )
-            {
-                // 빈 마스크는 구멍 없음이다 — 다시 읽은 에셋에 구멍이 있어도 모두 0 으로 쓴다.
-                vector<uint8>     listAll = listHole.empty() ? vector<uint8>( static_cast<size_t>( cells ) * cells, 0u ) : std::move( listHole );
-                TerrainSampleRect all{};
-                all.include( 0, 0 );
-                all.include( cells - 1, cells - 1 );
-                bWritten = writeHoles( listAll, all );
-            }
-            if ( bWritten == false )
-            {
-                SW_LOG_WARNING_ID( "TerrainComponent.TerrainUnsavedHoleEdits", "Terrain '%#': unsaved hole edits (%#x%#) do not fit the reloaded heightfield - keeping the asset values", _heightfieldPath.c_str(), resolution, resolution );
-                return;
-            }
+            bWritten = TerrainHeightfield::resampleHoles( _heightfield.getHoleCells(), current, resolution, listHole ) && replaceHeightfield( resolution, listHeight, listHole );
         }
-        bool bSplat{ false };
-        archive >> bSplat;
-        if ( bSplat == false )
+        if ( bWritten )
+            return true;
+        SW_LOG_WARNING_ID( "TerrainComponent.TerrainUnsavedHeightEdits", "Terrain '%#': unsaved height edits (%#x%#) do not fit the reloaded heightfield - keeping the asset values", _heightfieldPath.c_str(), resolution, resolution );
+        io.fail();
+        return false;
+    }
+
+    bool TerrainComponent::serializeHoleEdits( StateIO& io )
+    {
+        uint32        resolution = _heightfield.getResolution();
+        vector<uint8> listHole   = _heightfield.getHoleCells(); // 비었으면 구멍 없음
+        io.value( resolution );
+        io.value( listHole );
+        if ( io.isWriting() )
+            return true;
+        const uint32 cells    = resolution >= 2 ? resolution - 1 : 0u;
+        const bool   bSizeOk  = listHole.empty() || listHole.size() == static_cast<size_t>( cells ) * cells;
+        const bool   bFits    = io.isOk() && cells > 0 && resolution == _heightfield.getResolution() && bSizeOk;
+        bool         bWritten = false;
+        if ( bFits )
+        {
+            // 빈 마스크는 구멍 없음이다 — 다시 읽은 에셋에 구멍이 있어도 모두 0 으로 쓴다.
+            vector<uint8>     listAll = listHole.empty() ? vector<uint8>( static_cast<size_t>( cells ) * cells, 0u ) : std::move( listHole );
+            TerrainSampleRect all{};
+            all.include( 0, 0 );
+            all.include( cells - 1, cells - 1 );
+            bWritten = writeHoles( listAll, all );
+        }
+        if ( bWritten )
+            return true;
+        SW_LOG_WARNING_ID( "TerrainComponent.TerrainUnsavedHoleEdits", "Terrain '%#': unsaved hole edits (%#x%#) do not fit the reloaded heightfield - keeping the asset values", _heightfieldPath.c_str(), resolution, resolution );
+        io.fail();
+        return false;
+    }
+
+    void TerrainComponent::serializeSplatEdits( StateIO& io )
+    {
+        uint32        width      = _heightfield.getSplatWidth();
+        uint32        height     = _heightfield.getSplatHeight();
+        vector<uint8> splatBytes = _heightfield.getSplatBytes();
+        io.value( width );
+        io.value( height );
+        io.value( splatBytes );
+        if ( io.isWriting() )
             return;
-        uint32        width{ 0 };
-        uint32        height{ 0 };
-        vector<uint8> splatBytes;
-        archive >> width >> height >> splatBytes;
         const size_t texelCount = static_cast<size_t>( width ) * height;
-        const bool   bFits      = archive.isOk() && texelCount > 0 && width == _heightfield.getSplatWidth() && height == _heightfield.getSplatHeight();
+        const bool   bFits      = io.isOk() && texelCount > 0 && width == _heightfield.getSplatWidth() && height == _heightfield.getSplatHeight();
         if ( bFits == false || splatBytes.size() != texelCount * SurfaceLayerWeights::kLayerCount )
         {
             SW_LOG_WARNING_ID( "TerrainComponent.TerrainUnsavedSplatEdits", "Terrain '%#': unsaved splat edits (%#x%#) do not fit the reloaded splat - keeping the asset values", _heightfieldPath.c_str(), width, height );
+            io.fail();
             return;
         }
         // 바이트를 그대로 되돌리도록 가중치는 정규화하지 않는다(`writeLayerWeights` 는 x 255 를 반올림한다).
@@ -709,6 +708,12 @@ namespace sw
         all.include( width - 1, height - 1 );
         if ( writeLayerWeights( listWeight, all ) == false )
             SW_LOG_WARNING_ID( "TerrainComponent.TerrainCouldNotWrite", "Terrain '%#': could not write back the unsaved splat edits", _heightfieldPath.c_str() );
+    }
+
+    void TerrainComponent::restoreState( vector<uint8>&& bytes )
+    {
+        Archive archive( bytes.data(), static_cast<uint64>( bytes.size() ) );
+        (void)readState( archive ); // 맞지 않는 묶음은 serializeState 가 알리고 디스크 값으로 둔다
     }
 
     bool TerrainComponent::loadSplatWeights()

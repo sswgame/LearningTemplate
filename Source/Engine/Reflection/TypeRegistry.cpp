@@ -778,41 +778,19 @@ namespace sw
         return TaskValue{};
     }
 
-    TypeRegistrar*& TypeRegistrar::getHead()
-    {
-        static TypeRegistrar* s_pHead{ nullptr };
-        return s_pHead;
-    }
+    SW_DEFINE_REGISTRATION_CHAIN( TypeRegistrar::getChain, TypeRegistrar )
 
     TypeRegistrar::TypeRegistrar( void ( *registerFunc )( TypeRegistry& ) )
-        : TypeRegistrar( registerFunc, getHead() )
-    {
-    }
-
-    TypeRegistrar::TypeRegistrar( void ( *registerFunc )( TypeRegistry& ), TypeRegistrar*& pModuleHead )
         : _registerFunc{ registerFunc }
-        , _pNext{ nullptr }
+        , _pNext{ getChain().pushFront( this ) }
     {
-        _pNext      = pModuleHead;
-        pModuleHead = this;
     }
 
-    EnumRegistrar*& EnumRegistrar::getHead()
-    {
-        static EnumRegistrar* s_pHead{ nullptr };
-        return s_pHead;
-    }
+    SW_DEFINE_REGISTRATION_CHAIN( EnumRegistrar::getChain, EnumRegistrar )
 
     EnumRegistrar::EnumRegistrar( void ( *registerFunc )( TypeRegistry& ) )
-        : EnumRegistrar( registerFunc, getHead() )
-    {
-    }
-
-    EnumRegistrar::EnumRegistrar( void ( *registerFunc )( TypeRegistry& ), EnumRegistrar*& pModuleHead )
         : _registerFunc{ registerFunc }
-        , _pNext{ nullptr }
+        , _pNext{ getChain().pushFront( this ) }
     {
-        _pNext      = pModuleHead;
-        pModuleHead = this;
     }
 } // namespace sw
