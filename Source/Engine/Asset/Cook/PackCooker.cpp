@@ -8,6 +8,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -40,6 +41,9 @@ namespace sw
     {
         struct PackCookerInternal
         {
+            /** @brief 팩에서 뺀 셰이더 바이너리 가운데 정보 줄에 이름을 적는 수입니다. */
+            static constexpr uint32 kDroppedShaderNameCount = 5;
+
             /** @brief 팩 쿠킹 전체의 단계별 시간입니다(요약 로그). 팩 여럿이 더해 가고, 단계는 한 스레드에서 차례로 돌므로 합이 곧 그 단계에 쓴 시간이다. */
             struct PackCookTiming
             {
@@ -452,6 +456,8 @@ namespace sw
                 vector<string> listStagedFile;
                 if ( CookJob::collectFiles( stagedDir, "", listStagedFile ) == false )
                     return CookStep::Failed;
+                uint32 droppedShaderCount = 0;
+                string droppedShaderNames; // 처음 몇 개 — 원본이 닿지 않아 뺀 셰이더 바이너리(첫 굽기에만 빠진 layer_bake 를 쫓는 줄)
                 for ( const string& absPath : listStagedFile )
                 {
                     string relativePath;
@@ -461,10 +467,21 @@ namespace sw
                         continue;
                     // 산출물은 그 원본(같은 줄기의 원본 · 셰이더 원본)이 쓰일 때만 담는다 - 쓰지 않는 씬의 쿠킹본 · 쓰지 않는 셰이더의 바이너리를 싣지 않는다.
                     if ( selection._staged.selects( domain, relativePath ) == false )
+                    {
+                        if ( StringUtil::contains( FileUtil::normalizePath( relativePath ), "shaders/bin/" ) )
+                        {
+                            if ( droppedShaderCount < kDroppedShaderNameCount )
+                                droppedShaderNames += ( droppedShaderCount == 0 ? "" : ", " ) + relativePath;
+                            ++droppedShaderCount;
+                        }
                         continue;
+                    }
                     if ( addFile( writer, relativePath, absPath, ioTiming ) == false )
                         return CookStep::Failed;
                 }
+                if ( droppedShaderCount > 0 )
+                    SW_LOG_INFO_ID( "PackCooker.PackCookDroppedShaderBinaries", "Pack cook: %# drops %# %# shader binaries whose source shader is not reached (first: %#)", domain, droppedShaderCount,
+                                    params._shaderFolder, droppedShaderNames );
 
                 PackWriteStats writeStats;
                 if ( writer.writePackFile( outputPath, &writeStats ) == false )
@@ -578,6 +595,13 @@ namespace sw
         if ( PackCookerInternal::selectFiles( config, params, listDomain, desc, selection ) == false )
             return false;
 
+        // 기록은 스테이징 폴더(`--cooked-dir`)마다도 따로 둔다. 기록 자리(`<프로젝트>/Saved/CookRecord`)는 프리셋(Debug · Release · Shipping)이 함께 쓰는데 팩의 입력인
+        // 스테이징 산출물(셰이더 바이너리 · 씬 쿠킹본)은 프리셋마다 제 빌드 폴더에 있다. 한 기록을 나눠 쓰면 다른 프리셋의 스테이징을 입력으로 적은 기록이 "새것" 이라
+        // 이 프리셋의 스테이징을 보지 않고 DDC 의 그 팩을 되살린다 — 그 프리셋이 아직 굽지 않은 셰이더(layer_bake)가 빠진 팩이 첫 배포 굽기에만 나왔다.
+        StringBuilder<constant::buffer::kMax32> stagingKey;
+        const string                            normalizedCookedDir = FileUtil::normalizePath( params._cookedDir );
+        stagingKey.appendFormat( "%016llx", static_cast<unsigned long long>( HashUtil::computeStringHash64( normalizedCookedDir.c_str(), normalizedCookedDir.size(), false ) ) );
+
         uint32                             failedCount = 0;
         PackCookerInternal::PackCookTiming timing;
         const Stopwatch                    totalWatch;
@@ -587,7 +611,7 @@ namespace sw
             const string packName   = makePackFileName( domain );
             const string outputPath = FileUtil::joinPath( params._packOutputDir, packName );
             // 기록은 타깃 · 백엔드마다 따로 둔다 — 같은 팩 이름을 다른 설정으로 번갈아 베이크해도 서로의 기록을 덮지 않는다.
-            const string outputID    = FileUtil::joinPath( FileUtil::joinPath( "packs", desc._target ), packName );
+            const string outputID    = FileUtil::joinPath( FileUtil::joinPath( FileUtil::joinPath( "packs", desc._target ), stagingKey.view() ), packName );
             CookJobDesc  domainDesc  = desc;
             domainDesc._settingsHash = PackCookerInternal::computeSelectionHash( desc._settingsHash, domain, selection );
             const CookResult result  = store.cookFile( domainDesc, outputID, outputPath, [&]()
