@@ -36,7 +36,7 @@
 
 ### 4. Shooter3D 총 (사용자 지적)
 
-- **소총 자세:** 권총 조준 클립으로 소총이 머리 옆에 들린다. 브랜치 `rifle-pose-wip`(5073ea9105)에 기반이 있다. 다음: Quaternius **Toon Shooter Game Kit**(묶음 페이지가 CC0 인지 먼저 확인)의 `Character_Soldier` 클립을 UBC 로 리타깃 → 몸 전체 사진 → 손 소켓 `Gun` 회전을 사진으로 맞춤 → 골든 다시.
+- **소총 자세:** 권총 조준 클립으로 소총이 머리 옆에 들린다. `rifle-pose-wip`(5073ea9105)의 기반(두 손 층 · 리타깃 프로필 · `twoHanded`)은 main 에 들어왔지만 `weapons.xml` 의 `twoHanded` 는 꺼 두었다 — 켜면 KayKit 2h 조준 클립이 UBC 에서 조준 자세가 아니라(왼손이 앞손잡이를 놓고 펴짐 · 1 인칭 하체 빠짐) shooter3d 골든이 진다. 다음: Quaternius **Toon Shooter Game Kit**(묶음 페이지가 CC0 인지 먼저 확인)의 `Character_Soldier` 클립을 UBC 로 리타깃 → 몸 전체 사진 → 손 소켓 `Gun` 회전을 사진으로 맞춤 → 골든 다시.
 - **걸을 때 총이 떨린다:** 원인 미확인. `-gv_shooterMotionTrace` 기록에 총 위치를 더해 손 · 카메라와 프레임별로 대조한다.
 
 ### 5. 작업자 · 설계 문서가 남긴 일

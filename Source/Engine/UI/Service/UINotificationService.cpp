@@ -6,6 +6,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Automation/Scenario/AutomationStageReset.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Serialization/Inherit/ResourceTags.h"
@@ -326,6 +327,22 @@ namespace sw
 
 namespace sw
 {
+    namespace
+    {
+        /**
+         * @brief 체인의 다음 단계 앞에서 떠 있는 알림을 비웁니다 — 새 프로세스에는 앞 단계의 알림이 없다.
+         * @details 알림은 씬 · 게임 인스턴스가 아니라 엔진 서비스가 들어 단계를 넘어 남는다. 앞 단계(wildwest autosave)의 "Game saved"(3 초)가
+         *          다음 단계(mount)의 촬영에 찍혀 골든이 졌다. 서비스가 없는 호스트(서버)는 할 일이 없다.
+         */
+        void clearNotificationsForNextStage()
+        {
+            if ( UINotificationService* const pService = engine::findSubsystem<UINotificationService>() )
+                pService->clear();
+        }
+    } // namespace
+
+    SW_AUTOMATION_STAGE_RESET( uiNotifications, "UI notifications", &clearNotificationsForNextStage );
+
     SW_ENGINE_SERVICE_SUBSYSTEM( UINotificationService, GameVisible, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         (void)build;
