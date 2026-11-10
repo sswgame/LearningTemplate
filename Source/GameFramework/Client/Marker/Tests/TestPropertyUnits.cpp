@@ -7,6 +7,7 @@
 #include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/ReflectionUnits.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 #include "GameFramework/Client/Marker/HealthBarComponent.h"
@@ -89,11 +90,11 @@ SW_TEST_CASE( PropertyUnitsTest, UnitsMatchHowValuesAreStored )
     {
         for ( const sw::PropertyInfo& prop : pType->_listProperty )
         {
-            const sw::string* pUnits = prop.findCustomMeta( sw::hashed_string( "Units" ) );
-            const sw::string  units  = ( pUnits != nullptr ) ? *pUnits : sw::string{};
-            const sw::string  where  = sw::string( pType->_fullyQualifiedName.c_str() ) + "::" + prop._name.c_str() + " (Units=" + units + "): ";
-            const bool        bMax   = prop._metadata->_bHasMaxRange != SW_FALSE;
-            const float32     maxAt  = prop._metadata->_maxRange;
+            const sw::ReflectUnit* pUnits = sw::ReflectUnit::findUnit( prop._metadata->_unit );
+            const sw::string       units  = ( pUnits != nullptr ) ? sw::string{ pUnits->_pName } : sw::string{};
+            const sw::string       where  = sw::string( pType->_fullyQualifiedName.c_str() ) + "::" + prop._name.c_str() + " (Units=" + units + "): ";
+            const bool             bMax   = prop._metadata->_bHasMaxRange != SW_FALSE;
+            const float32          maxAt  = prop._metadata->_maxRange;
             if ( pUnits != nullptr )
                 ++unitCount;
             // 파일 스키마(`…Fields` — 원소 하나의 칸, `XMLFields::readFields`)의 칸은 파일 글 그대로의 단위다. 손으로 쓰는 데이터는 각을 도로 적고

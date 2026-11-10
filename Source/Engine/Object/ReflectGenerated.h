@@ -15,5 +15,6 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
+#include "Engine/Reflection/ReflectionUnits.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 #include "Engine/Serialization/Fixed/FixedLayout.h"

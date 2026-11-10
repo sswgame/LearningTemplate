@@ -12,6 +12,7 @@
 #include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/ReflectionUnits.h"
 
 // 인스펙터는 에디터 기능이라 배포 구성은 이 파일을 짓지 않는다(Editor 빌드 단위 — `Source/Editor/CMakeLists.txt`).
 namespace sw::editor
@@ -94,18 +95,16 @@ namespace sw::editor
 
     InspectorDisplayUnit InspectorPropertyLayout::getDisplayUnit( const PropertyInfo& prop )
     {
-        InspectorDisplayUnit unit{};
-        const string*        pUnits = prop.findCustomMeta( hashed_string( "Units" ) );
-        if ( pUnits == nullptr || pUnits->empty() )
-            return unit;
-        if ( *pUnits == "rad" )
+        InspectorDisplayUnit  unit{};
+        const ReflectUnitKind kind = prop._metadata->_unit;
+        if ( kind == ReflectUnitKind::Radian )
         {
             unit._scale     = MathUtil::kRadianToDegree;
             unit._dragSpeed = kAngleDragSpeed;
             unit._suffix    = "deg";
             return unit;
         }
-        if ( *pUnits == "ratio" )
+        if ( kind == ReflectUnitKind::Ratio )
         {
             unit._scale     = 100.0f;
             unit._dragSpeed = kPercentDragSpeed;
@@ -113,13 +112,21 @@ namespace sw::editor
             return unit;
         }
         // 0..100 으로 저장한 백분율은 그대로 보이고 글자만 `%` 다.
-        if ( *pUnits == "percent" )
+        if ( kind == ReflectUnitKind::Percent )
         {
             unit._dragSpeed = kPercentDragSpeed;
             unit._suffix    = "%";
             return unit;
         }
-        unit._suffix = *pUnits;
+        if ( const ReflectUnit* pUnit = ReflectUnit::findUnit( kind ) )
+        {
+            unit._suffix = pUnit->_pName;
+            return unit;
+        }
+        // 표 밖의 자유 글 단위(`Meta = "Units=HP"`)는 글자만 붙인다.
+        const string* pLabel = prop.findCustomMeta( hashed_string( "Units" ) );
+        if ( pLabel != nullptr )
+            unit._suffix = *pLabel;
         return unit;
     }
 

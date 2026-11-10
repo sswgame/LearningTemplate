@@ -379,6 +379,17 @@ namespace sw
         // 상한은 코덱이 지키는 값 그대로다(상수 이름으로 적었으면 `PropertyResolver` 가 푼 값).
         if ( prop._bHasMaxCount != SW_FALSE )
             emit.linef( "p._metadata->_maxCount     = %#u;", prop._maxCount );
+        // 단위는 상수 문맥에서 철자를 열거로 바꾼다 — 표에서 빠진 철자는 이 줄이 컴파일 오류다(검증은 `applyDisplayMeta` 가 먼저 했다).
+        if ( prop._units.empty() == false )
+        {
+            emit.line( "{" );
+            emit.push();
+            emit.linef( "constexpr ::sw::ReflectUnitKind kUnit = ::sw::ReflectUnit::kindOf( %# );", CodeEmit::quoted( prop._units ) );
+            emit.line( "static_assert( kUnit != ::sw::ReflectUnitKind::None, \"unknown PROPERTY( Units )\" );" );
+            emit.line( "p._metadata->_unit = kUnit;" );
+            emit.pop();
+            emit.line( "}" );
+        }
         // 숫자가 아닌 경계 중 이 타입의 필드 하나를 가리키는 것은 인스턴스에서 읽는 함수로 낸다(인스펙터와 읽기 공통 끝이 그 값으로 막는다).
         CodeGeneratorInternal::emitRangeReader( emit, typeInfo, prop._minRangeExpr._text, "_pReadMinRange" );
         CodeGeneratorInternal::emitRangeReader( emit, typeInfo, prop._maxRangeExpr._text, "_pReadMaxRange" );

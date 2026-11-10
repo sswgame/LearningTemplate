@@ -99,9 +99,9 @@ SW_TEST_CASE( ReflectionDisplayMetaTest, AnnotationsReachPropertyMetadata )
     SW_REQUIRE_NOT_NULL( pTexture );
     SW_REQUIRE_NOT_NULL( pFallback );
 
-    const sw::string* pUnits = pHeight->findCustomMeta( "Units" );
-    SW_REQUIRE_NOT_NULL( pUnits );
-    SW_EXPECT_EQUAL( sw::string( "cm" ), *pUnits );
+    // 아는 단위는 글이 아니라 열거로 실린다 — 커스텀 메타에는 없다(자유 글 단위 `Meta = "Units=HP"` 만 남는다).
+    SW_EXPECT_TRUE( pHeight->_metadata->_unit == sw::ReflectUnitKind::Centimeter );
+    SW_EXPECT_NULL( pHeight->findCustomMeta( "Units" ) );
     SW_EXPECT_TRUE( pHeight->_metadata->hasFullRange() && pHeight->_metadata->getEditor().hasFullUIRange() );
     SW_EXPECT_NEAR( 1000.0f, pHeight->_metadata->_maxRange, 1e-4f );
     SW_EXPECT_NEAR( 250.0f, pHeight->_metadata->getEditor()._uiMaxRange, 1e-4f );

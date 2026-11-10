@@ -223,7 +223,7 @@ namespace sw
                     return false;
                 }
             }
-            prop._listCustomMeta.emplace_back( "Units", prop._units );
+            // 아는 단위는 커스텀 메타 글이 아니라 런타임 메타데이터의 열거로 싣는다(`CodeGenerator::emitPropertyMetadata`).
         }
 
         if ( prop._editCondition.empty() == false && isEditConditionWellFormed( prop._editCondition ) == false )

@@ -30,9 +30,44 @@ namespace sw
         Temperature, ///< 색온도 · 온도(K) — 화이트 밸런스(`PostProcessValues::_whiteTemperature`)
     };
 
-    /** @brief 단위 하나 — 철자 · 차원 · 기준 단위로의 배율(값 × 배율 = 기준 단위 값). */
+    /**
+     * @brief `PROPERTY( Units = … )` 의 단위입니다 — 프로퍼티 메타데이터가 글이 아니라 이 값으로 든다(`PropertyMetadata::_unit`). None 은 단위 없음입니다.
+     * @details 예전에는 검증한 철자를 커스텀 메타 글로 실어 인스펙터가 `== "rad"` 로 다시 풀었다. 열거자 순서는 아래 표(`kArrReflectUnit`)의 순서다.
+     */
+    enum class ReflectUnitKind : uint8
+    {
+        None,
+        Millimeter,
+        Centimeter,
+        Meter,
+        Kilometer,
+        Degree,
+        Radian,
+        Millisecond,
+        Second,
+        Minute,
+        Hour,
+        Percent,
+        Ratio,
+        MeterPerSecond,
+        KilometerPerHour,
+        DegreePerSecond,
+        RadianPerSecond,
+        MeterPerSecondSquared,
+        Hertz,
+        FramesPerSecond,
+        Gram,
+        Kilogram,
+        Newton,
+        NewtonMeter,
+        NewtonSecond,
+        Kelvin,
+    };
+
+    /** @brief 단위 하나 — 종류 · 철자 · 차원 · 기준 단위로의 배율(값 × 배율 = 기준 단위 값). */
     struct ReflectUnit
     {
+        ReflectUnitKind      _kind;
         const utf8*          _pName;
         ReflectUnitDimension _dimension;
         float64              _toBase;
@@ -40,6 +75,10 @@ namespace sw
         // 단위 표를 찾고 값을 바꿉니다.
         /** @brief 철자(대소문자 구분 — `m` 과 `M` 은 다른 단위다)로 단위를 찾습니다. 없으면 nullptr 입니다. */
         static const ReflectUnit* findUnit( const string_view name ) noexcept;
+        /** @brief 종류로 단위를 찾습니다. None 이면 nullptr 입니다. */
+        static const ReflectUnit* findUnit( ReflectUnitKind kind ) noexcept;
+        /** @brief 철자의 종류입니다(없으면 None). 생성 코드가 상수 문맥에서 불러 철자 오타를 컴파일 오류로 만든다. */
+        static constexpr ReflectUnitKind kindOf( string_view name ) noexcept;
 
         /** @brief 받는 철자를 `a, b, c` 꼴 한 줄로 씁니다(오류 메시지용). */
         static string makeUnitList();
@@ -62,32 +101,58 @@ namespace sw
 {
     /** @brief `Units = …` 가 받는 철자 전부입니다. 기준 단위는 m · rad · s · ratio · m/s · rad/s · m/s2 · Hz · kg · N · N*m · N*s · K 입니다. */
     inline constexpr ReflectUnit kArrReflectUnit[] = {
-        {     "mm",       ReflectUnitDimension::Length,                   0.001},
-        {     "cm",       ReflectUnitDimension::Length,                    0.01},
-        {      "m",       ReflectUnitDimension::Length,                     1.0},
-        {     "km",       ReflectUnitDimension::Length,                  1000.0},
-        {    "deg",        ReflectUnitDimension::Angle, MathUtil::kPi64 / 180.0},
-        {    "rad",        ReflectUnitDimension::Angle,                     1.0},
-        {     "ms",         ReflectUnitDimension::Time,                   0.001},
-        {      "s",         ReflectUnitDimension::Time,                     1.0},
-        {    "min",         ReflectUnitDimension::Time,                    60.0},
-        {      "h",         ReflectUnitDimension::Time,                  3600.0},
-        {"percent",        ReflectUnitDimension::Ratio,                    0.01},
-        {  "ratio",        ReflectUnitDimension::Ratio,                     1.0},
-        {    "m/s",        ReflectUnitDimension::Speed,                     1.0},
-        {   "km/h",        ReflectUnitDimension::Speed, 0.277777777777777777778},
-        {  "deg/s", ReflectUnitDimension::AngularSpeed, MathUtil::kPi64 / 180.0},
-        {  "rad/s", ReflectUnitDimension::AngularSpeed,                     1.0},
-        {   "m/s2", ReflectUnitDimension::Acceleration,                     1.0},
-        {     "Hz",    ReflectUnitDimension::Frequency,                     1.0},
-        {    "fps",    ReflectUnitDimension::Frequency,                     1.0},
-        {      "g",         ReflectUnitDimension::Mass,                   0.001},
-        {     "kg",         ReflectUnitDimension::Mass,                     1.0},
-        {      "N",        ReflectUnitDimension::Force,                     1.0},
-        {    "N*m",       ReflectUnitDimension::Torque,                     1.0},
-        {    "N*s",      ReflectUnitDimension::Impulse,                     1.0},
-        {      "K",  ReflectUnitDimension::Temperature,                     1.0},
+        {           ReflectUnitKind::Millimeter,      "mm",       ReflectUnitDimension::Length,                   0.001},
+        {           ReflectUnitKind::Centimeter,      "cm",       ReflectUnitDimension::Length,                    0.01},
+        {                ReflectUnitKind::Meter,       "m",       ReflectUnitDimension::Length,                     1.0},
+        {            ReflectUnitKind::Kilometer,      "km",       ReflectUnitDimension::Length,                  1000.0},
+        {               ReflectUnitKind::Degree,     "deg",        ReflectUnitDimension::Angle, MathUtil::kPi64 / 180.0},
+        {               ReflectUnitKind::Radian,     "rad",        ReflectUnitDimension::Angle,                     1.0},
+        {          ReflectUnitKind::Millisecond,      "ms",         ReflectUnitDimension::Time,                   0.001},
+        {               ReflectUnitKind::Second,       "s",         ReflectUnitDimension::Time,                     1.0},
+        {               ReflectUnitKind::Minute,     "min",         ReflectUnitDimension::Time,                    60.0},
+        {                 ReflectUnitKind::Hour,       "h",         ReflectUnitDimension::Time,                  3600.0},
+        {              ReflectUnitKind::Percent, "percent",        ReflectUnitDimension::Ratio,                    0.01},
+        {                ReflectUnitKind::Ratio,   "ratio",        ReflectUnitDimension::Ratio,                     1.0},
+        {       ReflectUnitKind::MeterPerSecond,     "m/s",        ReflectUnitDimension::Speed,                     1.0},
+        {     ReflectUnitKind::KilometerPerHour,    "km/h",        ReflectUnitDimension::Speed, 0.277777777777777777778},
+        {      ReflectUnitKind::DegreePerSecond,   "deg/s", ReflectUnitDimension::AngularSpeed, MathUtil::kPi64 / 180.0},
+        {      ReflectUnitKind::RadianPerSecond,   "rad/s", ReflectUnitDimension::AngularSpeed,                     1.0},
+        {ReflectUnitKind::MeterPerSecondSquared,    "m/s2", ReflectUnitDimension::Acceleration,                     1.0},
+        {                ReflectUnitKind::Hertz,      "Hz",    ReflectUnitDimension::Frequency,                     1.0},
+        {      ReflectUnitKind::FramesPerSecond,     "fps",    ReflectUnitDimension::Frequency,                     1.0},
+        {                 ReflectUnitKind::Gram,       "g",         ReflectUnitDimension::Mass,                   0.001},
+        {             ReflectUnitKind::Kilogram,      "kg",         ReflectUnitDimension::Mass,                     1.0},
+        {               ReflectUnitKind::Newton,       "N",        ReflectUnitDimension::Force,                     1.0},
+        {          ReflectUnitKind::NewtonMeter,     "N*m",       ReflectUnitDimension::Torque,                     1.0},
+        {         ReflectUnitKind::NewtonSecond,     "N*s",      ReflectUnitDimension::Impulse,                     1.0},
+        {               ReflectUnitKind::Kelvin,       "K",  ReflectUnitDimension::Temperature,                     1.0},
     };
+
+    constexpr bool isReflectUnitTableOrdered() noexcept
+    {
+        for ( size_t index = 0; index < std::size( kArrReflectUnit ); ++index )
+        {
+            if ( static_cast<size_t>( kArrReflectUnit[index]._kind ) != index + 1 )
+                return false;
+        }
+        return true;
+    }
+    static_assert( isReflectUnitTableOrdered(), "kArrReflectUnit must list ReflectUnitKind in enum order (findUnit( kind ) indexes it)" );
+
+    constexpr ReflectUnitKind ReflectUnit::kindOf( const string_view name ) noexcept
+    {
+        for ( const ReflectUnit& unit : kArrReflectUnit )
+        {
+            if ( name == unit._pName )
+                return unit._kind;
+        }
+        return ReflectUnitKind::None;
+    }
+
+    inline const ReflectUnit* ReflectUnit::findUnit( const ReflectUnitKind kind ) noexcept
+    {
+        return kind == ReflectUnitKind::None ? nullptr : &kArrReflectUnit[static_cast<size_t>( kind ) - 1];
+    }
 
     inline const ReflectUnit* ReflectUnit::findUnit( const string_view name ) noexcept
     {

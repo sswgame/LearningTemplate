@@ -13,6 +13,7 @@
 
 namespace sw
 {
+    enum class ReflectUnitKind : uint8; // `ReflectionUnits.h` — 칸만 든다(표 · 변환은 읽는 쪽이 include 한다)
     struct FunctionEditorMetadata;
     struct PropertyEditorMetadata;
     struct TypeEditorMetadata;
@@ -109,6 +110,8 @@ namespace sw
          *          상한을 C++ 상수와 애노테이션 두 곳에 숫자로 적지 않습니다.
          */
         uint32 _maxCount;
+        /** @brief `PROPERTY( Units = … )` 의 저장 단위입니다(없으면 None). 표 · 변환은 `ReflectionUnits.h`. 자유 글 단위(`Meta = "Units=HP"`)는 커스텀 메타로 남는다. */
+        ReflectUnitKind _unit;
         /**
          * @brief 아래 경계와 위 경계를 각각 적었는지 나타냅니다(`PROPERTY( Min = … )`, `Max = …`). 적은 쪽만 막습니다.
          * @details 경계 표시를 하나로 합치면 `Min = 0` 만 적은 프로퍼티의 위 경계가 기본값 1 로 남아, 인스펙터가 그 값을 1 에서 막는다.

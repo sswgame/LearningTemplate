@@ -53,6 +53,7 @@ namespace sw
         , _minRange{ 0.0f }
         , _maxRange{ 1.0f }
         , _maxCount{ 0 }
+        , _unit{}
         , _bHasMinRange{ SW_FALSE }
         , _bHasMaxRange{ SW_FALSE }
         , _bReadOnly{ SW_FALSE }
