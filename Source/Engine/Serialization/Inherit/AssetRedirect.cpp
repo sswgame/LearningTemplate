@@ -26,6 +26,13 @@ namespace sw
         {
             static constexpr const utf8* kRedirectElement = "Redirect";
 
+            /** @brief 표의 한 줄입니다(글 순서를 지키려고 맵이 아니라 목록에 둔다). */
+            struct Entry
+            {
+                string _from;
+                string _to;
+            };
+
             /** @brief 표 전체입니다(`AssetRedirectTable` 이 든다). 옛 id → 끝 id(사슬을 접은 것). */
             struct State
             {
@@ -157,6 +164,64 @@ namespace sw
         state._mapOldToNew = std::move( mapOldToNew );
         state._entryCount.store( static_cast<uint32>( state._mapOldToNew.size() ) );
         return true;
+    }
+
+    string AssetRedirect::makeTableID( string_view assetID )
+    {
+        const size_t firstSlash = assetID.find( '/' );
+        string_view  domain     = assetID.substr( 0, firstSlash );
+        if ( firstSlash != string_view::npos && ( domain == "game" || domain == "dlc" ) )
+            domain = assetID.substr( 0, assetID.find( '/', firstSlash + 1 ) ); // 팩 도메인은 두 마디다(`game/<팩>`) — 검색 순서의 "game" 이 활성 팩 뿌리다
+        return FileUtil::joinPath( domain, kFileName );
+    }
+
+    bool AssetRedirect::isTable( string_view assetID )
+    {
+        return FileUtil::getFileNamePart( assetID ) == kFileName;
+    }
+
+    expected<string> AssetRedirect::addToXMLText( string_view tableText, string_view sourceName, const vector<string>& listFrom, const vector<string>& listTo )
+    {
+        using Internal = AssetRedirectInternal;
+        SW_ASSERT( listFrom.size() == listTo.size() );
+        // 틀린 표에 줄을 더하지 않는다 — 기동이 멈출 표를 키우지 않게. 이유는 parseInto 가 로그에 남겼다.
+        unordered_map<string, string> mapCheck;
+        if ( Internal::parseInto( tableText, sourceName, mapCheck ) == false )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the asset redirect table is malformed", sourceName } );
+        XMLDocument document;
+        if ( document.parse( tableText, sourceName ) == false )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the asset redirect table is malformed", sourceName } );
+        vector<Internal::Entry> listEntry;
+        for ( XMLNode node = document.getRoot( kRootElement ).findChild(); node.isValid(); node = node.findNextSibling() )
+        {
+            if ( StringUtil::isNullOrEmpty( node.getName() ) == false )
+                listEntry.push_back( Internal::Entry{ string{ node.getAttributeText( "from" ) }, string{ node.getAttributeText( "to" ) } } );
+        }
+        for ( size_t index = 0; index < listFrom.size(); ++index )
+        {
+            const string&           from = listFrom[index];
+            const string&           to   = listTo[index];
+            vector<Internal::Entry> listKept;
+            for ( Internal::Entry& entry : listEntry )
+            {
+                if ( entry._from != from && entry._from != to )
+                    listKept.push_back( std::move( entry ) );
+            }
+            listKept.push_back( Internal::Entry{ from, to } );
+            listEntry = std::move( listKept );
+        }
+        string text = string( "<" ) + kRootElement + ">
+                                                     ";
+                      for ( const Internal::Entry& entry : listEntry ) text += string( "	<" ) + Internal::kRedirectElement + " from=\"" + entry._from + "\" to=\"" + entry._to + "\" />
+                                                                                                                                                                                    ";
+                                                                               text += string( "</" ) + kRootElement + ">
+                                                                                                                       ";
+                                                                                       // 쓸 글을 런타임과 같은 규칙으로 다시 읽는다 — 맞춤 꼴이 아닌 id · 자기 자신으로 · 순환이면 쓰지 않는다.
+                                                                                       unordered_map<string, string>
+                                                                                           mapResult;
+        if ( Internal::parseInto( text, sourceName, mapResult ) == false || Internal::collapseChains( mapResult ) == false )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the asset redirect table would not load after the move", sourceName } );
+        return text;
     }
 
     bool AssetRedirect::loadFromSearchDomains()

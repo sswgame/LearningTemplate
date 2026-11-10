@@ -9,7 +9,9 @@
   2. 참조 파일(Content 의 글 에셋 · 테스트 CMake)에서 경로 칸(`Config/Dev/AssetReferenceFields.json` — 커밋 전 검사 · `App --check-asset-refs` ·
      에디터 이름 바꾸기와 같은 목록)의 값만 새 경로로. 폴더면 그 아래 경로 전부, 원본(`models_raw/x.glb`)이면 그 임포트 산출물 경로(`models/x…`)도.
      칸 밖의 글(주석 · 문서 · 출처 표)은 고치지 않는다 — 끝에 남은 옛 경로를 찍는다.
-  3. 작업 트리 전체를 검사해 끊어진 참조가 남았으면 알린다(실패 코드).
+  3. 옛 id 도메인의 리다이렉트 표(`Content/<도메인>/redirects.xml`)에 옮긴 파일마다 줄을 더한다 — 저장소 밖(세이브 · 서버 · 배포된 팩)에 적힌 옛 id 가 산다
+     (언리얼이 옮긴 자리에 리다이렉터를 남기는 것과 같다). 규칙은 에디터 옮기기와 같다(`addRedirects` = C++ `AssetRedirect::addToXMLText`).
+  4. 작업 트리 전체를 검사해 끊어진 참조가 남았으면 알린다(실패 코드).
 임포트 산출물은 커밋하지 않으므로 원본을 옮긴 뒤에는 `App --import-models` 등으로 다시 임포트한다.
 """
 
@@ -22,7 +24,8 @@ from pathlib import Path
 from common.ExitCode import ExitCode
 from common.Git import runGit
 from common.Paths import getProjectRoot
-from lint.AssetReferences import FieldConfig, checkWorkingTree, extractReferences, isReferrer, kContentFolder, listIndexFiles, loadConfig
+from lint.AssetReferences import (FieldConfig, addRedirects, checkWorkingTree, extractReferences, isReferrer, kContentFolder, kRedirectFileName, listIndexFiles, loadConfig,
+                                  makeRedirectTableID)
 
 kNameCharacters = set("abcdefghijklmnopqrstuvwxyz0123456789_.-/")
 # 옮긴 뒤 옛 경로가 칸 밖에 남았는지 훑는 글 파일 — 경로 칸의 글 에셋 · 문서 · 출처 표 · 테스트 CMake.
@@ -90,13 +93,40 @@ def gitMove(root: Path, oldPath: str, newPath: str) -> None:
         folder = folder.parent
 
 
+def listMovedFiles(root: Path, oldID: str, newID: str, bFolder: bool) -> list[tuple[str, str]]:
+    """옮긴 파일마다 (옛 id, 새 id) — 폴더면 옮긴 뒤 그 아래 추적 파일 전부. 표 파일 자신은 리다이렉트할 것이 아니다."""
+    if not bFolder:
+        return [(oldID, newID)]
+    prefix = f"{kContentFolder}/{newID}/"
+    return [(oldID + "/" + path[len(prefix):], path[len(kContentFolder) + 1:]) for path in listIndexFiles(root)
+            if path.startswith(prefix) and not path.endswith("/" + kRedirectFileName)]
+
+
+def writeRedirects(root: Path, listMove: list[tuple[str, str]]) -> list[str]:
+    """옛 id 도메인의 표마다 줄을 더해 쓰고 `git add` 한다. 쓴 표 경로 목록을 돌려준다."""
+    mapMoveByTable: dict[str, list[tuple[str, str]]] = {}
+    for move in listMove:
+        mapMoveByTable.setdefault(makeRedirectTableID(move[0]), []).append(move)
+    listWritten = []
+    for tableID, listTableMove in mapMoveByTable.items():
+        tablePath = root / kContentFolder / tableID
+        text = addRedirects(tablePath.read_text(encoding="utf-8") if tablePath.is_file() else None, listTableMove)
+        tablePath.parent.mkdir(parents=True, exist_ok=True)
+        tablePath.write_text(text, encoding="utf-8", newline="\n")
+        result = runGit(["add", f"{kContentFolder}/{tableID}"], cwd=root)
+        if not result.bSucceeded:
+            raise RuntimeError(f"git add {kContentFolder}/{tableID} 실패: {result.stderr.strip()}")
+        listWritten.append(f"{kContentFolder}/{tableID}")
+    return listWritten
+
+
 def reportLeftovers(root: Path, oldID: str) -> None:
     """칸 밖에 옛 경로가 남은 추적 글 파일(주석 · 출처 표 · 문서)을 알립니다. 고치지 않는다 — 경로인지 사람이 읽고 정한다."""
     lowered = oldID.lower()
     listLeftover = []
     for relativePath in listIndexFiles(root):
-        if not relativePath.lower().endswith(kLeftoverSuffix) or not (root / relativePath).is_file():
-            continue
+        if not relativePath.lower().endswith(kLeftoverSuffix) or relativePath.endswith("/" + kRedirectFileName) or not (root / relativePath).is_file():
+            continue   # 리다이렉트 표는 옛 id 를 적으려고 있다
         if lowered in (root / relativePath).read_bytes().decode("utf-8", "replace").lower():
             listLeftover.append(relativePath)
     for relativePath in listLeftover:
@@ -142,6 +172,8 @@ def main(argv: list[str]) -> int:
             (root / relativePath).write_bytes(rewritten.encode("utf-8", "surrogateescape"))
     print(f"[move-asset] {oldID} -> {newID}: 참조 파일 {fixedCount} 개{' (dry run — 아무것도 바꾸지 않았다)' if args.dry_run else ''}")
     if not args.dry_run:
+        for tablePath in writeRedirects(root, listMovedFiles(root, oldID, newID, bFolder)):
+            print(f"  [리다이렉트] {tablePath}")
         reportLeftovers(root, oldID)
     if args.dry_run:
         return ExitCode.Passed

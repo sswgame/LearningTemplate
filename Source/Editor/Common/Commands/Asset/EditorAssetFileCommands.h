@@ -61,7 +61,8 @@ namespace sw::editor
         /**
          * @brief 옮기기 묶음을 트랜잭션으로 적용합니다. 계획을 다시 세우고, 고칠 글을 모두 미리 만든 뒤 파일을 옮기고 글을 쓴다.
          * @details 옮기기나 쓰기가 하나라도 지면(잠긴 파일 · 읽기 전용) 쓴 글을 원래대로, 옮긴 파일을 거꾸로 되돌린다. 되돌리지 못한 파일은 이름을 오류 로그와 알림에 남긴다.
-         *          언리얼의 에셋 이동이 리다이렉터를 남기는 자리에서, 이 엔진은 경로 하나로 가리키므로 참조 글을 같은 트랜잭션에서 고친다.
+         *          이 엔진은 경로 하나로 가리키므로 저장소 안의 참조 글을 같은 트랜잭션에서 고치고, 저장소 밖(세이브 · 서버 · 배포된 팩)의 옛 id 를 위해 옛 도메인의
+         *          리다이렉트 표(`redirects.xml`, `AssetRedirect::addToXMLText`)에 줄을 더한다 — 언리얼이 옮긴 자리에 리다이렉터를 남기는 것과 같다. 표 쓰기도 되돌림에 든다.
          * @return 다 옮기고 고쳤으면 true(`_fixedFileCount`). false 면 디스크는 시작 상태이거나, 아니면 남은 목록이 로그에 있다.
          */
         [[nodiscard]] static bool applyAssetMoves( const vector<EditorAssetMove>& listMove, EditorReferenceIndex& inoutIndex, EditorAssetMovePlan& outPlan );

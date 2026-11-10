@@ -27,7 +27,7 @@
 
 - **Android:** `CookAssets`(호스트 빌드로 굽기) 통과 → `py -3 -m Scripts android-apk --game <게임>` → 실기기에서 기동 · 회전(pre-rotation 방향) · APK 팩 읽기 · 터치. JNI 클립보드(`AndroidClipboard.cpp` 는 지금 `isAvailable` false).
 - **웹:** 브라우저에 띄우기(팩 패키징 · COOP/COEP 로컬 서버 · 브라우저 MCP 로 기동 · WebGPU · 입력 · IDBFS), WebSocket 전송(클라이언트)과 서버 WebSocket 수락. WebGPU 단계 텍스처 한도는 `CookContract.json` 에서 null 이라 검사하지 않는다 — 어댑터 한도 16 인 브라우저에서 엔진 칸 슬롯 에뮬이 넘칠 수 있다.
-- **Linux:** `.linux` 골든을 dzn 으로 다시 뜬다(shooter3d · empty.boat · wildwest mount …), themepark 체인 멈춤, dzn 에서 진 단계 netresourcedigest · sequencercuts · sequencerkeys(`--gpu software chain editor` 로 가른다), 에디터 체인 단계 약 18(WSLg · Xvfb 입력 초점 의심), lavapipe `blendEnable` + `R16G16_SNORM` 재현 확인.
+- **Linux:** `.linux` 골든을 dzn 으로 다시 뜬다 — 저장소에 커밋된 `.linux` 골든이 0 이다(`py -3 Scripts/dev/ScenarioCulprit.py --golden-coverage`, 데스크톱 WebGPU 도 0)(shooter3d · empty.boat · wildwest mount …), themepark 체인 멈춤, dzn 에서 진 단계 netresourcedigest · sequencercuts · sequencerkeys(`--gpu software chain editor` 로 가른다), 에디터 체인 단계 약 18(WSLg · Xvfb 입력 초점 의심), lavapipe `blendEnable` + `R16G16_SNORM` 재현 확인.
 
 ### 3. 통합 담당이 직접 (실행 · 측정이 필요)
 
@@ -72,12 +72,10 @@ GameObject/Component API 는 저작 · 수명 · 직렬화 층, 프레임 일은
 
 ### 5-5. 상용 대비 고도화 남은 것
 
-- **T1 골든:** 골든 옆 `*.golden.json`(기록 커밋 · 측정값), WebGPU 골든 0 — 체인 백엔드 집합을 한 곳에서 정의해 골든 폴더와 대조.
-- **T2:** 표준 입력으로 모는 스크립트 실행(`LockstepPairRun.py` · `TelemetryLocalRun.py`)이 세이브를 쓰면 `-unattended` 를 붙이거나 판정에 더한다.
-- **T3:** 묶음 끝 스크립트가 보고 폴더를 `TestHistory.py ingest` 하고 ctest 에 `quarantine --ctest-exclude` 를 `-E` 로(bundle-verify 스킬과 함께), 샤드 시간 균형, 파이프라인 정의로. 외부 CI 러너는 사용자 결정.
+- **T3:** 샤드 시간 균형, 파이프라인 정의로. 외부 CI 러너는 사용자 결정.
 - **U1 햅틱:** 방아쇠 진동(DualSense · GameInput) · Android Vibrator 는 그 백엔드가 생길 때.
 - **A1 포즈 노드:** Mirror · Montage(섹션 · 분기)를 `AnimationPoseNodeRegistry` 에 한 줄씩.
-- **R1 리다이렉터:** 에디터 옮기기 · 이름 바꾸기가 `redirects.xml` 에 줄을 더하게(`move-asset`).
+- **R1 리다이렉터:** 배포 팩이 도메인의 `redirects.xml` 을 담는지 본다 — 쿠킹 설정(`Config/Engine/PackConfig.json` 등)에 그 이름이 없어 Shipping 에서 표가 빠질 수 있다(팩 도달 계산은 참조로만 담는다).
 
 ### 6. 리소스
 

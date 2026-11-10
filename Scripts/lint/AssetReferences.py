@@ -36,6 +36,7 @@ from common.Git import resolveGitExecutable, runGit  # noqa: E402
 kConfigPath = "Config/Dev/AssetReferenceFields.json"
 kGeneratedPath = "Config/Dev/AssetReferenceFields.generated.json"   # 리플렉션 파서가 낸 경로 칸 표 — Scripts/generate/AssetReferenceFieldList.py 가 쓴다
 kContentFolder = "Content"
+kRedirectFileName = "redirects.xml"   # 런타임 `AssetRedirect::kFileName` 과 같은 이름 — 도메인 뿌리마다 하나
 # 경로 낱말을 가르는 글자(값 하나에 경로 여럿 — 쉼표 · 세미콜론 · 공백). 경로 안에는 오지 않는다(리소스 이름 규칙 `[a-z0-9_.-/]`).
 kTokenSeparators = ",; \t\r\n#"  # `#` 뒤는 파일 안의 항목 id 다(`_base="common/data/items.xml#helmet_knight"`) - 참조는 앞의 파일이다
 # 이 글자가 든 낱말은 경로가 아니라 틀이다(`{bind:…}` · CMake `${…}` · 와일드카드).
@@ -308,6 +309,8 @@ def isReferrer(relativePath: str, config: FieldConfig) -> bool:
     lowered = normalized.lower()
     if not lowered.startswith(kContentFolder.lower() + "/") or not lowered.endswith(config.listTextExtension):
         return False
+    if lowered.rsplit("/", 1)[-1] == kRedirectFileName:
+        return False   # 리다이렉트 표는 옛 id 를 적는 글이다 — 참조가 아니다(`from` 은 다른 형식의 경로 칸 이름이기도 하다, C++ `AssetReferenceFields::isReferrer` 와 같다)
     assetID = lowered[len(kContentFolder) + 1:]
     if any(assetID.startswith(domain + "/") for domain in config.listUncheckedDomain):
         return False
@@ -346,7 +349,6 @@ def readIndexBlobs(projectRoot: Path, listRelativePath: list[str]) -> dict[str, 
     return mapText
 
 
-kRedirectFileName = "redirects.xml"   # 런타임 `AssetRedirect::kFileName` 과 같은 이름 — 도메인 뿌리마다 하나
 
 
 def isRedirectTable(relativePath: str) -> bool:
@@ -368,6 +370,50 @@ def parseRedirects(mapText: dict[str, str]) -> dict[str, str]:
             if source and target:
                 mapOldToNew[source] = target
     return mapOldToNew
+
+
+def makeRedirectTableID(assetID: str) -> str:
+    """리소스 id 가 속한 도메인의 표 id(`<도메인>/redirects.xml`) — 도메인은 첫 마디, `game/<팩>` · `dlc/<묶음>` 은 두 마디(C++ `AssetRedirect::makeTableID`)."""
+    parts = assetID.split("/")
+    domain = "/".join(parts[:2]) if parts[0] in ("game", "dlc") and len(parts) > 1 else parts[0]
+    return f"{domain}/{kRedirectFileName}"
+
+
+kRedirectIDCharacters = frozenset("abcdefghijklmnopqrstuvwxyz0123456789_.-/")
+
+
+def addRedirects(tableText: str | None, listMove: list[tuple[str, str]]) -> str:
+    """표 글(없으면 None)에 옮기기(옛 id, 새 id)를 더한 글을 돌려준다 — C++ `AssetRedirect::addToXMLText` 와 같은 규칙 · 같은 글 모양(에디터 옮기기와 diff 가 같게).
+
+    옮긴 자리(새 id)를 옛 id 로 둔 줄은 뺀다(그 id 에 다시 에셋이 산다 — 남기면 되돌린 옮기기가 순환이 된다). 같은 옛 id 의 줄은 새 줄로 바꾼다. 사슬은 둔다.
+    틀린 표 · 맞춤 꼴이 아닌 id · 순환이면 ValueError — 런타임이 기동을 멈출 표를 쓰지 않는다.
+    """
+    listEntry: list[tuple[str, str]] = []
+    if tableText is not None:
+        root = ElementTree.fromstring(tableText)   # 틀린 XML 은 ParseError(ValueError 가 아니다 — 부른 쪽이 그대로 멈춘다)
+        if root.tag != "Redirects":
+            raise ValueError(f"리다이렉트 표의 뿌리가 <Redirects> 가 아니다: <{root.tag}>")
+        for node in root:
+            if node.tag != "Redirect" or not node.get("from") or not node.get("to"):
+                raise ValueError(f"리다이렉트 표에 틀린 줄이 있다: <{node.tag} {node.attrib}>")
+            listEntry.append((node.get("from"), node.get("to")))
+    for oldID, newID in listMove:
+        for assetID in (oldID, newID):
+            if not assetID or not set(assetID) <= kRedirectIDCharacters or assetID.startswith("/") or "//" in assetID or "/../" in f"/{assetID}/":
+                raise ValueError(f"'{assetID}' 는 맞춤 꼴 리소스 id 가 아니다")
+        if oldID == newID:
+            raise ValueError(f"'{oldID}' 를 자기 자신으로 옮긴다")
+        listEntry = [entry for entry in listEntry if entry[0] not in (oldID, newID)] + [(oldID, newID)]
+    mapOldToNew = dict(listEntry)
+    if len(mapOldToNew) != len(listEntry):
+        raise ValueError("리다이렉트 표에 같은 옛 id 가 두 번 있다")
+    for start in mapOldToNew:
+        target, steps = mapOldToNew[start], 0
+        while target in mapOldToNew:
+            target, steps = mapOldToNew[target], steps + 1
+            if steps > len(mapOldToNew):
+                raise ValueError(f"리다이렉트가 '{start}' 에서 순환한다")
+    return "<Redirects>\n" + "".join(f'\t<Redirect from="{source}" to="{target}" />\n' for source, target in listEntry) + "</Redirects>\n"
 
 
 def collectProblems(listRelativePath: list[str], mapText: dict[str, str], assets: AssetSet, config: FieldConfig, mapRedirect: dict[str, str] | None = None) -> list[str]:
@@ -426,11 +472,35 @@ def checkWorkingTree(projectRoot: Path) -> list[str]:
     return listMetaProblems(listIndex) + collectProblems(listReferrer, mapText, assets, config, mapRedirect)
 
 
+def runSelfCheck() -> None:
+    """리다이렉트 표 쓰기 규칙 — C++ `AssetRedirectTest.MovesAddLinesAndMovingBackReplacesThem` 과 같은 사례 · 같은 글."""
+    assert makeRedirectTableID("game/empty/maps/a.scene.xml") == "game/empty/redirects.xml"
+    assert makeRedirectTableID("common/data/a.xml") == "common/redirects.xml"
+    first = addRedirects(None, [("common/data/a.xml", "common/data/b.xml")])
+    assert first == '<Redirects>\n\t<Redirect from="common/data/a.xml" to="common/data/b.xml" />\n</Redirects>\n', first
+    chained = addRedirects(first, [("common/data/b.xml", "common/data/c.xml")])
+    assert parseRedirects({"t": chained}) == {"common/data/a.xml": "common/data/b.xml", "common/data/b.xml": "common/data/c.xml"}
+    back = addRedirects(chained, [("common/data/c.xml", "common/data/a.xml")])
+    assert parseRedirects({"t": back}) == {"common/data/b.xml": "common/data/c.xml", "common/data/c.xml": "common/data/a.xml"}, back
+    for bad in (lambda: addRedirects("<Moves/>", [("common/a.xml", "common/b.xml")]), lambda: addRedirects(None, [("Common/A.xml", "common/b.xml")]),
+                lambda: addRedirects(None, [("common/a.xml", "common/a.xml")])):
+        try:
+            bad()
+        except ValueError:
+            continue
+        raise AssertionError("틀린 표 · id 를 받았다")
+
+
 def main(argv: list[str] | None = None) -> int:
     import argparse
     from common.ExitCode import ExitCode
     from common.Paths import getProjectRoot
-    argparse.ArgumentParser(description="작업 트리의 에셋 참조(Config/Dev/AssetReferenceFields.json 의 칸)가 모두 있는지 본다 — 인자 없음").parse_args(argv)
+    parser = argparse.ArgumentParser(description="작업 트리의 에셋 참조(Config/Dev/AssetReferenceFields.json 의 칸)가 모두 있는지 본다")
+    parser.add_argument("--self-check", action="store_true", help="리다이렉트 표 쓰기 규칙만 본다")
+    if parser.parse_args(argv).self_check:
+        runSelfCheck()
+        print("[AssetReferences] self-check OK")
+        return ExitCode.Passed
     listProblem = checkWorkingTree(getProjectRoot())
     for problem in listProblem:
         print(f"  - {problem}")

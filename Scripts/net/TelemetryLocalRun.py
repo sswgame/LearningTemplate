@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -30,7 +31,7 @@ from common import AppArguments
 from common.ExitCode import ExitCode
 from common.HostPlatform import executableName
 from common.Paths import getProjectRoot
-from net.NetPairRun import _stop, _waitForText
+from net.NetPairRun import _kUserDataRootEnvironment, _stop, _waitForText
 
 _kTelemetryLinked = re.compile(r"\[TelemetryUpload\] telemetry uploads go to")
 _kCrashSent = re.compile(r"\[TelemetryUpload\] crash reports: (\d+) sent from '([^']+)'")
@@ -129,11 +130,12 @@ def _writeFakeBundle(reportsFolder: Path) -> Path:
     return bundle
 
 
-def _runOnce(argument: argparse.Namespace, clientExe: Path, outDir: Path, port: int, index: int, bConsent: bool) -> Path:
+def _runOnce(argument: argparse.Namespace, clientExe: Path, outDir: Path, port: int, index: int, bConsent: bool, environment: dict[str, str]) -> Path:
     log = outDir / f"run{index}.log"
     clientArgs = [
         str(clientExe),
         AppArguments.option("game", argument.game),
+        AppArguments.flag("unattended"),
         AppArguments.variable("gv_standardInputCommands", "1"),
         AppArguments.variable("gv_userSettingsFile", outDir / 'usersettings.json'),
         AppArguments.variable("gv_telemetryUploadEndpoint", f"http://127.0.0.1:{port}/telemetry"),
@@ -141,7 +143,7 @@ def _runOnce(argument: argparse.Namespace, clientExe: Path, outDir: Path, port: 
     ]
     print(f"[telemetry-local] run {index}: {' '.join(clientArgs)}")
     with log.open("wb") as clientOut:
-        client = subprocess.Popen(clientArgs, cwd=str(clientExe.parent), stdin=subprocess.PIPE, stdout=clientOut, stderr=subprocess.STDOUT)
+        client = subprocess.Popen(clientArgs, cwd=str(clientExe.parent), stdin=subprocess.PIPE, stdout=clientOut, stderr=subprocess.STDOUT, env=environment)
         _waitForText(log, _kCrashSent, argument.timeout, client)
         time.sleep(argument.client_delay)  # 게임 인스턴스가 서고 표준 입력 명령을 받을 때까지
         try:
@@ -164,6 +166,13 @@ def _run(argument: argparse.Namespace) -> int:
     if outDir.exists():
         shutil.rmtree(outDir)
     outDir.mkdir(parents=True)
+    # 무인 실행(-unattended)의 사용자 데이터 뿌리 — 두 실행이 같은 크래시 묶음 폴더를 봐야 하므로 프로세스마다 새 폴더(기본)가 아니라 하나를 함께 쓴다.
+    # 뿌리는 `<Bin>/Saved/Automation/UserData/` 아래여야 한다(App 이 밖이면 거절한다 `AutomationUserDataRoot`, 순서 시나리오의 `RunStateDirPair.cmake` 와 같다).
+    userDataRoot = clientExe.parent / "Saved" / "Automation" / "UserData" / "telemetry-local"
+    if userDataRoot.exists():
+        shutil.rmtree(userDataRoot)
+    userDataRoot.mkdir(parents=True)
+    environment = {**os.environ, _kUserDataRootEnvironment: str(userDataRoot)}
     sink = Sink()
     server = ThreadingHTTPServer(("127.0.0.1", 0), _makeHandler(sink))
     serverThread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -172,13 +181,13 @@ def _run(argument: argparse.Namespace) -> int:
     listLog: list[Path] = []
     bundle: Path | None = None
     try:
-        listLog.append(_runOnce(argument, clientExe, outDir, port, 1, True))
+        listLog.append(_runOnce(argument, clientExe, outDir, port, 1, True, environment))
         match = _kCrashSent.search(listLog[0].read_text(encoding="utf-8", errors="replace"))
         if match is None:
             print(f"[telemetry-local] FAIL: run 1 logged no crash report line - the crash uploader was not linked (log: {listLog[0]})")
             return int(ExitCode.Violation)
         bundle = _writeFakeBundle(Path(match.group(2)))
-        listLog.append(_runOnce(argument, clientExe, outDir, port, 2, False))
+        listLog.append(_runOnce(argument, clientExe, outDir, port, 2, False, environment))
     finally:
         server.shutdown()
         if bundle is not None:

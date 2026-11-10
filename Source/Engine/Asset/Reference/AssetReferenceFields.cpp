@@ -11,6 +11,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Serialization/Inherit/AssetRedirect.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/JSON/JSONFields.h"
 
@@ -249,7 +250,8 @@ namespace sw
     bool AssetReferenceFields::isReferrer( string_view assetID ) const
     {
         const string lowered = AssetReferenceFieldsInternal::normalizePath( assetID );
-        if ( isTextAsset( lowered ) == false || AssetReferenceFieldsInternal::startsWithDomain( lowered, _listUncheckedDomain ) )
+        // 리다이렉트 표(`redirects.xml`)는 옛 id 를 적는 글이다 — 있는지 검사하거나 옮기기가 고칠 참조가 아니다(`from` 은 다른 형식의 경로 칸 이름이기도 하다).
+        if ( isTextAsset( lowered ) == false || AssetReferenceFieldsInternal::startsWithDomain( lowered, _listUncheckedDomain ) || AssetRedirect::isTable( lowered ) )
             return false;
         const string wrapped = "/" + lowered;
         return std::none_of( _listImported.begin(), _listImported.end(), [&wrapped]( const AssetImportedFolder& folder )
