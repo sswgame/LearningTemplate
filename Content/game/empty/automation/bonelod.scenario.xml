@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="695aaea3bcc7430fd6a71a56231f68cb"?>
 <!--
   본 LOD — 부품을 몸 메시 하나로 합친 Quaternius 마을 사람 40 명(8 열 격자)에서, 먼 캐릭터의 몸 유닛이 합친 메시 LOD 단계마다 가중치 없는 본을 풀지 않는지(SkeletonBoneLOD::computeMeshMasks) 본다.
   비용은 감시 값 Animation.EvaluatedBones(포즈를 만든 유닛이 풀어 낸 본 수의 합)로 판정한다 — 마스크를 끈 값(gv_animationBoneLOD=0)과 달라야 한다.

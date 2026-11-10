@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="11500ec82f5b682ffe6eb33769a954f3"?>
 <!--
   장르 완결 루프 — 택틱스 SRPG 키트(GF_TacticsSRPG)의 전투 한 판: 아군 페이즈(고르기 → 이동 → 공격) → 적 페이즈(AI) → 둘째 턴 → 승리.
   플레이어와 같은 입력(Move 축으로 커서 한 칸씩, 입력 맵 액션 KitDemo.Confirm)으로만 움직인다. 적 페이즈는 키트 AI(SRPGCommanderAI)가 한다.

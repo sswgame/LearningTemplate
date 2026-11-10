@@ -1,3 +1,4 @@
+<?asset guid="8a71ac6c9c5ee68c06ad7236dfb12676"?>
 <Scene formatVersion="2" name="VfxGPULights">
 	<!-- 파티클 라이트 시나리오(automation/vfxgpulights)의 무대 — 어두운 방의 바닥 위에서 불똥(engine/vfx/gpusparklights)이 튄다.
 	     바닥은 밝은 격자다 — 빛이 어두운 바닥(prototypegrid_dark)에서는 색 거리 3~5 밖에 못 올려 화소 비교의 하한(6)에 닿지 못했다. 해와 주변광이 약해 바닥 자체는 어둡다.

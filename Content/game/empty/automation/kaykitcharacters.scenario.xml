@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="fa1b455909910966769516e7cbb69b41"?>
 <!--
   KayKit 캐릭터 벤치의 아틀라스 색 — 벤치 기사(-gv_stressTestCharacters)가 흰 기본 머티리얼이 아니라 KayKit 머티리얼(data/benchscene.xml 의 _knightMaterial)로 그려지는지 눈으로 본다.
   벤치 카메라는 캐릭터 수에 맞춰 스스로 잡힌다(frameCharacterCameras). 사진은 걷기 · 서기가 자리 잡은 뒤(60 프레임) 한 장이다.

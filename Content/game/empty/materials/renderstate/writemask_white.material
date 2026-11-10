@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="7c16330592d634a32fabd4fa78b463cd"?>
 <MaterialDef formatVersion="0" name="writemask_white" _base="game/empty/materials/renderstate/plain_white.material">
 	<_listBlendTarget>
 		<BlendTargetState colorWriteMask="R"/>

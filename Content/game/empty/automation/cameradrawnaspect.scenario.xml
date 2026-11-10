@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="ebffe4bda86880ce3ede43be964314ea"?>
 <!--
   카메라가 그린 뷰의 가로세로 비 — 주 시점 카메라가 실제로 그린 뷰의 비(Camera.DrawnAspect)가 창 크기를 따른다.
   대기 카메라(컷 프리롤)의 LOD 미리 보기가 이 값으로 투영한다(CameraManagerComponent::updatePendingLODView). 예전에는 16:9 로 짐작해 세로 화면 · 분할 화면에서 어긋났다.

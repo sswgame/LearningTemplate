@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="1cbfded74578bdddf7cf5d40f5776bd1"?>
 <InputMap>
 	<action name="Game.Clash" layer="Common" trigger="Pressed">
 		<bind source="Key" code="E"/>

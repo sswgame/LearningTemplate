@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="72acdec565bf67263864751c4d62ef8b"?>
 <!-- 하우징 침구 -->
 <MaterialDef formatVersion="0" name="housing_cloth" _base="engine/materials/defaultmaterial.material">
 	<_properties>

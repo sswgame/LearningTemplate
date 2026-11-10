@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="fc78f878f1cd832789ac3ae93a5416c0"?>
 <!--
   2D 물리 묶음 — 캐릭터(의도 → CharacterPawnMovement2D → CharacterController2D)가 땅에 서고 걷고 뛰며, 힌지(Joint2D)로 매단 판이 축에 매달려 흔들리고,
   시한 폭탄이 상자(Fracture2D)를 깨고, 다각형 2D 빛(FreeformLight2D)이 벽을 밝힌다. 그림은 두 사진의 차로만 본다(골든 없음).

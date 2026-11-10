@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="372e5d86eb0ae74597c4f4e915a0f2dc"?>
 <!--
   자동 노출 적응(PostProcessValues._autoExposureMinEv · MaxEv, auto_exposure.hlsl) — 어두운 곳에서 밝은 곳으로 바뀐 직후의 화면은 하얗게 날아가고, 시간이 지나면 노출이 내려가 다른 그림이 되며, 다 적응하면 그림이 멈춘다.
   적응이 돌지 않으면(노출 고정 · 측정 없음) 첫 두 장이 같아서 진다. 적응이 끝나지 않고 떨리면 셋째 판정이 진다. 골든이 아니라 같은 실행의 세 장이다.

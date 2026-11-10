@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="7167900b0c098bc312d69dd72187a9a0"?>
 <!--
   캐릭터 잔상(PoseAfterimageComponent, S5) — 해골(Actor)이 외형을 입으면 0.1 초마다 포즈를 고정한 반투명 사본을 남긴다(풀 6, 0.6 초에 사라짐).
   ① 외형이 메시를 입힌 뒤 잔상이 쌓인다(Afterimage.CaptureCount ≥ 3, 보이는 사본은 풀 크기 6 이하).

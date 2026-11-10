@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="44055e1796aced2d9946f1a6d315d4b9"?>
 <!-- 하우징 가구 나무 -->
 <MaterialDef formatVersion="0" name="housing_wood" _base="engine/materials/defaultmaterial.material">
 	<_properties>

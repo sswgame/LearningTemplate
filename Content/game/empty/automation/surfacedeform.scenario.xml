@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="1d28ff86c936c7f8e353de2cd5dbd463"?>
 <!--
   표면 변형 층(SurfaceDeformSystem) — 무대 maps/surfaceinteraction 의 모래 지면(SandGround, surfacedeform_sand.material).
   ① 깔때기 Whirl(SurfaceStampComponent Hold, Funnel 지름 1.6 m · 깊이 0.14 m · 홈 셋 · 1.5 rad/s): 붙잡힌 도장 하나가 있고 그 둘레가 0.08 m 넘게 꺼져 있다.

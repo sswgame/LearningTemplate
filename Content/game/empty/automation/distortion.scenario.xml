@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="dd650011dcb58e5f36dc9193134c3ff9"?>
 <!--
   화면 왜곡 — 보이지 않는 왜곡 렌즈(구, MATERIAL_DISTORTION)가 뒤의 무늬 벽을 비껴 보이게 하고, 렌즈를 치우면 벽이 곧게 보인다.
   기본(포워드) 파이프라인의 왜곡 누적(Distortion) · 적용(DistortionApply) 패스를 본다. 렌즈 표면은 알파 0 이라 두 사진의 차이는 왜곡뿐이다.

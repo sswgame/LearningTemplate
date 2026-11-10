@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="5897cb904ec20ffef37eac1e97348cd1"?>
 <!--
   접촉 그림자 — 같은 무대를 접촉 그림자 없이(maps/shadowtest — 패스가 돌지 않는다)와 해 · 점광의 접촉 그림자를 켜고(maps/shadowtest_contact) 찍고 켠 무대의 접촉 그림자 마스크(gpu.show ContactShadowMask)를 골든으로 지키고, 두 장을 골든으로 지킨다.
   디퍼드(G버퍼 뒤 ContactShadow 패스)를 찍는다 — 포워드 깊이 프리패스 파이프라인(forwardprepasspipeline.xml)도 같은 패스 · 같은 마스크를 읽는다. 그림자 필터는 PCF 다.

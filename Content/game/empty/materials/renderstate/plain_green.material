@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="18a8a9eb93bc0a15b4e503012608afff"?>
 <MaterialDef formatVersion="0" name="plain_green" _base="engine/materials/defaultmaterial.material">
 	<_properties>
 		<item name="_color" defaultValue="0.1 0.9 0.1 1"/>

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="36a2cd6ff24f1920be51e07d2218b9f0"?>
 <!--
   KayKit 전투 벤치의 아틀라스 색 — 전투 연출(-gv_stressTestCombat=1)의 스켈레톤 적(_combatEnemyMaterial)과 칼(_combatSwordMaterial)이 KayKit 머티리얼로 그려지는지 눈으로 본다.
   사진 한 장은 서 있는 적(맞기 전), 한 장은 쓰러진 뒤(180 프레임에 치명적인 피격 → 래그돌, 칼 떨어뜨리기)다.

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="356029ca611c38d291438a3099edf3e3"?>
 <!--
   런타임 디버거 한 자리(디버그 섹션 표) — 컷씬 디버거(섹션 sequence)와 애니메이션 되감기(섹션 animrewind)가 다른 게임플레이 섹션과 같은 표 · 같은 대상(debug.target, 핸들로 저장)으로 줄을 낸다.
   무대 maps/cinematic: Director 의 시퀀스 플레이어(바인딩 셋 — CutA · CutB · Actor)와 스켈레탈 Actor. 되감기 기록을 켜고 시퀀스를 재생한 뒤 hud.print 로 줄을 로그(DebugHUD.PrintLine)에서 본다.

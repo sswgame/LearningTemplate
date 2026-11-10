@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="5a25c5a0b057bc4c13ace64c077eae8d"?>
 <!--
   장르 완결 루프 — 액션 플랫포머 키트(GF_ActionPlatformer)의 스테이지 한 판: 시작 → 비밀 줍기 → 구덩이 뛰어넘기 → 체크포인트 → 골 → 결과(점수 · 등급).
   플레이어와 같은 입력(Move 축을 내는 D 키, 입력 맵 액션 KitDemo.Jump 를 내는 Space)으로만 움직인다.

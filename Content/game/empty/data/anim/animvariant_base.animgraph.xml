@@ -1,3 +1,4 @@
+<?asset guid="3324774a823d44dee2697c279310ee2f"?>
 <!-- 시나리오 automation/animvariant 의 바탕 그래프 — 상태는 Idle 하나이고 상체에 연결 레이어 슬롯을 둔다. 비어 있는 슬롯은 아무것도 얹지 않는다. -->
 <AnimationGraphAsset>
 	<nodes>

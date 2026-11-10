@@ -1,3 +1,4 @@
+<?asset guid="a35fd2ad632585f8c4dde43a3abe0c81"?>
 <Scene formatVersion="2" name="GrabCarry">
 	<!-- 집기 · 눌림판 무게 · 씬 너머 남기기 시나리오(automation/grabcarry)의 무대.
 	     Hand(GrabberComponent)가 상자(Crate)를 집어 눌림판(Plate — 트리거 강체 + GimmickSensorComponent) 위로 옮겨 놓는다. 상자의 강체 질량은 5 kg 이지만

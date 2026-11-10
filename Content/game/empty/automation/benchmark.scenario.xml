@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="cac8c7ed3da32ed6f8b5b4b18b3ec54d"?>
 <!--
   내장 벤치마크(timedemo)의 본 — 씬이 서면 120 프레임의 벽시계 프레임 시간을 재서 산출물 폴더에 bench.json(프레임 수 · 평균 · 최소 · 최대 · p50 · p95 · p99 · 평균 fps)을 쓴다.
   게임의 벤치마크 메뉴는 같은 시나리오를 재생한다: scenario.play game/empty/automation/benchmark.scenario.xml fixed

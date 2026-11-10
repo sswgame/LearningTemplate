@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="c2ab2d4e8816c09f85d8c0e7f8530f27"?>
 <InputMap>
 	<override name="Use" trigger="Pressed">
 		<bind source="Key" code="G"/>

@@ -1,3 +1,4 @@
+<?asset guid="ec74c215f7168ef90c987c8551b7bd64"?>
 <!-- 바탕 그래프의 슬롯 Weapon 을 채우는 그래프 — 자기 상태 기계로 돌고 클립 이름은 애니메이터의 셋에서 찾는다. -->
 <AnimationGraphAsset>
 	<nodes>

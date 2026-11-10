@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="c0132485206b586b58adca5a48a87d3d"?>
 <!--
   늪 — 들어오면 감속(GE_SwampSlow), 1 초마다 가라앉음 스택, 진흙 채널(Dirt)이 묻고, 나가면 이 출처의 이펙트를 지운다.
   물체 대상 할 일: 열쇠(Item.Key)가 빠지면 제자리(KeyHome)로 돌아온다. NPC 는 InHazard 키로 안다.

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="3aca3ee755d6005ef14444295665d151"?>
 <!--
   스키닝 방식(SkeletalMeshComponent._skinningMethod, mesh_skin.hlsl) — 같은 기사 · 같은 클립 · 같은 프레임을 선형(skinningmethod)과 듀얼 쿼터니언(skinningmethod_dq)으로 찍어 견준다.
   DQ 갈래가 돌지 않으면(방식 깃발이 프레임 값 머리에 실리지 않거나 셰이더가 읽지 않으면) 두 장이 같아서 진다. DQ 본 행이 깨지면(부호 · 순서) 기사가 흩어져 둘째 판정이 진다.

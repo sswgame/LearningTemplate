@@ -1,3 +1,4 @@
+<?asset guid="6b467fe664d56ca6293c02f253842736"?>
 <!--
   두 프로세스 복제 확인용 페어드 애니메이션(`maps/pairedanimnet.scene.xml`, `Scripts/dev/RunPairedAnimationNetPair.py`). 기사(KayKit) 둘이 마주 서서 한쪽(Lead)이 환호하고 다른 쪽(Partner)이 상호작용 동작을 한다.
   타임라인 길이(1.6666666 초)는 앵커 클립 Cheer 의 길이다(시작 때 다르면 거절한다). Partner 의 Interact(1.3 초)는 타임라인 안에서 끝나 나간다.

@@ -1,3 +1,4 @@
+<?asset guid="5f90d73e95544bb81db872abaa429b86"?>
 <Scene formatVersion="2" name="UIStyleVariant">
 	<!-- 시나리오 automation/uistylevariant 의 무대 — 부모 시트를 쓰는 화면을 띄운다. uistylevariant_child 는 자식 시트를 쓰는 화면이다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">

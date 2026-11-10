@@ -1,3 +1,4 @@
+<?asset guid="de8bba170de5117546e238722a5550af"?>
 <Scene formatVersion="2" name="clothlod">
 	<!-- 시나리오 automation/clothlod 의 무대 — 기사(animgraphlod 와 같은 캐릭터) 등에 단 물리 천(등 장식 천, 기사의 자식 오브젝트)이다.
 	     천 LOD 는 기사 스켈레탈 메시의 애니메이션 LOD 등급을 읽는다: 등급 0 은 6 반복, 1 은 4, 2 는 2, 3 부터는 내린다(_maxLOD="2").

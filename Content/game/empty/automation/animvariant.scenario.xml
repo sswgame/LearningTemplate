@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="e13b82e726378801eb5f77c30ee71c7f"?>
 <!--
   애니메이션 변형 — 같은 기사 · 같은 무대에서 하나씩만 바꿔 바탕 사진과 견준다. 값이 재생을 바꾸지 않으면 진다(`ExpectImagesDiffer`).
   ① 셋을 교체표로 바꾸면 그래프가 쓰는 슬롯 idle 이 다른 클립이 된다(유니티 Animator Override Controller).

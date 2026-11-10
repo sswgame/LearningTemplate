@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="0abff7fee7029f5162291237eab426d9"?>
 <!--
   표면 라이브러리 쇼케이스 — 프리셋 29 종(engine/materials/library — 일상 물건 · 소품 · 배경 · 기믹)의 줄 세우기와 지형 레이어 규칙(경사 · 고도 · 높이 섞기)을
   맑음 · 비 · 눈 날씨로 찍는다. 날씨는 파라미터 묶음 engine/materials/weather.matparams.xml 의 Weather(x 젖음, y 웅덩이, z 눈, w 설선 m)를 개발 명령 matparam 으로 바꾼다 —

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="1fb559892a5bfef11e90e3e2b83fe44d"?>
 <!--
   하우징 키트(GF_Housing) 첫 수직 슬라이스 — 부지 HousingPlot(8 x 6 칸, 2 층, 500 골드)에 개발 명령 housing.* 로 짓는다. 값으로 판정한다(골든 없음).
   ① 고스트: 바닥 없는 탁자는 NoSupport(빨강), 바닥 위 80 도 탁자는 놓을 수 있다(초록) — 격자가 90 도 · 1 x 2 칸으로 맞춘다.

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="5cdaecabcc611f4db47e9071c252dd5b"?>
 <!--
   빛마다의 렌즈 플레어(LightComponent::_lensFlarePath · RenderPassType::LensFlare) — 플레어가 없는 무대와 두 점광에 플레어를 단 무대를 같은 실행에서 견준다.
   오른쪽 빛은 보여 빛무리 · 줄이 그 자리에 그려진다(오른쪽 위 띠가 달라진다). 왼쪽 빛은 기둥 뒤라 깊이 가림(빛 자리 둘레 표본 아홉)으로 플레어가 없다 — 켠 그림의 골든이 지킨다.

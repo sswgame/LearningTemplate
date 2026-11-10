@@ -1,3 +1,4 @@
+<?asset guid="1f095be4fcec4c9fe294034264474a76"?>
 <!--
   하우징 시연(GF_Housing) — 8 x 6 칸 · 2 층 부지 하나(원점 0,0,0 에서 +X · +Z 로 뻗는다)와 카탈로그 data/housingparts.xml(바닥 · 벽 · 문 · 탁자 · 침대).
   부지는 비어 시작한다. 시나리오 automation/housing.scenario.xml 이 개발 명령 housing.* 로 짓고 고스트 · 되돌리기 · 저장 · 재로드를 값으로 본다.

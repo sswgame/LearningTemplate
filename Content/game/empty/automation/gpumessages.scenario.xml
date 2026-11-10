@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="6d1822d9814b643586971c2ea6a0e943"?>
 <!--
   GPU 진단 — 셰이더 메시지 채널 · 픽셀 검사 · 패스별 GPU 시간.
   `gpu.inspect 16 16` 이 픽셀을 고르면 (1) 렌더 스레드가 공개된 첨부의 그 픽셀 값을 GPUInspect.Pixel 로 내고, (2) Present 의 fullscreen_blit 이 그 픽셀에서만

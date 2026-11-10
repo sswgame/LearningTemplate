@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="4b1adf4bce49b34ef9f561a6416a66a5"?>
 <MaterialDef formatVersion="0" name="glass" _base="engine/materials/glassmaterial.material" renderQueue="0">
 	<_properties>
 		<item name="_color" defaultValue="0.2 0.5 0.9 0.5"/>

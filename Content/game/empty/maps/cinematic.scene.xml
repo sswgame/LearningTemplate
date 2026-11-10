@@ -1,3 +1,4 @@
+<?asset guid="9ed884025342bcf9f10c420fc31983f6"?>
 <Scene formatVersion="2" name="Cinematic">
 	<!-- 시네마틱 시나리오(automation/cinematic)의 무대 — 플레이어 카메라(GameCamera)는 카메라 매니저로 GameplayView 를 보고, Director 의 시퀀스가 CutA · CutB 로 화면을 덮었다가 돌려준다. 언리얼 PlayerCameraManager + Level Sequence Camera Cut 의 조립과 같다.
 	     컷 카메라와 뷰 타깃은 Custom 역할이라 직접 뽑히지 않는다. 색이 다른 상자 둘을 컷마다 다른 쪽에서 본다.

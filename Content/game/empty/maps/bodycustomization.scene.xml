@@ -1,3 +1,4 @@
+<?asset guid="c53c54aef1c5928c7668e4f066b56873"?>
 <Scene formatVersion="2" name="BodyCustomization">
 	<!-- 몸 동작 무대(automation/bodydynamics.scenario.xml) — 해골 Dancer 는 외형 프리셋 BodyDemoWarrior(몸 프로필 BodyDemoWarrior — 굽 높이 0.08 m · 몸통 지글 ·
 	     동공 · 눈물, 피부 층 마스카라 · 장미 문신)다. 열린 하늘(0,0)과 넓은 지붕 아래(-8,0, Hut)를 오가며 눈에 닿는 빛이 바뀌고, 날씨(skyLight)가 직사광을 줄인다.

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="a1b28f5ae79867cc319e8dc9d5fc7f2d"?>
 <!-- 하우징 부품 카탈로그(GF_Housing, HousingPartCatalog) — 시연 씬 maps/housing.scene.xml 의 부지가 쓴다. 칸 1 m, 층 3 m. 프리팹 원점은 점유 칸의 가운데 바닥(회전 0).
      벽과 문은 끝 소켓(wallEnd)에 서로 붙는다. 탁자만 자유 배치를 허락한다. -->
 <HousingPartCatalog currency="Gold" cellSize="1" levelHeight="3" socketSnapRadius="0.6">

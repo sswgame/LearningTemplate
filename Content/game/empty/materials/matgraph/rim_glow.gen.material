@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="6d510cd251efbf6da8e4ba8821a7bb1e"?>
 <!-- Generated from game/empty/materials/matgraph/rim_glow.matgraph.xml by MaterialGraphCompiler - edit the graph; change values in a child material with _base. -->
 <MaterialDef formatVersion="0" name="matgraph_rim_glow" shaderPath="game/empty/shaders/matgraph/matgraph_rim_glow_51edde95.hlsl" alphaMode="Opaque">
 	<_properties>

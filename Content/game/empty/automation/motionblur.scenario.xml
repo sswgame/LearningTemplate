@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="d8e2bb41d66ea457cbae6904a72ed277"?>
 <!--
   모션 블러 — 카메라가 움직인 프레임만 흐리고(켬과 끔이 다르다), 멈춘 카메라는 원본 그대로다(켬과 끔이 같다). 디퍼드 파이프라인의 MotionBlur 패스(motion_blur.hlsl)를 본다.
   결정적: 애니메이션 없는 무대(maps/rendertest3d), 고정 프레임 시간, 카메라는 순간이동(teleport)으로만 옮긴다. 켬 · 끔은 같은 순서(정지 30 프레임 → 옆으로 0.25 m)를

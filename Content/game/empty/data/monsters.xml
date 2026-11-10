@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="c9af8efa8d9ae611e85c423caa3f34e1"?>
 <!--
   Empty 의 몬스터 정의(MonsterCatalog — 게임의 필수 데이터, EmptyGame 이 게임 서비스로 건다). 장르 키트 시연 액션 룸(maps/kitdemo_actioncombat)이 종 id 로 찾는다.
   수치는 시연 시나리오(automation/kitdemo_actioncombat)가 기대는 값이다: 플레이어 공격 34 - 방어 4 = 30 이라 졸개(HP 50)는 두 번, 보스(HP 120)는 네 번에 쓰러진다.

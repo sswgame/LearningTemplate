@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="249b59d8037a33c000e9abfc8c2c602b"?>
 <!--
   말의 출력 한계(maps/mountslope.scene.xml) — 다리의 가속 한계가 경사 당김보다 커도 출력(InertiaSettings::_maxPower, P = F·v)이 모자라면 오르막에서 처지는지 값으로 본다.
   ① 같은 의도(구보, 8 m/s) 6 초: 평지의 말(HorseFlat)은 구보 속도에 닿는다(8 m/s 에서 출력 한계 4000 / (500·8) = 1 m/s² — 공기 저항이 없어 유지된다).

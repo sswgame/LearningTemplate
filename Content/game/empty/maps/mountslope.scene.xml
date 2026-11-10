@@ -1,3 +1,4 @@
+<?asset guid="f7771900e57a5a290acbd319d3b06fee"?>
 <Scene formatVersion="2" name="MountSlope">
 	<!-- 말의 출력 한계 무대(automation/mountslope.scenario.xml) — 같은 말 둘(질량 500 kg, 출력 4000 W, 구보 8 m/s, 가속 6 m/s²): HorseFlat 은 평지, HorseHill 은 +Z 로 오르는
 	     돌 비탈(HillRamp, 기울기 0.2 rad) 위에서 같은 의도로 구보한다. 다리의 가속 한계(6)는 경사 당김(g·sin0.2 ≈ 1.95)보다 크지만 출력(P = F·v)이 모자라
