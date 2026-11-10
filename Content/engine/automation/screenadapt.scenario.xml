@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="a590f85052f8cfa91f613e0816f081ae"?>
 <!--
   엔진 시나리오 — 화면 대응: 데스크톱 창을 휴대 기기처럼 세로 · 가로로 바꿔 UI 뷰포트가 따라오는지, 안전 영역 흉내(gv_uiSafeZone)가 위 · 아래 여백으로 들어가는지,
   손가락 탭(Touch — 터치 장치 포인터 0)이 UI 로 가도 오류 없이 지나가는지 본다. 실제 노치 값은 Android 창(getSafeAreaInsets)이 대고, 에디터 UI 미리보기가 같은 견본(uiresolutions.xml)으로 보인다.

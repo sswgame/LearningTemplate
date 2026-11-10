@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="1ba99fce681ba40c72afde0c77a6c37c"?>
 <!-- 빙렬 청자 유약 — 유약 밑의 가는 균열(칸 무늬, 홈 깊이 0 — 유약이 덮어 평평하다). 부모(environmentsurface.material)의 값만 바꾼 프리셋이다. -->
 <MaterialDef formatVersion="0" name="PorcelainCrackle" _base="engine/materials/environmentsurface.material">
 	<_properties>

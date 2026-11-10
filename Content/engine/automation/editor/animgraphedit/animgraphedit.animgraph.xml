@@ -1,3 +1,4 @@
+<?asset guid="3c018a892095620be07c7b60fa5386bc"?>
 <AnimationGraphAsset>
 	<nodes>
 		<node id="1" name="Idle" x="40" y="80" loop="true" />

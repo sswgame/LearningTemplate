@@ -1,3 +1,4 @@
+<?asset guid="0842e44e92dcafcc4f357f7627b31b87"?>
 <!-- 카메라 프리셋 예시 — CameraPresetCatalog 가 읽는다. 각(pitch · yaw · fieldOfViewY)은 라디안, 거리는 m, 시간은 s 다. -->
 <CameraPresetCatalog>
     <DefaultBlend curve="SmoothStep" duration="0.5"/>

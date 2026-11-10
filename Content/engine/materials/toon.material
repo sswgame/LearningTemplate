@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="c53b70381487d19f77e50269c9f5bab2"?>
 <!-- 셀 셰이딩(툰) 머티리얼 — VRM MToon 1.0 의 파라미터 체계(toon.hlsl). 프로퍼티 이름 · 타입은 toon.hlsl 의 SW_MATERIAL 구조체와 같다.
      정적 스위치: Outline(MATERIAL_OUTLINE — 메시 외곽선 패스가 이 머티리얼을 그린다). 런타임에 바꿀 수 있는 스위치다(bShaderFeature="0" — 켬 · 끔 둘 다 쿠킹).
      알파 컷오프는 alphaMode="Mask", 양면은 cullMode="None" twoSidedLighting="true" 칸이다. 반투명은 alphaMode="Blend" + _alwaysDefines 의 MATERIAL_BLEND_TRANSLUCENT.

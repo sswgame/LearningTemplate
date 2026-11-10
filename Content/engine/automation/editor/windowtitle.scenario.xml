@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="a07dbb12422bb7907f5f735cbed501c9"?>
 <!--
   에디터 시나리오 — 창 제목이 미저장 표시(*)를 따라간다(EditorPlus E5). 새 씬을 임시 경로로 저장해 두고 시작하므로 Ctrl+S 가 저장소의 씬을 바꾸지 않는다.
   실행: App -EnableEditor -scenario=engine/automation/editor/windowtitle.scenario.xml -unattended

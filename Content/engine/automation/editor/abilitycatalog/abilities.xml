@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="bcc7a9a33a6ff83ec30258cac8eeb688"?>
 <!--
   어빌리티 카탈로그 편집 창 시나리오(editor/abilitycatalog)의 테스트 카탈로그 — 프레임워크 기본 클래스(ApplyEffects)만 쓰고 어트리뷰트 세트 클래스를 쓰지 않아 어느 게임에서도 런타임 로더가 읽는다.
   세트 Healer 가 없는 어빌리티 GA_Missing 을 가리킨다(시나리오가 고쳐 저장한다). 사본(scratch/abilitycatalog)에만 쓴다.

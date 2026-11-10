@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="706063a5edde919c11992bb500f51d6c"?>
 <!-- 외형 라이브러리 프리셋(lace): 흰 레이스. 값만 바꾼다 — 셰이더 변형은 갈래 바탕과 같다. -->
 <MaterialDef formatVersion="0" name="LaceWhite" _base="engine/materials/library/lace/base.material">
 </MaterialDef>

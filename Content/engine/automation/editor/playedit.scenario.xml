@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="2af8e2d3e0d19bd9257564a82d580f1b"?>
 <!--
   에디터 시나리오 — 플레이 옵션(N6).
   1) 플레이 중 인스펙터로 GameCamera 의 _priority 를 7 로 바꾸면 바로 들어가고(감시 값 Editor.SelectedProperty), Stop 이 0 으로 되돌린다.

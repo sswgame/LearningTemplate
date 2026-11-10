@@ -1,3 +1,4 @@
+<?asset guid="2583eea925899a501c7edaa0ef22c4ec"?>
 <!--
 	디퍼드 파이프라인 + 화면 공간 GI 두 가지 — 기본 디퍼드(deferredpipeline.xml)는 그대로이고, 이 파이프라인을 고르면 켜진다.
 	  SSAO 패스의 셰이더를 GTAO(gtao.hlsl — 지평선 기반 가림 + 굽은 노멀, 같은 AOColor 출력)로 바꾼다.

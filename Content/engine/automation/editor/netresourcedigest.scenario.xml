@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="67bfa60b574a99772392c6d5013c2182"?>
 <!--
   에디터 시나리오: 접속 뒤 합성 대조(GameNetSessionMessage::kResourceDigest, ResourceDigestComparer). 전용 서버와 App 클라이언트 1 을
   resourcecondition 씬으로 띄운다(netplay.start 의 scene= 인자가 모든 프로세스에 -gv_firstScene 을 준다). 씬의 상호작용 표는 layer.Night 이면

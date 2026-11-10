@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="caf450b70dedb0f699ab9a97e0718dbe"?>
 <!--
   에디터 시나리오 — 리그 디버그 창(rig_debug) 저장 왕복: 시험 기사 프리팹 · 리그(knight/ — rigdebugpanel 과 같은 데이터)의 실행마다 새 사본(scratch/saveroundtriprig — <Scratch>)을 쓴다.
   사본을 만들 때 글 안의 원본 id 가 사본 id 로 바뀌어 사본 프리팹이 사본 리그를 가리킨다 — 리그 창의 문서는 고른 오브젝트의 리그라 따로 여는 입구가 없다(경로는 씬 · 프리팹이 정한다).

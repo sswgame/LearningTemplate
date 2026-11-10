@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="8c975948d48915faf995f3277a049149"?>
 <!-- 후처리 머티리얼 본보기(post_process_color_tint.hlsl) — 장면 색의 채도를 낮추고 색을 입히며 멀수록 _farColor 로 민다. PostProcess 영역이다(MATERIAL_DOMAIN_POST_PROCESS):
      메시에 붙이지 않고 카메라 · 후처리 볼륨의 블렌더블 목록(_listBlendable — 경로 · 무게 · 자리)에 넣는다. 자리마다의 파이프라인 PostProcessMaterial 패스가 그린다. -->
 <MaterialDef formatVersion="0" name="PostProcessColorTint" shaderPath="engine/shaders/post_process_color_tint.hlsl" alphaMode="Opaque">

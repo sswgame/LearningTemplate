@@ -1,3 +1,4 @@
+<?asset guid="9734f709e1c5798e62f259405550df05"?>
 <UIStyleSheet _schemaVersion="1">
 	<Rule _selector="BorderPanel.notification" _backgroundColor="0.08,0.09,0.13,0.9" _cornerRadius="6,6,6,6" _padding="16,10,16,10" _borderWidth="2" _borderColor="0.35,0.55,1,1" />
 	<Rule _selector="BorderPanel.notification.achievement" _borderColor="0.95,0.78,0.25,1" />

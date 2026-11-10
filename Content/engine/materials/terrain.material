@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="f8349c02da55a1d5c28265c9247af3a9"?>
 <!-- 지형(TerrainComponent). 레이어 색 · 규칙 · 디테일 · 3 축 투영 · 거칠기 · 다공성 · 늘 젖음 · 스플랫 · 디테일 맵은 컴포넌트가 인스턴스에 싣는다 — 여기 값은 기본값이다.
      _weather 는 파라미터 묶음 engine/materials/weather.matparams.xml 의 Weather 에 묶는다 — 날씨가 값을 바꾸면 모든 지형 · 환경 머티리얼이 함께 젖고 눈이 쌓인다.
      표면 변형 층(발자국 · 바퀴 자국 · 깔때기 — 엔진 텍스처 칸 SurfaceDeform)이 정점을 내리므로 MATERIAL_VERTEX_DEFORM 이다(깊이 프리패스에서 빠지고 그림자는 같은 오프셋으로 그린다).

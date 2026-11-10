@@ -1,3 +1,4 @@
+<?asset guid="837602e3f0ec0ab81f9dabe06e535ad7"?>
 <!--
 	셀 셰이딩(툰)용 포워드 파이프라인 — forwardpipeline.xml 과 같은 패스(그림자 · 불투명 · 메시 외곽선 · 반투명)이고 Present 가 블룸 · 화면 외곽선 · 톤맵을 하지 않는다.
 	툰은 빛 쪽이 기본색 그대로가 목표다 — 톤맵(Reinhard)은 흰색을 0.5 로 누르고, 블룸은 계단 경계를 번지게 한다(forward2dpipeline.xml 과 같은 이유).

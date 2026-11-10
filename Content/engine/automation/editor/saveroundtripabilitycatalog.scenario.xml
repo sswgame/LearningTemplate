@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="efee9c463c9b7b42d9f5df70e193a093"?>
 <!--
   에디터 시나리오 — 어빌리티 카탈로그 저장 왕복: 테스트 카탈로그(abilitycatalog/abilities.xml — 항목 여섯)의 실행마다 새 사본(scratch/saveroundtripabilitycatalog — <Scratch>)을 연다.
   어빌리티 카탈로그 창은 문서 기반(EditorDocumentPanel, Data 종류 가운데 abilities.xml)이라 asset.openScratch 가 경로 칸 · 콘텐츠 브라우저와 같은 길(워크스페이스 포커스)로 사본을 연다.

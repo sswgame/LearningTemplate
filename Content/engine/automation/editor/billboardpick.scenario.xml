@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="da1c11f0c302b00a0bcba1589450fdec"?>
 <!--
   에디터 시나리오 — 뷰포트 빌보드와 클릭 선택(R4): 테스트 씬(editortest)의 게임 카메라는 메시가 없어 레이 피킹으로 집히지 않는다. 뷰포트에 그 아이콘 배지
   (이름표 viewport.billboard.GameCamera)가 보이고, 누르면 그 카메라 오브젝트가 골라진다(선택 하나 · 그 선택에 카메라 우선순위 프로퍼티가 있다).

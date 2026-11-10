@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="b308cb96ac8cda23d7b9b0bbf9ba5f6a"?>
 <!--
   에디터 시나리오 — 콘텐츠 브라우저 에셋 관리(N3). 테스트 폴더 engine/automation/editor/assetmanage 에는 probe.material 과 그것을 쓰는 씬이 있고,
   시나리오는 그것을 실행마다 새 사본(scratch/assetmanage)으로 복사해 사본에만 쓴다(<Scratch> — 추적 중인 원본이 바뀌거나 잔여 파일이 남지 않는다).

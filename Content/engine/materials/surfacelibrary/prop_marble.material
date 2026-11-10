@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="46374bdd8e0b4cde5daa31d0d1e8bde2"?>
 <!-- 대리석 — 노이즈로 휜 결, 연마 코트. 부모(environmentsurface.material)의 값만 바꾼 프리셋이다. -->
 <MaterialDef formatVersion="0" name="Marble" _base="engine/materials/environmentsurface.material">
 	<_properties>

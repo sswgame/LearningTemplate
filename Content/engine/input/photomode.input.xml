@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="b2383450aa320fa3caf3231e7033a61a"?>
 <!--
   Photo mode InputMap (EngineDefaultAssets::_photoModeInputMap) - CameraDirectorComponent loads it when photo mode starts and drops it when it ends.
   Every game gets the same free-camera controls without adding actions to its own map; the game is paused, so keys shared with gameplay do not clash.

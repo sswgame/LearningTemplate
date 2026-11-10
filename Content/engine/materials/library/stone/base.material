@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="cf0c0dafe2edd285c3e0926cb34d729c"?>
 <!-- 외형 라이브러리 갈래 바탕: 돌 — fbm 얼룩 · 결 · 거친 노멀. 젖은 돌은 _wetness. -->
 <MaterialDef formatVersion="0" name="AppearanceStone" _base="engine/materials/library/appearance.material">
 	<_properties>

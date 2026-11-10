@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="e36b1e83605f8108b44cf13bee08e2b8"?>
 <!--
   에디터 시나리오 — 콘텐츠 브라우저(A1): 게임 루트는 활성 팩 하나이고, All packs 를 켜면 game/ 의 팩이 모두 루트가 된다.
   참조 역색인이 다 만들어지면 활성 팩의 crate_medium.mesh 를 오른쪽 클릭해 Find References 를 누르고, 그 메시를 쓰는 씬이 결과에 나오는지 본다.

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="185099959c9de18d085cf7fcda1c6963"?>
 <!--
   에디터 시나리오 — 맵 검사(T2): **일부러 오류를 심은** 테스트 씬(반경 0 인 점광, engine/automation/editor/mapcheck/mapcheck_expect_error.scene.xml)을 열면 로드 검증이 오류 하나를 남긴다.
   상태줄의 경고 수(statusBar.mapCheck)를 누르면 Map Check 창이 열리고, 첫 줄(mapCheck.row.0 — 오류가 먼저다)을 누르면 그 점광 오브젝트가 골라진다.

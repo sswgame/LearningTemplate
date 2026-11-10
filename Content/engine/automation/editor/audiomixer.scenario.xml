@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="f2cb95cb0c3506aac11d30b3b232cda9"?>
 <!--
   에디터 시나리오 — 오디오 믹서 창: 커맨드로 열면 기본 믹서 그래프(master · music · sfx · voice · ambient · ui · reverb)의 버스마다 띠가 선다.
   sfx 의 M 을 누르면 음소거 버스가 1 개가 되고 다시 누르면 0, S 도 같다. sfx 페이더 가운데를 누르면 사용자 볼륨이 0.5 근처로 간다.

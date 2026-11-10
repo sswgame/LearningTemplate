@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="abff42f10830ecd3c6356d07ca5747cc"?>
 <!--
   에디터 시나리오 — 메시 모디파이어 패널(GF_EditorPlugIn_MeshModifiers, 후보 MeshModifierStack): 파괴 쇼케이스의 왼쪽 상자(CrateLeft, crate_medium.mesh - 통은 벽 뒤라 씬 뷰 그림에서 가려진다)을 골라 패널 대상으로 삼고
   모디파이어를 쌓는다. ① 휘기(Bend)를 더하고 각을 넣으면 GPU 미리보기(모프 풀 + 변형 프로그램)가 대상 메시에 걸리고 씬 뷰 그림이 레스트와 달라진다.

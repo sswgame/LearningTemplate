@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="5897ace58e4dc0fde236a56ef05a47b7"?>
 <!-- 모래 지면 — 표면 변형 층을 읽는 지면(surfacedeform.material)에 주황 격자(크기 가늠용)를 얹는다. -->
 <MaterialDef formatVersion="0" name="SurfaceDeformSand" _base="engine/materials/surfacedeform.material">
 	<_properties>

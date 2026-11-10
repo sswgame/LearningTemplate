@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="fcf8d3c3002f103a2f1e2a7827f86070"?>
 <!-- 외형 라이브러리 갈래 바탕: 녹슨 금속 — 녹 덩어리(금속도 0 · 거칠다) + 모서리 닳음(밝은 금속). -->
 <MaterialDef formatVersion="0" name="AppearanceRustMetal" _base="engine/materials/library/appearance.material">
 	<_properties>

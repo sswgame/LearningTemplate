@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="1b8425e9900a5db2008ac74ccc17ac86"?>
 <!--
   에디터 시나리오 — 토스트의 "Show in Explorer" 단추(후보 B-4): 단추가 달린 토스트를 띄우고 단추를 눌러, 탐색기 명령줄이 만들어지는지(호출 직전)까지 본다.
   explorer.dryRun 1 이 실제 탐색기 실행을 막는다 — 명령줄 조립과 횟수만 단언한다(Editor.ExplorerCommandWellFormed: 경로를 따옴표로 싸고 Windows 에서는 백슬래시만 쓴다).

@@ -1,3 +1,4 @@
+<?asset guid="a76464f7ee0df89c390c67e3b3381f61"?>
 <UIStyleSheet _schemaVersion="1">
 	<!-- 고대비 테마(accessibility.uiTheme = highcontrast) — 기본 시트 뒤에 걸려 색 · 테두리만 덮는다(크기 · 여백은 기본 시트 그대로).
 	     바탕은 불투명한 검정, 글은 흰색(대비 21:1), 강조는 노랑(검정 바탕 대비 19.6:1), 상호작용 위젯은 테두리 2. 같은 선택자로 덮어 특정도가 기본 시트와 같다

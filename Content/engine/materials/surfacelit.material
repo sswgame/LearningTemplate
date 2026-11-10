@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="0b1aa486303c557dc0b90a00dcea8cc9"?>
 <!-- 몸 표면 상태 머티리얼(surface_lit.hlsl) — forward_lit 의 PBR 에 젖음 · 흙 · 피 · 상처 · 찢김을 얹는다. _surface* 프로퍼티는 외형 컴포넌트의 CharacterSurfaceBinding 이 인스턴스에 올리는 이름과 같다
      (_surface<채널> 스칼라 · _surface<채널>Mask 마스크 — CharacterSurfaceBinding.h). 채널 이름은 engine/character/default.surfacechannels.xml 의 Wet · Dirt · Blood · Wound · Tear 다.
      alphaMode="Mask" 는 찢김(Tear) 구멍을 내려고 늘 켠다. 마스크 텍스처는 R 채널만 읽으므로 sRGB 가 아니다. -->

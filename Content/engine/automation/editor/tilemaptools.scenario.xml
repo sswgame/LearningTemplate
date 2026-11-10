@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="b3c34c21e0e7423e8ee189b0dd27b2fc"?>
 <!--
   에디터 시나리오 — 타일맵 도구(N11): 새 8 x 8 맵은 Walkable 플래그가 모두 켜져 있다. Erase 를 켠 Fill 로 한 번 누르면 64 칸이 모두 꺼지고,
   Brush 로 왼쪽 위 칸 하나를 칠한 뒤 Fill 로 빈 칸 하나를 누르면 이어진 빈 칸 63 개가 한 번에 칠해져 다시 64 칸이다.

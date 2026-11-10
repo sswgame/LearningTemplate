@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="2de2ddc37fa7786ba07716ca4e1c5ded"?>
 <!-- 환경 · 소품 표면 마스터 머티리얼(environment_surface.hlsl). 프리셋은 engine/materials/library/ 의 자식 .material 이 값만 바꾼다(언리얼 Material Instance).
      층 순서: 밑 → 무늬 → 잔무늬 · 큰 무늬 → 모서리 마모(밑 층) → 녹 → 변색 → 때 → 헤어라인 · 클리어 코트 → 날씨. 세기 0 이면 그 층이 꺼진다(기본은 모두 끔).
      무늬 종류(_patternShape.x): 0 없음 · 1 벽돌/타일(_patternScale.w = 줄 어긋남) · 2 판자(결 포함) · 3 대리석 결(_patternScale.x = 크기, y = 날카로움) · 4 칸(돌담 · 균열 유약) · 5 줄(밧줄 · 골판지 · 고무 홈, w = 기울기).

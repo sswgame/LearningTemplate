@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="8ecbfcd6eefe4d667da69d2630bce583"?>
 <!--
   에디터 시나리오 — 어빌리티 카탈로그 편집 창(Ability Catalog): 테스트 카탈로그(abilitycatalog/abilities.xml — 이펙트 셋 · 어빌리티 하나 · 세트 하나 · 큐 연출 하나)의 사본
   (scratch/abilitycatalog)을 경로 칸에 쳐서 연다. 항목 여섯이 서고(Editor.AbilityCatalogEntryCount = 6) 세트 Healer 의 GA_Missing 이 풀리지 않은 참조 하나로 보인다(IssueCount = 1).

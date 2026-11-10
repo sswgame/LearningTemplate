@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="d31894ed9f8d6f375835a1f425a6b5cd"?>
 <!--
   엔진 시나리오 — 디버그 HUD(Dev 전용): 마스터 단축키 Ctrl+F3 로 켜고, 개발 명령 hud 로 섹션 · 모서리를 바꾸고, 설정 창을 열어 B(UI.Back)로 닫고, 다시 Ctrl+F3 로 끈다.
   감시 값은 HUD 화면이 실제로 그린 것을 본다 — DebugHUD.SectionShown(gv_debugHUDWatchSection 의 섹션 상자) · DebugHUD.Corner(패널이 놓인 4 분면).

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="ad8e1ad0f24340f90c27bec969a41d47"?>
 <!--
   에디터 시나리오 — 환경설정 창(P2): 커맨드 팔레트로 열고, 검색 칸에 snap 을 치면 Viewport 섹션만 남는다.
   이동 스냅 간격(_gridSnapValue)을 2 로 바꾸면 0.5 초 뒤 저장되고, 파일에는 기본과 다른 그 키 하나만 있다(빈 에디터 상태 폴더라 처음엔 0 개).

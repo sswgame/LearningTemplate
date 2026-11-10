@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="8f1f690f97258fa0b6a63c625233b2f1"?>
 <!--
   에디터 시나리오 — 스프라이트 클립 창(sprite_clip): 임시 에셋을 새 문서(빈 프레임 하나)로 열고(asset.open) Add Frame 두 번 · Add Animation 한 번으로 고친 뒤 Save 로 저장한다.
   저장하면 파일이 생기고(Editor.TempAssetExists) 더러움이 걷힌다. Remove Frame 으로 하나 지운 뒤 Load 로 다시 읽으면 저장한 세 프레임 · 한 구간이 돌아온다(저장한 글이 맞다).

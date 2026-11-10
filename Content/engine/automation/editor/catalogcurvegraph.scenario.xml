@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="de2f6ab5a48c0dd73349de69d532e892"?>
 <!--
   에디터 시나리오 — 카탈로그 곡선 그래프(VFX 저작 UX): 카탈로그 편집기에서 엔진 표본 효과(sparks.vfx.xml)를 열고 첫 방출기의 Curves 창을 연다.
   곡선 미리보기를 누르면 위 그래프가 그 곡선을 열고, 키 하나를 끌어 놓으면 키 값이 문서에 한 번 적힌다(편집 한 줄 — 모델 테스트 ApplyEditedCurveMatchesTheGraph).

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="efabb57a75f0a5b6b2a9e2a91abf7b05"?>
 <!--
   에디터 시나리오 — 미리보기 씬(다중 월드, D3-7): Quick Open 으로 빨간 테스트 머티리얼을 열면 Material 패널이 자기 미리보기 씬(구 · 방향광 · 바닥)을 만들고,
   엔진이 그 씬을 씬마다 따로 둔 스냅샷 빌더 · 렌더러로 패널의 렌더 타깃에 그린다(PreviewSceneView → RenderPacketBuilder::populateScenePreviews →

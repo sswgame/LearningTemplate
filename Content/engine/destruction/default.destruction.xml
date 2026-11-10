@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="18ad3c5f5033530660b4e862a19ff868"?>
 <!-- 기본 파괴 재질(콘크리트 · 벽돌 벽). 형식은 Source/Engine/Destruction/DestructionProfile.h -->
 <DestructionProfile density="2000" physicsMaterial="Stone">
   <Strain thresholds="60 90 40"/>

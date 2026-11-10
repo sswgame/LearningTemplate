@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="05890e6a7672ef2e61a749fe1ebe5d85"?>
 <!-- 슬롯 스윕 표본(VfxGPULightSlotSweep) — gpusparklights 와 같은 방출기이고 파티클 라이트 슬롯만 256 이다(GPU 구간 상한 `GPULightBuffer::kMaxGPULight` 와 같다). 입자 풀(256)은 그대로라 시뮬레이션 비용은 같고 슬롯 비용만 다르다.
      측정: py -3 -m Scripts perf-compare --cases vfxGpuLights256 (씬 game/empty/maps/vfxgpulights256.scene.xml). 기준은 슬롯 32(gpusparklights). -->
 <VFXEffectDef>

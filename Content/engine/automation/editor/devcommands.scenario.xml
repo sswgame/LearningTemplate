@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="9a0631efb2772136fefae3fc5944f9e7"?>
 <!--
   에디터 시나리오 — 자동화가 부르지 않던 에디터 개발 명령을 한 번씩 부른다. 디버그 그리기 시연, 없는 태그 고르기(0 개), 입력 녹화 시작 · 멈춤(파일을 쓴다).
   실행: App -EnableEditor -scenario=engine/automation/editor/devcommands.scenario.xml -unattended

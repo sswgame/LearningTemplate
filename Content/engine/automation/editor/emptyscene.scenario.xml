@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="2db3e1317cf98f4c90d1af637d673985"?>
 <!--
   에디터 시나리오 — 편집 중인 씬을 빈 씬으로 바꾼 뒤(scene.new) 씬 없는 프레임도 네 백엔드가 UI 를 그린다. 활성 씬이 없는 프레임을 그리지 않게 한 변경이
   Vulkan 에서 UNDEFINED 백버퍼를 Load 로 열었던 결함(RenderThread::executeFrameBody)을 드러낸 적이 있어, 씬이 비는 상태를 CTest Scenario.editor 가 백엔드마다 지킨다.

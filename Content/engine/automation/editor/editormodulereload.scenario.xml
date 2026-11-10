@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="0c2a127d009463f99dc80a03347513bd"?>
 <!--
   편집기 모듈 핫 리로드: EditorModule(과 편집기 확장)을 두 번 갈아 끼우고, 그래프가 막히지 않았는지 · 묶임이 맞는지 본다. 편집기 인스턴스는 내려가며 되돌리기 기록 ·
   선택 · 복사 버퍼를 호스트의 맡김 칸에 맡기고 새 인스턴스가 되찾는다(로그 "Resumed the undo history").

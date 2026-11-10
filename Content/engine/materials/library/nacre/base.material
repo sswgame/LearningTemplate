@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="d746c5571a782203d03409ee45b4be6e"?>
 <!-- 외형 라이브러리 갈래 바탕: 진주층 — 아라고나이트 박막 간섭(Belcour · Barla 의 값싼 판, 언리얼 Substrate Thin Film). -->
 <MaterialDef formatVersion="0" name="AppearanceNacre" _base="engine/materials/library/appearance.material">
 	<_properties>

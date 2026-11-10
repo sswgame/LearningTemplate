@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="3c4b210b64d238a9209edfa65506848d"?>
 <!-- 콘크리트 — 거친 잔무늬와 얼룩(큰 무늬), 비에 어두워진다. 부모(environmentsurface.material)의 값만 바꾼 프리셋이다. -->
 <MaterialDef formatVersion="0" name="Concrete" _base="engine/materials/environmentsurface.material">
 	<_properties>

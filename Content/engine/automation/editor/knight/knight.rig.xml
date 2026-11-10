@@ -1,3 +1,4 @@
+<?asset guid="f342b8e696556b6c451c960c000f5b96"?>
 <RigAsset>
 	<nodes>
 		<item type="TwistDistribution" name="ForearmTwist" source="hand.l" axis="0,1,0">

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="7a3f90b5311b2491dd318d90e516749b"?>
 <!--
   에디터 시나리오 — 인스펙터의 타입 컴포넌트 핸들 선택기(TComponentHandle<T>). 엔진 컴포넌트에는 이 모양의 PROPERTY 가 없어서 Empty 게임의 테스트 무대 컴포넌트
   TypedHandleTestComponent(_target: TComponentHandle<MeshComponent>)로 본다. 값은 감시 값 Editor.SelectedHandle 이 선택기와 같은 글로 읽는다.

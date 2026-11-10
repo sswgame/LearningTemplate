@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="23b55b70fa06a286d9a579ae2995241f"?>
 <!--
   에디터 시나리오 — Dialogue Graph 를 처음 열 때 캔버스가 패널을 다 덮는지 화면으로 본다(패널 점검 D21).
   패널이 열리고(Editor.PanelOpen) 캔버스가 기본 문서의 노드 다섯을 그렸는지(Editor.GraphNodeCount — graphaddnode 와 같은 시작 상태)

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="e71c4ceb0a3e1c81c45ea6e7b24cc776"?>
 <!--
   에디터 시나리오 — 멀티 프로세스 재생(서버 디버깅 S1). Net Mode 를 전용 서버 + 클라이언트 1 로 두고 Play 하면 에디터가 Server 와 App 클라이언트를
   자식 프로세스로 띄워 붙인다. 접속은 감시 값 Editor.NetPlayConnectedClients(클라이언트가 남긴 "Net session connected to" 줄)로, Stop 뒤에 프로세스가

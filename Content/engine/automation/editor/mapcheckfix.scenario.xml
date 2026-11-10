@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="577f7ae1303819c0d9859832d3decd95"?>
 <!--
   에디터 시나리오 — 맵 검사의 안전한 고침(S3): 반경 0 인 점광(engine/automation/editor/mapcheck/mapcheck_expect_error.scene.xml)의 오류는 고침
   "Set Radius to the default 6 m" 을 데이터로 들고 온다(PointLightComponent::validateRadius → ValidationFix). 고칠 수 없는 결과에는 단추가 없다.

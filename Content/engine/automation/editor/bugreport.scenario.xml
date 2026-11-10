@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="84cddfc2d752ebd20fdb99a86efecd8e"?>
 <!--
   에디터 시나리오 — 버그 리포트 한 방: 개발 명령 bugreport 가 Saved/BugReports/<시각>/ 에 info · 로그 · 씬 사본 · 재현 명령(다음 프레임 스크린샷)을 모으고,
   카메라를 옮긴 뒤 bugreport.goto(폴더를 주지 않으면 가장 최근)가 씬 뷰 카메라를 기록한 자리로 되돌린다(씬 뷰가 바깥에서 옮긴 에디터 카메라를 이어받는다).

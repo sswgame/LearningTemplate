@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="64f8e9801e243864e0988f223528b408"?>
 <!--
   Runtime UI InputMap — the actions UISystem routes to the active screen (focus navigation, accept, back, tabs).
   UISystem owns this map and enables the UI layer only while a focus-taking screen is active. An input the UI uses for an action

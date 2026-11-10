@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="cef7087138bbc0a13482d7819e547973"?>
 <!--
   에디터 시나리오 — 자동 저장 · 비정상 종료 복구(S3). 사본은 원본을 덮지 않고 에디터 상태 폴더(시나리오마다 빈 폴더)의 Autosave/ 에만 쓴다.
   ① 씬을 고치고(오브젝트 AutosaveProbe) autosave.now 로 사본 하나를 쓴다(주기 대신 — 기본 주기는 300 초).

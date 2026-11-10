@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="760c905acc33f741456ded4820985fef"?>
 <!--
   에디터 시나리오 — Hierarchy 편집 기본기(N2): 첫 줄(GameCamera)을 누르고 Shift 를 누른 채 셋째 줄(TestSprite)을 누르면 세 줄이 골라진다.
   Ctrl+C · Ctrl+V 로 셋이 붙여 넣어지고(오브젝트 수 +3, 되돌리기 한 줄) Ctrl+Z 한 번에 돌아온다. ↓ 는 다음 줄로 선택을 옮긴다.

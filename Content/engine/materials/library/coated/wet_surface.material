@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="4cc82d8d1bb9377d2f8e584830f32b88"?>
 <!-- 외형 라이브러리 프리셋(coated): 젖은 면(마스크 없이 전체 젖음 — 스칼라 문만). 값만 바꾼다 — 셰이더 변형은 갈래 바탕과 같다. -->
 <MaterialDef formatVersion="0" name="WetSurface" _base="engine/materials/library/coated/base.material">
 	<_properties>

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="dc40080d12a85a1e9676fa87169b0b50"?>
 <!-- 광택 플라스틱 — 매끈한 유전체. 부모(environmentsurface.material)의 값만 바꾼 프리셋이다. -->
 <MaterialDef formatVersion="0" name="PlasticGlossy" _base="engine/materials/environmentsurface.material">
 	<_properties>

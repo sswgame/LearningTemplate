@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="7589ce3f28d42f31ec4bac924b2bf44a"?>
 <!--
   에디터 시나리오 — 회선 조절(서버 디버깅 S4). 전용 서버 + App 클라이언트 1 을 띄운 뒤, Multiplayer 창 Conditions 탭이 보내는 것과 같은 개발 명령을
   netplay.command 로 클라이언트 표준 입력에 보낸다: 두 방향 손실 30 %, 그리고 패킷 하나 크기의 신뢰 메시지 100 개(net.traffic — 재전송할 거리).

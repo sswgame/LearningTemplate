@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="ae264c31174587cad346cd5cc2ce0ab8"?>
 <!--
   에디터 시나리오 — 머티리얼 패널 저장 왕복: 테스트 머티리얼(materialpreview/previewblue.material)의 실행마다 새 사본(scratch/saveroundtripmaterial — <Scratch>)을 연다.
   고치지 않고 저장해 정규 꼴로 만든 뒤(panel.saveDocument — dirty 와 무관하게 저장) 그 글을 붙잡고(asset.snapshotScratch), 디스크에서 다시 읽어(panel.reloadDocument) 또 저장한다.

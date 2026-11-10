@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="14d382eb6ef79abbbe8088fdb73f34d3"?>
 <!--
   에디터 시나리오 — 월드 셀 패널(world_cells): 패널을 열면 그려지고(에디터 UI 캡처에 마젠타 자리표시가 없다) 닫으면 닫힌다. 셀이 없는 씬(기본 에디터 씬)에서도 빈 표로 그려져야 한다.
   열기 · 닫기만 본다 — 셀 행(worldCells.cell.N)과 미리보기(worldCells.preview)는 월드 파티션 씬이 필요해 이 시나리오는 누르지 않는다.
