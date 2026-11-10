@@ -41,7 +41,12 @@
 
 ### 5. 작업자 · 설계 문서가 남긴 일
 
-- **`game-gpu-includes` 를 타깃 게이트 껍데기로(진행 중):** 1단계(cae8f4c335)로 잎 7곳을 끊어 게임 코드 57 파일 · 엔진 공개 헤더 21 개가 남았다(`py -3` 로 include 닫힘을 세면 잎은 아래 넷). 남은 잎은 GPU 자원을 든 에셋 넷이다 — `Mesh.h`(RHIRenderResource 상속 · RHIDeviceBuffer · RHITypes), `Material.h` · `MaterialInstance.h`(RHIRenderResource), `MaterialRenderProxy.h`(RHIDeviceBuffer · RHIRenderResource · ShaderBindingSlots), `TextureCache.h`(RHITypes · RHIDevice · RHIAsyncUploads). 에셋은 CPU 데이터만 들고 GPU 자원은 렌더 프록시(`MeshRenderData` · `MaterialRenderProxy` 를 렌더러 쪽 헤더로)로 떼면(언리얼 UStaticMesh ↔ FStaticMeshRenderData, UMaterial ↔ FMaterialRenderProxy) TargetLayers `[gate]` 의 gameframework · kit · game 에 `Engine/Graphics/RHI` · `Engine/Graphics/Shader` 를 더하고 린트를 지운다(GF · 게임의 `Client/` · `Editor/` 가 RHI 를 직접 쓰는지 먼저 센다).
+- **`game-gpu-includes` 를 타깃 게이트 껍데기로(진행 중):** 메시 GPU 버퍼는 `MeshRenderData`, 머티리얼 바인딩 쌍은 `MaterialRenderBinding.h` 로 뗐고 `TextureCache.h` 는 RHI · `Texture2D.h` 를 보지 않는다 — 게임 코드가 RHI 에 닿는 파일 43(`Client/` · `Editor/` 밖 20), 직접 include 는 `Client/` · `Editor/` 포함 0. 남은 잎(include 닫힘으로 센 것):
+  - `Material.h` · `MaterialInstance.h` 의 `RHIRenderResource` 상속(빌린 텍스처 반환 통보) → 메시처럼 멤버 프록시로.
+  - `MaterialTypes.h` 의 `RHIRenderState.h`(`RHIRenderStateOverride` · `RHIBlendTargetState` · `RHIBlendMode` · `RHIOpaqueDrawBand` → `RHIEnums.h`) · `RHIHandles.h`(`RHIDescriptorIndex`) — 저작 값이라 언리얼 `EBlendMode` 처럼 엔진 쪽 형식으로 두고 렌더러가 RHI 로 옮긴다.
+  - `VFXEffectDef.h` 의 `AssetRef<Texture2D>` 가 `Texture2D::kAssetType` 완전 형식을 요구해 `Texture2D.h`(RHI) 를 include — 텍스처 에셋 종류를 GPU 객체와 떼거나 생성자를 .cpp 로.
+  - `Client/` 만 닿는 둘: `CanvasDrawList.h`(`RHIScissorRect` · `shaderslot::kCanvasTextureCount` → 주인 상수 + static_assert), `RenderExtension.h`(`Games/Empty/Client/Dev/EmptyRenderDemo` 가 렌더 확장을 직접 짓는다 — 게이트는 타깃 단위라 폴더로 빼지 못한다: 데모를 DevTools · 에디터 확장으로 옮기거나 `[allow]` 로).
+  그 뒤 TargetLayers `[gate]` 의 gameframework · kit · game 에 `Engine/Graphics/RHI` · `Engine/Graphics/Shader` 를 더하고 린트를 지운다.
 - **에디터 MVVM 측정(통합):**
   - Hierarchy: 큐브 8000 루트 씬에서 Hierarchy 창을 연 프레임 시간을 옮기기 전 커밋과 대조한다(모두 접힘 · 루트 하나 펼침 · 맨 아래로 스크롤). 나빠졌으면 원인을 `HierarchyViewModel::gather` 에서 찾는다.
   - 인스펙터 값 행: 프로퍼티 많은 대상(컴포넌트 여럿을 단 오브젝트 · 프로젝트 설정 · 펼친 큰 배열)에서 인스펙터 프레임 시간과 `Editor.InspectorFilledRows` · `Editor.InspectorSkippedRows` 를 값 행 전 커밋과 대조한다(맨 위 · 맨 아래로 스크롤 · 스크롤 중). 나빠졌으면 `PropertyGridModel::gather` 의 행 채우기(값 사본 · 기본값 비교 · 혼합)에서 찾는다.
