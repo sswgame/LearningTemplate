@@ -572,7 +572,7 @@ namespace sw
     {
         for ( uint32 channelIndex = 0; channelIndex < _listChannel.size(); ++channelIndex )
         {
-            if ( findChannelKey( channelIndex, frame ) != constant::invalid_index::kUint32 )
+            if ( findChannelKey( channelIndex, frame ).has_value() )
                 return true;
         }
         return false;
@@ -602,17 +602,17 @@ namespace sw
         return _listChannel[channelIndex].evaluate( frame );
     }
 
-    uint32 SequenceKeyTrack::findChannelKey( uint32 channelIndex, float32 frame ) const
+    optional<uint32> SequenceKeyTrack::findChannelKey( uint32 channelIndex, float32 frame ) const
     {
         if ( channelIndex >= _listChannel.size() )
-            return constant::invalid_index::kUint32;
+            return nullopt;
         const vector<FloatCurveKey>& listKey = _listChannel[channelIndex]._listKey;
         for ( size_t keyIndex = 0; keyIndex < listKey.size(); ++keyIndex )
         {
             if ( MathUtil::abs( listKey[keyIndex]._time - frame ) < kSequenceKeyFrameTolerance )
                 return static_cast<uint32>( keyIndex );
         }
-        return constant::invalid_index::kUint32;
+        return nullopt;
     }
 } // namespace sw
 

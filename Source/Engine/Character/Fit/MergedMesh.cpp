@@ -30,7 +30,7 @@ namespace sw
                         transformed._listPosition[vertex] += source._pFit->_listVertexDelta[vertex];
                     }
                 }
-                if ( source._socketBone >= 0 )
+                if ( source._socketBone.has_value() )
                 {
                     for ( uint32 vertex = 0; vertex < vertexCount; ++vertex )
                     {
@@ -48,7 +48,7 @@ namespace sw
                         }
                     }
                     SkinInfluence rigid;
-                    rigid._arrJoint[0]  = static_cast<uint16>( source._socketBone );
+                    rigid._arrJoint[0]  = static_cast<uint16>( *source._socketBone );
                     rigid._arrWeight[0] = 1.0f;
                     transformed._listSkin.assign( vertexCount, rigid );
                 }
@@ -147,7 +147,7 @@ namespace sw
         AppearanceGeometry::extractTriangles( geometry, listSelected, outGeometry );
         outGeometry._listTrianglePart.clear();
         const MergedPartRange& range = merged._listPart[partIndex];
-        if ( range._socketBone < 0 )
+        if ( range._socketBone.has_value() == false )
             return true;
         // 강체 부품은 쉬는 변환의 역으로 부품 공간에 되돌려 놓고 소켓 본 연결을 푼다.
         const float4x4 inverseRest = range._restTransform.invert();

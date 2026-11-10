@@ -10,9 +10,9 @@
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
+#include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
-#include "GameFramework/Runtime/Gameplay/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
 #include "GameFramework/Runtime/World/Land/AreaGraph.h"
 

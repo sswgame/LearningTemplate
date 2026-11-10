@@ -14,7 +14,7 @@
 namespace sw
 {
     VisualSinkReactionComponent::VisualSinkReactionComponent()
-        : _attribute{ "SinkDepth" }
+        : _attribute{}
         , _scale{ 1.0f }
         , _listVisual{}
         , _appliedDepth{ 0.0f }

@@ -29,10 +29,10 @@ namespace sw
         hashed_string             _name{};
         hashed_string             _material{};
         const AppearanceGeometry* _pGeometry{ nullptr };
-        const FitPartResult*      _pFit{ nullptr };  ///< 있으면 보임 마스크로 잘린 삼각형을 빼고 정점 델타를 더한다.
-        float4x4                  _restTransform{};  ///< 강체 부품의 쉬는 위치다(유닛 공간). 스킨 부품은 항등이다.
-        uint32                    _skeletonID{ 0 };  ///< 애니메이션 단위(스켈레톤) 번호다. 모두 같아야 병합한다.
-        int32                     _socketBone{ -1 }; ///< 0 이상이면 강체 부품이며, 모든 정점을 이 본에 가중치 1 로 묶는다.
+        const FitPartResult*      _pFit{ nullptr }; ///< 있으면 보임 마스크로 잘린 삼각형을 빼고 정점 델타를 더한다.
+        float4x4                  _restTransform{}; ///< 강체 부품의 쉬는 위치다(유닛 공간). 스킨 부품은 항등이다.
+        uint32                    _skeletonID{ 0 }; ///< 애니메이션 단위(스켈레톤) 번호다. 모두 같아야 병합한다.
+        optional<uint32>          _socketBone;      ///< 있으면 강체 부품이며, 모든 정점을 이 본에 가중치 1 로 묶는다.
     };
 } // namespace sw
 
@@ -52,11 +52,11 @@ namespace sw
     /** @brief 병합 결과에서 부품 하나가 차지한 정점 범위와, 분리할 때 필요한 정보입니다. */
     struct MergedPartRange
     {
-        hashed_string _name{};
-        float4x4      _restTransform{};
-        uint32        _vertexStart{ 0 };
-        uint32        _vertexCount{ 0 };
-        int32         _socketBone{ -1 };
+        hashed_string    _name{};
+        float4x4         _restTransform{};
+        uint32           _vertexStart{ 0 };
+        uint32           _vertexCount{ 0 };
+        optional<uint32> _socketBone; ///< 강체 부품의 소켓 본(스킨 부품은 비어 있다)
     };
 } // namespace sw
 

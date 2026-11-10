@@ -55,7 +55,7 @@ namespace sw
         static PhysicsCarInput toCarInput( const ControlIntent& intent, const float3& carForward, float32 forwardSpeed, float32 reverseSpeed, optional<int32> handBrakeIndex );
 
     private:
-        PROPERTY( Category = "Vehicle", DisplayName = "Hand Brake Button", Tooltip = "Intent button held for the hand brake" )
+        PROPERTY( Required, Category = "Vehicle", DisplayName = "Hand Brake Button", Tooltip = "Intent button held for the hand brake" )
         hashed_string _handBrakeButton;
         PROPERTY( Category = "Vehicle", DisplayName = "Reverse Speed", Min = 0.0, Tooltip = "Backward intent brakes above this forward speed and reverses below it", Units = "m/s" )
         float32 _reverseSpeed;

@@ -297,8 +297,8 @@ namespace sw
     struct RenderPassAttachment
     {
         REFLECT_BODY();
-        PROPERTY( InheritKey )
-        string _name = "ColorAttachment0";
+        PROPERTY( Required, InheritKey )
+        string _name;
 
         PROPERTY()
         RHIFormat _format{ RHIFormat::R8G8B8A8_UNORM };
@@ -382,8 +382,8 @@ namespace sw
     struct RenderGraphPassDesc : public RHIFixedRenderState
     {
         REFLECT_BODY();
-        PROPERTY( InheritKey )
-        string _name = "Pass";
+        PROPERTY( Required, InheritKey )
+        string _name;
 
         /** @brief 패스 종류입니다. 디스패치와 PSO 생성이 같은 값을 본다. */
         PROPERTY()

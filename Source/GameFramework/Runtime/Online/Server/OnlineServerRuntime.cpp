@@ -246,7 +246,7 @@ namespace sw
         optional<Error>                     _startupError{}; ///< 노드가 남긴 기동 오류(어느 키트 · 무엇)
         ServiceHealthRegistry*              _pHealthRegistry{ nullptr };
         UnixMilliseconds                    _nextRemoteConfigReloadMs{ 0 };
-        int32                               _healthCheckIndex{ constant::invalid_index::kInt32 };
+        optional<int32>                     _healthCheckIndex; ///< 헬스 표에 올린 검사(표가 없으면 비어 있다)
         uint8                               _bRegistered{ SW_FALSE };
         explicit Parts( const IClock& clock )
             : _clock{ clock }
@@ -385,8 +385,8 @@ namespace sw
         if ( expected<void> registered = registerServer( nowMs ); registered.has_value() == false )
             return registered;
 
-        if ( parts._pHealthRegistry != nullptr )
-            parts._pHealthRegistry->setCheck( parts._healthCheckIndex, HealthState::Ok, "" );
+        if ( parts._pHealthRegistry != nullptr && parts._healthCheckIndex.has_value() )
+            parts._pHealthRegistry->setCheck( *parts._healthCheckIndex, HealthState::Ok, "" );
         vector<string> listKitName;
         collectKitNames( listKitName );
         string kitText;
@@ -644,8 +644,8 @@ namespace sw
         // 순서는 모든 키트가 기반 노드에 의존하는 것 하나에서 나온다. 초기화에 성공한 노드만 종료를 받는다.
         parts._listKit.clear();
         parts._kitScope.destroyAll();
-        if ( parts._pHealthRegistry != nullptr && parts._healthCheckIndex >= 0 )
-            parts._pHealthRegistry->setCheck( parts._healthCheckIndex, HealthState::Failing, "stopped" );
+        if ( parts._pHealthRegistry != nullptr && parts._healthCheckIndex.has_value() )
+            parts._pHealthRegistry->setCheck( *parts._healthCheckIndex, HealthState::Failing, "stopped" );
         _parts.reset();
     }
 

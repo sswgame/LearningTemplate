@@ -408,7 +408,7 @@ namespace sw
             // 이미 마운트되어 있으면 이전 팩을 뺀다
             for ( auto it = _listMountedPack.begin(); it != _listMountedPack.end(); ++it )
             {
-                if ( it->_pReader != nullptr && FileUtil::pathsEqualNormalized( it->_pReader->getPackPath(), normalizedPath ) )
+                if ( it->_pReader != nullptr && FileUtil::isSameDiskPath( it->_pReader->getPackPath(), normalizedPath ) )
                 {
                     _listMountedPack.erase( it );
                     break;
@@ -442,7 +442,7 @@ namespace sw
             ScopedLock<mutex> lock{ _vfsMutex };
             for ( auto it = _listMountedPack.begin(); it != _listMountedPack.end(); ++it )
             {
-                if ( it->_pReader != nullptr && FileUtil::pathsEqualNormalized( it->_pReader->getPackPath(), packFilePath ) )
+                if ( it->_pReader != nullptr && FileUtil::isSameDiskPath( it->_pReader->getPackPath(), packFilePath ) )
                 {
                     it->_pReader->close();
                     _listMountedPack.erase( it );

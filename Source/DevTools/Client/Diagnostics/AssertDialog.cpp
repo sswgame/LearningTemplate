@@ -25,7 +25,7 @@ namespace sw
             /** @brief 사람이 지켜보지 않는 실행이면 true 를 반환합니다(-unattended, 시나리오, 프로파일, 자체 테스트). */
             static bool isAutomatedRun( const CommandLineManager& commandLine )
             {
-                if ( commandLine.isArgumentProvided( CommandLineArgument::UNATTENDED ) || commandLine.isArgumentProvided( CommandLineArgument::SCENARIO ) )
+                if ( commandLine.isAutomatedRun() )
                     return true;
                 for ( const utf8* pName : kArrAutomationVariable )
                 {

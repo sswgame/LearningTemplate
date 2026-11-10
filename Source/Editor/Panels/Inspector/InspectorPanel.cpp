@@ -198,8 +198,8 @@ namespace sw::editor
         {
             const InspectorComponentCard& card = _state._listComponent[index];
             ImGui::PushID( card._typeName.c_str() );
-            if ( _propertyGrid.getOpenAllRequest() != 0 )
-                ImGui::SetNextItemOpen( _propertyGrid.getOpenAllRequest() > 0 );
+            if ( _propertyGrid.getOpenAllRequest() != OpenAllRequest::None )
+                ImGui::SetNextItemOpen( _propertyGrid.getOpenAllRequest() == OpenAllRequest::ExpandAll );
             if ( ImGui::CollapsingHeader( card._typeDisplayName.c_str(), ImGuiTreeNodeFlags_DefaultOpen ) )
             {
                 _viewModel.setCurrentMultiComponent( index );
@@ -354,9 +354,9 @@ namespace sw::editor
                 ImGui::SetNextItemOpen( true );
                 _viewModel.consumeScrollTo();
             }
-            else if ( _propertyGrid.getOpenAllRequest() != 0 )
+            else if ( _propertyGrid.getOpenAllRequest() != OpenAllRequest::None )
             {
-                ImGui::SetNextItemOpen( _propertyGrid.getOpenAllRequest() > 0 ); // 보기 옵션의 모두 펼치기 · 접기는 컴포넌트 카드에도 적용한다
+                ImGui::SetNextItemOpen( _propertyGrid.getOpenAllRequest() == OpenAllRequest::ExpandAll ); // 보기 옵션의 모두 펼치기 · 접기는 컴포넌트 카드에도 적용한다
             }
 
             if ( EditorWidgets::beginComponentCard( cardTitle.c_str(), card._componentID, &bActive, &bRemove, card._bAccent == SW_TRUE ) )
@@ -514,7 +514,7 @@ namespace sw::editor
             for ( IInspectorComponent* pInspector : listInspector )
             {
                 // 확장 영역도 프로퍼티 위젯과 같은 규칙으로 되돌리기와 dirty 에 남긴다. 영역을 하나로 묶어 위젯 하나처럼 추적하므로
-                // 영역이 위젯마다 `trackPOD` 를 호출하지 않아도 된다.
+                // 영역이 위젯마다 `trackRowEdit` 를 호출하지 않아도 된다.
                 ImGui::BeginGroup();
                 pInspector->drawSection( pComp );
                 ImGui::EndGroup();

@@ -57,7 +57,7 @@ namespace sw
         ValeRules _rules;
         PROPERTY( Category = "Vale", DisplayName = "Interest Grid", Tooltip = "Cells the MMO replication uses to find what each player sees" )
         StreamingCellGridDef _interestGrid;
-        PROPERTY( Category = "Vale", DisplayName = "Profile Folder", Tooltip = "Server profile slots under the server's user data folder" )
+        PROPERTY( Required, Category = "Vale", DisplayName = "Profile Folder", Tooltip = "Server profile slots under the server's user data folder" )
         string _profileFolder;
 
         ValeServerLink _server;

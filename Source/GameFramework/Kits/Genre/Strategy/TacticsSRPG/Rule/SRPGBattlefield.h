@@ -168,9 +168,9 @@ namespace sw
         [[nodiscard]] bool setTerrain( const int2& cell, const hashed_string& terrainID );
         /** @brief 사각형(양 끝 포함)을 한 지형으로 칠하고, 칠한 셀 수를 반환합니다. */
         int32 fillTerrain( const int2& fromCell, const int2& toCell, const hashed_string& terrainID );
-        /** @brief 유닛을 놓습니다. 모르는 기체나 파일럿이거나, 격자 밖이거나, 이미 유닛이 선 셀이거나, 못 들어가는 지형이면 -1 을 반환합니다. */
-        int32 addUnit( const hashed_string& unitID, const hashed_string& pilotID, SRPGTeam team, const int2& cell, int32 pilotLevel = 1 );
-        void  setCommander( int32 unitIndex, bool bCommander );
+        /** @brief 유닛을 놓습니다. 모르는 기체나 파일럿이거나, 격자 밖이거나, 이미 유닛이 선 셀이거나, 못 들어가는 지형이면 이유를 돌려줍니다. */
+        [[nodiscard]] expected<int32> addUnit( const hashed_string& unitID, const hashed_string& pilotID, SRPGTeam team, const int2& cell, int32 pilotLevel = 1 );
+        void                          setCommander( int32 unitIndex, bool bCommander );
         /** @brief 1턴을 시작합니다(유닛을 모두 놓은 뒤에 호출). */
         void beginBattle();
         /**

@@ -25,7 +25,7 @@ namespace sw::editor
             };
 
             static void appendFolderListingEntry( vector<EditorFolderListingEntry>& outList, const string& path, bool bIsDirectory,
-                                                  const string& rootNorm )
+                                                  const string& resourceRoot )
             {
                 EditorFolderListingEntry item;
                 item._absolutePath = FileUtil::normalizeSeparators( path );
@@ -37,12 +37,9 @@ namespace sw::editor
                     item._bReadOnly = FileUtil::isReadOnlyFile( item._absolutePath );
                 }
 
-                if ( rootNorm.empty() == false )
-                {
-                    const string absNorm = FileUtil::normalizePath( item._absolutePath );
-                    if ( FileUtil::startsWithPathComponent( absNorm, rootNorm ) )
-                        item._relativePath = FileUtil::suffixAfterPathComponent( absNorm, rootNorm );
-                }
+                string relative;
+                if ( resourceRoot.empty() == false && FileUtil::tryMakePathUnderRoot( resourceRoot, item._absolutePath, relative ) ) // 대소문자는 OS 규칙
+                    item._relativePath = FileUtil::normalizePath( relative );                                                        // 상대 키는 소문자다
                 if ( item._relativePath.empty() )
                     item._relativePath = FileUtil::normalizePath( item._name );
 
@@ -68,17 +65,16 @@ namespace sw::editor
         (void)FileUtil::collectFiles( folderAbs, {}, listFile, bRecursive, stopToken ); // 표시용 — 모은 데까지 보인다
 
         const string& resourceRoot = assetPaths.getRootFolderPath(); // 워커(`EditorFolderListingJob`)에서 돈다 — 부른 쪽이 넘긴 경로 상태다
-        const string  rootNorm     = resourceRoot.empty() ? string{} : FileUtil::normalizePath( resourceRoot );
 
         for ( const string& folder : listFolder )
         {
-            EditorFolderListingInternal::appendFolderListingEntry( outList, folder, true, rootNorm );
+            EditorFolderListingInternal::appendFolderListingEntry( outList, folder, true, resourceRoot );
         }
         for ( const string& file : listFile )
         {
             if ( stopToken.isStopRequested() )
                 return;
-            EditorFolderListingInternal::appendFolderListingEntry( outList, file, false, rootNorm );
+            EditorFolderListingInternal::appendFolderListingEntry( outList, file, false, resourceRoot );
         }
         // 곁 파일(텍스처 형식 변형 · 파생 데이터 — `SW_ASSET_COMPANION`)은 원본 에셋의 일부다 — 따로 보이지 않는다. 보이면 썸네일 · 열기가 이 플랫폼이 못 읽는
         // 형식(ASTC · ETC2 를 데스크톱 D3D12)을 텍스처로 만들다 실패했다(언리얼 콘텐츠 브라우저도 플랫폼 파생 데이터를 에셋으로 보이지 않는다).

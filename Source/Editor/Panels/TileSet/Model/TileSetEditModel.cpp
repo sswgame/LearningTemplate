@@ -32,7 +32,7 @@ namespace sw::editor
         : _content{}
         , _status{}
         , _selectedBrush{ -1 }
-        , _selectedRule{ kDefaultVisual }
+        , _selectedRule{}
     {
     }
 
@@ -44,7 +44,7 @@ namespace sw::editor
             return result; // 저장은 기반이 막는다
         _content       = result == ToolAssetLoadResult::Loaded ? std::move( loaded ) : TileSetContent{};
         _selectedBrush = _content._listBrush.empty() ? -1 : 0;
-        _selectedRule  = kDefaultVisual;
+        _selectedRule  = nullopt;
         return result;
     }
 
@@ -115,7 +115,7 @@ namespace sw::editor
     void TileSetEditModel::selectBrush( int32 brushIndex )
     {
         _selectedBrush = brushIndex;
-        _selectedRule  = kDefaultVisual;
+        _selectedRule  = nullopt;
         clampSelection();
     }
 
@@ -152,7 +152,7 @@ namespace sw::editor
         }
         _content._listBrush.push_back( brush );
         _selectedBrush = static_cast<int32>( _content._listBrush.size() ) - 1;
-        _selectedRule  = kDefaultVisual;
+        _selectedRule  = nullopt;
     }
 
     bool TileSetEditModel::removeSelectedBrush()
@@ -214,7 +214,7 @@ namespace sw::editor
         return true;
     }
 
-    void TileSetEditModel::selectRule( int32 ruleIndex )
+    void TileSetEditModel::selectRule( optional<int32> ruleIndex )
     {
         _selectedRule = ruleIndex;
         clampSelection();
@@ -235,35 +235,38 @@ namespace sw::editor
     bool TileSetEditModel::removeSelectedRule()
     {
         TileBrush* pBrush = editSelectedBrush();
-        if ( pBrush == nullptr || _selectedRule < 0 || _selectedRule >= static_cast<int32>( pBrush->_listRule.size() ) )
+        if ( pBrush == nullptr || _selectedRule.has_value() == false || *_selectedRule < 0 || *_selectedRule >= static_cast<int32>( pBrush->_listRule.size() ) )
             return false;
         if ( pBrush->_listRule.size() <= 1 )
         {
             _status = "A rule tile keeps at least one rule";
             return false;
         }
-        pBrush->_listRule.erase( pBrush->_listRule.begin() + _selectedRule );
+        pBrush->_listRule.erase( pBrush->_listRule.begin() + *_selectedRule );
         clampSelection();
         return true;
     }
 
     bool TileSetEditModel::moveSelectedRule( int32 delta )
     {
-        TileBrush*  pBrush = editSelectedBrush();
-        const int32 target = _selectedRule + delta;
-        if ( pBrush == nullptr || _selectedRule < 0 || target < 0 || target >= static_cast<int32>( pBrush->_listRule.size() ) )
+        TileBrush* pBrush = editSelectedBrush();
+        if ( pBrush == nullptr || _selectedRule.has_value() == false || *_selectedRule < 0 )
             return false;
-        std::swap( pBrush->_listRule[static_cast<size_t>( _selectedRule )], pBrush->_listRule[static_cast<size_t>( target )] );
+        const int32 target = *_selectedRule + delta;
+        if ( target < 0 || target >= static_cast<int32>( pBrush->_listRule.size() ) )
+            return false;
+        std::swap( pBrush->_listRule[static_cast<size_t>( *_selectedRule )], pBrush->_listRule[static_cast<size_t>( target )] );
         _selectedRule = target;
         return true;
     }
 
     bool TileSetEditModel::cycleNeighbor( int32 neighbor )
     {
-        TileBrush* pBrush = editSelectedBrush();
-        if ( pBrush == nullptr || _selectedRule < 0 || _selectedRule >= static_cast<int32>( pBrush->_listRule.size() ) || neighbor < 0 || neighbor >= 8 )
+        TileBrush* pBrush       = editSelectedBrush();
+        const bool bRuleInRange = _selectedRule.has_value() && *_selectedRule >= 0 && *_selectedRule < static_cast<int32>( pBrush != nullptr ? pBrush->_listRule.size() : 0 );
+        if ( pBrush == nullptr || bRuleInRange == false || neighbor < 0 || neighbor >= 8 )
             return false;
-        TileNeighborRule& condition = pBrush->_listRule[static_cast<size_t>( _selectedRule )]._arrNeighbor[neighbor];
+        TileNeighborRule& condition = pBrush->_listRule[static_cast<size_t>( *_selectedRule )]._arrNeighbor[neighbor];
         switch ( condition )
         {
             case TileNeighborRule::Any:
@@ -290,9 +293,9 @@ namespace sw::editor
         const TileBrush* pBrush = findSelectedBrush();
         if ( pBrush == nullptr )
             return nullptr;
-        if ( _selectedRule < 0 )
+        if ( _selectedRule.has_value() == false || *_selectedRule < 0 )
             return &pBrush->_defaultVisual;
-        return _selectedRule < static_cast<int32>( pBrush->_listRule.size() ) ? &pBrush->_listRule[static_cast<size_t>( _selectedRule )]._visual : nullptr;
+        return *_selectedRule < static_cast<int32>( pBrush->_listRule.size() ) ? &pBrush->_listRule[static_cast<size_t>( *_selectedRule )]._visual : nullptr;
     }
 
     TileVisual* TileSetEditModel::editSelectedVisual()
@@ -348,9 +351,9 @@ namespace sw::editor
             _selectedBrush = 0;
         const TileBrush* pBrush    = findSelectedBrush();
         const int32      ruleCount = pBrush != nullptr ? static_cast<int32>( pBrush->_listRule.size() ) : 0;
-        if ( _selectedRule >= ruleCount )
+        if ( _selectedRule.has_value() && *_selectedRule >= ruleCount )
             _selectedRule = ruleCount - 1;
-        if ( _selectedRule < kDefaultVisual )
-            _selectedRule = kDefaultVisual;
+        if ( _selectedRule.has_value() && *_selectedRule < 0 )
+            _selectedRule = nullopt;
     }
 } // namespace sw::editor

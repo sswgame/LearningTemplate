@@ -767,18 +767,18 @@ namespace sw::editor
 
     void GimmickGraphPanel::editAddNode( GimmickCircuitComponent& circuit, const hashed_string& kind, const float2* pPosition )
     {
-        const ObjectSnapshot before  = beginEdit( circuit );
-        const int32          graphID = _model.addNode( kind );
-        if ( graphID == GimmickGraphModel::kNoGraphID )
+        const ObjectSnapshot  before  = beginEdit( circuit );
+        const expected<int32> graphID = _model.addNode( kind );
+        if ( graphID.has_value() == false )
             return;
-        const optional<uint32> index = _model.findNodeIndex( graphID );
+        const optional<uint32> index = _model.findNodeIndex( *graphID );
         if ( index.has_value() && pPosition != nullptr )
         {
             GimmickGraphNode& node = _model.getMutableNodes()[*index];
             node._position         = *pPosition;
             node._bPlaced          = false;
         }
-        _selectedNode = graphID;
+        _selectedNode = *graphID;
         commitEdit( circuit, before, "Add Gimmick Node" );
     }
 

@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -20,12 +21,12 @@ namespace sw::editor
     /** @brief 대상 오프셋 기즈모의 편집 상태입니다. 파일 머리말 참고. */
     struct SW_EDITOR_API RigTargetEdit
     {
-        BoneTransform _pending{};
-        string        _status{};                                       ///< 지난 저장 결과 줄
-        uint64        _objectID{ 0 };                                  ///< 기즈모를 놓은 대상의 오브젝트(0 이면 없음)
-        int32         _targetIndex{ constant::invalid_index::kInt32 }; ///< 기즈모를 놓은 대상 번호(없으면 무효 번호)
-        uint8         _bPending{ SW_FALSE };
-        uint8         _bDragging{ SW_FALSE };
+        BoneTransform    _pending{};
+        string           _status{};      ///< 지난 저장 결과 줄
+        uint64           _objectID{ 0 }; ///< 기즈모를 놓은 대상의 오브젝트(0 이면 없음)
+        optional<uint32> _targetIndex;   ///< 기즈모를 놓은 대상 번호(없으면 비어 있다)
+        uint8            _bPending{ SW_FALSE };
+        uint8            _bDragging{ SW_FALSE };
 
         /** @brief 에디터 범위의 편집 상태입니다. */
         static RigTargetEdit& get();

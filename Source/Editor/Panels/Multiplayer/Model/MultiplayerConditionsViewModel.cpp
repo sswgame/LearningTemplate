@@ -243,10 +243,10 @@ namespace sw::editor
     {
     }
 
-    void MultiplayerConditionsViewModel::gather( int32 targetIndex, MultiplayerConditionsViewState& outState )
+    void MultiplayerConditionsViewModel::gather( optional<int32> targetIndex, MultiplayerConditionsViewState& outState )
     {
         const EditorNetPlaySession& session = MultiplayerSessionViewModel::getSession();
-        outState._bActive                   = targetIndex >= 0 && session.isRunning() ? SW_TRUE : SW_FALSE;
+        outState._bActive                   = targetIndex.has_value() && *targetIndex >= 0 && session.isRunning() ? SW_TRUE : SW_FALSE;
         if ( outState._bActive == SW_FALSE )
         {
             _listLink.clear();
@@ -258,7 +258,7 @@ namespace sw::editor
             _listLink.clear();
         }
         _listLink.resize( static_cast<size_t>( session.getProcessCount() ) );
-        const ProcessLink* pLink = findLink( targetIndex );
+        const ProcessLink* pLink = findLink( *targetIndex );
         outState._up             = pLink != nullptr ? pLink->_up : EditorNetLinkSettings{};
         outState._down           = pLink != nullptr ? pLink->_down : EditorNetLinkSettings{};
 

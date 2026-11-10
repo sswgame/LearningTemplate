@@ -77,7 +77,7 @@ namespace sw
     }
 
     GatheringNodeComponent::GatheringNodeComponent()
-        : _item{ "Herb" }
+        : _item{}
         , _count{ 1 }
         , _uses{ 3 }
         , _respawnDelay{ 30.0f }

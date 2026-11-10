@@ -11,8 +11,8 @@
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Rule/WesternHorse.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Rule/WesternLaw.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Rule/WesternSurvival.h"
+#include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
-#include "GameFramework/Runtime/Gameplay/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/LootTable.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
@@ -1079,7 +1079,7 @@ SW_TEST_CASE( WesternCatalogTest, BrokenHonorIsNotAdded )
     SW_EXPECT_LOG( "XMLFields.ValueOutOfRange" );
     SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     sw::WesternCatalog    inverted;
-    constexpr const utf8* kInvertedXML = R"(<WesternCatalog><Honor min="5" max="1"/><Crime id="theft"/></WesternCatalog>)";
+    constexpr const utf8* kInvertedXML = R"(<WesternCatalog currency="Dollar"><Honor min="5" max="1"/><Crime id="theft"/></WesternCatalog>)";
     SW_REQUIRE_TRUE( inverted.loadFromXMLText( kInvertedXML, "WesternTest" ) );
     SW_EXPECT_TRUE( inverted.getHonorReputation().find( sw::hashed_string( sw::WesternCatalog::kHonorFactionID ) ) == nullptr );
 }
@@ -1091,7 +1091,7 @@ SW_TEST_CASE( WesternCatalogTest, HonorTierNeedsName )
 {
     SW_EXPECT_LOG( "XMLFields.RequiredFieldMissing" );
     sw::WesternCatalog    catalog;
-    constexpr const utf8* kNamelessXML = R"(<WesternCatalog><Honor><Tier min="0"/><Tier name="Known" min="10"/></Honor><Crime id="theft"/></WesternCatalog>)";
+    constexpr const utf8* kNamelessXML = R"(<WesternCatalog currency="Dollar"><Honor><Tier min="0"/><Tier name="Known" min="10"/></Honor><Crime id="theft"/></WesternCatalog>)";
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kNamelessXML, "WesternTest" ) );
     SW_EXPECT_TRUE( catalog.findHonorTier( sw::hashed_string{} ) == nullptr );
     SW_EXPECT_TRUE( catalog.findHonorTier( "Known" ) != nullptr );
@@ -1111,7 +1111,7 @@ SW_TEST_CASE( WesternCatalogTest, ReportsBrokenTables )
     SW_EXPECT_LOG( "Xml.UnknownElement" );
     SW_EXPECT_LOG( "WesternCatalog.BondExperienceNotRising" );
     sw::WesternCatalog    catalog;
-    constexpr const utf8* kBrokenXML = R"(<WesternCatalog>
+    constexpr const utf8* kBrokenXML = R"(<WesternCatalog currency="Dollar">
   <PeltGrade scales="0,0.3,0.6"/>
   <PeltGrade scales="0,-0.3,0.6,1"/>
   <HuntWeapon id="tiny" sizes="Tiny"/>

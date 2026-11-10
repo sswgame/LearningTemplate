@@ -41,7 +41,7 @@
 					<SkeletalAnimatorComponent _animationGraphPath="common/data/anim/skeleton.animgraph.xml" _animationSetPath="common/models/kaykit/skeleton_warrior/skeleton_warrior.animset.xml" _initialState="Idle_Combat" _bPlayOnBegin="true" />
 					<CharacterAppearanceComponent _presetID="SkeletonWarrior" _seed="0" _bMergeParts="true" _surfaceChannelsPath="engine/character/default.surfacechannels.xml" />
 					<RagdollComponent _physicsAssetPath="common/characters/skeleton_warrior/skeleton_warrior.physics.xml" _bRagdollOnFatalHit="true" _bAutoGetUp="false" />
-					<DismembermentComponent _regionTablePath="common/characters/skeleton_warrior/skeleton_warrior.fit.xml">
+					<DismembermentComponent _bloodChannel="Blood" _regionTablePath="common/characters/skeleton_warrior/skeleton_warrior.fit.xml">
 						<_listSeverableRegion>
 							<item>Head</item>
 							<item>Arm_L</item>

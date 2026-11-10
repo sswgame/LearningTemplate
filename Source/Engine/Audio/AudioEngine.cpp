@@ -1509,25 +1509,25 @@ namespace sw
             case AudioContainerType::Random:
             {
                 // 가중치로 하나를 고른다. 클립이 둘 이상이면 바로 앞에 낸 것은 뺀다.
-                const bool bSkipLast = event._bAvoidRepeat && clipCount > 1 && inoutState._lastRandomIndex >= 0;
+                const bool bSkipLast = event._bAvoidRepeat && clipCount > 1 && inoutState._lastRandomIndex.has_value();
                 float32    total     = 0.0f;
                 for ( uint32 clipIndex = 0; clipIndex < clipCount; ++clipIndex )
                 {
-                    if ( bSkipLast && static_cast<int32>( clipIndex ) == inoutState._lastRandomIndex )
+                    if ( bSkipLast && inoutState._lastRandomIndex == clipIndex )
                         continue;
                     total += MathUtil::max( 0.0f, event._listClip[clipIndex]._weight );
                 }
                 float32 pick = _random.nextFloat() * total;
                 for ( uint32 clipIndex = 0; clipIndex < clipCount; ++clipIndex )
                 {
-                    if ( bSkipLast && static_cast<int32>( clipIndex ) == inoutState._lastRandomIndex )
+                    if ( bSkipLast && inoutState._lastRandomIndex == clipIndex )
                         continue;
                     outFirstClip = clipIndex;
                     pick -= MathUtil::max( 0.0f, event._listClip[clipIndex]._weight );
                     if ( pick < 0.0f )
                         break;
                 }
-                inoutState._lastRandomIndex = static_cast<int32>( outFirstClip );
+                inoutState._lastRandomIndex = outFirstClip;
                 break;
             }
             case AudioContainerType::Sequence:

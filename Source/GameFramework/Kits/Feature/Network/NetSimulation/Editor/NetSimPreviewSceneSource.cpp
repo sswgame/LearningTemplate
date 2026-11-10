@@ -51,13 +51,13 @@ namespace sw
         SW_ASSERT( false && "NetSimPreviewSceneSource::releaseScene got a scene it did not lend" );
     }
 
-    uint32 NetSimPreviewSceneSource::findSceneKey( int32 worldIndex ) const
+    optional<uint32> NetSimPreviewSceneSource::findSceneKey( int32 worldIndex ) const
     {
         for ( const Lent& lent : _listLent )
         {
             if ( lent._worldIndex == worldIndex )
                 return lent._sceneKey;
         }
-        return kInvalidSceneKey;
+        return nullopt;
     }
 } // namespace sw

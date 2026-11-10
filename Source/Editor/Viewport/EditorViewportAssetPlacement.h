@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
@@ -28,7 +29,7 @@ namespace sw::editor
     /** @brief 배치가 마지막으로 한 일입니다. 감시 값(`Editor.Placement*`)이 읽는다. */
     struct EditorPlacementStats
     {
-        int32                  _ghostFrame{ -1 };                        ///< 고스트를 마지막으로 그린 ImGui 프레임. -1 이면 그린 적 없다
+        optional<int32>        _ghostFrame;                              ///< 고스트를 마지막으로 그린 ImGui 프레임. 그린 적 없으면 비어 있다
         EditorPlacementSurface _surface{ EditorPlacementSurface::None }; ///< 마지막 고스트 · 놓기가 찾은 표면
         float3                 _lastPosition{};                          ///< 마지막으로 놓은 자리
         float32                _yaw{ 0.0f };                             ///< 끄는 동안 고른 회전(라디안). 끌기가 끝나면 0 으로 돌아간다

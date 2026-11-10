@@ -52,6 +52,8 @@ namespace sw
     public:
         explicit AnimationNotifyListenerBinding( AnimationNotifyComponent& owner );
         void onAnimationNotifiesFired( const AnimationNotifyFrame& frame ) override;
+        bool hasNotify( const hashed_string& notify ) const override;
+        bool processExternalNotify( const AnimationFiredNotify& fired ) override;
 
     private:
         AnimationNotifyComponent& _owner;

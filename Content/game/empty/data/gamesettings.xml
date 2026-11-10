@@ -20,4 +20,5 @@
   <!-- 벤치 캐릭터 프리팹(-gv_stressTestCharacterPrefab — 부하 시나리오 load/townsfolk)의 외형은 공용 팩(common)의 외형 데이터다. 외형이 장비 아이템을 참조하므로 아이템도 함께 -->
   <RequiredData kind="items" pack="common"/>
   <RequiredData kind="appearance" pack="common"/>
+  <defaultLanguage>ko_kr</defaultLanguage>
 </GameSettings>

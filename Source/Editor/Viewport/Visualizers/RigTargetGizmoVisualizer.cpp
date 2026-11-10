@@ -15,10 +15,10 @@
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/Model/EditorViewportMouseClaim.h"
 
-#include "Engine/Animation/Component/PoseModifierComponent.h"
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Rig/RigInstance.h"
+#include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -83,18 +83,18 @@ namespace sw::editor
             static void drawTargetGizmo( const EditorViewportVisualizerArgs& args )
             {
                 RigTargetEdit&         edit      = RigTargetEdit::get();
-                PoseModifierComponent* pModifier = edit._targetIndex >= 0 ? findModifier( edit._objectID ) : nullptr;
+                PoseModifierComponent* pModifier = edit._targetIndex.has_value() ? findModifier( edit._objectID ) : nullptr;
                 GameObject*            pObject   = pModifier != nullptr ? pModifier->getOwner() : nullptr;
                 SkeletalMeshComponent* pUnit     = pObject != nullptr ? pObject->getComponent<SkeletalMeshComponent>() : nullptr;
                 const bool             bReady    = pUnit != nullptr && args._pActiveCamera != nullptr && pModifier->getRigInstance().isInitialized() &&
-                                    static_cast<uint32>( edit._targetIndex ) < pModifier->getRigInstance().getTargetCount();
+                                  *edit._targetIndex < pModifier->getRigInstance().getTargetCount();
                 float4x4 parentWorld{};
-                if ( bReady == false || computeTargetParentWorld( *pModifier, *pUnit, static_cast<uint32>( edit._targetIndex ), parentWorld ) == false )
+                if ( bReady == false || computeTargetParentWorld( *pModifier, *pUnit, *edit._targetIndex, parentWorld ) == false )
                 {
                     EditorViewportMouseClaim::release( &edit );
                     return;
                 }
-                const RigTargetDef& def = pModifier->getRigInstance().getTargetDef( static_cast<uint32>( edit._targetIndex ) );
+                const RigTargetDef& def = pModifier->getRigInstance().getTargetDef( *edit._targetIndex );
                 // 놓은 뒤 파일이 다시 읽혀 인스턴스가 같은 값이 되면 남겨 둔 값을 버린다.
                 const bool bReloaded = edit._bDragging == SW_FALSE && edit._bPending == SW_TRUE &&
                                        float3::getDistance( edit._pending._translation, def._offset._translation ) < kReloadDistance &&

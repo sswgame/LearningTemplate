@@ -78,7 +78,7 @@ SW_TEST_CASE( CanvasDrawListTest, SameTextureContinuesBatch )
     SW_REQUIRE_EQUAL( size_t{ 1 }, list._listBatch.size() );
     SW_EXPECT_EQUAL( 7u, list._listBatch[0]._quadCount );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( list._listBatch[0]._textureCount ) );
-    SW_EXPECT_EQUAL( sw::constant::invalid_index::kUint32, list._listQuad[6]._textureSlot );
+    SW_EXPECT_EQUAL( sw::CanvasQuad::kNoTextureSlot, list._listQuad[6]._textureSlot );
     SW_EXPECT_EQUAL( static_cast<uint32>( sw::CanvasQuadKind::Rect ), list._listQuad[6]._kind );
 }
 

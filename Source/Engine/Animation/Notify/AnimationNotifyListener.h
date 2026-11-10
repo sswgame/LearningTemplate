@@ -45,6 +45,16 @@ namespace sw
 
         /** @brief 이번 프레임의 알림이 울렸습니다(울린 것이 없어도 열린 구간의 틱을 위해 매 프레임 불립니다). */
         virtual void onAnimationNotifiesFired( const AnimationNotifyFrame& frame ) = 0;
+        /**
+         * @brief 받는 쪽이 이 이름의 알림을 처리할 수 있으면(표에 항목이 있으면) true 입니다.
+         * @details 애니메이터 밖의 타임라인(페어드 애니메이션 — 캐릭터)이 시작 전에 묻는다. 그쪽은 받는 쪽(알림 디스패치 — 위 단)의 형식을 모르고 이 창구만 본다.
+         */
+        virtual bool hasNotify( const hashed_string& notify ) const = 0;
+        /**
+         * @brief 애니메이터 밖의 타임라인이 낸 순간 알림 하나를 처리합니다(게임 스레드). 구간 알림은 받지 않습니다.
+         * @return 처리기를 불렀으면 true, 그 이름의 항목이 없으면 false 입니다.
+         */
+        virtual bool processExternalNotify( const AnimationFiredNotify& fired ) = 0;
     };
 } // namespace sw
 

@@ -14,6 +14,7 @@
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Path/AbsolutePath.h"
+#include "Core/Registry/RegistrationChain.h"
 #include "Core/Subsystem/ServiceSlot.h"
 
 #include <variant>
@@ -331,7 +332,7 @@ namespace sw
     // 3) GlobalVariableRegistrar. 정적 초기화 때 하나뿐인 전역 리스트에 연결된다(타입 등록자와 같다).
     // ------------------------------------------------------------------------------
     /**
-     * @brief 정적 객체가 전역 리스트(`getHead()`)에 자신을 붙입니다. 어느 이미지(Engine, 모듈, App, 테스트)에서 정의해도 같습니다.
+     * @brief 정적 객체가 전역 사슬(`getChain()`)에 자신을 붙입니다. 어느 이미지(Engine, 모듈, App, 테스트)에서 정의해도 같습니다.
      * @details 등록자는 자기 모듈 이름을 안다 — 정의 매크로가 CMake 가 대상마다 준 `SW_REGISTRAR_MODULE`(리플렉션 `--module` 과 같은 값)을 찍는다.
      *          정의가 없는 대상에서 매크로를 쓰면 컴파일 오류다(폴백 없음). 언리얼은 UBT 가 대상마다 `UE_MODULE_NAME` 을 정의한다.
      *          - 호스트 이미지(Engine · App · Server · DevTools, 배포본의 모든 것): 기동할 때 `CommandLineSubsystem` 이 걷어 등록자의 이름으로 올린다.
@@ -356,7 +357,7 @@ namespace sw
         bool                                       _bTestOnly; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         GlobalVariableRegistrar*                   _pNext;
 
-        /** @brief `getHead()` 리스트의 앞에 연결합니다. 글 인자(@p pName · @p pDescription · @p pEnumType · @p pModuleName)는 등록자보다 오래 사는 정적 글이어야 합니다. */
+        /** @brief `getChain()` 사슬의 앞에 연결합니다. 글 인자(@p pName · @p pDescription · @p pEnumType · @p pModuleName)는 등록자보다 오래 사는 정적 글이어야 합니다. */
         GlobalVariableRegistrar( const utf8* pName, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, const utf8* pDescription, const utf8* pEnumType, const utf8* pModuleName, uint32 typeSize, bool bTestOnly );
 
         /**
@@ -375,7 +376,7 @@ namespace sw
         }
 
         /** @brief 아직 아무도 가져가지 않은 등록자들의 리스트 헤드입니다(Engine.dll 이 가집니다). 가져가서 등록한 쪽이 nullptr 로 비웁니다. */
-        static GlobalVariableRegistrar*& getHead();
+        static RegistrationChain<GlobalVariableRegistrar>& getChain();
 
         /**
          * @brief @p path(`__FILE__`)가 테스트용 변수를 둘 수 있는 개발 전용 자리면 true 입니다 — 마지막 `Source` 아래 첫 폴더가 `DevTools` · `Editor` 이거나,

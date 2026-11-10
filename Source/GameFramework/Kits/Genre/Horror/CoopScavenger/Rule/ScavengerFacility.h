@@ -13,7 +13,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Gameplay/Condition/GameFlags.h"
+#include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/World/Land/AreaGraph.h"
 
 namespace sw

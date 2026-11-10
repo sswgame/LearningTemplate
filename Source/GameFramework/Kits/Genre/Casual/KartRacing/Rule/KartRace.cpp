@@ -192,11 +192,11 @@ namespace sw
         return _pProjectileCatalog != nullptr && item.isProjectile() ? _pProjectileCatalog->find( item._projectileID ) : nullptr;
     }
 
-    int32 KartRace::addRacer( const KinematicVehicleSettings& vehicleSettings, bool bAI )
+    expected<int32> KartRace::addRacer( const KinematicVehicleSettings& vehicleSettings, bool bAI )
     {
         const bool bCannotAddRacer = _phase != MatchPhase::Waiting || _pTrack == nullptr || _pTrack->isValid() == false;
         if ( bCannotAddRacer )
-            return constant::invalid_index::kInt32;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the race is not waiting or the track is missing" } );
         _listRacer.emplace_back();
         KartRacer& kart    = _listRacer.back();
         kart._baseSettings = vehicleSettings;

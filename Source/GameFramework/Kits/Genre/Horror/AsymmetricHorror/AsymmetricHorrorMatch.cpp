@@ -126,10 +126,10 @@ namespace sw
         return true;
     }
 
-    int32 AsymmetricHorrorMatch::addSurvivor( const float3& position )
+    expected<int32> AsymmetricHorrorMatch::addSurvivor( const float3& position )
     {
         if ( _pCatalog == nullptr || _bStarted == SW_TRUE )
-            return constant::invalid_index::kInt32;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "no catalog or the match has started" } );
         const AsymmetricHorrorRules& rules = _pCatalog->getRules();
         const int32                  index = static_cast<int32>( _listSurvivor.size() );
 
@@ -153,9 +153,9 @@ namespace sw
 
         AsymmetricHorrorSurvivor survivor;
         if ( survivor._healthMachine.initialize( healthMachine ) == false )
-            return constant::invalid_index::kInt32;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the survivor health settings are out of range" } );
         if ( survivor._healing.initialize( heal, &_pCatalog->getJudge(), GameRandom::deriveSeed( _settings._seed, static_cast<uint32>( index + 1 ) * AsymmetricHorrorMatchInternal::kHealSeedMix ) ) == false )
-            return constant::invalid_index::kInt32;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the heal settings are out of range" } );
         survivor._position = float3{ position._x, 0.0f, position._z };
         _listSurvivor.push_back( survivor );
         return index;
@@ -166,10 +166,10 @@ namespace sw
         _killer._position = float3{ position._x, 0.0f, position._z };
     }
 
-    int32 AsymmetricHorrorMatch::addGenerator( const float3& position )
+    expected<int32> AsymmetricHorrorMatch::addGenerator( const float3& position )
     {
         if ( _pCatalog == nullptr )
-            return constant::invalid_index::kInt32;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "no catalog" } );
         AsymmetricHorrorGenerator generator;
         generator._position = float3{ position._x, 0.0f, position._z };
         _listGenerator.push_back( generator );
@@ -177,7 +177,7 @@ namespace sw
         if ( configureGenerator( index, false ) == false )
         {
             _listGenerator.pop_back(); // 수리 규칙이 범위 밖이면 발전기를 세우지 않는다
-            return constant::invalid_index::kInt32;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the repair settings are out of range" } );
         }
         return index;
     }
@@ -210,10 +210,10 @@ namespace sw
         return static_cast<int32>( _listLocker.size() ) - 1;
     }
 
-    int32 AsymmetricHorrorMatch::addGate( const float3& position )
+    expected<int32> AsymmetricHorrorMatch::addGate( const float3& position )
     {
         if ( _pCatalog == nullptr )
-            return constant::invalid_index::kInt32;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "no catalog" } );
         const AsymmetricHorrorRules& rules = _pCatalog->getRules();
         InteractionConfig            config;
         config._duration        = rules._endgame._gateTime;
@@ -222,7 +222,7 @@ namespace sw
         gate._position    = float3{ position._x, 0.0f, position._z };
         const int32 index = static_cast<int32>( _listGate.size() );
         if ( gate._progress.initialize( config, nullptr, GameRandom::deriveSeed( _settings._seed, static_cast<uint32>( index + 1 ) * AsymmetricHorrorMatchInternal::kGateSeedMix ) ) == false )
-            return constant::invalid_index::kInt32; // 규칙의 문 시간이 범위 밖이다 - initialize 가 이유를 남겼다
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the gate time is out of range" } ); // 규칙의 문 시간이 범위 밖이다 - initialize 가 이유를 남겼다
         _listGate.push_back( gate );
         return index;
     }
@@ -243,9 +243,9 @@ namespace sw
         _killerTeam   = _match.addTeam( hashed_string( "Killer" ) );
         for ( AsymmetricHorrorSurvivor& survivor : _listSurvivor )
         {
-            survivor._participant = _match.addParticipant( _survivorTeam, hashed_string( "Survivor" ) );
+            survivor._participant = _match.addParticipant( _survivorTeam, hashed_string( "Survivor" ) ).value(); // 팀은 바로 위에서 만들었다
         }
-        _killer._participant = _match.addParticipant( _killerTeam, hashed_string( "Killer" ) );
+        _killer._participant = _match.addParticipant( _killerTeam, hashed_string( "Killer" ) ).value();
         _match.start();
         _bStarted = SW_TRUE;
     }
@@ -694,7 +694,7 @@ namespace sw
         leaveActivity( victim );
         _killer._attackCooldown.start( def._hitCooldown );
         _match.reportDamage( _killer._participant, target._participant, 1.0f );
-        (void)target._healthMachine.applyDamage( 1.0f, 0.0f, constant::invalid_index::kInt32 ); // 결과는 아래 pollEvents 가 이벤트로 읽는다
+        (void)target._healthMachine.applyDamage( 1.0f, 0.0f, nullopt ); // 결과는 아래 pollEvents 가 이벤트로 읽는다
         target._healthMachine.discardEvents();
         awardScore( _killer._score, "Hit", 1.0f );
         if ( target._healthMachine.isDowned() )
@@ -823,7 +823,7 @@ namespace sw
         releaseHealers( occupant, true );
         while ( target._healthMachine.isAlive() )
         {
-            (void)target._healthMachine.applyDamage( 1.0f, 0.0f, constant::invalid_index::kInt32 ); // 결과는 아래 pollEvents 가 이벤트로 읽는다
+            (void)target._healthMachine.applyDamage( 1.0f, 0.0f, nullopt ); // 결과는 아래 pollEvents 가 이벤트로 읽는다
         }
         target._healthMachine.discardEvents();
         target._state          = SurvivorState::Carried;
@@ -945,7 +945,7 @@ namespace sw
     void AsymmetricHorrorMatch::restoreInjured( AsymmetricHorrorSurvivor& survivor )
     {
         survivor._healthMachine.respawn();
-        (void)survivor._healthMachine.applyDamage( 1.0f, 0.0f, constant::invalid_index::kInt32 ); // 결과는 아래 pollEvents 가 이벤트로 읽는다
+        (void)survivor._healthMachine.applyDamage( 1.0f, 0.0f, nullopt ); // 결과는 아래 pollEvents 가 이벤트로 읽는다
         survivor._healthMachine.discardEvents();
         survivor._state          = SurvivorState::Injured;
         survivor._wiggleProgress = 0.0f;
@@ -961,7 +961,7 @@ namespace sw
         releaseHealers( survivorIndex, true );
         if ( _killer._carrying == survivorIndex )
             _killer._carrying = constant::invalid_index::kInt32;
-        survivor._healthMachine.kill( constant::invalid_index::kInt32 );
+        survivor._healthMachine.kill( nullopt );
         survivor._healthMachine.discardEvents();
         survivor._state    = SurvivorState::Sacrificed;
         survivor._bBledOut = bBledOut ? SW_TRUE : SW_FALSE;
@@ -1255,9 +1255,10 @@ namespace sw
             int32 survivor = static_cast<int32>( index );
             if ( io.isReading() )
             {
-                survivor = addSurvivor( position );
-                if ( io.check( survivor >= 0 ) == false )
+                const expected<int32> added = addSurvivor( position );
+                if ( io.check( added.has_value() ) == false )
                     return;
+                survivor = *added;
             }
             serializeSurvivor( io, _listSurvivor[static_cast<size_t>( survivor )] );
         }
@@ -1524,9 +1525,10 @@ namespace sw
             int32 generator = static_cast<int32>( index );
             if ( io.isReading() )
             {
-                generator = addGenerator( position );
-                if ( io.check( generator >= 0 && configureGenerator( generator, bKicked == SW_TRUE ) ) == false ) // 걷어차인 발전기는 퇴행 규칙을 쓴다
+                const expected<int32> added = addGenerator( position );
+                if ( io.check( added.has_value() && configureGenerator( *added, bKicked == SW_TRUE ) ) == false ) // 걷어차인 발전기는 퇴행 규칙을 쓴다
                     return;
+                generator                                                  = *added;
                 _listGenerator[static_cast<size_t>( generator )]._bBlocked = bBlocked;
             }
             io.value( _listGenerator[static_cast<size_t>( generator )]._progress );
@@ -1542,9 +1544,10 @@ namespace sw
             int32 gate = static_cast<int32>( index );
             if ( io.isReading() )
             {
-                gate = addGate( position );
-                if ( io.check( gate >= 0 ) == false )
+                const expected<int32> added = addGate( position );
+                if ( io.check( added.has_value() ) == false )
                     return;
+                gate = *added;
             }
             io.value( _listGate[static_cast<size_t>( gate )]._progress );
         }

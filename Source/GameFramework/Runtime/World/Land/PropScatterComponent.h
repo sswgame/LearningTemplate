@@ -121,8 +121,8 @@ namespace sw
          *          오브젝트 회전이 요뿐이라서 노멀 맞춤은 쓰지 않는다.
          */
         static void computeRulePlacements( const PropScatterParams& params, const IPlacementSurface* pSurface, vector<PropScatterPlacement>& outListPlacement );
-        /** @brief 비중대로 고른 모델 번호를 반환합니다. @p unit 은 [0, 1] 입니다. 모델이 없거나 비중 합이 0 이면 -1 입니다. */
-        static int32 pickModel( const vector<PropScatterModel>& listModel, float32 unit );
+        /** @brief 비중대로 고른 모델 번호를 반환합니다. @p unit 은 [0, 1] 입니다. 모델이 없거나 비중 합이 0 이면 비어 있습니다. */
+        static optional<int32> pickModel( const vector<PropScatterModel>& listModel, float32 unit );
         /**
          * @brief 모델 목록이 그릴 수 있는 모양인지 봅니다. 문제가 있으면 첫 문제가 오류입니다.
          * @details 메시가 비면 안 된다. 구간을 적은 모델은 구간마다 이름 · 머티리얼이 있어야 하고 이름이 겹치면 안 되며, 컴포넌트 머티리얼(@p componentMaterial)과
@@ -178,7 +178,7 @@ namespace sw
         vector<PropScatterExclusion> _listExclusion;
         PROPERTY( Category = "Scatter", DisplayName = "Material", Tooltip = "Material of every prop; empty uses the scene default" )
         AssetRef<Material> _materialPath;
-        PROPERTY( Category = "Scatter", DisplayName = "Prop Name", Tooltip = "Name of the spawned objects" )
+        PROPERTY( Required, Category = "Scatter", DisplayName = "Prop Name", Tooltip = "Name of the spawned objects" )
         string _propName;
         PROPERTY( Category = "Scatter", DisplayName = "Region Min", Units = m )
         float3 _regionMin;

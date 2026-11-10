@@ -2,6 +2,9 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabOverrides.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 

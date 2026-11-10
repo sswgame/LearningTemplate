@@ -307,9 +307,11 @@ namespace sw
         return true;
     }
 
-    void CameraDirectorComponent::writeState( Archive& outArchive ) const
+    void CameraDirectorComponent::serializeState( StateIO& io )
     {
-        _director.writeState( outArchive );
+        if ( io.isReading() && io.check( _pCatalog != nullptr ) == false )
+            return; // 카탈로그 전에는 프리셋을 찾을 수 없다 — 부르는 쪽(`applyPendingState`)은 시작 뒤에만 읽는다
+        _director.serializeState( io, io.isReading() ? _pCatalog.get() : nullptr );
     }
 
     void CameraDirectorComponent::restoreState( vector<uint8>&& bytes )
@@ -324,7 +326,7 @@ namespace sw
         if ( _pendingStateBytes.empty() )
             return false;
         Archive    archive( _pendingStateBytes.data(), static_cast<uint64>( _pendingStateBytes.size() ) );
-        const bool bRead = _director.readState( archive, *_pCatalog );
+        const bool bRead = StateIO::readInPlace( *this, archive ); // 디렉터 본문이 지역 변수에 읽어 끝까지 맞으면 바꾼다
         _pendingStateBytes.clear();
         if ( bRead == false )
             SW_LOG_WARNING_ID( "CameraDirectorComponent.CameraDirectorStateDid", "Camera director state of '%#' did not read - starting fresh", getOwner() != nullptr ? getOwner()->getName().c_str() : "?" );

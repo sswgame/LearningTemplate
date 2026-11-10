@@ -3,9 +3,12 @@
 #include "Engine/Animation/Notify/AnimationNotifyTable.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
 #include "Engine/Character/CharacterDataReader.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -15,6 +18,9 @@ namespace sw
     {
         struct AnimationNotifyTableInternal
         {
+            /** @brief 공유 캐시의 로더 — 엔진 기본 처리기 레지스트리로 읽습니다. */
+            [[nodiscard]] static bool loadNotifyTable( const AssetID& assetID, AnimationNotifyTable& outTable ) { return outTable.loadFromAsset( assetID, sw::engine::getSubsystem<AnimationNotifyHandlerRegistry>() ); }
+
             /** @brief 처리기 인자 선언에서 이름의 것을 찾습니다. */
             static const AnimationNotifyParamDef* findParamDef( vector_reference<const AnimationNotifyParamDef> listDef, const utf8* pName )
             {
@@ -261,4 +267,10 @@ namespace sw
         const unique_ptr<IAnimationNotifyHandler>* pHandler = _registry.find( name );
         return pHandler == nullptr ? nullptr : pHandler->get();
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_SHARED_ASSET_CACHE( AnimationNotifyTable, AnimationNotifyTable,
+                           AnimationNotifyTable::kAssetType.withLoader( AssetTypeLoader::with<AnimationNotifyTable, &AnimationNotifyTableInternal::loadNotifyTable>( MemoryTag::Animation ) ) );
 } // namespace sw

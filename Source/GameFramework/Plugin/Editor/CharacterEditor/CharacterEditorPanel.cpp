@@ -19,7 +19,6 @@
 #include "Editor/Viewport/EditorProjectedLineRenderer.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 
-#include "Engine/Animation/Component/PoseModifierComponent.h"
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
@@ -28,6 +27,7 @@
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Character/Fit/FitSolver.h"
 #include "Engine/Character/PoseModifier/CharacterPoseUtil.h"
+#include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Character/Socket/ResolvedSocketTable.h"
 #include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Content/AssetPaths.h"
@@ -346,7 +346,7 @@ namespace sw::editor
         , _published{}
         , _bodyState{}
         , _bodyHighlightDrive{ constant::invalid_index::kUint32 }
-        , _bodySelectedSection{ constant::invalid_index::kUint32 }
+        , _bodySelectedSection{}
         , _bodyPickLayer{ constant::invalid_index::kUint32 }
         , _bodyPickMarker{}
         , _bodyStepTimer{ 0.0f }
@@ -885,7 +885,10 @@ namespace sw::editor
             }
             pAnimator->setAnimationSetPath( string_view( _document.getPaths()._animationSet.c_str() ) );
             // 몸 동작(굽 · 지글 · 동공 · 체액)은 몸 프로필이 있는 외형에서만 일한다 — 없는 몸에서는 쉰다. 몸 탭의 미리보기 단추가 이것을 부른다.
-            (void)pBody->addComponent<CharacterBodyDynamicsComponent>();
+            // 이름 칸은 팩 데이터(charactereditor.xml 의 wipeEvent)에서 온다 — 코드로 붙인 컴포넌트는 데이터 파일이 칸을 채우지 못한다.
+            CharacterBodyDynamicsComponent* pDynamics = pBody->addComponent<CharacterBodyDynamicsComponent>();
+            if ( pDynamics != nullptr )
+                pDynamics->setWipeEvent( _document.getPreviewWipeEvent() );
             _previewBody         = pBody->getHandle();
             _bPreviewBodyDressed = SW_FALSE;
         }
@@ -1496,7 +1499,7 @@ namespace sw::editor
             ImGui::TableNextRow();
             ImGui::TableNextColumn();
             // 강조는 데이터 선택이다 — 강조색은 고른 줄 · 드라이브가 고른 구간에만(앱 화면 규칙).
-            if ( ImGui::Selectable( row._section.c_str(), index == _bodySelectedSection || row._bHighlighted == SW_TRUE, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap ) )
+            if ( ImGui::Selectable( row._section.c_str(), _bodySelectedSection == index || row._bHighlighted == SW_TRUE, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap ) )
                 _bodySelectedSection = index;
             ImGui::TableNextColumn();
             ImGui::BeginDisabled( visuals.isOpen() == false );
@@ -1698,7 +1701,7 @@ namespace sw::editor
         _published._previewPickVertexCount = Internal::countPickVertices( listObject );
         // 표면(몸 + 부품)은 지금 포즈로 스키닝해 짓는다 — 윤곽을 긋거나 누른 프레임에만(CPU 스키닝이 공짜가 아니다).
         vector<BodyPickSurface> listSurface;
-        bool                    bOutline = _bodySelectedSection < _bodyState._listSection.size();
+        bool                    bOutline = _bodySelectedSection.has_value() && *_bodySelectedSection < _bodyState._listSection.size();
         for ( const BodyCustomizationViewState::SectionRow& row : _bodyState._listSection )
             bOutline = bOutline || row._bHighlighted == SW_TRUE;
         if ( bOutline )
@@ -1710,8 +1713,9 @@ namespace sw::editor
         {
             for ( const MeshSection& section : surface._listSection )
             {
-                const uint32 row = BodyCustomizationViewModel::findSectionRow( _bodyState, section._name );
-                if ( row >= _bodyState._listSection.size() || ( _bodyState._listSection[row]._bHighlighted == SW_FALSE && row != _bodySelectedSection ) )
+                const optional<uint32> row = BodyCustomizationViewModel::findSectionRow( _bodyState, section._name );
+                if ( row.has_value() == false || *row >= _bodyState._listSection.size() ||
+                     ( _bodyState._listSection[*row]._bHighlighted == SW_FALSE && _bodySelectedSection != *row ) )
                     continue;
                 const uint32 triangleCount = section._indexCount / 3u;
                 const uint32 stride        = triangleCount > Internal::kHighlightTriangleBudget ? triangleCount / Internal::kHighlightTriangleBudget + 1u : 1u;
@@ -1786,8 +1790,8 @@ namespace sw::editor
             return;
         }
         const BodyPickSurface& surface = listSurface[hit._surface];
-        if ( hit._section < surface._listSection.size() )
-            _bodySelectedSection = BodyCustomizationViewModel::findSectionRow( _bodyState, surface._listSection[hit._section]._name );
+        if ( hit._section.has_value() && *hit._section < surface._listSection.size() )
+            _bodySelectedSection = BodyCustomizationViewModel::findSectionRow( _bodyState, surface._listSection[*hit._section]._name );
     }
 
     void CharacterEditorPanel::drawSkinLayerRows( const BodyCustomizationViewState& state )

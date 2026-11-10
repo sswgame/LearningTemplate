@@ -101,20 +101,20 @@ namespace sw::editor
         return height;
     }
 
-    int32 BehaviorTreeEditModel::addNode( int32 parentID, BehaviorNodeKind type )
+    expected<int32> BehaviorTreeEditModel::addNode( int32 parentID, BehaviorNodeKind type )
     {
         if ( parentID < 0 )
         {
             if ( _rootID >= 0 )
-                return -1;
+                return unexpected( Error{ ErrorKind::AlreadyExists, "the tree already has a root" } );
         }
         else
         {
             const BehaviorTreeEditNode* pParent = find( parentID );
             if ( pParent == nullptr || canHoldChild( *pParent ) == false )
-                return -1;
+                return unexpected( Error{ ErrorKind::InvalidArgument, "the parent does not exist or cannot take a child" } );
             if ( getDepth( parentID ) + 1 > BehaviorTreeNames::kMaxDepth )
-                return -1;
+                return unexpected( Error{ ErrorKind::InvalidArgument, "the node would be nested too deep" } );
         }
 
         BehaviorTreeEditNode node{};
@@ -255,7 +255,7 @@ namespace sw::editor
         outListIssue.clear();
         if ( _rootID < 0 )
         {
-            outListIssue.push_back( BehaviorTreeEditIssue{ -1, "The tree has no root node - right-click the canvas to add one" } );
+            outListIssue.push_back( BehaviorTreeEditIssue{ nullopt, "The tree has no root node - right-click the canvas to add one" } );
             return;
         }
         for ( const BehaviorTreeEditNode& node : _listNode )
@@ -324,9 +324,10 @@ namespace sw::editor
         if ( BehaviorTreeXML::readNodeFields( node, type, "BehaviorTreeEditModel", value ) == false )
             return unexpected( Internal::makeNodeError( node, "The node has a missing, unknown or invalid attribute - see the log" ) );
 
-        const int32 id = addNode( parentID, type );
-        if ( id < 0 )
+        const expected<int32> added = addNode( parentID, type );
+        if ( added.has_value() == false )
             return unexpected( Internal::makeNodeError( node, "The node cannot be placed here (a leaf or a decorator that already has a child is its parent)" ) );
+        const int32 id = *added;
         {
             // 읽은 값을 새 노드에 옮긴다. 번호와 부모, 자식 목록은 addNode 가 정한 대로 둔다.
             BehaviorTreeEditNode* pNew = find( id );

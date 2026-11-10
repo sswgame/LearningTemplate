@@ -84,7 +84,7 @@ namespace sw
             hashed_string _npc{};
             hashed_string _kind{};
             uint32        _id{ 0 };
-            int32         _spotIndex{ -1 };
+            int32         _spotIndex; ///< 예약할 때 채운다
             int32         _day{ 0 };
             int32         _startMinute{ 0 };
             int32         _endMinute{ 0 };

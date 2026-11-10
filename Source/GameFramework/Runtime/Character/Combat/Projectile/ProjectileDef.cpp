@@ -10,8 +10,8 @@
 #include "Engine/Serialization/XML/XMLFields.h"
 
 #include "GameFramework/Runtime/Character/Combat/Projectile/ResolvedShot.h"
+#include "GameFramework/Runtime/Foundation/Condition/GameConditions.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
-#include "GameFramework/Runtime/Gameplay/Condition/GameConditions.h"
 
 namespace sw
 {

@@ -128,10 +128,10 @@ namespace sw::editor
              */
             [[nodiscard]] static bool findElementRange( string_view fileText, const XMLNode& element, string_view elementName, size_t& outBegin, size_t& outEnd )
             {
-                const int64 offset = element.getSourceOffset();
-                if ( offset < 0 || static_cast<size_t>( offset ) >= fileText.size() )
+                const optional<size_t> offset = element.getSourceOffset();
+                if ( offset.has_value() == false || *offset >= fileText.size() )
                     return false;
-                const size_t begin = fileText.rfind( '<', static_cast<size_t>( offset ) );
+                const size_t begin = fileText.rfind( '<', *offset );
                 if ( begin == string_view::npos )
                     return false;
                 const size_t tagEnd = fileText.find( '>', begin );

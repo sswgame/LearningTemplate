@@ -108,8 +108,8 @@ SW_TEST_CASE( UIPreviewLogicTest, RowsAndOrdinalsFollowTheDocumentOrder )
     SW_EXPECT_EQUAL( 2u, listRow[2]._depth );
     SW_EXPECT_TRUE( listRow[1]._label.find( "#List" ) != string::npos );
 
-    SW_EXPECT_EQUAL( 2u, UIPreviewLogic::findWidgetOrdinal( tree, leaf.getID() ) );
-    SW_EXPECT_EQUAL( UIPreviewLogic::kNoOrdinal, UIPreviewLogic::findWidgetOrdinal( tree, kInvalidWidgetID ) );
+    SW_EXPECT_TRUE( UIPreviewLogic::findWidgetOrdinal( tree, leaf.getID() ) == 2u );
+    SW_EXPECT_TRUE( UIPreviewLogic::findWidgetOrdinal( tree, kInvalidWidgetID ).has_value() == false );
     SW_EXPECT_TRUE( UIPreviewLogic::findWidgetByOrdinal( tree, 2 ) == leaf.getID() );
     SW_EXPECT_TRUE( UIPreviewLogic::findWidgetByOrdinal( tree, 3 ) == kInvalidWidgetID );
     SW_EXPECT_TRUE( UIPreviewLogic::findPanelByOrdinal( tree, 1 ) == &box );

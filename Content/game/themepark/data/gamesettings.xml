@@ -11,4 +11,5 @@
   <inputMap path="game/themepark/data/park.input.xml"/>
   <loadingScreen>engine/ui/loading.ui.xml</loadingScreen>
   <audioEvents>game/themepark/audio/themepark.audioevents.xml</audioEvents>
+  <defaultLanguage>ko_kr</defaultLanguage>
 </GameSettings>

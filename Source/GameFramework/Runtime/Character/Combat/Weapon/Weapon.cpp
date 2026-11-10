@@ -13,8 +13,8 @@
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
+#include "GameFramework/Runtime/Foundation/Condition/GameConditions.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
-#include "GameFramework/Runtime/Gameplay/Condition/GameConditions.h"
 
 namespace sw
 {
@@ -47,6 +47,7 @@ namespace sw
         , _maxReserveAmmo{ 180 }
         , _pelletCount{ 1 }
         , _bAutomatic{ SW_TRUE }
+        , _bTwoHanded{ SW_FALSE }
         , _acceptsExpr{}
         , _listModifier{}
     {

@@ -427,8 +427,8 @@ namespace sw::editor
             const vector<GameDataFileEntry>& listGameDataFile = _model.getGameDataFiles();
             for ( const GameDataFileEntry& entry : listGameDataFile )
             {
-                const bool bSelected = FileUtil::pathsEqualNormalized( entry._absolutePath, _model.getGameDataPath() ); // 연 자리는 문서 id 를 푼 디스크 경로라 표기가 목록과 다를 수 있다
-                const bool bBlocked  = _model.isGameDataDirty() && bSelected == false;                                  // 고친 표를 두고 다른 표로 가지 않는다 — 저장하거나 되돌린 뒤 고른다
+                const bool bSelected = FileUtil::isSameDiskPath( entry._absolutePath, _model.getGameDataPath() ); // 연 자리는 문서 id 를 푼 디스크 경로라 표기가 목록과 다를 수 있다
+                const bool bBlocked  = _model.isGameDataDirty() && bSelected == false;                            // 고친 표를 두고 다른 표로 가지 않는다 — 저장하거나 되돌린 뒤 고른다
                 ImGui::BeginDisabled( bBlocked );
                 if ( ImGui::Selectable( entry._fileName.c_str(), bSelected ) && bSelected == false )
                 {

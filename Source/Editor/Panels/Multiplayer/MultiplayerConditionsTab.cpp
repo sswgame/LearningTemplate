@@ -87,14 +87,14 @@ namespace sw::editor
 
     void MultiplayerConditionsTab::drawTab( const MultiplayerTabContext& context )
     {
-        const int32 targetIndex = context._targetProcessIndex;
-        _viewModel.gather( targetIndex, _viewState );
+        _viewModel.gather( context._targetProcessIndex, _viewState );
         if ( _viewState._bActive == SW_FALSE )
         {
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorMultiplayer", "ConditionsNoSession" ) );
             return;
         }
-        const MultiplayerProcessRow& status = context._pState->_listProcess[static_cast<size_t>( targetIndex )];
+        const int32                  targetIndex = *context._targetProcessIndex; // `_bActive` 는 대상이 있을 때만 참이다
+        const MultiplayerProcessRow& status      = context._pState->_listProcess[static_cast<size_t>( targetIndex )];
 
         ImGui::Checkbox( SW_LOCKEY( "EdLabel", "AllProcesses" ), &_bApplyToAll );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ConditionsApplyToAll" ) );

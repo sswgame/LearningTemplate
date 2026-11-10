@@ -235,6 +235,8 @@ namespace sw
         , _scratchPose{}
         , _scratchTrackPose{}
         , _scratchLayerPose{}
+        , _listBaseModelScratch{}
+        , _listLayerModelScratch{}
         , _scratchLinkedPose{}
         , _listScratchTrackMask{}
         , _baseHistory{}
@@ -856,19 +858,19 @@ namespace sw
             _pSkeletalMesh->markPoseDirty();
     }
 
-    int32 SkeletalAnimatorComponent::addLayer( const AnimationLayerDef& desc )
+    expected<uint32> SkeletalAnimatorComponent::addLayer( const AnimationLayerDef& desc )
     {
         if ( preloadClip( desc._clipName ) == false )
         {
             SW_LOG_ERROR_ID( "SkeletalAnimator.AnimationLayerClipNot", "Animation layer clip '%#' was not found in '%#'", desc._clipName.c_str(), _animationSetPath.c_str() );
-            return constant::invalid_index::kInt32;
+            return unexpected( Error{ ErrorKind::NotFound, "the animation layer clip was not found", desc._clipName.c_str() } );
         }
         LayerState layer{};
         layer._desc = desc;
         layer._clip = _mapClip[desc._clipName];
         layer._player.play( layer._clip.get(), desc._bLoop == SW_TRUE );
         _listLayer.push_back( std::move( layer ) );
-        return static_cast<int32>( _listLayer.size() - 1 );
+        return static_cast<uint32>( _listLayer.size() - 1 );
     }
 
     void SkeletalAnimatorComponent::setLayerWeight( uint32 layerIndex, float32 weight )
@@ -1415,14 +1417,44 @@ namespace sw
             layer._inertializer.apply( _scratchLayerPose );
             layer._history.record( _scratchLayerPose );
         }
-        if ( layer._desc._blend == AnimationLayerBlend::Override )
+        if ( layer._desc._blend != AnimationLayerBlend::Additive )
         {
+            if ( layer._desc._blend == AnimationLayerBlend::OverrideMeshSpace )
+                alignMaskRootsInMeshSpace( skeleton, inoutPose, layer._listBoneWeight.data(), _scratchLayerPose );
             Pose::blendMasked( inoutPose, _scratchLayerPose, weight, layer._listBoneWeight.data(), inoutPose );
         }
         else
         {
             Pose::makeAdditive( _scratchLayerPose, layer._additiveReference, _scratchPose );
             inoutPose.applyAdditive( _scratchPose, weight, layer._listBoneWeight.data() );
+        }
+    }
+
+    void SkeletalAnimatorComponent::alignMaskRootsInMeshSpace( const Skeleton& skeleton, const Pose& basePose, const float32* pBoneWeight, Pose& inoutLayerPose )
+    {
+        const vector<int32>& listParent = skeleton.getParentIndices();
+        // 레이어의 루트(움직임 · 방향 뼈)는 기준 포즈의 것으로 잰다 — 레이어는 몸의 방향을 바꾸지 않는다(클립이 루트에 담은 요가 상체를 옆으로 돌리지 않게).
+        if ( inoutLayerPose.getBoneCount() > 0 && basePose.getBoneCount() > 0 )
+            inoutLayerPose.setBoneTransform( 0, basePose.getBoneTransform( 0 ) );
+        basePose.computeModelSpace( listParent, _listBaseModelScratch );
+        inoutLayerPose.computeModelSpace( listParent, _listLayerModelScratch );
+        const uint32 boneCount = MathUtil::min( inoutLayerPose.getBoneCount(), static_cast<uint32>( _listBaseModelScratch.size() ) );
+        for ( uint32 boneIndex = 0; boneIndex < boneCount; ++boneIndex )
+        {
+            const int32 parentIndex = listParent[boneIndex];
+            const bool  bMaskRoot   = pBoneWeight[boneIndex] > 0.0f && ( parentIndex < 0 || pBoneWeight[static_cast<uint32>( parentIndex )] <= 0.0f );
+            if ( bMaskRoot == false || parentIndex < 0 )
+                continue;
+            // 행벡터 규약(모델 = 로컬 × 부모 모델) — 레이어의 메시 공간 방향을 기준 포즈의 부모 아래에 놓는 로컬이다. 회전만 바꾼다(뼈 길이 · 스케일은 레이어 그대로).
+            const float4x4 local = _listLayerModelScratch[boneIndex] * _listBaseModelScratch[static_cast<uint32>( parentIndex )].invert();
+            float3         scale;
+            quaternion     rotation;
+            float3         translation;
+            if ( local.decompose( scale, rotation, translation ) == false )
+                continue;
+            BoneTransform transform = inoutLayerPose.getBoneTransform( boneIndex );
+            transform._rotation     = rotation.normalize();
+            inoutLayerPose.setBoneTransform( boneIndex, transform );
         }
     }
 

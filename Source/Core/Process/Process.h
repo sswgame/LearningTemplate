@@ -7,6 +7,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Path/AbsolutePath.h"
@@ -135,13 +136,14 @@ namespace sw
 
         /**
          * @brief 프로세스가 끝나기를 기다리고 종료 코드를 반환합니다.
-         * @return 프로세스 종료 코드(-1 = 대기 실패). **POSIX 에서 시그널로 죽은 자식은 `128 + 시그널 번호`** 입니다(셸 규약.
+         * @return 프로세스 종료 코드. 기다릴 자식이 없거나(띄우지 않음 · 이미 거둠 · 웹) OS 대기가 실패하면 그 까닭의 오류입니다 — 예전에는 -1 이라
+         *         -1 로 끝난 프로세스와 갈리지 않았다. **POSIX 에서 시그널로 죽은 자식은 `128 + 시그널 번호`** 입니다(셸 규약.
          *         예: SIGKILL 이면 137). 시그널로 죽은 프로세스에는 종료 코드가 없기 때문입니다.
          * @details POSIX 는 여기서 자식을 회수하고 **pid 를 놓습니다.** 그 번호는 OS 가 곧 재사용하므로, 계속 보관하면 나중에 다른
          *          프로세스의 자식을 회수하게 됩니다. 그래서 `waitForExit` 뒤의 `getProcessID` 는 0 이고, 두 번째 `waitForExit` 은
-         *          -1 입니다.
+         *          오류입니다.
          */
-        int32 waitForExit();
+        [[nodiscard]] expected<int32> waitForExit();
 
         /**
          * @brief 프로세스에 강제 종료를 **요청**합니다.
@@ -190,9 +192,10 @@ namespace sw
          * @param command 실행 파일과 인자
          * @param options 작업 디렉터리 등 프로세스 옵션
          * @param onOutput 출력 줄을 받을 델리게이트(표준 에러가 합쳐져 들어옵니다)
-         * @return 프로세스 종료 코드(-1 = 실행 실패)
+         * @return 띄웠으면 그 프로세스의 종료 코드, 띄우지 못했으면(실행 파일 없음 · 빈 명령) 명령줄이 대상인 오류입니다.
+         *         예전에는 띄우기 실패도 종료 코드 -1 이라 -1 로 끝난 프로세스와 갈리지 않았고, 부르는 쪽마다 -1 을 따로 비교했다.
          */
-        static int32 execute( const ProcessCommand& command, const ProcessOptions& options = {}, const ProcessOutputDelegate& onOutput = {} );
+        [[nodiscard]] static expected<int32> execute( const ProcessCommand& command, const ProcessOptions& options = {}, const ProcessOutputDelegate& onOutput = {} );
 
         /**
          * @brief 출력을 받지 않고 **기다리지도 않고** 프로세스를 띄웁니다. 띄웠으면 true 입니다(종료 코드는 볼 수 없습니다).

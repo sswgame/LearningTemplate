@@ -184,6 +184,29 @@ namespace sw
                 return { ShaderTargetFormat::DXBC_D3D11, ShaderTargetFormat::DXIL_D3D12, ShaderTargetFormat::SPIRV_Vulkan, ShaderTargetFormat::SPIRV_OpenGL };
             }
 
+            /** @brief 요청 하나 × 형식 하나의 바이너리 자리입니다 — 스테이징 루트 기준 폴더(`<도메인>/shaders/bin/<rhi>`)와 파일 이름. */
+            struct BinarySlot
+            {
+                string _binDirectory;
+                string _fileName;
+            };
+
+            /**
+             * @brief 요청 @p request 가 형식 @p format 으로 만드는 바이너리의 자리입니다. 그 형식에 없는 단계(WebGPU 의 헐 · 도메인 · 지오메트리)면 없음입니다.
+             * @details 굽기(`planRequest`)와 팩 쿠커에 넘기는 요청 바이너리 목록(`collectRequestedBinaries`)이 이 규칙 하나를 쓴다.
+             */
+            static optional<BinarySlot> locateBinary( const ShaderCookRequest& request, ShaderTargetFormat format )
+            {
+                const bool bOptionalStage = request._stage == ShaderStage::Hull || request._stage == ShaderStage::Domain || request._stage == ShaderStage::Geometry;
+                if ( bOptionalStage && ShaderTargetFormatTable::find( format )->_bOptionalStages == 0 )
+                    return nullopt;
+                const ShaderSourceID source{ request._shaderPath };
+                BinarySlot           slot;
+                slot._binDirectory = ShaderBinaryLocation::make( source, format )->_binDirectory;
+                slot._fileName     = ShaderCooker::computeBinaryFileName( source.getStemLower(), request._stage, request._entryPoint, request._permutationHash, ShaderCooker::getExtensionForFormat( format ) );
+                return slot;
+            }
+
             /**
              * @brief 요청 하나를 모든 포맷의 작업으로 풀어 `outListTask` 에 더합니다. 소스 파일이 없거나 `shaders` 폴더 밖이면 쿠킹할 수 없으므로 **실패로 셉니다**(요청은 에셋이 만든 것이라 소스가 있어야 한다).
              */
@@ -198,11 +221,10 @@ namespace sw
                     SW_LOG_ERROR_ID( "ShaderCooker.ShaderCookRequestCannot", "Shader cook request cannot be resolved (%#): %# (%#)", request._entryPoint, input.error().message(), input.error().detail() );
                     return;
                 }
-                const string stemLower      = source.getStemLower();
-                const bool   bOptionalStage = request._stage == ShaderStage::Hull || request._stage == ShaderStage::Domain || request._stage == ShaderStage::Geometry;
                 for ( ShaderTargetFormat fmt : listTargetFormat )
                 {
-                    if ( bOptionalStage && ShaderTargetFormatTable::find( fmt )->_bOptionalStages == 0 )
+                    const optional<BinarySlot> slot = locateBinary( request, fmt );
+                    if ( slot.has_value() == false )
                         continue; // 이 형식에는 헐 · 도메인 · 지오메트리가 없다(WebGPU) — 런타임도 그 PSO 를 만들지 않는다
                     FormatTask task;
                     task._pRequest                                     = &request;
@@ -210,8 +232,8 @@ namespace sw
                     task._normPath                                     = input->_source.str();
                     task._shadersDir                                   = input->_shadersFolder.str();
                     task._format                                       = fmt;
-                    task._outDir                                       = FileUtil::normalizeSeparators( FileUtil::joinPath( ioState._cookedDir, ShaderBinaryLocation::make( source, fmt )->_binDirectory ) );
-                    task._fileName                                     = ShaderCooker::computeBinaryFileName( stemLower, request._stage, request._entryPoint, request._permutationHash, ShaderCooker::getExtensionForFormat( fmt ) );
+                    task._outDir                                       = FileUtil::normalizeSeparators( FileUtil::joinPath( ioState._cookedDir, slot->_binDirectory ) );
+                    task._fileName                                     = slot->_fileName;
                     task._outPath                                      = FileUtil::joinPath( task._outDir, task._fileName );
                     ioState._mapSourceShadersDirByOutDir[task._outDir] = task._shadersDir;
                     outListTask.push_back( std::move( task ) );
@@ -440,6 +462,21 @@ namespace sw
         vector<string> listDomain;
         collectCookedDomains( listRequest, listDomain );
         ShaderCookStamp::verifyCookedShaders( assetPaths, cookedDir, targetFormat, listDomain, outListProblem );
+    }
+
+    bool ShaderCookDriver::collectRequestedBinaries( ShaderTargetFormat targetFormat, vector<string>& outListBinaryID )
+    {
+        outListBinaryID.clear();
+        vector<ShaderCookRequest> listRequest;
+        if ( ShaderCookRequestCollector::collectAllRequests( engine::getSubsystem<AssetPaths>().getRootFolderPath(), listRequest ) == false )
+            return false;
+        for ( const ShaderCookRequest& request : listRequest )
+        {
+            const optional<ShaderCookDriverInternal::BinarySlot> slot = ShaderCookDriverInternal::locateBinary( request, targetFormat );
+            if ( slot.has_value() )
+                outListBinaryID.push_back( FileUtil::normalizePath( FileUtil::joinPath( slot->_binDirectory, slot->_fileName ) ) );
+        }
+        return true;
     }
 
     ShaderCookSummary ShaderCookDriver::cookRequests( string_view                      cookedDir,

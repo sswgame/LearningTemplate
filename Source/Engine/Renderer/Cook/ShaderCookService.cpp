@@ -33,6 +33,11 @@ namespace sw
                 }
                 return listProblem.empty();
             }
+
+            bool collectRequestedBinaries( ShaderTargetFormat format, vector<string>& outListBinaryID ) override
+            {
+                return ShaderCookDriver::collectRequestedBinaries( format, outListBinaryID );
+            }
         };
 
         ShaderCookService                      s_shaderCookService;

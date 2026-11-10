@@ -75,7 +75,11 @@ namespace sw::editor
                 }
                 result._listLine.push_back( line );
             }
-            result._exitCode = pProcess->waitForExit();
+            const expected<int32> waited = pProcess->waitForExit();
+            if ( waited.has_value() )
+                result._exitCode = *waited;
+            else // 종료 코드는 없음으로 두고 까닭을 출력 끝 줄에 남긴다
+                result._listLine.push_back( "[editor] could not wait for the tool: " + string( waited.error().message() ) + " " + string( waited.error().detail() ) );
             // 끝난 도구가 파일을 만들거나 지웠을 수 있다 — 이 프로세스의 경로 캐시가 옛 "없음" · "있음" 을 돌려주지 않게 알린다(`Process` 는 `File` 보다 아래 층이라 스스로 알리지 못한다).
             FileUtil::recordFileCreated();
             FileUtil::recordFileRemoved();

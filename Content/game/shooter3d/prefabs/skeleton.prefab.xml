@@ -13,7 +13,7 @@
 			<RagdollComponent _physicsAssetPath="common/characters/skeleton_warrior/skeleton_warrior.physics.xml" />
 		</Override>
 		<Add after="RagdollComponent#0">
-			<DismembermentComponent _componentName="DismembermentComponent" _bActive="true" _regionTablePath="common/characters/skeleton_warrior/skeleton_warrior.fit.xml">
+			<DismembermentComponent _componentName="DismembermentComponent" _bActive="true" _bloodChannel="Blood" _regionTablePath="common/characters/skeleton_warrior/skeleton_warrior.fit.xml">
 				<_listSeverableRegion>
 					<item>Head</item>
 					<item>Arm_L</item>

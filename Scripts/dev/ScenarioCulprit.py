@@ -8,6 +8,7 @@ ctest 목록의 경로와 짝짓는다(이름 속성은 경로에서 알 수 없
   py -3 Scripts/dev/ScenarioCulprit.py empty surfacefootprint                      # Ninja-Debug, dx12, 무인
   py -3 Scripts/dev/ScenarioCulprit.py editor focusloss --preset Ninja-Release --show
   py -3 Scripts/dev/ScenarioCulprit.py --self-check
+  py -3 Scripts/dev/ScenarioCulprit.py --golden-margins [보고 폴더…]                # 흔들리는 골든: 보고의 goldenSamples[] 를 모아 골든별 최대 · 여유
 
 Linux 는 `LinuxScenarios.py culprit` 가 같은 함수(`findCulprit`)를 자기 실행기(Xvfb · lavapipe)로 부른다.
 """
@@ -64,7 +65,65 @@ def findCulprit(before: Sequence[str], fails: Callable[[list[str]], bool]) -> in
     return low
 
 
+kGoldenAxes = (('differingFraction', 'maxDifferingFraction'), ('meanDistance', 'maxMeanDistance'), ('largestDeepRegionPixels', 'maxDeepRegionPixels'))
+
+
+def summarizeGoldenMargins(listReport: Sequence[dict]) -> list[dict]:
+    """보고들(`goldenSamples[]`)을 골든마다 모아 축마다 최대값 · 상한 · 여유(상한 / 최대값, 최대가 0 이면 inf)를 낸다. 여유가 작은 골든부터.
+
+    흔들리는 골든을 고칠 때 보는 표다 — 같은 골든을 여러 번 돌린 보고(체인 여러 번 · 백엔드마다)를 넣으면 실행 사이 흔들림이 최대값에 드러난다.
+    """
+    byGolden: dict[str, dict] = {}
+    for report in listReport:
+        for sample in report.get('goldenSamples', []):
+            row = byGolden.setdefault(sample['golden'], {'golden': sample['golden'], 'runs': 0})
+            row['runs'] += 1
+            for valueKey, limitKey in kGoldenAxes:
+                row[valueKey] = max(row.get(valueKey, 0), sample[valueKey])
+                row[limitKey] = sample[limitKey]   # 상한은 실행마다 같다(정책 · 단계 속성) — 마지막 것을 쓴다
+    for row in byGolden.values():
+        row['margin'] = min((row[limitKey] / row[valueKey]) if row[valueKey] > 0 else float('inf') for valueKey, limitKey in kGoldenAxes)
+    return sorted(byGolden.values(), key=lambda row: (row['margin'], row['golden']))
+
+
+def printGoldenMargins(folders: Sequence[str], preset: str) -> int:
+    import json
+    roots = [pathlib.Path(folder) for folder in folders] or [REPO / 'build' / preset / 'Bin' / 'Saved' / 'Automation']
+    listReport = []
+    for root in roots:
+        for path in sorted(root.rglob('*.json')) if root.is_dir() else [root]:
+            try:
+                document = json.loads(path.read_text(encoding='utf-8'))
+            except (OSError, ValueError):
+                continue   # 보고가 아닌 JSON(설정 · 메타) · 쓰다 만 보고는 건너뛴다
+            if isinstance(document, dict) and 'goldenSamples' in document:
+                listReport.append(document)
+    rows = summarizeGoldenMargins(listReport)
+    if not rows:
+        print(f'goldenSamples 가 있는 보고가 없다: {", ".join(str(root) for root in roots)} — 기록 모드가 아닌 실행의 보고를 넣는다')
+        return 1
+    print(f'보고 {len(listReport)} · 골든 {len(rows)} — 여유 = 상한 / 실행 중 최대값(가장 작은 축), 1 미만이면 진 실행이 있다')
+    print(f'{"margin":>7} {"runs":>4} {"frac%":>7} {"mean":>8} {"region":>6}  golden')
+    for row in rows:
+        print(f'{row["margin"]:7.2f} {row["runs"]:4d} {row["differingFraction"] * 100:7.3f} {row["meanDistance"]:8.5f} {row["largestDeepRegionPixels"]:6d}  {row["golden"]}')
+    regions = sorted(row['largestDeepRegionPixels'] for row in rows)
+    print(f'덩어리 최대 {regions[-1]} px · p99 {regions[min(len(regions) - 1, int(0.99 * len(regions)))]} px (상한 {rows[0]["maxDeepRegionPixels"]} px)')
+    return 0
+
+
 def selfCheck() -> int:
+    reports = [
+        {'goldenSamples': [{'golden': 'a', 'differingFraction': 0.002, 'meanDistance': 0.0001, 'largestDeepRegionPixels': 4, 'maxDifferingFraction': 0.01, 'maxMeanDistance': 0.005, 'maxDeepRegionPixels': 16}]},
+        {'goldenSamples': [{'golden': 'a', 'differingFraction': 0.001, 'meanDistance': 0.0001, 'largestDeepRegionPixels': 8, 'maxDifferingFraction': 0.01, 'maxMeanDistance': 0.005, 'maxDeepRegionPixels': 16},
+                           {'golden': 'b', 'differingFraction': 0.0, 'meanDistance': 0.0, 'largestDeepRegionPixels': 0, 'maxDifferingFraction': 0.01, 'maxMeanDistance': 0.005, 'maxDeepRegionPixels': 16}]},
+        {'records': []},
+    ]
+    rows = summarizeGoldenMargins(reports)
+    assert [row['golden'] for row in rows] == ['a', 'b'], rows
+    assert rows[0]['runs'] == 2 and rows[0]['largestDeepRegionPixels'] == 8 and rows[0]['differingFraction'] == 0.002, rows[0]
+    assert rows[0]['margin'] == 2.0, rows[0]   # 덩어리 16 / 8 이 가장 작은 여유
+    assert rows[1]['margin'] == float('inf'), rows[1]
+
     stages = [f's{i}' for i in range(10)]
     for culprit in range(10):
         calls: list[list[str]] = []
@@ -87,9 +146,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument('--backend', default='dx12')
     parser.add_argument('--show', action='store_true', help='창을 띄워 돈다(-unattended 를 뺀다 — 판정은 같다)')
     parser.add_argument('--self-check', action='store_true')
+    parser.add_argument('--golden-margins', nargs='*', metavar='보고 폴더 · 파일',
+                        help='체인 대신: 시나리오 보고(goldenSamples[])를 모아 골든마다 실행 사이 최대 차이와 여유를 낸다(기본 build/<preset>/Bin/Saved/Automation)')
     options = parser.parse_args(argv)
     if options.self_check:
         return selfCheck()
+    if options.golden_margins is not None:
+        return printGoldenMargins(options.golden_margins, options.preset)
     if not options.chain or not options.stage:
         parser.error('체인과 단계를 적는다 (예: empty surfacefootprint)')
 

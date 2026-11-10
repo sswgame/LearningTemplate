@@ -667,6 +667,9 @@ namespace sw
         // 헤드리스 작업이 정한 코드(시나리오 행렬의 시나리오 결과)가 먼저다.
         if ( _launch.getEngine().isHeadless() && _launch.getEngine().didHeadlessTaskFail() && _launch.getEngine().getHeadlessFailureExitCode() != -1 )
             return _launch.getEngine().getHeadlessFailureExitCode();
+        // 기동 단계가 실패하면서 종료 코드를 골랐으면 그 코드다(시나리오 실행의 사용자 데이터 뿌리 거절 — 로드 오류 11, `AutomationUserDataIsolation`).
+        if ( _launch.getEngine().isQuitRequested() && _launch.getEngine().getExitCode() != ProcessExitCode::Passed )
+            return static_cast<int32>( _launch.getEngine().getExitCode() );
         // 환경 탓(백엔드가 이 빌드에 없거나 드라이버가 기능을 주지 않음)은 테스트와 스크립트가 건너뜀으로 읽는 코드로 끝낸다. 그 밖은 초기화 실패다 —
         // 표에 없는 -1 로 끝내면 자동화가 크래시로 셌다(언리얼도 초기화 실패 코드를 따로 낸다). 까닭은 초기화가 오류 로그로 남겼다.
         return AppInternal::isRHIUnusableHere( _launch.getEngine().getRHIInitResult() ) ? kRHIUnusableHereExitCode : static_cast<int32>( ProcessExitCode::InitializationFailed );

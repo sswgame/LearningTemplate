@@ -37,7 +37,7 @@ namespace sw
         void exitDriver();
 
     private:
-        PROPERTY( Category = "Vehicle", DisplayName = "Exit Button", Tooltip = "Intent button of the vehicle pawn that gets the driver off" )
+        PROPERTY( Required, Category = "Vehicle", DisplayName = "Exit Button", Tooltip = "Intent button of the vehicle pawn that gets the driver off" )
         hashed_string _exitButton;
 
         optional<int32> _exitIndex;

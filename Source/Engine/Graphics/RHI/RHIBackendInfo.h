@@ -168,6 +168,19 @@ namespace sw
             return index < std::size( kArrInfo ) ? &kArrInfo[index] : nullptr;
         }
 
+        /**
+         * @brief 백엔드의 명령줄 이름(쿠킹 표 `command_line_name` — `dx12` · `vk` · `wgpu`)입니다. 열거 범위 밖이면 nullptr 입니다.
+         * @details 골든 꼬리 · 재현 명령 · 버그 보고의 플래그가 모두 이것을 읽는다 — 저마다 손으로 적은 표가 WebGPU 를 빠뜨렸다.
+         */
+        static constexpr const utf8* findCommandLineName( RHIBackend backend )
+        {
+#define SW_RHI_COMMAND_LINE_NAME_ROW( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) CommandLineName,
+            constexpr const utf8* kArrName[] = { SW_RHI_BACKEND_TABLE( SW_RHI_COMMAND_LINE_NAME_ROW ) };
+#undef SW_RHI_COMMAND_LINE_NAME_ROW
+            const size_t index = static_cast<size_t>( backend );
+            return index < std::size( kArrName ) ? kArrName[index] : nullptr;
+        }
+
         /** @brief 항목 순서가 열거값과 같은지 확인합니다(`find` 가 열거값을 인덱스로 쓴다). */
         static constexpr bool isOrderedByBackend()
         {

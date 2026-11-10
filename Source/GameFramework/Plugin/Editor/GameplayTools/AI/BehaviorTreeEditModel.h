@@ -36,8 +36,8 @@ namespace sw::editor
     /** @brief 저장 전에 고쳐야 할 문제 하나입니다. */
     struct BehaviorTreeEditIssue
     {
-        int32  _nodeID{ -1 };
-        string _message{};
+        optional<int32> _nodeID; ///< 문제가 난 노드. 트리 전체의 문제면 비어 있다
+        string          _message{};
     };
 } // namespace sw::editor
 
@@ -76,9 +76,9 @@ namespace sw::editor
 
         /**
          * @brief @p parentID 아래 맨 뒤에 @p type 노드를 더합니다. @p parentID 가 -1 이면 루트이고 이미 루트가 있으면 거절합니다.
-         * @return 새 노드 번호입니다. 거절하면(잎 아래, 자식이 이미 있는 데코레이터 아래, 루트 중복, 없는 부모) -1 입니다.
+         * @return 새 노드 번호입니다. 거절하면(잎 아래, 자식이 이미 있는 데코레이터 아래, 루트 중복, 없는 부모, 깊이 상한) 이유를 돌려줍니다.
          */
-        int32 addNode( int32 parentID, BehaviorNodeKind type );
+        [[nodiscard]] expected<int32> addNode( int32 parentID, BehaviorNodeKind type );
         /** @brief 노드와 그 아래를 모두 지웁니다. 없는 번호면 false 입니다. 루트를 지우면 빈 문서가 됩니다. */
         [[nodiscard]] bool removeNode( int32 id );
         /** @brief 형제 사이에서 @p delta 칸(음수는 앞으로 = 우선순위 높게) 옮깁니다. 끝에 닿으면 거기서 멈추고, 움직였으면 true 입니다. */

@@ -140,21 +140,21 @@ namespace sw
         ModuleRegistrarHeads peekGlobalRegistrarHeads()
         {
             ModuleRegistrarHeads heads;
-            heads._pType      = TypeRegistrar::getHead();
-            heads._pEnum      = EnumRegistrar::getHead();
-            heads._pVariable  = GlobalVariableRegistrar::getHead();
-            heads._pObject    = ModuleObjectRegistrar::getHead();
-            heads._pSubsystem = ModuleSubsystemRegistrar::getHead();
+            heads._pType      = TypeRegistrar::getChain().getHead();
+            heads._pEnum      = EnumRegistrar::getChain().getHead();
+            heads._pVariable  = GlobalVariableRegistrar::getChain().getHead();
+            heads._pObject    = ModuleObjectRegistrar::getChain().getHead();
+            heads._pSubsystem = ModuleSubsystemRegistrar::getChain().getHead();
             return heads;
         }
 
         void setGlobalRegistrarHeads( const ModuleRegistrarHeads& heads )
         {
-            TypeRegistrar::getHead()            = heads._pType;
-            EnumRegistrar::getHead()            = heads._pEnum;
-            GlobalVariableRegistrar::getHead()  = heads._pVariable;
-            ModuleObjectRegistrar::getHead()    = heads._pObject;
-            ModuleSubsystemRegistrar::getHead() = heads._pSubsystem;
+            TypeRegistrar::getChain().resetHead( heads._pType );
+            EnumRegistrar::getChain().resetHead( heads._pEnum );
+            GlobalVariableRegistrar::getChain().resetHead( heads._pVariable );
+            ModuleObjectRegistrar::getChain().resetHead( heads._pObject );
+            ModuleSubsystemRegistrar::getChain().resetHead( heads._pSubsystem );
         }
 
         void registerModuleTypes( string_view moduleName, const ModuleRegistrarHeads& heads )

@@ -171,8 +171,24 @@ namespace sw
     template <typename T>
     using optional = expected<T, Absent>;
 
+    namespace constant
+    {
+        template <typename T>
+        struct InvalidIndex; // Core/Foundation/Constants.h
+    } // namespace constant
+
     namespace internal
     {
+        /** @brief 무효 인덱스 표지(`constant::invalid_index::k*`)인지 봅니다 — `expected` 는 그것을 값으로 받지 않는다(없음은 `nullopt` · `unexpected`). */
+        template <typename T>
+        struct InvalidIndexTraits : std::false_type
+        {
+        };
+        template <typename T>
+        struct InvalidIndexTraits<constant::InvalidIndex<T>> : std::true_type
+        {
+        };
+
         template <typename T>
         struct ExpectedTraits : std::false_type
         {
@@ -216,7 +232,7 @@ namespace sw
         template <typename U>
         static constexpr bool kIsValueArgument = std::is_constructible_v<T, U&&> && std::is_same_v<std::decay_t<U>, expected> == false &&
                                                  internal::UnexpectedTraits<std::decay_t<U>>::value == false &&
-                                                 std::is_same_v<std::decay_t<U>, nullopt_t> == false;
+                                                 std::is_same_v<std::decay_t<U>, nullopt_t> == false && internal::InvalidIndexTraits<std::decay_t<U>>::value == false;
 
     public:
         using value_type      = T;
@@ -255,6 +271,10 @@ namespace sw
         {
             ::new ( static_cast<void*>( &_storage._value ) ) T( std::forward<U>( value ) );
         }
+
+        /** @brief 무효 인덱스 표지를 값으로 넣지 못한다 — "없음" 은 `nullopt`(optional) · `unexpected`(expected) 다. -1 이 값으로 들어가 `_list[-1]` 로 죽던 결함을 컴파일에서 막는다. */
+        template <typename U>
+        expected( const constant::InvalidIndex<U>& ) = delete;
 
         template <typename G, std::enable_if_t<std::is_constructible_v<E, const G&>, int32> = 0>
         expected( const unexpected<G>& failure )
@@ -333,6 +353,9 @@ namespace sw
             return *this;
         }
 
+        template <typename U>
+        expected& operator=( const constant::InvalidIndex<U>& ) = delete;
+
         template <typename G, std::enable_if_t<std::is_constructible_v<E, G&&>, int32> = 0>
         expected& operator=( unexpected<G>&& failure )
         {
@@ -363,6 +386,7 @@ namespace sw
         template <typename... Args>
         T& emplace( Args&&... args )
         {
+            static_assert( ( internal::InvalidIndexTraits<std::decay_t<Args>>::value || ... ) == false, "expected::emplace: an invalid_index marker is not a value - use reset() / nullopt" );
             destroy();
             ::new ( static_cast<void*>( &_storage._value ) ) T( std::forward<Args>( args )... );
             _bHasValue = SW_TRUE;
@@ -500,14 +524,14 @@ namespace sw
         // --- 비교 ---
 
         template <typename U, std::enable_if_t<internal::ExpectedTraits<std::decay_t<U>>::value == false && internal::UnexpectedTraits<std::decay_t<U>>::value == false &&
-                                                   std::is_same_v<std::decay_t<U>, nullopt_t> == false,
+                                                   std::is_same_v<std::decay_t<U>, nullopt_t> == false && internal::InvalidIndexTraits<std::decay_t<U>>::value == false,
                                                int32> = 0>
         friend bool operator==( const expected& self, const U& value )
         {
             return self._bHasValue && static_cast<bool>( self._storage._value == value );
         }
         template <typename U, std::enable_if_t<internal::ExpectedTraits<std::decay_t<U>>::value == false && internal::UnexpectedTraits<std::decay_t<U>>::value == false &&
-                                                   std::is_same_v<std::decay_t<U>, nullopt_t> == false,
+                                                   std::is_same_v<std::decay_t<U>, nullopt_t> == false && internal::InvalidIndexTraits<std::decay_t<U>>::value == false,
                                                int32> = 0>
         friend bool operator!=( const expected& self, const U& value )
         {

@@ -195,47 +195,65 @@ namespace sw::editor
                 return bPicked;
             }
 
-            /** @brief 숫자 목록 표에서 한 행에 눌린 행 조작(위로 · 아래로 · 복제 · 삭제)입니다. 없으면 -1 입니다. */
+            /** @brief 숫자 목록 표에서 한 행에 눌린 행 조작(위로 · 아래로 · 복제 · 삭제)과 그 행입니다. 눌린 것이 없으면 `optional` 이 비어 있다. */
             struct NumberRowAction
             {
-                int32 _upRow{ -1 };
-                int32 _downRow{ -1 };
-                int32 _duplicateAt{ -1 };
-                int32 _removeAt{ -1 };
+                enum class Kind : uint8
+                {
+                    MoveUp,
+                    MoveDown,
+                    Duplicate,
+                    Remove
+                };
 
-                bool isRequested() const { return _upRow >= 0 || _downRow >= 0 || _duplicateAt >= 0 || _removeAt >= 0; }
+                Kind   _kind;
+                size_t _row;
             };
 
             /** @brief 행 끝의 위 · 아래 · 복제 · 삭제 단추를 그리고 눌린 것을 @p inoutAction 에 적습니다. */
-            static void drawNumberRowButtons( size_t row, NumberRowAction& inoutAction )
+            static void drawNumberRowButtons( size_t row, optional<NumberRowAction>& inoutAction )
             {
+                using Kind = NumberRowAction::Kind;
                 if ( ImGui::SmallButton( "^" ) )
-                    inoutAction._upRow = static_cast<int32>( row );
+                    inoutAction = NumberRowAction{ Kind::MoveUp, row };
                 drawItemTooltip( SW_LOCKEY( "EdMeshModifiers", "MoveRowUp" ) );
                 EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "v" ) );
                 if ( ImGui::SmallButton( "v" ) )
-                    inoutAction._downRow = static_cast<int32>( row );
+                    inoutAction = NumberRowAction{ Kind::MoveDown, row };
                 drawItemTooltip( SW_LOCKEY( "EdMeshModifiers", "MoveRowDown" ) );
                 EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "+" ) );
                 if ( ImGui::SmallButton( "+" ) )
-                    inoutAction._duplicateAt = static_cast<int32>( row );
+                    inoutAction = NumberRowAction{ Kind::Duplicate, row };
                 drawItemTooltip( SW_LOCKEY( "EdMeshModifiers", "DuplicateRow" ) );
                 EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "x" ) );
                 if ( ImGui::SmallButton( "x" ) )
-                    inoutAction._removeAt = static_cast<int32>( row );
+                    inoutAction = NumberRowAction{ Kind::Remove, row };
                 drawItemTooltip( SW_LOCKEY( "EdMeshModifiers", "RemoveRow" ) );
             }
 
             /** @brief 눌린 행 조작 하나를 목록에 적용합니다. 표를 다 그린 뒤 부른다(그리는 도중에 바꾸면 행 번호와 입력칸이 어긋난다). 범위는 방금 그린 행이라 맞다. 바뀌었으면 true 입니다. */
             [[nodiscard]] static bool applyNumberRowAction( const NumberRowAction& action, vector<float32>& inoutListNumber, uint32 stride )
             {
-                if ( action._upRow >= 0 )
-                    return MeshModifierParamEdit::moveRowUp( inoutListNumber, stride, static_cast<size_t>( action._upRow ) );
-                if ( action._downRow >= 0 )
-                    return MeshModifierParamEdit::moveRowDown( inoutListNumber, stride, static_cast<size_t>( action._downRow ) );
-                if ( action._duplicateAt >= 0 )
-                    return MeshModifierParamEdit::duplicateRow( inoutListNumber, stride, static_cast<size_t>( action._duplicateAt ) );
-                return MeshModifierParamEdit::removeRow( inoutListNumber, stride, static_cast<size_t>( action._removeAt ) );
+                switch ( action._kind )
+                {
+                    case NumberRowAction::Kind::MoveUp:
+                    {
+                        return MeshModifierParamEdit::moveRowUp( inoutListNumber, stride, action._row );
+                    }
+                    case NumberRowAction::Kind::MoveDown:
+                    {
+                        return MeshModifierParamEdit::moveRowDown( inoutListNumber, stride, action._row );
+                    }
+                    case NumberRowAction::Kind::Duplicate:
+                    {
+                        return MeshModifierParamEdit::duplicateRow( inoutListNumber, stride, action._row );
+                    }
+                    case NumberRowAction::Kind::Remove:
+                    {
+                        return MeshModifierParamEdit::removeRow( inoutListNumber, stride, action._row );
+                    }
+                }
+                return false;
             }
         };
     } // namespace
@@ -330,10 +348,10 @@ namespace sw::editor
 
     void MeshModifiersPanel::drawStackList( MeshModifierSession& session )
     {
-        MeshModifierStack& stack = session.getStack();
-        const int32        added = drawAddMenu( session, stack, "meshmodifiers" );
-        if ( added >= 0 )
-            session.setSelectedIndex( added );
+        MeshModifierStack&    stack = session.getStack();
+        const optional<int32> added = drawAddMenu( session, stack, "meshmodifiers" );
+        if ( added.has_value() )
+            session.setSelectedIndex( *added );
         session.setSelectedIndex( drawStackRows( session, stack, session.getSelectedIndex(), "meshmodifiers.row", nullptr ) );
     }
 
@@ -424,9 +442,9 @@ namespace sw::editor
             ImGui::SameLine();
         }
         ImGui::TextDisabled( "%s %u", SW_LOCKEY( "EdMeshModifiers", "NestedDepth" ), _model.getNestedDepth() );
-        const int32 added = drawAddMenu( session, shown, "meshmodifiers.nested" );
-        if ( added >= 0 )
-            _model.setNestedSelectedIndex( added );
+        const optional<int32> added = drawAddMenu( session, shown, "meshmodifiers.nested" );
+        if ( added.has_value() )
+            _model.setNestedSelectedIndex( *added );
         int32 enterIndex = -1;
         _model.setNestedSelectedIndex( drawStackRows( session, shown, _model.getNestedSelectedIndex(), "meshmodifiers.nested.row", &enterIndex ) );
         if ( enterIndex >= 0 )
@@ -466,10 +484,10 @@ namespace sw::editor
             _model.exportWarp( shown );
     }
 
-    int32 MeshModifiersPanel::drawAddMenu( MeshModifierSession& session, MeshModifierStack& stack, const utf8* pMarkPrefix )
+    optional<int32> MeshModifiersPanel::drawAddMenu( MeshModifierSession& session, MeshModifierStack& stack, const utf8* pMarkPrefix )
     {
-        int32      addedIndex = -1;
-        const bool bOpenMenu  = ImGui::Button( SW_LOCKEY( "EdMeshModifiers", "AddModifier" ) );
+        optional<int32> addedIndex{};
+        const bool      bOpenMenu = ImGui::Button( SW_LOCKEY( "EdMeshModifiers", "AddModifier" ) );
         MeshModifiersPanelInternal::recordMark( pMarkPrefix, "add" );
         if ( bOpenMenu )
             EditorInputGUI::openPopup( "##AddModifier" );
@@ -500,11 +518,11 @@ namespace sw::editor
                         continue;
                     session.applyEdit( [&]
                     {
-                        const int32   newIndex = stack.addModifier( listRegistration[item]->_pID );
-                        MeshModifier* pAdded   = stack.findModifier( newIndex );
-                        if ( pAdded != nullptr )
-                            pAdded->fitToBounds( session.getSourceBounds() ); // 하위 스택이면 묶음 공간과 다를 수 있다 - 맞추기 단추로 다시 맞춘다
-                        addedIndex = newIndex;
+                        const expected<int32> newIndex = stack.addModifier( listRegistration[item]->_pID );
+                        if ( newIndex.has_value() == false )
+                            return;
+                        stack.findModifier( *newIndex )->fitToBounds( session.getSourceBounds() ); // 하위 스택이면 묶음 공간과 다를 수 있다 - 맞추기 단추로 다시 맞춘다
+                        addedIndex = *newIndex;
                     } );
                 }
                 ImGui::EndMenu();
@@ -919,14 +937,14 @@ namespace sw::editor
             ImGui::TextDisabled( "(%s)", def._pHint );
         }
 
-        vector<float32>           listNumber  = modifier.getNumberList( paramIndex );
-        const uint32              stride      = MathUtil::max<uint32>( def._stride, 1 );
-        const bool                bHasColumns = MeshModifierParamEdit::isColumnLayoutValid( def );
-        const uint32              columnCount = bHasColumns ? def._columnCount : stride;
-        const size_t              rowCount    = MeshModifierParamEdit::getRowCount( listNumber, stride );
-        bool                      bChanged    = false;
-        Internal::NumberRowAction rowAction{};
-        const ImGuiTableFlags     tableFlags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingStretchProp;
+        vector<float32>                     listNumber  = modifier.getNumberList( paramIndex );
+        const uint32                        stride      = MathUtil::max<uint32>( def._stride, 1 );
+        const bool                          bHasColumns = MeshModifierParamEdit::isColumnLayoutValid( def );
+        const uint32                        columnCount = bHasColumns ? def._columnCount : stride;
+        const size_t                        rowCount    = MeshModifierParamEdit::getRowCount( listNumber, stride );
+        bool                                bChanged    = false;
+        optional<Internal::NumberRowAction> rowAction;
+        const ImGuiTableFlags               tableFlags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingStretchProp;
         if ( rowCount > 0 && ImGui::BeginTable( "##Rows", static_cast<int32>( columnCount ) + 2, tableFlags ) )
         {
             ImGui::TableSetupColumn( "#", ImGuiTableColumnFlags_WidthFixed );
@@ -970,10 +988,10 @@ namespace sw::editor
         }
 
         // 표를 다 그린 뒤 행을 옮긴다(그리는 도중에 바꾸면 행 번호와 입력칸이 어긋난다). 범위는 방금 그린 행이라 맞다
-        if ( rowAction.isRequested() )
+        if ( rowAction.has_value() )
         {
             session.recordUndo();
-            bChanged |= Internal::applyNumberRowAction( rowAction, listNumber, stride );
+            bChanged |= Internal::applyNumberRowAction( *rowAction, listNumber, stride );
         }
         if ( bChanged )
         {

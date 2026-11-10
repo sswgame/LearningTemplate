@@ -21,6 +21,8 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -149,6 +151,18 @@ namespace sw::test
      */
     SW_API bool checkSnapshot( string_view name, string_view actual, const utf8* pFile, int32 line );
 
+    /** @brief 견주고 찍을 값입니다. 무효 인덱스 표지(`constant::InvalidIndex`)는 그 정수다 — 부호가 다른 정수 규칙(`areValuesEqual`)이 표지에도 선다. */
+    template <typename T>
+    constexpr const T& toComparable( const T& value )
+    {
+        return value;
+    }
+    template <typename T>
+    constexpr T toComparable( const constant::InvalidIndex<T>& marker )
+    {
+        return marker;
+    }
+
     /** @brief 단언 실패 글에 값을 넣습니다. 숫자 · 문자열이면 값을, 그 밖의 타입이면 `(value)` 를 씁니다. */
     template <typename T>
     string describeValue( const T& value )
@@ -202,10 +216,10 @@ namespace sw::test
     bool checkEqual( const TExpected& expected, const TActual& actual, const utf8* pExpression, const utf8* pFile, int32 line )
     {
         countAssertion();
-        if ( areValuesEqual( expected, actual ) )
+        if ( areValuesEqual( toComparable( expected ), toComparable( actual ) ) )
             return true;
-        const string expectedText = describeValue( expected );
-        const string actualText   = describeValue( actual );
+        const string expectedText = describeValue( toComparable( expected ) );
+        const string actualText   = describeValue( toComparable( actual ) );
         utf8         arrBuffer[constant::buffer::kMax1024];
         formatstring( arrBuffer, constant::buffer::kMax1024, "%# — expected %#, actual %#", pExpression, expectedText.c_str(), actualText.c_str() );
         reportFailure( pFile, line, arrBuffer );
@@ -219,7 +233,7 @@ namespace sw::test
         countAssertion();
         if ( ( unexpected == actual ) == false )
             return true;
-        const string valueText = describeValue( actual );
+        const string valueText = describeValue( toComparable( actual ) );
         utf8         arrBuffer[constant::buffer::kMax1024];
         formatstring( arrBuffer, constant::buffer::kMax1024, "%# — both are %#", pExpression, valueText.c_str() );
         reportFailure( pFile, line, arrBuffer );
@@ -234,10 +248,10 @@ namespace sw::test
      */
     struct SW_API ChildRunResult
     {
-        int32  _exitCode{ -1 };     ///< 자식의 종료 코드(띄우지 못했으면 -1). 자식 역할이 통과하면 0 이다
-        bool   _bLaunched{ false }; ///< 프로세스를 만들었는가 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool   _bTimedOut{ false }; ///< 시한을 넘겨 죽였는가 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        string _output;             ///< 표준 출력과 표준 에러(합쳐서, 줄마다 `\n`)
+        optional<int32> _exitCode{};         ///< 자식의 종료 코드. 띄우지 못했거나 기다리지 못했으면 없다(-1 로 끝난 자식과 갈린다 — 기다리지 못한 까닭은 `_output` 끝 줄). 자식 역할이 통과하면 0 이다
+        bool            _bLaunched{ false }; ///< 프로세스를 만들었는가 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool            _bTimedOut{ false }; ///< 시한을 넘겨 죽였는가 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        string          _output;             ///< 표준 출력과 표준 에러(합쳐서, 줄마다 `\n`)
 
         /** @brief 실패 글에 붙일 마지막 몇 줄입니다 — 자식이 어디서 멈췄는지가 대개 거기 있다. */
         [[nodiscard]] string getOutputTail( uint32 lineCount = 12 ) const;

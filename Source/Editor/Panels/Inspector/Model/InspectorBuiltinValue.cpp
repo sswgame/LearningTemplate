@@ -31,6 +31,25 @@ namespace sw::editor
                 return value.getPtr<T>();
             }
 
+            template <typename T>
+            static TaskValue readValue( const void* pValue )
+            {
+                return TaskValue{ T( *static_cast<const T*>( pValue ) ) };
+            }
+
+            template <typename T>
+            static bool writeValue( const TaskValue& value, void* pValue )
+            {
+                // TaskValue 는 담긴 타입 이름을 들지 않는다 — 크기로만 가린다(값 행은 같은 표 줄의 `_pReadValue` 가 만들었다).
+                if ( value.getStoredSize() != sizeof( T ) )
+                    return false;
+                const T* pSource = value.getPtr<T>();
+                if ( pSource == nullptr )
+                    return false;
+                *static_cast<T*>( pValue ) = *pSource;
+                return true;
+            }
+
             /** @brief 내장 타입 값 하나를 글로 씁니다. 타입이 늘었는데 여기 분기가 없으면 컴파일되지 않습니다. */
             template <typename T>
             static void formatValue( const void* pValue, utf8* pOutBuf, uint32 capacity )
@@ -94,6 +113,8 @@ namespace sw::editor
                 row._pMakeDefault   = &makeDefault<T>;
                 row._pFormatValue   = &formatValue<T>;
                 row._pFindTaskValue = &findTaskValue<T>;
+                row._pReadValue     = &readValue<T>;
+                row._pWriteValue    = &writeValue<T>;
                 row._widget         = InspectorWidgetFor<T>::kWidget;
                 row._index          = 0;
                 return row;

@@ -60,16 +60,16 @@ namespace sw
         return _matchState.addTeam( name );
     }
 
-    int32 BattleRoyaleMatch::addPlayer( int32 team )
+    expected<int32> BattleRoyaleMatch::addPlayer( int32 team )
     {
         if ( _pCatalog == nullptr || _matchState.findTeam( team ) == nullptr )
-            return constant::invalid_index::kInt32;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "no catalog or the team does not exist" } );
         // 사람을 먼저 만들어 보고, 설정이 거절되면 판에 참가자를 더하지 않는다.
         BattleRoyalePlayer player;
         const int32        participant = _matchState.getParticipantCount();
         if ( initializePlayer( player, team, participant ) == false )
-            return constant::invalid_index::kInt32;
-        const int32 added = _matchState.addParticipant( team, hashed_string{} );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the catalog player health settings are out of range" } );
+        const int32 added = _matchState.addParticipant( team, hashed_string{} ).value(); // 팀은 위에서 확인했다
         SW_ASSERT( added == participant );
         _listPlayer.push_back( std::move( player ) );
         return added;
@@ -108,7 +108,7 @@ namespace sw
     {
         _matchState.start();
         collectMatchEvents();
-        pushEvent( BattleRoyaleEvent::Kind::PlayersRemaining, constant::invalid_index::kInt32, constant::invalid_index::kInt32, constant::invalid_index::kInt32, countRemainingPlayers() );
+        pushEvent( BattleRoyaleEvent::Kind::PlayersRemaining, nullopt, nullopt, nullopt, countRemainingPlayers() );
     }
 
     void BattleRoyaleMatch::update( float32 deltaTime )
@@ -132,8 +132,8 @@ namespace sw
         if ( bDamageRejected )
             return 0.0f;
         // 없는 사람은 환경이다. 그 번호가 `_downedBy` 에 남으면 세이브를 읽을 수 없다.
-        const int32         instigator = isValidPlayer( attacker ) ? attacker : constant::invalid_index::kInt32;
-        BattleRoyalePlayer& target     = _listPlayer[static_cast<size_t>( victim )];
+        const optional<int32> instigator = isValidPlayer( attacker ) ? optional<int32>( attacker ) : nullopt;
+        BattleRoyalePlayer&   target     = _listPlayer[static_cast<size_t>( victim )];
         if ( target.isDead() )
             return 0.0f;
         const bool bFriendlyFire = isValidPlayer( attacker ) && attacker != victim && TeamAttitudeUtil::isFriendly( _listPlayer[static_cast<size_t>( attacker )]._team, target._team );
@@ -251,7 +251,7 @@ namespace sw
             const float32 zoneDamage = _zone.computeDamagePerSecond( player._position ) * deltaTime;
             if ( zoneDamage > 0.0f )
             {
-                (void)player._healthMachine.applyDamage( zoneDamage, 0.0f, constant::invalid_index::kInt32 ); // 결과는 processHealthMachine 가 사건으로 읽는다
+                (void)player._healthMachine.applyDamage( zoneDamage, 0.0f, nullopt ); // 결과는 processHealthMachine 가 사건으로 읽는다
                 processHealthMachine( listZoneOrder[order] );
             }
         }
@@ -296,24 +296,24 @@ namespace sw
         }
     }
 
-    void BattleRoyaleMatch::handleDowned( int32 player, int32 instigator )
+    void BattleRoyaleMatch::handleDowned( int32 player, optional<int32> instigator )
     {
         BattleRoyalePlayer& target = _listPlayer[static_cast<size_t>( player )];
-        target._downedBy           = instigator;
+        target._downedBy           = instigator.value_or( constant::invalid_index::kInt32 ); // 상태 바이트 칸이라 없으면 -1
         target._revive.reset();
         endRevive( player ); // 살리던 사람이 기절하면 그만둔다
         // 처치(`handleDeath`)와 같은 규칙이다. 자기 자신을 기절시킨 것은 세지 않는다.
-        if ( isValidPlayer( instigator ) && TeamAttitudeUtil::isHostile( _listPlayer[static_cast<size_t>( instigator )]._team, target._team ) )
-            ++_listPlayer[static_cast<size_t>( instigator )]._knocks;
+        if ( instigator.has_value() && isValidPlayer( *instigator ) && TeamAttitudeUtil::isHostile( _listPlayer[static_cast<size_t>( *instigator )]._team, target._team ) )
+            ++_listPlayer[static_cast<size_t>( *instigator )]._knocks;
         pushEvent( BattleRoyaleEvent::Kind::PlayerDowned, player, instigator, target._team, 0 );
         resolveTeamWipe( target._team );
     }
 
-    void BattleRoyaleMatch::handleDeath( int32 player, int32 instigator )
+    void BattleRoyaleMatch::handleDeath( int32 player, optional<int32> instigator )
     {
         BattleRoyalePlayer& target = _listPlayer[static_cast<size_t>( player )];
         // 기절한 뒤의 죽음(출혈, 자기장, 전멸)은 기절시킨 사람의 처치로 센다.
-        const int32 killer = isValidPlayer( instigator ) ? instigator : target._downedBy;
+        const optional<int32> killer = instigator.has_value() && isValidPlayer( *instigator ) ? instigator : target.findDownedBy();
         endRevive( player );
         for ( BattleRoyalePlayer& other : _listPlayer )
         {
@@ -321,12 +321,12 @@ namespace sw
                 other._revivingTarget = constant::invalid_index::kInt32;
         }
         target._revive.reset();
-        if ( isValidPlayer( killer ) && TeamAttitudeUtil::isHostile( _listPlayer[static_cast<size_t>( killer )]._team, target._team ) )
-            ++_listPlayer[static_cast<size_t>( killer )]._kills;
+        if ( killer.has_value() && isValidPlayer( *killer ) && TeamAttitudeUtil::isHostile( _listPlayer[static_cast<size_t>( *killer )]._team, target._team ) )
+            ++_listPlayer[static_cast<size_t>( *killer )]._kills;
         _matchState.reportKill( player, killer );
         const int32 remaining = countRemainingPlayers();
         pushEvent( BattleRoyaleEvent::Kind::PlayerKilled, player, killer, target._team, remaining );
-        pushEvent( BattleRoyaleEvent::Kind::PlayersRemaining, constant::invalid_index::kInt32, constant::invalid_index::kInt32, constant::invalid_index::kInt32, remaining );
+        pushEvent( BattleRoyaleEvent::Kind::PlayersRemaining, nullopt, nullopt, nullopt, remaining );
         collectMatchEvents();
         resolveTeamWipe( target._team );
     }
@@ -342,23 +342,24 @@ namespace sw
         downed._revive.reset();
         downed._healthMachine.stopRevive();
         if ( bNotify )
-            pushEvent( BattleRoyaleEvent::Kind::ReviveInterrupted, target, constant::invalid_index::kInt32, downed._team, 0 );
+            pushEvent( BattleRoyaleEvent::Kind::ReviveInterrupted, target, nullopt, downed._team, 0 );
     }
 
     void BattleRoyaleMatch::finishRevive( int32 target )
     {
-        BattleRoyalePlayer& downed  = _listPlayer[static_cast<size_t>( target )];
-        int32               reviver = constant::invalid_index::kInt32;
+        BattleRoyalePlayer& downed = _listPlayer[static_cast<size_t>( target )];
+        optional<int32>     reviver{};
         for ( size_t index = 0; index < _listPlayer.size(); ++index )
         {
             if ( _listPlayer[index]._revivingTarget == target )
             {
-                reviver                            = reviver < 0 ? static_cast<int32>( index ) : reviver;
+                if ( reviver.has_value() == false )
+                    reviver = static_cast<int32>( index );
                 _listPlayer[index]._revivingTarget = constant::invalid_index::kInt32;
             }
         }
         // 진행이 다 찼다. 멈춰 둔 HealthStateMachine 의 부활 시계를 한 번에 끝까지 돌린다.
-        (void)downed._healthMachine.startRevive( reviver, 1.0f );
+        (void)downed._healthMachine.startRevive( reviver.value_or( constant::invalid_index::kInt32 ), 1.0f ); // 살린 쪽은 체력 상태 바이트 칸이라 없으면 -1
         downed._healthMachine.update( downed._healthMachine.getSettings()._reviveTime );
         downed._healthMachine.discardEvents();
         downed._revive.reset();
@@ -379,7 +380,7 @@ namespace sw
             BattleRoyalePlayer& player = _listPlayer[index];
             if ( player._team != team || player.isDowned() == false )
                 continue;
-            player._healthMachine.kill( player._downedBy );
+            player._healthMachine.kill( player.findDownedBy() );
             processHealthMachine( static_cast<int32>( index ) );
         }
     }
@@ -404,13 +405,13 @@ namespace sw
         for ( const MatchEvent& event : _matchState.takeEvents() )
         {
             if ( event._kind == MatchEvent::Kind::TeamEliminated )
-                pushEvent( BattleRoyaleEvent::Kind::TeamEliminated, constant::invalid_index::kInt32, constant::invalid_index::kInt32, event._team, event._value );
+                pushEvent( BattleRoyaleEvent::Kind::TeamEliminated, nullopt, nullopt, event._team, event._value );
             else if ( event._kind == MatchEvent::Kind::MatchEnded )
-                pushEvent( BattleRoyaleEvent::Kind::MatchEnded, constant::invalid_index::kInt32, constant::invalid_index::kInt32, event._team, 0 );
+                pushEvent( BattleRoyaleEvent::Kind::MatchEnded, nullopt, nullopt, event._team, 0 );
         }
     }
 
-    void BattleRoyaleMatch::pushEvent( BattleRoyaleEvent::Kind kind, int32 player, int32 other, int32 team, int32 value )
+    void BattleRoyaleMatch::pushEvent( BattleRoyaleEvent::Kind kind, optional<int32> player, optional<int32> other, optional<int32> team, int32 value )
     {
         BattleRoyaleEvent event;
         event._kind   = kind;

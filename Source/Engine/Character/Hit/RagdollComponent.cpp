@@ -54,7 +54,7 @@ namespace sw
 
     bool RagdollAnimationBinding::isAnimationActive() const
     {
-        if ( _owner._state != RagdollState::Animated || _owner._flinchLayer >= 0 )
+        if ( _owner._state != RagdollState::Animated || _owner._flinchLayer.has_value() )
             return true;
         for ( const float32 reactionTime : _owner._listReactionTime )
         {
@@ -86,7 +86,6 @@ namespace sw
     RagdollComponent::RagdollComponent()
         : PhysicsComponent{ PhysicsComponentPhase::Body }
         , _physicsAssetPath{}
-        , _partialRootBone{ "spine" }
         , _getUpClipFaceUp{}
         , _getUpClipFaceDown{}
         , _getUpExitState{}
@@ -123,7 +122,7 @@ namespace sw
         , _pBoneNameSkeleton{ nullptr }
         , _pUnit{ nullptr }
         , _assetReload{}
-        , _flinchLayer{ -1 }
+        , _flinchLayer{}
         , _partialWeight{ 1.0f }
         , _settleElapsed{ 0.0f }
         , _blendBackElapsed{ 0.0f }
@@ -189,8 +188,6 @@ namespace sw
         {
             listBone.push_back( body._bone );
         }
-        if ( _partialRootBone.empty() == false )
-            listBone.push_back( _partialRootBone );
         _boneRequirement = _pUnit->requireBones( std::move( listBone ) );
     }
 
@@ -351,14 +348,15 @@ namespace sw
 
     void RagdollComponent::startPartialRagdoll( float32 weight )
     {
-        if ( _state == RagdollState::Ragdoll || _pUnit == nullptr )
+        if ( _state == RagdollState::Ragdoll || _pUnit == nullptr || _asset == nullptr )
             return;
-        const optional<uint32> boneIndex = _pUnit->getSkeleton().findBoneIndex( _partialRootBone );
+        const hashed_string&   rootBone  = _asset->_partialRootBone; // 에셋 칸 — 바디가 있는 뼈다(PhysicsAsset::validate)
+        const optional<uint32> boneIndex = _pUnit->getSkeleton().findBoneIndex( rootBone );
         const optional<uint32> bodyIndex = ( boneIndex.has_value() && *boneIndex < _ragdoll._listBodyOfBone.size() ) ? _ragdoll._listBodyOfBone[*boneIndex] : nullopt;
         if ( bodyIndex.has_value() == false )
         {
             SW_LOG_WARNING_ID( "Ragdoll.PartialRagdollRootBone", "'%#': partial ragdoll root bone '%#' has no body", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)",
-                               _partialRootBone.c_str() );
+                               rootBone.c_str() );
             return;
         }
         _listPartialMask.clear();
@@ -416,12 +414,15 @@ namespace sw
         const bool                 bCannotFlinch = _flinchClip.empty() || pAnimator == nullptr || _state == RagdollState::Ragdoll;
         if ( bCannotFlinch )
             return;
-        if ( _flinchLayer < 0 )
-            _flinchLayer = pAnimator->addLayer( AnimationLayerDef{ _flinchClip, hashed_string{}, 1.0f, AnimationLayerBlend::Additive, SW_FALSE } );
-        if ( _flinchLayer < 0 )
-            return;
-        pAnimator->restartLayer( static_cast<uint32>( _flinchLayer ) );
-        pAnimator->setLayerWeight( static_cast<uint32>( _flinchLayer ), 1.0f );
+        if ( _flinchLayer.has_value() == false )
+        {
+            const expected<uint32> layer = pAnimator->addLayer( AnimationLayerDef{ _flinchClip, hashed_string{}, 1.0f, AnimationLayerBlend::Additive, SW_FALSE } );
+            if ( layer.has_value() == false )
+                return; // addLayer 가 오류를 남겼다 — 다음 맞음에서 다시 해 본다
+            _flinchLayer = *layer;
+        }
+        pAnimator->restartLayer( *_flinchLayer );
+        pAnimator->setLayerWeight( *_flinchLayer, 1.0f );
         _flinchElapsed = 0.0f;
     }
 
@@ -430,11 +431,11 @@ namespace sw
         // 움찔 레이어 가중치를 정한다.
         GameObject*                pOwner    = unit.getOwner();
         SkeletalAnimatorComponent* pAnimator = pOwner != nullptr ? pOwner->getComponent<SkeletalAnimatorComponent>() : nullptr;
-        if ( _flinchLayer >= 0 && pAnimator != nullptr )
+        if ( _flinchLayer.has_value() && pAnimator != nullptr )
         {
             _flinchElapsed += deltaSeconds;
             const float32 weight = _flinchSeconds > 0.0f ? MathUtil::saturate( 1.0f - _flinchElapsed / _flinchSeconds ) : 0.0f;
-            pAnimator->setLayerWeight( static_cast<uint32>( _flinchLayer ), weight );
+            pAnimator->setLayerWeight( *_flinchLayer, weight );
         }
         // 기상 클립이 끝나면 다음 상태로.
         const bool bGetUpFinished = _bGettingUp && pAnimator != nullptr && pAnimator->getGraphPlayer().getPlayer().hasFinished();
@@ -577,7 +578,7 @@ namespace sw
             if ( _ragdoll._listParentBody[body].has_value() == false )
                 pelvisBone = _ragdoll._listBoneIndex[body];
         }
-        const optional<uint32> upperBone = skeleton.findBoneIndex( _partialRootBone );
+        const optional<uint32> upperBone = _asset != nullptr ? skeleton.findBoneIndex( _asset->_partialRootBone ) : nullopt;
         if ( pelvisBone < 0 || upperBone.has_value() == false )
             return false;
         const float4x4      oldUnitWorld  = _pUnit->getWorldMatrix();

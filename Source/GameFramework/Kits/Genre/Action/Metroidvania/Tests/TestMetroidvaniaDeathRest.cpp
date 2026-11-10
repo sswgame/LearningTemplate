@@ -8,9 +8,9 @@
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Catalog/MetroidvaniaCatalog.h"
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Rule/MetroidvaniaDeathRestState.h"
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Rule/MetroidvaniaDuelist.h"
+#include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
-#include "GameFramework/Runtime/Gameplay/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/LootTable.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
@@ -146,7 +146,7 @@ SW_TEST_CASE( MetroidvaniaDeathRestTest, DeathDropsACorpse )
     DeathRestBench bench;
     SW_REQUIRE_TRUE( bench.setUp() );
     SW_REQUIRE_TRUE( bench._state.rest( kBench, bench._healthMachine ) );
-    bench._healthMachine.kill( -1 );
+    bench._healthMachine.kill( sw::nullopt );
 
     SW_EXPECT_EQUAL( kBench, bench._state.die( kCave, sw::float2{ 1.0f, 2.0f }, bench._healthMachine ) ); // 빈손
     SW_EXPECT_TRUE( bench._state.getCorpse()._bActive == SW_FALSE );
@@ -231,7 +231,7 @@ SW_TEST_CASE( MetroidvaniaDeathRestTest, FlaskChargesAndUpgrades )
     bench._state.upgradeFlaskPotency();
     SW_EXPECT_NEAR( 40.0f, bench._state.computeFlaskHeal(), kDuelTolerance );
 
-    bench._healthMachine.kill( -1 );
+    bench._healthMachine.kill( sw::nullopt );
     SW_EXPECT_FALSE( bench._state.drinkFlask( bench._healthMachine ) );
     SW_EXPECT_EQUAL( 1, bench._state.getFlaskCharges() ); // 죽어서 못 마신 충전은 그대로다
 }
@@ -402,7 +402,7 @@ SW_TEST_CASE( MetroidvaniaDuelistTest, ActionsSpendStamina )
 
     sw::MetroidvaniaDuelist dead;
     SW_REQUIRE_TRUE( dead.initialize( &catalog ) );
-    dead.getHealthMachine().kill( -1 );
+    dead.getHealthMachine().kill( sw::nullopt );
     SW_EXPECT_FALSE( dead.tryAttack() );
     SW_EXPECT_FALSE( dead.tryDodge() );
 }
@@ -525,7 +525,7 @@ SW_TEST_CASE( MetroidvaniaDuelistTest, IgnoredAttacksCostNothing )
 
     sw::MetroidvaniaDuelist dead;
     SW_REQUIRE_TRUE( dead.initialize( &catalog ) );
-    dead.getHealthMachine().kill( -1 );
+    dead.getHealthMachine().kill( sw::nullopt );
     SW_EXPECT_TRUE( dead.receiveAttack( 10.0f, 5.0f )._result == sw::MetroidvaniaDefenseResult::Ignored );
 }
 

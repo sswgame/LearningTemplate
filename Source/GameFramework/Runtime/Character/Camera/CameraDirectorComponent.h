@@ -26,7 +26,6 @@
 
 namespace sw
 {
-    class Archive;
     class ICameraCollisionProbe;
     class InputMap;
 
@@ -44,7 +43,7 @@ namespace sw
      *          암 충돌(`<Collision>`)은 따로 준 질의(`setCollisionProbe`)가 없으면 씬의 물리(`SceneCameraProbe`)에 쓸어 본다. 대상 자신은 뺀다.
      *          입력 맵 액션 `_cycleAction` 이 발동하면 카탈로그 순서로 다음 프리셋을 켠다.
      *          블렌드 없는 전환(컷)은 카메라에 컷 표시를 넣어서 렌더러가 TAA 기록을 버리게 한다.
-     *          켠 프리셋과 블렌드 스택(진행, 입력이 돌린 각과 줌)은 `ComponentStateStore` 계약(`writeState` / `restoreState`)으로 저장한다.
+     *          켠 프리셋과 블렌드 스택(진행, 입력이 돌린 각과 줌)은 `ComponentStateStore` 계약(`serializeState` / `restoreState`)으로 저장한다.
      *          이 타입은 정의한 .cpp 가 `StatefulComponentRegistrar` 로 등록해 모든 게임의 스냅샷에 실린다. 게임 인스턴스가 따로 등록하지 않는다.
      */
     REFLECT( Category = "Camera", DisplayName = "Camera Director", Tooltip = "Drives the camera on this object from data presets with blends, damping, framing and shake" )
@@ -105,8 +104,11 @@ namespace sw
          */
         [[nodiscard]] bool findGroundPoint( const float2& mouseNormalized, float32 groundHeight, float3& outPoint ) const;
 
-        /** @brief `ComponentStateStore` 계약입니다. 켠 프리셋과 블렌드 스택을 씁니다. */
-        void writeState( Archive& outArchive ) const;
+        /**
+         * @brief `ComponentStateStore` 계약입니다. 켠 프리셋과 블렌드 스택을 디렉터의 본문(`CameraDirector::serializeState`)으로 놓습니다.
+         * @details 읽기는 프리셋을 id 로 다시 찾으므로 카탈로그가 선 뒤(`onBeginPlay`)에만 된다 — 그 전 바이트는 `restoreState` 가 보관했다가 `applyPendingState` 가 이것으로 읽는다.
+         */
+        void serializeState( StateIO& io );
         /** @brief `ComponentStateStore` 계약입니다. 시작 전이면 보관했다가 카탈로그를 읽은 뒤 적용하고, 시작 뒤면 바로 적용합니다. 읽지 못하면 알리고 지금 상태를 둡니다. */
         void restoreState( vector<uint8>&& bytes );
 

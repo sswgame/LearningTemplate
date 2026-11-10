@@ -13,7 +13,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
-#include "Engine/Serialization/XML/XMLReadUtil.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
@@ -113,30 +113,17 @@ namespace sw
 
     bool SkirmishUnitModelCatalog::loadModel( const XMLNode& node, string_view sourceName )
     {
-
-        const utf8* pID = XMLReadUtil::findRequiredID( node, sourceName );
-        if ( pID == nullptr )
+        // 세 칸은 리플렉션 필수 칸이다 — 빠진 칸 · 빈 이름(XMLFields.RequiredFieldMissing) · 범위 밖 폭(XMLFields.ValueOutOfRange)을 이름과 함께 알린다.
+        SkirmishUnitModelDef def;
+        if ( XMLFields::readFields( node, def, sourceName ) == false )
+        {
+            SW_LOG_ERROR_ID( "SkirmishUnit.ModelInvalidFieldsSkipped", "%#: model '%#' has invalid fields - skipped", sourceName, def._id.viewOrEmpty() );
             return false;
-        hashed_string     modelName;
+        }
         SkirmishUnitModel entry;
-        entry._id   = hashed_string( pID );
-        bool bValid = XMLReadUtil::readRequiredName( node, "model", sourceName, modelName );
-        // 폭은 필수다(적지 않은 칸이 조용히 1 이 되지 않는다). 0 이하는 오류다.
-        if ( node.findAttribute( "width" ) == nullptr )
-        {
-            SW_LOG_ERROR_ID( "SkirmishUnit.ModelNoWidth", "%#: model '%#' has no width", sourceName, pID );
-            bValid = false;
-        }
-        else
-        {
-            bValid = XMLReadUtil::readOptionalNumber( node, "width", sourceName, 0.01f, 1000.0f, entry._width ) && bValid;
-        }
-        if ( bValid == false )
-        {
-            SW_LOG_ERROR_ID( "SkirmishUnit.ModelInvalidFieldsSkipped", "%#: model '%#' has invalid fields - skipped", sourceName, pID );
-            return false;
-        }
-        entry._model = string( modelName.c_str() );
+        entry._id    = def._id;
+        entry._model = string( def._model.c_str() );
+        entry._width = def._width;
         add( entry );
         return true;
     }

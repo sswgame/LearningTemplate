@@ -22,8 +22,6 @@
 - 흔들리는 단위 테스트 `AudioDataVariantTest.GraphVariantSavesOnlyItsDifference`: 전체 실행 한 번에 "base 'testproject/base.audiograph.xml' could not be read" 로 졌다. 같은 씨앗 · 단독 1800 회로는 재현되지 않았다 — 다시 지면 그 로그의 앞 케이스와 스크래치 도메인 마운트 상태를 본다.
 - 통합 때 확인하지 못한 동작: 셋이 시나리오에서 본다 — Vulkan AMD 브레드크럼 · 128 타임스탬프 슬롯(실장치), DX12 placed 텍스처(`D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES` 가 RT+SRV 를 받는지), 배포 서버(shipping-check — 서버가 `Window/Linux` · `Input/Linux` 를 짓지 않는다).
 
-- **`-1` 이 optional 에 '값' 으로 들어가는 것을 형식으로 막기(작업자 브랜치 `-1` 둘을 합친 직후):** `optional<int32>` 를 돌려주는 `SkillTreeState::findIndex` 가 못 찾으면 `invalid_index::kInt32` 를 돌려줘 `_listRank[-1]` 로 단위 테스트가 죽었다(고침). `constant::invalid_index::*` 를 정수로 바뀌는 별도 형식으로 두고 `expected<T, Absent>` 에 그 형식을 받는 생성자를 `= delete` 로 둔다(831 사용처 — 비교 · 대입은 그대로 컴파일). 인자 · 대입으로 들어오는 같은 결함도 함께 막힌다.
-
 ### 2. 플랫폼 ([PlatformTargets](PlatformTargets.md) "남은 일")
 
 - **Android:** `CookAssets`(호스트 빌드로 굽기) 통과 → `py -3 -m Scripts android-apk --game <게임>` → 실기기에서 기동 · 회전(pre-rotation 방향) · APK 팩 읽기 · 터치. JNI 클립보드(`AndroidClipboard.cpp` 는 지금 `isAvailable` false).
@@ -35,7 +33,7 @@
 
 - **에디터 첫 패널의 느린 프레임:** 새 패널이 처음 열리는 프레임이 약 1 초. `-gv_traceSlowTickMs` 트레이스로 그 프레임의 동기 일을 찾아 비동기로.
 - **시나리오 대기:** boat · clothshowcase(골든 앞 구간이 물리 이력), waterplay(강체 속도 · 잠듦 감시 값으로 조건 대기).
-- **측정:** 유니티 배치 크기 12 · 24 · 48(Release 깨끗한 빌드), [DesignBacklog](DesignBacklog.md) S8 측정 표 7 행, 작업자 W25 가 남긴 GPU 비교(`gpu.timings` — `GPU.<프레임 패스>` · `RT.GPUScene.upload` · `RT.Light.uploadBytes` · `GT.GPUScene.build.viewTransparentOrder`, c05a3ee251 대 지금 — 이득이 노이즈 안이면 되돌린다).
+- **측정:** Tracy 에서 `GT.Frame` 자식 구간 합이 90% 이상인지(W-P0 계측 자동 부착이 들어왔다 — 모자라면 빠진 호출부에 구간), 유니티 배치 크기 12 · 24 · 48(Release 깨끗한 빌드), [DesignBacklog](DesignBacklog.md) S8 측정 표 7 행, 작업자 W25 가 남긴 GPU 비교(`gpu.timings` — `GPU.<프레임 패스>` · `RT.GPUScene.upload` · `RT.Light.uploadBytes` · `GT.GPUScene.build.viewTransparentOrder`, c05a3ee251 대 지금 — 이득이 노이즈 안이면 되돌린다).
 
 ### 4. Shooter3D 총 (사용자 지적)
 
@@ -44,23 +42,21 @@
 
 ### 5. 작업자 · 설계 문서가 남긴 일
 
-- **린트를 빌드 구조로(린트 표에서 지우기):** `editor-view-includes`(MVVM 이 끝나면 View 부분의 껍데기로).
-- **에디터 MVVM 남은 일:** 모든 패널 View 를 옮겼다. 남은 것은 인스펙터 그리드의 값 행(3단계 — `gather` 가 프로퍼티마다 값 행을 내고 위젯이 멤버 주소에 바로 쓰지 않게, EditorUI 'Property grid edit model' 절). 그 뒤 `editor-view-includes` 를 View 부분 `#error` 껍데기로.
+- **린트를 빌드 구조로(린트 표에서 지우기):** `editor-view-includes` 를 Panels View 부분의 `#error` 껍데기로. 먼저 린트가 못 보는 전이 include 둘을 끊는다 — `VFXPreviewPanel.cpp` → `Engine/VFX/VFXComponent.h`(View 가 미리보기 `VFXComponent*` 를 든다 — ViewModel 값으로), `PrefabEditorPanel.h` → `Viewport/EditorPreviewGizmo.h` → `EditorViewportGizmo.h` → `Workspace/EditorTransaction.h`. 껍데기는 티어 6 View 부분 중 `Panels` 만(같은 티어 `AssetActions` 는 씬 헤더를 쓴다 — 부분을 가른다), `GameFramework/.../MultiplayerInProcessTab` 은 확장 모듈 쪽 껍데기로. 닫힘 검사는 전이 include 를 다 따라간다(EditorUI 'MVVM' 절).
+- **에디터 MVVM 측정(통합):**
+  - Hierarchy: 큐브 8000 루트 씬에서 Hierarchy 창을 연 프레임 시간을 옮기기 전 커밋과 대조한다(모두 접힘 · 루트 하나 펼침 · 맨 아래로 스크롤). 나빠졌으면 원인을 `HierarchyViewModel::gather` 에서 찾는다.
+  - 인스펙터 값 행: 프로퍼티 많은 대상(컴포넌트 여럿을 단 오브젝트 · 프로젝트 설정 · 펼친 큰 배열)에서 인스펙터 프레임 시간과 `Editor.InspectorFilledRows` · `Editor.InspectorSkippedRows` 를 값 행 전 커밋과 대조한다(맨 위 · 맨 아래로 스크롤 · 스크롤 중). 나빠졌으면 `PropertyGridModel::gather` 의 행 채우기(값 사본 · 기본값 비교 · 혼합)에서 찾는다.
 - **렌더링:** Vulkan placed 텍스처(해제 큐에 메모리 참조 세기), TransientLeasePool 을 뷰 풀에 잇기, 비동기 컴퓨트 큐 패스 타임스탬프 · Tracy 프레임 패스 내보내기, 같은 자리 후처리 머티리얼이 앞 결과를 이어 읽기, 박막 · 털 · 스타킹 · 비단 외형의 디퍼드(G버퍼 칸 부족 — 포워드 전용으로 남김), 몸 머티리얼이 피부 층 표면 덮어쓰기(`_skinLayerSurfaceMap`)를 읽기, 텍스처 전이 · VFX · 프로브 디스패치의 버퍼별 전이를 묶음 API 로.
 - **표면 변형:** 지형(`terrain.hlsl`)은 머티리얼을 픽셀에서만 읽어(GL 은 구조버퍼를 두 단계에서 못 읽는다) 정점 변위를 받지 못한다 — 엔진 텍스처 칸 `SurfaceDeform`(`shaderslot::emulated::kEngineTextureNames` 13 번째 — `SW_ENGINE_TEXTURE_COUNT` · DX11 `t44` · GL 유닛 12 · binding.hlsli 의 칸 줄)과 패스 상수 `g_SurfaceDeformParams`(창)를 더해 지형 정점 셰이더가 읽게 한다(언리얼 RVT · 유니티 `SetGlobalTexture` 자리, 그림자 패스도 같은 오프셋). 네 백엔드 셰이더 · 바인딩을 함께 바꾸므로 빌드 · 시나리오를 돌릴 수 있는 작업자가 한 묶음으로 한다.
 - **폴더 자리(막는 구조부터):** 엔진 쪽 `Dev/` 예외(`Config/Rules/Lint/FolderLayout.json` `_devFolderAllowed` — ModuleManager/Dev · Host/Dev · App/Dev · GF GameData/Dev · Graphics/Material/Dev)를 DevTools 로 — ModuleManager 를 공유 라이브러리로(언리얼 HotReload 처럼), DevTools 에 리플렉션 단계를 더하면 핫 리로드 · 머티리얼 그래프가 옮겨 간다.
 
 ### 5-1. 구조 · 성능 설계(2026-11-10 설계안 — 순서대로, 폴더가 겹치지 않는 작업자 단위)
 
-- **W-P0 계측 자동 부착(선결):** `SceneTickScheduler` 가 프레임 시스템 · 씬 서비스 · 틱 배치마다 등록 이름으로 `SW_PROFILE_SCOPE` 를 건다. 오디오 · 물리 드라이버 호출부(`Engine.cpp`)에도 존 하나씩. 지금 존은 Physics 1 · Audio 0 · Scene 2 · Asset 1 이다. 완료: Tracy 에서 `GT.Frame` 자식 합 90% 이상.
-- **W-S1 Engine 6층 하위 티어:** 바닥 기능(Physics · Visual · Audio · UserSettings · Net · TileMap · Navigation)과 합성 기능(Animation · VFX · Environment · Destruction · Character · UI …)으로 가른다. 층 안 상호 include 5쌍(Animation↔Character · Physics · Visual, TileMap↔Visual, Telemetry↔UserSettings)을 끊는다.
-- **W-S2 `GameFrameworkLayers.toml`:** Runtime 에 Foundation 0 · World 1 · Character 2 · Gameplay/Online 3 의 층 부분과 `#error` 껍데기를 둔다. 역방향 include 24 를 끊고, 생성기 `Scripts/generate/EngineLayers.py` 를 매개변수화한다.
-- **W-S3 등록 사슬 통일 · `state-shape` 형식화:** `s_pHead` 손 사슬(Audio · RHI · Module 2 · UI 접근성 · UserSettings)을 `ModuleEntryRegistrar`/`RegistrationList` 로 옮기고 `MutableStaticExceptions` 의 그 줄을 지운다. `Archive` 를 내부 헤더로 숨기고 린트 행을 지운다.
-- **W-S4 `GameObjectManager.h` 허브 해체(W-P0 뒤):** 포함 TU 428 · include 30 이다. 소유 타입을 pimpl 로, 템플릿 전달은 `.inl` 로. `-ftime-trace` 집계로 재컴파일 TU · ms 를 전후 비교한다.
+- **W-S4 `GameObjectManager.h` 허브 해체:** 포함 TU 428 · include 30 이다. 소유 타입을 pimpl 로, 템플릿 전달은 `.inl` 로. `-ftime-trace` 집계로 재컴파일 TU · ms 를 전후 비교한다.
 - **W-R1 `FramePassExecutor` 분할 → 프레임 아레나:** 3257줄을 그래프 짓기 · 패스 라이브러리 · 제출로 나눈다(성능 변화 0). 그 뒤 프레임 지역 `vector` 를 `LinearAllocator` 기반 `frame_vector` 로 옮긴다(RT 프레임 힙 할당 0).
 - **W-R2 PSO 배치 색인(W-R1 뒤):** 배치를 만들 때 PSO 핸들을 한 번 풀어 둔다. `RT.PSO.ensureMaterial` 전후를 재고, 흔들림 안이면 되돌린다.
 - **W-E1 패널 열림 훅:** `IEditorPanel::onPanelOpened` 에서만 비동기 준비를 시작하고, View 는 준비 전에 뼈대만 그린다(3절 "첫 패널 느린 프레임" 측정이 후보를 고른다).
-- **W-G1 분할(W-S2 뒤):** `InputMap`(데이터 · 평가기 · 상태 — Enhanced Input 자리), `PrefabAsset`(포맷 셋 + 스폰), `AbilityComponent`(어트리뷰트 · 이펙트 · 스펙 컨테이너).
+- **W-G1 분할:** `InputMap`(데이터 · 평가기 · 상태 — Enhanced Input 자리), `PrefabAsset`(포맷 셋 + 스폰), `AbilityComponent`(어트리뷰트 · 이펙트 · 스펙 컨테이너).
 
 ### 5-2. RHI 진단(2026-11-10 — 결함 먼저, 폴더가 겹치는 단위는 순서대로)
 
@@ -78,7 +74,7 @@
 
 GameObject/Component API 는 저작 · 수명 · 직렬화 층으로 두고, 프레임마다 도는 일은 읽기 · 쓰기 종류를 선언한 잡으로, 핫 데이터는 종류별 SoA(`SceneTransformStorage` 일반화)로 옮긴다. 완전 ECS 는 기각했다(컴포넌트 타입 229 · `getComponent<>` 593 · 리플렉션 · 프리팹 전부 재작성). 단계마다 빌드 · 테스트가 통과해야 하고, 이득이 흔들림 안이면 되돌린다.
 
-0. **측정 기반(W-P0 뒤):** `-workers=N` 인자, Debug 카운터(`getComponentLookups` · `virtualTicks`), `load/*` 4 시나리오 × 워커 1 · 2 · 4 · 8 기준선을 S8 표에.
+0. **측정 기반:** `-workers=N` 인자, Debug 카운터(`getComponentLookups` · `virtualTicks`), `load/*` 4 시나리오 × 워커 1 · 2 · 4 · 8 기준선을 S8 표에.
 1. **일괄 틱이 기본:** 리플렉션 생성기가 `onTick` 을 재정의한 타입(102 개)에 `TickBatchOf` 등록을 자동으로 낸다. 지금 수동 등록은 `StressTestMover` 하나뿐이다. 완료: `batchElements/objectEntries ≥ 0.9`.
    - **서브틱 · 선행 조건은 그대로 돌아야 한다(사용자 요구).** 지금 규칙(`TickRegistry::findBatchFunction`, `TickRegistry.cpp:814`)을 유지한다.
      - 일괄 경로는 그 그룹의 틱 항목이 주 틱 하나뿐이고 선행 조건이 없는 오브젝트만 탄다.
@@ -110,7 +106,7 @@ GameObject/Component API 는 저작 · 수명 · 직렬화 층으로 두고, 프
 6. **엔진 공간 색인:** `SceneSpatialGrid` 서비스(월드 버전으로 증분, 이중 버퍼 읽기). GF `InteractionSpatialIndex` · `ZoneOccupantIndex` 는 읽기만. `TagIndex` 는 세대 스냅샷으로.
 7. W-S4 허브 해체(5-1) → 8. `StructuralChangeBuffer` 를 스레드별 버퍼 + (writerID, 순번) 병합으로(틱 뒤 큐가 뮤텍스 하나라 투사체 수천에서 줄 선다).
 
-병렬 작업자: A(0 · 1, Task · 생성기 · TickBatch), B(3 · 4, `Engine/Physics/**` — `-1` 기본값 브랜치 병합 뒤), C(2, A 뒤), D(6, C 뒤). 확인할 결함 후보: 틱 본문 안 중첩 `runParallel` 이 돕기 중 TLS 틱 상태를 비워 writerID 가 0 이 되는 것(`SceneTickScheduler.cpp:83`), 남의 오브젝트에 `setCanEverTick` 을 쓰는 비트필드 경쟁(`Component.h:620`).
+병렬 작업자: A(0 · 1, Task · 생성기 · TickBatch), B(3 · 4, `Engine/Physics/**`), C(2, A 뒤), D(6, C 뒤). 확인할 결함 후보: 틱 본문 안 중첩 `runParallel` 이 돕기 중 TLS 틱 상태를 비워 writerID 가 0 이 되는 것(`SceneTickScheduler.cpp:83`), 남의 오브젝트에 `setCanEverTick` 을 쓰는 비트필드 경쟁(`Component.h:620`).
 
 ### 5-4. 리플렉션(2026-11-10 설계 — 규모: REFLECT 1,408 · PROPERTY 6,708 · ENUM 413, 생성 TU 가 전체 컴파일 CPU 의 20 %(Debug) · 17 %(Release))
 
@@ -127,9 +123,10 @@ GameObject/Component API 는 저작 · 수명 · 직렬화 층으로 두고, 프
   - **(a) 정적 서술자 표:** 생성 코드를 constexpr 서술자 표로 바꾼다(언리얼 UHT `PropPointers` 자리). 해시를 미리 계산하고, 컨테이너 래퍼는 정적 객체로 두어 `shared_ptr` 를 없앤다. 목표는 등록 할당 타입당 3 이하, 생성 바이트 10.8 → 4 MB 미만이다.
   - **(b) 메타데이터 형식화:** `Units` 는 열거로 둔다(지금은 검증한 뒤 문자열로 실어 인스펙터가 `== "rad"` 로 다시 푼다). `Default` 는 그 프로퍼티 타입의 리터럴로 내서 오타가 컴파일 오류가 되게 한다. `EditCondition` 은 생성기가 미리 풀고, 없는 이름은 생성 오류로 막는다.
   - **(c) 타입 특성 수집기:** 재정의(`onTick` · `onSubTick` · `serializeState`)를 특성 비트로 모은다. `REFLECT( TickMode = … )` 를 받아 `TickBatchRegistry` 등록을 생성 코드에 낸다. 그러면 손 매크로 `SW_REGISTER_TICK_BATCH` 가 사라진다.
+  - **(e) 조건부 필수 주석:** "부모(`_base` · 상속)가 없을 때만 `Required`" 같은 조건을 메타데이터로 적는다. `CultureInfo` 는 상속 덮어쓰기라 칸이 비어도 부모 값을 받으므로 지금의 무조건 `Required` 로는 `XMLFields` 로 옮기지 못했다(D1 손 파서 이전에서 남김). 생성기가 조건을 서술자에 싣고 필수 칸 판정(`SerializerUtil::isRequiredValueMissing`)이 합친 상태에서 본다.
   - **(d) 경고를 생성 오류로:** 클래스 템플릿 `REFLECT` · 멤버 함수 템플릿 `FUNCTION` 은 지금 경고만 남기고 건너뛴다. `#if` 아래 `PROPERTY` 가 조용히 빠지는 것도 막는다. 같은 모듈 안에 리프 이름이 겹치면 오류로 낸다.
 - **W-R5 빌드 시간(W-R3 와 병렬 — 파일이 다르다):** 헤더당 `.gen.cpp` 대신 모듈 안 8~16 헤더 묶음 TU 로 짓는다(PCH 를 1,465 번 연다). `.gen.meta.cpp` 는 같은 TU 의 `#if` 절로, 의존은 헤더별로 귀속한다. 목표는 생성 비중 8 % 미만이다.
-- **W-R4 프로퍼티 방문자 하나(W-R3 · 인스펙터 값 행 뒤):** 직렬화 9 루프 · 검증 · 문서 · 인스펙터 gather · 상태 해시 기본 구현이 `ReflectVisit` 하나를 쓴다. 지금 `foldStateHash` 는 손으로 써서 새 칸이 해시에서 빠질 수 있다. 소비자가 테스트뿐인 `Replicated` 메타데이터는 여기서 첫 소비자를 얻는다.
+- **W-R4 프로퍼티 방문자 하나(W-R3 뒤):** 직렬화 9 루프 · 검증 · 문서 · 인스펙터 gather · 상태 해시 기본 구현이 `ReflectVisit` 하나를 쓴다. 지금 `foldStateHash` 는 손으로 써서 새 칸이 해시에서 빠질 수 있다. 소비자가 테스트뿐인 `Replicated` 메타데이터는 여기서 첫 소비자를 얻는다.
 - **W-R6 밀집 타입 색인:** 5-3 의 5 단계(`ComponentDataStore<T>`)와 함께만.
 
 ### 5-5. 상용 대비 고도화(2026-11-10 진단 — 5-1 ~ 5-4 밖)
@@ -142,10 +139,9 @@ GameObject/Component API 는 저작 · 수명 · 직렬화 층으로 두고, 프
   - 판정을 두 축으로 나눈다: 넓고 얕은 차이(평균 거리)와 좁고 깊은 차이(최대 연결 영역). 지금 "색 거리 12 이상 화소 ≤ 1 %" 한 식은 작은 마젠타 덩어리를 놓친다.
   - 골든 옆 `*.golden.json` 에 기록 커밋과 측정값을 둔다. 30 일간 골든 631 개가 1442 회 다시 쓰였다.
   - WebGPU 골든은 0 이다 — 체인 백엔드 집합을 한 곳에서 정의해 골든 폴더와 대조한다.
-- **T2 자동화 격리를 형식으로:**
-  - 자동화가 실제 사용자 폴더(`%LOCALAPPDATA%/SWEngine/<게임>`)를 쓴다. 와일드웨스트 백엔드 프로세스끼리 서로의 임시 파일을 지웠다 — 잔재 판정은 `FileUtil::isAbandonedWriteTemp` 로 고쳤다. `SW_USER_DATA_ROOT` 는 자동화 어디서도 참조하지 않는다.
-  - 세션 시작 때 사용자 데이터 뿌리가 scratch 아래가 아니면 종료 11 로 멈추고, 부모가 자식마다 `SW_USER_DATA_ROOT=<scratch>/p<pid>` 를 건다.
-  - 완료: 체인 중 사용자 폴더 mtime 불변을 단언하는 시나리오.
+- **T2 자동화 격리 — 통합 검증만 남음:** 자동화 실행(`CommandLineManager::isAutomatedRun` — `-unattended` · `-scenario`)은 사용자 데이터 뿌리를 `Saved/Automation/UserData/` 아래로 가두고 밖이면 종료 11(`AutomationUserDataRoot`), 상태 자리 변수(`gv_editorStateDir` · `gv_userSettingsFile`)가 사람의 폴더여도 11, 백엔드별 부모가 자식마다 `<뿌리>/<백엔드>`, 두 번 기동 쌍은 묶음 뿌리(`RunStateDirPair.cmake`).
+  - 남은 일: 빌드 · `AutomationUserDataRootTest`(리눅스 포함 — 대소문자 케이스) · `UnitTests*`(무인 실행이라 이제 격리된다) · 체인(`engine.isolation` 포함) · `Scenario.velmora.sequence.*` · `Scenario.editor.statedir.*` · `py -3 -m Scripts net-pair mmo` 를 돌린다.
+  - `-unattended` 도 `-scenario` 도 없는 스크립트 실행(`LockstepPairRun.py` · `TelemetryLocalRun.py` — 표준 입력 명령으로 모는 보이는 실행)은 판정 밖이라 사람의 세이브 폴더를 쓴다. 세이브를 쓰면 스크립트가 `-unattended` 를 붙이거나 판정에 표준 입력 실행을 더한다.
 - **T3 테스트 이력 · 격리 · 파이프라인(T1 뒤):**
   - 보고 JSON 을 sqlite 에 쌓고, 흔들림 지수와 p95 추세를 낸다. 격리 표 `Config/Rules/Test/Quarantine.json` 은 사유 · 만료 필수다.
   - 샤드를 시간 균형으로 나누고, 묶음 끝 셸 스크립트를 단계 · 산출물 · 재시도가 적힌 파이프라인 정의로 옮긴다.
@@ -160,7 +156,7 @@ GameObject/Component API 는 저작 · 수명 · 직렬화 층으로 두고, 프
   - `ServerApp --check-config` 를 둔다(잘못된 설정은 종료 11).
   - `OpsHTTPEndpoint` 는 인증 없는 GET 이다. 바인드 주소를 루프백 · 사설로 형식에서 제한하고, 외부 바인드는 토큰 필수로 한다.
 - **U1 햅틱 · UI 포커스 내비:** 진동 · 트리거 출력 API 가 없다(grep 0). `IInputFeedbackDevice` 와 `*.haptic.xml` 을 둔다. 패드 전용 메뉴 탐색(방향 포커스)을 확인하고 없으면 더한다.
-- **A1 애니메이션 포즈 노드 등록식(W-S1 뒤, 평가 경로는 5-3 뒤):**
+- **A1 애니메이션 포즈 노드 등록식(평가 경로는 5-3 뒤):**
   - 포즈 노드가 `None · BlendPoses` 둘뿐이라(`AnimationGraphAsset.h:106`) 새 블렌드마다 enum · 로더 · 플레이어를 고친다. 리그 노드처럼 등록표로 바꾼다.
   - 그 위에 Mirror · Montage(섹션 · 분기)를 더한다.
 - **R1 에셋 리다이렉터(5-4 뒤):** GUID 전환은 기각한다(경로 id 가 언리얼 SoftObjectPath 자리). `redirects.xml`(옛 → 새)를 `AssetPaths` 앞단에서 풀어, 세이브 · 서버에 적힌 옛 경로가 산다. 린트가 남은 참조를 보고한다.
@@ -168,7 +164,7 @@ GameObject/Component API 는 저작 · 수명 · 직렬화 층으로 두고, 프
   - 엔티티 상태 바이트를 게임이 손으로 양자화한다. 그래서 칸 하나를 더하면 서버 · 클라 두 곳을 고쳐야 한다.
   - `PROPERTY( Replicated, Quantize = … )` 로 작성기를 생성하고, 스키마 해시를 와이어 버전에 합친다.
   - `kMaxEntityBytes` 초과는 첫 경고만 남기고 엔티티가 사라진다 — `registerEntity` 의 오류로 바꾼다.
-- **E1 되돌리기를 형식으로(에디터 MVVM 3 단계 뒤):** 씬 변이 명령이 `EditorTransaction&` 를 요구하게 한다. 시나리오 `editor/undocoverage` 는 등록 명령 전수를 실행 → undo 한 뒤 씬 해시가 같은지 본다.
+- **E1 되돌리기를 형식으로:** 씬 변이 명령이 `EditorTransaction&` 를 요구하게 한다. 시나리오 `editor/undocoverage` 는 등록 명령 전수를 실행 → undo 한 뒤 씬 해시가 같은지 본다.
 - **E2 런타임 디버거 한 자리(5-1 W-E1 뒤):** AI 섹션 · 시퀀스 디버거 · 애니 리와인드 · HUD 섹션을 `IDebugSource` 등록표 하나로 묶는다. 선택 오브젝트에 연동하는 패널을 둔다(언리얼 Gameplay Debugger 자리).
 - **G1 장르 수직 슬라이스(T1 · T2 뒤):** 완결 루프가 없는 게임마다 `slice.scenario.xml` 을 둔다(시작 → 목표 → 결과 → 저장 · 복원 해시 동일).
 

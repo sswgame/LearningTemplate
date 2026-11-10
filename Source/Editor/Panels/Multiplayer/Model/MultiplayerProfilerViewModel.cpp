@@ -99,10 +99,10 @@ namespace sw::editor
         MultiplayerProfilerViewModelInternal::getHistory().update( MultiplayerSessionViewModel::getSession(), MultiplayerProfilerViewModelInternal::nowSeconds() );
     }
 
-    void MultiplayerProfilerViewModel::gather( int32 targetIndex, bool bAllProcessKinds, bool bSentKinds, MultiplayerProfilerViewState& outState )
+    void MultiplayerProfilerViewModel::gather( optional<int32> targetIndex, bool bAllProcessKinds, bool bSentKinds, MultiplayerProfilerViewState& outState )
     {
         const EditorNetProfilerHistory& history = MultiplayerProfilerViewModelInternal::getHistory();
-        const EditorNetProfilerTrack*   pTrack  = targetIndex >= 0 ? history.findTrack( targetIndex ) : nullptr;
+        const EditorNetProfilerTrack*   pTrack  = targetIndex.has_value() && *targetIndex >= 0 ? history.findTrack( *targetIndex ) : nullptr;
         outState._bHasData                      = pTrack != nullptr && pTrack->_series.getCount() > 0 ? SW_TRUE : SW_FALSE;
         if ( outState._bHasData == SW_FALSE )
             return;

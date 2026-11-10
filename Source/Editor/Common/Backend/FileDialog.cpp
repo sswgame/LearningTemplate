@@ -4,9 +4,12 @@
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/thread.h"
+#include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Process/ThreadCrashStack.h"
+#include "Core/String/StringUtil.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Editor/Common/Backend/Platform/WindowsFileDialog.h"
@@ -58,6 +61,17 @@ namespace sw
             (void)params;
             SW_LOG_WARNING_ID( "FileDialog.FileDialogNotSupported", "The file dialog is not supported on this platform." );
 #endif
+            // 저장 자리가 리소스 트리(`Content/`) 아래면 그 아래 이름을 소문자로 접는다 — 리소스 id 는 소문자이고, 쓰기 경로의 이름 규칙(`AssetPaths::checkLowercaseResourceName`)은
+            // 대문자 새 파일을 거절한다. 사람이 대화상자에 `MyLevel` 이라 적어도 저장은 된다(언리얼도 새 애셋 이름을 패키지 규칙으로 맞춘다).
+            if ( bSuccess && params._type == FileDialogParams::Type::Save )
+            {
+                for ( string& path : listResult )
+                {
+                    string relative;
+                    if ( FileUtil::tryMakePathUnderRoot( ProcessRoots::get()._content.str(), path, relative ) )
+                        path = FileUtil::joinPath( ProcessRoots::get()._content.str(), StringUtil::toLower( relative.c_str() ) );
+                }
+            }
             // **여기서 델리게이트를 부르지 않는다** — 콜백은 메인 스레드가 매 프레임 만지는 상태(씬 · 컴포넌트)를 고친다.
             if ( bSuccess )
                 pDialog->_listPath = std::move( listResult );

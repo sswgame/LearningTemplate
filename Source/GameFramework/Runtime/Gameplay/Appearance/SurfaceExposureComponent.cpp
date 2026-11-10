@@ -103,8 +103,8 @@ namespace sw
 namespace sw
 {
     SurfaceExposureComponent::SurfaceExposureComponent()
-        : _wetChannel{ "Wet" }
-        , _precipitationValue{ "wetness" }
+        : _wetChannel{}
+        , _precipitationValue{}
         , _rainWetPerSecond{ 0.1f }
         , _shelterDistance{ 20.0f }
         , _immersionWetPerSecond{ 0.5f }

@@ -49,8 +49,9 @@ namespace
         /** @brief 격자에 맞춘 @p pID 하나짜리 스택을 만듭니다. */
         static void makeStack( MeshModifierStack& outStack, const utf8* pID )
         {
-            const int32   index     = outStack.addModifier( pID );
-            MeshModifier* pModifier = outStack.findModifier( index );
+            const expected<int32> index = outStack.addModifier( pID );
+            SW_REQUIRE_TRUE( index.has_value() );
+            MeshModifier* pModifier = outStack.findModifier( *index );
             SW_REQUIRE_TRUE( pModifier != nullptr );
             pModifier->fitToBounds( makeGridBounds() );
         }

@@ -359,18 +359,18 @@ namespace sw::editor
     {
     }
 
-    int32 MeshModifierStack::addModifier( string_view typeID )
+    expected<int32> MeshModifierStack::addModifier( string_view typeID )
     {
         unique_ptr<MeshModifier> modifier = MeshModifierRegistry::create( typeID );
         if ( modifier == nullptr )
-            return -1;
+            return unexpected( Error{ ErrorKind::NotFound, "unknown mesh modifier id", typeID } );
         return addModifier( std::move( modifier ) );
     }
 
-    int32 MeshModifierStack::addModifier( unique_ptr<MeshModifier> modifier )
+    expected<int32> MeshModifierStack::addModifier( unique_ptr<MeshModifier> modifier )
     {
         if ( modifier == nullptr )
-            return -1;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the mesh modifier is null" } );
         _listModifier.push_back( std::move( modifier ) );
         return static_cast<int32>( _listModifier.size() - 1 );
     }

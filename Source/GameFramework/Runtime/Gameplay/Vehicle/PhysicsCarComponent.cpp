@@ -14,7 +14,7 @@
 namespace sw
 {
     PhysicsCarComponent::PhysicsCarComponent()
-        : _handBrakeButton{ "HandBrake" }
+        : _handBrakeButton{}
         , _reverseSpeed{ 0.5f }
         , _handBrakeIndex{}
     {

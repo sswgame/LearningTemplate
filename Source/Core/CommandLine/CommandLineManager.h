@@ -189,6 +189,12 @@ namespace sw
         bool isArgumentProvided( CommandLineArgument argument ) const;
 
         /**
+         * @brief 자동화 실행(`-unattended` 또는 `-scenario`)이면 true 입니다 — 사람의 사용자 설정 · 세이브 · 상태 폴더를 읽지도 쓰지도 않는 실행의 판정 하나입니다.
+         * @details 사용자 설정의 무인 자리(`UserSettingsManager`) · 사용자 데이터 뿌리 격리(`AutomationUserDataIsolation`) · 어서트 대화상자가 같은 판정을 쓴다(예전에는 곳마다 두 인자를 따로 물었다).
+         */
+        bool isAutomatedRun() const;
+
+        /**
          * @brief 받는 인자의 목록(`-help` 가 찍는 글)을 만듭니다 — 줄마다 표(ArgumentList.xxx)의 철자와 값 모양(`-key` · `-key=<int>` …)입니다.
          * @details 목록은 표에서 만든다(손으로 쓴 도움말이 표와 어긋나지 않는다).
          */

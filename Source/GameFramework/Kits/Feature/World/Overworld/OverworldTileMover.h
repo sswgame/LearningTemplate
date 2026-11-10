@@ -73,7 +73,7 @@ namespace sw
         /**
          * @brief 의도를 읽고 이동 FSM 을 갱신합니다.
          * @param intent 이번 틱의 의도입니다. 이동 축(`_move`, y 가 위쪽 타일)을 데드존으로 걸러 네 방향 한 칸으로 읽습니다.
-         * @param interactButton 상호작용 버튼의 슬롯(`PawnComponent::findButton`)입니다. 그 버튼이 발동하면 상호작용합니다. -1이면 버튼이 없습니다.
+         * @param interactButton 상호작용 버튼의 슬롯(`PawnComponent::findButton`)입니다. 그 버튼이 발동하면 상호작용합니다. 비어 있으면 버튼이 없습니다.
          */
         void update( float32 deltaTime, const ControlIntent& intent, optional<int32> interactButton );
 

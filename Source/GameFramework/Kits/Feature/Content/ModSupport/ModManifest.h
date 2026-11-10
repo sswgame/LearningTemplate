@@ -22,6 +22,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -56,6 +58,63 @@ namespace sw
         string     _id;                 ///< 의존하는 모드 id
         ModVersion _minVersion;         ///< 그 모드의 가장 낮은 판
         bool       _bOptional{ false }; ///< 선택 의존 — 없으면 무시하고, 있으면 순서 · 판을 지킨다 NOLINT(sw-bool-flag): 집합체다(중괄호로 만든다)
+    };
+} // namespace sw
+
+namespace sw
+{
+    // 매니페스트 원소의 속성 스키마다 — `XMLFields::readFields` 가 필수 · 모르는 속성 · 숫자 꼴을 본다. 판(`x.y.z`) · id 꼴 · 경로 규칙은 읽은 뒤 매니페스트가 본다.
+
+    /** @brief `<Mod id version minContentVersion maxContentVersion priority>` 입니다. */
+    REFLECT()
+    struct ModManifestRootDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _id;
+        PROPERTY( Required )
+        string _version;
+        PROPERTY( Required )
+        uint32 _minContentVersion{ 0 };
+        PROPERTY( Required )
+        uint32 _maxContentVersion{ 0 };
+        PROPERTY( Required )
+        int32 _priority{ 0 };
+    };
+
+    /** @brief `<Dependency id minVersion optional/>` 입니다. */
+    REFLECT()
+    struct ModDependencyDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _id;
+        PROPERTY( Required )
+        string _minVersion;
+        PROPERTY( Required, Name = "optional" )
+        bool _bOptional{ false }; ///< NOLINT(sw-bool-flag): 스키마 집합체다(XMLFields 가 칸마다 쓴다)
+    };
+
+    /** @brief `<Conflict id/>` 입니다. */
+    REFLECT()
+    struct ModConflictDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _id;
+    };
+
+    /** @brief `<Override path/>` · `<Layer path/>` 입니다. */
+    REFLECT()
+    struct ModPathDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _path;
     };
 } // namespace sw
 

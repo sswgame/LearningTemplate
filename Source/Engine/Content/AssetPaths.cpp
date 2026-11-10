@@ -303,14 +303,13 @@ namespace sw
             /** @brief 절대 경로 @p absolutePath 가 붙인 디스크 도메인 폴더 아래면 그 도메인의 id(`<도메인>/<폴더 아래 경로>`)를 적고 true 입니다. */
             [[nodiscard]] static bool findDiskDomainID( State& state, const string& absolutePath, string& outID )
             {
-                const string      path = FileUtil::normalizePath( absolutePath );
                 ScopedLock<mutex> lock{ state._diskDomainMutex };
                 for ( const MountedDiskDomain& mounted : state._listDiskDomain )
                 {
-                    const string folder = FileUtil::normalizePath( mounted._folder );
-                    if ( path.size() <= folder.size() || FileUtil::startsWithPathComponent( path, folder ) == false )
+                    string relative;
+                    if ( FileUtil::tryMakePathUnderRoot( mounted._folder, absolutePath, relative ) == false ) // 대소문자는 OS 규칙
                         continue;
-                    outID = mounted._domain + "/" + FileUtil::suffixAfterPathComponent( path, folder );
+                    outID = mounted._domain + "/" + FileUtil::normalizePath( relative ); // id 는 소문자다
                     return true;
                 }
                 return false;
@@ -501,8 +500,23 @@ namespace sw
         return false;
     }
 
+    expected<void> AssetPaths::checkLowercaseResourceName( string_view diskPath )
+    {
+        // 리소스 id 는 소문자이고 디스크 이름이 곧 id 다 — 대문자 이름은 리눅스에서 id 로 다시 찾지 못하고 Windows 에서는 소문자 파일과 겹친다.
+        string relative;
+        if ( FileUtil::tryMakePathUnderRoot( ProcessRoots::get()._content.str(), diskPath, relative ) == false )
+            return {}; // 리소스 트리 밖(Saved · 붙인 디스크 도메인 · 임시 폴더)은 이 규칙이 아니다
+        const bool bUppercase = std::any_of( relative.begin(), relative.end(), []( utf8 ch )
+        { return 'A' <= ch && ch <= 'Z'; } );
+        if ( bUppercase )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "a new file under Content/ must be lowercase - resource ids are lowercase (name it through toDiskPath / normalizeAssetID)", relative } );
+        return {};
+    }
+
     bool AssetPaths::initialize()
     {
+        // 리소스 트리에 새로 생기는 이름은 소문자 — 쓰기 경로 하나가 막는다(입구마다 접는 것을 잊어도 대문자 파일이 생기지 않는다). 함수가 상태 없이 루트를 읽어 다시 걸어도 같다.
+        FileUtil::setCreateRule( &AssetPaths::checkLowercaseResourceName );
         // `_bInitialized` 는 "시작했다" 가 아니라 **"성공했다"** 를 뜻한다 — 루트를 못 찾아 false 로 나가면 다음 호출이 다시 찾는다.
         // 예전에는 프로세스 정적이라 `call_once` 로 막았다. 이제 부르는 쪽은 이 객체의 소유자 하나(기동의 직렬 구간)라 겹치지 않는다.
         if ( _pState->_bInitialized )
@@ -729,7 +743,7 @@ namespace sw
             return false;
         }
         const string root = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( AssetPathsInternal::getTable( *_pState )._resourceRootFolderPath ) );
-        if ( root.empty() == false && FileUtil::startsWithPathComponent( FileUtil::normalizePath( folder ), FileUtil::normalizePath( root ) ) )
+        if ( root.empty() == false && FileUtil::isPathAtOrUnderRoot( root, folder ) )
         {
             SW_LOG_ERROR_ID( "AssetPaths.MountInsideContentRoot", "Cannot mount disk domain '%#' - '%#' is inside the content root (packs-only builds would read loose assets)", domainName, diskFolder );
             return false;

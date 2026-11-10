@@ -52,14 +52,14 @@ namespace sw
                 close( descriptor );
         }
 
-        /** @brief `waitpid` 가 준 상태를 종료 코드로 바꿉니다. 시그널로 죽었으면 셸 규약대로 128 + 시그널 번호입니다. */
-        int32 exitCodeFromStatus( int32 status )
+        /** @brief `waitpid` 가 준 상태를 종료 코드로 바꿉니다. 시그널로 죽었으면 셸 규약대로 128 + 시그널 번호입니다. 끝나지 않은 상태(멈춤 · 재개)면 없음입니다. */
+        optional<int32> exitCodeFromStatus( int32 status )
         {
             if ( WIFEXITED( status ) )
                 return static_cast<int32>( WEXITSTATUS( status ) );
             if ( WIFSIGNALED( status ) )
                 return 128 + static_cast<int32>( WTERMSIG( status ) );
-            return -1;
+            return nullopt;
         }
 
         /** @brief **fork 전에** 만들어 두는 exec 재료입니다 — 찾은 실행 파일 경로와 `execv` 에 줄 인자 포인터 배열(nullptr 로 끝난다). 자식에서는 할당하지 않는다. */
@@ -456,12 +456,12 @@ namespace sw
         return false;
     }
 
-    int32 Process::waitForExit()
+    expected<int32> Process::waitForExit()
     {
         // pid 는 **한 번만 읽어 지역 변수에 담는다.** 아래 `terminate` 주석과 같은 이유다.
         const pid_t childPid = static_cast<pid_t>( _processID.load() );
         if ( childPid <= 0 )
-            return -1;
+            return unexpected( Error{ ErrorKind::NotFound, "there is no child process to wait for (never launched or already reaped)" } );
 
         int32 status = 0;
         pid_t reaped = 0;
@@ -476,7 +476,12 @@ namespace sw
         _processID.store( 0 );
         _pNativeHandle = nullptr;
 
-        return ( reaped < 0 ) ? -1 : exitCodeFromStatus( status );
+        if ( reaped < 0 )
+            return unexpected( Error{ ErrorKind::ExternalFailure, "waitpid failed on the child process" } );
+        const optional<int32> exitCode = exitCodeFromStatus( status );
+        if ( exitCode.has_value() == false )
+            return unexpected( Error{ ErrorKind::ExternalFailure, "waitpid returned a status that is neither an exit nor a signal" } );
+        return *exitCode;
     }
 
     bool Process::terminate( int32 exitCode )

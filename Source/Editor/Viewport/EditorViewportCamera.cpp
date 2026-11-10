@@ -207,15 +207,15 @@ namespace sw::editor
         }
     }
 
-    void EditorViewportCamera::applyBookmarkRequest( int32& inoutSlot )
+    void EditorViewportCamera::applyBookmarkRequest( optional<uint32>& inoutSlot )
     {
-        if ( inoutSlot < 0 )
+        if ( inoutSlot.has_value() == false )
             return;
         EditorContext&        editorContext = editor::getSubsystem<EditorContext>();
-        const CameraBookmark* pBm           = editorContext.getSubsystem<EditorWorkspace>().getCameraBookmark( static_cast<uint32>( inoutSlot ) );
+        const CameraBookmark* pBm           = editorContext.getSubsystem<EditorWorkspace>().getCameraBookmark( *inoutSlot );
         if ( pBm != nullptr && pBm->_bValid )
             applyBookmark( *pBm );
-        inoutSlot = -1;
+        inoutSlot = nullopt;
     }
 
     void EditorViewportCamera::applyToCamera( CameraComponent* pCamera )

@@ -1085,7 +1085,7 @@ namespace sw::editor
         for ( uint32 channelIndex = 0; channelIndex < channelCount; ++channelIndex )
         {
             ImGui::PushID( static_cast<int32>( channelIndex ) );
-            const bool bKeyed    = track.findChannelKey( channelIndex, frame ) != constant::invalid_index::kUint32;
+            const bool bKeyed    = track.findChannelKey( channelIndex, frame ).has_value();
             const bool bRotation = SequenceModel::isRotationChannel( track, channelIndex );
             // 키가 없는 채널은 대상의 지금 값을 보인다.
             const float32 currentValue = channelIndex < kSequenceMaxChannelCount ? pArrCurrent[channelIndex] : 0.0f;

@@ -69,7 +69,7 @@ SW_TEST_CASE( LedgerTest, MovesAndRefusesOverdraft )
     const uint64 commitsBefore = database.getCommitCount();
     SW_EXPECT_TRUE( move( database, makeMove( sw::LedgerHolder::makeAccount( kBob ), sw::LedgerHolder::makeAccount( kAlice ), 31, "test/pay.2" ), result ) ==
                     sw::LedgerResult::InsufficientFunds );
-    SW_EXPECT_EQUAL( 0, result._failedPostingIndex );
+    SW_EXPECT_TRUE( result._failedPostingIndex == 0 );
     SW_EXPECT_EQUAL( commitsBefore, database.getCommitCount() );
     SW_EXPECT_EQUAL( int64( 30 ), readGold( database, kBob ) );
     expectAuditBalanced( database );

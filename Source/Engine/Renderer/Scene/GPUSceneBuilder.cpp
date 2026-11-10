@@ -1657,17 +1657,17 @@ namespace sw
         }
     }
 
-    uint32 GPUSceneBuilder::findOpaqueInstanceSlot( uint32 primitiveIndex ) const
+    optional<uint32> GPUSceneBuilder::findOpaqueInstanceSlot( uint32 primitiveIndex ) const
     {
         if ( primitiveIndex >= _listPrimitiveToCandidate.size() )
-            return constant::invalid_index::kUint32;
+            return nullopt;
         const uint32 candidate = _listPrimitiveToCandidate[primitiveIndex];
         if ( candidate == kInvalidCandidateIndex || candidate >= _listCandidateToInstance.size() )
-            return constant::invalid_index::kUint32;
+            return nullopt;
         const uint32 slot        = _listCandidateToInstance[candidate];
         const bool   bConsistent = slot != kInvalidCandidateIndex && slot < _listInstanceSrcIndex.size() && _listInstanceSrcIndex[slot] == candidate;
         if ( bConsistent == false || slot >= _snapshot.getOpaqueInstanceCount() )
-            return constant::invalid_index::kUint32;
+            return nullopt;
         return slot;
     }
 

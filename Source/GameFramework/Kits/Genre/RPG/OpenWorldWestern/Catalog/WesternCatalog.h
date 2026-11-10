@@ -361,8 +361,8 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY()
-        hashed_string _currency{ "Dollar" };
+        PROPERTY( Required )
+        hashed_string _currency;
         PROPERTY( Min = 0 )
         int32 _extraHitPenalty{ 1 }; ///< 첫 발 뒤 한 발마다 떨어지는 등급
     };

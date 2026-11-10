@@ -9,4 +9,5 @@
   <inputMap path="game/abilityarena/data/arena.input.xml"/>
   <loadingScreen>engine/ui/loading.ui.xml</loadingScreen>
   <audioEvents>game/abilityarena/audio/abilityarena.audioevents.xml</audioEvents>
+  <defaultLanguage>ko_kr</defaultLanguage>
 </GameSettings>

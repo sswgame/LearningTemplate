@@ -246,9 +246,10 @@ namespace sw::editor
         };
         ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EditorRenderTarget", "Producers", TextArgumentList().addText( "passes", joinPasses( pSelected->_listProducer ) ) ).c_str() );
         ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EditorRenderTarget", "Consumers", TextArgumentList().addText( "passes", joinPasses( pSelected->_listConsumer ) ) ).c_str() );
-        ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EditorRenderTarget", "Lifetime",
-                                                    TextArgumentList().addInteger( "firstPass", static_cast<int64>( pSelected->_firstPass ) ).addInteger( "lastPass", static_cast<int64>( pSelected->_lastPass ) ) )
-                                       .c_str() );
+        if ( pSelected->_firstPass.has_value() && pSelected->_lastPass.has_value() ) // 쓰는 패스가 없는 첨부는 수명 줄이 없다
+            ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EditorRenderTarget", "Lifetime",
+                                                        TextArgumentList().addInteger( "firstPass", static_cast<int64>( *pSelected->_firstPass ) ).addInteger( "lastPass", static_cast<int64>( *pSelected->_lastPass ) ) )
+                                           .c_str() );
 
         const bool bDepth     = pSelected->_bDepth != SW_FALSE;
         const bool bDecodable = RenderTargetReadback::isDecodableFormat( pSelected->_format, bDepth );

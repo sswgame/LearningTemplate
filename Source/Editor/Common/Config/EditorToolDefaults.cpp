@@ -11,6 +11,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 #include "sw/config/ConfigConstants.h"
 
@@ -32,7 +33,11 @@ namespace sw::editor
             bool            bComplete = true;
             for ( const PropertyInfo& prop : EditorToolDefaults::StaticType()->getPropertiesWithBase() )
             {
-                if ( prop._metadata->_bRequired == SW_FALSE || root.has( prop._name.view() ) )
+                // 판정은 직렬화기 · XMLFields 와 한 함수다 — 빠졌거나, 이름 · 경로 형식(DataPath)인데 빈 글이다.
+                const JSONValue   value = root.get( prop._name.view() );
+                const string      text  = value.isValid() && value.isString() ? value.asString() : string{};
+                const string_view textView( text );
+                if ( SerializerUtil::isRequiredValueMissing( prop, value.isValid(), value.isValid() && value.isString() ? &textView : nullptr ) == false )
                     continue;
                 SW_LOG_ERROR_ID( "EditorToolDefaults.EditorToolDefaultsRequired", "Editor tool defaults %#: required key '%#' is missing", pSourceLabel, prop._name.c_str() );
                 bComplete = false;

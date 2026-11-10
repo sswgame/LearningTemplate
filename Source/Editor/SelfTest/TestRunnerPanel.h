@@ -9,6 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Memory/Memory.h"
 
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
@@ -65,7 +66,7 @@ namespace sw::editor
         vector<string>                    _listExternalLine;   ///< 마지막 외부 실행의 출력
         string                            _externalTitle;      ///< 마지막 외부 실행이 무엇이었는지
         utf8                              _arrFilter[constant::buffer::kMax128];
-        int32                             _externalExitCode;
+        optional<int32>                   _externalExitCode;   ///< 외부 실행의 종료 코드 — 기다리지 못했으면 없다
         uint32                            _externalErrorCount; ///< 출력의 `[Error]` 줄 수
         uint32                            _selfTestGeneration; ///< `_selfTests` 를 맞춘 자체 테스트 등록 세대(0 은 등록이 한 번도 없었던 때라 빈 목록과 맞다)
         ExternalRunKind                   _externalRunKind;

@@ -249,7 +249,7 @@ namespace sw
     ValeWorldComponent::ValeWorldComponent()
         : _rules{}
         , _interestGrid{}
-        , _profileFolder{ "LanternVale/ServerProfiles" }
+        , _profileFolder{}
         , _server{}
         , _client{}
         , _bRulesValid{ SW_FALSE }

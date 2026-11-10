@@ -23,8 +23,8 @@ namespace sw
     struct RenderPipelineDesc
     {
         REFLECT_BODY();
-        PROPERTY()
-        string _name = "ForwardPipeline";
+        PROPERTY( Required )
+        string _name;
 
         /** @brief 셰이딩 방식입니다. Forward / Deferred / Custom. 패스 구성과 맞아야 합니다(Deferred 는 GBuffer · Lighting 패스가 있고, Forward 는 GBuffer 패스가 없다 — 검증). */
         PROPERTY()

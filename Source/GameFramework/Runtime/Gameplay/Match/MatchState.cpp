@@ -46,10 +46,10 @@ namespace sw
         return static_cast<int32>( _listTeam.size() ) - 1;
     }
 
-    int32 MatchState::addParticipant( int32 team, const hashed_string& role, int32 respawnCost )
+    expected<int32> MatchState::addParticipant( int32 team, const hashed_string& role, int32 respawnCost )
     {
         if ( isValidTeam( team ) == false )
-            return constant::invalid_index::kInt32;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the team does not exist" } );
         MatchParticipant participant;
         participant._team        = team;
         participant._role        = role;
@@ -64,7 +64,7 @@ namespace sw
             return;
         _phase     = phase;
         _phaseTime = 0.0f;
-        pushEvent( MatchEvent::Kind::PhaseChanged, constant::invalid_index::kInt32, constant::invalid_index::kInt32, constant::invalid_index::kInt32, static_cast<int32>( phase ) );
+        pushEvent( MatchEvent::Kind::PhaseChanged, nullopt, nullopt, nullopt, static_cast<int32>( phase ) );
     }
 
     void MatchState::start()
@@ -103,34 +103,33 @@ namespace sw
             if ( participant._respawnTimer.isActive() == false )
             {
                 participant._bAlive = SW_TRUE;
-                pushEvent( MatchEvent::Kind::Respawned, static_cast<int32>( index ), constant::invalid_index::kInt32, participant._team, 0 );
+                pushEvent( MatchEvent::Kind::Respawned, static_cast<int32>( index ), nullopt, participant._team, 0 );
             }
         }
         if ( _settings._timeLimit > 0.0f && _phaseTime >= _settings._timeLimit )
             finishByScore();
     }
 
-    void MatchState::reportDamage( int32 attacker, int32 victim, float32 amount )
+    void MatchState::reportDamage( optional<int32> attacker, int32 victim, float32 amount )
     {
-        if ( isValidParticipant( victim ) == false || amount <= 0.0f )
+        const bool bIgnoreDamage = isValidParticipant( victim ) == false || amount <= 0.0f || attacker.has_value() == false || isValidParticipant( *attacker ) == false;
+        if ( bIgnoreDamage )
             return;
-        if ( isValidParticipant( attacker ) )
+        const int32 source = *attacker;
+        _listParticipant[static_cast<size_t>( source )]._damageDealt += amount;
+        vector<MatchParticipant::DamageRecord>& listDamage = _listParticipant[static_cast<size_t>( victim )]._listDamage;
+        for ( MatchParticipant::DamageRecord& record : listDamage )
         {
-            _listParticipant[static_cast<size_t>( attacker )]._damageDealt += amount;
-            vector<MatchParticipant::DamageRecord>& listDamage = _listParticipant[static_cast<size_t>( victim )]._listDamage;
-            for ( MatchParticipant::DamageRecord& record : listDamage )
+            if ( record._attacker == source )
             {
-                if ( record._attacker == attacker )
-                {
-                    record._time = _elapsed;
-                    return;
-                }
+                record._time = _elapsed;
+                return;
             }
-            listDamage.push_back( MatchParticipant::DamageRecord{ attacker, _elapsed } );
         }
+        listDamage.push_back( MatchParticipant::DamageRecord{ source, _elapsed } );
     }
 
-    void MatchState::reportKill( int32 victim, int32 killer )
+    void MatchState::reportKill( int32 victim, optional<int32> killer )
     {
         if ( _phase != MatchPhase::InProgress || isValidParticipant( victim ) == false )
             return;
@@ -141,17 +140,17 @@ namespace sw
         ++dead._deaths;
         pushEvent( MatchEvent::Kind::Killed, victim, killer, dead._team, 0 );
 
-        const bool bEnemyKill = isValidParticipant( killer ) && TeamAttitudeUtil::isHostile( _listParticipant[static_cast<size_t>( killer )]._team, dead._team );
+        const bool bEnemyKill = killer.has_value() && isValidParticipant( *killer ) && TeamAttitudeUtil::isHostile( _listParticipant[static_cast<size_t>( *killer )]._team, dead._team );
         if ( bEnemyKill )
         {
-            MatchParticipant& slayer = _listParticipant[static_cast<size_t>( killer )];
+            MatchParticipant& slayer = _listParticipant[static_cast<size_t>( *killer )];
             ++slayer._kills;
             if ( _settings._scorePerKill != 0 )
                 addScore( slayer._team, _settings._scorePerKill );
         }
         for ( const MatchParticipant::DamageRecord& record : dead._listDamage )
         {
-            if ( record._attacker == killer || _elapsed - record._time > _settings._assistWindow )
+            if ( killer == record._attacker || _elapsed - record._time > _settings._assistWindow )
                 continue;
             MatchParticipant& helper = _listParticipant[static_cast<size_t>( record._attacker )];
             if ( TeamAttitudeUtil::isHostile( helper._team, dead._team ) == false )
@@ -186,7 +185,7 @@ namespace sw
             return;
         target._bEliminated = SW_TRUE;
         target._bAlive      = SW_FALSE;
-        pushEvent( MatchEvent::Kind::ParticipantEliminated, participant, constant::invalid_index::kInt32, target._team, 0 );
+        pushEvent( MatchEvent::Kind::ParticipantEliminated, participant, nullopt, target._team, 0 );
         if ( countStanding( target._team ) == 0 )
             eliminateTeam( target._team );
         resolveEndConditions();
@@ -213,7 +212,7 @@ namespace sw
             remaining += other._bEliminated ? 0 : 1;
         }
         target._placement = remaining + 1;
-        pushEvent( MatchEvent::Kind::TeamEliminated, constant::invalid_index::kInt32, constant::invalid_index::kInt32, team, target._placement );
+        pushEvent( MatchEvent::Kind::TeamEliminated, nullopt, nullopt, team, target._placement );
     }
 
     void MatchState::addScore( int32 team, int32 amount )
@@ -223,7 +222,7 @@ namespace sw
             return;
         MatchTeam& target = _listTeam[static_cast<size_t>( team )];
         target._score += amount;
-        pushEvent( MatchEvent::Kind::ScoreChanged, -1, -1, team, target._score );
+        pushEvent( MatchEvent::Kind::ScoreChanged, nullopt, nullopt, team, target._score );
         if ( _settings._scoreLimit > 0 && target._score >= _settings._scoreLimit )
             endMatch( team );
     }
@@ -289,7 +288,8 @@ namespace sw
         if ( _winningTeam >= 0 )
             _listTeam[static_cast<size_t>( _winningTeam )]._placement = 1;
         setPhase( MatchPhase::Ended );
-        pushEvent( MatchEvent::Kind::MatchEnded, constant::invalid_index::kInt32, constant::invalid_index::kInt32, _winningTeam, 0 );
+        const optional<int32> winner = _winningTeam >= 0 ? optional<int32>( _winningTeam ) : nullopt; // _winningTeam 은 저장 형식이라 무승부가 -1 이다
+        pushEvent( MatchEvent::Kind::MatchEnded, nullopt, nullopt, winner, 0 );
     }
 
     const MatchTeam* MatchState::findTeam( int32 team ) const
@@ -312,7 +312,7 @@ namespace sw
         return count;
     }
 
-    void MatchState::pushEvent( MatchEvent::Kind kind, int32 participant, int32 other, int32 team, int32 value )
+    void MatchState::pushEvent( MatchEvent::Kind kind, optional<int32> participant, optional<int32> other, optional<int32> team, int32 value )
     {
         MatchEvent event;
         event._kind        = kind;

@@ -10,6 +10,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -30,7 +31,8 @@ namespace sw
      *          언리얼의 `UObject::Serialize` 오버라이드와 유니티의 `ISerializationCallbackReceiver` 에 해당한다.
      *
      *          컴포넌트 쪽 약속은 다음과 같다. 템플릿이 이름으로 부른다.
-     *          - `void writeState( Archive& outArchive ) const`: 지금 상태를 쓴다(`SW_DECLARE_STATE_IO` 가 낸다). 첫 값은 그 컴포넌트의 형식 버전으로 둔다.
+     *          - `void serializeState( StateIO& io )`: 지금 상태를 쓴다(`StateIO::writeObject` 로 부른다 — `SW_DECLARE_STATE_IO` 가 낸다). 첫 값은 그 컴포넌트의 형식 버전으로 둔다.
+     *            손으로 짝지은 `writeState( Archive& )` 는 여기에 꽂을 수 없다 — 쓰기와 읽기의 칸 순서는 본문 하나가 정한다.
      *          - `void restoreState( vector<uint8>&& bytes )`: 다시 만든 컴포넌트가 받는다. 아직 `onBeginPlay` 전이면 보관했다가 시작할 때 적용한다.
      *            읽지 못하면(버전이나 길이가 맞지 않음) 알리고 새 판으로 시작한다.
      *
@@ -86,7 +88,7 @@ namespace sw
         [[nodiscard]] bool read( Archive& archive );
 
         /**
-         * @brief @p manager 의 @p TComponent 마다 `writeState` 를 불러 싣고, 실은 수를 반환합니다.
+         * @brief @p manager 의 @p TComponent 마다 `serializeState` 로 써서 싣고, 실은 수를 반환합니다.
          * @details 매니저 타입을 템플릿으로 받아서, 이 헤더는 오브젝트 매니저를 include 하지 않는다. 부르는 쪽은 이미 include 했다.
          */
         template <typename TComponent, typename TManager>
@@ -97,7 +99,7 @@ namespace sw
             manager.template forEachComponentOfType<TComponent>( [this, &typeName, &count]( TComponent* pComponent )
             {
                 Archive archive;
-                pComponent->writeState( archive );
+                StateIO::writeObject( *pComponent, archive );
                 vector<uint8> bytes;
                 archive.writeData( bytes );
                 add( typeName, pComponent->getComponentID(), std::move( bytes ) );
@@ -192,7 +194,7 @@ namespace sw
 
     /**
      * @class StatefulComponentRegistrar
-     * @brief @p TComponent 의 `writeState` / `restoreState` 를 `ComponentStateStore` 에 연결하는 정적 등록입니다.
+     * @brief @p TComponent 의 `serializeState` / `restoreState` 를 `ComponentStateStore` 에 연결하는 정적 등록입니다.
      * @details 오브젝트 매니저를 include 한 .cpp 에서 만든다(순회 템플릿이 그때 인스턴스화된다).
      *          `despawnViews()` 가 있는 타입(`GameModeComponent` 파생 — 키트의 부지 · 디렉터)은 상태를 실은 뒤 세운 것도 걷는다. 걷지 않으면 세운 오브젝트가 씬 섹션에 실려
      *          복원한 뒤 다시 세운 것과 겹친다 — 그래서 등록 한 줄이 둘을 함께 정한다(게임마다 `registerGameMode` 를 적지 않는다).

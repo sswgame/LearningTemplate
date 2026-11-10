@@ -28,6 +28,7 @@
 	<Expect watch="Editor.SelectedHandle" is="(none)"/>
 	<WaitUntil watch="Editor.InspectorMethodRows" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.InspectorHiddenMethods" equals="1"/>
+	<Expect watch="Editor.InspectorFilledRows" atLeast="1"/>
 	<CaptureEditorUI file="inspectormethods/default.png" maxMagentaFraction="0"/>
 	<!-- ② CallInEditor 호출은 되돌리기 한 단계 -->
 	<Remember watch="Editor.UndoIndex" as="undoBefore"/>

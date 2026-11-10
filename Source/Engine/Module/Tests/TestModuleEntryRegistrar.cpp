@@ -37,10 +37,10 @@ namespace
         /** @brief 만들 때 링크 목록에 달린 지역 등록자를 목록에서 다시 빼, 스택 객체가 목록에 남지 않게 합니다. */
         struct HeadGuard
         {
-            ModuleObjectRegistrar*& _head{ ModuleObjectRegistrar::getHead() };
-            ModuleObjectRegistrar*  _saved{ _head };
+            RegistrationChain<ModuleObjectRegistrar>& _chain{ ModuleObjectRegistrar::getChain() };
+            ModuleObjectRegistrar*                    _pSaved{ _chain.getHead() };
 
-            ~HeadGuard() { _head = _saved; }
+            ~HeadGuard() { _chain.resetHead( _pSaved ); }
         };
     };
 } // namespace

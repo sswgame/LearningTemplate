@@ -93,7 +93,7 @@ namespace sw
         , _bondExperience{}
         , _bondCurve{}
         , _survival{}
-        , _currency{ "Dollar" }
+        , _currency{} // 루트 `currency` 가 필수다(WesternCatalogRootDef)
         , _extraHitPenalty{ 1 }
     {
         _listGradeScale = { 0.0f, 0.3f, 0.6f, 1.0f };

@@ -41,9 +41,11 @@ namespace sw::editor
             static EditorSelfTestStep runModelRoundTrips( EditorSelfTestContext& context )
             {
                 BehaviorTreeEditModel model;
-                const int32           root = model.addNode( -1, BehaviorNodeKind::Selector );
-                const int32           wait = model.addNode( root, BehaviorNodeKind::Wait );
-                context.expect( root >= 0 && wait >= 0, "the model rejected a Selector with a Wait child" );
+                const expected<int32> root = model.addNode( -1, BehaviorNodeKind::Selector );
+                const expected<int32> wait = root.has_value() ? model.addNode( *root, BehaviorNodeKind::Wait ) : root;
+                context.expect( wait.has_value(), "the model rejected a Selector with a Wait child" );
+                if ( root.has_value() == false || wait.has_value() == false )
+                    return EditorSelfTestStep::Done; // 위 expect 가 이미 알렸다
                 string                text = model.write();
                 BehaviorTreeEditModel reread;
                 context.expect( reread.parse( text ).has_value(), "the model could not read what it wrote" );
@@ -68,12 +70,12 @@ namespace sw::editor
                 context.expect( authored.write().find( "repathDistance" ) == string::npos, "a default value was written out" );
 
                 // 하위 트리 복제는 바로 뒤 형제로 들어가고, 붙여 넣기는 고른 부모의 맨 뒤 자식이다. 루트 복제 · 잎 아래 붙이기는 모델을 그대로 둔다.
-                const expected<int32> copy = model.duplicateSubtree( wait );
-                context.expect( copy.has_value() && model.find( root )->_listChild.size() == 2 && model.find( root )->_listChild[1] == *copy, "duplicating a Wait did not add it right after the original" );
-                const expected<int32> pasted = model.pasteSubtree( root, model.writeSubtree( wait ), -1 );
-                context.expect( pasted.has_value() && model.find( root )->_listChild.back() == *pasted, "pasting a subtree did not append it under the parent" );
+                const expected<int32> copy = model.duplicateSubtree( *wait );
+                context.expect( copy.has_value() && model.find( *root )->_listChild.size() == 2 && model.find( *root )->_listChild[1] == *copy, "duplicating a Wait did not add it right after the original" );
+                const expected<int32> pasted = model.pasteSubtree( *root, model.writeSubtree( *wait ), -1 );
+                context.expect( pasted.has_value() && model.find( *root )->_listChild.back() == *pasted, "pasting a subtree did not append it under the parent" );
                 const uint32 nodeCount = model.getNodeCount();
-                context.expect( model.duplicateSubtree( root ).has_value() == false && model.pasteSubtree( wait, model.writeSubtree( wait ), -1 ).has_value() == false && model.getNodeCount() == nodeCount,
+                context.expect( model.duplicateSubtree( *root ).has_value() == false && model.pasteSubtree( *wait, model.writeSubtree( *wait ), -1 ).has_value() == false && model.getNodeCount() == nodeCount,
                                 "duplicating the root or pasting under a leaf changed the tree" );
                 return EditorSelfTestStep::Done;
             }

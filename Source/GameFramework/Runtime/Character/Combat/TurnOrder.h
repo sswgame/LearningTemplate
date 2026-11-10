@@ -75,7 +75,7 @@ namespace sw
         {
             float32 _speed{ 1.0f };
             float32 _gauge{ 0.0f }; ///< 타임라인제에서 다음 차례까지 남은 양
-            int32   _actorID{ constant::invalid_index::kInt32 };
+            int32   _actorID;       ///< 더할 때 채운다(`add`)
             int32   _priority{ 0 };
             uint32  _tieBreak{ 0 };
         };

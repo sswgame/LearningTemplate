@@ -621,7 +621,8 @@ namespace sw
                 const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );
                 for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
                 {
-                    if ( prop._metadata->_bRequired == SW_TRUE )
+                    // 열쇠 칸은 목록 원소를 쓸 때 따로 적는다 — 남기는 칸에 넣으면 바뀌지 않은 원소도 "내용이 있다" 로 보여 자식 파일에 모두 적힌다
+                    if ( prop._metadata->_bRequired == SW_TRUE && prop._metadata->_bInheritKey != SW_TRUE )
                         out._listKeptAttribute.emplace_back( prop._name.c_str() );
                     const bool      bContainer = prop._bIsContainer == SW_TRUE;
                     const bool      bNested    = prop._nestedContainer != nullptr && prop._nestedContainer->_elementNested != nullptr;
@@ -921,7 +922,7 @@ namespace sw
                     return false;
                 const string basePath = findBasePath( text );
                 string       relativePath;
-                if ( basePath.empty() == false && FileUtil::normalizePath( basePath ) == normalizedBase && FileUtil::tryMakePathUnderRoot( contentRoot, filePath, relativePath, true ) )
+                if ( basePath.empty() == false && FileUtil::normalizePath( basePath ) == normalizedBase && FileUtil::tryMakePathUnderRoot( contentRoot, filePath, relativePath ) )
                     outListChildID.push_back( FileUtil::normalizePath( relativePath ) );
             }
         }

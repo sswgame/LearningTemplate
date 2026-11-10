@@ -14,8 +14,6 @@
 namespace sw
 {
     struct FunctionParameterInfo;
-
-    class GameObjectManager;
 } // namespace sw
 
 namespace sw::editor
@@ -25,6 +23,7 @@ namespace sw::editor
     struct InspectorMethodArgSlot;
 
     class IInspectorProperty;
+    class PropertyGridModel;
 
     /** @brief 타입별 인스펙터 프로퍼티 UI 관리자 (EditorContext 소유) */
     class InspectorPropertyManager : public EditorSubsystem
@@ -56,11 +55,11 @@ namespace sw::editor
 
         /**
          * @brief CallInEditor 인자 필드 하나를 그 C++ 타입의 위젯으로 그립니다. 값이 바뀌었으면 true 입니다.
-         * @details 타입 핸들 인자(`FunctionParameterInfo::_handleTargetTypeName`)는 프로퍼티와 같은 선택기를 그린다 — @p pManager(편집 대상의 씬)에서 대상 타입의
-         *          컴포넌트만 고를 수 있다. 씬이나 대상 타입이 없으면 선택기 대신 오류 글이다(정수 입력으로 물러서지 않는다).
+         * @details 타입 핸들 인자(`FunctionParameterInfo::_handleTargetTypeName`)는 프로퍼티와 같은 선택기를 그린다 — @p model 의 편집 대상 씬에서 대상 타입의
+         *          컴포넌트만 고를 수 있다(`PropertyGridModel::collectComponentChoices`). 씬이나 대상 타입이 없으면 선택기 대신 오류 글이다(정수 입력으로 물러서지 않는다).
          * @param inoutListChoice 선택기 콤보가 열린 프레임에만 채우는 선택지 버퍼입니다. 부르는 그리드가 든다.
          */
-        static bool drawMethodArg( const utf8* pLabel, InspectorMethodArgSlot& slot, const FunctionParameterInfo& parameter, const GameObjectManager* pManager,
+        static bool drawMethodArg( const utf8* pLabel, InspectorMethodArgSlot& slot, const FunctionParameterInfo& parameter, const PropertyGridModel& model,
                                    vector<InspectorComponentChoice>& inoutListChoice );
 
     private:

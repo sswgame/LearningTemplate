@@ -54,7 +54,7 @@ namespace sw::editor
         uint64                  _objectHashMinTick{ 0 };    ///< `requestObjectHashes` 가 바란 가장 이른 틱 — 이보다 이른 답은 받지 않고 다시 묻는다
         uint32                  _objectHashReaskCount{ 0 }; ///< 그 요청에서 다시 물은 수(`kMaxObjectHashReask` 에서 멈춘다)
         atomic<int32>           _exitCode{ 0 };
-        atomic<uint32>          _exited{ 0 };            ///< 읽기 스레드가 파이프 끝을 보고 종료 코드를 거뒀다
+        atomic<uint32>          _exited{ 0 };            ///< 읽기 스레드가 파이프 끝을 봤다 — 1 이면 종료 코드를 거뒀고(`_exitCode`), 2 면 기다리지 못했다(까닭은 마지막 출력 줄)
         int32                   _processID{ 0 };         ///< 띄울 때의 pid(회수한 뒤에도 패널에 보인다)
         bool                    _bExitReported{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool                    _bConnected{ false };    ///< 클라이언트가 서버에 연결됐다는 줄을 남겼다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
@@ -329,8 +329,19 @@ namespace sw::editor
             ScopedLock<mutex> lock{ pChild->_mutex };
             pChild->_listPendingLine.push_back( line );
         }
-        pChild->_exitCode.store( pChild->_process.waitForExit() );
-        pChild->_exited.store( 1 );
+        const expected<int32> waited = pChild->_process.waitForExit();
+        if ( waited.has_value() )
+        {
+            pChild->_exitCode.store( *waited );
+            pChild->_exited.store( 1 );
+            return;
+        }
+        // 기다리지 못한 자식은 종료 코드가 없다 — 숫자로 꾸미지 않고 그 까닭을 출력 줄로 남겨 패널 · 끝 로그가 보이게 한다.
+        {
+            ScopedLock<mutex> lock{ pChild->_mutex };
+            pChild->_listPendingLine.push_back( "[net play] could not wait for the process: " + string( waited.error().message() ) + " " + string( waited.error().detail() ) );
+        }
+        pChild->_exited.store( 2 );
     }
 
     uint16 EditorNetPlaySession::findFreeUDPPort()
@@ -542,7 +553,10 @@ namespace sw::editor
             if ( child._exited.load() != 0 && child._bExitReported == false )
             {
                 child._bExitReported = true;
-                SW_LOG_WARNING_ID( "NetPlay.ExitedCodeDuringSession", "%# exited with code %# during the session - last line: %#", child._label, child._exitCode.load(), child._lastLine );
+                if ( child._exited.load() == 1 )
+                    SW_LOG_WARNING_ID( "NetPlay.ExitedCodeDuringSession", "%# exited with code %# during the session - last line: %#", child._label, child._exitCode.load(), child._lastLine );
+                else
+                    SW_LOG_WARNING_ID( "NetPlay.ExitedUnwaitedDuringSession", "%# stopped during the session and could not be waited for - last line: %#", child._label, child._lastLine );
             }
         }
         // 거두는 중인 프로세스의 줄도 옮긴다(끝날 때까지 나오는 줄 - 서버의 끊김 줄 등). 번호는 멈추기 전과 같다(목록을 통째로 옮겼다).
@@ -675,7 +689,8 @@ namespace sw::editor
         status._processID             = child._processID;
         status._bRunning              = child._exited.load() == 0;
         status._bConnected            = child._bConnected;
-        status._exitCode              = status._bRunning ? 0 : child._exitCode.load();
+        if ( child._exited.load() == 1 )
+            status._exitCode = child._exitCode.load(); // 2(기다리지 못함) · 0(돈다)은 종료 코드가 없다
         return status;
     }
 

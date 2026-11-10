@@ -997,7 +997,7 @@ namespace sw
         };
         const auto markUse = []( RenderTargetInfo& info, int32 passIndex )
         {
-            info._firstPass = info._firstPass < 0 ? passIndex : info._firstPass;
+            info._firstPass = info._firstPass.has_value() ? *info._firstPass : passIndex;
             info._lastPass  = passIndex;
         };
         for ( int32 passIndex = 0; passIndex < static_cast<int32>( listPass.size() ); ++passIndex )

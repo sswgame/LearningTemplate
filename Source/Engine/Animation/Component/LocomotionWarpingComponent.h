@@ -105,7 +105,7 @@ namespace sw
 
         PROPERTY( Category = "Stride", DisplayName = "Stride Warping", Tooltip = "Scale the play rate by actual speed / clip speed" )
         bool _bStrideWarping;
-        PROPERTY( Category = "Stride", DisplayName = "Speed Curve", Tooltip = "Clip curve holding the authored movement speed (m/s)" )
+        PROPERTY( Required, Category = "Stride", DisplayName = "Speed Curve", Tooltip = "Clip curve holding the authored movement speed (m/s)" )
         hashed_string _speedCurve;
         PROPERTY( Category = "Stride", DisplayName = "Min Play Rate", Min = 0.1, Max = 4.0 )
         float32 _minPlayRate;

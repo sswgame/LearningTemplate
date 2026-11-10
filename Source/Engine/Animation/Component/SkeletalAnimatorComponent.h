@@ -252,8 +252,8 @@ namespace sw
         /** @brief 현재 상태 이름을 반환합니다. */
         const hashed_string& getCurrentStateName() const { return _graphPlayer.getCurrentStateName(); }
 
-        /** @brief 레이어를 더하고 그 인덱스를 반환합니다. 클립을 못 찾으면 -1 입니다. */
-        int32 addLayer( const AnimationLayerDef& desc );
+        /** @brief 레이어를 더하고 그 인덱스를 반환합니다. 클립을 못 찾으면 오류를 남기고 이유를 돌려줍니다. */
+        [[nodiscard]] expected<uint32> addLayer( const AnimationLayerDef& desc );
         /** @brief 레이어 가중치를 바꿉니다. */
         void setLayerWeight( uint32 layerIndex, float32 weight );
         /** @brief 레이어 클립을 처음부터 다시 재생합니다(맞음 움찔처럼 한 번 도는 가산 레이어). */
@@ -472,6 +472,8 @@ namespace sw
         void accumulateClipCurves( const AnimationClip& clip, float32 time, float32 weight );
         /** @brief 레이어 하나를 @p inoutPose 에 얹습니다. */
         void applyLayer( LayerState& layer, const Skeleton& skeleton, Pose& inoutPose, const uint8* pBoneMask );
+        /** @brief 마스크의 맨 위 뼈(부모가 마스크 밖)의 레이어 로컬 회전을, 레이어의 메시 공간 방향이 기준 포즈의 부모 아래에서 그대로 나오게 바꿉니다(`AnimationLayerBlend::OverrideMeshSpace`). */
+        void alignMaskRootsInMeshSpace( const Skeleton& skeleton, const Pose& basePose, const float32* pBoneWeight, Pose& inoutLayerPose );
         /** @brief 클립의 트랙에서 본으로 가는 테이블입니다(유닛 스켈레톤 기준이며, 처음 쓸 때 만듭니다). */
         const vector<optional<uint32>>& getTrackMap( const AnimationClip& clip, const Skeleton& skeleton );
         /**
@@ -553,6 +555,8 @@ namespace sw
         Pose                                                          _scratchPose;
         Pose                                                          _scratchTrackPose;
         Pose                                                          _scratchLayerPose;
+        vector<float4x4>                                              _listBaseModelScratch;  ///< 메시 공간 덮기의 기준 포즈 모델 공간(프레임마다 다시 쓴다)
+        vector<float4x4>                                              _listLayerModelScratch; ///< 메시 공간 덮기의 레이어 포즈 모델 공간
         Pose                                                          _scratchLinkedPose;
         vector<uint8>                                                 _listScratchTrackMask; ///< 본 LOD 마스크를 트랙 순서로 옮긴 것(샘플마다 재사용)
         PoseHistory                                                   _baseHistory;          ///< 화면에 보인 지난 기본 포즈(레이어 전)다. 페이드가 끊기면 · inertialization 이 여기서 출발한다

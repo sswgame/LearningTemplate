@@ -8,6 +8,7 @@
 #include "Core/Foundation/EnumUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Registry/RegistrationChain.h"
 #include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Task/TaskTypes.h"
 
@@ -359,42 +360,34 @@ namespace sw
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 7) TypeRegistrar: 정적 초기화로 Type 등록 함수를 체인에 연결한다.
-    //    Core TU 는 getHead(), 핫 리로드 모듈은 모듈 로컬 헤드를 쓴다.
+    // 7) TypeRegistrar: 정적 초기화로 Type 등록 함수를 사슬(`getChain`)에 단다. 올리는 쪽(`engine::registerModuleTypes`)이 이미지마다 걷어 간다.
     // ------------------------------------------------------------------------------
     struct SW_API TypeRegistrar
     {
         void ( *_registerFunc )( TypeRegistry& ); ///< TypeRegistry에 TypeInfo를 넣는 함수
-        TypeRegistrar* _pNext;                    ///< 같은 헤드의 다음 registrar
+        TypeRegistrar* _pNext;                    ///< 같은 사슬의 다음(먼저 만든) registrar
 
-        /** @brief Engine.dll(Core OBJECT) 전용 registrar 리스트 헤드입니다. */
-        static TypeRegistrar*& getHead();
+        /** @brief 아직 걷히지 않은 registrar 사슬입니다(Engine 이미지가 가진다). */
+        static RegistrationChain<TypeRegistrar>& getChain();
 
-        /** @brief Engine.dll(Core OBJECT) 정적 등록에 사용합니다. */
         TypeRegistrar( void ( *registerFunc )( TypeRegistry& ) );
-        /** @brief 핫 리로드 모듈 등 외부 registrar 등록에 사용합니다. */
-        TypeRegistrar( void ( *registerFunc )( TypeRegistry& ), TypeRegistrar*& pModuleHead );
     };
 } // namespace sw
 
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 8) EnumRegistrar: 정적 초기화로 Enum 등록 함수를 체인에 연결한다.
-    //    Core TU 는 getHead(), 핫 리로드 모듈은 모듈 로컬 헤드를 쓴다.
+    // 8) EnumRegistrar: 정적 초기화로 Enum 등록 함수를 사슬(`getChain`)에 단다(TypeRegistrar 와 같다).
     // ------------------------------------------------------------------------------
     struct SW_API EnumRegistrar
     {
         void ( *_registerFunc )( TypeRegistry& ); ///< TypeRegistry에 EnumInfo를 넣는 함수
-        EnumRegistrar* _pNext;                    ///< 같은 헤드의 다음 registrar
+        EnumRegistrar* _pNext;                    ///< 같은 사슬의 다음(먼저 만든) registrar
 
-        /** @brief Engine.dll(Core OBJECT) 전용 enum registrar 리스트 헤드입니다. */
-        static EnumRegistrar*& getHead();
+        /** @brief 아직 걷히지 않은 enum registrar 사슬입니다(Engine 이미지가 가진다). */
+        static RegistrationChain<EnumRegistrar>& getChain();
 
-        /** @brief Engine.dll(Core OBJECT) 정적 등록에 사용합니다. */
         EnumRegistrar( void ( *registerFunc )( TypeRegistry& ) );
-        /** @brief 핫 리로드 모듈 등 외부 registrar 등록에 사용합니다. */
-        EnumRegistrar( void ( *registerFunc )( TypeRegistry& ), EnumRegistrar*& pModuleHead );
     };
 
     // ------------------------------------------------------------------------------

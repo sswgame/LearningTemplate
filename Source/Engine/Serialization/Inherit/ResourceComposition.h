@@ -11,6 +11,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -141,7 +142,7 @@ namespace sw
         {
             int32               _peer{ 0 };
             ResourceDigestEntry _entry{};
-            int64               _suspectStartTime{ -1 }; ///< 어긋남을 처음 본 때. 음수면 맞다
+            optional<int64>     _suspectStartTime; ///< 어긋남을 처음 본 때. 비어 있으면 맞다
         };
 
         const ResourceComposition& _composition;

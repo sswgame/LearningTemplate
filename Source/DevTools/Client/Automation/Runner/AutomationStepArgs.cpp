@@ -120,8 +120,13 @@ namespace sw
         if ( bPlainName == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "golden must be a plain name (no path, no dot)", params._golden } );
         ExpectImageArgs args;
-        args._golden    = params._golden;
-        args._tolerance = params._tolerance;
+        args._golden = params._golden;
+        if ( step.findAttribute( "tolerance" ) != nullptr )
+            args._maxDifferingFraction = static_cast<float64>( params._tolerance );
+        if ( step.findAttribute( "maxMeanDistance" ) != nullptr )
+            args._maxMeanDistance = static_cast<float64>( params._maxMeanDistance );
+        if ( step.findAttribute( "maxRegionPixels" ) != nullptr )
+            args._maxDeepRegionPixels = params._maxRegionPixels;
         if ( params._region.empty() == false && AutomationImage::tryParseRegion( params._region, args._region ) == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "region must be x0,y0,x1,y1 in 0..1 with x0<x1 and y0<y1", params._region } );
         return args;

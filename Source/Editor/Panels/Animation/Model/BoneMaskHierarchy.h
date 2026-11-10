@@ -7,6 +7,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
@@ -32,9 +33,9 @@ namespace sw::editor
     struct BoneMaskBoneRow
     {
         hashed_string        _bone{};
-        int32                _parentIndex{ -1 }; ///< 부모 줄 번호(루트 -1)
-        uint32               _depth{ 0 };        ///< 루트 0 부터의 깊이(들여쓰기)
-        float32              _weight{ 0.0f };    ///< 런타임이 쓸 최종 가중치
+        optional<uint32>     _parentIndex;    ///< 부모 줄 번호(루트는 비어 있다)
+        uint32               _depth{ 0 };     ///< 루트 0 부터의 깊이(들여쓰기)
+        float32              _weight{ 0.0f }; ///< 런타임이 쓸 최종 가중치
         BoneMaskWeightSource _source{ BoneMaskWeightSource::None };
     };
 

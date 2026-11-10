@@ -10,10 +10,10 @@
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 
-#include "Engine/Animation/Component/PoseModifierComponent.h"
 #include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Rig/RigInstance.h"
 #include "Engine/Animation/Rig/RigNode.h"
+#include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/XML/XMLDocument.h"

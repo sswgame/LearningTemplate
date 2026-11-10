@@ -99,8 +99,8 @@ namespace sw
 
     ElementStatusComponent::ElementStatusComponent()
         : _tablePath{}
-        , _material{ "Torch" }
-        , _signalStatus{ "Burning" }
+        , _material{}
+        , _signalStatus{}
         , _startStimulus{}
         , _grid{}
         , _pTable{}

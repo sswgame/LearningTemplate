@@ -49,10 +49,10 @@ namespace sw
     /** @brief 노드 출력이 바뀐 일 하나입니다(런타임 기믹 디버거가 읽는다 — `GimmickCircuit::collectRecentTransitions`). */
     struct GimmickOutputTransition
     {
-        uint32 _stepIndex{ 0 };                          ///< 바뀐 스텝(그 스텝을 실행하기 전의 번호)
-        int32  _node{ constant::invalid_index::kInt32 }; ///< 노드 순서 번호
-        uint32 _beforeBits{ 0 };                         ///< 바뀌기 전 출력 비트
-        uint32 _afterBits{ 0 };                          ///< 바뀐 뒤 출력 비트
+        uint32 _stepIndex{ 0 };  ///< 바뀐 스텝(그 스텝을 실행하기 전의 번호)
+        int32  _node;            ///< 노드 순서 번호(전이를 적을 때 채운다)
+        uint32 _beforeBits{ 0 }; ///< 바뀌기 전 출력 비트
+        uint32 _afterBits{ 0 };  ///< 바뀐 뒤 출력 비트
     };
 } // namespace sw
 

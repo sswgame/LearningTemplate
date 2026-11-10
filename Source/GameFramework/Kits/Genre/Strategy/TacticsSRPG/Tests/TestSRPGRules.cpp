@@ -70,7 +70,7 @@ namespace
 
         void open( int32 width = 8, int32 height = 8 ) { _field.initialize( &_catalog, width, height, "plain", _settings, 7 ); }
 
-        int32 place( const sw::hashed_string& unitID, sw::SRPGTeam team, const sw::int2& cell ) { return _field.addUnit( unitID, "rookie", team, cell ); }
+        sw::expected<int32> place( const sw::hashed_string& unitID, sw::SRPGTeam team, const sw::int2& cell ) { return _field.addUnit( unitID, "rookie", team, cell ); }
 
         int32 countEvents( sw::SRPGEvent::Kind kind )
         {
@@ -147,14 +147,14 @@ SW_TEST_CASE_F( SRPGRulesTest, StrikeFormula )
     open();
     SW_REQUIRE_TRUE( _field.setTerrain( sw::int2{ 3, 0 }, "forest" ) );
     SW_REQUIRE_TRUE( _field.setTerrain( sw::int2{ 0, 3 }, "lake" ) );
-    const int32 rookie = place( "gm", sw::SRPGTeam::Player, sw::int2{ 0, 0 } );
-    const int32 ace    = _field.addUnit( "gm", "ace", sw::SRPGTeam::Player, sw::int2{ 1, 1 } );
-    const int32 onLake = place( "gm", sw::SRPGTeam::Player, sw::int2{ 0, 3 } );
-    const int32 plainT = place( "gm", sw::SRPGTeam::Enemy, sw::int2{ 1, 0 } );
-    const int32 forest = place( "gm", sw::SRPGTeam::Enemy, sw::int2{ 3, 0 } );
-    const int32 bigT   = place( "big", sw::SRPGTeam::Enemy, sw::int2{ 4, 0 } );
-    const int32 heavyT = place( "heavy", sw::SRPGTeam::Enemy, sw::int2{ 5, 0 } );
-    const int32 keen   = place( "striker", sw::SRPGTeam::Player, sw::int2{ 6, 6 } );
+    const int32 rookie = place( "gm", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ).value();
+    const int32 ace    = _field.addUnit( "gm", "ace", sw::SRPGTeam::Player, sw::int2{ 1, 1 } ).value();
+    const int32 onLake = place( "gm", sw::SRPGTeam::Player, sw::int2{ 0, 3 } ).value();
+    const int32 plainT = place( "gm", sw::SRPGTeam::Enemy, sw::int2{ 1, 0 } ).value();
+    const int32 forest = place( "gm", sw::SRPGTeam::Enemy, sw::int2{ 3, 0 } ).value();
+    const int32 bigT   = place( "big", sw::SRPGTeam::Enemy, sw::int2{ 4, 0 } ).value();
+    const int32 heavyT = place( "heavy", sw::SRPGTeam::Enemy, sw::int2{ 5, 0 } ).value();
+    const int32 keen   = place( "striker", sw::SRPGTeam::Player, sw::int2{ 6, 6 } ).value();
     const auto  strike = [this]( int32 attacker, int32 weapon, int32 defender, int32 percent = 100 )
     { return sw::SRPGCombat::computeStrike( _field, attacker, unit( attacker )._cell, weapon, defender, unit( defender )._cell, percent ); };
 
@@ -210,10 +210,10 @@ SW_TEST_CASE_F( SRPGRulesTest, StrikeFormula )
 SW_TEST_CASE_F( SRPGRulesTest, WeaponStatusAndForecastRefusals )
 {
     open();
-    const int32   attacker   = place( "gm", sw::SRPGTeam::Player, sw::int2{ 0, 0 } );
-    const int32   ally       = place( "dummy", sw::SRPGTeam::Player, sw::int2{ 0, 1 } );
-    const int32   closeFoe   = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 1, 0 } );
-    const int32   distantFoe = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 7, 7 } );
+    const int32   attacker   = place( "gm", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ).value();
+    const int32   ally       = place( "dummy", sw::SRPGTeam::Player, sw::int2{ 0, 1 } ).value();
+    const int32   closeFoe   = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 1, 0 } ).value();
+    const int32   distantFoe = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 7, 7 } ).value();
     sw::SRPGUnit& shooter    = unit( attacker );
 
     SW_EXPECT_EQUAL( sw::SRPGWeaponStatus::InvalidWeapon, _field.computeWeaponStatus( shooter, 9, false ) );
@@ -251,9 +251,9 @@ SW_TEST_CASE_F( SRPGRulesTest, WeaponStatusAndForecastRefusals )
 SW_TEST_CASE_F( SRPGRulesTest, ExecuteAttackAppliesEverything )
 {
     open();
-    const int32 attacker = place( "striker", sw::SRPGTeam::Player, sw::int2{ 0, 0 } );
-    const int32 rifleman = place( "gm", sw::SRPGTeam::Player, sw::int2{ 0, 1 } );
-    const int32 target   = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 1, 0 } );
+    const int32 attacker = place( "striker", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ).value();
+    const int32 rifleman = place( "gm", sw::SRPGTeam::Player, sw::int2{ 0, 1 } ).value();
+    const int32 target   = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 1, 0 } ).value();
     _field.beginBattle();
 
     sw::SRPGCombatResult result;
@@ -288,8 +288,8 @@ SW_TEST_CASE_F( SRPGRulesTest, ExecuteAttackAppliesEverything )
 SW_TEST_CASE_F( SRPGRulesTest, CritAndKill )
 {
     open();
-    const int32 attacker = place( "striker", sw::SRPGTeam::Player, sw::int2{ 0, 0 } );
-    const int32 tough    = place( "weak", sw::SRPGTeam::Enemy, sw::int2{ 1, 0 } );
+    const int32 attacker = place( "striker", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ).value();
+    const int32 tough    = place( "weak", sw::SRPGTeam::Enemy, sw::int2{ 1, 0 } ).value();
     _field.beginBattle();
     unit( tough )._hp = 2000;
 
@@ -317,9 +317,9 @@ SW_TEST_CASE_F( SRPGRulesTest, CritAndKill )
 SW_TEST_CASE_F( SRPGRulesTest, XPMoraleAndDamageBounds )
 {
     open();
-    const int32 attacker = place( "striker", sw::SRPGTeam::Player, sw::int2{ 0, 0 } );
-    const int32 senior   = _field.addUnit( "dummy", "rookie", sw::SRPGTeam::Enemy, sw::int2{ 1, 0 }, 3 );
-    const int32 junior   = _field.addUnit( "dummy", "rookie", sw::SRPGTeam::Enemy, sw::int2{ 2, 0 }, 1 );
+    const int32 attacker = place( "striker", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ).value();
+    const int32 senior   = _field.addUnit( "dummy", "rookie", sw::SRPGTeam::Enemy, sw::int2{ 1, 0 }, 3 ).value();
+    const int32 junior   = _field.addUnit( "dummy", "rookie", sw::SRPGTeam::Enemy, sw::int2{ 2, 0 }, 1 ).value();
     _field.beginBattle();
 
     sw::SRPGCombatResult result;
@@ -331,8 +331,8 @@ SW_TEST_CASE_F( SRPGRulesTest, XPMoraleAndDamageBounds )
     stingy._xpLevelStep     = 100;
     sw::SRPGBattlefield poor;
     poor.initialize( &_catalog, 8, 8, "plain", stingy, 7 );
-    const int32 elder = poor.addUnit( "striker", "rookie", sw::SRPGTeam::Player, sw::int2{ 0, 0 }, 9 );
-    const int32 kid   = poor.addUnit( "dummy", "rookie", sw::SRPGTeam::Enemy, sw::int2{ 1, 0 }, 1 );
+    const int32 elder = poor.addUnit( "striker", "rookie", sw::SRPGTeam::Player, sw::int2{ 0, 0 }, 9 ).value();
+    const int32 kid   = poor.addUnit( "dummy", "rookie", sw::SRPGTeam::Enemy, sw::int2{ 1, 0 }, 1 ).value();
     poor.beginBattle();
     const int64 before = poor.findUnit( elder )->_pilotLevel.getTotalXP();
     SW_REQUIRE_EQUAL( sw::SRPGWeaponStatus::Ok, sw::SRPGCombat::executeAttack( poor, elder, 0, kid, result ) );
@@ -356,10 +356,10 @@ SW_TEST_CASE_F( SRPGRulesTest, XPMoraleAndDamageBounds )
 SW_TEST_CASE_F( SRPGRulesTest, CounterAttack )
 {
     open();
-    const int32 attacker = place( "striker", sw::SRPGTeam::Player, sw::int2{ 0, 0 } );
-    const int32 fighter  = place( "weak", sw::SRPGTeam::Enemy, sw::int2{ 2, 0 } );
-    const int32 distant  = place( "weak", sw::SRPGTeam::Enemy, sw::int2{ 5, 0 } );
-    const int32 unarmed  = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 0, 2 } );
+    const int32 attacker = place( "striker", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ).value();
+    const int32 fighter  = place( "weak", sw::SRPGTeam::Enemy, sw::int2{ 2, 0 } ).value();
+    const int32 distant  = place( "weak", sw::SRPGTeam::Enemy, sw::int2{ 5, 0 } ).value();
+    const int32 unarmed  = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 0, 2 } ).value();
     _field.beginBattle();
     SW_EXPECT_TRUE( sw::SRPGCombat::findCounterWeapon( _field, fighter, attacker, unit( attacker )._cell ) == 1 ); // pea 보다 sure
     SW_EXPECT_FALSE( sw::SRPGCombat::findCounterWeapon( _field, distant, attacker, unit( attacker )._cell ).has_value() );
@@ -384,11 +384,11 @@ SW_TEST_CASE_F( SRPGRulesTest, SupportDefense )
 {
     _settings._bSupportDefense = SW_TRUE;
     open();
-    const int32 first   = place( "striker", sw::SRPGTeam::Player, sw::int2{ 0, 0 } );
-    const int32 second  = place( "striker", sw::SRPGTeam::Player, sw::int2{ 0, 2 } );
-    const int32 target  = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 2, 1 } );
-    const int32 guard   = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 3, 1 } );
-    const int32 fragile = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 2, 2 } );
+    const int32 first   = place( "striker", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ).value();
+    const int32 second  = place( "striker", sw::SRPGTeam::Player, sw::int2{ 0, 2 } ).value();
+    const int32 target  = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 2, 1 } ).value();
+    const int32 guard   = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 3, 1 } ).value();
+    const int32 fragile = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 2, 2 } ).value();
     _field.beginBattle();
     unit( fragile )._hp = 1125; // 크리티컬 1125 에 쓰러진다
     unit( guard )._hp   = 2500;
@@ -417,10 +417,10 @@ SW_TEST_CASE_F( SRPGRulesTest, SupportAttack )
 {
     _settings._bSupportAttack = SW_TRUE;
     open();
-    const int32 attacker = place( "striker", sw::SRPGTeam::Player, sw::int2{ 0, 0 } );
-    const int32 helper   = place( "gm", sw::SRPGTeam::Player, sw::int2{ 0, 1 } );
-    const int32 tall     = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 1, 0 } );
-    const int32 frail    = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 1, 1 } );
+    const int32 attacker = place( "striker", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ).value();
+    const int32 helper   = place( "gm", sw::SRPGTeam::Player, sw::int2{ 0, 1 } ).value();
+    const int32 tall     = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 1, 0 } ).value();
+    const int32 frail    = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 1, 1 } ).value();
     _field.beginBattle();
     unit( tall )._hp  = 100000;
     unit( frail )._hp = 1;
@@ -448,10 +448,10 @@ SW_TEST_CASE_F( SRPGRulesTest, SyncAttack )
 {
     _settings._bSyncAttack = SW_TRUE;
     open();
-    const int32 attacker = place( "striker", sw::SRPGTeam::Player, sw::int2{ 0, 0 } );
-    const int32 partner  = place( "gm", sw::SRPGTeam::Player, sw::int2{ 0, 2 } );
-    const int32 outside  = place( "runner", sw::SRPGTeam::Player, sw::int2{ 7, 7 } );
-    const int32 target   = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 1, 0 } );
+    const int32 attacker = place( "striker", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ).value();
+    const int32 partner  = place( "gm", sw::SRPGTeam::Player, sw::int2{ 0, 2 } ).value();
+    const int32 outside  = place( "runner", sw::SRPGTeam::Player, sw::int2{ 7, 7 } ).value();
+    const int32 target   = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 1, 0 } ).value();
     (void)outside;
     _field.beginBattle();
     unit( target )._hp           = 100000;
@@ -472,9 +472,9 @@ SW_TEST_CASE_F( SRPGRulesTest, SyncAttack )
 
     sw::SRPGBattlefield second;
     second.initialize( &_catalog, 8, 8, "plain", _settings, 7 );
-    const int32 killer = second.addUnit( "striker", "rookie", sw::SRPGTeam::Player, sw::int2{ 0, 0 } );
+    const int32 killer = second.addUnit( "striker", "rookie", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ).value();
     (void)second.addUnit( "striker", "rookie", sw::SRPGTeam::Player, sw::int2{ 0, 2 } );
-    const int32 victim = second.addUnit( "dummy", "rookie", sw::SRPGTeam::Enemy, sw::int2{ 1, 0 } );
+    const int32 victim = second.addUnit( "dummy", "rookie", sw::SRPGTeam::Enemy, sw::int2{ 1, 0 } ).value();
     second.beginBattle();
     second.findUnit( victim )->_hp = 1;
     SW_REQUIRE_EQUAL( sw::SRPGWeaponStatus::Ok, sw::SRPGCombat::executeAttack( second, killer, 0, victim, result ) );
@@ -487,7 +487,7 @@ SW_TEST_CASE_F( SRPGRulesTest, SyncAttack )
 SW_TEST_CASE_F( SRPGRulesTest, MapWeaponCells )
 {
     open();
-    const int32          gm = place( "gm", sw::SRPGTeam::Player, sw::int2{ 2, 2 } );
+    const int32          gm = place( "gm", sw::SRPGTeam::Player, sw::int2{ 2, 2 } ).value();
     sw::vector<sw::int2> listCell;
 
     SW_REQUIRE_TRUE( _field.collectMapCells( gm, 3, sw::int2{ 7, 3 }, listCell ) ); // 동쪽이 더 멀다
@@ -509,7 +509,7 @@ SW_TEST_CASE_F( SRPGRulesTest, MapWeaponCells )
     SW_EXPECT_FALSE( _field.collectMapCells( gm, 0, sw::int2{ 3, 2 }, listCell ) ); // MAP 병기가 아니다
     SW_EXPECT_FALSE( _field.collectMapCells( 99, 3, sw::int2{ 3, 2 }, listCell ) );
 
-    const int32 corner = place( "gm", sw::SRPGTeam::Player, sw::int2{ 0, 0 } );
+    const int32 corner = place( "gm", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ).value();
     SW_REQUIRE_TRUE( _field.collectMapCells( corner, 3, sw::int2{ -5, 0 }, listCell ) );
     SW_EXPECT_TRUE( listCell.empty() );
 }
@@ -520,9 +520,9 @@ SW_TEST_CASE_F( SRPGRulesTest, MapWeaponCells )
 SW_TEST_CASE_F( SRPGRulesTest, MapAttack )
 {
     open();
-    const int32 gm       = place( "gm", sw::SRPGTeam::Player, sw::int2{ 2, 2 } );
-    const int32 closeFoe = place( "weak", sw::SRPGTeam::Enemy, sw::int2{ 3, 2 } );
-    const int32 next     = place( "weak", sw::SRPGTeam::Enemy, sw::int2{ 4, 2 } );
+    const int32 gm       = place( "gm", sw::SRPGTeam::Player, sw::int2{ 2, 2 } ).value();
+    const int32 closeFoe = place( "weak", sw::SRPGTeam::Enemy, sw::int2{ 3, 2 } ).value();
+    const int32 next     = place( "weak", sw::SRPGTeam::Enemy, sw::int2{ 4, 2 } ).value();
     (void)place( "dummy", sw::SRPGTeam::Player, sw::int2{ 2, 3 } );
     (void)place( "dummy", sw::SRPGTeam::Third, sw::int2{ 2, 1 } );
     _field.beginBattle();
@@ -546,8 +546,8 @@ SW_TEST_CASE_F( SRPGRulesTest, MapAttack )
     _settings._bMapFriendlyFire = SW_TRUE;
     sw::SRPGBattlefield friendly;
     friendly.initialize( &_catalog, 8, 8, "plain", _settings, 7 );
-    const int32 shooter = friendly.addUnit( "gm", "rookie", sw::SRPGTeam::Player, sw::int2{ 2, 2 } );
-    const int32 buddy   = friendly.addUnit( "dummy", "rookie", sw::SRPGTeam::Player, sw::int2{ 2, 3 } );
+    const int32 shooter = friendly.addUnit( "gm", "rookie", sw::SRPGTeam::Player, sw::int2{ 2, 2 } ).value();
+    const int32 buddy   = friendly.addUnit( "dummy", "rookie", sw::SRPGTeam::Player, sw::int2{ 2, 3 } ).value();
     friendly.beginBattle();
     SW_REQUIRE_EQUAL( sw::SRPGWeaponStatus::Ok, sw::SRPGCombat::executeMapAttack( friendly, shooter, 3, sw::int2{ 2, 7 }, result ) );
     SW_EXPECT_EQUAL( 1500, friendly.findUnit( buddy )->_hp );
@@ -565,10 +565,10 @@ SW_TEST_CASE_F( SRPGRulesTest, CombatIsDeterministic )
     sw::vector<int32> listAttacker;
     for ( int32 column = 0; column < 6; ++column )
     {
-        listAttacker.push_back( place( "gm", sw::SRPGTeam::Player, sw::int2{ column, 0 } ) );
+        listAttacker.push_back( place( "gm", sw::SRPGTeam::Player, sw::int2{ column, 0 } ).value() );
         (void)twin.addUnit( "gm", "rookie", sw::SRPGTeam::Player, sw::int2{ column, 0 } );
     }
-    const int32 target = place( "heavy", sw::SRPGTeam::Enemy, sw::int2{ 3, 2 } );
+    const int32 target = place( "heavy", sw::SRPGTeam::Enemy, sw::int2{ 3, 2 } ).value();
     (void)twin.addUnit( "heavy", "rookie", sw::SRPGTeam::Enemy, sw::int2{ 3, 2 } );
     _field.beginBattle();
     twin.beginBattle();
@@ -596,30 +596,30 @@ SW_TEST_CASE_F( SRPGRulesTest, PlacingAndTerrain )
     SW_EXPECT_LOG( "SRPGBattlefield.CannotPlaceUnitPilot" );
     SW_EXPECT_LOG( "SRPGBattlefield.UnknownDefaultTerrainCells" );
     open( 4, 4 );
-    SW_EXPECT_EQUAL( -1, _field.addUnit( "nothing", "rookie", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ) );
-    SW_EXPECT_EQUAL( -1, _field.addUnit( "gm", "nobody", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ) );
-    SW_EXPECT_EQUAL( -1, place( "gm", sw::SRPGTeam::Player, sw::int2{ 4, 0 } ) );
-    SW_EXPECT_EQUAL( -1, place( "gm", sw::SRPGTeam::Player, sw::int2{ 0, -1 } ) );
+    SW_EXPECT_FALSE( _field.addUnit( "nothing", "rookie", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ).has_value() );
+    SW_EXPECT_FALSE( _field.addUnit( "gm", "nobody", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ).has_value() );
+    SW_EXPECT_FALSE( place( "gm", sw::SRPGTeam::Player, sw::int2{ 4, 0 } ).has_value() );
+    SW_EXPECT_FALSE( place( "gm", sw::SRPGTeam::Player, sw::int2{ 0, -1 } ).has_value() );
 
     SW_EXPECT_EQUAL( 4, _field.fillTerrain( sw::int2{ 3, 1 }, sw::int2{ 2, 0 }, "wall" ) ); // 뒤집어 적어도 된다
     SW_EXPECT_EQUAL( 1, _field.fillTerrain( sw::int2{ 3, 2 }, sw::int2{ 4, 2 }, "wall" ) ); // 격자 안만 센다
     SW_EXPECT_EQUAL( 0, _field.fillTerrain( sw::int2{ 0, 0 }, sw::int2{ 1, 1 }, "nothing" ) );
     SW_EXPECT_FALSE( _field.setTerrain( sw::int2{ 9, 9 }, "wall" ) );
-    SW_EXPECT_EQUAL( -1, place( "gm", sw::SRPGTeam::Player, sw::int2{ 2, 0 } ) ); // 벽
+    SW_EXPECT_FALSE( place( "gm", sw::SRPGTeam::Player, sw::int2{ 2, 0 } ).has_value() ); // 벽
 
     SW_REQUIRE_TRUE( _field.setTerrain( sw::int2{ 1, 3 }, "void" ) );
-    SW_EXPECT_EQUAL( -1, place( "gm", sw::SRPGTeam::Player, sw::int2{ 1, 3 } ) ); // 우주 적성 없음
-    SW_EXPECT_TRUE( place( "dummy", sw::SRPGTeam::Player, sw::int2{ 1, 3 } ) >= 0 );
+    SW_EXPECT_FALSE( place( "gm", sw::SRPGTeam::Player, sw::int2{ 1, 3 } ).has_value() ); // 우주 적성 없음
+    SW_EXPECT_TRUE( place( "dummy", sw::SRPGTeam::Player, sw::int2{ 1, 3 } ).has_value() );
 
-    const int32 first = place( "gm", sw::SRPGTeam::Player, sw::int2{ 0, 0 } );
+    const int32 first = place( "gm", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ).value();
     SW_REQUIRE_TRUE( first >= 0 );
-    SW_EXPECT_EQUAL( -1, place( "gm", sw::SRPGTeam::Enemy, sw::int2{ 0, 0 } ) ); // 겹침
+    SW_EXPECT_FALSE( place( "gm", sw::SRPGTeam::Enemy, sw::int2{ 0, 0 } ).has_value() ); // 겹침
     unit( first )._bAlive = SW_FALSE;
-    SW_EXPECT_TRUE( place( "gm", sw::SRPGTeam::Enemy, sw::int2{ 0, 0 } ) >= 0 ); // 격파된 유닛의 셀은 비었다
+    SW_EXPECT_TRUE( place( "gm", sw::SRPGTeam::Enemy, sw::int2{ 0, 0 } ).has_value() ); // 격파된 유닛의 셀은 비었다
 
     sw::SRPGBattlefield noGround;
     noGround.initialize( &_catalog, 2, 2, "nothing", _settings, 7 );
-    SW_EXPECT_EQUAL( -1, noGround.addUnit( "gm", "rookie", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ) );
+    SW_EXPECT_FALSE( noGround.addUnit( "gm", "rookie", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ).has_value() );
     SW_EXPECT_TRUE( noGround.findTerrainAt( sw::int2{ 0, 0 } ) == nullptr );
     SW_EXPECT_EQUAL( 0, noGround.computeAptitude( *_field.findUnit( first ), sw::int2{ 0, 0 } ) );
 }
@@ -632,8 +632,8 @@ SW_TEST_CASE_F( SRPGRulesTest, MovementRange )
     open();
     SW_REQUIRE_TRUE( _field.setTerrain( sw::int2{ 1, 0 }, "forest" ) );
     SW_REQUIRE_TRUE( _field.setTerrain( sw::int2{ 0, 1 }, "wall" ) );
-    const int32 mover = place( "gm", sw::SRPGTeam::Player, sw::int2{ 0, 0 } );
-    const int32 foe   = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 7, 7 } );
+    const int32 mover = place( "gm", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ).value();
+    const int32 foe   = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 7, 7 } ).value();
 
     SW_EXPECT_FALSE( _field.moveUnit( mover, sw::int2{ 1, 0 } ) ); // 전투 전
     _field.beginBattle();
@@ -656,7 +656,7 @@ SW_TEST_CASE_F( SRPGRulesTest, MovementRange )
 
     sw::SRPGBattlefield blocked;
     blocked.initialize( &_catalog, 8, 8, "plain", _settings, 7 );
-    const int32 walker = blocked.addUnit( "gm", "rookie", sw::SRPGTeam::Player, sw::int2{ 0, 0 } );
+    const int32 walker = blocked.addUnit( "gm", "rookie", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ).value();
     (void)blocked.addUnit( "dummy", "rookie", sw::SRPGTeam::Player, sw::int2{ 1, 0 } );
     (void)blocked.addUnit( "dummy", "rookie", sw::SRPGTeam::Enemy, sw::int2{ 0, 1 } );
     blocked.beginBattle();
@@ -680,8 +680,8 @@ SW_TEST_CASE_F( SRPGRulesTest, ZoneOfControl )
 {
     _settings._bZoneOfControl = SW_TRUE;
     open();
-    const int32 mover = place( "gm", sw::SRPGTeam::Player, sw::int2{ 0, 0 } );
-    const int32 foe   = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 2, 1 } );
+    const int32 mover = place( "gm", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ).value();
+    const int32 foe   = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 2, 1 } ).value();
     _field.beginBattle();
     SW_EXPECT_TRUE( _field.isInEnemyZone( unit( mover ), sw::int2{ 2, 0 } ) );
     SW_EXPECT_FALSE( _field.isInEnemyZone( unit( mover ), sw::int2{ 3, 0 } ) );
@@ -709,8 +709,8 @@ SW_TEST_CASE_F( SRPGRulesTest, MoveDodge )
     _settings._bMoveDodge = SW_TRUE;
     _settings._dodgeMax   = 12;
     open();
-    const int32 first  = place( "gm", sw::SRPGTeam::Player, sw::int2{ 0, 0 } );
-    const int32 second = place( "gm", sw::SRPGTeam::Player, sw::int2{ 0, 7 } );
+    const int32 first  = place( "gm", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ).value();
+    const int32 second = place( "gm", sw::SRPGTeam::Player, sw::int2{ 0, 7 } ).value();
     (void)place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 7, 7 } );
     _field.beginBattle();
     SW_REQUIRE_TRUE( _field.moveUnit( first, sw::int2{ 2, 0 } ) );
@@ -731,7 +731,7 @@ SW_TEST_CASE_F( SRPGRulesTest, MoveDodge )
 SW_TEST_CASE_F( SRPGRulesTest, ThreatCells )
 {
     open( 12, 1 );
-    const int32 runner = place( "runner", sw::SRPGTeam::Player, sw::int2{ 0, 0 } );
+    const int32 runner = place( "runner", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ).value();
     const auto  covers = [this]( int32 index, int32 column )
     {
         sw::vector<sw::int2> listCell;
@@ -749,7 +749,7 @@ SW_TEST_CASE_F( SRPGRulesTest, ThreatCells )
     SW_EXPECT_EQUAL( 0, covers( runner, 4 ) );
     SW_EXPECT_EQUAL( 1, covers( runner, 3 ) );
 
-    const int32 fixer = place( "fixer", sw::SRPGTeam::Player, sw::int2{ 11, 0 } );
+    const int32 fixer = place( "fixer", sw::SRPGTeam::Player, sw::int2{ 11, 0 } ).value();
     SW_EXPECT_EQUAL( 1, covers( fixer, 9 ) ); // 이동 뒤에 못 쏘는 무기
     SW_EXPECT_EQUAL( 0, covers( fixer, 8 ) );
     unit( fixer )._bAlive = SW_FALSE;
@@ -763,10 +763,10 @@ SW_TEST_CASE_F( SRPGRulesTest, ThreatCells )
 SW_TEST_CASE_F( SRPGRulesTest, PhaseFlow )
 {
     open();
-    const int32 first  = place( "dummy", sw::SRPGTeam::Player, sw::int2{ 0, 0 } );
-    const int32 second = place( "dummy", sw::SRPGTeam::Player, sw::int2{ 1, 0 } );
-    const int32 enemy  = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 2, 0 } );
-    const int32 third  = place( "dummy", sw::SRPGTeam::Third, sw::int2{ 3, 0 } );
+    const int32 first  = place( "dummy", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ).value();
+    const int32 second = place( "dummy", sw::SRPGTeam::Player, sw::int2{ 1, 0 } ).value();
+    const int32 enemy  = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 2, 0 } ).value();
+    const int32 third  = place( "dummy", sw::SRPGTeam::Third, sw::int2{ 3, 0 } ).value();
 
     SW_EXPECT_FALSE( _field.canAct( first ) ); // 시작 전
     _field.beginBattle();
@@ -813,8 +813,8 @@ SW_TEST_CASE_F( SRPGRulesTest, IndividualTurns )
 {
     _settings._turnMode = sw::SRPGTurnMode::Individual;
     open();
-    const int32 first  = place( "dummy", sw::SRPGTeam::Player, sw::int2{ 0, 0 } );
-    const int32 second = _field.addUnit( "dummy", "ace", sw::SRPGTeam::Enemy, sw::int2{ 1, 0 } );
+    const int32 first  = place( "dummy", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ).value();
+    const int32 second = _field.addUnit( "dummy", "ace", sw::SRPGTeam::Enemy, sw::int2{ 1, 0 } ).value();
     _field.beginBattle();
     const int32 active = _field.getActiveUnit();
     SW_REQUIRE_TRUE( active == first || active == second );
@@ -847,7 +847,7 @@ SW_TEST_CASE_F( SRPGRulesTest, IndividualTurns )
 SW_TEST_CASE_F( SRPGRulesTest, Development )
 {
     open();
-    const int32                   gm = place( "gm", sw::SRPGTeam::Player, sw::int2{ 0, 0 } );
+    const int32                   gm = place( "gm", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ).value();
     sw::vector<sw::hashed_string> listOption;
     _field.collectDevelopOptions( gm, listOption );
     SW_EXPECT_TRUE( listOption.empty() ); // 레벨 1
@@ -882,8 +882,8 @@ SW_TEST_CASE_F( SRPGRulesTest, StateRoundTrip )
 {
     open();
     SW_REQUIRE_TRUE( _field.setTerrain( sw::int2{ 5, 5 }, "forest" ) );
-    const int32 attacker = place( "gm", sw::SRPGTeam::Player, sw::int2{ 0, 0 } );
-    const int32 target   = place( "heavy", sw::SRPGTeam::Enemy, sw::int2{ 1, 0 } );
+    const int32 attacker = place( "gm", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ).value();
+    const int32 target   = place( "heavy", sw::SRPGTeam::Enemy, sw::int2{ 1, 0 } ).value();
     _field.beginBattle();
     sw::SRPGCombatResult result;
     (void)sw::SRPGCombat::executeAttack( _field, attacker, 0, target, result );
@@ -938,10 +938,10 @@ SW_TEST_CASE_F( SRPGRulesTest, ReadStateRefusesBrokenUnit )
 SW_TEST_CASE_F( SRPGRulesTest, MissionOutcomes )
 {
     open();
-    const int32 commander = place( "dummy", sw::SRPGTeam::Player, sw::int2{ 0, 0 } );
-    const int32 ally      = place( "dummy", sw::SRPGTeam::Player, sw::int2{ 1, 0 } );
-    const int32 boss      = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 7, 7 } );
-    const int32 grunt     = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 6, 7 } );
+    const int32 commander = place( "dummy", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ).value();
+    const int32 ally      = place( "dummy", sw::SRPGTeam::Player, sw::int2{ 1, 0 } ).value();
+    const int32 boss      = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 7, 7 } ).value();
+    const int32 grunt     = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 6, 7 } ).value();
     (void)place( "dummy", sw::SRPGTeam::Third, sw::int2{ 4, 4 } ); // 전멸에 세지 않는다
     _field.setCommander( commander, true );
     _field.setCommander( boss, true );
@@ -984,7 +984,7 @@ SW_TEST_CASE_F( SRPGRulesTest, MissionTurnLimit )
 {
     open();
     (void)place( "dummy", sw::SRPGTeam::Player, sw::int2{ 0, 0 } );
-    const int32 foe = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 7, 7 } );
+    const int32 foe = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 7, 7 } ).value();
     _field.beginBattle();
 
     sw::SRPGMissionRule survive;
@@ -1259,10 +1259,10 @@ SW_TEST_CASE_F( SRPGRulesTest, CampaignRun )
     settings._listForcedFloor[1] = "Boss";
     sw::SRPGCampaign campaign;
     SW_REQUIRE_TRUE( campaign.initialize( settings, 5 ) );
-    SW_EXPECT_EQUAL( -1, campaign.addRosterEntry( _catalog, "nothing", "rookie" ) );
-    SW_EXPECT_EQUAL( -1, campaign.addRosterEntry( _catalog, "gm", "nobody" ) );
-    SW_EXPECT_EQUAL( 0, campaign.addRosterEntry( _catalog, "gm", "rookie", 3 ) );
-    SW_EXPECT_EQUAL( 1, campaign.addRosterEntry( _catalog, "dummy", "rookie" ) );
+    SW_EXPECT_FALSE( campaign.addRosterEntry( _catalog, "nothing", "rookie" ).has_value() );
+    SW_EXPECT_FALSE( campaign.addRosterEntry( _catalog, "gm", "nobody" ).has_value() );
+    SW_EXPECT_TRUE( campaign.addRosterEntry( _catalog, "gm", "rookie", 3 ) == 0 );
+    SW_EXPECT_TRUE( campaign.addRosterEntry( _catalog, "dummy", "rookie" ) == 1 );
     SW_EXPECT_TRUE( campaign.getMissionKind().empty() ); // 아직 어디에도 없다
 
     sw::vector<int32> listChoice;
@@ -1405,9 +1405,9 @@ SW_TEST_CASE_F( SRPGRulesTest, CampaignState )
 SW_TEST_CASE_F( SRPGRulesTest, CommanderPlansTargets )
 {
     open();
-    const int32 unitIndex = place( "striker", sw::SRPGTeam::Player, sw::int2{ 3, 3 } );
-    const int32 plainFoe  = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 4, 3 } );
-    const int32 killable  = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 2, 3 } );
+    const int32 unitIndex = place( "striker", sw::SRPGTeam::Player, sw::int2{ 3, 3 } ).value();
+    const int32 plainFoe  = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 4, 3 } ).value();
+    const int32 killable  = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 2, 3 } ).value();
     _field.beginBattle();
     sw::SRPGCommanderAI     ai;
     sw::SRPGCommanderAIPlan plan;
@@ -1434,9 +1434,9 @@ SW_TEST_CASE_F( SRPGRulesTest, CommanderPlansTargets )
 
     sw::SRPGBattlefield risky;
     risky.initialize( &_catalog, 8, 8, "plain", _settings, 7 );
-    const int32 hunter = risky.addUnit( "striker", "rookie", sw::SRPGTeam::Player, sw::int2{ 3, 3 } );
+    const int32 hunter = risky.addUnit( "striker", "rookie", sw::SRPGTeam::Player, sw::int2{ 3, 3 } ).value();
     (void)risky.addUnit( "weak", "rookie", sw::SRPGTeam::Enemy, sw::int2{ 4, 3 } ); // 반격한다
-    const int32 harmless = risky.addUnit( "dummy", "rookie", sw::SRPGTeam::Enemy, sw::int2{ 2, 3 } );
+    const int32 harmless = risky.addUnit( "dummy", "rookie", sw::SRPGTeam::Enemy, sw::int2{ 2, 3 } ).value();
     risky.beginBattle();
     SW_REQUIRE_TRUE( ai.makePlan( risky, hunter, plan ) );
     SW_EXPECT_EQUAL( harmless, plan._attack.value()._target );
@@ -1448,8 +1448,8 @@ SW_TEST_CASE_F( SRPGRulesTest, CommanderPlansTargets )
 SW_TEST_CASE_F( SRPGRulesTest, CommanderMovesTowardEnemy )
 {
     open();
-    const int32 unitIndex = place( "runner", sw::SRPGTeam::Player, sw::int2{ 0, 0 } );
-    const int32 foe       = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 5, 0 } );
+    const int32 unitIndex = place( "runner", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ).value();
+    const int32 foe       = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 5, 0 } ).value();
     _field.beginBattle();
     sw::SRPGCommanderAI     ai;
     sw::SRPGCommanderAIPlan plan;
@@ -1466,7 +1466,7 @@ SW_TEST_CASE_F( SRPGRulesTest, CommanderMovesTowardEnemy )
 
     sw::SRPGBattlefield distant;
     distant.initialize( &_catalog, 8, 8, "plain", _settings, 7 );
-    const int32 walker = distant.addUnit( "runner", "rookie", sw::SRPGTeam::Player, sw::int2{ 0, 0 } );
+    const int32 walker = distant.addUnit( "runner", "rookie", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ).value();
     (void)distant.addUnit( "dummy", "rookie", sw::SRPGTeam::Enemy, sw::int2{ 7, 0 } );
     distant.beginBattle();
     SW_REQUIRE_TRUE( ai.makePlan( distant, walker, plan ) );
@@ -1480,7 +1480,7 @@ SW_TEST_CASE_F( SRPGRulesTest, CommanderMovesTowardEnemy )
 
     sw::SRPGBattlefield alone;
     alone.initialize( &_catalog, 8, 8, "plain", _settings, 7 );
-    const int32 lonely = alone.addUnit( "runner", "rookie", sw::SRPGTeam::Player, sw::int2{ 4, 4 } );
+    const int32 lonely = alone.addUnit( "runner", "rookie", sw::SRPGTeam::Player, sw::int2{ 4, 4 } ).value();
     alone.beginBattle();
     SW_REQUIRE_TRUE( ai.makePlan( alone, lonely, plan ) );
     SW_EXPECT_TRUE( plan._moveCell == ( sw::int2{ 4, 4 } ) );
@@ -1493,8 +1493,8 @@ SW_TEST_CASE_F( SRPGRulesTest, CommanderMovesTowardEnemy )
 SW_TEST_CASE_F( SRPGRulesTest, CommanderAttacksAfterAlreadyMoving )
 {
     open();
-    const int32 unitIndex = place( "runner", sw::SRPGTeam::Player, sw::int2{ 0, 0 } );
-    const int32 foe       = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 4, 0 } );
+    const int32 unitIndex = place( "runner", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ).value();
+    const int32 foe       = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 4, 0 } ).value();
     _field.beginBattle();
     SW_REQUIRE_TRUE( _field.moveUnit( unitIndex, sw::int2{ 2, 0 } ) ); // 사람이 먼저 옮겼다
 
@@ -1513,8 +1513,8 @@ SW_TEST_CASE_F( SRPGRulesTest, CommanderRunsPhase )
 {
     open();
     (void)place( "dummy", sw::SRPGTeam::Player, sw::int2{ 0, 0 } );
-    const int32 first  = place( "runner", sw::SRPGTeam::Enemy, sw::int2{ 7, 7 } );
-    const int32 second = place( "runner", sw::SRPGTeam::Enemy, sw::int2{ 6, 7 } );
+    const int32 first  = place( "runner", sw::SRPGTeam::Enemy, sw::int2{ 7, 7 } ).value();
+    const int32 second = place( "runner", sw::SRPGTeam::Enemy, sw::int2{ 6, 7 } ).value();
     _field.beginBattle();
     sw::SRPGCommanderAI ai;
     SW_EXPECT_EQUAL( 0, ai.runPhase( _field, sw::SRPGTeam::Enemy ) ); // 아군 차례다
@@ -1531,7 +1531,7 @@ SW_TEST_CASE_F( SRPGRulesTest, CommanderRunsPhase )
     _settings._turnMode = sw::SRPGTurnMode::Individual;
     sw::SRPGBattlefield individual;
     individual.initialize( &_catalog, 8, 8, "plain", _settings, 7 );
-    const int32 solo = individual.addUnit( "runner", "rookie", sw::SRPGTeam::Enemy, sw::int2{ 0, 0 } );
+    const int32 solo = individual.addUnit( "runner", "rookie", sw::SRPGTeam::Enemy, sw::int2{ 0, 0 } ).value();
     (void)individual.addUnit( "dummy", "rookie", sw::SRPGTeam::Player, sw::int2{ 7, 7 } );
     individual.beginBattle();
     while ( individual.getActiveUnit() != solo )

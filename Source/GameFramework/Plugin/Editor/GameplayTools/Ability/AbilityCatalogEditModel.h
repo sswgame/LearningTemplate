@@ -29,8 +29,8 @@ namespace sw::editor
     /** @brief 항목 하나입니다. */
     struct AbilityCatalogEntry
     {
-        string           _id{};          ///< id(큐는 태그)
-        int32            _element{ -1 }; ///< 원문의 원소 번호(`CatalogXMLText`)
+        string           _id{};    ///< id(큐는 태그)
+        int32            _element; ///< 원문의 원소 번호(`CatalogXMLText`). 읽을 때 채운다
         AbilityEntryKind _kind{ AbilityEntryKind::Effect };
     };
 
@@ -54,7 +54,7 @@ namespace sw::editor
     struct AbilityCatalogIssue
     {
         string _message{};
-        int32  _entry{ -1 };
+        int32  _entry; ///< 문제가 난 항목 번호(만들 때 채운다)
     };
 
     /**
@@ -96,8 +96,8 @@ namespace sw::editor
         [[nodiscard]] bool setAbilityEffectSlot( int32 entry, string_view attribute, string_view effectID );
         /** @brief 세트 @p entry 에 `<Ability id>` 또는 `<Effect id>` 를 더합니다. */
         [[nodiscard]] bool addSetMember( int32 entry, AbilityEntryKind memberKind, string_view id );
-        /** @brief 종류의 새 항목(겹치지 않는 id)을 끝에 더하고 그 항목 번호를 돌려줍니다. 실패하면 -1 입니다. */
-        int32 addEntry( AbilityEntryKind kind );
+        /** @brief 종류의 새 항목(겹치지 않는 id)을 끝에 더하고 그 항목 번호를 돌려줍니다. 실패하면 이유를 돌려줍니다(문서 오류는 `getDocument().getError()`). */
+        [[nodiscard]] expected<int32> addEntry( AbilityEntryKind kind );
         /** @brief 항목을 복제합니다(`<id>_copy`). 새 항목 번호입니다. */
         int32 duplicateEntry( int32 entry );
         /** @brief 항목을 지웁니다. 다른 항목이 가리키면(필수 참조) 지우지 않고 false 입니다 — 지우면 그 항목이 로드에서 풀리지 않는다. */

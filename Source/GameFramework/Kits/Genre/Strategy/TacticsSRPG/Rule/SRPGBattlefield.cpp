@@ -103,21 +103,21 @@ namespace sw
         return count;
     }
 
-    int32 SRPGBattlefield::addUnit( const hashed_string& unitID, const hashed_string& pilotID, SRPGTeam team, const int2& cell, int32 pilotLevel )
+    expected<int32> SRPGBattlefield::addUnit( const hashed_string& unitID, const hashed_string& pilotID, SRPGTeam team, const int2& cell, int32 pilotLevel )
     {
         if ( _pCatalog == nullptr )
-            return constant::invalid_index::kInt32;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the battlefield has no catalog" } );
         SRPGUnit unit;
         unit._pDef   = _pCatalog->findUnit( unitID );
         unit._pPilot = _pCatalog->findPilot( pilotID );
         if ( unit._pDef == nullptr || unit._pPilot == nullptr )
         {
             SW_LOG_WARNING_ID( "SRPGBattlefield.CannotPlaceUnitPilot", "cannot place unit '%#' with pilot '%#' - unknown id", unitID.c_str(), pilotID.c_str() );
-            return constant::invalid_index::kInt32;
+            return unexpected( Error{ ErrorKind::NotFound, "unknown unit or pilot id", unitID.c_str() } );
         }
         const bool bCannotPlaceUnit = isInside( cell ) == false || findUnitAt( cell ).has_value() || computeTerrainCost( unit, cell ) < 0;
         if ( bCannotPlaceUnit )
-            return constant::invalid_index::kInt32;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the cell is outside the grid, taken or impassable" } );
         unit._cell = cell;
         unit._team = team;
         unit._pilotLevel.setLevel( _pCatalog->getPilotCurve(), pilotLevel );

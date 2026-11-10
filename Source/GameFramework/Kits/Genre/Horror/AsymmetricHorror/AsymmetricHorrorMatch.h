@@ -251,17 +251,20 @@ namespace sw
 
         /** @brief 규칙과 살인마를 정합니다. 살인마 id 를 모르면 false 를 반환합니다. */
         [[nodiscard]] bool initialize( const AsymmetricHorrorMatchSettings& settings, const AsymmetricHorrorRulesCatalog* pCatalog );
-        int32              addSurvivor( const float3& position );
-        void               setKillerPosition( const float3& position );
-        int32              addGenerator( const float3& position );
-        int32              addHook( const float3& position );
-        int32              addPallet( const float3& position );
-        int32              addWindow( const float3& position );
-        int32              addLocker( const float3& position );
-        int32              addGate( const float3& position );
-        void               setHatchPosition( const float3& position );
-        void               start();
-        void               update( float32 deltaTime );
+        /** @brief 생존자를 세웁니다(`start` 전). 카탈로그가 없거나 시작했거나 체력 · 치료 규칙이 범위 밖이면 이유를 돌려줍니다. */
+        [[nodiscard]] expected<int32> addSurvivor( const float3& position );
+        void                          setKillerPosition( const float3& position );
+        /** @brief 발전기를 세웁니다. 카탈로그가 없거나 수리 규칙이 범위 밖이면 이유를 돌려줍니다. */
+        [[nodiscard]] expected<int32> addGenerator( const float3& position );
+        int32                         addHook( const float3& position );
+        int32                         addPallet( const float3& position );
+        int32                         addWindow( const float3& position );
+        int32                         addLocker( const float3& position );
+        /** @brief 탈출문을 세웁니다. 카탈로그가 없거나 문 시간이 범위 밖이면 이유를 돌려줍니다. */
+        [[nodiscard]] expected<int32> addGate( const float3& position );
+        void                          setHatchPosition( const float3& position );
+        void                          start();
+        void                          update( float32 deltaTime );
 
         // --- 생존자 ---
         /** @brief @p direction(XZ 평면, 길이 1 이하) 쪽으로 이번 프레임만큼 움직입니다. 하던 일은 그만둡니다. */

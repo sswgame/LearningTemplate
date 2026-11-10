@@ -143,7 +143,7 @@ SW_TEST_CASE( BattleRoyaleMatchTest, ArmorFiltersDamageUntilDowned )
     const sw::vector<sw::BattleRoyaleEvent> listBroken = bench.drainKind( EventKind::ArmorBroken );
     SW_REQUIRE_EQUAL( size_t( 1 ), listBroken.size() );
     SW_EXPECT_EQUAL( static_cast<int32>( sw::BattleRoyaleHitZone::Head ), listBroken[0]._value );
-    SW_EXPECT_EQUAL( 2, listBroken[0]._other );
+    SW_EXPECT_TRUE( listBroken[0]._other == 2 );
 
     SW_EXPECT_NEAR( 30.0f, bench._match.applyDamage( 0, 2, 40.0f, sw::BattleRoyaleHitZone::Body ), kMatchTolerance );
     SW_EXPECT_NEAR( 50.0f, bench.player( 0 )._healthMachine.getHealth(), kMatchTolerance );
@@ -177,8 +177,8 @@ SW_TEST_CASE( BattleRoyaleMatchTest, DownedPlayersBleedOutAndCreditTheKnocker )
     SW_EXPECT_EQUAL( 2, bench._match.countRemainingPlayers() );
     const sw::vector<sw::BattleRoyaleEvent> listKilled = bench.drainKind( EventKind::PlayerKilled );
     SW_REQUIRE_EQUAL( size_t( 1 ), listKilled.size() );
-    SW_EXPECT_EQUAL( 0, listKilled[0]._player );
-    SW_EXPECT_EQUAL( 2, listKilled[0]._other );
+    SW_EXPECT_TRUE( listKilled[0]._player == 0 );
+    SW_EXPECT_TRUE( listKilled[0]._other == 2 );
     SW_EXPECT_EQUAL( 2, listKilled[0]._value );
     SW_EXPECT_NEAR( 0.0f, bench._match.applyDamage( 0, 2, 10.0f, sw::BattleRoyaleHitZone::Limb ), kMatchTolerance ); // 죽은 사람
 }
@@ -213,8 +213,8 @@ SW_TEST_CASE( BattleRoyaleMatchTest, ReviveRestoresTheDownedTeammate )
     SW_EXPECT_EQUAL( -1, bench.player( 0 )._downedBy );
     const sw::vector<sw::BattleRoyaleEvent> listRevived = bench.drainKind( EventKind::PlayerRevived );
     SW_REQUIRE_EQUAL( size_t( 1 ), listRevived.size() );
-    SW_EXPECT_EQUAL( 0, listRevived[0]._player );
-    SW_EXPECT_EQUAL( 1, listRevived[0]._other );
+    SW_EXPECT_TRUE( listRevived[0]._player == 0 );
+    SW_EXPECT_TRUE( listRevived[0]._other == 1 );
 }
 
 /**
@@ -302,8 +302,8 @@ SW_TEST_CASE( BattleRoyaleMatchTest, TeamWipeEndsTheMatch )
 
     sw::vector<sw::BattleRoyaleEvent> listAll;
     bench._match.pollEvents( listAll );
-    int32 eliminatedPlacement = 0;
-    int32 endedTeam           = -1;
+    int32               eliminatedPlacement = 0;
+    sw::optional<int32> endedTeam{};
     for ( const sw::BattleRoyaleEvent& event : listAll )
     {
         if ( event._kind == EventKind::TeamEliminated )
@@ -312,7 +312,7 @@ SW_TEST_CASE( BattleRoyaleMatchTest, TeamWipeEndsTheMatch )
             endedTeam = event._team;
     }
     SW_EXPECT_EQUAL( 2, eliminatedPlacement );
-    SW_EXPECT_EQUAL( 1, endedTeam );
+    SW_EXPECT_TRUE( endedTeam == 1 );
 
     SW_EXPECT_NEAR( 0.0f, bench._match.applyDamage( 2, 0, 10.0f, sw::BattleRoyaleHitZone::Limb ), kMatchTolerance );
     const float32 timeBefore = bench._match.getTime();
@@ -345,7 +345,7 @@ SW_TEST_CASE( BattleRoyaleMatchTest, UnknownAttackerCountsAsEnvironment )
     SW_EXPECT_EQUAL( -1, bench.player( 0 )._downedBy );
     const sw::vector<sw::BattleRoyaleEvent> listDowned = bench.drainKind( EventKind::PlayerDowned );
     SW_REQUIRE_EQUAL( size_t( 1 ), listDowned.size() );
-    SW_EXPECT_EQUAL( -1, listDowned[0]._other );
+    SW_EXPECT_FALSE( listDowned[0]._other.has_value() );
 
     sw::Archive written;
     bench._match.writeState( written );
@@ -423,7 +423,7 @@ SW_TEST_CASE( BattleRoyaleMatchTest, ZoneDeathKeepsTheKnockCredit )
     SW_EXPECT_EQUAL( 0, environment.player( 2 )._kills );
     const sw::vector<sw::BattleRoyaleEvent> listKilled = environment.drainKind( EventKind::PlayerKilled );
     SW_REQUIRE_EQUAL( size_t( 1 ), listKilled.size() );
-    SW_EXPECT_EQUAL( -1, listKilled[0]._other );
+    SW_EXPECT_FALSE( listKilled[0]._other.has_value() );
 }
 
 /**
@@ -448,7 +448,7 @@ SW_TEST_CASE( BattleRoyaleMatchTest, ZoneTieLosesByLowerHealth )
 {
     MatchBench bench;
     SW_REQUIRE_TRUE( bench.setUp( kLethalXML, 1 ) );
-    (void)bench._match.findPlayerMutable( 1 )->_healthMachine.applyDamage( 10.0f, 0.0f, -1 );
+    (void)bench._match.findPlayerMutable( 1 )->_healthMachine.applyDamage( 10.0f, 0.0f, sw::nullopt );
     bench.stepFor( 1 );
     SW_EXPECT_TRUE( bench.player( 1 ).isDead() );
     SW_EXPECT_TRUE( bench.player( 0 ).isAlive() );
@@ -494,12 +494,12 @@ SW_TEST_CASE( BattleRoyaleMatchTest, AddPlayerNeedsAValidTeam )
     sw::BattleRoyaleMatch noCatalog;
     SW_REQUIRE_TRUE( noCatalog.initialize( nullptr, nullptr, nullptr, 1, nullptr ) );
     const int32 team = noCatalog.addTeam( sw::hashed_string( "A" ) );
-    SW_EXPECT_EQUAL( -1, noCatalog.addPlayer( team ) );
+    SW_EXPECT_FALSE( noCatalog.addPlayer( team ).has_value() );
 
     MatchBench bench;
     SW_REQUIRE_TRUE( bench.setUp( kMatchXML, 1, false ) );
-    SW_EXPECT_EQUAL( -1, bench._match.addPlayer( 7 ) );
-    SW_EXPECT_EQUAL( -1, bench._match.addPlayer( -1 ) );
+    SW_EXPECT_FALSE( bench._match.addPlayer( 7 ).has_value() );
+    SW_EXPECT_FALSE( bench._match.addPlayer( -1 ).has_value() );
     SW_EXPECT_EQUAL( 2, bench._match.getPlayerCount() );
     SW_EXPECT_TRUE( bench._match.findPlayer( 7 ) == nullptr );
     SW_EXPECT_TRUE( bench._match.findPlayer( -1 ) == nullptr );

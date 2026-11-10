@@ -29,7 +29,7 @@ namespace sw
             }
             case DialogueNodeOutput::Choice:
             {
-                return asset.findChoiceNextNodeID( node._id, input._choiceIndex );
+                return input._choiceIndex.has_value() ? asset.findChoiceNextNodeID( node._id, *input._choiceIndex ) : asset.findDefaultNextNodeID( node._id );
             }
         }
         return nullopt;

@@ -138,7 +138,7 @@ namespace sw
         if ( moved._arrDirectory[0] != '\0' )
         {
             const string movedDirectory = FileUtil::joinPath( ProcessRoots::get()._binary.str(), moved._arrDirectory );
-            if ( FileUtil::pathsEqualNormalized( FileUtil::getDirectoryPart( libraryPath ), movedDirectory ) )
+            if ( FileUtil::isSameDiskPath( FileUtil::getDirectoryPart( libraryPath ), movedDirectory ) )
                 symbolDirectory = FileUtil::joinPath( symbolDirectory, moved._arrDirectory );
         }
         string found = FileUtil::joinPath( symbolDirectory, fileName );

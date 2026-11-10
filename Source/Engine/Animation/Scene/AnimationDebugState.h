@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
@@ -25,7 +26,7 @@ namespace sw
         vector<float32>       _listCurveValue;    ///< `_listCurveName` 과 나란한 값
         float3                _rootMotionTranslation{};
         quaternion            _rootMotionRotation{};
-        int32                 _spriteFrame{ constant::invalid_index::kInt32 }; ///< 스프라이트 프레임 번호(스켈레탈은 -1)
+        optional<int32>       _spriteFrame; ///< 스프라이트 프레임 번호(스켈레탈 · 아직 고르지 않은 프레임은 비어 있다)
 
         /** @brief 비웁니다(목록의 용량은 둔다 — 고리 버퍼가 프레임마다 다시 쓴다). */
         void reset()
@@ -37,7 +38,7 @@ namespace sw
             _listCurveValue.clear();
             _rootMotionTranslation = float3{};
             _rootMotionRotation    = quaternion::Identity;
-            _spriteFrame           = constant::invalid_index::kInt32;
+            _spriteFrame           = nullopt;
         }
     };
 } // namespace sw

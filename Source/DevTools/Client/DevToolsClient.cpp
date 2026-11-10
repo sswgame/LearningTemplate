@@ -7,6 +7,7 @@
 
 #include "DevTools/Client/Audio/AudioDumpListener.h"
 #include "DevTools/Client/Automation/Scenario/AutomationScratchWorkspace.h"
+#include "DevTools/Client/Automation/Scenario/AutomationUserDataRoot.h"
 #include "DevTools/Client/Capture/StartupCaptureSubsystem.h"
 #include "DevTools/Client/Console/DevConsoleOverlay.h"
 #include "DevTools/Client/DebugHUD/DebugHUD.h"
@@ -37,6 +38,8 @@ namespace sw
             {
                 (void)startup.emplaceSubsystem<AudioDumpBuffer>();          // `-gv_audioDumpPath` 의 쌓은 렌더
                 (void)startup.emplaceSubsystem<AutomationScratchCounter>(); // 시나리오 사본을 끝까지 만든 횟수(세대 번호)
+                // `-scenario` 실행의 사용자 데이터 뿌리를 자동화 폴더 아래로 정한다 — 호스트 서비스(게임 · 로컬 저장)가 뿌리를 읽기 전이다. 밖이면 기동을 멈춘다(종료 11).
+                (void)startup.emplaceSubsystem<AutomationUserDataIsolation>();
                 // 셰이더 라이브 리로드는 렌더러가 있는 호스트만(렌더러를 끈 기동은 렌더 쪽이 nullptr).
                 if ( parts._pFrameRendererSubsystem != nullptr && parts._pRenderThread != nullptr )
                 {

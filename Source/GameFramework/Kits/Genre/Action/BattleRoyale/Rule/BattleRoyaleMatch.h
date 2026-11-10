@@ -8,6 +8,7 @@
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -43,12 +44,14 @@ namespace sw
         int32               _team{ constant::invalid_index::kInt32 };
         int32               _kills{ 0 };
         int32               _knocks{ 0 };                                       ///< 기절시킨 수
-        int32               _downedBy{ constant::invalid_index::kInt32 };       ///< 기절시킨 사람(출혈사와 전멸 처치의 귀속 대상)
+        int32               _downedBy{ constant::invalid_index::kInt32 };       ///< 기절시킨 사람(출혈사와 전멸 처치의 귀속 대상). 상태 바이트 칸이라 없으면 -1 이다
         int32               _revivingTarget{ constant::invalid_index::kInt32 }; ///< 지금 살리고 있는 팀원
 
         bool isAlive() const { return _healthMachine.isAlive(); }
-        bool isDowned() const { return _healthMachine.isDowned(); }
-        bool isDead() const { return _healthMachine.isDead(); }
+        /** @brief 기절시킨 사람입니다. 환경이 기절시켰거나 기절하지 않았으면 없음입니다. */
+        optional<int32> findDownedBy() const { return _downedBy >= 0 ? optional<int32>( _downedBy ) : nullopt; }
+        bool            isDowned() const { return _healthMachine.isDowned(); }
+        bool            isDead() const { return _healthMachine.isDead(); }
     };
 } // namespace sw
 
@@ -71,7 +74,7 @@ namespace sw
         enum class Kind : uint8
         {
             PlayerDowned = 0,  ///< _player 가 _other 에게 기절당했다(킬 피드 "knocked")
-            PlayerKilled,      ///< _player 가 _other 에게 죽었다(_other 가 −1 이면 자기장이나 환경). _value 는 남은 인원
+            PlayerKilled,      ///< _player 가 _other 에게 죽었다(_other 가 없으면 자기장이나 환경). _value 는 남은 인원
             ReviveStarted,     ///< _other 가 기절한 _player 를 살리기 시작했다
             ReviveInterrupted, ///< 맞아서 끊겼다
             PlayerRevived,     ///< _other 가 _player 를 살렸다
@@ -79,14 +82,14 @@ namespace sw
             PlayersRemaining,  ///< _value 는 남은 인원(기절 포함)
             TeamEliminated,    ///< _team 이 전멸했다. _value 는 순위
             SupplyDropLanded,  ///< _value 는 보급 상자 번호, _position 은 착지 위치
-            MatchEnded         ///< _team 이 이긴 팀(−1이면 무승부)
+            MatchEnded         ///< _team 이 이긴 팀(없으면 무승부)
         };
-        float2 _position{};
-        int32  _player{ constant::invalid_index::kInt32 };
-        int32  _other{ constant::invalid_index::kInt32 };
-        int32  _team{ constant::invalid_index::kInt32 };
-        int32  _value{ 0 };
-        Kind   _kind{ Kind::PlayerDowned };
+        float2          _position{};
+        optional<int32> _player{};
+        optional<int32> _other{};
+        optional<int32> _team{};
+        int32           _value{ 0 };
+        Kind            _kind{ Kind::PlayerDowned };
     };
 } // namespace sw
 
@@ -115,10 +118,10 @@ namespace sw
         /** @brief 카탈로그, 아이템, 전리품(빌려 옴), 시드, 지형(빌려 옴, nullptr 가능)을 설정하고 상태를 비웁니다. 자기장이 맵 크기를 거절하면 false 입니다. */
         [[nodiscard]] bool initialize( const BattleRoyaleCatalog* pCatalog, const ItemCatalog* pItemCatalog, const LootCatalog* pLootCatalog, uint32 seed, const IBrZoneTerrain* pTerrain );
         int32              addTeam( const hashed_string& name );
-        /** @brief 사람을 추가하고 번호를 반환합니다(`start` 전에 호출합니다). 없는 팀이거나 카탈로그의 체력 설정이 범위 밖이면 −1 입니다. */
-        int32 addPlayer( int32 team );
-        void  start();
-        void  update( float32 deltaTime );
+        /** @brief 사람을 추가하고 번호를 반환합니다(`start` 전에 호출합니다). 없는 팀이거나 카탈로그의 체력 설정이 범위 밖이면 이유를 돌려줍니다. */
+        [[nodiscard]] expected<int32> addPlayer( int32 team );
+        void                          start();
+        void                          update( float32 deltaTime );
 
         void setPlayerPosition( int32 player, const float2& position );
         /**
@@ -158,14 +161,14 @@ namespace sw
         [[nodiscard]] bool initializePlayer( BattleRoyalePlayer& outPlayer, int32 team, int32 participant ) const;
         void               stepFixed( float32 deltaTime );
         void               processHealthMachine( int32 player );
-        void               handleDowned( int32 player, int32 instigator );
-        void               handleDeath( int32 player, int32 instigator );
+        void               handleDowned( int32 player, optional<int32> instigator );
+        void               handleDeath( int32 player, optional<int32> instigator );
         void               interruptRevive( int32 target, bool bNotify );
         void               finishRevive( int32 target );
         void               resolveTeamWipe( int32 team );
         void               dropSupply();
         void               collectMatchEvents();
-        void               pushEvent( BattleRoyaleEvent::Kind kind, int32 player, int32 other, int32 team, int32 value );
+        void               pushEvent( BattleRoyaleEvent::Kind kind, optional<int32> player, optional<int32> other, optional<int32> team, int32 value );
 
     private:
         vector<BattleRoyalePlayer>     _listPlayer;

@@ -1,5 +1,5 @@
 {
-    "_description": "Scripts/lint/MutableStatics.py 의 예외입니다. 주인 객체의 멤버로 둘 수 없는 가변 정적 저장소(침입형 정적 등록 머리 · 정적 등록 틀과 서비스 표의 뿌리 · OS 와 외부 라이브러리 콜백이 문맥 없이 부르는 프로세스 바닥)와 그 까닭입니다. 항목은 파일 + 변수 이름이고 까닭이 필수입니다.",
+    "_description": "Scripts/lint/MutableStatics.py 의 예외입니다. 주인 객체의 멤버로 둘 수 없는 가변 정적 저장소(정적 등록 틀과 서비스 표의 뿌리 · OS 와 외부 라이브러리 콜백이 문맥 없이 부르는 프로세스 바닥)와 그 까닭입니다. 항목은 파일 + 변수 이름이고 까닭이 필수입니다.",
     "_listEntry": [
         {
             "_path": "Source/App/AppEntry.cpp",
@@ -258,11 +258,6 @@
         },
         {
             "_path": "Source/Core/GlobalVariable/GlobalVariableManager.cpp",
-            "_name": "s_pHead",
-            "_why": "침입형 정적 등록 머리 — 다른 TU · DLL 의 정적 등록자가 정적 초기화 때(할당 · 엔진보다 먼저) 자기를 잇는다. RegistrationList 로 옮기면 그 목록 자체가 정적 초기화 순서에 걸린다(머리 포인터는 상수 초기화라 순서와 무관하다). 전역 변수(gv_) 등록자다."
-        },
-        {
-            "_path": "Source/Core/GlobalVariable/GlobalVariableManager.cpp",
             "_name": "s_pathBaseDirectory",
             "_why": "전역 변수 바닥 — GlobalVariableManager 는 정적 등록 변수(SW_GLOBAL_VARIABLE)의 문맥 없는 읽기 · 쓰기 입구다. 글 변수 잠금과 경로 기준은 그 입구가 쓰는 프로세스 칸이다."
         },
@@ -462,11 +457,6 @@
             "_why": "정적 등록 항목 — 칸이 없는(상태 없는) 구현 객체다. 정적 등록 틀(RegistrationSlot · RegistrationList 등록자)이 이 객체를 가리키고 이미지와 수명이 같다(언리얼 compiled-in 등록 항목 자리)."
         },
         {
-            "_path": "Source/Engine/Audio/IAudioService.cpp",
-            "_name": "s_pHead",
-            "_why": "침입형 정적 등록 머리 — 다른 TU · DLL 의 정적 등록자가 정적 초기화 때(할당 · 엔진보다 먼저) 자기를 잇는다. RegistrationList 로 옮기면 그 목록 자체가 정적 초기화 순서에 걸린다(머리 포인터는 상수 초기화라 순서와 무관하다)."
-        },
-        {
             "_path": "Source/Engine/Config/GameSelection.cpp",
             "_name": "s_arrName",
             "_why": "게임 선택 — 코어 범위의 CrashHandlerSubsystem 이 기동 스레드에서 한 번 적고, 모듈 · 설정 경로를 찾는 정적 함수가 서비스 범위가 서기 전에도 묻는다(테스트는 범위 없이 기본 게임). 고정 배열이라 상수 초기화된다."
@@ -487,24 +477,9 @@
             "_why": "엔진 등록 목록(getGlobal) — 서브시스템 · 서비스 칸의 정적 등록자가 엔진보다 먼저 단다(정적 등록 틀과 같은 자리)."
         },
         {
-            "_path": "Source/Engine/Graphics/RHI/RHIBackendRegistry.cpp",
-            "_name": "s_pHead",
-            "_why": "침입형 정적 등록 머리 — 다른 TU · DLL 의 정적 등록자가 정적 초기화 때(할당 · 엔진보다 먼저) 자기를 잇는다. RegistrationList 로 옮기면 그 목록 자체가 정적 초기화 순서에 걸린다(머리 포인터는 상수 초기화라 순서와 무관하다). 배포 정적 링크의 RHI 백엔드 등록자다."
-        },
-        {
             "_path": "Source/Engine/Graphics/Shader/Compile/ShaderCompiler.cpp",
             "_name": "s_mutexDXCSerial",
             "_why": "DXC 는 프로세스 전역 상태가 있어 동시에 부르면 안 된다 — 라이브러리를 지키는 잠금이다."
-        },
-        {
-            "_path": "Source/Engine/Module/ModuleObjectRegistrar.cpp",
-            "_name": "s_pHead",
-            "_why": "침입형 정적 등록 머리 — 다른 TU · DLL 의 정적 등록자가 정적 초기화 때(할당 · 엔진보다 먼저) 자기를 잇는다. RegistrationList 로 옮기면 그 목록 자체가 정적 초기화 순서에 걸린다(머리 포인터는 상수 초기화라 순서와 무관하다)."
-        },
-        {
-            "_path": "Source/Engine/Module/ModuleSubsystemRegistrar.cpp",
-            "_name": "s_pHead",
-            "_why": "침입형 정적 등록 머리 — 다른 TU · DLL 의 정적 등록자가 정적 초기화 때(할당 · 엔진보다 먼저) 자기를 잇는다. RegistrationList 로 옮기면 그 목록 자체가 정적 초기화 순서에 걸린다(머리 포인터는 상수 초기화라 순서와 무관하다)."
         },
         {
             "_path": "Source/Engine/Physics/Jolt/JoltPhysicsBackend.cpp",
@@ -573,11 +548,6 @@
         },
         {
             "_path": "Source/Engine/Reflection/TypeRegistry.cpp",
-            "_name": "s_pHead",
-            "_why": "침입형 정적 등록 머리 — 다른 TU · DLL 의 정적 등록자가 정적 초기화 때(할당 · 엔진보다 먼저) 자기를 잇는다. RegistrationList 로 옮기면 그 목록 자체가 정적 초기화 순서에 걸린다(머리 포인터는 상수 초기화라 순서와 무관하다). 리플렉션 형식 · 열거 등록자다."
-        },
-        {
-            "_path": "Source/Engine/Reflection/TypeRegistry.cpp",
             "_name": "s_typeTableGeneration",
             "_why": "리플렉션 바닥 — 타입 등록은 정적 초기화(침입형 등록 머리와 같은 경로)에서 엔진보다 먼저 돈다. 타입 번호 발급과 타입 표 세대는 그 등록과 인라인 캐시(TypeCacheSlot)가 읽는 프로세스 칸이다."
         },
@@ -585,16 +555,6 @@
             "_path": "Source/Engine/Renderer/Cook/ShaderCookService.cpp",
             "_name": "s_shaderCookService",
             "_why": "정적 등록 항목 — 칸이 없는(상태 없는) 구현 객체다. 정적 등록 틀(RegistrationSlot · RegistrationList 등록자)이 이 객체를 가리키고 이미지와 수명이 같다(언리얼 compiled-in 등록 항목 자리)."
-        },
-        {
-            "_path": "Source/Engine/UI/Accessibility/UIAccessibilityBridgeFactory.cpp",
-            "_name": "s_pHead",
-            "_why": "침입형 정적 등록 머리 — 다른 TU · DLL 의 정적 등록자가 정적 초기화 때(할당 · 엔진보다 먼저) 자기를 잇는다. RegistrationList 로 옮기면 그 목록 자체가 정적 초기화 순서에 걸린다(머리 포인터는 상수 초기화라 순서와 무관하다)."
-        },
-        {
-            "_path": "Source/Engine/UserSettings/UserSettingsHandlerRegistry.cpp",
-            "_name": "s_pHead",
-            "_why": "침입형 정적 등록 머리 — 다른 TU · DLL 의 정적 등록자가 정적 초기화 때(할당 · 엔진보다 먼저) 자기를 잇는다. RegistrationList 로 옮기면 그 목록 자체가 정적 초기화 순서에 걸린다(머리 포인터는 상수 초기화라 순서와 무관하다)."
         },
         {
             "_path": "Source/Engine/Window/Android/AndroidWindow.cpp",

@@ -471,15 +471,17 @@ namespace sw
         return false;
     }
 
-    int32 Process::waitForExit()
+    expected<int32> Process::waitForExit()
     {
         if ( _pNativeHandle == nullptr )
-            return -1;
+            return unexpected( Error{ ErrorKind::NotFound, "there is no child process to wait for" } );
 
-        WaitForSingleObject( static_cast<HANDLE>( _pNativeHandle ), INFINITE );
+        if ( WaitForSingleObject( static_cast<HANDLE>( _pNativeHandle ), INFINITE ) != WAIT_OBJECT_0 )
+            return unexpected( Error{ ErrorKind::ExternalFailure, "WaitForSingleObject failed on the child process" } );
 
         DWORD exitCode = 0;
-        GetExitCodeProcess( static_cast<HANDLE>( _pNativeHandle ), &exitCode );
+        if ( GetExitCodeProcess( static_cast<HANDLE>( _pNativeHandle ), &exitCode ) == FALSE )
+            return unexpected( Error{ ErrorKind::ExternalFailure, "GetExitCodeProcess failed on the child process" } );
         return static_cast<int32>( exitCode );
     }
 

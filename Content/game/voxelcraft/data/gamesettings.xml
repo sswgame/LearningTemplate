@@ -11,4 +11,5 @@
   <inputMap path="game/voxelcraft/data/voxel.input.xml"/>
   <loadingScreen>engine/ui/loading.ui.xml</loadingScreen>
   <audioEvents>game/voxelcraft/audio/voxelcraft.audioevents.xml</audioEvents>
+  <defaultLanguage>ko_kr</defaultLanguage>
 </GameSettings>

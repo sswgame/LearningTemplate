@@ -314,7 +314,7 @@ namespace sw
         for ( const IngredientSpoilage& spoilage : _listSpoilageScratch )
         {
             _pendingSpoilageCost += spoilage._cost;
-            _eventBuffer.push( RestaurantEvent{ spoilage._itemID, spoilage._count, constant::invalid_index::kInt32, RestaurantEvent::Kind::IngredientSpoiled } );
+            _eventBuffer.push( RestaurantEvent{ spoilage._itemID, spoilage._count, nullopt, RestaurantEvent::Kind::IngredientSpoiled } );
         }
         _market.advanceDay();
         rollMarketPrices();
@@ -905,7 +905,7 @@ namespace sw
         if ( _pStaffCurve == nullptr || amount <= 0 )
             return;
         if ( staff._level.addXP( *_pStaffCurve, amount ) > 0 )
-            _eventBuffer.push( RestaurantEvent{ staff._name, staff._level.getLevel(), constant::invalid_index::kInt32, RestaurantEvent::Kind::StaffLevelUp } );
+            _eventBuffer.push( RestaurantEvent{ staff._name, staff._level.getLevel(), nullopt, RestaurantEvent::Kind::StaffLevelUp } );
     }
 
     void RestaurantSimulation::rollMarketPrices()

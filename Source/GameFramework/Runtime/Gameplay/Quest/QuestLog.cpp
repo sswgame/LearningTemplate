@@ -203,7 +203,7 @@ namespace sw
         progress._bAwaitingChoice = SW_FALSE;
         progress._listCount.assign( pStage->_listObjective.size(), 0 );
         const bool bHasReward = pStage->_reward._items.isEmpty() == false || pStage->_reward._values.isEmpty() == false || pStage->_reward._listAction.empty() == false;
-        pushEvent( QuestEvent::Kind::StageEntered, progress, constant::invalid_index::kInt32, 0, bHasReward ? &pStage->_reward : nullptr );
+        pushEvent( QuestEvent::Kind::StageEntered, progress, nullopt, 0, bHasReward ? &pStage->_reward : nullptr );
         for ( const GameActionCall& call : pStage->_reward._listAction )
         {
             ActionContext context;
@@ -397,7 +397,7 @@ namespace sw
         }
     }
 
-    void QuestLog::pushEvent( QuestEvent::Kind kind, const QuestProgress& progress, int32 objective, int32 value, const QuestReward* pReward )
+    void QuestLog::pushEvent( QuestEvent::Kind kind, const QuestProgress& progress, optional<int32> objective, int32 value, const QuestReward* pReward )
     {
         QuestEvent event;
         event._kind      = kind;

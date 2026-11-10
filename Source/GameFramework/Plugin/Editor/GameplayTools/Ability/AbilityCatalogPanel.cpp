@@ -348,25 +348,28 @@ namespace sw::editor
         // 더하기는 종류마다 — 새 id 는 겹치지 않는다(`new`, `new_2`).
         if ( ImGui::Button( SW_LOCKEY( "EdAbilityCatalog", "AddEffect" ) ) )
         {
-            const int32 added = _model.addEntry( AbilityEntryKind::Effect );
-            reportEdit( added >= 0 );
-            _selectedEntry = added >= 0 ? added : _selectedEntry;
+            const expected<int32> added = _model.addEntry( AbilityEntryKind::Effect );
+            reportEdit( added.has_value() );
+            if ( added.has_value() )
+                _selectedEntry = *added;
         }
         EditorSelfTestMarks::record( "abilityCatalog.addEffect" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdAbilityCatalog", "AddAbility" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdAbilityCatalog", "AddAbility" ) ) )
         {
-            const int32 added = _model.addEntry( AbilityEntryKind::Ability );
-            reportEdit( added >= 0 );
-            _selectedEntry = added >= 0 ? added : _selectedEntry;
+            const expected<int32> added = _model.addEntry( AbilityEntryKind::Ability );
+            reportEdit( added.has_value() );
+            if ( added.has_value() )
+                _selectedEntry = *added;
         }
         EditorSelfTestMarks::record( "abilityCatalog.addAbility" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdAbilityCatalog", "AddAbilitySet" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdAbilityCatalog", "AddAbilitySet" ) ) )
         {
-            const int32 added = _model.addEntry( AbilityEntryKind::AbilitySet );
-            reportEdit( added >= 0 );
-            _selectedEntry = added >= 0 ? added : _selectedEntry;
+            const expected<int32> added = _model.addEntry( AbilityEntryKind::AbilitySet );
+            reportEdit( added.has_value() );
+            if ( added.has_value() )
+                _selectedEntry = *added;
         }
     }
 

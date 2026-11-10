@@ -238,7 +238,7 @@ namespace sw::editor
                     {
                         const BehaviorNodeKind type = static_cast<BehaviorNodeKind>( index );
                         if ( ImGui::Selectable( BehaviorTreeNames::toString( type ) ) )
-                            (void)addNodeFromSelection( type ); // 거절하면 상태 줄이 이유를 알린다
+                            addNodeFromSelection( type ); // 거절하면 상태 줄이 이유를 알린다
                     }
                     ImGui::EndCombo();
                 }
@@ -334,10 +334,10 @@ namespace sw::editor
         vector<EditorGraphNodeIssue> listNodeIssue;
         for ( const BehaviorTreeEditIssue& issue : _listIssue )
         {
-            if ( issue._nodeID < 0 )
+            if ( issue._nodeID.has_value() == false )
                 continue;
             EditorGraphNodeIssue nodeIssue;
-            nodeIssue._nodeID  = issue._nodeID;
+            nodeIssue._nodeID  = *issue._nodeID;
             nodeIssue._message = issue._message;
             listNodeIssue.push_back( std::move( nodeIssue ) );
         }
@@ -433,7 +433,7 @@ namespace sw::editor
         uint32 kindID{ 0 };
         float2 canvasPosition{};
         if ( _nodeGraph.drawAddNodePopup( listKind, kindID, canvasPosition ) )
-            (void)addNodeFromSelection( static_cast<BehaviorNodeKind>( kindID ) ); // 거절하면 상태 줄이 이유를 알린다
+            addNodeFromSelection( static_cast<BehaviorNodeKind>( kindID ) ); // 거절하면 상태 줄이 이유를 알린다
 
         handleEditCommands(); // 잘라내기가 지우므로 아래 지우기 처리보다 먼저
 
@@ -518,7 +518,7 @@ namespace sw::editor
             _nodeGraph.requestNodeDeletion( targetID ); // 지우기는 아래 지우기 처리가 같은 프레임에 받는다
     }
 
-    int32 BehaviorTreePanel::addNodeFromSelection( BehaviorNodeKind type )
+    void BehaviorTreePanel::addNodeFromSelection( BehaviorNodeKind type )
     {
         int32 parentID = _selectedID;
         if ( _model.getRootID() < 0 )
@@ -528,18 +528,17 @@ namespace sw::editor
         else if ( _model.find( parentID ) == nullptr )
         {
             _statusText = "Select the parent node first";
-            return -1;
+            return;
         }
-        const int32 id = _model.addNode( parentID, type );
-        if ( id < 0 )
+        const expected<int32> id = _model.addNode( parentID, type );
+        if ( id.has_value() == false )
         {
             _statusText = "That node cannot take a child here (a leaf, a decorator that already has one, or the depth limit)";
-            return -1;
+            return;
         }
-        _selectedID     = id;
+        _selectedID     = *id;
         _bSelectPending = SW_TRUE;
         markStructureChanged( "Add Behavior Node" );
-        return id;
     }
 
     void BehaviorTreePanel::markStructureChanged( const utf8* pLabel )
@@ -716,7 +715,7 @@ namespace sw::editor
         ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Error" ) ), "%s", SW_LOCKEYFORMAT( "EdPluginFormat", "Problems", TextArgumentList().addInteger( "issueCount", static_cast<int64>( _listIssue.size() ) ) ).c_str() );
         for ( const BehaviorTreeEditIssue& issue : _listIssue )
         {
-            const string where = issue._nodeID >= 0 ? _model.makeDisplayName( issue._nodeID ) : string{ "Tree" };
+            const string where = issue._nodeID.has_value() ? _model.makeDisplayName( *issue._nodeID ) : string{ "Tree" };
             ImGui::BulletText( "%s: %s", where.c_str(), issue._message.c_str() );
         }
     }

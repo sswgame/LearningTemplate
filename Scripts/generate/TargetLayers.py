@@ -6,7 +6,7 @@ Scripts/generate/TargetLayers.py
 타깃 경계 껍데기를 만든다. `Source/` 가 모든 타깃의 include 루트라 Core 가 `Engine/...` 을, 키트가 매니페스트에 적지 않은 키트를 include 해도 헤더만 쓰면
 컴파일 · 링크가 된다. 표(`Config/Rules/Layers/TargetLayers.toml`)의 게이트마다, 그리고 모듈(키트 · 에디터 확장 · 게임)마다 보면 안 되는 헤더와 같은 경로의 `#error`
 파일을 `<빌드>/generated/sw/TargetLayerStubs/<게이트>/` 에 놓고, CMake(`sw_applyTargetLayerGate`)가 그 폴더를 타깃의 include 자리 맨 앞에 둔다.
-위반하면(헤더를 거쳐 닿는 전이 include 도) 컴파일이 멈춘다 — `EngineLayers.py` · `EditorLayers.py` 와 같은 틀이고, 그쪽이 폴더 층을 보면 이쪽은 타깃 경계를 본다.
+위반하면(헤더를 거쳐 닿는 전이 include 도) 컴파일이 멈춘다 — `ModuleLayers.py` · `EditorLayers.py` 와 같은 틀이고, 그쪽이 폴더 층을 보면 이쪽은 타깃 경계를 본다.
 
 `[gatefolder]` 는 경로 접두어 대신 폴더 이름으로 막는다 — 서버 구성이 짓지 않는 `Client/`, 클라이언트 구성이 짓지 않는 `Server/` 가 모듈 · 게임마다 있어서다.
 `serverbuild` 는 서버가 짓지 않는 엔진 폴더(`cmake/Engine/BuildLayout.cmake` 의 `SW_UNBUILT_ENGINE_FOLDERS`)를 모두 막아야 한다 — 대조해 빠지면 멈춘다.

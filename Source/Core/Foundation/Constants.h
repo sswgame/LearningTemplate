@@ -117,24 +117,40 @@ namespace sw::constant::path
     inline constexpr const utf8* kPacksFolder = "Packs";
 } // namespace sw::constant::path
 
+namespace sw::constant
+{
+    /**
+     * @brief 무효 인덱스 표지의 형식입니다. 정수 `T` 로 암시 변환되어 비교 · 대입 · 산술은 리터럴처럼 쓰지만, `optional` · `expected` 의
+     *        값으로는 들어가지 못한다(`Expected.h` 가 그 생성 · 대입 · 비교를 지운다) — "없음" 을 값 -1 로 싣던 결함이 컴파일 오류가 된다.
+     * @note 따로 된 형식이라 `auto` 로 받거나 템플릿 인자로 추론하면 이 형식이 된다. 정수가 필요하면 형식을 적는다(`const int32 x = kInt32;`).
+     */
+    template <typename T>
+    struct InvalidIndex
+    {
+        static constexpr T kValue = static_cast<T>( -1 );
+
+        constexpr operator T() const noexcept { return kValue; }
+    };
+} // namespace sw::constant
+
 namespace sw::constant::invalid_index
 {
     // 무효 인덱스 — 부호 없는 형은 모든 비트가 1, 부호 있는 형은 -1
     /** @brief uint8 무효값 (0xFF) 입니다. */
-    inline constexpr uint8 kUint8 = static_cast<uint8>( -1 );
+    inline constexpr InvalidIndex<uint8> kUint8{};
     /** @brief uint16 무효값 (0xFFFF) 입니다. */
-    inline constexpr uint16 kUint16 = static_cast<uint16>( -1 );
+    inline constexpr InvalidIndex<uint16> kUint16{};
     /** @brief uint32 무효값 (0xFFFFFFFF) 입니다. */
-    inline constexpr uint32 kUint32 = static_cast<uint32>( -1 );
+    inline constexpr InvalidIndex<uint32> kUint32{};
     /** @brief uint64 무효값(모든 비트가 1)입니다. */
-    inline constexpr uint64 kUint64 = static_cast<uint64>( -1 );
+    inline constexpr InvalidIndex<uint64> kUint64{};
 
     /** @brief int8 무효값 (-1) 입니다. */
-    inline constexpr int8 kInt8 = -1;
+    inline constexpr InvalidIndex<int8> kInt8{};
     /** @brief int16 무효값 (-1) 입니다. */
-    inline constexpr int16 kInt16 = -1;
+    inline constexpr InvalidIndex<int16> kInt16{};
     /** @brief int32 무효값 (-1) 입니다. */
-    inline constexpr int32 kInt32 = -1;
+    inline constexpr InvalidIndex<int32> kInt32{};
     /** @brief int64 무효값 (-1) 입니다. */
-    inline constexpr int64 kInt64 = -1;
+    inline constexpr InvalidIndex<int64> kInt64{};
 } // namespace sw::constant::invalid_index

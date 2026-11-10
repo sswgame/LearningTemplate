@@ -201,9 +201,10 @@ namespace sw::editor
             _running = next;
     }
 
-    void EditorSourceControl::applyResult( const PendingOperation& operation, int32 exitCode, bool bLaunched, const vector<string>& listLine )
+    void EditorSourceControl::applyResult( const PendingOperation& operation, const optional<int32>& exitCode, bool bLaunched, const vector<string>& listLine )
     {
         const string lastLine = listLine.empty() ? string{} : listLine.back();
+        const string exitText = exitCode.has_value() ? to_string( *exitCode ) : string( "none - not waited for" ); // 기다리지 못한 도구는 종료 코드가 없다(까닭은 마지막 줄)
         switch ( operation._operation )
         {
             case SourceControlOperation::Probe:
@@ -248,7 +249,7 @@ namespace sw::editor
                 else
                 {
                     StringBuilder<constant::buffer::kMax256> lastErrorBuilder;
-                    lastErrorBuilder.appendFormat( "Listing changes failed (exit %#): %#", exitCode, lastLine );
+                    lastErrorBuilder.appendFormat( "Listing changes failed (exit %#): %#", exitText, lastLine );
                     _lastError = string( lastErrorBuilder.view() );
                     SW_LOG_WARNING_ID( "SourceControl.StatusFailed", "Source control: %#", _lastError );
                 }
@@ -264,7 +265,7 @@ namespace sw::editor
                 if ( exitCode != 0 )
                 {
                     StringBuilder<constant::buffer::kMax256> lastErrorBuilder;
-                    lastErrorBuilder.appendFormat( "%# of %# failed (exit %#): %#", operation._operation == SourceControlOperation::Diff ? "Diff" : "History", operation._repositoryPath, exitCode, lastLine );
+                    lastErrorBuilder.appendFormat( "%# of %# failed (exit %#): %#", operation._operation == SourceControlOperation::Diff ? "Diff" : "History", operation._repositoryPath, exitText, lastLine );
                     _lastError = string( lastErrorBuilder.view() );
                 }
                 ++_changeRevision;
@@ -280,7 +281,7 @@ namespace sw::editor
                 else
                 {
                     StringBuilder<constant::buffer::kMax256> lastErrorBuilder;
-                    lastErrorBuilder.appendFormat( "Revert of %# failed (exit %#): %#", operation._repositoryPath, exitCode, lastLine );
+                    lastErrorBuilder.appendFormat( "Revert of %# failed (exit %#): %#", operation._repositoryPath, exitText, lastLine );
                     _lastError = string( lastErrorBuilder.view() );
                     SW_LOG_WARNING_ID( "SourceControl.RevertFailed", "Source control: %#", _lastError );
                 }
@@ -293,7 +294,7 @@ namespace sw::editor
                 if ( exitCode == 0 && _pProvider->parseRefreshOutput( listLine, listLock ) )
                     _listLock = std::move( listLock );
                 else
-                    SW_LOG_WARNING_ID( "SourceControl.SourceControlListingLocks", "Source control: listing locks failed (exit %#): %#", exitCode, lastLine.c_str() );
+                    SW_LOG_WARNING_ID( "SourceControl.SourceControlListingLocks", "Source control: listing locks failed (exit %#): %#", exitText, lastLine.c_str() );
                 return;
             }
             case SourceControlOperation::Lock:
@@ -303,7 +304,7 @@ namespace sw::editor
                 if ( exitCode == 0 )
                     SW_LOG_INFO_ID( "SourceControl.SourceControl2", "Source control: %# %# - %#", pVerb, operation._repositoryPath.c_str(), lastLine.c_str() );
                 else
-                    SW_LOG_WARNING_ID( "SourceControl.SourceControlFailedExit", "Source control: %# %# failed (exit %#): %#", pVerb, operation._repositoryPath.c_str(), exitCode, lastLine.c_str() );
+                    SW_LOG_WARNING_ID( "SourceControl.SourceControlFailedExit", "Source control: %# %# failed (exit %#): %#", pVerb, operation._repositoryPath.c_str(), exitText, lastLine.c_str() );
                 requestRefresh();
                 return;
             }
@@ -337,15 +338,10 @@ namespace sw::editor
     {
         if ( repositoryRoot.empty() || absolutePath.empty() )
             return {};
-        // 비교는 소문자로(Windows 경로), 돌려주는 경로는 원래 철자로 — git 은 리눅스에서 대소문자를 가린다.
-        const string root      = FileUtil::normalizePath( repositoryRoot );
-        const string lowerPath = FileUtil::normalizePath( absolutePath );
-        if ( FileUtil::startsWithPathComponent( lowerPath, root ) == false )
+        // 비교는 OS 대소문자 규칙으로, 돌려주는 경로는 원래 철자로 — git 은 리눅스에서 대소문자를 가린다.
+        string relative;
+        if ( FileUtil::tryMakePathUnderRoot( repositoryRoot, absolutePath, relative ) == false )
             return {};
-        const string lowerSuffix = FileUtil::suffixAfterPathComponent( lowerPath, root );
-        const string original    = FileUtil::normalizeSeparators( absolutePath );
-        if ( lowerSuffix.empty() || lowerSuffix.size() > original.size() )
-            return {};
-        return original.substr( original.size() - lowerSuffix.size() );
+        return relative;
     }
 } // namespace sw::editor

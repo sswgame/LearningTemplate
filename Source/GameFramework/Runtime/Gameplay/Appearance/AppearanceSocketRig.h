@@ -11,6 +11,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
@@ -82,7 +83,7 @@ namespace sw
     public:
         /** @brief 몸 유닛의 번호입니다. */
         static constexpr uint32 kBodyUnit = 0;
-        /** @brief 소켓 에셋이 없는 부품의 유닛 번호입니다. */
+        /** @brief `computePlacement` 가 채우기 전의 유닛 번호입니다(나가는 칸의 초기값). */
         static constexpr uint32 kNoUnit = constant::invalid_index::kUint32;
 
         AppearanceSocketRig();
@@ -95,8 +96,6 @@ namespace sw
          */
         bool rebuild( const ResolvedAppearance& resolved, const CharacterBoneArray& bodyBindBones, IAppearanceSocketSource& source, CharacterIssueList& outIssues );
 
-        /** @brief 부품(해석 결과의 `_listPart` 번호)의 유닛 번호입니다. 소켓 에셋이 없으면 `kNoUnit` 입니다. */
-        uint32 findPartUnit( uint32 partIndex ) const;
         /**
          * @brief 부품 배치(소켓 후보, 오프셋, 회전)를 붙을 유닛 공간의 변환으로 계산합니다. 후보 중 이번 해석에서 켜진 첫 소켓을 씁니다.
          * @param bodyBones 몸의 현재 본(모델 공간)입니다. 몸 소켓이면 이 본으로, 부품 소켓이면 그 부품의 강체 본으로 계산합니다.
@@ -115,8 +114,8 @@ namespace sw
         const ResolvedSocketTable& getTable() const { return _table; }
         /** @brief 몸을 포함한 유닛 수입니다. */
         uint32 getUnitCount() const { return static_cast<uint32>( _listUnitPart.size() ); }
-        /** @brief 유닛의 부품 번호입니다. 몸 유닛도 몸 부품 번호이며, 몸 부품이 없으면 `kNoUnit` 입니다. */
-        uint32 getUnitPart( uint32 unitIndex ) const { return unitIndex < _listUnitPart.size() ? _listUnitPart[unitIndex] : kNoUnit; }
+        /** @brief 유닛의 부품 번호입니다. 몸 유닛도 몸 부품 번호이며, 몸 부품이 없거나 유닛이 없으면 비어 있습니다. */
+        optional<uint32> getUnitPart( uint32 unitIndex ) const { return unitIndex < _listUnitPart.size() ? _listUnitPart[unitIndex] : nullopt; }
 
         /** @brief 배치의 로컬 변환입니다. 오프셋과, 도 단위 "피치 요 롤" 회전으로 이루어집니다. */
         static float4x4 makePlacementTransform( const AppearancePlacement& placement );
@@ -126,9 +125,8 @@ namespace sw
         static void applySocketOverrides( const ResolvedAppearance& resolved, const CharacterBoneArray& bodyBindBones, SocketSet& inoutBodySockets );
 
     private:
-        ResolvedSocketTable _table;
-        CharacterBoneArray  _rigidBones;   ///< 강체 부품 유닛의 본("root" 하나, 단위 변환)
-        vector<uint32>      _listUnitPart; ///< 유닛에서 부품 번호로의 대응
-        vector<uint32>      _listPartUnit; ///< 부품에서 유닛 번호로의 대응(`kNoUnit` 이면 소켓 없음)
+        ResolvedSocketTable      _table;
+        CharacterBoneArray       _rigidBones;   ///< 강체 부품 유닛의 본("root" 하나, 단위 변환)
+        vector<optional<uint32>> _listUnitPart; ///< 유닛에서 부품 번호로의 대응(몸 부품이 없는 몸 유닛은 비어 있다)
     };
 } // namespace sw

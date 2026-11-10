@@ -16,6 +16,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -48,6 +49,11 @@ namespace sw
          *          목록은 쿠킹 설정 해시에 들어가 바뀌면 팩을 다시 베이크한다.
          */
         vector<string> _listExcludedSourceFile;
+        /**
+         * @brief 셰이더 쿠킹 요청이 만드는 바이너리의 스테이징 기준 id(`engine/shaders/bin/dx12/<파일>`, 정규화)입니다 — 위 층(렌더러의 요청 수집)이 채운다. 셰이더가 없는 구성(전용 서버)은 비어 있다.
+         * @details 이 가운데 원본이 닿지 않아 팩에서 버리는 것은 경고(`PackCooker.PackCookDroppedRequestedShader`)다 — 런타임이 찾을 셰이더가 팩에 없다. 요청 밖 바이너리는 정보 줄이다.
+         */
+        unordered_set<string> _setRequestedShaderBinary;
     };
 } // namespace sw
 
@@ -61,6 +67,12 @@ namespace sw
     {
         /** @brief 도메인(`engine` · `common` · `game/empty`)의 팩 파일 이름(`engine.pack` · `game_empty.pack`)입니다. 도메인은 이름이 아니라 팩 안(마운트 도메인)에 적는다. */
         static string makePackFileName( string_view domain );
+        /**
+         * @brief 팩 하나의 쿠킹 기록 id(`packs/<타깃>/<스테이징 해시>/<팩 이름>`)입니다.
+         * @details 기록 자리(`<프로젝트>/Saved/CookRecord`)는 프리셋이 함께 쓰는데 팩의 입력인 스테이징(`--cooked-dir`)은 프리셋마다 다르다 — 스테이징마다 기록을 따로 둔다.
+         *          나눠 쓰면 다른 프리셋의 기록이 새것이라 이 스테이징을 보지 않고 그 팩을 DDC 에서 되살렸다(첫 배포 굽기의 빠진 layer_bake).
+         */
+        static string makeRecordID( string_view target, string_view cookedDir, string_view packName );
 
         /**
          * @brief 도메인 기준 경로 @p relativePath 를 팩에 담을지 판정합니다(스테이징 산출물은 `shouldIncludeStagedFile` 이 본다).

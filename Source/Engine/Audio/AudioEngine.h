@@ -322,7 +322,7 @@ namespace sw
             const AudioEventDef*                _pDesc{ nullptr };
             uint64                              _lastPostFrame{ 0 };
             uint32                              _sequenceCursor{ 0 };
-            int32                               _lastRandomIndex{ constant::invalid_index::kInt32 };
+            optional<uint32>                    _lastRandomIndex;      ///< 바로 앞에 낸 무작위 클립(아직 없으면 비어 있다)
             bool                                _bPostedOnce{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 

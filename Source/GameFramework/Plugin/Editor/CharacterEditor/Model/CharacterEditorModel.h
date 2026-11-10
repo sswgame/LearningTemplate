@@ -98,6 +98,7 @@ namespace sw::editor
         const string&        getPackDataPath() const { return _packDataPath; }
         const string&        getPackDataMessage() const { return _packDataMessage; }
         const hashed_string& getPreviewPresetID() const { return _previewPresetID; }
+        const hashed_string& getPreviewWipeEvent() const { return _previewWipeEvent; }
         /** @brief 엔진 기본 소켓 종류 표와 좌우 이름 규칙을 한 번 읽어 소켓 모델에 겁니다. */
         void ensureKindTable();
 
@@ -271,15 +272,16 @@ namespace sw::editor
         string                        _status;
         hashed_string                 _selectedSocket;
         hashed_string                 _selectedBone;
-        vector<hashed_string>         _listClipName;    ///< 클립 폴더의 클립 이름들(콤보 목록, 이름순)
-        hashed_string                 _selectedClip;    ///< 콤보에서 고른 클립
-        ResolvedAppearance            _preview;         ///< 입혀 본 결과(규칙 설명). 선택이 바뀔 때만 다시 푼다
-        AppearanceSelectionReport     _previewReport;   ///< `_preview` 와 같이 푼 보고
-        uint32                        _previewRevision; ///< `_preview` 를 푼 외형 선택의 세대
-        string                        _packRoot;        ///< 경로 칸을 채운 활성 게임 팩 루트 — 바뀌면 다시 읽는다
-        string                        _packDataPath;    ///< 활성 팩의 캐릭터 편집 데이터 파일
-        string                        _packDataMessage; ///< `Invalid` 의 이유
-        hashed_string                 _previewPresetID; ///< 팩 데이터의 미리보기 몸 프리셋(선택에 기준 프리셋이 없을 때)
+        vector<hashed_string>         _listClipName;     ///< 클립 폴더의 클립 이름들(콤보 목록, 이름순)
+        hashed_string                 _selectedClip;     ///< 콤보에서 고른 클립
+        ResolvedAppearance            _preview;          ///< 입혀 본 결과(규칙 설명). 선택이 바뀔 때만 다시 푼다
+        AppearanceSelectionReport     _previewReport;    ///< `_preview` 와 같이 푼 보고
+        uint32                        _previewRevision;  ///< `_preview` 를 푼 외형 선택의 세대
+        string                        _packRoot;         ///< 경로 칸을 채운 활성 게임 팩 루트 — 바뀌면 다시 읽는다
+        string                        _packDataPath;     ///< 활성 팩의 캐릭터 편집 데이터 파일
+        string                        _packDataMessage;  ///< `Invalid` 의 이유
+        hashed_string                 _previewPresetID;  ///< 팩 데이터의 미리보기 몸 프리셋(선택에 기준 프리셋이 없을 때)
+        hashed_string                 _previewWipeEvent; ///< 팩 데이터의 미리보기 몸 닦기 이벤트(비면 닦지 않는다)
         PackDataState                 _packDataState;
         CharacterGizmoTarget          _gizmoTarget;          ///< 마지막에 고른 쪽(`selectSocket` · `selectBone`)
         uint8                         _bClipNamesLoaded : 1; ///< 클립 이름을 한 번 모았다(팩 데이터가 바뀌면 다시 모은다)

@@ -240,8 +240,13 @@ namespace sw
         string _golden{};
         PROPERTY()
         string _region{};
+        // 아래 세 상한은 적었을 때만 정책 데이터(`Config/Dev/GoldenImage.json`)의 기본을 덮는다 — 적었는지를 판정이 읽는다(`AutomationStepArgsUtil::parseExpectImage`).
         PROPERTY( Min = 0, Max = 1 )
-        float32 _tolerance{ 0.01f }; ///< 다른 화소의 비율 상한
+        float32 _tolerance{ 0.0f }; ///< 다른 화소의 비율 상한
+        PROPERTY( Min = 0, Max = 1 )
+        float32 _maxMeanDistance{ 0.0f }; ///< 평균 색 거리의 상한(0..1) — 넓고 얕은 차이
+        PROPERTY( Min = 0 )
+        uint32 _maxRegionPixels{ 0 }; ///< 깊은 차이 덩어리의 상한(축소 그림의 화소 수) — 좁고 깊은 차이
     };
 
     /** @brief `ExpectImagesDiffer` 의 인자입니다 — 값을 바꾼 두 장이 정말 다른지 보는 음성 대조입니다(골든 없이 같은 실행의 두 스크린샷을 견준다). */

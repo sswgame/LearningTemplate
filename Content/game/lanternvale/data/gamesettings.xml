@@ -5,4 +5,5 @@
   <startMap>game/lanternvale/maps/vale.scene.xml</startMap>
   <inputMap path="common/input/base.input.xml"/>
   <loadingScreen>engine/ui/loading.ui.xml</loadingScreen>
+  <defaultLanguage>ko_kr</defaultLanguage>
 </GameSettings>

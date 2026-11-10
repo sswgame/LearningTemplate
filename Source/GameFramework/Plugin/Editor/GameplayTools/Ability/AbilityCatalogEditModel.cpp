@@ -307,10 +307,10 @@ namespace sw::editor
         return bAdded;
     }
 
-    int32 AbilityCatalogEditModel::addEntry( AbilityEntryKind kind )
+    expected<int32> AbilityCatalogEditModel::addEntry( AbilityEntryKind kind )
     {
         if ( kind == AbilityEntryKind::Count || _document.addRow( getElementName( kind ) ) == false )
-            return -1;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the catalog document did not take a new row" } );
         rebuild();
         // 새 행은 그 종류 표의 끝이다.
         for ( int32 entryIndex = static_cast<int32>( _listEntry.size() ) - 1; entryIndex >= 0; --entryIndex )
@@ -318,7 +318,7 @@ namespace sw::editor
             if ( _listEntry[static_cast<size_t>( entryIndex )]._kind == kind )
                 return entryIndex;
         }
-        return -1;
+        return unexpected( Error{ ErrorKind::NotFound, "the new row is not in the rebuilt entry list" } );
     }
 
     int32 AbilityCatalogEditModel::duplicateEntry( int32 entry )

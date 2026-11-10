@@ -39,7 +39,7 @@ namespace sw
 
         /**
          * @brief PROPERTY 가 아닌 상태를 가진 컴포넌트 타입 하나를 상태 스냅샷에 올립니다 — 게임 인스턴스 생성자에서 한 줄로 부릅니다.
-         * @details 상태를 저장하기 전에 그 타입마다 `writeState` 를 싣고(`ComponentStateStore::capture`), 복원한 뒤 `restoreState` 로 돌려준다(`restore`).
+         * @details 상태를 저장하기 전에 그 타입마다 `serializeState` 로 써서 싣고(`ComponentStateStore::capture`), 복원한 뒤 `restoreState` 로 돌려준다(`restore`).
          *          등록은 함수 포인터라 게임 모듈과 수명이 같다. 핫 리로드가 새 인스턴스를 만들면 새 생성자가 다시 등록한다.
          *          부르는 .cpp 는 `GameObjectManager.h` 를 include 해야 한다. 순회 템플릿이 그때 인스턴스화된다.
          */

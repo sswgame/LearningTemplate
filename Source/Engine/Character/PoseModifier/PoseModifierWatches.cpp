@@ -7,8 +7,8 @@
 
 #include "Core/Name/hashed_string.h"
 
-#include "Engine/Animation/Component/PoseModifierComponent.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 
 namespace sw

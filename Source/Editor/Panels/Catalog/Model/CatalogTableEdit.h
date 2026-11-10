@@ -5,6 +5,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Panels/Catalog/Model/CatalogChildSection.h"
@@ -44,7 +45,7 @@ namespace sw::editor
         };
 
         Kind             _kind{ Kind::None };
-        int32            _element{ -1 };
+        optional<int32>  _element; ///< 고칠 원소. 원소가 없는 편집(`None` · `AddRow`)은 비어 있다
         string           _column{};
         string           _text{}; ///< 칸의 새 값(`SetCell`) 또는 표 이름(`AddRow`)
         CatalogChildPath _path{};

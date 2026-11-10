@@ -8,6 +8,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Panels/Inspector/Model/PropertyGridModel.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -53,10 +54,15 @@ namespace sw::editor
     {
     }
 
-    bool SceneObjectReferencePickerState::gatherPreview( const MutableObjectAddress instance, const PropertyInfo& prop, SceneObjectReferencePickerState& outChoices )
+    bool SceneObjectReferencePickerState::gatherPreview( const PropertyGridModel& model, uint32 rowID, SceneObjectReferencePickerState& outChoices )
     {
         using Internal = SceneObjectReferencePickerStateInternal;
         outChoices._listScene.clear();
+        MutableObjectAddress instance{ nullptr };
+        const PropertyInfo*  pProp = nullptr;
+        if ( model.findRowValue( rowID, instance, pProp ) == false )
+            return false;
+        const PropertyInfo&         prop   = *pProp;
         const SceneObjectReference* pValue = prop.getValuePtr<SceneObjectReference>( instance.get() );
         if ( pValue == nullptr )
             return false;
@@ -96,10 +102,15 @@ namespace sw::editor
         return true;
     }
 
-    void SceneObjectReferencePickerState::gatherScenes( const MutableObjectAddress instance, const PropertyInfo& prop, SceneObjectReferencePickerState& inoutChoices )
+    void SceneObjectReferencePickerState::gatherScenes( const PropertyGridModel& model, uint32 rowID, SceneObjectReferencePickerState& inoutChoices )
     {
         using Internal = SceneObjectReferencePickerStateInternal;
         inoutChoices._listScene.clear();
+        MutableObjectAddress instance{ nullptr };
+        const PropertyInfo*  pProp = nullptr;
+        if ( model.findRowValue( rowID, instance, pProp ) == false )
+            return;
+        const PropertyInfo&         prop   = *pProp;
         const SceneObjectReference* pValue = prop.getValuePtr<SceneObjectReference>( instance.get() );
         if ( pValue == nullptr )
             return;

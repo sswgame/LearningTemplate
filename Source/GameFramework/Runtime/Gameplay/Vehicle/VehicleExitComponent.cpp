@@ -14,7 +14,7 @@
 namespace sw
 {
     VehicleExitComponent::VehicleExitComponent()
-        : _exitButton{ "Exit" }
+        : _exitButton{}
         , _exitIndex{}
     {
         setCanEverTick( true );

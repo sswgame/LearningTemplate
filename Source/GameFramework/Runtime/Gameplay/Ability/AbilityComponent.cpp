@@ -16,6 +16,7 @@
 #include "GameFramework/Runtime/Gameplay/Ability/Ability.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityEvents.h"
+#include "GameFramework/Runtime/Gameplay/Ability/CombatAttributeSet.h"
 
 namespace sw
 {
@@ -66,8 +67,8 @@ namespace sw
         , _bHasPendingRemoval{ SW_FALSE }
         , _bRefreshingOngoingTags{ SW_FALSE }
         , _abilitySetID{}
-        , _healthAttribute{ "Health" }
-        , _maxHealthAttribute{ "MaxHealth" }
+        , _healthAttribute{ CombatAttributes::health() } // 프레임워크 공용 어트리뷰트 세트의 이름(엔진 상수) — 다른 세트를 쓰는 데이터가 덮는다
+        , _maxHealthAttribute{ CombatAttributes::maxHealth() }
         , _damageNumberOffset{ 0.0f, 0.6f, 0.0f }
         , _bShowDamageNumbers{ false }
     {

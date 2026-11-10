@@ -116,7 +116,7 @@ namespace sw::editor
         , _selected{ kInvalidWidgetID }
         , _seenRootID{ kInvalidWidgetID }
         , _baselineWidget{ kInvalidWidgetID }
-        , _selectedOrdinal{ UIPreviewLogic::kNoOrdinal }
+        , _selectedOrdinal{}
         , _generation{ 0 }
         , _gameTextRevision{ 0 }
         , _languageIndex{ 0 }
@@ -208,7 +208,7 @@ namespace sw::editor
         _openedDocument.clear();
         _targetPath.clear();
         _selected           = kInvalidWidgetID;
-        _selectedOrdinal    = UIPreviewLogic::kNoOrdinal;
+        _selectedOrdinal    = nullopt;
         _seenRootID         = kInvalidWidgetID;
         _baselineWidget     = kInvalidWidgetID;
         _bMutated           = SW_FALSE;
@@ -291,7 +291,7 @@ namespace sw::editor
         ++_generation;
         _listBaseline.clear();
         _baselineWidget = kInvalidWidgetID;
-        _selected       = _selectedOrdinal != UIPreviewLogic::kNoOrdinal ? UIPreviewLogic::findWidgetByOrdinal( tree, _selectedOrdinal ) : kInvalidWidgetID;
+        _selected       = _selectedOrdinal.has_value() ? UIPreviewLogic::findWidgetByOrdinal( tree, *_selectedOrdinal ) : kInvalidWidgetID;
         if ( bRebuilt )
         {
             // 다시 만든 트리는 디스크 문서 그대로다 — 고친 값과 입력 흉내의 흔적이 모두 사라졌다. 재생기도 새것이라 멈춤 표시를 남기지 않는다.
@@ -408,7 +408,7 @@ namespace sw::editor
     void UIPreviewModel::selectAt( const WidgetTree& tree, const float2& point )
     {
         _selected        = UIPreviewLogic::findWidgetAt( tree, point );
-        _selectedOrdinal = _selected != kInvalidWidgetID ? UIPreviewLogic::findWidgetOrdinal( tree, _selected ) : UIPreviewLogic::kNoOrdinal;
+        _selectedOrdinal = _selected != kInvalidWidgetID ? UIPreviewLogic::findWidgetOrdinal( tree, _selected ) : nullopt;
     }
 
     const vector<UIPreviewWidgetRow>& UIPreviewModel::getWidgetRows( const WidgetTree& tree )
@@ -452,7 +452,7 @@ namespace sw::editor
     {
         UIScreen* pScreen = findPreviewScreen();
         Widget*   pWidget = pScreen != nullptr ? pScreen->getTree().findWidgetByID( _selected ) : nullptr;
-        if ( pWidget == nullptr )
+        if ( pWidget == nullptr || _selectedOrdinal.has_value() == false )
             return;
         setDirty( true );
         if ( prop._containerKind != ContainerKind::None )
@@ -471,16 +471,16 @@ namespace sw::editor
             const string oldText = baseline._text;
             baseline._text       = newText;
             // 끌어 바꾸는 값은 프레임마다 알려 온다 — 같은 위젯 · 같은 프로퍼티의 연속 편집은 되돌리기 항목 하나로 합친다.
-            pushPropertyEdit( _selectedOrdinal, name, oldText, newText, UIPreviewLogic::makeEditCoalesceKey( _generation, _selectedOrdinal, name ) );
+            pushPropertyEdit( *_selectedOrdinal, name, oldText, newText, UIPreviewLogic::makeEditCoalesceKey( _generation, *_selectedOrdinal, name ) );
             return;
         }
     }
 
-    bool UIPreviewModel::commitSlotEdit( uint32 ordinal, const string& oldText, const string& newText )
+    bool UIPreviewModel::commitSlotEdit( optional<uint32> ordinal, const string& oldText, const string& newText )
     {
-        if ( newText == oldText )
+        if ( ordinal.has_value() == false || newText == oldText )
             return false;
-        pushPropertyEdit( ordinal, "_slot", oldText, newText, string{} );
+        pushPropertyEdit( *ordinal, "_slot", oldText, newText, string{} );
         setDirty( true );
         _baselineWidget = kInvalidWidgetID; // 인스펙터의 기준 값을 다시 잡는다
         return true;
@@ -505,7 +505,7 @@ namespace sw::editor
                                  "Edit UI Widget", coalesceKey );
     }
 
-    void UIPreviewModel::afterStructureEdit( UIScreen& screen, uint32 selectedOrdinal )
+    void UIPreviewModel::afterStructureEdit( UIScreen& screen, optional<uint32> selectedOrdinal )
     {
         // 위젯이 붙거나 떨어졌다 — 호버 경로가 옛 위젯 번호를 보관하고 있을 수 있어 비우고, 고름과 기준 값을 새 구조에 맞춘다.
         WidgetTree& tree = screen.getTree();
@@ -513,7 +513,7 @@ namespace sw::editor
         _pointerTracker.removeInside();
         _baselineWidget  = kInvalidWidgetID;
         _selectedOrdinal = selectedOrdinal;
-        _selected        = selectedOrdinal != UIPreviewLogic::kNoOrdinal ? UIPreviewLogic::findWidgetByOrdinal( tree, selectedOrdinal ) : kInvalidWidgetID;
+        _selected        = selectedOrdinal.has_value() ? UIPreviewLogic::findWidgetByOrdinal( tree, *selectedOrdinal ) : kInvalidWidgetID;
         setDirty( true );
     }
 
@@ -537,7 +537,7 @@ namespace sw::editor
         PanelWidget*    pParent = UIPreviewLogic::findDropContainer( tree, pTarget, index );
         if ( pType == nullptr || pParent == nullptr )
             return false;
-        const uint32 parentOrdinal = UIPreviewLogic::findWidgetOrdinal( tree, pParent->getID() );
+        const uint32 parentOrdinal = UIPreviewLogic::findWidgetOrdinal( tree, pParent->getID() ).value(); // 트리에서 찾은 패널이라 늘 있다
         Widget*      pAdded        = UIPreviewLogic::insertWidget( tree, *pType, parentOrdinal, index );
         if ( pAdded == nullptr )
         {
@@ -575,8 +575,8 @@ namespace sw::editor
         if ( pWidget == nullptr || pWidget->getParent() == nullptr )
             return false; // 루트는 지우지 않는다(문서에는 루트가 있어야 한다)
         PanelWidget* pParent       = pWidget->getParent();
-        const uint32 index         = pParent->findChildIndex( pWidget ).value(); // 부모의 자식이라 늘 있다
-        const uint32 parentOrdinal = UIPreviewLogic::findWidgetOrdinal( tree, pParent->getID() );
+        const uint32 index         = pParent->findChildIndex( pWidget ).value();                          // 부모의 자식이라 늘 있다
+        const uint32 parentOrdinal = UIPreviewLogic::findWidgetOrdinal( tree, pParent->getID() ).value(); // 트리 안 위젯의 부모라 늘 있다
         _pointer.clearHover();
         shared_ptr<RemovedWidget> pHolder = sw::make_shared<RemovedWidget>();
         pHolder->_pWidget                 = UIPreviewLogic::detachWidget( tree, parentOrdinal, index );
@@ -634,7 +634,7 @@ namespace sw::editor
         uint32        toIndex{ 0 };
         if ( pWidget == nullptr || UIPreviewLogic::findSiblingMove( *pWidget, delta, fromIndex, toIndex ) == false )
             return;
-        reorderChild( UIPreviewLogic::findWidgetOrdinal( tree, pWidget->getParent()->getID() ), fromIndex, toIndex );
+        reorderChild( UIPreviewLogic::findWidgetOrdinal( tree, pWidget->getParent()->getID() ).value(), fromIndex, toIndex ); // 트리 안 위젯의 부모라 늘 있다
     }
 
     void UIPreviewModel::dropLayoutHandle( WidgetTree& tree, Widget& widget, const float2& point )
@@ -646,7 +646,7 @@ namespace sw::editor
             uint32 fromIndex{ 0 };
             uint32 toIndex{ 0 };
             if ( UIPreviewLogic::findBoxReorder( *pBox, widget, point, fromIndex, toIndex ) )
-                reorderChild( UIPreviewLogic::findWidgetOrdinal( tree, pParent->getID() ), fromIndex, toIndex );
+                reorderChild( UIPreviewLogic::findWidgetOrdinal( tree, pParent->getID() ).value(), fromIndex, toIndex ); // 트리 안 위젯의 부모라 늘 있다
             return;
         }
         const GridPanel*    pGrid     = castTo<const GridPanel>( pParent );
@@ -916,15 +916,17 @@ namespace sw::editor
             const Widget* pHovered = tree.findWidgetByID( _pointer.getHoveredWidget() );
             if ( pHovered != nullptr )
             {
-                _probe._hoveredOrdinal    = static_cast<int32>( UIPreviewLogic::findWidgetOrdinal( tree, pHovered->getID() ) );
+                const optional<uint32> hovered = UIPreviewLogic::findWidgetOrdinal( tree, pHovered->getID() );
+                if ( hovered.has_value() )
+                    _probe._hoveredOrdinal = static_cast<int32>( *hovered );
                 _probe._bHoveredFocusable = pHovered->supportsFocus();
             }
         }
         if ( tree.getFocusedWidget() != kInvalidWidgetID )
         {
-            const uint32 focused = UIPreviewLogic::findWidgetOrdinal( tree, tree.getFocusedWidget() );
-            if ( focused != UIPreviewLogic::kNoOrdinal )
-                _probe._focusedOrdinal = static_cast<int32>( focused );
+            const optional<uint32> focused = UIPreviewLogic::findWidgetOrdinal( tree, tree.getFocusedWidget() );
+            if ( focused.has_value() )
+                _probe._focusedOrdinal = static_cast<int32>( *focused );
         }
         const Widget* pSelected = tree.findWidgetByID( _selected );
         if ( pSelected != nullptr )

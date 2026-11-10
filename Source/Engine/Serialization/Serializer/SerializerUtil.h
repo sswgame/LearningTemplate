@@ -224,6 +224,16 @@ namespace sw
         SW_API static const TypeInfo* findNestedObjectType( hashed_string typeName, const SerializeContext& context );
 
         /**
+         * @brief 필수 칸(`PROPERTY( Required )`)이 빠졌는지 봅니다 — 적히지 않았거나, 이름 · 경로 형식(`isNameValueType`)인데 적힌 글이 비었다.
+         * @details XML · JSON 의 `collectMissingRequired` 가 함께 쓰는 한 판정이다(한쪽만 바뀌면 두 포맷이 같은 데이터를 다르게 통과시킨다).
+         *          빈 이름은 형식만 있고 값이 없는 칸이다 — 에디터가 빈 칸을 속성으로 적어도 데이터가 값을 준 것이 아니다.
+         * @param pWrittenText 적힌 글(스칼라 칸). 적히지 않았으면 nullptr, 객체 · 목록으로 적혔으면 빈 값이 아닌 것으로 본다(@p bWritten 만 본다).
+         */
+        SW_API static bool isRequiredValueMissing( const PropertyInfo& prop, bool bWritten, const string_view* pWrittenText );
+        /** @brief 이름 · 경로 형식(hashed_string · TagID · DataPath · AssetID · AssetRef<…>)인지 봅니다 — 빈 값이 "없음" 인 형식이다. 글(`string`)은 빈 값도 값이라 넣지 않는다. */
+        SW_API static bool isNameValueType( const hashed_string& typeName );
+
+        /**
          * @brief 원소 타입 이름이 **소유 포인터**인지 확인합니다(이름에 `*` 가 있으면 소유 포인터입니다).
          * @details `JSONSerializer` 와 `XMLSerializer` 가 함께 쓴다. 판정 기준이
          *          "이름에 별표가 있는가"라는 문자열 규칙이라, 한쪽만 고치면 두 포맷이 서로 다른

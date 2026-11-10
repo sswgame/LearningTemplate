@@ -516,19 +516,21 @@ namespace sw
                 const string wgslPath = string( FileUtil::removeExtension( spirvPath ) ) + ".wgsl"; // 잡은 이름에서 나온다 — 다른 작업과 겹치지 않는다
                 if ( FileUtil::writeFile( spirvPath, inoutBytecode.data(), inoutBytecode.size() ) == false )
                     return unexpected( Error{ ErrorKind::ExternalFailure, "could not write the SPIR-V for Tint", spirvPath } );
-                string        toolOutput;
-                const auto    onOutput = SW_DELEGATE_LAMBDA( ProcessOutputDelegate, [&toolOutput]( string_view line )
-                   {
+                string                toolOutput;
+                const auto            onOutput = SW_DELEGATE_LAMBDA( ProcessOutputDelegate, [&toolOutput]( string_view line )
+                           {
                     toolOutput += line;
                     toolOutput += ' ';
                 } );
-                const int32   exitCode = Process::execute( ProcessCommand::at( *tintPath, { "--format", "wgsl", "--allow-non-uniform-derivatives", "true", "-o", wgslPath, spirvPath } ), {}, onOutput );
-                vector<uint8> wgslBytes;
-                const bool    bRead = exitCode == 0 && FileUtil::readFile( wgslPath, wgslBytes );
+                const expected<int32> exitCode = Process::execute( ProcessCommand::at( *tintPath, { "--format", "wgsl", "--allow-non-uniform-derivatives", "true", "-o", wgslPath, spirvPath } ), {}, onOutput );
+                vector<uint8>         wgslBytes;
+                const bool            bRead = exitCode.has_value() && *exitCode == 0 && FileUtil::readFile( wgslPath, wgslBytes );
                 (void)FileUtil::removeFile( spirvPath );
                 (void)FileUtil::removeFile( wgslPath );
+                if ( exitCode.has_value() == false )
+                    return unexpected( exitCode.error() );
                 if ( bRead == false )
-                    return unexpected( Error{ ErrorKind::ExternalFailure, "Tint failed", "exit " + to_string( exitCode ) + ": " + toolOutput } );
+                    return unexpected( Error{ ErrorKind::ExternalFailure, "Tint failed", "exit " + to_string( *exitCode ) + ": " + toolOutput } );
                 vector<uint8> container;
                 WebGPUShaderContainer::pack( inoutBytecode, string_view( reinterpret_cast<const utf8*>( wgslBytes.data() ), wgslBytes.size() ), container );
                 inoutBytecode = std::move( container );

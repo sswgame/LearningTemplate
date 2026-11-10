@@ -55,9 +55,9 @@ namespace sw
         float32 getWaterDepth() const { return _waterDepth; }
 
     private:
-        PROPERTY( Category = "Surface", DisplayName = "Wet Channel", Tooltip = "Surface channel rain and water raise" )
+        PROPERTY( Required, Category = "Surface", DisplayName = "Wet Channel", Tooltip = "Surface channel rain and water raise" )
         hashed_string _wetChannel;
-        PROPERTY( Category = "Rain", DisplayName = "Precipitation Value", Tooltip = "Weather value read as rain strength (WeatherCatalog <Values>)" )
+        PROPERTY( Required, Category = "Rain", DisplayName = "Precipitation Value", Tooltip = "Weather value read as rain strength (WeatherCatalog <Values>)" )
         hashed_string _precipitationValue;
         PROPERTY( Category = "Rain", DisplayName = "Rain Wet Rate", Min = 0.0, Tooltip = "Wetness gained per second at precipitation 1 while under the open sky" )
         float32 _rainWetPerSecond;

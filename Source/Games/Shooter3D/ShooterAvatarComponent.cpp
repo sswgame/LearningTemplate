@@ -6,11 +6,11 @@
 #include "Core/Math/OrientationUtil.h"
 
 #include "Engine/Animation/AnimationClip.h"
-#include "Engine/Animation/Component/PoseModifierComponent.h"
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Skeletal/LocomotionSpeedUtil.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
+#include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -77,8 +77,8 @@ namespace sw
         , _firstPersonHandsSlot{}
         , _thirdPersonHandsSlot{}
         , _listFirstPersonHiddenSlot{}
-        , _strideNode{ "Stride" }
-        , _lookSourceObject{ "LookSource" }
+        , _strideNode{}
+        , _lookSourceObject{}
         , _locomotion{ 0.25f }
         , _mapClipFootSpeed{}
         , _aimWeight{ 0.0f }
@@ -161,7 +161,7 @@ namespace sw
         if ( found == _mapClipFootSpeed.end() )
         {
             // 클립마다 한 번만 측정한다(표본 수만큼 디코드한다). 상태가 처음 바뀌는 프레임에만 든다.
-            const float32 footSpeed = LocomotionSpeedUtil::computeFootSpeed( *pClip, pUnit->getSkeleton(), hashed_string( _leftFootBone ), hashed_string( _rightFootBone ),
+            const float32 footSpeed = LocomotionSpeedUtil::computeFootSpeed( *pClip, pUnit->getSkeleton(), _leftFootBone, _rightFootBone,
                                                                              LocomotionSpeedUtil::kDefaultSampleCount );
             found                   = _mapClipFootSpeed.emplace( pClip, footSpeed ).first;
         }
@@ -248,8 +248,13 @@ namespace sw
         _aimWeight                   = MathUtil::moveToward( _aimWeight, aimTarget, _layerBlendRate * step );
         _shootWeight                 = MathUtil::moveToward( _shootWeight, shootTarget, _layerBlendRate * 2.0f * step );
         // 레이어(클립 · 상체 마스크)는 그래프 데이터("layers" · "bone_masks")가 갖는다 — 코드는 가중치 파라미터만 쓴다.
-        parameters.setFloat( hashed_string( ShooterAnimationParameter::kAimWeight ), _aimWeight );
-        parameters.setFloat( hashed_string( ShooterAnimationParameter::kShootWeight ), _shootWeight );
+        // 들고 있는 무기가 두 손이면 두 손 층에 가중치를 준다(한 손 권총 자세로 소총을 들면 머리 옆으로 간다).
+        const bool    bTwoHanded = pPlayer->getWeapon( pPlayer->getWeaponIndex() ).getDef()._bTwoHanded == SW_TRUE;
+        const float32 oneHand    = bTwoHanded ? 0.0f : 1.0f;
+        parameters.setFloat( hashed_string( ShooterAnimationParameter::kAimWeight ), _aimWeight * oneHand );
+        parameters.setFloat( hashed_string( ShooterAnimationParameter::kShootWeight ), _shootWeight * oneHand );
+        parameters.setFloat( hashed_string( ShooterAnimationParameter::kAimTwoHandWeight ), _aimWeight * ( 1.0f - oneHand ) );
+        parameters.setFloat( hashed_string( ShooterAnimationParameter::kShootTwoHandWeight ), _shootWeight * ( 1.0f - oneHand ) );
     }
 } // namespace sw
 

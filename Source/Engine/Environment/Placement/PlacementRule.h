@@ -9,6 +9,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Math/MathUtil.h"
@@ -223,8 +224,8 @@ namespace sw
         static float32 computeSlope( const float3& normal );
         /** @brief 평면 좌표가 제외 영역 안이면 true 입니다. */
         static bool isExcluded( const vector<PlacementExclusion>& listExclusion, const float2& planePosition );
-        /** @brief 비중대로 고른 항목 번호입니다. @p unit 은 [0, 1) 입니다. 비중 합이 0 이면 −1 입니다. */
-        static int32 pickEntry( const vector<float32>& listEntryWeight, float32 unit );
+        /** @brief 비중대로 고른 항목 번호입니다. @p unit 은 [0, 1) 입니다. 비중 합이 0 이면 비어 있습니다. */
+        static optional<int32> pickEntry( const vector<float32>& listEntryWeight, float32 unit );
         /** @brief (시드, 번호, 셀)을 섞은 32 비트 해시를 반환합니다. */
         static uint32 hashCandidate( uint32 seed, uint32 candidateIndex, uint32 lane );
         /** @brief 해시를 [0, 1) 실수로 바꿉니다(상위 24 비트). */

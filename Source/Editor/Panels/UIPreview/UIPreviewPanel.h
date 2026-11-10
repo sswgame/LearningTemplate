@@ -7,6 +7,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Name/hashed_string.h"
@@ -128,7 +129,7 @@ namespace sw::editor
         string                                 _slotFieldBaseline;   ///< Slot 필드 컨트롤을 끌기 시작할 때의 `_slot` 텍스트
         void*                                  _pTextureID;          ///< ImGui 텍스처 id(이 패널 소유)
         uint64                                 _texture;             ///< 그 id 의 RHI 텍스처
-        uint32                                 _slotDragOrdinal;     ///< 슬롯 손잡이를 끄는 위젯의 문서 순서 번호
+        optional<uint32>                       _slotDragOrdinal;     ///< 슬롯 손잡이를 끄는 위젯의 문서 순서 번호(고른 위젯이 없으면 비어 있다)
         bool                                   _bShowLayout;         ///< 레이아웃 사각형을 겹쳐 그린다 NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
         uint8                                  _bSlotDragging   : 1; ///< 슬롯 손잡이를 끄는 중인지
         uint8                                  _bLayoutDragging : 1; ///< 상자 · 격자 옮기기 손잡이를 끄는 중인지

@@ -322,7 +322,7 @@ namespace sw::editor
         outListCode.push_back( string( UIPreviewLogicInternal::kPseudoMirrored ) );
     }
 
-    uint32 UIPreviewLogic::findWidgetOrdinal( const WidgetTree& tree, WidgetID id )
+    optional<uint32> UIPreviewLogic::findWidgetOrdinal( const WidgetTree& tree, WidgetID id )
     {
         vector<Widget*> listWidget;
         tree.collectWidgetsInDocumentOrder( listWidget );
@@ -331,7 +331,7 @@ namespace sw::editor
             if ( listWidget[index]->getID() == id )
                 return static_cast<uint32>( index );
         }
-        return kNoOrdinal;
+        return nullopt;
     }
 
     WidgetID UIPreviewLogic::findWidgetByOrdinal( const WidgetTree& tree, uint32 ordinal )
