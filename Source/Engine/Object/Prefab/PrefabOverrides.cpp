@@ -337,6 +337,15 @@ namespace sw
 
 namespace sw
 {
+    string PrefabPartOverride::joinPath( string_view parentPath, string_view key )
+    {
+        string path{ parentPath };
+        if ( path.empty() == false )
+            path += "/";
+        path += key;
+        return path;
+    }
+
     bool PrefabOverrides::makeBaseState( const PrefabAsset& prefab, string& outStateXML )
     {
         outStateXML.clear();
