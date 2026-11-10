@@ -21,36 +21,12 @@ namespace sw
     {
         struct SkinLayerInternal
         {
-            static constexpr const utf8* kArrValueAttribute[] = { "layer", "color", "opacity", "offset", "scale", "rotation", "mirror", "hidden" };
-            static constexpr float32     kByteMax             = 255.0f; ///< 번짐 텍스처 한 채널의 끝 값
-            static constexpr float32     kTexelMidpoint       = 0.5f;   ///< 번짐 이동 0 의 채널 값
+            static constexpr float32 kByteMax       = 255.0f; ///< 번짐 텍스처 한 채널의 끝 값
+            static constexpr float32 kTexelMidpoint = 0.5f;   ///< 번짐 이동 0 의 채널 값
 
             static float32 quantizeUnit( float32 value, uint32 steps )
             {
                 return static_cast<float32>( static_cast<uint32>( MathUtil::saturate( value ) * static_cast<float32>( steps ) + 0.5f ) ) / static_cast<float32>( steps );
-            }
-
-            /** @brief `"u v"` 두 실수를 읽습니다. 없으면 그대로 두고, 깨졌으면 오류입니다. */
-            static void readOptionalFloat2( const XMLNode& node, const utf8* pAttribute, float2& inoutValue, AppearanceLoadReport& report, string_view sourceName )
-            {
-                if ( node.findAttribute( pAttribute ) == nullptr )
-                    return;
-                float32 arrValue[2] = {};
-                uint32  count       = 0;
-                bool    bValid      = true;
-                StringUtil::forEachToken( node.getAttributeText( pAttribute ), " ,", [&]( string_view token )
-                {
-                    float32 value = 0.0f;
-                    if ( count < 2 && StringUtil::parseFloat( token, value ) )
-                        arrValue[count] = value;
-                    else
-                        bValid = false;
-                    ++count;
-                } );
-                if ( bValid && count == 2 )
-                    inoutValue = float2{ arrValue[0], arrValue[1] };
-                else
-                    report.addErrorWithID( "Appearance.ValueShape", "%#: <%#> '%#' needs exactly two numbers 'u v'", sourceName, node.getName(), pAttribute );
             }
 
             static float32 applyOverlay( float32 below, float32 layer ) { return below < 0.5f ? 2.0f * below * layer : 1.0f - 2.0f * ( 1.0f - below ) * ( 1.0f - layer ); }
@@ -101,16 +77,25 @@ namespace sw
 
     bool SkinLayerValue::readFromXML( const XMLNode& node, AppearanceLoadReport& report, string_view sourceName )
     {
-        (void)AppearanceXMLUtil::reportUnknownAttributes( node, SkinLayerInternal::kArrValueAttribute, report, sourceName );
-        _layer = AppearanceXMLUtil::readRequiredName( node, "layer", report, sourceName );
-        AppearanceXMLUtil::readOptionalFloat4( node, "color", _color, report, sourceName );
-        AppearanceXMLUtil::readOptionalFloat( node, "opacity", 0.0f, 1.0f, _opacity, report, sourceName );
-        SkinLayerInternal::readOptionalFloat2( node, "offset", _offset, report, sourceName );
-        SkinLayerInternal::readOptionalFloat2( node, "scale", _scale, report, sourceName );
-        AppearanceXMLUtil::readOptionalFloat( node, "rotation", -kMaxRotation, kMaxRotation, _rotationDegrees, report, sourceName );
-        _bMirror = StringUtil::equals( node.getAttributeText( "mirror" ), "true" ) ? SW_TRUE : SW_FALSE;
-        _bHidden = StringUtil::equals( node.getAttributeText( "hidden" ), "true" ) ? SW_TRUE : SW_FALSE;
-        return _layer.empty() == false;
+        // 속성은 리플렉션 칸이다(필수 층 이름 · 범위 · 모르는 속성은 XMLFields 가 알린다). 적지 않은 칸은 지금 값이 남는다. 회전 범위는 kMaxRotation 과 같다(PROPERTY 는 글자 범위만 받는다).
+        SkinLayerValueDef def;
+        def._color           = _color;
+        def._opacity         = _opacity;
+        def._offset          = _offset;
+        def._scale           = _scale;
+        def._rotationDegrees = _rotationDegrees;
+        def._bMirror         = _bMirror != SW_FALSE;
+        def._bHidden         = _bHidden != SW_FALSE;
+        const bool bRead     = AppearanceXMLUtil::readFields( node, def, report, sourceName );
+        _layer               = def._layer;
+        _color               = def._color;
+        _opacity             = def._opacity;
+        _offset              = def._offset;
+        _scale               = def._scale;
+        _rotationDegrees     = def._rotationDegrees;
+        _bMirror             = def._bMirror ? SW_TRUE : SW_FALSE;
+        _bHidden             = def._bHidden ? SW_TRUE : SW_FALSE;
+        return bRead && _layer.empty() == false;
     }
 
     void SkinLayerValue::writeToXML( const XMLNode& node ) const
@@ -291,11 +276,8 @@ namespace sw
                 continue;
             }
             SkinLayerDef layer;
-            if ( AppearanceXMLUtil::readFields( node, layer, report, sourceName, { "defaultColor", "regionMin", "regionMax" } ) == false )
+            if ( AppearanceXMLUtil::readFields( node, layer, report, sourceName ) == false )
                 continue;
-            AppearanceXMLUtil::readOptionalFloat4( node, "defaultColor", layer._defaultColor, report, sourceName );
-            SkinLayerInternal::readOptionalFloat2( node, "regionMin", layer._regionMin, report, sourceName );
-            SkinLayerInternal::readOptionalFloat2( node, "regionMax", layer._regionMax, report, sourceName );
             const bool bInvalidRegion = layer._regionMin._x >= layer._regionMax._x || layer._regionMin._y >= layer._regionMax._y;
             if ( bInvalidRegion )
                 report.addErrorWithID( "Appearance.SkinLayerRegionInvalid", "%#: skin layer '%#' needs regionMin < regionMax", sourceName, layer._id.c_str() );
