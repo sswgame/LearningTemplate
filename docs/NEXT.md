@@ -86,7 +86,7 @@ GameObject/Component API 는 저작 · 수명 · 직렬화 층, 프레임 일은
 
 - Empty 게임 이름을 TestBed 로 전수 개명(옛 이름 린트로 막기).
 - 스캐폴드 `new-online-kit` 로 키트 하나를 실제로 지어 보기. 게임을 `-cooked-content` 로 띄워 경로를 조립해 읽는 에셋이 빠지지 않는지 보기.
-- 남은 단위 테스트: `py -3 Scripts/dev/TestCoverage.py --uncovered` 의 "없음" 폴더 가운데 순수 로직인 것(온라인 Runtime 의 Store · Directory/Server · Mail · Report · Sanction · Config 서버 쪽, `Core/Name`, `Programs/ReflectionParser`, 온라인 키트 Runtime API). 표는 같은 폴더 · 형제 `Tests/` 만 세어 다른 폴더가 시험하는 타입도 "없음" 으로 나온다(예 `Engine/Curve` 는 `Serialization/Format/Tests`, `Online/Directory` 는 `OnlineCore/Server/Directory/Tests`) — 쓰기 전에 그 타입 이름으로 테스트를 찾는다. GPU · 창 폴더(RHI · Renderer · UI 화면 · Editor 패널 · Games)는 단위 테스트 밖이다.
+- 남은 단위 테스트: `py -3 Scripts/dev/TestCoverage.py --uncovered` 의 "없음" 폴더 가운데 순수 로직인 것 — 온라인 키트 Runtime 의 클라이언트 창구 · 프로토콜(Economy/API · Protocol, Leaderboard · Mailbox · ServerDirectory · Social · Trade · Admin Runtime, Chat/Client — 루프백으로 요청 · 응답 · 깨진 응답을 재는 틀이 필요하다), `Runtime/Online/Bus` · `Platform`, `OnlineCore/Server/Identity` · `Observability`, `Programs/OnlineLoadBot`. 서버 쪽 Store · Mail · Sanction · Config · Directory · Audit · Report 는 `OnlineCore/Server/<같은 이름>/Tests` 가, `Programs/ReflectionParser` 는 `Test/ReflectionParser/Fixtures`(ctest `ReflectionParser.*`)가 본다. 표는 같은 폴더 · 형제 `Tests/` 만 세어 다른 폴더가 시험하는 타입도 "없음" 으로 나온다(예 `Engine/Curve` 는 `Serialization/Format/Tests`, `Online/Directory` 는 `OnlineCore/Server/Directory/Tests`) — 쓰기 전에 그 타입 이름으로 테스트를 찾는다. GPU · 창 폴더(RHI · Renderer · UI 화면 · Editor 패널 · Games)는 단위 테스트 밖이다.
 - 흔들리는 게임 골든: 다시 지면 그 로그의 단계 · 백엔드 · 직전 `Assets.Pending` 을 적는다.
 
 ## 사용자에게 받을 것
