@@ -28,7 +28,8 @@
 
 - **Android:** `CookAssets`(호스트 빌드로 굽기) 통과 → `py -3 -m Scripts android-apk --game <게임>` → 실기기에서 기동 · 회전(pre-rotation 방향) · APK 팩 읽기 · 터치. JNI 클립보드(`AndroidClipboard.cpp` 는 지금 `isAvailable` false).
 - **웹:** 브라우저에 띄우기(팩 패키징 · COOP/COEP 로컬 서버 · 브라우저 MCP 로 기동 · WebGPU · 입력 · IDBFS), WebSocket 전송(클라이언트)과 서버 WebSocket 수락.
-- dzn SPIR-V→DXIL 충돌.
+- **Linux GL 프래그먼트 샘플러 한도:** `forward_lit` 이 Mesa(d3d12 · llvmpipe 둘 다 단계당 32)에서 "Too many fragment shader texture samplers" 로 링크되지 않아 GL 교체 단계(editor flowboundaries · flowterrain · previewswap)가 UnhandledLog 로 진다. 머티리얼 유닛 0..31 위에 엔진 텍스처 유닛 32..49 를 얹어 한 프래그먼트 셰이더가 32 를 넘는다 — 장치 검사(`OpenGLRHIDevice` 의 `requiredTextureUnit`)가 머티리얼 칸만 세어 이 백엔드를 받아들인다. 셰이더가 실제로 쓰는 샘플러 수로 검사하거나 유닛 배치를 줄인다.
+- dzn 기본 드라이버로 처음 돈 체인(editor · empty)에서 진 단계: netresourcedigest(접속 클라이언트 0), sequencercuts · sequencerkeys(`SequencerUnboundCount`) — 소프트웨어에서도 지는지 `--gpu software chain editor` 로 가른다. `.linux` 골든은 dzn 으로 다시 뜬다(통합 담당).
 
 ### 3. 통합 담당이 직접 (실행 · 측정이 필요)
 
@@ -183,7 +184,7 @@ GameObject/Component API 는 저작 · 수명 · 직렬화 층으로 두고, 프
 - 스캐폴드 `new-online-kit` 로 키트 하나를 실제로 지어 보기. 게임을 `-cooked-content` 로 띄워 경로를 조립해 읽는 에셋이 빠지지 않는지 보기.
 - 남은 단위 테스트: `py -3 Scripts/dev/TestCoverage.py` 의 "없음" 폴더, 온라인 `AccountTicketConnect` 의 만료 · 재시도 길(성공 길은 `net.ticketconnect` 시나리오가 본다).
 - 흔들리는 게임 골든: 다시 지면 그 로그의 단계 · 백엔드 · 직전 `Assets.Pending` 을 적는다.
-- **Linux**(큰 일이 모두 끝난 뒤 — 사용자 결정): `LinuxScenarios.py all`, `.linux` 골든, 드라이버를 고르는 칸(dzn · Mesa d3d12 GPU), 에디터 체인 단계 약 18(WSLg · Xvfb 입력 초점 의심). lavapipe `blendEnable` + `R16G16_SNORM` 은 `VulkanRHIResourceFactory` 가 이제 막는다 — 재현해 확인.
+- **Linux**(큰 일이 모두 끝난 뒤 — 사용자 결정): `LinuxScenarios.py all`, `.linux` 골든(dzn 기준), 에디터 체인 단계 약 18(WSLg · Xvfb 입력 초점 의심). lavapipe `blendEnable` + `R16G16_SNORM` 은 `VulkanRHIResourceFactory` 가 이제 막는다 — 재현해 확인.
 
 ## 사용자에게 받을 것
 

@@ -1,6 +1,6 @@
 ---
 name: linux-verify
-description: "이 저장소의 Linux 검증 절차: WSL 클론 빌드, Xvfb 에서 시나리오 체인(Vulkan lavapipe · GL llvmpipe), .linux 골든 기록과 비교, Linux Debug 단위 테스트. Linux · WSL · Xvfb · lavapipe · llvmpipe · .linux 골든 · Linux 시나리오 · X11 코드를 다룰 때, 또는 묶음 끝 Linux 검증을 할 때 쓴다."
+description: "이 저장소의 Linux 검증 절차: WSL 클론 빌드, Xvfb 에서 시나리오 체인(Vulkan dzn · GL d3d12, --gpu software 는 lavapipe · llvmpipe), .linux 골든 기록과 비교, Linux Debug 단위 테스트. Linux · WSL · Xvfb · lavapipe · llvmpipe · .linux 골든 · Linux 시나리오 · X11 코드를 다룰 때, 또는 묶음 끝 Linux 검증을 할 때 쓴다."
 ---
 
 # linux-verify
@@ -18,7 +18,8 @@ description: "이 저장소의 Linux 검증 절차: WSL 클론 빌드, Xvfb 에�
 
 ## 지킬 것
 
-- GPU 로 돌릴 때는 명령 앞에 `--gpu dzn`(Vulkan 은 dzn, GL 은 d3d12). 처음 한 번 `setup-dzn`. 기본은 소프트웨어(lavapipe · llvmpipe)이고 .linux 골든도 그것으로 떴다 — GPU 실행의 그림 차이는 참고만 한다.
+- 시나리오 드라이버는 기본이 WSL GPU 다(Vulkan 은 dzn, GL 은 d3d12). 처음 한 번 `setup-dzn`. 소프트웨어(lavapipe · llvmpipe)는 명령 앞에 `--gpu software`. `.linux` 골든은 dzn 으로 다시 뜬다 — 그 전에는 그림 차이를 참고만 한다.
+- dzn 은 `vkCreateDevice` 에 `descriptorIndexing` 묶음 비트가 있어야 bindless 경로로 셰이더를 내린다(없으면 크기 없는 텍스처 배열을 쓰는 PSO 컴파일에서 죽는다). 드라이버 진단(`DZN_DEBUG=nir`)은 백엔드 자식 프로세스의 콘솔로 나와 체인 실행에서는 버려진다 — `Bin/App -EnableEditor -vk -scenario=…` 를 직접 띄워 본다.
 
 - 기록 실행은 그림이 틀려도 통과한다. 기록 통과는 그림의 증거가 아니다.
 - 이 명령은 클론당 하나만 돌린다(체인 병렬은 명령 안에서 한다).
@@ -32,7 +33,7 @@ description: "이 저장소의 Linux 검증 절차: WSL 클론 빌드, Xvfb 에�
 
 - vcpkg: `build` 는 vcpkg.json 해시가 설치본 표시(`.sw-manifest.sha256`)와 다르면 Linux-Debug 를 `-DSW_VCPKG_FORCE_INSTALL=ON` 으로 다시 구성해 새 포트(예: dawn)를 깐다. 매니페스트에서 포트가 빠지면 공유 설치본 보호 장치가 설치를 건너뛰어 오버레이 패치(imgui-node-editor 의 `NavigateToRect` · `GetGroupSize`)가 들어가지 않는다 — 혼자 쓰는 클론이라 한 번 `-DSW_VCPKG_FORCE_INSTALL=ON` 으로 구성한다.
 - Xvfb: `apt-get download` + `dpkg -x` 로 받고 창 관리자 없이 `-screen 0 2560x1440x24` 로 띄운다(사용자 화면을 건드리지 않는다). `xkbcomp` 경로는 실행 파일에 박혀 있다. 창 관리자가 없어 `engine/automation/windowpresent` 의 최소화 단계는 건너뛴다.
-- 드라이버: Vulkan 은 `VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json`(lavapipe), GL 은 `LIBGL_ALWAYS_SOFTWARE=1 GALLIUM_DRIVER=llvmpipe`(Mesa 26 은 4.5 문맥에 `ARB_gl_spirv`). 소프트웨어라 느리니 `-gv_scenarioWallScale=4`. `Scenario.<팩>` 명령에서 `-scenario-backend-split` 을 빼고 `-scenario-backends=vk`.
+- 드라이버(`scenario_env`): 기본은 Vulkan `~/lt-deps/dzn` 의 dzn ICD · GL `GALLIUM_DRIVER=d3d12`(`/usr/lib/wsl/lib`). `--gpu software` 는 Vulkan `VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json`(lavapipe), GL `LIBGL_ALWAYS_SOFTWARE=1 GALLIUM_DRIVER=llvmpipe`(Mesa 26 은 4.5 문맥에 `ARB_gl_spirv`). 벽시계 시한은 `-gv_scenarioWallScale=4`. `Scenario.<팩>` 명령에서 `-scenario-backend-split` 을 빼고 `-scenario-backends=vk`.
 - 콘텐츠: 임포트 결과는 Windows 에서 복사한다(Debug 임포트가 너무 느리다). 메시 원본은 Git LFS 라 `git-lfs` 와 `.git/lfs/objects` 복사가 있어야 임포트된다. 고정 화면 글꼴은 카탈로그가 찾는 파일을 `~/.local/share/fonts` 에(Noto CJK · LiberationSans). 골든은 `<시나리오>.<이름>.<백엔드>.linux.ppm`.
 - 전용 서버 Debug: 렌더러를 빼는 구성이라 클라이언트 빌드가 못 잡는 층 위반이 여기서만 드러난다 — `cmake -S . -B build/Linux-Server -G Ninja -DCMAKE_BUILD_TYPE=Debug -DSW_TARGET_TYPE=Server` 에 Linux-Debug 캐시의 컴파일러 · 툴체인 · `VCPKG_INSTALLED_DIR` 을 **절대 경로로**(상대 경로면 컴파일러 확인에서 진다). 실행 `Bin/Server -gv_serverExitAfterTicks=60` · `Bin/Server --test`.
 - Wayland(`SW_ENABLE_WAYLAND`, 기본 빌드에 없음): `~/lt-deps/root` 에 sudo 없이 푼 `libxkbcommon-dev` · `wayland-protocols`(.pc 의 prefix 를 그 폴더로)를 `PKG_CONFIG_PATH` 로 주고 `cmake --preset Linux-Debug -B build/Linux-Wayland -DSW_ENABLE_WAYLAND=ON`. 실행은 `SW_WINDOW_BACKEND=wayland`.

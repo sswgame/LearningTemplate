@@ -5,9 +5,8 @@ Windows 의 하드웨어 GPU 테스트와 함께 돌려도 된다. 체인은 저
 
 명령:
   setup                  Xvfb · 글꼴을 sudo 없이 ~/lt-deps 에 푼다(한 번)
-  setup-dzn              GPU Vulkan(dzn — Mesa 의 Vulkan-on-D3D12)을 sudo 없이 ~/lt-deps/dzn 에 짓는다(한 번)
-  --gpu dzn              (어느 명령 앞에든) 시나리오를 소프트웨어(lavapipe · llvmpipe) 대신 WSL GPU(dzn Vulkan · d3d12 GL)로 돌린다.
-                         골든은 소프트웨어로 뜬 .linux 라 그림 비교는 참고만 한다
+  setup-dzn              GPU Vulkan(dzn — Mesa 의 Vulkan-on-D3D12)을 sudo 없이 ~/lt-deps/dzn 에 짓는다(한 번) — 시나리오의 기본 드라이버다
+  --gpu software         (어느 명령 앞에든) 시나리오를 WSL GPU(dzn Vulkan · d3d12 GL, 기본) 대신 소프트웨어(lavapipe · llvmpipe)로 돌린다
   build                  본 저장소 HEAD 를 클론으로 옮겨 Linux-Release 를 짓고 임포트 결과를 복사한다
   chain [--record] 이름… Scenario.<이름> 체인을 돌리고 진 단계와 까닭을 낸다(--record 는 .linux 골든 기록)
   stages 묶음…           쉼표로 이은 단계 묶음을 부분 체인으로 돌린다(예: focusloss,graphaddnode)
@@ -51,7 +50,7 @@ XVFB_DEBS = ('git-lfs xvfb xserver-common x11-xkb-utils xkb-data libxfont2 libfo
 SCREEN = '2560x1440x24'  # 체인의 큰 창이 화면 안에 들어오고, 실제 포인터가 창 밖 가운데에 머문다
 ALL_CHAINS = ('editor empty abilityarena frontiertown harvestvalley lanternvale meadowvillage nilecity pixeltown shooter3d starskirmish themepark velmora voxelcraft wildwest '
               'abilityarena.editor harvestvalley.editor shooter3d.editor themepark.editor').split()
-PARALLEL_CHAINS = 4  # lavapipe 가 코어를 나눠 쓰므로 많이 띄우면 벽시계 시한을 넘긴다
+PARALLEL_CHAINS = 4  # --gpu software(lavapipe)는 코어를 나눠 쓰므로 많이 띄우면 벽시계 시한을 넘긴다
 WALL_SCALE = '4'  # 소프트웨어 렌더링이라 벽시계 시한을 늘린다(gv_scenarioWallScale)
 PATH_LINUX = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'  # Windows PATH 가 끼면 Windows 도구를 잡는다
 
@@ -87,9 +86,9 @@ def shell(command, **kwargs):
     return subprocess.run(command, shell=True, executable='/bin/bash', env=dict(os.environ, PATH=PATH_LINUX), **kwargs)
 
 
-# 시나리오 드라이버. 기본은 소프트웨어(lavapipe · llvmpipe — 결정적이고 .linux 골든이 이것으로 떴다). `--gpu dzn` 은 WSL 의 GPU 로 돈다:
-# Vulkan 은 직접 지은 dzn(시스템 Mesa 에 없다 — setup-dzn), GL 은 시스템 Mesa 의 d3d12 gallium. dzn 은 Vulkan 1.2 까지다(엔진 요구 1.2).
-GPU = 'software'
+# 시나리오 드라이버. 기본은 WSL 의 GPU 다: Vulkan 은 직접 지은 dzn(시스템 Mesa 에 없다 — setup-dzn), GL 은 시스템 Mesa 의 d3d12 gallium.
+# dzn 은 Vulkan 1.2 까지다(엔진 요구 1.2). `--gpu software` 는 lavapipe · llvmpipe(느리지만 GPU 없는 곳에서도 돈다).
+GPU = 'dzn'
 DZN = f'{HOME}/lt-deps/dzn'
 DZN_MESA_VERSION = '26.0.8'
 DZN_DEBS = ('directx-headers-dev libdrm-dev libdrm2 libpciaccess-dev libpciaccess0 libx11-dev libx11-xcb-dev libx11-xcb1 libxau-dev libxcb-dri2-0-dev '
@@ -314,7 +313,7 @@ def stages(arguments):
 
 
 def culprit(arguments):
-    """이분 탐색은 ScenarioCulprit.findCulprit(Windows 와 같은 함수) — 여기는 Xvfb · lavapipe 실행기와 ctest 목록만 댄다."""
+    """이분 탐색은 ScenarioCulprit.findCulprit(Windows 와 같은 함수) — 여기는 Xvfb · 드라이버(scenario_env) 실행기와 ctest 목록만 댄다."""
     target = arguments[0]
     pack = arguments[1] if len(arguments) > 1 else 'editor'
     names = ScenarioCulprit.readStageNames(open(f'{LOGS}/Scenario.{pack}.vk.log', errors='replace').read())
