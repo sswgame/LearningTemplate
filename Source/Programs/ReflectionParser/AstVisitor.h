@@ -42,6 +42,8 @@ namespace sw
 
     private:
         static CXChildVisitResult visitCursor( CXCursor cursor, CXCursor parent, CXClientData clientData );
+        /** @brief 대상 헤더의 글에서 `#if` 아래 놓인 리플렉션 매크로(PROPERTY · FUNCTION · REFLECT)를 찾아 알립니다. 없으면 true 입니다(W-R3 d). */
+        bool checkConditionalReflectMacros( CXFile file, const string& path ) const;
         /** @brief 커서가 적힌 파일이 몇 번째 대상인지 찾습니다. 대상이 아니면 kNoTarget 입니다. */
         int32 findTargetIndex( CXCursor cursor ) const;
         /** @brief 그 헤더를 실패로 표시합니다(산출물을 쓰지 않는다). 순회는 계속합니다. */

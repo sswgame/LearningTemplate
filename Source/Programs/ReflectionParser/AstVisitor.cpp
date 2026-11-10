@@ -3,6 +3,7 @@
 #include "Programs/ReflectionParser/AstVisitor.h"
 
 #include "Core/Log/Logger.h"
+#include "Core/String/StringUtil.h"
 
 #include "Programs/ReflectionParser/AnnotationLookup.h"
 #include "Programs/ReflectionParser/CursorReader.h"
@@ -53,7 +54,53 @@ namespace sw
             return false;
 
         clang_visitChildren( clang_getTranslationUnitCursor( _translationUnit ), visitCursor, this );
+        for ( uint32 index = 0; index < _listTargetFile.size(); ++index )
+        {
+            if ( checkConditionalReflectMacros( _listTargetFile[index], _listTargetPath[index] ) == false )
+                markHeaderError( _listHeader[index] );
+        }
         return _bHasError == SW_FALSE;
+    }
+
+    bool AstVisitor::checkConditionalReflectMacros( CXFile file, const string& path ) const
+    {
+        // 파서는 한 구성(정의 한 벌)만 본다 — `#if` 아래의 PROPERTY · FUNCTION · REFLECT 는 그 구성에서 꺼져 있으면 오류 없이 빠지고, 켜져 있으면
+        // 구성마다 레이아웃이 달라진다. 조건부 멤버는 리플렉션 밖에 두고, 리플렉션 멤버는 조건 없이 선언한다. 지금 트리에는 0 건이다.
+        size_t            size  = 0;
+        const char* const pText = clang_getFileContents( _translationUnit, file, &size );
+        if ( pText == nullptr )
+            return true;
+        const string_view text{ pText, size };
+        uint32            depth   = 0;
+        uint32            lineNo  = 0;
+        bool              bPassed = true;
+        size_t            start   = 0;
+        while ( start < text.size() )
+        {
+            const size_t      end  = text.find( '\n', start );
+            const string_view line = StringUtil::trim( text.substr( start, end == string_view::npos ? string_view::npos : end - start ) );
+            start                  = end == string_view::npos ? text.size() : end + 1;
+            ++lineNo;
+            if ( line.starts_with( "#" ) )
+            {
+                const string_view directive = StringUtil::trim( line.substr( 1 ) );
+                if ( directive.starts_with( "if" ) )
+                    ++depth;
+                else if ( directive.starts_with( "endif" ) && depth > 0 )
+                    --depth;
+                continue;
+            }
+            const bool bReflectMacro = line.starts_with( "PROPERTY(" ) || line.starts_with( "PROPERTY (" ) || line.starts_with( "FUNCTION(" ) ||
+                                       line.starts_with( "FUNCTION (" ) || line.starts_with( "REFLECT(" ) || line.starts_with( "REFLECT (" );
+            if ( depth > 0 && bReflectMacro )
+            {
+                SW_LOG_ERROR_ID( "AstVisitor.ERRORReflectMacroUnderIf", "ERROR: %#(%#): a reflection macro is under #if - the parser sees one configuration, so it would be "
+                                                                        "silently dropped or change the layout per configuration. Declare reflected members unconditionally.",
+                                 path, lineNo );
+                bPassed = false;
+            }
+        }
+        return bPassed;
     }
 
     /**
@@ -135,14 +182,14 @@ namespace sw
             return CXChildVisit_Continue;
         }
 
-        // 클래스 템플릿은 FQN 에 인자가 없어 offsetof / TypeRegistrar<T> 가 성립하지 않는다.
-        // 조용히 빠지면 원인을 찾기 어려우므로 경고만 남기고 건너뛴다.
+        // 클래스 템플릿은 FQN 에 인자가 없어 offsetof / TypeRegistrar<T> 가 성립하지 않는다. 경고로 건너뛰면 적은 REFLECT 가 조용히 사라진다 — 생성 오류다.
         if ( kind == CXCursor_ClassTemplate || kind == CXCursor_ClassTemplatePartialSpecialization )
         {
             if ( AnnotationLookup::hasAnnotation( cursor, annotation::kReflect, config ) )
             {
-                SW_LOG_WARNING_ID( "AstVisitor.REFLECTClassTemplateNot", "REFLECT on class template is not supported, skipping: %#",
-                                   CursorReader::makeFullyQualifiedName( cursor ) );
+                SW_LOG_ERROR_ID( "AstVisitor.REFLECTClassTemplateNot", "ERROR: REFLECT on a class template is not supported: %# - reflect a concrete type",
+                                 CursorReader::makeFullyQualifiedName( cursor ) );
+                self->markHeaderError( header );
             }
             return CXChildVisit_Continue;
         }

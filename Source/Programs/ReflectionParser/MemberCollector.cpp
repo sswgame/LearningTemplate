@@ -512,11 +512,12 @@ namespace sw
             return;
         }
 
-        // 멤버 함수 템플릿은 인자 타입이 정해지지 않아 등록할 수 없다. 클래스 템플릿처럼 알리고 건너뛴다.
+        // 멤버 함수 템플릿은 인자 타입이 정해지지 않아 등록할 수 없다. 클래스 템플릿과 같이 생성 오류다(건너뛰면 적은 FUNCTION 이 조용히 사라진다).
         if ( kind == CXCursor_FunctionTemplate && annotation._functionSpelling.empty() == false )
         {
-            SW_LOG_WARNING_ID( "AstVisitor.FUNCTIONMemberFunctionTemplate", "FUNCTION on a member function template is not supported, skipping: %#",
-                               CursorReader::makeMemberOwnerName( _pType->_fullyQualifiedName, spelling ) );
+            SW_LOG_ERROR_ID( "AstVisitor.FUNCTIONMemberFunctionTemplate", "ERROR: FUNCTION on a member function template is not supported: %#",
+                             CursorReader::makeMemberOwnerName( _pType->_fullyQualifiedName, spelling ) );
+            _bHasError = SW_TRUE;
         }
     }
 
