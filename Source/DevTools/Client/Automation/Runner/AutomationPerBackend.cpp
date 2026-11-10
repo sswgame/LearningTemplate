@@ -74,19 +74,19 @@ namespace sw
             /** @brief 자식 하나의 상태입니다. 출력 파이프는 스레드 하나가 끝까지 비운다 — 비우지 않으면 파이프가 찬 자식이 멈춘다. */
             struct Child
             {
-                string         _backend{};
-                string         _logPath{};
-                string         _reportPath{};
-                ProcessCommand _command{}; ///< 띄울 명령(슬롯이 비면 띄운다)
-                ProcessOptions _options{}; ///< 자식의 환경(사용자 데이터 뿌리)
-                Process        _process{};
-                thread         _flushThread{};
-                Deadline       _killDeadline  = Deadline::afterMilliseconds( 0 ); ///< 띄운 때부터 센 프로세스 시한(띄울 때 다시 정한다)
-                Deadline       _stallDeadline = Deadline::afterMilliseconds( 0 ); ///< 로그가 마지막으로 자란 때부터 센 정지 시한(로그가 자랄 때마다 다시 정한다)
-                uint64         _observedLogBytes{ 0 };                            ///< 정지 감시가 마지막으로 본 자식 로그 크기
-                int32          _exitCode{ -1 };
-                bool           _bLaunched{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-                bool           _bPending{ false };  ///< 아직 띄우지 않았다(맡은 시나리오가 있다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                string          _backend{};
+                string          _logPath{};
+                string          _reportPath{};
+                ProcessCommand  _command{}; ///< 띄울 명령(슬롯이 비면 띄운다)
+                ProcessOptions  _options{}; ///< 자식의 환경(사용자 데이터 뿌리)
+                Process         _process{};
+                thread          _flushThread{};
+                Deadline        _killDeadline  = Deadline::afterMilliseconds( 0 ); ///< 띄운 때부터 센 프로세스 시한(띄울 때 다시 정한다)
+                Deadline        _stallDeadline = Deadline::afterMilliseconds( 0 ); ///< 로그가 마지막으로 자란 때부터 센 정지 시한(로그가 자랄 때마다 다시 정한다)
+                uint64          _observedLogBytes{ 0 };                            ///< 정지 감시가 마지막으로 본 자식 로그 크기
+                optional<int32> _exitCode{};                                       ///< 자식의 결과 — 끝났거나 · 띄우지 못했거나(Failed) · 맡은 시나리오가 없을 때(Skipped) 적는다. 아직 돌면 없다
+                bool            _bLaunched{ false };                               ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool            _bPending{ false };                                ///< 아직 띄우지 않았다(맡은 시나리오가 있다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
             /** @brief 자식 로그가 자랐으면 정지 시한을 다시 정합니다 — 일하는 자식(빈 셰이더 캐시의 컴파일)은 죽이지 않고, 아무것도 남기지 않는 자식만 멈춘 것으로 본다. */
@@ -209,9 +209,12 @@ namespace sw
                     writer.key( "backend" );
                     writer.valueString( pChild->_backend );
                     writer.key( "result" );
-                    writer.valueString( describeExitCode( pChild->_exitCode ) );
+                    writer.valueString( pChild->_exitCode.has_value() ? describeExitCode( *pChild->_exitCode ) : "unfinished" );
                     writer.key( "exitCode" );
-                    writer.valueInt( pChild->_exitCode );
+                    if ( pChild->_exitCode.has_value() )
+                        writer.valueInt( *pChild->_exitCode );
+                    else
+                        writer.valueNull();
                     writer.key( "log" );
                     writer.valueString( pChild->_logPath );
                     writer.key( "report" );
@@ -441,6 +444,7 @@ namespace sw
             if ( child._bLaunched == false )
             {
                 SW_LOG_ERROR_ID( "ScenarioPerBackend.PerBackendCouldNot2", "[Scenario] per-backend: could not launch %#", child._command.toCommandLine().c_str() );
+                child._exitCode = getAutomationExitStatus( AutomationResult::Failed ); // 띄우지 못한 자식은 결과가 실패다(숫자 -1 로 남겨 뒤에서 다시 바꾸지 않는다)
                 return;
             }
             SW_LOG_INFO_ID( "ScenarioPerBackend.PerBackendStartedLog", "[Scenario] per-backend: %# started (log %#)", child._backend.c_str(), child._logPath.c_str() );
@@ -459,7 +463,18 @@ namespace sw
             if ( bKilled )
                 SW_LOG_ERROR_ID( "ScenarioPerBackend.PerBackendDidNot", "[Scenario] per-backend: %# %# - killed", child._backend.c_str(),
                                  child._killDeadline.isExpired() ? "did not finish within the process limit" : "logged nothing for the stall limit (stopped)" );
-            child._exitCode = child._process.waitForExit();
+            const expected<int32> waited = child._process.waitForExit();
+            if ( waited.has_value() )
+            {
+                child._exitCode = *waited;
+            }
+            else
+            {
+                // 기다리지 못한 자식은 결과를 모른다 — 통과로 세지 않고 실패로 적는다(까닭은 이 줄).
+                SW_LOG_ERROR_ID( "ScenarioPerBackend.PerBackendWaitFailed", "[Scenario] per-backend: %# could not be waited for: %# %#", child._backend.c_str(), string( waited.error().message() ),
+                                 string( waited.error().detail() ) );
+                child._exitCode = getAutomationExitStatus( AutomationResult::Failed );
+            }
             if ( bKilled )
                 child._exitCode = getAutomationExitStatus( AutomationResult::TimedOut ); // POSIX 는 종료 코드를 줄 수 없다(128 + SIGKILL) — 결과는 시간 초과다
             child._flushThread.join();
@@ -496,16 +511,18 @@ namespace sw
         bool  bAnyPassed   = false;
         for ( unique_ptr<Internal::Child>& pChild : listChild )
         {
-            const bool bSkipped = Internal::isSkip( pChild->_exitCode );
-            bAnyPassed          = bAnyPassed || pChild->_exitCode == 0;
-            if ( pChild->_exitCode != 0 && bSkipped == false && firstFailure == 0 )
-                firstFailure = pChild->_exitCode == -1 ? getAutomationExitStatus( AutomationResult::Failed ) : pChild->_exitCode;
-            const LogLevel level = pChild->_exitCode == 0 || bSkipped ? LogLevel::Info : LogLevel::Error;
+            SW_ASSERT( pChild->_exitCode.has_value() ); // 위 고리는 모든 자식을 띄우고 거둔 뒤에야 끝난다 — 결과가 없는 자식이 남지 않는다
+            const int32 childExitCode = *pChild->_exitCode;
+            const bool  bSkipped      = Internal::isSkip( childExitCode );
+            bAnyPassed                = bAnyPassed || childExitCode == 0;
+            if ( childExitCode != 0 && bSkipped == false && firstFailure == 0 )
+                firstFailure = childExitCode;
+            const LogLevel level = childExitCode == 0 || bSkipped ? LogLevel::Info : LogLevel::Error;
             if ( level == LogLevel::Error )
-                SW_LOG_ERROR_ID( "ScenarioPerBackend.PerBackendExit", "[Scenario] per-backend: %# %# (exit %#) - %#", pChild->_backend.c_str(), Internal::describeExitCode( pChild->_exitCode ), pChild->_exitCode,
+                SW_LOG_ERROR_ID( "ScenarioPerBackend.PerBackendExit", "[Scenario] per-backend: %# %# (exit %#) - %#", pChild->_backend.c_str(), Internal::describeExitCode( childExitCode ), childExitCode,
                                  pChild->_logPath.c_str() );
             else
-                SW_LOG_INFO_ID( "ScenarioPerBackend.PerBackendExit", "[Scenario] per-backend: %# %# (exit %#) - %#", pChild->_backend.c_str(), Internal::describeExitCode( pChild->_exitCode ), pChild->_exitCode,
+                SW_LOG_INFO_ID( "ScenarioPerBackend.PerBackendExit", "[Scenario] per-backend: %# %# (exit %#) - %#", pChild->_backend.c_str(), Internal::describeExitCode( childExitCode ), childExitCode,
                                 pChild->_logPath.c_str() );
         }
 

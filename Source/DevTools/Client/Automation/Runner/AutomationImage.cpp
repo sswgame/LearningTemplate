@@ -172,7 +172,7 @@ namespace sw
         return reduced;
     }
 
-    expected<AutomationImageDifference> AutomationImage::compare( const AutomationImage& actual, const AutomationImage& golden )
+    expected<AutomationImageDifference> AutomationImage::compare( const AutomationImage& actual, const AutomationImage& golden, const AutomationImageThreshold& measure )
     {
         if ( actual._width != golden._width || actual._height != golden._height )
         {
@@ -180,21 +180,58 @@ namespace sw
             sizeBuilder.appendFormat( "image %#x%#, golden %#x%#", actual._width, actual._height, golden._width, golden._height );
             return unexpected( Error{ ErrorKind::InvalidArgument, "the image and the golden differ in size (region or window size changed - record the golden again)", sizeBuilder.view() } );
         }
-        const size_t pixelCount     = static_cast<size_t>( actual._width ) * actual._height;
-        size_t       differingCount = 0;
-        uint64       distanceSum    = 0;
+        const size_t  pixelCount     = static_cast<size_t>( actual._width ) * actual._height;
+        size_t        differingCount = 0;
+        uint64        distanceSum    = 0;
+        vector<uint8> listDeep( pixelCount, 0 ); // 1 = 아직 덩어리에 세지 않은 깊은 화소
         for ( size_t pixel = 0; pixel < pixelCount; ++pixel )
         {
             const uint8* pA       = &actual._listRGB[pixel * 3u];
             const uint8* pB       = &golden._listRGB[pixel * 3u];
             const uint32 distance = static_cast<uint32>( std::abs( pA[0] - pB[0] ) + std::abs( pA[1] - pB[1] ) + std::abs( pA[2] - pB[2] ) );
             distanceSum += distance;
-            if ( distance >= kDifferingMinDistance )
+            if ( distance >= measure._differingMinDistance )
                 ++differingCount;
+            listDeep[pixel] = distance >= measure._deepMinDistance ? 1u : 0u;
+        }
+        // 깊은 화소의 4 이웃 덩어리 중 가장 큰 것 — 골든은 가로 160 이하라 스택 하나로 훑는다(재귀하지 않는다).
+        uint32         largestRegion = 0;
+        vector<size_t> listStack;
+        const auto     pushDeep = [&]( size_t pixel )
+        {
+            if ( listDeep[pixel] == 0 )
+                return;
+            listDeep[pixel] = 0;
+            listStack.push_back( pixel );
+        };
+        for ( size_t seed = 0; seed < pixelCount; ++seed )
+        {
+            if ( listDeep[seed] == 0 )
+                continue;
+            pushDeep( seed );
+            uint32 regionPixels = 0;
+            while ( listStack.empty() == false )
+            {
+                const size_t pixel = listStack.back();
+                listStack.pop_back();
+                ++regionPixels;
+                const size_t x = pixel % actual._width;
+                const size_t y = pixel / actual._width;
+                if ( x > 0 )
+                    pushDeep( pixel - 1 );
+                if ( x + 1 < actual._width )
+                    pushDeep( pixel + 1 );
+                if ( y > 0 )
+                    pushDeep( pixel - actual._width );
+                if ( y + 1 < actual._height )
+                    pushDeep( pixel + actual._width );
+            }
+            largestRegion = MathUtil::max( largestRegion, regionPixels );
         }
         AutomationImageDifference difference;
-        difference._differingFraction = pixelCount > 0 ? static_cast<float64>( differingCount ) / static_cast<float64>( pixelCount ) : 0.0;
-        difference._meanDistance      = pixelCount > 0 ? static_cast<float64>( distanceSum ) / ( static_cast<float64>( pixelCount ) * 765.0 ) : 0.0;
+        difference._differingFraction       = pixelCount > 0 ? static_cast<float64>( differingCount ) / static_cast<float64>( pixelCount ) : 0.0;
+        difference._meanDistance            = pixelCount > 0 ? static_cast<float64>( distanceSum ) / ( static_cast<float64>( pixelCount ) * static_cast<float64>( kMaxColorDistance ) ) : 0.0;
+        difference._largestDeepRegionPixels = largestRegion;
         return difference;
     }
 

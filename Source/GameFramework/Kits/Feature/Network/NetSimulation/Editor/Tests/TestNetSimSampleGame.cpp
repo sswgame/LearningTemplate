@@ -49,8 +49,8 @@ namespace
     {
         NetSimSampleGame _game;
         NetSimHarness    _harness{};
-        int32            _firstClient{};
-        int32            _secondClient{};
+        int32            _firstClient{ 0 }; ///< 월드 번호(1 부터) — 0 은 만들지 못했다(위 단언이 진다)
+        int32            _secondClient{ 0 };
 
         SampleHarnessFixture()
             : _game{
@@ -63,9 +63,9 @@ namespace
             const expected<int32> firstClient  = _harness.addClient( NetSimLinkConditions{} );
             const expected<int32> secondClient = _harness.addClient( NetSimLinkConditions{} );
             SW_EXPECT_TRUE( firstClient.has_value() && secondClient.has_value() );
-            _firstClient  = firstClient.value();
-            _secondClient = secondClient.value();
-            SW_EXPECT_TRUE( _harness.stepUntil( &NetSimSampleGameTestUtil::areClientsConnected, nullptr, kConnectTickLimit ) >= 0 );
+            _firstClient  = firstClient.value_or( 0 );
+            _secondClient = secondClient.value_or( 0 );
+            SW_EXPECT_TRUE( _harness.stepUntil( &NetSimSampleGameTestUtil::areClientsConnected, nullptr, kConnectTickLimit ).has_value() );
             _harness.stepTicks( 10 );
         }
     };

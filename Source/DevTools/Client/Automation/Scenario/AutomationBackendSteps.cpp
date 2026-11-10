@@ -44,7 +44,12 @@ namespace sw
         RHIBackend backend{};
         const bool bRelative = params._backend == kOtherBackend || params._backend == kStartBackend;
         if ( bRelative == false && tryParseBackend( params._backend, backend ) == false )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "needs backend=\"dx11|dx12|vk|gl|other|start\"", params._backend } );
+        {
+            // 받는 이름 목록은 쿠킹 표에서 만든다(글자 리터럴을 이어 붙인다) — 손으로 적은 목록이 `wgpu` 를 빠뜨렸다.
+#define SW_SWAP_BACKEND_HINT_ROW( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) CommandLineName "|"
+            return unexpected( Error{ ErrorKind::InvalidArgument, "needs backend=\"" SW_RHI_BACKEND_TABLE( SW_SWAP_BACKEND_HINT_ROW ) "other|start\"", params._backend } );
+#undef SW_SWAP_BACKEND_HINT_ROW
+        }
         return {};
     }
 

@@ -302,12 +302,15 @@ namespace sw
         return pNode.child_value();
     }
 
-    int64 XMLNode::getSourceOffset() const
+    optional<size_t> XMLNode::getSourceOffset() const
     {
         const pugi::xml_node pNode = XMLDocumentInternal::asNode( _pNode );
         if ( pNode.empty() )
-            return -1;
-        return static_cast<int64>( pNode.offset_debug() );
+            return nullopt;
+        const ptrdiff_t offset = pNode.offset_debug(); // pugixml 도 모르면 음수다(파싱하지 않은 노드)
+        if ( offset < 0 )
+            return nullopt;
+        return static_cast<size_t>( offset );
     }
 
     const utf8* XMLNode::findAttribute( const utf8* pName ) const
@@ -684,11 +687,11 @@ namespace sw
         return parse( bComposed ? string_view( flatText ) : xmlText, sourceName );
     }
 
-    uint32 XMLDocument::computeLineNumber( string_view text, int64 offset )
+    uint32 XMLDocument::computeLineNumber( string_view text, const optional<size_t>& offset )
     {
-        if ( offset < 0 )
+        if ( offset.has_value() == false )
             return 0;
-        const size_t end  = MathUtil::min( static_cast<size_t>( offset ), text.size() );
+        const size_t end  = MathUtil::min( *offset, text.size() );
         uint32       line = 1;
         for ( size_t index = 0; index < end; ++index )
         {

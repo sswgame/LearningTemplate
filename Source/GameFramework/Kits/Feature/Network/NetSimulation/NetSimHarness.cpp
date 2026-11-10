@@ -296,20 +296,20 @@ namespace sw
     {
         SW_ASSERT( _bStepping == false && "NetSimHarness::addClient called from inside step" );
         if ( _pServer == nullptr )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "the harness has no server world" } );
+            return unexpected( Error{ ErrorKind::NotFound, "the harness has no server world (initialize first)" } );
         const int32 worldIndex = _nextWorldIndex;
         Link*       pLink      = createLink( worldIndex );
         if ( pLink == nullptr )
-            return unexpected( Error{ ErrorKind::ExternalFailure, "the client link was not created (see the log)" } );
+            return unexpected( Error{ ErrorKind::ExternalFailure, "could not create the client link" } );
         ++_nextWorldIndex;
         applyLinkConditions( worldIndex, conditions );
         unique_ptr<NetSimWorld> pWorld = createWorld( NetSimRole::Client, worldIndex, *pLink );
         if ( pWorld == nullptr )
-            return unexpected( Error{ ErrorKind::ExternalFailure, "the client world has no scene (see the log)" } );
+            return unexpected( Error{ ErrorKind::ExternalFailure, "could not borrow a scene for the client world (see the log)" } ); // createWorld 가 알렸다
         if ( pWorld->_host.connect( _pServer->getAddress() ) == false )
         {
             SW_LOG_ERROR_ID( "NetSimHarness.NetSimHarnessClientFailedStart", "NetSimHarness: client %# failed to start connecting", worldIndex );
-            return unexpected( Error{ ErrorKind::ExternalFailure, "the client did not start connecting" } );
+            return unexpected( Error{ ErrorKind::ExternalFailure, "the client failed to start connecting" } );
         }
         pWorld->start( _pGame );
         _listClient.push_back( std::move( pWorld ) );
@@ -466,17 +466,16 @@ namespace sw
         }
     }
 
-    int32 NetSimHarness::stepUntil( bool ( *pPredicate )( const NetSimHarness&, void* ), void* pContext, uint32 maxTicks )
+    optional<uint32> NetSimHarness::stepUntil( bool ( *pPredicate )( const NetSimHarness&, void* ), void* pContext, uint32 maxTicks )
     {
-        if ( pPredicate == nullptr )
-            return constant::invalid_index::kInt32;
+        SW_ASSERT( pPredicate != nullptr );
         for ( uint32 index = 0; index <= maxTicks; ++index )
         {
             if ( pPredicate( *this, pContext ) )
-                return static_cast<int32>( index );
+                return index;
             if ( index < maxTicks )
                 step();
         }
-        return -1;
+        return nullopt;
     }
 } // namespace sw

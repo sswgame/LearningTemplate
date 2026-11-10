@@ -79,7 +79,8 @@ SW_TEST_CASE( TestFrameworkTest, ChildRoleGetsItsArgumentAndOutputIsCaptured, ._
 {
     const test::ChildRunResult child = test::runChildRole( "TestFrameworkTest.ChildEchoesOrHangs", "marker42", 120.0f );
     SW_EXPECT_FALSE( child._bTimedOut );
-    SW_EXPECT_EQUAL( 0, child._exitCode );
+    SW_REQUIRE_TRUE_MSG( child._exitCode.has_value(), child.getOutputTail() );
+    SW_EXPECT_EQUAL( 0, *child._exitCode );
     SW_EXPECT_TRUE_MSG( StringUtil::contains( child._output, "SW_CHILD_ECHO:marker42" ), child.getOutputTail() );
 }
 
@@ -92,7 +93,8 @@ SW_TEST_CASE( TestFrameworkTest, HangingChildIsKilledAtTheDeadline, ._tags = "sl
     const test::ChildRunResult child = test::runChildRole( "TestFrameworkTest.ChildEchoesOrHangs", "hang", 3.0f );
     SW_EXPECT_TRUE( child._bLaunched );
     SW_EXPECT_TRUE( child._bTimedOut );
-    SW_EXPECT_NOT_EQUAL( 0, child._exitCode );
+    SW_REQUIRE_TRUE( child._exitCode.has_value() ); // 죽인 자식도 거둔다 — 종료 코드가 있다
+    SW_EXPECT_NOT_EQUAL( 0, *child._exitCode );
     SW_EXPECT_TRUE_MSG( stopwatch.getElapsedMilliseconds() < 30000, "the harness waited for a child past its 3 s deadline" );
 }
 

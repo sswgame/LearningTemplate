@@ -275,8 +275,12 @@ namespace sw::editor
                 EditorWidgets::drawChip( "running", SW_THEME_COLOR( "Signal", "Success" ) );
             else
             {
+                // 기다리지 못한 프로세스는 종료 코드가 없다 — 0 으로 꾸미지 않고 따로 보인다(까닭은 그 프로세스의 마지막 출력 줄)
                 fixed_string<constant::buffer::kMax64> text;
-                formatstring( text.data(), text.capacity(), "exited %#", status._exitCode );
+                if ( status._exitCode.has_value() )
+                    formatstring( text.data(), text.capacity(), "exited %#", *status._exitCode );
+                else
+                    formatstring( text.data(), text.capacity(), "stopped, not waited for" );
                 EditorWidgets::drawChip( text.c_str(), SW_THEME_COLOR( "Signal", "Warning" ) );
             }
             ImGui::TableNextColumn();

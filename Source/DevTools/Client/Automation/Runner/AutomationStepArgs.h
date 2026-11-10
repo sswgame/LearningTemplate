@@ -9,6 +9,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 
+#include "DevTools/Client/Automation/Runner/AutomationGoldenUtil.h"
 #include "DevTools/Client/Automation/Runner/AutomationImage.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
@@ -56,12 +57,27 @@ namespace sw
             bool    _bWallSeconds{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
-        /** @brief `ExpectImage` 의 인자입니다(`file` · `golden` · `region` · `tolerance`). */
+        /** @brief `ExpectImage` 의 인자입니다(`file` · `golden` · `region` · 상한 덮기 `tolerance` · `maxMeanDistance` · `maxRegionPixels`). */
         struct ExpectImageArgs
         {
             AutomationImageRegion _region{};
-            string                _golden{};          ///< 골든 이름(`<시나리오 폴더>/golden/<시나리오>.<이름>.<백엔드>.ppm`)
-            float32               _tolerance{ 0.0f }; ///< 다른 화소 비율의 상한(0..1)
+            string                _golden{};               ///< 골든 이름(`<시나리오 폴더>/golden/<시나리오>.<이름>.<백엔드>.ppm`)
+            optional<float64>     _maxDifferingFraction{}; ///< `tolerance` — 적지 않으면 정책의 기본
+            optional<float64>     _maxMeanDistance{};      ///< `maxMeanDistance`
+            optional<uint32>      _maxDeepRegionPixels{};  ///< `maxRegionPixels`
+
+            /** @brief 정책의 기본 @p defaults 에 이 단계가 적은 상한을 덮은 값입니다. */
+            AutomationGoldenLimits resolveLimits( const AutomationGoldenLimits& defaults ) const
+            {
+                AutomationGoldenLimits limits = defaults;
+                if ( _maxDifferingFraction.has_value() )
+                    limits._maxDifferingFraction = *_maxDifferingFraction;
+                if ( _maxMeanDistance.has_value() )
+                    limits._maxMeanDistance = *_maxMeanDistance;
+                if ( _maxDeepRegionPixels.has_value() )
+                    limits._maxDeepRegionPixels = *_maxDeepRegionPixels;
+                return limits;
+            }
         };
 
         static constexpr float32 kWatchNearTolerance = 1.0e-4f; ///< 감시 값 `near` 의 기본 허용 폭

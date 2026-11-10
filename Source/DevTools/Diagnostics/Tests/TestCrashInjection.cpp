@@ -125,7 +125,7 @@ SW_TEST_CASE_EACH( CrashInjectionTest, EveryCrashKindLeavesAReport, kArrCrashCas
     const test::ChildRunResult child =
         test::runChildRole( "CrashInjectionTest.ChildCrashesAsRequested", makeCrashChildArgument( param._kind, folder ), kCrashChildTimeoutSeconds );
     SW_REQUIRE_TRUE_MSG( child._bLaunched && child._bTimedOut == false, param._pName );
-    SW_EXPECT_TRUE_MSG( child._exitCode != 0, param._pName + string( " - last output:" ) + child.getOutputTail() );
+    SW_EXPECT_TRUE_MSG( ( child._exitCode.has_value() && *child._exitCode != 0 ), param._pName + string( " - last output:" ) + child.getOutputTail() );
     expectCrashFiles( folder, param._pName );
 }
 
@@ -142,7 +142,7 @@ SW_TEST_CASE( CrashInjectionTest, StuckReportStillEndsAndKeepsTheStackFile, ._ta
     const test::ChildRunResult child =
         test::runChildRole( "CrashInjectionTest.ChildCrashesAsRequested", makeCrashChildArgument( CrashInjectionKind::StderrHeld, folder, kStuckReportDeadlineSeconds ), kCrashChildTimeoutSeconds );
     SW_REQUIRE_TRUE( child._bLaunched && child._bTimedOut == false );
-    SW_EXPECT_TRUE( child._exitCode != 0 );
+    SW_EXPECT_TRUE( ( child._exitCode.has_value() && *child._exitCode != 0 ) );
     SW_EXPECT_TRUE_MSG( child._output.find( "made no progress before its deadline" ) != string::npos, "no line saying the report hit its deadline - last output:" + child.getOutputTail() );
     expectCrashFiles( folder, "stuck" );
 }
@@ -160,7 +160,7 @@ SW_TEST_CASE( CrashInjectionTest, FailedAssertNamesItsExpressionBeforeStopping, 
     const test::ChildRunResult child =
         test::runChildRole( "CrashInjectionTest.ChildCrashesAsRequested", makeCrashChildArgument( CrashInjectionKind::AssertFailure, folder ), kCrashChildTimeoutSeconds );
     SW_REQUIRE_TRUE( child._bLaunched && child._bTimedOut == false );
-    SW_EXPECT_TRUE( child._exitCode != 0 );
+    SW_EXPECT_TRUE( ( child._exitCode.has_value() && *child._exitCode != 0 ) );
     const bool bNamesExpression = child._output.find( "[SW_ASSERT] bProbeHolds" ) != string::npos;
     const bool bNamesPlace      = child._output.find( "CrashInjection.cpp:" ) != string::npos;
     SW_EXPECT_TRUE_MSG( bNamesExpression && bNamesPlace, "the assert did not name its expression and place - last output:" + child.getOutputTail() );

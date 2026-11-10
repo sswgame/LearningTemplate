@@ -21,14 +21,6 @@ extern "C"
 
 namespace sw
 {
-    namespace
-    {
-        struct WebProcessInternal
-        {
-            static constexpr int32 kWaitFailedExitCode = -1; ///< `waitForExit` 의 대기 실패 값(Process.h 약속) — 기다릴 자식이 없다
-        };
-    } // namespace
-
     void Process::shutdown()
     {
         _bufferedOutput.clear();
@@ -68,9 +60,9 @@ namespace sw
         return false;
     }
 
-    int32 Process::waitForExit()
+    expected<int32> Process::waitForExit()
     {
-        return WebProcessInternal::kWaitFailedExitCode;
+        return unexpected( Error{ ErrorKind::Unsupported, "the browser has no child processes to wait for" } );
     }
 
     bool Process::terminate( int32 exitCode )

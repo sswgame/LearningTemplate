@@ -77,10 +77,10 @@ namespace sw
         /** @brief 엘리먼트 텍스트입니다. 노드가 유효하면 빈 문자열이어도 nullptr 이 아닙니다. */
         const utf8* getText() const;
         /**
-         * @brief 파싱한 원문에서 이 노드가 시작하는 바이트 위치입니다. 오류에 줄 번호를 적을 때 씁니다. 알 수 없으면(직접 만든 노드, 무효 노드) -1 입니다.
-         * @details 줄 번호는 `XMLDocument::computeLineNumber( 원문, 위치 )` 로 센다.
+         * @brief 파싱한 원문에서 이 노드가 시작하는 바이트 위치입니다. 오류에 줄 번호를 적을 때 씁니다. 알 수 없으면(직접 만든 노드, 무효 노드) 없음입니다.
+         * @details 줄 번호는 `XMLDocument::computeLineNumber( 원문, 위치 )` 로 센다. 예전에는 모를 때 -1 이라 부르는 쪽마다 `< 0` 을 따로 비교했다.
          */
-        int64 getSourceOffset() const;
+        [[nodiscard]] optional<size_t> getSourceOffset() const;
         /** @brief 속성 값을 반환합니다. 없으면 nullptr 입니다. */
         const utf8* findAttribute( const utf8* pName ) const;
         /** @brief 속성이 있으면 true 입니다(값은 비어 있어도 된다). */
@@ -353,8 +353,8 @@ namespace sw
         const string& getLastError() const { return _lastError; }
         /** @brief 마지막 `loadResource` 가 실패한 이유가 "파일이 없다" 인가(구문 오류 · 읽기 실패가 아니라). 글(`getLastError`)을 뒤지지 않고 가르는 길이다. */
         bool isLastErrorNotFound() const { return _bLastErrorNotFound; }
-        /** @brief 원문 @p text 의 바이트 위치 @p offset 이 몇 번째 줄(1 부터)인지 셉니다. 위치가 음수면 0 입니다(`XMLNode::getSourceOffset` 이 모를 때). */
-        static uint32 computeLineNumber( string_view text, int64 offset );
+        /** @brief 원문 @p text 의 바이트 위치 @p offset 이 몇 번째 줄(1 부터)인지 셉니다. 위치를 모르면(`XMLNode::getSourceOffset` 이 없음) 0 — 오류 글의 "줄 모름" 이다. */
+        static uint32 computeLineNumber( string_view text, const optional<size_t>& offset );
 
         /** @brief 첫 엘리먼트를 반환합니다. pName 이 있으면 이름으로 찾습니다(철자 그대로 — 대소문자가 다르면 없는 이름). */
         XMLNode getRoot( const utf8* pName = nullptr ) const;

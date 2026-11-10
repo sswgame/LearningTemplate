@@ -48,9 +48,9 @@ SW_TEST_CASE( ProcessTest, LaunchAndReadOutput )
             bFound = true;
     }
 
-    const int32 exitCode = proc.waitForExit();
+    const sw::expected<int32> exitCode = proc.waitForExit();
     SW_EXPECT_TRUE( bFound );
-    SW_EXPECT_EQUAL( 0, exitCode );
+    SW_EXPECT_TRUE( exitCode == 0 );
 }
 
 /**
@@ -67,8 +67,8 @@ SW_TEST_CASE( ProcessTest, ExecuteHelper )
     #error "Unsupported platform"
 #endif
 
-    sw::vector<sw::string> listLines;
-    const int32            exitCode = sw::Process::execute(
+    sw::vector<sw::string>    listLines;
+    const sw::expected<int32> exitCode = sw::Process::execute(
         cmd,
         {},
         sw::ProcessOutputDelegate::create( [&listLines]( sw::string_view line )
@@ -76,7 +76,8 @@ SW_TEST_CASE( ProcessTest, ExecuteHelper )
         listLines.push_back( sw::string( line ) );
     } ) );
 
-    SW_EXPECT_EQUAL( 0, exitCode );
+    SW_REQUIRE_TRUE( exitCode.has_value() );
+    SW_EXPECT_EQUAL( 0, *exitCode );
     SW_EXPECT_TRUE( listLines.size() >= 2 );
 }
 
@@ -92,7 +93,7 @@ SW_TEST_CASE( ProcessTest, ExitCodeStillActiveIsNotMistakenForRunning )
     sw::Process proc;
 
     SW_REQUIRE_TRUE( proc.launch( sw::ProcessCommand::fromSearchPath( "cmd.exe", { "/c", "exit", "259" } ) ) );
-    SW_EXPECT_EQUAL( 259, proc.waitForExit() );
+    SW_EXPECT_TRUE( proc.waitForExit() == 259 ); // 기다리지 못하면 값이 없어 진다
     SW_EXPECT_FALSE( proc.isRunning() );
 }
 #endif
@@ -128,7 +129,7 @@ SW_TEST_CASE( ProcessTest, TerminateProcess )
     // 강제 종료는 **요청**이라 돌아온 직후에는 아직 죽지 않았을 수 있다. 끝났는지는 기다려야 알 수
     // 있으므로 여기서 기다린다. 종료 코드가 0 이 아닌 것이 우리가 죽였다는 증거다 — 자식이 스스로
     // 끝났다면 0 이다(그리고 10초를 기다렸다는 뜻이기도 하다).
-    SW_EXPECT_EQUAL( expectedExitCode, proc.waitForExit() );
+    SW_EXPECT_TRUE( proc.waitForExit() == expectedExitCode ); // 기다리지 못하면 값이 없어 진다
     SW_EXPECT_FALSE( proc.isRunning() );
 }
 
@@ -163,7 +164,7 @@ SW_TEST_CASE( ProcessTest, TerminateEndsGrandchildren )
  * @details `isRunning` 이 자기 깃발만 보면 자식이 끝나도 `waitForExit` 을 부르기 전까지 true 라, 취소 UI 가
  *          끝난 빌드를 "돌고 있다" 고 보여 준다. OS 에 물어 곧 false 가 되어야 하고, 그러면서도
  *          **종료 코드는 그대로 남아 있어야 한다**(POSIX 에서
- *          묻는 김에 자식을 거둬 버리면 뒤이은 `waitForExit` 이 -1 을 준다 — 실제로 쉬운 함정이다).
+ *          묻는 김에 자식을 거둬 버리면 뒤이은 `waitForExit` 이 오류를 준다 — 실제로 쉬운 함정이다).
  */
 SW_TEST_CASE( ProcessTest, IsRunningTurnsFalseWithoutEatingTheExitCode )
 {
@@ -185,7 +186,11 @@ SW_TEST_CASE( ProcessTest, IsRunningTurnsFalseWithoutEatingTheExitCode )
     SW_EXPECT_TRUE_MSG( bSawStopped, "자식이 끝났는데도 isRunning 이 계속 true 다" );
 
     // 묻는 것이 자식을 거두지는 않았어야 한다.
-    SW_EXPECT_EQUAL( 7, proc.waitForExit() );
+    SW_EXPECT_TRUE( proc.waitForExit() == 7 ); // 기다리지 못하면 값이 없어 진다
+#if defined( SW_PLATFORM_POSIX )               // POSIX 는 거둘 때 pid 를 놓는다 — Windows 는 핸들을 들고 있어 다시 물어도 같은 종료 코드다
+    // 거둔 뒤 다시 기다리면 종료 코드가 아니라 오류다(-1 로 끝난 프로세스와 갈린다)
+    SW_EXPECT_FALSE( proc.waitForExit().has_value() );
+#endif
 }
 
 /**
@@ -237,7 +242,7 @@ SW_TEST_CASE( ProcessTest, ChildInheritsOnlyItsOwnPipe )
     const bool bChildStillRunning = child.isRunning();
 
     child.terminate( 1 );
-    child.waitForExit();
+    (void)child.waitForExit();
 
     SW_EXPECT_TRUE_MSG( bChildStillRunning, "새 자식이 남의 파이프를 물려받았다 — 그 파이프의 읽기가 자식이 끝날 때까지 막혔다" );
 }
@@ -307,7 +312,7 @@ SW_TEST_CASE( ProcessTest, StandardInputPipeReachesTheChild )
         output += line;
         output += '\n';
     }
-    SW_EXPECT_EQUAL( 0, process.waitForExit() );
+    SW_EXPECT_TRUE( process.waitForExit() == 0 ); // 기다리지 못하면 값이 없어 진다
     SW_EXPECT_EQUAL( sw::string( "axb\n" ), output );
 }
 
@@ -372,12 +377,13 @@ SW_TEST_CASE( ProcessTest, PosixChildReceivesArgumentsUnchanged )
     sw::ProcessCommand           command      = sw::ProcessCommand::fromSearchPath( "printf", { "%s\\n" } );
     command._listArgument.insert( command._listArgument.end(), listArgument.begin(), listArgument.end() );
 
-    sw::vector<sw::string> listLine;
-    const int32            exitCode = sw::Process::execute( command, {}, sw::ProcessOutputDelegate::create( [&listLine]( sw::string_view line )
+    sw::vector<sw::string>    listLine;
+    const sw::expected<int32> exitCode = sw::Process::execute( command, {}, sw::ProcessOutputDelegate::create( [&listLine]( sw::string_view line )
     {
         listLine.push_back( sw::string( line ) );
     } ) );
-    SW_EXPECT_EQUAL( 0, exitCode );
+    SW_REQUIRE_TRUE( exitCode.has_value() );
+    SW_EXPECT_EQUAL( 0, *exitCode );
     SW_REQUIRE_EQUAL( listArgument.size(), listLine.size() );
     for ( size_t index = 0; index < listArgument.size(); ++index )
     {
@@ -397,6 +403,10 @@ SW_TEST_CASE( ProcessTest, MissingExecutableFailsToLaunch )
     SW_EXPECT_FALSE( process.launch( sw::ProcessCommand::fromSearchPath( "sw_no_such_program_7f3a", { "x" } ) ) );
     SW_EXPECT_FALSE( process.launch( sw::ProcessCommand{} ) );
     SW_EXPECT_FALSE( sw::Process::launchDetached( sw::ProcessCommand{} ) );
+    // 동기 실행도 띄우기 실패는 종료 코드(-1)가 아니라 오류다 — -1 로 끝난 프로세스와 갈린다.
+    const sw::expected<int32> missing = sw::Process::execute( sw::ProcessCommand::fromSearchPath( "sw_no_such_program_7f3a", { "x" } ) );
+    SW_REQUIRE_FALSE( missing.has_value() );
+    SW_EXPECT_TRUE( missing.error().detail().find( "sw_no_such_program_7f3a" ) != sw::string_view::npos );
 }
 
 /**
@@ -424,7 +434,7 @@ SW_TEST_CASE( ProcessTest, EnvironmentOverrideReachesOnlyTheChild )
         if ( line.find( "from-option" ) != sw::string::npos )
             bFound = true;
     }
-    SW_EXPECT_EQUAL( 0, process.waitForExit() );
+    SW_EXPECT_TRUE( process.waitForExit() == 0 ); // 기다리지 못하면 값이 없어 진다
     SW_EXPECT_TRUE( bFound );
     SW_EXPECT_FALSE( sw::ProcessEnvironment::isSet( kName ) );
 

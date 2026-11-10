@@ -33,6 +33,7 @@
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Message/NetStatsReport.h"
@@ -77,7 +78,7 @@ namespace sw::editor
         uint64                  _objectHashTick{ 0 };        ///< 그 답이 단 틱
         uint32                  _objectHashReportCount{ 0 }; ///< 받은 오브젝트 해시 답 수 — 새 답이 왔는지 이 값으로 본다
         int32                   _processID{ 0 };
-        int32                   _exitCode{ 0 };
+        optional<int32>         _exitCode{};           ///< 거둔 프로세스의 종료 코드 — 돌고 있거나 기다리지 못했으면 없다(까닭은 `_lastLine`)
         bool                    _bRunning{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool                    _bConnected{ false };  ///< 클라이언트가 서버에 연결되었다는 줄(`Net session connected to`)을 남겼고 그 뒤 서버를 잃지 않았다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };

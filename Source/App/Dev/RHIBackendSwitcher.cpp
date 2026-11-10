@@ -334,8 +334,11 @@ namespace sw
                     "Remove the GPU device as a TDR would (DirectX 12; Vulkan marks it lost) to check that frames and shutdown do not hang; with a wait, the render thread first blocks that long where the fence wait is",
                     &RHIBackendSwitcherInternal::runRemoveDevice );
     SW_AUTOMATION_STEP( swapBackend, AutomationBackendSteps::kSwapBackendKind, &RHIBackendSwitcherInternal::runSwapBackend, &AutomationBackendSteps::validateSwapBackend, AutomationStepOptions{}.withPrepare( &RHIBackendSwitcherInternal::prepareSwapBackend ).withWallBudget( AutomationBackendSteps::kSwapBackendWallSeconds ) );
-    SW_AUTOMATION_WATCH( rhiBackend, "RHI.Backend", "Backend the device runs on: 0 DirectX11, 1 DirectX12, 2 Vulkan, 3 OpenGL",
+    // 설명의 백엔드 목록은 쿠킹 표에서 만든다(줄 순서 = 열거값) — 손으로 적은 목록이 WebGPU 를 빠뜨렸다.
+#define SW_RHI_BACKEND_WATCH_NAME_ROW( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) " " #Backend
+    SW_AUTOMATION_WATCH( rhiBackend, "RHI.Backend", "Backend the device runs on, as the RHIBackend value counted from 0 in this order:" SW_RHI_BACKEND_TABLE( SW_RHI_BACKEND_WATCH_NAME_ROW ),
                          &RHIBackendSwitcherInternal::readCommittedBackend );
+#undef SW_RHI_BACKEND_WATCH_NAME_ROW
     SW_AUTOMATION_WATCH( rhiSwapPending, "RHI.SwapPending", "1 from a backend swap request (SwapBackend, gv_rhiBackend) until the end-of-frame swap has run",
                          &RHIBackendSwitcherInternal::readSwapPending );
     SW_AUTOMATION_WATCH( rhiSwapFailedCount, "RHI.SwapFailedCount", "Backend swaps that failed since the process started (each falls back to the previous backend)",

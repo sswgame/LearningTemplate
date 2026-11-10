@@ -1,0 +1,8 @@
+{
+    "_differingMinDistance": 12,
+    "_deepMinDistance": 96,
+    "_maxDifferingFraction": 0.01,
+    "_maxMeanDistance": 0.005,
+    "_maxDeepRegionPixels": 16,
+    "_nearLimitRatio": 0.5
+}

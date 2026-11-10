@@ -57,7 +57,9 @@ namespace sw
         virtual float32 getElapsedTimeSec() const = 0;
         /** @brief 마지막 빌드에 소요된 시간(초)을 반환합니다. */
         virtual float32 getLastDurationSec() const = 0;
-        /** @brief 마지막 빌드 프로세스의 종료 코드를 반환합니다(0 = 성공). */
+        /** @brief 종료 코드가 없을 때(빌드를 띄우지 못함 · 기다리지 못함 · 아직 없음)의 값입니다. 모듈 경계(C-ABI 가상 표)라 `optional` 을 넘기지 못해 이름 붙인 값으로 둔다. */
+        static constexpr int32 kNoExitCode = -1;
+        /** @brief 마지막 빌드 프로세스의 종료 코드를 반환합니다(0 = 성공, 종료 코드가 없으면 `kNoExitCode`). */
         virtual int32 getLastExitCode() const = 0;
         /**
          * @brief 현재 또는 마지막으로 컴파일된 타겟 이름을 반환합니다.

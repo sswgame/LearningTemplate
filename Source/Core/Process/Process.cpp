@@ -148,14 +148,11 @@ namespace sw
         return *this;
     }
 
-    int32 Process::execute( const ProcessCommand& command, const ProcessOptions& options, const ProcessOutputDelegate& onOutput )
+    expected<int32> Process::execute( const ProcessCommand& command, const ProcessOptions& options, const ProcessOutputDelegate& onOutput )
     {
         Process proc;
         if ( proc.launch( command, options ) == false )
-        {
-            SW_LOG_ERROR_ID( "Process.FailedLaunchCommand", "Failed to launch command: %#", command.toCommandLine() );
-            return -1;
-        }
+            return unexpected( Error{ ErrorKind::ExternalFailure, "could not launch the command", command.toCommandLine() } );
 
         string line;
         while ( proc.readOutputLine( line ) )
