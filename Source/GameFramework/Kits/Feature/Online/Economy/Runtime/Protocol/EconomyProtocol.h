@@ -275,11 +275,20 @@ namespace sw
         using ResultName   = EconomyResult;
 
         static const OnlineProtocolEntry kOnlineEntry; ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
-        static constexpr int32           kMaxOfferIDSize        = 64;
-        static constexpr int32           kMaxStoreNameSize      = 64;
-        static constexpr int32           kMaxProductIDSize      = 64;
-        static constexpr int32           kMaxReceiptPayloadSize = 16384; ///< 영수증 한 장의 크기이다. Apple JWS 는 수 KB 이다
-        static constexpr int32           kMaxCursorSize         = 512;
-        static constexpr int32           kMaxHistoryCount       = 100; ///< 내역 응답 한 번의 항목 수이며 요청의 `_maxCount` 상한(`Max`)이기도 하다
+        static constexpr int32           kMaxOfferIDSize = 64;
+        /// 원장 분개 키 범위의 접두(`<접두><스토어 이름>`) — 지급 · 환불 · 청약철회. 범위는 `LedgerConstant::kMaxJournalScopeSize` 안이어야 원장이 받는다.
+        static constexpr const utf8* kReceiptScopePrefix     = "rcpt.";
+        static constexpr const utf8* kRefundScopePrefix      = "refund.";
+        static constexpr const utf8* kWithdrawScopePrefix    = "withdraw.";
+        static constexpr int32       kLongestScopePrefixSize = 9; ///< 위 접두 가운데 가장 긴 것(`withdraw.`)의 길이 — `EconomyStoreLogic.cpp` 의 static_assert 가 맞춘다
+        /**
+         * @brief 스토어 이름의 와이어 상한입니다. 원장 범위 상한에서 가장 긴 접두를 뺀 값이다 — 와이어가 받은 이름은 늘 원장이 받는 분개 키가 된다.
+         * @details 예전에는 64 로 따로 정해 범위 상한(32)과 어긋났다 — 24 자 넘는 이름은 와이어를 지나고 원장 앞에서 거절됐다(쓰는 쪽과 읽는 쪽이 상한을 따로 정한 모양).
+         */
+        static constexpr int32 kMaxStoreNameSize      = LedgerConstant::kMaxJournalScopeSize - kLongestScopePrefixSize;
+        static constexpr int32 kMaxProductIDSize      = 64;
+        static constexpr int32 kMaxReceiptPayloadSize = 16384; ///< 영수증 한 장의 크기이다. Apple JWS 는 수 KB 이다
+        static constexpr int32 kMaxCursorSize         = 512;
+        static constexpr int32 kMaxHistoryCount       = 100; ///< 내역 응답 한 번의 항목 수이며 요청의 `_maxCount` 상한(`Max`)이기도 하다
     };
 } // namespace sw

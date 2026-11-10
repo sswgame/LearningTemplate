@@ -17,11 +17,15 @@ namespace sw
     {
         struct EconomyStoreLogicInternal
         {
-            static constexpr const utf8* kReceiptScopePrefix  = "rcpt.";
-            static constexpr const utf8* kRefundScopePrefix   = "refund.";
-            static constexpr const utf8* kWithdrawScopePrefix = "withdraw.";
-            static constexpr uint8       kMarkRefunded        = 1;
-            static constexpr uint8       kMarkWithdrawn       = 2;
+            static constexpr const utf8* kReceiptScopePrefix  = EconomyProtocol::kReceiptScopePrefix;
+            static constexpr const utf8* kRefundScopePrefix   = EconomyProtocol::kRefundScopePrefix;
+            static constexpr const utf8* kWithdrawScopePrefix = EconomyProtocol::kWithdrawScopePrefix;
+            static_assert( string_view( kReceiptScopePrefix ).size() <= EconomyProtocol::kLongestScopePrefixSize &&
+                               string_view( kRefundScopePrefix ).size() <= EconomyProtocol::kLongestScopePrefixSize &&
+                               string_view( kWithdrawScopePrefix ).size() <= EconomyProtocol::kLongestScopePrefixSize,
+                           "스토어 이름 상한(kMaxStoreNameSize)은 가장 긴 범위 접두로 셈한다 — 더 긴 접두를 더하면 kLongestScopePrefixSize 를 올린다" );
+            static constexpr uint8 kMarkRefunded  = 1;
+            static constexpr uint8 kMarkWithdrawn = 2;
 
             /** @brief 거래의 지급 분개 키입니다. 환불 표시의 키이기도 하다. */
             [[nodiscard]] static bool makeRedeemKey( string_view storeName, string_view transactionID, string& outKey )
