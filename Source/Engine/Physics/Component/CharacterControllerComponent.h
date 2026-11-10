@@ -3,7 +3,7 @@
  * @brief 캐릭터 컨트롤러(3D) — 캡슐 하나를 질의로 움직여 벽에 미끄러지고 · 턱을 오르고 · 가파른 비탈에 막힙니다(Jolt `CharacterVirtual`).
  */
 #pragma once
-#include "Core/Concurrency/SpinLock.h"
+#include "Core/Concurrency/ThreadSafety.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -18,6 +18,10 @@
 
 namespace sw
 {
+    struct CharacterCommand3D;
+    template <typename TCommand>
+    struct CharacterCommandPage;
+
     class ValidationContext;
 } // namespace sw
 
@@ -36,8 +40,10 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        /** @brief 입력 칸(`PhysicsPoseStore` 의 캐릭터 저장소)을 받습니다. */
         CharacterControllerComponent();
-        ~CharacterControllerComponent() override = default;
+        /** @brief 입력 칸을 놓습니다. */
+        ~CharacterControllerComponent() override;
 
         /** @brief 원하는 수평 이동 속도(월드, 미터/초)입니다. 다시 부를 때까지 유지합니다. Y 는 보지 않습니다(중력 · 점프가 정한다). */
         void setMoveVelocity( const float3& velocity );
@@ -132,6 +138,9 @@ namespace sw
     private:
         /** @brief `_layer` 가 물리 레이어 표에 있는지 봅니다(`PhysicsNameValidation`). */
         void validateLayer( ValidationContext& context ) const;
+        /** @brief 입력 칸을 잠그고 @p function( CharacterCommand3D& ) 을 부릅니다(아무 스레드). */
+        template <typename TFunction>
+        void editCommand( TFunction&& function ) const;
 
     private:
         PROPERTY( Category = "Character", Min = 0.01, Tooltip = "Capsule radius", Units = m )
@@ -151,32 +160,26 @@ namespace sw
         PROPERTY( Category = "Character", DisplayName = "Inner Body", Tooltip = "Keep a kinematic capsule body on the character so cloth and sensors feel it (it also pushes dynamic bodies harder)" )
         bool _bInnerBody;
 
-        PhysicsCharacterHandle           _character;
-        PhysicsCharacterState3D          _state;
-        mutable SpinLock                 _commandLock;
-        float3 _moveVelocity             SW_GUARDED_BY( _commandLock ); ///< 요청된 수평 속도(`_commandLock`)
-        float3 _pendingRootMotion        SW_GUARDED_BY( _commandLock ); ///< 아직 스텝에 넘기지 않은 루트 모션 이동(`_commandLock`)
-        ThreadRole                       _physicsStep;                  ///< 물리 스텝 역할 — 이번 프레임 속도 · 공중 속도는 prePhysicsStep 만 만진다(잠금이 아니라 분석용 능력)
-        float3 _frameRootMotionVelocity  SW_GUARDED_BY( _physicsStep ); ///< 이번 물리 프레임의 스텝마다 더할 루트 모션 속도
-        float3 _pendingSurfaceVelocity   SW_GUARDED_BY( _commandLock ); ///< 이번 프레임에 쌓인 면 속도(`_commandLock`)
-        float3 _frameSurfaceVelocity     SW_GUARDED_BY( _physicsStep ); ///< 이번 물리 프레임의 면 속도
-        float32 _pendingMoveScale        SW_GUARDED_BY( _commandLock ); ///< 이번 프레임에 받은 이동 계수의 최솟값(`_commandLock`)
-        float32 _frameMoveScale          SW_GUARDED_BY( _physicsStep ); ///< 이번 물리 프레임의 이동 계수
-        atomic<float32>                  _reportedMoveScale;            ///< 진단 · 감시 값이 읽는 사본(`getMoveScale`) — 물리 스텝이 쓰고 게임 스레드가 읽는다
-        float3 _pendingLaunch            SW_GUARDED_BY( _commandLock ); ///< 0 이 아니면 다음 스텝에 쏜다(`_commandLock`)
-        float3 _airVelocity              SW_GUARDED_BY( _physicsStep ); ///< 발사 · 떠난 바닥의 수평 속도 — 땅에 다시 닿으면 0
-        PhysicsFieldSample _pendingField SW_GUARDED_BY( _commandLock ); ///< 이번 게임 프레임에 모인 물리 필드(`_commandLock`)
-        PhysicsFieldSample               _frameField;                   ///< 이번 물리 프레임의 필드(`beginPhysicsFrame` 이 옮긴다)
-        float3 _walkVelocity             SW_GUARDED_BY( _physicsStep ); ///< 지난 스텝에 실제로 낸 걷는 속도 — 접지가 낮으면(빙판) 요청 속도로 천천히 간다
-        float3 _fieldVelocity            SW_GUARDED_BY( _physicsStep ); ///< 필드의 가속 · 흐름이 쌓은 수평 속도(당김 · 해류) — 디디면 접지만큼 줄어든다
-        CharacterMovementMode            _movementMode;                 ///< 지난 스텝의 이동 방식
-        float3                           _previousPosition;
-        float3                           _worldScale;    ///< 트랜스폼의 월드 배율(변경 번호가 바뀔 때만 다시 읽는다)
-        quaternion                       _worldRotation; ///< 트랜스폼의 월드 회전(바닥이 돈 각을 얹어 쓴다). 변경 번호가 같으면 그대로다
-        float32                          _verticalSpeed;
-        float32 _pendingJumpSpeed        SW_GUARDED_BY( _commandLock ); ///< 0 이 아니면 다음 스텝에 준다(`_commandLock`)
-        float32                          _pendingGroundYaw;             ///< 마지막 쓰기 뒤 디딘 바닥이 위 축 둘레로 돈 각(rad) — 다음 트랜스폼 쓰기에 얹는다
-        vector<StepRecord>               _listStepHistory;              ///< 스텝 기록 고리(`setStepHistoryEnabled` 가 켜졌을 때 처음 칸을 만든다 — 꺼져 있으면 비어 있다)
-        uint32                           _stepHistoryCount;             ///< 기록한 스텝의 누계(고리의 다음 칸은 `% kStepHistoryCapacity`)
+        PhysicsCharacterHandle                    _character;
+        PhysicsCharacterState3D                   _state;
+        CharacterCommandPage<CharacterCommand3D>* _pCommandPage;                 ///< 입력 칸이 든 페이지 — 이동 요청 · 대기(`PhysicsPoseStore::getCharacterStore`)
+        uint32                                    _commandSlot;                  ///< 입력 칸 번호(컴포넌트 수명 동안 그대로)
+        ThreadRole                                _physicsStep;                  ///< 물리 스텝 역할 — 이번 프레임 속도 · 공중 속도는 prePhysicsStep 만 만진다(잠금이 아니라 분석용 능력)
+        float3 _frameRootMotionVelocity           SW_GUARDED_BY( _physicsStep ); ///< 이번 물리 프레임의 스텝마다 더할 루트 모션 속도
+        float3 _frameSurfaceVelocity              SW_GUARDED_BY( _physicsStep ); ///< 이번 물리 프레임의 면 속도
+        float32 _frameMoveScale                   SW_GUARDED_BY( _physicsStep ); ///< 이번 물리 프레임의 이동 계수
+        atomic<float32>                           _reportedMoveScale;            ///< 진단 · 감시 값이 읽는 사본(`getMoveScale`) — 물리 스텝이 쓰고 게임 스레드가 읽는다
+        float3 _airVelocity                       SW_GUARDED_BY( _physicsStep ); ///< 발사 · 떠난 바닥의 수평 속도 — 땅에 다시 닿으면 0
+        PhysicsFieldSample                        _frameField;                   ///< 이번 물리 프레임의 필드(`beginPhysicsFrame` 이 옮긴다)
+        float3 _walkVelocity                      SW_GUARDED_BY( _physicsStep ); ///< 지난 스텝에 실제로 낸 걷는 속도 — 접지가 낮으면(빙판) 요청 속도로 천천히 간다
+        float3 _fieldVelocity                     SW_GUARDED_BY( _physicsStep ); ///< 필드의 가속 · 흐름이 쌓은 수평 속도(당김 · 해류) — 디디면 접지만큼 줄어든다
+        CharacterMovementMode                     _movementMode;                 ///< 지난 스텝의 이동 방식
+        float3                                    _previousPosition;
+        float3                                    _worldScale;    ///< 트랜스폼의 월드 배율(변경 번호가 바뀔 때만 다시 읽는다)
+        quaternion                                _worldRotation; ///< 트랜스폼의 월드 회전(바닥이 돈 각을 얹어 쓴다). 변경 번호가 같으면 그대로다
+        float32                                   _verticalSpeed;
+        float32                                   _pendingGroundYaw; ///< 마지막 쓰기 뒤 디딘 바닥이 위 축 둘레로 돈 각(rad) — 다음 트랜스폼 쓰기에 얹는다
+        vector<StepRecord>                        _listStepHistory;  ///< 스텝 기록 고리(`setStepHistoryEnabled` 가 켜졌을 때 처음 칸을 만든다 — 꺼져 있으면 비어 있다)
+        uint32                                    _stepHistoryCount; ///< 기록한 스텝의 누계(고리의 다음 칸은 `% kStepHistoryCapacity`)
     };
 } // namespace sw
