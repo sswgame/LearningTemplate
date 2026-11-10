@@ -118,8 +118,8 @@ namespace sw
                         validate( *pNested, pValue, context, depth + 1, cache );
                         continue;
                     }
-                    ISequenceContainerWrapper* pSequence    = prop._containerWrapper->asSequence();
-                    const size_t               elementCount = pSequence->getSize( pValue );
+                    const ISequenceContainerWrapper* pSequence    = prop._containerWrapper->asSequence();
+                    const size_t                     elementCount = pSequence->getSize( pValue );
                     for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
                     {
                         validate( *pNested, pSequence->getElementConst( pValue, elementIndex ), context, depth + 1, cache );

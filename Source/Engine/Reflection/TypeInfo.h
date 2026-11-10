@@ -180,6 +180,9 @@ namespace sw
         /** @brief 커스텀 메타데이터 태그를 조회합니다. */
         const string* findCustomMeta( const hashed_string& key ) const noexcept;
 
+        /** @brief 생성 코드의 서술자 표(`PropertyDesc`) @p count 줄로 선언 프로퍼티 목록을 짓습니다. 목록 할당은 한 번입니다. */
+        void setPropertyTable( const PropertyDesc* pDesc, size_t count );
+
         /** @brief 카테고리를 반환합니다. */
         string_view getCategory() const noexcept;
         /** @brief 표시 이름을 반환합니다. DisplayName 메타가 없으면 C++ 타입 이름을 반환합니다. */

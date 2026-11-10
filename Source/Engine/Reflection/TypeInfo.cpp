@@ -58,6 +58,16 @@ namespace sw
         };
     } // namespace
 
+    void TypeInfo::setPropertyTable( const PropertyDesc* pDesc, const size_t count )
+    {
+        _listProperty.clear();
+        _listProperty.reserve( count );
+        for ( size_t descIndex = 0; descIndex < count; ++descIndex )
+        {
+            _listProperty.emplace_back( pDesc[descIndex] );
+        }
+    }
+
     const string* TypeInfo::findCustomMeta( const hashed_string& key ) const noexcept
     {
         return _metadata->getEditor().findCustomMeta( key );

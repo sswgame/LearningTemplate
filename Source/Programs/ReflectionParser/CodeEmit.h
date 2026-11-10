@@ -29,6 +29,9 @@ namespace sw
         /** @brief 내부 출력 버퍼를 반환합니다. */
         CodeEmitBuffer& buffer() noexcept { return _out; }
 
+        /** @brief 지금 들여쓰기 단계입니다(다른 버퍼에 같은 깊이로 쓸 때). */
+        int32 getIndent() const noexcept { return _indent; }
+
         /** @brief 들여쓰기 단계를 올립니다. */
         CodeEmit& push( int32 levels = 1 )
         {

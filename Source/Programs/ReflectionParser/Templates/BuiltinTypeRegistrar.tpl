@@ -9,7 +9,7 @@
 			info._moduleName         = ::sw::hashed_string( "$ModuleName" );
 			info._size               = sizeof( $CppType );
 			info._bPrimitive         = 1;
-			registry.registerClass( info );
+			registry.registerClass( ::std::move( info ) );
 $AliasRegs
 		}
 

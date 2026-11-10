@@ -98,10 +98,10 @@ namespace sw
             const bool  bNothingToWalk = pContainer == nullptr || shape._wrapper == nullptr || shapeHoldsLeaf( shape ) == false;
             if ( bNothingToWalk )
                 return true;
-            ISequenceContainerWrapper* pSequence = shape._wrapper->asSequence();
+            const ISequenceContainerWrapper* pSequence = shape._wrapper->asSequence();
             if ( pSequence != nullptr )
                 return walkSequence( pContainer, *pSequence, shape );
-            IMapContainerWrapper* pMap = shape._wrapper->asMap();
+            const IMapContainerWrapper* pMap = shape._wrapper->asMap();
             if ( pMap != nullptr )
                 return walkMap( pContainer, *pMap, shape );
             return true;
@@ -122,7 +122,7 @@ namespace sw
             return pStruct == nullptr || walkObject( MutableObjectAddress{ value.get() }, *pStruct );
         }
 
-        bool walkSequence( void* pContainer, ISequenceContainerWrapper& sequence, const NestedContainerInfo& shape )
+        bool walkSequence( void* pContainer, const ISequenceContainerWrapper& sequence, const NestedContainerInfo& shape )
         {
             const size_t elementCount = sequence.getSize( pContainer );
             const bool   bLeafElement = shape._elementNested == nullptr && shape._elementTypeName == _leafTypeName;
@@ -162,7 +162,7 @@ namespace sw
             return bAllWalked;
         }
 
-        bool walkMap( void* pContainer, IMapContainerWrapper& map, const NestedContainerInfo& shape )
+        bool walkMap( void* pContainer, const IMapContainerWrapper& map, const NestedContainerInfo& shape )
         {
             // 값부터 제자리에서 바꾼다(잎, 잎을 품은 구조체, 중첩 컨테이너).
             bool bAllWalked = true;
@@ -185,7 +185,7 @@ namespace sw
         }
 
         /** @brief 잎 키는 제자리에서 고칠 수 없다 — 값을 밖에 복사해 두고, 비운 뒤 옮긴 키로 다시 넣습니다. */
-        bool reinsertLeafKeys( void* pContainer, IMapContainerWrapper& map )
+        bool reinsertLeafKeys( void* pContainer, const IMapContainerWrapper& map )
         {
             constexpr size_t kAlignment  = 64;
             const size_t     valueStride = ( map.getValueSize() + kAlignment - 1 ) / kAlignment * kAlignment;

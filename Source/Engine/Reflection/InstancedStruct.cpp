@@ -18,7 +18,7 @@ namespace sw
         struct InstancedStructInternal
         {
             /** @brief 원소가 값 글 하나로 읽히는 시퀀스 칸이면 그 시퀀스입니다(`XMLFields` 의 한 줄 목록과 같은 기준). */
-            [[nodiscard]] static ISequenceContainerWrapper* findTextList( const PropertyInfo& prop, const SerializeContext& context )
+            [[nodiscard]] static const ISequenceContainerWrapper* findTextList( const PropertyInfo& prop, const SerializeContext& context )
             {
                 const bool bSequence = prop._bIsContainer == SW_TRUE && prop._containerWrapper != nullptr && ( prop._nestedContainer == nullptr || prop._nestedContainer->_elementNested == nullptr );
                 if ( bSequence == false || SerializerUtil::canCarryValueType( prop._elementTypeName, context ) == false )
@@ -29,7 +29,7 @@ namespace sw
             /** @brief 칸 하나에 글 하나를 씁니다. 목록 칸이면 뒤에 더합니다. */
             [[nodiscard]] static bool applyToken( const PropertyInfo& prop, void* pInstance, string_view token, const SerializeContext& context )
             {
-                ISequenceContainerWrapper* const pList = findTextList( prop, context );
+                const ISequenceContainerWrapper* const pList = findTextList( prop, context );
                 if ( pList == nullptr )
                     return SerializerUtil::applyPropertyText( prop, MutableObjectAddress{ pInstance }, token, context );
                 void* const pContainer = prop.getRawPtr( pInstance );
@@ -39,7 +39,7 @@ namespace sw
             }
 
             /** @brief 목록 칸의 글입니다. 원소를 쉼표로 잇습니다. */
-            [[nodiscard]] static string formatList( const PropertyInfo& prop, ISequenceContainerWrapper& list, const void* pInstance, const SerializeContext& context )
+            [[nodiscard]] static string formatList( const PropertyInfo& prop, const ISequenceContainerWrapper& list, const void* pInstance, const SerializeContext& context )
             {
                 void* const  pContainer = prop.getRawPtr( const_cast<void*>( pInstance ) ); // 시퀀스 접근이 비 const 다 - 읽기만 한다
                 string       text;
@@ -167,7 +167,7 @@ namespace sw
         string                  text;
         for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
         {
-            ISequenceContainerWrapper* const pList = Internal::findTextList( prop, context );
+            const ISequenceContainerWrapper* const pList = Internal::findTextList( prop, context );
             if ( pList == nullptr && ( prop._bIsContainer == SW_TRUE || SerializerUtil::canCarryValueType( prop._typeName, context ) == false ) )
                 continue;
             const string value        = pList != nullptr ? Internal::formatList( prop, *pList, pInstance, context ) : SerializerUtil::formatPropertyText( prop, ObjectAddress{ pInstance }, context );

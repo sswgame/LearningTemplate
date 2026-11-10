@@ -109,9 +109,9 @@ SW_TEST_CASE( ReflectionTypeInfoTest, FindExistingProperty )
 SW_TEST_CASE( ReflectionTypeInfoTest, MetadataBoxCopiesByValue )
 {
     sw::PropertyInfo original;
-    original._metadata->_defaultValue = "7";
-    sw::PropertyInfo copy             = original;
-    copy._metadata->_defaultValue     = "9";
+    original._metadata.edit()._defaultValue = "7";
+    sw::PropertyInfo copy                   = original;
+    copy._metadata.edit()._defaultValue     = "9";
     SW_EXPECT_EQUAL( sw::string( "7" ), original._metadata->_defaultValue );
     SW_EXPECT_EQUAL( sw::string( "9" ), copy._metadata->_defaultValue );
 
@@ -130,21 +130,54 @@ SW_TEST_CASE( ReflectionTypeInfoTest, MetadataBoxCopiesByValue )
 }
 
 /**
+ * @brief [ReflectionTypeInfoTest] 서술자 표(`PropertyDesc`)로 지은 프로퍼티 — 적은 것이 없는 메타데이터는 공유 기본값(힙 없음)이고, 고치면 제 사본을 짓는다.
+ */
+SW_TEST_CASE( ReflectionTypeInfoTest, PropertyDescTableSharesDefaultMetadata )
+{
+    static constexpr const utf8*      kAlias[]      = { "oldValue" };
+    static constexpr sw::PropertyDesc kProperties[] = {
+        {  "value", "int32", 4u, sw::ContainerKind::None, nullptr, nullptr, nullptr, nullptr, nullptr,  kAlias, 1u, nullptr, nullptr, nullptr, nullptr, 0u,nullptr                             },
+        {"flagged",  "bool", 8u, sw::ContainerKind::None, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, 0u, nullptr, nullptr, nullptr, nullptr, 0u,
+         []( sw::PropertyMetadata& m )
+         { m._bTransient = SW_TRUE; }},
+    };
+    sw::TypeInfo info;
+    info.setPropertyTable( kProperties, 2 );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, info._listProperty.size() );
+
+    const sw::PropertyInfo& plain   = info._listProperty[0];
+    const sw::PropertyInfo& flagged = info._listProperty[1];
+    SW_EXPECT_TRUE( plain.matchesName( sw::hashed_string( "oldValue" ) ) );
+    SW_EXPECT_EQUAL( sw::hashed_string( "value" ).getHash(), plain.getNameHash() );
+    SW_EXPECT_EQUAL( size_t{ 4 }, plain.getOffset() );
+    SW_EXPECT_TRUE( flagged._metadata->_bTransient == SW_TRUE );
+
+    const sw::PropertyInfo other;
+    SW_EXPECT_TRUE( &*plain._metadata == &*other._metadata ); // 둘 다 공유 기본값
+    SW_EXPECT_TRUE( &*flagged._metadata != &*other._metadata );
+
+    sw::PropertyInfo copy             = plain;
+    copy._metadata.edit()._bTransient = SW_TRUE; // 고치는 쪽만 제 사본을 짓는다
+    SW_EXPECT_TRUE( plain._metadata->_bTransient == SW_FALSE );
+    SW_EXPECT_TRUE( copy._metadata->_bTransient == SW_TRUE );
+}
+
+/**
  * @brief [ReflectionTypeInfoTest] 프로퍼티 메타데이터
  */
 SW_TEST_CASE( ReflectionTypeInfoTest, PropertyMetadataSupport )
 {
     sw::PropertyInfo           prop;
     sw::PropertyEditorMetadata editor; // 에디터 메타데이터는 옆 표다 — 런타임 메타데이터는 포인터로만 가리킨다(`ReflectionEditorMetadata.h`)
-    editor._category              = "Rendering";
-    editor._displayName           = "Light Intensity";
-    editor._tooltip               = "Controls light intensity";
-    prop._metadata->_pEditor      = &editor;
-    prop._metadata->_minRange     = 0.0f;
-    prop._metadata->_maxRange     = 100.0f;
-    prop._metadata->_bHasMinRange = SW_TRUE;
-    prop._metadata->_bHasMaxRange = SW_TRUE;
-    prop._metadata->_bReadOnly    = SW_TRUE;
+    editor._category                    = "Rendering";
+    editor._displayName                 = "Light Intensity";
+    editor._tooltip                     = "Controls light intensity";
+    prop._metadata.edit()._pEditor      = &editor;
+    prop._metadata.edit()._minRange     = 0.0f;
+    prop._metadata.edit()._maxRange     = 100.0f;
+    prop._metadata.edit()._bHasMinRange = SW_TRUE;
+    prop._metadata.edit()._bHasMaxRange = SW_TRUE;
+    prop._metadata.edit()._bReadOnly    = SW_TRUE;
 
     SW_EXPECT_EQUAL( sw::string( "Rendering" ), prop._metadata->getEditor()._category );
     SW_EXPECT_EQUAL( sw::string( "Light Intensity" ), prop._metadata->getEditor()._displayName );

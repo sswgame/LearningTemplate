@@ -1,4 +1,4 @@
-			registry.registerClass( info );
+			registry.registerClass( ::std::move( info ) );
 $AliasRegs
 		}
 $FixedCodec

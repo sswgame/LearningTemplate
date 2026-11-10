@@ -45,7 +45,6 @@ namespace sw
         , _keyTypeName{}
         , _listAlias{}
         , _metadata{}
-        , _cachedNameHash{ 0 }
         , _bitOffset{ 0 }
         , _containerKind{ ContainerKind::None }
         , _bIsContainer{ SW_FALSE }
@@ -117,9 +116,9 @@ namespace sw
     PropertyInfo::PropertyInfo( hashed_string name, hashed_string typeName, size_t offset,
                                 bool bIsContainer, ContainerKind containerKind,
                                 hashed_string elementTypeName, hashed_string keyTypeName,
-                                shared_ptr<IContainerWrapper> containerWrapper,
-                                hashed_string                 alias )
-        : _containerWrapper{ std::move( containerWrapper ) }
+                                const IContainerWrapper* pContainerWrapper,
+                                hashed_string            alias )
+        : _containerWrapper{ pContainerWrapper }
         , _nestedContainer{ nullptr }
         , _pValueAccessor{ nullptr }
         , _pRepNotify{ nullptr }
@@ -130,7 +129,6 @@ namespace sw
         , _keyTypeName{ keyTypeName }
         , _listAlias{}
         , _metadata{}
-        , _cachedNameHash{ 0 }
         , _bitOffset{ 0 }
         , _containerKind{ containerKind }
         , _bIsContainer{ static_cast<uint8>( bIsContainer ? SW_TRUE : SW_FALSE ) }
@@ -141,5 +139,41 @@ namespace sw
     {
         if ( alias.empty() == false )
             _listAlias.push_back( alias );
+    }
+
+    PropertyInfo::PropertyInfo( const PropertyDesc& desc )
+        : _containerWrapper{ desc._pContainerWrapper }
+        , _nestedContainer{ desc._pNestedContainer }
+        , _pValueAccessor{ desc._pValueAccessor }
+        , _pRepNotify{ desc._pRepNotify }
+        , _pValidate{ desc._pValidate }
+        , _name{ desc._pName }
+        , _typeName{ desc._pTypeName }
+        , _elementTypeName{ desc._pElementTypeName != nullptr ? hashed_string( desc._pElementTypeName ) : hashed_string{} }
+        , _keyTypeName{ desc._pKeyTypeName != nullptr ? hashed_string( desc._pKeyTypeName ) : hashed_string{} }
+        , _handleTargetTypeName{ desc._pHandleTargetTypeName != nullptr ? hashed_string( desc._pHandleTargetTypeName ) : hashed_string{} }
+        , _listAlias{}
+        , _metadata{}
+        , _bitOffset{ 0 }
+        , _containerKind{ desc._containerKind }
+        , _bIsContainer{ static_cast<uint8>( desc._containerKind != ContainerKind::None ? SW_TRUE : SW_FALSE ) }
+        , _bIsBitField{ SW_FALSE }
+        , _reservedFlags{ 0 }
+        , _offset{ desc._offset }
+        , _bitMask{ MathUtil::kMaxUInt8 }
+    {
+        if ( desc._aliasCount != 0 )
+        {
+            _listAlias.reserve( desc._aliasCount );
+            for ( uint32 aliasIndex = 0; aliasIndex < desc._aliasCount; ++aliasIndex )
+            {
+                _listAlias.push_back( hashed_string( desc._ppAlias[aliasIndex] ) );
+            }
+        }
+        if ( desc._pFillMetadata != nullptr )
+            desc._pFillMetadata( _metadata.edit() );
+        // 파서가 측정한 바이트를 박지 않는다 — 파서는 Debug 정의를 모르고 측정한다(`resolveBitField` 설명). 못 찾으면 그쪽이 이름과 함께 오류를 남긴다.
+        if ( desc._pSetBit != nullptr && resolveBitField( desc._ownerSize, desc._pSetBit ) == false )
+            SW_ASSERT( false && "bit field not found in this build layout" );
     }
 } // namespace sw
