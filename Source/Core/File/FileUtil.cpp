@@ -722,6 +722,11 @@ namespace sw
                 return false;
             }
         }
+        return isCreateAllowed( path );
+    }
+
+    bool FileUtil::isCreateAllowed( string_view path )
+    {
         // 이름 규칙은 새로 생기는 자리만 본다 — 있는 파일을 덮어쓰거나 지우는 것은 이름을 만들지 않는다.
         const WriteGate rule = FileUtilInternal::s_writeCounters._createRule.load( std::memory_order_acquire );
         if ( rule == nullptr || exists( path ) )
@@ -1026,6 +1031,9 @@ namespace sw
             return true;
 
         const string directory = FileUtilInternal::trimTrailingSeparators( directoryPath );
+        // 새 폴더도 새 자리다 — 이름 규칙(리소스 트리는 소문자)을 지난다. 자동화 쓰기 게이트는 보지 않는다(이미 있는 폴더에 흔히 부르는 입구다 — `setWriteGate`).
+        if ( isCreateAllowed( directory ) == false )
+            return false;
         if ( FileUtilInternal::createDirectoryTree( directory ) )
             recordFileCreated(); // 폴더를 만들었다(없는 폴더를 기억한 캐시가 버린다)
         // 성공은 "폴더가 있는가" 로만 가른다. 병렬 쿠킹 · 임포트가 같은 폴더를 동시에 만들 때 다른 스레드가 먼저 만든 경쟁은 실패가 아니다.

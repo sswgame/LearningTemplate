@@ -51,6 +51,15 @@ SW_TEST_CASE( WriteIDTest, NewNamesUnderContentMustBeLowercase )
     SW_EXPECT_LOG( "File.CreateRefused" );
     SW_EXPECT_FALSE( FileUtil::writeTextFile( upperFile, "x" ) );
     SW_EXPECT_FALSE( FileUtil::exists( upperFile ) );
+
+    // 폴더를 만드는 입구도 같은 규칙이다 — 대문자 이름의 빈 폴더가 생기지 않는다. 소문자 폴더는 만든다.
+    const string upperFolder = content + "/scratch/write_id_test_not_yet/UpperFolder";
+    SW_EXPECT_LOG( "File.CreateRefused" );
+    SW_EXPECT_FALSE( FileUtil::ensureDirectoryExists( upperFolder ) );
+    SW_EXPECT_FALSE( FileUtil::isDirectory( upperFolder ) );
+    const string lowerFolder = content + "/scratch/write_id_test_not_yet/lower_folder";
+    SW_EXPECT_TRUE( FileUtil::ensureDirectoryExists( lowerFolder ) );
+    (void)FileUtil::removeDirectory( content + "/scratch/write_id_test_not_yet" ); // 못 지우면 경고만 남는다 — 다음 실행이 같은 이름을 다시 쓴다
 }
 
 SW_TEST_CASE( WriteIDTest, RelativeKeyWritesTheFileReadingPicked )

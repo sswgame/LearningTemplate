@@ -269,6 +269,11 @@ namespace sw
          *        둘 다 없으면 true. 파일을 바꾸는 모든 입구가 부릅니다.
          */
         [[nodiscard]] static bool isWriteAllowed( string_view path );
+        /**
+         * @brief @p path 가 아직 없으면 이름 규칙(`setCreateRule`)에 맞는지 봅니다(있으면 true). 거절하면 경로와 이유를 오류로 남기고 false 입니다.
+         * @details `isWriteAllowed` 와 폴더를 만드는 `ensureDirectoryExists` 가 부른다 — 파일이든 폴더든 새로 생기는 이름은 같은 규칙을 지난다.
+         */
+        [[nodiscard]] static bool isCreateAllowed( string_view path );
         /** @brief 파일을 복사합니다(대상이 있으면 덮어씁니다). 실패하면 로그를 남기고 false 입니다. */
         [[nodiscard]] static bool copyFile( string_view source, string_view destination );
         /** @brief 파일을 삭제합니다. 없었거나 삭제했으면 true 이고, 지우지 못했으면 경로와 이유를 알리고 false 입니다. */
