@@ -1172,6 +1172,23 @@ namespace sw
         return true;
     }
 
+    bool FileUtil::isAbandonedWriteTemp( string_view path )
+    {
+        // 이름 규칙은 writeAtomically 가 짓는다: <원본>.tmp<pid>_<번호>
+        const size_t marker = path.rfind( ".tmp" );
+        if ( marker == string_view::npos )
+            return false;
+        const string_view tail       = path.substr( marker + 4 );
+        const size_t      underscore = tail.find( '_' );
+        if ( underscore == string_view::npos )
+            return false;
+        uint64 processID = 0;
+        uint64 serial    = 0;
+        if ( StringUtil::parseUint64( tail.substr( 0, underscore ), processID ) == false || StringUtil::parseUint64( tail.substr( underscore + 1 ), serial ) == false )
+            return false;
+        return Process::isProcessAlive( static_cast<int32>( processID ) ) == false;
+    }
+
     bool FileUtil::removeFile( string_view path )
     {
         if ( path.empty() )

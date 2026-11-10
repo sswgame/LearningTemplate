@@ -247,6 +247,12 @@ namespace sw
         /** @brief 파일을 삭제합니다. 없었거나 삭제했으면 true 이고, 지우지 못했으면 경로와 이유를 알리고 false 입니다. */
         [[nodiscard]] static bool removeFile( string_view path );
         /**
+         * @brief @p path 가 원자적 쓰기(`writeFile`)의 임시 파일이고 그것을 쓴 프로세스가 죽었으면 true 입니다(중단된 쓰기의 잔재 — 지워도 된다).
+         * @details 이름 규칙(`<원본>.tmp<pid>_<번호>`)의 주인이 여기라 판정도 여기서 한다. 쓴 프로세스가 살아 있으면(다른 인스턴스가 같은 폴더에 쓰는 중) false —
+         *          잔재 정리가 남의 쓰는 중인 파일을 지우지 않게 한다. 이름이 규칙과 다르면 false.
+         */
+        [[nodiscard]] static bool isAbandonedWriteTemp( string_view path );
+        /**
          * @brief 파일 삭제를 시도만 합니다 — 지우지 못해도 알리지 않습니다. 없었거나 삭제했으면 true 입니다.
          * @details 실패가 예상된 정리에만 씁니다(아직 매핑된 모듈 DLL 의 그림자 사본 — 다음 시작 · 종료의 정리가 지운다). 그 밖은 `removeFile`.
          */

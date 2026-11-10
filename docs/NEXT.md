@@ -22,6 +22,9 @@
 - 흔들리는 단위 테스트 `AudioDataVariantTest.GraphVariantSavesOnlyItsDifference`: 전체 실행 한 번에 "base 'testproject/base.audiograph.xml' could not be read" 로 졌다. 같은 씨앗 · 단독 1800 회로는 재현되지 않았다 — 다시 지면 그 로그의 앞 케이스와 스크래치 도메인 마운트 상태를 본다.
 - 통합 때 확인하지 못한 동작: 셋이 시나리오에서 본다 — Vulkan AMD 브레드크럼 · 128 타임스탬프 슬롯(실장치), DX12 placed 텍스처(`D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES` 가 RT+SRV 를 받는지), 배포 서버(shipping-check — 서버가 `Window/Linux` · `Input/Linux` 를 짓지 않는다).
 
+- **`-1` 이 optional 에 '값' 으로 들어가는 것을 형식으로 막기(작업자 브랜치 `-1` 둘을 합친 직후):** `optional<int32>` 를 돌려주는 `SkillTreeState::findIndex` 가 못 찾으면 `invalid_index::kInt32` 를 돌려줘 `_listRank[-1]` 로 단위 테스트가 죽었다(고침). `constant::invalid_index::*` 를 정수로 바뀌는 별도 형식으로 두고 `expected<T, Absent>` 에 그 형식을 받는 생성자를 `= delete` 로 둔다(831 사용처 — 비교 · 대입은 그대로 컴파일). 인자 · 대입으로 들어오는 같은 결함도 함께 막힌다.
+- **테스트가 실제 사용자 저장 폴더를 쓴다:** 와일드웨스트 체인이 `AppData/Local/SWEngine/wildwest/saves` 를 백엔드 프로세스끼리 함께 써서, 한 프로세스가 남이 쓰는 중인 임시 파일을 잔재로 지웠다. 잔재 판정은 고쳤다(`FileUtil::isAbandonedWriteTemp` — 쓴 pid 가 살아 있으면 남긴다). 남은 일: 자동화 실행은 저장 뿌리를 프로세스별 scratch 로 돌린다(`AutomationScratchWorkspace`).
+
 ### 2. 플랫폼 ([PlatformTargets](PlatformTargets.md) "남은 일")
 
 - **Android:** `CookAssets`(호스트 빌드로 굽기) 통과 → `py -3 -m Scripts android-apk --game <게임>` → 실기기에서 기동 · 회전(pre-rotation 방향) · APK 팩 읽기 · 터치. JNI 클립보드(`AndroidClipboard.cpp` 는 지금 `isAvailable` false).

@@ -3,6 +3,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/File/UserDataPath.h"
 #include "Core/Path/AbsolutePath.h"
+#include "Core/Process/Process.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Testing/ScopedAssertCapture.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -101,11 +103,18 @@ SW_TEST_CASE( LocalStoreFileTest, SlotIsAFileUnderTheRootAndLeftoverTempFilesAre
         SW_REQUIRE_TRUE( storage.writeSlot( "save/slot0", envelopeBytes ) == LocalStoreResult::Ok );
         SW_EXPECT_TRUE( FileUtil::isRegularFile( FileUtil::joinPath( root, "save/slot0.swls" ) ) );
     }
-    const string leftover = FileUtil::joinPath( root, "save/slot0.swls.tmp1234_0" ); // 꺼진 쓰기의 찌꺼기
+    const string leftover = FileUtil::joinPath( root, "save/slot0.swls.tmp2147483644_0" ); // 꺼진 쓰기의 찌꺼기(있을 수 없는 pid — 죽은 쓰는 쪽)
     SW_REQUIRE_TRUE( FileUtil::writeFile( leftover, reinterpret_cast<const uint8*>( "x" ), 1 ) );
+    // 살아 있는 프로세스(이 프로세스)의 임시 파일은 다른 인스턴스가 쓰는 중인 것이다 — 남긴다(병렬 백엔드 실행이 서로의 쓰기를 지우던 결함)
+    StringBuilder<constant::file::kMaxPathSize> inFlightBuilder;
+    inFlightBuilder.append( FileUtil::joinPath( root, "save/slot0.swls.tmp" ).c_str() ).append( static_cast<uint64>( Process::getCurrentProcessID() ) ).append( "_0" );
+    const string inFlight{ inFlightBuilder.c_str() };
+    SW_REQUIRE_TRUE( FileUtil::writeFile( inFlight, reinterpret_cast<const uint8*>( "y" ), 1 ) );
     SW_EXPECT_LOG( "LocalStore.LeftoverTempRemoved" );
     FileLocalSlotStorage restarted{ root };
     SW_EXPECT_FALSE( FileUtil::exists( leftover ) );
+    SW_EXPECT_TRUE( FileUtil::exists( inFlight ) );
+    SW_REQUIRE_TRUE( FileUtil::removeFile( inFlight ) );
     vector<LocalSlotInfo> listSlotInfo;
     SW_EXPECT_TRUE( restarted.listSlots( "", listSlotInfo ) == LocalStoreResult::Ok );
     SW_REQUIRE_EQUAL( size_t( 1 ), listSlotInfo.size() );

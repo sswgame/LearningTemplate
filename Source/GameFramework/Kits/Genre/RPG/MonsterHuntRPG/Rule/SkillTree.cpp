@@ -155,7 +155,7 @@ namespace sw
             if ( _pTree->_listSkill[index]._id == skillID )
                 return static_cast<int32>( index );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     int32 SkillTreeState::getRank( const hashed_string& skillID ) const

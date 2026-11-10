@@ -24,7 +24,8 @@ namespace sw
         vector<string> listTempPath;
         (void)FileUtil::forEachDirectoryEntry( _rootDirectory, true, [&listTempPath]( const DirectoryEntry& entry )
         {
-            if ( entry._bDirectory == false && entry._path.find( kLocalSlotTempMarker ) != string_view::npos )
+            // 쓴 프로세스가 살아 있는 임시 파일은 다른 인스턴스가 쓰는 중이다 — 지우지 않는다
+            if ( entry._bDirectory == false && entry._path.find( kLocalSlotTempMarker ) != string_view::npos && FileUtil::isAbandonedWriteTemp( entry._path ) )
                 listTempPath.emplace_back( entry._path );
             return true;
         } );
