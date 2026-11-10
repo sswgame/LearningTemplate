@@ -341,7 +341,8 @@ namespace sw
                 const vector<string> listEngineShader = {
                     engineDefaultAssets._shaderSprite2D.get(),
                     engineDefaultAssets._shaderSprite2DLit.get(),
-                    engineDefaultAssets._shaderParticle.get() };
+                    engineDefaultAssets._shaderParticle.get(),
+                    engineDefaultAssets._shaderLayerBake.get() }; // 빠뜨린 칸은 ShaderCookCoverageTest 가 잡는다
                 for ( const string& path : listEngineShader )
                 {
                     appendRequestUnique( outListRequest, path, getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint, ShaderStage::Vertex, {} );
