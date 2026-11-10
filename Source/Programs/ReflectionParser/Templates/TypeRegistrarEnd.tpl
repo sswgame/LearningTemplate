@@ -1,7 +1,6 @@
 			registry.registerClass( ::std::move( info ) );
 $AliasRegs
 		}
-$FixedCodec
 		Registrar()
 		{
 			static ::sw::TypeRegistrar reg{ &RegisterType };

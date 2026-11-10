@@ -11,10 +11,27 @@ namespace sw
 {
     FixedCodecBound::FixedCodecBound() noexcept
         : _text{}
-        , _expr{}
+        , _ownerFqn{}
+        , _fieldName{}
         , _value{ 0.0 }
+        , _scopeDepth{ 0 }
         , _bPresent{ SW_FALSE }
         , _bLiteral{ SW_FALSE }
+        , _bNegate{ SW_FALSE }
+    {
+    }
+
+    FixedCodecNode::FixedCodecNode() noexcept
+        : _call{}
+        , _listChild{}
+        , _childArgs{ ChildArgs::None }
+    {
+    }
+
+    FixedCodecNode::FixedCodecNode( string call, const ChildArgs childArgs ) noexcept
+        : _call{ std::move( call ) }
+        , _listChild{}
+        , _childArgs{ childArgs }
     {
     }
 } // namespace sw
@@ -25,13 +42,7 @@ namespace sw
         : _pHeader{ &header }
         , _pSourcePath{ &sourcePath }
         , _pRoot{ &root }
-        , _writeBuffer{}
-        , _readBuffer{}
-        , _equalsBuffer{}
-        , _write{ _writeBuffer }
-        , _read{ _readBuffer }
-        , _equals{ _equalsBuffer }
-        , _canonical{}
+        , _listRootNode{}
         , _listDependency{}
         , _listEnum{}
         , _listScope{}
@@ -59,14 +70,9 @@ namespace sw
         return string( b.view() );
     }
 
-    string FixedCodecEmitState::makeEnumHelperName( const ParsedFixedEnum& enumInfo )
+    string FixedCodecEmitState::makeEnumValueTableName( const ParsedFixedEnum& enumInfo )
     {
-        return "isFixedEnumValue_" + CodeGenerator::sanitizeIdentifier( enumInfo._fullyQualifiedName );
-    }
-
-    string FixedCodecEmitState::makeCodecAccessorName( const string& fqn )
-    {
-        return "getFixedCodec_" + CodeGenerator::sanitizeIdentifier( fqn );
+        return "s_arrFixedEnum_" + CodeGenerator::sanitizeIdentifier( enumInfo._fullyQualifiedName );
     }
 
     void FixedCodecEmitState::reportError( const ParsedPropertyInfo& prop, const string_view message )
@@ -82,14 +88,15 @@ namespace sw
             _reason = "field '" + prop._memberName + "': " + string( reason );
     }
 
-    void FixedCodecEmitState::addDependency( const string& fieldName, const string& fqn )
+    uint32 FixedCodecEmitState::addDependency( const string& fieldName, const string& fqn )
     {
-        for ( const pair<string, string>& dependency : _listDependency )
+        for ( size_t index = 0; index < _listDependency.size(); ++index )
         {
-            if ( dependency.second == fqn )
-                return;
+            if ( _listDependency[index].second == fqn )
+                return static_cast<uint32>( index );
         }
         _listDependency.emplace_back( fieldName, fqn );
+        return static_cast<uint32>( _listDependency.size() - 1 );
     }
 
     void FixedCodecEmitState::addEnum( const ParsedFixedEnum& enumInfo )
@@ -100,24 +107,5 @@ namespace sw
                 return;
         }
         _listEnum.push_back( &enumInfo );
-    }
-
-    void FixedCodecEmitState::emitReadCheck( const string& call )
-    {
-        _read.linef( "result = %#;", call );
-        _read.linef( "if ( result != %# )", FixedCodecEmitState::kReadOk );
-        _read.push().line( "return result;" ).pop();
-    }
-
-    void FixedCodecEmitState::emitWriteCheck( const string& call )
-    {
-        _write.linef( "if ( %# == false )", call );
-        _write.push().line( "return false;" ).pop();
-    }
-
-    void FixedCodecEmitState::emitEqualsCheck( const string& condition )
-    {
-        _equals.linef( "if ( %# )", condition );
-        _equals.push().line( "return false;" ).pop();
     }
 } // namespace sw

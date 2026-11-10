@@ -913,7 +913,6 @@ namespace sw
                             { templatekey::kFqn, typeInfo._fullyQualifiedName },
                             { templatekey::kAliasRegs,
                              CodeGeneratorInternal::emitAliasRegisterLines( typeInfo._listAlias, typeInfo._fullyQualifiedName, false ) },
-                            { templatekey::kFixedCodec, _fixedCodec.getMemberText( typeIndex ) },
         } );
     }
 
