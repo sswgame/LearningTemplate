@@ -158,8 +158,8 @@ namespace sw
      * @details 카탈로그는 생성 인자로 받는다(기체 대전과 같은 길 — 경기가 게임 서비스를 찾지 않아 테스트 · 리플레이 · 서버가 같은 판을 그대로 연다).
      * @code
      *     if ( race.initialize( settings, &track, &items, &projectiles ) == false ) { ... } // 아이템의 탄이 탄 카탈로그에 없다
-     *     race.addRacer( kartSettings, false ); // 사람
-     *     race.addRacer( kartSettings, true );  // AI
+     *     (void)race.addRacer( kartSettings, false ); // 사람
+     *     (void)race.addRacer( kartSettings, true );  // AI
      *     race.start();
      *     // 매 프레임: race.setInput( 0, input ); race.update( deltaTime ); race.pollEvents( listEvent );
      * @endcode
@@ -179,9 +179,9 @@ namespace sw
          * @return 날거나 놓이는 아이템의 탄(`KartItemDef::_projectileID`)이 탄 카탈로그에 없으면 오류를 남기고 false 입니다. 그 아이템은 써도 나가지 않습니다.
          */
         [[nodiscard]] bool initialize( const KartRaceSettings& settings, const KartTrack* pTrack, const KartItemCatalog* pItemCatalog, const ProjectileCatalog* pProjectileCatalog );
-        /** @brief 차를 추가하고 차 번호를 반환합니다(`Waiting` 단계에서만 가능합니다). 실패하면 -1 입니다. 반환한 `KartRacer` 포인터는 다음 `addRacer` 까지만 유효합니다. */
-        int32 addRacer( const KinematicVehicleSettings& vehicleSettings, bool bAI );
-        void  setRacerAI( int32 racer, const KartAISettings& settings );
+        /** @brief 차를 추가하고 차 번호를 반환합니다(`Waiting` 단계에서만 가능합니다). 대기 단계가 아니거나 트랙이 없으면 이유를 돌려줍니다. 반환한 `KartRacer` 포인터는 다음 `addRacer` 까지만 유효합니다. */
+        [[nodiscard]] expected<int32> addRacer( const KinematicVehicleSettings& vehicleSettings, bool bAI );
+        void                          setRacerAI( int32 racer, const KartAISettings& settings );
         /** @brief 차를 출발 격자에 세우고 카운트다운을 시작합니다. 차가 없으면 아무것도 하지 않습니다. */
         void start();
 

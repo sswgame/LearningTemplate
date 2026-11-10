@@ -123,7 +123,7 @@ namespace
             initializeRace( _race, _settings );
             for ( int32 index = 0; index < racerCount; ++index )
             {
-                SW_EXPECT_EQUAL( index, _race.addRacer( sw::KinematicVehicleSettings{}, bAILast && index == racerCount - 1 ) );
+                SW_EXPECT_TRUE( _race.addRacer( sw::KinematicVehicleSettings{}, bAILast && index == racerCount - 1 ) == index );
             }
             _race.start();
         }
@@ -416,7 +416,7 @@ SW_TEST_CASE( KartTrackTest, RefusesUnusableDefinitions )
 
     sw::KartRace race;
     SW_EXPECT_TRUE( race.initialize( sw::KartRaceSettings{}, &track, nullptr, nullptr ) ); // 아이템이 없는 경기다
-    SW_EXPECT_EQUAL( -1, race.addRacer( sw::KinematicVehicleSettings{}, false ) );
+    SW_EXPECT_FALSE( race.addRacer( sw::KinematicVehicleSettings{}, false ).has_value() );
 }
 
 /**
@@ -786,7 +786,7 @@ SW_TEST_CASE_F( KartRaceTest, GhostReplaysSamePath )
 
     SW_REQUIRE_TRUE( _track.initialize( def ) );
     initializeRace( _race, _settings );
-    SW_REQUIRE_EQUAL( 0, _race.addRacer( sw::KinematicVehicleSettings{}, false ) );
+    SW_REQUIRE_TRUE( _race.addRacer( sw::KinematicVehicleSettings{}, false ) == 0 );
     sw::KartGhost ghost;
     _race.startGhostRecording( 0, &ghost ); // 출발 전에 건다
     _race.start();
@@ -830,10 +830,10 @@ SW_TEST_CASE_F( KartRaceTest, PhasesAndCountdown )
     _race.step();
     SW_EXPECT_EQUAL( sw::MatchPhase::Waiting, _race.getPhase() );
 
-    SW_EXPECT_EQUAL( 0, _race.addRacer( sw::KinematicVehicleSettings{}, false ) );
+    SW_EXPECT_TRUE( _race.addRacer( sw::KinematicVehicleSettings{}, false ) == 0 );
     _race.start();
     SW_EXPECT_EQUAL( sw::MatchPhase::Warmup, _race.getPhase() );
-    SW_EXPECT_EQUAL( -1, _race.addRacer( sw::KinematicVehicleSettings{}, false ) );
+    SW_EXPECT_FALSE( _race.addRacer( sw::KinematicVehicleSettings{}, false ).has_value() );
     SW_EXPECT_EQUAL( 1, racer( 0 )._place );
 
     _race.step();
@@ -848,7 +848,7 @@ SW_TEST_CASE_F( KartRaceTest, PhasesAndCountdown )
 
     sw::KartRace noTrack;
     SW_EXPECT_TRUE( noTrack.initialize( _settings, nullptr, nullptr, nullptr ) );
-    SW_EXPECT_EQUAL( -1, noTrack.addRacer( sw::KinematicVehicleSettings{}, false ) );
+    SW_EXPECT_FALSE( noTrack.addRacer( sw::KinematicVehicleSettings{}, false ).has_value() );
     SW_EXPECT_TRUE( noTrack.findRacer( 0 ) == nullptr );
     SW_EXPECT_FALSE( noTrack.findRacerAtPlace( 1 ).has_value() );
 }
@@ -1081,7 +1081,7 @@ SW_TEST_CASE_F( KartRaceTest, ItemUseAndShield )
 {
     SW_REQUIRE_TRUE( _track.initialize( KartTestUtil::makeRingDef( 3, {} ) ) );
     initializeRace( _race, _settings );
-    SW_REQUIRE_EQUAL( 0, _race.addRacer( sw::KinematicVehicleSettings{}, false ) );
+    SW_REQUIRE_TRUE( _race.addRacer( sw::KinematicVehicleSettings{}, false ) == 0 );
     _race.giveItem( 0, "boost" );
     SW_EXPECT_FALSE( _race.useItem( 0 ) ); // 아직 시작 전
     SW_EXPECT_EQUAL( sw::hashed_string( "boost" ), racer( 0 )._itemID );
@@ -1135,7 +1135,7 @@ SW_TEST_CASE_F( KartRaceTest, ItemsFlyByTheirProjectile )
     SW_EXPECT_TRUE( broken.find( "bare" ) == nullptr );
     SW_REQUIRE_TRUE( _track.initialize( KartTestUtil::makeRingDef( 3, {} ) ) );
     SW_EXPECT_FALSE( _race.initialize( _settings, &_track, &broken, &_projectiles ) );
-    SW_REQUIRE_EQUAL( 0, _race.addRacer( sw::KinematicVehicleSettings{}, false ) );
+    SW_REQUIRE_TRUE( _race.addRacer( sw::KinematicVehicleSettings{}, false ) == 0 );
     _race.start();
     _race.giveItem( 0, "lost" );
     SW_EXPECT_FALSE( _race.useItem( 0 ) );
@@ -1146,7 +1146,7 @@ SW_TEST_CASE_F( KartRaceTest, ItemsFlyByTheirProjectile )
 
     // 탄의 값이 운동을 정한다: 녹색 껍질은 탄의 속력 45 로 날고 탄의 반지름만큼 앞에서 나간다.
     SW_REQUIRE_TRUE( _race.initialize( _settings, &_track, &_items, &_projectiles ) );
-    SW_REQUIRE_EQUAL( 0, _race.addRacer( sw::KinematicVehicleSettings{}, false ) );
+    SW_REQUIRE_TRUE( _race.addRacer( sw::KinematicVehicleSettings{}, false ) == 0 );
     _race.start();
     _race.giveItem( 0, "green" );
     SW_REQUIRE_TRUE( _race.useItem( 0 ) );
@@ -1308,7 +1308,7 @@ SW_TEST_CASE_F( KartRaceTest, ItemBoxesRespawn )
     noItems._bItems              = SW_FALSE;
     sw::KartRace plain;
     initializeRace( plain, noItems );
-    SW_REQUIRE_EQUAL( 0, plain.addRacer( sw::KinematicVehicleSettings{}, false ) );
+    SW_REQUIRE_TRUE( plain.addRacer( sw::KinematicVehicleSettings{}, false ) == 0 );
     plain.start();
     plain.placeRacer( 0, boxPosition, 0.0f );
     plain.step();
@@ -1426,7 +1426,7 @@ SW_TEST_CASE_F( KartRaceTest, ReadStateRefusesCheckpointOutsideTrack )
     SW_REQUIRE_TRUE( noGates.initialize( KartTestUtil::makeRingDef( 3, {} ) ) );
     sw::KartRace other;
     initializeRace( other, _settings, &noGates );
-    SW_REQUIRE_EQUAL( 0, other.addRacer( sw::KinematicVehicleSettings{}, false ) );
+    SW_REQUIRE_TRUE( other.addRacer( sw::KinematicVehicleSettings{}, false ) == 0 );
     sw::Archive reading( written.getData(), written.getSize() );
     SW_EXPECT_FALSE( other.readState( reading ) );
     SW_EXPECT_EQUAL( sw::MatchPhase::Waiting, other.getPhase() );
