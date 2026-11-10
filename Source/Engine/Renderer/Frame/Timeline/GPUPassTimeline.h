@@ -67,7 +67,7 @@ namespace sw
          * @details 파이프라인을 다시 읽어 패스 구성이 바뀌어도 이름 비교로 알아챈다(슬롯마다 문자열 비교 한 번).
          */
         uint32 getOrCreateScopeSlot( size_t passIndex, const string& passName );
-        /** @brief 프레임 패스 @p framePassIndex 의 `GPU.<프레임 패스>` 프로파일러 슬롯입니다(`getOrCreateScopeSlot` 과 같은 규칙, 따로 둔 목록). Tracy 지점은 만들지 않는다. */
+        /** @brief 프레임 패스 @p framePassIndex 의 `GPU.<프레임 패스>` 프로파일러 슬롯과 Tracy 지점입니다(`getOrCreateScopeSlot` 과 같은 규칙, 따로 둔 목록). */
         uint32 getOrCreateFrameScopeSlot( size_t framePassIndex, const string& passName );
 
     private:
@@ -96,6 +96,8 @@ namespace sw
         GPUTimelineExporter _exporter;
         /// @brief 패스 번호에서 Tracy 지점을 찾는 목록입니다. `_listPassScope` 에서 프레임마다 채우며, 할당을 반복하지 않도록 보관합니다.
         vector<const ProfileZoneSite*> _listPassSite;
+        /// @brief 프레임 패스 번호에서 Tracy 지점을 찾는 목록입니다(`_listPassSite` 와 같은 규칙).
+        vector<const ProfileZoneSite*> _listFramePassSite;
         /// @brief 보고할 프로파일러입니다. 렌더러 초기화 때 주입받습니다.
         FrameProfiler* _pProfiler;
         /// @brief GPU 시계를 읽지 못한 디바이스입니다. 블로킹 읽기(DX11, Vulkan)를 프레임마다 다시 하지 않기 위해 기억합니다.
