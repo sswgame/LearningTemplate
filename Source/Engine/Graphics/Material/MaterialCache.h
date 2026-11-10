@@ -13,7 +13,7 @@
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Content/AssetID.h"
-#include "Engine/Graphics/RHI/RHIRenderState.h"
+#include "Engine/Graphics/RenderState/RenderState.h"
 
 namespace sw
 

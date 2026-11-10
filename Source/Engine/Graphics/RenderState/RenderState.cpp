@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Graphics/RHI/RHIRenderState.h"
+#include "Engine/Graphics/RenderState/RenderState.h"
 
 #include "Core/Hash/HashUtil.h"
 #include "Core/Memory/Memory.h"

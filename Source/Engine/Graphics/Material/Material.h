@@ -186,7 +186,7 @@ namespace sw
         /**
          * @brief 텍스처 디스크립터 인덱스를 대상 버퍼에 바로 패킹합니다(문자열 변환 없음).
          */
-        bool packTextureIntoBuffer( hashed_string name, RHIDescriptorIndex descIdx, vector<uint8>& inoutBuffer ) const;
+        bool packTextureIntoBuffer( hashed_string name, MaterialTextureIndex descIdx, vector<uint8>& inoutBuffer ) const;
 
         /**
          * @brief POD 바이너리 데이터를 대상 버퍼의 프로퍼티 오프셋에 바로 씁니다.
@@ -196,7 +196,7 @@ namespace sw
         /** @brief 이름으로 찾은 프로퍼티 값을 텍스트로 설정합니다. 렌더 스레드는 다음 스냅샷의 사본으로 받는다. */
         bool setParameter( hashed_string name, string_view value );
         /** @brief 텍스처 슬롯에 디스크립터를 설정합니다. */
-        bool setTextureParameter( hashed_string name, RHIDescriptorIndex descIdx );
+        bool setTextureParameter( hashed_string name, MaterialTextureIndex descIdx );
         /**
          * @brief Texture2D 프로퍼티 중 assetPath 가 있는 것을 TextureCache 에서 빌려 SRV 인덱스를 패킹합니다.
          * @details initialize 끝에서 부른다(CB 가 있어야 인덱스가 GPU 에 올라간다). releaseRHI 와 clearRHI 가 releaseTextureAssets 로 되돌린다.
@@ -221,7 +221,7 @@ namespace sw
          * @details 네이티브 bindless 가 없는 백엔드(DX11, GL)에서 엔진이 이 순서대로 t16..t31 에 바인딩한다.
          *          그 백엔드에서 MaterialCB 에 실리는 값은 SRV 인덱스가 아니라 이 배열의 **서수**다.
          */
-        const vector<RHIDescriptorIndex>& getMaterialTextureSRVs() const { return _listMaterialTextureSRV; }
+        const vector<MaterialTextureIndex>& getMaterialTextureSRVs() const { return _listMaterialTextureSRV; }
         /**
          * @brief 텍스처 프로퍼티 `name` 이 슬롯 목록(`getMaterialTextureSRVs`)의 몇 번째인지 반환합니다. 이 머티리얼이 그 프로퍼티에 텍스처를 빌리지
          *        않았으면 비어 있습니다.
@@ -382,7 +382,7 @@ namespace sw
         vector<string>                       _listAcquiredTexturePath; ///< resolveTextureAssets 가 해석한 요청 경로(프로퍼티의 assetPath). refreshTextureBindings 가 프로퍼티와 맞춘다.
         vector<TextureHandle>                _listTextureLoad;         ///< 위와 같은 순서의 텍스처 로드(`TextureCache::request`). 준비되면 참조를 쥐고, 실패하면 놓는다
         vector<string>                       _listBorrowedTexturePath; ///< 위와 같은 순서로 대신 빌린 경로(`acquire` · `release` 짝) — 로드 중이면 로드 중 텍스처, 실패면 누락 텍스처, 진짜가 붙었으면 빈 문자열
-        vector<RHIDescriptorIndex>           _listMaterialTextureSRV;  ///< 위 경로와 같은 순서의 백엔드 SRV 인덱스(에뮬레이션 백엔드의 슬롯 바인딩용)
+        vector<MaterialTextureIndex>         _listMaterialTextureSRV;  ///< 위 경로와 같은 순서의 백엔드 SRV 인덱스(에뮬레이션 백엔드의 슬롯 바인딩용)
         vector<hashed_string>                _listMaterialTextureName; ///< 위와 같은 순서의 프로퍼티 이름(인스턴스가 같은 슬롯을 덮어쓴다)
         vector<CollectionBinding>            _listCollectionBinding;   ///< 묶음을 가리키는 프로퍼티(`MaterialParameterCollection`)
         vector<hashed_string>                _listPropertyName;        ///< `_data._listProperty` 와 같은 순서의 이름. `findProperty` 가 프로퍼티마다 intern 하지 않고 정수로 비교한다

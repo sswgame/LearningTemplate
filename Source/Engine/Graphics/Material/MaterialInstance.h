@@ -184,7 +184,7 @@ namespace sw
          * @brief 이 인스턴스로 그릴 때의 텍스처 슬롯(DX11 과 GL 의 t16..)에 바인딩할 SRV 를 채웁니다. 부모의 슬롯 위에 덮어쓴 텍스처를 적용합니다.
          * @details 슬롯 바인딩 백엔드는 배치마다 슬롯을 바인딩하고, 인스턴스가 있는 배치는 그 인스턴스의 것이다(합치기는 네이티브 bindless 에서만 켜진다).
          */
-        void fillTextureSlots( RHIDescriptorIndex* pOutSlot, uint32 slotCount ) const;
+        void fillTextureSlots( MaterialTextureIndex* pOutSlot, uint32 slotCount ) const;
         /**
          * @brief 텍스처 덮어쓰기를 원하는 상태로 맞춥니다(`getRenderBinding`). 바뀐 경로는 반환하고 새로 빌리며, 지운 것은 뺍니다.
          * @return 다시 패킹해야 하면 true 입니다(빌린 것이 바뀌었거나 텍스처가 다시 올라왔습니다).

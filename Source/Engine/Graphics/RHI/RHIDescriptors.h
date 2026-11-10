@@ -15,7 +15,7 @@
 #include "Engine/Graphics/RHI/RHIEnums.h"
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"
 #include "Engine/Graphics/RHI/RHIHandles.h"
-#include "Engine/Graphics/RHI/RHIRenderState.h"
+#include "Engine/Graphics/RenderState/RenderState.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Window/IRenderSurface.h"
 

@@ -37,6 +37,8 @@
 
 namespace sw
 {
+    static_assert( std::is_same_v<MaterialTextureIndex, RHIDescriptorIndex>, "MaterialTextureIndex must be the RHI bindless index type (MaterialTypes.h)" );
+
     MaterialProperty::MaterialProperty() noexcept
         : _type{ MaterialPropertyType::Unknown }
         , _shaderType{ MaterialPropertyType::Unknown }

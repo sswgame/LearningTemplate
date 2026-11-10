@@ -9,7 +9,7 @@
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialTypes.h"
 #include "Engine/Graphics/Material/RenderBlendPreset.h"
-#include "Engine/Graphics/RHI/RHIRenderState.h"
+#include "Engine/Graphics/RenderState/RenderState.h"
 
 using namespace sw;
 

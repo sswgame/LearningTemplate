@@ -7,7 +7,7 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Foundation/EngineDefines.h"
-#include "Engine/Graphics/RHI/RHIRenderState.h"
+#include "Engine/Graphics/RenderState/RenderState.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
