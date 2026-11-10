@@ -16,6 +16,7 @@
 #include "Engine/Animation/Scene/AnimationSkinSlot.h"
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Animation/Skeletal/Pose.h"
+#include "Engine/Animation/Skeletal/SkeletonMirrorTable.h"
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -197,6 +198,13 @@ namespace sw
          *          스켈레톤에 없는 이름은 건너뛴다(사용처가 자기 오류를 낸다). 마스크는 다음 평가 앞에 다시 짓는다.
          */
         [[nodiscard]] Subscription requireBones( vector<hashed_string> listBone );
+        /** @brief 미러 표를 런타임에 정합니다(테스트용이며, 보통은 스켈레톤 옆 `<이름>.mirrortable.xml` 을 본 LOD 와 같은 규칙으로 읽습니다). nullptr 이면 표 없음입니다. */
+        void setMirrorTable( shared_ptr<const SkeletonMirrorTable> table ) { _mirrorBoneMap.setTable( std::move( table ) ); }
+        /**
+         * @brief 이 스켈레톤의 본마다 짝 본 번호입니다(포즈 노드 `Mirror` 가 받는다 — `AnimationPoseParams::_pMirroredBone`). 표가 없거나 스켈레톤과 맞지 않으면 nullptr 입니다.
+         * @details 표가 다시 읽히거나 스켈레톤이 바뀌면 그 자리에서 다시 만든다(애니메이터가 샘플할 때 부른다 — 워커, 이 유닛만의 칸이다).
+         */
+        const vector<uint32>* findMirroredBones() { return _mirrorBoneMap.find( *_skeleton, _skeletonPath.path() ); }
         /** @brief LOD 판정을 받는 인터페이스 구현을 반환합니다. */
         SkeletalMeshLODClient& getLODClient() { return _lodClient; }
 
@@ -277,8 +285,15 @@ namespace sw
         void runTasks( AnimationPhase phase );
         /** @brief 매니저의 시스템이 순서를 다시 만들게 합니다. */
         void notifyOrderChanged();
+        /**
+         * @brief 스켈레톤 옆 파일의 경로입니다. @p pfnMakePath 가 스켈레톤 경로에서 곁 경로를 만들고, 그 파일이 없으면 변형의 부모(`Skeleton::getBasePaths`) 곁을 차례로 봅니다.
+         *        어디에도 없으면 빈 문자열입니다(곁 파일은 선택이다). 본 LOD · 미러 표가 같은 규칙을 쓴다.
+         */
+        string findSidePath( string ( *pfnMakePath )( string_view ) ) const;
         /** @brief 스켈레톤 옆의 본 LOD 파일을 읽습니다(없으면 본 LOD 없음). */
         void resolveBoneLOD();
+        /** @brief 스켈레톤 옆의 미러 표를 읽습니다(없으면 표 없음 — 포즈 노드 `Mirror` 가 쓸 때 오류다). */
+        void resolveMirrorTable();
         /** @brief 본 LOD 테이블 · 스켈레톤 · 스킨 원본 메시 · 핵심 본이 바뀌었으면 단계별 마스크를 다시 만듭니다. */
         void refreshBoneLODMasks();
         /** @brief 핵심 본 구독 @p id 가 풀렸습니다(`requireBones`). */
@@ -350,6 +365,7 @@ namespace sw
         IdentityToken                                   _boneLODMeshContentID; ///< 마스크를 만든 스킨 원본 메시의 내용 토큰이다
         vector<uint32>                                  _listBoneLODMaskCount; ///< 마스크마다 남는 본 수(`getEvaluatedBoneCount`)
         vector<BoneRequirement>                         _listBoneRequirement;  ///< 사용처가 알린 핵심 본(`requireBones`)
+        SkeletonMirrorBoneMap                           _mirrorBoneMap;        ///< 스켈레톤 옆 미러 표와 그 짝 번호 표(`findMirroredBones`)
         SubscriptionList                                _boneRequirementSubscriptions;
         uint64                                          _nextBoneRequirementID;
         Pose                                            _interpolationFrom;   ///< 마지막 평가 때 표시하던 포즈

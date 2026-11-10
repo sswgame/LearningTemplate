@@ -3,6 +3,7 @@
 #include "Engine/Animation/Skeletal/AnimationPoseNode.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
@@ -58,7 +59,8 @@ namespace sw
     {
         if ( params._pSampler == nullptr || params._pSkeleton == nullptr || params._pMirroredBone == nullptr )
         {
-            SW_LOG_ERROR_ID( "AnimationPoseNode.MirrorNeedsSkeleton", "MirrorPoseNode needs a sampler, a skeleton and its mirror bone map (the skeleton's mirror table)" );
+            // 포즈 단계마다 도는 길이다 — 표가 없는 데이터 오류는 한 번만 알린다(포즈는 입력 없이 들어온 그대로).
+            SW_LOG_ERROR_ONCE_ID( "AnimationPoseNode.MirrorNeedsSkeleton", "MirrorPoseNode needs a sampler, a skeleton and its mirror bone map (the skeleton's mirror table)" );
             return false;
         }
         const Skeleton&       skeleton     = *params._pSkeleton;
@@ -66,8 +68,8 @@ namespace sw
         const uint32          boneCount    = skeleton.getBoneCount();
         if ( listMirrored.size() != boneCount || inoutPose.getBoneCount() != boneCount )
         {
-            SW_LOG_ERROR_ID( "AnimationPoseNode.MirrorBoneCountMismatch", "MirrorPoseNode: the pose (%# bones) and the mirror bone map (%#) must match the skeleton (%# bones)", inoutPose.getBoneCount(),
-                             static_cast<uint32>( listMirrored.size() ), boneCount );
+            SW_LOG_ERROR_ONCE_ID( "AnimationPoseNode.MirrorBoneCountMismatch", "MirrorPoseNode: the pose (%# bones) and the mirror bone map (%#) must match the skeleton (%# bones)", inoutPose.getBoneCount(),
+                                  static_cast<uint32>( listMirrored.size() ), boneCount );
             return false;
         }
         params._pSampler->samplePose( *_pInput, time, inoutPose );
@@ -184,6 +186,8 @@ namespace sw
                 return make_unique<BlendPosesNode>( *listInput[0], *listInput[1], def._weightParameter );
             }
 
+            static void fillBlendPoses( AnimationGraphPoseNodeDef& inoutDef ) { inoutDef._weightParameter = hashed_string( "Weight" ); }
+
             static bool validateBlendPoses( const AnimationGraphPoseNodeDef& def, string_view nodeName )
             {
                 if ( def._weightParameter.empty() == false )
@@ -197,6 +201,8 @@ namespace sw
             {
                 return make_unique<MirrorPoseNode>( *listInput[0], def._mirrorAxis );
             }
+
+            static void fillMirror( AnimationGraphPoseNodeDef& inoutDef ) { inoutDef._mirrorAxis = AnimationMirrorAxis::X; }
 
             static bool validateMirror( const AnimationGraphPoseNodeDef& def, string_view nodeName )
             {
@@ -216,6 +222,9 @@ namespace sw
                 }
                 return MontagePoseNode::kNoSection;
             }
+
+            /** @brief 클립 처음부터 끝까지 한 섹션이다. */
+            static void fillMontage( AnimationGraphPoseNodeDef& inoutDef ) { inoutDef._listSection.assign( 1u, AnimationMontageSection{ hashed_string( "Default" ), 0.0f, {}, {}, {} } ); }
 
             static bool validateMontage( const AnimationGraphPoseNodeDef& def, string_view nodeName )
             {
@@ -288,9 +297,9 @@ namespace sw
         : _registry{}
     {
         using Internal = AnimationPoseNodeInternal;
-        registerType( hashed_string( "BlendPoses" ), AnimationPoseNodeType{ 2u, &Internal::createBlendPoses, &Internal::validateBlendPoses } );
-        registerType( hashed_string( "Mirror" ), AnimationPoseNodeType{ 1u, &Internal::createMirror, &Internal::validateMirror } );
-        registerType( hashed_string( "Montage" ), AnimationPoseNodeType{ 1u, &Internal::createMontage, &Internal::validateMontage } );
+        registerType( hashed_string( "BlendPoses" ), AnimationPoseNodeType{ 2u, &Internal::createBlendPoses, &Internal::validateBlendPoses, &Internal::fillBlendPoses } );
+        registerType( hashed_string( "Mirror" ), AnimationPoseNodeType{ 1u, &Internal::createMirror, &Internal::validateMirror, &Internal::fillMirror } );
+        registerType( hashed_string( "Montage" ), AnimationPoseNodeType{ 1u, &Internal::createMontage, &Internal::validateMontage, &Internal::fillMontage } );
     }
 
     SW_ENGINE_SERVICE_SUBSYSTEM( AnimationPoseNodeRegistry, GameVisible, Services, (), SW_ENGINE_DEFAULT_FACTORY( AnimationPoseNodeRegistry ) );
@@ -319,6 +328,25 @@ namespace sw
             listName.push_back( _registry.getNameAt( index ) );
         }
         return listName;
+    }
+
+    bool AnimationPoseNodeRegistry::makeDefaultDef( const hashed_string& typeName, AnimationGraphPoseNodeDef& outDef ) const
+    {
+        const AnimationPoseNodeType* pType = findType( typeName );
+        if ( pType == nullptr )
+        {
+            SW_LOG_ERROR_ID( "AnimationPoseNode.PoseNodeTypeUnknown", "Pose node type '%#' is not registered", typeName.c_str() );
+            return false;
+        }
+        outDef       = AnimationGraphPoseNodeDef{};
+        outDef._type = typeName;
+        for ( uint32 inputIndex = 0; inputIndex < pType->_inputCount; ++inputIndex )
+        {
+            outDef._listInput.push_back( hashed_string( ( string( "Input" ) + to_string( inputIndex + 1u ).c_str() ).c_str() ) );
+        }
+        if ( pType->_fillDefault != nullptr )
+            pType->_fillDefault( outDef );
+        return true;
     }
 
     bool AnimationPoseNodeRegistry::isSatisfiedBy( const AnimationPoseNodeType& type, const AnimationGraphPoseNodeDef& def, string_view nodeName )
@@ -364,12 +392,26 @@ namespace sw
 
     const IAnimationPlayable* AnimationPoseNodeSet::findPlayable( const hashed_string& name ) const
     {
+        const IAnimationPoseNode* pNode = findNode( name );
+        if ( pNode != nullptr )
+            return pNode;
+        return _pClipSource != nullptr ? _pClipSource->findPlayable( name ) : nullptr;
+    }
+
+    const IAnimationPoseNode* AnimationPoseNodeSet::findNode( const hashed_string& name ) const
+    {
         for ( const Entry& entry : _listEntry )
         {
             if ( entry._name == name )
                 return entry._node.get();
         }
-        return _pClipSource != nullptr ? _pClipSource->findPlayable( name ) : nullptr;
+        return nullptr;
+    }
+
+    void AnimationPoseNodeSet::clear()
+    {
+        _listEntry.clear();
+        _pClipSource = nullptr;
     }
 
     unique_ptr<IAnimationPoseNode> AnimationPoseNodeSet::createNode( const AnimationGraphNode& node, const IAnimationPlayableSource& clipSource ) const

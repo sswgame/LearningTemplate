@@ -1,15 +1,18 @@
-// 포즈 노드 Mirror · Montage 와 스켈레톤 미러 표 — 메모리 클립 · 샘플러로 평가한다(nogpu).
+// 포즈 노드 Mirror · Montage 와 스켈레톤 미러 표 — 메모리 클립 · 샘플러로 평가한다(nogpu). 그래프 글 → 노드 셋 → 평가는 애니메이터가 잇는 길과 같다.
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Animation/AnimationPlayer.h"
+#include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Skeletal/AnimationPoseNode.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Animation/Skeletal/SkeletonMirrorTable.h"
 #include "Engine/Animation/Tests/AnimationTestUtil.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 
 using namespace sw;
 
@@ -58,7 +61,25 @@ namespace
             return skeleton;
         }
 
+        /** @brief 이름 하나에 길이만 있는 입력 클립 하나를 내는 클립 풀이입니다(애니메이터의 `SkeletalAnimatorClipSource` 자리). */
+        class SingleClipSource final : public IAnimationPlayableSource
+        {
+        public:
+            SingleClipSource( const hashed_string& name, float32 length )
+                : _name{ name }
+                , _clip{ length }
+            {
+            }
+            const IAnimationPlayable* findPlayable( const hashed_string& name ) const override { return name == _name ? &_clip : nullptr; }
+
+        private:
+            hashed_string _name;
+            FixedPlayable _clip;
+        };
+
         static bool isSameRotation( const quaternion& expected, const quaternion& actual ) { return MathUtil::abs( expected.dot( actual ) ) > 0.9999f; }
+
+        static constexpr const utf8* kArmsMirrorTable = R"(<SkeletonMirrorTable><_listPair><SkeletonMirrorPair _bone="arm_l" _mirroredBone="arm_r" /></_listPair></SkeletonMirrorTable>)";
 
         /** @brief 섹션 Start(0..0.5) → Loop(0.5..1, 반복, Done 이면 End) → End(1..1.5) 의 몽타주입니다. */
         static unique_ptr<IAnimationPoseNode> makeReloadMontage( const IAnimationPlayable& input )
@@ -204,4 +225,165 @@ SW_TEST_CASE( AnimationPoseNodeTest, MirrorTableRejectsBadPairs )
     SW_EXPECT_FALSE( build( R"(<SkeletonMirrorPair _bone="arm_l" _mirroredBone="arm_r" /><SkeletonMirrorPair _bone="arm_l" _mirroredBone="spine" />)" ) );
     SW_EXPECT_TRUE( listMirrored.empty() );
     SW_EXPECT_EQUAL( string( "a/knight.mirrortable.xml" ), SkeletonMirrorTable::makePathForSkeleton( "a/knight/knight.skeleton.xml" ) );
+}
+
+/**
+ * @brief [AnimationPoseNodeTest] 그래프의 Mirror 상태는 노드 셋을 거쳐 평가된다 — 레퍼런스 포즈는 그대로 나오고, 왼팔만 든 포즈는 오른팔이 반대로 든 포즈가 된다
+ * @details 애니메이터가 잇는 길(그래프 글 → `AnimationPoseNodeSet::rebuild` → 상태 이름의 재생할 것 → `findPoseNode` → `evaluatePose`)과 짝 번호 표의 주인(`SkeletonMirrorBoneMap`)을 함께 본다.
+ */
+SW_TEST_CASE( AnimationPoseNodeTest, GraphMirrorStateEvaluatesThroughTheNodeSet )
+{
+    AnimationGraphAsset graph;
+    SW_REQUIRE_TRUE( graph.loadFromXMLText( "<AnimationGraphAsset><nodes><node id=\"1\" name=\"WaveMirrored\"><pose_node type=\"Mirror\" mirror_axis=\"X\"><inputs><item>Wave</item></inputs></pose_node></node></nodes></AnimationGraphAsset>" ) );
+    const Util::SingleClipSource clipSource( hashed_string( "Wave" ), 1.0f );
+    AnimationPoseNodeSet         poseNodes;
+    SW_REQUIRE_TRUE( poseNodes.rebuild( graph, clipSource ) );
+    const IAnimationPlayable* pPlayable = poseNodes.findPlayable( hashed_string( "WaveMirrored" ) );
+    SW_REQUIRE_NOT_NULL( pPlayable );
+    const IAnimationPoseNode* pNode = pPlayable->findPoseNode();
+    SW_REQUIRE_NOT_NULL( pNode );
+    SW_EXPECT_NULL( poseNodes.findNode( hashed_string( "Wave" ) ) ); // 입력 클립은 노드가 아니다
+
+    const Skeleton                  skeleton = Util::makeArmsSkeleton();
+    shared_ptr<SkeletonMirrorTable> table    = make_shared<SkeletonMirrorTable>();
+    SW_REQUIRE_TRUE( table->loadFromXMLText( Util::kArmsMirrorTable, "arms" ) );
+    SkeletonMirrorBoneMap boneMap;
+    boneMap.setTable( table );
+    const vector<uint32>* pMirrored = boneMap.find( skeleton, "arms" );
+    SW_REQUIRE_NOT_NULL( pMirrored );
+
+    Util::RecordingSampler sampler;
+    AnimationParameterSet  parameter;
+    AnimationPoseParams    params;
+    params._pSampler      = &sampler;
+    params._pParameter    = &parameter;
+    params._pSkeleton     = &skeleton;
+    params._pMirroredBone = pMirrored;
+
+    // 레퍼런스 포즈는 거울상이라 그대로다.
+    sampler._pose.setToReference( skeleton );
+    Pose reference;
+    reference.setToReference( skeleton );
+    Pose pose = reference;
+    SW_REQUIRE_TRUE( pNode->evaluatePose( params, 0.0f, pose ) );
+    for ( uint32 boneIndex = 0; boneIndex < skeleton.getBoneCount(); ++boneIndex )
+    {
+        const BoneTransform expected = reference.getBoneTransform( boneIndex );
+        SW_EXPECT_TRUE( Util::isSameRotation( expected._rotation, pose.getBoneTransform( boneIndex )._rotation ) );
+        SW_EXPECT_NEAR( expected._translation._x, pose.getBoneTransform( boneIndex )._translation._x, 1.0e-4f );
+    }
+
+    // 왼팔만 Z 로 든 비대칭 포즈 → 왼팔은 내려가고(오른팔의 레퍼런스가 비친 것) 오른팔이 반대 방향으로 든다.
+    BoneTransform raisedArm = sampler._pose.getBoneTransform( 1u );
+    raisedArm._rotation     = quaternion::makeFromAxisAngle( float3{ 0.0f, 0.0f, 1.0f }, 0.5f );
+    sampler._pose.setBoneTransform( 1u, raisedArm );
+    pose.setToReference( skeleton );
+    SW_REQUIRE_TRUE( pNode->evaluatePose( params, 0.0f, pose ) );
+    SW_EXPECT_TRUE( Util::isSameRotation( quaternion::Identity, pose.getBoneTransform( 1u )._rotation ) );
+    SW_EXPECT_TRUE( Util::isSameRotation( quaternion::makeFromAxisAngle( float3{ 0.0f, 0.0f, 1.0f }, -0.5f ), pose.getBoneTransform( 2u )._rotation ) );
+
+    // 표를 다시 읽으면(내용 토큰이 바뀐다) 짝 번호 표를 다시 만든다 — 짝이 없어진 표는 모든 본이 자기 자신이다.
+    SW_REQUIRE_TRUE( table->loadFromXMLText( "<SkeletonMirrorTable><_listPair></_listPair></SkeletonMirrorTable>", "arms" ) );
+    pMirrored = boneMap.find( skeleton, "arms" );
+    SW_REQUIRE_NOT_NULL( pMirrored );
+    SW_EXPECT_EQUAL( 1u, ( *pMirrored )[1] );
+}
+
+/**
+ * @brief [AnimationPoseNodeTest] 그래프의 Montage 상태는 노드 셋의 인스턴스가 섹션 위치를 들고 플레이어 시각을 따라 섹션을 나아간다
+ */
+SW_TEST_CASE( AnimationPoseNodeTest, GraphMontageStateAdvancesSections )
+{
+    AnimationGraphAsset graph;
+    SW_REQUIRE_TRUE( graph.loadFromXMLText( "<AnimationGraphAsset><nodes><node id=\"1\" name=\"Reload\"><pose_node type=\"Montage\"><inputs><item>ReloadClip</item></inputs><sections>"
+                                            "<section name=\"Start\" start=\"0\" next=\"Loop\"/>"
+                                            "<section name=\"Loop\" start=\"0.5\" next=\"Loop\" branch_param=\"Done\" branch=\"End\"/>"
+                                            "<section name=\"End\" start=\"1\"/>"
+                                            "</sections></pose_node></node></nodes></AnimationGraphAsset>" ) );
+    const Util::SingleClipSource clipSource( hashed_string( "ReloadClip" ), 1.5f );
+    AnimationPoseNodeSet         poseNodes;
+    SW_REQUIRE_TRUE( poseNodes.rebuild( graph, clipSource ) );
+    const IAnimationPoseNode* pNode = poseNodes.findNode( hashed_string( "Reload" ) );
+    SW_REQUIRE_NOT_NULL( pNode );
+    const MontagePoseNode& montage = static_cast<const MontagePoseNode&>( *pNode ); // 종류 이름 "Montage" 가 만든 노드다
+
+    Util::RecordingSampler sampler;
+    AnimationParameterSet  parameter;
+    AnimationPoseParams    params;
+    params._pSampler   = &sampler;
+    params._pParameter = &parameter;
+    Pose pose;
+    pose.resize( 1u );
+
+    // 플레이어가 프레임마다 시각을 늘려 준다 — 섹션 위치는 노드 인스턴스가 든다.
+    for ( float32 time = 0.1f; time < 1.3f; time += 0.1f )
+    {
+        SW_REQUIRE_TRUE( pNode->evaluatePose( params, time, pose ) );
+    }
+    SW_EXPECT_EQUAL( 1u, montage.getCurrentSection() ); // Loop 을 돈다
+    parameter.setBool( hashed_string( "Done" ), true );
+    SW_REQUIRE_TRUE( pNode->evaluatePose( params, 2.0f, pose ) );
+    SW_EXPECT_EQUAL( 2u, montage.getCurrentSection() );     // 분기로 End
+    SW_EXPECT_NEAR( 1.5f, montage.getClipTime(), 1.0e-4f ); // 끝에서 멈춘다
+
+    // 다시 지으면 새 인스턴스 — 섹션 위치가 처음으로 돌아간다.
+    SW_REQUIRE_TRUE( poseNodes.rebuild( graph, clipSource ) );
+    const MontagePoseNode& rebuilt = static_cast<const MontagePoseNode&>( *poseNodes.findNode( hashed_string( "Reload" ) ) );
+    SW_EXPECT_EQUAL( 0u, rebuilt.getCurrentSection() );
+    poseNodes.clear();
+    SW_EXPECT_NULL( poseNodes.findNode( hashed_string( "Reload" ) ) );
+}
+
+/**
+ * @brief [AnimationPoseNodeTest] 유닛은 미러 표로 스켈레톤의 짝 번호 표를 내고(애니메이터가 평가에 넘긴다), 표가 없거나 맞지 않으면 없음이다
+ */
+SW_TEST_CASE( AnimationPoseNodeTest, SkeletalMeshGivesTheMirrorBoneMap )
+{
+    GameObjectManager manager;
+    GameObject*       pActor = manager.createGameObject( hashed_string( "Actor" ) );
+    SW_REQUIRE_NOT_NULL( pActor );
+    SkeletalMeshComponent* pMesh = pActor->addComponent<SkeletalMeshComponent>();
+    SW_REQUIRE_NOT_NULL( pMesh );
+    pMesh->setSkeleton( make_shared<Skeleton>( Util::makeArmsSkeleton() ) );
+    SW_EXPECT_NULL( pMesh->findMirroredBones() ); // 표 없음
+
+    shared_ptr<SkeletonMirrorTable> table = make_shared<SkeletonMirrorTable>();
+    SW_REQUIRE_TRUE( table->loadFromXMLText( Util::kArmsMirrorTable, "arms" ) );
+    pMesh->setMirrorTable( table );
+    const vector<uint32>* pMirrored = pMesh->findMirroredBones();
+    SW_REQUIRE_NOT_NULL( pMirrored );
+    SW_EXPECT_EQUAL( 2u, ( *pMirrored )[1] );
+    SW_EXPECT_EQUAL( 1u, ( *pMirrored )[2] );
+
+    // 다른 스켈레톤(짝 본이 없다)으로 바꾸면 다시 만들다 오류 — 한 번만 알리고 없음이다.
+    pMesh->setSkeleton( make_shared<Skeleton>( test::makeChainSkeleton( 2u ) ) );
+    SW_EXPECT_LOG( "SkeletonMirrorTable.UnknownBone" );
+    SW_EXPECT_NULL( pMesh->findMirroredBones() );
+    SW_EXPECT_NULL( pMesh->findMirroredBones() );
+}
+
+/**
+ * @brief [AnimationPoseNodeTest] 등록된 종류마다 새 노드 정의(에디터의 "노드 더하기")는 그 종류의 계약을 지키고 같은 글로 다시 읽힌다 — 저장 · 되돌리기 글이 읽히지 않는 노드를 만들지 않는다
+ */
+SW_TEST_CASE( AnimationPoseNodeTest, DefaultDefsSatisfyTheirContract )
+{
+    const AnimationPoseNodeRegistry& registry = engine::getSubsystem<AnimationPoseNodeRegistry>();
+    for ( const hashed_string& typeName : registry.getTypeNames() )
+    {
+        AnimationGraphPoseNodeDef def;
+        SW_REQUIRE_TRUE( registry.makeDefaultDef( typeName, def ) );
+        SW_EXPECT_TRUE( def._type == typeName );
+        SW_EXPECT_TRUE( AnimationPoseNodeRegistry::isSatisfiedBy( *registry.findType( typeName ), def, typeName.c_str() ) );
+
+        AnimationGraphAsset graph;
+        AnimationGraphNode& node = graph._listNode.emplace_back();
+        node._name               = typeName.c_str();
+        node._id                 = 1;
+        node._poseNode           = def;
+        AnimationGraphAsset reread;
+        SW_EXPECT_TRUE( reread.loadFromXMLText( graph.toXML() ) );
+    }
+    AnimationGraphPoseNodeDef unknown;
+    SW_EXPECT_LOG( "AnimationPoseNode.PoseNodeTypeUnknown" );
+    SW_EXPECT_FALSE( registry.makeDefaultDef( hashed_string( "Mystery" ), unknown ) );
 }

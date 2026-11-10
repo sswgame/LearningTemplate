@@ -189,6 +189,8 @@ namespace sw
     using AnimationPoseNodeFactory = unique_ptr<IAnimationPoseNode> ( * )( const vector<const IAnimationPlayable*>& listInput, const AnimationGraphPoseNodeDef& def, string_view nodeName );
     /** @brief 종류가 요구하는 칸(weight · 축 · 섹션)을 봅니다. 어긴 까닭을 오류로 남기고 false 입니다. 입력 수는 표가 따로 본다. */
     using AnimationPoseNodeValidator = bool ( * )( const AnimationGraphPoseNodeDef& def, string_view nodeName );
+    /** @brief 종류가 요구하는 칸에 계약을 지키는 첫 값을 씁니다(에디터의 "노드 더하기" — 언리얼 AnimGraph 노드의 기본 핀 값 자리). 입력 이름은 표가 채운다. */
+    using AnimationPoseNodeDefaultFiller = void ( * )( AnimationGraphPoseNodeDef& inoutDef );
 
     /**
      * @struct AnimationPoseNodeType
@@ -196,9 +198,10 @@ namespace sw
      */
     struct AnimationPoseNodeType
     {
-        uint32                     _inputCount{ 0 };     ///< 정확한 입력 수
-        AnimationPoseNodeFactory   _create{ nullptr };   ///< 노드를 만드는 함수
-        AnimationPoseNodeValidator _validate{ nullptr }; ///< 종류가 요구하는 칸의 검사(없으면 입력만 본다)
+        uint32                         _inputCount{ 0 };        ///< 정확한 입력 수
+        AnimationPoseNodeFactory       _create{ nullptr };      ///< 노드를 만드는 함수
+        AnimationPoseNodeValidator     _validate{ nullptr };    ///< 종류가 요구하는 칸의 검사(없으면 입력만 본다)
+        AnimationPoseNodeDefaultFiller _fillDefault{ nullptr }; ///< 새 노드의 첫 값(없으면 입력만 채운다). `_validate` 를 지켜야 한다
     };
 
     /**
@@ -228,6 +231,11 @@ namespace sw
         vector<hashed_string> getTypeNames() const;
         /** @brief 정의 @p def 가 종류 @p type 의 계약(입력 수 · 빈 입력 이름 없음 · 종류의 검사 `_validate`)을 지키면 true 입니다. 어기면 그 까닭을 노드 이름 @p nodeName 과 함께 오류로 남깁니다. */
         [[nodiscard]] static bool isSatisfiedBy( const AnimationPoseNodeType& type, const AnimationGraphPoseNodeDef& def, string_view nodeName );
+        /**
+         * @brief 종류 @p typeName 의 새 노드 정의를 만듭니다 — 입력은 `Input1` … 의 자리 이름(클립 이름으로 바꿔 쓴다), 나머지 칸은 종류의 `_fillDefault`. 만든 정의는 계약을 지킨다.
+         * @return 모르는 종류면 오류를 남기고 false 입니다.
+         */
+        [[nodiscard]] bool makeDefaultDef( const hashed_string& typeName, AnimationGraphPoseNodeDef& outDef ) const;
 
     private:
         NameRegistry<AnimationPoseNodeType> _registry; ///< 종류 이름 → 계약(등록 순서)
@@ -259,6 +267,10 @@ namespace sw
         [[nodiscard]] bool rebuild( const AnimationGraphAsset& graph, const IAnimationPlayableSource& clipSource );
         /** @brief 포즈 노드가 있는 이름이면 그 노드, 아니면 클립 풀이의 결과입니다. */
         const IAnimationPlayable* findPlayable( const hashed_string& name ) const override;
+        /** @brief 이 셋이 만든 포즈 노드만 찾습니다(클립 셋으로 넘기지 않는다). 상태 이름을 해석하는 쪽이 클립 셋을 따로 들 때 씁니다(`SkeletalAnimatorClipSource`). */
+        const IAnimationPoseNode* findNode( const hashed_string& name ) const;
+        /** @brief 노드를 모두 놓습니다(입력으로 빌린 클립 · 상태를 먼저 놓아야 할 때). */
+        void clear();
         /** @brief 만든 포즈 노드 수입니다. */
         uint32 getNodeCount() const { return static_cast<uint32>( _listEntry.size() ); }
 
