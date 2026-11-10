@@ -18,7 +18,11 @@
  * 다른 배율(kHighLayerDetailScale)로 다시 찍어 쓴다(디테일 맵 한 장으로 여덟 레이어 — 같은 무늬가 겹쳐 보이지 않게 배율을 어긋낸다).
  * 정점 UV 는 지형 정규 좌표(0..1)다. 스플랫 텍셀 중심을 지형 가장자리에 맞추려고 너비로 반 텍셀 옮긴다(CPU 와 같은 규칙).
  *
- * 지오모프(E4) — 지오모프 머티리얼(terrain_geomorph._material)만 MATERIAL_VERTEX_DEFORM 을 가져 `computeWorldPositionOffset` 이 불린다. 청크가 거친 LOD 로 바뀔 때의 튐을
+ * 표면 변형 층(surface_deform_layer.hlsli) — 지형 머티리얼은 모두 MATERIAL_VERTEX_DEFORM 이라 `computeWorldPositionOffset` 이 층의 높이만큼 정점을 내리고(그림자 패스도 같은 층),
+ * 픽셀은 마지막 법선을 층의 기울기로 기울인다(레이어 규칙의 경사는 기울이기 전 법선 — 자국이 바위 레이어를 부르지 않는다). 층이 걸리지 않은 패스 · 씬은 0 이다.
+ * 깊이 프리패스에서 빠진다(정점을 옮기는 머티리얼 — shadow_depth.hlsl).
+ *
+ * 지오모프(E4) — 지오모프 머티리얼(terrain_geomorph.material)만 TERRAIN_GEOMORPH 를 가져 오프셋에 지오모프가 더해진다. 청크가 거친 LOD 로 바뀔 때의 튐을
  * 없애려고 높이를 한 걸음 거친 LOD 메시의 높이로 옮긴다. 섞는 값은 정점 색 · 탄젠트 칸에 CPU(`TerrainMeshBuilder::applyGeomorph`)가 구워 둔다:
  * 색 = (거친 높이 - 지금 높이, 섞기 시작 거리, 섞기 끝 거리, 청크 최소 x), 탄젠트 = (청크 최소 z, 청크 최대 x, 청크 최대 z, 청크 중앙 샘플 높이) - 월드 값이다.
  * 카메라와 청크 사이 거리는 컴포넌트가 LOD 를 고르는 식(청크 상자까지의 평면 거리와 중앙 샘플 높이 차)이고, 섞는 비율은 시작~끝 거리 사이의 0..1 이다.
@@ -92,6 +96,7 @@ SW_MATERIAL_END
 #define SW_MATERIAL_DEFAULT_VARYINGS
 #include "material_shader.hlsli"
 #include "material_functions.hlsli"
+#include "surface_deform_layer.hlsli"
 
 /** @brief 가중치 여덟(낮은 넷 · 높은 넷)을 여덟 전체의 합 1 로 나눈다. 합이 0 이면 레이어 0 이다(C++ SurfaceLayerWeights::computeNormalized 와 같다). */
 void normalizeWeights( inout float4 inoutLow, inout float4 inoutHigh )
@@ -184,7 +189,7 @@ MaterialSurface computeMaterialSurface( PixelContext context )
 
     // 5. 날씨 — 젖음(날씨 · 레이어의 늘 젖음) → 웅덩이 → 눈 → 반짝이.
     const float4 weather       = material._weather;
-    float3       surfaceNormal = normal;
+    float3       surfaceNormal = SurfaceDeformLayer::tiltNormal( normal, position.xz );
     float        metallic      = kSurfaceMetallic;
     SurfaceFunction::applyWetness( albedo, roughness, porosity, max( weather.x, layerWet ) );
     const float puddle = SurfaceFunction::computePuddleMask( position, normal, max( weather.y, layerWet * kLayerWetnessToPuddle ), material._terrainSurface.x );
@@ -201,7 +206,11 @@ MaterialSurface computeMaterialSurface( PixelContext context )
     return surface;
 }
 
-#if defined( MATERIAL_VERTEX_DEFORM )
+#if !defined( MATERIAL_VERTEX_DEFORM )
+    #error "terrain.hlsl moves vertices by the surface deform layer: terrain materials need MATERIAL_VERTEX_DEFORM (terrain.material)"
+#endif
+
+#if defined( TERRAIN_GEOMORPH )
     #if defined( SW_PASS_SHADOW )
 /** @brief 그림자 패스는 지오모프를 섞지 않는다(빛의 시점이라 눈 거리가 뜻이 없다) — 정의를 파일 수준에서 고른다. */
 float computeGeomorphBlend( VertexContext context )
@@ -229,13 +238,22 @@ float computeGeomorphBlend( VertexContext context )
 }
     #endif
 
+#else
+/** @brief 지오모프가 없는 지형 — 정점 색에 구운 값이 없다. */
+float computeGeomorphBlend( VertexContext context )
+{
+    return 0.0f;
+}
+#endif
+
 /**
- * @brief 지오모프 — 정점 높이를 거친 LOD 높이로 옮기는 월드 위치 오프셋(y 만)입니다.
+ * @brief 월드 위치 오프셋(y 만)입니다 — 지오모프(거친 LOD 높이로 옮김, TERRAIN_GEOMORPH 만)와 표면 변형 층의 높이를 더한다.
+ * @details 층은 지오모프 전 월드 xz 로 읽는다 — 오프셋이 y 만이라 xz 가 같다.
  */
 float3 computeWorldPositionOffset( VertexContext context )
 {
-    return float3( 0.0f, context._input._color.x * computeGeomorphBlend( context ), 0.0f );
+    const float geomorph = context._input._color.x * computeGeomorphBlend( context );
+    return float3( 0.0f, geomorph + SurfaceDeformLayer::sampleHeight( context._worldPosition.xz ), 0.0f );
 }
-#endif
 
 #include "material_shader_main.hlsli"

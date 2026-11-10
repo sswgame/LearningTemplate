@@ -1,17 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 표면 변형 층을 읽는 지면(surface_deform.hlsl) — 발자국 · 바퀴 자국 · 깔때기가 정점을 내리고 법선을 기울인다(충돌 · 내비는 그대로).
-     _deformMap · _deformParams · _deformTexel 은 같은 오브젝트의 SurfaceDeformMeshComponent 가 씬의 변형 층(SurfaceDeformSystem)에서 인스턴스에 싣는다 — 여기 값은
-     기본값(변형 없음)이다. 정점을 옮기므로 MATERIAL_VERTEX_DEFORM 이다(깊이 프리패스에서 빠지고 그림자는 같은 오프셋으로 그린다). 정점이 촘촘한 메시(PlaneDense)에 건다.
-     프로퍼티 이름 · 순서 · 타입은 surface_deform.hlsl 의 SW_MATERIAL 구조체와 같다(정점 셰이더만 읽는다). 변형 텍스처는 높이 인코딩이라 sRGB 가 아니다. -->
+     변형 텍스처와 창은 머티리얼 칸이 아니라 패스가 거는 값이다(엔진 텍스처 칸 SurfaceDeform · 패스 상수 g_SurfaceDeformParams — 씬의 SurfaceDeformSystem 하나).
+     정점을 옮기므로 MATERIAL_VERTEX_DEFORM 이다(깊이 프리패스에서 빠지고 그림자는 같은 오프셋으로 그린다). 정점이 촘촘한 메시(PlaneDense)에 건다.
+     프로퍼티 이름 · 순서 · 타입은 surface_deform.hlsl 의 SW_MATERIAL 구조체와 같다(정점 셰이더만 읽는다). -->
 <MaterialDef formatVersion="0" name="SurfaceDeform" shaderPath="engine/shaders/surface_deform.hlsl" alphaMode="Opaque">
 	<_properties>
 		<item name="_color" type="Color" defaultValue="1.0 1.0 1.0 1.0" displayName="Base Color" group="Surface" bHdr="0" bSrgb="1"/>
-		<item name="_deformParams" type="Vector4" defaultValue="0.0 0.0 0.0 0.0" displayName="Deform Window (Min X, Min Z, 1 / Extent, Depth Range)" group="Deform"/>
-		<item name="_deformTexel" type="Float" defaultValue="0.05" displayName="Deform Texel (m)" group="Deform"/>
 		<item name="_roughness" type="Range" defaultValue="0.8" min="0.0" max="1.0" group="Surface"/>
 		<item name="_metallic" type="Range" defaultValue="0.0" min="0.0" max="1.0" group="Surface"/>
 		<item name="_albedoMap" type="Texture2D" displayName="Albedo (world, 1 m tiles)" group="Surface" bSrgb="1"/>
-		<item name="_deformMap" type="Texture2D" displayName="Deform Map" group="Deform" bSrgb="0"/>
 	</_properties>
 	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
 		<_alwaysDefines>

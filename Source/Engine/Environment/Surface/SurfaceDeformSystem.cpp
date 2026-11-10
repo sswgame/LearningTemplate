@@ -127,9 +127,9 @@ namespace sw
         , _persistentStampTable{}
         , _listTexelByte{}
         , _texturePath{}
+        , _texture{}
         , _depthRange{ 0.0f }
         , _stampCount{ 0 }
-        , _bindingRevision{ 0 }
     {
     }
 
@@ -149,8 +149,8 @@ namespace sw
             const float2  origin     = _grid.getOrigin();
             const float32 limit      = _grid.getExtent() * kRecenterRatio;
             const bool    bAway      = MathUtil::abs( focus._x - ( origin._x + halfExtent ) ) > limit || MathUtil::abs( focus._y - ( origin._y + halfExtent ) ) > limit;
-            if ( bAway && _grid.recenter( focus._x, focus._y ) )
-                ++_bindingRevision;
+            if ( bAway )
+                (void)_grid.recenter( focus._x, focus._y ); // 창 값은 패킷이 프레임마다 makeShaderParams 로 읽는다
         }
         _grid.fill( deltaTime );
         _persistentStampTable.forEach( [this, deltaTime]( PersistentStamp& held )
@@ -168,7 +168,15 @@ namespace sw
         _persistentStampTable.clear();
         _depthRange = 0.0f;
         _stampCount = 0;
-        ++_bindingRevision;
+    }
+
+    bool SurfaceDeformSystem::contributeSurfaceDeform( SurfaceDeformBinding& outBinding ) const
+    {
+        if ( _texture.isValid() == false )
+            return false;
+        outBinding._texture = _texture;
+        outBinding._params  = makeShaderParams();
+        return true;
     }
 
     void SurfaceDeformSystem::stamp( const SurfaceStampDef& def, const float3& point, float32 yaw )
@@ -254,7 +262,6 @@ namespace sw
             focus = float2{ point._x, point._z };
         _grid.reset( pTable->_deformResolution, pTable->_deformExtent, focus._x, focus._y );
         _depthRange = pTable->_deformDepthRange;
-        ++_bindingRevision;
         return true;
     }
 
@@ -289,8 +296,8 @@ namespace sw
                 SW_LOG_ERROR_ID( "Surface.DeformTextureFailed", "Surface deform texture '%#' (%#x%#) could not be created", path.c_str(), resolution, resolution );
                 return;
             }
+            _texture     = cache.request( path, AssetLoadStart::Async ); // CPU 텍스처는 읽을 파일이 없어 업로드 단계만 있다 — 렌더 스레드가 올린다
             _texturePath = std::move( path );
-            ++_bindingRevision;
             _grid.clearDirtyRect();
             return;
         }
@@ -307,6 +314,7 @@ namespace sw
         AssetManager* pAssets = _pManager->findAssetManager();
         if ( pAssets != nullptr )
             pAssets->getAssetCache<TextureCache>().releaseCPUTexture( _texturePath );
+        _texture = TextureHandle{};
         _texturePath.clear();
     }
 } // namespace sw

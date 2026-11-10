@@ -537,6 +537,8 @@ namespace sw
         hashed_string _colorGradingLUT{ "ColorGradingLUT" };
         /// 블룸 먼지 마스크(뷰의 후처리 값 `_bloomDirtMask`) — 블룸을 더하는 패스가 `g_BloomDirtMaskIndex` 로 읽는다. 텍스처 캐시가 소유한 텍스처다.
         hashed_string _bloomDirtMask{ "BloomDirtMask" };
+        /// 표면 변형 층의 높이 텍스처(패킷의 `SurfaceDeformBinding`) — 씬 지오메트리 패스의 정점 셰이더가 `g_SurfaceDeformIndex` 로 읽는다. 텍스처 캐시가 소유한 CPU 텍스처다.
+        hashed_string _surfaceDeform{ "SurfaceDeform" };
     };
 } // namespace sw
 
@@ -584,6 +586,8 @@ namespace sw
         hashed_string _fogHeightParams{ "g_FogHeightParams" };
         hashed_string _fogInscatter{ "g_FogInscatter" };
         hashed_string _fogVolumeParams{ "g_FogVolumeParams" };
+        /// @brief 표면 변형 층의 창(`SurfaceDeformBinding::_params`) — 지면 · 지형의 정점 셰이더와 그림자 패스가 같은 값을 읽는다.
+        hashed_string _surfaceDeformParams{ "g_SurfaceDeformParams" };
         /// @brief 안개 패스의 진단 보기입니다(`FrameFog::makeDebugParams`, fog.hlsl).
         hashed_string _fogDebugParams{ "g_FogDebugParams" };
         hashed_string _postProcessMaterial{ "g_PostProcessMaterial" }; ///< 후처리 머티리얼 그리기마다의 무게(x)

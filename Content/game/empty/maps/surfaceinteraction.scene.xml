@@ -5,7 +5,7 @@
 	     표면 질의(SurfaceQuery)가 패드의 물리 재질 · 물 깊이로 종류를 고르고, 눈은 발자국(SurfaceFootprintSystem)을, 날씨 · 물은 젖음 · 씻김(SurfaceExposureComponent)을,
 	     모래 구역은 지역 볼륨(ZoneVolumeComponent, 프로필 zones/sand.zone.xml — 가라앉음 스택 · 감속 · 삼켜짐, 배치 덮어쓰기로 파묻힘 테두리 도장 rim 을 더한다)이고, 외형 내리기 · 점프 탈출은 걷는 해골의 반응 컴포넌트
 	     (VisualSinkReactionComponent · JumpEscapeReactionComponent)가 속성 · 스택만 읽어 한다. 날씨는 Weather 오브젝트의 판 상태가 연다(WeatherDirectorComponent).
-	     표면 변형 층(SurfaceDeformSystem): 눈 · 모래 패드 위의 촘촘한 지면(SnowGround · SandGround — PlaneDense + surfacedeform_*.material + SurfaceDeformMeshComponent)이
+	     표면 변형 층(SurfaceDeformSystem): 눈 · 모래 패드 위의 촘촘한 지면(SnowGround · SandGround — PlaneDense + surfacedeform_*.material — 층은 엔진 텍스처 칸 SurfaceDeform 으로 걸린다)이
 	     발자국 · 끌린 자국(Dragger — SurfaceStampComponent Trail) · 깔때기(Whirl — Hold, 홈이 돈다)로 꺼진다. 패드 상자는 그 아래로 내려 두었다(꺼진 지면이 상자 윗면에 가리지 않게). -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
@@ -172,7 +172,6 @@
 			<GameObject _schemaVersion="0" _name="SnowGround" _bActive="true">
 				<_listComponent>
 					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,1,6" _attachOwner="None" _attachComponent="None" _meshID="PlaneDense" _materialPath="engine/materials/surfacedeform_snow.material" _boundsRadius="4" />
-					<SurfaceDeformMeshComponent />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -180,7 +179,6 @@
 			<GameObject _schemaVersion="0" _name="SandGround" _bActive="true">
 				<_listComponent>
 					<MeshComponent _localPosition="8,0,0" _localRotation="0,0,0" _localScale="4,1,6" _attachOwner="None" _attachComponent="None" _meshID="PlaneDense" _materialPath="engine/materials/surfacedeform_sand.material" _boundsRadius="4" />
-					<SurfaceDeformMeshComponent />
 				</_listComponent>
 			</GameObject>
 		</entity>

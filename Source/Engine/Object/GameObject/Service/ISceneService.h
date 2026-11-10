@@ -42,6 +42,7 @@ namespace sw
     struct GPULight;
     struct ScenePreviewPolicy;
     struct SkyGradient;
+    struct SurfaceDeformBinding;
 
     /**
      * @brief 기능이 씬 라이트 목록에 원소를 붙이는 자리입니다(`GameObjectManager::collectServiceLights`). 값의 순서가 목록의 순서입니다 — 상한을 넘으면 뒤에서부터 잘리므로 순서가 곧 뜻입니다.
@@ -101,6 +102,12 @@ namespace sw
         {
             (void)viewPosition;
             (void)outSettings;
+            return false;
+        }
+        /** @brief 이 씬의 표면 변형 층을 맡고 텍스처가 있으면 값을 쓰고 true 입니다. */
+        [[nodiscard]] virtual bool contributeSurfaceDeform( SurfaceDeformBinding& outBinding ) const
+        {
+            (void)outBinding;
             return false;
         }
 

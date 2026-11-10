@@ -369,6 +369,8 @@ namespace sw
         // 하늘도 패킷으로만 온다.
         applyFrameSky( packet._bHasSky != SW_FALSE, packet._sky );
         _fog.applyFrameFog( packet._bHasFog != SW_FALSE, packet._fog );
+        // 표면 변형 층도 패킷으로만 온다(텍스처 핸들 + 창). 맞바꾸기라 지난 프레임의 핸들이 패킷으로 돌아가 다음 리셋이 놓는다.
+        std::swap( _state._surfaceDeform, packet._surfaceDeform );
         // 그림자 배치도 패킷으로만 온다. 맞바꾸기라 지난 프레임의 저장소가 패킷으로 돌아간다.
         std::swap( _state._frameShadow, packet._shadow );
         applyFrameShadow();
@@ -671,6 +673,9 @@ namespace sw
         context._passValues.setFloat4( passConstantNames()._fogHeightParams, _fog.getFrameFog()._heightParams );
         context._passValues.setFloat4( passConstantNames()._fogInscatter, _fog.getFrameFog()._inscatter );
         context._passValues.setFloat4( passConstantNames()._fogVolumeParams, _fog.getFrameFog()._volumeParams );
+        // 표면 변형 층의 창 — 텍스처가 아직 올라가지 않았으면 0 이라 셰이더가 정점을 옮기지 않는다(칸과 창이 같이 켜지고 같이 꺼진다).
+        const bool bSurfaceDeformReady = _state._surfaceDeform._texture.isReady();
+        context._passValues.setFloat4( passConstantNames()._surfaceDeformParams, bSurfaceDeformReady ? _state._surfaceDeform._params : float4{ 0.0f, 0.0f, 0.0f, 0.0f } );
         context._passValues.setFloat4( passConstantNames()._outlineColor, kDefaultOutlineColor );
         // 지난 프레임 어느 뷰도 묻지 않은 후처리 텍스처를 놓는다 — 이번 프레임의 뷰들이 묻기 전에 한 번.
         _state._postProcessTextures.pruneUnused();
@@ -798,9 +803,10 @@ namespace sw
         _postProcessMaterials.release();
         _state._shadowCache.releaseLayer( _pDevice );
         // HDRI 텍스처의 참조를 놓는다 — 다음 프레임의 하늘이 새 디바이스에 다시 청한다(경로를 비워 다르게 본다).
-        _state._skyHdriLoad  = TextureHandle{};
-        _state._skyHdriPath  = hashed_string{};
-        _bPassResourcesReady = SW_FALSE;
+        _state._skyHdriLoad   = TextureHandle{};
+        _state._skyHdriPath   = hashed_string{};
+        _state._surfaceDeform = SurfaceDeformBinding{};
+        _bPassResourcesReady  = SW_FALSE;
     }
 
     void FrameRenderer::resetPassCbRing()

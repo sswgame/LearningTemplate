@@ -109,6 +109,9 @@ namespace sw
         // 하늘도 씬이 갖는다. 없으면 스카이 패스가 그리지 않는다(배경은 SceneColor 클리어 색).
         const GameObjectManager* pActiveObjects = activeScene.getObjectManager();
         packet._bHasSky                         = ( pActiveObjects != nullptr && pActiveObjects->findServiceSky( packet._sky ) ) ? SW_TRUE : SW_FALSE;
+        // 표면 변형 층도 씬이 갖는다 — 없으면 빈 값이라 셰이더가 정점을 옮기지 않는다.
+        if ( pActiveObjects == nullptr || pActiveObjects->findServiceSurfaceDeform( packet._surfaceDeform ) == false )
+            packet._surfaceDeform = SurfaceDeformBinding{};
         return lights;
     }
 

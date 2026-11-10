@@ -653,6 +653,16 @@ namespace sw
         return false;
     }
 
+    bool GameObjectManager::findServiceSurfaceDeform( SurfaceDeformBinding& outBinding ) const
+    {
+        for ( const SceneServiceEntry& entry : _pState->_listSceneService )
+        {
+            if ( entry._pService->contributeSurfaceDeform( outBinding ) )
+                return true;
+        }
+        return false;
+    }
+
     ISceneFrameSystem* GameObjectManager::findFrameSystem( const hashed_string& key ) const
     {
         for ( const FrameSystemEntry& entry : _listFrameSystem )

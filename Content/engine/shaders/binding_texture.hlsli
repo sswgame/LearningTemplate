@@ -228,7 +228,8 @@ SW_DECLARE_ENGINE_TEXTURE( 14 );
 SW_DECLARE_ENGINE_TEXTURE( 15 );
 SW_DECLARE_ENGINE_TEXTURE( 16 );
 SW_DECLARE_ENGINE_TEXTURE( 17 );
-        #if SW_ENGINE_TEXTURE_COUNT != 18
+SW_DECLARE_ENGINE_TEXTURE( 18 );
+        #if SW_ENGINE_TEXTURE_COUNT != 19
             #error "SW_ENGINE_TEXTURE_COUNT changed - match the declarations above and SW_ENGINE_TEXTURE_SWITCH"
         #endif
 
@@ -362,6 +363,9 @@ static float4 Bindless::sampleSlotWith( Texture2D slotTexture, uint samplerID, f
                 case 17u:                                                  \
                     OP( SW_ENGINE_TEXTURE( 17 ), SW_ENGINE_SAMPLER( 17 ) ) \
                     break;                                                 \
+                case 18u:                                                  \
+                    OP( SW_ENGINE_TEXTURE( 18 ), SW_ENGINE_SAMPLER( 18 ) ) \
+                    break;                                                 \
                 default:                                                   \
                     break;                                                 \
             }
@@ -370,7 +374,7 @@ static float4 Bindless::sampleSlotWith( Texture2D slotTexture, uint samplerID, f
  * @brief 에뮬 백엔드(DX11 · GL)가 칸 밖 번호(`emulatedSlot`)를 받았을 때 내는 오류 색(자홍)입니다.
  * @details 칸 밖 번호를 슬롯 0 으로 읽지 않는다 — 그러면 그림자 · 원본 색이 엉뚱한 자리에 조용히 나온다. 칸은 PassCB 역할이면 `SW_ENGINE_ROLE( 역할 )` 이,
  *          루트 상수로 받은 인덱스면 패스가 그 텍스처를 건 `SW_EMU_SLOT_<역할>` 이 정한다 — 둘 다 C++ 표(`shaderslot::emulated::kEngineTextureNames`)의 칸이다.
- * @note 칸을 인덱스 값으로 되짚지 않는다. 런타임 값으로 고르는 분기는 18 칸을 모두 셰이더에 남겨, 머티리얼 16 칸과 함께 GL 프래그먼트 텍스처 유닛 한도(32)를 넘었다
+ * @note 칸을 인덱스 값으로 되짚지 않는다. 런타임 값으로 고르는 분기는 엔진 칸을 모두 셰이더에 남겨, 머티리얼 16 칸과 함께 GL 프래그먼트 텍스처 유닛 한도(32)를 넘었다
  *       (Mesa llvmpipe 의 forward_lit 링크 실패 — "Too many fragment shader texture samplers"). 리터럴 칸은 분기가 접혀 그 칸 하나만 남는다.
  */
 static const float4 kUnmappedEngineTextureColor = float4( 1, 0, 1, 1 );
