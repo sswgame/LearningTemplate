@@ -28,7 +28,7 @@
 ### 2. 플랫폼 ([PlatformTargets](PlatformTargets.md) "남은 일")
 
 - **Android:** `CookAssets`(호스트 빌드로 굽기) 통과 → `py -3 -m Scripts android-apk --game <게임>` → 실기기에서 기동 · 회전(pre-rotation 방향) · APK 팩 읽기 · 터치. JNI 클립보드(`AndroidClipboard.cpp` 는 지금 `isAvailable` false).
-- **웹:** 브라우저에 띄우기(팩 패키징 · COOP/COEP 로컬 서버 · 브라우저 MCP 로 기동 · WebGPU · 입력 · IDBFS), WebSocket 전송(클라이언트)과 서버 WebSocket 수락. WebGPU 단계 텍스처 한도는 `CookContract.json` 에서 null 이라 검사하지 않는다 — 어댑터 한도 16 인 브라우저에서 엔진 칸 슬롯 에뮬이 넘칠 수 있다.
+- **웹:** 통합에서 Web-Shipping 빌드(쿠킹이 단계 텍스처 16 계약을 처음 건다 — 넘는 WGSL 셰이더가 나오면 역할 칸으로 줄인다) → `py -3 -m Scripts web-check --game Empty`(실패는 `<묶음>/check/` 로그 · 화면). Core 단위 테스트 `WebSocketProtocolTest` · `WebSocketAcceptTransportTest`. 남은 것: 입력 · 클립보드 판정, `wss://`, 게임 세션(UDP)의 브라우저 길 — [PlatformTargets](PlatformTargets.md) "남은 일".
 - **Linux:** `.linux` 골든을 dzn 으로 다시 뜬다 — 저장소에 커밋된 `.linux` 골든이 0 이다(`py -3 Scripts/dev/ScenarioCulprit.py --golden-coverage`, 데스크톱 WebGPU 도 0)(shooter3d · empty.boat · wildwest mount …), themepark 체인 멈춤, dzn 에서 진 단계 netresourcedigest · sequencercuts · sequencerkeys(`--gpu software chain editor` 로 가른다), 에디터 체인 단계 약 18(WSLg · Xvfb 입력 초점 의심), lavapipe `blendEnable` + `R16G16_SNORM` 재현 확인.
 
 ### 3. 통합 담당이 직접 (실행 · 측정이 필요)

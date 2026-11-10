@@ -642,4 +642,10 @@ SW_TEST_CASE( ShaderBindingValidatorTest, StageTextureUnitLimit )
     ShaderReflectionData array;
     Util::addResource( array, "g_TestArray", "Texture", 0, 100, *glLimit + 1 ); // 배열은 원소마다 한 단위
     SW_EXPECT_EQUAL( 1u, ShaderBindingValidatorIssue::validate( array, format, "Test" ) );
+
+    // WebGPU: 명세 기본 한도(16)가 계약이고 장치 검사(kStageTextureBudget)와 같은 값이다.
+    const optional<uint32> wgpuLimit = ShaderBindingValidatorIssue::findStageTextureUnitLimit( ShaderTargetFormat::WGSL_WebGPU );
+    SW_REQUIRE_TRUE( wgpuLimit.has_value() );
+    SW_EXPECT_EQUAL( shaderslot::wgpu::kStageTextureBudget, *wgpuLimit );
+    SW_EXPECT_EQUAL( 16u, *wgpuLimit );
 }

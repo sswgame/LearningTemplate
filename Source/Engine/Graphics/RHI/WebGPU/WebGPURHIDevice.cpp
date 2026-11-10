@@ -499,6 +499,15 @@ namespace sw
         SW_LOG_INFO_ID( "WebGPU.AdapterLimits", "WebGPU limits: sampled textures %#, samplers %#, storage buffers %#, uniform buffers %# per stage, bind group bindings %#",
                         _limits.maxSampledTexturesPerShaderStage, _limits.maxSamplersPerShaderStage, _limits.maxStorageBuffersPerShaderStage, _limits.maxUniformBuffersPerShaderStage,
                         _limits.maxBindingsPerBindGroup );
+        // 쿠킹한 셰이더는 단계마다 샘플 텍스처를 계약 예산까지 쓴다(쿠킹의 계약 검사가 넘는 바이너리를 멈춘다) — 어댑터가 그만큼 못 주면 그릴 수 없다.
+        // 명세의 기본 한도가 16 이라(https://www.w3.org/TR/webgpu/#limits) 명세를 지키는 어댑터는 늘 지난다 — 계약 값을 올리면 여기서 드러난다.
+        if ( _limits.maxSampledTexturesPerShaderStage < shaderslot::wgpu::kStageTextureBudget )
+        {
+            SW_LOG_ERROR_ID( "WebGPU.StageTextureLimit", "WebGPU: the adapter gives %# sampled textures per shader stage, the cooked shaders need %# (Config/Engine/CookContract.json stage_texture_unit_limit)",
+                             _limits.maxSampledTexturesPerShaderStage, shaderslot::wgpu::kStageTextureBudget );
+            _initResult = RHIInitResult::DriverUnsupported;
+            return false;
+        }
 
         WGPUDeviceDescriptor deviceDesc{};
         deviceDesc.label                                 = WebGPURHIUtil::toStringView( "SW Device" );

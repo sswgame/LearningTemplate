@@ -1,6 +1,7 @@
 """
 웹 패키징 검사 — 빌드 산출물이 없으면 멈추고, 페이지가 캔버스 · 로더 · App.js 를 그 순서로 싣고, 서버가 교차 출처 격리 헤더를 준다.
-file_packager 는 부르지 않는다.
+웹 확인(web-check)의 확인 페이지가 보고 스크립트를 Module 뒤 · App.js 앞에 싣고, 판정이 오류 줄 · 빠진 보고를 실패로 센다.
+file_packager · 브라우저는 부르지 않는다.
 
 실행: python -X utf8 Scripts/package/Tests/TestWebPackage.py (CTest `Scripts.WebPackage`).
 """
@@ -14,6 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
+from package.WebCheck import RunReport, judgeRun, kProbePath, writeCheckPage  # noqa: E402
 from package.WebPackage import IsolatedRequestHandler, WebPackageError, kIndexHtml, kPackLoaderName, makeWebPackage  # noqa: E402
 
 kProjectRoot = Path(__file__).resolve().parents[3]
@@ -29,7 +31,7 @@ class WebPackageTest(unittest.TestCase):
             self.assertFalse((root / "out").exists())  # 멈춘 묶음은 폴더를 남기지 않는다
 
     def testPageLoadsCanvasThenLoaderThenApp(self) -> None:
-        page = kIndexHtml.format(title="Empty", loader=kPackLoaderName)
+        page = kIndexHtml.format(title="Empty", loader=kPackLoaderName, reporter="")
         self.assertIn('<canvas id="canvas"', page)  # WebWindow::kCanvasSelector
         self.assertLess(page.index("var Module"), page.index(kPackLoaderName))
         self.assertLess(page.index(kPackLoaderName), page.index('src="App.js"'))
@@ -44,6 +46,24 @@ class WebPackageTest(unittest.TestCase):
         handler.end_headers()
         self.assertIn(("Cross-Origin-Opener-Policy", "same-origin"), sent)
         self.assertIn(("Cross-Origin-Embedder-Policy", "require-corp"), sent)
+
+    def testCheckPageReportsBetweenModuleAndApp(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            writeCheckPage(Path(folder), "Empty", "abc123", 5)
+            page = (Path(folder) / "check.html").read_text(encoding="utf-8")
+        self.assertLess(page.index("var Module"), page.index("__swcheck/"))
+        self.assertLess(page.index("__swcheck/"), page.index('src="App.js"'))
+        self.assertIn('"abc123"', page)
+        self.assertIn(kProbePath, page)
+
+    def testJudgeCountsErrorsAndMissingReports(self) -> None:
+        report = RunReport(listLine=["O booted"], gpu="yes")
+        report.done.set()
+        self.assertEqual([], judgeRun("run1", report))
+        report.listLine.append("E WebGPU: device lost")
+        report.exit = "abort oom"
+        self.assertEqual(2, len(judgeRun("run1", report)))
+        self.assertEqual(2, len(judgeRun("run2", RunReport())))  # 끝나지 않았다 + GPU 보고 없음
 
 
 if __name__ == "__main__":

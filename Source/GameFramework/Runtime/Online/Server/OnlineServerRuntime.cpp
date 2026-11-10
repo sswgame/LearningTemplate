@@ -6,6 +6,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/IStreamTransport.h"
+#include "Core/Network/Transport/WebSocketAcceptTransport.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Time/Clock.h"
 
@@ -589,8 +590,11 @@ namespace sw
         IStreamTransport* pTransport = settings._pTransport;
         if ( pTransport == nullptr )
         {
-            parts._ownedTransport = StreamTransportFactory::createPlatformTransport();
-            pTransport            = parts._ownedTransport.get();
+            // 플레이어 서비스 리슨은 브라우저 클라이언트(WebSocket)도 받는다 — 첫 바이트로 가르는 장식자라 원시 TCP 클라이언트는 그대로 지난다.
+            unique_ptr<IStreamTransport> platformTransport = StreamTransportFactory::createPlatformTransport();
+            if ( platformTransport != nullptr )
+                parts._ownedTransport = make_unique<WebSocketAcceptTransport>( std::move( platformTransport ) );
+            pTransport = parts._ownedTransport.get();
         }
         if ( settings._bAdminListener == SW_TRUE )
         {
