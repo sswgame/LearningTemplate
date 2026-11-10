@@ -179,6 +179,7 @@ namespace sw
         // 라이트는 **패스 종류를 가리지 않는다.** 포워드 지오메트리도, 디퍼드 풀스크린 조명도 읽는다.
         // 그래서 인스턴스 버퍼(지오메트리 패스 전용)와 달리 여기서 모든 패스에 바인딩한다.
         registerLightBuffer( context );
+        registerSurfaceDeformLayer( context );
         // 후처리 텍스처(LUT · 먼지 마스크)도 패스를 가리지 않는다 — 톤맵이 Tonemap 패스에도 후처리 체인(Present)에도 있고, 파이프라인 XML 이 자리를 정한다.
         registerPostProcessTextures( context );
 
@@ -1170,6 +1171,7 @@ namespace sw
         context._resourceRegistry.reset();
         context._passType = RenderPassType::Invalid;
         registerLightBuffer( context );
+        registerSurfaceDeformLayer( context );
         ExtensionViewInfo view{};
         view._bMainView = _pActiveView == &_state._mainView;
         view._width     = activePool().getWidth();

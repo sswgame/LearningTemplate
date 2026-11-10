@@ -156,7 +156,7 @@ namespace sw
         SkyGradient            _frameSkySource{}; ///< 이번 프레임 하늘의 원본 값입니다(실시간 프로브 갱신이 하늘 SH 를 투영한다). `_bHasFrameSky` 가 0 이면 기본값
         hashed_string          _skyHdriPath{};    ///< 지금 쥔 HDRI 하늘 텍스처의 경로입니다(`FrameRenderer::applyFrameSky`). 비었으면 쥔 것이 없다
         TextureHandle          _skyHdriLoad{};    ///< HDRI 하늘 텍스처의 로드 핸들입니다(참조를 쥔다). 스카이 패스가 준비된 것만 읽는다
-        SurfaceDeformBinding   _surfaceDeform{};  ///< 이번 프레임의 표면 변형 층(패킷에서 — 핸들이 참조를 쥔다). 씬 지오메트리 패스가 준비된 텍스처만 건다(`FramePassExecutor::registerInstanceBuffer`)
+        SurfaceDeformBinding   _surfaceDeform{};  ///< 이번 프레임의 표면 변형 층(패킷에서 — 핸들이 참조를 쥔다). 준비된 텍스처는 모든 패스가 건다(`FramePassExecutor::registerSurfaceDeformLayer`), 창은 프레임 시드(`FrameRenderer::updatePassConstants`)
         /** @brief 2D 빛 쿠키 아틀라스입니다(칸 나누기 · 쿠키 텍스처 수명 · 아틀라스 렌더 타깃). */
         Light2DCookieAtlas _cookieAtlas{};
         /** @brief 뷰의 후처리 값이 가리키는 텍스처(컬러 그레이딩 LUT · 블룸 먼지 마스크)의 로드 핸들입니다. 셋업이 뷰마다 묻고 프레임 시작에 안 쓰인 것을 놓는다. */

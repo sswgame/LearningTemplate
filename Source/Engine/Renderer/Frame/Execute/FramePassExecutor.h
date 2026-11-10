@@ -359,6 +359,12 @@ namespace sw
          *          패스라 `registerInstanceBuffer` 를 거치지 않는데, 라이트는 바로 거기서 필요하다.
          */
         void registerLightBuffer( FramePassContext& context );
+        /**
+         * @brief 표면 변형 층의 높이 텍스처를 "SurfaceDeform" 이름으로 겁니다. **모든 패스**에 겁니다(창 `g_SurfaceDeformParams` 가 프레임 시드로 모든 패스에 가므로 칸도 같이 간다).
+         * @details 인스턴스 버퍼 등록에 두었을 때 DX11 · GL 에서 칸이 비었다 — 그 등록은 인스턴스 그리기에서만 불리고 에뮬 칸을 거는 `commitBindlessTextureBindings`
+         *          보다 뒤였다. 창만 켜지고 칸이 빈 채 지형 · 지면이 평평했다. 텍스처가 올라가기 전에는 걸지 않는다(창도 0 — `FrameRenderer::updatePassConstants`).
+         */
+        void registerSurfaceDeformLayer( FramePassContext& context );
         /** @brief 지금 그리는 뷰가 이번 프레임에 읽는 후처리 텍스처(컬러 그레이딩 LUT · 블룸 먼지 마스크)를 역할 이름으로 겁니다. 셋업이 고른 것만 건다. */
         void registerPostProcessTextures( FramePassContext& context );
         /** @brief 배치의 머티리얼 데이터 버퍼(GPUScene)를 패스 레지스트리에 "SwMaterials" 이름으로 등록합니다. */
