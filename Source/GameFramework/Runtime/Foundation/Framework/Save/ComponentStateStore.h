@@ -190,6 +190,15 @@ namespace sw
         struct HasDespawnViews<T, std::void_t<decltype( std::declval<T&>().despawnViews() )>> : std::true_type
         {
         };
+        /** @brief @p T 가 PROPERTY 밖의 상태를 싣는 `restoreState( vector<uint8>&& )` 를 가졌는지 봅니다(쓰기 `serializeState` 와 짝으로 선언한다). */
+        template <typename T, typename = void>
+        struct HasRestoreState : std::false_type
+        {
+        };
+        template <typename T>
+        struct HasRestoreState<T, std::void_t<decltype( std::declval<T&>().restoreState( std::declval<vector<uint8>&&>() ) )>> : std::true_type
+        {
+        };
     } // namespace ComponentStateStoreTraits
 
     /**
@@ -198,17 +207,35 @@ namespace sw
      * @details 오브젝트 매니저를 include 한 .cpp 에서 만든다(순회 템플릿이 그때 인스턴스화된다).
      *          `despawnViews()` 가 있는 타입(`GameModeComponent` 파생 — 키트의 부지 · 디렉터)은 상태를 실은 뒤 세운 것도 걷는다. 걷지 않으면 세운 오브젝트가 씬 섹션에 실려
      *          복원한 뒤 다시 세운 것과 겹친다 — 그래서 등록 한 줄이 둘을 함께 정한다(게임마다 `registerGameMode` 를 적지 않는다).
+     *          상태 없이 세운 것만 가진 타입(`CharacterAppearanceComponent` — 스폰한 부품 · 합친 구간 컴포넌트)도 같은 한 줄이다 — 있는 쪽만 연결한다.
      */
     template <typename TComponent>
     class StatefulComponentRegistrar final : public StatefulComponentRegistration
     {
+        static_assert( ComponentStateStoreTraits::HasRestoreState<TComponent>::value || ComponentStateStoreTraits::HasDespawnViews<TComponent>::value,
+                       "StatefulComponentRegistrar needs serializeState/restoreState or despawnViews" );
+
     public:
         explicit StatefulComponentRegistrar( const utf8* pTypeName )
-            : StatefulComponentRegistration( pTypeName, &StatefulComponentRegistrar::captureOf, &StatefulComponentRegistrar::restoreOf, selectDespawn() )
+            : StatefulComponentRegistration( pTypeName, selectCapture(), selectRestore(), selectDespawn() )
         {
         }
 
     private:
+        static CaptureFn selectCapture()
+        {
+            if constexpr ( ComponentStateStoreTraits::HasRestoreState<TComponent>::value )
+                return &StatefulComponentRegistrar::captureOf;
+            else
+                return nullptr;
+        }
+        static RestoreFn selectRestore()
+        {
+            if constexpr ( ComponentStateStoreTraits::HasRestoreState<TComponent>::value )
+                return &StatefulComponentRegistrar::restoreOf;
+            else
+                return nullptr;
+        }
         static DespawnFn selectDespawn()
         {
             if constexpr ( ComponentStateStoreTraits::HasDespawnViews<TComponent>::value )
@@ -232,10 +259,19 @@ namespace sw
                 (void)manager;
             }
         }
-        static void captureOf( ComponentStateStore& store, GameObjectManager& manager ) { (void)store.capture<TComponent>( manager ); }
+        static void captureOf( ComponentStateStore& store, GameObjectManager& manager )
+        {
+            if constexpr ( ComponentStateStoreTraits::HasRestoreState<TComponent>::value )
+                (void)store.capture<TComponent>( manager );
+            else
+                (void)store, (void)manager;
+        }
         static void restoreOf( const ComponentStateStore& store, GameObjectManager& manager )
         {
-            (void)store.restore<TComponent>( manager ); // 짝이 없는 컴포넌트는 그대로 둔다
+            if constexpr ( ComponentStateStoreTraits::HasRestoreState<TComponent>::value )
+                (void)store.restore<TComponent>( manager ); // 짝이 없는 컴포넌트는 그대로 둔다
+            else
+                (void)store, (void)manager;
         }
     };
 } // namespace sw

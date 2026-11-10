@@ -38,6 +38,7 @@
 #include "Engine/Visual/Component/MeshSectionComponent.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/ComponentStateStore.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceMeshPart.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceXMLUtil.h"
@@ -215,6 +216,9 @@ namespace sw
                     pInstance->setVectorParameter( value._name, value._value );
             }
         };
+
+        /** @brief 저장 전에 조립 결과(부품 · 합친 구간 컴포넌트)를 걷습니다 — 모든 게임의 상태 스냅샷(게임마다 올리지 않는다). */
+        const StatefulComponentRegistrar<CharacterAppearanceComponent> s_viewRegistration{ "CharacterAppearanceComponent" };
     } // namespace
 } // namespace sw
 
@@ -501,6 +505,14 @@ namespace sw
     void CharacterAppearanceComponent::despawnParts()
     {
         removeParts( false );
+    }
+
+    void CharacterAppearanceComponent::despawnViews()
+    {
+        despawnParts();
+        const GameObject* pOwner = getOwner();
+        if ( _bStarted == SW_TRUE && pOwner != nullptr && pOwner->isPendingDestroy() == false )
+            requestAssemble(); // 저장 뒤에도 실행은 계속된다 — 걷은 부품을 다시 세운다
     }
 
     void CharacterAppearanceComponent::destroyOwnerStowingParts()
