@@ -186,8 +186,11 @@ namespace sw
         rootParams._bMapSameNames  = _bMapSameNames == SW_TRUE;
         rootParams._heightRatio    = _heightRatioOverride;
         XMLFields::writeFields( root, rootParams ); // 기본값과 같은 칸은 적지 않는다
-        Internal::writePair( root.appendChild( "root" ), _sourceRoot, _targetRoot );
-        Internal::writePair( root.appendChild( "pelvis" ), _sourcePelvis, _targetPelvis );
+        // 아직 고르지 않은 쌍(새 문서)은 적지 않는다 — 적으면 빈 이름이 필수 칸 검사에 걸려 되돌리기 스냅샷이 다시 읽히지 않는다. 쓰는 쪽(`PoseRetargeter`)이 없는 뼈를 오류로 낸다.
+        if ( _sourceRoot.empty() == false || _targetRoot.empty() == false )
+            Internal::writePair( root.appendChild( "root" ), _sourceRoot, _targetRoot );
+        if ( _sourcePelvis.empty() == false || _targetPelvis.empty() == false )
+            Internal::writePair( root.appendChild( "pelvis" ), _sourcePelvis, _targetPelvis );
         const XMLNode chains = root.appendChild( "chains" );
         for ( const RetargetChain& chain : _listChain )
         {
@@ -233,7 +236,7 @@ namespace sw
         _targetSkeletonPath           = rootParams._targetSkeleton;
         _translationMode              = rootParams._translation;
 
-        const XMLNode    arrPair[2] = { reader.readObject( "root", true ), reader.readObject( "pelvis", true ) };
+        const XMLNode    arrPair[2] = { reader.readObject( "root", false ), reader.readObject( "pelvis", false ) }; // 없으면 아직 고르지 않은 쌍이다(새 문서)
         const RigXMLList chains     = reader.readArray( "chains", true );
         const RigXMLList boneMap    = reader.readArray( "bone_map", false );
         const RigXMLList targetPose = reader.readArray( "target_pose", false );
@@ -276,6 +279,8 @@ namespace sw
         hashed_string* arrTarget[2] = { &_targetRoot, &_targetPelvis };
         for ( uint32 pairIndex = 0; pairIndex < 2; ++pairIndex )
         {
+            if ( arrPair[pairIndex].isValid() == false )
+                continue;
             RigXMLReader     pairReader( arrPair[pairIndex], sourceLabel );
             RetargetBonePair pair{};
             bOk = pairReader.readFields( pair );

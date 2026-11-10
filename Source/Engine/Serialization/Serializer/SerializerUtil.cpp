@@ -583,7 +583,10 @@ namespace sw
             return false;
         if ( bWritten == false )
             return true;
-        return pWrittenText != nullptr && pWrittenText->empty() && prop._bIsContainer == SW_FALSE && isNameValueType( prop._typeName );
+        if ( pWrittenText == nullptr || prop._bIsContainer != SW_FALSE || isNameValueType( prop._typeName ) == false )
+            return false;
+        // 이름 형식은 "None" 도 빈 이름이다(FName 의 None — 읽으면 빈 이름이 된다). 글만 보면 적힌 것으로 보여 데이터의 빈 필수 칸을 놓친다.
+        return pWrittenText->empty() || hashed_string( *pWrittenText ).empty();
     }
 
     hashed_string SerializerUtil::resolveHandlerTypeName( const hashed_string& typeName, const SerializeContext& context )

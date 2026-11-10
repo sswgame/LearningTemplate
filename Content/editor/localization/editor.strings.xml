@@ -2063,7 +2063,7 @@
 		</entry>
 		<entry key="EdFormat.NoInspectorFor" source="No inspector for {type}">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Panels/Inspector/Model/PropertyGridModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdFormat.NoSamples" source="{seriesName}: no samples">
