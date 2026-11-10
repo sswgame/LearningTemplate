@@ -35,19 +35,19 @@ namespace sw::editor
     {
     public:
         /** @brief 빈 GameObject 를 만들고 SceneComponent 를 붙인 뒤 선택합니다. */
-        static GameObject* create( GameObjectManager* pManager, GameObject* pParent = nullptr );
+        static GameObject* create( EditorTransaction& transaction, GameObjectManager* pManager, GameObject* pParent = nullptr );
         /** @brief XML 스냅샷으로 복제해 같은 부모 아래에 붙입니다. */
-        static GameObject* duplicate( GameObjectManager* pManager, GameObject* pSrc );
+        static GameObject* duplicate( EditorTransaction& transaction, GameObjectManager* pManager, GameObject* pSrc );
         /** @brief pChild 를 pNewParent 아래로 옮깁니다. 순환이 생기면 false 입니다. */
-        static bool reparent( GameObject* pChild, GameObject* pNewParent, string_view undoLabel = "Reparent GameObject" );
+        static bool reparent( EditorTransaction& transaction, GameObject* pChild, GameObject* pNewParent, string_view undoLabel = "Reparent GameObject" );
         /** @brief 부모에서 분리해 루트로 만듭니다. */
-        static bool unparent( GameObject* pObj, string_view undoLabel = "Unparent GameObject" );
+        static bool unparent( EditorTransaction& transaction, GameObject* pObj, string_view undoLabel = "Unparent GameObject" );
         /** @brief 삭제를 Undo 에 기록하고 매니저에서 제거합니다. */
-        static bool destroy( GameObjectManager* pManager, GameObject* pObj );
+        static bool destroy( EditorTransaction& transaction, GameObjectManager* pManager, GameObject* pObj );
         /**
          * @brief 선택한 오브젝트들을 되돌리기 한 단계로 지웁니다. 선택한 조상이 있는 오브젝트는 그 조상과 함께 지워지므로 건너뜁니다. 지운 수를 반환합니다.
          */
-        static uint32 destroyObjects( GameObjectManager* pManager, const vector<GameObject*>& listObject );
+        static uint32 destroyObjects( EditorTransaction& transaction, GameObjectManager* pManager, const vector<GameObject*>& listObject );
         /**
          * @brief 계층 창이 그릴 루트 오브젝트를 표시 순서(형제 번호, 같으면 오브젝트 id 오름차순)로 모읍니다. 먼저 출력 목록을 비우며, 지우는 중인 오브젝트는 뺍니다.
          * @details 스토어의 순서는 삭제에 따라 바뀌므로(swap-remove) 쓰지 않는다. 씬은 파일 순서로 id 를 매기므로 번호가 모두 0 인 씬은 처음 연 순서와 같고,
@@ -55,7 +55,7 @@ namespace sw::editor
          */
         static void collectRootsInOrder( GameObjectManager& manager, vector<GameObject*>& outListRoot );
         /** @brief 선택한 오브젝트들을 되돌리기 한 단계로 복제하고 새 오브젝트를 @p outListCreated 에 담습니다. 먼저 출력 목록을 비웁니다. */
-        static void duplicateObjects( GameObjectManager* pManager, const vector<GameObject*>& listObject, vector<GameObject*>& outListCreated );
+        static void duplicateObjects( EditorTransaction& transaction, GameObjectManager* pManager, const vector<GameObject*>& listObject, vector<GameObject*>& outListCreated );
         /**
          * @brief 오브젝트를 에디터 클립보드에 서브트리째 복사합니다. 선택한 것 안의 자손은 한 번만 복사하며, 복사한 루트 수를 반환합니다.
          * @details 클립보드는 상태 바이트이므로 씬을 바꿔도 남는다. 다른 씬에 붙여 넣을 수 있다(유니티와 언리얼의 Ctrl+C/V).
@@ -63,7 +63,7 @@ namespace sw::editor
          */
         static uint32 copyObjects( const vector<GameObject*>& listObject );
         /** @brief 클립보드의 오브젝트를 @p pManager 의 루트로 붙여 넣습니다. 되돌리기 항목은 하나이며, 붙여 넣은 루트를 선택합니다. */
-        static void pasteObjects( GameObjectManager* pManager, vector<GameObject*>& outListCreated );
+        static void pasteObjects( EditorTransaction& transaction, GameObjectManager* pManager, vector<GameObject*>& outListCreated );
         /** @brief 붙여 넣을 오브젝트가 있으면 true 입니다. */
         static bool hasCopiedObjects();
         /** @brief 이름을 바꾸고 Undo 에 기록합니다. 씬을 바꾸므로 부른 쪽이 연 거래 구간 안에서만 부른다(이름 칸 확정 — `scene.object.rename` 명령은 칸만 연다). */
@@ -72,7 +72,7 @@ namespace sw::editor
          * @brief 오브젝트의 활성 비트를 바꿉니다. 정지 상태이면 되돌리기와 씬 dirty 에 기록하고, 플레이 중이면 바로 바꿉니다(Stop 이 되돌린다).
          * @details 계층 창의 눈 아이콘 버튼과 인스펙터의 Active 항목이 함께 쓴다. 같은 값이면 아무것도 하지 않는다.
          */
-        static void setActive( GameObject* pObj, bool bActive );
+        static void setActive( EditorTransaction& transaction, GameObject* pObj, bool bActive );
         /**
          * @brief 타입 이름으로 컴포넌트를 붙이고 Undo 에 기록합니다. 붙이지 못하면 nullptr 입니다.
          * @details 새 컴포넌트에 `onPostLoad` 를 호출한다. 기본값이 그 상태이고, 값을 리소스로 바꾸는 곳이 거기다(메시, 머티리얼).
@@ -87,7 +87,7 @@ namespace sw::editor
          */
         static void setHiddenInEditor( GameObject* pObj, bool bHidden );
         /** @brief 소유 오브젝트에서 컴포넌트를 제거합니다. */
-        static bool destroyComponent( GameObjectManager* pManager, GameObject* pObj, Component* pComp );
+        static bool destroyComponent( EditorTransaction& transaction, GameObjectManager* pManager, GameObject* pObj, Component* pComp );
         /** @brief 워크스페이스 선택을 바꿉니다. */
         static void select( GameObject* pObj, SelectionMode mode = SelectionMode::Replace );
         /**
@@ -113,7 +113,7 @@ namespace sw::editor
         /** @brief 아래에 있는 콜라이더나 메시의 윗면에 월드 Y 를 맞춥니다. @p translation 은 월드 위치, @p scaleY 는 월드 Y 스케일입니다. */
         static void snapTranslationToSurface( GameObject* pObj, float3& translation );
         /** @brief @p before 와 현재 상태로 Undo 를 기록합니다. */
-        static void commitModify( GameObject* pObj, const ObjectSnapshot& before, string_view undoLabel );
+        static void commitModify( EditorTransaction& transaction, GameObject* pObj, const ObjectSnapshot& before, string_view undoLabel );
 
         /** @brief 씬 통계의 한 행입니다. 컴포넌트 타입 이름과 그 인스턴스 수를 담습니다. */
         struct ComponentDistributionRow

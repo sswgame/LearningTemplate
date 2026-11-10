@@ -26,7 +26,8 @@ namespace sw::editor
              */
             static EditorSelfTestStep runHistorySurvivesHandoff( EditorSelfTestContext& context )
             {
-                Scene* const pScene = editor::getSubsystem<SceneManager>().getActiveScene();
+                EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
+                Scene* const      pScene = editor::getSubsystem<SceneManager>().getActiveScene();
                 if ( context.expect( pScene != nullptr && pScene->getObjectManager() != nullptr, "there is no active scene to edit" ) == false )
                     return EditorSelfTestStep::Done;
                 GameObjectManager& manager = *pScene->getObjectManager();
@@ -36,7 +37,7 @@ namespace sw::editor
 
                 const ObjectSnapshot before = EditorTransaction::captureSnapshot( pObject );
                 pObject->setName( hashed_string( "UndoHandoffProbeRenamed" ) );
-                EditorTransaction::recordModify( pObject, before, EditorTransaction::captureSnapshot( pObject ), "Rename Probe" );
+                transaction.recordModify( pObject, before, EditorTransaction::captureSnapshot( pObject ), "Rename Probe" );
 
                 CommandStack& stack = editor::getSubsystem<CommandStack>();
                 Archive       written;

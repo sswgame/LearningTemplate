@@ -102,6 +102,7 @@ namespace sw::editor
 
     bool SequencerViewModel::bindSelection( string_view documentPath, const uint32 bindingID ) const
     {
+        EditorTransaction        transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
         SequencePlayerComponent* pContext = findBindingContext( documentPath );
         GameObject*              pTarget  = SequencerViewModelInternal::findSelectedObject();
         GameObject*              pOwner   = pContext != nullptr ? pContext->getOwner() : nullptr;
@@ -110,7 +111,7 @@ namespace sw::editor
         // 묶음은 씬의 데이터(플레이어의 바인딩 표)다 — 오브젝트 수정으로 되돌리기에 남긴다.
         const ObjectSnapshot before = EditorTransaction::captureSnapshot( pOwner );
         pContext->setBinding( bindingID, pTarget->getHandle() );
-        EditorTransaction::recordModify( pOwner, before, EditorTransaction::captureSnapshot( pOwner ), "Bind Sequence Object" );
+        transaction.recordModify( pOwner, before, EditorTransaction::captureSnapshot( pOwner ), "Bind Sequence Object" );
         return true;
     }
 

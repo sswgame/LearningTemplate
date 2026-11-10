@@ -384,6 +384,7 @@ namespace sw::editor
 
     bool EditorToolAssetCommands::revertComponentOverride( GameObject* pInstance, GameObject* pCdo, PrefabOverrideItem& item )
     {
+        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
         if ( pInstance == nullptr || pCdo == nullptr )
             return false;
         Component* pInstanceComponent   = ComponentStableKey::findComponent( pInstance, item._componentKey );
@@ -408,7 +409,7 @@ namespace sw::editor
         }
         pInstanceComponent->onPropertyChanged( pProp->_name );
         const ObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pInstance );
-        EditorTransaction::recordModify( pInstance, beforeSnapshot, afterSnapshot, "Revert Prefab Override" );
+        transaction.recordModify( pInstance, beforeSnapshot, afterSnapshot, "Revert Prefab Override" );
         item._overriddenValue = item._defaultValue;
         item._bModified       = false;
         return true;

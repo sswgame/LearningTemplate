@@ -121,6 +121,7 @@ namespace sw::editor
 
     bool EditorInspectorCommands::applyToPrefab( GameObject* pObj, const AssetID& assetID )
     {
+        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
         const string_view prefabPath = assetID.view();
         if ( EditorPlaySession::refuseSceneEdit( "Apply to prefab" ) )
             return false;
@@ -186,9 +187,9 @@ namespace sw::editor
         if ( bHadFile )
         {
             const string savedPath{ prefabPath };
-            EditorTransaction::push( SW_UNDO_STEP( EditorInspectorCommandsInternal::writePrefabFile, savedPath, filePath->str(), string{ oldFileText } ),
-                                     SW_UNDO_STEP( EditorInspectorCommandsInternal::writePrefabFile, savedPath, filePath->str(), string{ newFileText } ),
-                                     "Write Prefab" );
+            transaction.push( SW_UNDO_STEP( EditorInspectorCommandsInternal::writePrefabFile, savedPath, filePath->str(), string{ oldFileText } ),
+                              SW_UNDO_STEP( EditorInspectorCommandsInternal::writePrefabFile, savedPath, filePath->str(), string{ newFileText } ),
+                              "Write Prefab" );
         }
         uint32 updatedCount = 0;
         for ( GameObject* pInstance : listInstance )
@@ -199,7 +200,7 @@ namespace sw::editor
                 SW_LOG_WARNING_ID( "EditorInspectorCommands.PrefabInstanceCouldNot2", "Prefab instance '%#' could not take the new prefab state", pInstance->getName().c_str() );
                 continue;
             }
-            EditorTransaction::recordModify( pInstance, before, EditorTransaction::captureSnapshot( pInstance ), "Update Prefab Instance" );
+            transaction.recordModify( pInstance, before, EditorTransaction::captureSnapshot( pInstance ), "Update Prefab Instance" );
             ++updatedCount;
         }
         EditorTransaction::endTransaction();
@@ -210,6 +211,7 @@ namespace sw::editor
 
     bool EditorInspectorCommands::revertToPrefab( GameObject* pObj, string_view prefabPath )
     {
+        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
         if ( EditorPlaySession::refuseSceneEdit( "Revert to prefab" ) )
             return false;
         if ( pObj == nullptr || prefabPath.empty() )
@@ -226,7 +228,7 @@ namespace sw::editor
         if ( EditorInspectorCommandsInternal::revertInstance( pResources->getAssetCache<PrefabCache>(), pObj, prefabPath ) == false )
             return false;
         const ObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pObj );
-        EditorTransaction::recordModify( pObj, beforeSnapshot, afterSnapshot, "Revert to Prefab" );
+        transaction.recordModify( pObj, beforeSnapshot, afterSnapshot, "Revert to Prefab" );
         return true;
     }
 

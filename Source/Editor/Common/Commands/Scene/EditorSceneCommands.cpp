@@ -67,7 +67,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    GameObject* EditorSceneCommands::create( GameObjectManager* pManager, GameObject* pParent )
+    GameObject* EditorSceneCommands::create( EditorTransaction& transaction, GameObjectManager* pManager, GameObject* pParent )
     {
         if ( EditorPlaySession::refuseSceneEdit( "Create GameObject" ) )
             return nullptr;
@@ -82,12 +82,12 @@ namespace sw::editor
         if ( pParent != nullptr && pCreated->attachToParent( pParent ) == false )
             SW_LOG_WARNING_ID( "EditorSceneCommands.NewObjectCouldNot", "New object could not be put under '%#' - it is created at the root", pParent->getName().c_str() );
 
-        EditorTransaction::recordCreation( pCreated, "Create GameObject" );
+        transaction.recordCreation( pCreated, "Create GameObject" );
         select( pCreated, SelectionMode::Replace );
         return pCreated;
     }
 
-    GameObject* EditorSceneCommands::duplicate( GameObjectManager* pManager, GameObject* pSrc )
+    GameObject* EditorSceneCommands::duplicate( EditorTransaction& transaction, GameObjectManager* pManager, GameObject* pSrc )
     {
         if ( EditorPlaySession::refuseSceneEdit( "Duplicate GameObject" ) )
             return nullptr;
@@ -159,14 +159,14 @@ namespace sw::editor
                                                              : string_view{} };
             if ( prefabPath.empty() == false && pContext != nullptr )
                 pContext->getSubsystem<EditorWorkspace>().setPlacedPrefabPath( *listCopy[copyIndex], prefabPath );
-            EditorTransaction::recordCreation( listCopy[copyIndex], "Duplicate GameObject" );
+            transaction.recordCreation( listCopy[copyIndex], "Duplicate GameObject" );
         }
         EditorTransaction::endTransaction();
         select( pNewObj, SelectionMode::Replace );
         return pNewObj;
     }
 
-    bool EditorSceneCommands::reparent( GameObject* pChild, GameObject* pNewParent, string_view undoLabel )
+    bool EditorSceneCommands::reparent( EditorTransaction& transaction, GameObject* pChild, GameObject* pNewParent, string_view undoLabel )
     {
         if ( EditorPlaySession::refuseSceneEdit( "Reparent GameObject" ) )
             return false;
@@ -182,12 +182,12 @@ namespace sw::editor
             return false;
 
         const ObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pChild );
-        EditorTransaction::recordModify( pChild, beforeSnapshot, afterSnapshot, undoLabel );
+        transaction.recordModify( pChild, beforeSnapshot, afterSnapshot, undoLabel );
         select( pChild, SelectionMode::Replace );
         return true;
     }
 
-    bool EditorSceneCommands::unparent( GameObject* pObj, string_view undoLabel )
+    bool EditorSceneCommands::unparent( EditorTransaction& transaction, GameObject* pObj, string_view undoLabel )
     {
         if ( EditorPlaySession::refuseSceneEdit( "Unparent GameObject" ) )
             return false;
@@ -197,12 +197,12 @@ namespace sw::editor
         const ObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pObj );
         pObj->detachFromParent( AttachRule::KeepWorld );
         const ObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pObj );
-        EditorTransaction::recordModify( pObj, beforeSnapshot, afterSnapshot, undoLabel );
+        transaction.recordModify( pObj, beforeSnapshot, afterSnapshot, undoLabel );
         select( pObj, SelectionMode::Replace );
         return true;
     }
 
-    uint32 EditorSceneCommands::destroyObjects( GameObjectManager* pManager, const vector<GameObject*>& listObject )
+    uint32 EditorSceneCommands::destroyObjects( EditorTransaction& transaction, GameObjectManager* pManager, const vector<GameObject*>& listObject )
     {
         if ( EditorPlaySession::refuseSceneEdit( "Destroy GameObjects" ) || pManager == nullptr )
             return 0;
@@ -230,7 +230,7 @@ namespace sw::editor
         EditorTransaction::beginTransaction( listRoot.size() == 1 ? string( "Destroy GameObject" ) : "Destroy " + to_string( listRoot.size() ) + " GameObjects" );
         for ( GameObject* pObj : listRoot )
         {
-            if ( destroy( pManager, pObj ) )
+            if ( destroy( transaction, pManager, pObj ) )
                 ++destroyedCount;
         }
         EditorTransaction::endTransaction();
@@ -249,7 +249,7 @@ namespace sw::editor
         EditorSiblingOrder::sortSiblings( outListRoot );
     }
 
-    void EditorSceneCommands::duplicateObjects( GameObjectManager* pManager, const vector<GameObject*>& listObject, vector<GameObject*>& outListCreated )
+    void EditorSceneCommands::duplicateObjects( EditorTransaction& transaction, GameObjectManager* pManager, const vector<GameObject*>& listObject, vector<GameObject*>& outListCreated )
     {
         outListCreated.clear();
         const bool bNothingToDuplicate = EditorPlaySession::refuseSceneEdit( "Duplicate GameObjects" ) || pManager == nullptr || listObject.empty();
@@ -258,14 +258,14 @@ namespace sw::editor
         EditorTransaction::beginTransaction( listObject.size() == 1 ? string( "Duplicate GameObject" ) : "Duplicate " + to_string( listObject.size() ) + " GameObjects" );
         for ( GameObject* pSource : listObject )
         {
-            GameObject* pCopy = duplicate( pManager, pSource );
+            GameObject* pCopy = duplicate( transaction, pManager, pSource );
             if ( pCopy != nullptr )
                 outListCreated.push_back( pCopy );
         }
         EditorTransaction::endTransaction();
     }
 
-    bool EditorSceneCommands::destroy( GameObjectManager* pManager, GameObject* pObj )
+    bool EditorSceneCommands::destroy( EditorTransaction& transaction, GameObjectManager* pManager, GameObject* pObj )
     {
         if ( EditorPlaySession::refuseSceneEdit( "Destroy GameObject" ) )
             return false;
@@ -292,14 +292,14 @@ namespace sw::editor
         EditorTransaction::beginTransaction( "Destroy GameObject" );
         for ( GameObject* pDoomed : listSubtree )
         {
-            EditorTransaction::recordDestruction( pDoomed, "Destroy GameObject" );
+            transaction.recordDestruction( pDoomed, "Destroy GameObject" );
         }
         EditorTransaction::endTransaction();
         pManager->destroyGameObject( pObj );
         return true;
     }
 
-    bool EditorSceneCommands::rename( EditorTransaction& /*transaction*/, GameObject* pObj, const utf8* pNewName )
+    bool EditorSceneCommands::rename( EditorTransaction& transaction, GameObject* pObj, const utf8* pNewName )
     {
         if ( EditorPlaySession::refuseSceneEdit( "Rename GameObject" ) )
             return false;
@@ -309,11 +309,11 @@ namespace sw::editor
         const ObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pObj );
         pObj->setName( hashed_string( pNewName ) );
         const ObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pObj );
-        EditorTransaction::recordModify( pObj, beforeSnapshot, afterSnapshot, "Rename GameObject" );
+        transaction.recordModify( pObj, beforeSnapshot, afterSnapshot, "Rename GameObject" );
         return true;
     }
 
-    void EditorSceneCommands::setActive( GameObject* pObj, bool bActive )
+    void EditorSceneCommands::setActive( EditorTransaction& transaction, GameObject* pObj, bool bActive )
     {
         if ( pObj == nullptr || pObj->isActive() == bActive )
             return;
@@ -325,10 +325,10 @@ namespace sw::editor
         }
         const ObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pObj );
         pObj->setActive( bActive );
-        commitModify( pObj, beforeSnapshot, bActive ? "Activate GameObject" : "Deactivate GameObject" );
+        commitModify( transaction, pObj, beforeSnapshot, bActive ? "Activate GameObject" : "Deactivate GameObject" );
     }
 
-    Component* EditorSceneCommands::addComponent( EditorTransaction& /*transaction*/, GameObject* pObj, const hashed_string& typeName )
+    Component* EditorSceneCommands::addComponent( EditorTransaction& transaction, GameObject* pObj, const hashed_string& typeName )
     {
         if ( EditorPlaySession::refuseSceneEdit( "Add component" ) )
             return nullptr;
@@ -341,11 +341,11 @@ namespace sw::editor
         if ( pComp == nullptr )
             return nullptr;
         pComp->onPostLoad();
-        commitModify( pObj, beforeSnapshot, "Add Component" );
+        commitModify( transaction, pObj, beforeSnapshot, "Add Component" );
         return pComp;
     }
 
-    bool EditorSceneCommands::destroyComponent( GameObjectManager* pManager, GameObject* pObj, Component* pComp )
+    bool EditorSceneCommands::destroyComponent( EditorTransaction& transaction, GameObjectManager* pManager, GameObject* pObj, Component* pComp )
     {
         if ( EditorPlaySession::refuseSceneEdit( "Remove component" ) )
             return false;
@@ -369,7 +369,7 @@ namespace sw::editor
         // 스냅샷에 들어가지 않으므로 지우기 전과 후의 스냅샷이 다르다. 그래서 되돌리면 그 컴포넌트가 원래 id 로 돌아온다.
         const ObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pObj );
         pManager->destroyComponent( pComp );
-        commitModify( pObj, beforeSnapshot, "Remove Component" );
+        commitModify( transaction, pObj, beforeSnapshot, "Remove Component" );
         return true;
     }
 
@@ -522,7 +522,7 @@ namespace sw::editor
         translation._y = ( bHit ? hitY : 0.0f ) + bottomOffset;
     }
 
-    void EditorSceneCommands::commitModify( GameObject* pObj, const ObjectSnapshot& before, string_view undoLabel )
+    void EditorSceneCommands::commitModify( EditorTransaction& transaction, GameObject* pObj, const ObjectSnapshot& before, string_view undoLabel )
     {
         if ( EditorPlaySession::refuseSceneEdit( "Commit modify" ) )
             return;
@@ -530,7 +530,7 @@ namespace sw::editor
             return;
 
         const ObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pObj );
-        EditorTransaction::recordModify( pObj, before, afterSnapshot, undoLabel );
+        transaction.recordModify( pObj, before, afterSnapshot, undoLabel );
     }
 
     EditorSceneCommands::SceneStatistics EditorSceneCommands::collectSceneStatistics( GameObjectManager* pManager )
@@ -638,7 +638,7 @@ namespace sw::editor
         return editor::getSubsystem<ObjectCopyBuffer>().getEntries().empty() == false;
     }
 
-    void EditorSceneCommands::pasteObjects( GameObjectManager* pManager, vector<GameObject*>& outListCreated )
+    void EditorSceneCommands::pasteObjects( EditorTransaction& transaction, GameObjectManager* pManager, vector<GameObject*>& outListCreated )
     {
         outListCreated.clear();
         const vector<ObjectCopyEntry>& listCopied      = editor::getSubsystem<ObjectCopyBuffer>().getEntries();
@@ -695,7 +695,7 @@ namespace sw::editor
             }
             if ( listCopied[copyIndex]._prefabPath.empty() == false && pContext != nullptr )
                 pContext->getSubsystem<EditorWorkspace>().setPlacedPrefabPath( *pCopy, listCopied[copyIndex]._prefabPath );
-            EditorTransaction::recordCreation( pCopy, label );
+            transaction.recordCreation( pCopy, label );
         }
         EditorTransaction::endTransaction();
         // 붙여 넣은 것은 그 씬의 선택에 놓는다. 미리보기 창에 붙이면 창의 선택에 놓는다.

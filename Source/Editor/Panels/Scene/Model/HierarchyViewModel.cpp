@@ -422,9 +422,10 @@ namespace sw::editor
 
     void HierarchyViewModel::createObject()
     {
+        EditorTransaction  transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
         GameObjectManager* pManager = editor::getActiveObjectManager();
         if ( pManager != nullptr )
-            (void)EditorSceneCommands::create( pManager, nullptr ); // 편집이 막혔으면 nullptr 이고 아무것도 바뀌지 않는다
+            (void)EditorSceneCommands::create( transaction, pManager, nullptr ); // 편집이 막혔으면 nullptr 이고 아무것도 바뀌지 않는다
     }
 
     void HierarchyViewModel::renameObject( uint64 objectID, const utf8* pName )
@@ -438,22 +439,24 @@ namespace sw::editor
 
     void HierarchyViewModel::dropObject( uint64 draggedID, uint64 targetID, HierarchyDropZone zone )
     {
+        EditorTransaction  transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
         GameObjectManager* pManager = editor::getActiveObjectManager();
         GameObject*        pDragged = HierarchyViewModelInternal::findObject( draggedID );
         GameObject*        pTarget  = HierarchyViewModelInternal::findObject( targetID );
         if ( pManager == nullptr || pDragged == nullptr || pTarget == nullptr )
             return;
         if ( zone == HierarchyDropZone::Onto )
-            (void)EditorSceneCommands::reparent( pDragged, pTarget ); // 순환 · 편집 잠금이면 아무것도 바꾸지 않는다
+            (void)EditorSceneCommands::reparent( transaction, pDragged, pTarget ); // 순환 · 편집 잠금이면 아무것도 바꾸지 않는다
         else
             (void)EditorSiblingOrder::moveBeside( *pManager, pDragged, pTarget, zone == HierarchyDropZone::After, HierarchyCommands::findEditorCameraObject() ); // 실패는 아무것도 바꾸지 않는다
     }
 
     void HierarchyViewModel::detachToRoot( uint64 draggedID )
     {
-        GameObject* pDragged = HierarchyViewModelInternal::findObject( draggedID );
+        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
+        GameObject*       pDragged = HierarchyViewModelInternal::findObject( draggedID );
         if ( pDragged != nullptr && pDragged->getParent() != nullptr )
-            (void)EditorSceneCommands::unparent( pDragged, "Detach GameObject to Root" ); // 편집 잠금이면 아무것도 바꾸지 않는다
+            (void)EditorSceneCommands::unparent( transaction, pDragged, "Detach GameObject to Root" ); // 편집 잠금이면 아무것도 바꾸지 않는다
     }
 
     void HierarchyViewModel::spawnPrefab( const utf8* pPath, uint64 parentID )

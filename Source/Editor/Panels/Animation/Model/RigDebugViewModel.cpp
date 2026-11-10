@@ -230,22 +230,24 @@ namespace sw::editor
 
     void RigDebugViewModel::commitNodeWeight( uint32 nodeIndex, float32 weightBefore )
     {
+        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
         using Internal       = RigDebugViewModelInternal;
         const RigNode* pNode = Internal::findNode( _selectedObjectID, nodeIndex );
         if ( pNode == nullptr )
             return;
-        EditorTransaction::push( SW_UNDO_STEP( RigDebugViewModelInternal::applyWeight, _selectedObjectID, nodeIndex, weightBefore ),
-                                 SW_UNDO_STEP( RigDebugViewModelInternal::applyWeight, _selectedObjectID, nodeIndex, pNode->getWeight() ), "Edit Rig Node Weight" );
+        transaction.push( SW_UNDO_STEP( RigDebugViewModelInternal::applyWeight, _selectedObjectID, nodeIndex, weightBefore ),
+                          SW_UNDO_STEP( RigDebugViewModelInternal::applyWeight, _selectedObjectID, nodeIndex, pNode->getWeight() ), "Edit Rig Node Weight" );
     }
 
     void RigDebugViewModel::setNodeEnabled( uint32 nodeIndex, bool bEnabled )
     {
+        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
         using Internal = RigDebugViewModelInternal;
         if ( Internal::findNode( _selectedObjectID, nodeIndex ) == nullptr )
             return;
         Internal::applyEnabled( _selectedObjectID, nodeIndex, bEnabled );
-        EditorTransaction::push( SW_UNDO_STEP( RigDebugViewModelInternal::applyEnabled, _selectedObjectID, nodeIndex, bEnabled == false ),
-                                 SW_UNDO_STEP( RigDebugViewModelInternal::applyEnabled, _selectedObjectID, nodeIndex, bEnabled ), "Toggle Rig Node" );
+        transaction.push( SW_UNDO_STEP( RigDebugViewModelInternal::applyEnabled, _selectedObjectID, nodeIndex, bEnabled == false ),
+                          SW_UNDO_STEP( RigDebugViewModelInternal::applyEnabled, _selectedObjectID, nodeIndex, bEnabled ), "Toggle Rig Node" );
     }
 
     void RigDebugViewModel::saveToRig()

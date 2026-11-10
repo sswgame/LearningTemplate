@@ -274,9 +274,10 @@ namespace sw::editor
 
     void EditorSelection::recordModify( GameObject& obj, const ObjectSnapshot& before, const ObjectSnapshot& after, string_view label ) const
     {
+        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
         if ( _pPreviewScene == nullptr )
         {
-            EditorTransaction::recordModify( &obj, before, after, label );
+            transaction.recordModify( &obj, before, after, label );
             return;
         }
         // 창의 스택에 남긴다 — 명령은 기록할 때의 씬 키를 기억해 활성 씬이 바뀌어도 그 미리보기 씬에서 되돌린다(`ObjectSnapshot`).

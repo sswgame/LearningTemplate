@@ -23,10 +23,10 @@ namespace sw::editor
          * @brief 오브젝트 하나를 바꾸는 인스펙터 편집입니다. 정지 상태이면 되돌리기 기록과 씬 dirty 를 남기고, 플레이 중이면 바로 바꿉니다.
          * @details 이름, 활성, 부모 해제, 컴포넌트 활성, 컴포넌트 제거가 이 함수를 지난다. 기록도 dirty 도 없이 바꾸면 그 편집은
          *          다른 씬을 열거나 에디터를 끌 때 묻지도 않고 사라지고 Ctrl+Z 로도 돌릴 수 없다. 플레이 중에는 씬 명령이 막히므로
-         *          (플레이 사본은 Stop 이 되돌린다) 바로 바꾼다.
+         *          (플레이 사본은 Stop 이 되돌린다) 바로 바꾼다. 부른 쪽이 연 거래 구간 @p transaction 안에서만 부른다.
          */
         template <typename EditFunc>
-        static void applyObjectEdit( GameObject* pObj, string_view undoLabel, EditFunc&& edit )
+        static void applyObjectEdit( EditorTransaction& transaction, GameObject* pObj, string_view undoLabel, EditFunc&& edit )
         {
             if ( pObj == nullptr )
                 return;
@@ -37,7 +37,7 @@ namespace sw::editor
             }
             const ObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pObj );
             edit();
-            EditorSceneCommands::commitModify( pObj, beforeSnapshot, undoLabel );
+            EditorSceneCommands::commitModify( transaction, pObj, beforeSnapshot, undoLabel );
         }
     };
 } // namespace sw::editor

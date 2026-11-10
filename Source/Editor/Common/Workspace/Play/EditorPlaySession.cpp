@@ -215,7 +215,7 @@ namespace sw::editor
              * @brief Keep Simulation Changes 로 저장한 상태를 편집 씬의 같은 id 오브젝트에 적용하고 되돌리기 한 번으로 기록합니다.
              * @details 스냅샷을 되돌리고 편집 내역을 되찾은 뒤에 호출한다. 그래야 기록이 편집 내역에 들어가고, Ctrl+Z 가 플레이 전 값으로 돌린다.
              */
-            static void applyKeptStates( PlaySessionData& data, EditorTransaction& /*transaction*/ )
+            static void applyKeptStates( PlaySessionData& data, EditorTransaction& transaction )
             {
                 GameObjectManager* pObjects = editor::getActiveObjectManager();
                 if ( data._listKept.empty() || pObjects == nullptr )
@@ -245,7 +245,7 @@ namespace sw::editor
                     // `Live` 배치는 런타임 id 가 맞아 옮기지 못한 핸들을 실패로 치지 않는다. 늘 true 다.
                     [[maybe_unused]] const bool bLinked = batch.finish();
                     SW_ASSERT( bLinked );
-                    EditorTransaction::recordModify( pObj, before, EditorTransaction::captureSnapshot( pObj ), "Keep Simulation Changes" );
+                    transaction.recordModify( pObj, before, EditorTransaction::captureSnapshot( pObj ), "Keep Simulation Changes" );
                 }
                 SW_LOG_INFO_ID( "EditorPlaySession.KeptPlayStateObject", "Kept the play state of %# object(s).", static_cast<uint32>( data._listKept.size() ) );
                 data._listKept.clear();

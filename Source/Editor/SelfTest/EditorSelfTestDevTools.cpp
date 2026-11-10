@@ -26,6 +26,7 @@
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/Console/ConsolePanel.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
@@ -274,6 +275,7 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             static EditorSelfTestStep runNamedLayoutRoundTrip( EditorSelfTestContext& context )
             {
+                EditorTransaction     transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
                 constexpr const utf8* kPanelID      = HistoryPanel::kPanelID;
                 constexpr const utf8* kLayoutName   = "selftest";
                 EditorContext&        editorContext = editor::getSubsystem<EditorContext>();
@@ -351,7 +353,7 @@ namespace sw::editor
                     if ( stepIndex == 0 )
                     {
                         // 카메라 앞 6 m 에 놓는다. 만들면 선택된다.
-                        GameObject* pObj = EditorSceneCommands::create( pManager, nullptr );
+                        GameObject* pObj = EditorSceneCommands::create( transaction, pManager, nullptr );
                         if ( context.expect( pObj != nullptr && pObj->getPrimarySceneComponent() != nullptr, "could not create the probe object" ) == false )
                             return EditorSelfTestStep::Done;
                         probe._objectID = pObj->getObjectID();
@@ -437,7 +439,8 @@ namespace sw::editor
             /** @brief 카메라 앞 6 m 에 테스트 오브젝트를 만들어 선택합니다. 만들지 못하면 0 을 반환합니다. */
             static uint64 createSelectedProbe( GameObjectManager* pManager, const CameraComponent* pCamera )
             {
-                GameObject* pObj = EditorSceneCommands::create( pManager, nullptr );
+                EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
+                GameObject*       pObj = EditorSceneCommands::create( transaction, pManager, nullptr );
                 if ( pObj == nullptr || pObj->getPrimarySceneComponent() == nullptr )
                     return 0;
                 static_cast<SceneComponent*>( pObj->getPrimarySceneComponent() )->setLocalPosition( pCamera->getWorldPosition() + pCamera->getCameraForward() * 6.0f );

@@ -45,14 +45,14 @@ namespace sw::editor
                 return pEditorCamera != nullptr ? pEditorCamera->getOwner() : nullptr;
             }
 
-            static void runCreate( const EditorCommandTarget& /*target*/, EditorTransaction& /*transaction*/ )
+            static void runCreate( const EditorCommandTarget& /*target*/, EditorTransaction& transaction )
             {
-                (void)EditorSceneCommands::create( editor::getActiveObjectManager(), nullptr ); // 만든 것을 선택한다 — 실패는 편집이 막힌 것이다
+                (void)EditorSceneCommands::create( transaction, editor::getActiveObjectManager(), nullptr ); // 만든 것을 선택한다 — 실패는 편집이 막힌 것이다
             }
 
-            static void runCreateChild( const EditorCommandTarget& target, EditorTransaction& /*transaction*/ )
+            static void runCreateChild( const EditorCommandTarget& target, EditorTransaction& transaction )
             {
-                (void)EditorSceneCommands::create( editor::getActiveObjectManager(), EditorSceneObjectCommands::findTargetObject( target ) ); // 위와 같다
+                (void)EditorSceneCommands::create( transaction, editor::getActiveObjectManager(), EditorSceneObjectCommands::findTargetObject( target ) ); // 위와 같다
             }
 
             static void runCreateFolder( const EditorCommandTarget& /*target*/, EditorTransaction& /*transaction*/ )
@@ -80,12 +80,12 @@ namespace sw::editor
             static void runMoveUp( const EditorCommandTarget& target, EditorTransaction& /*transaction*/ ) { runMoveStep( target, false ); }
             static void runMoveDown( const EditorCommandTarget& target, EditorTransaction& /*transaction*/ ) { runMoveStep( target, true ); }
 
-            static void runDuplicate( const EditorCommandTarget& target, EditorTransaction& /*transaction*/ )
+            static void runDuplicate( const EditorCommandTarget& target, EditorTransaction& transaction )
             {
                 vector<GameObject*> listObject;
                 EditorSceneObjectCommands::collectTargetObjects( target, listObject );
                 vector<GameObject*> listCreated;
-                EditorSceneCommands::duplicateObjects( editor::getActiveObjectManager(), listObject, listCreated ); // 되돌리기 한 단계
+                EditorSceneCommands::duplicateObjects( transaction, editor::getActiveObjectManager(), listObject, listCreated ); // 되돌리기 한 단계
                 if ( listCreated.empty() == false )
                     editor::getMainSceneSelection().selectObjects( listCreated, SelectionMode::Replace );
             }
@@ -97,22 +97,22 @@ namespace sw::editor
                 (void)EditorSceneCommands::copyObjects( listObject ); // 복사한 수는 붙여 넣을 때 확인할 수 있다
             }
 
-            static void runPaste( const EditorCommandTarget& /*target*/, EditorTransaction& /*transaction*/ )
+            static void runPaste( const EditorCommandTarget& /*target*/, EditorTransaction& transaction )
             {
                 vector<GameObject*> listPasted;
-                EditorSceneCommands::pasteObjects( editor::getActiveObjectManager(), listPasted ); // 되돌리기 한 단계이고, 붙여 넣은 것을 선택한다
+                EditorSceneCommands::pasteObjects( transaction, editor::getActiveObjectManager(), listPasted ); // 되돌리기 한 단계이고, 붙여 넣은 것을 선택한다
             }
 
             static bool canPaste( const EditorCommandTarget& /*target*/ ) { return EditorSceneCommands::hasCopiedObjects(); }
 
-            static void runUnparent( const EditorCommandTarget& target, EditorTransaction& /*transaction*/ )
+            static void runUnparent( const EditorCommandTarget& target, EditorTransaction& transaction )
             {
                 vector<GameObject*> listObject;
                 EditorSceneObjectCommands::collectTargetObjects( target, listObject );
                 for ( GameObject* pObject : listObject )
                 {
                     if ( pObject->getParent() != nullptr )
-                        (void)EditorSceneCommands::unparent( pObject ); // 부모가 없으면 아무것도 하지 않는다
+                        (void)EditorSceneCommands::unparent( transaction, pObject ); // 부모가 없으면 아무것도 하지 않는다
                 }
             }
 
@@ -128,19 +128,19 @@ namespace sw::editor
                 return false;
             }
 
-            static void runDestroy( const EditorCommandTarget& target, EditorTransaction& /*transaction*/ )
+            static void runDestroy( const EditorCommandTarget& target, EditorTransaction& transaction )
             {
                 vector<GameObject*> listObject;
                 EditorSceneObjectCommands::collectTargetObjects( target, listObject );
-                (void)EditorSceneCommands::destroyObjects( editor::getActiveObjectManager(), listObject ); // 되돌리기 한 단계
+                (void)EditorSceneCommands::destroyObjects( transaction, editor::getActiveObjectManager(), listObject ); // 되돌리기 한 단계
                 editor::getMainSceneSelection().clearObjectSelection();
             }
 
             static bool hasSingleTargetObject( const EditorCommandTarget& target ) { return EditorSceneObjectCommands::findTargetObject( target ) != nullptr; }
 
-            static void runCreateHere( const EditorCommandTarget& target, EditorTransaction& /*transaction*/ )
+            static void runCreateHere( const EditorCommandTarget& target, EditorTransaction& transaction )
             {
-                GameObject* pCreated = EditorSceneCommands::create( editor::getActiveObjectManager(), nullptr );
+                GameObject* pCreated = EditorSceneCommands::create( transaction, editor::getActiveObjectManager(), nullptr );
                 if ( pCreated != nullptr && target._bHasWorldPosition )
                     EditorSceneCommands::applyLocalTransform( pCreated, target._worldPosition, float3{}, float3{ 1.0f, 1.0f, 1.0f } );
             }
@@ -227,8 +227,9 @@ namespace sw::editor
 
             static void runMoveComponent( const EditorCommandTarget& target, int32 direction )
             {
-                GameObject* pOwner     = nullptr;
-                Component*  pComponent = EditorSceneObjectCommands::findTargetComponent( target, pOwner );
+                EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
+                GameObject*       pOwner     = nullptr;
+                Component*        pComponent = EditorSceneObjectCommands::findTargetComponent( target, pOwner );
                 if ( pComponent == nullptr )
                     return;
                 // 인스펙터 편집과 같은 규칙(`InspectorObjectEdit`) — 정지 상태면 되돌리기 기록과 dirty, 플레이 중이면 사본을 바로 바꾼다.
@@ -236,7 +237,7 @@ namespace sw::editor
                 const ObjectSnapshot beforeSnapshot = bRecord ? EditorTransaction::captureSnapshot( pOwner ) : ObjectSnapshot{};
                 (void)pOwner->moveComponent( pComponent, direction ); // 끝 · 주 씬 컴포넌트면 그대로 — 켜짐 조건이 이미 막는다
                 if ( bRecord )
-                    EditorSceneCommands::commitModify( pOwner, beforeSnapshot, direction < 0 ? "Move Component Up" : "Move Component Down" );
+                    EditorSceneCommands::commitModify( transaction, pOwner, beforeSnapshot, direction < 0 ? "Move Component Up" : "Move Component Down" );
             }
 
             static bool canMoveComponentUp( const EditorCommandTarget& target ) { return canMoveComponent( target, -1 ); }
@@ -306,11 +307,12 @@ namespace sw::editor
 
     void EditorSceneObjectCommands::removeComponent( GameObject* pOwner, Component* pComponent )
     {
+        EditorTransaction  transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
         GameObjectManager* pManager = pOwner->getManager();
         if ( pManager == nullptr )
             (void)pOwner->removeComponent( pComponent ); // 실패는 removeComponent 가 알리고 카드가 남는다
         else if ( EditorPlaySession::areSceneEditsAllowed() )
-            (void)EditorSceneCommands::destroyComponent( pManager, pOwner, pComponent ); // 기록과 dirty 를 남긴다. 지울 수 없으면 그대로다
+            (void)EditorSceneCommands::destroyComponent( transaction, pManager, pOwner, pComponent ); // 기록과 dirty 를 남긴다. 지울 수 없으면 그대로다
         else
             pManager->destroyComponent( pComponent ); // 플레이 사본이므로 Stop 이 되돌린다
     }

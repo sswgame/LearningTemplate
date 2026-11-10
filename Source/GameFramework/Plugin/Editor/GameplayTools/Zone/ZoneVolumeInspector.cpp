@@ -12,6 +12,7 @@
 #include "Core/String/formatString.h"
 
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
 #include "Editor/Panels/Inspector/Model/InspectorObjectEdit.h"
@@ -88,7 +89,8 @@ namespace sw::editor
             /** @brief 덮어쓰기 항목 @p name 을 지웁니다(되돌리기 기록과 함께). */
             static void revert( ZoneVolumeComponent& volume, const hashed_string& name )
             {
-                InspectorObjectEdit::applyObjectEdit( volume.getOwner(), SW_LOCKEY( "EdUndo", "ZoneRevertModule" ), [&volume, &name]()
+                EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
+                InspectorObjectEdit::applyObjectEdit( transaction, volume.getOwner(), SW_LOCKEY( "EdUndo", "ZoneRevertModule" ), [&volume, &name]()
                 { (void)ZoneModuleDef::revertOverrideModule( volume.getModuleOverrides(), name ); } );
             }
 
@@ -104,8 +106,9 @@ namespace sw::editor
             /** @brief 매개변수 덮어쓰기 · 되돌리기를 되돌리기 기록과 함께 적용합니다. */
             static void applyParamEdit( ZoneVolumeComponent& volume, const PendingParamEdit& edit )
             {
-                const utf8* pUndo = edit._bRevert ? SW_LOCKEY( "EdUndo", "ZoneRevertParam" ) : SW_LOCKEY( "EdUndo", "ZoneOverrideParam" );
-                InspectorObjectEdit::applyObjectEdit( volume.getOwner(), pUndo, [&volume, &edit]()
+                EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
+                const utf8*       pUndo = edit._bRevert ? SW_LOCKEY( "EdUndo", "ZoneRevertParam" ) : SW_LOCKEY( "EdUndo", "ZoneOverrideParam" );
+                InspectorObjectEdit::applyObjectEdit( transaction, volume.getOwner(), pUndo, [&volume, &edit]()
                 {
                     if ( edit._bRevert )
                         (void)ZoneModuleDef::revertOverrideParam( volume.getModuleOverrides(), edit._module, edit._param );
