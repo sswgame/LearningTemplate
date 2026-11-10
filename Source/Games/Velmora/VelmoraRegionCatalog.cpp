@@ -6,6 +6,7 @@
 
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
@@ -16,17 +17,6 @@ namespace sw
     {
         struct VelmoraRegionCatalogInternal
         {
-            /** @brief 필수 평면 자리 속성 @p pName(`x,z`)을 읽습니다. 없거나 틀리면 오류를 남기고 false 입니다. */
-            [[nodiscard]] static bool readPoint( const XMLNode& node, const utf8* pName, string_view where, float2& outPoint )
-            {
-                if ( node.findAttribute( pName ) == nullptr )
-                {
-                    SW_LOG_ERROR_ID( "Velmora.RegionMissingPoint", "%#: <%#> needs '%#' (x,z)", where, node.getName(), pName );
-                    return false;
-                }
-                return XMLReadUtil::readOptionalFloat2( node, pName, where, outPoint );
-            }
-
             /** @brief 자리 @p point 가 지역 경계 안인지 봅니다. 밖이면 오류를 남기고 false 입니다. */
             [[nodiscard]] static bool checkInside( const VelmoraRegionDef& region, const float2& point, const utf8* pWhat, string_view where )
             {
@@ -44,15 +34,23 @@ namespace sw
                     SW_LOG_ERROR_ID( "Velmora.RegionSiteRepeated", "%#: <%#> is written twice - a region has one", where, node.getName() );
                     return false;
                 }
-                return XMLReadUtil::readRequiredName( node, "id", where, outSite._id ) && readPoint( node, "at", where, outSite._position );
+                VelmoraSiteAttributeDef def;
+                if ( XMLFields::readFields( node, def, where ) == false )
+                    return false;
+                outSite._id       = def._id;
+                outSite._position = def._at;
+                return true;
             }
 
             /** @brief `<Hall monster at/>` · `<Boss monster at/>` 한 줄을 읽습니다. */
             [[nodiscard]] static bool readSpawn( const XMLNode& node, string_view where, vector<ActionRoomSpawnDef>& outListSpawn )
             {
-                ActionRoomSpawnDef spawn;
-                if ( XMLReadUtil::readRequiredName( node, "monster", where, spawn._monsterID ) == false || readPoint( node, "at", where, spawn._position ) == false )
+                VelmoraSpawnAttributeDef def;
+                if ( XMLFields::readFields( node, def, where ) == false )
                     return false;
+                ActionRoomSpawnDef spawn;
+                spawn._monsterID = def._monster;
+                spawn._position  = def._at;
                 outListSpawn.push_back( spawn );
                 return true;
             }
@@ -88,21 +86,24 @@ namespace sw
         const utf8* pID = XMLReadUtil::findRequiredID( node, sourceName );
         if ( pID == nullptr )
             return false;
-        const string     where = string( sourceName ) + " <Region id=\"" + pID + "\">";
-        VelmoraRegionDef region;
-        region._id        = hashed_string( pID );
-        const utf8* pName = node.findAttribute( "name" );
-        region._name      = pName != nullptr ? string( pName ) : string( pID );
-        bool bValid       = Internal::readPoint( node, "min", where, region._min ) && Internal::readPoint( node, "max", where, region._max ) &&
-                      Internal::readPoint( node, "respawn", where, region._respawn );
+        const string where = string( sourceName ) + " <Region id=\"" + pID + "\">";
+        // 속성은 리플렉션 칸이다 — 빠진 경계 · 일어설 자리는 XMLFields.RequiredFieldMissing, 깨진 `x,z` 는 XMLFields.ValueUnreadable 로 이름과 함께 알린다.
+        VelmoraRegionAttributeDef attribute;
+        bool                      bValid = XMLFields::readFields( node, attribute, where );
+        VelmoraRegionDef          region;
+        region._id      = attribute._id.empty() ? hashed_string( pID ) : attribute._id;
+        region._name    = attribute._name.empty() ? string( pID ) : attribute._name;
+        region._min     = attribute._min;
+        region._max     = attribute._max;
+        region._respawn = attribute._respawn;
         if ( bValid && ( region._min._x >= region._max._x || region._min._y >= region._max._y ) )
         {
             SW_LOG_ERROR_ID( "Velmora.RegionEmptyBounds", "%#: min must be below max on both axes", where );
             bValid = false;
         }
         bValid = bValid && Internal::checkInside( region, region._respawn, "respawn", where );
-        if ( const utf8* pStartQuest = node.findAttribute( "startQuest" ) )
-            XMLReadUtil::parseNameList( pStartQuest, ", ", region._listStartQuest );
+        if ( attribute._startQuest.empty() == false )
+            XMLReadUtil::parseNameList( attribute._startQuest.c_str(), ", ", region._listStartQuest );
 
         for ( XMLNode child = node.findChild(); bValid && child; child = child.findNextSibling() )
         {
