@@ -251,7 +251,7 @@ namespace sw
                     _arrAI[player].notify( event );
             }
             if ( event._kind == RTSEvent::Kind::PlayerDefeated )
-                SW_LOG_INFO_ID( "SkirmishMatch.TPlayerLostEvery", "[Skirmish] t=%#s player %# lost every building and is defeated", static_cast<int32>( _world.getTime() ), event._player );
+                SW_LOG_INFO_ID( "SkirmishMatch.TPlayerLostEvery", "[Skirmish] t=%#s player %# lost every building and is defeated", static_cast<int32>( _world.getTime() ), *event._player );
         }
         _listEvent.insert( _listEvent.end(), _listFrameEvent.begin(), _listFrameEvent.end() );
 
