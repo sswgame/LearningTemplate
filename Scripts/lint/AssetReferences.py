@@ -11,6 +11,8 @@ Scripts/lint/AssetReferences.py
   글 모양을 짐작하는 정규식으로 찾지 않는다 — 칸 이름이 목록에 있는 속성 · 요소 글 · JSON 키의 값만, 그 안에서도 도메인(`engine/` …)으로 시작하는 낱말만 경로다.
 - 있음 판정은 **스테이지(인덱스)** 기준이다. 커밋하지 않은 파일은 없는 것으로 본다(작업 트리에만 있는 파일을 가리킨 커밋은 다른 체크아웃에서 끊긴다).
   임포트 산출물(`models/` · `textures/` · `heightfields/`)은 커밋하지 않으므로 같은 자리의 원본(`models_raw/<이름>.glb` 등)이 있으면 있다.
+- 옮긴 에셋의 옛 id(도메인 뿌리의 `redirects.xml`, 런타임 `AssetRedirect`)는 엔진이 풀어 읽지만, 저장소 안의 참조는 새 id 로 고친다 — 남은 옛 참조를
+  보고한다(언리얼 "Fix Up Redirectors" 자리). 리다이렉트는 저장소 밖(세이브 · 서버 · 배포된 팩)에 적힌 옛 경로를 살리려고 있다.
 - 검사 범위는 인덱스의 모든 참조 파일(Content 의 글 에셋 + `listCMakeFile`)이다 — 680 개 남짓이라 1 초 안팎이고, 지우거나 옮긴 에셋을 가리키던 다른 파일
   (역참조)도 같은 한 번의 훑기로 잡힌다. 저장소가 깨끗해야 하므로(ctest 가 지킨다) 걸린 것은 모두 이 커밋이 고칠 몫이다.
 """
@@ -21,6 +23,7 @@ import json
 import re
 import subprocess
 import sys
+import xml.etree.ElementTree as ElementTree
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterable
@@ -343,12 +346,41 @@ def readIndexBlobs(projectRoot: Path, listRelativePath: list[str]) -> dict[str, 
     return mapText
 
 
-def collectProblems(listRelativePath: list[str], mapText: dict[str, str], assets: AssetSet, config: FieldConfig) -> list[str]:
-    """참조 파일들에서 없는 경로를 `파일:줄: 칸 = '경로'` 로 모읍니다."""
+kRedirectFileName = "redirects.xml"   # 런타임 `AssetRedirect::kFileName` 과 같은 이름 — 도메인 뿌리마다 하나
+
+
+def isRedirectTable(relativePath: str) -> bool:
+    """`Content/<도메인>/redirects.xml`(게임 팩은 `Content/game/<팩>/redirects.xml`)인지."""
+    parts = relativePath.replace("\\", "/").split("/")
+    return parts[0] == kContentFolder and parts[-1] == kRedirectFileName and len(parts) in (3, 4)
+
+
+def parseRedirects(mapText: dict[str, str]) -> dict[str, str]:
+    """리다이렉트 표들의 옛 id → 새 id 입니다. 틀린 표는 런타임이 기동을 멈추므로 여기서는 읽히는 줄만 모은다."""
+    mapOldToNew: dict[str, str] = {}
+    for relativePath, text in mapText.items():
+        try:
+            root = ElementTree.fromstring(text)
+        except ElementTree.ParseError:
+            continue
+        for node in root.iter("Redirect"):
+            source, target = node.get("from"), node.get("to")
+            if source and target:
+                mapOldToNew[source] = target
+    return mapOldToNew
+
+
+def collectProblems(listRelativePath: list[str], mapText: dict[str, str], assets: AssetSet, config: FieldConfig, mapRedirect: dict[str, str] | None = None) -> list[str]:
+    """참조 파일들에서 없는 경로와 옮긴 에셋의 옛 id 를 `파일:줄: 칸 = '경로'` 로 모읍니다."""
     listProblem: list[str] = []
+    mapRedirect = mapRedirect or {}
     for relativePath in listRelativePath:
         for reference in extractReferences(relativePath, mapText[relativePath], config):
-            if isChecked(reference, config) and not resolves(reference.path, assets, config):
+            if not isChecked(reference, config):
+                continue
+            if reference.path in mapRedirect:
+                listProblem.append(f"{relativePath}:{reference.line}: {reference.field} = '{reference.path}' 는 옮긴 에셋의 옛 id 다 — '{mapRedirect[reference.path]}' 로 고친다")
+            elif not resolves(reference.path, assets, config):
                 listProblem.append(f"{relativePath}:{reference.line}: {reference.field} = '{reference.path}' 가 없습니다")
     return listProblem
 
@@ -377,7 +409,9 @@ def checkStagedAssetReferences(projectRoot: Path) -> list[str] | None:
     prefix = kContentFolder + "/"
     assets = AssetSet(path[len(prefix):] for path in listIndex if path.startswith(prefix))
     listReferrer = [path for path in listIndex if isReferrer(path, config)]
-    return listMetaProblems(listIndex) + collectProblems(listReferrer, readIndexBlobs(projectRoot, listReferrer), assets, config)
+    listRedirect = [path for path in listIndex if isRedirectTable(path)]
+    mapRedirect = parseRedirects(readIndexBlobs(projectRoot, listRedirect)) if listRedirect else {}
+    return listMetaProblems(listIndex) + collectProblems(listReferrer, readIndexBlobs(projectRoot, listReferrer), assets, config, mapRedirect)
 
 
 def checkWorkingTree(projectRoot: Path) -> list[str]:
@@ -388,7 +422,8 @@ def checkWorkingTree(projectRoot: Path) -> list[str]:
     assets = AssetSet(path[len(prefix):] for path in listIndex if path.startswith(prefix))
     listReferrer = [path for path in listIndex if isReferrer(path, config)]
     mapText = {path: (projectRoot / path).read_text(encoding="utf-8", errors="replace") for path in listReferrer}
-    return listMetaProblems(listIndex) + collectProblems(listReferrer, mapText, assets, config)
+    mapRedirect = parseRedirects({path: (projectRoot / path).read_text(encoding="utf-8", errors="replace") for path in listIndex if isRedirectTable(path)})
+    return listMetaProblems(listIndex) + collectProblems(listReferrer, mapText, assets, config, mapRedirect)
 
 
 def main(argv: list[str] | None = None) -> int:
