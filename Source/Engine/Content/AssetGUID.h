@@ -67,7 +67,7 @@ namespace sw
      * @struct AssetGUIDHeader
      * @brief 우리 형식 XML 글의 GUID 머리(`<?asset guid="…"?>`)를 찾은 결과와, 그 머리의 읽기 · 쓰기입니다. 글만 다루고 파일을 열지 않는다.
      * @details 자리는 하나다 — 맨 앞(BOM · XML 선언 · 공백 뒤)의 첫 처리 지시. 그 밖의 자리에 있거나 둘이면 `Invalid` 다(두 곳에 적힌 정체성을 고르지 않는다).
-     *          파이썬 도구(`Scripts/dev/AssetIdentity.py`)가 같은 규칙으로 읽고 쓴다.
+     *          파이썬 도구(`Scripts/lint/AssetIdentity.py`)가 같은 규칙으로 읽고 쓴다.
      */
     struct SW_API AssetGUIDHeader
     {
