@@ -177,10 +177,10 @@ namespace sw
             StaffLevelUp,        ///< `_id` 는 직원 이름, `_value` 는 새 레벨이다
             IngredientSpoiled    ///< `_id` 는 재료, `_value` 는 개수이다
         };
-        hashed_string _id{};
-        int64         _value{ 0 };
-        int32         _customerID{ constant::invalid_index::kInt32 };
-        Kind          _kind{ Kind::CustomerArrived };
+        hashed_string   _id{};
+        int64           _value{ 0 };
+        optional<int32> _customerID{}; ///< 손님과 상관없는 일(재료 상함 · 직원 레벨 업)은 없음
+        Kind            _kind{ Kind::CustomerArrived };
     };
 } // namespace sw
 
