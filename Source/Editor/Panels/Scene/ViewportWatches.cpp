@@ -44,7 +44,7 @@ namespace sw::editor
             if ( pClient == nullptr )
                 return nullptr;
             const EditorGridStats& stats = pClient->getGridStats();
-            return stats._frame >= 0 && ImGui::GetFrameCount() - stats._frame <= 1 ? &stats : nullptr;
+            return stats._frame.has_value() && ImGui::GetFrameCount() - *stats._frame <= 1 ? &stats : nullptr;
         }
 
         /** @brief 물리 셰이프 시각화가 지난 프레임에 그린 선분 수입니다. 씬 뷰 패널이 없으면 값을 내지 않습니다. */
@@ -70,7 +70,7 @@ namespace sw::editor
             const EditorPlacementStats* pStats = findPlacementStats();
             if ( pStats == nullptr )
                 return false;
-            outValue = pStats->_ghostFrame >= 0 && ImGui::GetFrameCount() - pStats->_ghostFrame <= 1 ? 1.0 : 0.0;
+            outValue = pStats->_ghostFrame.has_value() && ImGui::GetFrameCount() - *pStats->_ghostFrame <= 1 ? 1.0 : 0.0;
             return true;
         }
 

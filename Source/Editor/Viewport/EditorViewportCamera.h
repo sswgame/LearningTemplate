@@ -3,6 +3,7 @@
  * @brief 씬 뷰 카메라의 상태(위치 · 회전 · 궤도 · 직교)와 그 입력(비행 · 궤도 · 북마크 · 초점)입니다.
  */
 #pragma once
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
@@ -37,8 +38,8 @@ namespace sw::editor
         /** @brief 숫자 키 1~9 북마크입니다. Ctrl 과 함께 누르면 저장하고, 수식 키 없이 누르면 불러옵니다. */
         void processBookmarkKeys();
 
-        /** @brief 툴바가 요청한 북마크(@p inoutSlot, 0 이상)를 불러오고 요청을 지웁니다(-1). */
-        void applyBookmarkRequest( int32& inoutSlot );
+        /** @brief 툴바가 요청한 북마크(@p inoutSlot)를 불러오고 요청을 비웁니다. */
+        void applyBookmarkRequest( optional<uint32>& inoutSlot );
         /** @brief 이 카메라 값을 에디터 카메라 컴포넌트에 씁니다. 그 전에 외부가 컴포넌트를 옮겼으면 그 위치를 이어받습니다. */
         void applyToCamera( CameraComponent* pCamera );
 

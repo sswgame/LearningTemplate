@@ -282,10 +282,10 @@ namespace sw::editor
         for ( const ModelImportSection& section : inoutResult._listSection )
         {
             const ToonMaterialDef& toon = inoutResult._listToonMaterial[section._materialIndex];
-            for ( const int32 textureIndex : { toon._baseColorTexture, toon._shadeTexture, toon._emissiveTexture, toon._matcapTexture } )
+            for ( const optional<uint32>& textureIndex : { toon._baseColorTexture, toon._shadeTexture, toon._emissiveTexture, toon._matcapTexture } )
             {
-                if ( 0 <= textureIndex && static_cast<cgltf_size>( textureIndex ) < data.textures_count )
-                    listUsed[static_cast<size_t>( textureIndex )] = SW_TRUE;
+                if ( textureIndex.has_value() && *textureIndex < data.textures_count )
+                    listUsed[*textureIndex] = SW_TRUE;
             }
         }
 

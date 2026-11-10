@@ -5,6 +5,7 @@
  *          카메라 위치를 판정에 넣으면 카메라가 움직일 때 굵은 선이 다른 월드 선으로 미끄러진다.
  */
 #pragma once
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
@@ -75,10 +76,10 @@ namespace sw::editor
      */
     struct EditorGridStats
     {
-        float32 _step{ 0.0f };
-        float3  _cameraPos{};
-        uint32  _majorLineCount{ 0 };
-        uint32  _misplacedMajorCount{ 0 };
-        int32   _frame{ -1 };
+        float32         _step{ 0.0f };
+        float3          _cameraPos{};
+        uint32          _majorLineCount{ 0 };
+        uint32          _misplacedMajorCount{ 0 };
+        optional<int32> _frame; ///< 마지막으로 그린 ImGui 프레임(그린 적 없으면 비어 있다)
     };
 } // namespace sw::editor

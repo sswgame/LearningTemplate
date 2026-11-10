@@ -148,7 +148,7 @@ namespace sw::editor
     RigDebugViewModel::RigDebugViewModel()
         : _status{}
         , _selectedObjectID{ 0 }
-        , _selectedNode{ constant::invalid_index::kInt32 }
+        , _selectedNode{}
     {
     }
 
@@ -164,7 +164,7 @@ namespace sw::editor
         if ( objectID != _selectedObjectID )
         {
             _selectedObjectID = objectID;
-            _selectedNode     = constant::invalid_index::kInt32;
+            _selectedNode     = nullopt;
             targetEdit        = RigTargetEdit{};
         }
         outState._status       = _status;
@@ -209,7 +209,7 @@ namespace sw::editor
             optional<uint32>    bone;
             BoneTransform       combined{};
             const bool          bOwnUnit     = instance.tryGetOwnTargetBinding( targetIndex, bone, combined );
-            const bool          bEditingThis = targetEdit._objectID == objectID && targetEdit._targetIndex == static_cast<int32>( targetIndex );
+            const bool          bEditingThis = targetEdit._objectID == objectID && targetEdit._targetIndex == targetIndex;
             RigDebugTargetRow&  row          = outState._listTarget[targetIndex];
             row._name                        = def._name.c_str();
             row._translation                 = bEditingThis && targetEdit._bPending == SW_TRUE ? targetEdit._pending._translation : def._offset._translation;
@@ -220,7 +220,7 @@ namespace sw::editor
 
     void RigDebugViewModel::toggleNodeSelection( uint32 nodeIndex )
     {
-        _selectedNode = _selectedNode == static_cast<int32>( nodeIndex ) ? constant::invalid_index::kInt32 : static_cast<int32>( nodeIndex );
+        _selectedNode = _selectedNode == nodeIndex ? nullopt : optional<uint32>{ nodeIndex };
     }
 
     void RigDebugViewModel::setNodeWeight( uint32 nodeIndex, float32 weight )
@@ -261,7 +261,7 @@ namespace sw::editor
         RigTargetEdit& targetEdit = RigTargetEdit::get();
         targetEdit                = RigTargetEdit{};
         targetEdit._objectID      = bOn ? _selectedObjectID : 0;
-        targetEdit._targetIndex   = bOn ? static_cast<int32>( targetIndex ) : constant::invalid_index::kInt32;
+        targetEdit._targetIndex   = bOn ? optional<uint32>{ targetIndex } : nullopt;
     }
 
     void RigDebugViewModel::submitBoneMarkers( const float4& color )
@@ -269,11 +269,11 @@ namespace sw::editor
         using Internal                         = RigDebugViewModelInternal;
         const PoseModifierComponent* pModifier = Internal::findModifier( _selectedObjectID );
         const SkeletalMeshComponent* pUnit     = pModifier != nullptr ? Internal::findUnit( *pModifier ) : nullptr;
-        const bool                   bNoTarget = pUnit == nullptr || _selectedNode < 0 || static_cast<uint32>( _selectedNode ) >= pModifier->getRigInstance().getNodeCount();
+        const bool                   bNoTarget = pUnit == nullptr || _selectedNode.has_value() == false || *_selectedNode >= pModifier->getRigInstance().getNodeCount();
         if ( bNoTarget )
             return;
         vector<uint32> listBone;
-        pModifier->getRigInstance().getNode( static_cast<uint32>( _selectedNode ) ).collectWrittenBones( listBone );
+        pModifier->getRigInstance().getNode( *_selectedNode ).collectWrittenBones( listBone );
         const vector<float4x4>& listModel = pUnit->getModelSpaceTransforms();
         const Skeleton&         skeleton  = pUnit->getSkeleton();
         const float4x4          world     = pUnit->getWorldMatrix();

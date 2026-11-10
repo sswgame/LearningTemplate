@@ -22,7 +22,7 @@ namespace sw::editor
     /** @brief 곡선 키 하나입니다. 값을 못 읽은 키는 `_bValid` 가 false 입니다(글 상자로 고치게 둔다). */
     struct CatalogCurveKey
     {
-        int32   _elementIndex{ -1 };
+        int32   _elementIndex; ///< 키 원소 번호(읽을 때 채운다)
         float32 _time{ 0.0f };
         float32 _value{ 0.0f };
         string  _interpolation{};
@@ -37,10 +37,10 @@ namespace sw::editor
     /** @brief 곡선 하나입니다. */
     struct CatalogCurve
     {
-        string                  _label{};   ///< 소유 원소 아래 경로(`VFXEmitterDef(Smoke)/_colorOverLife/_red`)
-        string                  _channel{}; ///< 곡선 원소의 이름(`_red`)
-        int32                   _elementIndex{ -1 };
-        int32                   _parentIndex{ -1 };
+        string                  _label{};      ///< 소유 원소 아래 경로(`VFXEmitterDef(Smoke)/_colorOverLife/_red`)
+        string                  _channel{};    ///< 곡선 원소의 이름(`_red`)
+        int32                   _elementIndex; ///< 곡선 원소 번호(읽을 때 채운다)
+        int32                   _parentIndex;  ///< 곡선을 담은 원소 번호(읽을 때 채운다)
         vector<CatalogCurveKey> _listKey{};
 
         // 곡선 찾기 · 표본 · 키 더하기.

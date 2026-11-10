@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -37,7 +38,7 @@ namespace sw::editor
         MultiplayerConditionsViewModel();
 
         /** @brief 대상 @p targetIndex 의 패널 값을 채웁니다. 세션이 돌지 않거나 대상이 없으면 패널 값을 지우고 `_bActive` 가 거짓입니다. 프리셋 표는 처음 쓸 때 한 번 읽습니다. */
-        void gather( int32 targetIndex, MultiplayerConditionsViewState& outState );
+        void gather( optional<int32> targetIndex, MultiplayerConditionsViewState& outState );
         /** @brief 대상의 패널 값을 둡니다(슬라이더를 끄는 동안 — 보내지 않는다). */
         void setLink( int32 targetIndex, const EditorNetLinkSettings& up, const EditorNetLinkSettings& down );
         /** @brief 대상의 한 방향 패널 값을 그 프로세스(들)에 보냅니다(슬라이더를 놓았을 때). */

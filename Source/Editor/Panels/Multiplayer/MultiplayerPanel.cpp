@@ -44,11 +44,11 @@ namespace sw::editor
         }
     }
 
-    int32 MultiplayerPanel::drawTargetPicker()
+    optional<int32> MultiplayerPanel::drawTargetPicker()
     {
         const int32 processCount = static_cast<int32>( _viewState._listProcess.size() );
         if ( processCount == 0 )
-            return -1; // 안내는 탭마다 제 자리에 있다(Session 의 "No processes" · Conditions · Profiler) — 탭 위에 한 줄 더 두면 같은 말을 두 번 한다
+            return nullopt; // 안내는 탭마다 제 자리에 있다(Session 의 "No processes" · Conditions · Profiler) — 탭 위에 한 줄 더 두면 같은 말을 두 번 한다
         _targetProcessIndex = MathUtil::clamp( _targetProcessIndex, 0, processCount - 1 );
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Target" ) );

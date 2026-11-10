@@ -41,7 +41,7 @@ SW_TEST_CASE( TileSetEditModelTest, NeighborCyclesAndTheRuntimeFollows )
     TileSetEditModel model;
     Util::load( model );
     SW_REQUIRE_TRUE( model.addRule() );
-    SW_EXPECT_EQUAL( 1, model.getSelectedRule() );
+    SW_EXPECT_TRUE( model.getSelectedRule() == 1 );
     SW_REQUIRE_TRUE( model.pickCell( 9, false ) );
     // 아래(이웃 6)를 "다름" 으로 — 두 번 누른다.
     SW_REQUIRE_TRUE( model.cycleNeighbor( 6 ) );

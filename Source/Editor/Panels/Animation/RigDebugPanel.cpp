@@ -62,7 +62,7 @@ namespace sw::editor
             ImGui::TableNextRow();
 
             ImGui::TableNextColumn();
-            const bool bSelected = _viewState._selectedNode == static_cast<int32>( nodeIndex );
+            const bool bSelected = _viewState._selectedNode == nodeIndex;
             if ( ImGui::Selectable( node._name.c_str(), bSelected ) )
                 _viewModel.toggleNodeSelection( nodeIndex );
 

@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
@@ -24,9 +25,6 @@ namespace sw::editor
     class TileSetEditModel
     {
     public:
-        /** @brief 고른 규칙이 없을 때(브러시의 기본 모습을 고친다)의 규칙 번호입니다. */
-        static constexpr int32 kDefaultVisual = -1;
-
         TileSetEditModel();
 
         // ------------------------------------------------------------------------------
@@ -74,9 +72,10 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         // 4) 규칙(규칙 타일)
         // ------------------------------------------------------------------------------
-        int32 getSelectedRule() const { return _selectedRule; }
-        /** @brief 규칙을 고릅니다. `kDefaultVisual` 이면 브러시의 기본 모습입니다. */
-        void selectRule( int32 ruleIndex );
+        /** @brief 고른 규칙 번호입니다. 비어 있으면 브러시의 기본 모습을 고친다. */
+        optional<int32> getSelectedRule() const { return _selectedRule; }
+        /** @brief 규칙을 고릅니다. 비어 있으면 브러시의 기본 모습입니다. */
+        void selectRule( optional<int32> ruleIndex );
         /** @brief 고른 브러시 끝에 규칙(모든 이웃 상관없음, 모습은 기본 모습)을 더하고 고릅니다. 브러시가 없으면 false 입니다. */
         [[nodiscard]] bool addRule();
         /** @brief 고른 규칙을 지웁니다. 규칙이 하나뿐이면 지우지 않고 false 입니다(규칙 없는 규칙 타일은 로드 오류다 — 그냥 타일로 바꾸려면 브러시를 다시 만든다). */
@@ -104,9 +103,9 @@ namespace sw::editor
         void clampSelection();
 
     private:
-        TileSetContent _content;
-        string         _status;
-        int32          _selectedBrush;
-        int32          _selectedRule;
+        TileSetContent  _content;
+        string          _status;
+        int32           _selectedBrush;
+        optional<int32> _selectedRule;
     };
 } // namespace sw::editor
