@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -115,9 +116,9 @@ namespace sw
         BehaviorTaskFunction _function{ nullptr };
         float32              _seconds{ 0.0f };
         float32              _repathDistance{ 0.0f };
-        int32                _parent{ -1 };
-        int32                _firstChild{ -1 };
-        int32                _nextSibling{ -1 };
+        optional<int32>      _parent{};      ///< 루트는 비어 있다
+        optional<int32>      _firstChild{};  ///< 잎은 비어 있다
+        optional<int32>      _nextSibling{}; ///< 마지막 형제는 비어 있다
         int32                _count{ 0 };
         BehaviorNodeKind     _type{ BehaviorNodeKind::Sequence };
         BehaviorAbortMode    _abortMode{ BehaviorAbortMode::None };
@@ -131,13 +132,13 @@ namespace sw
      * @class BehaviorTree
      * @brief 트리 정의입니다. 여러 행위자가 같은 트리를 나눠 쓰고, 상태는 `BehaviorTreeRunner` 가 행위자마다 보관합니다.
      * @details 언리얼의 BT 에셋과 인스턴스의 관계와 같다.
-     *          부모를 -1 로 더한 첫 노드가 루트이다.
+     *          부모 없이(`nullopt`) 더한 첫 노드가 루트이다. 더하기는 새 노드 번호이고, 루트가 둘이거나 부모가 없는 번호이면 그 이유다.
      *          함수 포인터는 게임 모듈의 것이므로 핫 리로드 뒤에는 트리를 다시 만들어야 한다.
      * @code
-     *     const int32 root  = tree.addSelector( -1, "Root" );
-     *     const int32 fight = tree.addBlackboardCondition( root, "Target", BlackboardCompare::IsSet, 0.0f, BehaviorAbortMode::Both );
-     *     tree.addAction( fight, "Attack", &attackTarget );
-     *     tree.addAction( root, "Wander", &wander );
+     *     const int32 root  = tree.addSelector( nullopt, "Root" ).value();
+     *     const int32 fight = tree.addBlackboardCondition( root, "Target", BlackboardCompare::IsSet, 0.0f, BehaviorAbortMode::Both ).value();
+     *     (void)tree.addAction( fight, "Attack", &attackTarget );
+     *     (void)tree.addAction( root, "Wander", &wander );
      * @endcode
      */
     class SW_GF_API BehaviorTree
@@ -145,34 +146,34 @@ namespace sw
     public:
         BehaviorTree();
 
-        int32 addSelector( int32 parent, const utf8* pName = "Selector", bool bReactive = false );
-        int32 addSequence( int32 parent, const utf8* pName = "Sequence" );
-        int32 addInverter( int32 parent );
-        int32 addForceSuccess( int32 parent );
+        [[nodiscard]] expected<int32> addSelector( optional<int32> parent, const utf8* pName = "Selector", bool bReactive = false );
+        [[nodiscard]] expected<int32> addSequence( optional<int32> parent, const utf8* pName = "Sequence" );
+        [[nodiscard]] expected<int32> addInverter( optional<int32> parent );
+        [[nodiscard]] expected<int32> addForceSuccess( optional<int32> parent );
         /** @brief 자식을 @p count 번 되풀이합니다. 0 이면 자식이 실패할 때까지 되풀이합니다. */
-        int32 addRepeat( int32 parent, int32 count );
-        int32 addCooldown( int32 parent, float32 seconds );
-        int32 addTimeLimit( int32 parent, float32 seconds );
-        int32 addBlackboardCondition( int32 parent, const hashed_string& key, BlackboardCompare compare, float32 value = 0.0f,
-                                      BehaviorAbortMode abortMode = BehaviorAbortMode::None );
+        [[nodiscard]] expected<int32> addRepeat( optional<int32> parent, int32 count );
+        [[nodiscard]] expected<int32> addCooldown( optional<int32> parent, float32 seconds );
+        [[nodiscard]] expected<int32> addTimeLimit( optional<int32> parent, float32 seconds );
+        [[nodiscard]] expected<int32> addBlackboardCondition( optional<int32> parent, const hashed_string& key, BlackboardCompare compare, float32 value = 0.0f,
+                                                              BehaviorAbortMode abortMode = BehaviorAbortMode::None );
         /** @brief 식 @p condition 이 참일 때만 자식을 돌리는 데코레이터입니다. 데이터의 `<BlackboardCondition test="…">` 가 부릅니다. */
-        int32 addConditionDecorator( int32 parent, const utf8* pName, const ConditionExpr& condition, BehaviorAbortMode abortMode = BehaviorAbortMode::None );
-        int32 addAction( int32 parent, const utf8* pName, BehaviorTaskFunction function );
+        [[nodiscard]] expected<int32> addConditionDecorator( optional<int32> parent, const utf8* pName, const ConditionExpr& condition, BehaviorAbortMode abortMode = BehaviorAbortMode::None );
+        [[nodiscard]] expected<int32> addAction( optional<int32> parent, const utf8* pName, BehaviorTaskFunction function );
         /** @brief 등록된 동작을 부르는 작업입니다. */
-        int32 addAction( int32 parent, const utf8* pName, const GameActionCall& action );
-        int32 addCondition( int32 parent, const utf8* pName, BehaviorTaskFunction function );
+        [[nodiscard]] expected<int32> addAction( optional<int32> parent, const utf8* pName, const GameActionCall& action );
+        [[nodiscard]] expected<int32> addCondition( optional<int32> parent, const utf8* pName, BehaviorTaskFunction function );
         /** @brief 식을 평가하는 조건 잎입니다. */
-        int32 addCondition( int32 parent, const utf8* pName, const ConditionExpr& condition );
+        [[nodiscard]] expected<int32> addCondition( optional<int32> parent, const utf8* pName, const ConditionExpr& condition );
         /** @brief 쓰는 쪽이 채우는 하위 트리 자리입니다(`BehaviorTreeRunner::setSlotTree`). 비어 있으면 실패합니다. */
-        int32 addSubTreeSlot( int32 parent, const utf8* pName, const hashed_string& slot );
-        int32 addWait( int32 parent, float32 seconds );
+        [[nodiscard]] expected<int32> addSubTreeSlot( optional<int32> parent, const utf8* pName, const hashed_string& slot );
+        [[nodiscard]] expected<int32> addWait( optional<int32> parent, float32 seconds );
         /**
          * @brief 블랙보드 벡터 @p destinationKey 로 가는 이동 노드를 더합니다. 언리얼 `BTTask_MoveTo`(블랙보드 키 + 관찰)에 해당합니다.
          * @details 러너의 `INavMover`(내비메시 에이전트든 격자 행위자든)에 목적지를 요청한다. 닿으면 성공, 경로가 없거나 멈추면 실패이고, 가는 동안은 Running 이다.
          *          도는 동안 블랙보드 값이 @p repathDistance 미터보다 멀리 바뀌면 새 목적지를 다시 요청한다(쫓기). 중단되면 이동을 멈춘다.
          *          키가 비었거나 러너에 이동 인터페이스가 없으면 실패한다.
          */
-        int32 addMoveTo( int32 parent, const hashed_string& destinationKey, float32 repathDistance = 0.5f );
+        [[nodiscard]] expected<int32> addMoveTo( optional<int32> parent, const hashed_string& destinationKey, float32 repathDistance = 0.5f );
 
         /** @brief 트리가 올바르면 true 입니다. 루트가 있고, 데코레이터는 자식이 꼭 하나, 컴포짓은 하나 이상, 작업과 조건은 함수가 있어야 합니다. */
         bool                isValid() const;
@@ -183,7 +184,7 @@ namespace sw
         static bool evaluateCondition( const BehaviorNode& node, const GameplayContext& context );
 
     private:
-        int32 addNode( int32 parent, BehaviorNodeKind type, const utf8* pName );
+        [[nodiscard]] expected<int32> addNode( optional<int32> parent, BehaviorNodeKind type, const utf8* pName );
 
     private:
         vector<BehaviorNode> _listNode;
@@ -218,8 +219,8 @@ namespace sw
         /** @brief 도는 작업을 모두 중단하고 처음 상태로 돌립니다. */
         void reset();
 
-        /** @brief 도는 중(Running)인 잎 노드입니다. 없으면 -1 입니다. */
-        int32 getActiveLeaf() const { return _activeLeaf; }
+        /** @brief 도는 중(Running)인 잎 노드입니다. 없으면 비어 있습니다. */
+        optional<int32> getActiveLeaf() const { return _activeLeaf; }
         /**
          * @brief 지난 틱이 머문 잎 노드의 이름입니다. 도는 잎이 있으면 그것, 없으면 그 틱에 마지막으로 성공한 작업입니다. 둘 다 없으면 빈 문자열입니다.
          * @details 한 틱에 끝나는 작업만 있는 트리(경제 AI 처럼 작업마다 성공 강제)는 도는 잎이 늘 없다. 그때 "이번 틱에 실제로 한 일" 을 보여 준다.
@@ -238,8 +239,8 @@ namespace sw
          * @details 반응형이면 매 틱 앞 자식부터 봅니다. 앞 자식이 실패하지 않으면 돌던 뒤 자식을 중단하고 그쪽으로 커서를 옮깁니다.
          */
         BehaviorStatus tickSelector( const BehaviorNode& node, int32& inoutCursor );
-        /** @brief @p node 의 @p order 번째 자식 노드 번호입니다. 자식이 모자라면 -1 입니다. */
-        int32 findChild( const BehaviorNode& node, int32 order ) const;
+        /** @brief @p node 의 @p order 번째 자식 노드 번호입니다. 자식이 모자라면 비어 있습니다. */
+        optional<int32> findChild( const BehaviorNode& node, int32 order ) const;
         /** @brief 작업 잎 하나를 부릅니다(코드 함수 또는 등록된 동작). */
         BehaviorStatus runAction( const BehaviorNode& node, int32 index, bool bJustStarted );
         /** @brief 슬롯 @p slot 의 러너입니다. 비어 있으면 nullptr 입니다. */
@@ -275,7 +276,7 @@ namespace sw
         vector<float3>      _listMoveTarget;    ///< 이동 노드가 마지막으로 요청한 목적지
         float32             _elapsedTime;
         int32               _tickCount; ///< 확률 조건의 씨앗
-        int32               _activeLeaf;
-        int32               _lastSucceededLeaf; ///< 이번 틱에 마지막으로 성공한 작업. 도는 잎이 없을 때 `getActiveLeafName` 이 쓴다
+        optional<int32>     _activeLeaf;
+        optional<int32>     _lastSucceededLeaf; ///< 이번 틱에 마지막으로 성공한 작업. 도는 잎이 없을 때 `getActiveLeafName` 이 쓴다
     };
 } // namespace sw

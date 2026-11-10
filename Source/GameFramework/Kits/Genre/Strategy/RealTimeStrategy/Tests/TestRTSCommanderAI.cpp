@@ -73,7 +73,7 @@ namespace
         void start( BehaviorTaskFunction function, int32 player = 0 )
         {
             BehaviorTree tree;
-            const int32  root = tree.addSequence( -1, "Root" );
+            const int32  root = tree.addSequence( nullopt, "Root" ).value();
             (void)tree.addAction( root, "Task", function );
             _ai.initialize( &_world, player, _settings, tree );
         }
@@ -84,7 +84,7 @@ namespace
             GameActionCall call;
             SW_REQUIRE_TRUE( GameActionCall::compileText( pAction, "RTSCommanderAITest", call ) );
             BehaviorTree tree;
-            const int32  root = tree.addSequence( -1, "Root" );
+            const int32  root = tree.addSequence( nullopt, "Root" ).value();
             (void)tree.addAction( root, "Task", call );
             _ai.initialize( &_world, player, _settings, tree );
         }
