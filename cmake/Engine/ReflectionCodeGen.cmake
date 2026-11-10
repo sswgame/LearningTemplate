@@ -220,8 +220,41 @@ function(sw_claimReflectionStem STEM TARGET_NAME HEADER)
 	endif()
 endfunction()
 
-# 헤더마다의 생성 파일을 OUT_FILES(전부) · OUT_CPP_FILES(.gen.cpp) · OUT_META_FILES(.gen.meta.cpp — 개발 전용 에디터 메타데이터) 에 담고,
-# 없는 것은 자리 표시자를 심는다 — target_sources 가 구성 때 붙일 파일이 있어야 한다.
+# 생성 TU 묶음 하나에 넣는 헤더 수(NEXT 5-4 W-R5). 헤더당 TU 하나면 PCH 를 헤더 수만큼 열고 같은 템플릿을 TU 마다 인스턴스화한다 —
+# 생성 TU 가 Debug 컴파일 CPU 의 약 30 % 였다(BuildTimeReport.py). 언리얼 UHT 가 모듈의 .gen.cpp 를 Module.<이름>.N.cpp 묶음으로 짓는 자리와 같다.
+# 크게 잡을수록 TU 수가 줄지만 한 헤더 변경이 다시 짓는 양이 는다 — 8~16 의 가운데.
+set(SW_REFLECTION_BUNDLE_SIZE 12)
+
+# @p FILES 를 SW_REFLECTION_BUNDLE_SIZE 개씩 묶은 TU(`<OUTPUT_DIR>/<PREFIX><번호>.cpp`, 생성 파일을 #include 만 한다)를 구성 때 쓰고 OUT_BUNDLES 에 담는다.
+# 묶음은 자기가 include 하는 생성 파일에 기대 다시 지어진다(OBJECT_DEPENDS — 첫 빌드에도 생성이 먼저 돈다). 남는 옛 묶음 파일은 소스에 들지 않아 무해하다.
+function(sw_writeReflectionBundles OUT_BUNDLES OUTPUT_DIR PREFIX)
+	set(listBundle "")
+	set(listMember "")
+	set(bundleCount 0)
+	list(LENGTH ARGN fileCount)
+	set(fileIndex 0)
+	foreach(genFile IN LISTS ARGN)
+		list(APPEND listMember "${genFile}")
+		math(EXPR fileIndex "${fileIndex} + 1")
+		list(LENGTH listMember memberCount)
+		if(memberCount EQUAL SW_REFLECTION_BUNDLE_SIZE OR fileIndex EQUAL fileCount)
+			set(bundleFile "${OUTPUT_DIR}/${PREFIX}${bundleCount}.cpp")
+			set(bundleText "// AUTO-GENERATED -- reflection bundle (cmake/Engine/ReflectionCodeGen.cmake)")
+			foreach(member IN LISTS listMember)
+				string(APPEND bundleText "\n#include \"${member}\"")
+			endforeach()
+			sw_writeIfChanged("${bundleFile}" "${bundleText}")
+			set_source_files_properties("${bundleFile}" PROPERTIES OBJECT_DEPENDS "${listMember}")
+			list(APPEND listBundle "${bundleFile}")
+			math(EXPR bundleCount "${bundleCount} + 1")
+			set(listMember "")
+		endif()
+	endforeach()
+	set(${OUT_BUNDLES} ${listBundle} PARENT_SCOPE)
+endfunction()
+
+# 헤더마다의 생성 파일을 OUT_FILES(전부) 에 담고, 컴파일할 묶음 TU 를 OUT_CPP_FILES(.gen.cpp 묶음) · OUT_META_FILES(.gen.meta.cpp 묶음 — 개발 전용 에디터 메타데이터) 에 담는다.
+# 없는 생성 파일은 자리 표시자를 심는다 — 묶음이 구성 때 include 할 파일이 있어야 한다.
 function(sw_planReflectionOutputs OUT_FILES OUT_CPP_FILES OUT_META_FILES TARGET_NAME OUTPUT_DIR)
 	set(listFile "")
 	set(listCpp "")
@@ -244,9 +277,11 @@ function(sw_planReflectionOutputs OUT_FILES OUT_CPP_FILES OUT_META_FILES TARGET_
 			file(REMOVE "${genFile}${SW_EXT_REFLECTION_STAMP}")
 		endif()
 	endforeach()
+	sw_writeReflectionBundles(listCppBundle "${OUTPUT_DIR}" "ReflectionBundle." ${listCpp})
+	sw_writeReflectionBundles(listMetaBundle "${OUTPUT_DIR}" "ReflectionMetaBundle." ${listMeta})
 	set(${OUT_FILES} ${listFile} PARENT_SCOPE)
-	set(${OUT_CPP_FILES} ${listCpp} PARENT_SCOPE)
-	set(${OUT_META_FILES} ${listMeta} PARENT_SCOPE)
+	set(${OUT_CPP_FILES} ${listCppBundle} PARENT_SCOPE)
+	set(${OUT_META_FILES} ${listMetaBundle} PARENT_SCOPE)
 endfunction()
 
 # 자동 훑기는 구성 때 굳는다. 매크로가 없던 헤더가 바뀌면 그것만 다시 읽어 매크로가 생겼는지 본다(바뀐 헤더가 없으면 돌지 않는다).
