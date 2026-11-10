@@ -157,7 +157,7 @@ namespace sw
         string                       _assetType;
         string                       _repNotify;     ///< `RepNotify = fn` — 같은 타입의 메서드 이름(모양은 `validateMemberFunctions` 가 본다)
         string                       _validate;      ///< `Validate = fn` — 같은 타입의 `void fn( ValidationContext& )`
-        string                       _editCondition; ///< `EditCondition = "…"` — 식은 편집기 인스펙터(`PropertyEditConditionExpr`)가 푼다
+        string                       _editCondition; ///< `EditCondition = "…"` — 생성기가 컴파일된 판정(`PropertyMetadata::_pEditCondition`)으로 낸다
         string                       _fileFilter;    ///< `FileFilter = "*.png;*.dds"`
         string                       _units;         ///< `Units = m` — 단위 표(`ReflectionUnits.h`)에 있어야 한다. 커스텀 메타 `Units` 로 실린다
         vector<pair<string, string>> _listCustomMeta;
@@ -199,7 +199,11 @@ namespace sw
         /** @brief 데이터 파일이 반드시 적어야 하는 칸입니다(PROPERTY(Required)). */
         uint8 _bRequired : 1;
         /** @brief 목록 원소의 열쇠 칸입니다(PROPERTY(InheritKey), DataInheritance). */
-        uint8 _bInheritKey      : 1;
+        uint8 _bInheritKey : 1;
+        /** @brief 부모가 없는 원소만 반드시 적는 칸입니다(PROPERTY(RequiredAtRoot)). */
+        uint8 _bRequiredAtRoot : 1;
+        /** @brief 부모 원소를 가리키는 칸입니다(PROPERTY(InheritParent)). */
+        uint8 _bInheritParent   : 1;
         uint8 _bHideInInspector : 1;
         /**
          * @brief 값이 객체 밖에 있습니다 — `PROPERTY` 가 필드가 아니라 값 참조(`T&`)를 돌려주는 인자 없는 메서드에 붙었습니다.
@@ -269,6 +273,8 @@ namespace sw
             , _bSkipIfEmpty{ SW_FALSE }
             , _bRequired{ SW_FALSE }
             , _bInheritKey{ SW_FALSE }
+            , _bRequiredAtRoot{ SW_FALSE }
+            , _bInheritParent{ SW_FALSE }
             , _bHideInInspector{ SW_FALSE }
             , _bIsAccessor{ SW_FALSE }
             , _bReplicated{ SW_FALSE }

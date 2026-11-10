@@ -44,11 +44,13 @@ namespace sw
     PropertyMetadata::PropertyMetadata() noexcept
         : _pEditor{ nullptr }
         , _defaultValue{}
+        , _pApplyDefault{ nullptr }
         , _assetType{}
         , _repNotify{}
         , _validate{}
         , _pReadMinRange{ nullptr }
         , _pReadMaxRange{ nullptr }
+        , _pEditCondition{ nullptr }
         , _minRange{ 0.0f }
         , _maxRange{ 1.0f }
         , _maxCount{ 0 }
@@ -67,7 +69,8 @@ namespace sw
         , _bSaveGame{ SW_FALSE }
         , _bInterp{ SW_FALSE }
         , _bRuntimeState{ SW_FALSE }
-        , _reservedRoles{ 0 }
+        , _bRequiredAtRoot{ SW_FALSE }
+        , _bInheritParent{ SW_FALSE }
     {
     }
 

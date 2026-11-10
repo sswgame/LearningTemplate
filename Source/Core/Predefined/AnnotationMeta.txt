@@ -59,6 +59,10 @@ flag.SkipIfEmpty = SkipIfEmpty, skipIfEmpty
 flag.Required = Required, required
 # 이 칸이 목록 원소의 열쇠다 — 부모를 가리키는 데이터(`_base`)가 목록을 이 칸의 값으로 합친다(DataInheritance)
 flag.InheritKey = InheritKey, inheritKey
+# 부모가 없는 원소만 이 칸을 반드시 적는다 — 부모를 가리키는 칸(InheritParent)이 적힌 원소는 부모의 값을 물려받는다
+flag.RequiredAtRoot = RequiredAtRoot, requiredAtRoot
+# 이 칸이 부모 원소를 가리킨다 — 적혀 있으면 RequiredAtRoot 칸은 물려받은 값으로 채워진 것이다
+flag.InheritParent = InheritParent, inheritParent
 flag.HideInInspector = HideInInspector, hideInInspector, HiddenInInspector, EditorHidden
 # 여러 개면 Alias="hp, HitPoints" (따옴표가 필요하다. 그래야 콤마가 토큰 구분자로 읽히지 않는다)
 string.Alias = Alias

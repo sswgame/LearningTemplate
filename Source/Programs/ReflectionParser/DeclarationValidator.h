@@ -26,7 +26,8 @@ namespace sw
 
         /**
          * @brief 뜻이 모순인 프로퍼티 플래그 조합을 멈춥니다.
-         * @details `RuntimeState` 는 저작 저장만 빼고 스냅샷 · 세이브에는 쓰는 필드다. `Transient`(어디에도 쓰지 않는다)와 함께면 어느 쪽이 이기는지
+         * @details 기본값은 컨테이너에 둘 수 없고, 기반이 없는 타입의 `EditCondition` 은 그 타입의 프로퍼티를 가리켜야 한다.
+         *          `RuntimeState` 는 저작 저장만 빼고 스냅샷 · 세이브에는 쓰는 필드다. `Transient`(어디에도 쓰지 않는다)와 함께면 어느 쪽이 이기는지
          *          선언만 보고 알 수 없고, `Required`(데이터 파일이 반드시 적는다)와 함께면 저작 파일이 쓰지 않는 칸을 필수로 요구한다.
          */
         [[nodiscard]] static bool validatePropertyFlags( const ParsedTypeInfo& type );
@@ -48,8 +49,7 @@ namespace sw
         /**
          * @brief 표시 메타를 검사하고 정리합니다 — `Units` 는 단위 표에 있어야 하고(커스텀 메타 `Units` 로 싣는다), 표에 있는 단위를 `Meta = "Units=…"` 로
          *        적으면 거절하고, `EditCondition` 은 네 꼴 중 하나여야 하며, C 고정 배열의 원소는 컨테이너일 수 없습니다.
-         * @details 조건식이 가리키는 이름은 기반 클래스의 것일 수 있어 여기서는 꼴만 본다 — 이름은 등록된 뒤 `PropertyEditConditionExpr::parse` 가 보고,
-         *          `ReflectionDisplayMetaTest.EveryEditConditionResolves` 가 모든 타입을 대조한다.
+         * @details 여기서는 꼴만 본다. 이름은 `validatePropertyFlags`(기반이 없는 타입)와 생성된 판정 `PropertyMetadata::_pEditCondition` 의 컴파일이 본다.
          */
         [[nodiscard]] static bool applyDisplayMeta( ParsedPropertyInfo& prop, CXType fieldType, string_view owner );
 
@@ -86,5 +86,9 @@ namespace sw
         static bool isIdentifier( string_view text ) noexcept;
         /** @brief `name` · `!name` · `name == Value` · `name != Value` 꼴인지 봅니다(값은 식별자 · 정수 · `Enum::Value`). */
         static bool isEditConditionWellFormed( string_view text );
+        /** @brief 조건식이 보는 이름이 @p type 이 선언한 프로퍼티(C++ 이름)인지 봅니다. */
+        static bool hasEditConditionSubject( const ParsedTypeInfo& type, string_view text );
+        /** @brief @p type 이 부모를 가리키는 칸(`InheritParent`)을 선언했는지 봅니다. */
+        static bool hasInheritParent( const ParsedTypeInfo& type );
     };
 } // namespace sw

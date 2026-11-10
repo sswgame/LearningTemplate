@@ -146,7 +146,7 @@ namespace sw
                         bMatched = uniqueMatchedPropHashes.find( listProp[propIdx].getNameHash() ) != uniqueMatchedPropHashes.end();
                     const bool bOutsidePurpose = SerializerUtil::shouldSerializeProperty( typeInfo, listProp[propIdx], context ) == false;
                     if ( bMatched == false && bOutsidePurpose == false )
-                        SerializerUtil::applyPropertyDefault( listProp[propIdx], MutableObjectAddress{ pInstance }, context );
+                        SerializerUtil::applyPropertyDefault( listProp[propIdx], MutableObjectAddress{ pInstance } );
                 }
             }
 

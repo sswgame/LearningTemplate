@@ -3,6 +3,12 @@
     "_types": ["string", "hashed_string", "DataPath", "AssetID", "TagID", "vector<string>", "vector<hashed_string>", "vector<DataPath>"],
     "_typePrefixes": ["AssetRef<"],
     "_exceptions": {
+        "Source/Engine/Localization/CultureInfo.h::CultureInfo::_numberingSystem": "(1) 표 <numberingSystems> 의 id — 뿌리 문화권은 RequiredAtRoot 로 반드시 적고 모르는 id 는 로드 오류. 기본 latn 은 표 없이 만드는 불변 문화권(CultureInfo{} — .NET InvariantCulture 자리, LocalizationManager 가 문화권을 못 찾을 때 · LocText 가 쓴다)의 값",
+        "Source/Engine/Localization/CultureInfo.h::CultureInfo::_decimalSeparator": "(2) 다른 데이터를 가리키지 않는 자기 값(구분 기호) — 표 없이 만드는 불변 문화권(CultureInfo{} — .NET InvariantCulture 자리, LocalizationManager 가 문화권을 못 찾을 때 · LocText 가 쓴다)의 값",
+        "Source/Engine/Localization/CultureInfo.h::CultureInfo::_groupSeparator": "(2) 자기 값(구분 기호) — 표 없이 만드는 불변 문화권(CultureInfo{} — .NET InvariantCulture 자리, LocalizationManager 가 문화권을 못 찾을 때 · LocText 가 쓴다)의 값",
+        "Source/Engine/Localization/CultureInfo.h::CultureInfo::_percentPattern": "(2) 자기 값(패턴) — 표 없이 만드는 불변 문화권(CultureInfo{} — .NET InvariantCulture 자리, LocalizationManager 가 문화권을 못 찾을 때 · LocText 가 쓴다)의 값",
+        "Source/Engine/Localization/CultureInfo.h::CultureInfo::_currencyCode": "(2) 자기 값(ISO 4217 코드, 표에 없으면 코드를 기호 자리에 쓴다) — 표 없이 만드는 불변 문화권(CultureInfo{} — .NET InvariantCulture 자리, LocalizationManager 가 문화권을 못 찾을 때 · LocText 가 쓴다)의 값",
+        "Source/Engine/Localization/CultureInfo.h::CultureInfo::_currencyPattern": "(2) 자기 값(패턴) — 표 없이 만드는 불변 문화권(CultureInfo{} — .NET InvariantCulture 자리, LocalizationManager 가 문화권을 못 찾을 때 · LocText 가 쓴다)의 값",
         "Source/Engine/Physics/Component/RigidBodyComponent.h::RigidBodyComponent::_layer": "(1) 엔진 물리 설정(Content/engine/physics/physicssettings.xml)의 기본 층 — 유니티 Default 층과 같다. 모르는 이름은 Validate 와 ScenePhysics.UnknownPhysicsLayerUsing 오류",
         "Source/Engine/Physics/Component/RigidBody2DComponent.h::RigidBody2DComponent::_layer": "(1) 엔진 물리 설정의 기본 층(Default). 모르는 이름은 Validate · ScenePhysics.UnknownPhysicsLayerUsing",
         "Source/Engine/Physics/Component/CharacterControllerComponent.h::CharacterControllerComponent::_layer": "(1) 엔진 물리 설정의 캐릭터 층(Character). 모르는 이름은 Validate · ScenePhysics.UnknownPhysicsLayerUsing",

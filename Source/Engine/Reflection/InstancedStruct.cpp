@@ -152,7 +152,7 @@ namespace sw
             if ( listWritten[index] != 0 )
                 SerializerUtil::collectPropertyRangeErrors( listProperty[index], ObjectAddress{ pInstance }, string(), listRangeError );
             // 판정은 직렬화기 · XMLFields 와 한 함수다 — 빠졌거나, 이름 · 경로 형식인데 빈 글이다.
-            if ( SerializerUtil::isRequiredValueMissing( listProperty[index], listWritten[index] != 0, listWritten[index] != 0 ? &listWrittenText[index] : nullptr ) )
+            if ( SerializerUtil::isRequiredValueMissing( listProperty[index], listWritten[index] != 0, listWritten[index] != 0 ? &listWrittenText[index] : nullptr, RequiredScope::Root ) )
                 return unexpected( Error{ ErrorKind::InvalidArgument, "a required field is missing", typeInfo._name.c_str() }.appendDetail( "." ).appendDetail( XMLFields::getAttributeName( listProperty[index] ).c_str() ) );
         }
         if ( listRangeError.empty() == false )

@@ -86,6 +86,70 @@ namespace sw
                             pMemberName, bNegate ? "-" : "", typeInfo._fullyQualifiedName, pField->_memberName, pCall );
             }
 
+            /** @brief 이 타입이 선언한 프로퍼티 중 C++ 이름이 @p name 인 것입니다. 없으면(기반의 이름 포함) nullptr 입니다. */
+            static const ParsedPropertyInfo* findOwnProperty( const ParsedTypeInfo& typeInfo, const string_view name )
+            {
+                for ( const ParsedPropertyInfo& candidate : typeInfo._listProperty )
+                {
+                    if ( string_view( candidate._memberName ) == name )
+                        return &candidate;
+                }
+                return nullptr;
+            }
+
+            /** @brief 인스턴스 `o` 에서 그 이름의 값을 읽는 C++ 식입니다. 이 타입의 접근자 프로퍼티면 메서드를 부르고, 기반의 이름은 필드로 읽는다(틀리면 컴파일 오류). */
+            static string makeMemberRead( const ParsedTypeInfo& typeInfo, const string_view name )
+            {
+                const ParsedPropertyInfo* pOwn  = findOwnProperty( typeInfo, name );
+                const bool                bCall = pOwn != nullptr && pOwn->_bIsAccessor == SW_TRUE;
+                return "o." + string( name ) + ( bCall ? "()" : "" );
+            }
+
+            /**
+             * @brief `Default = "…"` 를 그 프로퍼티 타입의 C++ 리터럴로 바꿉니다 — 문자열은 따옴표, 열거는 `::열거형::이름`, 나머지는 적은 식 그대로.
+             * @details 대입문으로 나가므로 오타 · 타입이 맞지 않는 기본값은 생성된 코드의 컴파일 오류다(글을 로드 때 읽다 경고하던 길을 없앤다).
+             */
+            static string makeDefaultLiteral( const ParsedPropertyInfo& prop )
+            {
+                const string_view    text = StringUtil::trim( prop._defaultValue );
+                const FixedValueKind kind = prop._fixedType != nullptr ? prop._fixedType->_kind : FixedValueKind::Ineligible;
+                if ( kind == FixedValueKind::String )
+                    return CodeEmit::quoted( text );
+                const bool bBareEnumerator = kind == FixedValueKind::Enum && prop._fixedType->_enum != nullptr && text.find( "::" ) == string_view::npos &&
+                                             ( text.empty() == false && ( text.front() < '0' || text.front() > '9' ) && text.front() != '-' );
+                if ( bBareEnumerator )
+                    return "::" + prop._fixedType->_enum->_fullyQualifiedName + "::" + string( text );
+                return string( text );
+            }
+
+            /**
+             * @brief `EditCondition` 식(꼴은 `DeclarationValidator::isEditConditionWellFormed` 가 봤다)을 인스턴스 `o` 에 대한 C++ bool 식으로 바꿉니다.
+             * @details 열거자는 그 칸의 타입으로 한정한다(`decltype`) — 없는 이름 · 없는 열거자는 생성된 코드의 컴파일 오류다.
+             *          언리얼 `EditCondition` 은 글을 에디터가 런타임에 풀어 틀린 이름이 조용히 무시된다.
+             */
+            static string makeEditConditionExpr( const ParsedTypeInfo& typeInfo, const string_view rawText )
+            {
+                const string_view text  = StringUtil::trim( rawText );
+                const size_t      eqPos = text.find( "==" );
+                const size_t      nePos = text.find( "!=" );
+                if ( eqPos == string_view::npos && nePos == string_view::npos )
+                {
+                    const bool        bNegate = text.front() == '!';
+                    const string_view name    = StringUtil::trim( bNegate ? text.substr( 1 ) : text );
+                    return string( bNegate ? "!" : "" ) + "static_cast<bool>( " + makeMemberRead( typeInfo, name ) + " )";
+                }
+                const size_t      opPos = eqPos != string_view::npos ? eqPos : nePos;
+                const string      read  = makeMemberRead( typeInfo, StringUtil::trim( text.substr( 0, opPos ) ) );
+                const string_view op    = text.substr( opPos, 2 );
+                string_view       value = StringUtil::trim( text.substr( opPos + 2 ) );
+                int64             number{ 0 };
+                if ( StringUtil::parseInt64( value, number ) )
+                    return "static_cast<::sw::int64>( " + read + " ) " + string( op ) + " " + string( value );
+                // 한정해 적어도(`Mode::Orbit`) 끝 이름을 칸의 타입으로 다시 한정한다 — 적은 한정자가 다른 열거형이어도 칸과 맞춘다.
+                value = ParserUtil::scopeLeaf( value );
+                return read + " " + string( op ) + " ::std::decay_t<decltype( " + read + " )>::" + string( value );
+            }
+
             /**
              * @brief 열거형 전체 FQN(예: "sw::EState::Idle")에서 말단 열거자 이름("Idle")을 추출합니다.
              */
@@ -393,6 +457,14 @@ namespace sw
         // 숫자가 아닌 경계 중 이 타입의 필드 하나를 가리키는 것은 인스턴스에서 읽는 함수로 낸다(인스펙터와 읽기 공통 끝이 그 값으로 막는다).
         CodeGeneratorInternal::emitRangeReader( emit, typeInfo, prop._minRangeExpr._text, "_pReadMinRange" );
         CodeGeneratorInternal::emitRangeReader( emit, typeInfo, prop._maxRangeExpr._text, "_pReadMaxRange" );
+        // 기본값 · 편집 조건은 글이 아니라 컴파일된 대입 · 판정이다 — 이름 · 철자가 틀리면 이 줄이 컴파일되지 않는다.
+        // 이 함수는 `Registrar<T>`(모든 REFLECT 타입의 친구) 안에서 나가므로 기반의 비공개 칸도 읽는다.
+        if ( prop._defaultValue.empty() == false )
+            emit.linef( "p._metadata->_pApplyDefault = []( void* pInstance ) { static_cast<%#*>( pInstance )->%#%# = %#; };", typeInfo._fullyQualifiedName, prop._memberName,
+                        prop._bIsAccessor == SW_TRUE ? "()" : "", CodeGeneratorInternal::makeDefaultLiteral( prop ) );
+        if ( prop._editCondition.empty() == false )
+            emit.linef( "p._metadata->_pEditCondition = []( const void* pInstance ) -> bool { const %#& o = *static_cast<const %#*>( pInstance ); return %#; };",
+                        typeInfo._fullyQualifiedName, typeInfo._fullyQualifiedName, CodeGeneratorInternal::makeEditConditionExpr( typeInfo, prop._editCondition ) );
         // 슬라이더 범위는 에디터 메타데이터다 — 개발 전용 단위가 낸다(`emitPropertyEditorMetadata`).
     }
 

@@ -153,14 +153,19 @@ namespace sw
             }
         }
 
-        // 2) 필수 칸이 빠졌는지 본다. 초기값은 형식일 뿐이라 대신 쓰지 않는다.
+        // 2) 필수 칸이 빠졌는지 본다. 초기값은 형식일 뿐이라 대신 쓰지 않는다. 부모를 가리키는 원소는 `RequiredAtRoot` 칸을 물려받는다.
+        const RequiredScope scope = SerializerUtil::findRequiredScope( listProperty, [&node, &listAttributeName]( const size_t propIndex )
+        {
+            const utf8* const pText = node.findAttribute( listAttributeName[propIndex].c_str() );
+            return pText != nullptr ? string_view( pText ) : string_view{};
+        } );
         for ( size_t propIndex = 0; propIndex < listProperty.size(); ++propIndex )
         {
             const string&     attributeName = listAttributeName[propIndex];
             const utf8* const pAttribute    = node.findAttribute( attributeName.c_str() );
             const string_view writtenText   = pAttribute != nullptr ? string_view( pAttribute ) : string_view{};
             // 판정은 XML · JSON 직렬화기와 한 함수다 — 빠졌거나, 이름 · 경로 형식인데 빈 글이다.
-            if ( SerializerUtil::isRequiredValueMissing( listProperty[propIndex], pAttribute != nullptr, pAttribute != nullptr ? &writtenText : nullptr ) )
+            if ( SerializerUtil::isRequiredValueMissing( listProperty[propIndex], pAttribute != nullptr, pAttribute != nullptr ? &writtenText : nullptr, scope ) )
             {
                 StringBuilder<constant::buffer::kMax256> textBuilder;
                 textBuilder.appendFormat( "%#: <%#> needs %#=\"...\" (%#)", sourceName, pElement, attributeName.c_str(), typeInfo._name.c_str() );

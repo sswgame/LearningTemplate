@@ -65,7 +65,7 @@ namespace sw
                                               SerializerUtil::shouldSerializeProperty( typeInfo, prop, context ) == false;
                     if ( bKeepCurrent )
                         continue;
-                    SerializerUtil::applyPropertyDefault( prop, MutableObjectAddress{ pInstance }, context );
+                    SerializerUtil::applyPropertyDefault( prop, MutableObjectAddress{ pInstance } );
                 }
             }
 
@@ -506,7 +506,7 @@ namespace sw
             // 판정은 XML 과 한 함수다(`SerializerUtil::isRequiredValueMissing`) — 빈 이름 글도 빠진 것이다.
             const string      valueText = value.isValid() && value.isString() ? value.asString() : string{};
             const string_view textView( valueText );
-            if ( SerializerUtil::isRequiredValueMissing( prop, value.isValid(), value.isValid() && value.isString() ? &textView : nullptr ) )
+            if ( SerializerUtil::isRequiredValueMissing( prop, value.isValid(), value.isValid() && value.isString() ? &textView : nullptr, RequiredScope::Root ) )
             {
                 outListPath.push_back( path );
                 continue;

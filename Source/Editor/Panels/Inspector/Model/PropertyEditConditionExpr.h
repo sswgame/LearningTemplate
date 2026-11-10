@@ -1,15 +1,10 @@
 /**
  * @file PropertyEditConditionExpr.h
- * @brief `PROPERTY( EditCondition = "…" )` 를 풀고 값을 보고 판정합니다 — 인스펙터가 그 프로퍼티를 숨기거나 막을지 정하는 자리입니다.
- * @details 식은 넷 중 하나입니다(공백 자유). `name` — 그 프로퍼티(bool · 정수)가 참일 때, `!name` — 거짓일 때, `name == Value` ·
- *          `name != Value` — 열거형(이름 · 숫자) · 정수가 같을 때 · 다를 때. `name` 은 같은 타입의 프로퍼티(기반 포함) 이름입니다.
- *          에디터 기능이라 배포 구성은 짓지 않는다(Editor 빌드 단위).
+ * @brief `PROPERTY( EditCondition = "…" )` 판정으로 인스펙터가 그 프로퍼티를 숨기거나 막을지 정합니다.
+ * @details 식(`name` · `!name` · `name == Value` · `name != Value`)은 생성기가 컴파일된 판정(`PropertyMetadata::_pEditCondition`)으로 낸다 —
+ *          없는 이름 · 열거자는 생성 · 컴파일 오류라 여기서 풀다 실패하는 길이 없다. 에디터 기능이라 배포 구성은 짓지 않는다(Editor 빌드 단위).
  */
 #pragma once
-#include "Core/Container/string.h"
-#include "Core/Foundation/Expected.h"
-#include "Core/Name/hashed_string.h"
-
 #include "Editor/Common/EditorExports.h"
 
 #include "Engine/EngineMinimal.h"
@@ -17,9 +12,7 @@
 
 namespace sw
 {
-    struct EnumInfo;
     struct PropertyInfo;
-    struct TypeInfo;
 } // namespace sw
 
 namespace sw
@@ -32,24 +25,10 @@ namespace sw
         Hidden,   ///< 숨긴다(조건이 거짓이고 `EditConditionHides`)
     };
 
-    /** @brief 풀어 둔 조건식 하나입니다. */
+    /** @brief EditCondition 판정입니다. */
     struct SW_EDITOR_API PropertyEditConditionExpr
     {
-        const PropertyInfo* _pSubject{ nullptr }; ///< 조건이 보는 프로퍼티
-        const EnumInfo*     _pEnum{ nullptr };    ///< 그 프로퍼티가 열거형이면 그 표
-        int64               _compareValue{ 0 };   ///< `==` · `!=` 의 오른쪽 값
-        bool                _bNegate{ SW_FALSE }; ///< `!name` · `!=` NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool                _bCompare{ false };   ///< `==` · `!=` 꼴 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-
-        // EditCondition 식을 풀고 판정합니다. */
-        /**
-         * @brief @p prop 의 EditCondition 식을 @p type(기반 포함)에 대해 풉니다.
-         * @return 푼 식(식이 없으면 보는 프로퍼티가 없는 빈 식). 이름이 없거나 · 열거자가 없거나 · 꼴이 틀리면 그 이유(대상은 그 이름 · 값)입니다.
-         */
-        [[nodiscard]] static expected<PropertyEditConditionExpr> parse( const TypeInfo& type, const PropertyInfo& prop );
-        /** @brief 풀어 둔 식을 인스턴스 값으로 판정합니다. 보는 프로퍼티가 없으면(식 없음) 참입니다. */
-        static bool evaluate( const PropertyEditConditionExpr& expr, ObjectAddress instance );
-        /** @brief 인스펙터가 쓰는 한 번에 — 풀고 판정해 보일 상태를 돌려줍니다. 풀지 못하면 `Enabled`(막지 않는다)입니다. */
-        static PropertyEditState getEditState( const TypeInfo& type, const PropertyInfo& prop, ObjectAddress instance );
+        /** @brief @p prop 의 조건을 @p instance 값으로 판정해 보일 상태를 돌려줍니다. 조건이 없거나 인스턴스가 없으면 `Enabled` 입니다. */
+        static PropertyEditState getEditState( const PropertyInfo& prop, ObjectAddress instance );
     };
 } // namespace sw

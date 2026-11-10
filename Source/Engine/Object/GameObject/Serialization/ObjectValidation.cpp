@@ -34,7 +34,7 @@ namespace sw
                     StringBuilder<constant::buffer::kMax8192> text;
                     SerializerUtil::valueToText( text, ValueAddress{ prop.getRawPtr( static_cast<const void*>( pComp ) ) }, prop._typeName, serialize );
                     const string_view written = text.view();
-                    if ( SerializerUtil::isRequiredValueMissing( prop, true, &written ) == false )
+                    if ( SerializerUtil::isRequiredValueMissing( prop, true, &written, RequiredScope::Root ) == false )
                         continue;
                     context.setScope( typeInfo._name, prop._name );
                     context.addWarning( "required name is empty - write it in the prefab or scene (the next load fails: ObjectStateSerializer.RequiredMissing)" );

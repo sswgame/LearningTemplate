@@ -239,8 +239,8 @@ SW_TEST_CASE( SerializerUtilTest, DeclaredDefaultIsAppliedOnlyWhereDeclared )
 {
     SerializerSample sample;
     sample._count = 5;
-    SerializerUtil::applyPropertyDefault( getSampleProperty( "_withDefault" ), MutableObjectAddress{ &sample }, getContext() );
-    SerializerUtil::applyPropertyDefault( getSampleProperty( "_count" ), MutableObjectAddress{ &sample }, getContext() );
+    SerializerUtil::applyPropertyDefault( getSampleProperty( "_withDefault" ), MutableObjectAddress{ &sample } );
+    SerializerUtil::applyPropertyDefault( getSampleProperty( "_count" ), MutableObjectAddress{ &sample } );
     SW_EXPECT_EQUAL( 7, sample._withDefault );
     SW_EXPECT_EQUAL( 5, sample._count );
 }
