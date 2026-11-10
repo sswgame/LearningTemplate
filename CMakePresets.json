@@ -117,6 +117,15 @@
       }
     },
     {
+      "name": "Ninja-Shipping-Client",
+      "displayName": "Windows Ninja Shipping - Client only (Clang-cl)",
+      "description": "클라이언트 전용 배포본(SW_TARGET_TYPE=Client) — 이름이 Server 인 폴더(전용 서버 · 온라인 서비스 구현)를 짓지 않고 그 헤더를 게이트가 막는다(언리얼 Client 타깃). Ninja-Shipping 은 클라이언트 + 서버(Game)다",
+      "inherits": "Ninja-Shipping",
+      "cacheVariables": {
+        "SW_TARGET_TYPE": "Client"
+      }
+    },
+    {
       "name": "Web-Shipping",
       "displayName": "Web Shipping (Emscripten, WebGPU)",
       "description": "브라우저 배포(Emscripten + vcpkg dawn 의 emdawnwebgpu). 툴체인은 저장소의 Tools/emsdk(설치 py -3 Scripts/setup/PlatformSdk.py web — 판은 Config/Environment/search_paths.defaults.json)",
@@ -177,6 +186,10 @@
     {
       "name": "Ninja-Shipping-Server",
       "configurePreset": "Ninja-Shipping-Server"
+    },
+    {
+      "name": "Ninja-Shipping-Client",
+      "configurePreset": "Ninja-Shipping-Client"
     },
     {
       "name": "Linux-Debug",

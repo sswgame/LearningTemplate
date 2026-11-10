@@ -139,6 +139,32 @@ def rewriteBareIncludes(text: str, oldFolder: str, newFolder: str, source: Path,
     return kBareInclude.sub(replace, text)
 
 
+def makePathRule(mapFile: dict[str, str], listFolderPrefix: list[tuple[str, str]]) -> tuple[re.Pattern[str], object]:
+    """파일 경로 · 폴더 접두어를 **한 번 훑기** 규칙 하나로 묶는다(긴 것 먼저).
+    차례로 적용하면 앞 규칙이 바꾼 글을 뒤 규칙이 다시 바꿨다 — 폴더를 자기 아래로 옮기면(`A=A/Server`) 파일 규칙이 만든 `A/Server/X.h` 를
+    폴더 규칙 `A/` 가 다시 `A/Server/Server/X.h` 로 바꿨다. 정규식 하나의 sub 는 바꾼 자리를 다시 보지 않는다.
+    전체 경로는 낱말 경계로 — `Engine/A/B.h` 가 `MyEngine/A/B.h` 안에서 바뀌지 않게(`Source/Engine/A/B.h` 처럼 앞에 `/` 가 오는 것은 바꾼다)."""
+    mapNew: dict[str, str] = {}
+    listAlternative: list[tuple[int, str]] = []
+    for old, new in mapFile.items():
+        mapNew[old] = new
+        listAlternative.append((len(old), re.escape(old) + r"(?![\w.])"))
+    for old, new in listFolderPrefix:
+        mapNew[old] = new
+        listAlternative.append((len(old), re.escape(old)))
+    listAlternative.sort(key=lambda item: -item[0])
+    pattern = re.compile(r"(?<![\w.-])(?:" + "|".join(part for _, part in listAlternative) + ")")
+    return pattern, lambda match: mapNew[match.group(0)]
+
+
+def checkPathRuleSinglePass() -> None:
+    """자기 아래 폴더로 옮겨도 한 번만 바뀌는지의 자체 확인."""
+    pattern, replacement = makePathRule({"A/X.h": "A/Server/X.h"}, [("A/", "A/Server/")])
+    text = '#include "A/X.h"\n#include "A/Y.h"\nMyA/X.h'
+    expected = '#include "A/Server/X.h"\n#include "A/Server/Y.h"\nMyA/X.h'
+    assert pattern.sub(replacement, text) == expected, pattern.sub(replacement, text)
+
+
 def mainMove(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="py -3 -m Scripts move-source", description="소스를 옮기고 참조를 고친다")
     parser.add_argument("pair", nargs="+", help="Source 기준 old=new (파일 또는 폴더)")
@@ -192,9 +218,7 @@ def mainMove(argv: list[str]) -> int:
             folder.rmdir()
             folder = folder.parent
 
-    # 전체 경로는 낱말 경계로 — `Engine/A/B.h` 가 `MyEngine/A/B.h` 안에서 바뀌지 않게(`Source/Engine/A/B.h` 처럼 앞에 `/` 가 오는 것은 바꾼다).
-    listRule = [(re.compile(r"(?<![\w.-])" + re.escape(old) + r"(?![\w.])"), lambda _, new=new: new) for old, new in sorted(mapFile.items(), key=lambda item: -len(item[0]))]
-    listRule += [(re.compile(r"(?<![\w.-])" + re.escape(old)), lambda _, new=new: new) for old, new in listFolderPrefix]
+    listRule = [makePathRule(mapFile, listFolderPrefix)]
     # `@file` 은 최상위 폴더 없이 적은 곳도 있다(`@file Utility/X.h`).
     listRule += [(re.compile(r"(@file\s+)" + re.escape(old.partition("/")[2]) + r"\b"), lambda match, new=new: match.group(1) + new) for old, new in mapFile.items() if "/" in old]
     changedCppSet = {source / new for new in mapMovedText} | set(listNeighbourText)
@@ -227,6 +251,7 @@ def mainRename(argv: list[str]) -> int:
                         help="C 계열 소스의 문자열 리터럴 안도 바꾼다(기본은 건너뛰고 그 자리를 알린다 — 매직 · JSON 키 · 내보내기 기호는 바깥 철자다)")
     args = parser.parse_args(argv)
     checkRewriteOutsideStrings()
+    checkPathRuleSinglePass()
 
     root = getProjectRoot()
     listPair = [pair.partition("=")[::2] for pair in args.pair]

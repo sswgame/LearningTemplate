@@ -3,7 +3,7 @@
 """
 Scripts/dev/ShippingCheck.py
 
-배포 구성 확인 — 배포 프리셋 둘(클라이언트 · 전용 서버)을 구성 · 빌드하고, 산출물을 잠깐 띄워 기동 · 종료를 본다.
+배포 구성 확인 — 배포 프리셋 셋(클라이언트 + 서버 · 클라이언트 전용 · 전용 서버)을 구성 · 빌드하고, 산출물을 잠깐 띄워 기동 · 종료를 본다.
 배포 구성에는 테스트 장치(자동화 실행기 · 테스트용 전역 변수)가 없다 — 그래서 실행 인자로 조종하지 않고 운영과 같은 길(창 닫기 · 종료 신호)로 끝낸다.
 통합 단계에서 한 번 돌린다(일상 개발 빌드는 Dev 프리셋이라 배포 구성의 컴파일 · 링크 · 쿠킹 결함이 여기서만 드러난다).
 
@@ -11,6 +11,7 @@ Scripts/dev/ShippingCheck.py
 | --- | --- | --- |
 | `Ninja-Shipping` | `App -unattended` 를 `kAppRunSeconds` 동안 돌린 뒤 창을 닫는다(WM_CLOSE) | 그동안 살아 있고 0 으로 끝난다 |
 | `Ninja-Shipping` | `App -unattended -scenario=<아무 경로>` | 0 이 아닌 코드로 곧 끝나고, 로그에 자동화 없음 오류가 있다(배포 구성은 실행기를 짓지 않는다) |
+| `Ninja-Shipping-Client` | 클라이언트 전용 `App`(Server 폴더를 짓지 않는다)을 같은 길로 띄우고 닫는다 | 그동안 살아 있고 0 으로 끝난다 |
 | `Ninja-Shipping-Server` | `Server` 를 `kServerRunSeconds` 동안 돌린 뒤 종료 신호(Windows Ctrl+Break · POSIX SIGTERM) | 그동안 살아 있고 0 으로 끝난다 |
 
 배포 실행 파일에 테스트용 전역 변수 이름(`SW_TEST_GLOBAL_VARIABLE` 의 `gv_…`)이 하나라도 남아 있으면 실패다 — 배포 구성에서 그 변수는 상수라
@@ -99,13 +100,12 @@ def closeProcessWindow(process: subprocess.Popen[bytes]) -> None:
         process.terminate()
 
 
-def runApp(projectRoot: Path) -> SmokeResult:
+def runApp(projectRoot: Path, preset: str = "Ninja-Shipping") -> SmokeResult:
     """배포 App 을 띄우고, 살아 있는지 본 뒤 창을 닫아 정상 종료를 본다."""
-    preset = "Ninja-Shipping"
     logPath = makeLogPath(projectRoot, preset, "App")
     executable = findBinDir(projectRoot, preset) / f"App{kExecutableSuffix}"
     if executable.is_file() is False:
-        return SmokeResult("App", logPath, False, f"{executable} is missing")
+        return SmokeResult(f"App ({preset})", logPath, False, f"{executable} is missing")
     process = subprocess.Popen([str(executable), AppArguments.flag("unattended"), AppArguments.option("log-file", logPath)], cwd=projectRoot)
     try:
         process.wait(timeout=kAppRunSeconds)
@@ -127,6 +127,11 @@ def sendShutdownSignal(process: subprocess.Popen) -> None:
         os.kill(process.pid, signal.CTRL_BREAK_EVENT)
     else:
         process.send_signal(signal.SIGTERM)
+
+
+def runClientApp(projectRoot: Path) -> SmokeResult:
+    """클라이언트 전용 배포 App(Server 폴더 · 서버 서비스 구현이 없다)을 같은 길로 띄우고 닫는다."""
+    return runApp(projectRoot, "Ninja-Shipping-Client")
 
 
 def runServer(projectRoot: Path) -> SmokeResult:
@@ -180,7 +185,7 @@ def checkNoTestVariables(projectRoot: Path) -> SmokeResult:
     """배포 실행 파일(App · Server)에 테스트용 전역 변수 이름이 남지 않았는지 본다."""
     listName = collectTestVariableNames(projectRoot)
     listLeft: list[str] = []
-    for preset, stem in (("Ninja-Shipping", "App"), ("Ninja-Shipping-Server", "Server")):
+    for preset, stem in (("Ninja-Shipping", "App"), ("Ninja-Shipping-Client", "App"), ("Ninja-Shipping-Server", "Server")):
         executable = findBinDir(projectRoot, preset) / f"{stem}{kExecutableSuffix}"
         if executable.is_file() is False:
             return SmokeResult("NoTestVariables", executable, False, f"{executable} is missing")
@@ -215,7 +220,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     projectRoot = getProjectRoot()
 
-    listRun = ((runApp, "Ninja-Shipping"), (runServer, "Ninja-Shipping-Server"), (runNoAutomationScenario, "Ninja-Shipping"))
+    listRun = ((runApp, "Ninja-Shipping"), (runClientApp, "Ninja-Shipping-Client"), (runServer, "Ninja-Shipping-Server"), (runNoAutomationScenario, "Ninja-Shipping"))
     if args.skip_build is False:
         listFailedBuild = [preset for preset in dict.fromkeys(preset for _, preset in listRun) if buildPreset(projectRoot, preset) is False]
         if listFailedBuild:
