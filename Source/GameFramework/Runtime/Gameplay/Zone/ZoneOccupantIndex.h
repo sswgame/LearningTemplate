@@ -4,7 +4,7 @@
  * @details 예전에는 볼륨마다 틱 뒤에 씬의 캐릭터 컨트롤러 · 강체를 모두 돌았다 — 볼륨 Z 개 × 개체 N 개(지역 수백이면 N² 모양). 이제 이번 프레임 처음 묻는 볼륨이
  *          개체를 한 번 모아 수평(XZ) 격자에 넣고, 볼륨은 자기 사각형에 든 후보만 받는다(언리얼 Mass 프로세서가 한 번 모은 청크를 여러 질의가 나눠 읽는 것과 같은 자리).
  *
- *          - 자리: 짓기는 틱 뒤 게임 스레드(볼륨의 `updateZone` — 예전과 같은 자리라 볼륨이 보는 위치는 그대로다). `FrameSystems` 단계(`runBeforeTick`)는 낡았다고만 적는다.
+ *          - 자리: 짓기는 틱 뒤 게임 스레드(볼륨의 `updateZone` — 예전과 같은 자리라 볼륨이 보는 위치는 그대로다). `FrameSystems` 단계(`runLane`)는 낡았다고만 적는다.
  *          - 순서: 후보는 예전 순회 순서(캐릭터 컨트롤러 전부, 그다음 움직이는 강체)이고, 질의 결과도 그 순서다 — 볼륨이 대상을 넣는 순서(진입 이벤트 순서)가 같다.
  *          - 판정: 격자는 고르기만 하고, 안인지는 볼륨이 지금 자리로 잰다(`sampleAt`). 같은 프레임의 앞 볼륨 동작이 옮긴(순간 이동) 개체는 지은 자리로 걸러져 다음 프레임에 든다.
  *          - 셀: 볼륨들의 가장 큰 수평 반 크기의 두 배 — 볼륨 사각형이 셀 2×2 안팎에 든다(`InteractionSpatialIndex` 의 최대 도달 거리 셀과 같은 규칙).
@@ -39,7 +39,7 @@ namespace sw
      * @class ZoneOccupantIndex
      * @brief 매니저 하나에 하나씩 붙는 지역 후보 격자입니다. 파일 머리말 참고.
      */
-    class SW_GF_API ZoneOccupantIndex final : public ISceneFrameSystem
+    class SW_GF_API ZoneOccupantIndex final : public ISceneLaneFrameSystem
     {
     public:
         /** @brief 매니저의 프레임 시스템 키입니다. */
@@ -55,7 +55,7 @@ namespace sw
         static void releaseIfUnused( GameObjectManager& manager );
 
         /** @brief 이번 프레임 격자를 낡았다고 적습니다. 다음 질의가 다시 짓는다. */
-        void runBeforeTick( GameObjectManager& manager, float32 deltaTime ) override;
+        void runLane( SceneJobContext& context ) override;
         /** @brief 자기 깃발 하나만 바꾼다 — 씬 데이터를 읽거나 쓰지 않는다(짓기는 틱 뒤 질의에서 한다). */
         SceneFrameAccess getFrameAccess() const override;
 

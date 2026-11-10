@@ -28,7 +28,7 @@ namespace sw
      * @class SurfaceExposureSystem
      * @brief 매니저 하나에 하나씩 붙는 표면 노출의 프레임 일입니다. 파일 머리말 참고.
      */
-    class SW_GF_API SurfaceExposureSystem final : public ISceneFrameSystem
+    class SW_GF_API SurfaceExposureSystem final : public ISceneMainFrameSystem
     {
     public:
         /** @brief 매니저의 프레임 시스템 키입니다. */
@@ -44,7 +44,7 @@ namespace sw
         static void releaseIfUnused( GameObjectManager& manager );
 
         /** @brief 이번 프레임의 노출 일(`runFramePass`) 하나를 틱 뒤 큐에 넣습니다. */
-        void runBeforeTick( GameObjectManager& manager, float32 deltaTime ) override;
+        void runMain( GameObjectManager& manager, float32 deltaTime ) override;
         /** @brief 틱 뒤 큐에 일을 넣기만 한다 — 씬 데이터를 읽거나 쓰지 않는다. */
         SceneFrameAccess getFrameAccess() const override;
 

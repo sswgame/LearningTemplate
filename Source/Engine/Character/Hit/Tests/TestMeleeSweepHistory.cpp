@@ -23,7 +23,7 @@ namespace
         {
             for ( uint32 frame = 0; frame < frameCount; ++frame )
             {
-                _ledger.runBeforeTick( _manager, 1.0f / 60.0f );
+                _ledger.runMain( _manager, 1.0f / 60.0f );
             }
         }
 

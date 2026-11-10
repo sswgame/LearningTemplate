@@ -54,7 +54,7 @@ namespace sw
         manager.removeFrameSystem( hashed_string( kFrameSystemKey ) );
     }
 
-    void DecalRainWashSystem::runBeforeTick( GameObjectManager& manager, float32 deltaTime )
+    void DecalRainWashSystem::runMain( GameObjectManager& manager, float32 deltaTime )
     {
         if ( deltaTime <= 0.0f )
             return;

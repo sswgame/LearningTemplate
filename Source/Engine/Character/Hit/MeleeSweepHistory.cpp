@@ -61,10 +61,9 @@ namespace sw
             manager.removeFrameSystem( hashed_string( kFrameSystemKey ) );
     }
 
-    void MeleeSweepHistory::runBeforeTick( GameObjectManager& manager, float32 deltaTime )
+    void MeleeSweepHistory::runLane( SceneJobContext& context )
     {
-        (void)manager;
-        (void)deltaTime;
+        (void)context;
         ++_frame;
         // 보관 프레임 밖의 기록을 앞에서부터 버린다(기록은 프레임 순으로 쌓인다).
         size_t dropCount = 0;
@@ -80,8 +79,6 @@ namespace sw
     {
         SceneFrameAccess access{};
         access._writes = { SceneDataKind::HitRecord };
-        // 기록 장부 안의 목록만 만진다(씬 · 싱글턴 · 게임 스레드 전용 API 를 부르지 않는다) — 접근이 겹치지 않는 시스템과 워커 레인에서 같이 돌아도 된다.
-        access._bLaneSafe = true;
         return access;
     }
 

@@ -49,18 +49,16 @@ namespace sw
             manager.removeFrameSystem( hashed_string( kFrameSystemKey ) );
     }
 
-    void ZoneOccupantIndex::runBeforeTick( GameObjectManager& manager, float32 deltaTime )
+    void ZoneOccupantIndex::runLane( SceneJobContext& context )
     {
-        (void)manager;
-        (void)deltaTime;
+        (void)context;
         _bBuilt = SW_FALSE;
     }
 
     SceneFrameAccess ZoneOccupantIndex::getFrameAccess() const
     {
         SceneFrameAccess access{};
-        // 감사: 자기 깃발 하나만 내린다. 워커에서 돌려도 된다.
-        access._bLaneSafe = true;
+        // 자기 깃발 하나만 내린다 — 레인 시스템이라 워커에서 돈다.
         return access;
     }
 

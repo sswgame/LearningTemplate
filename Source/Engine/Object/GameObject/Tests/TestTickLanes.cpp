@@ -190,3 +190,55 @@ SW_TEST_CASE( TickLanesTest, DeferredQueueMergesThreadBuffersByKey )
     SW_EXPECT_TRUE( ( listRun == vector<uint32>{ 1, 2, 3, 4, 5 } ) );
     SW_EXPECT_TRUE( queue.isEmpty() );
 }
+
+namespace
+{
+    /** @brief 잡 컨텍스트로 도는 레인 시스템입니다 — 씬을 바꾸는 일은 틱 뒤 큐로만 낸다. */
+    class LaneProbeSystem final : public ISceneLaneFrameSystem
+    {
+    public:
+        uint32 _runCount      = 0;
+        uint32 _deferredCount = 0;
+
+        explicit LaneProbeSystem( bool bWritesStructure )
+            : _bWritesStructure{ bWritesStructure ? SW_TRUE : SW_FALSE }
+        {
+        }
+
+        void runLane( SceneJobContext& context ) override
+        {
+            ++_runCount;
+            uint32* pDeferredCount = &_deferredCount;
+            context.deferPostTick( SW_DELEGATE_LAMBDA( SceneJobContext::Callback, [pDeferredCount]()
+            { ++*pDeferredCount; } ) );
+        }
+
+        SceneFrameAccess getFrameAccess() const override
+        {
+            SceneFrameAccess access{};
+            if ( _bWritesStructure == SW_TRUE )
+                access._writes = { SceneDataKind::Structure };
+            return access;
+        }
+
+    private:
+        uint8 _bWritesStructure : 1;
+    };
+} // namespace
+
+/**
+ * @brief [TickLanesTest] 레인 시스템은 잡 컨텍스트로 돌고 씬을 바꾸는 일은 틱 뒤 큐로 간다 — 구조를 쓴다고 선언한 레인 시스템은 붙지 않는다
+ */
+SW_TEST_CASE( TickLanesTest, LaneFrameSystemRunsThroughJobContext )
+{
+    GameObjectManager manager;
+    SW_EXPECT_TRUE( manager.addFrameSystem( hashed_string( "LaneStructure" ), make_unique<LaneProbeSystem>( true ) ) == false );
+    SW_REQUIRE_TRUE( manager.addFrameSystem( hashed_string( "LaneProbe" ), make_unique<LaneProbeSystem>( false ) ) );
+    (void)manager.createGameObject( hashed_string( "Anchor" ) );
+    manager.beginPlay();
+    manager.update( 1.0f / 60.0f );
+    const LaneProbeSystem* pProbe = static_cast<const LaneProbeSystem*>( manager.findFrameSystem( hashed_string( "LaneProbe" ) ) );
+    SW_REQUIRE_TRUE( pProbe != nullptr );
+    SW_EXPECT_EQUAL( uint32{ 1 }, pProbe->_runCount );
+    SW_EXPECT_EQUAL( uint32{ 1 }, pProbe->_deferredCount ); // 같은 프레임의 `ApplyPrePhysics` 가 돌렸다
+}
