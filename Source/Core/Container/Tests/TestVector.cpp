@@ -3,6 +3,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/InlineAllocator.h"
+#include "Core/Container/frame_vector.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Testing/ScopedAssertCapture.h"
@@ -610,6 +611,40 @@ SW_TEST_CASE( VectorTest, ShrinkToFitReleasesBufferWhenEmpty )
     listNested.emplace_back().push_back( 11 );
     SW_REQUIRE_EQUAL( size_t( 1 ), listNested.size() );
     SW_EXPECT_EQUAL( 11, listNested[0][0] );
+}
+
+/**
+ * @brief [VectorTest] `frame_vector` 는 아레나에서 자라고 원소 소멸자는 돌며, 아레나 reset 뒤 같은 메모리를 다시 쓴다(프레임 지역 목록의 힙 할당 0).
+ */
+SW_TEST_CASE( VectorTest, FrameVectorGrowsInArenaAndReusesAfterReset )
+{
+    LinearAllocator arena{ 4096 };
+    TrackedValue::s_liveCount = 0;
+    const TrackedValue* pFirstBuffer{ nullptr };
+    {
+        frame_vector<TrackedValue> listValue{ FrameAllocator<TrackedValue>{ arena } };
+        listValue.emplace_back( 0 );
+        pFirstBuffer = listValue.data();
+        for ( int32 index = 1; index < 100; ++index )
+            listValue.emplace_back( index );
+        SW_REQUIRE_EQUAL( size_t( 100 ), listValue.size() );
+        SW_EXPECT_EQUAL( 99, listValue.back()._value );
+        const frame_vector<TrackedValue> listCopy{ listValue };
+        SW_EXPECT_TRUE( listCopy.get_allocator() == listValue.get_allocator() );
+        SW_EXPECT_EQUAL( 99, listCopy.back()._value );
+    }
+    SW_EXPECT_EQUAL( 0, TrackedValue::s_liveCount );
+
+    // reset 은 오프셋만 되돌린다 — 다음 프레임의 첫 목록이 앞 프레임의 첫 버퍼 자리를 받는다.
+    arena.reset();
+    frame_vector<TrackedValue> listNext{ FrameAllocator<TrackedValue>{ arena } };
+    listNext.emplace_back( 7 );
+    SW_EXPECT_TRUE( listNext.data() == pFirstBuffer );
+    listNext.clear();
+
+    frame_vector<int32> listEmpty{ FrameAllocator<int32>{ arena } };
+    listEmpty.reserve( 0 );
+    SW_EXPECT_TRUE( listEmpty.empty() );
 }
 
 /**

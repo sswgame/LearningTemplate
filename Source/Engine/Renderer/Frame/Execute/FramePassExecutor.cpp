@@ -11,6 +11,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/array.h"
+#include "Core/Container/frame_vector.h"
 #include "Core/Container/string.h"
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -126,6 +127,7 @@ namespace sw
         , _nanCheckCommandList{}
         , _pLastSwapchainWriter{ nullptr }
         , _pMainOutputCanvasView{ nullptr }
+        , _frameArena{}
         , _indirectDrawCallCount{ 0 }
         , _pendingPSOBatchCount{ 0 }
         , _disabledInputRoleMask{ 0 }
@@ -210,6 +212,7 @@ namespace sw
         const size_t passCount = _pipelineResource.getGraphPass().size() + 1 + _extensionHost.getPasses().size(); // XML 패스 + 공용 슬롯 + 모듈 확장 패스
         if ( _listPassContext.size() < passCount )
             _listPassContext.resize( passCount );
+        _frameArena.reset(); // 앞 프레임의 frame_vector 는 모두 사라졌다(기록 지역 목록만 잡는다)
 
         _pCmd->beginCommandList();
         _indirectDrawCallCount.store( 0, std::memory_order_relaxed );
@@ -599,7 +602,7 @@ namespace sw
             return;
 
         pCmd->beginCommandList();
-        vector<RHITextureHandle> listScanned; // 같은 텍스처를 가리키는 출력은 한 번만 훑는다
+        frame_vector<RHITextureHandle> listScanned{ FrameAllocator<RHITextureHandle>{ _frameArena } }; // 같은 텍스처를 가리키는 출력은 한 번만 훑는다
         for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPass() )
         {
             for ( const RenderGraphPassDesc::ResolvedAttachment& output : pass._listResolvedColorOutput )

@@ -12,6 +12,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Memory/LinearAllocator.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
@@ -530,6 +531,11 @@ namespace sw
          *          언리얼이 모든 장면 뷰 뒤에 Slate 를 한 번 그리는 것과 같은 순서로, 마지막 뷰의 Canvas 패스만 UI 를 그린다. `submitGraph` 가 기록 전에 정한다.
          */
         const FrameViewTarget* _pMainOutputCanvasView;
+        /**
+         * @brief 기록 중의 지역 목록(`frame_vector`)이 잡는 프레임 아레나입니다. `submitGraph` 첫머리에 reset 한다 — 그때는 앞 프레임의 기록이 다 끝나 살아 있는 목록이 없다.
+         * @details 병렬 기록 워커가 함께 잡는다(`LinearAllocator::allocate` 는 여러 스레드에서 안전하다). 언리얼 렌더 스레드의 `FMemStack` 자리다.
+         */
+        LinearAllocator _frameArena;
         /// @brief 이번 프레임의 씬 간접 드로우 호출 수입니다. 패스를 병렬로 기록하므로 atomic 으로 둡니다.
         atomic<uint32> _indirectDrawCallCount;
         /// @brief 이번 프레임에 PSO 가 만드는 중이라 건너뛴 묶음 수입니다(`getPendingPSOBatchCount`). 같은 이유로 atomic 입니다.
