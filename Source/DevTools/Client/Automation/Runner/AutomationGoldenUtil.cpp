@@ -17,10 +17,9 @@ namespace sw
     {
         struct AutomationGoldenInternal
         {
-            static constexpr string_view kImageExtension       = ".ppm";
-            static constexpr string_view kMetaExtension        = ".golden.json";
-            static constexpr int32       kMetaIndent           = 4;
-            static constexpr int32       kLaunchFailedExitCode = -1; ///< `Process::execute` 가 실행 파일을 띄우지 못했을 때의 값(Process.h 의 계약)
+            static constexpr string_view kImageExtension = ".ppm";
+            static constexpr string_view kMetaExtension  = ".golden.json";
+            static constexpr int32       kMetaIndent     = 4;
 
             static bool isFraction( float64 value ) { return value >= 0.0 && value <= 1.0; }
 
@@ -200,9 +199,9 @@ namespace sw
 
     expected<string> AutomationGoldenUtil::findRecordingCommit()
     {
-        string      firstLine;
-        const int32 exitCode = Process::execute( ProcessCommand::fromSearchPath( "git", { "-C", string( ProcessRoots::get()._project.str() ), "describe", "--always", "--dirty", "--abbrev=40" } ), {},
-                                                 ProcessOutputDelegate::create( [&firstLine]( string_view line )
+        string                firstLine;
+        const expected<int32> exitCode = Process::execute( ProcessCommand::fromSearchPath( "git", { "-C", string( ProcessRoots::get()._project.str() ), "describe", "--always", "--dirty", "--abbrev=40" } ), {},
+                                                           ProcessOutputDelegate::create( [&firstLine]( string_view line )
         {
             if ( firstLine.empty() )
                 firstLine = string( StringUtil::trim( line ) );
@@ -210,12 +209,12 @@ namespace sw
         return readRecordingCommit( exitCode, firstLine );
     }
 
-    expected<string> AutomationGoldenUtil::readRecordingCommit( int32 exitCode, string_view firstLine )
+    expected<string> AutomationGoldenUtil::readRecordingCommit( const expected<int32>& exitCode, string_view firstLine )
     {
         // 기록한 커밋 없이 골든을 쓰지 않는다(폴백 없음) — 메타가 언제 뜬 그림인지 말하지 못하면 다음 리뷰가 그 골든을 믿을 근거가 없다.
-        if ( exitCode == AutomationGoldenInternal::kLaunchFailedExitCode )
-            return unexpected( Error{ ErrorKind::NotFound, "git could not be started (not on PATH) - recording a golden needs git to write the recording commit into its meta" } );
-        if ( exitCode != 0 )
+        if ( exitCode.has_value() == false )
+            return unexpected( Error{ ErrorKind::NotFound, "git could not be started (not on PATH) - recording a golden needs git to write the recording commit into its meta", exitCode.error().detail() } );
+        if ( *exitCode != 0 )
             return unexpected( Error{ ErrorKind::ExternalFailure, "git describe failed (is the project folder a git work tree?) - recording a golden needs the recording commit", firstLine } );
         if ( firstLine.empty() )
             return unexpected( Error{ ErrorKind::ExternalFailure, "git describe printed no commit - recording a golden needs the recording commit" } );

@@ -109,7 +109,10 @@ namespace sw
         [[nodiscard]] static string makeMetaText( const AutomationGoldenMeta& meta );
         /** @brief 지금 작업 트리의 커밋(`git describe --always --dirty --abbrev=40`)입니다. git 이 없거나 저장소가 아니면 오류입니다. */
         [[nodiscard]] static expected<string> findRecordingCommit();
-        /** @brief `git describe` 의 결과(종료 코드 · 첫 줄)를 커밋으로 읽습니다. git 을 띄우지 못함 · 저장소 아님 · 빈 출력은 저마다 까닭을 말하는 오류입니다(폴백 없음). */
-        [[nodiscard]] static expected<string> readRecordingCommit( int32 exitCode, string_view firstLine );
+        /**
+         * @brief `git describe` 의 결과(`Process::execute` 의 결과 · 첫 줄)를 커밋으로 읽습니다. git 을 띄우지 못함(오류) · 저장소 아님(0 아닌 종료) · 빈 출력은
+         *        저마다 까닭을 말하는 오류입니다(폴백 없음).
+         */
+        [[nodiscard]] static expected<string> readRecordingCommit( const expected<int32>& exitCode, string_view firstLine );
     };
 } // namespace sw

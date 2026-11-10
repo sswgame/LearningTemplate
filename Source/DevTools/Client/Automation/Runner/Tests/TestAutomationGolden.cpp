@@ -156,15 +156,18 @@ SW_TEST_CASE( AutomationGoldenTest, NamesAndMeta )
 /** @brief [AutomationGoldenTest] 기록 커밋을 못 구하면 골든을 쓰지 않고 까닭을 말한다 — git 을 못 띄움(PATH) · 저장소 아님 · 빈 출력이 서로 다른 문장이다 */
 SW_TEST_CASE( AutomationGoldenTest, RecordingCommitNeedsGit )
 {
-    const expected<string> notStarted = AutomationGoldenUtil::readRecordingCommit( -1, "" );
+    const expected<int32>  launchFailed = unexpected( Error{ ErrorKind::ExternalFailure, "could not launch the command", "git describe" } );
+    const expected<string> notStarted   = AutomationGoldenUtil::readRecordingCommit( launchFailed, "" );
     SW_REQUIRE_FALSE( notStarted.has_value() );
     SW_EXPECT_TRUE( notStarted.error().message().find( "not on PATH" ) != string_view::npos );
+    // -1 로 끝난 git 은 띄우기 실패가 아니라 git 의 실패다(형식으로 갈린다)
+    SW_EXPECT_TRUE( AutomationGoldenUtil::readRecordingCommit( expected<int32>( -1 ), "" ).error().message().find( "work tree" ) != string_view::npos );
 
-    const expected<string> notRepository = AutomationGoldenUtil::readRecordingCommit( 128, "fatal: not a git repository" );
+    const expected<string> notRepository = AutomationGoldenUtil::readRecordingCommit( expected<int32>( 128 ), "fatal: not a git repository" );
     SW_REQUIRE_FALSE( notRepository.has_value() );
     SW_EXPECT_TRUE( notRepository.error().message().find( "work tree" ) != string_view::npos );
     SW_EXPECT_TRUE( notRepository.error().detail().find( "not a git repository" ) != string_view::npos );
 
-    SW_EXPECT_FALSE( AutomationGoldenUtil::readRecordingCommit( 0, "" ).has_value() );
-    SW_EXPECT_TRUE( AutomationGoldenUtil::readRecordingCommit( 0, "0123abcd-dirty" ).value_or( string() ) == "0123abcd-dirty" );
+    SW_EXPECT_FALSE( AutomationGoldenUtil::readRecordingCommit( expected<int32>( 0 ), "" ).has_value() );
+    SW_EXPECT_TRUE( AutomationGoldenUtil::readRecordingCommit( expected<int32>( 0 ), "0123abcd-dirty" ).value_or( string() ) == "0123abcd-dirty" );
 }

@@ -89,7 +89,6 @@
     "Source/Core/Process/Posix/PosixProcess.cpp": {"minus-one": 3, "integer": 9},
     "Source/Core/Process/Posix/PosixShutdownSignal.cpp": {"integer": 1},
     "Source/Core/Process/Posix/PosixStandardInputReader.cpp": {"integer": 2},
-    "Source/Core/Process/Process.cpp": {"minus-one": 1},
     "Source/Core/Process/ProcessSession.cpp": {"integer": 1},
     "Source/Core/Process/Windows/WindowsProcess.cpp": {"minus-one": 1, "integer": 1},
     "Source/Core/Process/Windows/WindowsStandardInputReader.cpp": {"integer": 5},

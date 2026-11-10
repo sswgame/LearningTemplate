@@ -67,8 +67,8 @@ SW_TEST_CASE( ProcessTest, ExecuteHelper )
     #error "Unsupported platform"
 #endif
 
-    sw::vector<sw::string> listLines;
-    const int32            exitCode = sw::Process::execute(
+    sw::vector<sw::string>    listLines;
+    const sw::expected<int32> exitCode = sw::Process::execute(
         cmd,
         {},
         sw::ProcessOutputDelegate::create( [&listLines]( sw::string_view line )
@@ -76,7 +76,8 @@ SW_TEST_CASE( ProcessTest, ExecuteHelper )
         listLines.push_back( sw::string( line ) );
     } ) );
 
-    SW_EXPECT_EQUAL( 0, exitCode );
+    SW_REQUIRE_TRUE( exitCode.has_value() );
+    SW_EXPECT_EQUAL( 0, *exitCode );
     SW_EXPECT_TRUE( listLines.size() >= 2 );
 }
 
@@ -372,12 +373,13 @@ SW_TEST_CASE( ProcessTest, PosixChildReceivesArgumentsUnchanged )
     sw::ProcessCommand           command      = sw::ProcessCommand::fromSearchPath( "printf", { "%s\\n" } );
     command._listArgument.insert( command._listArgument.end(), listArgument.begin(), listArgument.end() );
 
-    sw::vector<sw::string> listLine;
-    const int32            exitCode = sw::Process::execute( command, {}, sw::ProcessOutputDelegate::create( [&listLine]( sw::string_view line )
+    sw::vector<sw::string>    listLine;
+    const sw::expected<int32> exitCode = sw::Process::execute( command, {}, sw::ProcessOutputDelegate::create( [&listLine]( sw::string_view line )
     {
         listLine.push_back( sw::string( line ) );
     } ) );
-    SW_EXPECT_EQUAL( 0, exitCode );
+    SW_REQUIRE_TRUE( exitCode.has_value() );
+    SW_EXPECT_EQUAL( 0, *exitCode );
     SW_REQUIRE_EQUAL( listArgument.size(), listLine.size() );
     for ( size_t index = 0; index < listArgument.size(); ++index )
     {
@@ -397,6 +399,10 @@ SW_TEST_CASE( ProcessTest, MissingExecutableFailsToLaunch )
     SW_EXPECT_FALSE( process.launch( sw::ProcessCommand::fromSearchPath( "sw_no_such_program_7f3a", { "x" } ) ) );
     SW_EXPECT_FALSE( process.launch( sw::ProcessCommand{} ) );
     SW_EXPECT_FALSE( sw::Process::launchDetached( sw::ProcessCommand{} ) );
+    // 동기 실행도 띄우기 실패는 종료 코드(-1)가 아니라 오류다 — -1 로 끝난 프로세스와 갈린다.
+    const sw::expected<int32> missing = sw::Process::execute( sw::ProcessCommand::fromSearchPath( "sw_no_such_program_7f3a", { "x" } ) );
+    SW_REQUIRE_FALSE( missing.has_value() );
+    SW_EXPECT_TRUE( missing.error().detail().find( "sw_no_such_program_7f3a" ) != sw::string_view::npos );
 }
 
 /**
