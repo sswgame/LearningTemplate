@@ -107,6 +107,7 @@ SW_TEST_CASE( AssetReferenceFieldsTest, ImportedOutputsResolveFromTheirSource )
     SW_EXPECT_FALSE( params.isChecked( "scratch/assetmanage/probe.material" ) );
     SW_EXPECT_FALSE( params.isReferrer( "common/models/kaykit/knight/materials/a.material" ) ); // 임포터가 쓴 산출물
     SW_EXPECT_TRUE( params.isReferrer( "game/x/maps/a.scene.xml" ) );
+    SW_EXPECT_FALSE( params.isReferrer( "game/x/redirects.xml" ) ); // 리다이렉트 표는 옛 id 를 적는다 — 참조가 아니다
 }
 
 /**

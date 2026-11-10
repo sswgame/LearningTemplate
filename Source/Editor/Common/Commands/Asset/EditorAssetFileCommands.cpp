@@ -25,6 +25,7 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineDefines.h"
+#include "Engine/Serialization/Inherit/AssetRedirect.h"
 
 namespace sw::editor
 {
@@ -116,6 +117,7 @@ namespace sw::editor
                 string _referrerAbs; ///< 옮긴 뒤의 디스크 경로
                 string _originalText;
                 string _rewrittenText;
+                bool   _bNewFile{ false }; ///< 쓰기 전에 없던 파일(새 리다이렉트 표) — 되돌릴 때 원래 글을 쓰지 않고 지운다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
             /** @brief 리소스 id 의 도메인입니다(`game/<팩>` · `common` · `engine` …). 옮기기 미리보기가 바깥 참조를 도메인별로 묶는다. */
@@ -176,6 +178,8 @@ namespace sw::editor
                 }
                 for ( const string& referrerID : listReferrerID )
                 {
+                    if ( AssetRedirect::isTable( referrerID ) )
+                        continue;                                                                                               // 리다이렉트 표는 옛 id 를 적는 글이다 — 고칠 참조가 아니고, 줄은 prepareRedirectTables 가 더한다
                     const optional<AbsolutePath> referrerFile = editor::getSubsystem<AssetPaths>().findLooseFile( referrerID ); // 해석 하나(붙인 도메인 · 대소문자 규칙)
                     PreparedRewrite              rewrite{};
                     if ( referrerFile.has_value() == false || FileUtil::readTextFile( referrerFile->str(), rewrite._originalText ) == false )
@@ -209,6 +213,70 @@ namespace sw::editor
                     }
                     inoutPlan._listReferrerID.push_back( referrerID );
                     outListRewrite.push_back( std::move( rewrite ) );
+                }
+                return true;
+            }
+
+            /**
+             * @brief 옮기기마다 옛 id 도메인의 리다이렉트 표(`redirects.xml`)에 줄을 더한 글을 @p inoutListRewrite 끝에 더합니다(NEXT 5-5 R1).
+             * @details 저장소 안의 참조는 prepareRewrites 가 새 id 로 고치고, 표는 저장소 밖(세이브 · 서버 · 배포된 팩)에 적힌 옛 id 를 살린다 — 언리얼이 옮긴 자리에
+             *          리다이렉터를 남기는 것과 같다. 규칙(되돌린 옮기기 · 사슬)은 `AssetRedirect::addToXMLText` 한 곳이고 `move-asset` 도 같은 규칙으로 쓴다.
+             * @return 표를 읽지 못했거나 더한 표가 런타임에서 읽히지 않으면 false 입니다(`_failure` 에 이유 — 아무것도 옮기지 않는다).
+             */
+            [[nodiscard]] static bool prepareRedirectTables( EditorAssetMovePlan& inoutPlan, vector<PreparedRewrite>& inoutListRewrite )
+            {
+                vector<string>         listTableID;
+                vector<string>         listTableAbs;
+                vector<vector<string>> listFrom;
+                vector<vector<string>> listTo;
+                for ( size_t moveIndex = 0; moveIndex < inoutPlan._listOldID.size(); ++moveIndex )
+                {
+                    const string& oldID = inoutPlan._listOldID[moveIndex];
+                    if ( AssetRedirect::isTable( oldID ) )
+                        continue; // 표 자신을 옮기는 일은 리다이렉트할 것이 아니다
+                    const string tableID = AssetRedirect::makeTableID( oldID );
+                    // 표 자리는 옮기는 파일의 디스크 경로에서 잰다 — 옛 id 에서 도메인 뒤 꼬리를 떼면 도메인 폴더다(붙인 디스크 도메인 · 사본 도메인도 같다).
+                    const size_t  domainLength = tableID.size() - string_view{ AssetRedirect::kFileName }.size() - 1;
+                    const size_t  tailLength   = oldID.size() - domainLength;
+                    const string& sourceAbs    = inoutPlan._listMove[moveIndex]._sourceAbs;
+                    SW_ASSERT( sourceAbs.size() > tailLength );
+                    size_t tableIndex = 0;
+                    while ( tableIndex < listTableID.size() && listTableID[tableIndex] != tableID )
+                        ++tableIndex;
+                    if ( tableIndex == listTableID.size() )
+                    {
+                        listTableID.push_back( tableID );
+                        listTableAbs.push_back( FileUtil::joinPath( string_view{ sourceAbs }.substr( 0, sourceAbs.size() - tailLength ), AssetRedirect::kFileName ) );
+                        listFrom.emplace_back();
+                        listTo.emplace_back();
+                    }
+                    listFrom[tableIndex].push_back( oldID );
+                    listTo[tableIndex].push_back( inoutPlan._listNewID[moveIndex] );
+                }
+                for ( size_t tableIndex = 0; tableIndex < listTableID.size(); ++tableIndex )
+                {
+                    PreparedRewrite table{};
+                    table._referrerID  = listTableID[tableIndex];
+                    table._referrerAbs = listTableAbs[tableIndex];
+                    table._bNewFile    = FileUtil::exists( table._referrerAbs ) == false;
+                    if ( table._bNewFile == false && FileUtil::readTextFile( table._referrerAbs, table._originalText ) == false )
+                    {
+                        StringBuilder<constant::buffer::kMax256> failureBuilder;
+                        failureBuilder.appendFormat( "could not read the asset redirect table '%#'", table._referrerID );
+                        inoutPlan._failure = string( failureBuilder.view() );
+                        return false;
+                    }
+                    const string_view      currentText = table._bNewFile ? string_view{ AssetRedirect::kEmptyTableText } : string_view{ table._originalText };
+                    const expected<string> rewritten   = AssetRedirect::addToXMLText( currentText, table._referrerID, listFrom[tableIndex], listTo[tableIndex] );
+                    if ( rewritten.has_value() == false )
+                    {
+                        StringBuilder<constant::buffer::kMax256> failureBuilder;
+                        failureBuilder.appendFormat( "%# '%#' - nothing was moved", rewritten.error().message(), rewritten.error().detail() );
+                        inoutPlan._failure = string( failureBuilder.view() );
+                        return false;
+                    }
+                    table._rewrittenText = *rewritten;
+                    inoutListRewrite.push_back( std::move( table ) );
                 }
                 return true;
             }
@@ -430,6 +498,13 @@ namespace sw::editor
             SW_LOG_WARNING_ID( "EditorAssetFileCommands.NothingMoved", "Nothing was moved - %#", outPlan._failure );
             return false;
         }
+        // 리다이렉트 표도 같은 트랜잭션으로 쓴다(참조 글 뒤에 붙인다 — 고친 참조 파일 수에는 세지 않는다).
+        const size_t referrerRewriteCount = listRewrite.size();
+        if ( EditorAssetFileCommandsInternal::prepareRedirectTables( outPlan, listRewrite ) == false )
+        {
+            SW_LOG_WARNING_ID( "EditorAssetFileCommands.NothingMoved", "Nothing was moved - %#", outPlan._failure );
+            return false;
+        }
 
         // ① 파일을 옮긴다. 하나라도 지면 옮긴 것을 거꾸로 되돌린다.
         size_t movedCount = 0;
@@ -471,8 +546,11 @@ namespace sw::editor
             vector<string> listStuck;
             for ( size_t index = 0; index < writtenCount; ++index )
             {
-                if ( FileUtil::writeTextFile( listRewrite[index]._referrerAbs, listRewrite[index]._originalText ) == false )
-                    listStuck.push_back( listRewrite[index]._referrerID );
+                const EditorAssetFileCommandsInternal::PreparedRewrite& rewrite   = listRewrite[index];
+                const bool                                              bRestored = rewrite._bNewFile ? FileUtil::removeFile( rewrite._referrerAbs )
+                                                                                                      : FileUtil::writeTextFile( rewrite._referrerAbs, rewrite._originalText );
+                if ( bRestored == false )
+                    listStuck.push_back( rewrite._referrerID );
             }
             for ( size_t index = movedCount; index > 0; --index )
             {
@@ -512,7 +590,7 @@ namespace sw::editor
         }
         for ( const EditorAssetFileCommandsInternal::PreparedRewrite& rewrite : listRewrite )
             inoutIndex.refreshFile( resourceRoot, rewrite._referrerID );
-        outPlan._fixedFileCount = static_cast<uint32>( listRewrite.size() );
+        outPlan._fixedFileCount = static_cast<uint32>( referrerRewriteCount );
         if ( outPlan._listMove.size() == 1 )
             SW_LOG_INFO_ID( "Asset.Moved", "Moved '%#' to '%#' and fixed %# referencing file(s)", outPlan._listOldID.front(), outPlan._listNewID.front(), outPlan._fixedFileCount );
         else
